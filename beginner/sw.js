@@ -3,11 +3,11 @@
    鑑定・60干支の教科書を使えるようにする。
    オンライン鑑定（生成AI）だけは通信が要るが、圏外時は端末内の
    オフライン鑑定に自動で切り替わる。 */
-const CACHE = 'kyoukara-uranaishi-v3';
+const CACHE = 'kyoukara-uranaishi-v4';
 
 /* 初回訪問時に先読みしてキャッシュするページ一式（このブランドのみ） */
 const ASSETS = [
-  'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icon-crystal.png',
+  'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icon-maskable-512.png', 'icon-crystal.png',
   'app-beginner.html', 'index.html', 'textbook.html',
   'pricing.html', 'mypage.html',
   'terms.html', 'tokushoho.html', 'privacy.html',
