@@ -774,7 +774,7 @@
 /* ===== 節木運（せつぼくうん）モジュール setsuboku.js v1.0 をインライン展開 =====
    単体ファイル版は同フォルダの setsuboku.js（他PRO版への移植用・内容は同一） ===== */
 /*!
- * setsuboku.js — 節木運（せつぼくうん）モジュール  v1.0
+ * setsuboku.js — 節木運（せつぼくうん）モジュール  v1.1
  * ------------------------------------------------------------------
  * 四柱推命の「30年周期の大きな節目（節木運）」を、既存の大運データから読み解く独立モジュール。
  * エンジン非依存・追加の四柱推命計算ゼロ。どのPRO版にもそのまま載せられます。
@@ -818,6 +818,26 @@
   var TU = { 丑:1, 辰:1, 未:1, 戌:1 };
   /* 影響を強める十二運（新字体・旧字体どちらも許容） */
   var AMP_TERRAIN = { 墓:1, 絶:1, 絕:1, 胎:1 };
+  /* 十二支の並び（順行/逆行の判定用） */
+  var ORD = { 子:0, 丑:1, 寅:2, 卯:3, 辰:4, 巳:5, 午:6, 未:7, 申:8, 酉:9, 戌:10, 亥:11 };
+  /* プロンプト表記用の季節名 */
+  var SEA_NAME = { winter:'winter/water', spring:'spring/wood', summer:'summer/fire', autumn:'autumn/metal' };
+  /* 暦順で次の季節／季節→五行（順行で次の大運が無い＝季節の締めの補完に使用） */
+  var SEASON_NEXT = { spring:'summer', summer:'autumn', autumn:'winter', winter:'spring' };
+  var SEASON_EL = { winter:'水', spring:'木', summer:'火', autumn:'金' };
+  function brOf(d) { return d.branch || (d.ganzhi ? d.ganzhi.charAt(1) : ''); }
+  /* 大運の進行方向：支が十二支順に増える＝順行(forward)、減る＝逆行(reverse)。
+     隣り合う大運支の増減を数え、多数決で決める（判定不能なら順行扱い）。 */
+  function isForward(decs) {
+    var fwd = 0, rev = 0;
+    for (var i = 0; i + 1 < decs.length; i++) {
+      var a = ORD[brOf(decs[i])], b = ORD[brOf(decs[i + 1])];
+      if (a == null || b == null) continue;
+      var step = ((b - a) % 12 + 12) % 12;
+      if (step === 1) fwd++; else if (step === 11) rev++;
+    }
+    return rev > fwd ? false : true;
+  }
 
   /* ---- 中核：分析 ---- */
   function analyze(opt) {
@@ -828,24 +848,46 @@
     var voids = opt.voids || [];
     var birthY = (opt.birthYear != null) ? +opt.birthYear : null;
     var nowAge = (opt.nowAge != null) ? +opt.nowAge : null;
+    /* ③ 順行/逆行。明示指定(opt.forward = startFortune.forward)があれば優先、無ければ支の並びから推定 */
+    var forward = (opt.forward != null) ? !!opt.forward : isForward(decs);
 
     var blocks = decs.map(function (d) {
-      var br = d.branch || (d.ganzhi ? d.ganzhi.charAt(1) : '');
+      var br = brOf(d);
       var se = SEASON[br] || null;
       var el = se ? se.el : '';
       var mark = fav[el] || '';                       /* 喜 / 忌 / '' */
       var isSetsu = !!TU[br];                          /* 節木運＝土の支 */
       var amp = (!!AMP_TERRAIN[d.terrain]) || (voids.indexOf(br) >= 0);
-      var startY = (birthY != null) ? birthY + d.startAge : null;
+      /* ② 西暦：エンジンが startYear を持っていればそれを正とする（立運の端数月ぶんの1年ズレを避ける）。
+         無ければ従来どおり 生年+年齢 で近似する。 */
+      var startY = (d.startYear != null) ? +d.startYear
+                 : (birthY != null) ? birthY + d.startAge : null;
       var current = (nowAge != null) && (nowAge >= d.startAge) && (nowAge <= d.endAge);
       return {
         startAge: d.startAge, endAge: d.endAge, ganzhi: d.ganzhi || '', branch: br,
         terrain: d.terrain || '', season: se ? se.s : '', seasonEl: el, mark: mark,
         isSetsu: isSetsu, intense: isSetsu && amp,
+        enterSeason: '', enterEl: '', enterMark: '',   /* ③ 節目で“これから入る季節” */
         startYear: startY, swayFrom: startY != null ? startY - 2 : null,
         swayTo: startY != null ? startY + 2 : null, current: current
       };
     });
+
+    /* ③ 方向補正：土の支は【逆行＝新しい季節の先頭 / 順行＝今の季節の締めくくり】。
+       ゆえに節目で“これから入る30年の季節”は、逆行＝その支自身の季節、順行＝次の大運の季節。
+       喜忌もその「入る季節」の五行で読む（＝発展/備えの向きを反転させない）。
+       判定は隣接ブロックから行う（大運支は連続するので、順行の土の支は必ず次が別季＝締め、
+       逆行の土の支は次が同季＝先頭になる）。末尾の節目だけ前ブロックで締め/先頭を見分ける。 */
+    for (var k = 0; k < blocks.length; k++) {
+      if (!blocks[k].isSetsu) continue;
+      var b = blocks[k], nx = blocks[k + 1], pv = blocks[k - 1], se;
+      if (nx && nx.season) se = (nx.season !== b.season) ? nx.season : b.season;      /* 中間：次が別季→次の季節(順行の締め) / 同季→自季(逆行の先頭) */
+      else if (pv && pv.season === b.season) se = SEASON_NEXT[b.season] || b.season;   /* 末尾＝季節の締め(順行)→暦順で次の季節へ */
+      else se = b.season;                                                             /* 末尾＝季節の先頭(逆行)→自季 */
+      b.enterSeason = se;
+      b.enterEl = SEASON_EL[se] || b.seasonEl;
+      b.enterMark = fav[b.enterEl] || '';
+    }
 
     /* 今から見て現在進行中/次の節木運 */
     var next = null;
@@ -856,28 +898,40 @@
     var proactive = false;
     if (next && nowAge != null) proactive = (next.startAge - 2 <= nowAge) && (nowAge <= next.startAge + 2);
 
-    return { blocks: blocks, next: next, nowAge: nowAge, proactive: proactive };
+    return { blocks: blocks, next: next, nowAge: nowAge, proactive: proactive, forward: forward };
   }
 
   /* ---- AI鑑定に渡す1ブロック（挙動ルールつき） ---- */
   function promptBlock(a) {
     if (!a || !a.blocks || !a.blocks.length) return '';
-    var SEA = { winter:'winter/water', spring:'spring/wood', summer:'summer/fire', autumn:'autumn/metal' };
+    var mkEnter = function (b) {   /* ③ 節目で“これから入る季節”＋その喜忌（方向補正済み） */
+      if (!b.isSetsu) return '';
+      var s = ' → entering ' + (SEA_NAME[b.enterSeason] || '?') +
+        (b.enterMark === '喜' ? ' (FAVORABLE 30-yr season ahead = 発展)'
+          : (b.enterMark === '忌' ? ' (challenging 30-yr season ahead = 備え)' : ''));
+      return s;
+    };
     var seq = a.blocks.map(function (b) {
-      return 'age ' + b.startAge + '-' + b.endAge + ':' + (b.ganzhi || '') + ' ' + (SEA[b.season] || '?') +
-        (b.mark === '喜' ? '(FAVORABLE season)' : (b.mark === '忌' ? '(challenging season)' : '')) +
-        (b.isSetsu ? ' <<SETSUBOKU turning-point' + (b.intense ? ', intensified' : '') + '>>' : '') +
+      return 'age ' + b.startAge + '-' + b.endAge + ':' + (b.ganzhi || '') + ' ' + (SEA_NAME[b.season] || '?') +
+        (b.mark === '喜' ? '(favorable)' : (b.mark === '忌' ? '(challenging)' : '')) +
+        (b.isSetsu ? ' <<SETSUBOKU turning-point' + (b.intense ? ', intensified' : '') + mkEnter(b) + '>>' : '') +
         (b.current ? ' [NOW]' : '');
     }).join(' | ');
     var nx = a.next;
     var nxt = nx
       ? ('The next/current life turning-point (節木運): around age ' + nx.startAge +
          (nx.startYear ? (' (~year ' + nx.startYear + ')') : '') + ', when the 大運 enters ' + nx.ganzhi +
-         ' — the "replanting" hinge between two 30-year seasons; the ~2 years around it (' +
-         (nx.swayFrom || '') + '-' + (nx.swayTo || '') + ') tend to feel unsettled.')
+         ' — the "replanting" hinge into a new 30-year season' +
+         (nx.enterSeason ? (': turning toward ' + (SEA_NAME[nx.enterSeason] || '') +
+           (nx.enterMark === '喜' ? ', a FAVORABLE season for them (発展の30年)'
+             : (nx.enterMark === '忌' ? ', a challenging season for them (備えの30年)' : ''))) : '') +
+         '; the ~2 years around it (' + (nx.swayFrom || '') + '-' + (nx.swayTo || '') + ') tend to feel unsettled.')
       : 'No major turning-point is near right now.';
     var t = '';
-    t += '[SETSUBOKU-UN (節木運) — 30-YEAR LIFE SEASONS] The 大運 decades group by 方合 into ~30-year seasons; the hinge branches 丑辰未戌 (amplified by the 十二運 stages 墓/絶/胎 or 空亡) are "replanting" turning-points = 人生の曲がり角. Sequence: ' + seq + '. ' + nxt + '\n';
+    t += '[SETSUBOKU-UN (節木運) — 30-YEAR LIFE SEASONS] The 大運 decades group by 方合 into ~30-year seasons. Luck runs ' +
+      (a.forward ? '順行/FORWARD: the earth branch 丑辰未戌 CLOSES its season, so the NEW 30-year season opens at the NEXT 大運'
+                 : '逆行/REVERSE: the earth branch 丑辰未戌 LEADS its season, so it opens the NEW 30-year season') +
+      '. The hinge branches 丑辰未戌 (amplified by the 十二運 stages 墓/絶/胎 or 空亡) are "replanting" turning-points = 人生の曲がり角. Each turning-point below is annotated with the season it turns INTO (already direction-corrected — read the coming 30 years from "entering …", NOT from the hinge branch\'s own season). Sequence: ' + seq + '. ' + nxt + '\n';
     t += '[SETSUBOKU — HOW TO SPEAK OF IT] ' + (a.proactive
       ? 'A turning-point is within ~2 years, so you MAY raise it warmly on your own when relevant. '
       : 'Only discuss this if the user asks about life turning-points / their future direction; do NOT bring it up unprompted. ') +
@@ -944,8 +998,9 @@
   };
 
   return {
-    version: '1.0',
+    version: '1.1',
     analyze: analyze,
+    isForward: isForward,
     promptBlock: promptBlock,
     bandHtml: bandHtml,
     css: CSS,
@@ -2233,35 +2288,20 @@ function sbFav(c){
 }
 function sbAnalyze(c){
   if(typeof Setsuboku==='undefined'||!c||!c.decadeFortunes||!c.decadeFortunes.length)return null;
-  const df=c.decadeFortunes, d0=df[0];
-  const a=Setsuboku.analyze({
-    decadeFortunes:df,
-    birthYear:d0.startYear-d0.startAge,
+  // ★節木運のロジックは Setsuboku モジュール(v1.1)に一本化。アプリ側で再計算・上書きは一切しない。
+  //  ・西暦＝各大運の startYear（立運の端数月ぶんのズレ込みで正しい暦年）をモジュールがそのまま採用
+  //  ・順行/逆行＝エンジンの startFortune.forward を明示的に渡す。土の支が季節の先頭か締めかを正しく判定
+  //    （逆行＝新しい季節の先頭／順行＝今の季節の締め→入る季節は次の大運）。結果は enterSeason/enterEl/enterMark
+  //  ・喜忌＝用神判定(_kkAssess)を五行へ落とした fav を渡す
+  return Setsuboku.analyze({
+    decadeFortunes:c.decadeFortunes,
     nowAge:c.now?c.now.age:null,
     fav:sbFav(c),
-    voids:kubo(c)
-  });
-  if(!a)return null;
-  // 西暦は既存エンジンが算出した立運年（decadeFortunes[].startYear）を正とする
-  // （モジュールの 生年+開始年齢 は立運の月数ぶん1年ずれることがあるため）
-  a.blocks.forEach((b,i)=>{const y=df[i]&&df[i].startYear;
-    if(y!=null){b.startYear=y;b.swayFrom=y-2;b.swayTo=y+2;}});
-  // 節木運が「どの季節へ入る節目か」＝次の大運の季節。大運が逆行なら土の支は新しい季節の先頭
-  // （辰→卯→寅＝春の入口）、順行なら今の季節の締めくくり（寅→卯→辰→巳＝次は夏）になるため、
-  // 次ブロックの季節が違えばそちらを、同じならこのブロック自身の季節を「入る季節」とする。
-  const F=sbFav(c);
-  a.fav=F;
-  a.blocks.forEach((b,i)=>{const nx=a.blocks[i+1],pv=a.blocks[i-1];
-    let se;
-    if(nx&&nx.season)se=(nx.season!==b.season)?nx.season:b.season;
-    else if(pv&&pv.season===b.season)se=SB_NEXT_SEASON[b.season]||b.season; // 最後の大運が季節の締めくくり（順行）
-    else se=b.season;                                                       // 最後の大運が季節の先頭（逆行）
-    b.inSeason=se; b.inEl=SB_SEASON_EL[se]||b.seasonEl; b.inMark=F[b.inEl]||'';});
-  return a;   // a.next は a.blocks の同一オブジェクト参照なので上書き済み
+    voids:kubo(c),
+    forward:c.startFortune?c.startFortune.forward:null
+  })||null;
 }
 const SB_SEASON_JA={winter:'冬（水）',spring:'春（木）',summer:'夏（火）',autumn:'秋（金）'};
-const SB_SEASON_EL={winter:'水',spring:'木',summer:'火',autumn:'金'};
-const SB_NEXT_SEASON={spring:'summer',summer:'autumn',autumn:'winter',winter:'spring'};
 /* 帯の見た目：Setsuboku.css を土台に、このアプリ（明色固定・端末幅せまめ）へ合わせる上書き。
    PRO版はダークモードを持たないので、モジュール側の prefers-color-scheme 指定は打ち消す。 */
 const SB_SKIN=
@@ -2321,15 +2361,15 @@ function sbListHtml(a){
   if(!hits.length)return '<div class="mhint">この大運の範囲には、節木運（土の支に入る節目）は巡ってきません。</div>';
   const rows=hits.map(b=>{
     const isNext=a.next&&a.next.startAge===b.startAge;
-    const col=ec(b.inEl||b.seasonEl)||'#B5623A';
-    const tag=b.inMark==='喜'?'<span class="sb-tag ki">発展の30年</span>':(b.inMark==='忌'?'<span class="sb-tag imi">備えの30年</span>':'');
+    const col=ec(b.enterEl||b.seasonEl)||'#B5623A';
+    const tag=b.enterMark==='喜'?'<span class="sb-tag ki">発展の30年</span>':(b.enterMark==='忌'?'<span class="sb-tag imi">備えの30年</span>':'');
     const yr=b.startYear?`${b.startYear}年`:'';
     const sway=b.swayFrom?`${b.swayFrom}〜${b.swayTo}年ごろは環境が動きやすい`:'前後2年は環境が動きやすい';
-    const why=b.inMark==='喜'?'この季節の五行はあなたの<b>喜神</b>。追い風のなかで伸ばしていける30年です。'
-             :(b.inMark==='忌'?'この季節の五行はあなたの<b>忌神</b>。土台を整えながら進むと安定する30年です（悪い30年という意味ではありません）。':'');
+    const why=b.enterMark==='喜'?'この季節の五行はあなたの<b>喜神</b>。追い風のなかで伸ばしていける30年です。'
+             :(b.enterMark==='忌'?'この季節の五行はあなたの<b>忌神</b>。土台を整えながら進むと安定する30年です（悪い30年という意味ではありません）。':'');
     return `<div class="sb-item ${isNext?'next':''}" style="--sbc:${col}">
       <div style="flex:1 1 auto"><b>${b.startAge}歳ごろ（${yr}）・大運${b.ganzhi}${isNext?'　← 次の節目':''}${b.current?'　← 今この節目':''}</b>
-      <small>ここから<b>${SB_SEASON_JA[b.inSeason]||''}</b>の30年へ植え替え。${sway}。${why}${b.intense?'十二運「'+b.terrain+'」または空亡が重なり、<b>動きが大きめ</b>に出やすい節目です。':''}</small></div>${tag}</div>`;
+      <small>ここから<b>${SB_SEASON_JA[b.enterSeason]||''}</b>の30年へ植え替え。${sway}。${why}${b.intense?'十二運「'+b.terrain+'」または空亡が重なり、<b>動きが大きめ</b>に出やすい節目です。':''}</small></div>${tag}</div>`;
   }).join('');
   const lead=a.next
     ?`<div class="mhint" style="margin-top:8px">次の（または今まさに巡っている）節木運は<b>${a.next.startAge}歳ごろ${a.next.startYear?'＝'+a.next.startYear+'年':''}</b>。人生の「植え替え」の時期で、越えると新しい運気が進みます。</div>`
@@ -3269,11 +3309,6 @@ function buildChartText(c){
   const grpFlow=c.decadeFortunes.map(d=>TS_GROUP[d.tenStar]).join('→');
   // 節木運（せつぼくうん）：大運を方合で30年の季節に束ね、土の支（丑辰未戌）＝季節の継ぎ目を人生の曲がり角として読む
   const sbA=sbAnalyze(c);
-  const setsuboku=sbA?sbA.blocks.map(b=>{
-    const se=SB_SEASON_JA[b.season]||'';
-    return `${b.startAge}-${b.endAge}歳(${b.startYear}年〜):大運${b.ganzhi}／${se}の季節${b.mark?'（この五行は'+b.mark+'神）':''}${b.isSetsu?'　★節木運＝人生の曲がり角。ここから'+(SB_SEASON_JA[b.inSeason]||'')+'の30年へ植え替え'+(b.inMark==='喜'?'＝喜神の季節＝発展の30年':(b.inMark==='忌'?'＝忌神の季節＝備えの30年':''))+(b.intense?'（十二運'+b.terrain+'・空亡が重なり影響が強め）':''):''}${b.current?'　←今ここ':''}`;
-  }).join('\n  '):'';
-  const sbSwitch=(sbA&&sbA.next)?`${sbA.next.startAge}歳ごろ（${sbA.next.startYear}年・大運${sbA.next.ganzhi}）＝次の節木運。ここから${SB_SEASON_JA[sbA.next.inSeason]||''}の30年へ。前後2年（${sbA.next.swayFrom}〜${sbA.next.swayTo}年）は環境が動きやすい`:'';
   const voids=kubo(c);
   const L=[c.timeUnknown?'※生まれた時刻が不明：時柱は使わず、年月日の3柱だけで鑑定する。五行・通変・合冲・吉凶星も3柱で集計済み。将来・本心（時柱）や時刻由来の星・子供運には触れないこと。':'',
     `生年月日時:${c.birth.clock}（${c.birth.sex==='male'?'男性':'女性'}）`,
@@ -3342,8 +3377,6 @@ function buildChartText(c){
     `各大運・年運で巡る通変星の意味（上の流れの各時期に当てはめ、「その年代＝この星が巡る＝こういう時期・こう過ごす」と時系列で具体的に読む）:${Object.keys(TS_FORTUNE).map(s=>s+'＝'+TS_FORTUNE[s].意).join(' ／ ')}`,
     `大運の通変グループの移り変わり（人生の大きな流れ）:${grpFlow}`,
     (()=>{const sType=strengthType(c);const sLabel=gogyoBalance(c).strength;return `大運の運気推移（バイオリズム・あなたの${sLabel}と用神＝喜神/忌神から％化。高=追い風で挑戦向き、低=守り/土台づくり。吉凶の断定ではなく運気の波）:\n  ${c.decadeFortunes.map(d=>{const bs=tenStarOf(c.dayMaster.stem,HONKI[d.branch]);return `${d.startAge}-${d.endAge}歳(${d.startYear}年-) ${d.ganzhi} 干${d.tenStar}/支${bs} 運気約${unkiPct(d.tenStar,bs,sType)}%${(c.now&&c.now.age>=d.startAge&&c.now.age<d.endAge)?' ←今':''}`;}).join('\n  ')}`;})(),
-    `節木運（せつぼくうん＝30年周期の人生の季節と節目。大運を方合で「冬=亥子丑/春=寅卯辰/夏=巳午未/秋=申酉戌」の30年の季節に束ね、土の支（丑・辰・未・戌）に入る大運＝季節の継ぎ目＝人生の曲がり角＝「植え替え」の時期。その季節が喜神なら発展の30年・忌神なら備えの30年。十二運の墓/絶/胎や空亡が重なると影響が強く出る）:\n  ${setsuboku}`,
-    sbSwitch?`次の節木運（人生の曲がり角）:${sbSwitch}`:'',
     (typeof Setsuboku!=='undefined'&&sbA)?Setsuboku.promptBlock(sbA):''];
   if(c.now){const di=c.now.daeunIndex>=0?c.now.daeunIndex:0,dd=c.decadeFortunes[di];
     const ay=c.annualFortunes.find(a=>a.year===c.now.year);
