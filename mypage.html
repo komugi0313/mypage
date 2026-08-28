@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>マイページ ── 私だけの運気予報</title>
+<link rel="icon" type="image/png" href="favicon-tenki.png">
+<link rel="apple-touch-icon" href="favicon-tenki-180.png">
+<meta name="description" content="私だけの運気予報 マイページ。会員ステータス・運気カレンダー・配信設定。">
+<!-- 会員専用ページのため検索エンジンに登録しない -->
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=Cormorant+Garamond:ital,wght@0,400;0,500&display=optional" rel="stylesheet">
+<style>
+  :root{
+    --ink:#3a2f3a;--ink-soft:#564c58;--muted:#7a6e78;--muted-2:#968a93;
+    --cream:#fff9f1;--card:#ffffff;
+    --coral:#ff7e5f;--coral-d:#f0623f;--peach:#ffd6b0;--gold:#f0b94e;--gold-d:#cf8f33;--rose:#ff8fa8;--sakura:#ff9fb4;
+    --line:rgba(240,98,63,.16);--line-strong:rgba(240,98,63,.34);
+    --serif:'Shippori Mincho B1',serif;--sans:'Zen Kaku Gothic New',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--sans);color:var(--ink);background:#fef5ec;line-height:1.8;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  .bg{position:fixed;inset:0;z-index:-2;background:radial-gradient(700px 380px at 50% -4%,rgba(255,222,196,.55),transparent 60%),linear-gradient(180deg,#ffe9d6 0%,#fef4ec 30%,#f1f5fb 70%,#eaf2fb 100%);}
+  canvas#stars{display:none;}
+  .wrap{max-width:560px;margin:0 auto;padding:20px 16px 110px;}
+
+  /* 全ページ共通トップバー（index と同じ振る舞い：ページ名＋1.66 TOPへ） */
+  .topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 16px;
+    background:linear-gradient(180deg,rgba(255,249,241,.94),rgba(255,249,241,.76));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line-strong);box-shadow:0 6px 22px -16px rgba(120,60,40,.5);}
+  .topbar .tb-name{font-family:var(--serif);font-weight:800;font-size:15px;letter-spacing:.04em;color:var(--ink);display:flex;flex-direction:column;line-height:1.1;}
+  .topbar .tb-name small{font-family:var(--sans);font-weight:600;font-size:9px;letter-spacing:.28em;color:var(--coral-d);margin-bottom:2px;}
+  .topbar .tb-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto;}
+  .tb-top{font-family:var(--sans);font-size:12px;font-weight:700;color:#fff;text-decoration:none;border-radius:999px;padding:7px 13px;white-space:nowrap;background:linear-gradient(135deg,var(--coral),var(--coral-d));box-shadow:0 6px 16px -8px rgba(240,98,63,.6);}
+  .tb-logout,.tb-mypage{font-family:var(--sans);font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line-strong);background:rgba(255,255,255,.72);border-radius:999px;padding:6px 12px;white-space:nowrap;}
+  @media(max-width:420px){.topbar .tb-name{font-size:13.5px;}.topbar .tb-name small{font-size:8.5px;}.tb-top,.tb-logout,.tb-mypage{padding:6px 10px;}}
+
+  /* ヘッダー */
+  .mp-head{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 16px;}
+  .mp-brand{font-family:var(--serif);font-weight:800;font-size:16px;letter-spacing:.04em;color:var(--ink);}
+  .mp-brand .s{display:block;font-family:var(--sans);font-size:9.5px;letter-spacing:.3em;color:var(--coral-d);font-weight:600;}
+  .mp-logout{font-size:11.5px;color:var(--muted);text-decoration:none;border:1px solid var(--line-strong);background:rgba(255,255,255,.7);border-radius:999px;padding:6px 12px;}
+  .mp-top{font-size:11.5px;font-weight:700;color:#fff;text-decoration:none;border:1px solid transparent;background:linear-gradient(135deg,var(--coral),var(--coral-d));border-radius:999px;padding:6px 13px;box-shadow:0 6px 16px -8px rgba(240,98,63,.6);}
+
+  /* プレビュー切替(プロトタイプ用) */
+  .proto-bar{display:flex;gap:8px;align-items:center;background:rgba(255,255,255,.72);border:1px dashed var(--line-strong);border-radius:12px;padding:8px 10px;margin-bottom:16px;font-size:11.5px;color:var(--ink-soft);flex-wrap:wrap;}
+  .proto-bar > span:first-child{flex:1 1 auto;min-width:0;}
+  @media(max-width:420px){
+    .proto-bar{flex-direction:column;align-items:stretch;gap:8px;}
+    .proto-seg{margin-left:0;justify-content:center;}
+  }
+  .proto-bar b{color:var(--coral-d);}
+  .proto-seg{display:flex;gap:4px;margin-left:auto;}
+  .proto-seg button{font-family:var(--sans);font-size:11.5px;border:1px solid var(--line-strong);background:#fff;color:var(--ink-soft);border-radius:999px;padding:5px 11px;cursor:pointer;white-space:nowrap;line-height:1.2;flex:0 0 auto;}
+  .proto-seg button.on{background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;border-color:transparent;font-weight:700;}
+
+  /* 会員ステータスカード */
+  .status-card{position:relative;border-radius:20px;padding:20px 18px;overflow:hidden;
+    background:#fff;border:1px solid var(--line);
+    box-shadow:0 22px 50px -26px rgba(120,60,40,.3);}
+  .status-card.premium{background:linear-gradient(150deg,#fff,#fff4ea);border-color:var(--line-strong);}
+  .greet{font-size:13px;color:var(--ink-soft);}
+  .greet b{color:var(--ink);font-family:var(--serif);font-size:16px;}
+  .plan-badge{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:12px;width:100%;font-family:var(--serif);font-weight:800;font-size:15.5px;letter-spacing:.04em;padding:12px 16px;border-radius:14px;}
+  .plan-badge.free{background:#f3eef0;color:var(--ink-soft);border:1px solid var(--line-strong);}
+  .plan-badge.premium{background:linear-gradient(90deg,#f0408f 0%,#c04ac4 52%,#7a6ce6 100%);color:#fff;box-shadow:0 13px 28px -10px rgba(150,70,190,.55);}
+  .plan-meta{margin-top:12px;font-size:12.5px;color:var(--ink-soft);line-height:1.9;}
+  .plan-meta .row{display:flex;justify-content:space-between;border-top:1px dashed var(--line-strong);padding:6px 0;}
+  .plan-meta .row:first-child{border-top:none;}
+  .plan-meta .k{color:var(--muted);}
+  .plan-meta .v{color:var(--ink);font-weight:500;}
+
+  /* セクション共通 */
+  .sec{margin-top:22px;}
+  .sec-h{font-family:var(--serif);font-weight:700;font-size:14.5px;color:var(--coral-d);letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:center;gap:7px;}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 14px 34px -24px rgba(120,60,40,.3);}
+  .kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line);font-size:13.5px;}
+  .kv:first-child{border-top:none;}
+  .kv .k{color:var(--muted);flex:0 0 auto;}
+  .kv .v{color:var(--ink);text-align:right;}
+  .edit-link{font-size:11.5px;color:var(--coral-d);text-decoration:none;border:1px solid var(--line-strong);border-radius:999px;padding:3px 10px;}
+
+  /* 配信設定トグル */
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-top:1px solid var(--line);}
+  .toggle-row:first-child{border-top:none;}
+  .toggle-row .tl{font-size:13.5px;color:var(--ink);}
+  .toggle-row .ts{font-size:11.5px;color:var(--muted);}
+  .sw{position:relative;width:46px;height:26px;flex:0 0 auto;cursor:pointer;}
+  .sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;}
+  .sw .track{position:absolute;inset:0;background:#e6dcd6;border-radius:999px;transition:.2s;}
+  .sw .thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.2s;}
+  .sw input:checked+.track{background:linear-gradient(135deg,var(--coral),var(--gold));}
+  .sw input:checked+.track+.thumb{transform:translateX(20px);}
+
+  /* カレンダー */
+  .cal-wrap{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 14px 34px -24px rgba(120,60,40,.3);}
+  .cal-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .cal-nav{font-family:var(--serif);background:#fff6ef;border:1px solid var(--line-strong);color:var(--coral-d);border-radius:10px;width:34px;height:34px;font-size:15px;cursor:pointer;}
+  .cal-title{font-family:var(--serif);font-weight:700;font-size:16px;color:var(--ink);letter-spacing:.04em;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .cal-dow{text-align:center;font-size:10.5px;color:var(--muted);padding:2px 0;}
+  .cal-cell{position:relative;min-height:52px;border-radius:9px;background:#f6f8fc;border:1px solid rgba(60,50,80,.12);padding:3px 2px 2px;cursor:pointer;transition:.15s;}
+  .cal-cell:hover{background:#ffe9dc;}
+  .cal-cell.empty{background:none;cursor:default;}
+  .cal-cell.today{outline:2px solid var(--coral);}
+  .cal-d{font-size:11px;color:var(--ink-soft);text-align:center;position:relative;}
+  .cal-memo-dot{position:absolute;top:0;right:6px;width:5px;height:5px;border-radius:50%;background:var(--sakura);}
+  .cal-grade{text-align:center;font-size:18px;line-height:1;margin-top:1px;font-weight:700;}
+  .g-top{color:#e0699a}.g-good{color:#3c9a63}.g-normal{color:#bcb0a4}.g-care{color:#5b93c2}
+  .cal-marks{text-align:center;font-size:10px;line-height:1.15;margin-top:1px;min-height:12px;letter-spacing:-1px;}
+  /* 「記号が重なる日」の世界観＋タップ導線（目立つバナー） */
+  .cal-tapcta{margin-top:13px;background:#fffdfb;border:1px solid var(--line-strong);border-radius:16px;padding:15px 16px 16px;text-align:center;box-shadow:0 12px 30px -20px rgba(120,60,40,.4);}
+  .cal-tapcta .ct-h{font-family:var(--serif);font-weight:800;font-size:14.5px;color:#fff;margin:-2px -2px 12px;line-height:1.5;background:linear-gradient(135deg,#5b9bd0,#3f78a8);border-radius:11px;padding:10px 12px;box-shadow:0 8px 16px -9px rgba(63,120,168,.6);word-break:auto-phrase;line-break:strict;overflow-wrap:break-word;}
+  .cal-tapcta .ct-b{font-size:12.5px;color:var(--ink);line-height:2.05;text-align:left;}
+  .cal-tapcta .ct-b .hl{font-weight:700;background:linear-gradient(transparent 60%,rgba(255,158,196,.8) 60%);padding:0 1px;}
+  .cal-tapcta .ct-tap{display:inline-block;margin-top:13px;font-size:12.5px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--coral),var(--coral-d));border-radius:999px;padding:10px 20px;box-shadow:0 10px 20px -8px rgba(240,98,63,.55);}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:12px;font-size:11.5px;color:var(--muted);}
+  .legend span{white-space:nowrap;}
+  .leg-note{margin-top:8px;color:var(--muted-2);font-size:11px;}
+  /* 日付ポップ：ローズゴールドの縁取り（単色で角丸をきれいに保つ） */
+  .daydetail{display:none;margin-top:12px;background:#fff7f4;
+    border:2px solid #d7a29a;border-radius:14px;padding:14px;font-size:13px;color:var(--ink);
+    box-shadow:0 8px 22px -12px rgba(214,138,150,.45);}
+  .daydetail.show{display:block;}
+  .daydetail textarea{width:100%;margin-top:10px;background:#fff;border:1px solid var(--line-strong);border-radius:10px;color:var(--ink);font-family:var(--sans);font-size:13px;padding:10px;min-height:60px;resize:vertical;}
+  .gcal{display:inline-flex;align-items:center;gap:5px;text-decoration:none;font-size:12.5px;color:#fff;background:linear-gradient(135deg,var(--coral),var(--gold));border-radius:999px;padding:8px 14px;font-weight:700;}
+  .datewear{margin-top:10px;background:linear-gradient(135deg,rgba(255,143,168,.12),rgba(240,185,78,.1));border:1px dashed var(--line-strong);border-radius:12px;padding:12px;}
+  .datewear .dw-h{font-family:var(--serif);font-weight:700;font-size:13.5px;color:var(--rose);margin-bottom:7px;}
+  .datewear .dw-row{display:flex;gap:8px;font-size:12.5px;margin-top:4px;}
+  .datewear .dw-k{flex:0 0 38px;color:var(--coral-d);font-weight:700;}
+  .datewear .dw-note{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.6;}
+
+  /* 日タップ詳細のジャンル分け（恋愛は先頭・開いたまま。他ジャンルは畳んで全員に表示） */
+  .gsum{margin-top:9px;padding:10px 12px;border-radius:11px;background:linear-gradient(135deg,#fff3ea,#ffe9f0);border:1px solid rgba(240,150,110,.3);font-size:12.5px;line-height:1.75;}
+  .gsum b{color:var(--coral-d);}
+  .gwarn{margin-top:9px;padding:9px 12px;border-radius:11px;background:#fdf0ee;border:1px solid rgba(205,120,110,.35);font-size:12px;line-height:1.7;color:#8a5548;}
+  .gwarn b{color:#cd5b56;}
+  .ghint{margin:13px 0 3px;font-size:11px;color:var(--muted);text-align:center;}
+  .gsec{border:1px solid var(--line);border-radius:13px;margin-top:9px;overflow:hidden;background:#fff;}
+  .gsec[open]{border-color:var(--line-strong);}
+  .gsec>summary{list-style:none;cursor:pointer;padding:12px 34px 12px 13px;position:relative;display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+  .gsec>summary::-webkit-details-marker{display:none;}
+  .gsec>summary::after{content:"＋";position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--coral-d);font-weight:700;font-size:16px;}
+  .gsec[open]>summary::after{content:"－";}
+  .gsec .ge{font-size:20px;line-height:1;flex:0 0 auto;}
+  .gsec .gn{font-family:var(--serif);font-weight:800;font-size:14.5px;color:var(--ink);}
+  .gsec .gbadge{flex:0 0 auto;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;}
+  .gsec .gb-good{color:#2f8b56;background:#e7f5ec;border:1px solid #b9e2c8;}
+  .gsec .gb-rest{color:#3f7bb8;background:#eaf2fb;border:1px solid #c4dcf3;}
+  .gsec .gb-turn{color:#c07d28;background:#fdf0e2;border:1px solid #f2d7ae;}
+  .gsec .gb-care{color:#cd5b56;background:#fdecec;border:1px solid #f4cbc9;}
+  .gsec .gb-quiet{color:#8a8172;background:#f1efe9;border:1px solid #ddd7cc;}
+  .gsec .gw{flex:1 1 100%;font-size:10.5px;color:var(--muted);padding-left:29px;letter-spacing:.02em;}
+  .gsec .gb{padding:2px 14px 14px 14px;border-top:1px dashed var(--line);background:#fffaf5;font-size:12.5px;line-height:1.8;color:var(--ink-soft);}
+  .gsec .gb b{color:var(--coral-d);}
+  .gsec .whos{margin-top:7px;font-size:11px;color:var(--muted);background:rgba(120,110,120,.06);border-radius:8px;padding:6px 9px;}
+  /* 神殺×分野の“合成の読み方”（空亡と仕事などが重なった時の解釈を、その分野欄の中で提示） */
+  .gsec .gcombo{margin-top:8px;font-size:11.5px;line-height:1.75;color:#3f6f95;background:#eef4fb;border:1px solid #cfe0f2;border-left:3px solid #6aa0d0;border-radius:9px;padding:8px 10px;}
+  .gsec .gcombo b{color:#2f6390;}
+  .gsec .gcombo.turn{color:#8a6224;background:#fdf4e6;border-color:#f0dcb8;border-left-color:#d8a24e;}
+  .gsec .gcombo.turn b{color:#a9741f;}
+  .gsec .gcombo.ok{color:#2f7d55;background:#eef8f1;border-color:#c8e6d4;border-left-color:#5cbd86;}
+  .gsec .gcombo.ok b{color:#2b8a5c;}
+
+  /* Google連携 */
+  .gconn{display:flex;align-items:center;gap:12px;}
+  .gconn .gic{flex:0 0 auto;width:42px;height:42px;border-radius:11px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;}
+  .gconn .gt{flex:1;font-size:12.5px;color:var(--ink-soft);line-height:1.6;}
+  .gconn .gt b{color:var(--ink);font-size:13.5px;}
+  .gconn-btn{margin-top:12px;width:100%;border:1px solid var(--line-strong);cursor:pointer;font-family:var(--sans);font-weight:700;font-size:13.5px;color:#3c4043;background:#fff;border-radius:11px;padding:12px;box-shadow:0 8px 20px -12px rgba(120,60,40,.35);}
+  .gconn-note{font-size:11px;color:var(--muted-2);margin-top:8px;line-height:1.6;}
+
+  /* 解約・フッター */
+  .danger{margin-top:10px;text-align:center;}
+  .danger a{font-size:12px;color:var(--muted);text-decoration:underline;cursor:pointer;}
+  .mp-foot{text-align:center;font-size:11px;color:var(--muted-2);margin-top:30px;line-height:1.8;}
+  .mp-foot a{color:var(--muted);}
+
+  .proto-flag{display:inline-block;font-size:10px;color:var(--coral-d);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;margin-left:6px;vertical-align:middle;}
+
+  @media(max-width:400px){.wrap{padding:16px 12px 90px;}.cal-cell{min-height:42px;}}
+  /* ===== メリハリ強化 + CRO ===== */
+  .status-card,.panel{box-shadow:0 24px 56px -28px rgba(120,60,40,.42)!important;border:1px solid rgba(240,98,63,.2)!important;}
+  /* 無料体験カウントダウン帯（退会抑止・更新前の透明性） */
+  /* 「相性診断へ戻る」ボタン：インラインstyle無効化対策でクラス化 */
+  .mp-back{display:inline-flex;align-items:center;gap:7px;text-decoration:none;font-family:'Zen Kaku Gothic New',sans-serif;font-weight:800;font-size:14px;color:#c0562e;background:#fff;border:2px solid rgba(224,80,110,.5);border-radius:999px;padding:12px 24px;box-shadow:0 6px 16px -6px rgba(0,0,0,.2);}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<canvas id="stars"></canvas>
+
+<header class="topbar">
+  <div class="tb-brand"><span class="tb-name"><small>MY DAILY FORECAST</small>私だけの運気予報</span></div>
+  <div class="tb-actions">
+    <a class="tb-top" href="index.html">🏠 1.66 TOPへ</a>
+    <a class="tb-logout" href="index.html">ログアウト</a>
+  </div>
+</header>
+<div class="wrap">
+
+  <!-- 会員ステータス -->
+  <div class="status-card premium" id="statusCard">
+    <div class="greet">おかえりなさい、<b id="memberName">ゲスト</b>さん</div>
+    <span class="plan-badge premium" id="planBadge">✦ 全機能解放（完全無料）</span>
+    <div class="plan-meta" id="planMeta"></div>
+  </div>
+
+  <!-- 運気カレンダー -->
+  <div class="sec">
+    <div class="sec-h">📅 あなたの運気カレンダー <span class="proto-flag">主役</span></div>
+    <div class="cal-wrap" id="calWrap">
+      <div class="cal-top">
+        <button class="cal-nav" id="calPrev">‹</button>
+        <div class="cal-title" id="calTitle">2026年 6月</div>
+        <button class="cal-nav" id="calNext">›</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-tapcta">
+        <div class="ct-h">👆 マークが重なる日ほど、タップしてみて</div>
+        <div class="ct-b">毎日は、恋も・仕事も・お金も・健康も・暮らしも——いくつもの運が重なり合って進んでいます。<span class="hl">人はひとつの軸だけで動いてはいません。</span><br>だからマークが2つ3つ重なる日も、ちぐはぐではなく“<span class="hl">いろんな運が同時に動く日</span>”。日付をタップすれば、その日のぜんぶの意味と「今日の使い方」が、ジャンルごとに全部読めます。</div>
+        <span class="ct-tap">👆 日付をタップで、すべての鑑定が開く</span>
+      </div>
+      <div class="legend">
+        <span>🌈 運命の人の日</span><span>🌷 出会い・モテ運の日</span><span>🌸 恋チャンスUP</span><span>🩷 魅力・表現の日</span><span>🌐 対人の気が動く日</span><span>💰 金運の気が動く日</span><span>💼 仕事の気が動く日</span><span>📚 学びの日</span><span>🍀 貴人の日</span><span>🐴 動き・変化の日</span><span>🌫️ 整える日</span><span>🌀 大きく動く日</span><span style="opacity:.6">｜あなた基準の運気ランク｜</span><span><b style="color:#e0699a">💮</b> 特別な日</span><span><b style="color:#3c9a63">◎</b> 調子のいい日</span><span><b style="color:#bcb0a4">〇</b> 普通の日</span><span><b style="color:#5b93c2">△</b> 充電日</span><span>⚠️ ゆらぎ注意日</span>
+      </div>
+      <div class="leg-note">💮◎〇△は<b>あなた基準</b>のランクです（他人との比較ではなく、あなた自身のリズムの中での“動きやすい日／整える日”）。だから毎日届く運気予報メールとも一致します。日付をタップすると、その日が「何の日」か・メモ・Googleカレンダー追加が開きます。カレンダーは<b>過去も未来も、好きなだけ</b>ご覧いただけます。</div>
+      <div id="calRangeNote" style="display:none;"></div>
+      <div class="daydetail" id="dayDetail"></div>
+    </div>
+  </div>
+
+  <!-- マークの見かた（初心者向け＋タップで四柱推命の専門解説＋あなたの命式の実例） -->
+  <style>
+    #markGuide .mg-card{border:1px solid var(--line);border-radius:12px;margin-top:8px;overflow:hidden;background:#fff;}
+    #markGuide .mg-card>summary{list-style:none;cursor:pointer;padding:11px 38px 11px 12px;position:relative;display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+    #markGuide .mg-card>summary::-webkit-details-marker{display:none;}
+    #markGuide .mg-card>summary::after{content:"＋";position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--coral-d);font-weight:700;font-size:16px;}
+    #markGuide .mg-card[open]>summary::after{content:"－";}
+    #markGuide .mg-emoji{font-size:19px;line-height:1;flex:0 0 auto;}
+    #markGuide .mg-name{font-family:var(--serif);font-weight:700;font-size:14px;color:var(--ink);}
+    #markGuide .mg-badge{flex:0 0 auto;font-size:11px;font-weight:700;line-height:1;padding:4px 8px;border-radius:999px;letter-spacing:.02em;}
+    #markGuide .mg-good{background:#e7f5ec;color:#2f8b56;border:1px solid #b9e2c8;}
+    #markGuide .mg-calm{background:#f1efe9;color:#8a8172;border:1px solid #ddd7cc;}
+    #markGuide .mg-rest{background:#eaf2fb;color:#3f7bb8;border:1px solid #c4dcf3;}
+    #markGuide .mg-turn{background:#fdf0e2;color:#c07d28;border:1px solid #f2d7ae;}
+    #markGuide .mg-care{background:#fdecec;color:#cd5b56;border:1px solid #f4cbc9;}
+    #markGuide .mg-plain{font-size:12px;color:var(--muted);flex:1 1 100%;line-height:1.6;padding-left:28px;}
+    #markGuide .mg-detail{padding:2px 13px 14px 13px;border-top:1px dashed var(--line);background:#faf6ef;}
+    #markGuide .mg-tech{font-size:12.5px;line-height:1.85;color:var(--ink2);margin-top:10px;}
+    #markGuide .mg-tech b{color:var(--coral-d);}
+    #markGuide .mg-ex{margin-top:9px;background:rgba(196,137,43,.09);border:1px solid rgba(196,137,43,.22);border-radius:9px;padding:8px 11px;font-size:12.5px;color:var(--ink);line-height:1.7;}
+    #markGuide .mg-ex b{color:var(--gold-d);}
+    #markGuide .mg-toc{background:#fff;border:1px solid var(--line-strong);border-radius:13px;padding:13px 14px;margin-bottom:10px;box-shadow:0 8px 20px -16px rgba(120,60,40,.4);}
+    #markGuide .mg-toc-h{font-family:var(--serif);font-weight:800;font-size:14px;color:var(--coral-d);margin-bottom:8px;}
+    #markGuide .mg-toc-r{display:flex;gap:9px;align-items:baseline;font-size:12.5px;color:var(--ink);line-height:1.7;padding:3px 0;}
+    #markGuide .mg-toc-r b{color:var(--ink);}
+    #markGuide .mg-toc-e{flex:0 0 22px;font-size:16px;font-weight:800;text-align:center;}
+    #markGuide .mg-toc-n{margin-top:8px;font-size:10.5px;color:var(--muted);text-align:center;}
+    #markGuide .mg-intro{background:linear-gradient(160deg,#fff,#fff5ec);border:1px solid var(--line-strong);border-radius:13px;padding:14px;margin-top:4px;}
+    #markGuide .mg-intro-h{font-family:var(--serif);font-weight:800;font-size:14px;color:var(--coral-d);margin-bottom:8px;}
+    #markGuide .mg-intro p{font-size:12.5px;color:var(--ink);line-height:1.9;}
+    #markGuide .mg-intro>p b{color:var(--coral-d);}
+    /* 総合記号を暦と同じ色で（学習しやすく） */
+    #markGuide .mg-s-top{color:#e0699a;font-weight:800;}#markGuide .mg-s-good{color:#3c9a63;font-weight:800;}
+    #markGuide .mg-s-norm{color:#b0a498;font-weight:800;}#markGuide .mg-s-care{color:#5b93c2;font-weight:800;}
+    /* Q&A：白地＋コーラルの左バーで高コントラスト。強調＝濃い緑、注意＝青（薄黄をやめる） */
+    #markGuide .mg-q{margin-top:11px;font-size:12px;color:var(--ink);line-height:1.9;background:#fff;border:1px solid rgba(240,98,63,.18);border-left:4px solid var(--coral);border-radius:9px;padding:10px 12px;}
+    #markGuide .mg-q .ql{display:block;font-family:var(--serif);font-weight:800;font-size:12.5px;color:var(--coral-d);margin-bottom:5px;}
+    #markGuide .mg-q b{color:#2f8b56;}
+    #markGuide .mg-q .warn{color:#3f7bb8;font-weight:700;}
+    /* 流年ブロック：青緑系で“動き・希望”を表現。強調＝濃い青緑 */
+    #markGuide .mg-flow{margin-top:12px;background:linear-gradient(160deg,#eef6fb,#f0faf5);border:1px solid #cbe4dc;border-left:4px solid #4bb39a;border-radius:11px;padding:12px 13px;}
+    #markGuide .mg-flow-h{font-family:var(--serif);font-weight:800;font-size:13px;color:#227d8f;margin-bottom:6px;}
+    #markGuide .mg-flow p{font-size:12px;color:var(--ink);line-height:1.95;}
+    #markGuide .mg-flow .fl-y{color:#1f8a72;}
+    #markGuide .mg-group{font-family:var(--serif);font-weight:700;font-size:13px;color:var(--coral-d);margin:16px 0 2px;}
+    #markGuide .mg-group:first-child{margin-top:4px;}
+    #markGuide .mg-note{font-size:11.5px;color:var(--muted);margin-top:12px;line-height:1.8;}
+    #markGuide .kubou-panel{margin-top:16px;background:linear-gradient(160deg,#f3f7fb,#eef4fb);border:1px solid #d3e0ef;border-radius:14px;padding:14px 15px;}
+    #markGuide .kp-h{font-family:var(--serif);font-weight:800;font-size:14px;color:#2f6b96;margin-bottom:8px;}
+    #markGuide .kp-lead{font-size:12px;color:var(--ink);line-height:1.9;margin-bottom:10px;}
+    #markGuide .kp-lead b{color:#2f6b96;}
+    #markGuide .kp-row{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px dashed #cfdcec;}
+    #markGuide{word-break:auto-phrase;line-break:strict;overflow-wrap:break-word;}
+    #markGuide .kp-k{flex:0 0 108px;font-size:12px;font-weight:800;color:#3a5674;line-height:1.5;}
+    #markGuide .kp-v{flex:1 1 auto;font-size:12px;color:var(--ink);line-height:1.6;}
+    #markGuide .kp-s{font-size:11px;color:var(--muted);}
+    #markGuide .kp-s b{color:#3a5674;}
+    #markGuide .kp-note{margin-top:10px;font-size:10.5px;color:var(--muted);line-height:1.75;}
+    #markGuide .kp-note b{color:#3a5674;}
+  </style>
+  <div class="sec" id="markGuide">
+    <div class="sec-h">📖 マークの見かた <span class="proto-flag">タップで四柱推命の解説</span></div>
+    <p style="font-size:12.5px;color:var(--muted);line-height:1.8;margin:2px 0 4px;">各マークの意味と、なぜその日に出るのか。<b>「＋」をタップ</b>すると四柱推命の専門的な理由と、<b>あなたの命式での実例</b>が開きます。</p>
+    <div id="markGuideBody"></div>
+  </div>
+
+  <!-- Googleカレンダー連携 -->
+  <div class="sec" id="gsecWrap">
+    <div class="sec-h">🔗 Googleカレンダー連携</div>
+    <div class="panel">
+      <div class="gconn">
+        <div class="gic">📆</div>
+        <div class="gt"><b>運命日・勝負日を、自動でGoogleカレンダーへ</b><br>一度の設定で、毎月の特別な日をまとめて追加できます（自動連携は準備中）。</div>
+      </div>
+      <button class="gconn-btn" id="gconnBtn" onclick="gconnDemo()">Googleカレンダーと連携する</button>
+      <div class="gconn-note">※ 自動連携は現在準備中です。いまは、カレンダーの各日から「Googleカレンダーに追加」で1件ずつ登録できます。</div>
+    </div>
+  </div>
+
+  <!-- あなたの基本性格 -->
+  <div class="sec">
+    <div class="sec-h">🌿 あなたの基本性格 <span class="proto-flag">四柱推命・日干</span></div>
+    <div class="panel" id="nisshinPanel">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <div id="nisshinKan" style="font-family:var(--serif);font-weight:800;font-size:30px;color:var(--coral-d);line-height:1;"></div>
+        <div><div id="nisshinName" style="font-family:var(--serif);font-weight:700;font-size:15px;color:var(--ink);"></div><div id="nisshinImg" style="font-size:12px;color:var(--gold-d);"></div></div>
+      </div>
+      <div id="nisshinBody" style="font-size:13.5px;line-height:1.9;color:var(--ink);"></div>
+      <div style="margin-top:8px;font-size:11px;color:var(--muted-2);">― 生まれた日の十干（日干）から見た、あなたの生まれ持った性質です。―</div>
+    </div>
+  </div>
+
+  <!-- あなたの命式（四柱推命） -->
+  <div class="sec">
+    <div class="sec-h"><img src="icon-crystal.png" alt="" style="height:1.2em;width:auto;vertical-align:-0.26em;"> あなたの命式 <span class="proto-flag">四柱推命</span></div>
+    <details style="margin:0 0 12px;border:1px solid var(--line-strong);border-radius:13px;background:#fffdfb;overflow:hidden;box-shadow:0 8px 22px -18px rgba(120,60,40,.4);">
+      <summary style="cursor:pointer;padding:12px 15px;font-family:var(--serif);font-weight:800;font-size:13.5px;color:var(--coral-d);">🔰 命式（めいしき）ってなに？</summary>
+      <div style="padding:2px 15px 15px;font-size:12.5px;line-height:1.95;color:var(--ink);">
+        <b>命式＝生年月日（と生まれた時刻）からつくる、あなただけの“運命の設計図”</b>です。生まれ持った性格・強み・運のリズムが表れます。むずかしく見えますが、要は<b>「あなたの取扱説明書」</b>。楽しむ目安としてご覧ください。
+        <div style="margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);">
+          ● <b>四本の柱</b>…年柱（ルーツ・幼少期）／月柱（仕事・家庭）／日柱（あなた自身）／時柱（晩年・将来）<br>
+          ● <b>日主（にっしゅ）</b>…日柱の十干。あなたの“本質”をあらわす軸<br>
+          ● <b>五行（ごぎょう）</b>…木・火・土・金・水の5要素。その多い少ないで気質が決まります<br>
+          ● <b>喜神／忌神</b>…あなたを後押しする五行／強くなりすぎに注意な五行<br>
+          ● <b>十二運（じゅうにうん）</b>…長生・帝旺・死・墓など、その気の“勢い”の段階（死や墓も縁起の悪い意味ではありません）
+        </div>
+      </div>
+    </details>
+    <div class="panel">
+      <!-- 四柱（年月日＋あれば時） -->
+      <div id="pillarsWrap" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
+      <!-- 日主・身強弱 -->
+      <div id="dayInfo" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
+      <!-- 五行バランス -->
+      <div style="font-size:11px;color:var(--muted-2);letter-spacing:.03em;margin-bottom:5px;">五行（ごぎょう）バランス</div>
+      <div id="gogyoWrap" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
+      <!-- 喜神・忌神 -->
+      <div id="favWrap" style="margin-bottom:12px;"></div>
+      <!-- 十二運（自坐）の性質 -->
+      <div id="kanshiBody" style="font-size:13.5px;line-height:1.9;color:var(--ink);"></div>
+      <div id="meishikiNote" style="margin-top:8px;font-size:11px;color:var(--muted-2);">― 生まれた日時から立てた四柱推命の命式です。<br>四本の柱＝<b>年柱</b>（ルーツ・幼少期）／<b>月柱</b>（仕事・家庭）／<b>日柱</b>（あなた自身）／<b>時柱</b>（晩年・将来）。各柱の「長生・帝旺」、また「死・墓・病」なども<b>十二運（じゅうにうん）</b>＝その気の“勢い”の段階を表す呼び名で、<b>縁起の良し悪しではありません</b>。<br>喜神＝あなたを後押しする五行、忌神＝強くなりすぎると注意が必要な五行です。―</div>
+    </div>
+  </div>
+
+  <!-- 登録情報 -->
+  <div class="sec">
+    <div class="sec-h">👤 登録情報</div>
+    <div class="panel">
+      <div class="kv"><span class="k">ニックネーム</span><span class="v" id="infoNick">ゲスト</span></div>
+      <div class="kv"><span class="k">メールアドレス</span><span class="v" id="infoMail">—</span></div>
+      <div class="kv"><span class="k">生年月日</span><span class="v" id="infoBirth">1995年6月15日</span></div>
+      <div class="kv"><span class="k">今の状況</span><span class="v" id="infoRel">気になる人がいる</span></div>
+      <div class="kv"><span class="k">関心</span><span class="v" id="infoInterest">恋愛・カフェ巡り・占い</span></div>
+    </div>
+  </div>
+
+  <!-- 配信設定 -->
+  <div class="sec" id="delivery">
+    <div class="sec-h">✉️ 配信設定</div>
+    <div class="panel">
+      <div class="toggle-row">
+        <div><div class="tl">毎朝の予報メール</div><div class="ts">毎朝6:00ごろ、その日の運勢が届きます</div></div>
+        <label class="sw"><input type="checkbox" id="swMail" checked><span class="track"></span><span class="thumb"></span></label>
+      </div>
+    </div>
+    <div class="danger"><a id="cancelLink" onclick="cancelDemo()">配信を停止する</a></div>
+  </div>
+
+  <div style="text-align:center;margin:34px 0 10px;">
+    <a class="mp-back" href="index.html">← 1.66 相性診断へ戻る</a>
+  </div>
+
+</div>
+
+<script src="bazi.js"></script>
+<script src="engine.js"></script>
+<script src="daily-engine.js"></script>
+<script>
+/* ===== 四柱推命ロジック（my-tenki-demo.html と共通） ===== */
+const STEMS=["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
+const BRANCHES=["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+const STEM_GOGYO={甲:"木",乙:"木",丙:"火",丁:"火",戊:"土",己:"土",庚:"金",辛:"金",壬:"水",癸:"水"};
+const KANGOU={甲:"己",己:"甲",乙:"庚",庚:"乙",丙:"辛",辛:"丙",丁:"壬",壬:"丁",戊:"癸",癸:"戊"};
+const SHIGOU={子:"丑",丑:"子",寅:"亥",亥:"寅",卯:"戌",戌:"卯",辰:"酉",酉:"辰",巳:"申",申:"巳",午:"未",未:"午"};
+const SHENG={木:"火",火:"土",土:"金",金:"水",水:"木"};
+const BRANCH_GOGYO={子:"水",丑:"土",寅:"木",卯:"木",辰:"土",巳:"火",午:"火",未:"土",申:"金",酉:"金",戌:"土",亥:"水"};
+const SANGOU=[["申","子","辰"],["亥","卯","未"],["寅","午","戌"],["巳","酉","丑"]];
+function jdn(y,m,d){const a=Math.floor((14-m)/12),yy=y+4800-a,mm=m+12*a-3;return d+Math.floor((153*mm+2)/5)+365*yy+Math.floor(yy/4)-Math.floor(yy/100)+Math.floor(yy/400)-32045;}
+const ANCHOR_JDN=jdn(2000,1,1),ANCHOR_INDEX=54;
+function pillar(y,m,d){const i=(((ANCHOR_INDEX+(jdn(y,m,d)-ANCHOR_JDN))%60)+60)%60;return{stem:STEMS[i%10],branch:BRANCHES[i%12]};}
+function partner(s,b){return{stem:KANGOU[s],branch:SHIGOU[b]};}
+const TOUKA={};{const map={"申子辰":"酉","亥卯未":"子","寅午戌":"卯","巳酉丑":"午"};SANGOU.forEach(g=>{const k=g.join("");g.forEach(b=>TOUKA[b]=map[k]);});}
+const CHONG={子:"午",午:"子",丑:"未",未:"丑",寅:"申",申:"寅",卯:"酉",酉:"卯",辰:"戌",戌:"辰",巳:"亥",亥:"巳"};
+const HAI={子:"未",未:"子",丑:"午",午:"丑",寅:"巳",巳:"寅",卯:"辰",辰:"卯",申:"亥",亥:"申",酉:"戌",戌:"酉"};
+const PO={子:"酉",酉:"子",午:"卯",卯:"午",申:"巳",巳:"申",寅:"亥",亥:"寅",辰:"丑",丑:"辰",戌:"未",未:"戌"};
+const XING=[["子","卯"],["寅","巳"],["巳","申"],["寅","申"],["丑","戌"],["戌","未"],["丑","未"]];
+function branchRel(b1,b2){if(b1===b2)return"同";if(SHIGOU[b1]===b2)return"支合";for(const g of SANGOU)if(g.includes(b1)&&g.includes(b2))return"三合";if(CHONG[b1]===b2)return"沖";for(const p of XING)if((p[0]===b1&&p[1]===b2)||(p[0]===b2&&p[1]===b1))return"刑";if(HAI[b1]===b2)return"害";if(PO[b1]===b2)return"破";const g1=BRANCH_GOGYO[b1],g2=BRANCH_GOGYO[b2];if(g1===g2)return"支比和";if(SHENG[g1]===g2||SHENG[g2]===g1)return"支相生";return"支相剋";}
+const ELEM={木:{dir:"東",color:"緑",hex:"#8cc18a"},火:{dir:"南",color:"赤",hex:"#e88a80"},土:{dir:"地元・中心部",color:"黄",hex:"#e6c477"},金:{dir:"西",color:"白・ゴールド",hex:"#efe9d6"},水:{dir:"北",color:"青・黒",hex:"#84b0d0"}};
+const YANG=new Set(["甲","丙","戊","庚","壬"]);
+const KOKU={木:"土",土:"水",水:"火",火:"金",金:"木"};
+function juushin(D,T){const dg=STEM_GOGYO[D],tg=STEM_GOGYO[T];const same=YANG.has(D)===YANG.has(T);if(dg===tg)return same?"比肩":"劫財";if(SHENG[dg]===tg)return same?"食神":"傷官";if(KOKU[dg]===tg)return same?"偏財":"正財";if(KOKU[tg]===dg)return same?"偏官":"正官";return same?"偏印":"印綬";}
+const DATEWEAR_F={木:"グリーンや花柄のワンピースでナチュラルに",火:"赤の差し色で華やかに、明るい印象に",土:"ベージュのやわらかニットで安心感のある装い",金:"白ワンピ＋上品なアクセできれいめに",水:"ネイビーや黒のシックなコーデで大人っぽく"};
+const DATEWEAR_M={木:"ナチュラルな抜け感のシャツスタイル",火:"明るいシャツで爽やかに",土:"アースカラーのきれいめカジュアル",金:"白シャツで清潔感を",水:"紺ジャケットで落ち着いた印象に"};
+function enToday(t,p){
+  if(t.stem===p.stem&&t.branch===p.branch)return{lv:3};
+  if(KANGOU[t.stem]===p.stem||SHIGOU[t.branch]===p.branch)return{lv:2};
+  return{lv:1};
+}
+const WORK_GOOD=['正官','偏官'],SOCIAL_GOOD=['比肩','劫財'],MONEY_GOOD=['偏財','正財'],CLASH=['沖']; // 官星（正官＋偏官）＝仕事の勝負日
+/* ── 神殺（決定論・表引き。参照値で検算済み）：本人の日柱から算出し、その日の地支と照合 ── */
+const KUBOU_T=[["戌","亥"],["申","酉"],["午","未"],["辰","巳"],["寅","卯"],["子","丑"]]; // 空亡（旬空）：日柱の旬(index/10)ごとに2支
+const TENOTSU_T={甲:["丑","未"],戊:["丑","未"],庚:["丑","未"],乙:["子","申"],己:["子","申"],丙:["亥","酉"],丁:["亥","酉"],壬:["巳","卯"],癸:["巳","卯"],辛:["午","寅"]}; // 天乙貴人（日干→2支）
+const EKIBA_T={申:"寅",子:"寅",辰:"寅",寅:"申",午:"申",戌:"申",巳:"亥",酉:"亥",丑:"亥",亥:"巳",卯:"巳",未:"巳"}; // 駅馬（日支の三合局→駅馬支）
+function _meIdx(){for(var i=0;i<60;i++)if(STEMS[i%10]===CUR.me.stem&&BRANCHES[i%12]===CUR.me.branch)return i;return 0;}
+function shinsatsuMarks(dayBranch){var m=[];
+  var kb=KUBOU_T[Math.floor(_meIdx()/10)]; if(kb&&kb.indexOf(dayBranch)>=0)m.push('🌫️');   // 空亡（空回り・整える日）
+  var tn=TENOTSU_T[CUR.me.stem]||[]; if(tn.indexOf(dayBranch)>=0)m.push('🍀');              // 天乙貴人（助けがくる）
+  if(EKIBA_T[CUR.me.branch]===dayBranch)m.push('🐴');                                        // 駅馬（動き・変化）
+  return m;}
+
+/* 十干10タイプの基本性格（出典の意味に忠実、表現は独自） */
+const NISSHIN={
+ 甲:{yomi:"きのえ",img:"芯が強く、面倒見のいいリーダー肌",body:"信念と向上心が強く、責任感のあるしっかり者。面倒見がよく、人を引っ張る力があります。まっすぐな分、ときに頑固になったり、自分のこだわりを譲れない一面も。一度決めた道は曲げない、芯の強い人です。"},
+ 乙:{yomi:"きのと",img:"やわらかく、芯のある協調タイプ",body:"柔らかな適応力と粘り強さを持つ人。どんな環境にもなじみ、周りと協調しながら物事を進めるのが得意です。我慢強い反面、ときに無理を抱え込んだり、人に頼りすぎてしまうことも。柔らかく見えて、芯はしっかり通っています。"},
+ 丙:{yomi:"ひのえ",img:"明るく情熱的なムードメーカー",body:"明るくおおらかで、裏表のないさっぱりした性格。自信を持って前向きに行動し、その場を明るくする存在です。その勢いが、自分では気づかないうちに強引に映ってしまうことも。エネルギッシュで、人を惹きつける人です。"},
+ 丁:{yomi:"ひのと",img:"繊細で思いやり深い人",body:"穏やかで、鋭い洞察力を持つ人。身近な人をそっと支える、献身的で謙虚なタイプです。普段は控えめな分、ふとした瞬間に感情が高ぶり、激しい一面が出ることも。心の機微を察する、繊細な感性の持ち主です。"},
+ 戊:{yomi:"つちのえ",img:"どっしり安定、包容力のある人",body:"どっしりと落ち着いた、飾り気のない真面目な人。少々のことでは動じず、自分のスタイルを貫く芯の強さがあります。穏やかに見えて、内には熱いものを秘めているタイプ。その落ち着きが、周りに安心感を与えます。"},
+ 己:{yomi:"つちのと",img:"誠実で世話好き、人を育てる人",body:"面倒見がよく、人の成長を支えるのが得意な世話好きタイプ。学ぶ意欲も高く、知識やスキルをぐんぐん吸収する多才さもあります。興味が広い分、ひとつに絞って続けるのが少し苦手で、迷いやすい一面も。柔軟で、まわりに安心感を与える人です。"},
+ 庚:{yomi:"かのえ",img:"決断力があり、いざ頼れる人",body:"正直でまっすぐ、潔い決断力を持つ人。現状維持より、前へ前へと変化を起こしていく行動派です。考えるより先に体が動く分、ときにせっかちに見えることも。内に芯の通った、強さを持つ人です。"},
+ 辛:{yomi:"かのと",img:"美意識が高い、こだわり派",body:"繊細な感受性と、自分なりの美意識を持つ人。洗練された、品のある振る舞いが自然とできます。好き嫌いがはっきりしていて、こだわりが強い一面も。努力を積み重ねた分だけ、実力を発揮する人です。"},
+ 壬:{yomi:"みずのえ",img:"自由で発想豊かなアイデア派",body:"視野が広く、おおらかな人。状況に合わせてしなやかに対応でき、何が起きても動じません。才能豊かな反面、気持ちが大きく動くと、勢いが出すぎることも。スケールが大きく、発想の自由な人です。"},
+ 癸:{yomi:"みずのと",img:"知的で献身的、そっと支える人",body:"周りに合わせる順応性と、粘り強い努力家の一面を持つ人。好奇心旺盛で、いろいろなことに興味を広げます。繊細な感性を持つ分、細かいことにこだわりすぎてしまうことも。静かに、じっくり信頼を深めていく人です。"},
+};
+
+/* ===== 日柱の読み・十二運 ===== */
+const BRANCH_YOMI={子:"ね",丑:"うし",寅:"とら",卯:"う",辰:"たつ",巳:"み",午:"うま",未:"ひつじ",申:"さる",酉:"とり",戌:"いぬ",亥:"い"};
+const JUNI_BR=["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+const JUNI_ST=["長生","沐浴","冠帯","臨官","帝旺","衰","病","死","墓","絶","胎","養"];
+const JUNI_START={甲:"亥",乙:"午",丙:"寅",丁:"酉",戊:"寅",己:"酉",庚:"巳",辛:"子",壬:"申",癸:"卯"};
+const JUNI_YANG={甲:1,丙:1,戊:1,庚:1,壬:1};
+function juniOf(stem,branch){var start=JUNI_BR.indexOf(JUNI_START[stem]||"子"),dir=JUNI_YANG[stem]?1:-1,bi=JUNI_BR.indexOf(branch);if(start<0||bi<0)return "長生";return JUNI_ST[(((bi-start)*dir)%12+12)%12];}
+const JUNI_TRAIT={
+ 長生:{yomi:"ちょうせい",body:"生まれたての清らかなエネルギーを持つ人。素直で温厚、まわりから自然と好かれ、目上にも引き立てられやすいタイプです。派手さより、まっすぐ着実に伸びていく発展運の持ち主。人に恵まれ、じっくり育っていく“気”です。"},
+ 沐浴:{yomi:"もくよく",body:"感受性が豊かで、多感なロマンチスト。変化や刺激を好み、人を惹きつける独特の魅力があります。気持ちの浮き沈みもありますが、それすら味方につけて。感性の鋭さを活かせる場で、いちばん輝く“気”の持ち主です。"},
+ 冠帯:{yomi:"かんたい",body:"自立心とプライドが高く、負けず嫌いな頑張り屋。人前でしっかり振る舞え、見栄えやおしゃれにもこだわります。周りの評価を力に変えて、ぐんぐん成長していくタイプ。認められる場でこそ、本領を発揮します。"},
+ 臨官:{yomi:"りんかん",body:"堅実でまじめ、責任感の強い自立派。人に頼りすぎず、自分の力で道を切り開いていきます。派手さより信頼で評価される、地に足のついた安定感が魅力。コツコツ積んだ実績が、そのまま力になる“気”です。"},
+ 帝旺:{yomi:"ていおう",body:"十二運でもっともエネルギーが強い、王者の運。行動力とカリスマ性があり、人を率いる力があります。我の強さが出ることもありますが、それを認め合える環境でこそ最強に。強い“気”を、堂々と発揮していけるタイプです。"},
+ 衰:{yomi:"すい",body:"落ち着いていて控えめ、穏やかな安定型。派手さよりも堅実さで、聞き上手で、まわりに安心感を与えます。経験を積むほど深い味わいが出る人。じっくり熟成していく、しなやかで芯のある“気”の持ち主です。"},
+ 病:{yomi:"びょう",body:"繊細で空想力ゆたか、優しく共感力の高い人。人の気持ちの機微に敏感で、そっと寄り添うのが得意です。感受性が強いぶん、想像や表現、人をケアする世界で輝くタイプ。やわらかな心が、いちばんの魅力です。"},
+ 死:{yomi:"し",body:"一途で集中力があり、ひとつのことを深く極めるタイプ。研究熱心でまじめ、決めたことをコツコツ最後まで貫きます。派手ではなくても、その芯の強さと誠実さが厚い信頼を生む人。静かに、深く極めていく“気”です。"},
+ 墓:{yomi:"ぼ",body:"探究心が強く、コツコツ積み重ねるのが得意な人。物も縁も大切に“貯めて”いく、堅実で芯のあるタイプです。地味に見えても、時間をかけるほど確かな実りを得ていく。年月を味方にできる、奥深い“気”の持ち主です。"},
+ 絶:{yomi:"ぜつ",body:"自由な発想と独特の感性を持つ、マイペースな人。ひらめきや直感が鋭く、型にはまりません。飽きっぽく見える一面も、裏を返せば新しいものを生み出す原動力。その自由さこそが、いちばんの魅力です。"},
+ 胎:{yomi:"たい",body:"好奇心旺盛で、可能性に満ちたおっとりタイプ。まだ形になる前のまっさらな“気”で、これから何にでも育っていけます。マイペースに、自分の“好き”を伸ばしていくほど開花する人。伸びしろの大きさが、最大の魅力です。"},
+ 養:{yomi:"よう",body:"甘え上手で、人に恵まれ愛される、おっとりタイプ。まわりに支えられ、のびのびと育っていく“気”の持ち主です。素直に頼り、感謝をきちんと返せるほど、良縁がどんどん巡ってくる人。愛されることが、そのまま力になります。"}
+};
+const $=id=>document.getElementById(id);
+
+/* ===== 会員データ（プロトタイプ：本番はサーバーから取得） ===== */
+/* デモ等で記憶した情報を引き継ぐ（なければゲスト表示）。本番はログイン会員データを使用 */
+function loadSelf(){try{var s=localStorage.getItem("enbiyori_self_birth");return s?JSON.parse(s):null;}catch(e){return null;}}
+var _self=loadSelf();
+var MEMBER=_self&&_self.y?{
+  nick:(_self.nick&&_self.nick.trim())||"ゲスト",
+  mail:"（登録すると、ここにメールアドレスが表示されます）",
+  birth:{y:_self.y,m:_self.m,d:_self.d,h:_self.h,mi:_self.mi,tu:_self.tu},
+  sex:_self.sex||"female",
+  rel:_self.rel||"crush",
+  interest:"（登録時に選んだ関心が表示されます）",
+  plan:"premium"
+}:{
+  nick:"ゲスト",
+  mail:"（登録すると、ここにメールアドレスが表示されます）",
+  birth:{y:1995,m:6,d:15,tu:true},
+  sex:"female",
+  rel:"crush",
+  interest:"（登録時に選んだ関心が表示されます）",
+  plan:"premium"
+};
+var CUR={me:null,partner:null};
+var calY,calM;
+
+/* ===== 星空 ===== */
+(function(){
+  const c=$("stars"),x=c.getContext("2d");let st=[];
+  function rs(){c.width=innerWidth;c.height=innerHeight;st=[];const n=Math.min(90,Math.floor(innerWidth*innerHeight/12000));for(let i=0;i<n;i++)st.push({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.4+.3,a:Math.random(),s:Math.random()*.02+.004});}
+  function dr(){x.clearRect(0,0,c.width,c.height);st.forEach(s=>{s.a+=s.s;const o=.3+Math.abs(Math.sin(s.a))*.6;x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.fillStyle="rgba(255,248,225,"+o+")";x.fill();});requestAnimationFrame(dr);}
+  rs();dr();addEventListener("resize",rs);
+})();
+
+/* ===== カレンダー ===== */
+/* ── メンバーの命式プロフィール（喜神/忌神）を一度だけ計算 ── */
+var MEMBER_PROF;
+function memberProfile(){
+  if(MEMBER_PROF!==undefined)return MEMBER_PROF;
+  var b=MEMBER.birth||{}, tu=(b.tu===true)||(b.h==null);
+  MEMBER_PROF=(typeof window.PersonBazi==='function')?window.PersonBazi(b.y,b.m,b.d,tu?null:b.h,tu?null:b.mi,tu,MEMBER.sex||'female'):null;
+  return MEMBER_PROF;
+}
+/* ── その日の干支の五行 × 本人の命式（喜神/忌神）→ 追い風/整える/自然体。メール配信と同一ルール ── */
+function dayGogyo(t){
+  var prof=memberProfile(); if(!prof||!prof.ok)return null;
+  var dayElem=STEM_GOGYO[t.stem], E=['木','火','土','金','水'];
+  var favSet=E.filter(function(e){return prof.fav[e]==='喜';});
+  var imiSet=E.filter(function(e){return prof.fav[e]==='忌';});
+  var koku={木:'土',火:'金',土:'水',金:'木',水:'火'}, shg={木:'火',火:'土',土:'金',金:'水',水:'木'};
+  var ctrlBy=function(e){for(var k in koku)if(koku[k]===e)return k;return null;};
+  if(favSet.indexOf(dayElem)>=0)return {kind:'kishin',dayElem:dayElem,fe:dayElem};
+  if(imiSet.indexOf(dayElem)>=0){var c=ctrlBy(dayElem),dd=shg[dayElem];var fe=favSet.indexOf(c)>=0?c:(favSet.indexOf(dd)>=0?dd:(favSet[0]||dayElem));return {kind:'osae',dayElem:dayElem,fe:fe};}
+  return {kind:'neutral',dayElem:dayElem,fe:dayElem};
+}
+function dayMarks(d){
+  const t=pillar(d.getFullYear(),d.getMonth()+1,d.getDate());const m=[];
+  const js=juushin(CUR.me.stem,t.stem);
+  const _en=enToday(t,CUR.partner);if(_en.lv===3)m.push('🌈');else if(_en.lv===2)m.push('🌸');
+  if(t.branch===TOUKA[CUR.me.branch])m.push('🌷');
+  // 分野マークはその日の十神に応じて必ず表示する（案A）。命式で忌神の分野でも隠さず、
+  // 「その分野の“気”が動く日」として出し、忌神の日は詳細文と総合ランク(△等)で正直に補足する。
+  if(js==='食神'||js==='傷官')m.push('🩷');
+  if(SOCIAL_GOOD.includes(js))m.push('🌐');
+  if(MONEY_GOOD.includes(js))m.push('💰');
+  if(WORK_GOOD.includes(js))m.push('💼');
+  if(['偏印','印綬'].includes(js))m.push('📚');
+  if(CLASH.includes(branchRel(t.branch,CUR.me.branch)))m.push('⚠️');
+  shinsatsuMarks(t.branch).forEach(function(x){m.push(x);}); // 空亡🌫️・貴人🍀・駅馬🐴
+  /* ③ 年柱・月柱との響き（冲＝転機／支合・三合＝まとまり）。検証済みbazi.jsの年月柱を再利用。グレードには反映せずマーク情報のみ */
+  var _mp=memberProfile();
+  if(_mp&&_mp.ok&&_mp.pillars){var _reso=false;[0,1].forEach(function(pi){var _pp=_mp.pillars[pi];if(!_pp)return;var pb=(typeof _pp.branch==='string'&&_pp.branch)?_pp.branch:((_pp.ganzhi||'').slice(-1)||'');if(BRANCHES.indexOf(pb)<0)return;var r=branchRel(t.branch,pb);if(r==='沖')_reso=true;});if(_reso)m.push('🌀');}
+  const dg=dayGogyo(t);
+  return {t,m,dg,d};
+}
+/* 流年・流月の補正（メール＝daily-engine.ymAdjust と同一計算）。エンジン未読込なら0。
+   中庸（喜忌なし）の人は日主との生剋で判定されるため、日主五行も渡す */
+function _ymAdj(d){
+  try{
+    var KD=window.KDaily; if(!KD||!KD.ymAdjust||!d)return 0;
+    if(!CUR.me.__fi){
+      var fav=[],imi=[];
+      var prof=memberProfile();
+      if(prof&&prof.ok){
+        var E5=['木','火','土','金','水'];
+        fav=E5.filter(function(e){return prof.fav[e]==='喜';});
+        imi=E5.filter(function(e){return prof.fav[e]==='忌';});
+      }
+      CUR.me.__fi={fav:fav,imi:imi};
+    }
+    return KD.ymAdjust(d.getFullYear(),d.getMonth()+1,d.getDate(),CUR.me.__fi.fav,CUR.me.__fi.imi,STEM_GOGYO[CUR.me.stem]);
+  }catch(e){return 0;}
+}
+/* ── 今日の運勢ランク（💮/◎/〇/△）──
+   相対評価：本人の60干支スコア分布から閾値を決め、誰もが「自分の中の良い日／静かな日」を持つ。
+   これにより ①中和型でも山谷が出る ②◎が出過ぎない ③喜が印比の人も報われる、を同時に実現し、
+   かつ山谷の“位置と中身”は命式ごとに異なる（皆と同じカレンダーにならない）。 */
+function _dayRaw(t){
+  var js=juushin(CUR.me.stem,t.stem);
+  var BASE={'正官':2,'正財':1.8,'偏財':1.6,'食神':1.4,'印綬':1.0,'比肩':0.6,'偏印':0.2,'傷官':-0.8,'劫財':-1.0,'偏官':-2.0};
+  var s=(BASE[js]!==undefined?BASE[js]:0);
+  var dg=dayGogyo(t);                                   // 喜神=追い風 / 忌神=整える
+  if(dg){ if(dg.kind==='kishin')s+=1.2; else if(dg.kind==='osae')s-=1.2; }
+  if(CLASH.includes(branchRel(t.branch,CUR.me.branch)))s-=2.0;   // 沖＝ゆらぎ
+  return s;
+}
+function _gradeTh(){
+  if(CUR.me.__th)return CUR.me.__th;
+  var arr=[];
+  for(var i=0;i<60;i++){var d=new Date(2020,0,1+i);arr.push(_dayRaw(pillar(d.getFullYear(),d.getMonth()+1,d.getDate())));}
+  arr.sort(function(a,b){return a-b;});
+  var q=function(p){return arr[Math.min(59,Math.floor(p*60))];};
+  return (CUR.me.__th={maru:q(0.72),tri:q(0.15)});   // ◎=自分の上位約28% / △=下位約15%
+}
+function dayGrade(r){
+  var th=_gradeTh(), s=_dayRaw(r.t)+_ymAdj(r.d);   // 年月補正（閾値は従来どおり日の分布のみ）
+  var touka=(r.t.branch===TOUKA[CUR.me.branch]);
+  var love=(touka||r.m.includes('🌸'));                                       // モテ運/恋チャンス＝恋の合図日
+  var sok=CLASH.includes(branchRel(r.t.branch,CUR.me.branch));                // 沖＝ゆらぎ
+  // ★メール(daily-engine.dailyGrade)と完全に同じ判定順（案C：💮レア＝全員一律／恋の底上げは正直版）。
+  if(r.m.includes('🌈'))return {sym:'💮',label:'特別な日',cls:'g-top'};        // 運命の人の日
+  if(touka && !sok && s>=th.maru)return {sym:'💮',label:'特別な日',cls:'g-top'}; // 桃花×高得点×非沖のみ💮
+  if(s>=th.maru)return {sym:'◎',label:'調子のいい日',cls:'g-good'};                    // 上位28%は◎
+  if(love && !sok && s>th.tri)return {sym:'◎',label:'調子のいい日',cls:'g-good'};      // 恋の合図(非沖・中位以上)は底上げ◎
+  if(s<=th.tri)return {sym:'△',label:'充電日',cls:'g-care'};                    // 下位15%は正直に△
+  return {sym:'〇',label:'普通の日',cls:'g-normal'};
+}
+function dayColor(t){const e=BRANCH_GOGYO[t.branch];return {e:e,color:ELEM[e].color};}
+function memoKey(d){return 'enbiyori_memo_'+d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+function getMemo(d){try{return localStorage.getItem(memoKey(d))||'';}catch(e){return '';}}
+function renderCalendar(){
+  if(!CUR.me)return;
+  const startDow=new Date(calY,calM-1,1).getDay(), days=new Date(calY,calM,0).getDate();
+  /* 「今日」はJST基準で判定（メール配信＝JSTと揃える。JST圏外の閲覧者でもハイライトが1日ずれない） */
+  const _n=new Date(), _jst=new Date(_n.getTime()+(9*60+_n.getTimezoneOffset())*60000);
+  const todY=_jst.getFullYear(), todM=_jst.getMonth()+1, todD=_jst.getDate();
+  $("calTitle").textContent=calY+'年 '+calM+'月';
+  const dow=['日','月','火','水','木','金','土'];let h='';
+  dow.forEach(w=>h+='<div class="cal-dow">'+w+'</div>');
+  for(let i=0;i<startDow;i++)h+='<div class="cal-cell empty"></div>';
+  for(let dn=1;dn<=days;dn++){
+    const d=new Date(calY,calM-1,dn);const dm=dayMarks(d);const mk=(dm.m.includes('🌈')?['🌈']:(dm.m.includes('🌷')?['🌷']:dm.m));const hasMemo=!!getMemo(d);
+    const isTod=(calY===todY&&calM===todM&&dn===todD);
+    const gr=dayGrade(dm);
+    h+='<div class="cal-cell'+(isTod?' today':'')+'" data-d="'+dn+'"><div class="cal-d">'+dn+(hasMemo?'<span class="cal-memo-dot"></span>':'')+'</div><div class="cal-grade '+gr.cls+'">'+gr.sym+'</div><div class="cal-marks">'+mk.join('')+'</div></div>';
+  }
+  $("calGrid").innerHTML=h;
+  $("calGrid").querySelectorAll('.cal-cell[data-d]').forEach(c=>c.onclick=()=>showDay(new Date(calY,calM-1,+c.dataset.d)));
+  if(!renderMarkGuide._done){try{renderMarkGuide();renderMarkGuide._done=true;}catch(e){}}
+}
+/* ── マークの見かた（初心者向け＋タップで四柱推命の専門解説＋あなたの命式の実例） ── */
+var _CHONG_M={子:'午',午:'子',丑:'未',未:'丑',寅:'申',申:'寅',卯:'酉',酉:'卯',辰:'戌',戌:'辰',巳:'亥',亥:'巳'};
+var _MG_TONE={
+  good:{t:'吉日',c:'good'},        // 動くほど良い日
+  calm:{t:'自然体',c:'calm'},      // 普通・様子見
+  rest:{t:'整える日',c:'rest'},    // 攻めより充電（凶ではない）
+  turn:{t:'転機',c:'turn'},        // 大きく動く（吉凶より“変化”）
+  care:{t:'注意',c:'care'}         // 決断・言い合いは控えめに
+};
+function _mgCard(emoji,name,plain,tech,ex,tone){
+  var tn=_MG_TONE[tone]||_MG_TONE.calm;
+  var badge='<span class="mg-badge mg-'+tn.c+'">'+tn.t+'</span>';
+  return '<details class="mg-card"><summary><span class="mg-emoji">'+emoji+'</span><span class="mg-name">'+name+'</span>'+badge+'<span class="mg-plain">'+plain+'</span></summary>'
+    +'<div class="mg-detail"><div class="mg-tech">'+tech+'</div>'+(ex?'<div class="mg-ex">'+ex+'</div>':'')+'</div></details>';
+}
+function renderMarkGuide(){
+  var host=$("markGuideBody"); if(!host||!CUR.me)return;
+  var me=CUR.me.stem+CUR.me.branch;
+  var prof=memberProfile();
+  var yG=(prof&&prof.ok&&prof.pillars&&prof.pillars[0])?(prof.pillars[0].ganzhi||''):'';
+  var mG=(prof&&prof.ok&&prof.pillars&&prof.pillars[1])?(prof.pillars[1].ganzhi||''):'';
+  var kb=KUBOU_T[Math.floor(_meIdx()/10)]||[];
+  var tn=TENOTSU_T[CUR.me.stem]||[];
+  var ek=EKIBA_T[CUR.me.branch]||'';
+  var to=TOUKA[CUR.me.branch]||'';
+  var dCho=_CHONG_M[CUR.me.branch]||'';
+  var yb=yG?yG.slice(-1):'', mb=mG?mG.slice(-1):'';
+  var ymCho=[]; if(yb&&_CHONG_M[yb])ymCho.push(_CHONG_M[yb]); if(mb&&_CHONG_M[mb]&&ymCho.indexOf(_CHONG_M[mb])<0)ymCho.push(_CHONG_M[mb]);
+  var mate=(typeof KANGOU!=='undefined'&&typeof SHIGOU!=='undefined')?((KANGOU[CUR.me.stem]||'')+(SHIGOU[CUR.me.branch]||'')):'';
+  var kiEls=[]; if(prof&&prof.ok&&prof.fav){['木','火','土','金','水'].forEach(function(e){if(prof.fav[e]==='喜')kiEls.push(e);});}
+  var timeKnown=!((MEMBER.birth&&MEMBER.birth.tu===true)||(MEMBER.birth&&MEMBER.birth.h==null));
+  var kiTxt = kiEls.length ? ('あなたの<b>喜神（味方の五行）</b>は【'+kiEls.join('・')+'】'+(timeKnown?'':'（<b>生まれた時間</b>を入れるとより正確になります）')) : '五行のバランスが良い「中和」タイプです';
+  var _SYM='<span class="mg-s-top">💮</span><span class="mg-s-good">◎</span><span class="mg-s-norm">〇</span><span class="mg-s-care">△</span>';
+  var h='';
+  // ── よく見るマーク早わかり（全部読まなくても要点がつかめるミニ目次） ──
+  h+='<div class="mg-toc"><div class="mg-toc-h">🔰 よく見るマーク、早わかり</div>'
+    +'<div class="mg-toc-r"><span class="mg-toc-e mg-s-good">◎</span><span><b>調子のいい日</b>／前向きに動くと good</span></div>'
+    +'<div class="mg-toc-r"><span class="mg-toc-e">🌸</span><span><b>恋チャンス</b>／気になる人へ連絡・お誘いに◎</span></div>'
+    +'<div class="mg-toc-r"><span class="mg-toc-e">💼</span><span><b>仕事の日</b>／プレゼン・商談・勝負に</span></div>'
+    +'<div class="mg-toc-r"><span class="mg-toc-e">🍀</span><span><b>貴人の日</b>／人の助けに恵まれる。頼ると吉</span></div>'
+    +'<div class="mg-toc-r"><span class="mg-toc-e">🌫️</span><span><b>整える日</b>／ひと休み・片づけ・充電に向く</span></div>'
+    +'<div class="mg-toc-n">↓ もっと詳しく知りたいマークは、下の一覧をタップ</div></div>';
+  h+='<div class="mg-intro">'
+    +'<div class="mg-intro-h">🔎 まず、ここだけ覚えればOK</div>'
+    +'<p>大きな記号 '+_SYM+' ＝その日の<b>総合天気</b>（良い／普通／充電）。<br>下の絵文字 ＝その日に<b>動く分野</b>（恋・お金・仕事など）です。</p>'
+    +'<div class="mg-q"><span class="ql">Q. 絵文字がたくさん重なる日は、ぜんぶ良い日？</span>'
+    +'いいえ。重なり＝<b>色々な運が動く日</b>という意味で、良し悪しは<b>総合記号 '+_SYM+'</b>で見ます。'
+    +'◎や💮の日に良い絵文字が重なれば＝<b>本当に強い日</b>。△の日に絵文字が出たら＝その分野の“気”は動くけれど、<span class="warn">あなたは充電モードなので軽めに</span>。</div>'
+    +'<div class="mg-q"><span class="ql">Q. 良い絵文字と注意の絵文字が、同じ日に重なることは？</span>'
+    +'あります。例えば <b>💰お金が動く＋⚠️ゆらぎ</b> が同じ日＝「<span class="warn">チャンスはあるけど足元が少しゆらぐ日</span>」。'
+    +'総合記号を見て、<b>勢いだけで決めない</b>のが吉。急ぎでなければ一呼吸おくと安心です。</div>'
+    +'<div class="mg-flow"><div class="mg-flow-h">🔄 運気は毎年、動いています</div>'
+    +'<p>このカレンダーは、生まれ持った<b>命式</b>（変わらない性質）に加えて、<b class="fl-y">その年ごとの運の流れ（流年）</b>も毎日に反映しています。'
+    +'だから運気は一生同じではなく、<b class="fl-y">年が変われば追い風・向かい風も入れ替わる</b>もの。'
+    +'今年「整える日」が多い人も、来年は「調子のいい日」が増える——運気はとどまらず、<b class="fl-y">ダイナミックに動いていきます</b>。今の巡りを味方に、軽やかに過ごしましょう。</p></div>'
+    +'</div>';
+  h+='<div class="mg-group">◆ 運気ランク（あなた自身のリズム）</div>';
+  h+=_mgCard('💮','特別な日','特別に恵まれた、めったにない吉日',
+    '四柱推命で最上級とされる縁の気が最も高まり、「恋の合図（桃花）」や「運命の相手の巡り」が重なった、あなたにとって特別な日です。', '','good');
+  h+=_mgCard('◎','調子のいい日','あなたの調子が上位＝物事が進みやすい日',
+    'その日の<b>十神（通変星）</b>が良く、その日の五行が<b>あなたの喜神（味方の五行）</b>に合う日。あなた自身のリズムの中で、調子が上向く日です。', kiTxt,'good');
+  h+=_mgCard('〇','普通の日','いつも通り、自然体でOKの日','上位でも下位でもない中間の日。無理に動かなくても、自然体で過ごすのが吉。', '','calm');
+  h+=_mgCard('△','充電日','少し力を蓄えたい日','運が悪いのではなく「攻めより整えが向く日」。休息・見直し・仕込みに向く、力を蓄える日です。', '','rest');
+  h+='<div class="mg-group">◆ 恋・縁</div>';
+  h+=_mgCard('🌈','運命の人の日','最上級とされる、特別な縁の吉日',
+    '生まれの<b>十干・十二支が最高にかみ合う（干合・支合）</b>相手の干支が巡る、四柱推命で最上級とされる縁<b>「天地徳合」</b>の日。めったにない特別な日です。', mate?('あなたの<b>運命の相手</b>の干支は【'+mate+'】。この干支の日が🌈です'):'','good');
+  h+=_mgCard('🌷','出会い・モテ運の日','魅力が全開・出会いも動く吉日',
+    '<b>桃花（とうか）</b>＝あなたの日柱の三合局が持つ「華やかさ・魅力」の十二支が巡る日。昔から出会い運・恋愛運の象徴です。', to?('あなたの<b>桃花</b>は【'+to+'】の日です'):'','good');
+  h+=_mgCard('🌸','恋チャンスUP','恋が動きやすい吉日',
+    '運命の相手と<b>干合・支合</b>で惹かれ合う気が流れる日。恋の進展や出会いのきっかけが生まれやすい日です。', '','good');
+  h+=_mgCard('🩷','魅力・表現の日','あなたの表現力・華やかさが出る吉日',
+    'その日の十神が<b>食神・傷官</b>（あなたの日主が生み出す「表現」の星）になる日。発信・人前・おしゃれが映えます。', '','good');
+  h+='<div class="mg-group">◆ 毎日の分野（その日の十神＝通変星）</div>';
+  h+=_mgCard('🌐','対人の気が動く日','仲間・友達との縁が動く、動くと吉',
+    'その日の十神が<b>比肩・劫財</b>（仲間・対等の星）になる日。協力やチームワークが動きやすい。', '','good');
+  h+=_mgCard('💰','金運の気が動く日','お金・チャンスが巡りやすい吉日',
+    'その日の十神が<b>偏財・正財</b>（お金・実りの星）になる日。商談・買い物・投資に縁。', '','good');
+  h+=_mgCard('💼','仕事の気が動く日','仕事・責任まわりが動く、勝負に良い日',
+    'その日の十神が<b>正官・偏官</b>（責任・評価の星）になる日。ただし全体ランク（💮◎〇△）もあわせて見て、△の日は無理せず。', '','good');
+  h+=_mgCard('📚','学びの日','勉強・情報収集が捗る吉日',
+    'その日の十神が<b>偏印・印綬</b>（学び・サポートの星）になる日。インプット・準備に向く。', '','good');
+  h+='<div class="mg-group">◆ 吉の巡り（神殺）</div>';
+  h+=_mgCard('🍀','貴人の日','人の助け・チャンスに恵まれる吉日',
+    '<b>天乙貴人（てんおつきじん）</b>＝あなたの日干が最も助けられる十二支が巡る日。四柱推命で最良の吉星のひとつ。', tn.length?('あなたの<b>貴人</b>は【'+tn.join('・')+'】の日です'):'','good');
+  h+=_mgCard('🐴','動き・変化の日','移動・行動・変化に縁があり吉。動くほど開ける',
+    '<b>駅馬（えきば）</b>＝あなたの日支の三合局が示す「動き」の十二支が巡る日。移動・転換・行動が吉。じっとしているより、動いたほうが流れが開ける日です。', ek?('あなたの<b>駅馬</b>は【'+ek+'】の日です'):'','good');
+  h+='<div class="mg-group">◆ 注意・転機</div>';
+  h+=_mgCard('⚠️','ゆらぎ注意日','リズムが少し乱れやすい日。凶ではなく“気分転換”にも向く',
+    '<b>冲（ちゅう）</b>＝あなたの<b>日柱</b>（あなた自身の柱）と真向かいでぶつかる十二支が巡る日。<b>冲＝「動き・刺激」のエネルギー</b>で、悪い日という意味ではありません。'
+    +'<br><b>◎良い使い方：</b>気分転換・模様替え・環境を変える・立ち止まって見直すのに向く日。<br><b>△控えたいこと：</b>大事な決断・契約・言い合いは、勢いだけで進めず別の日か一呼吸おいて。', me?('あなたの日柱は【'+me+'】。その冲は【'+dCho+'】。この十二支の日が⚠️です'):'','care');
+  h+=_mgCard('🌀','大きく動く日','いわば“人生の模様替え”の日。変えたい人には追い風',
+    'その日の十二支が、あなたの<b>年柱（ルーツ・社会）や月柱（仕事・家庭）</b>と<b>冲</b>になる日。日柱より大きな単位＝環境や状況が動きやすい転機です。<b>冲は「良い・悪い」より「大きく動く」エネルギー</b>。'
+    +'<br><b>◎追い風になる人：</b>変えたい・動きたいことがある人。<span style="color:#c07d28">転職・引っ越し・方向転換・断捨離・新しい挑戦の“始め時”</span>にgood。<br><b>△慎重にしたい人：</b>今の状態を守りたい大事なこと（大きな契約・仲直り・重い判断）は、勢いだけで決めず流れをよく見て。'
+    +'<br><b>ひとことで：</b>「<b>攻めの変化はOK、守りたいものは慎重に</b>」。', (yG||mG)?('あなたの年柱【'+(yG||'—')+'】月柱【'+(mG||'—')+'】。その冲＝【'+(ymCho.join('・')||'—')+'】の日が🌀です'):'','turn');
+  h+=_mgCard('🌫️','整える日（四柱推命の「空亡」）','なぜか空回りしやすい。凶ではなく“整える”日',
+    '<b>空亡（くうぼう）＝旬空（じゅんくう）・天中殺</b>。あなたの日柱の「旬」に含まれない十二支が巡ると訪れます。'
+    +'<br>ここで出しているのは<b>“その日だけ”の軽い空亡（日の空亡）</b>。よく耳にする<b>「天中殺」は“年”単位（約2年）</b>で規模が大きいものです。'
+    +'<b>同じ仕組みが 日・月・年 それぞれに巡り</b>、大きい単位ほど影響も長く続きます（→下の「あなたの空亡（日・月・年）」参照）。'
+    +'気が抜けやすいので、勝負より片づけ・充電・仕込みに向く日。'
+    +'<br><b style="color:#2b8a5c">◎「合空（ごうくう）」で解ける：</b>空亡の支が<b>あなたの日支と支合・三合で結ばれる日</b>は、古典の「合空（ごうくう）・填実（てんじつ）」で空亡が解け、影響がほぼ消えます。とくに<b>🌈運命の人の日</b>は必ず合空なので、安心して前向きに動いてOKです。', kb.length?('あなたの<b>空亡</b>は【'+kb.join('・')+'】の十二支。この支が巡る日が🌫️です'):'','rest');
+  // ── あなたの空亡（日・月・年）＝天中殺の周期。日だけでなく月・年の空亡も提示 ──
+  try{
+    var _pair=KUBOU_T[Math.floor(_meIdx()/10)]||[];
+    var _n2=new Date(),_j2=new Date(_n2.getTime()+(9*60+_n2.getTimezoneOffset())*60000);
+    var _tY=_j2.getFullYear(),_tM=_j2.getMonth()+1,_tD=_j2.getDate();
+    var _ymp=null; try{ _ymp=(window.KDaily&&window.KDaily.ymPillars)?window.KDaily.ymPillars(_tY,_tM,_tD):null; }catch(e){}
+    var _curYb=_ymp?_ymp.yb:'', _curMb=_ymp?_ymp.mb:'';
+    var _yearK=(_pair.indexOf(_curYb)>=0), _monthK=(_pair.indexOf(_curMb)>=0);
+    // 天中殺の年（あなたの空亡支が年に巡る＝次の該当2年）
+    var _nextYearFor=function(br){var idx=BRANCHES.indexOf(br);for(var yy=_tY;yy<_tY+13;yy++){if((((yy-4)%12)+12)%12===idx)return yy;}return null;};
+    var _tcy=_pair.map(_nextYearFor).filter(function(x){return x!=null;}).sort(function(a,b){return a-b;});
+    var _yn=['子年','丑年','寅年','卯年','辰年','巳年','午年','未年','申年','酉年','戌年','亥年'];
+    var _brYr=_pair.map(function(b){return _yn[BRANCHES.indexOf(b)];}).join('・');
+    var _st=function(on){return on?'<span style="color:#c26a2a;font-weight:800">◉ いま その時期です</span>':'<span style="color:#3c8a5a;font-weight:700">— 今は該当しません</span>';};
+    h+='<div class="kubou-panel">'
+      +'<div class="kp-h">🌫️ あなたの空亡（日・月・年）</div>'
+      +'<p class="kp-lead">あなたの空亡は <b>【'+(_pair.join('・')||'—')+'】</b>。この十二支が巡る時期は、勝負より<b>整える・充電・仕込み</b>に向きます。<br>空亡は<b>日・月・年の3つのスケール</b>で巡り、大きい単位ほど影響が長く続きます。</p>'
+      +'<div class="kp-row"><span class="kp-k">年の空亡（＝天中殺）</span><span class="kp-v">'+_st(_yearK)+'<br><span class="kp-s">該当年：<b>'+_brYr+'</b>（直近は '+(_tcy.length?(_tcy[0]+(_tcy[1]&&_tcy[1]!==_tcy[0]?'〜'+_tcy[1]:'')+'年'):'—')+'）。約2年続きます</span></span></div>'
+      +'<div class="kp-row"><span class="kp-k">月の空亡</span><span class="kp-v">'+_st(_monthK)+'<br><span class="kp-s">'+(_monthK?'今月はいつもより“整える”意識で。':'その月の十二支が【'+(_pair.join('・')||'—')+'】の月に巡ります')+'</span></span></div>'
+      +'<div class="kp-row"><span class="kp-k">日の空亡</span><span class="kp-v"><span style="color:#3f78a8;font-weight:700">カレンダーの 🌫️ の日</span><br><span class="kp-s">12日に約2日巡る、いちばん軽い空亡です</span></span></div>'
+      +'<div class="kp-note">※ 別名：<b>旬空（じゅんくう）／天中殺</b>。年・月は<b>立春・節入り</b>を基準に判定しています（暦どおりの本格計算）。「大殺界」は別系統の占術のため用いていません。</div>'
+      +'</div>';
+  }catch(_e){}
+  h+='<div class="mg-note">※ 柱・空亡・貴人・駅馬・桃花・冲は、あなたの生年月日から正確に導いています。喜神（味方の五行）は命式のバランスから判定するため、生まれた時間を入れるとより正確になります。</div>';
+  host.innerHTML=h;
+}
+/* 🔎 今日のまとめ：あなたの調子（💮◎〇△）と、その日の“縁”マークを1文でつなぐ。
+   例）△(充電)＋🌐対人 → 「自分は充電モードだが人との縁は活きる＝会って“もらう”日」と橋渡しし、
+   “休むのに対人◯”という矛盾感をなくす。 */
+function _goukuu(dayBranch){ if(!CUR.me)return false; var r=branchRel(dayBranch,CUR.me.branch); return (r==='支合'||r==='三合'); }
+function daySummaryHTML(gr,m,t){
+  var sym=gr.sym;
+  var love=m.includes('🌷')||m.includes('🌸')||m.includes('🩷')||m.includes('🌈');
+  var social=m.includes('🌐'), work=m.includes('💼'), money=m.includes('💰'), learn=m.includes('📚'), sway=m.includes('⚠️');
+  var kubou=m.includes('🌫️');
+  var goukuu=kubou && t && _goukuu(t.branch);   // 空亡が支合・三合で解ける（合空・填実）
+  var base, bridge='';
+  if(sym==='💮'){ base=(kubou&&!goukuu)?'今日はあなたにとって<b>特別な縁の予感がある日</b>。最高クラスの縁が近づいています。':'今日はあなたにとって<b>特別な一日</b>。ここぞという事に、思いきって動くほど流れに乗れます。'; }
+  else if(sym==='◎'){ base='今日は<b>追い風</b>。やりたいことに前向きに動くと、いい形で返ってきやすい日です。'; }
+  else if(sym==='〇'){ base='今日は<b>ふだん通り</b>の、おだやかな一日。自然体で、いつものペースが心地よく過ごせます。'; }
+  else { base='今日はあなた自身は<b>充電モード</b>。エネルギーは控えめなので、無理に頑張らず、ゆるめのペースが吉。'; }
+  if(sym==='△'){
+    if(love||social){ bridge='ただし<b>人との縁は活きる日</b>。自分から予定を詰め込むより、「誘われたら乗る」「気の合う人と会って元気をもらう」くらいが、いちばん心地よく過ごせます。'; }
+    else if(work){ bridge='仕事は“力むより丁寧に”。新しい勝負より、準備・確認・仕込みに向く日です。'; }
+    else if(money){ bridge='大きな決断や散財は控えめに。コツコツ整えるお金づかいが吉。'; }
+    else if(learn){ bridge='勉強・資格・情報収集に向く日。インプットに時間を使うと、あとで効いてきます。'; }
+    else { bridge='家でも外でも、自分がラクな過ごし方でOK。頑張りすぎないのがいちばんの開運です。'; }
+  } else {
+    var ups=[];
+    if(love)ups.push('恋'); if(social)ups.push('人づきあい'); if(work)ups.push('仕事'); if(money)ups.push('お金'); if(learn)ups.push('学び');
+    if(ups.length) bridge='とくに<b>'+ups.join('・')+'</b>の場面で追い風。気になることには、今日こそ一歩ふみ出してみて。';
+  }
+  if(sway) bridge+=(bridge?' ':'')+'（少しリズムが揺れやすいので、急ぎの決断や言い合いだけ控えめに。）';
+  // 💮◎〇に空亡が重なる日の“結局どっち？”を一文で束ねる（良い気は来ているが、今日は形にするより育てる）
+  if(kubou && sym!=='△'){
+    if(goukuu){ bridge+=(bridge?'<br>':'')+'（今日は<b>良い流れが後押し</b>してくれるので、あまり気にせず、<b>いつも通り前向きに動いてOK</b>な日です。）'; }
+    else{ bridge+=(bridge?'<br>':'')+'ただし今日は、<b>ものごとが“形になりにくい・宙に浮きやすい”日</b>。良い気は来ていますが、<b>今日ガッと決める・踏み込むより、丁寧に育てる・仕込む</b>と、空回りせず次につながります。'; }
+  }
+  return '<div style="margin-top:8px;padding:10px 12px;border-radius:11px;background:rgba(207,109,144,.08);border:1px solid rgba(207,109,144,.26);font-size:12.5px;line-height:1.85"><b style="color:#c14e77">🔎 今日のまとめ</b><br><span style="color:#5a4a50">'+base+(bridge?'<br>'+bridge:'')+'</span></div>';
+}
+function showDay(d){
+  const r=dayMarks(d),t=r.t,m=r.m;
+  const labels={'🌈':'運命の人の日 ── 運命の相手と縁が最高に高まる、めったにない特別な日','🌷':'出会い・モテ運の日 ── 出逢い運・魅力が全開。動くほど縁が広がる日。誘いには前向きに、気になる人には自分から一言を','🌸':'恋チャンスUP ── 恋が動きやすい日。気になる人への連絡や誘いに good','🩷':'魅力・表現の日 ── あなたの表現力・センス・華やかさが動く日。人前・発信・デート・おしゃれが向く日','🌐':'対人の気が動く日 ── 仲間・友達との縁が動く日。協力やチームワークが活きやすい','💰':'金運の気が動く日 ── お金やチャンスが巡りやすい日。商談・買い物・投資に縁あり','💼':'仕事の気が動く日 ── 仕事・責任・評価まわりが動く日。全体の調子（💮◎〇△）もあわせて見て、△の日は無理せず整えるのが吉','⚠️':'ゆらぎ注意日 ── 今日は少しリズムが合いにくい日。運が悪いわけではなく、急ぎの決断や言い合いだけ控えめにすればOK。一呼吸おいて過ごすと安心な一日です。','📚':'学びの日 ── 勉強・資格・情報収集に good。インプットや準備がはかどり、あなたを一段のばす日です','🍀':'貴人の日 ── 人の助け・引き立て・チャンスに恵まれやすい日。困ったら遠慮なく頼ると、良いご縁が動きます','🐴':'動き・変化の日 ── 移動・行動・環境の変化に縁がある日。フットワーク軽く動くと、流れが開けます','🌫️':'整える日 ── 気が抜けやすく、なぜか空回りしやすい日。大きな決断や勝負より、片づけ・充電・仕込みに向く日です','🌀':'大きく動く日 ── いつもより大きな転機・変化が起きやすい日。環境や立場・家庭など、人生の土台が動くような大きな変わり目です','🍃':'追い風の日 ── 今日はあなたに追い風。やりたいことに思い切って動くと good'};
+  const _exNames={'💰':'金運','💼':'仕事運','🌐':'対人運','📚':'学び運','🩷':'魅力','🌸':'恋チャンス'};
+  const _headline=m.includes('🌈')?'🌈':(m.includes('🌷')?'🌷':null);
+  const _extras=m.filter(x=>_exNames[x]);
+  const _bonus=(_headline&&_extras.length)?'<div style="margin-top:8px;padding:8px 11px;border-radius:10px;background:rgba(214,86,126,.09);border:1px solid rgba(214,86,126,.28);font-size:12.5px;font-weight:700;color:#c14e77">✨ しかも今日は '+_extras.map(x=>_exNames[x]).join('・')+' も高まる、二重にうれしい日。</div>':'';
+  const info=_headline?(_headline+' '+labels[_headline]):(m.length?m.map(x=>x+' '+labels[x]).join('<br>'):'おだやかな一日。自分のペースで。');
+  // 命式ベース（メール配信と同一ルール）：その日の五行の巡り→意味→補う五行
+  let goLine='';
+  if(r.dg){
+    if(r.dg.kind==='kishin')goLine='<div style="margin-top:9px;padding:9px 11px;border-radius:10px;background:rgba(74,158,107,.12);border:1px solid rgba(74,158,107,.3);font-size:12.5px;line-height:1.65">🍃 <b style="color:#3c8a5a">追い風の日</b> ── 今日はあなたに追い風が吹く日。やりたいことに、思い切って動くほど流れに乗れます。</div>';
+    else if(r.dg.kind==='osae')goLine='<div style="margin-top:9px;padding:9px 11px;border-radius:10px;background:rgba(79,143,192,.1);border:1px solid rgba(79,143,192,.28);font-size:12.5px;line-height:1.65">🌫️ <b style="color:#3f78a8">整える日</b> ── 今日は少し力が強く出やすい日。無理せず、ゆったり整えると◎。焦らず一歩ずつがうまくいきます。</div>';
+    else goLine='<div style="margin-top:9px;padding:9px 11px;border-radius:10px;background:rgba(196,137,43,.08);border:1px solid rgba(196,137,43,.2);font-size:12.5px;line-height:1.65">🍵 <b style="color:#b0842a">穏やかな日</b> ── 今日はおだやかな流れ。自然体で、いつも通り過ごすのが good。</div>';
+  }
+  const ymd=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';
+  const z=n=>String(n).padStart(2,'0');
+  const gs=d.getFullYear()+z(d.getMonth()+1)+z(d.getDate());
+  const gn=new Date(d.getTime()+86400000),ge=gn.getFullYear()+z(gn.getMonth()+1)+z(gn.getDate());
+  const gurl='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('【私だけの運気予報】'+m.join('')+ymd)+'&dates='+gs+'/'+ge+'&details='+encodeURIComponent(info.replace(/<br>/g,' / '));
+  const memo=getMemo(d).replace(/</g,'&lt;');
+  let extra='';
+  if(m.includes('🌈')||m.includes('🌸')||m.includes('🩷')||m.includes('🌷')){
+    const dc=dayColor(t);
+    // 共通エンジン(daily-engine.js)のリッチな文言バンクを再利用：デート服=五行×季×10種、テーマカラー=五行×16色。日替わりで選ぶ
+    const _KD=window.KDaily;
+    const _seed=jdn(d.getFullYear(),d.getMonth()+1,d.getDate());
+    let _wf=DATEWEAR_F[dc.e], _wm=DATEWEAR_M[dc.e], _cName=dc.color, _cHex=(ELEM[dc.e]&&ELEM[dc.e].hex)||'#e6c477';
+    if(_KD&&_KD.DATEWEAR_F&&_KD.climateSeason){
+      const _sea=_KD.climateSeason(d.getMonth()+1);
+      const _af=_KD.DATEWEAR_F[dc.e]&&_KD.DATEWEAR_F[dc.e][_sea], _am=_KD.DATEWEAR_M[dc.e]&&_KD.DATEWEAR_M[dc.e][_sea];
+      if(_af&&_af.length)_wf=_af[_seed%_af.length];
+      if(_am&&_am.length)_wm=_am[_seed%_am.length];
+      if(_KD.COLORVAR&&_KD.COLORVAR[dc.e]){const _cv=_KD.COLORVAR[dc.e][_seed%_KD.COLORVAR[dc.e].length];_cName=_cv[0];_cHex=_cv[1];}
+    }
+    const _sw='<span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:'+_cHex+';border:1px solid rgba(0,0,0,.12);vertical-align:-1px;margin-right:4px"></span>';
+    // △(充電日)は「あなた自身は充電モード・でも縁は活きる」ので、デート表現を“攻め”から“誘われたら乗る”に切替（ズレ解消）
+    var _charge=dayGrade(r).sym==='△';
+    var _dwHead=_charge?'💄 お誘いがあれば◎ ── この日のゆるっとデート服':'💄 デート日和！この日のおすすめデート服';
+    var _chargeNote=_charge?'<div style="margin-top:8px;font-size:11.5px;color:#3f78a8;background:rgba(79,143,192,.09);border:1px solid rgba(79,143,192,.24);border-radius:9px;padding:7px 10px;line-height:1.75">今日はあなた自身は<b>充電モード</b>。自分から予定を詰め込むより、<b>誘われたら軽やかに乗る</b>くらいが、恋も心地よく運びます。</div>':'';
+    extra='<div class="datewear"><div class="dw-h">'+_dwHead+'</div><div class="dw-row"><span class="dw-k">女性</span><span>'+_wf+'</span></div><div class="dw-row"><span class="dw-k">男性</span><span>'+_wm+'</span></div><div class="dw-note">テーマカラーは'+_sw+'<b style="color:var(--sakura)">'+_cName+'</b>。</div>'+_chargeNote+'</div>';
+  }
+  const gr=dayGrade(r);
+  const gradeHead='<div style="display:flex;align-items:center;gap:8px;margin-top:6px;margin-bottom:2px"><span class="'+gr.cls+'" style="font-size:30px;font-weight:800;line-height:1">'+gr.sym+'</span><span style="font-size:14px;font-weight:800">今日の運勢：'+gr.label+'</span></div>';
+  // ゆらぎ(⚠️)と恋の合図(🌷/🌸/🩷)が重なる日は、はっきり「揺らぎ日だけど恋運はUP」と言葉で伝える
+  const _swayLove=(m.includes('⚠️')&&(m.includes('🌷')||m.includes('🌸')||m.includes('🩷')))
+    ? '<div style="margin-top:8px;padding:9px 12px;border-radius:11px;background:rgba(214,86,126,.09);border:1px solid rgba(214,86,126,.3);font-size:12.5px;line-height:1.75"><b style="color:#c14e77">💗 ゆらぎ日だけど、恋運はUP</b><br><span style="color:#7a5563">今日は少しリズムが揺れやすい日。でも恋の追い風は吹いています。急ぎの決断や言い合いだけ控えめに、気になる人へのひと言はむしろ good。</span></div>'
+    : '';
+  // 🔎 今日のまとめ：ランク(あなたの調子)と分野マーク(縁)を1文でつなぎ、「充電なのに対人◯」等の矛盾感を解消
+  const _summary=daySummaryHTML(gr,m,t);
+  // 忌神の分野の日は、分野マークを出しつつ「あなたには力の要るテーマ」と正直に補足（案A）
+  var _mpf=memberProfile(), _mfav=(_mpf&&_mpf.ok)?_mpf.fav:null;
+  const _dImi=(_mfav && _mfav[STEM_GOGYO[t.stem]]==='忌');
+  const _dPresent=['💼','💰','🩷','🌐','📚'].some(function(x){return m.includes(x);});
+  const _favNote=(_dImi&&_dPresent&&(gr.sym==='〇'||gr.sym==='△'))?'<div style="margin-top:8px;font-size:12px;color:#9c7b46;background:rgba(196,137,43,.08);border:1px solid rgba(196,137,43,.22);border-radius:10px;padding:8px 11px;line-height:1.75">※ 今日はこの分野の“気”が動く日。ただし<b>あなたには少し力の要るテーマ</b>なので、チャンスはあっても勢い任せにせず、<b>整えて臨む</b>と◎。</div>':'';
+  // ── ジャンル別セクション（恋愛は先頭・開いたまま＝今の体験を維持。他は畳んで全員に表示） ──
+  function _gBadge(tone){var T={good:['吉日','gb-good'],rest:['整える','gb-rest'],turn:['転機','gb-turn'],care:['注意','gb-care'],quiet:['静か','gb-quiet']}[tone]||['静か','gb-quiet'];return '<span class="gbadge '+T[1]+'">'+T[0]+'</span>';}
+  function _gSec(emoji,name,who,open,tone,body){return '<details class="gsec"'+(open?' open':'')+'><summary><span class="ge">'+emoji+'</span><span class="gn">'+name+'</span>'+_gBadge(tone)+'<span class="gw">'+who+'</span></summary><div class="gb">'+body+'</div></details>';}
+  var _has=function(x){return m.indexOf(x)>=0;};
+  var _loveOn=(_has('🌈')||_has('🌷')||_has('🌸')||_has('🩷'));
+  var _lb='';['🌈','🌷','🌸','🩷'].forEach(function(x){if(_has(x))_lb+=x+' '+labels[x]+'<br>';});
+  if(!_loveOn)_lb='今日は恋の大きな動きは静か。自分磨き・おしゃれ・気になる人の様子を見るくらいが◎。';
+  _lb+=_bonus+_swayLove+extra;
+  var _workOn=_has('💼');
+  var _wb=(_workOn?('💼 '+labels['💼']+'<br><b>プレゼン・商談・面接・大事な連絡</b>を狙うなら今日。起業・開業の一歩にも背中を押されます。'):'今日は仕事の“勝負の気”は控えめ。攻めるより<b>段取り・資料づくり・振り返り</b>の仕込みに向く日。')+'<div class="whos">会社員の勝負／営業まわり／起業・面接にも。</div>';
+  var _moneyOn=_has('💰');
+  var _mb=_moneyOn?('💰 '+labels['💰']):'今日は大きな金運の波は静か。<b>家計の見直し・固定費チェック</b>など、整えるのに向く日。';
+  var _ijinOn=(_has('🌐')||_has('🍀'));
+  var _ib='';if(_has('🍀'))_ib+='🍀 '+labels['🍀']+'<br>';if(_has('🌐'))_ib+='🌐 '+labels['🌐']+'<br>';
+  if(!_ijinOn)_ib='今日は対人の動きは穏やか。無理に広げず、身近な人を大切に。';
+  _ib+='<div class="whos">同僚・上司／ママ友・ご近所／仲間、どの縁にも。</div>';
+  var _studyOn=_has('📚');
+  var _sb=(_studyOn?('📚 '+labels['📚']):'今日は学びの気は控えめ。気になる本を1ページ、くらいの軽さでOK。')+'<div class="whos">自分の勉強・資格にも、お子さんの勉強・習い事の後押しにも。</div>';
+  // ── 神殺×分野の“合成の読み方”：空亡や冲が分野に重なった日は、その分野の使い方を1つに束ねて提示（例：空亡×仕事＝勝負より仕込み） ──
+  var _gk=_has('🌫️') && _goukuu(t.branch);   // 内部判定：良い巡り合わせで“整える”が解ける日（説明欄で四柱推命の「合空」として解説）
+  var _combo='';
+  if(_has('🌫️') && _gk) _combo='<div class="gcombo ok"><b>✅ 今日は前向きに動いてOK</b><br>本来はひと休み向きの気配でしたが、<b>今日は良い流れが後押し</b>してくれます。<b>ほぼ通常どおり・前向きに動いてOK</b>。せっかくの流れ、活かしてください。</div>';
+  else if(_has('🌫️')) _combo='<div class="gcombo"><b>🌫️ 「整える」が重なる日</b><br>この分野の“気”は動きますが、今日は<b>ものごとが“形になりにくい・宙に浮きやすい”日</b>。大きな決断・踏み込みは焦らず、<b>“育てる・整える・仕込む”</b>つもりで臨むと、空回りせず次につながります。</div>';
+  else if(_has('🌀')) _combo='<div class="gcombo turn"><b>🌀 大きく動く転機が重なる日</b><br>この分野に大きな変化のきっかけが。<b>変えたいなら追い風</b>、<b>守りたいなら勢い任せにせず</b>流れをよく見て。</div>';
+  else if(_has('⚠️')) _combo='<div class="gcombo"><b>⚠️ ゆらぎが重なる日の活かし方</b><br>この分野は動きますが、<b>勢いだけで進めず確認・ダブルチェックを</b>。急ぎでなければ一呼吸おくと安心です。</div>';
+  if(_combo){ if(_loveOn)_lb+=_combo; if(_workOn)_wb+=_combo; if(_moneyOn)_mb+=_combo; if(_ijinOn)_ib+=_combo; if(_studyOn)_sb+=_combo; }
+  var _hOn=(gr.sym==='💮'||gr.sym==='◎'), _hTone=_hOn?'good':(gr.sym==='△'?'rest':'quiet');
+  var _hb=_hOn?'今日は心身の調子が上向き。少し早起きして、好きなことに時間を使うと満たされます。':(gr.sym==='△'?'今日は<b>充電モード</b>。がんばりすぎず、早めに休むと明日が軽くなります。':'ふつうの体調。水分と睡眠を整えて、いつも通りに。');
+  var _kOn=(_has('🌫️')||_has('🐴')||_has('🌀')), _kTone=_has('🌀')?'turn':(_has('🐴')?'good':(_has('🌫️')?'rest':'quiet'));
+  var _kb='';['🌫️','🐴','🌀'].forEach(function(x){if(_has(x)){var _lx=labels[x];if(x==='🌫️'&&_gk)_lx+=' <b style="color:#2b8a5c">→ 今日は良い流れが後押し。気にせず前向きでOK</b>';_kb+=x+' '+_lx+'<br>';}});
+  if(!_kOn)_kb='今日は暮らしは平常運転。気になった所を少しだけ整えると気分◎。';
+  _kb+='<div class="whos">家事の段取り・断捨離／お出かけ／暮らしの変わり目に。</div>';
+  var _warnTop=_has('⚠️')?'<div class="gwarn">⚠️ <b>ゆらぎ注意日</b>：少しリズムが乱れやすい日。急ぎの決断・言い合いは一呼吸おいて。悪い日ではありません。</div>':'';
+  var _secs=_gSec('💗','恋愛・ご縁','片想い／恋人／夫婦',true,_loveOn?'good':'quiet',_lb)
+    +_gSec('💼','仕事・チャレンジ','会社員／営業／起業・面接',false,_workOn?'good':'quiet',_wb)
+    +_gSec('💰','お金・金運','家計／投資／ビジネス',false,_moneyOn?'good':'quiet',_mb)
+    +_gSec('🌐','対人・人間関係','同僚／ママ友／仲間',false,_ijinOn?'good':'quiet',_ib)
+    +_gSec('📚','学び・成長','自分の学び／子供の学び',false,_studyOn?'good':'quiet',_sb)
+    +_gSec('🌿','健康・コンディション','自分／家族の体調',false,_hTone,_hb)
+    +_gSec('🏠','暮らし・整え','家事／お出かけ／転機',false,_kTone,_kb);
+  // メールと同一の“巡回する今日のひとこと”(todayOne)を日別詳細にも表示。個人×日付でpickSeq巡回するため、
+  // 同じ十神・同グレードが重なる日（約10日周期）でも文面が毎回変わり、詳細の重複感を解消する。
+  var _oneLine='';
+  try{
+    var _KDx=window.KDaily, _bh=(MEMBER&&MEMBER.birth)||null;
+    if(_KDx&&_KDx.generateDaily&&_bh&&_bh.y){
+      var _md=_KDx.generateDaily({y:_bh.y,m:_bh.m,d:_bh.d},
+        {y:d.getFullYear(),m:d.getMonth()+1,d:d.getDate()},
+        {nick:MEMBER.nick,rel:MEMBER.rel,sex:(MEMBER.sex==='m'||MEMBER.sex==='male')?'m':'f',
+         personBazi:window.PersonBazi,hour:_bh.tu?null:_bh.h,minute:_bh.tu?null:_bh.mi,timeUnknown:_bh.tu!==false});
+      if(_md&&_md.todayOne){
+        var _tm=(_md.theme&&_md.theme.message)?'<div style="margin-top:6px;color:#7a6a54;font-size:12px;line-height:1.7">'+_md.theme.message+'</div>':'';
+        _oneLine='<div style="margin-top:8px;padding:9px 12px;border-radius:11px;background:rgba(200,151,58,.08);border:1px solid rgba(200,151,58,.24);font-size:12.5px;line-height:1.75;color:#8a6a2e"><b style="color:#b0842a">今日のひとこと</b><br>'+_md.todayOne+_tm+'</div>';
+      }
+    }
+  }catch(e){}
+  $("dayDetail").innerHTML='<b style="color:#a06517;font-size:15px">'+ymd+'</b>'+gradeHead+_summary+_oneLine+_warnTop+goLine+_favNote
+    +'<div class="ghint">▼ ジャンル別にタップで開きます（恋愛・仕事・お金・対人・学び・健康・暮らし）</div>'+_secs
+    +'<textarea id="memoBox" placeholder="この日の予定・メモ（仕事/会食/デートなど）">'+memo+'</textarea><div style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="cal-nav" id="memoSave" style="width:auto;padding:0 14px;height:34px;font-size:12.5px;">メモを保存</button><a class="gcal" href="'+gurl+'" target="_blank" rel="noopener">📅 Googleカレンダーに追加</a></div>';
+  $("dayDetail").classList.add('show');
+  setTimeout(function(){var _dd=$("dayDetail");if(_dd){var _y=_dd.getBoundingClientRect().top+window.pageYOffset-70;window.scrollTo({top:_y,behavior:'smooth'});}},60);
+  $("memoSave").onclick=()=>{try{localStorage.setItem(memoKey(d),$("memoBox").value);}catch(e){}renderCalendar();$("memoSave").textContent='保存しました ✓';};
+}
+/* カレンダーの閲覧範囲：登録済みは全期間フル閲覧可（現行どおり）。
+   未登録（マイページを直URLで開いた等）は当月のみ＝翌月以降は無料登録へ誘導し、先の月を見せない */
+function _isReg(){try{return (JSON.parse(localStorage.getItem("enbiyori_register")||"[]")||[]).length>0;}catch(e){return false;}}
+function _calInRange(y,m){
+  if(_isReg())return true;
+  const n=new Date(), j=new Date(n.getTime()+(9*60+n.getTimezoneOffset())*60000);
+  return (y===j.getFullYear() && m===(j.getMonth()+1));
+}
+function _calRangeNote(){
+  const n=$("calRangeNote");
+  if(n){
+    n.style.cssText="display:block;margin:10px 13px 0;padding:11px 13px;background:#fff4ee;border:1px solid rgba(214,86,126,.28);border-radius:11px;font-size:12.5px;color:var(--coral-d,#c14e77);line-height:1.75;text-align:center;";
+    n.innerHTML='📅 来月以降の運気カレンダーは、<b>無料登録</b>で毎日ずっと見られます。<a href="register.html" style="display:inline-block;margin-top:6px;color:#fff;background:linear-gradient(135deg,#e0699a,#d6567e 55%,#c8436e);border-radius:999px;padding:7px 16px;font-weight:800;text-decoration:none;">無料で登録する →</a>';
+    clearTimeout(n._t);n._t=setTimeout(()=>{n.style.display="none";},6000);
+  }
+}
+$("calPrev").onclick=()=>{let y=calY,m=calM-1;if(m<1){m=12;y--;}if(!_calInRange(y,m)){_calRangeNote();return;}calY=y;calM=m;renderCalendar();$("dayDetail").classList.remove('show');};
+$("calNext").onclick=()=>{let y=calY,m=calM+1;if(m>12){m=1;y++;}if(!_calInRange(y,m)){_calRangeNote();return;}calY=y;calM=m;renderCalendar();$("dayDetail").classList.remove('show');};
+
+/* ===== 会員情報の反映 ===== */
+function relText(r){return {single:"恋の出会いを、これから探したい",crush:"気になる人がいる",partner:"恋人がいる",married:"結婚している",work:"恋愛より、仕事・対人運を重視"}[r]||"—";}
+function fmtBirth(b){return b.y+'年'+b.m+'月'+b.d+'日'+((b.tu||b.h==null)?'':' '+String(b.h).padStart(2,'0')+':'+String(b.mi||0).padStart(2,'0'));}
+var EL_COL={木:'#4a9e6b',火:'#d9604f',土:'#c4892b',金:'#b8912e',水:'#4f8fc0'};
+/* 十二運の凶名（死・墓・病・絶・衰）は一般に不吉と誤読されるため、前向きな別名を主表示にし伝統名を括弧で添える（意味は変えない） */
+var JUNI_SOFT={衰:'円熟',病:'感性',死:'集中',墓:'蓄積',絶:'転機'};
+function _pillCard(label,gz,terr){
+  var td=terr?(JUNI_SOFT[terr]?JUNI_SOFT[terr]+'（'+terr+'）':terr):'';
+  return '<div style="flex:1 1 60px;min-width:58px;text-align:center;background:rgba(207,74,38,.05);border:1px solid rgba(207,74,38,.14);border-radius:10px;padding:8px 4px;">'
+    +'<div style="font-size:10px;color:var(--muted);">'+label+'</div>'
+    +'<div style="font-family:var(--serif);font-weight:800;font-size:22px;color:var(--coral-d);line-height:1.2;">'+gz+'</div>'
+    +'<div style="font-size:10.5px;color:var(--gold-d);">'+td+'</div></div>';
+}
+function renderMeishiki(){
+  var b=MEMBER.birth||{};
+  var tu=(b.tu===true)||(b.h==null);
+  var prof=(typeof window.PersonBazi==='function')?window.PersonBazi(b.y,b.m,b.d,tu?null:b.h,tu?null:b.mi,tu,MEMBER.sex||'female'):null;
+  if(prof&&prof.ok){
+    var labels=['年柱','月柱','日柱'], html='';
+    prof.pillars.slice(0,3).forEach(function(p,i){html+=_pillCard(labels[i]||'',p.ganzhi||(p.stem+p.branch),p.terrain);});
+    if(!tu&&prof.pillars[3])html+=_pillCard('時柱',prof.pillars[3].ganzhi,prof.pillars[3].terrain);
+    else html+='<div style="flex:1 1 60px;min-width:58px;text-align:center;background:rgba(0,0,0,.03);border:1px dashed var(--line-strong);border-radius:10px;padding:8px 4px;color:var(--muted);"><div style="font-size:10px;">時柱</div><div style="font-size:12px;line-height:1.45;margin-top:5px;">時刻<br>不明</div></div>';
+    $("pillarsWrap").innerHTML=html;
+    var dm=prof.dayMaster||{};
+    /* 本質のラッキーカラー＝あなたを後押しする五行（喜神）の色。※「足りない色」ではない：喜神は日主の強弱バランスで決まり、多い五行でも喜神になりうる。1色とは限らず複数表示 */
+    var LC={木:['グリーン','#5aa66a'],火:['コーラルレッド','#e8756a'],土:['山吹色','#e3b23c'],金:['シルバー','#9aa3ad'],水:['ネイビー','#3a5680']};
+    var _els5=['木','火','土','金','水'];
+    var _kiEls=_els5.filter(function(e){return (prof.fav||{})[e]==='喜';});
+    var _lcNote='（あなたを後押しする五行＝喜神の色）';
+    if(!_kiEls.length){
+      /* 中和タイプ（「喜」が閾値に届かない）：喜神方式と同じ強弱スコアで最上位の通変グループ＝「財」の五行を表示。
+         ※「欠けている五行を補う」基準は使わない（喜神＝足りない色ではない、という本サービスの説明と矛盾するため） */
+      var _grp=prof.grp||{};
+      _kiEls=_els5.filter(function(e){return _grp[e]==='財';});
+      _lcNote='（中和タイプ＝あなたの力をいちばん引き出す五行の色）';
+      if(!_kiEls.length){_kiEls=[dm.element];_lcNote='（あなたの日主の五行の色）';}
+    }
+    var lcChips=_kiEls.map(function(e){var c=LC[e]||['シルバー','#9aa3ad'];return '<span style="display:inline-flex;align-items:center;gap:4px;margin:3px 10px 0 0;font-size:13px;font-weight:700;color:var(--ink);"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:'+c[1]+';border:1px solid rgba(0,0,0,.18);"></span>'+c[0]+'</span>';}).join('');
+    $("dayInfo").innerHTML=
+      '<div style="flex:1 1 100%;background:rgba(196,137,43,.08);border:1px solid rgba(196,137,43,.2);border-radius:10px;padding:9px 11px;"><div style="font-size:10.5px;color:var(--muted);">日主（あなたの本質）</div><div style="font-family:var(--serif);font-weight:800;font-size:20px;color:var(--gold-d);">'+dm.stem+' <span style="font-size:12px;color:var(--muted);">'+dm.element+'の気</span></div></div>'
+      +'<div style="flex:1 1 100%;background:#faf6ef;border:1px solid rgba(0,0,0,.06);border-radius:10px;padding:9px 11px;"><div style="font-size:10.5px;color:var(--muted);">本質のラッキーカラー <span style="color:var(--muted-2);">'+_lcNote+'</span></div><div style="margin-top:1px;">'+lcChips+'</div><div style="margin-top:6px;font-size:10.5px;color:var(--muted-2);line-height:1.6;">※毎朝のメールに出る「ラッキーカラー」は、その日の運気を補う<b>日替わりの色</b>。ここはあなたの<b>本質の色</b>で、役割が違います。</div></div>';
+    var five=prof.five||{}, els=['木','火','土','金','水'];
+    $("gogyoWrap").innerHTML=els.map(function(e){var n=five[e]||0,on=n>0;return '<div style="flex:1 1 40px;text-align:center;border-radius:8px;padding:6px 2px;background:'+EL_COL[e]+(on?'22':'0c')+';border:1px solid '+EL_COL[e]+(on?'55':'22')+';"><div style="font-family:var(--serif);font-weight:800;font-size:16px;color:'+EL_COL[e]+';">'+e+'</div><div style="font-size:12px;font-weight:700;color:'+(on?EL_COL[e]:'var(--muted)')+';">'+n+'</div></div>';}).join('');
+    var fav=prof.fav||{}, ki=els.filter(function(e){return fav[e]==='喜';}), imi=els.filter(function(e){return fav[e]==='忌';}), favHtml='';
+    if(ki.length)favHtml+='<div style="display:inline-block;margin:0 8px 6px 0;padding:6px 11px;border-radius:20px;background:rgba(74,158,107,.13);border:1px solid rgba(74,158,107,.4);"><b style="color:#3c8a5a;">🍃 喜神（あなたの味方）：</b>'+ki.join('・')+'</div>';
+    if(imi.length)favHtml+='<div style="display:inline-block;margin:0 8px 6px 0;padding:6px 11px;border-radius:20px;background:rgba(217,96,79,.1);border:1px solid rgba(217,96,79,.35);"><b style="color:#c04a3a;">⚠️ 忌神（強すぎ注意）：</b>'+imi.join('・')+'</div>';
+    if(!ki.length&&!imi.length)favHtml='<div style="font-size:12.5px;color:var(--muted);">五行のバランスが良く（中和）、特定の偏りが少ないタイプです。</div>';
+    $("favWrap").innerHTML=favHtml;
+    var terr=prof.pillars[2]?prof.pillars[2].terrain:'', jkey=(terr==='建禄')?'臨官':terr;
+    var jt=(typeof JUNI_TRAIT!=='undefined'&&JUNI_TRAIT[jkey])||{};
+    $("kanshiBody").innerHTML=jt.body?('<b style="color:var(--gold-d);">十二運「'+(JUNI_SOFT[terr]?JUNI_SOFT[terr]+'（'+terr+'）':terr)+'」：</b>'+jt.body):'';
+  }else{
+    var me=CUR.me||pillar(b.y,b.m,b.d);
+    var jn=juniOf(me.stem,me.branch), jt2=(typeof JUNI_TRAIT!=='undefined'&&JUNI_TRAIT[jn])||{};
+    $("pillarsWrap").innerHTML=_pillCard('日柱',me.stem+me.branch,jn);
+    $("dayInfo").innerHTML='';$("gogyoWrap").innerHTML='';$("favWrap").innerHTML='';
+    $("kanshiBody").innerHTML=jt2.body||'';
+  }
+}
+function applyMember(){
+  $("memberName").textContent=MEMBER.nick;
+  $("infoNick").textContent=MEMBER.nick;
+  $("infoMail").textContent=MEMBER.mail;
+  $("infoBirth").textContent=fmtBirth(MEMBER.birth);
+  $("infoRel").textContent=relText(MEMBER.rel);
+  $("infoInterest").textContent=MEMBER.interest;
+  // 干支計算
+  CUR.me=pillar(MEMBER.birth.y,MEMBER.birth.m,MEMBER.birth.d);
+  CUR.partner=partner(CUR.me.stem,CUR.me.branch);
+  // 基本性格（日干）
+  var ns=NISSHIN[CUR.me.stem];
+  if(ns){
+    $("nisshinKan").textContent=CUR.me.stem;
+    $("nisshinName").textContent="「"+CUR.me.stem+"（"+ns.yomi+"）」タイプ";
+    $("nisshinImg").textContent="ひとことで言うと ── "+ns.img;
+    $("nisshinBody").innerHTML=ns.body;
+  }
+  // 命式（四柱推命）— 検証済みエンジン。失敗時は日柱のみへ自動フォールバック
+  renderMeishiki();
+  // 今月をセット
+  const t=new Date();calY=t.getFullYear();calM=t.getMonth()+1;
+  setPlan(MEMBER.plan);
+}
+function setPlan(plan){
+  /* 無料化：会員種別の区別を撤廃。全員がフル機能（プレミアム相当）として扱う。 */
+  MEMBER.plan="premium";
+  const card=$("statusCard"),badge=$("planBadge");
+  card.className="status-card premium";
+  badge.className="plan-badge premium";badge.textContent="✦ 全機能解放（完全無料）";
+  $("planMeta").innerHTML='<div class="row"><span class="k">ステータス</span><span class="v">フル予報（すべての機能が使えます）</span></div><div class="row"><span class="k">お支払い</span><span class="v">完全無料 ／ ずっと0円</span></div>';
+  $("calWrap").style.display="";
+  $("gsecWrap").style.display="";
+  renderCalendar();
+}
+function gconnDemo(){alert("Googleカレンダーの自動連携は現在準備中です。\\n\\nいまは、カレンダーの各日から「Googleカレンダーに追加」で1件ずつ登録できます。");}
+function cancelDemo(){alert("配信の停止手続きはこちらで行えます。\\n\\n・「私だけの運気予報」はすべての機能がずっと完全無料です。料金は一切かかりません。\\n・メール配信が不要になれば、いつでも停止できます。");}
+
+applyMember();
+</script><div style="text-align:center;font-size:10px;color:#b6b6be;opacity:.6;padding:10px 0 14px;font-family:sans-serif;letter-spacing:.03em;">v.0824-177</div>
+<script>/* カタカナ語の泣き別れ防止：短い見出し・ラベルのみ連続カタカナをU+2060で連結（長い本文は自然な折返し＝隙間を作らない）。全ブラウザ対応 */
+(function(){var SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,NOSCRIPT:1,CODE:1,PRE:1};var MAX=24;
+function blockLen(node){var el=node.parentNode;while(el&&el.nodeType===1){var d=getComputedStyle(el).display;if(d.indexOf('inline')<0&&d!=='contents')return (el.textContent||'').replace(/\s/g,'').length;el=el.parentNode;}return (node.nodeValue||'').length;}
+function glue(root){if(!root)return;var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:function(n){return (n.parentNode&&SKIP[n.parentNode.nodeName])?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT;}});var n,a=[];while(n=w.nextNode())a.push(n);a.forEach(function(t){var v=t.nodeValue;if(!/[\u30A1-\u30F6\u30FC][\u30A1-\u30F6\u30FC]/.test(v))return;if(blockLen(t)>MAX)return;var nv=v.replace(/([\u30A1-\u30F6\u30FC])(?=[\u30A1-\u30F6\u30FC])/g,'$1\u2060');if(nv!==v)t.nodeValue=nv;});}
+window.__glueKata=glue;
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){glue(document.body);});else glue(document.body);
+})();</script>
+</body>
+</html>
