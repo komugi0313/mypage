@@ -444,7 +444,7 @@ function weather(idx){
    カレンダー(mypage/my-tenki-demo)と“完全に同じ式”で、天気・指数もこのグレードから導く＝画面とメールが必ず一致する。 */
 var GRADE_BASE={'正官':2,'正財':1.8,'偏財':1.6,'食神':1.4,'印綬':1.0,'比肩':0.6,'偏印':0.2,'傷官':-0.8,'劫財':-1.0,'偏官':-2.0};
 // カレンダー凡例と完全一致の“あなた基準”ラベル（画面＝メール共通）
-var GRADE_LABEL={'💮':'特別な日','◎':'調子のいい日','〇':'普通の日','△':'ひと休みの日'};
+var GRADE_LABEL={'💮':'特別な日','◎':'調子のいい日','〇':'普通の日','△':'無理しない日'};
 function dayRawScore(youStem, youBranch, tt, favSet, imiSet){
   var js=juushin(youStem, tt.stem);
   var s=(GRADE_BASE[js]!==undefined?GRADE_BASE[js]:0);
