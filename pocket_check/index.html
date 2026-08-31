@@ -449,7 +449,9 @@ select:focus,input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 <body>
 <script>
 /* 初回訪問はLP(lp.html)を先に見せる。登録済み・LP閲覧済み・テストビルド(キー入り)はアプリへ直行 */
-try{ if(!localStorage.getItem('pk_profile')&&!localStorage.getItem('pk_seen_lp')&&!window.PK_DIRECT_KEY){ localStorage.setItem('pk_seen_lp','1'); location.replace('lp.html'); } }catch(e){}
+try{ var _fromLP=/[?&]go=1/.test(location.search); if(_fromLP){ try{localStorage.setItem('pk_seen_lp','1');}catch(_e){} }
+  /* LPのCTAから来た(?go=1)なら絶対に戻さない＝localStorageが使えない環境でもループしない */
+  if(!_fromLP&&!localStorage.getItem('pk_profile')&&!localStorage.getItem('pk_seen_lp')&&!window.PK_DIRECT_KEY){ localStorage.setItem('pk_seen_lp','1'); location.replace('lp.html'); } }catch(e){}
 </script>
 
 <!-- LP -->
@@ -759,7 +761,7 @@ try{ if(!localStorage.getItem('pk_profile')&&!localStorage.getItem('pk_seen_lp')
   var _th=localStorage.getItem('pk_theme'); document.body.setAttribute('data-theme', _th==='indigo'?'':'green');
   var _tc=document.querySelector('meta[name=theme-color]'); if(_tc) _tc.setAttribute('content', _th==='indigo'?'#4f46e5':'#4E8060');
   var _prof=localStorage.getItem('pk_profile'), _seen=localStorage.getItem('pk_seen_lp');
-  var _id=_prof?'scChat':(_seen?'scOnboard':'');
+  var _id=_prof?'scChat':((_seen||/[?&]go=1/.test(location.search))?'scOnboard':'');
   if(_id){ document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('on');}); var _el=document.getElementById(_id); if(_el) _el.classList.add('on'); }
 }catch(e){}</script>
 <script src="pro-bazi.js"></script>
@@ -6795,7 +6797,7 @@ function sendPartnerAttr(y,m,d,sex,relation){
   applyI18n(); rebuildSelects(); setLang(state.lang);
   var seenLp=false; try{seenLp=!!localStorage.getItem('pk_seen_lp');}catch(e){}
   if(state.profile){ state.chart=computeChart(state.profile); enterChat(); }
-  else if(seenLp&&!window.PK_DIRECT_KEY){ show('scOnboard'); } /* LPはlp.htmlに一本化：見た人は即登録へ */
+  else if((seenLp||/[?&]go=1/.test(location.search))&&!window.PK_DIRECT_KEY){ show('scOnboard'); } /* LPはlp.htmlに一本化：見た人・CTAから来た人は即登録へ */
   else { location.replace('lp.html'); }
   window.__booting=false;
   try{ if(pkNotifyPref().on) pkNotifyApply(); }catch(e){} /* アプリ起動時に毎日通知の予約を更新（文面を今日ぶんに差し替え） */
