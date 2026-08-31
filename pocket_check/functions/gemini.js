@@ -156,15 +156,26 @@ exports.handler = async (event) => {
     } catch (e) {}
   }
   let resp;
+  const sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
   try {
     let r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: sendBody });
     let text = await r.text();
+    // 一時的なレート超過(429=無料枠の毎分/秒制限)は、少し待って1回だけ自動リトライ＝ユーザーに「混雑中」を見せない。
+    //   ※DEEP(3.x=思考モデルで遅い)は二度打ちの遅延を避け、下のLITEフォールバックに任せる。速いLITE単体呼び出しのみ即リトライ。
+    if (r.status === 429 && !usedDeep) {
+      await sleep(900);
+      const rr = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: sendBody });
+      const tt = await rr.text();
+      r = rr; text = tt;
+    }
     // DEEP(上位/3.x)が失敗（課金枯渇429・一時的な5xx等）したら、LITEに一度だけフォールバックして必ず返答を返す（ユーザーにエラーを見せない）
     if (usedDeep && !r.ok && MODEL_DEEP !== MODEL_LITE) {
       try {
         const url2 = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_LITE}:generateContent?key=${encodeURIComponent(key)}`;
-        const r2 = await fetch(url2, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: event.body });
-        const text2 = await r2.text();
+        let r2 = await fetch(url2, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: event.body });
+        let text2 = await r2.text();
+        // LITEフォールバックも混雑(429)なら、少し待って1回だけ再試行（毎分制限の谷を越える）
+        if (r2.status === 429) { await sleep(900); r2 = await fetch(url2, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: event.body }); text2 = await r2.text(); }
         if (r2.ok) { r = r2; text = text2; }
       } catch (e2) {}
     }
