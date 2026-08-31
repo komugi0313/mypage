@@ -2158,7 +2158,7 @@ function greetStatic(){
   state.msgs=[]; saveMsgs(); renderChat();
   var _seq=[G.g1,b2,G.g3]; if(_chartStriking()){ _seq.push(pick(STRIKING_NUDGE)); } _seq.push(G.compat);
 if(_bdayForGreet){ _seq=[pick(BDAY_GREET)].concat(_seq); } /* 誕生日は初回あいさつ（オフライン時）の先頭にも */
-  pushSeq(_seq,function(){ renderChat(true); if(!state.chartB){ try{ appendBirthdayPill(); }catch(e){} } if(typeof _askDone==='function') _askDone(); });
+  pushSeq(_seq,function(){ renderChat(true); try{ appendGreetChips(); }catch(e){} if(!state.chartB){ try{ appendBirthdayPill(); }catch(e){} } if(typeof _askDone==='function') _askDone(); });
 }
 /* 初回あいさつ＝定型文ではなく、その人の命式からGeminiが生成する本気のファーストリーディング */
 var _greetTok=0;
@@ -2179,7 +2179,7 @@ function greet(){
     .then(function(j){ if(_mt!==_greetTok) return; var tx=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0].text; if(!tx) throw 0; t.remove();
       var _gb=greetBubbles(_softenJargon(sanitizeOut(tx))); if(_chartStriking()){ _gb=_gb.concat([pick(STRIKING_NUDGE)]); } /* 偏りが顕著な人は必ず「特徴を詳しく」へ誘導 */
 if(_bdayForGreet){ _gb=[pick(BDAY_GREET)].concat(_gb); } /* 誕生日は初回あいさつの先頭に */
-      pushSeq(_gb,function(){ renderChat(true); if(!state.chartB){ try{ appendBirthdayPill(); }catch(e){} } if(typeof _askDone==='function') _askDone(); }); })
+      pushSeq(_gb,function(){ renderChat(true); try{ appendGreetChips(); }catch(e){} if(!state.chartB){ try{ appendBirthdayPill(); }catch(e){} } if(typeof _askDone==='function') _askDone(); }); })
     .catch(function(){ if(_mt!==_greetTok) return; t.remove(); greetStatic(); });
 }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -2341,6 +2341,26 @@ function appendCompatStartPill(){ try{ var box=$('scroll'); if(!box) return; var
   box.appendChild(d); if(box.scrollHeight-box.scrollTop-box.clientHeight<160) box.scrollTop=box.scrollHeight; }catch(e){} }
 /* Nico自身が「お相手の生年月日を教えて→相性を見る」と誘った返信を検出。相手未設定なら📅ピルを自動で出す（文字入力に頼らず、次へ進みやすく） */
 var RE_COMPAT_INVITE=/生年月日|誕生日を教え|お相手の(?:生ま|情報)|their birth\s?date|his or her birth\s?date|partner'?s birth\s?date|date of birth|出生日期|出生年月|生辰八字|생년월일|상대.{0,4}생일|ngày sinh|fecha de nacimiento|data de nascimento|tanggal lahir|วันเกิดของ|วันเดือนปีเกิด/i;
+/* 初回あいさつの直後に出す誘導ピル：あいさつが例示する「そのまま聞ける言葉」を、打たずにタップで送れるように（恋愛のクセ／いまの運気／性格＝BLOCK2の“目に留まった3つ”に対応） */
+var GREET_CHIPS={
+ ja:['恋愛のクセを詳しく','いまの運気のことを詳しく','私の性格を詳しく'],
+ en:['More about my love pattern','More about my current luck','More about my personality'],
+ zh:['详细说说我的恋爱习惯','详细说说我现在的运势','详细说说我的性格'],
+ zt:['詳細說說我的戀愛習慣','詳細說說我現在的運勢','詳細說說我的性格'],
+ ko:['내 연애 습관 자세히','지금 운세 자세히','내 성격 자세히'],
+ vi:['Kỹ hơn về chuyện yêu đương của mình','Kỹ hơn về vận khí hiện tại','Kỹ hơn về tính cách của mình'],
+ es:['Más sobre mi patrón en el amor','Más sobre mi suerte actual','Más sobre mi personalidad'],
+ pt:['Mais sobre meu padrão no amor','Mais sobre minha sorte atual','Mais sobre minha personalidade'],
+ id:['Lebih detail pola cintaku','Lebih detail keberuntunganku sekarang','Lebih detail kepribadianku'],
+ th:['ขอรายละเอียดนิสัยความรักของฉัน','ขอรายละเอียดดวงตอนนี้','ขอรายละเอียดนิสัยของฉัน']
+};
+function appendGreetChips(){ try{ var box=$('scroll'); if(!box||document.getElementById('greetChips')) return;
+  var arr=(GREET_CHIPS[state.lang]||GREET_CHIPS.en); if(!arr||!arr.length) return;
+  var d=document.createElement('div'); d.id='greetChips'; d.className='sugg';
+  d.innerHTML=arr.map(function(c){return '<button>'+esc(c)+'</button>';}).join('');
+  d.addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; d.remove(); ask(b.textContent); });
+  box.appendChild(d); if(box.scrollHeight-box.scrollTop-box.clientHeight<160) box.scrollTop=box.scrollHeight;
+}catch(e){} }
 function appendBirthdayPill(){ try{ var box=$('scroll'); if(!box||document.getElementById('bdayPill')) return; var d=document.createElement('div'); d.id='bdayPill'; d.className='sugg'; d.innerHTML='<button class="bday">📅 '+esc(pick(COMPAT_PILL_LABEL))+'</button>'; d.querySelector('button').onclick=function(){ d.remove(); try{ openSheet('shAisho'); }catch(e){} }; box.appendChild(d); if(box.scrollHeight-box.scrollTop-box.clientHeight<160) box.scrollTop=box.scrollHeight; }catch(e){} }
 /* ==== 過去を占う：ピル＋日付ピッカー ==== */
 var PAST_PILL_LABEL={ja:'過去を占う',en:'Look back at a past time',zh:'占卜过去某段时光',zt:'占卜過去某段時光',ko:'과거의 어느 시기 보기',vi:'Xem lại một thời điểm đã qua',es:'Mirar un momento del pasado',pt:'Ver um momento do passado',id:'Menilik masa lalu',th:'ดูดวงช่วงเวลาในอดีต'};
@@ -3378,7 +3398,7 @@ function _chipTopicOf(q){
   if(/友達|友人|親友|仲間|ダチ|マブダチ|友だち|\bfriend|\bbuddy|\bpal\b|friendship|친구|벗|절친|朋友|好友|哥们|閨蜜|闺蜜|bạn bè|bạn thân|bạn của tôi|amig[oa]|amistad|amizade|\bteman\b|sahabat|เพื่อน|เพื่อนสนิท/i.test(q)) return 'friend';
   if(/家族|家庭|両親|父|母|パパ|ママ|兄弟|姉妹|息子|娘|夫|妻|旦那|嫁|姑|舅|実家|親戚|うちの親|family|parents?|mother|father|\bmom\b|\bdad\b|sibling|son|daughter|husband|\bwife\b|가족|부모|엄마|아빠|형제|자매|아들|딸|남편|아내|家人|家庭|父母|父親|母親|兄弟|姐妹|儿子|兒子|女儿|女兒|丈夫|妻子|gia đình|cha mẹ|bố mẹ|ba mẹ|con cái|chồng|vợ|familia|padres|madre|padre|hij[oa]|espos[oa]|família|pais|m[ãa]e|\bpai\b|filh[oa]|marido|keluarga|orang tua|\bibu\b|ayah|\banak\b|suami|istri|ครอบครัว|พ่อแม่|พ่อ|แม่|ลูก|สามี|ภรรยา/i.test(q)) return 'family';
   if(/人間関係|同僚|苦手な人|人付き合い|人脈|relationship|colleague|coworker|인간관계|人际|人際|同事|人脉|人脈|đồng nghiệp|quan hệ|relaci[oó]n|colega|relacionamento|colega|rekan kerja|hubungan|ความสัมพันธ์|เพื่อนร่วมงาน/i.test(q)) return 'human';
-  if(/いつ|時期|タイミング|運気|今年|来年|今月|when|timing|luck|언제|시기|운|什么时候|什麼時候|运|運|khi nào|vận|cuándo|suerte|quando|sorte|kapan|เมื่อไหร่|ดวง/i.test(q)) return 'timing';
+  if(/いつ|時期|タイミング|運気|今年|来年|今月|when|timing|luck|언제|시기|운|什么时候|什麼時候|运|運|khi nào|vận|cuándo|suerte|quando|sorte|kapan|keberuntungan|peruntungan|เมื่อไหร่|ดวง/i.test(q)) return 'timing';
   return '';
 }
 /* いまの一言だけでなく、直近の会話から“話題”を拾う（短い相槌でも、その話題の関連ピルを必ず出せるように） */
