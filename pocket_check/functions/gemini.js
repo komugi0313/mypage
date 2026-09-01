@@ -32,11 +32,14 @@ const MODEL_DEEP = process.env.GEMINI_MODEL_DEEP || 'gemini-3.6-flash';
 //   ip    = 同一IPの【1日】総生成（悪用抑止）。
 // ★雑談も「理屈（なぜ？根拠）」も LITE＝安価。deep 枠には数えず、本格鑑定枠を使い切っても続けられる（詐欺感を出さない）。
 //   価格（USD/月・年）との対応：Standard $19.99/$214.99 / Pro $39.99/$429.99 / VIP $69.99/$749.99。
+// ★月間 deep は「利益率が必ず60%以上（総額ベース・手数料30%控除後）」を満たす上限：条件＝Gemini原価 ≤ 総額の10%。
+//   前提＝DEEP原価 ¥2.0/通（保守的上限）＋雑談等で約+25%。年額契約者（月割で総額が安い）でも60%維持。実測原価が下がれば上げてよい。
+//   → Standard 100／Pro 200／VIP 350／無料はお試し合計15。
 const LIMITS = {
   free:     { deep: 15,  total: 60,  ip: 120 },  // 無料お試し：本格鑑定 合計15（3日間・月間枠）＋雑談。獲得コストとして上限厳しめ
-  standard: { deep: 120, total: 400, ip: 500 },  // Standard $19.99：本格鑑定 120/月＋雑談・理屈（1日で使い切ってもOK）
-  pro:      { deep: 240, total: 600, ip: 700 },  // Pro $39.99：本格鑑定 240/月＋雑談・理屈
-  vip:      { deep: 420, total: 900, ip: 1000 }, // VIP $69.99：本格鑑定 420/月＋雑談・理屈
+  standard: { deep: 100, total: 400, ip: 500 },  // Standard $19.99：本格鑑定 100/月＋雑談・理屈（1日で使い切ってもOK・利益率≥60%）
+  pro:      { deep: 200, total: 600, ip: 700 },  // Pro $39.99：本格鑑定 200/月＋雑談・理屈（利益率≥60%）
+  vip:      { deep: 350, total: 900, ip: 1000 }, // VIP $69.99：本格鑑定 350/月＋雑談・理屈（利益率≥60%）
 };
 // 旧プラン名からの後方互換（既存契約者が light/unlimited を送ってきても動くように）
 const PLAN_ALIAS = { light: 'standard', unlimited: 'pro', premium: 'vip' };
