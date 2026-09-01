@@ -26,16 +26,17 @@ const MODEL_DEEP = process.env.GEMINI_MODEL_DEEP || 'gemini-3.6-flash';
 
 // プラン別の1日上限。★実コスト（DEEP=gemini-3.6-flash：入力$0.75/出力$3.75 per1M、実測 約¥1.4〜2.0/通／
 //   LITE=gemini-2.5-flash-lite：約¥0.17/通）にもとづき、手数料30%控除後も利益率が必ず60%以上に収まる値に設定。
-//   deep  = 本格鑑定（DEEP生成）の1日通数 … これが原価の主因。上限＝利益60%を守る予算天井。
-//   total = 雑談・理屈込みの1日総生成（LITE中心・安全上限）。deep＋雑談＋理屈の合計がここを超えない＝原価が青天井にならない。
-//   ip    = 同一IPの1日総生成（悪用抑止）。
+// ★方針（月間プール）：本格鑑定(DEEP)は「1日◯回」ではなく「1か月◯回」で管理する。1日で1か月ぶんを使い切ってもよい（わざわざ1日で止めない）。
+//   deep  = 本格鑑定（DEEP生成）の【月間】通数 … これが原価の主因。上限＝利益60%を守る月次の予算天井（目安＝旧1日枠×30）。
+//   total = 雑談・理屈込みの【1日】総生成（LITE中心・bot対策の安全上限）。月ぶんを1日で使い切っても余裕で超えない高めの値。
+//   ip    = 同一IPの【1日】総生成（悪用抑止）。
 // ★雑談も「理屈（なぜ？根拠）」も LITE＝安価。deep 枠には数えず、本格鑑定枠を使い切っても続けられる（詐欺感を出さない）。
 //   価格（USD/月・年）との対応：Standard $19.99/$214.99 / Pro $39.99/$429.99 / VIP $69.99/$749.99。
 const LIMITS = {
-  free:     { deep: 5,  total: 20, ip: 90 },    // 無料お試し：本格鑑定5/日（3日で計15）＋雑談。獲得コストとして上限厳しめ
-  standard: { deep: 4,  total: 16, ip: 150 },   // Standard $19.99：本格鑑定 4/日＋雑談・理屈
-  pro:      { deep: 8,  total: 32, ip: 250 },   // Pro $39.99：本格鑑定 8/日＋雑談・理屈
-  vip:      { deep: 14, total: 56, ip: 350 },   // VIP $69.99：本格鑑定 14/日＋雑談・理屈
+  free:     { deep: 15,  total: 60,  ip: 120 },  // 無料お試し：本格鑑定 合計15（3日間・月間枠）＋雑談。獲得コストとして上限厳しめ
+  standard: { deep: 120, total: 400, ip: 500 },  // Standard $19.99：本格鑑定 120/月＋雑談・理屈（1日で使い切ってもOK）
+  pro:      { deep: 240, total: 600, ip: 700 },  // Pro $39.99：本格鑑定 240/月＋雑談・理屈
+  vip:      { deep: 420, total: 900, ip: 1000 }, // VIP $69.99：本格鑑定 420/月＋雑談・理屈
 };
 // 旧プラン名からの後方互換（既存契約者が light/unlimited を送ってきても動くように）
 const PLAN_ALIAS = { light: 'standard', unlimited: 'pro', premium: 'vip' };
@@ -81,13 +82,14 @@ exports.handler = async (event) => {
     if (!dev) return json(400, { error: { code: 'NO_DEVICE', message: 'x-pk-refund-device required' } });
     const rn = Math.max(1, Math.min(50, parseInt(clean(h['x-pk-refund-n']) || '1', 10) || 1));
     const rday = clean(h['x-pk-refund-day']) || jstDay();
+    const rmonth = clean(h['x-pk-refund-month']) || jstMonth();   // 本格鑑定は月間プール
     try {
-      const ddK = `dd:${rday}:${dev}`, dK = `d:${rday}:${dev}`;
+      const ddK = `dd:${rmonth}:${dev}`, dK = `d:${rday}:${dev}`;
       const dd = Math.max(0, (await readCount(st, ddK)) - rn);
       const dtot = Math.max(0, (await readCount(st, dK)) - rn);
       await st.setJSON(ddK, { n: dd, t: Date.now() });
       await st.setJSON(dK, { n: dtot, t: Date.now() });
-      return json(200, { ok: true, device: dev, day: rday, refunded: rn, deep: dd, total: dtot });
+      return json(200, { ok: true, device: dev, month: rmonth, day: rday, refunded: rn, deep: dd, total: dtot });
     } catch (e) { return json(500, { error: { code: 'REFUND_FAIL', message: String(e && e.message) } }); }
   }
 
@@ -113,6 +115,7 @@ exports.handler = async (event) => {
   plan = PLAN_ALIAS[plan] || plan;
   const lim = LIMITS[plan] || LIMITS.free;
   const day = jstDay();
+  const month = jstMonth();   // 本格鑑定(DEEP)は月間プールで管理（1日で使い切ってもOK）
   // 話題分類用の軽量呼び出し（x-pk-classify:1）は、ユーザーの1日カウントに含めない（本体の応答呼び出しだけを課金対象にする）。常に軽量モデルで安価。
   const isClassify = clean(h['x-pk-classify']) === '1';
 
@@ -126,15 +129,15 @@ exports.handler = async (event) => {
   let degraded = false, deepCount = 0;
   if (store && !isClassify) {
     try {
-      const ddKey = `dd:${day}:${device}`;   // 本格鑑定（DEEP）専用カウンタ（課金枠）
-      const dKey  = `d:${day}:${device}`;    // 総生成カウンタ（雑談・理屈込み・bot対策）
+      const ddKey = `dd:${month}:${device}`;   // 本格鑑定（DEEP）専用カウンタ（課金枠・月間プール）
+      const dKey  = `d:${day}:${device}`;      // 総生成カウンタ（雑談・理屈込み・bot対策・1日）
       const ipKey = `i:${day}:${ip}`;
       deepCount = await readCount(store, ddKey);
       const totalCount = await readCount(store, dKey);
       const ipCount    = await readCount(store, ipKey);
-      // ① 本格鑑定の1日枠（雑談・理屈のLITEはこの枠を消費しない＝枠を使い切っても続けられる）
+      // ① 本格鑑定の月間枠（雑談・理屈のLITEはこの枠を消費しない＝枠を使い切っても続けられる）
       if (usedDeep && deepCount >= lim.deep) return limitResp(lim.deep, 'deep');
-      // ② 総量・IPの安全上限（bot・大量アクセス対策＋原価の天井）。雑談・理屈もここには数える。
+      // ② 総量・IPの1日安全上限（bot・大量アクセス対策）。雑談・理屈もここには数える。
       if (totalCount >= lim.total) return limitResp(lim.total, 'total');
       if (ipCount    >= lim.ip)    return limitResp(lim.ip, 'ip');
     } catch (e) { degraded = true; }
@@ -193,10 +196,10 @@ exports.handler = async (event) => {
     if (!answered && r.ok) { try { console.error('[pk] 200-but-empty (not counted):', device, MODEL, text.slice(0, 300)); } catch (e) {} await noteError(store, 'empty'); }
     if (answered && store && !degraded && !isClassify) {
       try {
-        await bump(store, `d:${day}:${device}`);   // 総生成（雑談・理屈込み）
-        await bump(store, `i:${day}:${ip}`);        // IP
-        if (usedDeep) await bump(store, `dd:${day}:${device}`);   // 本格鑑定枠は DEEP のみ加算
-        // 本格鑑定の残り回数（雑談・理屈は別枠なので deep 基準で通知）
+        await bump(store, `d:${day}:${device}`);   // 総生成（雑談・理屈込み・1日）
+        await bump(store, `i:${day}:${ip}`);        // IP（1日）
+        if (usedDeep) await bump(store, `dd:${month}:${device}`);   // 本格鑑定枠は DEEP のみ加算（月間プール）
+        // 本格鑑定の残り回数（月間プール／雑談・理屈は別枠なので deep 基準で通知）
         resp.headers['x-pk-remaining'] = String(Math.max(0, lim.deep - (deepCount + (usedDeep ? 1 : 0))));
       } catch (e) {}
     }
@@ -265,7 +268,7 @@ function limitResp(limit, scope) {
   // scope='deep'（本格鑑定の枠）… 雑談は続けられる。プラン変更でさらに本格鑑定できる。
   // scope='total'/'ip' … bot対策の安全上限（通常利用では到達しない）。
   const message = (scope === 'deep')
-    ? '本日の本格鑑定の上限に達しました。雑談は続けられます。プランを上げると、もっと本格鑑定ができます。'
+    ? '今月の本格鑑定の上限に達しました。雑談は続けられます。プランを上げると、もっと本格鑑定ができます。'
     : '本日のご利用上限に達しました。時間をおいて再度お試しください。';
   return json(429, { error: { code: 'LIMIT', scope, limit, message } });
 }
@@ -276,10 +279,11 @@ async function getStore() {
   catch (e) { return null; } // Blobs 未提供環境（手動zip等）ではフェイルオープン
 }
 function jstDay() { const d = new Date(Date.now() + 9 * 3600 * 1000); return d.toISOString().slice(0, 10); }
+function jstMonth() { const d = new Date(Date.now() + 9 * 3600 * 1000); return d.toISOString().slice(0, 7); } // 本格鑑定の月間プール用（YYYY-MM）
 function lower(o) { const r = {}; for (const k in o) r[k.toLowerCase()] = o[k]; return r; }
 function clean(s) { return (s == null ? '' : String(s)).replace(/[\r\n]/g, '').slice(0, 200); }
 function baseHeaders(degraded) { const h = { 'Content-Type': 'application/json' }; if (degraded) h['x-pk-ratelimit'] = 'degraded'; return h; }
 function json(statusCode, obj) { return { statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) }; }
 
 // ---- テスト用エクスポート（本番動作には影響しない） ----
-module.exports.__test = { readCount, bump, LIMITS, jstDay };
+module.exports.__test = { readCount, bump, LIMITS, jstDay, jstMonth };
