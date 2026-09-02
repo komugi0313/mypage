@@ -24,6 +24,16 @@
 const MODEL_LITE = process.env.GEMINI_MODEL      || 'gemini-2.5-flash-lite';
 const MODEL_DEEP = process.env.GEMINI_MODEL_DEEP || 'gemini-3.6-flash';
 
+// ── 原価計測（プロンプトキャッシュの効果を“見える化”して、上限を安全に上げる判断材料にする）─────────────
+// ★Gemini はモデルが返す usageMetadata に、入力/出力/キャッシュ済みトークン数を含める。
+//   暗黙キャッシュ（gemini-2.5+/3.x は既定でON・保管料ゼロ）が効くと cachedContentTokenCount が入り、その分の入力が最大75〜90%引きになる。
+//   → 実測 ¥/通 をサーバーログに出し、ヘッダ x-pk-tok でも返す。数日運用してこの数字を見れば、利益率60%を守れる正確な月間上限を決められる。
+//   単価は環境変数で上書き可（USD / 1Mトークン）。既定は gemini-3.6-flash の公表単価。キャッシュ入力は保守的に「入力の25%」（＝75%引き）で見積もる（原価を過小評価しない）。
+const PX_IN   = parseFloat(process.env.PK_PRICE_IN   || '0.75');  // 入力 $/1M
+const PX_OUT  = parseFloat(process.env.PK_PRICE_OUT  || '3.75');  // 出力 $/1M
+const PX_CACHE= parseFloat(process.env.PK_PRICE_CACHE|| String(0.75 * 0.25)); // キャッシュ済み入力 $/1M（保守的に75%引き）
+const PX_FX   = parseFloat(process.env.PK_FX_JPY     || '150');   // ¥/$（保守的に円安寄りにしたい時は下げる）
+
 // プラン別の1日上限。★実コスト（DEEP=gemini-3.6-flash：入力$0.75/出力$3.75 per1M、実測 約¥1.4〜2.0/通／
 //   LITE=gemini-2.5-flash-lite：約¥0.17/通）にもとづき、手数料30%控除後も利益率が必ず60%以上に収まる値に設定。
 // ★方針（月間プール）：本格鑑定(DEEP)は「1日◯回」ではなく「1か月◯回」で管理する。1日で1か月ぶんを使い切ってもよい（わざわざ1日で止めない）。
@@ -198,6 +208,19 @@ exports.handler = async (event) => {
     //   ＝海外や特定話題で“生成が空振り”しても、ユーザーの本格鑑定の回数は減らない）。失敗・分類用の軽量呼び出しも数えない。
     const answered = r.ok && hasAnswerText(text);
     if (!answered && r.ok) { try { console.error('[pk] 200-but-empty (not counted):', device, MODEL, text.slice(0, 300)); } catch (e) {} await noteError(store, 'empty'); }
+    // ★原価計測：モデルの usageMetadata から入力/出力/キャッシュ済みトークンと概算¥を算出し、ログ＋ヘッダに出す。
+    //   暗黙キャッシュが効いていれば cached>0 になり、その分だけ ¥/通 が下がる（この数字を見て月間上限を安全に上げ直せる）。
+    if (r.ok) {
+      try {
+        const u = readUsage(text);
+        if (u) {
+          const yen = usageYen(u);
+          resp.headers['x-pk-tok'] = 'p=' + u.p + ',cache=' + u.c + ',out=' + u.o + ',yen=' + yen.toFixed(2);
+          // DEEP だけ集計ログ（LITE/分類はノイズになるので出さない）
+          if (usedDeep) console.log('[pk-cost] deep model=' + MODEL + ' prompt=' + u.p + ' cached=' + u.c + ' out=' + u.o + ' ≈¥' + yen.toFixed(2) + '/通 (cacheHit=' + (u.p > 0 ? Math.round(u.c / u.p * 100) : 0) + '%)');
+        }
+      } catch (e) {}
+    }
     if (answered && store && !degraded && !isClassify) {
       try {
         await bump(store, `d:${day}:${device}`);   // 総生成（雑談・理屈込み・1日）
@@ -246,6 +269,25 @@ async function noteError(store, kind) {
   } catch (e) {}
 }
 
+// usageMetadata から使用トークンを取り出す（p=入力合計 / c=うちキャッシュ済み / o=出力）。無ければ null。
+function readUsage(bodyStr) {
+  try {
+    const j = JSON.parse(bodyStr);
+    const m = j && j.usageMetadata;
+    if (!m) return null;
+    const p = m.promptTokenCount || 0;
+    const c = m.cachedContentTokenCount || 0;   // 暗黙/明示キャッシュのヒット分（入力に含まれる）
+    const o = m.candidatesTokenCount || 0;
+    if (!p && !o) return null;
+    return { p: p, c: c, o: o };
+  } catch (e) { return null; }
+}
+// 概算原価（¥）。入力合計 p のうち c はキャッシュ単価、残りは通常入力単価。出力は出力単価。
+function usageYen(u) {
+  const fullIn = Math.max(0, u.p - u.c);
+  const usd = (fullIn * PX_IN + u.c * PX_CACHE + u.o * PX_OUT) / 1e6;
+  return usd * PX_FX;
+}
 // 返答本文が実際に入っているか（HTTP200でも空・ブロックの回を課金しないための判定）
 function hasAnswerText(bodyStr) {
   try {
