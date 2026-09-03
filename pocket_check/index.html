@@ -1363,7 +1363,7 @@ var I18N={
 var LANGS=['ja','en','zh','zt','ko','vi','es','pt','id','th'],
     LANG_LABEL={ja:'日本語',en:'English',zh:'简体中文',zt:'繁體中文',ko:'한국어',vi:'Tiếng Việt',es:'Español',pt:'Português',id:'Indonesia',th:'ไทย'};
 var LS_PROF='pk_profile', LS_MSGS='pk_msgs', LS_LANG='pk_lang', LS_THEME='pk_theme';
-var PK_VER='v83'; /* 版番号：SW版に合わせて更新（不具合報告メールに自動添付） */
+var PK_VER='v84'; /* 版番号：SW版に合わせて更新（不具合報告メールに自動添付） */
 var state={ lang:'ja', theme:'indigo', profile:null, sex:'female', esex:'female', chart:null, chartB:null, mode:'self', useCount:0, msgs:[] };
 var FREE_LIMIT=15;
 /* ---- プラン枠（内部値・画面には出さない）。鑑定はGeminiのみ：本格鑑定(DEEP)の枠を使い切ったら止めて正直に案内する。
@@ -1547,7 +1547,7 @@ function _dailyGreetAI(){
   });
 }
 function _streakSuffix(){ try{ var n=streakCount(); return (n>=2)?('\n\n'+pick(STREAK_PILL).replace('{n}',n)):''; }catch(e){ return ''; } }
-function _dailyGreet(tmpl){ try{ _dailyGreetAI().then(function(txt){ pushAI((_softenJargon(txt)||tmpl)+_streakSuffix()); }).catch(function(){ pushAI(tmpl+_streakSuffix()); }); }catch(e){ pushAI(tmpl); } }
+function _dailyGreet(tmpl){ try{ _dailyGreetAI().then(function(txt){ pushAI((_softenJargon(txt)||tmpl)+_streakSuffix()); try{_resumePills();}catch(e){} }).catch(function(){ pushAI(tmpl+_streakSuffix()); try{_resumePills();}catch(e){} }); }catch(e){ pushAI(tmpl); try{_resumePills();}catch(e2){} } }
 /* お誕生日おめでとう：メール/通知の“送信”は一切しない。本人がその日にアプリを開いたときだけ、Nicoが最初のひとことで祝う（=誤送が構造的に起こり得ない）。年齢は言わない（数字の捏造を避ける） */
 var BDAY_GREET={
  ja:'お誕生日おめでとう！🎉 今日という日にあなたが生まれてきてくれて、私はとっても嬉しいよ。あなたの一年が、あたたかくて優しい光に包まれますように。今日はあなたのための日だからね、無理せず、好きなことをして過ごしてね。',
@@ -1585,7 +1585,7 @@ function nicoDailyHi(){
        greet() は同期的に markBday() 済みなので、新規時はここでは二重に出ない。 */
     if(bdayPending()){
       markBday(); localStorage.setItem('pk_hiday',dkey); /* 同日の通常あいさつは重ねない */
-      setTimeout(function(){ pushAI(pick(BDAY_GREET)); },700);
+      setTimeout(function(){ pushAI(pick(BDAY_GREET)); try{_resumePills();}catch(e){} },700);
       return;
     }
     if(prev===dkey) return;
@@ -1862,11 +1862,17 @@ $('regBtn').onclick=function(){
 };
 
 /* ---- チャット ---- */
-function enterChat(){ if(!state.chart) state.chart=computeChart(state.profile); state.mode='self'; state.chartB=null; updateModeBar(); trialStart(); updateTrialPill(); state.msgs=loadJSON(LS_MSGS)||[]; show('scChat'); if(!state.msgs.length){ greet(); } else { renderChat(); } nicoDailyHi();
+/* 会話を再開（既存の会話を開き直した）ときも、必ずピルを出す＝迷子にしない（ユーザー要望：ピルはどんな時も必ず出す）。
+   直近のユーザー発言の話題に沿ったピルを出し、発言が無ければ挨拶ピル。日次あいさつの後にも呼ぶ（下の _dailyGreet 参照）。 */
+function _resumePills(){ try{
+  var lastU=''; for(var i=(state.msgs||[]).length-1;i>=0;i--){ var m=state.msgs[i]; if(m&&m.role==='me'&&m.text){ lastU=m.text; break; } }
+  if(lastU){ maybeTopicChips(lastU); } else { try{ appendGreetChips(); }catch(e){} }
+}catch(e){} }
+function enterChat(){ if(!state.chart) state.chart=computeChart(state.profile); state.mode='self'; state.chartB=null; updateModeBar(); trialStart(); updateTrialPill(); state.msgs=loadJSON(LS_MSGS)||[]; show('scChat'); if(!state.msgs.length){ greet(); } else { renderChat(); _resumePills(); } nicoDailyHi();
   /* 初回のみ：右上「命式」ボタンの意味を一度だけ案内 */
   try{ if(!localStorage.getItem('pk_seen_charttip')){ localStorage.setItem('pk_seen_charttip','1'); setTimeout(function(){ pkToast(pick(UX_TXT.chartTip),5000); },1800); } }catch(e){}
   /* 連続記録：1日1回カウント。マイルストーン到達時はNicoが祝う（既存ユーザーのみ・あいさつの後で） */
-  try{ var _mile=streakTouch(); if(_mile&&state.msgs.length){ setTimeout(function(){ pushAI(pick(STREAK_MILE_MSG[_mile])); },1700); } }catch(e){}
+  try{ var _mile=streakTouch(); if(_mile&&state.msgs.length){ setTimeout(function(){ pushAI(pick(STREAK_MILE_MSG[_mile])); try{_resumePills();}catch(e){} },1700); } }catch(e){}
   try{ pkNotifyReschedule(); }catch(e){} /* 開くたびに通知内容を最新化（次の数日ぶんを作り直す） */
 }
 var CHIP_TOMORROW={ja:'明日はどんな日？',en:'How’s tomorrow?',zh:'明天是怎样的一天？',zt:'明天是怎樣的一天？',ko:'내일은 어떤 날?',vi:'Ngày mai thế nào?',es:'¿Cómo será mañana?',pt:'Como será amanhã?',id:'Besok hari seperti apa?',th:'พรุ่งนี้เป็นวันแบบไหน?'};
