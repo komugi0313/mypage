@@ -1363,7 +1363,7 @@ var I18N={
 var LANGS=['ja','en','zh','zt','ko','vi','es','pt','id','th'],
     LANG_LABEL={ja:'日本語',en:'English',zh:'简体中文',zt:'繁體中文',ko:'한국어',vi:'Tiếng Việt',es:'Español',pt:'Português',id:'Indonesia',th:'ไทย'};
 var LS_PROF='pk_profile', LS_MSGS='pk_msgs', LS_LANG='pk_lang', LS_THEME='pk_theme';
-var PK_VER='v78'; /* 版番号：SW版に合わせて更新（不具合報告メールに自動添付） */
+var PK_VER='v79'; /* 版番号：SW版に合わせて更新（不具合報告メールに自動添付） */
 var state={ lang:'ja', theme:'indigo', profile:null, sex:'female', esex:'female', chart:null, chartB:null, mode:'self', useCount:0, msgs:[] };
 var FREE_LIMIT=15;
 /* ---- プラン枠（内部値・画面には出さない）。鑑定はGeminiのみ：本格鑑定(DEEP)の枠を使い切ったら止めて正直に案内する。
@@ -3031,7 +3031,10 @@ function _askProc(q){
   if(capEnforced() && _isBillableDeep(q) && usedNow()>=planCap()){
     /* 本格鑑定の1日枠を使い切ったら、本格鑑定だけ止める：質を守るため自動返信ではごまかさない。※雑談(billDe="false")はここを通らず続けられる */
     var p=curPlan(), noteMap=(p==='vip')?FAIR_NOTE:((p==='standard'||p==='pro')?FULL_NOTE:LIMIT_MSG);
-    pushSeq(splitBubbles(pick(noteMap)),function(){ _askDone(); });
+    /* Standard/Pro が上限：チャット案内のあと料金プランのシート(POP)を開いてアップグレード導線を強める。
+       VIP は上位プランが無いのでPOPを出さない（チャット案内のみ）。地域未対応時は出さない。 */
+    var _openPlan=(p==='standard'||p==='pro');
+    pushSeq(splitBubbles(pick(noteMap)),function(){ if(_openPlan&&!window._pkRegion) setTimeout(function(){ openSheet('shPlan'); },700); _askDone(); });
     return;
   }
   /* 相性を求めた（まだ相手未設定・生年月日を打っていない）→ 文字認識に頼らず、「生年月日を入力」ピルからプルダウンで確実に選ばせる */
