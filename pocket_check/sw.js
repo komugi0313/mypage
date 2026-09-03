@@ -4,7 +4,7 @@
    ・JS/画像等は stale-while-revalidate（即表示＋裏で更新）
    ・AI通信（/functions・/.netlify・generativelanguage）は絶対にキャッシュせず常にネットワークへ
    ※アプリを更新したら CACHE の版番号を上げると確実に配信されます。 */
-var CACHE = 'pocket-kantei-v81';
+var CACHE = 'pocket-kantei-v82';
 var SHELL = [
   './', './index.html', './lp.html', './pro-bazi.js', './pro-adapter.js',
   './owl.png', './icon-512.png', './icon-192.png', './icon-maskable-512.png', './apple-touch-icon.png',
