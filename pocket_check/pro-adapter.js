@@ -81,9 +81,21 @@ const KICHI_NICHI={水:{咸池:'酉',驛馬:'寅',劫殺:'巳',亡神:'亥',囚�
 
 const BLOOD={子:'戌',丑:'酉',寅:'申',卯:'未',辰:'午',巳:'巳',午:'辰',未:'卯',申:'寅',酉:'丑',戌:'子',亥:'亥'};
 
-const KAIGOU=new Set(['庚辰','庚戌','壬辰','戊戌']);
+const KAIGOU=new Set(['庚辰','庚戌','壬辰','壬戌','戊戌']);
 
 const ROKUBA=new Set(['壬午','癸巳']);
+
+/* 日刃（にちじん）＝自刃が日柱に立つ日 */
+const NICHIJIN=new Set(['丙午','戊午','壬子']);
+
+/* 月支ベースの貴人（値が天干なら四柱の天干、地支なら四柱の地支と照合） */
+const TENTOKU={子:'巳',丑:'庚',寅:'丁',卯:'申',辰:'壬',巳:'辛',午:'亥',未:'甲',申:'癸',酉:'寅',戌:'丙',亥:'乙'};
+const GETTOKU={子:'壬',丑:'庚',寅:'丙',卯:'甲',辰:'壬',巳:'庚',午:'丙',未:'甲',申:'壬',酉:'庚',戌:'丙',亥:'甲'};
+const TENTOKU_GO={子:'申',丑:'乙',寅:'壬',卯:'巳',辰:'丁',巳:'丙',午:'寅',未:'己',申:'戊',酉:'亥',戌:'辛',亥:'庚'};
+const GETTOKU_GO={子:'丁',丑:'乙',寅:'辛',卯:'己',辰:'丁',巳:'乙',午:'辛',未:'己',申:'丁',酉:'乙',戌:'辛',亥:'己'};
+
+/* 隔角（かくかく）＝年支から見た日支の隔角。年支→日支の関係で判定 */
+const KAKKAKU={子:'卯',丑:'卯',寅:'午',卯:'午',辰:'午',巳:'酉',午:'酉',未:'酉',申:'子',酉:'子',戌:'子',亥:'卯'};
 
 const KICHI_NIKKAN={
   甲:{天乙貴人:['丑','未'],文昌貴人:['巳'],金与禄:['辰'],暗禄:['亥'],羊刃:['卯'],飛刃:['酉'],太極貴人:['子','午'],紅艶:['午'],天厨貴人:['巳'],福星貴人:['子','寅'],天官貴人:['未']},
@@ -241,6 +253,19 @@ function shinsatsuHits(c){
     Object.keys(d4).forEach(function(name){ if(natal.indexOf(d4[name])>=0) hits.push(name+'('+d4[name]+')'); });
     if(kaigouOn(c)) hits.push('魁罡');
     if(rokubaOn(c)) hits.push('禄馬');
+    if(NICHIJIN.has(c.pillars[2].ganzhi)) hits.push('日刃');
+    /* 月支ベースの貴人（天徳・月徳・天徳合・月徳合）＝干は天干列、支は地支列と照合 */
+    var mb=c.pillars[1]&&c.pillars[1].branch, stems=c.pillars.map(function(p){return p.stem;});
+    if(mb){
+      [['天德貴人',TENTOKU],['月德貴人',GETTOKU],['天德合',TENTOKU_GO],['月德合',GETTOKU_GO]].forEach(function(pair){
+        var t=pair[1][mb]; if(!t)return;
+        var pool=(STEMS.indexOf(t)>=0)?stems:natal;
+        if(pool.indexOf(t)>=0) hits.push(pair[0]+'('+t+')');
+      });
+    }
+    /* 隔角（年支→日支） */
+    var yb=c.pillars[0]&&c.pillars[0].branch, db=c.pillars[2]&&c.pillars[2].branch;
+    if(yb&&db&&KAKKAKU[yb]===db) hits.push('隔角('+db+')');
   }catch(e){}
   return hits;
 }
@@ -422,6 +447,9 @@ var STAR_MEAN={
  咸池:'peach-blossom charm — magnetism, popularity, romantic attention', 紅艶:'strong romantic/sensual magnetism',
  驛馬:'the travel star — movement, travel, change, restlessness', 羊刃:'a sharp blade of force — intensity & drive, can be extreme',
  飛刃:'a hidden sharp edge', 魁罡:'bold, decisive, all-or-nothing willpower', 禄馬:'capability paired with mobility',
+ 日刃:'a self-blade on the day pillar — very strong, intense drive (like 羊刃 on the self)',
+ 天德合:'protection earned through good relationships', 月德合:'gentle protection & goodwill through harmony',
+ 隔角:'a "corner" star — needs own space; occasional isolation or feeling out of step',
  妨害殺:'obstruction — watch for interference', 囚獄:'restriction — feeling boxed in at times',
  劫殺:'sudden loss/robbery caution', 亡神:'loss/absent-mindedness caution', 血刃:'injury caution — care with the body'
 };
