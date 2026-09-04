@@ -251,6 +251,16 @@ function shinsatsuHits(c){
     });
     var d4=kichi4Targets(c.pillars[2].branch)||{};
     Object.keys(d4).forEach(function(name){ if(natal.indexOf(d4[name])>=0) hits.push(name+'('+d4[name]+')'); });
+    /* ⑥吉凶星(4)は年支からも判定する（表ヘッダ「年支・日支」）。日支基準と同一命中は重複させず、
+       別の地支に命中した分だけ「年」印を付けて追加する。対象は咸池・驛馬・劫殺・亡神・囚獄・血刃。 */
+    var yb0=c.pillars[0]&&c.pillars[0].branch;
+    if(yb0){
+      var y4=kichi4Targets(yb0)||{};
+      ['咸池','驛馬','劫殺','亡神','囚獄','血刃'].forEach(function(name){
+        var b=y4[name];
+        if(b&&natal.indexOf(b)>=0&&hits.indexOf(name+'('+b+')')<0){ var tag=name+'(年'+b+')'; if(hits.indexOf(tag)<0) hits.push(tag); }
+      });
+    }
     if(kaigouOn(c)) hits.push('魁罡');
     if(rokubaOn(c)) hits.push('禄馬');
     if(NICHIJIN.has(c.pillars[2].ganzhi)) hits.push('日刃');
