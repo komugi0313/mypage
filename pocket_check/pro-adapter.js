@@ -458,6 +458,8 @@ var STAR_MEAN={
  驛馬:'the travel star — movement, travel, change, restlessness', 羊刃:'a sharp blade of force — intensity & drive, can be extreme',
  飛刃:'a hidden sharp edge', 魁罡:'bold, decisive, all-or-nothing willpower', 禄馬:'capability paired with mobility',
  日刃:'a self-blade on the day pillar — very strong, intense drive (like 羊刃 on the self)',
+ 将星:'a leadership/command star — natural authority, drawn to the center of things',
+ 華蓋:'the artistic/spiritual canopy — solitary depth, talent in art, faith, research; enjoys their own world',
  天德合:'protection earned through good relationships', 月德合:'gentle protection & goodwill through harmony',
  隔角:'a "corner" star — needs own space; occasional isolation or feeling out of step',
  妨害殺:'obstruction — watch for interference', 囚獄:'restriction — feeling boxed in at times',
