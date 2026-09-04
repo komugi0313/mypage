@@ -75,13 +75,13 @@ const GEN={木:'水',火:'木',土:'火',金:'土',水:'金'};
 
 const SANGO_KEY={申:'水',子:'水',辰:'水',寅:'火',午:'火',戌:'火',巳:'金',酉:'金',丑:'金',亥:'木',卯:'木',未:'木'};
 
-const KICHI_NICHI={水:{咸池:'酉',驛馬:'寅',劫殺:'巳',亡神:'亥',囚獄:'午'},火:{咸池:'卯',驛馬:'申',劫殺:'亥',亡神:'巳',囚獄:'子'},金:{咸池:'午',驛馬:'亥',劫殺:'寅',亡神:'申',囚獄:'卯'},木:{咸池:'子',驛馬:'巳',劫殺:'申',亡神:'寅',囚獄:'酉'}};
+/* 三合局ベースの吉凶星（base=日支）。将星=三合の旺(中神)、華蓋=三合の墓。
+   水局申子辰:旺子/墓辰、火局寅午戌:旺午/墓戌、金局巳酉丑:旺酉/墓丑、木局亥卯未:旺卯/墓未。 */
+const KICHI_NICHI={水:{咸池:'酉',驛馬:'寅',劫殺:'巳',亡神:'亥',囚獄:'午',将星:'子',華蓋:'辰'},火:{咸池:'卯',驛馬:'申',劫殺:'亥',亡神:'巳',囚獄:'子',将星:'午',華蓋:'戌'},金:{咸池:'午',驛馬:'亥',劫殺:'寅',亡神:'申',囚獄:'卯',将星:'酉',華蓋:'丑'},木:{咸池:'子',驛馬:'巳',劫殺:'申',亡神:'寅',囚獄:'酉',将星:'卯',華蓋:'未'}};
 
 const BLOOD={子:'戌',丑:'酉',寅:'申',卯:'未',辰:'午',巳:'巳',午:'辰',未:'卯',申:'寅',酉:'丑',戌:'子',亥:'亥'};
 
-const KAKU={子:'卯',丑:'卯',寅:'午',卯:'午',辰:'午',巳:'酉',午:'酉',未:'酉',申:'子',酉:'子',戌:'子',亥:'卯'};
-
-const KAIGOU=new Set(['庚辰','庚戌','壬辰','戊戌','戊辰']);
+const KAIGOU=new Set(['庚辰','庚戌','壬辰','戊戌']);
 
 const ROKUBA=new Set(['壬午','癸巳']);
 
@@ -179,8 +179,6 @@ function kuuboNow(c){
 
 function kichi4Targets(base){const g=SANGO_KEY[base];const o=g?{...KICHI_NICHI[g]}:{};if(BLOOD[base])o['血刃']=BLOOD[base];return o;}
 
-function kakuOn(c){return KAKU[c.pillars[0].branch]===c.pillars[2].branch;}
-
 function kaigouOn(c){return KAIGOU.has(c.pillars[2].ganzhi);}
 
 function rokubaOn(c){return ROKUBA.has(c.pillars[2].ganzhi);}
@@ -205,6 +203,19 @@ window.PersonBazi=function(y,m,d,hour,minute,timeUnknown,sex,place){
     if(place&&place.lon!=null&&!timeUnknown){ opt.longitude=place.lon; opt.stdMer=place.mer; opt.correctionMode='full'; }
     var c=window.Bazi.computeChart(opt);
     if(timeUnknown) c=markTimeUnknown(c);
+    /* ★年運は「立春」で切り替わる（暦年ではない）。tyme4tsは立春を正しく扱うので、今日の年柱(干支)を求め、
+       annualFortunes の一致する年ラベルを現在年(now.year)に補正する＝1/1〜立春前に年運が1年先取りされる不具合を解消。 */
+    try{
+      if(c&&c.now&&c.annualFortunes&&c.annualFortunes.length){
+        var _td=new Date(), _cy=_td.getFullYear();
+        var _tc=window.Bazi.computeChart({year:_cy,month:_td.getMonth()+1,day:_td.getDate(),hour:12,minute:0,sex:'male',correctionMode:'none'});
+        var _yp=_tc&&_tc.pillars&&_tc.pillars[0]&&_tc.pillars[0].ganzhi;
+        if(_yp){
+          var _cand=c.annualFortunes.filter(function(a){return a.ganzhi===_yp;});
+          if(_cand.length){ _cand.sort(function(a,b){return Math.abs(a.year-_cy)-Math.abs(b.year-_cy);}); c.now.year=_cand[0].year; }
+        }
+      }
+    }catch(e){}
     var kk=_kkAssess(c);
     var fav={},grpMap={};
     SHENG.forEach(function(el){var a=kk.assess(el);fav[el]=a.fav;grpMap[el]=a.grp;});
