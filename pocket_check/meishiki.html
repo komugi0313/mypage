@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>命式作成ソフト（プロトタイプ）</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--line:#e4e0d6;--ink:#2b2723;--muted:#8a8377;--accent:#7a5c3e;--soft:#f0ebe2;
+ --moku:#3f7a4e;--ka:#c0453b;--do:#b8892f;--kin:#9a9aa2;--sui:#3d6ea8;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;line-height:1.55}
+.wrap{max-width:920px;margin:0 auto;padding:18px 14px 60px}
+h1{font-size:19px;margin:6px 0 2px}
+.sub{color:var(--muted);font-size:12.5px;margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+label{display:block;font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px}
+input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff;color:inherit}
+.row-check{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:13px}
+.row-check input{width:auto}
+.btn{margin-top:14px;width:100%;padding:12px;border:0;border-radius:11px;background:var(--accent);color:#fff;font-size:15px;font-weight:800;cursor:pointer}
+.btn:active{opacity:.85}
+h2{font-size:15px;margin:2px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--soft)}
+.note{font-size:12px;color:var(--muted)}
+/* 命式グリッド */
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+.meishiki th,.meishiki td{border:1px solid var(--line);padding:8px 6px;text-align:center;vertical-align:middle}
+.meishiki th{background:var(--soft);font-size:12px;color:var(--muted);font-weight:700;width:22%}
+.meishiki .rh{background:var(--soft);font-size:11.5px;color:var(--muted);font-weight:700;width:12%}
+.gz{font-size:22px;font-weight:800;letter-spacing:1px}
+.ten{font-size:12px;color:var(--accent);font-weight:700}
+.zoukan{font-size:11.5px;line-height:1.5}
+.zoukan b{font-weight:800}
+.el-木{color:var(--moku)}.el-火{color:var(--ka)}.el-土{color:var(--do)}.el-金{color:var(--kin)}.el-水{color:var(--sui)}
+/* 五行バー */
+.gogyo{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;text-align:center}
+.gcell{border:1px solid var(--line);border-radius:10px;padding:8px 4px}
+.gcell .n{font-size:20px;font-weight:800}
+.gcell .l{font-size:12px;font-weight:700}
+.bar{height:6px;border-radius:3px;background:var(--soft);margin-top:6px;overflow:hidden}
+.bar>i{display:block;height:100%}
+/* 大運 */
+.ladder{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px}
+.lstep{flex:0 0 auto;min-width:78px;border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center;background:#fff}
+.lstep.now{border-color:var(--accent);box-shadow:0 0 0 2px rgba(122,92,62,.15)}
+.lstep .age{font-size:11px;color:var(--muted)}
+.lstep .lgz{font-size:16px;font-weight:800;margin:2px 0}
+.lstep .lten{font-size:11px;color:var(--accent);font-weight:700}
+.lstep .lter{font-size:10.5px;color:var(--muted)}
+/* 年運 */
+.years{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:6px}
+.ycell{border:1px solid var(--line);border-radius:8px;padding:6px 4px;text-align:center;font-size:11.5px;background:#fff}
+.ycell.now{border-color:var(--accent);background:#fbf7f0}
+.ycell .yy{font-weight:800;font-size:12px}
+.ycell .ygz{font-size:13px;font-weight:700}
+.ycell .yten{font-size:10.5px;color:var(--accent)}
+.pill{display:inline-block;background:var(--soft);border-radius:999px;padding:3px 10px;font-size:12.5px;font-weight:700;margin:2px 4px 2px 0}
+.hidden{display:none}
+@media print{.noprint{display:none}body{background:#fff}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>命式作成ソフト <span class="note">（プロトタイプ）</span></h1>
+  <p class="sub">生年月日・出生地・出生時間から、真太陽時補正・四柱・通変星・蔵干・十二運・五行・大運・年運・空亡を表示します。</p>
+
+  <div class="card noprint">
+    <div class="form">
+      <div>
+        <label>生年月日</label>
+        <input type="date" id="bd" value="1990-06-15">
+      </div>
+      <div>
+        <label>出生時間</label>
+        <input type="time" id="bt" value="10:30">
+        <div class="row-check"><input type="checkbox" id="tu"><label for="tu" style="margin:0">時間不明</label></div>
+      </div>
+      <div>
+        <label>性別</label>
+        <select id="sex"><option value="female">女性</option><option value="male">男性</option></select>
+      </div>
+      <div>
+        <label>出生地</label>
+        <select id="place"></select>
+      </div>
+      <div id="manualWrap" class="hidden">
+        <label>経度（東経＋）／標準子午線</label>
+        <div style="display:flex;gap:6px">
+          <input type="number" id="lon" step="0.01" placeholder="経度 例139.69">
+          <input type="number" id="mer" step="1" value="135" placeholder="標準135">
+        </div>
+      </div>
+    </div>
+    <button class="btn" id="go">命式を作成する</button>
+    <p class="note" id="err" style="color:var(--ka);margin:10px 0 0"></p>
+  </div>
+
+  <div id="out"></div>
+</div>
+
+<script src="./pro-bazi.js"></script>
+<script src="./pro-adapter.js"></script>
+<script>
+var CITIES={
+ "東京":[139.69,135],"札幌":[141.35,135],"仙台":[140.87,135],"名古屋":[136.91,135],
+ "大阪":[135.50,135],"京都":[135.77,135],"広島":[132.46,135],"福岡":[130.40,135],
+ "那覇":[127.68,135],"ソウル":[126.98,135],"台北":[121.56,120],"上海":[121.47,120],
+ "北京":[116.40,120],"バンコク":[100.50,105],"ジャカルタ":[106.85,105],
+ "ロサンゼルス":[-118.24,-120],"ニューヨーク":[-74.00,-75],"ロンドン":[-0.13,0],
+ "（経度を手入力）":["manual",0]};
+var STEMS=["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"], BR=["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+var STEM_EL={甲:"木",乙:"木",丙:"火",丁:"火",戊:"土",己:"土",庚:"金",辛:"金",壬:"水",癸:"水"};
+var BR_EL={子:"水",丑:"土",寅:"木",卯:"木",辰:"土",巳:"火",午:"火",未:"土",申:"金",酉:"金",戌:"土",亥:"水"};
+var EL_ORDER=["木","火","土","金","水"];
+
+function kubo(gz){var ds=STEMS.indexOf(gz[0]),db=BR.indexOf(gz[1]);var d=((db-ds)%12+12)%12;return [BR[(d+10)%12],BR[(d+11)%12]];}
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+function elc(el){return '<span class="el-'+el+'">'+el+'</span>';}
+
+(function initPlaces(){
+  var sel=document.getElementById("place");
+  Object.keys(CITIES).forEach(function(c){var o=document.createElement("option");o.value=c;o.textContent=c;sel.appendChild(o);});
+  sel.value="東京";
+  sel.onchange=function(){document.getElementById("manualWrap").classList.toggle("hidden",CITIES[sel.value][0]!=="manual");};
+})();
+document.getElementById("tu").onchange=function(){document.getElementById("bt").disabled=this.checked;};
+document.getElementById("go").onclick=run;
+
+function run(){
+  var err=document.getElementById("err"); err.textContent="";
+  try{
+    var bd=document.getElementById("bd").value; if(!bd){err.textContent="生年月日を入力してください";return;}
+    var parts=bd.split("-"), y=+parts[0],mo=+parts[1],d=+parts[2];
+    var tu=document.getElementById("tu").checked;
+    var hh=12,mi=0;
+    if(!tu){var bt=document.getElementById("bt").value||"12:00";hh=+bt.split(":")[0];mi=+bt.split(":")[1];}
+    var sex=document.getElementById("sex").value;
+    var pc=document.getElementById("place").value, cc=CITIES[pc], place=null, lonShown="";
+    if(cc[0]==="manual"){var lon=parseFloat(document.getElementById("lon").value),mer=parseFloat(document.getElementById("mer").value||"135");
+      if(!isNaN(lon)){place={lon:lon,mer:isNaN(mer)?135:mer};lonShown=lon+"°／標準"+place.mer+"°";}}
+    else { place={lon:cc[0],mer:cc[1]}; lonShown=pc+"（経度"+cc[0]+"°／標準"+cc[1]+"°）"; }
+
+    var p=window.PersonBazi(y,mo,d,hh,mi,tu,sex,(!tu&&place)?place:null);
+    if(!p||!p.ok){err.textContent="計算エラー: "+(p&&p.error||"unknown");return;}
+    render(p,{y:y,mo:mo,d:d,hh:hh,mi:mi,tu:tu,sex:sex,lonShown:lonShown,place:place});
+  }catch(e){ err.textContent="エラー: "+(e&&e.message||e); }
+}
+
+function render(p,inp){
+  var c=p.pro, out=document.getElementById("out"), H="";
+  var pil=p.pillars.slice(); // 3 or 4
+  var labels=["年柱","月柱","日柱","時柱"];
+  // 真太陽時
+  var corr="";
+  if(inp.tu){ corr="出生時間：<b>不明</b>（時柱は算出しません／年月日で鑑定）"; }
+  else {
+    var mmin = inp.place ? Math.round((inp.place.lon - inp.place.mer)*4) : 0;
+    corr="入力時刻 "+two(inp.hh)+":"+two(inp.mi)+"（"+esc(inp.lonShown||"補正なし")+"）";
+    if(inp.place) corr+=" ／ 経度差による補正 "+(mmin>=0?"+":"")+mmin+"分＋均時差をエンジンが適用し四柱を確定";
+  }
+  H+='<div class="card"><h2>基本情報 ・ 真太陽時</h2>'
+    +'<p class="note" style="margin:0 0 6px">'+esc(inp.y)+'年'+esc(inp.mo)+'月'+esc(inp.d)+'日 ／ '+(inp.sex==="male"?"男性":"女性")+'</p>'
+    +'<p class="note" style="margin:0">'+corr+'</p>'
+    +'<div style="margin-top:8px"><span class="pill">日主 '+esc(c.dayMaster.stem)+'（'+elc(c.dayMaster.element)+'）</span>'
+    +'<span class="pill">身の強弱 '+esc(p.sType)+'</span>'
+    +'<span class="pill">空亡 '+kubo(pil[2].ganzhi).join("")+'</span></div></div>';
+
+  // 命式グリッド
+  H+='<div class="card"><h2>命式（四柱）</h2><table class="meishiki"><tr><th></th><th>年柱</th><th>月柱</th><th>日柱</th><th>時柱</th></tr>';
+  // 天干＋通変星
+  H+='<tr><td class="rh">天干<br>(通変星)</td>'+cell4(pil,function(x){return '<div class="gz">'+elc2(x.stem)+'</div><div class="ten">'+esc(x.tenStar||"日主")+'</div>';},inp.tu)+'</tr>';
+  // 地支
+  H+='<tr><td class="rh">地支</td>'+cell4(pil,function(x){return '<div class="gz">'+elc2b(x.branch)+'</div>';},inp.tu)+'</tr>';
+  // 蔵干
+  H+='<tr><td class="rh">蔵干<br>(通変星)</td>'+cell4(pil,function(x){return '<div class="zoukan">'+(x.hiddenStems||[]).map(function(h){return '<b>'+elc2(h.stem)+'</b> '+esc(h.role)+' '+esc(h.tenStar||"");}).join("<br>")+'</div>';},inp.tu)+'</tr>';
+  // 十二運
+  H+='<tr><td class="rh">十二運</td>'+cell4(pil,function(x){return esc(x.terrain||"-");},inp.tu)+'</tr>';
+  H+='</table></div>';
+
+  // 五行
+  var five=p.five||{}, tot=0; EL_ORDER.forEach(function(e){tot+=five[e]||0;}); tot=tot||1;
+  H+='<div class="card"><h2>五行バランス</h2><div class="gogyo">';
+  EL_ORDER.forEach(function(e){var n=five[e]||0;H+='<div class="gcell"><div class="l el-'+e+'">'+e+'</div><div class="n">'+n+'</div><div class="bar"><i class="el-'+e+'" style="width:'+Math.round(n/tot*100)+'%;background:currentColor"></i></div></div>';});
+  H+='</div><p class="note" style="margin:8px 0 0">喜神（味方）：'+favList(p.fav,"喜")+' ／ 忌神（控えめに）：'+favList(p.fav,"忌")+'</p></div>';
+
+  // 大運
+  var now=c.now||{}, di=now.daeunIndex;
+  var sf=c.startFortune||{};
+  H+='<div class="card"><h2>大運（起運：'+esc(sf.years!=null?sf.years+"歳"+(sf.months||0)+"ヶ月":"-")+' ／ '+(sf.forward?"順行":"逆行")+'）</h2><div class="ladder">';
+  (c.decadeFortunes||[]).forEach(function(dd,i){var a=(dd.startAge!=null?dd.startAge:dd.age);
+    H+='<div class="lstep'+(i===di?" now":"")+'"><div class="age">'+esc(a)+'〜'+esc(a+9)+'歳</div><div class="lgz">'+elc2gz(dd.ganzhi)+'</div><div class="lten">'+esc(dd.tenStar||"")+'</div><div class="lter">'+esc(dd.terrain||"")+'</div></div>';});
+  H+='</div></div>';
+
+  // 年運
+  var cy=now.year;
+  H+='<div class="card"><h2>年運</h2><div class="years">';
+  (c.annualFortunes||[]).forEach(function(a){H+='<div class="ycell'+(a.year===cy?" now":"")+'"><div class="yy">'+esc(a.year)+'</div><div class="ygz">'+elc2gz(a.ganzhi)+'</div><div class="yten">'+esc(a.tenStar||"")+'</div></div>';});
+  H+='</div><p class="note" style="margin:8px 0 0">枠付き＝今年（'+esc(cy||"-")+'）。年運の切替は立春が基準です。</p></div>';
+
+  H+='<div class="card noprint"><button class="btn" style="background:#6b6257" onclick="window.print()">この命式を印刷／PDF保存</button></div>';
+  out.innerHTML=H;
+  out.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function two(n){return (n<10?"0":"")+n;}
+function cell4(pil,fn,tu){var h="";for(var i=0;i<4;i++){var x=pil[i];if(i===3&&(tu||!x)){h+='<td class="note">—</td>';continue;}h+='<td>'+fn(x)+'</td>';}return h;}
+function elc2(stem){var e=STEM_EL[stem]||"";return '<span class="el-'+e+'">'+esc(stem)+'</span>';}
+function elc2b(br){var e=BR_EL[br]||"";return '<span class="el-'+e+'">'+esc(br)+'</span>';}
+function elc2gz(gz){return elc2(gz[0])+elc2b(gz[1]);}
+function favList(fav,mark){if(!fav)return"-";var a=EL_ORDER.filter(function(e){return fav[e]===mark;});return a.length?a.map(elc).join("・"):"-";}
+
+// 初回自動表示
+run();
+</script>
+</body>
+</html>
