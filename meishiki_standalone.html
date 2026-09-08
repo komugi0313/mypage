@@ -924,6 +924,11 @@ var EL_LUCK={木:{色:"緑",方:"東",行:"自然に触れる・読書・早起�
 
 function two(n){return (n<10?"0":"")+n;}
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+function mdLite(s){var t=esc(s);
+  t=t.replace(/^\s*#{1,6}\s*(.+)$/gm,'<b style="display:block;margin:12px 0 4px;color:var(--accent)">$1</b>');
+  t=t.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<em>$2</em>');
+  t=t.replace(/^\s*[-・]\s+/gm,'・').replace(/^\s*---+\s*$/gm,'<hr style="border:0;border-top:1px solid var(--line);margin:10px 0">');
+  return t.replace(/\n/g,'<br>');}
 function elc(el){return '<span class="el-'+el+'">'+el+'</span>';}
 function elS(stem){var e=MSTEM_EL[stem]||"";return '<span class="el-'+e+'">'+esc(stem)+'</span>';}
 function elB(br){var e=MBR_EL[br]||"";return '<span class="el-'+e+'">'+esc(br)+'</span>';}
@@ -1085,8 +1090,10 @@ function aiReading(c,btn){
   try{ localStorage.setItem("ms_gkey",key); }catch(e){}
   var deck=window.richGrounding?window.richGrounding(c):(window.proGrounding?window.proGrounding(c):"");
   var sys="あなたは四柱推命の鑑定士です。以下の【命式データ】だけを根拠に、日本語で温かく、具体的に鑑定してください。専門用語（通変星名や神殺の漢字）は理屈を聞かれない限り避け、日常語に翻訳して織り込むこと。性格・強みと注意点・才能や向いていること・今の運の流れ（大運/今年）・開運のヒントの順で、断定しすぎず前向きに。過去の出来事は断定しない。600〜900字程度。\n【命式データ】\n"+deck;
-  var body={systemInstruction:{parts:[{text:sys}]},contents:[{role:"user",parts:[{text:"この人を鑑定してください。"}]}],generationConfig:{temperature:0.9,maxOutputTokens:1800}};
-  if(/gemini-3/.test(model)){ /* 3.xはthinkingConfig不可 */ }
+  var gc={temperature:0.9};
+  if(/gemini-3/.test(model)){ gc.maxOutputTokens=3200; /* 3.xは思考ぶんの余裕を確保・thinkingConfigは付けない */ }
+  else { gc.thinkingConfig={thinkingBudget:0}; gc.maxOutputTokens=2000; /* 2.5系は思考OFFで本文に全ぶん使う */ }
+  var body={systemInstruction:{parts:[{text:sys}]},contents:[{role:"user",parts:[{text:"この人を鑑定してください。"}]}],generationConfig:gc};
   box.innerHTML='<span class="note">鑑定中… 🔮</span>'; btn.disabled=true;
   fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(key),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
    .then(function(r){return r.text().then(function(t){return {ok:r.ok,status:r.status,t:t};});})
@@ -1094,8 +1101,9 @@ function aiReading(c,btn){
      if(!res.ok){ box.innerHTML='<span style="color:var(--warn)">エラー('+res.status+')：'+(res.status===429?"利用上限/レート超過。少し待って再試行を。":res.status===400||res.status===403?"キーが無効か、地域制限の可能性。":"接続に失敗しました。")+'</span>'; return; }
      var j; try{j=JSON.parse(res.t);}catch(e){ box.innerHTML='<span style="color:var(--warn)">応答の解析に失敗しました。</span>'; return; }
      var cand=j.candidates&&j.candidates[0], txt=cand&&cand.content&&cand.content.parts?cand.content.parts.map(function(x){return x.text||"";}).join(""):"";
-     if(!txt){ box.innerHTML='<span style="color:var(--warn)">鑑定文が生成されませんでした（安全フィルタ等）。もう一度お試しください。</span>'; return; }
-     box.innerHTML='<div style="white-space:pre-wrap;line-height:1.7">'+esc(txt)+'</div>';
+     if(!txt){ var fr=cand&&cand.finishReason; box.innerHTML='<span style="color:var(--warn)">鑑定文が生成されませんでした'+(fr?'（'+esc(fr)+'）':'（安全フィルタ等）')+'。もう一度お試しください。</span>'; return; }
+     var trunc=cand&&cand.finishReason==="MAX_TOKENS";
+     box.innerHTML='<div style="line-height:1.75">'+mdLite(txt)+'</div>'+(trunc?'<p class="note" style="color:var(--warn);margin:8px 0 0">※長さの上限で途中までの表示です。もう一度押すと続きが変わります。</p>':'');
    })
    .catch(function(){ btn.disabled=false; box.innerHTML='<span style="color:var(--warn)">通信エラー。ネット接続をご確認ください。</span>'; });
 }
