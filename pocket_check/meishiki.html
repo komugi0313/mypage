@@ -88,6 +88,11 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
     </div>
     <button class="btn" id="go">命式を作成する</button>
     <div style="display:flex;gap:8px"><button class="btn sub2" id="save" style="flex:1">この命式を保存</button></div>
+    <details style="margin-top:12px"><summary style="cursor:pointer;font-size:13px;color:var(--muted);font-weight:700">🤖 AI鑑定の設定（任意・キーが必要）</summary>
+      <div style="margin-top:8px"><label>Gemini APIキー（この端末にのみ保存）</label><input type="password" id="gkey" placeholder="AIza..." autocomplete="off"></div>
+      <div style="margin-top:8px"><label>モデル</label><select id="gmodel"><option value="gemini-2.5-flash">gemini-2.5-flash（推奨）</option><option value="gemini-3.6-flash">gemini-3.6-flash</option><option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite（最安）</option></select></div>
+      <p class="note" style="margin:6px 0 0">キーは端末内(localStorage)のみ・外部送信はGoogleへの鑑定リクエストのみ。テスト後は再発行推奨。</p>
+    </details>
     <p class="note" id="err" style="color:var(--warn);margin:10px 0 0"></p>
   </div>
 
@@ -128,6 +133,10 @@ var SETSU_JP={"입춘":"立春","경칩":"啓蟄","청명":"清明","입하":"�
 /* 神殺の日本語ひとこと */
 var STAR_JP={"天乙貴人":"最強の助け・人徳","太極貴人":"探究・信仰・研究","福星貴人":"衣食住の安泰","文昌貴人":"学問・文才","天厨貴人":"食に恵まれる","天官貴人":"地位・出世","金与禄":"結婚・財の安定","暗禄":"陰の援助","咸池":"桃花・色気","紅艶":"強い色気・魅力","驛馬":"移動・変化・旅","羊刃":"強い刃の気・激しさ","飛刃":"隠れた鋭さ","魁罡":"強烈な意志・カリスマ","禄馬":"才能＋機動力","将星":"リーダー・中心","華蓋":"芸術・孤高・信仰","日刃":"自らに立つ刃・強さ","天德貴人":"天の加護","月德貴人":"静かな加護","天德合":"縁による加護","月德合":"和による加護","隔角":"孤立・すきま風","妨害殺":"妨げ・邪魔","囚獄":"束縛・停滞","劫殺":"急な損失に注意","亡神":"喪失・うっかり","血刃":"ケガに注意"};
 var REL_JP={"干合":"強い引き合い","六合":"結びつき・仲良し","三合":"強い調和","半会":"前進の勢い","方合":"一極集中","冲":"衝突・変化の軸","刑":"摩擦・調整","破":"小さなほころび","害":"見えないすれ違い"};
+/* 解析用テンプレ（ルールベース／AIなし） */
+var EL_NATURE={木:"成長・向上心・優しさ。伸びたい気持ちが強く、面倒見もよいタイプ。",火:"情熱・表現・華やかさ。明るく人を照らし、感情がまっすぐ。",土:"安定・信頼・面倒見。地に足がつき、コツコツ積み上げる。",金:"決断・けじめ・美意識。筋を通し、白黒はっきりさせる。",水:"知恵・柔軟・共感。流れを読み、しなやかに立ち回る。"};
+var TEN_THEME={比肩:"自立心とマイペース。自分の軸で動く",劫財:"行動力と勝負勘。仲間と動くと強い",食神:"のびのびした才能。楽しみながら形にする",傷官:"鋭い感性と表現力。完璧主義な一面も",偏財:"フットワークと商才。人脈と機会に恵まれる",正財:"堅実・誠実。コツコツ貯め、信頼を築く",偏官:"度胸と行動力。プレッシャーに強い",正官:"まじめ・責任感・秩序。きちんと者",偏印:"独自の発想と直感。探究心が深い",印綬:"学びと知性。人に支えられ、育てる力"};
+var EL_LUCK={木:{色:"緑",方:"東",行:"自然に触れる・読書・早起き"},火:{色:"赤・紫",方:"南",行:"人前に出る・発信する・明るい場へ"},土:{色:"黄・ベージュ",方:"中央/南西",行:"整理整頓・継続・地に足をつける"},金:{色:"白・金銀",方:"西",行:"身だしなみ・決断・区切りをつける"},水:{色:"青・黒",方:"北",行:"水辺・休息・情報を集める"}};
 
 function two(n){return (n<10?"0":"")+n;}
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
@@ -241,8 +250,70 @@ function renderSolo(p,inp){
   (c.annualFortunes||[]).forEach(function(a){H+='<div class="ycell'+(a.year===cy?" now":"")+'"><div class="yy">'+esc(a.year)+'</div><div class="ygz">'+elGz(a.ganzhi)+'</div><div class="yten">'+esc(a.tenStar||"")+'</div></div>';});
   H+='</div><p class="note" style="margin:8px 0 0">枠付き＝今年（'+esc(cy||"-")+'）。年運の切替は立春が基準です。</p></div>';
 
+  // 解析（ルールベース）
+  H+='<div class="card"><h2>解析（自動）</h2>'+analyzeSolo(p)+'</div>';
+  // AI鑑定
+  H+='<div class="card"><h2>AI鑑定</h2><div id="aiOut" class="note">下のボタンで、この命式をAIが自然文で鑑定します（APIキー設定が必要）。</div>'
+    +'<button class="btn" id="aiBtn" style="margin-top:10px">🤖 AIで詳しく鑑定する</button></div>';
+
   H+='<div class="card noprint"><button class="btn sub2" onclick="window.print()">この命式を印刷／PDF保存</button></div>';
   out.innerHTML=H;out.scrollIntoView({behavior:"smooth",block:"start"});
+  var ab=document.getElementById("aiBtn"); if(ab) ab.onclick=function(){aiReading(p.pro,ab);};
+}
+
+/* ルールベース解析：エンジンの構造化データ(fullProfile/tenGodBias等)を日本語文へ */
+function analyzeSolo(p){
+  var c=p.pro, fp=window.fullProfile?window.fullProfile(c):null, tb=window.tenGodBias?window.tenGodBias(c):null;
+  var el=c.dayMaster.element, L=[];
+  // 性格の核
+  var genmei=(fp&&fp.genmei)||"", gTheme=TEN_THEME[genmei]||"";
+  L.push('<p style="margin:0 0 8px"><b>◆ 性格の核</b><br>日主は'+elc(el)+'（'+esc(c.dayMaster.stem)+'）。'+esc(EL_NATURE[el]||"")
+    +(gTheme?'<br>中心となる星は<b>'+esc(genmei)+'</b>＝'+esc(gTheme)+'。':'')
+    +'<br>身の強弱は<b>'+esc(p.sType)+'</b>。'+(p.sType.indexOf("強")>=0?'自我とエネルギーが強く、自分で切り開くタイプ。':(p.sType.indexOf("弱")>=0?'繊細で周囲と調和しながら力を発揮するタイプ。':'バランス型で状況に応じて動けるタイプ。'))+'</p>');
+  // 通変星の偏り
+  if(tb){ var t=tb.type==="balanced"?"バランス型（多才で適応力が高い）":(tb.maxGroup?("<b>"+tb.maxGroup+"</b>が強め＝そのテーマが人生の主役"):"");
+    L.push('<p style="margin:0 0 8px"><b>◆ エネルギーの偏り</b><br>'+t+'。'+(tb.missing&&tb.missing.length?'弱いのは'+tb.missing.join("・")+'（そこは人に頼る・意識して補うテーマ）。':'')+'</p>'); }
+  // 五行の強み・弱み・開運
+  var five=p.five||{}, strong=[],weak=[]; EL_ORDER.forEach(function(e){ if((five[e]||0)>=3)strong.push(e); if((five[e]||0)===0)weak.push(e); });
+  L.push('<p style="margin:0 0 8px"><b>◆ 五行の傾向</b><br>'+(strong.length?'強い：'+strong.map(elc).join("・")+'（持ち味・出やすい面）。':'')+(weak.length?'　欠け：'+weak.map(elc).join("・")+'（意識して取り入れたい面）。':'')+(!strong.length&&!weak.length?'大きな偏りは少なく安定型。':'')+'</p>');
+  // 開運（喜神）
+  var favs=EL_ORDER.filter(function(e){return p.fav&&p.fav[e]==="喜";});
+  if(favs.length){ L.push('<p style="margin:0 0 8px"><b>◆ 開運のヒント（喜神：'+favs.map(elc).join("・")+'）</b><br>'+favs.map(function(e){var k=EL_LUCK[e];return k?('・'+elc(e)+'：色「'+k.色+'」／方角「'+k.方+'」／'+k.行):"";}).filter(Boolean).join("<br>")+'</p>'); }
+  // 運の流れ
+  if(fp){ var cur=fp.cur, ty=fp.ty, ny=fp.ny;
+    L.push('<p style="margin:0 0 8px"><b>◆ 運の流れ</b><br>'
+      +(cur?'今の10年（大運）：<b>'+esc(cur)+'</b>＝'+esc(TEN_THEME[cur]||"")+'。<br>':'')
+      +(ty?'今年：<b>'+esc(ty)+'</b>＝'+esc(TEN_THEME[ty]||"")+'。<br>':'')
+      +(ny?'来年：<b>'+esc(ny)+'</b>＝'+esc(TEN_THEME[ny]||"")+'。':'')+'</p>'); }
+  // 神殺
+  var ss=(window.shinsatsuHits?window.shinsatsuHits(c):[]).slice(0,4);
+  if(ss.length){ L.push('<p style="margin:0"><b>◆ 目立つ星</b><br>'+ss.map(function(s){var nm=s.split("(")[0].replace(/^年/,"");return esc(nm)+'（'+esc(STAR_JP[nm]||"")+'）';}).join("／")+'</p>'); }
+  L.push('<p class="note" style="margin:8px 0 0">※この解析は計算結果からの自動要約です。より深く自然な鑑定は下の「AIで詳しく鑑定」から。</p>');
+  return L.join("");
+}
+
+/* AI鑑定：richGroundingを根拠にGeminiへ（キーは端末内localStorage） */
+function aiReading(c,btn){
+  var key=(document.getElementById("gkey").value||localStorage.getItem("ms_gkey")||"").trim();
+  var model=document.getElementById("gmodel").value||"gemini-2.5-flash";
+  var box=document.getElementById("aiOut");
+  if(!key){ box.innerHTML='<span style="color:var(--warn)">APIキーが未設定です。上の「AI鑑定の設定」でキーを入力してください。</span>'; return; }
+  try{ localStorage.setItem("ms_gkey",key); }catch(e){}
+  var deck=window.richGrounding?window.richGrounding(c):(window.proGrounding?window.proGrounding(c):"");
+  var sys="あなたは四柱推命の鑑定士です。以下の【命式データ】だけを根拠に、日本語で温かく、具体的に鑑定してください。専門用語（通変星名や神殺の漢字）は理屈を聞かれない限り避け、日常語に翻訳して織り込むこと。性格・強みと注意点・才能や向いていること・今の運の流れ（大運/今年）・開運のヒントの順で、断定しすぎず前向きに。過去の出来事は断定しない。600〜900字程度。\n【命式データ】\n"+deck;
+  var body={systemInstruction:{parts:[{text:sys}]},contents:[{role:"user",parts:[{text:"この人を鑑定してください。"}]}],generationConfig:{temperature:0.9,maxOutputTokens:1800}};
+  if(/gemini-3/.test(model)){ /* 3.xはthinkingConfig不可 */ }
+  box.innerHTML='<span class="note">鑑定中… 🔮</span>'; btn.disabled=true;
+  fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(key),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+   .then(function(r){return r.text().then(function(t){return {ok:r.ok,status:r.status,t:t};});})
+   .then(function(res){ btn.disabled=false;
+     if(!res.ok){ box.innerHTML='<span style="color:var(--warn)">エラー('+res.status+')：'+(res.status===429?"利用上限/レート超過。少し待って再試行を。":res.status===400||res.status===403?"キーが無効か、地域制限の可能性。":"接続に失敗しました。")+'</span>'; return; }
+     var j; try{j=JSON.parse(res.t);}catch(e){ box.innerHTML='<span style="color:var(--warn)">応答の解析に失敗しました。</span>'; return; }
+     var cand=j.candidates&&j.candidates[0], txt=cand&&cand.content&&cand.content.parts?cand.content.parts.map(function(x){return x.text||"";}).join(""):"";
+     if(!txt){ box.innerHTML='<span style="color:var(--warn)">鑑定文が生成されませんでした（安全フィルタ等）。もう一度お試しください。</span>'; return; }
+     box.innerHTML='<div style="white-space:pre-wrap;line-height:1.7">'+esc(txt)+'</div>';
+   })
+   .catch(function(){ btn.disabled=false; box.innerHTML='<span style="color:var(--warn)">通信エラー。ネット接続をご確認ください。</span>'; });
 }
 
 function cell4(pil,fn,tu){var h="";for(var i=0;i<4;i++){var x=pil[i];if(i===3&&(tu||!x)){h+='<td class="note">—</td>';continue;}h+='<td>'+fn(x)+'</td>';}return h;}
@@ -335,6 +406,7 @@ function applyHist(id){
   runSolo();
 }
 
+try{ var _gk=localStorage.getItem("ms_gkey"); if(_gk&&document.getElementById("gkey")) document.getElementById("gkey").value=_gk; }catch(e){}
 renderHist();
 runSolo();
 </script>
