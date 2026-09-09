@@ -251,10 +251,15 @@ function shortBirth(o){return o.y+"."+o.mo+"."+o.d;}
 function idChip(txt){return '<span style="display:inline-block;font-size:11px;color:var(--muted);font-weight:700;background:var(--soft);border-radius:6px;padding:1px 7px;margin-right:7px;vertical-align:middle">'+esc(txt)+'</span>';}
 function targetLine(txt){return '<div class="note" style="margin:0 0 8px;font-weight:600">🧭 対象：'+txt+'</div>';}
 function mdLite(s){var t=esc(s);
-  t=t.replace(/^\s*#{1,6}\s*(.+)$/gm,'<b style="display:block;margin:12px 0 4px;color:var(--accent)">$1</b>');
+  t=t.replace(/^\s*#{1,6}\s*(.+)$/gm,'<b style="display:block;margin:9px 0 2px;color:var(--accent)">$1</b>');
   t=t.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<em>$2</em>');
-  t=t.replace(/^\s*[-・]\s+/gm,'・').replace(/^\s*---+\s*$/gm,'<hr style="border:0;border-top:1px solid var(--line);margin:10px 0">');
-  return t.replace(/\n/g,'<br>');}
+  t=t.replace(/^\s*[-・]\s+/gm,'・').replace(/^\s*---+\s*$/gm,'<hr style="border:0;border-top:1px solid var(--line);margin:8px 0">');
+  t=t.replace(/[ \t]+\n/g,'\n');            // 行末の余白を除去
+  t=t.replace(/\n{2,}/g,'');           // 段落区切り（空行が何行あっても1つに）
+  t=t.replace(/\n/g,'<br>');                 // 段落内の改行
+  t=t.replace(//g,'<div style="height:5px"></div>'); // 段落間＝控えめな一定の間隔
+  t=t.replace(/(<b style="display:block[^"]*">.*?<\/b>)(?:<br>|<div style="height:5px"><\/div>)+/g,'$1'); // 見出し直後の余分な間を除去
+  return t;}
 function elc(el){return '<span class="el-'+el+'">'+el+'</span>';}
 function elS(stem){var e=MSTEM_EL[stem]||"";return '<span class="el-'+e+'">'+esc(stem)+'</span>';}
 function elB(br){var e=MBR_EL[br]||"";return '<span class="el-'+e+'">'+esc(br)+'</span>';}
@@ -609,7 +614,7 @@ function aiReading(c,btn){
      var cand=j.candidates&&j.candidates[0], txt=cand&&cand.content&&cand.content.parts?cand.content.parts.map(function(x){return x.text||"";}).join(""):"";
      if(!txt){ var fr=cand&&cand.finishReason; box.innerHTML='<span style="color:var(--warn)">鑑定文が生成されませんでした'+(fr?'（'+esc(fr)+'）':'（安全フィルタ等）')+'。もう一度お試しください。</span>'; return; }
      var trunc=cand&&cand.finishReason==="MAX_TOKENS";
-     box.className=""; box.innerHTML='<div style="font-size:15px;line-height:1.9;color:var(--ink)">'+mdLite(txt)+'</div>'+(trunc?'<p class="note" style="color:var(--warn);margin:8px 0 0">※長さの上限で途中までの表示です。もう一度押すと続きが変わります。</p>':'');
+     box.className=""; box.innerHTML='<div style="font-size:15px;line-height:1.7;color:var(--ink)">'+mdLite(txt)+'</div>'+(trunc?'<p class="note" style="color:var(--warn);margin:8px 0 0">※長さの上限で途中までの表示です。もう一度押すと続きが変わります。</p>':'');
    })
    .catch(function(){ if(btn) btn.disabled=false; box.innerHTML='<span style="color:var(--warn)">通信エラー。ネット接続をご確認ください。</span>'; });
 }
@@ -636,7 +641,7 @@ function aiAsk(deck,question,boxId,btn){
      var j; try{j=JSON.parse(res.t);}catch(e){ box.innerHTML='<span style="color:var(--warn)">応答の解析に失敗しました。</span>'; return; }
      var cand=j.candidates&&j.candidates[0], txt=cand&&cand.content&&cand.content.parts?cand.content.parts.map(function(x){return x.text||"";}).join(""):"";
      if(!txt){ var fr=cand&&cand.finishReason; box.innerHTML='<span style="color:var(--warn)">鑑定文が生成されませんでした'+(fr?'（'+esc(fr)+'）':'')+'。表現を変えてお試しください。</span>'; return; }
-     box.className=""; box.innerHTML='<div style="font-size:15px;line-height:1.9;color:var(--ink)">'+mdLite(txt)+'</div>';
+     box.className=""; box.innerHTML='<div style="font-size:15px;line-height:1.7;color:var(--ink)">'+mdLite(txt)+'</div>';
    })
    .catch(function(){ if(btn) btn.disabled=false; box.innerHTML='<span style="color:var(--warn)">通信エラー。ネット接続をご確認ください。</span>'; });
 }
@@ -957,7 +962,7 @@ function aiCompat(cA,cB,btn){
      var cand=j.candidates&&j.candidates[0], txt=cand&&cand.content&&cand.content.parts?cand.content.parts.map(function(x){return x.text||"";}).join(""):"";
      if(!txt){ var fr=cand&&cand.finishReason; box.innerHTML='<span style="color:var(--warn)">鑑定文が生成されませんでした'+(fr?'（'+esc(fr)+'）':'')+'。もう一度お試しください。</span>'; return; }
      var trunc=cand&&cand.finishReason==="MAX_TOKENS";
-     box.className=""; box.innerHTML='<div style="font-size:15px;line-height:1.9;color:var(--ink)">'+mdLite(txt)+'</div>'+(trunc?'<p class="note" style="color:var(--warn);margin:8px 0 0">※上限で途中までの表示です。</p>':'');
+     box.className=""; box.innerHTML='<div style="font-size:15px;line-height:1.7;color:var(--ink)">'+mdLite(txt)+'</div>'+(trunc?'<p class="note" style="color:var(--warn);margin:8px 0 0">※上限で途中までの表示です。</p>':'');
    })
    .catch(function(){ if(btn) btn.disabled=false; box.innerHTML='<span style="color:var(--warn)">通信エラー。ネット接続をご確認ください。</span>'; });
 }
