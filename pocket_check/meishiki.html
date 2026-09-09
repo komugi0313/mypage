@@ -484,7 +484,8 @@ function kuboYearsCard(c){var ks=kuboSet(c),af=(c.annualFortunes||[]),now=c.now|
     +'<p class="note" style="margin:6px 0 0">★色付き＝今年含む／濃い色＝これから来る空亡／薄い色＝過去。年運カードでも各年に<span class="ybadge kb">空亡</span>を表示しています。</p>';}
 /* 恋愛・結婚の時期 — 視覚化カード */
 function loveMarriageCard(c,sex){var rows=romanceRows(c,sex),now=c.now||{},cy=now.year,ks=kuboSet(c),by=birthYearOf(c),female=(sex!=="male");
-  var loveY=rows.filter(function(r){return r.love.length;}),marY=rows.filter(function(r){return r.mar.length;});
+  var adult=function(r){return r.age==null||r.age>=16;}; /* 結婚・恋愛の目安は思春期以降に限定（幼少期の年は除外） */
+  var loveY=rows.filter(function(r){return r.love.length&&adult(r);}),marY=rows.filter(function(r){return r.mar.length&&adult(r);});
   function chips(list,icon,col){return list.map(function(r){var f=r.year>=cy;return '<span class="kchip'+(r.year===cy?' now':'')+'" style="border-color:'+(f?col:'var(--muted)')+';color:'+(f?col:'var(--muted)')+'">'+icon+r.year+'</span>';}).join('');}
   var detail=rows.filter(function(r){return (r.love.length||r.mar.length)&&r.year>=cy-1;}).slice(0,20).map(function(r){
     var kubu=ks.set[r.branch],cls=r.mar.length?'mar':'love',icon=r.mar.length?'💍':'💕';
@@ -871,8 +872,11 @@ function pcMoney(p){var c=p.pro,tb=biasOf(c),sc=starCounts(c),fin=tb.counts["財
 /* --- 健康：身体の弱いところ --- */
 var EL_HEALTH={木:{o:"肝臓・胆のう・目・筋・自律神経",s:"イライラ・目の疲れ・筋のこわばり・自律神経の乱れ"},火:{o:"心臓・小腸・血管・血圧・精神",s:"動悸・血圧・不眠・のぼせ・情緒の波"},土:{o:"胃・脾・消化器・口・肌",s:"胃腸の不調・食欲の波・肌荒れ・むくみ・思い悩み"},金:{o:"肺・大腸・気管支・皮膚・鼻",s:"呼吸器や皮膚のトラブル・便通・乾燥"},水:{o:"腎・膀胱・泌尿器・生殖・骨・耳・ホルモン",s:"冷え・むくみ・腰や骨・耳・婦人科／ホルモン"}};
 function pcHealth(p){var c=p.pro,five=p.five||{},sl=starList(c),L=[],pts=[];
+  var maxC=Math.max.apply(null,EL_ORDER.map(function(e){return five[e]||0;}));
   EL_ORDER.forEach(function(e){if((five[e]||0)===0){var h=EL_HEALTH[e];if(h)pts.push('<b>「'+e+'」が無い</b>→ '+h.o+'が弱点になりやすい（'+h.s+'）。この五行を意識して養生を。');}});
   EL_ORDER.forEach(function(e){if((five[e]||0)>=4){var h=EL_HEALTH[e];if(h)pts.push('<b>「'+e+'」が過多</b>→ '+h.o+'を使いすぎ・熱を持ちやすい（'+h.s+'）。ためこまず発散を。');}});
+  /* 欠けてはいないが「少なめ」の五行も、疲れると出やすい弱点として拾う */
+  EL_ORDER.forEach(function(e){var n=five[e]||0;if(n>0&&n<=1&&n<maxC){var h=EL_HEALTH[e];if(h)pts.push('<b>「'+e+'」が少なめ</b>→ '+h.o+'がやや弱点になりやすい（'+h.s+'）。疲れたときに出やすいので労わって。');}});
   if(sl.indexOf("血刃")>=0||sl.indexOf("羊刃")>=0||sl.indexOf("日刃")>=0)pts.push('<b>刃の星（羊刃・血刃・日刃）</b>→ ケガ・出血・手術・刃物や事故に注意。無理な力仕事や過労を避ける。');
   if(!pts.length){var dh=EL_HEALTH[c.dayMaster.element];pts.push('五行のバランスがとれており、大きな偏りは出にくいタイプ。とはいえ日主'+elc(c.dayMaster.element)+'（'+(dh?dh.o:"")+'）は土台なので大切に。');}
   L.push('<p class="note" style="margin:0 0 8px">四柱推命では五行と臓腑が対応します（木＝肝／火＝心／土＝脾胃／金＝肺／水＝腎）。<b>欠けた・偏った五行</b>が体の弱点の目安です。※医療の診断ではなく養生の参考に。</p>');
