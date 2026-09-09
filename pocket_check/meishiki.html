@@ -352,6 +352,9 @@ var LUCK_TEN={
  正官:{ev:"地位・信用・昇進に恵まれ公に認められる。（女性は結婚）・責任も。",up:"筋を通し役割を果たすほど評価に。ルールを味方に。"},
  偏印:{ev:"学び直し・資格・方向転換・独自の道。孤独感や食の細りも出やすい。",up:"内省と探究の時期。焦らず学び直し、人に相談を。"},
  印綬:{ev:"学問・資格・目上の引き立て・家庭の安泰。守られ受け取る時期。",up:"学び・準備に最適。目上を大切に。受け身になり過ぎない。"}};
+/* 年運用：通変星の短いテーマ＋十二運のエネルギー感（年ごとに変化を出す） */
+var LUCK_SHORT={比肩:"自立・仲間・出費",劫財:"勝負・競争・散財注意",食神:"衣食住・楽しみ・才能",傷官:"才能と刺激・口論/怪我注意",偏財:"人脈・収入・活動的",正財:"堅実な蓄財・家庭",偏官:"重責・挑戦・無理注意",正官:"昇進・信用・責任",偏印:"学び直し・転換・内省",印綬:"学問・資格・引き立て"};
+var JUNI_ENERGY={帝旺:"勢い最高潮",建禄:"働き盛り",冠帯:"自立の",長生:"伸びゆく",沐浴:"揺れやすい",養:"育ち・準備の",胎:"芽生えの",衰:"落ち着いた",病:"繊細な",死:"静かで内向きの",墓:"納め蓄える",絶:"切り替えの"};
 function luckFav(el,fav){var f=fav&&fav[el];return f==="喜"?{m:"◎",t:"追い風",lbl:"喜神"+el,c:"var(--good)"}:f==="忌"?{m:"△",t:"調整期",lbl:"忌神"+el,c:"var(--warn)"}:{m:"○",t:"中立",lbl:el,c:"var(--muted)"};}
 function juniShort(t){return (JUNI_MEAN[t]||"").split("。")[0];}
 function daeunDetail(c,fav){var now=c.now||{},di=now.daeunIndex;
@@ -364,12 +367,11 @@ function daeunDetail(c,fav){var now=c.now||{},di=now.daeunIndex;
       +'<br><span style="color:'+fv.c+'"><b>'+fv.t+'：</b>'+esc(lk.up||'')+'</span>'
       +'</div>';}).join("");}
 function annualDetail(c,fav){var now=c.now||{},cy=now.year,af=(c.annualFortunes||[]);
-  var rows=af.map(function(a){var el=a.stemElement||MSTEM_EL[a.stem],ten=a.tenStar||"",ter=a.terrain||"",fv=luckFav(el,fav),gb=TENGOD_GB[ten]||{},cur=(a.year===cy);
+  var rows=af.map(function(a){var el=a.stemElement||MSTEM_EL[a.stem],ten=a.tenStar||"",ter=a.terrain||"",fv=luckFav(el,fav),en=JUNI_ENERGY[ter]||ter,s=LUCK_SHORT[ten]||ten,cur=(a.year===cy);
     return '<div style="border-top:1px solid var(--soft);padding:6px 2px'+(cur?';background:var(--soft);border-radius:6px;padding:6px':'')+'" '+(cur?'id="yNow"':'')+'>'
-      +'<b>'+esc(a.year)+'年</b> '+elGz(a.ganzhi)+' <b>'+esc(ten)+'</b> <b style="color:'+fv.c+'">'+fv.m+'</b> <span class="note">'+esc(ter)+'｜'+esc(gb.w||ten)+'・'+fv.t+'</span>'+(cur?' <span class="pill">今年</span>':'')
-      +'<br><span class="note">'+esc((LUCK_TEN[ten]||{}).ev||'')+'</span>'
+      +'<b>'+esc(a.year)+'年</b> '+elGz(a.ganzhi)+' <b>'+esc(ten)+'</b> <b style="color:'+fv.c+'">'+fv.m+'</b> <span class="note">'+esc(ter)+'（'+esc(en)+'年）｜'+esc(s)+'／'+fv.t+'</span>'+(cur?' <span class="pill">今年</span>':'')
       +'</div>';}).join("");
-  return '<p class="note" style="margin:12px 0 4px"><b>各年の詳細（全'+af.length+'年）</b>　◎喜神年＝追い風／△忌神年＝守り。枠内をスクロールできます。</p>'
+  return '<p class="note" style="margin:12px 0 4px"><b>各年の詳細（全'+af.length+'年）</b>　通変星＝その年のテーマ／十二運＝勢い／◎喜神年＝追い風・△忌神年＝守り。枠内をスクロールできます。</p>'
     +'<div style="max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:2px 10px">'+rows+'</div>';}
 /* 節木運（せつぼくうん）：大運の30年季節の継ぎ目＝次の季節に入る直前2〜3年 */
 var BR_SEASON={寅:"木",卯:"木",辰:"木",巳:"火",午:"火",未:"火",申:"金",酉:"金",戌:"金",亥:"水",子:"水",丑:"水"};
@@ -651,7 +653,7 @@ function analyzeSolo(p){
   if(fp){ var cur=fp.cur, ty=fp.ty, ny=fp.ny;
     function flow(o,head,extra){ if(!o)return""; var t=o.tenStar||""; return head+'：<b>'+elGz(o.ganzhi||"")+(t?'（'+esc(t)+'）':'')+'</b>'+(extra||"")+(TEN_THEME[t]?' ＝ '+esc(TEN_THEME[t]):"")+'。<br>'; }
     L.push('<p style="margin:0 0 8px"><b>◆ 運の流れ</b><br>'
-      +flow(cur,'今の10年（大運）',cur?' '+esc(cur.startAge)+'〜'+esc(cur.endAge)+'歳':'')
+      +flow(cur,'今の10年（大運）',cur?' '+esc(cur.startAge)+'〜'+esc(cur.startAge+9)+'歳':'')
       +flow(ty,'今年'+(ty&&ty.year?'（'+esc(ty.year)+'）':''))
       +flow(ny,'来年'+(ny&&ny.year?'（'+esc(ny.year)+'）':''))+'</p>'); }
   // 神殺
