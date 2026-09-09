@@ -938,7 +938,7 @@ function elGz(gz){return elS(gz[0])+elB(gz[1]);}
 document.getElementById("tu").onchange=function(){document.getElementById("bt").disabled=this.checked;};
 document.getElementById("go").onclick=function(){window._msAutoAI=true;runSolo();};
 document.getElementById("save").onclick=saveCurrent;
-document.getElementById("goPair").onclick=runPair;
+document.getElementById("goPair").onclick=function(){window._msAutoAI=true;runPair();};
 document.getElementById("tabSolo").onclick=function(){setTab("solo");};
 document.getElementById("tabPair").onclick=function(){setTab("pair");};
 function setTab(t){
@@ -1173,8 +1173,57 @@ function renderPair(pa,pb,a,b){
     H+='<p class="note" style="margin:10px 0 0">五行の流れ：'+elc(cd.aEl)+'（一人目）と '+elc(cd.bEl)+'（二人目）。相生・相剋の関係が二人のリズムを作ります。</p>';
     H+='</div>';
   } else H+='<div class="card"><p class="note">相性データを取得できませんでした。</p></div>';
+  // AI相性鑑定（辛口・詳細）
+  H+='<div class="card"><h2>AI相性鑑定 <span class="note" style="font-weight:400">v3・自動生成</span></h2><div id="aiPair" class="note">「相性を見る」で、二人の特性・合う所/合わない所・仲良くなる時期/すれ違う時期・二人ならではのプラスまで辛口で自動鑑定します。</div>'
+    +'<button class="btn" id="aiPairBtn" style="margin-top:10px">🤖 AIで相性を鑑定する（手動）</button></div>';
   H+='<div class="card noprint"><button class="btn sub2" onclick="window.print()">相性結果を印刷／PDF保存</button></div>';
   out.innerHTML=H;out.scrollIntoView({behavior:"smooth",block:"start"});
+  var pb2=document.getElementById("aiPairBtn"); if(pb2) pb2.onclick=function(){aiCompat(pa.pro,pb.pro,pb2);};
+  if(window._msAutoAI){ window._msAutoAI=false; if(msCanAI()) aiCompat(pa.pro,pb.pro,pb2); }
+}
+
+/* 相性の根拠テキストをcompatDataから生成 */
+function compatText(cd){
+  if(!cd) return "";
+  var L=[];
+  L.push("総合点:"+cd.score+"（"+(cd.good?"良い":"補完的")+"）");
+  L.push("日主: 一人目"+cd.aS+"("+cd.aEl+") / 二人目"+cd.bS+"("+cd.bEl+")");
+  L.push("干合(日主どうしの強い引き合い):"+(cd.kangou?"あり":"なし"));
+  if(cd.seiritsu&&cd.seiritsu.length) L.push("二人で完成する三合/方合:"+cd.seiritsu.map(function(s){return s.kind+"("+s.el+")";}).join("、"));
+  if(cd.hankai&&cd.hankai.length) L.push("半会:"+cd.hankai.map(function(s){return s.el;}).join("、"));
+  if(cd.rikugouAll&&cd.rikugouAll.length) L.push("六合(結びつき):"+cd.rikugouAll.map(function(p){return p.join("");}).join("、"));
+  var w=[]; if(cd.chong)w.push("冲(衝突)"); if(cd.kei)w.push("刑(摩擦)"); if(cd.ha)w.push("破(ほころび)"); if(cd.gai)w.push("害(すれ違い)");
+  L.push("注意の関係:"+(w.length?w.join("、"):"目立つものなし"));
+  L.push("十神: 相手→自分="+(cd.tenBtoA||"-")+" / 自分→相手="+(cd.tenAtoB||"-"));
+  return L.join("\n");
+}
+/* AI相性鑑定：二人のrichGrounding＋関係データを根拠に、辛口で */
+function aiCompat(cA,cB,btn){
+  var key=msKey(), model=(document.getElementById("gmodel")||{}).value||"gemini-2.5-flash";
+  var box=document.getElementById("aiPair"); if(!box) return;
+  var served=/^https?:$/.test(location.protocol);
+  if(!key && !served){ box.className="note"; box.innerHTML='<span style="color:var(--warn)">この端末で試すにはAPIキーが必要です（1人タブの「AI鑑定の設定」）。本番サイト設置ならキー不要。</span>'; return; }
+  if(key){ try{ localStorage.setItem("ms_gkey",key); }catch(e){} }
+  var gA=window.richGrounding?window.richGrounding(cA):"", gB=window.richGrounding?window.richGrounding(cB):"";
+  var cd=window.compatData?window.compatData(cA,cB):null;
+  var sys="あなたは四柱推命の相性鑑定士『Nico』です。以下の【二人のデータ】と【関係データ】だけを根拠に、日本語で具体的に、そして正直で辛口に相性を鑑定してください（甘やかさず、課題もはっきり指摘する。ただし人格否定や『別れろ』等の断定はしない）。専門用語は避け日常語に。必ず次の見出しをこの順で##見出しで立てる：\\n## お相手それぞれの特性\\n（一人目・二人目それぞれの性格と、二人が相手からどう見えるかを短く鋭く）\\n## 相性の核\\n（結論を辛口で。何が噛み合い何が噛み合わないか）\\n## 合うところ\\n## 合わないところ・火種\\n（遠慮なく具体的に。放置するとどうなるかも）\\n## 仲良くなる時期・すれ違う時期\\n（二人の年運データを根拠に『◯年ごろ＝近づく／◯年ごろ＝ぶつかりやすい』と具体的な年で。理由も）\\n## 二人ならではのプラス\\n（この二人だからこそ生まれる強み・可能性を必ず具体的に）\\n断定しすぎず、でも忖度なし。全体1400〜2200字。\\n【二人のデータ】\\n<一人目>\\n"+gA+"\\n<二人目>\\n"+gB+"\\n【関係データ】\\n"+compatText(cd);
+  var gc={temperature:0.95}; if(/gemini-3/.test(model)){ gc.maxOutputTokens=4096; } else { gc.thinkingConfig={thinkingBudget:0}; gc.maxOutputTokens=4096; }
+  var body={systemInstruction:{parts:[{text:sys}]},contents:[{role:"user",parts:[{text:"この二人の相性を辛口で鑑定してください。"}]}],generationConfig:gc};
+  var url,headers;
+  if(key){ url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(key); headers={"Content-Type":"application/json"}; }
+  else { url="/api/gemini"; headers={"Content-Type":"application/json","x-pk-device":msDevId(),"x-pk-deep":"1"}; }
+  box.className="note"; box.innerHTML='<span class="note">鑑定中… 🔮（数十秒かかることがあります）</span>'; if(btn) btn.disabled=true;
+  fetch(url,{method:"POST",headers:headers,body:JSON.stringify(body)})
+   .then(function(r){return r.text().then(function(t){return {ok:r.ok,status:r.status,t:t};});})
+   .then(function(res){ if(btn) btn.disabled=false;
+     if(!res.ok){ box.innerHTML='<span style="color:var(--warn)">エラー('+res.status+')：'+(res.status===429?"混み合っています。少し待って再試行を。":res.status===400||res.status===403?"キー/設定に問題があるか、地域制限の可能性。":"接続に失敗しました。")+'</span>'; return; }
+     var j; try{j=JSON.parse(res.t);}catch(e){ box.innerHTML='<span style="color:var(--warn)">応答の解析に失敗しました。</span>'; return; }
+     var cand=j.candidates&&j.candidates[0], txt=cand&&cand.content&&cand.content.parts?cand.content.parts.map(function(x){return x.text||"";}).join(""):"";
+     if(!txt){ var fr=cand&&cand.finishReason; box.innerHTML='<span style="color:var(--warn)">鑑定文が生成されませんでした'+(fr?'（'+esc(fr)+'）':'')+'。もう一度お試しください。</span>'; return; }
+     var trunc=cand&&cand.finishReason==="MAX_TOKENS";
+     box.className=""; box.innerHTML='<div style="font-size:15px;line-height:1.9;color:var(--ink)">'+mdLite(txt)+'</div>'+(trunc?'<p class="note" style="color:var(--warn);margin:8px 0 0">※上限で途中までの表示です。</p>':'');
+   })
+   .catch(function(){ if(btn) btn.disabled=false; box.innerHTML='<span style="color:var(--warn)">通信エラー。ネット接続をご確認ください。</span>'; });
 }
 
 /* ===== 保存・履歴（localStorage） ===== */
