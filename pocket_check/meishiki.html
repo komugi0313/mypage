@@ -420,17 +420,21 @@ function juniShort(t){return (JUNI_MEAN[t]||"").split("。")[0];}
 /* 年齢を「X歳Yヶ月」表記に */
 function ageJ(m){m=Math.max(0,Math.round(m));var y=Math.floor(m/12),mo=m%12;return y+'歳'+(mo?mo+'ヶ月':'');}
 /* 大運リスト（先生の流派：第一運＝月柱を必ず先頭に置き、以降は立運起点で各10年） */
-function daeunList(c){var sf=c.startFortune||{},ritsu=(sf.years||0)*12+(sf.months||0),mp=c.pillars[1]||{};
+function daeunList(c){var sf=c.startFortune||{},ritsuRaw=(sf.years||0)*12+(sf.months||0),ritsu=Math.max(0,ritsuRaw),mp=c.pillars[1]||{};
   var list=[{ganzhi:mp.ganzhi,stem:mp.ganzhi[0],branch:mp.ganzhi[1],tenStar:mp.tenStar||'',terrain:mp.terrain||'',startM:0,endM:ritsu,first:true}];
   (c.decadeFortunes||[]).forEach(function(d,i){list.push({ganzhi:d.ganzhi,stem:d.ganzhi[0],branch:d.ganzhi[1],tenStar:d.tenStar||'',terrain:d.terrain||'',startM:ritsu+i*120,endM:ritsu+(i+1)*120,first:false});});
   var now=c.now||{},ageM=(now.ageMonths!=null?now.ageMonths:(now.age!=null?now.age*12:-1)),ci=-1;
   for(var k=0;k<list.length;k++){if(ageM>=list[k].startM&&ageM<list[k].endM){ci=k;break;}}
-  return {items:list,cur:ci,ritsu:ritsu};}
+  var bm=(c.birth&&typeof c.birth.setsuMin==="number")?c.birth.setsuMin:0;
+  return {items:list,cur:ci,ritsu:ritsu,boundary:(ritsuRaw<0||bm<0)};}
+/* 立運の表示（節の変わり目で稀にエンジンの立運が不安定になる境界ケースを正直に注記） */
+function ritsuLabel(sf,boundary){if(boundary)return "要確認（節の変わり目の境界ケース）";if(!sf||sf.years==null)return "-";var m=(sf.years||0)*12+(sf.months||0);if(m<0)return "要確認（節の変わり目の境界ケース）";return (sf.years||0)+"歳"+(sf.months||0)+"ヶ月";}
+function ageRange(s,e){return (s>=e)?'誕生ごろ':ageJ(s)+'〜'+ageJ(e);}
 function daeunDetail(c,fav){var dl=daeunList(c);
   return '<p class="note" style="margin:12px 0 4px"><b>各大運の詳細</b>（先頭は<b>第一運＝月柱</b>。◎＝喜神で追い風／△＝忌神で調整期／○＝中立。テーマは干の通変星）</p>'+dl.items.map(function(d,i){
     var stem=d.stem,el=MSTEM_EL[stem],ten=d.tenStar||"",ter=d.terrain||"",fv=luckFav(el,fav),gb=TENGOD_GB[ten]||{},lk=LUCK_TEN[ten]||{},cur=(i===dl.cur);
     return '<div style="border-top:1px solid var(--soft);'+(cur?'background:var(--soft);border-radius:8px;padding:8px;margin-top:4px':'padding:8px 2px')+'">'
-      +'<b style="font-size:15px">'+esc(ageJ(d.startM))+'〜'+esc(ageJ(d.endM))+'</b>　'+elGz(d.ganzhi)+'　'+tenC(ten)+' <b style="color:'+fv.c+'">'+fv.m+'</b><span class="note">（'+fv.lbl+'）</span>'+(d.first?' <span class="pill">第一運・月柱</span>':'')+(cur?' <span class="pill">今ここ</span>':'')
+      +'<b style="font-size:15px">'+esc(dl.boundary?'年齢は要確認':ageRange(d.startM,d.endM))+'</b>　'+elGz(d.ganzhi)+'　'+tenC(ten)+' <b style="color:'+fv.c+'">'+fv.m+'</b><span class="note">（'+fv.lbl+'）</span>'+(d.first?' <span class="pill">第一運・月柱</span>':'')+(cur?' <span class="pill">今ここ</span>':'')
       +'<br><span class="note">テーマ：'+esc(gb.w||ten)+'／十二運「</span>'+terrainC(ter)+'<span class="note">」＝'+esc(juniShort(ter))+'</span>'
       +'<br><b>起こりやすい事：</b>'+esc(lk.ev||'')
       +'<br><span style="color:'+fv.c+'"><b>'+fv.t+'：</b>'+esc(lk.up||'')+'</span>'
@@ -502,8 +506,9 @@ var SEASON_JP={木:"春（木）",火:"夏（火）",金:"秋（金）",水:"冬
 var SEASON_PREP={木:"新しい習い事を始める・独立や種まきの準備をする",火:"表現力を磨く・人前に出る/発信の練習をする",金:"結果にこだわる・財務や経営、実務スキルを学ぶ",水:"知恵を蓄える・精神世界や哲学、専門知識を学ぶ"};
 var DOYO={辰:1,未:1,戌:1,丑:1};
 function setsubokuCard(c,fav,birthYear){
-  var dec=daeunList(c).items;
+  var _dl=daeunList(c),dec=_dl.items;
   var head='<p style="margin:0 0 8px">四柱推命の大運は、十二支の季節（春＝寅卯辰／夏＝巳午未／秋＝申酉戌／冬＝亥子丑）ごとに巡り、一つの季節は<b>約30年（10年×3干支）</b>。その<b>季節が切り替わる継ぎ目＝次の季節に入る直前の2〜3年</b>が「<b>節木運（せつぼくうん）</b>」です。台木に新しい枝を接ぐように質の違う運命へ移るため揺れや痛みを伴いますが、乗り越えると新しい花を咲かせます。</p>'
+    +(_dl.boundary?'<p class="note" style="margin:0 0 8px;color:var(--warn)">※節の変わり目に生まれた境界ケースのため立運が不確定です。季節の<b>順序</b>は正しいですが、下の<b>年齢・年は目安</b>として、立運を手計算で確認のうえお使いください。</p>':'')
     +'<p class="note" style="margin:0 0 6px"><b>起こりやすい事：</b>①価値観の強制終了と再起動（大事だったことに関心が薄れる）②環境からの追い出し（異動・別れ・引越などの変化）③体調の節目（デトックス）。<b>過ごし方：</b>不要なもの（物・人間関係・過去の栄光）を手放し、踊り場と割り切って休養・学び直し、次の季節を予習する。</p>'
     +'<p class="note" style="margin:0 0 10px"><b>転職：</b>追い出される流れで次の季節が喜神なら大吉。「逃げ」の突発的な決断は判断力が鈍る時期ゆえ注意。<b>／結婚：</b>好みが変わる時期。変化を共に受け入れられる相手なら同志に。迷いが強ければ運が明けるまで待つのも賢明。（下の各タイミングに共通）</p>';
   if(dec.length<2) return head+'<p class="note">大運が十分に算出されていません。</p>';
@@ -598,9 +603,9 @@ function renderSolo(p,inp){
 
   // 大運（第一運＝月柱を先頭に、立運起点で表示）
   var now=c.now||{},sf=c.startFortune||{},dl=daeunList(c);
-  H+='<div class="card"><h2>大運（立運：'+esc(sf.years!=null?sf.years+"歳"+(sf.months||0)+"ヶ月":"-")+' ／ '+(sf.forward?"順行":"逆行")+' ／ 第一運＝月柱）</h2><div class="ladder">';
-  dl.items.forEach(function(dd,i){H+='<div class="lstep'+(i===dl.cur?" now":"")+(dd.first?" first":"")+'"><div class="age">'+esc(ageJ(dd.startM))+'〜'+esc(ageJ(dd.endM))+'</div><div class="lgz">'+elGz(dd.ganzhi)+'</div><div class="lten">'+esc(dd.tenStar||"")+(dd.first?'･月柱':'')+'</div><div class="lter">'+esc(dd.terrain||"")+'</div></div>';});
-  H+='</div><p class="note" style="margin:6px 0 0">先頭は<b>第一運＝月柱（'+esc(c.pillars[1].ganzhi)+'）</b>で0歳〜立運まで。以降は立運起点で各10年。</p>'+daeunDetail(c,p.fav)+'</div>';
+  H+='<div class="card"><h2>大運（立運：'+esc(ritsuLabel(sf,dl.boundary))+' ／ '+(sf.forward?"順行":"逆行")+' ／ 第一運＝月柱）</h2><div class="ladder">';
+  dl.items.forEach(function(dd,i){H+='<div class="lstep'+(i===dl.cur?" now":"")+(dd.first?" first":"")+'"><div class="age">'+esc(dl.boundary?'年齢は要確認':ageRange(dd.startM,dd.endM))+'</div><div class="lgz">'+elGz(dd.ganzhi)+'</div><div class="lten">'+esc(dd.tenStar||"")+(dd.first?'･月柱':'')+'</div><div class="lter">'+esc(dd.terrain||"")+'</div></div>';});
+  H+='</div><p class="note" style="margin:6px 0 0">先頭は<b>第一運＝月柱（'+esc(c.pillars[1].ganzhi)+'）</b>で0歳〜立運まで。以降は立運起点で各10年。'+(dl.boundary?'<br><span style="color:var(--warn)">※この命式は<b>節の変わり目（節入り直前）に生まれた境界ケース</b>で、立運の自動計算が不安定です（実際より約10年ずれることがあります）。<b>大運の干支の並び順と方向（'+(sf.forward?"順行":"逆行")+'）は正しく出ています</b>が、各運の年齢は先生の早見表・手計算での確認をおすすめします。</span>':'')+'</p>'+daeunDetail(c,p.fav)+'</div>';
   // 接木運（季節の変わり目）
   H+='<div class="card"><h2>節木運（人生の季節の変わり目）</h2>'+setsubokuCard(c,p.fav,parseInt(inp.y,10))+'</div>';
 
