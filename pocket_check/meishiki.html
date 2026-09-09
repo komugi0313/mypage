@@ -348,6 +348,7 @@ function renderSolo(p,inp){
   H+='<div class="card"><h2>通変星の意味（柱別）</h2>'+tsuhenMeaning(c,inp.tu)+'</div>';
   H+='<div class="card"><h2>月支元命（使命・中心の性格）</h2>'+genmeiCard(p)+'</div>';
   H+='<div class="card"><h2>日柱（'+esc(c.pillars[2].ganzhi)+'）の性格 — 良い面・課題</h2>'+dayGBCard(p)+'</div>';
+  H+='<div class="card"><h2>この人の特徴：よいところ10・ウィークポイント10</h2>'+swCard(p)+'<p class="note" style="margin:8px 0 0">日柱60干支・月支元命・十二運・五行・通変星・吉凶星から総合分析。</p></div>';
 
   // 五行
   var five=p.five||{},tot=0;EL_ORDER.forEach(function(e){tot+=five[e]||0;});tot=tot||1;
@@ -399,6 +400,46 @@ function renderSolo(p,inp){
   if(window._msAutoAI){ window._msAutoAI=false; if(msCanAI()) aiReading(p.pro,ab); }
 }
 
+/* 良い/弱点 分析（命式から・オフライン） */
+var GB_EL={
+ 木:{g:["成長意欲が高く前へ進む力がある","面倒見がよく人を育てられる","素直でまっすぐ","発想が伸びやかで企画力がある"],b:["お節介・過干渉になりやすい","気が多く手を広げすぎる","頑固で折れにくい","計画倒れしやすい"]},
+ 火:{g:["明るく場を温める華がある","情熱的で表現力が高い","裏表がなく正直","行動が早く決断できる"],b:["感情が表に出やすい","飽きっぽく移り気","見栄を張りやすい","熱しやすく冷めやすい"]},
+ 土:{g:["誠実で信頼される","面倒見がよく世話上手","現実的で堅実","粘り強く続けられる"],b:["優柔不断で決めるのが遅い","こだわり・頑固さが出る","心配性で動きが重い","何でも抱え込みやすい"]},
+ 金:{g:["決断力がありけじめをつけられる","美意識・センスが高い","筋を通す正義感がある","責任感が強い"],b:["批判的で厳しくなりがち","プライドが高く折れにくい","融通が利かない","冷たく見られやすい"]},
+ 水:{g:["知恵と機転がある","柔軟で適応力が高い","共感力があり聞き上手","情報感度が高い"],b:["流されやすく八方美人","気分屋で波がある","本心を隠しがち","考えすぎて動けない"]}};
+var GOOD_STAR_PH={天乙貴人:"困った時に助けが入る人徳",太極貴人:"探究心が深く精神性が高い",福星貴人:"衣食住に恵まれ安泰",文昌貴人:"学問・文章・頭脳の才",天厨貴人:"食や楽しみに恵まれる",天官貴人:"地位・信用・出世に強い",金与禄:"結婚運・財の安定",暗禄:"見えない助け・裏の実力",天德貴人:"天の加護があり守られる",月德貴人:"静かな加護・徳がある",天德合:"良縁による加護",月德合:"和による加護",将星:"リーダー性・場の中心になれる",華蓋:"芸術・独創・精神世界の才",禄馬:"才能と機動力を併せ持つ",紅艶:"色気・人を惹きつける魅力",咸池:"華やかで人気運がある"};
+var CAUTION_STAR_PH={羊刃:"刃のような激しさ・強引さ",飛刃:"隠れた鋭さ・突発的な衝動",劫殺:"急な損失・奪われに注意",亡神:"うっかり・喪失感に注意",囚獄:"束縛・停滞を感じやすい",妨害殺:"邪魔・妨げが入りやすい",血刃:"ケガ・体の無理に注意",隔角:"孤立・浮きやすい",日刃:"勢い任せで自分を傷つける激しさ"};
+function analyzeSW(p){var c=p.pro,dEl=c.dayMaster.element,five=p.five||{},good=[],weak=[];
+  var gb=GB_EL[dEl]||{g:[],b:[]}; good=good.concat(gb.g); weak=weak.concat(gb.b);
+  if((p.sType||"").indexOf("強")>=0){good.push("エネルギッシュで自分から動き道を切り開ける");weak.push("我が強く頑固で、人の意見を聞き入れにくい");}
+  else if((p.sType||"").indexOf("弱")>=0){good.push("繊細で気配り上手・協調して力を発揮できる");weak.push("頑張りすぎて消耗し、自信を失いやすい");}
+  else good.push("バランス感覚がよく状況に合わせて動ける");
+  EL_ORDER.forEach(function(e){if(e!==dEl&&(five[e]||0)>=3&&GB_EL[e])good.push(GB_EL[e].g[0]+"（"+e+"の力が強い）");});
+  EL_ORDER.forEach(function(e){if((five[e]||0)===0&&GB_EL[e])weak.push("「"+e+"」が無く、"+GB_EL[e].b[0]+"面を補う必要");});
+  var tb=window.tenGodBias?window.tenGodBias(c):null;
+  if(tb){if(tb.type!=="balanced"&&tb.maxGroup)good.push(tb.maxGroup+"の力が強く、その分野で頭角を現しやすい");(tb.missing||[]).forEach(function(gp){weak.push(gp+"の要素が薄く、その面は人に頼る/意識して伸ばすテーマ");});}
+  var ss=(window.shinsatsuHits?window.shinsatsuHits(c):[]);
+  ss.forEach(function(s){var nm=s.split("(")[0].replace(/^年/,"");if(GOOD_STAR_PH[nm])good.push(nm+"："+GOOD_STAR_PH[nm]);if(CAUTION_STAR_PH[nm])weak.push(nm+"："+CAUTION_STAR_PH[nm]);if(nm==="魁罡"){good.push("魁罡：強烈な意志とカリスマ、逆境に強い");weak.push("魁罡：妥協できず極端に振れやすい");}});
+  /* 月支元命 */
+  var g=(window.fullProfile?(window.fullProfile(c).genmei||""):"");
+  if(g&&TEN_MISSION[g])good.push("中心の使命（元命="+g+"）＝"+TEN_MISSION[g]);
+  /* 十二運（日柱） */
+  var ter=c.pillars[2].terrain;
+  if(/帝旺|建禄|冠帯|長生/.test(ter))good.push("日柱の十二運が"+ter+"で、芯が強く自立心・行動力がある");
+  else if(/死|絶|墓|病|衰|胎|沐浴/.test(ter))weak.push("日柱の十二運が"+ter+"で、繊細さ・気疲れや不安定さが出やすい");
+  /* 60干支の持ち味（日柱） */
+  var dbEl=MBR_EL[c.pillars[2].branch];
+  good.push("日柱"+c.pillars[2].ganzhi+"の持ち味＝表は「"+dEl+"」、内側に「"+dbEl+"」を併せ持つ");
+  function uniq(a){var s={},r=[];a.forEach(function(x){if(!s[x]){s[x]=1;r.push(x);}});return r;}
+  good=uniq(good);weak=uniq(weak);
+  var padG=["周囲をよく見て動ける","一度決めたことをやり遂げる粘り","人の気持ちを汲む優しさ","独自の視点を持つ","土台がしっかりし安定感がある","誠実で約束を守る","学びを活かす力がある","感受性が豊か","目標に向かう集中力","ここぞで力を出せる勝負強さ"];
+  var padW=["気を使いすぎて疲れやすい","こだわりが強く出る場面がある","本音を溜め込みやすい","完璧を求めて動けなくなる","気分の波が出やすい","人に合わせすぎることがある","決断に時間がかかる時がある","一人で抱え込みやすい","変化に弱い一面","自分に厳しくなりすぎる"];
+  for(var gi=0;good.length<10&&gi<padG.length;gi++)if(good.indexOf(padG[gi])<0)good.push(padG[gi]);
+  for(var wi=0;weak.length<10&&wi<padW.length;wi++)if(weak.indexOf(padW[wi])<0)weak.push(padW[wi]);
+  return {good:good.slice(0,10),weak:weak.slice(0,10)};}
+function swCard(p){var r=analyzeSW(p);
+  return '<div style="margin-bottom:10px"><b style="color:var(--good)">◎ よいところ 10</b><ol style="margin:6px 0 0;padding-left:22px;line-height:1.85">'+r.good.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ol></div>'
+    +'<div><b style="color:var(--warn)">△ ウィークポイント 10</b><ol style="margin:6px 0 0;padding-left:22px;line-height:1.85">'+r.weak.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ol></div>';}
 /* ルールベース解析：エンジンの構造化データ(fullProfile/tenGodBias等)を日本語文へ */
 function analyzeSolo(p){
   var c=p.pro, fp=window.fullProfile?window.fullProfile(c):null, tb=window.tenGodBias?window.tenGodBias(c):null;
@@ -657,6 +698,8 @@ function renderPair(pa,pb,a,b){
     H+='<div class="card"><h2>五行バランス（二人・補い合い）</h2>'+gogyoPair(pa,pb)+'</div>';
     H+='<div class="card"><h2>十二運の意味（二人）</h2>'+junishunPair(pa,pb)+'</div>';
     H+='<div class="card"><h2>相手の好み・喜ばせ方</h2>'+likesPair(pa,pb)+'</div>';
+    H+='<div class="card"><h2>お一人目の特徴：よいところ10・ウィークポイント10</h2>'+swCard(pa)+'</div>';
+    H+='<div class="card"><h2>お二人目の特徴：よいところ10・ウィークポイント10</h2>'+swCard(pb)+'</div>';
     H+='<div class="card"><h2>二人の縁（干支・十神）</h2>';
     var good=[],warn=[];
     if(cd.kangou) good.push('<span class="tag rel"><b>干合</b><span class="note"> 日主どうしが強く引き合う</span></span>');
