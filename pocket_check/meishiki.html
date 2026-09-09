@@ -232,6 +232,10 @@ function two(n){return (n<10?"0":"")+n;}
 function toggleYears(){var w=document.getElementById("yearsWrap"),b=document.getElementById("yearsToggle");if(!w)return;var col=w.classList.toggle("ycollapsed");if(b)b.textContent=col?"▼ 過去も含めすべての年を表示":"▲ 閉じる（今年前後だけ）";}
 window.toggleYears=toggleYears;
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+/* 誰の結果か常時明示（②）：見出し用チップ／短い生年月日ラベル */
+function shortBirth(o){return o.y+"."+o.mo+"."+o.d;}
+function idChip(txt){return '<span style="display:inline-block;font-size:11px;color:var(--muted);font-weight:700;background:var(--soft);border-radius:6px;padding:1px 7px;margin-right:7px;vertical-align:middle">'+esc(txt)+'</span>';}
+function targetLine(txt){return '<div class="note" style="margin:0 0 8px;font-weight:600">🧭 対象：'+txt+'</div>';}
 function mdLite(s){var t=esc(s);
   t=t.replace(/^\s*#{1,6}\s*(.+)$/gm,'<b style="display:block;margin:12px 0 4px;color:var(--accent)">$1</b>');
   t=t.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<em>$2</em>');
@@ -319,6 +323,8 @@ function setsuInfo(c){
 
 function renderSolo(p,inp){
   var c=p.pro,out=document.getElementById("out"),H="";
+  var whoChip=inp.name?(esc(inp.name)+"さん"):(shortBirth(inp)+"生");
+  var whoFull=(inp.name?esc(inp.name)+"さん（":"")+esc(inp.y)+"/"+esc(inp.mo)+"/"+esc(inp.d)+"・"+(inp.sex==="male"?"男性":"女性")+"・日主"+elS(c.dayMaster.stem)+(inp.name?"）":"");
   var pil=p.pillars.slice();
   var corr;
   if(inp.tu) corr="出生時間：<b>不明</b>（時柱は算出せず、年月日で構成）";
@@ -393,14 +399,15 @@ function renderSolo(p,inp){
   // 解析（ルールベース）
   H+='<div class="card"><h2>解析（自動）</h2>'+analyzeSolo(p)+'</div>';
   // AI鑑定（特性・直すべき点・恋愛・運気の波を細かく／自動）
-  H+='<div class="card"><h2>AI鑑定書 <span class="note" style="font-weight:400">v3・自動生成</span></h2><div id="aiOut" class="note">生年月日を入れて「命式を作成」すると、特性・直すべき点・恋愛・運気の波まで自動で鑑定します。</div>'
+  H+='<div class="card"><h2>AI鑑定書 <span class="note" style="font-weight:400">v3・自動生成</span></h2>'+targetLine(whoFull)+'<div id="aiOut" class="note">生年月日を入れて「命式を作成」すると、特性・直すべき点・恋愛・運気の波まで自動で鑑定します。</div>'
     +'<button class="btn" id="aiBtn" style="margin-top:10px">🤖 AIで鑑定する（手動）</button></div>';
-  H+='<div class="card"><h2>質問して鑑定 <span class="note" style="font-weight:400">GEMINI</span></h2>'
+  H+='<div class="card"><h2>質問して鑑定 <span class="note" style="font-weight:400">GEMINI</span></h2>'+targetLine(whoFull)
     +'<textarea id="askIn" rows="2" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:15px;font-family:inherit;background:#fff;color:inherit" placeholder="例）転職を考えています。今年動いても大丈夫？／この人と結婚したらどう？"></textarea>'
     +'<button class="btn" id="askBtn" style="margin-top:8px">この命式に質問する</button>'
     +'<div id="askOut" class="note" style="margin-top:10px"></div></div>';
 
   H+='<div class="card noprint"><button class="btn sub2" onclick="window.print()">この命式を印刷／PDF保存</button></div>';
+  H=H.replace(/<h2>/g,'<h2>'+idChip(whoChip)+' ');  // 全カード見出しに「誰の分か」を明記（②）
   out.innerHTML=H;out.scrollIntoView({behavior:"smooth",block:"start"});
   var ab=document.getElementById("aiBtn"); if(ab) ab.onclick=function(){aiReading(p.pro,ab);};
   var qb=document.getElementById("askBtn"); if(qb) qb.onclick=function(){ aiAsk(window.richGrounding?window.richGrounding(p.pro):"", document.getElementById("askIn").value, "askOut", qb); };
@@ -838,7 +845,11 @@ function miniChart(p,tu){
 function renderPair(pa,pb,a,b){
   var cd=window.compatData?window.compatData(pa.pro,pb.pro):null;
   var out=document.getElementById("out"),H="";
-  H+='<div class="card"><h2>相性 総合</h2>';
+  var pairChip="相性 "+shortBirth(a)+"×"+shortBirth(b);
+  var whoAfull=shortBirth(a)+"生・日主"+elS(pa.pro.dayMaster.stem)+"（お一人目）";
+  var whoBfull=shortBirth(b)+"生・日主"+elS(pb.pro.dayMaster.stem)+"（お二人目）";
+  var pairFull=whoAfull+" × "+whoBfull;
+  H+='<div class="card"><h2>相性 総合</h2>'+targetLine(pairFull);
   if(cd){
     H+='<div style="text-align:center"><div class="score">'+esc(cd.score)+'<span style="font-size:16px">点</span></div><p class="note" style="margin:0">'+(cd.good?"とても良い縁が出ています":"補い合える関係です")+'</p></div>';
   }
@@ -872,13 +883,14 @@ function renderPair(pa,pb,a,b){
     H+='</div>';
   } else H+='<div class="card"><p class="note">相性データを取得できませんでした。</p></div>';
   // AI相性鑑定（辛口・詳細）
-  H+='<div class="card"><h2>AI相性鑑定 <span class="note" style="font-weight:400">v3・自動生成</span></h2><div id="aiPair" class="note">「相性を見る」で、二人の特性・惹かれ合う所・強み/魅力・合わない所・攻略法・仲直り法・仲良くなる/すれ違う時期・ラブラブな過ごし方まで自動鑑定します。</div>'
+  H+='<div class="card"><h2>AI相性鑑定 <span class="note" style="font-weight:400">v3・自動生成</span></h2>'+targetLine(pairFull)+'<div id="aiPair" class="note">「相性を見る」で、二人の特性・惹かれ合う所・強み/魅力・合わない所・攻略法・仲直り法・仲良くなる/すれ違う時期・ラブラブな過ごし方まで自動鑑定します。</div>'
     +'<button class="btn" id="aiPairBtn" style="margin-top:10px">🤖 AIで相性を鑑定する（手動）</button></div>';
-  H+='<div class="card"><h2>二人について質問 <span class="note" style="font-weight:400">GEMINI</span></h2>'
+  H+='<div class="card"><h2>二人について質問 <span class="note" style="font-weight:400">GEMINI</span></h2>'+targetLine(pairFull)
     +'<textarea id="askPairIn" rows="2" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:15px;font-family:inherit;background:#fff;color:inherit" placeholder="例）この二人が不倫関係だったらどうなる？／別れた方がいい？／結婚に向く？"></textarea>'
     +'<button class="btn" id="askPairBtn" style="margin-top:8px">二人について質問する</button>'
     +'<div id="askPairOut" class="note" style="margin-top:10px"></div></div>';
   H+='<div class="card noprint"><button class="btn sub2" onclick="window.print()">相性結果を印刷／PDF保存</button></div>';
+  H=H.replace(/<h2>/g,'<h2>'+idChip(pairChip)+' ');  // 全カード見出しに「二人鑑定・誰と誰か」を明記（②）
   out.innerHTML=H;out.scrollIntoView({behavior:"smooth",block:"start"});
   var pb2=document.getElementById("aiPairBtn"); if(pb2) pb2.onclick=function(){aiCompat(pa.pro,pb.pro,pb2);};
   var qp=document.getElementById("askPairBtn"); if(qp) qp.onclick=function(){ var g="<一人目>\n"+(window.richGrounding?window.richGrounding(pa.pro):"")+"\n<二人目>\n"+(window.richGrounding?window.richGrounding(pb.pro):"")+"\n【二人の関係】\n"+compatText(window.compatData?window.compatData(pa.pro,pb.pro):null); aiAsk(g, document.getElementById("askPairIn").value, "askPairOut", qp); };
