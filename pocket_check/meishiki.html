@@ -12,7 +12,10 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"H
 .wrap{max-width:940px;margin:0 auto;padding:18px 14px 70px}
 h1{font-size:19px;margin:6px 0 2px}
 .sub{color:var(--muted);font-size:14.5px;margin:0 0 14px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px;scroll-margin-top:56px}
+.jumpnav{position:sticky;top:0;z-index:30;display:flex;gap:6px;overflow-x:auto;padding:8px 2px;margin:0 0 12px;background:var(--bg);border-bottom:1px solid var(--line);-webkit-overflow-scrolling:touch}
+.jumpnav a{flex:0 0 auto;font-size:12.5px;font-weight:700;color:var(--accent);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 11px;text-decoration:none;white-space:nowrap}
+.jumpnav a:active{background:var(--soft)}
 .tabs{display:flex;gap:8px;margin-bottom:14px}
 .tab{flex:1;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;font-weight:800;font-size:16px;cursor:pointer;color:var(--muted)}
 .tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -50,12 +53,12 @@ table{width:100%;border-collapse:collapse;font-size:15.5px}
 .bar{height:6px;border-radius:3px;background:var(--soft);margin-top:6px;overflow:hidden}.bar>i{display:block;height:100%}
 .ladder{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px}
 .lstep{flex:0 0 auto;min-width:78px;border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center;background:#fff}
-.lstep.now{border-color:var(--accent);box-shadow:0 0 0 2px rgba(122,92,62,.15)}
+.lstep.now{border:2px solid var(--accent);background:var(--soft)}
 .lstep .age{font-size:13px;color:var(--muted)}.lstep .lgz{font-size:16px;font-weight:800;margin:2px 0}
 .lstep .lten{font-size:13px;color:var(--accent);font-weight:700}.lstep .lter{font-size:12.5px;color:var(--muted)}
 .years{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:6px}
 .ycell{border:1px solid var(--line);border-radius:8px;padding:6px 4px;text-align:center;font-size:13.5px;background:#fff}
-.ycell.now{border-color:var(--accent);background:#fbf7f0}
+.ycell.now{border-color:var(--accent);background:var(--soft)}
 .ycell .yy{font-weight:800;font-size:14px}.ycell .ygz{font-size:15px;font-weight:700}.ycell .yten{font-size:12.5px;color:var(--accent)}
 .pill{display:inline-block;background:var(--soft);border-radius:999px;padding:3px 10px;font-size:14.5px;font-weight:700;margin:2px 4px 2px 0}
 .tag{display:inline-block;border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:14.5px;margin:3px 5px 3px 0}
@@ -250,6 +253,14 @@ function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"
 function shortBirth(o){return o.y+"."+o.mo+"."+o.d;}
 function idChip(txt){return '<span style="display:inline-block;font-size:11px;color:var(--muted);font-weight:700;background:var(--soft);border-radius:6px;padding:1px 7px;margin-right:7px;vertical-align:middle">'+esc(txt)+'</span>';}
 function targetLine(txt){return '<div class="note" style="margin:0 0 8px;font-weight:600">🧭 対象：'+txt+'</div>';}
+/* 各カードにID付与＋見出しに対象チップ＋上部にジャンプ目次（長いページのUI改善） */
+function injectNavAndChips(H,chip){var idx=0,items=[];
+  H=H.replace(/<div class="card([^"]*)"><h2>([\s\S]*?)<\/h2>/g,function(m,cls,title){idx++;var id="sec"+idx;
+    var plain=title.replace(/<[^>]+>/g,"").replace(/&[a-z]+;/g,"");
+    var lbl=(plain.split(/[（(：\s]/)[0]||plain).trim()||plain.slice(0,6);
+    items.push('<a href="#'+id+'">'+esc(lbl)+'</a>');
+    return '<div class="card'+cls+'" id="'+id+'"><h2>'+(chip?idChip(chip)+' ':'')+title+'</h2>';});
+  return '<div class="jumpnav noprint">'+items.join("")+'</div>'+H;}
 function mdLite(s){var t=esc(s);
   t=t.replace(/^\s*#{1,6}\s*(.+)$/gm,'<b style="display:block;margin:9px 0 2px;color:var(--accent)">$1</b>');
   t=t.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<em>$2</em>');
@@ -492,7 +503,7 @@ function renderSolo(p,inp){
     +'<div id="askOut" class="note" style="margin-top:10px"></div></div>';
 
   H+='<div class="card noprint"><button class="btn sub2" onclick="window.print()">この命式を印刷／PDF保存</button></div>';
-  H=H.replace(/<h2>/g,'<h2>'+idChip(whoChip)+' ');  // 全カード見出しに「誰の分か」を明記（②）
+  H=injectNavAndChips(H,whoChip);  // 目次＋各カードID＋対象チップ
   out.innerHTML=H;out.scrollIntoView({behavior:"smooth",block:"start"});
   var ab=document.getElementById("aiBtn"); if(ab) ab.onclick=function(){aiReading(p.pro,ab);};
   var qb=document.getElementById("askBtn"); if(qb) qb.onclick=function(){ aiAsk(window.richGrounding?window.richGrounding(p.pro):"", document.getElementById("askIn").value, "askOut", qb); };
@@ -998,7 +1009,7 @@ function renderPair(pa,pb,a,b){
     +'<button class="btn" id="askPairBtn" style="margin-top:8px">二人について質問する</button>'
     +'<div id="askPairOut" class="note" style="margin-top:10px"></div></div>';
   H+='<div class="card noprint"><button class="btn sub2" onclick="window.print()">相性結果を印刷／PDF保存</button></div>';
-  H=H.replace(/<h2>/g,'<h2>'+idChip(pairChip)+' ');  // 全カード見出しに「二人鑑定・誰と誰か」を明記（②）
+  H=injectNavAndChips(H,pairChip);  // 目次＋各カードID＋対象チップ
   out.innerHTML=H;out.scrollIntoView({behavior:"smooth",block:"start"});
   var pb2=document.getElementById("aiPairBtn"); if(pb2) pb2.onclick=function(){aiCompat(pa.pro,pb.pro,pb2);};
   var qp=document.getElementById("askPairBtn"); if(qp) qp.onclick=function(){ var g="<一人目>\n"+(window.richGrounding?window.richGrounding(pa.pro):"")+"\n<二人目>\n"+(window.richGrounding?window.richGrounding(pb.pro):"")+"\n【二人の関係】\n"+compatText(window.compatData?window.compatData(pa.pro,pb.pro):null); aiAsk(g, document.getElementById("askPairIn").value, "askPairOut", qp); };
