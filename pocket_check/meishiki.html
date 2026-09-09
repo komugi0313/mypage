@@ -527,19 +527,30 @@ function analyzeSW(p){var c=p.pro,dEl=c.dayMaster.element,five=p.five||{},good=[
   /* 60干支の持ち味（日柱） */
   var dbEl=MBR_EL[c.pillars[2].branch];
   good.push("日柱"+c.pillars[2].ganzhi+"の持ち味＝表は「"+dEl+"」、内側に「"+dbEl+"」を併せ持つ");
-  function uniq(a){var s={},r=[];a.forEach(function(x){if(!s[x]){s[x]=1;r.push(x);}});return r;}
-  good=uniq(good);weak=uniq(weak);
-  /* 10未満のときは一般論の定数ではなく、この人の五行構成（強い順）から補完する＝すべて命式由来 */
+  /* 意味の重複を排除（同義の言い回しを1つに）。神殺・元命など固有名の行は常に残す */
+  var THEME_KEYS=["面倒見","世話","誠実","信頼","粘り","堅実","現実","優柔不断","こだわり","頑固","抱え込","溜め込","心配","気配り","協調","繊細","傷つき","行動力","決断","スピード","華","表現","感受","独自","ひらめき","発想","学び","知性","勝負","マイペース","自立","散財","見栄","八方美人","批判","プライド","飽き","移り気","流され","本心","秘密","融通","強引","短気","成長","素直","正義","責任","美意識","機転","柔軟","共感"];
+  function themeDedup(arr){var seen={},out=[];
+    arr.forEach(function(x){
+      if(x.indexOf("：")>=0||x.indexOf("＝")>=0){out.push(x);return;}
+      var ks=THEME_KEYS.filter(function(k){return x.indexOf(k)>=0;});
+      if(!ks.length){if(!seen["__"+x]){seen["__"+x]=1;out.push(x);}return;}
+      if(ks.some(function(k){return seen[k];}))return;
+      ks.forEach(function(k){seen[k]=1;});out.push(x);});
+    return out;}
+  good=themeDedup(good);weak=themeDedup(weak);
+  /* 10未満なら、この人の五行構成から"意味が重複しないものだけ"補完（すべて命式由来） */
   var byStrong=EL_ORDER.slice().sort(function(a,b){return (five[b]||0)-(five[a]||0);});
-  byStrong.forEach(function(e){if((five[e]||0)>0&&GB_EL[e])GB_EL[e].g.forEach(function(x){good.push(x+"（"+e+"の気）");});});
-  byStrong.slice().reverse().forEach(function(e){if(GB_EL[e])GB_EL[e].b.forEach(function(x){weak.push(((five[e]||0)===0?x+"（"+e+"が無く出やすい）":x+"（"+e+"の課題）"));});});
-  good=uniq(good);weak=uniq(weak);
+  var gp=[],wp=[];
+  byStrong.forEach(function(e){if((five[e]||0)>0&&GB_EL[e])GB_EL[e].g.forEach(function(x){gp.push(x+"（"+e+"の気）");});});
+  byStrong.slice().reverse().forEach(function(e){if(GB_EL[e])GB_EL[e].b.forEach(function(x){wp.push((five[e]||0)===0?x+"（"+e+"が無く出やすい）":x+"（"+e+"の課題）");});});
+  good=themeDedup(good.concat(gp));weak=themeDedup(weak.concat(wp));
   return {good:good.slice(0,10),weak:weak.slice(0,10)};}
 function swCard(p){var r=analyzeSW(p);
   function block(arr,color,topLbl,restLbl){var top=arr.slice(0,3),rest=arr.slice(3);
-    return '<div style="margin-bottom:6px"><b style="color:'+color+';font-size:15px">'+topLbl+'</b><ul style="margin:5px 0 0;padding-left:20px;line-height:2;font-weight:700">'+top.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></div>'
-      +'<div style="margin-bottom:12px"><span class="note">'+restLbl+'</span><ul style="margin:3px 0 0;padding-left:20px;line-height:1.8;color:var(--muted)">'+rest.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></div>';}
-  return block(r.good,"var(--good)","◎ あなたの武器・特に光る3つ","そのほかの長所（計10）")+block(r.weak,"var(--warn)","△ 特に意識したい弱点3つ","そのほかの課題（計10）");}
+    var h='<div style="margin-bottom:6px"><b style="color:'+color+';font-size:15px">'+topLbl+'</b><ul style="margin:5px 0 0;padding-left:20px;line-height:2;font-weight:700">'+top.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></div>';
+    if(rest.length) h+='<div style="margin-bottom:12px"><span class="note">'+restLbl+'（全'+arr.length+'項目）</span><ul style="margin:3px 0 0;padding-left:20px;line-height:1.8;color:var(--muted)">'+rest.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></div>';
+    return h;}
+  return block(r.good,"var(--good)","◎ あなたの武器・特に光る3つ","そのほかの長所")+block(r.weak,"var(--warn)","△ 特に意識したい弱点3つ","そのほかの課題");}
 /* 持って生まれた使命（人生の道しるべ・オフライン） */
 function missionCard(p){var c=p.pro,dEl=c.dayMaster.element,g=(window.fullProfile?(window.fullProfile(c).genmei||""):"");
   var tb=window.tenGodBias?window.tenGodBias(c):null,dom=(tb&&tb.type!=="balanced")?tb.maxGroup:"";
