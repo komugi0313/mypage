@@ -371,6 +371,30 @@ function annualDetail(c,fav){var now=c.now||{},cy=now.year,af=(c.annualFortunes|
       +'</div>';}).join("");
   return '<p class="note" style="margin:12px 0 4px"><b>各年の詳細（全'+af.length+'年）</b>　◎喜神年＝追い風／△忌神年＝守り。枠内をスクロールできます。</p>'
     +'<div style="max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:2px 10px">'+rows+'</div>';}
+/* 節木運（せつぼくうん）：大運の30年季節の継ぎ目＝次の季節に入る直前2〜3年 */
+var BR_SEASON={寅:"木",卯:"木",辰:"木",巳:"火",午:"火",未:"火",申:"金",酉:"金",戌:"金",亥:"水",子:"水",丑:"水"};
+var SEASON_JP={木:"春（木）",火:"夏（火）",金:"秋（金）",水:"冬（水）"};
+var SEASON_PREP={木:"新しい習い事を始める・独立や種まきの準備をする",火:"表現力を磨く・人前に出る/発信の練習をする",金:"結果にこだわる・財務や経営、実務スキルを学ぶ",水:"知恵を蓄える・精神世界や哲学、専門知識を学ぶ"};
+var DOYO={辰:1,未:1,戌:1,丑:1};
+function setsubokuCard(c,fav,birthYear){
+  var dec=c.decadeFortunes||[];
+  var head='<p style="margin:0 0 8px">四柱推命の大運は、十二支の季節（春＝寅卯辰／夏＝巳午未／秋＝申酉戌／冬＝亥子丑）ごとに巡り、一つの季節は<b>約30年（10年×3干支）</b>。その<b>季節が切り替わる継ぎ目＝次の季節に入る直前の2〜3年</b>が「<b>節木運（せつぼくうん）</b>」です。台木に新しい枝を接ぐように質の違う運命へ移るため揺れや痛みを伴いますが、乗り越えると新しい花を咲かせます。</p>'
+    +'<p class="note" style="margin:0 0 10px"><b>起こりやすい事：</b>①価値観の強制終了と再起動（大事だったことに関心が薄れる）②環境からの追い出し（異動・別れ・引越などの変化）③体調の節目（デトックス）。<b>過ごし方：</b>不要を手放す・踊り場と割り切って内面を磨く・次の季節を予習。</p>';
+  if(dec.length<2) return head+'<p class="note">大運が十分に算出されていません。</p>';
+  var boundaries=[];
+  for(var i=1;i<dec.length;i++){var pb=dec[i-1].ganzhi[1],cb=dec[i].ganzhi[1],ps=BR_SEASON[pb],cs=BR_SEASON[cb];
+    if(ps&&cs&&ps!==cs){var sa=(dec[i].startAge!=null?dec[i].startAge:dec[i].age);boundaries.push({fromEl:ps,toEl:cs,age:sa,prevBr:pb});}}
+  if(!boundaries.length) return head+'<p class="note">算出範囲では季節の変わり目（接木運）は見当たりません。</p>';
+  var body=boundaries.map(function(b){var tf=luckFav(b.toEl,fav);
+    var y0=birthYear+b.age-3,y1=birthYear+b.age-1;
+    var doyo=DOYO[b.prevBr]?'<br><span style="color:var(--warn)">※季節末（土用：'+esc(b.prevBr)+'）の変わり目＝心身が特に揺れやすい時期。無理は禁物。</span>':'';
+    return '<div style="border-top:1px solid var(--soft);padding:9px 2px">'
+      +'<b style="font-size:15px">約'+esc(b.age-3)+'〜'+esc(b.age-1)+'歳ごろ（'+esc(y0)+'〜'+esc(y1)+'年）</b>：<b>'+esc(SEASON_JP[b.fromEl])+'</b> → <b>'+esc(SEASON_JP[b.toEl])+'</b> へ移行'
+      +'<br>次の季節「'+esc(SEASON_JP[b.toEl])+'」は、あなたに <b style="color:'+tf.c+'">'+tf.m+' '+tf.t+'</b>（'+tf.lbl+'）の30年。'+(fav&&fav[b.toEl]==="喜"?'思い切った転身・挑戦が吉と出やすい季節。':(fav&&fav[b.toEl]==="忌"?'守り・整え・工夫が活きる季節。焦らず土台を固めて。':'穏やかに移行できる季節。'))
+      +'<br><b>過ごし方：</b>不要なもの（物・人間関係・過去の栄光）を手放し、踊り場と割り切って休養・学び直し。次の「'+esc(SEASON_JP[b.toEl])+'」に向け＝'+esc(SEASON_PREP[b.toEl]||'')+'を先取りすると乗り換えがスムーズ。'
+      +'<br><span class="note">転職：追い出される流れで次の季節が喜神なら大吉。「逃げ」の突発的な決断は判断力が鈍る時期ゆえ注意。／結婚：好みが変わる時期。変化を共に受け入れられる相手なら同志に。迷いが強ければ運が明けるまで待つのも賢明。</span>'
+      +doyo+'</div>';}).join("");
+  return head+body;}
 function renderSolo(p,inp){
   var c=p.pro,out=document.getElementById("out"),H="";
   var whoChip=inp.name?(esc(inp.name)+"さん"):(shortBirth(inp)+"生");
@@ -439,6 +463,8 @@ function renderSolo(p,inp){
   H+='<div class="card"><h2>大運（起運：'+esc(sf.years!=null?sf.years+"歳"+(sf.months||0)+"ヶ月":"-")+' ／ '+(sf.forward?"順行":"逆行")+'）</h2><div class="ladder">';
   (c.decadeFortunes||[]).forEach(function(dd,i){var a=(dd.startAge!=null?dd.startAge:dd.age);H+='<div class="lstep'+(i===di?" now":"")+'"><div class="age">'+esc(a)+'〜'+esc(a+9)+'歳</div><div class="lgz">'+elGz(dd.ganzhi)+'</div><div class="lten">'+esc(dd.tenStar||"")+'</div><div class="lter">'+esc(dd.terrain||"")+'</div></div>';});
   H+='</div>'+daeunDetail(c,p.fav)+'</div>';
+  // 接木運（季節の変わり目）
+  H+='<div class="card"><h2>節木運（人生の季節の変わり目）</h2>'+setsubokuCard(c,p.fav,parseInt(inp.y,10))+'</div>';
 
   // 年運
   var cy=now.year;
