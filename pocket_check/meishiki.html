@@ -21,6 +21,10 @@ label{display:block;font-size:12px;color:var(--muted);font-weight:700;margin-bot
 input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff;color:inherit}
 .row-check{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:13px}
 .row-check input{width:auto}
+input[type=date],input[type=time]{min-height:44px}
+input[type=time]:disabled{opacity:.4}
+.tgl{margin-top:8px;width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer}
+.tgl.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .btn{margin-top:14px;width:100%;padding:12px;border:0;border-radius:11px;background:var(--accent);color:#fff;font-size:15px;font-weight:800;cursor:pointer}
 .btn.sub2{background:#6b6257}
 .btn:active{opacity:.85}
@@ -80,7 +84,7 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
   <div class="card noprint" id="soloForm">
     <div class="form">
       <div><label>生年月日</label><input type="date" id="bd" value="1990-06-15"></div>
-      <div><label>出生時間</label><input type="time" id="bt" value="10:30"><div class="row-check"><input type="checkbox" id="tu"><label for="tu" style="margin:0">時間不明</label></div></div>
+      <div><label>出生時間</label><input type="time" id="bt" value="10:30"><input type="checkbox" id="tu" hidden><button type="button" class="tgl" id="tuBtn">🕐 時刻がわからない</button></div>
       <div><label>性別</label><select id="sex"><option value="female">女性</option><option value="male">男性</option></select></div>
       <div><label>出生地</label><select id="place"></select></div>
       <div id="manualWrap" class="hidden"><label>経度／標準子午線</label><div style="display:flex;gap:6px"><input type="number" id="lon" step="0.01" placeholder="経度139.69"><input type="number" id="mer" step="1" value="135"></div></div>
@@ -102,13 +106,13 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
       <div>
         <div class="pill">お一人目</div>
         <div style="margin-top:8px"><label>生年月日</label><input type="date" id="Abd" value="2006-05-27"></div>
-        <div style="margin-top:8px"><label>出生時間</label><input type="time" id="Abt" value="12:00"><div class="row-check"><input type="checkbox" id="Atu" checked><label for="Atu" style="margin:0">時間不明</label></div></div>
+        <div style="margin-top:8px"><label>出生時間</label><input type="time" id="Abt" value="12:00"><input type="checkbox" id="Atu" checked hidden><button type="button" class="tgl" id="AtuBtn">🕐 時刻がわからない</button></div>
         <div style="margin-top:8px"><label>性別</label><select id="Asex"><option value="female">女性</option><option value="male">男性</option></select></div>
       </div>
       <div>
         <div class="pill">お二人目</div>
         <div style="margin-top:8px"><label>生年月日</label><input type="date" id="Bbd" value="2007-10-02"></div>
-        <div style="margin-top:8px"><label>出生時間</label><input type="time" id="Bbt" value="12:00"><div class="row-check"><input type="checkbox" id="Btu" checked><label for="Btu" style="margin:0">時間不明</label></div></div>
+        <div style="margin-top:8px"><label>出生時間</label><input type="time" id="Bbt" value="12:00"><input type="checkbox" id="Btu" checked hidden><button type="button" class="tgl" id="BtuBtn">🕐 時刻がわからない</button></div>
         <div style="margin-top:8px"><label>性別</label><select id="Bsex"><option value="male">男性</option><option value="female">女性</option></select></div>
       </div>
     </div>
@@ -124,7 +128,11 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
 <script src="./pro-bazi.js"></script>
 <script src="./pro-adapter.js"></script>
 <script>
-var CITIES={"東京":[139.69,135],"札幌":[141.35,135],"仙台":[140.87,135],"名古屋":[136.91,135],"大阪":[135.50,135],"京都":[135.77,135],"広島":[132.46,135],"福岡":[130.40,135],"那覇":[127.68,135],"ソウル":[126.98,135],"台北":[121.56,120],"上海":[121.47,120],"北京":[116.40,120],"バンコク":[100.50,105],"ジャカルタ":[106.85,105],"ロサンゼルス":[-118.24,-120],"ニューヨーク":[-74.00,-75],"ロンドン":[-0.13,0],"（経度を手入力）":["manual",0]};
+/* 出生地（真太陽時の経度補正用）。日本＝47都道府県庁所在地・韓国＝主要都市。標準子午線はどちらも135° */
+var PLACES={"日本":[["北海道（札幌）",141.35],["青森",140.74],["岩手（盛岡）",141.15],["宮城（仙台）",140.87],["秋田",140.10],["山形",140.36],["福島",140.47],["茨城（水戸）",140.45],["栃木（宇都宮）",139.88],["群馬（前橋）",139.06],["埼玉（さいたま）",139.65],["千葉",140.12],["東京",139.69],["神奈川（横浜）",139.64],["新潟",139.02],["富山",137.21],["石川（金沢）",136.63],["福井",136.22],["山梨（甲府）",138.57],["長野",138.18],["岐阜",136.72],["静岡",138.38],["愛知（名古屋）",136.91],["三重（津）",136.51],["滋賀（大津）",135.87],["京都",135.77],["大阪",135.50],["兵庫（神戸）",135.18],["奈良",135.83],["和歌山",135.17],["鳥取",134.24],["島根（松江）",133.05],["岡山",133.93],["広島",132.46],["山口",131.47],["徳島",134.55],["香川（高松）",134.04],["愛媛（松山）",132.77],["高知",133.53],["福岡",130.40],["佐賀",130.30],["長崎",129.87],["熊本",130.74],["大分",131.61],["宮崎",131.42],["鹿児島",130.56],["沖縄（那覇）",127.68]],
+"韓国":[["ソウル",126.98],["釜山（プサン）",129.08],["仁川（インチョン）",126.71],["大邱（テグ）",128.60],["大田（テジョン）",127.38],["光州（クァンジュ）",126.85],["蔚山（ウルサン）",129.31],["水原（スウォン）",127.03],["城南（ソンナム）",127.14],["高陽（コヤン）",126.83],["龍仁（ヨンイン）",127.18],["清州（チョンジュ）",127.49],["全州（チョンジュ）",127.15],["天安（チョナン）",127.11],["江陵（カンヌン）",128.90],["春川（チュンチョン）",127.73],["浦項（ポハン）",129.34],["済州（チェジュ）",126.53]]};
+var PLON={}; Object.keys(PLACES).forEach(function(g){PLACES[g].forEach(function(x){PLON[x[0]]=x[1];});});
+var MANUAL_OPT="（経度を手入力）";
 var MSTEM_EL={甲:"木",乙:"木",丙:"火",丁:"火",戊:"土",己:"土",庚:"金",辛:"金",壬:"水",癸:"水"};
 var MBR_EL={子:"水",丑:"土",寅:"木",卯:"木",辰:"土",巳:"火",午:"火",未:"土",申:"金",酉:"金",戌:"土",亥:"水"};
 var EL_ORDER=["木","火","土","金","水"];
@@ -150,8 +158,16 @@ function elS(stem){var e=MSTEM_EL[stem]||"";return '<span class="el-'+e+'">'+esc
 function elB(br){var e=MBR_EL[br]||"";return '<span class="el-'+e+'">'+esc(br)+'</span>';}
 function elGz(gz){return elS(gz[0])+elB(gz[1]);}
 
-(function initPlaces(){var sel=document.getElementById("place");Object.keys(CITIES).forEach(function(c){var o=document.createElement("option");o.value=c;o.textContent=c;sel.appendChild(o);});sel.value="東京";sel.onchange=function(){document.getElementById("manualWrap").classList.toggle("hidden",CITIES[sel.value][0]!=="manual");};})();
-document.getElementById("tu").onchange=function(){document.getElementById("bt").disabled=this.checked;};
+(function initPlaces(){var sel=document.getElementById("place");
+  Object.keys(PLACES).forEach(function(g){var og=document.createElement("optgroup");og.label=g;PLACES[g].forEach(function(x){var o=document.createElement("option");o.value=x[0];o.textContent=x[0];og.appendChild(o);});sel.appendChild(og);});
+  var mo=document.createElement("option");mo.value=MANUAL_OPT;mo.textContent=MANUAL_OPT;sel.appendChild(mo);
+  sel.value="東京";
+  sel.onchange=function(){document.getElementById("manualWrap").classList.toggle("hidden",sel.value!==MANUAL_OPT);};
+})();
+function wireToggle(btnId,cbId,timeId){var btn=document.getElementById(btnId),cb=document.getElementById(cbId),tm=document.getElementById(timeId);if(!btn||!cb)return;
+  function sync(){var on=cb.checked;btn.classList.toggle("on",on);btn.textContent=on?"🕐 時刻不明（時柱なし）":"🕐 時刻がわからない";if(tm)tm.disabled=on;}
+  btn.onclick=function(){cb.checked=!cb.checked;sync();};sync();}
+wireToggle("tuBtn","tu","bt"); wireToggle("AtuBtn","Atu","Abt"); wireToggle("BtuBtn","Btu","Bbt");
 document.getElementById("go").onclick=function(){window._msAutoAI=true;runSolo();};
 document.getElementById("save").onclick=saveCurrent;
 document.getElementById("goPair").onclick=function(){window._msAutoAI=true;runPair();};
@@ -173,9 +189,9 @@ function readSolo(){
   var tu=document.getElementById("tu").checked,hh=12,mi=0;
   if(!tu){var bt=document.getElementById("bt").value||"12:00";hh=+bt.split(":")[0];mi=+bt.split(":")[1];}
   var sex=document.getElementById("sex").value;
-  var pc=document.getElementById("place").value,cc=CITIES[pc],place=null,lonShown="";
-  if(cc[0]==="manual"){var lon=parseFloat(document.getElementById("lon").value),mer=parseFloat(document.getElementById("mer").value||"135");if(!isNaN(lon)){place={lon:lon,mer:isNaN(mer)?135:mer};lonShown="経度"+lon+"°／標準"+place.mer+"°";}}
-  else{place={lon:cc[0],mer:cc[1]};lonShown=pc+"（経度"+cc[0]+"°）";}
+  var pc=document.getElementById("place").value,place=null,lonShown="";
+  if(pc===MANUAL_OPT){var lon=parseFloat(document.getElementById("lon").value),mer=parseFloat(document.getElementById("mer").value||"135");if(!isNaN(lon)){place={lon:lon,mer:isNaN(mer)?135:mer};lonShown="経度"+lon+"°／標準"+place.mer+"°";}}
+  else if(PLON[pc]!=null){place={lon:PLON[pc],mer:135};lonShown=pc+"（経度"+PLON[pc]+"°）";}
   return {y:y,mo:mo,d:d,hh:hh,mi:mi,tu:tu,sex:sex,place:place,lonShown:lonShown,name:document.getElementById("pname").value||""};
 }
 
@@ -464,10 +480,11 @@ function renderHist(){
 function applyHist(id){
   var it=loadHist().filter(function(x){return x.id===id;})[0];if(!it)return;
   document.getElementById("bd").value=it.y+"-"+two(it.mo)+"-"+two(it.d);
-  document.getElementById("tu").checked=!!it.tu;document.getElementById("bt").disabled=!!it.tu;
+  document.getElementById("tu").checked=!!it.tu;
   if(!it.tu)document.getElementById("bt").value=two(it.hh)+":"+two(it.mi);
+  wireToggle("tuBtn","tu","bt");
   document.getElementById("sex").value=it.sex;
-  if(it.place&&CITIES[it.place]){document.getElementById("place").value=it.place;document.getElementById("manualWrap").classList.toggle("hidden",CITIES[it.place][0]!=="manual");}
+  if(it.place&&(PLON[it.place]!=null||it.place===MANUAL_OPT)){document.getElementById("place").value=it.place;document.getElementById("manualWrap").classList.toggle("hidden",it.place!==MANUAL_OPT);}
   document.getElementById("pname").value=it.name||"";
   window._msAutoAI=true; runSolo();
 }
