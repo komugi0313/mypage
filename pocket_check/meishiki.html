@@ -64,6 +64,7 @@ table{width:100%;border-collapse:collapse;font-size:15.5px}
 .ladder{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px}
 .lstep{flex:0 0 auto;min-width:78px;border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center;background:var(--card)}
 .lstep.now{border:2px solid var(--accent);background:var(--soft)}
+.lstep.first{border-style:dashed;border-color:var(--title)}
 .lstep .age{font-size:13px;color:var(--muted)}.lstep .lgz{font-size:16px;font-weight:800;margin:2px 0}
 .lstep .lten{font-size:13px;color:var(--accent);font-weight:700}.lstep .lter{font-size:12.5px;color:var(--muted)}
 .years{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:6px}
@@ -395,11 +396,20 @@ var LUCK_SHORT={比肩:"自立・仲間・出費",劫財:"勝負・競争・散�
 var JUNI_ENERGY={帝旺:"勢い最高潮",建禄:"働き盛り",冠帯:"自立の",長生:"伸びゆく",沐浴:"揺れやすい",養:"育ち・準備の",胎:"芽生えの",衰:"落ち着いた",病:"繊細な",死:"静かで内向きの",墓:"納め蓄える",絶:"切り替えの"};
 function luckFav(el,fav){var f=fav&&fav[el];return f==="喜"?{m:"◎",t:"追い風",lbl:"喜神"+el,c:"var(--good)"}:f==="忌"?{m:"△",t:"調整期",lbl:"忌神"+el,c:"var(--warn)"}:{m:"○",t:"中立",lbl:el,c:"var(--muted)"};}
 function juniShort(t){return (JUNI_MEAN[t]||"").split("。")[0];}
-function daeunDetail(c,fav){var now=c.now||{},di=now.daeunIndex;
-  return '<p class="note" style="margin:12px 0 4px"><b>各10年の詳細</b>（◎＝喜神で追い風／△＝忌神で調整期／○＝中立。テーマは干の通変星）</p>'+(c.decadeFortunes||[]).map(function(d,i){
-    var a=(d.startAge!=null?d.startAge:d.age),stem=d.ganzhi[0],el=MSTEM_EL[stem],ten=d.tenStar||"",ter=d.terrain||"",fv=luckFav(el,fav),gb=TENGOD_GB[ten]||{},lk=LUCK_TEN[ten]||{},cur=(i===di);
+/* 年齢を「X歳Yヶ月」表記に */
+function ageJ(m){m=Math.max(0,Math.round(m));var y=Math.floor(m/12),mo=m%12;return y+'歳'+(mo?mo+'ヶ月':'');}
+/* 大運リスト（先生の流派：第一運＝月柱を必ず先頭に置き、以降は立運起点で各10年） */
+function daeunList(c){var sf=c.startFortune||{},ritsu=(sf.years||0)*12+(sf.months||0),mp=c.pillars[1]||{};
+  var list=[{ganzhi:mp.ganzhi,stem:mp.ganzhi[0],branch:mp.ganzhi[1],tenStar:mp.tenStar||'',terrain:mp.terrain||'',startM:0,endM:ritsu,first:true}];
+  (c.decadeFortunes||[]).forEach(function(d,i){list.push({ganzhi:d.ganzhi,stem:d.ganzhi[0],branch:d.ganzhi[1],tenStar:d.tenStar||'',terrain:d.terrain||'',startM:ritsu+i*120,endM:ritsu+(i+1)*120,first:false});});
+  var now=c.now||{},ageM=(now.ageMonths!=null?now.ageMonths:(now.age!=null?now.age*12:-1)),ci=-1;
+  for(var k=0;k<list.length;k++){if(ageM>=list[k].startM&&ageM<list[k].endM){ci=k;break;}}
+  return {items:list,cur:ci,ritsu:ritsu};}
+function daeunDetail(c,fav){var dl=daeunList(c);
+  return '<p class="note" style="margin:12px 0 4px"><b>各大運の詳細</b>（先頭は<b>第一運＝月柱</b>。◎＝喜神で追い風／△＝忌神で調整期／○＝中立。テーマは干の通変星）</p>'+dl.items.map(function(d,i){
+    var stem=d.stem,el=MSTEM_EL[stem],ten=d.tenStar||"",ter=d.terrain||"",fv=luckFav(el,fav),gb=TENGOD_GB[ten]||{},lk=LUCK_TEN[ten]||{},cur=(i===dl.cur);
     return '<div style="border-top:1px solid var(--soft);'+(cur?'background:var(--soft);border-radius:8px;padding:8px;margin-top:4px':'padding:8px 2px')+'">'
-      +'<b style="font-size:15px">'+esc(a)+'〜'+esc(a+9)+'歳</b>　'+elGz(d.ganzhi)+'　'+tenC(ten)+' <b style="color:'+fv.c+'">'+fv.m+'</b><span class="note">（'+fv.lbl+'）</span>'+(cur?' <span class="pill">今ここ</span>':'')
+      +'<b style="font-size:15px">'+esc(ageJ(d.startM))+'〜'+esc(ageJ(d.endM))+'</b>　'+elGz(d.ganzhi)+'　'+tenC(ten)+' <b style="color:'+fv.c+'">'+fv.m+'</b><span class="note">（'+fv.lbl+'）</span>'+(d.first?' <span class="pill">第一運・月柱</span>':'')+(cur?' <span class="pill">今ここ</span>':'')
       +'<br><span class="note">テーマ：'+esc(gb.w||ten)+'／十二運「</span>'+terrainC(ter)+'<span class="note">」＝'+esc(juniShort(ter))+'</span>'
       +'<br><b>起こりやすい事：</b>'+esc(lk.ev||'')
       +'<br><span style="color:'+fv.c+'"><b>'+fv.t+'：</b>'+esc(lk.up||'')+'</span>'
@@ -417,20 +427,20 @@ var SEASON_JP={木:"春（木）",火:"夏（火）",金:"秋（金）",水:"冬
 var SEASON_PREP={木:"新しい習い事を始める・独立や種まきの準備をする",火:"表現力を磨く・人前に出る/発信の練習をする",金:"結果にこだわる・財務や経営、実務スキルを学ぶ",水:"知恵を蓄える・精神世界や哲学、専門知識を学ぶ"};
 var DOYO={辰:1,未:1,戌:1,丑:1};
 function setsubokuCard(c,fav,birthYear){
-  var dec=c.decadeFortunes||[];
+  var dec=daeunList(c).items;
   var head='<p style="margin:0 0 8px">四柱推命の大運は、十二支の季節（春＝寅卯辰／夏＝巳午未／秋＝申酉戌／冬＝亥子丑）ごとに巡り、一つの季節は<b>約30年（10年×3干支）</b>。その<b>季節が切り替わる継ぎ目＝次の季節に入る直前の2〜3年</b>が「<b>節木運（せつぼくうん）</b>」です。台木に新しい枝を接ぐように質の違う運命へ移るため揺れや痛みを伴いますが、乗り越えると新しい花を咲かせます。</p>'
     +'<p class="note" style="margin:0 0 6px"><b>起こりやすい事：</b>①価値観の強制終了と再起動（大事だったことに関心が薄れる）②環境からの追い出し（異動・別れ・引越などの変化）③体調の節目（デトックス）。<b>過ごし方：</b>不要なもの（物・人間関係・過去の栄光）を手放し、踊り場と割り切って休養・学び直し、次の季節を予習する。</p>'
     +'<p class="note" style="margin:0 0 10px"><b>転職：</b>追い出される流れで次の季節が喜神なら大吉。「逃げ」の突発的な決断は判断力が鈍る時期ゆえ注意。<b>／結婚：</b>好みが変わる時期。変化を共に受け入れられる相手なら同志に。迷いが強ければ運が明けるまで待つのも賢明。（下の各タイミングに共通）</p>';
   if(dec.length<2) return head+'<p class="note">大運が十分に算出されていません。</p>';
   var boundaries=[];
-  for(var i=1;i<dec.length;i++){var pb=dec[i-1].ganzhi[1],cb=dec[i].ganzhi[1],ps=BR_SEASON[pb],cs=BR_SEASON[cb];
-    if(ps&&cs&&ps!==cs){var sa=(dec[i].startAge!=null?dec[i].startAge:dec[i].age);boundaries.push({fromEl:ps,toEl:cs,age:sa,prevBr:pb});}}
+  for(var i=1;i<dec.length;i++){var pb=dec[i-1].branch,cb=dec[i].branch,ps=BR_SEASON[pb],cs=BR_SEASON[cb];
+    if(ps&&cs&&ps!==cs){var sa=dec[i].startM/12;boundaries.push({fromEl:ps,toEl:cs,age:sa,prevBr:pb});}}
   if(!boundaries.length) return head+'<p class="note">算出範囲では季節の変わり目（接木運）は見当たりません。</p>';
   var body=boundaries.map(function(b){var tf=luckFav(b.toEl,fav);
-    var y0=birthYear+b.age-3,y1=birthYear+b.age-1;
+    var a0=Math.max(0,Math.round(b.age-3)),a1=Math.max(0,Math.round(b.age-1)),y0=birthYear+a0,y1=birthYear+a1;
     var doyo=DOYO[b.prevBr]?'<br><span style="color:var(--warn)">※季節末（土用：'+esc(b.prevBr)+'）の変わり目＝心身が特に揺れやすい時期。無理は禁物。</span>':'';
     return '<div style="border-top:1px solid var(--soft);padding:9px 2px">'
-      +'<b style="font-size:15px">約'+esc(b.age-3)+'〜'+esc(b.age-1)+'歳ごろ（'+esc(y0)+'〜'+esc(y1)+'年）</b>：<b>'+esc(SEASON_JP[b.fromEl])+'</b> → <b>'+esc(SEASON_JP[b.toEl])+'</b> へ移行'
+      +'<b style="font-size:15px">約'+esc(a0)+'〜'+esc(a1)+'歳ごろ（'+esc(y0)+'〜'+esc(y1)+'年）</b>：<b>'+esc(SEASON_JP[b.fromEl])+'</b> → <b>'+esc(SEASON_JP[b.toEl])+'</b> へ移行'
       +'<br>次の季節「'+esc(SEASON_JP[b.toEl])+'」は、あなたに <b style="color:'+tf.c+'">'+tf.m+' '+tf.t+'</b>（'+tf.lbl+'）の30年。'+(fav&&fav[b.toEl]==="喜"?'思い切った転身・挑戦が吉と出やすい季節。':(fav&&fav[b.toEl]==="忌"?'守り・整え・工夫が活きる季節。焦らず土台を固めて。':'穏やかに移行できる季節。'))
       +'<br><b>予習：</b>次の「'+esc(SEASON_JP[b.toEl])+'」に向け＝'+esc(SEASON_PREP[b.toEl]||'')+'を先取りするとスムーズ。'
       +doyo+'</div>';}).join("");
@@ -505,11 +515,11 @@ function renderSolo(p,inp){
   else H+='<p class="note" style="margin:0">該当する神殺はありません。</p>';
   H+='<p class="note" style="margin:8px 0 0">「(年○)」は年支からも成立するもの。</p></div>';
 
-  // 大運
-  var now=c.now||{},di=now.daeunIndex,sf=c.startFortune||{};
-  H+='<div class="card"><h2>大運（起運：'+esc(sf.years!=null?sf.years+"歳"+(sf.months||0)+"ヶ月":"-")+' ／ '+(sf.forward?"順行":"逆行")+'）</h2><div class="ladder">';
-  (c.decadeFortunes||[]).forEach(function(dd,i){var a=(dd.startAge!=null?dd.startAge:dd.age);H+='<div class="lstep'+(i===di?" now":"")+'"><div class="age">'+esc(a)+'〜'+esc(a+9)+'歳</div><div class="lgz">'+elGz(dd.ganzhi)+'</div><div class="lten">'+esc(dd.tenStar||"")+'</div><div class="lter">'+esc(dd.terrain||"")+'</div></div>';});
-  H+='</div>'+daeunDetail(c,p.fav)+'</div>';
+  // 大運（第一運＝月柱を先頭に、立運起点で表示）
+  var now=c.now||{},sf=c.startFortune||{},dl=daeunList(c);
+  H+='<div class="card"><h2>大運（立運：'+esc(sf.years!=null?sf.years+"歳"+(sf.months||0)+"ヶ月":"-")+' ／ '+(sf.forward?"順行":"逆行")+' ／ 第一運＝月柱）</h2><div class="ladder">';
+  dl.items.forEach(function(dd,i){H+='<div class="lstep'+(i===dl.cur?" now":"")+(dd.first?" first":"")+'"><div class="age">'+esc(ageJ(dd.startM))+'〜'+esc(ageJ(dd.endM))+'</div><div class="lgz">'+elGz(dd.ganzhi)+'</div><div class="lten">'+esc(dd.tenStar||"")+(dd.first?'･月柱':'')+'</div><div class="lter">'+esc(dd.terrain||"")+'</div></div>';});
+  H+='</div><p class="note" style="margin:6px 0 0">先頭は<b>第一運＝月柱（'+esc(c.pillars[1].ganzhi)+'）</b>で0歳〜立運まで。以降は立運起点で各10年。</p>'+daeunDetail(c,p.fav)+'</div>';
   // 接木運（季節の変わり目）
   H+='<div class="card"><h2>節木運（人生の季節の変わり目）</h2>'+setsubokuCard(c,p.fav,parseInt(inp.y,10))+'</div>';
 
@@ -686,10 +696,11 @@ function analyzeSolo(p){
   var favs=EL_ORDER.filter(function(e){return p.fav&&p.fav[e]==="喜";});
   if(favs.length){ L.push('<p style="margin:0 0 8px"><b class="sech">◆ 開運のヒント（喜神：'+favs.map(elc).join("・")+'）</b><br>'+favs.map(function(e){var k=EL_LUCK[e];return k?('・'+elc(e)+'：色「'+k.色+'」／方角「'+k.方+'」／'+k.行):"";}).filter(Boolean).join("<br>")+'</p>'); }
   // 運の流れ
-  if(fp){ var cur=fp.cur, ty=fp.ty, ny=fp.ny;
+  if(fp){ var ty=fp.ty, ny=fp.ny;
+    var _dl=daeunList(c), _ci=_dl.cur>=0?_dl.items[_dl.cur]:null, cur=_ci?{ganzhi:_ci.ganzhi,tenStar:_ci.tenStar,ageLbl:ageJ(_ci.startM)+'〜'+ageJ(_ci.endM),first:_ci.first}:null;
     function flow(o,head,extra){ if(!o)return""; var t=o.tenStar||"",w=(TENGOD_GB[t]||{}).w; return head+'：<b>'+elGz(o.ganzhi||"")+(t?'（'+esc(t)+'）':'')+'</b>'+(extra||"")+(w?' ＝ '+esc(w):"")+'。<br>'; }
     L.push('<p style="margin:0 0 8px"><b class="sech">◆ 運の流れ</b><br>'
-      +flow(cur,'今の10年（大運）',cur?' '+esc(cur.startAge)+'〜'+esc(cur.startAge+9)+'歳':'')
+      +flow(cur,'今の大運'+(cur&&cur.first?'（第一運・月柱）':''),cur?' '+esc(cur.ageLbl):'')
       +flow(ty,'今年'+(ty&&ty.year?'（'+esc(ty.year)+'）':''))
       +flow(ny,'来年'+(ny&&ny.year?'（'+esc(ny.year)+'）':''))+'</p>'); }
   // 神殺
