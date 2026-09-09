@@ -1401,28 +1401,29 @@ var GB_EL={
  水:{g:["知恵と機転がある","柔軟で適応力が高い","共感力があり聞き上手","情報感度が高い"],b:["流されやすく八方美人","気分屋で波がある","本心を隠しがち","考えすぎて動けない"]}};
 var GOOD_STAR_PH={天乙貴人:"困った時に助けが入る人徳",太極貴人:"探究心が深く精神性が高い",福星貴人:"衣食住に恵まれ安泰",文昌貴人:"学問・文章・頭脳の才",天厨貴人:"食や楽しみに恵まれる",天官貴人:"地位・信用・出世に強い",金与禄:"結婚運・財の安定",暗禄:"見えない助け・裏の実力",天德貴人:"天の加護があり守られる",月德貴人:"静かな加護・徳がある",天德合:"良縁による加護",月德合:"和による加護",将星:"リーダー性・場の中心になれる",華蓋:"芸術・独創・精神世界の才",禄馬:"才能と機動力を併せ持つ",紅艶:"色気・人を惹きつける魅力",咸池:"華やかで人気運がある"};
 var CAUTION_STAR_PH={羊刃:"刃のような激しさ・強引さ",飛刃:"隠れた鋭さ・突発的な衝動",劫殺:"急な損失・奪われに注意",亡神:"うっかり・喪失感に注意",囚獄:"束縛・停滞を感じやすい",妨害殺:"邪魔・妨げが入りやすい",血刃:"ケガ・体の無理に注意",隔角:"孤立・浮きやすい",日刃:"勢い任せで自分を傷つける激しさ"};
-function analyzeSW(p){var c=p.pro,dEl=c.dayMaster.element,five=p.five||{},good=[],weak=[];
-  var G60=GANZHI60[c.pillars[2].ganzhi]; if(G60){good=good.concat(G60[0].split("・"));weak=weak.concat(G60[1].split("・"));}
-  var gb=GB_EL[dEl]||{g:[],b:[]}; good=good.concat(gb.g); weak=weak.concat(gb.b);
-  if((p.sType||"").indexOf("強")>=0){good.push("エネルギッシュで自分から動き道を切り開ける");weak.push("我が強く頑固で、人の意見を聞き入れにくい");}
-  else if((p.sType||"").indexOf("弱")>=0){good.push("繊細で気配り上手・協調して力を発揮できる");weak.push("頑張りすぎて消耗し、自信を失いやすい");}
-  else good.push("バランス感覚がよく状況に合わせて動ける");
-  EL_ORDER.forEach(function(e){if(e!==dEl&&(five[e]||0)>=3&&GB_EL[e])good.push(GB_EL[e].g[0]+"（"+e+"の力が強い）");});
-  EL_ORDER.forEach(function(e){if((five[e]||0)===0&&GB_EL[e])weak.push("「"+e+"」が無く、"+GB_EL[e].b[0]+"面を補う必要");});
-  var tb=window.tenGodBias?window.tenGodBias(c):null;
-  if(tb){if(tb.type!=="balanced"&&tb.maxGroup)good.push(tb.maxGroup+"の力が強く、その分野で頭角を現しやすい");(tb.missing||[]).forEach(function(gp){weak.push(gp+"の要素が薄く、その面は人に頼る/意識して伸ばすテーマ");});}
-  var ss=(window.shinsatsuHits?window.shinsatsuHits(c):[]);
-  ss.forEach(function(s){var nm=s.split("(")[0].replace(/^年/,"");if(GOOD_STAR_PH[nm])good.push(nm+"："+GOOD_STAR_PH[nm]);if(CAUTION_STAR_PH[nm])weak.push(nm+"："+CAUTION_STAR_PH[nm]);if(nm==="魁罡"){good.push("魁罡：強烈な意志とカリスマ、逆境に強い");weak.push("魁罡：妥協できず極端に振れやすい");}});
-  /* 月支元命 */
-  var g=(window.fullProfile?(window.fullProfile(c).genmei||""):"");
-  if(g&&TEN_MISSION[g])good.push("中心の使命（元命="+g+"）＝"+TEN_MISSION[g]);
-  /* 十二運（日柱） */
+function analyzeSW(p){var c=p.pro,dEl=c.dayMaster.element,five=p.five||{};
+  /* 日干支・日主由来（同じ日干支なら共通する層） */
+  var dayG=[],dayW=[];
+  var G60=GANZHI60[c.pillars[2].ganzhi]; if(G60){dayG=dayG.concat(G60[0].split("・"));dayW=dayW.concat(G60[1].split("・"));}
+  var gb=GB_EL[dEl]||{g:[],b:[]}; dayG=dayG.concat(gb.g); dayW=dayW.concat(gb.b);
   var ter=c.pillars[2].terrain;
-  if(/帝旺|建禄|冠帯|長生/.test(ter))good.push("日柱の十二運が"+ter+"で、芯が強く自立心・行動力がある");
-  else if(/死|絶|墓|病|衰|胎|沐浴/.test(ter))weak.push("日柱の十二運が"+ter+"で、繊細さ・気疲れや不安定さが出やすい");
-  /* 60干支の持ち味（日柱） */
+  if(/帝旺|建禄|冠帯|長生/.test(ter))dayG.push("日柱の十二運が"+ter+"で、芯が強く自立心・行動力がある");
+  else if(/死|絶|墓|病|衰|胎|沐浴/.test(ter))dayW.push("日柱の十二運が"+ter+"で、繊細さ・気疲れや不安定さが出やすい");
   var dbEl=MBR_EL[c.pillars[2].branch];
-  good.push("日柱"+c.pillars[2].ganzhi+"の持ち味＝表は「"+dEl+"」、内側に「"+dbEl+"」を併せ持つ");
+  dayG.push("日柱"+c.pillars[2].ganzhi+"の持ち味＝表は「"+dEl+"」、内側に「"+dbEl+"」を併せ持つ");
+  /* 命式固有（月支元命・身強弱・五行偏り・通変偏り・神殺）＝同じ日干支でも人により変わる層 */
+  var perG=[],perW=[];
+  if((p.sType||"").indexOf("強")>=0){perG.push("エネルギッシュで自分から動き道を切り開ける（身強）");perW.push("我が強く頑固で、人の意見を聞き入れにくい（身強）");}
+  else if((p.sType||"").indexOf("弱")>=0){perG.push("繊細で気配り上手・協調して力を発揮できる（身弱）");perW.push("頑張りすぎて消耗し、自信を失いやすい（身弱）");}
+  else perG.push("バランス感覚がよく状況に合わせて動ける（中和）");
+  EL_ORDER.forEach(function(e){if(e!==dEl&&(five[e]||0)>=3&&GB_EL[e])perG.push(GB_EL[e].g[0]+"（"+e+"の力が強い）");});
+  EL_ORDER.forEach(function(e){if((five[e]||0)===0&&GB_EL[e])perW.push("「"+e+"」が無く、"+GB_EL[e].b[0]+"面を補う必要");});
+  var tb=window.tenGodBias?window.tenGodBias(c):null;
+  if(tb){if(tb.type!=="balanced"&&tb.maxGroup)perG.push(tb.maxGroup+"の力が強く、その分野で頭角を現しやすい");(tb.missing||[]).forEach(function(gp){perW.push(gp+"の要素が薄く、その面は人に頼る/意識して伸ばすテーマ");});}
+  var ss=(window.shinsatsuHits?window.shinsatsuHits(c):[]);
+  ss.forEach(function(s){var nm=s.split("(")[0].replace(/^年/,"");if(GOOD_STAR_PH[nm])perG.push(nm+"："+GOOD_STAR_PH[nm]);if(CAUTION_STAR_PH[nm])perW.push(nm+"："+CAUTION_STAR_PH[nm]);if(nm==="魁罡"){perG.push("魁罡：強烈な意志とカリスマ、逆境に強い");perW.push("魁罡：妥協できず極端に振れやすい");}});
+  var g=(window.fullProfile?(window.fullProfile(c).genmei||""):"");
+  if(g&&TEN_MISSION[g])perG.push("中心の使命（元命="+g+"）＝"+TEN_MISSION[g]);
   /* 意味の重複を排除（同義の言い回しを1つに）。神殺・元命など固有名の行は常に残す */
   var THEME_KEYS=["面倒見","世話","誠実","信頼","粘り","堅実","現実","優柔不断","こだわり","頑固","抱え込","溜め込","心配","気配り","協調","繊細","傷つき","行動力","決断","スピード","華","表現","感受","独自","ひらめき","発想","学び","知性","勝負","マイペース","自立","散財","見栄","八方美人","批判","プライド","飽き","移り気","流され","本心","秘密","融通","強引","短気","成長","素直","正義","責任","美意識","機転","柔軟","共感"];
   function themeDedup(arr){var seen={},out=[];
@@ -1433,13 +1434,15 @@ function analyzeSW(p){var c=p.pro,dEl=c.dayMaster.element,five=p.five||{},good=[
       if(ks.some(function(k){return seen[k];}))return;
       ks.forEach(function(k){seen[k]=1;});out.push(x);});
     return out;}
-  good=themeDedup(good);weak=themeDedup(weak);
+  /* 命式固有を先に交互配置し「光る3つ／意識したい3つ」に必ずその人固有を出す。同じ日干支でも上位が変わる */
+  function weave(per,day){per=themeDedup(per).slice();day=themeDedup(day).slice();var out=[];
+    while(per.length||day.length){if(per.length)out.push(per.shift());if(day.length)out.push(day.shift());}return out;}
   /* 10未満なら、この人の五行構成から"意味が重複しないものだけ"補完（すべて命式由来） */
   var byStrong=EL_ORDER.slice().sort(function(a,b){return (five[b]||0)-(five[a]||0);});
   var gp=[],wp=[];
   byStrong.forEach(function(e){if((five[e]||0)>0&&GB_EL[e])GB_EL[e].g.forEach(function(x){gp.push(x+"（"+e+"の気）");});});
   byStrong.slice().reverse().forEach(function(e){if(GB_EL[e])GB_EL[e].b.forEach(function(x){wp.push((five[e]||0)===0?x+"（"+e+"が無く出やすい）":x+"（"+e+"の課題）");});});
-  good=themeDedup(good.concat(gp));weak=themeDedup(weak.concat(wp));
+  var good=themeDedup(weave(perG,dayG).concat(gp)),weak=themeDedup(weave(perW,dayW).concat(wp));
   return {good:good.slice(0,10),weak:weak.slice(0,10)};}
 function swCard(p){var r=analyzeSW(p);
   function block(arr,color,topLbl,restLbl){var top=arr.slice(0,3),rest=arr.slice(3);
@@ -1455,7 +1458,8 @@ function missionCard(p){var c=p.pro,dEl=c.dayMaster.element,g=(window.fullProfil
   var gifts=[],seen={}; stars.forEach(function(n){if(GOOD_STAR_PH[n]&&!seen[n]){seen[n]=1;gifts.push(n);}}); gifts=gifts.slice(0,3);
   var G60=GANZHI60[c.pillars[2].ganzhi];
   var L=['<p style="margin:0 0 8px">四柱推命では、生まれ持った命式に「この人生で果たすと最も輝く役割＝天命」が刻まれています。あなたの命式が指し示す道しるべを、丁寧に読み解きます。</p>'];
-  L.push('<p style="margin:0 0 8px"><b class="sech">◆ あなたの核（日主 '+esc(c.dayMaster.stem)+'＝'+elc(dEl)+'）</b><br>'+esc(EL_NATURE[dEl]||"")+'これが、飾りのないあなたの"魂の地色"です。'+(G60?'とくに日柱'+esc(c.pillars[2].ganzhi)+'は「'+esc(G60[0].split("・")[0])+'」という個性を宿しています。':'')+'</p>');
+  var st=p.sType||"",stPhr=st.indexOf("強")>=0?"自分から強く押し出す形":st.indexOf("弱")>=0?"周囲と調和させ、にじませる形":"場に合わせて出し入れする形";
+  L.push('<p style="margin:0 0 8px"><b class="sech">◆ あなたの核（日主 '+esc(c.dayMaster.stem)+'＝'+elc(dEl)+'）</b><br>'+esc(EL_NATURE[dEl]||"")+'これが、飾りのないあなたの"魂の地色"です。'+(G60?'とくに日柱'+esc(c.pillars[2].ganzhi)+'は「'+esc(G60[0].split("・")[0])+'」という個性を宿しています。':'')+(st?'あなたは<b>'+esc(st)+'</b>なので、この核は<b>'+stPhr+'</b>で表に出ます。':'')+'</p>');
   if(g&&TEN_MISSION[g])L.push('<p style="margin:0 0 8px"><b class="sech">◆ 授かった使命（月支元命：'+esc(g)+'）</b><br>あなたが人生で最も自然に力を発揮できるのは、<b>「'+esc(TEN_MISSION[g])+'」</b>という生き方です。'+(dom?'さらに'+esc(dom)+'の力が強く、そのテーマがあなたの主戦場になります。':'')+'この軸で選択すると迷いが減り、運が味方します。</p>');
   if(gifts.length)L.push('<p style="margin:0 0 8px"><b class="sech">◆ 使うべき天与の才（吉星）</b><br>'+gifts.map(function(n){return n+'（'+GOOD_STAR_PH[n]+'）';}).join('、')+'。これらは"意識して使うほど開けていく"あなたの持ち味。眠らせず、人生の場面で積極的に活かしてください。</p>');
   if(favs.length)L.push('<p style="margin:0 0 8px"><b class="sech">◆ 運が開く方向（喜神：'+favs.map(elc).join('・')+'）</b><br>'+favs.map(function(e){var k=EL_LUCK[e];return k?(e+'の気（色「'+k.色+'」・'+k.行+'）'):'';}).filter(Boolean).join('、')+'を暮らしに取り入れると、エネルギーが満ち、本来の使命へ進みやすくなります。</p>');
@@ -1664,11 +1668,18 @@ function dayGBCard(p){var c=p.pro,ds=c.dayMaster.stem,sEl=MSTEM_EL[ds],db=c.pill
   var ss=(window.shinsatsuHits?window.shinsatsuHits(c):[]);
   var kk=ss.indexOf("魁罡")>=0?"魁罡日＝強烈な意志とカリスマ。白黒はっきりで妥協を嫌う（強みでも課題でも）。":ss.indexOf("日刃")>=0?"日刃＝自らに強い刃を持つ日。行動力が突出するぶん勢い任せに注意。":"";
   var G60=GANZHI60[c.pillars[2].ganzhi];
+  /* この命式ならではの出方（同じ日干支でも人により変わる要素を明示） */
+  var gen=(window.fullProfile?(window.fullProfile(c).genmei||""):""),st=p.sType||"";
+  var goodStars=[],gseen={}; ss.forEach(function(s){var nm=s.split("(")[0].replace(/^年/,"");if(GOOD_STAR_PH[nm]&&!gseen[nm]){gseen[nm]=1;goodStars.push(nm);}});
+  var kb=(window.kuboX?window.kuboX(c):[]).join("");
+  var parts=[]; if(gen)parts.push('月支元命＝<b>'+esc(gen)+'</b>'); if(st)parts.push('<b>'+esc(st)+'</b>'); if(goodStars.length)parts.push('吉星 '+esc(goodStars.slice(0,2).join("・"))); if(kb)parts.push('空亡 '+esc(kb));
+  var personal=parts.length?'<p class="note" style="margin:8px 0 0;border-top:1px dashed var(--soft);padding-top:7px">※上の持ち味は<b>同じ日柱（'+esc(c.pillars[2].ganzhi)+'）の人に共通</b>する層です。あなた個人は命式全体で〔'+parts.join('／')+'〕を併せ持つため、実際の出方はこの個性の方へ寄ります（各カードで確認できます）。</p>':'';
   return (G60?'<p style="margin:0 0 6px"><b>'+esc(c.pillars[2].ganzhi)+'の持ち味：</b>'+esc(G60[0].split("・").join("／"))+'／〔課題〕'+esc(G60[1].split("・").join("／"))+'</p>':'')
     +'<p style="margin:0 0 6px"><b>タイプ：</b>'+elc(sEl)+'の'+(yin?"陰":"陽")+'（'+esc(ds)+'）× 日支 '+elB(db)+'（'+elc(bEl)+'）</p>'
     +'<p style="margin:0 0 6px;color:var(--good)"><b>◎ 良いところ：</b>'+esc(good)+'</p>'
     +'<p style="margin:0 0 6px;color:var(--warn)"><b>△ 課題・直すと良い所：</b>'+esc(bad)+'</p>'
-    +'<p class="note" style="margin:0">'+esc(ter2)+(kk?'<br>'+esc(kk):'')+'</p>';}
+    +'<p class="note" style="margin:0">'+esc(ter2)+(kk?'<br>'+esc(kk):'')+'</p>'
+    +personal;}
 /* 相性の理由（詳細・ルールベース） */
 function tenPairNote(b2a,a2b){var m={正官:"支え合い敬い合える誠実な縁",偏官:"刺激的で情熱的だが強め",正財:"堅実で安定した相性",偏財:"楽しく開放的な相性",印綬:"守り育てられる安心の縁",偏印:"独特の波長で惹かれる",食神:"一緒にいて楽な癒しの縁",傷官:"刺激的だが言葉のトゲに注意",比肩:"対等な同志の関係",劫財:"距離が近く助け合うが張り合いも"};return (m[b2a]||"")+"／"+(m[a2b]||"")+"。";}
 function compatReasonText(cd){if(!cd)return"";var er=elRelation(cd.aEl,cd.bEl),L=[];
