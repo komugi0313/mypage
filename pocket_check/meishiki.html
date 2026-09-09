@@ -340,6 +340,37 @@ function setsuInfo(c){
   return out;
 }
 
+/* 大運・年運の「起こりやすい事／過ごし方」（通変星が運として巡る時の標準的な意味・オフライン） */
+var LUCK_TEN={
+ 比肩:{ev:"独立心が高まり、自分の意志で動く時期。仲間・兄弟との縁、競争や出費も。",up:"自分で決めて動くほど吉。人任せにしない。"},
+ 劫財:{ev:"勝負・競争・仲間との協力や金銭の出入りが活発。散財・保証事に注意。",up:"大きな投機や貸し借りは慎重に。仲間と組むと力に。"},
+ 食神:{ev:"衣食住が充実し楽しみが増える。才能・趣味・健康（女性は出産）に縁。",up:"好きなことを楽しみ身体を大切に。表現・発信が開運。"},
+ 傷官:{ev:"才能・技術・表現で光る一方、口論・別離・怪我・反発も出やすい刺激期。",up:"言葉を選び、感情的な決断を避ける。技を磨く方へ。"},
+ 偏財:{ev:"人脈と収入のチャンスが広がり活動的に。副収入（男性は恋愛）も。",up:"軽やかに動き縁を大切に。使い過ぎには注意。"},
+ 正財:{ev:"堅実に蓄え信用が育つ安定期。（男性は結婚）・家庭・貯蓄に縁。",up:"地道な積み重ねが実る。誠実な約束を守ると吉。"},
+ 偏官:{ev:"重責・昇進・挑戦や試練が来る攻めの時期。（女性は異性）・争い・無理に注意。",up:"覚悟を決めて挑むと成長。過労・強引さを抑える。"},
+ 正官:{ev:"地位・信用・昇進に恵まれ公に認められる。（女性は結婚）・責任も。",up:"筋を通し役割を果たすほど評価に。ルールを味方に。"},
+ 偏印:{ev:"学び直し・資格・方向転換・独自の道。孤独感や食の細りも出やすい。",up:"内省と探究の時期。焦らず学び直し、人に相談を。"},
+ 印綬:{ev:"学問・資格・目上の引き立て・家庭の安泰。守られ受け取る時期。",up:"学び・準備に最適。目上を大切に。受け身になり過ぎない。"}};
+function luckFav(el,fav){var f=fav&&fav[el];return f==="喜"?{m:"◎",t:"追い風",lbl:"喜神"+el,c:"var(--good)"}:f==="忌"?{m:"△",t:"調整期",lbl:"忌神"+el,c:"var(--warn)"}:{m:"○",t:"中立",lbl:el,c:"var(--muted)"};}
+function juniShort(t){return (JUNI_MEAN[t]||"").split("。")[0];}
+function daeunDetail(c,fav){var now=c.now||{},di=now.daeunIndex;
+  return '<p class="note" style="margin:12px 0 4px"><b>各10年の詳細</b>（◎＝喜神で追い風／△＝忌神で調整期／○＝中立。テーマは干の通変星）</p>'+(c.decadeFortunes||[]).map(function(d,i){
+    var a=(d.startAge!=null?d.startAge:d.age),stem=d.ganzhi[0],el=MSTEM_EL[stem],ten=d.tenStar||"",ter=d.terrain||"",fv=luckFav(el,fav),gb=TENGOD_GB[ten]||{},lk=LUCK_TEN[ten]||{},cur=(i===di);
+    return '<div style="border-top:1px solid var(--soft);'+(cur?'background:var(--soft);border-radius:8px;padding:8px;margin-top:4px':'padding:8px 2px')+'">'
+      +'<b style="font-size:15px">'+esc(a)+'〜'+esc(a+9)+'歳</b>　'+elGz(d.ganzhi)+'　<b>'+esc(ten)+'</b> <b style="color:'+fv.c+'">'+fv.m+'</b><span class="note">（'+fv.lbl+'）</span>'+(cur?' <span class="pill">今ここ</span>':'')
+      +'<br><span class="note">テーマ：'+esc(gb.w||ten)+'／十二運「'+esc(ter)+'」＝'+esc(juniShort(ter))+'</span>'
+      +'<br><b>起こりやすい事：</b>'+esc(lk.ev||'')
+      +'<br><span style="color:'+fv.c+'"><b>'+fv.t+'：</b>'+esc(lk.up||'')+'</span>'
+      +'</div>';}).join("");}
+function annualDetail(c,fav){var now=c.now||{},cy=now.year,af=(c.annualFortunes||[]);
+  var rows=af.map(function(a){var el=a.stemElement||MSTEM_EL[a.stem],ten=a.tenStar||"",ter=a.terrain||"",fv=luckFav(el,fav),gb=TENGOD_GB[ten]||{},cur=(a.year===cy);
+    return '<div style="border-top:1px solid var(--soft);padding:6px 2px'+(cur?';background:var(--soft);border-radius:6px;padding:6px':'')+'" '+(cur?'id="yNow"':'')+'>'
+      +'<b>'+esc(a.year)+'年</b> '+elGz(a.ganzhi)+' <b>'+esc(ten)+'</b> <b style="color:'+fv.c+'">'+fv.m+'</b> <span class="note">'+esc(ter)+'｜'+esc(gb.w||ten)+'・'+fv.t+'</span>'+(cur?' <span class="pill">今年</span>':'')
+      +'<br><span class="note">'+esc((LUCK_TEN[ten]||{}).ev||'')+'</span>'
+      +'</div>';}).join("");
+  return '<p class="note" style="margin:12px 0 4px"><b>各年の詳細（全'+af.length+'年）</b>　◎喜神年＝追い風／△忌神年＝守り。枠内をスクロールできます。</p>'
+    +'<div style="max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:2px 10px">'+rows+'</div>';}
 function renderSolo(p,inp){
   var c=p.pro,out=document.getElementById("out"),H="";
   var whoChip=inp.name?(esc(inp.name)+"さん"):(shortBirth(inp)+"生");
@@ -407,13 +438,13 @@ function renderSolo(p,inp){
   var now=c.now||{},di=now.daeunIndex,sf=c.startFortune||{};
   H+='<div class="card"><h2>大運（起運：'+esc(sf.years!=null?sf.years+"歳"+(sf.months||0)+"ヶ月":"-")+' ／ '+(sf.forward?"順行":"逆行")+'）</h2><div class="ladder">';
   (c.decadeFortunes||[]).forEach(function(dd,i){var a=(dd.startAge!=null?dd.startAge:dd.age);H+='<div class="lstep'+(i===di?" now":"")+'"><div class="age">'+esc(a)+'〜'+esc(a+9)+'歳</div><div class="lgz">'+elGz(dd.ganzhi)+'</div><div class="lten">'+esc(dd.tenStar||"")+'</div><div class="lter">'+esc(dd.terrain||"")+'</div></div>';});
-  H+='</div></div>';
+  H+='</div>'+daeunDetail(c,p.fav)+'</div>';
 
   // 年運
   var cy=now.year;
   H+='<div class="card"><h2>年運</h2><div id="yearsWrap" class="ycollapsed"><div class="years">';
   (c.annualFortunes||[]).forEach(function(a){var far=(cy&&(a.year<cy-2||a.year>cy+12))?" yfar":"";H+='<div class="ycell'+(a.year===cy?" now":"")+far+'"><div class="yy">'+esc(a.year)+'</div><div class="ygz">'+elGz(a.ganzhi)+'</div><div class="yten">'+esc(a.tenStar||"")+'</div></div>';});
-  H+='</div></div><button class="btn sub2" id="yearsToggle" style="margin-top:8px" onclick="toggleYears()">▼ 過去も含めすべての年を表示</button><p class="note" style="margin:8px 0 0">枠付き＝今年（'+esc(cy||"-")+'）。既定は今年前後を表示。年運の切替は立春が基準です。</p></div>';
+  H+='</div></div><button class="btn sub2" id="yearsToggle" style="margin-top:8px" onclick="toggleYears()">▼ 過去も含めすべての年を表示</button><p class="note" style="margin:8px 0 0">枠付き＝今年（'+esc(cy||"-")+'）。既定は今年前後を表示。年運の切替は立春が基準です。</p>'+annualDetail(c,p.fav)+'</div>';
 
   // 解析（ルールベース）
   H+='<div class="card"><h2>解析（自動）</h2>'+analyzeSolo(p)+'</div>';
