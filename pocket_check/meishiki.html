@@ -332,10 +332,17 @@ function renderSolo(p,inp){
   // 節入り
   var si=setsuInfo(c);
   var sm=SETSU_MEAN[si.name]||{};
+  var mp2=c.pillars[1]||{}, mhs=(mp2.hiddenStems||[]);
+  var ling2=mhs.filter(function(h){return h.ling;})[0]||mhs[0]||null;
+  var lingStem2=ling2?ling2.stem:"";
+  var lingTen2=(window.fullProfile?(window.fullProfile(c).genmei||""):"")||(ling2?ling2.tenStar:"");
   H+='<div class="card"><h2>節入り（24節気）</h2>'
     +'<p style="margin:0 0 6px">生まれた月の節：<b style="font-size:17px">'+esc(si.name)+'</b>'+(sm.y?'（'+esc(sm.y)+'）':'')+'</p>'
     +(sm.m?'<p style="margin:0 0 6px"><b>意味：</b>'+esc(sm.m)+'</p>':'')
-    +(sm.t?'<p style="margin:0 0 6px"><b>人格への影響：</b>この節が<b>月支（月令）</b>を決めます。月支は身強弱と格局（性格の構造）を決める<b>「提綱（ていこう）」＝構造上もっとも重い一支</b>で、日主（＝あなた自身）の働き方を大きく左右します。※"本質そのもの"は日主、"親・育ち"は月柱の受け持ち。性格への現れ方は節の名前そのものではなく、この月支が生む<b>司令→通変星</b>を通じて決まります。季節像でいえば'+esc(si.name)+'は「'+esc(sm.t)+'」の気配を帯びやすい、という読み方をします。</p>':'')
+    +'<p style="margin:0 0 6px"><b>人格への影響（計算に基づく）：</b>この節が<b>月支（月令）</b>を決めます。月支は身強弱と格局を決める<b>「提綱（ていこう）」＝命式の重心</b>で、日主（＝あなた自身）の働き方を最も左右します。'
+      +(lingStem2?'いま月支で当令している<b>司令は「'+esc(lingStem2)+'」</b>、日主から見た通変星は<b>「'+esc(lingTen2)+'」（＝月支元命）</b>。'+(TEN_THEME[lingTen2]?'この'+esc(lingTen2)+'＝<b>'+esc(TEN_THEME[lingTen2])+'</b>が、あなたの性格・才能の"司令塔"になります。':'')+'つまり性格は節の名前ではなく、この<b>司令→通変星</b>を通じて具体的に表れます（詳しくは下の「月支元命」カード）。':'※"本質そのもの"は日主、"親・育ち"は月柱の受け持ち。')
+      +'</p>'
+    +(sm.t?'<p class="note" style="margin:0 0 6px">※季節像としての補助イメージ：'+esc(si.name)+'は「'+esc(sm.t)+'」の趣。あくまで読み物としての彩りで、鑑定の根拠は上の司令→通変星です。</p>':'')
     +(si.entry?'<span class="note">節入り日時：'+esc(si.entry)+'</span><br>':'')
     +(si.elapsed?'<span class="note">節入りからの経過：'+esc(si.elapsed)+'（この経過が蔵干の司令★と大運の起運を決めます）</span>':'')
     +'<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:700;color:var(--accent)">24節気とは？（一覧を見る）</summary>'
@@ -722,10 +729,39 @@ function genmeiPair(pa,pb){var ga=(window.fullProfile?window.fullProfile(pa.pro)
     +'<p style="margin:0 0 4px">'+esc(combo)+'</p>'+(note?'<p class="note" style="margin:0">'+esc(note)+'</p>':'');}
 /* 五行バランス（二人・補完） */
 function esw(five){var st=[],wk=[];EL_ORDER.forEach(function(e){var n=(five&&five[e])||0;if(n>=3)st.push(e);if(n===0)wk.push(e);});return{st:st,wk:wk};}
+var EL_SHENG={木:"火",火:"土",土:"金",金:"水",水:"木"},EL_KE={木:"土",土:"水",水:"火",火:"金",金:"木"};
+var EL_SUPP={木:"緑を身につけ、自然・植物・読書に触れる",火:"赤系を使い、人前に出る・発信する・明るい場へ",土:"黄/ベージュで整え、継続・地に足をつける習慣を",金:"白・金銀で身だしなみを整え、区切り・決断を意識する",水:"青・黒を取り入れ、水辺・休息・情報収集を大切に"};
 function gogyoPair(pa,pb){var fa=pa.five||{},fb=pb.five||{},a=esw(fa),b=esw(fb);
-  function line(lbl,f,x){return '<p style="margin:0 0 4px"><b>'+lbl+'：</b>'+EL_ORDER.map(function(e){return elc(e)+(f[e]||0);}).join(' ')+(x.st.length?'　強い→'+x.st.map(elc).join('・'):'')+(x.wk.length?'　欠け→'+x.wk.map(elc).join('・'):'')+'</p>';}
-  var comp=[]; a.wk.forEach(function(e){if((fb[e]||0)>=2)comp.push('あなたに欠けた'+e+'を相手が持つ');}); b.wk.forEach(function(e){if((fa[e]||0)>=2)comp.push('相手に欠けた'+e+'をあなたが持つ');});
-  return line("お一人目",fa,a)+line("お二人目",fb,b)+'<p style="margin:4px 0 0">'+(comp.length?'◎ 補い合い：'+comp.join('／')+'。足りない気を相手が埋めてくれる好相性。':'五行の偏りは近め。似た心地よさがある一方、二人で不足する気は外（友人・趣味）で補うと安定。')+'</p>';}
+  var dA=pa.pro.dayMaster.element,dB=pb.pro.dayMaster.element;
+  function cnt(f,e){return f[e]||0;}
+  function line(lbl,f,x){return '<p style="margin:0 0 3px"><b>'+lbl+'：</b>'+EL_ORDER.map(function(e){return elc(e)+cnt(f,e);}).join(' ')+(x.st.length?'　<b>強い→</b>'+x.st.map(elc).join('・'):'')+(x.wk.length?'　<b>欠け→</b>'+x.wk.map(elc).join('・'):'')+'</p>';}
+  var H=line("お一人目",fa,a)+line("お二人目",fb,b);
+  // 合算プール
+  var sum={},lackBoth=[],over=[]; EL_ORDER.forEach(function(e){sum[e]=cnt(fa,e)+cnt(fb,e);if(sum[e]===0)lackBoth.push(e);if(sum[e]>=6)over.push(e);});
+  H+='<p style="margin:8px 0 3px"><b>◆ 二人合算のプール</b><br>'+EL_ORDER.map(function(e){return elc(e)+sum[e];}).join(' ')
+    +(lackBoth.length?'<br><b style="color:var(--warn)">二人とも欠ける気：'+lackBoth.map(elc).join('・')+'</b>（＝カップルの共通の死角。ここは二人とも意識して外から補うテーマ）':'<br>五行が一通りそろい、二人で世界が完結しやすい組み合わせ')
+    +(over.length?'<br>過多な気：'+over.map(elc).join('・')+'（その色が二人で強く出る＝持ち味にも、行き過ぎれば摩擦にもなる）':'')+'</p>';
+  // 日主どうしの関係（核）
+  var dr=elRelation(dA,dB);
+  H+='<p style="margin:8px 0 3px"><b>◆ 日主どうしの関係（相性の核）</b><br>お一人目'+elc(dA)+' × お二人目'+elc(dB)+'　'+(dr.t?'＝<b>'+esc(dr.t)+'</b><br>'+esc(dr.d):'')+'</p>';
+  // 補い合い（欠け→相手が直接持つ／相手の生で埋める）
+  var comp=[];
+  function fill(wkArr,fSelf,fMate,selfLbl,mateLbl){wkArr.forEach(function(e){
+    if(cnt(fMate,e)>=2){comp.push(selfLbl+'に欠けた'+elc(e)+'を、'+mateLbl+'が'+cnt(fMate,e)+'持っていて直接補う');}
+    else{var gen=EL_ORDER.filter(function(k){return EL_SHENG[k]===e;})[0];if(gen&&cnt(fMate,gen)>=2)comp.push(selfLbl+'に欠けた'+elc(e)+'を、'+mateLbl+'の'+elc(gen)+'('+cnt(fMate,gen)+')が生み出して間接的に補う');}
+  });}
+  fill(a.wk,fa,fb,"お一人目","お二人目"); fill(b.wk,fb,fa,"お二人目","お一人目");
+  if(comp.length)H+='<p style="margin:8px 0 3px"><b style="color:var(--good)">◎ 補い合い（相手が足りない気を埋める）</b><br>'+comp.join('<br>')+'</p>';
+  // 剋の摩擦（相手の強い気が自分の軸＝日主を抑える）
+  var fric=[];
+  a.st.forEach(function(e){if(EL_KE[e]===dB)fric.push('お一人目の強い'+elc(e)+'が、お二人目の軸'+elc(dB)+'を抑えがち…正論・主導が過ぎると相手を萎縮させるので、一歩引く配慮を');});
+  b.st.forEach(function(e){if(EL_KE[e]===dA)fric.push('お二人目の強い'+elc(e)+'が、お一人目の軸'+elc(dA)+'を抑えがち…お一人目は我慢を溜めやすいので、早めに気持ちを言葉に');});
+  if(fric.length)H+='<p style="margin:8px 0 3px"><b style="color:var(--warn)">△ 剋の摩擦（注意点）</b><br>'+fric.join('<br>')+'</p>';
+  // 暮らしのヒント（二人で欠ける気を補う具体策）
+  var tips=(lackBoth.length?lackBoth:a.wk.filter(function(e){return b.wk.indexOf(e)>=0;}));
+  if(tips.length)H+='<p style="margin:8px 0 0"><b>◆ 二人で運を底上げするコツ</b><br>不足しがちな'+tips.map(elc).join('・')+'を、'+tips.map(function(e){return EL_SUPP[e];}).filter(Boolean).join('／')+'。二人の共同の趣味や住まいに取り入れると、噛み合いが良くなります。</p>';
+  else if(!comp.length&&!fric.length)H+='<p style="margin:8px 0 0" class="note">五行の偏りが近く、価値観の心地よさが似ている二人。刺激より安心の相性。マンネリを感じたら、役割を分けて外の風（新しい人・場所）を一緒に入れると活性化します。</p>';
+  return H;}
 /* 十二運（二人の日柱） */
 function junishunPair(pa,pb){var ta=pa.pro.pillars[2].terrain,tb=pb.pro.pillars[2].terrain;
   return '<p style="margin:0 0 6px"><b>お一人目：'+esc(ta)+'</b> … '+esc(JUNI_MEAN[ta]||"")+'</p>'
