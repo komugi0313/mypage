@@ -78,13 +78,14 @@ table{width:100%;border-collapse:collapse;font-size:15.5px}
 .vzk{font-size:13.5px}
 .zkrow{padding:2px 0}
 .ling{color:var(--warn);font-weight:800;font-size:12.5px;margin-left:3px}
-.mtbl{border-collapse:collapse;width:100%;min-width:540px;font-size:14px;background:#fff}
-.mtbl th,.mtbl td{border:1px solid var(--line);padding:8px 6px;text-align:center;vertical-align:middle}
-.mtbl th{background:var(--soft);color:var(--muted);font-size:12.5px;font-weight:700}
-.mtbl .rl{background:var(--soft);font-weight:800;color:var(--accent);width:38px;font-size:15px}
+.mtbl{border-collapse:collapse;width:100%;min-width:600px;font-size:14px;background:#fff}
+.mtbl th,.mtbl td{border:1px solid var(--line);padding:8px 5px;text-align:center;vertical-align:middle}
+.mtbl th{background:var(--soft);color:var(--muted);font-size:12.5px;font-weight:700;line-height:1.25}
+.mtbl .rl{background:var(--soft);font-weight:800;color:var(--accent);width:34px;font-size:15px}
 .mtbl .bigk{font-size:24px;font-weight:800}
-.mtbl .zkc{font-size:14px;text-align:left;line-height:1.8;white-space:nowrap}
-.mtbl .stc{font-size:13px;text-align:left}
+.mtbl .zkc{font-size:15px;font-weight:700;white-space:nowrap}
+.mtbl .tenc{font-weight:800;color:var(--accent);font-size:14.5px;white-space:nowrap}
+.mtbl .stc{font-size:12.5px;text-align:left}
 .mscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .hidden{display:none}
 @media(max-width:560px){.two{grid-template-columns:1fr}}
@@ -438,16 +439,20 @@ function starsByPillar(c){var hits=(window.shinsatsuHits?window.shinsatsuHits(c)
     if(b){var hit=false;for(var i=0;i<br.length;i++){if(br[i]===b){out[i].push(name);hit=true;}}}
     else{out[2].push(name);}});
   return out.map(function(a){var seen={},r=[];a.forEach(function(n){if(!seen[n]){seen[n]=1;r.push(n);}});return r;});}
+function honkiStem(x){var hs=x.hiddenStems||[];return hs.filter(function(h){return h.role==="本氣";})[0]||hs[hs.length-1]||{};}
 function meishikiTable(c,tu){var labs=["年","月","日","時"],pil=c.pillars,sbp=starsByPillar(c);
-  var H='<table class="mtbl"><thead><tr><th>柱</th><th>天干<br>(通変)</th><th>地支</th><th>蔵干（通変・司令★）</th><th>十二運</th><th>吉凶星</th></tr></thead><tbody>';
+  var H='<table class="mtbl"><thead><tr><th>柱</th><th>天干</th><th>地支</th><th>蔵干</th><th>天干<br>通変</th><th>地支<br>通変</th><th>十二運</th><th>吉凶星</th></tr></thead><tbody>';
   for(var i=0;i<4;i++){var x=pil[i];
-    if(i===3&&(tu||!x)){H+='<tr><td class="rl">時</td><td colspan="5" class="note">時刻不明のため算出しません</td></tr>';continue;}
-    var zk=(x.hiddenStems||[]).map(function(h){return elS(h.stem)+'<span class="ten">('+esc(h.tenStar||"")+')</span>'+(h.ling?'<span class="ling">★</span>':'');}).join('　');
+    if(i===3&&(tu||!x)){H+='<tr><td class="rl">時</td><td colspan="7" class="note">時刻不明のため算出しません</td></tr>';continue;}
+    var zk=(x.hiddenStems||[]).map(function(h){return elS(h.stem)+(h.ling?'<span class="ling">★</span>':'');}).join('　');
+    var hk=honkiStem(x), chiten=(i===2&&!hk.tenStar)?"—":(hk.tenStar||"—");
     var st=(sbp[i]||[]).join('・')||'—';
     H+='<tr><td class="rl">'+labs[i]+'</td>'
-      +'<td><span class="bigk">'+elS(x.stem)+'</span><br><span class="ten">'+esc(x.tenStar||"日主")+'</span></td>'
+      +'<td><span class="bigk">'+elS(x.stem)+'</span></td>'
       +'<td><span class="bigk">'+elB(x.branch)+'</span></td>'
       +'<td class="zkc">'+zk+'</td>'
+      +'<td class="tenc">'+esc(x.tenStar||"日主")+'</td>'
+      +'<td class="tenc">'+esc(chiten)+'</td>'
       +'<td>'+esc(x.terrain||"-")+'</td>'
       +'<td class="stc">'+esc(st)+'</td></tr>';}
   return H+'</tbody></table>';}
@@ -529,9 +534,9 @@ function renderPair(pa,pb,a,b){
   if(cd){
     H+='<div style="text-align:center"><div class="score">'+esc(cd.score)+'<span style="font-size:16px">点</span></div><p class="note" style="margin:0">'+(cd.good?"とても良い縁が出ています":"補い合える関係です")+'</p></div>';
   }
-  H+='<div class="two" style="margin-top:12px">'
-    +'<div><div class="pill">お一人目 '+elS(pa.pro.dayMaster.stem)+'（'+elc(pa.pro.dayMaster.element)+'）</div>'+miniChart(pa,a.tu)+'</div>'
-    +'<div><div class="pill">お二人目 '+elS(pb.pro.dayMaster.stem)+'（'+elc(pb.pro.dayMaster.element)+'）</div>'+miniChart(pb,b.tu)+'</div></div></div>';
+  H+='</div>';
+  H+='<div class="card"><h2>お一人目の命式表 <span class="note" style="font-weight:400">日主 '+elS(pa.pro.dayMaster.stem)+'（'+elc(pa.pro.dayMaster.element)+'）'+esc(pa.sType)+'</span></h2><div class="mscroll">'+meishikiTable(pa.pro,a.tu)+'</div></div>';
+  H+='<div class="card"><h2>お二人目の命式表 <span class="note" style="font-weight:400">日主 '+elS(pb.pro.dayMaster.stem)+'（'+elc(pb.pro.dayMaster.element)+'）'+esc(pb.sType)+'</span></h2><div class="mscroll">'+meishikiTable(pb.pro,b.tu)+'</div></div>';
 
   if(cd){
     H+='<div class="card"><h2>相性の理由（詳しく）</h2>'+compatReasonText(cd)+'</div>';
