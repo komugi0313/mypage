@@ -1099,11 +1099,11 @@ function fillPlaceSelect(id,def){var sel=document.getElementById(id);if(!sel)ret
   Object.keys(PLACES).forEach(function(g){var og=document.createElement("optgroup");og.label=g;PLACES[g].forEach(function(x){var o=document.createElement("option");o.value=x[0];o.textContent=x[0];og.appendChild(o);});sel.appendChild(og);});
   if(id==="place"){var mo=document.createElement("option");mo.value=MANUAL_OPT;mo.textContent=MANUAL_OPT;sel.appendChild(mo);}
   sel.value=def;}
-(function initPlaces(){
+(function initPlaces(){ try{
   fillPlaceSelect("place","福島"); fillPlaceSelect("Aplace","東京"); fillPlaceSelect("Bplace","東京");
   var sel=document.getElementById("place");
   if(sel) sel.onchange=function(){document.getElementById("manualWrap").classList.toggle("hidden",sel.value!==MANUAL_OPT);};
-})();
+}catch(_e){} })();
 function wireToggle(cbId,wrapId){var cb=document.getElementById(cbId),wrap=document.getElementById(wrapId);if(!cb)return;
   function sync(){if(wrap)wrap.style.display=cb.checked?"none":"";}
   cb.onchange=sync;sync();}
@@ -1135,12 +1135,15 @@ function toggleDark(){var d=msIsDark();try{localStorage.setItem("ms_dark",d?"0":
 function initTheme(){var box=document.getElementById("swatches");if(box){box.innerHTML=MTORDER.map(function(k){return '<div class="sw" data-k="'+k+'" title="'+MTHEMES[k].label+'" style="background:'+MTHEMES[k].accent+'"></div>';}).join("");var els=box.querySelectorAll(".sw");for(var i=0;i<els.length;i++)els[i].onclick=(function(el){return function(){applyTheme(el.getAttribute("data-k"));};})(els[i]);}
   var db=document.getElementById("darkToggle");if(db)db.onclick=toggleDark;
   var saved="indigo";try{saved=localStorage.getItem("ms_theme")||"indigo";}catch(e){} applyTheme(saved);}
+try{
 wireToggle("tu","soloTime"); wireToggle("Atu","ATime"); wireToggle("Btu","BTime");
-document.getElementById("go").onclick=function(){window._msAutoAI=true;runSolo(true);};
-document.getElementById("save").onclick=saveCurrent;
-document.getElementById("goPair").onclick=function(){window._msAutoAI=true;runPair();};
-document.getElementById("tabSolo").onclick=function(){setTab("solo");};
-document.getElementById("tabPair").onclick=function(){setTab("pair");};
+var _bind=function(id,fn){var e=document.getElementById(id);if(e)e.onclick=fn;};
+_bind("go",function(){window._msAutoAI=true;runSolo(true);});
+_bind("save",saveCurrent);
+_bind("goPair",function(){window._msAutoAI=true;runPair();});
+_bind("tabSolo",function(){setTab("solo");});
+_bind("tabPair",function(){setTab("pair");});
+}catch(_e){}
 function setTab(t){
   document.getElementById("tabSolo").classList.toggle("on",t==="solo");
   document.getElementById("tabPair").classList.toggle("on",t==="pair");
@@ -1612,7 +1615,7 @@ function pcIndividuality(p){var c=p.pro,G60=GANZHI60[c.pillars[2].ganzhi],g=(win
   if((tb.counts["比劫"]||0)>=3)combos.push('<b>比劫旺</b>：独立心が非常に強く、群れず自分の道を行く一匹狼。主導権は譲れない。');
   if(!combos.length)combos.push('五行・十神が比較的とれた型。極端さより、状況で顔を使い分ける適応力が個性。');
   L.push('<p style="margin:0 0 8px"><b class="sech">◆ この命式ならではの型</b><br>'+combos.join('<br>')+'</p>');
-  var sp=[],M={魁罡:'魁罡＝強烈な意志とカリスマ、逆境で光る',華蓋:'華蓋＝芸術・孤高・精神世界の才',将星:'将星＝人の上に立つ器',羊刃:'羊刃＝刃のような強さと激しさ',紅艶:'紅艶＝人を惹きつける色気',金与禄:'金与禄＝良縁と財の恵み',天乙貴人:'天乙貴人＝困った時に助けが来る強運',華蓋:'華蓋＝芸術・信仰・独自の世界'};
+  var sp=[],M={魁罡:'魁罡＝強烈な意志とカリスマ、逆境で光る',華蓋:'華蓋＝芸術・孤高・信仰・独自の世界の才',将星:'将星＝人の上に立つ器',羊刃:'羊刃＝刃のような強さと激しさ',紅艶:'紅艶＝人を惹きつける色気',金与禄:'金与禄＝良縁と財の恵み',天乙貴人:'天乙貴人＝困った時に助けが来る強運'};
   sl.forEach(function(n){if(M[n]&&sp.indexOf(M[n])<0)sp.push(M[n]);});
   if(sp.length)L.push('<p style="margin:0"><b class="sech">◆ あなたを彩る星</b><br>'+sp.join('／')+'</p>');
   return L.join("");}
@@ -2236,9 +2239,19 @@ function scrollYearsToNow(){try{document.querySelectorAll(".yearsBox").forEach(f
     var h=e.target.closest?e.target.closest(".card>h2"):null;
     if(h&&h.parentElement&&h.parentElement.classList.contains("card"))h.parentElement.classList.toggle("folded");
   });})();
-initDates(); initTheme();
-renderHist();
-runSolo();
+/* 初期化＝各処理を独立して保護（1つが失敗しても他は動く） */
+function msBoot(){
+  try{ if(!(document.getElementById("by")&&document.getElementById("by").options.length)) initDates(); }catch(e){}
+  try{ initTheme(); }catch(e){}
+  try{ renderHist(); }catch(e){}
+  try{ runSolo(); }catch(e){}
+}
+try{ initDates(); }catch(e){}   // 生年月日プルダウンを最優先で確実に生成
+msBoot();
+/* 保険：読み込み完了時にプルダウンが空なら作り直す（iOS等の実行タイミング対策） */
+function msEnsureDates(){try{var s=document.getElementById("by");if(s&&!s.options.length)initDates();}catch(e){}}
+document.addEventListener("DOMContentLoaded",msEnsureDates);
+window.addEventListener("load",msEnsureDates);
 </script>
 </body>
 </html>
