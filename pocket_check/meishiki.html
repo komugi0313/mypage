@@ -152,7 +152,7 @@ function elGz(gz){return elS(gz[0])+elB(gz[1]);}
 
 (function initPlaces(){var sel=document.getElementById("place");Object.keys(CITIES).forEach(function(c){var o=document.createElement("option");o.value=c;o.textContent=c;sel.appendChild(o);});sel.value="東京";sel.onchange=function(){document.getElementById("manualWrap").classList.toggle("hidden",CITIES[sel.value][0]!=="manual");};})();
 document.getElementById("tu").onchange=function(){document.getElementById("bt").disabled=this.checked;};
-document.getElementById("go").onclick=runSolo;
+document.getElementById("go").onclick=function(){window._msAutoAI=true;runSolo();};
 document.getElementById("save").onclick=saveCurrent;
 document.getElementById("goPair").onclick=runPair;
 document.getElementById("tabSolo").onclick=function(){setTab("solo");};
@@ -257,13 +257,15 @@ function renderSolo(p,inp){
 
   // 解析（ルールベース）
   H+='<div class="card"><h2>解析（自動）</h2>'+analyzeSolo(p)+'</div>';
-  // AI鑑定
-  H+='<div class="card"><h2>AI鑑定 <span class="note" style="font-weight:400">v2・全文表示対応</span></h2><div id="aiOut" class="note">下のボタンで、この命式をAIが自然文で鑑定します（APIキー設定が必要）。</div>'
-    +'<button class="btn" id="aiBtn" style="margin-top:10px">🤖 AIで詳しく鑑定する</button></div>';
+  // AI鑑定（特性・直すべき点・恋愛・運気の波を細かく／自動）
+  H+='<div class="card"><h2>AI鑑定書 <span class="note" style="font-weight:400">v3・自動生成</span></h2><div id="aiOut" class="note">生年月日を入れて「命式を作成」すると、特性・直すべき点・恋愛・運気の波まで自動で鑑定します。</div>'
+    +'<button class="btn" id="aiBtn" style="margin-top:10px">🤖 AIで鑑定する（手動）</button></div>';
 
   H+='<div class="card noprint"><button class="btn sub2" onclick="window.print()">この命式を印刷／PDF保存</button></div>';
   out.innerHTML=H;out.scrollIntoView({behavior:"smooth",block:"start"});
   var ab=document.getElementById("aiBtn"); if(ab) ab.onclick=function(){aiReading(p.pro,ab);};
+  /* 自動鑑定：ユーザーが「命式を作成」した時だけ（初期表示では走らせない＝無駄な課金防止）。キー or サーバー配信が前提 */
+  if(window._msAutoAI){ window._msAutoAI=false; if(msCanAI()) aiReading(p.pro,ab); }
 }
 
 /* ルールベース解析：エンジンの構造化データ(fullProfile/tenGodBias等)を日本語文へ */
@@ -298,31 +300,37 @@ function analyzeSolo(p){
   return L.join("");
 }
 
-/* AI鑑定：richGroundingを根拠にGeminiへ（キーは端末内localStorage） */
+/* AI鑑定：キーがあれば直接Gemini／なければ /api/gemini（公開サイト＝キーはサーバー秘匿） */
+function msDevId(){ try{var d=localStorage.getItem("ms_dev"); if(!d){d="ms"+Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem("ms_dev",d);} return d;}catch(e){return "ms-nodev";} }
+function msKey(){ var f=document.getElementById("gkey"); return ((f&&f.value)||localStorage.getItem("ms_gkey")||"").trim(); }
+function msCanAI(){ return !!msKey() || /^https?:$/.test(location.protocol); }
 function aiReading(c,btn){
-  var key=(document.getElementById("gkey").value||localStorage.getItem("ms_gkey")||"").trim();
-  var model=document.getElementById("gmodel").value||"gemini-2.5-flash";
-  var box=document.getElementById("aiOut");
-  if(!key){ box.innerHTML='<span style="color:var(--warn)">APIキーが未設定です。上の「AI鑑定の設定」でキーを入力してください。</span>'; return; }
-  try{ localStorage.setItem("ms_gkey",key); }catch(e){}
+  var key=msKey(), model=(document.getElementById("gmodel")||{}).value||"gemini-2.5-flash";
+  var box=document.getElementById("aiOut"); if(!box) return;
+  var served=/^https?:$/.test(location.protocol);
+  if(!key && !served){ box.className="note"; box.innerHTML='<span style="color:var(--warn)">この端末で試すにはAPIキーが必要です（上の「AI鑑定の設定」）。※本番サイトに設置すればキー不要で自動鑑定されます。</span>'; return; }
+  if(key){ try{ localStorage.setItem("ms_gkey",key); }catch(e){} }
   var deck=window.richGrounding?window.richGrounding(c):(window.proGrounding?window.proGrounding(c):"");
-  var sys="あなたは四柱推命の鑑定士です。以下の【命式データ】だけを根拠に、日本語で温かく、具体的に鑑定してください。専門用語（通変星名や神殺の漢字）は理屈を聞かれない限り避け、日常語に翻訳して織り込むこと。次の見出しを必ずこの順で立てて書くこと：①性格・強みと注意点 ②才能や向いていること ③恋愛・パートナーシップ（恋愛の傾向・惹かれる相手や縁のかたち・恋のタイミングや気をつけたい点まで必ず具体的に。相手がいる場合の関わり方のヒントも）④今の運の流れ（大運/今年・来年）⑤開運のヒント。恋愛の項は絶対に省略しないこと。断定しすぎず前向きに、過去の出来事は断定しない。全体で800〜1200字程度。\n【命式データ】\n"+deck;
-  var gc={temperature:0.9};
-  if(/gemini-3/.test(model)){ gc.maxOutputTokens=3200; /* 3.xは思考ぶんの余裕を確保・thinkingConfigは付けない */ }
-  else { gc.thinkingConfig={thinkingBudget:0}; gc.maxOutputTokens=2000; /* 2.5系は思考OFFで本文に全ぶん使う */ }
+  var sys="あなたは四柱推命の鑑定士『Nico』です。以下の【命式データ】だけを根拠に、日本語で温かく、具体的で読み応えのある鑑定を書いてください。専門用語（通変星や神殺の漢字）は避け、日常語に翻訳して自然に織り込むこと。必ず次の見出しをこの順でMarkdownの##見出しで立てる：\\n## この人の特性\\n（性格・強み・才能・向いていること・魅力を具体的に）\\n## 気をつけたい点・直すともっと良くなるところ\\n（短所や課題を責めずに正直に。必ず具体的な改善のコツも添える。省略禁止）\\n## 恋愛・パートナーシップ\\n（恋愛傾向・惹かれる相手や縁・恋のタイミング・気をつけたい点・相手がいる場合の関わり方まで具体的に。省略禁止）\\n## 運気の波（これまでとこれから）\\n（10年ごとの大運の流れを幼少期から晩年まで良い時期と注意の時期に分けて。さらに近年から今後10年ほどの年運を『◯年＝…』と1年ずつ細かく。データの大運・年運の星に忠実に）\\n## 開運のヒント\\n（色・方角・習慣・心がけをまとめる）\\n断定しすぎず前向きに、過去の具体的出来事は断定せず傾向として書く。全体1400〜2200字程度。\\n【命式データ】\\n"+deck;
+  var gc={temperature:0.92};
+  if(/gemini-3/.test(model)){ gc.maxOutputTokens=4096; }
+  else { gc.thinkingConfig={thinkingBudget:0}; gc.maxOutputTokens=4096; }
   var body={systemInstruction:{parts:[{text:sys}]},contents:[{role:"user",parts:[{text:"この人を鑑定してください。"}]}],generationConfig:gc};
-  box.innerHTML='<span class="note">鑑定中… 🔮</span>'; btn.disabled=true;
-  fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(key),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+  var url,headers;
+  if(key){ url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(key); headers={"Content-Type":"application/json"}; }
+  else { url="/api/gemini"; headers={"Content-Type":"application/json","x-pk-device":msDevId(),"x-pk-deep":"1"}; }
+  box.className="note"; box.innerHTML='<span class="note">鑑定中… 🔮（数十秒かかることがあります）</span>'; if(btn) btn.disabled=true;
+  fetch(url,{method:"POST",headers:headers,body:JSON.stringify(body)})
    .then(function(r){return r.text().then(function(t){return {ok:r.ok,status:r.status,t:t};});})
-   .then(function(res){ btn.disabled=false;
-     if(!res.ok){ box.innerHTML='<span style="color:var(--warn)">エラー('+res.status+')：'+(res.status===429?"利用上限/レート超過。少し待って再試行を。":res.status===400||res.status===403?"キーが無効か、地域制限の可能性。":"接続に失敗しました。")+'</span>'; return; }
+   .then(function(res){ if(btn) btn.disabled=false;
+     if(!res.ok){ box.innerHTML='<span style="color:var(--warn)">エラー('+res.status+')：'+(res.status===429?"利用が混み合っています。少し待って再試行を。":res.status===400||res.status===403?"キー/設定に問題があるか、地域制限の可能性。":"接続に失敗しました。")+'</span>'; return; }
      var j; try{j=JSON.parse(res.t);}catch(e){ box.innerHTML='<span style="color:var(--warn)">応答の解析に失敗しました。</span>'; return; }
      var cand=j.candidates&&j.candidates[0], txt=cand&&cand.content&&cand.content.parts?cand.content.parts.map(function(x){return x.text||"";}).join(""):"";
      if(!txt){ var fr=cand&&cand.finishReason; box.innerHTML='<span style="color:var(--warn)">鑑定文が生成されませんでした'+(fr?'（'+esc(fr)+'）':'（安全フィルタ等）')+'。もう一度お試しください。</span>'; return; }
      var trunc=cand&&cand.finishReason==="MAX_TOKENS";
      box.className=""; box.innerHTML='<div style="font-size:15px;line-height:1.9;color:var(--ink)">'+mdLite(txt)+'</div>'+(trunc?'<p class="note" style="color:var(--warn);margin:8px 0 0">※長さの上限で途中までの表示です。もう一度押すと続きが変わります。</p>':'');
    })
-   .catch(function(){ btn.disabled=false; box.innerHTML='<span style="color:var(--warn)">通信エラー。ネット接続をご確認ください。</span>'; });
+   .catch(function(){ if(btn) btn.disabled=false; box.innerHTML='<span style="color:var(--warn)">通信エラー。ネット接続をご確認ください。</span>'; });
 }
 
 function cell4(pil,fn,tu){var h="";for(var i=0;i<4;i++){var x=pil[i];if(i===3&&(tu||!x)){h+='<td class="note">—</td>';continue;}h+='<td>'+fn(x)+'</td>';}return h;}
@@ -412,7 +420,7 @@ function applyHist(id){
   document.getElementById("sex").value=it.sex;
   if(it.place&&CITIES[it.place]){document.getElementById("place").value=it.place;document.getElementById("manualWrap").classList.toggle("hidden",CITIES[it.place][0]!=="manual");}
   document.getElementById("pname").value=it.name||"";
-  runSolo();
+  window._msAutoAI=true; runSolo();
 }
 
 try{ var _gk=localStorage.getItem("ms_gkey"); if(_gk&&document.getElementById("gkey")) document.getElementById("gkey").value=_gk; }catch(e){}
