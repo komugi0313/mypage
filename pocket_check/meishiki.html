@@ -335,7 +335,7 @@ function renderSolo(p,inp){
   H+='<div class="card"><h2>節入り（24節気）</h2>'
     +'<p style="margin:0 0 6px">生まれた月の節：<b style="font-size:17px">'+esc(si.name)+'</b>'+(sm.y?'（'+esc(sm.y)+'）':'')+'</p>'
     +(sm.m?'<p style="margin:0 0 6px"><b>意味：</b>'+esc(sm.m)+'</p>':'')
-    +(sm.t?'<p style="margin:0 0 6px"><b>人格への影響：</b>この節が月柱（月支）を決めます。月柱は<b>本質・才能・両親運の柱＝命式で最も影響が大きい</b>ので、生まれた節の気は土台の性格に強く表れます。'+esc(si.name)+'生まれは「'+esc(sm.t)+'」が出やすいタイプです。</p>':'')
+    +(sm.t?'<p style="margin:0 0 6px"><b>人格への影響：</b>この節が<b>月支（月令）</b>を決めます。月支は身強弱と格局（性格の構造）を決める<b>「提綱（ていこう）」＝構造上もっとも重い一支</b>で、日主（＝あなた自身）の働き方を大きく左右します。※"本質そのもの"は日主、"親・育ち"は月柱の受け持ち。性格への現れ方は節の名前そのものではなく、この月支が生む<b>司令→通変星</b>を通じて決まります。季節像でいえば'+esc(si.name)+'は「'+esc(sm.t)+'」の気配を帯びやすい、という読み方をします。</p>':'')
     +(si.entry?'<span class="note">節入り日時：'+esc(si.entry)+'</span><br>':'')
     +(si.elapsed?'<span class="note">節入りからの経過：'+esc(si.elapsed)+'（この経過が蔵干の司令★と大運の起運を決めます）</span>':'')
     +'<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:700;color:var(--accent)">24節気とは？（一覧を見る）</summary>'
@@ -349,6 +349,7 @@ function renderSolo(p,inp){
   H+='<div class="card"><h2>月支元命（使命・中心の性格）</h2>'+genmeiCard(p)+'</div>';
   H+='<div class="card"><h2>日柱（'+esc(c.pillars[2].ganzhi)+'）の性格 — 良い面・課題</h2>'+dayGBCard(p)+'</div>';
   H+='<div class="card"><h2>この人の特徴：よいところ10・ウィークポイント10</h2>'+swCard(p)+'<p class="note" style="margin:8px 0 0">日柱60干支・月支元命・十二運・五行・通変星・吉凶星から総合分析。</p></div>';
+  H+='<div class="card"><h2>持って生まれた使命（人生の道しるべ）</h2>'+missionCard(p)+'</div>';
 
   // 五行
   var five=p.five||{},tot=0;EL_ORDER.forEach(function(e){tot+=five[e]||0;});tot=tot||1;
@@ -495,14 +496,31 @@ function analyzeSW(p){var c=p.pro,dEl=c.dayMaster.element,five=p.five||{},good=[
   good.push("日柱"+c.pillars[2].ganzhi+"の持ち味＝表は「"+dEl+"」、内側に「"+dbEl+"」を併せ持つ");
   function uniq(a){var s={},r=[];a.forEach(function(x){if(!s[x]){s[x]=1;r.push(x);}});return r;}
   good=uniq(good);weak=uniq(weak);
-  var padG=["周囲をよく見て動ける","一度決めたことをやり遂げる粘り","人の気持ちを汲む優しさ","独自の視点を持つ","土台がしっかりし安定感がある","誠実で約束を守る","学びを活かす力がある","感受性が豊か","目標に向かう集中力","ここぞで力を出せる勝負強さ"];
-  var padW=["気を使いすぎて疲れやすい","こだわりが強く出る場面がある","本音を溜め込みやすい","完璧を求めて動けなくなる","気分の波が出やすい","人に合わせすぎることがある","決断に時間がかかる時がある","一人で抱え込みやすい","変化に弱い一面","自分に厳しくなりすぎる"];
-  for(var gi=0;good.length<10&&gi<padG.length;gi++)if(good.indexOf(padG[gi])<0)good.push(padG[gi]);
-  for(var wi=0;weak.length<10&&wi<padW.length;wi++)if(weak.indexOf(padW[wi])<0)weak.push(padW[wi]);
+  /* 10未満のときは一般論の定数ではなく、この人の五行構成（強い順）から補完する＝すべて命式由来 */
+  var byStrong=EL_ORDER.slice().sort(function(a,b){return (five[b]||0)-(five[a]||0);});
+  byStrong.forEach(function(e){if((five[e]||0)>0&&GB_EL[e])GB_EL[e].g.forEach(function(x){good.push(x+"（"+e+"の気）");});});
+  byStrong.slice().reverse().forEach(function(e){if(GB_EL[e])GB_EL[e].b.forEach(function(x){weak.push(((five[e]||0)===0?x+"（"+e+"が無く出やすい）":x+"（"+e+"の課題）"));});});
+  good=uniq(good);weak=uniq(weak);
   return {good:good.slice(0,10),weak:weak.slice(0,10)};}
 function swCard(p){var r=analyzeSW(p);
-  return '<div style="margin-bottom:10px"><b style="color:var(--good)">◎ よいところ 10</b><ol style="margin:6px 0 0;padding-left:22px;line-height:1.85">'+r.good.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ol></div>'
-    +'<div><b style="color:var(--warn)">△ ウィークポイント 10</b><ol style="margin:6px 0 0;padding-left:22px;line-height:1.85">'+r.weak.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ol></div>';}
+  function block(arr,color,topLbl,restLbl){var top=arr.slice(0,3),rest=arr.slice(3);
+    return '<div style="margin-bottom:6px"><b style="color:'+color+';font-size:15px">'+topLbl+'</b><ul style="margin:5px 0 0;padding-left:20px;line-height:2;font-weight:700">'+top.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></div>'
+      +'<div style="margin-bottom:12px"><span class="note">'+restLbl+'</span><ul style="margin:3px 0 0;padding-left:20px;line-height:1.8;color:var(--muted)">'+rest.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></div>';}
+  return block(r.good,"var(--good)","◎ あなたの武器・特に光る3つ","そのほかの長所（計10）")+block(r.weak,"var(--warn)","△ 特に意識したい弱点3つ","そのほかの課題（計10）");}
+/* 持って生まれた使命（人生の道しるべ・オフライン） */
+function missionCard(p){var c=p.pro,dEl=c.dayMaster.element,g=(window.fullProfile?(window.fullProfile(c).genmei||""):"");
+  var tb=window.tenGodBias?window.tenGodBias(c):null,dom=(tb&&tb.type!=="balanced")?tb.maxGroup:"";
+  var favs=EL_ORDER.filter(function(e){return p.fav&&p.fav[e]==="喜";});
+  var stars=(window.shinsatsuHits?window.shinsatsuHits(c):[]).map(function(s){return s.split("(")[0].replace(/^年/,"");});
+  var gifts=[],seen={}; stars.forEach(function(n){if(GOOD_STAR_PH[n]&&!seen[n]){seen[n]=1;gifts.push(n);}}); gifts=gifts.slice(0,3);
+  var G60=GANZHI60[c.pillars[2].ganzhi];
+  var L=['<p style="margin:0 0 8px">四柱推命では、生まれ持った命式に「この人生で果たすと最も輝く役割＝天命」が刻まれています。あなたの命式が指し示す道しるべを、丁寧に読み解きます。</p>'];
+  L.push('<p style="margin:0 0 8px"><b>◆ あなたの核（日主 '+esc(c.dayMaster.stem)+'＝'+elc(dEl)+'）</b><br>'+esc(EL_NATURE[dEl]||"")+'これが、飾りのないあなたの"魂の地色"です。'+(G60?'とくに日柱'+esc(c.pillars[2].ganzhi)+'は「'+esc(G60[0].split("・")[0])+'」という個性を宿しています。':'')+'</p>');
+  if(g&&TEN_MISSION[g])L.push('<p style="margin:0 0 8px"><b>◆ 授かった使命（月支元命：'+esc(g)+'）</b><br>あなたが人生で最も自然に力を発揮できるのは、<b>「'+esc(TEN_MISSION[g])+'」</b>という生き方です。'+(dom?'さらに'+esc(dom)+'の力が強く、そのテーマがあなたの主戦場になります。':'')+'この軸で選択すると迷いが減り、運が味方します。</p>');
+  if(gifts.length)L.push('<p style="margin:0 0 8px"><b>◆ 使うべき天与の才（吉星）</b><br>'+gifts.map(function(n){return n+'（'+GOOD_STAR_PH[n]+'）';}).join('、')+'。これらは"意識して使うほど開けていく"あなたの持ち味。眠らせず、人生の場面で積極的に活かしてください。</p>');
+  if(favs.length)L.push('<p style="margin:0 0 8px"><b>◆ 運が開く方向（喜神：'+favs.map(elc).join('・')+'）</b><br>'+favs.map(function(e){var k=EL_LUCK[e];return k?(e+'の気（色「'+k.色+'」・'+k.行+'）'):'';}).filter(Boolean).join('、')+'を暮らしに取り入れると、エネルギーが満ち、本来の使命へ進みやすくなります。</p>');
+  L.push('<p style="margin:0"><b>◆ 人生の道しるべ</b><br>迷ったときは、短所を消そうと焦るより「'+esc(TEN_MISSION[g]||"自分らしくあること")+'」に立ち返ってください。上に挙げた"核・使命・才・追い風"を活かす方を選ぶこと——それがあなたにとって最も無理がなく、幸福に近い道です。</p>');
+  return L.join("");}
 /* ルールベース解析：エンジンの構造化データ(fullProfile/tenGodBias等)を日本語文へ */
 function analyzeSolo(p){
   var c=p.pro, fp=window.fullProfile?window.fullProfile(c):null, tb=window.tenGodBias?window.tenGodBias(c):null;
