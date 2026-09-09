@@ -1136,7 +1136,7 @@ function renderSolo(p,inp){
   // 命式
   H+='<div class="card"><h2>命式表</h2><div class="mscroll">'+meishikiTable(c,inp.tu)+'</div><p class="note" style="margin:8px 0 0">年→時の順。蔵干の★＝司令（当令）＝今いちばん働く隠れた干。（　）内は日主から見た通変星。横にスクロールできます。</p></div>';
   H+='<div class="card"><h2>蔵干の意味（内に秘めたもの）</h2>'+zoukanMeaning(c)+'</div>';
-  H+='<div class="card"><h2>通変星（十神）の意味（柱別）</h2>'+tsuhenMeaning(c,inp.tu)+juushinExplain()+'</div>';
+  H+='<div class="card"><h2>通変星（十神）の意味（柱別）</h2>'+tsuhenMeaning(c,inp.tu,p.fav)+juushinExplain()+'</div>';
   H+='<div class="card"><h2>月支元命（使命・中心の性格）</h2>'+genmeiCard(p)+'</div>';
   H+='<div class="card"><h2>日柱（'+esc(c.pillars[2].ganzhi)+'）の性格 — 良い面・課題</h2>'+dayGBCard(p)+'</div>';
   H+='<div class="card"><h2>この人の特徴：よいところ10・ウィークポイント10</h2>'+swCard(p)+'<p class="note" style="margin:8px 0 0">日柱60干支・月支元命・十二運・五行・通変星・吉凶星から総合分析。</p></div>';
@@ -1452,19 +1452,31 @@ function juushinExplain(){
   +'<tr><td style="border:1px solid var(--line);padding:3px 7px;color:var(--warn)"><b>四凶神</b>（諸刃）</td><td style="border:1px solid var(--line);padding:3px 7px">偏官（七殺）・傷官・劫財・偏印</td><td style="border:1px solid var(--line);padding:3px 7px">権力/攻め・鋭い反骨・競争散財・偏った知。強力だが暴れやすい</td></tr>'
   +'<tr><td style="border:1px solid var(--line);padding:3px 7px">中間</td><td style="border:1px solid var(--line);padding:3px 7px">比肩・偏財</td><td style="border:1px solid var(--line);padding:3px 7px">自立・商才。使い方次第</td></tr>'
   +'</tbody></table></div>'
-  +'<p style="margin:0"><b style="color:var(--accent)">いちばん大事な点：</b>この吉凶は仮のラベルにすぎません。<b>最終判断は「喜忌」</b>——その五行があなたにとって味方（喜神）か負担（忌神）か、で決まります。凶神の<b>七殺も喜神で身強なら最大の武器</b>、吉神の<b>正官も忌神なら重荷</b>。だから本ソフトは十神ラベルだけで断じず、必ず五行バランスの<b>喜神・忌神</b>と合わせて読みます。</p>'
+  +'<p style="margin:0 0 8px"><b style="color:var(--accent)">いちばん大事な点：</b>この吉凶は仮のラベルにすぎません。<b>最終判断は「喜忌」</b>——その五行があなたにとって味方（喜神）か負担（忌神）か、で決まります。凶神の<b>七殺も喜神で身強なら最大の武器</b>、吉神の<b>正官も忌神なら重荷</b>。</p>'
+  +'<p style="margin:0 0 4px"><b>◆ では喜忌はどう決まる？（扶抑＝ふよく）</b></p>'
+  +'<p style="margin:0 0 4px"><b>手順①</b> 日主が<b>身強</b>（助ける気＝比劫・印が多くエネルギー過剰）か<b>身弱</b>（それが少なく不足）かを見る。</p>'
+  +'<p style="margin:0 0 4px"><b>手順②</b> 足りなければ足す／余れば減らす：</p>'
+  +'<p style="margin:0 0 4px">・<b>身強（余る）</b>→ 減らす・使う方向が味方＝<b style="color:var(--good)">喜神</b>：食傷（出す）・財（使う）・官殺（律する）。増やす比劫・印は<b style="color:var(--warn)">忌神</b>。</p>'
+  +'<p style="margin:0 0 6px">・<b>身弱（足りない）</b>→ 足す方向が味方＝<b style="color:var(--good)">喜神</b>：印（生む）・比劫（仲間）。消耗させる食傷・財・官殺は<b style="color:var(--warn)">忌神</b>。</p>'
+  +'<p style="margin:0"><b>手順③</b> その十神の五行が<b>喜神なら「良い（活きる）」</b>、<b>忌神なら「過剰・負担」</b>。だから同じ十神でも身強／身弱で良し悪しが逆転します。<br><b style="color:var(--accent)">→ 本ソフトは各通変星に、あなた専用の <b style="color:var(--good)">◎喜神</b>／<b style="color:var(--warn)">△忌神</b> バッジを自動表示しています。</b></p>'
   +'</div></details>';}
-function tsuhenMeaning(c,tu){var labs=["年","月","日","時"];
-  var L=['<p style="margin:0 0 6px">通変星は、日主（あなた）から見た他の干の"役割"。同じ柱でも<b>天干</b>と<b>地支</b>で意味が違います：</p>'
+/* あなた専用の吉凶バッジ：その干の五行が喜神=◎追い風／忌神=△負担 */
+function favBadge(stem,fav){if(!fav)return"";var el=MSTEM_EL[stem],f=fav[el];
+  if(f==="喜")return ' <b style="color:var(--good)">◎あなたには追い風（喜神'+el+'）</b>';
+  if(f==="忌")return ' <b style="color:var(--warn)">△過剰・負担になりやすい（忌神'+el+'）</b>';
+  return ' <span class="note">（'+el+'・中立）</span>';}
+function tsuhenMeaning(c,tu,fav){var labs=["年","月","日","時"];
+  var L=['<p style="margin:0 0 6px">通変星（十神）は、日主（あなた）から見た他の干の"役割"。同じ柱でも<b>天干</b>と<b>地支</b>で意味が違います：</p>'
     +'<p style="margin:0 0 4px"><b>・天干通変星</b>＝<b>表に出る顕在の力</b>。人から見える性質・行動・その人の"看板"。</p>'
-    +'<p style="margin:0 0 8px"><b>・地支通変星</b>＝<b>内面・本音の深層の力</b>。蔵干の司令（★＝実際に働く干）から出る、地に足のついた"中身・本心"。表(天干)と違うほど「見た目と中身のギャップ」が大きい人。</p>'];
+    +'<p style="margin:0 0 6px"><b>・地支通変星</b>＝<b>内面・本音の深層の力</b>。蔵干の司令（★＝実際に働く干）から出る、地に足のついた"中身・本心"。表(天干)と違うほど「見た目と中身のギャップ」が大きい人。</p>'
+    +(fav?'<p class="note" style="margin:0 0 8px"><b style="color:var(--good)">◎</b>＝その星の五行があなたの喜神で活きる／<b style="color:var(--warn)">△</b>＝忌神で過剰・負担になりやすい（身強弱から算出。同じ星でも人により逆転します）。</p>':'')];
   c.pillars.forEach(function(x,i){ if(!x)return; if(i===3&&tu)return;
     var tk=x.tenStar||"日主";
     var ling=(x.hiddenStems||[]).filter(function(h){return h.ling;})[0]||honkiStem(x), ck=ling.tenStar||"";
     var h='<div style="border-top:1px solid var(--soft);padding-top:7px;margin-top:7px"><b>'+labs[i]+'柱</b>（'+esc(PILLAR_POS[labs[i]]||"")+'）';
     if(tk==="日主"){ h+='<br>天干＝<b>あなた自身（'+esc(x.stem)+'）</b>：命式の主役。'+esc(EL_NATURE[MSTEM_EL[x.stem]]||""); }
-    else { h+='<br><b>天干通変：'+esc(tk)+'</b>（表の顔）… '+esc(TEN_THEME[tk]||"")+'。<span class="note">'+esc(tsuhenPillarNote(tk,labs[i]))+'</span>'; }
-    if(ck){ h+='<br><b>地支通変：'+esc(ck)+'</b>（内面・本音）… '+esc(TEN_THEME[ck]||"")+'。<span class="note">この柱の"内側で実際に働く"力。'+esc(tsuhenPillarNote(ck,labs[i]))+'</span>'; }
+    else { h+='<br><b>天干通変：'+esc(tk)+'</b>（表の顔）'+favBadge(x.stem,fav)+'<br>… '+esc(TEN_THEME[tk]||"")+'。<span class="note">'+esc(tsuhenPillarNote(tk,labs[i]))+'</span>'; }
+    if(ck){ h+='<br><b>地支通変：'+esc(ck)+'</b>（内面・本音）'+favBadge(ling.stem,fav)+'<br>… '+esc(TEN_THEME[ck]||"")+'。<span class="note">この柱の"内側で実際に働く"力。'+esc(tsuhenPillarNote(ck,labs[i]))+'</span>'; }
     L.push(h+'</div>');});
   return L.join("");}
 function tsuhenPillarNote(t,pos){
