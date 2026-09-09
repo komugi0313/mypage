@@ -78,6 +78,14 @@ table{width:100%;border-collapse:collapse;font-size:15.5px}
 .vzk{font-size:13.5px}
 .zkrow{padding:2px 0}
 .ling{color:var(--warn);font-weight:800;font-size:12.5px;margin-left:3px}
+.mtbl{border-collapse:collapse;width:100%;min-width:540px;font-size:14px;background:#fff}
+.mtbl th,.mtbl td{border:1px solid var(--line);padding:8px 6px;text-align:center;vertical-align:middle}
+.mtbl th{background:var(--soft);color:var(--muted);font-size:12.5px;font-weight:700}
+.mtbl .rl{background:var(--soft);font-weight:800;color:var(--accent);width:38px;font-size:15px}
+.mtbl .bigk{font-size:24px;font-weight:800}
+.mtbl .zkc{font-size:14px;text-align:left;line-height:1.8;white-space:nowrap}
+.mtbl .stc{font-size:13px;text-align:left}
+.mscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .hidden{display:none}
 @media(max-width:560px){.two{grid-template-columns:1fr}}
 @media print{.noprint{display:none}body{background:#fff}}
@@ -1060,7 +1068,8 @@ function renderSolo(p,inp){
     +(si.elapsed?'<br><span class="note">節入りからの経過：'+esc(si.elapsed)+'（この経過が大運の起運計算に使われます）</span>':'')+'</p></div>';
 
   // 命式
-  H+='<div class="card"><h2>命式（年→時・縦）</h2>'+verticalPillars(pil,inp.tu)+'<p class="note" style="margin:8px 0 0">★＝司令（当令）：節入りからの深さで決まる「実際に働く蔵干」。（通変星）は日主から見た役割です。</p></div>';
+  H+='<div class="card"><h2>命式表</h2><div class="mscroll">'+meishikiTable(c,inp.tu)+'</div><p class="note" style="margin:8px 0 0">年→時の順。蔵干の★＝司令（当令）＝今いちばん働く隠れた干。（　）内は日主から見た通変星。横にスクロールできます。</p></div>';
+  H+='<div class="card"><h2>蔵干の意味（内に秘めたもの）</h2>'+zoukanMeaning(c)+'</div>';
   H+='<div class="card"><h2>月支元命（使命・中心の性格）</h2>'+genmeiCard(p)+'</div>';
   H+='<div class="card"><h2>日柱（'+esc(c.pillars[2].ganzhi)+'）の性格 — 良い面・課題</h2>'+dayGBCard(p)+'</div>';
 
@@ -1207,15 +1216,33 @@ function aiAsk(deck,question,boxId,btn){
 }
 function cell4(pil,fn,tu){var h="";for(var i=0;i<4;i++){var x=pil[i];if(i===3&&(tu||!x)){h+='<td class="note">—</td>';continue;}h+='<td>'+fn(x)+'</td>';}return h;}
 function favList(fav,mark){if(!fav)return"-";var a=EL_ORDER.filter(function(e){return fav[e]===mark;});return a.length?a.map(elc).join("・"):"-";}
-/* 命式を縦（年→時）＋蔵干の内包・司令★・通変星 */
-function verticalPillars(pil,tu){var labs=["年柱","月柱","日柱","時柱"],H='<div class="vpil">';
+/* プロ仕様の命式表（年→時を行に。天干/地支/蔵干/通変/十二運/吉凶星） */
+function starsByPillar(c){var hits=(window.shinsatsuHits?window.shinsatsuHits(c):[]),br=c.pillars.map(function(p){return p.branch;}),out=[[],[],[],[]];
+  hits.forEach(function(s){var mm=s.match(/\(([^)]+)\)/),name=s.split("(")[0].replace(/^年/,""),b=mm?mm[1].replace(/^年/,""):null;
+    if(b){var hit=false;for(var i=0;i<br.length;i++){if(br[i]===b){out[i].push(name);hit=true;}}}
+    else{out[2].push(name);}});
+  return out.map(function(a){var seen={},r=[];a.forEach(function(n){if(!seen[n]){seen[n]=1;r.push(n);}});return r;});}
+function meishikiTable(c,tu){var labs=["年","月","日","時"],pil=c.pillars,sbp=starsByPillar(c);
+  var H='<table class="mtbl"><thead><tr><th>柱</th><th>天干<br>(通変)</th><th>地支</th><th>蔵干（通変・司令★）</th><th>十二運</th><th>吉凶星</th></tr></thead><tbody>';
   for(var i=0;i<4;i++){var x=pil[i];
-    if(i===3&&(tu||!x)){H+='<div class="vrow"><div class="vlab">時柱</div><div class="vgz note">時刻不明</div><div class="vzk note">—</div></div>';continue;}
-    var zk=(x.hiddenStems||[]).map(function(h){return '<div class="zkrow"><b>'+elS(h.stem)+'</b>'+(h.ling?'<span class="ling">★司令</span>':'')+' <span class="note">'+esc(h.role)+' '+esc(h.pct)+'%</span> → <span class="ten">'+esc(h.tenStar||"")+'</span></div>';}).join("");
-    H+='<div class="vrow"><div class="vlab">'+labs[i]+'</div>'
-      +'<div class="vgz"><div class="vk">'+elS(x.stem)+'</div><div class="ten">'+esc(x.tenStar||"日主")+'</div><div class="vk">'+elB(x.branch)+'</div><div class="note">'+esc(x.terrain||"")+'</div></div>'
-      +'<div class="vzk"><div class="note" style="margin-bottom:2px">蔵干（内包）</div>'+zk+'</div></div>';}
-  return H+'</div>';}
+    if(i===3&&(tu||!x)){H+='<tr><td class="rl">時</td><td colspan="5" class="note">時刻不明のため算出しません</td></tr>';continue;}
+    var zk=(x.hiddenStems||[]).map(function(h){return elS(h.stem)+'<span class="ten">('+esc(h.tenStar||"")+')</span>'+(h.ling?'<span class="ling">★</span>':'');}).join('　');
+    var st=(sbp[i]||[]).join('・')||'—';
+    H+='<tr><td class="rl">'+labs[i]+'</td>'
+      +'<td><span class="bigk">'+elS(x.stem)+'</span><br><span class="ten">'+esc(x.tenStar||"日主")+'</span></td>'
+      +'<td><span class="bigk">'+elB(x.branch)+'</span></td>'
+      +'<td class="zkc">'+zk+'</td>'
+      +'<td>'+esc(x.terrain||"-")+'</td>'
+      +'<td class="stc">'+esc(st)+'</td></tr>';}
+  return H+'</tbody></table>';}
+/* 蔵干の意味（内に秘めたもの・隠れた性質） */
+function zoukanMeaning(c){var labs=["年柱","月柱","日柱","時柱"],pos=["先祖・幼少期・社会運の土台","両親・仕事・命式の本質（最重要）","自分自身・配偶者・心の内側","子ども・晩年・秘めた才能"];
+  var L=['<p style="margin:0 0 8px">蔵干とは、地支（十二支）の中に<b>隠れて宿る干</b>のこと。表からは見えないけれど、その人が<b>内に秘めた性質・才能・本音</b>を表します。表の干支が「見えている顔」なら、蔵干は「心の奥・隠れた引き出し」です。</p>'];
+  c.pillars.forEach(function(x,i){ if(!x)return;
+    var items=(x.hiddenStems||[]).map(function(h){return '<b>'+elS(h.stem)+'</b>（'+esc(h.tenStar||"")+'＝'+esc(TEN_THEME[h.tenStar]||"")+'）'+(h.ling?'〔今いちばん働く★〕':'');}).join('、');
+    L.push('<p style="margin:0 0 7px"><b>'+labs[i]+'</b>（'+pos[i]+'）<br>蔵干：'+items+'</p>');});
+  L.push('<p class="note" style="margin:6px 0 0">★＝司令。今の時期に実際に働く隠れた力。蔵干が複数あるほど「多面的で内側に色々持っている」人です。</p>');
+  return L.join("");}
 /* 月支元命：使命・性格・理由 */
 function genmeiCard(p){var c=p.pro,fp=window.fullProfile?window.fullProfile(c):{},g=(fp&&fp.genmei)||"";
   var mp=c.pillars[1],hs=mp.hiddenStems||[],ling=hs.filter(function(h){return h.ling;})[0]||hs[hs.length-1]||{};
