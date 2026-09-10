@@ -187,6 +187,8 @@ table{width:100%;border-collapse:collapse;font-size:15.5px}
 
   <div class="card noprint" id="histCard"><h2>保存した命式（履歴）</h2><div class="hist" id="hist"></div><p class="note" id="histEmpty">まだ保存された命式はありません。</p></div>
 
+  <div class="card noprint hidden" id="pairHistCard"><h2>保存した相性（履歴）</h2><div class="hist" id="pairHist"></div><p class="note" id="pairHistEmpty">まだ保存された相性はありません。「相性を見る」を押すと自動で保存され、ここからいつでも呼び出せます。</p></div>
+
   <div id="out"></div>
 </div>
 
@@ -363,7 +365,7 @@ wireToggle("tu","soloTime"); wireToggle("Atu","ATime"); wireToggle("Btu","BTime"
 var _bind=function(id,fn){var e=document.getElementById(id);if(e)e.onclick=fn;};
 _bind("go",function(){window._msAutoAI=true;window._msScrollNext=true;runSolo(true);});
 _bind("save",saveCurrent);
-_bind("goPair",function(){window._msAutoAI=true;window._msScrollNext=true;runPair();});
+_bind("goPair",function(){window._msAutoAI=true;window._msScrollNext=true;runPair(true);});
 _bind("tabSolo",function(){setTab("solo");});
 _bind("tabPair",function(){setTab("pair");});
 }catch(_e){}
@@ -373,6 +375,7 @@ function setTab(t){
   document.getElementById("soloForm").classList.toggle("hidden",t!=="solo");
   document.getElementById("histCard").classList.toggle("hidden",t!=="solo");
   document.getElementById("pairForm").classList.toggle("hidden",t!=="pair");
+  var ph=document.getElementById("pairHistCard");if(ph)ph.classList.toggle("hidden",t!=="pair");
   document.getElementById("out").innerHTML="";
   if(t==="pair") runPair(); else runSolo();
 }
@@ -1302,7 +1305,7 @@ function readPerson(pre){
   var name=(g("name")&&g("name").value||"").trim();
   return {y:y,mo:mo,d:d,hh:hh,mi:mi,tu:tu,sex:sex,place:place,placeName:placeName,name:name};
 }
-function runPair(){
+function runPair(doSave){
   var err=document.getElementById("errP");err.textContent="";
   try{
     var a=readPerson("A"),b=readPerson("B");
@@ -1310,6 +1313,7 @@ function runPair(){
     var pb=window.PersonBazi(b.y,b.mo,b.d,b.hh,b.mi,b.tu,b.sex,(!b.tu&&b.place)?b.place:null);
     if(!pa.ok||!pb.ok){err.textContent="計算エラー";return;}
     renderPair(pa,pb,a,b);
+    if(doSave)autoSavePair(a,b);
   }catch(e){err.textContent="エラー: "+(e&&e.message||e);}
 }
 function miniChart(p,tu){
@@ -1461,6 +1465,44 @@ function applyHist(id){
   window._msAutoAI=true; window._msScrollNext=true; runSolo();
 }
 
+/* ===== 相性（2人）の保存・履歴 ===== */
+var PHKEY="ms_pair_history_v1";
+function loadPHist(){try{return JSON.parse(localStorage.getItem(PHKEY)||"[]");}catch(e){return [];}}
+function savePHist(a){try{localStorage.setItem(PHKEY,JSON.stringify(a));}catch(e){}}
+function packP(x){return {y:x.y,mo:x.mo,d:x.d,hh:x.hh,mi:x.mi,tu:x.tu,sex:x.sex,place:x.placeName||"",name:x.name||""};}
+function pairKey(a,b){return histKey(a)+"__"+histKey(b);}
+function fmtP(x){return x.y+"/"+x.mo+"/"+x.d+(x.tu?" 時刻不明":" "+two(x.hh)+":"+two(x.mi))+(x.name?"（"+x.name+"）":"");}
+/* 相性を見るたびに自動保存（同じ二人は重複させず先頭へ） */
+function autoSavePair(a,b){try{
+  var arr=loadPHist(),k=pairKey(a,b);
+  arr=arr.filter(function(x){return pairKey(x.a,x.b)!==k;});
+  var label=(a.name||"お一人目")+" × "+(b.name||"お二人目");
+  arr.unshift({id:Date.now(),label:label,a:packP(a),b:packP(b)});
+  if(arr.length>60)arr=arr.slice(0,60);
+  savePHist(arr);renderPHist();
+}catch(e){}}
+function renderPHist(){
+  var arr=loadPHist(),box=document.getElementById("pairHist"),empty=document.getElementById("pairHistEmpty");
+  if(!box)return;
+  if(empty)empty.style.display=arr.length?"none":"";
+  box.innerHTML=arr.map(function(it){return '<div class="histItem" data-id="'+it.id+'"><b>'+esc(it.label)+'</b><span class="note">'+esc(fmtP(it.a))+' ／ '+esc(fmtP(it.b))+'</span><span class="del" data-del="'+it.id+'">×</span></div>';}).join("");
+  box.querySelectorAll(".histItem").forEach(function(el){el.onclick=function(e){if(e.target.getAttribute("data-del")){var id=+e.target.getAttribute("data-del");savePHist(loadPHist().filter(function(x){return x.id!==id;}));renderPHist();return;}applyPair(+el.getAttribute("data-id"));};});
+}
+function applyPair(id){
+  var it=loadPHist().filter(function(x){return x.id===id;})[0];if(!it)return;
+  function fill(pre,p){function setv(sfx,v){var s=document.getElementById(pre+sfx);if(s!=null&&v!=null&&v!=="")s.value=v;}
+    setv("by",p.y);setv("bm",p.mo);setv("bdd",p.d);
+    var tu=document.getElementById(pre+"tu");if(tu)tu.checked=!!p.tu;
+    if(!p.tu){setv("bh",p.hh);setv("bmin",p.mi);}
+    setv("sex",p.sex);
+    if(p.place&&PLON[p.place]!=null)setv("place",p.place);
+    setv("name",p.name);
+  }
+  fill("A",it.a);fill("B",it.b);
+  wireToggle("Atu","ATime");wireToggle("Btu","BTime");
+  window._msAutoAI=true; window._msScrollNext=true; runPair();
+}
+
 try{ var _gk=localStorage.getItem("ms_gkey"); if(_gk&&document.getElementById("gkey")) document.getElementById("gkey").value=_gk; }catch(e){}
 function scrollYearsToNow(){try{document.querySelectorAll(".yearsBox").forEach(function(box){var n=box.querySelector(".yNow");if(n){box.scrollTop+=n.getBoundingClientRect().top-box.getBoundingClientRect().top-8;}});}catch(e){}}
 /* カード折りたたみ（見出しクリック）＋目次クリックで対象を展開 */
@@ -1476,6 +1518,7 @@ function msBoot(){
   try{ if(!(document.getElementById("by")&&document.getElementById("by").options.length)) initDates(); }catch(e){}
   try{ initTheme(); }catch(e){}
   try{ renderHist(); }catch(e){}
+  try{ renderPHist(); }catch(e){}
   try{ runSolo(); }catch(e){}
 }
 try{ initDates(); }catch(e){}   // 生年月日プルダウンを最優先で確実に生成
