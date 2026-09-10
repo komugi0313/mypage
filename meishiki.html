@@ -1427,10 +1427,14 @@ function renderSolo(p,inp){
   H+='<div class="card noprint"><button class="btn sub2" onclick="window.print()">この命式を印刷／PDF保存</button></div>';
   H=injectNavAndChips(H,whoChip);  // 目次＋各カードID＋対象チップ
   out.innerHTML=H;if(window._msScrollNext){out.scrollIntoView({behavior:"smooth",block:"start"});window._msScrollNext=false;}scrollYearsToNow();
-  var ab=document.getElementById("aiBtn"); if(ab) ab.onclick=function(){aiReading(p.pro,ab);};
+  var aid=aiIdSolo(inp);
+  var ab=document.getElementById("aiBtn"); if(ab) ab.onclick=function(){aiReading(p.pro,ab,aid);};
   var qb=document.getElementById("askBtn"); if(qb) qb.onclick=function(){ aiAsk(window.richGrounding?window.richGrounding(p.pro):"", document.getElementById("askIn").value, "askOut", qb); };
-  /* 自動鑑定：ユーザーが「命式を作成」した時だけ（初期表示では走らせない＝無駄な課金防止）。キー or サーバー配信が前提 */
-  if(window._msAutoAI){ window._msAutoAI=false; if(msCanAI()) aiReading(p.pro,ab); }
+  /* 保存済みのAI鑑定があれば、再課金せずそのまま再表示（消えないように）。無ければ「作成」時だけ自動鑑定 */
+  var _auto=window._msAutoAI; window._msAutoAI=false;
+  var _cached=aiCacheGet(aid);
+  if(_cached){ aiRenderText(document.getElementById("aiOut"),_cached.t,_cached.tr); }
+  else if(_auto && msCanAI()){ aiReading(p.pro,ab,aid); }
 }
 
 /* 日柱60干支の固有の[良い所, 課題]（・区切り） */
@@ -1821,7 +1825,17 @@ function analyzeSolo(p){
 function msDevId(){ try{var d=localStorage.getItem("ms_dev"); if(!d){d="ms"+Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem("ms_dev",d);} return d;}catch(e){return "ms-nodev";} }
 function msKey(){ var f=document.getElementById("gkey"); return ((f&&f.value)||localStorage.getItem("ms_gkey")||"").trim(); }
 function msCanAI(){ return !!msKey() || /^https?:$/.test(location.protocol); }
-function aiReading(c,btn){
+/* ===== AI鑑定の結果を端末に保存し、再表示・リロード・タブ切替でも消えないように（追加課金なし） ===== */
+var AICACHE="ms_ai_cache_v1";
+function aiCacheLoad(){try{return JSON.parse(localStorage.getItem(AICACHE)||"{}");}catch(e){return {};}}
+function aiCacheGet(id){try{return aiCacheLoad()[id]||null;}catch(e){return null;}}
+function aiCacheSet(id,text,trunc){try{var o=aiCacheLoad();o[id]={t:text,tr:!!trunc,at:Date.now()};
+  var ks=Object.keys(o).sort(function(a,b){return o[b].at-o[a].at;}); if(ks.length>40)ks.slice(40).forEach(function(k){delete o[k];});
+  localStorage.setItem(AICACHE,JSON.stringify(o));}catch(e){}}
+function aiRenderText(box,text,trunc){if(!box)return;box.className="";box.innerHTML='<div style="font-size:15px;line-height:1.7;color:var(--ink)">'+mdLite(text)+'</div>'+(trunc?'<p class="note" style="color:var(--warn);margin:8px 0 0">※長さの上限で途中までの表示です。もう一度押すと続きが変わります。</p>':'');}
+function aiIdSolo(i){return "s:"+i.y+"/"+i.mo+"/"+i.d+"/"+(i.tu?"u":i.hh+":"+i.mi)+"/"+i.sex;}
+function aiIdPair(a,b){function k(x){return x.y+"/"+x.mo+"/"+x.d+"/"+(x.tu?"u":x.hh+":"+x.mi)+"/"+x.sex;}return "p:"+k(a)+"__"+k(b);}
+function aiReading(c,btn,aid){
   var key=msKey(), model=(document.getElementById("gmodel")||{}).value||"gemini-2.5-flash";
   var box=document.getElementById("aiOut"); if(!box) return;
   var served=/^https?:$/.test(location.protocol);
@@ -1845,7 +1859,8 @@ function aiReading(c,btn){
      var cand=j.candidates&&j.candidates[0], txt=cand&&cand.content&&cand.content.parts?cand.content.parts.map(function(x){return x.text||"";}).join(""):"";
      if(!txt){ var fr=cand&&cand.finishReason; box.innerHTML='<span style="color:var(--warn)">鑑定文が生成されませんでした'+(fr?'（'+esc(fr)+'）':'（安全フィルタ等）')+'。もう一度お試しください。</span>'; return; }
      var trunc=cand&&cand.finishReason==="MAX_TOKENS";
-     box.className=""; box.innerHTML='<div style="font-size:15px;line-height:1.7;color:var(--ink)">'+mdLite(txt)+'</div>'+(trunc?'<p class="note" style="color:var(--warn);margin:8px 0 0">※長さの上限で途中までの表示です。もう一度押すと続きが変わります。</p>':'');
+     if(aid)aiCacheSet(aid,txt,trunc);
+     aiRenderText(box,txt,trunc);
    })
    .catch(function(){ if(btn) btn.disabled=false; box.innerHTML='<span style="color:var(--warn)">通信エラー。ネット接続をご確認ください。</span>'; });
 }
@@ -2166,9 +2181,13 @@ function renderPair(pa,pb,a,b){
   if(a.name)H=H.split("お一人目").join(nameA); if(b.name)H=H.split("お二人目").join(nameB);
   H=injectNavAndChips(H,pairChip);  // 目次＋各カードID＋対象チップ
   out.innerHTML=H;if(window._msScrollNext){out.scrollIntoView({behavior:"smooth",block:"start"});window._msScrollNext=false;}scrollYearsToNow();
-  var pb2=document.getElementById("aiPairBtn"); if(pb2) pb2.onclick=function(){aiCompat(pa.pro,pb.pro,pb2);};
+  var paid=aiIdPair(a,b);
+  var pb2=document.getElementById("aiPairBtn"); if(pb2) pb2.onclick=function(){aiCompat(pa.pro,pb.pro,pb2,paid);};
   var qp=document.getElementById("askPairBtn"); if(qp) qp.onclick=function(){ var g="<一人目>\n"+(window.richGrounding?window.richGrounding(pa.pro):"")+"\n<二人目>\n"+(window.richGrounding?window.richGrounding(pb.pro):"")+"\n【二人の関係】\n"+compatText(window.compatData?window.compatData(pa.pro,pb.pro):null); aiAsk(g, document.getElementById("askPairIn").value, "askPairOut", qp); };
-  if(window._msAutoAI){ window._msAutoAI=false; if(msCanAI()) aiCompat(pa.pro,pb.pro,pb2); }
+  var _autoP=window._msAutoAI; window._msAutoAI=false;
+  var _cachedP=aiCacheGet(paid);
+  if(_cachedP){ aiRenderText(document.getElementById("aiPair"),_cachedP.t,_cachedP.tr); }
+  else if(_autoP && msCanAI()){ aiCompat(pa.pro,pb.pro,pb2,paid); }
 }
 
 /* 相性の根拠テキストをcompatDataから生成 */
@@ -2187,7 +2206,7 @@ function compatText(cd){
   return L.join("\n");
 }
 /* AI相性鑑定：二人のrichGrounding＋関係データを根拠に、辛口で */
-function aiCompat(cA,cB,btn){
+function aiCompat(cA,cB,btn,aid){
   var key=msKey(), model=(document.getElementById("gmodel")||{}).value||"gemini-2.5-flash";
   var box=document.getElementById("aiPair"); if(!box) return;
   var served=/^https?:$/.test(location.protocol);
@@ -2210,7 +2229,8 @@ function aiCompat(cA,cB,btn){
      var cand=j.candidates&&j.candidates[0], txt=cand&&cand.content&&cand.content.parts?cand.content.parts.map(function(x){return x.text||"";}).join(""):"";
      if(!txt){ var fr=cand&&cand.finishReason; box.innerHTML='<span style="color:var(--warn)">鑑定文が生成されませんでした'+(fr?'（'+esc(fr)+'）':'')+'。もう一度お試しください。</span>'; return; }
      var trunc=cand&&cand.finishReason==="MAX_TOKENS";
-     box.className=""; box.innerHTML='<div style="font-size:15px;line-height:1.7;color:var(--ink)">'+mdLite(txt)+'</div>'+(trunc?'<p class="note" style="color:var(--warn);margin:8px 0 0">※上限で途中までの表示です。</p>':'');
+     if(aid)aiCacheSet(aid,txt,trunc);
+     aiRenderText(box,txt,trunc);
    })
    .catch(function(){ if(btn) btn.disabled=false; box.innerHTML='<span style="color:var(--warn)">通信エラー。ネット接続をご確認ください。</span>'; });
 }
