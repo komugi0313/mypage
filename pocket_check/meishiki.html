@@ -440,14 +440,16 @@ function daeunList(c){var sf=c.startFortune||{},ritsuRaw=(sf.years||0)*12+(sf.mo
 /* 立運の表示（節の変わり目で稀にエンジンの立運が不安定になる境界ケースを正直に注記） */
 function ritsuLabel(sf,boundary){if(boundary)return "要確認（節の変わり目の境界ケース）";if(!sf||sf.years==null)return "-";var m=(sf.years||0)*12+(sf.months||0);if(m<0)return "要確認（節の変わり目の境界ケース）";return (sf.years||0)+"歳"+(sf.months||0)+"ヶ月";}
 function ageRange(s,e){return (s>=e)?'誕生ごろ':ageJ(s)+'〜'+ageJ(e);}
-function daeunDetail(c,fav){var dl=daeunList(c);
+/* 大運・年運の説明に含まれる「（女性は…）（男性は…）」を、その命式の性別に合う方だけ残す */
+function sexNote(t,sex){if(!t)return t;return (sex==="male")?t.replace(/（女性は[^）]*）/g,""):t.replace(/（男性は[^）]*）/g,"");}
+function daeunDetail(c,fav,sex){var dl=daeunList(c);
   return '<p class="note" style="margin:12px 0 4px"><b>各大運の詳細</b>（先頭は<b>第一運＝月柱</b>。◎＝喜神で追い風／△＝忌神で調整期／○＝中立。テーマは干の通変星）</p>'+dl.items.map(function(d,i){
     var stem=d.stem,el=MSTEM_EL[stem],ten=d.tenStar||"",ter=d.terrain||"",fv=luckFav(el,fav),gb=TENGOD_GB[ten]||{},lk=LUCK_TEN[ten]||{},cur=(i===dl.cur);
     return '<div style="border-top:1px solid var(--soft);'+(cur?'background:var(--soft);border-radius:8px;padding:8px;margin-top:4px':'padding:8px 2px')+'">'
       +'<b style="font-size:15px">'+esc(dl.boundary?'年齢は要確認':ageRange(d.startM,d.endM))+'</b>　'+elGz(d.ganzhi)+'　'+tenC(ten)+' <b style="color:'+fv.c+'">'+fv.m+'</b><span class="note">（'+fv.lbl+'）</span>'+(d.first?' <span class="pill">第一運・月柱</span>':'')+(cur?' <span class="pill">今ここ</span>':'')
       +'<br><span class="note">テーマ：'+esc(gb.w||ten)+'／十二運「</span>'+terrainC(ter)+'<span class="note">」＝'+esc(juniShort(ter))+'</span>'
-      +'<br><b>起こりやすい事：</b>'+esc(lk.ev||'')
-      +'<br><span style="color:'+fv.c+'"><b>'+fv.t+'：</b>'+esc(lk.up||'')+'</span>'
+      +'<br><b>起こりやすい事：</b>'+esc(sexNote(lk.ev||'',sex))
+      +'<br><span style="color:'+fv.c+'"><b>'+fv.t+'：</b>'+esc(sexNote(lk.up||'',sex))+'</span>'
       +'</div>';}).join("");}
 /* ==== 時期の視覚化：空亡（天中殺）・恋愛・結婚（すべて標準ルール・オフライン） ==== */
 var RIKUGOU={子:"丑",丑:"子",寅:"亥",亥:"寅",卯:"戌",戌:"卯",辰:"酉",酉:"辰",巳:"申",申:"巳",午:"未",未:"午"};
@@ -538,7 +540,7 @@ function setsubokuCard(c,fav,birthYear){
 /* 一人ぶんの運の流れ（大運・節木運・年運）＝ソロ/二人で共通。二人版は折りたたみ */
 function luckSection(pers,birthYear,label,sex){var c=pers.pro,fav=pers.fav;
   return '<details style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:800;color:var(--accent);font-size:15px">▼ '+esc(label)+'の運の流れ（大運・節木運・年運・空亡・恋愛結婚）を見る</summary>'
-    +'<div style="margin-top:8px"><b style="display:block;margin:6px 0;color:var(--accent)">大運（10年ごと）</b>'+daeunDetail(c,fav)+'</div>'
+    +'<div style="margin-top:8px"><b style="display:block;margin:6px 0;color:var(--accent)">大運（10年ごと）</b>'+daeunDetail(c,fav,sex)+'</div>'
     +'<div><b style="display:block;margin:12px 0 4px;color:var(--accent)">節木運（人生の季節の変わり目）</b>'+setsubokuCard(c,fav,birthYear)+'</div>'
     +'<div><b style="display:block;margin:12px 0 4px;color:var(--title)">空亡（天中殺）が来る年</b>'+kuboYearsCard(c)+'</div>'
     +'<div><b style="display:block;margin:12px 0 4px;color:var(--title)">恋愛・結婚の時期</b>'+loveMarriageCard(c,sex)+'</div>'
@@ -615,7 +617,7 @@ function renderSolo(p,inp){
   var now=c.now||{},sf=c.startFortune||{},dl=daeunList(c);
   H+='<div class="card"><h2>大運（立運：'+esc(ritsuLabel(sf,dl.boundary))+' ／ '+(sf.forward?"順行":"逆行")+' ／ 第一運＝月柱）</h2><div class="ladder">';
   dl.items.forEach(function(dd,i){H+='<div class="lstep'+(i===dl.cur?" now":"")+(dd.first?" first":"")+'"><div class="age">'+esc(dl.boundary?'年齢は要確認':ageRange(dd.startM,dd.endM))+'</div><div class="lgz">'+elGz(dd.ganzhi)+'</div><div class="lten">'+esc(dd.tenStar||"")+(dd.first?'･月柱':'')+'</div><div class="lter">'+esc(dd.terrain||"")+'</div></div>';});
-  H+='</div><p class="note" style="margin:6px 0 0">先頭は<b>第一運＝月柱（'+esc(c.pillars[1].ganzhi)+'）</b>で0歳〜立運まで。以降は立運起点で各10年。'+(dl.boundary?'<br><span style="color:var(--warn)">※この命式は<b>節の変わり目（節入り直前）に生まれた境界ケース</b>で、立運の自動計算が不安定です（実際より約10年ずれることがあります）。<b>大運の干支の並び順と方向（'+(sf.forward?"順行":"逆行")+'）は正しく出ています</b>が、各運の年齢は先生の早見表・手計算での確認をおすすめします。</span>':'')+'</p>'+daeunDetail(c,p.fav)+'</div>';
+  H+='</div><p class="note" style="margin:6px 0 0">先頭は<b>第一運＝月柱（'+esc(c.pillars[1].ganzhi)+'）</b>で0歳〜立運まで。以降は立運起点で各10年。'+(dl.boundary?'<br><span style="color:var(--warn)">※この命式は<b>節の変わり目（節入り直前）に生まれた境界ケース</b>で、立運の自動計算が不安定です（実際より約10年ずれることがあります）。<b>大運の干支の並び順と方向（'+(sf.forward?"順行":"逆行")+'）は正しく出ています</b>が、各運の年齢は先生の早見表・手計算での確認をおすすめします。</span>':'')+'</p>'+daeunDetail(c,p.fav,inp.sex)+'</div>';
   // 接木運（季節の変わり目）
   H+='<div class="card"><h2>節木運（人生の季節の変わり目）</h2>'+setsubokuCard(c,p.fav,parseInt(inp.y,10))+'</div>';
 
