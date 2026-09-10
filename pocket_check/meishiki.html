@@ -114,6 +114,8 @@ table{width:100%;border-collapse:collapse;font-size:15.5px}
 /* 時期の視覚化（空亡・恋愛・結婚） */
 .chk{display:inline-flex;align-items:center;gap:7px;margin-top:7px;padding:7px 11px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:14px;font-weight:700;cursor:pointer;color:var(--ink)}
 .chk input{width:17px;height:17px;accent-color:var(--accent);cursor:pointer}
+.cardlead{margin:0 0 10px;padding:7px 11px;background:var(--soft);border-left:4px solid var(--title);border-radius:0 8px 8px 0;font-size:13.5px;font-weight:700;color:var(--sub);line-height:1.5}
+.cardlead b{color:var(--title)}
 .chipwrap{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
 .kchip{display:inline-flex;align-items:center;gap:3px;border:2px solid var(--line);border-radius:999px;padding:4px 11px;font-size:14.5px;font-weight:800;background:var(--card);white-space:nowrap}
 .kchip.now{box-shadow:0 0 0 2px var(--card),0 0 0 4px currentColor}
@@ -298,12 +300,55 @@ function shortBirth(o){return o.y+"."+o.mo+"."+o.d;}
 function idChip(txt){return '<span style="display:inline-block;font-size:11px;color:var(--muted);font-weight:700;background:var(--soft);border-radius:6px;padding:1px 7px;margin-right:7px;vertical-align:middle">'+esc(txt)+'</span>';}
 function targetLine(txt){return '<div class="note" style="margin:0 0 8px;font-weight:600">🧭 対象：'+txt+'</div>';}
 /* 各カードにID付与＋見出しに対象チップ＋上部にジャンプ目次（長いページのUI改善） */
+/* 各カード先頭の「1行でわかる」要約（見出しのキーワードで判定・意味は変えず読みやすさ用） */
+var CARD_LEAD=[
+ ["基本情報","まず見る基本：あなたの<b>日主（自分そのもの）</b>・強さ・空亡と、時差の補正"],
+ ["節入り","<b>生まれた月の“入口”</b>。ここがあなたの<b>性格の中心</b>を決めます"],
+ ["命式表","四本柱の一覧表。干支・隠れた干・十二運・星が<b>ひと目で</b>わかります"],
+ ["蔵干","表からは見えない、<b>内に秘めた性質・才能・本音</b>"],
+ ["通変星","あなたから見た各柱の“役割”＝<b>性格や才能の中身</b>（同じ柱でも表と内面で違う）"],
+ ["宮位","<b>年＝家系／月＝仕事／日＝自分・配偶者／時＝子・晩年</b>。どこに何が効くか"],
+ ["月支元命","あなたの<b>人生の中心テーマ・使命</b>（命式の主役の星）"],
+ ["日柱","生まれた<b>日</b>が示す、あなたの<b>基本的な性格</b>（良い面と課題）"],
+ ["この人の特徴","あなたの<b>強み10</b>と<b>気をつけたい点10</b>"],
+ ["持って生まれた使命","あなたが<b>いちばん輝く生き方</b>の道しるべ"],
+ ["五行","<b>木・火・土・金・水</b>のバランス。多い/少ない気と、開運の方向"],
+ ["干支関係","命式の中の支どうしの<b>結びつき</b>や<b>ぶつかり</b>"],
+ ["神殺","命式に付く<b>ラッキーの星・注意の星</b>"],
+ ["あなた特有の個性","この命式<b>ならでは</b>の、あなただけの個性"],
+ ["向いている仕事","<b>才能が活きる仕事</b>と、<b>避けたい仕事</b>"],
+ ["金銭感覚","<b>お金との付き合い方</b>のクセ"],
+ ["健康","体で<b>気をつけたい弱点</b>（五行と体の対応から）"],
+ ["霊感","<b>直感・スピリチュアルの感度</b>"],
+ ["恋愛の深層","恋のクセ（<b>一線を越えやすさ・別れの暗示</b>）と、失恋時にかける言葉"],
+ ["噛み合う人","<b>相性の良い人</b>と<b>合わない人</b>のタイプ"],
+ ["親との関係","親との関係のクセと、<b>しんどい時の距離の取り方</b>"],
+ ["付き合うメリット","この人を<b>恋人にした時</b>の良い点・大変な点"],
+ ["大運","<b>10年ごと</b>に巡る、人生の<b>大きな運の波</b>"],
+ ["節木運","人生の<b>“季節の変わり目”</b>（揺れやすい時期）"],
+ ["空亡","無理を避け<b>“充電”に向く2年間</b>が、<b>何年に来るか</b>"],
+ ["恋愛・結婚の時期","<b>恋・結婚の縁が動きやすい年</b>"],
+ ["年運","<b>1年ごと</b>の運の流れ"],
+ ["解析","命式の<b>要点をまとめた</b>自動サマリー"],
+ ["AI鑑定","<b>AIが文章で</b>読み解く総合鑑定"],
+ ["質問して鑑定","気になることを<b>AIに質問</b>"],
+ ["相性 総合","二人の<b>相性の結論と点数</b>"],
+ ["相性の理由","二人が<b>合う理由・注意点</b>を詳しく"],
+ ["十神","二人が<b>お互いにとってどんな存在か</b>"],
+ ["元命の相性","二人の<b>中心テーマ</b>の相性"],
+ ["五行バランス（二人","二人合わせた<b>気のバランス</b>と補い合い"],
+ ["十二運の意味","二人それぞれの<b>エネルギーの質</b>"],
+ ["相手の好み","<b>相手の喜ばせ方</b>"],
+ ["二人の縁","二人を結ぶ<b>干支・十神の縁</b>"],
+ ["運の流れ","二人それぞれの<b>大運・年運</b>"]
+];
+function cardLead(plain){for(var i=0;i<CARD_LEAD.length;i++){if(plain.indexOf(CARD_LEAD[i][0])>=0)return '<p class="cardlead">📌 '+CARD_LEAD[i][1]+'</p>';}return '';}
 function injectNavAndChips(H,chip){var idx=0,items=[];
   H=H.replace(/<div class="card([^"]*)"><h2>([\s\S]*?)<\/h2>/g,function(m,cls,title){idx++;var id="sec"+idx;
     var plain=title.replace(/<[^>]+>/g,"").replace(/&[a-z]+;/g,"");
     var lbl=(plain.split(/[（(：\s]/)[0]||plain).trim()||plain.slice(0,6);
     items.push('<a href="#'+id+'">'+esc(lbl)+'</a>');
-    return '<div class="card'+cls+'" id="'+id+'"><h2>'+(chip?idChip(chip)+' ':'')+title+'</h2>';});
+    return '<div class="card'+cls+'" id="'+id+'"><h2>'+(chip?idChip(chip)+' ':'')+title+'</h2>'+cardLead(plain);});
   return '<div class="jumpnav noprint">'+items.join("")+'</div>'+H;}
 function mdLite(s){var t=esc(s);
   t=t.replace(/^\s*#{1,6}\s*(.+)$/gm,'<b style="display:block;margin:9px 0 2px;color:var(--accent)">$1</b>');
@@ -570,12 +615,12 @@ function renderSolo(p,inp){
   H+='<div class="card"><h2>節入り（24節気）</h2>'
     +'<p style="margin:0 0 6px">生まれた月の節：<b style="font-size:17px">'+esc(si.name)+'</b>'+(sm.y?'（'+esc(sm.y)+'）':'')+'</p>'
     +(sm.m?'<p style="margin:0 0 6px"><b>意味：</b>'+esc(sm.m)+'</p>':'')
-    +'<p style="margin:0 0 6px"><b>人格への影響（計算に基づく）：</b>この節が<b>月支（月令）</b>を決めます。月支は身強弱と格局を決める<b>「提綱（ていこう）」＝命式の重心</b>で、日主（＝あなた自身）の働き方を最も左右します。'
-      +(lingStem2?'いま月支で当令している<b>司令は「'+esc(lingStem2)+'」</b>、日主から見た通変星は<b>「'+esc(lingTen2)+'」（＝月支元命）</b>。'+(TEN_THEME[lingTen2]?'この'+esc(lingTen2)+'＝<b>'+esc(TEN_THEME[lingTen2])+'</b>が、あなたの性格・才能の"司令塔"になります。':'')+'つまり性格は節の名前ではなく、この<b>司令→通変星</b>を通じて具体的に表れます（詳しくは下の「月支元命」カード）。':'※"本質そのもの"は日主、"親・育ち"は月柱の受け持ち。')
+    +'<p style="margin:0 0 6px"><b>ここであなたの“性格の中心”が決まります：</b>四柱推命では、<b>生まれた月の季節（節）</b>が「あなたらしさの芯」を作ります。専門的には<b>月支（げっし）＝生まれ月を表す部分</b>で、これは命式の中でいちばん影響が大きく、あなた本人（日主）の性格の出方を最も左右します。'
+      +(lingStem2?'いまその季節で<b>いちばん強く働いている隠れた干は「'+esc(lingStem2)+'」</b>。これをあなた（日主）から見た呼び名が<b>「'+esc(lingTen2)+'」</b>で、これが<b>あなたの性格の中心テーマ</b>になります。'+(TEN_THEME[lingTen2]?'ひとことで言うと＝<b>'+esc(TEN_THEME[lingTen2])+'</b>。':'')+'※性格は“節の名前”そのものではなく、この星「'+esc(lingTen2)+'」を通して具体的に表れます（くわしくは下の「月支元命」カード）。':'※“あなたそのもの”は日主（生まれた日）、“親・育った環境”は月柱が受け持ちます。')
       +'</p>'
     +(sm.t?'<p class="note" style="margin:0 0 6px">※季節像としての補助イメージ：'+esc(si.name)+'は「'+esc(sm.t)+'」の趣。あくまで読み物としての彩りで、鑑定の根拠は上の司令→通変星です。</p>':'')
     +(si.entry?'<span class="note">節入り日時：'+esc(si.entry)+'</span><br>':'')
-    +(si.elapsed?'<span class="note">節入りからの経過：'+esc(si.elapsed)+'（この経過が蔵干の司令★と大運の起運を決めます）</span>':'')
+    +(si.elapsed?'<span class="note">節入りからの経過：'+esc(si.elapsed)+'（この日数が、蔵干のどれが働くか★と、大運の始まる年齢〈立運〉を決めます）</span>':'')
     +'<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:700;color:var(--accent)">24節気とは？（一覧を見る）</summary>'
     +'<p class="note" style="margin:6px 0">1年を24に区切った季節の目安。うち<b>●節（12個）で四柱推命の「月」が切り替わり</b>、月柱が決まります（○中＝中気）。</p>'
     +'<div style="font-size:13px;line-height:1.5">'+setsu24Html(si.name)+'</div></details></div>';
@@ -617,7 +662,7 @@ function renderSolo(p,inp){
   var now=c.now||{},sf=c.startFortune||{},dl=daeunList(c);
   H+='<div class="card"><h2>大運（立運：'+esc(ritsuLabel(sf,dl.boundary))+' ／ '+(sf.forward?"順行":"逆行")+' ／ 第一運＝月柱）</h2><div class="ladder">';
   dl.items.forEach(function(dd,i){H+='<div class="lstep'+(i===dl.cur?" now":"")+(dd.first?" first":"")+'"><div class="age">'+esc(dl.boundary?'年齢は要確認':ageRange(dd.startM,dd.endM))+'</div><div class="lgz">'+elGz(dd.ganzhi)+'</div><div class="lten">'+esc(dd.tenStar||"")+(dd.first?'･月柱':'')+'</div><div class="lter">'+esc(dd.terrain||"")+'</div></div>';});
-  H+='</div><p class="note" style="margin:6px 0 0">先頭は<b>第一運＝月柱（'+esc(c.pillars[1].ganzhi)+'）</b>で0歳〜立運まで。以降は立運起点で各10年。'+(dl.boundary?'<br><span style="color:var(--warn)">※この命式は<b>節の変わり目（節入り直前）に生まれた境界ケース</b>で、立運の自動計算が不安定です（実際より約10年ずれることがあります）。<b>大運の干支の並び順と方向（'+(sf.forward?"順行":"逆行")+'）は正しく出ています</b>が、各運の年齢は先生の早見表・手計算での確認をおすすめします。</span>':'')+'</p>'+daeunDetail(c,p.fav,inp.sex)+'</div>';
+  H+='</div><p class="note" style="margin:6px 0 0"><b>用語：</b>立運＝大運が始まる年齢／順行・逆行＝干支をどちら回りに進むか／第一運＝スタートの10年（この流派では月柱）。<br>先頭は<b>第一運＝月柱（'+esc(c.pillars[1].ganzhi)+'）</b>で0歳〜立運まで。以降は立運起点で各10年。'+(dl.boundary?'<br><span style="color:var(--warn)">※この命式は<b>節の変わり目（節入り直前）に生まれた境界ケース</b>で、立運の自動計算が不安定です（実際より約10年ずれることがあります）。<b>大運の干支の並び順と方向（'+(sf.forward?"順行":"逆行")+'）は正しく出ています</b>が、各運の年齢は先生の早見表・手計算での確認をおすすめします。</span>':'')+'</p>'+daeunDetail(c,p.fav,inp.sex)+'</div>';
   // 接木運（季節の変わり目）
   H+='<div class="card"><h2>節木運（人生の季節の変わり目）</h2>'+setsubokuCard(c,p.fav,parseInt(inp.y,10))+'</div>';
 
@@ -1194,7 +1239,8 @@ function tsuhenPillarNote(t,pos){
   return "テーマは「"+grp+"」。"+(m[pos]||"");}
 /* 蔵干の意味（内に秘めたもの・隠れた性質） */
 function zoukanMeaning(c){var labs=["年柱","月柱","日柱","時柱"],pos=["先祖・幼少期・社会運の土台","両親・仕事・命式の本質（最重要）","自分自身・配偶者・心の内側","子ども・晩年・秘めた才能"];
-  var L=['<p style="margin:0 0 8px">蔵干とは、地支（十二支）の中に<b>隠れて宿る干</b>のこと。表からは見えないけれど、その人が<b>内に秘めた性質・才能・本音</b>を表します。表の干支が「見えている顔」なら、蔵干は「心の奥・隠れた引き出し」。<b>★＝司令＝今この時期に"実際に使って働いている"蔵干</b>、★以外は<b>内に眠る潜在の力</b>です。</p>'];
+  var L=['<p style="margin:0 0 8px">蔵干とは、地支（十二支）の中に<b>隠れて宿る干</b>のこと。表からは見えないけれど、その人が<b>内に秘めた性質・才能・本音</b>を表します。表の干支が「見えている顔」なら、蔵干は「心の奥・隠れた引き出し」。<b>★＝司令＝今この時期に“実際に使って働いている”蔵干</b>、★以外は<b>内に眠る潜在の力</b>です。</p>',
+    '<p class="note" style="margin:-2px 0 8px">※「余氣（よき）・中氣（ちゅうき）・本氣（ほんき）」は、その地支の中でその蔵干がどのくらい主役かを表す言葉です。<b>本氣＝いちばんの中心（その支の代表）</b>、<b>中氣＝サブ</b>、<b>余氣＝前の季節の名残でうっすら残る力</b>、と読みます。</p>'];
   c.pillars.forEach(function(x,i){ if(!x)return;
     var items=(x.hiddenStems||[]).map(function(h){var el=MSTEM_EL[h.stem];return '<div style="margin:2px 0"><b>'+elS(h.stem)+'</b>（'+elc(el)+'）'+esc(h.role)+' '+esc(h.pct)+'％ … <b>'+esc(h.tenStar||"")+'</b>＝'+esc(TEN_THEME[h.tenStar]||"")+' '+(h.ling?'<span class="ling">★使っている（表で働く）</span>':'<span class="note">〔内に秘める潜在〕</span>')+'</div>';}).join('');
     L.push('<p style="margin:0 0 9px"><b>'+labs[i]+'</b>（'+pos[i]+'）'+items+'</p>');});
