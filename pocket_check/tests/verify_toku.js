@@ -64,7 +64,7 @@ const path = require('path');
   console.log('  検査 '+R.kagai.checked+' / エンジン=日支基準と一致 '+R.kagai.engMatchNichi+' / エンジン=月支基準と一致 '+R.kagai.engMatchGetsu);
   console.log('  日支基準と月支基準で結果が割れる命式 '+R.kagai.diffBase+' 件');
   R.kagai.samples.forEach(x=>console.log('   ・ '+x));
-  console.log('  → '+(R.kagai.engMatchNichi===R.kagai.checked?'エンジンは【日支基準】で華蓋を判定（資料の表は月支基準なので、基準が異なる）':'（要精査）'));
+  console.log('  → '+(R.kagai.engMatchGetsu===R.kagai.checked?'✅ エンジンは【月支基準】で華蓋を判定＝資料どおり':'❌ 月支基準と不一致 '+(R.kagai.checked-R.kagai.engMatchGetsu)+'件'));
 
   await b.close();
 })();
