@@ -1241,6 +1241,7 @@ function pcJob(p){var c=p.pro,tb=biasOf(c),el=c.dayMaster.element,five=p.five||{
     L.push('<div class="tline">'+mt.map(function(r){return '<div class="tItem"><div class="ty">🧳 '+esc(r.year)+'年'+(r.age!=null?'（'+esc(r.age)+'歳ごろ）':'')+' '+elGz(r.ganzhi)+'</div><div class="tr">'+r.reasons.map(function(x){return '・'+esc(x);}).join('<br>')+'</div></div>';}).join('')+'</div>');
     L.push('<p class="note" style="margin:6px 0 0">※驛馬（移動の星）が巡る年や、月柱（仕事）・日柱（住まい）が動く年の目安です。動くと決めた時の“追い風の年”としてご活用ください。</p>');
   }
+  L.push(lifeTimingBand(studyTiming(c),'📚','勉強・資格の好機（あなたの運だけで読めます）','var(--sui)','※印綬＝学問・資格・目上の引き立て／偏印＝専門・独自の研究の年。学び始め・受験・資格取得の追い風としてどうぞ。'));
   return L.join("");}
 
 /* --- 金銭感覚 --- */
@@ -1254,7 +1255,8 @@ function pcMoney(p){var c=p.pro,tb=biasOf(c),sc=starCounts(c),fin=tb.counts["財
   if(inn>=3)pts.push('<b>印が強い</b>：物欲は淡白で、援助や目上の引き立てでお金が回りやすい。守りは得意だが攻めの投資は慎重に。');
   if(!pts.length)pts.push('財のバランスは中庸。極端な浪費も守銭奴的な締めもなく、常識的な金銭感覚。');
   var lead='<p style="margin:0 0 8px">お金との“つき合い方”にも、あなたらしい癖があります。良し悪しではなく、知っておくと家計もチャンスも生かしやすくなります。</p>';
-  return lead+pts.map(function(x){return '<p style="margin:0 0 6px">'+x+'</p>';}).join("");}
+  var moneyBand=lifeTimingBand(moneyTiming(c),'💰','金運が上がる年（あなたの運だけで読めます）','var(--do)','※財星（正財＝堅実／偏財＝臨時収入）や食傷生財の年の目安です。財が多め・身弱の人は“入る年ほど散財”に気をつけると、より貯まります。');
+  return lead+pts.map(function(x){return '<p style="margin:0 0 6px">'+x+'</p>';}).join("")+moneyBand;}
 
 /* --- 健康：身体の弱いところ --- */
 var EL_HEALTH={木:{o:"肝臓・胆のう・目・筋・自律神経",s:"イライラ・目の疲れ・筋のこわばり・自律神経の乱れ"},火:{o:"心臓・小腸・血管・血圧・精神",s:"動悸・血圧・不眠・のぼせ・情緒の波"},土:{o:"胃・脾・消化器・口・肌",s:"胃腸の不調・食欲の波・肌荒れ・むくみ・思い悩み"},金:{o:"肺・大腸・気管支・皮膚・鼻",s:"呼吸器や皮膚のトラブル・便通・乾燥"},水:{o:"腎・膀胱・泌尿器・生殖・骨・耳・ホルモン",s:"冷え・むくみ・腰や骨・耳・婦人科／ホルモン"}};
@@ -1268,7 +1270,8 @@ function pcHealth(p){var c=p.pro,five=p.five||{},sl=starList(c),L=[],pts=[];
   if(!pts.length){var dh=EL_HEALTH[c.dayMaster.element];pts.push('五行のバランスがとれており、大きな偏りは出にくいタイプ。とはいえ日主'+elc(c.dayMaster.element)+'（'+(dh?dh.o:"")+'）は土台なので大切に。');}
   L.push('<p style="margin:0 0 8px">体は“いちばんの資本”。あなたの命式が教える「疲れると出やすい弱点」を先回りで知って、ふだんの養生に生かしましょう。</p>');
   L.push('<p class="note" style="margin:0 0 8px">四柱推命では五行と臓腑が対応します（木＝肝／火＝心／土＝脾胃／金＝肺／水＝腎）。<b>欠けた・偏った五行</b>が体の弱点の目安です。※医療の診断ではなく養生の参考に。</p>');
-  return L.join("")+pts.map(function(x){return '<p style="margin:0 0 6px">'+x+'</p>';}).join("");}
+  var healthBand=lifeTimingBand(healthTiming(c,p.sType),'🩺','健康に気をつけたい年（あなたの運だけで読めます）','var(--warn)','※体調に無理がかかりやすい年の目安です。この年ほど休養・健診・生活リズムを大切に。深刻に捉えず“予防のカレンダー”としてお使いください。');
+  return L.join("")+pts.map(function(x){return '<p style="margin:0 0 6px">'+x+'</p>';}).join("")+healthBand;}
 
 /* --- 霊感・直感 --- */
 function pcSpirit(p){var c=p.pro,sc=starCounts(c),sl=starList(c),five=p.five||{},ters=c.pillars.filter(Boolean).map(function(x){return x.terrain;}),L=[],pos=[],score=0;
@@ -1385,6 +1388,52 @@ function moveTiming(c){
     if(r.length)out.push({year:a.year,age:age,ganzhi:a.ganzhi,reasons:r});
   });
   return out.slice(0,8);
+}
+/* 金運が上がる年を年運から抽出。財星（正財=堅実/偏財=臨時）・食傷生財（命式に財があり食傷が巡る） */
+function moneyTiming(c){
+  var by=birthYearOf(c),cy=((c.now||{}).year)||0,sc=starCounts(c),hasFin=((sc.正財||0)+(sc.偏財||0))>=1,out=[];
+  (c.annualFortunes||[]).forEach(function(a){
+    var ten=a.tenStar||"",age=(by!=null?a.year-by:null),r=[];
+    if(age!=null&&age<16)return; if(cy&&a.year<cy-1)return;
+    if(ten==='正財')r.push('正財の年＝コツコツお金が入り、貯まりやすい堅実な金運の年');
+    else if(ten==='偏財')r.push('偏財の年＝臨時収入・商売・投資でお金が大きく動く年（気前よく出ていきやすくも）');
+    if((ten==='食神'||ten==='傷官')&&hasFin)r.push('食傷生財の年＝才能・行動がお金に変わりやすい、稼ぐ力が伸びる年');
+    if(r.length)out.push({year:a.year,age:age,ganzhi:a.ganzhi,reasons:r});
+  });
+  return out.slice(0,8);
+}
+/* 健康に気をつけたい年を年運から抽出。偏官（七殺）＝過労/身弱の正官/空亡/日柱冲 */
+function healthTiming(c,sType){
+  var by=birthYearOf(c),cy=((c.now||{}).year)||0,ks=kuboSet(c),db=c.pillars[2].branch,weak=((sType||'').indexOf('弱')>=0),out=[];
+  (c.annualFortunes||[]).forEach(function(a){
+    var yb=a.branch||a.ganzhi[1],ten=a.tenStar||"",age=(by!=null?a.year-by:null),r=[];
+    if(age!=null&&age<16)return; if(cy&&a.year<cy-1)return;
+    if(ten==='偏官')r.push('偏官（七殺）の年＝重責・プレッシャーがかかり、過労・ストレスで体調を崩しやすい。無理を避けて');
+    else if(weak&&ten==='正官')r.push('正官の年＝責任が増える時期。身弱ぎみなので頑張りすぎに注意');
+    if(ks.set[yb])r.push('空亡（天中殺）の年＝無理が利きにくい。休養・メンテナンス・守りを大切に');
+    if(CHONG[db]===yb)r.push('日柱が冲＝生活リズムが乱れやすい。睡眠・食事を整えて');
+    if(r.length)out.push({year:a.year,age:age,ganzhi:a.ganzhi,reasons:r});
+  });
+  return out.slice(0,8);
+}
+/* 勉強・資格の好機を年運から抽出。印綬＝学問/資格/引き立て、偏印＝専門/独自研究 */
+function studyTiming(c){
+  var by=birthYearOf(c),cy=((c.now||{}).year)||0,out=[];
+  (c.annualFortunes||[]).forEach(function(a){
+    var ten=a.tenStar||"",age=(by!=null?a.year-by:null),r=[];
+    if(age!=null&&age<10)return; if(cy&&a.year<cy-1)return;
+    if(ten==='印綬')r.push('印綬の年＝学問・資格・試験・目上の引き立てに恵まれる、学びの好機');
+    else if(ten==='偏印')r.push('偏印の年＝専門・独自の研究、資格取得や学び直しに縁のある年');
+    if(r.length)out.push({year:a.year,age:age,ganzhi:a.ganzhi,reasons:r});
+  });
+  return out.slice(0,8);
+}
+/* 年運タイミングのリストHTMLを共通生成 */
+function lifeTimingBand(rows,icon,title,color,note){
+  if(!rows.length)return '';
+  return '<p style="margin:12px 0 3px"><b class="sech" style="color:'+color+'">'+icon+' '+title+'</b></p><div class="tline">'
+    +rows.map(function(r){return '<div class="tItem"><div class="ty">'+icon+' '+esc(r.year)+'年'+(r.age!=null?'（'+esc(r.age)+'歳ごろ）':'')+' '+elGz(r.ganzhi)+'</div><div class="tr">'+r.reasons.map(function(x){return '・'+esc(x);}).join('<br>')+'</div></div>';}).join('')
+    +'</div>'+(note?'<p class="note" style="margin:6px 0 0">'+note+'</p>':'');
 }
 /* --- 失恋・お別れの暗示 --- */
 function pcBreakup(p,sex){var c=p.pro,sc=starCounts(c),female=(sex!=="male"),rels=(window.natalRelationsX?window.natalRelationsX(c):[]),db=c.pillars[2].branch,ds=c.pillars[2].ganzhi[0],pos=[],L=[];
