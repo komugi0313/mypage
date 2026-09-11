@@ -2221,6 +2221,8 @@ function lifeTimingBand(rows,icon,title,color,note){
 }
 /* カレンダーのタグ→該当カードへスムーズスクロール＆一瞬ハイライト */
 var TAG_CARD={'💕恋愛':'card-love','💍結婚':'card-love','👶子宝':'card-love','💔別れ注意':'card-breakup','🔁復縁':'card-breakup','🧳転職・引越':'card-job','📚学び':'card-job','💰金運':'card-money','🩺健康注意':'card-health'};
+/* どの年にも“基本テーマ”がある＝空の年をなくす（年の通変星の気候。事実どおりで前向きに） */
+var YEAR_THEME={比肩:'🤝 自立・仲間・自分づくりの年',劫財:'🤝 行動・仲間・ここ一番の年',食神:'🌸 出会い・楽しみ・才能が動く年',傷官:'🌸 表現・感性・出会いが動く年',偏財:'💰 お金・人脈・華やぎが動く年',正財:'💰 堅実にお金・信頼が育つ年',偏官:'💪 挑戦・責任・ご縁の転機の年',正官:'💍 ご縁・信用・結婚に縁のある年',偏印:'📚 学び直し・専門・内省の年',印綬:'📚 学び・資格・充電の年'};
 function jumpCard(id){var el=document.getElementById(id);if(!el)return;try{el.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){el.scrollIntoView();}el.style.transition='box-shadow .3s';el.style.boxShadow='0 0 0 3px var(--title)';setTimeout(function(){el.style.boxShadow='';},1300);}
 /* 運勢カレンダー：各“時期”関数の結果を年ごとに集約して一望表示（新しい占いロジックは足さず、既存結果をまとめるだけ） */
 function calendarCard(p,sex){
@@ -2240,9 +2242,36 @@ function calendarCard(p,sex){
   var body=af.filter(function(a){return a.year>=cy&&a.year<=cy+14;}).map(function(a){
     var age=(by!=null?a.year-by:null),ts=tag[a.year]||[],cur=(a.year===cy);
     return '<div class="tItem'+(cur?' mar':'')+'"><div class="ty">'+(cur?'★ ':'')+esc(a.year)+'年'+(age!=null?'（'+esc(age)+'歳）':'')+' '+elGz(a.ganzhi)+(cur?' <span class="pill">今年</span>':'')+'</div><div class="tr">'
-      +(ts.length?ts.map(function(t){var cid=TAG_CARD[t];return '<span class="kchip" style="margin:2px 4px 2px 0'+(cid?';cursor:pointer':'')+'"'+(cid?' onclick="jumpCard(\''+cid+'\')"':'')+'>'+t+'</span>';}).join(''):'<span class="note">大きな山はなく、力を蓄える・整える年</span>')+'</div></div>';
+      +(ts.length?ts.map(function(t){var cid=TAG_CARD[t];return '<span class="kchip" style="margin:2px 4px 2px 0'+(cid?';cursor:pointer':'')+'"'+(cid?' onclick="jumpCard(\''+cid+'\')"':'')+'>'+t+'</span>';}).join(''):'<span class="note">'+esc(YEAR_THEME[a.tenStar]||'🌱 整える・準備の年')+'</span>')+'</div></div>';
   }).join('');
-  return '<p style="margin:0 0 8px">これから約15年ぶんの“運の見取り図”です。年ごとに、どんなテーマの縁・チャンス・注意が巡るかを一望できます（下の各カードの要約）。<b>★＝今年</b>／<b>タグをタップ</b>すると、その詳しいカードへ移動します。</p><div class="tline">'+body+'</div>'
+  /* ① 直近の“見どころ月”（月運）＝近い日の出会い・恋愛に、いつも答えられるように */
+  var mr=(typeof monthlyRomance==='function')?monthlyRomance(c,sex,18):[];
+  var mChips=mr.slice(0,5).map(function(r){var icon=(r.mar&&r.mar.length)?'💍':'💕';return '<span class="kchip" style="margin:2px 4px 2px 0;border-color:#c0397a;color:#c0397a;cursor:pointer" onclick="jumpCard(\'card-love\')">'+icon+' '+esc(r.y)+'年'+esc(r.m)+'月</span>';}).join('');
+  var monthHtml='<div style="background:var(--soft);border-radius:10px;padding:8px 10px;margin:0 0 10px"><b style="color:#c0397a">📅 近いうちに出会い・恋愛が動きやすい月</b><br>'
+    +(mChips?mChips+'<br><span class="note">この月ごろは、いつもより一歩外へ（誘い・紹介・お出かけ）。出会いは“運が半分・行動が半分”です。</span>':'<span class="note">この先しばらくは強い山の月は控えめ。だからこそ“自分磨き・生活を整える”のに向く時期で、準備した人から良縁に届きます。</span>')+'</div>';
+  /* ② よくある質問の自動回答（命式・運から機械的に） */
+  var rr=romanceRows(c,sex),adult=function(r){return r.age==null||r.age>=16;};
+  var nextLove=rr.filter(function(r){return r.year>=cy&&r.love.length&&adult(r);})[0];
+  var nextMar=rr.filter(function(r){return r.year>=cy&&r.mar.length&&adult(r);})[0];
+  var dr=(typeof decadeRomance==='function')?decadeRomance(c,sex):{cur:-1,items:[]};
+  var curDec=(dr.cur>=0?dr.items[dr.cur]:null),decLove=!!(curDec&&curDec.sig&&curDec.sig.length);
+  var nextRec=reconcileYears(c,sex)[0],firstMonth=mr[0];
+  var sc=starCounts(c),female=(sex!=='male'),db=c.pillars[2].branch,rels=(window.natalRelationsX?window.natalRelationsX(c):[]),kuse;
+  if(female&&(sc.傷官||0)>=2)kuse='あなたは傷官が強め＝無意識に相手を追い越し・ダメ出ししがち。“正すより尊重の言葉”を意識すると縁が続きます。';
+  else if(((sc.比肩||0)+(sc.劫財||0))>=3)kuse='比劫が強め＝独占欲や張り合いが出やすい。相手の自由も認めると安定します。';
+  else if(rels.some&&rels.some(function(r){return /冲|刑|害|破/.test(r.kind)&&(r.branches||[]).indexOf(db)>=0;}))kuse='配偶者宮が揺れやすい配置＝環境の変化で別れやすい。焦らず“落ち着ける相手”を選ぶと吉。';
+  else kuse='大きな別れのクセは強くありません。あなたのペースで縁を育てて大丈夫。';
+  function q(qt,at){return '<div style="margin:0 0 8px"><div style="font-weight:700;color:var(--accent)">Q. '+qt+'</div><div class="tr">'+at+'</div></div>';}
+  var a1=(firstMonth?'まず<b>'+esc(firstMonth.y)+'年'+esc(firstMonth.m)+'月ごろ</b>が近い“動きやすい月”。':'')+(nextLove?'年で見ると<b>'+esc(nextLove.year)+'年</b>ごろ恋愛運が高まります。':'この先は月ごとの出会いのチャンスを大切に。')+(decLove?'いまは<b>恋の追い風の10年</b>なので、動くほど縁が来ます。':'');
+  var a2=nextMar
+    ?'次に結婚のご縁が高まるのは<b>'+esc(nextMar.year)+'年'+(nextMar.age!=null?'（'+esc(nextMar.age)+'歳ごろ）':'')+'</b>。'+(decLove?'今の10年は結婚に向く追い風期なので、この年はとくに有力です。':'相手の有無や行動で前後しますが、良縁を育てる意識でどうぞ。')
+    :'強い結婚サインは数年内には目立ちませんが、'+(decLove?'今の10年が結婚に向く追い風期です。動くほど縁が近づきます。':'今は“良縁を見極める目”を育てる準備期。次の縁期に向けて整えましょう。');
+  var a3='つらいですよね。まず<b>'+esc(kuse)+'</b>'+(nextRec?'そのうえで、次に縁が結び直し・安定しやすいのは<b>'+esc(nextRec.year)+'年</b>ごろです。':'焦らず、次の良縁の準備を。');
+  var faqHtml='<div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0 0 12px"><b class="sech">💬 よく聞かれることへの答え（あなたの運から）</b>'
+    +q('いつ出会い・恋愛が動く？',a1)+q('いつ結婚のご縁が来る？',a2)+q('いつも別れて辛い…次はいつ安定する？',a3)
+    +'<p class="note" style="margin:0">※どれも命式・運から出した“縁が動きやすい目安”です。運が半分・行動が半分——動く時期に動くほど現実になります。</p></div>';
+  return faqHtml+monthHtml
+    +'<p style="margin:0 0 8px">これから約15年ぶんの“運の見取り図”です。<b>★＝今年</b>／<b>タグをタップ</b>で詳しいカードへ。<b>どの年にも必ず“テーマ”があります</b>（空の年はありません）。</p><div class="tline">'+body+'</div>'
     +'<p class="note" style="margin:8px 0 0">💕恋愛 💍結婚 💔別れ注意 🔁復縁 👶子宝 🧳転職・引越 💰金運 🩺健康注意 📚学び ｜ くわしい理由は各テーマのカードでご覧いただけます。</p>';
 }
 /* --- 失恋・お別れの暗示 --- */
