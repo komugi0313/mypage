@@ -1720,6 +1720,8 @@ function renderSolo(p,inp){
   // 空亡（天中殺）が来る年
   H+='<div class="card"><h2>空亡（天中殺）が来る年</h2>'+kuboYearsCard(c)+'</div>';
   H+=seinenChusatsuCard(p);  /* 年柱が空亡なら生年中殺の宿命を出力 */
+  // 運勢カレンダー（各時期カードの一望サマリー）
+  H+='<div class="card"><h2>🗓 運勢カレンダー（これから約15年の一望）</h2>'+calendarCard(p,inp.sex)+'</div>';
   // 恋愛・結婚の時期
   H+='<div class="card"><h2>恋愛・結婚の時期</h2>'+loveMarriageCard(c,inp.sex)+'</div>';
 
@@ -2216,6 +2218,29 @@ function lifeTimingBand(rows,icon,title,color,note){
   return '<p style="margin:12px 0 3px"><b class="sech" style="color:'+color+'">'+icon+' '+title+'</b></p><div class="tline">'
     +rows.map(function(r){return '<div class="tItem"><div class="ty">'+icon+' '+esc(r.year)+'年'+(r.age!=null?'（'+esc(r.age)+'歳ごろ）':'')+' '+elGz(r.ganzhi)+'</div><div class="tr">'+r.reasons.map(function(x){return '・'+esc(x);}).join('<br>')+'</div></div>';}).join('')
     +'</div>'+(note?'<p class="note" style="margin:6px 0 0">'+note+'</p>':'');
+}
+/* 運勢カレンダー：各“時期”関数の結果を年ごとに集約して一望表示（新しい占いロジックは足さず、既存結果をまとめるだけ） */
+function calendarCard(p,sex){
+  var c=p.pro,by=birthYearOf(c),cy=((c.now||{}).year)||0,af=(c.annualFortunes||[]);
+  if(!cy||!af.length)return '<p class="note">生年月日を入れると、年ごとの運勢カレンダーが表示されます。</p>';
+  var tag={};
+  function put(y,t){(tag[y]=tag[y]||[]);if(tag[y].indexOf(t)<0)tag[y].push(t);}
+  function add(rows,t){rows.forEach(function(r){put(r.year,t);});}
+  romanceRows(c,sex).forEach(function(r){if(r.mar&&r.mar.length)put(r.year,'💍結婚');if(r.love&&r.love.length)put(r.year,'💕恋愛');});
+  add(breakupCautionYears(c,sex),'💔別れ注意');
+  add(reconcileYears(c,sex),'🔁復縁');
+  add(childTiming(c,sex),'👶子宝');
+  add(moveTiming(c),'🧳転職・引越');
+  add(moneyTiming(c),'💰金運');
+  add(healthTiming(c,p.sType),'🩺健康注意');
+  add(studyTiming(c),'📚学び');
+  var body=af.filter(function(a){return a.year>=cy&&a.year<=cy+14;}).map(function(a){
+    var age=(by!=null?a.year-by:null),ts=tag[a.year]||[],cur=(a.year===cy);
+    return '<div class="tItem'+(cur?' mar':'')+'"><div class="ty">'+(cur?'★ ':'')+esc(a.year)+'年'+(age!=null?'（'+esc(age)+'歳）':'')+' '+elGz(a.ganzhi)+(cur?' <span class="pill">今年</span>':'')+'</div><div class="tr">'
+      +(ts.length?ts.map(function(t){return '<span class="kchip" style="margin:2px 4px 2px 0">'+t+'</span>';}).join(''):'<span class="note">大きな山はなく、力を蓄える・整える年</span>')+'</div></div>';
+  }).join('');
+  return '<p style="margin:0 0 8px">これから約15年ぶんの“運の見取り図”です。年ごとに、どんなテーマの縁・チャンス・注意が巡るかを一望できます（下の各カードの要約）。<b>★＝今年</b>。</p><div class="tline">'+body+'</div>'
+    +'<p class="note" style="margin:8px 0 0">💕恋愛 💍結婚 💔別れ注意 🔁復縁 👶子宝 🧳転職・引越 💰金運 🩺健康注意 📚学び ｜ くわしい理由は各テーマのカードでご覧いただけます。</p>';
 }
 /* --- 失恋・お別れの暗示 --- */
 function pcBreakup(p,sex){var c=p.pro,sc=starCounts(c),female=(sex!=="male"),rels=(window.natalRelationsX?window.natalRelationsX(c):[]),db=c.pillars[2].branch,ds=c.pillars[2].ganzhi[0],pos=[],L=[];
