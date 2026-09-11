@@ -941,7 +941,7 @@ function renderSolo(p,inp){
   // 運勢カレンダー（各時期カードの一望サマリー）
   H+='<div class="card"><h2>🗓 運勢カレンダー（これから約15年の一望）</h2>'+calendarCard(p,inp.sex)+'</div>';
   // 恋愛・結婚の時期
-  H+='<div class="card"><h2>恋愛・結婚の時期</h2>'+loveMarriageCard(c,inp.sex)+'</div>';
+  H+='<div class="card" id="card-love"><h2>恋愛・結婚の時期</h2>'+loveMarriageCard(c,inp.sex)+'</div>';
 
   // 年運（一覧グリッドは廃止し、詳細リストに集約。今年へ自動スクロール）
   var cy=now.year;
@@ -1437,6 +1437,9 @@ function lifeTimingBand(rows,icon,title,color,note){
     +rows.map(function(r){return '<div class="tItem"><div class="ty">'+icon+' '+esc(r.year)+'年'+(r.age!=null?'（'+esc(r.age)+'歳ごろ）':'')+' '+elGz(r.ganzhi)+'</div><div class="tr">'+r.reasons.map(function(x){return '・'+esc(x);}).join('<br>')+'</div></div>';}).join('')
     +'</div>'+(note?'<p class="note" style="margin:6px 0 0">'+note+'</p>':'');
 }
+/* カレンダーのタグ→該当カードへスムーズスクロール＆一瞬ハイライト */
+var TAG_CARD={'💕恋愛':'card-love','💍結婚':'card-love','👶子宝':'card-love','💔別れ注意':'card-breakup','🔁復縁':'card-breakup','🧳転職・引越':'card-job','📚学び':'card-job','💰金運':'card-money','🩺健康注意':'card-health'};
+function jumpCard(id){var el=document.getElementById(id);if(!el)return;try{el.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){el.scrollIntoView();}el.style.transition='box-shadow .3s';el.style.boxShadow='0 0 0 3px var(--title)';setTimeout(function(){el.style.boxShadow='';},1300);}
 /* 運勢カレンダー：各“時期”関数の結果を年ごとに集約して一望表示（新しい占いロジックは足さず、既存結果をまとめるだけ） */
 function calendarCard(p,sex){
   var c=p.pro,by=birthYearOf(c),cy=((c.now||{}).year)||0,af=(c.annualFortunes||[]);
@@ -1455,9 +1458,9 @@ function calendarCard(p,sex){
   var body=af.filter(function(a){return a.year>=cy&&a.year<=cy+14;}).map(function(a){
     var age=(by!=null?a.year-by:null),ts=tag[a.year]||[],cur=(a.year===cy);
     return '<div class="tItem'+(cur?' mar':'')+'"><div class="ty">'+(cur?'★ ':'')+esc(a.year)+'年'+(age!=null?'（'+esc(age)+'歳）':'')+' '+elGz(a.ganzhi)+(cur?' <span class="pill">今年</span>':'')+'</div><div class="tr">'
-      +(ts.length?ts.map(function(t){return '<span class="kchip" style="margin:2px 4px 2px 0">'+t+'</span>';}).join(''):'<span class="note">大きな山はなく、力を蓄える・整える年</span>')+'</div></div>';
+      +(ts.length?ts.map(function(t){var cid=TAG_CARD[t];return '<span class="kchip" style="margin:2px 4px 2px 0'+(cid?';cursor:pointer':'')+'"'+(cid?' onclick="jumpCard(\''+cid+'\')"':'')+'>'+t+'</span>';}).join(''):'<span class="note">大きな山はなく、力を蓄える・整える年</span>')+'</div></div>';
   }).join('');
-  return '<p style="margin:0 0 8px">これから約15年ぶんの“運の見取り図”です。年ごとに、どんなテーマの縁・チャンス・注意が巡るかを一望できます（下の各カードの要約）。<b>★＝今年</b>。</p><div class="tline">'+body+'</div>'
+  return '<p style="margin:0 0 8px">これから約15年ぶんの“運の見取り図”です。年ごとに、どんなテーマの縁・チャンス・注意が巡るかを一望できます（下の各カードの要約）。<b>★＝今年</b>／<b>タグをタップ</b>すると、その詳しいカードへ移動します。</p><div class="tline">'+body+'</div>'
     +'<p class="note" style="margin:8px 0 0">💕恋愛 💍結婚 💔別れ注意 🔁復縁 👶子宝 🧳転職・引越 💰金運 🩺健康注意 📚学び ｜ くわしい理由は各テーマのカードでご覧いただけます。</p>';
 }
 /* --- 失恋・お別れの暗示 --- */
@@ -1615,12 +1618,12 @@ function pcLoveProfile(p,sex){var c=p.pro,ds=c.pillars[2].ganzhi[0],db=c.pillars
   return H;}
 function detailProfileCards(p,sex){var H='';
   H+='<div class="card"><h2>あなた特有の個性</h2>'+pcIndividuality(p)+'</div>';
-  H+='<div class="card"><h2>向いている仕事・向いていない仕事</h2>'+pcJob(p)+'</div>';
-  H+='<div class="card"><h2>金銭感覚</h2>'+pcMoney(p)+'</div>';
-  H+='<div class="card"><h2>健康：身体の弱いところ</h2>'+pcHealth(p)+'</div>';
+  H+='<div class="card" id="card-job"><h2>向いている仕事・向いていない仕事</h2>'+pcJob(p)+'</div>';
+  H+='<div class="card" id="card-money"><h2>金銭感覚</h2>'+pcMoney(p)+'</div>';
+  H+='<div class="card" id="card-health"><h2>健康：身体の弱いところ</h2>'+pcHealth(p)+'</div>';
   H+='<div class="card"><h2>霊感・直感（スピリチュアル資質）</h2>'+pcSpirit(p)+'</div>';
   H+='<div class="card"><h2>恋愛の傾向・配偶者像・魅力タイプ</h2>'+pcLoveProfile(p,sex)+'</div>';
-  H+='<div class="card"><h2>恋愛の深層：不倫傾向・別れの暗示・失恋の言葉</h2>'
+  H+='<div class="card" id="card-breakup"><h2>恋愛の深層：不倫傾向・別れの暗示・失恋の言葉</h2>'
      +'<div><b class="sech">◆ 不倫・一線を越えやすい傾向</b>'+pcAffair(p,sex)+'</div>'
      +'<div style="margin-top:10px;border-top:1px solid var(--soft);padding-top:8px"><b class="sech">◆ 失恋・お別れの暗示</b>'+pcBreakup(p,sex)+'</div>'
      +'<div style="margin-top:10px;border-top:1px solid var(--soft);padding-top:8px"><b class="sech">◆ 失恋したときにかける言葉</b>'+pcHeal(p)+'</div></div>';
