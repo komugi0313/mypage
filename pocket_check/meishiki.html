@@ -1310,8 +1310,39 @@ function breakupCautionYears(c,sex){
   });
   return out.slice(0,8);
 }
+/* 復縁・縁が結び直されやすい年を、本人の運（年運）だけから抽出（相手の生年月日は不要）。
+   配偶者宮（日支）との支合・日干との干合・配偶者星（女性=正官/男性=正財）の巡り＝縁が結ばれ直す通説サイン */
+function reconcileYears(c,sex){
+  var db=c.pillars[2].branch,ds=c.pillars[2].ganzhi[0],rk=RIKUGOU[db],gou=GANGOU[ds],by=birthYearOf(c),female=(sex!=="male"),cy=((c.now||{}).year)||0,out=[];
+  (c.annualFortunes||[]).forEach(function(a){
+    var yb=a.branch||a.ganzhi[1],ys=a.stem||a.ganzhi[0],ten=a.tenStar||"",age=(by!=null?a.year-by:null),r=[];
+    if(age!=null&&age<16)return;
+    if(cy&&a.year<cy-1)return;
+    if(yb===rk)r.push('配偶者宮（日支'+db+'）と支合＝離れた縁が結び直されやすい、寄りを戻しやすい年');
+    if(gou&&ys===gou)r.push('日干と干合（'+ds+'＋'+ys+'）＝強く引き合い、縁がつながり直しやすい年');
+    if(female&&ten==='正官')r.push('夫・恋人の星（正官）が巡る＝真剣な縁・関係の再構築に進みやすい年');
+    if(!female&&ten==='正財')r.push('妻・恋人の星（正財）が巡る＝家庭・安定した縁を結び直しやすい年');
+    if(r.length)out.push({year:a.year,age:age,ganzhi:a.ganzhi,reasons:r});
+  });
+  return out.slice(0,8);
+}
+/* 相手の“生まれ年だけ”で、あなたの日柱との引き合い/ぶつかりをざっくり判定（年干支×日柱） */
+function exReconcileCheck(btn,db,ds){
+  var box=document.getElementById('exOut'); if(!box)return;
+  var el=document.getElementById('exYear'),y=parseInt((el&&el.value)||'',10);
+  if(!y||y<1900||y>2100){box.innerHTML='<span style="color:var(--warn)">相手の生まれ年を西暦4桁で入れてください（例 1990）。</span>';return;}
+  var ST=['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'],BR=['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  var es=ST[((y-4)%10+10)%10],eb=BR[((y-4)%12+12)%12],msgs=[];
+  if(RIKUGOU[db]===eb)msgs.push('あなたの日支<b>'+db+'</b>と相手の年支<b>'+eb+'</b>が<b>支合</b>＝惹かれ合い、寄りを戻しやすい縁。');
+  if(GANGOU[ds]===es)msgs.push('あなたの日干<b>'+ds+'</b>と相手の年干<b>'+es+'</b>が<b>干合</b>＝強く引き合い、離れがたい縁。');
+  var sango=[['申','子','辰'],['亥','卯','未'],['寅','午','戌'],['巳','酉','丑']];
+  if(sango.some(function(g){return g.indexOf(db)>=0&&g.indexOf(eb)>=0&&db!==eb;}))msgs.push('日支<b>'+db+'</b>と年支<b>'+eb+'</b>が<b>三合の関係</b>＝協力し合える相性のよい縁。');
+  if(CHONG[db]===eb)msgs.push('あなたの日支<b>'+db+'</b>と相手の年支<b>'+eb+'</b>が<b>冲</b>＝刺激的だがぶつかりやすい。戻すなら、同じ衝突を繰り返さない工夫を。');
+  if(!msgs.length)msgs.push('年支・年干での目立つ引き合い・ぶつかりは出ていません（＝良くも悪くも“ふつう”）。');
+  box.innerHTML='<b>相手（'+y+'年・'+es+eb+'）×あなた（日柱'+ds+db+'）</b><br>'+msgs.map(function(m){return '・'+m;}).join('<br>')+'<br><span class="note">※“生まれ年だけ”のざっくり目安です。くわしくは相手の月日も入れて「相性診断」で。</span>';
+}
 /* --- 失恋・お別れの暗示 --- */
-function pcBreakup(p,sex){var c=p.pro,sc=starCounts(c),female=(sex!=="male"),rels=(window.natalRelationsX?window.natalRelationsX(c):[]),db=c.pillars[2].branch,pos=[],L=[];
+function pcBreakup(p,sex){var c=p.pro,sc=starCounts(c),female=(sex!=="male"),rels=(window.natalRelationsX?window.natalRelationsX(c):[]),db=c.pillars[2].branch,ds=c.pillars[2].ganzhi[0],pos=[],L=[];
   L.push('<p style="margin:0 0 8px">お別れの“暗示”は、こわがらせるためのものではありません。あらかじめ知っておけば、時期や相手選びで十分にやわらげられます。あなたの縁が揺れやすいポイントを、そっとお伝えします。</p>');
   var dayHit=rels.filter(function(r){return /冲|刑|害|破/.test(r.kind)&&(r.branches||[]).indexOf(db)>=0;});
   if(dayHit.length)pos.push('配偶者宮（日支'+db+'）に'+dayHit.map(function(r){return r.kind;}).join('・')+'＝家庭・パートナー面が揺れやすく、別れ・すれ違いの暗示');
@@ -1327,7 +1358,19 @@ function pcBreakup(p,sex){var c=p.pro,sc=starCounts(c),female=(sex!=="male"),rel
     L.push('<div class="tline">'+bc.map(function(r){return '<div class="tItem"><div class="ty">'+esc(r.year)+'年'+(r.age!=null?'（'+esc(r.age)+'歳ごろ）':'')+' '+elGz(r.ganzhi)+'</div><div class="tr">'+r.reasons.map(function(x){return '・'+esc(x);}).join('<br>')+'</div></div>';}).join('')+'</div>');
     L.push('<p class="note" style="margin:6px 0 0">※“縁が揺れやすい年”の目安で、必ず別れるという意味ではありません。冲・空亡の年ほど、勢いで大きな決断をせず丁寧に向き合うと乗り越えられます。</p>');
   }
-  L.push('<p class="note" style="margin:10px 0 0"><b>相手の生年月日がわからなくても</b>、あなた自身の命式と運から「別れやすいクセ」「揺れやすい時期」はここまで読めます。ただし“その特定の相手とうまくいくか・復縁できるか”は、お相手の生年月日（せめて生まれ年）があると精度がぐっと上がります。</p>');
+  var ry=reconcileYears(c,sex);
+  if(ry.length){
+    L.push('<p style="margin:12px 0 3px"><b class="sech" style="color:var(--good)">◆ 復縁・縁が結び直されやすい年（あなたの運だけで読めます）</b></p>');
+    L.push('<div class="tline">'+ry.map(function(r){return '<div class="tItem mar"><div class="ty">🔁 '+esc(r.year)+'年'+(r.age!=null?'（'+esc(r.age)+'歳ごろ）':'')+' '+elGz(r.ganzhi)+'</div><div class="tr">'+r.reasons.map(function(x){return '・'+esc(x);}).join('<br>')+'</div></div>';}).join('')+'</div>');
+    L.push('<p class="note" style="margin:6px 0 0">※“縁がつながり直しやすい年”の目安です。復縁を望むなら、この年に無理なく連絡・再会の機会をつくると自然に進みやすいとされます。</p>');
+  }
+  L.push('<p class="note" style="margin:10px 0 0"><b>相手の生年月日がわからなくても</b>、あなた自身の命式と運から「別れやすいクセ」「揺れやすい時期」「復縁しやすい年」はここまで読めます。ただし“その特定の相手とうまくいくか”は、お相手の生年月日（せめて生まれ年）があると精度がぐっと上がります。</p>');
+  L.push('<div style="margin-top:12px;border-top:1px dashed var(--line);padding-top:8px">'
+    +'<p style="margin:0 0 6px"><b class="sech">◆ 元カレ・元カノとの“縁”ざっくりチェック（生まれ年だけでOK）</b></p>'
+    +'<p class="note" style="margin:0 0 6px">相手の生年月日が全部わからなくても、<b>生まれた年</b>だけで、あなたの日柱との“引き合い／ぶつかり”の目安が出せます。</p>'
+    +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><input id="exYear" type="number" inputmode="numeric" placeholder="相手の生まれ年（例 1990）" style="flex:1;min-width:150px;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:15px;background:var(--card);color:var(--ink)">'
+    +'<button type="button" onclick="exReconcileCheck(this,\''+db+'\',\''+ds+'\')" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer">縁を見る</button></div>'
+    +'<div id="exOut" class="note" style="margin-top:8px"></div></div>');
   return L.join("");}
 
 /* --- 失恋したときにかける言葉 --- */
