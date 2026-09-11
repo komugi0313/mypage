@@ -1092,6 +1092,7 @@ var CARD_LEAD=[
  ["この人の特徴","あなたの<b>強み10</b>と<b>気をつけたい点10</b>"],
  ["持って生まれた使命","あなたが<b>いちばん輝く生き方</b>の道しるべ"],
  ["五行","<b>木・火・土・金・水</b>のバランス。多い/少ない気と、開運の方向"],
+ ["運と命式の干支関係","<b>大運・年運・月</b>が命式と作る<b>合・冲刑破害・干合</b>の成立"],
  ["干支関係","命式の中の支どうしの<b>結びつき</b>や<b>ぶつかり</b>"],
  ["魁罡","四柱推命で<b>最も気が強い5つの日柱</b>「魁罡」に生まれた人の、強烈な個性"],
  ["神殺","命式に付く<b>ラッキーの星・注意の星</b>"],
@@ -1377,6 +1378,46 @@ function monthlyRomance(c,sex,ahead){var db=c.pillars[2].branch,ds=c.pillars[2].
     m++;if(m>12){m=1;y++;}}
   return out;}
 /* 恋愛・結婚の時期 — 視覚化カード */
+/* ===== 運×命式の干支関係（各層で 合・冲刑破害・干合 を拾う）＝見落とし対策・追加のみ ===== */
+/* 干合：transitの干（大運/年運/月）が、命式のどの柱の干と干合するか */
+function transitKangouStems(c,stem){var g=GANGOU[stem];if(!g)return [];var out=[];(c.pillars||[]).forEach(function(p){if(p.ganzhi&&p.ganzhi[0]===g)out.push((p.label||'').charAt(0)||'');});return out;}
+/* transitの干支（例：大運の甲子）と命式の関係を短い文字列の配列で返す（支はエンジンtransitRels、干は干合を自前で） */
+function transitRelParts(c,gz){if(!gz||gz.length<2)return [];var parts=[];
+  var rels=window.transitRels?window.transitRels(c,gz.charAt(1)):[];
+  rels.forEach(function(r){
+    if(r.kind==='三合成立')parts.push('三合成立('+esc(r.el)+')');
+    else if(r.kind==='半会成立')parts.push('半会('+esc(r.el)+')');
+    else if(r.kind==='方合成立')parts.push('方合成立('+esc(r.el)+')');
+    else if(r.kind==='六合')parts.push('六合'+(r.to?'→'+esc(r.to):''));
+    else if(r.kind==='冲')parts.push('冲'+(r.to?'→'+esc(r.to):''));
+    else if(r.kind==='刑')parts.push('刑'+(r.to?'→'+esc(r.to):''));
+    else if(r.kind==='破')parts.push('破'+(r.to?'→'+esc(r.to):''));
+    else if(r.kind==='害')parts.push('害'+(r.to?'→'+esc(r.to):''));
+  });
+  var kg=transitKangouStems(c,gz.charAt(0));if(kg.length)parts.push('干合→'+esc(kg.join(''))+'柱');
+  return parts;}
+function relRow(label,gz,parts,cur){var s=parts.join('');var warn=/冲|刑|破|害/.test(s),good=/三合|方合|六合|半会|干合/.test(s);
+  return '<div class="tItem" style="border-left-color:'+(good?'var(--good)':warn?'var(--warn)':'var(--line)')+'"><div class="ty">'+esc(label)+'　'+elGz(gz)+(cur?' <span class="pill">今</span>':'')+'</div><div class="tr">'+(parts.length?parts.join(' ／ '):'<span class="note">目立つ関係なし</span>')+'</div></div>';}
+function unTransitCard(c){var now=c.now||{},cy=now.year,dl=daeunList(c),H='';
+  var curD=dl.cur>=0?dl.items[dl.cur]:null,nextD=dl.cur>=0?dl.items[dl.cur+1]:(dl.items[0]||null);
+  H+='<p style="margin:0 0 8px" class="note">大運・年運・月の干支が、あなたの命式と作る<b>三合・方合・六合・冲・刑・破・害・干合</b>の「成立」をまとめました。<span style="color:var(--good)">緑＝結びつき（合）</span>／<span style="color:var(--warn)">赤＝ぶつかり（冲刑破害）</span>。</p>';
+  H+='<p style="margin:0 0 4px"><b class="sech">① 大運（10年運）× 命式</b></p><div class="tline">';
+  if(curD)H+=relRow('今の大運',curD.ganzhi,transitRelParts(c,curD.ganzhi),true);
+  if(nextD)H+=relRow('次の大運',nextD.ganzhi,transitRelParts(c,nextD.ganzhi),false);
+  H+='</div>';
+  var af=(c.annualFortunes||[]).filter(function(a){return a.year>=cy&&a.year<=cy+10;});
+  var yrows=af.map(function(a){var parts=transitRelParts(c,a.ganzhi);return parts.length?relRow(a.year+'年',a.ganzhi,parts,a.year===cy):'';}).filter(Boolean);
+  H+='<p style="margin:12px 0 4px"><b class="sech">② 年運 × 命式</b>（今年〜10年で関係が出る年）</p><div class="tline">'+(yrows.join('')||'<span class="note">この10年で目立つ成立はありません。</span>')+'</div>';
+  var td=new Date(),yy=td.getFullYear(),mm=td.getMonth()+1,mrows=[];
+  for(var k=0;k<12;k++){var mp=monthPillarOf(yy,mm);if(mp){var parts=transitRelParts(c,mp.ganzhi);if(parts.length)mrows.push(relRow(yy+'年'+mm+'月',mp.ganzhi,parts,false));}mm++;if(mm>12){mm=1;yy++;}}
+  H+='<p style="margin:12px 0 4px"><b class="sech">③ 月運 × 命式</b>（これから12ヶ月で関係が出る月）</p><div class="tline">'+(mrows.join('')||'<span class="note">この1年の各月で目立つ成立はありません。</span>')+'</div>';
+  var comboLines=[];
+  if(curD){[cy,cy+1].forEach(function(Y){var ya=(c.annualFortunes||[]).filter(function(a){return a.year===Y;})[0];if(!ya)return;
+    var cr=window.comboRels?window.comboRels(c,curD.ganzhi.charAt(1),ya.ganzhi.charAt(1)):[];
+    cr.forEach(function(x){comboLines.push(Y+'年：命式の<b>'+esc(x.natal)+'</b>＋大運<b>'+esc(x.daiun)+'</b>＋年運<b>'+esc(x.year)+'</b> で <b style="color:var(--good)">'+(x.kind==='三合成立'?'三合会局':'方合')+'('+esc(x.el)+')</b>完成');});});}
+  if(comboLines.length)H+='<p style="margin:12px 0 4px"><b class="sech">④ 三者持ち寄りの会局成立</b>（命式＋大運＋年運）</p><ul style="margin:0;padding-left:1.2em;line-height:1.85">'+comboLines.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';
+  else H+='<p style="margin:12px 0 4px"><b class="sech">④ 三者持ち寄りの会局成立</b>（命式＋大運＋年運）</p><p class="note" style="margin:0">今年・来年では、三者がそろって会局が完成する年はありません。</p>';
+  return H;}
 function loveMarriageCard(c,sex){var rows=romanceRows(c,sex),now=c.now||{},cy=now.year,ks=kuboSet(c),by=birthYearOf(c),female=(sex!=="male");
   var adult=function(r){return r.age==null||r.age>=16;}; /* 結婚・恋愛の目安は思春期以降に限定（幼少期の年は除外） */
   var loveY=rows.filter(function(r){return r.love.length&&adult(r);}),marY=rows.filter(function(r){return r.mar.length&&adult(r);});
@@ -1535,8 +1576,12 @@ function renderSolo(p,inp){
 
   // 干支関係
   var rels=window.natalRelationsX?window.natalRelationsX(c):[];
-  H+='<div class="card"><h2>干支関係（三合・方合・冲・刑・害・破・合）</h2>';
-  if(rels.length){ H+=rels.map(function(r){var warn=/冲|刑|害|破/.test(r.kind);return '<span class="tag '+(warn?"warn":"rel")+'"><b>'+esc(r.kind)+'</b> '+(r.branches||[]).map(elB).join("")+'<span class="note"> '+(REL_JP[r.kind]||"")+'</span></span>';}).join(""); }
+  /* 命式内の干合（隣り合う柱に限らず全柱の干どうし）を追加検出 */
+  var natKg=[],_pil=c.pillars||[];
+  for(var _i=0;_i<_pil.length;_i++)for(var _j=_i+1;_j<_pil.length;_j++){var s1=_pil[_i].ganzhi[0],s2=_pil[_j].ganzhi[0];if(GANGOU[s1]===s2)natKg.push([(_pil[_i].label||'').charAt(0)+s1,(_pil[_j].label||'').charAt(0)+s2]);}
+  H+='<div class="card"><h2>干支関係（三合・方合・冲・刑・害・破・合・干合）</h2>';
+  if(rels.length||natKg.length){ H+=rels.map(function(r){var warn=/冲|刑|害|破/.test(r.kind);return '<span class="tag '+(warn?"warn":"rel")+'"><b>'+esc(r.kind)+'</b> '+(r.branches||[]).map(elB).join("")+'<span class="note"> '+(REL_JP[r.kind]||"")+'</span></span>';}).join("");
+    H+=natKg.map(function(pr){return '<span class="tag rel"><b>干合</b> '+esc(pr.join(''))+'<span class="note"> 干どうしの強い引き合い</span></span>';}).join(""); }
   else H+='<p class="note" style="margin:0">目立つ干支関係はありません（対立も強い偏りも少ない安定型）。</p>';
   H+='</div>';
 
@@ -1566,6 +1611,7 @@ function renderSolo(p,inp){
   // 年運（一覧グリッドは廃止し、詳細リストに集約。今年へ自動スクロール）
   var cy=now.year;
   H+='<div class="card"><h2>年運</h2><p class="note" style="margin:0 0 4px">立春で切り替わります。今年（'+esc(cy||"-")+'）を強調表示。</p>'+annualDetail(c,p.fav,inp.sex)+'</div>';
+  H+='<div class="card"><h2>運と命式の干支関係（大運・年運・月の成立）</h2>'+unTransitCard(c)+'</div>';
 
   // 解析（ルールベース）
   H+='<div class="card"><h2>解析（自動）</h2>'+analyzeSolo(p)+'</div>';
