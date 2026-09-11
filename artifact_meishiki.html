@@ -1279,26 +1279,44 @@ function daeunDetail(c,fav,sex){var dl=daeunList(c);
 var RIKUGOU={子:"丑",丑:"子",寅:"亥",亥:"寅",卯:"戌",戌:"卯",辰:"酉",酉:"辰",巳:"申",申:"巳",午:"未",未:"午"};
 var CHONG={子:"午",午:"子",丑:"未",未:"丑",寅:"申",申:"寅",卯:"酉",酉:"卯",辰:"戌",戌:"辰",巳:"亥",亥:"巳"};
 var PEACH={申:"酉",子:"酉",辰:"酉",寅:"卯",午:"卯",戌:"卯",巳:"午",酉:"午",丑:"午",亥:"子",卯:"子",未:"子"};
+/* 紅艶殺（日干→この支が巡ると強い色気・魅力／異性運）。通説の紅艷煞：戊己怕辰・六丙逢寅…等 */
+var KOUEN={甲:"午",乙:"午",丙:"寅",丁:"未",戊:"辰",己:"辰",庚:"戌",辛:"酉",壬:"子",癸:"申"};
+/* 干合（日干とこの干が巡ると縁が強く結ばれる：甲己/乙庚/丙辛/丁壬/戊癸） */
+var GANGOU={甲:"己",己:"甲",乙:"庚",庚:"乙",丙:"辛",辛:"丙",丁:"壬",壬:"丁",戊:"癸",癸:"戊"};
+/* 十神（通変星）を日主と相手の干から算出。年運・大運はエンジン提供の値を使い、月運はこれで計算する */
+var STEM_YANG={甲:1,丙:1,戊:1,庚:1,壬:1,乙:0,丁:0,己:0,辛:0,癸:0};
+var EL_GEN={木:"火",火:"土",土:"金",金:"水",水:"木"};   /* 我生（day generates） */
+var EL_KE ={木:"土",土:"水",水:"火",火:"金",金:"木"};   /* 我克（day controls） */
+function tenGodOf(day,other){ if(!day||!other)return "";
+  var de=MSTEM_EL[day],oe=MSTEM_EL[other],same=(STEM_YANG[day]===STEM_YANG[other]);
+  if(de===oe) return same?"比肩":"劫財";
+  if(EL_GEN[de]===oe) return same?"食神":"傷官";
+  if(EL_KE[de]===oe) return same?"偏財":"正財";
+  if(EL_KE[oe]===de) return same?"偏官":"正官";
+  if(EL_GEN[oe]===de) return same?"偏印":"印綬";
+  return "";}
 function kuboSet(c){var k=(window.kuboX?window.kuboX(c):[])||[],s={};k.forEach(function(b){s[b]=1;});return {set:s,list:k};}
 function birthYearOf(c){var n=c.now||{};return (n.year!=null&&n.age!=null)?n.year-n.age:null;}
 /* 各年の恋愛・結婚シグナル（配偶者宮＝日支との支合/冲・配偶者星の巡り・桃花） */
-function romanceRows(c,sex){var db=c.pillars[2].branch,peach=PEACH[db],rk=RIKUGOU[db],ch=CHONG[db],female=(sex!=="male"),by=birthYearOf(c);
-  return (c.annualFortunes||[]).map(function(a){var yb=a.branch||a.ganzhi[1],ten=a.tenStar||"",love=[],mar=[];
+function romanceRows(c,sex){var db=c.pillars[2].branch,ds=c.pillars[2].ganzhi[0],peach=PEACH[db],rk=RIKUGOU[db],ch=CHONG[db],koe=KOUEN[ds],gou=GANGOU[ds],female=(sex!=="male"),by=birthYearOf(c);
+  return (c.annualFortunes||[]).map(function(a){var yb=a.branch||a.ganzhi[1],ys=a.stem||a.ganzhi[0],ten=a.tenStar||"",love=[],mar=[];
     if(yb===rk)mar.push("配偶者宮（日支"+db+"）と支合＝縁が強く結ばれる、結婚の代表サイン");
     if(female&&ten==="正官")mar.push("正官が巡る＝女性にとって夫の星。良縁・結婚に進みやすい");
     if(!female&&ten==="正財")mar.push("正財が巡る＝男性にとって妻・家庭の星。身を固めやすい");
+    if(gou&&ys===gou)mar.push("日干と干合（"+ds+"＋"+ys+"）＝相手と縁が強く引き合う、結ばれやすい年");
     if(yb===peach)love.push("桃花＝人気運・異性を惹きつける魅力が高まる");
+    if(koe&&yb===koe)love.push("紅艶＝強い色気・魅力が出て、異性を惹きつけやすい年");
     if(female&&ten==="偏官")love.push("偏官が巡る＝刺激的な出会い・恋愛が動きやすい");
     if(!female&&ten==="偏財")love.push("偏財が巡る＝華やかな異性運・恋愛が動きやすい");
     if(yb===ch)love.push("配偶者宮（日支"+db+"）と冲＝環境が動き、出会い/別れのきっかけ");
     return {year:a.year,age:(by!=null?a.year-by:null),ganzhi:a.ganzhi,branch:yb,ten:ten,love:love,mar:mar};});}
 function annualDetail(c,fav,sex){var now=c.now||{},cy=now.year,af=(c.annualFortunes||[]),ks=kuboSet(c);
-  var db=c.pillars[2].branch,peach=PEACH[db],rk=RIKUGOU[db],ch=CHONG[db],female=(sex!=="male");
+  var db=c.pillars[2].branch,ds=c.pillars[2].ganzhi[0],peach=PEACH[db],rk=RIKUGOU[db],ch=CHONG[db],koe=KOUEN[ds],gou=GANGOU[ds],female=(sex!=="male");
   var rows=af.map(function(a){var el=a.stemElement||MSTEM_EL[a.stem],ten=a.tenStar||"",ter=a.terrain||"",fv=luckFav(el,fav),en=JUNI_ENERGY[ter]||ter,s=LUCK_SHORT[ten]||ten,cur=(a.year===cy);
-    var yb=a.branch||a.ganzhi[1],bd='';
+    var yb=a.branch||a.ganzhi[1],ys=a.stem||a.ganzhi[0],bd='';
     if(ks.set[yb])bd+=' <span class="ybadge kb">空亡</span>';
-    var isMar=(yb===rk)||(female&&ten==="正官")||(!female&&ten==="正財");
-    var isLove=(yb===peach)||(female&&ten==="偏官")||(!female&&ten==="偏財")||(yb===ch);
+    var isMar=(yb===rk)||(female&&ten==="正官")||(!female&&ten==="正財")||(gou&&ys===gou);
+    var isLove=(yb===peach)||(koe&&yb===koe)||(female&&ten==="偏官")||(!female&&ten==="偏財")||(yb===ch);
     if(isMar)bd+=' <span class="ybadge mar" title="結婚が高まる年">💍</span>';
     if(isLove)bd+=' <span class="ybadge love" title="恋愛が動く年">💕</span>';
     return '<div class="'+(cur?"yNow":"")+'" style="border-top:1px solid var(--soft);padding:6px 2px'+(cur?';background:var(--soft);border-radius:6px;padding:6px':'')+'">'
@@ -1322,6 +1340,41 @@ function kuboYearsCard(c){var ks=kuboSet(c),af=(c.annualFortunes||[]),now=c.now|
     +'<p style="margin:0 0 8px">'+status+'</p>'
     +'<div class="chipwrap">'+chips+'</div>'
     +'<p class="note" style="margin:6px 0 0">★色付き＝今年含む／濃い色＝これから来る空亡／薄い色＝過去。年運カードでも各年に<span class="ybadge kb">空亡</span>を表示しています。</p>';}
+/* 大運（10年運）で「今が縁の時期か」を判定：干の官星/財星・支の桃花/冲/支合/紅艶から縁のサインを拾う */
+function decadeRomance(c,sex){var dl=daeunList(c),db=c.pillars[2].branch,ds=c.pillars[2].ganzhi[0],by=birthYearOf(c),female=(sex!=="male");
+  var peach=PEACH[db],rk=RIKUGOU[db],ch=CHONG[db],koe=KOUEN[ds],gou=GANGOU[ds];
+  var items=dl.items.map(function(d,i){var b=d.branch,st=d.stem,ten=d.tenStar||"",sig=[];
+    if(female&&ten==="正官")sig.push("夫の星（正官）の10年＝結婚・良縁に進みやすい期");
+    if(female&&ten==="偏官")sig.push("恋愛星（偏官）の10年＝異性運・刺激的な出会いが増える期");
+    if(!female&&ten==="正財")sig.push("妻の星（正財）の10年＝家庭を持ちやすい期");
+    if(!female&&ten==="偏財")sig.push("異性運（偏財）の10年＝華やかな出会いが増える期");
+    if(gou&&st===gou)sig.push("日干と干合の10年＝縁が強く引き合う期");
+    if(b===peach)sig.push("桃花の10年＝モテ期・異性を惹きつける魅力が続く");
+    if(koe&&b===koe)sig.push("紅艶の10年＝色気・魅力が高まる期");
+    if(b===rk)sig.push("配偶者宮と支合の10年＝結ばれる縁が強まる期");
+    if(b===ch)sig.push("配偶者宮と冲の10年＝出会い/別れなど関係が動きやすい期");
+    return {i:i,ganzhi:d.ganzhi,startM:d.startM,endM:d.endM,cur:(i===dl.cur),sig:sig,boundary:dl.boundary};});
+  return {items:items,cur:dl.cur,boundary:dl.boundary,by:by};}
+/* 月運（月柱）を日付から算出。年運では拾えない「日々の出会い」の目安を、近い月について出す */
+function monthPillarOf(y,m){try{var r=window.Bazi.computeChart({year:y,month:m,day:15,hour:12,minute:0,sex:'male',correctionMode:'none'});
+  var mp=(r&&r.pillars&&r.pillars[1])||null;return mp?{stem:mp.ganzhi[0],branch:mp.ganzhi[1],ganzhi:mp.ganzhi}:null;}catch(e){return null;}}
+function monthlyRomance(c,sex,ahead){var db=c.pillars[2].branch,ds=c.pillars[2].ganzhi[0],female=(sex!=="male");
+  var peach=PEACH[db],rk=RIKUGOU[db],ch=CHONG[db],koe=KOUEN[ds],gou=GANGOU[ds];
+  var td=new Date(),y=td.getFullYear(),m=td.getMonth()+1,out=[],n=ahead||15;
+  for(var k=0;k<n;k++){var mp=monthPillarOf(y,m);
+    if(mp){var mten=tenGodOf(ds,mp.stem),love=[],mar=[];
+      if(mp.branch===rk)mar.push("配偶者宮と支合＝縁が結ばれやすい月");
+      if(gou&&mp.stem===gou)mar.push("日干と干合＝縁が引き合う月");
+      if(female&&mten==="正官")mar.push("夫の星（正官）月＝真剣な縁が動きやすい");
+      if(!female&&mten==="正財")mar.push("妻の星（正財）月＝家庭的な縁が動きやすい");
+      if(mp.branch===peach)love.push("桃花月＝出会い・人気が高まる");
+      if(koe&&mp.branch===koe)love.push("紅艶月＝色気・魅力が出る");
+      if(female&&mten==="偏官")love.push("恋愛星（偏官）月＝刺激的な出会い");
+      if(!female&&mten==="偏財")love.push("異性運（偏財）月＝華やかな出会い");
+      if(mp.branch===ch)love.push("配偶者宮と冲＝関係が動く・出会い/別れのきっかけ");
+      if(love.length||mar.length)out.push({y:y,m:m,ganzhi:mp.ganzhi,love:love,mar:mar});}
+    m++;if(m>12){m=1;y++;}}
+  return out;}
 /* 恋愛・結婚の時期 — 視覚化カード */
 function loveMarriageCard(c,sex){var rows=romanceRows(c,sex),now=c.now||{},cy=now.year,ks=kuboSet(c),by=birthYearOf(c),female=(sex!=="male");
   var adult=function(r){return r.age==null||r.age>=16;}; /* 結婚・恋愛の目安は思春期以降に限定（幼少期の年は除外） */
@@ -1332,10 +1385,27 @@ function loveMarriageCard(c,sex){var rows=romanceRows(c,sex),now=c.now||{},cy=no
     var reasons=r.mar.concat(r.love).map(function(x){return '・'+esc(x);}).join('<br>');
     return '<div class="tItem '+cls+'"><div class="ty">'+icon+' '+esc(r.year)+'年'+(r.age!=null?'（'+esc(r.age)+'歳ごろ）':'')+' '+elGz(r.ganzhi)+(r.year===cy?' <span class="pill">今年</span>':'')+'</div>'
       +'<div class="tr">'+reasons+(kubu?'<br><span style="color:var(--warn)">※この年は空亡（天中殺）。結婚など大きな決断は慎重に、というのが通説です。</span>':'')+'</div></div>';}).join('');
-  var head='<p style="margin:0 0 8px">配偶者宮（日支<b>'+esc(c.pillars[2].branch)+'</b>）との<b>支合／冲</b>、'+(female?'夫の星＝<b>正官</b>／恋愛の星＝<b>偏官</b>':'妻の星＝<b>正財</b>／恋愛の星＝<b>偏財</b>')+'の巡り、<b>桃花</b>の年から、恋愛・結婚が動きやすい年を機械的に抽出しました（四柱推命の通説ルール）。相手の有無・本人の状況で結果は変わるため<b>「縁が動きやすい時期の目安」</b>としてお使いください。</p>'
-    +'<p style="margin:0 0 3px"><b style="color:#b3225f">💍 結婚の可能性が出てくる年</b></p><div class="chipwrap">'+(marY.length?chips(marY,'💍','#b3225f'):'<span class="note">算出範囲では強い結婚サインは目立ちません。</span>')+'</div>'
+  /* ① 大運（10年運）で「今が縁の時期か」 */
+  var dr=decadeRomance(c,sex),curD=(dr.cur>=0?dr.items[dr.cur]:null);
+  function decAge(d){return dr.boundary?'年齢は目安':ageRange(d.startM,d.endM);}
+  var curLine=curD?(curD.sig.length
+      ? '<b style="color:#c0397a">いまの大運（'+decAge(curD)+'）は「縁の追い風期」です。</b><br>'+curD.sig.map(function(x){return '・'+esc(x);}).join('<br>')
+      : '<b>いまの大運（'+decAge(curD)+'・'+esc(curD.ganzhi)+'）は、結婚・恋愛の強いサインは出ていません。</b>この期は下の<b>年運・月運</b>のタイミングを頼りに、日々の出会いを大切に。')
+    :'現在の大運が特定できませんでした。';
+  var futureDec=dr.items.filter(function(d){return d.i>dr.cur&&d.sig.length;});
+  var nextDecLine=futureDec.length?'<p class="note" style="margin:6px 0 0">次に縁が強まる10年は <b>'+decAge(futureDec[0])+'（'+esc(futureDec[0].ganzhi)+'）</b>：'+esc(futureDec[0].sig[0])+'</p>':'';
+  var decadeBand='<div class="tItem '+((curD&&curD.sig.length)?'love':'')+'" style="margin:0 0 10px"><div class="ty">🌙 大運（10年運）で見る「いまが縁の時期か」</div><div class="tr">'+curLine+'</div></div>'+nextDecLine;
+  /* ③ 月運（月柱）で「これから1年強の出会いが動きやすい月」 */
+  var mr=monthlyRomance(c,sex,15);
+  var monthItems=mr.map(function(r){var cls=r.mar.length?'mar':'love',icon=r.mar.length?'💍':'💕';
+    var reasons=r.mar.concat(r.love).map(function(x){return '・'+esc(x);}).join('<br>');
+    return '<div class="tItem '+cls+'"><div class="ty">'+icon+' '+esc(r.y)+'年'+esc(r.m)+'月 '+elGz(r.ganzhi)+'</div><div class="tr">'+reasons+'</div></div>';}).join('');
+  var monthBand='<p class="note" style="margin:14px 0 4px"><b>📅 これから約1年強の「出会い・恋愛が動きやすい月」（月運）</b>　年運より弱い“追い風”で、日々の出会いのきっかけの目安です。</p><div class="tline">'+(monthItems||'<span class="note">近い月に目立つサインは出ていません（ふだんどおりの月）。出会いは日常の行動しだいで動きます。</span>')+'</div>';
+  var head='<p style="margin:0 0 8px">配偶者宮（日支<b>'+esc(c.pillars[2].branch)+'</b>）との<b>支合／冲</b>、'+(female?'夫の星＝<b>正官</b>／恋愛の星＝<b>偏官</b>':'妻の星＝<b>正財</b>／恋愛の星＝<b>偏財</b>')+'の巡り、<b>桃花・紅艶</b>（色気）、<b>日干との干合</b>（縁）から、恋愛・結婚が動きやすい時期を機械的に抽出しました（四柱推命の通説ルール）。<b>大運（10年）→年→月</b>の順で、大きな流れから日々の出会いまで見られます。相手の有無・本人の行動で結果は変わるため<b>「縁が動きやすい時期の目安」</b>としてお使いください（この年しか恋愛が来ない、という意味ではありません）。</p>'
+    +decadeBand
+    +'<p style="margin:10px 0 3px"><b style="color:#b3225f">💍 結婚の可能性が出てくる年</b></p><div class="chipwrap">'+(marY.length?chips(marY,'💍','#b3225f'):'<span class="note">算出範囲では強い結婚サインは目立ちません。</span>')+'</div>'
     +'<p style="margin:8px 0 3px"><b style="color:#c0397a">💕 恋愛が動きやすい年</b></p><div class="chipwrap">'+(loveY.length?chips(loveY,'💕','#c0397a'):'<span class="note">算出範囲では目立つ恋愛サインは少なめです。</span>')+'</div>';
-  return head+'<p class="note" style="margin:10px 0 4px"><b>近い年から順に理由つきで（今年以降）</b></p><div class="tline">'+(detail||'<span class="note">今年以降で目立つ時期は算出範囲にありません。</span>')+'</div>';}
+  return head+'<p class="note" style="margin:10px 0 4px"><b>近い年から順に理由つきで（今年以降）</b></p><div class="tline">'+(detail||'<span class="note">今年以降で目立つ時期は算出範囲にありません。</span>')+'</div>'+monthBand;}
 /* 節木運（せつぼくうん）：大運の30年季節の継ぎ目＝次の季節に入る直前2〜3年 */
 var BR_SEASON={寅:"木",卯:"木",辰:"木",巳:"火",午:"火",未:"火",申:"金",酉:"金",戌:"金",亥:"水",子:"水",丑:"水"};
 var SEASON_JP={木:"春（木）",火:"夏（火）",金:"秋（金）",水:"冬（水）"};
