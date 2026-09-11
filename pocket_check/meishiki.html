@@ -126,7 +126,9 @@ table{width:100%;border-collapse:collapse;font-size:15.5px}
 .tline{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
 .tItem{border:1px solid var(--line);border-left:5px solid var(--line);border-radius:10px;padding:8px 11px;background:var(--card);min-width:150px}
 .tItem.love{border-left-color:#e05a97}.tItem.mar{border-left-color:#b3225f}.tItem.kb{border-left-color:#555}
-.tItem .ty{font-size:15px;font-weight:800}.tItem .tr{font-size:13px;color:var(--muted);line-height:1.55;margin-top:3px}
+.tItem .ty{font-size:15px;font-weight:800}.tItem .tr{font-size:13px;color:var(--muted);line-height:1.7;margin-top:3px}
+.jx{display:inline-block;border-radius:6px;padding:1px 8px;font-size:11.5px;font-weight:800;margin-left:6px;vertical-align:middle}
+.jxg{background:#e3f3e8;color:#2f7a4e}.jxb{background:#fde3e3;color:#c0453b}.jxmix{background:#fbf0d8;color:#a8791f}
 @media(max-width:560px){.two{grid-template-columns:1fr}.tItem{min-width:0;flex:1 1 100%}}
 @media print{.noprint{display:none}:root{--bg:#fff;--card:#fff;--ink:#000;--soft:#f0f0f0;--line:#ccc}body{background:#fff}.jumpnav{display:none}.kchip,.ybadge{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style>
@@ -342,6 +344,7 @@ var CARD_LEAD=[
  ["五行バランス（二人","二人合わせた<b>気のバランス</b>と補い合い"],
  ["十二運の意味","二人それぞれの<b>エネルギーの質</b>"],
  ["相手の好み","<b>相手の喜ばせ方</b>"],
+ ["二人の開運","二人の支を持ち寄り<b>三合・方合が完成</b>する<b>開運の年・月</b>"],
  ["二人の縁","二人を結ぶ<b>干支・十神の縁</b>"],
  ["運の流れ","二人それぞれの<b>大運・年運</b>"]
 ];
@@ -603,35 +606,44 @@ function monthlyRomance(c,sex,ahead){var db=c.pillars[2].branch,ds=c.pillars[2].
 /* ===== 運×命式の干支関係（各層で 合・冲刑破害・干合 を拾う）＝見落とし対策・追加のみ ===== */
 /* 干合：transitの干（大運/年運/月）が、命式のどの柱の干と干合するか */
 function transitKangouStems(c,stem){var g=GANGOU[stem];if(!g)return [];var out=[];(c.pillars||[]).forEach(function(p){if(p.ganzhi&&p.ganzhi[0]===g)out.push((p.label||'').charAt(0)||'');});return out;}
-/* transitの干支（例：大運の甲子）と命式の関係を短い文字列の配列で返す（支はエンジンtransitRels、干は干合を自前で） */
-function transitRelParts(c,gz){if(!gz||gz.length<2)return [];var parts=[];
+/* transitの干支（例：大運の甲子）と命式の関係を、吉凶つきの構造で返す
+   k: kichi2=大吉(三合/方合成立◎), kichi1=吉(六合/半会○), en=縁(干合♡), kyo2=注意大(冲), kyo1=注意小(刑破害) */
+var REL_ICON={kichi2:'◎',kichi1:'○',en:'♡',kyo2:'⚡',kyo1:'△'};
+function transitRelItems(c,gz){if(!gz||gz.length<2)return [];var items=[];
   var rels=window.transitRels?window.transitRels(c,gz.charAt(1)):[];
   rels.forEach(function(r){
-    if(r.kind==='三合成立')parts.push('三合成立('+esc(r.el)+')');
-    else if(r.kind==='半会成立')parts.push('半会('+esc(r.el)+')');
-    else if(r.kind==='方合成立')parts.push('方合成立('+esc(r.el)+')');
-    else if(r.kind==='六合')parts.push('六合'+(r.to?'→'+esc(r.to):''));
-    else if(r.kind==='冲')parts.push('冲'+(r.to?'→'+esc(r.to):''));
-    else if(r.kind==='刑')parts.push('刑'+(r.to?'→'+esc(r.to):''));
-    else if(r.kind==='破')parts.push('破'+(r.to?'→'+esc(r.to):''));
-    else if(r.kind==='害')parts.push('害'+(r.to?'→'+esc(r.to):''));
+    if(r.kind==='三合成立')items.push({t:'三合成立('+esc(r.el)+')',k:'kichi2'});
+    else if(r.kind==='方合成立')items.push({t:'方合成立('+esc(r.el)+')',k:'kichi2'});
+    else if(r.kind==='半会成立')items.push({t:'半会('+esc(r.el)+')',k:'kichi1'});
+    else if(r.kind==='六合')items.push({t:'六合'+(r.to?'→'+esc(r.to):''),k:'kichi1'});
+    else if(r.kind==='冲')items.push({t:'冲'+(r.to?'→'+esc(r.to):''),k:'kyo2'});
+    else if(r.kind==='刑')items.push({t:'刑'+(r.to?'→'+esc(r.to):''),k:'kyo1'});
+    else if(r.kind==='破')items.push({t:'破'+(r.to?'→'+esc(r.to):''),k:'kyo1'});
+    else if(r.kind==='害')items.push({t:'害'+(r.to?'→'+esc(r.to):''),k:'kyo1'});
   });
-  var kg=transitKangouStems(c,gz.charAt(0));if(kg.length)parts.push('干合→'+esc(kg.join(''))+'柱');
-  return parts;}
-function relRow(label,gz,parts,cur){var s=parts.join('');var warn=/冲|刑|破|害/.test(s),good=/三合|方合|六合|半会|干合/.test(s);
-  return '<div class="tItem" style="border-left-color:'+(good?'var(--good)':warn?'var(--warn)':'var(--line)')+'"><div class="ty">'+esc(label)+'　'+elGz(gz)+(cur?' <span class="pill">今</span>':'')+'</div><div class="tr">'+(parts.length?parts.join(' ／ '):'<span class="note">目立つ関係なし</span>')+'</div></div>';}
+  var kg=transitKangouStems(c,gz.charAt(0));if(kg.length)items.push({t:'干合→'+esc(kg.join(''))+'柱',k:'en'});
+  return items;}
+/* 吉凶の凡例 */
+function relLegend(){return '<p class="note" style="margin:0 0 8px">見方：<b style="color:var(--good)">◎大吉</b>=三合/方合成立　<b style="color:var(--good)">○吉</b>=六合/半会　<b style="color:#c0397a">♡縁</b>=干合　<b style="color:var(--warn)">⚡注意</b>=冲　<b style="color:var(--warn)">△小凶</b>=刑・破・害</p>';}
+function relRow(label,gz,items,cur){
+  var good=items.some(function(x){return x.k==='kichi2'||x.k==='kichi1'||x.k==='en';});
+  var bad=items.some(function(x){return x.k==='kyo2'||x.k==='kyo1';});
+  var badge = !items.length ? '' : (good&&bad ? '<span class="jx jxmix">吉凶混在</span>' : good ? '<span class="jx jxg">吉</span>' : '<span class="jx jxb">要注意</span>');
+  var body = items.length ? items.map(function(x){var col=(x.k==='kyo2'||x.k==='kyo1')?'var(--warn)':(x.k==='en'?'#c0397a':'var(--good)');return '<span style="color:'+col+';font-weight:700">'+REL_ICON[x.k]+'</span> '+x.t;}).join('　') : '<span class="note">目立つ関係なし</span>';
+  var edge=(good&&!bad)?'var(--good)':(bad&&!good)?'var(--warn)':(good&&bad)?'#c9a227':'var(--line)';
+  return '<div class="tItem" style="border-left-color:'+edge+'"><div class="ty">'+esc(label)+'　'+elGz(gz)+(cur?' <span class="pill">今</span>':'')+' '+badge+'</div><div class="tr">'+body+'</div></div>';}
 function unTransitCard(c){var now=c.now||{},cy=now.year,dl=daeunList(c),H='';
   var curD=dl.cur>=0?dl.items[dl.cur]:null,nextD=dl.cur>=0?dl.items[dl.cur+1]:(dl.items[0]||null);
-  H+='<p style="margin:0 0 8px" class="note">大運・年運・月の干支が、あなたの命式と作る<b>三合・方合・六合・冲・刑・破・害・干合</b>の「成立」をまとめました。<span style="color:var(--good)">緑＝結びつき（合）</span>／<span style="color:var(--warn)">赤＝ぶつかり（冲刑破害）</span>。</p>';
+  H+='<p style="margin:0 0 6px" class="note">大運・年運・月の干支が、あなたの命式と作る<b>三合・方合・六合・冲・刑・破・害・干合</b>の「成立」をまとめました。</p>'+relLegend();
   H+='<p style="margin:0 0 4px"><b class="sech">① 大運（10年運）× 命式</b></p><div class="tline">';
-  if(curD)H+=relRow('今の大運',curD.ganzhi,transitRelParts(c,curD.ganzhi),true);
-  if(nextD)H+=relRow('次の大運',nextD.ganzhi,transitRelParts(c,nextD.ganzhi),false);
+  if(curD)H+=relRow('今の大運',curD.ganzhi,transitRelItems(c,curD.ganzhi),true);
+  if(nextD)H+=relRow('次の大運',nextD.ganzhi,transitRelItems(c,nextD.ganzhi),false);
   H+='</div>';
-  var af=(c.annualFortunes||[]).filter(function(a){return a.year>=cy&&a.year<=cy+10;});
-  var yrows=af.map(function(a){var parts=transitRelParts(c,a.ganzhi);return parts.length?relRow(a.year+'年',a.ganzhi,parts,a.year===cy):'';}).filter(Boolean);
-  H+='<p style="margin:12px 0 4px"><b class="sech">② 年運 × 命式</b>（今年〜10年で関係が出る年）</p><div class="tline">'+(yrows.join('')||'<span class="note">この10年で目立つ成立はありません。</span>')+'</div>';
+  var af=(c.annualFortunes||[]).filter(function(a){return a.year>=cy&&a.year<=cy+20;});
+  var yrows=af.map(function(a){var it=transitRelItems(c,a.ganzhi);return it.length?relRow(a.year+'年',a.ganzhi,it,a.year===cy):'';}).filter(Boolean);
+  H+='<p style="margin:12px 0 4px"><b class="sech">② 年運 × 命式</b>（今年〜20年で関係が出る年）</p><div class="tline">'+(yrows.join('')||'<span class="note">この20年で目立つ成立はありません。</span>')+'</div>';
   var td=new Date(),yy=td.getFullYear(),mm=td.getMonth()+1,mrows=[];
-  for(var k=0;k<12;k++){var mp=monthPillarOf(yy,mm);if(mp){var parts=transitRelParts(c,mp.ganzhi);if(parts.length)mrows.push(relRow(yy+'年'+mm+'月',mp.ganzhi,parts,false));}mm++;if(mm>12){mm=1;yy++;}}
+  for(var k=0;k<12;k++){var mp=monthPillarOf(yy,mm);if(mp){var it2=transitRelItems(c,mp.ganzhi);if(it2.length)mrows.push(relRow(yy+'年'+mm+'月',mp.ganzhi,it2,false));}mm++;if(mm>12){mm=1;yy++;}}
   H+='<p style="margin:12px 0 4px"><b class="sech">③ 月運 × 命式</b>（これから12ヶ月で関係が出る月）</p><div class="tline">'+(mrows.join('')||'<span class="note">この1年の各月で目立つ成立はありません。</span>')+'</div>';
   var comboLines=[];
   if(curD){[cy,cy+1].forEach(function(Y){var ya=(c.annualFortunes||[]).filter(function(a){return a.year===Y;})[0];if(!ya)return;
@@ -1547,6 +1559,39 @@ function miniChart(p,tu){
   for(var i=0;i<4;i++){var x=pil[i];if(i===3&&(tu||!x)){h+='<td>—</td>';continue;}h+='<td><div class="mgz">'+elGz(x.ganzhi)+'</div><div class="mten">'+esc(x.tenStar||"日主")+'</div></td>';}
   h+='</tr></table>';return h;
 }
+/* 二人の開運の年・月：二人の支を持ち寄って三合/方合が「あと1支で完成」する形を探し、
+   その残り1支が巡る年・月を開運として列挙（＝半会・支合が三合・方合に完成する時） */
+function coupleLuck(pa,pb){
+  var SANGO=[['申','子','辰','水'],['亥','卯','未','木'],['寅','午','戌','火'],['巳','酉','丑','金']];
+  var HOUGO=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','戌','金'],['亥','子','丑','水']];
+  var abr=(pa.pro.pillars||[]).map(function(p){return p.branch;});
+  var bbr=(pb.pro.pillars||[]).map(function(p){return p.branch;});
+  var union=abr.concat(bbr),needs=[];
+  [[SANGO,'三合'],[HOUGO,'方合']].forEach(function(pair){
+    pair[0].forEach(function(g){var tri=g.slice(0,3);
+      var inA=tri.filter(function(x){return abr.indexOf(x)>=0;}),inB=tri.filter(function(x){return bbr.indexOf(x)>=0;});
+      var present=tri.filter(function(x){return union.indexOf(x)>=0;});
+      if(present.length===2&&inA.length>=1&&inB.length>=1){
+        var miss=tri.filter(function(x){return union.indexOf(x)<0;})[0];
+        if(miss)needs.push({kind:pair[1],el:g[3],have:present.slice(),miss:miss,inA:inA,inB:inB});
+      }});
+  });
+  return needs;}
+function coupleLuckCard(pa,pb){
+  var needs=coupleLuck(pa,pb);if(!needs.length)return '';
+  var cy=(pa.pro.now&&pa.pro.now.year)||new Date().getFullYear(),af=(pa.pro.annualFortunes||[]);
+  var H='<p style="margin:0 0 8px" class="note">お二人の支を持ち寄ると、<b>あと1支で三合／方合が完成</b>する形があります（＝半会・支合の関係）。その残り1支が巡ってくる<b>年・月＝二人の開運期</b>とされます（通説）。</p>';
+  needs.forEach(function(nd){
+    H+='<div class="tItem" style="border-left-color:var(--good)"><div class="ty"><span style="color:var(--good)">◎</span> '+esc(nd.kind)+'（'+esc(nd.el)+'）開運：あと <b>'+elB(nd.miss)+'</b> で完成 <span class="jx jxg">開運</span></div>';
+    H+='<div class="tr">二人の <b>'+nd.have.map(elB).join('')+'</b>（一人目'+esc(nd.inA.join(''))+'／二人目'+esc(nd.inB.join(''))+'）に <b>'+esc(nd.miss)+'</b> が加わると「'+esc(nd.el)+'」の'+esc(nd.kind)+'が完成します。';
+    var yrs=af.filter(function(a){return a.year>=cy&&a.year<=cy+20&&(a.branch||a.ganzhi[1])===nd.miss;}).map(function(a){return a.year;});
+    H+='<br><b style="color:var(--good)">開運の年：</b>'+(yrs.length?yrs.map(function(y){return y+'年'+(y===cy?'（今年！）':'');}).join('・'):'今後20年内になし');
+    var td=new Date(),yy=td.getFullYear(),mm=td.getMonth()+1,mos=[];
+    for(var k=0;k<24;k++){var mp=monthPillarOf(yy,mm);if(mp&&mp.branch===nd.miss)mos.push(yy+'年'+mm+'月');mm++;if(mm>12){mm=1;yy++;}}
+    H+='<br><b style="color:var(--good)">開運の月：</b>'+(mos.length?mos.slice(0,6).join('・'):'直近24ヶ月内になし');
+    H+='</div></div>';
+  });
+  return H;}
 function renderPair(pa,pb,a,b){
   var cd=window.compatData?window.compatData(pa.pro,pb.pro):null;
   var out=document.getElementById("out"),H="";
@@ -1587,6 +1632,8 @@ function renderPair(pa,pb,a,b){
     if(warn.length) H+='<div style="margin-top:10px"><div class="note" style="margin-bottom:3px">気をつける流れ</div>'+warn.join("")+'</div>';
     H+='<p class="note" style="margin:10px 0 0">五行の流れ：'+elc(cd.aEl)+'（一人目）と '+elc(cd.bEl)+'（二人目）。相生・相剋の関係が二人のリズムを作ります。</p>';
     H+='</div>';
+    var clk=coupleLuckCard(pa,pb);
+    if(clk) H+='<div class="card"><h2>二人の開運の年・月（半会・支合→三合・方合の完成）</h2>'+clk+'</div>';
   } else H+='<div class="card"><p class="note">相性データを取得できませんでした。</p></div>';
   // 各人の運の流れ（大運・節木運・年運）
   H+='<div class="card"><h2>二人それぞれの運の流れ（大運・節木運・年運）</h2>'
