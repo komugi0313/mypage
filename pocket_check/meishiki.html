@@ -362,6 +362,7 @@ var CARD_LEAD=[
  ["金銭感覚","<b>お金との付き合い方</b>のクセ"],
  ["健康","体で<b>気をつけたい弱点</b>（五行と体の対応から）"],
  ["霊感","<b>直感・スピリチュアルの感度</b>"],
+ ["恋愛の傾向","<b>配偶者像</b>（どんな相手と結ばれるか）・<b>惹かれ方/尽くし方</b>・<b>モテ度</b>"],
  ["恋愛の深層","恋のクセ（<b>一線を越えやすさ・別れの暗示</b>）と、失恋時にかける言葉"],
  ["噛み合う人","<b>相性の良い人</b>と<b>合わない人</b>のタイプ"],
  ["親との関係","親との関係のクセと、<b>しんどい時の距離の取り方</b>"],
@@ -382,6 +383,7 @@ var CARD_LEAD=[
  ["五行バランス（二人","二人合わせた<b>気のバランス</b>と補い合い"],
  ["十二運の意味","二人それぞれの<b>エネルギーの質</b>"],
  ["相手の好み","<b>相手の喜ばせ方</b>"],
+ ["配偶者星マッチ","相手は自分の<b>夫／妻星</b>か・<b>恋人/夫婦/復縁/不倫</b>別の相性・五行/十二運の一言"],
  ["二人の開運","二人の支を持ち寄り<b>三合・方合が完成</b>する<b>開運の年・月</b>"],
  ["二人の縁","二人を結ぶ<b>干支・十神の縁</b>"],
  ["運の流れ","二人それぞれの<b>大運・年運</b>"],
@@ -1302,12 +1304,73 @@ function pcDate(p,sex){var c=p.pro,tb=biasOf(c),sl=starList(c),el=c.dayMaster.el
   return L.join("");}
 
 /* まとめて9枚のカードHTMLを返す */
+/* ===== 恋愛（一人）：配偶者像・恋愛傾向・モテ度 ===== */
+var SPOUSE_BY_TEN={
+ 比肩:'自立心があり対等・マイペースな人',劫財:'行動的で勝負強く、仲間思いな人',
+ 食神:'おおらかで楽しく、家庭的でやさしい人',傷官:'感性豊かで才能があるが、繊細でこだわりの強い人',
+ 偏財:'社交的で商才があり、フットワークの軽い華やかな人',正財:'誠実で堅実、家庭を大事にする信頼できる人',
+ 偏官:'度胸と行動力があり頼れるが、激しい一面もある人',正官:'まじめで責任感が強く、律儀で品のある人',
+ 偏印:'独自の発想と探究心を持つ、少しミステリアスな人',印綬:'知的でやさしく、包み込むように支えてくれる人'};
+function honkiTen(pil){var hs=(pil&&pil.hiddenStems)||[];var h=hs.filter(function(x){return x.role==='本氣';})[0]||hs[hs.length-1];return h?h.tenStar:'';}
+function groupSums(sc){return {比劫:(sc.比肩||0)+(sc.劫財||0),食傷:(sc.食神||0)+(sc.傷官||0),財:(sc.正財||0)+(sc.偏財||0),官殺:(sc.正官||0)+(sc.偏官||0),印:(sc.印綬||0)+(sc.偏印||0)};}
+function topGroup(sc){var g=groupSums(sc),best='',bv=-1;Object.keys(g).forEach(function(k){if(g[k]>bv){bv=g[k];best=k;}});return best;}
+var LOVE_BY_GROUP={
+ 比劫:'対等でさっぱりした恋を好みます。束縛を嫌い、友達のような距離感が心地よいタイプ。自分の世界も大事にしたいので、干渉しすぎない相手だと長続きします。',
+ 食傷:'表現豊かでサービス精神があり、尽くすロマンチスト。好きになると一生懸命に。ただし傷官が強いと理想が高く、相手に完璧を求めて厳しくなりがち。素直に甘えるのが吉。',
+ 財:'惚れっぽく行動的で、恋を楽しむタイプ。魅力的な人に弱く、追う恋が好き。モテる分、目移りしやすいので、一人に絞る意識を持つと安定します。',
+ 官殺:'恋愛にまじめで一途。相手に合わせ、尽くしてしまうタイプ。我慢しがちで、押されると弱い一面も。自分の気持ちも言葉にすると、対等で幸せな関係に。',
+ 印:'尽くされたい・守られたい受け身タイプ。安心できる成熟した相手を選びます。母性/父性で包む優しさも。自分から一歩踏み出すと、縁が動きやすくなります。'};
+function pcLoveProfile(p,sex){var c=p.pro,ds=c.pillars[2].ganzhi[0],db=c.pillars[2].branch,dbEl=MBR_EL[db],sc=starCounts(c),female=(sex!=='male'),sl=starList(c),ter=c.pillars[2].terrain||'';
+  var seiName=female?'正官':'正財',henName=female?'偏官':'偏財';
+  var seiCnt=female?(sc.正官||0):(sc.正財||0),henCnt=female?(sc.偏官||0):(sc.偏財||0),spouseCnt=seiCnt+henCnt;
+  var spouseTen=honkiTen(c.pillars[2]),tg=topGroup(sc);
+  var H='';
+  /* ① 配偶者像 */
+  H+='<div><b class="sech">◆ 配偶者像（どんな相手と結ばれるか）</b>';
+  H+='<p style="margin:4px 0">配偶者宮（日支 <b>'+elB(db)+'</b>）の芯は<b>'+esc(spouseTen||'—')+'</b>。<b>'+esc(SPOUSE_BY_TEN[spouseTen]||'自分と縁の深いタイプ')+'</b>と結ばれやすいでしょう。</p>';
+  if(spouseCnt===0){
+    H+='<p style="margin:4px 0">命式に<b>配偶者星（'+seiName+'・'+henName+'）が見当たりません</b>。これは「縁がない」意味ではなく、<b>結婚の縁は大運・年運で'+seiName+'／'+henName+'が巡る時期に動きやすい</b>ということ。焦らずタイミングを待つのが吉です（下の「恋愛・結婚の時期」も参考に）。</p>';
+  } else {
+    var parts=[];
+    if(seiCnt>0)parts.push('<b>'+seiName+'</b>（正式な縁の星）があり、<b>誠実で堅実な相手・結婚向きの良縁</b>に恵まれやすい');
+    if(henCnt>0)parts.push('<b>'+henName+'</b>（刺激の縁の星）があり、<b>個性的・情熱的な相手や刺激的な恋</b>に縁がある');
+    H+='<p style="margin:4px 0">'+parts.join('。また')+'。';
+    if(female&&seiCnt>0&&henCnt>0)H+=' ※正官と偏官が混在（<b>官殺混雑</b>）＝関わる男性が複数・複雑になりやすいので、<b>誠実な一人を選ぶ意識</b>を。';
+    if(!female&&seiCnt>0&&henCnt>0)H+=' ※正財と偏財が混在＝<b>異性関係が華やか</b>になりやすいので、一人に絞ると安定します。';
+    H+='</p>';
+  }
+  var attractBy={官殺:'頼れて律してくれる、しっかり者・年上の相手',印:'包み込んでくれる成熟した年上・知的な相手',食傷:'自分がリードできる、素直で才能や愛嬌のある相手',比劫:'対等で気の合う、友達のような相手',財:'華やかで社交的、いっしょにいて楽しい相手'};
+  H+='<p style="margin:4px 0"><b>惹かれやすいタイプ：</b>'+esc(attractBy[tg]||'自分にないものを持つ相手')+'。</p></div>';
+  /* ② 恋愛傾向 */
+  H+='<div style="margin-top:10px;border-top:1px solid var(--soft);padding-top:8px"><b class="sech">◆ 恋愛傾向（惹かれ方・尽くし方）</b>';
+  H+='<p style="margin:4px 0">'+esc(LOVE_BY_GROUP[tg]||'状況に合わせて柔軟に恋を楽しむタイプです。')+'</p>';
+  var notes=[];
+  if(sl.indexOf('咸池')>=0)notes.push('<b>桃花（咸池）</b>持ちで、自然と異性を惹きつけ恋の機会が多い');
+  if(sl.indexOf('紅艶')>=0)notes.push('<b>紅艶</b>持ちで、色気・華があり放っておかれないタイプ');
+  if(sl.indexOf('羊刃')>=0||sl.indexOf('日刃')>=0)notes.push('感情が強く出る星があり、<b>一途だが嫉妬・衝突</b>に注意');
+  if(notes.length)H+='<p class="note" style="margin:4px 0 0">＋ '+notes.join('／')+'。</p>';
+  H+='</div>';
+  /* ③ モテ度・魅力タイプ */
+  var m=1;if(sl.indexOf('咸池')>=0)m+=2;if(sl.indexOf('紅艶')>=0)m+=2;if(ter==='沐浴')m+=1;if((sc.食神||0)+(sc.傷官||0)>=2)m+=1;m=Math.max(1,Math.min(5,m));
+  var stars='★★★★★'.slice(0,m)+'☆☆☆☆☆'.slice(0,5-m);
+  var typ=[];
+  if(sl.indexOf('咸池')>=0)typ.push('華やかで人を惹きつける<b>人気者タイプ</b>');
+  if(sl.indexOf('紅艶')>=0)typ.push('色気でドキッとさせる<b>魅惑タイプ</b>');
+  if(ter==='沐浴')typ.push('恋多く色気のある<b>ロマンチスト</b>');
+  if((sc.食神||0)+(sc.傷官||0)>=2)typ.push('愛嬌・表現力で好かれる<b>チャーミングタイプ</b>');
+  if((sc.正官||0)+(sc.偏官||0)>=2||(sc.正財||0)+(sc.偏財||0)>=2)typ.push('誠実さ・安定感で信頼される<b>本命タイプ</b>');
+  if(!typ.length)typ.push('派手さより<b>内面でじわじわ好かれる遅咲き・本命タイプ</b>');
+  H+='<div style="margin-top:10px;border-top:1px solid var(--soft);padding-top:8px"><b class="sech">◆ モテ度・魅力タイプ</b>';
+  H+='<p style="margin:4px 0"><b>モテ度：</b><span style="color:#c0397a;font-size:16px;letter-spacing:2px">'+stars+'</span></p>';
+  H+='<p style="margin:4px 0"><b>魅力タイプ：</b>'+typ.join('／')+'。</p></div>';
+  return H;}
 function detailProfileCards(p,sex){var H='';
   H+='<div class="card"><h2>あなた特有の個性</h2>'+pcIndividuality(p)+'</div>';
   H+='<div class="card"><h2>向いている仕事・向いていない仕事</h2>'+pcJob(p)+'</div>';
   H+='<div class="card"><h2>金銭感覚</h2>'+pcMoney(p)+'</div>';
   H+='<div class="card"><h2>健康：身体の弱いところ</h2>'+pcHealth(p)+'</div>';
   H+='<div class="card"><h2>霊感・直感（スピリチュアル資質）</h2>'+pcSpirit(p)+'</div>';
+  H+='<div class="card"><h2>恋愛の傾向・配偶者像・魅力タイプ</h2>'+pcLoveProfile(p,sex)+'</div>';
   H+='<div class="card"><h2>恋愛の深層：不倫傾向・別れの暗示・失恋の言葉</h2>'
      +'<div><b class="sech">◆ 不倫・一線を越えやすい傾向</b>'+pcAffair(p,sex)+'</div>'
      +'<div style="margin-top:10px;border-top:1px solid var(--soft);padding-top:8px"><b class="sech">◆ 失恋・お別れの暗示</b>'+pcBreakup(p,sex)+'</div>'
@@ -1749,6 +1812,48 @@ function renderTrio(arr){
   out.innerHTML=injectNavAndChips(H,chip);
   if(window._msScrollNext){out.scrollIntoView({behavior:"smooth",block:"start"});window._msScrollNext=false;}
 }
+/* ===== 相性（二人）：配偶者星マッチ・関係タイプ別・十二運/五行の一言 ===== */
+function spouseMatchLabel(sex,ten){var female=(sex!=='male');
+  if(female&&(ten==='正官'||ten==='偏官'))return {yes:true,name:(ten==='正官'?'正式な夫星（正官）':'夫星（偏官）')};
+  if(!female&&(ten==='正財'||ten==='偏財'))return {yes:true,name:(ten==='正財'?'正式な妻星（正財）':'妻星（偏財）')};
+  return {yes:false,name:''};}
+function compatLoveCard(pa,pb,a,b){
+  var cd=window.compatData?window.compatData(pa.pro,pb.pro):null; if(!cd)return '';
+  var an=(a.name||'一人目'),bn=(b.name||'二人目');
+  var aM=spouseMatchLabel(a.sex,cd.tenAtoB); /* 二人目は一人目の配偶者星か */
+  var bM=spouseMatchLabel(b.sex,cd.tenBtoA); /* 一人目は二人目の配偶者星か */
+  var H='';
+  /* ① 配偶者星マッチ */
+  H+='<div><b class="sech">◆ 配偶者星マッチ（相手は自分の夫／妻星か）</b>';
+  H+='<p style="margin:4px 0"><b>'+esc(bn)+'</b> は <b>'+esc(an)+'</b> から見て「<b>'+esc(cd.tenAtoB||'—')+'</b>」'+(aM.yes?' ＝ <span style="color:var(--good);font-weight:800">'+esc(an)+'の'+aM.name+'！</span>':'')+'</p>';
+  H+='<p style="margin:4px 0"><b>'+esc(an)+'</b> は <b>'+esc(bn)+'</b> から見て「<b>'+esc(cd.tenBtoA||'—')+'</b>」'+(bM.yes?' ＝ <span style="color:var(--good);font-weight:800">'+esc(bn)+'の'+bM.name+'！</span>':'')+'</p>';
+  if(aM.yes&&bM.yes)H+='<p style="margin:4px 0;color:var(--good)"><b>◎ 相互に配偶者星＝結婚を意識できる強い縁です。</b></p>';
+  else if(aM.yes||bM.yes)H+='<p style="margin:4px 0;color:var(--good)"><b>◎ 片方にとって相手が配偶者星＝結婚向きの縁があります。</b></p>';
+  else H+='<p class="note" style="margin:4px 0">配偶者星の直接の関係は控えめですが、下の縁（干合・六合・三合）や五行の相性で十分に読めます。</p>';
+  H+='</div>';
+  /* ② 関係タイプ別の深掘り */
+  var pull=(cd.kangou||cd.rikugou||(cd.rikugouAll||[]).length||(cd.seiritsu||[]).length||cd.score>=70);
+  var clash=(cd.chong||cd.kei);
+  var rel=function(title,txt){return '<div class="tItem" style="border-left-color:var(--accent)"><div class="ty">'+title+'</div><div class="tr">'+txt+'</div></div>';};
+  H+='<div style="margin-top:10px;border-top:1px solid var(--soft);padding-top:8px"><b class="sech">◆ 関係タイプ別の相性</b><div class="tline">';
+  H+=rel('💕 恋人なら', (pull?'自然に惹かれ合い、いっしょにいて心地よい二人。':'最初は控えめでも、時間をかけて縁が育つ二人。')+(clash?'刺激と情熱がある分ぶつかりやすいので、感情的な時ほど一呼吸を。':'穏やかに距離を縮められます。'));
+  H+=rel('💍 夫婦なら', ((aM.yes||bM.yes||cd.score>=65)?'安定した家庭を築きやすい相性。':'役割分担と会話を意識すると安定します。')+(clash?'価値観の違いは、責めずに話し合うことでむしろ絆になります。':'日々の感謝を言葉にすると長続きします。'));
+  H+=rel('🔁 復縁なら', (cd.kangou||cd.rikugou||(cd.rikugouAll||[]).length?'引き合う縁が強く、戻りやすい二人。':'一度離れると距離ができやすいので、変わった姿を見せることが鍵。')+(cd.chong?'冲があり再会は刺激的。勢いだけで戻ると同じ衝突を繰り返しやすいので冷静に。':''));
+  var himitsu=(cd.kangou||cd.tenAtoB==='偏官'||cd.tenAtoB==='偏財'||cd.tenBtoA==='偏官'||cd.tenBtoA==='偏財');
+  H+=rel('🌙 不倫など秘めた関係なら', (himitsu?'理屈抜きに強く惹かれ合う組み合わせ。':'惹かれ合いはあるが、割り切りが難しくなりがち。')+'デリケートな関係ほど、期待とすれ違いが大きくなりやすいので、当人の幸せを軸に現実的な選択を（否定はしません）。');
+  H+='</div></div>';
+  /* ③ 十二運・五行の一言 */
+  var aEl=cd.aEl,bEl=cd.bEl,elMsg;
+  if(aEl===bEl)elMsg='<b>比和（同じ'+elc(aEl)+'）</b>＝似た者同士で気楽。刺激は少なめなので、共通の目標があると盛り上がります。';
+  else if(EL_GEN[aEl]===bEl||EL_GEN[bEl]===aEl)elMsg='<b>相生</b>＝自然に補い合い、片方が片方を育てる良い流れ。長く安定しやすい相性です。';
+  else if(EL_KE[aEl]===bEl||EL_KE[bEl]===aEl)elMsg='<b>相剋</b>＝惹かれ合うけれど摩擦も。刺激的で、乗り越えると互いに成長できる関係です。';
+  else elMsg='五行はほどよい距離感。';
+  var STRONG={帝旺:1,建禄:1,冠帯:1,長生:1};
+  var at=pa.pro.pillars[2].terrain||'',bt=pb.pro.pillars[2].terrain||'',as=!!STRONG[at],bs=!!STRONG[bt];
+  var juni = (as&&bs)?'二人とも日柱のエネルギーが強く（'+esc(at)+'・'+esc(bt)+'）、対等で個性がぶつかる刺激的な関係。':(!as&&!bs)?'二人とも穏やかなエネルギー（'+esc(at)+'・'+esc(bt)+'）で、似た者同士のやわらかい関係。目標を共有すると前に進みます。':'片方が引っぱり片方が支える、自然な役割分担ができる関係（'+esc(at)+'・'+esc(bt)+'）。';
+  H+='<div style="margin-top:10px;border-top:1px solid var(--soft);padding-top:8px"><b class="sech">◆ 五行・十二運の相性（一言）</b>';
+  H+='<p style="margin:4px 0">五行：'+elMsg+'</p><p style="margin:4px 0">十二運：'+juni+'</p></div>';
+  return H;}
 function renderPair(pa,pb,a,b){
   var cd=window.compatData?window.compatData(pa.pro,pb.pro):null;
   var out=document.getElementById("out"),H="";
@@ -1789,6 +1894,7 @@ function renderPair(pa,pb,a,b){
     if(warn.length) H+='<div style="margin-top:10px"><div class="note" style="margin-bottom:3px">気をつける流れ</div>'+warn.join("")+'</div>';
     H+='<p class="note" style="margin:10px 0 0">五行の流れ：'+elc(cd.aEl)+'（一人目）と '+elc(cd.bEl)+'（二人目）。相生・相剋の関係が二人のリズムを作ります。</p>';
     H+='</div>';
+    H+='<div class="card"><h2>配偶者星マッチ・関係タイプ別の相性</h2>'+compatLoveCard(pa,pb,a,b)+'</div>';
     var clk=coupleLuckCard(pa,pb);
     if(clk) H+='<div class="card"><h2>二人の開運の年・月（半会・支合→三合・方合の完成）</h2>'+clk+'</div>';
   } else H+='<div class="card"><p class="note">相性データを取得できませんでした。</p></div>';
