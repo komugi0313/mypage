@@ -44,3 +44,9 @@ node tests/verify_engine2.js   # 大運の順行逆行/節入り/立運/干合ta
 `node tests/verify_juniun.js`
 - 日干×地支→十二運（terrain）を、資料5の表と**全120通り（日干10×地支12）**照合
 - この表は火土同法（戊=丙・己=丁）。エンジンも同convention＝不一致ゼロを確認済み
+
+## 吉凶星(2)の検証（資料5④・日柱干支ベース）
+`node tests/verify_kichi.js`
+- 魁罡（庚辰庚戌壬辰壬戌戊戌）・禄馬貴人（壬午癸巳）・日刃（丙午戊午壬子）を
+  60日柱すべてで照合＝検出漏れ・誤検出ゼロを確認済み
+- ※魁罡日は renderSolo で必ず詳細カードを出力（kaigouCard）
