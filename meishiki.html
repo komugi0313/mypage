@@ -157,6 +157,7 @@ table{width:100%;border-collapse:collapse;font-size:15.5px}
     <div style="display:flex;gap:8px"><button class="btn sub2" id="save" style="flex:1">この命式を保存</button></div>
     <details style="margin-top:12px"><summary style="cursor:pointer;font-size:15px;color:var(--muted);font-weight:700">🤖 AI鑑定の設定（任意・キーが必要）</summary>
       <div style="margin-top:8px"><label>Gemini APIキー（この端末にのみ保存）</label><input type="password" id="gkey" placeholder="AIza..." autocomplete="off"></div>
+      <div style="margin-top:8px"><label>オーナー合言葉（自分専用・任意）</label><input type="password" id="gowner" placeholder="Netlifyの PK_OWNER_TOKEN と同じ文字列" autocomplete="off"><p class="note" style="margin:4px 0 0">本番サイトで、ここに合言葉を入れておくと<b>自分だけ回数上限なし</b>で鑑定できます（APIキー欄は空のままでOK）。この端末にのみ保存。</p></div>
       <div style="margin-top:8px"><label>モデル</label><select id="gmodel"><option value="gemini-2.5-flash">gemini-2.5-flash（推奨）</option><option value="gemini-3.6-flash">gemini-3.6-flash</option><option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite（最安）</option></select></div>
       <p class="note" style="margin:6px 0 0">キーは端末内(localStorage)のみ・外部送信はGoogleへの鑑定リクエストのみ。テスト後は再発行推奨。</p>
     </details>
@@ -1881,6 +1882,8 @@ function analyzeSolo(p){
 /* AI鑑定：キーがあれば直接Gemini／なければ /api/gemini（公開サイト＝キーはサーバー秘匿） */
 function msDevId(){ try{var d=localStorage.getItem("ms_dev"); if(!d){d="ms"+Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem("ms_dev",d);} return d;}catch(e){return "ms-nodev";} }
 function msKey(){ var f=document.getElementById("gkey"); return ((f&&f.value)||localStorage.getItem("ms_gkey")||"").trim(); }
+/* オーナー合言葉：入力欄 or 端末保存から取得。使ったら端末に保存して次回から自動送信（サーバーの PK_OWNER_TOKEN と一致すれば自分だけ上限なし） */
+function msOwner(){ var f=document.getElementById("gowner"); var v=((f&&f.value)||localStorage.getItem("ms_owner")||"").trim(); if(v){ try{localStorage.setItem("ms_owner",v);}catch(e){} } return v; }
 function msCanAI(){ return !!msKey() || /^https?:$/.test(location.protocol); }
 /* ===== AI鑑定の結果を端末に保存し、再表示・リロード・タブ切替でも消えないように（追加課金なし） ===== */
 var AICACHE="ms_ai_cache_v1";
@@ -1906,7 +1909,7 @@ function aiReading(c,btn,aid){
   var body={systemInstruction:{parts:[{text:sys}]},contents:[{role:"user",parts:[{text:"この人を鑑定してください。"}]}],generationConfig:gc};
   var url,headers;
   if(key){ url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(key); headers={"Content-Type":"application/json"}; }
-  else { url="/api/gemini"; headers={"Content-Type":"application/json","x-pk-device":msDevId(),"x-pk-deep":"1"}; }
+  else { url="/api/gemini"; headers={"Content-Type":"application/json","x-pk-device":msDevId(),"x-pk-deep":"1","x-pk-owner":msOwner()}; }
   box.className="note"; box.innerHTML='<span class="note">鑑定中… 🔮（数十秒かかることがあります）</span>'; if(btn) btn.disabled=true;
   fetch(url,{method:"POST",headers:headers,body:JSON.stringify(body)})
    .then(function(r){return r.text().then(function(t){return {ok:r.ok,status:r.status,t:t};});})
@@ -1935,7 +1938,7 @@ function aiAsk(deck,question,boxId,btn){
   var body={systemInstruction:{parts:[{text:sys}]},contents:[{role:"user",parts:[{text:question}]}],generationConfig:gc};
   var url,headers;
   if(key){ url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(key); headers={"Content-Type":"application/json"}; }
-  else { url="/api/gemini"; headers={"Content-Type":"application/json","x-pk-device":msDevId(),"x-pk-deep":"1"}; }
+  else { url="/api/gemini"; headers={"Content-Type":"application/json","x-pk-device":msDevId(),"x-pk-deep":"1","x-pk-owner":msOwner()}; }
   box.className="note"; box.innerHTML='<span class="note">鑑定中… 🔮</span>'; if(btn) btn.disabled=true;
   fetch(url,{method:"POST",headers:headers,body:JSON.stringify(body)})
    .then(function(r){return r.text().then(function(t){return {ok:r.ok,status:r.status,t:t};});})
@@ -2277,7 +2280,7 @@ function aiCompat(cA,cB,btn,aid){
   var body={systemInstruction:{parts:[{text:sys}]},contents:[{role:"user",parts:[{text:"この二人の相性を辛口で鑑定してください。"}]}],generationConfig:gc};
   var url,headers;
   if(key){ url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(key); headers={"Content-Type":"application/json"}; }
-  else { url="/api/gemini"; headers={"Content-Type":"application/json","x-pk-device":msDevId(),"x-pk-deep":"1"}; }
+  else { url="/api/gemini"; headers={"Content-Type":"application/json","x-pk-device":msDevId(),"x-pk-deep":"1","x-pk-owner":msOwner()}; }
   box.className="note"; box.innerHTML='<span class="note">鑑定中… 🔮（数十秒かかることがあります）</span>'; if(btn) btn.disabled=true;
   fetch(url,{method:"POST",headers:headers,body:JSON.stringify(body)})
    .then(function(r){return r.text().then(function(t){return {ok:r.ok,status:r.status,t:t};});})

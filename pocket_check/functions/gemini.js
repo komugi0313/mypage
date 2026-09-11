@@ -9,6 +9,7 @@
 //   任意 GEMINI_MODEL / GEMINI_MODEL_DEEP … モデル差し替え（障害時の緊急切替や将来の値上げ対策）
 //   任意 PK_ALERT_WEBHOOK … エラー急増時の通知先URL（Slack/Discord等のIncoming Webhook）。未設定なら通知しない（集計のみ）
 //   任意 PK_ALERT_THRESHOLD … 通知するエラー件数/時（既定8）
+//   任意 PK_OWNER_TOKEN … 自分専用の合言葉。ヘッダ x-pk-owner が一致した時だけ回数上限なし（自分＝実質無制限）。他人には出さない。
 //   任意 PK_ADMIN_TOKEN … 運営用の手動返金トークン（サポート対応時のみ運営が使用。利用者には出さない）
 //          Blobs は Netlify の通常デプロイ（Git連携 / netlify deploy）で自動有効。
 // 【運営用・手動返金の使い方】二重課金などの申告時：
@@ -23,6 +24,14 @@
 //   ※ Gemini 3.x は thinkingConfig.thinkingBudget:0 が非対応（下で自動除去）。旧2.5系に戻す場合のみ thinkingBudget:0 が有効。
 const MODEL_LITE = process.env.GEMINI_MODEL      || 'gemini-2.5-flash-lite';
 const MODEL_DEEP = process.env.GEMINI_MODEL_DEEP || 'gemini-3.6-flash';
+
+// ── オーナー枠（運営者＝自分専用の上限なし）───────────────────────────────
+// ★環境変数 PK_OWNER_TOKEN と一致するリクエスト（ヘッダ x-pk-owner）だけ、回数上限を完全にスキップする。
+//   トークンは自分だけが知る合言葉。他人はこのトークンを知らないので、これまで通り安全な上限のまま＝タダ乗りされない。
+//   ・自分（オーナー）＝実質無制限で本格鑑定を使える
+//   ・原価ログ（[pk-cost]）は引き続き出るので、いくら使っているかは把握できる
+//   ・オーナーの利用は共有カウンタに数えない（他人の枠を圧迫しない／統計が汚れない）
+const OWNER_TOKEN = process.env.PK_OWNER_TOKEN || '';
 
 // ── 原価計測（プロンプトキャッシュの効果を“見える化”して、上限を安全に上げる判断材料にする）─────────────
 // ★Gemini はモデルが返す usageMetadata に、入力/出力/キャッシュ済みトークン数を含める。
@@ -84,6 +93,9 @@ exports.handler = async (event) => {
   // 識別子
   const h = lower(event.headers || {});
 
+  // ★オーナー判定：合言葉が一致したら「自分」＝回数上限なし（下のカウント/上限チェックをスキップ）。
+  const isOwner = !!OWNER_TOKEN && clean(h['x-pk-owner']) === OWNER_TOKEN;
+
   // ── 運営用：手動返金（サポート窓口対応）──────────────────────────────
   // ★安全設計：環境変数 PK_ADMIN_TOKEN と一致するリクエストだけ実行できる。
   //   トークンは運営だけが保持し、ブラウザには一切出さないため、クライアント（利用者）からは実行不可＝悪用でタダ乗りできない。
@@ -141,7 +153,7 @@ exports.handler = async (event) => {
   // レート制限（Blobs が使えない環境ではフェイルオープン＝ヘッダで警告）
   const store = await getStore();
   let degraded = false, deepCount = 0;
-  if (store && !isClassify) {
+  if (store && !isClassify && !isOwner) {   // ★オーナーは上限チェックをスキップ＝無制限
     try {
       const ddKey = `dd:${month}:${device}`;   // 本格鑑定（DEEP）専用カウンタ（課金枠・月間プール）
       const dKey  = `d:${day}:${device}`;      // 総生成カウンタ（雑談・理屈込み・bot対策・1日）
@@ -221,7 +233,7 @@ exports.handler = async (event) => {
         }
       } catch (e) {}
     }
-    if (answered && store && !degraded && !isClassify) {
+    if (answered && store && !degraded && !isClassify && !isOwner) {   // ★オーナーの利用は共有カウンタに数えない
       try {
         await bump(store, `d:${day}:${device}`);   // 総生成（雑談・理屈込み・1日）
         await bump(store, `i:${day}:${ip}`);        // IP（1日）
