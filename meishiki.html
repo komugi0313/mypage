@@ -1143,6 +1143,7 @@ var CARD_LEAD=[
  ["干支関係","命式の中の支どうしの<b>結びつき</b>や<b>ぶつかり</b>"],
  ["魁罡","四柱推命で<b>最も気が強い5つの日柱</b>「魁罡」に生まれた人の、強烈な個性"],
  ["神殺","命式に付く<b>ラッキーの星・注意の星</b>"],
+ ["華蓋","<b>芸術・研究・精神世界</b>の星。どの柱にあるか＋強まる条件"],
  ["あなた特有の個性","この命式<b>ならでは</b>の、あなただけの個性"],
  ["向いている仕事","<b>才能が活きる仕事</b>と、<b>避けたい仕事</b>"],
  ["金銭感覚","<b>お金との付き合い方</b>のクセ"],
@@ -1593,6 +1594,36 @@ function kaigouCard(p,sex){var c=p.pro,gz=c.pillars[2].ganzhi; if(!KAIGOU_SET[gz
               :'魁罡の男性は<b>カリスマと決断力で人を率いる器</b>。頑固さ・激しさを自覚し、周りへの配慮を足すほど、さらに大きくなります。')+'</p>'
     +'<p style="margin:0"><b>活かし方：</b>明確な<b>目標・使命</b>があるほど強くなる命。中途半端な環境より、<b>責任と裁量のある立場・専門性</b>で輝きます。自分の激しさを自覚して“引く”技術を持つと、敵が減り器がさらに大きくなります。</p>'
     +'</div>';}
+/* 華蓋（かがい）＝月支の三合の墓が命式にある人の詳細カード。柱別の意味＋強まる条件を必ず出力 */
+var KAGAI_TARGET={子:'辰',丑:'丑',寅:'戌',卯:'未',辰:'辰',巳:'丑',午:'戌',未:'未',申:'辰',酉:'丑',戌:'戌',亥:'未'};
+var KAGAI_PILLAR_TEXT=[
+ '<b>年柱</b>にある：幼い頃から精神的なことに興味を持つ人が多め。祖父母や年配の方の教えを大事にするなど、<b>伝統的なものに触れる中で感性を磨き</b>、考え方や行動の土台を作っていきます。',
+ '<b>月柱</b>にある：<b>突き詰める性質を活かした仕事で成功</b>しやすい配置。芸術に関する職業・研究職・職人技が要求される分野で力を発揮できます。',
+ '<b>日柱</b>にある：<b>パートナーとの関係の中であなたの世界が育まれて</b>いきます。孤独を感じるときは、自分の価値観や感性を言葉で伝え、相手の考えもじっくり聞くのがおすすめ。互いの世界の違いを知ると絆が深まります。',
+ '<b>時柱</b>にある：<b>ひたむきに突き詰めてきたことが後世に良い影響</b>を与えます。次の世代や未来を見据えて行動すると、見えない形でのつながりが生まれます。'];
+function kagaiCard(p,sex){
+  var c=p.pro,mb=c.pillars[1]&&c.pillars[1].branch,tgt=KAGAI_TARGET[mb]; if(!tgt)return '';
+  var ks=kuboSet(c),labels=['年柱','月柱','日柱','時柱'],found=[];
+  c.pillars.forEach(function(pl,i){ if(pl&&pl.branch===tgt) found.push({i:i,label:labels[i],ten:pl.tenStar||'',terr:pl.terrain||'',kubo:!!ks.set[pl.branch],hidden:(pl.hiddenStems||[]).map(function(h){return h.tenStar;})}); });
+  if(!found.length)return '';
+  var female=(sex!=='male');
+  var H='<div class="card" style="border:2px solid var(--title)"><h2 style="color:var(--title);border-color:var(--title)">華蓋（かがい）— 芸術・孤高・精神世界の星</h2>';
+  H+='<p style="margin:0 0 8px">あなたの命式には<b>華蓋</b>があります（月支<b>'+esc(mb)+'</b>の三合の墓＝<b>'+esc(tgt)+'</b>が命式にある）。華蓋は<b>芸術・研究・信仰・精神世界の才、独自の世界を持ち一芸を極める資質</b>を表す星です。</p>';
+  H+='<p style="margin:6px 0 3px"><b class="sech">どの柱にあるか（'+found.length+'か所）</b></p><div class="tline">';
+  found.forEach(function(f){ H+='<div class="tItem" style="border-left-color:var(--title)"><div class="ty">'+esc(f.label)+'　'+elB(tgt)+(f.kubo?' <span class="ybadge kb">空亡</span>':'')+(f.terr==='墓'?' <span class="ybadge love">墓</span>':'')+'</div><div class="tr">'+KAGAI_PILLAR_TEXT[f.i]+'</div></div>'; });
+  H+='</div>';
+  var boosts=[];
+  var hasInju=found.some(function(f){return f.ten==='印綬'||f.hidden.indexOf('印綬')>=0;});
+  var hasBo=found.some(function(f){return f.terr==='墓';});
+  var hasKuboMale=(!female)&&found.some(function(f){return f.kubo;});
+  if(hasInju)boosts.push('<li><b style="color:var(--good)">◎ 通変星が【印綬】</b>：華蓋のある柱に印綬がつくと、<b>芸術で成功する可能性</b>が高まります。</li>');
+  if(hasBo)boosts.push('<li><b style="color:var(--good)">◎ 十二運が【墓】</b>：華蓋のある柱が墓だと、<b>宗教・精神世界との縁</b>が深まるとされます。</li>');
+  if(hasKuboMale)boosts.push('<li><b style="color:var(--good)">◎ 男性で華蓋の柱が天中殺（空亡）</b>：華蓋の<b>パワーが増す</b>とされます。</li>');
+  if(found.length>=2)boosts.push('<li><b style="color:var(--good)">◎ 華蓋が'+found.length+'つ</b>：<b>複数の分野で一流と呼ばれるまで極める</b>パワフルさを持ちます。</li>');
+  if(boosts.length)H+='<p style="margin:8px 0 3px"><b class="sech">パワーが強まる条件</b></p><ul style="margin:0;padding-left:1.2em;line-height:1.85">'+boosts.join('')+'</ul>';
+  else H+='<p class="note" style="margin:6px 0 0">※特別な強化条件（印綬・墓・男性の空亡）は今回は該当なし。基本の華蓋の資質として読みます。</p>';
+  H+='</div>';
+  return H;}
 function renderSolo(p,inp){
   var c=p.pro,out=document.getElementById("out"),H="";
   var whoChip=inp.name?(esc(inp.name)+"さん"):(shortBirth(inp)+"生");
@@ -1661,6 +1692,7 @@ function renderSolo(p,inp){
   if(ss.length){ H+=ss.map(function(s){var nm=s.split("(")[0].replace(/^年/,"");var g=STAR_JP[nm]||"";return '<span class="tag"><b>'+esc(s)+'</b>'+(g?'<span class="note"> '+esc(g)+'</span>':'')+'</span>';}).join(""); }
   else H+='<p class="note" style="margin:0">該当する神殺はありません。</p>';
   H+='<p class="note" style="margin:8px 0 0">「(年○)」は年支からも成立するもの。</p></div>';
+  H+=kagaiCard(p,inp.sex);  /* 華蓋があれば柱別の意味＋強まる条件を必ず出力 */
 
   // 詳細プロファイル（教科書用・9枚）
   H+=detailProfileCards(p,inp.sex);
