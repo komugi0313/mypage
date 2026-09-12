@@ -160,8 +160,10 @@ table{width:100%;border-collapse:collapse;font-size:15.5px}
     </div>
     <button class="btn" id="go">命式を作成する</button>
     <div style="display:flex;gap:8px"><button class="btn sub2" id="save" style="flex:1">この命式を保存</button></div>
-    <details style="margin-top:12px"><summary style="cursor:pointer;font-size:15px;color:var(--muted);font-weight:700">🤖 AI鑑定の設定（任意・キーが必要）</summary>
-      <div style="margin-top:8px"><label>Gemini APIキー（この端末にのみ保存）</label><input type="password" id="gkey" placeholder="AIza..." autocomplete="off"></div>
+    <div id="aiStatus" class="note" style="margin-top:10px"></div>
+    <details style="margin-top:8px"><summary style="cursor:pointer;font-size:15px;color:var(--muted);font-weight:700">🤖 AI鑑定の設定（本番サイトでは設定不要・任意）</summary>
+      <p class="note" style="margin:8px 0 0">💡 <b>Netlifyなどの本番サイトに設置し、環境変数 <code>GEMINI_API_KEY</code> を1回設定すれば、以降はここを触らなくてもAI鑑定が自動で使えます（キーはサーバーに隠れ、閲覧者には出ません）。</b>下の欄は、自分の端末だけでお試しする時や、自分専用の上限なし設定に使います。</p>
+      <div style="margin-top:8px"><label>Gemini APIキー（この端末にのみ保存・お試し用）</label><input type="password" id="gkey" placeholder="AIza..." autocomplete="off"></div>
       <div style="margin-top:8px"><label>オーナー合言葉（自分専用・任意）</label><input type="password" id="gowner" placeholder="Netlifyの PK_OWNER_TOKEN と同じ文字列" autocomplete="off"><p class="note" style="margin:4px 0 0">本番サイトで、ここに合言葉を入れておくと<b>自分だけ回数上限なし</b>で鑑定できます（APIキー欄は空のままでOK）。この端末にのみ保存。</p></div>
       <div style="margin-top:8px"><label>モデル</label><select id="gmodel"><option value="gemini-2.5-flash">gemini-2.5-flash（推奨）</option><option value="gemini-3.6-flash">gemini-3.6-flash</option><option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite（最安）</option></select></div>
       <p class="note" style="margin:6px 0 0">キーは端末内(localStorage)のみ・外部送信はGoogleへの鑑定リクエストのみ。テスト後は再発行推奨。</p>
@@ -2557,6 +2559,19 @@ function applyPair(id){
 }
 
 try{ var _gk=localStorage.getItem("ms_gkey"); if(_gk&&document.getElementById("gkey")) document.getElementById("gkey").value=_gk; }catch(e){}
+/* AI鑑定の利用状況を分かりやすく表示（キーはサーバーに隠れる＝閲覧者には出ない） */
+(function(){var el=document.getElementById("aiStatus");if(!el)return;
+  var served=/^https?:$/.test(location.protocol);
+  var hasKey=false; try{hasKey=!!(localStorage.getItem("ms_gkey")||"").trim();}catch(e){}
+  if(served){
+    el.innerHTML='<span style="display:inline-block;background:#e3f3e8;color:#2f7a4e;border-radius:8px;padding:5px 10px;font-weight:700">✅ AI鑑定：このサイトで自動で使えます（閲覧者のキー入力は不要）</span>'
+      +'<br><span style="font-size:12.5px">※動かない場合は、Netlifyの環境変数 <code>GEMINI_API_KEY</code> の設定をご確認ください（サーバー側にキーが隠れて動く仕組みです）。</span>';
+  }else if(hasKey){
+    el.innerHTML='<span style="display:inline-block;background:#fbf0d8;color:#a8791f;border-radius:8px;padding:5px 10px;font-weight:700">🔑 この端末に保存したキーでAI鑑定を使えます（お試し）</span>';
+  }else{
+    el.innerHTML='<span style="display:inline-block;background:#f0f0f0;color:#565a80;border-radius:8px;padding:5px 10px;font-weight:700">ℹ️ AI鑑定：本番サイト（Netlify等）に設置すればキー不要で自動。この単体ファイルだけで試す時は下の設定でキーを入れてください。</span>';
+  }
+})();
 function scrollYearsToNow(){try{document.querySelectorAll(".yearsBox").forEach(function(box){var n=box.querySelector(".yNow");if(n){box.scrollTop+=n.getBoundingClientRect().top-box.getBoundingClientRect().top-8;}});}catch(e){}}
 /* カード折りたたみ（見出しクリック）＋目次クリックで対象を展開 */
 (function(){var out=document.getElementById("out");if(!out)return;
