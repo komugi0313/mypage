@@ -1338,16 +1338,16 @@ function ageRange(s,e){return (s>=e)?'誕生ごろ':ageJ(s)+'〜'+ageJ(e);}
 /* 人生の節目（大運の切替＝運の季節が変わる年）を西暦つきで“ひと目”。次にいつ変わるかを明示 */
 function lifeMilestonesCard(c,fav){
   var dl=daeunList(c),items=dl.items,by=birthYearOf(c),now=c.now||{},curAge=(now.age!=null?now.age:null);
-  var ritsuY=Math.round(dl.ritsu/12);
+  var ritsuLab=ageJ(dl.ritsu),ritsuYr=(by!=null?by+Math.round(dl.ritsu/12):null);
   var rows=[];
   for(var i=1;i<items.length;i++){var it=items[i],ageY=Math.round(it.startM/12),yr=(by!=null?by+ageY:null);
     var lf=luckFav(MSTEM_EL[it.stem]||'',fav);
-    rows.push({age:ageY,yr:yr,ten:it.ten||it.tenStar||'',gz:it.ganzhi,lf:lf,cur:(i===dl.cur)});}
+    rows.push({age:ageY,ageLab:ageJ(it.startM),yr:yr,ten:it.ten||it.tenStar||'',gz:it.ganzhi,lf:lf,cur:(i===dl.cur)});}
   var nextRow=null;for(var k=0;k<rows.length;k++){if(curAge!=null&&rows[k].age>curAge){nextRow=rows[k];break;}}
-  var lead=(nextRow?('次に運の季節が変わるのは <b style="color:var(--title)">'+nextRow.age+'歳'+(nextRow.yr!=null?'（'+nextRow.yr+'年）':'')+'</b>'+(nextRow.ten?'＝<b>'+esc(nextRow.ten)+'運</b>':'')+(nextRow.lf?'（'+nextRow.lf.m+' '+nextRow.lf.t+'）':'')+'。'):'今後の算出範囲では大運の切替はこの先しばらくありません。')
-    +'<br>最初の大運が動き出す「立運」は <b>'+ritsuY+'歳'+(by!=null?'（'+(by+ritsuY)+'年）':'')+'</b>ごろです。';
+  var lead=(nextRow?('次に運の季節が変わるのは <b style="color:var(--title)">'+nextRow.ageLab+(nextRow.yr!=null?'（'+nextRow.yr+'年ごろ）':'')+'</b>'+(nextRow.ten?'＝<b>'+esc(nextRow.ten)+'運</b>':'')+(nextRow.lf?'（'+nextRow.lf.m+' '+nextRow.lf.t+'）':'')+'。'):'今後の算出範囲では大運の切替はこの先しばらくありません。')
+    +'<br>最初の大運が動き出す「立運」は <b>'+ritsuLab+(ritsuYr!=null?'（'+ritsuYr+'年ごろ）':'')+'</b>です。';
   var list=rows.map(function(r){
-    return '<div class="tItem'+(r.cur?' love':'')+'" style="min-width:132px'+(r.cur?';border-left-color:var(--title)':'')+'"><div class="ty">'+r.age+'歳'+(r.yr!=null?'〜（'+r.yr+'年〜）':'')+(r.cur?' <span class="ybadge love">今ここ</span>':'')+'</div><div class="tr">'+esc(r.gz)+'／テーマ<b>'+esc(r.ten||'-')+'</b> <span style="color:'+r.lf.c+';font-weight:700">'+r.lf.m+r.lf.t+'</span></div></div>';
+    return '<div class="tItem'+(r.cur?' love':'')+'" style="min-width:132px'+(r.cur?';border-left-color:var(--title)':'')+'"><div class="ty">'+r.ageLab+'〜'+(r.yr!=null?'（'+r.yr+'年〜）':'')+(r.cur?' <span class="ybadge love">今ここ</span>':'')+'</div><div class="tr">'+esc(r.gz)+'／テーマ<b>'+esc(r.ten||'-')+'</b> <span style="color:'+r.lf.c+';font-weight:700">'+r.lf.m+r.lf.t+'</span></div></div>';
   }).join('');
   return '<p style="margin:0 0 6px">'+lead+'</p><div class="tline">'+list+'</div>'
     +guideBox('<p style="margin:0 0 6px">大運は<b>立運（最初の切替年齢）</b>から<b>10年ごと</b>に巡る運の季節です。各運の<b>テーマ＝干の通変星</b>、<b>◎＝喜神で追い風／△＝忌神で調整期／○＝中立</b>。</p>'
@@ -1795,13 +1795,21 @@ function natalDataBoard(p,inp,sex){
   var seiName=female?'正官':'正財',henName=female?'偏官':'偏財';
   var seiTou=false;(fp&&fp.pillars||[]).forEach(function(pl,i){if(i!==2&&pl.tenStar===seiName)seiTou=true;});
   var seiState=seiTou?'透干（表に出る）':((sc[seiName]||0)>0?'蔵干のみ（内に秘める）':'命中になし');
-  var dl=daeunList(c),ritsuY=Math.round(dl.ritsu/12),sf=c.startFortune||{};
+  var dl=daeunList(c),ritsuLab=ageJ(dl.ritsu),sf=c.startFortune||{};
   var en=ndSec('◆ 縁・運の座標',
     '<div class="note" style="font-size:12px;line-height:1.9">'
     +'配偶者宮＝<b>日支 '+elB(c.pillars[2].branch)+'</b>／配偶者星（'+seiName+'）＝<b>'+esc(seiState)+'</b>／恋愛星＝'+henName+'<b>'+(sc[henName]||0)+'</b>'
     +'<br>桃花（咸池）<b>'+(sl.indexOf('咸池')>=0?'有':'無')+'</b>／紅艶<b>'+(sl.indexOf('紅艶')>=0?'有':'無')+'</b>／空亡（天中殺）＝<b>'+(ks.list&&ks.list.length?ks.list.join('・'):'-')+'</b>'
-    +'<br>立運（大運の始まり）＝<b>'+ritsuY+'歳ごろ</b>／大運の進み方＝<b>'+(sf.forward?'順行':'逆行')+'</b>'
-    +'</div>');
+    +'<br>立運（大運の始まり）＝<b>'+ritsuLab+'ごろ</b>／大運の進み方＝<b>'+(sf.forward?'順行':'逆行')+'</b>'
+    +'</div>'
+    +'<details style="margin:4px 0 0"><summary class="note" style="cursor:pointer;font-weight:700;color:var(--accent)">❓ 配偶者宮・配偶者星・透干とは？（良し悪しの見方つき）</summary>'
+      +'<div class="note" style="font-size:11px;line-height:1.85;margin-top:5px">'
+      +'<b>◆ 配偶者宮（はいぐうしゃきゅう）＝日支</b>：日主のすぐ足元（日支）は「結婚相手・家庭の“席”」。ここに来る干支や、そこへ巡る運で、パートナー運の動きを読みます。<br>'
+      +'<b>◆ 配偶者星（はいぐうしゃせい）</b>：結婚相手を表す“星（通変星）”。<b>女性＝正官（夫星）／男性＝正財（妻星）</b>。宮＝「席」、星＝「相手そのもの」のイメージ。<br>'
+      +'<b>◆ 恋愛星</b>：恋の相手を表す星＝<b>女性＝偏官／男性＝偏財</b>。結婚星より“ときめき・惹かれ”寄り。<br>'
+      +'<b>◆ 透干（とうかん）と蔵干（ぞうかん）</b>：星が<b>天干（上の段）に出て見えている＝透干</b>＝その縁が“表に出て働きやすい・日常で意識しやすい”。<b>地支の中に隠れている＝蔵干のみ</b>＝“内に秘めていて、運が巡った年に表に出る”。<br><br>'
+      +'<b>◆ 良い？悪い？</b>：どちらも<b>良い悪いではなく「縁の出方」</b>です。配偶者星が<b>有る・透干＝結婚を意識しやすい縁</b>、<b>無い＝縁が運まかせ（巡ってきた年にまとまる）</b>で、“結婚できない”という意味ではありません。桃花（咸池）＝魅力・人気、空亡＝その分野が一時的に「お休み・充電」になりやすい時期の目安、と読みます。'
+      +'</div></details>');
   return '<div class="card" style="border:2px solid var(--title)"><h2 style="border-color:var(--title)">命式サマリー（この命式から拾った素材・ひと目）</h2>'
     +'<p class="note" style="margin:0 0 6px">下の全カードは、ここに並ぶ素材（干支・五行・通変星・神殺・合冲・喜神…）から読み解いています。<b>何を根拠にしているかが一目で分かります。</b></p>'
     +head+grid+gogyo+tsuhen+shinsatsu+kankei+en
