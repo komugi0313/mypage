@@ -2278,6 +2278,54 @@ function zaikoBox(p){
     +'</div></details>';
   return head+body+guide+'</div>';
 }
+/* 稼ぎ方・浪費のクセ／入る年・破財年／遺産の縁／お金の“月”ネタ */
+function moneyExtra(p){
+  var c=p.pro,sc=starCounts(c),tb=biasOf(c).counts||{},ds=c.pillars[2].ganzhi[0];
+  var strong=(p.sType||'').indexOf('強')>=0,weak=(p.sType||'').indexOf('弱')>=0;
+  var fin=tb['財']||0,shoku=tb['食傷']||0,hikou=tb['比劫']||0,inn=tb['印']||0,kan=tb['官殺']||0;
+  var by=birthYearOf(c),now=c.now||{},cy=now.year,af=c.annualFortunes||[];
+  var earn=[];
+  if(shoku>=1&&fin>=1)earn.push('<b>食傷生財型</b>：好き・得意・技術がそのままお金に（趣味・スキル・発信・ものづくり）');
+  if((sc.偏財||0)>=1)earn.push('<b>偏財型</b>：人脈・機会で大きく回して稼ぐ（商売・副業・投資・臨時収入）');
+  if((sc.正財||0)>=1)earn.push('<b>正財型</b>：コツコツ堅実に積む（給与・専門職・地道な蓄財）');
+  if(kan>=1&&fin>=1)earn.push('<b>財官型</b>：地位・肩書き・組織・信用で稼ぐ（役職・会社・資格）');
+  if(hikou>=2&&strong)earn.push('<b>比劫型</b>：自力・行動・独立・仲間と稼ぐ（現場・独立業）');
+  if(inn>=1&&!earn.length)earn.push('<b>印型</b>：知識・資格・不動産・目上の引き立てで稼ぐ');
+  if(!earn.length)earn.push('決まった収入を堅実に守るタイプ');
+  earn=earn.slice(0,2);
+  var waste=[];
+  if((sc.劫財||0)>=1)waste.push('<b>見栄・つき合い・勝負ごと（投機）・貸し借り</b>で出やすい（奪われ注意）');
+  if((sc.比肩||0)>=2)waste.push('<b>自分への投資・おごり・仲間関係</b>で出やすい');
+  if(shoku>=2)waste.push('<b>趣味・グルメ・衝動買い・楽しみ</b>で出やすい');
+  if((sc.偏財||0)>=2||(fin>=3&&weak))waste.push('<b>気前よく使う・お金にルーズ・交際費</b>で出やすい（多財身弱は特に）');
+  if(inn>=3)waste.push('<b>良い物志向・溜め込み・学びへの投資</b>で出やすい');
+  if((sc.傷官||0)>=2)waste.push('<b>こだわり・高級志向・見栄</b>で出やすい');
+  if(!waste.length)waste.push('大きな浪費のクセは控えめ。手元に残しやすいタイプ');
+  waste=waste.slice(0,2);
+  function ylist(pred){return af.filter(function(a){return pred(a)&&a.year>=(cy||0)&&a.year<=(cy?cy+15:9999);}).map(function(a){return a.year+'年'+(by!=null?'（'+(a.year-by)+'歳）':'');});}
+  var inY=ylist(function(a){var t=a.tenStar||'';return t==='正財'||t==='偏財';});
+  var lossY=ylist(function(a){return (a.tenStar||'')==='劫財';});
+  var hasBo=c.pillars.filter(Boolean).some(function(x){return /[辰戌丑未]/.test(x.branch);});
+  var isan=((inn>=2)||((sc.偏印||0)>=1&&hasBo))?'年長者から受け継ぐ・不動産・相続の“縁”がある傾向です（印＝受け継ぐ星）。<span class="note">※四柱推命で遺産の有無は確定できません。“動きやすさ”の目安で、動くなら財庫開冲や印が強まる年に。</span>':'受け継ぐより<b>自分で築く</b>タイプ（大きな相続の縁は薄め）。';
+  var mIn=[],mOut=[],d=new Date(),yy=(cy||d.getFullYear()),mm=d.getMonth()+1;
+  for(var k=0;k<12&&(mIn.length<3||mOut.length<3);k++){
+    var mp=(typeof monthPillarOf==='function')?monthPillarOf(yy,mm):null;
+    if(mp){var t=tenGodOf(ds,mp.stem);
+      if((t==='正財'||t==='偏財')&&mIn.length<3)mIn.push(yy+'年'+mm+'月'+(t==='偏財'?'(臨時)':'(堅実)'));
+      else if(t==='劫財'&&mOut.length<3)mOut.push(yy+'年'+mm+'月');}
+    mm++;if(mm>12){mm=1;yy++;}
+  }
+  return '<div style="background:var(--soft);border-radius:10px;padding:10px 12px;margin:2px 0 10px">'
+    +'<b class="sech">◆ 稼ぎ方・浪費のクセ ＆ お金の時期</b>'
+    +'<p style="margin:6px 0 0"><b>💪 稼ぎ方のクセ：</b>'+earn.join('／')+'</p>'
+    +'<p style="margin:6px 0 0"><b>💸 浪費のクセ：</b>'+waste.join('／')+'</p>'
+    +'<p style="margin:6px 0 0"><b>📈 お金が入りやすい年：</b>'+(inY.length?'<b style="color:var(--good)">'+inY.join('／')+'</b>':'算出範囲では控えめ')+'<span class="note">（財星が巡る年＝収入・臨時収入）</span></p>'
+    +'<p style="margin:6px 0 0"><b>⚠ 金運の失敗に注意な年：</b>'+(lossY.length?'<b style="color:var(--warn)">'+lossY.join('／')+'</b>':'算出範囲では目立ちません')+'<span class="note">（劫財の年＝奪われ・散財・保証・投機の負け・貸し倒れに注意）</span></p>'
+    +'<p style="margin:6px 0 0"><b>🏛 遺産・受け継ぐ財の縁：</b>'+isan+'</p>'
+    +((mIn.length||mOut.length)?'<p style="margin:8px 0 0;padding-top:6px;border-top:1px dashed var(--line)"><b>📅 お金の“月”ネタ（今後12ヶ月）</b><br>'+(mIn.length?'💰 入りやすい月：<b style="color:var(--good)">'+mIn.join('／')+'</b><br>':'')+(mOut.length?'🌀 出やすい月：<b style="color:var(--warn)">'+mOut.join('／')+'</b><br>':'')+'<span class="note" style="font-size:10.5px">※月運は年運より弱い“日常の波”。話のネタ・目安としてどうぞ。</span></p>':'')
+    +'<p class="note" style="margin:6px 0 0">※吉凶は身強弱・喜忌で変わります（入る年でも身弱だと“入って出る”ことも）。</p>'
+    +'</div>';
+}
 function pcMoney(p){var c=p.pro,tb=biasOf(c),sc=starCounts(c),fin=tb.counts["財"]||0,hikou=tb.counts["比劫"]||0,inn=tb.counts["印"]||0,shoku=tb.counts["食傷"]||0,weak=(p.sType||"").indexOf("弱")>=0,pts=[];
   if(sc.正財>=1)pts.push('<b>正財あり</b>：堅実。コツコツ貯め、計画的で無駄遣いを嫌い、数字にきちんとしている。');
   if(sc.偏財>=1)pts.push('<b>偏財あり</b>：お金を動かす・稼ぐ・使うのが上手で気前がよい。商才・投資センスがある一方、入っても出やすい。');
@@ -2302,7 +2350,7 @@ function pcMoney(p){var c=p.pro,tb=biasOf(c),sc=starCounts(c),fin=tb.counts["財
     +stRow('🎲 勝負・大きく動かす力',1+((sc.偏財||0)>=1?1:0)+(hikou>=2?1:0)+((sc.劫財||0)>=1?1:0)+(shoku>=2?1:0),'"大きく動かす星"が強いほど勝負向きだが波も。例：投資や独立で大きく増やせる反面、増減が激しい')
     +stRow('🛡 金運の安定度',1+((fin>=1&&fin<=2)?2:0)+(mStrong?1:0)+(inn>=1?1:0)-((fin>=3&&weak)?1:0),'お金の星が"ほどよく"あり芯が強いほど安定。お金の星が多すぎて力負けすると不安定。例：稼ぎは大きいのに出費も大きく残らない、など'),
     '正財<b>'+(sc.正財||0)+'</b>／偏財<b>'+(sc.偏財||0)+'</b>／財計<b>'+fin+'</b>／食傷<b>'+shoku+'</b>／印<b>'+inn+'</b>／比劫<b>'+hikou+'</b>／劫財<b>'+(sc.劫財||0)+'</b>／身の強さ<b>'+esc((p.sType||'').replace(/[（(].*$/,'')||'中和')+'</b>'+((fin>=3&&weak)?'／<b>多財身弱</b>':'')+'<br><span style="color:var(--muted)">※貯蓄＝正財+印+身強、稼ぐ＝偏財+食傷生財、勝負＝偏財+比劫、安定＝財ほどよく+身強−多財身弱 で加点。通変の数はエンジン算出（蔵干0.5換算）。</span>');
-  return moneyStars+zaikoBox(p)+lead+pts.map(function(x){return '<p style="margin:0 0 6px">'+x+'</p>';}).join("")+moneyBand;}
+  return moneyStars+zaikoBox(p)+moneyExtra(p)+lead+pts.map(function(x){return '<p style="margin:0 0 6px">'+x+'</p>';}).join("")+moneyBand;}
 
 /* --- 健康：身体の弱いところ --- */
 var EL_HEALTH={木:{o:"肝臓・胆のう・目・筋・自律神経",s:"イライラ・目の疲れ・筋のこわばり・自律神経の乱れ"},火:{o:"心臓・小腸・血管・血圧・精神",s:"動悸・血圧・不眠・のぼせ・情緒の波"},土:{o:"胃・脾・消化器・口・肌",s:"胃腸の不調・食欲の波・肌荒れ・むくみ・思い悩み"},金:{o:"肺・大腸・気管支・皮膚・鼻",s:"呼吸器や皮膚のトラブル・便通・乾燥"},水:{o:"腎・膀胱・泌尿器・生殖・骨・耳・ホルモン",s:"冷え・むくみ・腰や骨・耳・婦人科／ホルモン"}};
