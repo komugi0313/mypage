@@ -1416,6 +1416,15 @@ function annualDetail(c,fav,sex){var now=c.now||{},cy=now.year,af=(c.annualFortu
       +'</div>';}).join("");
   return '<p class="note" style="margin:8px 0 4px"><b>各年の詳細（全'+af.length+'年）</b>　通変星＝その年のテーマ／十二運＝勢い／◎喜神年＝追い風・△忌神年＝守り／<span class="ybadge kb">空亡</span>💍結婚💕恋愛。枠内はスクロール（今年付近を表示中）。</p>'
     +'<div class="yearsBox" style="max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:2px 10px">'+rows+'</div>';}
+/* 解空（げくう）＝空亡が“冲”で解ける。先生の流派に合わせ「冲のみ」で判定（合・填実は解けとしない）。
+   命式の四柱に、空亡支を冲する支があれば＝生まれつき解空。年運でその冲支が巡る年＝一時的に解空（開く）。 */
+function kaikuInfo(c){var ks=kuboSet(c),labels=['年','月','日','時'];
+  var items=(ks.list||[]).map(function(vb){var ch=CHONG[vb],by=[];
+    c.pillars.forEach(function(pl,i){if(pl&&pl.branch===ch)by.push(labels[i]+'柱');});
+    return {vb:vb,chong:ch,kaiku:by.length>0,by:by};});
+  return {list:ks.list||[],items:items,
+    allKaiku:items.length>0&&items.every(function(r){return r.kaiku;}),
+    anyKaiku:items.some(function(r){return r.kaiku;})};}
 /* 空亡（天中殺）が来る年 — 視覚化カード */
 function kuboYearsCard(c){var ks=kuboSet(c),af=(c.annualFortunes||[]),now=c.now||{},cy=now.year;
   if(!ks.list.length)return '<p class="note">空亡の算出データがありません。</p>';
@@ -1428,9 +1437,30 @@ function kuboYearsCard(c){var ks=kuboSet(c),af=(c.annualFortunes||[]),now=c.now|
     return '<span class="kchip'+(containsNow?' now':'')+'" style="border-color:'+col+';color:'+col+'">'+pr.join('・')+'年'+(containsNow?' <b>←今ここ</b>':(isNext?' <b>←次</b>':''))+'</span>';}).join('');
   var status=isNow?'<b style="color:var(--warn)">今年（'+cy+'年）はまさに空亡（天中殺）の中です。</b>新しい大勝負・結婚・独立・大型契約は急がず、種まき・充電・守りに向く時期とされます。'
     :(nextPair?'次の空亡（天中殺）は<b style="color:var(--title)">'+nextPair.join('・')+'年（'+(birthYearOf(c)!=null?(nextPair[0]-birthYearOf(c))+'〜'+(nextPair[nextPair.length-1]-birthYearOf(c))+'歳ごろ':'')+'）</b>です。':'今後の算出範囲に空亡はありません。');
+  /* 解空（冲のみ）：命式で解けているか＋冲の年で一時的に解ける年 */
+  var ki=kaikuInfo(c),kaikuHtml='';
+  var resolved=ki.items.filter(function(r){return r.kaiku;});
+  if(ki.anyKaiku){
+    kaikuHtml='<div style="margin:10px 0 0;padding:9px 11px;background:var(--soft);border-radius:9px">'
+      +'<b class="sech" style="color:var(--good)">🔓 解空（げくう）＝あなたの空亡は“解けて”います</b>'
+      +'<p style="margin:5px 0 0">命式の中に<b>空亡支を冲する支</b>があり、'
+      +resolved.map(function(r){return '空亡の<b>'+elB(r.vb)+'</b>を<b>'+r.by.join('・')+'の'+elB(r.chong)+'</b>が冲';}).join('、')
+      +'＝<b style="color:var(--good)">解空</b>しています。'
+      +(ki.allKaiku?'空亡の2支ともが解けており、<b>天中殺の重さは生まれつき軽い</b>タイプ。空亡年の「お休み感」も控えめに読めます。':'2支のうち片方が解けており、<b>その分だけ天中殺の重さが和らぐ</b>とされます。')
+      +'</p>'
+      +'<p class="note" style="margin:5px 0 0">※先生の流派に合わせ<b>「冲のみ」で解空</b>と判定（合・填実は解けとしていません）。冲された空亡は“閉じた蔵が開く”＝マイナスが軽くなる／むしろ動き出す、と読みます。</p>'
+      +'</div>';
+  }else{
+    kaikuHtml='<p class="note" style="margin:10px 0 0;padding:8px 11px;background:var(--soft);border-radius:9px"><b>🔒 解空（げくう）：</b>命式に空亡支（'+ki.list.map(elB).join('')+'）を冲する支は<b>ありません</b>。この流派は<b>冲のみで解空</b>のため、あなたの空亡は<b>解けずにそのまま働くタイプ</b>と読みます（合・填実では解けとしません）。空亡年は通説どおり“充電・守り”を意識すると安心です。</p>';
+  }
+  /* 年運で冲支が巡る＝一時的に解空（開く）年 */
+  var chMap={};ki.list.forEach(function(vb){chMap[CHONG[vb]]=vb;});
+  var kYears=af.filter(function(a){var yb=a.branch||a.ganzhi[1];return chMap[yb]&&a.year>=(cy?cy-1:0)&&a.year<=(cy?cy+15:9999);}).slice(0,5).map(function(a){var yb=a.branch||a.ganzhi[1];return a.year+'年（'+elB(yb)+'が空亡'+elB(chMap[yb])+'を冲）';});
+  var kYearsHtml=kYears.length?'<p class="note" style="margin:6px 0 0"><b>🔓 冲で空亡が“開く”年（今後）：</b>'+kYears.join('／')+'<br>眠っていた空亡支が冲で動き出す年。<b>止まっていた縁や物事が動く／区切りがつく</b>きっかけになりやすいとされます（＝空亡年とは別の年です）。</p>':'';
   return '<p style="margin:0 0 6px">あなたの空亡（天中殺）は <b style="font-size:17px">'+ks.list.map(elB).join('')+'</b> の2支。この支が巡る<b>2年間</b>が空亡年です（12年に一度・2年連続）。努力が実りにくい・結果が遅れる時期とされ、無理な勝負より<b>整える・学ぶ・待つ</b>のが吉という通説です。</p>'
     +'<p style="margin:0 0 8px">'+status+'</p>'
     +'<div class="chipwrap">'+chips+'</div>'
+    +kaikuHtml+kYearsHtml
     +'<p class="note" style="margin:6px 0 0">★色付き＝今年含む／濃い色＝これから来る空亡／薄い色＝過去。年運カードでも各年に<span class="ybadge kb">空亡</span>を表示しています。</p>';}
 /* 大運（10年運）で「今が縁の時期か」を判定：干の官星/財星・支の桃花/冲/支合/紅艶から縁のサインを拾う */
 function decadeRomance(c,sex){var dl=daeunList(c),db=c.pillars[2].branch,ds=c.pillars[2].ganzhi[0],by=birthYearOf(c),female=(sex!=="male");
