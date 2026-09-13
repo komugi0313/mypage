@@ -1669,6 +1669,78 @@ function seinenChusatsuCard(p){var c=p.pro,ks=kuboSet(c),yb=c.pillars[0]&&c.pill
     +'<li><b>親の影響のないところで再スタート</b>することで、幸せになれる人です。</li></ul>'
     +'<p style="margin:6px 0 0"><b>※絶縁が良いという意味ではありません。</b>「親に言われたから」「親が喜びそうだから」で決めるのではなく、<b>自分の意思で決めて、親・家族に振り回されない・依存しすぎない</b>ことが大事です。実際の鑑定でも、不運続きで相談に来る方は<b>生年中殺なのに親と同居している</b>ケースが多いとされます。</p>'
     +'</div>';}
+/* この命式から拾った素材を1枚に集約した“命式サマリーボード”（色・枠・大きさで一目瞭然） */
+function ndSec(title,inner){return '<div style="border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin:8px 0;background:var(--card)"><div style="font-size:12px;font-weight:800;color:var(--title);margin-bottom:5px">'+title+'</div>'+inner+'</div>';}
+function natalDataBoard(p,inp,sex){
+  var c=p.pro,pil=c.pillars,fp=window.fullProfile?window.fullProfile(c):null,genmei=(fp&&fp.genmei)||'';
+  var sc=starCounts(c),grp=groupSums(sc),sl=starList(c),ks=kuboSet(c),five=p.five||{},fav=p.fav||{};
+  var female=(sex!=='male'),dEl=c.dayMaster.element,dStem=c.dayMaster.stem,sType=(p.sType||'').replace(/[（(].*$/,'')||'中和';
+  var labs=['年','月','日','時'];
+  /* ヘッダ（大きく） */
+  var head='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">'
+    +'<div style="font-size:15px"><span class="note" style="font-size:11px">日主（自分の芯）</span><br><b style="font-size:22px">'+elS(dStem)+'</b> <span class="el-'+dEl+'" style="font-weight:800">'+dEl+'</span></div>'
+    +'<div style="font-size:15px"><span class="note" style="font-size:11px">身の強さ</span><br><b style="font-size:17px">'+esc(sType)+'</b></div>'
+    +(genmei?'<div style="font-size:15px"><span class="note" style="font-size:11px">月支元命（使命）</span><br><b style="font-size:17px;color:var(--accent)">'+esc(genmei)+'</b></div>':'')+'</div>';
+  /* 四柱グリッド */
+  var sbp=starsByPillar(c),cells='';
+  for(var i=0;i<4;i++){var x=pil[i];
+    if(i===3&&(inp.tu||!x)){cells+='<div style="flex:1;min-width:66px;border:1px solid var(--line);border-radius:8px;padding:6px 3px;text-align:center;background:var(--soft)"><div style="font-size:12px;color:var(--muted);font-weight:700">時</div><div class="note" style="font-size:10.5px;margin-top:12px">時刻不明</div></div>';continue;}
+    var kubo=ks.set[x.branch]?'<span style="display:inline-block;background:#3a3a3a;color:#fff;border-radius:4px;font-size:9.5px;padding:0 4px;font-weight:800">空亡</span>':'';
+    var zk=(x.hiddenStems||[]).map(function(h){return elS(h.stem);}).join('');
+    var stp=(sbp[i]||[]);
+    cells+='<div style="flex:1;min-width:66px;border:1px solid var(--line);border-radius:8px;padding:6px 3px 7px;text-align:center;background:var(--card)'+(i===2?';box-shadow:0 0 0 2px var(--title) inset':'')+'">'
+      +'<div style="font-size:11.5px;color:var(--muted);font-weight:700">'+labs[i]+(i===2?'・自分':'')+'</div>'
+      +'<div style="font-size:25px;font-weight:800;line-height:1.1;margin:1px 0">'+elS(x.stem)+elB(x.branch)+'</div>'
+      +'<div style="font-size:11px;color:var(--accent);font-weight:700">'+esc(x.tenStar||'日主')+'</div>'
+      +'<div class="note" style="font-size:10.5px">蔵 '+zk+'</div>'
+      +'<div style="font-size:11px">'+terrainC(x.terrain||'-')+'</div>'
+      +(kubo?'<div style="margin-top:2px">'+kubo+'</div>':'')
+      +(stp.length?'<div style="font-size:9.5px;color:#8a5a00;margin-top:2px;line-height:1.25">'+esc(stp.join('・'))+'</div>':'')
+      +'</div>';
+  }
+  var grid=ndSec('◆ 四柱（年・月・日・時）＝干支／通変／蔵干／十二運／神殺／空亡','<div style="display:flex;gap:5px">'+cells+'</div>');
+  /* 五行 */
+  var tot=0;EL_ORDER.forEach(function(e){tot+=five[e]||0;});tot=tot||1;
+  var fcells=EL_ORDER.map(function(e){var n=five[e]||0,fv=fav[e],mk=fv==='喜'?'<span style="color:var(--good);font-weight:800">◎喜</span>':(fv==='忌'?'<span style="color:var(--warn);font-weight:800">△忌</span>':'<span class="note">○</span>');
+    return '<div style="text-align:center;flex:1;min-width:46px"><div class="el-'+e+'" style="font-weight:800;font-size:15px">'+e+'</div><div style="font-size:20px;font-weight:800">'+n+'</div><div class="bar" style="margin:3px 2px 0"><i class="el-'+e+'" style="width:'+Math.round((n/tot)*100)+'%;background:currentColor"></i></div><div style="font-size:10.5px;margin-top:2px">'+mk+'</div></div>';}).join('');
+  var gogyo=ndSec('◆ 五行の数（◎＝喜神で追い風／△＝忌神で調整）','<div style="display:flex;gap:4px">'+fcells+'</div>');
+  /* 通変グループ */
+  var GKEY=[['比劫','#8f8f98'],['食傷','#3f7a4e'],['財','#b8892f'],['官殺','#c0453b'],['印','#3d6ea8']],topG='',bv=-1;
+  var gchips=GKEY.map(function(g){var n=grp[g[0]]||0;if(n>bv){bv=n;topG=g[0];}return '<span style="display:inline-block;border:1.5px solid '+g[1]+';color:'+g[1]+';border-radius:999px;font-size:12.5px;font-weight:800;padding:2px 10px;margin:2px;background:var(--card)">'+g[0]+' <b style="font-size:14px">'+n+'</b></span>';}).join('');
+  var tsuhen=ndSec('◆ 通変星（十神）の量＝いちばん強いのは「'+esc(topG)+'」','<div>'+gchips+'</div><div class="note" style="font-size:10.5px;margin-top:3px">比劫=自分/仲間・食傷=才能/表現・財=お金/現実・官殺=責任/立場・印=学び/守り（蔵干は0.5換算）</div>');
+  /* 神殺 */
+  function starChip(nm){var bg,cc;
+    if(nm==='咸池'||nm==='紅艶'){bg='#ffe3ef';cc='#c0397a';}
+    else if(nm==='驛馬'){bg='#e2eefb';cc='#3d6ea8';}
+    else if(nm==='魁罡'||nm==='将星'){bg='#eee6f7';cc='#7a4fae';}
+    else if(CAUTION_STAR_PH[nm]){bg='#fde3e3';cc='#c0453b';}
+    else {bg='#e3f3e8';cc='#2f7a4e';}
+    return '<span style="display:inline-block;background:'+bg+';color:'+cc+';border-radius:6px;font-size:12px;font-weight:800;padding:2px 8px;margin:2px" title="'+esc(STAR_JP[nm]||'')+'">'+esc(nm)+'</span>';}
+  var uq=[];sl.forEach(function(s){if(uq.indexOf(s)<0)uq.push(s);});
+  var shinsatsu=ndSec('◆ 神殺（吉凶星）　<span class="note" style="font-weight:400">緑=吉／赤=注意／桃=恋/華／青=動</span>',uq.length?uq.map(starChip).join(''):'<span class="note">目立つ神殺はありません</span>');
+  /* 命式内の関係 */
+  var rels=window.natalRelationsX?window.natalRelationsX(c):[],natKg=[];
+  for(var a=0;a<pil.length;a++)for(var b2=a+1;b2<pil.length;b2++){if(!pil[a]||!pil[b2])continue;var s1=pil[a].ganzhi[0],s2=pil[b2].ganzhi[0];if(GANGOU[s1]===s2)natKg.push(s1+s2);}
+  function relChip(txt,good){var bg=good?'#e3f3e8':'#fbeee0',cc=good?'#2f7a4e':'#a8791f';return '<span style="display:inline-block;background:'+bg+';color:'+cc+';border-radius:6px;font-size:12px;font-weight:800;padding:2px 8px;margin:2px">'+esc(txt)+'</span>';}
+  var relc='';natKg.forEach(function(k){relc+=relChip('干合 '+k,true);});
+  rels.forEach(function(r){relc+=relChip((r.kind||'')+((r.branches&&r.branches.length)?' '+r.branches.join(''):''),/三合|方合|六合|半会|支合/.test(r.kind||''));});
+  var kankei=ndSec('◆ 命式内の関係（縁を強める＝緑／調整が要る＝橙）',relc||'<span class="note">合・冲刑破害は目立ちません</span>');
+  /* 縁の座標 */
+  var seiName=female?'正官':'正財',henName=female?'偏官':'偏財';
+  var seiTou=false;(fp&&fp.pillars||[]).forEach(function(pl,i){if(i!==2&&pl.tenStar===seiName)seiTou=true;});
+  var seiState=seiTou?'透干（表に出る）':((sc[seiName]||0)>0?'蔵干のみ（内に秘める）':'命中になし');
+  var dl=daeunList(c),ritsuY=Math.round(dl.ritsu/12),sf=c.startFortune||{};
+  var en=ndSec('◆ 縁・運の座標',
+    '<div class="note" style="font-size:12px;line-height:1.9">'
+    +'配偶者宮＝<b>日支 '+elB(c.pillars[2].branch)+'</b>／配偶者星（'+seiName+'）＝<b>'+esc(seiState)+'</b>／恋愛星＝'+henName+'<b>'+(sc[henName]||0)+'</b>'
+    +'<br>桃花（咸池）<b>'+(sl.indexOf('咸池')>=0?'有':'無')+'</b>／紅艶<b>'+(sl.indexOf('紅艶')>=0?'有':'無')+'</b>／空亡（天中殺）＝<b>'+(ks.list&&ks.list.length?ks.list.join('・'):'-')+'</b>'
+    +'<br>立運（大運の始まり）＝<b>'+ritsuY+'歳ごろ</b>／大運の進み方＝<b>'+(sf.forward?'順行':'逆行')+'</b>'
+    +'</div>');
+  return '<div class="card" style="border:2px solid var(--title)"><h2 style="border-color:var(--title)">命式サマリー（この命式から拾った素材・ひと目）</h2>'
+    +'<p class="note" style="margin:0 0 6px">下の全カードは、ここに並ぶ素材（干支・五行・通変星・神殺・合冲・喜神…）から読み解いています。<b>何を根拠にしているかが一目で分かります。</b></p>'
+    +head+grid+gogyo+tsuhen+shinsatsu+kankei+en
+    +'<p class="note" style="margin:6px 0 0;font-size:10.5px">※すべてエンジンが命式から算出した"素材"です。各カードの「🔎根拠」と合わせて検算にお使いください。色分け：五行＝木緑/火赤/土黄/金灰/水青、吉星＝緑、注意星＝赤、恋・華＝桃、動＝青。</p></div>';
+}
 function renderSolo(p,inp){
   var c=p.pro,out=document.getElementById("out"),H="";
   var whoChip=inp.name?(esc(inp.name)+"さん"):(shortBirth(inp)+"生");
@@ -1682,6 +1754,9 @@ function renderSolo(p,inp){
     +'<p class="note" style="margin:0 0 6px">'+esc(inp.y)+'年'+esc(inp.mo)+'月'+esc(inp.d)+'日 ／ '+(inp.sex==="male"?"男性":"女性")+(inp.name?'（'+esc(inp.name)+'）':'')+'</p>'
     +'<p class="note" style="margin:0">'+corr+'</p>'
     +'<div style="margin-top:8px"><span class="pill">日主 '+elS(c.dayMaster.stem)+'（'+elc(c.dayMaster.element)+'）</span><span class="pill">'+esc(p.sType)+'</span><span class="pill">空亡 '+esc(kb)+'</span></div></div>';
+
+  // 命式サマリーボード（拾った素材を1枚に）
+  H+=natalDataBoard(p,inp,inp.sex);
 
   // 節入り
   var si=setsuInfo(c);
