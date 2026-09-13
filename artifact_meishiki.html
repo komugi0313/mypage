@@ -1328,6 +1328,27 @@ function daeunList(c){var sf=c.startFortune||{},ritsuRaw=(sf.years||0)*12+(sf.mo
 /* 立運の表示（節の変わり目で稀にエンジンの立運が不安定になる境界ケースを正直に注記） */
 function ritsuLabel(sf,boundary){if(boundary)return "要確認（節の変わり目の境界ケース）";if(!sf||sf.years==null)return "-";var m=(sf.years||0)*12+(sf.months||0);if(m<0)return "要確認（節の変わり目の境界ケース）";return (sf.years||0)+"歳"+(sf.months||0)+"ヶ月";}
 function ageRange(s,e){return (s>=e)?'誕生ごろ':ageJ(s)+'〜'+ageJ(e);}
+/* 人生の節目（大運の切替＝運の季節が変わる年）を西暦つきで“ひと目”。次にいつ変わるかを明示 */
+function lifeMilestonesCard(c,fav){
+  var dl=daeunList(c),items=dl.items,by=birthYearOf(c),now=c.now||{},curAge=(now.age!=null?now.age:null);
+  var ritsuY=Math.round(dl.ritsu/12);
+  var rows=[];
+  for(var i=1;i<items.length;i++){var it=items[i],ageY=Math.round(it.startM/12),yr=(by!=null?by+ageY:null);
+    var lf=luckFav(MSTEM_EL[it.stem]||'',fav);
+    rows.push({age:ageY,yr:yr,ten:it.ten||it.tenStar||'',gz:it.ganzhi,lf:lf,cur:(i===dl.cur)});}
+  var nextRow=null;for(var k=0;k<rows.length;k++){if(curAge!=null&&rows[k].age>curAge){nextRow=rows[k];break;}}
+  var lead=(nextRow?('次に運の季節が変わるのは <b style="color:var(--title)">'+nextRow.age+'歳'+(nextRow.yr!=null?'（'+nextRow.yr+'年）':'')+'</b>'+(nextRow.ten?'＝<b>'+esc(nextRow.ten)+'運</b>':'')+(nextRow.lf?'（'+nextRow.lf.m+' '+nextRow.lf.t+'）':'')+'。'):'今後の算出範囲では大運の切替はこの先しばらくありません。')
+    +'<br>最初の大運が動き出す「立運」は <b>'+ritsuY+'歳'+(by!=null?'（'+(by+ritsuY)+'年）':'')+'</b>ごろです。';
+  var list=rows.map(function(r){
+    return '<div class="tItem'+(r.cur?' love':'')+'" style="min-width:132px'+(r.cur?';border-left-color:var(--title)':'')+'"><div class="ty">'+r.age+'歳'+(r.yr!=null?'〜（'+r.yr+'年〜）':'')+(r.cur?' <span class="ybadge love">今ここ</span>':'')+'</div><div class="tr">'+esc(r.gz)+'／テーマ<b>'+esc(r.ten||'-')+'</b> <span style="color:'+r.lf.c+';font-weight:700">'+r.lf.m+r.lf.t+'</span></div></div>';
+  }).join('');
+  return '<p style="margin:0 0 6px">'+lead+'</p><div class="tline">'+list+'</div>'
+    +guideBox('<p style="margin:0 0 6px">大運は<b>立運（最初の切替年齢）</b>から<b>10年ごと</b>に巡る運の季節です。各運の<b>テーマ＝干の通変星</b>、<b>◎＝喜神で追い風／△＝忌神で調整期／○＝中立</b>。</p>'
+      +gRow('立運','エンジンが節入りからの日数で算出（この流派は第一運＝月柱）')
+      +gRow('◎/△の理屈','大運の干の五行が、あなたの喜神なら◎・忌神なら△')
+      +gTip('「“いつ運の色が変わるか”を先に知っておくと、転職・結婚・引越などの大きな決断を運の波に乗せやすくなります」'))
+    +'<p class="note" style="margin:6px 0 0">※年齢・西暦は目安（立運起点の概算）。空亡（縁の切替・充電期）の年は別カード「空亡」をご覧ください。</p>';
+}
 /* 大運・年運の説明に含まれる「（女性は…）（男性は…）」を、その命式の性別に合う方だけ残す */
 function sexNote(t,sex){if(!t)return t;return (sex==="male")?t.replace(/（女性は[^）]*）/g,""):t.replace(/（男性は[^）]*）/g,"");}
 function daeunDetail(c,fav,sex){var dl=daeunList(c);
@@ -1721,6 +1742,8 @@ function renderSolo(p,inp){
   // 詳細プロファイル（教科書用・9枚）
   H+=detailProfileCards(p,inp.sex);
 
+  // 人生の節目（大運の切替＝運の季節が変わる年）ひと目
+  H+='<div class="card"><h2>人生の節目（大運の切替・ひと目）</h2>'+lifeMilestonesCard(c,p.fav)+'</div>';
   // 大運（第一運＝月柱を先頭に、立運起点で表示）
   var now=c.now||{},sf=c.startFortune||{},dl=daeunList(c);
   H+='<div class="card"><h2>大運（立運：'+esc(ritsuLabel(sf,dl.boundary))+' ／ '+(sf.forward?"順行":"逆行")+' ／ 第一運＝月柱）</h2><div class="ladder">';
