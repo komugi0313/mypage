@@ -3172,6 +3172,32 @@ function compatLoveCard(pa,pb,a,b){
   H+='<div style="margin-top:10px;border-top:1px solid var(--soft);padding-top:8px"><b class="sech">◆ 五行・十二運の相性（一言）</b>';
   H+='<p style="margin:4px 0">五行：'+elMsg+'</p><p style="margin:4px 0">十二運：'+juni+'</p></div>';
   return H;}
+/* 結論ファースト：お客様にそのまま伝えられる“納得”パネル＋検算用の根拠 */
+function compatVerdict(cd,pa,pb){
+  if(!cd)return"";
+  var dA=pa.pro.dayMaster.element,dB=pb.pro.dayMaster.element,dr=elRelation(dA,dB);
+  var bonds=[]; if(cd.kangou)bonds.push('干合（日主どうしが磁石のように引き合う）');
+  (cd.seiritsu||[]).forEach(function(s){bonds.push(esc(s.kind)+'（'+esc(s.el)+'）＝二人で一つの強い流れが完成');});
+  (cd.hankai||[]).forEach(function(s){bonds.push('半会（'+esc(s.el)+'）＝前へ進む勢い');});
+  (cd.rikugouAll||[]).forEach(function(pr){bonds.push('六合〔'+pr.map(elB).join('')+'〕＝そっと結びつく安心の縁');});
+  var cautions=[]; if(cd.chong)cautions.push('冲');if(cd.kei)cautions.push('刑');if(cd.ha)cautions.push('破');if(cd.gai)cautions.push('害');
+  var adv;
+  if(cd.kangou)adv='理屈抜きで惹かれ合う分、依存しすぎず“互いの世界”も大切にすると、長く続きます';
+  else if((cd.seiritsu&&cd.seiritsu.length)||(cd.hankai&&cd.hankai.length))adv='二人で一つの力が完成する強い絆。同じ目標を持つほど大きく伸びます';
+  else if(cd.rikugouAll&&cd.rikugouAll.length)adv='自然に寄り添える相性。感謝を言葉にするほど絆が深まります';
+  else if(cd.chong)adv='価値観の違いは“刺激・成長のもと”。相手の領域を尊重し、距離感を大切にすると長続きします';
+  else if(cd.kei||cd.ha||cd.gai)adv='小さなすれ違いはためこまず、こまめに言葉に。「察して」より「伝える」が鍵です';
+  else adv='派手な結びは控えめでも、'+esc(dr.t||'五行の流れ')+'で十分に噛み合います。役割を分けると心地よい関係に';
+  return '<div style="background:var(--soft);border-radius:10px;padding:12px 14px;margin:10px 0 2px;text-align:left">'
+    +'<b class="sech">◆ ひとことで言うと（お客様への伝え方）</b>'
+    +'<p style="margin:6px 0 0">相性に「良い／悪い」はありません。お二人は<b>核＝日主が'+esc(dr.t||'—')+'</b>'+((cd.tenBtoA||cd.tenAtoB)?('、十神では相手が「'+esc(cd.tenBtoA||'-')+'」・あなたが「'+esc(cd.tenAtoB||'-')+'」'):'')+'の組み合わせ。</p>'
+    +(bonds.length?'<p style="margin:6px 0 0;color:var(--good)"><b>💞 惹き合う縁：</b>'+bonds.join('／')+'</p>':'<p class="note" style="margin:6px 0 0">特別な結びの星は控えめですが「縁がない」意味ではありません（日主・五行・十神で十分読めます）。</p>')
+    +(cautions.length?'<p style="margin:6px 0 0;color:var(--warn)"><b>⚠ 気をつける軸：</b>'+cautions.join('・')+'（悪縁ではなく“成長のきっかけ”）</p>':'')
+    +'<p style="margin:8px 0 0"><b>だから、'+adv+'</b>。</p>'
+    +'<details style="margin:8px 0 0"><summary class="note" style="cursor:pointer;font-weight:700">🔎 根拠（この結論の元・専門用語／先生の検算用）</summary>'
+      +'<p class="note" style="margin:4px 0 0;line-height:1.9">日主'+elc(dA)+'×'+elc(dB)+'＝<b>'+esc(dr.t||'—')+'</b>／干合<b>'+(cd.kangou?'有':'無')+'</b>／六合<b>'+((cd.rikugouAll||[]).length?cd.rikugouAll.map(function(pr){return pr.join('');}).join('・'):'無')+'</b>／三合・方合<b>'+((cd.seiritsu||[]).length?cd.seiritsu.map(function(s){return s.kind+'('+s.el+')';}).join('・'):'無')+'</b>／半会<b>'+((cd.hankai||[]).length?cd.hankai.map(function(s){return s.el;}).join('・'):'無')+'</b><br>冲<b>'+(cd.chong?'有':'無')+'</b>／刑<b>'+(cd.kei?'有':'無')+'</b>／破<b>'+(cd.ha?'有':'無')+'</b>／害<b>'+(cd.gai?'有':'無')+'</b>／十神：相手→あなた<b>'+esc(cd.tenBtoA||'-')+'</b>・あなた→相手<b>'+esc(cd.tenAtoB||'-')+'</b>／総合点<b>'+esc(cd.score)+'</b><br><span style="color:var(--muted)">※干合・三合/方合/半会・六合＝縁を強める／冲・刑・破・害＝調整が要る軸。総合点は良縁−注意点の目安。判定はエンジン算出。</span></p></details>'
+    +'</div>';
+}
 function renderPair(pa,pb,a,b){
   var cd=window.compatData?window.compatData(pa.pro,pb.pro):null;
   var out=document.getElementById("out"),H="";
@@ -3183,6 +3209,7 @@ function renderPair(pa,pb,a,b){
   H+='<div class="card"><h2>相性 総合</h2>'+targetLine(pairFull);
   if(cd){
     H+='<div style="text-align:center"><div class="score">'+esc(cd.score)+'<span style="font-size:16px">点</span></div><p class="note" style="margin:0">'+(cd.good?"とても良い縁が出ています":"補い合える関係です")+'</p></div>';
+    H+=compatVerdict(cd,pa,pb);
   }
   H+='</div>';
   H+='<div class="card"><h2>お一人目の命式表 <span class="note" style="font-weight:400">日主 '+elS(pa.pro.dayMaster.stem)+'（'+elc(pa.pro.dayMaster.element)+'）'+esc(pa.sType)+'</span></h2><div class="mscroll">'+meishikiTable(pa.pro,a.tu)+'</div></div>';
