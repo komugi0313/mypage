@@ -2160,6 +2160,24 @@ function ichidaiUnCard(p){var c=p.pro,ks=kuboSet(c),yb=c.pillars[0]&&c.pillars[0
   if(!yb||!mb||!ks.set[yb]||!ks.set[mb])return '';
   return '<div class="card" style="border:2px solid #7a5cc0"><h2 style="color:#6a4bb0;border-color:#7a5cc0">一代運（いちだいうん）— 生年中殺かつ生月中殺</h2>'
     +'<p style="margin:0;line-height:1.9">あなたは<b>生年中殺（年柱）と生月中殺（月柱）の両方</b>を持ちます。6分の1×6分の1で<b>約36人に1人</b>の宿命で、<b>一代運</b>と呼ばれます。<b>自分で始めて、自分の代で完成させる</b>運勢。<b>親との縁も家系との縁も薄め</b>なので、受け継ぐより<b>自分の力で新しく道を切り開き、自分の代で築き上げる</b>生き方でこそ、この宿命が輝きます。</p></div>';}
+/* 任意の干支の空亡（旬空）2支を求める（旬空＝10干で回る旬に含まれない2支）。年柱基準の判定に使用 */
+function pillarKubo(gz){var STE='甲乙丙丁戊己庚辛壬癸',BRs='子丑寅卯辰巳午未申酉戌亥';
+  if(!gz||gz.length<2)return [];var s=STE.indexOf(gz[0]),b=BRs.indexOf(gz[1]);if(s<0||b<0)return [];
+  var d=((b-s)%12+12)%12;return [BRs.charAt((d+10)%12),BRs.charAt((d+11)%12)];}
+/* 生日中殺（せいじつちゅうさつ）＝年干支の天中殺（空亡）の十二支が日柱（日支）にある人。※日柱由来ではなく年柱基準で見る */
+function seijitsuChusatsuCard(p){var c=p.pro,ygz=c.pillars[0]&&c.pillars[0].ganzhi,db=c.pillars[2]&&c.pillars[2].branch;
+  if(!ygz||!db)return '';
+  var yk=pillarKubo(ygz);if(yk.indexOf(db)<0)return '';
+  return '<div class="card" style="border:2px solid var(--warn)"><h2 style="color:var(--warn);border-color:var(--warn)">生日中殺（せいじつちゅうさつ）— 日柱が天中殺</h2>'
+    +'<p style="margin:0 0 8px">あなたは<b>年柱（'+esc(ygz)+'）から見た天中殺（空亡 '+yk.map(elB).join('')+'）</b>の十二支を<b>日柱（日支 '+elB(db)+'）</b>に持つ「<b>生日中殺</b>」です。<span class="note">※生日中殺だけは日柱由来ではなく<b>年柱の干支の天中殺グループ</b>で見ます。</span> 日柱は<b>自分自身・プライベートな自分</b>を表す柱です。</p>'
+    +'<p style="margin:6px 0 3px"><b class="sech">独自の切り口・カリスマ性</b></p><ul style="margin:0 0 8px;padding-left:1.25em;line-height:1.85">'
+    +'<li>先入観にとらわれない感じ方ができ、<b>唯一無二の発想力</b>の持ち主です。</li>'
+    +'<li>他人と違う自分を否定せず、<b>あなた独自の視点で生み出す新しいアイディア</b>を広げることに力を注ぐのがおすすめ。</li>'
+    +'<li>個性を発揮していくことで、<b>他の人にない魅力をもつカリスマ的存在</b>になっていきます。</li></ul>'
+    +'<p style="margin:6px 0 3px"><b class="sech">理解されにくさ・孤独について</b></p>'
+    +'<p style="margin:0 0 8px;line-height:1.85">「自分自身」を表す日柱が天中殺のため、<b>「これが自分だ」という感覚を持ちづらく</b>、アイデンティティを確立しづらい面があります。その時々で反応や行動が変わりやすく、周囲からは一貫性がないように見えて「理解しにくい」と思われることも。<b>本当はそのときの思いを素直に表しているだけ</b>なのに「前と言っていることが違う、どっちが本当？」と問われ、<b>「誰にもわかってもらえない」という孤独感</b>を抱えやすいとされます。</p>'
+    +'<p style="margin:6px 0 0"><b>※これは短所ではありません。</b>自分の感覚を否定せず、<b>独自の発想を「新しいアイディア」として形にして広げていく</b>ことで、唯一無二の魅力・カリスマ性として花開きます。</p>'
+    +'</div>';}
 /* 身の強さ（身強/身弱）の検算内訳。エンジンと同じ式を表示側で再現（400/400一致を確認済み） */
 function strengthCalcHtml(p){
   var c=p.pro,dEl=c.dayMaster.element,dStem=c.dayMaster.stem,five=p.five||{};
@@ -2448,6 +2466,7 @@ function renderSolo(p,inp){
   H+='<div class="card"><h2>天戦地冲（要注意の年・大運）</h2>'+tensenSelfCard(p)+'</div>';
   H+=seinenChusatsuCard(p);  /* 年柱が空亡なら生年中殺の宿命を出力 */
   H+=seigetsuChusatsuCard(p);  /* 月柱が空亡なら生月中殺の宿命を出力 */
+  H+=seijitsuChusatsuCard(p);  /* 年柱由来の空亡が日支にあれば生日中殺を出力 */
   H+=ichidaiUnCard(p);  /* 生年中殺かつ生月中殺なら一代運を出力 */
   // 運勢カレンダー（各時期カードの一望サマリー）
   H+='<div class="card"><h2>🗓 運勢カレンダー（これから約15年の一望）</h2>'+calendarCard(p,inp.sex)+'</div>';
