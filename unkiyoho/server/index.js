@@ -28,7 +28,10 @@ const CONFIG = {
   codeTTLms: 10 * 60 * 1000,
   maxAttempts: 5,
   resendCooldownMs: 60 * 1000,
-  rememberDays: 90,
+  // remember=true → 長期Cookie（ずっとログイン）。利用のたびに更新（スライディング）推奨。
+  // remember=false → セッションCookie＋短命セッション（共用端末向け）。
+  rememberDays: 365,
+  tempTTLms: 12 * 60 * 60 * 1000,
   pepper: process.env.OTP_PEPPER || 'change-me-in-production', // コードハッシュの追加秘密
   cookieSecure: process.env.NODE_ENV === 'production'          // 本番は必ず true（HTTPS）
 };
@@ -202,7 +205,8 @@ async function verifyCode(req, res) {
   const user = await store.upsertUser(email, { email }); // 未作成なら作成／既存はそのまま
 
   const token = genToken();
-  await store.putSession(token, { email, expires_at: remember ? Date.now() + CONFIG.rememberDays * 864e5 : null });
+  // remember=true はログアウトするまで（長期）、false は tempTTLms 後に失効。
+  await store.putSession(token, { email, expires_at: Date.now() + (remember ? CONFIG.rememberDays * 864e5 : CONFIG.tempTTLms), remember });
   return send(res, 200, { ok: true, nick: user.nick || null }, { 'Set-Cookie': sessionCookie(token, remember) });
 }
 
@@ -217,7 +221,14 @@ async function sessionInfo(req, res) {
   const sess = token ? await store.getSession(token) : null;
   if (!sess) return send(res, 200, { loggedIn: false });
   const user = await store.getUser(sess.email);
-  return send(res, 200, { loggedIn: true, email: sess.email, nick: (user && user.nick) || null });
+  // スライディング更新：remember 済みは利用のたびに期限を延長 → 使い続ける限りログアウトされない（＝ずっと）
+  let extra;
+  if (sess.remember) {
+    sess.expires_at = Date.now() + CONFIG.rememberDays * 864e5;
+    await store.putSession(token, sess);
+    extra = { 'Set-Cookie': sessionCookie(token, true) };
+  }
+  return send(res, 200, { loggedIn: true, email: sess.email, nick: (user && user.nick) || null }, extra);
 }
 
 server.listen(CONFIG.port, () => {

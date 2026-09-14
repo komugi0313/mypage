@@ -31,7 +31,10 @@
     codeTTLms: 10 * 60 * 1000,      // 確認コードの有効期限：10分
     maxAttempts: 5,                 // コード誤入力の上限
     resendCooldownMs: 60 * 1000,    // 再送クールダウン：60秒
-    rememberDays: 90,               // 「ログイン状態を保持」の期間
+    // 「ログイン状態を保持する」にチェック → ずっとログイン（有効期限なし＝ログアウトするまで）。
+    // チェックなし → tempTTLms 後に自動ログアウト（共用端末向け）。
+    tempTTLms: 12 * 60 * 60 * 1000, // 保持しない場合のセッション寿命：12時間
+    rememberDays: 365,              // 本番Cookieの目安（Max-Age）。毎回の利用で更新推奨
     sessionKey: 'unkiyoho_session',
     pendingKey: 'unkiyoho_otp_pending',
     selfKey: 'enbiyori_self_birth'  // 既存：本人プロフィール（生年月日・ニックネーム・メール等）
@@ -113,7 +116,9 @@
       return api('/auth/verify-code', { email: email, code: code, remember: remember })
         .then(function (data) {
           // サーバーが HttpOnly Cookie を発行。画面の出し分け用に軽量セッションも保持
-          var sess = { email: email, nick: (data && data.nick) || null, loginAt: now(), server: true };
+          // remember=true はログアウトするまで（有効期限なし）、false は tempTTLms 後に失効。
+          var sess = { email: email, nick: (data && data.nick) || null, loginAt: now(), remember: remember, server: true,
+            expiresAt: remember ? null : now() + CONFIG.tempTTLms };
           writeJSON(CONFIG.sessionKey, sess);
           return sess;
         });
@@ -134,7 +139,8 @@
     var self = readJSON(CONFIG.selfKey) || {};
     var sess = {
       email: email, nick: self.nick || null, loginAt: now(),
-      remember: remember, expiresAt: remember ? now() + CONFIG.rememberDays * 864e5 : null
+      // remember=true → 有効期限なし（ログアウトするまでずっと）。false → 12時間で自動失効。
+      remember: remember, expiresAt: remember ? null : now() + CONFIG.tempTTLms
     };
     writeJSON(CONFIG.sessionKey, sess);
     // 開発モード：本人プロフィールのメールも最新に合わせる（アドレス修正時の整合のため）
