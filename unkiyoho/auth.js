@@ -12,7 +12,8 @@
  *                   ※ メールは送信されない。動作確認・引き継ぎ用。
  *
  * ■ 本番でエンジニアが実装するAPI（詳細は docs/認証設計_引き継ぎ.md）
- *   POST {API_BASE}/auth/request-code   { email, purpose }        → コードをメール送信
+ *   POST {API_BASE}/auth/request-code   { email, purpose, identify? } → コードをメール送信
+ *       ・identify={nick,birth} は change-email（アドレス修正）時の本人確認用
  *   POST {API_BASE}/auth/verify-code    { email, code, remember } → 検証しセッション発行(Cookie)
  *   POST {API_BASE}/auth/logout         { }                       → セッション破棄
  *   GET  {API_BASE}/auth/session        (Cookie)                  → 現在のログイン状態
@@ -87,7 +88,10 @@
     try { localStorage.setItem(CONFIG.lastEmailKey, email); } catch (e) {} // 次回ログインで自動表示
 
     if (!DEV) {
-      return api('/auth/request-code', { email: email, purpose: purpose })
+      var payload = { email: email, purpose: purpose };
+      // change-email（アドレス修正）の本人確認情報を渡す：{ nick, birth }。サーバーで照合する。
+      if (opts.identify) payload.identify = opts.identify;
+      return api('/auth/request-code', payload)
         .then(function () { return { devCode: null, cooldownMs: CONFIG.resendCooldownMs }; });
     }
 
