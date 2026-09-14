@@ -61,6 +61,12 @@ table.mt .k{font-size:18px;font-weight:800}
 .rn .rcta{background:linear-gradient(90deg,#fff4f9,#fdf6ff);border:1px solid var(--pink);border-radius:11px;padding:13px;font-family:-apple-system,sans-serif;font-weight:800;color:var(--pink);font-size:15px;margin:16px 0 4px;line-height:1.7}
 .rn .rtag{font-family:-apple-system,sans-serif;color:var(--title);font-weight:700;font-size:13.5px;margin-top:8px}
 .rn .rtitle{font-family:-apple-system,sans-serif;font-weight:800;color:var(--muted);font-size:12.5px;background:#eef0f7;border-radius:8px;padding:10px 12px;line-height:1.75;margin:0 0 14px}
+/* ポイント語の色分け */
+.rn .pt{color:var(--pink);font-weight:800}
+.rn .qt{color:var(--title);font-weight:800}
+.rn .tm{color:var(--accent);font-weight:800}
+.rn .nowtag{color:var(--pink);font-weight:800}
+.rn .rli.now .qt,.rn .rli.now .tm{color:var(--pink)}
 @media(max-width:520px){.grid{grid-template-columns:1fr 1fr}.wrap{padding:14px 12px 80px}.rn{font-size:15px}}
 </style>
 </head><body>
@@ -1195,6 +1201,13 @@ function buildNote(f,cfg){
 /* note本文を“読みやすい”HTMLに整形（画面プレビュー用・段落/色分け/フォント替え） */
 function formatNoteHtml(note){
   function e(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  /* エスケープ済みテキストの“ポイント語”に色を付与：【】=強調ピンク／「」=専門語ティール／（今ここ）=ピンク */
+  function hi(s){ return s
+    .replace(/【([^】]+)】/g,'<b class="pt">【$1】</b>')
+    .replace(/「([^」]+)」/g,'<b class="qt">「$1」</b>')
+    .replace(/（今ここ）/g,'<b class="nowtag">（今ここ）</b>'); }
+  /* 「語＝説明」の左側（＝の直前まで）を太字アクセント色に */
+  function hiEq(s){ var mi=s.indexOf('＝'); if(mi>0)return '<b class="tm">'+hi(s.slice(0,mi))+'</b>＝'+hi(s.slice(mi+1)); return hi(s); }
   var lines=note.split('\n'),out=[],i,chart=[],titles=[],mode='';
   function flushChart(){ if(chart.length){out.push('<pre class="rchart">'+chart.map(e).join('\n')+'</pre>');chart=[];} }
   function flushTitles(){ if(titles.length){out.push('<div class="rtitle"><b>💡 タイトル案</b><br>'+titles.map(function(t){return e(t);}).join('<br>')+'</div>');titles=[];} }
@@ -1211,13 +1224,13 @@ function formatNoteHtml(note){
       if(/命式表/.test(h))mode='chart';
       continue;
     }
-    if(/^🔑/.test(ln)){out.push('<div class="rkw">'+e(ln)+'</div>');continue;}
+    if(/^🔑/.test(ln)){out.push('<div class="rkw">'+hi(e(ln))+'</div>');continue;}
     if(/^※/.test(ln)){out.push('<div class="rnote">'+e(ln)+'</div>');continue;}
     if(/^#/.test(ln)){out.push('<div class="rtag">'+e(ln)+'</div>');continue;}
-    if(/^▶\s+/.test(ln)){ if(/歳/.test(ln))out.push('<div class="rli now">'+e(ln)+'</div>'); else out.push('<div class="rcta">'+e(ln)+'</div>'); continue; }
-    if(/^(◆|◎)\s*/.test(ln)){out.push('<div class="rli">'+e(ln)+'</div>');continue;}
-    if(/^・/.test(ln)){out.push('<div class="rli">'+e(ln.replace(/^・/,''))+'</div>');continue;}
-    out.push('<p>'+e(ln)+'</p>');
+    if(/^▶\s+/.test(ln)){ if(/歳/.test(ln))out.push('<div class="rli now">'+hi(e(ln))+'</div>'); else out.push('<div class="rcta">'+e(ln)+'</div>'); continue; }
+    if(/^(◆|◎)\s*/.test(ln)){out.push('<div class="rli">'+hiEq(e(ln))+'</div>');continue;}
+    if(/^・/.test(ln)){out.push('<div class="rli">'+hiEq(e(ln.replace(/^・/,'')))+'</div>');continue;}
+    out.push('<p>'+hi(e(ln))+'</p>');
   }
   flushChart();flushTitles();
   return out.join('');
