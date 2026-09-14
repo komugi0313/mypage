@@ -2283,6 +2283,48 @@ function natalDataBoard(p,inp,sex){
     +head+grid+gogyo+tsuhen+shinsatsu+kankei+en
     +'<p class="note" style="margin:6px 0 0;font-size:10.5px">※すべてエンジンが命式から算出した"素材"です。各カードの「🔎根拠」と合わせて検算にお使いください。色分け：五行＝木緑/火赤/土黄/金灰/水青、吉星＝緑、注意星＝赤、恋・華＝桃、動＝青。</p></div>';
 }
+/* 律音（りっちん）＝干支が同じ。宿命(命式内の年月日柱どうし)＋後天運(大運・年運が命式の柱と一致)。表示のみ・エンジン不変 */
+var RITCHIN_NATURE='考えが変わりやすく裏表があり、周囲から二重人格のように見られる二面性。変人・変わり者で、人に真似できないオリジナリティが武器になります。常にもう一人の自分が自分を俯瞰しているような感覚があり、客観的で冷静。「二度人生」＝一生のうちに二度、異なる人生を歩むとも言われ、“同じ山が2つ”ある状態なので、大半会のような広がりすぎ・進みすぎも、対冲のような停滞・遅延もありません。';
+var RITCHIN_PAIR={
+  '01':'<b>年干支×月干支の律音</b>：視野は狭くなりがちですが、特定の技芸・才能に専念することで成功します。親が家系の名誉・伝統を重んじても、本人はあまり興味がなく無頓着です。',
+  '12':'<b>月干支×日干支の律音</b>：無欲な性格で行動範囲は狭くなります。ただし集中力がずば抜けており、一つのことに専念できれば才能を開花させます。家系との結びつきが強く、生家から離れにくい宿命です。',
+  '02':'<b>年干支×日干支の律音</b>：無欲な性格で親との絆が深く、跡取りに向いています。親元を離れにくい宿命です。視野は狭めですが、一つのことに集中すれば成功できます。'
+};
+var RITCHIN_TRANSIT={
+  '年柱':'仕事に変化が起きやすく、新たな道が開けたり、友人関係で新しい出会いがあるかも。自分と同じ志を持つ仲間ができやすく、協力して物事が順調に進みやすい時期。ライバル出現の意もあり、現状を抜け出して新しい目標をスタートしたくなります。',
+  '月柱':'信念が強固になり自己確立するなど、自分のレベル・グレードが上がる時期で出世しやすい。新しい自分を発見する意も。家族と離れて暮らし始める・引越し（独立）など環境の変化が起きやすく、現状を打開したい欲求が出てきます。',
+  '日柱':'人生の一つの分岐点。道が二つに分かれやすく、物事をガラリと変えるチャンスの年です。'
+};
+function ritchinSelfCard(c){
+  var gz=[c.pillars[0].ganzhi,c.pillars[1].ganzhi,c.pillars[2].ganzhi];
+  function matchP(g){var r=[];if(gz[0]===g)r.push('年柱');if(gz[1]===g)r.push('月柱');if(gz[2]===g)r.push('日柱');return r;}
+  var pairs=[]; if(gz[0]===gz[1])pairs.push('01'); if(gz[1]===gz[2])pairs.push('12'); if(gz[0]===gz[2]&&gz[0]!==gz[1])pairs.push('02');
+  var allThree=(gz[0]===gz[1]&&gz[1]===gz[2]);
+  var now=c.now||{},cy=now.year||0,af=c.annualFortunes||[];
+  var yearsHit=[]; af.forEach(function(a){ if(a.year>=cy){ var m=matchP(a.ganzhi); if(m.length)yearsHit.push({year:a.year,gz:a.ganzhi,pil:m}); } }); yearsHit=yearsHit.slice(0,6);
+  var decHit=[]; daeunList(c).items.forEach(function(d){ if(!d.first){ var m=matchP(d.ganzhi); if(m.length)decHit.push({age:Math.round(d.startM/12),gz:d.ganzhi,pil:m}); } });
+  var H='<p class="note" style="margin:0 0 8px">律音（りっちん）＝<b>干支がまったく同じ</b>こと。命式の中で年・月・日柱どうしが同じなら<b>宿命律音</b>、大運・年運が命式の柱と同じ干支になる年は<b>後天運の律音</b>。どちらも「物事が大きく変わる分岐点・チャンス」を表します。</p>';
+  if(allThree){
+    H+='<div style="margin:0 0 10px;padding:9px 11px;background:var(--soft);border-radius:9px"><b class="sech">◆ 宿命律音：三柱すべてが律音</b>';
+    H+='<p style="margin:6px 0 6px;line-height:1.85">'+RITCHIN_NATURE+'</p>';
+    H+='<p style="margin:0;line-height:1.85"><b>指針：</b>生まれた環境を変えないのが良いとされます。家業があれば継続を。律音は家系が中心で、親・兄弟・本人がみな同じことをする方がよいと考えます。後天運では各律音は同等で作用が特に増すことはありませんが、大半会・半会が巡ると行動を起こしやすく、対冲と組むと運気が後退する意味が出ます。</p></div>';
+  } else if(pairs.length){
+    H+='<div style="margin:0 0 10px;padding:9px 11px;background:var(--soft);border-radius:9px"><b class="sech">◆ 宿命律音（命式内）あり</b>';
+    H+='<p style="margin:6px 0 6px;line-height:1.85">'+RITCHIN_NATURE+'</p>';
+    pairs.forEach(function(k){ H+='<p style="margin:0 0 6px;line-height:1.8">'+RITCHIN_PAIR[k]+'</p>'; });
+    H+='</div>';
+  } else {
+    H+='<p style="margin:0 0 10px" class="note">命式内（年・月・日柱どうし）の律音は<b>ありません</b>。以下は運（大運・年運）で律音が巡る時期です。</p>';
+  }
+  H+='<p style="margin:6px 0 4px"><b class="sech">◆ 後天運で律音が巡る時期（分岐点・変化のチャンス）</b></p>';
+  H+='<p class="note" style="margin:0 0 6px">律音の年は<b>道が二つに分かれやすい</b>分岐点。その年の十二支が強調され、親に反抗的になりやすい（親よりも親戚など目上に可愛がられる）時期でもあります。還暦（60歳ごろ）は誰でも一度、年柱が律音になります。</p>';
+  if(decHit.length){ H+='<p style="margin:0 0 3px"><b>大運（10年）で律音：</b></p>';
+    decHit.forEach(function(d){ H+='<p style="margin:0 0 6px;line-height:1.8">・<b>'+d.age+'歳〜</b>（'+esc(d.gz)+'）＝<b>'+d.pil.join('・')+'</b>と律音<br><span class="note">'+RITCHIN_TRANSIT[d.pil[0]]+'</span></p>'; }); }
+  if(yearsHit.length){ H+='<p style="margin:6px 0 3px"><b>年運で律音（今年以降）：</b></p>';
+    yearsHit.forEach(function(y){ H+='<p style="margin:0 0 6px;line-height:1.8">・<b>'+esc(y.year)+'年</b>（'+esc(y.gz)+'）＝<b>'+y.pil.join('・')+'</b>と律音<br><span class="note">'+RITCHIN_TRANSIT[y.pil[0]]+'</span></p>'; }); }
+  if(!decHit.length&&!yearsHit.length){ H+='<p class="note" style="margin:0">表示範囲内に、運が命式の柱と律音する時期は見当たりません（還暦の年柱律音は必ず一度訪れます）。</p>'; }
+  return H;
+}
 function renderSolo(p,inp){
   var c=p.pro,out=document.getElementById("out"),H="";
   var whoChip=inp.name?(esc(inp.name)+"さん"):(shortBirth(inp)+"生");
@@ -2386,6 +2428,7 @@ function renderSolo(p,inp){
   var cy=now.year;
   H+='<div class="card"><h2>年運</h2><p class="note" style="margin:0 0 4px">立春で切り替わります。今年（'+esc(cy||"-")+'）を強調表示。</p>'+annualDetail(c,p.fav,inp.sex)+'</div>';
   H+='<div class="card"><h2>運と命式の干支関係（大運・年運・月の成立）</h2>'+unTransitCard(c)+'</div>';
+  H+='<div class="card"><h2>律音（りっちん）｜宿命・後天運の分岐点</h2>'+ritchinSelfCard(c)+'</div>';
 
   // 解析（ルールベース）
   H+='<div class="card"><h2>解析（自動）</h2>'+analyzeSolo(p)+'</div>';
