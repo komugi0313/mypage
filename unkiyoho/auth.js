@@ -37,6 +37,7 @@
     rememberDays: 365,              // 本番Cookieの目安（Max-Age）。毎回の利用で更新推奨
     sessionKey: 'unkiyoho_session',
     pendingKey: 'unkiyoho_otp_pending',
+    lastEmailKey: 'unkiyoho_last_email', // 前回入力したメール（ログイン画面で自動表示）
     selfKey: 'enbiyori_self_birth'  // 既存：本人プロフィール（生年月日・ニックネーム・メール等）
   };
   var DEV = !CONFIG.apiBase;
@@ -83,6 +84,7 @@
     var email = normEmail(opts.email);
     var purpose = opts.purpose || 'login'; // 'login' | 'register' | 'change-email'
     if (!validEmail(email)) return Promise.reject(new Error('メールアドレスの形式が正しくありません。'));
+    try { localStorage.setItem(CONFIG.lastEmailKey, email); } catch (e) {} // 次回ログインで自動表示
 
     if (!DEV) {
       return api('/auth/request-code', { email: email, purpose: purpose })
@@ -183,6 +185,7 @@
     logout: logout,
     requireLogin: requireLogin,
     normEmail: normEmail,
-    validEmail: validEmail
+    validEmail: validEmail,
+    lastEmail: function () { try { return localStorage.getItem(CONFIG.lastEmailKey) || ''; } catch (e) { return ''; } }
   };
 })(window);
