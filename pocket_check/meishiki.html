@@ -3376,6 +3376,87 @@ function dayKanCard(pa,pb){
     +(d.bad?'<p style="margin:0 0 4px"><b class="sech" style="color:var(--warn)">相性の注意点</b></p><p style="margin:0;line-height:1.9">'+esc(d.bad)+'</p>':'')
     +'</div>';
 }
+/* ========== 相性の追加分析（表示のみ・計算エンジンは不変） ========== */
+/* engineの神殺表(pro-adapter.js)から相性用に転記：天乙貴人・紅艶＝日干基準、咸池(桃花)＝日支の三合局 */
+var PC_TENOTSU={甲:['丑','未'],乙:['子','申'],丙:['亥','酉'],丁:['亥','酉'],戊:['丑','未'],己:['子','申'],庚:['丑','未'],辛:['午','寅'],壬:['卯','巳'],癸:['卯','巳']};
+var PC_KOEN={甲:'午',乙:'申',丙:'寅',丁:'未',戊:'辰',己:'辰',庚:'戌',辛:'酉',壬:'子',癸:'申'};
+var PC_SANGOG={申:'水',子:'水',辰:'水',寅:'火',午:'火',戌:'火',巳:'金',酉:'金',丑:'金',亥:'木',卯:'木',未:'木'};
+var PC_KANCHI={水:'酉',火:'卯',金:'午',木:'子'};
+function pcKanchi(dayBranch){var g=PC_SANGOG[dayBranch];return g?PC_KANCHI[g]:'';}
+function pcBranches(pers,tu){var pil=pers.pro.pillars,labs=['年','月','日','時'],out=[],i;for(i=0;i<pil.length;i++){if(i===3&&tu)continue;if(pil[i]&&pil[i].branch)out.push({lab:labs[i],br:pil[i].branch});}return out;}
+
+/* ① 喜神・忌神の相互補完：相手が持ち込む気が、自分の喜神か忌神か */
+function favComplementCard(pa,pb){
+  var fa=pa.fav||{},fb=pb.fav||{};
+  function brings(p){var el=p.pro.dayMaster.element,fv=p.five||{},set=[el];EL_ORDER.forEach(function(e){if((fv[e]||0)>=3&&set.indexOf(e)<0)set.push(e);});return set;}
+  function judge(selfFav,mateBring,selfLbl,mateLbl){
+    var ng=0,nb=0,L=[];
+    mateBring.forEach(function(e){
+      if(selfFav[e]==='喜'){ng++;L.push('<span style="color:var(--good)">◎ '+mateLbl+'の'+elc(e)+'は、'+selfLbl+'の<b>喜神</b>（必要な気）＝運を後押し</span>');}
+      else if(selfFav[e]==='忌'){nb++;L.push('<span style="color:var(--warn)">△ '+mateLbl+'の'+elc(e)+'は、'+selfLbl+'の<b>忌神</b>＝強まると乱れやすい気</span>');}
+      else{L.push('<span class="note">・'+mateLbl+'の'+elc(e)+'は、'+selfLbl+'には中庸（大きな増減なし）</span>');}
+    });
+    var v=ng>nb?'<b style="color:var(--good)">'+mateLbl+'は'+selfLbl+'の運を上げてくれる“補い手”</b>':nb>ng?'<b style="color:var(--warn)">'+mateLbl+'は'+selfLbl+'の気をやや乱しやすい相手。合わせ方に工夫を</b>':'<b>'+mateLbl+'と'+selfLbl+'は喜忌が拮抗＝ほどよい刺激の関係</b>';
+    return '<p style="margin:0 0 3px">'+v+'</p>'+L.join('<br>');
+  }
+  var H='<p class="note" style="margin:0 0 8px">喜神＝その人に<b>必要で運を上げる気</b>／忌神＝<b>強まると乱れやすい気</b>（身強弱から算出）。相手が持ち込む主な気（日主＋強い五行）が、自分の喜神か忌神かで「運を上げ合えるか」を見ます。</p>';
+  H+='<p style="margin:0 0 4px"><b>お一人目</b>　喜神：'+favList(fa,'喜')+'／忌神：'+favList(fa,'忌')+'</p>';
+  H+='<p style="margin:0 0 10px"><b>お二人目</b>　喜神：'+favList(fb,'喜')+'／忌神：'+favList(fb,'忌')+'</p>';
+  H+='<div style="margin:0 0 10px;padding:9px 11px;background:var(--soft);border-radius:9px"><b class="sech">◆ お二人目 → お一人目への影響</b><br>'+judge(fa,brings(pb),'お一人目','お二人目')+'</div>';
+  H+='<div style="padding:9px 11px;background:var(--soft);border-radius:9px"><b class="sech">◆ お一人目 → お二人目への影響</b><br>'+judge(fb,brings(pa),'お二人目','お一人目')+'</div>';
+  return H;
+}
+
+/* ② 配偶者宮（日支）どうしの相性 ＝ 夫婦・パートナーの宮の合冲（cdは日支基準で算出済み） */
+function spousePalaceCard(pa,pb,cd){
+  var aB=(pa.pro.pillars[2]||{}).branch,bB=(pb.pro.pillars[2]||{}).branch;
+  if(!aB||!bB)return '';
+  var rel,tone,txt;
+  if(aB===bB){rel='同じ地支';tone='good';txt='生活リズム・価値観・居心地の好みがそっくり。家庭での“気の合い方”が自然で、一緒にいて安心できる相性。反面、似すぎて緊張感が薄れやすいので、外の刺激を一緒に取り入れると新鮮さが続きます。';}
+  else if(cd.rikugou){rel='支合（六合）';tone='good';txt='夫婦・家庭の宮どうしが結びつく、いちばんの“家庭円満サイン”。自然と一緒に居たくなり、同居・結婚生活が噛み合いやすい。言葉が少なくても気持ちが通じ合う相性です。';}
+  else if(cd.sango){rel='三合の一部';tone='good';txt='家庭の宮が大きな調和の流れに乗る組み合わせ。周囲も巻き込んで発展しやすく、二人の生活が外へ開いていきます。';}
+  else if(cd.chong){rel='冲（向かい合う）';tone='warn';txt='夫婦の宮どうしが正面からぶつかる軸。強く惹かれ合う一方で、生活習慣・価値観の違いが表面化しやすく、すれ違い・別れの代表サインにもなります。“違い＝刺激”と捉え、相手の領域を尊重し、物理的にも心理的にも適度な距離を保つと長続きします。';}
+  else if(cd.kei){rel='刑';tone='warn';txt='家庭内で小さな摩擦・調整が起きやすい宮の関係。ためこまず、こまめに気持ちを言葉にすると和らぎます。';}
+  else if(cd.gai){rel='害';tone='warn';txt='見えないすれ違いが起きやすい宮の関係。“察してほしい”より「はっきり伝える」を意識すると誤解が減ります。';}
+  else if(cd.ha){rel='破';tone='warn';txt='ちょっとしたほころびが出やすい宮の関係。感謝や労いを言葉にして、こまめに関係を手入れすると安定します。';}
+  else{rel='特別な合冲なし';tone='';txt='日支どうしに強い合も冲もない、フラットな関係。日主・五行・十神など他の要素で相性を読みます。可もなく不可もない“素の距離感”からスタートできます。';}
+  var col=tone==='good'?'var(--good)':tone==='warn'?'var(--warn)':'var(--muted)';
+  return '<p class="note" style="margin:0 0 8px">日支＝<b>配偶者宮（夫婦・パートナーの居場所）</b>。二人の日支どうしの関係は、恋愛・結婚で最も効く“生活のかみ合い”を表します。</p>'
+    +'<p style="margin:0 0 6px">お一人目の日支<b>'+elB(aB)+'</b> × お二人目の日支<b>'+elB(bB)+'</b>　＝　<b style="color:'+col+'">'+esc(rel)+'</b></p>'
+    +'<p style="margin:0;line-height:1.85">'+txt+'</p>';
+}
+
+/* ③ 律音（日柱が完全一致）＝深く似た縁。カードごと返す（該当しなければ空） */
+function ritchinCard(cd){
+  if(!cd||!cd.ritchin)return '';
+  return '<div class="card" style="border-color:#7a5cc0"><h2 style="color:#6a4bb0;border-color:#7a5cc0">律音（りっちん）＝日柱がまったく同じ</h2>'
+    +'<p style="margin:0;line-height:1.9">お二人は生まれた日の干支（日柱）が<b>完全に一致</b>しています。四柱推命では<b>律音</b>といい、「もう一人の自分」のように<b>深く似た縁</b>。感覚・価値観・弱点までそっくりで、多くを語らなくても分かり合える一方、<b>同じ弱点で同時につまずきやすい</b>面も。鏡のような関係なので、片方が調子を落とした時こそ、もう一方が意識して支える役に回ると長く安定します。</p></div>';
+}
+
+/* ④ 神殺の相性：相手が自分の天乙貴人（助け人）・紅艶／桃花（色気）になる縁 */
+function shenshaCompatCard(pa,pb,a,b){
+  var aS=pa.pro.dayMaster.stem,bS=pb.pro.dayMaster.stem;
+  var aBr=pcBranches(pa,a.tu),bBr=pcBranches(pb,b.tu);
+  var aDay=(pa.pro.pillars[2]||{}).branch,bDay=(pb.pro.pillars[2]||{}).branch;
+  var good=[],love=[];
+  function benef(selfStem,mateBr,selfLbl,mateLbl){var tg=PC_TENOTSU[selfStem]||[],hit=mateBr.filter(function(o){return tg.indexOf(o.br)>=0;});if(hit.length)good.push('<span style="color:var(--good)">◎ '+mateLbl+'は'+selfLbl+'の<b>天乙貴人</b>（困った時に助けてくれる最上級の人徳の縁）＝'+hit.map(function(o){return o.lab+'支'+o.br;}).join('・')+'</span>');}
+  benef(aS,bBr,'お一人目','お二人目'); benef(bS,aBr,'お二人目','お一人目');
+  function romance(selfStem,selfDay,mateDay,selfLbl,mateLbl){
+    var ko=PC_KOEN[selfStem],ka=pcKanchi(selfDay),hits=[];
+    if(mateDay===ko)hits.push('紅艶');
+    if(mateDay===ka&&ka!==ko)hits.push('桃花（咸池）');
+    if(hits.length)love.push('<span style="color:#c0397a">💗 '+selfLbl+'は'+mateLbl+'に強く惹かれます（'+mateLbl+'の日支'+mateDay+'が'+selfLbl+'の<b>'+hits.join('・')+'</b>＝色気・魅力を感じる縁）</span>');
+  }
+  romance(aS,aDay,bDay,'お一人目','お二人目'); romance(bS,bDay,aDay,'お二人目','お一人目');
+  if(!good.length&&!love.length)return '';
+  var H='<p class="note" style="margin:0 0 8px">お互いの生まれ持つ星（神殺）が、相手にどう働くかを見ます。<b>天乙貴人</b>＝助け人の縁、<b>紅艶・桃花</b>＝惹かれ合う色気の縁。</p>';
+  if(good.length)H+='<p style="margin:0 0 6px">'+good.join('<br>')+'</p>';
+  if(love.length)H+='<p style="margin:0 0 6px">'+love.join('<br>')+'</p>';
+  if(good.length>=2)H+='<p style="margin:6px 0 0"><b style="color:var(--good)">お互いが助け合える“貴人どうし”の縁</b>。困った時に支え合える、得がたい関係です。</p>';
+  if(love.length>=2)H+='<p style="margin:4px 0 0"><b style="color:#c0397a">相思相愛の“桃花”</b>。理屈ぬきで惹かれ合う、恋愛向きの相性です。</p>';
+  return H;
+}
+
 function renderPair(pa,pb,a,b){
   var cd=window.compatData?window.compatData(pa.pro,pb.pro):null;
   var out=document.getElementById("out"),H="";
@@ -3393,6 +3474,7 @@ function renderPair(pa,pb,a,b){
     H+=compatVerdict(cd,pa,pb);
   }
   H+='</div>';
+  H+=ritchinCard(cd);  /* ③律音（日柱完全一致）＝深く似た縁。該当時のみ表示 */
   H+=dayKanCard(pa,pb);  /* 日干×日干の相性（データがある組み合わせのみ表示） */
   H+='<div class="card"><h2>お一人目の命式表 <span class="note" style="font-weight:400">日主 '+elS(pa.pro.dayMaster.stem)+'（'+elc(pa.pro.dayMaster.element)+'）'+esc(pa.sType)+'</span></h2><div class="mscroll">'+meishikiTable(pa.pro,a.tu)+'</div></div>';
   H+='<div class="card"><h2>お二人目の命式表 <span class="note" style="font-weight:400">日主 '+elS(pb.pro.dayMaster.stem)+'（'+elc(pb.pro.dayMaster.element)+'）'+esc(pb.sType)+'</span></h2><div class="mscroll">'+meishikiTable(pb.pro,b.tu)+'</div></div>';
@@ -3402,6 +3484,9 @@ function renderPair(pa,pb,a,b){
     H+='<div class="card"><h2>十神（通変星）の説明（お互いの役割）</h2>'+tenGodExplain(cd)+'</div>';
     H+='<div class="card"><h2>月支元命の相性（なりやすい関係）</h2>'+genmeiPair(pa,pb)+'</div>';
     H+='<div class="card"><h2>五行バランス（二人・補い合い）</h2>'+gogyoPair(pa,pb)+'</div>';
+    H+='<div class="card"><h2>喜神・忌神の相互補完（運を上げ合えるか）</h2>'+favComplementCard(pa,pb)+'</div>';
+    var sp=spousePalaceCard(pa,pb,cd);
+    if(sp) H+='<div class="card"><h2>配偶者宮（日支）どうしの相性</h2>'+sp+'</div>';
     H+='<div class="card"><h2>十二運の意味（二人）</h2>'+junishunPair(pa,pb)+'</div>';
     H+='<div class="card"><h2>相手の好み・喜ばせ方</h2>'+likesPair(pa,pb)+'</div>';
     H+='<div class="card"><h2>お一人目の特徴：よいところ10・ウィークポイント10</h2>'+swCard(pa)+'</div>';
@@ -3421,6 +3506,8 @@ function renderPair(pa,pb,a,b){
     if(warn.length) H+='<div style="margin-top:10px"><div class="note" style="margin-bottom:3px">気をつける流れ</div>'+warn.join("")+'</div>';
     H+='<p class="note" style="margin:10px 0 0">五行の流れ：'+elc(cd.aEl)+'（一人目）と '+elc(cd.bEl)+'（二人目）。相生・相剋の関係が二人のリズムを作ります。</p>';
     H+='</div>';
+    var ss=shenshaCompatCard(pa,pb,a,b);
+    if(ss) H+='<div class="card"><h2>神殺の相性（貴人・桃花の縁）</h2>'+ss+'</div>';
     H+='<div class="card"><h2>配偶者星マッチ・関係タイプ別の相性</h2>'+compatLoveCard(pa,pb,a,b)+'</div>';
     var clk=coupleLuckCard(pa,pb);
     if(clk) H+='<div class="card"><h2>二人の開運の年・月（半会・支合→三合・方合の完成）</h2>'+clk+'</div>';
