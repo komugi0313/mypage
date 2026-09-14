@@ -2043,6 +2043,41 @@ function msPrint(ev){
   }
   try{ window.print(); }catch(e){}
 }
+/* 鑑定結果を共有（AI鑑定・質問の結果も、表示されていれば一緒に）。
+   共有できる自己完結HTMLを組み立て → ファイル共有 → テキスト共有 → コピー＆保存 の順でフォールバック */
+function msShareBuildHtml(){
+  var wrap=document.querySelector('.wrap'); if(!wrap)return '';
+  var clone=wrap.cloneNode(true);
+  [].forEach.call(clone.querySelectorAll('.noprint, script, button, textarea, input, select, .jumpnav'), function(n){ if(n.parentNode)n.parentNode.removeChild(n); });
+  [].forEach.call(clone.querySelectorAll('details'), function(d){ d.setAttribute('open',''); });
+  [].forEach.call(clone.querySelectorAll('.card.folded'), function(c){ c.classList.remove('folded'); });
+  var styles=''; [].forEach.call(document.querySelectorAll('style'), function(s){ styles+=s.textContent; });
+  return '<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>四柱推命 鑑定結果</title><style>'+styles+'</style></head><body><div class="wrap">'+clone.innerHTML+'</div></body></html>';
+}
+function msShareFallback(html,text,hint){
+  var copied=false,dl=false;
+  try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text); copied=true; } }catch(e){}
+  try{ var blob=new Blob([html],{type:'text/html'}); var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download='鑑定結果.html'; document.body.appendChild(a); a.click(); setTimeout(function(){ if(a.parentNode)a.parentNode.removeChild(a); URL.revokeObjectURL(url); },1500); dl=true; }catch(e){}
+  hint((copied?'✅ 鑑定結果のテキストを<b>コピー</b>しました（LINEやメールに貼り付けできます）。':'')+(dl?(copied?'<br>':'')+'✅ 鑑定結果を<b>HTMLファイル</b>として保存しました（開くと印刷・共有できます）。':(copied?'':'※この環境では共有機能が使えませんでした。「印刷／PDF保存」をご利用ください。')),!(copied||dl));
+}
+function msShare(ev){
+  var b=ev&&(ev.currentTarget||ev.target);
+  function hint(msg,warn){ if(!b)return; var n=document.createElement('p'); n.className='note'; n.style.cssText='margin:9px 0 0;line-height:1.65'+(warn?';color:var(--warn)':';color:var(--good)'); n.innerHTML=msg; if(b.parentNode)b.parentNode.appendChild(n); }
+  var out=document.getElementById('out');
+  var title='四柱推命の鑑定結果';
+  var text=(out?out.innerText:'').replace(/\n{3,}/g,'\n\n').replace(/[ \t]+\n/g,'\n').trim();
+  var html=msShareBuildHtml();
+  var file=null; try{ file=new File([html],'鑑定結果.html',{type:'text/html'}); }catch(e){ file=null; }
+  try{
+    if(file && navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+      navigator.share({files:[file],title:title}).catch(function(){ msShareFallback(html,text,hint); }); return;
+    }
+    if(navigator.share){
+      navigator.share({title:title,text:text}).catch(function(){ msShareFallback(html,text,hint); }); return;
+    }
+  }catch(e){}
+  msShareFallback(html,text,hint);
+}
 /* 魁罡（かいごう）＝五大強柱の“強烈な命”。該当日柱なら必ず詳細を出力する専用カード */
 var KAIGOU_SET={庚辰:1,庚戌:1,壬辰:1,壬戌:1,戊戌:1};
 var KAIGOU_NUANCE={
@@ -2367,7 +2402,9 @@ function renderSolo(p,inp){
     +'<button class="btn" id="askBtn" style="margin-top:8px">この命式に質問する</button>'
     +'<div id="askOut" class="note" style="margin-top:10px"></div></div>';
 
-  H+='<div class="card noprint"><button class="btn sub2" onclick="msPrint(event)">この命式を印刷／PDF保存</button></div>';
+  H+='<div class="card noprint"><button class="btn sub2" onclick="msPrint(event)">この命式を印刷／PDF保存</button>'
+    +'<button class="btn" style="margin-top:8px" onclick="msShare(event)">📤 この鑑定を共有（LINE・メール等）</button>'
+    +'<p class="note" style="margin:8px 0 0;line-height:1.6">AI鑑定書・この命式への質問の結果も、表示されていれば一緒に印刷・共有されます。</p></div>';
   H=injectNavAndChips(H,whoChip);  // 目次＋各カードID＋対象チップ
   out.innerHTML=H;if(window._msScrollNext){out.scrollIntoView({behavior:"smooth",block:"start"});window._msScrollNext=false;}scrollYearsToNow();
   var aid=aiIdSolo(inp);
@@ -4187,7 +4224,9 @@ function renderPair(pa,pb,a,b){
     +'<textarea id="askPairIn" rows="2" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:15px;font-family:inherit;background:var(--card);color:inherit" placeholder="例）この二人が不倫関係だったらどうなる？／別れた方がいい？／結婚に向く？"></textarea>'
     +'<button class="btn" id="askPairBtn" style="margin-top:8px">二人について質問する</button>'
     +'<div id="askPairOut" class="note" style="margin-top:10px"></div></div>';
-  H+='<div class="card noprint"><button class="btn sub2" onclick="msPrint(event)">相性結果を印刷／PDF保存</button></div>';
+  H+='<div class="card noprint"><button class="btn sub2" onclick="msPrint(event)">相性結果を印刷／PDF保存</button>'
+    +'<button class="btn" style="margin-top:8px" onclick="msShare(event)">📤 この相性鑑定を共有（LINE・メール等）</button>'
+    +'<p class="note" style="margin:8px 0 0;line-height:1.6">AI鑑定・二人についての質問の結果も、表示されていれば一緒に印刷・共有されます。</p></div>';
   // 入力された名前で「お一人目／お二人目」を置き換え（未入力なら既定のまま）
   if(a.name)H=H.split("お一人目").join(nameA); if(b.name)H=H.split("お二人目").join(nameB);
   H=injectNavAndChips(H,pairChip);  // 目次＋各カードID＋対象チップ
