@@ -89,8 +89,10 @@ table.mt .k{font-size:18px;font-weight:800}
       <input type="text" id="setCta" placeholder="例）無料説明会・相性診断はプロフのリンクから">
       <label>固定ハッシュタグ（スペース区切り）</label>
       <input type="text" id="setTags" placeholder="例）#四柱推命 #占い #〇〇スクール">
+      <label>Gemini APIキー（「AIで磨く」用・任意・この端末にのみ保存）</label>
+      <input type="password" id="setKey" placeholder="AIza...（本番Netlifyサイトでは不要）" autocomplete="off">
       <button class="btn sub2 mini" id="setSave" style="margin-top:12px">この設定を保存</button>
-      <p class="hint">この端末に保存されます（localStorage）。毎回同じ文言が自動で入ります。</p>
+      <p class="hint">この端末に保存されます（localStorage）。CTA等は毎回自動で入ります。<br>APIキーは「AIで磨く」を<b>手元のファイルで使うとき</b>だけ必要です（Netlifyの本番サイトに置けば、環境変数 <code>GEMINI_API_KEY</code> をサーバーに1回設定するだけで、キー入力なしで使えます）。キーは <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> で無料発行できます。</p>
     </details>
   </div>
 
@@ -106,7 +108,7 @@ table.mt .k{font-size:18px;font-weight:800}
       <div class="outhead"><b class="note">note本文（約2,500字）</b><button class="btn mini sub2" data-copy="outNote">コピー</button></div>
       <textarea class="out" id="outNote" readonly></textarea>
       <div class="outhead" style="margin-top:10px"><b class="note">🤖 AIで文章を磨く（任意・本番サイトで有効）</b><button class="btn mini ai" id="aiPolish">AIで磨く</button></div>
-      <p class="hint" id="aiHint">下書きをそのまま投稿できます。もっと自然な文章にしたい時だけAIで整えます（Netlify等の本番サイトで動作）。</p>
+      <p class="hint" id="aiHint">下書きはそのまま投稿できます。もっと自然な文章にしたい時だけAIで整えます。<b>本番サイト（Netlify）ならキー不要</b>／手元のファイルで使うなら「⚙️ 設定」で<b>Geminiキー</b>を入力してください。</p>
     </div>
     <div class="pane" id="pane-x">
       <div class="outhead"><b class="note">X・スレッド版</b><button class="btn mini sub2" data-copy="outXThread">コピー</button></div>
@@ -1235,9 +1237,11 @@ function stripTags(h){return (h||'').replace(/<li>/g,'・').replace(/<\/li>/g,'\
 
 /* ---- 設定の保存/読込 ---- */
 function loadCfg(){var c={};try{c=JSON.parse(localStorage.getItem('sns_cfg')||'{}');}catch(e){}
-  $('setSchool').value=c.school||'';$('setUrl').value=c.url||'';$('setCta').value=c.cta||'';$('setTags').value=c.tags||'#四柱推命 #占い';return c;}
+  $('setSchool').value=c.school||'';$('setUrl').value=c.url||'';$('setCta').value=c.cta||'';$('setTags').value=c.tags||'#四柱推命 #占い';
+  try{$('setKey').value=localStorage.getItem('ms_gkey')||'';}catch(e){}return c;}
 function curCfg(){return {school:$('setSchool').value.trim(),url:$('setUrl').value.trim(),cta:$('setCta').value.trim(),tags:$('setTags').value.trim(),weak:$('weak').value};}
-$('setSave').onclick=function(){var c=curCfg();try{localStorage.setItem('sns_cfg',JSON.stringify(c));}catch(e){}toast('設定を保存しました');};
+$('setSave').onclick=function(){var c=curCfg();try{localStorage.setItem('sns_cfg',JSON.stringify(c));}catch(e){}
+  try{localStorage.setItem('ms_gkey',$('setKey').value.trim());}catch(e){}toast('設定を保存しました');};
 
 /* ---- UI ---- */
 function fillSelects(){
@@ -1288,8 +1292,8 @@ $('go').onclick=function(){
 $('aiPolish').onclick=function(){
   if(!LAST){toast('先に鑑定文を生成してください');return;}
   var served=/^https?:$/.test(location.protocol);
-  var key=''; try{key=localStorage.getItem('ms_gkey')||'';}catch(e){}
-  if(!served&&!key){$('aiHint').innerHTML='<span style="color:var(--warn)">AI整文は本番サイト（https）で使えます。この画面ではテンプレ文をそのままお使いください。</span>';return;}
+  var key=($('setKey')&&$('setKey').value.trim())||''; if(!key){try{key=localStorage.getItem('ms_gkey')||'';}catch(e){}}
+  if(!served&&!key){$('aiHint').innerHTML='<span style="color:var(--warn)">手元のファイルでAI整文を使うには、上の「⚙️ 設定」を開いて<b>Gemini APIキー</b>を入力→「保存」してください。<br>（Netlifyの本番サイトに置けばキー入力なしで使えます。テンプレ文はこのままでも投稿OKです）</span>';var sb=$('setBox');if(sb)sb.open=true;return;}
   var draft=$('outNote').value;
   var sys='あなたは四柱推命の鑑定士でSNSライターです。以下の【下書き】を、構成・見出し・順序・事実（干支/通変星/神殺/運）を一切変えずに、より自然で読みたくなる日本語に整えてください。ポジティブ中心・約2500字・「■」見出しは維持・専門用語は残しつつ平易に。免責とハッシュタグはそのまま末尾に。断定を避け、実在人物の私生活は事実として書かない。';
   var body={systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:draft}]}],generationConfig:{temperature:0.7,maxOutputTokens:4096}};
