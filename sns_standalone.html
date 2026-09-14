@@ -83,10 +83,12 @@ table.mt .k{font-size:18px;font-weight:800}
       <summary>⚙️ 固定素材の設定（スクール名・URL・ハッシュタグ・CTA）</summary>
       <label>スクール名／サービス名</label>
       <input type="text" id="setSchool" placeholder="例）〇〇四柱推命スクール">
-      <label>noteプロフ／サービスのURL</label>
-      <input type="text" id="setUrl" placeholder="例）https://note.com/xxxx">
       <label>CTA（誘導の一言）</label>
-      <input type="text" id="setCta" placeholder="例）無料説明会・相性診断はプロフのリンクから">
+      <input type="text" id="setCta" placeholder="例）自分の命式も読み解いてみませんか？">
+      <label>リンク（最大3つ・名前＋URL）</label>
+      <div class="grid2" style="gap:6px"><input type="text" id="setL1n" placeholder="① 名前（例：公式サイト）"><input type="text" id="setL1u" placeholder="https://..."></div>
+      <div class="grid2" style="gap:6px;margin-top:6px"><input type="text" id="setL2n" placeholder="② 名前（例：無料説明会）"><input type="text" id="setL2u" placeholder="https://..."></div>
+      <div class="grid2" style="gap:6px;margin-top:6px"><input type="text" id="setL3n" placeholder="③ 名前（例：相性診断アプリ）"><input type="text" id="setL3u" placeholder="https://..."></div>
       <label>固定ハッシュタグ（スペース区切り）</label>
       <input type="text" id="setTags" placeholder="例）#四柱推命 #占い #〇〇スクール">
       <label>Gemini APIキー（「AIで磨く」用・任意・この端末にのみ保存）</label>
@@ -1126,7 +1128,8 @@ function buildNote(f,cfg){
   L.push('■ まとめ');
   L.push(name+'さんは、'+f.dayStem+'の芯に'+(tal[0]?TALENT[tal[0]].replace(/。.*/,''):'豊かな個性')+'を宿した、魅力あふれる命式の持ち主。これからの流れも楽しみですね。\n');
   L.push('あなたの命式には、どんな“星”が光っているでしょう？');
-  L.push('▶ '+(cfg.cta||'あなた自身の命式も読み解いてみませんか？')+(cfg.school?('（'+cfg.school+'）'):'')+(cfg.url?('\n'+cfg.url):''));
+  L.push('▶ '+(cfg.cta||'あなた自身の命式も読み解いてみませんか？')+(cfg.school?('（'+cfg.school+'）'):''));
+  if(cfg.links&&cfg.links.length)L.push(cfg.links.map(function(l){return '・'+(l.name?l.name+'：':'')+l.url;}).join('\n'));
   L.push('\n※公開情報の生年月日に基づく推定・出生時間不明のため時柱なしで鑑定した占い・エンタメです。事実を断定するものではありません。');
   L.push(cfg.tags||'#四柱推命 #占い');
   return L.join('\n').replace(/<[^>]+>/g,'').replace(/\n{3,}/g,'\n\n');
@@ -1212,8 +1215,9 @@ function buildX(f,cfg){
   thread.push('2/ 日主「'+f.dayStem+'」＝'+DAYSTEM[f.dayStem].split('。')[0]+'。'+strip(f.sType)+'のバランス。');
   thread.push('3/ '+(tal[0]?('際立つのは【'+tal[0]+'】'+TALENT[tal[0]].split('。')[0]):'豊かな個性')+'。'+(keyStars(f)[0]?('神殺は「'+keyStars(f)[0]+'」も。'):''));
   thread.push('4/ 隠れた一面は“'+(f.chusatsu.length||f.names['太極貴人']?'孤高':'こだわり')+'”。'+(f.names['咸池']||f.names['紅艶']?'桃花の華もあり人を惹きつける。':''));
-  thread.push('5/ 運の流れ：'+(cd?('今は「'+cd.ten+'」の大運（'+cd.age+'歳〜）。'):'')+'続きはnoteで▶'+(cfg.url||'')+' '+tags);
-  var one='🔮'+f.name+'さんを四柱推命で観ると…日主「'+f.dayStem+'」に'+(tal[0]?('【'+tal[0]+'】'+TALENT[tal[0]].split('。')[0]):'豊かな個性')+'✨'+(f.names['咸池']||f.names['紅艶']?'桃花の華も。':'')+'詳しくはnoteで👇\n'+(cfg.url||'')+'\n'+tags;
+  var link1=(cfg.links&&cfg.links[0]?cfg.links[0].url:'');
+  thread.push('5/ 運の流れ：'+(cd?('今は「'+cd.ten+'」の大運（'+cd.age+'歳〜）。'):'')+'続きはnoteで▶'+link1+' '+tags);
+  var one='🔮'+f.name+'さんを四柱推命で観ると…日主「'+f.dayStem+'」に'+(tal[0]?('【'+tal[0]+'】'+TALENT[tal[0]].split('。')[0]):'豊かな個性')+'✨'+(f.names['咸池']||f.names['紅艶']?'桃花の華も。':'')+'詳しくはnoteで👇\n'+link1+'\n'+tags;
   return {thread:thread.join('\n'),one:one};
 }
 function buildIG(f,cfg){
@@ -1225,6 +1229,7 @@ function buildIG(f,cfg){
   if(f.names['咸池']||f.names['紅艶'])lines.push('💗 桃花の星＝人を惹きつける華');
   if(cd)lines.push('🚀 今は「'+cd.ten+'」の運の流れ');
   lines.push('👉 詳しい鑑定＋命式表はプロフのリンクからnoteへ！');
+  if(cfg.links&&cfg.links.length)lines.push('🔗 プロフのリンクから：'+cfg.links.map(function(l){return l.name||l.url;}).join(' / '));
   if(cfg.cta)lines.push(cfg.cta);
   lines.push('—\n※公開情報に基づく推定・時柱なし・占い/エンタメ');
   var tags=(cfg.tags||'#四柱推命 #占い')+' #占い好きな人と繋がりたい';
@@ -1237,9 +1242,15 @@ function stripTags(h){return (h||'').replace(/<li>/g,'・').replace(/<\/li>/g,'\
 
 /* ---- 設定の保存/読込 ---- */
 function loadCfg(){var c={};try{c=JSON.parse(localStorage.getItem('sns_cfg')||'{}');}catch(e){}
-  $('setSchool').value=c.school||'';$('setUrl').value=c.url||'';$('setCta').value=c.cta||'';$('setTags').value=c.tags||'#四柱推命 #占い';
+  $('setSchool').value=c.school||'';$('setCta').value=c.cta||'';$('setTags').value=c.tags||'#四柱推命 #占い';
+  var links=c.links||[]; if(!links.length&&c.url)links=[{name:'',url:c.url}]; // 旧設定の移行
+  $('setL1n').value=(links[0]&&links[0].name)||'';$('setL1u').value=(links[0]&&links[0].url)||'';
+  $('setL2n').value=(links[1]&&links[1].name)||'';$('setL2u').value=(links[1]&&links[1].url)||'';
+  $('setL3n').value=(links[2]&&links[2].name)||'';$('setL3u').value=(links[2]&&links[2].url)||'';
   try{$('setKey').value=localStorage.getItem('ms_gkey')||'';}catch(e){}return c;}
-function curCfg(){return {school:$('setSchool').value.trim(),url:$('setUrl').value.trim(),cta:$('setCta').value.trim(),tags:$('setTags').value.trim(),weak:$('weak').value};}
+function curCfg(){
+  var links=[[$('setL1n'),$('setL1u')],[$('setL2n'),$('setL2u')],[$('setL3n'),$('setL3u')]].map(function(p){return {name:p[0].value.trim(),url:p[1].value.trim()};}).filter(function(l){return l.url;});
+  return {school:$('setSchool').value.trim(),links:links,cta:$('setCta').value.trim(),tags:$('setTags').value.trim(),weak:$('weak').value};}
 $('setSave').onclick=function(){var c=curCfg();try{localStorage.setItem('sns_cfg',JSON.stringify(c));}catch(e){}
   try{localStorage.setItem('ms_gkey',$('setKey').value.trim());}catch(e){}toast('設定を保存しました');};
 
