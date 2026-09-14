@@ -1571,6 +1571,11 @@ function daeunDetail(c,fav,sex){var dl=daeunList(c);
 /* ==== 時期の視覚化：空亡（天中殺）・恋愛・結婚（すべて標準ルール・オフライン） ==== */
 var RIKUGOU={子:"丑",丑:"子",寅:"亥",亥:"寅",卯:"戌",戌:"卯",辰:"酉",酉:"辰",巳:"申",申:"巳",午:"未",未:"午"};
 var CHONG={子:"午",午:"子",丑:"未",未:"丑",寅:"申",申:"寅",卯:"酉",酉:"卯",辰:"戌",戌:"辰",巳:"亥",亥:"巳"};
+/* 天戦地冲＝天干が“同じ陰陽で剋し合う”＋地支が冲。日干支どうし／日干支×年運・大運で成立。
+   天干の組（各干が偏財側=自分が剋す同陰陽／七殺側=自分を剋す同陰陽、の2干） */
+var TENSEN={甲:['戊','庚'],乙:['己','辛'],丙:['庚','壬'],丁:['辛','癸'],戊:['甲','壬'],己:['乙','癸'],庚:['甲','丙'],辛:['乙','丁'],壬:['丙','戊'],癸:['丁','己']};
+function isTensenChichu(gzA,gzB){ if(!gzA||!gzB||gzA.length<2||gzB.length<2)return false;
+  return (TENSEN[gzA[0]]||[]).indexOf(gzB[0])>=0 && CHONG[gzA[1]]===gzB[1]; }
 var PEACH={申:"酉",子:"酉",辰:"酉",寅:"卯",午:"卯",戌:"卯",巳:"午",酉:"午",丑:"午",亥:"子",卯:"子",未:"子"};
 /* 紅艶殺（日干→この支が巡ると強い色気・魅力／異性運）。通説の紅艷煞：戊己怕辰・六丙逢寅…等 */
 var KOUEN={甲:"午",乙:"申",丙:"寅",丁:"未",戊:"辰",己:"辰",庚:"戌",辛:"酉",壬:"子",癸:"申"};
@@ -2156,6 +2161,7 @@ function renderSolo(p,inp){
 
   // 空亡（天中殺）が来る年
   H+='<div class="card"><h2>空亡（天中殺）が来る年</h2>'+kuboYearsCard(c)+'</div>';
+  H+='<div class="card"><h2>天戦地冲（要注意の年・大運）</h2>'+tensenSelfCard(p)+'</div>';
   H+=seinenChusatsuCard(p);  /* 年柱が空亡なら生年中殺の宿命を出力 */
   // 運勢カレンダー（各時期カードの一望サマリー）
   H+='<div class="card"><h2>🗓 運勢カレンダー（これから約15年の一望）</h2>'+calendarCard(p,inp.sex)+'</div>';
@@ -3863,6 +3869,45 @@ function tenchiBanner(pa,pb){
     +'</div></details>'
     +'</div>';
 }
+/* 天戦地冲＝最も刺激の強い相性。相性診断の上部に警告として表示（干合徳合とは排他） */
+function tensenBanner(pa,pb){
+  var da=pa.pro.pillars[2].ganzhi, db=pb.pro.pillars[2].ganzhi;
+  if(!isTensenChichu(da,db))return '';
+  var wc='#c0453b';
+  return '<div class="card" style="border:3px solid '+wc+';box-shadow:0 0 0 3px rgba(192,69,59,.10)">'
+    +'<div style="text-align:center;color:'+wc+'"><div style="font-size:21px;font-weight:800;line-height:1.3">⚠ 天戦地冲（てんせんちちゅう）</div><div style="font-size:14.5px;font-weight:800;margin-top:2px">四柱推命で“最も刺激が強い”とされる相性です</div></div>'
+    +'<p style="margin:10px 0 6px;color:'+wc+';font-weight:700;line-height:1.8">日干（天）が<b>相剋</b>し、日支（地）が<b>冲</b>——<b>天と地の両方がぶつかる</b>組み合わせ。<b>'+esc(da)+'</b> × <b>'+esc(db)+'</b> がその条件を満たしています。</p>'
+    +'<ul style="margin:6px 0 0;padding-left:20px;color:'+wc+';line-height:1.9">'
+    +'<li>意見の対立・衝突が起きやすく、些細な誤解が大きな喧嘩に発展しがち。</li>'
+    +'<li>互いの長所を認め合いにくく、協力関係を築くのに工夫が要ります。</li>'
+    +'<li>計画の急な変更・予期せぬ出来事も起きやすいので、リスク管理を丁寧に。</li>'
+    +'</ul>'
+    +'<p style="margin:8px 0 0;line-height:1.8"><b style="color:'+wc+'">ただし“悪縁”と決めつけないで。</b>刺激が強いぶん<b>強く惹かれ合い、成長し合える</b>関係にもなり得ます。ぶつかったら勝ち負けにしない・"違い"を責めず言葉で確認・大事な決断は勢いで進めない——これを意識するだけで、同じ配置でも結果は大きく変わります。</p>'
+    +'<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:700;color:'+wc+'">▼ 天戦地冲について、もっと詳しく</summary>'
+    +'<div class="note" style="margin-top:6px;line-height:1.85;color:var(--ink)">'
+    +'<p style="margin:0 0 6px">天戦地冲は、天干が相剋（攻撃の関係）にあり、同時に地支が冲（180度反対でぶつかる関係）にある組み合わせ。天と地の両方が不調和なため、意見の対立や予期せぬ事態が起きやすいとされます。</p>'
+    +'<p style="margin:0 0 6px">具体的には、衝突・誤解の拡大、協力のしにくさ、計画変更や不測の障害などが挙げられます。だからこそ、慎重な行動とリスク管理が大切です。</p>'
+    +'<p style="margin:0">一方で、強くぶつかる縁は<b>強く惹かれ合う縁</b>でもあります。相手を“変えよう”とせず、距離感と対話を大切にできれば、互いを鍛え合う良き関係にもなれます。</p>'
+    +'</div></details>'
+    +'</div>';
+}
+/* 自分の日干支 × 年運／大運 の天戦地冲＝環境が大きく動く“揺れやすい時期”の目安 */
+function tensenSelfCard(p){
+  var c=p.pro, day=c.pillars[2].ganzhi, by=birthYearOf(c), now=c.now||{}, cy=now.year, wc='var(--warn)';
+  var af=c.annualFortunes||[];
+  var yHit=af.filter(function(a){return isTensenChichu(day,a.ganzhi)&&a.year>=(cy?cy-1:0)&&a.year<=(cy?cy+20:9999);}).map(function(a){return a.year+'年'+(by!=null?'（'+(a.year-by)+'歳）':'');});
+  var dl=daeunList(c), dHit=dl.items.filter(function(d){return isTensenChichu(day,d.ganzhi);}).map(function(d){return elGz(d.ganzhi)+'（'+(dl.boundary?'年齢は要確認':ageRange(d.startM,d.endM))+'）';});
+  var L=[];
+  L.push(guideBox('<p style="margin:0 0 6px"><b>天戦地冲（てんせんちちゅう）</b>は、あなたの<b>日干支「'+esc(day)+'」</b>に対して、巡る運の<b>天干が相剋＋地支が冲</b>でぶつかる時期。<b>環境の変化・衝突・予期せぬ出来事</b>が起きやすい“揺れやすい時期”の目安です（凶と決めつけず、備えのカレンダーに）。</p>'
+    +gRow('天戦（てんせん）','運の天干があなたの日干を剋す／剋される（同じ陰陽の攻めの関係）')
+    +gRow('地冲（ちちゅう）','運の地支があなたの日支と真向かいで冲（ぶつかる）')
+    +gTip('「揺れる時期ほど“変化を味方に”。急がず、確認とリスク管理を丁寧にすれば、飛躍のきっかけにもなります」')));
+  L.push('<p style="margin:8px 0 3px"><b class="sech" style="color:'+wc+'">📅 年運で天戦地冲する年（今後）</b></p>');
+  L.push(yHit.length?'<p style="margin:0 0 8px"><b style="color:'+wc+'">'+yHit.join('／')+'</b><br><span class="note">この年は大きな決断・契約・引越・転職などを急がず、確認とリスク管理を丁寧に。刺激を成長に変えるつもりで。</span></p>':'<p class="note" style="margin:0 0 8px">今後の算出範囲では、年運の天戦地冲は該当ありません。</p>');
+  L.push('<p style="margin:0 0 3px"><b class="sech" style="color:'+wc+'">🌀 大運（10年運）で天戦地冲する時期</b></p>');
+  L.push(dHit.length?'<p style="margin:0"><b style="color:'+wc+'">'+dHit.join('／')+'</b><br><span class="note">人生の大きな転換が起きやすい10年。環境が変わりやすいぶん、飛躍のチャンスにもなります。無理な勝負より、変化を味方につける姿勢で。</span></p>':'<p class="note" style="margin:0">今後の算出範囲では、大運の天戦地冲は該当ありません。</p>');
+  return L.join('');
+}
 function renderPair(pa,pb,a,b){
   var cd=window.compatData?window.compatData(pa.pro,pb.pro):null;
   var out=document.getElementById("out"),H="";
@@ -3872,6 +3917,7 @@ function renderPair(pa,pb,a,b){
   var whoBfull=shortBirth(b)+"生・日主"+elS(pb.pro.dayMaster.stem)+"（お二人目）";
   var pairFull=whoAfull+" × "+whoBfull;
   H+=tenchiBanner(pa,pb);  /* 天地徳合＝最高の相性なら最上部にピンクで大きく */
+  H+=tensenBanner(pa,pb);  /* 天戦地冲＝最も刺激の強い相性なら最上部に警告表示 */
   H+='<div class="card"><h2>相性 総合</h2>'+targetLine(pairFull);
   if(cd){
     H+='<div style="text-align:center"><div class="score">'+esc(cd.score)+'<span style="font-size:16px">点</span></div><p class="note" style="margin:0">'+(cd.good?"とても良い縁が出ています":"補い合える関係です")+'</p></div>';
