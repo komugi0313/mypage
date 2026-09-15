@@ -24,4 +24,4 @@ Netlify: https://animated-dolphin-24857d.netlify.app/
 
 ## デプロイ
 
-この `destina/` ディレクトリを公開ディレクトリとして Netlify にデプロイ（ドラッグ&ドロップ、または publish directory に指定）。
+この `nikocale/` ディレクトリを公開ディレクトリとして Netlify にデプロイ（ドラッグ&ドロップ、または publish directory に指定）。
