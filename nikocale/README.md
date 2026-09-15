@@ -12,7 +12,6 @@ Netlify: https://animated-dolphin-24857d.netlify.app/
 | `daily-engine.js` | 日次の運気グレード算出エンジン（`generateDaily` / `dailyGrade` / `koyomiOf` / `window.KDaily` / `window.PersonBazi`） |
 | `engine.js` | 四柱推命コアエンジン（`window.KEngine` ほか） |
 | `_headers` | Netlify 配信ヘッダー設定 |
-| `仕様書_相性ごよみロジック.md` | カレンダーの「良い日／避けたい日」判定ロジックの正本（監査・調整履歴込み） |
 
 外部依存：Google Fonts（Marcellus / Zen 系）、qrcodejs（cdnjs）。
 
