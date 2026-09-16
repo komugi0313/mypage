@@ -1787,7 +1787,7 @@ function renderResult(){
   const c=chart;
   document.getElementById('ai-slot').innerHTML = consultHTML();
   document.getElementById('result').innerHTML =
-    heroHTML(c)+kaikyokuHTML(c)+sbBandCard(c)+genmeiHTML(c)+meishiHTML(c)+junitenHTML(c)+gogyoHTML(c)+yojoHTML(c)+flowHTML(c);
+    heroHTML(c)+kaikyokuHTML(c)+sbxCard(c,'ja')+genmeiHTML(c)+meishiHTML(c)+junitenHTML(c)+gogyoHTML(c)+yojoHTML(c)+flowHTML(c);
   document.querySelectorAll('#result .tg [data-or]').forEach(b=>b.onclick=()=>{orient=b.dataset.or;renderResult();scrollKeep();});
   document.querySelectorAll('#result .dur').forEach(d=>d.onclick=()=>{selDu=+d.dataset.i;selYear=null;renderResult();scrollKeep();});
   document.querySelectorAll('#result .nyr').forEach(d=>d.onclick=()=>{selYear=+d.dataset.y;renderResult();scrollKeep();});
@@ -2692,6 +2692,94 @@ function sbPromptX(c){try{var a=sbAnalyzeX(c);return a?Setsuboku.promptBlock(a):
 function sbAppend(c){var p=sbPromptX(c);return p?('\n'+p):'';}
 function sbBandHTML(c,lang){try{var a=sbAnalyzeX(c);return a?('<div class="sb-wrap">'+Setsuboku.bandHtml(a,lang||'ja')+'</div>'):'';}catch(e){return '';}}
 function sbBandCard(c){try{var lang=(typeof state!=='undefined'&&state&&state.lang)?state.lang:'ja';var h=sbBandHTML(c,lang);return h?('<section class="card" style="margin-top:12px"><div style="font-weight:900;font-size:14px;margin-bottom:6px">節木運（人生の季節と節目）</div>'+h+'</section>'):'';}catch(e){return '';}}
+</script>
+
+<script>/* 節木運 pro完全一致UI（SB_SKIN＋詳細一覧＋★用語ポップアップ）v-pro */
+(function(){try{
+  if(typeof Setsuboku==='undefined')return;
+  if(document.getElementById('sbx-skin'))return;
+  var SB_SKIN=
+    '.sb-wrap .sb-title{display:none}'+
+    '.sb-wrap .sb-band{gap:4px;margin:6px 0 4px}'+
+    '.sb-wrap .sb-seg{flex:1 0 38px;min-width:38px}'+
+    '.sb-wrap .sb-cell{height:38px;border-radius:10px;border:1px solid var(--line,rgba(0,0,0,.1))}'+
+    '.sb-wrap .sb-age{font-size:11px;font-weight:900;color:var(--muted,#888)}'+
+    '.sb-wrap .sb-star{font-size:19px}'+
+    '.sb-wrap .sb-now{background:var(--now,#3C7A5B);font-weight:900}'+
+    '.sb-wrap .sb-seg.cur .sb-cell{outline:2px solid var(--now,#3C7A5B);outline-offset:1px}'+
+    '.sb-wrap .sb-lg,.sb-wrap .sb-hint{font-weight:700;color:var(--muted,#888);opacity:1}'+
+    '.sb-wrap .sb-hint{font-size:11.5px}'+
+    '@media(prefers-color-scheme:dark){'+
+    '.sb-wrap .sb-spring .sb-cell{background:#E3EFDD}.sb-wrap .sb-summer .sb-cell{background:#F6E2DB}'+
+    '.sb-wrap .sb-autumn .sb-cell{background:#F2E9D2}.sb-wrap .sb-winter .sb-cell{background:#E0E8F1}'+
+    '.sb-wrap .sb-cell{border-color:var(--line,rgba(0,0,0,.1))}}'+
+    '.sb-term{margin-top:9px;background:var(--card,#fff);border:1px solid var(--line,rgba(0,0,0,.1));border-left:5px solid #B5623A;'+
+    'border-radius:11px;padding:9px 11px;font-size:12.5px;font-weight:700;line-height:1.7;color:var(--ink2,#555)}'+
+    '.sb-term b{color:var(--ink,#222)}'+
+    '.sb-term .x{display:inline-block;margin-top:5px;font-size:11px;font-weight:900;color:var(--muted,#888);cursor:pointer;text-decoration:underline}'+
+    '.sb-list{display:flex;flex-direction:column;gap:7px;margin-top:9px}'+
+    '.sb-item{display:flex;gap:9px;align-items:flex-start;background:var(--card,#fff);border:1px solid var(--line,rgba(0,0,0,.1));'+
+    'border-left:5px solid var(--sbc,#B5623A);border-radius:11px;padding:8px 11px}'+
+    '.sb-item.next{box-shadow:0 0 0 2px rgba(181,98,58,.26)}'+
+    '.sb-item b{font-size:13px}'+
+    '.sb-item small{display:block;font-size:11.5px;font-weight:700;color:var(--muted,#888);line-height:1.55;margin-top:2px}'+
+    '.sb-tag{flex:0 0 auto;font-size:10px;font-weight:900;border-radius:6px;padding:2px 6px;letter-spacing:.04em;white-space:nowrap}'+
+    '.sb-tag.ki{background:#E3EFDD;color:#1F6B44}'+
+    '.sb-tag.imi{background:#F3E7E3;color:#9A4B2C}';
+  var st=document.createElement('style'); st.id='sbx-skin'; st.textContent=Setsuboku.css+SB_SKIN; document.head.appendChild(st);
+  document.addEventListener('click',function(e){
+    var t=e.target;
+    if(t&&t.classList&&t.classList.contains('x')&&t.parentElement&&t.parentElement.classList.contains('sb-term')){t.parentElement.remove();return;}
+    var star=t&&t.closest?t.closest('.sb-star'):null; if(!star)return;
+    var wrap=star.closest('.sb-wrap'); if(!wrap)return;
+    var old=wrap.querySelector('.sb-term'); if(old){old.remove();return;}
+    var key=star.getAttribute('data-t')||'節木運';
+    var term=Setsuboku.terms[key]||Setsuboku.terms['節木運']; if(!term)return;
+    var lang=(typeof state!=='undefined'&&state&&state.lang)?state.lang:'ja';
+    var body=(term.b&&(term.b[lang]!=null?term.b[lang]:term.b.ja))||'';
+    var box=document.createElement('div'); box.className='sb-term';
+    box.innerHTML='<b>'+key+'（'+String(term.yomi).split('·')[0].trim()+'）</b><br>'+body+'<br><span class="x">'+(lang==='ko'?'닫기':(lang==='en'?'Close':'閉じる'))+'</span>';
+    wrap.appendChild(box);
+  });
+}catch(e){}}());
+var SBX_SEASON={ja:{winter:'冬（水）',spring:'春（木）',summer:'夏（火）',autumn:'秋（金）'},ko:{winter:'겨울(수)',spring:'봄(목)',summer:'여름(화)',autumn:'가을(금)'}};
+function sbxFav(c){try{var as=_kkAssess(c).assess,f={};['木','火','土','金','水'].forEach(function(el){var r=as(el);f[el]=r.fav==='喜'?'喜':(r.fav==='忌'?'忌':'');});return f;}catch(e){return {};}}
+function sbxAnalyze(c){try{if(typeof Setsuboku==='undefined'||!c||!c.decadeFortunes||!c.decadeFortunes.length)return null;var v=[];try{v=(typeof kubo==='function')?kubo(c):((typeof kuboX==='function')?kuboX(c):[]);}catch(e){}return Setsuboku.analyze({decadeFortunes:c.decadeFortunes,nowAge:(c.now?c.now.age:null),fav:sbxFav(c),voids:v,forward:(c.startFortune?c.startFortune.forward:null)});}catch(e){return null;}}
+function sbxList(a,lang){
+  if(!a)return '';lang=lang||'ja';var ko=(lang==='ko');
+  var SEA=SBX_SEASON[ko?'ko':'ja'];
+  var ecf=(typeof ec==='function')?ec:function(){return '#B5623A';};
+  var hits=a.blocks.filter(function(b){return b.isSetsu;});
+  if(!hits.length)return ko?'<div class="mhint">이 대운 범위에는 절목운(토의 지지로 드는 전환점)이 돌아오지 않습니다.</div>':'<div class="mhint">この大運の範囲には、節木運（土の支に入る節目）は巡ってきません。</div>';
+  var rows=hits.map(function(b){
+    var isNext=a.next&&a.next.startAge===b.startAge;
+    var col=ecf(b.enterEl||b.seasonEl)||'#B5623A';
+    var tag=b.enterMark==='喜'?('<span class="sb-tag ki">'+(ko?'발전의 30년':'発展の30年')+'</span>'):(b.enterMark==='忌'?('<span class="sb-tag imi">'+(ko?'대비의 30년':'備えの30年')+'</span>'):'');
+    var yr=b.startYear?(ko?(b.startYear+'년'):(b.startYear+'年')):'';
+    var sway=b.swayFrom?(ko?(b.swayFrom+'~'+b.swayTo+'년 무렵은 환경이 움직이기 쉽습니다'):(b.swayFrom+'〜'+b.swayTo+'年ごろは環境が動きやすい')):(ko?'전후 2년은 환경이 움직이기 쉽습니다':'前後2年は環境が動きやすい');
+    var why=b.enterMark==='喜'?(ko?'이 계절의 오행은 당신의 <b>희신</b>. 순풍 속에서 키워갈 수 있는 30년입니다.':'この季節の五行はあなたの<b>喜神</b>。追い風のなかで伸ばしていける30年です。')
+           :(b.enterMark==='忌'?(ko?'이 계절의 오행은 당신의 <b>기신</b>. 토대를 다지며 나아가면 안정되는 30년입니다(나쁜 30년이라는 뜻이 아닙니다).':'この季節の五行はあなたの<b>忌神</b>。土台を整えながら進むと安定する30年です（悪い30年という意味ではありません）。'):'');
+    var head=ko
+      ?(b.startAge+'세 무렵('+yr+')·대운'+b.ganzhi+(isNext?'　← 다음 전환점':'')+(b.current?'　← 지금 이 전환점':''))
+      :(b.startAge+'歳ごろ（'+yr+'）・大運'+b.ganzhi+(isNext?'　← 次の節目':'')+(b.current?'　← 今この節目':''));
+    var body=ko
+      ?('여기서부터 <b>'+(SEA[b.enterSeason]||'')+'</b>의 30년으로 옮겨심기. '+sway+'. '+why+(b.intense?'십이운 「'+b.terrain+'」 또는 공망이 겹쳐 <b>움직임이 큰 편</b>으로 나오기 쉬운 전환점입니다.':''))
+      :('ここから<b>'+(SEA[b.enterSeason]||'')+'</b>の30年へ植え替え。'+sway+'。'+why+(b.intense?'十二運「'+b.terrain+'」または空亡が重なり、<b>動きが大きめ</b>に出やすい節目です。':''));
+    return '<div class="sb-item '+(isNext?'next':'')+'" style="--sbc:'+col+'"><div style="flex:1 1 auto"><b>'+head+'</b><small>'+body+'</small></div>'+tag+'</div>';
+  }).join('');
+  var lead=a.next
+    ?('<div class="mhint" style="margin-top:8px">'+(ko?('다음(또는 지금 막 지나는) 절목운은 <b>'+a.next.startAge+'세 무렵'+(a.next.startYear?'＝'+a.next.startYear+'년':'')+'</b>. 인생의 「옮겨심기」 시기로, 넘어서면 새로운 운이 열립니다.'):('次の（または今まさに巡っている）節木運は<b>'+a.next.startAge+'歳ごろ'+(a.next.startYear?'＝'+a.next.startYear+'年':'')+'</b>。人生の「植え替え」の時期で、越えると新しい運気が進みます。'))+'</div>')
+    :('<div class="mhint" style="margin-top:8px">'+(ko?'앞으로의 대운 중에 다음 절목운은 포함되어 있지 않습니다.':'今後の大運のなかに、次の節木運は含まれていません。')+'</div>');
+  return '<div class="sb-list">'+rows+'</div>'+lead;
+}
+function sbxSection(c,lang){
+  var sa=sbxAnalyze(c);if(!sa)return '';lang=lang||'ja';var ko=(lang==='ko');
+  var hdr=ko
+    ?'<div class="scry">절목운(30년 주기의 인생 계절과 전환점)<small style="font-weight:700;color:var(--muted)"> ── 대운을 <b>방합</b>으로 30년의 계절로 묶고, <b>토의 지지(축·진·미·술)＝계절의 이음매</b>가 ★절목운＝인생의 갈림길＝「옮겨심기」 시기. 전후 2년은 환경이 움직이기 쉽습니다</small></div>'
+    :'<div class="scry">節木運（せつぼくうん・30年周期の人生の季節と節目）<small style="font-weight:700;color:var(--muted)"> ── 大運を<b>方合</b>で30年の季節に束ね、<b>土の支（丑・辰・未・戌）＝季節の継ぎ目</b>が★節木運＝人生の曲がり角＝「植え替え」の時期。前後2年は環境が動きやすい</small></div>';
+  return hdr+'<div class="sb-wrap">'+Setsuboku.bandHtml(sa,lang)+'</div>'+sbxList(sa,lang);
+}
+function sbxCard(c,lang){var s=sbxSection(c,lang);return s?('<section class="card" style="margin-top:12px">'+s+'</section>'):'';}
 </script>
 
 </body><umsdataelement id="UMSDataElement" style="display: none;"></umsdataelement><div id="tmtoolbar_manual_rating_injected" style="display: none;">init</div><div id="UMSSendDataEventElement" style="display: none;">init</div></html>
