@@ -91,6 +91,27 @@ textarea{resize:vertical;min-height:74px;line-height:1.6;}
   font-size:13.5px;color:var(--ink);line-height:1.85;}
 .summary .st{font-weight:800;display:block;margin-bottom:4px;color:var(--pink-deep);}
 .note{font-size:11px;color:var(--ink3);margin-top:10px;line-height:1.6;}
+/* 1日の鑑定 */
+.reading .rhead{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding-bottom:12px;border-bottom:1.5px dashed var(--line);}
+.reading .rday{font-size:13px;font-weight:800;color:var(--ink2);}
+.reading .rstar{font-size:16px;font-weight:800;color:var(--pink-deep);}
+.reading .rstar small{font-size:11px;color:var(--ink3);font-weight:500;}
+.reading .rscore{margin-left:auto;font-size:12px;font-weight:800;padding:5px 12px;border-radius:999px;}
+.reading .rscore.good{background:#eafaf3;color:var(--good);}
+.reading .rscore.mix{background:#fff6e4;color:var(--mix);}
+.reading .rscore.warn{background:#fdeeee;color:var(--warn);}
+.reading .rlead{font-size:14px;font-weight:700;line-height:1.8;margin:14px 0 4px;color:var(--ink);}
+.reading .rsec{display:flex;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px;line-height:1.75;}
+.reading .rsec:last-of-type{border-bottom:0;}
+.reading .rsec .rico{font-size:17px;flex:0 0 auto;}
+.reading .rsec b{display:block;font-size:12px;color:var(--pink-deep);margin-bottom:2px;}
+.reading .rsec.warn b{color:var(--warn);} .reading .rsec.good b{color:var(--good);}
+.reading .rsec.warn{background:#fdf3f3;border-radius:12px;padding:11px 12px;border-bottom:0;margin-top:4px;}
+.reading .rsec.good{background:#eefaf4;border-radius:12px;padding:11px 12px;border-bottom:0;margin-top:8px;}
+.reading .rlucky{display:flex;flex-direction:column;gap:8px;margin-top:14px;background:linear-gradient(135deg,var(--gold-soft),var(--pink-soft));
+  border-radius:14px;padding:13px 15px;font-size:12.5px;color:var(--ink);}
+.reading .rlucky span{display:flex;justify-content:space-between;gap:12px;align-items:baseline;}
+.reading .rlucky b{font-weight:800;color:var(--pink-deep);text-align:right;}
 /* AI 出力 */
 .ai-out{background:#fffafc;border:1.5px solid var(--lav-soft);border-radius:16px;padding:15px;margin-top:12px;
   font-size:13.5px;line-height:1.9;white-space:pre-wrap;color:var(--ink);min-height:20px;}
@@ -154,8 +175,8 @@ details.setting summary::before{content:"⚙️ ";}
       <summary>くわしい設定（生まれた地域・AI連携）</summary>
       <label class="fld">生まれた都道府県（真太陽時の補正・任意）</label>
       <select id="f-pref"><option value="">補正なし（標準時のまま）</option></select>
-      <label class="fld">AI（Gemini）APIキー ― 質問ボックスとAIリーディングに使います</label>
-      <input type="text" id="g-key" placeholder="AIza... (このブラウザにだけ保存されます)">
+      <label class="fld">🔑 AI（Gemini）APIキー ― オーナー専用</label>
+      <input type="text" id="g-key" placeholder="AIza... (この端末のブラウザにだけ保存)">
       <label class="fld">Geminiモデル</label>
       <select id="g-model">
         <option value="gemini-2.5-flash">gemini-2.5-flash（推奨・速い）</option>
@@ -163,7 +184,7 @@ details.setting summary::before{content:"⚙️ ";}
         <option value="gemini-2.0-flash">gemini-2.0-flash</option>
         <option value="gemini-1.5-flash">gemini-1.5-flash</option>
       </select>
-      <p class="hint">APIキーは <b>Google AI Studio</b>（aistudio.google.com/apikey）で無料で取得できます。キーはお使いの端末のブラウザ内だけに保存され、外部には送られません（AIへの質問時のみGoogleに送信）。</p>
+      <p class="hint"><b>AI機能はキーを入れたこの端末でだけ使えます。</b>キーはファイルには埋め込まれず、あなたの端末のブラウザ内にのみ保存されるため、LINEで送った友だちの端末ではAIリーディング・質問ボックスは表示されません（＝他の人はAIを使えません）。友だちは「その日の鑑定」だけ見られます。<br>キーは <b>Google AI Studio</b>（aistudio.google.com/apikey）で無料取得できます。</p>
     </details>
   </div>
 
@@ -201,19 +222,32 @@ function tenStarOf(dayStem,target){
   return [['比肩','劫財'],['食神','傷官'],['偏財','正財'],['偏官','正官'],['偏印','印綬']][diff][same?0:1];
 }
 
-/* 通変星ごとの日運テーマ */
+/* 通変星ごとの日運テーマ（総合・恋愛/対人・仕事/勉強・金運・開運アクション） */
 const STAR_THEME={
-  比肩:{t:'good',one:'自分らしく動ける日。マイペースが吉。',adv:'自分の判断で前へ。ただし人に頼りすぎず、頼られすぎず、ほどよい距離で。'},
-  劫財:{t:'mix', one:'勢いと行動力がある日。衝動と出費に注意。',adv:'チャレンジは○。ただし勝負ごと・大きな買い物・見栄の出費はいったん保留に。'},
-  食神:{t:'good',one:'のびのび楽しめる日。おいしいもの＆リラックスが開運。',adv:'好きなことを味わって。笑顔と食が運を連れてきます。詰め込みすぎず、ゆったりと。'},
-  傷官:{t:'mix', one:'感性・才能がさえる日。鋭い一言と批判に注意。',adv:'創作・表現・美容に良い日。ただしSNSや口論でトゲが出やすいので、言葉はやさしく。'},
-  偏財:{t:'good',one:'人とお金の巡りが良い日。社交とチャンスに恵まれる。',adv:'人に会う・声をかけるのが吉。臨時の縁やお得な話も。気前よく、でも使いすぎには注意。'},
-  正財:{t:'good',one:'堅実さが実る日。コツコツ・貯蓄・約束を守ると◎。',adv:'地道な作業や手続き、節約や整理に向く日。信用を積む行動が、のちの実りに。'},
-  偏官:{t:'warn',one:'プレッシャーや衝突が起きやすい日。急がず冷静に。',adv:'急ぎ・無理・対立・事故に注意。ひと呼吸おいて動けば、むしろ度胸が味方に。'},
-  正官:{t:'good',one:'きちんと整える日。責任・公的なこと・評価が上がる。',adv:'ルールを守り、丁寧に。目上や公的な場面で信頼を得やすい日。身だしなみも整えて。'},
-  偏印:{t:'mix', one:'直感とひらめきの日。考えすぎと気分の波に注意。',adv:'学び・研究・アイデア出しに◎。ただし深読み・停滞・マイナス思考に沈まないよう軽やかに。'},
-  印綬:{t:'good',one:'守られ・学び・受け取る日。休息と知識が開運。',adv:'目上の助けや学びに恵まれる日。無理せず、インプットや休養にあてるのも吉。'}
+  比肩:{t:'good',one:'自分らしく動ける日。マイペースが吉。',adv:'自分の判断で前へ。ただし人に頼りすぎず、頼られすぎず、ほどよい距離で。',
+    love:'対等でさっぱりした関係が心地よい日。押しすぎず自然体で。',work:'自分の裁量で進める作業がはかどる。独断は少し抑えて。',money:'自分への必要な投資は○。見栄の出費は控えめに。',act:'一人時間で自分の気持ちを整理する'},
+  劫財:{t:'mix',one:'勢いと行動力がある日。衝動と出費に注意。',adv:'チャレンジは○。ただし勝負ごと・大きな買い物・見栄の出費はいったん保留に。',
+    love:'情熱的になりやすいが、駆け引きや嫉妬に注意。素直さが鍵。',work:'瞬発力が出る日。仲間と組むと力倍増、でも先走りに注意。',money:'出費・貸し借り・衝動買いに注意。財布のひもは固めに。',act:'欲しい物は一晩考えてから決める'},
+  食神:{t:'good',one:'のびのび楽しめる日。おいしいもの＆リラックスが開運。',adv:'好きなことを味わって。笑顔と食が運を連れてきます。詰め込みすぎず、ゆったりと。',
+    love:'笑顔と楽しい会話で距離が縮まる日。デートやグルメに◎。',work:'発想がやわらかく、企画やクリエイティブ向き。楽しんで。',money:'食やレジャーの出費は満足度高め。使いすぎだけ注意。',act:'おいしいものをゆっくり味わう'},
+  傷官:{t:'mix',one:'感性・才能がさえる日。鋭い一言と批判に注意。',adv:'創作・表現・美容に良い日。ただしSNSや口論でトゲが出やすいので、言葉はやさしく。',
+    love:'感受性が高く、言葉ひとつで揺れやすい。優しい言葉選びを。',work:'クオリティ・美的センスが光る。批判・完璧主義は控えめに。',money:'美容・センスへの投資は○。細かいこだわりの出費に注意。',act:'創作・おしゃれ・写真など「表現」を楽しむ'},
+  偏財:{t:'good',one:'人とお金の巡りが良い日。社交とチャンスに恵まれる。',adv:'人に会う・声をかけるのが吉。臨時の縁やお得な話も。気前よく、でも使いすぎには注意。',
+    love:'出会い・社交運アップ。フットワーク軽く動くと縁が広がる。',work:'人脈・営業・調整ごとが追い風。声をかけるほど吉。',money:'金回りが良い日。臨時収入やお得も。気前と節度のバランスを。',act:'人に会う・連絡する・新しい場所へ行く'},
+  正財:{t:'good',one:'堅実さが実る日。コツコツ・貯蓄・約束を守ると◎。',adv:'地道な作業や手続き、節約や整理に向く日。信用を積む行動が、のちの実りに。',
+    love:'誠実さが伝わる日。約束を守る小さな積み重ねが信頼に。',work:'コツコツ作業・数字・事務が正確に進む。丁寧さが評価に。',money:'貯蓄・節約・家計管理に最適。堅実な選択が実る。',act:'家計の見直し・お部屋やデータの整理整頓'},
+  偏官:{t:'warn',one:'プレッシャーや衝突が起きやすい日。急がず冷静に。',adv:'急ぎ・無理・対立・事故に注意。ひと呼吸おいて動けば、むしろ度胸が味方に。',
+    love:'刺激的だが衝突しやすい。カッとなったら一呼吸。',work:'責任・締切のプレッシャー大。無理せず優先順位を絞って。',money:'急な出費・トラブル出費に注意。契約は慎重に。',act:'予定に余裕をもつ・移動や体の使い方を丁寧に'},
+  正官:{t:'good',one:'きちんと整える日。責任・公的なこと・評価が上がる。',adv:'ルールを守り、丁寧に。目上や公的な場面で信頼を得やすい日。身だしなみも整えて。',
+    love:'まじめな関係が進みやすい。礼儀と誠実さが好印象。',work:'公的な場・上司との関係・手続きが順調。信頼を得やすい。',money:'計画的な支出が吉。きちんとした管理が運を安定させる。',act:'身だしなみを整える・きちんとした挨拶や連絡をする'},
+  偏印:{t:'mix',one:'直感とひらめきの日。考えすぎと気分の波に注意。',adv:'学び・研究・アイデア出しに◎。ただし深読み・停滞・マイナス思考に沈まないよう軽やかに。',
+    love:'ミステリアスな魅力が出る日。ただし深読みしすぎに注意。',work:'研究・分析・アイデア出しに強い。気分のムラだけ気をつけて。',money:'情報や学びへの投資は○。あいまいな話・うまい話に注意。',act:'本を読む・学ぶ・静かに考える時間をつくる'},
+  印綬:{t:'good',one:'守られ・学び・受け取る日。休息と知識が開運。',adv:'目上の助けや学びに恵まれる日。無理せず、インプットや休養にあてるのも吉。',
+    love:'包み込むような優しさが縁を育てる。甘え上手が吉。',work:'学び・資格・目上のサポートに恵まれる。焦らず着実に。',money:'大きく動かすより守り・貯めが吉。堅実に。',act:'ゆっくり休む・学ぶ・目上の人に相談する'}
 };
+/* 五行 → ラッキーカラー／アイテム */
+const EL_COLOR={木:'グリーン・若草色',火:'レッド・ピンク・オレンジ',土:'イエロー・ベージュ・ブラウン',金:'ホワイト・ゴールド・シルバー',水:'ブルー・ネイビー・ブラック'};
+const EL_FOOD={木:'葉物野菜・柑橘・酸味のもの',火:'トマト・赤い食材・苦味のもの',土:'かぼちゃ・芋類・甘味のもの',金:'白い食材・辛味・根菜',水:'魚介・海藻・黒い食材'};
 const REL_INFO={
   冲:{t:'warn',d:'ぶつかり・変化・移動。予定変更や物理的な接触、気持ちの揺れに注意。'},
   害:{t:'warn',d:'すれ違い・裏切られ感・体調のゆらぎ。人間関係の綻びにそっと配慮を。'},
@@ -228,7 +262,7 @@ const EL_JP={木:'木（成長・行動）',火:'火（情熱・表現）',土:'
 /* ============ ストレージ ============ */
 const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
 let sex='female', geminiKey='', geminiModel='gemini-2.5-flash';
-let natal=null, transit=null, facts=null, personName='';
+let natal=null, transit=null, facts=null, personName='', lastTarget='';
 
 /* ============ 都道府県（経度）============ */
 const PREFS=[['北海道',141.35],['青森',140.74],['岩手',141.15],['宮城',140.87],['秋田',140.10],['山形',140.36],['福島',140.47],['茨城',140.45],['栃木',139.88],['群馬',139.06],['埼玉',139.65],['千葉',140.12],['東京',139.69],['神奈川',139.64],['新潟',139.02],['富山',137.21],['石川',136.63],['福井',136.22],['山梨',138.57],['長野',138.18],['岐阜',136.72],['静岡',138.38],['愛知',136.91],['三重',136.51],['滋賀',135.87],['京都',135.76],['大阪',135.52],['兵庫',135.18],['奈良',135.83],['和歌山',135.17],['鳥取',134.24],['島根',133.05],['岡山',133.93],['広島',132.46],['山口',131.47],['徳島',134.56],['香川',134.04],['愛媛',132.77],['高知',133.53],['福岡',130.42],['佐賀',130.30],['長崎',129.87],['熊本',130.74],['大分',131.61],['宮崎',131.42],['鹿児島',130.56],['沖縄',127.68]];
@@ -241,7 +275,8 @@ function init(){
   document.getElementById('f-target').value=iso;
   geminiKey=store.get('unsei_gkey')||''; geminiModel=store.get('unsei_gmodel')||'gemini-2.5-flash';
   const gk=document.getElementById('g-key'),gm=document.getElementById('g-model');
-  gk.value=geminiKey; gk.oninput=()=>{geminiKey=gk.value.trim();store.set('unsei_gkey',geminiKey);};
+  gk.value=geminiKey; gk.oninput=()=>{const had=!!geminiKey;geminiKey=gk.value.trim();store.set('unsei_gkey',geminiKey);
+    if(natal&&(had!==!!geminiKey))render(lastTarget);}; // キー有無が変わったらAI欄を出し入れ
   gm.value=geminiModel; gm.onchange=()=>{geminiModel=gm.value;store.set('unsei_gmodel',geminiModel);};
   // 前回の入力を復元
   ['name','date','time','pref'].forEach(k=>{const v=store.get('unsei_'+k);if(v!=null){const el=document.getElementById('f-'+k);if(el)el.value=v;}});
@@ -315,6 +350,7 @@ function run(){
   transit=window.Bazi.computeChart({year:ty,month:tmo,day:td,hour:12,minute:0,sex,correctionMode:'none'});
 
   facts=buildFacts(tg);
+  lastTarget=tg;
   render(tg);
   document.getElementById('result').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -331,9 +367,13 @@ function buildFacts(tg){
   const f=natal.fiveElements, tot=Object.values(f).reduce((a,b)=>a+b,0)||1;
   const dayEl=STEM_EL[dayStem], resEl=SHENG[(SHENG.indexOf(dayEl)+4)%5];
   const support=(f[dayEl]||0)+(f[resEl]||0);
-  const strength= support/tot>=0.45?'身強（自分の力が強め）': support/tot<=0.28?'身弱（周りの力を借りると吉）':'中和（バランス型）';
+  const strong= support/tot>=0.45, weak=support/tot<=0.28;
+  const strength= strong?'身強（自分の力が強め）': weak?'身弱（周りの力を借りると吉）':'中和（バランス型）';
   const lack=SHENG.filter(e=>(f[e]||0)===0);
-  return {dayStem,daeun,yearUn:{ganzhi:yearUn.ganzhi,stem:yearUn.stem,branch:yearUn.branch,star:yearUn.tenStar||tenStarOf(dayStem,yearUn.stem)},
+  // ラッキーカラー＝喜神の五行（身強→財、身弱→印、中和→日主の五行）
+  const di=SHENG.indexOf(dayEl);
+  const favEl= strong?SHENG[(di+2)%5] : weak?SHENG[(di+4)%5] : dayEl;
+  return {dayStem,dayEl,favEl,daeun,yearUn:{ganzhi:yearUn.ganzhi,stem:yearUn.stem,branch:yearUn.branch,star:yearUn.tenStar||tenStarOf(dayStem,yearUn.stem)},
     monthUn,dayUn,rels,strength,lack,fiveElements:f};
 }
 
@@ -364,28 +404,61 @@ function render(tg){
   // 関係バッジ
   const relBadges=f.rels.length? f.rels.map(r=>{const info=REL_INFO[r.k]||{t:'mix'};return `<span class="rb ${info.t}">${r.k}：${r.t}</span>`}).join(''):'<span class="rb good">おだやか：今日は命式との大きな衝突なし</span>';
 
-  // まとめ（決定論ロジック）
-  const th=STAR_THEME[f.dayUn.star]||{t:'mix',one:'',adv:''};
+  // ===== 1日の鑑定（デフォルト・AI不要の読みやすい鑑定文）=====
+  const th=STAR_THEME[f.dayUn.star]||{t:'mix',one:'',adv:'',love:'',work:'',money:'',act:''};
   const warns=f.rels.filter(r=>(REL_INFO[r.k]||{}).t==='warn');
   const goods=f.rels.filter(r=>(REL_INFO[r.k]||{}).t==='good');
   const cautionParts=[];
-  if(th.t==='warn')cautionParts.push(`「${f.dayUn.star}」の気が強めの日。${th.adv}`);
+  if(th.t==='warn')cautionParts.push(`今日は「${f.dayUn.star}」の気が強めの日。${th.adv}`);
   else if(th.t==='mix')cautionParts.push(`「${f.dayUn.star}」の日。${th.adv}`);
-  warns.forEach(r=>cautionParts.push(`「${r.k}」＝${REL_INFO[r.k].d}`));
+  warns.forEach(r=>cautionParts.push(`<b>${r.k}</b>：${REL_INFO[r.k].d}`));
   const cautionTxt = cautionParts.length? cautionParts.join('<br>') : '今日は大きな注意点は出ていません。いつも通り、自分をいたわって過ごして。';
-  const luckParts=[];
-  if(th.t==='good')luckParts.push(th.adv);
-  goods.forEach(r=>luckParts.push(`「${r.k}」＝${REL_INFO[r.k].d}`));
-  const luckTxt = luckParts.length? luckParts.join('<br>') : 'ゆったり構えるほど運が味方する日。焦らず、丁寧に過ごして。';
-  const summary=`<div class="summary">
-    <span class="st">🌟 ${dateJa} の日運：${f.dayUn.star}（${f.dayUn.ganzhi}）</span>
-    ${th.one}<br><br>
-    <b>⚠️ 注意点：</b>${cautionTxt}<br><br>
-    <b>💗 追い風：</b>${luckTxt}
+  const tailParts=[];
+  if(th.t==='good')tailParts.push(th.adv);
+  goods.forEach(r=>tailParts.push(`<b>${r.k}</b>：${REL_INFO[r.k].d}`));
+  const tailwind = tailParts.length? tailParts.join('<br>') : 'ゆったり構えるほど運が味方する日。焦らず、丁寧に。';
+  const scoreEmoji={good:'☀️ 好調',mix:'⛅ ふつう〜やや注意',warn:'🌂 慎重に'}[th.t]||'⛅';
+  const luckyColor=EL_COLOR[f.favEl], luckyFood=EL_FOOD[f.favEl];
+
+  const reading=`<div class="reading">
+    <div class="rhead">
+      <span class="rday">${dateJa}</span>
+      <span class="rstar">日運：${f.dayUn.star}<small>（${f.dayUn.ganzhi}）</small></span>
+      <span class="rscore ${th.t}">${scoreEmoji}</span>
+    </div>
+    <p class="rlead">${th.one}</p>
+    <div class="rsec"><span class="rico">💗</span><div><b>恋愛・対人</b>${th.love}</div></div>
+    <div class="rsec"><span class="rico">💼</span><div><b>仕事・勉強</b>${th.work}</div></div>
+    <div class="rsec"><span class="rico">💰</span><div><b>金運</b>${th.money}</div></div>
+    <div class="rsec warn"><span class="rico">⚠️</span><div><b>今日の注意点</b>${cautionTxt}</div></div>
+    <div class="rsec good"><span class="rico">🍀</span><div><b>追い風・開運</b>${tailwind}</div></div>
+    <div class="rlucky">
+      <span>🎨 ラッキーカラー<b>${luckyColor}</b></span>
+      <span>✨ ラッキーアクション<b>${th.act}</b></span>
+      <span>🍽 開運フード<b>${luckyFood}</b></span>
+    </div>
   </div>`;
 
   const nameLine=personName?`<small>${personName} さん</small>`:'';
   const timeNote=natal.timeUnknown?'<p class="note">※ 生まれた時間が不明のため、時柱を作らず「年柱・月柱・日柱」の3柱で鑑定しています（大運の切替時期は正午基準の目安です）。</p>':'';
+  const daeunNote=`<p class="note">大運は<b>月柱（${natal.pillars[1].ganzhi}）を起点</b>に、${natal.startFortune.forward?'順行':'逆行'}で展開しています（立運：${natal.startFortune.text}〜）。月柱そのものは立運前の運です。</p>`;
+
+  // ===== AIセクション（オーナーのAIキーがある時だけ表示。他の人は使えません）=====
+  const aiSection = geminiKey ? `
+  <div class="card">
+    <h2><span class="emo">🌙</span>AIリーディング <small>オーナー専用</small></h2>
+    <p class="hint" style="margin-top:0">上の鑑定を、AIがさらに深く文章で読み解きます。</p>
+    <button class="btn" id="ai-read">🌙 AIに今日の運勢を読み解いてもらう</button>
+    <div class="ai-out" id="ai-out"></div>
+  </div>
+  <div class="card">
+    <h2><span class="emo">💬</span>命式おしえてボックス <small>オーナー専用</small></h2>
+    <p class="hint" style="margin-top:0">気になることを何でも聞いてね。あなたの命式・今日の運勢をふまえてAIが答えます。</p>
+    <div class="chips" id="q-chips"></div>
+    <textarea id="q-input" placeholder="例：今日の恋愛運は？／仕事で気をつけることは？／私の性格を教えて"></textarea>
+    <button class="btn" id="q-go">🔮 質問する</button>
+    <div class="ai-out" id="q-out"></div>
+  </div>` : '';
 
   document.getElementById('result').innerHTML=`
   <div class="card">
@@ -397,22 +470,18 @@ function render(tg){
   </div>
 
   <div class="card">
-    <h2><span class="emo">📅</span>今日の運勢の流れ <small>大運＞年運＞月運＞日運</small></h2>
-    <div class="levels">${levels}</div>
-    <div class="badges">${relBadges}</div>
-    ${summary}
-    <button class="btn" id="ai-read">🌙 AIに今日の運勢を読み解いてもらう</button>
-    <div class="ai-out" id="ai-out"></div>
+    <h2><span class="emo">🌟</span>${dateJa} の鑑定</h2>
+    ${reading}
   </div>
 
   <div class="card">
-    <h2><span class="emo">💬</span>命式おしえてボックス <small>Gemini AI</small></h2>
-    <p class="hint" style="margin-top:0">気になることを何でも聞いてね。あなたの命式・今日の運勢をふまえてAIが答えます。</p>
-    <div class="chips" id="q-chips"></div>
-    <textarea id="q-input" placeholder="例：今日の恋愛運は？／仕事で気をつけることは？／私の性格を教えて"></textarea>
-    <button class="btn" id="q-go">🔮 質問する</button>
-    <div class="ai-out" id="q-out"></div>
+    <h2><span class="emo">📅</span>運勢の流れ <small>大運＞年運＞月運＞日運</small></h2>
+    <div class="levels">${levels}</div>
+    <div class="badges">${relBadges}</div>
+    ${daeunNote}
   </div>
+
+  ${aiSection}
 
   <div class="card">
     <h2><span class="emo">💌</span>この鑑定をシェア <small>LINE・メール</small></h2>
@@ -422,15 +491,16 @@ function render(tg){
       <button class="sbtn copy" id="sh-copy">📋 コピー</button>
       <button class="sbtn app" id="sh-app">🔗 アプリを共有</button>
     </div>
-    <p class="hint">「アプリを共有」で友だちにこのアプリを送れます。友だちが命式を聞くAI質問を使うには、その方の端末でもAIキーの設定が必要です（今日の運勢の計算はキー不要でできます）。</p>
   </div>`;
 
   // イベント
-  const QCHIPS=['今日の恋愛運は？','今日の仕事・勉強運は？','今日の金運は？','今日の人間関係の注意点は？','私の性格の本質を教えて','私の強みと才能は？','今の大運の過ごし方は？','ラッキーな過ごし方を教えて'];
-  document.getElementById('q-chips').innerHTML=QCHIPS.map(q=>`<span class="chip">${q}</span>`).join('');
-  document.querySelectorAll('#q-chips .chip').forEach(c=>c.onclick=()=>{document.getElementById('q-input').value=c.textContent;});
-  document.getElementById('ai-read').onclick=aiRead;
-  document.getElementById('q-go').onclick=aiAsk;
+  if(geminiKey){
+    const QCHIPS=['今日の恋愛運は？','今日の仕事・勉強運は？','今日の金運は？','今日の人間関係の注意点は？','私の性格の本質を教えて','私の強みと才能は？','今の大運の過ごし方は？','ラッキーな過ごし方を教えて'];
+    document.getElementById('q-chips').innerHTML=QCHIPS.map(q=>`<span class="chip">${q}</span>`).join('');
+    document.querySelectorAll('#q-chips .chip').forEach(c=>c.onclick=()=>{document.getElementById('q-input').value=c.textContent;});
+    document.getElementById('ai-read').onclick=aiRead;
+    document.getElementById('q-go').onclick=aiAsk;
+  }
   document.getElementById('sh-line').onclick=shareLine;
   document.getElementById('sh-mail').onclick=shareMail;
   document.getElementById('sh-copy').onclick=shareCopy;
@@ -441,13 +511,19 @@ function render(tg){
 function shareText(){
   const f=facts,tg=document.getElementById('f-target').value.replace(/-/g,'/');
   const who=personName?personName+'さんの':'';
-  const th=STAR_THEME[f.dayUn.star]||{one:''};
-  const ai=document.getElementById('ai-out')&&document.getElementById('ai-out').textContent.trim();
+  const th=STAR_THEME[f.dayUn.star]||{one:'',love:'',work:'',money:'',act:''};
+  const aiEl=document.getElementById('ai-out');
+  const ai=aiEl&&aiEl.textContent.trim();
+  const warns=f.rels.filter(r=>(REL_INFO[r.k]||{}).t==='warn').map(r=>r.k);
   let t=`🔮${who}きょうの運勢（${tg}）\n`;
-  t+=`日主：${natal.dayMaster.stem}（${natal.dayMaster.element}）\n`;
-  t+=`今日の日運：${f.dayUn.star}（${f.dayUn.ganzhi}）\n${th.one}\n`;
-  if(f.rels.length)t+=`\n巡り：${f.rels.map(r=>r.k).join('・')}\n`;
-  if(ai)t+=`\n${ai}\n`;
+  t+=`日主：${natal.dayMaster.stem}（${natal.dayMaster.element}）／日運：${f.dayUn.star}（${f.dayUn.ganzhi}）\n\n`;
+  t+=`${th.one}\n`;
+  t+=`💗恋愛・対人：${th.love}\n`;
+  t+=`💼仕事・勉強：${th.work}\n`;
+  t+=`💰金運：${th.money}\n`;
+  if(warns.length)t+=`⚠️注意：${warns.join('・')}\n`;
+  t+=`🎨ラッキーカラー：${EL_COLOR[f.favEl]}\n✨ラッキーアクション：${th.act}\n`;
+  if(ai)t+=`\n【AI鑑定】\n${ai}\n`;
   t+=`\n▼あなたの運勢も調べる\n${location.href}`;
   return t;
 }
