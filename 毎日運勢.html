@@ -108,6 +108,27 @@ textarea{resize:vertical;min-height:74px;line-height:1.6;}
 .detail-card>div{padding:0 18px 18px;}
 .detail-card .emo{font-size:19px;}
 .subh{font-size:13px;font-weight:800;color:var(--ink2);margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--line);}
+/* 相性占い */
+.compat-card{padding:0;background:linear-gradient(160deg,#fff 0%,#fff6fa 100%);border:1.5px solid var(--pink-soft);}
+.compat-card summary{cursor:pointer;list-style:none;padding:18px;font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px;color:var(--pink-deep);}
+.compat-card summary::-webkit-details-marker{display:none;}
+.compat-card summary::after{content:"▸";margin-left:auto;color:var(--ink3);}
+.compat-card[open] summary::after{content:"▾";}
+.compat-card .emo{font-size:20px;}
+.compat-body{padding:0 18px 18px;}
+.compat-score{text-align:center;border-radius:18px;padding:18px;margin:6px 0 14px;background:linear-gradient(135deg,var(--pink-soft),var(--lav-soft));}
+.compat-score.mix{background:linear-gradient(135deg,var(--gold-soft),var(--pink-soft));}
+.cs-hearts{font-size:26px;letter-spacing:2px;}
+.cs-num{font-size:42px;font-weight:800;color:var(--pink-deep);line-height:1.1;}
+.cs-num small{font-size:16px;}
+.cs-lv{font-size:15px;font-weight:800;color:var(--ink);}
+.cs-pair{font-size:11px;color:var(--ink2);margin-top:6px;}
+.crel{background:#fffafc;border:1.5px solid var(--lav-soft);border-radius:14px;padding:13px 15px;font-size:13px;line-height:1.9;margin-bottom:8px;}
+.crel b{color:var(--pink-deep);}
+.crow{font-size:13px;line-height:1.7;padding:10px 12px;border-radius:12px;margin-top:8px;}
+.crow b{display:block;font-size:12px;margin-bottom:2px;}
+.crow.good{background:#eefaf4;} .crow.good b{color:var(--good);}
+.crow.warn{background:#fdf3f3;} .crow.warn b{color:var(--warn);}
 /* 1日の鑑定 */
 .reading .rhead{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding-bottom:12px;border-bottom:1.5px dashed var(--line);}
 .reading .rday{font-size:13px;font-weight:800;color:var(--ink2);}
@@ -228,6 +249,29 @@ details.setting summary::before{content:"⚙️ ";}
   </div>
 
   <div id="result"></div>
+
+  <!-- 相性占い -->
+  <details class="card compat-card" id="compat-card">
+    <summary><span class="emo">💞</span>相性占い（お相手と）</summary>
+    <div class="compat-body">
+      <p class="hint" style="margin-top:0">上に入れた<b>あなたの生年月日</b>と、お相手の生年月日で相性をみます（四柱推命）。</p>
+      <label class="fld">お相手のお名前（任意）</label>
+      <input type="text" id="p-name" placeholder="お相手のニックネーム">
+      <label class="fld">お相手の生年月日</label>
+      <input type="date" id="p-date" min="1900-01-01" max="2100-12-31">
+      <label class="fld">生まれた時間（任意）</label>
+      <input type="time" id="p-time" value="12:00">
+      <label class="check"><input type="checkbox" id="p-notime">時間がわからない（3柱でみます）</label>
+      <label class="fld">お相手の性別</label>
+      <div class="seg" id="p-sex">
+        <button type="button" data-v="male" aria-pressed="true">男性</button>
+        <button type="button" data-v="female" aria-pressed="false">女性</button>
+      </div>
+      <button class="btn" id="p-go">💞 相性をみる</button>
+      <div id="compat-result"></div>
+    </div>
+  </details>
+
   <div id="toast" class="toast"></div>
 
   <div class="foot">
@@ -338,9 +382,25 @@ function init(){
   document.querySelectorAll('#f-sex button').forEach(b=>b.onclick=()=>setSex(b.dataset.v));
   document.getElementById('f-notime').onchange=toggleTime;
   document.getElementById('f-go').onclick=run;
+  // 相性占い
+  document.querySelectorAll('#p-sex button').forEach(b=>b.onclick=()=>setSexP(b.dataset.v));
+  document.getElementById('p-notime').onchange=()=>{const c=document.getElementById('p-notime').checked;const t=document.getElementById('p-time');t.disabled=c;t.style.opacity=c?.5:1;};
+  document.getElementById('p-go').onclick=runCompat;
 }
 function setSex(v){sex=v;document.querySelectorAll('#f-sex button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));}
+function setSexP(v){sexP=v;document.querySelectorAll('#p-sex button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));}
 function toggleTime(){const c=document.getElementById('f-notime').checked;const t=document.getElementById('f-time');t.disabled=c;t.style.opacity=c?.5:1;}
+
+/* ============ 命式を作る共通関数（自分・相手で共用） ============ */
+function chartFrom(o){
+  const [y,mo,d]=o.date.split('-').map(Number);
+  const [h,mi]=(o.time||'12:00').split(':').map(Number);
+  const opt={year:y,month:mo,day:d,hour:o.notime?12:h,minute:o.notime?0:mi,sex:o.sex,correctionMode:o.lon?'full':'none'};
+  if(o.lon)opt.longitude=parseFloat(o.lon);
+  const c=window.Bazi.computeChart(opt);
+  if(o.notime)markTimeUnknown(c);
+  return c;
+}
 
 /* ============ 時刻不明：時柱を外して3柱に ============ */
 function markTimeUnknown(c){
@@ -407,6 +467,80 @@ function run(){
   lastTarget=tg;
   render(tg);
   document.getElementById('result').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ============ 相性占いの実行・描画 ============ */
+let sexP='male', compatData=null;
+function runCompat(){
+  const ad=document.getElementById('f-date').value;
+  if(!ad){toast('先にあなたの生年月日を入れてね');document.getElementById('f-date').scrollIntoView({behavior:'smooth',block:'center'});return;}
+  const pd=document.getElementById('p-date').value;
+  if(!pd){toast('お相手の生年月日を入れてね');return;}
+  const lon=document.getElementById('f-pref').value;
+  const A=chartFrom({date:ad,time:document.getElementById('f-time').value,notime:document.getElementById('f-notime').checked,sex,lon});
+  const B=chartFrom({date:pd,time:document.getElementById('p-time').value,notime:document.getElementById('p-notime').checked,sex:sexP,lon:''});
+  const aName=document.getElementById('f-name').value.trim()||'あなた';
+  const bName=document.getElementById('p-name').value.trim()||'お相手';
+  const c=compat(A,B);
+  compatData={c,A,B,aName,bName};
+  renderCompat();
+  document.getElementById('compat-result').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function renderCompat(){
+  const {c,A,B,aName,bName}=compatData;
+  const level = c.score>=85?{t:'とても良い相性💗',cls:'good'}: c.score>=70?{t:'良い相性🌸',cls:'good'}: c.score>=55?{t:'まずまずの相性🍀',cls:'mix'}:{t:'努力で深まる相性🌱',cls:'mix'};
+  const goodHTML=c.good.map(g=>`<div class="crow good"><b>${g.k}</b>${g.d}</div>`).join('');
+  const warnHTML=c.warn.map(g=>`<div class="crow warn"><b>${g.k}</b>${g.d}</div>`).join('');
+  const noteHTML=c.notes.length?`<p class="note">${c.notes.join(' ')}</p>`:'';
+  const relText=`${bName}は、${aName}にとって<b>「${c.selfSees}」</b>の星。${STAR_PARTNER[c.selfSees]||''}<br>${aName}は、${bName}にとって<b>「${c.partnerSees}」</b>の星。${STAR_PARTNER[c.partnerSees]||''}`;
+  const aiBtn = geminiKey ? `<button class="btn" id="compat-ai">🌙 AIに二人の相性を読み解いてもらう</button><div class="ai-out" id="compat-ai-out"></div>` : '';
+  document.getElementById('compat-result').innerHTML=`
+    <div class="compat-score ${level.cls}">
+      <div class="cs-hearts">${heartGauge(c.score)}</div>
+      <div class="cs-num">${c.score}<small>点</small></div>
+      <div class="cs-lv">${level.t}</div>
+      <div class="cs-pair">${aName}（日柱${c.aDay}）× ${bName}（日柱${c.bDay}）</div>
+    </div>
+    <div class="crel">${relText}</div>
+    ${goodHTML?`<h3 class="subh" style="border:0;padding-top:6px">💗 良いところ</h3>${goodHTML}`:''}
+    ${warnHTML?`<h3 class="subh" style="border:0;padding-top:6px">⚠️ 気をつけるところ</h3>${warnHTML}`:''}
+    ${noteHTML}
+    <div class="share-grid" style="margin-top:14px">
+      <button class="sbtn line" id="csh-line">💚 LINEで送る</button>
+      <button class="sbtn copy" id="csh-copy">📋 コピー</button>
+    </div>
+    ${aiBtn}
+    <p class="note">※ 相性は日柱（干合・支合・三合・冲・害・破）と五行の補い合いをもとに算出した目安です。点数は楽しむためのもの。冲＝刺激的で惹かれ合う縁でもあり、低い＝ダメではありません。</p>`;
+  document.getElementById('csh-line').onclick=()=>{location.href='https://line.me/R/msg/text/?'+encodeURIComponent(compatShareText());};
+  document.getElementById('csh-copy').onclick=async()=>{try{await navigator.clipboard.writeText(compatShareText());toast('コピーしました💗');}catch(e){toast('コピーできませんでした');}};
+  if(geminiKey)document.getElementById('compat-ai').onclick=compatAiRead;
+}
+function compatShareText(){
+  const {c,aName,bName}=compatData;
+  let t=`💞${aName} × ${bName} の相性\n`;
+  t+=`${heartGauge(c.score)} ${c.score}点\n`;
+  t+=`${bName}はあなたにとって「${c.selfSees}」の星。\n`;
+  if(c.good.length)t+=`💗${c.good.map(g=>g.k).join('・')}\n`;
+  if(c.warn.length)t+=`⚠️${c.warn.map(g=>g.k).join('・')}\n`;
+  t+=`\n▼あなたも相性をみる\n${location.href}`;
+  return t;
+}
+function compatFactText(){
+  const {c,A,B,aName,bName}=compatData;
+  const pil=x=>x.pillars.map(p=>p.label+':'+p.ganzhi+'('+p.tenStar+')').join(' ');
+  return [
+   `【相性鑑定データ（万年暦で確定計算）】`,
+   `${aName}：日主${A.dayMaster.stem}(${A.dayMaster.element})／命式 ${pil(A)}`,
+   `${bName}：日主${B.dayMaster.stem}(${B.dayMaster.element})／命式 ${pil(B)}`,
+   `相性スコア:${c.score}点`,
+   `${bName}は${aName}にとって「${c.selfSees}」、${aName}は${bName}にとって「${c.partnerSees}」`,
+   c.good.length?`良い関係:${c.good.map(g=>g.k).join('、')}`:'',
+   c.warn.length?`注意の関係:${c.warn.map(g=>g.k).join('、')}`:''
+  ].filter(Boolean).join('\n');
+}
+function compatAiRead(){
+  callGemini(`この二人（${compatData.aName}と${compatData.bName}）の相性を、恋愛・結婚・長く続けるコツ・ぶつかりやすい点の観点から、400〜550字で温かく読み解いてください。`,
+    document.getElementById('compat-ai-out'), document.getElementById('compat-ai'), compatFactText());
 }
 
 function ageLabel(m){const y=Math.floor(m/12),mo=m%12;return mo?`${y}歳${mo}カ月`:`${y}歳`;}
@@ -483,6 +617,70 @@ function narrative(f,dateJa,isToday){
     warn:'いつもの半歩ゆっくりを意識すれば、穏やかに乗り切れます。'}[th.t]||'自分をいたわりながら、素敵な一日を。';
   p.push(close);
   return p.map(x=>`<p>${x}</p>`).join('');
+}
+
+/* ============ 相性占い ============ */
+/* 相手が自分にとって何の星（通変星）か → 関係性の色合い */
+const STAR_PARTNER={
+  比肩:'対等な親友・同志のような関係。気楽で長続きしやすいが、刺激は控えめ。',
+  劫財:'刺激的で惹かれ合うが、張り合いや金銭・ペースで衝突も。程よい距離が鍵。',
+  食神:'一緒にいて癒やされ、のびのびできる楽しい相性。笑顔が増える関係。',
+  傷官:'ドキドキと刺激のある相性。感性が響き合うが、言葉のトゲに注意。',
+  偏財:'一緒にいて楽しく、つい尽くしたくなる華やかで社交的な相性。',
+  正財:'家庭的で堅実、安心できる結婚向きの相性。信頼を積み重ねられる。',
+  偏官:'ドキドキと緊張感のある相性。強く惹かれるが、振り回されやすい面も。',
+  正官:'頼れて尊敬できる、けじめのある相性。結婚・長い関係に向く安定型。',
+  偏印:'ミステリアスに惹かれ合う、独特の距離感の相性。ふしぎと落ち着く。',
+  印綬:'包まれ守られ、素直に甘えられる安心の相性。癒やしと成長をくれる相手。'
+};
+function compat(A,B){
+  const aS=A.dayMaster.stem, bS=B.dayMaster.stem;
+  const aB=A.pillars[2].branch, bB=B.pillars[2].branch;
+  let score=58; const good=[], warn=[], notes=[];
+  // 日干の関係
+  if(KANGO[aS]===bS){score+=16; good.push({k:'日干が干合',d:'お互い自然と惹かれ合う、ご縁の強い組み合わせ。'});}
+  else if(STEM_EL[aS]===STEM_EL[bS]){score+=4; notes.push('日干が同じ五行で、価値観や感覚が似やすい。');}
+  // 日支（配偶宮＝パートナー運）の関係
+  let dayDone=false;
+  if(RIKUGO[aB]===bB){score+=15; good.push({k:'日支が支合',d:'一緒にいて安心できる、まとまりの良い相性。'});dayDone=true;}
+  if(!dayDone)SANGO.forEach(g=>{const s=g.slice(0,3);if(s.includes(aB)&&s.includes(bB)&&aB!==bB){score+=12;good.push({k:`日支が三合／半合（${g[3]}）`,d:'目的や方向性が合い、協力しやすい強い縁。'});dayDone=true;}});
+  if(!dayDone){
+    if(isChong(aB,bB)){score+=3; warn.push({k:'日支が冲',d:'刺激的で強く惹かれ合うが、ぶつかりやすい情熱的な相性。距離感と一呼吸が鍵。'});}
+    else if(GAI[aB]===bB){score-=8; warn.push({k:'日支が害',d:'すれ違いが起きやすいので、こまめな確認と思いやりを大切に。'});}
+    else if(HA[aB]===bB){score-=6; warn.push({k:'日支が破',d:'ペースや段取りが乱れやすい。約束ごとは丁寧に。'});}
+    else if(aB===bB){score+=6; notes.push('日支が同じで、似た者同士の安心感。');}
+  }
+  // 他の柱の支の関係（軽め）
+  const aBrs=A.pillars.map(p=>p.branch), bBrs=B.pillars.map(p=>p.branch);
+  let plus=0,minus=0;
+  aBrs.forEach((x,i)=>bBrs.forEach((y,j)=>{ if(i===2&&j===2)return;
+    if(RIKUGO[x]===y)plus+=1; SANGO.forEach(g=>{if(g.slice(0,3).includes(x)&&g.slice(0,3).includes(y)&&x!==y)plus+=0.5;});
+    if(isChong(x,y))minus+=1; if(GAI[x]===y)minus+=0.6; if(HA[x]===y)minus+=0.5;
+  }));
+  score += Math.min(8,plus*1.1) - Math.min(8,minus*1.1);
+  // 干合（日干以外も含む縁）
+  let kangoElse=false; A.pillars.forEach(p=>B.pillars.forEach(q=>{if(KANGO[p.stem]===q.stem)kangoElse=true;}));
+  if(kangoElse&&KANGO[aS]!==bS){score+=3; notes.push('命式のどこかに干合があり、引き合う縁がある。');}
+  // 五行の補い合い
+  const aLack=SHENG.filter(e=>(A.fiveElements[e]||0)===0);
+  const bLack=SHENG.filter(e=>(B.fiveElements[e]||0)===0);
+  const bFillsA=aLack.filter(e=>(B.fiveElements[e]||0)>0);
+  const aFillsB=bLack.filter(e=>(A.fiveElements[e]||0)>0);
+  if(aLack.length){score+=Math.round(bFillsA.length/aLack.length*7);}
+  if(bLack.length){score+=Math.round(aFillsB.length/bLack.length*4);}
+  if(bFillsA.length||aFillsB.length){
+    const t=[]; if(bFillsA.length)t.push(`あなたに足りない「${bFillsA.join('・')}」を相手が補い`); if(aFillsB.length)t.push(`相手に足りない「${aFillsB.join('・')}」をあなたが補う`);
+    good.push({k:'五行を補い合う',d:t.join('、')+'、バランスの取れた関係。'});
+  }
+  score=Math.max(38,Math.min(98,Math.round(score)));
+  const selfSees=tenStarOf(aS,bS);   // 相手はあなたにとって何の星か
+  const partnerSees=tenStarOf(bS,aS); // あなたは相手にとって何の星か
+  return {score, good, warn, notes, selfSees, partnerSees, aDay:A.pillars[2].ganzhi, bDay:B.pillars[2].ganzhi, aS, bS};
+}
+function heartGauge(score){
+  const full=Math.round(score/20); // 0-5
+  let h=''; for(let i=0;i<5;i++)h+= i<full?'💗':'🤍';
+  return h;
 }
 
 /* ============ 描画 ============ */
@@ -679,13 +877,14 @@ function factText(){
   ].filter(Boolean).join('\n');
 }
 const PERSONA=`あなたは経験豊富で温かい四柱推命の鑑定師です。以下の「確定した命式・運勢データ」は万年暦で計算済みの事実なので、これを根拠に読み解いてください（数値の再計算や否定はしない）。専門用語（通変星・十二運・蔵干・五行・冲・合など）は使ってよいですが、出てきたら必ずその場でやさしい言葉で短く言いかえてください。断定や脅しはせず、開運のヒントとして前向きに、でも中身は本格的に。健康・命に関わる深刻な内容は「専門家（医療等）に相談を」と添えてください。親しみやすい「です・ます」で。`;
-async function callGemini(userPrompt,outEl,btn){
+async function callGemini(userPrompt,outEl,btn,factOverride){
   if(!geminiKey){outEl.innerHTML='';toast('先に⚙️設定でGemini APIキーを入れてね');
     document.querySelector('details.setting').open=true;document.getElementById('g-key').scrollIntoView({behavior:'smooth',block:'center'});return;}
   outEl.innerHTML='<span class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span> AIが命式を読んでいます…</span>';
   if(btn)btn.disabled=true;
   try{
-    const body={contents:[{role:'user',parts:[{text:PERSONA+'\n\n'+factText()+'\n\n【依頼】'+userPrompt}]}],generationConfig:{temperature:0.9,maxOutputTokens:1600}};
+    const facts=factOverride||factText();
+    const body={contents:[{role:'user',parts:[{text:PERSONA+'\n\n'+facts+'\n\n【依頼】'+userPrompt}]}],generationConfig:{temperature:0.9,maxOutputTokens:1600}};
     const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${encodeURIComponent(geminiKey)}`,
       {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const j=await r.json();
