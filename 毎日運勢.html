@@ -91,6 +91,23 @@ textarea{resize:vertical;min-height:74px;line-height:1.6;}
   font-size:13.5px;color:var(--ink);line-height:1.85;}
 .summary .st{font-weight:800;display:block;margin-bottom:4px;color:var(--pink-deep);}
 .note{font-size:11px;color:var(--ink3);margin-top:10px;line-height:1.6;}
+/* 今日はこんな日（ナラティブ） */
+.hero-card{background:linear-gradient(160deg,#fff 0%,#fff8fb 100%);border:1.5px solid var(--pink-soft);}
+.today-hero p{font-size:14px;line-height:1.95;margin:0 0 12px;color:var(--ink);}
+.today-hero p:first-child{font-size:15px;font-weight:700;background:linear-gradient(135deg,var(--pink-soft),var(--lav-soft));
+  border-radius:14px;padding:14px 15px;}
+.today-hero p:last-child{margin-bottom:0;color:var(--pink-deep);font-weight:700;}
+.today-hero b{color:var(--pink-deep);}
+/* 詳細（折りたたみ） */
+.detail-card{padding:0;}
+.detail-card summary{cursor:pointer;list-style:none;padding:18px;font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px;color:var(--ink);}
+.detail-card summary::-webkit-details-marker{display:none;}
+.detail-card summary::after{content:"▸";margin-left:auto;color:var(--ink3);}
+.detail-card[open] summary::after{content:"▾";}
+.detail-card[open] summary{border-bottom:1.5px dashed var(--line);}
+.detail-card>div{padding:0 18px 18px;}
+.detail-card .emo{font-size:19px;}
+.subh{font-size:13px;font-weight:800;color:var(--ink2);margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--line);}
 /* 1日の鑑定 */
 .reading .rhead{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding-bottom:12px;border-bottom:1.5px dashed var(--line);}
 .reading .rday{font-size:13px;font-weight:800;color:var(--ink2);}
@@ -184,9 +201,9 @@ details.setting summary::before{content:"⚙️ ";}
       <button type="button" data-v="female" aria-pressed="true">女性</button>
       <button type="button" data-v="male" aria-pressed="false">男性</button>
     </div>
-    <label class="fld">占う日</label>
-    <input type="date" id="f-target">
-    <button class="btn" id="f-go">🌟 今日の運勢をみる</button>
+    <input type="hidden" id="f-target">
+    <button class="btn" id="f-go">🌟 今日はどんな日？をみる</button>
+    <p class="hint" style="text-align:center">誕生日を入れて押すだけ。<b>今日の運勢</b>をお伝えします🔮</p>
     <details class="setting">
       <summary>くわしい設定（生まれた地域・AI連携）</summary>
       <label class="fld">生まれた都道府県（真太陽時の補正・任意）</label>
@@ -361,8 +378,10 @@ function run(){
   natal=window.Bazi.computeChart(opt);
   if(notime)markTimeUnknown(natal);
 
-  // 占う日 → 年運・月運・日運（同じ万年暦エンジンで確定計算）
-  const tg=document.getElementById('f-target').value||new Date().toISOString().slice(0,10);
+  // 占う日は常に「今日」（同じ万年暦エンジンで年運・月運・日運を確定計算）
+  const now=new Date();
+  const tg=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  document.getElementById('f-target').value=tg;
   const [ty,tmo,td]=tg.split('-').map(Number);
   transit=window.Bazi.computeChart({year:ty,month:tmo,day:td,hour:12,minute:0,sex,correctionMode:'none'});
 
@@ -415,6 +434,36 @@ function buildFacts(tg){
   const favEl= strong?SHENG[(di+2)%5] : weak?SHENG[(di+4)%5] : dayEl;
   return {dayStem,dayEl,favEl,daeun,daeunList,daeunIdx,yearUn:{ganzhi:yearUn.ganzhi,stem:yearUn.stem,branch:yearUn.branch,star:yearUn.tenStar||tenStarOf(dayStem,yearUn.stem)},
     monthUn,dayUn,rels,strength,lack,fiveElements:f};
+}
+
+/* ============ 「今日はこんな日」ナラティブ鑑定（会話調・AI不要） ============ */
+function narrative(f,dateJa){
+  const th=STAR_THEME[f.dayUn.star]||{one:'',adv:'',act:''};
+  const warns=f.rels.filter(r=>(REL_INFO[r.k]||{}).t==='warn');
+  const goods=f.rels.filter(r=>(REL_INFO[r.k]||{}).t==='good');
+  const nm=personName?personName+'さん、':'';
+  const p=[];
+  // 1. 今日はどんな日
+  p.push(`${nm}${dateJa}は、あなたにとって<b>「${f.dayUn.star}」（${f.dayUn.ganzhi}）</b>のエネルギーが巡る一日です。${th.one}`);
+  // 2. なぜ（命式との巡り）
+  if(f.rels.length){
+    const kinds=[...new Set(f.rels.map(r=>r.k))].map(k=>`「${k}」`).join('・');
+    const descs=[...new Set(f.rels.map(r=>(REL_INFO[r.k]||{}).d).filter(Boolean))].join(' ');
+    p.push(`今日の干支は、あなたの生まれ持った星と${kinds}の関係を結びます。${descs}`);
+  }else{
+    p.push(`今日はあなたの命式と大きくぶつかる巡りはなく、比較的おだやかに過ごせそうです。`);
+  }
+  // 3. 気をつけたいこと
+  const cautionExtra = warns.length? `とくに${warns.map(r=>'「'+r.k+'」').join('・')}の巡りがあるので、人との接触・移動・約束ごとはいつもより丁寧に。`:'';
+  p.push(`<b>気をつけたいこと。</b>${th.adv}${cautionExtra}`);
+  // 4. おすすめの過ごし方
+  p.push(`<b>おすすめの過ごし方。</b>「${th.act}」を心がけると運が整います。ラッキーカラーは<b>${EL_COLOR[f.favEl]}</b>、開運フードは${EL_FOOD[f.favEl]}。`);
+  // 5. 締め（トーン別）
+  const close={good:'追い風の日。思い切って動くと良い流れに乗れますよ。',
+    mix:'焦らず、自分のペースを大切に過ごせば大丈夫。',
+    warn:'いつもの半歩ゆっくりを意識すれば、穏やかに乗り切れます。'}[th.t]||'自分をいたわりながら、素敵な一日を。';
+  p.push(close);
+  return p.map(x=>`<p>${x}</p>`).join('');
 }
 
 /* ============ 描画 ============ */
@@ -509,25 +558,14 @@ function render(tg){
   </div>` : '';
 
   document.getElementById('result').innerHTML=`
-  <div class="card">
-    <h2><span class="emo">🎴</span>あなたの命式 ${nameLine}</h2>
-    <div class="meishiki" style="--cols:${cols}">${meishiki}</div>
-    <div class="gogyo">${gogyo}</div>
-    <div class="dm-badge">日主（あなたの本質）：<b class="el-${natal.dayMaster.element}">${natal.dayMaster.stem}（${EL_JP[natal.dayMaster.element]}）</b><br>強弱の傾向：<b>${f.strength}</b>${f.lack.length?'／不足しやすい五行：'+f.lack.join('・'):''}</div>
-    ${timeNote}
+  <div class="card hero-card">
+    <h2><span class="emo">🌟</span>${nameLine?nameLine+'の':''}今日はこんな日</h2>
+    <div class="today-hero">${narrative(f,dateJa)}</div>
   </div>
 
   <div class="card">
-    <h2><span class="emo">🌟</span>${dateJa} の鑑定</h2>
+    <h2><span class="emo">🔎</span>今日の運勢くわしく</h2>
     ${reading}
-  </div>
-
-  <div class="card">
-    <h2><span class="emo">📅</span>運勢の流れ <small>大運＞年運＞月運＞日運</small></h2>
-    <div class="levels">${levels}</div>
-    <div class="badges">${relBadges}</div>
-    ${daeunNote}
-    ${daeunList}
   </div>
 
   ${aiSection}
@@ -540,7 +578,22 @@ function render(tg){
       <button class="sbtn copy" id="sh-copy">📋 コピー</button>
       <button class="sbtn app" id="sh-app">🔗 アプリを共有</button>
     </div>
-  </div>`;
+  </div>
+
+  <details class="card detail-card">
+    <summary><span class="emo">🎴</span>あなたの命式・大運（くわしく見る）</summary>
+    <div style="margin-top:14px">
+      <div class="meishiki" style="--cols:${cols}">${meishiki}</div>
+      <div class="gogyo">${gogyo}</div>
+      <div class="dm-badge">日主（あなたの本質）：<b class="el-${natal.dayMaster.element}">${natal.dayMaster.stem}（${EL_JP[natal.dayMaster.element]}）</b><br>強弱の傾向：<b>${f.strength}</b>${f.lack.length?'／不足しやすい五行：'+f.lack.join('・'):''}</div>
+      ${timeNote}
+      <h3 class="subh">運勢の流れ（大運＞年運＞月運＞日運）</h3>
+      <div class="levels">${levels}</div>
+      <div class="badges">${relBadges}</div>
+      ${daeunNote}
+      ${daeunList}
+    </div>
+  </details>`;
 
   // イベント
   if(geminiKey){
