@@ -1739,11 +1739,82 @@ function junitenHTML(c){
     <div class="mhint" style="margin-top:8px">他の柱：年柱<b>${c.pillars[0].terrain}</b>（親・目上）／月柱<b>${c.pillars[1].terrain}</b>（仕事）／時柱<b>${c.pillars[3]?c.pillars[3].terrain:'不明'}</b>（将来・本心）。意味は命式表もご覧ください。</div>
   </section>`;
 }
+/* ===== 会局(三合・方合・半合) proより移植 ===== */
+function _kaikyokuHits(provider,incoming){
+  const hits=[];
+  [['三合',SANGO],['方合',HOUGOU]].forEach(([kind,tbl])=>tbl.forEach(g=>{const tp=g.slice(0,3);
+    if(!tp.includes(incoming))return;const have=new Set(provider.filter(x=>tp.includes(x)));
+    if(have.size===2&&!have.has(incoming))hits.push({kind,el:g[3],text:tp.join('')});}));
+  SANGO.forEach(g=>{const tp=g.slice(0,3);if(!tp.includes(incoming))return;
+    const have=new Set(provider.filter(x=>tp.includes(x)));if(have.has(incoming))return;
+    if(have.size===1){const partner=[...have][0];if(CEN.has(incoming)||CEN.has(partner))hits.push({kind:'半合',el:g[3],text:tp.filter(x=>x===incoming||x===partner).join('')});}});
+  return hits;
+}
+function _kkAssess(c){
+  try{
+    if(typeof strengthType!=="function"||typeof UNKI_FAV==="undefined")return {sType:"中和",assess:function(el){return {tone:"neutral",fav:"中庸",excess:false,grp:"比劫"};}};
+    var dmEl=c.dayMaster.element, gi=SHENG.indexOf(dmEl);
+    var sType=strengthType(c), fav=UNKI_FAV[sType]||UNKI_FAV["中和"];
+    var grp=function(el){var d=(SHENG.indexOf(el)-gi+5)%5;return d===0?"比劫":d===1?"食傷":d===2?"財":d===3?"官殺":"印";};
+    var taika=((typeof gogyoTaika==="function"?gogyoTaika(c).baseTaika:null))||[], fe=c.fiveElements||{};
+    var favLabel=function(el){var s=fav[grp(el)];return s>=0.66?"喜":(s<=0.45?"忌":"中庸");};
+    var excess=function(el){return taika.includes(el)||(fe[el]||0)>=3;};
+    var assess=function(el){var ex=excess(el),fl=favLabel(el);var tone=ex?"caution":(fl==="喜"?"good":(fl==="忌"?"caution":"neutral"));return {tone:tone,fav:fl,excess:ex,grp:grp(el)};};
+    return {sType:sType,assess:assess};
+  }catch(e){return {sType:"中和",assess:function(el){return {tone:"neutral",fav:"中庸",excess:false,grp:"比劫"};}};}
+}
+const _KKW={'三合':0,'方合':1,'半合':2};
+function kaikyokuScan(c){
+  const res={natal:[],periods:[]};
+  const natalBr=c.pillars.map(p=>p.branch);
+  uniq(natalRels(c.pillars)).forEach(r=>{if(r.kind==='三合'||r.kind==='方合'||r.kind==='半合')res.natal.push({kind:r.kind,el:r.el,text:r.text});});
+  res.natal.sort((a,b)=>(_KKW[a.kind]-_KKW[b.kind]));
+  if(!c.decadeFortunes||!c.annualFortunes)return res;
+  const nowYear=c.now?c.now.year:c.annualFortunes[0].year, nowAge=c.now?c.now.age:0;
+  const y2age=y=>nowAge+(y-nowYear);
+  c.decadeFortunes.forEach(d=>{const endY=d.startYear+10;if(endY<=nowYear)return;
+    _kaikyokuHits(natalBr,d.branch).forEach(h=>res.periods.push(Object.assign({when:'大運',ganzhi:d.ganzhi,year0:Math.max(d.startYear,nowYear),year1:endY-1,age0:d.startAge,age1:d.endAge,current:(c.now&&c.now.age>=d.startAge&&c.now.age<d.endAge)},h)));});
+  const horizon=nowYear+30;
+  c.annualFortunes.forEach(a=>{if(a.year<nowYear||a.year>horizon)return;
+    const dd=c.decadeFortunes.find(d=>a.year>=d.startYear&&a.year<d.startYear+10);
+    const provider=dd?[...natalBr,dd.branch]:natalBr;
+    _kaikyokuHits(provider,a.branch).forEach(h=>res.periods.push(Object.assign({when:'年',ganzhi:a.ganzhi,year0:a.year,year1:a.year,age0:y2age(a.year),age1:y2age(a.year),current:(c.now&&a.year===c.now.year)},h)));});
+  res.periods.sort((x,y)=>x.year0-y.year0||(_KKW[x.kind]-_KKW[y.kind])||(x.when==='大運'?-1:1));
+  const _A=_kkAssess(c); res.sType=_A.sType;
+  res.natal.forEach(r=>Object.assign(r,_A.assess(r.el)));
+  res.periods.forEach(r=>Object.assign(r,_A.assess(r.el)));
+  return res;
+}
+function kaikyokuHTML(c){
+  const k=kaikyokuScan(c);
+  const cur=k.periods.filter(p=>p.current), up=k.periods.filter(p=>!p.current);
+  if(!k.natal.length&&!cur.length&&!up.length)return '';
+  const GOLD='#E2A12B';
+  const tag=r=>r.tone==='good'?'<span style="margin-left:6px;background:#E7F4EA;color:#1E7A45;border-radius:5px;padding:0 6px;font-size:10.5px;font-weight:900">喜・追い風</span>':r.tone==='caution'?'<span style="margin-left:6px;background:#F6E4C4;color:#8A5A12;border-radius:5px;padding:0 6px;font-size:10.5px;font-weight:900">'+(r.excess?'太過・注意':'忌・注意')+'</span>':'<span style="margin-left:6px;background:#EDEFF3;color:#5B6472;border-radius:5px;padding:0 6px;font-size:10.5px;font-weight:900">中庸</span>';
+  const chip=(r)=>{const col=ec(r.el),tx=onEl(r.el);return `<span style="display:inline-flex;align-items:center;gap:4px;background:${col};color:${tx};border-radius:999px;padding:3px 11px;font-weight:900;font-size:12.5px;margin:4px 5px 0 0"><b>${r.kind}</b>${r.text}<span style="font-weight:800;opacity:.9;font-size:11px">${r.el}</span></span>${tag(r)}`;};
+  const line=(p)=>{const when=p.when==='大運'?`${p.year0}〜${p.year1}年ごろ<span style="color:var(--muted)">（${p.age0}〜${p.age1}歳・大運${p.ganzhi}）</span>`:`${p.year0}年<span style="color:var(--muted)">（${p.age0}歳・年運${p.ganzhi}）</span>`;
+    return `<li style="margin:7px 0;line-height:1.55;list-style:none;display:flex;gap:9px;align-items:flex-start"><span style="flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:${ec(p.el)};margin-top:5px"></span><span><b style="color:${ec(p.el)}">${p.kind} ${p.text}（${p.el}が強まる${p.kind==='半合'?'・ゆるい結びつき':''}）</b>${tag(p)}<br><span style="font-weight:800;font-size:12.5px">${when}</span></span></li>`;};
+  let body='';
+  if(!k.natal.length&&(cur.length||up.length))body+=`<div style="margin-top:8px;color:var(--ink2);font-weight:700;font-size:12.5px">命式単独の会局はありませんが、大運・年運の巡りで下の時期に成立します。</div>`;
+  if(k.natal.length)body+=`<div style="margin-top:10px"><div style="font-weight:900;font-size:12.5px;color:var(--ink2);margin-bottom:2px">生まれ持った会局（一生を通じて作用）</div>${k.natal.map(chip).join('')}</div>`;
+  if(cur.length)body+=`<div style="margin-top:12px;background:#FFF7E6;border:1px solid #F0DBA8;border-radius:12px;padding:10px 12px"><div style="font-weight:900;font-size:12.5px;color:#8A6A2E;margin-bottom:4px">🔥 今まさに巡っている会局</div><ul style="margin:0;padding:0">${cur.map(line).join('')}</ul></div>`;
+  if(up.length)body+=`<div style="margin-top:12px"><div style="font-weight:900;font-size:12.5px;color:var(--ink2);margin-bottom:4px">これから巡ってくる会局（運が大きく動く節目）</div><ul style="margin:0;padding:0">${up.slice(0,8).map(line).join('')}</ul>${up.length>8?`<div style="color:var(--muted);font-weight:700;font-size:11.5px;margin-top:4px">ほか${up.length-8}件</div>`:''}</div>`;
+  return `<section class="card" style="border:2px solid ${GOLD};box-shadow:0 8px 24px rgba(226,161,43,.18)">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:2px">
+      <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(160deg,#F2C14E,${GOLD});display:flex;align-items:center;justify-content:center;font-size:19px;flex:0 0 auto">🌟</div>
+      <div><div style="font-weight:900;font-size:15px">三合・方合・半合（会局）— 運が大きく動く巡り</div>
+      <div style="font-size:11.5px;color:var(--muted);font-weight:700">その五行が強まる節目。<b>喜神なら追い風、忌神・太過なら「強まりすぎ注意」</b>として色ラベルで判定（日主：${k.sType}）。</div></div>
+    </div>
+    ${body}
+    <div style="margin-top:10px;font-size:11px;color:var(--muted);font-weight:700;line-height:1.7">※会局＝その五行が強まる結びつき。強まる五行が喜神か忌神か・既に太過かで吉凶が変わります（喜=追い風／忌・太過=強まりすぎ注意）。年は立春（節）で切り替わるため境目はまたいでとらえてください。</div>
+  </section>`;
+}
+
 function renderResult(){
   const c=chart;
   document.getElementById('ai-slot').innerHTML = consultHTML();
   document.getElementById('result').innerHTML =
-    heroHTML(c)+genmeiHTML(c)+meishiHTML(c)+junitenHTML(c)+gogyoHTML(c)+yojoHTML(c)+flowHTML(c);
+    heroHTML(c)+kaikyokuHTML(c)+genmeiHTML(c)+meishiHTML(c)+junitenHTML(c)+gogyoHTML(c)+yojoHTML(c)+flowHTML(c);
   document.querySelectorAll('#result .tg [data-or]').forEach(b=>b.onclick=()=>{orient=b.dataset.or;renderResult();scrollKeep();});
   document.querySelectorAll('#result .dur').forEach(d=>d.onclick=()=>{selDu=+d.dataset.i;selYear=null;renderResult();scrollKeep();});
   document.querySelectorAll('#result .nyr').forEach(d=>d.onclick=()=>{selYear=+d.dataset.y;renderResult();scrollKeep();});
