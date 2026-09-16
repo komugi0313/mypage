@@ -201,9 +201,15 @@ details.setting summary::before{content:"⚙️ ";}
       <button type="button" data-v="female" aria-pressed="true">女性</button>
       <button type="button" data-v="male" aria-pressed="false">男性</button>
     </div>
-    <input type="hidden" id="f-target">
-    <button class="btn" id="f-go">🌟 今日はどんな日？をみる</button>
-    <p class="hint" style="text-align:center">誕生日を入れて押すだけ。<b>今日の運勢</b>をお伝えします🔮</p>
+    <label class="fld">占う日（初期値は今日／他の日も選べます）</label>
+    <input type="date" id="f-target">
+    <div class="seg" id="f-quick" style="margin-top:8px">
+      <button type="button" data-q="-1">◀ 昨日</button>
+      <button type="button" data-q="0" aria-pressed="true">今日</button>
+      <button type="button" data-q="1">明日 ▶</button>
+    </div>
+    <button class="btn" id="f-go">🌟 この日はどんな日？をみる</button>
+    <p class="hint" style="text-align:center">誕生日を入れて押すだけ。初期値は<b>今日の運勢</b>🔮</p>
     <details class="setting">
       <summary>くわしい設定（生まれた地域・AI連携）</summary>
       <label class="fld">生まれた都道府県（真太陽時の補正・任意）</label>
@@ -293,6 +299,11 @@ const REL_INFO={
 };
 const EL_JP={木:'木（成長・行動）',火:'火（情熱・表現）',土:'土（安定・信頼）',金:'金（決断・お金）',水:'水（知性・柔軟）'};
 
+/* ============ 日付ヘルパー ============ */
+function isoOf(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function todayISO(){return isoOf(new Date());}
+function offsetISO(days){const d=new Date();d.setDate(d.getDate()+days);return isoOf(d);}
+
 /* ============ ストレージ ============ */
 const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
 let sex='female', geminiKey='', geminiModel='gemini-2.5-flash';
@@ -305,8 +316,16 @@ const PREFS=[['北海道',141.35],['青森',140.74],['岩手',141.15],['宮城',
 function init(){
   const pf=document.getElementById('f-pref');
   PREFS.forEach(([n,lon])=>{const o=document.createElement('option');o.value=lon;o.textContent=n;pf.appendChild(o);});
-  const t=new Date(),iso=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
-  document.getElementById('f-target').value=iso;
+  const ft=document.getElementById('f-target');
+  ft.value=todayISO();
+  // 昨日／今日／明日のワンタップ
+  document.querySelectorAll('#f-quick button').forEach(b=>b.onclick=()=>{
+    ft.value=offsetISO(Number(b.dataset.q));
+    document.querySelectorAll('#f-quick button').forEach(x=>x.setAttribute('aria-pressed', x===b));
+    if(natal)run();
+  });
+  // 日付を手で変えたらクイックの選択表示を更新（当日以外は今日の押下を解除）
+  ft.onchange=()=>{const v=ft.value;document.querySelectorAll('#f-quick button').forEach(x=>x.setAttribute('aria-pressed', v===offsetISO(Number(x.dataset.q))));};
   geminiKey=store.get('unsei_gkey')||''; geminiModel=store.get('unsei_gmodel')||'gemini-2.5-flash';
   const gk=document.getElementById('g-key'),gm=document.getElementById('g-model');
   gk.value=geminiKey; gk.oninput=()=>{const had=!!geminiKey;geminiKey=gk.value.trim();store.set('unsei_gkey',geminiKey);
@@ -378,9 +397,8 @@ function run(){
   natal=window.Bazi.computeChart(opt);
   if(notime)markTimeUnknown(natal);
 
-  // 占う日は常に「今日」（同じ万年暦エンジンで年運・月運・日運を確定計算）
-  const now=new Date();
-  const tg=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  // 占う日（初期値は今日。他の日も可）→ 万年暦エンジンで年運・月運・日運を確定計算
+  const tg=document.getElementById('f-target').value||todayISO();
   document.getElementById('f-target').value=tg;
   const [ty,tmo,td]=tg.split('-').map(Number);
   transit=window.Bazi.computeChart({year:ty,month:tmo,day:td,hour:12,minute:0,sex,correctionMode:'none'});
@@ -437,21 +455,22 @@ function buildFacts(tg){
 }
 
 /* ============ 「今日はこんな日」ナラティブ鑑定（会話調・AI不要） ============ */
-function narrative(f,dateJa){
+function narrative(f,dateJa,isToday){
   const th=STAR_THEME[f.dayUn.star]||{one:'',adv:'',act:''};
   const warns=f.rels.filter(r=>(REL_INFO[r.k]||{}).t==='warn');
   const goods=f.rels.filter(r=>(REL_INFO[r.k]||{}).t==='good');
   const nm=personName?personName+'さん、':'';
+  const kono=isToday?'今日':'この日';
   const p=[];
-  // 1. 今日はどんな日
-  p.push(`${nm}${dateJa}は、あなたにとって<b>「${f.dayUn.star}」（${f.dayUn.ganzhi}）</b>のエネルギーが巡る一日です。${th.one}`);
+  // 1. どんな日
+  p.push(`${nm}${dateJa}${isToday?'（今日）':''}は、あなたにとって<b>「${f.dayUn.star}」（${f.dayUn.ganzhi}）</b>のエネルギーが巡る一日です。${th.one}`);
   // 2. なぜ（命式との巡り）
   if(f.rels.length){
     const kinds=[...new Set(f.rels.map(r=>r.k))].map(k=>`「${k}」`).join('・');
     const descs=[...new Set(f.rels.map(r=>(REL_INFO[r.k]||{}).d).filter(Boolean))].join(' ');
-    p.push(`今日の干支は、あなたの生まれ持った星と${kinds}の関係を結びます。${descs}`);
+    p.push(`${kono}の干支は、あなたの生まれ持った星と${kinds}の関係を結びます。${descs}`);
   }else{
-    p.push(`今日はあなたの命式と大きくぶつかる巡りはなく、比較的おだやかに過ごせそうです。`);
+    p.push(`${kono}はあなたの命式と大きくぶつかる巡りはなく、比較的おだやかに過ごせそうです。`);
   }
   // 3. 気をつけたいこと
   const cautionExtra = warns.length? `とくに${warns.map(r=>'「'+r.k+'」').join('・')}の巡りがあるので、人との接触・移動・約束ごとはいつもより丁寧に。`:'';
@@ -486,9 +505,9 @@ function render(tg){
   const lv=(t,g,s)=>`<div class="lv"><div class="lvt">${t}</div><div class="lvg"><span class="el-${STEM_EL[g[0]]}">${g[0]}</span><span class="el-${BR_EL[g[1]]}">${g[1]}</span></div><div class="lvs">${s}</div></div>`;
   const levels=
     lv('大運',f.daeun.ganzhi,f.daeun.tenStar+(f.daeun.first?'・月柱':''))
-    +lv('年運（今年）',f.yearUn.ganzhi,f.yearUn.star)
-    +lv('月運（今月）',f.monthUn.ganzhi,f.monthUn.star)
-    +lv('日運（今日）',f.dayUn.ganzhi,f.dayUn.star);
+    +lv('年運',f.yearUn.ganzhi,f.yearUn.star)
+    +lv('月運',f.monthUn.ganzhi,f.monthUn.star)
+    +lv('日運',f.dayUn.ganzhi,f.dayUn.star);
 
   // 関係バッジ
   const relBadges=f.rels.length? f.rels.map(r=>{const info=REL_INFO[r.k]||{t:'mix'};return `<span class="rb ${info.t}">${r.k}：${r.t}</span>`}).join(''):'<span class="rb good">おだやか：今日は命式との大きな衝突なし</span>';
@@ -557,14 +576,16 @@ function render(tg){
     <div class="ai-out" id="q-out"></div>
   </div>` : '';
 
+  const isToday = tg===todayISO();
+  const heroTitle = isToday? '今日はこんな日' : `${dateJa} はこんな日`;
   document.getElementById('result').innerHTML=`
   <div class="card hero-card">
-    <h2><span class="emo">🌟</span>${nameLine?nameLine+'の':''}今日はこんな日</h2>
-    <div class="today-hero">${narrative(f,dateJa)}</div>
+    <h2><span class="emo">🌟</span>${nameLine?nameLine+'の':''}${heroTitle}</h2>
+    <div class="today-hero">${narrative(f,dateJa,isToday)}</div>
   </div>
 
   <div class="card">
-    <h2><span class="emo">🔎</span>今日の運勢くわしく</h2>
+    <h2><span class="emo">🔎</span>${isToday?'今日':'この日'}の運勢くわしく</h2>
     ${reading}
   </div>
 
@@ -617,7 +638,8 @@ function shareText(){
   const aiEl=document.getElementById('ai-out');
   const ai=aiEl&&aiEl.textContent.trim();
   const warns=f.rels.filter(r=>(REL_INFO[r.k]||{}).t==='warn').map(r=>r.k);
-  let t=`🔮${who}きょうの運勢（${tg}）\n`;
+  const isToday=document.getElementById('f-target').value===todayISO();
+  let t=`🔮${who}${isToday?'きょう':tg}の運勢${isToday?'（'+tg+'）':''}\n`;
   t+=`日主：${natal.dayMaster.stem}（${natal.dayMaster.element}）／日運：${f.dayUn.star}（${f.dayUn.ganzhi}）\n\n`;
   t+=`${th.one}\n`;
   t+=`💗恋愛・対人：${th.love}\n`;
