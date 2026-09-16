@@ -539,7 +539,7 @@ function renderCompat(){
       <button class="sbtn copy" id="csh-copy">📋 コピー</button>
     </div>
     ${aiBtn}
-    <p class="note">※ 相性は日柱（干合・支合・三合・冲・害・破）と五行の補い合いをもとに算出した目安です。冲・害・破は不安定要素として減点、干合・支合・三合や五行の補い合いは加点。点数は楽しむためのものです（低い＝ダメではなく、工夫で深まる関係もあります）。上のタブで観点を切り替えられます。</p>`;
+    <p class="note">※ 相性は日柱を中心に、天地徳合・律音・干合・支合・三合を加点、冲・害・破を減点、さらに五行の補い合いを加味した目安です（天地徳合＝干合＋支合の最上級の縁、律音＝同じ干支で響き合う縁）。点数は楽しむためのもの（低い＝ダメではありません）。上のタブで観点を切り替えられます。</p>`;
   document.querySelectorAll('#compat-result .vtab').forEach(b=>b.onclick=()=>setViewP(b.dataset.v));
   document.getElementById('csh-line').onclick=()=>{location.href='https://line.me/R/msg/text/?'+encodeURIComponent(compatShareText());};
   document.getElementById('csh-copy').onclick=async()=>{try{await navigator.clipboard.writeText(compatShareText());toast('コピーしました💗');}catch(e){toast('コピーできませんでした');}};
@@ -702,27 +702,39 @@ function compat(A,B){
   const aS=A.dayMaster.stem, bS=B.dayMaster.stem;
   const aB=A.pillars[2].branch, bB=B.pillars[2].branch;
   let score=58; const good=[], warn=[], notes=[];
-  // 日干の関係
-  if(KANGO[aS]===bS){score+=16; good.push({k:'日干が干合',d:'お互い自然と惹かれ合う、ご縁の強い組み合わせ。'});}
-  else if(STEM_EL[aS]===STEM_EL[bS]){score+=4; notes.push('日干が同じ五行で、価値観や感覚が似やすい。');}
-  // 日支（配偶宮＝パートナー運）の関係
-  let dayDone=false;
-  if(RIKUGO[aB]===bB){score+=15; good.push({k:'日支が支合',d:'一緒にいて安心できる、まとまりの良い相性。'});dayDone=true;}
-  if(!dayDone)SANGO.forEach(g=>{const s=g.slice(0,3);if(s.includes(aB)&&s.includes(bB)&&aB!==bB){score+=12;good.push({k:`日支が三合／半合（${g[3]}）`,d:'目的や方向性が合い、協力しやすい強い縁。'});dayDone=true;}});
-  if(!dayDone){
-    if(isChong(aB,bB)){score-=10; warn.push({k:'日支が冲',d:'配偶宮どうしのぶつかり合い。強く惹かれ合うぶん、すれ違いや衝突・別れが起きやすい不安定さも。距離感と一呼吸、感情的にならない工夫が鍵。'});}
-    else if(GAI[aB]===bB){score-=8; warn.push({k:'日支が害',d:'すれ違いが起きやすいので、こまめな確認と思いやりを大切に。'});}
-    else if(HA[aB]===bB){score-=6; warn.push({k:'日支が破',d:'ペースや段取りが乱れやすい。約束ごとは丁寧に。'});}
-    else if(aB===bB){score+=6; notes.push('日支が同じで、似た者同士の安心感。');}
+  // 日柱どうしの関係（律音＞天地徳合＞干合/支合…の順で最上位ひとつを採用）
+  const dGanhe=KANGO[aS]===bS, dShigou=RIKUGO[aB]===bB;
+  if(aS===bS && aB===bB){ // 律音（りっちん）＝まったく同じ日柱
+    score+=12; good.push({k:'律音（同じ日柱）',d:'まったく同じ日柱を持つ「律音」。感覚がよく似て強く響き合う、影響の大きい深いご縁（良い面も課題も増幅しやすい）。'});
+  } else if(dGanhe && dShigou){ // 天地徳合＝干合＋支合
+    score+=34; good.push({k:'天地徳合（日柱）',d:'日柱どうしが干合と支合で二重に結ばれる最上級の良縁。心も生活も深く結びつき、離れがたい相性。'});
+  } else {
+    // 日干
+    if(dGanhe){score+=16; good.push({k:'日干が干合',d:'お互い自然と惹かれ合う、ご縁の強い組み合わせ。'});}
+    else if(STEM_EL[aS]===STEM_EL[bS]){score+=4; notes.push('日干が同じ五行で、価値観や感覚が似やすい。');}
+    // 日支（配偶宮）
+    let dayDone=false;
+    if(dShigou){score+=15; good.push({k:'日支が支合',d:'一緒にいて安心できる、まとまりの良い相性。'});dayDone=true;}
+    if(!dayDone)SANGO.forEach(g=>{const s=g.slice(0,3);if(s.includes(aB)&&s.includes(bB)&&aB!==bB){score+=12;good.push({k:`日支が三合／半合（${g[3]}）`,d:'目的や方向性が合い、協力しやすい強い縁。'});dayDone=true;}});
+    if(!dayDone){
+      if(isChong(aB,bB)){score-=10; warn.push({k:'日支が冲',d:'配偶宮どうしのぶつかり合い。強く惹かれ合うぶん、すれ違いや衝突・別れが起きやすい不安定さも。距離感と一呼吸、感情的にならない工夫が鍵。'});}
+      else if(GAI[aB]===bB){score-=8; warn.push({k:'日支が害',d:'すれ違いが起きやすいので、こまめな確認と思いやりを大切に。'});}
+      else if(HA[aB]===bB){score-=6; warn.push({k:'日支が破',d:'ペースや段取りが乱れやすい。約束ごとは丁寧に。'});}
+      else if(aB===bB){score+=6; notes.push('日支が同じで、似た者同士の安心感。');}
+    }
   }
-  // 他の柱の支の関係（軽め）
-  const aBrs=A.pillars.map(p=>p.branch), bBrs=B.pillars.map(p=>p.branch);
-  let plus=0,minus=0;
-  aBrs.forEach((x,i)=>bBrs.forEach((y,j)=>{ if(i===2&&j===2)return;
-    if(RIKUGO[x]===y)plus+=1; SANGO.forEach(g=>{if(g.slice(0,3).includes(x)&&g.slice(0,3).includes(y)&&x!==y)plus+=0.5;});
+  // 他の柱の関係（日柱ペアは上で処理済み。天地徳合・律音・支合・三合は加点、冲害破は減点／すべて軽め）
+  let plus=0,minus=0,tenchiElse=0,ritsuElse=0;
+  A.pillars.forEach((p,i)=>B.pillars.forEach((q,j)=>{ if(i===2&&j===2)return;
+    const x=p.branch,y=q.branch, ganhe=KANGO[p.stem]===q.stem, shigou=RIKUGO[x]===y;
+    if(p.stem===q.stem&&x===y){ritsuElse++; return;}   // 律音（他柱・同じ干支）
+    if(ganhe&&shigou){tenchiElse++; return;}            // 天地徳合（他柱）
+    if(shigou)plus+=1; SANGO.forEach(g=>{if(g.slice(0,3).includes(x)&&g.slice(0,3).includes(y)&&x!==y)plus+=0.5;});
     if(isChong(x,y))minus+=1; if(GAI[x]===y)minus+=0.6; if(HA[x]===y)minus+=0.5;
   }));
   score += Math.min(8,plus*1.1) - Math.min(8,minus*1.1);
+  if(tenchiElse){score+=Math.min(8,tenchiElse*4); good.push({k:'天地徳合（他柱）',d:'日柱以外にも干合＋支合で結ばれる柱があり、縁の深さを後押しします。'});}
+  if(ritsuElse){score+=Math.min(6,ritsuElse*2); good.push({k:'律音（他柱）',d:'日柱以外にも同じ干支の柱があり、感覚が響き合う部分があります。'});}
   // 干合（日干以外も含む縁）
   let kangoElse=false; A.pillars.forEach(p=>B.pillars.forEach(q=>{if(KANGO[p.stem]===q.stem)kangoElse=true;}));
   if(kangoElse&&KANGO[aS]!==bS){score+=3; notes.push('命式のどこかに干合があり、引き合う縁がある。');}
