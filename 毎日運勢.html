@@ -372,29 +372,32 @@ function run(){
   document.getElementById('result').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-/* 大運：月柱そのものを第1大運として立運の年齢からスタートし、順行/逆行で展開 */
+function ageLabel(m){const y=Math.floor(m/12),mo=m%12;return mo?`${y}歳${mo}カ月`:`${y}歳`;}
+/* 大運：月柱そのものを第1大運として0歳からスタート、立運で第2大運へ切替、以降10年ごとに順行/逆行で展開 */
 function buildDaeun(){
   const dayStem=natal.dayMaster.stem;
   const mp=natal.pillars[1];                 // 月柱（3柱でも index1 は月柱）
   const sf=natal.startFortune;               // {years, months, forward}
-  const startAge=sf.years, dir=sf.forward?1:-1;
+  const luckM=sf.years*12+sf.months, dir=sf.forward?1:-1;   // 立運（カ月）
   const birthYear=Number(document.getElementById('f-date').value.slice(0,4));
   const mIdx=ganzhiIndex(mp.stem,mp.branch);
   const list=[];
-  for(let k=0;k<9;k++){
+  for(let k=0;k<10;k++){
     const idx=((mIdx+dir*k)%60+60)%60, stem=STEMS[idx%10], branch=BR[idx%12];
-    list.push({startAge:startAge+10*k, endAge:startAge+10*(k+1), ganzhi:stem+branch, stem, branch,
+    const sM = k===0?0:luckM+(k-1)*120, eM = k===0?luckM:luckM+k*120;
+    list.push({startAgeM:sM, endAgeM:eM, startAge:Math.floor(sM/12), endAge:Math.floor(eM/12),
+      startLabel:ageLabel(sM), endLabel:ageLabel(eM), ganzhi:stem+branch, stem, branch,
       stemElement:STEM_EL[stem], branchElement:BR_EL[branch], tenStar:tenStarOf(dayStem,stem),
-      startYear:birthYear+startAge+10*k, first:k===0});
+      startYear:birthYear+Math.floor(sM/12), first:k===0});
   }
   return list;
 }
 function buildFacts(tg){
   const dayStem=natal.dayMaster.stem;
   const daeunList=buildDaeun();
-  const nowAge=natal.now.age, startAge=natal.startFortune.years;
-  const daeunIdx = nowAge<startAge ? -1 : Math.min(daeunList.length-1, Math.floor((nowAge-startAge)/10));
-  const daeun = daeunIdx>=0 ? daeunList[daeunIdx] : null;
+  const luckM=natal.startFortune.years*12+natal.startFortune.months, nowM=natal.now.ageMonths;
+  const daeunIdx = Math.min(daeunList.length-1, nowM<luckM ? 0 : 1+Math.floor((nowM-luckM)/120));
+  const daeun = daeunList[daeunIdx];
   const yearUn=natal.annualFortunes.find(a=>a.year===Number(tg.slice(0,4)))||transit.pillars[0];
   const monthP=transit.pillars[1], dayP=transit.pillars[2];
   const monthUn={ganzhi:monthP.ganzhi,stem:monthP.stem,branch:monthP.branch,star:tenStarOf(dayStem,monthP.stem)};
@@ -433,7 +436,7 @@ function render(tg){
   // 運勢レベル
   const lv=(t,g,s)=>`<div class="lv"><div class="lvt">${t}</div><div class="lvg"><span class="el-${STEM_EL[g[0]]}">${g[0]}</span><span class="el-${BR_EL[g[1]]}">${g[1]}</span></div><div class="lvs">${s}</div></div>`;
   const levels=
-    lv('大運（10年）',f.daeun?f.daeun.ganzhi:natal.pillars[1].ganzhi,f.daeun?f.daeun.tenStar:'（立運前・月柱）')
+    lv('大運',f.daeun.ganzhi,f.daeun.tenStar+(f.daeun.first?'・月柱':''))
     +lv('年運（今年）',f.yearUn.ganzhi,f.yearUn.star)
     +lv('月運（今月）',f.monthUn.ganzhi,f.monthUn.star)
     +lv('日運（今日）',f.dayUn.ganzhi,f.dayUn.star);
@@ -478,15 +481,15 @@ function render(tg){
 
   const nameLine=personName?`<small>${personName} さん</small>`:'';
   const timeNote=natal.timeUnknown?'<p class="note">※ 生まれた時間が不明のため、時柱を作らず「年柱・月柱・日柱」の3柱で鑑定しています（大運の切替時期は正午基準の目安です）。</p>':'';
-  // 大運一覧（月柱＝乙卯を第1大運として立運からスタート）
+  // 大運一覧（月柱＝乙卯を第1大運として0歳からスタート、立運で第2大運へ切替）
   const daeunRows=f.daeunList.map((d,i)=>`<div class="drow${i===f.daeunIdx?' now':''}">
-    <span class="dage">${d.startAge}〜${d.endAge}歳<small>${d.startYear}年〜</small></span>
+    <span class="dage">${d.startLabel}〜${d.endLabel}<small>${d.startYear}年〜</small></span>
     <span class="dgz"><span class="el-${d.stemElement}">${d.stem}</span><span class="el-${d.branchElement}">${d.branch}</span>${d.first?'<em>月柱</em>':''}</span>
     <span class="dstar">${d.tenStar}</span>
     ${i===f.daeunIdx?'<span class="dnow">今</span>':''}
   </div>`).join('');
-  const daeunNote=`<p class="note">大運は<b>月柱（${natal.pillars[1].ganzhi}）を第1大運</b>として立運（${natal.startFortune.text}）からスタートし、${natal.startFortune.forward?'順行':'逆行'}で展開しています。</p>`;
-  const daeunList=`<details class="daeun-list"><summary>大運の一覧を見る（第1運＝月柱 ${natal.pillars[1].ganzhi}）</summary><div class="drows">${daeunRows}</div></details>`;
+  const daeunNote=`<p class="note">大運は<b>月柱（${natal.pillars[1].ganzhi}）を第1大運</b>として<b>0歳</b>からスタートし、立運（${natal.startFortune.text}）で第2大運に切り替わって、以降10年ごとに${natal.startFortune.forward?'順行':'逆行'}で展開します。</p>`;
+  const daeunList=`<details class="daeun-list"><summary>大運の一覧を見る（第1運＝月柱 ${natal.pillars[1].ganzhi}・0歳〜）</summary><div class="drows">${daeunRows}</div></details>`;
 
   // ===== AIセクション（オーナーのAIキーがある時だけ表示。他の人は使えません）=====
   const aiSection = geminiKey ? `
@@ -592,7 +595,7 @@ function factText(){
    `【五行の数】${go}`,
    natal.timeUnknown?'【注意】生まれた時刻が不明なため時柱は用いない（勝手に作らない）。3柱で読む。':'',
    `【運勢の巡り（占う日:${document.getElementById('f-target').value}）】`,
-   ` ・大運(10年):${f.daeun?f.daeun.ganzhi+'／'+f.daeun.tenStar+'（'+f.daeun.startAge+'〜'+f.daeun.endAge+'歳）':'立運前'}（大運は月柱${natal.pillars[1].ganzhi}を第1運として立運から展開）`,
+   ` ・大運(10年):${f.daeun.ganzhi}／${f.daeun.tenStar}（${f.daeun.startLabel}〜${f.daeun.endLabel}）（大運は月柱${natal.pillars[1].ganzhi}を第1運として0歳から、立運${natal.startFortune.text}で第2運へ切替）`,
    ` ・年運(今年):${f.yearUn.ganzhi}／${f.yearUn.star}`,
    ` ・月運(今月):${f.monthUn.ganzhi}／${f.monthUn.star}`,
    ` ・日運(今日):${f.dayUn.ganzhi}／${f.dayUn.star}`,
