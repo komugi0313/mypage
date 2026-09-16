@@ -129,6 +129,14 @@ textarea{resize:vertical;min-height:74px;line-height:1.6;}
 .crow b{display:block;font-size:12px;margin-bottom:2px;}
 .crow.good{background:#eefaf4;} .crow.good b{color:var(--good);}
 .crow.warn{background:#fdf3f3;} .crow.warn b{color:var(--warn);}
+.seg-wrap{flex-wrap:wrap;} .seg-wrap button{flex:1 1 44%;min-width:0;font-size:13px;padding:10px 6px;}
+.vtabs{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 4px;}
+.vtab{flex:1 1 22%;min-width:0;padding:8px 4px;border:1.5px solid var(--lav-soft);background:#fbfaff;border-radius:12px;
+  font-family:inherit;font-size:11.5px;font-weight:700;color:var(--lav);cursor:pointer;white-space:nowrap;}
+.vtab.on{background:linear-gradient(135deg,var(--pink),var(--lav));color:#fff;border-color:transparent;}
+.compat-read p{font-size:13.5px;line-height:1.95;margin:0 0 11px;color:var(--ink);}
+.compat-read p:first-child{background:linear-gradient(135deg,var(--pink-soft),var(--lav-soft));border-radius:14px;padding:13px 15px;font-weight:600;}
+.compat-read b{color:var(--pink-deep);}
 /* 1日の鑑定 */
 .reading .rhead{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding-bottom:12px;border-bottom:1.5px dashed var(--line);}
 .reading .rday{font-size:13px;font-weight:800;color:var(--ink2);}
@@ -255,6 +263,13 @@ details.setting summary::before{content:"⚙️ ";}
     <summary><span class="emo">💞</span>相性占い（お相手と）</summary>
     <div class="compat-body">
       <p class="hint" style="margin-top:0">上に入れた<b>あなたの生年月日</b>と、お相手の生年月日で相性をみます（四柱推命）。</p>
+      <label class="fld">どんな相性をみる？（観点）</label>
+      <div class="seg seg-wrap" id="p-view">
+        <button type="button" data-v="love" aria-pressed="true">💗 恋愛・結婚</button>
+        <button type="button" data-v="work">💼 仕事</button>
+        <button type="button" data-v="friend">🤝 友人・対人</button>
+        <button type="button" data-v="family">🏠 家族・親子</button>
+      </div>
       <label class="fld">お相手のお名前（任意）</label>
       <input type="text" id="p-name" placeholder="お相手のニックネーム">
       <label class="fld">お相手の生年月日</label>
@@ -342,6 +357,19 @@ const REL_INFO={
   半合:{t:'good',d:'部分的な後押し・協力。ゆるやかな追い風。'}
 };
 const EL_JP={木:'木（成長・行動）',火:'火（情熱・表現）',土:'土（安定・信頼）',金:'金（決断・お金）',水:'水（知性・柔軟）'};
+/* 日主（十干）の本質 */
+const DM_DESC={
+  甲:'まっすぐ伸びる大樹のような人。リーダー気質で正義感が強く、面倒見のよい頼れる存在',
+  乙:'しなやかな草花のような人。協調性と粘り強さがあり、環境に合わせて上手に生きる',
+  丙:'太陽のように明るく情熱的な人。裏表なく、まわりを照らして元気にする華やかさがある',
+  丁:'ろうそくや星あかりのような人。繊細で感受性ゆたか、人の気持ちに寄り添える気配り上手',
+  戊:'どっしりした山のような人。包容力と安定感があり、動じない芯の強さで信頼を集める',
+  己:'田畑の土のような人。面倒見がよく、人や物事を育てる力があり、柔軟で優しい',
+  庚:'鍛えた鋼のような人。決断力と行動力があり、正義感が強く、さっぱりした芯の強さを持つ',
+  辛:'宝石のような人。繊細で美意識が高く、プライドと感性を大切にする一途さがある',
+  壬:'大河や海のような人。知的で自由、発想がゆたかで、器が大きく物おじしない',
+  癸:'雨や露のような人。感受性がこまやかで柔軟、まわりをそっと潤す癒やしと知性を持つ'
+};
 
 /* ============ 日付ヘルパー ============ */
 function isoOf(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -383,6 +411,7 @@ function init(){
   document.getElementById('f-notime').onchange=toggleTime;
   document.getElementById('f-go').onclick=run;
   // 相性占い
+  document.querySelectorAll('#p-view button').forEach(b=>b.onclick=()=>setViewP(b.dataset.v));
   document.querySelectorAll('#p-sex button').forEach(b=>b.onclick=()=>setSexP(b.dataset.v));
   document.getElementById('p-notime').onchange=()=>{const c=document.getElementById('p-notime').checked;const t=document.getElementById('p-time');t.disabled=c;t.style.opacity=c?.5:1;};
   document.getElementById('p-go').onclick=runCompat;
@@ -470,7 +499,8 @@ function run(){
 }
 
 /* ============ 相性占いの実行・描画 ============ */
-let sexP='male', compatData=null;
+let sexP='male', viewP='love', compatData=null;
+function setViewP(v){viewP=v;document.querySelectorAll('#p-view button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));if(compatData){compatData.view=v;renderCompat();}}
 function runCompat(){
   const ad=document.getElementById('f-date').value;
   if(!ad){toast('先にあなたの生年月日を入れてね');document.getElementById('f-date').scrollIntoView({behavior:'smooth',block:'center'});return;}
@@ -482,46 +512,48 @@ function runCompat(){
   const aName=document.getElementById('f-name').value.trim()||'あなた';
   const bName=document.getElementById('p-name').value.trim()||'お相手';
   const c=compat(A,B);
-  compatData={c,A,B,aName,bName};
+  compatData={c,A,B,aName,bName,view:viewP};
   renderCompat();
   document.getElementById('compat-result').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function renderCompat(){
-  const {c,A,B,aName,bName}=compatData;
+  const {c,A,B,aName,bName}=compatData; const view=compatData.view||'love';
+  const V=COMPAT_VIEWS[view];
   const level = c.score>=85?{t:'とても良い相性💗',cls:'good'}: c.score>=70?{t:'良い相性🌸',cls:'good'}: c.score>=55?{t:'まずまずの相性🍀',cls:'mix'}:{t:'努力で深まる相性🌱',cls:'mix'};
-  const goodHTML=c.good.map(g=>`<div class="crow good"><b>${g.k}</b>${g.d}</div>`).join('');
-  const warnHTML=c.warn.map(g=>`<div class="crow warn"><b>${g.k}</b>${g.d}</div>`).join('');
   const noteHTML=c.notes.length?`<p class="note">${c.notes.join(' ')}</p>`:'';
-  const relText=`${bName}は、${aName}にとって<b>「${c.selfSees}」</b>の星。${STAR_PARTNER[c.selfSees]||''}<br>${aName}は、${bName}にとって<b>「${c.partnerSees}」</b>の星。${STAR_PARTNER[c.partnerSees]||''}`;
   const aiBtn = geminiKey ? `<button class="btn" id="compat-ai">🌙 AIに二人の相性を読み解いてもらう</button><div class="ai-out" id="compat-ai-out"></div>` : '';
+  // 観点タブ（結果内でも切替できる）
+  const viewTabs=Object.keys(COMPAT_VIEWS).map(k=>`<button type="button" class="vtab${k===view?' on':''}" data-v="${k}">${COMPAT_VIEWS[k].emo} ${COMPAT_VIEWS[k].label}</button>`).join('');
   document.getElementById('compat-result').innerHTML=`
     <div class="compat-score ${level.cls}">
       <div class="cs-hearts">${heartGauge(c.score)}</div>
       <div class="cs-num">${c.score}<small>点</small></div>
-      <div class="cs-lv">${level.t}</div>
+      <div class="cs-lv">${V.emo} ${V.label}：${level.t}</div>
       <div class="cs-pair">${aName}（日柱${c.aDay}）× ${bName}（日柱${c.bDay}）</div>
     </div>
-    <div class="crel">${relText}</div>
-    ${goodHTML?`<h3 class="subh" style="border:0;padding-top:6px">💗 良いところ</h3>${goodHTML}`:''}
-    ${warnHTML?`<h3 class="subh" style="border:0;padding-top:6px">⚠️ 気をつけるところ</h3>${warnHTML}`:''}
+    <div class="vtabs">${viewTabs}</div>
+    <div class="compat-read">${compatNarrative(c,aName,bName,view)}</div>
     ${noteHTML}
     <div class="share-grid" style="margin-top:14px">
       <button class="sbtn line" id="csh-line">💚 LINEで送る</button>
       <button class="sbtn copy" id="csh-copy">📋 コピー</button>
     </div>
     ${aiBtn}
-    <p class="note">※ 相性は日柱（干合・支合・三合・冲・害・破）と五行の補い合いをもとに算出した目安です。点数は楽しむためのもの。冲＝刺激的で惹かれ合う縁でもあり、低い＝ダメではありません。</p>`;
+    <p class="note">※ 相性は日柱（干合・支合・三合・冲・害・破）と五行の補い合いをもとに算出した目安です。点数は楽しむためのもの。冲＝刺激的で惹かれ合う縁でもあり、低い＝ダメではありません。上のタブで観点を切り替えられます。</p>`;
+  document.querySelectorAll('#compat-result .vtab').forEach(b=>b.onclick=()=>setViewP(b.dataset.v));
   document.getElementById('csh-line').onclick=()=>{location.href='https://line.me/R/msg/text/?'+encodeURIComponent(compatShareText());};
   document.getElementById('csh-copy').onclick=async()=>{try{await navigator.clipboard.writeText(compatShareText());toast('コピーしました💗');}catch(e){toast('コピーできませんでした');}};
   if(geminiKey)document.getElementById('compat-ai').onclick=compatAiRead;
 }
 function compatShareText(){
-  const {c,aName,bName}=compatData;
-  let t=`💞${aName} × ${bName} の相性\n`;
+  const {c,aName,bName}=compatData; const V=COMPAT_VIEWS[compatData.view||'love'];
+  let t=`💞${aName} × ${bName} の${V.label}相性\n`;
   t+=`${heartGauge(c.score)} ${c.score}点\n`;
+  t+=`${V.scoreWord(c.score)}\n`;
   t+=`${bName}はあなたにとって「${c.selfSees}」の星。\n`;
-  if(c.good.length)t+=`💗${c.good.map(g=>g.k).join('・')}\n`;
-  if(c.warn.length)t+=`⚠️${c.warn.map(g=>g.k).join('・')}\n`;
+  if(c.good.length)t+=`💗良いところ：${c.good.map(g=>g.k).join('・')}\n`;
+  if(c.warn.length)t+=`⚠️注意：${c.warn.map(g=>g.k).join('・')}\n`;
+  t+=`💡${V.tip(c)}\n`;
   t+=`\n▼あなたも相性をみる\n${location.href}`;
   return t;
 }
@@ -590,32 +622,38 @@ function buildFacts(tg){
 
 /* ============ 「今日はこんな日」ナラティブ鑑定（会話調・AI不要） ============ */
 function narrative(f,dateJa,isToday){
-  const th=STAR_THEME[f.dayUn.star]||{one:'',adv:'',act:''};
+  const th=STAR_THEME[f.dayUn.star]||{one:'',adv:'',act:'',love:'',work:'',money:''};
   const warns=f.rels.filter(r=>(REL_INFO[r.k]||{}).t==='warn');
-  const goods=f.rels.filter(r=>(REL_INFO[r.k]||{}).t==='good');
   const nm=personName?personName+'さん、':'';
   const kono=isToday?'今日':'この日';
+  const dmStem=natal.dayMaster.stem;
   const p=[];
-  // 1. どんな日
-  p.push(`${nm}${dateJa}${isToday?'（今日）':''}は、あなたにとって<b>「${f.dayUn.star}」（${f.dayUn.ganzhi}）</b>のエネルギーが巡る一日です。${th.one}`);
-  // 2. なぜ（命式との巡り）
+  // 1. あなたの本質（日主）
+  p.push(`${nm}あなたの本質は<b>「${dmStem}（${natal.dayMaster.element}）」</b>。${DM_DESC[dmStem]||''}。${f.strength.replace(/（.*/,'')}の傾向で、${f.strength.includes('身強')?'自分の力で切りひらくタイプ':f.strength.includes('身弱')?'まわりと協力してこそ輝くタイプ':'状況に合わせてバランスを取れるタイプ'}。その土台をふまえて、${kono}を読み解きます。`);
+  // 2. 今日はどんな日（星の意味を詳しく）
+  p.push(`${dateJa}${isToday?'（今日）':''}は、あなたに<b>「${f.dayUn.star}」（日運${f.dayUn.ganzhi}）</b>のエネルギーが巡る一日。${th.one} ${th.adv}`);
+  // 3. 大きな流れ（大運・年運・月運）
+  p.push(`いま、あなたは<b>「${f.daeun.tenStar}」の大運（${f.daeun.ganzhi}・${f.daeun.startLabel}〜）</b>という10年の流れの中にいて、今年は<b>「${f.yearUn.star}」の年（${f.yearUn.ganzhi}）</b>、今月は<b>「${f.monthUn.star}」の月</b>。その大きな流れの上での${kono}の運気です（影響の大きさは 大運＞年運＞月運＞日運）。`);
+  // 4. 命式との巡り
   if(f.rels.length){
     const kinds=[...new Set(f.rels.map(r=>r.k))].map(k=>`「${k}」`).join('・');
     const descs=[...new Set(f.rels.map(r=>(REL_INFO[r.k]||{}).d).filter(Boolean))].join(' ');
     p.push(`${kono}の干支は、あなたの生まれ持った星と${kinds}の関係を結びます。${descs}`);
   }else{
-    p.push(`${kono}はあなたの命式と大きくぶつかる巡りはなく、比較的おだやかに過ごせそうです。`);
+    p.push(`${kono}はあなたの命式と大きくぶつかる巡りがなく、比較的おだやかに、自分のペースで進めやすい日です。`);
   }
-  // 3. 気をつけたいこと
-  const cautionExtra = warns.length? `とくに${warns.map(r=>'「'+r.k+'」').join('・')}の巡りがあるので、人との接触・移動・約束ごとはいつもより丁寧に。`:'';
-  p.push(`<b>気をつけたいこと。</b>${th.adv}${cautionExtra}`);
-  // 4. おすすめの過ごし方
-  p.push(`<b>おすすめの過ごし方。</b>「${th.act}」を心がけると運が整います。ラッキーカラーは<b>${EL_COLOR[f.favEl]}</b>、開運フードは${EL_FOOD[f.favEl]}。`);
-  // 5. 締め（トーン別）
-  const close={good:'追い風の日。思い切って動くと良い流れに乗れますよ。',
-    mix:'焦らず、自分のペースを大切に過ごせば大丈夫。',
-    warn:'いつもの半歩ゆっくりを意識すれば、穏やかに乗り切れます。'}[th.t]||'自分をいたわりながら、素敵な一日を。';
-  p.push(close);
+  // 5. 分野別（恋愛・仕事・金運）を文章で
+  p.push(`<b>💗 恋愛・対人。</b>${th.love}　<b>💼 仕事・勉強。</b>${th.work}　<b>💰 金運。</b>${th.money}`);
+  // 6. 気をつけたいこと
+  const cautionExtra = warns.length? `とくに${warns.map(r=>'「'+r.k+'」').join('・')}の巡りがあるので、人との接触・移動・約束ごとはいつもより丁寧に。感情的になりそうなときは、ひと呼吸おいてから。`:'大きな注意点は出ていないので、いつもの心がけで大丈夫です。';
+  p.push(`<b>⚠️ 気をつけたいこと。</b>${th.adv} ${cautionExtra}`);
+  // 7. おすすめの過ごし方＋開運
+  p.push(`<b>🍀 おすすめの過ごし方。</b>「${th.act}」を心がけると運が整います。${kono}のラッキーカラーは<b>${EL_COLOR[f.favEl]}</b>、開運フードは<b>${EL_FOOD[f.favEl]}</b>。身につけたり、食事にひと工夫すると、足りない気が補われて運の巡りがよくなります。`);
+  // 8. 締め（トーン別）
+  const close={good:'全体に追い風の一日。気になっていたことは、思い切って動くと良い流れに乗れますよ。',
+    mix:'良い面と気をつける面が混ざる日。焦らず、自分のペースを大切に過ごせば大丈夫。',
+    warn:'少し力の入りやすい日ですが、いつもの半歩ゆっくりを意識すれば、穏やかに乗り切れます。'}[th.t]||'自分をいたわりながら、素敵な一日を。';
+  p.push(`${close}　${nm}${kono}が笑顔の多い一日になりますように🍀`);
   return p.map(x=>`<p>${x}</p>`).join('');
 }
 
@@ -632,6 +670,33 @@ const STAR_PARTNER={
   正官:'頼れて尊敬できる、けじめのある相性。結婚・長い関係に向く安定型。',
   偏印:'ミステリアスに惹かれ合う、独特の距離感の相性。ふしぎと落ち着く。',
   印綬:'包まれ守られ、素直に甘えられる安心の相性。癒やしと成長をくれる相手。'
+};
+/* 観点ごとの相性の読み方 */
+const COMPAT_VIEWS={
+  love:{label:'恋愛・結婚',emo:'💗',
+    scoreWord:s=>s>=85?'とても惹かれ合い、長く続きやすい相性です。':s>=70?'相性は良好。自然体で歩み寄れば深まる関係です。':s>=55?'まずまずの相性。お互いの違いを楽しめると◎。':'違いは大きめですが、思いやりで育てていける関係です。',
+    focus:'恋愛・結婚では、日柱（とくに配偶宮＝日支）の結びつきと、日干どうしの惹かれ合い（干合）を大切にみます。',
+    lens:{比肩:'恋人というより同志・親友のような、対等で気楽な関係になりやすい二人。',劫財:'刺激的で燃え上がりやすいぶん、ヤキモチや張り合いも。素直さが長続きの鍵。',食神:'一緒にいて癒やされ、笑顔が増える相性。デートや食を楽しんで。',傷官:'感性が響き合い惹かれ合うが、言葉ひとつで揺れやすい。優しい言葉選びを。',偏財:'一緒にいて楽しく、尽くしたくなる華やかな恋。マンネリ対策に新しい体験を。',正財:'家庭的で安心できる、結婚に向いた堅実な相性。信頼を積み重ねて。',偏官:'ドキドキと刺激のある恋。強く惹かれるが振り回されやすいので、距離感を大切に。',正官:'誠実で長続きしやすい、結婚向きの安定した相性。けじめと敬意が深めます。',偏印:'ミステリアスに惹かれ合う、独特の距離感の恋。干渉しすぎないのが吉。',印綬:'包まれ守られ、素直に甘えられる安心の恋。癒やしと成長をくれる相手。'},
+    tipTitle:'💞 長続きのコツ。',
+    tip:c=>c.warn.some(w=>w.k.includes('冲'))?'ぶつかりやすい情熱型なので、熱くなったら一度離れて頭を冷やす“クールダウン”を二人のルールに。':c.good.length?'相性の良さに甘えず、感謝と「好き」をこまめに言葉にすると、ご縁がさらに深まります。':'違いを「欠点」でなく「役割の違い」と捉え、こまめに気持ちを確認し合うと安定します。'},
+  work:{label:'仕事・ビジネス',emo:'💼',
+    scoreWord:s=>s>=85?'組めば大きな成果を出せる、心強いビジネスパートナー。':s>=70?'役割分担がかみ合い、協力して伸ばし合える関係です。':s>=55?'ほどよい距離で組むと力を発揮しやすい相性。':'進め方が異なるぶん、役割と責任を明確にすると噛み合います。',
+    focus:'仕事では、規律（官星）・成果や利益（財星）・アイデアや行動（食傷）の噛み合い、そして足りない力を補い合えるかをみます。',
+    lens:{比肩:'対等な相棒。似た強みなので、担当を分けると衝突なく進む。',劫財:'勢いはあるがペースや取り分でぶつかりやすい。ルールを先に決めて。',食神:'アイデアと和やかさをくれる、企画・接客向きの相手。',傷官:'質やセンスを高めてくれるが、批判はやわらかく伝え合って。',偏財:'人脈・営業・お金回りを広げてくれる、稼ぐ力のある相手。',正財:'管理・数字・堅実さで支えてくれる、経理や運営に強い相手。',偏官:'厳しくも引き締めてくれる、勝負どころに強い相手。指示系統を明確に。',正官:'規律と信頼をくれる、管理役・まとめ役に向く相手。',偏印:'独自の発想・専門性をくれる、企画やクリエイティブの相棒。',印綬:'知識や後ろ盾で支えてくれる、教え合い・育成に向く相手。'},
+    tipTitle:'🤝 うまく組むコツ。',
+    tip:c=>'得意分野で役割をはっきり分けるのが成功の鍵。'+(c.good.some(g=>g.k.includes('五行'))?'足りない力を補い合える二人なので、片方が苦手な部分をもう片方が担うと強い。':'定期的に方針をすり合わせると、行き違いを防げます。')},
+  friend:{label:'友人・対人',emo:'🤝',
+    scoreWord:s=>s>=85?'一緒にいてとても楽な、長く続く親友タイプ。':s>=70?'気が合い、心地よく付き合える相性です。':s>=55?'ほどよい距離感で、無理なく付き合える相性。':'感覚は違うぶん、お互いを尊重すると学びの多い関係に。',
+    focus:'友人・対人では、一緒にいる心地よさ（比肩・食神）や、価値観の近さ・刺激のバランスをみます。',
+    lens:{比肩:'価値観が近く、対等で気楽。長く続く親友になりやすい。',劫財:'ノリが合って盛り上がるが、はりあいや貸し借りには注意。',食神:'一緒にいて癒やされる、笑いの絶えない相手。',傷官:'感性で通じ合える刺激的な友。言葉のトゲにだけ注意。',偏財:'遊び・交友を広げてくれる、楽しい社交仲間。',正財:'約束を守る誠実な相手。安心して頼れる。',偏官:'刺激をくれるが振り回されがち。程よい距離で。',正官:'きちんとした、相談しやすい信頼できる相手。',偏印:'独特の感性で通じ合う、ふしぎと落ち着く友。',印綬:'包容力があり、甘えたり相談できる兄姉のような存在。'},
+    tipTitle:'🌸 心地よく付き合うコツ。',
+    tip:c=>c.warn.length?'すれ違いやすい面があるので、こまめに連絡して誤解をためないのが◎。':'ほどよい距離感を保ちつつ、楽しいことを一緒にすると絆が深まります。'},
+  family:{label:'家族・親子',emo:'🏠',
+    scoreWord:s=>s>=85?'深い縁で結ばれた、支え合える家族の相性。':s>=70?'安心して寄り添える、あたたかい相性です。':s>=55?'ほどよく見守り合える相性。':'価値観の違いはあるぶん、尊重し合うと絆が育ちます。',
+    focus:'家族・親子では、支え育てる力（印星）や、安心感・縁の深さ（支合・三合）をみます。',
+    lens:{比肩:'対等で友だちのような、さっぱりした家族関係。',劫財:'距離が近いぶんぶつかりも。干渉しすぎないのが平和のコツ。',食神:'一緒にいて和む、笑顔の多いあたたかい関係。',傷官:'感性ゆたかに通じ合うが、口出ししすぎに注意。',偏財:'にぎやかで楽しい、面倒見のよい関係。',正財:'堅実で安心できる、家庭を大切にする関係。',偏官:'しつけ・厳しさが出やすい。愛情を言葉でも伝えて。',正官:'礼儀と信頼のある、しっかりした家族関係。',偏印:'独特の距離感だが、ふしぎと落ち着ける関係。',印綬:'深く守り育て合う、絆の強い親子・家族の縁。'},
+    tipTitle:'🏡 仲を深めるコツ。',
+    tip:c=>c.good.length?'もともと縁が深い二人。感謝を言葉にすると、さらにあたたかい関係に。':'距離感を尊重しつつ、小さな気づかいを積み重ねると安心が育ちます。'}
 };
 function compat(A,B){
   const aS=A.dayMaster.stem, bS=B.dayMaster.stem;
@@ -681,6 +746,23 @@ function heartGauge(score){
   const full=Math.round(score/20); // 0-5
   let h=''; for(let i=0;i<5;i++)h+= i<full?'💗':'🤍';
   return h;
+}
+/* 観点別・相性の詳しい鑑定文 */
+function compatNarrative(c,aName,bName,view){
+  const V=COMPAT_VIEWS[view]||COMPAT_VIEWS.love;
+  const p=[];
+  p.push(`${aName}さんと${bName}さんの<b>${V.label}</b>の相性は、四柱推命でみると<b>${c.score}点</b>。${V.scoreWord(c.score)} ${V.focus}`);
+  p.push(`${bName}さんは、${aName}さんにとって<b>「${c.selfSees}」</b>の星。${V.lens[c.selfSees]||STAR_PARTNER[c.selfSees]||''} 反対に、${aName}さんは${bName}さんにとって<b>「${c.partnerSees}」</b>の星で、${V.lens[c.partnerSees]||STAR_PARTNER[c.partnerSees]||''}`);
+  if(c.good.length){
+    p.push(`<b>💗 とくに良いところ。</b>${c.good.map(g=>`${g.k}——${g.d}`).join(' ')}`);
+  }
+  if(c.warn.length){
+    p.push(`<b>⚠️ 気をつけるところ。</b>${c.warn.map(g=>`${g.k}——${g.d}`).join(' ')}`);
+  }else{
+    p.push(`<b>⚠️ 気をつけるところ。</b>大きくぶつかる巡りはなく、比較的おだやかに寄り添える二人です。`);
+  }
+  p.push(`<b>${V.tipTitle}</b>${V.tip(c)}`);
+  return p.map(x=>`<p>${x}</p>`).join('');
 }
 
 /* ============ 描画 ============ */
