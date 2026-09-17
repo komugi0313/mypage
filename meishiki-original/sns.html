@@ -1,0 +1,524 @@
+<!doctype html><html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SNS鑑定文ジェネレーター（四柱推命）</title>
+<style>
+:root{--bg:#eef0f7;--card:#fff;--line:#d3d6e4;--ink:#191c30;--muted:#565a80;--accent:#2c3068;--soft:#e4e7f2;--sub:#3f4370;--good:#3f7a4e;--warn:#c0453b;--title:#1f7a8c;--pink:#c0397a;
+ --moku:#3f7a4e;--ka:#c0453b;--do:#b8892f;--kin:#8f8f98;--sui:#3d6ea8;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;line-height:1.6;-webkit-text-size-adjust:100%}
+.wrap{max-width:720px;margin:0 auto;padding:16px 14px 80px}
+h1{font-size:19px;margin:6px 0 2px}
+.sub{color:var(--muted);font-size:13.5px;margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;margin-bottom:14px}
+h2{font-size:16px;margin:2px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--title);color:var(--title);font-weight:800}
+label{display:block;font-size:13.5px;color:var(--muted);font-weight:700;margin:10px 0 4px}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:16px;font-family:inherit;background:var(--card);color:inherit}
+select{-webkit-appearance:none;appearance:none;padding-right:26px;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' fill='none' stroke='%23999' stroke-width='1.6'/></svg>");background-repeat:no-repeat;background-position:right 9px center}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row-check{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;color:var(--ink);font-weight:700}
+.row-check input{width:auto}
+.btn{margin-top:14px;width:100%;padding:13px;border:0;border-radius:11px;background:var(--accent);color:#fff;font-size:16px;font-weight:800;cursor:pointer}
+.btn:active{opacity:.85}
+.btn.sub2{background:var(--sub)}
+.btn.mini{margin-top:0;width:auto;padding:8px 14px;font-size:13.5px}
+.btn.ai{background:var(--good)}
+.tabs{display:flex;gap:6px;margin:0 0 12px;flex-wrap:wrap}
+.tab{flex:1 1 auto;min-width:90px;padding:9px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-weight:800;font-size:14px;cursor:pointer;color:var(--muted)}
+.tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pane{display:none}
+.pane.on{display:block}
+.outhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 6px}
+.outhead .note{font-size:12px}
+textarea.out{min-height:280px;line-height:1.7;font-size:14px;white-space:pre-wrap}
+textarea.outx{min-height:150px}
+.note{font-size:13px;color:var(--muted)}
+.hint{font-size:12.5px;color:var(--muted);margin:6px 0 0;line-height:1.6}
+details{margin-top:8px}
+summary{cursor:pointer;font-weight:700;color:var(--accent);font-size:14px}
+table.mt{border-collapse:collapse;width:100%;min-width:520px;font-size:13.5px;margin-top:4px}
+table.mt th,table.mt td{border:1px solid var(--line);padding:7px 5px;text-align:center;vertical-align:middle}
+table.mt th{background:var(--soft);color:var(--muted);font-size:12px;font-weight:700}
+table.mt .k{font-size:18px;font-weight:800}
+.mscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.el-木{color:var(--moku)}.el-火{color:var(--ka)}.el-土{color:var(--do)}.el-金{color:var(--kin)}.el-水{color:var(--sui)}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#222;color:#fff;padding:9px 16px;border-radius:999px;font-size:13.5px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
+.toast.show{opacity:.95}
+.err{color:var(--warn);font-size:13.5px;margin-top:8px;font-weight:700}
+@media(max-width:520px){.grid{grid-template-columns:1fr 1fr}.wrap{padding:14px 12px 80px}}
+</style>
+</head><body>
+<div class="wrap">
+  <h1>SNS鑑定文ジェネレーター <span class="note">四柱推命</span></h1>
+  <p class="sub">名前と生年月日から、note・X・Instagram 用の鑑定文を毎回同じ構成で自動生成します。※計算は既存エンジンをそのまま使用。占い・エンタメ用。</p>
+
+  <div class="card">
+    <h2>鑑定する人物</h2>
+    <label>名前（表示名）</label>
+    <input type="text" id="pname" placeholder="例）大森元貴">
+    <label>肩書き・ひとこと紹介（任意・検索してコピペ）</label>
+    <input type="text" id="pbio" placeholder="例）Mrs. GREEN APPLE のボーカル・ソングライター">
+    <label>生年月日（西暦）</label>
+    <div class="grid">
+      <div><input type="number" id="by" inputmode="numeric" placeholder="1996"></div>
+      <div><select id="bm"></select></div>
+      <div><select id="bd"></select></div>
+    </div>
+    <div class="grid2" style="margin-top:8px">
+      <div><label>性別</label><select id="sex"><option value="male">男性</option><option value="female">女性</option></select></div>
+      <div><label>弱み・不安の濃さ</label><select id="weak"><option value="soft">ソフト（推奨）</option><option value="normal">ふつう</option><option value="strong">やや踏み込む</option></select></div>
+    </div>
+    <label class="row-check"><input type="checkbox" id="tu" checked> 出生時間は不明（時柱なしで鑑定）</label>
+    <div id="timeWrap" class="grid2" style="margin-top:8px;display:none">
+      <div><label>時</label><select id="bh"></select></div>
+      <div><label>分</label><select id="bmin"></select></div>
+    </div>
+    <button class="btn" id="go">鑑定文を生成する</button>
+    <p class="err" id="err"></p>
+  </div>
+
+  <div class="card">
+    <details id="setBox">
+      <summary>⚙️ 固定素材の設定（スクール名・URL・ハッシュタグ・CTA）</summary>
+      <label>スクール名／サービス名</label>
+      <input type="text" id="setSchool" placeholder="例）〇〇四柱推命スクール">
+      <label>noteプロフ／サービスのURL</label>
+      <input type="text" id="setUrl" placeholder="例）https://note.com/xxxx">
+      <label>CTA（誘導の一言）</label>
+      <input type="text" id="setCta" placeholder="例）無料説明会・相性診断はプロフのリンクから">
+      <label>固定ハッシュタグ（スペース区切り）</label>
+      <input type="text" id="setTags" placeholder="例）#四柱推命 #占い #〇〇スクール">
+      <button class="btn sub2 mini" id="setSave" style="margin-top:12px">この設定を保存</button>
+      <p class="hint">この端末に保存されます（localStorage）。毎回同じ文言が自動で入ります。</p>
+    </details>
+  </div>
+
+  <div class="card" id="outCard" style="display:none">
+    <div class="tabs">
+      <button class="tab on" data-pane="note">note（長文）</button>
+      <button class="tab" data-pane="x">X</button>
+      <button class="tab" data-pane="ig">Instagram</button>
+      <button class="tab" data-pane="chart">命式表</button>
+    </div>
+
+    <div class="pane on" id="pane-note">
+      <div class="outhead"><b class="note">note本文（約2,500字）</b><button class="btn mini sub2" data-copy="outNote">コピー</button></div>
+      <textarea class="out" id="outNote" readonly></textarea>
+      <div class="outhead" style="margin-top:10px"><b class="note">🤖 AIで文章を磨く（任意・本番サイトで有効）</b><button class="btn mini ai" id="aiPolish">AIで磨く</button></div>
+      <p class="hint" id="aiHint">下書きをそのまま投稿できます。もっと自然な文章にしたい時だけAIで整えます（Netlify等の本番サイトで動作）。</p>
+    </div>
+    <div class="pane" id="pane-x">
+      <div class="outhead"><b class="note">X・スレッド版</b><button class="btn mini sub2" data-copy="outXThread">コピー</button></div>
+      <textarea class="out outx" id="outXThread" readonly></textarea>
+      <div class="outhead" style="margin-top:10px"><b class="note">X・単発版</b><button class="btn mini sub2" data-copy="outXOne">コピー</button></div>
+      <textarea class="out outx" id="outXOne" readonly></textarea>
+    </div>
+    <div class="pane" id="pane-ig">
+      <div class="outhead"><b class="note">Instagram キャプション</b><button class="btn mini sub2" data-copy="outIG">コピー</button></div>
+      <textarea class="out" id="outIG" readonly></textarea>
+    </div>
+    <div class="pane" id="pane-chart">
+      <div class="mscroll" id="chartBox"></div>
+      <p class="hint" id="chartMeta"></p>
+    </div>
+  </div>
+
+  <p class="note" style="margin:16px 2px 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;line-height:1.7">※生成文は公開情報の生年月日に基づく推定（出生時間不明のため時柱なし）で、占い・エンタメです。実在の人物の事実・私生活を断定するものではありません。投稿前に必ず内容をご確認ください。</p>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="./pro-bazi.js"></script>
+<script src="./pro-adapter.js"></script>
+<script>
+(function(){
+"use strict";
+var $=function(id){return document.getElementById(id);};
+var BR='子丑寅卯辰巳午未申酉戌亥',STE='甲乙丙丁戊己庚辛壬癸';
+var MSTEM_EL={甲:"木",乙:"木",丙:"火",丁:"火",戊:"土",己:"土",庚:"金",辛:"金",壬:"水",癸:"水"};
+var MBR_EL={子:"水",丑:"土",寅:"木",卯:"木",辰:"土",巳:"火",午:"火",未:"土",申:"金",酉:"金",戌:"土",亥:"水"};
+
+/* ---- 表現ライブラリ（毎回同じ言い回し＝一貫性） ---- */
+var DAYSTEM={
+ 甲:'空へまっすぐ伸びる大樹。曲がらない芯・向上心・リーダー気質の持ち主',
+ 乙:'しなやかな草花。柔軟に人と調和しながら、粘り強く目的へ向かう',
+ 丙:'太陽のような明るさ。情熱的で、まわりを照らす華やかな存在感',
+ 丁:'灯火の温かさ。繊細で心配り上手、内側に静かな情熱を秘める',
+ 戊:'どっしりした大きな山。安定感と包容力があり、人から頼られる',
+ 己:'作物を育てる田畑の土。面倒見がよく、柔軟で現実的な感覚を持つ',
+ 庚:'鍛えた刃・鉄。決断力と正義感があり、筋を通す強さを持つ',
+ 辛:'磨かれた宝石。美意識とプライドが高く、洗練された感性の持ち主',
+ 壬:'大河・海。スケールが大きく自由で、知性と行動力に富む',
+ 癸:'雨露や清水。感受性が豊かで、想像力と人の心に浸透する優しさを持つ'
+};
+var STYPE=function(s){s=s||'';if(/強/.test(s))return 'エネルギーが強く、自分の意志でぐいぐい押し進む推進力';if(/弱/.test(s))return '周囲と協調し、場を活かしながらしなやかに立ち回る適応力';return '自分の軸と柔軟さを併せ持つ、バランス型';};
+var TALENT={
+ 比肩:'自分の力で道を切り拓く独立心と、ぶれない芯の強さ',
+ 劫財:'行動力と勝負強さ。人を巻き込み、前へ前へと進む力',
+ 食神:'のびのびと才能を楽しみ、人を和ませる表現力。衣食住の豊かさ',
+ 傷官:'鋭い感性と技巧、美意識で「世に問う」表現力。一芸を極める資質',
+ 偏財:'人と機会をつなぎ、フットワークで富や縁を回す社交センスと商才',
+ 正財:'誠実にコツコツ積み上げる堅実さと、まわりからの厚い信頼',
+ 偏官:'度胸と決断で困難を突破する、カリスマ性と行動力',
+ 正官:'責任感と品格。秩序を守り、まっとうに務めを果たす王道の力',
+ 偏印:'人と違う視点とひらめき。物事を深く掘り下げる探究心',
+ 印綬:'学びと知性、人を支え育てる包容力'
+};
+var UN={
+ 比肩:'自分軸を固め、独立・自立が進む10年。仲間とも対等に動ける',
+ 劫財:'挑戦と勝負の気。行動範囲が広がり、動くほど道が拓ける',
+ 食神:'表現・創造がのびやかに花開く。楽しみと人の縁が増える',
+ 傷官:'研ぎ澄まされた才能が形になる。美意識が冴え、代表作が生まれやすい',
+ 偏財:'人・機会・お金が回り、活動が外へ大きく広がる',
+ 正財:'堅実な実り・信頼・安定が育つ。地に足のついた成果の時期',
+ 偏官:'自分を追い込み殻を破る、変革と飛躍の気。勝負どころ',
+ 正官:'社会的信頼・地位・役割が確立していく、王道の実りの時期',
+ 偏印:'学び直し・専門を深める、内省と再構築の時期',
+ 印綬:'知性と人徳が高まり、支えられ・導く立場になっていく'
+};
+var STAR={
+ 天乙貴人:'困った時に助けが入る最上級の人徳',太極貴人:'目に見えない世界や専門を深く突き詰める探究心',
+ 福星貴人:'衣食住に恵まれる安泰の星',文昌貴人:'学問・文章・頭脳の才',天厨貴人:'食や楽しみに恵まれる',
+ 天官貴人:'地位・信用・出世に強い',金与禄:'良縁と財の安定',暗禄:'いざという時にそっと助けが入る見えない支え',
+ 天德貴人:'天の加護に守られる',月德貴人:'静かな加護と徳',天德合:'良縁による加護',月德合:'和による加護',
+ 咸池:'人を惹きつける桃花・華',紅艶:'強い色気と人を惹きつける魅力',驛馬:'移動・活動的で行動範囲が広い',
+ 将星:'人の上に立つ器、場の中心になれる',華蓋:'芸術・独創・研究の才。ひとりの世界を深め一芸を極める',
+ 魁罡:'強烈な意志とカリスマ',禄馬:'才能と機動力を併せ持つ',羊刃:'内に秘めた鋭さと激しさ',飛刃:'内に秘めた鋭さ・妥協しない強さ'
+};
+var POS_STAR=['天乙貴人','太極貴人','福星貴人','文昌貴人','天厨貴人','天官貴人','金与禄','暗禄','天德貴人','月德貴人','天德合','月德合','将星','華蓋','魁罡','禄馬','咸池','紅艶','驛馬'];
+
+function elc(el){return '<span class="el-'+el+'">'+el+'</span>';}
+function pillarKubo(gz){if(!gz||gz.length<2)return[];var s=STE.indexOf(gz[0]),b=BR.indexOf(gz[1]);if(s<0||b<0)return[];var d=((b-s)%12+12)%12;return[BR.charAt((d+10)%12),BR.charAt((d+11)%12)];}
+function kuboKey(list){return (list||[]).slice().sort(function(a,b){return BR.indexOf(a)-BR.indexOf(b);}).join('');}
+
+/* ---- 特徴抽出（エンジン出力から） ---- */
+function extract(inp){
+  var R=window.PersonBazi(inp.y,inp.mo,inp.d,inp.hh,inp.mi,inp.tu,inp.sex,null);
+  if(!R||!R.ok||!R.pro)return null;
+  var c=R.pro;
+  var kubo=(window.kuboX?window.kuboX(c):[])||[];
+  var hits=(window.shinsatsuHits?window.shinsatsuHits(c):[])||[];
+  var names={}; hits.forEach(function(h){var n=h.split('(')[0].replace(/^年/,'');names[n]=1;});
+  var starList=POS_STAR.filter(function(n){return names[n];});
+  var ks={}; kubo.forEach(function(x){ks[x]=1;});
+  var yb=c.pillars[0].branch,mb=c.pillars[1].branch,db=c.pillars[2].branch;
+  var chusatsu=[];
+  if(ks[yb])chusatsu.push('生年中殺'); if(ks[mb])chusatsu.push('生月中殺');
+  if(pillarKubo(c.pillars[0].ganzhi).indexOf(db)>=0)chusatsu.push('生日中殺');
+  if(c.pillars[2].ganzhi==='甲戌'||c.pillars[2].ganzhi==='乙亥')chusatsu.push('日座中殺');
+  // 大運
+  var dae=daeun(c);
+  // 年運（今年＋近い）
+  var now=c.now||{},cy=now.year||0;
+  var af=(c.annualFortunes||[]).filter(function(a){return a.year>=cy&&a.year<=cy+5;});
+  // 五行の欠け
+  var five=R.five||{},lack=[];['木','火','土','金','水'].forEach(function(e){if((five[e]||0)===0)lack.push(e);});
+  // 通変の集合（柱＋蔵干）
+  var tens={};
+  c.pillars.slice(0,inp.tu?3:4).forEach(function(pl){if(!pl)return;if(pl.tenStar)tens[pl.tenStar]=(tens[pl.tenStar]||0)+1;(pl.hiddenStems||[]).forEach(function(h){if(h.tenStar)tens[h.tenStar]=(tens[h.tenStar]||0)+0.5;});});
+  return {R:R,c:c,name:inp.name,bio:inp.bio,sex:inp.sex,tu:inp.tu,
+    dayStem:c.dayMaster.stem,dayEl:c.dayMaster.element,sType:R.sType,
+    yearTen:c.pillars[0].tenStar,monthTen:c.pillars[1].tenStar,
+    pillars:c.pillars.slice(0,3),kubo:kubo,group:kuboKey(kubo),chusatsu:chusatsu,
+    stars:starList,names:names,dae:dae,now:now,af:af,five:five,lack:lack,tens:tens,
+    peach:!!(names['咸池']||names['紅艶'])};
+}
+function daeun(c){
+  var sf=c.startFortune||{},ritsu=Math.max(0,(sf.years||0)*12+(sf.months||0)),mp=c.pillars[1]||{};
+  var list=[{age:0,gz:mp.ganzhi,ten:mp.tenStar||'',ter:mp.terrain||'',first:true}];
+  (c.decadeFortunes||[]).forEach(function(d,i){list.push({age:Math.round((ritsu+i*120)/12),gz:d.ganzhi,ten:d.tenStar||'',ter:d.terrain||'',first:false});});
+  var now=c.now||{},ageM=(now.ageMonths!=null?now.ageMonths:(now.age!=null?now.age*12:-1)),cur=-1;
+  var acc=[{s:0,e:ritsu}]; for(var i=0;i<(c.decadeFortunes||[]).length;i++)acc.push({s:ritsu+i*120,e:ritsu+(i+1)*120});
+  for(var k=0;k<acc.length;k++){if(ageM>=acc[k].s&&ageM<acc[k].e){cur=k;break;}}
+  return {list:list,cur:cur,next:(cur>=0&&cur+1<list.length)?cur+1:-1};
+}
+
+/* ---- 命式表（決定的・必ず表示） ---- */
+function chartTable(f){
+  var labs=['年','月','日'],H='<table class="mt"><thead><tr><th>柱</th><th>干支</th><th>通変星</th><th>十二運</th><th>蔵干（隠れた星）</th><th>主な神殺</th></tr></thead><tbody>';
+  var starByBr={}; (window.shinsatsuHits?window.shinsatsuHits(f.c):[]).forEach(function(h){var m=h.match(/\(([^)]+)\)/),n=h.split('(')[0].replace(/^年/,'');if(m){var br=m[1].replace(/^年/,'');if(POS_STAR.indexOf(n)>=0)(starByBr[br]=starByBr[br]||[]).push(n);}});
+  for(var i=0;i<3;i++){var p=f.pillars[i];
+    var zk=(p.hiddenStems||[]).map(function(h){return h.stem+'('+(h.tenStar||'')+')';}).join('・');
+    var st=(starByBr[p.branch]||[]).join('・')||'—';
+    H+='<tr><td>'+labs[i]+'</td><td><span class="k">'+p.ganzhi+'</span></td><td>'+(p.tenStar||'日主')+'</td><td>'+(p.terrain||'—')+'</td><td style="font-size:12.5px">'+(zk||'—')+'</td><td style="font-size:12px;text-align:left">'+st+'</td></tr>';
+  }
+  H+='</tbody></table>';
+  return H;
+}
+
+/* ---- 文章生成 ---- */
+function topTalents(f){
+  // 年柱・月柱の通変を主役に
+  var arr=[]; if(f.monthTen&&TALENT[f.monthTen])arr.push(f.monthTen); if(f.yearTen&&TALENT[f.yearTen]&&arr.indexOf(f.yearTen)<0)arr.push(f.yearTen);
+  return arr;
+}
+function keyStars(f){return f.stars.slice(0,4);}
+function headlineLabel(f){
+  if(f.names['華蓋'])return '芸術の星“華蓋”を持つ表現者';
+  if(f.monthTen==='傷官'||f.yearTen==='傷官')return '“傷官”の感性を持つ表現者';
+  if(f.monthTen==='食神'||f.yearTen==='食神')return '“食神”の才を持つ人';
+  if(f.names['天乙貴人'])return '“天乙貴人”に守られた強運の人';
+  if(f.names['魁罡'])return '“魁罡”のカリスマを持つ人';
+  return f.dayStem+'（'+f.dayEl+'）の芯を持つ人';
+}
+function weakBlock(f,level){
+  var b=[];
+  var hasSho=(f.tens['傷官']||0)>0, hasKan=(f.tens['正官']||0)+(f.tens['偏官']||0)>0, hasHigh=f.names['飛刃']||f.names['羊刃'];
+  var lonely=f.chusatsu.length>0||f.names['太極貴人'];
+  if(hasSho)b.push('<b>繊細さ</b>：感受性が鋭く、人の何気ない一言や反応に人一倍敏感。称賛は素直に受け取りにくく、小さな批判ほど深く刺さってしまうことも。');
+  if(hasKan||hasHigh)b.push('<b>完璧主義の自己ダメ出し</b>：「まだ足りない」と自分に厳しく、走り続けて“休むこと”が少し苦手。理想が高いぶん、達成しても満たされにくい瞬間があるのかもしれません。');
+  if(lonely)b.push('<b>抱え込みと孤独感</b>：弱音を吐くのがちょっと苦手で、悩みを一人で抱えがち。「本当は分かってほしい」という静かな寂しさも。');
+  if(f.names['太極貴人']||(f.tens['偏印']||0)+(f.tens['印綬']||0)>=1.5)b.push('<b>考えすぎのループ</b>：答えの出ない問いを、夜中まで一人で反芻してしまうことも。');
+  if(f.lack.length)b.push('<b>自分のケアは後回し</b>：'+f.lack.map(elc).join('・')+'の気が控えめで、現実的な段取りや休息、自分をいたわることが後回しになりがち。');
+  if(!b.length)b.push('<b>ときどきの迷い</b>：まわりに気を配るぶん、自分の本音や希望を後回しにしてしまうことがあるかもしれません。');
+  var cap=level==='soft'?3:(level==='normal'?4:5); b=b.slice(0,cap);
+  var close=level==='strong'
+    ? 'でも、その“揺らぎ”や痛みを知っていることが、人の心に深く届く表現や優しさの源。弱さも含めて認めてあげると、才能はもっと自由に輝きます。🌱'
+    : 'でも、この“揺らぎ”こそが、人の痛みに寄り添える優しさや、心を打つ表現の源。弱さを責めず、時々立ち止まって自分をいたわる時間を持てると、才能はもっとのびやかに輝きます。🌱';
+  return '<ul style="margin:6px 0;padding-left:1.2em">'+b.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'+close;
+}
+function loveBlock(f){
+  var s='';
+  if(f.names['咸池']&&f.names['紅艶'])s='「咸池（桃花）」と「紅艶」、人を惹きつける華の星をあわせ持ちます。自然と視線を集める色気と魅力の持ち主。';
+  else if(f.names['咸池'])s='「咸池＝桃花」の星を持ち、人を自然と惹きつける華と色気があります。';
+  else if(f.names['紅艶'])s='「紅艶」の星を持ち、独特の色気で人を惹きつけます。';
+  else s='派手さより、知るほどに惹かれる“じわじわ本命”タイプ。誠実さが最大の魅力です。';
+  var star=f.sex==='male'?'正財（妻の星）':'正官（夫の星）';
+  var has=(f.sex==='male'?(f.tens['正財']||0)+(f.tens['偏財']||0):(f.tens['正官']||0)+(f.tens['偏官']||0))>0;
+  s+=has?('命式には'+star+'にあたる相手運の星もあり、パートナーとの縁を大切に育てられる人。'):('相手運の星は控えめですが、それは「縁がない」意味ではなく、自分らしい形の関係を築くタイプということ。');
+  s+='日柱「'+f.pillars[2].ganzhi+'」らしく、愛する対象にはまっすぐ——恋も全力で向き合う人でしょう。';
+  return s;
+}
+
+function buildNote(f,cfg){
+  var name=f.name, who=f.bio?('。'+f.bio+'として知られています'):'';
+  var head=headlineLabel(f);
+  var titles=['【誕生日にも】'+name+'さんを四柱推命で徹底鑑定｜'+head,
+              name+'さんの命式を四柱推命で解剖｜'+f.dayStem+'の芯と、これからの運の流れ',
+              '四柱推命で読む'+name+'さんの“素顔”と宿命｜'+head];
+  var L=[];
+  L.push('【タイトル案】\n・'+titles.join('\n・')+'\n');
+  L.push(name+'さん'+(f.bio?('（'+f.bio+'）'):'')+'を、公開情報の生年月日から四柱推命で読み解きます。命式・神殺・運の流れまで、まるっと鑑定してみましょう🔮\n');
+  L.push(keywordBlock(f)+'\n');
+  // 命式表（テキスト）
+  L.push('■ 命式表（四柱推命の設計図）');
+  L.push(chartText(f));
+  L.push('※出生時間は非公開のため時柱なし／空亡（天中殺）＝'+(f.kubo.join('')||'—')+(f.chusatsu.length?('（'+f.chusatsu.join('・')+'あり）'):'')+'\n');
+  // 一言
+  L.push('■ 一言でいうと');
+  L.push('日主は「'+f.dayStem+'」＝'+DAYSTEM[f.dayStem]+'。身の強さは「'+strip(f.sType)+'」で、'+STYPE(f.sType)+'タイプです。\n');
+  // 五行バランス
+  L.push('■ 五行のバランス');
+  L.push(gogyoBlock(f)+'\n');
+  // 才能
+  var tal=topTalents(f);
+  L.push('■ 際立つ才能・性格');
+  var talS=tal.map(function(t){return '【'+t+'】'+TALENT[t];}).join('。また、');
+  L.push(talS+'。'+(keyStars(f).length?('神殺では '+keyStars(f).map(function(n){return '「'+n+'（'+STAR[n]+'）」';}).join('、')+' に恵まれ、才能をあと押しします。'):'')+'\n');
+  // 隠れた一面
+  L.push('■ 隠れた一面');
+  L.push(hiddenBlock(f)+'\n');
+  // 弱さ・不安
+  L.push('■ ちょっとした弱さ・不安（だからこそ人間らしい）');
+  L.push(stripTags(weakBlock(f,cfg.weak))+'\n');
+  // 恋愛
+  L.push('■ 恋愛・人を惹きつける力');
+  L.push(loveBlock(f)+'\n');
+  // 仕事
+  L.push('■ 仕事・才能の活かし方');
+  L.push(workBlock(f)+'\n');
+  // 運の流れ
+  L.push('■ これからの運の流れ（大運・年運）');
+  L.push(fortuneBlock(f)+'\n');
+  // 運を活かすヒント
+  L.push('■ 運を活かすヒント');
+  L.push(tipsBlock(f)+'\n');
+  // まとめ
+  L.push('■ まとめ');
+  L.push(name+'さんは、'+f.dayStem+'の芯に'+(tal[0]?TALENT[tal[0]].replace(/。.*/,''):'豊かな個性')+'を宿した、魅力あふれる命式の持ち主。これからの流れも楽しみですね。\n');
+  L.push('あなたの命式には、どんな“星”が光っているでしょう？');
+  L.push('▶ '+(cfg.cta||'あなた自身の命式も読み解いてみませんか？')+(cfg.school?('（'+cfg.school+'）'):'')+(cfg.url?('\n'+cfg.url):''));
+  L.push('\n※公開情報の生年月日に基づく推定・出生時間不明のため時柱なしで鑑定した占い・エンタメです。事実を断定するものではありません。');
+  L.push(cfg.tags||'#四柱推命 #占い');
+  return L.join('\n').replace(/<[^>]+>/g,'').replace(/\n{3,}/g,'\n\n');
+}
+function keywordBlock(f){
+  var kw=[],SK={天乙貴人:'強運の人徳',咸池:'桃花の華',紅艶:'色気の魅力',魁罡:'カリスマ',将星:'リーダー気質',太極貴人:'深い探究心',驛馬:'行動力',華蓋:'芸術の星',福星貴人:'恵まれ運'};
+  if(f.names['華蓋'])kw.push('芸術の星・華蓋');
+  topTalents(f).forEach(function(t){kw.push(t);});
+  ['天乙貴人','咸池','紅艶','魁罡','将星','太極貴人','驛馬'].forEach(function(n){if(f.names[n])kw.push(SK[n]);});
+  if(f.chusatsu.length)kw.push(f.chusatsu[0]);
+  var GM={子丑:'初代運',寅卯:'2代目の才',辰巳:'行動派',午未:'まとめ役',申酉:'調整役',戌亥:'精神性'}; if(GM[f.group])kw.push(GM[f.group]);
+  kw=kw.filter(function(v,i,a){return v&&a.indexOf(v)===i;}).slice(0,6);
+  return '🔑 この人を象徴するキーワード：'+kw.join(' ／ ');
+}
+function gogyoBlock(f){
+  var five=f.five,order=['木','火','土','金','水'];
+  var s='五行のバランスは '+order.map(function(e){return e+(five[e]||0);}).join(' ')+'。';
+  var SUP={木:'植物・緑・成長のテーマ',火:'太陽・情熱・発信',土:'安定・現実・健康管理',金:'ルール・けじめ・美意識',水:'休息・柔軟さ・知性'};
+  if(f.lack.length)s+=f.lack.map(function(e){return e;}).join('・')+'の気が控えめなので、'+f.lack.map(function(e){return SUP[e];}).filter(Boolean).join('／')+'を意識すると、運のバランスが整いやすくなります。';
+  else s+='五行が一通りそろい、自分の力で世界を組み立てられるタイプです。';
+  return s;
+}
+function chartText(f){
+  var labs=['年','月','日'],rows=[];
+  for(var i=0;i<3;i++){var p=f.pillars[i];var zk=(p.hiddenStems||[]).map(function(h){return h.stem+'('+(h.tenStar||'')+')';}).join('・');rows.push('　'+labs[i]+'柱：'+p.ganzhi+'／'+(p.tenStar||'日主')+'／十二運:'+(p.terrain||'—')+'／蔵干:'+(zk||'—'));}
+  return rows.join('\n');
+}
+function hiddenBlock(f){
+  var parts=[];
+  var hasKan=(f.tens['正官']||0)+(f.tens['偏官']||0)>0;
+  var hasSho=(f.tens['傷官']||0)>0;
+  if(hasSho)parts.push('表向きの明るさの奥に、傷官ならではの鋭い感性と“妥協しない”美意識を秘めています。');
+  if(hasKan)parts.push('蔵干に隠れた官星（正官・偏官）が、「ここは絶対に譲れない」という強い自制心と責任感を内側に育てています。');
+  if(f.names['太極貴人'])parts.push('「太極貴人」を持ち、目に見えない世界や物事の本質を、一人で深く掘り下げるタイプ。');
+  if(f.chusatsu.length)parts.push('宿命中殺（'+f.chusatsu.join('・')+'）を持ち、既存の枠にとらわれず、自分の力で道を切り拓く覚悟が根っこにあります。');
+  if(!parts.length)parts.push('穏やかな表情の奥に、自分だけの世界観と静かなこだわりを持っています。');
+  parts.push('この“表と裏の二面性”——にぎやかさと孤高、優しさと激しさのせめぎ合いこそが、この人の深みと魅力の源かもしれません。');
+  return parts.join('');
+}
+function workBlock(f){
+  var s='日柱の十二運は「'+(f.pillars[2].terrain||'—')+'」。';
+  if(/建禄|帝旺|冠帯|長生/.test(f.pillars[2].terrain||''))s+='自分の足で立ち、実力で道を切り拓くパワーがあります。';
+  else s+='マイペースに、自分のリズムで着実に力を発揮していくタイプです。';
+  var good=keyStars(f).filter(function(n){return ['天乙貴人','福星貴人','天德貴人','太極貴人','将星','華蓋','禄馬','天官貴人'].indexOf(n)>=0;});
+  if(good.length)s+='「'+good.map(function(n){return n;}).join('」「')+'」といった吉星に恵まれ、活動を広げるほど運が乗ります。';
+  if(f.names['驛馬'])s+='「驛馬」もあり、移動・変化の多い活動的なフィールドで輝きます。';
+  var g=f.group; var GM={子丑:'何もないところから道を切り拓く“初代運”',寅卯:'補佐役・2代目として才能を発揮する運',辰巳:'現実世界での行動力・実行力に恵まれた運',午未:'物事を完成させ、まとめ上げる力に優れた運',申酉:'人との調整・バランス感覚に優れた運',戌亥:'精神性の高さと独立運に恵まれた運'};
+  if(GM[g])s+='天中殺グループは「'+g+'」＝'+GM[g]+'。';
+  return s;
+}
+function fortuneBlock(f){
+  var L=[],d=f.dae;
+  if(d.cur>=0){var cd=d.list[d.cur];L.push('◎ 現在の大運：'+cd.age+'歳〜「'+cd.gz+'・'+cd.ten+'」。'+(UN[cd.ten]||'新しい流れが動く時期')+'のまっただ中。');}
+  if(d.next>=0){var nd=d.list[d.next];L.push('◎ 次の大運：'+nd.age+'歳〜「'+nd.gz+'・'+nd.ten+'」。'+(UN[nd.ten]||'次のステージへ')+'。');}
+  var cy=f.now.year,thisY=f.af[0];
+  if(thisY)L.push('◎ 今年（'+thisY.year+'年）：「'+thisY.ganzhi+'・'+thisY.tenStar+'」。'+yearLine(thisY.tenStar)+'。');
+  var near=f.af.slice(1,3).map(function(a){return a.year+'年は「'+a.tenStar+'」';});
+  if(near.length)L.push('◎ 近い流れ：'+near.join('、')+'——'+f.af.slice(1,3).map(function(a){return shortUn(a.tenStar);}).join('、')+'。');
+  return L.join('\n');
+}
+function tipsBlock(f){
+  var t=[];
+  if(f.chusatsu.indexOf('生年中殺')>=0||f.chusatsu.indexOf('生月中殺')>=0)t.push('生まれ育った環境に縛られず、自分の力で新しい場所を築くほど運が伸びます。');
+  if(f.chusatsu.indexOf('生日中殺')>=0||f.chusatsu.indexOf('日座中殺')>=0)t.push('「普通」に自分を合わせるより、自分らしいスタイルを貫くほうが輝けます。');
+  var d=f.dae,cd=(d.cur>=0?d.list[d.cur]:null);
+  if(cd&&/偏官|傷官/.test(cd.ten))t.push('今は攻めと表現の時期。走りすぎに気をつけつつ、勝負に出て吉。');
+  else if(cd&&/財/.test(cd.ten))t.push('今は人・機会を広げる時期。出会いとつながりを大切に。');
+  else if(cd&&/官/.test(cd.ten))t.push('今は信頼と役割を固める時期。丁寧な積み上げが実ります。');
+  else if(cd)t.push('今の流れに逆らわず、自分のペースを守ることが開運につながります。');
+  if(f.lack.length)t.push(f.lack.join('・')+'の気を暮らしに取り入れると、心身のバランスが整いやすくなります。');
+  if(f.peach)t.push('人を惹きつける華があるぶん、恋も人間関係も“情に流されすぎない”冷静さを一つ持つと安心です。');
+  if(!t.length)t.push('持ち味を素直に活かし、心地よいペースを守ることが開運の近道です。');
+  return t.slice(0,5).map(function(x){return '・'+x;}).join('\n');
+}
+function yearLine(t){return (UN[t]||'新しい流れが動く年').replace(/10年|時期/g,'年');}
+function shortUn(t){var M={比肩:'自分軸が固まる',劫財:'挑戦の気',食神:'表現が花開く',傷官:'才能が形になる',偏財:'縁と機会が広がる',正財:'堅実な実り',偏官:'変革と飛躍',正官:'信頼と地位が育つ',偏印:'学び直し',印綬:'知性と人徳が高まる'};return M[t]||'新たな動き';}
+
+function buildX(f,cfg){
+  var head=headlineLabel(f),d=f.dae,cd=(d.cur>=0?d.list[d.cur]:null),tal=topTalents(f);
+  var tags=(cfg.tags||'#四柱推命').split(/\s+/).slice(0,3).join(' ');
+  var thread=[];
+  thread.push('1/ '+f.name+'さんを四柱推命で鑑定🔮'+(f.bio?('（'+f.bio+'）'):''));
+  thread.push('2/ 日主「'+f.dayStem+'」＝'+DAYSTEM[f.dayStem].split('。')[0]+'。'+strip(f.sType)+'のバランス。');
+  thread.push('3/ '+(tal[0]?('際立つのは【'+tal[0]+'】'+TALENT[tal[0]].split('。')[0]):'豊かな個性')+'。'+(keyStars(f)[0]?('神殺は「'+keyStars(f)[0]+'」も。'):''));
+  thread.push('4/ 隠れた一面は“'+(f.chusatsu.length||f.names['太極貴人']?'孤高':'こだわり')+'”。'+(f.names['咸池']||f.names['紅艶']?'桃花の華もあり人を惹きつける。':''));
+  thread.push('5/ 運の流れ：'+(cd?('今は「'+cd.ten+'」の大運（'+cd.age+'歳〜）。'):'')+'続きはnoteで▶'+(cfg.url||'')+' '+tags);
+  var one='🔮'+f.name+'さんを四柱推命で観ると…日主「'+f.dayStem+'」に'+(tal[0]?('【'+tal[0]+'】'+TALENT[tal[0]].split('。')[0]):'豊かな個性')+'✨'+(f.names['咸池']||f.names['紅艶']?'桃花の華も。':'')+'詳しくはnoteで👇\n'+(cfg.url||'')+'\n'+tags;
+  return {thread:thread.join('\n'),one:one};
+}
+function buildIG(f,cfg){
+  var tal=topTalents(f),d=f.dae,cd=(d.cur>=0?d.list[d.cur]:null);
+  var lines=['🔮'+f.name+'さんを四柱推命で鑑定！'+(f.bio?('（'+f.bio+'）'):'')];
+  lines.push('🌳 日主「'+f.dayStem+'」＝'+DAYSTEM[f.dayStem].split('。')[0]);
+  if(tal[0])lines.push('✨ 【'+tal[0]+'】'+TALENT[tal[0]].split('。')[0]);
+  lines.push('🖤 隠れた一面＝'+(f.chusatsu.length||f.names['太極貴人']?'こだわりと孤高':'自分だけの世界観'));
+  if(f.names['咸池']||f.names['紅艶'])lines.push('💗 桃花の星＝人を惹きつける華');
+  if(cd)lines.push('🚀 今は「'+cd.ten+'」の運の流れ');
+  lines.push('👉 詳しい鑑定＋命式表はプロフのリンクからnoteへ！');
+  if(cfg.cta)lines.push(cfg.cta);
+  lines.push('—\n※公開情報に基づく推定・時柱なし・占い/エンタメ');
+  var tags=(cfg.tags||'#四柱推命 #占い')+' #占い好きな人と繋がりたい';
+  lines.push(tags);
+  return lines.join('\n');
+}
+
+function strip(s){return (s||'').replace(/[（(].*$/,'');}
+function stripTags(h){return (h||'').replace(/<li>/g,'・').replace(/<\/li>/g,'\n').replace(/<[^>]+>/g,'').replace(/\n+/g,'\n').trim();}
+
+/* ---- 設定の保存/読込 ---- */
+function loadCfg(){var c={};try{c=JSON.parse(localStorage.getItem('sns_cfg')||'{}');}catch(e){}
+  $('setSchool').value=c.school||'';$('setUrl').value=c.url||'';$('setCta').value=c.cta||'';$('setTags').value=c.tags||'#四柱推命 #占い';return c;}
+function curCfg(){return {school:$('setSchool').value.trim(),url:$('setUrl').value.trim(),cta:$('setCta').value.trim(),tags:$('setTags').value.trim(),weak:$('weak').value};}
+$('setSave').onclick=function(){var c=curCfg();try{localStorage.setItem('sns_cfg',JSON.stringify(c));}catch(e){}toast('設定を保存しました');};
+
+/* ---- UI ---- */
+function fillSelects(){
+  var bm=$('bm'),bd=$('bd'),bh=$('bh'),bmin=$('bmin'),i;
+  bm.innerHTML='<option value="">月</option>';for(i=1;i<=12;i++)bm.innerHTML+='<option value="'+i+'">'+i+'月</option>';
+  bd.innerHTML='<option value="">日</option>';for(i=1;i<=31;i++)bd.innerHTML+='<option value="'+i+'">'+i+'日</option>';
+  bh.innerHTML='';for(i=0;i<24;i++)bh.innerHTML+='<option value="'+i+'">'+i+'時</option>';
+  bmin.innerHTML='';for(i=0;i<60;i+=5)bmin.innerHTML+='<option value="'+i+'">'+i+'分</option>';
+}
+$('tu').onchange=function(){$('timeWrap').style.display=this.checked?'none':'grid';};
+[].forEach.call(document.querySelectorAll('.tab'),function(t){t.onclick=function(){
+  [].forEach.call(document.querySelectorAll('.tab'),function(x){x.classList.remove('on');});
+  [].forEach.call(document.querySelectorAll('.pane'),function(x){x.classList.remove('on');});
+  t.classList.add('on');$('pane-'+t.getAttribute('data-pane')).classList.add('on');
+};});
+[].forEach.call(document.querySelectorAll('[data-copy]'),function(bn){bn.onclick=function(){
+  var ta=$(bn.getAttribute('data-copy'));if(!ta)return;ta.focus();ta.select();
+  var ok=false;try{ok=document.execCommand('copy');}catch(e){}
+  try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(ta.value);ok=true;}}catch(e){}
+  toast(ok?'コピーしました':'コピーできませんでした（長押しで選択してください）');
+};});
+function toast(m){var t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},1600);}
+
+var LAST=null;
+$('go').onclick=function(){
+  $('err').textContent='';
+  var y=parseInt($('by').value,10),mo=parseInt($('bm').value,10),d=parseInt($('bd').value,10);
+  var name=$('pname').value.trim();
+  if(!name){$('err').textContent='名前を入力してください。';return;}
+  if(!(y>=1900&&y<=2100)||!(mo>=1&&mo<=12)||!(d>=1&&d<=31)){$('err').textContent='生年月日を正しく入力してください（西暦・月・日）。';return;}
+  var tu=$('tu').checked;
+  var inp={name:name,bio:$('pbio').value.trim(),y:y,mo:mo,d:d,hh:tu?12:parseInt($('bh').value,10),mi:tu?0:parseInt($('bmin').value,10),tu:tu,sex:$('sex').value};
+  var f;
+  try{f=extract(inp);}catch(e){f=null;}
+  if(!f){$('err').textContent='鑑定の計算に失敗しました。生年月日をご確認ください。';return;}
+  LAST=f;
+  var cfg=curCfg();
+  $('outNote').value=buildNote(f,cfg);
+  var x=buildX(f,cfg);$('outXThread').value=x.thread;$('outXOne').value=x.one;
+  $('outIG').value=buildIG(f,cfg);
+  $('chartBox').innerHTML=chartTable(f);
+  $('chartMeta').textContent='日主 '+f.dayStem+'（'+f.dayEl+'）／'+strip(f.sType)+'／空亡 '+(f.kubo.join('')||'—')+(f.chusatsu.length?('／'+f.chusatsu.join('・')):'');
+  $('outCard').style.display='block';
+  $('outCard').scrollIntoView({behavior:'smooth',block:'start'});
+};
+
+/* ---- AIで磨く（任意・本番サイトで有効） ---- */
+$('aiPolish').onclick=function(){
+  if(!LAST){toast('先に鑑定文を生成してください');return;}
+  var served=/^https?:$/.test(location.protocol);
+  var key=''; try{key=localStorage.getItem('ms_gkey')||'';}catch(e){}
+  if(!served&&!key){$('aiHint').innerHTML='<span style="color:var(--warn)">AI整文は本番サイト（https）で使えます。この画面ではテンプレ文をそのままお使いください。</span>';return;}
+  var draft=$('outNote').value;
+  var sys='あなたは四柱推命の鑑定士でSNSライターです。以下の【下書き】を、構成・見出し・順序・事実（干支/通変星/神殺/運）を一切変えずに、より自然で読みたくなる日本語に整えてください。ポジティブ中心・約2500字・「■」見出しは維持・専門用語は残しつつ平易に。免責とハッシュタグはそのまま末尾に。断定を避け、実在人物の私生活は事実として書かない。';
+  var body={systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:draft}]}],generationConfig:{temperature:0.7,maxOutputTokens:4096}};
+  var url,headers;
+  if(key){url='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+encodeURIComponent(key);headers={'Content-Type':'application/json'};}
+  else{url='/api/gemini';headers={'Content-Type':'application/json','x-pk-deep':'1'};}
+  $('aiHint').textContent='AIで整えています… 🔮';$('aiPolish').disabled=true;
+  fetch(url,{method:'POST',headers:headers,body:JSON.stringify(body)}).then(function(r){return r.text();}).then(function(t){
+    $('aiPolish').disabled=false;var j;try{j=JSON.parse(t);}catch(e){$('aiHint').textContent='AI応答の解析に失敗しました。テンプレ文をお使いください。';return;}
+    var cand=j.candidates&&j.candidates[0],txt=cand&&cand.content&&cand.content.parts?cand.content.parts.map(function(x){return x.text||'';}).join(''):'';
+    if(txt){$('outNote').value=txt.trim();$('aiHint').textContent='✅ AIで整えました（気に入らなければ再生成で戻せます）。';}
+    else{$('aiHint').textContent='AI生成に失敗しました。テンプレ文をそのままお使いください。';}
+  }).catch(function(){$('aiPolish').disabled=false;$('aiHint').textContent='通信エラー。テンプレ文をお使いください。';});
+};
+
+fillSelects();loadCfg();
+})();
+</script>
+</body></html>
