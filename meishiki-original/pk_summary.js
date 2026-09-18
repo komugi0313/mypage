@@ -51,9 +51,12 @@ function favOf(fav,el){return fav&&fav[el]==='喜'?1:(fav&&fav[el]==='忌'?-1:0)
 function kuubo(dayGZ){var S='甲乙丙丁戊己庚辛壬癸',B='子丑寅卯辰巳午未申酉戌亥';var s=S.indexOf(dayGZ[0]),b=B.indexOf(dayGZ[1]);var d=((b-s)%12+12)%12;return [B[(d+10)%12],B[(d+11)%12]];}
 
 var WANG={火:'午',水:'子',木:'卯',金:'酉'}; /* 三合の旺神（中神） */
-function assess(stem,branch,fav,natal,daeun,kb){
+/* 通変星テーマの加点（建設的な星は少し追い風寄りに。喜忌ほど大きくは効かせない） */
+var TENSTAR_TONE={食神:0.5,正財:0.4,正官:0.4,印綬:0.4,正印:0.4,偏財:0.3,比肩:0.1,偏印:0.1,劫財:-0.1,傷官:-0.1,偏官:-0.3,七殺:-0.3};
+function assess(stem,branch,fav,natal,daeun,kb,ten){
   var se=STEM_EL[stem],be=BR_EL[branch],rs=[];
   var s=favOf(fav,se)*0.8+favOf(fav,be)*1.2;
+  if(ten&&TENSTAR_TONE[ten]!=null){ s+=TENSTAR_TONE[ten]; rs.push((TENSTAR_TONE[ten]>=0?'◎':'⚠')+ten); }
   /* 大運は「五行トーン」に加え、支そのものを合冲刑の照合対象に参加させる（年運×命式＋年運×大運） */
   var others=natal.slice();
   if(daeun){var de=STEM_EL[daeun[0]],dbe=BR_EL[daeun[1]];s+=favOf(fav,de)*0.4+favOf(fav,dbe)*0.8;
@@ -213,7 +216,7 @@ window.pkProSummaryHTML=function(p,inp){
   try{ window.__pkCtx={ds:ds,af:(c.annualFortunes||[]),fav:fav,natal:natal,kb:kb,assess:window.__pkAssess,sex:(inp&&inp.sex)||''}; }catch(e){}
   var prevS=null;
   var decCells=ds.map(function(d,i){
-    var a=window.__pkAssess(d.ganzhi[0],d.ganzhi[1],fav,natal,null,kb);
+    var a=window.__pkAssess(d.ganzhi[0],d.ganzhi[1],fav,natal,null,kb,d.tenStar);
     var seas=seasons[i], trans=(prevS&&seas&&prevS!==seas);
     var badge=(trans?'<div style="font-size:10px;font-weight:900;color:#7A5A16;background:#FBEFD3;border:1px solid #E7CE93;border-radius:5px;padding:1px 6px;margin-bottom:3px;display:inline-block">🍃 '+SJP[prevS]+'→'+SJP[seas]+' 切替</div>':'');
     var seasTag='<div style="font-size:9.5px;color:#8a7f6b;font-weight:700;margin-bottom:1px">'+(SJP[seas]||'')+'（'+(seas||'')+'）</div>';
@@ -310,11 +313,11 @@ window.pkProSummaryHTML=function(p,inp){
   var af=(c.annualFortunes||[]).filter(function(a){return a.year>=cy&&a.year<=cy+8;});
   var sexS=(inp&&inp.sex)||'';
   var markS=function(ts){var m=window.__pkMarry(ts,sexS);return m?' '+m:'';};
-  var yrCells=af.map(function(y){var a=window.__pkAssess(y.ganzhi[0],y.ganzhi[1],fav,natal,daeunFor(y.year),kb);return cell(a,y.year+markS(y.tenStar));}).join('');
+  var yrCells=af.map(function(y){var a=window.__pkAssess(y.ganzhi[0],y.ganzhi[1],fav,natal,daeunFor(y.year),kb,y.tenStar);return cell(a,y.year+markS(y.tenStar));}).join('');
   var anyMarS=af.some(function(y){return !!markS(y.tenStar);})||ds.some(function(d){return !!markS(d.tenStar);});
   var marLegendS=anyMarS?('<p class="note" style="margin:6px 0 0;color:#b06a2e;font-size:11.5px">💍＝'+(sexS==='male'?'正財＝正妻':sexS==='female'?'正官＝正夫':'配偶者星')+'（結婚の星）／💕＝'+(sexS==='male'?'偏財':sexS==='female'?'偏官':'—')+'（恋愛・出会い）／📖＝偏印（学び・占いと縁）が<b>大運・年運</b>に巡る時。</p>'):'';
-  var curD=window.__pkAssess(ds[nowI].ganzhi[0],ds[nowI].ganzhi[1],fav,natal,null,kb);
-  var curY=af.length?window.__pkAssess(af[0].ganzhi[0],af[0].ganzhi[1],fav,natal,daeunFor(af[0].year),kb):null;
+  var curD=window.__pkAssess(ds[nowI].ganzhi[0],ds[nowI].ganzhi[1],fav,natal,null,kb,ds[nowI].tenStar);
+  var curY=af.length?window.__pkAssess(af[0].ganzhi[0],af[0].ganzhi[1],fav,natal,daeunFor(af[0].year),kb,af[0].tenStar):null;
   var thisYearTxt=curY?('<b>今年('+af[0].year+')</b>は<b style="color:'+curY.color+'">'+curY.label+'</b>。'+({追い風:'素直に動いて良い年。',良:'堅実に前進できる年。',仕込み:'種まきの年。焦って確定を急がない。',穏やか:'穏やかな年。土台固めを。','小さな注意':'少し守りの年。',要注意:'守りの年。大きな勝負は避ける。'}[curY.label]||'')):'';
   /* 「今ここ」一行サマリー */
   var nowAge=(c.now&&c.now.age!=null)?c.now.age:null, dN=ds[nowI], nowSeas=BRS[dN.ganzhi[1]];
@@ -361,7 +364,7 @@ window.__pkDecadeDetailHTML=function(di){
   var years=(C.af||[]).filter(function(y){return y.year>=sy&&y.year<=ey;});
   if(!years.length)return '<div style="background:#FBFAF6;border:1px dashed #CDBF9E;border-radius:10px;padding:9px 10px;margin:2px 0 10px;font-size:12px;color:#888">この10年の年運データがありません。</div>';
   var SC={追い風:5,良:4,仕込み:3,穏やか:2,'小さな注意':1,要注意:0};
-  var rows=years.map(function(y){var a=C.assess(y.ganzhi[0],y.ganzhi[1],C.fav,C.natal,d.ganzhi,C.kb);return {y:y.year,age:sAge+(y.year-sy),gz:y.ganzhi,ts:y.tenStar,a:a,sc:(SC[a.label]!=null?SC[a.label]:2)};});
+  var rows=years.map(function(y){var a=C.assess(y.ganzhi[0],y.ganzhi[1],C.fav,C.natal,d.ganzhi,C.kb,y.tenStar);return {y:y.year,age:sAge+(y.year-sy),gz:y.ganzhi,ts:y.tenStar,a:a,sc:(SC[a.label]!=null?SC[a.label]:2)};});
   var mn=Math.min.apply(null,rows.map(function(r){return r.sc;})),mx=Math.max.apply(null,rows.map(function(r){return r.sc;}));
   var mark=function(ts){return window.__pkMarry(ts,C.sex);};
   var anyMar=rows.some(function(r){return !!mark(r.ts);})||!!mark(d.tenStar);
@@ -516,7 +519,7 @@ window.__pkDecadeDetailHTML=function(di){
 (function(){
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 var SHENG={木:'火',火:'土',土:'金',金:'水',水:'木'};
-function daeunLabel(p){var c=p.pro,fav=p.fav||{},natal=window.__pkNatal(c),kb=window.__pkKuubo(c.pillars[2].ganzhi),ds=c.decadeFortunes||[],i=(c.now&&c.now.daeunIndex)||0;var a=window.__pkAssess(ds[i].ganzhi[0],ds[i].ganzhi[1],fav,natal,null,kb);return a.label;}
+function daeunLabel(p){var c=p.pro,fav=p.fav||{},natal=window.__pkNatal(c),kb=window.__pkKuubo(c.pillars[2].ganzhi),ds=c.decadeFortunes||[],i=(c.now&&c.now.daeunIndex)||0;var a=window.__pkAssess(ds[i].ganzhi[0],ds[i].ganzhi[1],fav,natal,null,kb,ds[i].tenStar);return a.label;}
 window.pkCompatSummaryHTML=function(pa,pb,la,lb){
   var ca=pa.pro,cb=pb.pro,elA=ca.dayMaster.element,elB=cb.dayMaster.element;
   var good=[],care=[],score=0,type='';
