@@ -620,11 +620,20 @@ window.pkKaikyokuSummaryHTML=function(p,inp){
     af.forEach(function(y){ if(!y||!y.ganzhi) return; if(cy!=null&&y.year<cy) return; if(yrR.length>=12) return;
       var a=assess(y.ganzhi[0],y.ganzhi[1],fav,natal,daeGZ(y.year),kb);
       (a&&a.rs||[]).forEach(function(t){ if(isKai(t)) yrR.push(E(y.year)+' '+tagH(t)); }); });
+    /* 4) 三者持ち寄り（命式＋大運＋年運）で会局が完成する年 */
+    var fm=function(el){var v=(window.__pkFavOf?window.__pkFavOf(fav,el):0);return v>0?' <b style="color:var(--good)">◎喜</b>':(v<0?' <b style="color:var(--warn)">⚠忌</b>':'');};
+    var comboR=[];
+    if(typeof window.comboRels==='function'){
+      af.forEach(function(y){ if(!y||!y.ganzhi) return; if(cy!=null&&y.year<cy) return; if(comboR.length>=12) return;
+        var dg=daeGZ(y.year); if(!dg) return; var cr=[]; try{ cr=window.comboRels(c,dg.charAt(1),y.ganzhi.charAt(1))||[]; }catch(e){}
+        cr.forEach(function(x){ comboR.push(E(y.year)+'年：命式'+E(x.natal)+'＋大運'+E(x.daiun)+'＋年運'+E(x.year)+' → <b style="color:var(--good)">'+(x.kind==='三合成立'?'三合会局':'方合')+'('+E(x.el)+')</b>完成'+fm(x.el)); }); });
+    }
     var H='<section class="card"><h2>🔗 会局サマリー（三合・方合・半会の成立）</h2>'
       +'<p class="note" style="margin:0 0 8px">支がそろって<b>三合・方合が完成</b>／<b>半会</b>が成立する所です。<b style="color:var(--good)">◎＝喜（開運・狙い目）</b>／<b style="color:var(--warn)">⚠＝忌（注意）</b>／○＝中立。命式・大運・年運を通しで拾っています。</p>';
     H+='<div style="margin:5px 0"><b>命式内：</b>'+(inner.length?inner.join('、'):'<span class="note">完成した三合・方合はなし（単独支＋巡りで狙う形）</span>')+'</div>';
     H+='<div style="margin:5px 0"><b>大運で成立：</b>'+(deR.length?deR.join(' ／ '):'<span class="note">なし</span>')+'</div>';
     H+='<div style="margin:5px 0"><b>これからの年で成立：</b>'+(yrR.length?yrR.join(' ／ '):'<span class="note">算出範囲では成立年なし</span>')+'</div>';
+    H+='<div style="margin:5px 0"><b>三者持ち寄り（命式＋大運＋年運）完成：</b>'+(comboR.length?comboR.join('<br>'):'<span class="note">算出範囲では三者がそろう完成年なし</span>')+'</div>';
     H+='</section>';
     return H;
   }catch(e){ return ''; }
