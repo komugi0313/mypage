@@ -1732,7 +1732,22 @@ function gouCard(c){
     /* 方合 */
     for(var h in HOUGO){ var hg=HOUGO[h]; if(hg.every(function(x){return brs.indexOf(x)>=0;})) rows.push('<div class="tr"><b style="color:var(--good)">方合（'+esc(h)+'＝'+esc(HOUEL[h])+'）</b>：'+esc(hg.join(''))+' がそろう＝季節の一極集中</div>'); }
     /* 干合（天干合） */
-    for(i=0;i<stems.length;i++)for(j=i+1;j<stems.length;j++){ if(stems[i]&&stems[j]&&GANGOU[stems[i]]===stems[j]){ var eln=GANEL[stems[i]+stems[j]]||''; rows.push('<div class="tr">'+esc(LB[i])+'干'+esc(stems[i])+'・'+esc(LB[j])+'干'+esc(stems[j])+' の<b>干合</b>'+(eln?'（条件がそろえば<b>'+esc(eln)+'</b>に化す縁）':'')+'</div>'); } }
+    /* 干合＋合化（成立＝化す／不成立＝羈絆・縛り）の目安判定 */
+    var STEM_EL={甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'金',辛:'金',壬:'水',癸:'水'};
+    var BR_EL2={子:'水',丑:'土',寅:'木',卯:'木',辰:'土',巳:'火',午:'火',未:'土',申:'金',酉:'金',戌:'土',亥:'水'};
+    var elCount=function(keshin,ia,ib){var n=0,k;for(k=0;k<brs.length;k++){if(brs[k]&&BR_EL2[brs[k]]===keshin)n++;}for(k=0;k<stems.length;k++){if(k!==ia&&k!==ib&&stems[k]&&STEM_EL[stems[k]]===keshin)n++;}return n;};
+    for(i=0;i<stems.length;i++)for(j=i+1;j<stems.length;j++){ if(stems[i]&&stems[j]&&GANGOU[stems[i]]===stems[j]){
+      var eln=GANEL[stems[i]+stems[j]]||'';
+      var mEl=brs[1]?BR_EL2[brs[1]]:'', monthOK=(!!eln&&mEl===eln), cnt=eln?elCount(eln,i,j):0;
+      var sougou=false,k2; for(k2=0;k2<stems.length;k2++){ if(k2!==i&&k2!==j&&(stems[k2]===stems[i]||stems[k2]===stems[j])) sougou=true; }
+      var dayIn=(i===2||j===2);
+      var kesu=(!!eln)&&(!sougou)&&(monthOK||cnt>=3)&&(!dayIn||(monthOK&&cnt>=3));
+      var reason=[]; if(monthOK)reason.push('月令が'+eln+'で後押し'); if(cnt>=3)reason.push(eln+'が命式に多い'); if(sougou)reason.push('同じ干が複数＝奪い合い(争合)で不安定'); if(dayIn)reason.push('日干（本人）が絡むため化は稀＝縛りとして出やすい');
+      var verdict = kesu
+        ? '<b style="color:var(--good)">化す（成立の目安）</b>：この縁が本人を<b>'+esc(eln)+'</b>寄りの性質に寄せます（面倒見・安定など五行の質が前へ）'
+        : '<b>合のみ（羈絆・化さず）</b>：結ばれるが変わりきらず、その縁（人・役割・情）に気を取られ<b>動きが縛られやすい</b>読み';
+      rows.push('<div class="tr">'+esc(LB[i])+'干'+esc(stems[i])+'・'+esc(LB[j])+'干'+esc(stems[j])+' の<b>干合</b>'+(eln?'（→'+esc(eln)+'）':'')+' — '+verdict+(reason.length?'<br><span class="note">理由：'+esc(reason.join('／'))+'（目安・流派差あり）</span>':'')+'</div>');
+    } }
     /* 命式内に冲があるか（解冲の一言用） */
     var hasChu=false; for(i=0;i<brs.length;i++)for(j=i+1;j<brs.length;j++){ if(brs[i]&&brs[j]&&CHONG[brs[i]]===brs[j]) hasChu=true; }
     var H='<div class="card"><h2>合の見方（六合・三合・方合・干合）</h2>';
