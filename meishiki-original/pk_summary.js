@@ -308,10 +308,10 @@ window.pkProSummaryHTML=function(p,inp){
     +'<span class="pill">空亡 '+esc(kbStr)+'</span><span class="pill">日支 '+esc(c.pillars[2].branch)+'</span></div>'
     +nowBar
     +'<p style="font-size:16px;font-weight:800;line-height:1.5;margin:0 0 10px">'+esc(r.core)+'</p>'
-    +'<p class="note" style="margin:-4px 0 8px">※下の<b>強み・辛口</b>は、生まれ持った<b>一生の性質（命式）</b>です。特定の時期（大運・年運）の話ではありません。</p>'
+    +'<p class="note" style="margin:-4px 0 8px">※下の<b>強み・辛口</b>は、生年月日から出る<b>命式（通変星）</b>をもとにした、<b>生まれ持った一生の性質</b>です（ずっと変わりません）。上の「今このタイミング」のような<b>特定の時期（大運・年運）の話ではありません</b>。<b>辛口＝欠点ではなく</b>、行き過ぎたときに出やすい“クセ・気をつけたい点”です。</p>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
     +'<div style="background:#EAF4EE;border-radius:10px;padding:10px"><div style="font-weight:800;color:#2E7D50;margin-bottom:4px">◎ 強み</div><ul style="margin:0;padding-left:1.1em;line-height:1.6;font-size:13.5px">'+r.strengths.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>'
-    +'<div style="background:#FCEEE9;border-radius:10px;padding:10px"><div style="font-weight:800;color:#B0483F;margin-bottom:4px">⚠ 辛口（必ず伝える）</div><ul style="margin:0;padding-left:1.1em;line-height:1.6;font-size:13.5px">'+r.cautions.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div></div>'
+    +'<div style="background:#FCEEE9;border-radius:10px;padding:10px"><div style="font-weight:800;color:#B0483F;margin-bottom:4px">⚠ 辛口</div><ul style="margin:0;padding-left:1.1em;line-height:1.6;font-size:13.5px">'+r.cautions.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div></div>'
     +'<div style="background:#FFF7E9;border:1px solid #EBD9B8;border-radius:10px;padding:10px;font-size:13.5px;line-height:1.7;margin-bottom:10px"><b>● 今どうすべきか</b><br>'+nowPhrase(curD.label)+' '+thisYearTxt+'<br><b>● 開運のコツ</b><br>'+esc(r.luck)+'</div>'
     +kyokuHTML
     +tensionHTML
