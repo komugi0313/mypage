@@ -136,11 +136,22 @@ function reading(p){
   var c=p.pro,fav=p.fav||{},dEl=c.dayMaster.element,sType=(p.sType||''),weak=/弱/.test(sType),strong=/強/.test(sType);
   var g=tally(c),five=p.five||{},s10=stars10(c);
   var top=Object.keys(g).sort(function(a,b){return g[b]-g[a];});
-  // 強み — 具体の通変星から（食神/傷官などを潰さず）
-  var strengths=[];
-  Object.keys(s10).sort(function(a,b){return s10[b]-s10[a];}).forEach(function(k){ if(strengths.length<2&&s10[k]>=2&&STR10[k]) strengths.push(STR10[k]); });
-  if(!strengths.length){ top.slice(0,2).forEach(function(k){ if(g[k]>=2&&STR[k]&&strengths.length<2) strengths.push(STR[k]); }); }
-  if(!strengths.length) strengths.push(STR[top[0]]||ELNAT[dEl]);
+  // 強み — 通変星＋五行＋十二運＋身強弱から多面的に拾う（辛口と数を揃えて最大4件）
+  var strengths=[], seenS={};
+  function pushS(t){ if(t&&!seenS[t]&&strengths.length<4){seenS[t]=1;strengths.push(t);} }
+  // ① 通変星ベース（具体・食神/傷官などを潰さない）
+  Object.keys(s10).sort(function(a,b){return s10[b]-s10[a];}).forEach(function(k){ if(s10[k]>=2) pushS(STR10[k]); });
+  // ② 五行（日主）ベース
+  var ELSTR={木:'素直な成長力と面倒見のよさで、人を伸ばし場を育てられる',火:'明るく情熱的で表現力があり、人を惹きつける華がある',土:'誠実で安定感があり、地道に信頼を積み上げられる',金:'筋を通す決断力と美意識・けじめがあり、頼られる',水:'知恵と柔軟さ・共感力があり、機転よく立ち回れる'};
+  pushS(ELSTR[dEl]);
+  // ③ 十二運（日支）ベース
+  var TERRSTR={帝旺:'ここぞで発揮する強い行動力とリーダーシップ',建禄:'まじめな責任感と、自立して働く力',冠帯:'自立心と行動力のあるしっかり者',長生:'素直で発展性があり、周りに可愛がられ伸びる',墓:'こつこつ蓄え探究する粘り強さ',死:'一つを深く突き詰める専門性・研究気質',病:'繊細で人の心に寄り添える感性',絶:'独自の発想で0→1を生むひらめき',胎:'好奇心旺盛で発想が豊か',養:'穏やかで人に恵まれ、人を育てるのが上手',沐浴:'感受性が豊かで、変化に柔軟に対応できる',衰:'落ち着いて思慮深く、堅実に判断できる'};
+  pushS(TERRSTR[c.pillars[2].terrain||'']);
+  // ④ 身強／身弱ベース
+  if(strong) pushS('芯が強く、自分を持って粘り強く進める'); else if(weak) pushS('周りに合わせて気を配れる協調性と、細やかな気づかい');
+  // フォールバック（最低1件は必ず出す）
+  if(!strengths.length){ top.slice(0,2).forEach(function(k){ if(g[k]>=2&&STR[k]) pushS(STR[k]); }); }
+  if(!strengths.length) pushS(STR[top[0]]||ELNAT[dEl]);
   // cautions（辛口）— 命式の偏りで出し分け（specific → general の順で上位が変わる）
   var ca=[], dayTerr=c.pillars[2].terrain||'';
   if(s10.正官>=1&&s10.偏官>=1) ca.push('責任や役割が二重にのしかかりやすく、真面目さゆえに抱えて消耗しやすい');
