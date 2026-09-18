@@ -286,6 +286,7 @@ table{width:100%;border-collapse:collapse;font-size:15.5px}
 <script src="./pro-bazi.js"></script>
 <script src="./pro-adapter.js"></script>
 <script src="./pk_summary.js?v=9t"></script>
+<script src="./tenkanki.js?v=1"></script>
 <script>
 /* 出生地（真太陽時の経度補正用）。日本＝47都道府県庁所在地・韓国＝主要都市。標準子午線はどちらも135° */
 var PLACES={"日本":[["北海道（札幌）",141.35],["青森",140.74],["岩手（盛岡）",141.15],["宮城（仙台）",140.87],["秋田",140.10],["山形",140.36],["福島",140.47],["茨城（水戸）",140.45],["栃木（宇都宮）",139.88],["群馬（前橋）",139.06],["埼玉（さいたま）",139.65],["千葉",140.12],["東京",139.69],["神奈川（横浜）",139.64],["新潟",139.02],["富山",137.21],["石川（金沢）",136.63],["福井",136.22],["山梨（甲府）",138.57],["長野",138.18],["岐阜",136.72],["静岡",138.38],["愛知（名古屋）",136.91],["三重（津）",136.51],["滋賀（大津）",135.87],["京都",135.77],["大阪",135.50],["兵庫（神戸）",135.18],["奈良",135.83],["和歌山",135.17],["鳥取",134.24],["島根（松江）",133.05],["岡山",133.93],["広島",132.46],["山口",131.47],["徳島",134.55],["香川（高松）",134.04],["愛媛（松山）",132.77],["高知",133.53],["福岡",130.40],["佐賀",130.30],["長崎",129.87],["熊本",130.74],["大分",131.61],["宮崎",131.42],["鹿児島",130.56],["沖縄（那覇）",127.68]],
@@ -848,6 +849,44 @@ function daeunDetail(c,fav,sex){var dl=daeunList(c);
       +'<br><b>起こりやすい事：</b>'+esc(sexNote(lk.ev||'',sex))
       +'<br><span style="color:'+fv.c+'"><b>'+fv.t+'：</b>'+esc(sexNote(lk.up||'',sex))+'</span>'
       +'</div>';}).join("");}
+/* 転換期：大運が切り替わる時の「前の通変星→後の通変星」を自動抽出して読み解く（tenkanki.js のデータを参照） */
+function tenkankiCardHTML(c){
+  var T=window.TENKANKI; if(!T)return '<p class="note">転換期データが読み込めませんでした。</p>';
+  var dl=daeunList(c),items=dl.items,by=birthYearOf(c),now=c.now||{},curAge=(now.age!=null?now.age:null);
+  var rows=[];
+  for(var i=1;i<items.length;i++){
+    var prev=items[i-1],cur=items[i],a=Math.round(cur.startM/12),yr=(by!=null?by+a:null);
+    var pt=prev.tenStar||'',nt=cur.tenStar||'',key=pt+'→'+nt;
+    rows.push({startM:cur.startM,age:a,yr:yr,prevTen:pt,nextTen:nt,rd:T.trans[key]||null,idx:i});
+  }
+  var curInto=dl.cur, nextIdx=null;
+  for(var k=0;k<rows.length;k++){ if(curAge!=null&&rows[k].age>curAge){nextIdx=rows[k].idx;break;} }
+  var nextRow=null; for(var m=0;m<rows.length;m++){ if(rows[m].idx===nextIdx){nextRow=rows[m];break;} }
+  var lead=nextRow
+    ? '次の転換期は <b style="color:var(--title)">'+ageJ(nextRow.startM)+(nextRow.yr!=null&&!dl.boundary?'（'+nextRow.yr+'年ごろ）':'')+'</b>＝<b>'+esc(nextRow.prevTen)+'運 → '+esc(nextRow.nextTen)+'運</b> の切り替わりです。'
+    : '今後の算出範囲では、この先しばらく大運の切り替わり（転換期）はありません。';
+  var body=rows.map(function(r){
+    var isInto=(r.idx===curInto), isNext=(r.idx===nextIdx);
+    var badge=isNext?' <span class="pill" style="background:var(--title);color:#fff">次の転換期</span>':(isInto?' <span class="pill">今の運へ切替済</span>':'');
+    var border=isNext?'border-left:4px solid var(--title)':(isInto?'border-left:4px solid var(--muted)':'border-left:4px solid var(--line)');
+    var h='<div style="'+border+';background:var(--soft);border-radius:10px;padding:10px 12px;margin:8px 0">'
+      +'<div style="font-weight:800;font-size:14px">'+esc(dl.boundary?'年齢は要確認':ageJ(r.startM))+(r.yr!=null&&!dl.boundary?'（'+r.yr+'年ごろ）':'')+badge+'</div>'
+      +'<div style="font-size:16px;font-weight:800;margin:4px 0"><span style="background:var(--card);border:1px solid var(--line);border-radius:8px;padding:1px 8px">'+esc(r.prevTen)+'運</span> <span style="color:var(--title);font-weight:900">→</span> <span style="background:var(--card);border:1px solid var(--line);border-radius:8px;padding:1px 8px">'+esc(r.nextTen)+'運</span></div>'
+      +'<div class="note" style="margin:2px 0"><b>変わる前（'+esc(r.prevTen)+'）：</b>'+esc(T.mean[r.prevTen]||'')+'</div>'
+      +'<div class="note" style="margin:2px 0"><b>変わった後（'+esc(r.nextTen)+'）：</b>'+esc(T.mean[r.nextTen]||'')+'</div>';
+    if(r.rd){
+      if(r.rd.good)h+='<div style="margin-top:6px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 10px"><b style="color:var(--good)">良い方向：</b>'+esc(r.rd.good)+'</div>';
+      if(r.rd.bad)h+='<div style="margin-top:6px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 10px"><b style="color:var(--warn)">注意の方向：</b>'+esc(r.rd.bad)+'</div>';
+    } else {
+      h+='<div class="note" style="margin-top:6px">※この組み合わせの詳しい読み解き例は収録範囲外です。上の「変わる前／変わった後」の性質を照らし合わせて読みます。</div>';
+    }
+    return h+'</div>';
+  }).join('');
+  return '<p style="margin:0 0 6px">'+lead+'</p>'
+    +'<p class="note" style="margin:0 0 8px">大運が切り替わる時は、<b>変わる前の通変星</b>と<b>変わった後の通変星</b>を照らし合わせて、これから進む方向を読み解きます。年齢・西暦は立運起点の概算です。</p>'
+    +body
+    +'<p class="note" style="margin:8px 0 0">※各通変星の意味・読み解きは要約し独自表現で再構成したものです（原典の転載ではありません）。良い方向／注意の方向は代表例で、必ずそうなるという断定ではありません。</p>';
+}
 /* ==== 時期の視覚化：空亡（天中殺）・恋愛・結婚（すべて標準ルール・オフライン） ==== */
 var RIKUGOU={子:"丑",丑:"子",寅:"亥",亥:"寅",卯:"戌",戌:"卯",辰:"酉",酉:"辰",巳:"申",申:"巳",午:"未",未:"午"};
 var CHONG={子:"午",午:"子",丑:"未",未:"丑",寅:"申",申:"寅",卯:"酉",酉:"卯",辰:"戌",戌:"辰",巳:"亥",亥:"巳"};
@@ -1853,6 +1892,8 @@ function renderSolo(p,inp){
   H+='<div class="card"><h2>大運（立運：'+esc(ritsuLabel(sf,dl.boundary))+' ／ '+(sf.forward?"順行":"逆行")+' ／ 第一運＝月柱）</h2><div class="ladder">';
   dl.items.forEach(function(dd,i){H+='<div class="lstep'+(i===dl.cur?" now":"")+(dd.first?" first":"")+'"><div class="age">'+esc(dl.boundary?'年齢は要確認':ageRange(dd.startM,dd.endM))+'</div><div class="lgz">'+elGz(dd.ganzhi)+'</div><div class="lten">'+esc(dd.tenStar||"")+(dd.first?'･月柱':'')+'</div><div class="lter">'+esc(dd.terrain||"")+'</div></div>';});
   H+='</div><p class="note" style="margin:6px 0 0"><b>用語：</b>立運＝大運が始まる年齢／順行・逆行＝干支をどちら回りに進むか／第一運＝スタートの10年（この流派では月柱）。<br>先頭は<b>第一運＝月柱（'+esc(c.pillars[1].ganzhi)+'）</b>で0歳〜立運まで。以降は立運起点で各10年。'+(dl.boundary?'<br><span style="color:var(--warn)">※この命式は<b>節の変わり目（節入り直前）に生まれた境界ケース</b>で、立運の自動計算が不安定です（実際より約10年ずれることがあります）。<b>大運の干支の並び順と方向（'+(sf.forward?"順行":"逆行")+'）は正しく出ています</b>が、各運の年齢は先生の早見表・手計算での確認をおすすめします。</span>':'')+'</p>'+daeunDetail(c,p.fav,inp.sex)+'</div>';
+  // 転換期（大運が切り替わる時＝前の通変星→後の通変星の読み解き）
+  H+='<div class="card"><h2>転換期（大運が変わる時の読み解き）</h2>'+tenkankiCardHTML(c)+'</div>';
   // 接木運（季節の変わり目）
   H+='<div class="card"><h2>節木運（人生の季節の変わり目）</h2>'+setsubokuCard(c,p.fav,parseInt(inp.y,10))+'</div>';
 
