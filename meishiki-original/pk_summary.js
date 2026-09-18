@@ -308,6 +308,7 @@ window.pkProSummaryHTML=function(p,inp){
     +'<span class="pill">空亡 '+esc(kbStr)+'</span><span class="pill">日支 '+esc(c.pillars[2].branch)+'</span></div>'
     +nowBar
     +'<p style="font-size:16px;font-weight:800;line-height:1.5;margin:0 0 10px">'+esc(r.core)+'</p>'
+    +'<p class="note" style="margin:-4px 0 8px">※下の<b>強み・辛口</b>は、生まれ持った<b>一生の性質（命式）</b>です。特定の時期（大運・年運）の話ではありません。</p>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
     +'<div style="background:#EAF4EE;border-radius:10px;padding:10px"><div style="font-weight:800;color:#2E7D50;margin-bottom:4px">◎ 強み</div><ul style="margin:0;padding-left:1.1em;line-height:1.6;font-size:13.5px">'+r.strengths.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>'
     +'<div style="background:#FCEEE9;border-radius:10px;padding:10px"><div style="font-weight:800;color:#B0483F;margin-bottom:4px">⚠ 辛口（必ず伝える）</div><ul style="margin:0;padding-left:1.1em;line-height:1.6;font-size:13.5px">'+r.cautions.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div></div>'
@@ -588,3 +589,43 @@ window.pkTrioSummaryHTML=function(persons){
   return H;
 };
 })();
+
+/* ===== 会局サマリー（三合・方合・半会の"成立"を上部に集約表示）— 表示専用・エンジン非改変 =====
+   ヘルパーはラッパー内スコープのため、公開済みの window.__pk* 経由で参照する。 */
+window.pkKaikyokuSummaryHTML=function(p,inp){
+  try{
+    var c=p&&p.pro, fav=(p&&p.fav)||{};
+    if(!c||!c.pillars||!c.pillars.length) return '';
+    var natalOf=window.__pkNatal, assess=window.__pkAssess, kuubo=window.__pkKuubo;
+    if(typeof natalOf!=='function'||typeof assess!=='function') return '';
+    var SANGO={火:['寅','午','戌'],水:['申','子','辰'],木:['亥','卯','未'],金:['巳','酉','丑']};
+    var HOUGO={木:['寅','卯','辰'],火:['巳','午','未'],金:['申','酉','戌'],水:['亥','子','丑']};
+    var SEA={木:'春（木）',火:'夏（火）',金:'秋（金）',水:'冬（水）'};
+    var E=function(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+    var natal=natalOf(c), natalB=natal.map(function(n){return n.b;});
+    var kb=(typeof kuubo==='function')?kuubo(c.pillars[2].ganzhi):[];
+    var ds=c.decadeFortunes||[], af=c.annualFortunes||[];
+    var isKai=function(t){return /方合|三合|半会/.test(t);};
+    var col=function(t){return /^◎/.test(t)?'var(--good,#2E9E5B)':(/^⚠/.test(t)?'var(--warn,#D5493C)':'var(--muted,#8a8a8a)');};
+    var tagH=function(t){return '<b style="color:'+col(t)+'">'+E(t)+'</b>';};
+    var inner=[],el;
+    for(el in SANGO){ if(SANGO[el].every(function(x){return natalB.indexOf(x)>=0;})) inner.push('<b style="color:var(--good)">三合会局（'+E(SEA[el]||el)+'）</b>'); }
+    for(el in HOUGO){ if(HOUGO[el].every(function(x){return natalB.indexOf(x)>=0;})) inner.push('<b style="color:var(--good)">方合成立（'+E(SEA[el]||el)+'）</b>'); }
+    var deR=[];
+    ds.forEach(function(d){ if(!d||!d.ganzhi) return; var a=assess(d.ganzhi[0],d.ganzhi[1],fav,natal,null,kb);
+      (a&&a.rs||[]).forEach(function(t){ if(isKai(t)) deR.push(E(d.startAge)+'歳 '+E(d.ganzhi)+' '+tagH(t)); }); });
+    var cy=(c.now&&c.now.year)||(af[0]&&af[0].year)||null;
+    var daeGZ=function(y){for(var i=ds.length-1;i>=0;i--){var sy=ds[i].year||ds[i].startYear;if(sy!=null&&y>=sy)return ds[i].ganzhi;}return ds[0]&&ds[0].ganzhi;};
+    var yrR=[];
+    af.forEach(function(y){ if(!y||!y.ganzhi) return; if(cy!=null&&y.year<cy) return; if(yrR.length>=12) return;
+      var a=assess(y.ganzhi[0],y.ganzhi[1],fav,natal,daeGZ(y.year),kb);
+      (a&&a.rs||[]).forEach(function(t){ if(isKai(t)) yrR.push(E(y.year)+' '+tagH(t)); }); });
+    var H='<section class="card"><h2>🔗 会局サマリー（三合・方合・半会の成立）</h2>'
+      +'<p class="note" style="margin:0 0 8px">支がそろって<b>三合・方合が完成</b>／<b>半会</b>が成立する所です。<b style="color:var(--good)">◎＝喜（開運・狙い目）</b>／<b style="color:var(--warn)">⚠＝忌（注意）</b>／○＝中立。命式・大運・年運を通しで拾っています。</p>';
+    H+='<div style="margin:5px 0"><b>命式内：</b>'+(inner.length?inner.join('、'):'<span class="note">完成した三合・方合はなし（単独支＋巡りで狙う形）</span>')+'</div>';
+    H+='<div style="margin:5px 0"><b>大運で成立：</b>'+(deR.length?deR.join(' ／ '):'<span class="note">なし</span>')+'</div>';
+    H+='<div style="margin:5px 0"><b>これからの年で成立：</b>'+(yrR.length?yrR.join(' ／ '):'<span class="note">算出範囲では成立年なし</span>')+'</div>';
+    H+='</section>';
+    return H;
+  }catch(e){ return ''; }
+};
