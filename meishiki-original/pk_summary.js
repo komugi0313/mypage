@@ -548,10 +548,10 @@ window.pkCompatSummaryHTML=function(pa,pb,la,lb){
     else {verdict='×';vword='難しめ（努力で補う）';vcolor='#D5493C';}
   }
   if(!adv&&care.length) adv='お互いの'+(care.length?'注意点を分かった上で、良い所を口に出して伝え合う':'')+'と長続きします。';
-  /* 恋愛の出方（各人の日支の通変星＝日支蔵干の本氣） */
+  /* 恋愛の出方（各人の日支の通変星）＝司令★（当令）を採用し、命式表・元命と一致させる（★→本氣→最大pct） */
   var TS=window.__pkTenStar||{};
   function dayBranchTenStar(c){var hs=(c.pillars[2]&&c.pillars[2].hiddenStems)||[];if(!hs.length)return '';
-    var main=hs.filter(function(x){return x.role==='本氣';})[0]||hs.slice().sort(function(a,b){return (b.pct||0)-(a.pct||0);})[0]||hs[0];
+    var main=hs.filter(function(x){return x.ling;})[0]||hs.filter(function(x){return x.role==='本氣';})[0]||hs.slice().sort(function(a,b){return (b.pct||0)-(a.pct||0);})[0]||hs[0];
     return (main&&main.tenStar)||'';}
   var tsA=dayBranchTenStar(ca),tsB=dayBranchTenStar(cb);
   function loveBox(name,ts){var v=TS[ts];if(!v)return '';return '<div style="background:#fff;border:1px solid #F0D9DE;border-radius:9px;padding:7px 10px;margin-bottom:6px"><div style="font-weight:800;font-size:13px;color:#b5477a">'+esc(name)+'　<span style="color:#8a6b78;font-size:11.5px">日支の通変星：'+esc(ts)+'</span></div><div style="font-size:12.5px;line-height:1.6;margin-top:2px"><b style="color:#2E7D50">◎ 良い面</b> '+esc(v.g)+'<br><b style="color:#B0483F">△ 注意</b> '+esc(v.b)+'</div></div>';}
