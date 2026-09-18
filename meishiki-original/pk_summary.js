@@ -261,7 +261,8 @@ window.pkProSummaryHTML=function(p,inp){
   setsuLine+='</div>';
   // 月柱＝自分・仕事の通変星（月支蔵干の本氣）
   var TSW=window.__pkTenStarWork||{};
-  function branchMain(pc,idx){var hs=(pc.pillars[idx]&&pc.pillars[idx].hiddenStems)||[];if(!hs.length)return '';var m=hs.filter(function(x){return x.role==='本氣';})[0]||hs.slice().sort(function(a,b){return (b.pct||0)-(a.pct||0);})[0]||hs[0];return (m&&m.tenStar)||'';}
+  /* 月支の通変星は「司令★（当令）＝元命」を採用（命式表・月支元命カードと一致させる）。★→本氣→最大pct の順にフォールバック */
+  function branchMain(pc,idx){var hs=(pc.pillars[idx]&&pc.pillars[idx].hiddenStems)||[];if(!hs.length)return '';var m=hs.filter(function(x){return x.ling;})[0]||hs.filter(function(x){return x.role==='本氣';})[0]||hs.slice().sort(function(a,b){return (b.pct||0)-(a.pct||0);})[0]||hs[0];return (m&&m.tenStar)||'';}
   var mbTs=branchMain(c,1), wv=TSW[mbTs];
   /* 命式内に最初から成立している会局（三合・方合・半会）＝生まれつき強い五行 */
   var natRels=(window.natalRelationsX?window.natalRelationsX(c):[]);
