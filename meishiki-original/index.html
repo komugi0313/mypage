@@ -1711,24 +1711,43 @@ function chuCard(c){
 /* ===== 合の見方（六合・三合・方合・干合＋合で解冲/解空）＝ピルボタン自動生成 ===== */
 function gouCard(c){
   try{
-    var P=c.pillars||[], LB=['年','月','日','時'], brs=P.map(function(p){return p&&p.branch;});
+    var P=c.pillars||[], LB=['年','月','日','時'];
+    var brs=P.map(function(p){return p&&p.branch;});
+    var stems=P.map(function(p){return p&&(p.ganzhi?p.ganzhi.charAt(0):p.stem);});
     var RIKUGO={子:'丑',丑:'子',寅:'亥',亥:'寅',卯:'戌',戌:'卯',辰:'酉',酉:'辰',巳:'申',申:'巳',午:'未',未:'午'};
-    var rk=[];
-    for(var i=0;i<brs.length;i++){for(var j=i+1;j<brs.length;j++){ if(brs[i]&&brs[j]&&RIKUGO[brs[i]]===brs[j]) rk.push(LB[i]+'支'+brs[i]+'・'+LB[j]+'支'+brs[j]); }}
+    var SANGO={水:['申','子','辰'],木:['亥','卯','未'],火:['寅','午','戌'],金:['巳','酉','丑']};
+    var HOUGO={春:['寅','卯','辰'],夏:['巳','午','未'],秋:['申','酉','戌'],冬:['亥','子','丑']};
+    var HOUEL={春:'木',夏:'火',秋:'金',冬:'水'}, WANG={水:'子',木:'卯',火:'午',金:'酉'};
+    var GANGOU={甲:'己',己:'甲',乙:'庚',庚:'乙',丙:'辛',辛:'丙',丁:'壬',壬:'丁',戊:'癸',癸:'戊'};
+    var GANEL={甲己:'土',己甲:'土',乙庚:'金',庚乙:'金',丙辛:'水',辛丙:'水',丁壬:'木',壬丁:'木',戊癸:'火',癸戊:'火'};
+    var CHONG={子:'午',午:'子',丑:'未',未:'丑',寅:'申',申:'寅',卯:'酉',酉:'卯',辰:'戌',戌:'辰',巳:'亥',亥:'巳'};
+    var rows=[], el, i, j;
+    /* 六合 */
+    for(i=0;i<brs.length;i++)for(j=i+1;j<brs.length;j++){ if(brs[i]&&brs[j]&&RIKUGO[brs[i]]===brs[j]) rows.push('<div class="tr">'+esc(LB[i])+'支'+esc(brs[i])+'・'+esc(LB[j])+'支'+esc(brs[j])+' の<b>六合</b>（結びつき・仲良し）</div>'); }
+    /* 三合 / 半会 */
+    for(el in SANGO){ var g=SANGO[el], pres=g.filter(function(x){return brs.indexOf(x)>=0;});
+      if(pres.length>=3) rows.push('<div class="tr"><b style="color:var(--good)">三合会局（'+esc(el)+'）</b>：'+esc(g.join(''))+' がそろう＝強い一体（発展のエンジン）</div>');
+      else if(pres.length===2 && pres.indexOf(WANG[el])>=0) rows.push('<div class="tr"><b>半会（'+esc(el)+'）</b>：'+esc(pres.join(''))+'（旺神'+esc(WANG[el])+'あり／あと1支で三合完成）</div>');
+    }
+    /* 方合 */
+    for(var h in HOUGO){ var hg=HOUGO[h]; if(hg.every(function(x){return brs.indexOf(x)>=0;})) rows.push('<div class="tr"><b style="color:var(--good)">方合（'+esc(h)+'＝'+esc(HOUEL[h])+'）</b>：'+esc(hg.join(''))+' がそろう＝季節の一極集中</div>'); }
+    /* 干合（天干合） */
+    for(i=0;i<stems.length;i++)for(j=i+1;j<stems.length;j++){ if(stems[i]&&stems[j]&&GANGOU[stems[i]]===stems[j]){ var eln=GANEL[stems[i]+stems[j]]||''; rows.push('<div class="tr">'+esc(LB[i])+'干'+esc(stems[i])+'・'+esc(LB[j])+'干'+esc(stems[j])+' の<b>干合</b>'+(eln?'（条件がそろえば<b>'+esc(eln)+'</b>に化す縁）':'')+'</div>'); } }
+    /* 命式内に冲があるか（解冲の一言用） */
+    var hasChu=false; for(i=0;i<brs.length;i++)for(j=i+1;j<brs.length;j++){ if(brs[i]&&brs[j]&&CHONG[brs[i]]===brs[j]) hasChu=true; }
     var H='<div class="card"><h2>合の見方（六合・三合・方合・干合）</h2>';
     H+='<p style="margin:0 0 6px"><b>合</b>は支どうし・干どうしが<b>結びつく・引き合う</b>関係。調和・協力・縁を表します。</p>';
     H+='<ul style="margin:0 0 6px;padding-left:1.1em;line-height:1.85">'
       +'<li><b>六合</b>…2支が仲良く結ぶ（子丑／寅亥／卯戌／辰酉／巳申／午未）</li>'
       +'<li><b>三合</b>…3支がそろい一つの五行に強くまとまる（申子辰=水／亥卯未=木／寅午戌=火／巳酉丑=金）。2支＋旺神＝<b>半会</b></li>'
       +'<li><b>方合</b>…季節の3支がそろう一極集中（寅卯辰=春／巳午未=夏／申酉戌=秋／亥子丑=冬）</li>'
-      +'<li><b>干合</b>…天干が結ぶ（甲己／乙庚／丙辛／丁壬／戊癸）</li></ul>';
-    H+='<p style="margin:6px 0 3px"><b class="sech">あなたの命式内の六合</b></p>'+(rk.length?rk.map(function(x){return '<div class="tr">'+esc(x)+'</div>';}).join(''):'<div class="note">命式内に六合はありません。</div>');
-    H+='<p class="note" style="margin:8px 0 0">合は<b>冲を緩める（解冲）</b>働きもあります。また<b>合と冲が重なると「解空」</b>＝空亡の作用が薄まる（消えはしない・流派差あり）と見る流派もあります。三合・方合の"成立"は上部の<b>🔗会局サマリー</b>をご覧ください。</p>';
+      +'<li><b>干合</b>…天干が結ぶ（甲己=土／乙庚=金／丙辛=水／丁壬=木／戊癸=火）。条件がそろうとその五行に<b>化す</b></li></ul>';
+    H+='<p style="margin:6px 0 3px"><b class="sech">あなたの命式内の合</b></p>'+(rows.length?rows.join(''):'<div class="note">命式内に目立つ合（六合・三合・半会・方合・干合）はありません。</div>');
+    H+='<p class="note" style="margin:8px 0 0">合は<b>冲を緩める（解冲／貪合忘冲）</b>働きもあります。'+(hasChu?'（この命式には冲があるので、上の合がその冲を和らげることがあります。）':'')+'また<b>合と冲が重なると「解空」</b>＝空亡の作用が薄まる（消えはしない・流派差あり）と見る流派もあります。三合・方合が大運・年運で"成立"する時期は上部の<b>🔗会局サマリー</b>をご覧ください。</p>';
     H+='</div>';
     return H;
   }catch(e){ return ''; }
 }
-
 function renderSolo(p,inp){
   var c=p.pro,out=document.getElementById("out"),H="";
   try{ if(window.pkProSummaryHTML) H+=window.pkProSummaryHTML(p,inp); }catch(e){}
