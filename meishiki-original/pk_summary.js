@@ -284,13 +284,25 @@ window.pkProSummaryHTML=function(p,inp){
       return '<div style="border-left:4px solid '+col+';background:'+col+'12;border-radius:8px;padding:6px 9px;margin-bottom:5px;font-size:12.5px;line-height:1.6"><b style="color:'+col+'">'+esc(kindTxt)+'</b> <span style="color:#888;font-size:11px">'+esc(k.brs)+'</span><br>'+strength+'<b>'+esc(k.el)+'</b>（日主から見て<b>'+esc(k.grp||'—')+'</b>＝'+esc(KGD[k.grp]||'')+'）が生まれつき強い。<br>'+favTxt+'</div>';
     }).join('')
     +'</div>'):'';
-  /* 命式内の冲・刑・害・破（生まれ持った緊張）＝年運・大運で同じ関係が重なると動きやすい */
-  var dBr=c.pillars[2].branch, TJP={冲:'衝突・変化の軸',刑:'摩擦・調整',害:'見えないすれ違い',破:'小さなほころび'};
-  var seenT={}; var natTen=natRels.filter(function(r){return /冲|刑|害|破/.test(r.kind);}).filter(function(r){var k=r.kind+(r.branches||[]).slice().sort().join('');if(seenT[k])return false;seenT[k]=1;return true;});
-  var tensionHTML=natTen.length?('<div style="background:#FCEEE9;border:1px solid #EAD2CC;border-radius:10px;padding:9px 10px;margin-bottom:10px">'
-    +'<div style="font-weight:800;color:#B0483F;font-size:12.5px">⚡ 命式内の緊張（生まれ持った冲・刑・害・破）</div>'
-    +natTen.map(function(r){var bs=(r.branches||[]),hasDay=bs.indexOf(dBr)>=0;return '<div style="font-size:12px;line-height:1.6;margin-top:2px"><b>'+esc(r.kind)+'</b> '+esc(bs.join('⇄'))+'（'+esc(TJP[r.kind]||'')+'）'+(hasDay&&r.kind==='冲'?'<b style="color:#B0483F">※日支を含む＝配偶者・住居・自分の土台が動きやすい</b>':'')+'</div>';}).join('')
-    +'<div class="note" style="font-size:10.5px;margin-top:3px">生まれ持った揺れ。<b>大運・年運で同じ支が巡ると、そのテーマが実際に動きやすい</b>年になります。</div></div>'):'';
+  /* 命式内の冲（生まれ持った緊張の軸）＝真向かいの支がぶつかる関係。方針：緊張は「冲」のみ採用（刑・害・破は不採用） */
+  var CHONGt={子:'午',午:'子',丑:'未',未:'丑',寅:'申',申:'寅',卯:'酉',酉:'卯',辰:'戌',戌:'辰',巳:'亥',亥:'巳'};
+  var LBt=['年','月','日','時'], brsT=c.pillars.map(function(p){return p&&p.branch;}), DOTUt={未:1,丑:1,辰:1,戌:1};
+  var chList=[];
+  for(var _i=0;_i<4;_i++)for(var _j=_i+1;_j<4;_j++){ if(brsT[_i]&&brsT[_j]&&CHONGt[brsT[_i]]===brsT[_j]) chList.push({i:_i,j:_j,bi:brsT[_i],bj:brsT[_j]}); }
+  function chMeaning(o){ var L=[], pair=o.i+'-'+o.j;
+    if(pair==='0-1') L.push('親との縁が薄くなりやすく、早くに実家を離れる傾向。');
+    else if(pair==='1-2') L.push('家庭・夫婦関係が不安定になりやすい。');
+    else if(pair==='2-3') L.push('子どもとの縁が薄くなりやすく、子どもが早く家を離れる傾向。');
+    if(o.i===1||o.j===1) L.push('社会的な立場での問題に注意。');
+    if(o.i===2||o.j===2) L.push('健康面に影響が出ることもあります。');
+    if(pair==='1-2') L.push('<b style="color:#B0483F">特に月支ー日支の冲は人生で波乱が多く、人の援助を得にくい・裏切りに注意</b>とされます。');
+    if(DOTUt[o.bi]&&DOTUt[o.bj]) L.push('<span style="color:#2E7D50">※土性同士（未ー丑・辰ー戌）の冲なので、凶の作用は弱まります。</span>');
+    return L; }
+  var tensionHTML=chList.length?('<div style="background:#FCEEE9;border:1px solid #EAD2CC;border-radius:10px;padding:9px 11px;margin-bottom:10px">'
+    +'<div style="font-weight:800;color:#B0483F;font-size:12.5px">⚡ 命式内の冲（生まれ持った緊張の軸）</div>'
+    +'<div class="note" style="font-size:10.5px;margin:2px 0 5px;line-height:1.6">冲＝真向かいの支がぶつかる関係。人間関係が安定しにくく、変化・別れ・すれ違いが起きやすい傾向。夢を途中で諦めたり、感謝を忘れて人に強く当たりやすい面も。</div>'
+    +chList.map(function(o){return '<div style="border-left:4px solid #B0483F;background:#B0483F10;border-radius:8px;padding:6px 9px;margin-top:5px;font-size:12px;line-height:1.6"><b style="color:#B0483F">'+esc(LBt[o.i]+'支ー'+LBt[o.j]+'支の冲')+'</b> <span style="color:#888;font-size:11px">'+esc(o.bi+'⇄'+o.bj)+'</span>'+chMeaning(o).map(function(x){return '<br>・'+x;}).join('')+'</div>';}).join('')
+    +'<div class="note" style="font-size:10.5px;margin-top:5px;line-height:1.6">大運・年運で同じ支が巡ると、そのテーマが実際に動きやすい年になります。※伝統的な見方で<b>断定ではなく“気をつけると和らぐ傾向”</b>。冲は<b>変化・刷新の力</b>にもなります。</div></div>'):'';
   var workHTML=wv?('<div style="background:#EFF3F7;border:1px solid #CCD9E6;border-radius:10px;padding:10px;margin-bottom:10px"><div style="font-weight:800;color:#3a5a8a;font-size:13.5px">🧑‍💼 仕事・自分の出方（月柱の通変星：'+esc(mbTs)+'／'+esc(wv.th)+'）</div><div style="font-size:10.5px;color:#7d8aa0;margin:1px 0 3px">＝<b>生まれ持った星</b>（一生変わらない仕事・自分の土台）</div><div style="font-size:13px;line-height:1.6"><b style="color:#2E7D50">◎ 活きているとき</b> '+esc(wv.g)+'<br><b style="color:#B0483F">△ 出すぎると</b> '+esc(wv.b)+'</div></div>'):'';
   // near-term annual: now..+8
   var cy=(c.now&&c.now.year)||new Date().getFullYear();
