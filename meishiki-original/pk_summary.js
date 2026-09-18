@@ -590,49 +590,64 @@ window.pkTrioSummaryHTML=function(persons){
 };
 })();
 
-/* ===== 会局サマリー（三合・方合・半会の"成立"を上部に集約表示）— 表示専用・エンジン非改変 =====
-   ヘルパーはラッパー内スコープのため、公開済みの window.__pk* 経由で参照する。 */
+/* ===== 会局サマリー（三合・方合・半会の"成立"を上部に集約表示）— 表示専用・エンジン非改変
+   ★会局は assess の"1件だけ報告"に依存せず、この枠だけは独立に全会局を列挙する（方合成立＋別五行の半会の同時成立も取りこぼさない）。
+   ヘルパー定数/関数はラッパー内スコープのため、会局定数はローカル定義、喜忌は公開済み window.__pkFavOf を使用。 */
 window.pkKaikyokuSummaryHTML=function(p,inp){
   try{
     var c=p&&p.pro, fav=(p&&p.fav)||{};
     if(!c||!c.pillars||!c.pillars.length) return '';
-    var natalOf=window.__pkNatal, assess=window.__pkAssess, kuubo=window.__pkKuubo;
-    if(typeof natalOf!=='function'||typeof assess!=='function') return '';
+    var natalOf=window.__pkNatal;
+    if(typeof natalOf!=='function') return '';
     var SANGO={火:['寅','午','戌'],水:['申','子','辰'],木:['亥','卯','未'],金:['巳','酉','丑']};
     var HOUGO={木:['寅','卯','辰'],火:['巳','午','未'],金:['申','酉','戌'],水:['亥','子','丑']};
+    var WANG={火:'午',水:'子',木:'卯',金:'酉'};
     var SEA={木:'春（木）',火:'夏（火）',金:'秋（金）',水:'冬（水）'};
     var E=function(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+    var favV=function(el){return (window.__pkFavOf?window.__pkFavOf(fav,el):(fav[el]==='喜'?1:(fav[el]==='忌'?-1:0)));};
+    /* branch と pool（他の支の配列）から成立する全会局を列挙：方合(完成)・三合(完成)・半会 */
+    var kaiOf=function(branch,pool){
+      var out=[],e,g,others;
+      for(e in HOUGO){ g=HOUGO[e]; if(g.indexOf(branch)>=0){ if(g.every(function(x){return x===branch||pool.indexOf(x)>=0;})) out.push({kind:'方合',el:e}); break; } }
+      for(e in SANGO){ g=SANGO[e]; if(g.indexOf(branch)>=0){
+        others=g.filter(function(x){return x!==branch&&pool.indexOf(x)>=0;});
+        if(others.length>=2) out.push({kind:'三合',el:e});
+        else if(others.length===1 && (WANG[e]===branch||WANG[e]===others[0])) out.push({kind:'半会',el:e});
+        break; } }
+      return out;
+    };
+    var tag=function(k){ var v=favV(k.el); var sym=v>0?'◎':(v<0?'⚠':'○'); var fw=v>0?'(喜:'+k.el+')':(v<0?'(忌:'+k.el+')':'('+k.el+')');
+      var col=v>0?'var(--good,#2E9E5B)':(v<0?'var(--warn,#D5493C)':'var(--muted,#8a8a8a)');
+      return '<b style="color:'+col+'">'+sym+k.kind+fw+'</b>'; };
     var natal=natalOf(c), natalB=natal.map(function(n){return n.b;});
-    var kb=(typeof kuubo==='function')?kuubo(c.pillars[2].ganzhi):[];
     var ds=c.decadeFortunes||[], af=c.annualFortunes||[];
-    var isKai=function(t){return /方合|三合|半会/.test(t);};
-    var col=function(t){return /^◎/.test(t)?'var(--good,#2E9E5B)':(/^⚠/.test(t)?'var(--warn,#D5493C)':'var(--muted,#8a8a8a)');};
-    var tagH=function(t){return '<b style="color:'+col(t)+'">'+E(t)+'</b>';};
-    var inner=[],el;
-    for(el in SANGO){ if(SANGO[el].every(function(x){return natalB.indexOf(x)>=0;})) inner.push('<b style="color:var(--good)">三合会局（'+E(SEA[el]||el)+'）</b>'); }
-    for(el in HOUGO){ if(HOUGO[el].every(function(x){return natalB.indexOf(x)>=0;})) inner.push('<b style="color:var(--good)">方合成立（'+E(SEA[el]||el)+'）</b>'); }
+    /* 1) 命式内で成立（完成三合/方合＋半会） */
+    var inner=[], seenI={};
+    natalB.forEach(function(b){ kaiOf(b,natalB).forEach(function(k){ var key=k.kind+k.el; if(!seenI[key]){seenI[key]=1; inner.push(tag(k));} }); });
+    /* 2) 大運×命式：各大運支の全会局 */
     var deR=[];
-    ds.forEach(function(d){ if(!d||!d.ganzhi) return; var a=assess(d.ganzhi[0],d.ganzhi[1],fav,natal,null,kb);
-      (a&&a.rs||[]).forEach(function(t){ if(isKai(t)) deR.push(E(d.startAge)+'歳 '+E(d.ganzhi)+' '+tagH(t)); }); });
+    ds.forEach(function(d){ if(!d||!d.ganzhi) return; var b=d.ganzhi.charAt(1);
+      kaiOf(b,natalB).forEach(function(k){ deR.push(E(d.startAge)+'歳 '+E(d.ganzhi)+' '+tag(k)); }); });
+    /* 3) 年運×(命式+大運)：今年以降・近い順に最大20年ぶん */
     var cy=(c.now&&c.now.year)||(af[0]&&af[0].year)||null;
-    var daeGZ=function(y){for(var i=ds.length-1;i>=0;i--){var sy=ds[i].year||ds[i].startYear;if(sy!=null&&y>=sy)return ds[i].ganzhi;}return ds[0]&&ds[0].ganzhi;};
-    var yrR=[];
-    af.forEach(function(y){ if(!y||!y.ganzhi) return; if(cy!=null&&y.year<cy) return; if(yrR.length>=12) return;
-      var a=assess(y.ganzhi[0],y.ganzhi[1],fav,natal,daeGZ(y.year),kb);
-      (a&&a.rs||[]).forEach(function(t){ if(isKai(t)) yrR.push(E(y.year)+' '+tagH(t)); }); });
+    var daeBr=function(y){for(var i=ds.length-1;i>=0;i--){var sy=ds[i].year||ds[i].startYear;if(sy!=null&&y>=sy)return ds[i].ganzhi.charAt(1);}return ds[0]&&ds[0].ganzhi.charAt(1);};
+    var yrR=[], scanned=0;
+    af.forEach(function(y){ if(!y||!y.ganzhi) return; if(cy!=null&&y.year<cy) return; if(scanned>=20) return; scanned++;
+      var db=daeBr(y.year), pool=natalB.concat(db?[db]:[]);
+      kaiOf(y.ganzhi.charAt(1),pool).forEach(function(k){ yrR.push(E(y.year)+' '+tag(k)); }); });
     /* 4) 三者持ち寄り（命式＋大運＋年運）で会局が完成する年 */
-    var fm=function(el){var v=(window.__pkFavOf?window.__pkFavOf(fav,el):0);return v>0?' <b style="color:var(--good)">◎喜</b>':(v<0?' <b style="color:var(--warn)">⚠忌</b>':'');};
-    var comboR=[];
+    var fm=function(el){var v=favV(el);return v>0?' <b style="color:var(--good)">◎喜</b>':(v<0?' <b style="color:var(--warn)">⚠忌</b>':'');};
+    var comboR=[], sc2=0;
     if(typeof window.comboRels==='function'){
-      af.forEach(function(y){ if(!y||!y.ganzhi) return; if(cy!=null&&y.year<cy) return; if(comboR.length>=12) return;
-        var dg=daeGZ(y.year); if(!dg) return; var cr=[]; try{ cr=window.comboRels(c,dg.charAt(1),y.ganzhi.charAt(1))||[]; }catch(e){}
+      af.forEach(function(y){ if(!y||!y.ganzhi) return; if(cy!=null&&y.year<cy) return; if(sc2>=20) return; sc2++;
+        var db=daeBr(y.year); if(!db) return; var cr=[]; try{ cr=window.comboRels(c,db,y.ganzhi.charAt(1))||[]; }catch(e){}
         cr.forEach(function(x){ comboR.push(E(y.year)+'年：命式'+E(x.natal)+'＋大運'+E(x.daiun)+'＋年運'+E(x.year)+' → <b style="color:var(--good)">'+(x.kind==='三合成立'?'三合会局':'方合')+'('+E(x.el)+')</b>完成'+fm(x.el)); }); });
     }
     var H='<section class="card"><h2>🔗 会局サマリー（三合・方合・半会の成立）</h2>'
-      +'<p class="note" style="margin:0 0 8px">支がそろって<b>三合・方合が完成</b>／<b>半会</b>が成立する所です。<b style="color:var(--good)">◎＝喜（開運・狙い目）</b>／<b style="color:var(--warn)">⚠＝忌（注意）</b>／○＝中立。命式・大運・年運を通しで拾っています。</p>';
-    H+='<div style="margin:5px 0"><b>命式内：</b>'+(inner.length?inner.join('、'):'<span class="note">完成した三合・方合はなし（単独支＋巡りで狙う形）</span>')+'</div>';
+      +'<p class="note" style="margin:0 0 8px">支がそろって<b>三合・方合が完成</b>／<b>半会</b>が成立する所を、命式・大運・年運・三者持ち寄りで<b>すべて</b>拾っています。<b style="color:var(--good)">◎＝喜（開運・狙い目）</b>／<b style="color:var(--warn)">⚠＝忌（注意）</b>／○＝中立。</p>';
+    H+='<div style="margin:5px 0"><b>命式内：</b>'+(inner.length?inner.join('、'):'<span class="note">完成した三合・方合・半会はなし（単独支＋巡りで狙う形）</span>')+'</div>';
     H+='<div style="margin:5px 0"><b>大運で成立：</b>'+(deR.length?deR.join(' ／ '):'<span class="note">なし</span>')+'</div>';
-    H+='<div style="margin:5px 0"><b>これからの年で成立：</b>'+(yrR.length?yrR.join(' ／ '):'<span class="note">算出範囲では成立年なし</span>')+'</div>';
+    H+='<div style="margin:5px 0"><b>これからの年で成立（近い順）：</b>'+(yrR.length?yrR.join(' ／ '):'<span class="note">算出範囲では成立年なし</span>')+'</div>';
     H+='<div style="margin:5px 0"><b>三者持ち寄り（命式＋大運＋年運）完成：</b>'+(comboR.length?comboR.join('<br>'):'<span class="note">算出範囲では三者がそろう完成年なし</span>')+'</div>';
     H+='</section>';
     return H;
