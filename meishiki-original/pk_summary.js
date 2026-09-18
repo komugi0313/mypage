@@ -654,12 +654,26 @@ window.pkKaikyokuSummaryHTML=function(p,inp){
         var db=daeBr(y.year); if(!db) return; var cr=[]; try{ cr=window.comboRels(c,db,y.ganzhi.charAt(1))||[]; }catch(e){}
         cr.forEach(function(x){ comboR.push(E(y.year)+'年：命式'+E(x.natal)+'＋大運'+E(x.daiun)+'＋年運'+E(x.year)+' → <b style="color:var(--good)">'+(x.kind==='三合成立'?'三合会局':'方合')+'('+E(x.el)+')</b>完成'+fm(x.el)); }); });
     }
+    /* 各成立を色分けピルで表示（◎喜=緑／⚠忌=赤／○中立=グレー）。長文の「／」区切りをやめ読みやすく */
+    var chips=function(arr){ if(!arr.length) return ''; return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'+arr.map(function(s){
+      var good=/◎/.test(s),bad=/⚠/.test(s);
+      var bg=good?'rgba(46,158,91,.10)':(bad?'rgba(213,73,60,.10)':'rgba(120,120,120,.08)');
+      var bd=good?'rgba(46,158,91,.40)':(bad?'rgba(213,73,60,.40)':'var(--line)');
+      return '<span style="display:inline-block;background:'+bg+';border:1px solid '+bd+';border-radius:999px;padding:3px 11px;font-size:13px;line-height:1.6;white-space:nowrap">'+s+'</span>';
+    }).join('')+'</div>'; };
+    var sect=function(title,body,empty){ return '<div style="margin:10px 0 0;padding:10px 12px;background:var(--soft);border-radius:10px">'
+      +'<div style="font-weight:800;font-size:13.5px;color:var(--ink)">'+title+'</div>'
+      +(body||('<div class="note" style="margin-top:3px">'+empty+'</div>'))+'</div>'; };
     var H='<section class="card"><h2>🔗 会局サマリー（三合・方合・半会の成立）</h2>'
-      +'<p class="note" style="margin:0 0 8px">支がそろって<b>三合・方合が完成</b>／<b>半会</b>が成立する所を、命式・大運・年運・三者持ち寄りで<b>すべて</b>拾っています。<b style="color:var(--good)">◎＝喜（開運・狙い目）</b>／<b style="color:var(--warn)">⚠＝忌（注意）</b>／○＝中立。</p>';
-    H+='<div style="margin:5px 0"><b>命式内：</b>'+(inner.length?inner.join('、'):'<span class="note">完成した三合・方合・半会はなし（単独支＋巡りで狙う形）</span>')+'</div>';
-    H+='<div style="margin:5px 0"><b>大運で成立：</b>'+(deR.length?deR.join(' ／ '):'<span class="note">なし</span>')+'</div>';
-    H+='<div style="margin:5px 0"><b>これからの年で成立（近い順）：</b>'+(yrR.length?yrR.join(' ／ '):'<span class="note">算出範囲では成立年なし</span>')+'</div>';
-    H+='<div style="margin:5px 0"><b>三者持ち寄り（命式＋大運＋年運）完成：</b>'+(comboR.length?comboR.join('<br>'):'<span class="note">算出範囲では三者がそろう完成年なし</span>')+'</div>';
+      +'<p class="note" style="margin:0 0 6px;line-height:1.7">支がそろうと強い五行の“かたまり（会局）”ができ、そのテーマが強まります。命式・大運・年運・三者持ち寄りで<b>すべて</b>拾っています。<b style="color:var(--good)">◎＝喜（開運・狙い目）</b>／<b style="color:var(--warn)">⚠＝忌（注意）</b>／○＝中立。</p>'
+      +'<div class="note" style="margin:0 0 4px;font-size:11.5px;line-height:1.65;padding:7px 10px;background:var(--soft);border-radius:8px"><b>三合</b>＝3支そろって五行が完成／<b>方合</b>＝季節の3支そろって完成／<b>半会</b>＝2支＋中心の支で準完成。</div>';
+    H+=sect('① 命式内（生まれつき成立）', inner.length?chips(inner):'', '完成した三合・方合・半会はなし（単独支＋巡りで狙う形）');
+    H+=sect('② 大運で成立（10年ごとの運）', deR.length?chips(deR):'', 'なし');
+    H+=sect('③ これからの年で成立（近い順）', yrR.length?chips(yrR):'', '算出範囲では成立年なし');
+    var comboBody=comboR.length?('<div style="margin-top:6px;display:flex;flex-direction:column;gap:6px">'+comboR.map(function(s){
+      return '<div style="background:rgba(46,158,91,.08);border:1px solid rgba(46,158,91,.32);border-radius:8px;padding:6px 10px;font-size:13px;line-height:1.65">'+s+'</div>';
+    }).join('')+'</div>'):'';
+    H+=sect('④ 三者持ち寄り（命式＋大運＋年運）で完成', comboBody, '算出範囲では三者がそろう完成年なし');
     H+='</section>';
     return H;
   }catch(e){ return ''; }
