@@ -3288,6 +3288,43 @@ function coupleLuckCard(pa,pb){
     H+='</div></div>';
   });
   return H;}
+
+/* ===== 相性の会局サマリー：①二人の命式で成立(3/3) ②持ち寄りで成立する年(あと1支) ③全く成立しない場合の明示 ===== */
+function coupleKaikyokuBox(pa,pb){
+  try{
+    var SANGO=[['申','子','辰','水'],['亥','卯','未','木'],['寅','午','戌','火'],['巳','酉','丑','金']];
+    var HOUGO=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','戌','金'],['亥','子','丑','水']];
+    var abr=(pa.pro.pillars||[]).map(function(p){return p&&p.branch;}).filter(Boolean);
+    var bbr=(pb.pro.pillars||[]).map(function(p){return p&&p.branch;}).filter(Boolean);
+    var union=abr.concat(bbr), fA=pa.fav||{}, fB=pb.fav||{};
+    var fmark=function(f,el){return f[el]==='喜'?'<b style="color:var(--good)">喜</b>':(f[el]==='忌'?'<b style="color:var(--warn)">忌</b>':'—');};
+    /* ① 二人の命式で既に成立している会局（3支そろい＝両者が最低1支ずつ寄与） */
+    var done=[];
+    [[SANGO,'三合会局'],[HOUGO,'方合']].forEach(function(pair){
+      pair[0].forEach(function(g){var tri=g.slice(0,3);
+        var inA=tri.filter(function(x){return abr.indexOf(x)>=0;}), inB=tri.filter(function(x){return bbr.indexOf(x)>=0;});
+        if(tri.filter(function(x){return union.indexOf(x)>=0;}).length===3 && inA.length>=1 && inB.length>=1)
+          done.push({kind:pair[1],el:g[3],inA:inA,inB:inB});
+      });
+    });
+    var doneH = done.length ? done.map(function(d){
+      return '<div class="tr" style="margin:2px 0">◎<b style="color:var(--good)">'+esc(d.kind)+'（'+esc(d.el)+'）</b>成立：一人目<b>'+esc(d.inA.join(''))+'</b>＋二人目<b>'+esc(d.inB.join(''))+'</b>（一人目'+fmark(fA,d.el)+'／二人目'+fmark(fB,d.el)+'）</div>';
+    }).join('') : '<div class="note" style="margin:2px 0">二人の命式だけでそろう三合・方合はありません。</div>';
+    /* ② 持ち寄りで成立する年（あと1支で完成＝coupleLuckCardを再利用） */
+    var clk=(typeof coupleLuckCard==='function')?coupleLuckCard(pa,pb):'';
+    var none = (!done.length && !clk);
+    var H='<div class="card"><h2>🔗 会局サマリー（二人の会局・開運の年）</h2>';
+    if(none){
+      H+='<p style="margin:0" class="note"><b>この二人は、命式でも持ち寄りでも三合・方合は成立しません。</b>会局由来の「開運の年」は出ません。相性は日主・日支の合冲・喜忌の補完で見ます。</p>';
+    } else {
+      H+='<p style="margin:0 0 4px"><b class="sech">① 二人の命式で成立</b></p>'+doneH;
+      H+='<p style="margin:10px 0 4px"><b class="sech">② 持ち寄りで成立する年（あと1支で完成）</b></p>'+(clk||'<div class="note" style="margin:2px 0">あと1支で完成する持ち寄りの形はありません。</div>');
+    }
+    H+='</div>';
+    return H;
+  }catch(e){ return ''; }
+}
+
 /* ===== 3人（グループ）：三合/方合の成立・各ペア相性・3人の開運の年月 ===== */
 function groupHarmony(persons){
   var SANGO=[['申','子','辰','水'],['亥','卯','未','木'],['寅','午','戌','火'],['巳','酉','丑','金']];
@@ -3661,7 +3698,7 @@ function renderPair(pa,pb,a,b){
   var out=document.getElementById("out"),H="";
   var nameA=a.name?esc(a.name):"お一人目",nameB=b.name?esc(b.name):"お二人目";
   try{ if(window.pkCompatSummaryHTML) H+=window.pkCompatSummaryHTML(pa,pb,nameA,nameB); }catch(e){}
-  try{ if(cd){ var _clkTop=coupleLuckCard(pa,pb); if(_clkTop) H+='<div class="card"><h2>🔗 会局サマリー：二人の開運の年・月（半会・支合→三合・方合の完成）</h2>'+_clkTop+'</div>'; } }catch(e){}
+  try{ if(cd){ H+=coupleKaikyokuBox(pa,pb); } }catch(e){}
   var pairChip="相性 "+(a.name?esc(a.name):shortBirth(a))+"×"+(b.name?esc(b.name):shortBirth(b));
   var whoAfull=shortBirth(a)+"生・日主"+elS(pa.pro.dayMaster.stem)+"（お一人目）";
   var whoBfull=shortBirth(b)+"生・日主"+elS(pb.pro.dayMaster.stem)+"（お二人目）";
