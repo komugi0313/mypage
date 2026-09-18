@@ -96,8 +96,8 @@ function assess(stem,branch,fav,natal,daeun,kb){
   var kuu=kb&&kb.indexOf(branch)>=0;
   var label,color;
   if(kuu&&(favOf(fav,se)>0||favOf(fav,be)>0)&&s>-0.8){label='仕込み';color='#C8952B';}
-  else if(s>=1.8){label='追い風';color='#2E9E5B';}
-  else if(s>=0.6){label='良';color='#69B486';}
+  else if(s>=1.5){label='追い風';color='#2E9E5B';}
+  else if(s>=0.4){label='良';color='#69B486';}
   else if(s>-0.9){label='穏やか';color='#B9A98C';}
   else if(s>-2.3){label='小さな注意';color='#E0954A';}
   else {label='要注意';color='#D5493C';}
