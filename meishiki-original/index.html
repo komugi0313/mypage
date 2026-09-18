@@ -1711,8 +1711,9 @@ function natalDataBoard(p,inp,sex){
   for(var a=0;a<pil.length;a++)for(var b2=a+1;b2<pil.length;b2++){if(!pil[a]||!pil[b2])continue;var s1=pil[a].ganzhi[0],s2=pil[b2].ganzhi[0];if(GANGOU[s1]===s2)natKg.push(s1+s2);}
   function relChip(txt,good){var bg=good?'#e3f3e8':'#fbeee0',cc=good?'#2f7a4e':'#a8791f';return '<span style="display:inline-block;background:'+bg+';color:'+cc+';border-radius:6px;font-size:12px;font-weight:800;padding:2px 8px;margin:2px">'+esc(txt)+'</span>';}
   var relc='';natKg.forEach(function(k){relc+=relChip('干合 '+k,true);});
-  rels.forEach(function(r){relc+=relChip((r.kind||'')+((r.branches&&r.branches.length)?' '+r.branches.join(''):''),/三合|方合|六合|半会|支合/.test(r.kind||''));});
-  var kankei=ndSec('◆ 命式内の関係（縁を強める＝緑／調整が要る＝橙）',relc||'<span class="note">合・冲刑破害は目立ちません</span>');
+  /* 方針：命式内の緊張は「冲」のみ採用（刑・害・破は表示しない） */
+  rels.filter(function(r){return !/刑|害|破/.test(r.kind||'');}).forEach(function(r){relc+=relChip((r.kind||'')+((r.branches&&r.branches.length)?' '+r.branches.join(''):''),/三合|方合|六合|半会|支合/.test(r.kind||''));});
+  var kankei=ndSec('◆ 命式内の関係（縁を強める＝緑／調整が要る＝橙）',relc||'<span class="note">合・冲は目立ちません</span>');
   /* 縁の座標 */
   var seiName=female?'正官':'正財',henName=female?'偏官':'偏財';
   var seiTou=false;(fp&&fp.pillars||[]).forEach(function(pl,i){if(i!==2&&pl.tenStar===seiName)seiTou=true;});
@@ -1947,12 +1948,12 @@ function renderSolo(p,inp){
   EL_ORDER.forEach(function(e){var n=five[e]||0;H+='<div class="gcell"><div class="l el-'+e+'">'+e+'</div><div class="n">'+n+'</div><div class="bar"><i class="el-'+e+'" style="width:'+Math.round(n/tot*100)+'%;background:currentColor"></i></div></div>';});
   H+='</div><p class="note" style="margin:8px 0 0">喜神：'+favList(p.fav,"喜")+' ／ 忌神：'+favList(p.fav,"忌")+'</p></div>';
 
-  // 干支関係
-  var rels=window.natalRelationsX?window.natalRelationsX(c):[];
+  // 干支関係（方針：命式内の緊張は「冲」のみ採用。刑・害・破は表示しない）
+  var rels=(window.natalRelationsX?window.natalRelationsX(c):[]).filter(function(r){return !/刑|害|破/.test(r.kind);});
   /* 命式内の干合（隣り合う柱に限らず全柱の干どうし）を追加検出 */
   var natKg=[],_pil=c.pillars||[];
   for(var _i=0;_i<_pil.length;_i++)for(var _j=_i+1;_j<_pil.length;_j++){var s1=_pil[_i].ganzhi[0],s2=_pil[_j].ganzhi[0];if(GANGOU[s1]===s2)natKg.push([(_pil[_i].label||'').charAt(0)+s1,(_pil[_j].label||'').charAt(0)+s2]);}
-  H+='<div class="card"><h2>干支関係（三合・方合・冲・刑・害・破・合・干合）</h2>';
+  H+='<div class="card"><h2>干支関係（三合・方合・冲・合・干合）</h2>';
   if(rels.length||natKg.length){ H+=rels.map(function(r){var warn=/冲|刑|害|破/.test(r.kind);return '<span class="tag '+(warn?"warn":"rel")+'"><b>'+esc(r.kind)+'</b> '+(r.branches||[]).map(elB).join("")+'<span class="note"> '+(REL_JP[r.kind]||"")+'</span></span>';}).join("");
     H+=natKg.map(function(pr){return '<span class="tag rel"><b>干合</b> '+esc(pr.join(''))+'<span class="note"> 干どうしの強い引き合い</span></span>';}).join(""); }
   else H+='<p class="note" style="margin:0">目立つ干支関係はありません（対立も強い偏りも少ない安定型）。</p>';
@@ -2727,7 +2728,7 @@ function calendarCard(p,sex){
   var sc=starCounts(c),female=(sex!=='male'),db=c.pillars[2].branch,rels=(window.natalRelationsX?window.natalRelationsX(c):[]),kuse;
   if(female&&(sc.傷官||0)>=2)kuse='あなたは傷官が強め＝無意識に相手を追い越し・ダメ出ししがち。“正すより尊重の言葉”を意識すると縁が続きます。';
   else if(((sc.比肩||0)+(sc.劫財||0))>=3)kuse='比劫が強め＝独占欲や張り合いが出やすい。相手の自由も認めると安定します。';
-  else if(rels.some&&rels.some(function(r){return /冲|刑|害|破/.test(r.kind)&&(r.branches||[]).indexOf(db)>=0;}))kuse='配偶者宮が揺れやすい配置＝環境の変化で別れやすい。焦らず“落ち着ける相手”を選ぶと吉。';
+  else if(rels.some&&rels.some(function(r){return /冲/.test(r.kind)&&(r.branches||[]).indexOf(db)>=0;}))kuse='配偶者宮が揺れやすい配置＝環境の変化で別れやすい。焦らず“落ち着ける相手”を選ぶと吉。';
   else kuse='大きな別れのクセは強くありません。あなたのペースで縁を育てて大丈夫。';
   function q(qt,at){return '<div style="margin:0 0 7px"><div style="font-weight:700;color:var(--accent)">Q. '+qt+'</div><div class="tr">'+at+'</div></div>';}
   function head(t){return '<div style="font-weight:800;margin:10px 0 4px;color:var(--title)">'+t+'</div>';}
@@ -2883,7 +2884,7 @@ function pcBreakup(p,sex){var c=p.pro,sc=starCounts(c),female=(sex!=="male"),rel
     +'<p style="margin:8px 0 0"><b>お客様への一言：</b>「別れやすい年は“別れる年”ではなく<b>“ていねいに向き合う年”</b>。①勢いで決めない ②危うい場を避ける ③尊重の言葉 ④急がない——これを知るだけで、同じ年でも結果は変わります。運が半分、あなたの選択が半分ですよ。」</p>'
     +'<p class="note" style="margin:6px 0 0">※これらは<b>あなた自身の運だけ</b>で読めます（相手の生年月日は不要）。別れの時期を伝えたら、下の「復縁・縁が結び直されやすい年」もセットで伝えると、希望が残せます。</p>'
     +'</div></details>');
-  var dayHit=rels.filter(function(r){return /冲|刑|害|破/.test(r.kind)&&(r.branches||[]).indexOf(db)>=0;});
+  var dayHit=rels.filter(function(r){return /冲/.test(r.kind)&&(r.branches||[]).indexOf(db)>=0;});
   if(dayHit.length)pos.push('配偶者宮（日支'+db+'）に'+dayHit.map(function(r){return r.kind;}).join('・')+'＝家庭・パートナー面が揺れやすく、別れ・すれ違いの暗示');
   if(female&&sc.傷官>=2)pos.push('女性で傷官が強い（傷官は夫の星＝官を剋すため、恋が終わりやすい・尽くしても離れやすい）');
   if((sc.比肩+sc.劫財)>=3)pos.push('比肩・劫財が多い（ライバルや第三者に縁を奪われやすい・三角関係）');
@@ -2961,7 +2962,7 @@ function pcParents(p,sex){var c=p.pro,sc=starCounts(c),tb=biasOf(c),rels=(window
   if((tb.counts["印"]||0)>=3)pts.push('<b>印（母・世話の星）が多い</b>→ 愛情が濃く<b>過干渉・過保護な母</b>になりやすく、重い・支配的に感じることも。対処＝感謝は示しつつ<b>物理的・心理的に距離</b>をとり、自分の判断を優先していい。');
   if(sc.偏印>=1)pts.push('<b>偏印あり</b>→ 親（特に母）の愛情表現が独特・気分屋、または継母的な縁。対処＝<b>過度に期待せず割り切る</b>。理解し合えなくても普通と考えると楽になる。');
   if((tb.counts["官殺"]||0)>=3)pts.push('<b>官殺（父・規律の星）が多い</b>→ <b>厳格・支配的な父</b>や親の圧を受けやすい。対処＝正論で真正面から戦わず<b>受け流して自分の領域を死守</b>。距離と経済的自立が最大の武器。');
-  var pc2=rels.filter(function(r){return /冲|刑|害/.test(r.kind)&&((r.branches||[]).indexOf(c.pillars[0].branch)>=0||(r.branches||[]).indexOf(c.pillars[1].branch)>=0);});
+  var pc2=rels.filter(function(r){return /冲/.test(r.kind)&&((r.branches||[]).indexOf(c.pillars[0].branch)>=0||(r.branches||[]).indexOf(c.pillars[1].branch)>=0);});
   if(pc2.length)pts.push('<b>年柱・月柱に'+pc2.map(function(r){return r.kind;}).join('・')+'</b>→ 親との摩擦・早く家を出る縁。対処＝<b>離れることに罪悪感を持たない</b>。距離があるほどうまくいく親子もいます。');
   if((tb.counts["印"]||0)<0.5)pts.push('<b>印が薄い</b>→ 親の支えが少なく<b>早く自立</b>する人。頼れない代わりに自由。あなたは自力で立てる人なので大丈夫。');
   if(!pts.length)pts.push('親との関係は比較的おだやかで、大きな確執の暗示は少なめです。');
@@ -3012,7 +3013,7 @@ function pcLoveProfile(p,sex){var c=p.pro,ds=c.pillars[2].ganzhi[0],db=c.pillars
   function _st(n){n=starCurve(n);return '★★★★★'.slice(0,n)+'☆☆☆☆☆'.slice(0,5-n);}
   var _mote=1;if(sl.indexOf('咸池')>=0)_mote+=2;if(sl.indexOf('紅艶')>=0)_mote+=2;if(ter==='沐浴')_mote+=1;if(((sc.食神||0)+(sc.傷官||0))>=2)_mote+=1;
   var _pas=1+(_fire>=3?2:(_fire>=1?1:0));if(sl.indexOf('咸池')>=0)_pas+=1;if(ter==='沐浴')_pas+=1;if(((sc.偏官||0)+(sc.偏財||0))>=1)_pas+=1;
-  var _rel=(window.natalRelationsX?window.natalRelationsX(c):[]),_clash=(_rel.some&&_rel.some(function(r){return /冲|刑/.test(r.kind)&&(r.branches||[]).indexOf(db)>=0;}));
+  var _rel=(window.natalRelationsX?window.natalRelationsX(c):[]),_clash=(_rel.some&&_rel.some(function(r){return /冲/.test(r.kind)&&(r.branches||[]).indexOf(db)>=0;}));
   var _mar=1+(seiTou?2:(seiCnt>0?1:0))+(_clash?0:1)+(spouseCnt>=2?1:0);
   var _loy=3;if(((sc.正財||0)+(sc.正官||0)+(sc.印綬||0))>=1)_loy+=1;if((sc.傷官||0)>=2||ter==='沐浴'||sl.indexOf('咸池')>=0)_loy-=1;if(((sc.比肩||0)+(sc.劫財||0))>=3)_loy-=1;
   var _style=(((sc.印綬||0)+(sc.偏印||0))>=3)?'受け・大事にされ型（守られる恋）':((((sc.比肩||0)+(sc.劫財||0))>=3)?'ぐいぐい攻め型（情熱的にアタック）':(_strong?'攻め型（自分から動くと縁が来る）':(_weak?'受け型（誘われ待ち・じっくり派）':'バランス型（状況で攻守を切り替え）')));
