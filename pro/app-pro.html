@@ -3547,21 +3547,30 @@ function engineBadge(online,note){
 const YOMI_RULE='\n【用語の読みがな＝厳守】読みがなを添える場合は必ず正しい読みで書く：比肩=ひけん／劫財=ごうざい（「ぎょうざい」「きょうざい」は誤り）／食神=しょくじん／傷官=しょうかん／偏財=へんざい／正財=せいざい／偏官=へんかん／正官=せいかん／偏印=へんいん／印綬=いんじゅ／建禄=けんろく／帝旺=ていおう／沐浴=もくよく／冠帯=かんたい／羊刃=ようじん／空亡=くうぼう／冲=ちゅう／三合=さんごう／方合=ほうごう／半合=はんごう／干合=かんごう／支合=しごう／月支元命=げっしげんめい／蔵干=ぞうかん／通変星=つうへんせい／納音=なっちん／律音=りっちん。自信がない用語には読みがなを付けない。';
 async function generateReading(user,localText,system){
   system=(system||CONSULT_SYSTEM)+YOMI_RULE;
-  if(!geminiKey){aiEngine='かんたん鑑定（端末内・AIなし）';return {ok:true,text:localText,online:false};}
   // 電波がない（オフライン）ときはAIを呼ばず、端末内鑑定を出す
   if(typeof navigator!=='undefined'&&navigator.onLine===false){
     aiEngine='オフライン鑑定（端末内）';
     return {ok:true,text:localText,fallback:true,online:false,note:'通信がオフラインのため、端末内で命式から作成した鑑定（オフライン鑑定）を表示しています。'};}
-  aiEngine='Gemini '+geminiModel;
   // 2.5系は思考(thinking)がデフォルトONで、maxOutputTokensを思考だけで使い切ると本文が空になる。
   // flash/flash-lite は思考をオフにして本文を確実に出す。pro は最小思考のまま余裕を持たせる。
   const genCfg={maxOutputTokens:2048};
   if(/flash/.test(geminiModel))genCfg.thinkingConfig={thinkingBudget:0};
+  // ★本番：クライアントにAPIキーは置かない。サーバー中継 /.netlify/functions/gemini がキーを保持して呼ぶ（キーがブラウザに出ない）。
+  //   動作確認用にだけ geminiKey が入っている場合は、従来どおりブラウザから直接呼ぶ（テスト専用・本番UIにキー入力欄は無い）。
+  const useServer=!geminiKey;
+  aiEngine=useServer?'AI鑑定':('Gemini '+geminiModel);
   let data;
   try{
-    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${encodeURIComponent(geminiKey)}`,
-      {method:"POST",headers:{"Content-Type":"application/json"},
-       body:JSON.stringify({system_instruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:user}]}],generationConfig:genCfg})});
+    let r;
+    if(useServer){
+      r=await fetch('/.netlify/functions/gemini',
+        {method:"POST",headers:{"Content-Type":"application/json"},
+         body:JSON.stringify({model:geminiModel,system_instruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:user}]}],generationConfig:genCfg})});
+    }else{
+      r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${encodeURIComponent(geminiKey)}`,
+        {method:"POST",headers:{"Content-Type":"application/json"},
+         body:JSON.stringify({system_instruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:user}]}],generationConfig:genCfg})});
+    }
     data=await r.json();
   }catch(e){ // 電波が弱い・通信失敗 → オフライン鑑定に切替
     aiEngine='オフライン鑑定（端末内）';
