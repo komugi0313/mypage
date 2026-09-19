@@ -3547,7 +3547,7 @@ function engineBadge(online,note){
 }
 /* AI呼び出しの共通処理。Geminiが使えれば生成。キーなし／オフライン／接続エラー／応答が空のときは、端末内のオフライン鑑定に自動で切り替える（エラーで止めない）。 */
 const YOMI_RULE='\n【用語の読みがな＝厳守】読みがなを添える場合は必ず正しい読みで書く：比肩=ひけん／劫財=ごうざい（「ぎょうざい」「きょうざい」は誤り）／食神=しょくじん／傷官=しょうかん／偏財=へんざい／正財=せいざい／偏官=へんかん／正官=せいかん／偏印=へんいん／印綬=いんじゅ／建禄=けんろく／帝旺=ていおう／沐浴=もくよく／冠帯=かんたい／羊刃=ようじん／空亡=くうぼう／冲=ちゅう／三合=さんごう／方合=ほうごう／半合=はんごう／干合=かんごう／支合=しごう／月支元命=げっしげんめい／蔵干=ぞうかん／通変星=つうへんせい／納音=なっちん／律音=りっちん。自信がない用語には読みがなを付けない。';
-async function generateReading(user,localText,system){
+async function generateReading(user,localText,system,deep){
   system=(system||CONSULT_SYSTEM)+YOMI_RULE;
   // 電波がない（オフライン）ときはAIを呼ばず、端末内鑑定を出す
   if(typeof navigator!=='undefined'&&navigator.onLine===false){
@@ -3565,9 +3565,11 @@ async function generateReading(user,localText,system){
   try{
     let r;
     if(useServer){
+      // モデルはサーバーが決める（重い自動レポートだけ x-pk-deep:1 で DEEP、相談・相性は LITE）。キーはサーバー保持。
+      var _hdr={"Content-Type":"application/json"}; if(deep)_hdr["x-pk-deep"]="1";
       r=await fetch('/.netlify/functions/gemini',
-        {method:"POST",headers:{"Content-Type":"application/json"},
-         body:JSON.stringify({model:geminiModel,system_instruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:user}]}],generationConfig:genCfg})});
+        {method:"POST",headers:_hdr,
+         body:JSON.stringify({system_instruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:user}]}],generationConfig:genCfg})});
     }else{
       r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${encodeURIComponent(geminiKey)}`,
         {method:"POST",headers:{"Content-Type":"application/json"},
@@ -3587,20 +3589,20 @@ async function generateReading(user,localText,system){
   aiEngine='オフライン鑑定（端末内）';
   return {ok:true,text:localText,fallback:true,online:false,note:'AIの応答が得られなかったため、端末内で作成した鑑定（オフライン鑑定）を表示しています。'};
 }
-async function runReading(btn,out,user,localText,proUser){
+async function runReading(btn,out,user,localText,proUser,deep){
   btn.disabled=true;out.innerHTML='<div class="loading"><span class="spin"></span>命式を読み解いています…</div>';
   try{
-    const res=await generateReading(user,localText);
+    const res=await generateReading(user,localText,undefined,deep);
     out.innerHTML=engineBadge(res.online,res.fallback?res.note:'')+formatReading(res.text);
     attachReadingTools(out,res.text);
-    if(proUser)appendPro(out,proUser,localText);
+    if(proUser)appendPro(out,proUser,localText,deep);
   }catch(e){console.error(e); // 想定外のエラーでもオフライン鑑定を出す
     out.innerHTML=engineBadge(false,'通信できないため、端末内で作成した鑑定（オフライン鑑定）を表示しています。')+formatReading(localText);
-    attachReadingTools(out,localText); if(proUser)appendPro(out,proUser,localText);}
+    attachReadingTools(out,localText); if(proUser)appendPro(out,proUser,localText,deep);}
   finally{btn.disabled=false;}
 }
 // 鑑定文の下に「本格鑑定（専門用語そのまま）を開く」ボタンを足す（デフォルトはわかりやすい本格鑑定）。
-function appendPro(out,proUser,localText){
+function appendPro(out,proUser,localText,deep){
   const wrap=document.createElement('div');wrap.className='prowrap';
   wrap.innerHTML='<button type="button" class="probtn" style="margin-top:14px;width:100%;min-height:48px;border:0;background:linear-gradient(135deg,#E8392B 0%,#E26A2C 50%,#E2A12B 100%);color:#fff;border-radius:12px;font-family:inherit;font-weight:900;font-size:14px;cursor:pointer;box-shadow:0 3px 11px rgba(226,107,44,.26);text-shadow:0 1px 2px rgba(0,0,0,.16)">📜 本格鑑定を開く（専門用語そのまま）</button><div class="proout" hidden style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--line2)"></div>';
   out.appendChild(wrap);
@@ -3609,7 +3611,7 @@ function appendPro(out,proUser,localText){
   btn.onclick=async()=>{
     if(box.dataset.done){box.hidden=!box.hidden;btn.textContent=box.hidden?closed:opened;return;}
     btn.disabled=true;box.hidden=false;box.innerHTML='<div class="loading"><span class="spin"></span>専門用語そのままの本格鑑定を作成しています…</div>';
-    try{const res=await generateReading(proUser,localText,CONSULT_SYSTEM);box.innerHTML=engineBadge(res.online,res.fallback?res.note:'')+formatReading(res.text);box.dataset.done='1';btn.textContent=opened;}
+    try{const res=await generateReading(proUser,localText,CONSULT_SYSTEM,deep);box.innerHTML=engineBadge(res.online,res.fallback?res.note:'')+formatReading(res.text);box.dataset.done='1';btn.textContent=opened;}
     catch(e){console.error(e);box.innerHTML=engineBadge(false,'通信できないため、端末内で作成した鑑定（オフライン鑑定）を表示しています。')+formatReading(localText);box.dataset.done='1';btn.textContent=opened;}
     finally{btn.disabled=false;}
   };
@@ -3629,7 +3631,8 @@ function proReadUser(c){return `【確定済みの命式】\n${buildChartText(c)
 function easyReadUser(c){return `【確定済みの命式】\n${buildChartText(c)}\n\nこの命式そのものを、相談がなくても通用するプロの「鑑定レポート」として読み解いてください。\n【書き方＝最重要】鑑定は「深く、しかし分かりやすく・伝わりやすい言葉」で書く。占い師にも占い初心者にも、すっと頭に入るように。専門用語（通変星・十二運・蔵干・干支・五行など）は省かず使ってよいが、出てきたら必ずその場で“ふつうの言葉”で短く言いかえる（例:「正官（規律と責任を大切にする星）」「冲（ぶつかり合い・刺激）」）。一文は短めにし、つなぎを丁寧に。内容・結論・深さ・構成・根拠は本格鑑定とまったく同じにし、やさしくするために情報を削ったり薄めたりしない（＝浅くしない）。\n${READ_STRUCT}\n全体900〜1100字。`;}
 async function doAutoRead(){
   const out=document.getElementById('autoReading');
-  runReading(document.getElementById('autoReadBtn'),out,easyReadUser(chart),localReading(chart,''),proReadUser(chart));
+  // 自動鑑定レポートは最重要＝DEEP（x-pk-deep:1）。相談・相性は既定(LITE)。
+  runReading(document.getElementById('autoReadBtn'),out,easyReadUser(chart),localReading(chart,''),proReadUser(chart),true);
 }
 
 /* ===== 相性診断（2人の命式を比較・計算ロジックは同じ） ===== */
