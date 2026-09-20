@@ -77,6 +77,86 @@
     function _starP(){ var names=[].slice.call(arguments),r=[]; c.pillars.forEach(function(pl,i){ if(!pl)return; var hit=(names.indexOf(pl.tenStar)>=0)||((pl.hiddenStems||[]).some(function(h){return names.indexOf(h.tenStar)>=0;})); if(hit)r.push(_LB[i]+'柱'); }); return r.join('・'); }
     var _kangoP = (function(){ var g=GANGOU[c.dayMaster.stem],r=[]; c.pillars.forEach(function(pl,i){ if(pl&&pl.ganzhi&&pl.ganzhi[0]===g)r.push(_LB[i]+'柱'); }); return r.join('・'); })();
 
+    /* ===== 運の巡り（A:選択年で5項目★を切替／B:輝く年ハイライト）＝②純正データで手計算なし ===== */
+    var MUTED='#8B7E68';
+    var marryStar = female?'正官':'正財', loveStar = female?'偏官':'偏財';
+    var voids = (typeof kubo==='function') ? (kubo(c)||[]) : [];
+    var nowY = (c.now&&c.now.year) || (new Date().getFullYear());
+    var natalCore = (_hasKa||_hasKo)?1:0;   /* 生まれ持ちのモテ星があれば全体を少し底上げ */
+    var af = (c.annualFortunes||[]).filter(function(a){ return a.year>=nowY; }).slice(0,15);
+    function hh(n){ n=Math.max(0,Math.min(5,n)); return '❤'.repeat(n)+'<span style="opacity:.28">'+'❤'.repeat(5-n)+'</span>'; }
+    /* B:今後15年の「その年の恋愛運❤」 */
+    var frows = af.map(function(a){
+      var b=a.branch, bonus=0, why=[];
+      var k4=(typeof matchKichi4==='function')?matchKichi4(c,b):[];
+      var k1=(typeof matchKichi1==='function')?matchKichi1(c,b):[];
+      if(k4.indexOf('咸池')>=0){bonus+=2;why.push('桃花');}
+      if(k1.indexOf('紅艶')>=0){bonus+=2;why.push('紅艶');}
+      var ts=a.tenStar, hts=a.hiddenTenStar;
+      if(ts===marryStar||hts===marryStar){bonus+=2;why.push('結婚の星('+marryStar+')');}
+      else if(ts===loveStar||hts===loveStar){bonus+=1;why.push('恋愛の星('+loveStar+')');}
+      if(ts==='食神'||ts==='傷官'||hts==='食神'||hts==='傷官'){bonus+=1;why.push('食傷（魅力）');}
+      if(RIKUGOU[db]===b){bonus+=1;why.push('日支と支合');}
+      else if(inSango(db,b)){bonus+=1;why.push('日支と三合');}
+      if(k1.indexOf('天乙貴人')>=0){bonus+=1;why.push('貴人');}
+      var heart=Math.max(1,Math.min(5,1+natalCore+bonus));
+      return {year:a.year, gz:a.ganzhi, heart:heart, why:why, voidY:(voids.indexOf(b)>=0), clash:isChong(db,b)};
+    });
+    var maxHeart = frows.reduce(function(m,r){ return Math.max(m,r.heart); }, 1);
+    var best = frows.filter(function(r){ return r.heart===maxHeart && maxHeart>=3; });
+    var flowHtml='';
+    if(frows.length){
+      flowHtml = '<div style="background:#FBF3EF;border:1px solid #F0DBD0;border-radius:10px;padding:10px 12px;margin:2px 0 10px">'
+        + '<b style="display:block;color:#c0397a;font-weight:800;margin:0 0 4px">◆ 恋愛運が輝く年（これからの巡り）</b>'
+        + '<p style="margin:0 0 6px;font-size:12.5px;color:'+MUTED+'">生まれ持った❤に、その年に巡ってくる恋愛の星（桃花・紅艶・配偶者星など）を足した「その年の恋愛運」です。'
+          + ((natalCore===0&&maxHeart>=3)?'<b style="color:#c0397a">持って生まれたモテ星が控えめでも、下の年は縁が動いて❤が上がります。</b>':'') + '</p>';
+      if(best.length){
+        flowHtml += '<p style="margin:4px 0 6px"><b>💖 とくに輝く年：</b>'
+          + best.map(function(r){ return '<b style="color:#c0397a">'+r.year+'年</b>'; }).join('・')
+          + '（'+hh(maxHeart)+'）</p>';
+      }
+      flowHtml += frows.map(function(r){
+        return '<div style="margin:3px 0;font-size:13px"><b>'+r.year+'</b> '+esc(r.gz)
+          + ' <span style="letter-spacing:1px">'+hh(r.heart)+'</span>'
+          + (r.why.length?' <span style="color:'+MUTED+';font-size:11.5px">／'+esc(r.why.join('・'))+'</span>':'')
+          + (r.voidY?' <span style="color:#b06a2e;font-size:11px">※空亡：整える年</span>':'')
+          + (r.clash&&!r.voidY?' <span style="color:#b06a2e;font-size:11px">※配偶宮が動く年</span>':'')
+          + '</div>';
+      }).join('');
+      flowHtml += '<p style="margin:6px 0 0;font-size:11px;color:'+MUTED+'">※桃花+2／紅艶+2／結婚の星+2／恋愛の星+1／食傷+1／日支と支合・三合+1／貴人+1（1〜5に調整）。年運は立春で切替。悪い予言ではなく「縁が動きやすい時期」の目安です。</p>'
+        + '</div>';
+    }
+    /* A:選択中の年運（②の年運タップ or カード内セレクタで selYear が入る）→ 5項目★へ加点 */
+    var selY = (typeof selYear!=='undefined' && selYear) ? +selYear : null;
+    var yBonus=null;
+    if(selY){
+      var _ya=(c.annualFortunes||[]).filter(function(a){return a.year===selY;})[0];
+      var _du=(c.decadeFortunes||[]).filter(function(d){return d.startYear!=null && selY>=d.startYear && selY<d.startYear+10;})[0];
+      if(_ya){
+        var _yb=_ya.branch,_yts=_ya.tenStar,_yhts=_ya.hiddenTenStar,_yEl=_ya.branchElement;
+        var _yk1=(typeof matchKichi1==='function')?matchKichi1(c,_yb):[],_yk4=(typeof matchKichi4==='function')?matchKichi4(c,_yb):[];
+        var _yKa=_yk4.indexOf('咸池')>=0,_yKo=_yk1.indexOf('紅艶')>=0,_yTen=_yk1.indexOf('天乙貴人')>=0;
+        var _yMarry=(_yts===marryStar||_yhts===marryStar),_yLove=(_yts===loveStar||_yhts===loveStar);
+        var _yHego=(RIKUGOU[db]===_yb),_ySango=inSango(db,_yb);
+        var _dMarry=false,_dKa=false;
+        if(_du){_dMarry=(_du.tenStar===marryStar);var _dk4=(typeof matchKichi4==='function')?matchKichi4(c,_du.branch):[];_dKa=_dk4.indexOf('咸池')>=0;}
+        yBonus={mote:0,pas:0,mar:0,first:0,fate:0,r:{mote:[],pas:[],mar:[],first:[],fate:[]}};
+        if(_yKa){yBonus.mote+=2;yBonus.r.mote.push(selY+'年:桃花+2');} if(_yKo){yBonus.mote+=2;yBonus.r.mote.push(selY+'年:紅艶+2');} if(_dKa){yBonus.mote+=1;yBonus.r.mote.push('大運:桃花+1');}
+        if(_yKa){yBonus.pas+=1;yBonus.r.pas.push(selY+'年:桃花+1');} if(_yEl==='火'){yBonus.pas+=1;yBonus.r.pas.push(selY+'年:火が巡る+1');}
+        if(_yMarry){yBonus.mar+=2;yBonus.r.mar.push(selY+'年:結婚の星('+marryStar+')+2');} else if(_yLove){yBonus.mar+=1;yBonus.r.mar.push(selY+'年:恋愛の星('+loveStar+')+1');}
+        if(_yHego){yBonus.mar+=1;yBonus.r.mar.push(selY+'年:日支と支合+1');} else if(_ySango){yBonus.mar+=1;yBonus.r.mar.push(selY+'年:日支と三合+1');}
+        if(_dMarry){yBonus.mar+=1;yBonus.r.mar.push('大運:結婚の星+1');}
+        if(_yKa){yBonus.first+=1;yBonus.r.first.push(selY+'年:桃花+1');} if(_yKo){yBonus.first+=1;yBonus.r.first.push(selY+'年:紅艶+1');}
+        if(_yTen){yBonus.fate+=1;yBonus.r.fate.push(selY+'年:天乙貴人+1');} if(_yKa||_yKo){yBonus.fate+=1;yBonus.r.fate.push(selY+'年:桃花/紅艶+1');} if(_yMarry||_yLove){yBonus.fate+=1;yBonus.r.fate.push(selY+'年:縁星+1');}
+      }
+    }
+    /* カード内の「見る時期」セレクタ（選ぶと selYear をセットして再描画） */
+    var yrSel = '<div style="margin:2px 0 8px"><label style="font-size:12px;color:'+MUTED+';font-weight:700">見る時期：</label> '
+      + '<select onchange="try{selYear=(this.value?+this.value:null);renderResult();}catch(e){}" style="font-size:13px;padding:3px 6px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)">'
+      + '<option value="">生まれ持ち（基本）</option>'
+      + frows.map(function(r){ return '<option value="'+r.year+'"'+(selY===r.year?' selected':'')+'>'+r.year+'年（❤'+r.heart+'）</option>'; }).join('')
+      + '</select></div>';
+
     /* 各★の素点と「その人で実際に効いた根拠（＋出現する柱）」 */
     var _mote=1,_moteR=[]; if(_hasKa){_mote+=2;_moteR.push(_wp('桃花(咸池)',_ssP('咸池'))+'+2');} if(_hasKo){_mote+=2;_moteR.push(_wp('紅艶',_ssP('紅艶'))+'+2');} if(_boku){_mote+=1;_moteR.push('日柱が沐浴+1');} if(_ss>=2){_mote+=1;_moteR.push(_wp('食傷が2つ以上',_starP('食神','傷官'))+'+1');}
     var _pas=1,_pasR=[]; if(_fire>=3){_pas+=2;_pasR.push('火の五行が多い(+2)');}else if(_fire>=1){_pas+=1;_pasR.push('火の五行あり(+1)');} if(_hasKa){_pas+=1;_pasR.push(_wp('桃花',_ssP('咸池'))+'+1');} if(_boku){_pas+=1;_pasR.push('日柱が沐浴+1');} if(((sc.偏官||0)+(sc.偏財||0))>=1){_pas+=1;_pasR.push(_wp('偏官/偏財あり',_starP('偏官','偏財'))+'+1');}
@@ -92,13 +172,21 @@
     var _amae=1,_amaeR=[]; if(_inx>=1){_amae+=1;_amaeR.push(_wp('印星(甘え上手)',_starP('印綬','偏印'))+'+1');} if(ter==='養'||ter==='胎'){_amae+=1;_amaeR.push('日柱が'+esc(ter)+'(愛され気質)+1');} if((sc.食神||0)>=1){_amae+=1;_amaeR.push(_wp('食神(愛嬌)',_starP('食神'))+'+1');} if(_hasTen){_amae+=1;_amaeR.push(_wp('天乙貴人(助けられ運)',_ssP('天乙貴人'))+'+1');}
     var _style=(_inx>=3)?'受け・大事にされ型（守られる恋）':((_hk>=3)?'ぐいぐい攻め型（情熱的にアタック）':(_strong?'攻め型（自分から動くと縁が来る）':(_weak?'受け型（誘われ待ち・じっくり派）':'バランス型（状況で攻守を切り替え）')));
 
+    /* A:選択年の巡りを5項目★へ反映 */
+    if(yBonus){
+      _mote+=yBonus.mote; _pas+=yBonus.pas; _mar+=yBonus.mar; _first+=yBonus.first; _fate+=yBonus.fate;
+      Array.prototype.push.apply(_moteR,yBonus.r.mote); Array.prototype.push.apply(_pasR,yBonus.r.pas);
+      Array.prototype.push.apply(_marR,yBonus.r.mar); Array.prototype.push.apply(_firstR,yBonus.r.first);
+      Array.prototype.push.apply(_fateR,yBonus.r.fate);
+    }
     function stars5(n){ n=starCurve(n); return '★★★★★'.slice(0,n)+'☆☆☆☆☆'.slice(0,5-n); }
     function _why(arr){ return '<br><span style="color:#8a6b78;font-size:11px">🔎 あなたの根拠：'+(arr.length?esc(arr.join(' ／ ')):'目立つ加点サインなし（標準）')+'</span>'; }
-    var MUTED='#8B7E68';
     function note(t,extra){ return '<span style="color:'+MUTED+';font-size:12px'+(extra||'')+'">'+t+'</span>'; }
     function _lrow(lbl,n,rs,wr){ return '<div style="margin:7px 0"><b>'+lbl+'</b> <span style="color:#c0397a;font-size:16px;letter-spacing:2px">'+stars5(n)+'</span><br>'+note(rs)+_why(wr||[])+'</div>'; }
 
-    var loveStatus = '<div style="background:#FBF3EF;border:1px solid #F0DBD0;border-radius:10px;padding:10px 12px;margin:2px 0 10px"><b style="display:block;color:#c0397a;font-weight:800;margin:0 0 4px">◆ 恋愛ステータス（★でひと目）</b>'
+    var loveStatus = '<div style="background:#FBF3EF;border:1px solid #F0DBD0;border-radius:10px;padding:10px 12px;margin:2px 0 10px"><b style="display:block;color:#c0397a;font-weight:800;margin:0 0 4px">◆ '+(selY?(selY+'年の'):'')+'恋愛ステータス（★でひと目）</b>'
+      + yrSel
+      + (selY?'<p style="margin:0 0 6px;font-size:12px;color:'+MUTED+'">★は<b>生まれ持ち＋'+selY+'年の巡り</b>を合わせた値です（「生まれ持ち（基本）」に戻すと先天のみ）。</p>':'')
       + (c.timeUnknown ? '<p style="margin:3px 0 4px;color:#b06a2e;font-size:11.5px">※生まれ<b>時間が不明</b>のため、時柱ぶんのサイン（神殺・星）は含めていません。実際の❤は<b>これ以上になることがあります</b>。時間がわかると精度が上がります。</p>' : '')
       + _lrow('💖 モテ度（人気・魅力）',_mote,(_hasKa||_hasKo)?'人を惹きつける“色気・華の星”（桃花・紅艶）持ち。例：黙っていても自然と目に留まるタイプ':'派手さより、知るほど好きになる“じわじわ本命”タイプ',_moteR)
       + _lrow('🔥 情熱・ときめき度',_pas,_fire>=2?'火の気が強く、好きになると一直線。例：気になる人にはすぐ連絡したくなる情熱家':'ゆっくり信頼を育てる、落ち着いた愛し方',_pasR)
@@ -123,53 +211,6 @@
         + '</p></details>'
       + '<p style="margin:6px 0 0;color:'+MUTED+';font-size:12px">※星は命式の“恋の傾向”の目安です。行動しだいでいくらでも伸ばせます。</p></div>';
 
-    /* ===== 恋愛運が輝く年（これからの巡り）＝ベース＋年運の恋愛星で❤が上下する ===== */
-    var marryStar = female?'正官':'正財', loveStar = female?'偏官':'偏財';
-    var natalCore = (_hasKa||_hasKo)?1:0;   /* 生まれ持ちのモテ星があれば全体を少し底上げ */
-    var voids = (typeof kubo==='function') ? (kubo(c)||[]) : [];
-    var nowY = (c.now&&c.now.year) || (new Date().getFullYear());
-    var af = (c.annualFortunes||[]).filter(function(a){ return a.year>=nowY; }).slice(0,15);
-    function hh(n){ n=Math.max(0,Math.min(5,n)); return '❤'.repeat(n)+'<span style="opacity:.28">'+'❤'.repeat(5-n)+'</span>'; }
-    var frows = af.map(function(a){
-      var b=a.branch, bonus=0, why=[];
-      var k4=(typeof matchKichi4==='function')?matchKichi4(c,b):[];
-      var k1=(typeof matchKichi1==='function')?matchKichi1(c,b):[];
-      if(k4.indexOf('咸池')>=0){bonus+=2;why.push('桃花');}
-      if(k1.indexOf('紅艶')>=0){bonus+=2;why.push('紅艶');}
-      var ts=a.tenStar, hts=a.hiddenTenStar;
-      if(ts===marryStar||hts===marryStar){bonus+=2;why.push('結婚の星('+marryStar+')');}
-      else if(ts===loveStar||hts===loveStar){bonus+=1;why.push('恋愛の星('+loveStar+')');}
-      if(ts==='食神'||ts==='傷官'||hts==='食神'||hts==='傷官'){bonus+=1;why.push('食傷（魅力）');}
-      if(RIKUGOU[db]===b){bonus+=1;why.push('日支と支合');}
-      else if(inSango(db,b)){bonus+=1;why.push('日支と三合');}
-      if(k1.indexOf('天乙貴人')>=0){bonus+=1;why.push('貴人');}
-      var heart=Math.max(1,Math.min(5,1+natalCore+bonus));
-      return {year:a.year, gz:a.ganzhi, heart:heart, why:why, voidY:(voids.indexOf(b)>=0), clash:isChong(db,b)};
-    });
-    var maxHeart = frows.reduce(function(m,r){ return Math.max(m,r.heart); }, 1);
-    var best = frows.filter(function(r){ return r.heart===maxHeart && maxHeart>=3; });
-    var flowHtml = '';
-    if(frows.length){
-      flowHtml = '<div style="background:#FBF3EF;border:1px solid #F0DBD0;border-radius:10px;padding:10px 12px;margin:2px 0 10px">'
-        + '<b style="display:block;color:#c0397a;font-weight:800;margin:0 0 4px">◆ 恋愛運が輝く年（これからの巡り）</b>'
-        + '<p style="margin:0 0 6px;font-size:12.5px;color:'+MUTED+'">生まれ持った❤に、その年に巡ってくる恋愛の星（桃花・紅艶・配偶者星など）を足した「その年の恋愛運」です。'
-          + ((natalCore===0&&maxHeart>=3)?'<b style="color:#c0397a">持って生まれたモテ星が控えめでも、下の年は縁が動いて❤が上がります。</b>':'') + '</p>';
-      if(best.length){
-        flowHtml += '<p style="margin:4px 0 6px"><b>💖 とくに輝く年：</b>'
-          + best.map(function(r){ return '<b style="color:#c0397a">'+r.year+'年</b>'; }).join('・')
-          + '（'+hh(maxHeart)+'）</p>';
-      }
-      flowHtml += frows.map(function(r){
-        return '<div style="margin:3px 0;font-size:13px"><b>'+r.year+'</b> '+esc(r.gz)
-          + ' <span style="letter-spacing:1px">'+hh(r.heart)+'</span>'
-          + (r.why.length?' <span style="color:'+MUTED+';font-size:11.5px">／'+esc(r.why.join('・'))+'</span>':'')
-          + (r.voidY?' <span style="color:#b06a2e;font-size:11px">※空亡：整える年</span>':'')
-          + (r.clash&&!r.voidY?' <span style="color:#b06a2e;font-size:11px">※配偶宮が動く年</span>':'')
-          + '</div>';
-      }).join('');
-      flowHtml += '<p style="margin:6px 0 0;font-size:11px;color:'+MUTED+'">※桃花+2／紅艶+2／結婚の星+2／恋愛の星+1／食傷+1／日支と支合・三合+1／貴人+1（1〜5に調整）。年運は立春で切替。悪い予言ではなく「縁が動きやすい時期」の目安です。</p>'
-        + '</div>';
-    }
 
     /* ガイド＋導入 */
     var H = '<details style="border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:0 0 10px"><summary style="cursor:pointer;font-weight:700;color:var(--gold)">＋ 読み解きガイド（人に説明する用・タップで開く）</summary><div style="margin-top:8px;line-height:1.6;color:var(--ink2);font-size:13px">'
