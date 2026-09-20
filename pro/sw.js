@@ -3,7 +3,7 @@
    鑑定・60干支の教科書を使えるようにする。
    オンライン鑑定（生成AI）だけは通信が要るが、圏外時は端末内の
    オフライン鑑定に自動で切り替わる。 */
-const CACHE = 'shichu-jidou-v7';   /* 恋愛❤カード・教科書9本の追加を配信 */
+const CACHE = 'shichu-jidou-v8';   /* 干支相性早見表の追加を配信 */
 
 /* 初回訪問時に先読みしてキャッシュするページ一式（このブランドのみ） */
 const ASSETS = [
@@ -14,7 +14,8 @@ const ASSETS = [
   'manifest-pro.webmanifest', 'icon-pro.svg',
   'pklove.js',
   'jikkan.html', 'tsuhensei.html', 'juniun.html', 'zohkan.html', 'kubo.html',
-  'daiun-tenkanki.html', 'ritsuun.html', 'nichiza-tenchusatsu.html', 'ijokanshi.html'
+  'daiun-tenkanki.html', 'ritsuun.html', 'nichiza-tenchusatsu.html', 'ijokanshi.html',
+  'kanshi-aisho.html'
 ];
 
 self.addEventListener('install', (e) => {
