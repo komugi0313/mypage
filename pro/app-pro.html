@@ -346,11 +346,15 @@
 (function(){
   // 本番モード（会員ゲート有効）。開発時のみ true にするとログイン不要で確認できます。
   var DEMO_MODE = false;
+  // ★公開前プレビュー：決済（テレコムクレジット）接続までは true にして、ログイン不要で誰でも試せる状態にする。
+  //   本番公開（決済URL設定＋会員バックエンド準備）時に false へ戻すと、通常の会員制ゲートに戻る。
+  var PREVIEW_MODE = true;
   var API='/.netlify/functions';
   var gate=document.getElementById('member-gate');
   var msg=document.getElementById('mg-msg');
   var statusEl=document.getElementById('mg-status');
   function unlock(){ gate.classList.add('unlocked'); document.body.style.overflow=''; }
+  function showPreviewBanner(){ try{ if(document.getElementById('preview-banner'))return; var d=document.createElement('div'); d.id='preview-banner'; d.style.cssText='position:sticky;top:0;z-index:60;background:#2A2140;color:#fff;text-align:center;font-size:12px;font-weight:800;padding:7px 12px;line-height:1.5'; d.innerHTML='🔎 公開前プレビュー中（無料・ログイン不要でお試しいただけます）'; document.body.insertAdjacentElement('afterbegin', d); }catch(e){} }
   function showErr(t){ msg.innerHTML='<div class="mg-err">'+t+'</div>'; }
   function statusJa(s){ return ({active:'課金中',trialing:'無料トライアル中',past_due:'支払い遅延',canceled:'解約済み',unpaid:'未払い',none:'未契約'})[s]||s||'未契約'; }
   async function check(email){
@@ -381,6 +385,8 @@
   }
   // ローカルで開いた場合（file://）は確認用に自動解除
   if(location.protocol==='file:'){ unlock(); return; }
+  // ★公開前プレビュー：決済接続まではログイン不要で全開放（本番公開時は PREVIEW_MODE=false に戻す）
+  if(PREVIEW_MODE){ unlock(); showPreviewBanner(); return; }
   document.body.style.overflow='hidden';
   var saved=localStorage.getItem('member_email');
   if(saved){ document.getElementById('mg-email').value=saved; tryEmail(saved); }
