@@ -3305,33 +3305,83 @@ function pickFocus(interests){
   function rrect(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
   function shareCardCanvas(){
     var W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;var g=c.getContext('2d');
+    var solo=(state.mode==='solo');
     var grd=g.createLinearGradient(0,0,W,H); grd.addColorStop(0,'#3a4570');grd.addColorStop(.55,'#232c52');grd.addColorStop(1,'#141a34');
     g.fillStyle=grd; g.fillRect(0,0,W,H);
     g.strokeStyle='rgba(216,189,119,.45)'; g.lineWidth=3; g.strokeRect(46,46,W-92,H-92);
     var cx=W/2;
     function T(txt,y,font,color,align,x){ g.font=font; g.fillStyle=color; g.textAlign=align||'center'; g.textBaseline='alphabetic'; g.fillText(txt,(x==null?cx:x),y); }
-    T('運命の相性カレンダー',148,'600 30px "Zen Old Mincho",serif','#d8bd77');
-    T('にこカレ',250,'900 96px "Zen Old Mincho",serif','#f6efda');
-    T(state.y+'年 '+state.m+'月 ・ 「'+PP[state.pp].name+'」',336,'700 40px "Zen Old Mincho",serif','#f6efda');
-    if(state.mode==='couple'){ T((state.A.name||'あなた')+' ✕ '+(state.B.name||'お相手'),392,'500 30px "Zen Kaku Gothic New",sans-serif','rgba(246,239,218,.82)'); }
+    T('運命の相性カレンダー',138,'600 30px "Zen Old Mincho",serif','#d8bd77');
+    T('にこカレ',228,'900 88px "Zen Old Mincho",serif','#f6efda');
+    T(state.y+'年 '+state.m+'月　'+(solo?'あなたの運勢':'「'+PP[state.pp].name+'」'),300,'700 38px "Zen Old Mincho",serif','#f6efda');
+    if(!solo){ T((state.A.name||'あなた')+' ✕ '+(state.B.name||'お相手'),350,'500 29px "Zen Kaku Gothic New",sans-serif','rgba(246,239,218,.82)'); }
+
     var data=monthScan();
-    var stars=data.filter(function(x){return x.mk&&x.mk.s==='◎';}).sort(function(a,b){return b.score-a.score;}).slice(0,3).map(function(x){return x.d;}).sort(function(a,b){return a-b;});
-    var okgood=data.filter(function(x){return x.mk&&(x.mk.s==='◎'||x.mk.s==='○');}).length;
-    var avoid=data.filter(function(x){return x.mk&&x.mk.s==='×';}).map(function(x){return x.d;});
-    var reco=stars.length?stars:data.filter(function(x){return x.mk&&(x.mk.s==='◎'||x.mk.s==='○');}).sort(function(a,b){return b.score-a.score;}).slice(0,3).map(function(x){return x.d;}).sort(function(a,b){return a-b;});
-    // star panel
-    var by=445,bh=300;
-    g.fillStyle='rgba(216,189,119,.12)'; rrect(g,110,by,W-220,bh,26); g.fill();
-    g.strokeStyle='rgba(216,189,119,.5)'; g.lineWidth=2; rrect(g,110,by,W-220,bh,26); g.stroke();
-    T('⭐ 二人の運命が動く日',by+78,'700 40px "Zen Kaku Gothic New",sans-serif','#e6cf95');
-    var daysTxt=reco.length?reco.map(function(d){return d+'日';}).join('　'):'今月は穏やかな日が中心';
-    T(daysTxt,by+205,(reco.length?'900 96px':'700 46px')+' "Zen Old Mincho",serif','#f6efda');
-    // good count + avoid
-    T('◎ 二人にいい日：'+okgood+'日',by+bh+90,'700 40px "Zen Kaku Gothic New",sans-serif','#c6d2a8');
-    if(avoid.length){ T('⚠ 避けたい日：'+avoid.slice(0,6).map(function(d){return d+'日';}).join('・')+(avoid.length>6?' ほか':''),by+bh+160,'500 34px "Zen Kaku Gothic New",sans-serif','#e6a89f'); }
-    // tagline + footer
-    T('二人の運命が、動く日。',H-150,'900 44px "Zen Old Mincho",serif','#f6efda');
-    T('四柱推命でみる 相性ごよみ　にこカレ',H-84,'400 28px "Zen Kaku Gothic New",sans-serif','rgba(216,189,119,.8)');
+    // 各日の色（◎/○/△/× ・ ⭐ ・ soloの💮/◎/〇/△）
+    var GC={star:'#f4d27a',maru:'#e6cf95',ok:'#9cc7a6',warn:'#e0b168',bad:'#e79a91',none:'rgba(246,239,218,.14)'};
+    var stars={};
+    if(!solo){ data.filter(function(x){return x.mk&&x.mk.s==='◎';}).sort(function(a,b){return b.score-a.score;}).slice(0,3).forEach(function(x){stars[x.d]=true;}); }
+    function dayColor(x){
+      if(solo){ if(x.sym==='💮')return GC.star; if(x.sym==='◎')return GC.maru; if(x.sym==='△')return GC.warn; return GC.ok; }
+      if(stars[x.d])return GC.star;
+      var s=x.mk&&x.mk.s;
+      if(s==='◎')return GC.maru; if(s==='○')return GC.ok; if(s==='△')return GC.warn; if(s==='×')return GC.bad; return GC.none;
+    }
+    // ミニ月間ヒートマップ（固定の帯に収めるので何月でも崩れない）
+    var gx=104, gw=W-208, cols=7, cw=gw/cols;
+    var wdY=430, gridTop=452, gridH=352;
+    var wd=['日','月','火','水','木','金','土'];
+    for(var i=0;i<7;i++){ T(wd[i],wdY,'600 25px "Zen Kaku Gothic New",sans-serif', i===0?'#e79a91':(i===6?'#9db4e0':'rgba(246,239,218,.72)'),'center',gx+cw*i+cw/2); }
+    var first=new Date(state.y,state.m-1,1).getDay();
+    var rows=Math.ceil((first+data.length)/7), ch=gridH/rows;
+    var dotR=Math.min(cw,ch)*0.40; if(dotR>34)dotR=34;
+    data.forEach(function(x){
+      var idx=first+(x.d-1), col=idx%7, row=Math.floor(idx/7);
+      var ccx=gx+cw*col+cw/2, ccy=gridTop+ch*row+ch/2;
+      var fill=dayColor(x), hot=(solo?x.sym==='💮':stars[x.d]);
+      g.beginPath(); g.arc(ccx,ccy,dotR,0,Math.PI*2); g.fillStyle=fill; g.fill();
+      if(hot){ g.lineWidth=3; g.strokeStyle='#fff3d0'; g.stroke(); }
+      var light=(fill===GC.none);
+      T(String(x.d),ccy+9,'700 24px "Zen Kaku Gothic New",sans-serif',light?'rgba(246,239,218,.7)':'#26305a','center',ccx);
+    });
+
+    // ベストデー・パネル（固定位置）
+    var by=828,bh=176;
+    g.fillStyle='rgba(216,189,119,.12)'; rrect(g,104,by,gw,bh,26); g.fill();
+    g.strokeStyle='rgba(216,189,119,.5)'; g.lineWidth=2; rrect(g,104,by,gw,bh,26); g.stroke();
+    var bestDays,bestLabel;
+    if(solo){ bestDays=data.filter(function(x){return x.sym==='💮'||x.sym==='◎';}).map(function(x){return x.d;}); bestLabel='✨ 絶好調・好調の日'; }
+    else { bestDays=Object.keys(stars).map(Number).sort(function(a,b){return a-b;});
+      if(!bestDays.length) bestDays=data.filter(function(x){return x.mk&&(x.mk.s==='◎'||x.mk.s==='○');}).sort(function(a,b){return b.score-a.score;}).slice(0,3).map(function(x){return x.d;}).sort(function(a,b){return a-b;});
+      bestLabel='⭐ 二人の運命が動く日'; }
+    T(bestLabel,by+62,'700 37px "Zen Kaku Gothic New",sans-serif','#e6cf95');
+    var daysTxt=bestDays.length?bestDays.slice(0,6).map(function(d){return d+'日';}).join('　'):'今月は穏やかな日が中心';
+    // パネル幅に収まるよう自動縮小
+    (function(){
+      var px=bestDays.length?74:44, maxW=gw-72;
+      g.font='900 '+px+'px "Zen Old Mincho",serif';
+      while(px>28 && g.measureText(daysTxt).width>maxW){ px-=3; g.font='900 '+px+'px "Zen Old Mincho",serif'; }
+      T(daysTxt,by+142,'900 '+px+'px "Zen Old Mincho",serif','#f6efda');
+    })();
+
+    // カウント行（固定位置）
+    var cy1=1076,cy2=1134;
+    if(solo){
+      var good=data.filter(function(x){return x.sym==='💮'||x.sym==='◎';}).length;
+      var mote=data.filter(function(x){return x.touka;}).map(function(x){return x.d;});
+      T('◎ 好調の日：'+good+'日',cy1,'700 37px "Zen Kaku Gothic New",sans-serif','#c6d2a8');
+      if(mote.length) T('🌷 モテ運の日：'+mote.slice(0,6).map(function(d){return d+'日';}).join('・')+(mote.length>6?' ほか':''),cy2,'500 31px "Zen Kaku Gothic New",sans-serif','#e6b7c8');
+    } else {
+      var okgood=data.filter(function(x){return x.mk&&(x.mk.s==='◎'||x.mk.s==='○');}).length;
+      var avoid=data.filter(function(x){return x.mk&&x.mk.s==='×';}).map(function(x){return x.d;});
+      T('◎ 二人にいい日：'+okgood+'日',cy1,'700 37px "Zen Kaku Gothic New",sans-serif','#c6d2a8');
+      if(avoid.length) T('⚠ 避けたい日：'+avoid.slice(0,6).map(function(d){return d+'日';}).join('・')+(avoid.length>6?' ほか':''),cy2,'500 31px "Zen Kaku Gothic New",sans-serif','#e6a89f');
+    }
+
+    // タグライン＋フッター（屋号があれば併記）
+    T(solo?'あなたの運気が、動く日。':'二人の運命が、動く日。',H-150,'900 44px "Zen Old Mincho",serif','#f6efda');
+    var yago=(state.brand&&state.brand.bYago)?String(state.brand.bYago).trim():'';
+    T('四柱推命でみる 相性ごよみ　にこカレ'+(yago?'　／　'+yago:''),H-82,'400 27px "Zen Kaku Gothic New",sans-serif','rgba(216,189,119,.82)');
     return c;
   }
   async function shareImage(){
@@ -3398,6 +3448,13 @@ function pickFocus(interests){
   try{ window.scrollTo(0,0); }catch(e){}
 })();
 </script>
-
+<script>
+/* オフライン対応：サービスワーカー登録（対応ブラウザのみ。file:// では無効） */
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
 </body>
 </html>
