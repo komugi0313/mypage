@@ -261,6 +261,7 @@
     H += '<p style="margin:4px 0"><b>モテ度：</b><span style="color:#c0397a;font-size:16px;letter-spacing:2px">'+stars+'</span></p>';
     H += '<p style="margin:4px 0"><b>魅力タイプ：</b>'+typ.join('／')+'。</p></div>';
 
+    H += '<p style="margin:10px 0 0;padding-top:8px;border-top:1px solid var(--line)"><a href="kanshi-aisho.html?ds='+encodeURIComponent(c.dayMaster.stem)+'&db='+encodeURIComponent(db)+'" target="_blank" rel="noopener" style="color:#c0397a;font-weight:800;text-decoration:none">🔗 この人の干支相性 早見表（日主'+esc(c.dayMaster.stem)+'・日支'+esc(db)+'）→</a></p>';
     return '<section class="card sec" id="love-card"><span class="eyebrow"><b>恋愛</b>❤で見る</span><h2>恋愛ステータス・配偶者像・魅力タイプ</h2>'+H+'</section>';
   }
 
