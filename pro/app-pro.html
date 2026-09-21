@@ -281,6 +281,17 @@
   .reading-card ol.r-onum li::marker{font-weight:900;color:var(--ka)}
   .reading-card strong{font-weight:900;background:linear-gradient(transparent 62%,var(--do-w) 62%);padding:0 1px}
   .reading-foot{font-size:11px;color:var(--muted);font-weight:600;margin-top:8px;line-height:1.6}
+  /* セクション・ジャンプ目次（占う後に上部固定でワンタップ移動） */
+  #jumpnav{position:sticky;top:0;z-index:40;display:none;gap:7px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    margin:0 -20px 4px;padding:9px 20px;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line);scrollbar-width:none}
+  #jumpnav.on{display:flex}
+  #jumpnav::-webkit-scrollbar{display:none}
+  #jumpnav button{flex:0 0 auto;border:1.5px solid var(--line2);background:#fff;color:var(--ink2);
+    border-radius:999px;padding:7px 14px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap}
+  #jumpnav button:active{background:var(--ka-w);border-color:var(--ka);color:var(--ka)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #jumpnav{background:rgba(31,34,44,.94)}}
+  :root[data-theme="dark"] #jumpnav{background:rgba(31,34,44,.94)}
   /* ひと目でわかる判定サマリー（運気・会局） */
   .vd-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
   @media(max-width:400px){.vd-grid{grid-template-columns:1fr}}
@@ -515,6 +526,16 @@
     </details>
     <div class="legend5" id="legend5" style="margin-top:12px"><span class="l"><i style="background:#1FA463"></i>木＝成長・やさしさ</span><span class="l"><i style="background:#E8392B"></i>火＝情熱・表現</span><span class="l"><i style="background:#E2A12B"></i>土＝安定・信頼</span><span class="l"><i style="background:#8A93A6"></i>金＝規律・決断</span><span class="l"><i style="background:#2A6FD0"></i>水＝知恵・柔軟</span></div>
   </section>
+
+  <!-- セクション・ジャンプ目次（占う後に表示・上部固定） -->
+  <nav id="jumpnav" aria-label="セクションの目次">
+    <button type="button" data-t="meishi-sec">命式</button>
+    <button type="button" data-t="flow-sec">大運・年運</button>
+    <button type="button" data-t="compat-card">相性</button>
+    <button type="button" data-t="ai-slot">AI鑑定</button>
+    <button type="button" data-t="love-card">恋愛❤</button>
+    <button type="button" data-t="yojo-sec">養生</button>
+  </nav>
 
   <!-- 相性診断 -->
   <div id="ai-slot"></div>
@@ -2095,7 +2116,7 @@ function meishiHTML(c){
   }
   const allK=[...new Set(cells.flatMap(cc=>cc.kichi))].filter(k=>KICHI_DESC[k]);
   const kglos=allK.length?`<details class="adv" style="margin-top:10px"><summary>📖 この命式の吉凶星の意味（${allK.length}）</summary><div style="margin-top:8px">${allK.map(k=>`<div style="margin-bottom:8px;font-size:13px;line-height:1.65"><b style="color:var(--ka)">${kichiLabel(k)}</b>：${KICHI_DESC[k]}</div>`).join('')}</div></details>`:'';
-  return `<section class="card sec">
+  return `<section class="card sec" id="meishi-sec">
     <span class="eyebrow"><b>命式</b>四つの柱</span>
     <h2>あなたの四つの柱</h2>
     <p class="lead">左に<b>干支（天干・地支）</b>、右に星を並べた表。<b>日柱があなた自身</b>。文字の色がその五行です。</p>
@@ -2761,7 +2782,7 @@ function yojoHTML(c){
   </div>`;
   const nowBlock=nv?`<div class="mhint" style="margin-top:10px;background:${ec(nv.el)}10;border-radius:10px;padding:9px 11px">
     <b>今の時期の傾き：</b>大運${nv.dd.ganzhi}${nv.ay?'＋年運'+nv.ay.ganzhi:''}で<b style="color:${ec(nv.el)}">${dot(nv.el)}${nv.el}</b>が強まる流れ。${nv.advice}。食養生（${nv.excess?'整える':'補う'}）：${nv.excess?YOJO[nv.el].過食:nv.food}</div>`:'';
-  return `<section class="card sec">
+  return `<section class="card sec" id="yojo-sec">
     <span class="eyebrow"><b>五行バランス</b>養生・薬膳</span>
     <h2>五行のバランスと養生</h2>
     <p class="lead">五行の数から、<b>${b.verdict}</b>。日主の強弱は<b>${b.strength}</b>（得令＝生まれ月が日干を支える季節か：<b>${b.tokurei?'○':'×'}</b>／月支${b.monthBranch}の十二運：<b>${b.monthTerr}</b>を総合）。</p>
@@ -2841,6 +2862,18 @@ function renderResult(){
   document.getElementById('consultBtn').onclick=doConsult;
   document.getElementById('autoReadBtn').onclick=doAutoRead;
   updateGogyoPin();
+  var jn=document.getElementById('jumpnav'); if(jn)jn.classList.add('on');
+}
+// セクション・ジャンプ目次：チップをタップでそのセクションへスムーズ移動（固定ナビの高さ分だけ上に余白）
+if(!window.__jumpnavBound){ window.__jumpnavBound=1;
+  var _jn=document.getElementById('jumpnav');
+  if(_jn) _jn.addEventListener('click',function(e){
+    var btn=e.target.closest('button[data-t]'); if(!btn)return;
+    var el=document.getElementById(btn.dataset.t); if(!el)return;
+    var off=(_jn.offsetHeight||44)+8;
+    var y=el.getBoundingClientRect().top+window.scrollY-off;
+    window.scrollTo({top:y<0?0:y, behavior:'smooth'});
+  });
 }
 // 五行（通変星ホイール）の連動ミニ図：大運・年運セクションを見ている時だけ画面上部に固定表示。
 // 鑑定文など他の場所へスクロールすると自動で消え、✕で手動でも閉じられる。
