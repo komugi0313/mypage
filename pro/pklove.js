@@ -180,7 +180,7 @@
       Array.prototype.push.apply(_fateR,yBonus.r.fate);
     }
     function stars5(n){ n=starCurve(n); return '★★★★★'.slice(0,n)+'☆☆☆☆☆'.slice(0,5-n); }
-    function _why(arr){ return '<br><span style="color:#8a6b78;font-size:11px">🔎 あなたの根拠：'+(arr.length?esc(arr.join(' ／ ')):'目立つ加点サインなし（標準）')+'</span>'; }
+    function _why(arr){ return '<br><span style="color:#8a6b78;font-size:11px">あなたの根拠：'+(arr.length?esc(arr.join(' ／ ')):'目立つ加点サインなし（標準）')+'</span>'; }
     function note(t,extra){ return '<span style="color:'+MUTED+';font-size:12px'+(extra||'')+'">'+t+'</span>'; }
     function _lrow(lbl,n,rs,wr){ return '<div style="margin:7px 0"><b>'+lbl+'</b> <span style="color:#c0397a;font-size:16px;letter-spacing:2px">'+stars5(n)+'</span><br>'+note(rs)+_why(wr||[])+'</div>'; }
 
@@ -189,19 +189,19 @@
       + (selY?'<p style="margin:0 0 6px;font-size:12px;color:'+MUTED+'">★は<b>生まれ持ち＋'+selY+'年の巡り</b>を合わせた値です（「生まれ持ち（基本）」に戻すと先天のみ）。</p>':'')
       + (c.timeUnknown ? '<p style="margin:3px 0 4px;color:#b06a2e;font-size:11.5px">※生まれ<b>時間が不明</b>のため、時柱ぶんのサイン（神殺・星）は含めていません。実際の❤は<b>これ以上になることがあります</b>。時間がわかると精度が上がります。</p>' : '')
       + _lrow('💖 モテ度（人気・魅力）',_mote,(_hasKa||_hasKo)?'人を惹きつける“色気・華の星”（桃花・紅艶）持ち。例：黙っていても自然と目に留まるタイプ':'派手さより、知るほど好きになる“じわじわ本命”タイプ',_moteR)
-      + _lrow('🔥 情熱・ときめき度',_pas,_fire>=2?'火の気が強く、好きになると一直線。例：気になる人にはすぐ連絡したくなる情熱家':'ゆっくり信頼を育てる、落ち着いた愛し方',_pasR)
+      + _lrow('情熱・ときめき度',_pas,_fire>=2?'火の気が強く、好きになると一直線。例：気になる人にはすぐ連絡したくなる情熱家':'ゆっくり信頼を育てる、落ち着いた愛し方',_pasR)
       + _lrow('💍 結婚のご縁',_mar,seiTou?'結婚相手を表す星（配偶者星）が“表に出て”強い＝結婚を意識できるご縁':(seiCnt>0?'配偶者星が“内側”にあり、良縁はこれから運が巡る時期に表に出ます':'結婚のご縁は、運が巡る年に動きやすいタイプ'),_marR)
-      + '<p style="margin:-2px 0 6px;padding-left:2px;color:'+MUTED+';font-size:12px">💡 結婚の<b>時期</b>は下の〈大運・年運〉で見てください。★が控えめでも、良縁の年が来ればちゃんと結ばれます。</p>'
+      + '<p style="margin:-2px 0 6px;padding-left:2px;color:'+MUTED+';font-size:12px">結婚の<b>時期</b>は下の〈大運・年運〉で見てください。★が控えめでも、良縁の年が来ればちゃんと結ばれます。</p>'
       + _lrow('🌹 一途さ（尽くす愛）',_loy,_loy>=4?'まじめ・誠実の星が強く、決めた人にまっすぐ尽くすタイプ':(_loy<=2?'好奇心旺盛で、気持ちが移りやすい面も（悪いことではありません）':'相手やタイミングで、一途にも自由にも'),_loyR)
-      + _lrow('😍 惚れられ度（愛される力）',_bore,_bore>=4?'愛され・守られの星があり、自然と大切にされる。例：気づけば周りが世話を焼いてくれる':'自分から一歩動くと、ちゃんと愛が返ってくるタイプ',_boreR)
-      + _lrow('🎭 恋の駆け引き上手',_kake,_kake>=4?'押し引き・演出が上手。例：さりげなく相手を惹きつける“小悪魔”な一面':'駆け引きは苦手でも、まっすぐ・正直さがいちばんの武器',_kakeR)
+      + _lrow('惚れられ度（愛される力）',_bore,_bore>=4?'愛され・守られの星があり、自然と大切にされる。例：気づけば周りが世話を焼いてくれる':'自分から一歩動くと、ちゃんと愛が返ってくるタイプ',_boreR)
+      + _lrow('恋の駆け引き上手',_kake,_kake>=4?'押し引き・演出が上手。例：さりげなく相手を惹きつける“小悪魔”な一面':'駆け引きは苦手でも、まっすぐ・正直さがいちばんの武器',_kakeR)
       + _lrow('💐 尽くされ度（大切にされる）',_tsuku,_tsuku>=4?'良縁と“守りの星”があり、相手が大切にしてくれる関係になりやすい':'自分が尽くすほど、その分ちゃんと返ってくる関係に',_tsukuR)
       + _lrow('💘 第一印象・ひとめ惚れされ度',_first,_first>=4?'初対面で目を引く“華”があり、第一印象で好かれやすいタイプ':'じっくり知るほど魅力が伝わる、後からじわじわ効くタイプ',_firstR)
-      + _lrow('🔮 運命の出会い運',_fate,_fate>=4?'貴人・強い縁の星があり、“運命的な出会い”に恵まれやすい':'出会いは自分から動く年・場に出るほど広がるタイプ',_fateR)
-      + _lrow('🌶 ギャップ・小悪魔度',_gap,_gap>=4?'見た目と中身のギャップ・意外性で人を惹きつける小悪魔タイプ':'裏表のない“まっすぐさ”そのものが魅力',_gapR)
-      + _lrow('🍯 甘え上手・愛されキャラ度',_amae,_amae>=4?'自然に甘えられ、周りに可愛がられる“愛されキャラ”':'しっかり者で、人に甘えたり頼るのは少し苦手なタイプ',_amaeR)
-      + '<div style="margin:6px 0 0"><b>🎯 恋のスタイル：</b>'+_style+'</div>'
-      + '<details style="margin:6px 0 0"><summary style="cursor:pointer;font-weight:700;color:'+MUTED+'">🔎 根拠（この★の理由・専門用語／先生の検算用）</summary>'
+      + _lrow('運命の出会い運',_fate,_fate>=4?'貴人・強い縁の星があり、“運命的な出会い”に恵まれやすい':'出会いは自分から動く年・場に出るほど広がるタイプ',_fateR)
+      + _lrow('ギャップ・小悪魔度',_gap,_gap>=4?'見た目と中身のギャップ・意外性で人を惹きつける小悪魔タイプ':'裏表のない“まっすぐさ”そのものが魅力',_gapR)
+      + _lrow('甘え上手・愛されキャラ度',_amae,_amae>=4?'自然に甘えられ、周りに可愛がられる“愛されキャラ”':'しっかり者で、人に甘えたり頼るのは少し苦手なタイプ',_amaeR)
+      + '<div style="margin:6px 0 0"><b>恋のスタイル：</b>'+_style+'</div>'
+      + '<details style="margin:6px 0 0"><summary style="cursor:pointer;font-weight:700;color:'+MUTED+'">根拠（この★の理由・専門用語／先生の検算用）</summary>'
         + '<p style="margin:4px 0 0;line-height:1.9;color:'+MUTED+';font-size:12px">'
         + '桃花(咸池)<b>'+(_hasKa?'有':'無')+'</b>／紅艶<b>'+(_hasKo?'有':'無')+'</b>／日支の十二運<b>'+esc(ter||'-')+'</b>'
         + '／食傷<b>'+_ss+'</b>（食神'+(sc.食神||0)+'・傷官'+(sc.傷官||0)+'）／火の五行<b>'+_fire+'</b>'
@@ -261,7 +261,7 @@
     H += '<p style="margin:4px 0"><b>モテ度：</b><span style="color:#c0397a;font-size:16px;letter-spacing:2px">'+stars+'</span></p>';
     H += '<p style="margin:4px 0"><b>魅力タイプ：</b>'+typ.join('／')+'。</p></div>';
 
-    H += '<p style="margin:10px 0 0;padding-top:8px;border-top:1px solid var(--line)"><a href="kanshi-aisho.html?ds='+encodeURIComponent(c.dayMaster.stem)+'&db='+encodeURIComponent(db)+'" target="_blank" rel="noopener" style="color:#c0397a;font-weight:800;text-decoration:none">🔗 この人の干支相性 早見表（日主'+esc(c.dayMaster.stem)+'・日支'+esc(db)+'）→</a></p>';
+    H += '<p style="margin:10px 0 0;padding-top:8px;border-top:1px solid var(--line)"><a href="kanshi-aisho.html?ds='+encodeURIComponent(c.dayMaster.stem)+'&db='+encodeURIComponent(db)+'" target="_blank" rel="noopener" style="color:#c0397a;font-weight:800;text-decoration:none">この人の干支相性 早見表（日主'+esc(c.dayMaster.stem)+'・日支'+esc(db)+'）→</a></p>';
     return '<section class="card sec" id="love-card"><span class="eyebrow"><b>恋愛</b>❤で見る</span><h2>恋愛ステータス・配偶者像・魅力タイプ</h2>'+H+'</section>';
   }
 
