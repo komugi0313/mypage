@@ -773,14 +773,15 @@ window.MEISHIKI=(function(){
     });
   }
 
-  // 干支関係（干合・三合・方合・半合・冲・刑・破・害）を命式の天干/地支から算出
+  // 干支関係（干合・支合・三合・方合・半合・冲・刑・破・害）を命式の天干/地支から算出。合化は「→元素」で併記
   function computeKankei(rp){
     rp=rp||{};
     var order=['year','month','day','hour'], lab=['年','月','日','時'], S=[], B=[];
     order.forEach(function(k){ var p=rp[k]||{}; S.push(p.gan||''); B.push(p.shi||''); });
     function pk(a,b){ return [a,b].sort().join(''); }
-    function mkset(rows){ var m={}; rows.forEach(function(x){ m[[x[0],x[1]].sort().join('')]=x[2]||true; }); return m; }
-    var GANGO=mkset([['甲','己'],['乙','庚'],['丙','辛'],['丁','壬'],['戊','癸']]);
+    function mkset(rows){ var m={}; rows.forEach(function(x){ m[[x[0],x[1]].sort().join('')]=(x[2]!=null?x[2]:true); }); return m; }
+    var GANGO=mkset([['甲','己','土'],['乙','庚','金'],['丙','辛','水'],['丁','壬','木'],['戊','癸','火']]);      // 干合（合化）
+    var GOGO=mkset([['子','丑','土'],['寅','亥','木'],['卯','戌','火'],['辰','酉','金'],['巳','申','水'],['午','未','']]); // 支合＝六合（合化）
     var CHONG=mkset([['子','午'],['丑','未'],['寅','申'],['卯','酉'],['辰','戌'],['巳','亥']]);
     var HA=mkset([['子','酉'],['卯','午'],['辰','丑'],['未','戌'],['寅','亥'],['巳','申']]);
     var GAI=mkset([['子','未'],['丑','午'],['寅','巳'],['卯','辰'],['申','亥'],['酉','戌']]);
@@ -791,20 +792,22 @@ window.MEISHIKI=(function(){
     var HOUGO=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','戌','金'],['亥','子','丑','水']];
     var SANKEI=[['寅','巳','申'],['丑','戌','未']];
     function trioHit(trio){ var seen={}; for(var i=0;i<B.length;i++){ if(trio.indexOf(B[i])>=0) seen[B[i]]=1; } return trio.every(function(b){return seen[b];}); }
+    function ka(el){ return (el&&el!==true) ? '→'+el : ''; }   // 合化（元素）併記
     var out=[], i, j;
-    for(i=0;i<4;i++)for(j=i+1;j<4;j++){ if(S[i]&&S[j]&&GANGO[pk(S[i],S[j])]) out.push({t:'干合',d:lab[i]+lab[j]+'（'+S[i]+S[j]+'）',o:1}); }
-    SANGO.forEach(function(g){ if(trioHit([g[0],g[1],g[2]])) out.push({t:'三合',d:g[0]+g[1]+g[2]+'＝'+g[3],o:2}); });
-    HOUGO.forEach(function(g){ if(trioHit([g[0],g[1],g[2]])) out.push({t:'方合',d:g[0]+g[1]+g[2]+'＝'+g[3],o:3}); });
+    for(i=0;i<4;i++)for(j=i+1;j<4;j++){ if(S[i]&&S[j]&&GANGO[pk(S[i],S[j])]!=null) out.push({t:'干合',d:lab[i]+lab[j]+'（'+S[i]+S[j]+ka(GANGO[pk(S[i],S[j])])+'）',o:1}); }
+    SANGO.forEach(function(g){ if(trioHit([g[0],g[1],g[2]])) out.push({t:'三合',d:g[0]+g[1]+g[2]+'→'+g[3],o:3}); });
+    HOUGO.forEach(function(g){ if(trioHit([g[0],g[1],g[2]])) out.push({t:'方合',d:g[0]+g[1]+g[2]+'→'+g[3],o:4}); });
     var sankeiHit=[];
-    SANKEI.forEach(function(g){ if(trioHit(g)){ out.push({t:'三刑',d:g.join(''),o:6}); sankeiHit.push(g); } });
+    SANKEI.forEach(function(g){ if(trioHit(g)){ out.push({t:'三刑',d:g.join(''),o:7}); sankeiHit.push(g); } });
     for(i=0;i<4;i++)for(j=i+1;j<4;j++){
       if(!B[i]||!B[j]) continue; var key=pk(B[i],B[j]);
-      if(CHONG[key]) out.push({t:'冲',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:5});
-      if(HANGO[key]) out.push({t:'半合',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'＝'+HANGO[key]+'）',o:4});
-      if(HA[key]) out.push({t:'破',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:7});
-      if(GAI[key]) out.push({t:'害',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:8});
-      if(KEI[key]){ var inSan=false; sankeiHit.forEach(function(s){ if(s.indexOf(B[i])>=0&&s.indexOf(B[j])>=0) inSan=true; }); if(!inSan) out.push({t:'刑',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:6}); }
-      if(B[i]===B[j]&&SELFKEI[B[i]]) out.push({t:'刑',d:lab[i]+lab[j]+'（自刑）',o:6});
+      if(GOGO[key]!=null) out.push({t:'支合',d:lab[i]+lab[j]+'（'+B[i]+B[j]+ka(GOGO[key])+'）',o:2});
+      if(HANGO[key]) out.push({t:'半合',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'→'+HANGO[key]+'）',o:5});
+      if(CHONG[key]) out.push({t:'冲',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:6});
+      if(KEI[key]){ var inSan=false; sankeiHit.forEach(function(s){ if(s.indexOf(B[i])>=0&&s.indexOf(B[j])>=0) inSan=true; }); if(!inSan) out.push({t:'刑',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:7}); }
+      if(B[i]===B[j]&&SELFKEI[B[i]]) out.push({t:'刑',d:lab[i]+lab[j]+'（自刑）',o:7});
+      if(HA[key]) out.push({t:'破',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:8});
+      if(GAI[key]) out.push({t:'害',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:9});
     }
     out.sort(function(a,b){return a.o-b.o;});
     return out;
