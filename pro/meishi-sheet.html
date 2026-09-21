@@ -8,7 +8,7 @@
     --rule:#B9B4AA; --rule2:#DAD6CD; --shade:#F0EFEB;
     --gold:#6E695F; --gold-soft:#A9A499;   /* 枠・装飾＝墨グレー */
     --now:#333029; --focus:#8A9A7B;
-    --el-moku:#2E7D52; --el-ka:#C0392B; --el-do:#B07E1E; --el-kin:#6E6A62; --el-sui:#2F5A8F;
+    --el-moku:#2E7D52; --el-ka:#C0392B; --el-do:#B07E1E; --el-kin:#6E6A62; --el-sui:#2A6FD0;
     --mincho:"Shippori Mincho","Yu Mincho","Hiragino Mincho ProN",serif;
     --gothic:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic UI",sans-serif;
     --stage:#E9E7E1; --stage2:#DBD8D0;
@@ -179,6 +179,7 @@
   .daiun tr.sel td{ background:rgba(46,125,82,.12); }
   .daiun tr.sel td.age{ box-shadow:inset 4px 0 0 #2E7D52; }
   .daiun tr.sel .age::after{ content:"　▶ 年運表示中"; color:#2E7D52; font-weight:800; }
+  .daiun tr.pre:not(.now):not(.sel) .age::after{ content:"　立運前"; color:var(--faint); font-weight:600; font-size:11px; }
   @media print{ .daiun tr.clk{ cursor:auto; } }
   /* 節木運（せつぼくうん・接木運）＝季節が変わる大運＝人生の曲がり角。大運表の外枠側（左）に小さな印。 */
   .daiun td.age{ position:relative; }
@@ -367,8 +368,8 @@
       <div class="grp">
         <span class="glabel">五行カラー</span>
         <span class="seg" role="group" aria-label="五行カラー切替">
-          <button type="button" id="cOff" aria-pressed="true">なし（白黒）</button>
-          <button type="button" id="cOn" aria-pressed="false">あり</button>
+          <button type="button" id="cOff" aria-pressed="false">なし（白黒）</button>
+          <button type="button" id="cOn" aria-pressed="true">あり</button>
         </span>
       </div>
       <div class="act">
@@ -948,7 +949,7 @@ window.MEISHIKI=(function(){
   }
   document.getElementById('cOn').addEventListener('click', function(){ setColor(true); });
   document.getElementById('cOff').addEventListener('click', function(){ setColor(false); });
-  setColor(false);
+  setColor(true);   // デフォルトはカラー（色付き）
 
   // ---- 印刷 ----
   document.getElementById('printBtn').addEventListener('click', function(){ try{ window.print(); }catch(e){} });
@@ -1177,6 +1178,20 @@ window.MEISHIKI=(function(){
           if(sb && sb.blocks) setsuFlags = sb.blocks.map(function(b){ return !!b.isSetsu; });
         }
       }catch(e){}
+      // 立運前（0才〜最初の大運）＝月柱が司る期間を先頭に追加
+      var firstAge = (r.daiun[0]&&r.daiun[0].ageFrom!=null) ? r.daiun[0].ageFrom : 0;
+      if(firstAge>0 && r.pillars && r.pillars.month){
+        var mp=r.pillars.month, ey0=(by!=null?by+firstAge:null);
+        var tr0=document.createElement('tr');
+        tr0.className='pre'+((nowAge!=null && nowAge<firstAge)?' now':'');
+        tr0.innerHTML='<td class="age ed" contenteditable="true">0才〜'+firstAge+'才</td>'+
+          '<td class="yr2 ed" contenteditable="true">'+((by!=null&&ey0!=null)?(by+'〜'+ey0):'')+'</td>'+
+          '<td class="ed" contenteditable="true">'+(mp.kanshi||'')+'</td>'+
+          '<td class="ed" contenteditable="true">'+(mp.tsuhen||'')+'</td>'+
+          '<td class="ed" contenteditable="true">'+(mp.junishi||'')+'</td>';
+        if(by!=null){ tr0.dataset.sy=by; tr0.classList.add('clk'); tr0.addEventListener('click', function(){ renderNenunFor(by); }); }
+        tb.appendChild(tr0);
+      }
       r.daiun.forEach(function(d,i){
         var tr=document.createElement('tr');
         var cls=[];
