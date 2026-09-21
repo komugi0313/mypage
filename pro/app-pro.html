@@ -145,6 +145,19 @@
   .mtable .zreset{display:inline-block;margin-top:6px;font-size:11px;font-weight:800;color:var(--sui);cursor:pointer;text-decoration:underline}
   .mtable .zmore.alt{background:var(--ka)}
   .mtable .zoud[open] .zmore.alt::before{content:""}
+  /* 蔵干の流派切替パネル（表の外に集約） */
+  .zpanel .zrow{margin-top:11px}
+  .zpanel .zrow-h{font-size:12.5px;font-weight:900;color:var(--ink2);margin-bottom:2px}
+  .zpanel .hspick{display:flex;align-items:center;gap:4px;cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:6px 0;background:var(--card);transition:background .12s}
+  .zpanel .hspick:hover{background:var(--sui-w)}
+  .zpanel .hspick.on{background:var(--ka-w);border-color:var(--ka)}
+  .zpanel .hspick .hs{font-weight:900;font-size:15px}
+  .zpanel .hspick .gen{font-size:9px;font-weight:900;background:var(--ka);color:#fff;border-radius:3px;padding:0 3px;vertical-align:1px}
+  .zpanel .hspick .zts{font-size:13.5px;font-weight:800;margin-left:2px}
+  .zpanel .hspick .zrole{font-size:11px;color:var(--muted);font-weight:800;margin-left:6px}
+  .zpanel .hspick .zsel{font-size:10px;font-weight:900;color:#fff;background:var(--ka);border-radius:4px;padding:1px 8px;margin-left:auto}
+  .zpanel .zreset{display:inline-block;margin-top:5px;font-size:12px;font-weight:800;color:var(--sui);cursor:pointer;text-decoration:underline}
+  .zou .zpicked{font-size:9px;font-weight:900;color:var(--ka);margin-left:4px;vertical-align:1px}
   .mtable .kichi{font-size:11px;font-weight:800;color:var(--ka);line-height:1.55;white-space:normal}
   .mtable .none{color:var(--muted);font-weight:700}
   .mhint{font-size:11.5px;color:var(--muted);font-weight:700;margin-top:8px;line-height:1.6}
@@ -2100,12 +2113,21 @@ function meishiHTML(c){
     ?`<span class="ts"><b style="color:var(--ka)">${cc.tsBranch}</b><span style="display:inline-block;margin-top:3px;font-size:9px;font-weight:900;color:#fff;background:var(--ka);border-radius:4px;padding:1px 5px;letter-spacing:.02em;white-space:nowrap">月支元命</span><small>${TS_DESC[cc.tsBranch]||''}</small></span>`
     :tsCell(cc.tsBranch,false);
   const zone=h=>`<span class="hs" style="color:${ec(STEM_EL[h.stem])}">${h.stem}</span>${h.ling?'<span class="gen">元</span>':''}<span class="zts">${h.tenStar}</span>`;
+  // A案：セルは代表（干＋通変＋元）だけをスッキリ表示。流派の切替は表の下のパネルに集約。
   const zouCell=cc=>{const hs=cc.zou,label=cc.label;
-    const cur=repOf(hs,label),curIdx=hs.indexOf(cur),ov=zouOverride[label]!=null;
-    if(hs.length<=1)return `<span class="zou">${zone(cur)}</span>`;
-    const rows=hs.map((h,idx)=>`<span class="hspick${idx===curIdx?' on':''}" onclick="selectZou('${label}',${idx})"><span class="hs" style="color:${ec(STEM_EL[h.stem])}">${h.stem}</span>${h.ling?'<span class="gen">元</span>':''}<span class="zts">${h.tenStar}</span><span class="zrole">${h.role}</span>${idx===curIdx?'<span class="zsel">選択中</span>':''}</span>`).join('');
-    const reset=ov?`<a class="zreset" onclick="selectZou('${label}',-1)">司令（元）に戻す</a>`:'';
-    return `<details class="zoud"${ov?' open':''}><summary>${zone(cur)}<span class="zmore${ov?' alt':''}" title="隠れた蔵干があと${hs.length-1}つ（タップで展開）。通変のカウントには影響しません">${ov?'選択':'あと'+(hs.length-1)}</span></summary><div class="zrest zpick">${rows}${reset}</div></details>`;};
+    const cur=repOf(hs,label),ov=zouOverride[label]!=null;
+    return `<span class="zou">${zone(cur)}${ov?'<span class="zpicked" title="流派選択で切替中">選</span>':''}</span>`;};
+  // 表の下の「蔵干を切り替える」パネル（>1蔵干の柱だけ）
+  const zouPanel=(()=>{
+    const pil=cells.filter(cc=>!cc.unknown&&cc.zou&&cc.zou.length>1);
+    if(!pil.length)return '';
+    const block=cc=>{const cur=repOf(cc.zou,cc.label),curIdx=cc.zou.indexOf(cur),ov=zouOverride[cc.label]!=null;
+      const rows=cc.zou.map((h,idx)=>`<span class="hspick${idx===curIdx?' on':''}" onclick="selectZou('${cc.label}',${idx})"><span class="hs" style="color:${ec(STEM_EL[h.stem])}">${h.stem}</span>${h.ling?'<span class="gen">元</span>':''}<span class="zts">${h.tenStar}</span><span class="zrole">${h.role}</span>${idx===curIdx?'<span class="zsel">選択中</span>':''}</span>`).join('');
+      const reset=ov?`<a class="zreset" onclick="selectZou('${cc.label}',-1)">司令（元）に戻す</a>`:'';
+      return `<div class="zrow"><div class="zrow-h">${cc.label}（${cc.stem}${cc.branch}）</div>${rows}${reset}</div>`;};
+    return `<details class="adv" style="margin-top:10px"><summary>蔵干を切り替える（他流派に対応・上級者向け）</summary>
+      <div class="zpanel" style="margin-top:6px"><div class="mhint" style="margin:0 0 2px">既定は<b>司令（元＝月支元命の基準）</b>。流派に合わせて各柱の代表（通変星）を選べます。選択は鑑定にも反映され、「司令（元）に戻す」で戻せます。表では選択中の柱に<b class="zpicked" style="margin:0">選</b>が付きます。</div>${pil.map(block).join('')}</div></details>`;
+  })();
   const kCell=cc=>cc.kichi.length?`<span class="kichi">${cc.kichi.map(kichiLabel).join('・')}</span>`:'<span class="none">－</span>';
   const ROWS=[
     ['天干',cc=>`<span class="gan" style="color:${ec(cc.sEl)}">${cc.stem}</span>`,'gangrp'],
@@ -2137,6 +2159,7 @@ function meishiHTML(c){
       <span class="tg lab">空亡：${ku.join('')}</span>
     </div>
     <div class="mwrap">${table}</div>
+    ${zouPanel}
     <details class="adv" style="margin-top:10px"><summary>四つの柱の意味と年齢域（人生の時間軸）</summary><div style="margin-top:8px">${PILLAR_INFO.map(pi=>`<div style="margin-bottom:8px;font-size:13px;line-height:1.65"><b style="color:var(--ka)">${pi.label}</b>　<small style="color:var(--muted);font-weight:800">${pi.age}</small><br>${pi.mean}</div>`).join('')}</div></details>
     ${(()=>{const day=nayinOf(c.pillars[2].stem,c.pillars[2].branch);if(!day)return '';const za=nayinZa(c.pillars[2].stem,c.pillars[2].branch);const sd=shidaiKuubou(c);const combos=nayinCombos(c);const lk=nayinLuckCombos(c);
       return `<details class="adv" style="margin-top:10px"><summary>納音（なっちん）＝生まれ持った宿命の五行</summary><div style="margin-top:8px;font-size:13px;line-height:1.7">
@@ -2151,7 +2174,7 @@ function meishiHTML(c){
     ${c.timeUnknown?'<div class="mhint" style="margin-top:8px;background:var(--do-w);border-radius:8px;padding:8px 10px"><b>時刻不明モード：</b>時柱は使わず、年月日の3柱で鑑定しています（五行・通変・合冲・吉凶星も3柱で集計）。生まれた時刻が分かると、時柱（将来・本心）や時刻に関わる星まで読めます。<br><span style="color:var(--muted)">※大運・立運は昼12時とみなして概算しています（時刻が分かれば±数ヶ月の範囲で確定します）。</span></div>':''}
     ${(c.timeUnknown&&c.setsuBoundary)?`<div class="mhint" style="margin-top:8px;background:#FDECEC;border:1px solid #E8392B;border-radius:8px;padding:8px 10px;color:#8a1a12"><b>⚠️ 節入り日の可能性があります</b><br>この生年月日は二十四節気の変わり目（節入り日）にあたり、<b>生まれた時刻によって${[c.setsuBoundary.year?`年柱（${c.setsuBoundary.year[0]}↔${c.setsuBoundary.year[1]}）`:'',c.setsuBoundary.month?`月柱（${c.setsuBoundary.month[0]}↔${c.setsuBoundary.month[1]}）`:''].filter(Boolean).join('・')}が変わります</b>。${c.setsuBoundary.month?'月柱が変わると通変星・十二運・蔵干、そして大運の並びまで変わります。':''}${c.setsuBoundary.year?'年柱が変わると干支年・空亡なども変わります。':''}正確な鑑定には出生時刻の確認が必要です（不明の場合は昼12時基準の結果を表示しています）。</div>`:''}
     ${kglos}
-    <div class="mhint">蔵干は地支の隣に<b>主となる1つ（月柱は司令＝<span style="background:var(--ka);color:#fff;border-radius:3px;padding:0 3px;font-weight:900">元</span>命）</b>だけ表示。<b>「あと◯」のバッジをタップ</b>で残りの蔵干が開き、<b>各蔵干をタップ</b>すると流派に合わせて代表（通変星）を選べます（既定は司令＝元。「司令（元）に戻す」で復帰）。選んだ通変星はオンライン・オフライン鑑定にも反映されます。<b>※通変星のカウントは各柱「天干1つ＋地支（代表蔵干）1つ」だけ。</b>蔵干（通変）列と地支通変列は同じ星を表示しているだけで、二重には数えません（「あと◯」は残りの蔵干の数で、カウントとは無関係）。吉凶星：日干基準（天乙貴人・文昌貴人・金与禄・暗禄・羊刃・飛刃・大極貴人・紅艶・天厨貴人・福星貴人・天官貴人・妨害殺)／月支基準（天徳貴人・天徳合・月徳貴人・月徳合・華蓋)／年支日支基準（咸池・駅馬・劫殺・亡神・血刃・囚獄・隔角)／日柱判定（魁罡〈カイゴウ〉・禄馬貴人）＋空亡。該当した柱に表示。</div>
+    <div class="mhint">蔵干は地支の隣に<b>主となる1つ（月柱は司令＝<span style="background:var(--ka);color:#fff;border-radius:3px;padding:0 3px;font-weight:900">元</span>命）</b>だけ表示。他流派に合わせて代表（通変星）を変えたいときは、<b>表の下の「蔵干を切り替える」</b>から各柱で選べます（既定は司令＝元。「司令（元）に戻す」で復帰）。選んだ通変星はオンライン・オフライン鑑定にも反映されます。<b>※通変星のカウントは各柱「天干1つ＋地支（代表蔵干）1つ」だけ。</b>蔵干（通変）列と地支通変列は同じ星を表示しているだけで、二重には数えません（「あと◯」は残りの蔵干の数で、カウントとは無関係）。吉凶星：日干基準（天乙貴人・文昌貴人・金与禄・暗禄・羊刃・飛刃・大極貴人・紅艶・天厨貴人・福星貴人・天官貴人・妨害殺)／月支基準（天徳貴人・天徳合・月徳貴人・月徳合・華蓋)／年支日支基準（咸池・駅馬・劫殺・亡神・血刃・囚獄・隔角)／日柱判定（魁罡〈カイゴウ〉・禄馬貴人）＋空亡。該当した柱に表示。</div>
     ${relHTML(c)}
   </section>`;
 }
