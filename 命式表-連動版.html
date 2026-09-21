@@ -961,18 +961,23 @@ window.MEISHIKI=(function(){
     (function(){ var d=new Date(); setEl('kanteiDate', d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'); })();
     // 守護神（命式から自動）：r.shugojin = ["丁","癸","丙"] など
     renderShugo(r.shugojin);
-    // 五行バランス（数＋強弱を命式から）
-    if(r.gogyoCount){
-      var gs = r.gogyoStrength||{};
-      [['木','moku'],['火','ka'],['土','do'],['金','kin'],['水','sui']].forEach(function(pr){
-        var el=pr[0], key=pr[1], cnt=r.gogyoCount[el];
-        setEl('go-'+key, cnt);
-        setEl('mk-'+key, gs[el]!=null ? gs[el] : strFromCount(cnt));
+    // 五行バランスの「数」＝命式に出ている通変星を単純に集計（表の天干通変＋地支通変を拾う）
+    var dayEl = (r.pillars && r.pillars.day) ? r.pillars.day.ganElement : null;
+    var CAT={'比肩':'比劫','劫財':'比劫','食神':'食傷','傷官':'食傷','正財':'財星','偏財':'財星','正官':'官星','偏官':'官星','印綬':'印星','偏印':'印星'};
+    var catCnt={比劫:0,食傷:0,財星:0,官星:0,印星:0};
+    ['year','month','day','hour'].forEach(function(k){
+      var pp=(r.pillars&&r.pillars[k])||{};
+      [pp.tsuhen, pp.zokanTsuhen].forEach(function(t){ if(t&&CAT[t]!=null) catCnt[CAT[t]]++; });  // 日主(—)は通変なしで対象外
+    });
+    if(dayEl){
+      var catEl={ 比劫:dayEl, 食傷:GEN[dayEl], 財星:CON[dayEl], 官星:CONINV[dayEl], 印星:GENINV[dayEl] };
+      ['比劫','食傷','財星','官星','印星'].forEach(function(cat){
+        var key=ELKEY[catEl[cat]];
+        setEl('go-'+key, catCnt[cat]);
+        setEl('mk-'+key, strFromCount(catCnt[cat]));
       });
     }
-    // 通変（日干＝自分を基準に五行を連動）：比劫を中央に配置
-    var dayEl = (r.pillars && r.pillars.day) ? r.pillars.day.ganElement : null;
-    updateGogyoDiagram(dayEl);   // 五行図：比劫（中央）＋印星/食傷/官星/財星
+    updateGogyoDiagram(dayEl);   // 五行図：比劫（頂点）＋印星/食傷/官星/財星（数も通変集計に連動）
     updateTsuhen(dayEl);         // 五行バランス表の通変列
     // 干支関係（干合・三合・方合・半合・冲・刑・破・害）
     renderKankei(computeKankei(r.pillars||{}));
