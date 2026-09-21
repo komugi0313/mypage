@@ -435,11 +435,11 @@
               <table class="gogyo">
                 <thead><tr><th>五行</th><th>数</th><th>強弱</th><th class="cd">色・方位</th></tr></thead>
                 <tbody>
-                  <tr><td class="g g-moku">木</td><td class="c ed" id="go-moku" contenteditable="true"></td><td class="mk ed" contenteditable="true"></td><td class="cd ed" contenteditable="true">青・緑／東・南東</td></tr>
-                  <tr><td class="g g-ka">火</td><td class="c ed" id="go-ka" contenteditable="true"></td><td class="mk ed" contenteditable="true"></td><td class="cd ed" contenteditable="true">赤・ピンク／南</td></tr>
-                  <tr><td class="g g-do">土</td><td class="c ed" id="go-do" contenteditable="true"></td><td class="mk ed" contenteditable="true"></td><td class="cd ed" contenteditable="true">黄・ゴールド／北東・南西</td></tr>
-                  <tr><td class="g g-kin">金</td><td class="c ed" id="go-kin" contenteditable="true"></td><td class="mk ed" contenteditable="true"></td><td class="cd ed" contenteditable="true">白・シルバー／北西・西</td></tr>
-                  <tr><td class="g g-sui">水</td><td class="c ed" id="go-sui" contenteditable="true"></td><td class="mk ed" contenteditable="true"></td><td class="cd ed" contenteditable="true">黒・紺／北</td></tr>
+                  <tr><td class="g g-moku">木</td><td class="c ed" id="go-moku" contenteditable="true"></td><td class="mk ed" id="mk-moku" contenteditable="true"></td><td class="cd ed" contenteditable="true">青・緑／東・南東</td></tr>
+                  <tr><td class="g g-ka">火</td><td class="c ed" id="go-ka" contenteditable="true"></td><td class="mk ed" id="mk-ka" contenteditable="true"></td><td class="cd ed" contenteditable="true">赤・ピンク／南</td></tr>
+                  <tr><td class="g g-do">土</td><td class="c ed" id="go-do" contenteditable="true"></td><td class="mk ed" id="mk-do" contenteditable="true"></td><td class="cd ed" contenteditable="true">黄・ゴールド／北東・南西</td></tr>
+                  <tr><td class="g g-kin">金</td><td class="c ed" id="go-kin" contenteditable="true"></td><td class="mk ed" id="mk-kin" contenteditable="true"></td><td class="cd ed" contenteditable="true">白・シルバー／北西・西</td></tr>
+                  <tr><td class="g g-sui">水</td><td class="c ed" id="go-sui" contenteditable="true"></td><td class="mk ed" id="mk-sui" contenteditable="true"></td><td class="cd ed" contenteditable="true">黒・紺／北</td></tr>
                 </tbody>
               </table>
               <div class="pent">
@@ -549,7 +549,8 @@
  *    },
  *    tenchusatsu: "戌亥",                 // 空亡（天中殺）
  *    shugojin: ["丁","癸","丙"],           // 守護神（命式から。可変長。守護神欄へ自動表示）
- *    gogyoCount:  { 木:0, 火:0, 土:0, 金:0, 水:0 },
+ *    gogyoCount:  { 木:0, 火:0, 土:0, 金:0, 水:0 },   // 五行の数（五行バランス＋五角形へ）
+ *    gogyoStrength:{ 木:"◎", 火:"○", … }(任意),        // 強弱。無ければ数から自動（0✕/1△/2○/3+◎）
  *    direction:   "順行" | "逆行",         // 大運の進行
  *    daiun: [ { ageFrom, ageTo, kanshi, tsuhen, junishi,
  *               num(任意),
@@ -627,7 +628,7 @@
       });
     });
     setEl('tenchu',''); setEl('sum-tenchu','');
-    ['go-moku','go-ka','go-do','go-kin','go-sui'].forEach(function(id){ setEl(id,''); });
+    ['go-moku','go-ka','go-do','go-kin','go-sui','mk-moku','mk-ka','mk-do','mk-kin','mk-sui'].forEach(function(id){ setEl(id,''); });
     // 年運（12年）の 西暦・通変・十二運 をクリア
     var biob=document.getElementById('bioBody');
     if(biob){ Array.prototype.forEach.call(biob.rows, function(row){
@@ -640,6 +641,9 @@
     renderShugo(null);
     updatePentagon();
   }
+
+  // 五行の強弱（◎○△✕）を数から自動判定：0→✕ 1→△ 2→○ 3以上→◎
+  function strFromCount(n){ n=+n; if(isNaN(n)) return ''; if(n<=0) return '✕'; if(n===1) return '△'; if(n===2) return '○'; return '◎'; }
 
   // 守護神を命式（エンジン出力）から自動表示。arr 無しなら空欄3つ（記入用）
   function renderShugo(arr){
@@ -689,10 +693,14 @@
     setEl('tenchu', r.tenchusatsu);
     // 守護神（命式から自動）：r.shugojin = ["丁","癸","丙"] など
     renderShugo(r.shugojin);
-    // 五行バランス
+    // 五行バランス（数＋強弱を命式から）
     if(r.gogyoCount){
-      setEl('go-moku', r.gogyoCount['木']); setEl('go-ka', r.gogyoCount['火']);
-      setEl('go-do', r.gogyoCount['土']); setEl('go-kin', r.gogyoCount['金']); setEl('go-sui', r.gogyoCount['水']);
+      var gs = r.gogyoStrength||{};
+      [['木','moku'],['火','ka'],['土','do'],['金','kin'],['水','sui']].forEach(function(pr){
+        var el=pr[0], key=pr[1], cnt=r.gogyoCount[el];
+        setEl('go-'+key, cnt);
+        setEl('mk-'+key, gs[el]!=null ? gs[el] : strFromCount(cnt));
+      });
     }
     updatePentagon();
     // 年運（12年）— r.nenun = [{year, tsuhen, junishi}, … 12件]（エンジンから西暦を反映）
