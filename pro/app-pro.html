@@ -553,6 +553,7 @@
     <div style="margin-top:12px;font-size:13.5px;font-weight:900;color:var(--ink2)">✏️ 自由に入力してください</div><textarea class="worry" id="compat-worry" placeholder="例：この人とは結婚を考えても大丈夫でしょうか？　価値観は合いますか？" style="margin-top:6px"></textarea><div class="hint" style="margin-top:6px">🔒 入力した相談内容は鑑定文の生成にのみ使われます。保存した鑑定者・メモを見られるのはあなただけで、第三者に公開・提供されることはありません。</div>
     <button class="ask" id="compatAskBtn">この質問に答えてもらう</button>
     <button id="compat-reset" type="button" style="margin-top:8px;width:100%;height:40px;border:2px solid var(--line2);background:#fff;color:var(--ink2);border-radius:11px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer">↺ お相手の入力をリセット</button>
+    <div id="compat-verdict"></div>
     <div class="reading" id="compat"></div>
   </section>
 
@@ -3959,6 +3960,25 @@ function localCompat(A,B,na,nb,rt,ask){
   return L.join('\n');
 }
 // お相手の命式を計算（共通）。失敗時はnullを返す。
+/* 相性を一目で：日柱の相性グレード（ganzhiCompat＝六十干支相性の自動算出）を信号バッジ化。
+   吉凶は engine のグレードそのまま。低グレードは product方針に合わせ、やわらかい前向き表現にする（意味は保持）。 */
+const CGRADE={'最高':{col:'#1FA463',lab:'最高'},'とてもよい':{col:'#1FA463',lab:'とてもよい'},'よい':{col:'#4FA96A',lab:'よい'},'普通':{col:'#8B8578',lab:'普通'},'悪い':{col:'#E2A12B',lab:'かみ合いにくい'},'合わない':{col:'#E2A12B',lab:'違いが大きめ'}};
+function compatVerdictHTML(a,b,rt){
+  if(typeof ganzhiCompat!=='function')return '';
+  const gc=ganzhiCompat(a.pillars[2].ganzhi,b.pillars[2].ganzhi);
+  const S=CGRADE[gc.stem]||CGRADE['普通'], B=CGRADE[gc.branch]||CGRADE['普通'];
+  const badge=(head,g)=>`<span class="vd-badge" style="background:${g.col};color:#fff"><b>${head}</b>${g.lab}</span>`;
+  return `<section class="card sec" style="border:2px solid #E85D9E;box-shadow:0 8px 24px rgba(232,93,158,.16)">
+    <span class="eyebrow"><b>相性ひと目</b>${a.dayMaster.stem}${a.pillars[2].branch}×${b.dayMaster.stem}${b.pillars[2].branch}</span>
+    <h2 style="margin-bottom:2px">2人の相性、直感でどう？</h2>
+    <div class="vd-kai" style="border-color:#F3C0D8;background:#FFF4F9;margin-top:10px">
+      <div class="vd-lab" style="flex:0 0 100%">日柱の相性（六十干支・自動算出／最高＞とてもよい＞よい＞普通＞かみ合いにくい＞違いが大きめ）</div>
+      ${badge('心の縁（十干）＝',S)}
+      ${badge('縁・つながり（十二支）＝',B)}
+    </div>
+    <div class="mhint" style="margin-top:9px">※ 直感の目安です。相性は<b>お互いの違いを活かす工夫</b>でよくできます。良い点・注意点の詳しい読み解きは、下の「${rt.label}」相性鑑定をご覧ください。</div>
+  </section>`;
+}
 function buildCompatBase(out){
   if(!chart){out.innerHTML='<div class="err">先に上の入力で「占う」を押し、本人の命式を出してください。</div>';return null;}
   const dv=document.getElementById('b-date').value, tv=document.getElementById('b-time').value||'12:00';
@@ -3970,6 +3990,7 @@ function buildCompatBase(out){
   if(document.getElementById('b-notime')&&document.getElementById('b-notime').checked)markTimeUnknown(chartB);
   const na=personName||'本人', nb=personNameB||'お相手';
   const rt=RELTYPES[document.getElementById('rel-type')?.value||'love']||RELTYPES.love;
+  try{var _cv=document.getElementById('compat-verdict'); if(_cv)_cv.innerHTML=compatVerdictHTML(chart,chartB,rt);}catch(_e){}
   const head=`【本人A】${na}（${chart.birth.sex==='male'?'男性':'女性'}）: ${compatBrief(chart)}\n【お相手B】${nb}（${sexB==='male'?'男性':'女性'}）: ${compatBrief(chartB)}\n\n【2人の関係】${rt.label}\n\n【2人の関係の自動分析（計算済み）】\n${compatAnalysis(chart,chartB,rt)}`;
   return {na,nb,rt,head};
 }
@@ -4357,6 +4378,7 @@ function resetCompat(){
   const cw=document.getElementById('compat-worry');if(cw)cw.value='';
   chartB=null;
   document.getElementById('compat').innerHTML='';
+  var _cv=document.getElementById('compat-verdict');if(_cv)_cv.innerHTML='';
 }
 document.getElementById('compat-reset').onclick=resetCompat;
 // フローティング「最初へ戻る」
