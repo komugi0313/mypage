@@ -281,6 +281,19 @@
   .reading-card ol.r-onum li::marker{font-weight:900;color:var(--ka)}
   .reading-card strong{font-weight:900;background:linear-gradient(transparent 62%,var(--do-w) 62%);padding:0 1px}
   .reading-foot{font-size:11px;color:var(--muted);font-weight:600;margin-top:8px;line-height:1.6}
+  /* ひと目でわかる判定サマリー（運気・会局） */
+  .vd-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  @media(max-width:400px){.vd-grid{grid-template-columns:1fr}}
+  .vd-item{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:11px 13px}
+  .vd-lab{font-size:11.5px;font-weight:800;color:var(--muted);line-height:1.4}
+  .vd-sig{font-size:19px;font-weight:900;margin:3px 0 6px;line-height:1.2}
+  .vd-bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+  .vd-bar i{display:block;height:100%;border-radius:99px}
+  .vd-sub{font-size:11px;font-weight:800;color:var(--muted);margin-top:5px}
+  .vd-kai{margin-top:11px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+    background:var(--card);border:1px solid var(--line);border-radius:13px;padding:11px 13px}
+  .vd-kai .vd-badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 12px;font-weight:900;font-size:13.5px;color:#fff}
+  .vd-kai .vd-tone{font-size:12px;font-weight:900;border-radius:6px;padding:2px 8px}
   /* 五行（通変星ホイール）の連動ミニ図：大運・年運セクションを見ている時だけ画面上部に固定表示 */
   #gogyo-pin{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:55;width:min(94vw,430px);
     background:var(--card);border:1px solid var(--line2);border-radius:14px;box-shadow:0 10px 28px rgba(20,23,29,.22);
@@ -2534,6 +2547,48 @@ function kaikyokuHTML(c){
   </section>`;
 }
 
+/* ひと目でわかる判定サマリー：運気（unkiPct）と会局（kaikyokuScanのtone）を、既存の計算値そのままで信号表示 */
+function unkiSignal(p){
+  if(p>=70)return {mk:'◎',lab:'好調（追い風）',col:'#1FA463'};
+  if(p>=55)return {mk:'○',lab:'順調',col:'#4FA96A'};
+  if(p>=40)return {mk:'◦',lab:'ふつう',col:'#8B8578'};
+  return {mk:'△',lab:'静かに整える時期',col:'#E2A12B'};
+}
+function verdictHTML(c){
+  const ds=c.dayMaster.stem, sType=strengthType(c);
+  const {dd,ay}=curDuYear(c);
+  const duPct=unkiPct(dd.tenStar, tenStarOf(ds,HONKI[dd.branch]), sType);
+  const yPct = ay?unkiPct(ay.tenStar, tenStarOf(ds,HONKI[ay.branch]), sType):null;
+  const dS=unkiSignal(duPct), yS=ay?unkiSignal(yPct):null;
+  const item=(lab,sig,pct,sub)=>`<div class="vd-item"><div class="vd-lab">${lab}</div>
+    <div class="vd-sig" style="color:${sig.col}">${sig.mk} ${sig.lab}</div>
+    <div class="vd-bar"><i style="width:${pct}%;background:${sig.col}"></i></div>
+    <div class="vd-sub">運気の目安 ${pct}%・巡る星＝${sub}</div></div>`;
+  const scan=(typeof kaikyokuScan==='function')?kaikyokuScan(c):{natal:[]};
+  const rank={三合:3,方合:2,半合:1};
+  const natal=(scan.natal||[]).slice().sort((a,b)=>(rank[b.kind]||0)-(rank[a.kind]||0));
+  let kaiHTML;
+  if(natal.length){const r=natal[0];const col=ec(r.el),tx=onEl(r.el);
+    const tone=r.tone==='good'?{t:'強運の追い風',bg:'#E7F4EA',fg:'#1E7A45'}:r.tone==='caution'?{t:(r.excess?'強まりすぎ注意':'強まりに注意'),bg:'#F6E4C4',fg:'#8A5A12'}:{t:'中庸',bg:'#EDEFF3',fg:'#5B6472'};
+    kaiHTML=`<div class="vd-kai"><div class="vd-lab" style="flex:0 0 100%">生まれ持った会局（一生の土台）</div>
+      <span class="vd-badge" style="background:${col};color:${tx}"><b>${r.kind}</b>${r.text}（${r.el}）</span>
+      <span class="vd-tone" style="background:${tone.bg};color:${tone.fg}">${tone.t}</span></div>`;
+  } else {
+    kaiHTML=`<div class="vd-kai"><div class="vd-lab" style="flex:0 0 100%">生まれ持った会局（一生の土台）</div>
+      <span class="vd-tone" style="background:#EDEFF3;color:#5B6472">なし</span>
+      <span style="font-size:11.5px;font-weight:700;color:var(--muted)">大運・年運の巡りで成立する時期はあります（下の会局カード参照）</span></div>`;
+  }
+  return `<section class="card sec" id="verdict-sec">
+    <span class="eyebrow"><b>ひと目</b>いまの見立て</span>
+    <h2>いま、どうなの？ ── 運気と会局を直感でチェック</h2>
+    <div class="vd-grid">
+      ${item(`10年の基調（大運 ${dd.ganzhi}）`,dS,duPct,dd.tenStar)}
+      ${ay?item(`${ay.year}年の運気（年運 ${ay.ganzhi}）`,yS,yPct,ay.tenStar):''}
+    </div>
+    ${kaiHTML}
+    <div class="mhint" style="margin-top:9px">※ 運気％は<b>身強弱と用神（喜神・忌神）</b>からの<b>目安</b>で、吉凶の断定ではありません（${sType}）。<b>下の大運・年運をタップ</b>すると、この判定も連動して変わります。</div>
+  </section>`;
+}
 function relHTML(c){
   const {dd,ay}=curDuYear(c);
   const br=c.pillars.map(p=>({label:p.label[0],branch:p.branch}));
@@ -2772,7 +2827,7 @@ function renderResult(){
   const c=chart;
   document.getElementById('ai-slot').innerHTML = consultHTML();
   document.getElementById('result').innerHTML =
-    heroHTML(c)+kaikyokuHTML(c)+genmeiHTML(c)+meishiHTML(c)+junitenHTML(c)+gogyoHTML(c)+yojoHTML(c)+(typeof pkLoveCard==='function'?pkLoveCard(c):'')+flowHTML(c);
+    heroHTML(c)+verdictHTML(c)+kaikyokuHTML(c)+genmeiHTML(c)+meishiHTML(c)+junitenHTML(c)+gogyoHTML(c)+yojoHTML(c)+(typeof pkLoveCard==='function'?pkLoveCard(c):'')+flowHTML(c);
   document.querySelectorAll('#result .tg [data-or]').forEach(b=>b.onclick=()=>{orient=b.dataset.or;renderResult();scrollKeep();});
   document.querySelectorAll('#result .dur').forEach(d=>d.onclick=()=>{selDu=+d.dataset.i;selYear=null;renderResult();scrollKeep();});
   document.querySelectorAll('#result .nyr').forEach(d=>d.onclick=()=>{selYear=+d.dataset.y;renderResult();scrollKeep();});
