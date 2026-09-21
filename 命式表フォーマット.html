@@ -131,6 +131,7 @@
   .bio .cv{ font-family:var(--mincho); text-align:center; white-space:nowrap; width:32px; font-size:13px; }
   .bio tr.tc .yr, .bio tr.tc .nm{ color:var(--now); }
   .bio td.ds:empty::before{ content:"（毎年のテーマを記入）"; color:var(--faint); }
+  .bio tr.kubo .nm::after{ content:"空亡"; display:block; font-size:9px; letter-spacing:.12em; color:var(--now); font-weight:700; margin-top:1px; }
 
   .daiun{ font-size:13px; font-family:var(--mincho); }
   .daiun th,.daiun td{ border-bottom:1px solid var(--rule2); padding:5px 6px; text-align:center; white-space:nowrap; }
@@ -401,9 +402,9 @@
                   <tr><td class="yr ed" contenteditable="true"></td><td class="nm ed" contenteditable="true">飛躍</td><td class="ds ed" contenteditable="true"></td><td class="n ed" contenteditable="true">2</td><td class="cv ed" contenteditable="true"></td><td class="cv ed" contenteditable="true"></td></tr>
                   <tr><td class="yr ed" contenteditable="true"></td><td class="nm ed" contenteditable="true">絶好調</td><td class="ds ed" contenteditable="true"></td><td class="n ed" contenteditable="true">3</td><td class="cv ed" contenteditable="true"></td><td class="cv ed" contenteditable="true"></td></tr>
                   <tr><td class="yr ed" contenteditable="true"></td><td class="nm ed" contenteditable="true">頂点</td><td class="ds ed" contenteditable="true"></td><td class="n ed" contenteditable="true">4</td><td class="cv ed" contenteditable="true"></td><td class="cv ed" contenteditable="true"></td></tr>
-                  <tr><td class="yr ed" contenteditable="true"></td><td class="nm ed" contenteditable="true">空亡<br><small style="font-size:9px;color:var(--faint)">忍耐</small></td><td class="ds ed" contenteditable="true"></td><td class="n ed" contenteditable="true">5</td><td class="cv ed" contenteditable="true"></td><td class="cv ed" contenteditable="true"></td></tr>
-                  <tr><td class="yr ed" contenteditable="true"></td><td class="nm ed" contenteditable="true">空亡<br><small style="font-size:9px;color:var(--faint)">陰徳</small></td><td class="ds ed" contenteditable="true"></td><td class="n ed" contenteditable="true">6</td><td class="cv ed" contenteditable="true"></td><td class="cv ed" contenteditable="true"></td></tr>
-                  <tr><td class="yr ed" contenteditable="true"></td><td class="nm ed" contenteditable="true">空亡<br><small style="font-size:9px;color:var(--faint)">修行</small></td><td class="ds ed" contenteditable="true"></td><td class="n ed" contenteditable="true">7</td><td class="cv ed" contenteditable="true"></td><td class="cv ed" contenteditable="true"></td></tr>
+                  <tr><td class="yr ed" contenteditable="true"></td><td class="nm ed" contenteditable="true"></td><td class="ds ed" contenteditable="true"></td><td class="n ed" contenteditable="true">5</td><td class="cv ed" contenteditable="true"></td><td class="cv ed" contenteditable="true"></td></tr>
+                  <tr><td class="yr ed" contenteditable="true"></td><td class="nm ed" contenteditable="true"></td><td class="ds ed" contenteditable="true"></td><td class="n ed" contenteditable="true">6</td><td class="cv ed" contenteditable="true"></td><td class="cv ed" contenteditable="true"></td></tr>
+                  <tr><td class="yr ed" contenteditable="true"></td><td class="nm ed" contenteditable="true"></td><td class="ds ed" contenteditable="true"></td><td class="n ed" contenteditable="true">7</td><td class="cv ed" contenteditable="true"></td><td class="cv ed" contenteditable="true"></td></tr>
                   <tr><td class="yr ed" contenteditable="true"></td><td class="nm ed" contenteditable="true">夜明け</td><td class="ds ed" contenteditable="true"></td><td class="n ed" contenteditable="true">8</td><td class="cv ed" contenteditable="true"></td><td class="cv ed" contenteditable="true"></td></tr>
                   <tr><td class="yr ed" contenteditable="true"></td><td class="nm ed" contenteditable="true">進化</td><td class="ds ed" contenteditable="true"></td><td class="n ed" contenteditable="true">9</td><td class="cv ed" contenteditable="true"></td><td class="cv ed" contenteditable="true"></td></tr>
                   <tr><td class="yr ed" contenteditable="true"></td><td class="nm ed" contenteditable="true">決意</td><td class="ds ed" contenteditable="true"></td><td class="n ed" contenteditable="true">10</td><td class="cv ed" contenteditable="true"></td><td class="cv ed" contenteditable="true"></td></tr>
@@ -545,8 +546,9 @@
  *               startYear(任意), endYear(任意) }, … ],
  *              // 西暦は startYear/endYear があれば使用、無ければ
  *              //  birthYear + ageFrom〜ageTo で自動計算（入力の year を使用）
- *    nenun: [ { year, tsuhen, junishi }, … 12件 ],
+ *    nenun: [ { year, tsuhen, junishi, kubo }, … 12件 ],
  *              // 年運（12年）に西暦・通変・十二運を反映（時期名/テーマ/数は固定）
+ *              // kubo:true の年は「空亡」と自動表示（空亡＝2年。日柱の空亡支に当たる年）
  *    birthYear: 1990,                      // 任意。無ければ入力 year を使用
  *    nowAge: 45                            // 任意。現在の大運行をハイライト
  *  }
@@ -620,6 +622,7 @@
     // 年運（12年）の 西暦・通変・十二運 をクリア
     var biob=document.getElementById('bioBody');
     if(biob){ Array.prototype.forEach.call(biob.rows, function(row){
+      row.classList.remove('kubo');
       var yr=row.querySelector('.yr'); if(yr) yr.textContent='';
       var cvs=row.querySelectorAll('.cv'); if(cvs[0]) cvs[0].textContent=''; if(cvs[1]) cvs[1].textContent='';
     }); }
@@ -695,7 +698,9 @@
     if(Array.isArray(r.nenun)){
       var biob=document.getElementById('bioBody');
       if(biob){ Array.prototype.forEach.call(biob.rows, function(row,i){
-        var u=r.nenun[i]; if(!u) return;
+        var u=r.nenun[i];
+        row.classList.toggle('kubo', !!(u && u.kubo));
+        if(!u) return;
         var yr=row.querySelector('.yr'); if(yr && u.year!=null) yr.textContent=u.year;
         var cvs=row.querySelectorAll('.cv');
         if(cvs[0] && u.tsuhen!=null) cvs[0].textContent=u.tsuhen;
