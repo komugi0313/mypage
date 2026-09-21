@@ -269,6 +269,7 @@ table{width:100%;border-collapse:collapse;font-size:15.5px}
     </div>
     <button class="btn" id="go">命式を作成する</button>
     <div style="display:flex;gap:8px"><button class="btn sub2" id="save" style="flex:1">この命式を保存</button></div>
+    <button class="btn sub2" id="openSheet" type="button" style="width:100%;margin-top:8px">命式表（鑑定書）を印刷用で開く →</button>
     <div id="aiStatus" class="note" style="margin-top:10px"></div>
     <details style="margin-top:8px"><summary style="cursor:pointer;font-size:15px;color:var(--muted);font-weight:700">🤖 AI鑑定の設定（本番サイトでは設定不要・任意）</summary>
       <p class="note" style="margin:8px 0 0">💡 <b>Netlifyなどの本番サイトに設置し、環境変数 <code>GEMINI_API_KEY</code> を1回設定すれば、以降はここを触らなくてもAI鑑定が自動で使えます（キーはサーバーに隠れ、閲覧者には出ません）。</b>下の欄は、自分の端末だけでお試しする時や、自分専用の上限なし設定に使います。</p>
@@ -799,6 +800,26 @@ wireToggle("Tatu","TaTime"); wireToggle("Tbtu","TbTime"); wireToggle("Tctu","TcT
 var _bind=function(id,fn){var e=document.getElementById(id);if(e)e.onclick=fn;};
 _bind("go",function(){window._msAutoAI=true;window._msScrollNext=true;runSolo(true);});
 _bind("save",saveCurrent);
+// 鑑定書スタイル命式表（meishi-sheet.html）を、今の入力・補正を引き継いで別タブで開く（同一エンジンで結果一致）
+function openMeishiSheet1(){
+  var y=+document.getElementById('by').value, mo=+document.getElementById('bm').value, d=+document.getElementById('bdd').value;
+  if(!y||!mo||!d){alert('先に生年月日を選んでください');return;}
+  var tu=document.getElementById('tu').checked;
+  var hh=tu?12:(+document.getElementById('bh').value||12), mi=tu?0:(+document.getElementById('bmin').value||0);
+  var sex=document.getElementById('sex').value;
+  var nm=(document.getElementById('pname').value||'').trim();
+  var pc=document.getElementById('place').value, lon='', corr='none';
+  if(!tu){
+    if(typeof MANUAL_OPT!=='undefined' && pc===MANUAL_OPT){var L=parseFloat(document.getElementById('lon').value); if(!isNaN(L)){lon=L;corr='full';}}
+    else if(typeof PLON!=='undefined' && PLON[pc]!=null){lon=PLON[pc];corr='full';}
+  }
+  var pad=function(n){return String(n).length<2?'0'+n:''+n;};
+  var q=new URLSearchParams({d:y+'-'+pad(mo)+'-'+pad(d), t:pad(hh)+':'+pad(mi), sex:(sex==='male'?'male':'female'), corr:corr});
+  if(lon!=='')q.set('lon',lon);
+  if(nm)q.set('name',nm);
+  window.open('meishi-sheet.html?'+q.toString(),'_blank','noopener');
+}
+_bind("openSheet",openMeishiSheet1);
 _bind("goPair",function(){window._msAutoAI=true;window._msScrollNext=true;runPair(true);});
 _bind("tabSolo",function(){setTab("solo");});
 _bind("tabPair",function(){setTab("pair");});
