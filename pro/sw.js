@@ -3,13 +3,13 @@
    鑑定・60干支の教科書を使えるようにする。
    オンライン鑑定（生成AI）だけは通信が要るが、圏外時は端末内の
    オフライン鑑定に自動で切り替わる。 */
-const CACHE = 'shichu-jidou-v8';   /* 干支相性早見表の追加を配信 */
+const CACHE = 'shichu-jidou-v9';   /* 認証画面(auth.html)の追加を配信 */
 
 /* 初回訪問時に先読みしてキャッシュするページ一式（このブランドのみ） */
 const ASSETS = [
   'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icon-maskable-512.png', 'icon-crystal.png',
   'app-pro.html', 'index.html', 'textbook-pro.html',
-  'pricing-pro.html', 'mypage-pro.html',
+  'pricing-pro.html', 'mypage-pro.html', 'auth.html',
   'terms-pro.html', 'tokushoho-pro.html', 'privacy-pro.html',
   'manifest-pro.webmanifest', 'icon-pro.svg',
   'pklove.js',
