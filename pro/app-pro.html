@@ -268,6 +268,10 @@
   .reading-card h4.r-head .r-ic{font-size:16px;line-height:1}
   .reading-card h4.r-head:first-of-type{margin-top:8px}
   .reading-card p{margin:0 0 13px;font-size:14.5px;line-height:1.95}
+  /* 鑑定文を「1文＝1ポイント」で読みやすく：各文に余白と目印、頭の「ラベル：」を強調 */
+  .reading-card p.r-s{margin:0 0 9px;padding-left:16px;position:relative;font-size:14.5px;line-height:1.8}
+  .reading-card p.r-s::before{content:"";position:absolute;left:3px;top:.72em;width:5px;height:5px;border-radius:50%;background:var(--do)}
+  .reading-card .r-lbl{color:var(--ka);font-weight:900}
   .reading-card .r-list{margin:2px 0 11px;padding-left:1.15em}
   .reading-card .r-list li{font-size:14px;margin:4px 0;line-height:1.75}
   .reading-card ol.r-onum{margin:4px 0 12px;padding-left:1.4em}
@@ -3424,7 +3428,11 @@ function sectionIcon(t){const k=String(t).replace(/[：:　\s]+$/,'');return SEC
 function formatReading(text){
   const lines=esc(text).split('\n').map(l=>l.trim());
   let html='',pbuf=[],lbuf=[],ltype='',summarySet=false,sawHead=false;
-  const flushP=()=>{if(pbuf.length){html+=`<p>${pbuf.join('<br>')}</p>`;pbuf=[];}};
+  // 段落を「。」で1文ずつに分け、各文を1ポイントとして表示（内容は変えない・見やすくするだけ）
+  const splitSentences=(t)=>{const out=[];let cur='';for(const ch of t){cur+=ch;if(ch==='。'){out.push(cur);cur='';}}if(cur.trim())out.push(cur);return out.map(s=>s.trim()).filter(Boolean);};
+  // 文頭の「ラベル：…」「ラベル＝…」の見出し部分を強調（要点が一目でわかるように）
+  const labelize=(s)=>{const m=s.match(/^([^：:＝\s][^：:＝]{0,21}[：:＝])([\s\S]+)$/);return m?`<b class="r-lbl">${m[1]}</b>${m[2]}`:s;};
+  const flushP=()=>{if(!pbuf.length)return;const joined=pbuf.join('');const sents=splitSentences(joined);if(sents.length)for(const s of sents){html+=`<p class="r-s">${labelize(s)}</p>`;}else html+=`<p class="r-s">${labelize(joined)}</p>`;pbuf=[];};
   const flushL=()=>{if(lbuf.length){const tag=ltype==='ol'?'ol':'ul',cls=ltype==='ol'?'r-onum':'r-list';html+=`<${tag} class="${cls}">`+lbuf.map(t=>`<li>${t}</li>`).join('')+`</${tag}>`;lbuf=[];ltype='';}};
   const flush=()=>{flushL();flushP();};
   for(const ln of lines){
