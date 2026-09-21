@@ -48,6 +48,14 @@
     background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:7px 9px; }
   .calcbox input{ width:74px; text-align:right; font-variant-numeric:tabular-nums; }
   .calcbox input.yr{ width:82px; }
+  .calcbox input.nm{ width:130px; text-align:left; }
+  .calcbox input.dt{ width:150px; text-align:left; }
+  .calcbox input.tm{ width:96px; text-align:left; }
+  .savebox{ display:flex; align-items:center; gap:8px; margin-top:10px; padding-top:10px; border-top:1px dashed var(--rule2); flex-wrap:wrap; }
+  .savebox button{ font-family:var(--gothic); font-size:12.5px; font-weight:700; color:var(--ink); background:var(--paper); border:1px solid var(--rule); border-radius:999px; padding:6px 14px; cursor:pointer; }
+  .savebox button:hover{ background:var(--shade); border-color:var(--gold-soft); }
+  .savebox #saveBtn{ background:var(--gold); color:#fff; border-color:var(--gold); }
+  .savebox select{ font-family:var(--gothic); font-size:13px; color:var(--ink); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:6px 8px; max-width:230px; }
   .calcbox :focus-visible{ outline:2px solid var(--focus); outline-offset:1px; }
   .calc-msg{ font-size:12px; color:var(--now); font-weight:700; }
   body[data-mode="blank"] #calcRow{ display:none; }
@@ -358,18 +366,21 @@
     </div>
     <div class="bar-row" id="calcRow">
       <form class="calcbox" id="calcForm">
-        <span class="glabel" style="align-self:center">生年月日</span>
-        <div class="f"><label for="iY">年（西暦）</label><input class="yr" id="iY" type="number" inputmode="numeric" value="2024" min="1900" max="2100"></div>
-        <div class="f"><label for="iM">月</label><input id="iM" type="number" inputmode="numeric" value="1" min="1" max="12"></div>
-        <div class="f"><label for="iD">日</label><input id="iD" type="number" inputmode="numeric" value="1" min="1" max="31"></div>
-        <div class="f"><label for="iH">時</label><input id="iH" type="number" inputmode="numeric" value="12" min="0" max="23"></div>
-        <div class="f"><label for="iMin">分</label><input id="iMin" type="number" inputmode="numeric" value="0" min="0" max="59"></div>
+        <div class="f"><label for="iName">氏名</label><input class="nm" id="iName" type="text" placeholder="お名前（任意）"></div>
+        <div class="f"><label for="iDate">生年月日</label><input class="dt" id="iDate" type="date" value="2024-01-01" min="1900-01-01" max="2100-12-31"></div>
+        <div class="f"><label for="iTime">時刻</label><input class="tm" id="iTime" type="time" value="12:00"></div>
         <div class="f"><label for="iSex">性別</label>
           <select id="iSex"><option value="female">女性</option><option value="male">男性</option></select>
         </div>
         <div class="act" style="margin-left:0"><button type="submit" class="primary">鑑定する</button></div>
         <span class="calc-msg" id="calcMsg" role="status"></span>
       </form>
+      <div class="savebox">
+        <button type="button" id="saveBtn" title="この生年月日を保存">💾 保存</button>
+        <label for="savedList" class="glabel">保存済み</label>
+        <select id="savedList"><option value="">— 呼び出す —</option></select>
+        <button type="button" id="delBtn" title="選択中の保存を削除">削除</button>
+      </div>
     </div>
   </div>
 
@@ -1041,14 +1052,18 @@ window.MEISHIKI=(function(){
     if(typeof window.computeMeishiki!=='function'){
       msg.textContent='自動計算にはご自身の計算エンジン（window.computeMeishiki）の接続が必要です。未接続の場合は「記入用」でご入力ください。'; return;
     }
-    var y=+document.getElementById('iY').value, m=+document.getElementById('iM').value, d=+document.getElementById('iD').value;
-    var h=+document.getElementById('iH').value, mn=+document.getElementById('iMin').value;
+    var dv=(document.getElementById('iDate').value||'').split('-');
+    var tv=(document.getElementById('iTime').value||'12:00').split(':');
+    var y=+dv[0], m=+dv[1], d=+dv[2], h=+(tv[0]||0), mn=+(tv[1]||0);
+    if(!y||!m||!d){ msg.textContent='生年月日を入力してください。'; return; }
     var sex=document.getElementById('iSex').value;
+    var nm=(document.getElementById('iName').value||'').trim();
     try{
       var r=window.computeMeishiki({year:y,month:m,day:d,hour:h,minute:mn,sex:sex});
       r.nowAge = (new Date()).getFullYear() - y;
       if(r.birthYear==null) r.birthYear = y;   // 大運の西暦計算に使用
       fillFromResult(r);
+      setEl('mName', nm ? (nm+'　様') : '　　　　　　様');
       setEl('mBirth','西暦'+y+'年'+m+'月'+d+'日 '+h+'時'+mn+'分 生');
       setEl('mSex', sex==='female'?'女性':'男性');
       setMode('auto');
@@ -1064,6 +1079,49 @@ window.MEISHIKI=(function(){
     var g=document.querySelector('.gogyo .'+cls);
     if(g){ g.title='クリックで吉（ラッキーカラー）を選択'; g.addEventListener('click', function(){ if(g.parentNode) g.parentNode.classList.toggle('lucky'); }); }
   });
+
+  // ===== 保存機能（この端末のブラウザに保存） =====
+  var LSKEY='meishiki_saved_v1';
+  function loadSaved(){ try{ return JSON.parse(localStorage.getItem(LSKEY)||'[]')||[]; }catch(e){ return []; } }
+  function putSaved(a){ try{ localStorage.setItem(LSKEY, JSON.stringify(a)); return true; }catch(e){ return false; } }
+  function refreshSavedList(){
+    var sel=document.getElementById('savedList'); if(!sel) return;
+    var a=loadSaved();
+    sel.innerHTML='<option value="">— 呼び出す（'+a.length+'件）—</option>'+a.map(function(r,i){
+      return '<option value="'+i+'">'+((r.name||'(無名)'))+'／'+(r.date||'')+'</option>';
+    }).join('');
+  }
+  function currentInput(){
+    return { name:(document.getElementById('iName').value||'').trim(),
+      date:document.getElementById('iDate').value, time:document.getElementById('iTime').value,
+      sex:document.getElementById('iSex').value };
+  }
+  var saveBtn=document.getElementById('saveBtn'), savedList=document.getElementById('savedList'), delBtn=document.getElementById('delBtn');
+  if(saveBtn) saveBtn.addEventListener('click', function(){
+    var msg=document.getElementById('calcMsg'); var rec=currentInput();
+    if(!rec.date){ if(msg) msg.textContent='先に生年月日を入力してください。'; return; }
+    var a=loadSaved();
+    var idx=a.findIndex(function(x){ return x.name===rec.name && x.date===rec.date && x.time===rec.time; });
+    if(idx>=0) a[idx]=rec; else a.push(rec);
+    if(putSaved(a)){ refreshSavedList(); if(msg) msg.textContent='保存しました（'+(rec.name||'無名')+'）'; }
+    else { if(msg) msg.textContent='この環境では保存できません（プライベートモード等）。'; }
+  });
+  if(savedList) savedList.addEventListener('change', function(){
+    var v=savedList.value; if(v==='') return; var r=loadSaved()[+v]; if(!r) return;
+    document.getElementById('iName').value=r.name||'';
+    document.getElementById('iDate').value=r.date||'';
+    document.getElementById('iTime').value=r.time||'12:00';
+    document.getElementById('iSex').value=r.sex||'female';
+    setMode('auto');
+    try{ document.getElementById('calcForm').requestSubmit(); }catch(e){}
+  });
+  if(delBtn) delBtn.addEventListener('click', function(){
+    var v=savedList.value; var msg=document.getElementById('calcMsg');
+    if(v===''){ if(msg) msg.textContent='削除する保存を選んでください。'; return; }
+    var a=loadSaved(); a.splice(+v,1); putSaved(a); refreshSavedList();
+    if(msg) msg.textContent='削除しました。';
+  });
+  refreshSavedList();
 
   // 初期表示：自動計算（エンジン連動）。手書きは「記入用」に切替。
   setMode('auto');
