@@ -104,6 +104,12 @@
   .pillars .kanchar{ font-family:var(--mincho); font-size:24px; line-height:1.12; }
   .pillars .p-day{ background:rgba(180,72,60,.05); }
   .pillars thead th.p-day{ background:rgba(180,72,60,.10); }
+  /* 干支関係の帯（命式表のすぐ下） */
+  .kankei-band{ flex:0 0 auto; margin-top:7px; border-top:1px dashed var(--rule2); padding-top:6px; display:flex; align-items:baseline; gap:8px; min-height:22px; }
+  .kankei-band .kk-label{ font-family:var(--mincho); font-weight:700; font-size:11px; color:var(--ink2); letter-spacing:.12em; white-space:nowrap; }
+  .kankei-band .kk-list{ display:flex; flex-wrap:wrap; gap:4px 6px; }
+  .kankei-band .kk{ font-family:var(--gothic); font-size:11px; color:var(--ink); background:var(--shade); border:1px solid var(--rule2); border-radius:4px; padding:1px 7px; white-space:nowrap; }
+  .kankei-band .kk.none{ background:transparent; border:0; color:var(--faint); padding:0; }
   .block-title{ font-family:var(--mincho); font-weight:700; color:var(--ink); font-size:14px; letter-spacing:.16em;
     margin:0 0 6px; padding-bottom:5px; border-bottom:1.4px solid var(--rule); display:flex; align-items:baseline; gap:8px; }
   .block-title small{ font-family:var(--gothic); font-weight:500; font-size:11px; color:var(--ink2); letter-spacing:.08em; }
@@ -289,6 +295,9 @@
     .pillars .rowlbl{ font-size:9px; }
     .pillars thead th{ font-size:10px; padding:2px 3px; }
     .ori-toggle{ display:none !important; }
+    .kankei-band{ margin-top:2mm; padding-top:1.4mm; min-height:0; gap:6px; }
+    .kankei-band .kk-label{ font-size:9px; }
+    .kankei-band .kk{ font-size:9px; padding:0 5px; }
     @page{ size:A4 landscape; margin:5mm; }
   }
 </style>
@@ -378,6 +387,10 @@
               </span>
             </h2>
             <div class="scroll"><div id="meishikiMount"></div></div>
+            <div class="kankei-band">
+              <span class="kk-label">干支関係</span>
+              <span class="kk-list" id="kankeiList"></span>
+            </div>
           </section>
         </div>
         <!-- 右：年運（12年） -->
@@ -715,6 +728,7 @@ window.MEISHIKI=(function(){
     setEl('kanteiDate','　年　月　日');
     updatePentagon();
     updateTsuhen(null);   // 記入用：通変ラベル・比劫の強調を消す
+    renderKankei(null);   // 記入用：干支関係は手書き枠
   }
 
   // 五行の強弱（◎○△✕）を数から自動判定：0→✕ 1→△ 2→○ 3以上→◎
@@ -759,6 +773,50 @@ window.MEISHIKI=(function(){
     });
   }
 
+  // 干支関係（干合・三合・方合・半合・冲・刑・破・害）を命式の天干/地支から算出
+  function computeKankei(rp){
+    rp=rp||{};
+    var order=['year','month','day','hour'], lab=['年','月','日','時'], S=[], B=[];
+    order.forEach(function(k){ var p=rp[k]||{}; S.push(p.gan||''); B.push(p.shi||''); });
+    function pk(a,b){ return [a,b].sort().join(''); }
+    function mkset(rows){ var m={}; rows.forEach(function(x){ m[[x[0],x[1]].sort().join('')]=x[2]||true; }); return m; }
+    var GANGO=mkset([['甲','己'],['乙','庚'],['丙','辛'],['丁','壬'],['戊','癸']]);
+    var CHONG=mkset([['子','午'],['丑','未'],['寅','申'],['卯','酉'],['辰','戌'],['巳','亥']]);
+    var HA=mkset([['子','酉'],['卯','午'],['辰','丑'],['未','戌'],['寅','亥'],['巳','申']]);
+    var GAI=mkset([['子','未'],['丑','午'],['寅','巳'],['卯','辰'],['申','亥'],['酉','戌']]);
+    var HANGO=mkset([['申','子','水'],['子','辰','水'],['寅','午','火'],['午','戌','火'],['亥','卯','木'],['卯','未','木'],['巳','酉','金'],['酉','丑','金']]);
+    var KEI=mkset([['寅','巳'],['巳','申'],['丑','戌'],['戌','未'],['子','卯']]);
+    var SELFKEI={'辰':1,'午':1,'酉':1,'亥':1};
+    var SANGO=[['申','子','辰','水'],['亥','卯','未','木'],['寅','午','戌','火'],['巳','酉','丑','金']];
+    var HOUGO=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','戌','金'],['亥','子','丑','水']];
+    var SANKEI=[['寅','巳','申'],['丑','戌','未']];
+    function trioHit(trio){ var seen={}; for(var i=0;i<B.length;i++){ if(trio.indexOf(B[i])>=0) seen[B[i]]=1; } return trio.every(function(b){return seen[b];}); }
+    var out=[], i, j;
+    for(i=0;i<4;i++)for(j=i+1;j<4;j++){ if(S[i]&&S[j]&&GANGO[pk(S[i],S[j])]) out.push({t:'干合',d:lab[i]+lab[j]+'（'+S[i]+S[j]+'）',o:1}); }
+    SANGO.forEach(function(g){ if(trioHit([g[0],g[1],g[2]])) out.push({t:'三合',d:g[0]+g[1]+g[2]+'＝'+g[3],o:2}); });
+    HOUGO.forEach(function(g){ if(trioHit([g[0],g[1],g[2]])) out.push({t:'方合',d:g[0]+g[1]+g[2]+'＝'+g[3],o:3}); });
+    var sankeiHit=[];
+    SANKEI.forEach(function(g){ if(trioHit(g)){ out.push({t:'三刑',d:g.join(''),o:6}); sankeiHit.push(g); } });
+    for(i=0;i<4;i++)for(j=i+1;j<4;j++){
+      if(!B[i]||!B[j]) continue; var key=pk(B[i],B[j]);
+      if(CHONG[key]) out.push({t:'冲',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:5});
+      if(HANGO[key]) out.push({t:'半合',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'＝'+HANGO[key]+'）',o:4});
+      if(HA[key]) out.push({t:'破',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:7});
+      if(GAI[key]) out.push({t:'害',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:8});
+      if(KEI[key]){ var inSan=false; sankeiHit.forEach(function(s){ if(s.indexOf(B[i])>=0&&s.indexOf(B[j])>=0) inSan=true; }); if(!inSan) out.push({t:'刑',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:6}); }
+      if(B[i]===B[j]&&SELFKEI[B[i]]) out.push({t:'刑',d:lab[i]+lab[j]+'（自刑）',o:6});
+    }
+    out.sort(function(a,b){return a.o-b.o;});
+    return out;
+  }
+  // list=null → 記入用（空欄）、[]→特になし、配列→タグ表示
+  function renderKankei(list){
+    var el=document.getElementById('kankeiList'); if(!el) return;
+    if(list==null){ el.innerHTML=''; return; }
+    if(!list.length){ el.innerHTML='<span class="kk none">特になし</span>'; return; }
+    el.innerHTML=list.map(function(x){ return '<span class="kk">'+x.t+' '+x.d+'</span>'; }).join('');
+  }
+
   function blankDaiunRows(){
     var h='';
     for(var i=0;i<8;i++){ h+='<tr><td class="age ed" contenteditable="true"></td><td class="yr2 ed" contenteditable="true"></td><td class="ed" contenteditable="true"></td><td class="ed" contenteditable="true"></td><td class="ed" contenteditable="true"></td><td class="n ed" contenteditable="true"></td></tr>'; }
@@ -792,6 +850,8 @@ window.MEISHIKI=(function(){
     updatePentagon();
     // 通変（日干＝自分を基準に五行を連動）：日干の五行から算出
     updateTsuhen(r.pillars && r.pillars.day ? r.pillars.day.ganElement : null);
+    // 干支関係（干合・三合・方合・半合・冲・刑・破・害）
+    renderKankei(computeKankei(r.pillars||{}));
     // 年運（12年）— r.nenun = [{year, tsuhen, junishi}, … 12件]（エンジンから西暦を反映）
     if(Array.isArray(r.nenun)){
       var biob=document.getElementById('bioBody');
