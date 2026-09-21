@@ -305,6 +305,17 @@
     background:var(--card);border:1px solid var(--line);border-radius:13px;padding:11px 13px}
   .vd-kai .vd-badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 12px;font-weight:900;font-size:13.5px;color:#fff}
   .vd-kai .vd-tone{font-size:12px;font-weight:900;border-radius:6px;padding:2px 8px}
+  /* 要点カルテ：命式そのものの核をひと目で（上部に集約） */
+  #summary-sec{border-left:5px solid var(--accent,#8A93A6)}
+  .sm-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px}
+  @media(max-width:480px){.sm-grid{grid-template-columns:1fr}}
+  .sm-cell{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px;min-width:0}
+  .sm-cell.wide{grid-column:1 / -1}
+  .sm-lab{font-size:11px;font-weight:800;color:var(--muted);line-height:1.4}
+  .sm-val{font-size:15px;font-weight:900;margin-top:2px;line-height:1.35;word-break:break-word}
+  .sm-val .sm-sub{font-size:11.5px;font-weight:800;color:var(--ink2);margin-left:2px}
+  .sm-el{display:inline-flex;align-items:center;border-radius:999px;padding:1px 9px;font-weight:900;font-size:12.5px;margin:2px 5px 0 0}
+  .sm-star{display:inline-block;font-size:12.5px;font-weight:800;color:var(--ink2);margin:1px 8px 0 0;white-space:nowrap}
   /* 相性ひと目：ラベル（左）＋判定チップ（右）を1行に。チップは折り返さない */
   .cv-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px}
   .cv-k{font-size:13px;font-weight:800;color:var(--ink2);line-height:1.4}
@@ -2590,6 +2601,51 @@ function unkiSignal(p){
   if(p>=40)return {mk:'◦',lab:'ふつう',col:'#8B8578'};
   return {mk:'△',lab:'静かに整える時期',col:'#E2A12B'};
 }
+/* 要点カルテ：命式そのもの（一生の土台）の核だけを、既存の計算値そのままで上部に集約。
+   ここは静的な核（本質・強弱・中心の星・格局・十二運・喜忌・吉凶星）。
+   「今の運気・会局」はすぐ下の判定サマリー（verdictHTML）が担当し、重複させない。 */
+function summaryHTML(c){
+  const ds=c.dayMaster.stem, el=c.dayMaster.element, col=ec(el), tx=onEl(el);
+  const sType=strengthType(c);
+  const sMean=sType==='身強'?'自我・行動力が強い':sType==='身弱'?'繊細・受け身で周囲の影響を受けやすい':'バランス型（中庸）';
+  const g=(typeof genmeiStar==='function')?genmeiStar(c):null;
+  const gCat=g&&TS_KISHITSU[g.star]?TS_KISHITSU[g.star].cat:'';
+  const kg=(typeof kakukyoku==='function')?kakukyoku(c):null;
+  const terr=c.pillars[2].terrain, tOne=TERR_DESC[terr]||'';
+  // 喜神・忌神の五行（_kkAssess＝会局や運気％と同じ物差し）
+  const A=(typeof _kkAssess==='function')?_kkAssess(c):null;
+  const chip=e=>`<span class="sm-el" style="background:${ec(e)};color:${onEl(e)}">${e}</span>`;
+  let kishi='';
+  if(A){
+    const fav=SHENG.filter(e=>A.assess(e).fav==='喜');
+    const ki=SHENG.filter(e=>{const a=A.assess(e);return a.fav==='忌'||a.excess;});
+    kishi=`<div class="sm-cell wide"><div class="sm-lab">伸ばすと良い五行（喜）／ 控えめが吉の五行（忌）</div>
+      <div class="sm-val" style="margin-top:5px">${fav.length?fav.map(chip).join(''):'<span class="sm-sub">特になし（中庸）</span>'}
+      <span style="color:var(--muted);font-weight:800;margin:0 6px">｜</span>
+      ${ki.length?ki.map(chip).join(''):'<span class="sm-sub">特になし</span>'}</div></div>`;
+  }
+  // 吉凶星（全柱・重複除去）。吉凶の断定はせず、命式にある星を列挙（詳細は命式表）
+  let stars=[];
+  try{ stars=[...new Set(c.pillars.flatMap(p=>pillarKichi(c,p)))].filter(Boolean); }catch(_e){}
+  const starHTML=stars.length
+    ? `<div class="sm-cell wide"><div class="sm-lab">この命式の吉凶星（${stars.length}）<span style="font-weight:700">※吉凶は日主の強弱・全体で変わります。意味は命式表へ</span></div>
+       <div class="sm-val" style="margin-top:4px;font-size:13.5px">${stars.map(s=>`<span class="sm-star">${kichiLabel(s)}</span>`).join('')}</div></div>`
+    : '';
+  return `<section class="card sec" id="summary-sec" style="--accent:${col}">
+    <span class="eyebrow" style="background:${col}"><b>要点</b>この人の“核”</span>
+    <h2>まず要点をひと目で</h2>
+    <p class="lead">スクロールしなくても分かるよう、<b>命式そのもの（一生の土台）</b>の核をここに集約しました。<b>いまの運気・会局</b>はすぐ下のカードに出ます。</p>
+    <div class="sm-grid">
+      <div class="sm-cell"><div class="sm-lab">本質（日主）</div><div class="sm-val" style="color:${col}">${ds}<span class="sm-sub">（${el}）</span></div></div>
+      <div class="sm-cell"><div class="sm-lab">日主の強さ</div><div class="sm-val">${sType}<span class="sm-sub">${sMean}</span></div></div>
+      ${g?`<div class="sm-cell"><div class="sm-lab">中心の星（月支元命）</div><div class="sm-val">${g.star}${gCat?`<span class="sm-sub">${gCat}</span>`:''}</div></div>`:''}
+      ${kg&&kg.name?`<div class="sm-cell"><div class="sm-lab">命式の型（格局）</div><div class="sm-val">${kg.name}</div></div>`:''}
+      <div class="sm-cell wide"><div class="sm-lab">日柱の十二運（生命力の段階）</div><div class="sm-val">${terr}${tOne?`<span class="sm-sub">${tOne}</span>`:''}</div></div>
+      ${kishi}
+      ${starHTML}
+    </div>
+  </section>`;
+}
 function verdictHTML(c){
   const ds=c.dayMaster.stem, sType=strengthType(c);
   const {dd,ay}=curDuYear(c);
@@ -2863,7 +2919,7 @@ function renderResult(){
   const c=chart;
   document.getElementById('ai-slot').innerHTML = consultHTML();
   document.getElementById('result').innerHTML =
-    heroHTML(c)+verdictHTML(c)+kaikyokuHTML(c)+genmeiHTML(c)+meishiHTML(c)+junitenHTML(c)+gogyoHTML(c)+yojoHTML(c)+(typeof pkLoveCard==='function'?pkLoveCard(c):'')+flowHTML(c);
+    heroHTML(c)+summaryHTML(c)+verdictHTML(c)+kaikyokuHTML(c)+genmeiHTML(c)+meishiHTML(c)+junitenHTML(c)+gogyoHTML(c)+yojoHTML(c)+(typeof pkLoveCard==='function'?pkLoveCard(c):'')+flowHTML(c);
   document.querySelectorAll('#result .tg [data-or]').forEach(b=>b.onclick=()=>{orient=b.dataset.or;renderResult();scrollKeep();});
   document.querySelectorAll('#result .dur').forEach(d=>d.onclick=()=>{selDu=+d.dataset.i;selYear=null;renderResult();scrollKeep();});
   document.querySelectorAll('#result .nyr').forEach(d=>d.onclick=()=>{selYear=+d.dataset.y;renderResult();scrollKeep();});
