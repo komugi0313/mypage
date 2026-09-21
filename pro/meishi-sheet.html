@@ -174,6 +174,12 @@
   .daiun tr.now td{ background:var(--shade); color:var(--now); font-weight:700; }
   .daiun tr.now td.age{ box-shadow:inset 4px 0 0 var(--now); }
   .daiun tr.now .age::after{ content:"　◀ 今ここ"; color:var(--now); font-weight:800; }  /* 今の大運を強調（年齢欄の左に印＋ラベル） */
+  .daiun tr.clk{ cursor:pointer; }
+  @media(hover:hover){ .daiun tr.clk:hover td{ background:rgba(120,110,90,.10); } }
+  .daiun tr.sel td{ background:rgba(46,125,82,.12); }
+  .daiun tr.sel td.age{ box-shadow:inset 4px 0 0 #2E7D52; }
+  .daiun tr.sel .age::after{ content:"　▶ 年運表示中"; color:#2E7D52; font-weight:800; }
+  @media print{ .daiun tr.clk{ cursor:auto; } }
   /* 節木運（せつぼくうん・接木運）＝季節が変わる大運＝人生の曲がり角。大運表の外枠側（左）に小さな印。 */
   .daiun td.age{ position:relative; }
   .daiun tr.setsu td.age::before{ content:""; position:absolute; left:-6px; top:50%; transform:translateY(-50%);
@@ -420,6 +426,7 @@
           <section>
             <h2 class="block-title">命式（四柱）<small>四つの柱で読む宿命</small>
               <span class="kubo-chip">空亡：<span class="ed" id="kuboChip" contenteditable="true">　</span></span>
+              <span class="kubo-chip">守護神：<span id="shugoWrap">　</span></span>
               <span class="ori-toggle seg" role="group" aria-label="向き切替（縦横）">
                 <button type="button" id="oYoko" aria-pressed="true">横</button>
                 <button type="button" id="oTate" aria-pressed="false">縦</button>
@@ -435,7 +442,7 @@
         <!-- 右：年運（12年） -->
         <div class="col">
           <section>
-            <h2 class="block-title">年運（12年）<small>1年ごとの運気</small></h2>
+            <h2 class="block-title">年運（12年）<small>1年ごとの運気<span id="nenunNote" class="scr-hint"></span></small></h2>
             <div class="scroll">
               <table class="bio">
                 <thead><tr><th class="yr">西暦</th><th>時期</th><th>毎年のテーマ</th><th class="cv">通変</th><th class="cv">十二運</th></tr></thead>
@@ -734,6 +741,31 @@
       zokan:rp.stem||'', zokanElement:STEM_EL[rp.stem]||p.branchElement,
       tsuhen:(p.tenStar==='日主'?null:p.tenStar), zokanTsuhen:rp.tenStar||'', junishi:p.terrain }; }
 
+  // 守護神＝喜神/用神：日主の強弱（五行バランス）から「助ける五行」を算出。
+  // 身強＝漏らす/抑える（食傷・財・官殺）／身弱＝生じる/助ける（印・比劫）／中和＝軽く整える。
+  var _GEN={'木':'火','火':'土','土':'金','金':'水','水':'木'};      // 自分が生む（食傷）
+  var _GENINV={'火':'木','土':'火','金':'土','水':'金','木':'水'};   // 自分を生む（印）
+  var _CON={'木':'土','火':'金','土':'水','金':'木','水':'火'};      // 自分が剋す（財）
+  var _CONINV={'土':'木','金':'火','水':'土','木':'金','火':'水'};   // 自分を剋す（官殺）
+  function computeShugo(tc){
+    try{
+      var day=tc.pillars&&tc.pillars[2]; if(!day) return null;
+      var dayEl=day.stemElement||STEM_EL[day.stem]; if(!dayEl) return null;
+      var fe=tc.fiveElements||{}, c=function(e){return +(fe[e]||0);};
+      var support=c(dayEl)+c(_GENINV[dayEl]);                         // 比劫＋印
+      var drain=c(_GEN[dayEl])+c(_CON[dayEl])+c(_CONINV[dayEl]);      // 食傷＋財＋官殺
+      // 月令（月支の五行が日主を助けるか）を加味：得令なら支持を強める
+      var mon=tc.pillars[1], monEl=mon&&(mon.branchElement||STEM_EL[repHidden(mon.hiddenStems).stem]);
+      if(monEl===dayEl||monEl===_GENINV[dayEl]) support+=1.5;
+      else if(monEl===_GEN[dayEl]||monEl===_CON[dayEl]||monEl===_CONINV[dayEl]) drain+=1;
+      var diff=support-drain, kind=diff>=1.5?'身強':(diff<=-1.5?'身弱':'中和'), els;
+      if(kind==='身強') els=[_GEN[dayEl],_CON[dayEl],_CONINV[dayEl]];        // 漏らす・抑える
+      else if(kind==='身弱') els=[dayEl,_GENINV[dayEl]];                      // 助ける
+      else els=[_GEN[dayEl],_GENINV[dayEl]];                                  // 中和：軽く整える
+      var uniq=[]; els.forEach(function(e){ if(e&&uniq.indexOf(e)<0)uniq.push(e); });
+      return {kind:kind, els:uniq};
+    }catch(e){ return null; }
+  }
   // 命式表フォーマットが呼ぶ関数。中身はエンジン(computeChart)の出力を写すだけ。
   window.computeMeishiki=function(input){
     if(!(window.Bazi&&window.Bazi.computeChart)) throw new Error('engine(window.Bazi) not loaded');
@@ -754,13 +786,17 @@
         now: (k===0),   // 先頭＝今年（現在の年運）
         kubo: !!(a && kuboPair && kuboPair.indexOf(a.branch)>=0) }); }  // その年が空亡年か（必ず2年）
     function withKichi(p,key){ if(p) p.kichi=kichiOf(key); return p; }
+    // 守護神＝喜神/用神（身強弱から算出）。命式の五行バランスと日主の強弱から「助ける五行」を出す。
+    var shugo=computeShugo(tc);
+    // 大運↔年運の連動用：全年の年運データ（西暦→通変・十二運・地支）を渡す
+    var annualByYear={}; (tc.annualFortunes||[]).forEach(function(a){ annualByYear[a.year]={tsuhen:a.tenStar,junishi:a.terrain,branch:a.branch}; });
     return { pillars:{ year:withKichi(mapP(P[0]),'year'), month:withKichi(mapP(P[1]),'month'), day:withKichi(mapP(P[2]),'day'), hour:withKichi(mapP(P[3]),'hour') },
       tenchusatsu:kuboPair, gogyoCount:tc.fiveElements||null,
       direction:(tc.startFortune&&tc.startFortune.forward)?'順行':'逆行',
       ritsuun:(tc.startFortune?{years:tc.startFortune.years, months:tc.startFortune.months}:null),  // 立運（何年何ヶ月で大運入り）
-      daiun:daiun, nenun:nenun,
-      nowAge:(tc.now?tc.now.age:null), birthYear:input.year
-      /* 守護神(shugojin)はcomputeChart非公開のため未設定＝手入力 */ };
+      daiun:daiun, nenun:nenun, annualByYear:annualByYear, kuboPair:kuboPair,
+      nowAge:(tc.now?tc.now.age:null), nowYear:startY, birthYear:input.year,
+      shugojin:(shugo?shugo.els:null), shugoStrength:(shugo?shugo.kind:null) };
   };
 })();
 </script>
@@ -949,10 +985,11 @@ window.MEISHIKI=(function(){
   function strFromCount(n){ n=+n; if(isNaN(n)) return ''; if(n<=0) return '✕'; if(n===1) return '△'; if(n===2) return '○'; return '◎'; }
 
   // 守護神を命式（エンジン出力）から自動表示。arr 無しなら空欄3つ（記入用）
-  function renderShugo(arr){
+  function renderShugo(arr, strength){
     var wrap=document.getElementById('shugoWrap'); if(!wrap) return;
     var items=(arr && arr.length)?arr:['　','　','　'];
-    wrap.innerHTML=items.map(function(v){ return '<span class="ed" contenteditable="true">'+(v==null||v===''?'　':v)+'</span>'; }).join(' ／ ');
+    var head=strength?'<span class="ed" contenteditable="true" style="font-size:11px;color:var(--ink2);margin-right:6px">'+strength+'</span>':'';
+    wrap.innerHTML=head+items.map(function(v){ return '<span class="ed" contenteditable="true">'+(v==null||v===''?'　':v)+'</span>'; }).join(' ／ ');
   }
 
   // 通変（日干＝自分を基準に、各五行が比劫/食傷/財星/官星/印星のどれか）
@@ -1064,12 +1101,38 @@ window.MEISHIKI=(function(){
   }
   function elClass(id, elName){ var e=document.getElementById(id); if(!e) return; e.className=e.className.replace(/\bel-\w+\b/g,'').trim(); if(ELMAP[elName]) e.classList.add(ELMAP[elName]); }
 
+  // ---- 大運↔年運の連動：年運（12年）を「指定年から」描く ----
+  var _nenunState=null, _selDaiunYear=null;
+  function renderNenunFor(startYear){
+    if(!_nenunState) return;
+    var by=_nenunState.byYear||{}, kp=_nenunState.kuboPair||'', nowY=_nenunState.nowYear;
+    _selDaiunYear=startYear;
+    var biob=document.getElementById('bioBody'); if(!biob) return;
+    Array.prototype.forEach.call(biob.rows, function(row,i){
+      var yy=startYear+i, a=by[yy];
+      row.classList.toggle('kubo', !!(a && kp && String(kp).indexOf(a.branch)>=0));
+      row.classList.toggle('now', yy===nowY);
+      var yr=row.querySelector('.yr'); if(yr) yr.textContent=yy;
+      var cvs=row.querySelectorAll('.cv');
+      if(cvs[0]) cvs[0].textContent=a?(a.tsuhen||''):'';
+      if(cvs[1]) cvs[1].textContent=a?(a.junishi||''):'';
+    });
+    var note=document.getElementById('nenunNote');
+    if(note) note.textContent=(startYear===nowY)?'　現在から12年':('　'+startYear+'年〜（選択した大運）');
+    // 大運表の選択ハイライト
+    var tb=document.getElementById('daiunBody');
+    if(tb) Array.prototype.forEach.call(tb.rows, function(tr){
+      tr.classList.toggle('sel', (+tr.dataset.sy)===startYear && startYear!==nowY);
+    });
+  }
+  function daiunToNow(){ if(_nenunState) renderNenunFor(_nenunState.nowYear); }
+
   // ---- 自動計算 → 反映 ----
   function fillFromResult(r){
     if(window.MEISHIKI) window.MEISHIKI.fill(r);
     (function(){ var d=new Date(); setEl('kanteiDate', d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'); })();
     // 守護神（命式から自動）：r.shugojin = ["丁","癸","丙"] など
-    renderShugo(r.shugojin);
+    renderShugo(r.shugojin, r.shugoStrength);
     // 五行バランスの「数」＝命式に出ている通変星を単純に集計（表の天干通変＋地支通変を拾う）
     Array.prototype.forEach.call(document.querySelectorAll('.gogyo tr.lucky'), function(r2){ r2.classList.remove('lucky'); });  // 新規鑑定でラッキー選択を解除
     var dayEl = (r.pillars && r.pillars.day) ? r.pillars.day.ganElement : null;
@@ -1091,20 +1154,9 @@ window.MEISHIKI=(function(){
     updateTsuhen(dayEl);         // 五行バランス表の通変列
     // 干支関係（干合・三合・方合・半合・冲・刑・破・害）
     renderKankei(computeKankei(r.pillars||{}));
-    // 年運（12年）— r.nenun = [{year, tsuhen, junishi}, … 12件]（エンジンから西暦を反映）
-    if(Array.isArray(r.nenun)){
-      var biob=document.getElementById('bioBody');
-      if(biob){ Array.prototype.forEach.call(biob.rows, function(row,i){
-        var u=r.nenun[i];
-        row.classList.toggle('kubo', !!(u && u.kubo));
-        row.classList.toggle('now', !!(u && u.now));   // 今年（現在の年運）を強調
-        if(!u) return;
-        var yr=row.querySelector('.yr'); if(yr && u.year!=null) yr.textContent=u.year;
-        var cvs=row.querySelectorAll('.cv');
-        if(cvs[0] && u.tsuhen!=null) cvs[0].textContent=u.tsuhen;
-        if(cvs[1] && u.junishi!=null) cvs[1].textContent=u.junishi;
-      }); }
-    }
+    // 年運（12年）— 全年データ(annualByYear)を保持し、指定年から12年を描ける形に（大運↔年運の連動用）
+    _nenunState={ byYear:(r.annualByYear||{}), kuboPair:(r.kuboPair||r.tenchusatsu||''), nowYear:(r.nowYear!=null?r.nowYear:(r.birthYear+ (r.nowAge||0))) };
+    renderNenunFor(_nenunState.nowYear);
     // 大運（年齢＋西暦）
     if(r.direction) setEl('daiunDir', r.direction);
     setEl('ritsuun', r.ritsuun ? (r.ritsuun.years+'年'+r.ritsuun.months+'ヶ月') : '　年　ヶ月');
@@ -1139,6 +1191,9 @@ window.MEISHIKI=(function(){
           '<td class="ed" contenteditable="true">'+(d.kanshi||'')+'</td>'+
           '<td class="ed" contenteditable="true">'+(d.tsuhen||'')+'</td>'+
           '<td class="ed" contenteditable="true">'+(d.junishi||'')+'</td>';
+        // 大運↔年運の連動：この行をタップ→その大運10年ぶんの年運を年運表へ
+        if(sy!=null){ tr.dataset.sy=sy; tr.classList.add('clk');
+          tr.addEventListener('click', function(){ renderNenunFor(sy); }); }
         tb.appendChild(tr);
       });
     }
