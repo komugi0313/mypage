@@ -265,7 +265,21 @@
 
   /* ===== 画面：幅1180pxの用紙を、パネル幅に合わせて丸ごと縮小表示（スクロール・見切れなし） ===== */
   .paper{ width:100%; overflow:hidden; }
+  .sheets{ width:1180px; transform-origin:top left; display:flex; flex-direction:column; gap:26px; }
   .sheet{ width:1180px; max-width:none; aspect-ratio:auto; transform-origin:top left; margin:0; }
+
+  /* ===== 2枚目：鑑定書（命式からの読み解き） ===== */
+  .title-sub{ font-size:.62em; color:var(--ink2); letter-spacing:.12em; font-weight:600; }
+  .rd-body{ margin-top:10px; }
+  .rd-cols{ column-count:2; column-gap:34px; }
+  .rd-sec{ break-inside:avoid; -webkit-column-break-inside:avoid; page-break-inside:avoid; margin:0 0 15px; }
+  .rd-h{ font-family:var(--mincho,serif); font-size:16px; font-weight:700; color:var(--el-sui,#2A6FD0);
+    letter-spacing:.06em; margin:0 0 5px; padding:0 0 4px; border-bottom:1px solid var(--rule); }
+  .rd-p{ margin:0 0 7px; font-size:13px; line-height:1.72; color:var(--ink); text-align:justify; }
+  .rd-p b{ color:var(--ink); font-weight:700; }
+  .rd-note{ margin-top:10px; font-size:11px; line-height:1.55; color:var(--ink2);
+    border-top:1px dashed var(--rule); padding-top:8px; }
+  .rd-empty{ color:var(--faint); font-size:14px; text-align:center; padding:60px 20px; }
   .head{ margin:0 0 3px; } .crest{ height:22px; margin-bottom:1px; }
   .title{ font-size:clamp(17px,2.1vw,23px); }
   .subrule{ margin:5px auto 0; }
@@ -294,11 +308,19 @@
 
   /* ============ 印刷（A4横1枚に収める） ============ */
   @media print{
-    html,body{ width:297mm; height:210mm; margin:0; padding:0; overflow:hidden; }
-    body{ background:#fff; } .stage{ padding:0; margin:0; width:297mm; height:210mm; overflow:hidden; } .bar{ display:none; }
-    .paper{ width:auto; height:210mm; overflow:hidden; }
+    html,body{ width:297mm; margin:0; padding:0; }
+    body{ background:#fff; } .stage{ padding:0; margin:0; width:297mm; } .bar{ display:none; }
+    .paper{ width:auto; height:auto; overflow:visible; }
+    .sheets{ display:block; gap:0; width:297mm; transform:none !important; margin:0; }
     .sheet{ box-shadow:none; max-width:none; width:297mm; height:210mm; aspect-ratio:auto; margin:0; padding:8mm 10mm;
       transform:none !important; transform-origin:top left; font-size:9.4px; overflow:hidden; }
+    /* 2枚目（鑑定書）は必ず新しいページへ */
+    .sheet-read{ break-before:page; page-break-before:always; }
+    .rd-cols{ column-gap:12mm; }
+    .rd-h{ font-size:13px; margin:0 0 1.5mm; padding-bottom:1mm; }
+    .rd-p{ font-size:10.3px; line-height:1.62; margin:0 0 2mm; }
+    .rd-sec{ margin:0 0 3mm; }
+    .rd-note{ font-size:9px; margin-top:2mm; padding-top:1.5mm; }
     .sheet::before{ inset:3mm; } .sheet::after{ inset:5mm; }
     .corner{ width:16mm; height:16mm; top:5mm; left:5mm; }
     .corner.tr{ left:auto; right:5mm; } .corner.bl{ top:auto; bottom:5mm; } .corner.br{ top:auto; bottom:5mm; left:auto; right:5mm; }
@@ -409,6 +431,7 @@
 
   <!-- ============ 用紙（画面はA4横1枚を丸ごと縮小表示・スクロールなし） ============ -->
   <div class="paper" id="paper">
+  <div class="sheets" id="sheetsWrap">
   <div class="sheet" id="sheet">
     <span class="corner tl" aria-hidden="true"></span>
     <span class="corner tr" aria-hidden="true"></span>
@@ -532,9 +555,28 @@
         <span class="kantei">鑑定日：<span class="ed" id="kanteiDate" contenteditable="true">　年　月　日</span></span>
       </div>
     </div>
-  </div>
-  </div>
-</div>
+  </div><!-- /#sheet（1枚目・命式表 ここまで） -->
+
+  <!-- ============ 2枚目：鑑定書（命式からの読み解き・AI不使用） ============ -->
+  <div class="sheet sheet-read" id="sheetRead">
+    <span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span>
+    <span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
+    <div class="head">
+      <div class="crest" aria-hidden="true"></div>
+      <h1 class="title">鑑定書 <span class="title-sub">― 命式からの読み解き</span></h1>
+      <div class="rule2" aria-hidden="true"></div>
+      <div class="meta"><span class="field">氏名 <span class="ed" id="rdName">　</span></span><span class="field"><span class="ed" id="rdBirth">　</span></span></div>
+    </div>
+    <div class="rd-body" id="readMount"><div class="rd-empty">生年月日を入れて「鑑定する」を押すと、命式から読み解いた鑑定文がここに出ます。</div></div>
+    <div class="footrow">
+      <span class="foot-spacer" aria-hidden="true"></span>
+      <p class="footline">四柱推命 鑑定書 ・ <span class="ed" id="rdSchool" contenteditable="true">（スクール名を入力）</span></p>
+      <span class="kantei">鑑定日：<span class="ed" id="rdDate" contenteditable="true">　年　月　日</span></span>
+    </div>
+  </div><!-- /#sheetRead -->
+  </div><!-- /#sheetsWrap -->
+  </div><!-- /#paper -->
+</div><!-- /.stage -->
 
 <!-- ============ 装飾モチーフ（3種） ============ -->
 <template id="m-botanical">
@@ -912,6 +954,190 @@ window.MEISHIKI=(function(){
 })();
 </script>
 
+<!-- ============ 鑑定文モジュール：命式から読み解く（AI不使用・毎回同じ品質） ============ -->
+<script id="reading-module">
+(function(){
+  var STEM_EL={'甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水'};
+  var STEM_YY={'甲':'陽','丙':'陽','戊':'陽','庚':'陽','壬':'陽','乙':'陰','丁':'陰','己':'陰','辛':'陰','癸':'陰'};
+  var GROUP={比肩:'比劫',劫財:'比劫',食神:'食傷',傷官:'食傷',偏財:'財',正財:'財',偏官:'官殺',正官:'官殺',偏印:'印',印綬:'印'};
+  // 日主（日干）＝その人の本体・芯
+  var NATURE={
+    甲:'大樹のようにまっすぐで、責任感が強く面倒見のよい人。上へ伸びる向上心があり、リーダーや年長者の役割が似合います。芯が強い反面、融通がききにくく折れにくいので、時にはしなやかさを取り入れると楽になります。',
+    乙:'草花のように柔らかく、環境に合わせて根を張るしなやかな人。協調性と粘り強さがあり、人との縁に恵まれます。表は穏やかでも内側の意志は強く、無理を重ねやすいので、頼る力を持つと長く力を出せます。',
+    丙:'太陽のように明るく、周囲を照らす情熱の人。裏表がなく親しみやすく、人を励ます力があります。感情がそのまま出やすいので、熱が高ぶった時ほど一呼吸おくと信頼がさらに厚くなります。',
+    丁:'灯火のように静かで温かく、細やかな心配りができる人。一点を深く照らす集中力と表現力を持ちます。繊細ゆえに気疲れしやすいので、自分の灯を守る休息を大切に。',
+    戊:'山のようにどっしりと構え、周囲に安心感を与える人。信頼が厚く、物事を受け止める度量があります。動き出すまでに時間がかかる面があるので、小さく早く始める習慣が味方になります。',
+    己:'畑の土のように育て上手で、面倒見がよく現実的な人。人や物事を地道に実らせる力があります。抱え込みやすいので、任せる・断ることを覚えると余裕が生まれます。',
+    庚:'鋼のように意志が強く、決断力と行動力のある人。正義感が強く、白黒をはっきりさせます。鋭さが対立を生むこともあるので、角を丸める言葉を添えると力が通りやすくなります。',
+    辛:'宝石のように繊細で美意識が高く、こだわりと品のある人。細部を磨き上げる才能を持ちます。傷つきやすい面があるので、認め合える環境で本来の輝きが増します。',
+    壬:'大河のように知恵が深く、視野が広く自由な人。発想力と順応力があり、流れを読むのが得意です。気持ちが定まりにくいこともあるので、軸を一つ決めると力が集まります。',
+    癸:'雨露のように優しく感受性が豊かで、細やかに人を潤す人。直感と想像力に恵まれます。周囲の影響を受けやすいので、自分の時間を確保すると心が安定します。'
+  };
+  // 通変星（月支元命＝気質の軸・多い星として）
+  var TSU={
+    比肩:{k:'自立と仲間の星。自分の足で立ち、対等な関係を好みます。',t:'独立心・行動力・仲間を束ねる力',w:'独立・自営、チームの要、専門職',c:'我を通しすぎて衝突しやすい面に注意'},
+    劫財:{k:'勝負と結束の星。負けん気が強く、人を巻き込む力があります。',t:'突破力・度胸・場を動かす力',w:'営業・起業・勝負どころの多い仕事',c:'勢い任せ・金銭の出入りが荒くなりやすい'},
+    食神:{k:'表現と楽しみの星。おおらかで、好きなことを味わい深く育てます。',t:'表現力・企画・もてなし・食や美の感性',w:'クリエイティブ・飲食・接客・企画',c:'のんびりしすぎ・締切に弱い面に注意'},
+    傷官:{k:'才能と美意識の星。感性が鋭く、専門や表現で抜きん出ます。',t:'鋭い感性・技術・批評眼・完成度',w:'芸術・技術・専門職・研究',c:'完璧主義や一言多さで摩擦を生みやすい'},
+    偏財:{k:'動く財と社交の星。人脈とチャンスを広げる商才があります。',t:'社交・商才・機転・人を活かす力',w:'商売・営業・投資・人と動く仕事',c:'手を広げすぎ・八方美人で消耗しやすい'},
+    正財:{k:'堅実な財の星。真面目にコツコツ積み上げ、信用で築きます。',t:'誠実・堅実・管理・信頼の積み上げ',w:'経理・管理・堅実な商い・堅い職',c:'守りに入りすぎ・細かさが窮屈になる面'},
+    偏官:{k:'行動と挑戦の星。度胸があり、責任を負って前へ出ます。',t:'行動力・決断・統率・逆境の強さ',w:'指導的立場・現場のリーダー・体を張る仕事',c:'白黒つけすぎ・無理を通して消耗しやすい'},
+    正官:{k:'規律と責任の星。公正で品位があり、筋を通します。',t:'責任感・公正さ・信用・組織での信頼',w:'公務・管理職・組織の中核・士業',c:'まじめさゆえ堅くなり、自分を追い込みやすい'},
+    偏印:{k:'ひらめきと探究の星。独自の視点と専門性を深めます。',t:'発想力・探究心・独自性・専門知識',w:'専門職・研究・企画・独創的な分野',c:'気移り・理屈っぽさ・孤立に注意'},
+    印綬:{k:'学びと支えの星。知性と慈愛があり、人を導き支えます。',t:'知性・思いやり・学び続ける力・信頼',w:'教育・研究・相談職・支える仕事',c:'考えすぎ・受け身・甘えに傾きやすい面'}
+  };
+  // 十二運（日柱＝恋愛・私生活での表れを主に）
+  var TERR={
+    長生:'素直で伸びやかな星。人に恵まれ、育ちながら花開くタイプ。恋愛も自然体で、周囲に可愛がられます。',
+    沐浴:'変化と自由を好む星。刺激に敏感で移り気な面があり、恋愛も情熱的。飽きの波を自覚すると安定します。',
+    冠帯:'自立と体裁を大切にする星。しっかり者で見栄えを整えるのが上手。恋愛は理想が高めで、対等な関係を好みます。',
+    建禄:'まじめで独立心の強い星。自分の力で道を切り開きます。恋愛は誠実で一途、頼られる存在になりやすい。',
+    帝旺:'勢いと自信のある絶頂の星。カリスマ性があり人を引っ張ります。恋愛は情熱的で主導権を握りがち、押しの強さを優しさで包むと吉。',
+    衰:'落ち着きと思慮の星。控えめで内面が豊か。恋愛は穏やかで安定志向、無理せず信頼を育てます。',
+    病:'繊細で共感力の高い星。人の気持ちに敏感で世話好き。恋愛は情が深く、尽くしすぎに注意すると長続きします。',
+    死:'内省と探究の星。よく考えてから動く慎重派。恋愛は奥手でも一途、素直に表す練習で縁が深まります。',
+    墓:'蓄えと専門の星。地道に積み上げ、身内を大切にします。恋愛は堅実で家庭的、心を開くまで時間がかかる分深く結ばれます。',
+    絶:'切り替えと直感の星。ゼロから動ける身軽さがあります。恋愛は一目惚れや急展開が起きやすく、勢いと落ち着きの両立が鍵。',
+    胎:'好奇心と可能性の星。新しいことに惹かれ、柔らかく形を変えます。恋愛は受け身にも能動にもなれ、育てる関係が向きます。',
+    養:'おっとりと愛される星。人に助けられ、のびのび育ちます。恋愛は甘え上手で癒やし系、支え合う相手と幸せになりやすい。'
+  };
+  // 五行の過不足
+  var EL={
+    木:{ex:'木が強く、伸びる意志と成長欲が旺盛。頑張りすぎて力むと肩や目に疲れが出やすいので、緩める時間を。',lk:'木が弱め。決断や踏み出しに迷いが出やすい傾向。小さな目標で「決めて動く」練習が向きます。',col:'青・緑',care:'早寝・軽い運動・目を休める'},
+    火:{ex:'火が強く、情熱と表現力が豊か。熱が高ぶると心が波立ちやすいので、クールダウンの習慣を。',lk:'火が弱め。気持ちの表現や自己アピールが控えめに。好きなことで発信する時間を持つと明るさが増します。',col:'赤・ピンク',care:'笑う・楽しむ・夜更かしを控える'},
+    土:{ex:'土が強く、安定感と面倒見の良さが際立つ。抱え込むと胃腸に負担が出やすいので、任せる勇気を。',lk:'土が弱め。地に足をつけるより先に動きがち。生活リズムを整えると土台が安定します。',col:'黄・ゴールド',care:'規則正しい食事・胃腸をいたわる'},
+    金:{ex:'金が強く、意志と決断が鋭い。切れ味が対立を生むことも。呼吸を整えると角が取れます。',lk:'金が弱め。区切りやケジメが甘くなりがち。仕上げ・締めを意識すると評価が上がります。',col:'白・シルバー',care:'深呼吸・肺を潤す・乾燥対策'},
+    水:{ex:'水が強く、知恵と柔軟さが豊か。考えすぎて動けなくなる時は、まず一歩を。',lk:'水が弱め。柔軟さや情報より勢いで進みがち。学びと休息を足すと視野が広がります。',col:'黒・紺',care:'水分・睡眠・腎を冷やさない'}
+  };
+  // 大運（今の10年）で巡る通変星の傾向
+  var DUTSU={
+    比肩:'自立・仲間・行動がテーマの10年。自分の足で動くほど道が開けます。人と組む/独立の見極めどきです。',
+    劫財:'勝負と拡大の10年。チャンスも出費も増えやすいので、攻めと守りのバランスを。仲間との連携が力に。',
+    食神:'表現と楽しみが実る10年。好きなことや発信が仕事につながりやすい時期。健康と余裕を保つと花開きます。',
+    傷官:'才能と専門性が際立つ10年。技術・表現で抜きん出るチャンス。完璧主義と一言多さだけ穏やかに。',
+    偏財:'人脈とお金が活発に動く10年。出会いとチャンスが増える一方、散財や欲張りに注意して選び取る力を。',
+    正財:'堅実に積み上がる10年。信用・貯え・家庭が育ちやすい時期。地道さが後の大きな安定になります。',
+    偏官:'挑戦と責任が増す10年。役割や重圧が来ますが、乗り越えるほど地位と実力がつきます。無理のペース配分を。',
+    正官:'評価と立場が上がる10年。責任ある役割で信用を得やすい時期。筋を通す姿勢が財産になります。',
+    偏印:'学びと転換の10年。専門を深めたり、進路を見直したりする時期。内省が次の飛躍の準備になります。',
+    印綬:'知性と支えに恵まれる10年。学び・資格・人からの後押しが力に。心の安定を土台に着実に伸びます。'
+  };
+  // 命式内の会局（三合・方合・半合）
+  function natalKaikyoku(P){
+    var B=[]; ['year','month','day','hour'].forEach(function(k){var p=P[k]; if(p&&p.shi)B.push(p.shi);});
+    var SANGO=[['申','子','辰','水'],['亥','卯','未','木'],['寅','午','戌','火'],['巳','酉','丑','金']];
+    var HOUGO=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','戌','金'],['亥','子','丑','水']];
+    var HANGO=[['申','子','水'],['子','辰','水'],['寅','午','火'],['午','戌','火'],['亥','卯','木'],['卯','未','木'],['巳','酉','金'],['酉','丑','金']];
+    var out=[];
+    SANGO.forEach(function(g){var t=[g[0],g[1],g[2]]; if(t.every(function(x){return B.indexOf(x)>=0;})) out.push({kind:'三合',text:t.join(''),el:g[3]});});
+    HOUGO.forEach(function(g){var t=[g[0],g[1],g[2]]; if(t.every(function(x){return B.indexOf(x)>=0;})) out.push({kind:'方合',text:t.join(''),el:g[3]});});
+    if(!out.length){ HANGO.forEach(function(g){ if(B.indexOf(g[0])>=0&&B.indexOf(g[1])>=0) out.push({kind:'半合',text:g[0]+g[1],el:g[2]});}); }
+    return out;
+  }
+  function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function sec(title, body){ return '<section class="rd-sec"><h3 class="rd-h">'+title+'</h3>'+body+'</section>'; }
+  function para(t){ return '<p class="rd-p">'+t+'</p>'; }
+
+  window.buildReadingHTML=function(r, opts){
+    opts=opts||{};
+    var P=r.pillars||{}, day=P.day||{}, mon=P.month||{}, yr=P.year||{}, hour=P.hour||{};
+    var dm=day.gan||'', dmEl=day.ganElement||STEM_EL[dm]||'';
+    var dayGZ=(day.gan||'')+(day.shi||'');
+    var genmei=mon.zokanTsuhen||'';
+    var terrDay=day.junishi||'';
+    var spouse=day.shi||'';
+    var sex=opts.sex==='male'?'male':'female';
+    var fe=r.gogyoCount||{};
+    var shugoEls=r.shugojin||[], shugoKind=r.shugoStrength||'';
+    // 通変集計（天干通変＋代表蔵干通変、日主は除く）
+    var tcount={};
+    ['year','month','day','hour'].forEach(function(k){var p=P[k]; if(!p)return;
+      [p.tsuhen,p.zokanTsuhen].forEach(function(t){ if(t&&t!=='—'&&t!=='日主'&&TSU[t]) tcount[t]=(tcount[t]||0)+1; }); });
+    var domStar=Object.keys(tcount).sort(function(a,b){return tcount[b]-tcount[a];})[0]||genmei||'';
+    var taika=Object.keys(tcount).filter(function(t){return tcount[t]>=3;});
+    // 五行（命式8字の五行そのままの数）
+    var ELS=['木','火','土','金','水'];
+    var maxVal=Math.max.apply(null, ELS.map(function(e){return fe[e]||0;}));
+    var maxList=ELS.filter(function(e){return (fe[e]||0)===maxVal && maxVal>0;});  // 最多五行（同数は並記）
+    var maxEl=maxList[0];
+    var lackEls=ELS.filter(function(e){return (fe[e]||0)===0;});
+    // 会局
+    var kk=natalKaikyoku(P);
+    // 大運（今）
+    var nowAge=r.nowAge, curDu=(r.daiun||[]).filter(function(d){return nowAge!=null&&nowAge>=d.ageFrom&&nowAge<d.ageTo;})[0];
+    // 恋愛星
+    var loveStars=sex==='male'?['偏財','正財']:['偏官','正官'];
+    var loveHave=loveStars.filter(function(s){return tcount[s];});
+
+    var H='';
+    // 1. 本質
+    (function(){
+      var b='';
+      b+=para('あなたの本体を表す<b>日干は「'+dm+'（'+dmEl+'・'+(STEM_YY[dm]||'')+'）」</b>。'+(NATURE[dm]||''));
+      b+=para('生まれ日の干支は<b>「'+dayGZ+'」</b>。日柱はあなた自身と、もっとも身近な人間関係（恋愛・家庭）が表れる場所です。'+(terrDay&&TERR[terrDay]?'日柱の十二運は<b>「'+terrDay+'」</b>。'+TERR[terrDay]:''));
+      H+=sec('１．持って生まれた本質', b);
+    })();
+    // 2. 性格の軸（月支元命）
+    (function(){
+      if(!genmei||!TSU[genmei]){ return; }
+      var g=TSU[genmei];
+      var b=para('性格の中心＝<b>月支元命は「'+genmei+'」</b>。'+g.k+'四柱推命でもっとも重視される「生まれ持った気質の軸」で、経験を積んでもここは大きく変わりません。');
+      b+=para('この星が活きると、<b>'+g.t+'</b>が持ち味になります。'+(g.c?'一方で、<b>'+g.c+'</b>——これは強みの裏返しなので、気づいて手綱を握れば大きな武器になります。':''));
+      H+=sec('２．性格の軸（月支元命）', b);
+    })();
+    // 3. 才能と活かし方・仕事
+    (function(){
+      var b='';
+      var starList=[genmei].concat(Object.keys(tcount).sort(function(a,b){return tcount[b]-tcount[a];})).filter(function(v,i,a){return v&&TSU[v]&&a.indexOf(v)===i;}).slice(0,3);
+      var jobs=starList.map(function(s){return TSU[s].w;});
+      b+=para('通変星の集計から、あなたに強く出るのは<b>'+starList.map(function(s){return s+(tcount[s]?'（'+tcount[s]+'）':'');}).join('・')+'</b>。これらの星の力を仕事や活動に乗せると、持ち味がまっすぐ発揮されます。');
+      if(taika.length){ b+=para('特に<b>'+taika.map(function(s){return s+'（'+tcount[s]+'つ＝太過）';}).join('・')+'</b>は非常に強く出ます。'+taika.map(function(s){return TSU[s]?TSU[s].t:'';}).filter(Boolean).join('／')+'が際立つ反面、'+taika.map(function(s){return TSU[s]?TSU[s].c:'';}).filter(Boolean).join('／')+'。強みとして活かしつつ、出すぎに気をつけると安定します。'); }
+      b+=para('向いやすい方向は<b>'+jobs.filter(function(v,i,a){return a.indexOf(v)===i;}).join('／')+'</b>など。'+((maxList.length===1&&maxEl)?'五行では<b>'+maxEl+'</b>が強く、その分野の適性も後押しになります。':'')+'（固定の職業名より、この持ち味が活きる働き方を選ぶのがコツです）');
+      H+=sec('３．才能と活かし方・向いやすい仕事', b);
+    })();
+    // 4. 恋愛・結婚
+    (function(){
+      var b='';
+      b+=para('恋愛や結婚は<b>日支（配偶宮）「'+spouse+'」</b>と、日柱の十二運「'+terrDay+'」に表れます。'+(terrDay&&TERR[terrDay]?TERR[terrDay]:''));
+      if(loveHave.length){ b+=para('あなたの'+(sex==='male'?'パートナー運を表す財星':'パートナー運を表す官星')+'は<b>'+loveHave.join('・')+'</b>があり、'+(sex==='male'?'女性':'男性')+'との縁やチャンスに恵まれやすい配置です。'+(loveHave.map(function(s){return TSU[s]?TSU[s].k:'';}).filter(Boolean).join(''))); }
+      else { b+=para((sex==='male'?'財星（女性運）':'官星（男性運）')+'は表面に強くは出ていません。縁が薄いという意味ではなく、自分から動く・環境を選ぶことで縁が育つタイプです。'); }
+      H+=sec('４．人との関わり・恋愛と結婚', b);
+    })();
+    // 5. 五行と養生
+    (function(){
+      var b='';
+      var five=ELS.map(function(e){return e+(fe[e]||0);}).join('・');
+      if(maxList.length>=2){
+        // 最多が同数で並ぶ＝突出がなく、バランス型
+        b+=para('五行のバランスは<b>'+five+'</b>（命式の8字の五行）。<b>'+maxList.join('・')+'</b>がほぼ同じ強さで並ぶ、偏りの少ない安定した配置です。突出した五行がない分、環境に合わせて色々な力を出せる万能タイプといえます。');
+      } else {
+        b+=para('五行のバランスは<b>'+five+'</b>（命式の8字の五行）。'+(maxEl&&EL[maxEl]?EL[maxEl].ex:''));
+      }
+      if(lackEls.length){ b+=para('足りない五行は<b>'+lackEls.join('・')+'</b>。'+lackEls.map(function(e){return EL[e]?EL[e].lk:'';}).filter(Boolean).join(' ')); }
+      if(shugoEls.length){ b+=para('あなたを助ける<b>守護神（喜神）は「'+shugoEls.join('・')+'」</b>（日主は'+shugoKind+'）。この五行を意識的に取り入れると調子が整います。ラッキーカラーは<b>'+shugoEls.map(function(e){return EL[e]?EL[e].col:'';}).filter(Boolean).join('／')+'</b>、養生は<b>'+shugoEls.map(function(e){return EL[e]?EL[e].care:'';}).filter(Boolean).join('／')+'</b>が向きます。'); }
+      H+=sec('５．五行のバランスと養生', b);
+    })();
+    // 6. 運の流れ
+    (function(){
+      var b='';
+      if(r.ritsuun){ b+=para('大運（10年ごとの運の流れ）は<b>立運 '+r.ritsuun.years+'年'+r.ritsuun.months+'ヶ月・'+(r.direction||'')+'</b>で始まります。'); }
+      if(curDu){ var dt=curDu.tsuhen, ds=DUTSU[dt]; b+=para('今めぐっているのは<b>'+curDu.ageFrom+'〜'+curDu.ageTo+'歳の大運「'+curDu.kanshi+'」（通変'+dt+'・十二運'+curDu.junishi+'）</b>。'+(ds||'この時期の巡りを土台に日々を組み立てるとよいでしょう。')); }
+      if(kk.length){ b+=para('生まれ持った<b>会局は「'+kk.map(function(x){return x.kind+x.text+'（'+x.el+'）';}).join('・')+'」</b>。三合・方合が命式に成る人は、その五行がバランスよく強い"強運の土台"を持ちます。何も巡らなくても芯の強さとして働く、恵まれた配置です。'); }
+      b+=para('年ごとの吉凶星・三合方合の巡り・節木運（季節の変わり目＝人生の曲がり角）は、1枚目の「年運」「大運」表に自動で出ています。良い巡りが来た年は前向きに動き、注意の巡り（冲・刑など）の年は無理をせず整える——このメリハリが開運のコツです。');
+      H+=sec('６．運の流れ（大運・会局・これから）', b);
+    })();
+    // 7. 総括
+    (function(){
+      var strong=(domStar&&TSU[domStar])?TSU[domStar].t:'あなたらしい持ち味';
+      var b=para('まとめると、<b>'+dm+'（'+dmEl+'）</b>を芯に、<b>'+genmei+'</b>の気質を軸として、<b>'+strong+'</b>が最大の強みです。'+(shugoEls.length?'進む方向に迷ったら、守護神の五行<b>「'+shugoEls.join('・')+'」</b>（色なら'+shugoEls.map(function(e){return EL[e]?EL[e].col:'';}).filter(Boolean).join('／')+'）を取り入れると流れが整います。':'')+'持ち味を素直に活かし、巡りの良い時期に一歩を踏み出していきましょう。');
+      H+=sec('７．総括と開運の指針', b);
+    })();
+    return '<div class="rd-cols">'+H+'</div>'+
+      '<div class="rd-note">※この鑑定文は、あなたの命式（生年月日時から算出した四柱・通変・十二運・五行・大運・吉凶星・会局）にもとづいて自動でまとめたものです。一般的な傾向であり、日々の行動で運は育てられます。</div>';
+  };
+})();
+</script>
+
 <script>
 (function(){
   var body = document.body;
@@ -919,11 +1145,11 @@ window.MEISHIKI=(function(){
 
   // 画面プレビュー：幅1180pxの用紙を、パネル幅に合わせて丸ごと縮小（スクロール・見切れなし）
   function fitSheet(){
-    var sheet=document.getElementById('sheet'), paper=document.getElementById('paper'); if(!sheet||!paper) return;
+    var sheet=document.getElementById('sheetsWrap')||document.getElementById('sheet'), paper=document.getElementById('paper'); if(!sheet||!paper) return;
     if(window.matchMedia && window.matchMedia('print').matches){ sheet.style.transform='none'; sheet.style.marginLeft=''; paper.style.height=''; return; }
     sheet.style.transform='none';                 // いったん解除して自然な高さを測る
     var avail=paper.clientWidth||1180, k=Math.min(1, avail/1180);
-    var h=sheet.offsetHeight;                      // 自然な高さ（幅1180時）
+    var h=sheet.offsetHeight;                      // 自然な高さ（幅1180時／2枚ぶん）
     sheet.style.transform = 'scale('+k+')';
     sheet.style.marginLeft = (avail>1180 ? (avail-1180)/2 : 0)+'px';
     paper.style.height = Math.ceil(h*k)+'px';      // 縮小後の高さだけ確保（余白なし）
@@ -931,6 +1157,13 @@ window.MEISHIKI=(function(){
   window.addEventListener('resize', fitSheet);
   if(window.ResizeObserver){ try{ new ResizeObserver(fitSheet).observe(document.getElementById('paper')); }catch(e){} }
   setTimeout(fitSheet,60); fitSheet();
+  // 印刷（Ctrl+P/共有）時：画面用の縮小インラインstyleを解除 → A4横2枚で崩れないように
+  function clearFit(){ var w=document.getElementById('sheetsWrap'), pa=document.getElementById('paper');
+    if(w){ w.style.transform='none'; w.style.marginLeft=''; } if(pa){ pa.style.height=''; } }
+  window.addEventListener('beforeprint', clearFit);
+  window.addEventListener('afterprint', function(){ setTimeout(fitSheet,30); });
+  try{ if(window.matchMedia){ var mq=window.matchMedia('print');
+    (mq.addEventListener?mq.addEventListener.bind(mq,'change'):mq.addListener.bind(mq))(function(e){ if(e.matches) clearFit(); else setTimeout(fitSheet,30); }); } }catch(e){}
 
   // ---- モチーフ ----
   function setMotif(name){
@@ -998,6 +1231,10 @@ window.MEISHIKI=(function(){
     updateGogyoDiagram(null);   // 記入用：五行図は空欄（通変ラベルのみ）
     updateTsuhen(null);         // 記入用：通変列・強調を消す
     renderKankei(null);         // 記入用：干支関係は手書き枠
+    // 2枚目（鑑定書）もクリア
+    var _rm=document.getElementById('readMount');
+    if(_rm) _rm.innerHTML='<div class="rd-empty">生年月日を入れて「鑑定する」を押すと、命式から読み解いた鑑定文がここに出ます。</div>';
+    setEl('rdName','　'); setEl('rdBirth','　'); setEl('rdDate','　年　月　日');
   }
 
   // 五行の強弱（◎○△✕）を数から自動判定：0→✕ 1→△ 2→○ 3以上→◎
@@ -1281,6 +1518,13 @@ window.MEISHIKI=(function(){
         tb.appendChild(tr);
       });
     }
+    // ── 2枚目：命式から読み解いた鑑定文（決定論・非AI） ──
+    try{
+      var mount=document.getElementById('readMount');
+      if(mount && window.buildReadingHTML){
+        mount.innerHTML = window.buildReadingHTML(r, {sex: (r.sex||'female')});
+      }
+    }catch(e){ console.error('reading build failed', e); }
   }
 
   // ---- フォーム ----
@@ -1302,10 +1546,16 @@ window.MEISHIKI=(function(){
       var _now=new Date(); var _age=_now.getFullYear()-y; if(((_now.getMonth()+1)*100+_now.getDate()) < (m*100+d)) _age--;  // 満年齢（誕生日前なら-1）
       r.nowAge = _age;
       if(r.birthYear==null) r.birthYear = y;   // 大運の西暦計算に使用
+      r.sex = sex;                              // 2枚目の鑑定文（恋愛の星など）で使用
       fillFromResult(r);
+      var _birthTxt='西暦'+y+'年'+m+'月'+d+'日 '+h+'時'+mn+'分 生　（現在 '+_age+'歳）';
       setEl('mName', nm ? (nm+'　様') : '　　　　　　様');
-      setEl('mBirth','西暦'+y+'年'+m+'月'+d+'日 '+h+'時'+mn+'分 生　（現在 '+_age+'歳）');
+      setEl('mBirth', _birthTxt);
       setEl('mSex', sex==='female'?'女性':'男性');
+      // 2枚目（鑑定書）のヘッダーも連動
+      setEl('rdName', nm ? (nm+'　様') : '　');
+      setEl('rdBirth', _birthTxt);
+      (function(){ var dd=new Date(); setEl('rdDate', dd.getFullYear()+'年'+(dd.getMonth()+1)+'月'+dd.getDate()+'日'); })();
       setMode('auto');
     }catch(e){ msg.textContent='計算エラー：入力値をご確認ください。'; console.error(e); }
   });
