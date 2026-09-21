@@ -281,6 +281,18 @@
   .reading-card ol.r-onum li::marker{font-weight:900;color:var(--ka)}
   .reading-card strong{font-weight:900;background:linear-gradient(transparent 62%,var(--do-w) 62%);padding:0 1px}
   .reading-foot{font-size:11px;color:var(--muted);font-weight:600;margin-top:8px;line-height:1.6}
+  /* 五行（通変星ホイール）の連動ミニ図：大運・年運セクションを見ている時だけ画面上部に固定表示 */
+  #gogyo-pin{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:55;width:min(94vw,430px);
+    background:var(--card);border:1px solid var(--line2);border-radius:14px;box-shadow:0 10px 28px rgba(20,23,29,.22);
+    padding:8px 10px;display:none;align-items:center;gap:10px}
+  #gogyo-pin.show{display:flex}
+  #gogyo-pin .gp-wheel{flex:0 0 auto;width:92px;height:92px;display:flex;align-items:center;justify-content:center}
+  #gogyo-pin .gp-wheel svg{width:92px!important;height:92px!important;max-width:92px!important;margin:0!important;display:block}
+  #gogyo-pin .gp-txt{flex:1;min-width:0;font-size:11.5px;font-weight:800;line-height:1.55;color:var(--ink2)}
+  #gogyo-pin .gp-txt .gp-ttl{font-size:12.5px;font-weight:900;color:var(--ink);display:block;margin-bottom:2px}
+  #gogyo-pin .gp-x{flex:0 0 auto;width:28px;height:28px;border-radius:50%;border:1px solid var(--line2);
+    background:#fff;color:var(--ink2);font-weight:900;cursor:pointer;font-family:inherit;font-size:13px;line-height:1;align-self:flex-start}
+  @media (prefers-reduced-motion:reduce){#gogyo-pin{box-shadow:0 6px 18px rgba(20,23,29,.22)}}
 
   .foot{margin-top:22px;font-size:11.5px;color:var(--muted);font-weight:600;line-height:1.7;text-align:center}
 
@@ -580,6 +592,12 @@
     <div id="mypage-list"></div>
   </section>
 
+  <!-- 五行（通変星ホイール）連動ミニ図：大運・年運を見ている時だけ画面上部に固定表示 -->
+  <div id="gogyo-pin" aria-hidden="true">
+    <div class="gp-wheel"></div>
+    <div class="gp-txt"><span class="gp-ttl">五行の連動図</span><span style="color:#7C3AED">●紫＝大運</span>／<span style="color:#DB2777">●桃＝年運</span><br>下の年運をタップ→印が動きます</div>
+    <button class="gp-x" type="button" aria-label="閉じる">✕</button>
+  </div>
   <div id="result"><section class="card hero">
     <div class="top" style="--accent:#8A93A6">
       <div class="gchar" style="background:#8A93A6;color:#14171D">庚</div>
@@ -2179,7 +2197,7 @@ function gogyoHTML(c){
     ${ay?`<div class="n">${ring(NY)}<b>年運</b>：${ay.year} ${ay.ganzhi} → 干<b>${yrStar}</b>・支<b>${yrStarB}</b></div>`:''}${(function(){var mf=curMonthFortune(c);return (mf&&mf.meaning)?('<div class="n"><span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:#0EA5A5;margin-right:6px;vertical-align:-2px"></span><b>月運</b>：'+(mf.month?'約'+mf.month+'月ごろ ':'')+mf.ganzhi+' → <b>'+mf.star+'</b>（'+mf.meaning+'）</div>'):'';})()}</div>`;
   const total=Object.values(k).reduce((a,b)=>a+b,0);
   const have=TENSTAR10.filter(s=>k[s]>0).map(s=>`${s}${k[s]}`).join('・');
-  return `<section class="card sec">
+  return `<section class="card sec" id="gogyo-sec">
     <span class="eyebrow"><b>通変星</b>ホイール</span>
     <h2>10の通変星と五行</h2>
     <p class="lead">円を10に分けて<b>全通変星</b>を配置。外側の帯が<b>五行（木・火・土・金・水）</b>で色分け（2区画＝1五行）。<b>てっぺんが比肩・劫財（＝あなた自身）</b>、中央が日主。色の濃い区画＋数字が<b>生まれ持った星</b>。<b>下の大運・年運をタップ</b>すると<span style="color:${DU};font-weight:900">紫（大運）</span>・<span style="color:${NY};font-weight:900">桃（年運）</span>の印（干＝天干／支＝地支）が巡ってきた星に付きます。</p>
@@ -2583,7 +2601,7 @@ function flowHTML(c){
       <div class="ts">${a.tenStar}<small>${TS_DESC[a.tenStar]||''}</small></div>
       ${now?'<span class="nowtag rt">今年</span>':''}
     </div>`;}).join('');
-  return `<section class="card sec">
+  return `<section class="card sec" id="flow-sec">
     <span class="eyebrow"><b>運勢</b>大運・年運</span>
     <h2>運の流れ ── 今どこ？これから何が巡る？</h2>
     <p class="flowlead">四柱推命は、<b>10年ごとの「大運」</b>と<b>1年ごとの「年運」</b>で運勢を読みます。巡ってくる干支と命式の関わり（三合・方合・冲など）は<b>命式表の下</b>に表示します。<b>タップで切り替え</b>。</p>
@@ -2761,6 +2779,32 @@ function renderResult(){
   document.querySelectorAll('#ai-slot .wchip').forEach(b=>b.onclick=()=>{document.getElementById('worry').value=b.dataset.w;});
   document.getElementById('consultBtn').onclick=doConsult;
   document.getElementById('autoReadBtn').onclick=doAutoRead;
+  updateGogyoPin();
+}
+// 五行（通変星ホイール）の連動ミニ図：大運・年運セクションを見ている時だけ画面上部に固定表示。
+// 鑑定文など他の場所へスクロールすると自動で消え、✕で手動でも閉じられる。
+function updateGogyoPin(){
+  var pin=document.getElementById('gogyo-pin'); if(!pin)return;
+  var src=document.querySelector('#gogyo-sec svg'), holder=pin.querySelector('.gp-wheel');
+  if(src&&holder){ var cl=src.cloneNode(true); cl.removeAttribute('width'); cl.removeAttribute('style'); holder.innerHTML=''; holder.appendChild(cl); }
+  positionGogyoPin();
+}
+function positionGogyoPin(){
+  var pin=document.getElementById('gogyo-pin'); if(!pin)return;
+  var w=document.getElementById('gogyo-sec'), f=document.getElementById('flow-sec');
+  if(!w||!f){ pin.classList.remove('show'); return; }
+  var wr=w.getBoundingClientRect(), fr=f.getBoundingClientRect(), vh=window.innerHeight||document.documentElement.clientHeight;
+  var wheelVisible = wr.bottom>70 && wr.top<vh-40;      // 本体のホイールが画面内なら固定図は不要
+  var flowVisible  = fr.top<vh-60 && fr.bottom>90;      // 大運・年運セクションが画面内
+  if(!flowVisible) pin.dataset.closed='';               // セクションを離れたら✕の状態はリセット（次回また出る）
+  if(pin.dataset.closed==='1'){ pin.classList.remove('show'); return; }
+  pin.classList.toggle('show', flowVisible && !wheelVisible);
+}
+if(!window.__gogyoPinBound){ window.__gogyoPinBound=1;
+  window.addEventListener('scroll',positionGogyoPin,{passive:true});
+  window.addEventListener('resize',positionGogyoPin,{passive:true});
+  var _gpin=document.getElementById('gogyo-pin');
+  if(_gpin){ var _gx=_gpin.querySelector('.gp-x'); if(_gx)_gx.onclick=function(){ _gpin.dataset.closed='1'; _gpin.classList.remove('show'); }; }
 }
 // 蔵干の代表（通変星）を手動で選ぶ：idx<0 で司令（元）に戻す。表もAI鑑定も連動して切り替わる。
 function selectZou(label,idx){ if(idx<0) delete zouOverride[label]; else zouOverride[label]=idx; renderResult(); scrollKeep(); }
