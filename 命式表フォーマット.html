@@ -101,6 +101,10 @@
   #meishikiMount{ height:100%; }
   #meishikiMount > table.pillars{ height:100%; }
   .pillars .v{ text-align:center; font-size:14px; }
+  /* 吉凶星が多い柱は文字を自動縮小して枠内に収める */
+  .pillars td.v.kichi-cell{ line-height:1.3; word-break:break-word; }
+  .pillars td.v.kichi-cell.k-mid{ font-size:11px; line-height:1.25; }
+  .pillars td.v.kichi-cell.k-many{ font-size:9px; line-height:1.2; }
   .pillars .kanchar{ font-family:var(--mincho); font-size:24px; line-height:1.12; }
   .pillars .p-day{ background:rgba(180,72,60,.05); }
   .pillars thead th.p-day{ background:rgba(180,72,60,.10); }
@@ -215,8 +219,8 @@
   .daiun .yr2{ white-space:nowrap; font-variant-numeric:tabular-nums; min-width:96px; }
   .daiun td.yr2:empty::before{ content:"年 〜 年"; color:var(--faint); }
 
-  /* ===== 画面はA4横に近い自然な高さで表示（はみ出さない） ===== */
-  .sheet{ max-width:1180px; }
+  /* ===== 画面もA4横1枚の比率に固定（大運まで必ず1枚に収める） ===== */
+  .sheet{ max-width:1180px; aspect-ratio:297/210; overflow:hidden; }
   .head{ margin:0 0 3px; } .crest{ height:22px; margin-bottom:1px; }
   .title{ font-size:clamp(17px,2.1vw,23px); }
   .subrule{ margin:5px auto 0; }
@@ -291,6 +295,8 @@
     .note{ font-size:11px; padding:4px 9px; }
     /* 命式（新レイアウト）印刷サイズ */
     .pillars .v{ font-size:10.5px; padding:1.4px 3px; }
+    .pillars td.v.kichi-cell.k-mid{ font-size:9px; line-height:1.2; }
+    .pillars td.v.kichi-cell.k-many{ font-size:7.5px; line-height:1.15; }
     .pillars .kanchar{ font-size:16px; }
     .pillars .rowlbl{ font-size:9px; }
     .pillars thead th{ font-size:10px; padding:2px 3px; }
@@ -602,6 +608,13 @@ window.MEISHIKI=(function(){
     }
     return esc(v);
   }
+  // 吉凶星セルは項目数に応じて文字を自動縮小（多くても枠内に収める）
+  function cellCls(pk,a){
+    if(a.k!=='kichi') return '';
+    var v=model.p[pk].kichi||''; if(!v) return '';
+    var n=v.split('・').length;
+    return ' kichi-cell'+(n>=7?' k-many':(n>=4?' k-mid':''));
+  }
   function render(){
     var m=document.getElementById('meishikiMount'); if(!m) return;
     var t='<table class="pillars ori-'+model.orient+'">';
@@ -609,7 +622,7 @@ window.MEISHIKI=(function(){
       t+='<thead><tr><th class="rowlbl">　</th>'+PKEYS.map(function(pk){return '<th'+(pk==='day'?' class="p-day"':'')+'>'+PLABEL[pk]+'</th>';}).join('')+'</tr></thead><tbody>';
       ATTRS.forEach(function(a){
         t+='<tr><td class="rowlbl">'+a.label+'</td>'+PKEYS.map(function(pk){
-          return '<td class="v'+(a.big?' kbig':'')+(pk==='day'?' p-day':'')+'" data-p="'+pk+'" data-a="'+a.k+'" contenteditable="true">'+cellHTML(pk,a)+'</td>';
+          return '<td class="v'+(a.big?' kbig':'')+(pk==='day'?' p-day':'')+cellCls(pk,a)+'" data-p="'+pk+'" data-a="'+a.k+'" contenteditable="true">'+cellHTML(pk,a)+'</td>';
         }).join('')+'</tr>';
       });
       t+='</tbody>';
@@ -617,7 +630,7 @@ window.MEISHIKI=(function(){
       t+='<thead><tr><th class="rowlbl">　</th>'+ATTRS.map(function(a){return '<th>'+a.label+'</th>';}).join('')+'</tr></thead><tbody>';
       PKEYS.forEach(function(pk){
         t+='<tr'+(pk==='day'?' class="p-day"':'')+'><td class="rowlbl">'+PLABEL[pk]+'</td>'+ATTRS.map(function(a){
-          return '<td class="v'+(a.big?' kbig':'')+'" data-p="'+pk+'" data-a="'+a.k+'" contenteditable="true">'+cellHTML(pk,a)+'</td>';
+          return '<td class="v'+(a.big?' kbig':'')+cellCls(pk,a)+'" data-p="'+pk+'" data-a="'+a.k+'" contenteditable="true">'+cellHTML(pk,a)+'</td>';
         }).join('')+'</tr>';
       });
       t+='</tbody>';
