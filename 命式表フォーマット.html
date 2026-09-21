@@ -183,7 +183,9 @@
   .bottom > section{ min-width:0; }
   /* 大運：年齢の期間を主役に。空欄は「才 〜 才」を薄く表示（記入ガイド） */
   .daiun td.age:empty::before{ content:"才 〜 才"; color:var(--faint); }
-  .daiun td.age{ min-width:104px; }
+  .daiun td.age{ min-width:92px; }
+  .daiun .yr2{ white-space:nowrap; font-variant-numeric:tabular-nums; min-width:96px; }
+  .daiun td.yr2:empty::before{ content:"年 〜 年"; color:var(--faint); }
 
   /* ===== 画面はA4横に近い自然な高さで表示（はみ出さない） ===== */
   .sheet{ max-width:1180px; }
@@ -396,8 +398,8 @@
             <h2 class="block-title">年運（12年）<small>1年ごとの運気</small></h2>
             <div class="scroll">
               <table class="bio">
-                <thead><tr><th>年</th><th>時期</th><th>毎年のテーマ</th><th class="n">数</th><th class="cv">通変</th><th class="cv">十二運</th></tr></thead>
-                <tbody>
+                <thead><tr><th class="yr">西暦</th><th>時期</th><th>毎年のテーマ</th><th class="n">数</th><th class="cv">通変</th><th class="cv">十二運</th></tr></thead>
+                <tbody id="bioBody">
                   <tr><td class="yr ed" contenteditable="true"></td><td class="nm ed" contenteditable="true">青春</td><td class="ds ed" contenteditable="true">毎年4月／出会いのご縁が愛と豊かさをもたらす</td><td class="n ed" contenteditable="true">0</td><td class="cv ed" contenteditable="true"></td><td class="cv ed" contenteditable="true"></td></tr>
                   <tr><td class="yr ed" contenteditable="true"></td><td class="nm ed" contenteditable="true">種まき</td><td class="ds ed" contenteditable="true">毎年5月／来年に向けて焦らずに地道に</td><td class="n ed" contenteditable="true">1</td><td class="cv ed" contenteditable="true"></td><td class="cv ed" contenteditable="true"></td></tr>
                   <tr><td class="yr ed" contenteditable="true"></td><td class="nm ed" contenteditable="true">飛躍</td><td class="ds ed" contenteditable="true">毎年6月／これから3年・3ヶ月始まりのタイミング</td><td class="n ed" contenteditable="true">2</td><td class="cv ed" contenteditable="true"></td><td class="cv ed" contenteditable="true"></td></tr>
@@ -422,7 +424,7 @@
           <section>
             <h2 class="block-title">大運 <small id="daiunDir">順行</small></h2>
             <table class="daiun">
-              <thead><tr><th class="age">年齢（何才〜何才）</th><th>干支</th><th>通変星</th><th>十二運</th><th class="n">数</th></tr></thead>
+              <thead><tr><th class="age">年齢（才〜才）</th><th class="yr2">西暦</th><th>干支</th><th>通変星</th><th>十二運</th><th class="n">数</th></tr></thead>
               <tbody id="daiunBody"><!-- filled by JS / blank rows --></tbody>
             </table>
           </section>
@@ -547,7 +549,14 @@
  *    tenchusatsu: "戌亥",                 // 空亡（天中殺）
  *    gogyoCount:  { 木:0, 火:0, 土:0, 金:0, 水:0 },
  *    direction:   "順行" | "逆行",         // 大運の進行
- *    daiun: [ { ageFrom, ageTo, kanshi, tsuhen, junishi }, … ],
+ *    daiun: [ { ageFrom, ageTo, kanshi, tsuhen, junishi,
+ *               num(任意),
+ *               startYear(任意), endYear(任意) }, … ],
+ *              // 西暦は startYear/endYear があれば使用、無ければ
+ *              //  birthYear + ageFrom〜ageTo で自動計算（入力の year を使用）
+ *    nenun: [ { year, tsuhen, junishi }, … 12件 ],
+ *              // 年運（12年）に西暦・通変・十二運を反映（時期名/テーマ/数は固定）
+ *    birthYear: 1990,                      // 任意。無ければ入力 year を使用
  *    nowAge: 45                            // 任意。現在の大運行をハイライト
  *  }
  *  ※干支セルは gan と shi を ganElement / shiElement で色分けします
@@ -617,11 +626,12 @@
     });
     setEl('tenchu',''); setEl('sum-tenchu','');
     ['go-moku','go-ka','go-do','go-kin','go-sui'].forEach(function(id){ setEl(id,''); });
-    // 行運（3年）
-    ['前年','本年','翌年'].forEach(function(lbl,i){
-      setEl('un-'+i+'-yr', lbl);
-      ['kanshi','tsuhen','junishi','tenchu','memo'].forEach(function(f){ var e=document.getElementById('un-'+i+'-'+f); if(e){e.textContent=''; e.className=e.className.replace(/\bel-\w+\b/g,'').trim();} });
-    });
+    // 年運（12年）の 西暦・通変・十二運 をクリア
+    var biob=document.getElementById('bioBody');
+    if(biob){ Array.prototype.forEach.call(biob.rows, function(row){
+      var yr=row.querySelector('.yr'); if(yr) yr.textContent='';
+      var cvs=row.querySelectorAll('.cv'); if(cvs[0]) cvs[0].textContent=''; if(cvs[1]) cvs[1].textContent='';
+    }); }
     document.getElementById('daiunBody').innerHTML = blankDaiunRows();
     document.getElementById('daiunDir').textContent = '順行';
     setEl('mName','　　　　　　様'); setEl('mBirth','　年　月　日　時　分 生'); setEl('mSex','　');
@@ -638,7 +648,7 @@
 
   function blankDaiunRows(){
     var h='';
-    for(var i=0;i<8;i++){ h+='<tr><td class="age ed" contenteditable="true"></td><td class="ed" contenteditable="true"></td><td class="ed" contenteditable="true"></td><td class="ed" contenteditable="true"></td><td class="n ed" contenteditable="true"></td></tr>'; }
+    for(var i=0;i<8;i++){ h+='<tr><td class="age ed" contenteditable="true"></td><td class="yr2 ed" contenteditable="true"></td><td class="ed" contenteditable="true"></td><td class="ed" contenteditable="true"></td><td class="ed" contenteditable="true"></td><td class="n ed" contenteditable="true"></td></tr>'; }
     return h;
   }
 
@@ -673,23 +683,30 @@
       setEl('go-do', r.gogyoCount['土']); setEl('go-kin', r.gogyoCount['金']); setEl('go-sui', r.gogyoCount['水']);
     }
     updatePentagon();
-    // 行運（3年）— 任意：r.nenun = [{year,kanshi,tsuhen,junishi,tenchu,memo}, …]
+    // 年運（12年）— r.nenun = [{year, tsuhen, junishi}, … 12件]（エンジンから西暦を反映）
     if(Array.isArray(r.nenun)){
-      r.nenun.slice(0,3).forEach(function(u,i){
-        if(u.year!=null) setEl('un-'+i+'-yr', u.year+'年');
-        setEl('un-'+i+'-kanshi', u.kanshi); setEl('un-'+i+'-tsuhen', u.tsuhen);
-        setEl('un-'+i+'-junishi', u.junishi); setEl('un-'+i+'-tenchu', u.tenchu); setEl('un-'+i+'-memo', u.memo);
-      });
+      var biob=document.getElementById('bioBody');
+      if(biob){ Array.prototype.forEach.call(biob.rows, function(row,i){
+        var u=r.nenun[i]; if(!u) return;
+        var yr=row.querySelector('.yr'); if(yr && u.year!=null) yr.textContent=u.year;
+        var cvs=row.querySelectorAll('.cv');
+        if(cvs[0] && u.tsuhen!=null) cvs[0].textContent=u.tsuhen;
+        if(cvs[1] && u.junishi!=null) cvs[1].textContent=u.junishi;
+      }); }
     }
-    // 大運
+    // 大運（年齢＋西暦）
     if(r.direction) document.getElementById('daiunDir').textContent = r.direction;
     if(Array.isArray(r.daiun)){
       var tb=document.getElementById('daiunBody'); tb.innerHTML='';
-      var nowAge = r.nowAge;
+      var nowAge = r.nowAge, by = r.birthYear;
       r.daiun.forEach(function(d){
         var tr=document.createElement('tr');
         if(nowAge!=null && nowAge>=d.ageFrom && nowAge<d.ageTo) tr.className='now';
+        var sy = d.startYear!=null ? d.startYear : (by!=null ? by + d.ageFrom : null);
+        var ey = d.endYear!=null ? d.endYear : (by!=null ? by + d.ageTo : null);
+        var seireki = (sy!=null && ey!=null) ? (sy+'〜'+ey) : '';
         tr.innerHTML='<td class="age ed" contenteditable="true">'+d.ageFrom+'才〜'+d.ageTo+'才</td>'+
+          '<td class="yr2 ed" contenteditable="true">'+seireki+'</td>'+
           '<td class="ed" contenteditable="true">'+(d.kanshi||'')+'</td>'+
           '<td class="ed" contenteditable="true">'+(d.tsuhen||'')+'</td>'+
           '<td class="ed" contenteditable="true">'+(d.junishi||'')+'</td>'+
@@ -712,6 +729,7 @@
     try{
       var r=window.computeMeishiki({year:y,month:m,day:d,hour:h,minute:mn,sex:sex});
       r.nowAge = (new Date()).getFullYear() - y;
+      if(r.birthYear==null) r.birthYear = y;   // 大運の西暦計算に使用
       fillFromResult(r);
       setEl('mBirth','西暦'+y+'年'+m+'月'+d+'日 '+h+'時'+mn+'分 生');
       setEl('mSex', sex==='female'?'女性':'男性');
