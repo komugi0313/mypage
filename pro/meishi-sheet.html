@@ -191,6 +191,9 @@
   .daiun td.age{ position:relative; }
   .daiun tr.setsu td.age::before{ content:""; position:absolute; left:-6px; top:50%; transform:translateY(-50%);
     width:5px; height:5px; border-radius:50%; background:#B5623A; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .daiun .setsu-tag{ display:inline-block; margin-left:6px; font-family:var(--gothic); font-size:9.5px; font-weight:800;
+    color:#8A4B24; background:rgba(181,98,58,.14); border-radius:4px; padding:0 5px; letter-spacing:.04em; white-space:nowrap;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 
   .gogyo{ font-size:13px; }
   .gogyo th,.gogyo td{ border-bottom:1px solid var(--rule2); padding:6px 6px; text-align:center; }
@@ -476,7 +479,7 @@
       <!-- 下段：大運（年齢の期間が主役）＋ 五行バランス -->
       <div class="bottom">
           <section>
-            <h2 class="block-title">大運 <small>立運 <span class="ed" id="ritsuun" contenteditable="true">　年　ヶ月</span> ／ <span class="ed" id="daiunDir" contenteditable="true">順行・逆行</span></small></h2>
+            <h2 class="block-title">大運 <small>立運 <span class="ed" id="ritsuun" contenteditable="true">　年　ヶ月</span> ／ <span class="ed" id="daiunDir" contenteditable="true">順行・逆行</span><span class="scr-hint">／<span class="setsu-tag" style="margin-left:0">節木運</span>＝季節の変わり目（人生の曲がり角）</span></small></h2>
             <table class="daiun">
               <thead><tr><th class="age">年齢（才〜才）</th><th class="yr2">西暦</th><th>干支</th><th>通変星</th><th>十二運</th></tr></thead>
               <tbody id="daiunBody"><!-- filled by JS / blank rows --></tbody>
@@ -1213,8 +1216,9 @@ window.MEISHIKI=(function(){
     if(Array.isArray(r.daiun)){
       var tb=document.getElementById('daiunBody'); tb.innerHTML='';
       var nowAge = r.nowAge, by = r.birthYear;
-      // 節木運（せつぼくうん）：季節（方合）が前の大運から変わる大運＝人生の曲がり角。その行だけに印を付ける。
-      var setsuFlags = [];
+      // 節木運（せつぼくうん）：季節（方合）が前の大運から変わる大運＝人生の曲がり角。その行に印＋「○へ」ラベルを付ける。
+      var setsuFlags = [], setsuBlocks = [];
+      var SEASON_JP={winter:'冬',spring:'春',summer:'夏',autumn:'秋'};
       try{
         if(window.Setsuboku && window.Setsuboku.analyze){
           var decs = r.daiun.map(function(d){
@@ -1224,7 +1228,7 @@ window.MEISHIKI=(function(){
           var sb = window.Setsuboku.analyze({ decadeFortunes:decs, birthYear:by, nowAge:nowAge,
                      forward:(r.direction ? r.direction.indexOf('順')>=0 : undefined),
                      voids:(r.tenchusatsu||'').split('') });
-          if(sb && sb.blocks) setsuFlags = sb.blocks.map(function(b){ return !!b.isSetsu; });
+          if(sb && sb.blocks){ setsuBlocks = sb.blocks; setsuFlags = sb.blocks.map(function(b){ return !!b.isSetsu; }); }
         }
       }catch(e){}
       // 立運前（0才〜最初の大運）＝月柱が司る期間を先頭に追加
@@ -1250,9 +1254,13 @@ window.MEISHIKI=(function(){
         var sy = d.startYear!=null ? d.startYear : (by!=null ? by + d.ageFrom : null);
         var ey = d.endYear!=null ? d.endYear : (by!=null ? by + d.ageTo : null);
         var seireki = (sy!=null && ey!=null) ? (sy+'〜'+ey) : '';
+        // 節木運ラベル：季節が変わる大運に「節木運 ○へ（五行）」を干支の下に添える
+        var sbk=setsuBlocks[i], setsuTag='';
+        if(setsuFlags[i] && sbk){ var seas=SEASON_JP[sbk.enterSeason||sbk.season]||''; var sel=sbk.enterEl||sbk.seasonEl||'';
+          setsuTag='<span class="setsu-tag">節木運'+(seas?' '+seas+'へ':'')+(sel?'（'+sel+'）':'')+'</span>'; }
         tr.innerHTML='<td class="age ed" contenteditable="true">'+d.ageFrom+'才〜'+d.ageTo+'才</td>'+
           '<td class="yr2 ed" contenteditable="true">'+seireki+'</td>'+
-          '<td class="ed" contenteditable="true">'+(d.kanshi||'')+'</td>'+
+          '<td class="ed" contenteditable="true">'+(d.kanshi||'')+setsuTag+'</td>'+
           '<td class="ed" contenteditable="true">'+(d.tsuhen||'')+'</td>'+
           '<td class="ed" contenteditable="true">'+(d.junishi||'')+'</td>';
         // 大運↔年運の連動：この行をタップ→その大運10年ぶんの年運を年運表へ
