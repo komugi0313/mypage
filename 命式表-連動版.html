@@ -226,8 +226,9 @@
   .daiun .yr2{ white-space:nowrap; font-variant-numeric:tabular-nums; min-width:96px; }
   .daiun td.yr2:empty::before{ content:"年 〜 年"; color:var(--faint); }
 
-  /* ===== 画面もA4横1枚の比率に固定（大運まで必ず1枚に収める） ===== */
-  .sheet{ max-width:1180px; aspect-ratio:297/210; overflow:hidden; }
+  /* ===== 画面：幅1180pxの用紙を、パネル幅に合わせて丸ごと縮小表示（スクロール・見切れなし） ===== */
+  .paper{ width:100%; overflow:hidden; }
+  .sheet{ width:1180px; max-width:none; aspect-ratio:auto; transform-origin:top left; margin:0; }
   .head{ margin:0 0 3px; } .crest{ height:22px; margin-bottom:1px; }
   .title{ font-size:clamp(17px,2.1vw,23px); }
   .subrule{ margin:5px auto 0; }
@@ -257,8 +258,9 @@
   @media print{
     html,body{ width:287mm; }
     body{ background:#fff; } .stage{ padding:0; width:287mm; } .bar{ display:none; }
+    .paper{ width:auto; overflow:visible; }
     .sheet{ box-shadow:none; max-width:none; width:287mm; height:200mm; aspect-ratio:auto; margin:0; padding:7mm 8mm;
-      transform-origin:top left; font-size:9.4px; }
+      transform:none !important; transform-origin:top left; font-size:9.4px; }
     .sheet::before{ inset:3mm; } .sheet::after{ inset:5mm; }
     .corner{ width:16mm; height:16mm; top:5mm; left:5mm; }
     .corner.tr{ left:auto; right:5mm; } .corner.bl{ top:auto; bottom:5mm; } .corner.br{ top:auto; bottom:5mm; left:auto; right:5mm; }
@@ -362,7 +364,8 @@
     </div>
   </div>
 
-  <!-- ============ 用紙 ============ -->
+  <!-- ============ 用紙（画面はA4横1枚を丸ごと縮小表示・スクロールなし） ============ -->
+  <div class="paper" id="paper">
   <div class="sheet" id="sheet">
     <span class="corner tl" aria-hidden="true"></span>
     <span class="corner tr" aria-hidden="true"></span>
@@ -482,6 +485,7 @@
         <span class="kantei">鑑定日：<span class="ed" id="kanteiDate" contenteditable="true">　年　月　日</span></span>
       </div>
     </div>
+  </div>
   </div>
 </div>
 
@@ -753,6 +757,21 @@ window.MEISHIKI=(function(){
 (function(){
   var body = document.body;
   if(window.MEISHIKI) window.MEISHIKI.init();
+
+  // 画面プレビュー：幅1180pxの用紙を、パネル幅に合わせて丸ごと縮小（スクロール・見切れなし）
+  function fitSheet(){
+    var sheet=document.getElementById('sheet'), paper=document.getElementById('paper'); if(!sheet||!paper) return;
+    if(window.matchMedia && window.matchMedia('print').matches){ sheet.style.transform='none'; sheet.style.marginLeft=''; paper.style.height=''; return; }
+    sheet.style.transform='none';                 // いったん解除して自然な高さを測る
+    var avail=paper.clientWidth||1180, k=Math.min(1, avail/1180);
+    var h=sheet.offsetHeight;                      // 自然な高さ（幅1180時）
+    sheet.style.transform = 'scale('+k+')';
+    sheet.style.marginLeft = (avail>1180 ? (avail-1180)/2 : 0)+'px';
+    paper.style.height = Math.ceil(h*k)+'px';      // 縮小後の高さだけ確保（余白なし）
+  }
+  window.addEventListener('resize', fitSheet);
+  if(window.ResizeObserver){ try{ new ResizeObserver(fitSheet).observe(document.getElementById('paper')); }catch(e){} }
+  setTimeout(fitSheet,60); fitSheet();
 
   // ---- モチーフ ----
   function setMotif(name){
