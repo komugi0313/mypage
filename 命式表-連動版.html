@@ -173,6 +173,10 @@
   .daiun .n{ font-variant-numeric:tabular-nums; color:var(--faint); }
   .daiun tr.now td{ background:var(--shade); color:var(--now); font-weight:600; }
   .daiun tr.now .age::after{ content:"　今"; color:var(--now); font-weight:700; }  /* 今の大運＝年齢欄の右（左寄せなので年をずらさない） */
+  /* 節木運（せつぼくうん・接木運）＝季節が変わる大運＝人生の曲がり角。大運表の外枠側（左）に小さな印。 */
+  .daiun td.age{ position:relative; }
+  .daiun tr.setsu td.age::before{ content:""; position:absolute; left:-6px; top:50%; transform:translateY(-50%);
+    width:5px; height:5px; border-radius:50%; background:#B5623A; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 
   .gogyo{ font-size:13px; }
   .gogyo th,.gogyo td{ border-bottom:1px solid var(--rule2); padding:6px 6px; text-align:center; }
@@ -638,6 +642,81 @@
 })();
 </script>
 
+<!-- ==== 節木運（せつぼくうん）モジュール setsuboku.js v1.1 — エンジン非依存の独立モジュール（無改変） ==== -->
+<script id="setsuboku-module">
+/*!
+ * setsuboku.js — 節木運（せつぼくうん）モジュール  v1.1
+ * 大運の地支を方合(亥子丑=冬/寅卯辰=春/巳午未=夏/申酉戌=秋)で30年の季節に束ね、
+ * 前の大運から季節が切り替わる大運＝節木運（人生の曲がり角）を判定する。エンジン非依存。
+ */
+(function (root, factory) {
+  var mod = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = mod;
+  if (root) root.Setsuboku = mod;
+})(typeof window !== 'undefined' ? window : this, function () {
+  'use strict';
+  var SEASON = {
+    亥:{s:'winter',el:'水'}, 子:{s:'winter',el:'水'}, 丑:{s:'winter',el:'水'},
+    寅:{s:'spring',el:'木'}, 卯:{s:'spring',el:'木'}, 辰:{s:'spring',el:'木'},
+    巳:{s:'summer',el:'火'}, 午:{s:'summer',el:'火'}, 未:{s:'summer',el:'火'},
+    申:{s:'autumn',el:'金'}, 酉:{s:'autumn',el:'金'}, 戌:{s:'autumn',el:'金'}
+  };
+  var TU = { 丑:1, 辰:1, 未:1, 戌:1 };
+  var AMP_TERRAIN = { 墓:1, 絶:1, 絕:1, 胎:1 };
+  var ORD = { 子:0, 丑:1, 寅:2, 卯:3, 辰:4, 巳:5, 午:6, 未:7, 申:8, 酉:9, 戌:10, 亥:11 };
+  function brOf(d) { return d.branch || (d.ganzhi ? d.ganzhi.charAt(1) : ''); }
+  function isForward(decs) {
+    var fwd = 0, rev = 0;
+    for (var i = 0; i + 1 < decs.length; i++) {
+      var a = ORD[brOf(decs[i])], b = ORD[brOf(decs[i + 1])];
+      if (a == null || b == null) continue;
+      var step = ((b - a) % 12 + 12) % 12;
+      if (step === 1) fwd++; else if (step === 11) rev++;
+    }
+    return rev > fwd ? false : true;
+  }
+  function analyze(opt) {
+    opt = opt || {};
+    var decs = opt.decadeFortunes || [];
+    if (!decs.length) return null;
+    var fav = opt.fav || {};
+    var voids = opt.voids || [];
+    var birthY = (opt.birthYear != null) ? +opt.birthYear : null;
+    var nowAge = (opt.nowAge != null) ? +opt.nowAge : null;
+    var forward = (opt.forward != null) ? !!opt.forward : isForward(decs);
+    var blocks = decs.map(function (d, i) {
+      var br = brOf(d);
+      var se = SEASON[br] || null;
+      var el = se ? se.el : '';
+      var mark = fav[el] || '';
+      /* 節木運＝大運の地支の「季節（方合）の変わり目」。前の大運と季節が変わる大運＝節木運。 */
+      var pd = (i > 0) ? decs[i - 1] : null, pse = pd ? SEASON[brOf(pd)] : null;
+      var isSetsu = !!(pse && se && pse.s !== se.s);
+      var amp = (!!AMP_TERRAIN[d.terrain]) || (voids.indexOf(br) >= 0);
+      var startY = (d.startYear != null) ? +d.startYear
+                 : (birthY != null) ? birthY + d.startAge : null;
+      var current = (nowAge != null) && (nowAge >= d.startAge) && (nowAge <= d.endAge);
+      return {
+        startAge: d.startAge, endAge: d.endAge, ganzhi: d.ganzhi || '', branch: br,
+        terrain: d.terrain || '', season: se ? se.s : '', seasonEl: el, mark: mark,
+        isSetsu: isSetsu, intense: isSetsu && amp,
+        enterSeason: isSetsu ? (se ? se.s : '') : '', enterEl: isSetsu ? el : '', enterMark: isSetsu ? mark : '',
+        startYear: startY, swayFrom: startY != null ? startY - 1.5 : null,
+        swayTo: startY != null ? startY + 1.5 : null, current: current
+      };
+    });
+    var next = null;
+    for (var i = 0; i < blocks.length; i++) {
+      if (blocks[i].isSetsu && nowAge != null && blocks[i].endAge >= nowAge) { next = blocks[i]; break; }
+    }
+    var proactive = false;
+    if (next && nowAge != null) proactive = (next.startAge - 1.5 <= nowAge) && (nowAge <= next.startAge + 1.5);
+    return { blocks: blocks, next: next, nowAge: nowAge, proactive: proactive, forward: forward };
+  }
+  return { version:'1.1', analyze:analyze, isForward:isForward, SEASON:SEASON, TU:TU };
+});
+</script>
+
 <!-- ==== アダプタ：エンジン(window.Bazi.computeChart)→命式表。エンジンは無改変 ==== -->
 <script id="engine-adapter">
 (function(){
@@ -1029,9 +1108,26 @@ window.MEISHIKI=(function(){
     if(Array.isArray(r.daiun)){
       var tb=document.getElementById('daiunBody'); tb.innerHTML='';
       var nowAge = r.nowAge, by = r.birthYear;
-      r.daiun.forEach(function(d){
+      // 節木運（せつぼくうん）：季節（方合）が前の大運から変わる大運＝人生の曲がり角。その行だけに印を付ける。
+      var setsuFlags = [];
+      try{
+        if(window.Setsuboku && window.Setsuboku.analyze){
+          var decs = r.daiun.map(function(d){
+            return { startAge:d.ageFrom, endAge:d.ageTo, ganzhi:d.kanshi||'',
+                     branch:(d.kanshi||'　').charAt(1), terrain:d.junishi||'', startYear:d.startYear };
+          });
+          var sb = window.Setsuboku.analyze({ decadeFortunes:decs, birthYear:by, nowAge:nowAge,
+                     forward:(r.direction ? r.direction.indexOf('順')>=0 : undefined),
+                     voids:(r.tenchusatsu||'').split('') });
+          if(sb && sb.blocks) setsuFlags = sb.blocks.map(function(b){ return !!b.isSetsu; });
+        }
+      }catch(e){}
+      r.daiun.forEach(function(d,i){
         var tr=document.createElement('tr');
-        if(nowAge!=null && nowAge>=d.ageFrom && nowAge<d.ageTo) tr.className='now';
+        var cls=[];
+        if(nowAge!=null && nowAge>=d.ageFrom && nowAge<d.ageTo) cls.push('now');
+        if(setsuFlags[i]) cls.push('setsu');
+        if(cls.length) tr.className=cls.join(' ');
         var sy = d.startYear!=null ? d.startYear : (by!=null ? by + d.ageFrom : null);
         var ey = d.endYear!=null ? d.endYear : (by!=null ? by + d.ageTo : null);
         var seireki = (sy!=null && ey!=null) ? (sy+'〜'+ey) : '';
