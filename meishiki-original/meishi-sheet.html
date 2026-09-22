@@ -2012,6 +2012,26 @@ window.KANSHI60_DETAIL={
     return '<ul class="rd-ul">'+top.join('')+'<li>人生の季節の移り変わり（年齢の目安）'+note+'<ul class="rd-ul2">'+seasons+'</ul></li></ul>';
   }
 
+  // 過去のふり返り：いちばん直近（一つ前）の「空亡の年」と「冲の年」を求める（西暦→干支は暦式で算出＝エンジン非依存）
+  function pastKuboChong(r){
+    var P=r.pillars||{};
+    var nowYear=(r.nowYear!=null?r.nowYear:(r.birthYear!=null?r.birthYear+(r.nowAge||0):null));
+    if(nowYear==null) return null;
+    var _ST='甲乙丙丁戊己庚辛壬癸', _BR='子丑寅卯辰巳午未申酉戌亥';
+    var _CH={子:'午',午:'子',丑:'未',未:'丑',寅:'申',申:'寅',卯:'酉',酉:'卯',辰:'戌',戌:'辰',巳:'亥',亥:'巳'};
+    function gz(y){ return _ST[((y-4)%10+10)%10]+_BR[((y-4)%12+12)%12]; }
+    function br(y){ return _BR[((y-4)%12+12)%12]; }
+    var kubo=String(r.kuboPair||r.tenchusatsu||'').split('').filter(Boolean);
+    var natB=[]; ['year','month','day','hour'].forEach(function(k){var p=P[k]; if(p&&p.shi)natB.push(p.shi);});
+    var pk=null, pc=null;
+    for(var y=nowYear-1; y>=nowYear-13 && (!pk||!pc); y--){
+      var b=br(y);
+      if(!pk && kubo.indexOf(b)>=0) pk={year:y, gz:gz(y)};
+      if(!pc){ var hit=natB.filter(function(x){return _CH[b]===x;}); if(hit.length) pc={year:y, gz:gz(y), hit:hit}; }
+    }
+    return (pk||pc)?{kubo:pk, chong:pc, nowYear:nowYear}:null;
+  }
+
   window.buildReadingHTML=function(r, opts){
     opts=opts||{};
     var P=r.pillars||{}, day=P.day||{}, mon=P.month||{}, yr=P.year||{}, hour=P.hour||{};
@@ -2352,6 +2372,13 @@ window.KANSHI60_DETAIL={
       if(curDu){ var dt=curDu.tsuhen, ds=DUTSU[dt]; var _jun=curDu.junishi; b+=para('今めぐっているのは<b>'+curDu.ageFrom+'〜'+curDu.ageTo+'歳の大運「'+ruby(curDu.kanshi)+'」（星は'+dt+'・十二運は'+_jun+(_jun==='墓'?'＝"納め・蓄える"時期':'')+'）</b>。'+(ds||'この時期の巡りを土台に日々を組み立てるとよいでしょう。')); }
       if(kk.length){ b+=para('生まれ持った<b>会局（かいきょく＝地支が集まって強い五行をつくる配置）は「'+kk.map(function(x){return x.kind+ruby(x.text)+'（'+x.el+'）';}).join('・')+'」</b>。三合・方合（さんごう・ほうごう）が命式に成る人は、その五行がバランスよく強い"強運の土台"を持ちます。何も巡らなくても芯の強さとして働く、恵まれた配置です。'); }
       b+=para('年ごとの吉凶星・三合方合の巡り・節木運（せつぼくうん＝季節の変わり目＝人生の曲がり角）は、1枚目の「年運」「大運」表に出ています。良い巡りが来た年は前向きに動き、注意の巡り（冲・刑（ちゅう・けい）＝ぶつかり・こじれが起きやすい組み合わせ）の年は無理をせず整える——このメリハリが開運のコツです。');
+      // 過去のふり返りメモ：直近（一つ前）の空亡の年・冲の年
+      (function(){ var pkc=pastKuboChong(r); if(!pkc) return;
+        var lines=[];
+        if(pkc.kubo) lines.push('<li><b>直近の空亡（くうぼう）の年：'+pkc.kubo.year+'年（'+ruby(pkc.kubo.gz)+'）</b>…歯車が空回りしやすく、努力が結果に結びつきにくかったり、見直し・立て直しが起きやすかった時期です。この頃うまく進まなかったことは、時期の巡りが影響していた面もあります。</li>');
+        if(pkc.chong) lines.push('<li><b>直近の冲（ちゅう＝大きな変化）の年：'+pkc.chong.year+'年（'+ruby(pkc.chong.gz)+'）</b>…引っ越し・転職・出会い・別れなど、環境や生き方が大きく動きやすかった年です。振り返ると転機になっていたことがあるかもしれません。</li>');
+        if(lines.length) b+='<p class="rd-p"><b>【過去のふり返りメモ】</b><span class="rd-mini">（過去にさかのぼって、直近の一つ前の巡りを目安として。）</span></p><ul class="rd-ul">'+lines.join('')+'</ul>';
+      })();
       addSec(8, '運の流れ（大運・会局・これから）', b);
     })();
     // 9. 総括
@@ -2667,6 +2694,12 @@ window.KANSHI60_DETAIL={
     var healthOne=(shugoEls.length? '疲れたら「'+care+'」を意識するとすぐ整います。元気が出る色は'+col+'。':'生活リズムを一定に保つのが一番の元気の秘訣です。');
     if(ezShow('money')) H+=ezCard('💰🌿 お金・健康のヒント', '<div class="ez-grid"><div><b>💰 お金</b><br>'+moneyOne+'</div><div><b>🌿 健康</b><br>'+healthOne+'</div></div>');
     if(ezShow('cal') && spouse && window.MonthPillar){ H+=ezCard('📅 恋愛が動く月（今年・来年）', monthlyBlock(nowYear, dm, spouse, 'love', sex, true), 'wide'); }
+    // 過去のふり返りメモ（直近の空亡の年・冲の年）
+    if(!ezSolo){ (function(){ var pkc=pastKuboChong(r); if(!pkc) return; var li='';
+      if(pkc.kubo) li+='<li><b>前回の「空回りしやすかった年（空亡）」＝'+pkc.kubo.year+'年</b>…がんばっても結果が出にくかったり、見直しが起きやすい時期でした。</li>';
+      if(pkc.chong) li+='<li><b>前回の「大きく動いた年（冲）」＝'+pkc.chong.year+'年</b>…引っ越し・転職・出会い・別れなど、環境が変わりやすい年でした。</li>';
+      if(li) H+=ezCard('📝 過去のふり返りメモ', '<ul class="ez-ul">'+li+'</ul><p class="ez-note2">過去の巡りをふり返る目安です。当てはまらないこともありますが、「あの頃はそういう時期だったのかも」と役立ててください。</p>');
+    })(); }
     H+=ezCard('✨ 今日からできる開運アクション', '<ul class="ez-ul"><li>ラッキーカラー<b>'+(col||'自分の好きな色')+'</b>を身近に取り入れる</li><li>気になることへ<b>一歩ふみ出す</b>（追い風の時期に）</li><li>「'+(care?care.split('／')[0]:'早寝・軽い運動')+'」で心と体を整える</li></ul>');
     return '<div class="ez-wrap">'+H+'</div>'+
       '<div class="rd-note">※この診断は、生年月日時から出したあなたの生まれ持った傾向を、やさしくまとめたものです。当たり外れを決めるものではなく、毎日の行動で運は育てられます。</div>';
