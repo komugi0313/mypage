@@ -318,6 +318,12 @@
   .ez-meter .ez-row:last-child{ border-bottom:0; }
   .ez-lbl{ font-size:12px; color:var(--ink); }
   .ez-stars{ font-size:15px; color:#E0A32E; letter-spacing:2px; white-space:nowrap; }
+  .ez-brow{ display:flex; align-items:center; gap:8px; padding:3.5px 0; }
+  .ez-blbl{ font-size:11.5px; color:var(--ink); width:9.5em; flex:0 0 auto; }
+  .ez-btrack{ flex:1; height:11px; background:var(--shade); border-radius:6px; overflow:hidden; }
+  .ez-bfill{ display:block; height:100%; border-radius:6px; background:linear-gradient(90deg, rgba(42,111,208,.5), rgba(42,111,208,.75)); }
+  .ez-bfill.ez-btop{ background:linear-gradient(90deg, rgba(224,120,60,.7), rgba(214,64,122,.85)); }
+  .ez-bstar{ font-size:9.5px; font-weight:700; color:#D6407A; white-space:nowrap; flex:0 0 auto; }
   .ez-note2{ font-size:11.5px; margin:6px 0 0; color:var(--ink2); }
   .ez-grid{ display:grid; grid-template-columns:1fr 1fr; gap:7px 16px; font-size:12px; line-height:1.55; }
   .ez-grid b{ color:var(--el-sui); }
@@ -376,6 +382,8 @@
     .ez-card{ padding:1.8mm 2.4mm; border-radius:2mm; } .ez-h{ font-size:11px; margin:0 0 1.2mm; }
     .ez-p{ font-size:9.4px; line-height:1.55; margin:0 0 1mm; } .ez-note2{ font-size:8.6px; margin-top:1mm; }
     .ez-lbl{ font-size:9.2px; } .ez-stars{ font-size:11px; } .ez-meter .ez-row{ padding:0.8mm 0; }
+    .ez-brow{ gap:2mm; padding:0.9mm 0; } .ez-blbl{ font-size:9px; width:9.5em; } .ez-btrack{ height:2.4mm; } .ez-bstar{ font-size:8px; }
+    .ez-bfill, .ez-bfill.ez-btop{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .ez-grid{ font-size:9.2px; gap:1mm 3mm; } .ez-ul{ font-size:9.4px; line-height:1.5; }
     .rd-note{ font-size:8.4px; margin-top:1.6mm; padding-top:1.2mm; }
     .sheet::before{ inset:3mm; } .sheet::after{ inset:5mm; }
@@ -1686,6 +1694,9 @@ window.KANSHI60_DETAIL={
       var b=para('性格の中心＝<b>月支元命（げっしげんめい＝生まれ月から出す、あなたの主役の星）は「'+genmei+'」</b>。'+g.k+'四柱推命でもっとも重視される「生まれ持った気質の軸」で、経験を積んでもここは大きく変わりません。');
       b+=para('月柱（生まれ月の柱）は<b>社会（仕事・世間）と向き合う場所</b>。月支元命は、内面の軸であると同時に<b>あなたが社会に向けて見せる姿・対外的な顔</b>としても表れます。つまり周囲から「'+genmei+'らしい人」——'+g.t+'のある人として受け取られやすい、ということです。');
       b+=para('この星が活きると、<b>'+g.t+'</b>が持ち味になります。'+(g.c?'一方で、<b>'+g.c+'</b>——これは強みの裏返しなので、気づいて手綱を握れば大きな武器になります。':''));
+      // 月支元命の厚い解説（性格・仕事）
+      if(MEIGEN[genmei]){ b+=para('<b>【性格の軸】</b>'+MEIGEN[genmei].sei);
+        b+=para('<b>【仕事の軸】</b>'+MEIGEN[genmei].shi); }
       addSec(2, '性格の軸（月支元命）', b);
     })();
     // 3. 才能と活かし方・仕事
@@ -1913,7 +1924,25 @@ window.KANSHI60_DETAIL={
   };
   var EZAXIS=[['行動力・自分で動く力','比劫'],['楽しむ・表現する力','食傷'],['社交・現実を回す力','財'],['責任感・きちんと力','官'],['知性・思いやり','印']];
   var EZGOOD={比劫:'自分の足で動ける行動力',食傷:'表現力と、場を明るくする力',財:'人やお金を上手に動かす現実力',官:'責任感が強く信頼される真面目さ',印:'知性と、人を思いやる優しさ'};
-  function ezStars(n){ var s=Math.max(1,Math.min(5,(n||0)+1)), o=''; for(var i=0;i<5;i++)o+=(i<s?'★':'☆'); return o; }
+  // 持ち味バランス（横バー）。最多を基準に相対表示。低くても"伸びしろ"として最低幅を確保し、弱点に見せない。
+  function ezMeter(cat){
+    var vals=EZAXIS.map(function(a){return cat[a[1]]||0;}), mx=Math.max.apply(null, vals)||1;
+    return EZAXIS.map(function(a){ var v=cat[a[1]]||0, w=Math.round(34+66*(v/mx)), top=(v===mx&&mx>0);
+      return '<div class="ez-brow"><span class="ez-blbl">'+a[0]+'</span><span class="ez-btrack"><span class="ez-bfill'+(top?' ez-btop':'')+'" style="width:'+w+'%"></span></span>'+(top?'<span class="ez-bstar">いちばん</span>':'')+'</div>'; }).join('');
+  }
+  // 月支元命（性格・仕事の軸）の厚めの解説
+  var MEIGEN={
+    比肩:{sei:'自分の意志と足で立つ「自立」の星。人に流されず、自分のペースと信念を大切にします。仲間とは上下より対等でいたいタイプ。芯が強く粘り強い反面、我を通しすぎると衝突を生むので、譲る余白を持つほど信頼されます。',shi:'独立・自営や、自分の裁量で動ける仕事で力を発揮します。指示待ちより、任されて自分で進める環境が向いています。専門職や、仲間と対等に組むチームでも活躍します。'},
+    劫財:{sei:'負けん気と度胸の「勝負」の星。人を巻き込む馬力があり、ここぞの場面で強さが出ます。社交的で表は穏やかでも、内に強い闘志を秘めます。勢い任せや金銭の出入りが荒くなりやすい点だけ整えると、大きな武器になります。',shi:'営業・起業・勝負どころの多い仕事で輝きます。人を動かし場を盛り上げる力があるので、チームの起爆剤や交渉役に向いています。攻めと守りのバランスを意識すると成果が安定します。'},
+    食神:{sei:'楽しむ・味わう「表現」の星。おおらかでマイペース、好きなことをじっくり育てるのが得意です。人を和ませる愛嬌があり、衣食住や美を楽しむセンスに恵まれます。のんびりしすぎて締切に弱い面は、区切りを決めると解決します。',shi:'クリエイティブ・飲食・接客・企画など、"好き"や"もてなし"を活かす仕事が向いています。楽しみながら続けられる分野ほど才能が伸びます。'},
+    傷官:{sei:'感性と美意識の「才能」の星。鋭い観察眼と表現力で、専門や芸術で抜きん出ます。完成度へのこだわりが強く細部まで妥協しません。理想が高く一言多くなりがちな面は、優しい言葉に変えると人望も得られます。',shi:'芸術・技術・専門職・研究など、腕やセンスで勝負する分野が適職。人と同じより"自分だけの表現"を磨くほど評価されます。'},
+    偏財:{sei:'人とお金を動かす「社交と商才」の星。フットワークが軽く、人脈とチャンスを広げる才があります。誰とでも打ち解ける明るさが魅力。手を広げすぎ・八方美人で消耗しやすいので、選び取る力を持つと安定します。',shi:'商売・営業・投資・人と動く仕事で力を発揮。多くの人やお金が行き交う現場で、機転と社交性が武器になります。'},
+    正財:{sei:'堅実に積み上げる「信用」の星。真面目でコツコツ型、約束を守り信頼を築きます。地に足のついた安定志向で、家庭やお金を大切にします。守りに入りすぎ・細かくなりすぎる面は、時に冒険を混ぜると世界が広がります。',shi:'経理・管理・堅実な商い・堅い職など、正確さと信用が活きる仕事が適職。地道な積み上げが大きな安定になります。'},
+    偏官:{sei:'行動と責任の「挑戦」の星。度胸があり、重圧のかかる場面で前に出られます。正義感が強く白黒はっきりさせるタイプ。無理を通して消耗しやすいので、ペース配分を意識すると長く力を出せます。',shi:'現場のリーダー・体を張る仕事・指導的立場が向いています。責任ある役割を任されるほど成長します。'},
+    正官:{sei:'規律と品位の「責任」の星。公正でまじめ、筋を通して信頼を得ます。組織やルールの中で誠実に役割を果たすタイプ。真面目ゆえ堅くなり自分を追い込みやすいので、肩の力を抜く時間を大切に。',shi:'公務・管理職・組織の中核・士業など、信用と責任が活きる仕事が適職。きちんとした姿勢がそのまま財産になります。'},
+    偏印:{sei:'ひらめきと探究の「独自性」の星。人と違う視点と専門性を深めます。好奇心旺盛で独学や独創的な発想が得意。気移りや理屈っぽさ、孤立に注意すると力が定まります。',shi:'専門職・研究・企画・独創的な分野が向いています。人がやらないニッチを掘るほど価値が出ます。'},
+    印綬:{sei:'学びと慈愛の「知性」の星。知識欲が高く、人を導き支える優しさがあります。品があり信頼されるタイプ。考えすぎ・受け身・甘えに傾きやすい面は、学びを行動に移すと開けます。',shi:'教育・研究・相談職・支える仕事が適職。知性と思いやりで、人を育て支える役割に向いています。'}
+  };
   function ezCard(title, body, cls){ return '<section class="ez-card'+(cls?' '+cls:'')+'"><h3 class="ez-h">'+title+'</h3>'+body+'</section>'; }
   window.buildEasyHTML=function(r, opts){
     opts=opts||{};
@@ -1936,8 +1965,9 @@ window.KANSHI60_DETAIL={
     if(kan){ konna='<p class="ez-p">'+kan.基本+'</p>'; var sx=(sex==='female')?kan.女:kan.男; if(sx) konna+='<p class="ez-p"><b>'+(sex==='female'?'女性としては：':'男性としては：')+'</b>'+sx+'</p>'; }
     else { konna='<p class="ez-p">'+(NATURE[dm]||'')+'</p>'; }
     H+=ezCard('🌱 こんな人です（生まれ日で読むあなた）', konna);
-    var meter=EZAXIS.map(function(a){ return '<div class="ez-row"><span class="ez-lbl">'+a[0]+'</span><span class="ez-stars">'+ezStars(cat[a[1]])+'</span></div>'; }).join('');
-    H+=ezCard('⭐ あなたの強み', '<div class="ez-meter">'+meter+'</div><p class="ez-note2">とくに強いのは<b>'+(EZGOOD[topCat]||'')+'</b>。ここを活かすと、あなたらしくいられます。</p>');
+    // 性格・仕事の軸（月支元命）を厚く
+    if(genmei&&MEIGEN[genmei]){ H+=ezCard('🧭 あなたの軸（性格と仕事の中心）', '<p class="ez-p"><b>性格：</b>'+MEIGEN[genmei].sei+'</p><p class="ez-p"><b>仕事：</b>'+MEIGEN[genmei].shi+'</p><p class="ez-note2">これは生まれ月から出る"あなたの主役の持ち味"で、社会で見せる顔にもなります。</p>', 'wide'); }
+    H+=ezCard('⭐ あなたの持ち味バランス', '<div class="ez-meter">'+ezMeter(cat)+'</div><p class="ez-note2">いちばんの持ち味は<b>'+(EZGOOD[topCat]||'')+'</b>。ほかは弱点ではなく<b>"伸びしろ"</b>——意識して使うほど育ちます。これは生まれ持った傾向で、経験や環境で変えていけます（運勢は動きます）。</p>');
     var kuse=(genmei&&TSU[genmei])?TSU[genmei].c:'';
     H+=ezCard('🔧 取扱いのコツ', '<p class="ez-p"><b>良いところ：</b>'+(EZGOOD[topCat]||'')+'。</p>'+(kuse?'<p class="ez-p"><b>クセ（気をつけると◎）：</b>'+kuse+'。気づいて手綱を握れば長所に変わります。</p>':'')+(care?'<p class="ez-p"><b>ごきげんの保ち方：</b>'+care+'。元気が出る色は<b>'+col+'</b>。</p>':''));
     H+=ezCard('🤝 相性のいい人', '<p class="ez-p">あなたが<b>ラクでいられる</b>のは、あなたを立ててくれる人や褒めてくれる年上。<b>力を発揮できる</b>のは、あなたを頼ってくれる後輩。<b>楽しく過ごせる</b>のは一緒に遊べる人。ちょっと<b>疲れやすい</b>のは、張り合う相手やダメ出しの多い人です。相手のタイプを見て距離を選ぶと、人間関係がぐっとラクになります。</p>');
