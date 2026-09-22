@@ -283,6 +283,8 @@
   .rd-note{ margin-top:10px; font-size:11px; line-height:1.55; color:var(--ink2);
     border-top:1px dashed var(--rule); padding-top:8px; }
   .rd-empty{ color:var(--faint); font-size:14px; text-align:center; padding:60px 20px; }
+  .rd-lead{ column-span:all; -webkit-column-span:all; margin:0 0 12px; padding:8px 12px; font-size:12px; line-height:1.6;
+    color:var(--ink); background:rgba(42,111,208,.07); border:1px solid var(--rule); border-radius:8px; }
   .head{ margin:0 0 3px; } .crest{ height:22px; margin-bottom:1px; }
   .title{ font-size:clamp(17px,2.1vw,23px); }
   .subrule{ margin:5px auto 0; }
@@ -317,13 +319,14 @@
     .sheets{ display:block; gap:0; width:297mm; transform:none !important; margin:0; }
     .sheet{ box-shadow:none; max-width:none; width:297mm; height:210mm; aspect-ratio:auto; margin:0; padding:8mm 10mm;
       transform:none !important; transform-origin:top left; font-size:9.4px; overflow:hidden; }
-    /* 2枚目（鑑定書）は必ず新しいページへ */
-    .sheet-read{ break-before:page; page-break-before:always; }
+    /* 2枚目（鑑定書）は必ず新しいページへ。内容が多いテーマ（恋愛重視など）は次ページへ自然に流す */
+    .sheet-read{ break-before:page; page-break-before:always; height:auto; min-height:210mm; overflow:visible; }
     .rd-cols{ column-count:3; column-gap:8mm; }
     .rd-h{ font-size:11.5px; margin:0 0 1.2mm; padding-bottom:.8mm; }
     .rd-p{ font-size:9.2px; line-height:1.66; margin:0 0 1.6mm; }
     .rd-p rt{ font-size:.46em; }
     .rd-sec{ margin:0 0 2.2mm; }
+    .rd-lead{ font-size:9px; padding:1.4mm 2.4mm; margin:0 0 2.4mm; }
     .rd-note{ font-size:8.4px; margin-top:1.6mm; padding-top:1.2mm; }
     .sheet::before{ inset:3mm; } .sheet::after{ inset:5mm; }
     .corner{ width:16mm; height:16mm; top:5mm; left:5mm; }
@@ -407,6 +410,13 @@
         <span class="seg" role="group" aria-label="五行カラー切替">
           <button type="button" id="cOff" aria-pressed="false">なし（白黒）</button>
           <button type="button" id="cOn" aria-pressed="true">あり</button>
+        </span>
+      </div>
+      <div class="grp">
+        <span class="glabel">鑑定テーマ<span class="scr-hint">（2枚目）</span></span>
+        <span class="seg" role="group" aria-label="鑑定書テーマ切替">
+          <button type="button" id="thGeneral" aria-pressed="true">総合</button>
+          <button type="button" id="thLove" aria-pressed="false">恋愛重視</button>
         </span>
       </div>
       <div class="act">
@@ -567,7 +577,7 @@
     <span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
     <div class="head">
       <div class="crest" aria-hidden="true"></div>
-      <h1 class="title">鑑定書 <span class="title-sub">― 命式からの読み解き</span></h1>
+      <h1 class="title">鑑定書 <span class="title-sub" id="rdSub">― 命式からの読み解き</span></h1>
       <div class="rule2" aria-hidden="true"></div>
       <div class="meta"><span class="field">氏名 <span class="ed" id="rdName">　</span></span><span class="field"><span class="ed" id="rdBirth">　</span></span></div>
     </div>
@@ -1071,6 +1081,9 @@ window.MEISHIKI=(function(){
     var terrDay=day.junishi||'';
     var spouse=day.shi||'';
     var sex=opts.sex==='male'?'male':'female';
+    var theme=(opts.theme==='love')?'love':'general';
+    var byYear=r.annualByYear||{};
+    var nowYear=(r.nowYear!=null?r.nowYear:(r.birthYear!=null?r.birthYear+(r.nowAge||0):null));
     var fe=r.gogyoCount||{};
     var shugoEls=r.shugojin||[], shugoKind=r.shugoStrength||'';
     // 通変集計（天干通変＋代表蔵干通変、日主は除く）
@@ -1094,6 +1107,7 @@ window.MEISHIKI=(function(){
     var loveHave=loveStars.filter(function(s){return tcount[s];});
 
     var H='';
+    if(theme==='love'){ H+='<div class="rd-lead">この鑑定書は<b>恋愛・ご縁を中心</b>に読み解いています。出逢いの時期は「４．恋愛・結婚」に、日々の相性は「６．対人相性」にまとめています。</div>'; }
     // 1. 本質
     (function(){
       var b='';
@@ -1157,7 +1171,23 @@ window.MEISHIKI=(function(){
       // 干合（日干と結ばれる相手＝深い縁）
       var ganGoHas=['year','month','hour'].some(function(k){return P[k]&&P[k].gan===GANGO[dm];});
       if(ganGoHas) b+=para('さらに日干「'+ruby(dm)+'」と<b>干合（かんごう＝干どうしが強く結びつく関係）</b>する「'+ruby(GANGO[dm])+'」が命式にあり、<b>深く惹かれ合う運命的な縁</b>を持ちます。強い結びつきのパートナーシップに恵まれやすい配置です。');
-      H+=sec('４．恋愛・結婚（相手との縁）', b);
+      // 恋愛重視テーマ：出逢いの時期・進め方・注意期を年運から
+      if(theme==='love' && nowYear!=null){
+        var loveSet=(sex==='female')?{'正官':'誠実な相手','偏官':'情熱的な相手'}:{'正財':'家庭的な相手','偏財':'華やかな相手'};
+        var PEACH={'咸池':1,'紅艶':1,'紅艶殺':1,'桃花':1,'天喜':1};
+        var meet=[], caution=[];
+        for(var yy=nowYear; yy<=nowYear+9; yy++){ var a=byYear[yy]; if(!a) continue;
+          var lv=loveSet[a.tsuhen], pc=(a.kichi||[]).filter(function(k){return PEACH[k];});
+          if(lv||pc.length){ meet.push({y:yy, why:[lv?(a.tsuhen+'＝'+lv):'', pc.length?'桃花（'+pc.join('・')+'）':''].filter(Boolean).join('・')}); }
+          if(spouse&&CHONG[spouse]&&a.branch===CHONG[spouse]) caution.push(yy);
+        }
+        if(meet.length){ b+=para('<b>◆ 出逢い運が高まる年</b>：'+meet.slice(0,5).map(function(m){return '<b>'+m.y+'年</b>（'+m.why+'）';}).join('、')+'。異性を表す星や桃花（人を惹きつける星）が巡る年で、新しいご縁・関係が動きやすい時期です。'); }
+        else { b+=para('<b>◆ 出逢い運</b>：向こう10年で異性の星・桃花が強く巡る年は目立ちません。待つより、日常の場や紹介など<b>自分から動いて出会う</b>意識を持つほど縁が生まれます。'); }
+        var appr=(sex==='female')?((tcount['正官']&&tcount['偏官'])?'惹かれる相手が二種類に分かれやすいので、迷ったら<b>「誠実さ」を基準に一人を選ぶ</b>と関係が安定します。':(tcount['偏官']?'情熱で動きやすいので、<b>勢いより相手の中身を見極める</b>とミスマッチが減ります。':(tcount['正官']?'<b>じっくり誠実に育てる</b>ほど良縁。焦らず信頼を積むのが吉。':'受け身になりやすいので、<b>興味の場に出て自分から一歩</b>踏み出すと縁が動きます。'))):((tcount['正財']&&tcount['偏財'])?'魅力的な出会いが多い分、<b>本命を一人に絞る</b>と落ち着きます。':(tcount['偏財']?'華やかな縁が多いので、<b>遊びと本気の線引き</b>を意識すると安定します。':(tcount['正財']?'<b>誠実に一途</b>に向き合うほど幸せを築きやすいタイプです。':'<b>自分から動く</b>ほど縁が育ちます。受け身で待たないのがコツ。')));
+        b+=para('<b>◆ 進め方</b>：'+appr);
+        if(caution.length){ b+=para('<b>◆ 注意の年</b>：<b>'+caution.slice(0,4).map(function(y){return y+'年';}).join('、')+'</b>は日支（配偶宮）と冲（ちゅう＝ぶつかり）になりやすい年。すれ違い・別れ・急な進展が起きやすいので、大事な決断は一呼吸おいて。'); }
+      }
+      H+=sec((theme==='love'?'４．恋愛・結婚（出逢いの時期と縁）':'４．恋愛・結婚（相手との縁）'), b);
     })();
     // 5. 金運
     (function(){
@@ -1595,13 +1625,30 @@ window.MEISHIKI=(function(){
       });
     }
     // ── 2枚目：命式から読み解いた鑑定文（決定論・非AI） ──
+    _lastResult = r;
+    renderReading();
+  }
+  // 鑑定テーマ（総合／恋愛重視）
+  var _lastResult=null, _readTheme='general';
+  function renderReading(){
     try{
       var mount=document.getElementById('readMount');
-      if(mount && window.buildReadingHTML){
-        mount.innerHTML = window.buildReadingHTML(r, {sex: (r.sex||'female')});
+      if(mount && window.buildReadingHTML && _lastResult){
+        mount.innerHTML = window.buildReadingHTML(_lastResult, {sex:(_lastResult.sex||'female'), theme:_readTheme});
       }
+      var sub=document.getElementById('rdSub'); if(sub) sub.textContent=(_readTheme==='love')?'― 恋愛を中心に読み解く':'― 命式からの読み解き';
     }catch(e){ console.error('reading build failed', e); }
   }
+  function setTheme(t){
+    _readTheme = (t==='love')?'love':'general';
+    var g=document.getElementById('thGeneral'), l=document.getElementById('thLove');
+    if(g) g.setAttribute('aria-pressed', String(_readTheme==='general'));
+    if(l) l.setAttribute('aria-pressed', String(_readTheme==='love'));
+    renderReading();
+  }
+  (function(){ var g=document.getElementById('thGeneral'), l=document.getElementById('thLove');
+    if(g) g.addEventListener('click', function(){ setTheme('general'); });
+    if(l) l.addEventListener('click', function(){ setTheme('love'); }); })();
 
   // ---- フォーム ----
   document.getElementById('calcForm').addEventListener('submit', function(ev){
