@@ -192,8 +192,9 @@
   .pillars{ font-family:var(--mincho); table-layout:fixed; }
   .pillars .rowlbl{ width:70px; }  /* 見出し列を固定し、四柱を等幅に */
   .pillars th,.pillars td{ border:1px solid var(--rule); text-align:center; padding:6px 4px; }
-  .pillars thead th{ background:var(--shade); font-weight:700; color:var(--ink); font-size:13px; letter-spacing:.1em; padding:7px 4px; }
-  .pillars .rowlbl{ background:var(--paper2); color:var(--ink2); font-size:12px; letter-spacing:.08em; white-space:nowrap; width:70px; }
+  /* 見出し（上段：年月日時／左列：天干・地支…）は薄く色を敷いてメリハリを出す */
+  .pillars thead th{ background:#EAE3D3; font-weight:700; color:var(--ink); font-size:13px; letter-spacing:.1em; padding:7px 4px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .pillars .rowlbl{ background:#F1ECE0; color:var(--ink); font-size:12px; letter-spacing:.08em; white-space:nowrap; width:70px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   .pillars .govern td{ background:var(--paper2); color:var(--ink2); font-size:12px; letter-spacing:.06em; font-family:var(--gothic); padding:5px 4px; }
   .pillars .tenchu{ background:var(--paper2); width:56px; color:var(--ink2); }
   .pillars .tenchu .val{ font-size:14px; line-height:1.35; font-family:var(--mincho); }
@@ -722,6 +723,11 @@
         <button type="button" id="chapAll" class="ghost sm">全部</button>
         <button type="button" id="chapNone" class="ghost sm">クリア</button>
       </div>
+      <div class="grp" id="dateGrp">
+        <span class="glabel">鑑定日</span>
+        <label class="pchk"><input type="checkbox" id="autoDate" checked> 今日の日付を自動で入れる</label>
+        <span class="share-hint">チェックを外すと、命式表・鑑定書の「鑑定日：」欄を自分で入力できます</span>
+      </div>
     </div>
   </div>
 
@@ -1224,8 +1230,15 @@
     var P=tc.pillars||[];
     var kichi=(window.computeKichi?window.computeKichi(tc):{});  // 吉凶星(別モジュール)。エンジンは無改変
     function kichiOf(key){ return (kichi[key]||[]).join('・'); }
-    var daiun=(tc.decadeFortunes||[]).map(function(d){
-      return { ageFrom:d.startAge, ageTo:d.endAge, kanshi:d.ganzhi, tsuhen:d.tenStar, junishi:d.terrain,
+    // 大運は「0歳＝月柱の干支」から始めるのが鉄則。エンジンの大運列は月柱±1（＝1つ進んだ/戻った干支）から
+    // 始まるため、表示層で先頭に月柱を差し込み、各行の干支を1つ手前へずらす。年齢・西暦・立運・順逆は不変、
+    // 干支の順番（順行＝進む／逆行＝戻る）はエンジン列がそのまま保持しているのでそれに従う（エンジン無改変）。
+    var _monP=(P&&P[1])?P[1]:null, _monGz=_monP?_monP.ganzhi:null;
+    var _duSrc=(tc.decadeFortunes||[]);
+    var _duShift=!!(_monP && _duSrc.length && _duSrc[0].ganzhi!==_monGz);  // 既に月柱始まりなら二重差し込みしない
+    var daiun=_duSrc.map(function(d,i){
+      var s = _duShift ? (i===0 ? {ganzhi:_monP.ganzhi, tenStar:_monP.tenStar, terrain:_monP.terrain} : _duSrc[i-1]) : d;
+      return { ageFrom:d.startAge, ageTo:d.endAge, kanshi:s.ganzhi, tsuhen:s.tenStar, junishi:s.terrain,
         startYear:d.startYear, endYear:(d.startYear!=null?d.startYear+(d.endAge-d.startAge):null) }; });
     var kuboPair=kubo(P[2]&&P[2].ganzhi);           // 空亡の2支（例 "戌亥"）
     var startY=(tc.now&&tc.now.year)?tc.now.year:input.year;
@@ -3054,10 +3067,24 @@ window.KANSHI60_DETAIL={
   }
   function daiunToNow(){ if(_nenunState) renderNenunFor(_nenunState.nowYear); }
 
+  // ---- 鑑定日：既定は「今日」を自動入力。チェックを外すと手入力（命式表・鑑定書とも編集可） ----
+  function _todayJP(){ var d=new Date(); return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'; }
+  function applyKanteiDate(){
+    var chk=document.getElementById('autoDate'); var on=!chk||chk.checked;
+    if(on){ var t=_todayJP(); setEl('kanteiDate', t); setEl('rdDate', t); }
+    // 外しているときは、ユーザーが入力した値を尊重して上書きしない
+  }
+  (function(){ var chk=document.getElementById('autoDate'); if(!chk) return;
+    chk.addEventListener('change', function(){
+      if(chk.checked){ applyKanteiDate(); }
+      else { setEl('kanteiDate','　年　月　日'); setEl('rdDate','　年　月　日'); }
+    });
+  })();
+
   // ---- 自動計算 → 反映 ----
   function fillFromResult(r){
     if(window.MEISHIKI) window.MEISHIKI.fill(r);
-    (function(){ var d=new Date(); setEl('kanteiDate', d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'); })();
+    applyKanteiDate();
     // 守護神（命式から自動）：r.shugojin = ["丁","癸","丙"] など
     renderShugo(r.shugojin, r.shugoStrength);
     // 五行バランスの「数」＝命式8字（天干4＋地支4）の五行そのものの数（エンジンの実数＝2枚目の鑑定書と一致）
@@ -3216,7 +3243,7 @@ window.KANSHI60_DETAIL={
       // 2枚目（鑑定書）のヘッダーも連動
       setEl('rdName', nm ? (nm+'　様') : '　');
       setEl('rdBirth', _birthTxt);
-      (function(){ var dd=new Date(); setEl('rdDate', dd.getFullYear()+'年'+(dd.getMonth()+1)+'月'+dd.getDate()+'日'); })();
+      applyKanteiDate();   // 鑑定日（既定＝今日／チェックを外せば手入力を尊重）
       setMode('auto');
     }catch(e){ msg.textContent='計算エラー：入力値をご確認ください。'; console.error(e); }
   });
