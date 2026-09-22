@@ -515,10 +515,10 @@
             </table>
           </section>
           <section>
-            <h2 class="block-title">五行バランス <small>第二宿命<span class="scr-hint">／五行名クリックで吉</span></small></h2>
+            <h2 class="block-title">五行バランス <small>命式の五行の数<span class="scr-hint">／五行名クリックで吉</span></small></h2>
             <div class="gogyo-wrap">
               <table class="gogyo">
-                <thead><tr><th>五行</th><th class="tv">通変</th><th>数</th><th>強弱</th><th class="cd">色</th><th class="og">臓器</th></tr></thead>
+                <thead><tr><th>五行</th><th class="tv">対応通変</th><th>数</th><th>強弱</th><th class="cd">色</th><th class="og">臓器</th></tr></thead>
                 <tbody>
                   <tr><td class="g g-moku">木</td><td class="tv" id="tv-moku"></td><td class="c ed" id="go-moku" contenteditable="true"></td><td class="mk ed" id="mk-moku" contenteditable="true"></td><td class="cd ed" contenteditable="true">青・緑</td><td class="og ed" contenteditable="true">肝・胆</td></tr>
                   <tr><td class="g g-ka">火</td><td class="tv" id="tv-ka"></td><td class="c ed" id="go-ka" contenteditable="true"></td><td class="mk ed" id="mk-ka" contenteditable="true"></td><td class="cd ed" contenteditable="true">赤・ピンク</td><td class="og ed" contenteditable="true">心・小腸</td></tr>
@@ -1519,24 +1519,16 @@ window.MEISHIKI=(function(){
     (function(){ var d=new Date(); setEl('kanteiDate', d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'); })();
     // 守護神（命式から自動）：r.shugojin = ["丁","癸","丙"] など
     renderShugo(r.shugojin, r.shugoStrength);
-    // 五行バランスの「数」＝命式に出ている通変星を単純に集計（表の天干通変＋地支通変を拾う）
+    // 五行バランスの「数」＝命式8字（天干4＋地支4）の五行そのものの数（エンジンの実数＝2枚目の鑑定書と一致）
     Array.prototype.forEach.call(document.querySelectorAll('.gogyo tr.lucky'), function(r2){ r2.classList.remove('lucky'); });  // 新規鑑定でラッキー選択を解除
     var dayEl = (r.pillars && r.pillars.day) ? r.pillars.day.ganElement : null;
-    var CAT={'比肩':'比劫','劫財':'比劫','食神':'食傷','傷官':'食傷','正財':'財星','偏財':'財星','正官':'官星','偏官':'官星','印綬':'印星','偏印':'印星'};
-    var catCnt={比劫:0,食傷:0,財星:0,官星:0,印星:0};
-    ['year','month','day','hour'].forEach(function(k){
-      var pp=(r.pillars&&r.pillars[k])||{};
-      [pp.tsuhen, pp.zokanTsuhen].forEach(function(t){ if(t&&CAT[t]!=null) catCnt[CAT[t]]++; });  // 日主(—)は通変なしで対象外
+    var feCnt = r.gogyoCount || {};
+    ['木','火','土','金','水'].forEach(function(el){
+      var key=ELKEY[el], n=(feCnt[el]!=null?feCnt[el]:0);
+      setEl('go-'+key, n);
+      setEl('mk-'+key, strFromCount(n));
     });
-    if(dayEl){
-      var catEl={ 比劫:dayEl, 食傷:GEN[dayEl], 財星:CON[dayEl], 官星:CONINV[dayEl], 印星:GENINV[dayEl] };
-      ['比劫','食傷','財星','官星','印星'].forEach(function(cat){
-        var key=ELKEY[catEl[cat]];
-        setEl('go-'+key, catCnt[cat]);
-        setEl('mk-'+key, strFromCount(catCnt[cat]));
-      });
-    }
-    updateGogyoDiagram(dayEl);   // 五行図：比劫（頂点）＋印星/食傷/官星/財星（数も通変集計に連動）
+    updateGogyoDiagram(dayEl);   // 五行図：数は表（実数）を鏡写し。ノード位置は日干から見た通変（印/食/官/財）
     updateTsuhen(dayEl);         // 五行バランス表の通変列
     // 干支関係（干合・三合・方合・半合・冲・刑・破・害）
     renderKankei(computeKankei(r.pillars||{}));
