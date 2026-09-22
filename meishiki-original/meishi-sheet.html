@@ -1240,14 +1240,17 @@
     var P=tc.pillars||[];
     var kichi=(window.computeKichi?window.computeKichi(tc):{});  // 吉凶星(別モジュール)。エンジンは無改変
     function kichiOf(key){ return (kichi[key]||[]).join('・'); }
-    // 大運は「0歳＝月柱の干支」から始めるのが鉄則。エンジンの大運列は月柱±1（＝1つ進んだ/戻った干支）から
-    // 始まるため、表示層で先頭に月柱を差し込み、各行の干支を1つ手前へずらす。年齢・西暦・立運・順逆は不変、
-    // 干支の順番（順行＝進む／逆行＝戻る）はエンジン列がそのまま保持しているのでそれに従う（エンジン無改変）。
-    var _monP=(P&&P[1])?P[1]:null, _monGz=_monP?_monP.ganzhi:null;
+    // 大運は「0歳＝月柱」を鉄則とする。表示の仕組みは立運の長さで2通り：
+    //  (A) 立運が1年以上 … エンジンの大運（月柱±1で始まる標準列）をそのまま使い、レンダラが先頭に
+    //      「立運前（＝月柱）」行を出す（＝0歳から月柱が見える）。ここでは何も足さない（二重防止）。
+    //  (B) 立運が1年未満（＝立運前行が出ない/エンジン先頭が0歳始まり） … 先頭に月柱を1行差し込み、
+    //      各行の干支を1つ手前へずらして「0歳＝月柱」にする（順逆の並びはエンジン列がそのまま保持）。
+    var _monP=(P&&P[1])?P[1]:null;
     var _duSrc=(tc.decadeFortunes||[]);
-    var _duShift=!!(_monP && _duSrc.length && _duSrc[0].ganzhi!==_monGz);  // 既に月柱始まりなら二重差し込みしない
+    var _firstAge=(_duSrc[0]&&_duSrc[0].startAge!=null)?_duSrc[0].startAge:0;
+    var _prepend=!!(_monP && _duSrc.length && _firstAge===0 && _duSrc[0].ganzhi!==_monP.ganzhi);
     var daiun=_duSrc.map(function(d,i){
-      var s = _duShift ? (i===0 ? {ganzhi:_monP.ganzhi, tenStar:_monP.tenStar, terrain:_monP.terrain} : _duSrc[i-1]) : d;
+      var s=_prepend ? (i===0 ? {ganzhi:_monP.ganzhi, tenStar:_monP.tenStar, terrain:_monP.terrain} : _duSrc[i-1]) : d;
       return { ageFrom:d.startAge, ageTo:d.endAge, kanshi:s.ganzhi, tsuhen:s.tenStar, junishi:s.terrain,
         startYear:d.startYear, endYear:(d.startYear!=null?d.startYear+(d.endAge-d.startAge):null) }; });
     var kuboPair=kubo(P[2]&&P[2].ganzhi);           // 空亡の2支（例 "戌亥"）
