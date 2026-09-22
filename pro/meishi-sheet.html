@@ -78,6 +78,7 @@
   .corner.tr{ top:18px; right:18px; transform:scaleX(-1); }
   .corner.bl{ bottom:18px; left:18px; transform:scaleY(-1); }
   .corner.br{ bottom:18px; right:18px; transform:scale(-1,-1); }
+  #pageFrame{ display:none; }   /* 画面では非表示。印刷時のみ固定の飾り枠として全ページに出す */
   .inner{ position:relative; z-index:3; flex:1; display:flex; flex-direction:column; min-height:0; }
 
   /* ============ 見出し ============ */
@@ -621,6 +622,20 @@
     .gogyo{ font-size:10.8px; } .gogyo th,.gogyo td{ border-bottom-color:#C6C1B7; } .gogyo thead th{ color:var(--ink); }
     .block-title{ font-size:13.2px; color:var(--ink); border-bottom:1.6px solid #9A948A; }
     .block-title small{ font-size:10.5px; color:var(--ink2); }
+    /* ===== 全ページ共通の飾り枠（固定＝各ページに繰り返し描画）。あふれたページも同じデザインの用紙に ===== */
+    .sheet{ box-shadow:none !important; }
+    .sheet::before, .sheet::after{ display:none !important; }   /* 各シート個別の枠は消して固定枠に一本化 */
+    .sheet > .corner{ display:none !important; }                /* シート内の四隅飾りも消す（固定枠のcornerを使う） */
+    #pageFrame{ display:block; position:fixed; inset:3mm; pointer-events:none; z-index:9999; }
+    #pageFrame::before{ content:""; position:absolute; inset:0; border:1.4px solid var(--gold); border-radius:2.4mm; opacity:.8;
+      -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    #pageFrame::after{ content:""; position:absolute; inset:2mm; border:1px dashed var(--faint); border-radius:2mm; opacity:.7;
+      -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    #pageFrame .corner.pf{ position:absolute; width:13mm; height:13mm; color:var(--gold); opacity:.7; top:auto; bottom:auto; left:auto; right:auto; }
+    #pageFrame .corner.pf.tl{ top:0.6mm; left:0.6mm; transform:none; }
+    #pageFrame .corner.pf.tr{ top:0.6mm; right:0.6mm; transform:scaleX(-1); }
+    #pageFrame .corner.pf.bl{ bottom:0.6mm; left:0.6mm; transform:scaleY(-1); }
+    #pageFrame .corner.pf.br{ bottom:0.6mm; right:0.6mm; transform:scale(-1,-1); }
     @page{ size:A4 landscape; margin:0; }
   }
 </style>
@@ -739,6 +754,13 @@
         <span class="share-hint">チェックを外すと、命式表・鑑定書の「鑑定日：」欄を自分で入力できます</span>
       </div>
     </div>
+  </div>
+
+  <!-- 印刷専用：全ページ共通の飾り枠（position:fixed は各ページに繰り返し描画される）。
+       これで1枚目～最終ページまで同じデザインの用紙になり、あふれたページも枠が付く。 -->
+  <div id="pageFrame" aria-hidden="true">
+    <span class="corner pf tl"></span><span class="corner pf tr"></span>
+    <span class="corner pf bl"></span><span class="corner pf br"></span>
   </div>
 
   <!-- ============ 用紙（画面はA4横1枚を丸ごと縮小表示・スクロールなし） ============ -->
@@ -2134,9 +2156,8 @@ window.KANSHI60_DETAIL={
         if(ganGoHas) s+='さらに日干「'+ruby(dm)+'」は命式内の「'+ruby(gp)+'」と<b>干合（＝強い縁で結ばれ、時に"縛られる"配置）</b>。一つの人・役割に気を取られやすいので、<b>手放す・任せる・断る</b>が開運の鍵です。';
         b+=para('<b>【強み・注意】</b>'+s);
       }
-      // 3) 運の大きな流れ（人生の四季）＝箇条書き（図なし）
-      var ls=lifeSeasons(r);
-      if(ls){ b+='<p class="rd-p"><b>【運の大きな流れ（人生の四季）】</b></p>'+lifeList(ls,false); }
+      // 3)（旧「運の大きな流れ・人生の四季」）長期を「充電期間」等と括ると誤解を招くため鑑定文には載せない。
+      //    大運の実際の流れは1枚目の大運表（節木運つき）で確認する。
       // 4) 今このタイミング（今の10年＝大運）
       var curFav=0;
       if(curDu){ var cel=brEl(curDu.kanshi); curFav=fav(cel);
@@ -2668,9 +2689,7 @@ window.KANSHI60_DETAIL={
       var b='';
       // どんな人＋強み・クセ
       b+='<p class="ez-p"><b>あなたは「'+T.img+'」のような'+T.name+'。</b>いちばんの強みは<b>'+(EZGOOD[topCat]||'あなたらしい持ち味')+'</b>。'+((genmei&&TSU[genmei]&&TSU[genmei].c)?'気をつけるとよいのは「'+TSU[genmei].c+'」——気づけば長所に変わります。':'')+'</p>';
-      // 運の流れ（人生の四季）＝箇条書き（図なし）
-      var ls=lifeSeasons(r);
-      if(ls){ b+='<p class="ez-p"><b>運の流れ（人生の四季）</b></p>'+lifeList(ls,true); }
+      //（旧「運の流れ・人生の四季」）長期を「充電期間」等と括ると誤解を招くため載せない。今の時期は下で伝える。
       // 今の時期（今の10年）
       var curDu=du.filter(function(d){return nowAge!=null&&nowAge>=d.ageFrom&&nowAge<d.ageTo;})[0];
       if(curDu){ var cel=BREL[(curDu.kanshi.length>1?curDu.kanshi.charAt(1):'')]||''; var cf=fav(cel);
@@ -2691,7 +2710,7 @@ window.KANSHI60_DETAIL={
       }
       if(favYears.length) b+='<p class="ez-p">とくに<b>'+favYears.map(function(y){return y+'年';}).join('・')+'</b>は<b>チャンスの年</b>。気になることに一歩ふみ出すと道がひらけます。</p>';
       b+='<p class="ez-note2">むずかしく考えなくて大丈夫。<b>'+(col||'好きな色')+'</b>を身近に置き、追い風の時期に動く——それだけで運は育ちます。</p>';
-      H+=ezCard('📌 まるっと総合まとめ', b);
+      H+=ezCard('📌 総合まとめ', b);
     })();
     // こんな人です（生まれ日の60干支の詳しい人物像）
     var konna='';
@@ -2699,7 +2718,7 @@ window.KANSHI60_DETAIL={
     else { konna='<p class="ez-p">'+(NATURE[dm]||'')+'</p>'; }
     H+=ezCard('🌱 こんな人です（生まれ日で読むあなた）', konna);
     // 命式の読み解き（要素ごとに、やさしい言葉で箇条書き）＝full版のみ
-    if(!ezSolo){ var yomi=ezYomitoki(r); if(yomi) H+=ezCard('🔎 あなたの命式からわかること', yomi+'<p class="ez-note2">これは生年月日時から出た「生まれ持った傾向」です。良し悪しを決めるものではなく、知って上手に活かすためのもの。行動しだいで運は育ちます。</p>', 'wide ez-flow'); }
+    if(!ezSolo){ var yomi=ezYomitoki(r); if(yomi) H+=ezCard('🔎 あなたの命式からわかること', yomi+'<p class="ez-note2">これは生年月日時から出た「生まれ持った傾向」です。良し悪しを決めるものではなく、知って上手に活かすためのもの。行動しだいで運は育ちます。</p>', 'ez-flow'); }
     // 性格・仕事の軸（月支元命）を厚く
     if(ezShow('axis') && genmei&&MEIGEN[genmei]){ H+=ezCard('🧭 あなたの軸（性格と仕事の中心）', '<p class="ez-p"><b>性格：</b>'+MEIGEN[genmei].sei+'</p><p class="ez-p"><b>仕事：</b>'+MEIGEN[genmei].shi+'</p><p class="ez-note2">これは生まれ月から出る"あなたの主役の持ち味"で、社会で見せる顔にもなります。</p>'); }
     if(ezShow('mochi')) H+=ezCard('⭐ あなたの持ち味バランス', '<div class="ez-meter">'+ezMeter(cat)+'</div><p class="ez-note2">いちばんの持ち味は<b>'+(EZGOOD[topCat]||'')+'</b>。ほかは弱点ではなく<b>"伸びしろ"</b>——意識して使うほど育ちます。これは生まれ持った傾向で、経験や環境で変えていけます（運勢は動きます）。</p>');
