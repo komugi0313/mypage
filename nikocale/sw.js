@@ -9,7 +9,7 @@
  *  - バージョンを上げると古いキャッシュを自動削除。
  */
 'use strict';
-var VERSION = 'nikocale-v1';
+var VERSION = 'nikocale-v2';
 var SHELL = './';
 
 self.addEventListener('install', function (e) {
