@@ -422,6 +422,13 @@
           <button type="button" id="thHealth" aria-pressed="false">健康重視</button>
         </span>
       </div>
+      <div class="grp">
+        <span class="glabel">範囲<span class="scr-hint">（テーマ選択時）</span></span>
+        <span class="seg" role="group" aria-label="鑑定書の範囲切替">
+          <button type="button" id="scFull" aria-pressed="true">全体</button>
+          <button type="button" id="scSolo" aria-pressed="false">この項目だけ</button>
+        </span>
+      </div>
       <div class="act">
         <button type="button" id="printBtn">🖨 印刷 / PDF保存</button>
       </div>
@@ -1085,6 +1092,7 @@ window.MEISHIKI=(function(){
     var spouse=day.shi||'';
     var sex=opts.sex==='male'?'male':'female';
     var theme=({love:'love',work:'work',money:'money',health:'health'})[opts.theme]||'general';
+    var scope=(opts.scope==='solo' && theme!=='general')?'solo':'full';  // solo＝その項目だけの専用版
     var byYear=r.annualByYear||{};
     var nowYear=(r.nowYear!=null?r.nowYear:(r.birthYear!=null?r.birthYear+(r.nowAge||0):null));
     var fe=r.gogyoCount||{};
@@ -1110,16 +1118,31 @@ window.MEISHIKI=(function(){
     var loveHave=loveStars.filter(function(s){return tcount[s];});
 
     var H='';
-    if(theme==='love'){ H+='<div class="rd-lead">この鑑定書は<b>恋愛・ご縁を中心</b>に読み解いています。出逢いの時期は「４．恋愛・結婚」に、日々の相性は「６．対人相性」にまとめています。</div>'; }
-    else if(theme==='work'){ H+='<div class="rd-lead">この鑑定書は<b>仕事・キャリアを中心</b>に読み解いています。伸びる時期・進め方は「３．才能と活かし方」に、人との組み方は「６．対人相性」にまとめています。</div>'; }
-    else if(theme==='money'){ H+='<div class="rd-lead">この鑑定書は<b>金運・財を中心</b>に読み解いています。お金が動く時期・増やし方は「５．金運」に、稼ぐ力は「３．才能と活かし方」にまとめています。</div>'; }
-    else if(theme==='health'){ H+='<div class="rd-lead">この鑑定書は<b>健康・養生を中心</b>に読み解いています。体質・弱りやすい所・無理の出やすい時期・養生法は「７．五行と健康・養生」にまとめています。</div>'; }
+    // 専用版（solo）に載せる章番号セット。フル版は全章。
+    var SOLO={love:[1,4,6,9],work:[1,3,6,9],money:[1,3,5,9],health:[1,7,9]};
+    var soloSet=(scope==='solo')?SOLO[theme]:null;
+    var KNUM=['','１','２','３','４','５','６','７','８','９'];
+    var _sn=0;
+    // 章を積む。フル版は元番号、専用版は該当章だけを1から振り直して表示。
+    function addSec(n, title, body){
+      if(soloSet && soloSet.indexOf(n)<0) return;
+      _sn++; H+=sec(KNUM[soloSet?_sn:n]+'．'+title, body);
+    }
+    // 冒頭リード
+    var LEADF={love:['恋愛・ご縁','出逢いの時期は「恋愛・結婚」に、日々の相性は「対人相性」に'],
+               work:['仕事・キャリア','伸びる時期・進め方は「才能と活かし方」に、人との組み方は「対人相性」に'],
+               money:['金運・財','お金が動く時期・増やし方は「金運」に、稼ぐ力は「才能と活かし方」に'],
+               health:['健康・養生','体質・弱りやすい所・無理の出やすい時期・養生法は「五行と健康・養生」に']};
+    if(LEADF[theme]){
+      if(scope==='solo'){ H+='<div class="rd-lead">この鑑定書は<b>'+LEADF[theme][0]+'だけ</b>をまとめた専用版です（他の項目は含みません）。基本の持ち味も冒頭に添えています。</div>'; }
+      else { H+='<div class="rd-lead">この鑑定書は<b>'+LEADF[theme][0]+'を中心</b>に読み解いています。'+LEADF[theme][1]+'まとめています。</div>'; }
+    }
     // 1. 本質
     (function(){
       var b='';
       b+=para('あなたの本体（性格・生き方の芯）を表す<b>日干（にっかん）は「'+dm+'（'+(STEM_YOMI[dm]||'')+'／'+dmEl+'の'+(STEM_YY[dm]==='陽'?'陽':'陰')+'）」</b>。'+(NATURE[dm]||''));
       b+=para('生まれた日の干支は<b>「'+ruby(dayGZ)+'」</b>。日柱（生まれ日の柱）は、あなた自身と、もっとも身近な人間関係（恋愛・家庭）が表れる場所です。'+(terrDay&&TERR[terrDay]?'日柱の十二運（じゅうにうん＝運気の勢いを十二段階で示すもの）は<b>「'+terrDay+'」</b>。'+TERR[terrDay]:''));
-      H+=sec('１．持って生まれた本質', b);
+      addSec(1, '持って生まれた本質', b);
     })();
     // 2. 性格の軸（月支元命）
     (function(){
@@ -1128,7 +1151,7 @@ window.MEISHIKI=(function(){
       var b=para('性格の中心＝<b>月支元命（げっしげんめい＝生まれ月から出す、あなたの主役の星）は「'+genmei+'」</b>。'+g.k+'四柱推命でもっとも重視される「生まれ持った気質の軸」で、経験を積んでもここは大きく変わりません。');
       b+=para('月柱（生まれ月の柱）は<b>社会（仕事・世間）と向き合う場所</b>。月支元命は、内面の軸であると同時に<b>あなたが社会に向けて見せる姿・対外的な顔</b>としても表れます。つまり周囲から「'+genmei+'らしい人」——'+g.t+'のある人として受け取られやすい、ということです。');
       b+=para('この星が活きると、<b>'+g.t+'</b>が持ち味になります。'+(g.c?'一方で、<b>'+g.c+'</b>——これは強みの裏返しなので、気づいて手綱を握れば大きな武器になります。':''));
-      H+=sec('２．性格の軸（月支元命）', b);
+      addSec(2, '性格の軸（月支元命）', b);
     })();
     // 3. 才能と活かし方・仕事
     (function(){
@@ -1153,7 +1176,7 @@ window.MEISHIKI=(function(){
         b+=para('<b>◆ 進め方</b>：'+wappr);
         if(wCau.length){ b+=para('<b>◆ 注意の年</b>：<b>'+wCau.slice(0,4).map(function(y){return y+'年';}).join('、')+'</b>は傷官や冲が絡み、上司との衝突・勇み足の転職でつまずきやすい年。<b>大きな決断は一呼吸おく</b>と安全です。'); }
       }
-      H+=sec((theme==='work'?'３．才能と活かし方・仕事の伸びる時期':'３．才能と活かし方・向いやすい仕事'), b);
+      addSec(3, (theme==='work'?'才能と活かし方・仕事の伸びる時期':'才能と活かし方・向いやすい仕事'), b);
     })();
     // 五行の相生・相剋マップ（対人相性・配偶宮の関係に使用）
     var GEN_EL={木:'火',火:'土',土:'金',金:'水',水:'木'};   // x が GEN_EL[x] を生む
@@ -1208,7 +1231,7 @@ window.MEISHIKI=(function(){
         b+=para('<b>◆ 進め方</b>：'+appr);
         if(caution.length){ b+=para('<b>◆ 注意の年</b>：<b>'+caution.slice(0,4).map(function(y){return y+'年';}).join('、')+'</b>は日支（配偶宮）と冲（ちゅう＝ぶつかり）になりやすい年。すれ違い・別れ・急な進展が起きやすいので、大事な決断は一呼吸おいて。'); }
       }
-      H+=sec((theme==='love'?'４．恋愛・結婚（出逢いの時期と縁）':'４．恋愛・結婚（相手との縁）'), b);
+      addSec(4, (theme==='love'?'恋愛・結婚（出逢いの時期と縁）':'恋愛・結婚（相手との縁）'), b);
     })();
     // 5. 金運
     (function(){
@@ -1238,7 +1261,7 @@ window.MEISHIKI=(function(){
         b+=para('<b>◆ 増やし方</b>：'+mappr);
         if(mCau.length){ b+=para('<b>◆ 注意の年</b>：<b>'+mCau.slice(0,4).map(function(y){return y+'年';}).join('、')+'</b>は比肩・劫財（お金が出ていきやすい星）が巡る年。<b>貸し借り・衝動買い・共同出資</b>でお金が減りやすいので、大きな支出は先送りが安全です。'); }
       }
-      H+=sec((theme==='money'?'５．金運（お金が動く時期と増やし方）':'５．金運（お金との付き合い方）'), b);
+      addSec(5, (theme==='money'?'金運（お金が動く時期と増やし方）':'金運（お金との付き合い方）'), b);
     })();
     // 6. 対人相性
     (function(){
@@ -1249,7 +1272,7 @@ window.MEISHIKI=(function(){
       }
       var _hk=(tcount['比肩']||0)+(tcount['劫財']||0);
       b+=para('全体に、'+(_hk>=2?'仲間の星（比肩・劫財）が強く<b>横のつながり・チームで力を発揮</b>するタイプ。':( (tcount['正官']||tcount['偏官'])?'規律の星（官星）を持ち<b>組織や年長者との縁</b>で伸びるタイプ。':'') )+'相手のタイプを見極めて役割を選ぶと、人間関係がぐっと楽になります。');
-      H+=sec('６．対人相性（合う人・合わせ方）', b);
+      addSec(6, '対人相性（合う人・合わせ方）', b);
     })();
     // 7. 五行と健康・養生
     (function(){
@@ -1280,7 +1303,7 @@ window.MEISHIKI=(function(){
         if(hRest.length){ b+=para('<b>◆ 整え・回復に向く年</b>：<b>'+hRest.slice(0,4).map(function(y){return y+'年';}).join('、')+'</b>は印星（休む・受け取る星）が巡る年。<b>健診・生活リズムの立て直し・体づくり</b>を始めると効果が出やすい時期です。'); }
         if(careUniq.length){ b+=para('<b>◆ 養生の指針</b>：'+careUniq.join('／')+'。'+((maxList.length===1&&maxEl)?'とくに強い<b>'+maxEl+'</b>を出しすぎないよう、休む・緩める時間を意識すると安定します。':'バランス型なので、生活リズムを一定に保つのが一番の養生です。')); }
       }
-      H+=sec((theme==='health'?'７．健康・養生（体質と無理の出やすい時期）':'７．五行と健康・養生'), b);
+      addSec(7, (theme==='health'?'健康・養生（体質と無理の出やすい時期）':'五行と健康・養生'), b);
     })();
     // 8. 運の流れ
     (function(){
@@ -1289,13 +1312,13 @@ window.MEISHIKI=(function(){
       if(curDu){ var dt=curDu.tsuhen, ds=DUTSU[dt]; var _jun=curDu.junishi; b+=para('今めぐっているのは<b>'+curDu.ageFrom+'〜'+curDu.ageTo+'歳の大運「'+ruby(curDu.kanshi)+'」（星は'+dt+'・十二運は'+_jun+(_jun==='墓'?'＝"納め・蓄える"時期':'')+'）</b>。'+(ds||'この時期の巡りを土台に日々を組み立てるとよいでしょう。')); }
       if(kk.length){ b+=para('生まれ持った<b>会局（かいきょく＝地支が集まって強い五行をつくる配置）は「'+kk.map(function(x){return x.kind+ruby(x.text)+'（'+x.el+'）';}).join('・')+'」</b>。三合・方合（さんごう・ほうごう）が命式に成る人は、その五行がバランスよく強い"強運の土台"を持ちます。何も巡らなくても芯の強さとして働く、恵まれた配置です。'); }
       b+=para('年ごとの吉凶星・三合方合の巡り・節木運（せつぼくうん＝季節の変わり目＝人生の曲がり角）は、1枚目の「年運」「大運」表に出ています。良い巡りが来た年は前向きに動き、注意の巡り（冲・刑（ちゅう・けい）＝ぶつかり・こじれが起きやすい組み合わせ）の年は無理をせず整える——このメリハリが開運のコツです。');
-      H+=sec('８．運の流れ（大運・会局・これから）', b);
+      addSec(8, '運の流れ（大運・会局・これから）', b);
     })();
     // 9. 総括
     (function(){
       var strong=(domStar&&TSU[domStar])?TSU[domStar].t:'あなたらしい持ち味';
       var b=para('まとめると、<b>'+ruby(dm)+'（'+dmEl+'）</b>を芯に、<b>'+genmei+'</b>の気質を軸として、<b>'+strong+'</b>が最大の強みです。'+(shugoEls.length?'進む方向に迷ったら、守護神の五行<b>「'+shugoEls.join('・')+'」</b>（色なら'+shugoEls.map(function(e){return EL[e]?EL[e].col:'';}).filter(Boolean).join('／')+'）を取り入れると流れが整います。':'')+'持ち味を素直に活かし、巡りの良い時期に一歩を踏み出していきましょう。');
-      H+=sec('９．総括と開運の指針', b);
+      addSec(9, '総括と開運の指針', b);
     })();
     return '<div class="rd-cols">'+H+'</div>'+
       '<div class="rd-note">※この鑑定文は、あなたの命式（生年月日時から算出した四柱・通変・十二運・五行・大運・吉凶星・会局）にもとづいてまとめたものです。一般的な傾向であり、日々の行動で運は育てられます。</div>';
@@ -1680,14 +1703,17 @@ window.MEISHIKI=(function(){
     renderReading();
   }
   // 鑑定テーマ（総合／恋愛重視）
-  var _lastResult=null, _readTheme='general';
+  var _lastResult=null, _readTheme='general', _readScope='full';
   function renderReading(){
     try{
       var mount=document.getElementById('readMount');
+      var solo=(_readScope==='solo' && _readTheme!=='general');
       if(mount && window.buildReadingHTML && _lastResult){
-        mount.innerHTML = window.buildReadingHTML(_lastResult, {sex:(_lastResult.sex||'female'), theme:_readTheme});
+        mount.innerHTML = window.buildReadingHTML(_lastResult, {sex:(_lastResult.sex||'female'), theme:_readTheme, scope:(solo?'solo':'full')});
       }
-      var sub=document.getElementById('rdSub'); if(sub) sub.textContent=({love:'― 恋愛を中心に読み解く',work:'― 仕事・キャリアを中心に読み解く',money:'― 金運・財を中心に読み解く',health:'― 健康・養生を中心に読み解く'})[_readTheme]||'― 命式からの読み解き';
+      var base=({love:'恋愛',work:'仕事・キャリア',money:'金運・財',health:'健康・養生'})[_readTheme];
+      var sub=document.getElementById('rdSub');
+      if(sub) sub.textContent = base ? ('― '+base+(solo?'だけの専用鑑定':'を中心に読み解く')) : '― 命式からの読み解き';
     }catch(e){ console.error('reading build failed', e); }
   }
   function setTheme(t){
@@ -1696,8 +1722,18 @@ window.MEISHIKI=(function(){
     Object.keys(map).forEach(function(k){ var el=document.getElementById(map[k]); if(el) el.setAttribute('aria-pressed', String(_readTheme===k)); });
     renderReading();
   }
+  function setScope(sc){
+    _readScope = (sc==='solo')?'solo':'full';
+    var f=document.getElementById('scFull'), s=document.getElementById('scSolo');
+    if(f) f.setAttribute('aria-pressed', String(_readScope==='full'));
+    if(s) s.setAttribute('aria-pressed', String(_readScope==='solo'));
+    renderReading();
+  }
   (function(){ [['thGeneral','general'],['thLove','love'],['thWork','work'],['thMoney','money'],['thHealth','health']].forEach(function(pair){
-    var el=document.getElementById(pair[0]); if(el) el.addEventListener('click', function(){ setTheme(pair[1]); }); }); })();
+    var el=document.getElementById(pair[0]); if(el) el.addEventListener('click', function(){ setTheme(pair[1]); }); });
+    var f=document.getElementById('scFull'), s=document.getElementById('scSolo');
+    if(f) f.addEventListener('click', function(){ setScope('full'); });
+    if(s) s.addEventListener('click', function(){ setScope('solo'); }); })();
 
   // ---- フォーム ----
   document.getElementById('calcForm').addEventListener('submit', function(ev){
