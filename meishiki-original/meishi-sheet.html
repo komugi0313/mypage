@@ -27,6 +27,7 @@
   .bar{ max-width:1100px; margin:0 auto 16px; background:rgba(251,247,238,.72); border:1px solid var(--rule);
     border-radius:14px; padding:14px 16px; backdrop-filter:blur(4px); }
   .bar-row{ display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px; }
+  .bar-row[hidden]{ display:none !important; }   /* 「⚙詳細設定」「⚙出力内容」は開くまで隠す（.bar-row の display:flex が [hidden] を上書きしてしまう対策） */
   .bar-row + .bar-row{ margin-top:12px; padding-top:12px; border-top:1px dashed var(--rule2); }
   .bar .grp{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .bar .glabel{ font-family:var(--mincho); font-weight:700; font-size:12.5px; letter-spacing:.1em; color:var(--ink2); }
@@ -637,7 +638,37 @@
 <div class="stage">
   <!-- ============ コントロール ============ -->
   <div class="bar">
-    <div class="bar-row">
+    <!-- 入口：まずはここだけ。生年月日を入れて「鑑定する」を押すだけで出ます。
+         こまかい設定（版・テーマ・章・装飾など）は「⚙詳細設定」の中にしまってあります。 -->
+    <div class="bar-row" id="calcRow">
+      <form class="calcbox" id="calcForm">
+        <div class="f"><label for="iName">氏名</label><input class="nm" id="iName" type="text" placeholder="お名前（任意）"></div>
+        <div class="f"><label for="iDate">生年月日</label><input class="dt" id="iDate" type="date" value="2024-01-01" min="1900-01-01" max="2100-12-31"></div>
+        <div class="f"><label for="iTime">時刻</label><input class="tm" id="iTime" type="time" value="12:00"></div>
+        <div class="f"><label for="iSex">性別</label>
+          <select id="iSex"><option value="female">女性</option><option value="male">男性</option></select>
+        </div>
+        <div class="act" style="margin-left:0"><button type="submit" class="primary">鑑定する</button></div>
+        <span class="calc-msg" id="calcMsg" role="status"></span>
+      </form>
+      <div class="act">
+        <button type="button" id="advToggle" class="ghost" aria-expanded="false">⚙ 詳細設定</button>
+        <button type="button" id="outToggle" class="ghost" aria-expanded="false">⚙ 出力内容</button>
+        <button type="button" id="printBtn">🖨 印刷 / PDF保存</button>
+        <button type="button" id="shareBtn" title="PDFにして LINE・メールで送る">📄 共有</button>
+      </div>
+    </div>
+    <div class="bar-row" id="calcRow2">
+      <div class="savebox">
+        <button type="button" id="saveBtn" title="この生年月日を保存">💾 保存</button>
+        <label for="savedList" class="glabel">保存済み</label>
+        <select id="savedList"><option value="">— 呼び出す —</option></select>
+        <button type="button" id="delBtn" title="選択中の保存を削除">削除</button>
+      </div>
+      <span class="share-hint">「📄共有」＝LINE・メールにリンク送信／「🖨」＝紙・PDF保存</span>
+    </div>
+    <!-- 詳細設定：ふだんは閉じている（「⚙詳細設定」で開閉）。使い慣れた人だけ触ればOK -->
+    <div class="bar-row adv-row" id="advRow" hidden>
       <div class="grp">
         <span class="glabel">モード</span>
         <span class="seg" role="group" aria-label="モード切替">
@@ -683,30 +714,6 @@
           <button type="button" id="scFull" aria-pressed="true">全体</button>
           <button type="button" id="scSolo" aria-pressed="false">この項目だけ</button>
         </span>
-      </div>
-      <div class="act">
-        <button type="button" id="outToggle" class="ghost" aria-expanded="false">⚙ 出力内容</button>
-        <button type="button" id="printBtn">🖨 印刷 / PDF保存</button>
-        <button type="button" id="shareBtn" title="PDFにして LINE・メールで送る">📄 共有</button>
-        <span class="share-hint">「📄共有」＝LINE・メールにリンク送信／「🖨」＝紙・PDF保存</span>
-      </div>
-    </div>
-    <div class="bar-row" id="calcRow">
-      <form class="calcbox" id="calcForm">
-        <div class="f"><label for="iName">氏名</label><input class="nm" id="iName" type="text" placeholder="お名前（任意）"></div>
-        <div class="f"><label for="iDate">生年月日</label><input class="dt" id="iDate" type="date" value="2024-01-01" min="1900-01-01" max="2100-12-31"></div>
-        <div class="f"><label for="iTime">時刻</label><input class="tm" id="iTime" type="time" value="12:00"></div>
-        <div class="f"><label for="iSex">性別</label>
-          <select id="iSex"><option value="female">女性</option><option value="male">男性</option></select>
-        </div>
-        <div class="act" style="margin-left:0"><button type="submit" class="primary">鑑定する</button></div>
-        <span class="calc-msg" id="calcMsg" role="status"></span>
-      </form>
-      <div class="savebox">
-        <button type="button" id="saveBtn" title="この生年月日を保存">💾 保存</button>
-        <label for="savedList" class="glabel">保存済み</label>
-        <select id="savedList"><option value="">— 呼び出す —</option></select>
-        <button type="button" id="delBtn" title="選択中の保存を削除">削除</button>
       </div>
     </div>
     <div class="bar-row out-row" id="outRow" hidden>
@@ -2824,6 +2831,8 @@ window.KANSHI60_DETAIL={
   (function(){
     var ot=document.getElementById('outToggle'), row=document.getElementById('outRow');
     if(ot&&row) ot.addEventListener('click', function(){ var open=row.hasAttribute('hidden'); if(open){row.removeAttribute('hidden');} else {row.setAttribute('hidden','');} ot.setAttribute('aria-expanded', String(open)); });
+    var at=document.getElementById('advToggle'), arow=document.getElementById('advRow');
+    if(at&&arow) at.addEventListener('click', function(){ var open=arow.hasAttribute('hidden'); if(open){arow.removeAttribute('hidden');} else {arow.setAttribute('hidden','');} at.setAttribute('aria-expanded', String(open)); });
     function setVer(v){ _printVer=v;
       [['ovPro','pro'],['ovEasy','easy'],['ovBoth','both']].forEach(function(p){ var el=document.getElementById(p[0]); if(el) el.setAttribute('aria-pressed', String(v===p[1])); });
       // プレビューも合わせる（両方はプレビュー据え置き）
