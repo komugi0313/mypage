@@ -601,7 +601,7 @@
         <button type="button" id="outToggle" class="ghost" aria-expanded="false">⚙ 出力内容</button>
         <button type="button" id="printBtn">🖨 印刷 / PDF保存</button>
         <button type="button" id="shareBtn" title="PDFにして LINE・メールで送る">📄 共有</button>
-        <span class="share-hint">スマホは「📄共有」→PDF保存→LINE・メールで送れます</span>
+        <span class="share-hint">「📄共有」＝LINE・メールにリンク送信／「🖨」＝紙・PDF保存</span>
       </div>
     </div>
     <div class="bar-row" id="calcRow">
@@ -2534,16 +2534,33 @@ window.KANSHI60_DETAIL={
     return true;
   }
   document.getElementById('printBtn').addEventListener('click', runOutput);
-  // 📄 共有：印刷/PDFの流れを起動（スマホは共有シート→LINE・メール）。初回だけ送り方のヒント。
+  // 現在の入力から、鑑定を再現できる共有リンクを作る
+  function buildShareURL(){
+    try{
+      var g=function(id){var e=document.getElementById(id);return e?(e.value||''):'';};
+      var d=g('iDate'), t=g('iTime'), sx=g('iSex')||'female', nm=g('iName');
+      var base=(location.protocol==='file:')? location.href.split('?')[0] : (location.origin+location.pathname);
+      var q='?d='+encodeURIComponent(d)+'&t='+encodeURIComponent(t)+'&sex='+encodeURIComponent(sx)+(nm?'&name='+encodeURIComponent(nm):'');
+      return (d? base+q : (location.href.split('#')[0]));
+    }catch(e){ return location.href; }
+  }
+  // 📄 共有：スマホは共有シート（LINE・メール等）にリンクを渡す。非対応はコピー。
   (function(){
     var sb=document.getElementById('shareBtn'); if(!sb) return;
     sb.addEventListener('click', function(){
-      var seen=false; try{ seen=localStorage.getItem('ms_share_hint')==='1'; }catch(e){}
-      if(!seen){
-        try{ localStorage.setItem('ms_share_hint','1'); }catch(e){}
-        alert('この後ひらく画面で、送信先を「PDFに保存」にすると鑑定書がPDFになります。\nスマホは共有アイコンから、そのまま LINE・メール で送れます。');
+      var url=buildShareURL();
+      var nm=(function(){var e=document.getElementById('iName');return e&&e.value?e.value:'';})();
+      var title='四柱推命 鑑定書', text=(nm?nm+'さんの':'')+'鑑定書です。リンクを開くと表示されます。';
+      if(navigator.share){
+        navigator.share({title:title, text:text, url:url}).catch(function(){});
+        return;
       }
-      runOutput();
+      // 共有APIが無い端末（多くのPC等）：リンクをコピー
+      var done=function(){ alert('共有リンクをコピーしました。\nLINE・メールに貼り付けて送れます。\n（PDFで渡したい場合は「🖨 印刷 / PDF保存」から）'); };
+      try{
+        if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(url).then(done, function(){ window.prompt('このリンクをコピーしてLINE等に貼り付けてください：', url); }); }
+        else { window.prompt('このリンクをコピーしてLINE等に貼り付けてください：', url); }
+      }catch(e){ window.prompt('このリンクをコピーしてLINE等に貼り付けてください：', url); }
     });
   })();
   window.addEventListener('afterprint', function(){ document.body.classList.remove('pm-cover','pm-nomeishiki','pm-vpro','pm-veasy'); });

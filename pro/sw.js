@@ -3,7 +3,7 @@
    鑑定・60干支の教科書を使えるようにする。
    オンライン鑑定（生成AI）だけは通信が要るが、圏外時は端末内の
    オフライン鑑定に自動で切り替わる。 */
-const CACHE = 'shichu-jidou-v41';  /* app-proナビの枠はみ出し修正・恋愛の♥削除 */
+const CACHE = 'shichu-jidou-v42';  /* 鑑定書: 共有をnavigator.share(LINE等)に。ヒント更新 */
 
 /* 初回訪問時に先読みしてキャッシュするページ一式（このブランドのみ） */
 const ASSETS = [
