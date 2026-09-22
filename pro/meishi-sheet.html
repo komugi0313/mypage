@@ -417,6 +417,8 @@
         <span class="seg" role="group" aria-label="鑑定書テーマ切替">
           <button type="button" id="thGeneral" aria-pressed="true">総合</button>
           <button type="button" id="thLove" aria-pressed="false">恋愛重視</button>
+          <button type="button" id="thWork" aria-pressed="false">仕事重視</button>
+          <button type="button" id="thMoney" aria-pressed="false">金運重視</button>
         </span>
       </div>
       <div class="act">
@@ -1081,7 +1083,7 @@ window.MEISHIKI=(function(){
     var terrDay=day.junishi||'';
     var spouse=day.shi||'';
     var sex=opts.sex==='male'?'male':'female';
-    var theme=(opts.theme==='love')?'love':'general';
+    var theme=({love:'love',work:'work',money:'money'})[opts.theme]||'general';
     var byYear=r.annualByYear||{};
     var nowYear=(r.nowYear!=null?r.nowYear:(r.birthYear!=null?r.birthYear+(r.nowAge||0):null));
     var fe=r.gogyoCount||{};
@@ -1108,6 +1110,8 @@ window.MEISHIKI=(function(){
 
     var H='';
     if(theme==='love'){ H+='<div class="rd-lead">この鑑定書は<b>恋愛・ご縁を中心</b>に読み解いています。出逢いの時期は「４．恋愛・結婚」に、日々の相性は「６．対人相性」にまとめています。</div>'; }
+    else if(theme==='work'){ H+='<div class="rd-lead">この鑑定書は<b>仕事・キャリアを中心</b>に読み解いています。伸びる時期・進め方は「３．才能と活かし方」に、人との組み方は「６．対人相性」にまとめています。</div>'; }
+    else if(theme==='money'){ H+='<div class="rd-lead">この鑑定書は<b>金運・財を中心</b>に読み解いています。お金が動く時期・増やし方は「５．金運」に、稼ぐ力は「３．才能と活かし方」にまとめています。</div>'; }
     // 1. 本質
     (function(){
       var b='';
@@ -1132,7 +1136,22 @@ window.MEISHIKI=(function(){
       b+=para('通変星（性格や才能を表す星）の集計から、あなたに強く出るのは<b>'+starList.map(function(s){return s+(tcount[s]?'（'+tcount[s]+'）':'');}).join('・')+'</b>。<span class="rd-gloss">かっこ内の数字は、その星が命式に出ている回数です。</span>これらの星の力を仕事や活動に乗せると、持ち味がまっすぐ発揮されます。');
       if(taika.length){ b+=para('特に<b>'+taika.map(function(s){return s+'（'+tcount[s]+'つ＝太過（たいか＝多すぎて強く出る状態））';}).join('・')+'</b>は非常に強く出ます。'+taika.map(function(s){return TSU[s]?TSU[s].t:'';}).filter(Boolean).join('／')+'が際立つ反面、'+taika.map(function(s){return TSU[s]?TSU[s].c:'';}).filter(Boolean).join('／')+'。強みとして活かしつつ、出すぎに気をつけると安定します。'); }
       b+=para('向いやすい方向は<b>'+jobs.filter(function(v,i,a){return a.indexOf(v)===i;}).join('／')+'</b>など。'+((maxList.length===1&&maxEl)?'五行では<b>'+maxEl+'</b>が強く、その分野の適性も後押しになります。':'')+'（固定の職業名より、この持ち味が活きる働き方を選ぶのがコツです）');
-      H+=sec('３．才能と活かし方・向いやすい仕事', b);
+      // 仕事重視テーマ：飛躍の年・進め方・注意期を年運から
+      if(theme==='work' && nowYear!=null){
+        var WGOOD={'正官':'昇進・信用','偏官':'抜擢・責任','印綬':'学び・引き立て','偏印':'専門・転換','正財':'成果が実る','偏財':'人脈が広がる'};
+        var wUp=[], wCau=[];
+        for(var wy=nowYear; wy<=nowYear+9; wy++){ var wa=byYear[wy]; if(!wa) continue;
+          if(WGOOD[wa.tsuhen]) wUp.push({y:wy, why:wa.tsuhen+'＝'+WGOOD[wa.tsuhen]});
+          if(wa.tsuhen==='傷官'||(spouse&&CHONG[spouse]&&wa.branch===CHONG[spouse])) wCau.push(wy);
+        }
+        if(wUp.length){ b+=para('<b>◆ 評価・飛躍の年</b>：'+wUp.slice(0,5).map(function(m){return '<b>'+m.y+'年</b>（'+m.why+'）';}).join('、')+'。地位・責任・学びの星が巡る年で、<b>役割が上がる・実力が形になる</b>時期です。'); }
+        else { b+=para('<b>◆ 飛躍の年</b>：向こう10年で地位・評価の星が強く巡る年は目立ちません。派手な追い風より、<b>実力と信用をコツコツ積む</b>ほど後半に大きく返ってくるタイプです。'); }
+        if(curDu){ b+=para('<b>◆ この10年の方向</b>：今の大運は'+curDu.tsuhen+'の巡り。'+(DUTSU[curDu.tsuhen]||'この巡りを土台に働き方を組み立てるとよい時期です。')); }
+        var wappr=(tcount['正官']||tcount['偏官'])?'責任ある役割・組織の中核を任されるほど伸びます。<b>筋を通し信用を積む</b>のが最大の武器。':((tcount['食神']||tcount['傷官'])?'表現・専門・技術で抜きん出るタイプ。<b>得意を尖らせ、独立や専門職</b>で力を発揮します。':((tcount['正財']||tcount['偏財'])?'現場で人やお金を動かす実務・商いに強み。<b>成果を数字で示す</b>ほど評価されます。':((tcount['印綬']||tcount['偏印'])?'学び・資格・知識が武器。<b>専門性を深め、教える・支える</b>役割で信頼を得ます。':'仲間と組む・独立するなど<b>自分の裁量で動ける環境</b>ほど力が出ます。')));
+        b+=para('<b>◆ 進め方</b>：'+wappr);
+        if(wCau.length){ b+=para('<b>◆ 注意の年</b>：<b>'+wCau.slice(0,4).map(function(y){return y+'年';}).join('、')+'</b>は傷官や冲が絡み、上司との衝突・勇み足の転職でつまずきやすい年。<b>大きな決断は一呼吸おく</b>と安全です。'); }
+      }
+      H+=sec((theme==='work'?'３．才能と活かし方・仕事の伸びる時期':'３．才能と活かし方・向いやすい仕事'), b);
     })();
     // 五行の相生・相剋マップ（対人相性・配偶宮の関係に使用）
     var GEN_EL={木:'火',火:'土',土:'金',金:'水',水:'木'};   // x が GEN_EL[x] を生む
@@ -1203,7 +1222,21 @@ window.MEISHIKI=(function(){
       if(spc>0&&zc>0){ b+=para('さらに<b>食神・傷官（表現や才能の星）が財を生む形</b>があり、<b>好きなこと・得意を収入に変える力</b>が強い配置。趣味や特技をお金に育てるのが最短ルートです。'); }
       if(hkc>=2){ b+=para('一方で<b>比肩・劫財が多め</b>。仲間づきあいや勝負ごとでお金が出やすい"散財の芽"もあるので、大きな支出は一呼吸おき、共同のお金は取り決めを明確にすると安心です。'); }
       if(curDu&&(curDu.tsuhen==='正財'||curDu.tsuhen==='偏財')){ b+=para('今の大運は財星「'+curDu.tsuhen+'」の巡り。<b>この10年はお金が動きやすい時期</b>——収入源を育て、良い流れを貯えに変えていきましょう。'); }
-      H+=sec('５．金運（お金との付き合い方）', b);
+      // 金運重視テーマ：お金が動く年・増やし方・注意期を年運から
+      if(theme==='money' && nowYear!=null){
+        var MGOOD={'正財':'堅実な収入・貯え','偏財':'臨時収入・チャンス','食神':'稼ぐ力が実る','傷官':'才能が収入に'};
+        var mUp=[], mCau=[];
+        for(var my=nowYear; my<=nowYear+9; my++){ var ma=byYear[my]; if(!ma) continue;
+          if(MGOOD[ma.tsuhen]) mUp.push({y:my, why:ma.tsuhen+'＝'+MGOOD[ma.tsuhen]});
+          if(ma.tsuhen==='劫財'||ma.tsuhen==='比肩') mCau.push(my);
+        }
+        if(mUp.length){ b+=para('<b>◆ お金が動く年</b>：'+mUp.slice(0,5).map(function(m){return '<b>'+m.y+'年</b>（'+m.why+'）';}).join('、')+'。財星や食傷（稼ぐ力の星）が巡る年で、<b>収入増・臨時収入・商機</b>が生まれやすい時期です。良い流れは使い切らず貯えに回すのがコツ。'); }
+        else { b+=para('<b>◆ お金が動く年</b>：向こう10年で財の星が強く巡る年は目立ちません。大きな増減は少なめなので、<b>固定費を締め、コツコツ積み立てる</b>のが着実に効きます。'); }
+        var mappr=(sc>hc?'<b>堅実運用（貯金・積立・不動産）</b>が向きます。ハイリスクより時間を味方につける複利型が吉。':(hc>sc?'<b>攻めの運用（副業・商い・人脈投資）</b>に縁。ただし利益は一部を必ず確保し、拡大しすぎないこと。':'守りと攻めを併用でき、<b>生活防衛資金を確保しつつ一部で挑戦</b>する形が最適です。'))+((spc>0&&zc>0)?'とくに<b>得意・好きを収入源に育てる</b>と財が太くなります。':'');
+        b+=para('<b>◆ 増やし方</b>：'+mappr);
+        if(mCau.length){ b+=para('<b>◆ 注意の年</b>：<b>'+mCau.slice(0,4).map(function(y){return y+'年';}).join('、')+'</b>は比肩・劫財（お金が出ていきやすい星）が巡る年。<b>貸し借り・衝動買い・共同出資</b>でお金が減りやすいので、大きな支出は先送りが安全です。'); }
+      }
+      H+=sec((theme==='money'?'５．金運（お金が動く時期と増やし方）':'５．金運（お金との付き合い方）'), b);
     })();
     // 6. 対人相性
     (function(){
@@ -1636,19 +1669,17 @@ window.MEISHIKI=(function(){
       if(mount && window.buildReadingHTML && _lastResult){
         mount.innerHTML = window.buildReadingHTML(_lastResult, {sex:(_lastResult.sex||'female'), theme:_readTheme});
       }
-      var sub=document.getElementById('rdSub'); if(sub) sub.textContent=(_readTheme==='love')?'― 恋愛を中心に読み解く':'― 命式からの読み解き';
+      var sub=document.getElementById('rdSub'); if(sub) sub.textContent=({love:'― 恋愛を中心に読み解く',work:'― 仕事・キャリアを中心に読み解く',money:'― 金運・財を中心に読み解く'})[_readTheme]||'― 命式からの読み解き';
     }catch(e){ console.error('reading build failed', e); }
   }
   function setTheme(t){
-    _readTheme = (t==='love')?'love':'general';
-    var g=document.getElementById('thGeneral'), l=document.getElementById('thLove');
-    if(g) g.setAttribute('aria-pressed', String(_readTheme==='general'));
-    if(l) l.setAttribute('aria-pressed', String(_readTheme==='love'));
+    _readTheme = ({love:'love',work:'work',money:'money'})[t]||'general';
+    var map={general:'thGeneral',love:'thLove',work:'thWork',money:'thMoney'};
+    Object.keys(map).forEach(function(k){ var el=document.getElementById(map[k]); if(el) el.setAttribute('aria-pressed', String(_readTheme===k)); });
     renderReading();
   }
-  (function(){ var g=document.getElementById('thGeneral'), l=document.getElementById('thLove');
-    if(g) g.addEventListener('click', function(){ setTheme('general'); });
-    if(l) l.addEventListener('click', function(){ setTheme('love'); }); })();
+  (function(){ [['thGeneral','general'],['thLove','love'],['thWork','work'],['thMoney','money']].forEach(function(pair){
+    var el=document.getElementById(pair[0]); if(el) el.addEventListener('click', function(){ setTheme(pair[1]); }); }); })();
 
   // ---- フォーム ----
   document.getElementById('calcForm').addEventListener('submit', function(ev){
