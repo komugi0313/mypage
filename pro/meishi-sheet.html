@@ -404,12 +404,19 @@
   .ez-grid > div{ margin:0 0 6px; } .ez-grid > div:last-child{ margin:0; }
   .ez-grid b{ color:var(--el-sui); }
   .ez-ul{ margin:0; padding-left:1.2em; font-size:12.5px; line-height:1.75; }
-  /* やさしい版「命式の読み解き」＝要素ごとの入れ子リスト */
+  /* やさしい版・本格版共通「命式の読み解き」＝要素ごとの入れ子リスト。長いので“項目の途中では切らず、項目の境目で改ページ”する */
   .ez-yomi{ padding-left:1.1em; }
-  .ez-yomi > li{ margin:0 0 9px; line-height:1.72; }
+  .ez-yomi > li{ margin:0 0 9px; line-height:1.72; break-inside:auto; -webkit-column-break-inside:auto; }
   .ez-yomi > li:last-child{ margin-bottom:0; }
+  .ez-yhead{ margin:0 0 2px; break-after:avoid; -webkit-column-break-after:avoid; page-break-after:avoid; }
   .ez-ul2{ list-style:none; margin:3px 0 0; padding-left:0.1em; }
-  .ez-ul2 > li{ margin:2px 0; line-height:1.7; font-size:12px; }
+  .ez-ul2 > li{ margin:2px 0; line-height:1.7; font-size:12px; break-inside:avoid; -webkit-column-break-inside:avoid; page-break-inside:avoid; }
+  /* 読み解きカードは1枚に収めず、ページをまたいで流す（見切れ防止） */
+  .ez-card.ez-flow{ break-inside:auto; -webkit-column-break-inside:auto; page-break-inside:auto; }
+  /* 本格版は3段組みのまま、読み解きだけ段・ページをまたいで流す（全幅にはしない＝空白防止） */
+  .rd-sec.rd-flow{ break-inside:auto; -webkit-column-break-inside:auto; page-break-inside:auto; }
+  .rd-sec.rd-flow .ez-yomi{ padding-left:1.05em; }
+  .rd-sec.rd-flow .ez-yhead{ font-size:12.5px; }
   body.mobile-view .ez-yomi > li{ font-size:15px; line-height:1.8; }
   body.mobile-view .ez-ul2 > li{ font-size:14px; line-height:1.75; }
   .head{ margin:0 0 3px; } .crest{ height:22px; margin-bottom:1px; }
@@ -505,7 +512,9 @@
     .ez-pentwrap{ gap:2mm; } .ez-pent{ width:30mm; height:28mm; } .ez-plg{ font-size:8px; gap:1mm; } .ez-plg i{ width:2mm; height:2mm; }
     .ez-pent circle, .ez-pent polygon, .ez-pent text{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .ez-grid{ font-size:9.2px; gap:1mm 3mm; } .ez-ul{ font-size:9.4px; line-height:1.5; }
-    .ez-yomi > li{ font-size:9px; line-height:1.5; margin:0 0 1.4mm; } .ez-ul2 > li{ font-size:8.6px; line-height:1.45; }
+    .ez-yomi > li{ font-size:9px; line-height:1.5; margin:0 0 1.4mm; break-inside:auto; page-break-inside:auto; } .ez-ul2 > li{ font-size:8.6px; line-height:1.45; break-inside:avoid; page-break-inside:avoid; }
+    .ez-yhead{ page-break-after:avoid; break-after:avoid; }
+    .ez-card.ez-flow, .rd-sec.rd-flow{ break-inside:auto; page-break-inside:auto; -webkit-column-break-inside:auto; }
     .rd-note{ font-size:8.4px; margin-top:1.6mm; padding-top:1.2mm; }
     .sheet::before{ inset:3mm; } .sheet::after{ inset:5mm; }
     .corner{ width:16mm; height:16mm; top:5mm; left:5mm; }
@@ -2074,7 +2083,7 @@ window.KANSHI60_DETAIL={
     // ◎ 命式の読み解き（要素ごと）＝やさしい版と同じ、命式を項目別に噛みくだいた箇条書き（章「10」で選択可）
     if(scope==='full' && inOnly(10)){
       var _yomi=ezYomitoki(r);
-      if(_yomi) H+=sec('◎ 命式の読み解き（要素ごと）', '<p class="rd-p">命式に表れる一つひとつの要素を、専門用語をかみくだいて箇条書きにしました。まず全体像をつかむ入口としてお読みください。</p>'+_yomi);
+      if(_yomi) H+='<section class="rd-sec rd-flow"><h3 class="rd-h">◎ 命式の読み解き（要素ごと）</h3><p class="rd-p">命式に表れる一つひとつの要素を、専門用語をかみくだいて箇条書きにしました。まず全体像をつかむ入口としてお読みください。</p>'+_yomi+'</section>';
     }
     // 1. 本質
     (function(){
@@ -2417,7 +2426,7 @@ window.KANSHI60_DETAIL={
     var SEASON={寅:'春',卯:'春',辰:'春',巳:'夏',午:'夏',未:'夏',申:'秋',酉:'秋',戌:'秋',亥:'冬',子:'冬',丑:'冬'};
     var genmei=mon.zokanTsuhen||'';
     var out=[];
-    function box(head, inner){ return '<li><b>'+head+'</b><ul class="ez-ul2">'+inner+'</ul></li>'; }
+    function box(head, inner){ return '<li><p class="ez-yhead"><b>'+head+'</b></p><ul class="ez-ul2">'+inner+'</ul></li>'; }
 
     // 1) 芯＝日主
     out.push(box('あなたの芯＝日主「'+dm+'（'+(STEM_YOMI[dm]||'')+'／'+dmEl+'の'+(yy==='陽'?'陽':'陰')+'）」',
@@ -2602,7 +2611,7 @@ window.KANSHI60_DETAIL={
     else { konna='<p class="ez-p">'+(NATURE[dm]||'')+'</p>'; }
     H+=ezCard('🌱 こんな人です（生まれ日で読むあなた）', konna);
     // 命式の読み解き（要素ごとに、やさしい言葉で箇条書き）＝full版のみ
-    if(!ezSolo){ var yomi=ezYomitoki(r); if(yomi) H+=ezCard('🔎 あなたの命式からわかること', yomi+'<p class="ez-note2">これは生年月日時から出た「生まれ持った傾向」です。良し悪しを決めるものではなく、知って上手に活かすためのもの。行動しだいで運は育ちます。</p>', 'wide'); }
+    if(!ezSolo){ var yomi=ezYomitoki(r); if(yomi) H+=ezCard('🔎 あなたの命式からわかること', yomi+'<p class="ez-note2">これは生年月日時から出た「生まれ持った傾向」です。良し悪しを決めるものではなく、知って上手に活かすためのもの。行動しだいで運は育ちます。</p>', 'wide ez-flow'); }
     // 性格・仕事の軸（月支元命）を厚く
     if(ezShow('axis') && genmei&&MEIGEN[genmei]){ H+=ezCard('🧭 あなたの軸（性格と仕事の中心）', '<p class="ez-p"><b>性格：</b>'+MEIGEN[genmei].sei+'</p><p class="ez-p"><b>仕事：</b>'+MEIGEN[genmei].shi+'</p><p class="ez-note2">これは生まれ月から出る"あなたの主役の持ち味"で、社会で見せる顔にもなります。</p>'); }
     if(ezShow('mochi')) H+=ezCard('⭐ あなたの持ち味バランス', '<div class="ez-meter">'+ezMeter(cat)+'</div><p class="ez-note2">いちばんの持ち味は<b>'+(EZGOOD[topCat]||'')+'</b>。ほかは弱点ではなく<b>"伸びしろ"</b>——意識して使うほど育ちます。これは生まれ持った傾向で、経験や環境で変えていけます（運勢は動きます）。</p>');
