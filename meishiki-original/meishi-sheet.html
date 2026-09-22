@@ -107,6 +107,17 @@
   .kubo-chip #sidaiChip{ color:var(--now); }
   #nayinWrap .nn-item{ margin-right:7px; white-space:nowrap; font-weight:600; }
   #nayinWrap .nn-item b{ color:var(--ink2); font-weight:700; margin-right:1px; }
+  /* 人生の時期マップ（横帯・今ここ▲） */
+  .ls-map{ position:relative; margin:8px 0 22px; }
+  .ls-bar{ display:flex; border-radius:8px; overflow:hidden; border:1px solid #dcd6cc; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .ls-seg{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:5px 2px; border-right:2px solid #fff; min-width:0; }
+  .ls-seg:last-child{ border-right:none; }
+  .ls-seg .ls-emoji{ font-size:13px; line-height:1; }
+  .ls-seg .ls-nm{ font-size:11px; font-weight:800; color:#3a3a3a; line-height:1; }
+  .ls-seg .ls-age{ font-size:8.5px; color:#6a6a6a; white-space:nowrap; }
+  .ls-seg.ls-cur{ box-shadow:inset 0 0 0 2px #c0392b; }
+  .ls-now{ position:absolute; bottom:-2px; transform:translateX(-50%); font-size:10px; font-weight:800; color:#c0392b; white-space:nowrap; }
+  .rd-mini{ display:inline; font-size:10.5px; color:var(--ink2); }
   .ori-toggle.seg{ margin-left:auto; }
   .ori-toggle.seg button{ padding:3px 12px; font-size:11.5px; }
   #meishikiMount{ height:100%; }
@@ -1709,6 +1720,48 @@ window.KANSHI60_DETAIL={
   function sec(title, body){ return '<section class="rd-sec"><h3 class="rd-h">'+title+'</h3>'+body+'</section>'; }
   function para(t){ return '<p class="rd-p">'+t+'</p>'; }
 
+  // ===== 人生の四季（大運の方合季節）＝占いを知らない人向けの長期運表現。大運データから生成（エンジン無改変） =====
+  var SEASON_INFO={
+    春:{emoji:'🌱',ch:'春',name:'準備の春',mean:'学び・準備・種まき',bg:'#e7f4ea',bar:'#4f9d69'},
+    夏:{emoji:'☀️',ch:'夏',name:'活動の夏',mean:'活動・挑戦・広げる',bg:'#fdeceb',bar:'#dd6f66'},
+    秋:{emoji:'🍂',ch:'秋',name:'実りの秋',mean:'実り・形にする・確立',bg:'#fbf1d6',bar:'#c6952e'},
+    冬:{emoji:'❄️',ch:'冬',name:'充電の冬',mean:'充電・見直し・力をためる',bg:'#e9f0f8',bar:'#4a72a8'}
+  };
+  var SEAS_BR={寅:'春',卯:'春',辰:'春',巳:'夏',午:'夏',未:'夏',申:'秋',酉:'秋',戌:'秋',亥:'冬',子:'冬',丑:'冬'};
+  function lifeSeasons(r){
+    var du=(r.daiun||[]).filter(function(d){return d&&d.kanshi;}); if(!du.length) return null;
+    var runs=[], prev=null;
+    du.forEach(function(d){ var se=SEAS_BR[(d.kanshi.length>1?d.kanshi.charAt(1):'')]||'';
+      if(prev&&prev.se===se){ prev.to=d.ageTo; } else { prev={se:se,from:d.ageFrom,to:d.ageTo}; runs.push(prev); } });
+    var nowAge=r.nowAge, curIdx=-1;
+    for(var i=0;i<runs.length;i++){ if(nowAge!=null&&nowAge>=runs[i].from&&nowAge<runs[i].to){curIdx=i;break;} }
+    return {runs:runs, curIdx:curIdx, nowAge:nowAge, start:runs[0].from, end:runs[runs.length-1].to};
+  }
+  // 横帯の「人生の時期マップ」（今ここ▲つき）。文章より一目でわかる。
+  function lifeTimeline(ls){
+    if(!ls) return '';
+    var span=(ls.end-ls.start)||1;
+    var segs=ls.runs.map(function(rn,i){ var inf=SEASON_INFO[rn.se]||{};
+      return '<div class="ls-seg'+(i===ls.curIdx?' ls-cur':'')+'" style="flex:'+(rn.to-rn.from)+' 1 0;background:'+(inf.bg||'#eee')+';">'
+        +'<span class="ls-emoji">'+(inf.emoji||'')+'</span><span class="ls-nm">'+(inf.ch||rn.se)+'</span><span class="ls-age">'+rn.from+'〜'+rn.to+'</span></div>'; }).join('');
+    var nowPct=(ls.nowAge!=null)?Math.min(100,Math.max(0,(ls.nowAge-ls.start)/span*100)):null;
+    var mark=(nowPct!=null)?'<div class="ls-now" style="left:'+nowPct.toFixed(1)+'%">▲今 '+ls.nowAge+'歳</div>':'';
+    return '<div class="ls-map"><div class="ls-bar">'+segs+'</div>'+mark+'</div>';
+  }
+  // 人生の四季の説明文（easy=true でさらにやさしく）
+  function lifeText(ls, easy){
+    if(!ls) return '';
+    var cur=(ls.curIdx>=0)?ls.runs[ls.curIdx]:null, nxt=(ls.curIdx>=0&&ls.curIdx+1<ls.runs.length)?ls.runs[ls.curIdx+1]:null;
+    var ci=cur?SEASON_INFO[cur.se]:null, ni=nxt?SEASON_INFO[nxt.se]:null;
+    var s='人生を大きな四季（🌱準備の春→☀️活動の夏→🍂実りの秋→❄️充電の冬）で見ると、';
+    if(ci) s+='あなたは今<b>「'+ci.name+'」</b>——'+ci.mean+'の時期です。';
+    else s+='いくつもの季節を巡っていきます。';
+    if(nxt&&ni) s+='つぎの<b>人生の曲がり角は'+nxt.from+'歳ごろ</b>。そこから<b>「'+ni.name+'」</b>（'+ni.mean+'）に入り、生き方のテーマが切り替わります。';
+    else if(cur) s+='この季節がこの先しばらく続きます。';
+    if(!easy) s+='<span class="rd-mini">（四柱推命では、10年ごとの運＝大運を、季節のまとまり＝方合で束ねた"人生の節目"を節木運（せつぼくうん）と呼びます。）</span>';
+    return s;
+  }
+
   window.buildReadingHTML=function(r, opts){
     opts=opts||{};
     var P=r.pillars||{}, day=P.day||{}, mon=P.month||{}, yr=P.year||{}, hour=P.hour||{};
@@ -1787,24 +1840,14 @@ window.KANSHI60_DETAIL={
         if(ganGoHas) s+='さらに日干「'+ruby(dm)+'」は命式内の「'+ruby(gp)+'」と<b>干合（＝強い縁で結ばれ、時に"縛られる"配置）</b>。一つの人・役割に気を取られやすいので、<b>手放す・任せる・断る</b>が開運の鍵です。';
         b+=para('<b>【強み・注意】</b>'+s);
       }
-      // 3) 運の大きな流れ（大運の季節＝方合／節木運）
-      var du=(r.daiun||[]).filter(function(d){return d&&d.kanshi;});
-      if(du.length){
-        var runs=[], prev=null;
-        du.forEach(function(d){ var se=SEAS[(d.kanshi.length>1?d.kanshi.charAt(1):'')]||'';
-          if(prev&&prev.se===se){ prev.to=d.ageTo; } else { prev={se:se,from:d.ageFrom,to:d.ageTo}; runs.push(prev); } });
-        var parts=runs.map(function(rn){ var el=SEASEL[rn.se]||'', f=fav(el);
-          return rn.from+'〜'+rn.to+'歳＝'+rn.se+'('+el+')'+(f>0?'◎追い風':(f<0?'△踏ん張り':'')); });
-        b+=para('<b>【運の大きな流れ】</b>大運は'+(r.direction||'')+'で、'+parts.join('／')+'。'+(shugoEls.length?'喜神は「'+shugoEls.join('・')+'」なので、その季節の大運ほど底流の追い風になります。':''));
-        var setsu=runs.slice(1).map(function(rn){return rn.from;});
-        if(setsu.length){ var near=setsu.filter(function(a){return nowAge==null||a>=nowAge;})[0];
-          b+=para('人生の節目（季節の変わり目＝節木運）は<b>'+setsu.map(function(a){return a+'歳';}).join('・')+'</b>。'+(near!=null?'次の踏ん張りどきは<b>'+near+'歳前後</b>で、越えると次の季節（'+((runs.filter(function(rn){return rn.from===near;})[0]||{}).se||'')+'）の巡りに入ります。':'')); }
-      }
-      // 4) 今このタイミング
+      // 3) 運の大きな流れ（人生の四季＋時期マップ）
+      var ls=lifeSeasons(r);
+      if(ls){ b+=para('<b>【運の大きな流れ（人生の四季）】</b>'+lifeText(ls,false)); b+=lifeTimeline(ls); }
+      // 4) 今このタイミング（今の10年＝大運）
       var curFav=0;
       if(curDu){ var cel=brEl(curDu.kanshi); curFav=fav(cel);
-        var jud=(curFav>0?'喜神の五行が巡る<b>追い風</b>の時期':(curFav<0?'忌神が重なりやすい<b>要注意・仕込み</b>の時期':'穏やかな時期'));
-        b+=para('<b>【今このタイミング'+(nowAge!=null?'（'+nowAge+'歳）':'')+'】</b>今めぐるのは'+curDu.ageFrom+'〜'+curDu.ageTo+'歳の大運「'+ruby(curDu.kanshi)+'」（星は'+curDu.tsuhen+'）。五行では'+(cel||'—')+'＝'+jud+'。'+(curFav<0?'無理に広げず、土台を整える"仕込み"に徹するのが吉。':(curFav>0?'動いて仕上げる・受け取るのに向く時期です。':'流れに沿って着実に進めるとよい時期です。')));
+        var jud=(curFav>0?'あなたの得意な流れが来て<b>調子が出やすい時期</b>です':(curFav<0?'少し力を蓄える<b>整えどき</b>です':'落ち着いて進める時期です'));
+        b+=para('<b>【今の10年'+(nowAge!=null?'（'+nowAge+'歳）':'')+'】</b>今は<b>'+curDu.ageFrom+'〜'+curDu.ageTo+'歳の10年</b>のなか。テーマの星は「'+curDu.tsuhen+'」で、'+jud+'。'+(curFav<0?'無理に広げず、土台を整えて次にそなえるのが吉。':(curFav>0?'やりたいことを前に進める・形にするのに向きます。':'ふだんの積み重ねが力になります。'))+'<span class="rd-mini">（10年ごとの運を四柱推命では大運（だいうん）と呼びます。）</span>');
       }
       // 5) 開運の狙い（喜神＋狙い目の年＝喜神の会局が巡る年）
       var favYears=[];
@@ -2147,27 +2190,14 @@ window.KANSHI60_DETAIL={
       var b='';
       // どんな人＋強み・クセ
       b+='<p class="ez-p"><b>あなたは「'+T.img+'」のような'+T.name+'。</b>いちばんの強みは<b>'+(EZGOOD[topCat]||'あなたらしい持ち味')+'</b>。'+((genmei&&TSU[genmei]&&TSU[genmei].c)?'気をつけるとよいのは「'+TSU[genmei].c+'」——気づけば長所に変わります。':'')+'</p>';
-      // 運の流れ（追い風／ひとやすみ）＋変わり目
-      if(du.length){
-        var runs=[], prev=null;
-        du.forEach(function(d){ var se=SEAS[(d.kanshi.length>1?d.kanshi.charAt(1):'')]||'';
-          if(prev&&prev.se===se){prev.to=d.ageTo;} else {prev={se:se,from:d.ageFrom,to:d.ageTo,el:SEASEL[se]}; runs.push(prev);} });
-        var goods=runs.filter(function(rn){return fav(rn.el)>0;}).map(function(rn){return rn.from+'〜'+rn.to+'歳ごろ';});
-        var rests=runs.filter(function(rn){return fav(rn.el)<0;}).map(function(rn){return rn.from+'〜'+rn.to+'歳ごろ';});
-        var flow='運には波があります。';
-        if(goods.length) flow+='<b>'+goods.join('・')+'</b>は<b>追い風</b>（動くほど伸びる時期）。';
-        if(rests.length) flow+='<b>'+rests.join('・')+'</b>は<b>ひとやすみ</b>（無理に広げず力をためると◎）。';
-        if(!goods.length&&!rests.length) flow+='大きな波は少なめで、<b>コツコツ積み上げるほど安定して伸びる</b>タイプです。';
-        var setsu=runs.slice(1).map(function(rn){return rn.from;});
-        var near=setsu.filter(function(a){return nowAge==null||a>=nowAge;})[0];
-        if(near!=null) flow+='つぎの変わり目は<b>'+near+'歳ごろ</b>。';
-        b+='<p class="ez-p">'+flow+'</p>';
-      }
-      // 今の時期
+      // 運の流れ（人生の四季＋時期マップ）
+      var ls=lifeSeasons(r);
+      if(ls){ b+='<p class="ez-p">'+lifeText(ls,true)+'</p>'; b+=lifeTimeline(ls); }
+      // 今の時期（今の10年）
       var curDu=du.filter(function(d){return nowAge!=null&&nowAge>=d.ageFrom&&nowAge<d.ageTo;})[0];
       if(curDu){ var cel=BREL[(curDu.kanshi.length>1?curDu.kanshi.charAt(1):'')]||''; var cf=fav(cel);
         var now=(cf>0?'いまは<b>攻めどき</b>。やりたいことを前に進めるのに向いています。':(cf<0?'いまは<b>整えどき</b>。土台を整えて、つぎの追い風にそなえる時期です。':'いまは<b>おだやかな時期</b>。ふだんの積み重ねが力になります。'));
-        b+='<p class="ez-p">'+(nowAge!=null?'今（'+nowAge+'歳）：':'')+now+'</p>';
+        b+='<p class="ez-p">'+(nowAge!=null?'今（'+nowAge+'歳）：':'')+'今の10年（'+curDu.ageFrom+'〜'+curDu.ageTo+'歳）は、'+now+'</p>';
       }
       // チャンスの年
       var favYears=[];
