@@ -104,6 +104,9 @@
   .pillars td, .pillars th, .bio td, .bio th{ vertical-align:middle; }
   .kubo-chip{ margin-left:12px; font-family:var(--gothic); font-size:11px; color:var(--ink2); font-weight:700; letter-spacing:.04em; }
   .kubo-chip #kuboChip{ color:var(--now); }
+  .kubo-chip #sidaiChip{ color:var(--now); }
+  #nayinWrap .nn-item{ margin-right:7px; white-space:nowrap; font-weight:600; }
+  #nayinWrap .nn-item b{ color:var(--ink2); font-weight:700; margin-right:1px; }
   .ori-toggle.seg{ margin-left:auto; }
   .ori-toggle.seg button{ padding:3px 12px; font-size:11.5px; }
   #meishikiMount{ height:100%; }
@@ -568,6 +571,8 @@
           <section>
             <h2 class="block-title">命式（四柱）<small>四つの柱で読む宿命</small>
               <span class="kubo-chip">空亡：<span class="ed" id="kuboChip" contenteditable="true">　</span></span>
+              <span class="kubo-chip">四大空亡：<span class="ed" id="sidaiChip" contenteditable="true">　</span></span>
+              <span class="kubo-chip">納音：<span id="nayinWrap">　</span></span>
               <span class="kubo-chip">守護神：<span id="shugoWrap">　</span></span>
               <span class="ori-toggle seg" role="group" aria-label="向き切替（縦横）">
                 <button type="button" id="oYoko" aria-pressed="true">横</button>
@@ -813,6 +818,54 @@
 })();
 </script>
 
+<!-- ==== 納音（なっちん）・四大空亡（しだいくうぼう）モジュール — エンジン非依存の表示専用（Bazi無改変） ====
+     ・納音：60干支を30組に分け、各組に固有の名称・カナ・五行を割り当てる古典表（占いラボ資料と同一）。
+     ・四大空亡：日柱の旬（＝空亡の2支）で決まる「五行の大空亡」。甲子旬/甲午旬＝水、甲寅旬/甲申旬＝金、甲辰旬/甲戌旬＝なし。 -->
+<script id="nayin-module">
+(function(){
+  // [干支A, 干支B, 名称, カナ, 五行]（30組＝60干支）
+  var NAYIN_ROWS=[
+    ['甲子','乙丑','海中金','かいちゅうきん','金'],
+    ['丙寅','丁卯','炉中火','ろちゅうか','火'],
+    ['戊辰','己巳','大林木','だいりんぼく','木'],
+    ['庚午','辛未','路傍土','ろぼうど','土'],
+    ['壬申','癸酉','剣鋒金','けんぽうきん','金'],
+    ['甲戌','乙亥','山頭火','さんとうか','火'],
+    ['丙子','丁丑','澗下水','かんかすい','水'],
+    ['戊寅','己卯','城頭土','じょうとうど','土'],
+    ['庚辰','辛巳','白鑞金','はくろうきん','金'],
+    ['壬午','癸未','楊柳木','ようりゅうぼく','木'],
+    ['甲申','乙酉','泉中水','せんちゅうすい','水'],
+    ['丙戌','丁亥','屋上土','おくじょうど','土'],
+    ['戊子','己丑','霹靂火','へきれきか','火'],
+    ['庚寅','辛卯','松柏木','しょうはくぼく','木'],
+    ['壬辰','癸巳','長流水','ちょうりゅうすい','水'],
+    ['甲午','乙未','沙中金','さちゅうきん','金'],
+    ['丙申','丁酉','山下火','さんげか','火'],
+    ['戊戌','己亥','平地木','へいちぼく','木'],
+    ['庚子','辛丑','壁上土','へきじょうど','土'],
+    ['壬寅','癸卯','金箔金','きんぱくきん','金'],
+    ['甲辰','乙巳','覆燈火','ふくとうか','火'],
+    ['丙午','丁未','天河水','てんがすい','水'],
+    ['戊申','己酉','大駅土','だいえきど','土'],
+    ['庚戌','辛亥','釵釧金','さいせんきん','金'],
+    ['壬子','癸丑','桑柘木','そうしゃくぼく','木'],
+    ['甲寅','乙卯','大渓水','だいけいすい','水'],
+    ['丙辰','丁巳','沙中土','さちゅうど','土'],
+    ['戊午','己未','天上火','てんじょうか','火'],
+    ['庚申','辛酉','石榴木','せきりゅうぼく','木'],
+    ['壬戌','癸亥','大海水','たいかいすい','水']
+  ];
+  var NAYIN={};
+  NAYIN_ROWS.forEach(function(r){ var o={name:r[2],kana:r[3],el:r[4]}; NAYIN[r[0]]=o; NAYIN[r[1]]=o; });
+  function nayinOf(ganzhi){ return NAYIN[ganzhi]||null; }
+  // 四大空亡：日柱の空亡2支（旬）で判定
+  var SIDAI={ '戌亥':'水','辰巳':'水','子丑':'金','午未':'金','寅卯':'','申酉':'' };
+  function sidaiOf(kuboPair){ if(!kuboPair) return null; var v=SIDAI[kuboPair]; return (v===undefined)?null:v; }
+  if(typeof window!=='undefined'){ window.NAYIN=NAYIN; window.nayinOf=nayinOf; window.sidaiKuboOf=sidaiOf; }
+})();
+</script>
+
 <!-- ==== 節木運（せつぼくうん）モジュール setsuboku.js v1.1 — エンジン非依存の独立モジュール（無改変） ==== -->
 <script id="setsuboku-module">
 /*!
@@ -1035,6 +1088,23 @@ window.MEISHIKI=(function(){
     });
   }
   function setKubo(v){ model.kubo=v||''; var c=document.getElementById('kuboChip'); if(c) c.textContent=(v&&v!=='')?v:'　'; }
+  var PLAB={year:'年',month:'月',day:'日',hour:'時'};
+  function setNayin(r){
+    var wrap=document.getElementById('nayinWrap'); if(!wrap) return;
+    if(!r||!r.pillars||!window.nayinOf){ wrap.textContent='　'; return; }
+    var parts=[];
+    PKEYS.forEach(function(pk){
+      var p=r.pillars[pk]||{}; var gz=(p.gan||'')+(p.shi||''); var n=window.nayinOf(gz);
+      if(n) parts.push('<span class="nn-item"><b>'+PLAB[pk]+'</b>'+n.name+'</span>');
+    });
+    wrap.innerHTML = parts.length ? parts.join('') : '　';
+  }
+  function setSidai(kuboPair){
+    var c=document.getElementById('sidaiChip'); if(!c) return;
+    var v=(window.sidaiKuboOf?window.sidaiKuboOf(kuboPair):null);
+    // 空亡が寅卯/申酉＝四大空亡なし、水/金＝該当、判定不能＝空欄（記入用）
+    c.textContent = (v===null||v===undefined) ? '　' : (v==='' ? 'なし' : v);
+  }
   function setOriBtns(){ var y=document.getElementById('oYoko'),t=document.getElementById('oTate'); if(y)y.setAttribute('aria-pressed',String(model.orient==='yoko')); if(t)t.setAttribute('aria-pressed',String(model.orient==='tate')); }
   return {
     init:function(){
@@ -1054,9 +1124,9 @@ window.MEISHIKI=(function(){
         d.juni=p.junishi||'';
         d.kichi=p.kichi||'';   // 吉凶星(神殺)を自動表示。空欄なら記入用のまま
       });
-      setKubo(r.tenchusatsu); render();
+      setKubo(r.tenchusatsu); setNayin(r); setSidai(r.tenchusatsu); render();
     },
-    clear:function(){ PKEYS.forEach(function(pk){ model.p[pk]=blank(); }); setKubo(''); render(); }
+    clear:function(){ PKEYS.forEach(function(pk){ model.p[pk]=blank(); }); setKubo(''); setNayin(null); setSidai(null); render(); }
   };
 })();
 </script>
