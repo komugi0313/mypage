@@ -128,6 +128,8 @@
   button.ghost{ background:transparent; border:1px solid var(--gold-soft); border-radius:6px; padding:3px 10px; font-family:var(--gothic); font-size:11.5px; color:var(--ink2); cursor:pointer; }
   button.ghost.sm{ padding:1px 7px; font-size:10.5px; margin-left:4px; }
   button.ghost[aria-expanded="true"]{ background:var(--gold-soft); color:#fff; }
+  .share-hint{ font-family:var(--gothic); font-size:10.5px; color:var(--faint); margin-left:8px; }
+  @media (max-width:760px){ .share-hint{ display:block; margin:4px 0 0; } }
   /* 表紙・両方出力シート（通常は非表示。印刷時にモードで表示） */
   #coverSheet, #sheetReadPro, #sheetReadEasy{ display:none; }
   .cover-sheet .cov-inner{ height:100%; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:10mm 16mm; }
@@ -564,6 +566,8 @@
       <div class="act">
         <button type="button" id="outToggle" class="ghost" aria-expanded="false">⚙ 出力内容</button>
         <button type="button" id="printBtn">🖨 印刷 / PDF保存</button>
+        <button type="button" id="shareBtn" title="PDFにして LINE・メールで送る">📄 共有</button>
+        <span class="share-hint">スマホは「📄共有」→PDF保存→LINE・メールで送れます</span>
       </div>
     </div>
     <div class="bar-row" id="calcRow">
@@ -2452,12 +2456,12 @@ window.KANSHI60_DETAIL={
   function selectedChapters(){ var a=[]; [].forEach.call(document.querySelectorAll('.chap'), function(c){ if(c.checked) a.push(Number(c.value)); }); return a; }
 
   // ---- 印刷（紙・版・章の選択を反映。専用シートに流し込み） ----
-  document.getElementById('printBtn').addEventListener('click', function(){
+  function runOutput(){
     try{
       var wantCover=_chk('outCover'), wantMei=_chk('outMeishiki'), wantRead=_chk('outReading');
       var verPro=(wantRead && (_printVer==='pro'||_printVer==='both'));
       var verEasy=(wantRead && (_printVer==='easy'||_printVer==='both'));
-      if(!wantMei && !verPro && !verEasy && !wantCover){ alert('出力する内容が選ばれていません（命式表／鑑定書／表紙のいずれかを選んでください）。'); return; }
+      if(!wantMei && !verPro && !verEasy && !wantCover){ alert('出力する内容が選ばれていません（命式表／鑑定書／表紙のいずれかを選んでください）。'); return false; }
       var sx=(_lastResult?(_lastResult.sex||'female'):'female');
       // 表紙
       if(wantCover){
@@ -2485,7 +2489,21 @@ window.KANSHI60_DETAIL={
       B.classList.toggle('pm-veasy', verEasy);
     }catch(e){}
     try{ window.print(); }catch(e){}
-  });
+    return true;
+  }
+  document.getElementById('printBtn').addEventListener('click', runOutput);
+  // 📄 共有：印刷/PDFの流れを起動（スマホは共有シート→LINE・メール）。初回だけ送り方のヒント。
+  (function(){
+    var sb=document.getElementById('shareBtn'); if(!sb) return;
+    sb.addEventListener('click', function(){
+      var seen=false; try{ seen=localStorage.getItem('ms_share_hint')==='1'; }catch(e){}
+      if(!seen){
+        try{ localStorage.setItem('ms_share_hint','1'); }catch(e){}
+        alert('この後ひらく画面で、送信先を「PDFに保存」にすると鑑定書がPDFになります。\nスマホは共有アイコンから、そのまま LINE・メール で送れます。');
+      }
+      runOutput();
+    });
+  })();
   window.addEventListener('afterprint', function(){ document.body.classList.remove('pm-cover','pm-nomeishiki','pm-vpro','pm-veasy'); });
 
   // ---- 命式セルの塗り分け・クリア ----
