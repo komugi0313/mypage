@@ -13,7 +13,7 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
-<script>try{var _p=localStorage.getItem('dc_pal')||'navy';if(_p&&_p!=='fuji')document.documentElement.setAttribute('data-pal',_p);}catch(e){document.documentElement.setAttribute('data-pal','navy');}</script>
+<script>try{if(localStorage.getItem('dc_pal_navydefault')!=='1'){localStorage.setItem('dc_pal','navy');localStorage.setItem('dc_pal_navydefault','1');}var _p=localStorage.getItem('dc_pal')||'navy';if(_p&&_p!=='fuji')document.documentElement.setAttribute('data-pal',_p);}catch(e){document.documentElement.setAttribute('data-pal','navy');}</script>
 <script>try{var _t=localStorage.getItem('dc_theme');if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');else if(_t!=='auto')document.documentElement.setAttribute('data-theme','light');}catch(e){document.documentElement.setAttribute('data-theme','light');}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -976,6 +976,15 @@ select{
 .hookshow:hover{background:var(--panel-2)}
 .sum-adv .cnt{color:#d6548f;font-weight:900;font-size:1.2em;letter-spacing:.01em}
 :root[data-theme="dark"] .sum-adv .cnt{color:#f2a0c4}
+.motemk{font-size:9px;white-space:nowrap;font-weight:800}
+.motemk .a{color:var(--accent-2)}
+.motemk .b{color:var(--warn)}
+.cell:not(.empty){cursor:pointer;transition:transform .08s ease}
+.cell:not(.empty):active{transform:scale(.95)}
+.cal-tip{text-align:center;font-size:11.5px;color:var(--accent-2);font-weight:700;margin:0 2px 8px;display:flex;align-items:center;justify-content:center;gap:8px}
+.cal-tip::before,.cal-tip::after{content:'';flex:0 0 20px;height:1px;background:var(--line-strong)}
+@keyframes tapHint{0%,100%{box-shadow:inset 0 0 0 0 transparent}50%{box-shadow:inset 0 0 0 3px var(--accent)}}
+.cell.tapme{animation:tapHint .9s ease 3}
 .cell.today{box-shadow:inset 0 0 0 2px var(--accent)}
 .legend .abkey{flex:1 0 100%;font-weight:600;color:var(--ink-soft);margin-bottom:3px}
 .abkey .a,.abkey .b{display:inline-block;min-width:1.15em;text-align:center;border-radius:4px;font-weight:800;padding:0 3px;line-height:1.4}
@@ -1354,6 +1363,7 @@ select{
     </div>
     <div class="modehead" id="modeHead"></div>
     <div class="legend" id="legend"></div>
+    <div class="cal-tip" id="calTip">日付をタップ → その日の“なぜ？”が開きます</div>
     <div class="grid" id="wdhead"></div>
     <div class="grid" id="cal"></div>
     <details class="help-bad" id="helpBad">
@@ -3067,7 +3077,8 @@ function pickFocus(interests){
         sub='<div class="pm"><span class="a">A</span>'+pmA+' <span class="b">B</span>'+pmB+'</div>';
       }
       var moon=(x.dA&&x.dA.moon&&x.dA.moon.emoji)?x.dA.moon.emoji:'';
-      var mote=(!solo && ((x.dA&&x.dA.touka)||(x.dB&&x.dB.touka)))?'<span class="motemk">🌷</span>':'';
+      var moteA=!!(x.dA&&x.dA.touka), moteB=!!(x.dB&&x.dB.touka);
+      var mote=(!solo && (moteA||moteB))?'<span class="motemk">🌷'+(moteA?'<span class="a">A</span>':'')+(moteB?'<span class="b">B</span>':'')+'</span>':'';
       var hol=jpHol(Y,M,x.d);
       var gz='<div class="gz">'+moon+mote+(hol?'<span class="hol">'+hol+'</span>':'')+'</div>';
       var memoMk=getMemo(x.d)?'<span class="memodot">📝</span>':'';
@@ -3077,6 +3088,8 @@ function pickFocus(interests){
       (function(dd){cell.onclick=function(){state.sel=dd;render();detail(dd);};})(x.d);
       cal.appendChild(cell);
     });
+    // 初回だけ、タップできると気づけるよう今日のマスを軽く点滅（1回のみ・邪魔にならない）
+    if(!state._tapHinted){ state._tapHinted=true; var _tc=cal.querySelector('.cell.today')||cal.querySelector('.cell:not(.empty)'); if(_tc){ _tc.classList.add('tapme'); setTimeout(function(){ if(_tc)_tc.classList.remove('tapme'); }, 3000); } }
     if(state.sel){ detail(state.sel); } else { $('detail').innerHTML='<p style="text-align:center;color:var(--muted);font-size:12px;margin-top:12px">日付をタップすると、その日が「なぜ良い／避けたいのか」＆「カレンダーに追加」が出ます。</p>'; }
     try{refreshShare();}catch(e){}
     try{renderAnniv();}catch(e){}
