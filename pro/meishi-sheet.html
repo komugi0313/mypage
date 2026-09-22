@@ -121,6 +121,11 @@
   /* 印刷オプションのチェック */
   .pchk{ font-family:var(--gothic); font-size:11.5px; color:var(--ink2); margin-right:10px; white-space:nowrap; cursor:pointer; }
   .pchk input{ vertical-align:-1px; margin-right:3px; }
+  .out-row{ flex-wrap:wrap; gap:10px 18px; background:#faf8f3; border-top:1px solid var(--gold-soft); padding-top:8px; }
+  .out-row .chaps{ display:inline-flex; flex-wrap:wrap; gap:2px 8px; }
+  button.ghost{ background:transparent; border:1px solid var(--gold-soft); border-radius:6px; padding:3px 10px; font-family:var(--gothic); font-size:11.5px; color:var(--ink2); cursor:pointer; }
+  button.ghost.sm{ padding:1px 7px; font-size:10.5px; margin-left:4px; }
+  button.ghost[aria-expanded="true"]{ background:var(--gold-soft); color:#fff; }
   /* 表紙・両方出力シート（通常は非表示。印刷時にモードで表示） */
   #coverSheet, #sheetReadPro, #sheetReadEasy{ display:none; }
   .cover-sheet .cov-inner{ height:100%; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:10mm 16mm; }
@@ -487,14 +492,19 @@
     .kankei-band{ margin-top:2mm; padding-top:1.4mm; min-height:0; gap:6px; }
     .kankei-band .kk-label{ font-size:9px; }
     .kankei-band .kk{ font-size:9px; padding:0 5px; }
-    /* 表紙：ONのとき先頭に出す。命式表は次ページへ */
+    /* 印刷は専用シートを使う：画面プレビュー用の #sheetRead は印刷しない */
+    #sheetRead{ display:none; }
+    #sheetReadPro, #sheetReadEasy{ display:none; }
+    body.pm-vpro #sheetReadPro{ display:block; }
+    body.pm-veasy #sheetReadEasy{ display:block; }
+    body.pm-nomeishiki #sheet{ display:none; }
+    /* 表紙：ONのとき先頭に出す。次の紙は改ページ */
     body.pm-cover #coverSheet{ display:block; }
     body.pm-cover #sheet{ break-before:page; page-break-before:always; }
+    body.pm-cover.pm-nomeishiki #sheetReadPro,
+    body.pm-cover.pm-nomeishiki #sheetReadEasy{ break-before:page; page-break-before:always; }
     .cover-sheet{ height:210mm; }
     .cov-title{ font-size:30px; } .cov-name{ font-size:22px; } .cov-note{ font-size:11.5px; }
-    /* 両方出力：ONのとき対話用の鑑定書を隠し、本格版→やさしい版の2シートを出す */
-    body.pm-both #sheetRead{ display:none; }
-    body.pm-both #sheetReadPro, body.pm-both #sheetReadEasy{ display:block; }
     @page{ size:A4 landscape; margin:0; }
   }
 </style>
@@ -550,8 +560,7 @@
         </span>
       </div>
       <div class="act">
-        <label class="pchk"><input type="checkbox" id="coverChk"> 表紙をつける</label>
-        <label class="pchk"><input type="checkbox" id="bothChk"> 本格版＋やさしい版</label>
+        <button type="button" id="outToggle" class="ghost" aria-expanded="false">⚙ 出力内容</button>
         <button type="button" id="printBtn">🖨 印刷 / PDF保存</button>
       </div>
     </div>
@@ -571,6 +580,39 @@
         <label for="savedList" class="glabel">保存済み</label>
         <select id="savedList"><option value="">— 呼び出す —</option></select>
         <button type="button" id="delBtn" title="選択中の保存を削除">削除</button>
+      </div>
+    </div>
+    <div class="bar-row out-row" id="outRow" hidden>
+      <div class="grp">
+        <span class="glabel">印刷する紙</span>
+        <label class="pchk"><input type="checkbox" id="outCover"> 表紙</label>
+        <label class="pchk"><input type="checkbox" id="outMeishiki" checked> 命式表</label>
+        <label class="pchk"><input type="checkbox" id="outReading" checked> 鑑定書</label>
+      </div>
+      <div class="grp" id="verGrp">
+        <span class="glabel">鑑定書の版</span>
+        <span class="seg" role="group" aria-label="印刷する版">
+          <button type="button" id="ovPro" aria-pressed="true">本格版</button>
+          <button type="button" id="ovEasy" aria-pressed="false">やさしい版</button>
+          <button type="button" id="ovBoth" aria-pressed="false">両方</button>
+        </span>
+      </div>
+      <div class="grp" id="chapGrp">
+        <span class="glabel">章を選ぶ<span class="scr-hint">（本格版）</span></span>
+        <span class="chaps" id="chaps">
+          <label class="pchk"><input type="checkbox" class="chap" value="0" checked>総合まとめ</label>
+          <label class="pchk"><input type="checkbox" class="chap" value="1" checked>本質</label>
+          <label class="pchk"><input type="checkbox" class="chap" value="2" checked>性格の軸</label>
+          <label class="pchk"><input type="checkbox" class="chap" value="3" checked>才能・仕事</label>
+          <label class="pchk"><input type="checkbox" class="chap" value="4" checked>恋愛</label>
+          <label class="pchk"><input type="checkbox" class="chap" value="5" checked>金運</label>
+          <label class="pchk"><input type="checkbox" class="chap" value="6" checked>相性</label>
+          <label class="pchk"><input type="checkbox" class="chap" value="7" checked>健康</label>
+          <label class="pchk"><input type="checkbox" class="chap" value="8" checked>運の流れ</label>
+          <label class="pchk"><input type="checkbox" class="chap" value="9" checked>総括</label>
+        </span>
+        <button type="button" id="chapAll" class="ghost sm">全部</button>
+        <button type="button" id="chapNone" class="ghost sm">クリア</button>
       </div>
     </div>
   </div>
@@ -1873,12 +1915,16 @@ window.KANSHI60_DETAIL={
     // 専用版（solo）に載せる章番号セット。フル版は全章。
     var SOLO={love:[1,4,6,8,9],work:[1,3,6,9],money:[1,3,5,9],health:[1,7,9]};
     var soloSet=(scope==='solo')?SOLO[theme]:null;
+    // opts.only＝出す章番号の配列（0=総合まとめ）。指定時はその章だけを1から振り直す。
+    var onlySet=(opts.only&&opts.only.length)?opts.only.map(Number):null;
+    function inOnly(n){ return !onlySet || onlySet.indexOf(n)>=0; }
     var KNUM=['','１','２','３','４','５','６','７','８','９'];
     var _sn=0;
-    // 章を積む。フル版は元番号、専用版は該当章だけを1から振り直して表示。
+    // 章を積む。フル版は元番号、専用版／章選択は該当章だけを1から振り直して表示。
     function addSec(n, title, body){
       if(soloSet && soloSet.indexOf(n)<0) return;
-      _sn++; H+=sec(KNUM[soloSet?_sn:n]+'．'+title, body);
+      if(onlySet && onlySet.indexOf(n)<0) return;
+      _sn++; H+=sec(KNUM[(soloSet||onlySet)?_sn:n]+'．'+title, body);
     }
     // 冒頭リード
     var LEADF={love:['恋愛・ご縁','出逢いの時期は「恋愛・結婚」に、日々の相性は「対人相性」に'],
@@ -1890,7 +1936,7 @@ window.KANSHI60_DETAIL={
       else { H+='<div class="rd-lead">この鑑定書は<b>'+LEADF[theme][0]+'を中心</b>に読み解いています。'+LEADF[theme][1]+'まとめています。</div>'; }
     }
     // ◎ 総合鑑定（ひと目でわかるまとめ）＝命式の確定データ（日主・喜忌・大運の季節・節木運・会局の巡り）を統合した要約。詳細は下の各章に続く。
-    if(scope==='full'){ (function(){
+    if(scope==='full' && inOnly(0)){ (function(){
       var GINV={'火':'木','土':'火','金':'土','水':'金','木':'水'};   // 印（自分を生む）
       var CINV={'土':'木','金':'火','水':'土','木':'金','火':'水'};   // 官殺（自分を剋す）
       var BREL={子:'水',丑:'土',寅:'木',卯:'木',辰:'土',巳:'火',午:'火',未:'土',申:'金',酉:'金',戌:'土',亥:'水'};
@@ -2238,6 +2284,11 @@ window.KANSHI60_DETAIL={
     var sex=opts.sex==='male'?'male':'female';
     var genmei=mon.zokanTsuhen||'', spouse=day.shi||'';
     var nowYear=(r.nowYear!=null?r.nowYear:(r.birthYear!=null?r.birthYear+(r.nowAge||0):null));
+    // やさしい版の「この項目だけ」：テーマ別に出すカードを絞る（base＝常に表示）
+    var ezTheme=({love:'love',work:'work',money:'money',health:'health'})[opts.theme]||'general';
+    var ezSolo=(opts.scope==='solo' && ezTheme!=='general');
+    var EZSETS={love:['ai','koi','cal'],work:['axis','shigoto'],money:['money'],health:['money','gogyo']};
+    function ezShow(tag){ if(!ezSolo) return true; if(tag==='base') return true; return (EZSETS[ezTheme]||[]).indexOf(tag)>=0; }
     var CAT={'比肩':'比劫','劫財':'比劫','食神':'食傷','傷官':'食傷','正財':'財','偏財':'財','正官':'官','偏官':'官','印綬':'印','偏印':'印'};
     var cat={比劫:0,食傷:0,財:0,官:0,印:0};
     ['year','month','day','hour'].forEach(function(k){var p=P[k]; if(!p)return; [p.tsuhen,p.zokanTsuhen].forEach(function(t){ if(CAT[t])cat[CAT[t]]++; }); });
@@ -2293,20 +2344,20 @@ window.KANSHI60_DETAIL={
     else { konna='<p class="ez-p">'+(NATURE[dm]||'')+'</p>'; }
     H+=ezCard('🌱 こんな人です（生まれ日で読むあなた）', konna);
     // 性格・仕事の軸（月支元命）を厚く
-    if(genmei&&MEIGEN[genmei]){ H+=ezCard('🧭 あなたの軸（性格と仕事の中心）', '<p class="ez-p"><b>性格：</b>'+MEIGEN[genmei].sei+'</p><p class="ez-p"><b>仕事：</b>'+MEIGEN[genmei].shi+'</p><p class="ez-note2">これは生まれ月から出る"あなたの主役の持ち味"で、社会で見せる顔にもなります。</p>'); }
-    H+=ezCard('⭐ あなたの持ち味バランス', '<div class="ez-meter">'+ezMeter(cat)+'</div><p class="ez-note2">いちばんの持ち味は<b>'+(EZGOOD[topCat]||'')+'</b>。ほかは弱点ではなく<b>"伸びしろ"</b>——意識して使うほど育ちます。これは生まれ持った傾向で、経験や環境で変えていけます（運勢は動きます）。</p>');
-    H+=ezCard('🌈 五行バランス（生まれ持ったエネルギー）', ezGogyo(fe));
+    if(ezShow('axis') && genmei&&MEIGEN[genmei]){ H+=ezCard('🧭 あなたの軸（性格と仕事の中心）', '<p class="ez-p"><b>性格：</b>'+MEIGEN[genmei].sei+'</p><p class="ez-p"><b>仕事：</b>'+MEIGEN[genmei].shi+'</p><p class="ez-note2">これは生まれ月から出る"あなたの主役の持ち味"で、社会で見せる顔にもなります。</p>'); }
+    if(ezShow('mochi')) H+=ezCard('⭐ あなたの持ち味バランス', '<div class="ez-meter">'+ezMeter(cat)+'</div><p class="ez-note2">いちばんの持ち味は<b>'+(EZGOOD[topCat]||'')+'</b>。ほかは弱点ではなく<b>"伸びしろ"</b>——意識して使うほど育ちます。これは生まれ持った傾向で、経験や環境で変えていけます（運勢は動きます）。</p>');
+    if(ezShow('gogyo')) H+=ezCard('🌈 五行バランス（生まれ持ったエネルギー）', ezGogyo(fe));
     var kuse=(genmei&&TSU[genmei])?TSU[genmei].c:'';
-    H+=ezCard('🔧 取扱いのコツ', '<p class="ez-p"><b>良いところ：</b>'+(EZGOOD[topCat]||'')+'。</p>'+(kuse?'<p class="ez-p"><b>クセ（気をつけると◎）：</b>'+kuse+'。気づいて手綱を握れば長所に変わります。</p>':'')+(care?'<p class="ez-p"><b>ごきげんの保ち方：</b>'+care+'。元気が出る色は<b>'+col+'</b>。</p>':''));
-    H+=ezCard('🤝 相性のいい人', '<p class="ez-p">あなたが<b>ラクでいられる</b>のは、あなたを立ててくれる人や褒めてくれる年上。<b>力を発揮できる</b>のは、あなたを頼ってくれる後輩。<b>楽しく過ごせる</b>のは一緒に遊べる人。ちょっと<b>疲れやすい</b>のは、張り合う相手やダメ出しの多い人です。相手のタイプを見て距離を選ぶと、人間関係がぐっとラクになります。</p>');
+    if(ezShow('tsukai')) H+=ezCard('🔧 取扱いのコツ', '<p class="ez-p"><b>良いところ：</b>'+(EZGOOD[topCat]||'')+'。</p>'+(kuse?'<p class="ez-p"><b>クセ（気をつけると◎）：</b>'+kuse+'。気づいて手綱を握れば長所に変わります。</p>':'')+(care?'<p class="ez-p"><b>ごきげんの保ち方：</b>'+care+'。元気が出る色は<b>'+col+'</b>。</p>':''));
+    if(ezShow('ai')) H+=ezCard('🤝 相性のいい人', '<p class="ez-p">あなたが<b>ラクでいられる</b>のは、あなたを立ててくれる人や褒めてくれる年上。<b>力を発揮できる</b>のは、あなたを頼ってくれる後輩。<b>楽しく過ごせる</b>のは一緒に遊べる人。ちょっと<b>疲れやすい</b>のは、張り合う相手やダメ出しの多い人です。相手のタイプを見て距離を選ぶと、人間関係がぐっとラクになります。</p>');
     // 恋愛・仕事は60干支の詳しい記述で（あれば）
-    if(kan && kan.恋愛){ H+=ezCard('❤️ 恋愛のこと', '<p class="ez-p">'+kan.恋愛+'</p>'); }
-    if(kan && kan.仕事){ H+=ezCard('💼 仕事・適職のこと', '<p class="ez-p">'+kan.仕事+'</p>'); }
+    if(ezShow('koi') && kan && kan.恋愛){ H+=ezCard('❤️ 恋愛のこと', '<p class="ez-p">'+kan.恋愛+'</p>'); }
+    if(ezShow('shigoto') && kan && kan.仕事){ H+=ezCard('💼 仕事・適職のこと', '<p class="ez-p">'+kan.仕事+'</p>'); }
     var moneyOne=(cat.財>=2?'お金を動かす・増やすのが上手なタイプ。収入源を複数持つと安定します。':cat.財===1?'コツコツ堅実に貯めるのが向くタイプ。計画的な積立が力になります。':'得意なこと・好きなことを収入につなげると金運が育つタイプです。');
     var healthOne=(shugoEls.length? '疲れたら「'+care+'」を意識するとすぐ整います。元気が出る色は'+col+'。':'生活リズムを一定に保つのが一番の元気の秘訣です。');
-    H+=ezCard('💰🌿 お金・健康のヒント', '<div class="ez-grid"><div><b>💰 お金</b><br>'+moneyOne+'</div><div><b>🌿 健康</b><br>'+healthOne+'</div></div>');
-    if(spouse && window.MonthPillar){ H+=ezCard('📅 恋愛が動く月（今年・来年）', monthlyBlock(nowYear, dm, spouse, 'love', sex, true), 'wide'); }
-    H+=ezCard('✨ 今日からできる開運アクション', '<ul class="ez-ul"><li>ラッキーカラー<b>'+(col||'自分の好きな色')+'</b>を身近に取り入れる</li><li>上のカレンダーの<b>色がついた月</b>に、気になることへ一歩ふみ出す</li><li>「'+(care?care.split('／')[0]:'早寝・軽い運動')+'」で心と体を整える</li></ul>');
+    if(ezShow('money')) H+=ezCard('💰🌿 お金・健康のヒント', '<div class="ez-grid"><div><b>💰 お金</b><br>'+moneyOne+'</div><div><b>🌿 健康</b><br>'+healthOne+'</div></div>');
+    if(ezShow('cal') && spouse && window.MonthPillar){ H+=ezCard('📅 恋愛が動く月（今年・来年）', monthlyBlock(nowYear, dm, spouse, 'love', sex, true), 'wide'); }
+    H+=ezCard('✨ 今日からできる開運アクション', '<ul class="ez-ul"><li>ラッキーカラー<b>'+(col||'自分の好きな色')+'</b>を身近に取り入れる</li><li>気になることへ<b>一歩ふみ出す</b>（追い風の時期に）</li><li>「'+(care?care.split('／')[0]:'早寝・軽い運動')+'」で心と体を整える</li></ul>');
     return '<div class="ez-wrap">'+H+'</div>'+
       '<div class="rd-note">※この診断は、生年月日時から出したあなたの生まれ持った傾向を、やさしくまとめたものです。当たり外れを決めるものではなく、毎日の行動で運は育てられます。</div>';
   };
@@ -2376,12 +2427,37 @@ window.KANSHI60_DETAIL={
   document.getElementById('cOff').addEventListener('click', function(){ setColor(false); });
   setColor(true);   // デフォルトはカラー（色付き）
 
-  // ---- 印刷（表紙／本格＋やさしい 両方 出力オプション対応） ----
+  // ---- 出力内容パネル ----
   function _txt(id){ var e=document.getElementById(id); return e?(e.textContent||'').trim():''; }
+  function _chk(id){ var e=document.getElementById(id); return !!(e&&e.checked); }
+  var _printVer='pro';  // 印刷する版：pro / easy / both
+  (function(){
+    var ot=document.getElementById('outToggle'), row=document.getElementById('outRow');
+    if(ot&&row) ot.addEventListener('click', function(){ var open=row.hasAttribute('hidden'); if(open){row.removeAttribute('hidden');} else {row.setAttribute('hidden','');} ot.setAttribute('aria-expanded', String(open)); });
+    function setVer(v){ _printVer=v;
+      [['ovPro','pro'],['ovEasy','easy'],['ovBoth','both']].forEach(function(p){ var el=document.getElementById(p[0]); if(el) el.setAttribute('aria-pressed', String(v===p[1])); });
+      // プレビューも合わせる（両方はプレビュー据え置き）
+      if(v==='pro'||v==='easy'){ if(typeof setLevel==='function') setLevel(v); }
+    }
+    var mp={ovPro:'pro',ovEasy:'easy',ovBoth:'both'};
+    Object.keys(mp).forEach(function(id){ var el=document.getElementById(id); if(el) el.addEventListener('click', function(){ setVer(mp[id]); }); });
+    // わかりやすさトグル → 版を同期
+    ['lvPro','lvEasy'].forEach(function(id){ var el=document.getElementById(id); if(el) el.addEventListener('click', function(){ if(_printVer!=='both') setVer(id==='lvPro'?'pro':'easy'); }); });
+    var all=document.getElementById('chapAll'), none=document.getElementById('chapNone');
+    if(all) all.addEventListener('click', function(){ [].forEach.call(document.querySelectorAll('.chap'), function(c){ c.checked=true; }); });
+    if(none) none.addEventListener('click', function(){ [].forEach.call(document.querySelectorAll('.chap'), function(c){ c.checked=false; }); });
+  })();
+  function selectedChapters(){ var a=[]; [].forEach.call(document.querySelectorAll('.chap'), function(c){ if(c.checked) a.push(Number(c.value)); }); return a; }
+
+  // ---- 印刷（紙・版・章の選択を反映。専用シートに流し込み） ----
   document.getElementById('printBtn').addEventListener('click', function(){
     try{
-      var wantCover=!!(document.getElementById('coverChk')||{}).checked;
-      var wantBoth =!!(document.getElementById('bothChk')||{}).checked;
+      var wantCover=_chk('outCover'), wantMei=_chk('outMeishiki'), wantRead=_chk('outReading');
+      var verPro=(wantRead && (_printVer==='pro'||_printVer==='both'));
+      var verEasy=(wantRead && (_printVer==='easy'||_printVer==='both'));
+      if(!wantMei && !verPro && !verEasy && !wantCover){ alert('出力する内容が選ばれていません（命式表／鑑定書／表紙のいずれかを選んでください）。'); return; }
+      var sx=(_lastResult?(_lastResult.sex||'female'):'female');
+      // 表紙
       if(wantCover){
         var nm=(_txt('rdName')||_txt('mName')||'').replace(/[　\s]*様$/,'').trim();
         var cn=document.getElementById('covName'); if(cn) cn.textContent=(nm||'　　　')+'　様';
@@ -2389,20 +2465,26 @@ window.KANSHI60_DETAIL={
         var cs=document.getElementById('covSchool'); if(cs) cs.textContent=_txt('rdSchool')||_txt('schoolName')||'';
         var cd=document.getElementById('covDate'); if(cd){ var dv=_txt('rdDate'); cd.textContent=dv?('鑑定日：'+dv):''; }
       }
-      if(wantBoth && _lastResult && window.buildReadingHTML && window.buildEasyHTML){
-        var sx=(_lastResult.sex||'female');
-        var mp=document.getElementById('readMountPro'); if(mp) mp.innerHTML=window.buildReadingHTML(_lastResult,{sex:sx,theme:_readTheme,scope:'full'});
-        var me=document.getElementById('readMountEasy'); if(me) me.innerHTML=window.buildEasyHTML(_lastResult,{sex:sx,theme:_readTheme});
-        ['Name','Birth','School','Date'].forEach(function(k){ var v=_txt('rd'+k)||'　';
-          var a=document.getElementById('rd'+k+'Pro'); if(a) a.textContent=v;
-          var b=document.getElementById('rd'+k+'Easy'); if(b) b.textContent=v; });
+      // 鑑定書（専用シートへ）
+      function copyHead(suf){ ['Name','Birth','School','Date'].forEach(function(k){ var v=_txt('rd'+k)||'　'; var e=document.getElementById('rd'+k+suf); if(e) e.textContent=v; }); }
+      if(verPro && _lastResult && window.buildReadingHTML){
+        var chaps=selectedChapters();
+        var mpn=document.getElementById('readMountPro'); if(mpn) mpn.innerHTML=window.buildReadingHTML(_lastResult,{sex:sx,theme:_readTheme,scope:'full',only:chaps});
+        copyHead('Pro');
       }
-      document.body.classList.toggle('pm-cover', wantCover);
-      document.body.classList.toggle('pm-both', wantBoth);
+      if(verEasy && _lastResult && window.buildEasyHTML){
+        var men=document.getElementById('readMountEasy'); if(men) men.innerHTML=window.buildEasyHTML(_lastResult,{sex:sx,theme:_readTheme,scope:_readScope});
+        copyHead('Easy');
+      }
+      var B=document.body;
+      B.classList.toggle('pm-cover', wantCover);
+      B.classList.toggle('pm-nomeishiki', !wantMei);
+      B.classList.toggle('pm-vpro', verPro);
+      B.classList.toggle('pm-veasy', verEasy);
     }catch(e){}
     try{ window.print(); }catch(e){}
   });
-  window.addEventListener('afterprint', function(){ document.body.classList.remove('pm-cover','pm-both'); });
+  window.addEventListener('afterprint', function(){ document.body.classList.remove('pm-cover','pm-nomeishiki','pm-vpro','pm-veasy'); });
 
   // ---- 命式セルの塗り分け・クリア ----
   var COLS = ['hour','day','month','year'];
@@ -2722,7 +2804,7 @@ window.KANSHI60_DETAIL={
       var solo=(_readScope==='solo' && _readTheme!=='general');
       var sub=document.getElementById('rdSub');
       if(_readLevel==='easy' && window.buildEasyHTML){
-        mount.innerHTML = window.buildEasyHTML(_lastResult, {sex:(_lastResult.sex||'female'), theme:_readTheme});
+        mount.innerHTML = window.buildEasyHTML(_lastResult, {sex:(_lastResult.sex||'female'), theme:_readTheme, scope:(solo?'solo':'full')});
         var nm0=(document.getElementById('rdName')||{}).textContent||''; nm0=nm0.replace(/[　\s]*様$/,'').trim();
         if(sub) sub.textContent = '― '+(nm0?nm0+'さんの':'あなたの')+'取扱説明書';
         return;
