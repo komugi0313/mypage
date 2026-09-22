@@ -130,6 +130,13 @@
   button.ghost[aria-expanded="true"]{ background:var(--gold-soft); color:#fff; }
   .share-hint{ font-family:var(--gothic); font-size:10.5px; color:var(--faint); margin-left:8px; }
   @media (max-width:760px){ .share-hint{ display:block; margin:4px 0 0; } }
+  /* 共有リンクで開いた側：操作バーを隠し、選んだ紙だけ表示（画面のみ／印刷は通常どおり） */
+  @media screen{
+    body.share-view .bar{ display:none !important; }
+    body.share-view .stage{ padding-top:14px; }
+    body.sv-only-meishi #sheetRead{ display:none !important; }
+    body.sv-only-reading #sheet{ display:none !important; }
+  }
   /* 表紙・両方出力シート（通常は非表示。印刷時にモードで表示） */
   #coverSheet, #sheetReadPro, #sheetReadEasy{ display:none; }
   .cover-sheet .cov-inner{ height:100%; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:10mm 16mm; }
@@ -2540,8 +2547,18 @@ window.KANSHI60_DETAIL={
       var g=function(id){var e=document.getElementById(id);return e?(e.value||''):'';};
       var d=g('iDate'), t=g('iTime'), sx=g('iSex')||'female', nm=g('iName');
       var base=(location.protocol==='file:')? location.href.split('?')[0] : (location.origin+location.pathname);
+      if(!d) return location.href.split('#')[0];
       var q='?d='+encodeURIComponent(d)+'&t='+encodeURIComponent(t)+'&sex='+encodeURIComponent(sx)+(nm?'&name='+encodeURIComponent(nm):'');
-      return (d? base+q : (location.href.split('#')[0]));
+      // 「⚙出力内容」の選択を共有リンクにも反映（開いた側は操作バーなしで、選んだものだけ表示）
+      var wantMei=_chk('outMeishiki'), wantRead=_chk('outReading');
+      var show=(wantMei&&wantRead)?'both':(wantRead?'reading':(wantMei?'meishi':'both'));
+      q+='&share=1&show='+show;
+      if(wantRead){
+        q+='&lv='+((_printVer==='easy')?'easy':'pro');
+        if(_readTheme && _readTheme!=='general') q+='&th='+_readTheme;
+        if(_readScope==='solo') q+='&sc=solo';
+      }
+      return base+q;
     }catch(e){ return location.href; }
   }
   // 📄 共有：スマホは共有シート（LINE・メール等）にリンクを渡す。非対応はコピー。
@@ -3023,5 +3040,24 @@ window.KANSHI60_DETAIL={
   // 初期表示：自動計算（エンジン連動）。手書きは「記入用」に切替。
   setMode('auto');
   try{ document.getElementById('calcForm').requestSubmit(); }catch(e){}
+
+  // 共有リンクで開いた側の表示（?share=1&show=…&lv=…&th=…&sc=…）：操作バーを隠し、選んだものだけ表示
+  (function(){ try{
+    var q=new URLSearchParams(location.search);
+    if(q.get('share')!=='1' && !q.get('show')) return;
+    var show=q.get('show')||'both', lv=q.get('lv')||'', th=q.get('th')||'', sc=q.get('sc')||'';
+    var B=document.body;
+    if(q.get('share')==='1') B.classList.add('share-view');
+    if(show==='meishi') B.classList.add('sv-only-meishi');
+    else if(show==='reading') B.classList.add('sv-only-reading');
+    // 鑑定書の版・テーマ・範囲は、既存トグルをクリックして反映（レンダリング後）
+    setTimeout(function(){ try{
+      var clk=function(id){ var e=document.getElementById(id); if(e) e.click(); };
+      if(sc==='solo') clk('scSolo');
+      if(th){ var map={love:'thLove',work:'thWork',money:'thMoney',health:'thHealth',general:'thGeneral'}; if(map[th]) clk(map[th]); }
+      if(lv==='easy') clk('lvEasy'); else if(lv==='pro') clk('lvPro');
+      if(window.dispatchEvent) window.dispatchEvent(new Event('resize')); // 縮尺再計算
+    }catch(e){} }, 120);
+  }catch(e){} })();
 })();
 </script>
