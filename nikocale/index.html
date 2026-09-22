@@ -954,6 +954,14 @@ select{
 .tag.mid{background:var(--panel-2);color:var(--muted)}
 .tag.mote{background:var(--gold-soft);color:var(--gold)}
 
+.cell.today{box-shadow:inset 0 0 0 2px var(--accent)}
+.savehint{margin-top:6px;opacity:.72;line-height:1.55}
+.help-bad .gl{margin:0}
+.help-bad .gl dt{font-weight:800;color:var(--accent-2);font-size:13.5px;margin-top:9px}
+.help-bad .gl dd{margin:2px 0 0;color:var(--ink-soft);font-size:13px;line-height:1.7}
+/* 色覚配慮：各マークに自色の縁取りを付け、色だけに頼らず輪郭でも判別できるように */
+.dd.ok,.dd.good,.dd.warn,.dd.bad,.dd.sp,.dd.star{border:1.5px solid color-mix(in oklab, currentColor 45%, transparent)}
+.todaymk{position:absolute;top:3px;right:3px;font-size:8px;line-height:1;padding:1px 4px;border-radius:6px;background:var(--accent);color:#fff;font-weight:700;letter-spacing:.02em;z-index:2}
 .to-top{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:60;width:48px;height:48px;border-radius:50%;border:1px solid var(--line-gold);background:var(--accent-2);color:#fff;font-size:22px;line-height:1;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transform:translateY(10px);transition:opacity .25s ease, transform .25s ease, visibility .25s ease}
 .to-top.show{opacity:1;visibility:visible;transform:translateY(0)}
 .to-top:hover{filter:brightness(1.06)}
@@ -1263,6 +1271,7 @@ select{
           <button type="button" class="mini-btn save" id="aSave">＋保存</button>
           <button type="button" class="mini-btn" id="aDel" title="選択中を削除">🗑</button>
         </div>
+        <p class="mini savehint">💡 よく占う人は保存が便利。<b>この端末だけ</b>に保存され、次回はリストから1タップで呼び出せます。</p>
       </div>
     </div>
     <div class="step" id="rowB">
@@ -1325,6 +1334,21 @@ select{
           <li class="k4"><b class="hb-k">短めに・無理をしない</b> … 我を張らず、言い方をやわらかく。それで十分です。</li>
         </ol>
         <div class="hb-end">要するに <b>「良くない日＝気をつけて、やわらかく過ごす日」</b>。それ以上でも以下でもありません。どうしても外せない大事な予定のときだけ、近くの◎・⭐の日にずらすのがコツです。</div>
+      </div>
+    </details>
+    <details class="help-bad" id="glossary">
+      <summary>📖 ことばの意味（かんたん用語ガイド）</summary>
+      <div class="hb-body">
+        <dl class="gl">
+          <dt>◎ ○ △ ×</dt><dd>特に良い／良い／注意／避けたい（沖の日）。<b>⭐</b>＝今月いちばん運命が動く日、<b>💮</b>＝特別な日。</dd>
+          <dt>干支（かんし）</dt><dd>生年月日から出る「十干＋十二支」。相性判定のもとになります。</dd>
+          <dt>干合・支合・三合</dt><dd>惹かれ合う／自然に手を取り合う／周りも味方する、良い関係。</dd>
+          <dt>沖（ちゅう）</dt><dd>正反対の気が真っ向からぶつかる関係。「避けたい日（×）」の元です。</dd>
+          <dt>刑・害・破</dt><dd>摩擦・すれ違い・段取り崩れが少し出やすい、軽い注意の関係。</dd>
+          <dt>桃花（とうか）🌷</dt><dd>モテ運・人気運が高まる星。魅力が自然に伝わる日。</dd>
+          <dt>喜神・忌神（きしん・きしん）</dt><dd>あなたに追い風になる五行／控えたい五行。日々の調子の色分けに使います。</dd>
+          <dt>空亡・貴人・駅馬</dt><dd>こよみメモに出る合図。休む日／助けが来る日／動くと良い日。</dd>
+        </dl>
       </div>
     </details>
     <div class="detail" id="detail"></div>
@@ -2771,15 +2795,26 @@ function pickFocus(interests){
 (function(){
   "use strict";
   var $=function(id){return document.getElementById(id);};
-  var KE=window.KEngine, KD=window.KDaily, nowY=2026;
-  var state={mode:'couple', pp:'date', p:{a:{sex:'f'},b:{sex:'m'}}, y:2026, m:9, sel:null, brand:{}};
+  var KE=window.KEngine, KD=window.KDaily;
+  // 「今日」(JST)。カレンダーの初期月・年の上限・今日ハイライトに使う
+  var TODAY=(KE&&KE.todayJST)?KE.todayJST():(function(){var d=new Date();return {y:d.getFullYear(),m:d.getMonth()+1,d:d.getDate()};})();
+  var nowY=TODAY.y;
+  var state={mode:'couple', pp:'date', p:{a:{sex:'f'},b:{sex:'m'}}, y:TODAY.y, m:TODAY.m, sel:null, brand:{}};
 
   /* ---- selects ---- */
   function opt(v,t){var o=document.createElement('option');o.value=v;o.textContent=t;return o;}
   function fill(id,from,to,suf,ph){var s=$(id);s.appendChild(opt('',ph));for(var i=from;i<=to;i++)s.appendChild(opt(i,i+suf));}
   ['a','b'].forEach(function(x){ fill(x+'y',1940,nowY,'年','年'); fill(x+'m',1,12,'月','月'); fill(x+'d',1,31,'日','日'); fill(x+'h',0,23,'時','時'); fill(x+'i',0,59,'分','分'); });
-  $('ay').value=2008; $('am').value=3; $('ad').value=28; $('ah').value=14; $('ai').value=7;
+  // 存在しない日付(2/31・4/31・2/30 等)を選べないよう、選んだ年月に応じて「日」を絞る
+  function daysInMonth(y,m){ return new Date(y||2000, m||1, 0).getDate(); }
+  function refreshDays(x){ var sy=$(x+'y'),sm=$(x+'m'),sd=$(x+'d'); if(!sd)return;
+    var dim=daysInMonth(+sy.value, +sm.value), cur=+sd.value||0;
+    sd.innerHTML=''; sd.appendChild(opt('','日')); for(var i=1;i<=dim;i++) sd.appendChild(opt(i,i+'日'));
+    if(cur>=1&&cur<=dim) sd.value=cur; }
+  ['a','b'].forEach(function(x){ ['y','m'].forEach(function(k){ var el=$(x+k); if(el)el.addEventListener('change',function(){refreshDays(x);}); }); });
+  $('ay').value=2008; $('am').value=1; $('ad').value=1; $('ah').value=14; $('ai').value=7;
   $('by').value=2006; $('bm').value=6; $('bd').value=7; $('btu').checked=true;
+  refreshDays('a'); refreshDays('b');
 
   /* ---- brand ---- */
   var BK=['bYago','bName','bContact','bInsta','bLine'];
@@ -2979,7 +3014,8 @@ function pickFocus(interests){
     for(var b=0;b<first;b++){var e=document.createElement('div');e.className='cell empty';cal.appendChild(e);}
     data.forEach(function(x){
       var cell=document.createElement('div');
-      cell.className='cell'+(x.wd===6?' s6':x.wd===0?' s0':'')+(state.sel===x.d?' sel':'');
+      var isToday=(state.y===TODAY.y&&state.m===TODAY.m&&x.d===TODAY.d);
+      cell.className='cell'+(x.wd===6?' s6':x.wd===0?' s0':'')+(state.sel===x.d?' sel':'')+(isToday?' today':'');
       var badge, sub;
       if(solo){
         var cls=x.sym==='💮'?'sp':x.sym==='◎'?'ok':x.sym==='△'?'warn':'good';
@@ -2997,7 +3033,7 @@ function pickFocus(interests){
       var memoMk=getMemo(x.d)?'<span class="memodot">📝</span>':'';
       var _ao=annivOnDay(M,x.d); var annMk=_ao?'<span class="annivmark" title="'+esc(_ao.name)+'"></span>':'';
       cell.setAttribute('data-day',x.d);
-      cell.innerHTML='<div class="dn'+(hol?' hol':'')+'">'+x.d+'</div>'+badge+gz+sub+memoMk+annMk;
+      cell.innerHTML='<div class="dn'+(hol?' hol':'')+'">'+x.d+'</div>'+badge+gz+sub+memoMk+annMk+(isToday?'<span class="todaymk">今日</span>':'');
       (function(dd){cell.onclick=function(){state.sel=dd;render();detail(dd);};})(x.d);
       cal.appendChild(cell);
     });
