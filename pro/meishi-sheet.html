@@ -319,10 +319,11 @@
   .footrow .footline{ margin:0; grid-column:2; }
   .kantei{ grid-column:3; justify-self:end; font-family:var(--gothic); font-size:11px; color:var(--ink2); letter-spacing:.05em; white-space:nowrap; }
   /* 命式表の左下の空きに「前回の空亡・冲の年」をメモ表示 */
-  .past-memo{ grid-column:1; justify-self:start; align-self:end; font-family:var(--gothic); font-size:10.5px; color:var(--ink2); line-height:1.55; letter-spacing:.02em; }
+  /* 五行バランスの下の空きに置く「前回の空亡・冲」メモ */
+  .past-memo{ margin-top:8px; padding-top:6px; border-top:1px dashed var(--rule2); font-family:var(--gothic); font-size:11px; color:var(--ink2); line-height:1.65; letter-spacing:.02em; }
   .past-memo:empty{ display:none; }
-  .past-memo .pm-h{ font-weight:700; color:var(--ink); margin-right:3px; }
-  .past-memo .pm-row{ white-space:nowrap; }
+  .past-memo .pm-h{ font-weight:700; color:var(--ink); margin-right:5px; }
+  .past-memo .pm-row{ display:block; }
   .past-memo b{ color:var(--ink); font-weight:700; }
   #schoolName{ color:var(--ink2); font-weight:700; letter-spacing:.08em; }
   .subgrid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
@@ -904,11 +905,12 @@
                 <div class="pcap">頂点＝日干　外周＝相生　内星＝相剋</div>
               </div>
             </div>
+            <div class="past-memo" id="pastMemo"></div>
           </section>
       </div>
 
       <div class="footrow">
-        <span class="past-memo" id="pastMemo"></span>
+        <span class="foot-spacer" aria-hidden="true"></span>
         <p class="footline">四柱推命 命式表 ・ <span class="ed" id="schoolName" contenteditable="true">（スクール名を入力）</span></p>
         <span class="kantei">鑑定日：<span class="ed" id="kanteiDate" contenteditable="true">　年　月　日</span></span>
       </div>
@@ -2068,13 +2070,16 @@ window.KANSHI60_DETAIL={
     function br(y){ return _BR[((y-4)%12+12)%12]; }
     var kubo=String(r.kuboPair||r.tenchusatsu||'').split('').filter(Boolean);
     var natB=[]; ['year','month','day','hour'].forEach(function(k){var p=P[k]; if(p&&p.shi)natB.push(p.shi);});
-    var pk=null, pc=null;
-    for(var y=nowYear-1; y>=nowYear-13 && (!pk||!pc); y--){
-      var b=br(y);
-      if(!pk && kubo.indexOf(b)>=0) pk={year:y, gz:gz(y)};
-      if(!pc){ var hit=natB.filter(function(x){return _CH[b]===x;}); if(hit.length) pc={year:y, gz:gz(y), hit:hit}; }
-    }
-    return (pk||pc)?{kubo:pk, chong:pc, nowYear:nowYear}:null;
+    // 空亡は2支あるので、それぞれの直近の過去年＝2年分を出す（新しい順）
+    var kubos=[];
+    kubo.forEach(function(kb){
+      for(var y=nowYear-1; y>=nowYear-13; y--){ if(br(y)===kb){ kubos.push({year:y, gz:gz(y)}); break; } }
+    });
+    kubos.sort(function(a,b){ return b.year-a.year; });
+    // 冲は直近1年
+    var pc=null;
+    for(var y2=nowYear-1; y2>=nowYear-13 && !pc; y2--){ var b2=br(y2); var hit=natB.filter(function(x){return _CH[b2]===x;}); if(hit.length) pc={year:y2, gz:gz(y2), hit:hit}; }
+    return (kubos.length||pc)?{kubos:kubos, kubo:kubos[0]||null, chong:pc, nowYear:nowYear}:null;
   }
   if(typeof window!=='undefined') window.pastKuboChong=pastKuboChong;
 
@@ -2420,7 +2425,8 @@ window.KANSHI60_DETAIL={
       // 過去のふり返りメモ：直近（一つ前）の空亡の年・冲の年
       (function(){ var pkc=pastKuboChong(r); if(!pkc) return;
         var lines=[];
-        if(pkc.kubo) lines.push('<li><b>直近の空亡（くうぼう）の年：'+pkc.kubo.year+'年（'+ruby(pkc.kubo.gz)+'）</b>…歯車が空回りしやすく、努力が結果に結びつきにくかったり、見直し・立て直しが起きやすかった時期です。この頃うまく進まなかったことは、時期の巡りが影響していた面もあります。</li>');
+        var _ks=(pkc.kubos&&pkc.kubos.length)?pkc.kubos:(pkc.kubo?[pkc.kubo]:[]);
+        if(_ks.length) lines.push('<li><b>直近の空亡（くうぼう）の年：'+_ks.map(function(k){return k.year+'年（'+ruby(k.gz)+'）';}).join('・')+'</b>…歯車が空回りしやすく、努力が結果に結びつきにくかったり、見直し・立て直しが起きやすかった時期です。この頃うまく進まなかったことは、時期の巡りが影響していた面もあります。</li>');
         if(pkc.chong) lines.push('<li><b>直近の冲（ちゅう＝大きな変化）の年：'+pkc.chong.year+'年（'+ruby(pkc.chong.gz)+'）</b>…引っ越し・転職・出会い・別れなど、環境や生き方が大きく動きやすかった年です。振り返ると転機になっていたことがあるかもしれません。</li>');
         if(lines.length) b+='<p class="rd-p"><b>【過去のふり返りメモ】</b><span class="rd-mini">（過去にさかのぼって、直近の一つ前の巡りを目安として。）</span></p><ul class="rd-ul">'+lines.join('')+'</ul>';
       })();
@@ -2739,7 +2745,8 @@ window.KANSHI60_DETAIL={
     if(ezShow('cal') && spouse && window.MonthPillar){ H+=ezCard('📅 恋愛が動く月（今年・来年）', monthlyBlock(nowYear, dm, spouse, 'love', sex, true), 'wide'); }
     // 過去のふり返りメモ（直近の空亡の年・冲の年）
     if(!ezSolo){ (function(){ var pkc=pastKuboChong(r); if(!pkc) return; var li='';
-      if(pkc.kubo) li+='<li><b>前回の「空回りしやすかった年（空亡）」＝'+pkc.kubo.year+'年</b>…がんばっても結果が出にくかったり、見直しが起きやすい時期でした。</li>';
+      var _ks=(pkc.kubos&&pkc.kubos.length)?pkc.kubos:(pkc.kubo?[pkc.kubo]:[]);
+      if(_ks.length) li+='<li><b>前回の「空回りしやすかった年（空亡）」＝'+_ks.map(function(k){return k.year+'年';}).join('・')+'</b>…がんばっても結果が出にくかったり、見直しが起きやすい時期でした。</li>';
       if(pkc.chong) li+='<li><b>前回の「大きく動いた年（冲）」＝'+pkc.chong.year+'年</b>…引っ越し・転職・出会い・別れなど、環境が変わりやすい年でした。</li>';
       if(li) H+=ezCard('📝 過去のふり返りメモ', '<ul class="ez-ul">'+li+'</ul><p class="ez-note2">過去の巡りをふり返る目安です。当てはまらないこともありますが、「あの頃はそういう時期だったのかも」と役立ててください。</p>');
     })(); }
@@ -3179,14 +3186,15 @@ window.KANSHI60_DETAIL={
   function fillFromResult(r){
     if(window.MEISHIKI) window.MEISHIKI.fill(r);
     applyKanteiDate();
-    // 命式表の左下メモ：前回（直近）の空亡の年・冲の年
+    // 五行バランス下のメモ：前回（直近）の空亡の年（2支＝2年分）・冲の年
     (function(){ var pm=document.getElementById('pastMemo'); if(!pm) return;
       var pkc=window.pastKuboChong?window.pastKuboChong(r):null;
       if(!pkc){ pm.innerHTML=''; return; }
       var rows=[];
-      if(pkc.kubo)  rows.push('<span class="pm-row"><span class="pm-h">前回の空亡</span>'+pkc.kubo.year+'年（'+pkc.kubo.gz+'）</span>');
+      var ks=(pkc.kubos&&pkc.kubos.length)?pkc.kubos:(pkc.kubo?[pkc.kubo]:[]);
+      if(ks.length) rows.push('<span class="pm-row"><span class="pm-h">前回の空亡</span>'+ks.map(function(k){return k.year+'年（'+k.gz+'）';}).join('・')+'</span>');
       if(pkc.chong) rows.push('<span class="pm-row"><span class="pm-h">前回の冲</span>'+pkc.chong.year+'年（'+pkc.chong.gz+'）</span>');
-      pm.innerHTML=rows.join('<br>');
+      pm.innerHTML=rows.join('');
     })();
     // 守護神（命式から自動）：r.shugojin = ["丁","癸","丙"] など
     renderShugo(r.shugojin, r.shugoStrength);
