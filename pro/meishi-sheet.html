@@ -285,6 +285,24 @@
   .rd-empty{ color:var(--faint); font-size:14px; text-align:center; padding:60px 20px; }
   .rd-lead{ column-span:all; -webkit-column-span:all; margin:0 0 12px; padding:8px 12px; font-size:12px; line-height:1.6;
     color:var(--ink); background:rgba(42,111,208,.07); border:1px solid var(--rule); border-radius:8px; }
+  /* 月間カレンダー（色で直感的に） */
+  .rd-mwrap{ break-inside:avoid; -webkit-column-break-inside:avoid; margin:0 0 9px; padding:7px 9px; border:1px solid var(--rule2); border-radius:8px; background:rgba(0,0,0,.015); }
+  .rd-mhead{ font-size:12px; font-weight:700; color:var(--ink); margin:0 0 5px; }
+  .mcal{ display:flex; align-items:center; gap:6px; margin:3px 0; }
+  .mcal-y{ font-size:10px; font-weight:700; color:var(--ink2); white-space:nowrap; min-width:58px; }
+  .mcal-row{ display:flex; gap:2px; flex:1; }
+  .mc{ flex:1; text-align:center; border-radius:4px; padding:2px 0; border:1px solid var(--rule2); background:var(--paper); }
+  .mc b{ display:block; font-size:8px; color:var(--ink2); font-weight:600; line-height:1.1; }
+  .mc i{ font-style:normal; font-size:11px; line-height:1.1; color:var(--faint); }
+  .mc.cau{ background:rgba(200,90,40,.13); border-color:rgba(200,90,40,.45); }
+  .mc.cau i{ color:#C0563C; font-weight:700; }
+  .mcal.t-love  .mc.good{ background:rgba(214,64,122,.16); border-color:rgba(214,64,122,.5); } .mcal.t-love  .mc.good i{ color:#D6407A; font-weight:700; }
+  .mcal.t-work  .mc.good{ background:rgba(42,111,208,.15); border-color:rgba(42,111,208,.5); } .mcal.t-work  .mc.good i{ color:#2A6FD0; font-weight:700; }
+  .mcal.t-money .mc.good{ background:rgba(176,126,30,.18); border-color:rgba(176,126,30,.55); } .mcal.t-money .mc.good i{ color:#B07E1E; font-weight:700; }
+  .mcal.t-health .mc.good{ background:rgba(46,125,82,.16); border-color:rgba(46,125,82,.5); } .mcal.t-health .mc.good i{ color:#2E7D52; font-weight:700; }
+  .mc.both{ box-shadow:inset 0 -3px 0 rgba(200,90,40,.55); }
+  .rd-mcap{ font-size:10.5px; line-height:1.5; margin:2px 0; color:var(--ink); }
+  .rd-mleg{ font-size:9.5px; color:var(--ink2); margin:4px 0 0; }
   .head{ margin:0 0 3px; } .crest{ height:22px; margin-bottom:1px; }
   .title{ font-size:clamp(17px,2.1vw,23px); }
   .subrule{ margin:5px auto 0; }
@@ -327,6 +345,12 @@
     .rd-p rt{ font-size:.46em; }
     .rd-sec{ margin:0 0 2.2mm; }
     .rd-lead{ font-size:9px; padding:1.4mm 2.4mm; margin:0 0 2.4mm; }
+    .rd-mwrap{ padding:1.4mm 2mm; margin:0 0 2mm; }
+    .rd-mhead{ font-size:9.5px; margin:0 0 1mm; }
+    .mcal{ gap:1.5mm; margin:0.6mm 0; } .mcal-y{ font-size:8px; min-width:12mm; } .mcal-row{ gap:0.5mm; }
+    .mc{ padding:0.6mm 0; } .mc b{ font-size:6.5px; } .mc i{ font-size:9px; }
+    .rd-mcap{ font-size:8.4px; margin:0.6mm 0; } .rd-mleg{ font-size:7.6px; }
+    .mc, .mc.good, .mc.cau{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .rd-note{ font-size:8.4px; margin-top:1.6mm; padding-top:1.2mm; }
     .sheet::before{ inset:3mm; } .sheet::after{ inset:5mm; }
     .corner{ width:16mm; height:16mm; top:5mm; left:5mm; }
@@ -1094,22 +1118,71 @@ window.MEISHIKI=(function(){
     if(_CON[xe]===de) return same?'偏官':'正官';
     if(_GEN[xe]===de) return same?'偏印':'印綬';
     return ''; }
-  // 指定年の恋愛が動く「月」を月柱（天文計算）から抽出
-  function monthlyLove(Y, dm, dayBranch, sex){
+  // テーマ別・月の意味づけ設定
+  function themeMonthCfg(theme, sex){
+    if(theme==='love'){ return { cls:'t-love', useLove:true, chong:true,
+      good:(sex==='female')?{'正官':{label:'誠実な縁',score:2},'偏官':{label:'情熱的な出会い',score:2}}:{'正財':{label:'家庭的な縁',score:2},'偏財':{label:'華やかな出会い',score:2}}, caution:{},
+      legend:'◎○＝縁が動く月　△＝注意の月' }; }
+    if(theme==='work'){ return { cls:'t-work', chong:true,
+      good:{'正官':{label:'昇進・評価',score:3},'偏官':{label:'抜擢・責任',score:3},'印綬':{label:'学び・引立て',score:2},'偏印':{label:'専門・転換',score:2},'正財':{label:'成果',score:1},'偏財':{label:'人脈',score:1}}, caution:{'傷官':'衝突・勇み足'},
+      legend:'◎○＝伸びる月　△＝トラブル注意' }; }
+    if(theme==='money'){ return { cls:'t-money', chong:false,
+      good:{'正財':{label:'堅実な収入',score:3},'偏財':{label:'臨時収入・商機',score:3},'食神':{label:'稼ぐ力',score:2},'傷官':{label:'才能が収入に',score:2}}, caution:{'劫財':'散財・貸し借り','比肩':'出費が増えやすい'},
+      legend:'◎○＝お金が動く月　△＝散財注意' }; }
+    if(theme==='health'){ return { cls:'t-health', chong:true,
+      good:{'印綬':{label:'休養・回復',score:2},'偏印':{label:'静養・立て直し',score:2}}, caution:{'傷官':'消耗・気の高ぶり','偏官':'重圧・過労'},
+      legend:'●＝整え月　△＝不調が出やすい月' }; }
+    return null;
+  }
+  // 指定年の12か月を月柱（天文計算）から意味づけ
+  function themeMonths(Y, dm, dayBranch, cfg){
     if(!(window.MonthPillar&&window.MonthPillar.monthGZ)) return [];
-    var loveStars=(sex==='female')?{'正官':'誠実な縁','偏官':'情熱的な出会い'}:{'正財':'家庭的な縁','偏財':'華やかな出会い'};
     var out=[];
-    for(var mo=1;mo<=12;mo++){ var mp=window.MonthPillar.monthGZ(Y,mo,15); var why=[], caution=false, score=0;
-      if(GANGO[dm]===mp.gan){ why.push('強い縁（干合）'); score+=3; }
-      if(TAOHUA[dayBranch]===mp.shi){ why.push('桃花（魅力・モテ）'); score+=3; }
-      var tsu=tsuhenOf(dm, mp.gan);
-      if(loveStars[tsu]){ why.push(loveStars[tsu]); score+=2; }
-      if(SHIGOU[dayBranch]===mp.shi){ why.push('ご縁（六合）'); score+=2; }
-      else if((SANGO_MAP[dayBranch]||[]).indexOf(mp.shi)>=0){ why.push('ご縁（三合）'); score+=1; }
-      if(CHONG[dayBranch]===mp.shi){ caution=true; }
-      if(why.length||caution) out.push({mo:mo, why:why, caution:caution, score:score});
+    for(var mo=1;mo<=12;mo++){ var mp=window.MonthPillar.monthGZ(Y,mo,15); var tsu=tsuhenOf(dm,mp.gan);
+      var why=[], score=0, caution=false, creas='';
+      if(cfg.useLove){
+        if(GANGO[dm]===mp.gan){ why.push('強い縁（干合）'); score+=3; }
+        if(TAOHUA[dayBranch]===mp.shi){ why.push('桃花'); score+=3; }
+        else if(SHIGOU[dayBranch]===mp.shi){ why.push('ご縁（六合）'); score+=2; }
+        else if((SANGO_MAP[dayBranch]||[]).indexOf(mp.shi)>=0){ why.push('ご縁（三合）'); score+=1; }
+      }
+      var g=cfg.good[tsu]; if(g){ why.push(g.label); score+=g.score; }
+      if(cfg.caution[tsu]){ caution=true; creas=cfg.caution[tsu]; }
+      if(cfg.chong && CHONG[dayBranch]===mp.shi){ caution=true; creas=creas||'冲（急変）'; }
+      out.push({mo:mo, why:why, score:score, caution:caution, creas:creas});
     }
     return out;
+  }
+  // 12か月カレンダー（色分け・◎○△）を生成
+  function monthCalHTML(Y, months, cfg, lbl){
+    var cells='';
+    for(var i=0;i<12;i++){ var m=months[i]||{mo:i+1,score:0,caution:false,why:[],creas:''};
+      var cls='mc', mark='·';
+      if(m.score>0){ cls+=' good'; mark=(m.score>=3?'◎':'○'); }
+      else if(m.caution){ cls+=' cau'; mark='△'; }
+      else { cls+=' neu'; }
+      if(m.score>0&&m.caution) cls+=' both';
+      var tip=(m.why.join('・'))+(m.caution?((m.why.length?'／':'')+'注意：'+m.creas):'');
+      cells+='<span class="'+cls+'" title="'+esc(tip)+'"><b>'+(i+1)+'</b><i>'+mark+'</i></span>';
+    }
+    return '<div class="mcal '+cfg.cls+'"><span class="mcal-y">'+Y+'年'+(lbl||'')+'</span><span class="mcal-row">'+cells+'</span></div>';
+  }
+  // 月カレンダー＋要点テキスト（今年・来年）をまとめて返す
+  function monthlyBlock(nowYear, dm, dayBranch, theme, sex){
+    var cfg=themeMonthCfg(theme, sex); if(!cfg||nowYear==null||!window.MonthPillar) return '';
+    var html='';
+    [0,1].forEach(function(off){ var Y=nowYear+off, lbl=(off===0?'（今年）':'（来年）'), ms=themeMonths(Y,dm,dayBranch,cfg);
+      html+=monthCalHTML(Y, ms, cfg, lbl);
+      var pos=ms.filter(function(m){return m.score>0;}).sort(function(a,b){return b.score-a.score;}).slice(0,4).sort(function(a,b){return a.mo-b.mo;});
+      var cau=ms.filter(function(m){return m.caution&&m.score<=0;}).map(function(m){return m.mo;});
+      var line='';
+      if(pos.length) line='<b>'+pos.map(function(m){return m.mo+'月';}).join('・')+'</b>（'+pos.slice(0,2).map(function(m){return m.why[0];}).filter(Boolean).join('・')+'ほか）';
+      else line='大きく動く月は控えめ';
+      if(cau.length) line+='／注意：<b>'+cau.join('・')+'月</b>';
+      html+='<p class="rd-mcap">'+Y+'年'+lbl+'：'+line+'</p>';
+    });
+    html+='<p class="rd-mleg">'+cfg.legend+'（各月にカーソルで理由。節入りで数日前後する目安）</p>';
+    return html;
   }
   // 大運（今の10年）で巡る通変星の傾向
   var DUTSU={
@@ -1221,6 +1294,7 @@ window.MEISHIKI=(function(){
       b+=para('向いやすい方向は<b>'+jobs.filter(function(v,i,a){return a.indexOf(v)===i;}).join('／')+'</b>など。'+((maxList.length===1&&maxEl)?'五行では<b>'+maxEl+'</b>が強く、その分野の適性も後押しになります。':'')+'（固定の職業名より、この持ち味が活きる働き方を選ぶのがコツです）');
       // 仕事重視テーマ：飛躍の年・進め方・注意期を年運から
       if(theme==='work' && nowYear!=null){
+        if(window.MonthPillar){ b+='<div class="rd-mwrap"><div class="rd-mhead">◆ 仕事が伸びる月（今年・来年）</div>'+monthlyBlock(nowYear, dm, spouse, 'work', sex)+'</div>'; }
         var WGOOD={'正官':'昇進・信用','偏官':'抜擢・責任','印綬':'学び・引き立て','偏印':'専門・転換','正財':'成果が実る','偏財':'人脈が広がる'};
         var wUp=[], wCau=[];
         for(var wy=nowYear; wy<=nowYear+9; wy++){ var wa=byYear[wy]; if(!wa) continue;
@@ -1300,15 +1374,8 @@ window.MEISHIKI=(function(){
         var nearArr=[];
         [0,1].forEach(function(off){ var y2=nowYear+off, a2=byYear[y2]; if(a2) nearArr.push('<b>'+y2+'年'+(off===0?'（今年）':'（来年）')+'</b>…'+loveYearRead(a2)); });
         if(nearArr.length){ b+=para('<b>◆ 直近の恋愛運（今年・来年）</b>：'+nearArr.join(' ／ ')+'。'); }
-        // 月ピンポイント：今年・来年の「恋愛が動く月」を月柱（天文計算）から算出
-        if(spouse && window.MonthPillar){
-          [0,1].forEach(function(off){ var Y=nowYear+off, ml=monthlyLove(Y,dm,spouse,sex), lbl=(off===0?'（今年）':'（来年）');
-            var pos=ml.filter(function(m){return m.why.length;}).sort(function(a,b){return b.score-a.score;}).slice(0,4).sort(function(a,b){return a.mo-b.mo;});
-            var cau=ml.filter(function(m){return m.caution;}).map(function(m){return m.mo;});
-            if(!pos.length){ b+=para('<b>◆ '+Y+'年'+lbl+'の月</b>：恋愛が大きく動く月は控えめ。日常の交流を絶やさず、気になる縁は自分から動くと吉。'+(cau.length?'<b>'+cau.join('・')+'月</b>はすれ違いに注意。':'')); return; }
-            var txt=pos.map(function(m){ return '<b>'+m.mo+'月</b>（'+m.why.join('・')+'）'; }).join('、');
-            b+=para('<b>◆ '+Y+'年'+lbl+'の恋愛が動く月</b>：'+txt+(cau.length?'。すれ違い注意は<b>'+cau.join('・')+'月</b>':'')+'。'+(off===0?'（節入りで数日前後する目安です）':'')); });
-        }
+        // 月ピンポイント（視覚カレンダー）：今年・来年の「恋愛が動く月」
+        if(spouse && window.MonthPillar){ b+='<div class="rd-mwrap"><div class="rd-mhead">◆ 恋愛が動く月（今年・来年）</div>'+monthlyBlock(nowYear, dm, spouse, 'love', sex)+'</div>'; }
         // 次の出会い・結婚のチャンス年（直近から最初の1つを必ず明示）
         var nextMeet=meet[0], nextMarry=marry[0];
         if(nextMeet||nextMarry){ b+=para('<b>◆ 次のチャンス</b>：'+[nextMeet?'出会いは<b>'+nextMeet.y+'年</b>（'+nextMeet.why+'）が直近':'', nextMarry?'ご縁が固まりやすいのは<b>'+nextMarry.y+'年</b>（'+nextMarry.why+'）が直近':''].filter(Boolean).join('、')+'。ここを一つの目標に動くと動きやすくなります。'); }
@@ -1355,6 +1422,7 @@ window.MEISHIKI=(function(){
       if(curDu&&(curDu.tsuhen==='正財'||curDu.tsuhen==='偏財')){ b+=para('今の大運は財星「'+curDu.tsuhen+'」の巡り。<b>この10年はお金が動きやすい時期</b>——収入源を育て、良い流れを貯えに変えていきましょう。'); }
       // 金運重視テーマ：お金が動く年・増やし方・注意期を年運から
       if(theme==='money' && nowYear!=null){
+        if(window.MonthPillar){ b+='<div class="rd-mwrap"><div class="rd-mhead">◆ お金が動く月（今年・来年）</div>'+monthlyBlock(nowYear, dm, spouse, 'money', sex)+'</div>'; }
         var MGOOD={'正財':'堅実な収入・貯え','偏財':'臨時収入・チャンス','食神':'稼ぐ力が実る','傷官':'才能が収入に'};
         var mUp=[], mCau=[];
         for(var my=nowYear; my<=nowYear+9; my++){ var ma=byYear[my]; if(!ma) continue;
@@ -1395,6 +1463,7 @@ window.MEISHIKI=(function(){
       if(shugoEls.length){ var _mikyo=(shugoKind==='身強'?'身強（みきょう＝自分の力が強めのタイプ）':shugoKind==='身弱'?'身弱（じんじゃく＝自分の力が控えめのタイプ）':shugoKind); b+=para('あなたを助ける<b>守護神（しゅごしん＝喜神・あなたに味方する五行）は「'+shugoEls.join('・')+'」</b>（あなたは'+_mikyo+'）。この五行を意識的に取り入れると調子が整います。ラッキーカラーは<b>'+shugoEls.map(function(e){return EL[e]?EL[e].col:'';}).filter(Boolean).join('／')+'</b>、養生は<b>'+shugoEls.map(function(e){return EL[e]?EL[e].care:'';}).filter(Boolean).join('／')+'</b>が向きます。'); }
       // 健康重視テーマ：無理の出やすい年・整えやすい年・養生の指針を年運から
       if(theme==='health' && nowYear!=null){
+        if(window.MonthPillar){ b+='<div class="rd-mwrap"><div class="rd-mhead">◆ 体調の月間カレンダー（今年・来年）</div>'+monthlyBlock(nowYear, dm, spouse, 'health', sex)+'</div>'; }
         var hCau=[], hRest=[];
         for(var hy=nowYear; hy<=nowYear+9; hy++){ var ha=byYear[hy]; if(!ha) continue;
           if((spouse&&CHONG[spouse]&&ha.branch===CHONG[spouse])||ha.tsuhen==='傷官') hCau.push(hy);   // 冲・傷官＝消耗/不調の出やすい年
