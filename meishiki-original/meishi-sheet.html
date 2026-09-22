@@ -333,6 +333,12 @@
   .ez-gfill{ display:block; height:100%; border-radius:6px; }
   .ge-moku{ background:var(--el-moku); } .ge-ka{ background:var(--el-ka); } .ge-do{ background:var(--el-do); } .ge-kin{ background:var(--el-kin); } .ge-sui{ background:var(--el-sui); }
   .ez-grow .ez-btrack{ height:10px; }
+  /* 五行の五角形 */
+  .ez-pentwrap{ display:flex; align-items:center; gap:10px; }
+  .ez-pent{ width:150px; height:140px; flex:0 0 auto; }
+  .ez-plegs{ display:flex; flex-direction:column; gap:4px; }
+  .ez-plg{ font-size:11px; color:var(--ink); display:flex; align-items:center; gap:6px; white-space:nowrap; }
+  .ez-plg i{ width:11px; height:11px; border-radius:50%; display:inline-block; flex:0 0 auto; }
   .ez-note2{ font-size:11.5px; margin:6px 0 0; color:var(--ink2); }
   .ez-grid{ display:block; font-size:12px; line-height:1.6; }
   .ez-grid > div{ margin:0 0 6px; } .ez-grid > div:last-child{ margin:0; }
@@ -394,8 +400,8 @@
     .ez-lbl{ font-size:9.2px; } .ez-stars{ font-size:11px; } .ez-meter .ez-row{ padding:0.8mm 0; }
     .ez-brow{ gap:2mm; padding:0.5mm 0; } .ez-blbl{ font-size:8.4px; width:9.5em; } .ez-btrack{ height:2mm; } .ez-bstar{ font-size:7.6px; }
     .ez-bfill, .ez-bfill.ez-btop{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-    .ez-grow{ gap:1.6mm; padding:0.4mm 0; } .ez-gmark{ width:3.4mm; height:3.4mm; line-height:3.4mm; font-size:8px; } .ez-glbl{ font-size:8px; width:7em; } .ez-gnum{ font-size:8px; } .ez-grow .ez-btrack{ height:1.9mm; }
-    .ez-gfill, .ez-gmark{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .ez-pentwrap{ gap:2mm; } .ez-pent{ width:30mm; height:28mm; } .ez-plg{ font-size:8px; gap:1mm; } .ez-plg i{ width:2mm; height:2mm; }
+    .ez-pent circle, .ez-pent polygon, .ez-pent text{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .ez-grid{ font-size:9.2px; gap:1mm 3mm; } .ez-ul{ font-size:9.4px; line-height:1.5; }
     .rd-note{ font-size:8.4px; margin-top:1.6mm; padding-top:1.2mm; }
     .sheet::before{ inset:3mm; } .sheet::after{ inset:5mm; }
@@ -1958,12 +1964,27 @@ window.KANSHI60_DETAIL={
   function ezCard(title, body, cls){ return '<section class="ez-card'+(cls?' '+cls:'')+'"><h3 class="ez-h">'+title+'</h3>'+body+'</section>'; }
   // 五行バランス（色付きマーク＋バー）。命式8字の実数。少ない五行は"補うと整う"と前向きに。
   var EZEL={木:{k:'moku',n:'成長・のびのび'},火:{k:'ka',n:'情熱・明るさ'},土:{k:'do',n:'安定・信頼'},金:{k:'kin',n:'意志・けじめ'},水:{k:'sui',n:'知恵・柔軟'}};
+  var EZELCOL={木:'#2E7D52',火:'#C0392B',土:'#B07E1E',金:'#6E6A62',水:'#2A6FD0'};
+  // 五行の五角形（外周＝相生の助け合い／内の星＝相剋の抑え合い）。ノードの大きさ＝多さ。
+  function ezPentagon(fe){
+    var pts={木:[80,22],火:[134,61],土:[113,123],金:[47,123],水:[26,61]};
+    var sei=['木','火','土','金','水'], kok=['木','土','水','火','金'];
+    var seiP=sei.map(function(e){return pts[e].join(',');}).join(' ');
+    var kokP=kok.map(function(e){return pts[e].join(',');}).join(' ');
+    var nodes=sei.map(function(e){ var p=pts[e], v=fe[e]||0, r=11+3*Math.min(v,4);
+      return '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="'+r+'" fill="'+EZELCOL[e]+'"/>'+
+        '<text x="'+p[0]+'" y="'+p[1]+'" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="13" font-weight="700">'+e+'</text>'+
+        '<text x="'+p[0]+'" y="'+(p[1]-r-4)+'" text-anchor="middle" fill="#565049" font-size="10" font-weight="700">'+v+'</text>'; }).join('');
+    return '<svg viewBox="0 0 160 150" class="ez-pent" role="img" aria-label="五行バランスの五角形">'+
+      '<polygon points="'+seiP+'" fill="none" stroke="#B9B4AA" stroke-width="1.3"/>'+
+      '<polygon points="'+kokP+'" fill="none" stroke="#DAD6CD" stroke-width="1" stroke-dasharray="3 3"/>'+
+      nodes+'</svg>';
+  }
   function ezGogyo(fe){
-    var els=['木','火','土','金','水'], vals=els.map(function(e){return fe[e]||0;}), mx=Math.max.apply(null,vals)||1;
-    var rows=els.map(function(e){ var v=fe[e]||0, w=Math.round(18+82*(v/mx));
-      return '<div class="ez-grow"><span class="ez-gmark ge-'+EZEL[e].k+'">'+e+'</span><span class="ez-glbl">'+EZEL[e].n+'</span><span class="ez-btrack"><span class="ez-gfill ge-'+EZEL[e].k+'" style="width:'+w+'%"></span></span><span class="ez-gnum">'+v+'</span></div>'; }).join('');
-    var few=els.filter(function(e){return (fe[e]||0)===0;});
-    return '<div class="ez-gwrap">'+rows+'</div><p class="ez-note2">この5つのエネルギーの多い少ないが、あなたらしさをつくります。'+(few.length?'少ない<b>'+few.join('・')+'</b>は"足すと整う"色・習慣で補えます。':'バランスよく持ち合わせた万能タイプです。')+'</p>';
+    var els=['木','火','土','金','水'], few=els.filter(function(e){return (fe[e]||0)===0;});
+    var legend=els.map(function(e){return '<span class="ez-plg"><i class="ge-'+EZEL[e].k+'"></i>'+e+'（'+EZEL[e].n+'）'+(fe[e]||0)+'</span>';}).join('');
+    return '<div class="ez-pentwrap">'+ezPentagon(fe)+'<div class="ez-plegs">'+legend+'</div></div>'+
+      '<p class="ez-note2">数字＝生まれ持った量。外周は助け合い、内の星は抑え合いの関係です。'+(few.length?'少ない<b>'+few.join('・')+'</b>は"足すと整う"色や習慣で補えます。':'バランスよく持ち合わせた万能タイプです。')+'</p>';
   }
   window.buildEasyHTML=function(r, opts){
     opts=opts||{};
