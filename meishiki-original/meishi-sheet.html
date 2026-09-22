@@ -1764,6 +1764,66 @@ window.KANSHI60_DETAIL={
       if(scope==='solo'){ H+='<div class="rd-lead">この鑑定書は<b>'+LEADF[theme][0]+'だけ</b>をまとめた専用版です（他の項目は含みません）。基本の持ち味も冒頭に添えています。</div>'; }
       else { H+='<div class="rd-lead">この鑑定書は<b>'+LEADF[theme][0]+'を中心</b>に読み解いています。'+LEADF[theme][1]+'まとめています。</div>'; }
     }
+    // ◎ 総合鑑定（ひと目でわかるまとめ）＝命式の確定データ（日主・喜忌・大運の季節・節木運・会局の巡り）を統合した要約。詳細は下の各章に続く。
+    if(scope==='full'){ (function(){
+      var GINV={'火':'木','土':'火','金':'土','水':'金','木':'水'};   // 印（自分を生む）
+      var CINV={'土':'木','金':'火','水':'土','木':'金','火':'水'};   // 官殺（自分を剋す）
+      var BREL={子:'水',丑:'土',寅:'木',卯:'木',辰:'土',巳:'火',午:'火',未:'土',申:'金',酉:'金',戌:'土',亥:'水'};
+      var SEAS={寅:'春',卯:'春',辰:'春',巳:'夏',午:'夏',未:'夏',申:'秋',酉:'秋',戌:'秋',亥:'冬',子:'冬',丑:'冬'};
+      var SEASEL={春:'木',夏:'火',秋:'金',冬:'水'};
+      var kiEls=(shugoKind==='身強')?[dmEl,GINV[dmEl]]:(shugoKind==='身弱'?[_GEN[dmEl],_CON[dmEl],CINV[dmEl]]:[]);
+      function fav(el){ if(!el) return 0; if(shugoEls.indexOf(el)>=0) return 1; if(kiEls.indexOf(el)>=0) return -1; return 0; }
+      function brEl(gz){ return (gz&&gz.length>1)?BREL[gz.charAt(1)]:''; }
+      var b='';
+      // 1) 核
+      var kyoName=(shugoKind==='身強'?'身強（自分の力が強め）':(shugoKind==='身弱'?'身弱（周囲の力を借りて伸びる）':'中和（バランス型）'));
+      b+=para('<b>【核】</b><b>日主「'+ruby(dm)+'（'+dmEl+'）」</b>を芯に、'+(NATURE[dm]||''));
+      if(genmei&&TSU[genmei]) b+=para('性格・仕事の軸は<b>月支元命「'+genmei+'」</b>＝'+TSU[genmei].t+'。身強弱は<b>'+kyoName+'</b>。');
+      // 2) 強みと注意（＋干合の縛り）
+      if(domStar&&TSU[domStar]){
+        var t=TSU[domStar];
+        var s='<b>強み</b>＝'+t.t+'。<b>気をつける所</b>＝'+(t.c||'—')+'。';
+        var gp=GANGO[dm], ganGoHas=['year','month','hour'].some(function(k){return P[k]&&P[k].gan===gp;});
+        if(ganGoHas) s+='さらに日干「'+ruby(dm)+'」は命式内の「'+ruby(gp)+'」と<b>干合（＝強い縁で結ばれ、時に"縛られる"配置）</b>。一つの人・役割に気を取られやすいので、<b>手放す・任せる・断る</b>が開運の鍵です。';
+        b+=para('<b>【強み・注意】</b>'+s);
+      }
+      // 3) 運の大きな流れ（大運の季節＝方合／節木運）
+      var du=(r.daiun||[]).filter(function(d){return d&&d.kanshi;});
+      if(du.length){
+        var runs=[], prev=null;
+        du.forEach(function(d){ var se=SEAS[(d.kanshi.length>1?d.kanshi.charAt(1):'')]||'';
+          if(prev&&prev.se===se){ prev.to=d.ageTo; } else { prev={se:se,from:d.ageFrom,to:d.ageTo}; runs.push(prev); } });
+        var parts=runs.map(function(rn){ var el=SEASEL[rn.se]||'', f=fav(el);
+          return rn.from+'〜'+rn.to+'歳＝'+rn.se+'('+el+')'+(f>0?'◎追い風':(f<0?'△踏ん張り':'')); });
+        b+=para('<b>【運の大きな流れ】</b>大運は'+(r.direction||'')+'で、'+parts.join('／')+'。'+(shugoEls.length?'喜神は「'+shugoEls.join('・')+'」なので、その季節の大運ほど底流の追い風になります。':''));
+        var setsu=runs.slice(1).map(function(rn){return rn.from;});
+        if(setsu.length){ var near=setsu.filter(function(a){return nowAge==null||a>=nowAge;})[0];
+          b+=para('人生の節目（季節の変わり目＝節木運）は<b>'+setsu.map(function(a){return a+'歳';}).join('・')+'</b>。'+(near!=null?'次の踏ん張りどきは<b>'+near+'歳前後</b>で、越えると次の季節（'+((runs.filter(function(rn){return rn.from===near;})[0]||{}).se||'')+'）の巡りに入ります。':'')); }
+      }
+      // 4) 今このタイミング
+      var curFav=0;
+      if(curDu){ var cel=brEl(curDu.kanshi); curFav=fav(cel);
+        var jud=(curFav>0?'喜神の五行が巡る<b>追い風</b>の時期':(curFav<0?'忌神が重なりやすい<b>要注意・仕込み</b>の時期':'穏やかな時期'));
+        b+=para('<b>【今このタイミング'+(nowAge!=null?'（'+nowAge+'歳）':'')+'】</b>今めぐるのは'+curDu.ageFrom+'〜'+curDu.ageTo+'歳の大運「'+ruby(curDu.kanshi)+'」（星は'+curDu.tsuhen+'）。五行では'+(cel||'—')+'＝'+jud+'。'+(curFav<0?'無理に広げず、土台を整える"仕込み"に徹するのが吉。':(curFav>0?'動いて仕上げる・受け取るのに向く時期です。':'流れに沿って着実に進めるとよい時期です。')));
+      }
+      // 5) 開運の狙い（喜神＋狙い目の年＝喜神の会局が巡る年）
+      var favYears=[];
+      if(r.annualByYear&&nowYear!=null){
+        var natB=[]; ['year','month','day','hour'].forEach(function(k){var p=P[k]; if(p&&p.shi)natB.push(p.shi);});
+        var SAN=[['申','子','辰','水'],['亥','卯','未','木'],['寅','午','戌','火'],['巳','酉','丑','金']];
+        var HOU=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','戌','金'],['亥','子','丑','水']];
+        for(var y=nowYear; y<nowYear+12 && favYears.length<3; y++){ var a=r.annualByYear[y]; if(!a||!a.branch)continue; var ab=a.branch, hit=null;
+          SAN.forEach(function(g){ if(g.indexOf(ab)>=0&&fav(g[3])>0){ var c=[g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}).length; if(c>=2)hit={k:'三合',el:g[3]}; else if(c>=1&&!hit)hit={k:'半会',el:g[3]}; } });
+          HOU.forEach(function(g){ if(g.indexOf(ab)>=0&&fav(g[3])>0){ var c=[g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}).length; if(c>=2)hit={k:'方合',el:g[3]}; } });
+          if(hit) favYears.push(y+'年（'+hit.k+'・'+hit.el+'）');
+        }
+      }
+      b+=para('<b>【開運の狙い】</b><b>喜神＝'+(shugoEls.join('・')||'—')+'</b>を意識して使うと流れが整います。'+(favYears.length?'狙い目の年は<b>'+favYears.join('・')+'</b>——動く・仕上げる・受け取る年です。':'巡りの良い年は1枚目「年運」表を目安にしてください。'));
+      // 6) 一言でいうと
+      var oneStrong=(domStar&&TSU[domStar])?TSU[domStar].t:'あなたらしい持ち味';
+      b+=para('<b>【一言でいうと】</b>「'+dmEl+'の芯を持つ、'+oneStrong+'が武器の人。'+(shugoEls.length?'"'+shugoEls.join('・')+'"を使う':'持ち味を素直に活かす')+'ほど開運。'+(curDu?'今は'+(curFav>0?'追い風':(curFav<0?'仕込みどき':'穏やか'))+'。':'')+(favYears.length?'勝負どころは'+favYears.map(function(s){return s.split('（')[0];}).join('・')+'。':'')+'」');
+      H+=sec('◎ 総合鑑定（ひと目でわかるまとめ）', b);
+    })(); }
     // 1. 本質
     (function(){
       var b='';
