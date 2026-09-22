@@ -419,6 +419,7 @@
           <button type="button" id="thLove" aria-pressed="false">恋愛重視</button>
           <button type="button" id="thWork" aria-pressed="false">仕事重視</button>
           <button type="button" id="thMoney" aria-pressed="false">金運重視</button>
+          <button type="button" id="thHealth" aria-pressed="false">健康重視</button>
         </span>
       </div>
       <div class="act">
@@ -1083,7 +1084,7 @@ window.MEISHIKI=(function(){
     var terrDay=day.junishi||'';
     var spouse=day.shi||'';
     var sex=opts.sex==='male'?'male':'female';
-    var theme=({love:'love',work:'work',money:'money'})[opts.theme]||'general';
+    var theme=({love:'love',work:'work',money:'money',health:'health'})[opts.theme]||'general';
     var byYear=r.annualByYear||{};
     var nowYear=(r.nowYear!=null?r.nowYear:(r.birthYear!=null?r.birthYear+(r.nowAge||0):null));
     var fe=r.gogyoCount||{};
@@ -1112,6 +1113,7 @@ window.MEISHIKI=(function(){
     if(theme==='love'){ H+='<div class="rd-lead">この鑑定書は<b>恋愛・ご縁を中心</b>に読み解いています。出逢いの時期は「４．恋愛・結婚」に、日々の相性は「６．対人相性」にまとめています。</div>'; }
     else if(theme==='work'){ H+='<div class="rd-lead">この鑑定書は<b>仕事・キャリアを中心</b>に読み解いています。伸びる時期・進め方は「３．才能と活かし方」に、人との組み方は「６．対人相性」にまとめています。</div>'; }
     else if(theme==='money'){ H+='<div class="rd-lead">この鑑定書は<b>金運・財を中心</b>に読み解いています。お金が動く時期・増やし方は「５．金運」に、稼ぐ力は「３．才能と活かし方」にまとめています。</div>'; }
+    else if(theme==='health'){ H+='<div class="rd-lead">この鑑定書は<b>健康・養生を中心</b>に読み解いています。体質・弱りやすい所・無理の出やすい時期・養生法は「７．五行と健康・養生」にまとめています。</div>'; }
     // 1. 本質
     (function(){
       var b='';
@@ -1262,7 +1264,23 @@ window.MEISHIKI=(function(){
       if(maxList.length===1&&maxEl&&ORGAN[maxEl]){ b+=para('体質面では、強い<b>'+maxEl+'（'+ORGAN[maxEl].o+'）</b>に負担が出やすい傾向。'+ORGAN[maxEl].ex+'養生は<b>'+ORGAN[maxEl].tip+'</b>を意識すると整います。'); }
       if(lackEls.length){ b+=para('弱い（または無い）<b>'+lackEls.join('・')+'</b>は、'+lackEls.map(function(e){return ORGAN[e]?ORGAN[e].o+'——'+ORGAN[e].lk:'';}).filter(Boolean).join(' ')+' 疲れやすいと感じたら、この系統をいたわると回復が早まります。'); }
       if(shugoEls.length){ var _mikyo=(shugoKind==='身強'?'身強（みきょう＝自分の力が強めのタイプ）':shugoKind==='身弱'?'身弱（じんじゃく＝自分の力が控えめのタイプ）':shugoKind); b+=para('あなたを助ける<b>守護神（しゅごしん＝喜神・あなたに味方する五行）は「'+shugoEls.join('・')+'」</b>（あなたは'+_mikyo+'）。この五行を意識的に取り入れると調子が整います。ラッキーカラーは<b>'+shugoEls.map(function(e){return EL[e]?EL[e].col:'';}).filter(Boolean).join('／')+'</b>、養生は<b>'+shugoEls.map(function(e){return EL[e]?EL[e].care:'';}).filter(Boolean).join('／')+'</b>が向きます。'); }
-      H+=sec('７．五行と健康・養生', b);
+      // 健康重視テーマ：無理の出やすい年・整えやすい年・養生の指針を年運から
+      if(theme==='health' && nowYear!=null){
+        var hCau=[], hRest=[];
+        for(var hy=nowYear; hy<=nowYear+9; hy++){ var ha=byYear[hy]; if(!ha) continue;
+          if((spouse&&CHONG[spouse]&&ha.branch===CHONG[spouse])||ha.tsuhen==='傷官') hCau.push(hy);   // 冲・傷官＝消耗/不調の出やすい年
+          if(ha.tsuhen==='印綬'||ha.tsuhen==='偏印') hRest.push(hy);                                    // 印星＝休養・回復の年
+        }
+        var careParts=[];
+        if(maxList.length===1&&maxEl&&ORGAN[maxEl]) careParts.push(ORGAN[maxEl].tip);
+        lackEls.forEach(function(e){ if(ORGAN[e]) careParts.push(ORGAN[e].tip); });
+        if(shugoEls.length) careParts.push(shugoEls.map(function(e){return EL[e]?EL[e].care:'';}).filter(Boolean).join('／'));
+        var careUniq=[]; careParts.forEach(function(c){ if(c&&careUniq.indexOf(c)<0)careUniq.push(c); });
+        if(hCau.length){ b+=para('<b>◆ 体に無理が出やすい年</b>：<b>'+hCau.slice(0,4).map(function(y){return y+'年';}).join('、')+'</b>は冲（ぶつかり）や傷官（消耗の星）が絡む年。疲れ・不調・ケガが出やすいので、<b>睡眠と休息を厚め</b>にし、無理な予定を詰め込まないのが安全です。'); }
+        if(hRest.length){ b+=para('<b>◆ 整え・回復に向く年</b>：<b>'+hRest.slice(0,4).map(function(y){return y+'年';}).join('、')+'</b>は印星（休む・受け取る星）が巡る年。<b>健診・生活リズムの立て直し・体づくり</b>を始めると効果が出やすい時期です。'); }
+        if(careUniq.length){ b+=para('<b>◆ 養生の指針</b>：'+careUniq.join('／')+'。'+((maxList.length===1&&maxEl)?'とくに強い<b>'+maxEl+'</b>を出しすぎないよう、休む・緩める時間を意識すると安定します。':'バランス型なので、生活リズムを一定に保つのが一番の養生です。')); }
+      }
+      H+=sec((theme==='health'?'７．健康・養生（体質と無理の出やすい時期）':'７．五行と健康・養生'), b);
     })();
     // 8. 運の流れ
     (function(){
@@ -1669,16 +1687,16 @@ window.MEISHIKI=(function(){
       if(mount && window.buildReadingHTML && _lastResult){
         mount.innerHTML = window.buildReadingHTML(_lastResult, {sex:(_lastResult.sex||'female'), theme:_readTheme});
       }
-      var sub=document.getElementById('rdSub'); if(sub) sub.textContent=({love:'― 恋愛を中心に読み解く',work:'― 仕事・キャリアを中心に読み解く',money:'― 金運・財を中心に読み解く'})[_readTheme]||'― 命式からの読み解き';
+      var sub=document.getElementById('rdSub'); if(sub) sub.textContent=({love:'― 恋愛を中心に読み解く',work:'― 仕事・キャリアを中心に読み解く',money:'― 金運・財を中心に読み解く',health:'― 健康・養生を中心に読み解く'})[_readTheme]||'― 命式からの読み解き';
     }catch(e){ console.error('reading build failed', e); }
   }
   function setTheme(t){
-    _readTheme = ({love:'love',work:'work',money:'money'})[t]||'general';
-    var map={general:'thGeneral',love:'thLove',work:'thWork',money:'thMoney'};
+    _readTheme = ({love:'love',work:'work',money:'money',health:'health'})[t]||'general';
+    var map={general:'thGeneral',love:'thLove',work:'thWork',money:'thMoney',health:'thHealth'};
     Object.keys(map).forEach(function(k){ var el=document.getElementById(map[k]); if(el) el.setAttribute('aria-pressed', String(_readTheme===k)); });
     renderReading();
   }
-  (function(){ [['thGeneral','general'],['thLove','love'],['thWork','work'],['thMoney','money']].forEach(function(pair){
+  (function(){ [['thGeneral','general'],['thLove','love'],['thWork','work'],['thMoney','money'],['thHealth','health']].forEach(function(pair){
     var el=document.getElementById(pair[0]); if(el) el.addEventListener('click', function(){ setTheme(pair[1]); }); }); })();
 
   // ---- フォーム ----
