@@ -2133,6 +2133,58 @@ window.KANSHI60_DETAIL={
     var dayGZ=dm+(day.shi||''); var kan=(window.KANSHI60_DETAIL&&window.KANSHI60_DETAIL[dayGZ])||null;
     var H='';
     H+='<div class="ez-hero"><div class="ez-badge">'+T.name+'</div><div class="ez-hero-copy">あなたは「<b>'+T.img+'</b>」のような人。'+(kan?kan.一言:T.copy)+'。</div></div>';
+    // 📌 まるっと総合まとめ（専門用語ゼロ）＝強み・運の流れ・今・チャンスの年をやさしく統合
+    (function(){
+      var GINV={'火':'木','土':'火','金':'土','水':'金','木':'水'};
+      var CINV={'土':'木','金':'火','水':'土','木':'金','火':'水'};
+      var BREL={子:'水',丑:'土',寅:'木',卯:'木',辰:'土',巳:'火',午:'火',未:'土',申:'金',酉:'金',戌:'土',亥:'水'};
+      var SEAS={寅:'春',卯:'春',辰:'春',巳:'夏',午:'夏',未:'夏',申:'秋',酉:'秋',戌:'秋',亥:'冬',子:'冬',丑:'冬'};
+      var SEASEL={春:'木',夏:'火',秋:'金',冬:'水'};
+      var kind=r.shugoStrength||'';
+      var kiEls=(kind==='身強')?[dmEl,GINV[dmEl]]:(kind==='身弱'?[_GEN[dmEl],_CON[dmEl],CINV[dmEl]]:[]);
+      function fav(el){ if(!el) return 0; if(shugoEls.indexOf(el)>=0) return 1; if(kiEls.indexOf(el)>=0) return -1; return 0; }
+      var nowAge=r.nowAge, du=(r.daiun||[]).filter(function(d){return d&&d.kanshi;});
+      var b='';
+      // どんな人＋強み・クセ
+      b+='<p class="ez-p"><b>あなたは「'+T.img+'」のような'+T.name+'。</b>いちばんの強みは<b>'+(EZGOOD[topCat]||'あなたらしい持ち味')+'</b>。'+((genmei&&TSU[genmei]&&TSU[genmei].c)?'気をつけるとよいのは「'+TSU[genmei].c+'」——気づけば長所に変わります。':'')+'</p>';
+      // 運の流れ（追い風／ひとやすみ）＋変わり目
+      if(du.length){
+        var runs=[], prev=null;
+        du.forEach(function(d){ var se=SEAS[(d.kanshi.length>1?d.kanshi.charAt(1):'')]||'';
+          if(prev&&prev.se===se){prev.to=d.ageTo;} else {prev={se:se,from:d.ageFrom,to:d.ageTo,el:SEASEL[se]}; runs.push(prev);} });
+        var goods=runs.filter(function(rn){return fav(rn.el)>0;}).map(function(rn){return rn.from+'〜'+rn.to+'歳ごろ';});
+        var rests=runs.filter(function(rn){return fav(rn.el)<0;}).map(function(rn){return rn.from+'〜'+rn.to+'歳ごろ';});
+        var flow='運には波があります。';
+        if(goods.length) flow+='<b>'+goods.join('・')+'</b>は<b>追い風</b>（動くほど伸びる時期）。';
+        if(rests.length) flow+='<b>'+rests.join('・')+'</b>は<b>ひとやすみ</b>（無理に広げず力をためると◎）。';
+        if(!goods.length&&!rests.length) flow+='大きな波は少なめで、<b>コツコツ積み上げるほど安定して伸びる</b>タイプです。';
+        var setsu=runs.slice(1).map(function(rn){return rn.from;});
+        var near=setsu.filter(function(a){return nowAge==null||a>=nowAge;})[0];
+        if(near!=null) flow+='つぎの変わり目は<b>'+near+'歳ごろ</b>。';
+        b+='<p class="ez-p">'+flow+'</p>';
+      }
+      // 今の時期
+      var curDu=du.filter(function(d){return nowAge!=null&&nowAge>=d.ageFrom&&nowAge<d.ageTo;})[0];
+      if(curDu){ var cel=BREL[(curDu.kanshi.length>1?curDu.kanshi.charAt(1):'')]||''; var cf=fav(cel);
+        var now=(cf>0?'いまは<b>攻めどき</b>。やりたいことを前に進めるのに向いています。':(cf<0?'いまは<b>整えどき</b>。土台を整えて、つぎの追い風にそなえる時期です。':'いまは<b>おだやかな時期</b>。ふだんの積み重ねが力になります。'));
+        b+='<p class="ez-p">'+(nowAge!=null?'今（'+nowAge+'歳）：':'')+now+'</p>';
+      }
+      // チャンスの年
+      var favYears=[];
+      if(r.annualByYear&&nowYear!=null){
+        var natB=[]; ['year','month','day','hour'].forEach(function(k){var p=P[k]; if(p&&p.shi)natB.push(p.shi);});
+        var SAN=[['申','子','辰','水'],['亥','卯','未','木'],['寅','午','戌','火'],['巳','酉','丑','金']];
+        var HOU=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','戌','金'],['亥','子','丑','水']];
+        for(var y=nowYear; y<nowYear+12 && favYears.length<3; y++){ var a=r.annualByYear[y]; if(!a||!a.branch)continue; var ab=a.branch, ok=false;
+          SAN.forEach(function(g){ if(g.indexOf(ab)>=0&&fav(g[3])>0){ if([g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}).length>=1)ok=true; } });
+          HOU.forEach(function(g){ if(g.indexOf(ab)>=0&&fav(g[3])>0){ if([g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}).length>=2)ok=true; } });
+          if(ok) favYears.push(y);
+        }
+      }
+      if(favYears.length) b+='<p class="ez-p">とくに<b>'+favYears.map(function(y){return y+'年';}).join('・')+'</b>は<b>チャンスの年</b>。気になることに一歩ふみ出すと道がひらけます。</p>';
+      b+='<p class="ez-note2">むずかしく考えなくて大丈夫。<b>'+(col||'好きな色')+'</b>を身近に置き、追い風の時期に動く——それだけで運は育ちます。</p>';
+      H+=ezCard('📌 まるっと総合まとめ', b);
+    })();
     // こんな人です（生まれ日の60干支の詳しい人物像）
     var konna='';
     if(kan){ konna='<p class="ez-p">'+kan.基本+'</p>'; var sx=(sex==='female')?kan.女:kan.男; if(sx) konna+='<p class="ez-p"><b>'+(sex==='female'?'女性としては：':'男性としては：')+'</b>'+sx+'</p>'; }
