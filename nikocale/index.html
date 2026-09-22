@@ -2891,10 +2891,14 @@ function pickFocus(interests){
   (function(){ var pr=$('ppResult'); if(pr){ var ch=pr.querySelector('.pp-chips'); if(ch)ch.addEventListener('scroll',updatePpFade,{passive:true}); } window.addEventListener('resize',function(){setTimeout(updatePpFade,0);}); })();
   function pulseResults(){ var mh=$('modeHead'); if(!mh)return; mh.classList.remove('flash'); void mh.offsetWidth; mh.classList.add('flash'); }
   function scrollResultsIfNeeded(){ var mh=$('modeHead'); if(!mh)return; var r=mh.getBoundingClientRect(); if(r.top<8||r.top>window.innerHeight*0.6){ $('summary').scrollIntoView({behavior:'smooth',block:'start'}); } }
-  function setPurpose(pp){ state.pp=pp;
+  function setPurpose(pp, opt){ opt=opt||{}; state.pp=pp;
     document.querySelectorAll('[data-pp]').forEach(function(o){o.setAttribute('aria-pressed', o.getAttribute('data-pp')===pp?'true':'false');});
-    if($('out').style.display!=='none'){ state.sel=null; render(); scrollResultsIfNeeded(); pulseResults(); try{toast(PP[pp].name+' で占い直しました');}catch(e){} } }
-  document.querySelectorAll('[data-pp]').forEach(function(btn){ btn.onclick=function(){ setPurpose(btn.getAttribute('data-pp')); }; });
+    if($('out').style.display!=='none'){ state.sel=null; render();
+      // カレンダー下のクイック切替チップからのタップのときだけ、結果へスクロール＆点滅。
+      // 上の入力フォーム②のピルでは勝手にカレンダーへ飛ばさない（誕生日入力の妨げになるため）。
+      if(opt.scroll){ scrollResultsIfNeeded(); pulseResults(); try{toast(PP[pp].name+' で占い直しました');}catch(e){} }
+    } }
+  document.querySelectorAll('[data-pp]').forEach(function(btn){ btn.onclick=function(){ setPurpose(btn.getAttribute('data-pp'), {scroll: !!btn.closest('#ppResult')}); }; });
 
   /* ===== 関係の点数・意味 ===== */
   var ST={'干合':6,'干相生':3,'干比和':2,'干相剋':-2};
