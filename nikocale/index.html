@@ -1030,6 +1030,10 @@ select{
 .cell:not(.empty){cursor:pointer;transition:transform .08s ease}
 .cell:not(.empty):active{transform:scale(.95)}
 .cal-month{text-align:center;font-family:var(--serif);font-weight:700;font-size:15px;letter-spacing:.06em;color:var(--accent-2);margin:2px 0 4px}
+.cal-flow{text-align:center;font-size:12px;font-weight:700;color:var(--ink-soft);margin:0 0 8px;letter-spacing:.02em}
+.cal-flow .cf-pill{display:inline-block;padding:3px 12px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line-strong)}
+.cal-flow .cf-up{color:var(--accent-2);border-color:color-mix(in oklab,var(--accent) 30%,var(--line))}
+.cal-flow .cf-dn{color:var(--warn);border-color:color-mix(in oklab,var(--warn) 30%,var(--line))}
 .cal-tip{text-align:center;font-size:11.5px;color:var(--accent-2);font-weight:700;margin:0 2px 8px;display:flex;align-items:center;justify-content:center;gap:8px}
 .cal-tip::before,.cal-tip::after{content:'';flex:0 0 20px;height:1px;background:var(--line-strong)}
 @keyframes tapHint{0%,100%{box-shadow:inset 0 0 0 0 transparent}50%{box-shadow:inset 0 0 0 3px var(--accent)}}
@@ -1422,6 +1426,7 @@ select{
     <div class="modehead" id="modeHead"></div>
     <div class="legend" id="legend"></div>
     <div class="cal-month" id="calMonth" aria-hidden="true"></div>
+    <div class="cal-flow" id="calFlow" aria-hidden="true"></div>
     <div class="cal-tip" id="calTip">日付をタップ → その日の“なぜ？”が開きます</div>
     <div class="grid" id="wdhead"></div>
     <div class="grid" id="cal"></div>
@@ -2278,17 +2283,24 @@ function gradeThresholds(youStem, youBranch, favSet, imiSet){
   for(var i=0;i<60;i++){ var d=new Date(2020,0,1+i); arr.push(dayRawScore(youStem,youBranch,pillar(d.getFullYear(),d.getMonth()+1,d.getDate()),favSet,imiSet)); }
   arr.sort(function(a,b){return a-b;});
   var q=function(pp){return arr[Math.min(59,Math.floor(pp*60))];};
+  // tri は「実測の△割合」が設計意図(≈下位15%＝週1回程度)になるよう較正した値。
+  // スコアは離散で同点が多く、公称 q(0.15) だと実測は約22%に膨らむため q(0.10) を採用（実測≈15%）。
+  // ◎は上位28%(q0.72)。案Bにより判定は日柱の関係のみ＝流月・流年に依らず毎月ほぼ一定・人により偏らない。
   return (_GRADE_TH[key]={maru:q(0.72),tri:q(0.10)});
 }
 /* 統一グレード（案C：💮はレア＝全員一律／恋の底上げは正直版）
    ・🌈(運命の人)＝無条件💮
    ・💮は「桃花×高得点×非沖」のみに限定（🌸恋チャンス×高得点は◎に留める）→ 💮の人ごとの二極化を解消し全員一律≈5%に
-   ・恋の合図(桃花/恋チャンス・非沖)の底上げは「中位以上(下位10%より上)」のみ◎。下位10%は正直に△
-   ・上位28%◎・下位10%△（△は控えめに調整） */
+   ・恋の合図(桃花/恋チャンス・非沖)の底上げは「中位以上(下位15%より上)」のみ◎。下位15%は正直に△
+   ・上位28%◎・下位15%△（判定は日柱の関係のみ＝流月・流年に依らず毎月一定／案B） */
 function dailyGrade(you, tt, favSet, imiSet, touka, enlv, ymd){
   var th=gradeThresholds(you.stem, you.branch, favSet, imiSet);
   var s=dayRawScore(you.stem, you.branch, tt, favSet, imiSet);
-  if(ymd) s+=ymAdjust(ymd.y, ymd.m, ymd.d, favSet, imiSet, STEM_GOGYO[you.stem]);   // 流年・流月の補正（日付を渡した時のみ）
+  // 【案B】流月・流年の補正は「その月の全日に一律にかかる定数」。以前はこれをグレード判定に足していたが、
+  // 閾値は補正なしで作っていたため“巡りの悪い月は△だらけ／良い月は△ゼロ”という矛盾（設計は下位15%△の
+  // はずが実際は月27%等）が出ていた。→ グレード(◎〇△)は日柱の関係だけで判定して毎月ほぼ一定にし、
+  // 流月・流年は ym に切り出して「今月の巡り」の一言でまとめて見せる。
+  var ym = ymd ? ymAdjust(ymd.y, ymd.m, ymd.d, favSet, imiSet, STEM_GOGYO[you.stem]) : 0;
   var sok=(CLASH.indexOf(branchRel(tt.branch, you.branch))>=0);
   var love=(touka||enlv===2);
   var sym;
@@ -2296,12 +2308,12 @@ function dailyGrade(you, tt, favSet, imiSet, touka, enlv, ymd){
   else if(touka && !sok && s>=th.maru) sym='💮';        // 桃花×高得点×非沖のみ💮（レア化）
   else if(s>=th.maru) sym='◎';                           // 上位28%は◎
   else if(love && !sok && s>th.tri) sym='◎';             // 恋の合図(非沖・中位以上)は底上げ◎
-  else if(s<=th.tri) sym='△';                            // 下位10%は正直に△
+  else if(s<=th.tri) sym='△';                            // 下位15%は正直に△
   else sym='〇';
   // 恋の合図日(モテ運/恋チャンス)は、たとえ△でも天気は“くもり”以上に留める（にわか雨まで落とさない）。
   var triIdx = (sok && !love) ? 45 : 55;
   var idx = sym==='💮'?96 : sym==='◎'?84 : sym==='〇'?68 : triIdx;
-  return {sym:sym, idx:idx};
+  return {sym:sym, idx:idx, ym:ym};
 }
 const LOVE_ADVICE={
   比肩:"今日は自分の気持ちに正直に。無理に相手へ合わせるより、自然体のあなたがいちばん魅力的です。",
@@ -2803,7 +2815,7 @@ function pickFocus(interests){
       relIntro:(REL_PREFIX[rel]||REL_PREFIX.single)+RI_OPEN[pickSeq(ubase,76,RI_OPEN.length,seed)]+RI_CLOSE[pickSeq(ubase,83,RI_CLOSE.length,seed)],
       pillars:{you:you, partner:p, today:t},
       index:idx, weather:{icon:w.ic, name:w.name}, weatherMsg:wmsg,
-      grade:{sym:_grade.sym, label:(GRADE_LABEL[_grade.sym]||'')},
+      grade:{sym:_grade.sym, label:(GRADE_LABEL[_grade.sym]||''), ym:_grade.ym},
       theme:{god:god, mean:meanP, axis:themeAxis.ax, line:themeLine, message:godMsg},
       en:{lv:en.lv, tag:enTag, body:enBody},
       love:love, loveMove:loveMove,
@@ -3116,6 +3128,19 @@ function pickFocus(interests){
       ? '<span><i class="dd sp">💮</i>特別</span><span><i class="dd ok">◎</i>好調</span><span><i class="dd good">〇</i>普通</span><span><i class="dd warn">△</i>休息</span><span>🌷=モテ日</span><span>📝=メモした日</span>'
       : '<span class="abkey"><span class="a">A</span>＝あなた'+(state.A&&state.A.name?'（'+esc(state.A.name)+'）':'')+'　<span class="b">B</span>＝お相手'+(state.B&&state.B.name?'（'+esc(state.B.name)+'）':'')+'</span><span><i class="dd star">⭐</i>奇跡の相性日</span><span><i class="dd ok">◎</i>特に良い</span><span><i class="dd good">○</i>良い</span><span><i class="dd warn">△</i>注意</span><span><i class="dd bad">×</i>避けたい</span><span><i class="dd" style="background:var(--panel-2);color:var(--muted);font-weight:400">・</i>マーク無し＝ふつうの日</span><span>🌷='+(isRomance()?'魅力・ときめきの日':'個人のモテ日')+'</span><span>📝=メモした日</span><span><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--accent);vertical-align:middle"></i> =記念日</span>';
     var data=monthScan();
+    // 今月の巡り（流月・流年）：◎〇△のグレードとは別枠で、月全体のトーンを一言で見せる（案Bの補完）
+    (function(){
+      var fl=$('calFlow'); if(!fl)return;
+      function avgYm(key){ var s=0,n=0; data.forEach(function(x){ var g=x[key]&&x[key].grade; if(g&&typeof g.ym==='number'){s+=g.ym;n++;} }); return n?s/n:0; }
+      var val = solo ? avgYm('dA') : (avgYm('dA')+avgYm('dB'));
+      var up = solo?0.15:0.25, dn = solo?-0.15:-0.25;
+      var lead = solo ? '今月のあなたの巡り' : '今月の二人の巡り';
+      var pill;
+      if(val>=up)      pill='<span class="cf-pill cf-up">🌤 追い風。動くほど良い流れ</span>';
+      else if(val<=dn) pill='<span class="cf-pill cf-dn">🍵 ゆっくりの月。無理せず整えて</span>';
+      else             pill='<span class="cf-pill">☁ おだやかな巡り</span>';
+      fl.innerHTML=lead+'：'+pill;
+    })();
     // 奇跡の相性日＝今月の◎の中でも上位3日を⭐に
     state.topSet={};
     if(!solo){ data.filter(function(x){return x.mk.s==='◎';}).sort(function(a,b){return b.score-a.score;}).slice(0,3).forEach(function(x){ x.star=true; state.topSet[x.d]=true; }); }

@@ -461,17 +461,24 @@ function gradeThresholds(youStem, youBranch, favSet, imiSet){
   for(var i=0;i<60;i++){ var d=new Date(2020,0,1+i); arr.push(dayRawScore(youStem,youBranch,pillar(d.getFullYear(),d.getMonth()+1,d.getDate()),favSet,imiSet)); }
   arr.sort(function(a,b){return a-b;});
   var q=function(pp){return arr[Math.min(59,Math.floor(pp*60))];};
+  // tri は「実測の△割合」が設計意図(≈下位15%＝週1回程度)になるよう較正した値。
+  // スコアは離散で同点が多く、公称 q(0.15) だと実測は約22%に膨らむため q(0.10) を採用（実測≈15%）。
+  // ◎は上位28%(q0.72)。案Bにより判定は日柱の関係のみ＝流月・流年に依らず毎月ほぼ一定・人により偏らない。
   return (_GRADE_TH[key]={maru:q(0.72),tri:q(0.10)});
 }
 /* 統一グレード（案C：💮はレア＝全員一律／恋の底上げは正直版）
    ・🌈(運命の人)＝無条件💮
    ・💮は「桃花×高得点×非沖」のみに限定（🌸恋チャンス×高得点は◎に留める）→ 💮の人ごとの二極化を解消し全員一律≈5%に
-   ・恋の合図(桃花/恋チャンス・非沖)の底上げは「中位以上(下位10%より上)」のみ◎。下位10%は正直に△
-   ・上位28%◎・下位10%△（△は控えめに調整） */
+   ・恋の合図(桃花/恋チャンス・非沖)の底上げは「中位以上(下位15%より上)」のみ◎。下位15%は正直に△
+   ・上位28%◎・下位15%△（判定は日柱の関係のみ＝流月・流年に依らず毎月一定／案B） */
 function dailyGrade(you, tt, favSet, imiSet, touka, enlv, ymd){
   var th=gradeThresholds(you.stem, you.branch, favSet, imiSet);
   var s=dayRawScore(you.stem, you.branch, tt, favSet, imiSet);
-  if(ymd) s+=ymAdjust(ymd.y, ymd.m, ymd.d, favSet, imiSet, STEM_GOGYO[you.stem]);   // 流年・流月の補正（日付を渡した時のみ）
+  // 【案B】流月・流年の補正は「その月の全日に一律にかかる定数」。以前はこれをグレード判定に足していたが、
+  // 閾値は補正なしで作っていたため“巡りの悪い月は△だらけ／良い月は△ゼロ”という矛盾（設計は下位15%△の
+  // はずが実際は月27%等）が出ていた。→ グレード(◎〇△)は日柱の関係だけで判定して毎月ほぼ一定にし、
+  // 流月・流年は ym に切り出して「今月の巡り」の一言でまとめて見せる。
+  var ym = ymd ? ymAdjust(ymd.y, ymd.m, ymd.d, favSet, imiSet, STEM_GOGYO[you.stem]) : 0;
   var sok=(CLASH.indexOf(branchRel(tt.branch, you.branch))>=0);
   var love=(touka||enlv===2);
   var sym;
@@ -479,12 +486,12 @@ function dailyGrade(you, tt, favSet, imiSet, touka, enlv, ymd){
   else if(touka && !sok && s>=th.maru) sym='💮';        // 桃花×高得点×非沖のみ💮（レア化）
   else if(s>=th.maru) sym='◎';                           // 上位28%は◎
   else if(love && !sok && s>th.tri) sym='◎';             // 恋の合図(非沖・中位以上)は底上げ◎
-  else if(s<=th.tri) sym='△';                            // 下位10%は正直に△
+  else if(s<=th.tri) sym='△';                            // 下位15%は正直に△
   else sym='〇';
   // 恋の合図日(モテ運/恋チャンス)は、たとえ△でも天気は“くもり”以上に留める（にわか雨まで落とさない）。
   var triIdx = (sok && !love) ? 45 : 55;
   var idx = sym==='💮'?96 : sym==='◎'?84 : sym==='〇'?68 : triIdx;
-  return {sym:sym, idx:idx};
+  return {sym:sym, idx:idx, ym:ym};
 }
 const LOVE_ADVICE={
   比肩:"今日は自分の気持ちに正直に。無理に相手へ合わせるより、自然体のあなたがいちばん魅力的です。",
@@ -986,7 +993,7 @@ function pickFocus(interests){
       relIntro:(REL_PREFIX[rel]||REL_PREFIX.single)+RI_OPEN[pickSeq(ubase,76,RI_OPEN.length,seed)]+RI_CLOSE[pickSeq(ubase,83,RI_CLOSE.length,seed)],
       pillars:{you:you, partner:p, today:t},
       index:idx, weather:{icon:w.ic, name:w.name}, weatherMsg:wmsg,
-      grade:{sym:_grade.sym, label:(GRADE_LABEL[_grade.sym]||'')},
+      grade:{sym:_grade.sym, label:(GRADE_LABEL[_grade.sym]||''), ym:_grade.ym},
       theme:{god:god, mean:meanP, axis:themeAxis.ax, line:themeLine, message:godMsg},
       en:{lv:en.lv, tag:enTag, body:enBody},
       love:love, loveMove:loveMove,
