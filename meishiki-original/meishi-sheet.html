@@ -718,6 +718,14 @@
         </span>
       </div>
       <div class="grp">
+        <span class="glabel">鑑定文</span>
+        <span class="seg" role="group" aria-label="鑑定文エンジン切替">
+          <button type="button" id="engTpl" aria-pressed="true">定型文</button>
+          <button type="button" id="engAI" aria-pressed="false">AI鑑定文</button>
+        </span>
+        <span class="scr-hint">AIはネット接続が必要（この命式をAIが読み解きます）</span>
+      </div>
+      <div class="grp">
         <span class="glabel">鑑定テーマ<span class="scr-hint">（2枚目）</span></span>
         <span class="seg" role="group" aria-label="鑑定書テーマ切替">
           <button type="button" id="thGeneral" aria-pressed="true">総合</button>
@@ -2890,13 +2898,14 @@ window.KANSHI60_DETAIL={
       }
       // 鑑定書（専用シートへ）
       function copyHead(suf){ ['Name','Birth','School','Date'].forEach(function(k){ var v=_txt('rd'+k)||'　'; var e=document.getElementById('rd'+k+suf); if(e) e.textContent=v; }); }
+      var aiOn=(_readEngine==='ai' && window._aiReadingHTML);   // AI鑑定文を印刷にも反映
       if(verPro && _lastResult && window.buildReadingHTML){
         var chaps=selectedChapters();
-        var mpn=document.getElementById('readMountPro'); if(mpn) mpn.innerHTML=window.buildReadingHTML(_lastResult,{sex:sx,theme:_readTheme,scope:'full',only:chaps});
+        var mpn=document.getElementById('readMountPro'); if(mpn) mpn.innerHTML= aiOn ? window._aiReadingHTML : window.buildReadingHTML(_lastResult,{sex:sx,theme:_readTheme,scope:'full',only:chaps});
         copyHead('Pro');
       }
       if(verEasy && _lastResult && window.buildEasyHTML){
-        var men=document.getElementById('readMountEasy'); if(men) men.innerHTML=window.buildEasyHTML(_lastResult,{sex:sx,theme:_readTheme,scope:_readScope});
+        var men=document.getElementById('readMountEasy'); if(men) men.innerHTML= aiOn ? window._aiReadingHTML : window.buildEasyHTML(_lastResult,{sex:sx,theme:_readTheme,scope:_readScope});
         copyHead('Easy');
       }
       var B=document.body;
@@ -3296,15 +3305,19 @@ window.KANSHI60_DETAIL={
         tb.appendChild(tr);
       });
     }
-    // ── 2枚目：命式から読み解いた鑑定文（決定論・非AI） ──
+    // ── 2枚目：命式から読み解いた鑑定文 ──
     _lastResult = r;
-    renderReading();
+    if(_readEngine==='ai'){ setEngine('template'); }   // 別の人を鑑定したら定型文に戻す（古いAI文・不要な課金を防ぐ）
+    else renderReading();
   }
   // 鑑定テーマ（総合／恋愛重視）
   var _lastResult=null, _readTheme='general', _readScope='full', _readLevel='pro';
+  var _readEngine='template';           // 'template'（定型文）or 'ai'（AI鑑定文）
+  window._aiReadingHTML=null;           // AI生成HTML（印刷用にも使う）
   function renderReading(){
     try{
       var mount=document.getElementById('readMount'); if(!mount||!_lastResult) return;
+      if(_readEngine==='ai'){ return; }  // AI鑑定文の表示中は、テーマ等の切替で上書きしない
       var solo=(_readScope==='solo' && _readTheme!=='general');
       var sub=document.getElementById('rdSub');
       if(_readLevel==='easy' && window.buildEasyHTML){
@@ -3398,12 +3411,121 @@ window.KANSHI60_DETAIL={
       if(typeof fitSheet==='function') fitSheet();
     }catch(e){ console.error('paginate failed', e); }
   }
+
+  // ============ AI鑑定文（命式データ→Geminiサーバー中継→A4カードに流し込む） ============
+  // 命式の確定値をテキスト化（AIが"本物の命式"を根拠に書けるように）。四柱の通変・蔵干・十二運・
+  //   吉凶星はエンジンが描画した命式表(#meishikiMount)からそのまま採る＝表示と完全一致。
+  function chartSummaryText(r){
+    var lines=[], P=r.pillars||{};
+    [['year','年柱'],['month','月柱'],['day','日柱'],['hour','時柱']].forEach(function(o){
+      var p=P[o[0]]||{}; if(p.gan||p.shi) lines.push(o[1]+'：'+(p.gan||'')+(p.shi||'')+(p.ganElement?'（'+p.ganElement+'）':''));
+    });
+    var day=P.day||{}; lines.push('日主（本人の芯）：'+(day.gan||'')+(day.ganElement?'（'+day.ganElement+'）':''));
+    if(P.month&&P.month.zokanTsuhen) lines.push('月支元命（性格の軸）：'+P.month.zokanTsuhen);
+    if(r.shugoStrength) lines.push('身強弱：'+r.shugoStrength);
+    var fe=r.gogyoCount||{}; lines.push('五行バランス：'+['木','火','土','金','水'].map(function(e){return e+(fe[e]||0);}).join(' '));
+    if(r.shugojin&&r.shugojin.length) lines.push('守護神（喜神＝味方する五行）：'+r.shugojin.join('・'));
+    if(r.kuboPair||r.tenchusatsu) lines.push('空亡：'+(r.kuboPair||r.tenchusatsu));
+    function dom(id){ var e=document.getElementById(id); return e?((e.innerText||e.textContent||'').replace(/[ \t]+/g,' ').replace(/\n{2,}/g,'\n').trim()):''; }
+    var ny=dom('nayinWrap'); if(ny) lines.push('納音：'+ny);
+    var kk=dom('kankeiList'); if(kk) lines.push('干支関係：'+kk);
+    var mm=dom('meishikiMount'); if(mm) lines.push('【四柱の詳細（天干通変・蔵干・十二運・吉凶星）】\n'+mm);
+    var du=document.querySelector('#daiunBody tr.now, #daiunBody tr.sel'); if(du) lines.push('現在の大運：'+((du.innerText||'').replace(/\s+/g,' ').trim()));
+    var pkc=(window.pastKuboChong?window.pastKuboChong(r):null);
+    if(pkc){ if(pkc.kubos&&pkc.kubos.length) lines.push('直近の空亡の年：'+pkc.kubos.map(function(k){return k.year+'年('+k.gz+')';}).join('・')); if(pkc.chong) lines.push('直近の冲の年：'+pkc.chong.year+'年('+pkc.chong.gz+')'); }
+    lines.push('現在の年齢：'+(r.nowAge!=null?r.nowAge+'歳':'不明')+' / 性別：'+((r.sex==='male')?'男性':'女性'));
+    return lines.join('\n');
+  }
+  // AIの返答（見出し#・段落・箇条書き・）をA4カード用のHTML(.rd-cols>.rd-sec)へ変換
+  function parseAIToHTML(text){
+    text=String(text||'').replace(/[*＊`>#]{1,}\s?/g, function(m){ return /^#/.test(m)?m:''; }); // アスタリスク等の装飾を除去（見出し#は残す）
+    text=text.replace(/\r/g,'');
+    var esc=function(s){ return s.replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); };
+    var linkEsc=function(s){ return esc(s).replace(/【([^】]{1,24})】/g,'<b>【$1】</b>'); };
+    var lines=text.split('\n'), secs=[], cur=null, para=[], ul=[];
+    function flushPara(){ if(para.length){ cur.body+='<p class="rd-p">'+para.join('<br>')+'</p>'; para=[]; } }
+    function flushUl(){ if(ul.length){ cur.body+='<ul class="rd-ul">'+ul.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'; ul=[]; } }
+    function flushAll(){ flushUl(); flushPara(); }
+    function ensureSec(h){ if(cur){ flushAll(); secs.push(cur); } cur={head:h, body:''}; }
+    lines.forEach(function(ln){
+      var t=ln.trim();
+      var mh=t.match(/^#{1,3}\s*(.+)$/) || t.match(/^[■◎●▶]\s*(.+)$/);
+      if(mh){ ensureSec(mh[1].replace(/[:：]$/,'').trim()); return; }
+      if(!cur){ ensureSec('鑑定'); }
+      if(!t){ flushUl(); flushPara(); return; }
+      var ml=t.match(/^[・･\-•]\s*(.+)$/);
+      if(ml){ flushPara(); ul.push(linkEsc(ml[1])); return; }
+      flushUl(); para.push(linkEsc(t));
+    });
+    if(cur){ flushAll(); secs.push(cur); }
+    if(!secs.length) return '';
+    var H=secs.map(function(s){ return '<div class="rd-sec"><p class="rd-h">'+esc(s.head)+'</p>'+s.body+'</div>'; }).join('');
+    return '<div class="rd-cols">'+H+'</div>'+
+      '<div class="rd-note">※この鑑定文は、あなたの命式（四柱・通変・蔵干・十二運・五行・守護神・大運）をもとにAIが読み解いたものです。表現はAIによるため、命式表の数値が正となります。</div>';
+  }
+  function aiCardMsg(msg, sub){
+    var pages=document.getElementById('readPages'); if(!pages) return;
+    pages.innerHTML='<div class="sheet sheet-read rd-page rd-page-empty"><div class="rd-empty">'+msg+(sub?'<br><span style="font-size:12px">'+sub+'</span>':'')+'</div></div>';
+    if(typeof fitSheet==='function') fitSheet();
+  }
+  var _aiBusy=false;
+  function generateAIReading(){
+    if(!_lastResult){ aiCardMsg('先に生年月日を入れて「鑑定する」を押してください。'); return; }
+    if(_aiBusy) return; _aiBusy=true;
+    aiCardMsg('🤖 AIが命式を読み解いています…','（十数秒かかることがあります。ネット接続が必要です）');
+    var r=_lastResult;
+    var nm=((document.getElementById('rdName')||{}).textContent||'').replace(/[　\s]*様$/,'').trim();
+    var isEasy=(_readLevel==='easy');
+    var sys='あなたは四柱推命のプロ鑑定士です。与えられた【命式データ】だけを根拠に、鑑定書の本文を日本語で書きます。\n'+
+      '厳守事項：\n'+
+      '・命式データ（四柱・天干通変・蔵干・十二運・五行・守護神・空亡・大運）に忠実に。命式に無い事実や生年月日を作らない。\n'+
+      '・アスタリスク（*）や記号の装飾は一切使わない。\n'+
+      '・章立てで書く。各章は行頭に「# 見出し」を置き、続けて本文の段落。箇条書きは行頭「・」。\n'+
+      '・章の順番：総合まとめ／性格と本質／才能・仕事／恋愛・結婚／対人・相性／金運／健康・養生／運の流れ（大運）／開運のヒント\n'+
+      '・専門用語は（）で一言かみくだく。読者本人に語りかける、あたたかく具体的な文体。断定しすぎず、日々の行動のヒントを添える。'+
+      (isEasy?'\n・やさしい版：中学生にもわかる易しい言葉で。専門用語は最小限、はげます調子で短めに。':'');
+    var usr='【鑑定対象】'+(nm||'ご本人')+'さん\n【命式データ】\n'+chartSummaryText(r)+'\n\n上記の命式から、指定の章立てで鑑定書の本文を書いてください。';
+    var body=JSON.stringify({ system_instruction:{parts:[{text:sys}]}, contents:[{role:'user',parts:[{text:usr}]}], generationConfig:{maxOutputTokens:3200} });
+    fetch('/.netlify/functions/gemini',{ method:'POST', headers:{'Content-Type':'application/json','x-pk-deep':'1'}, body:body })
+      .then(function(res){ return res.text().then(function(t){ return {ok:res.ok, t:t}; }); })
+      .then(function(o){
+        var data={}; try{ data=JSON.parse(o.t); }catch(e){}
+        var txt=''; try{ txt=(data.candidates[0].content.parts||[]).map(function(p){return p.text||'';}).join(''); }catch(e){}
+        if(!o.ok || !txt.trim()){
+          var em=(data&&data.error&&data.error.message)||'';
+          aiCardMsg('AI鑑定文を取得できませんでした。','ネット接続をご確認ください。'+(em?'（'+em+'）':'')+' ／「定型文」に切り替えると命式ベースの鑑定書が出ます。');
+          _aiBusy=false; return;
+        }
+        var html=parseAIToHTML(txt);
+        if(!html){ aiCardMsg('AIの返答を整形できませんでした。','もう一度お試しください。'); _aiBusy=false; return; }
+        window._aiReadingHTML=html;
+        var mount=document.getElementById('readMount'); if(mount) mount.innerHTML=html;
+        paginateReadingScreen();
+        _aiBusy=false;
+      })
+      .catch(function(){
+        aiCardMsg('AIサーバーに接続できませんでした。','オフラインか、サーバー未デプロイの可能性があります。「定型文」でも命式ベースの鑑定書が出ます。');
+        _aiBusy=false;
+      });
+  }
+  function setEngine(eng){
+    _readEngine=(eng==='ai')?'ai':'template';
+    var t=document.getElementById('engTpl'), a=document.getElementById('engAI');
+    if(t) t.setAttribute('aria-pressed', String(_readEngine==='template'));
+    if(a) a.setAttribute('aria-pressed', String(_readEngine==='ai'));
+    if(_readEngine==='ai'){ generateAIReading(); }
+    else { window._aiReadingHTML=null; renderReading(); }
+  }
+  (function(){ var t=document.getElementById('engTpl'), a=document.getElementById('engAI');
+    if(t) t.addEventListener('click', function(){ setEngine('template'); });
+    if(a) a.addEventListener('click', function(){ setEngine('ai'); }); })();
+
   function setLevel(lv){
     _readLevel=(lv==='easy')?'easy':'pro';
     var ppv=document.getElementById('lvPro'), ez=document.getElementById('lvEasy');
     if(ppv) ppv.setAttribute('aria-pressed', String(_readLevel==='pro'));
     if(ez) ez.setAttribute('aria-pressed', String(_readLevel==='easy'));
-    renderReading();
+    if(_readEngine==='ai') generateAIReading(); else renderReading();
   }
   function setTheme(t){
     _readTheme = ({love:'love',work:'work',money:'money',health:'health'})[t]||'general';
