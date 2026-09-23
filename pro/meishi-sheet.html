@@ -146,6 +146,7 @@
     body.share-view .bar{ display:none !important; }
     body.share-view .stage{ padding-top:14px; }
     body.sv-only-meishi #sheetRead{ display:none !important; }
+    body.sv-only-meishi #readPages{ display:none !important; }   /* 命式表だけ共有：鑑定書ページも隠す */
     body.sv-only-reading #sheet{ display:none !important; }
   }
   /* 表紙・両方出力シート（通常は非表示。印刷時にモードで表示） */
@@ -338,6 +339,22 @@
   .title-sub{ font-size:.62em; color:var(--ink2); letter-spacing:.12em; font-weight:600; }
   .rd-body{ margin-top:10px; }
   .rd-cols{ column-count:3; column-gap:26px; }
+  /* ===== 画面プレビュー：鑑定書を「A4横カード」に分割（命式表と同じ用紙・同じ位置・1枚＝A4横） ===== */
+  #sheetRead{ display:none; }                     /* 旧・単一カードは裏の生成バッファに（表示は #readPages） */
+  .rd-pages{ display:flex; flex-direction:column; gap:26px; }
+  .rd-page{ height:834px; overflow:hidden; }      /* 1180×834 ＝ A4横1枚 */
+  .rd-page .rd-body{ flex:1 1 auto; min-height:0; margin-top:0; }
+  .rd-page-cols{ column-fill:auto; height:100%; overflow:hidden; }   /* 段落を縦詰めで列に流す（あふれたら次のA4カードへ） */
+  .rd-page-cols.rd-cols{ column-count:3; column-gap:26px; }
+  .rd-page-cols.ez-wrap{ column-count:2; column-gap:11px; }
+  .rd-page .rd-h, .rd-page .ez-h{ break-after:avoid; -webkit-column-break-after:avoid; break-inside:avoid; }  /* 見出しだけ列末に残さない */
+  .rd-atom-secstart{ margin-top:14px; }           /* 章の切れ目に少し間 */
+  .rd-page-head{ text-align:center; font-family:var(--mincho,serif); font-weight:700; font-size:17px;
+    letter-spacing:.14em; color:var(--ink); border-bottom:1px solid var(--rule); padding-bottom:7px; margin:0 0 9px; }
+  .rd-page-head small{ font-size:11px; font-weight:600; letter-spacing:.06em; color:var(--ink2); margin-left:8px; }
+  .rd-page-foot{ text-align:center; font-size:10.5px; letter-spacing:.06em; color:var(--ink2);
+    border-top:1px solid var(--rule); padding-top:6px; margin-top:9px; }
+  .rd-page .rd-note{ margin-top:8px; }
   .rd-sec{ break-inside:avoid; -webkit-column-break-inside:avoid; page-break-inside:avoid; margin:0 0 16px; }
   .rd-h{ font-family:var(--mincho,serif); font-size:15px; font-weight:700; color:var(--el-sui,#2A6FD0);
     letter-spacing:.04em; margin:0 0 7px; padding:1px 0 4px 9px; border-left:3px solid var(--el-sui,#2A6FD0);
@@ -584,8 +601,9 @@
     .kankei-band{ margin-top:2mm; padding-top:1.4mm; min-height:0; gap:6px; }
     .kankei-band .kk-label{ font-size:9px; }
     .kankei-band .kk{ font-size:9px; padding:0 5px; }
-    /* 印刷は専用シートを使う：画面プレビュー用の #sheetRead は印刷しない */
+    /* 印刷は専用シートを使う：画面プレビュー用の #sheetRead / #readPages は印刷しない */
     #sheetRead{ display:none; }
+    #readPages{ display:none !important; }
     #sheetReadPro, #sheetReadEasy{ display:none; }
     body.pm-vpro #sheetReadPro{ display:block; }
     body.pm-veasy #sheetReadEasy{ display:block; }
@@ -930,7 +948,11 @@
       <p class="footline">四柱推命 鑑定書 ・ <span class="ed" id="rdSchool" contenteditable="true">（スクール名を入力）</span></p>
       <span class="kantei">鑑定日：<span class="ed" id="rdDate" contenteditable="true">　年　月　日</span></span>
     </div>
-  </div><!-- /#sheetRead -->
+  </div><!-- /#sheetRead（画面では非表示。鑑定文の生成バッファ＆氏名/スクール名/鑑定日の元データ） -->
+
+  <!-- 画面プレビュー：鑑定書を「A4横カード」に分割して表示（命式表と同じ用紙・同じ位置）。
+       #sheetRead(バッファ)から章ごとに詰め直し、1ページ＝A4横1枚のカードとして並べる。 -->
+  <div class="rd-pages" id="readPages"></div>
 
   <!-- ===== 両方出力（印刷時のみ・「両方」ON時）：本格版 ===== -->
   <div class="sheet sheet-read" id="sheetReadPro">
@@ -2781,6 +2803,7 @@ window.KANSHI60_DETAIL={
   window.addEventListener('resize', fitSheet);
   if(window.ResizeObserver){ try{ new ResizeObserver(fitSheet).observe(document.getElementById('paper')); }catch(e){} }
   setTimeout(fitSheet,60); fitSheet();
+  if(typeof paginateReadingScreen==='function') paginateReadingScreen();   // 初期表示：鑑定書の空A4カードを出す
   // 印刷（Ctrl+P/共有）時：画面用の縮小インラインstyleを解除 → A4横2枚で崩れないように
   function clearFit(){ var w=document.getElementById('sheetsWrap'), pa=document.getElementById('paper');
     if(w){ w.style.transform='none'; w.style.marginLeft=''; } if(pa){ pa.style.height=''; } }
@@ -2959,6 +2982,7 @@ window.KANSHI60_DETAIL={
     var _rm=document.getElementById('readMount');
     if(_rm) _rm.innerHTML='<div class="rd-empty">生年月日を入れて「鑑定する」を押すと、命式から読み解いた鑑定文がここに出ます。</div>';
     setEl('rdName','　'); setEl('rdBirth','　'); setEl('rdDate','　年　月　日');
+    if(typeof paginateReadingScreen==='function') paginateReadingScreen();   // 画面のA4カードも空状態に
   }
 
   // 五行の強弱（◎○△✕）を数から自動判定：0→✕ 1→△ 2→○ 3以上→◎
@@ -3287,6 +3311,7 @@ window.KANSHI60_DETAIL={
         mount.innerHTML = window.buildEasyHTML(_lastResult, {sex:(_lastResult.sex||'female'), theme:_readTheme, scope:(solo?'solo':'full')});
         var nm0=(document.getElementById('rdName')||{}).textContent||''; nm0=nm0.replace(/[　\s]*様$/,'').trim();
         if(sub) sub.textContent = '― '+(nm0?nm0+'さんの':'あなたの')+'取扱説明書';
+        paginateReadingScreen();
         return;
       }
       if(window.buildReadingHTML){
@@ -3294,7 +3319,84 @@ window.KANSHI60_DETAIL={
       }
       var base=({love:'恋愛',work:'仕事・キャリア',money:'金運・財',health:'健康・養生'})[_readTheme];
       if(sub) sub.textContent = base ? ('― '+base+(solo?'だけの専用鑑定':'を中心に読み解く')) : '― 命式からの読み解き';
+      paginateReadingScreen();
     }catch(e){ console.error('reading build failed', e); }
+  }
+  // 画面プレビュー：鑑定書(#readMount)を、印刷と同じ「A4横カード」に分割して #readPages に表示する。
+  //   命式表と同じ用紙・同じ位置で、1ページ＝A4横1枚。長い鑑定文は複数のA4カードに区切って並べる
+  //   （ダラダラ次ページに繋がって見えないように、各ページが独立したA4に見える）。
+  //   ※印刷/PDFは従来どおり専用シート(#sheetReadPro/Easy)を使う。ここは画面プレビュー専用。
+  function paginateReadingScreen(){
+    try{
+      var pages=document.getElementById('readPages'); if(!pages) return;
+      var buf=document.getElementById('readMount');
+      var wrap=buf?buf.querySelector('.rd-cols, .ez-wrap'):null;
+      var _t=function(id){var e=document.getElementById(id);return e?(e.textContent||'').trim():'';};
+      pages.innerHTML='';
+      if(!wrap){
+        var em=document.createElement('div'); em.className='sheet sheet-read rd-page rd-page-empty';
+        em.innerHTML='<div class="rd-empty">生年月日を入れて「鑑定する」を押すと、命式から読み解いた鑑定文が、A4の鑑定書としてここに出ます。</div>';
+        pages.appendChild(em); if(typeof fitSheet==='function') fitSheet(); return;
+      }
+      var isEasy=wrap.classList.contains('ez-wrap');
+      var nCols=isEasy?2:3, gap=isEasy?11:26;
+      var nm=_t('rdName'), sc=_t('rdSchool'), dt=_t('rdDate');
+      function esc(s){ return (s||'').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+
+      var colsCls='rd-page-cols '+(isEasy?'ez-wrap':'rd-cols');
+      var pageNo=0;
+      function newPage(){
+        pageNo++;
+        var pg=document.createElement('div'); pg.className='sheet sheet-read rd-page';
+        pg.innerHTML=
+          '<div class="rd-page-head">鑑定書 <small>'+(nm?esc(nm)+' ・ ':'')+'No.'+pageNo+'</small></div>'+
+          '<div class="rd-body"><div class="'+colsCls+'"></div></div>'+
+          '<div class="rd-page-foot">四柱推命 鑑定書'+(sc?' ・ '+esc(sc):'')+(dt?' ・ 鑑定日：'+esc(dt):'')+'</div>';
+        pages.appendChild(pg);
+        var cols=pg.querySelector('.rd-page-cols');
+        cols.style.height=(pg.querySelector('.rd-body').clientHeight||600)+'px';
+        return cols;
+      }
+
+      // 章(.rd-sec/.ez-card)を「見出し・段落・箇条書き」の単位に開いて、多段組みに縦詰めで流す。
+      //   段落や箇条書きは列・ページ境界で自然に分割されるので、列が密に埋まり空白が出にくい。
+      //   長い章も途中で次のA4カードへ続く（が、各ページはA4として独立して見える）。
+      var atoms=[];
+      var items=Array.prototype.slice.call(wrap.children);
+      items.forEach(function(sec){
+        var isSec=sec.classList && (sec.classList.contains('rd-sec')||sec.classList.contains('ez-card'));
+        if(isSec && sec.children.length){ Array.prototype.forEach.call(sec.children, function(k,idx){ atoms.push({el:k, secStart:(idx===0)}); }); }
+        else atoms.push({el:sec, secStart:true});
+      });
+      var note=buf.querySelector('.rd-note'); if(note) atoms.push({el:note, secStart:true});
+
+      var queue=atoms.slice();                   // 途中で"あふれた塊"は子要素に分割してこの列に挿し込む
+      var cols=newPage(), placed=0, guard=0;
+      for(var qi=0; qi<queue.length; qi++){
+        if(++guard>3000) break;                  // 保険
+        var a=queue[qi], el=a.el;
+        var node=el.cloneNode(true);
+        if(a.secStart) node.classList.add('rd-atom-secstart');
+        cols.appendChild(node);
+        if(cols.scrollWidth > cols.clientWidth+2){   // 列数を超えてあふれた
+          if(placed===0){ placed++; continue; }      // 1つ目で既にあふれ＝これ以上分割できない：そのまま置く
+          cols.removeChild(node);
+          if(el.children && el.children.length>1){   // 箇条書き/複数段落の塊 → 子に割ってこのページに続ける
+            var tag=el.tagName, kids=Array.prototype.slice.call(el.children), ins=[];
+            kids.forEach(function(k,idx){
+              if(tag==='UL'||tag==='OL'){ var w=document.createElement(tag); w.className=el.className; w.appendChild(k.cloneNode(true)); ins.push({el:w, secStart:a.secStart&&idx===0}); }
+              else ins.push({el:k, secStart:a.secStart&&idx===0});
+            });
+            Array.prototype.splice.apply(queue, [qi+1,0].concat(ins));
+            continue;                                // 新ページにはせず、子要素で埋め続ける
+          }
+          cols=newPage(); placed=0;                  // これ以上割れない単体 → 次のA4カードへ
+          cols.appendChild(node); placed++; continue;
+        }
+        placed++;
+      }
+      if(typeof fitSheet==='function') fitSheet();
+    }catch(e){ console.error('paginate failed', e); }
   }
   function setLevel(lv){
     _readLevel=(lv==='easy')?'easy':'pro';
