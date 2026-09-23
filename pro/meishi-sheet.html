@@ -753,9 +753,9 @@
         <span class="glabel">鑑定文</span>
         <span class="seg" role="group" aria-label="鑑定文エンジン切替">
           <button type="button" id="engTpl" aria-pressed="true">定型文</button>
-          <button type="button" id="engAI" aria-pressed="false">AI鑑定文</button>
+          <button type="button" id="engAI" aria-pressed="false">詳細鑑定</button>
         </span>
-        <span class="scr-hint" id="engHint">AIはネット接続が必要（この命式をAIが読み解きます）</span>
+        <span class="scr-hint" id="engHint">詳細鑑定はネット接続が必要（この命式を詳しく読み解きます）</span>
       </div>
       <!-- 「鑑定テーマ(総合/恋愛/仕事/金運/健康)」「範囲(全体/この項目だけ)」は廃止。
            鑑定書の軸は「エンジン(定型文/AI)×わかりやすさ(本格版/やさしい版)」の4通りに整理。
@@ -2919,7 +2919,7 @@ window.KANSHI60_DETAIL={
       }
       // 鑑定書（専用シートへ）
       function copyHead(suf){ ['Name','Birth','School','Date'].forEach(function(k){ var v=_txt('rd'+k)||'　'; var e=document.getElementById('rd'+k+suf); if(e) e.textContent=v; }); }
-      var aiOn=(_readEngine==='ai' && window._aiReadingHTML);   // AI鑑定文を印刷にも反映
+      var aiOn=(_readEngine==='ai' && window._aiReadingHTML);   // 詳細鑑定を印刷にも反映
       if(verPro && _lastResult && window.buildReadingHTML){
         var chaps=selectedChapters();
         var mpn=document.getElementById('readMountPro'); if(mpn) mpn.innerHTML= aiOn ? window._aiReadingHTML : window.buildReadingHTML(_lastResult,{sex:sx,theme:_readTheme,scope:'full',only:chaps});
@@ -3334,12 +3334,12 @@ window.KANSHI60_DETAIL={
   }
   // 鑑定テーマ（総合／恋愛重視）
   var _lastResult=null, _readTheme='general', _readScope='full', _readLevel='pro';
-  var _readEngine='template';           // 'template'（定型文）or 'ai'（AI鑑定文）
+  var _readEngine='template';           // 'template'（定型文）or 'ai'（詳細鑑定）
   window._aiReadingHTML=null;           // AI生成HTML（印刷用にも使う）
   function renderReading(){
     try{
       var mount=document.getElementById('readMount'); if(!mount||!_lastResult) return;
-      if(_readEngine==='ai'){ return; }  // AI鑑定文の表示中は、テーマ等の切替で上書きしない
+      if(_readEngine==='ai'){ return; }  // 詳細鑑定の表示中は、テーマ等の切替で上書きしない
       var solo=(_readScope==='solo' && _readTheme!=='general');
       var sub=document.getElementById('rdSub');
       if(_readLevel==='easy' && window.buildEasyHTML){
@@ -3434,8 +3434,8 @@ window.KANSHI60_DETAIL={
     }catch(e){ console.error('paginate failed', e); }
   }
 
-  // ============ AI鑑定文（命式データ→Geminiサーバー中継→A4カードに流し込む） ============
-  // 命式の確定値をテキスト化（AIが"本物の命式"を根拠に書けるように）。四柱の通変・蔵干・十二運・
+  // ============ 詳細鑑定（命式データ→Geminiサーバー中継→A4カードに流し込む） ============
+  // 命式の確定値をテキスト化（詳しく"本物の命式"を根拠に書けるように）。四柱の通変・蔵干・十二運・
   //   吉凶星はエンジンが描画した命式表(#meishikiMount)からそのまま採る＝表示と完全一致。
   function chartSummaryText(r){
     var lines=[], P=r.pillars||{};
@@ -3483,7 +3483,7 @@ window.KANSHI60_DETAIL={
     if(!secs.length) return '';
     var H=secs.map(function(s){ return '<div class="rd-sec"><p class="rd-h">'+esc(s.head)+'</p>'+s.body+'</div>'; }).join('');
     return '<div class="rd-cols">'+H+'</div>'+
-      '<div class="rd-note">※この鑑定文は、あなたの命式（四柱・通変・蔵干・十二運・五行・守護神・大運）をもとにAIが読み解いたものです。表現はAIによるため、命式表の数値が正となります。</div>';
+      '<div class="rd-note">※この鑑定文は、あなたの命式（四柱・通変・蔵干・十二運・五行・守護神・大運）をもとに詳しく読み解いたものです。命式表の数値が正となります。</div>';
   }
   function aiCardMsg(msg, sub){
     var pages=document.getElementById('readPages'); if(!pages) return;
@@ -3494,7 +3494,7 @@ window.KANSHI60_DETAIL={
   function generateAIReading(){
     if(!_lastResult){ aiCardMsg('先に生年月日を入れて「鑑定する」を押してください。'); return; }
     if(_aiBusy) return; _aiBusy=true;
-    aiCardMsg('🤖 AIが命式を読み解いています…','（十数秒かかることがあります。ネット接続が必要です）');
+    aiCardMsg('🔍 この命式を詳しく読み解いています…','（十数秒かかることがあります。ネット接続が必要です）');
     var r=_lastResult;
     var nm=((document.getElementById('rdName')||{}).textContent||'').replace(/[　\s]*様$/,'').trim();
     var isEasy=(_readLevel==='easy');
@@ -3515,18 +3515,18 @@ window.KANSHI60_DETAIL={
         var txt=''; try{ txt=(data.candidates[0].content.parts||[]).map(function(p){return p.text||'';}).join(''); }catch(e){}
         if(!o.ok || !txt.trim()){
           var em=(data&&data.error&&data.error.message)||'';
-          aiCardMsg('AI鑑定文を取得できませんでした。','ネット接続をご確認ください。'+(em?'（'+em+'）':'')+' ／「定型文」に切り替えると命式ベースの鑑定書が出ます。');
+          aiCardMsg('詳細鑑定を取得できませんでした。','ネット接続をご確認ください。'+(em?'（'+em+'）':'')+' ／「定型文」に切り替えると命式ベースの鑑定書が出ます。');
           _aiBusy=false; return;
         }
         var html=parseAIToHTML(txt);
-        if(!html){ aiCardMsg('AIの返答を整形できませんでした。','もう一度お試しください。'); _aiBusy=false; return; }
+        if(!html){ aiCardMsg('返答を整形できませんでした。','もう一度お試しください。'); _aiBusy=false; return; }
         window._aiReadingHTML=html;
         var mount=document.getElementById('readMount'); if(mount) mount.innerHTML=html;
         paginateReadingScreen();
         _aiBusy=false;
       })
       .catch(function(){
-        aiCardMsg('AIサーバーに接続できませんでした。','オフラインか、サーバー未デプロイの可能性があります。「定型文」でも命式ベースの鑑定書が出ます。');
+        aiCardMsg('サーバーに接続できませんでした。','オフラインか、サーバー未デプロイの可能性があります。「定型文」でも命式ベースの鑑定書が出ます。');
         _aiBusy=false;
       });
   }
@@ -3539,13 +3539,13 @@ window.KANSHI60_DETAIL={
     if(_readEngine==='ai'){ generateAIReading(); }
     else { window._aiReadingHTML=null; renderReading(); }
   }
-  // オンライン/オフラインでAI鑑定文の選択可否を切り替える（オフライン＝定型文のみ、オンライン＝選べる）
+  // オンライン/オフラインで詳細鑑定の選択可否を切り替える（オフライン＝定型文のみ、オンライン＝選べる）
   function updateEngineAvail(){
     var a=document.getElementById('engAI'), h=document.getElementById('engHint');
     var online=navigator.onLine;
     if(a){ a.disabled=!online; a.style.opacity=online?'':'.45'; a.style.cursor=online?'':'not-allowed'; a.title=online?'':'オフライン中は使えません'; }
-    if(h) h.textContent=online ? 'オンライン：定型文かAI鑑定文を選べます（AIがこの命式を読み解きます）'
-                                : 'オフライン中：定型文のみ（ネットに繋ぐとAI鑑定文が選べます）';
+    if(h) h.textContent=online ? 'オンライン：定型文か詳細鑑定を選べます（この命式を詳しく読み解きます）'
+                                : 'オフライン中：定型文のみ（ネットに繋ぐと詳細鑑定が選べます）';
     if(!online && _readEngine==='ai'){ setEngine('template'); }   // 途中でオフラインになったら定型文へ戻す
   }
   (function(){ var t=document.getElementById('engTpl'), a=document.getElementById('engAI');
