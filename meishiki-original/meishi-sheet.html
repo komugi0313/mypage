@@ -66,7 +66,7 @@
   /* ============ 用紙 ============ */
   .sheet{ position:relative; max-width:1100px; margin:0 auto;
     background:var(--paper); color:var(--ink);
-    padding:clamp(24px,3.8vw,48px); border-radius:2px;
+    padding:48px; border-radius:2px;   /* A4設計の余白を固定（vwにすると画面幅で余白が変わり「縦横で崩れる」原因になる） */
     display:flex; flex-direction:column;
     box-shadow:0 1px 0 rgba(0,0,0,.05), 0 20px 50px -30px rgba(30,27,23,.5); }
   /* 装飾（枠・四隅の花飾り）は不要 → 画面・印刷とも表示しない */
@@ -429,7 +429,7 @@
   body.mobile-view .ez-yomi > li{ font-size:15px; line-height:1.8; }
   body.mobile-view .ez-ul2 > li{ font-size:14px; line-height:1.75; }
   .head{ margin:0 0 3px; } .crest{ height:22px; margin-bottom:1px; }
-  .title{ font-size:clamp(17px,2.1vw,23px); }
+  .title{ font-size:23px; }   /* タイトルも固定（vw依存だと画面幅で大きさが変わってしまう） */
   .subrule{ margin:5px auto 0; }
   .meta{ margin:4px auto 0; font-size:13.5px; gap:5px 20px; }
   .body{ margin-top:6px; gap:22px; } .col{ gap:11px; } .bottom{ margin-top:11px; gap:22px; }
@@ -449,8 +449,9 @@
   .note{ font-size:12.5px; padding:9px 13px; }
 
   @media (max-width:760px){
-    .body{ grid-template-columns:1fr; } .subgrid{ grid-template-columns:1fr; }
-    .meta{ font-size:13.5px; gap:6px 14px; } .title{ letter-spacing:.28em; text-indent:.28em; }
+    /* 命式表(.body/.subgrid/.meta/.title)は画面幅に反応させない：
+       用紙はA4設計のまま丸ごと縮小する方式なので、内部レイアウトを1列に組み替えると
+       「縦横で崩れる」原因になる。ここでは操作バーの配置だけ調整する。 */
     .bar .act{ margin-left:0; }
   }
   /* ===== スマホ縦読みレイアウト（画面のみ・JSで body.mobile-view を付与）。印刷/PDFはA4のまま（@media screen で囲い印刷に漏らさない） ===== */
@@ -2758,21 +2759,21 @@ window.KANSHI60_DETAIL={
   var body = document.body;
   if(window.MEISHIKI) window.MEISHIKI.init();
 
-  // 画面プレビュー：幅1180pxの用紙を、パネル幅に合わせて丸ごと縮小（スクロール・見切れなし）
+  // 画面プレビュー：幅1180pxの用紙(A4横の設計)を、パネル幅に合わせて丸ごと縮小。
+  //   ★どの画面幅・向きでも「常にA4の同じ形」を保つ（縦読みへの組み替えはしない）。
+  //     → スマホを縦横に回しても、PCの窓を広い↔細いにしても、レイアウトは変わらず
+  //       大きさだけが変わるので「崩れる」現象が起きない。スマホでは小さくなるが
+  //       ピンチで拡大して見られる（幅にはピッタリ収まり、横スクロールも見切れも無し）。
   function fitSheet(){
     var sheet=document.getElementById('sheetsWrap')||document.getElementById('sheet'), paper=document.getElementById('paper'); if(!sheet||!paper) return;
+    document.body.classList.remove('mobile-view');   // 常にA4：縦読みには切り替えない
     var isPrint=(window.matchMedia && window.matchMedia('print').matches);
-    var isMobile=(window.innerWidth<=760);
-    // スマホ（画面）＝縮小せず「縦読みレイアウト」に。印刷はA4のまま（別途 @media print）。
-    if(isPrint || isMobile){
-      sheet.style.transform='none'; sheet.style.marginLeft=''; paper.style.height='';
-      document.body.classList.toggle('mobile-view', isMobile && !isPrint);
-      return;
+    if(isPrint){                                      // 印刷/PDFはA4のまま（@media print が担当）
+      sheet.style.transform='none'; sheet.style.marginLeft=''; paper.style.height=''; return;
     }
-    document.body.classList.remove('mobile-view');
     sheet.style.transform='none';                 // いったん解除して自然な高さを測る
     var avail=paper.clientWidth||1180, k=Math.min(1, avail/1180);
-    var h=sheet.offsetHeight;                      // 自然な高さ（幅1180時／2枚ぶん）
+    var h=sheet.offsetHeight;                      // 自然な高さ（幅1180時）
     sheet.style.transform = 'scale('+k+')';
     sheet.style.marginLeft = (avail>1180 ? (avail-1180)/2 : 0)+'px';
     paper.style.height = Math.ceil(h*k)+'px';      // 縮小後の高さだけ確保（余白なし）
