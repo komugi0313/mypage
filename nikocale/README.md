@@ -1,6 +1,6 @@
-# にこカレ — 相性ごよみ
+# ニコカレ — 相性ごよみ
 
-「二人の運命が、動く日。」相性診断・運気予報サイト **にこカレ**（旧名 Destina）のデプロイ用一式。
+「二人の運命が、動く日。」相性診断・運気予報サイト **ニコカレ**（旧名 Destina）のデプロイ用一式。
 
 Netlify: https://animated-dolphin-24857d.netlify.app/
 
@@ -31,10 +31,10 @@ node tools/sync-engines.js --write   # index.html を正として外部 .js を�
 
 ## 由来
 
-- `index.html` … アップロードされた最新版 `destinacal_2.html` を「にこカレ」へリブランドしたもの
+- `index.html` … アップロードされた最新版 `destinacal_2.html` を「ニコカレ」へリブランドしたもの
 - `daily-engine.js` / `engine.js` … リポジトリ最新版 `166unmei_latest (4).zip`（2026-08-24 時点）の `site/` から取得
 
-ブランド遍歴：「1.66 / 私だけの運気予報」→「Destina」→ **にこカレ**
+ブランド遍歴：「1.66 / 私だけの運気予報」→「Destina」→ **ニコカレ**
 
 ## デプロイ
 
