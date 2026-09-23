@@ -3565,6 +3565,17 @@ window.KANSHI60_DETAIL={
   function _ykColor(ch){ if(!ch) return ''; var el=_YSTEL[ch]||_YBREL[ch]||''; return '<span class="kanchar'+(el?' el-'+el:'')+'">'+ch+'</span>'; }
   function _ykGZ(y){ return _YKS.charAt(((y-4)%10+10)%10)+_YKB.charAt(((y-4)%12+12)%12); }
   function _ykSplit(gz){ gz=(gz||'').replace(/\s/g,''); return {g:_ykColor(gz.charAt(0)), s:_ykColor(gz.slice(1,2))}; }
+  function _ykBr(gz){ gz=(gz||'').replace(/\s/g,''); return gz.slice(1,2); }
+  function _ykUniq(a){ var o=[]; a.forEach(function(x){ if(x&&o.indexOf(x)<0)o.push(x); }); return o; }
+  // 会局（三合・方合・半会・半方）を、与えられた地支の集合から検出。標準ルール（流派共通の会局表）。
+  var _YSANGO=[['申','子','辰','水'],['亥','卯','未','木'],['寅','午','戌','火'],['巳','酉','丑','金']];
+  var _YHOUGO=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','戌','金'],['亥','子','丑','水']];
+  function _ykKyoku(branches){
+    var u=_ykUniq(branches), res=[];
+    _YSANGO.forEach(function(g){ var mem=[g[0],g[1],g[2]].filter(function(x){return u.indexOf(x)>=0;}); if(mem.length>=3)res.push({label:g[3]+'局三合',mem:[g[0],g[1],g[2]]}); else if(mem.length===2)res.push({label:g[3]+'局半会',mem:mem}); });
+    _YHOUGO.forEach(function(g){ var mem=[g[0],g[1],g[2]].filter(function(x){return u.indexOf(x)>=0;}); if(mem.length>=3)res.push({label:g[3]+'局方合',mem:[g[0],g[1],g[2]]}); else if(mem.length===2)res.push({label:g[3]+'局半方',mem:mem}); });
+    return res;
+  }
   function buildYokoSheet(){
     try{
       var host=document.getElementById('sheetYoko'); if(!host) return;
@@ -3577,29 +3588,38 @@ window.KANSHI60_DETAIL={
       var iDate=(document.getElementById('iDate')||{}).value||'', iTime=(document.getElementById('iTime')||{}).value||'';
       var dp=iDate.split('-'), tp=iTime.split(':');
       var rlab={ year:(dp[0]?dp[0]+'年':'年柱'), month:(dp[1]?(+dp[1])+'月':'月柱'), day:(dp[2]?(+dp[2])+'日':'日柱'), hour:(tp[0]!=null&&tp[0]!==''?(+tp[0])+'時'+(tp[1]!=null&&tp[1]!==''?(+tp[1])+'分':''):'時柱') };
-      // 上段：大運＋年運（列＝天干/地支/年齢/会局/年運結果運/大運結果運/大運テーマ/通変星/十二運/吉凶星）
-      var ucols=['天干','地支','年齢','会局','年運結果運','大運結果運','大運テーマ','通変星','十二運','吉凶星'];
-      function unRow(label, sp, age, tsu, juni, kichiHtml, kichiFree){
+      // 命式の地支（会局の検出に使う）
+      var P=_lastResult.pillars||{};
+      var natB=['year','month','day','hour'].map(function(k){return (P[k]||{}).shi||'';}).filter(Boolean);
+      // 上段：大運＋年運（列＝天干/地支/年齢/会局/メモ/通変星/十二運/吉凶星）※結果運・テーマ枠は撤去→メモ欄
+      var ucols=['天干','地支','年齢','会局','メモ','通変星','十二運','吉凶星'];
+      function kaiFor(rowBr){ if(!rowBr)return ''; var ks=_ykKyoku(natB.concat([rowBr])).filter(function(k){return k.mem.length>=3 && k.mem.indexOf(rowBr)>=0;}); return _ykUniq(ks.map(function(k){return k.label;})).join('・'); }
+      function unRow(label, sp, age, kai, tsu, juni, kichiHtml, kichiFree){
         return '<tr><td class="lbl">'+label+'</td><td class="big">'+sp.g+'</td><td class="big">'+sp.s+'</td><td>'+esc(age)+'</td>'+
-          '<td class="free" contenteditable="true"></td><td class="free" contenteditable="true"></td><td class="free" contenteditable="true"></td><td class="free" contenteditable="true"></td>'+
+          '<td>'+esc(kai)+'</td><td class="free" contenteditable="true"></td>'+
           '<td>'+esc(tsu)+'</td><td>'+esc(juni)+'</td>'+(kichiFree?'<td class="kichi free" contenteditable="true"></td>':'<td class="kichi">'+(kichiHtml||'')+'</td>')+'</tr>';
       }
-      var unRows='';
+      var unRows='', curDaiunBr='', curNenunBr='';
       var duRows=[].slice.call(document.querySelectorAll('#daiunBody tr'));
       var nowIdx=-1; duRows.forEach(function(tr,i){ if(nowIdx<0 && /now|sel/.test(tr.className)) nowIdx=i; });
       var pick=(nowIdx>=0)?[duRows[nowIdx],duRows[nowIdx+1]].filter(Boolean):duRows.filter(function(tr){return (tr.querySelectorAll('td')[2]||{}).textContent;}).slice(0,2);
-      pick.forEach(function(tr){ var td=tr.querySelectorAll('td'); if(td.length<5)return;
-        unRows+=unRow('大運', _ykSplit(td[2].textContent), td[0].textContent.trim().replace(/才/g,'歳'), td[3].textContent.trim(), td[4].textContent.trim(), '', true); });
-      [].slice.call(document.querySelectorAll('#bioBody tr')).forEach(function(tr){ var td=tr.querySelectorAll('td'); if(td.length<5)return;
-        var yr=td[0].textContent.trim(), y=parseInt(yr,10); if(isNaN(y))return;
+      pick.forEach(function(tr,i){ var td=tr.querySelectorAll('td'); if(td.length<5)return;
+        var gz=td[2].textContent.trim(), br=_ykBr(gz); if(i===0)curDaiunBr=br;
+        unRows+=unRow('大運', _ykSplit(gz), td[0].textContent.trim().replace(/才/g,'歳'), kaiFor(br), td[3].textContent.trim(), td[4].textContent.trim(), '', true); });
+      // 年運は直近4年ぶん
+      [].slice.call(document.querySelectorAll('#bioBody tr')).filter(function(tr){ var td=tr.querySelectorAll('td'); return td.length>=5 && parseInt((td[0].textContent||'').trim(),10); }).slice(0,4).forEach(function(tr,i){ var td=tr.querySelectorAll('td');
+        var y=parseInt(td[0].textContent.trim(),10); var br=_ykBr(_ykGZ(y)); if(i===0)curNenunBr=br;
         var age=(_lastResult.birthYear?(y-_lastResult.birthYear)+'歳':'');
-        unRows+=unRow(y, _ykSplit(_ykGZ(y)), age, td[2].textContent.trim(), td[3].textContent.trim(), td[4].innerHTML, false); });
-      // 下段：四柱（列＝天干/地支/蔵干/変化蔵干/会局/変化通変/天干通変/地支通変/十二運/吉凶星）
+        unRows+=unRow(y, _ykSplit(_ykGZ(y)), age, kaiFor(br), td[2].textContent.trim(), td[3].textContent.trim(), td[4].innerHTML, false); });
+      // 下段：四柱（会局＝命式＋現在の大運・年運の地支で出現した会局を、参加する柱に記す）
+      var setB=natB.concat([curDaiunBr,curNenunBr].filter(Boolean));
+      var ksB=_ykKyoku(setB);
+      function pKai(br){ return _ykUniq(ksB.filter(function(k){return k.mem.length>=3 && k.mem.indexOf(br)>=0;}).map(function(k){return k.label;})).join('・'); }
       var scols=['天干','地支','蔵干','変化蔵干','会局','変化通変','天干通変','地支通変','十二運','吉凶星'];
       var PK=['year','month','day','hour'];
-      var sBody=PK.map(function(pk){ return '<tr><td class="lbl">'+rlab[pk]+'</td>'+
+      var sBody=PK.map(function(pk){ var br=(P[pk]||{}).shi||''; return '<tr><td class="lbl">'+rlab[pk]+'</td>'+
         '<td class="big">'+c(pk,'tenkan')+'</td><td class="big">'+c(pk,'chishi')+'</td><td>'+c(pk,'zct')+'</td>'+
-        '<td class="free" contenteditable="true"></td><td class="free" contenteditable="true"></td><td class="free" contenteditable="true"></td>'+
+        '<td class="free" contenteditable="true"></td><td>'+esc(pKai(br))+'</td><td class="free" contenteditable="true"></td>'+
         '<td>'+c(pk,'tenTsu')+'</td><td>'+c(pk,'chiTsu')+'</td><td>'+c(pk,'juni')+'</td><td class="kichi">'+c(pk,'kichi')+'</td></tr>'; }).join('');
       var nm=(T('mName')||T('rdName')||'').replace(/[　\s]*様$/,'').trim();
       var birth=T('mBirth')||'', school=T('schoolName')||'（スクール名を入力）', kdate=T('kanteiDate')||T('rdDate')||'';
@@ -3607,12 +3627,12 @@ window.KANSHI60_DETAIL={
         '<div class="yk-head"><div class="yk-title">四柱推命 命式表<small>横型（流派別）</small></div>'+
         '<div class="yk-meta">氏名 '+esc(nm||'　')+'　'+esc(birth)+'</div></div>'+
         '<div class="yk-secttl">大運・年運</div>'+
-        '<table class="yk-tbl"><colgroup><col style="width:8%"><col style="width:8%"><col style="width:8%"><col style="width:11%"><col style="width:8%"><col style="width:9%"><col style="width:9%"><col style="width:10%"><col style="width:8%"><col style="width:7%"><col style="width:14%"></colgroup>'+
+        '<table class="yk-tbl"><colgroup><col style="width:8%"><col style="width:7%"><col style="width:7%"><col style="width:11%"><col style="width:11%"><col style="width:23%"><col style="width:9%"><col style="width:7%"><col style="width:17%"></colgroup>'+
         '<thead><tr><th>　</th>'+ucols.map(function(h){return '<th>'+h+'</th>';}).join('')+'</tr></thead><tbody>'+unRows+'</tbody></table>'+
         '<div class="yk-secttl">命式（四柱）</div>'+
         '<table class="yk-tbl"><colgroup><col style="width:10%"><col style="width:9%"><col style="width:9%"><col style="width:8%"><col style="width:9%"><col style="width:8%"><col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:8%"><col style="width:12%"></colgroup>'+
         '<thead><tr><td class="lbl">生年月日</td>'+scols.map(function(h){return '<th>'+h+'</th>';}).join('')+'</tr></thead><tbody>'+sBody+'</tbody></table>'+
-        '<p class="footline" style="text-align:center;color:#9a927f;font-size:11px;margin-top:auto">四柱推命 命式表 ・ '+esc(school)+'　鑑定日：'+esc(kdate)+'　<span style="font-size:9.5px">※薄色マスは流派により手書きする欄（変化蔵干・会局・変化通変・結果運・テーマ／年運の干支は西暦から算出）</span></p>';
+        '<p class="footline" style="text-align:center;color:#9a927f;font-size:11px;margin-top:auto">四柱推命 命式表 ・ '+esc(school)+'　鑑定日：'+esc(kdate)+'　<span style="font-size:9.5px">※「メモ」「変化蔵干・変化通変」は手書き欄／会局は命式＋現在の大運・年運で出現した局を自動表示／年運の干支は西暦から算出</span></p>';
     }catch(e){ console.error('buildYokoSheet failed', e); }
   }
   function setMeishikiLayout(t){
