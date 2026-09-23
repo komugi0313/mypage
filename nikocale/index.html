@@ -1180,6 +1180,11 @@ select{
 :root[data-theme="dark"] .cal-g{color:var(--bg)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .cal-g{color:var(--bg)}}
 .cal-i{background:var(--panel-2);color:var(--ink-soft)}
+.cal-share{width:100%;margin-top:8px;background:var(--panel);color:var(--accent-2);border-color:var(--line-strong)}
+.cal-share:hover{border-color:var(--accent)}
+.to-today{display:inline-flex;align-items:center;gap:5px;margin:0 auto 10px;padding:5px 14px;border-radius:999px;border:1px solid var(--line-strong);background:var(--panel);color:var(--accent-2);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--maru)}
+.to-today:hover{border-color:var(--accent)}
+.totoday-wrap{text-align:center}
 .calnote{font-size:11px;color:var(--muted);margin:7px 2px 0;line-height:1.7}
 
 /* この日のメモ */
@@ -1446,6 +1451,7 @@ select{
     <div class="legend" id="legend"></div>
     <div class="cal-month" id="calMonth" aria-hidden="true"></div>
     <div class="cal-flow" id="calFlow" aria-hidden="true"></div>
+    <div class="totoday-wrap"><button type="button" class="to-today" id="toToday" hidden>↩ 今月・今日へ戻る</button></div>
     <div class="cal-tip" id="calTip">日付をタップ → その日の“なぜ？”が開きます</div>
     <div class="grid" id="wdhead"></div>
     <div class="grid" id="cal"></div>
@@ -3145,6 +3151,7 @@ function pickFocus(interests){
   function render(){
     var Y=state.y,M=state.m; $('moT').textContent=Y+'年 '+M+'月';
     var _cm=$('calMonth'); if(_cm)_cm.textContent=Y+'年 '+M+'月';
+    var _tt=$('toToday'); if(_tt){ _tt.hidden=(state.y===TODAY.y&&state.m===TODAY.m); _tt.onclick=function(){ state.y=TODAY.y; state.m=TODAY.m; state.sel=TODAY.d; render(); try{detail(TODAY.d);}catch(e){} var c=$('calMonth'); if(c)c.scrollIntoView({behavior:'smooth',block:'start'}); }; }
     var solo=(state.mode==='solo');
     document.querySelectorAll('[data-pp]').forEach(function(o){o.setAttribute('aria-pressed', o.getAttribute('data-pp')===state.pp?'true':'false');});
     if($('ppResult'))$('ppResult').style.display=solo?'none':'';
@@ -3248,7 +3255,7 @@ function pickFocus(interests){
   function dtLocalPlus(y,m,d,h,mi,addMin){ var t=new Date(y,m-1,d,h,mi+addMin); return dtLocal(t.getFullYear(),t.getMonth()+1,t.getDate(),t.getHours(),t.getMinutes()); }
   function calTimeOpts(){
     var allday=!!($('calAllday')&&$('calAllday').checked);
-    var v=($('calHour')&&$('calHour').value)||'19:00'; var hm=String(v).split(':');
+    var v=($('calHour')&&$('calHour').value)||'18:00'; var hm=String(v).split(':');
     return {allday:allday, h:(+hm[0]||0), mi:(+hm[1]||0)};
   }
   function gcalHref(d,title,details){
@@ -3275,6 +3282,14 @@ function pickFocus(interests){
       toast('カレンダーファイル(.ics)を保存しました');
     }catch(e){ toast('.icsを保存できませんでした'); }
   }
+  function shareDay(title, details){
+    var url=buildShareUrl();
+    try{ if(navigator.share){ navigator.share({title:'ニコカレ', text:title, url:url}).catch(function(){}); return; } }catch(e){}
+    var full=title+'\n'+url;
+    try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(full); toast('この日の内容をコピーしました'); return; } }catch(e){}
+    try{ var ta=document.createElement('textarea'); ta.value=full; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('この日の内容をコピーしました'); }
+    catch(e){ toast('この内容を共有してください：'+full); }
+  }
   function calRowHtml(){
     return '<div class="caltime"><span class="ct-l">🕒 予定の時刻</span>'
       +'<input type="time" id="calHour" step="1800" aria-label="予定の開始時刻">'
@@ -3282,16 +3297,18 @@ function pickFocus(interests){
       +'<label class="ct-allday"><input type="checkbox" id="calAllday"> 終日</label></div>'
       +'<div class="calrow"><a class="cal-btn cal-g" id="calG" target="_blank" rel="noopener">Googleカレンダーに追加</a>'
       +'<button type="button" class="cal-btn cal-i" id="calI">.ics保存（iPhone / Outlook）</button></div>'
+      +'<button type="button" class="cal-btn cal-share" id="shareDay">🔗 この日をシェア</button>'
       +'<p class="calnote">共有カレンダーを選んで追加すれば、お相手と二人で見られます。</p>';
   }
   function wireCal(d,title,details){
-    var hh=$('calHour'); if(hh){ var saved='19:00'; try{saved=localStorage.getItem('dc_caltime')||'19:00';}catch(e){} hh.value=saved; }
+    var hh=$('calHour'); if(hh){ var saved='18:00'; try{saved=localStorage.getItem('dc_caltime')||'18:00';}catch(e){} hh.value=saved; }
     var ad=$('calAllday');
-    function upd(){ var g=$('calG'); if(g)g.href=gcalHref(d,title,details); if($('calHour')){ try{localStorage.setItem('dc_caltime',$('calHour').value||'19:00');}catch(e){} } if(hh)hh.disabled=!!(ad&&ad.checked); }
+    function upd(){ var g=$('calG'); if(g)g.href=gcalHref(d,title,details); if($('calHour')){ try{localStorage.setItem('dc_caltime',$('calHour').value||'18:00');}catch(e){} } if(hh)hh.disabled=!!(ad&&ad.checked); }
     if(hh)hh.onchange=upd;
     if(ad)ad.onchange=upd;
     upd();
     var i=$('calI'); if(i)i.onclick=function(){downloadICS(d,title,details);};
+    var sd=$('shareDay'); if(sd)sd.onclick=function(){shareDay(title,details);};
   }
   /* ===== この日のメモ（端末保存 / 二人の組み合わせ別）===== */
   function _pkey(p){ return (p&&p.y)?(p.y+'-'+p.m+'-'+p.d):'-'; }
@@ -3712,7 +3729,7 @@ function pickFocus(interests){
   }
   /* 常連（保存した二人がいる人）は、前回の二人を自動表示して説明・入力を畳む */
   function initReturning(){
-    try{ if(loadPeople().length===0) return false; var lp=getLastPair(); if(!lp||!lp.a||!lp.a.y) return false;
+    try{ var lp=getLastPair(); if(!lp||!lp.a||!lp.a.y) return false;   /* 保存の有無に関わらず、前回入力の二人を自動で復元 */
       setPerson('a',lp.a);
       var mode=(lp.mode==='solo')?'solo':'couple';
       if(lp.pp&&PP[lp.pp]) state.pp=lp.pp;
