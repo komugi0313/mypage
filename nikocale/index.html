@@ -1167,7 +1167,13 @@ select{
 .sh-copy{background:var(--panel);color:var(--ink-soft)}
 .sh-img{background:linear-gradient(155deg,#3a4570,#232c52);border-color:#232c52;color:#f6efda}
 /* 日別：カレンダー追加ボタン */
-.calrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.caltime{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding:9px 12px;border:1px solid var(--line-strong);border-radius:var(--r-sm);background:var(--panel-2)}
+.caltime .ct-l{font-size:12.5px;font-weight:700;color:var(--ink-soft)}
+.caltime input[type="time"]{font-family:var(--sans);font-size:14px;font-weight:700;color:var(--ink);background:#fff;border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:6px 8px;width:auto}
+.caltime input[type="time"]:disabled{opacity:.45}
+.caltime .ct-dur{font-size:11.5px;color:var(--muted)}
+.caltime .ct-allday{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.calrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .cal-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:1 1 auto;min-width:150px;border-radius:var(--r-sm);padding:11px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--maru);text-decoration:none;border:1px solid var(--line-strong);transition:filter .15s,transform .15s}
 .cal-btn:hover{filter:brightness(1.05);transform:translateY(-1px)}
 .cal-g{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -3236,30 +3242,55 @@ function pickFocus(interests){
   function nextYmd(y,m,d){var t=new Date(y,m-1,d+1);return ymd(t.getFullYear(),t.getMonth()+1,t.getDate());}
   function stripTags(s){return String(s).replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ');}
   function icsEsc(s){return String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');}
+  /* 予定の時刻。既定19:00・所要2時間。終日チェックで終日予定に。前回の時刻を端末に記憶。 */
+  var CAL_DUR=120;
+  function dtLocal(y,m,d,h,mi){ return ''+y+pad2(m)+pad2(d)+'T'+pad2(h)+pad2(mi)+'00'; }
+  function dtLocalPlus(y,m,d,h,mi,addMin){ var t=new Date(y,m-1,d,h,mi+addMin); return dtLocal(t.getFullYear(),t.getMonth()+1,t.getDate(),t.getHours(),t.getMinutes()); }
+  function calTimeOpts(){
+    var allday=!!($('calAllday')&&$('calAllday').checked);
+    var v=($('calHour')&&$('calHour').value)||'19:00'; var hm=String(v).split(':');
+    return {allday:allday, h:(+hm[0]||0), mi:(+hm[1]||0)};
+  }
   function gcalHref(d,title,details){
-    var s=ymd(state.y,state.m,d), e=nextYmd(state.y,state.m,d);
-    return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(title)+'&dates='+s+'/'+e+'&details='+encodeURIComponent(details);
+    var base='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(title)+'&details='+encodeURIComponent(details);
+    var o=calTimeOpts();
+    if(o.allday){ return base+'&dates='+ymd(state.y,state.m,d)+'/'+nextYmd(state.y,state.m,d); }
+    var st=dtLocal(state.y,state.m,d,o.h,o.mi), en=dtLocalPlus(state.y,state.m,d,o.h,o.mi,CAL_DUR);
+    return base+'&dates='+st+'/'+en+'&ctz=Asia/Tokyo';
   }
   function downloadICS(d,title,details){
-    var s=ymd(state.y,state.m,d), e=nextYmd(state.y,state.m,d);
+    var o=calTimeOpts();
     var now=new Date(), stamp=ymd(now.getUTCFullYear(),now.getUTCMonth()+1,now.getUTCDate())+'T000000Z';
+    var dtLines = o.allday
+      ? ['DTSTART;VALUE=DATE:'+ymd(state.y,state.m,d),'DTEND;VALUE=DATE:'+nextYmd(state.y,state.m,d)]
+      : ['DTSTART:'+dtLocal(state.y,state.m,d,o.h,o.mi),'DTEND:'+dtLocalPlus(state.y,state.m,d,o.h,o.mi,CAL_DUR)];
     var ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//enkoyomi//JP','CALSCALE:GREGORIAN','METHOD:PUBLISH',
-      'BEGIN:VEVENT','UID:'+s+'-'+Math.random().toString(36).slice(2)+'@enkoyomi','DTSTAMP:'+stamp,
-      'DTSTART;VALUE=DATE:'+s,'DTEND;VALUE=DATE:'+e,'SUMMARY:'+icsEsc(title),'DESCRIPTION:'+icsEsc(details),'END:VEVENT','END:VCALENDAR'].join('\r\n');
+      'BEGIN:VEVENT','UID:'+ymd(state.y,state.m,d)+'-'+Math.random().toString(36).slice(2)+'@enkoyomi','DTSTAMP:'+stamp]
+      .concat(dtLines)
+      .concat(['SUMMARY:'+icsEsc(title),'DESCRIPTION:'+icsEsc(details),'END:VEVENT','END:VCALENDAR']).join('\r\n');
     try{
       var blob=new Blob([ics],{type:'text/calendar;charset=utf-8'}), url=URL.createObjectURL(blob);
-      var a=document.createElement('a'); a.href=url; a.download='enkoyomi-'+s+'.ics'; document.body.appendChild(a); a.click();
+      var a=document.createElement('a'); a.href=url; a.download='nicocale-'+ymd(state.y,state.m,d)+'.ics'; document.body.appendChild(a); a.click();
       setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},200);
       toast('カレンダーファイル(.ics)を保存しました');
     }catch(e){ toast('.icsを保存できませんでした'); }
   }
   function calRowHtml(){
-    return '<div class="calrow"><a class="cal-btn cal-g" id="calG" target="_blank" rel="noopener">Googleカレンダーに追加</a>'
+    return '<div class="caltime"><span class="ct-l">🕒 予定の時刻</span>'
+      +'<input type="time" id="calHour" step="1800" aria-label="予定の開始時刻">'
+      +'<span class="ct-dur">〜 約2時間</span>'
+      +'<label class="ct-allday"><input type="checkbox" id="calAllday"> 終日</label></div>'
+      +'<div class="calrow"><a class="cal-btn cal-g" id="calG" target="_blank" rel="noopener">Googleカレンダーに追加</a>'
       +'<button type="button" class="cal-btn cal-i" id="calI">.ics保存（iPhone / Outlook）</button></div>'
       +'<p class="calnote">共有カレンダーを選んで追加すれば、お相手と二人で見られます。</p>';
   }
   function wireCal(d,title,details){
-    var g=$('calG'); if(g)g.href=gcalHref(d,title,details);
+    var hh=$('calHour'); if(hh){ var saved='19:00'; try{saved=localStorage.getItem('dc_caltime')||'19:00';}catch(e){} hh.value=saved; }
+    var ad=$('calAllday');
+    function upd(){ var g=$('calG'); if(g)g.href=gcalHref(d,title,details); if($('calHour')){ try{localStorage.setItem('dc_caltime',$('calHour').value||'19:00');}catch(e){} } if(hh)hh.disabled=!!(ad&&ad.checked); }
+    if(hh)hh.onchange=upd;
+    if(ad)ad.onchange=upd;
+    upd();
     var i=$('calI'); if(i)i.onclick=function(){downloadICS(d,title,details);};
   }
   /* ===== この日のメモ（端末保存 / 二人の組み合わせ別）===== */
