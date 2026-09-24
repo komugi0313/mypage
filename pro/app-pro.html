@@ -4354,6 +4354,80 @@ function localCompat(A,B,na,nb,rt,ask){
     L.push(`2人の${rt.timingDesc}のは**${good.map(g=>g.split('(')[0]).join('・')}年**あたり。${rt.timingCause}相手の日支とも響き合う時期です。`);}
   return L.join('\n');
 }
+/* ===== 相性の質問も、オフラインでテーマ別に答える（同じ文章の繰り返しを解消） =====
+   関係の種類(rt)は利用者が選択済みなので、質問の軸は「時期／すれ違い注意／相性の良さ／長続きのコツ／全体」。
+   2人の命式から算出済みの値だけを使う（計算エンジンには触れない・表示層のみ）。 */
+function classifyCompatQ(q){
+  const w=String(q||'');
+  if(/別れ|離婚|わかれ|終わ|冷め|ぶつか|喧嘩|ケンカ|すれ違|合わな|うまくいか|不安|注意|危な|浮気|不倫|問題/.test(w))return 'clash';
+  if(/長続き|続け|仲良く|うまくいく|良くする|改善|コツ|どうすれ|どうしたら|距離/.test(w))return 'tips';
+  if(/いつ|時期|何年|何歳|来年|今年|将来|これから|タイミング|結婚|縁が|深ま/.test(w))return 'timing';
+  if(/相性|合う|惹か|好き|愛|縁|気が合/.test(w))return 'bond';
+  return 'general';
+}
+function localCompatAnswer(A,B,na,nb,rt,ask){
+  rt=rt||RELTYPES.love;
+  const topic=classifyCompatQ(ask);
+  const q=String(ask).slice(0,40)+(String(ask).length>40?'…':'');
+  const aS=A.dayMaster.stem,bS=B.dayMaster.stem,aB=A.pillars[2].branch,bB=B.pillars[2].branch;
+  const nA=na||'あなた', nB=nb||'お相手';
+  const tenju=(KANGO[aS]===bS&&RIKUGO[aB]===bB);
+  const bondLine=()=>{
+    let s;
+    if(KANGO[aS]===bS)s=`2人の**日干が干合（かんごう＝${aS}と${bS}が引き合う）**。強く惹かれ、自然に深まりやすい組み合わせです。`;
+    else if(STEM_EL[aS]===STEM_EL[bS])s=`日干が同じ**${STEM_EL[aS]}**どうしで、価値観やテンポが似て、一緒にいて楽な相性です。`;
+    else s=`相手はあなたから見て**${tenStarOf(aS,bS)}（${TS_DESC[tenStarOf(aS,bS)]||''}）**の星。この縁で結びつきます。`;
+    if(RIKUGO[aB]===bB)s+=` 日支も**支合（しごう＝${aB}と${bB}）**で、生活面の相性も良好です。`;
+    else if(isChong(aB,bB))s+=` 日支は**冲（ちゅう＝${aB}と${bB}のぶつかり合い）**で、刺激的な反面ペースの違いも出やすい面が。`;
+    return s;
+  };
+  const clashLine=()=>isChong(aB,bB)
+    ?`2人の日支が**冲（ちゅう＝${aB}と${bB}）**。惹かれ合う反面、ペースや価値観の違いでぶつかりやすい配置。距離感の調整が鍵です。`
+    :`相手から見たあなたは**${tenStarOf(bS,aS)}（${TS_DESC[tenStarOf(bS,aS)]||''}）**。この星が強く出る場面で、主導権や役割をめぐりすれ違うことがあります。`;
+  const tipsLine=()=>{const need=Object.entries(A.fiveElements).sort((x,y)=>x[1]-y[1])[0][0],bHas=B.fiveElements[need]||0;
+    return `あなたに不足の**${need}（${EL_DESC[need]}）**を、相手は${bHas}持っています。${bHas>=1?'相手の'+need+'の面を頼ると関係が安定します。':'2人とも'+need+'が弱めなので、'+EL_DESC[need]+'を一緒に意識すると整います。'} 違いを“補い合い”ととらえるのがコツです。`;};
+  const clashYears=[];
+  if(A.now)A.annualFortunes.filter(y=>y.year>=A.now.year&&y.year<=A.now.year+10).forEach(y=>{if(isChong(aB,y.branch)||isChong(bB,y.branch))clashYears.push(`${y.year}年（${y.ganzhi}）`);});
+  const clashBlock=(head)=>{const L=['【'+head+'】'];
+    L.push(clashYears.length?`**${clashYears.slice(0,4).join('・')}**あたりは、価値観やペースの違いが出やすい年（日支の冲）。「相性が悪い」ではなく“見直しの時期”ととらえ、無理に押し通さないのがコツです。`:'大きくぶつかりやすい年は目立ちません。ためこまず、その都度言葉にすると安定します。');return L;};
+  const good=compatGoodYears(A,B,rt.useSpouse);
+  const L=[`ご質問「${q}」について、${nA}と${nB}の命式（${rt.label}）から見ていきます。（ただ今オフライン。命式にもとづく端末内の鑑定です。通信が戻れば、さらに詳しい詳細鑑定もご利用いただけます）`];
+  if(tenju&&(topic==='bond'||topic==='timing'))L.push(`💞 2人は**天地徳合（てんちとくごう）**＝日干が干合し日支も支合する、六十干支でも最良クラスの特別な縁（大吉）。基本はとても良いご縁です。`);
+
+  if(topic==='timing'){
+    L.push('【'+rt.timing+'】');
+    L.push(good.length?`2人が${rt.timingDesc}のは**${good.map(g=>g.split('(')[0]).join('・')}年**あたり。${rt.timingCause}相手の日支とも響き合う時期です。`:`近い年に強く目立つ縁の年はありませんが、${rt.timingDesc}かは日々の関わりの積み重ねで変わります。`);
+    L.push(...clashBlock('すれ違いに気をつけたい時期'));
+    L.push('【2人でできること】');
+    L.push('- 上の「動きやすい年」を目安に、大事な話や節目を意識する。');
+  }
+  else if(topic==='clash'){
+    L.push('【'+rt.clash+'】');
+    L.push(clashLine());
+    L.push(...clashBlock('すれ違いに気をつけたい時期'));
+    L.push('【'+rt.tips+'】');
+    L.push(tipsLine());
+  }
+  else if(topic==='tips'){
+    L.push('【'+rt.tips+'】');
+    L.push(tipsLine());
+    const ex=compatExtras(A,B,rt).filter(r=>r.local);
+    if(ex.length){L.push('【2人の命式を合わせて見るポイント】');ex.forEach(r=>L.push((r.good==='good'?'◎ ':r.good==='soft'?'・':r.good==='bad'?'△ ':'・')+r.local));}
+    L.push('【'+rt.clash+'】');
+    L.push(clashLine());
+  }
+  else if(topic==='bond'){
+    L.push('【'+rt.kizuna+'】');
+    L.push(bondLine());
+    L.push('【'+rt.tips+'】');
+    L.push(tipsLine());
+    if(good.length){L.push('【'+rt.timing+'】');L.push(`2人が${rt.timingDesc}のは**${good.map(g=>g.split('(')[0]).join('・')}年**あたりです。`);}
+  }
+  else{ // general＝全体像（従来の相性まとめ。お休み中の文言は出さない）
+    return L.join('\n')+'\n'+localCompat(A,B,na,nb,rt);
+  }
+  return L.join('\n');
+}
 // お相手の命式を計算（共通）。失敗時はnullを返す。
 /* 相性を一目で：日柱の相性グレード（ganzhiCompat＝六十干支相性の自動算出）を信号バッジ化。
    吉凶は engine のグレードそのまま。低グレードは product方針に合わせ、やわらかい前向き表現にする（意味は保持）。 */
@@ -4466,7 +4540,7 @@ async function doCompatAsk(){
   const ask=`【相談者(本人A)からの質問】\n${q}\n\nこの質問に、上の「2人の関係の自動分析」を唯一の根拠として答えてください。挨拶や長い前置き、聞かれていない一般的な性格紹介は書かず、質問にだけまっすぐ答える。2人を「${rt.frame}」という前提で扱う。日干の関係・通変星・日支の合冲・五行の補い合い・大運の重なり・${rt.timing}・2人の命式を合わせた相性ポイント（合わせて三合・方合／互いの不足五行を持ち合う／同じ空亡／月支元命の生剋／印の関係・通変星の相生の流れ／日柱の納音の相性（2人の日柱が同じ納音か））など、関係する要素を名指しで挙げ「この要素があるから、こう言える」という理屈を添える。曖昧で誰にでも当てはまる表現は禁止。${rt.useSpouse?'':'\n※この関係では恋愛・結婚・出会い・配偶者の話題は出さないこと。'}\n構成：1行目に結論を一文（前置き・見出しなし）→【見出し】付きの短いブロックを2〜3個（各2〜4文）。時期を聞かれたら大運・今後の年運から具体的な西暦の年を挙げる（断定せず「動きやすい時期」として）。さらに、良い時期だけでなく<b>2人がすれ違い・衝突しやすい“注意な時期”</b>も、互いの日支が冲される年・比劫や官殺が重なる年などを根拠に具体的な西暦・年齢で1つは挙げ、乗り越え方を添える（断定せず「少し気をつけると良い」とやわらかく）。最後に【できること】を2〜3点。大事な語は**太字**。\n注意:繊細な相談でも中立に扱い、特定の事実を断定せず、誰も責めず建設的に。「相性が悪い」「ダメ」などの強い断定や怖がらせる表現は使わず、注意点は「少し気をつけるとより良い」程度のやわらかく前向きな言い方にとどめる。`;
   const easy=`${head}\n\n${ask}\n【書き方＝最重要】「深く、しかし分かりやすく伝わりやすい言葉」で書く。専門用語は使ってよいが、出たらその場でふつうの言葉に短く言いかえる。内容・根拠・深さは削らない。全体500〜700字。`;
   const pro=`${head}\n\n${ask}\n【書き方】四柱推命の専門用語（通変星名・三合・空亡・月支元命・相生相剋など）はそのままの言葉で明示してよい。通変星の相生の流れ（例:「食傷は比劫に生かされる」）は言いかえず通変星の言葉で根拠として書く。プロ向けの本格鑑定として深く。全体500〜700字。`;
-  runReading(document.getElementById('compatAskBtn'),out,easy,localCompat(chart,chartB,na,nb,rt,q),pro);
+  runReading(document.getElementById('compatAskBtn'),out,easy,localCompatAnswer(chart,chartB,na,nb,rt,q),pro);
 }
 
 /* ===== 入力・初期化 ===== */
