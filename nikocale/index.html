@@ -2982,8 +2982,8 @@ function pickFocus(interests){
 
   /* ---- selects ---- */
   function opt(v,t){var o=document.createElement('option');o.value=v;o.textContent=t;return o;}
-  function fill(id,from,to,suf,ph){var s=$(id);s.appendChild(opt('',ph));for(var i=from;i<=to;i++)s.appendChild(opt(i,i+suf));}
-  ['a','b'].forEach(function(x){ fill(x+'y',1940,nowY,'年','年'); fill(x+'m',1,12,'月','月'); fill(x+'d',1,31,'日','日'); fill(x+'h',0,23,'時','時'); fill(x+'i',0,59,'分','分'); });
+  function fill(id,from,to,suf,ph,step){var s=$(id);s.appendChild(opt('',ph));for(var i=from;i<=to;i+=(step||1))s.appendChild(opt(i,i+suf));}
+  ['a','b'].forEach(function(x){ fill(x+'y',1940,nowY,'年','年'); fill(x+'m',1,12,'月','月'); fill(x+'d',1,31,'日','日'); fill(x+'h',0,23,'時','時'); fill(x+'i',0,55,'分','分',5); });
   // 存在しない日付(2/31・4/31・2/30 等)を選べないよう、選んだ年月に応じて「日」を絞る
   function daysInMonth(y,m){ return new Date(y||2000, m||1, 0).getDate(); }
   function refreshDays(x){ var sy=$(x+'y'),sm=$(x+'m'),sd=$(x+'d'); if(!sd)return;
@@ -3056,7 +3056,7 @@ function pickFocus(interests){
   function loadPeople(){ try{return JSON.parse(localStorage.getItem('dc_people')||'[]');}catch(e){return [];} }
   function savePeople(a){ try{localStorage.setItem('dc_people',JSON.stringify(a));}catch(e){} }
   function refreshSaved(){ var ppl=loadPeople(); var has=ppl.length>0; ['a','b'].forEach(function(x){ var sel=$(x+'Saved'); if(!sel)return; sel.innerHTML='<option value="">― 保存リスト ―</option>'; ppl.forEach(function(p,i){ sel.appendChild(opt(String(i), p.name)); }); var rc=$(x+'Recall'), lb=$(x+'SavedLab'); if(rc)rc.hidden=!has; if(lb)lb.hidden=!has; }); }
-  function setPerson(x,p){ $(x+'y').value=p.y; $(x+'m').value=p.m; $(x+'d').value=p.d; $(x+'h').value=(p.h==null?'':p.h); $(x+'i').value=(p.mi==null?'':p.mi); $(x+'tu').checked=!!p.tu; if($(x+'name'))$(x+'name').value=p.name||''; state.p[x].sex=p.sex||'f'; document.querySelectorAll('.seg button[data-p="'+x+'"]').forEach(function(o){o.setAttribute('aria-pressed', o.getAttribute('data-sex')===state.p[x].sex?'true':'false');}); refreshDays(x); syncTimeUnknown(x); }
+  function setPerson(x,p){ $(x+'y').value=p.y; $(x+'m').value=p.m; $(x+'d').value=p.d; $(x+'h').value=(p.h==null?'':p.h); var _mi=(p.mi==null?'':Math.round(p.mi/5)*5); if(_mi===60)_mi=55; $(x+'i').value=_mi; $(x+'tu').checked=!!p.tu; if($(x+'name'))$(x+'name').value=p.name||''; state.p[x].sex=p.sex||'f'; document.querySelectorAll('.seg button[data-p="'+x+'"]').forEach(function(o){o.setAttribute('aria-pressed', o.getAttribute('data-sex')===state.p[x].sex?'true':'false');}); refreshDays(x); syncTimeUnknown(x); }
   ['a','b'].forEach(function(x){
     var sel=$(x+'Saved'); if(sel)sel.onchange=function(){ if(sel.value==='')return; var p=loadPeople()[+sel.value]; if(p)setPerson(x,p); };
     var sv=$(x+'Save'); if(sv)sv.onclick=function(){ var nm=(($(x+'name')&&$(x+'name').value)||'').trim(); if(!nm){alert('保存する名前を入力してください。');return;} var pp=person(x); if(!pp.y||!pp.m||!pp.d){alert('生年月日（年・月・日）を選んでください。');return;} var arr=loadPeople(); var idx=-1; for(var i=0;i<arr.length;i++){if(arr[i].name===nm){idx=i;break;}} if(idx>=0)arr[idx]=pp; else arr.push(pp); savePeople(arr); refreshSaved(); var sl=$(x+'Saved'); if(sl){for(var j=0;j<sl.options.length;j++){if(sl.options[j].textContent===nm)sl.selectedIndex=j;}} alert('「'+nm+'」を保存しました。次からリストで呼び出せます。'); };
