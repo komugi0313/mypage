@@ -2152,10 +2152,11 @@ function meishiHTML(c){
       tsStem:p.label==='日柱'?'比肩':p.tenStar,tsBranch:honki?honki.tenStar:'',terr:p.terrain,zou:p.hiddenStems,kichi};
   });
   if(c.timeUnknown)cells.push({label:'時柱',sub:'将来・本心',me:false,isMonth:false,unknown:true,kichi:[]});
-  const tsCell=(t,isDay)=>isDay?`<span class="ts">比肩<span style="color:var(--ka);font-size:11px">（日主）</span><small>${TS_DESC['比肩']}</small></span>`:`<span class="ts">${t}<small>${TS_DESC[t]||''}</small></span>`;
-  const tsBranchCell=cc=>cc.isMonth
-    ?`<span class="ts">${cc.tsBranch}<small>${TS_DESC[cc.tsBranch]||''}</small></span>`
-    :tsCell(cc.tsBranch,false);
+  // ①モック準拠：セルは値のみ（説明の小文字は付けない＝コンパクト表示）。日柱の天干通変は（比肩）。
+  const ganCell=(ch,el)=>`<span class="gan" style="color:${ec(el)}">${ch}</span>`;
+  const tsCell=(t,isDay)=>`<span class="ts">${isDay?'（比肩）':(t||'—')}</span>`;
+  const tsBranchCell=cc=>`<span class="ts">${cc.tsBranch||'—'}</span>`;
+  const terrCell=cc=>`<span class="ts">${cc.terr||'—'}</span>`;
   const zone=h=>`<span class="hs" style="color:${ec(STEM_EL[h.stem])}">${h.stem}</span>${h.ling?'<span class="gen">元</span>':''}<span class="zts">${h.tenStar}</span>`;
   // セルは蔵干の「干（＋元）」だけ。通変星は下の「地支通変」行と重複するため表示しない。流派の切替は表の下のパネルに集約。
   const zouCell=cc=>{const hs=cc.zou,label=cc.label;
@@ -2173,26 +2174,31 @@ function meishiHTML(c){
       <div class="zpanel" style="margin-top:6px"><div class="mhint" style="margin:0 0 2px">既定は<b>司令（元＝月支元命の基準）</b>。流派に合わせて各柱の代表（通変星）を選べます。選択は鑑定にも反映され、「司令（元）に戻す」で戻せます。表では選択中の柱に<b class="zpicked" style="margin:0">選</b>が付きます。</div>${pil.map(block).join('')}</div></details>`;
   })();
   const kCell=cc=>cc.kichi.length?`<span class="kichi">${cc.kichi.map(kichiLabel).join('・')}</span>`:'<span class="none">－</span>';
-  // ①モックに合わせた行順：核（干支・通変・十二運）→ 蔵干（開閉）。吉凶星は表の外に柱ごとチップで出す。
-  const ROWS=[
-    ['天干',cc=>`<span class="gan" style="color:${ec(cc.sEl)}">${cc.stem}</span>`,'gangrp'],
-    ['地支',cc=>`<span class="gan" style="color:${ec(cc.bEl)}">${cc.branch}</span>`,'gangrp'],
-    ['天干通変',cc=>tsCell(cc.tsStem,cc.me)],
-    ['地支通変',tsBranchCell],
-    ['十二運',cc=>`<span class="ts">${cc.terr}<small>${TERR_DESC[cc.terr]||''}</small></span>`],
-    ['蔵干',zouCell],
-  ];
+  // ①モック準拠の属性：天干・地支・蔵干・天干通変・地支通変・十二運。蔵干は地支の隣（開閉対象）。
+  const A={
+    gan:['天干',cc=>ganCell(cc.stem,cc.sEl),'gangrp'],
+    shi:['地支',cc=>ganCell(cc.branch,cc.bEl),'gangrp'],
+    zou:['蔵干',zouCell,'zoucol'],
+    tts:['天干通変',cc=>tsCell(cc.tsStem,cc.me),''],
+    cts:['地支通変',tsBranchCell,''],
+    jun:['十二運',terrCell,''],
+  };
+  const isZou=a=>a[0]==='蔵干';
+  const mkbl=(a,cc)=>(a[0]==='地支通変'&&cc.isMonth)?'mkblue':'';
+  const cH=(a,cc)=>cc.unknown?'<span class="none">—</span>':a[1](cc);
   // 吉凶星＝柱ごとの全幅チップ（表の外・開閉の中）
   const kichiChips=`<div class="mkichi md-detail"><div class="mkichi-h">吉凶星（柱ごと）</div>${cells.map(cc=>`<div class="mkrow"><span class="mkpil${cc.me?' me':''}">${cc.label}${cc.unknown?'':' '+cc.stem+cc.branch}</span><span class="mkval">${cc.unknown?'<span class="none">時刻不明のため参考外</span>':(cc.kichi.length?cc.kichi.map(k=>`<span class="mkchip">${kichiLabel(k)}</span>`).join(''):'<span class="none">－</span>')}</span></div>`).join('')}</div>`;
   let table;
-  if(orient==='yoko'){ // 柱を行に（左から：干支→星）
-    const head=`<tr><th></th>${ROWS.map(r=>`<th>${r[0]}</th>`).join('')}</tr>`;
-    const body=cells.map(cc=>`<tr><td class="rowlab ${cc.me?'me':''}">${cc.label}${bdayHTML(cc)}${cc.unknown?'<br><small style="color:var(--ka);font-weight:800">不明・参考外</small>':''}</td>${ROWS.map(r=>`<td class="${r[2]||''} ${cc.me?'me':''} ${(r[0]==='地支通変'&&cc.isMonth)?'mkblue':''}">${cc.unknown?'<span class="none">—</span>':r[1](cc)}</td>`).join('')}</tr>`).join('');
+  if(orient==='yoko'){ // 横：柱を列に（時柱→日柱→月柱→年柱＝時柱が左）。蔵干は最下段の行（開閉）。
+    const attrs=[A.gan,A.shi,A.tts,A.cts,A.jun,A.zou];
+    const pcols=cells.slice().reverse();
+    const head=`<tr><th></th>${pcols.map(cc=>`<th class="${cc.me?'me':''}">${cc.label}${bdayHTML(cc)}${cc.unknown?'<br><small style="color:var(--ka);font-weight:800">不明</small>':''}</th>`).join('')}</tr>`;
+    const body=attrs.map(a=>`<tr class="${isZou(a)?'md-detail':''}"><td class="rowlab">${a[0]}</td>${pcols.map(cc=>`<td class="${a[2]||''} ${cc.me?'me':''} ${mkbl(a,cc)}">${cH(a,cc)}</td>`).join('')}</tr>`).join('');
     table=`<table class="mtable">${head}${body}</table>`;
-  } else { // 縦：柱を列に（流派の並び＝時柱→日柱→月柱→年柱：時柱が左）
-    const cols=cells.slice().reverse();
-    const head=`<tr><th></th>${cols.map(cc=>`<th class="${cc.me?'me':''}">${cc.label}${bdayHTML(cc)}${cc.unknown?'<br><small style="color:var(--ka);font-weight:800">不明</small>':''}</th>`).join('')}</tr>`;
-    const body=ROWS.map(r=>`<tr class="${r[0]==='蔵干'?'md-detail':''}"><td class="rowlab">${r[0]}</td>${cols.map(cc=>`<td class="${r[2]||''} ${cc.me?'me':''} ${(r[0]==='地支通変'&&cc.isMonth)?'mkblue':''}">${cc.unknown?'<span class="none">—</span>':r[1](cc)}</td>`).join('')}</tr>`).join('');
+  } else { // 縦：柱を行に（年柱が一番上）。蔵干は地支の隣の列（開閉）。
+    const attrs=[A.gan,A.shi,A.zou,A.tts,A.cts,A.jun];
+    const head=`<tr><th></th>${attrs.map(a=>`<th class="${isZou(a)?'md-detail':''}">${a[0]}</th>`).join('')}</tr>`;
+    const body=cells.map(cc=>`<tr><td class="rowlab ${cc.me?'me':''}">${cc.label}${bdayHTML(cc)}${cc.unknown?'<br><small style="color:var(--ka);font-weight:800">不明・参考外</small>':''}</td>${attrs.map(a=>`<td class="${a[2]||''} ${cc.me?'me':''} ${mkbl(a,cc)} ${isZou(a)?'md-detail':''}">${cH(a,cc)}</td>`).join('')}</tr>`).join('');
     table=`<table class="mtable">${head}${body}</table>`;
   }
   const allK=[...new Set(cells.flatMap(cc=>cc.kichi))].filter(k=>KICHI_DESC[k]);
@@ -2200,12 +2206,12 @@ function meishiHTML(c){
   return `<section class="card sec" id="meishi-sec">
     <span class="eyebrow"><b>命式</b>四つの柱</span>
     <h2>あなたの四つの柱</h2>
-    <p class="lead"><b>干支（天干・地支）・通変星・十二運</b>の表。<b>日柱があなた自身</b>（ピンク）。文字の色がその五行です。蔵干・吉凶星は「詳しく見る」で開けます。</p>
+    <p class="lead"><b>日柱があなた自身</b>（ピンク）。文字の色が五行です。<b>横＝時柱が左（列）／縦＝年柱が上（行）</b>。蔵干・吉凶星は「詳しく見る」で開きます。</p>
     <div class="toggles">
       <span class="tg"><button data-or="yoko" aria-pressed="${orient==='yoko'}">横</button><button data-or="tate" aria-pressed="${orient==='tate'}">縦</button></span>
       <span class="tg lab">空亡：${ku.join('')}</span>
     </div>
-    ${(()=>{const collapsed=(orient==='tate');const dl=(orient==='tate')?'蔵干・吉凶星':'吉凶星';return `<div class="mbox${collapsed?' md-collapsed':''}"><div class="mwrap">${table}</div><div class="mleg"><span class="mleg-sw"></span>青ぬり＝<b>月支元命</b>（月柱の地支通変・先天的な気質の軸）</div>${kichiChips}<button type="button" class="md-toggle" onclick="var b=this.closest('.mbox');var c=b.classList.toggle('md-collapsed');this.firstChild.textContent=(c?'＋詳しく見る：${dl}':'閉じる：${dl}');this.lastElementChild.style.transform=c?'':'rotate(180deg)';"><span>${collapsed?('＋詳しく見る：'+dl):('閉じる：'+dl)}</span><svg class="md-arw" style="${collapsed?'':'transform:rotate(180deg)'}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div>`;})()}
+    ${(()=>{const collapsed=true;const dl='蔵干・吉凶星';return `<div class="mbox${collapsed?' md-collapsed':''}"><div class="mwrap">${table}</div><div class="mleg"><span class="mleg-sw"></span>青ぬり＝<b>月支元命</b>（月柱の地支通変・先天的な気質の軸）</div>${kichiChips}<button type="button" class="md-toggle" onclick="var b=this.closest('.mbox');var c=b.classList.toggle('md-collapsed');this.firstChild.textContent=(c?'＋詳しく見る：${dl}':'閉じる：${dl}');this.lastElementChild.style.transform=c?'':'rotate(180deg)';"><span>${collapsed?('＋詳しく見る：'+dl):('閉じる：'+dl)}</span><svg class="md-arw" style="${collapsed?'':'transform:rotate(180deg)'}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div>`;})()}
     <button type="button" onclick="openMeishiSheet()" style="margin-top:11px;width:100%;min-height:46px;border:1.5px solid var(--ka);background:var(--ka-w);color:var(--ka);border-radius:12px;font-family:inherit;font-weight:900;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>命式表（鑑定書）を印刷用で開く →</button>
     ${zouPanel}
     <details class="adv" style="margin-top:10px"><summary>四つの柱の意味と年齢域（人生の時間軸）</summary><div style="margin-top:8px">${PILLAR_INFO.map(pi=>`<div style="margin-bottom:8px;font-size:13px;line-height:1.65"><b style="color:var(--ka)">${pi.label}</b>　<small style="color:var(--muted);font-weight:800">${pi.age}</small><br>${pi.mean}</div>`).join('')}</div></details>
@@ -4625,7 +4631,7 @@ geminiKey=store.get('bazi_gkey')||''; geminiModel=store.get('bazi_gmodel')||'gem
 (function(){const k=document.getElementById('g-key'),m=document.getElementById('g-model');
   if(k){k.value=geminiKey;k.oninput=()=>{geminiKey=k.value.trim();store.set('bazi_gkey',geminiKey);};}
   if(m){m.value=geminiModel;m.onchange=()=>{geminiModel=m.value;store.set('bazi_gmodel',geminiModel);};}})();
-try{if(window.matchMedia&&window.matchMedia('(max-width:560px)').matches)orient='tate';}catch(e){}
+/* モバイル既定は横（時柱が左の列＝鑑定書の横型に合わせる）。既定値yokoのままとする。 */
 buildLegend();fillPref();fillPrefB();renderClients();
 mpSetStatus(mpEmail()?'synced':'guest'); if(mpEmail())mpPull();
 chart=window.Bazi.computeChart({year:2000,month:1,day:1,hour:12,minute:0,sex:'female',longitude:139.69,correctionMode:'full'});
