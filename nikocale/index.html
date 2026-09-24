@@ -44,7 +44,7 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
-<script>try{if(localStorage.getItem('dc_pal_elegantdefault')!=='1'){localStorage.setItem('dc_pal','rose');localStorage.setItem('dc_pal_elegantdefault','1');}var _p=localStorage.getItem('dc_pal')||'rose';if(_p&&_p!=='fuji')document.documentElement.setAttribute('data-pal',_p);}catch(e){document.documentElement.setAttribute('data-pal','rose');}</script>
+<script>try{if(localStorage.getItem('dc_pal_rose_v3')!=='1'){localStorage.setItem('dc_pal','rose');localStorage.setItem('dc_pal_rose_v3','1');}var _p=localStorage.getItem('dc_pal')||'rose';if(_p&&_p!=='fuji')document.documentElement.setAttribute('data-pal',_p);}catch(e){document.documentElement.setAttribute('data-pal','rose');}</script>
 <script>try{var _t=localStorage.getItem('dc_theme')||'light';if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');else if(_t!=='auto')document.documentElement.setAttribute('data-theme','light');}catch(e){document.documentElement.setAttribute('data-theme','light');}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4290,7 +4290,8 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     } else if(s==='share'){
       function baseUrl(){ return (location.origin&&location.origin!=='null')? location.origin+location.pathname : location.href.split('?')[0].split('#')[0]; }
       function myName2(){ try{ var lp=JSON.parse(localStorage.getItem('dc_lastPair')||'null'); if(lp&&lp.a&&lp.a.name) return String(lp.a.name); }catch(e){} var u=Auth.current(); if(u&&u.email) return u.email.split('@')[0]; return 'あなた'; }
-      function friendLink(){ var u=Auth.current(); var uid=(u&&(u.uid||u.email))||'me'; return baseUrl()+'?nf='+encodeURIComponent(uid)+'&nm='+encodeURIComponent(myName2())+'&accounts=1'; }
+      function myGanzhi(){ try{ var lp=JSON.parse(localStorage.getItem('dc_lastPair')||'null'); var p=lp&&lp.a; if(p&&window.PersonBazi&&p.y&&p.m&&p.d){ var r=window.PersonBazi(+p.y,+p.m,+p.d,(p.tu?null:p.h),(p.tu?null:p.mi),!!p.tu,p.sex||'f'); if(r&&r.pillars){ var day=r.pillars.filter(function(x){return x.label==='日柱';})[0]; if(day&&day.ganzhi) return day.ganzhi; } } }catch(e){} return ''; }
+      function friendLink(){ var u=Auth.current(); var uid=(u&&(u.uid||u.email))||'me'; var gz=myGanzhi(); return baseUrl()+'?nf='+encodeURIComponent(uid)+'&nm='+encodeURIComponent(myName2())+(gz?'&gz='+encodeURIComponent(gz):'')+'&accounts=1'; }
       var link=friendLink();
       var qel=el('auQR'); if(qel){ if(typeof window.QRCode==='function'){ qel.innerHTML=''; try{ new window.QRCode(qel,{text:link,width:174,height:174,colorDark:'#2b2530',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M}); }catch(e){ qel.innerHTML='<span style="font-size:11px;color:var(--muted,#8a8296);text-align:center">QRは準備中です。<br>下の「リンクをコピー」で共有できます。</span>'; } } else { qel.innerHTML='<span style="font-size:11px;color:var(--muted,#8a8296);text-align:center">QRは準備中です。<br>下の「リンクをコピー」で共有できます。</span>'; } }
       var shareText='ニコカレでふたりの相性カレンダーを見よう！（'+myName2()+'より）';
@@ -4307,19 +4308,54 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   chip.onclick=function(){ var u=Auth.current(); open(u?'account':'register'); };
   Auth.onChange(function(){ renderChip(); if(!modal.hidden) render(); });
 
-  /* 招待リンク（?nf=...）で来た人への案内（つながり成立の本番はFirebase後） */
+  /* 招待リンク（?nf=...）で来た人への歓迎＋登録モーダル（バイラルの入口） */
   (function(){
     try{
-      var q=new URLSearchParams(location.search); var nm=q.get('nm');
+      var q=new URLSearchParams(location.search);
       if(q.get('nf')==null) return;
       if(sessionStorage.getItem('dc_invite_seen')==='1') return;
-      var bar=document.createElement('div');
-      bar.style.cssText='position:fixed;left:0;right:0;top:0;z-index:10002;background:linear-gradient(180deg,var(--accent,#3a4a80),var(--accent-2,#2e3b6a));color:var(--accent-ink,#fff);font-family:var(--maru,sans-serif);font-size:12.5px;font-weight:700;padding:10px 40px 10px 14px;text-align:center;box-shadow:0 4px 14px -6px rgba(20,20,40,.5)';
-      bar.innerHTML='🎉 '+((nm?String(nm).replace(/[<>&"]/g,''):'お相手'))+'さんから招待されました。まずはふたりの相性を見てみましょう。<span style="opacity:.8;font-weight:400">（つながり機能は近日公開）</span>';
-      var x=document.createElement('button'); x.textContent='×'; x.setAttribute('aria-label','閉じる');
-      x.style.cssText='position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1';
-      x.onclick=function(){ bar.remove(); try{sessionStorage.setItem('dc_invite_seen','1');}catch(e){} };
-      bar.appendChild(x); document.body.appendChild(bar);
+      var nm=(q.get('nm')||'お相手').replace(/[<>&"]/g,'').slice(0,16)||'お相手';
+      var gz=(q.get('gz')||'').replace(/[^\u3400-\u9fff]/g,'').slice(0,2);
+      var invAv = gz? '<img src="img/mascot/thumb/'+encodeURIComponent(gz)+'.webp" alt="" onerror="this.style.display=\'none\'">' : '';
+      var st=document.createElement('style'); st.textContent=''
+        +'.nkiv-dim{position:fixed;inset:0;z-index:10050;background:rgba(40,25,35,.5);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:16px}'
+        +'.nkiv-card{width:100%;max-width:400px;background:var(--panel,#fff);border-radius:22px;box-shadow:0 20px 50px -14px rgba(40,25,35,.6);overflow:hidden;position:relative;max-height:92vh;overflow-y:auto}'
+        +'.nkiv-x{position:absolute;right:12px;top:10px;background:none;border:none;color:var(--muted,#9b99a1);font-size:22px;cursor:pointer;z-index:2}'
+        +'.nkiv-top{background:radial-gradient(120% 100% at 50% 0%,var(--accent-soft,#f4e3e8),var(--panel,#fff));padding:20px 18px 8px;text-align:center}'
+        +'.nkiv-pair{display:flex;align-items:center;justify-content:center;gap:14px;margin:2px 0 6px}'
+        +'.nkiv-pw{width:64px;height:64px;border-radius:50%;overflow:hidden;background:#efeeeb;box-shadow:0 0 0 2px var(--accent,#b56682),0 0 0 4px var(--panel,#fff);display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--accent,#b56682)}'
+        +'.nkiv-pw img{width:100%;height:100%;object-fit:cover;display:block}'
+        +'.nkiv-heart{font-size:22px;color:var(--accent,#b56682)}'
+        +'.nkiv-from{font-family:var(--cormo,serif);font-style:italic;font-size:13px;color:var(--accent-2,#9a5170)}'
+        +'.nkiv-c{padding:6px 20px 20px;text-align:center}'
+        +'.nkiv-h1{font-family:var(--serif);font-weight:800;font-size:18.5px;line-height:1.55;color:var(--hi,#3a2f36);word-break:keep-all}'
+        +'.nkiv-h1 b{color:var(--accent,#b56682)} .nkiv-h1 .nb{white-space:nowrap}'
+        +'.nkiv-sub{font-size:12.5px;color:var(--ink-soft,#5b5860);line-height:1.8;margin:10px 4px 14px}'
+        +'.nkiv-sub b{color:var(--hi,#3a2f36)} .nkiv-sub b.hl{color:var(--accent,#b56682);white-space:nowrap}'
+        +'.nkiv-bul{display:flex;flex-direction:column;gap:7px;text-align:left;background:var(--accent-soft,#f4e3e8);border-radius:12px;padding:12px 14px;margin-bottom:16px}'
+        +'.nkiv-bul div{font-size:12.5px;color:var(--ink,#33313a)} .nkiv-bul b{color:var(--accent-2,#9a5170)}'
+        +'.nkiv-cta{display:block;width:100%;background:linear-gradient(180deg,var(--accent,#b56682),var(--accent-2,#9a5170));color:var(--accent-ink,#fff);border:none;border-radius:13px;padding:15px;font-family:var(--serif);font-weight:800;font-size:16px;letter-spacing:.03em;cursor:pointer;box-shadow:0 10px 22px -10px var(--accent,#b56682)}'
+        +'.nkiv-wait{font-family:var(--cormo,serif);font-style:italic;font-size:12px;color:var(--muted,#9b99a1);margin-top:8px}'
+        +'.nkiv-sec{display:block;width:100%;margin-top:10px;background:none;border:none;color:var(--accent-2,#9a5170);font-size:13px;font-weight:700;text-decoration:underline;text-underline-offset:3px;cursor:pointer}';
+      document.head.appendChild(st);
+      var dim=document.createElement('div'); dim.className='nkiv-dim';
+      dim.innerHTML='<div class="nkiv-card"><button class="nkiv-x" aria-label="閉じる">\u00d7</button>'
+        +'<div class="nkiv-top"><div class="nkiv-pair">'
+          +'<div class="nkiv-pw">'+(invAv||'\u2764')+'</div><span class="nkiv-heart">\u2764</span><div class="nkiv-pw">?</div>'
+        +'</div><div class="nkiv-from">\ud83d\udc8c <b>'+nm+'</b> さんから招待が届いています</div></div>'
+        +'<div class="nkiv-c">'
+          +'<div class="nkiv-h1"><b>'+nm+'</b>さんが、<br>あなたとの相性を<span class="nb">見たいと</span><span class="nb">待っています</span></div>'
+          +'<div class="nkiv-sub">生年月日を入れるだけで、ふたりの<b class="hl">「会うのにいい日」</b>がわかります。返信や予定の相談も、このアプリのメッセージで。</div>'
+          +'<div class="nkiv-bul"><div>\u25ce <b>相性のいい日</b>がカレンダーでわかる</div><div>\ud83d\udcac <b>メッセージ</b>で予定調整＆お誘い</div><div>\ud83c\udf81 ずっと<b>無料</b>・登録はメール1つ（30秒）</div></div>'
+          +'<button class="nkiv-cta">無料でつながる</button>'
+          +'<div class="nkiv-wait">\u2014 '+nm+'さんが返信を待っています \u2014</div>'
+          +'<button class="nkiv-sec">まずは相性だけ見てみる</button>'
+        +'</div></div>';
+      function dismiss(){ dim.remove(); try{sessionStorage.setItem('dc_invite_seen','1');}catch(e){} }
+      dim.querySelector('.nkiv-x').onclick=dismiss;
+      dim.querySelector('.nkiv-sec').onclick=dismiss;
+      dim.querySelector('.nkiv-cta').onclick=function(){ dismiss(); try{ window.NicoAuth.requireAuth(function(){ if(window.NicoChat)window.NicoChat.open(); }); }catch(e){} };
+      document.body.appendChild(dim);
     }catch(e){}
   })();
 
