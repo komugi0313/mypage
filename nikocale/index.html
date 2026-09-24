@@ -1304,6 +1304,31 @@ select{
 .dm-cta .dm-cta-t{font-family:var(--serif);font-weight:700;font-size:15px;color:var(--hi)}
 .dm-cta .dm-cta-s{font-size:11.5px;color:var(--ink-soft);margin-top:3px;line-height:1.55}
 .dm-cta .dm-cta-b{flex:0 0 auto;background:var(--accent);color:var(--accent-ink,#fff);border:none;border-radius:10px;padding:11px 14px;font-weight:800;font-size:13px;font-family:var(--maru);cursor:pointer;white-space:nowrap}
+/* ===== あなたのキャラ（伏せ→登録→公開）===== */
+.charcard-wrap:empty{display:none}
+.charcard{background:var(--panel);border:1.5px solid var(--accent);border-radius:16px;padding:18px 16px;margin:16px 0;text-align:center;box-shadow:0 10px 26px -16px rgba(0,0,0,.34)}
+.charcard .cc-k{font-family:var(--cormo);font-style:italic;font-size:12.5px;color:var(--hi)}
+.charcard .cc-t{font-family:var(--serif);font-weight:800;font-size:18px;color:var(--ink);margin-top:1px}
+.cc-circ{width:120px;height:120px;border-radius:50%;margin:11px auto 4px;overflow:hidden;background:var(--accent-soft);box-shadow:0 0 0 3px var(--accent),0 0 0 6px var(--panel);display:flex;align-items:center;justify-content:center}
+.cc-circ img{width:100%;height:100%;object-fit:cover;display:block}
+.cc-q{font-family:var(--serif);font-weight:800;font-size:54px;color:var(--accent);opacity:.85;line-height:1}
+.cc-lockline{font-family:var(--cormo);font-style:italic;font-size:12px;color:var(--accent-2);letter-spacing:.03em;margin:9px 0 3px}
+.cc-lockmsg{font-size:12.5px;color:var(--ink-soft);line-height:1.8;margin:4px 6px 12px}
+.cc-lockmsg b{color:var(--accent)}
+.cc-vals{text-align:left;background:var(--accent-soft);border-radius:12px;padding:11px 14px;margin-bottom:13px}
+.cc-vals div{font-size:12.5px;color:var(--ink);margin:4px 0}
+.cc-vals b{color:var(--hi)}
+.cc-cta{display:block;width:100%;background:var(--accent);color:var(--accent-ink,#fff);border:none;border-radius:12px;padding:14px;font-family:var(--serif);font-weight:800;font-size:16px;cursor:pointer;box-shadow:0 9px 20px -9px var(--accent)}
+.cc-sub{font-family:var(--cormo);font-style:italic;font-size:12px;color:var(--muted);margin-top:8px}
+.cc-nick{font-family:var(--serif);font-weight:800;font-size:19px;color:var(--accent);margin-top:6px}
+.cc-trait{font-size:12.5px;color:var(--ink-soft);line-height:1.85;margin:8px 4px 0}
+.cc-banhead{font-family:var(--serif);font-size:12.5px;color:var(--hi);letter-spacing:.02em;margin:14px 0 5px;white-space:nowrap}
+.cc-ban{display:block;border-radius:12px;overflow:hidden;border:1px solid var(--line);box-shadow:0 6px 16px -10px rgba(0,0,0,.35)}
+.cc-ban img{width:100%;display:block}
+.cc-acts{display:flex;gap:8px;margin-top:13px}
+.cc-acts button{flex:1;border-radius:11px;padding:11px;font-weight:800;font-size:13px;font-family:var(--maru);cursor:pointer}
+.cc-save{background:var(--accent);color:var(--accent-ink,#fff);border:none}
+.cc-share{background:var(--panel);border:1px solid var(--accent);color:var(--hi)}
 .calbox .cal-h{font-family:var(--maru);font-weight:700;font-size:14px;color:var(--hi)}
 .calbox .cal-sub{font-size:11.5px;color:var(--muted);margin:3px 0 0;line-height:1.6}
 .calbox .caltime{background:var(--panel)}
@@ -1616,6 +1641,7 @@ select{
     <div class="ab-tag" id="abTag" aria-hidden="true"></div>
     <div class="grid" id="wdhead"></div>
     <div class="grid" id="cal"></div>
+    <div class="charcard-wrap" id="charCard"></div>
     <div class="summary" id="summary"></div>
     <details class="help-bad" id="helpBad">
       <summary>❓ <span class="mk-bad">「×避けたい」</span><span class="mk-warn">「△注意」</span>の日に会うことになったら？</summary>
@@ -3353,6 +3379,7 @@ function pickFocus(interests){
     state.topSet={};
     if(!solo){ data.filter(function(x){return x.mk.s==='◎';}).sort(function(a,b){return b.score-a.score;}).slice(0,3).forEach(function(x){ x.star=true; state.topSet[x.d]=true; }); }
     renderSummary(data, solo);
+    try{renderCharCard();}catch(e){}
     // weekday head
     var wd=['日','月','火','水','木','金','土'], wh=$('wdhead'); wh.innerHTML='';
     wd.forEach(function(x,i){var e=document.createElement('div');e.className='wd'+(i===6?' s6':i===0?' s0':'');e.textContent=x;wh.appendChild(e);});
@@ -3413,6 +3440,47 @@ function pickFocus(interests){
       '<div class="sum-box"><h4>⚠️ 避けたい日</h4>'+(avoid.length?avoid.map(function(x){return pill(x.d,x.wd,'bad','×');}).join(''):'<span class="tag mid">今月はなし</span>')+'</div></div>';
     el.innerHTML=h;
     el.querySelectorAll('[data-day]').forEach(function(b){ b.onclick=function(){ var dd=+b.getAttribute('data-day'); state.sel=dd; render(); detail(dd); }; });
+  }
+  /* ===== あなたのキャラ（伏せ→登録→公開）===== */
+  var CC_STEMADJ={甲:'まっすぐ',乙:'しなやかに',丙:'明るく',丁:'あたたかく',戊:'どっしり',己:'こまやかに',庚:'りりしく',辛:'美しく',壬:'のびやかに',癸:'しっとり'};
+  var CC_BRANCHCORE={子:'ご縁を引き寄せる',丑:'信頼を築く',寅:'道を切り開く',卯:'場を和ませる',辰:'夢を描く',巳:'直感がさえる',午:'情熱で駆ける',未:'思いやりにあふれる',申:'機知に富む',酉:'華をそえる',戌:'まわりを守る',亥:'一途に進む'};
+  var CC_ELEM={甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'金',辛:'金',壬:'水',癸:'水'};
+  var CC_ELEMTONE={木:'素直でのびやかな心を持ち、',火:'情熱的で表情ゆたかに、',土:'安定感があり面倒見よく、',金:'筋が通っていて凛と、',水:'柔軟で知的に、'};
+  var CC_BRANCHTRAIT={子:'新しいご縁や好機を引き寄せるタイプ。',丑:'こつこつ努力を重ね信頼を築くタイプ。',寅:'勇気をもって物事を切り開くタイプ。',卯:'まわりをやわらかく和ませるタイプ。',辰:'スケールの大きな夢を追うタイプ。',巳:'するどい直感と美意識を持つタイプ。',午:'情熱とスピードで駆けぬけるタイプ。',未:'やさしく思いやりにあふれるタイプ。',申:'才知と機転で人を楽しませるタイプ。',酉:'几帳面で華やかさをそえるタイプ。',戌:'誠実で大切な人をしっかり守るタイプ。',亥:'まっすぐ一途に突き進むタイプ。'};
+  function charInfo(gz){ if(!gz||gz.length<2)return null; var s=gz.charAt(0),b=gz.charAt(1); if(!CC_STEMADJ[s]||!CC_BRANCHCORE[b])return null; return {nick:CC_STEMADJ[s]+CC_BRANCHCORE[b]+'人', trait:(CC_ELEMTONE[CC_ELEM[s]]||'')+(CC_BRANCHTRAIT[b]||'')}; }
+  function selfGanzhi(){ try{ var p=state.A; if(!(p&&p.y&&p.m&&p.d)){ var lp=getLastPair(); p=lp&&lp.a; } if(p&&window.PersonBazi&&p.y&&p.m&&p.d){ var r=window.PersonBazi(+p.y,+p.m,+p.d,(p.tu?null:p.h),(p.tu?null:p.mi),!!p.tu,p.sex||'f'); if(r&&r.pillars){ var day=r.pillars.filter(function(z){return z.label==='日柱';})[0]; if(day&&day.ganzhi)return day.ganzhi; } } }catch(e){} return ''; }
+  function ccLoggedIn(){ try{ var u=window.NicoAuth&&window.NicoAuth.current&&window.NicoAuth.current(); return !!(u&&u.emailVerified&&u.profile); }catch(e){ return false; } }
+  function ccShare(gz,info){ var text='私のキャラは「'+info.nick+'」でした！ ニコカレで自分のキャラと相性を見てみよう ／ '+buildShareUrl();
+    try{ if(navigator.share){ navigator.share({text:text}).catch(function(){}); return; } }catch(e){}
+    try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text); toast('シェア文をコピーしました'); return; } }catch(e){}
+    try{ window.open('https://line.me/R/msg/text/?'+encodeURIComponent(text),'_blank','noopener'); }catch(e){} }
+  function renderCharCard(){
+    var el=$('charCard'); if(!el)return;
+    var gz=selfGanzhi(); if(!gz){ el.innerHTML=''; return; }
+    var info=charInfo(gz)||{nick:'あなたのキャラ',trait:''};
+    if(!state._ccBound){ state._ccBound=true; try{ if(window.NicoAuth&&window.NicoAuth.onChange)window.NicoAuth.onChange(function(){ try{renderCharCard();}catch(e){} }); }catch(e){} }
+    if(ccLoggedIn()){
+      el.innerHTML='<div class="charcard"><div class="cc-k">your character</div><div class="cc-t">あなたのキャラ</div>'
+        +'<div class="cc-circ"><img src="img/mascot/'+gz+'.webp" alt="あなたのキャラ" onerror="this.parentNode.innerHTML=\'<span class=&quot;cc-q&quot;>?</span>\'"></div>'
+        +'<div class="cc-nick">'+info.nick+'</div>'
+        +(info.trait?'<div class="cc-trait">'+info.trait+'</div>':'')
+        +'<div class="cc-banhead">＼ あなたの運命の人はだれ？ ／</div>'
+        +'<a class="cc-ban" href="https://166unmei.com" target="_blank" rel="noopener"><img src="promo2.png" alt="1.66 奇跡の相性診断" loading="lazy"></a>'
+        +'<div class="cc-acts"><button type="button" class="cc-save" id="ccSave">マイページに保存</button><button type="button" class="cc-share" id="ccShare">シェア</button></div>'
+        +'</div>';
+      var sv=$('ccSave'); if(sv)sv.onclick=function(){ try{localStorage.setItem('dc_mychar',gz);}catch(e){} toast('マイページにキャラを保存しました'); };
+      var sh=$('ccShare'); if(sh)sh.onclick=function(){ ccShare(gz,info); };
+    } else {
+      el.innerHTML='<div class="charcard"><div class="cc-k">your character</div><div class="cc-t">あなたのキャラは…？</div>'
+        +'<div class="cc-circ"><span class="cc-q">?</span></div>'
+        +'<div class="cc-lockline">― 登録すると公開 ―</div>'
+        +'<div class="cc-lockmsg">生年月日で決まる、<b>あなただけのキャラ</b>。<br>登録すると、ここで会えます。</div>'
+        +'<div class="cc-vals"><div>・<b>あなたのキャラ</b>を公開</div><div>・<b>自分だけの開運カレンダー</b>（毎日の運気）</div><div>・お相手と<b>メッセージ</b>＆予定調整</div></div>'
+        +'<button type="button" class="cc-cta" id="ccCta">無料で見る（30秒）</button>'
+        +'<div class="cc-sub">― 相性カレンダーは登録なしでも見られます ―</div>'
+        +'</div>';
+      var c=$('ccCta'); if(c)c.onclick=function(){ if(window.NicoAuth&&window.NicoAuth.requireAuth){ window.NicoAuth.requireAuth(function(){ try{renderCharCard();}catch(e){} var e2=$('charCard'); if(e2)e2.scrollIntoView({behavior:'smooth',block:'center'}); }); } };
+    }
   }
   function pill(d,wd,cls,sym){ var w=['日','月','火','水','木','金','土'][wd]; return '<span class="pill '+cls+'" data-day="'+d+'">'+sym+' '+d+'日<span class="wd">('+w+')</span></span>'; }
 
@@ -4346,11 +4414,11 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
           +'<div class="nkiv-p"><div class="nkiv-pw nkiv-q">?</div><span class="nkiv-nm">あなた＝？</span></div>'
         +'</div>'
         +'<div class="nkiv-from">\ud83d\udc8c <b>'+nm+'</b> さんから招待が届いています</div>'
-        +'<div class="nkiv-tease">\u2728 あなたは<b>60キャラ</b>のどれ？ 生年月日でわかる</div></div>'
+        +'</div>'
         +'<div class="nkiv-c">'
           +'<div class="nkiv-h1"><b>'+nm+'</b>さんが、<br>あなたとの相性を<span class="nb">見たいと</span><span class="nb">待っています</span></div>'
           +'<div class="nkiv-sub">生年月日を入れるだけで、ふたりの<b class="hl">「会うのにいい日」</b>がわかります。返信や予定の相談も、このアプリのメッセージで。</div>'
-          +'<div class="nkiv-bul"><div>\ud83d\udc23 <b>あなたのキャラ</b>（全60種）がわかる</div><div>\u25ce <b>相性のいい日</b>がカレンダーでわかる</div><div>\ud83d\udcac <b>メッセージ</b>で予定調整＆お誘い</div><div>\ud83c\udf81 <b>ずっと無料</b>・登録はメール1つ（30秒）</div></div>'
+          +'<div class="nkiv-bul"><div>\u25ce <b>相性のいい日</b>がカレンダーでわかる</div><div>\ud83d\udcac <b>メッセージ</b>で予定調整＆お誘い</div><div>\ud83c\udf81 <b>ずっと無料</b>・登録はメール1つ（30秒）</div></div>'
           +'<button class="nkiv-cta">無料でつながる</button>'
           +'<div class="nkiv-wait">\u2014 '+nm+'さんが返信を待っています \u2014</div>'
           +'<button class="nkiv-sec">まずは相性だけ見てみる</button>'
