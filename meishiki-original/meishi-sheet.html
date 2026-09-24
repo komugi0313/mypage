@@ -385,6 +385,15 @@
   .yk-kai-name{ display:inline-block; font-weight:700; color:var(--ink); font-size:11px; }
   .yk-kai-when{ display:block; color:#b8860b; font-size:9px; font-weight:700; margin:1px 0 0; }  /* 成立時期 */
   .yk-kai-mem{ display:block; color:var(--ink2); font-size:9px; margin-top:1px; }  /* どの地支と組むか（由来つき） */
+  .yk-kai-name.yk-kai-half{ color:#8a7b3a; font-weight:700; }  /* 半会・半方は控えめな色に */
+  /* 枠外メモ：生まれ持った会局・空亡 */
+  .yk-frame{ margin:0 0 10px; padding:8px 10px; border:1px dashed var(--rule2); border-radius:8px; background:#FBFAF5; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .yk-frow{ font-size:11px; line-height:1.7; color:var(--ink2); }
+  .yk-frow + .yk-frow{ margin-top:2px; }
+  .yk-flabel{ display:inline-block; min-width:15em; font-weight:700; color:var(--ink); }
+  .yk-ntag{ font-size:11px; color:var(--ink2); }
+  .yk-ntag b{ color:var(--ink); }
+  .yk-nmuted{ color:#a79f8c; }
   .yk-tbl .kanchar.el-moku{color:#2e7d32}.yk-tbl .kanchar.el-ka{color:#c0392b}.yk-tbl .kanchar.el-do{color:#a9791c}.yk-tbl .kanchar.el-kin{color:#b8860b}.yk-tbl .kanchar.el-sui{color:#2a6fd0}
   .sheet-yoko .footline{ margin-top:auto; }
   .rd-sec{ break-inside:avoid; -webkit-column-break-inside:avoid; page-break-inside:avoid; margin:0 0 16px; }
@@ -3585,8 +3594,8 @@ window.KANSHI60_DETAIL={
   var _YHOUGO=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','戌','金'],['亥','子','丑','水']];
   function _ykKyoku(branches){
     var u=_ykUniq(branches), res=[];
-    _YSANGO.forEach(function(g){ var mem=[g[0],g[1],g[2]].filter(function(x){return u.indexOf(x)>=0;}); if(mem.length>=3)res.push({label:g[3]+'局三合',mem:[g[0],g[1],g[2]]}); else if(mem.length===2)res.push({label:g[3]+'局半会',mem:mem}); });
-    _YHOUGO.forEach(function(g){ var mem=[g[0],g[1],g[2]].filter(function(x){return u.indexOf(x)>=0;}); if(mem.length>=3)res.push({label:g[3]+'局方合',mem:[g[0],g[1],g[2]]}); else if(mem.length===2)res.push({label:g[3]+'局半方',mem:mem}); });
+    _YSANGO.forEach(function(g){ var all=[g[0],g[1],g[2]]; var mem=all.filter(function(x){return u.indexOf(x)>=0;}); if(mem.length>=3)res.push({label:g[3]+'局三合',mem:all.slice(),all:all,kind:'三合'}); else if(mem.length===2)res.push({label:g[3]+'局半会',mem:mem,all:all,kind:'三合'}); });
+    _YHOUGO.forEach(function(g){ var all=[g[0],g[1],g[2]]; var mem=all.filter(function(x){return u.indexOf(x)>=0;}); if(mem.length>=3)res.push({label:g[3]+'局方合',mem:all.slice(),all:all,kind:'方合'}); else if(mem.length===2)res.push({label:g[3]+'局半方',mem:mem,all:all,kind:'方合'}); });
     return res;
   }
   function buildYokoSheet(){
@@ -3639,23 +3648,42 @@ window.KANSHI60_DETAIL={
       ['year','month','day','hour'].forEach(function(pk){ _addSrc((P[pk]||{}).shi, _pShort[pk]+'柱'); });
       _addSrc(curDaiunBr,'今の大運');
       _addSrc(curNenunBr,'今の年運'+(curNenunYear?'（'+curNenunYear+'年）':''));
-      // 会局セル：成立している局ごとに「局名／成立時期／どの地支と組むか（由来つき）」を出す
+      // 生まれ持った（命式内だけで成立している）完全な会局＝枠外にまとめて記載するので、表内からは除外する
+      var natalFull=_ykKyoku(natB).filter(function(k){return k.mem.length>=3;});
+      var natalFullLabels=natalFull.map(function(k){return k.label;});
+      function _kaiMem(k){ return k.mem.map(function(m){ var s=(srcMap[m]||[]); return esc(m)+(s.length?'（'+esc(s.join('・'))+'）':''); }).join('＋'); }
+      // 会局セル（表内）：大運・年運でそろう完全局＋半会・半方（あと1支で成立）を、成立時期と組む地支（由来）つきで出す
       function pKai(br){
         if(!br) return '';
-        var full=ksB.filter(function(k){ return k.mem.length>=3 && k.mem.indexOf(br)>=0; });
+        var list=ksB.filter(function(k){
+          if(k.mem.indexOf(br)<0) return false;
+          if(k.mem.length>=3) return natalFullLabels.indexOf(k.label)<0;  // 生まれ持ち完全局は枠外へ
+          return true;                                                     // 半会・半方は表内
+        });
         var seen=[];
-        return full.filter(function(k){ if(seen.indexOf(k.label)>=0)return false; seen.push(k.label); return true; }).map(function(k){
-          // どの地支と組むか（由来つき）
-          var comp=k.mem.map(function(m){ var s=(srcMap[m]||[]); return esc(m)+(s.length?'（'+esc(s.join('・'))+'）':''); }).join('＋');
-          // 成立時期：命式のみで成立か、大運／年運でそろうか
-          var allSrc=[]; k.mem.forEach(function(m){ (srcMap[m]||[]).forEach(function(s){ if(allSrc.indexOf(s)<0)allSrc.push(s); }); });
-          var future=allSrc.filter(function(s){ return s.indexOf('大運')>=0||s.indexOf('年運')>=0; });
-          var when=future.length ? future.join('・')+'でそろう' : '命式内で成立（元々）';
-          return '<div class="yk-kai-item"><b class="yk-kai-name">'+esc(k.label)+'</b>'+
-                 '<span class="yk-kai-when">'+esc(when)+'</span>'+
+        return list.filter(function(k){ if(seen.indexOf(k.label)>=0)return false; seen.push(k.label); return true; }).map(function(k){
+          var comp=_kaiMem(k);
+          if(k.mem.length>=3){
+            var allSrc=[]; k.mem.forEach(function(m){ (srcMap[m]||[]).forEach(function(s){ if(allSrc.indexOf(s)<0)allSrc.push(s); }); });
+            var future=_ykUniq(allSrc.filter(function(s){ return s.indexOf('大運')>=0||s.indexOf('年運')>=0; }));
+            return '<div class="yk-kai-item"><b class="yk-kai-name">'+esc(k.label)+'</b>'+
+                   '<span class="yk-kai-when">'+esc(future.join('・')+'でそろう')+'</span>'+
+                   '<span class="yk-kai-mem">'+comp+'</span></div>';
+          }
+          // 半会・半方：あと1支で成立
+          var miss=(k.all||[]).filter(function(x){ return k.mem.indexOf(x)<0; });
+          return '<div class="yk-kai-item"><b class="yk-kai-name yk-kai-half">'+esc(k.label)+'</b>'+
+                 '<span class="yk-kai-when">あと「'+esc(miss.join('・'))+'」で'+esc((k.label.charAt(0))+'局'+k.kind)+'成立</span>'+
                  '<span class="yk-kai-mem">'+comp+'</span></div>';
         }).join('');
       }
+      // 枠外：生まれ持った会局（命式内で成立）＋ 空亡
+      function _natalSrc(m){ return (srcMap[m]||[]).filter(function(s){ return s.indexOf('大運')<0&&s.indexOf('年運')<0; }); }
+      var natalKaiHtml=natalFull.length
+        ? natalFull.map(function(k){ return '<span class="yk-ntag"><b>'+esc(k.label)+'</b>（'+k.all.map(function(m){var s=_natalSrc(m);return esc(m)+(s.length?esc(s.join('・')):'');}).join('＋')+'）</span>'; }).join('　')
+        : '<span class="yk-nmuted">なし</span>';
+      var kuboArr=String((_lastResult.tenchusatsu||_lastResult.kuboPair||'')).split('').filter(Boolean);
+      var kuboHtml=kuboArr.length? kuboArr.map(esc).join('・') : '<span class="yk-nmuted">—</span>';
       var scols=['天干','地支','蔵干','会局','天干通変','地支通変','十二運','吉凶星'];
       var PK=['year','month','day','hour'];
       var pnames={year:'年柱',month:'月柱',day:'日柱',hour:'時柱'};
@@ -3674,7 +3702,11 @@ window.KANSHI60_DETAIL={
         '<div class="yk-secttl">命式（四柱）</div>'+
         '<table class="yk-tbl"><colgroup><col style="width:11%"><col style="width:9%"><col style="width:9%"><col style="width:6%"><col style="width:23%"><col style="width:9%"><col style="width:9%"><col style="width:8%"><col style="width:16%"></colgroup>'+
         '<thead><tr><td class="lbl">生年月日</td>'+scols.map(function(h){return '<th>'+h+'</th>';}).join('')+'</tr></thead><tbody>'+sBody+'</tbody></table>'+
-        '<p class="footline" style="text-align:center;color:#9a927f;font-size:11px;margin-top:auto">四柱推命 命式表 ・ '+esc(school)+'　鑑定日：'+esc(kdate)+'　<span style="font-size:9.5px">※「メモ」は手書き欄／会局は命式＋今の大運・年運で成立する局を、成立時期と組む地支（由来）つきで自動表示／年運の干支は西暦から算出</span></p>';
+        '<div class="yk-frame">'+
+          '<div class="yk-frow"><span class="yk-flabel">生まれ持った会局（命式内で成立）</span>'+natalKaiHtml+'</div>'+
+          '<div class="yk-frow"><span class="yk-flabel">空亡</span><span class="yk-ntag">'+kuboHtml+'</span></div>'+
+        '</div>'+
+        '<p class="footline" style="text-align:center;color:#9a927f;font-size:11px;margin-top:auto">四柱推命 命式表 ・ '+esc(school)+'　鑑定日：'+esc(kdate)+'　<span style="font-size:9.5px">※「メモ」は手書き欄／表内の会局は今の大運・年運でそろう完全局と半会・半方（あと1支で成立）を表示／生まれ持った会局と空亡は枠外に記載／年運の干支は西暦から算出</span></p>';
     }catch(e){ console.error('buildYokoSheet failed', e); }
   }
   function setMeishikiLayout(t){
