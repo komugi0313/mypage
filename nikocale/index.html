@@ -3322,7 +3322,11 @@ function pickFocus(interests){
     var v=($('calHour')&&$('calHour').value)||'19:00'; var hm=String(v).split(':');
     return {allday:allday, h:(+hm[0]||0), mi:(+hm[1]||0)};
   }
+  /* 「予定の内容」(メモ)があればイベントのタイトル＝メモ先頭行、詳細＝メモ＋相性の一言＋リンク */
+  function evTitle(base){ var m=(($('memoTa')&&$('memoTa').value)||'').trim(); return m? m.split('\n')[0].slice(0,60) : base; }
+  function evDetails(base){ var m=(($('memoTa')&&$('memoTa').value)||'').trim(); return (m? m+'\n\n':'')+base; }
   function gcalHref(d,title,details){
+    title=evTitle(title); details=evDetails(details);
     var base='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(title)+'&details='+encodeURIComponent(details);
     var o=calTimeOpts();
     if(o.allday){ return base+'&dates='+ymd(state.y,state.m,d)+'/'+nextYmd(state.y,state.m,d); }
@@ -3330,6 +3334,7 @@ function pickFocus(interests){
     return base+'&dates='+st+'/'+en+'&ctz=Asia/Tokyo';
   }
   function downloadICS(d,title,details){
+    title=evTitle(title); details=evDetails(details);
     var o=calTimeOpts();
     var now=new Date(), stamp=ymd(now.getUTCFullYear(),now.getUTCMonth()+1,now.getUTCDate())+'T000000Z';
     var dtLines = o.allday
@@ -3357,13 +3362,17 @@ function pickFocus(interests){
   function calRowHtml(){
     return '<div class="calbox">'
       +'<div class="cal-h">この日を予定に入れる</div>'
-      +'<p class="cal-sub">お使いのスマホのカレンダーに登録できます。共有カレンダーに入れれば、二人で見られます。</p>'
-      +'<div class="caltime"><span class="ct-l">開始時刻</span>'
+      +'<p class="cal-sub">予定の内容を書いて、お使いのスマホのカレンダーに登録できます。共有カレンダーに入れれば、二人で見られます。</p>'
+      +'<div class="memo"><label class="memo-h">① 予定の内容<span class="memo-when">（カレンダーに入ります）</span></label>'
+      +'<textarea id="memoTa" maxlength="500" placeholder="例：18時に渋谷で待ち合わせ／この日に告白する"></textarea>'
+      +'<div class="memo-foot"><span class="memo-status" id="memoStatus">入力すると自動保存されます</span><button type="button" class="memo-clear" id="memoClear">消去</button></div></div>'
+      +'<div class="caltime"><span class="ct-l">② 開始時刻</span>'
       +'<input type="time" id="calHour" step="1800" aria-label="予定の開始時刻">'
       +'<span class="ct-dur">〜 約2時間</span>'
       +'<label class="ct-allday"><input type="checkbox" id="calAllday"> 終日</label></div>'
-      +'<div class="calrow"><a class="cal-btn cal-g" id="calG" target="_blank" rel="noopener">Googleカレンダーに追加</a>'
-      +'<button type="button" class="cal-btn cal-i" id="calI">iPhoneカレンダーに追加</button></div>'
+      +'<div class="calrow"><a class="cal-btn cal-g" id="calG" target="_blank" rel="noopener">③ Googleカレンダーに追加</a>'
+      +'<button type="button" class="cal-btn cal-i" id="calI">③ iPhoneカレンダーに追加</button></div>'
+      +'<p class="calnote">「追加」を押すとカレンダーアプリが開きます。時間や内容は、そこでもさらに編集できます。</p>'
       +'</div>'
       +'<button type="button" class="cal-btn cal-share" id="shareDay">この日をシェア</button>';
   }
@@ -3373,6 +3382,7 @@ function pickFocus(interests){
     function upd(){ var g=$('calG'); if(g)g.href=gcalHref(d,title,details); if($('calHour')){ try{localStorage.setItem('dc_caltime',$('calHour').value||'19:00');}catch(e){} } if(hh)hh.disabled=!!(ad&&ad.checked); }
     if(hh)hh.onchange=upd;
     if(ad)ad.onchange=upd;
+    var mt=$('memoTa'); if(mt)mt.addEventListener('input',upd);   // 予定の内容(メモ)を書き替えたらGoogleリンクも更新
     upd();
     var i=$('calI'); if(i)i.onclick=function(){downloadICS(d,title,details);};
     var sd=$('shareDay'); if(sd)sd.onclick=function(){shareDay(title,details);};
@@ -3507,7 +3517,6 @@ function pickFocus(interests){
       var stitle='ニコカレ '+state.m+'/'+d+'（'+wd+'）'+sym+' '+lab+(x.touka?' 🌷モテ':'');
       var sdet=stripTags(msg||'自分のペースで過ごすと良い日です。')+' ／ '+buildShareUrl();
       h+=calRowHtml();
-      h+=memoBlockHtml();
       $('detail').innerHTML=h; wireCal(d,stitle,sdet); wireMemo(d); $('detail').scrollIntoView({behavior:'smooth',block:'nearest'}); return;
     }
     var p=PP[state.pp], mk=x.mk;
@@ -3554,7 +3563,6 @@ function pickFocus(interests){
     var ctitle='ニコカレ '+state.m+'/'+d+'（'+wd+'）'+p.name+'：'+(isStar?'⭐奇跡の相性日':((mk.s||'')+' '+(mk.w||'')));
     var cdet=stripTags(whyText(x))+' ／ '+buildShareUrl();
     h+=calRowHtml();
-    h+=memoBlockHtml();
     $('detail').innerHTML=h; wireCal(d,ctitle,cdet); wireMemo(d); $('detail').scrollIntoView({behavior:'smooth',block:'nearest'});
   }
   function whyText(x){
