@@ -2967,6 +2967,7 @@ function yojoHTML(c){
     <p class="lead">五行の数から、<b>${b.verdict}</b>。日主の強弱は<b>${b.strength}</b>（得令＝生まれ月が日干を支える季節か：<b>${b.tokurei?'○':'×'}</b>／月支${b.monthBranch}の十二運：<b>${b.monthTerr}</b>を総合）。</p>
     <div style="margin:6px 0 10px">${bars}</div>
     ${summary}
+    <details class="adv" style="margin-top:8px"><summary>食養生をくわしく（太過・不及と、五行別の食べ方）</summary><div style="margin-top:6px">
     ${(()=>{const tk=gogyoTaika(c);
       const segT=t=>t.length?`<b style="color:var(--ka)">太過</b> ${t.map(k=>dot(k)+k).join(' ')}`:'';
       const segF=d=>d.length?`<b style="color:var(--sui)">不及</b> ${d.map(r=>dot(r.el)+r.el+`<small style="color:var(--muted)">（${r.why}）</small>`).join('　')}`:'';
@@ -2974,6 +2975,7 @@ function yojoHTML(c){
       return `<div class="mhint" style="margin:0 0 10px;line-height:1.95"><b>太過・不及の判定</b>（${c.timeUnknown?'時刻不明＝3柱：3つ以上で太過':'4柱：4つ以上で太過'}／不及＝0、または1でも太過の偏りに押される・剋されて弱る場合）<br>命式：${line(tk.baseTaika,tk.baseFukyuDetail)}${tk.du?`<br>今（大運${tk.du}・年運${tk.ay||'-'}の巡り込み）：${line(tk.nowTaika,tk.nowFukyuDetail)}`:''}<br><span style="color:var(--muted)">太過＝強く出すぎて偏る（抑える・流す）。不及＝足りない/押される/剋されて働きにくい（補う・攻撃元を抑える）。</span></div>`;})()}
     ${b.strong.map(k=>card(k,'強')).join('')}
     ${weakK.map(k=>card(k,'弱')).join('')}
+    </div></details>
     ${(()=>{const lc=luckyColors(c);return `<div style="background:linear-gradient(180deg,#FFFFFF,#FAFAFD);border:1.5px solid var(--line2);border-radius:12px;padding:11px 13px;margin-top:10px">
       <div style="font-size:12.5px;font-weight:900;color:var(--ink2);margin-bottom:8px">ラッキーカラー（開運色）<span style="font-weight:700;color:var(--muted);font-size:11.5px">／${lc.st}＝${lc.mode}色</span></div>
       <div style="display:flex;flex-wrap:wrap;gap:12px">${lc.els.map(e=>{const L=LUCKY_COLOR[e];return `<div style="display:flex;align-items:center;gap:8px">
@@ -3014,9 +3016,9 @@ function junitenHTML(c){
   const block=(lbl,txt)=>`<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 13px 11px;margin-top:9px">
       <span style="display:inline-block;font-size:11.5px;font-weight:900;color:#fff;background:var(--ka);border-radius:999px;padding:2px 11px;margin-bottom:6px">${lbl}</span>
       <div style="font-size:14px;line-height:1.9">${txt}</div></div>`;
-  const body=d?`<div style="background:var(--ka-w);border-radius:12px;padding:11px 14px;font-size:14.5px;font-weight:800;line-height:1.8">${d.一言}</div>
-      ${block('性格',d.基本)}${block('仕事・適職',d.適職)}${block('恋愛・結婚',d.恋愛)}`
+  const body=d?`<div style="background:var(--ka-w);border-radius:12px;padding:11px 14px;font-size:14.5px;font-weight:800;line-height:1.8">${d.一言}</div>`
     :`<div class="mhint">${t}：${TERR_DESC[t]||''}（詳しい解説は順次追加します）</div>`;
+  const detail=d?`<details class="adv" style="margin-top:10px"><summary>性格・仕事・恋愛をくわしく見る</summary><div style="margin-top:6px">${block('性格',d.基本)}${block('仕事・適職',d.適職)}${block('恋愛・結婚',d.恋愛)}</div></details>`:'';
   return `<section class="card sec">
     <span class="eyebrow"><b>十二運</b>日柱が最重要</span>
     <h2>あなたの十二運（日柱）：<span style="color:var(--ka)">${t}</span></h2>
@@ -3027,6 +3029,7 @@ function junitenHTML(c){
       <div style="height:7px;background:var(--line);border-radius:4px;margin:7px 0;overflow:hidden"><div style="height:100%;width:${bar}%;background:var(--ka)"></div></div>
       <div style="font-size:11.5px;color:var(--muted);font-weight:700">${en.each.map(x=>`${x.label[0]}柱 ${x.terr}=${x.e}`).join('　/　')}　※高いほど活動的、低いほど省エネ・じっくり型。吉凶ではなく力の総量の目安です。</div>
     </div>`;})()}
+    ${detail}
     <div class="mhint" style="margin-top:8px">他の柱：年柱<b>${c.pillars[0].terrain}</b>（親・目上）／月柱<b>${c.pillars[1].terrain}</b>（仕事）／時柱<b>${c.pillars[3]?c.pillars[3].terrain:'不明'}</b>（将来・本心）。十二運は通変星と組み合わせて読むと「社会人としての性格」も見えます。</div>
   </section>`;
 }
@@ -3041,6 +3044,18 @@ function renderResult(){
   document.querySelectorAll('#ai-slot .wchip').forEach(b=>b.onclick=()=>{document.getElementById('worry').value=b.dataset.w;});
   document.getElementById('consultBtn').onclick=doConsult;
   document.getElementById('autoReadBtn').onclick=doAutoRead;
+  // 恋愛カードは要点（❤ステータス）だけ表示し、以降（輝く年・配偶者像ほか）は開閉に。表示層のみ・pklove.jsは非改変。
+  (function(){var lc=document.getElementById('love-card');if(!lc||lc.querySelector(':scope>details.tailfold'))return;
+    var kids=[].slice.call(lc.children),start=-1;
+    for(var i=0;i<kids.length;i++){var tx=kids[i].textContent||'';if(tx.indexOf('★でひと目')>=0){start=i+1;break;}}
+    if(start<0)start=Math.min(5,kids.length);
+    if(start>=kids.length)return;
+    var det=document.createElement('details');det.className='adv tailfold';det.style.marginTop='10px';
+    var sm=document.createElement('summary');sm.textContent='恋愛をくわしく（輝く年・配偶者像・恋愛傾向・魅力タイプ・相性早見表）';
+    var wr=document.createElement('div');wr.style.marginTop='8px';
+    for(var j=start;j<kids.length;j++){wr.appendChild(kids[j]);}
+    det.appendChild(sm);det.appendChild(wr);lc.appendChild(det);
+  })();
   updateGogyoPin();
   var jn=document.getElementById('jumpnav'); if(jn)jn.classList.add('on');
 }
