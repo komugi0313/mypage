@@ -3581,9 +3581,21 @@ window.KANSHI60_DETAIL={
     if(typeof fitSheet==='function') fitSheet();
   }
   var _aiBusy=false;
+  // 詳細鑑定(AI)の“ゆるい1日上限”（不正利用防止）。超過はその日だけ定型文に自動フォールバック・翌日リセット。
+  // ※フロント側の簡易カウンタ（同一ブラウザ内・アプリと共有）。厳密な強制はサーバー側で（BACKEND_HANDOFF.md 参照）。
+  var AI_DAILY_CAP=50;
+  function _aiDayKey(){ var d=new Date(); return 'ai_daily_'+d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2); }
+  function aiCount(){ try{ return parseInt(localStorage.getItem(_aiDayKey())||'0',10)||0; }catch(e){ return 0; } }
+  function aiCountInc(){ try{ localStorage.setItem(_aiDayKey(), String(aiCount()+1)); }catch(e){} }
   function generateAIReading(){
     if(!_lastResult){ aiCardMsg('先に生年月日を入れて「鑑定する」を押してください。'); return; }
-    if(_aiBusy) return; _aiBusy=true;
+    if(_aiBusy) return;
+    if(aiCount()>=AI_DAILY_CAP){   // 本日の上限 → 定型文（オフライン鑑定書）で表示
+      setEngine('template');
+      var _hc=document.getElementById('engHint'); if(_hc) _hc.textContent='本日の詳細鑑定（オンライン）のご利用上限に達したため、定型文（オフラインの鑑定書）で表示しています。日付が変わるとまたご利用いただけます。';
+      return;
+    }
+    _aiBusy=true;
     aiCardMsg('🔍 この命式を詳しく読み解いています…','（十数秒かかることがあります。ネット接続が必要です）');
     var r=_lastResult;
     var nm=((document.getElementById('rdName')||{}).textContent||'').replace(/[　\s]*様$/,'').trim();
@@ -3609,6 +3621,7 @@ window.KANSHI60_DETAIL={
         var html=parseAIToHTML(txt);
         if(!html){ aiCardMsg('返答を整形できませんでした。','もう一度お試しください。'); _aiBusy=false; return; }
         window._aiReadingHTML=html;
+        aiCountInc();   // 成功したAI生成だけカウント（不正防止のゆるい1日上限）
         var mount=document.getElementById('readMount'); if(mount) mount.innerHTML=html;
         paginateReadingScreen();
         _aiBusy=false;

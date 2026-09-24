@@ -4119,12 +4119,22 @@ function engineBadge(online,note){
 }
 /* AI呼び出しの共通処理。Geminiが使えれば生成。キーなし／オフライン／接続エラー／応答が空のときは、端末内のオフライン鑑定に自動で切り替える（エラーで止めない）。 */
 const YOMI_RULE='\n【用語の読みがな＝厳守】読みがなを添える場合は必ず正しい読みで書く：比肩=ひけん／劫財=ごうざい（「ぎょうざい」「きょうざい」は誤り）／食神=しょくじん／傷官=しょうかん／偏財=へんざい／正財=せいざい／偏官=へんかん／正官=せいかん／偏印=へんいん／印綬=いんじゅ／建禄=けんろく／帝旺=ていおう／沐浴=もくよく／冠帯=かんたい／羊刃=ようじん／空亡=くうぼう／冲=ちゅう／三合=さんごう／方合=ほうごう／半合=はんごう／干合=かんごう／支合=しごう／月支元命=げっしげんめい／蔵干=ぞうかん／通変星=つうへんせい／納音=なっちん／律音=りっちん。自信がない用語には読みがなを付けない。\n通変星・十二運・重要な用語は、文章内で初めて出したときに一度だけ読みがなを添える（毎回そろえる）。同じ語の2回目以降は付けない。';
+// 詳細鑑定(AI)の“ゆるい1日上限”（不正利用防止）。超過はその日だけオフライン鑑定に自動フォールバック・翌日リセット。
+// ※フロント側の簡易カウンタ（同一ブラウザ内・鑑定書ページと共有）。厳密な強制はサーバー側で（BACKEND_HANDOFF.md 参照）。
+const AI_DAILY_CAP=50;
+function _aiDayKey(){const d=new Date();return 'ai_daily_'+d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2);}
+function aiCount(){try{return parseInt(localStorage.getItem(_aiDayKey())||'0',10)||0;}catch(e){return 0;}}
+function aiCountInc(){try{localStorage.setItem(_aiDayKey(),String(aiCount()+1));}catch(e){}}
 async function generateReading(user,localText,system,deep){
   system=(system||CONSULT_SYSTEM)+YOMI_RULE;
   // 電波がない（オフライン）ときはAIを呼ばず、端末内鑑定を出す
   if(typeof navigator!=='undefined'&&navigator.onLine===false){
     aiEngine='オフライン鑑定（端末内）';
     return {ok:true,text:localText,fallback:true,online:false,note:'通信がオフラインのため、端末内で命式から作成した鑑定（オフライン鑑定）を表示しています。'};}
+  // 本日の詳細鑑定（オンライン）の上限に達したら、その日はオフライン鑑定に切替（翌日リセット）
+  if(aiCount()>=AI_DAILY_CAP){
+    aiEngine='オフライン鑑定（端末内）';
+    return {ok:true,text:localText,fallback:true,online:false,note:'本日の詳細鑑定（オンライン）のご利用上限に達したため、端末内のオフライン鑑定を表示しています。日付が変わるとまたご利用いただけます。'};}
   // 2.5系は思考(thinking)がデフォルトONで、maxOutputTokensを思考だけで使い切ると本文が空になる。
   // flash/flash-lite は思考をオフにして本文を確実に出す。pro は最小思考のまま余裕を持たせる。
   const genCfg={maxOutputTokens:2048};
@@ -4156,7 +4166,7 @@ async function generateReading(user,localText,system,deep){
     return {ok:true,text:localText,fallback:true,online:false,note:'詳細鑑定でエラーが出たため、端末内で作成した鑑定（オフライン鑑定）を表示しています。'};}
   const cand=data.candidates&&data.candidates[0];
   const text=((cand&&cand.content&&cand.content.parts)||[]).map(p=>p.text||'').join('\n').trim();
-  if(text)return {ok:true,text,online:true};
+  if(text){aiCountInc();return {ok:true,text,online:true};}
   // 応答が空（安全フィルタ・上限等）→ オフライン鑑定に切替
   aiEngine='オフライン鑑定（端末内）';
   return {ok:true,text:localText,fallback:true,online:false,note:'詳細鑑定の応答が得られなかったため、端末内で作成した鑑定（オフライン鑑定）を表示しています。'};
