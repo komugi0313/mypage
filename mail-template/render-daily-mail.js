@@ -260,7 +260,8 @@
       + '<div style="font-family:' + SERIF + ';font-size:12.5px;color:' + T.ink + ';line-height:1.7;">' + (r.closeWord || '— あなたの縁が、また一歩<br>ひらけますように。') + '</div>'
       + '<div style="font-family:' + SERIF + ';font-size:13px;font-weight:800;color:' + T.ink + ';margin-top:6px;letter-spacing:.06em;">🌤️ 私だけの運気予報</div>'
       + '<div style="display:inline-block;margin-top:9px;font-size:10px;color:#b0a09a;border:1px dashed #ccbbbb;border-radius:10px;padding:4px 10px;">毎朝6時ごろ・あなた専用にお届け 💌</div>'
-      + '<div style="margin-top:8px;font-size:11px;color:#8a7d75;line-height:1.8;">配信を停止する場合は <a href="' + esc(unsub) + '" style="color:#7a675e;text-decoration:underline;">こちら（ログイン不要で停止）</a>、設定変更は <a href="' + esc(mypage) + '" style="color:#7a675e;text-decoration:underline;">マイページ</a> から<br>運営：72k株式会社｜<a href="' + esc(operator) + '" style="color:#7a675e;text-decoration:underline;">運営者情報</a></div>'
+      + '<div style="margin-top:8px;font-size:11px;color:#8a7d75;line-height:1.8;">配信を停止する場合は <a href="' + esc(unsub) + '" style="color:#7a675e;text-decoration:underline;">こちら（ログイン不要で停止）</a>、設定変更は <a href="' + esc(mypage) + '" style="color:#7a675e;text-decoration:underline;">マイページ</a> から</div>'
+      + '<div style="margin-top:4px;font-size:9px;color:#c4b8b0;line-height:1.6;">運営：72k株式会社｜<a href="' + esc(operator) + '" style="color:#c4b8b0;text-decoration:underline;">運営者情報</a></div>'
       + '<div style="margin-top:6px;font-size:9px;color:#b8aba3;line-height:1.65;">本鑑定は四柱推命の伝統的な考え方（扶抑を軸とした解釈）にもとづく目安です。運勢指数は当サービス独自の指数で、四柱推命に公式の点数はありません。娯楽・参考としてお楽しみください。</div>'
       + '<div style="margin-top:10px;font-size:10px;color:#a8998f;letter-spacing:.08em;">produced by Mizuki Nico</div>'
       + '</div>');
