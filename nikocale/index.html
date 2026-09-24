@@ -4002,5 +4002,205 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   });
 }
 </script>
+<script>
+/* =============================================================
+   ニコカレ アカウント（登録・ログイン）モジュール
+   ・?accounts を付けたときだけ有効（通常リリースには出ません）。?accounts=0 で解除。
+   ・認証は差し替え可能な層 Auth。今はローカルのモック（本番は Firebase に差し替え）。
+   ・登録＝メール＋パスワード → 確認メール（再送/修正/タイポ検知）→ 性別・年代 → 本機能開放。
+   ============================================================= */
+(function(){
+  var ENABLED=false;
+  try{ ENABLED=/[?&]accounts(?:=1)?(?:&|$)/i.test(location.search) || localStorage.getItem('dc_accounts')==='1'; }catch(e){}
+  try{ if(/[?&]accounts=0(?:&|$)/i.test(location.search)){ ENABLED=false; localStorage.removeItem('dc_accounts'); return; } }catch(e){}
+  if(!ENABLED) return;
+  try{ localStorage.setItem('dc_accounts','1'); }catch(e){}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function el(id){return document.getElementById(id);}
+
+  /* ---- Auth：差し替え可能な認証層（現状モック：localStorage）---- */
+  var Auth=(function(){
+    var UK='dc_auth_users', SK='dc_auth_session', ls=window.localStorage;
+    function load(k,d){ try{return JSON.parse(ls.getItem(k))||d;}catch(e){return d;} }
+    function save(k,v){ try{ls.setItem(k,JSON.stringify(v));}catch(e){} }
+    function hash(s){ var h=5381,i=s.length; while(i)h=(h*33)^s.charCodeAt(--i); return 'h'+(h>>>0); } /* 難読化のみ（モック用・本番はFirebaseに委譲） */
+    var subs=[];
+    function cur(){ var s=load(SK,null); if(!s)return null; var u=load(UK,{})[s.uid]; if(!u)return null; return {uid:u.uid,email:u.email,emailVerified:!!u.emailVerified,profile:u.profile||null}; }
+    function emit(){ var u=cur(); subs.forEach(function(f){try{f(u);}catch(e){}}); }
+    return {
+      current:cur,
+      onChange:function(f){subs.push(f); try{f(cur());}catch(e){}},
+      register:function(email,password){ email=(email||'').trim().toLowerCase();
+        if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return {error:'メールアドレスの形式をご確認ください。'};
+        if((password||'').length<6) return {error:'パスワードは6文字以上にしてください。'};
+        var users=load(UK,{}); for(var k in users){ if(users[k].email===email) return {error:'このメールアドレスは登録済みです。ログインしてください。'}; }
+        var uid='u'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+        users[uid]={uid:uid,email:email,password:hash(password),emailVerified:false,profile:null,createdAt:Date.now()};
+        save(UK,users); save(SK,{uid:uid,remember:true}); emit(); return {uid:uid};
+      },
+      login:function(email,password,remember){ email=(email||'').trim().toLowerCase(); var users=load(UK,{});
+        for(var k in users){ if(users[k].email===email){ if(users[k].password===hash(password)){ save(SK,{uid:k,remember:!!remember}); emit(); return {uid:k}; } return {error:'パスワードが違います。'}; } }
+        return {error:'アカウントが見つかりません。'};
+      },
+      logout:function(){ try{ls.removeItem(SK);}catch(e){} emit(); },
+      resend:function(){ /* mock: 実送信なし */ },
+      changeEmail:function(ne){ ne=(ne||'').trim().toLowerCase(); var s=load(SK,null); if(!s)return; var users=load(UK,{}); if(users[s.uid]){ users[s.uid].email=ne; users[s.uid].emailVerified=false; save(UK,users); emit(); } },
+      markVerified:function(){ var s=load(SK,null); if(!s)return; var users=load(UK,{}); if(users[s.uid]){ users[s.uid].emailVerified=true; save(UK,users); emit(); } },
+      saveProfile:function(p){ var s=load(SK,null); if(!s)return; var users=load(UK,{}); if(users[s.uid]){ users[s.uid].profile=p; save(UK,users); emit(); } }
+    };
+  })();
+
+  function typoFix(email){ var m=/@(.+)$/.exec((email||'').toLowerCase()); if(!m)return ''; var map={'gmial.com':'gmail.com','gmai.com':'gmail.com','gmail.co':'gmail.com','gmail.con':'gmail.com','gnail.com':'gmail.com','yahoo.co':'yahoo.co.jp','yaho.co.jp':'yahoo.co.jp','hotmial.com':'hotmail.com','icloud.co':'icloud.com','iclod.com':'icloud.com','outlook.co':'outlook.com','ezweb.ne.jp ':'ezweb.ne.jp'}; var d=m[1]; return map[d]? email.replace(/@.+$/,'@'+map[d]) : ''; }
+
+  var MARK='<svg class="au-mk" viewBox="0 0 100 100"><defs><radialGradient id="aum" cx="30%" cy="22%" r="95%"><stop offset="0" stop-color="#3a4676"/><stop offset="55%" stop-color="#2a3358"/><stop offset="100%" stop-color="#171d38"/></radialGradient><linearGradient id="aug" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ecd79a"/><stop offset="1" stop-color="#c2a558"/></linearGradient></defs><rect width="100" height="100" fill="url(#aum)"/><circle cx="50" cy="50" r="43" fill="none" stroke="url(#aug)" stroke-width="1.5" opacity=".55"/><path d="M59 30 a22 22 0 1 0 0 39 a17 17 0 1 1 0-39 Z" fill="url(#aug)"/><path d="M66 54 l2.2-2.2 2.3 2.2-2.3 2.2Z" fill="url(#aug)"/><path d="M78 61 l1.8-1.8 1.9 1.8-1.9 1.8Z" fill="url(#aug)"/></svg>';
+
+  var CSS=''
+    +'.acct-chip{position:fixed;top:10px;left:10px;z-index:9998;display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.92);border:1px solid var(--line-strong,#a9b3cf);color:var(--accent-2,#2e3b6a);border-radius:999px;padding:7px 13px;font-size:12px;font-weight:700;font-family:var(--maru);cursor:pointer;box-shadow:0 4px 12px -6px rgba(40,40,80,.4);backdrop-filter:blur(4px)}'
+    +'.acct-chip .av{width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px}'
+    +'.acct-chip .un{color:#b2554e;font-weight:700}'
+    +'.auth-modal{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px}'
+    +'.auth-modal[hidden]{display:none}'
+    +'.auth-dim{position:absolute;inset:0;background:rgba(20,20,40,.5)}'
+    +'.auth-card{position:relative;width:100%;max-width:360px;max-height:92vh;overflow:auto;background:var(--bg,#f5f1ea);border-radius:22px;box-shadow:0 22px 60px -20px rgba(20,20,50,.6);padding:24px 20px 20px}'
+    +'.auth-x{position:absolute;top:12px;right:14px;font-size:20px;color:var(--muted);background:none;border:none;cursor:pointer;line-height:1}'
+    +'.au-brand{text-align:center;margin-bottom:12px}.au-mk{width:48px;height:48px;border-radius:14px;box-shadow:0 4px 12px -4px rgba(40,40,80,.4)}'
+    +'.au-bn{font-family:"Marcellus",serif;letter-spacing:.18em;font-size:11px;color:var(--gold,#a9863f);margin-top:6px}'
+    +'.au-tt{font-family:var(--serif);font-size:20px;font-weight:900;color:var(--hi,#293458);margin-top:1px}'
+    +'.au-copy{font-size:12px;color:var(--muted);text-align:center;line-height:1.7;margin:2px 0 14px}.au-copy b{color:var(--ink-soft)}'
+    +'.au-f{margin-bottom:10px}.au-f label{display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin:0 2px 5px;font-family:var(--maru)}'
+    +'.au-f .pw{position:relative}.au-f input{width:100%;background:#fff;border:1px solid var(--line-strong);border-radius:11px;padding:12px;font-size:14px;color:var(--ink)}'
+    +'.au-f .eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--accent-2);font-weight:700;cursor:pointer;background:none;border:none}'
+    +'.au-typo{background:#fff7e6;border:1px solid #e6cf9a;border-radius:9px;padding:8px 10px;font-size:11.5px;color:#8a6a2a;margin:-3px 2px 8px;cursor:pointer}.au-typo b{color:#6a4f18}'
+    +'.au-err{color:#b2554e;font-size:12px;font-weight:700;text-align:center;margin:6px 2px 0;min-height:0}'
+    +'.au-primary{display:block;width:100%;background:linear-gradient(180deg,#41508a,#2e3b6a);color:#fff;border:none;border-radius:13px;padding:14px;font-weight:900;font-size:15px;font-family:var(--maru);margin-top:8px;cursor:pointer;box-shadow:0 8px 18px -8px rgba(46,59,106,.6)}'
+    +'.au-note{font-size:10.5px;color:var(--muted);text-align:center;line-height:1.7;margin-top:10px}.au-note a{color:var(--accent-2);text-decoration:underline;cursor:pointer}'
+    +'.au-foot{text-align:center;font-size:12px;color:var(--ink-soft);margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}.au-foot a{color:var(--accent-2);font-weight:700;cursor:pointer}'
+    +'.au-remember{display:flex;align-items:center;gap:8px;margin:2px 2px 2px;font-size:12.5px;color:var(--ink-soft);font-weight:700;font-family:var(--maru);cursor:pointer}.au-remember input{width:18px;height:18px}'
+    +'.au-forgot{text-align:right;font-size:11px;margin:6px 2px 6px}.au-forgot a{color:var(--accent-2);cursor:pointer}'
+    +'.au-mail{width:64px;height:64px;border-radius:16px;background:var(--accent-soft);margin:2px auto 12px;display:flex;align-items:center;justify-content:center;font-size:28px}'
+    +'.au-to{background:#fff;border:1px solid var(--line);border-radius:11px;padding:11px;text-align:center;font-size:14px;font-weight:700;color:var(--hi);margin:2px 0 12px;word-break:break-all}'
+    +'.au-help{background:#f4ecec;border:1px solid #e6cfcf;border-radius:12px;padding:11px 12px;margin-top:6px}.au-help .t{font-size:12px;font-weight:700;color:#b2554e;margin-bottom:8px}.au-help .b{display:flex;gap:8px}.au-help .b button{flex:1;border-radius:10px;padding:10px;font-size:12px;font-weight:700;font-family:var(--maru);cursor:pointer;border:none}.au-help .re{background:var(--accent);color:#fff}.au-help .ed{background:#fff;border:1px solid var(--line-strong);color:var(--ink-soft)}'
+    +'.au-demo{display:block;width:100%;margin-top:10px;background:#eef5ef;border:1px dashed #9cbfa6;color:#3f7357;border-radius:11px;padding:11px;font-size:12px;font-weight:700;font-family:var(--maru);cursor:pointer}'
+    +'.au-q{font-size:12px;font-weight:700;color:var(--ink-soft);margin:14px 2px 8px;font-family:var(--maru)}'
+    +'.au-seg{display:flex;gap:8px}.au-seg button{flex:1;border:1px solid var(--line-strong);background:#fff;color:var(--ink-soft);border-radius:11px;padding:11px 4px;font-size:13px;font-weight:700;font-family:var(--maru);cursor:pointer}.au-seg button.on{background:var(--accent);border-color:var(--accent);color:#fff}'
+    +'.au-chips{display:flex;gap:8px;flex-wrap:wrap}.au-chips button{border:1px solid var(--line-strong);background:#fff;color:var(--ink-soft);border-radius:999px;padding:10px 15px;font-size:13px;font-weight:700;font-family:var(--maru);cursor:pointer}.au-chips button.on{background:var(--accent);border-color:var(--accent);color:#fff}'
+    +'.au-acct{font-size:13px;color:var(--ink-soft);text-align:center;line-height:1.9;margin-bottom:12px}.au-acct b{color:var(--hi)}.au-badge{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;margin-top:4px}.au-badge.ok{background:#e7f1ea;color:#3f7357}.au-badge.no{background:#f4e2df;color:#b2554e}'
+    +'.au-sec{display:block;width:100%;margin-top:8px;background:#fff;border:1px solid var(--line-strong);color:var(--ink-soft);border-radius:12px;padding:12px;font-size:13px;font-weight:700;font-family:var(--maru);cursor:pointer}';
+  var stTag=document.createElement('style'); stTag.textContent=CSS; document.head.appendChild(stTag);
+
+  var chip=document.createElement('button'); chip.className='acct-chip'; document.body.appendChild(chip);
+  var modal=document.createElement('div'); modal.className='auth-modal'; modal.hidden=true; document.body.appendChild(modal);
+  var state={screen:'register', email:''};
+  function open(s){ state.screen=s||'register'; modal.hidden=false; render(); }
+  function close(){ modal.hidden=true; }
+
+  function ageLabel(a){ return a||'—'; }
+  function render(){
+    var u=Auth.current(); var s=state.screen;
+    var body='';
+    if(s==='register'){
+      body='<div class="au-brand">'+MARK+'<div class="au-bn">NICO CALE</div><div class="au-tt">ニコカレ</div></div>'
+        +'<div class="au-tt" style="font-size:17px;text-align:center;margin:4px 0 4px;font-family:var(--maru)">アカウントをつくる</div>'
+        +'<div class="au-copy"><b>相性を保存</b> ・ <b>お相手とつながる</b><br>・ 予定もメッセージもここで。</div>'
+        +'<div class="au-f"><label>メールアドレス</label><input id="auEmail" type="email" autocomplete="username" inputmode="email" placeholder="you@example.com" value="'+esc(state.email)+'"></div>'
+        +'<div id="auTypoWrap"></div>'
+        +'<div class="au-f"><label>パスワード</label><div class="pw"><input id="auPass" type="password" autocomplete="new-password" placeholder="6文字以上"><button type="button" class="eye" data-eye="auPass">表示</button></div></div>'
+        +'<div class="au-err" id="auErr"></div>'
+        +'<button class="au-primary" id="auDoReg">はじめる</button>'
+        +'<div class="au-note">ご登録のメールに<b>確認メール</b>を送ります（本人確認）。<br>登録すると<a data-nav="terms">利用規約</a>・<a data-nav="privacy">プライバシー</a>に同意したものとみなします。</div>'
+        +'<div class="au-foot">すでにアカウントをお持ちですか？ <a data-go="login">ログイン</a></div>';
+    } else if(s==='verify'){
+      var em=(u&&u.email)||state.email;
+      body='<div class="au-mail">✉</div>'
+        +'<div class="au-tt" style="text-align:center;font-size:19px">確認メールを送りました</div>'
+        +'<div class="au-copy">下のアドレスに届いたメールの<br><b>リンクをタップ</b>すると登録完了です。</div>'
+        +'<div class="au-to">'+esc(em)+'</div>'
+        +'<div class="au-help"><div class="t">メールが届かない・間違えた場合</div><div class="b"><button class="re" id="auResend">確認メールを再送</button><button class="ed" id="auEdit">アドレスを修正</button></div></div>'
+        +'<button class="au-demo" id="auVerifyDemo">（デモ）メールのリンクを開く → 確認完了</button>'
+        +'<div class="au-note">迷惑メールフォルダもご確認ください。リンクは24時間有効です。</div>';
+    } else if(s==='editEmail'){
+      body='<div class="au-tt" style="text-align:center;font-size:19px;margin-bottom:10px">メールアドレスを修正</div>'
+        +'<div class="au-f"><label>新しいメールアドレス</label><input id="auNewEmail" type="email" inputmode="email" placeholder="you@example.com" value="'+esc((u&&u.email)||state.email)+'"></div>'
+        +'<div class="au-err" id="auErr"></div>'
+        +'<button class="au-primary" id="auSaveEmail">この内容で送り直す</button>'
+        +'<div class="au-foot"><a data-go="verify">戻る</a></div>';
+    } else if(s==='profile'){
+      var pf=(u&&u.profile)||{};
+      body='<div class="au-brand">'+MARK+'<div class="au-tt" style="margin-top:6px">あと少しで完了</div></div>'
+        +'<div class="au-copy">かんたんな2つだけ教えてください。<br><b>生年月日は、占うときに入力</b>します。</div>'
+        +'<div class="au-q">性別</div><div class="au-seg" id="auSex">'
+          +'<button data-v="f"'+(pf.sex==='f'?' class="on"':'')+'>女性</button><button data-v="m"'+(pf.sex==='m'?' class="on"':'')+'>男性</button><button data-v="x"'+(pf.sex==='x'?' class="on"':'')+'>回答しない</button></div>'
+        +'<div class="au-q">年代</div><div class="au-chips" id="auAge">'
+          +['10代','20代','30代','40代','50代〜'].map(function(a){return '<button data-v="'+a+'"'+(pf.age===a?' class="on"':'')+'>'+a+'</button>';}).join('')+'</div>'
+        +'<button class="au-primary" id="auDoProfile">はじめる</button>'
+        +'<div class="au-note">占うときの生年月日は、ログイン中ならアカウントに保存され、次回から再利用できます。</div>';
+    } else if(s==='login'){
+      body='<div class="au-brand">'+MARK+'<div class="au-bn">NICO CALE</div><div class="au-tt">おかえりなさい</div></div>'
+        +'<div class="au-copy">メールアドレスでログイン</div>'
+        +'<div class="au-f"><label>メールアドレス</label><input id="auLEmail" type="email" autocomplete="username" inputmode="email" placeholder="you@example.com" value="'+esc(state.email)+'"></div>'
+        +'<div class="au-f"><label>パスワード</label><div class="pw"><input id="auLPass" type="password" autocomplete="current-password" placeholder="パスワード"><button type="button" class="eye" data-eye="auLPass">表示</button></div></div>'
+        +'<label class="au-remember"><input type="checkbox" id="auRemember" checked> パスワードを保存する（次回から自動ログイン）</label>'
+        +'<div class="au-forgot"><a id="auForgot">パスワードを忘れた方</a></div>'
+        +'<div class="au-err" id="auErr"></div>'
+        +'<button class="au-primary" id="auDoLogin">ログイン</button>'
+        +'<div class="au-foot">はじめての方は <a data-go="register">新規登録</a></div>';
+    } else if(s==='account'){
+      var vf=u&&u.emailVerified, pf=(u&&u.profile)||null;
+      body='<div class="au-brand">'+MARK+'<div class="au-tt" style="margin-top:6px">アカウント</div></div>'
+        +'<div class="au-acct"><b>'+esc((u&&u.email)||'')+'</b><br>'
+          +'<span class="au-badge '+(vf?'ok':'no')+'">'+(vf?'メール確認済み':'メール未確認')+'</span>'
+          +(pf?('<br>'+({f:'女性',m:'男性',x:'回答しない'}[pf.sex]||'—')+' ・ '+ageLabel(pf.age)):'<br>プロフィール未設定')+'</div>'
+        +(vf?'':'<button class="au-primary" id="auGoVerify">メールを確認する</button>')
+        +'<button class="au-sec" id="auEditProfile">プロフィールを編集</button>'
+        +'<button class="au-sec" id="auLogout">ログアウト</button>';
+    }
+    modal.innerHTML='<div class="auth-dim"></div><div class="auth-card">'+(s==='profile'?'':'<button class="auth-x" aria-label="閉じる">×</button>')+body+'</div>';
+    wire();
+  }
+  function wire(){
+    var dim=modal.querySelector('.auth-dim'); if(dim)dim.onclick=close;
+    var x=modal.querySelector('.auth-x'); if(x)x.onclick=close;
+    modal.querySelectorAll('[data-go]').forEach(function(a){ a.onclick=function(){ open(a.getAttribute('data-go')); }; });
+    modal.querySelectorAll('[data-eye]').forEach(function(b){ b.onclick=function(){ var i=el(b.getAttribute('data-eye')); if(i){ i.type=i.type==='password'?'text':'password'; b.textContent=i.type==='password'?'表示':'隠す'; } }; });
+    modal.querySelectorAll('[data-nav]').forEach(function(a){ a.onclick=function(){ var t=a.getAttribute('data-nav'); window.open(t==='terms'?'terms.html':'legal.html','_blank'); }; });
+    var s=state.screen;
+    if(s==='register'){
+      var em=el('auEmail'), tw=el('auTypoWrap');
+      function chkTypo(){ var f=typoFix(em.value); tw.innerHTML=f?'<div class="au-typo">もしかして <b>'+esc(f)+'</b> ？ タップで修正</div>':''; var t=tw.querySelector('.au-typo'); if(t)t.onclick=function(){ em.value=f; tw.innerHTML=''; }; }
+      if(em)em.oninput=function(){ state.email=em.value; chkTypo(); }; chkTypo();
+      var b=el('auDoReg'); if(b)b.onclick=function(){ var r=Auth.register(em.value, (el('auPass')||{}).value||''); if(r.error){ el('auErr').textContent=r.error; } else { state.email=em.value.trim().toLowerCase(); open('verify'); } };
+    } else if(s==='verify'){
+      var re=el('auResend'); if(re)re.onclick=function(){ Auth.resend(); re.textContent='再送しました'; setTimeout(function(){re.textContent='確認メールを再送';},1500); };
+      var ed=el('auEdit'); if(ed)ed.onclick=function(){ open('editEmail'); };
+      var dm=el('auVerifyDemo'); if(dm)dm.onclick=function(){ Auth.markVerified(); open('profile'); };
+    } else if(s==='editEmail'){
+      var b=el('auSaveEmail'); if(b)b.onclick=function(){ var v=(el('auNewEmail')||{}).value||''; if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim())){ el('auErr').textContent='メールアドレスの形式をご確認ください。'; return; } Auth.changeEmail(v); state.email=v.trim().toLowerCase(); open('verify'); };
+    } else if(s==='profile'){
+      var sex=null,age=null; var u=Auth.current(); if(u&&u.profile){sex=u.profile.sex;age=u.profile.age;}
+      modal.querySelectorAll('#auSex button').forEach(function(btn){ btn.onclick=function(){ sex=btn.getAttribute('data-v'); modal.querySelectorAll('#auSex button').forEach(function(o){o.classList.toggle('on',o===btn);}); }; });
+      modal.querySelectorAll('#auAge button').forEach(function(btn){ btn.onclick=function(){ age=btn.getAttribute('data-v'); modal.querySelectorAll('#auAge button').forEach(function(o){o.classList.toggle('on',o===btn);}); }; });
+      var b=el('auDoProfile'); if(b)b.onclick=function(){ Auth.saveProfile({sex:sex||'x',age:age||''}); close(); };
+    } else if(s==='login'){
+      var b=el('auDoLogin'); if(b)b.onclick=function(){ var r=Auth.login((el('auLEmail')||{}).value||'', (el('auLPass')||{}).value||'', (el('auRemember')||{}).checked); if(r.error){ el('auErr').textContent=r.error; } else { var u=Auth.current(); if(u&&!u.emailVerified) open('verify'); else if(u&&!u.profile) open('profile'); else close(); } };
+      var f=el('auForgot'); if(f)f.onclick=function(){ alert('（デモ）パスワード再設定メールを送ります。'); };
+      var le=el('auLEmail'); if(le)le.oninput=function(){ state.email=le.value; };
+    } else if(s==='account'){
+      var gv=el('auGoVerify'); if(gv)gv.onclick=function(){ open('verify'); };
+      var ep=el('auEditProfile'); if(ep)ep.onclick=function(){ open('profile'); };
+      var lo=el('auLogout'); if(lo)lo.onclick=function(){ Auth.logout(); close(); };
+    }
+  }
+  function renderChip(){
+    var u=Auth.current();
+    if(u){ var pf=u.profile; chip.innerHTML='<span class="av">'+((pf&&{f:'女',m:'男',x:'・'}[pf.sex])||'●')+'</span>'+(pf&&pf.age?esc(pf.age):'アカウント')+(u.emailVerified?'':' <span class="un">未確認</span>'); }
+    else { chip.innerHTML='ログイン / 登録'; }
+  }
+  chip.onclick=function(){ var u=Auth.current(); open(u?'account':'register'); };
+  Auth.onChange(function(){ renderChip(); if(!modal.hidden) render(); });
+
+  /* 将来のゲート用に公開：requireAuth(cb) を各機能から呼ぶ */
+  window.NicoAuth={ current:Auth.current, open:open, requireAuth:function(cb){ var u=Auth.current(); if(u&&u.emailVerified&&u.profile){ cb&&cb(u); } else { open(u?(u.emailVerified?'profile':'verify'):'register'); } } };
+})();
+</script>
 </body>
 </html>
