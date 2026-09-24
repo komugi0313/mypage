@@ -7,8 +7,8 @@ const { PersonBazi } = require(path.join(dir, 'bazi.js'));
 const { renderDailyMail } = require('./render-daily-mail.js');
 const assetBase = process.env.ASSET_BASE || 'https://unkiyoho.jp/';
 const people = [
-  // 9/24 6:00 に実際に届いたメールと同じ会員・同じ日（検証済み）。「本来こう届くべきだったメール」
-  { file: 'sample-0924-rie',     birth: { y: 1981, m: 6, d: 10 }, date: { y: 2026, m: 9, d: 24 }, o: { nick: 'りえ', rel: 'married', sex: 'f', timeUnknown: true } },
+  // テスト会員（架空）：9/24 に届いたメールと同じ条件（結婚している・女性・時刻なし・9/24）
+  { file: 'sample-0924-test-married', birth: { y: 1985, m: 4, d: 1 }, date: { y: 2026, m: 9, d: 24 }, o: { nick: 'はなこ', rel: 'married', sex: 'f', timeUnknown: true } },
   { file: 'sample-0924-crush',   birth: { y: 1995, m: 9, d: 12 }, date: { y: 2026, m: 9, d: 24 }, o: { nick: 'あかり', rel: 'crush', sex: 'f', timeUnknown: true, interests: ['恋愛', '仕事・キャリア'] } },
   { file: 'sample-0808-single',  birth: { y: 1998, m: 3, d: 3 },  date: { y: 2026, m: 8, d: 8 },  o: { nick: 'けいた', rel: 'single', sex: 'm', hour: 7, minute: 30, timeUnknown: false } },
 ];

@@ -1,5 +1,5 @@
 /* 送ったメールの文章が、ロジック（generateDaily）の出力と同じかを確かめる
-   使い方：ENGINE_DIR=<daily-engine.js のあるフォルダ> node check-engine.js 1981-6-10 2026-9-24 married f りえ [HH:MM] [関心,関心]
+   使い方：ENGINE_DIR=<daily-engine.js のあるフォルダ> node check-engine.js 1985-4-1 2026-9-24 married f はなこ [HH:MM] [関心,関心]
    → その会員・その日にロジックが出す文章を一覧で表示する。送ったメールと1項目ずつ見比べる。 */
 const path = require('path');
 const dir = path.resolve(process.env.ENGINE_DIR || '.');
