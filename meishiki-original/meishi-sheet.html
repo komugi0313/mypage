@@ -807,6 +807,7 @@
         <span class="glabel">命式表の型</span>
         <span class="seg" role="group" aria-label="命式表レイアウト切替">
           <button type="button" id="mtStd" aria-pressed="true">標準</button>
+          <button type="button" id="mtTate" aria-pressed="false">縦</button>
           <button type="button" id="mtYoko" aria-pressed="false">横型（流派別）</button>
         </span>
         <span class="scr-hint">横型は四柱を行に並べ、大運・年運を上部に一体化（流派固有の列は手入力）</span>
@@ -1551,7 +1552,8 @@ window.MEISHIKI=(function(){
       });
       setKubo(r.tenchusatsu); setNayin(r); setSidai(r.tenchusatsu); render();
     },
-    clear:function(){ PKEYS.forEach(function(pk){ model.p[pk]=blank(); }); setKubo(''); setNayin(null); setSidai(null); render(); }
+    clear:function(){ PKEYS.forEach(function(pk){ model.p[pk]=blank(); }); setKubo(''); setNayin(null); setSidai(null); render(); },
+    setOrient:function(o){ model.orient=(o==='tate')?'tate':'yoko'; setOriBtns(); render(); }
   };
 })();
 </script>
@@ -3842,19 +3844,23 @@ window.KANSHI60_DETAIL={
   // 鑑定者が身強／身弱を指定 → 横型を再描画して会局の吉凶色を反映
   window.setYkStrength=function(v){ _ykStrengthOverride=(v==='身強'||v==='身弱'||v==='中和')?v:null; if(typeof buildYokoSheet==='function') buildYokoSheet(); };
   function setMeishikiLayout(t){
-    _meishikiLayout=(t==='yoko')?'yoko':'std';
-    var s=document.getElementById('mtStd'), y=document.getElementById('mtYoko');
+    _meishikiLayout=(t==='yoko')?'yoko':(t==='tate')?'tate':'std';
+    var s=document.getElementById('mtStd'), y=document.getElementById('mtYoko'), tt=document.getElementById('mtTate');
     if(s) s.setAttribute('aria-pressed', String(_meishikiLayout==='std'));
+    if(tt) tt.setAttribute('aria-pressed', String(_meishikiLayout==='tate'));
     if(y) y.setAttribute('aria-pressed', String(_meishikiLayout==='yoko'));
     document.body.classList.toggle('ml-yoko', _meishikiLayout==='yoko');
-    if(_meishikiLayout==='yoko') buildYokoSheet();
+    if(_meishikiLayout==='yoko'){ buildYokoSheet(); }
+    // 標準＝命式表を横並び（時→年の列）／縦＝縦並び（年→時の行）。どちらも同じ教科書式レンダラ。
+    else if(window.MEISHIKI && window.MEISHIKI.setOrient){ window.MEISHIKI.setOrient(_meishikiLayout==='tate'?'tate':'yoko'); }
     if(typeof fitSheet==='function') fitSheet();
   }
-  (function(){ var s=document.getElementById('mtStd'), y=document.getElementById('mtYoko');
+  (function(){ var s=document.getElementById('mtStd'), y=document.getElementById('mtYoko'), tt=document.getElementById('mtTate');
     // 横型（命式表）を詳細シート(#sheet)より前に置く＝画面も印刷も「命式表 → 2枚目(五行/年運/大運)」の順に
     var _sh=document.getElementById('sheet'), _yk=document.getElementById('sheetYoko');
     if(_sh&&_yk&&_yk.parentNode===_sh.parentNode) _sh.parentNode.insertBefore(_yk, _sh);
     if(s) s.addEventListener('click', function(){ setMeishikiLayout('std'); });
+    if(tt) tt.addEventListener('click', function(){ setMeishikiLayout('tate'); });
     if(y) y.addEventListener('click', function(){ setMeishikiLayout('yoko'); });
     setMeishikiLayout(_meishikiLayout); })();   // 既定レイアウト（横型）を初期適用
 
@@ -4036,7 +4042,7 @@ window.KANSHI60_DETAIL={
       ['outCover','outMeishiki','outReading','autoDate'].forEach(function(id){ var e=document.getElementById(id); if(e) d[id]=!!e.checked; });
       var pm=document.querySelector('.motif[aria-pressed="true"]'); if(pm) d.motif=pm.getAttribute('data-motif');
       d.color=pressedId(['cOn','cOff']);
-      d.layout=pressedId(['mtStd','mtYoko']);
+      d.layout=pressedId(['mtStd','mtTate','mtYoko']);
       d.level=pressedId(['ovPro','ovEasy','ovBoth']);
       d.chaps=[].map.call(document.querySelectorAll('.chap'), function(c){ return !!c.checked; });
       return d;
