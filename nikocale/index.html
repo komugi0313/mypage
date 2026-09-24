@@ -3328,6 +3328,7 @@ function pickFocus(interests){
     $('out').style.display='block'; state.sel=null; render();
     renderFoot();
     if(!noScroll){ setTimeout(function(){ (document.querySelector('.mo-nav')||$('modeHead')||$('summary')).scrollIntoView({behavior:'smooth',block:'start'}); pulseResults(); }, 60); }
+    setTimeout(function(){ try{ if(window.NicoInvite&&window.NicoInvite.showGeneral) window.NicoInvite.showGeneral(); }catch(e){} }, 900);
   }
   function getLastPair(){ try{ return JSON.parse(localStorage.getItem('dc_lastPair')||'null'); }catch(e){ return null; } }
   /* 常連＝保存した二人がいる人。前回の二人を自動表示し、説明・入力を畳む */
@@ -4434,6 +4435,26 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       dim.querySelector('.nkiv-cta').onclick=function(){ dismiss(); try{ window.NicoAuth.requireAuth(function(){ if(window.NicoChat)window.NicoChat.open(); }); }catch(e){} };
       document.body.appendChild(dim);
     }catch(e){}
+  })();
+
+  /* 招待なしで来た人向け：汎用の歓迎＋登録モーダル（カレンダー表示直後に1回だけ・未ログイン時のみ） */
+  (function(){
+    function ensureNkivStyles(){ if(document.getElementById('nkivStyle'))return; try{ var st=document.createElement('style'); st.id='nkivStyle'; st.textContent='.nkiv-dim{position:fixed;inset:0;z-index:10050;background:rgba(40,25,35,.5);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:16px}.nkiv-card{width:100%;max-width:400px;background:var(--panel,#fff);border-radius:22px;box-shadow:0 20px 50px -14px rgba(40,25,35,.6);overflow:hidden;position:relative;max-height:92vh;overflow-y:auto}.nkiv-x{position:absolute;right:12px;top:10px;background:none;border:none;color:var(--muted,#9b99a1);font-size:22px;cursor:pointer;z-index:2}.nkiv-top{background:radial-gradient(120% 100% at 50% 0%,var(--accent-soft,#f4e3e8),var(--panel,#fff));padding:20px 18px 8px;text-align:center}.nkiv-trio{display:flex;align-items:center;justify-content:center;margin:2px 0 8px}.nkiv-trio .nkiv-pw{margin:0 -8px}.nkiv-pw.sm{width:52px;height:52px;opacity:.92}.nkiv-pw{width:64px;height:64px;border-radius:50%;overflow:hidden;background:#efeeeb;box-shadow:0 0 0 2px var(--accent,#b56682),0 0 0 4px var(--panel,#fff);display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--accent,#b56682)}.nkiv-pw img{width:100%;height:100%;object-fit:cover;display:block}.nkiv-q{background:var(--accent-soft,#f4e3e8);color:var(--accent,#b56682);font-weight:800;font-size:28px}.nkiv-from{font-family:var(--cormo,serif);font-style:italic;font-size:13px;color:var(--accent-2,#9a5170)}.nkiv-tease{margin-top:9px;font-size:12.5px;color:var(--accent-2,#9a5170);font-weight:700;font-family:var(--maru,sans-serif)}.nkiv-tease b{color:var(--accent,#b56682)}.nkiv-c{padding:6px 20px 20px;text-align:center}.nkiv-h1{font-family:var(--serif);font-weight:800;font-size:18.5px;line-height:1.55;color:var(--hi,#3a2f36);word-break:keep-all}.nkiv-h1 b{color:var(--accent,#b56682)}.nkiv-sub{font-size:12.5px;color:var(--ink-soft,#5b5860);line-height:1.8;margin:10px 4px 14px}.nkiv-sub b{color:var(--hi,#3a2f36)} .nkiv-sub b.hl{color:var(--accent,#b56682);white-space:nowrap}.nkiv-bul{display:flex;flex-direction:column;gap:7px;text-align:left;background:var(--accent-soft,#f4e3e8);border-radius:12px;padding:12px 14px;margin-bottom:16px}.nkiv-bul div{font-size:12.5px;color:var(--ink,#33313a)} .nkiv-bul b{color:var(--accent-2,#9a5170)}.nkiv-cta{display:block;width:100%;background:linear-gradient(180deg,var(--accent,#b56682),var(--accent-2,#9a5170));color:var(--accent-ink,#fff);border:none;border-radius:13px;padding:15px;font-family:var(--serif);font-weight:800;font-size:16px;letter-spacing:.03em;cursor:pointer;box-shadow:0 10px 22px -10px var(--accent,#b56682)}.nkiv-wait{font-family:var(--cormo,serif);font-style:italic;font-size:12px;color:var(--muted,#9b99a1);margin-top:8px}.nkiv-sec{display:block;width:100%;margin-top:10px;background:none;border:none;color:var(--accent-2,#9a5170);font-size:13px;font-weight:700;text-decoration:underline;text-underline-offset:3px;cursor:pointer}'; document.head.appendChild(st); }catch(e){} }
+    window.NicoInvite={ showGeneral:function(){ try{
+      var q=new URLSearchParams(location.search); if(q.get('nf')!=null) return;              // 招待の人は招待版
+      if(sessionStorage.getItem('dc_genwelcome_seen')==='1') return;
+      if(document.querySelector('.nkiv-dim')) return;                                         // 既に何か開いている
+      if(!(window.NicoAuth&&window.NicoAuth.requireAuth)) return;                             // アカウント機能オフ時は出さない
+      var u=window.NicoAuth.current&&window.NicoAuth.current(); if(u&&u.emailVerified&&u.profile) return; // 登録済みには不要
+      ensureNkivStyles();
+      var dim=document.createElement('div'); dim.className='nkiv-dim';
+      dim.innerHTML='<div class="nkiv-card"><button class="nkiv-x" aria-label="閉じる">×</button><div class="nkiv-top"><div class="nkiv-trio"><div class="nkiv-pw sm"><img src="img/mascot/thumb/丙寅.webp" alt="" onerror="this.parentNode.style.display=&quot;none&quot;"></div><div class="nkiv-pw nkiv-q">?</div><div class="nkiv-pw sm"><img src="img/mascot/thumb/己巳.webp" alt="" onerror="this.parentNode.style.display=&quot;none&quot;"></div></div><div class="nkiv-from">your character</div><div class="nkiv-tease">✨ あなたは<b>どのキャラ</b>？ 生年月日でわかる</div></div><div class="nkiv-c"><div class="nkiv-h1">あなたは、<b>何のキャラ？</b></div><div class="nkiv-sub">生年月日で決まる、<b>あなただけのキャラ</b>。<br>無料登録で公開＆<b class="hl">自分だけの開運カレンダー</b>も。</div><div class="nkiv-bul"><div>🐣 <b>あなたのキャラ</b>が公開される</div><div>🗓 <b>自分だけの開運カレンダー</b>（毎日の運気）</div><div>💬 気になる人と<b>相性＆メッセージ</b></div><div>🎁 <b>ずっと無料</b>・登録はメール1つ（30秒）</div></div><button class="nkiv-cta">無料でキャラを見る</button><div class="nkiv-wait">— 相性カレンダーは登録なしでも見られます —</div><button class="nkiv-sec">あとで</button></div></div>';
+      function dismiss(){ dim.remove(); try{sessionStorage.setItem('dc_genwelcome_seen','1');}catch(e){} }
+      dim.querySelector('.nkiv-x').onclick=dismiss;
+      dim.querySelector('.nkiv-sec').onclick=dismiss;
+      dim.querySelector('.nkiv-cta').onclick=function(){ dismiss(); try{ window.NicoAuth.requireAuth(function(){ try{ var el=document.getElementById('charCard'); if(el)el.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }); }catch(e){} };
+      document.body.appendChild(dim);
+    }catch(e){} } };
   })();
 
   /* 将来のゲート用に公開：requireAuth(cb) を各機能から呼ぶ */
