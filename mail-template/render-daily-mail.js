@@ -126,7 +126,7 @@
 
     /* 🌙 今日の月／🍃 七十二候 */
     if (r.moon || r.kou){
-      h.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:12px 0 2px;border-collapse:separate;"><tr><td style="background:#f0eefa;background-image:linear-gradient(135deg,#eef1fb,#f4eef9);border:1px solid #c6c2e6;border-radius:12px;padding:11px 14px;">'
+      h.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:12px 0 2px;border-collapse:separate;"><tr><td style="background:#f0eefa;border:1px solid #c6c2e6;border-radius:12px;padding:11px 14px;">'
         + (r.moon ? '<div style="font-size:12.5px;font-weight:800;color:#6a5fb0;"><span style="font-size:20px;vertical-align:-3px;">' + r.moon.emoji + '</span>&nbsp; 今日の月：' + esc(r.moon.name)
           + (r.moon.text ? '<span style="color:#8a5cf6;"> ― ' + esc(r.moon.text) + '</span>' : '')
           + '<span style="font-weight:600;color:#8f88bd;">&nbsp; 月齢' + r.moon.age + '</span></div>' : '')
@@ -148,7 +148,7 @@
         + '<td style="background:#ffffff;border:1px solid #efe9e6;border-right:0;border-radius:11px 0 0 11px;padding:9px 0 9px 12px;font-size:11px;color:#a08a80;font-weight:800;white-space:nowrap;">' + l + '</td>'
         + '<td align="right" style="background:#ffffff;border:1px solid #efe9e6;border-left:0;border-radius:0 11px 11px 0;padding:9px 12px 9px 8px;font-size:13px;font-weight:800;color:#5a4d47;text-align:right;">' + v + '</td></tr></table>';
     }
-    h.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:14px 0;border-collapse:separate;"><tr><td style="background:' + kbg + ';background-image:linear-gradient(135deg,' + kbg + ',#ffffff);border:1.5px solid ' + kc + ';border-radius:16px;padding:12px 13px;">'
+    h.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:14px 0;border-collapse:separate;"><tr><td style="background:' + kbg + ';border:1.5px solid ' + kc + ';border-radius:16px;padding:12px 13px;">'
       + '<div style="font-size:11.5px;font-weight:800;color:' + kc + ';letter-spacing:.03em;">' + crystal + ' 今日のあなたの鑑定</div>'
       + '<div>' + chips + '</div>'
       + krow('🎯 開運アクション', esc(lk.action))
@@ -171,8 +171,8 @@
     h.push('<div style="font-size:12px;color:#6a5b53;margin:8px 0 0;text-align:center;line-height:1.65;">' + r.weatherMsg + '</div>');
 
     /* ✅ 今日はこれだけ／🌱 今日の開運習慣 */
-    if (r.todayOne) h.push(box('#fff0ec', '#f0b060', '#c9862a', '✅ 今日はこれだけ', '#3a3f4e', r.todayOne).replace('background:#fff0ec;', 'background:#fff0ec;background-image:linear-gradient(135deg,#fff3e8,#ffe9f0);'));
-    if (r.habit) h.push(box('#eaf6ed', '#7bbd8a', '#3f9d68', '🌱 今日の開運習慣　<span style="font-weight:600;color:#6a9a78;">コツコツ運気貯金</span>', '#33463a', r.habit).replace('margin-top:12px', 'margin-top:10px').replace('background:#eaf6ed;', 'background:#eaf6ed;background-image:linear-gradient(135deg,#eef8ee,#e6f4ec);'));
+    if (r.todayOne) h.push(box('#fff0ec', '#f0b060', '#c9862a', '✅ 今日はこれだけ', '#3a3f4e', r.todayOne));
+    if (r.habit) h.push(box('#eaf6ed', '#7bbd8a', '#3f9d68', '🌱 今日の開運習慣　<span style="font-weight:600;color:#6a9a78;">コツコツ運気貯金</span>', '#33463a', r.habit).replace('margin-top:12px', 'margin-top:10px'));
 
     /* 🎯 注目テーマ（関心登録がある人のみ）／🌅 今日のあなた／🔄 運気の巡り */
     if (r.focus) h.push(sec(r.focus.emoji || '🎯', '今日の注目：あなたが大切にしている「' + esc(r.focus.label) + '」', r.focus.text, '#c0392b', '#fff0ee'));
@@ -236,10 +236,10 @@
     /* 💞 1.66相性診断への導線＋シェア（全メール共通・必須） */
     var shareText = encodeURIComponent('毎朝あなただけの運勢が届く「私だけの運気予報」🌤 ずっと無料。60組に1組【1.66%】の奇跡の相性診断も！');
     var shareUrl = encodeURIComponent(aishou + (aishou.indexOf('?') < 0 ? '?' : '&') + 'ref=mail');
-    h.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;border-collapse:separate;"><tr><td align="center" style="background:#fdeef4;background-image:linear-gradient(135deg,#fdeef4,#fff3e8);border:1.5px solid #e8a8bd;border-radius:14px;padding:14px;text-align:center;">'
+    h.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;border-collapse:separate;"><tr><td align="center" style="background:#fdeef4;border:1.5px solid #e8a8bd;border-radius:14px;padding:14px;text-align:center;">'
       + '<div style="font-size:13.5px;font-weight:800;color:#c14e77;line-height:1.6;">💞 気になる人との相性、調べてみない？</div>'
       + '<div style="margin-top:4px;font-size:11.5px;color:#8a6f7a;line-height:1.7;">60組に1組の奇跡【1.66%】── 生年月日ふたつで、ふたりの相性がすぐわかります。</div>'
-      + '<div style="margin-top:9px;">' + btn(esc(aishou) + '" data-aishou="1', '1.66 相性診断をやってみる（無料）', '#d8466a', '13px', '10px 22px', 'linear-gradient(135deg,#e86a94,#d8466a)') + '</div>'
+      + '<div style="margin-top:9px;">' + btn(esc(aishou) + '" data-aishou="1', '1.66 相性診断をやってみる（無料）', '#d8466a', '13px', '10px 22px') + '</div>'
       + '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e8c8d4;font-size:10.5px;color:#a08a80;">🎁 お友達にもシェアして、いっしょに占ってみてね</div>'
       + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:7px auto 0;"><tr>'
       + '<td>' + btn('https://social-plugins.line.me/lineit/share?url=' + shareUrl, 'LINEで送る', '#06c755', '11.5px', '8px 16px') + '</td>'
@@ -267,7 +267,7 @@
     var mo = T.motif;
     var frameBg = T.bgimg
       ? 'background-color:' + (T.bgcolor || T.frame1) + ';background-image:url(\'' + base + T.bgimg + '\');background-position:center center;background-size:cover;background-repeat:no-repeat;'
-      : 'background:' + T.frame1 + ';background-image:linear-gradient(160deg,' + T.frame1 + ',' + T.frame2 + ');';
+      : 'background:' + T.frame1 + ';';  // 単色（グラデーションはダークモードで反転されず文字が読めなくなるため使わない）
     var framePad = T.bgimg ? '26px 22px 26px' : '10px 14px 12px';
     var motifRow = function(a, b, top){
       if (T.bgimg) return '';

@@ -79,7 +79,7 @@ send({ to, subject: mail.subject, html: mail.html, text: mail.text });  // text 
 | Android（Gmailアプリ・Samsungメール） | 同じ（ライト表示時） | 同じ | 絵文字の絵柄と明朝体の書体は端末のものになる |
 | Outlook（Web・iPhone/Androidアプリ・Mac） | 同じ（ライト表示時） | 同じ | |
 | **Outlook（Windowsの旧デスクトップ版）** | ほぼ同じ（グラデーションは単色に） | **角が四角になる** | 幅は440pxに固定済み。ボタンの色と大きさ、色の丸（●）は残る |
-| **ダークモードにしている人（Gmailアプリ・Outlookアプリ）** | **変わる** | 同じ | メールソフト側で色を自動で反転する。送る側では完全には止められない |
+| **ダークモードにしている人（Gmailアプリ・Outlookアプリ）** | **暗い色に変わる**（読める） | 同じ | メールソフトが自動で色を反転する（送る側では止められない）。文字が乗る箱はすべて単色背景にしてあるので、反転しても「明るい背景に明るい文字」にならず読める |
 
 変えられないもの：
 - 絵文字の絵柄（Apple／Google／Microsoft でデザインが違う）
@@ -87,3 +87,7 @@ send({ to, subject: mail.subject, html: mail.html, text: mail.text });  // text 
 - ダークモードでの自動の色反転（Gmail・Outlookのアプリ）
 
 **本番前に必ず実機へテスト送信すること**：Gmail（iPhone・Android）／iPhone標準メール（iCloud）／Outlook.com・Outlookアプリ／Windows版Outlook。Litmus や Email on Acid を使えば1回で各メールソフトの画面を撮れる。
+
+### ダークモード対策（重要・変更しないこと）
+- 文字が乗る箱・外枠・ボタンに **グラデーション（background-image）を使わない**。Gmail等は背景色と文字色は反転するが background-image は反転しないため、グラデーションの箱では「明るい背景に明るい文字」になり読めなくなる。
+- 背景は必ず `background-color`（単色）＋`bgcolor` 属性で指定する。
