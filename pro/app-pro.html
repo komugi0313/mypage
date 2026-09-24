@@ -641,6 +641,7 @@
     <button class="ask" id="compatAskBtn">この質問に答えてもらう</button>
     <button id="compat-reset" type="button" style="margin-top:8px;width:100%;height:40px;border:2px solid var(--line2);background:#fff;color:var(--ink2);border-radius:11px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer">↺ お相手の入力をリセット</button>
     <div id="compat-verdict"></div>
+    <div id="compat-meishi"></div>
     <div class="reading" id="compat"></div>
   </section>
 
@@ -4191,6 +4192,63 @@ function compatVerdictHTML(a,b,rt){
     <div class="mhint" style="margin-top:9px">※ 直感の目安です。相性は<b>お互いの違いを活かす工夫</b>でよくできます。良い点・注意点の詳しい読み解きは、下の「${rt.label}」相性鑑定をご覧ください。</div>
   </section>`;
 }
+/* 命式表だけを本表と同じ見た目で描く静的レンダラ（相性診断などで使用・蔵干切替なし＝zouOverride非依存） */
+function meishiTableHTML(c,orient){
+  const ku=kubo(c);
+  const _bc=((c.birth&&c.birth.clock)||'').split(' '), _bd=(_bc[0]||'').split('-'), _bt=(_bc[1]||'').split(':');
+  const BDAY={'年柱':_bd[0]?_bd[0]+'年':'','月柱':_bd[1]?(+_bd[1])+'月':'','日柱':_bd[2]?(+_bd[2])+'日':'','時柱':(c.timeUnknown?'時刻不明':(_bt[0]!=null&&_bt[0]!==''?(+_bt[0])+'時'+(_bt[1]!=null&&_bt[1]!==''?(+_bt[1])+'分':''):''))};
+  const bdayHTML=cc=>BDAY[cc.label]?`<br><b style="font-size:11px;color:var(--ink);font-weight:900">${BDAY[cc.label]}</b>`:'';
+  const repStatic=hs=>hs.find(h=>h.ling)||hs.find(h=>h.role==='本気')||hs[hs.length-1];
+  const kt=kichiTargets(c);
+  const cells=c.pillars.map((p,i)=>{
+    const honki=repStatic(p.hiddenStems);
+    const kichi=[]; if(ku.includes(p.branch))kichi.push('空亡');
+    matchKichi(kt,p.stem,p.branch,p.hiddenStems.map(h=>h.stem)).forEach(s=>kichi.push(s));
+    matchKichi4(c,p.branch).forEach(s=>{if(!kichi.includes(s))kichi.push(s);});
+    matchKichi1(c,p.branch).forEach(s=>{if(!kichi.includes(s))kichi.push(s);});
+    if(p.label==='日柱'&&kakuOn(c))kichi.push('隔角');
+    if(p.label==='日柱'&&kaigouOn(c))kichi.push('魁罡');
+    if(p.label==='日柱'&&rokubaOn(c))kichi.push('禄馬貴人');
+    return {label:PLABEL[i][0],me:p.label==='日柱',isMonth:p.label==='月柱',
+      stem:p.stem,branch:p.branch,sEl:p.stemElement,bEl:p.branchElement,
+      tsStem:p.label==='日柱'?'比肩':p.tenStar,tsBranch:honki?honki.tenStar:'',terr:p.terrain,
+      zStem:honki?honki.stem:'',zEl:honki?STEM_EL[honki.stem]:'',kichi};
+  });
+  if(c.timeUnknown)cells.push({label:'時柱',me:false,isMonth:false,unknown:true,kichi:[]});
+  const ganCell=(ch,el)=>`<span class="gan" style="color:${ec(el)}">${ch}</span>`;
+  const A={
+    gan:['天干',cc=>ganCell(cc.stem,cc.sEl),'gangrp'],
+    shi:['地支',cc=>ganCell(cc.branch,cc.bEl),'gangrp'],
+    zou:['蔵干',cc=>`<span class="zou"><span class="hs" style="color:${ec(cc.zEl)}">${cc.zStem}</span></span>`,'zoucol'],
+    tts:['天干通変',cc=>`<span class="ts">${cc.me?'（比肩）':(cc.tsStem||'—')}</span>`,''],
+    cts:['地支通変',cc=>`<span class="ts">${cc.tsBranch||'—'}</span>`,''],
+    jun:['十二運',cc=>`<span class="ts">${cc.terr||'—'}</span>`,''],
+  };
+  const isZou=a=>a[0]==='蔵干';
+  const mkbl=(a,cc)=>(a[0]==='地支通変'&&cc.isMonth)?'mkblue':'';
+  const cH=(a,cc)=>cc.unknown?'<span class="none">—</span>':a[1](cc);
+  const kichiChips=`<div class="mkichi md-detail"><div class="mkichi-h">吉凶星（柱ごと）</div>${cells.map(cc=>`<div class="mkrow"><span class="mkpil${cc.me?' me':''}">${cc.label}${cc.unknown?'':' '+cc.stem+cc.branch}</span><span class="mkval">${cc.unknown?'<span class="none">時刻不明のため参考外</span>':(cc.kichi.length?cc.kichi.map(k=>`<span class="mkchip">${kichiLabel(k)}</span>`).join(''):'<span class="none">－</span>')}</span></div>`).join('')}</div>`;
+  let table;
+  if(orient==='yoko'){
+    const attrs=[A.gan,A.shi,A.tts,A.cts,A.jun,A.zou];
+    const pcols=cells.slice().reverse();
+    const head=`<tr><th class="corner"></th>${pcols.map(cc=>`<th class="pillhead ${cc.me?'me':''}">${cc.label}${bdayHTML(cc)}${cc.unknown?'<br><small style="color:var(--ka);font-weight:800">不明</small>':''}</th>`).join('')}</tr>`;
+    const body=attrs.map(a=>`<tr class="${isZou(a)?'md-detail':''}"><td class="rowlab attrhead">${a[0]}</td>${pcols.map(cc=>`<td class="${a[2]||''} ${cc.me?'me':''} ${mkbl(a,cc)}">${cH(a,cc)}</td>`).join('')}</tr>`).join('');
+    table=`<table class="mtable">${head}${body}</table>`;
+  } else {
+    const attrs=[A.gan,A.shi,A.zou,A.tts,A.cts,A.jun];
+    const head=`<tr><th class="corner"></th>${attrs.map(a=>`<th class="attrhead ${isZou(a)?'md-detail':''}">${a[0]}</th>`).join('')}</tr>`;
+    const body=cells.map(cc=>`<tr><td class="rowlab pillhead ${cc.me?'me':''}">${cc.label}${bdayHTML(cc)}${cc.unknown?'<br><small style="color:var(--ka);font-weight:800">不明・参考外</small>':''}</td>${attrs.map(a=>`<td class="${a[2]||''} ${cc.me?'me':''} ${mkbl(a,cc)} ${isZou(a)?'md-detail':''}">${cH(a,cc)}</td>`).join('')}</tr>`).join('');
+    table=`<table class="mtable">${head}${body}</table>`;
+  }
+  const dl='蔵干・吉凶星';
+  return `<div class="mbox md-collapsed"><div class="mwrap">${table}</div><div class="mleg"><span class="mleg-sw"></span>青ぬり＝<b>月支元命</b>／空亡：${ku.join('')||'—'}</div>${kichiChips}<button type="button" class="md-toggle" onclick="var b=this.closest('.mbox');var c=b.classList.toggle('md-collapsed');this.firstChild.textContent=(c?'＋詳しく見る：${dl}':'閉じる：${dl}');this.lastElementChild.style.transform=c?'':'rotate(180deg)';"><span>＋詳しく見る：${dl}</span><svg class="md-arw" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div>`;
+}
+/* 相性診断：2人の命式表を本表と同じ見た目で並べる */
+function compatMeishiHTML(a,b,na,nb){
+  const one=(c,name,role)=>{const nm=(name&&name!==role)?`：<b>${name}</b>`:'';return `<div style="margin-top:12px"><div style="font-size:13.5px;font-weight:900;color:var(--ink2);margin:0 2px 7px">${role}${nm}（日柱 ${c.dayMaster.stem}${c.pillars[2].branch}）</div>${meishiTableHTML(c,orient)}</div>`;};
+  return `<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px"><div style="font-size:14.5px;font-weight:900;margin:0 2px">2人の命式表</div><div class="mhint" style="margin:2px 2px 0">日柱＝本人（ピンク）／青ぬり＝月支元命。「詳しく見る」で蔵干・吉凶星が開きます。</div>${one(a,na,'本人')}${one(b,nb,'お相手')}</div>`;
+}
 function buildCompatBase(out){
   if(!chart){out.innerHTML='<div class="err">先に上の入力で「占う」を押し、本人の命式を出してください。</div>';return null;}
   const dv=document.getElementById('b-date').value, tv=document.getElementById('b-time').value||'12:00';
@@ -4203,6 +4261,7 @@ function buildCompatBase(out){
   const na=personName||'本人', nb=personNameB||'お相手';
   const rt=RELTYPES[document.getElementById('rel-type')?.value||'love']||RELTYPES.love;
   try{var _cv=document.getElementById('compat-verdict'); if(_cv)_cv.innerHTML=compatVerdictHTML(chart,chartB,rt);}catch(_e){}
+  try{var _cm=document.getElementById('compat-meishi'); if(_cm)_cm.innerHTML=compatMeishiHTML(chart,chartB,na,nb);}catch(_e){}
   const head=`【本人A】${na}（${chart.birth.sex==='male'?'男性':'女性'}）: ${compatBrief(chart)}\n【お相手B】${nb}（${sexB==='male'?'男性':'女性'}）: ${compatBrief(chartB)}\n\n【2人の関係】${rt.label}\n\n【2人の関係の自動分析（計算済み）】\n${compatAnalysis(chart,chartB,rt)}`;
   return {na,nb,rt,head};
 }
@@ -4605,6 +4664,7 @@ function resetCompat(){
   chartB=null;
   document.getElementById('compat').innerHTML='';
   var _cv=document.getElementById('compat-verdict');if(_cv)_cv.innerHTML='';
+  var _cm=document.getElementById('compat-meishi');if(_cm)_cm.innerHTML='';
 }
 document.getElementById('compat-reset').onclick=resetCompat;
 // フローティング「最初へ戻る」
