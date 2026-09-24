@@ -4151,6 +4151,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
           +'<span class="au-badge '+(vf?'ok':'no')+'">'+(vf?'メール確認済み':'メール未確認')+'</span>'
           +(pf?('<br>'+({f:'女性',m:'男性',x:'回答しない'}[pf.sex]||'—')+' ・ '+ageLabel(pf.age)):'<br>プロフィール未設定')+'</div>'
         +(vf?'':'<button class="au-primary" id="auGoVerify">メールを確認する</button>')
+        +'<button class="au-sec" id="auOpenDM">メッセージ（DM）</button>'
         +'<button class="au-sec" id="auEditProfile">プロフィールを編集</button>'
         +'<button class="au-sec" id="auLogout">ログアウト</button>';
     }
@@ -4186,6 +4187,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       var le=el('auLEmail'); if(le)le.oninput=function(){ state.email=le.value; };
     } else if(s==='account'){
       var gv=el('auGoVerify'); if(gv)gv.onclick=function(){ open('verify'); };
+      var dmb=el('auOpenDM'); if(dmb)dmb.onclick=function(){ close(); window.NicoAuth.requireAuth(function(){ if(window.NicoChat)window.NicoChat.open(); }); };
       var ep=el('auEditProfile'); if(ep)ep.onclick=function(){ open('profile'); };
       var lo=el('auLogout'); if(lo)lo.onclick=function(){ Auth.logout(); close(); };
     }
@@ -4199,7 +4201,326 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   Auth.onChange(function(){ renderChip(); if(!modal.hidden) render(); });
 
   /* 将来のゲート用に公開：requireAuth(cb) を各機能から呼ぶ */
-  window.NicoAuth={ current:Auth.current, open:open, requireAuth:function(cb){ var u=Auth.current(); if(u&&u.emailVerified&&u.profile){ cb&&cb(u); } else { open(u?(u.emailVerified?'profile':'verify'):'register'); } } };
+  window.NicoAuth={ current:Auth.current, open:open, onChange:Auth.onChange, requireAuth:function(cb){ var u=Auth.current(); if(u&&u.emailVerified&&u.profile){ cb&&cb(u); } else { open(u?(u.emailVerified?'profile':'verify'):'register'); } } };
+})();
+</script>
+
+<!-- ====================== DM / チャット モジュール ======================
+   ・?accounts フラグ配下でのみ動作（未フラグ時は何も描画しない＝リリース安全）
+   ・ログイン必須（window.NicoAuth.requireAuth 経由）
+   ・データ層 Chat は差し替え可能：今は localStorage モック、将来 Firestore に置換
+     → エンジニアは ChatBackend の list/send/subscribe/markRead を Firestore 実装に
+       差し替えるだけでリアルタイムDMになる（UIは変更不要）
+-->
+<script>
+(function(){
+  'use strict';
+  // ---- 有効化ゲート（アカウントと同一） ----
+  var ENABLED=false;
+  try{ ENABLED=/[?&]accounts(?:=1)?(?:&|$)/i.test(location.search) || localStorage.getItem('dc_accounts')==='1'; }catch(e){}
+  if(!ENABLED) return;
+  if(!window.NicoAuth) return;
+
+  var esc=function(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); };
+  var pad=function(n){ return (n<10?'0':'')+n; };
+
+  /* =======================================================================
+     差し替え可能なデータ層（ChatBackend）
+     現在: localStorage モック（1端末デモ。相手役は簡易自動応答で疑似双方向）
+     将来: 下の4メソッドを Firestore 実装へ置換すれば本番リアルタイムDMになる
+       - roomId(me, otherUid)      : uid2つを昇順連結した部屋ID
+       - list(roomId)              : メッセージ配列（昇順）
+       - send(roomId, msg)         : 1件追加
+       - subscribe(roomId, cb)     : 変更購読（unsubscribeを返す）/ Firestore onSnapshot 相当
+       - markRead(roomId, uid)     : 自分が既読にした位置を保存
+  ======================================================================= */
+  var ChatBackend=(function(){
+    var K='dc_dm_';           // 部屋データ key 接頭
+    var subs={};              // roomId -> [cb]
+    function load(roomId){ try{ return JSON.parse(localStorage.getItem(K+roomId)||'null')||{msgs:[],read:{}}; }catch(e){ return {msgs:[],read:{}}; } }
+    function save(roomId,data){ try{ localStorage.setItem(K+roomId, JSON.stringify(data)); }catch(e){} }
+    function fire(roomId){ (subs[roomId]||[]).forEach(function(cb){ try{cb();}catch(e){} }); }
+    // 別タブ/端末の更新も拾う（Firestore の onSnapshot に相当する簡易版）
+    window.addEventListener('storage',function(ev){ if(ev.key&&ev.key.indexOf(K)===0){ var rid=ev.key.slice(K.length); fire(rid); } });
+    return {
+      roomId:function(a,b){ return [String(a),String(b)].sort().join('__'); },
+      list:function(roomId){ return load(roomId).msgs; },
+      readMap:function(roomId){ return load(roomId).read||{}; },
+      send:function(roomId,msg){ var d=load(roomId); msg.id=msg.id||('m'+Date.now()+Math.random().toString(36).slice(2,6)); msg.ts=msg.ts||Date.now(); d.msgs.push(msg); save(roomId,d); fire(roomId); return msg; },
+      markRead:function(roomId,uid){ var d=load(roomId); d.read=d.read||{}; var last=d.msgs.length?d.msgs[d.msgs.length-1].id:null; d.read[uid]=last; save(roomId,d); fire(roomId); },
+      subscribe:function(roomId,cb){ (subs[roomId]=subs[roomId]||[]).push(cb); return function(){ subs[roomId]=(subs[roomId]||[]).filter(function(f){return f!==cb;}); }; }
+    };
+  })();
+
+  // ---- デモ用: 相手プロフィール（お相手の名前は直近ペアのBを流用） ----
+  function partnerName(){
+    try{ var lp=JSON.parse(localStorage.getItem('dc_lastPair')||'null'); var n=lp&&(lp.b&&lp.b.name || lp.B&&lp.B.name); if(n) return String(n); }catch(e){}
+    return 'お相手';
+  }
+  var DEMO_PARTNER_UID='demo_partner';
+
+  // ---- デモ用の待ち合わせプラン（ピン留め）。将来はDBの部屋メタから ----
+  function loadPlan(roomId){
+    try{ var p=JSON.parse(localStorage.getItem('dc_dm_plan_'+roomId)||'null'); if(p) return p; }catch(e){}
+    // 既定: 近い土曜の良い日デモ
+    return {ymd:'20261004', time:'19:00', mark:'◎', title:'ふたりのいい日デート'};
+  }
+  function savePlan(roomId,p){ try{ localStorage.setItem('dc_dm_plan_'+roomId, JSON.stringify(p)); }catch(e){} }
+
+  function ymdToDate(ymd){ return new Date(+ymd.slice(0,4), +ymd.slice(4,6)-1, +ymd.slice(6,8)); }
+  function fmtJ(ymd){ var d=ymdToDate(ymd); var w='日月火水木金土'[d.getDay()]; return (d.getMonth()+1)+'月'+d.getDate()+'日('+w+')'; }
+  function daysLeft(ymd){ var d=ymdToDate(ymd); var t=new Date(); t.setHours(0,0,0,0); return Math.round((d-t)/86400000); }
+  function fmtClock(ts){ var d=new Date(ts); return pad(d.getHours())+':'+pad(d.getMinutes()); }
+
+  function gcalHref(plan,pname){
+    var d=ymdToDate(plan.ymd), t=(plan.time||'19:00').split(':');
+    var s=new Date(d); s.setHours(+t[0]||19,+t[1]||0,0,0);
+    var e=new Date(s.getTime()+2*3600000);
+    function z(x){ return x.getFullYear()+pad(x.getMonth()+1)+pad(x.getDate())+'T'+pad(x.getHours())+pad(x.getMinutes())+'00'; }
+    var text='【ニコカレ】'+(plan.title||'ふたりの予定')+'（'+pname+'さんと）';
+    return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(text)+'&dates='+z(s)+'/'+z(e)+'&details='+encodeURIComponent('ニコカレで見つけた相性のいい日です。');
+  }
+
+  // ---- スタイル ----
+  var st=document.createElement('style');
+  st.textContent=''
+    +'.dm-chip{position:fixed;top:10px;right:10px;z-index:9998;display:none;align-items:center;gap:6px;background:rgba(255,255,255,.92);border:1px solid var(--line-strong,#a9b3cf);color:var(--accent-2,#2e3b6a);border-radius:999px;padding:7px 13px;font-size:12px;font-weight:700;font-family:var(--maru);cursor:pointer;box-shadow:0 4px 12px -6px rgba(40,40,80,.4);backdrop-filter:blur(4px)}'
+    +'.dm-chip .dot{min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#b2554e;color:#fff;font-size:10px;font-weight:700;display:none;align-items:center;justify-content:center}'
+    +'.dm-chip .dot.on{display:inline-flex}'
+    +'.dm-wrap{position:fixed;inset:0;z-index:10000;display:none;background:rgba(30,30,50,.45);backdrop-filter:blur(3px)}'
+    +'.dm-wrap.on{display:flex;align-items:stretch;justify-content:center}'
+    +'.dm-app{width:100%;max-width:480px;background:var(--bg,#f5f1ea);display:flex;flex-direction:column;height:100%;box-shadow:0 0 40px rgba(20,20,40,.4)}'
+    +'.dm-head{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:12px 14px;background:linear-gradient(180deg,#3a4676,#2a3358);color:#fff}'
+    +'.dm-back{background:none;border:none;color:#fff;font-size:22px;line-height:1;cursor:pointer;padding:2px 6px}'
+    +'.dm-av{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:15px;font-family:var(--maru)}'
+    +'.dm-nm{font-weight:700;font-size:15px;font-family:var(--maru)}'
+    +'.dm-sub{font-size:10.5px;opacity:.75}'
+    +'.dm-demo{margin-left:auto;font-size:9.5px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:2px 8px}'
+    +'.dm-plan{flex:0 0 auto;margin:10px 12px 4px;background:#fff;border:1px solid var(--line,#e2ddd2);border-left:4px solid var(--gold,#a9863f);border-radius:12px;padding:11px 13px;box-shadow:0 4px 12px -8px rgba(40,40,80,.3)}'
+    +'.dm-plan .pt{font-size:10px;color:var(--gold,#a9863f);font-weight:700;letter-spacing:.06em;font-family:var(--maru)}'
+    +'.dm-plan .pm{font-family:var(--maru);font-weight:700;color:var(--hi,#293458);font-size:15px;margin-top:2px}'
+    +'.dm-plan .pd{font-size:12px;color:var(--ink-soft,#4a4353);margin-top:3px}'
+    +'.dm-plan .pd .mk{color:var(--gold,#a9863f);font-weight:700}'
+    +'.dm-plan .pcta{display:inline-block;margin-top:9px;font-size:12px;font-weight:700;font-family:var(--maru);color:#fff;background:linear-gradient(180deg,#41508a,#2e3b6a);border-radius:9px;padding:8px 14px;text-decoration:none}'
+    +'.dm-plan .pdays{float:right;font-size:11px;color:var(--muted,#8a8296);font-weight:700}'
+    +'.dm-body{flex:1 1 auto;overflow-y:auto;padding:10px 12px 6px;display:flex;flex-direction:column;gap:3px}'
+    +'.dm-day{align-self:center;font-size:10.5px;color:var(--muted,#8a8296);background:rgba(0,0,0,.05);border-radius:999px;padding:3px 11px;margin:8px 0 4px}'
+    +'.dm-row{display:flex;margin-top:5px;align-items:flex-end;gap:7px}'
+    +'.dm-row.me{flex-direction:row-reverse}'
+    +'.dm-b{max-width:74%;padding:9px 12px;border-radius:15px;font-size:14px;line-height:1.5;word-break:break-word;font-family:var(--sans)}'
+    +'.dm-row.them .dm-b{background:#fff;color:var(--ink,#2b2530);border:1px solid var(--line,#e2ddd2);border-bottom-left-radius:5px}'
+    +'.dm-row.me .dm-b{background:linear-gradient(180deg,#4a5a94,#3a4676);color:#fff;border-bottom-right-radius:5px}'
+    +'.dm-meta{font-size:9.5px;color:var(--muted,#8a8296);margin:0 2px;white-space:nowrap;display:flex;flex-direction:column;justify-content:flex-end}'
+    +'.dm-meta .rd{color:var(--accent-2,#2e3b6a);font-weight:700}'
+    +'.dm-pcard{max-width:80%;background:#fff;border:1px solid var(--line,#e2ddd2);border-radius:15px;overflow:hidden;box-shadow:0 4px 12px -8px rgba(40,40,80,.3)}'
+    +'.dm-pcard .h{background:linear-gradient(180deg,#3a4676,#2a3358);color:#fff;padding:7px 12px;font-size:11px;font-family:var(--maru);font-weight:700}'
+    +'.dm-pcard .c{padding:10px 12px}'
+    +'.dm-pcard .c .mm{font-family:var(--maru);font-weight:700;color:var(--hi,#293458);font-size:14px}'
+    +'.dm-pcard .c .dd{font-size:12px;color:var(--ink-soft,#4a4353);margin-top:2px}'
+    +'.dm-pcard .c .dd .mk{color:var(--gold,#a9863f);font-weight:700}'
+    +'.dm-pcard .c a{display:inline-block;margin-top:8px;font-size:11.5px;font-weight:700;font-family:var(--maru);color:#fff;background:linear-gradient(180deg,#41508a,#2e3b6a);border-radius:8px;padding:7px 12px;text-decoration:none}'
+    +'.dm-chips{flex:0 0 auto;display:flex;gap:7px;overflow-x:auto;padding:8px 12px 2px;-webkit-overflow-scrolling:touch}'
+    +'.dm-chips button{flex:0 0 auto;border:1px solid var(--line-strong,#cbc3b4);background:#fff;color:var(--ink-soft,#4a4353);border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:700;font-family:var(--maru);cursor:pointer;white-space:nowrap}'
+    +'.dm-comp{flex:0 0 auto;display:flex;align-items:flex-end;gap:8px;padding:8px 12px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg,#f5f1ea);border-top:1px solid var(--line,#e2ddd2)}'
+    +'.dm-plus{flex:0 0 auto;width:38px;height:38px;border-radius:50%;border:1px solid var(--line-strong,#cbc3b4);background:#fff;color:var(--accent-2,#2e3b6a);font-size:20px;cursor:pointer}'
+    +'.dm-in{flex:1 1 auto;border:1px solid var(--line-strong,#cbc3b4);background:#fff;border-radius:19px;padding:9px 14px;font-size:14px;font-family:var(--sans);resize:none;max-height:96px;line-height:1.4}'
+    +'.dm-send{flex:0 0 auto;width:38px;height:38px;border-radius:50%;border:none;background:linear-gradient(180deg,#41508a,#2e3b6a);color:#fff;font-size:17px;cursor:pointer;opacity:.5}'
+    +'.dm-send.on{opacity:1}'
+    +'.dm-sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:18px 18px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 24px -12px rgba(40,40,80,.4);transform:translateY(110%);transition:transform .2s}'
+    +'.dm-sheet.on{transform:translateY(0)}'
+    +'.dm-sheet h4{font-family:var(--maru);font-weight:700;color:var(--hi,#293458);font-size:15px;margin:0 0 3px}'
+    +'.dm-sheet p{font-size:11.5px;color:var(--muted,#8a8296);margin:0 0 12px;line-height:1.6}'
+    +'.dm-sheet .frow{display:flex;gap:8px;margin-bottom:10px}'
+    +'.dm-sheet .frow>div{flex:1}'
+    +'.dm-sheet label{display:block;font-size:11px;font-weight:700;color:var(--ink-soft,#4a4353);margin:0 2px 4px;font-family:var(--maru)}'
+    +'.dm-sheet input{width:100%;border:1px solid var(--line-strong,#cbc3b4);border-radius:10px;padding:10px;font-size:14px;background:#fff}'
+    +'.dm-sheet .go{display:block;width:100%;margin-top:4px;background:linear-gradient(180deg,#41508a,#2e3b6a);color:#fff;border:none;border-radius:12px;padding:13px;font-weight:900;font-size:15px;font-family:var(--maru);cursor:pointer}'
+    +'.dm-sheet .cancel{display:block;width:100%;margin-top:8px;background:none;border:none;color:var(--muted,#8a8296);font-size:12.5px;cursor:pointer}'
+    +'.dm-empty{align-self:center;text-align:center;color:var(--muted,#8a8296);font-size:12px;margin:30px 12px;line-height:1.8}';
+  document.head.appendChild(st);
+
+  // ---- DOM ----
+  var chip=document.createElement('button'); chip.className='dm-chip';
+  chip.innerHTML='<span>メッセージ</span><span class="dot" id="dmDot"></span>';
+  document.body.appendChild(chip);
+
+  var wrap=document.createElement('div'); wrap.className='dm-wrap';
+  document.body.appendChild(wrap);
+
+  var cur=null;          // {roomId, me, otherUid, pname}
+  var unsub=null;
+  var replyTimer=null;
+
+  function meUid(){ var u=window.NicoAuth.current(); return u?(u.uid||u.email||'me'):null; }
+
+  function open(){
+    var u=window.NicoAuth.current(); if(!u){ window.NicoAuth.requireAuth(function(){ open(); }); return; }
+    var me=u.uid||u.email||'me';
+    var pname=partnerName();
+    var roomId=ChatBackend.roomId(me, DEMO_PARTNER_UID);
+    cur={roomId:roomId, me:me, otherUid:DEMO_PARTNER_UID, pname:pname};
+    seedIfEmpty(roomId, pname);
+    wrap.classList.add('on'); document.documentElement.style.overflow='hidden';
+    build(); scrollBottom();
+    ChatBackend.markRead(roomId, me);
+    if(unsub)unsub(); unsub=ChatBackend.subscribe(roomId, function(){ build(); scrollBottom(); });
+    refreshChip();
+  }
+  function close(){ wrap.classList.remove('on'); document.documentElement.style.overflow=''; if(unsub){unsub();unsub=null;} refreshChip(); }
+
+  function seedIfEmpty(roomId, pname){
+    if(ChatBackend.list(roomId).length) return;
+    var base=Date.now()-3600000;
+    ChatBackend.send(roomId,{from:cur.otherUid, text:'ニコカレ見たよ！相性いい日あったね😊', ts:base});
+    ChatBackend.send(roomId,{from:cur.otherUid, text:'この日どうかな？空けとくね', ts:base+40000});
+  }
+
+  function build(){
+    var msgs=ChatBackend.list(cur.roomId);
+    var plan=loadPlan(cur.roomId);
+    var readMap=ChatBackend.readMap(cur.roomId);
+    var ids=msgs.map(function(m){return m.id;});
+    var otherReadIdx=readMap[cur.otherUid]? ids.indexOf(readMap[cur.otherUid]) : -1; // 相手が既読にした位置
+
+    var planHtml=''+
+      '<div class="dm-plan">'
+      +'<span class="pdays">'+(daysLeft(plan.ymd)>=0?'あと'+daysLeft(plan.ymd)+'日':'この日は過ぎました')+'</span>'
+      +'<div class="pt">ふたりの予定</div>'
+      +'<div class="pm">'+esc(plan.title||'ふたりの予定')+'</div>'
+      +'<div class="pd"><span class="mk">'+esc(plan.mark||'')+'</span> '+fmtJ(plan.ymd)+' '+esc(plan.time||'')+'</div>'
+      +'<a class="pcta" href="'+gcalHref(plan,cur.pname)+'" target="_blank" rel="noopener">カレンダーに追加</a>'
+      +'</div>';
+
+    var list='';
+    if(!msgs.length){ list='<div class="dm-empty">メッセージはまだありません。<br>下のボタンから送ってみましょう。</div>'; }
+    var lastDay='';
+    for(var i=0;i<msgs.length;i++){
+      var m=msgs[i], mine=(m.from===cur.me);
+      var dobj=new Date(m.ts), dkey=dobj.getFullYear()+'/'+(dobj.getMonth()+1)+'/'+dobj.getDate();
+      if(dkey!==lastDay){ lastDay=dkey; list+='<div class="dm-day">'+(dobj.getMonth()+1)+'月'+dobj.getDate()+'日</div>'; }
+      var isLastMine = mine && !msgs.slice(i+1).some(function(x){return x.from===cur.me;});
+      var readTag = (isLastMine && otherReadIdx>=i) ? '<span class="rd">既読</span>' : '';
+      var bubble;
+      if(m.kind==='plan' && m.plan){
+        bubble='<div class="dm-pcard"><div class="h">📅 ふたりの予定を提案</div><div class="c">'
+          +'<div class="mm">'+esc(m.plan.title||'いい日に会おう')+'</div>'
+          +'<div class="dd"><span class="mk">'+esc(m.plan.mark||'')+'</span> '+fmtJ(m.plan.ymd)+' '+esc(m.plan.time||'')+'</div>'
+          +'<a href="'+gcalHref(m.plan,cur.pname)+'" target="_blank" rel="noopener">カレンダーに追加</a>'
+          +'</div></div>';
+      } else {
+        bubble='<div class="dm-b">'+esc(m.text||'').replace(/\n/g,'<br>')+'</div>';
+      }
+      list+='<div class="dm-row '+(mine?'me':'them')+'">'+bubble
+        +'<div class="dm-meta">'+readTag+'<span>'+fmtClock(m.ts)+'</span></div></div>';
+    }
+
+    wrap.innerHTML=''
+      +'<div class="dm-app">'
+      +'<div class="dm-head">'
+        +'<button class="dm-back" id="dmBack" aria-label="閉じる">‹</button>'
+        +'<div class="dm-av">'+esc(cur.pname.slice(0,1))+'</div>'
+        +'<div><div class="dm-nm">'+esc(cur.pname)+'さん</div><div class="dm-sub">ニコカレでつながっています</div></div>'
+        +'<span class="dm-demo">デモ</span>'
+      +'</div>'
+      +planHtml
+      +'<div class="dm-body" id="dmBody">'+list+'</div>'
+      +'<div class="dm-chips" id="dmChips">'
+        +'<button data-q="OK！行こう😊">OK！行こう😊</button>'
+        +'<button data-q="楽しみ！">楽しみ！</button>'
+        +'<button data-q="どこにする？">どこにする？</button>'
+        +'<button data-q="何時にする？">何時にする？</button>'
+        +'<button data-q="今向かってるよ">今向かってる</button>'
+      +'</div>'
+      +'<div class="dm-comp">'
+        +'<button class="dm-plus" id="dmPlus" aria-label="いい日を提案">＋</button>'
+        +'<textarea class="dm-in" id="dmIn" rows="1" placeholder="メッセージを入力"></textarea>'
+        +'<button class="dm-send" id="dmSend" aria-label="送信">➤</button>'
+      +'</div>'
+      +'<div class="dm-sheet" id="dmSheet">'
+        +'<h4>ふたりの予定を提案</h4>'
+        +'<p>相性のいい日を選んで送ると、相手のカレンダーにも追加できます。</p>'
+        +'<div class="frow"><div><label>日付</label><input type="date" id="dmDate" value="'+isoOf(loadPlan(cur.roomId).ymd)+'"></div><div><label>時刻</label><input type="time" id="dmTime" value="'+esc(loadPlan(cur.roomId).time||'19:00')+'"></div></div>'
+        +'<label>ひとこと（任意）</label><input type="text" id="dmTitle" placeholder="例）渋谷でごはん" value="">'
+        +'<button class="go" id="dmPropose">この予定を送る</button>'
+        +'<button class="cancel" id="dmSheetX">閉じる</button>'
+      +'</div>'
+      +'</div>';
+    wire();
+  }
+
+  function isoOf(ymd){ return ymd.slice(0,4)+'-'+ymd.slice(4,6)+'-'+ymd.slice(6,8); }
+  function q(id){ return document.getElementById(id); }
+  function scrollBottom(){ var b=q('dmBody'); if(b)b.scrollTop=b.scrollHeight; }
+
+  function sendText(t){
+    t=(t||'').trim(); if(!t) return;
+    ChatBackend.send(cur.roomId,{from:cur.me, text:t});
+    scrollBottom();
+    scheduleDemoReply();
+  }
+
+  // デモ用: 相手役の簡易自動応答（本番Firestoreでは不要。実DMは相手端末から届く）
+  function scheduleDemoReply(){
+    if(replyTimer) clearTimeout(replyTimer);
+    replyTimer=setTimeout(function(){
+      if(!cur) return;
+      // 自分の直近を「既読」に → 相手からの返信
+      var pool=['了解！','いいね😊','ありがとう！','じゃあその日で！','楽しみにしてるね','うん、そうしよう'];
+      ChatBackend.send(cur.roomId,{from:cur.otherUid, text:pool[Math.floor(Math.random()*pool.length)]});
+      ChatBackend.markRead(cur.roomId, cur.otherUid);
+      scrollBottom();
+    }, 1100+Math.random()*700);
+  }
+
+  function wire(){
+    var back=q('dmBack'); if(back)back.onclick=close;
+    var input=q('dmIn'), send=q('dmSend');
+    function sync(){ if(send)send.classList.toggle('on', !!(input&&input.value.trim())); if(input){ input.style.height='auto'; input.style.height=Math.min(input.scrollHeight,96)+'px'; } }
+    if(input){ input.oninput=sync; input.onkeydown=function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendText(input.value); } }; }
+    if(send)send.onclick=function(){ if(input){ sendText(input.value); } };
+    document.querySelectorAll('#dmChips button').forEach(function(b){ b.onclick=function(){ sendText(b.getAttribute('data-q')); }; });
+    var plus=q('dmPlus'), sheet=q('dmSheet');
+    if(plus)plus.onclick=function(){ if(sheet)sheet.classList.add('on'); };
+    var sx=q('dmSheetX'); if(sx)sx.onclick=function(){ if(sheet)sheet.classList.remove('on'); };
+    var prop=q('dmPropose'); if(prop)prop.onclick=function(){
+      var dv=(q('dmDate')||{}).value||'', tv=(q('dmTime')||{}).value||'19:00', tt=((q('dmTitle')||{}).value||'').trim();
+      if(!dv){ alert('日付を選んでください。'); return; }
+      var ymd=dv.replace(/-/g,'');
+      var plan={ymd:ymd, time:tv, mark:'◎', title:tt||'いい日に会おう'};
+      savePlan(cur.roomId, plan);
+      ChatBackend.send(cur.roomId,{from:cur.me, kind:'plan', plan:plan, text:'ふたりの予定を提案'});
+      if(sheet)sheet.classList.remove('on');
+      scrollBottom(); scheduleDemoReply();
+    };
+    // 開いている間は自分を既読に（相手の未読数をリセット）
+    ChatBackend.markRead(cur.roomId, cur.me);
+  }
+
+  // ---- 入口チップ（ログイン時のみ表示。未読バッジ付き） ----
+  function unreadCount(){
+    var me=meUid(); if(!me) return 0;
+    var roomId=ChatBackend.roomId(me, DEMO_PARTNER_UID);
+    var msgs=ChatBackend.list(roomId); if(!msgs.length) return 0;
+    var read=ChatBackend.readMap(roomId)[me];
+    if(wrap.classList.contains('on')) return 0;
+    var idx=read? msgs.map(function(m){return m.id;}).indexOf(read):-1;
+    var n=0; for(var i=idx+1;i<msgs.length;i++){ if(msgs[i].from!==me)n++; }
+    return n;
+  }
+  function refreshChip(){
+    var u=window.NicoAuth.current();
+    var show=!!(u&&u.emailVerified&&u.profile) && !wrap.classList.contains('on');
+    chip.style.display=show?'inline-flex':'none';
+    var n=unreadCount(), dot=q('dmDot');
+    if(dot){ dot.textContent=n>9?'9+':n; dot.classList.toggle('on', n>0); }
+  }
+  chip.onclick=open;
+  window.NicoAuth.onChange(function(){ refreshChip(); });
+  // 別タブでの受信でバッジ更新
+  window.addEventListener('storage',function(ev){ if(ev.key&&ev.key.indexOf('dc_dm_')===0) refreshChip(); });
+  refreshChip();
+
+  window.NicoChat={ open:open, close:close, ENABLED:true };
 })();
 </script>
 </body>
