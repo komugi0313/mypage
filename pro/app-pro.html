@@ -114,6 +114,12 @@
 
   /* 命式テーブル */
   .mbox{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+  /* 命式表＋吉凶星はモック①の暖色（このブロック内だけ・アプリ基調の配色は変えない） */
+  .mbox{--th:#F1ECE0;--gan:#FBF7EE;--line:#E7DCC4;--line2:#D8CDB4;background:#fff}
+  .mbox .mtable th,.mbox .mtable td{border-color:#D8CDB4}
+  .mbox .md-toggle{background:#FBF9F4}
+  .mbox .mkichi{background:#FBF7EE}
+  .mbox .mkchip{background:#F4EFE6}
   .mwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .mbox.md-collapsed .md-detail{display:none}
   .md-toggle{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin:0;padding:11px;border:0;border-top:1px solid var(--line);background:#FBFAF7;font-family:inherit;font-size:14px;font-weight:900;color:var(--ink2);cursor:pointer}
@@ -2153,21 +2159,24 @@ function meishiHTML(c){
   });
   if(c.timeUnknown)cells.push({label:'時柱',sub:'将来・本心',me:false,isMonth:false,unknown:true,kichi:[]});
   // ①モック準拠：セルは値のみ（説明の小文字は付けない＝コンパクト表示）。日柱の天干通変は（比肩）。
-  const ganCell=(ch,el)=>`<span class="gan" style="color:${ec(el)}">${ch}</span>`;
+  // 命式表の五行カラーはモック①の配色（金＝ゴールド等）。ここだけの局所パレット（他セクションには影響させない）。
+  const MEL={木:'#2e7d32',火:'#c0392b',土:'#a9791c',金:'#b8860b',水:'#2a6fd0'};
+  const mc=el=>MEL[el]||'var(--ink)';
+  const ganCell=(ch,el)=>`<span class="gan" style="color:${mc(el)}">${ch}</span>`;
   const tsCell=(t,isDay)=>`<span class="ts">${isDay?'（比肩）':(t||'—')}</span>`;
   const tsBranchCell=cc=>`<span class="ts">${cc.tsBranch||'—'}</span>`;
   const terrCell=cc=>`<span class="ts">${cc.terr||'—'}</span>`;
-  const zone=h=>`<span class="hs" style="color:${ec(STEM_EL[h.stem])}">${h.stem}</span>${h.ling?'<span class="gen">元</span>':''}<span class="zts">${h.tenStar}</span>`;
+  const zone=h=>`<span class="hs" style="color:${mc(STEM_EL[h.stem])}">${h.stem}</span>${h.ling?'<span class="gen">元</span>':''}<span class="zts">${h.tenStar}</span>`;
   // セルは蔵干の「干（＋元）」だけ。通変星は下の「地支通変」行と重複するため表示しない。流派の切替は表の下のパネルに集約。
   const zouCell=cc=>{const hs=cc.zou,label=cc.label;
     const cur=repOf(hs,label),ov=zouOverride[label]!=null;
-    return `<span class="zou"><span class="hs" style="color:${ec(STEM_EL[cur.stem])}">${cur.stem}</span>${ov?'<span class="zpicked" title="流派選択で切替中">選</span>':''}</span>`;};
+    return `<span class="zou"><span class="hs" style="color:${mc(STEM_EL[cur.stem])}">${cur.stem}</span>${ov?'<span class="zpicked" title="流派選択で切替中">選</span>':''}</span>`;};
   // 表の下の「蔵干を切り替える」パネル（>1蔵干の柱だけ）
   const zouPanel=(()=>{
     const pil=cells.filter(cc=>!cc.unknown&&cc.zou&&cc.zou.length>1);
     if(!pil.length)return '';
     const block=cc=>{const cur=repOf(cc.zou,cc.label),curIdx=cc.zou.indexOf(cur),ov=zouOverride[cc.label]!=null;
-      const rows=cc.zou.map((h,idx)=>`<span class="hspick${idx===curIdx?' on':''}" onclick="selectZou('${cc.label}',${idx})"><span class="hs" style="color:${ec(STEM_EL[h.stem])}">${h.stem}</span>${h.ling?'<span class="gen">元</span>':''}<span class="zts">${h.tenStar}</span><span class="zrole">${h.role}</span>${idx===curIdx?'<span class="zsel">選択中</span>':''}</span>`).join('');
+      const rows=cc.zou.map((h,idx)=>`<span class="hspick${idx===curIdx?' on':''}" onclick="selectZou('${cc.label}',${idx})"><span class="hs" style="color:${mc(STEM_EL[h.stem])}">${h.stem}</span>${h.ling?'<span class="gen">元</span>':''}<span class="zts">${h.tenStar}</span><span class="zrole">${h.role}</span>${idx===curIdx?'<span class="zsel">選択中</span>':''}</span>`).join('');
       const reset=ov?`<a class="zreset" onclick="selectZou('${cc.label}',-1)">司令（元）に戻す</a>`:'';
       return `<div class="zrow"><div class="zrow-h">${cc.label}（${cc.stem}${cc.branch}）</div>${rows}${reset}</div>`;};
     return `<details class="adv" style="margin-top:10px"><summary>蔵干を切り替える（他流派に対応・上級者向け）</summary>
