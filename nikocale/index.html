@@ -3651,7 +3651,12 @@ function pickFocus(interests){
   }
   function calRowHtml(){
     var couple=(state.mode==='couple');
-    return (couple?'<div class="dm-cta"><div class="dm-cta-x"><div class="dm-cta-t">💬 お相手とメッセージ</div><div class="dm-cta-s">この日の相性を共有して、メッセージでやりとり＆お誘い。</div></div><button type="button" class="dm-cta-b" id="dmCtaBtn">メッセージを開く</button></div>':'')
+    // A案：つながる前（未ログイン）は「まず誘う」／つながっている（ログイン済み）人だけ「メッセージ」を出す
+    var _connected=false; try{ var _u=window.NicoAuth&&window.NicoAuth.current&&window.NicoAuth.current(); _connected=!!(_u&&_u.emailVerified&&_u.profile); }catch(e){}
+    var dmcta = !couple ? '' : (_connected
+      ? '<div class="dm-cta"><div class="dm-cta-x"><div class="dm-cta-t">💬 お相手とメッセージ</div><div class="dm-cta-s">この日の相性を共有して、メッセージでやりとり＆お誘い。</div></div><button type="button" class="dm-cta-b" id="dmCtaBtn">メッセージを開く</button></div>'
+      : '<div class="dm-cta"><div class="dm-cta-x"><div class="dm-cta-t">💌 お相手を誘って、二人でつながる</div><div class="dm-cta-s">この日の相性とお誘いをLINEで送ろう。お相手がつながると、ここでメッセージのやりとりができます。</div></div><button type="button" class="dm-cta-b" id="dmInviteBtn">お相手を誘う</button></div>');
+    return dmcta
       +'<div class="calbox">'
       +'<div class="cal-h">この日を予定にする</div>'
       +'<p class="cal-sub">'+(couple?'内容と時刻を決めて、お相手を誘えます。自分のカレンダーにも登録できます。':'内容と時刻を決めて、お使いのスマホのカレンダーに登録できます。')+'</p>'
@@ -3694,6 +3699,7 @@ function pickFocus(interests){
     var sd=$('shareDay'); if(sd)sd.onclick=function(){shareDay(title,details);};
     var ib=$('inviteBtn'); if(ib)ib.onclick=function(){ inviteShare(d); };   // LINEでお相手を誘う
     var dc=$('dmCtaBtn'); if(dc)dc.onclick=function(){ if(window.NicoAuth&&window.NicoAuth.requireAuth){ window.NicoAuth.requireAuth(function(){ if(window.NicoChat)window.NicoChat.open(); }); } else if(window.NicoChat){ window.NicoChat.open(); } };
+    var dci=$('dmInviteBtn'); if(dci)dci.onclick=function(){ inviteShare(d); };   // つながる前：まずLINEで誘う（この結果を送る）
     var sws=document.querySelectorAll('.it-sw'); if(sws.length){ var cur=inviteTheme();   // お誘いの色を選ぶ
       sws.forEach(function(s){ s.setAttribute('aria-pressed', s.getAttribute('data-th')===cur?'true':'false');
         s.onclick=function(){ state.inviteTheme=s.getAttribute('data-th'); try{localStorage.setItem('dc_invtheme',state.inviteTheme);}catch(e){} sws.forEach(function(o){o.setAttribute('aria-pressed',o===s?'true':'false');}); }; }); }
