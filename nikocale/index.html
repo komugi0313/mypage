@@ -4175,6 +4175,8 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   var state={screen:'register', email:''};
   function open(s){ state.screen=s||'register'; modal.hidden=false; render(); }
   function close(){ modal.hidden=true; }
+  var pendingCb=null;
+  function finishAuth(){ close(); var c=pendingCb; pendingCb=null; if(c){ try{c();}catch(e){} } }
 
   function ageLabel(a){ return a||'—'; }
   function render(){
@@ -4189,6 +4191,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
         +'<div class="au-f"><label>パスワード</label><div class="pw"><input id="auPass" type="password" autocomplete="new-password" placeholder="8文字以上（英字と数字がおすすめ）"><button type="button" class="eye" data-eye="auPass">表示</button></div></div>'
         +'<div class="au-err" id="auErr"></div>'
         +'<button class="au-primary" id="auDoReg">はじめる</button>'
+        +'<button class="au-sec" id="auDemo" style="margin-top:8px">🔎 デモをすぐ見る（登録なしでDMへ）</button>'
         +'<div class="au-note">ご登録のメールに<b>確認メール</b>を送ります（本人確認）。<br>登録すると<a data-nav="terms">利用規約</a>・<a data-nav="privacy">プライバシー</a>に同意したものとみなします。</div>'
         +'<div class="au-foot">すでにアカウントをお持ちですか？ <a data-go="login">ログイン</a></div>';
     } else if(s==='verify'){
@@ -4262,6 +4265,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       function chkTypo(){ var f=typoFix(em.value); tw.innerHTML=f?'<div class="au-typo">もしかして <b>'+esc(f)+'</b> ？ タップで修正</div>':''; var t=tw.querySelector('.au-typo'); if(t)t.onclick=function(){ em.value=f; tw.innerHTML=''; }; }
       if(em)em.oninput=function(){ state.email=em.value; chkTypo(); }; chkTypo();
       var b=el('auDoReg'); if(b)b.onclick=function(){ var r=Auth.register(em.value, (el('auPass')||{}).value||''); if(r.error){ el('auErr').textContent=r.error; } else { state.email=em.value.trim().toLowerCase(); open('verify'); } };
+      var dmo=el('auDemo'); if(dmo)dmo.onclick=function(){ var de='demo@nicocale.app',pw='demo1234'; var r=Auth.register(de,pw); if(r&&r.error){ Auth.login(de,pw,true); } try{ Auth.markVerified(); Auth.saveProfile({sex:'x',age:''}); }catch(e){} pendingCb=null; close(); if(window.NicoChat)window.NicoChat.open(); };
     } else if(s==='verify'){
       var re=el('auResend'); if(re)re.onclick=function(){ Auth.resend(); re.textContent='再送しました'; setTimeout(function(){re.textContent='確認メールを再送';},1500); };
       var ed=el('auEdit'); if(ed)ed.onclick=function(){ open('editEmail'); };
@@ -4272,9 +4276,9 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       var sex=null,age=null; var u=Auth.current(); if(u&&u.profile){sex=u.profile.sex;age=u.profile.age;}
       modal.querySelectorAll('#auSex button').forEach(function(btn){ btn.onclick=function(){ sex=btn.getAttribute('data-v'); modal.querySelectorAll('#auSex button').forEach(function(o){o.classList.toggle('on',o===btn);}); }; });
       modal.querySelectorAll('#auAge button').forEach(function(btn){ btn.onclick=function(){ age=btn.getAttribute('data-v'); modal.querySelectorAll('#auAge button').forEach(function(o){o.classList.toggle('on',o===btn);}); }; });
-      var b=el('auDoProfile'); if(b)b.onclick=function(){ Auth.saveProfile({sex:sex||'x',age:age||''}); close(); };
+      var b=el('auDoProfile'); if(b)b.onclick=function(){ Auth.saveProfile({sex:sex||'x',age:age||''}); finishAuth(); };
     } else if(s==='login'){
-      var b=el('auDoLogin'); if(b)b.onclick=function(){ var r=Auth.login((el('auLEmail')||{}).value||'', (el('auLPass')||{}).value||'', (el('auRemember')||{}).checked); if(r.error){ el('auErr').textContent=r.error; } else { var u=Auth.current(); if(u&&!u.emailVerified) open('verify'); else if(u&&!u.profile) open('profile'); else close(); } };
+      var b=el('auDoLogin'); if(b)b.onclick=function(){ var r=Auth.login((el('auLEmail')||{}).value||'', (el('auLPass')||{}).value||'', (el('auRemember')||{}).checked); if(r.error){ el('auErr').textContent=r.error; } else { var u=Auth.current(); if(u&&!u.emailVerified) open('verify'); else if(u&&!u.profile) open('profile'); else finishAuth(); } };
       var f=el('auForgot'); if(f)f.onclick=function(){ alert('（デモ）パスワード再設定メールを送ります。'); };
       var le=el('auLEmail'); if(le)le.oninput=function(){ state.email=le.value; };
     } else if(s==='account'){
@@ -4320,7 +4324,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   })();
 
   /* 将来のゲート用に公開：requireAuth(cb) を各機能から呼ぶ */
-  window.NicoAuth={ current:Auth.current, open:open, onChange:Auth.onChange, requireAuth:function(cb){ var u=Auth.current(); if(u&&u.emailVerified&&u.profile){ cb&&cb(u); } else { open(u?(u.emailVerified?'profile':'verify'):'register'); } } };
+  window.NicoAuth={ current:Auth.current, open:open, onChange:Auth.onChange, requireAuth:function(cb){ var u=Auth.current(); if(u&&u.emailVerified&&u.profile){ cb&&cb(u); } else { pendingCb=cb||null; open(u?(u.emailVerified?'profile':'verify'):'register'); } } };
 })();
 </script>
 
