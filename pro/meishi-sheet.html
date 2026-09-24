@@ -394,6 +394,13 @@
   .yk-ntag{ font-size:11px; color:var(--ink2); }
   .yk-ntag b{ color:var(--ink); }
   .yk-nmuted{ color:#a79f8c; }
+  /* 会局の「日干にとっての十神・働き」＋吉凶（身強弱指定時） */
+  .yk-kai-role{ display:block; font-size:9px; margin-top:1px; color:var(--ink2); }
+  .yk-kai-role.yk-good{ color:#1f7a44; font-weight:700; }
+  .yk-kai-role.yk-warn{ color:#b23b2e; font-weight:700; }
+  .yk-ntag .yk-kai-role{ display:inline; font-size:10px; }
+  .yk-sel{ font-family:inherit; font-size:11px; padding:1px 4px; border:1px solid var(--rule2); border-radius:5px; background:#fff; color:var(--ink); }
+  .yk-hint{ font-size:9.5px; color:#a79f8c; margin-left:8px; }
   .yk-tbl .kanchar.el-moku{color:#2e7d32}.yk-tbl .kanchar.el-ka{color:#c0392b}.yk-tbl .kanchar.el-do{color:#a9791c}.yk-tbl .kanchar.el-kin{color:#b8860b}.yk-tbl .kanchar.el-sui{color:#2a6fd0}
   .sheet-yoko .footline{ margin-top:auto; }
   .rd-sec{ break-inside:avoid; -webkit-column-break-inside:avoid; page-break-inside:avoid; margin:0 0 16px; }
@@ -3592,6 +3599,24 @@ window.KANSHI60_DETAIL={
   // 会局（三合・方合・半会・半方）を、与えられた地支の集合から検出。標準ルール（流派共通の会局表）。
   var _YSANGO=[['申','子','辰','水'],['亥','卯','未','木'],['寅','午','戌','火'],['巳','酉','丑','金']];
   var _YHOUGO=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','戌','金'],['亥','子','丑','水']];
+  // 会局の五行が日干にとって何か（十神＝生剋の関係）。※常に正しい＝身強弱に依存しない部分。
+  var _YKEL={'甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水'};
+  var _YKGEN={'木':'火','火':'土','土':'金','金':'水','水':'木'};      // 日干が生む（食傷）
+  var _YKGENINV={'火':'木','土':'火','金':'土','水':'金','木':'水'};   // 日干を生む（印）
+  var _YKCON={'木':'土','火':'金','土':'水','金':'木','水':'火'};      // 日干が剋す（財）
+  var _YKCONINV={'土':'木','金':'火','水':'土','木':'金','火':'水'};   // 日干を剋す（官殺）
+  // K＝会局の五行、D＝日干の五行 → {star:十神, work:働き, cat:'support'(印比劫)|'drain'(食傷財官殺)}
+  function _ykJuShin(K,D){
+    if(!K||!D) return null;
+    if(K===_YKGENINV[D]) return {star:'印',   work:'応援（あなたを強める）',   cat:'support'};
+    if(K===D)            return {star:'比劫', work:'仲間（後押し・自我を強める）', cat:'support'};
+    if(K===_YKGEN[D])    return {star:'食傷', work:'発散（表現・出す）',        cat:'drain'};
+    if(K===_YKCON[D])    return {star:'財',   work:'獲得（動く・扱う）',        cat:'drain'};
+    if(K===_YKCONINV[D]) return {star:'官殺', work:'試練（律する・重圧）',      cat:'drain'};
+    return null;
+  }
+  // 鑑定者が指定した身強／身弱（吉凶の色分けに使う）。未指定＝色なし（働きのみ表示）。
+  var _ykStrength='';
   function _ykKyoku(branches){
     var u=_ykUniq(branches), res=[];
     _YSANGO.forEach(function(g){ var all=[g[0],g[1],g[2]]; var mem=all.filter(function(x){return u.indexOf(x)>=0;}); if(mem.length>=3)res.push({label:g[3]+'局三合',mem:all.slice(),all:all,kind:'三合'}); else if(mem.length===2)res.push({label:g[3]+'局半会',mem:mem,all:all,kind:'三合'}); });
@@ -3652,6 +3677,16 @@ window.KANSHI60_DETAIL={
       var natalFull=_ykKyoku(natB).filter(function(k){return k.mem.length>=3;});
       var natalFullLabels=natalFull.map(function(k){return k.label;});
       function _kaiMem(k){ return k.mem.map(function(m){ var s=(srcMap[m]||[]); return esc(m)+(s.length?'（'+esc(s.join('・'))+'）':''); }).join('＋'); }
+      // 会局が日干にとって何か（十神＋働き）を出す。身強／身弱が指定されていれば吉凶の色も付ける。
+      var dayEl=_YKEL[(P.day||{}).gan]||'';
+      function _kaiRole(label){
+        var K=String(label||'').charAt(0);
+        var j=_ykJuShin(K,dayEl); if(!j) return '';
+        var jud=''; if(_ykStrength==='身弱') jud=(j.cat==='support')?'good':'warn';
+        else if(_ykStrength==='身強') jud=(j.cat==='support')?'warn':'good';
+        var word=jud==='good'?'追い風':(jud==='warn'?'要注意':'');
+        return '<span class="yk-kai-role'+(jud?(' yk-'+jud):'')+'">'+esc(K)+'局＝あなた（'+esc(dayEl)+'）に'+esc(j.star)+'・'+esc(j.work)+(word?'／<b>'+esc(word)+'</b>':'')+'</span>';
+      }
       // 会局セル（表内）：大運・年運でそろう完全局＋半会・半方（あと1支で成立）を、成立時期と組む地支（由来）つきで出す
       function pKai(br){
         if(!br) return '';
@@ -3668,19 +3703,21 @@ window.KANSHI60_DETAIL={
             var future=_ykUniq(allSrc.filter(function(s){ return s.indexOf('大運')>=0||s.indexOf('年運')>=0; }));
             return '<div class="yk-kai-item"><b class="yk-kai-name">'+esc(k.label)+'</b>'+
                    '<span class="yk-kai-when">'+esc(future.join('・')+'でそろう')+'</span>'+
+                   _kaiRole(k.label)+
                    '<span class="yk-kai-mem">'+comp+'</span></div>';
           }
           // 半会・半方：あと1支で成立
           var miss=(k.all||[]).filter(function(x){ return k.mem.indexOf(x)<0; });
           return '<div class="yk-kai-item"><b class="yk-kai-name yk-kai-half">'+esc(k.label)+'</b>'+
                  '<span class="yk-kai-when">あと「'+esc(miss.join('・'))+'」で'+esc((k.label.charAt(0))+'局'+k.kind)+'成立</span>'+
+                 _kaiRole(k.label)+
                  '<span class="yk-kai-mem">'+comp+'</span></div>';
         }).join('');
       }
       // 枠外：生まれ持った会局（命式内で成立）＋ 空亡
       function _natalSrc(m){ return (srcMap[m]||[]).filter(function(s){ return s.indexOf('大運')<0&&s.indexOf('年運')<0; }); }
       var natalKaiHtml=natalFull.length
-        ? natalFull.map(function(k){ return '<span class="yk-ntag"><b>'+esc(k.label)+'</b>（'+k.all.map(function(m){var s=_natalSrc(m);return esc(m)+(s.length?esc(s.join('・')):'');}).join('＋')+'）</span>'; }).join('　')
+        ? natalFull.map(function(k){ var role=_kaiRole(k.label); return '<span class="yk-ntag"><b>'+esc(k.label)+'</b>（'+k.all.map(function(m){var s=_natalSrc(m);return esc(m)+(s.length?esc(s.join('・')):'');}).join('＋')+'）'+(role?' '+role:'')+'</span>'; }).join('　')
         : '<span class="yk-nmuted">なし</span>';
       var kuboArr=String((_lastResult.tenchusatsu||_lastResult.kuboPair||'')).split('').filter(Boolean);
       var kuboHtml=kuboArr.length? kuboArr.map(esc).join('・') : '<span class="yk-nmuted">—</span>';
@@ -3705,10 +3742,18 @@ window.KANSHI60_DETAIL={
         '<div class="yk-frame">'+
           '<div class="yk-frow"><span class="yk-flabel">生まれ持った会局（命式内で成立）</span>'+natalKaiHtml+'</div>'+
           '<div class="yk-frow"><span class="yk-flabel">空亡</span><span class="yk-ntag">'+kuboHtml+'</span></div>'+
+          '<div class="yk-frow"><span class="yk-flabel">身強・身弱（鑑定者が指定）</span>'+
+            '<select class="yk-sel" onchange="if(window.setYkStrength)window.setYkStrength(this.value)">'+
+              ['','身強','身弱','中和'].map(function(v){ return '<option value="'+v+'"'+(v===_ykStrength?' selected':'')+'>'+(v===''?'未指定（吉凶の色なし）':v)+'</option>'; }).join('')+
+            '</select>'+
+            '<span class="yk-hint">参考（自動判定）：'+esc(_lastResult.shugoStrength||'—')+'　※指定すると会局に「追い風／要注意」の色が付きます</span>'+
+          '</div>'+
         '</div>'+
         '<p class="footline" style="text-align:center;color:#9a927f;font-size:11px;margin-top:auto">四柱推命 命式表 ・ '+esc(school)+'　鑑定日：'+esc(kdate)+'　<span style="font-size:9.5px">※「メモ」は手書き欄／表内の会局は今の大運・年運でそろう完全局と半会・半方（あと1支で成立）を表示／生まれ持った会局と空亡は枠外に記載／年運の干支は西暦から算出</span></p>';
     }catch(e){ console.error('buildYokoSheet failed', e); }
   }
+  // 鑑定者が身強／身弱を指定 → 横型を再描画して会局の吉凶色を反映
+  window.setYkStrength=function(v){ _ykStrength=(v==='身強'||v==='身弱'||v==='中和')?v:''; if(typeof buildYokoSheet==='function') buildYokoSheet(); };
   function setMeishikiLayout(t){
     _meishikiLayout=(t==='yoko')?'yoko':'std';
     var s=document.getElementById('mtStd'), y=document.getElementById('mtYoko');
