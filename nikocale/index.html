@@ -1111,6 +1111,8 @@ select{
 .pm .a,.pm .b{font-weight:800;padding:0}
 .pm .a{color:var(--accent-2)}
 .pm .b{color:var(--warn)}
+.ab-tag{text-align:left;font-size:12px;color:var(--ink-soft);font-weight:600;margin:4px 2px 6px;font-family:var(--maru),sans-serif}
+.ab-tag .abkey{font-weight:600}
 .savehint{margin-top:6px;opacity:.72;line-height:1.55}
 .help-bad .gl-lead{margin:0 0 10px;padding:10px 12px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line-strong);font-size:13px;line-height:1.75}
 .help-bad .gl{margin:0}
@@ -1475,12 +1477,6 @@ select{
   </div>
 
   <div id="out" style="display:none">
-    <div class="summary" id="summary"></div>
-    <div class="mo-nav">
-      <button id="prevM" aria-label="前の月">‹</button>
-      <div class="mo-t" id="moT"></div>
-      <button id="nextM" aria-label="次の月">›</button>
-    </div>
     <div class="pp-quick" id="ppResult">
       <span class="pql"><span class="pql-t">目的を選ぶ</span>タップすると下のカレンダーの相性が切り替わります</span>
       <div class="pp-chips">
@@ -1494,13 +1490,18 @@ select{
       <span class="ppfade ppfade-r" aria-hidden="true">›</span>
     </div>
     <div class="modehead" id="modeHead"></div>
-    <div class="legend" id="legend"></div>
-    <div class="cal-month" id="calMonth" aria-hidden="true"></div>
+    <div class="mo-nav">
+      <button id="prevM" aria-label="前の月">‹</button>
+      <div class="mo-t" id="moT"></div>
+      <button id="nextM" aria-label="次の月">›</button>
+    </div>
     <div class="cal-flow" id="calFlow" aria-hidden="true"></div>
     <div class="totoday-wrap"><button type="button" class="to-today" id="toToday" hidden>↩ 今月・今日へ戻る</button></div>
     <div class="cal-tip" id="calTip">日付をタップ → その日の“なぜ？”が開きます</div>
+    <div class="ab-tag" id="abTag" aria-hidden="true"></div>
     <div class="grid" id="wdhead"></div>
     <div class="grid" id="cal"></div>
+    <div class="summary" id="summary"></div>
     <details class="help-bad" id="helpBad">
       <summary>❓ <span class="mk-bad">「×避けたい」</span><span class="mk-warn">「△注意」</span>の日に会うことになったら？</summary>
       <div class="hb-body">
@@ -1516,6 +1517,7 @@ select{
         <div class="hb-end">要するに <b>「良くない日＝気をつけて、やわらかく過ごす日」</b>。それ以上でも以下でもありません。どうしても外せない大事な予定のときだけ、近くの◎・⭐の日にずらすのがコツです。</div>
       </div>
     </details>
+    <div class="legend" id="legend"></div>
     <details class="help-bad" id="glossary">
       <summary>📖 ことばの意味（かんたん用語ガイド）</summary>
       <div class="hb-body">
@@ -3038,7 +3040,7 @@ function pickFocus(interests){
     var end=ch.scrollWidth-ch.clientWidth; pr.classList.toggle('can-l', ch.scrollLeft>3); pr.classList.toggle('can-r', (end-ch.scrollLeft)>3); }
   (function(){ var pr=$('ppResult'); if(pr){ var ch=pr.querySelector('.pp-chips'); if(ch)ch.addEventListener('scroll',updatePpFade,{passive:true}); } window.addEventListener('resize',function(){setTimeout(updatePpFade,0);}); })();
   function pulseResults(){ var mh=$('modeHead'); if(!mh)return; mh.classList.remove('flash'); void mh.offsetWidth; mh.classList.add('flash'); }
-  function scrollResultsIfNeeded(){ var mh=$('modeHead'); if(!mh)return; var r=mh.getBoundingClientRect(); if(r.top<8||r.top>window.innerHeight*0.6){ $('summary').scrollIntoView({behavior:'smooth',block:'start'}); } }
+  function scrollResultsIfNeeded(){ var mh=$('modeHead'); if(!mh)return; var r=mh.getBoundingClientRect(); if(r.top<8||r.top>window.innerHeight*0.6){ (document.querySelector('.mo-nav')||$('modeHead')||$('summary')).scrollIntoView({behavior:'smooth',block:'start'}); } }
   function setPurpose(pp, opt){ opt=opt||{}; state.pp=pp;
     document.querySelectorAll('[data-pp]').forEach(function(o){o.setAttribute('aria-pressed', o.getAttribute('data-pp')===pp?'true':'false');});
     if($('out').style.display!=='none'){ state.sel=null; render();
@@ -3185,7 +3187,7 @@ function pickFocus(interests){
     try{ localStorage.setItem('dc_lastPair', JSON.stringify({mode:state.mode, pp:state.pp, a:state.A, b:(state.mode==='couple'?state.B:null)})); }catch(e){}
     $('out').style.display='block'; state.sel=null; render();
     renderFoot();
-    if(!noScroll){ setTimeout(function(){ $('summary').scrollIntoView({behavior:'smooth',block:'start'}); pulseResults(); }, 60); }
+    if(!noScroll){ setTimeout(function(){ (document.querySelector('.mo-nav')||$('modeHead')||$('summary')).scrollIntoView({behavior:'smooth',block:'start'}); pulseResults(); }, 60); }
   }
   function getLastPair(){ try{ return JSON.parse(localStorage.getItem('dc_lastPair')||'null'); }catch(e){ return null; } }
   /* 常連＝保存した二人がいる人。前回の二人を自動表示し、説明・入力を畳む */
@@ -3207,9 +3209,10 @@ function pickFocus(interests){
 
   function render(){
     var Y=state.y,M=state.m; $('moT').textContent=Y+'年 '+M+'月';
-    var _cm=$('calMonth'); if(_cm)_cm.textContent=Y+'年 '+M+'月';
-    var _tt=$('toToday'); if(_tt){ _tt.hidden=(state.y===TODAY.y&&state.m===TODAY.m); _tt.onclick=function(){ state.y=TODAY.y; state.m=TODAY.m; state.sel=TODAY.d; render(); try{detail(TODAY.d);}catch(e){} var c=$('calMonth'); if(c)c.scrollIntoView({behavior:'smooth',block:'start'}); }; }
+    var _tt=$('toToday'); if(_tt){ _tt.hidden=(state.y===TODAY.y&&state.m===TODAY.m); _tt.onclick=function(){ state.y=TODAY.y; state.m=TODAY.m; state.sel=TODAY.d; render(); try{detail(TODAY.d);}catch(e){} var c=document.querySelector('.mo-nav')||$('cal'); if(c)c.scrollIntoView({behavior:'smooth',block:'start'}); }; }
     var solo=(state.mode==='solo');
+    // A＝あなた／B＝お相手 をカレンダー左上に（二人のときだけ）
+    var _ab=$('abTag'); if(_ab){ if(solo){ _ab.style.display='none'; _ab.innerHTML=''; } else { _ab.style.display=''; _ab.innerHTML='<span class="abkey"><span class="a">A</span>＝あなた'+(state.A&&state.A.name?'（'+esc(state.A.name)+'）':'')+'　<span class="b">B</span>＝お相手'+(state.B&&state.B.name?'（'+esc(state.B.name)+'）':'')+'</span>'; } }
     document.querySelectorAll('[data-pp]').forEach(function(o){o.setAttribute('aria-pressed', o.getAttribute('data-pp')===state.pp?'true':'false');});
     if($('ppResult'))$('ppResult').style.display=solo?'none':'';
     if($('helpBad'))$('helpBad').style.display=solo?'none':'';
@@ -3218,7 +3221,7 @@ function pickFocus(interests){
     // legend
     $('legend').innerHTML = solo
       ? '<span><i class="dd sp">💮</i>特別</span><span><i class="dd ok">◎</i>好調</span><span><i class="dd good">〇</i>普通</span><span><i class="dd warn">△</i>休息</span><span>🌷=モテ日</span><span>📝=メモした日</span>'
-      : '<span class="abkey"><span class="a">A</span>＝あなた'+(state.A&&state.A.name?'（'+esc(state.A.name)+'）':'')+'　<span class="b">B</span>＝お相手'+(state.B&&state.B.name?'（'+esc(state.B.name)+'）':'')+'</span><span><i class="dd star">⭐</i>奇跡の相性日</span><span><i class="dd ok">◎</i>特に良い</span><span><i class="dd good">○</i>良い</span><span><i class="dd warn">△</i>注意</span><span><i class="dd bad">×</i>避けたい</span><span><i class="dd" style="background:var(--panel-2);color:var(--muted);font-weight:400">・</i>マーク無し＝ふつうの日</span><span>🌷='+(isRomance()?'魅力・ときめきの日':'個人のモテ日')+'</span><span>📝=メモした日</span><span><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--accent);vertical-align:middle"></i> =記念日</span>';
+      : '<span><i class="dd star">⭐</i>奇跡の相性日</span><span><i class="dd ok">◎</i>特に良い</span><span><i class="dd good">○</i>良い</span><span><i class="dd warn">△</i>注意</span><span><i class="dd bad">×</i>避けたい</span><span><i class="dd" style="background:var(--panel-2);color:var(--muted);font-weight:400">・</i>マーク無し＝ふつうの日</span><span>🌷='+(isRomance()?'魅力・ときめきの日':'個人のモテ日')+'</span><span>📝=メモした日</span><span><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--accent);vertical-align:middle"></i> =記念日</span>';
     var data=monthScan();
     // 今月の巡り（流月・流年）：◎〇△のグレードとは別枠で、月全体のトーンを一言で見せる（案Bの補完）
     (function(){
