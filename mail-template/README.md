@@ -5,6 +5,7 @@
 
 | ファイル | 内容 |
 |---|---|
+| `mail-bg/` | 12か月分の上帯・下帯の画像（24枚）。**`bg-*.jpg` と一緒に `assetBase` の下へアップロードする**（`https://unkiyoho.jp/mail-bg/…`） |
 | `render-daily-mail.js` | `renderDailyMail(r, opts)` → `{ subject, html, text }`。`r` は `generateDaily()` の返り値そのまま |
 | `build-samples.js` | 見本メールを3通生成（`samples/`） |
 | `samples/*.html` | 生成された本物のメールHTML（テスト送信の本文にそのまま使える） |
@@ -40,7 +41,10 @@ send({ to, subject: mail.subject, html: mail.html, text: mail.text });  // text 
 1. **件名**＝`【M/D(曜)】` ＋ `generateDaily().subject`（毎日変わる文面）
    例：`【9/24(木)】あかりさん、今日の運気予報｜今日は「ととのえの日」`
 2. **正は1つ**＝このテンプレート（元は `mail-sample.html`）。`my-tenki-demo.html` はアプリ画面のデモで、メールの見た目・並びの参考にはしない。
-3. **季節の便箋は `mail-sample.html` のとおり**。月（JST）で `THEMES` から色・絵文字を選ぶ。1・2・3・8月は背景画像（`bg-*.jpg`）＋単色フォールバック。
+3. **季節の便箋＝12か月すべて写真の背景**（オーナー指定の `bg-*.jpg`。`mail-sample-free.html` / `my-tenki-demo.html` と同じ組み合わせ）。月（JST）で `THEMES` から選ぶ。
+   - 写真は、上の帯・下の帯（`mail-bg/bg-*-top.jpg` / `-bottom.jpg`）を `<img>` で表示する。どのメールソフトでも出て、ダークモードでも色が変わらない。
+   - 間の左右の細い部分は、写真の背景（対応するメールソフトのみ）＋単色（`bgcolor`）。
+   - 一覧：`client-check/months-12.jpg`
 
 ## セクションの並び（上から）
 

@@ -22,19 +22,22 @@
   'use strict';
 
   /* ── 月替わりの季節テーマ（mail-sample.html の THEMES と同一。値を変えるときは両方そろえる） ── */
+  /* ── 月替わりの季節テーマ：12か月すべて写真の便箋（オーナー指定の bg-*.jpg。mail-sample-free.html / my-tenki-demo.html と同一） ──
+     メールでは写真を「上の帯」「下の帯」（mail-bg/bg-*-top.jpg / -bottom.jpg）として <img> で出し、
+     間の左右は写真の背景（対応ソフトのみ）＋ bgcolor で埋める。 */
   var THEMES = {
     1:{frame1:"#fff7e6",frame2:"#fbedc9",soft:"#fff9ee",accent:"#dcae4a",ink:"#9a7a2c",label:"正月",deco:["🎍","🌅","⛩️","🎌","🎍"],motif:["🎍","🌅","🎌","✨","🌅","🎍"],bgimg:"bg-shogatsu.jpg",bgcolor:"#fdf3dd"},
     2:{frame1:"#f4ecf5",frame2:"#e7d7ee",soft:"#f8f1f9",accent:"#c76a94",ink:"#a24d74",label:"バレンタイン",deco:["❤️","🍫","💝","🎁","❤️"],motif:["🍫","💝","❤️","🎁","🍫","💝"],bgimg:"bg-valentine.jpg",bgcolor:"#fbe4ee"},
     3:{frame1:"#fff0f4",frame2:"#ffdde7",soft:"#fff4f7",accent:"#f0a1b8",ink:"#b0576f",label:"ひな祭り",deco:["🎎","🌸","🌷","🍡","🌸"],motif:["🌸","🎎","🌷","🍡","🌸","🌷"],bgimg:"bg-hina.jpg",bgcolor:"#f7edf3"},
-    4:{frame1:"#ffeaf2",frame2:"#ffd3e3",soft:"#fff2f7",accent:"#f39ab9",ink:"#b25c81",label:"桜",deco:["🌸","🌸","🦋","🌸","🌸"],motif:["🌸","🦋","🌸","🌷","🌸","🦋"]},
-    5:{frame1:"#ecf9ec",frame2:"#d2efd2",soft:"#f1faf1",accent:"#7fc98a",ink:"#4f8a55",label:"新緑・こいのぼり",deco:["🎏","🌿","🍃","🌱","🎏"],motif:["🌿","🎏","🍃","🐝","🌱","🌿"]},
-    6:{frame1:"#f1ebfa",frame2:"#e0d3f2",soft:"#f5f0fc",accent:"#a98ee0",ink:"#7a5aa0",label:"あじさい",deco:["☔","💜","🐌","🌧️","💜"],motif:["💜","☔","🐌","🌧️","🌷","💜"]},
-    7:{frame1:"#e6f5fd",frame2:"#cee9f9",soft:"#eef8fd",accent:"#6fbde6",ink:"#3f83ac",label:"七夕",deco:["🎋","🎐","⭐","💧","🎋"],motif:["🎐","🎋","💧","⭐","🫧","🎐"]},
+    4:{frame1:"#ffeaf2",frame2:"#ffd3e3",soft:"#fff2f7",accent:"#f39ab9",ink:"#b25c81",label:"桜",deco:["🌸","🌸","🦋","🌸","🌸"],motif:["🌸","🦋","🌸","🌷","🌸","🦋"],bgimg:"bg-sakura.jpg",bgcolor:"#e9f4fb"},
+    5:{frame1:"#ecf9ec",frame2:"#d2efd2",soft:"#f1faf1",accent:"#7fc98a",ink:"#4f8a55",label:"新緑",deco:["🎏","🌿","🍃","🌱","🎏"],motif:["🌿","🎏","🍃","🐝","🌱","🌿"],bgimg:"bg-shinryoku.jpg",bgcolor:"#e6f5ea"},
+    6:{frame1:"#f1ebfa",frame2:"#e0d3f2",soft:"#f5f0fc",accent:"#a98ee0",ink:"#7a5aa0",label:"あじさい",deco:["☔","💜","🐌","🌧️","💜"],motif:["💜","☔","🐌","🌧️","🌷","💜"],bgimg:"bg-ajisai.jpg",bgcolor:"#f6f0e4"},
+    7:{frame1:"#e6f5fd",frame2:"#cee9f9",soft:"#eef8fd",accent:"#6fbde6",ink:"#3f83ac",label:"夏まつり",deco:["🎋","🎐","⭐","💧","🎋"],motif:["🎐","🎋","💧","⭐","🫧","🎐"],bgimg:"bg-natsu.jpg",bgcolor:"#16234f"},
     8:{frame1:"#201640",frame2:"#3a2866",soft:"#f3eefc",accent:"#f5c542",ink:"#6a4a9a",label:"花火",deco:["🎇","🎆","✨","🎆","🎇"],motif:["🎆","🎇","✨","🏮","🎆","🎇"],big:true,bgimg:"bg-fw.jpg",bgcolor:"#160e2e"},
-    9:{frame1:"#e8f0f8",frame2:"#d5e4f2",soft:"#eef4fa",accent:"#84acd6",ink:"#4f6f96",label:"お月見",deco:["🌙","🌾","🍇","🐰","🌾"],motif:["🌙","🌾","🍇","🐰","☁️","🌾"]},
-    10:{frame1:"#ffefdf",frame2:"#ffdcc0",soft:"#fff4ea",accent:"#f0912f",ink:"#bb6a2e",label:"ハロウィン",deco:["🎃","👻","🦇","🍬","🕸️"],motif:["🎃","👻","🦇","🍬","🕸️","🎃"]},
-    11:{frame1:"#fdeede",frame2:"#f6dabd",soft:"#fdf3e9",accent:"#dd8a48",ink:"#a05e28",label:"紅葉",deco:["🍁","🍂","🌰","🍄","🍁"],motif:["🍁","🍂","🌰","🍄","🍁","🍂"]},
-    12:{frame1:"#eef5ec",frame2:"#dcecdc",soft:"#f2f8f1",accent:"#d0574a",ink:"#3f7a4e",label:"クリスマス",deco:["🎄","🎅","⛄","🎁","✨"],motif:["🎄","🎁","⛄","🦌","❄️","🎄"]}
+    9:{frame1:"#fdf3dd",frame2:"#f8e6bd",soft:"#fdf6ea",accent:"#e2b04a",ink:"#a5792a",label:"お月見",deco:["🌕","🌾","🍇","🐰","🌾"],motif:["🌕","🌾","🍇","🐰","☁️","🌾"],bgimg:"bg-tsukimi.jpg",bgcolor:"#fdf6e3"},
+    10:{frame1:"#ffefdf",frame2:"#ffdcc0",soft:"#fff4ea",accent:"#f0912f",ink:"#bb6a2e",label:"ハロウィン",deco:["🎃","👻","🦇","🍬","🕸️"],motif:["🎃","👻","🦇","🍬","🕸️","🎃"],bgimg:"bg-halloween.jpg",bgcolor:"#4a2b5c"},
+    11:{frame1:"#fdeede",frame2:"#f6dabd",soft:"#fdf3e9",accent:"#dd8a48",ink:"#a05e28",label:"秋の花",deco:["🍁","🍂","🌰","🍄","🍁"],motif:["🍁","🍂","🌰","🍄","🍁","🍂"],bgimg:"bg-autumn.jpg",bgcolor:"#fdf6ef"},
+    12:{frame1:"#f6ecec",frame2:"#ead6d6",soft:"#f7efef",accent:"#c0392b",ink:"#2f7a48",label:"クリスマス",deco:["🎄","🎅","⛄","🎁","✨"],motif:["🎄","🎁","⛄","🦌","❄️","🎄"],bgimg:"bg-xmas.jpg",bgcolor:"#8a2a26"}
   };
 
   /* ── 「今日の状況(rel)」で縁の見出しを差し替える（my-tenki-demo.html の run() と同一） ── */
@@ -266,16 +269,12 @@
       + '<div style="margin-top:10px;font-size:10px;color:#a8998f;letter-spacing:.08em;">produced by Mizuki Nico</div>'
       + '</div>');
 
-    /* ── 外枠：季節の便箋（背景画像の月は画像＋単色フォールバック、それ以外はグラデーション＋単色フォールバック） ── */
-    var mo = T.motif;
-    var frameBg = T.bgimg
-      ? 'background-color:' + (T.bgcolor || T.frame1) + ';background-image:url(\'' + base + T.bgimg + '\');background-position:center center;background-size:cover;background-repeat:no-repeat;'
-      : 'background:' + T.frame1 + ';';  // 単色（グラデーションはダークモードで反転されず文字が読めなくなるため使わない）
-    var framePad = T.bgimg ? '26px 22px 26px' : '10px 14px 12px';
-    var motifRow = function(a, b, top){
-      if (T.bgimg) return '';
-      return '<tr><td style="padding:' + (top ? '0 4px 6px' : '6px 4px 0') + ';"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'
-        + '<td align="left" style="font-size:22px;line-height:1;">' + a + '</td><td align="right" style="font-size:22px;line-height:1;">' + b + '</td></tr></table></td></tr>';
+    /* ── 外枠：季節の便箋（写真の上帯・下帯は <img>＝どのメールソフトでも表示、ダークモードでも色が変わらない） ── */
+    var BG = T.bgcolor || T.frame1;
+    var stem = (T.bgimg || '').replace(/\.jpg$/, '');
+    var band = function(pos){
+      return '<tr><td style="line-height:0;font-size:0;"><img src="' + base + 'mail-bg/' + stem + '-' + pos + '.jpg" width="440" alt="" style="display:block;width:100%;max-width:440px;height:auto;border:0;'
+        + (pos === 'top' ? 'border-radius:26px 26px 0 0;' : 'border-radius:0 0 26px 26px;') + '"></td></tr>';
     };
     var preheader = strip(r.todayOne || r.weatherMsg || '');
     var html = '<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -285,13 +284,14 @@
       + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f6eee9" style="background:#f6eee9;"><tr><td align="center" style="padding:22px 10px 40px;">'
       + '<!--[if mso]><table role="presentation" width="440" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td><![endif]-->'
       + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:440px;width:100%;border-collapse:separate;font-family:' + SANS + ';color:#4a3f3a;">'
-      + '<tr><td bgcolor="' + (T.bgcolor || T.frame1) + '"' + (T.bgimg ? ' background="' + base + T.bgimg + '"' : '') + ' style="' + frameBg + 'border-radius:26px;padding:' + framePad + ';">'
+      + '<tr><td bgcolor="' + BG + '" style="background-color:' + BG + ';border-radius:26px;padding:0;">'
       + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
-      + motifRow(mo[0], mo[1], true)
-      + '<tr><td bgcolor="#ffffff" style="background:#ffffff;border-radius:20px;padding:18px 17px 18px;border:1px solid #ffffff;">'
+      + band('top')
+      + '<tr><td bgcolor="' + BG + '" background="' + base + T.bgimg + '" style="background-color:' + BG + ';background-image:url(\'' + base + T.bgimg + '\');background-size:100% auto;background-repeat:repeat-y;background-position:center top;padding:0 14px;">'
+      + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#ffffff" style="background:#ffffff;border-radius:20px;padding:18px 17px 18px;">'
       + h.join('')
-      + '</td></tr>'
-      + motifRow(mo[2], mo[3], false)
+      + '</td></tr></table></td></tr>'
+      + band('bottom')
       + '</table></td></tr></table>'
       + '<!--[if mso]></td></tr></table><![endif]-->'
       + '</td></tr></table></body></html>';
