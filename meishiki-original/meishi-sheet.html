@@ -3604,9 +3604,7 @@ window.KANSHI60_DETAIL={
         var data={}; try{ data=JSON.parse(o.t); }catch(e){}
         var txt=''; try{ txt=(data.candidates[0].content.parts||[]).map(function(p){return p.text||'';}).join(''); }catch(e){}
         if(!o.ok || !txt.trim()){
-          var em=(data&&data.error&&data.error.message)||'';
-          aiCardMsg('詳細鑑定を取得できませんでした。','ネット接続をご確認ください。'+(em?'（'+em+'）':'')+' ／「定型文」に切り替えると命式ベースの鑑定書が出ます。');
-          _aiBusy=false; return;
+          _aiBusy=false; aiFallbackToTemplate(); return;   // 圏外・接続不可 → 自動でオフライン鑑定書
         }
         var html=parseAIToHTML(txt);
         if(!html){ aiCardMsg('返答を整形できませんでした。','もう一度お試しください。'); _aiBusy=false; return; }
@@ -3616,9 +3614,14 @@ window.KANSHI60_DETAIL={
         _aiBusy=false;
       })
       .catch(function(){
-        aiCardMsg('サーバーに接続できませんでした。','オフラインか、サーバー未デプロイの可能性があります。「定型文」でも命式ベースの鑑定書が出ます。');
-        _aiBusy=false;
+        _aiBusy=false; aiFallbackToTemplate();   // 圏外・接続不可 → 自動でオフライン鑑定書
       });
+  }
+  // 圏外・接続不可のときは、自動で定型文（オフラインの鑑定書）に切り替えて表示する
+  function aiFallbackToTemplate(){
+    setEngine('template');
+    var h=document.getElementById('engHint');
+    if(h) h.textContent='いまは接続できないため、定型文（オフラインの鑑定書）で表示しています。ネットに繋ぐと「詳細鑑定」に切り替えられます。';
   }
   function setEngine(eng){
     if(eng==='ai' && !navigator.onLine){ updateEngineAvail(); return; }   // オフライン時はAIを選べない（定型文のまま）
@@ -3976,6 +3979,14 @@ window.KANSHI60_DETAIL={
   // 初期表示：自動計算（エンジン連動）。手書きは「記入用」に切替。
   setMode('auto');
   try{ document.getElementById('calcForm').requestSubmit(); }catch(e){}
+
+  // 鑑定文の既定＝オンライン（詳細鑑定）。ネットに繋がっていない時だけ定型文（オフライン鑑定書）で出す。
+  // ※共有リンクの受け手側では自動でAIを呼ばない（固定表示・都度課金を避ける）。
+  (function(){ try{
+    var q=new URLSearchParams(location.search);
+    if(q.get('share')==='1' || q.get('show')) return;
+    if(navigator.onLine){ setTimeout(function(){ try{ setEngine('ai'); }catch(e){} }, 520); }
+  }catch(e){} })();
 
   // 共有リンクで開いた側の表示（?share=1&show=…&lv=…&th=…&sc=…）：操作バーを隠し、選んだものだけ表示
   (function(){ try{
