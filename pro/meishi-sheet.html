@@ -376,8 +376,10 @@
   .yk-tbl tbody tr:last-child td.yk-memo{ border-bottom-color:var(--rule2); }  /* メモ列は一番下の線だけ残す */
   .yk-tbl td.lbl .yk-bd{ font-weight:400; font-size:9.5px; color:var(--ink2); letter-spacing:0; }  /* 柱名の下に生年月日を小さく */
   .yk-tbl tr.yk-day > td{ background:rgba(255,158,188,.16) !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }  /* 日柱の行を薄いピンクのマーカーで強調 */
-  .yk-tbl tr.yk-now > td{ background:rgba(255,206,84,.20) !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }  /* 今の大運・今の年運の行を薄いマーカーで強調 */
-  .yk-tbl tr.yk-now td.yk-memo{ background:rgba(255,206,84,.20) !important; }  /* メモ欄も同じマーカーで塗る */
+  .yk-tbl tr.yk-now-du > td{ background:rgba(102,187,106,.18) !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }  /* 今の大運の行を薄緑マーカーで強調 */
+  .yk-tbl tr.yk-now-du td.yk-memo{ background:rgba(102,187,106,.18) !important; }
+  .yk-tbl tr.yk-now-nen > td{ background:rgba(79,152,240,.16) !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }  /* 今の年運の行を薄青マーカーで強調 */
+  .yk-tbl tr.yk-now-nen td.yk-memo{ background:rgba(79,152,240,.16) !important; }
   .yk-tbl .kanchar.el-moku{color:#2e7d32}.yk-tbl .kanchar.el-ka{color:#c0392b}.yk-tbl .kanchar.el-do{color:#a9791c}.yk-tbl .kanchar.el-kin{color:#b8860b}.yk-tbl .kanchar.el-sui{color:#2a6fd0}
   .sheet-yoko .footline{ margin-top:auto; }
   .rd-sec{ break-inside:avoid; -webkit-column-break-inside:avoid; page-break-inside:avoid; margin:0 0 16px; }
@@ -3605,8 +3607,8 @@ window.KANSHI60_DETAIL={
       // 上段：大運＋年運（列＝天干/地支/年齢/会局/メモ/通変星/十二運/吉凶星）※結果運・テーマ枠は撤去→メモ欄
       var ucols=['天干','地支','年齢','会局','メモ','通変星','十二運','吉凶星'];
       function kaiFor(rowBr){ if(!rowBr)return ''; var ks=_ykKyoku(natB.concat([rowBr])).filter(function(k){return k.mem.length>=3 && k.mem.indexOf(rowBr)>=0;}); return _ykUniq(ks.map(function(k){return k.label;})).join('・'); }
-      function unRow(label, sp, age, kai, tsu, juni, kichiHtml, kichiFree, isNow){
-        return '<tr'+(isNow?' class="yk-now"':'')+'><td class="lbl">'+label+'</td><td class="big">'+sp.g+'</td><td class="big">'+sp.s+'</td><td>'+esc(age)+'</td>'+
+      function unRow(label, sp, age, kai, tsu, juni, kichiHtml, kichiFree, nowClass){
+        return '<tr'+(nowClass?' class="'+nowClass+'"':'')+'><td class="lbl">'+label+'</td><td class="big">'+sp.g+'</td><td class="big">'+sp.s+'</td><td>'+esc(age)+'</td>'+
           '<td>'+esc(kai)+'</td><td class="free yk-memo" contenteditable="true"></td>'+
           '<td>'+esc(tsu)+'</td><td>'+esc(juni)+'</td>'+(kichiFree?'<td class="kichi free" contenteditable="true"></td>':'<td class="kichi">'+(kichiHtml||'')+'</td>')+'</tr>';
       }
@@ -3616,12 +3618,12 @@ window.KANSHI60_DETAIL={
       var pick=(nowIdx>=0)?[duRows[nowIdx],duRows[nowIdx+1]].filter(Boolean):duRows.filter(function(tr){return (tr.querySelectorAll('td')[2]||{}).textContent;}).slice(0,2);
       pick.forEach(function(tr,i){ var td=tr.querySelectorAll('td'); if(td.length<5)return;
         var gz=td[2].textContent.trim(), br=_ykBr(gz), st=gz.charAt(0); if(i===0)curDaiunBr=br;
-        unRows+=unRow('大運', _ykSplit(gz), td[0].textContent.trim().replace(/才/g,'歳'), kaiFor(br), td[3].textContent.trim(), td[4].textContent.trim(), _ykKichi(st,br), false, i===0); });
+        unRows+=unRow('大運', _ykSplit(gz), td[0].textContent.trim().replace(/才/g,'歳'), kaiFor(br), td[3].textContent.trim(), td[4].textContent.trim(), _ykKichi(st,br), false, i===0?'yk-now-du':''); });
       // 年運は直近4年ぶん
       [].slice.call(document.querySelectorAll('#bioBody tr')).filter(function(tr){ var td=tr.querySelectorAll('td'); return td.length>=5 && parseInt((td[0].textContent||'').trim(),10); }).slice(0,4).forEach(function(tr,i){ var td=tr.querySelectorAll('td');
         var y=parseInt(td[0].textContent.trim(),10); var br=_ykBr(_ykGZ(y)); if(i===0)curNenunBr=br;
         var age=(_lastResult.birthYear?(y-_lastResult.birthYear)+'歳':'');
-        unRows+=unRow(y, _ykSplit(_ykGZ(y)), age, kaiFor(br), td[2].textContent.trim(), td[3].textContent.trim(), td[4].innerHTML, false, i===0); });
+        unRows+=unRow(y, _ykSplit(_ykGZ(y)), age, kaiFor(br), td[2].textContent.trim(), td[3].textContent.trim(), td[4].innerHTML, false, i===0?'yk-now-nen':''); });
       // 下段：四柱（会局＝命式＋現在の大運・年運の地支で出現した会局を、参加する柱に記す）
       var setB=natB.concat([curDaiunBr,curNenunBr].filter(Boolean));
       var ksB=_ykKyoku(setB);
