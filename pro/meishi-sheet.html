@@ -42,6 +42,10 @@
     background:var(--paper); border:1px solid var(--rule); border-radius:999px; padding:8px 16px; cursor:pointer; transition:.15s; }
   .bar .act button:hover{ background:var(--shade); border-color:var(--gold-soft); }
   .bar .act .primary{ background:var(--gold); color:#fff; border-color:var(--gold); }
+  /* 端末に依存しない「残し方」＝PDF保存・共有を目立たせる（この端末内保存より優先して案内） */
+  .bar .act #printBtn{ background:var(--gold); color:#fff; border-color:var(--gold); font-weight:800; }
+  .bar .act #shareBtn{ background:#2A6FD0; color:#fff; border-color:#2A6FD0; font-weight:800; }
+  .bar .act #printBtn:hover,.bar .act #shareBtn:hover{ filter:brightness(.96); }
   .bar .act .primary:hover{ background:#96793c; }
 
   .calcbox{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px 12px; }
@@ -773,7 +777,7 @@
         <select id="savedList"><option value="">— 呼び出す —</option></select>
         <button type="button" id="delBtn" title="選択中の保存を削除">削除</button>
       </div>
-      <span class="share-hint">「📄共有」＝LINE・メールにリンク送信／「🖨」＝紙・PDF保存</span>
+      <span class="share-hint"><b style="color:#b06a00">※「💾保存」はこの端末内のみ</b>（別の端末・ブラウザには出ません）。大切な鑑定書は <b>🖨PDF保存</b> か <b>📄共有</b> で残してください。<span style="color:var(--faint)">クラウド保存は準備中です。</span></span>
     </div>
     <!-- 詳細設定：ふだんは閉じている（「⚙詳細設定」で開閉）。使い慣れた人だけ触ればOK -->
     <div class="bar-row adv-row" id="advRow" hidden>
@@ -863,6 +867,12 @@
         <span class="glabel">鑑定日</span>
         <label class="pchk"><input type="checkbox" id="autoDate"> 今日の日付を自動で入れる</label>
         <span class="share-hint">チェックを外すと、命式表・鑑定書の「鑑定日：」欄を自分で入力できます</span>
+      </div>
+      <div class="grp" id="defGrp">
+        <span class="glabel">わたしの既定</span>
+        <button type="button" id="defSave" class="ghost sm" title="いまの出力設定を次回から既定にする">★ この設定を既定にする</button>
+        <button type="button" id="defClear" class="ghost sm" title="既定をやめて初期設定に戻す">既定を消す</button>
+        <span class="share-hint" id="defMsg">紙・版・モチーフ・五行カラー・命式表の型・章の選択を、次に開いたときも同じにします（この端末内）。</span>
       </div>
     </div>
   </div>
@@ -3899,8 +3909,21 @@ window.KANSHI60_DETAIL={
 
   // ===== 保存機能（この端末のブラウザに保存） =====
   var LSKEY='meishiki_saved_v1';
+  /* ============================================================
+     ★エンジニア接続ポイント（クラウド保存：将来のマルチ端末同期）
+     いまは端末内(localStorage)のみ。ログイン中はクラウドにも保存し、
+     別端末でも「保存済み」を呼び出せるようにするための接続点です。
+     CLOUD.STUB=false にして PUSH/PULL を実装すると有効化されます（app側 mypage-put/get と揃える想定）。
+     ・PUSH: POST {email, key:'saved', data:[...records]} → {ok:true}
+     ・PULL: POST {email, key:'saved'} → {data:[...records]}
+     localStorage は引き続きオフライン用のキャッシュとして残します。
+     ============================================================ */
+  var CLOUD={ STUB:true, API:'/.netlify/functions', PUSH:'/mypage-put', PULL:'/mypage-get' };
+  function memberEmail(){ try{ return localStorage.getItem('member_email')||''; }catch(e){ return ''; } }
+  function cloudPush(a){ if(CLOUD.STUB) return; var email=memberEmail(); if(!email) return;
+    try{ fetch(CLOUD.API+CLOUD.PUSH,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,key:'saved',data:a})}); }catch(e){} }
   function loadSaved(){ try{ return JSON.parse(localStorage.getItem(LSKEY)||'[]')||[]; }catch(e){ return []; } }
-  function putSaved(a){ try{ localStorage.setItem(LSKEY, JSON.stringify(a)); return true; }catch(e){ return false; } }
+  function putSaved(a){ try{ localStorage.setItem(LSKEY, JSON.stringify(a)); cloudPush(a); return true; }catch(e){ return false; } }
   function refreshSavedList(){
     var sel=document.getElementById('savedList'); if(!sel) return;
     var a=loadSaved();
@@ -3972,5 +3995,43 @@ window.KANSHI60_DETAIL={
       if(window.dispatchEvent) window.dispatchEvent(new Event('resize')); // 縮尺再計算
     }catch(e){} }, 120);
   }catch(e){} })();
+
+  /* ===== わたしの既定：出力設定（紙・版・モチーフ・五行カラー・命式表の型・章）を記憶して、次回も同じ鑑定書で開く ===== */
+  (function(){
+    var DEFKEY='meishiki_output_default_v1';
+    function pressedId(ids){ for(var i=0;i<ids.length;i++){ var e=document.getElementById(ids[i]); if(e && e.getAttribute('aria-pressed')==='true') return ids[i]; } return ''; }
+    function snapshot(){
+      var d={};
+      ['outCover','outMeishiki','outReading','autoDate'].forEach(function(id){ var e=document.getElementById(id); if(e) d[id]=!!e.checked; });
+      var pm=document.querySelector('.motif[aria-pressed="true"]'); if(pm) d.motif=pm.getAttribute('data-motif');
+      d.color=pressedId(['cOn','cOff']);
+      d.layout=pressedId(['mtStd','mtYoko']);
+      d.level=pressedId(['ovPro','ovEasy','ovBoth']);
+      d.chaps=[].map.call(document.querySelectorAll('.chap'), function(c){ return !!c.checked; });
+      return d;
+    }
+    function load(){ try{ return JSON.parse(localStorage.getItem(DEFKEY)||'null'); }catch(e){ return null; } }
+    function apply(d){
+      if(!d) return;
+      var clk=function(id){ var e=document.getElementById(id); if(e) e.click(); };
+      ['outCover','outMeishiki','outReading','autoDate'].forEach(function(id){ if(id in d){ var e=document.getElementById(id); if(e && e.checked!==d[id]){ e.checked=d[id]; try{ e.dispatchEvent(new Event('change',{bubbles:true})); }catch(_e){} } } });
+      if(d.chaps){ var cs=document.querySelectorAll('.chap'); d.chaps.forEach(function(v,i){ if(cs[i]) cs[i].checked=v; }); }
+      if(d.motif){ var mb=document.querySelector('.motif[data-motif="'+d.motif+'"]'); if(mb) mb.click(); }
+      if(d.color) clk(d.color);
+      if(d.layout) clk(d.layout);
+      if(d.level) clk(d.level);
+      try{ if(window.dispatchEvent) window.dispatchEvent(new Event('resize')); }catch(_e){}
+    }
+    var sMsg=document.getElementById('defMsg');
+    var bSave=document.getElementById('defSave'), bClear=document.getElementById('defClear');
+    if(bSave) bSave.addEventListener('click', function(){ try{ localStorage.setItem(DEFKEY, JSON.stringify(snapshot())); if(sMsg) sMsg.textContent='★ この設定を既定にしました。次に開いたときも同じ鑑定書で表示します。'; }catch(e){ if(sMsg) sMsg.textContent='この環境では保存できません（プライベートモード等）。'; } });
+    if(bClear) bClear.addEventListener('click', function(){ try{ localStorage.removeItem(DEFKEY); }catch(e){} if(sMsg) sMsg.textContent='既定を消しました。次回は初期設定で開きます。'; });
+    (function(){ try{
+      var q=new URLSearchParams(location.search);
+      if(q.get('share')==='1' || q.get('show')) return;   // 共有リンクは各自の指定を優先
+      var d=load(); if(!d) return;
+      setTimeout(function(){ apply(d); if(sMsg) sMsg.textContent='あなたの既定を適用しています（「既定を消す」で初期設定に戻せます）。'; }, 280);
+    }catch(e){} })();
+  })();
 })();
 </script>
