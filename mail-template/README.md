@@ -8,7 +8,8 @@
 |---|---|
 | `mail-bg/` | 12か月分の上帯・下帯の画像（24枚）。**`bg-*.jpg` と一緒に `assetBase` の下へアップロードする**（`https://unkiyoho.jp/mail-bg/…`） |
 | `render-daily-mail.js` | `renderDailyMail(r, opts)` → `{ subject, html, text }`。`r` は `generateDaily()` の返り値そのまま |
-| `build-samples.js` | 見本メールを3通生成（`samples/`） |
+| `build-samples.js` | 見本メールを3通生成（`samples/`）。`sample-0924-rie` は 9/24 に実際に届いたメールと同じ会員・同じ日（本来こう届くべきだったメール） |
+| `check-engine.js` | ある会員・ある日にロジックが出す文章を一覧表示（送ったメールとの照合用） |
 | `samples/*.html` | 生成された本物のメールHTML（テスト送信の本文にそのまま使える） |
 | `samples/*.txt` | 件名＋テキスト版 |
 | `samples/*.jpg` | スマホ幅（390px）での表示イメージ |
