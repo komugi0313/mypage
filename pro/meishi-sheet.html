@@ -833,7 +833,7 @@
       </div>
       <div class="grp" id="dateGrp">
         <span class="glabel">鑑定日</span>
-        <label class="pchk"><input type="checkbox" id="autoDate" checked> 今日の日付を自動で入れる</label>
+        <label class="pchk"><input type="checkbox" id="autoDate"> 今日の日付を自動で入れる</label>
         <span class="share-hint">チェックを外すと、命式表・鑑定書の「鑑定日：」欄を自分で入力できます</span>
       </div>
     </div>
@@ -3623,8 +3623,8 @@ window.KANSHI60_DETAIL={
     if(K===_YKCONINV[D]) return {star:'官殺', work:'試練（律する・重圧）',      cat:'drain'};
     return null;
   }
-  // 鑑定者が指定した身強／身弱（吉凶の色分けに使う）。未指定＝色なし（働きのみ表示）。
-  var _ykStrength='';
+  // 身強／身弱：既定は自動判定、鑑定者が上書きできる。null＝自動判定に従う。
+  var _ykStrengthOverride=null;
   function _ykKyoku(branches){
     var u=_ykUniq(branches), res=[];
     _YSANGO.forEach(function(g){ var all=[g[0],g[1],g[2]]; var mem=all.filter(function(x){return u.indexOf(x)>=0;}); if(mem.length>=3)res.push({label:g[3]+'局三合',mem:all.slice(),all:all,kind:'三合'}); else if(mem.length===2)res.push({label:g[3]+'局半会',mem:mem,all:all,kind:'三合'}); });
@@ -3685,13 +3685,15 @@ window.KANSHI60_DETAIL={
       var natalFull=_ykKyoku(natB).filter(function(k){return k.mem.length>=3;});
       var natalFullLabels=natalFull.map(function(k){return k.label;});
       function _kaiMem(k){ return k.mem.map(function(m){ var s=(srcMap[m]||[]); return esc(m)+(s.length?'（'+esc(s.join('・'))+'）':''); }).join('＋'); }
-      // 会局が日干にとって何か（十神＋働き）を出す。身強／身弱が指定されていれば吉凶の色も付ける。
+      // 会局が日干にとって何か（十神＋働き）を出す。身強／身弱（自動＋鑑定者上書き）に応じて吉凶の色も付ける。
       var dayEl=_YKEL[(P.day||{}).gan]||'';
+      var _autoStrength=(_lastResult.shugoStrength||'');                         // アプリの自動判定
+      var _effStrength=(_ykStrengthOverride!=null)?_ykStrengthOverride:_autoStrength;  // 鑑定者が上書きしていればそれを優先
       function _kaiRole(label){
         var K=String(label||'').charAt(0);
         var j=_ykJuShin(K,dayEl); if(!j) return '';
-        var jud=''; if(_ykStrength==='身弱') jud=(j.cat==='support')?'good':'warn';
-        else if(_ykStrength==='身強') jud=(j.cat==='support')?'warn':'good';
+        var jud=''; if(_effStrength==='身弱') jud=(j.cat==='support')?'good':'warn';   // 中和は色なし（断定を避ける）
+        else if(_effStrength==='身強') jud=(j.cat==='support')?'warn':'good';
         var word=jud==='good'?'追い風':(jud==='warn'?'要注意':'');
         return '<span class="yk-kai-role'+(jud?(' yk-'+jud):'')+'">'+esc(K)+'局＝あなた（'+esc(dayEl)+'）に'+esc(j.star)+'・'+esc(j.work)+(word?'／<b>'+esc(word)+'</b>':'')+'</span>';
       }
@@ -3750,18 +3752,19 @@ window.KANSHI60_DETAIL={
         '<div class="yk-frame">'+
           '<div class="yk-frow"><span class="yk-flabel">生まれ持った会局（命式内で成立）</span>'+natalKaiHtml+'</div>'+
           '<div class="yk-frow"><span class="yk-flabel">空亡</span><span class="yk-ntag">'+kuboHtml+'</span></div>'+
-          '<div class="yk-frow"><span class="yk-flabel">身強・身弱（鑑定者が指定）</span>'+
+          '<div class="yk-frow"><span class="yk-flabel">身強・身弱（自動判定＋上書き可）</span>'+
             '<select class="yk-sel" onchange="if(window.setYkStrength)window.setYkStrength(this.value)">'+
-              ['','身強','身弱','中和'].map(function(v){ return '<option value="'+v+'"'+(v===_ykStrength?' selected':'')+'>'+(v===''?'未指定（吉凶の色なし）':v)+'</option>'; }).join('')+
+              '<option value=""'+(_ykStrengthOverride==null?' selected':'')+'>自動判定（'+esc(_autoStrength||'—')+'）</option>'+
+              ['身強','身弱','中和'].map(function(v){ return '<option value="'+v+'"'+(v===_ykStrengthOverride?' selected':'')+'>'+v+'（手動）</option>'; }).join('')+
             '</select>'+
-            '<span class="yk-hint">参考（自動判定）：'+esc(_lastResult.shugoStrength||'—')+'　※指定すると会局に「追い風／要注意」の色が付きます</span>'+
+            '<span class="yk-hint">初期は自動判定。必要なら鑑定者が上書き（中和は色なし）</span>'+
           '</div>'+
         '</div>'+
         '<p class="footline" style="text-align:center;color:#9a927f;font-size:11px;margin-top:auto">四柱推命 命式表 ・ '+esc(school)+'　鑑定日：'+esc(kdate)+'　<span style="font-size:9.5px">※「メモ」は手書き欄／表内の会局は今の大運・年運でそろう完全局と半会・半方（あと1支で成立）を表示／生まれ持った会局と空亡は枠外に記載／年運の干支は西暦から算出</span></p>';
     }catch(e){ console.error('buildYokoSheet failed', e); }
   }
   // 鑑定者が身強／身弱を指定 → 横型を再描画して会局の吉凶色を反映
-  window.setYkStrength=function(v){ _ykStrength=(v==='身強'||v==='身弱'||v==='中和')?v:''; if(typeof buildYokoSheet==='function') buildYokoSheet(); };
+  window.setYkStrength=function(v){ _ykStrengthOverride=(v==='身強'||v==='身弱'||v==='中和')?v:null; if(typeof buildYokoSheet==='function') buildYokoSheet(); };
   function setMeishikiLayout(t){
     _meishikiLayout=(t==='yoko')?'yoko':'std';
     var s=document.getElementById('mtStd'), y=document.getElementById('mtYoko');
