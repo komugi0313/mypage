@@ -4186,33 +4186,29 @@ async function generateReading(user,localText,system,deep){
   //   動作確認用にだけ geminiKey が入っている場合は、従来どおりブラウザから直接呼ぶ（テスト専用・本番UIにキー入力欄は無い）。
   const useServer=!geminiKey;
   aiEngine=useServer?'詳細鑑定':('詳細鑑定 '+geminiModel);
-  let data;
-  try{
-    let r;
-    if(useServer){
-      // モデルはサーバーが決める（重い自動レポートだけ x-pk-deep:1 で DEEP、相談・相性は LITE）。キーはサーバー保持。
-      var _hdr={"Content-Type":"application/json"}; if(deep)_hdr["x-pk-deep"]="1";
-      r=await fetch('/.netlify/functions/gemini',
-        {method:"POST",headers:_hdr,
-         body:JSON.stringify({system_instruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:user}]}],generationConfig:genCfg})});
-    }else{
-      r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${encodeURIComponent(geminiKey)}`,
-        {method:"POST",headers:{"Content-Type":"application/json"},
-         body:JSON.stringify({system_instruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:user}]}],generationConfig:genCfg})});
-    }
-    data=await r.json();
-  }catch(e){ // 電波が弱い・通信失敗 → オフライン鑑定に切替
-    aiEngine='オフライン鑑定（端末内）';
-    return {ok:true,text:localText,fallback:true,online:false,note:'詳細鑑定に接続できなかったため、端末内で作成した鑑定（オフライン鑑定）を表示しています。'};}
-  if(data.error){ // APIエラー（キー・課金・モデル等）→ オフライン鑑定に切替
-    aiEngine='オフライン鑑定（端末内）';
-    return {ok:true,text:localText,fallback:true,online:false,note:'詳細鑑定でエラーが出たため、端末内で作成した鑑定（オフライン鑑定）を表示しています。'};}
-  const cand=data.candidates&&data.candidates[0];
-  const text=((cand&&cand.content&&cand.content.parts)||[]).map(p=>p.text||'').join('\n').trim();
-  if(text){aiCountInc();return {ok:true,text,online:true};}
-  // 応答が空（安全フィルタ・上限等）→ オフライン鑑定に切替
+  const _body=JSON.stringify({system_instruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:user}]}],generationConfig:genCfg});
+  async function callOnce(){
+    let data;
+    try{
+      let r;
+      if(useServer){ var _hdr={"Content-Type":"application/json"}; if(deep)_hdr["x-pk-deep"]="1";
+        r=await fetch('/.netlify/functions/gemini',{method:"POST",headers:_hdr,body:_body}); }
+      else{ r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${encodeURIComponent(geminiKey)}`,
+        {method:"POST",headers:{"Content-Type":"application/json"},body:_body}); }
+      data=await r.json();
+    }catch(e){ return null; }        // 通信失敗
+    if(data&&data.error) return null; // APIエラー
+    const cand=data&&data.candidates&&data.candidates[0];
+    const text=((cand&&cand.content&&cand.content.parts)||[]).map(p=>p.text||'').join('\n').trim();
+    return text||null;                // 空応答も失敗扱い
+  }
+  // まず1回オンライン生成。失敗（レート制限・一時的エラー・空応答）なら数秒待って“自動で1回だけ再試行”。
+  // それでもダメなときだけオフライン鑑定に切替（ユーザーが質問を打ち直す必要はありません）。
+  let text=await callOnce();
+  if(!text){ await new Promise(r=>setTimeout(r,2500)); text=await callOnce(); }
+  if(text){ aiCountInc(); return {ok:true,text,online:true}; }
   aiEngine='オフライン鑑定（端末内）';
-  return {ok:true,text:localText,fallback:true,online:false,note:'詳細鑑定の応答が得られなかったため、端末内で作成した鑑定（オフライン鑑定）を表示しています。'};
+  return {ok:true,text:localText,fallback:true,online:false,note:'詳細鑑定に接続できなかったため、端末内で作成した鑑定（オフライン鑑定）を表示しています（自動で再試行しました）。'};
 }
 async function runReading(btn,out,user,localText,proUser,deep){
   btn.disabled=true;out.innerHTML='<div class="loading"><span class="spin"></span>命式を読み解いています…</div>';

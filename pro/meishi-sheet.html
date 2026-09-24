@@ -3610,25 +3610,32 @@ window.KANSHI60_DETAIL={
       (isEasy?'\n・やさしい版：中学生にもわかる易しい言葉で。専門用語は最小限、はげます調子で短めに。':'');
     var usr='【鑑定対象】'+(nm||'ご本人')+'さん\n【命式データ】\n'+chartSummaryText(r)+'\n\n上記の命式から、指定の章立てで鑑定書の本文を書いてください。';
     var body=JSON.stringify({ system_instruction:{parts:[{text:sys}]}, contents:[{role:'user',parts:[{text:usr}]}], generationConfig:{maxOutputTokens:3200} });
-    fetch('/.netlify/functions/gemini',{ method:'POST', headers:{'Content-Type':'application/json','x-pk-deep':'1'}, body:body })
-      .then(function(res){ return res.text().then(function(t){ return {ok:res.ok, t:t}; }); })
-      .then(function(o){
-        var data={}; try{ data=JSON.parse(o.t); }catch(e){}
-        var txt=''; try{ txt=(data.candidates[0].content.parts||[]).map(function(p){return p.text||'';}).join(''); }catch(e){}
-        if(!o.ok || !txt.trim()){
-          _aiBusy=false; aiFallbackToTemplate(); return;   // 圏外・接続不可 → 自動でオフライン鑑定書
-        }
-        var html=parseAIToHTML(txt);
-        if(!html){ aiCardMsg('返答を整形できませんでした。','もう一度お試しください。'); _aiBusy=false; return; }
-        window._aiReadingHTML=html;
-        aiCountInc();   // 成功したAI生成だけカウント（不正防止のゆるい1日上限）
-        var mount=document.getElementById('readMount'); if(mount) mount.innerHTML=html;
-        paginateReadingScreen();
-        _aiBusy=false;
-      })
-      .catch(function(){
-        _aiBusy=false; aiFallbackToTemplate();   // 圏外・接続不可 → 自動でオフライン鑑定書
-      });
+    // まず1回オンライン生成。失敗（レート制限・一時エラー・空応答）なら数秒待って自動で1回だけ再試行。
+    // それでもダメなときだけ定型文（オフライン鑑定書）に切替（打ち直し不要）。
+    function attempt(isRetry){
+      fetch('/.netlify/functions/gemini',{ method:'POST', headers:{'Content-Type':'application/json','x-pk-deep':'1'}, body:body })
+        .then(function(res){ return res.text().then(function(t){ return {ok:res.ok, t:t}; }); })
+        .then(function(o){
+          var data={}; try{ data=JSON.parse(o.t); }catch(e){}
+          var txt=''; try{ txt=(data.candidates[0].content.parts||[]).map(function(p){return p.text||'';}).join(''); }catch(e){}
+          if(!o.ok || !txt.trim()){
+            if(!isRetry){ setTimeout(function(){ attempt(true); }, 2500); return; }
+            _aiBusy=false; aiFallbackToTemplate(); return;
+          }
+          var html=parseAIToHTML(txt);
+          if(!html){ if(!isRetry){ setTimeout(function(){ attempt(true); }, 2500); return; } aiCardMsg('返答を整形できませんでした。','もう一度お試しください。'); _aiBusy=false; return; }
+          window._aiReadingHTML=html;
+          aiCountInc();   // 成功したAI生成だけカウント（不正防止のゆるい1日上限）
+          var mount=document.getElementById('readMount'); if(mount) mount.innerHTML=html;
+          paginateReadingScreen();
+          _aiBusy=false;
+        })
+        .catch(function(){
+          if(!isRetry){ setTimeout(function(){ attempt(true); }, 2500); return; }
+          _aiBusy=false; aiFallbackToTemplate();
+        });
+    }
+    attempt(false);
   }
   // 圏外・接続不可のときは、自動で定型文（オフラインの鑑定書）に切り替えて表示する
   function aiFallbackToTemplate(){
