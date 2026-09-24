@@ -2113,6 +2113,10 @@ function repOf(hs,label){const ov=zouOverride[label];if(ov!=null&&hs[ov])return 
 function repHidden(p){return repOf(p.hiddenStems,p.label);}
 function meishiHTML(c){
   const ku=kubo(c);
+  // 各柱の下に「誕生日」を表示（年柱＝年／月柱＝月／日柱＝日／時柱＝時刻。時刻不明は「不明」）
+  const _bc=((c.birth&&c.birth.clock)||'').split(' '), _bd=(_bc[0]||'').split('-'), _bt=(_bc[1]||'').split(':');
+  const BDAY={'年柱':_bd[0]?_bd[0]+'年':'','月柱':_bd[1]?(+_bd[1])+'月':'','日柱':_bd[2]?(+_bd[2])+'日':'','時柱':(c.timeUnknown?'時刻不明':(_bt[0]!=null&&_bt[0]!==''?(+_bt[0])+'時'+(_bt[1]!=null&&_bt[1]!==''?(+_bt[1])+'分':''):''))};
+  const bdayHTML=cc=>BDAY[cc.label]?`<br><b style="font-size:11px;color:var(--ink);font-weight:900">${BDAY[cc.label]}</b>`:'';
   const kt=kichiTargets(c);
   const cells=c.pillars.map((p,i)=>{
     const honki=repHidden(p);
@@ -2161,11 +2165,12 @@ function meishiHTML(c){
   let table;
   if(orient==='yoko'){ // 柱を行に（左から：干支→星）
     const head=`<tr><th></th>${ROWS.map(r=>`<th>${r[0]}</th>`).join('')}</tr>`;
-    const body=cells.map(cc=>`<tr><td class="rowlab ${cc.me?'me':''}">${cc.label}${cc.unknown?'<br><small style="color:var(--ka);font-weight:800">不明・参考外</small>':cc.me?`<br><small><b>${cc.stem}${cc.branch}</b>（${ganzhiYomi(cc.stem,cc.branch)}）<br>${cc.gz60}番・空亡 ${ku.join('')}</small>`:`<br><small style="color:var(--muted);font-weight:700"><b style="color:var(--ink)">${cc.stem}${cc.branch}</b>（${ganzhiYomi(cc.stem,cc.branch)}）<br>${cc.sub}</small>`}</td>${ROWS.map(r=>`<td class="${r[2]||''} ${cc.me?'me':''}">${cc.unknown?'<span class="none">—</span>':r[1](cc)}</td>`).join('')}</tr>`).join('');
+    const body=cells.map(cc=>`<tr><td class="rowlab ${cc.me?'me':''}">${cc.label}${bdayHTML(cc)}${cc.unknown?'<br><small style="color:var(--ka);font-weight:800">不明・参考外</small>':cc.me?`<br><small><b>${cc.stem}${cc.branch}</b>（${ganzhiYomi(cc.stem,cc.branch)}）<br>${cc.gz60}番・空亡 ${ku.join('')}</small>`:`<br><small style="color:var(--muted);font-weight:700"><b style="color:var(--ink)">${cc.stem}${cc.branch}</b>（${ganzhiYomi(cc.stem,cc.branch)}）<br>${cc.sub}</small>`}</td>${ROWS.map(r=>`<td class="${r[2]||''} ${cc.me?'me':''}">${cc.unknown?'<span class="none">—</span>':r[1](cc)}</td>`).join('')}</tr>`).join('');
     table=`<table class="mtable">${head}${body}</table>`;
-  } else { // 縦：柱を列に
-    const head=`<tr><th></th>${cells.map(cc=>`<th class="${cc.me?'me':''}">${cc.label}${cc.unknown?'<br><small style="color:var(--ka);font-weight:800">不明</small>':`<br><small><b>${cc.stem}${cc.branch}</b>（${ganzhiYomi(cc.stem,cc.branch)}）${cc.me?'<br>'+cc.gz60+'番・空亡 '+ku.join(''):''}</small>`}</th>`).join('')}</tr>`;
-    const body=ROWS.map(r=>`<tr><td class="rowlab">${r[0]}</td>${cells.map(cc=>`<td class="${r[2]||''} ${cc.me?'me':''}">${cc.unknown?'<span class="none">—</span>':r[1](cc)}</td>`).join('')}</tr>`).join('');
+  } else { // 縦：柱を列に（流派の並び＝時柱→日柱→月柱→年柱：時柱が左）
+    const cols=cells.slice().reverse();
+    const head=`<tr><th></th>${cols.map(cc=>`<th class="${cc.me?'me':''}">${cc.label}${bdayHTML(cc)}${cc.unknown?'<br><small style="color:var(--ka);font-weight:800">不明</small>':`<br><small><b>${cc.stem}${cc.branch}</b>（${ganzhiYomi(cc.stem,cc.branch)}）${cc.me?'<br>'+cc.gz60+'番・空亡 '+ku.join(''):''}</small>`}</th>`).join('')}</tr>`;
+    const body=ROWS.map(r=>`<tr><td class="rowlab">${r[0]}</td>${cols.map(cc=>`<td class="${r[2]||''} ${cc.me?'me':''}">${cc.unknown?'<span class="none">—</span>':r[1](cc)}</td>`).join('')}</tr>`).join('');
     table=`<table class="mtable">${head}${body}</table>`;
   }
   const allK=[...new Set(cells.flatMap(cc=>cc.kichi))].filter(k=>KICHI_DESC[k]);
