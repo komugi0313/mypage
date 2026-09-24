@@ -12,15 +12,21 @@
 
 ベースパス：`/.netlify/functions`
 
+**認証方式＝メールアドレス＋パスワード**（マジックリンクは廃止）。登録時のみ確認メールでメールアドレスを検証します。
+
 | # | エンドポイント | 入力 | 返り値 | 用途 | 呼び出し元 |
 |---|---|---|---|---|---|
-| 1 | `/auth-send-link` | `{email}` | `{ok:true}` | ログイン/登録の確認メール送信（マジックリンク発行） | `auth.html`（CONFIG.SEND_LINK） |
-| 2 | `/auth-verify` | `{token}` | `{ok:true, email}` | マジックリンク検証・セッション発行 | `auth.html`（CONFIG.VERIFY） |
-| 3 | `/check-subscription` | `{email}` | `{status, plan, cardLast4, nextChargeAt}` | 契約状況の取得 | `app-pro.html`（会員ゲート L486）／`mypage-pro.html`（CONFIG.STATUS） |
-| 4 | `/cancel-subscription` | `{email}` | `{ok:true}` | 解約（次回更新分から停止） | `mypage-pro.html`（CONFIG.CANCEL） |
-| 5 | `/mypage-get` | `{email}` | `{data:{...}}` | クラウド保存の読み込み（鑑定者・鑑定・設定） | `app-pro.html`（L4618）／`meishi-sheet.html`（CLOUD.PULL） |
-| 6 | `/mypage-put` | `{email, data}` | `{ok:true}` | クラウド保存の書き込み | `app-pro.html`（L4609）／`meishi-sheet.html`（CLOUD.PUSH） |
-| 7 | `/gemini` | Gemini 形式のJSON | Gemini応答 | 詳細鑑定（AI本文生成）。**実装済み・鍵はサーバ保持** | `app-pro.html`（L4117）／`meishi-sheet.html` |
+| 1 | `/auth-register` | `{email, password}` | `{ok:true}` | 新規登録＋確認メール送信 | `auth.html`（CONFIG.REGISTER） |
+| 2 | `/auth-login` | `{email, password}` | `{ok:true, status, email}` ／ 認証失敗は `401` か `{ok:false}` | ログイン（契約状況も一緒に返す） | `app-pro.html`（会員ゲート）／`auth.html`（CONFIG.LOGIN） |
+| 3 | `/auth-verify` | `{token}` | `{ok:true, email}` | 確認メールのリンク検証（登録の有効化） | `auth.html`（CONFIG.VERIFY） |
+| 4 | `/auth-reset` | `{email}` | `{ok:true}` | パスワード再設定メールの送信 | `auth.html`（CONFIG.RESET） |
+| 5 | `/check-subscription` | `{email}` | `{status, plan, cardLast4, nextChargeAt}` | 契約状況の取得（マイページ表示用） | `mypage-pro.html`（CONFIG.STATUS） |
+| 6 | `/cancel-subscription` | `{email}` | `{ok:true}` | 解約（次回更新分から停止） | `mypage-pro.html`（CONFIG.CANCEL） |
+| 7 | `/mypage-get` | `{email}` | `{data:{...}}` | クラウド保存の読み込み（鑑定者・鑑定・設定） | `app-pro.html`（L4618）／`meishi-sheet.html`（CLOUD.PULL） |
+| 8 | `/mypage-put` | `{email, data}` | `{ok:true}` | クラウド保存の書き込み | `app-pro.html`（L4609）／`meishi-sheet.html`（CLOUD.PUSH） |
+| 9 | `/gemini` | Gemini 形式のJSON | Gemini応答 | 詳細鑑定（AI本文生成）。**実装済み・鍵はサーバ保持** | `app-pro.html`／`meishi-sheet.html` |
+
+> パスワードはサーバー側で**必ずハッシュ化**して保存（bcrypt/argon2 等）。`/auth-login` は契約状況（`status`）も返し、`active`/`trialing` のときだけツールを解放します。
 
 `status` の想定値：`active`（課金中）／`trialing`（無料トライアル中）／`past_due`／`canceled`／`unpaid`／`none`。
 `plan` の想定キー：`month`（9,800円/月）／`year`（98,000円/年）／`half`（52,800円/半年）。
@@ -43,14 +49,20 @@ pricing-pro.html（料金プラン）
 
 ---
 
-## 3. 認証（パスワードレス／マジックリンク）
+## 3. 認証（メールアドレス＋パスワード）
 
-`auth.html` に画面（ログイン→送信完了→着地検証）が実装済み。実装するのは 2 関数のみ：
+`auth.html` に画面（ログイン／新規登録／確認メール送信完了／リンク着地検証／パスワード再設定）が実装済み。`app-pro.html` の会員ゲートも email＋password ログインに更新済み。
 
-- `/auth-send-link`：メール送信。リンクは **`auth.html?token=XXXX`** の形で発行。
-- `/auth-verify`：トークン検証 → `{ok, email}`。セッション/Cookie発行はサーバ側。
+- **新規登録**：`/auth-register {email,password}` → 確認メール送信。リンクは **`auth.html?token=XXXX`** の形で発行。
+  - メールが届かない＝メールアドレスの打ち間違いの可能性。UIは「登録し直し」導線を用意済み（`auth.html` v-sent）。
+- **確認リンク着地**：`/auth-verify {token}` → 登録を有効化。以後ログイン可能。
+- **ログイン**：`/auth-login {email,password}` → `{ok, status}`。`active`/`trialing` で解放、それ以外は料金プランへ誘導、認証失敗はエラー表示。
+- **パスワード再設定**：`/auth-reset {email}` → 再設定メール。
 
-成功後、フロントは `localStorage['member_email']` に email を保存し、`app-pro.html` へ遷移（CONFIG.AFTER_LOGIN）。
+### 「パスワードをこの端末に保存」
+- チェックONで、次回からメール＋パスワードを自動入力（会員ゲートは自動ログインも実施）。
+- 現状フロントは `member_email` / `member_pw` / `member_remember` を localStorage に保存。
+- **★セキュリティ推奨**：本番は“パスワードそのもの”ではなく、サーバー発行の**長期セッショントークン**（例：`member_token`、HttpOnly Cookie か localStorage）を保存する方式へ差し替えてください。`auth.html` / `app-pro.html` の `rememberSave()` に切替ポイントのコメントあり。
 
 ---
 
@@ -66,6 +78,8 @@ pricing-pro.html（料金プラン）
 | `meishiki_saved_v1` | 鑑定書（命式表つき）の「保存済み」人物リスト | `meishi-sheet.html` |
 | `meishiki_output_default_v1` | 「わたしの既定」＝鑑定書の出力設定（紙・版・モチーフ・五行カラー・命式表の型・章） | `meishi-sheet.html` |
 | `member_email` | ログイン中のメール（同期キー） | 共通 |
+| `member_pw` | 「端末に保存」ON時のパスワード（★本番はトークンへ差し替え推奨） | 共通 |
+| `member_remember` | 「端末に保存」ON/OFF（`'1'`） | 共通 |
 
 - `app-pro.html` は `{email, data: <bazi_mypage_v2 全体>}` を PUT / GET（実装済みの呼び出し）。
 - `meishi-sheet.html` は `CLOUD` フック（`putSaved` 内で `cloudPush`）を用意済み。`CLOUD.STUB=false` にし、`{email, key:'saved', data:[...records]}` を PUT、起動時に PULL してマージしてください。

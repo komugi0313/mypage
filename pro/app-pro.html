@@ -441,8 +441,11 @@
   #member-gate .mg-logo i{display:block}
   #member-gate .mg-title{font-size:20px;font-weight:900;margin:0 0 6px;color:var(--ink)}
   #member-gate .mg-lead{font-size:13.5px;color:var(--ink2);font-weight:600;margin:0 0 18px;line-height:1.7}
-  #member-gate input[type=email]{width:100%;height:48px;padding:0 12px;font-size:16px;font-weight:700;color:var(--ink);background:#fff;border:2px solid var(--line2);border-radius:12px;font-family:inherit;text-align:center}
+  #member-gate input[type=email],#member-gate input[type=password]{width:100%;height:48px;padding:0 12px;font-size:16px;font-weight:700;color:var(--ink);background:#fff;border:2px solid var(--line2);border-radius:12px;font-family:inherit;text-align:center}
+  #member-gate input[type=password]{margin-top:10px}
   #member-gate input:focus{outline:none;border-color:var(--sui);box-shadow:0 0 0 3px var(--sui-w)}
+  #member-gate .mg-remember{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--ink2);margin:11px 0 0;cursor:pointer}
+  #member-gate .mg-remember input{width:18px;height:18px;accent-color:var(--sui)}
   #member-gate .mg-btn{display:block;width:100%;height:50px;border:0;border-radius:13px;font-family:inherit;font-size:15.5px;font-weight:900;cursor:pointer;margin-top:11px;text-decoration:none;line-height:50px;text-align:center}
   #member-gate .mg-primary{background:var(--ka);color:#fff;box-shadow:0 4px 0 #b32a20}
   #member-gate .mg-primary:active{transform:translateY(2px);box-shadow:0 2px 0 #b32a20}
@@ -457,14 +460,16 @@
   <div class="mg-card">
     <div class="mg-logo"><img id="gateLogo" alt="四柱推命占い自動鑑定" style="grid-column:1/-1;width:100%;height:100%;object-fit:cover"></div>
     <h2 class="mg-title">四柱推命占い<span style="color:var(--do)">自動鑑定</span></h2>
-    <p class="mg-lead">会員専用です。ご登録のメールアドレスでログインしてください。<br>一週間は無料でお試しいただけます。</p>
+    <p class="mg-lead">会員専用です。ご登録のメールアドレスとパスワードでログインしてください。<br>一週間は無料でお試しいただけます。</p>
     <input id="mg-email" type="email" placeholder="you@example.com" autocomplete="email">
+    <input id="mg-pw" type="password" placeholder="パスワード" autocomplete="current-password">
+    <label class="mg-remember"><input type="checkbox" id="mg-remember"> パスワードをこの端末に保存する</label>
     <button class="mg-btn mg-primary" id="mg-login-btn">ログインして鑑定をはじめる</button>
-    <a class="mg-btn mg-ghost" href="pricing-pro.html">はじめての方はこちら（料金プラン・一週間無料）</a>
+    <a class="mg-btn mg-ghost" href="auth.html?view=register">はじめての方はこちら（新規登録・一週間無料）</a>
     <button class="mg-btn mg-ghost" id="mg-demo-btn" style="display:none">ログインせずに体験する（デモ）</button>
     <div id="mg-status" class="mg-status"></div>
     <div id="mg-msg"></div>
-    <div class="mg-foot"><a href="auth.html">ログイン・メール確認でお困りの方</a> ・ <a href="mypage-pro.html">マイページ・契約状況</a></div>
+    <div class="mg-foot"><a href="auth.html">新規登録・パスワードの再設定</a> ・ <a href="mypage-pro.html">マイページ・契約状況</a></div>
   </div>
 </div>
 <script>
@@ -482,25 +487,42 @@
   function showPreviewBanner(){ try{ if(document.getElementById('preview-banner'))return; var d=document.createElement('div'); d.id='preview-banner'; d.style.cssText='position:sticky;top:0;z-index:60;background:#2A2140;color:#fff;text-align:center;font-size:12px;font-weight:800;padding:7px 12px;line-height:1.5'; d.innerHTML='公開前プレビュー中（無料・ログイン不要でお試しいただけます）'; document.body.insertAdjacentElement('afterbegin', d); }catch(e){} }
   function showErr(t){ msg.innerHTML='<div class="mg-err">'+t+'</div>'; }
   function statusJa(s){ return ({active:'課金中',trialing:'無料トライアル中',past_due:'支払い遅延',canceled:'解約済み',unpaid:'未払い',none:'未契約'})[s]||s||'未契約'; }
-  async function check(email){
-    var r=await fetch(API+'/check-subscription',{method:'POST',body:JSON.stringify({email:email})});
-    if(!r.ok) throw new Error('確認に失敗しました（'+r.status+'）');
+  // ★エンジニア接続ポイント：メール＋パスワードでログイン（契約状況も一緒に返す想定）
+  //   POST {email,password} → {ok:true, status} ／ 認証失敗は 401 か {ok:false}
+  async function login(email,pw){
+    var r=await fetch(API+'/auth-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pw})});
+    if(r.status===401){ return {ok:false, error:'invalid'}; }
+    if(!r.ok) throw new Error('login '+r.status);
     return r.json();
   }
-  async function tryEmail(email){
-    localStorage.setItem('member_email',email);
+  // 「パスワードをこの端末に保存」。※本番はトークン保存方式を推奨（auth.html の注記参照）。
+  function rememberSave(email,pw,on){
+    try{ localStorage.setItem('member_email',email);
+      if(on){ localStorage.setItem('member_pw',pw); localStorage.setItem('member_remember','1'); }
+      else { localStorage.removeItem('member_pw'); localStorage.removeItem('member_remember'); }
+    }catch(e){}
+  }
+  function doLogin(email,pw,remember){
     statusEl.textContent='確認中…'; msg.innerHTML='';
-    try{
-      var s=await check(email);
-      if(s.active){ unlock(); }
-      else{ statusEl.textContent=''; showErr('このメールでは現在ご利用いただけません（状態：'+statusJa(s.status)+'）。<br><a href="pricing-pro.html">一週間無料で始める</a>'); }
-    }catch(e){ statusEl.textContent=''; showErr('ただいま確認できませんでした。しばらくしてからもう一度お試しください。'); }
+    login(email,pw).then(function(s){
+      statusEl.textContent='';
+      if(s&&s.ok){
+        rememberSave(email,pw,remember);
+        if(s.status==='active'||s.status==='trialing'){ unlock(); }
+        else{ showErr('このアカウントは現在ご利用いただけません（状態：'+statusJa(s.status)+'）。<br><a href="pricing-pro.html">一週間無料で始める</a>'); }
+      } else {
+        showErr('メールアドレスまたはパスワードが違います。<br><a href="auth.html">新規登録・パスワード再設定</a>');
+      }
+    }).catch(function(){ statusEl.textContent=''; showErr('ただいま確認できませんでした。しばらくしてからもう一度お試しください。'); });
   }
   document.getElementById('mg-login-btn').onclick=function(){
     var email=(document.getElementById('mg-email').value||'').trim().toLowerCase();
+    var pw=(document.getElementById('mg-pw').value||'');
+    var remember=!!(document.getElementById('mg-remember')&&document.getElementById('mg-remember').checked);
     msg.innerHTML='';
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ showErr('メールアドレスを正しく入力してください。'); return; }
-    tryEmail(email);
+    if(!pw){ showErr('パスワードを入力してください。'); return; }
+    doLogin(email,pw,remember);
   };
   // 開発確認用：DEMO_MODE=true のときのみ、ログイン不要の確認導線を表示（本番は false）
   if(DEMO_MODE){
@@ -513,8 +535,11 @@
   // ★公開前プレビュー：決済接続まではログイン不要で全開放（本番公開時は PREVIEW_MODE=false に戻す）
   if(PREVIEW_MODE){ unlock(); showPreviewBanner(); return; }
   document.body.style.overflow='hidden';
-  var saved=localStorage.getItem('member_email');
-  if(saved){ document.getElementById('mg-email').value=saved; tryEmail(saved); }
+  var savedEmail=localStorage.getItem('member_email')||'';
+  var savedPw=localStorage.getItem('member_pw')||'';
+  var remembered=localStorage.getItem('member_remember')==='1';
+  if(savedEmail){ document.getElementById('mg-email').value=savedEmail; }
+  if(remembered&&savedPw){ document.getElementById('mg-pw').value=savedPw; var rc=document.getElementById('mg-remember'); if(rc)rc.checked=true; doLogin(savedEmail,savedPw,true); }
 })();
 </script>
 <!-- ▲▲▲ 会員ゲート ▲▲▲ -->
