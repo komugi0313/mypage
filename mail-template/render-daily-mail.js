@@ -88,7 +88,14 @@
       + '<div style="font-size:14px;font-weight:700;line-height:1.75;color:' + bodyColor + ';">' + bodyHtml + '</div>'
       + '</td></tr></table>';
   }
-  function dot(hex, size){ return '<span style="display:inline-block;width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:' + hex + ';border:1px solid #d8d0cc;vertical-align:-1px;margin-right:4px;"></span>'; }
+  // 表組みボタン：どのメールソフトでも色・大きさが保たれる（Outlook は角が四角になるだけ）
+  function btn(href, label, bg, fs, pad, grad){
+    return '<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="display:inline-table;margin:2px;border-collapse:separate;"><tr>'
+      + '<td bgcolor="' + bg + '" style="background:' + bg + ';' + (grad ? 'background-image:' + grad + ';' : '') + 'border-radius:999px;padding:' + pad + ';text-align:center;">'
+      + '<a href="' + href + '" style="color:#ffffff;font-size:' + fs + ';font-weight:800;text-decoration:none;display:inline-block;">' + label + '</a></td></tr></table>';
+  }
+  // 色の丸は文字「●」で出す（Outlook でも消えない）
+  function dot(hex, size){ return '<span style="color:' + hex + ';font-size:' + (size + 3) + 'px;line-height:1;margin-right:3px;">●</span>'; }
 
   function renderDailyMail(r, opts){
     opts = opts || {};
@@ -232,12 +239,12 @@
     h.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;border-collapse:separate;"><tr><td align="center" style="background:#fdeef4;background-image:linear-gradient(135deg,#fdeef4,#fff3e8);border:1.5px solid #e8a8bd;border-radius:14px;padding:14px;text-align:center;">'
       + '<div style="font-size:13.5px;font-weight:800;color:#c14e77;line-height:1.6;">💞 気になる人との相性、調べてみない？</div>'
       + '<div style="margin-top:4px;font-size:11.5px;color:#8a6f7a;line-height:1.7;">60組に1組の奇跡【1.66%】── 生年月日ふたつで、ふたりの相性がすぐわかります。</div>'
-      + '<a href="' + esc(aishou) + '" data-aishou="1" style="display:inline-block;margin-top:9px;background:#d8466a;background-image:linear-gradient(135deg,#e86a94,#d8466a);color:#ffffff;font-size:13px;font-weight:800;text-decoration:none;border-radius:999px;padding:10px 22px;">1.66 相性診断をやってみる（無料）</a>'
+      + '<div style="margin-top:9px;">' + btn(esc(aishou) + '" data-aishou="1', '1.66 相性診断をやってみる（無料）', '#d8466a', '13px', '10px 22px', 'linear-gradient(135deg,#e86a94,#d8466a)') + '</div>'
       + '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e8c8d4;font-size:10.5px;color:#a08a80;">🎁 お友達にもシェアして、いっしょに占ってみてね</div>'
-      + '<div style="margin-top:7px;">'
-      + '<a href="https://social-plugins.line.me/lineit/share?url=' + shareUrl + '" style="display:inline-block;background:#06c755;color:#ffffff;font-size:11.5px;font-weight:800;text-decoration:none;border-radius:999px;padding:8px 16px;margin:2px;">LINEで送る</a>'
-      + '<a href="https://twitter.com/intent/tweet?text=' + shareText + '&url=' + shareUrl + '" style="display:inline-block;background:#1d1f23;color:#ffffff;font-size:11.5px;font-weight:800;text-decoration:none;border-radius:999px;padding:8px 16px;margin:2px;">𝕏 でシェア</a>'
-      + '</div></td></tr></table>');
+      + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:7px auto 0;"><tr>'
+      + '<td>' + btn('https://social-plugins.line.me/lineit/share?url=' + shareUrl, 'LINEで送る', '#06c755', '11.5px', '8px 16px') + '</td>'
+      + '<td>' + btn('https://twitter.com/intent/tweet?text=' + shareText + '&amp;url=' + shareUrl, '𝕏 でシェア', '#1d1f23', '11.5px', '8px 16px') + '</td>'
+      + '</tr></table></td></tr></table>');
 
     /* 📖 ことばのメモ */
     h.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;border-collapse:separate;"><tr><td style="background:#f3f1f6;border:1px solid #e2dced;border-radius:12px;padding:11px 13px;">'
@@ -251,14 +258,15 @@
       + '<div style="font-family:' + SERIF + ';font-size:12.5px;color:' + T.ink + ';line-height:1.7;">' + (r.closeWord || '— あなたの縁が、また一歩<br>ひらけますように。') + '</div>'
       + '<div style="font-family:' + SERIF + ';font-size:13px;font-weight:800;color:' + T.ink + ';margin-top:6px;letter-spacing:.06em;">🌤️ 私だけの運気予報</div>'
       + '<div style="display:inline-block;margin-top:9px;font-size:10px;color:#b0a09a;border:1px dashed #ccbbbb;border-radius:10px;padding:4px 10px;">毎朝6時ごろ・あなた専用にお届け 💌</div>'
-      + '<div style="margin-top:8px;font-size:11px;color:#8a7d75;line-height:1.8;">配信を停止する場合は <a href="' + esc(unsub) + '" style="color:#7a675e;text-decoration:underline;">こちら（ログイン不要で停止）</a>、設定変更は <a href="' + esc(mypage) + '" style="color:#7a675e;text-decoration:underline;">マイページ</a> から<br>送信者：72k株式会社／お問い合わせ：info@72k.ai</div>'
+      + '<div style="margin-top:8px;font-size:11px;color:#8a7d75;line-height:1.8;">配信を停止する場合は <a href="' + esc(unsub) + '" style="color:#7a675e;text-decoration:underline;">こちら（ログイン不要で停止）</a>、設定変更は <a href="' + esc(mypage) + '" style="color:#7a675e;text-decoration:underline;">マイページ</a> から</div>'
       + '<div style="margin-top:6px;font-size:9px;color:#b8aba3;line-height:1.65;">本鑑定は四柱推命の伝統的な考え方（扶抑を軸とした解釈）にもとづく目安です。運勢指数は当サービス独自の指数で、四柱推命に公式の点数はありません。娯楽・参考としてお楽しみください。</div>'
+      + '<div style="margin-top:10px;font-size:10px;color:#a8998f;letter-spacing:.08em;">produced by Mizuki Nico</div>'
       + '</div>');
 
     /* ── 外枠：季節の便箋（背景画像の月は画像＋単色フォールバック、それ以外はグラデーション＋単色フォールバック） ── */
     var mo = T.motif;
     var frameBg = T.bgimg
-      ? 'background:' + (T.bgcolor || T.frame1) + ' url(\'' + base + T.bgimg + '\') center/cover;'
+      ? 'background-color:' + (T.bgcolor || T.frame1) + ';background-image:url(\'' + base + T.bgimg + '\');background-position:center center;background-size:cover;background-repeat:no-repeat;'
       : 'background:' + T.frame1 + ';background-image:linear-gradient(160deg,' + T.frame1 + ',' + T.frame2 + ');';
     var framePad = T.bgimg ? '26px 22px 26px' : '10px 14px 12px';
     var motifRow = function(a, b, top){
@@ -272,8 +280,9 @@
       + '<body style="margin:0;padding:0;background:#f6eee9;-webkit-text-size-adjust:100%;">'
       + '<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">' + esc(preheader) + '</div>'
       + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f6eee9" style="background:#f6eee9;"><tr><td align="center" style="padding:22px 10px 40px;">'
+      + '<!--[if mso]><table role="presentation" width="440" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td><![endif]-->'
       + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:440px;width:100%;border-collapse:separate;font-family:' + SANS + ';color:#4a3f3a;">'
-      + '<tr><td bgcolor="' + (T.bgcolor || T.frame1) + '" style="' + frameBg + 'border-radius:26px;padding:' + framePad + ';">'
+      + '<tr><td bgcolor="' + (T.bgcolor || T.frame1) + '"' + (T.bgimg ? ' background="' + base + T.bgimg + '"' : '') + ' style="' + frameBg + 'border-radius:26px;padding:' + framePad + ';">'
       + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
       + motifRow(mo[0], mo[1], true)
       + '<tr><td bgcolor="#ffffff" style="background:#ffffff;border-radius:20px;padding:18px 17px 18px;border:1px solid #ffffff;">'
@@ -281,6 +290,7 @@
       + '</td></tr>'
       + motifRow(mo[2], mo[3], false)
       + '</table></td></tr></table>'
+      + '<!--[if mso]></td></tr></table><![endif]-->'
       + '</td></tr></table></body></html>';
 
     /* ── テキスト版（HTMLを表示できない環境・迷惑メール判定対策） ── */
@@ -292,7 +302,7 @@
     if (RH.en) t.push('■ ' + RH.en, '[' + r.en.tag + '] ' + strip(r.en.body), '');
     t.push('■ 仕事・勝負運', strip(fo.work), '', '■ 金運', strip(fo.money), '', '■ 友達・対人運', strip(fo.friend), '', '■ 体調・リラックス', strip(fo.health), '');
     t.push('■ ラッキー', 'カラー：' + lk.color + '／方角：' + lk.direction + '／食材：' + lk.food + '／ナンバー：' + lk.number, '');
-    t.push('1.66 相性診断（無料）：' + aishou, '', '配信停止（ログイン不要）：' + unsub, '設定変更：' + mypage, '送信者：72k株式会社／お問い合わせ：info@72k.ai');
+    t.push('1.66 相性診断（無料）：' + aishou, '', '配信停止（ログイン不要）：' + unsub, '設定変更：' + mypage, '', 'produced by Mizuki Nico');
 
     return { subject: subject, html: html, text: t.join('\n') };
   }

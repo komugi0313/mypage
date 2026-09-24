@@ -67,3 +67,23 @@ send({ to, subject: mail.subject, html: mail.html, text: mail.text });  // text 
 - HTMLは約25KB（Gmail が「メッセージの一部が表示されていません」で切る 102KB を十分下回る）。
 - 本番前に **Gmail（Web/アプリ）・iPhoneメール・Outlook** へ実際にテスト送信して確認すること。
 - ニックネームはHTMLエスケープ済み。エンジンの文章（`<br>` や `<b>` を含む）はそのまま差し込む。
+
+## メールソフトごとの見え方（2026-09-24 確認）
+
+`client-check/compare-top.jpg` / `compare-bottom.jpg`：3列の比較。いずれも**ブラウザ上での再現**で、実機ではない。
+
+| メールソフト | 色 | 形 | 備考 |
+|---|---|---|---|
+| iPhone標準メール | 同じ | 同じ | `color-scheme: light` を指定しているので、ダークモードでも自動で色が変わりにくい |
+| Gmail（Web・iPhoneアプリ・Androidアプリ） | 同じ（ライト表示時） | 同じ | 使っているCSSはすべてGmailが対応しているもの。25KB前後なので途中で切られない |
+| Android（Gmailアプリ・Samsungメール） | 同じ（ライト表示時） | 同じ | 絵文字の絵柄と明朝体の書体は端末のものになる |
+| Outlook（Web・iPhone/Androidアプリ・Mac） | 同じ（ライト表示時） | 同じ | |
+| **Outlook（Windowsの旧デスクトップ版）** | ほぼ同じ（グラデーションは単色に） | **角が四角になる** | 幅は440pxに固定済み。ボタンの色と大きさ、色の丸（●）は残る |
+| **ダークモードにしている人（Gmailアプリ・Outlookアプリ）** | **変わる** | 同じ | メールソフト側で色を自動で反転する。送る側では完全には止められない |
+
+変えられないもの：
+- 絵文字の絵柄（Apple／Google／Microsoft でデザインが違う）
+- 書体（明朝体がない端末ではゴシック体になる）
+- ダークモードでの自動の色反転（Gmail・Outlookのアプリ）
+
+**本番前に必ず実機へテスト送信すること**：Gmail（iPhone・Android）／iPhone標準メール（iCloud）／Outlook.com・Outlookアプリ／Windows版Outlook。Litmus や Email on Acid を使えば1回で各メールソフトの画面を撮れる。
