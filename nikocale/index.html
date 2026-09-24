@@ -1245,6 +1245,25 @@ select{
 .to-today:hover{border-color:var(--accent)}
 .totoday-wrap{text-align:center}
 .calnote{font-size:11px;color:var(--muted);margin:7px 2px 0;line-height:1.7}
+/* お誘い：送信ボタン */
+.invite-send{display:block;width:100%;margin-top:12px;background:#06C755;color:#fff;border:none;border-radius:12px;padding:14px;font-weight:900;font-size:15px;font-family:var(--maru);cursor:pointer;box-shadow:0 6px 14px -6px rgba(6,199,85,.55);transition:filter .15s,transform .15s}
+.invite-send:hover{filter:brightness(1.05);transform:translateY(-1px)}
+.invite-cap{font-size:11px;color:var(--muted);text-align:center;margin:7px 2px 2px;line-height:1.6}
+.cal-subhead{text-align:center;font-size:11px;color:var(--muted);font-weight:700;margin:14px 0 8px;letter-spacing:.04em}
+/* お誘い：受け取りバナー */
+.invite-banner{border-radius:var(--r-md);overflow:hidden;margin:0 0 14px;border:1px solid color-mix(in oklab,var(--accent) 30%,var(--line));background:var(--panel);box-shadow:var(--shadow-2)}
+.invite-banner .iv-top{background:linear-gradient(160deg,#8f75c0,#6a51a0 55%,#4e3b7c);color:#fdfaf2;padding:16px;text-align:center}
+.invite-banner .iv-from{font-size:12.5px;opacity:.95}
+.invite-banner .iv-from b{color:#ffe6a6}
+.invite-banner .iv-d{font-family:var(--serif);font-weight:900;font-size:23px;margin:6px 0 2px}
+.invite-banner .iv-badge{display:inline-block;margin-top:6px;background:rgba(255,255,255,.15);border:1px solid rgba(255,230,166,.6);border-radius:999px;font-size:12px;font-weight:700;padding:4px 13px;color:#ffe6a6}
+.invite-banner .iv-plan{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.invite-banner .iv-plan .l{font-size:10.5px;color:var(--muted);font-weight:700}
+.invite-banner .iv-plan .v{font-size:15px;font-weight:700;color:var(--ink)}
+.invite-banner .iv-acts{display:flex;gap:8px;padding:12px 14px}
+.invite-banner .iv-acts button{flex:1;border:none;border-radius:11px;padding:12px;font-weight:900;font-size:13px;font-family:var(--maru);cursor:pointer}
+.invite-banner .iv-b1{background:var(--accent);color:#fff}
+.invite-banner .iv-b2{background:#06C755;color:#fff}
 
 /* この日のメモ */
 .memo{margin-top:14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--panel-2);padding:13px 15px}
@@ -1481,6 +1500,7 @@ select{
   </div>
 
   <div id="out" style="display:none">
+    <div class="invite-banner" id="inviteBanner" hidden></div>
     <div class="pp-quick" id="ppResult">
       <span class="pql"><span class="pql-t">目的を選ぶ</span>タップすると下のカレンダーの相性が切り替わります</span>
       <div class="pp-chips">
@@ -3359,26 +3379,119 @@ function pickFocus(interests){
     try{ var ta=document.createElement('textarea'); ta.value=full; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('この日の内容をコピーしました'); }
     catch(e){ toast('この内容を共有してください：'+full); }
   }
+  /* ===== お誘い（プランをLINEで送る／受け取る）===== */
+  function _rr(x,rx,ry,w,h,r){ x.beginPath(); x.moveTo(rx+r,ry); x.arcTo(rx+w,ry,rx+w,ry+h,r); x.arcTo(rx+w,ry+h,rx,ry+h,r); x.arcTo(rx,ry+h,rx,ry,r); x.arcTo(rx,ry,rx+w,ry,r); x.closePath(); }
+  function _clip(s,n){ s=String(s||''); return s.length>n? s.slice(0,n)+'…':s; }
+  function relLabelFor(d){
+    var x=evalDay(state.y,state.m,d);
+    if(state.topSet&&state.topSet[d]) return {t:'⭐ 二人の奇跡の相性日'};
+    var mk=x.mk||{}, map={'◎':'特に良い相性の日','○':'良い相性の日','△':'注意の日','×':'避けたい日'};
+    return {t:(mk.s||'○')+' '+(map[mk.s]||mk.w||'')};
+  }
+  function timeLabel(d){ var o=calTimeOpts(); return o.allday?'終日':(pad2(o.h)+':'+pad2(o.mi)+'〜'); }
+  function buildInviteUrl(d){
+    var base=buildShareUrl(); if(base.indexOf('?')<0) return base;
+    var o=calTimeOpts();
+    var plan=(($('memoTa')&&$('memoTa').value)||'').trim().slice(0,80);
+    var from=((state.A&&state.A.name)||'').slice(0,20);
+    var q='&inv=1&id='+ymd(state.y,state.m,d)+(o.allday?'&iad=1':'&it='+pad2(o.h)+pad2(o.mi));
+    if(plan)q+='&plan='+encodeURIComponent(plan);
+    if(from)q+='&from='+encodeURIComponent(from);
+    return base+q;
+  }
+  function inviteCardCanvas(d, plan, tlabel, rel){
+    var wd=['日','月','火','水','木','金','土'][new Date(state.y,state.m-1,d).getDay()];
+    var W=1080,H=1080,c=document.createElement('canvas'); c.width=W;c.height=H; var x=c.getContext('2d');
+    var g=x.createLinearGradient(0,0,W,H); g.addColorStop(0,'#3a4676'); g.addColorStop(.6,'#232c52'); g.addColorStop(1,'#171d38'); x.fillStyle=g; x.fillRect(0,0,W,H);
+    var rg=x.createRadialGradient(W*0.16,H*0.08,10,W*0.16,H*0.08,W*0.85); rg.addColorStop(0,'rgba(216,189,119,.20)'); rg.addColorStop(.55,'rgba(216,189,119,0)'); x.fillStyle=rg; x.fillRect(0,0,W,H);
+    x.strokeStyle='rgba(216,189,119,.5)'; x.lineWidth=3; _rr(x,44,44,W-88,H-88,26); x.stroke();
+    x.textAlign='center';
+    x.fillStyle='#e9cf94'; x.font='700 40px "Zen Maru Gothic","Zen Kaku Gothic New",sans-serif'; x.fillText('お  誘  い', W/2, 210);
+    x.fillStyle='#fdfaf2'; x.font='900 128px "Zen Old Mincho",serif'; x.fillText(state.m+'月'+d+'日', W/2, 392);
+    x.fillStyle='#d8cfe6'; x.font='700 46px "Zen Kaku Gothic New",sans-serif'; x.fillText('（'+wd+'）', W/2, 466);
+    var bt=rel.t; x.font='700 42px "Zen Kaku Gothic New",sans-serif'; var bw=Math.min(W-160, x.measureText(bt).width+90);
+    x.fillStyle='rgba(233,207,148,.15)'; _rr(x,(W-bw)/2,528,bw,80,40); x.fill(); x.strokeStyle='rgba(233,207,148,.6)'; x.lineWidth=2; _rr(x,(W-bw)/2,528,bw,80,40); x.stroke();
+    x.fillStyle='#f2dea2'; x.fillText(bt, W/2, 582);
+    if(plan){ x.fillStyle='#ffffff'; x.font='700 58px "Zen Kaku Gothic New",sans-serif'; x.fillText(_clip(plan,15), W/2, 738); }
+    x.fillStyle='#d8cfe6'; x.font='500 42px "Zen Kaku Gothic New",sans-serif'; x.fillText(tlabel+'  約2時間', W/2, 812);
+    x.fillStyle='#c9c0dc'; x.font='700 36px "Zen Kaku Gothic New",sans-serif'; x.fillText('ニコカレ', W/2, 958);
+    x.fillStyle='#e9cf94'; x.font='700 42px "Zen Kaku Gothic New",sans-serif'; x.fillText('タップして二人の相性を見る →', W/2, 1012);
+    return c;
+  }
+  async function inviteShare(d){
+    var url=buildInviteUrl(d);
+    var wd=['日','月','火','水','木','金','土'][new Date(state.y,state.m-1,d).getDay()];
+    var rel=relLabelFor(d), tlabel=timeLabel(d);
+    var plan=(($('memoTa')&&$('memoTa').value)||'').trim();
+    var text='【お誘い】'+state.m+'月'+d+'日（'+wd+'）'+rel.t+(plan?'\n「'+plan+'」':'')+'　'+tlabel+'\nニコカレで二人の相性を見てね';
+    try{ await Promise.all([document.fonts.load('900 128px "Zen Old Mincho"'),document.fonts.load('700 42px "Zen Kaku Gothic New"')]); }catch(e){}
+    var canvas=null; try{ canvas=inviteCardCanvas(d,plan,tlabel,rel); }catch(e){}
+    if(canvas){
+      await new Promise(function(res){
+        canvas.toBlob(async function(blob){
+          try{ if(blob&&navigator.canShare){ var f=new File([blob],'nicocale-invite.png',{type:'image/png'}); if(navigator.canShare({files:[f]})){ await navigator.share({files:[f],text:text,url:url}); return res(); } } }catch(e){ if(e&&e.name==='AbortError')return res(); }
+          try{ if(navigator.share){ await navigator.share({title:'ニコカレ お誘い',text:text,url:url}); return res(); } }catch(e){ if(e&&e.name==='AbortError')return res(); }
+          try{ window.open('https://social-plugins.line.me/lineit/share?url='+encodeURIComponent(url),'_blank','noopener'); }catch(e){}
+          res();
+        },'image/png');
+      });
+      return;
+    }
+    try{ if(navigator.share){ await navigator.share({title:'ニコカレ お誘い',text:text,url:url}); return; } }catch(e){ if(e&&e.name==='AbortError')return; }
+    try{ window.open('https://social-plugins.line.me/lineit/share?url='+encodeURIComponent(url),'_blank','noopener'); return; }catch(e){}
+    copyLink();
+  }
+  function showInviteBanner(){
+    var iv=state.invite; if(!iv)return; var el=$('inviteBanner'); if(!el)return;
+    var wd=['日','月','火','水','木','金','土'][new Date(iv.y,iv.m-1,iv.d).getDay()];
+    var rel=relLabelFor(iv.d);
+    var tlabel=iv.allday?'終日':(/^\d{4}$/.test(iv.it||'')?iv.it.slice(0,2)+':'+iv.it.slice(2,4)+'〜':'');
+    var from=iv.from?esc(iv.from)+'さん':'お相手';
+    el.hidden=false;
+    el.innerHTML='<div class="iv-top"><span class="iv-from"><b>'+from+'</b>からお誘いです</span>'
+      +'<div class="iv-d">'+iv.m+'月'+iv.d+'日（'+wd+'）</div>'
+      +'<span class="iv-badge">'+rel.t+'</span></div>'
+      +(iv.plan?'<div class="iv-plan"><span class="l">予定の内容</span><span class="v">'+esc(iv.plan)+(tlabel?'　'+tlabel:'')+'</span></div>':'')
+      +'<div class="iv-acts"><button type="button" class="iv-b1" id="ivAdd">自分のカレンダーに追加</button>'
+      +'<button type="button" class="iv-b2" id="ivReply">OK！とLINEで返信</button></div>';
+    var add=$('ivAdd'); if(add)add.onclick=function(){ try{ state.sel=iv.d; render(); detail(iv.d); }catch(e){} var dd=$('detail'); if(dd)dd.scrollIntoView({behavior:'smooth',block:'start'}); };
+    var rep=$('ivReply'); if(rep)rep.onclick=inviteReply;
+  }
+  function inviteReply(){
+    var iv=state.invite||{}; var text='OK！ '+iv.m+'月'+iv.d+'日、行こう！';
+    try{ if(navigator.share){ navigator.share({text:text}).catch(function(){}); return; } }catch(e){}
+    try{ window.open('https://line.me/R/msg/text/?'+encodeURIComponent(text),'_blank','noopener'); return; }catch(e){}
+    try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text); toast('返信メッセージをコピーしました'); return; } }catch(e){}
+    toast('この内容を送ってください：'+text);
+  }
   function calRowHtml(){
+    var couple=(state.mode==='couple');
     return '<div class="calbox">'
-      +'<div class="cal-h">この日を予定に入れる</div>'
-      +'<p class="cal-sub">予定の内容を書いて、お使いのスマホのカレンダーに登録できます。共有カレンダーに入れれば、二人で見られます。</p>'
-      +'<div class="memo"><label class="memo-h">① 予定の内容<span class="memo-when">（カレンダーに入ります）</span></label>'
+      +'<div class="cal-h">この日を予定にする</div>'
+      +'<p class="cal-sub">'+(couple?'内容と時刻を決めて、お相手を誘えます。自分のカレンダーにも登録できます。':'内容と時刻を決めて、お使いのスマホのカレンダーに登録できます。')+'</p>'
+      +'<div class="memo"><label class="memo-h">① 予定の内容<span class="memo-when">（お誘い・カレンダーに入ります）</span></label>'
       +'<textarea id="memoTa" maxlength="500" placeholder="例：18時に渋谷で待ち合わせ／この日に告白する"></textarea>'
       +'<div class="memo-foot"><span class="memo-status" id="memoStatus">入力すると自動保存されます</span><button type="button" class="memo-clear" id="memoClear">消去</button></div></div>'
       +'<div class="caltime"><span class="ct-l">② 開始時刻</span>'
       +'<input type="time" id="calHour" step="1800" aria-label="予定の開始時刻">'
       +'<span class="ct-dur">〜 約2時間</span>'
       +'<label class="ct-allday"><input type="checkbox" id="calAllday"> 終日</label></div>'
-      +'<div class="calrow"><a class="cal-btn cal-g" id="calG" target="_blank" rel="noopener">③ Googleカレンダーに追加</a>'
-      +'<button type="button" class="cal-btn cal-i" id="calI">③ iPhoneカレンダーに追加</button></div>'
+      +(couple?'<button type="button" class="invite-send" id="inviteBtn">LINEでお相手を誘う</button>'
+        +'<p class="invite-cap">お相手がタップすると、この日のふたりの相性とお誘いが開きます。</p>':'')
+      +'<div class="cal-subhead">'+(couple?'― 自分のカレンダーにも入れる ―':'― カレンダーに追加 ―')+'</div>'
+      +'<div class="calrow"><a class="cal-btn cal-g" id="calG" target="_blank" rel="noopener">Googleカレンダーに追加</a>'
+      +'<button type="button" class="cal-btn cal-i" id="calI">iPhoneカレンダーに追加</button></div>'
       +'<p class="calnote">「追加」を押すとカレンダーアプリが開きます。時間や内容は、そこでもさらに編集できます。</p>'
       +'</div>'
       +'<button type="button" class="cal-btn cal-share" id="shareDay">この日をシェア</button>';
   }
+  function _isInviteDay(d){ var iv=state.invite; return !!(iv&&iv.y===state.y&&iv.m===state.m&&iv.d===d); }
   function wireCal(d,title,details){
-    var hh=$('calHour'); if(hh){ var saved='19:00'; try{saved=localStorage.getItem('dc_caltime')||'19:00';}catch(e){} hh.value=saved; }
+    var hh=$('calHour'); if(hh){ var saved='19:00'; try{saved=localStorage.getItem('dc_caltime')||'19:00';}catch(e){}
+      if(_isInviteDay(d)&&/^\d{4}$/.test(state.invite.it||'')) saved=state.invite.it.slice(0,2)+':'+state.invite.it.slice(2,4);
+      hh.value=saved; }
     var ad=$('calAllday');
+    if(ad&&_isInviteDay(d)&&state.invite.allday) ad.checked=true;
     function upd(){ var g=$('calG'); if(g)g.href=gcalHref(d,title,details); if($('calHour')){ try{localStorage.setItem('dc_caltime',$('calHour').value||'19:00');}catch(e){} } if(hh)hh.disabled=!!(ad&&ad.checked); }
     if(hh)hh.onchange=upd;
     if(ad)ad.onchange=upd;
@@ -3386,6 +3499,7 @@ function pickFocus(interests){
     upd();
     var i=$('calI'); if(i)i.onclick=function(){downloadICS(d,title,details);};
     var sd=$('shareDay'); if(sd)sd.onclick=function(){shareDay(title,details);};
+    var ib=$('inviteBtn'); if(ib)ib.onclick=function(){ inviteShare(d); };   // LINEでお相手を誘う
   }
   /* ===== この日のメモ（端末保存 / 二人の組み合わせ別）===== */
   function _pkey(p){ return (p&&p.y)?(p.y+'-'+p.m+'-'+p.d):'-'; }
@@ -3408,6 +3522,7 @@ function pickFocus(interests){
   }
   function wireMemo(d){
     var ta=$('memoTa'); if(!ta)return; ta.value=getMemo(d);
+    if(!ta.value && _isInviteDay(d) && state.invite.plan){ ta.value=state.invite.plan; }   // 受け取った予定内容をプレフィル
     var st=$('memoStatus');
     function hasVal(){ return ta.value && ta.value.replace(/\s/g,'')!==''; }
     function rest(){ if(!st)return; st.classList.remove('saved'); st.textContent = hasVal()?'✓ 自動保存済み（この端末）':'入力すると自動保存されます'; }
@@ -3517,7 +3632,7 @@ function pickFocus(interests){
       var stitle='ニコカレ '+state.m+'/'+d+'（'+wd+'）'+sym+' '+lab+(x.touka?' 🌷モテ':'');
       var sdet=stripTags(msg||'自分のペースで過ごすと良い日です。')+' ／ '+buildShareUrl();
       h+=calRowHtml();
-      $('detail').innerHTML=h; wireCal(d,stitle,sdet); wireMemo(d); $('detail').scrollIntoView({behavior:'smooth',block:'nearest'}); return;
+      $('detail').innerHTML=h; wireMemo(d); wireCal(d,stitle,sdet); $('detail').scrollIntoView({behavior:'smooth',block:'nearest'}); return;
     }
     var p=PP[state.pp], mk=x.mk;
     var isStar=!!(state.topSet&&state.topSet[d]);
@@ -3563,7 +3678,7 @@ function pickFocus(interests){
     var ctitle='ニコカレ '+state.m+'/'+d+'（'+wd+'）'+p.name+'：'+(isStar?'⭐奇跡の相性日':((mk.s||'')+' '+(mk.w||'')));
     var cdet=stripTags(whyText(x))+' ／ '+buildShareUrl();
     h+=calRowHtml();
-    $('detail').innerHTML=h; wireCal(d,ctitle,cdet); wireMemo(d); $('detail').scrollIntoView({behavior:'smooth',block:'nearest'});
+    $('detail').innerHTML=h; wireMemo(d); wireCal(d,ctitle,cdet); $('detail').scrollIntoView({behavior:'smooth',block:'nearest'});
   }
   function whyText(x){
     var p=PP[state.pp], pp=state.pp;
@@ -3810,7 +3925,11 @@ function pickFocus(interests){
       var mode=(q.get('mode')==='solo')?'solo':'couple';
       var pp=q.get('pp'); if(pp&&PP[pp]){ state.pp=pp; }
       var b=q.get('b'); if(mode==='couple'&&b){ var pb=parseP(b); if(pb)setPerson('b',pb); }
-      state.mode=mode; applyModeUI(mode); return true;
+      state.mode=mode; applyModeUI(mode);
+      // お誘いリンク：日付・時刻・予定内容・送り主を読み、その月・その日を開く
+      if(q.get('inv')){ var id=q.get('id')||''; if(/^\d{8}$/.test(id)){ var iy=+id.slice(0,4),im=+id.slice(4,6),idd=+id.slice(6,8);
+        if(iy>=1900&&im>=1&&im<=12&&idd>=1&&idd<=31){ state.invite={y:iy,m:im,d:idd,allday:(q.get('iad')==='1'),it:(q.get('it')||''),plan:(q.get('plan')||'').slice(0,120),from:(q.get('from')||'').slice(0,24)}; state.y=iy; state.m=im; state.sel=idd; } } }
+      return true;
     }catch(e){ return false; }
   }
   /* 常連（保存した二人がいる人）は、前回の二人を自動表示して説明・入力を畳む */
@@ -3829,6 +3948,7 @@ function pickFocus(interests){
   // 初回訪問（共有URLでも常連でもない）は結果を自動表示しない＝入力してから「カレンダーを見る」で初表示。
   // 初期値のダミー結果を本物と誤解させないため。共有URL・前回の二人がいる常連のみ自動表示する。
   if(_fromUrl || _ret){ build(true); if(_ret){ try{ applyReturning(_ret); }catch(e){} } }
+  if(state.invite){ try{ showInviteBanner(); state.sel=state.invite.d; render(); detail(state.invite.d); }catch(e){} }
   try{ window.scrollTo(0,0); }catch(e){}
 })();
 </script>
