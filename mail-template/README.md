@@ -28,6 +28,7 @@ const mail = renderDailyMail(r, {
   unsubscribeUrl: 'https://unkiyoho.jp/unsubscribe.html?token=' + token, // 受信者ごとの解除トークン
   mypageUrl:      'https://unkiyoho.jp/mypage.html',
   aishouUrl:      'https://166unmei.com/',
+  operatorUrl:    'https://unkiyoho.jp/tokushoho.html',                  // 運営者情報
 });
 send({ to, subject: mail.subject, html: mail.html, text: mail.text });  // text は multipart/alternative の text/plain に
 ```
@@ -91,3 +92,10 @@ send({ to, subject: mail.subject, html: mail.html, text: mail.text });  // text 
 ### ダークモード対策（重要・変更しないこと）
 - 文字が乗る箱・外枠・ボタンに **グラデーション（background-image）を使わない**。Gmail等は背景色と文字色は反転するが background-image は反転しないため、グラデーションの箱では「明るい背景に明るい文字」になり読めなくなる。
 - 背景は必ず `background-color`（単色）＋`bgcolor` 属性で指定する。
+
+## 特定電子メール法の表示（オーナー決定：A案）
+
+1.66相性診断（自社の姉妹サービス）への案内を載せるため、広告宣伝メールとして扱い、次のように表示する。
+- **メール本文**：送信者の名称「運営：72k株式会社」、配信停止リンク（ログイン不要）、設定変更リンク
+- **リンク先（`operatorUrl`＝`tokushoho.html`）**：送信者の住所、問い合わせ先
+  - ⚠️ 現在の `tokushoho.html` には**住所が載っていない**。「所在地」を追記すること。
