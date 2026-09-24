@@ -4212,8 +4212,18 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
           +(pf?('<br>'+({f:'女性',m:'男性',x:'回答しない'}[pf.sex]||'—')+' ・ '+ageLabel(pf.age)):'<br>プロフィール未設定')+'</div>'
         +(vf?'':'<button class="au-primary" id="auGoVerify">メールを確認する</button>')
         +'<button class="au-sec" id="auOpenDM">メッセージ（DM）</button>'
+        +'<button class="au-sec" id="auShare">友だち追加（QR）</button>'
         +'<button class="au-sec" id="auEditProfile">プロフィールを編集</button>'
         +'<button class="au-sec" id="auLogout">ログアウト</button>';
+    } else if(s==='share'){
+      body='<div class="au-brand">'+MARK+'<div class="au-tt" style="margin-top:6px">友だち追加</div></div>'
+        +'<div style="text-align:center;color:var(--muted,#8a8296);font-size:12px;margin:-2px 0 12px;line-height:1.6">QRを読み取ってもらうか、<br>リンクを送ってお相手とつながれます。</div>'
+        +'<div id="auQR" style="width:190px;height:190px;margin:0 auto 14px;background:#fff;border:1px solid var(--line,#e2ddd2);border-radius:14px;display:flex;align-items:center;justify-content:center;padding:8px"></div>'
+        +'<button class="au-primary" id="auShareBtn">招待を共有</button>'
+        +'<button class="au-sec" id="auLineBtn" style="background:#06C755;color:#fff;border:none">LINEで送る</button>'
+        +'<button class="au-sec" id="auCopyBtn">リンクをコピー</button>'
+        +'<div id="auCopyMsg" style="text-align:center;font-size:11px;color:var(--accent-2,#2e3b6a);height:14px;margin-top:6px"></div>'
+        +'<div class="au-foot"><a data-go="account">← 戻る</a></div>';
     }
     modal.innerHTML='<div class="auth-dim"></div><div class="auth-card">'+(s==='profile'?'':'<button class="auth-x" aria-label="閉じる">×</button>')+body+'</div>';
     wire();
@@ -4248,8 +4258,19 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     } else if(s==='account'){
       var gv=el('auGoVerify'); if(gv)gv.onclick=function(){ open('verify'); };
       var dmb=el('auOpenDM'); if(dmb)dmb.onclick=function(){ close(); window.NicoAuth.requireAuth(function(){ if(window.NicoChat)window.NicoChat.open(); }); };
+      var shb=el('auShare'); if(shb)shb.onclick=function(){ open('share'); };
       var ep=el('auEditProfile'); if(ep)ep.onclick=function(){ open('profile'); };
       var lo=el('auLogout'); if(lo)lo.onclick=function(){ Auth.logout(); close(); };
+    } else if(s==='share'){
+      function baseUrl(){ return (location.origin&&location.origin!=='null')? location.origin+location.pathname : location.href.split('?')[0].split('#')[0]; }
+      function myName2(){ try{ var lp=JSON.parse(localStorage.getItem('dc_lastPair')||'null'); if(lp&&lp.a&&lp.a.name) return String(lp.a.name); }catch(e){} var u=Auth.current(); if(u&&u.email) return u.email.split('@')[0]; return 'あなた'; }
+      function friendLink(){ var u=Auth.current(); var uid=(u&&(u.uid||u.email))||'me'; return baseUrl()+'?nf='+encodeURIComponent(uid)+'&nm='+encodeURIComponent(myName2())+'&accounts=1'; }
+      var link=friendLink();
+      var qel=el('auQR'); if(qel){ if(typeof window.QRCode==='function'){ qel.innerHTML=''; try{ new window.QRCode(qel,{text:link,width:174,height:174,colorDark:'#2b2530',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M}); }catch(e){ qel.innerHTML='<span style="font-size:11px;color:var(--muted,#8a8296);text-align:center">QRは準備中です。<br>下の「リンクをコピー」で共有できます。</span>'; } } else { qel.innerHTML='<span style="font-size:11px;color:var(--muted,#8a8296);text-align:center">QRは準備中です。<br>下の「リンクをコピー」で共有できます。</span>'; } }
+      var shareText='ニコカレでふたりの相性カレンダーを見よう！（'+myName2()+'より）';
+      var sb=el('auShareBtn'); if(sb)sb.onclick=function(){ if(navigator.share){ navigator.share({title:'ニコカレ',text:shareText,url:link}).catch(function(){}); } else { window.open('https://social-plugins.line.me/lineit/share?url='+encodeURIComponent(link),'_blank'); } };
+      var lb=el('auLineBtn'); if(lb)lb.onclick=function(){ window.open('https://social-plugins.line.me/lineit/share?url='+encodeURIComponent(link),'_blank'); };
+      var cb=el('auCopyBtn'); if(cb)cb.onclick=function(){ var done=function(){ var m=el('auCopyMsg'); if(m){ m.textContent='リンクをコピーしました'; setTimeout(function(){ if(m)m.textContent=''; },1800); } }; if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(link).then(done,done); } else { done(); } };
     }
   }
   function renderChip(){
@@ -4259,6 +4280,22 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   }
   chip.onclick=function(){ var u=Auth.current(); open(u?'account':'register'); };
   Auth.onChange(function(){ renderChip(); if(!modal.hidden) render(); });
+
+  /* 招待リンク（?nf=...）で来た人への案内（つながり成立の本番はFirebase後） */
+  (function(){
+    try{
+      var q=new URLSearchParams(location.search); var nm=q.get('nm');
+      if(q.get('nf')==null) return;
+      if(sessionStorage.getItem('dc_invite_seen')==='1') return;
+      var bar=document.createElement('div');
+      bar.style.cssText='position:fixed;left:0;right:0;top:0;z-index:10002;background:linear-gradient(180deg,var(--accent,#3a4a80),var(--accent-2,#2e3b6a));color:#fff;font-family:var(--maru,sans-serif);font-size:12.5px;font-weight:700;padding:10px 40px 10px 14px;text-align:center;box-shadow:0 4px 14px -6px rgba(20,20,40,.5)';
+      bar.innerHTML='🎉 '+((nm?String(nm).replace(/[<>&"]/g,''):'お相手'))+'さんから招待されました。まずはふたりの相性を見てみましょう。<span style="opacity:.8;font-weight:400">（つながり機能は近日公開）</span>';
+      var x=document.createElement('button'); x.textContent='×'; x.setAttribute('aria-label','閉じる');
+      x.style.cssText='position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1';
+      x.onclick=function(){ bar.remove(); try{sessionStorage.setItem('dc_invite_seen','1');}catch(e){} };
+      bar.appendChild(x); document.body.appendChild(bar);
+    }catch(e){}
+  })();
 
   /* 将来のゲート用に公開：requireAuth(cb) を各機能から呼ぶ */
   window.NicoAuth={ current:Auth.current, open:open, onChange:Auth.onChange, requireAuth:function(cb){ var u=Auth.current(); if(u&&u.emailVerified&&u.profile){ cb&&cb(u); } else { open(u?(u.emailVerified?'profile':'verify'):'register'); } } };
