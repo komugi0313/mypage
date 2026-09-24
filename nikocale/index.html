@@ -1246,6 +1246,11 @@ select{
 .totoday-wrap{text-align:center}
 .calnote{font-size:11px;color:var(--muted);margin:7px 2px 0;line-height:1.7}
 /* お誘い：送信ボタン */
+.inv-theme{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap}
+.inv-theme .it-l{font-size:11.5px;font-weight:700;color:var(--ink-soft);font-family:var(--maru)}
+.it-sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1px var(--line-strong);cursor:pointer;padding:0;transition:transform .12s}
+.it-sw:hover{transform:scale(1.08)}
+.it-sw[aria-pressed="true"]{box-shadow:0 0 0 2px var(--accent);border-color:var(--panel);transform:scale(1.08)}
 .invite-msg{margin-top:12px}
 .invite-msg .im-l{display:block;font-size:11.5px;font-weight:700;color:var(--ink-soft);margin:0 2px 5px;font-family:var(--maru)}
 .invite-msg .im-opt{color:var(--muted);font-weight:500}
@@ -3385,6 +3390,13 @@ function pickFocus(interests){
     catch(e){ toast('この内容を共有してください：'+full); }
   }
   /* ===== お誘い（プランをLINEで送る／受け取る）===== */
+  var INV_THEMES={
+    navy:{label:'紺', bg:['#3a4676','#232c52','#171d38'], dark:true, glow:'rgba(216,189,119,.20)', border:'rgba(216,189,119,.55)', over:'#e9cf94', date:'#fdfaf2', sub:'#d8cfe6', msg:'#ffe6c9', plan:'#ffffff', accent:'#f2dea2', brand:'#c9c0dc', sw:'linear-gradient(135deg,#3a4676,#1f2647)'},
+    rose:{label:'ばら', bg:['#fbe3ea','#f3c9d8','#e8b0c6'], dark:false, glow:'rgba(255,255,255,.55)', border:'rgba(200,95,134,.45)', over:'#c05f86', date:'#a34468', sub:'#b76a89', msg:'#8a3f63', plan:'#5c3a4c', accent:'#b5527a', brand:'#c07a95', sw:'linear-gradient(135deg,#f2bcd0,#d17a9c)'},
+    cream:{label:'クリーム', bg:['#fbf3e2','#f6ecd6','#efe1c2'], dark:false, dashed:true, glow:'rgba(255,250,240,.6)', border:'#d8bd77', over:'#bf9a3f', date:'#8a6a2a', sub:'#a8843c', msg:'#9a5f70', plan:'#4a3f2c', accent:'#a8843c', brand:'#bfa46a', sw:'linear-gradient(135deg,#f6ecd6,#dcc17f)'},
+    fuji:{label:'藤', bg:['#8f75c0','#6a51a0','#4a3778'], dark:true, glow:'rgba(233,207,148,.18)', border:'rgba(233,207,148,.5)', over:'#f0d9a2', date:'#fdfaf2', sub:'#e7d6f0', msg:'#ffe6c9', plan:'#ffffff', accent:'#f2dea2', brand:'#d3c7e6', sw:'linear-gradient(135deg,#9a80cc,#6a51a0)'}
+  };
+  function inviteTheme(){ if(state.inviteTheme&&INV_THEMES[state.inviteTheme])return state.inviteTheme; try{var v=localStorage.getItem('dc_invtheme'); if(v&&INV_THEMES[v]){state.inviteTheme=v; return v;}}catch(e){} return 'navy'; }
   function _rr(x,rx,ry,w,h,r){ x.beginPath(); x.moveTo(rx+r,ry); x.arcTo(rx+w,ry,rx+w,ry+h,r); x.arcTo(rx+w,ry+h,rx,ry+h,r); x.arcTo(rx,ry+h,rx,ry,r); x.arcTo(rx,ry,rx+w,ry,r); x.closePath(); }
   function _clip(s,n){ s=String(s||''); return s.length>n? s.slice(0,n)+'…':s; }
   /* お誘いカード／バナー用のバッジ。良い日（⭐◎○）だけ表示し、△・×は出さない（お誘いを前向きに保つ）。
@@ -3404,32 +3416,32 @@ function pickFocus(interests){
     var plan=(($('memoTa')&&$('memoTa').value)||'').trim().slice(0,80);
     var from=((state.A&&state.A.name)||'').slice(0,20);
     var msg=inviteMsgVal();
-    var q='&inv=1&id='+ymd(state.y,state.m,d)+(o.allday?'&iad=1':'&it='+pad2(o.h)+pad2(o.mi));
+    var q='&inv=1&id='+ymd(state.y,state.m,d)+(o.allday?'&iad=1':'&it='+pad2(o.h)+pad2(o.mi))+'&th='+inviteTheme();
     if(plan)q+='&plan='+encodeURIComponent(plan);
     if(msg)q+='&msg='+encodeURIComponent(msg);
     if(from)q+='&from='+encodeURIComponent(from);
     return base+q;
   }
   function inviteCardCanvas(d, plan, tlabel, rel, msg){
+    var t=INV_THEMES[inviteTheme()]||INV_THEMES.navy;
     var wd=['日','月','火','水','木','金','土'][new Date(state.y,state.m-1,d).getDay()];
     var W=1080,H=1080,c=document.createElement('canvas'); c.width=W;c.height=H; var x=c.getContext('2d');
-    var g=x.createLinearGradient(0,0,W,H); g.addColorStop(0,'#3a4676'); g.addColorStop(.6,'#232c52'); g.addColorStop(1,'#171d38'); x.fillStyle=g; x.fillRect(0,0,W,H);
-    var rg=x.createRadialGradient(W*0.16,H*0.08,10,W*0.16,H*0.08,W*0.85); rg.addColorStop(0,'rgba(216,189,119,.20)'); rg.addColorStop(.55,'rgba(216,189,119,0)'); x.fillStyle=rg; x.fillRect(0,0,W,H);
-    x.strokeStyle='rgba(216,189,119,.5)'; x.lineWidth=3; _rr(x,44,44,W-88,H-88,26); x.stroke();
+    var g=x.createLinearGradient(0,0,W,H); g.addColorStop(0,t.bg[0]); g.addColorStop(.6,t.bg[1]); g.addColorStop(1,t.bg[2]); x.fillStyle=g; x.fillRect(0,0,W,H);
+    var rg=x.createRadialGradient(W*0.16,H*0.08,10,W*0.16,H*0.08,W*0.85); rg.addColorStop(0,t.glow); rg.addColorStop(.55,'rgba(255,255,255,0)'); x.fillStyle=rg; x.fillRect(0,0,W,H);
+    x.strokeStyle=t.border; x.lineWidth=t.dashed?4:3; if(t.dashed)x.setLineDash([16,12]); _rr(x,44,44,W-88,H-88,26); x.stroke(); x.setLineDash([]);
     x.textAlign='center';
-    x.fillStyle='#e9cf94'; x.font='700 40px "Zen Maru Gothic","Zen Kaku Gothic New",sans-serif'; x.fillText('お  誘  い', W/2, 200);
-    x.fillStyle='#fdfaf2'; x.font='900 126px "Zen Old Mincho",serif'; x.fillText(state.m+'月'+d+'日', W/2, 376);
-    x.fillStyle='#d8cfe6'; x.font='700 46px "Zen Kaku Gothic New",sans-serif'; x.fillText('（'+wd+'）', W/2, 448);
-    // 中央：良い日バッジ（⭐◎○のみ）→ ひとこと → 予定 → 時刻 を上から積む
+    x.fillStyle=t.over; x.font='700 40px "Zen Maru Gothic","Zen Kaku Gothic New",sans-serif'; x.fillText('お  誘  い', W/2, 200);
+    x.fillStyle=t.date; x.font='900 126px "Zen Old Mincho",serif'; x.fillText(state.m+'月'+d+'日', W/2, 376);
+    x.fillStyle=t.sub; x.font='700 46px "Zen Kaku Gothic New",sans-serif'; x.fillText('（'+wd+'）', W/2, 448);
     var y=540;
     if(rel&&rel.good&&rel.t){ x.font='700 42px "Zen Kaku Gothic New",sans-serif'; var bw=Math.min(W-160,x.measureText(rel.t).width+90);
-      x.fillStyle='rgba(233,207,148,.15)'; _rr(x,(W-bw)/2,y-40,bw,80,40); x.fill(); x.strokeStyle='rgba(233,207,148,.6)'; x.lineWidth=2; _rr(x,(W-bw)/2,y-40,bw,80,40); x.stroke();
-      x.fillStyle='#f2dea2'; x.fillText(rel.t,W/2,y+14); y+=110; }
-    if(msg){ x.fillStyle='#ffe6a6'; x.font='700 50px "Zen Maru Gothic","Zen Kaku Gothic New",sans-serif'; x.fillText('「'+_clip(msg,18)+'」',W/2,y+18); y+=96; }
-    if(plan){ x.fillStyle='#ffffff'; x.font='700 56px "Zen Kaku Gothic New",sans-serif'; x.fillText(_clip(plan,15),W/2,y+24); y+=86; }
-    x.fillStyle='#d8cfe6'; x.font='500 42px "Zen Kaku Gothic New",sans-serif'; x.fillText(tlabel+'  約2時間',W/2,y+22);
-    x.fillStyle='#c9c0dc'; x.font='700 36px "Zen Kaku Gothic New",sans-serif'; x.fillText('ニコカレ', W/2, 958);
-    x.fillStyle='#e9cf94'; x.font='700 42px "Zen Kaku Gothic New",sans-serif'; x.fillText('タップして二人の相性を見る →', W/2, 1012);
+      x.fillStyle=t.dark?'rgba(255,255,255,.14)':'#ffffff'; _rr(x,(W-bw)/2,y-40,bw,80,40); x.fill(); x.strokeStyle=t.border; x.lineWidth=2; _rr(x,(W-bw)/2,y-40,bw,80,40); x.stroke();
+      x.fillStyle=t.accent; x.fillText(rel.t,W/2,y+14); y+=110; }
+    if(msg){ x.fillStyle=t.msg; x.font='700 50px "Zen Maru Gothic","Zen Kaku Gothic New",sans-serif'; x.fillText('「'+_clip(msg,18)+'」',W/2,y+18); y+=96; }
+    if(plan){ x.fillStyle=t.plan; x.font='700 56px "Zen Kaku Gothic New",sans-serif'; x.fillText(_clip(plan,15),W/2,y+24); y+=86; }
+    x.fillStyle=t.sub; x.font='500 42px "Zen Kaku Gothic New",sans-serif'; x.fillText(tlabel+'  約2時間',W/2,y+22);
+    x.fillStyle=t.brand; x.font='700 36px "Zen Kaku Gothic New",sans-serif'; x.fillText('ニコカレ', W/2, 958);
+    x.fillStyle=t.accent; x.font='700 42px "Zen Kaku Gothic New",sans-serif'; x.fillText('タップして二人の相性を見る →', W/2, 1012);
     return c;
   }
   async function inviteShare(d){
@@ -3462,11 +3474,15 @@ function pickFocus(interests){
     var rel=relLabelFor(iv.d);
     var tlabel=iv.allday?'終日':(/^\d{4}$/.test(iv.it||'')?iv.it.slice(0,2)+':'+iv.it.slice(2,4)+'〜':'');
     var from=iv.from?esc(iv.from)+'さん':'お相手';
+    var t=INV_THEMES[iv.theme]||INV_THEMES.navy;
+    var ink=t.dark?'#fdfaf2':t.date, sub=t.dark?'rgba(255,255,255,.9)':t.sub;
+    var topStyle='background:linear-gradient(160deg,'+t.bg[0]+','+t.bg[1]+' 62%,'+t.bg[2]+');color:'+ink+'';
+    var badgeStyle=t.dark?'background:rgba(255,255,255,.15);border:1px solid '+t.border+';color:'+t.accent+'':'background:#fff;border:1px solid '+t.border+';color:'+t.accent+'';
     el.hidden=false;
-    el.innerHTML='<div class="iv-top"><span class="iv-from"><b>'+from+'</b>からお誘いです</span>'
-      +'<div class="iv-d">'+iv.m+'月'+iv.d+'日（'+wd+'）</div>'
-      +(iv.msg?'<div class="iv-msg">「'+esc(iv.msg)+'」</div>':'')
-      +((rel.good&&rel.t)?'<span class="iv-badge">'+rel.t+'</span>':'')+'</div>'
+    el.innerHTML='<div class="iv-top" style="'+topStyle+'"><span class="iv-from" style="color:'+sub+'"><b style="color:'+t.accent+'">'+from+'</b>からお誘いです</span>'
+      +'<div class="iv-d" style="color:'+ink+'">'+iv.m+'月'+iv.d+'日（'+wd+'）</div>'
+      +(iv.msg?'<div class="iv-msg" style="color:'+t.accent+'">「'+esc(iv.msg)+'」</div>':'')
+      +((rel.good&&rel.t)?'<span class="iv-badge" style="'+badgeStyle+'">'+rel.t+'</span>':'')+'</div>'
       +(iv.plan?'<div class="iv-plan"><span class="l">予定の内容</span><span class="v">'+esc(iv.plan)+(tlabel?'　'+tlabel:'')+'</span></div>':'')
       +'<div class="iv-acts"><button type="button" class="iv-b1" id="ivAdd">自分のカレンダーに追加</button>'
       +'<button type="button" class="iv-b2" id="ivReply">OK！とLINEで返信</button></div>';
@@ -3492,7 +3508,12 @@ function pickFocus(interests){
       +'<input type="time" id="calHour" step="1800" aria-label="予定の開始時刻">'
       +'<span class="ct-dur">〜 約2時間</span>'
       +'<label class="ct-allday"><input type="checkbox" id="calAllday"> 終日</label></div>'
-      +(couple?'<div class="invite-msg"><label class="im-l">お相手へのひとこと<span class="im-opt">（任意）</span></label>'
+      +(couple?'<div class="inv-theme"><span class="it-l">お誘いの色</span>'
+        +'<button type="button" class="it-sw" data-th="navy" style="background:linear-gradient(135deg,#3a4676,#1f2647)" aria-label="紺"></button>'
+        +'<button type="button" class="it-sw" data-th="rose" style="background:linear-gradient(135deg,#f2bcd0,#d17a9c)" aria-label="ばら"></button>'
+        +'<button type="button" class="it-sw" data-th="cream" style="background:linear-gradient(135deg,#f6ecd6,#dcc17f)" aria-label="クリーム"></button>'
+        +'<button type="button" class="it-sw" data-th="fuji" style="background:linear-gradient(135deg,#9a80cc,#6a51a0)" aria-label="藤"></button></div>'
+        +'<div class="invite-msg"><label class="im-l">お相手へのひとこと<span class="im-opt">（任意）</span></label>'
         +'<input id="inviteMsg" maxlength="40" placeholder="例：この日どう？会いたいな"></div>'
         +'<button type="button" class="invite-send" id="inviteBtn">LINEでお相手を誘う</button>'
         +'<p class="invite-cap">お相手がタップすると、この日のふたりの相性とお誘いが開きます。</p>':'')
@@ -3518,6 +3539,9 @@ function pickFocus(interests){
     var i=$('calI'); if(i)i.onclick=function(){downloadICS(d,title,details);};
     var sd=$('shareDay'); if(sd)sd.onclick=function(){shareDay(title,details);};
     var ib=$('inviteBtn'); if(ib)ib.onclick=function(){ inviteShare(d); };   // LINEでお相手を誘う
+    var sws=document.querySelectorAll('.it-sw'); if(sws.length){ var cur=inviteTheme();   // お誘いの色を選ぶ
+      sws.forEach(function(s){ s.setAttribute('aria-pressed', s.getAttribute('data-th')===cur?'true':'false');
+        s.onclick=function(){ state.inviteTheme=s.getAttribute('data-th'); try{localStorage.setItem('dc_invtheme',state.inviteTheme);}catch(e){} sws.forEach(function(o){o.setAttribute('aria-pressed',o===s?'true':'false');}); }; }); }
   }
   /* ===== この日のメモ（端末保存 / 二人の組み合わせ別）===== */
   function _pkey(p){ return (p&&p.y)?(p.y+'-'+p.m+'-'+p.d):'-'; }
@@ -3946,7 +3970,7 @@ function pickFocus(interests){
       state.mode=mode; applyModeUI(mode);
       // お誘いリンク：日付・時刻・予定内容・送り主を読み、その月・その日を開く
       if(q.get('inv')){ var id=q.get('id')||''; if(/^\d{8}$/.test(id)){ var iy=+id.slice(0,4),im=+id.slice(4,6),idd=+id.slice(6,8);
-        if(iy>=1900&&im>=1&&im<=12&&idd>=1&&idd<=31){ state.invite={y:iy,m:im,d:idd,allday:(q.get('iad')==='1'),it:(q.get('it')||''),plan:(q.get('plan')||'').slice(0,120),msg:(q.get('msg')||'').slice(0,60),from:(q.get('from')||'').slice(0,24)}; state.y=iy; state.m=im; state.sel=idd; } } }
+        if(iy>=1900&&im>=1&&im<=12&&idd>=1&&idd<=31){ var _th=q.get('th'); state.invite={y:iy,m:im,d:idd,allday:(q.get('iad')==='1'),it:(q.get('it')||''),plan:(q.get('plan')||'').slice(0,120),msg:(q.get('msg')||'').slice(0,60),from:(q.get('from')||'').slice(0,24),theme:(INV_THEMES[_th]?_th:'navy')}; state.y=iy; state.m=im; state.sel=idd; } } }
       return true;
     }catch(e){ return false; }
   }
