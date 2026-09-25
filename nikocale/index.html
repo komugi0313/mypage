@@ -40,6 +40,8 @@
   }catch(e){}
 })();
 </script>
+<script>/* DM/チャットのON/OFF。false=OFF（チャットはLINE等に任せ、予定共有＋カレンダー追加に集中）。将来サーバー連携時にtrueで復活 */
+window.NICO_DM_ON=false;</script>
 <script>
 (function(){
   var GA_ID=''; /* 例：'G-XXXXXXXXXX' */
@@ -1404,7 +1406,7 @@ select{
 .invite-msg .im-l{display:block;font-size:11.5px;font-weight:700;color:var(--ink-soft);margin:0 2px 5px;font-family:var(--maru)}
 .invite-msg .im-opt{color:var(--muted);font-weight:500}
 .invite-msg input{width:100%;background:var(--panel);border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:10px 11px;font-size:13.5px;font-family:var(--sans)}
-.invite-send{display:block;width:100%;margin-top:10px;background:#06C755;color:#fff;border:none;border-radius:12px;padding:14px;font-weight:900;font-size:15px;font-family:var(--maru);cursor:pointer;box-shadow:0 6px 14px -6px rgba(6,199,85,.55);transition:filter .15s,transform .15s}
+.invite-send{display:block;width:100%;margin-top:10px;background:linear-gradient(180deg,var(--accent),var(--accent-2));color:var(--accent-ink,#fff);border:none;border-radius:12px;padding:14px;font-weight:900;font-size:15px;font-family:var(--maru);cursor:pointer;box-shadow:0 8px 18px -8px var(--accent);transition:filter .15s,transform .15s}
 .invite-send:hover{filter:brightness(1.05);transform:translateY(-1px)}
 .invite-cap{font-size:11px;color:var(--muted);text-align:center;margin:7px 2px 2px;line-height:1.6}
 .cal-subhead{text-align:center;font-size:11px;color:var(--muted);font-weight:700;margin:14px 0 8px;letter-spacing:.04em}
@@ -3695,14 +3697,13 @@ function pickFocus(interests){
         canvas.toBlob(async function(blob){
           try{ if(blob&&navigator.canShare){ var f=new File([blob],'nicocale-invite.png',{type:'image/png'}); if(navigator.canShare({files:[f]})){ await navigator.share({files:[f],text:text,url:url}); return res(); } } }catch(e){ if(e&&e.name==='AbortError')return res(); }
           try{ if(navigator.share){ await navigator.share({title:'ニコカレ お誘い',text:text,url:url}); return res(); } }catch(e){ if(e&&e.name==='AbortError')return res(); }
-          try{ window.open('https://social-plugins.line.me/lineit/share?url='+encodeURIComponent(url),'_blank','noopener'); }catch(e){}
+          try{ copyLink(); }catch(e){}   // 共有非対応（PC等）はリンクをコピー（LINE固定にしない）
           res();
         },'image/png');
       });
       return;
     }
     try{ if(navigator.share){ await navigator.share({title:'ニコカレ お誘い',text:text,url:url}); return; } }catch(e){ if(e&&e.name==='AbortError')return; }
-    try{ window.open('https://social-plugins.line.me/lineit/share?url='+encodeURIComponent(url),'_blank','noopener'); return; }catch(e){}
     copyLink();
   }
   function showInviteBanner(){
@@ -3743,11 +3744,11 @@ function pickFocus(interests){
   }
   function calRowHtml(){
     var couple=(state.mode==='couple');
-    // A案：つながる前（未ログイン）は「まず誘う」／つながっている（ログイン済み）人だけ「メッセージ」を出す
-    var _connected=false; try{ var _u=window.NicoAuth&&window.NicoAuth.current&&window.NicoAuth.current(); _connected=!!(_u&&_u.emailVerified&&_u.profile); }catch(e){}
+    // DM ON時のみ「チャットに送る」。OFF時は全員「共有でお相手に送る」（この日の相性カード＋リンクを端末の共有で）
+    var _connected=false; try{ var _u=window.NicoAuth&&window.NicoAuth.current&&window.NicoAuth.current(); _connected=!!(_u&&_u.emailVerified&&_u.profile&&window.NICO_DM_ON); }catch(e){}
     var dmcta = !couple ? '' : (_connected
       ? '<div class="dm-cta"><div class="dm-cta-x"><div class="dm-cta-t">💬 この日をお相手に送る</div><div class="dm-cta-s">「この日どう？」をワンタップでチャットに送れます。</div></div><button type="button" class="dm-cta-b" id="dmSendDay">この日どう？と送る</button></div>'
-      : '<div class="dm-cta"><div class="dm-cta-x"><div class="dm-cta-t">💌 お相手を誘って、二人でつながる</div><div class="dm-cta-s">この日の相性とお誘いをLINEで送ろう。お相手がつながると、ここでメッセージのやりとりができます。</div></div><button type="button" class="dm-cta-b" id="dmInviteBtn">お相手を誘う</button></div>');
+      : '<div class="dm-cta"><div class="dm-cta-x"><div class="dm-cta-t">💌 この日をお相手に送る</div><div class="dm-cta-s">この日の相性カードとリンクを、そのまま共有で送れます（LINE・メールなど何でも）。</div></div><button type="button" class="dm-cta-b" id="dmInviteBtn">お相手に送る</button></div>');
     return dmcta
       +'<div class="calbox">'
       +'<div class="cal-h">この日を予定にする</div>'
@@ -3766,8 +3767,8 @@ function pickFocus(interests){
         +'<button type="button" class="it-sw" data-th="fuji" style="background:linear-gradient(135deg,#9a80cc,#6a51a0)" aria-label="藤"></button></div>'
         +'<div class="invite-msg"><label class="im-l">お相手へのひとこと<span class="im-opt">（任意）</span></label>'
         +'<input id="inviteMsg" maxlength="40" placeholder="例：この日どう？会いたいな"></div>'
-        +'<button type="button" class="invite-send" id="inviteBtn">LINEでお相手を誘う</button>'
-        +'<p class="invite-cap">お相手がタップすると、この日のふたりの相性とお誘いが開きます。</p>':'')
+        +'<button type="button" class="invite-send" id="inviteBtn">この日を共有してお相手を誘う</button>'
+        +'<p class="invite-cap">共有（LINE・メールなど何でも）で送れます。お相手がタップすると、この日のふたりの相性とお誘いが開きます。</p>':'')
       +'<div class="cal-subhead">'+(couple?'― 自分のカレンダーにも入れる ―':'― カレンダーに追加 ―')+'</div>'
       +'<div class="calrow"><a class="cal-btn cal-g" id="calG" target="_blank" rel="noopener">Googleカレンダーに追加</a>'
       +'<button type="button" class="cal-btn cal-i" id="calI">iPhoneカレンダーに追加</button></div>'
@@ -4397,7 +4398,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
         +'<div class="au-err" id="auErr"></div>'
         +'<button class="au-primary" id="auDoReg">はじめる</button>'
         +'<div class="au-note">ご登録のメールに<b>確認メール</b>を送ります（本人確認）。<br>登録すると<a data-nav="terms">利用規約</a>・<a data-nav="privacy">プライバシー</a>に同意したものとみなします。</div>'
-        +'<div class="au-demolink"><a id="auDemo">登録せずにデモを見る（DM）</a></div>'
+        +(window.NICO_DM_ON?'<div class="au-demolink"><a id="auDemo">登録せずにデモを見る（DM）</a></div>':'')
         +'<div class="au-foot">すでにアカウントをお持ちですか？ <a data-go="login">ログイン</a></div>';
     } else if(s==='verify'){
       var em=(u&&u.email)||state.email;
@@ -4451,7 +4452,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
           +'<span class="au-badge '+(vf?'ok':'no')+'">'+(vf?'メール確認済み':'メール未確認')+'</span>'
           +(pf?('<br>'+({f:'女性',m:'男性',x:'回答しない'}[pf.sex]||'—')+' ・ '+ageLabel(pf.age)):'<br>プロフィール未設定')+'</div>'
         +(vf?'':'<button class="au-primary" id="auGoVerify">メールを確認する</button>')
-        +'<button class="au-sec" id="auOpenDM">メッセージ（DM）</button>'
+        +(window.NICO_DM_ON?'<button class="au-sec" id="auOpenDM">メッセージ（DM）</button>':'')
         +'<button class="au-sec" id="auShare">友だち追加（QR）</button>'
         +'<button class="au-sec" id="auEditProfile">プロフィールを編集</button>'
         +'<button class="au-sec" id="auLogout">ログアウト</button>'
@@ -4481,7 +4482,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       function chkTypo(){ var f=typoFix(em.value); tw.innerHTML=f?'<div class="au-typo">もしかして <b>'+esc(f)+'</b> ？ タップで修正</div>':''; var t=tw.querySelector('.au-typo'); if(t)t.onclick=function(){ em.value=f; tw.innerHTML=''; }; }
       if(em)em.oninput=function(){ state.email=em.value; chkTypo(); }; chkTypo();
       var b=el('auDoReg'); if(b)b.onclick=function(){ var r=Auth.register(em.value, (el('auPass')||{}).value||''); if(r.error){ el('auErr').textContent=r.error; } else { state.email=em.value.trim().toLowerCase(); open('verify'); } };
-      var dmo=el('auDemo'); if(dmo)dmo.onclick=function(){ var de='demo@nicocale.app',pw='demo1234'; var r=Auth.register(de,pw); if(r&&r.error){ Auth.login(de,pw,true); } try{ Auth.markVerified(); Auth.saveProfile({sex:'x',age:''}); }catch(e){} pendingCb=null; close(); if(window.NicoChat)window.NicoChat.open(); };
+      var dmo=el('auDemo'); if(dmo)dmo.onclick=function(){ var de='demo@nicocale.app',pw='demo1234'; var r=Auth.register(de,pw); if(r&&r.error){ Auth.login(de,pw,true); } try{ Auth.markVerified(); Auth.saveProfile({sex:'x',age:''}); }catch(e){} pendingCb=null; close(); if(window.NICO_DM_ON&&window.NicoChat)window.NicoChat.open(); };
     } else if(s==='verify'){
       var re=el('auResend'); if(re)re.onclick=function(){ Auth.resend(); re.textContent='再送しました'; setTimeout(function(){re.textContent='確認メールを再送';},1500); };
       var ed=el('auEdit'); if(ed)ed.onclick=function(){ open('editEmail'); };
@@ -4583,7 +4584,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       function dismiss(){ dim.remove(); try{sessionStorage.setItem('dc_invite_seen','1');}catch(e){} }
       dim.querySelector('.nkiv-x').onclick=dismiss;
       dim.querySelector('.nkiv-sec').onclick=dismiss;
-      dim.querySelector('.nkiv-cta').onclick=function(){ dismiss(); try{ window.NicoAuth.requireAuth(function(){ if(window.NicoChat)window.NicoChat.open(); }); }catch(e){} };
+      dim.querySelector('.nkiv-cta').onclick=function(){ dismiss(); try{ window.NicoAuth.requireAuth(function(){ if(window.NICO_DM_ON&&window.NicoChat){ window.NicoChat.open(); } else { try{ var _cc=document.getElementById('charCard'); if(_cc)_cc.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} } }); }catch(e){} };
       document.body.appendChild(dim);
     }catch(e){}
   })();
@@ -4810,7 +4811,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   var _lockY=0;
   function lockBody(){ try{ _lockY=window.scrollY||window.pageYOffset||0; var b=document.body; b.style.position='fixed'; b.style.top=(-_lockY)+'px'; b.style.left='0'; b.style.right='0'; b.style.width='100%'; document.documentElement.style.overflow='hidden'; }catch(e){} }
   function unlockBody(){ try{ var b=document.body; b.style.position=''; b.style.top=''; b.style.left=''; b.style.right=''; b.style.width=''; document.documentElement.style.overflow=''; window.scrollTo(0,_lockY); }catch(e){} }
-  function open(){ openList(); }              // 入口＝トーク一覧
+  function open(){ if(!window.NICO_DM_ON) return; openList(); }   // 入口＝トーク一覧（DM OFF時は無効）
   function openList(){
     var u=window.NicoAuth.current(); if(!u){ window.NicoAuth.requireAuth(function(){ openList(); }); return; }
     if(unsub){ unsub(); unsub=null; } cur=null; view='list';
@@ -5079,6 +5080,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   function openSheet(){ var sh=q('dmSheet'); if(sh)sh.classList.add('on'); }
   // カレンダーの日を「この日どう？」で送る。相手が1人ならその人へ、複数なら一覧で選ばせる
   function proposeDay(pl){
+    if(!window.NICO_DM_ON) return;
     var u=window.NicoAuth.current(); if(!u){ window.NicoAuth.requireAuth(function(){ proposeDay(pl); }); return; }
     if(!pl||!pl.ymd) return;
     var ps=partners();
@@ -5133,6 +5135,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     var n=0; partners().forEach(function(p){ n+=unreadOf(p.uid); }); return n;
   }
   function refreshChip(){
+    if(!window.NICO_DM_ON){ chip.style.display='none'; return; }  // DM OFF：入口チップを出さない
     chip.style.display=wrap.classList.contains('on')?'none':'inline-flex';
     var n=unreadCount(), dot=q('dmDot');
     if(dot){ dot.textContent=n>9?'9+':n; dot.classList.toggle('on', n>0); }
@@ -5143,7 +5146,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   window.addEventListener('storage',function(ev){ if(ev.key&&ev.key.indexOf('dc_dm_')===0) refreshChip(); });
   refreshChip();
 
-  window.NicoChat={ open:open, openList:openList, openChat:openChat, close:close, proposeDay:proposeDay, ENABLED:true };
+  window.NicoChat={ open:open, openList:openList, openChat:openChat, close:close, proposeDay:proposeDay, ENABLED:!!window.NICO_DM_ON };
 })();
 </script>
 
