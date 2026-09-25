@@ -1,18 +1,26 @@
 diff -ru pk/index.html fx/index.html
 --- pk/index.html	2026-09-17 17:10:16.000000000 +0000
-+++ fx/index.html	2026-09-25 05:55:55.984932154 +0000
-@@ -1592,6 +1592,10 @@
++++ fx/index.html	2026-09-25 06:25:50.285761563 +0000
+@@ -1592,6 +1592,18 @@
  function loadJSON(k){ try{ var s=localStorage.getItem(k); return s?JSON.parse(s):null; }catch(e){ return null; } }
  function saveProfile(p){ try{ localStorage.setItem(LS_PROF,JSON.stringify(p)); }catch(e){} }
  function saveMsgs(){ try{ localStorage.setItem(LS_MSGS,JSON.stringify(state.msgs.slice(-60))); }catch(e){} }
 +/* 大運の第一運＝月柱（0歳〜立運）。流派ルール：大運は必ず0歳の月柱からスタート */
 +var MONTH_DU_LBL={ja:'第一運＝月柱',en:'1st = month pillar',zh:'第一运＝月柱',zt:'第一運＝月柱',ko:'제1운＝월주',vi:'vận 1 = trụ Tháng',es:'1.º = pilar Mes',pt:'1.º = pilar Mês',id:'ke-1 = pilar Bulan',th:'ช่วงแรก = เสาเดือน'};
++/* 大運の年齢表示は「◯歳◯ヶ月」まで出す（立運の端数月＝各大運の境目。例 立運8ヶ月→0歳〜0歳8ヶ月／0歳8ヶ月〜10歳8ヶ月） */
++var AGE_U={ja:['歳','ヶ月'],en:['y','m'],zh:['岁','个月'],zt:['歲','個月'],ko:['세','개월'],vi:['t','th'],es:['a','m'],pt:['a','m'],id:['th','bln'],th:['ปี','ด.']};
++function _ageL(y,m){ var u=AGE_U[state.lang]||AGE_U.en; return y+u[0]+(m?(m+u[1]):''); }
++function _ageJ(y,m){ return y+'歳'+(m?(m+'ヶ月'):''); }
++function _ageE(y,m){ return y+(m?('y'+m+'m'):''); }
++function _duSpan(d){ return d.isMonth?(_ageL(0,0)+'〜'+_ageL(d.endAge,d.endMonths)):(_ageL(d.startAge,d.months)+'〜'+_ageL(d.endAge,d.months)); }
++function _duSpanJ(d){ return d.isMonth?('0歳〜'+_ageJ(d.endAge,d.endMonths)):(_ageJ(d.startAge,d.months)+'〜'+_ageJ(d.endAge,d.months)); }
++function _duSpanE(d){ return d.isMonth?('0-'+_ageE(d.endAge,d.endMonths)):(_ageE(d.startAge,d.months)+'-'+_ageE(d.endAge,d.months)); }
 +function _monthDu(pro){ return (pro&&(pro.monthDecade||(window.monthDecade&&window.monthDecade(pro))))||null; }
 +function _curDu(pro){ return (window.curDecade&&pro)?window.curDecade(pro):((pro&&pro.now&&pro.now.daeunIndex>=0)?pro.decadeFortunes[pro.now.daeunIndex]:_monthDu(pro)); }
  function computeChart(p){
    if(!window.PersonBazi) return null;
    var pl=p.place?placeById(p.place):null;
-@@ -1725,8 +1729,8 @@
+@@ -1725,8 +1737,8 @@
   th:{'比肩':'ช่วงยืนด้วยขาตัวเองและตอกย้ำความเป็นตัวคุณ','劫財':'ช่วงเปิดทางฝ่าด่านผ่านการขัดเกลากับผู้คน','食神':'ช่วงที่ความสุขเพิ่มขึ้นและชีวิตเปิดกว้าง','傷官':'ช่วงที่ประสาทสัมผัสเฉียบคมและการแสดงออกเบ่งบาน','偏財':'ช่วงที่ขยับเท่าไหร่ก็ได้ผลตอบแทนเท่านั้น','正財':'ช่วงที่สิ่งที่สั่งสมเริ่มเป็นรูปเป็นร่าง','偏官':'ช่วงแห่งความท้าทายและจังหวะชี้ชะตา','正官':'ช่วงที่ความไว้ใจและฐานะเติบโต','偏印':'ช่วงเรียนรู้ลึกซึ้งและชาร์จพลัง','正印':'ช่วงที่รากฐานมั่นคงภายใต้การปกป้อง',none:'ช่วงก่อนวัฏจักรใหญ่ครั้งแรกจะเริ่ม เวลาแห่งการวางรากฐาน'}};
  try{ Object.keys(DEC_PHRASE).forEach(function(L){ var o=DEC_PHRASE[L]; if(o&&o['正印']&&!o['印綬']) o['印綬']=o['正印']; if(o&&o['偏官']&&!o['七殺']) o['七殺']=o['偏官']; }); }catch(e){}
  function decadePhrase(){
@@ -23,7 +31,7 @@ diff -ru pk/index.html fx/index.html
      var M=pick(DEC_PHRASE); return (ts&&M[ts])?M[ts]:M.none;
    }catch(e){ return pick(DEC_PHRASE).none; }
  }
-@@ -2369,7 +2373,7 @@
+@@ -2369,7 +2381,7 @@
    EL_ORDER.forEach(function(e){var v=five[e]||0; if(v<min)min=v; if(v>max)max=v;});
    EL_ORDER.forEach(function(e){var v=five[e]||0; if(v===min)weak.push(e); if(v===max)strong.push(e); if(v===0)zero.push(e);});
    var curDaeun='',ty='',ny='';
@@ -32,7 +40,7 @@ diff -ru pk/index.html fx/index.html
    if(pro.now&&pro.annualFortunes){ var t=pro.annualFortunes.find(function(a){return a.year===pro.now.year;}); var n=pro.annualFortunes.find(function(a){return a.year===pro.now.year+1;}); ty=t?t.tenStar:''; ny=n?n.tenStar:''; }
    var stars=(window.shinsatsuHits?window.shinsatsuHits(pro):[]).map(function(s){return s.split('(')[0];});
    return {present:present,dayBranchStar:dayBranchStar,weak:weak,strong:strong,zero:zero,curDaeun:curDaeun,ty:ty,ny:ny,stars:stars,sex:(state.profile&&state.profile.sex)||'female'};
-@@ -3142,14 +3146,14 @@
+@@ -3142,14 +3154,14 @@
    });
    /* --- 大運（各人の現在＋次） --- */
    function decadeTags(pro,who){
@@ -46,11 +54,11 @@ diff -ru pk/index.html fx/index.html
        if(BR_CLASH[aDay]===db) tg.push('あなたの日柱に冲');
        if(BR_CLASH[bDay]===db) tg.push('相手の日柱に冲');
 -      if(tg.length) out.push((ix===0?'現在':'次')+'の10年 '+d.ganzhi+'('+d.startYear+'-'+(d.startYear+9)+'): '+tg.join('・'));
-+      if(tg.length) out.push((ix===0?'現在':'次')+(d.isMonth?'の第一運(月柱・0-'+d.endAge+'歳) ':'の10年 ')+d.ganzhi+'('+d.startYear+'-'+(d.isMonth?((pro.decadeFortunes[0]||{}).startYear||''):(d.startYear+9))+'): '+tg.join('・'));
++      if(tg.length) out.push((ix===0?'現在':'次')+(d.isMonth?'の第一運(月柱・'+_duSpanJ(d)+') ':'の10年('+_duSpanJ(d)+') ')+d.ganzhi+'('+d.startYear+'-'+(d.isMonth?((pro.decadeFortunes[0]||{}).startYear||''):(d.startYear+9))+'): '+tg.join('・'));
      });
      return out.length?(who+'→'+out.join(' / ')):'';
    }
-@@ -3203,7 +3207,7 @@
+@@ -3203,7 +3215,7 @@
    var out=[];
    try{
      var pro=state.chart.pro, dp=pro.pillars[2], nowY=pro.now.year;
@@ -59,7 +67,29 @@ diff -ru pk/index.html fx/index.html
      var STEMS='甲乙丙丁戊己庚辛壬癸', BRS='子丑寅卯辰巳午未申酉戌亥';
      function elOf(st){ return (STEM[st]||{}).el; }
      function keRel(a,b){ return EL_KE[elOf(a)]===elOf(b)||EL_KE[elOf(b)]===elOf(a); }
-@@ -3390,13 +3394,14 @@
+@@ -3234,7 +3246,7 @@
+       [[0,'年柱'],[1,'月柱'],[3,'時柱']].forEach(function(pi){
+         var np=pro.pillars[pi[0]]; if(np&&np.ganzhi&&isNatchin(x.ganzhi,np.ganzhi)) tags.push('納音 vs '+pi[1]);
+       });
+-      if(tags.length){ var cur=(i===pro.now.daeunIndex); out.push(tags.join('+')+' decade '+x.ganzhi+' (age '+x.startAge+'-'+x.endAge+', '+x.startYear+'-'+(x.startYear+9)+(cur?', CURRENT':'')+')'); }
++      if(tags.length){ var cur=(i===pro.now.daeunIndex); out.push(tags.join('+')+' decade '+x.ganzhi+' (age '+_duSpanE(x)+', '+x.startYear+'-'+(x.startYear+9)+(cur?', CURRENT':'')+')'); }
+     });
+     if(!out.length) return '';
+     return '[DECADE 納音・律音] '+out.join(' | ')+' — a 納音 decade is a 10-year blank-slate chapter: old methods reset, and humbly re-examining oneself lets them ride a wave of renewal (people who struggled before can see life turn 180°). A 律音 decade doubles the day-pillar theme for 10 years. Weigh this heavily: it colors everything inside it.\n';
+@@ -3358,9 +3370,10 @@
+       var amp=(d.terrain==='墓'||d.terrain==='絶'||d.terrain==='胎')||(voids.indexOf(d.branch)>=0);
+       /* ② 西暦：エンジンの立運年(d.startYear)を正とする。無ければ従来どおり 生年+年齢 で近似（lifeArcBlock等と一致させる） */
+       var startY=(d.startYear!=null)?+d.startYear:((birthY!=null)?birthY+d.startAge:null);
+-      var current=(nowAge!=null)&&(nowAge>=d.startAge)&&(nowAge<=d.endAge);
++      var _am=(pro.now&&pro.now.ageMonths!=null)?pro.now.ageMonths:null, _s0=d.startAge*12+(d.months||0);
++      var current=(_am!=null)?(_am>=_s0&&_am<_s0+120):((nowAge!=null)&&(nowAge>=d.startAge)&&(nowAge<d.endAge)); /* 立運の端数月まで見て判定 */
+       var intense=isSetsu&&amp;
+-      return {startAge:d.startAge,endAge:d.endAge,ganzhi:d.ganzhi,branch:d.branch,terrain:d.terrain,
++      return {startAge:d.startAge,endAge:d.endAge,months:d.months||0,ganzhi:d.ganzhi,branch:d.branch,terrain:d.terrain,
+               season:se?se.s:'',seasonEl:el,mark:mark,isSetsu:isSetsu,isTu:isSetsu,intense:intense,
+               enterSeason:isSetsu?(se?se.s:''):'',enterEl:isSetsu?el:'',enterMark:isSetsu?mark:'',
+               startYear:startY,swayFrom:startY!=null?startY-1.5:null,swayTo:startY!=null?startY+1.5:null,current:current};
+@@ -3390,18 +3403,19 @@
        arc.push(p.label+'='+p.terrain+' ('+(LIFE[p.label]||'')+')');
      });
      var df=pro.decadeFortunes||[], ci=(pro.now&&pro.now.daeunIndex>=0)?pro.now.daeunIndex:-1;
@@ -68,43 +98,78 @@ diff -ru pk/index.html fx/index.html
      var decs=df.map(function(d,i){
        if(!d||!d.tenStar) return null;
        var yr=d.startYear?(' ~'+d.startYear):'';
-       return 'age '+d.startAge+'-'+d.endAge+yr+':'+(d.terrain||'')+'/'+(d.tenStar||'')+(i===ci?' <=NOW':'');
+-      return 'age '+d.startAge+'-'+d.endAge+yr+':'+(d.terrain||'')+'/'+(d.tenStar||'')+(i===ci?' <=NOW':'');
++      return 'age '+_duSpanE(d)+yr+':'+(d.terrain||'')+'/'+(d.tenStar||'')+(i===ci?' <=NOW':'');
      }).filter(Boolean);
 -    var nextD=(ci>=0&&df[ci+1])?df[ci+1]:null;
-+    var _md=_monthDu(pro); if(_md) decs.unshift('age 0-'+_md.endAge+(_md.startYear?(' ~'+_md.startYear):'')+':'+(_md.terrain||'')+'/'+(_md.tenStar||'')+' (1st period = month pillar '+_md.ganzhi+')'+(ci<0?' <=NOW':''));
++    var _md=_monthDu(pro); if(_md) decs.unshift('age '+_duSpanE(_md)+(_md.startYear?(' ~'+_md.startYear):'')+':'+(_md.terrain||'')+'/'+(_md.tenStar||'')+' (1st period = month pillar '+_md.ganzhi+')'+(ci<0?' <=NOW':''));
 +    var nextD=(ci>=0)?(df[ci+1]||null):(df[0]||null);
      var t='\n[LIFE ARC — the moving story of THIS life (computed truth; render as MOTION through time, never a static trait list)]\n';
      if(arc.length) t+='Birth-given life rhythm (十二運 across the pillars, earliest life -> latest): '+arc.join(' -> ')+'. This rise-mature-renew shape is the pulse the whole life follows'+(tu?' (birth time unknown → late-life pillar omitted; do NOT invent it)':'')+'.\n';
      if(decs.length){ t+='Decade chapters (大運 ~10y each, 十二運/十神): '+decs.join(' | ')+'.';
-@@ -3603,6 +3608,7 @@
+       if(nowAge!=null) t+=' They are '+nowAge+(nowY?(' ('+nowY+')'):'')+' now, inside the <=NOW chapter.';
+-      if(nextD) t+=' Next chapter change: age '+nextD.startAge+(nextD.startYear?(' (~'+nextD.startYear+')'):'')+', turning toward '+(nextD.terrain||'')+'/'+(nextD.tenStar||'')+'.';
++      if(nextD) t+=' Next chapter change: age '+_ageE(nextD.startAge,nextD.months)+(nextD.startYear?(' (~'+nextD.startYear+')'):'')+', turning toward '+(nextD.terrain||'')+'/'+(nextD.tenStar||'')+'.';
+       t+='\n';
+     }
+     return t;
+@@ -3411,8 +3425,8 @@
+   try{
+     var a=setsubokuAnalysis(); if(!a||!a.blocks.length) return '';
+     var SEA={winter:'winter/water',spring:'spring/wood',summer:'summer/fire',autumn:'autumn/metal'};
+-    var seq=a.blocks.map(function(b){ return 'age '+b.startAge+'-'+b.endAge+':'+(b.ganzhi||'')+' '+(SEA[b.season]||'?')+(b.mark==='喜'?'(favorable)':(b.mark==='忌'?'(challenging)':''))+(b.isSetsu?' <<SETSUBOKU turning-point'+(b.intense?', intensified':'')+(b.enterSeason?' → entering '+(SEA[b.enterSeason]||'?')+(b.enterMark==='喜'?' (FAVORABLE 30-yr season ahead=発展)':(b.enterMark==='忌'?' (challenging 30-yr season ahead=備え)':'')):'')+'>>':'')+(b.current?' [NOW]':''); }).join(' | ');
+-    var nx=a.next; var nxtLine=nx?('The next/current life turning-point (節木運): around age '+nx.startAge+(nx.startYear?(' (~year '+nx.startYear+')'):'')+', when the 大運 enters '+nx.ganzhi+' — the "replanting" hinge into a new 30-year season'+(nx.enterSeason?(': turning toward '+(SEA[nx.enterSeason]||'')+(nx.enterMark==='喜'?', a FAVORABLE season for them (発展の30年)':(nx.enterMark==='忌'?', a challenging season for them (備えの30年)':''))):'')+'; the ~1.5 years around it ('+(nx.swayFrom||'')+'-'+(nx.swayTo||'')+') tend to feel unsettled.'):'No major turning-point is near right now.';
++    var seq=a.blocks.map(function(b){ return 'age '+_ageE(b.startAge,b.months)+'-'+_ageE(b.endAge,b.months)+':'+(b.ganzhi||'')+' '+(SEA[b.season]||'?')+(b.mark==='喜'?'(favorable)':(b.mark==='忌'?'(challenging)':''))+(b.isSetsu?' <<SETSUBOKU turning-point'+(b.intense?', intensified':'')+(b.enterSeason?' → entering '+(SEA[b.enterSeason]||'?')+(b.enterMark==='喜'?' (FAVORABLE 30-yr season ahead=発展)':(b.enterMark==='忌'?' (challenging 30-yr season ahead=備え)':'')):'')+'>>':'')+(b.current?' [NOW]':''); }).join(' | ');
++    var nx=a.next; var nxtLine=nx?('The next/current life turning-point (節木運): around age '+_ageE(nx.startAge,nx.months)+(nx.startYear?(' (~year '+nx.startYear+')'):'')+', when the 大運 enters '+nx.ganzhi+' — the "replanting" hinge into a new 30-year season'+(nx.enterSeason?(': turning toward '+(SEA[nx.enterSeason]||'')+(nx.enterMark==='喜'?', a FAVORABLE season for them (発展の30年)':(nx.enterMark==='忌'?', a challenging season for them (備えの30年)':''))):'')+'; the ~1.5 years around it ('+(nx.swayFrom||'')+'-'+(nx.swayTo||'')+') tend to feel unsettled.'):'No major turning-point is near right now.';
+     var t='';
+     t+='[SETSUBOKU-UN (節木運) — 30-YEAR LIFE SEASONS] The 大運 decades group by 方合 into ~30-year seasons. Luck runs '+(a.forward?'順行/FORWARD: the earth branch 丑辰未戌 CLOSES its season, so the NEW 30-year season opens at the NEXT 大運':'逆行/REVERSE: the earth branch 丑辰未戌 LEADS its season, so it opens the NEW 30-year season')+'. The hinge branches 丑辰未戌 (amplified by the 十二運 stages 墓/絶/胎 or 空亡) are "replanting" turning-points = 人生の曲がり角. Each turning-point is annotated with the season it turns INTO (already direction-corrected — read the coming 30 years from "entering …", NOT from the hinge branch\'s own season). Their sequence: '+seq+'. '+nxtLine+'\n';
+     t+='[SETSUBOKU — HOW TO SPEAK OF IT] '+(a.proactive?'A turning-point is within ~1.5 years, so you MAY raise it warmly on your own when relevant. ':'Only discuss this if the user asks about life turning-points / their future direction; do NOT bring it up unprompted. ')+'RULES: (1) NEVER say a season is "30 years of bad luck" or doom — a challenging season is a backdrop, and daily action shapes the lived experience; (2) frame a turning-point as 人生の曲がり角/植え替えの時期 — unsettled for ~1.5 years but a doorway to a new flow once crossed; encourage small steps, a forward-looking mindset, and firming up footing before big decisions; (3) speak in FELT, concrete everyday terms (what tends to shift — work, home, the people around them — and how to steady it), never the bare label "慎重な時期"; (4) HEALTH stays gentle self-care only ("揺らぎやすいから休みながら整えて") — NEVER predict illness or diagnose; (5) NEVER use 九星/本命星/方位学/風水 — if you mention a lucky direction or colour, it must come only from their Four-Pillars 喜神; (6) if a favourable season falls early in life = 早咲き, late = 大器晩成 — say it kindly.\n';
+@@ -3434,7 +3448,7 @@
+     var segs=a.blocks.map(function(b){
+       var star=b.isSetsu?('<span class="sb-star" data-t="節木運">★</span>'):'';
+       var nowp=b.current?('<span class="sb-now">'+pick(SB_I18N.now)+'</span>'):'';
+-      return '<div class="sb-seg sb-'+(b.season||'')+(b.current?' cur':'')+'" title="'+b.startAge+'-'+b.endAge+'">'
++      return '<div class="sb-seg sb-'+(b.season||'')+(b.current?' cur':'')+'" title="'+_ageL(b.startAge,b.months)+'〜'+_ageL(b.endAge,b.months)+'">'
+         +'<div class="sb-age">'+b.startAge+'</div><div class="sb-cell">'+nowp+star+'</div></div>';
+     }).join('');
+     var lg=['spring','summer','autumn','winter'].map(function(s){return '<span class="sb-lg sb-'+s+'"><i></i>'+pick(SB_I18N[s])+'</span>';}).join('');
+@@ -3603,10 +3617,11 @@
      var nowY=(pro.now&&pro.now.year)||0, curD=(pro.now&&pro.now.daeunIndex>=0)?pro.now.daeunIndex:-1;
      var M=(DEC_PHRASE&&(DEC_PHRASE[state.lang]||DEC_PHRASE.en))||{};
      var decLines=[];
-+    var _md=_monthDu(pro); if(_md&&curD>=0&&_md.tenStar) decLines.push('0-'+_md.endAge+'歳: '+(M[_md.tenStar==='印綬'?'正印':_md.tenStar]||_md.tenStar));
++    var _md=_monthDu(pro); if(_md&&curD>=0&&_md.tenStar) decLines.push(_duSpanJ(_md)+': '+(M[_md.tenStar==='印綬'?'正印':_md.tenStar]||_md.tenStar));
      pro.decadeFortunes.forEach(function(d,i){
        if(curD>=0 && i>=curD) return; /* 現在より前の大運だけ */
        if(!d||!d.tenStar) return;
-@@ -4096,6 +4102,10 @@
+-      var age=(d.startAge!=null?d.startAge:'')+(d.endAge!=null?('-'+d.endAge):'')+'歳';
++      var age=_duSpanJ(d);
+       decLines.push(age+': '+(M[d.tenStar]||d.tenStar));
+     });
+     var yrLines=[];
+@@ -4094,8 +4109,12 @@
+     var rows=pro.decadeFortunes.map(function(x,i){
+       var yrs=x.startYear+'〜'+(x.startYear+9);
        var cur=(i===di);
-       return '<div class="lc-row'+(cur?' cur':'')+'"><span class="lc-age">'+x.startAge+'〜'+x.endAge+'</span><span class="lc-yrs">'+yrs+'</span><span class="lc-gz">'+x.ganzhi+'</span><span class="lc-star">'+(x.tenStar||'')+'</span>'+(cur?'<span class="lc-now">'+d.lcNow+'</span>':'')+'</div>';
+-      return '<div class="lc-row'+(cur?' cur':'')+'"><span class="lc-age">'+x.startAge+'〜'+x.endAge+'</span><span class="lc-yrs">'+yrs+'</span><span class="lc-gz">'+x.ganzhi+'</span><span class="lc-star">'+(x.tenStar||'')+'</span>'+(cur?'<span class="lc-now">'+d.lcNow+'</span>':'')+'</div>';
++      return '<div class="lc-row'+(cur?' cur':'')+'"><span class="lc-age">'+_duSpan(x)+'</span><span class="lc-yrs">'+yrs+'</span><span class="lc-gz">'+x.ganzhi+'</span><span class="lc-star">'+(x.tenStar||'')+'</span>'+(cur?'<span class="lc-now">'+d.lcNow+'</span>':'')+'</div>';
      }).join('');
 +    /* 第一運＝月柱（0歳〜立運）を先頭に */
 +    var _md=_monthDu(pro);
 +    if(_md){ var _mcur=(di<0), _d0=pro.decadeFortunes[0];
-+      rows='<div class="lc-row'+(_mcur?' cur':'')+'"><span class="lc-age">0〜'+_md.endAge+'</span><span class="lc-yrs">'+(_md.startYear||'')+'〜'+(_d0&&_d0.startYear?(_d0.startYear-1):'')+'</span><span class="lc-gz">'+_md.ganzhi+'</span><span class="lc-star">'+(_md.tenStar||'')+' <small>('+pick(MONTH_DU_LBL)+')</small></span>'+(_mcur?'<span class="lc-now">'+d.lcNow+'</span>':'')+'</div>'+rows; }
++      rows='<div class="lc-row'+(_mcur?' cur':'')+'"><span class="lc-age">'+_duSpan(_md)+'</span><span class="lc-yrs">'+(_md.startYear||'')+'〜'+(_d0&&_d0.startYear?(_d0.startYear-1):'')+'</span><span class="lc-gz">'+_md.ganzhi+'</span><span class="lc-star">'+(_md.tenStar||'')+' <small>('+pick(MONTH_DU_LBL)+')</small></span>'+(_mcur?'<span class="lc-now">'+d.lcNow+'</span>':'')+'</div>'+rows; }
      var tys=turningYears(11);
      var yb=pro.pillars[0].branch, kr=KOURAN[yb], tk=TENKI[yb], loves=[];
      (pro.annualFortunes||[]).forEach(function(a){ if(a.year>=nowY&&a.year<=nowY+10&&(a.branch===kr||a.branch===tk)) loves.push(a.year); });
-@@ -4133,7 +4143,7 @@
+@@ -4133,7 +4152,7 @@
      daiunHtml='<div class="section-label">'+pick({ja:'大運（10年ごとの運気の流れ）',en:'Decade luck cycles',zh:'大运（每十年的运势）',zt:'大運（每十年的運勢）',ko:'대운 (10년 주기 흐름)',vi:'Đại vận (chu kỳ 10 năm)',es:'Ciclos de suerte (10 años)',pt:'Ciclos de sorte (10 anos)',id:'Siklus 10 tahunan',th:'วัฏจักรโชค 10 ปี'})+'</div>'+
        '<div class="daiun">'+c.pro.decadeFortunes.map(function(df,i){
          var _v=_unV(df.ganzhi,[]),_tn=_TN[_v.k]||_TN['中'];
 -        return '<div class="du'+(i===curIdx?' cur':'')+'"><div class="da">'+df.startAge+'-'+df.endAge+'</div><div class="dg">'+df.ganzhi+'</div><div class="dt">'+(df.tenStar?'<span class="bdg" data-t="'+df.tenStar+'">'+df.tenStar+'</span>':'')+'</div><div class="dv" style="font-size:10px;font-weight:700;margin-top:2px;color:'+_tn.c+'">'+pick(_tn.t)+'</div></div>';
-+        return (i===0&&_monthDu(c.pro)?(function(md){var _mv=_unV(md.ganzhi,[]),_mt=_TN[_mv.k]||_TN['中'];return '<div class="du'+(curIdx<0?' cur':'')+'"><div class="da">0-'+md.endAge+'</div><div class="dg">'+md.ganzhi+'</div><div class="dt">'+(md.tenStar?'<span class="bdg" data-t="'+md.tenStar+'">'+md.tenStar+'</span>':'')+'</div><div class="dv" style="font-size:10px;font-weight:700;margin-top:2px;color:'+_mt.c+'">'+pick(_mt.t)+'</div><div style="font-size:9px;opacity:.7;margin-top:1px">'+pick(MONTH_DU_LBL)+'</div></div>';})(_monthDu(c.pro)):'')+'<div class="du'+(i===curIdx?' cur':'')+'"><div class="da">'+df.startAge+'-'+df.endAge+'</div><div class="dg">'+df.ganzhi+'</div><div class="dt">'+(df.tenStar?'<span class="bdg" data-t="'+df.tenStar+'">'+df.tenStar+'</span>':'')+'</div><div class="dv" style="font-size:10px;font-weight:700;margin-top:2px;color:'+_tn.c+'">'+pick(_tn.t)+'</div></div>';
++        return (i===0&&_monthDu(c.pro)?(function(md){var _mv=_unV(md.ganzhi,[]),_mt=_TN[_mv.k]||_TN['中'];return '<div class="du'+(curIdx<0?' cur':'')+'"><div class="da">'+_duSpan(md)+'</div><div class="dg">'+md.ganzhi+'</div><div class="dt">'+(md.tenStar?'<span class="bdg" data-t="'+md.tenStar+'">'+md.tenStar+'</span>':'')+'</div><div class="dv" style="font-size:10px;font-weight:700;margin-top:2px;color:'+_mt.c+'">'+pick(_mt.t)+'</div><div style="font-size:9px;opacity:.7;margin-top:1px">'+pick(MONTH_DU_LBL)+'</div></div>';})(_monthDu(c.pro)):'')+'<div class="du'+(i===curIdx?' cur':'')+'"><div class="da">'+_duSpan(df)+'</div><div class="dg">'+df.ganzhi+'</div><div class="dt">'+(df.tenStar?'<span class="bdg" data-t="'+df.tenStar+'">'+df.tenStar+'</span>':'')+'</div><div class="dv" style="font-size:10px;font-weight:700;margin-top:2px;color:'+_tn.c+'">'+pick(_tn.t)+'</div></div>';
        }).join('')+'</div>'+
        '<p class="disc-note" style="margin-top:6px">'+pick({ja:'各10年の色は用神（あなたにとっての喜／忌）で見た傾向です。追い風＝喜神が巡る（相生）／向かい風＝忌神が巡る（相剋）／太過注意＝その気が強まりすぎ（喜神でも過ぎれば負担）。干支をタップで通変星の意味。',en:'Each decade’s color shows its tendency by your 用神 (favorable/unfavorable elements): Tailwind = a favorable element cycles in (nourishing); Headwind = an unfavorable one (draining); Over-strong = that energy runs too high (even a favorable one can burden when excessive). Tap a pillar for its ten-god meaning.',zh:'每个十年的颜色，是按你的用神（对你而言的喜／忌）判断的走势。顺风＝喜神来临（相生）／逆风＝忌神来临（相克）／过旺注意＝该气过强（喜神过头也会成负担）。点按干支看十神含义。',zt:'每個十年的顏色，是依你的用神（對你而言的喜／忌）判斷的走勢。順風＝喜神來臨（相生）／逆風＝忌神來臨（相剋）／過旺注意＝該氣過強（喜神過頭也會成負擔）。點按干支看十神含義。',ko:'각 10년의 색은 용신(당신에게의 희／기)으로 본 흐름입니다. 순풍＝희신이 도는 때(상생)／역풍＝기신이 도는 때(상극)／과다주의＝그 기운이 지나치게 강함(희신도 지나치면 부담). 간지를 탭하면 십성 의미.',vi:'Màu của mỗi thập niên thể hiện xu hướng theo Dụng thần của bạn (hành hỷ/kỵ): Thuận＝hành hỷ tới (tương sinh)／Nghịch＝hành kỵ tới (tương khắc)／Thái quá＝khí đó quá mạnh (hành hỷ dư cũng thành gánh nặng). Chạm vào trụ để xem ý nghĩa thập thần.',es:'El color de cada década muestra su tendencia según tu 用神 (elementos favorables/desfavorables): a favor＝entra un elemento favorable (nutre)／en contra＝uno desfavorable (desgasta)／exceso＝esa energía es demasiado fuerte (incluso una favorable pesa si sobra). Toca un pilar para ver su significado.',pt:'A cor de cada década mostra sua tendência pelo seu 用神 (elementos favoráveis/desfavoráveis): a favor＝entra um elemento favorável (nutre)／contra＝um desfavorável (desgasta)／excesso＝essa energia fica forte demais (até uma favorável pesa em excesso). Toque num pilar para ver o significado.',id:'Warna tiap dekade menunjukkan kecenderungan menurut 用神 Anda (elemen menguntungkan/merugikan): angin baik＝elemen menguntungkan datang (menyuburkan)／angin lawan＝yang merugikan (menguras)／berlebih＝energi itu terlalu kuat (yang baik pun membebani bila berlebih). Ketuk pilar untuk maknanya.',th:'สีของแต่ละทศวรรษบอกแนวโน้มตามอิงสิน (用神) ของคุณ (ธาตุที่ส่งเสริม/ขัดขวาง): ส่งเสริม＝ธาตุดีเวียนมา (เกื้อกูล)／สวนทาง＝ธาตุร้ายเวียนมา (บั่นทอน)／แรงเกิน＝พลังนั้นแรงเกินไป (ธาตุดีถ้ามากไปก็เป็นภาระ) แตะที่เสาเพื่อดูความหมายสิบเทพ'})+'</p>'+
        (c.pro.startFortune?'<p class="disc-note" style="margin-top:8px">'+pick({ja:'運の切り替わりは '+c.pro.startFortune.years+'歳'+c.pro.startFortune.months+'ヶ月から、10年ごと。',en:'Cycles change every 10 years starting at age '+c.pro.startFortune.years+'y '+c.pro.startFortune.months+'m.',zh:'从'+c.pro.startFortune.years+'岁'+c.pro.startFortune.months+'个月起，每十年一换。',zt:'從'+c.pro.startFortune.years+'歲'+c.pro.startFortune.months+'個月起，每十年一換。',ko:c.pro.startFortune.years+'세 '+c.pro.startFortune.months+'개월부터 10년마다 바뀝니다.',vi:'Chu kỳ đổi mỗi 10 năm, bắt đầu từ '+c.pro.startFortune.years+' tuổi '+c.pro.startFortune.months+' tháng.',es:'Los ciclos cambian cada 10 años desde los '+c.pro.startFortune.years+' años y '+c.pro.startFortune.months+' meses.',pt:'Os ciclos mudam a cada 10 anos, a partir de '+c.pro.startFortune.years+' anos e '+c.pro.startFortune.months+' meses.',id:'Siklus berganti tiap 10 tahun mulai usia '+c.pro.startFortune.years+' th '+c.pro.startFortune.months+' bln.',th:'วัฏจักรเปลี่ยนทุก 10 ปี เริ่มตั้งแต่อายุ '+c.pro.startFortune.years+' ปี '+c.pro.startFortune.months+' เดือน'})+'</p>':'');
-@@ -4355,8 +4365,7 @@
+@@ -4355,8 +4374,7 @@
      var BR_E={寅:'木',卯:'木',巳:'火',午:'火',辰:'土',戌:'土',丑:'土',未:'土',申:'金',酉:'金',亥:'水',子:'水'};
      function gzEls(gz){ var o=[]; if(gz&&gz.length>=2){ if(STEM_E[gz.charAt(0)])o.push(STEM_E[gz.charAt(0)]); if(BR_E[gz.charAt(1)])o.push(BR_E[gz.charAt(1)]); } return o; }
      var proo=c.pro||{}, nowY=(proo.now&&proo.now.year)||0;
@@ -114,7 +179,7 @@ diff -ru pk/index.html fx/index.html
      var yy=(proo.annualFortunes||[]).filter(function(a){return a.year===nowY;})[0]||null;
      var seasonEl=(seasonIdx>=0)?['木','火','金','水'][seasonIdx]:'';
      var daeunEls=dd?gzEls(dd.ganzhi):[], yearEls=yy?gzEls(yy.ganzhi):[];
-@@ -4401,7 +4410,7 @@
+@@ -4401,7 +4419,7 @@
    var taikaHtml='';
    try{
      var _pn=c.pro&&c.pro.now, _pdi=(_pn&&_pn.daeunIndex>=0)?_pn.daeunIndex:-1;
@@ -123,9 +188,18 @@ diff -ru pk/index.html fx/index.html
      var _pyy=(c.pro&&c.pro.annualFortunes&&_pn)?c.pro.annualFortunes.filter(function(a){return a.year===_pn.year;})[0]:null;
      var _exNow=[]; if(_pdd)_exNow.push(_pdd.ganzhi); if(_pyy)_exNow.push(_pyy.ganzhi);
      var _natT=EL_ORDER.filter(function(e){return (_fiveM[e]||0)>=3;});
+@@ -4423,7 +4441,7 @@
+       function _natPairs(gz){var r=[];[0,1,2,3].forEach(function(pi){var np=_np2.pillars[pi];if(!np||!np.ganzhi)return;if(gz===np.ganzhi)r.push({pi:pi,rel:'律音'});else if(isNatchin(gz,np.ganzhi))r.push({pi:pi,rel:'納音'});});return r;}
+       var _mrows=[];
+       var _ndi=(_np2.now&&_np2.now.daeunIndex>=0)?_np2.now.daeunIndex:0;
+-      (_np2.decadeFortunes||[]).forEach(function(x,i){if(i<_ndi)return;var pr=_natPairs(x.ganzhi);if(!pr.length)return;var nm=nayinOf(x.ganzhi);_mrows.push({kind:'大運',when:x.startAge+'-'+x.endAge+pick({ja:'歳',en:'y',zh:'岁',zt:'歲',ko:'세',vi:'t',es:'a',pt:'a',id:'th',th:'ปี'}),gz:x.ganzhi,nm:nm?nm[0]:'',pairs:pr,cur:(i===_ndi)});});
++      (_np2.decadeFortunes||[]).forEach(function(x,i){if(i<_ndi)return;var pr=_natPairs(x.ganzhi);if(!pr.length)return;var nm=nayinOf(x.ganzhi);_mrows.push({kind:'大運',when:_duSpan(x),gz:x.ganzhi,nm:nm?nm[0]:'',pairs:pr,cur:(i===_ndi)});});
+       var _ny2=(_np2.now&&_np2.now.year)||0;
+       (_np2.annualFortunes||[]).forEach(function(a){if(a.year<_ny2||a.year>_ny2+12)return;var pr=_natPairs(a.ganzhi);if(!pr.length)return;var nm=nayinOf(a.ganzhi);_mrows.push({kind:'年運',when:''+a.year,gz:a.ganzhi,nm:nm?nm[0]:'',pairs:pr,cur:(a.year===_ny2)});});
+       if(_mrows.length){
 diff -ru pk/pro-adapter.js fx/pro-adapter.js
 --- pk/pro-adapter.js	2026-09-16 13:41:04.000000000 +0000
-+++ fx/pro-adapter.js	2026-09-25 05:55:55.990016059 +0000
++++ fx/pro-adapter.js	2026-09-25 06:28:18.313434023 +0000
 @@ -140,7 +140,7 @@
    const base={}; SHENG.forEach(k=>base[k]=(c.fiveElements&&c.fiveElements[k])||0);
    const now=Object.assign({},base); let du='',ay='';
@@ -144,7 +218,7 @@ diff -ru pk/pro-adapter.js fx/pro-adapter.js
      const yy=c.annualFortunes&&c.annualFortunes.find(a=>a.year===c.now.year);
      if(dd&&voids.includes(dd.branch))duVoid=dd.ganzhi;
      if(yy&&voids.includes(yy.branch))ayVoid=yy.year+' '+yy.ganzhi;}
-@@ -196,19 +196,50 @@
+@@ -196,19 +196,49 @@
    c.fiveElements=f; c.hourPillar=tp; c.pillars=c.pillars.slice(0,3); c.timeUnknown=true;
    return c;
  }
@@ -154,7 +228,6 @@ diff -ru pk/pro-adapter.js fx/pro-adapter.js
 +function monthDecade(c){
 +  try{
 +    var df=c.decadeFortunes||[], d0=df[0], mp=c.pillars[1]; if(!d0||!mp) return null;
-+    if(!d0.startAge&&!d0.months) return null; /* 立運0歳0ヶ月＝月柱の期間が実質ゼロ */
 +    return {isMonth:true,startAge:0,months:0,endAge:d0.startAge,endMonths:d0.months||0,
 +      startYear:(c.birth&&c.birth.clock)?+c.birth.clock.slice(0,4):null,
 +      ganzhi:mp.ganzhi,stem:mp.stem,branch:mp.branch,stemElement:mp.stemElement,branchElement:mp.branchElement,
@@ -198,7 +271,7 @@ diff -ru pk/pro-adapter.js fx/pro-adapter.js
        var _yc=_sa.pillars[0].ganzhi!==_sb.pillars[0].ganzhi, _mc=_sa.pillars[1].ganzhi!==_sb.pillars[1].ganzhi;
        if(_yc||_mc) setsuBoundary={year:_yc?[_sa.pillars[0].ganzhi,_sb.pillars[0].ganzhi]:null, month:_mc?[_sa.pillars[1].ganzhi,_sb.pillars[1].ganzhi]:null};
      }catch(_e){} }
-@@ -256,7 +287,7 @@
+@@ -256,22 +286,23 @@
      SHENG.forEach(function(el){var a=kk.assess(el); if(a.fav==='喜')favEls.push(el); if(a.fav==='忌')imEls.push(el);});
      L.push('Favorable elements(喜): '+(favEls.join(',')||'-')+' / Unfavorable(忌): '+(imEls.join(',')||'-'));
      var tk=gogyoTaika(c); if(tk&&tk.baseTaika&&tk.baseTaika.length) L.push('Excess elements(過多): '+tk.baseTaika.join(','));
@@ -207,15 +280,17 @@ diff -ru pk/pro-adapter.js fx/pro-adapter.js
      if(c.now&&c.decadeFortunes){
        if(c.now.daeunIndex>=0){
          var dd=c.decadeFortunes[c.now.daeunIndex];
-@@ -264,14 +295,15 @@
+-        if(dd) L.push('Current decade luck(大運): '+dd.ganzhi+' ['+dd.tenStar+'/'+dd.terrain+'] age '+dd.startAge+'-'+dd.endAge);
++        if(dd) L.push('Current decade luck(大運): '+dd.ganzhi+' ['+dd.tenStar+'/'+dd.terrain+'] age '+dd.startAge+'y'+(dd.months||0)+'m to '+dd.endAge+'y'+(dd.months||0)+'m');
          var next=c.decadeFortunes[c.now.daeunIndex+1];
-         if(next) L.push('Next decade luck: '+next.ganzhi+' ['+next.tenStar+'] from age '+next.startAge);
+-        if(next) L.push('Next decade luck: '+next.ganzhi+' ['+next.tenStar+'] from age '+next.startAge);
++        if(next) L.push('Next decade luck: '+next.ganzhi+' ['+next.tenStar+'] from age '+next.startAge+'y'+(next.months||0)+'m');
        } else {
 -        var d0=c.decadeFortunes[0];
 -        if(d0) L.push('Decade luck(大運) has NOT started yet (starts at age '+d0.startAge+'). First decade will be: '+d0.ganzhi+' ['+d0.tenStar+'] — speak of it as upcoming, never as the current decade.');
 +        var md=c.monthDecade||monthDecade(c), d0=c.decadeFortunes[0];
-+        if(md) L.push('Current decade luck(大運): FIRST period = the month pillar '+md.ganzhi+' ['+md.tenStar+'/'+md.terrain+'] age 0-'+md.endAge+' (大運 always starts at age 0 from the month pillar)');
-+        if(d0) L.push('Next decade luck: '+d0.ganzhi+' ['+d0.tenStar+'] from age '+d0.startAge);
++        if(md) L.push('Current decade luck(大運): FIRST period = the month pillar '+md.ganzhi+' ['+md.tenStar+'/'+md.terrain+'] age 0 to '+md.endAge+'y'+(md.endMonths||0)+'m (大運 always starts at age 0 from the month pillar)');
++        if(d0) L.push('Next decade luck: '+d0.ganzhi+' ['+d0.tenStar+'] from age '+d0.startAge+'y'+(d0.months||0)+'m');
        }
      }
      if(c.now&&c.annualFortunes){
@@ -226,6 +301,26 @@ diff -ru pk/pro-adapter.js fx/pro-adapter.js
        if(nextY) L.push('Next year('+nextY.year+'): '+nextY.ganzhi+' ['+nextY.tenStar+'/'+nextY.terrain+']');
      }
      var ku=kubo(c); L.push('Void branches(空亡): '+ku.join(','));
+@@ -513,7 +544,7 @@
+   var stars=(window.shinsatsuHits?window.shinsatsuHits(pro):[]).map(function(s){return s.split('(')[0];});
+   var uniqStars=stars.filter(function(v,i){return stars.indexOf(v)===i;});
+   var cur=null,next=null;
+-  if(pro.now&&pro.decadeFortunes){ var di=pro.now.daeunIndex; if(di>=0){ cur=pro.decadeFortunes[di]; next=pro.decadeFortunes[di+1]; } else { cur=null; next=pro.decadeFortunes[0]; } }
++  if(pro.now&&pro.decadeFortunes){ var di=pro.now.daeunIndex; if(di>=0){ cur=pro.decadeFortunes[di]; next=pro.decadeFortunes[di+1]; } else { cur=curDecade(pro); next=pro.decadeFortunes[0]; } }
+   var ty=null,ny=null;
+   if(pro.now&&pro.annualFortunes){ ty=pro.annualFortunes.find(function(a){return a.year===pro.now.year;}); ny=pro.annualFortunes.find(function(a){return a.year===pro.now.year+1;}); }
+   return { dayGanzhi:day.ganzhi, dayStem:day.stem, dayBranch:day.branch, dayStage:day.terrain,
+@@ -651,8 +682,8 @@
+       if(st2.length) parts.push('activates '+st2.map(function(n){return n+'('+((STAR_MEAN[n]||'').split(' — ')[0].split(',')[0])+')';}).join(', '));
+       return parts.length?(' <'+parts.join('; ')+'>'):'';
+     }
+-    if(f.cur) lk.push('now '+f.cur.ganzhi+' '+f.cur.tenStar+'('+tg(f.cur.tenStar)+') age'+f.cur.startAge+'-'+f.cur.endAge+trTag(f.cur.ganzhi));
+-    if(f.next) lk.push('next '+f.next.ganzhi+' '+f.next.tenStar+' from'+f.next.startAge);
++    if(f.cur) lk.push('now '+f.cur.ganzhi+' '+f.cur.tenStar+'('+tg(f.cur.tenStar)+') age'+(f.cur.isMonth?('0-'+f.cur.endAge+'y'+(f.cur.endMonths||0)+'m(1st=month pillar)'):(f.cur.startAge+'y'+(f.cur.months||0)+'m-'+f.cur.endAge+'y'+(f.cur.months||0)+'m'))+trTag(f.cur.ganzhi));
++    if(f.next) lk.push('next '+f.next.ganzhi+' '+f.next.tenStar+' from'+f.next.startAge+'y'+(f.next.months||0)+'m');
+     if(f.ty) lk.push(f.ty.year+' '+f.ty.ganzhi+' '+f.ty.tenStar+'('+tg(f.ty.tenStar)+')'+trTag(f.ty.ganzhi));
+     if(f.ny) lk.push(f.ny.year+' '+f.ny.ganzhi+' '+f.ny.tenStar+'('+tg(f.ny.tenStar)+')'+trTag(f.ny.ganzhi));
+     if(lk.length) L.push('LUCK: '+lk.join('; '));
 diff -ru pk/pro-bazi.js fx/pro-bazi.js
 --- pk/pro-bazi.js	2026-09-16 13:18:58.000000000 +0000
 +++ fx/pro-bazi.js	2026-09-25 05:54:52.774469861 +0000
