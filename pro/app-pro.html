@@ -641,10 +641,10 @@
   <!-- セクション・ジャンプ目次（占う後に表示・上部固定） -->
   <nav id="jumpnav" aria-label="セクションの目次">
     <button type="button" id="jn-print" title="命式表（鑑定書）を印刷用で開く（別タブ）" style="background:var(--ka);color:#fff;border-color:var(--ka);font-weight:900">🖨 印刷</button>
+    <button type="button" data-t="ai-slot">詳細鑑定</button>
+    <button type="button" data-t="compat-card">相性</button>
     <button type="button" data-t="meishi-sec">命式</button>
     <button type="button" data-t="flow-sec">大運・年運</button>
-    <button type="button" data-t="compat-card">相性</button>
-    <button type="button" data-t="ai-slot">詳細鑑定</button>
     <button type="button" data-t="love-card">恋愛</button>
     <button type="button" data-t="yojo-sec">養生</button>
   </nav>
@@ -756,8 +756,16 @@
     /* 並び順を元の設計へ：オフライン鑑定(#result)を、詳細鑑定カード(#ai-slot)より前に置く
        → 占うと「オフライン鑑定が先に表示」→ その下に詳細鑑定・相性 の順（マイページは上のボタンで開閉）。
        ※#result はこのスクリプトより後に出現するため、DOM構築後に並べ替える。 */
-    function reorder(){ try{ var res=document.getElementById('result'), slot=document.getElementById('ai-slot');
-      if(res&&slot&&slot.parentNode===res.parentNode){ slot.parentNode.insertBefore(res, slot); } }catch(e){} }
+    /* 並び：要点サマリー(#result) → 詳細鑑定(#ai-slot) → 相性(#compat-card) → 命式表以降(#result-body)。
+       #result-body が無ければ生成する（renderResult 側でも防御的に生成）。 */
+    function reorder(){ try{
+      var res=document.getElementById('result'), slot=document.getElementById('ai-slot'), comp=document.getElementById('compat-card');
+      if(!res||!res.parentNode)return;
+      var body=document.getElementById('result-body');
+      if(!body){ body=document.createElement('div'); body.id='result-body'; }
+      var nav=document.getElementById('jumpnav')||res, anchor=nav;
+      [res,slot,comp,body].forEach(function(el){ if(el){ anchor.after(el); anchor=el; } });
+    }catch(e){} }
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', reorder); else reorder();
   })();
   </script>
@@ -3161,11 +3169,16 @@ function junitenHTML(c){
 function renderResult(){
   const c=chart;
   document.getElementById('ai-slot').innerHTML = consultHTML();
+  // 要点サマリーは #result に、命式表以降は #result-body に分割（並び：要点→詳細鑑定→相性→命式表→五行→大運年運→恋愛→養生）
   document.getElementById('result').innerHTML =
-    heroHTML(c)+summaryHTML(c)+verdictHTML(c)+kaikyokuHTML(c)+genmeiHTML(c)+meishiHTML(c)+junitenHTML(c)+gogyoHTML(c)+yojoHTML(c)+(typeof pkLoveCard==='function'?pkLoveCard(c):'')+flowHTML(c);
-  document.querySelectorAll('#result .tg [data-or]').forEach(b=>b.onclick=()=>{orient=b.dataset.or;reRenderKeep();});
-  document.querySelectorAll('#result .dur').forEach(d=>d.onclick=()=>{selDu=+d.dataset.i;selYear=null;reRenderKeep();});
-  document.querySelectorAll('#result .nyr').forEach(d=>d.onclick=()=>{selYear=+d.dataset.y;reRenderKeep();});
+    heroHTML(c)+summaryHTML(c)+verdictHTML(c);
+  (function(){var _rb=document.getElementById('result-body');
+    if(!_rb){_rb=document.createElement('div');_rb.id='result-body';var _r=document.getElementById('result');if(_r&&_r.parentNode)_r.parentNode.insertBefore(_rb,_r.nextSibling);}
+    _rb.innerHTML = kaikyokuHTML(c)+genmeiHTML(c)+meishiHTML(c)+junitenHTML(c)+gogyoHTML(c)+flowHTML(c)+(typeof pkLoveCard==='function'?pkLoveCard(c):'')+yojoHTML(c);
+  })();
+  document.querySelectorAll('#result .tg [data-or], #result-body .tg [data-or]').forEach(b=>b.onclick=()=>{orient=b.dataset.or;reRenderKeep();});
+  document.querySelectorAll('#result .dur, #result-body .dur').forEach(d=>d.onclick=()=>{selDu=+d.dataset.i;selYear=null;reRenderKeep();});
+  document.querySelectorAll('#result .nyr, #result-body .nyr').forEach(d=>d.onclick=()=>{selYear=+d.dataset.y;reRenderKeep();});
   document.querySelectorAll('#ai-slot .wchip').forEach(b=>b.onclick=()=>{document.getElementById('worry').value=b.dataset.w;});
   document.getElementById('consultBtn').onclick=doConsult;
   document.getElementById('autoReadBtn').onclick=doAutoRead;
@@ -5156,6 +5169,7 @@ function resetMain(){
   setSex('female');
   chart=null;zouOverride={};selDu=-1;selYear=null;
   document.getElementById('result').innerHTML='';
+  {const _rb=document.getElementById('result-body');if(_rb)_rb.innerHTML='';}
   document.getElementById('ai-slot').innerHTML='';
   resetCompat();   // 「最初からやり直す」＝相性（お相手・結果）もまるごとリセット
   window.scrollTo({top:0,behavior:'smooth'});
