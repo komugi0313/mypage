@@ -4222,7 +4222,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
 
   var CSS=''
     +'.acct-chip{position:fixed;top:10px;left:10px;z-index:9998;display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.92);border:1px solid var(--line-strong,#a9b3cf);color:var(--accent-2,#2e3b6a);border-radius:999px;padding:7px 13px;font-size:12px;font-weight:700;font-family:var(--maru);cursor:pointer;box-shadow:0 4px 12px -6px rgba(40,40,80,.4);backdrop-filter:blur(4px)}'
-    +'.acct-chip .av{width:20px;height:20px;border-radius:50%;background:var(--accent);color:var(--accent-ink,#fff);display:inline-flex;align-items:center;justify-content:center;font-size:11px}'
+    +'.acct-chip .av{width:22px;height:22px;border-radius:50%;overflow:hidden;background:var(--accent-soft);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 0 0 1.5px var(--accent)}.acct-chip .av img{width:100%;height:100%;object-fit:cover;display:block}'
     +'.acct-chip .un{color:#b2554e;font-weight:700}'
     +'.auth-modal{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px}'
     +'.auth-modal[hidden]{display:none}'
@@ -4263,6 +4263,9 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   function finishAuth(){ close(); var c=pendingCb; pendingCb=null; if(c){ try{c();}catch(e){} } }
 
   function ageLabel(a){ return a||'—'; }
+  /* ログイン中ユーザーの日柱マスコット（60干支）。マイページ/チップのアイコンに統一 */
+  function userMascotThumb(){ try{ var lp=JSON.parse(localStorage.getItem('dc_lastPair')||'null'); var p=lp&&lp.a; if(p&&window.PersonBazi&&p.y&&p.m&&p.d){ var r=window.PersonBazi(+p.y,+p.m,+p.d,(p.tu?null:p.h),(p.tu?null:p.mi),!!p.tu,p.sex||'f'); if(r&&r.pillars){ var day=r.pillars.filter(function(x){return x.label==='日柱';})[0]; if(day&&day.ganzhi) return 'img/mascot/thumb/'+day.ganzhi+'.webp'; } } }catch(e){} return ''; }
+  function userMascotMark(){ var m=userMascotThumb(); return m ? '<span class="au-mk" style="display:inline-block;overflow:hidden;vertical-align:middle"><img src="'+m+'" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></span>' : MARK; }
   function render(){
     var u=Auth.current(); var s=state.screen;
     var body='';
@@ -4300,7 +4303,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
         +'<div class="au-q">性別</div><div class="au-seg" id="auSex">'
           +'<button data-v="f"'+(pf.sex==='f'?' class="on"':'')+'>女性</button><button data-v="m"'+(pf.sex==='m'?' class="on"':'')+'>男性</button><button data-v="x"'+(pf.sex==='x'?' class="on"':'')+'>回答しない</button></div>'
         +'<div class="au-q">年代</div><div class="au-chips" id="auAge">'
-          +['10代','20代','30代','40代','50代〜'].map(function(a){return '<button data-v="'+a+'"'+(pf.age===a?' class="on"':'')+'>'+a+'</button>';}).join('')+'</div>'
+          +['10代','20代','30代','40代','50代','60代〜'].map(function(a){return '<button data-v="'+a+'"'+(pf.age===a?' class="on"':'')+'>'+a+'</button>';}).join('')+'</div>'
         +'<button class="au-primary" id="auDoProfile">はじめる</button>'
         +'<div class="au-note">占うときの生年月日は、ログイン中ならアカウントに保存され、次回から再利用できます。</div>';
     } else if(s==='login'){
@@ -4315,7 +4318,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
         +'<div class="au-foot">はじめての方は <a data-go="register">新規登録</a></div>';
     } else if(s==='account'){
       var vf=u&&u.emailVerified, pf=(u&&u.profile)||null;
-      body='<div class="au-brand">'+MARK+'<div class="au-tt" style="margin-top:6px">アカウント</div></div>'
+      body='<div class="au-brand">'+userMascotMark()+'<div class="au-tt" style="margin-top:6px">アカウント</div></div>'
         +'<div class="au-acct"><b>'+esc((u&&u.email)||'')+'</b><br>'
           +'<span class="au-badge '+(vf?'ok':'no')+'">'+(vf?'メール確認済み':'メール未確認')+'</span>'
           +(pf?('<br>'+({f:'女性',m:'男性',x:'回答しない'}[pf.sex]||'—')+' ・ '+ageLabel(pf.age)):'<br>プロフィール未設定')+'</div>'
@@ -4386,7 +4389,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   }
   function renderChip(){
     var u=Auth.current();
-    if(u){ var pf=u.profile; chip.innerHTML='<span class="av">'+((pf&&{f:'女',m:'男',x:'・'}[pf.sex])||'●')+'</span>'+(pf&&pf.age?esc(pf.age):'アカウント')+(u.emailVerified?'':' <span class="un">未確認</span>'); }
+    if(u){ var mk=userMascotThumb(); var av = mk ? '<span class="av"><img src="'+mk+'" alt=""></span>' : '<span class="av">●</span>'; chip.innerHTML=av+'マイページ'+(u.emailVerified?'':' <span class="un">未確認</span>'); }
     else { chip.innerHTML='ログイン / 登録'; }
   }
   chip.onclick=function(){ var u=Auth.current(); open(u?'account':'register'); };
@@ -4564,9 +4567,9 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     +'.dm-chip{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:9998;display:inline-flex;align-items:center;gap:6px;background:var(--accent);border:none;color:var(--accent-ink,#fff);border-radius:999px;padding:12px 17px;font-size:13.5px;font-weight:700;font-family:var(--maru);cursor:pointer;box-shadow:0 0 0 3px var(--panel),0 8px 20px -6px rgba(0,0,0,.45)}'
     +'.dm-chip .dot{min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#b2554e;color:#fff;font-size:10px;font-weight:700;display:none;align-items:center;justify-content:center}'
     +'.dm-chip .dot.on{display:inline-flex}'
-    +'.dm-wrap{position:fixed;inset:0;z-index:10000;display:none;background:rgba(30,30,50,.45);backdrop-filter:blur(3px)}'
+    +'.dm-wrap{position:fixed;inset:0;z-index:10000;display:none;background:var(--bg,#f5f1ea)}'
     +'.dm-wrap.on{display:flex;align-items:stretch;justify-content:center}'
-    +'.dm-app{position:relative;width:100%;max-width:480px;background:var(--bg,#f5f1ea);display:flex;flex-direction:column;height:100%;box-shadow:0 0 40px rgba(20,20,40,.4)}'
+    +'.dm-app{position:relative;width:100%;max-width:480px;background:var(--bg,#f5f1ea);display:flex;flex-direction:column;height:100vh;height:100dvh;box-shadow:0 0 40px rgba(20,20,40,.4)}'
     +'.dm-head{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:12px 14px;background:linear-gradient(180deg,var(--accent,#3a4676),var(--accent-2,#2a3358));color:#fff}'
     +'.dm-back{background:none;border:none;color:#fff;font-size:22px;line-height:1;cursor:pointer;padding:2px 6px}'
     +'.dm-av{width:40px;height:40px;border-radius:50%;background:#eceae6;overflow:hidden;box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--accent)}'+'.dm-av img,.dm-avs img{width:100%;height:100%;object-fit:cover;display:block}'+'.dm-avs{width:28px;height:28px;border-radius:50%;background:#eceae6;overflow:hidden;flex:0 0 auto;box-shadow:0 0 0 2px var(--accent)}'
