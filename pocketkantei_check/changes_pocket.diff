@@ -31,8 +31,8 @@ diff -ruN "pk/README_\343\203\207\343\203\227\343\203\255\343\202\244.md" "fx/RE
  | `owl.png` | Nico（ふくろう）画像 |
 diff -ruN pk/functions/auth.js fx/functions/auth.js
 --- pk/functions/auth.js	1970-01-01 00:00:00.000000000 +0000
-+++ fx/functions/auth.js	2026-09-25 06:50:30.857705834 +0000
-@@ -0,0 +1,146 @@
++++ fx/functions/auth.js	2026-09-25 09:37:26.114528714 +0000
+@@ -0,0 +1,148 @@
 +// Netlify Function：アカウント（メールアドレス＋パスワード）とデータ同期。
 +// ・メール確認リンクは使わない。メールアドレス＋パスワードだけで登録／ログインする。
 +// ・パスワードは scrypt（ランダムsalt付き）でハッシュ化して保存。平文は保存しない。
@@ -138,7 +138,9 @@ diff -ruN pk/functions/auth.js fx/functions/auth.js
 +    }
 +    return json(400, { ok: false, code: 'BAD_ACTION' });
 +  } catch (e) {
-+    return json(500, { ok: false, code: 'SERVER' });
++    // Blobs 未接続（手動zipデプロイ等）は NO_STORE として返し、原因を見分けやすくする
++    const blob = /blob/i.test(String((e && (e.name || '')) + ' ' + (e && e.message || '')));
++    return json(blob ? 503 : 500, { ok: false, code: blob ? 'NO_STORE' : 'SERVER' });
 +  }
 +};
 +
@@ -205,17 +207,23 @@ diff -ruN pk/functions/gemini.js fx/functions/gemini.js
  function jstDay() { const d = new Date(Date.now() + 9 * 3600 * 1000); return d.toISOString().slice(0, 10); }
 diff -ruN pk/index.html fx/index.html
 --- pk/index.html	2026-09-17 17:10:16.000000000 +0000
-+++ fx/index.html	2026-09-25 09:17:35.147623919 +0000
-@@ -118,7 +118,7 @@
++++ fx/index.html	2026-09-25 09:37:26.112016869 +0000
+@@ -118,7 +118,13 @@
  .field{margin-top:16px}
  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:7px;font-weight:500}
  .dates{display:flex;gap:8px}.dates .sel{flex:1}
 -select,input[type=text],input[type=email]{width:100%;padding:12px 11px;border-radius:10px;border:1px solid var(--line);
++/* パスワード表示切替（目のボタン） */
++.pw-wrap{position:relative;display:block}
++.pw-wrap input{padding-right:50px!important}
++.pw-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:44px;height:44px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;color:var(--muted,#8a8578);cursor:pointer;border-radius:10px;padding:0}
++.pw-eye:focus-visible{outline:2px solid var(--accent,#4E8060)}
++.pw-eye svg{width:22px;height:22px}
 +select,input[type=text],input[type=email],input[type=password]{width:100%;padding:12px 11px;border-radius:10px;border:1px solid var(--line);
    background:#fff;color:var(--text);font-size:15px;font-family:inherit;outline:none;-webkit-appearance:none;appearance:none}
  select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='%23697386' fill='none' stroke-width='1.5'/></svg>");
    background-repeat:no-repeat;background-position:right 11px center;padding-right:28px}
-@@ -363,7 +363,8 @@
+@@ -363,7 +369,8 @@
  <body>
  <script>
  /* 初回訪問はLP(lp.html)を先に見せる。登録済み・LP閲覧済み・テストビルド(キー入り)はアプリへ直行 */
@@ -225,7 +233,7 @@ diff -ruN pk/index.html fx/index.html
  </script>
  
  <!-- LP -->
-@@ -415,6 +416,7 @@
+@@ -415,6 +422,7 @@
        <p class="free-hint" data-i18n-html="freeHint"></p>
      </div>
      <button class="btn" id="lpStart" style="margin-top:26px" data-i18n="lpStart"></button>
@@ -233,7 +241,7 @@ diff -ruN pk/index.html fx/index.html
      <details class="about" id="aboutBox">
        <summary id="aboutT"></summary>
        <div class="about-body" id="aboutB"></div>
-@@ -441,12 +443,38 @@
+@@ -441,12 +449,38 @@
        <div class="field"><label data-i18n="fSex"></label><div class="seg" id="sexSeg"><button data-sex="female" class="on" data-i18n="sexF"></button><button data-sex="male" data-i18n="sexM"></button></div>
          <p class="note" data-i18n="sexNote"></p></div>
      </div>
@@ -272,7 +280,7 @@ diff -ruN pk/index.html fx/index.html
  <!-- 登録後アンケート（1画面・15秒） -->
  <section class="screen" id="scSurvey">
    <div class="wrap">
-@@ -592,8 +620,8 @@
+@@ -592,8 +626,8 @@
    /* テーマを最初のペイント前に確定（重いエンジン読込中のネイビー点滅を防止） */
    var _th=localStorage.getItem('pk_theme'); document.body.setAttribute('data-theme', _th==='indigo'?'':'green');
    var _tc=document.querySelector('meta[name=theme-color]'); if(_tc) _tc.setAttribute('content', _th==='indigo'?'#4f46e5':'#4E8060');
@@ -283,7 +291,7 @@ diff -ruN pk/index.html fx/index.html
    if(_id){ document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('on');}); var _el=document.getElementById(_id); if(_el) _el.classList.add('on'); }
  }catch(e){}</script>
  <script src="pro-bazi.js"></script>
-@@ -769,7 +797,7 @@
+@@ -769,7 +803,7 @@
    obTitle:'はじめに、一度だけ登録', obLead:'この情報から四柱推命の命式を計算し、あなた専用の<span class="nw">鑑定</span>にします。次回からは入力不要です。', obEditNote:'登録内容（お名前・生年月日など）は、あとからいつでも変更できます。別の方の鑑定に切り替えることもできます。',
    fName:'ニックネーム（任意）', fNamePh:'呼んでほしい名前', fBday:'生年月日', fTime:'生まれた時刻（わかれば）', fUnknown:'時刻はわからない', fDst:'夏時間（サマータイム）に生まれた', fDstNote:'米国・カナダ・EU・英国・豪州（シドニー等）は夏時間を自動で判定します。それ以外の国で夏時間中に生まれた場合のみチェックしてください。',
    fSex:'性別', sexF:'女性', sexM:'男性', sexNote:'四柱推命では、運の巡り方の計算に使います。',
@@ -292,7 +300,7 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'命式', inputPh:'メッセージを入力…', exitAisho:'自分の鑑定に戻る', today:'今日',
    menuTitle:'メニュー', mLang:'言語', mTheme:'配色', thIndigo:'インディゴ', thGreen:'グリーン',
    miTodayT:'今日の運勢', miTodayD:'毎日の運勢とラッキーアクション', miChartT:'あなたの命式をみる', miChartD:'四柱・五行・日主のくわしい中身', miAishoT:'相性を占う', miAishoD:'恋人・友達・仕事仲間、誰とでも',
-@@ -814,7 +842,7 @@
+@@ -814,7 +848,7 @@
    obTitle:'A one-time setup', obLead:'We build your Four Pillars chart from this and make the reading truly yours. No need to enter it again.', obEditNote:'You can change these details (name, birth date, etc.) anytime later — you can even switch to another person\'s reading.',
    fName:'Nickname (optional)', fNamePh:'What should we call you?', fBday:'Date of birth', fTime:'Time of birth (if known)', fUnknown:'I don’t know the time', fDst:'Born during Daylight Saving (summer) time', fDstNote:'US, Canada, EU, UK and Australia (Sydney etc.) are auto-detected. Only tick this if you were born under daylight-saving time in another country.',
    fSex:'Sex', sexF:'Female', sexM:'Male', sexNote:'Used in Four Pillars to calculate how luck cycles move.',
@@ -301,7 +309,7 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'Chart', inputPh:'Type a message…', exitAisho:'Back to my reading', today:'Today',
    menuTitle:'Menu', mLang:'Language', mTheme:'Color', thIndigo:'Indigo', thGreen:'Green',
    miTodayT:'Today\'s Fortune', miTodayD:'Your daily luck & lucky action', miChartT:'View your chart', miChartD:'Pillars, Five Elements, Day Master', miAishoT:'Compatibility', miAishoD:'Partner, friend or coworker — anyone',
-@@ -859,7 +887,7 @@
+@@ -859,7 +893,7 @@
    obTitle:'首次仅需登记一次', obLead:'我们据此计算你的四柱命盘，使咨询专属于你。下次无需再输入。', obEditNote:'注册内容（姓名、出生日期等）以后随时可以更改，也可以切换为其他人的鉴定。',
    fName:'昵称（可选）', fNamePh:'希望怎么称呼你', fBday:'出生年月日', fTime:'出生时刻（若知道）', fUnknown:'不知道时刻', fDst:'出生于夏令时（夏时制）', fDstNote:'若出生时当地实行夏令时（欧美、澳洲等），请勾选，将回拨1小时计算。',
    fSex:'性别', sexF:'女', sexM:'男', sexNote:'四柱推命用它来推算运势的走向。',
@@ -310,7 +318,7 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'命盘', inputPh:'输入消息…', exitAisho:'返回我的命盘', today:'今天',
    menuTitle:'菜单', mLang:'语言', mTheme:'配色', thIndigo:'靛蓝', thGreen:'绿色',
    miTodayT:'今日运势', miTodayD:'每日运势与幸运行动', miChartT:'查看你的命盘', miChartD:'四柱・五行・日主详情', miAishoT:'测合盘', miAishoD:'恋人・朋友・同事都可以',
-@@ -904,7 +932,7 @@
+@@ -904,7 +938,7 @@
    obTitle:'처음 한 번만 등록', obLead:'이 정보로 사주 명식을 계산해서 당신만을 위한 상담을 준비해요. 다음부터는 입력할 필요 없어요.', obEditNote:'등록 내용(이름·생년월일 등)은 나중에 언제든지 변경할 수 있고, 다른 사람의 감정으로 바꿀 수도 있어요.',
    fName:'닉네임 (선택)', fNamePh:'불러줬으면 하는 이름', fBday:'생년월일', fTime:'태어난 시각 (알면)', fUnknown:'시각을 모름', fDst:'서머타임(일광절약시간)에 태어남', fDstNote:'미국·유럽·호주 등 서머타임 기간에 태어났다면 체크(1시간 되돌려 계산).',
    fSex:'성별', sexF:'여성', sexM:'남성', sexNote:'사주에서는 운의 흐름을 계산하는 데 씁니다.',
@@ -319,7 +327,7 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'명식', inputPh:'메시지 입력…', exitAisho:'내 명식으로 돌아가기', today:'오늘',
    menuTitle:'메뉴', mLang:'언어', mTheme:'색상', thIndigo:'인디고', thGreen:'그린',
    miTodayT:'오늘의 운세', miTodayD:'매일의 운세와 행운의 행동', miChartT:'내 명식 보기', miChartD:'사주·오행·일간 상세', miAishoT:'궁합 보기', miAishoD:'연인·친구·동료 누구든',
-@@ -949,7 +977,7 @@
+@@ -949,7 +983,7 @@
    obTitle:'首次僅需登記一次', obLead:'我們據此計算你的四柱命盤，使諮詢專屬於你。下次無需再輸入。', obEditNote:'註冊內容（姓名、出生日期等）之後隨時可以更改，也可以切換為其他人的鑑定。',
    fName:'暱稱（選填）', fNamePh:'希望怎麼稱呼你', fBday:'出生年月日', fTime:'出生時辰（若知道）', fUnknown:'不知道時辰', fDst:'出生於夏令時（日光節約時間）', fDstNote:'若出生時當地實行夏令時（歐美、澳洲等），請勾選，將回撥1小時計算。',
    fSex:'性別', sexF:'女', sexM:'男', sexNote:'四柱推命用它來推算運勢的走向。',
@@ -328,7 +336,7 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'命盤', inputPh:'輸入訊息…', exitAisho:'返回我的命盤', today:'今天',
    menuTitle:'選單', mLang:'語言', mTheme:'配色', thIndigo:'靛藍', thGreen:'綠色',
    miTodayT:'今日運勢', miTodayD:'每日運勢與幸運行動', miChartT:'查看你的命盤', miChartD:'四柱・五行・日主詳情', miAishoT:'合八字', miAishoD:'戀人・朋友・同事都可以',
-@@ -994,7 +1022,7 @@
+@@ -994,7 +1028,7 @@
    obTitle:'Chỉ đăng ký một lần', obLead:'Chúng tôi lập lá số Tứ Trụ từ thông tin này. Lần sau không cần nhập lại.', obEditNote:'Bạn có thể thay đổi thông tin này (tên, ngày sinh...) bất cứ lúc nào, hoặc chuyển sang xem cho người khác.',
    fName:'Biệt danh (tùy chọn)', fNamePh:'Bạn muốn được gọi là gì?', fBday:'Ngày sinh', fTime:'Giờ sinh (nếu biết)', fUnknown:'Không biết giờ sinh', fDst:'Sinh vào giờ mùa hè (DST)', fDstNote:'Tích chọn nếu bạn sinh trong thời gian giờ mùa hè (Mỹ, Âu, Úc...). Chúng tôi trừ 1 giờ.',
    fSex:'Giới tính', sexF:'Nữ', sexM:'Nam', sexNote:'Dùng để tính chiều vận hạn trong Tứ Trụ.',
@@ -337,7 +345,7 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'Lá số', inputPh:'Nhập tin nhắn…', exitAisho:'Về lá số của tôi', today:'Hôm nay',
    menuTitle:'Menu', mLang:'Ngôn ngữ', mTheme:'Màu sắc', thIndigo:'Chàm', thGreen:'Xanh lá',
    miTodayT:'Vận may hôm nay', miTodayD:'Vận may và điều nên làm hôm nay', miChartT:'Xem lá số của bạn', miChartD:'Tứ trụ, Ngũ hành, Nhật chủ', miAishoT:'Xem hợp tuổi', miAishoD:'Người yêu, bạn bè, đồng nghiệp — ai cũng được',
-@@ -1039,7 +1067,7 @@
+@@ -1039,7 +1073,7 @@
    obTitle:'Un único registro', obLead:'Con esto calculamos tu carta de los Cuatro Pilares y personalizamos tu lectura. No tendrás que escribirlo de nuevo.', obEditNote:'Puedes cambiar estos datos (nombre, fecha de nacimiento, etc.) cuando quieras, o cambiar a la lectura de otra persona.',
    fName:'Apodo (opcional)', fNamePh:'¿Cómo quieres que te llamemos?', fBday:'Fecha de nacimiento', fTime:'Hora de nacimiento (si la sabes)', fUnknown:'No sé la hora', fDst:'Nací en horario de verano (DST)', fDstNote:'Marca si naciste en horario de verano (EE. UU., Europa, Australia...). Restamos 1 hora.',
    fSex:'Sexo', sexF:'Mujer', sexM:'Hombre', sexNote:'En los Cuatro Pilares se usa para calcular los ciclos de la suerte.',
@@ -346,7 +354,7 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'Carta', inputPh:'Escribe un mensaje…', exitAisho:'Volver a mi lectura', today:'Hoy',
    menuTitle:'Menú', mLang:'Idioma', mTheme:'Color', thIndigo:'Índigo', thGreen:'Verde',
    miTodayT:'Tu día de hoy', miTodayD:'Tu suerte y acción de hoy', miChartT:'Ver tu carta', miChartD:'Pilares, Cinco Elementos, Maestro del Día', miAishoT:'Compatibilidad', miAishoD:'Pareja, amistad o trabajo — cualquiera',
-@@ -1084,7 +1112,7 @@
+@@ -1084,7 +1118,7 @@
    obTitle:'Cadastro único', obLead:'Com isso calculamos seu mapa dos Quatro Pilares e personalizamos sua leitura. Não precisará digitar de novo.', obEditNote:'Você pode alterar esses dados (nome, data de nascimento etc.) quando quiser, ou trocar para a leitura de outra pessoa.',
    fName:'Apelido (opcional)', fNamePh:'Como quer ser chamada?', fBday:'Data de nascimento', fTime:'Hora de nascimento (se souber)', fUnknown:'Não sei a hora', fDst:'Nasci no horário de verão (DST)', fDstNote:'Marque se você nasceu no horário de verão (EUA, Europa, Austrália...). Subtraímos 1 hora.',
    fSex:'Sexo', sexF:'Feminino', sexM:'Masculino', sexNote:'Nos Quatro Pilares, é usado para calcular os ciclos da sorte.',
@@ -355,7 +363,7 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'Mapa', inputPh:'Digite uma mensagem…', exitAisho:'Voltar à minha leitura', today:'Hoje',
    menuTitle:'Menu', mLang:'Idioma', mTheme:'Cor', thIndigo:'Índigo', thGreen:'Verde',
    miTodayT:'Seu dia de hoje', miTodayD:'Sua sorte e ação de hoje', miChartT:'Ver seu mapa', miChartD:'Pilares, Cinco Elementos, Mestre do Dia', miAishoT:'Compatibilidade', miAishoD:'Par, amizade ou trabalho — qualquer pessoa',
-@@ -1129,7 +1157,7 @@
+@@ -1129,7 +1163,7 @@
    obTitle:'Pendaftaran sekali saja', obLead:'Dari data ini kami hitung bagan Empat Pilar Anda. Tidak perlu mengisi lagi nanti.', obEditNote:'Data ini (nama, tanggal lahir, dll.) bisa diubah kapan saja, atau diganti ke pembacaan orang lain.',
    fName:'Nama panggilan (opsional)', fNamePh:'Ingin dipanggil apa?', fBday:'Tanggal lahir', fTime:'Jam lahir (jika tahu)', fUnknown:'Tidak tahu jamnya', fDst:'Lahir saat waktu musim panas (DST)', fDstNote:'Centang jika lahir saat daylight saving (AS, Eropa, Australia, dll). Kami kurangi 1 jam.',
    fSex:'Jenis kelamin', sexF:'Perempuan', sexM:'Laki-laki', sexNote:'Dalam Empat Pilar dipakai untuk menghitung siklus keberuntungan.',
@@ -364,7 +372,7 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'Bagan', inputPh:'Ketik pesan…', exitAisho:'Kembali ke bacaan saya', today:'Hari ini',
    menuTitle:'Menu', mLang:'Bahasa', mTheme:'Warna', thIndigo:'Indigo', thGreen:'Hijau',
    miTodayT:'Ramalan Hari Ini', miTodayD:'Keberuntungan & aksi hari ini', miChartT:'Lihat bagan Anda', miChartD:'Pilar, Lima Elemen, Penguasa Hari', miAishoT:'Cek kecocokan', miAishoD:'Pasangan, teman, rekan kerja — siapa pun',
-@@ -1174,7 +1202,7 @@
+@@ -1174,7 +1208,7 @@
    obTitle:'ลงทะเบียนครั้งเดียวเท่านั้น', obLead:'เราใช้ข้อมูลนี้คำนวณดวงสี่เสาหลักของคุณ ครั้งหน้าไม่ต้องกรอกอีก', obEditNote:'ข้อมูลนี้ (ชื่อ วันเกิด ฯลฯ) เปลี่ยนได้ทุกเมื่อ หรือสลับไปดูดวงให้คนอื่นก็ได้',
    fName:'ชื่อเล่น (ไม่บังคับ)', fNamePh:'อยากให้เรียกว่าอะไร', fBday:'วันเกิด', fTime:'เวลาเกิด (ถ้าทราบ)', fUnknown:'ไม่ทราบเวลาเกิด', fDst:'เกิดช่วงเวลาออมแสง (DST)', fDstNote:'ติ๊กถ้าเกิดช่วงเวลาออมแสง (สหรัฐฯ ยุโรป ออสเตรเลีย ฯลฯ) ระบบจะลบ 1 ชั่วโมง',
    fSex:'เพศ', sexF:'หญิง', sexM:'ชาย', sexNote:'ในวิชาสี่เสาหลัก ใช้คำนวณทิศทางการเดินของดวง',
@@ -373,7 +381,7 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'ดวงชะตา', inputPh:'พิมพ์ข้อความ…', exitAisho:'กลับไปดวงของฉัน', today:'วันนี้',
    menuTitle:'เมนู', mLang:'ภาษา', mTheme:'สี', thIndigo:'คราม', thGreen:'เขียว',
    miTodayT:'ดวงวันนี้', miTodayD:'โชคและสิ่งที่ควรทำวันนี้', miChartT:'ดูดวงชะตาของคุณ', miChartD:'สี่เสา ธาตุทั้งห้า และประธานวัน', miAishoT:'ดูดวงเนื้อคู่', miAishoD:'คนรัก เพื่อน เพื่อนร่วมงาน — ใครก็ได้',
-@@ -1592,6 +1620,18 @@
+@@ -1592,6 +1626,18 @@
  function loadJSON(k){ try{ var s=localStorage.getItem(k); return s?JSON.parse(s):null; }catch(e){ return null; } }
  function saveProfile(p){ try{ localStorage.setItem(LS_PROF,JSON.stringify(p)); }catch(e){} }
  function saveMsgs(){ try{ localStorage.setItem(LS_MSGS,JSON.stringify(state.msgs.slice(-60))); }catch(e){} }
@@ -392,7 +400,7 @@ diff -ruN pk/index.html fx/index.html
  function computeChart(p){
    if(!window.PersonBazi) return null;
    var pl=p.place?placeById(p.place):null;
-@@ -1611,7 +1651,7 @@
+@@ -1611,7 +1657,7 @@
    document.title=(l==='ja'||l==='zh'||l==='zt')?'Pocket 本格鑑定':'Pocket Kantei';
    if($('langSel')) $('langSel').value=l; if($('langSel2')) $('langSel2').value=l;
    if($('themeLbl')) $('themeLbl').textContent=(state.theme==='green'?T().thGreen:T().thIndigo);
@@ -401,7 +409,7 @@ diff -ruN pk/index.html fx/index.html
    if($('scChat').classList.contains('on')){ updateModeBar(); if(onlyGreeting()&&!window.__booting){ greet(); } else { renderChat(); } }
  }
  function onlyGreeting(){ return state.msgs.filter(function(m){return m.role==='me';}).length===0; }
-@@ -1640,7 +1680,18 @@
+@@ -1640,7 +1686,18 @@
    if(_age!=null&&_age<13){ alert(pick(AGE_BLOCK)); return; }
    if(_age!=null&&_age<18){ if(!confirm(pick(AGE_MINOR))){ return; } p.minor=true; p.guardianConsent=true; }
    var c=computeChart(p); if(!c||!c.ok){ alert('計算に失敗しました / calculation failed'); return; }
@@ -409,7 +417,7 @@ diff -ruN pk/index.html fx/index.html
 +  function _go(){ state.profile=p; state.chart=c; saveProfile(p); state.msgs=[]; saveMsgs(); trialStart(); if(!svDone()){ showSurvey(); } else { enterChat(); } }
 +  /* アカウント登録（メール＋パスワード。確認リンクなしで即登録）。ログイン済みの端末はそのまま進む */
 +  if(authGet()){ _go(); return; }
-+  var ac=acctFormRead('acEmail','acPw','acPw2','acErr'); if(!ac) return;
++  var ac=acctFormRead('acEmail','acPw','acPw2','acErr'); if(!ac) return; pwHideAll();
 +  var btn=this; btn.disabled=true;
 +  var data=cloudDump(); data[LS_PROF]=JSON.stringify(p);
 +  authCall('register',{email:ac.email,password:ac.pw,data:data}).then(function(j){
@@ -421,7 +429,7 @@ diff -ruN pk/index.html fx/index.html
  };
  
  /* ---- チャット ---- */
-@@ -1713,20 +1764,20 @@
+@@ -1713,20 +1770,20 @@
  
  /* いまの大運（10年）を、初めての人に伝わる言葉に（十神→テーマ。エンジン計算値のみ使用） */
  var DEC_PHRASE={
@@ -454,7 +462,7 @@ diff -ruN pk/index.html fx/index.html
      var M=pick(DEC_PHRASE); return (ts&&M[ts])?M[ts]:M.none;
    }catch(e){ return pick(DEC_PHRASE).none; }
  }
-@@ -2369,7 +2420,7 @@
+@@ -2369,7 +2426,7 @@
    EL_ORDER.forEach(function(e){var v=five[e]||0; if(v<min)min=v; if(v>max)max=v;});
    EL_ORDER.forEach(function(e){var v=five[e]||0; if(v===min)weak.push(e); if(v===max)strong.push(e); if(v===0)zero.push(e);});
    var curDaeun='',ty='',ny='';
@@ -463,7 +471,7 @@ diff -ruN pk/index.html fx/index.html
    if(pro.now&&pro.annualFortunes){ var t=pro.annualFortunes.find(function(a){return a.year===pro.now.year;}); var n=pro.annualFortunes.find(function(a){return a.year===pro.now.year+1;}); ty=t?t.tenStar:''; ny=n?n.tenStar:''; }
    var stars=(window.shinsatsuHits?window.shinsatsuHits(pro):[]).map(function(s){return s.split('(')[0];});
    return {present:present,dayBranchStar:dayBranchStar,weak:weak,strong:strong,zero:zero,curDaeun:curDaeun,ty:ty,ny:ny,stars:stars,sex:(state.profile&&state.profile.sex)||'female'};
-@@ -2645,7 +2696,7 @@
+@@ -2645,7 +2702,7 @@
      t+='USAGE: for tiredness/health/self-care topics, weave in the body tendency and 1-2 foods naturally, as caring daily advice \u2014 NEVER diagnose, never predict illness, never contradict doctors. When they mention an actual illness or symptom, do BOTH, always in this order: (1) clearly and warmly advise getting it checked by a doctor/professional in ONE short sentence woven into a substantive bubble — never as a standalone bubble (「ずっと続いてるなら、一度お医者さんに診てもらうと安心だよ」— never a vague もし行くなら), THEN (2) ALWAYS still give your support from the chart and 薬膳 lens \u2014 the element tendency, nourishing foods, rest timing, a good day for the hospital visit. Never leave them with only 病院へ行ってね and nothing else; your role is the warmth and self-care wisdom AROUND the medical care. For hospital/moving/travel direction questions: medical quality and convenience first \u2014 then, as a supportive extra, offer their favorable direction from THIS data and a GOOD DAY for the visit. This direction reading comes from their Four Pillars favorable elements \u2014 never present it as 九星術 and never invent nine-star numbers.\n';
      if(!heavy) t+='CONSTITUTION LENS (気血水 — Eastern self-care patterns you studied a little; use ONLY when the user describes how they FEEL, and as gentle self-care, NEVER a diagnosis): tired / short of breath / easily run-down / poor appetite = 気虚 (depleted qi -> 補気: rest, chew slowly; 山芋・米/もち米・なつめ・かぼちゃ・鶏肉・きのこ・栗・いんげん豆); bloating or moving pains / sighing / mood swings / tension = 気滞 (stuck qi -> 理気: light movement, unwind; 柑橘・陳皮・セロリ・三つ葉/香味野菜・ミント・ジャスミン茶・らっきょう); pale face-nails-hair / dryness / dizziness / light sleep = 血虚 (under-nourished blood -> 補血: avoid late nights; レバー・赤身肉・なつめ・黒豆・ほうれん草・にんじん・黒ごま・竜眼・プルーン・ぶどう・あさり); stiff shoulders / dull complexion / stabbing or period pain = 瘀血 (stagnant blood -> 活血: warmth, gentle exercise; 青魚(いわし/さば)・玉ねぎ・納豆・黒酢・にんにく・らっきょう・生姜・桃); hot flushes / night sweats / dry mouth-throat / red tongue with little coat = 陰虚 (dry-heat -> 滋陰: ease off late nights & strong spice; 白きくらげ・梨・百合・豆腐・山芋・松の実・黒ごま・はちみつ・豆乳・トマト・きゅうり); cold / puffy / low energy / feels the cold = 陽虚 (yang-cold -> 温陽: no cold drinks, keep the lower body warm; 羊肉・鶏肉・えび・ニラ・生姜・ねぎ・シナモン・くるみ・山椒・黒糖); heavy or puffy body / loose stool / worse on damp rainy days = 痰湿・水滞 (damp -> 化湿: fewer sweets & cold things; はと麦・冬瓜・小豆・緑豆・とうもろこし(ひげ茶)・大根・生姜・昆布). Combinations are real — e.g. 気陰両虚 (tired YET flushed or dry; common after illness, overwork or aging) = gently nourish qi AND moisten, plus proper rest. Reflect the pattern in plain, caring everyday words. NEVER print an internal label, tag or heading in your reply — no （薬膳・養生：…）, no （気血水：…）, no （気陰両虚）/（気虚）-style tags, no 養生：/薬膳： prefixes, no bracketed classification of any kind. Write the food-and-rest advice as ONE natural flowing sentence a caring friend would text. The words 気血水・薬膳・養生・気虚・気滞・血虚・瘀血・陰虚・陽虚・痰湿・水滞・気陰両虚 are your INTERNAL lens ONLY and must not appear in the reply. Name the pattern (気虚/陰虚/気陰両虚…) ONLY if they explicitly ask WHY. HARD LINE (never cross): never state or imply a disease or medical diagnosis (only a tendency toward…); never tell them to take a specific 漢方薬 or supplement as treatment — at most, if they ask, suggest that traditional 漢方 has formulas for such patterns and that a 漢方 doctor or pharmacist should choose and advise one — do NOT name a specific formula yourself; and if a symptom is persistent, strong, sudden or alarming, or they are pregnant / chronically ill / on medication, send them to a professional FIRST (this overrides any food or 養生 tip). A weak element in the chart is a 養生 focus, NOT an illness — say so if it matters.\n';
      if(!heavy){ var _si=pkSeasonIdx(); var _SN=(_si<0)?'a tropical, year-round climate with no distinct four seasons — keep seasonal advice light':['spring (春) → nourish 肝: greens, celery, citrus, herbs, gentle sour, and unwinding','summer (夏) → cool 心: bitter foods, tomato, cucumber, mung bean, hydrate and rest (around the rainy season / 長夏, also dry 脾-damp: はと麦, corn, ginger, fewer cold & sweet things)','autumn (秋) → moisten 肺: pear, lotus root, daikon, white fungus, guard against dryness','winter (冬) → warm & store 腎: roots, black foods, walnut, shrimp, ginger, keep warm and sleep early'][_si]; t+='SEASONAL 養生 (right now it is '+_SN+'). Combine the CURRENT season with their weakest element AND any pattern they describe — e.g. spring + a 気滞 feel = gently move qi with greens, citrus and a walk; summer + 陰虚 = cool and moisten. FOODS TO GO EASY ON (match to their weak element / pattern, never a hard ban): heat or dryness types (火/金 weak, 陰虚) → less spicy, fried, alcohol and caffeine; cold or damp types (水/土 weak, 陽虚, 痰湿) → less raw-cold food, icy drinks and excess sweets. Offer this warmly as everyday self-care — 1-2 items woven in, never a long list or a lecture.\n'; }
@@ -472,7 +480,7 @@ diff -ruN pk/index.html fx/index.html
      return t;
    }catch(e){ return ''; }
  }
-@@ -3142,14 +3193,14 @@
+@@ -3142,14 +3199,14 @@
    });
    /* --- 大運（各人の現在＋次） --- */
    function decadeTags(pro,who){
@@ -490,7 +498,7 @@ diff -ruN pk/index.html fx/index.html
      });
      return out.length?(who+'→'+out.join(' / ')):'';
    }
-@@ -3203,7 +3254,7 @@
+@@ -3203,7 +3260,7 @@
    var out=[];
    try{
      var pro=state.chart.pro, dp=pro.pillars[2], nowY=pro.now.year;
@@ -499,7 +507,7 @@ diff -ruN pk/index.html fx/index.html
      var STEMS='甲乙丙丁戊己庚辛壬癸', BRS='子丑寅卯辰巳午未申酉戌亥';
      function elOf(st){ return (STEM[st]||{}).el; }
      function keRel(a,b){ return EL_KE[elOf(a)]===elOf(b)||EL_KE[elOf(b)]===elOf(a); }
-@@ -3234,7 +3285,7 @@
+@@ -3234,7 +3291,7 @@
        [[0,'年柱'],[1,'月柱'],[3,'時柱']].forEach(function(pi){
          var np=pro.pillars[pi[0]]; if(np&&np.ganzhi&&isNatchin(x.ganzhi,np.ganzhi)) tags.push('納音 vs '+pi[1]);
        });
@@ -508,7 +516,7 @@ diff -ruN pk/index.html fx/index.html
      });
      if(!out.length) return '';
      return '[DECADE 納音・律音] '+out.join(' | ')+' — a 納音 decade is a 10-year blank-slate chapter: old methods reset, and humbly re-examining oneself lets them ride a wave of renewal (people who struggled before can see life turn 180°). A 律音 decade doubles the day-pillar theme for 10 years. Weigh this heavily: it colors everything inside it.\n';
-@@ -3352,15 +3403,18 @@
+@@ -3352,15 +3409,18 @@
        var se=_SETSU_SEASON[d.branch]||null, el=se?se.el:'';
        var mark=fav[el]||''; /* 喜 / 忌 / '' */
        /* 節木運＝方合(季節)が前の大運から切り替わる大運＝新しい季節に入る"変わり目"。順行・逆行の両方で正しい。 */
@@ -530,7 +538,7 @@ diff -ruN pk/index.html fx/index.html
                season:se?se.s:'',seasonEl:el,mark:mark,isSetsu:isSetsu,isTu:isSetsu,intense:intense,
                enterSeason:isSetsu?(se?se.s:''):'',enterEl:isSetsu?el:'',enterMark:isSetsu?mark:'',
                startYear:startY,swayFrom:startY!=null?startY-1.5:null,swayTo:startY!=null?startY+1.5:null,current:current};
-@@ -3369,10 +3423,13 @@
+@@ -3369,10 +3429,13 @@
      var forward=!!(pro.startFortune&&pro.startFortune.forward);
      /* 今から見て次（または現在進行中）の節木運 */
      var next=null;
@@ -546,7 +554,7 @@ diff -ruN pk/index.html fx/index.html
      return {blocks:blocks,next:next,nowAge:nowAge,proactive:proactive,forward:forward};
    }catch(e){ return null; }
  }
-@@ -3390,18 +3447,19 @@
+@@ -3390,18 +3453,19 @@
        arc.push(p.label+'='+p.terrain+' ('+(LIFE[p.label]||'')+')');
      });
      var df=pro.decadeFortunes||[], ci=(pro.now&&pro.now.daeunIndex>=0)?pro.now.daeunIndex:-1;
@@ -570,7 +578,7 @@ diff -ruN pk/index.html fx/index.html
        t+='\n';
      }
      return t;
-@@ -3411,10 +3469,10 @@
+@@ -3411,10 +3475,10 @@
    try{
      var a=setsubokuAnalysis(); if(!a||!a.blocks.length) return '';
      var SEA={winter:'winter/water',spring:'spring/wood',summer:'summer/fire',autumn:'autumn/metal'};
@@ -584,7 +592,7 @@ diff -ruN pk/index.html fx/index.html
      t+='[SETSUBOKU — HOW TO SPEAK OF IT] '+(a.proactive?'A turning-point is within ~1.5 years, so you MAY raise it warmly on your own when relevant. ':'Only discuss this if the user asks about life turning-points / their future direction; do NOT bring it up unprompted. ')+'RULES: (1) NEVER say a season is "30 years of bad luck" or doom — a challenging season is a backdrop, and daily action shapes the lived experience; (2) frame a turning-point as 人生の曲がり角/植え替えの時期 — unsettled for ~1.5 years but a doorway to a new flow once crossed; encourage small steps, a forward-looking mindset, and firming up footing before big decisions; (3) speak in FELT, concrete everyday terms (what tends to shift — work, home, the people around them — and how to steady it), never the bare label "慎重な時期"; (4) HEALTH stays gentle self-care only ("揺らぎやすいから休みながら整えて") — NEVER predict illness or diagnose; (5) NEVER use 九星/本命星/方位学/風水 — if you mention a lucky direction or colour, it must come only from their Four-Pillars 喜神; (6) if a favourable season falls early in life = 早咲き, late = 大器晩成 — say it kindly.\n';
      return t;
    }catch(e){ return ''; }
-@@ -3434,7 +3492,7 @@
+@@ -3434,7 +3498,7 @@
      var segs=a.blocks.map(function(b){
        var star=b.isSetsu?('<span class="sb-star" data-t="節木運">★</span>'):'';
        var nowp=b.current?('<span class="sb-now">'+pick(SB_I18N.now)+'</span>'):'';
@@ -593,7 +601,7 @@ diff -ruN pk/index.html fx/index.html
          +'<div class="sb-age">'+b.startAge+'</div><div class="sb-cell">'+nowp+star+'</div></div>';
      }).join('');
      var lg=['spring','summer','autumn','winter'].map(function(s){return '<span class="sb-lg sb-'+s+'"><i></i>'+pick(SB_I18N[s])+'</span>';}).join('');
-@@ -3603,10 +3661,11 @@
+@@ -3603,10 +3667,11 @@
      var nowY=(pro.now&&pro.now.year)||0, curD=(pro.now&&pro.now.daeunIndex>=0)?pro.now.daeunIndex:-1;
      var M=(DEC_PHRASE&&(DEC_PHRASE[state.lang]||DEC_PHRASE.en))||{};
      var decLines=[];
@@ -606,7 +614,7 @@ diff -ruN pk/index.html fx/index.html
        decLines.push(age+': '+(M[d.tenStar]||d.tenStar));
      });
      var yrLines=[];
-@@ -4094,8 +4153,12 @@
+@@ -4094,8 +4159,12 @@
      var rows=pro.decadeFortunes.map(function(x,i){
        var yrs=x.startYear+'〜'+(x.startYear+9);
        var cur=(i===di);
@@ -620,7 +628,7 @@ diff -ruN pk/index.html fx/index.html
      var tys=turningYears(11);
      var yb=pro.pillars[0].branch, kr=KOURAN[yb], tk=TENKI[yb], loves=[];
      (pro.annualFortunes||[]).forEach(function(a){ if(a.year>=nowY&&a.year<=nowY+10&&(a.branch===kr||a.branch===tk)) loves.push(a.year); });
-@@ -4133,7 +4196,7 @@
+@@ -4133,7 +4202,7 @@
      daiunHtml='<div class="section-label">'+pick({ja:'大運（10年ごとの運気の流れ）',en:'Decade luck cycles',zh:'大运（每十年的运势）',zt:'大運（每十年的運勢）',ko:'대운 (10년 주기 흐름)',vi:'Đại vận (chu kỳ 10 năm)',es:'Ciclos de suerte (10 años)',pt:'Ciclos de sorte (10 anos)',id:'Siklus 10 tahunan',th:'วัฏจักรโชค 10 ปี'})+'</div>'+
        '<div class="daiun">'+c.pro.decadeFortunes.map(function(df,i){
          var _v=_unV(df.ganzhi,[]),_tn=_TN[_v.k]||_TN['中'];
@@ -629,7 +637,7 @@ diff -ruN pk/index.html fx/index.html
        }).join('')+'</div>'+
        '<p class="disc-note" style="margin-top:6px">'+pick({ja:'各10年の色は用神（あなたにとっての喜／忌）で見た傾向です。追い風＝喜神が巡る（相生）／向かい風＝忌神が巡る（相剋）／太過注意＝その気が強まりすぎ（喜神でも過ぎれば負担）。干支をタップで通変星の意味。',en:'Each decade’s color shows its tendency by your 用神 (favorable/unfavorable elements): Tailwind = a favorable element cycles in (nourishing); Headwind = an unfavorable one (draining); Over-strong = that energy runs too high (even a favorable one can burden when excessive). Tap a pillar for its ten-god meaning.',zh:'每个十年的颜色，是按你的用神（对你而言的喜／忌）判断的走势。顺风＝喜神来临（相生）／逆风＝忌神来临（相克）／过旺注意＝该气过强（喜神过头也会成负担）。点按干支看十神含义。',zt:'每個十年的顏色，是依你的用神（對你而言的喜／忌）判斷的走勢。順風＝喜神來臨（相生）／逆風＝忌神來臨（相剋）／過旺注意＝該氣過強（喜神過頭也會成負擔）。點按干支看十神含義。',ko:'각 10년의 색은 용신(당신에게의 희／기)으로 본 흐름입니다. 순풍＝희신이 도는 때(상생)／역풍＝기신이 도는 때(상극)／과다주의＝그 기운이 지나치게 강함(희신도 지나치면 부담). 간지를 탭하면 십성 의미.',vi:'Màu của mỗi thập niên thể hiện xu hướng theo Dụng thần của bạn (hành hỷ/kỵ): Thuận＝hành hỷ tới (tương sinh)／Nghịch＝hành kỵ tới (tương khắc)／Thái quá＝khí đó quá mạnh (hành hỷ dư cũng thành gánh nặng). Chạm vào trụ để xem ý nghĩa thập thần.',es:'El color de cada década muestra su tendencia según tu 用神 (elementos favorables/desfavorables): a favor＝entra un elemento favorable (nutre)／en contra＝uno desfavorable (desgasta)／exceso＝esa energía es demasiado fuerte (incluso una favorable pesa si sobra). Toca un pilar para ver su significado.',pt:'A cor de cada década mostra sua tendência pelo seu 用神 (elementos favoráveis/desfavoráveis): a favor＝entra um elemento favorável (nutre)／contra＝um desfavorável (desgasta)／excesso＝essa energia fica forte demais (até uma favorável pesa em excesso). Toque num pilar para ver o significado.',id:'Warna tiap dekade menunjukkan kecenderungan menurut 用神 Anda (elemen menguntungkan/merugikan): angin baik＝elemen menguntungkan datang (menyuburkan)／angin lawan＝yang merugikan (menguras)／berlebih＝energi itu terlalu kuat (yang baik pun membebani bila berlebih). Ketuk pilar untuk maknanya.',th:'สีของแต่ละทศวรรษบอกแนวโน้มตามอิงสิน (用神) ของคุณ (ธาตุที่ส่งเสริม/ขัดขวาง): ส่งเสริม＝ธาตุดีเวียนมา (เกื้อกูล)／สวนทาง＝ธาตุร้ายเวียนมา (บั่นทอน)／แรงเกิน＝พลังนั้นแรงเกินไป (ธาตุดีถ้ามากไปก็เป็นภาระ) แตะที่เสาเพื่อดูความหมายสิบเทพ'})+'</p>'+
        (c.pro.startFortune?'<p class="disc-note" style="margin-top:8px">'+pick({ja:'運の切り替わりは '+c.pro.startFortune.years+'歳'+c.pro.startFortune.months+'ヶ月から、10年ごと。',en:'Cycles change every 10 years starting at age '+c.pro.startFortune.years+'y '+c.pro.startFortune.months+'m.',zh:'从'+c.pro.startFortune.years+'岁'+c.pro.startFortune.months+'个月起，每十年一换。',zt:'從'+c.pro.startFortune.years+'歲'+c.pro.startFortune.months+'個月起，每十年一換。',ko:c.pro.startFortune.years+'세 '+c.pro.startFortune.months+'개월부터 10년마다 바뀝니다.',vi:'Chu kỳ đổi mỗi 10 năm, bắt đầu từ '+c.pro.startFortune.years+' tuổi '+c.pro.startFortune.months+' tháng.',es:'Los ciclos cambian cada 10 años desde los '+c.pro.startFortune.years+' años y '+c.pro.startFortune.months+' meses.',pt:'Os ciclos mudam a cada 10 anos, a partir de '+c.pro.startFortune.years+' anos e '+c.pro.startFortune.months+' meses.',id:'Siklus berganti tiap 10 tahun mulai usia '+c.pro.startFortune.years+' th '+c.pro.startFortune.months+' bln.',th:'วัฏจักรเปลี่ยนทุก 10 ปี เริ่มตั้งแต่อายุ '+c.pro.startFortune.years+' ปี '+c.pro.startFortune.months+' เดือน'})+'</p>':'');
-@@ -4355,8 +4418,7 @@
+@@ -4355,8 +4424,7 @@
      var BR_E={寅:'木',卯:'木',巳:'火',午:'火',辰:'土',戌:'土',丑:'土',未:'土',申:'金',酉:'金',亥:'水',子:'水'};
      function gzEls(gz){ var o=[]; if(gz&&gz.length>=2){ if(STEM_E[gz.charAt(0)])o.push(STEM_E[gz.charAt(0)]); if(BR_E[gz.charAt(1)])o.push(BR_E[gz.charAt(1)]); } return o; }
      var proo=c.pro||{}, nowY=(proo.now&&proo.now.year)||0;
@@ -639,7 +647,7 @@ diff -ruN pk/index.html fx/index.html
      var yy=(proo.annualFortunes||[]).filter(function(a){return a.year===nowY;})[0]||null;
      var seasonEl=(seasonIdx>=0)?['木','火','金','水'][seasonIdx]:'';
      var daeunEls=dd?gzEls(dd.ganzhi):[], yearEls=yy?gzEls(yy.ganzhi):[];
-@@ -4401,7 +4463,7 @@
+@@ -4401,7 +4469,7 @@
    var taikaHtml='';
    try{
      var _pn=c.pro&&c.pro.now, _pdi=(_pn&&_pn.daeunIndex>=0)?_pn.daeunIndex:-1;
@@ -648,7 +656,7 @@ diff -ruN pk/index.html fx/index.html
      var _pyy=(c.pro&&c.pro.annualFortunes&&_pn)?c.pro.annualFortunes.filter(function(a){return a.year===_pn.year;})[0]:null;
      var _exNow=[]; if(_pdd)_exNow.push(_pdd.ganzhi); if(_pyy)_exNow.push(_pyy.ganzhi);
      var _natT=EL_ORDER.filter(function(e){return (_fiveM[e]||0)>=3;});
-@@ -4423,7 +4485,7 @@
+@@ -4423,7 +4491,7 @@
        function _natPairs(gz){var r=[];[0,1,2,3].forEach(function(pi){var np=_np2.pillars[pi];if(!np||!np.ganzhi)return;if(gz===np.ganzhi)r.push({pi:pi,rel:'律音'});else if(isNatchin(gz,np.ganzhi))r.push({pi:pi,rel:'納音'});});return r;}
        var _mrows=[];
        var _ndi=(_np2.now&&_np2.now.daeunIndex>=0)?_np2.now.daeunIndex:0;
@@ -657,7 +665,7 @@ diff -ruN pk/index.html fx/index.html
        var _ny2=(_np2.now&&_np2.now.year)||0;
        (_np2.annualFortunes||[]).forEach(function(a){if(a.year<_ny2||a.year>_ny2+12)return;var pr=_natPairs(a.ganzhi);if(!pr.length)return;var nm=nayinOf(a.ganzhi);_mrows.push({kind:'年運',when:''+a.year,gz:a.ganzhi,nm:nm?nm[0]:'',pairs:pr,cur:(a.year===_ny2)});});
        if(_mrows.length){
-@@ -4497,13 +4559,16 @@
+@@ -4497,13 +4565,16 @@
    $('mpBackup').onclick=function(){ closeSheets(); renderBackup(); openSheet('shBackup'); };
    $('mpEdit').onclick=function(){ closeSheets(); prefillEdit(); openSheet('shEdit'); };
    $('mpQuit').onclick=function(){
@@ -675,7 +683,7 @@ diff -ruN pk/index.html fx/index.html
  function backupCode(){ try{ return 'PK1.'+btoa(unescape(encodeURIComponent(JSON.stringify(_pkDump())))); }catch(e){ return ''; } }
  function backupRestore(code){
    try{
-@@ -4517,7 +4582,7 @@
+@@ -4517,7 +4588,7 @@
  function renderBackup(){
    $('bkTitle').textContent=pick(BK.t); $('bkDesc').textContent=pick(BK.d);
    var code=backupCode();
@@ -684,7 +692,7 @@ diff -ruN pk/index.html fx/index.html
      '<div class="mp-card"><textarea id="bkOut" readonly style="width:100%;height:78px;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:12px;font-family:monospace;resize:none;background:var(--soft);color:var(--text)"></textarea>'
      +'<button class="btn mini" id="bkCopy" style="margin-top:8px">'+pick(BK.cp)+'</button>'
      +'<p class="note" style="margin-top:8px">'+pick(BK.save)+'</p></div>'
-@@ -4526,6 +4591,7 @@
+@@ -4526,6 +4597,7 @@
    $('bkOut').value=code;
    $('bkCopy').onclick=function(){ var ta=$('bkOut'); ta.select(); try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(ta.value); } else { document.execCommand('copy'); } }catch(e){ try{document.execCommand('copy');}catch(e2){} } $('bkCopy').textContent=pick(BK.cpd); setTimeout(function(){ if($('bkCopy')) $('bkCopy').textContent=pick(BK.cp); },1600); };
    $('bkRestore').onclick=function(){ var v=$('bkIn').value; if(backupRestore(v)){ alert(pick(BK.ok)); location.reload(); } else { alert(pick(BK.err)); } };
@@ -692,7 +700,7 @@ diff -ruN pk/index.html fx/index.html
  }
  /* この鑑定について（監修・運営・根拠） */
  function renderAbout(){
-@@ -4653,6 +4719,7 @@
+@@ -4653,6 +4725,7 @@
    _mkChips('svSrcs','svSrcL',SV.srcs,false);
    _mkChips('svFreqs','svFreqL',SV.freqs,false);
    _mkChips('svJobs','svJobL',SV.jobs,false);
@@ -700,7 +708,7 @@ diff -ruN pk/index.html fx/index.html
    /* 下書き復元 */
    try{ var d=JSON.parse(localStorage.getItem('pk_svdraft')||'null'); if(d){ if(d.em) $('svEmail').value=d.em;
      [['svTopics',d.tp],['svInterests',d.iv],['svSrcs',d.sr],['svFreqs',d.fq],['svJobs',d.jb]].forEach(function(p){ (p[1]||[]).forEach(function(k){ var b=document.querySelector('#'+p[0]+' button[data-k="'+k+'"]'); if(b) b.classList.add('on'); }); }); } }catch(e){}
-@@ -4690,6 +4757,213 @@
+@@ -4690,6 +4763,235 @@
  /* 送信失敗分は次回起動時に再送 */
  (function(){ try{var q=localStorage.getItem('pk_svq'); if(q){_svPost(q).then(function(r){ if(r.ok) localStorage.removeItem('pk_svq'); }).catch(function(){});} }catch(e){} })();
  
@@ -753,16 +761,37 @@ diff -ruN pk/index.html fx/index.html
 + e_NET:{ja:'通信できませんでした。電波の良い所でもう一度お試しください',en:'Could not connect. Please try again with a better connection.',zh:'无法连接，请在网络良好时重试',zt:'無法連線，請在網路良好時重試',ko:'연결할 수 없어요. 통신 상태가 좋은 곳에서 다시 시도해 주세요',vi:'Không kết nối được. Vui lòng thử lại',es:'No se pudo conectar. Inténtalo de nuevo',pt:'Não foi possível conectar. Tente novamente',id:'Tidak bisa terhubung. Coba lagi',th:'เชื่อมต่อไม่ได้ โปรดลองอีกครั้ง'},
 + e_SERVER:{ja:'ただいまアカウント機能が使えません。時間をおいてお試しください',en:'Accounts are temporarily unavailable. Please try again later.',zh:'账户功能暂时不可用，请稍后再试',zt:'帳號功能暫時無法使用，請稍後再試',ko:'지금은 계정 기능을 쓸 수 없어요. 잠시 후 다시 시도해 주세요',vi:'Tạm thời không dùng được tài khoản. Vui lòng thử lại sau',es:'Las cuentas no están disponibles ahora. Inténtalo más tarde',pt:'Contas indisponíveis no momento. Tente mais tarde',id:'Fitur akun sedang tidak tersedia. Coba lagi nanti',th:'ขณะนี้ใช้งานบัญชีไม่ได้ โปรดลองใหม่ภายหลัง'}
 +};
++/* パスワード欄に「表示／非表示」の目のボタンを付ける（入力中の文字を確認できる） */
++var PW_EYE={show:{ja:'パスワードを表示',en:'Show password',zh:'显示密码',zt:'顯示密碼',ko:'비밀번호 보기',vi:'Hiện mật khẩu',es:'Mostrar contraseña',pt:'Mostrar senha',id:'Tampilkan kata sandi',th:'แสดงรหัสผ่าน'},
++ hide:{ja:'パスワードを隠す',en:'Hide password',zh:'隐藏密码',zt:'隱藏密碼',ko:'비밀번호 숨기기',vi:'Ẩn mật khẩu',es:'Ocultar contraseña',pt:'Ocultar senha',id:'Sembunyikan kata sandi',th:'ซ่อนรหัสผ่าน'}};
++var PW_SVG_ON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
++var PW_SVG_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
++function pwEyeSet(btn,inp){ var on=inp.type==='text'; btn.innerHTML=on?PW_SVG_OFF:PW_SVG_ON; btn.setAttribute('aria-label',pick(on?PW_EYE.hide:PW_EYE.show)); btn.setAttribute('aria-pressed',on?'true':'false'); btn.title=pick(on?PW_EYE.hide:PW_EYE.show); }
++function pwEyes(root){
++  (root||document).querySelectorAll('input[type=password]:not([data-eye])').forEach(function(inp){
++    inp.setAttribute('data-eye','1');
++    var w=document.createElement('span'); w.className='pw-wrap';
++    if(inp.style.marginTop){ w.style.marginTop=inp.style.marginTop; inp.style.marginTop='0'; }
++    inp.parentNode.insertBefore(w,inp); w.appendChild(inp);
++    var b=document.createElement('button'); b.type='button'; b.className='pw-eye'; w.appendChild(b);
++    b.onmousedown=function(e){ e.preventDefault(); }; /* 押してもキーボードが閉じないように */
++    b.onclick=function(){ var st=inp.selectionStart,en=inp.selectionEnd; inp.type=(inp.type==='password')?'text':'password'; pwEyeSet(b,inp); try{ inp.focus(); if(st!=null) inp.setSelectionRange(st,en); }catch(e){} };
++    pwEyeSet(b,inp);
++  });
++  (root||document).querySelectorAll('.pw-eye').forEach(function(b){ var inp=b.parentNode.querySelector('input'); if(inp) pwEyeSet(b,inp); });
++}
++/* 送信・画面切替のときは必ず隠した状態に戻す（パスワード保存機能のため） */
++function pwHideAll(){ document.querySelectorAll('input[data-eye]').forEach(function(inp){ if(inp.type==='text'){ inp.type='password'; var b=inp.parentNode.querySelector('.pw-eye'); if(b) pwEyeSet(b,inp); } }); }
 +function authGet(){ try{ var a=JSON.parse(localStorage.getItem(LS_AUTH)||'null'); return (a&&a.token&&a.email)?a:null; }catch(e){ return null; } }
 +function authSet(email,token){ try{ localStorage.setItem(LS_AUTH,JSON.stringify({email:email,token:token})); }catch(e){} }
 +function authClear(){ try{ localStorage.removeItem(LS_AUTH); localStorage.removeItem(LS_SYNC); }catch(e){} }
 +function authCall(action,obj){
 +  var body=Object.assign({action:action},obj||{});
 +  return fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),keepalive:(action==='save'&&JSON.stringify(body).length<60000)})
-+    .then(function(r){ return r.json().catch(function(){ return {ok:false,code:'SERVER'}; }); })
++    .then(function(r){ return r.json().catch(function(){ return {ok:false,code:'HTTP'+r.status}; }); }) /* 404＝関数が未デプロイ等 */
 +    .catch(function(){ return {ok:false,code:'NET'}; });
 +}
-+function acctMsg(code){ return pick(AU['e_'+code]||AU.e_SERVER); }
++function acctMsg(code){ return AU['e_'+code]?pick(AU['e_'+code]):(pick(AU.e_SERVER)+'（'+(code||'?')+'）'); } /* 設定の問題はコードを添えて原因を切り分けやすく */
 +function acctErr(id,code){ var e=$(id); if(!e) return; e.textContent=acctMsg(code); e.style.display=''; }
 +/* 登録フォームの読み取り＋チェック（NGならエラーを出して null） */
 +function acctFormRead(emId,pwId,pw2Id,errId){
@@ -828,7 +857,7 @@ diff -ruN pk/index.html fx/index.html
 +  show('scLogin');
 +}
 +$('lgForm').onsubmit=function(ev){ if(ev) ev.preventDefault();
-+  var ac=acctFormRead('lgEmail','lgPw',null,'lgErr'); if(!ac) return false;
++  var ac=acctFormRead('lgEmail','lgPw',null,'lgErr'); if(!ac) return false; pwHideAll();
 +  if(state.profile&&!confirm(pick(AU.replaceQ))) return false;
 +  var btn=$('lgBtn'); btn.disabled=true;
 +  authCall('login',{email:ac.email,password:ac.pw}).then(function(j){
@@ -849,6 +878,7 @@ diff -ruN pk/index.html fx/index.html
 +  $('acEmL').textContent=pick(AU.em); $('acPwL').textContent=pick(AU.pw); $('acPw2L').textContent=pick(AU.pw2);
 +  $('toLogin').textContent=pick(AU.toLogin); $('lpLogin').textContent=pick(AU.lpLogin);
 +  $('obAcct').style.display=authGet()?'none':'';
++  pwEyes(document);
 +  if($('scLogin').classList.contains('on')) showLogin();
 +}
 +/* メニュー「引き継ぎ・バックアップ」の先頭に出すアカウント欄 */
@@ -871,7 +901,7 @@ diff -ruN pk/index.html fx/index.html
 +    +'<button class="back" id="acGoLogin" type="button" style="margin-top:8px">'+pick(AU.toLogin)+'</button></div>';
 +}
 +function acctCardWire(){
-+  var a=authGet();
++  var a=authGet(); pwEyes($('acCard'));
 +  if(a){
 +    $('acSave').onclick=function(){ cloudSaveNow().then(function(j){ if(j.ok){ $('acSaved').textContent=pick(AU.saved); } else { acctErr('acCardErr',j.code); } }); };
 +    $('acChg').onclick=function(){
@@ -914,7 +944,7 @@ diff -ruN pk/index.html fx/index.html
  /* ---- 起動 ---- */
  (function boot(){
    window.__booting=true;
-@@ -4703,7 +4977,9 @@
+@@ -4703,7 +5005,9 @@
    var savedTheme=null; try{savedTheme=localStorage.getItem(LS_THEME);}catch(e){} setTheme(savedTheme==='indigo'?'indigo':'green');
    state.profile=loadJSON(LS_PROF);
    applyI18n(); rebuildSelects(); setLang(state.lang);
