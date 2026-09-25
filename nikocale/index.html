@@ -1343,6 +1343,18 @@ select{
 .sh-img{background:linear-gradient(155deg,#3a4570,#232c52);border-color:#232c52;color:#f6efda}
 /* 日別：カレンダー追加ボタン */
 .calbox{border:1.5px solid var(--accent);border-radius:var(--r-md);background:var(--panel-2);padding:13px 14px;margin-top:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+/* 既定は2アクションだけ（共有／カレンダー追加）。詳細は折りたたみ */
+.cal-actions{display:flex;flex-direction:column;gap:9px}
+.cal-main{display:block;width:100%;box-sizing:border-box;text-align:center;border:none;border-radius:12px;padding:14px;font-weight:800;font-size:15px;font-family:var(--maru);cursor:pointer;text-decoration:none;transition:filter .15s,transform .12s}
+.cal-main:active{transform:scale(.99)}
+.cal-main-share{background:linear-gradient(180deg,var(--accent),var(--accent-2));color:var(--accent-ink,#fff);box-shadow:0 8px 18px -8px var(--accent)}
+.cal-main-add{background:var(--panel);color:var(--ink);border:1px solid color-mix(in oklab,var(--accent) 32%,var(--line))}
+.cal-more{margin-top:12px;border-top:1px dashed var(--line);padding-top:8px}
+.cal-more>summary{font-size:12.5px;color:var(--muted);cursor:pointer;font-family:var(--maru);font-weight:700;list-style:none;padding:4px 2px}
+.cal-more>summary::-webkit-details-marker{display:none}
+.cal-more>summary::before{content:"▽ "}
+.cal-more[open]>summary::before{content:"△ "}
+.cal-more-body{padding-top:10px}
 .dm-cta{display:flex;align-items:center;gap:12px;margin-top:14px;padding:13px 15px;border:1.5px solid var(--accent);border-radius:var(--r-md);background:var(--accent-soft);box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .dm-cta .dm-cta-x{flex:1;min-width:0}
 .dm-cta .dm-cta-t{font-family:var(--serif);font-weight:700;font-size:15px;color:var(--hi)}
@@ -3744,37 +3756,34 @@ function pickFocus(interests){
   }
   function calRowHtml(){
     var couple=(state.mode==='couple');
-    // DM ON時のみ「チャットに送る」。OFF時は全員「共有でお相手に送る」（この日の相性カード＋リンクを端末の共有で）
-    var _connected=false; try{ var _u=window.NicoAuth&&window.NicoAuth.current&&window.NicoAuth.current(); _connected=!!(_u&&_u.emailVerified&&_u.profile&&window.NICO_DM_ON); }catch(e){}
-    var dmcta = !couple ? '' : (_connected
-      ? '<div class="dm-cta"><div class="dm-cta-x"><div class="dm-cta-t">💬 この日をお相手に送る</div><div class="dm-cta-s">「この日どう？」をワンタップでチャットに送れます。</div></div><button type="button" class="dm-cta-b" id="dmSendDay">この日どう？と送る</button></div>'
-      : '<div class="dm-cta"><div class="dm-cta-x"><div class="dm-cta-t">💌 この日をお相手に送る</div><div class="dm-cta-s">この日の相性カードとリンクを、そのまま共有で送れます（LINE・メールなど何でも）。</div></div><button type="button" class="dm-cta-b" id="dmInviteBtn">お相手に送る</button></div>');
-    return dmcta
-      +'<div class="calbox">'
-      +'<div class="cal-h">この日を予定にする</div>'
-      +'<p class="cal-sub">'+(couple?'内容と時刻を決めて、お相手を誘えます。自分のカレンダーにも登録できます。':'内容と時刻を決めて、お使いのスマホのカレンダーに登録できます。')+'</p>'
-      +'<div class="memo"><label class="memo-h">① 予定の内容<span class="memo-when">（お誘い・カレンダーに入ります）</span></label>'
-      +'<textarea id="memoTa" maxlength="500" placeholder="例：18時に渋谷で待ち合わせ／この日に告白する"></textarea>'
-      +'<div class="memo-foot"><span class="memo-status" id="memoStatus">入力すると自動保存されます</span><button type="button" class="memo-clear" id="memoClear">消去</button></div></div>'
-      +'<div class="caltime"><span class="ct-l">② 開始時刻</span>'
-      +'<input type="time" id="calHour" step="1800" aria-label="予定の開始時刻">'
-      +'<span class="ct-dur">〜 約2時間</span>'
-      +'<label class="ct-allday"><input type="checkbox" id="calAllday"> 終日</label></div>'
-      +(couple?'<div class="inv-theme"><span class="it-l">お誘いの色</span>'
-        +'<button type="button" class="it-sw" data-th="navy" style="background:linear-gradient(135deg,#3a4676,#1f2647)" aria-label="紺"></button>'
-        +'<button type="button" class="it-sw" data-th="rose" style="background:linear-gradient(135deg,#f2bcd0,#d17a9c)" aria-label="ばら"></button>'
-        +'<button type="button" class="it-sw" data-th="cream" style="background:linear-gradient(135deg,#f6ecd6,#dcc17f)" aria-label="クリーム"></button>'
-        +'<button type="button" class="it-sw" data-th="fuji" style="background:linear-gradient(135deg,#9a80cc,#6a51a0)" aria-label="藤"></button></div>'
-        +'<div class="invite-msg"><label class="im-l">お相手へのひとこと<span class="im-opt">（任意）</span></label>'
-        +'<input id="inviteMsg" maxlength="40" placeholder="例：この日どう？会いたいな"></div>'
-        +'<button type="button" class="invite-send" id="inviteBtn">この日を共有してお相手を誘う</button>'
-        +'<p class="invite-cap">共有（LINE・メールなど何でも）で送れます。お相手がタップすると、この日のふたりの相性とお誘いが開きます。</p>':'')
-      +'<div class="cal-subhead">'+(couple?'― 自分のカレンダーにも入れる ―':'― カレンダーに追加 ―')+'</div>'
-      +'<div class="calrow"><a class="cal-btn cal-g" id="calG" target="_blank" rel="noopener">Googleカレンダーに追加</a>'
-      +'<button type="button" class="cal-btn cal-i" id="calI">iPhoneカレンダーに追加</button></div>'
-      +'<p class="calnote">「追加」を押すとカレンダーアプリが開きます。時間や内容は、そこでもさらに編集できます。</p>'
+    // 既定はシンプルに2アクション（共有／カレンダー追加）。時刻・ひとこと・色は「詳しく」で任意
+    var shareBtn = couple
+      ? '<button type="button" class="cal-main cal-main-share" id="inviteBtn">📤 この日を共有してお相手を誘う</button>'
+      : '<button type="button" class="cal-main cal-main-share" id="shareDay">📤 この日を共有する</button>';
+    return '<div class="calbox">'
+      +'<div class="cal-actions">'
+        +shareBtn
+        +'<a class="cal-main cal-main-add" id="calG" target="_blank" rel="noopener">📅 Googleカレンダーに追加</a>'
+        +'<button type="button" class="cal-main cal-main-add" id="calI">📅 iPhoneカレンダーに追加</button>'
       +'</div>'
-      +'<button type="button" class="cal-btn cal-share" id="shareDay">この日をシェア</button>';
+      +'<details class="cal-more"><summary>時間・ひとこと'+(couple?'・色':'')+'を決める（任意）</summary><div class="cal-more-body">'
+        +'<div class="memo"><label class="memo-h">予定の内容<span class="memo-when">（共有・カレンダーに入ります）</span></label>'
+        +'<textarea id="memoTa" maxlength="500" placeholder="例：18時に渋谷で待ち合わせ／この日に告白する"></textarea>'
+        +'<div class="memo-foot"><span class="memo-status" id="memoStatus">入力すると自動保存されます</span><button type="button" class="memo-clear" id="memoClear">消去</button></div></div>'
+        +'<div class="caltime"><span class="ct-l">開始時刻</span>'
+        +'<input type="time" id="calHour" step="1800" aria-label="予定の開始時刻">'
+        +'<span class="ct-dur">〜 約2時間</span>'
+        +'<label class="ct-allday"><input type="checkbox" id="calAllday"> 終日</label></div>'
+        +(couple?'<div class="inv-theme"><span class="it-l">共有カードの色</span>'
+          +'<button type="button" class="it-sw" data-th="navy" style="background:linear-gradient(135deg,#3a4676,#1f2647)" aria-label="紺"></button>'
+          +'<button type="button" class="it-sw" data-th="rose" style="background:linear-gradient(135deg,#f2bcd0,#d17a9c)" aria-label="ばら"></button>'
+          +'<button type="button" class="it-sw" data-th="cream" style="background:linear-gradient(135deg,#f6ecd6,#dcc17f)" aria-label="クリーム"></button>'
+          +'<button type="button" class="it-sw" data-th="fuji" style="background:linear-gradient(135deg,#9a80cc,#6a51a0)" aria-label="藤"></button></div>'
+          +'<div class="invite-msg"><label class="im-l">お相手へのひとこと<span class="im-opt">（任意）</span></label>'
+          +'<input id="inviteMsg" maxlength="40" placeholder="例：この日どう？会いたいな"></div>':'')
+      +'</div></details>'
+      +'<p class="calnote">「共有」は端末の共有（LINE・メールなど何でも）で送れます。「追加」でカレンダーアプリが開きます。</p>'
+      +'</div>';
   }
   function _isInviteDay(d){ var iv=state.invite; return !!(iv&&iv.y===state.y&&iv.m===state.m&&iv.d===d); }
   function wireCal(d,title,details){
