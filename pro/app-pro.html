@@ -568,7 +568,7 @@
       </div>
     </div>
     <div class="frow" style="margin-top:12px">
-      <div class="field"><label>生年月日</label><input id="f-date" type="date" value="2000-01-01"></div>
+      <div class="field"><label>生年月日</label><div style="display:flex;gap:6px"><select id="f-y" style="flex:1.6 1 0;min-width:0;padding:0 6px"></select><select id="f-m" style="flex:1 1 0;min-width:0;padding:0 6px"></select><select id="f-d" style="flex:1 1 0;min-width:0;padding:0 6px"></select></div><input type="hidden" id="f-date" value="2000-01-01"></div>
       <div class="field"><label>生まれた時刻</label><input id="f-time" type="time" value="12:00">
         <div id="f-time-unknown" style="height:46px;padding:0 12px;border:2px solid var(--line2);border-radius:12px;background:#F1F3F7;color:var(--muted);font-weight:800;font-size:15px;align-items:center;display:none">不明（時刻なしで鑑定します）</div>
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);font-weight:700;margin-top:6px;cursor:pointer"><input type="checkbox" id="f-notime" style="width:16px;height:16px;flex:0 0 auto"> 生まれた時刻がわからない（時柱を使わず年月日で鑑定）</label>
@@ -672,7 +672,7 @@
       </div>
     </div>
     <div class="frow" style="margin-top:12px">
-      <div class="field"><label>生年月日</label><input id="b-date" type="date" value="2000-01-01"></div>
+      <div class="field"><label>生年月日</label><div style="display:flex;gap:6px"><select id="b-y" style="flex:1.6 1 0;min-width:0;padding:0 6px"></select><select id="b-m" style="flex:1 1 0;min-width:0;padding:0 6px"></select><select id="b-d" style="flex:1 1 0;min-width:0;padding:0 6px"></select></div><input type="hidden" id="b-date" value="2000-01-01"></div>
       <div class="field"><label>生まれた時刻</label><input id="b-time" type="time" value="12:00">
         <div id="b-time-unknown" style="height:46px;padding:0 12px;border:2px solid var(--line2);border-radius:12px;background:#F1F3F7;color:var(--muted);font-weight:800;font-size:15px;align-items:center;display:none">不明（時刻なしで鑑定します）</div>
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);font-weight:700;margin-top:6px;cursor:pointer"><input type="checkbox" id="b-notime" style="width:16px;height:16px;flex:0 0 auto"> お相手の生まれた時刻がわからない（時柱を使わず年月日で鑑定）</label>
@@ -4760,6 +4760,22 @@ function fillPref(){document.getElementById('f-pref').innerHTML=
 function setSex(v){sex=v;document.querySelectorAll('#f-sex button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===v));}
 function fillPrefB(){const sel=document.getElementById('b-pref');if(sel){sel.innerHTML=PREF.map(([nm,lon])=>`<option value="${lon}">${nm||'指定しない（補正なし）'}</option>`).join('');sel.value='';}}
 function setSexB(v){sexB=v;document.querySelectorAll('#b-sex button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===v));}
+// 生年月日を「年・月・日」プルダウンにする（端末の言語に関係なく必ず年→月→日の順で表示）。隠しinput #f-date/#b-date に YYYY-MM-DD を同期し、既存の読み書きはそのまま動く。
+function fillDateSel(yId,mId,dId,hidId){
+  const y=document.getElementById(yId),m=document.getElementById(mId),d=document.getElementById(dId),h=document.getElementById(hidId);
+  if(!y||!m||!d||!h)return;
+  const nowY=new Date().getFullYear();
+  y.innerHTML=''; for(let v=nowY;v>=1930;v--)y.appendChild(new Option(v+'年',v));
+  m.innerHTML=''; for(let v=1;v<=12;v++)m.appendChild(new Option(v+'月',v));
+  function fillDays(){const dim=new Date(+y.value,+m.value,0).getDate();const cur=+d.value||1;d.innerHTML='';for(let v=1;v<=dim;v++)d.appendChild(new Option(v+'日',v));d.value=Math.min(cur,dim);}
+  function sync(){h.value=y.value+'-'+String(m.value).padStart(2,'0')+'-'+String(d.value).padStart(2,'0');}
+  y.addEventListener('change',()=>{fillDays();sync();});
+  m.addEventListener('change',()=>{fillDays();sync();});
+  d.addEventListener('change',sync);
+  const init=(h.value||'2000-01-01').split('-').map(Number);
+  y.value=init[0]||2000; m.value=init[1]||1; fillDays(); d.value=init[2]||1; sync();
+  h.syncFromValue=function(){const p=(h.value||'').split('-').map(Number); if(p[0]&&p[1]&&p[2]){y.value=p[0];m.value=p[1];fillDays();d.value=p[2];} sync();};
+}
 
 /* ===== マイページ：鑑定者の保存・メモ・鑑定保存（クラウド同期対応） =====
    データはドキュメント {schema,updatedAt,clients[]} で保持。clients[].ts/deleted でマージ・削除同期。
@@ -4827,7 +4843,7 @@ function addClient(){
 function delClient(id){const doc=mpLoad();const c=doc.clients.find(x=>x.id===id);if(c){c.deleted=true;c.ts=Date.now();}mpWrite(doc);if(currentClientId===id)currentClientId=null;renderClients();mpTouch();}
 function loadClient(id){const c=mpLoad().clients.find(x=>x.id===id&&!x.deleted);if(!c)return;currentClientId=id;
   document.getElementById('f-name').value=c.name.indexOf('無題')===0?'':c.name;
-  document.getElementById('f-date').value=c.date;document.getElementById('f-time').value=c.time||'12:00';
+  {const fd=document.getElementById('f-date');fd.value=c.date;if(fd.syncFromValue)fd.syncFromValue();}document.getElementById('f-time').value=c.time||'12:00';
   setSex(c.sex);document.getElementById('f-pref').value=c.pref||'';document.getElementById('f-corr').value=c.corr||'full';
   const nt=document.getElementById('f-notime');if(nt)nt.checked=!!c.notime;
   compute();}
@@ -5101,7 +5117,7 @@ document.getElementById('f-save').onclick=addClient;
 };})();
 // リセット（本人）
 function resetMain(){
-  ['f-name','f-date'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-name').value='';{const fd=document.getElementById('f-date');fd.value='2000-01-01';if(fd.syncFromValue)fd.syncFromValue();}
   const ft=document.getElementById('f-time');ft.value='12:00';ft.disabled=false;ft.style.display='';
   const tu=document.getElementById('f-time-unknown');if(tu)tu.style.display='none';
   const nt=document.getElementById('f-notime');if(nt)nt.checked=false;
@@ -5123,7 +5139,7 @@ function clearCompatResult(){
 }
 // リセット（相性のお相手）
 function resetCompat(){
-  ['b-name','b-date'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('b-name').value='';{const bd=document.getElementById('b-date');bd.value='2000-01-01';if(bd.syncFromValue)bd.syncFromValue();}
   const bt=document.getElementById('b-time');bt.value='12:00';bt.disabled=false;bt.style.display='';
   const btu=document.getElementById('b-time-unknown');if(btu)btu.style.display='none';
   const bnt=document.getElementById('b-notime');if(bnt)bnt.checked=false;
@@ -5178,7 +5194,7 @@ geminiKey=store.get('bazi_gkey')||''; geminiModel=store.get('bazi_gmodel')||'gem
   if(k){k.value=geminiKey;k.oninput=()=>{geminiKey=k.value.trim();store.set('bazi_gkey',geminiKey);};}
   if(m){m.value=geminiModel;m.onchange=()=>{geminiModel=m.value;store.set('bazi_gmodel',geminiModel);};}})();
 /* モバイル既定は横（時柱が左の列＝鑑定書の横型に合わせる）。既定値yokoのままとする。 */
-buildLegend();fillPref();fillPrefB();renderClients();
+buildLegend();fillPref();fillPrefB();fillDateSel('f-y','f-m','f-d','f-date');fillDateSel('b-y','b-m','b-d','b-date');renderClients();
 mpSetStatus(mpEmail()?'synced':'guest'); if(mpEmail())mpPull();
 chart=window.Bazi.computeChart({year:2000,month:1,day:1,hour:12,minute:0,sex:'female',longitude:139.69,correctionMode:'full'});
 renderResult();
