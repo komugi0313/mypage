@@ -3,7 +3,7 @@
 四柱推命ツール（経験者版 `pro/`）の**フロントは完成済み**で、すべて **STUB=true / PREVIEW_MODE=true** の状態で単体動作します。
 バックエンド（Netlify Functions 想定）を用意し、各フラグを本番値に切り替えると会員制・決済・クラウド同期が有効になります。
 
-> 前提：認証はパスワードレス（メールのマジックリンク）。決済はテレコムクレジット（クレジットカード）。
+> 前提：認証はメールアドレス＋パスワード。決済はテレコムクレジット（クレジットカード／**審査通過済み**）。
 > 命式・鑑定の計算エンジンには一切触れないでください（表示・データ層のみ）。
 
 ---
@@ -25,6 +25,8 @@
 | 7 | `/mypage-get` | `{email}` | `{data:{...}}` | クラウド保存の読み込み（鑑定者・鑑定・設定） | `app-pro.html`（L4618）／`meishi-sheet.html`（CLOUD.PULL） |
 | 8 | `/mypage-put` | `{email, data}` | `{ok:true}` | クラウド保存の書き込み | `app-pro.html`（L4609）／`meishi-sheet.html`（CLOUD.PUSH） |
 | 9 | `/gemini` | Gemini 形式のJSON | Gemini応答 | 詳細鑑定（AI本文生成）。**実装済み・鍵はサーバ保持** | `app-pro.html`／`meishi-sheet.html` |
+| 10 | `/auth-reset-confirm` | `{token, password}` | `{ok:true}` | パスワード再設定の確定（新パスワード保存）※着地ビューは要追加（§3参照） | `auth.html`（`?view=newpw&token=…`） |
+| 11 | `/telecom-webhook` | テレコムクレジットの通知 | `200` | 決済成功／継続課金／失敗・解約 を会員 `status` に反映（§2参照） | テレコムクレジット（サーバ間） |
 
 > パスワードはサーバー側で**必ずハッシュ化**して保存（bcrypt/argon2 等）。`/auth-login` は契約状況（`status`）も返し、`active`/`trialing` のときだけツールを解放します。
 
@@ -33,19 +35,28 @@
 
 ---
 
-## 2. 決済フロー（テレコムクレジット）
+## 2. 決済フロー（テレコムクレジット）※**審査通過済み — 導入可**
 
 ```
-pricing-pro.html（料金プラン）
-   └─ カード決済（テレコムクレジット）
-        └─ 決済成功 Webhook → 会員レコード作成（email＋plan＋cardLast4＋trial開始）
-             └─ 確認メール（マジックリンク）送信 = /auth-send-link 相当
-                  └─ auth.html?token=… → /auth-verify → app-pro.html（ツール解放）
+pricing-pro.html（料金プラン＋メール＋パスワードで登録）
+   └─ /auth-register {email,password}（会員仮登録・パスワードはハッシュ保存）
+        └─ テレコムクレジットの決済ページへ遷移（プラン別 決済URL＋email等のパラメータ）
+             └─ カード決済成功 → テレコムクレジットの Webhook 受信
+                  └─ /telecom-webhook（要実装）→ 該当emailの会員を trial 開始で有効化
+                       └─ /auth-login {email,password} → status=trialing/active → app-pro.html 解放
 ```
 
-- **決済ページ導線**：`pricing-pro.html` に決済ボタンを設置（現在は公開前プレビュー導線が入っています／L125 `#preview-cta` ブロック）。
-- **無料トライアル一週間**：`trialing` として扱い、期間中の解約は費用0円（UIは実装済み）。
-- **会員判定**：`app-pro.html` の会員ゲート（L485〜）が `/check-subscription` を呼び、`active`/`trialing` で解放。それ以外は料金プランへ誘導。
+**テレコムクレジット導入の残タスク（審査通過後にやること）**
+
+1. **決済URLの設定**：`pricing-pro.html` の `TELECOM_PAYMENT_URL = { month:'', year:'', half:'' }`（**L266付近**）に、発行された**プラン別の決済URL**（加盟店ID・金額・周期などのパラメータ付き）を入れる。3プラン分。
+   - フォーム送信時、選択プランの URL があれば `location.href` で決済ページへ遷移する実装は**既に入っています**（L268付近）。URL を入れるだけで導線が有効化。
+2. **決済成功 Webhook の実装**：テレコムクレジットの通知（決済成功／継続課金成功／失敗・解約）を受ける `/telecom-webhook` を Netlify Functions で用意し、`status`（`trialing`/`active`/`past_due`/`canceled`/`unpaid`）を会員レコードへ反映。
+3. **会員との突き合わせ**：決済時に渡した email（またはテレコム側の取引ID）で会員レコードを特定。`/auth-login` と `/check-subscription` が同じ `status` を返すようにする。
+4. **環境変数**：加盟店ID・API/Web hook 署名シークレット等はコードに書かず **Netlify の環境変数**へ（`GEMINI_API_KEY` と同じ運用）。
+5. **無料トライアル一週間**：初回は `trialing`。期間中の解約は費用0円（UIは実装済み）。トライアル終了時の初回課金・失敗時の `past_due`/`unpaid` 遷移をWebhookで反映。
+
+- **決済ページ導線**：`pricing-pro.html` に決済ボタン・プラン選択・確認画面は実装済み（現在は公開前プレビュー導線 `#preview-cta`／L125 が併設。本番時に削除）。
+- **会員判定**：`app-pro.html` の会員ゲート（L481 `PREVIEW_MODE`／L493 `/auth-login`）が契約状況で解放。`active`/`trialing` で解放、それ以外は料金プランへ誘導。
 
 ---
 
@@ -57,7 +68,12 @@ pricing-pro.html（料金プラン）
   - メールが届かない＝メールアドレスの打ち間違いの可能性。UIは「登録し直し」導線を用意済み（`auth.html` v-sent）。
 - **確認リンク着地**：`/auth-verify {token}` → 登録を有効化。以後ログイン可能。
 - **ログイン**：`/auth-login {email,password}` → `{ok, status}`。`active`/`trialing` で解放、それ以外は料金プランへ誘導、認証失敗はエラー表示。
-- **パスワード再設定**：`/auth-reset {email}` → 再設定メール。
+- **パスワード再設定（フロントの流れ）**：ログイン画面「パスワードを忘れた方」→ 再設定画面でメール入力 → `/auth-reset {email}` → 「メールのリンクから新しいパスワードを設定してください」と案内（画面・導線は実装済み）。
+  - **★要実装の抜け（着地）**：再設定メールのリンクから「新しいパスワードを入力して確定」する着地画面と窓口が未実装です。現状 `auth.html?token=…` は**登録確認 `/auth-verify` に流れる**ため、再設定用は別扱いにしてください。推奨：
+    - リンクを `auth.html?view=newpw&token=XXXX` の形で発行。
+    - `auth.html` に「新パスワード入力」ビューを追加（`view=newpw` かつ `token` あり で表示）。
+    - 窓口 `POST /auth-reset-confirm {token, password}` → `{ok:true}`（トークン検証＋新パスワードをハッシュ保存）。
+  - 登録確認トークン（`/auth-verify`）と再設定トークンは**別種**として扱う（用途を取り違えない）。
 
 ### 「パスワードをこの端末に保存」
 - チェックONで、次回からメール＋パスワードを自動入力（会員ゲートは自動ログインも実施）。
@@ -110,8 +126,8 @@ pricing-pro.html（料金プラン）
 
 | ファイル | 変更点 |
 |---|---|
-| `app-pro.html` | `PREVIEW_MODE = true → false`（L476）／`DEMO_MODE` は false のまま |
-| `pricing-pro.html` | 公開前プレビュー導線 `#preview-cta` ブロックを削除（L125付近）／決済ボタンを有効化 |
+| `app-pro.html` | `PREVIEW_MODE = true → false`（L481）／`DEMO_MODE` は false のまま |
+| `pricing-pro.html` | 公開前プレビュー導線 `#preview-cta` ブロックを削除（L125付近）／`TELECOM_PAYMENT_URL`（L266付近）にプラン別決済URLを設定して決済ボタンを有効化 |
 | `auth.html` | `CONFIG.STUB = true → false`（L147） |
 | `mypage-pro.html` | `CONFIG.STUB = true → false`（L110） |
 | `meishi-sheet.html` | `CLOUD.STUB = true → false`（クラウド同期を使う場合）※`pro/` と `meishiki-original/` の**両方**（バイト単位ミラー） |
