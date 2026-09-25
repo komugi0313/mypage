@@ -3249,7 +3249,10 @@ function pickFocus(interests){
   /* ---- toggles ---- */
   document.querySelectorAll('.seg button').forEach(function(btn){btn.onclick=function(){ var p=btn.getAttribute('data-p'), sx=btn.getAttribute('data-sex'); state.p[p].sex=sx; document.querySelectorAll('.seg button[data-p="'+p+'"]').forEach(function(o){o.setAttribute('aria-pressed',o===btn?'true':'false');}); };});
   function renumber(){ var n=0; document.querySelectorAll('.card > .step').forEach(function(st){ if(st.style.display==='none')return; var h=st.querySelector('.sec-t'); if(h){ n++; h.setAttribute('data-n', n); } }); }
-  document.querySelectorAll('.modes button').forEach(function(btn){btn.onclick=function(){ state.mode=btn.getAttribute('data-mode'); document.querySelectorAll('.modes button').forEach(function(o){o.setAttribute('aria-pressed',o===btn?'true':'false');}); var solo=(state.mode==='solo'); $('rowB').style.display=solo?'none':''; $('purposeWrap').style.display=solo?'none':''; if($('ppResult'))$('ppResult').style.display=solo?'none':''; $('labA').textContent=solo?'あなたの生年月日':'お一人目（あなた）'; renumber(); if($('out').style.display!=='none'){ state.sel=null; render(); scrollResultsIfNeeded(); pulseResults(); try{toast(solo?'あなたの運勢に切り替えました':'二人の相性に切り替えました');}catch(e){} } };});
+  document.querySelectorAll('.modes button').forEach(function(btn){btn.onclick=function(){
+    // 一人用の開運鑑定は登録者限定（二人の相性は無料）。未登録で「一人で占う」を選んだら登録へ誘導
+    if(btn.getAttribute('data-mode')==='solo' && !ccLoggedIn() && window.NicoAuth && window.NicoAuth.requireAuth){ window.NicoAuth.requireAuth(function(){ if(ccLoggedIn()) btn.click(); }); return; }
+    state.mode=btn.getAttribute('data-mode'); document.querySelectorAll('.modes button').forEach(function(o){o.setAttribute('aria-pressed',o===btn?'true':'false');}); var solo=(state.mode==='solo'); $('rowB').style.display=solo?'none':''; $('purposeWrap').style.display=solo?'none':''; if($('ppResult'))$('ppResult').style.display=solo?'none':''; $('labA').textContent=solo?'あなたの生年月日':'お一人目（あなた）'; renumber(); if($('out').style.display!=='none'){ state.sel=null; render(); scrollResultsIfNeeded(); pulseResults(); try{toast(solo?'あなたの運勢に切り替えました':'二人の相性に切り替えました');}catch(e){} } };});
   renumber();
   function updatePpFade(){ var pr=$('ppResult'); if(!pr)return; var ch=pr.querySelector('.pp-chips'); if(!ch)return;
     var end=ch.scrollWidth-ch.clientWidth; pr.classList.toggle('can-l', ch.scrollLeft>3); pr.classList.toggle('can-r', (end-ch.scrollLeft)>3); }
@@ -3394,6 +3397,8 @@ function pickFocus(interests){
   function build(noScroll){
     readBrand(); applyBrand();
     state.A=person('a'); if(!state.A.y||!state.A.m||!state.A.d){ alert('あなたの生年月日（年・月・日）を選んでください。'); return; }
+    // 一人用の開運鑑定は登録者限定（二人の相性は無料）
+    if(state.mode==='solo' && !ccLoggedIn()){ if(window.NicoAuth && window.NicoAuth.requireAuth){ window.NicoAuth.requireAuth(function(){ build(noScroll); }); } return; }
     state.pA=KE.pillar(state.A.y,state.A.m,state.A.d);
     if(state.mode==='couple'){
       state.B=person('b'); if(!state.B.y||!state.B.m||!state.B.d){ alert('お相手の生年月日を選んでください。'); return; }
@@ -3580,9 +3585,9 @@ function pickFocus(interests){
       el.innerHTML='<div class="charcard"><div class="cc-k">your character</div><div class="cc-t">あなたのキャラは…？</div>'
         +'<div class="cc-circ"><span class="cc-q">?</span></div>'
         +'<div class="cc-lockline">― 登録すると公開 ―</div>'
-        +'<div class="cc-lockmsg">生年月日で決まる、<b>あなただけのキャラ</b>。<br>登録すると、ここで会えます。</div>'
-        +'<div class="cc-vals"><div>・<b>あなたのキャラ</b>（顔・呼び名・性格）を公開</div><div>・<b>キャラのシェア画像</b>がつくれる</div><div>・<b>二人の相性カレンダーを保存</b>（毎回入力しなくてOK）</div></div>'
-        +'<button type="button" class="cc-cta" id="ccCta">無料であなたのキャラを見る（30秒）</button>'
+        +'<div class="cc-lockmsg">生年月日で決まる、<b>あなただけの姿</b>。<br>登録すると、ここで会えます。</div>'
+        +'<div class="cc-vals"><div>・<b>あなたのキャラ</b>（顔・呼び名・性格）がわかる</div><div>・<b>シェア画像</b>がつくれる</div><div>・<b>二人の相性カレンダーを保存</b>（毎回入力しなくてOK）</div></div>'
+        +'<button type="button" class="cc-cta" id="ccCta">無料で見てみる（30秒）</button>'
         +'<div class="cc-sub">― 相性カレンダーは登録なしでも見られます ―</div>'
         +'</div>';
       var c=$('ccCta'); if(c)c.onclick=function(){ if(window.NicoAuth&&window.NicoAuth.requireAuth){ window.NicoAuth.requireAuth(function(){ try{renderCharCard();}catch(e){} var e2=$('charCard'); if(e2)e2.scrollIntoView({behavior:'smooth',block:'center'}); }); } };
