@@ -4758,7 +4758,11 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     +'.dm-li-del{background:none;border:none;color:var(--muted,#b3adb8);font-size:13px;cursor:pointer;padding:2px 4px;line-height:1;opacity:.7}'
     +'.dm-li-del:hover{color:#b2554e;opacity:1}'
     +'.dm-addbar{padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px))}'
-    +'.dm-add{width:100%;background:linear-gradient(180deg,var(--accent),var(--accent-2));color:var(--accent-ink,#fff);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:800;font-family:var(--maru);cursor:pointer}';
+    +'.dm-add{width:100%;background:linear-gradient(180deg,var(--accent),var(--accent-2));color:var(--accent-ink,#fff);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:800;font-family:var(--maru);cursor:pointer}'
+    +'.dm-addform{padding:18px 16px;display:block;background:var(--bg,#f5f1ea)}'
+    +'.dm-fl{display:block;font-size:12px;font-weight:800;color:var(--ink-soft);font-family:var(--maru);margin:14px 2px 6px}'
+    +'.dm-fi{width:100%;background:#fff;border:1px solid var(--line-strong,#cbc3b4);border-radius:11px;padding:12px;font-size:15px;color:var(--ink);font-family:var(--maru)}'
+    +'.dm-fnote{font-size:11.5px;color:var(--muted);margin:8px 2px 16px;line-height:1.7}.dm-fnote b{color:var(--ink-soft)}';
   document.head.appendChild(st);
 
   // ---- DOM ----
@@ -4780,9 +4784,10 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   // ---- 相手（トーク相手）ストア：複数人を保存して切り替え（上限なし）----
   function loadPartners(){ try{ var a=JSON.parse(localStorage.getItem('dc_partners')||'null'); return Array.isArray(a)?a:null; }catch(e){ return null; } }
   function savePartners(a){ try{ localStorage.setItem('dc_partners', JSON.stringify(a)); }catch(e){} }
-  function partners(){ var a=loadPartners(); if(!a || !a.length){ a=[{uid:DEMO_PARTNER_UID, name:partnerName(), mascot:mascotFile(personFromPair('b'),'img/mascot/辛酉.webp'), at:Date.now()}]; savePartners(a); } return a; }
+  function partners(){ var a=loadPartners(); if(!a || !a.length){ var pb=personFromPair('b'); var bd=(pb&&pb.y&&pb.m&&pb.d)?{y:+pb.y,m:+pb.m,d:+pb.d}:{y:1993,m:8,d:20}; a=[{uid:DEMO_PARTNER_UID, name:partnerName(), bday:bd, mascot:mascotFromBday(bd), at:Date.now()}]; savePartners(a); } return a; }
   function partnerByUid(uid){ var f=partners().filter(function(p){return p.uid===uid;}); return f[0]||null; }
-  function addPartner(name){ var a=partners(); var uid='p'+Date.now().toString(36)+Math.random().toString(36).slice(2,5); a.push({uid:uid, name:(name||'お相手').slice(0,16), mascot:'img/mascot/辛酉.webp', at:Date.now()}); savePartners(a); return uid; }
+  function mascotFromBday(bday){ if(bday&&bday.y&&bday.m&&bday.d){ return mascotFile({y:+bday.y,m:+bday.m,d:+bday.d,tu:true,sex:'f'}, 'img/mascot/辛酉.webp'); } return 'img/mascot/辛酉.webp'; }
+  function addPartner(name, bday){ var a=partners(); var uid='p'+Date.now().toString(36)+Math.random().toString(36).slice(2,5); a.push({uid:uid, name:(name||'お相手').slice(0,16), bday:bday||null, mascot:mascotFromBday(bday), at:Date.now()}); savePartners(a); return uid; }
   function removePartner(uid){ var a=partners().filter(function(p){return p.uid!==uid;}); savePartners(a); var me=meUid(); if(me){ var rid=ChatBackend.roomId(me,uid); try{ localStorage.removeItem('dc_dm_'+rid); }catch(e){} savePlan(rid,null); } }
   function lastMsgOf(uid){ var me=meUid(); if(!me) return null; var msgs=ChatBackend.list(ChatBackend.roomId(me,uid)); return msgs.length?msgs[msgs.length-1]:null; }
   function unreadOf(uid){ var me=meUid(); if(!me) return 0; var rid=ChatBackend.roomId(me,uid); var msgs=ChatBackend.list(rid); if(!msgs.length) return 0; var read=ChatBackend.readMap(rid)[me]; var idx=read?msgs.map(function(m){return m.id;}).indexOf(read):-1; var n=0; for(var i=idx+1;i<msgs.length;i++){ if(msgs[i].from!==me)n++; } return n; }
@@ -4958,10 +4963,32 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
         openChat(b.getAttribute('data-uid'));
       };
     });
-    var add=q('dmAdd'); if(add)add.onclick=function(){
-      var nm=null; try{ nm=prompt('相手の名前を入力してください（例：ゆうこ）',''); }catch(e){ nm=null; }
-      if(nm===null) return; nm=(nm||'').trim(); if(!nm) return;
-      openChat(addPartner(nm));
+    var add=q('dmAdd'); if(add)add.onclick=openAdd;
+  }
+  // 相手の追加（名前＋生年月日 → 干支キャラ）
+  function openAdd(){ var u=window.NicoAuth.current(); if(!u){ window.NicoAuth.requireAuth(function(){ openAdd(); }); return; }
+    if(unsub){unsub();unsub=null;} cur=null; view='add';
+    wrap.classList.add('on'); lockBody(); buildAdd(); refreshChip(); }
+  function buildAdd(){
+    wrap.innerHTML=''
+      +'<div class="dm-app">'
+      +'<div class="dm-head">'
+        +'<button class="dm-back" id="dmAddBack" aria-label="戻る">‹</button>'
+        +'<div><div class="dm-nm">新しい相手を追加</div><div class="dm-sub">生年月日でキャラが決まります</div></div>'
+      +'</div>'
+      +'<div class="dm-body dm-addform">'
+        +'<label class="dm-fl">お名前</label><input class="dm-fi" id="apName" type="text" maxlength="16" placeholder="例）ゆうこ">'
+        +'<label class="dm-fl">生年月日</label><input class="dm-fi" id="apBday" type="date">'
+        +'<div class="dm-fnote">生年月日から<b>相手のキャラ（干支）</b>を表示します（時刻は不要）。</div>'
+        +'<button class="dm-add" id="apSave">この相手を追加</button>'
+      +'</div>'
+      +'</div>';
+    var bk=q('dmAddBack'); if(bk)bk.onclick=backToList;
+    var sv=q('apSave'); if(sv)sv.onclick=function(){
+      var nm=((q('apName')||{}).value||'').trim(); if(!nm){ try{alert('お名前を入力してください。');}catch(e){} return; }
+      var dv=(q('apBday')||{}).value||'', bday=null;
+      if(/^\d{4}-\d{2}-\d{2}$/.test(dv)){ var pt=dv.split('-'); bday={y:+pt[0],m:+pt[1],d:+pt[2]}; }
+      openChat(addPartner(nm, bday));
     };
   }
   // 一覧で選んだ相手（＝現在のチャット）へ、カレンダーの日を送る
