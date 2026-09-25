@@ -132,6 +132,7 @@
     if(selY){
       var _ya=(c.annualFortunes||[]).filter(function(a){return a.year===selY;})[0];
       var _du=(c.decadeFortunes||[]).filter(function(d){return d.startYear!=null && selY>=d.startYear && selY<d.startYear+10;})[0];
+      if(!_du && c.decadeFortunes && c.decadeFortunes[0] && selY<c.decadeFortunes[0].startYear && typeof monthDuOf==='function') _du=monthDuOf(c); /* 立運前＝第一運（月柱） */
       if(_ya){
         var _yb=_ya.branch,_yts=_ya.tenStar,_yhts=_ya.hiddenTenStar,_yEl=_ya.branchElement;
         var _yk1=(typeof matchKichi1==='function')?matchKichi1(c,_yb):[],_yk4=(typeof matchKichi4==='function')?matchKichi4(c,_yb):[];
