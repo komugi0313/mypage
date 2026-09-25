@@ -2139,6 +2139,20 @@ function detectRitchin(c){
     .map(d=>d.startAge+'歳〜＝'+d.ganzhi+'（'+matchP(d.ganzhi).join('・')+'と同じ）');
   return {pairs,allThree,years,du,natal:(allThree||pairs.length>0),any:(allThree||pairs.length>0||years.length>0||du.length>0)};
 }
+// ── モテ度・魅力タイプ＝個人版①の式（桃花+2/紅艶+2/沐浴+1/食傷2つ+1→starCurveで★1〜5）。②純正データ（既存の吉凶星pillarKichi・十二運・通変natalTs10）で算出 ──
+function moteStarCurve(n){n=Math.round(n);if(n<=1)return 1;if(n<=2)return 2;if(n<=4)return 3;if(n<=5)return 4;return 5;}
+function detectMote(c){
+  const stars=[];(c.pillars||[]).forEach(p=>{if(!p)return;try{(pillarKichi(c,p)||[]).forEach(s=>{if(stars.indexOf(s)<0)stars.push(s);});}catch(e){}});
+  const hasKa=stars.indexOf('咸池')>=0,hasKo=stars.indexOf('紅艶')>=0;
+  const boku=!!(c.pillars[2]&&c.pillars[2].terrain==='沐浴');
+  const k=natalTs10(c)||{},ss=(k['食神']||0)+(k['傷官']||0);
+  let raw=1;const why=[];
+  if(hasKa){raw+=2;why.push('桃花(咸池)');} if(hasKo){raw+=2;why.push('紅艶');}
+  if(boku){raw+=1;why.push('日柱が沐浴');} if(ss>=2){raw+=1;why.push('食傷が2つ以上');}
+  const star=moteStarCurve(raw);
+  const type=(hasKa||hasKo)?'人を惹きつける"色気・華の星"（桃花・紅艶）を持つタイプ。黙っていても自然と目に留まる':'派手さより、知るほど好きになる"じわじわ本命"タイプ';
+  return {star,raw,why,hasKa,hasKo,boku,ss,type};
+}
 // 蔵干（余気・中気・本気）— 大運・年運の蔵干判定用
 // 蔵干（吉凶星マッチング用のセット。順序は無関係）。四正(子卯午酉)の余気も含め、本命の命式（エンジン本体のフル蔵干）と大運・年運を揃える。
 const ZOUKAN={子:['癸','壬'],丑:['己','癸','辛'],寅:['甲','丙','戊'],卯:['乙','甲'],辰:['戊','乙','癸'],巳:['丙','庚','戊'],午:['丁','己','丙'],未:['己','丁','乙'],申:['庚','壬','戊'],酉:['辛','庚'],戌:['戊','辛','丁'],亥:['壬','甲','戊']};
@@ -3822,6 +3836,7 @@ function buildChartText(c){
     (()=>{const pos=c.pillars.filter(p=>pillarKichi(c,p).includes('咸池')).map(p=>p.label);if(!pos.length)return '';
       const det=pos.map(lbl=>`${lbl}=${KANCHI_POS[lbl]||''}`).join(' / ');
       return `咸池（桃花殺・人を惹きつける魅力の星）:命式の${pos.join('・')}にある${pos.length>=2?'（'+pos.length+'つあり作用が強い）':''}。${det} ／ ${KANCHI_POWER} ／ ${KANCHI_UN}`;})(),
+    (()=>{const mo=detectMote(c);return `モテ度・魅力タイプ（桃花+2/紅艶+2/日柱沐浴+1/食傷2つ以上+1で素点→★1〜5に圧縮）:★${mo.star}（5段階）${mo.why.length?'＝'+mo.why.join('・')+'が魅力の源':'＝派手な神殺は目立たないが、知るほど惹かれる本命タイプ'}。魅力タイプ＝${mo.type}。恋愛・対人の魅力として、この人の惹きつけ方を具体的に描く（★が控えめでも「行動しだいで伸ばせる」と前向きに）`;})(),
     buildYojo(c),
     (()=>{const tk=gogyoTaika(c);const fmt=a=>a.length?a.join('・'):'なし';const ff=d=>d.length?d.map(r=>`${r.el}(${r.why})`).join('・'):'なし';return `五行の太過(${tk.th}つ以上＝過剰で偏る)・不及判定 ※${c.timeUnknown?'時刻不明=3柱・閾値3':'4柱・閾値4'}。不及＝0個／1しかなく他に太過の偏りがある／剋す五行に攻撃され1か0、を含む：命式単体[${SHENG.map(k=>k+tk.base[k]).join(' ')}]→太過:${fmt(tk.baseTaika)}／不及:${ff(tk.baseFukyuDetail)}。${tk.du?`大運${tk.du}・年運${tk.ay||'-'}の巡りも含めた今[${SHENG.map(k=>k+tk.now[k]).join(' ')}]→太過:${fmt(tk.nowTaika)}／不及:${ff(tk.nowFukyuDetail)}`:''}。太過＝その五行が強く出すぎて偏る（抑える・流す・剋す方向で整える）、不及＝足りない・押される・剋されて働きにくい（補う・生じる方向で整え、攻撃する五行は抑える）`;})(),
     (()=>{const fe=c.fiveElements||{};const we=Object.entries(fe).sort((a,b)=>a[1]-b[1])[0];if(!we)return '';const el=we[0];return `五行で最も弱い「${el}」(${we[1]}個)から出やすい性格傾向（※「${el}が弱い＝その分野の運がない」ではなく、気質のクセ。前向きな補い方とセットで読む）：${WEAK_EL_TRAIT[el]||''}`;})(),
@@ -4018,6 +4033,12 @@ function localReading(c,worry){
     if(r.years.length)s+='　📅 律音が巡る年（分岐点）：**'+r.years.join('・')+'**。道が分かれやすい転機です。';
     if(r.du.length)s+='　🌀 大運では**'+r.du.join('・')+'**。';
     L.push(s);
+  })();
+  (()=>{const mo=detectMote(c);const stars='★'.repeat(mo.star)+'☆'.repeat(5-mo.star);
+    L.push('【モテ度・魅力タイプ】');
+    L.push('💖 モテ度（人気・魅力）：**'+stars+'**（5段階）。'+mo.type+'。'
+      +(mo.why.length?'（'+mo.why.join('・')+'が魅力の源）':'')
+      +'　※星は"恋の傾向"の目安です。★が控えめでも、行動しだいでいくらでも伸ばせます。');
   })();
   L.push('【お金との付き合い方（金運）】');
   L.push((()=>{const sei=k.正財||0,hen=k.偏財||0,sho=k.食神||0,sha=k.傷官||0,zai=sei+hen;
