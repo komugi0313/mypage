@@ -1075,6 +1075,9 @@ select{
 .cell.r-good{background:color-mix(in oklab,var(--ok-bg) 55%,var(--panel))}
 .cell.r-warn{background:var(--warn-bg);border-color:color-mix(in oklab,var(--warn) 38%,var(--line))}
 .cell.r-bad{background:var(--bad-bg);border-color:color-mix(in oklab,var(--bad) 42%,var(--line))}
+/* 会う約束が入った日：二重枠＋💕約束チップで一目でわかる */
+.cell.appt{border:2px solid var(--accent);box-shadow:0 0 0 2px color-mix(in oklab,var(--accent) 22%,transparent) inset,0 6px 16px -10px color-mix(in oklab,var(--accent) 55%,transparent)}
+.apptmk{position:absolute;left:3px;top:3px;z-index:2;font-size:9px;line-height:1;font-weight:800;color:#fff;background:var(--accent);border-radius:8px;padding:2px 5px;letter-spacing:.02em;box-shadow:0 2px 5px -2px color-mix(in oklab,var(--accent) 60%,transparent);white-space:nowrap}
 .cell:hover:not(.empty){
   border-color:var(--accent);
   box-shadow:0 6px 16px -10px color-mix(in oklab, var(--accent) 40%, transparent);
@@ -3359,8 +3362,25 @@ function pickFocus(interests){
     return arr;
   }
 
+  // 会う約束（DMで確定した日）をアプリ内カレンダーへ自動反映。過ぎた日は自動で消える。
+  window.NicoAppt=(function(){
+    var KEY='dc_appts';
+    function todayNum(){ return TODAY.y*10000+TODAY.m*100+TODAY.d; }
+    function load(){ try{ var a=JSON.parse(localStorage.getItem(KEY)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+    function save(a){ try{ localStorage.setItem(KEY, JSON.stringify(a)); }catch(e){} }
+    function prune(a){ var t=todayNum(); return (a||load()).filter(function(o){ return o&&o.ymd&&(parseInt(String(o.ymd),10)>=t); }); }
+    function list(){ var a=prune(); save(a); return a; }
+    function has(ymd){ ymd=String(ymd); return list().some(function(o){ return String(o.ymd)===ymd; }); }
+    function get(ymd){ ymd=String(ymd); var f=list().filter(function(o){ return String(o.ymd)===ymd; }); return f[0]||null; }
+    function add(o){ if(!o||!o.ymd) return; var ymd=String(o.ymd); var a=list().filter(function(x){ return String(x.ymd)!==ymd; }); a.push({ymd:ymd, time:o.time||'', title:o.title||'', mark:o.mark||'◎'}); save(a); }
+    function remove(ymd){ ymd=String(ymd); save(list().filter(function(o){ return String(o.ymd)!==ymd; })); }
+    return { list:list, has:has, get:get, add:add, remove:remove, prune:function(){ save(prune()); } };
+  })();
+  window.NicoCalRerender=function(){ try{ render(); }catch(e){} };
+
   function render(){
     var Y=state.y,M=state.m; $('moT').textContent=Y+'年 '+M+'月';
+    var _appts={}; try{ (window.NicoAppt.list()||[]).forEach(function(o){ _appts[String(o.ymd)]=o; }); }catch(e){}
     var _tt=$('toToday'); if(_tt){ _tt.hidden=(state.y===TODAY.y&&state.m===TODAY.m); _tt.onclick=function(){ state.y=TODAY.y; state.m=TODAY.m; state.sel=TODAY.d; render(); try{detail(TODAY.d);}catch(e){} var c=document.querySelector('.mo-nav')||$('cal'); if(c)c.scrollIntoView({behavior:'smooth',block:'start'}); }; }
     var solo=(state.mode==='solo');
     // A＝あなた／B＝お相手 をカレンダー左上に（二人のときだけ）
@@ -3405,7 +3425,8 @@ function pickFocus(interests){
       var _rate = solo
         ? (x.sym==='💮'||x.sym==='◎'?'r-ok':(x.sym==='△'?'r-warn':''))
         : (x.star?'r-star':(x.mk.s==='◎'?'r-ok':x.mk.s==='○'?'r-good':x.mk.s==='△'?'r-warn':x.mk.s==='×'?'r-bad':''));
-      cell.className='cell'+(_rate?' '+_rate:'')+(x.wd===6?' s6':x.wd===0?' s0':'')+(state.sel===x.d?' sel':'')+(isToday?' today':'');
+      var _ymd=''+Y+pad2(M)+pad2(x.d), _appt=_appts[_ymd];
+      cell.className='cell'+(_rate?' '+_rate:'')+(_appt?' appt':'')+(x.wd===6?' s6':x.wd===0?' s0':'')+(state.sel===x.d?' sel':'')+(isToday?' today':'');
       var badge, sub;
       if(solo){
         var cls=x.sym==='💮'?'sp':x.sym==='◎'?'ok':x.sym==='△'?'warn':'good';
@@ -3423,7 +3444,8 @@ function pickFocus(interests){
       var memoMk=getMemo(x.d)?'<span class="memodot">📝</span>':'';
       var _ao=annivOnDay(M,x.d); var annMk=_ao?'<span class="annivmark" title="'+esc(_ao.name)+'"></span>':'';
       cell.setAttribute('data-day',x.d);
-      cell.innerHTML='<div class="dn'+(hol?' hol':'')+'">'+x.d+'</div>'+badge+gz+sub+memoMk+annMk+(isToday?'<span class="todaymk">今日</span>':'');
+      var apptMk=_appt?'<span class="apptmk" aria-label="会う約束">💕約束</span>':'';
+      cell.innerHTML='<div class="dn'+(hol?' hol':'')+'">'+x.d+'</div>'+badge+gz+sub+memoMk+annMk+apptMk+(isToday?'<span class="todaymk">今日</span>':'');
       (function(dd){cell.onclick=function(){state.sel=dd;render();detail(dd);};})(x.d);
       cal.appendChild(cell);
     });
@@ -4811,8 +4833,9 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       var p=loadPlan(cur.roomId);
       if(p && p.status==='proposed' && p.by===cur.me){
         p.status='confirmed'; savePlan(cur.roomId,p);
+        try{ window.NicoAppt.add({ymd:p.ymd,time:p.time,title:p.title,mark:p.mark}); window.NicoCalRerender(); }catch(e){}
         ChatBackend.send(cur.roomId,{from:cur.otherUid, text:'いいね、その日で！'});
-        ChatBackend.send(cur.roomId,{from:cur.otherUid, kind:'sys', text:'🎉 '+fmtJ(p.ymd)+' に会う約束ができました！'});
+        ChatBackend.send(cur.roomId,{from:cur.otherUid, kind:'sys', text:'🎉 '+fmtJ(p.ymd)+' に会う約束ができました！カレンダーに入れました'});
       } else {
         var pool=['了解！','いいね😊','ありがとう！','楽しみにしてるね','うん、そうしよう'];
         ChatBackend.send(cur.roomId,{from:cur.otherUid, text:pool[Math.floor(Math.random()*pool.length)]});
@@ -4823,8 +4846,10 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   }
   // 予定の確定・取消（自分の操作）
   function confirmPlan(){ var p=loadPlan(cur.roomId); if(!p)return; p.status='confirmed'; savePlan(cur.roomId,p);
-    ChatBackend.send(cur.roomId,{from:cur.me, kind:'sys', text:'🎉 '+fmtJ(p.ymd)+' に会う約束ができました！'}); scrollBottom(); }
-  function cancelPlan(){ savePlan(cur.roomId,null);
+    try{ window.NicoAppt.add({ymd:p.ymd,time:p.time,title:p.title,mark:p.mark}); window.NicoCalRerender(); }catch(e){}
+    ChatBackend.send(cur.roomId,{from:cur.me, kind:'sys', text:'🎉 '+fmtJ(p.ymd)+' に会う約束ができました！カレンダーに入れました'}); scrollBottom(); }
+  function cancelPlan(){ var p=loadPlan(cur.roomId); savePlan(cur.roomId,null);
+    try{ if(p&&p.ymd){ window.NicoAppt.remove(p.ymd); window.NicoCalRerender(); } }catch(e){}
     ChatBackend.send(cur.roomId,{from:cur.me, kind:'sys', text:'この予定は取り消されました'}); scrollBottom(); }
   function openSheet(){ var sh=q('dmSheet'); if(sh)sh.classList.add('on'); }
   // ワンタップ：カレンダーの日をそのままチャットに「この日どう？」で送る（提案を簡単化）
@@ -4835,7 +4860,9 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     scrollBottom(); scheduleDemoReply(); }
   // 自分でチャットを消す
   function clearChat(){ try{ if(!confirm('このチャットの履歴を消しますか？')) return; }catch(e){}
+    var p=loadPlan(cur.roomId);
     try{ localStorage.removeItem('dc_dm_'+cur.roomId); }catch(e){} savePlan(cur.roomId,null);
+    try{ if(p&&p.ymd){ window.NicoAppt.remove(p.ymd); window.NicoCalRerender(); } }catch(e){}
     try{ ChatBackend.markRead(cur.roomId, cur.me); }catch(e){} build(); refreshChip(); }
 
   function wire(){
