@@ -3535,7 +3535,7 @@ function pickFocus(interests){
   };
   function charInfo(gz){ if(!gz||gz.length<2)return null; var s=gz.charAt(0),b=gz.charAt(1); if(!CC_STEMADJ[s]||!CC_BRANCHCORE[b])return null; var o=CC_OVERRIDE[gz]||{}; return {nick:o.nick||(CC_STEMADJ[s]+CC_BRANCHCORE[b]+'人'), trait:o.trait||((CC_ELEMTONE[CC_ELEM[s]]||'')+(CC_BRANCHTRAIT[b]||''))}; }
   function selfGanzhi(){ try{ var p=state.A; if(!(p&&p.y&&p.m&&p.d)){ var lp=getLastPair(); p=lp&&lp.a; } if(p&&window.PersonBazi&&p.y&&p.m&&p.d){ var r=window.PersonBazi(+p.y,+p.m,+p.d,(p.tu?null:p.h),(p.tu?null:p.mi),!!p.tu,p.sex||'f'); if(r&&r.pillars){ var day=r.pillars.filter(function(z){return z.label==='日柱';})[0]; if(day&&day.ganzhi)return day.ganzhi; } } }catch(e){} return ''; }
-  function ccLoggedIn(){ try{ var u=window.NicoAuth&&window.NicoAuth.current&&window.NicoAuth.current(); return !!(u&&u.emailVerified&&u.profile); }catch(e){ return false; } }
+  function ccLoggedIn(){ try{ var u=window.NicoAuth&&window.NicoAuth.current&&window.NicoAuth.current(); return !!(u&&u.emailVerified&&u.profile&&u.email!=='demo@nicocale.app'); }catch(e){ return false; } }
   function ccShare(gz,info){ var text='私のキャラは「'+info.nick+'」でした！ ニコカレで、あなたのキャラと“二人にいい日”がわかるよ ／ '+buildShareUrl();
     try{ if(navigator.share){ navigator.share({text:text}).catch(function(){}); return; } }catch(e){}
     try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text); toast('シェア文をコピーしました'); return; } }catch(e){}
@@ -4780,6 +4780,8 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   var pendingDay=null;    // カレンダーから「この日どう？」を送る先を選ぶ待ち
 
   function meUid(){ var u=window.NicoAuth.current(); return u?(u.uid||u.email||'me'):null; }
+  // デモ（登録せずに見る）判定。デモ中は相手追加・削除など「登録が要る操作」を止める
+  function isDemo(){ try{ var u=window.NicoAuth.current(); return !!(u&&u.email==='demo@nicocale.app'); }catch(e){ return false; } }
 
   // ---- 相手（トーク相手）ストア：複数人を保存して切り替え（上限なし）----
   function loadPartners(){ try{ var a=JSON.parse(localStorage.getItem('dc_partners')||'null'); return Array.isArray(a)?a:null; }catch(e){ return null; } }
@@ -4936,7 +4938,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       items+='<div class="dm-li" data-uid="'+esc(p.uid)+'">'
         +'<div class="dm-av">'+avImg(p.mascot||'img/mascot/辛酉.webp')+'</div>'
         +'<div class="dm-li-mid"><div class="dm-li-nm">'+esc(p.name)+'さん</div><div class="dm-li-pv">'+esc(String(prev).slice(0,40))+'</div></div>'
-        +'<div class="dm-li-rt"><span class="dm-li-tm">'+tm+'</span>'+(un>0?'<span class="dm-li-dot">'+(un>9?'9+':un)+'</span>':'')+'<button class="dm-li-del" data-del="'+esc(p.uid)+'" aria-label="削除">✕</button></div>'
+        +'<div class="dm-li-rt"><span class="dm-li-tm">'+tm+'</span>'+(un>0?'<span class="dm-li-dot">'+(un>9?'9+':un)+'</span>':'')+(isDemo()?'':'<button class="dm-li-del" data-del="'+esc(p.uid)+'" aria-label="削除">✕</button>')+'</div>'
         +'</div>';
     });
     wrap.innerHTML=''
@@ -4948,7 +4950,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       +'</div>'
       +(pendingDay?'<div class="dm-pickbar">「この日どう？」を送る相手をえらんでください</div>':'')
       +'<div class="dm-body dm-listbody" id="dmListBody">'+items+'</div>'
-      +'<div class="dm-comp dm-addbar"><button class="dm-add" id="dmAdd">＋ 新しい相手を追加</button></div>'
+      +'<div class="dm-comp dm-addbar"><button class="dm-add" id="dmAdd">'+(isDemo()?'＋ 登録して相手を追加':'＋ 新しい相手を追加')+'</button></div>'
       +'</div>';
     wireList();
   }
@@ -4965,8 +4967,9 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     });
     var add=q('dmAdd'); if(add)add.onclick=openAdd;
   }
-  // 相手の追加（名前＋生年月日 → 干支キャラ）
+  // 相手の追加（名前＋生年月日 → 干支キャラ）※デモ中は登録へ誘導
   function openAdd(){ var u=window.NicoAuth.current(); if(!u){ window.NicoAuth.requireAuth(function(){ openAdd(); }); return; }
+    if(isDemo()){ close(); try{ window.NicoAuth.open('register'); }catch(e){} return; }
     if(unsub){unsub();unsub=null;} cur=null; view='add';
     wrap.classList.add('on'); lockBody(); buildAdd(); refreshChip(); }
   function buildAdd(){
