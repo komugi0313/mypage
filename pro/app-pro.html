@@ -572,7 +572,7 @@
   <!-- 入力 -->
   <section class="card panel">
     <div class="frow">
-      <div class="field"><label>お名前（任意）</label><input id="f-name" type="text" placeholder="例：佐藤 結愛"></div>
+      <div class="field"><label>お名前（任意）</label><input id="f-name" type="text" placeholder="例：佐藤 結愛"><input id="f-kana" type="text" placeholder="ふりがな（任意・例：さとう ゆあ）＝名前順の並べ替え・検索に使用" style="margin-top:6px;font-size:12.5px"></div>
       <div class="field"><label>性別</label>
         <div class="seg" id="f-sex"><button type="button" data-v="female" aria-pressed="true">女性</button><button type="button" data-v="male" aria-pressed="false">男性</button></div>
       </div>
@@ -4897,7 +4897,7 @@ function addClient(){
   const dv=document.getElementById('f-date').value; if(!dv){alert('先に生年月日を入力してください');return;}
   const nm=document.getElementById('f-name').value.trim()||('無題（'+dv+'）');
   const doc=mpLoad();
-  const base={name:nm,date:dv,time:document.getElementById('f-time').value||'12:00',sex,
+  const base={name:nm,kana:(document.getElementById('f-kana')||{}).value?document.getElementById('f-kana').value.trim():'',date:dv,time:document.getElementById('f-time').value||'12:00',sex,
     pref:document.getElementById('f-pref').value,corr:document.getElementById('f-corr').value,
     zishi:(function(){try{return zishiMode();}catch(e){return 'today';}})(),
     notime:!!(document.getElementById('f-notime')&&document.getElementById('f-notime').checked)};
@@ -4911,6 +4911,7 @@ function addClient(){
 function delClient(id){const doc=mpLoad();const c=doc.clients.find(x=>x.id===id);if(c){c.deleted=true;c.ts=Date.now();}mpWrite(doc);if(currentClientId===id)currentClientId=null;renderClients();mpTouch();}
 function loadClient(id){const c=mpLoad().clients.find(x=>x.id===id&&!x.deleted);if(!c)return;currentClientId=id;
   document.getElementById('f-name').value=c.name.indexOf('無題')===0?'':c.name;
+  {const fk=document.getElementById('f-kana');if(fk)fk.value=c.kana||'';}
   {const fd=document.getElementById('f-date');fd.value=c.date;if(fd.syncFromValue)fd.syncFromValue();}document.getElementById('f-time').value=c.time||'12:00';
   setSex(c.sex);document.getElementById('f-pref').value=c.pref||'';document.getElementById('f-corr').value=c.corr||'full';
   const nt=document.getElementById('f-notime');if(nt)nt.checked=!!c.notime;
@@ -5025,15 +5026,18 @@ function attachReadingTools(out,text){
 }
 
 /* 顧客一覧の検索・並べ替え・タグ（バックエンド不要・端末内） */
-function _clientMatch(c,q){ if(!q)return true; const hay=[c.name,c.date,c.time,(c.sex==='female'?'女性':'男性'),c.memo||'',((c.tags||[]).join(' '))].join(' ').toLowerCase(); return q.split(/\s+/).every(w=>!w||hay.indexOf(w)>=0); }
+function _clientMatch(c,q){ if(!q)return true; const hay=[c.name,c.kana||'',c.date,c.time,(c.sex==='female'?'女性':'男性'),c.memo||'',((c.tags||[]).join(' '))].join(' ').toLowerCase(); return q.split(/\s+/).every(w=>!w||hay.indexOf(w)>=0); }
+/* 名前順のキー：ふりがな（あれば五十音順）→ 無ければ名前。ふりがな未入力は漢字コード順になる。 */
+function _kanaKey(c){ return String(((c.kana||'').trim())||c.name||''); }
 function _clientSort(arr,mode){ const a=arr.slice();
-  if(mode==='name')a.sort((x,y)=>String(x.name||'').localeCompare(String(y.name||''),'ja'));
+  if(mode==='name')a.sort((x,y)=>_kanaKey(x).localeCompare(_kanaKey(y),'ja'));
   else if(mode==='birth')a.sort((x,y)=>String(x.date||'').localeCompare(String(y.date||'')));
   else if(mode==='readings')a.sort((x,y)=>((y.readings||[]).length-(x.readings||[]).length)||((y.ts||0)-(x.ts||0)));
   else a.sort((x,y)=>(y.ts||0)-(x.ts||0));
   return a; }
 function _tagChips(c){ const t=c.tags||[]; return t.length?('<div style="display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 0">'+t.map(x=>'<span style="background:var(--ka-w);color:var(--ka);border:1px solid var(--ka);border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:800">'+esc(x)+'</span>').join('')+'</div>'):''; }
 function setTags(id,str){ const doc=mpLoad();const c=doc.clients.find(x=>x.id===id); if(c){ c.tags=String(str||'').split(/[,、\s]+/).map(s=>s.trim()).filter(Boolean).slice(0,12); c.ts=Date.now(); } mpWrite(doc); mpTouch(); renderClients(); }
+function setKana(id,str){ const doc=mpLoad();const c=doc.clients.find(x=>x.id===id); if(c){ c.kana=String(str||'').trim(); c.ts=Date.now(); } mpWrite(doc); mpTouch(); renderClients(); }
 function renderClients(){
   const all=mpActive();
   const box=document.getElementById('clients-list');
@@ -5057,9 +5061,10 @@ function renderClients(){
     my.innerHTML=all.length?(list.length?list.map(c=>{
       const rd=(c.readings||[]).map(r=>`<div class="mp-rd"><span class="mp-rd-t">${esc(r.title||readingKindLabel(r.kind))}</span><span class="mp-rd-a"><a onclick="viewReading('${c.id}','${r.id}')">開く</a>・<a onclick="shareReading('${c.id}','${r.id}')">共有</a>・<a onclick="if(confirm('この鑑定を削除しますか？'))delReading('${c.id}','${r.id}')">削除</a></span></div>`).join('')||'<div class="hint" style="margin:6px 0 0">保存された鑑定はまだありません。鑑定文の下の「この鑑定を保存」で追加できます。</div>';
       return `<div class="mp-item">
-        <div class="mp-head"><div><b>${esc(c.name)}</b><br><small>${c.date} ${c.time}・${c.sex==='female'?'女性':'男性'}</small></div>
+        <div class="mp-head"><div><b>${esc(c.name)}</b>${c.kana?'<span style="font-size:11px;color:var(--muted);font-weight:700;margin-left:6px">'+esc(c.kana)+'</span>':''}<br><small>${c.date} ${c.time}・${c.sex==='female'?'女性':'男性'}</small></div>
           <div class="mp-actions"><button onclick="loadClient('${c.id}')">呼び出す</button><button class="del" onclick="if(confirm('この鑑定者を削除しますか？'))delClient('${c.id}')">×</button></div></div>
         ${_tagChips(c)}
+        <input class="mp-kanain" placeholder="ふりがな（例: さとう ゆあ）＝名前順の並べ替えに使用" value="${esc(c.kana||'')}" onchange="setKana('${c.id}',this.value)" style="width:100%;margin-top:6px;height:34px;padding:0 10px;border:1px solid var(--line2);border-radius:9px;font-family:inherit;font-size:12.5px;box-sizing:border-box">
         <input class="mp-tagin" placeholder="タグ（カンマ区切り。例: VIP, 常連, 恋愛）" value="${esc((c.tags||[]).join(', '))}" onchange="setTags('${c.id}',this.value)" style="width:100%;margin-top:6px;height:34px;padding:0 10px;border:1px solid var(--line2);border-radius:9px;font-family:inherit;font-size:12.5px;box-sizing:border-box">
         <textarea class="mp-memo" placeholder="メモ（特徴・相談内容・約束ごとなど）" onchange="setMemo('${c.id}',this.value)">${esc(c.memo||'')}</textarea>
         <div class="mp-rds">${rd}</div>
@@ -5211,7 +5216,7 @@ document.getElementById('f-save').onclick=addClient;
 };})();
 // リセット（本人）
 function resetMain(){
-  document.getElementById('f-name').value='';{const fd=document.getElementById('f-date');fd.value='2000-01-01';if(fd.syncFromValue)fd.syncFromValue();}
+  document.getElementById('f-name').value='';{const fk=document.getElementById('f-kana');if(fk)fk.value='';}{const fd=document.getElementById('f-date');fd.value='2000-01-01';if(fd.syncFromValue)fd.syncFromValue();}
   const ft=document.getElementById('f-time');ft.value='12:00';ft.disabled=false;ft.style.display='';
   const tu=document.getElementById('f-time-unknown');if(tu)tu.style.display='none';
   const nt=document.getElementById('f-notime');if(nt)nt.checked=false;
