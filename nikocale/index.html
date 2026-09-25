@@ -1409,7 +1409,8 @@ select{
 .invite-cap{font-size:11px;color:var(--muted);text-align:center;margin:7px 2px 2px;line-height:1.6}
 .cal-subhead{text-align:center;font-size:11px;color:var(--muted);font-weight:700;margin:14px 0 8px;letter-spacing:.04em}
 /* お誘い：受け取りバナー */
-.invite-banner{border-radius:var(--r-md);overflow:hidden;margin:0 0 14px;border:1px solid color-mix(in oklab,var(--accent) 30%,var(--line));background:var(--panel);box-shadow:var(--shadow-2)}
+.invite-banner{border-radius:var(--r-md);overflow:hidden;margin:0 0 14px;border:2px solid var(--gold);background:var(--panel);box-shadow:0 12px 30px -12px color-mix(in oklab,var(--gold) 55%,transparent)}
+.invite-banner .iv-ribbon{background:linear-gradient(180deg,var(--gold),color-mix(in oklab,var(--gold) 78%,#7a5a12));color:#fff;text-align:center;font-family:var(--maru);font-weight:800;font-size:13.5px;letter-spacing:.08em;padding:9px 8px}
 .invite-banner .iv-top{background:linear-gradient(160deg,#8f75c0,#6a51a0 55%,#4e3b7c);color:#fdfaf2;padding:16px;text-align:center}
 .invite-banner .iv-from{font-size:12.5px;opacity:.95}
 .invite-banner .iv-from b{color:#ffe6a6}
@@ -1419,10 +1420,11 @@ select{
 .invite-banner .iv-plan{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-bottom:1px solid var(--line)}
 .invite-banner .iv-plan .l{font-size:10.5px;color:var(--muted);font-weight:700}
 .invite-banner .iv-plan .v{font-size:15px;font-weight:700;color:var(--ink)}
-.invite-banner .iv-acts{display:flex;gap:8px;padding:12px 14px}
-.invite-banner .iv-acts button{flex:1;border:none;border-radius:11px;padding:12px;font-weight:900;font-size:13px;font-family:var(--maru);cursor:pointer}
-.invite-banner .iv-b1{background:var(--accent);color:var(--accent-ink,#fff)}
-.invite-banner .iv-b2{background:#06C755;color:#fff}
+.invite-banner .iv-acts{display:flex;padding:14px 14px 8px}
+.invite-banner .iv-acts button{flex:1;border:none;border-radius:12px;padding:15px;font-weight:900;font-size:15.5px;font-family:var(--maru);cursor:pointer}
+.invite-banner .iv-b1{background:linear-gradient(180deg,var(--accent),var(--accent-2));color:var(--accent-ink,#fff);box-shadow:0 8px 18px -8px var(--accent)}
+.invite-banner .iv-addlink{display:block;width:calc(100% - 28px);margin:0 14px 14px;background:none;border:1px solid color-mix(in oklab,var(--accent) 34%,var(--line));border-radius:12px;padding:11px;font-weight:700;font-size:13px;font-family:var(--maru);color:var(--ink);cursor:pointer}
+.invite-banner .iv-addlink:hover{border-color:var(--accent)}
 
 /* この日のメモ */
 .memo{margin-top:14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--panel-2);padding:13px 15px}
@@ -3656,23 +3658,27 @@ function pickFocus(interests){
   function inviteCardCanvas(d, plan, tlabel, rel, msg){
     var t=INV_THEMES[inviteTheme()]||INV_THEMES.navy;
     var wd=['日','月','火','水','木','金','土'][new Date(state.y,state.m-1,d).getDay()];
-    var W=1080,H=1080,c=document.createElement('canvas'); c.width=W;c.height=H; var x=c.getContext('2d');
+    // コンパクト化：内容量に応じた縦幅（横1080固定）でチャットでの占有を小さく
+    var hasBadge=!!(rel&&rel.good&&rel.t), hasMsg=!!msg, hasPlan=!!plan, hasTime=!!tlabel;
+    var midH=(hasBadge?92:0)+(hasMsg?80:0)+(hasPlan?76:0)+(hasTime?52:0);
+    var W=1080, H=Math.round(348 + (midH?midH+24:8) + 188);
+    var c=document.createElement('canvas'); c.width=W;c.height=H; var x=c.getContext('2d');
     var g=x.createLinearGradient(0,0,W,H); g.addColorStop(0,t.bg[0]); g.addColorStop(.6,t.bg[1]); g.addColorStop(1,t.bg[2]); x.fillStyle=g; x.fillRect(0,0,W,H);
-    var rg=x.createRadialGradient(W*0.16,H*0.08,10,W*0.16,H*0.08,W*0.85); rg.addColorStop(0,t.glow); rg.addColorStop(.55,'rgba(255,255,255,0)'); x.fillStyle=rg; x.fillRect(0,0,W,H);
-    x.strokeStyle=t.border; x.lineWidth=t.dashed?4:3; if(t.dashed)x.setLineDash([16,12]); _rr(x,44,44,W-88,H-88,26); x.stroke(); x.setLineDash([]);
+    var rg=x.createRadialGradient(W*0.16,H*0.10,10,W*0.16,H*0.10,W*0.85); rg.addColorStop(0,t.glow); rg.addColorStop(.55,'rgba(255,255,255,0)'); x.fillStyle=rg; x.fillRect(0,0,W,H);
+    x.strokeStyle=t.border; x.lineWidth=t.dashed?4:3; if(t.dashed)x.setLineDash([16,12]); _rr(x,40,40,W-80,H-80,26); x.stroke(); x.setLineDash([]);
     x.textAlign='center';
-    x.fillStyle=t.over; x.font='700 40px "Zen Maru Gothic","Zen Kaku Gothic New",sans-serif'; x.fillText('お  さ  そ  い', W/2, 200);
-    x.fillStyle=t.date; x.font='900 126px "Zen Old Mincho",serif'; x.fillText(state.m+'月'+d+'日', W/2, 376);
-    x.fillStyle=t.sub; x.font='700 46px "Zen Kaku Gothic New",sans-serif'; x.fillText('（'+wd+'）', W/2, 448);
-    var y=540;
-    if(rel&&rel.good&&rel.t){ x.font='700 42px "Zen Kaku Gothic New",sans-serif'; var bw=Math.min(W-160,x.measureText(rel.t).width+90);
-      x.fillStyle=t.dark?'rgba(255,255,255,.14)':'#ffffff'; _rr(x,(W-bw)/2,y-40,bw,80,40); x.fill(); x.strokeStyle=t.border; x.lineWidth=2; _rr(x,(W-bw)/2,y-40,bw,80,40); x.stroke();
-      x.fillStyle=t.accent; x.fillText(rel.t,W/2,y+14); y+=110; }
-    if(msg){ x.fillStyle=t.msg; x.font='700 50px "Zen Maru Gothic","Zen Kaku Gothic New",sans-serif'; x.fillText('「'+_clip(msg,18)+'」',W/2,y+18); y+=96; }
-    if(plan){ x.fillStyle=t.plan; x.font='700 56px "Zen Kaku Gothic New",sans-serif'; x.fillText(_clip(plan,15),W/2,y+24); y+=86; }
-    if(tlabel){ x.fillStyle=t.sub; x.font='500 42px "Zen Kaku Gothic New",sans-serif'; x.fillText(tlabel,W/2,y+22); }
-    x.fillStyle=t.brand; x.font='700 36px "Zen Kaku Gothic New",sans-serif'; x.fillText('ニコカレ', W/2, 958);
-    x.fillStyle=t.accent; x.font='700 42px "Zen Kaku Gothic New",sans-serif'; x.fillText('タップして二人の相性を見る →', W/2, 1012);
+    x.fillStyle=t.over; x.font='700 38px "Zen Maru Gothic","Zen Kaku Gothic New",sans-serif'; x.fillText('お  さ  そ  い', W/2, 122);
+    x.fillStyle=t.date; x.font='900 116px "Zen Old Mincho",serif'; x.fillText(state.m+'月'+d+'日', W/2, 276);
+    x.fillStyle=t.sub; x.font='700 44px "Zen Kaku Gothic New",sans-serif'; x.fillText('（'+wd+'）', W/2, 344);
+    var y=430;
+    if(hasBadge){ x.font='700 40px "Zen Kaku Gothic New",sans-serif'; var bw=Math.min(W-160,x.measureText(rel.t).width+90);
+      x.fillStyle=t.dark?'rgba(255,255,255,.14)':'#ffffff'; _rr(x,(W-bw)/2,y-38,bw,76,38); x.fill(); x.strokeStyle=t.border; x.lineWidth=2; _rr(x,(W-bw)/2,y-38,bw,76,38); x.stroke();
+      x.fillStyle=t.accent; x.fillText(rel.t,W/2,y+13); y+=92; }
+    if(hasMsg){ x.fillStyle=t.msg; x.font='700 48px "Zen Maru Gothic","Zen Kaku Gothic New",sans-serif'; x.fillText('「'+_clip(msg,18)+'」',W/2,y+16); y+=80; }
+    if(hasPlan){ x.fillStyle=t.plan; x.font='700 52px "Zen Kaku Gothic New",sans-serif'; x.fillText(_clip(plan,15),W/2,y+22); y+=76; }
+    if(hasTime){ x.fillStyle=t.sub; x.font='500 40px "Zen Kaku Gothic New",sans-serif'; x.fillText(tlabel,W/2,y+20); }
+    x.fillStyle=t.brand; x.font='700 34px "Zen Kaku Gothic New",sans-serif'; x.fillText('ニコカレ', W/2, H-96);
+    x.fillStyle=t.accent; x.font='700 40px "Zen Kaku Gothic New",sans-serif'; x.fillText('タップして二人の相性を見る →', W/2, H-42);
     return c;
   }
   async function inviteShare(d){
@@ -3710,22 +3716,30 @@ function pickFocus(interests){
     var topStyle='background:linear-gradient(160deg,'+t.bg[0]+','+t.bg[1]+' 62%,'+t.bg[2]+');color:'+ink+'';
     var badgeStyle=t.dark?'background:rgba(255,255,255,.15);border:1px solid '+t.border+';color:'+t.accent+'':'background:#fff;border:1px solid '+t.border+';color:'+t.accent+'';
     el.hidden=false;
-    el.innerHTML='<div class="iv-top" style="'+topStyle+'"><span class="iv-from" style="color:'+sub+'"><b style="color:'+t.accent+'">'+from+'</b>からお誘いです</span>'
+    el.innerHTML='<div class="iv-ribbon">✉ お誘いが届いています</div>'
+      +'<div class="iv-top" style="'+topStyle+'"><span class="iv-from" style="color:'+sub+'"><b style="color:'+t.accent+'">'+from+'</b>からお誘いです</span>'
       +'<div class="iv-d" style="color:'+ink+'">'+iv.m+'月'+iv.d+'日（'+wd+'）</div>'
       +(iv.msg?'<div class="iv-msg" style="color:'+t.accent+'">「'+esc(iv.msg)+'」</div>':'')
       +((rel.good&&rel.t)?'<span class="iv-badge" style="'+badgeStyle+'">'+rel.t+'</span>':'')+'</div>'
       +(iv.plan?'<div class="iv-plan"><span class="l">予定の内容</span><span class="v">'+esc(iv.plan)+(tlabel?'　'+tlabel:'')+'</span></div>':'')
-      +'<div class="iv-acts"><button type="button" class="iv-b1" id="ivAdd">自分のカレンダーに追加</button>'
-      +'<button type="button" class="iv-b2" id="ivReply">OK！とLINEで返信</button></div>';
-    var add=$('ivAdd'); if(add)add.onclick=function(){ try{ state.sel=iv.d; render(); detail(iv.d); }catch(e){} var dd=$('detail'); if(dd)dd.scrollIntoView({behavior:'smooth',block:'start'}); };
+      +'<div class="iv-acts"><button type="button" class="iv-b1" id="ivReply">OK！と返信する</button></div>'
+      +'<button type="button" class="iv-addlink" id="ivAdd">📅 自分のカレンダーに入れる</button>';
     var rep=$('ivReply'); if(rep)rep.onclick=inviteReply;
+    var add=$('ivAdd'); if(add)add.onclick=function(){
+      try{ var _t=(/^\d{4}$/.test(iv.it||'')?iv.it.slice(0,2)+':'+iv.it.slice(2,4):'19:00');
+        window.NicoAppt.add({ymd:''+iv.y+pad2(iv.m)+pad2(iv.d), time:_t, title:(iv.plan||iv.msg||'お誘いの日'), mark:(rel.good?'◎':'○')});
+        if(window.NicoCalRerender)window.NicoCalRerender(); }catch(e){}
+      try{ state.sel=iv.d; render(); detail(iv.d); }catch(e){}
+      try{ toast('カレンダーに入れました'); }catch(e){}
+      var dd=$('detail'); if(dd)dd.scrollIntoView({behavior:'smooth',block:'start'});
+    };
   }
+  // お誘いへの返信：LINE固定をやめ、端末の共有（どのアプリでも）→ダメならコピー
   function inviteReply(){
     var iv=state.invite||{}; var text='OK！ '+iv.m+'月'+iv.d+'日、行こう！';
     try{ if(navigator.share){ navigator.share({text:text}).catch(function(){}); return; } }catch(e){}
-    try{ window.open('https://line.me/R/msg/text/?'+encodeURIComponent(text),'_blank','noopener'); return; }catch(e){}
-    try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text); toast('返信メッセージをコピーしました'); return; } }catch(e){}
-    toast('この内容を送ってください：'+text);
+    try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text); toast('返信「'+text+'」をコピーしました。送ってください'); return; } }catch(e){}
+    try{ alert('この内容を送ってください：\n'+text); }catch(e){}
   }
   function calRowHtml(){
     var couple=(state.mode==='couple');
