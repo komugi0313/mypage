@@ -3669,7 +3669,7 @@ function pickFocus(interests){
     // A案：つながる前（未ログイン）は「まず誘う」／つながっている（ログイン済み）人だけ「メッセージ」を出す
     var _connected=false; try{ var _u=window.NicoAuth&&window.NicoAuth.current&&window.NicoAuth.current(); _connected=!!(_u&&_u.emailVerified&&_u.profile); }catch(e){}
     var dmcta = !couple ? '' : (_connected
-      ? '<div class="dm-cta"><div class="dm-cta-x"><div class="dm-cta-t">💬 お相手とメッセージ</div><div class="dm-cta-s">この日の相性を共有して、メッセージでやりとり＆お誘い。</div></div><button type="button" class="dm-cta-b" id="dmCtaBtn">メッセージを開く</button></div>'
+      ? '<div class="dm-cta"><div class="dm-cta-x"><div class="dm-cta-t">💬 この日をお相手に送る</div><div class="dm-cta-s">「この日どう？」をワンタップでチャットに送れます。</div></div><button type="button" class="dm-cta-b" id="dmSendDay">この日どう？と送る</button></div>'
       : '<div class="dm-cta"><div class="dm-cta-x"><div class="dm-cta-t">💌 お相手を誘って、二人でつながる</div><div class="dm-cta-s">この日の相性とお誘いをLINEで送ろう。お相手がつながると、ここでメッセージのやりとりができます。</div></div><button type="button" class="dm-cta-b" id="dmInviteBtn">お相手を誘う</button></div>');
     return dmcta
       +'<div class="calbox">'
@@ -3714,6 +3714,11 @@ function pickFocus(interests){
     var sd=$('shareDay'); if(sd)sd.onclick=function(){shareDay(title,details);};
     var ib=$('inviteBtn'); if(ib)ib.onclick=function(){ inviteShare(d); };   // LINEでお相手を誘う
     var dc=$('dmCtaBtn'); if(dc)dc.onclick=function(){ if(window.NicoAuth&&window.NicoAuth.requireAuth){ window.NicoAuth.requireAuth(function(){ if(window.NicoChat)window.NicoChat.open(); }); } else if(window.NicoChat){ window.NicoChat.open(); } };
+    var dsd=$('dmSendDay'); if(dsd)dsd.onclick=function(){   // ワンタップ：この日を「この日どう？」でチャットに送る
+      function go(){ try{ var x=evalDay(state.y,state.m,d); var mk=(state.topSet&&state.topSet[d])?'⭐':((x&&x.mk&&x.mk.s)||'◎');
+        var tt=(($('memoTa')&&$('memoTa').value)||'').trim();
+        if(window.NicoChat&&window.NicoChat.proposeDay) window.NicoChat.proposeDay({ymd:''+state.y+pad2(state.m)+pad2(d), time:(($('calHour')&&$('calHour').value)||'19:00'), mark:mk, title:tt||'この日どう？'}); }catch(e){} }
+      if(window.NicoAuth&&window.NicoAuth.requireAuth){ window.NicoAuth.requireAuth(go); } else { go(); } };
     var dci=$('dmInviteBtn'); if(dci)dci.onclick=function(){ inviteShare(d); };   // つながる前：まずLINEで誘う（この結果を送る）
     var sws=document.querySelectorAll('.it-sw'); if(sws.length){ var cur=inviteTheme();   // お誘いの色を選ぶ
       sws.forEach(function(s){ s.setAttribute('aria-pressed', s.getAttribute('data-th')===cur?'true':'false');
@@ -4586,7 +4591,8 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     +'.dm-av{width:40px;height:40px;border-radius:50%;background:#eceae6;overflow:hidden;box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--accent)}'+'.dm-av img,.dm-avs img{width:100%;height:100%;object-fit:cover;display:block}'+'.dm-avs{width:28px;height:28px;border-radius:50%;background:#eceae6;overflow:hidden;flex:0 0 auto;box-shadow:0 0 0 2px var(--accent)}'
     +'.dm-nm{font-weight:700;font-size:15px;font-family:var(--maru)}'
     +'.dm-sub{font-size:10.5px;opacity:.75}'
-    +'.dm-demo{margin-left:auto;font-size:9.5px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:2px 8px}'
+    +'.dm-clear{margin-left:auto;background:none;border:none;color:#fff;font-size:17px;line-height:1;cursor:pointer;padding:2px 8px;opacity:.85}'
+    +'.dm-demo{font-size:9.5px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:2px 8px}'
     +'.dm-plan{flex:0 0 auto;margin:10px 12px 10px;background:var(--panel,#fff);border:1px solid var(--line-strong,#a9b3cf);border-left:4px solid var(--accent,#3a4a80);border-radius:12px;padding:11px 13px;box-shadow:0 1px 3px rgba(0,0,0,.12)}'
     +'.dm-plan .pt{font-size:10.5px;color:var(--muted,#8a8296);font-weight:700;letter-spacing:.03em;font-family:var(--maru);display:flex;align-items:center}'
     +'.dm-plan .pm{font-family:var(--maru);font-weight:700;color:var(--hi,#293458);font-size:15px;margin-top:2px}'
@@ -4732,6 +4738,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
         +'<button class="dm-back" id="dmBack" aria-label="閉じる">‹</button>'
         +'<div class="dm-av">'+avImg(cur.partnerMascot)+'</div>'
         +'<div><div class="dm-nm">'+esc(cur.pname)+'さん</div><div class="dm-sub">ニコカレでつながっています</div></div>'
+        +'<button class="dm-clear" id="dmClear" aria-label="チャットを消す" title="チャットを消す">🗑</button>'
         +'<span class="dm-demo">デモ</span>'
       +'</div>'
       +planHtml
@@ -4820,6 +4827,16 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   function cancelPlan(){ savePlan(cur.roomId,null);
     ChatBackend.send(cur.roomId,{from:cur.me, kind:'sys', text:'この予定は取り消されました'}); scrollBottom(); }
   function openSheet(){ var sh=q('dmSheet'); if(sh)sh.classList.add('on'); }
+  // ワンタップ：カレンダーの日をそのままチャットに「この日どう？」で送る（提案を簡単化）
+  function proposeDay(pl){ open(); if(!cur||!pl||!pl.ymd) return;
+    var plan={ymd:String(pl.ymd), time:pl.time||'19:00', mark:pl.mark||'◎', title:pl.title||'この日どう？', status:'proposed', by:cur.me, at:Date.now(), change:false};
+    savePlan(cur.roomId, plan);
+    ChatBackend.send(cur.roomId,{from:cur.me, kind:'plan', plan:plan, text:'この日どう？'});
+    scrollBottom(); scheduleDemoReply(); }
+  // 自分でチャットを消す
+  function clearChat(){ try{ if(!confirm('このチャットの履歴を消しますか？')) return; }catch(e){}
+    try{ localStorage.removeItem('dc_dm_'+cur.roomId); }catch(e){} savePlan(cur.roomId,null);
+    try{ ChatBackend.markRead(cur.roomId, cur.me); }catch(e){} build(); refreshChip(); }
 
   function wire(){
     var back=q('dmBack'); if(back)back.onclick=close;
@@ -4850,6 +4867,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     document.querySelectorAll('.pc-no').forEach(function(b){ b.onclick=function(){ openSheet(); }; });
     var chg=q('dmChange'); if(chg)chg.onclick=function(){ openSheet(); };
     var cnl=q('dmCancel'); if(cnl)cnl.onclick=cancelPlan;
+    var clr=q('dmClear'); if(clr)clr.onclick=clearChat;
     // 開いている間は自分を既読に（相手の未読数をリセット）
     ChatBackend.markRead(cur.roomId, cur.me);
   }
@@ -4876,7 +4894,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   window.addEventListener('storage',function(ev){ if(ev.key&&ev.key.indexOf('dc_dm_')===0) refreshChip(); });
   refreshChip();
 
-  window.NicoChat={ open:open, close:close, ENABLED:true };
+  window.NicoChat={ open:open, close:close, proposeDay:proposeDay, ENABLED:true };
 })();
 </script>
 
