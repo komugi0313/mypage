@@ -313,6 +313,15 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   .err{padding:12px;background:var(--ka-w);color:#b32a20;border-radius:10px;font-weight:800;font-size:13.5px}
   .reading{margin-top:14px}
+  .crisis-card{border:2px solid #2A6FD0;background:#EEF4FD;border-radius:14px;padding:14px 16px;margin:0 0 14px;color:var(--ink);line-height:1.85;font-size:14px}
+  .crisis-card .cc-h{font-weight:900;font-size:16px;margin:0 0 6px;color:#1B4E9B}
+  .crisis-card p{margin:6px 0}
+  .crisis-card ul{margin:8px 0 4px;padding-left:1.15em}
+  .crisis-card li{margin:3px 0}
+  .crisis-card a{color:#1B4E9B;font-weight:800;text-decoration:underline}
+  .crisis-card .cc-note{font-size:12.5px;color:var(--ink2);margin-top:8px}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .crisis-card{background:#12233B;border-color:#3D7ADf}}
+  :root[data-theme="dark"] .crisis-card{background:#12233B;border-color:#3D7ADf}
   .r-engine{font-weight:900;font-size:13px;color:#FF2D9E;margin:0 0 9px;display:flex;align-items:center;gap:5px;letter-spacing:.01em}
   .r-engine:not(.off){animation:rblink 2s ease-in-out infinite}
   .r-engine.off{color:#FF2D9E}
@@ -4354,18 +4363,33 @@ async function generateReading(user,localText,system,deep){
   aiEngine='オフライン鑑定（端末内）';
   return {ok:true,text:localText,fallback:true,online:false,note:'詳細鑑定に接続できなかったため、端末内で作成した鑑定（オフライン鑑定）を表示しています（自動で再試行しました）。'};
 }
-async function runReading(btn,out,user,localText,proUser,deep){
-  btn.disabled=true;out.innerHTML='<div class="loading"><span class="spin"></span>命式を読み解いています…</div>';
+async function runReading(btn,out,user,localText,proUser,deep,safety){
+  const sc=safety||'';  // 自傷・希死念慮を検知したら、AIを待たずに最上部へ相談窓口を必ず表示（オンライン/オフライン/ブロック時も出す）
+  btn.disabled=true;out.innerHTML=sc+'<div class="loading"><span class="spin"></span>命式を読み解いています…</div>';
   try{
     const res=await generateReading(user,localText,undefined,deep);
-    out.innerHTML=engineBadge(res.online,res.fallback?res.note:'')+formatReading(res.text);
+    out.innerHTML=sc+engineBadge(res.online,res.fallback?res.note:'')+formatReading(res.text);
     attachReadingTools(out,res.text);
     if(proUser)appendPro(out,proUser,localText,deep);
   }catch(e){console.error(e); // 想定外のエラーでもオフライン鑑定を出す
-    out.innerHTML=engineBadge(false,'通信できないため、端末内で作成した鑑定（オフライン鑑定）を表示しています。')+formatReading(localText);
+    out.innerHTML=sc+engineBadge(false,'通信できないため、端末内で作成した鑑定（オフライン鑑定）を表示しています。')+formatReading(localText);
     attachReadingTools(out,localText); if(proUser)appendPro(out,proUser,localText,deep);}
   finally{btn.disabled=false;}
 }
+/* 自傷・希死念慮の検知と、命の安全（クライシス）表示。端末側で判定するので、AIがブロックされても必ず出る。 */
+function isCrisis(t){ if(!t)return false; return /死にたい|死のう|自殺|自死|消えたい|消えてしまいたい|消え去りたい|いなくなりたい|居なくなりたい|生きていたくない|生きる(意味|価値)が?ない|リストカット|リスカ|自傷|オーバードーズ|飛び降り|首を吊|殺してほしい/.test(String(t)); }
+function crisisCardHTML(){ return '<div class="crisis-card" role="alert">'
+  +'<div class="cc-h">🕊️ ひとりで抱えないでください</div>'
+  +'<p>いま、つらい気持ちがあるのですね。あなたの安全がいちばん大切です。占いよりも先に、気持ちを話せる専門の窓口を頼ってください（無料・秘密は守られます）。</p>'
+  +'<ul>'
+  +'<li><b>よりそいホットライン</b>：0120-279-338（24時間・通話無料）</li>'
+  +'<li><b>いのちの電話</b>：0570-783-556（毎日10〜22時）</li>'
+  +'<li><b>こころの健康相談統一ダイヤル</b>：0570-064-556</li>'
+  +'<li><b>チャット相談・窓口一覧</b>：厚生労働省「まもろうよ こころ」 <a href="https://www.mhlw.go.jp/mamorouyokokoro/" target="_blank" rel="noopener">mhlw.go.jp/mamorouyokokoro</a></li>'
+  +'<li>いますぐ危険を感じるときは <b>110／119</b> へ</li>'
+  +'</ul>'
+  +'<p class="cc-note">つらいときは、上の窓口や身近な信頼できる人に、いま連絡してください。あなたのことが大切です。</p>'
+  +'</div>'; }
 // 鑑定文の下に「本格鑑定（専門用語そのまま）を開く」ボタンを足す（デフォルトはわかりやすい本格鑑定）。
 function appendPro(out,proUser,localText,deep){
   const wrap=document.createElement('div');wrap.className='prowrap';
@@ -4388,7 +4412,7 @@ async function doConsult(){
   const struct=`重要:必ず命式の具体的な要素（星名・五行の数・干支・大運/年運の干支）を文中に挙げ、「この要素があるから、こう言える」という理屈をセットで示すこと。曖昧で誰にでも当てはまる表現は禁止。\n【この相談への集中＝最優先で厳守】目的はただ一つ、相談者が聞いた質問にまっすぐ答えること。挨拶・長い前置き・聞かれていない全体的な性格紹介や自分史は書かない。無関係なテーマへ脱線せず、同じ内容を言い換えて何度も繰り返さない（水増し・引き延ばし禁止）。\n構成（必ず守る）：\n・1行目に結論を一文だけ（前置き・見出しなし）。\n・「【見出し】」付きの短いブロックを2〜3個（各2〜4文）。悩みに直接答える根拠を、星・五行・大運/年運を名指しで示す。\n・「いつ?」を含む質問（恋愛・結婚・婚活・転職・来年の運気など）は、「大運の流れ」「今後5年の年運の流れ」「恋愛・結婚の手がかり」を根拠に、具体的な年代・西暦の年を必ず挙げて時期を示す（断定せず「縁が動きやすい時期」として）。\n・最後に【今できること】として、この命式と今の時期に即した具体的な行動を2〜3点。\n・大事な語は**太字**に。全体700〜900字。読み応えのある十分な分量で、根拠と具体例を厚めに（ただし水増し・繰り返しはしない）。`;
   const easy=head+`【書き方＝最重要】占い師にも占い初心者にも、すっと頭に入るように書く。専門用語（通変星・十二運・蔵干・干支・五行など）は省かず使ってよいが、出てきたら必ずその場で“ふつうの言葉”で短く言いかえる（例:「正官（規律と責任を大切にする星）」）。一文は短めにし、つなぎを丁寧に。内容・根拠・結論は変えない。\n`+struct;
   const pro=head+struct;
-  runReading(document.getElementById('consultBtn'),out,easy,localAnswer(chart,worry),pro);
+  runReading(document.getElementById('consultBtn'),out,easy,localAnswer(chart,worry),pro,undefined,isCrisis(worry)?crisisCardHTML():'');
 }
 // 鑑定レポートの本文構成（デフォルト=わかりやすい本格／トグル=専門用語そのまま で共通）
 const READ_STRUCT=`重要:各項目で必ず命式の具体的な要素（星名・五行の数・干支・蔵干・大運/年運の干支・合冲）を名指しで挙げ、「この要素があるから、こう言える」という理屈をセットで示すこと。曖昧で誰にでも当てはまる表現は禁止。この人だけの特徴を語る。\n構成（必ず守る・各見出しは【】で囲む）：\n・1行目に「どんな人か」を一文で結論（前置き・見出しなし）。\n【基本性質】日主と五行バランス（数を明示）から、性格の核を根拠込みで。★提供データの「命式内の会局」に三合・方合が成立していれば、その人は生まれつき運が強く良い暗示を持つ「会局を持つ強運の型」なので、冒頭の結論か【基本性質】で必ず前向きにはっきり触れる（何も巡らなくても常時働く土台の強み。強さは三合＞方合。該当の五行が既に太過のときだけ偏りに一言添える）。\n【才能・適性】通変星の構成（どの星が何個あるか）から、活きる場・向く動き方を根拠込みで。とくに提供データの「通変星の集計」で<b>最も多い星（3つ以上＝強く出る／4つ以上＝太過）</b>は、その人の個性を最も強く決める核なので<b>必ず主役として目立たせ</b>、強み（際立つ才能）と注意点（過多で出やすいクセ）の両面を、その星名と個数を挙げて具体的に描く（例:「食神が4つで太過＝表現や楽しむ力が突出する一方、のんびり・詰めの甘さに注意」）。多い星を一般論で薄めない。<b>適職は一つの星の固定リストをそのまま答えにせず</b>、多い星・五行の強弱・十二運・身強弱・今の大運を総合して、その人に合う職種と働き方を導く。提供データに<b>「通変星の特定の組み合わせ」（倒食・傷官見官・食神制殺・官印相生・財印交戦・劫財奪財など）</b>や<b>「通変グループの偏り」</b>があれば、その意味（吉/注意）とアドバイスを必ず織り込む（命式内だけでなく大運・年運の巡りで成立するものも、その時期の注意/好機として述べる）。\n【対人・関係性】命式内の合・冲・干合など（あれば干支を挙げて）の意味を根拠込みで。なければ五行配置から対人傾向を。\n【運の流れ】「大運の流れ」「大運の通変グループの移り変わり」「節木運（30年周期の季節と節目）」から、人生の大きな転換期を時系列で読み解く。まず節木運で30年単位の季節と★の節目（何歳・西暦）を示し、その中の10年大運を<b>「その年代＝○○星が巡る大運＝こういう時期（提供データの“通変星が巡る時の意味”を使う）＝こう過ごすとよい」</b>と、各大運で何の通変星が巡り本人がどうなるか・どう動くべきかを具体的に述べる（単に星名を並べない）。\n【今の時期】今めぐる<b>大運の通変星（何が巡っているか）と年運の通変星</b>を必ず名指しし、それぞれ「今この人に何が起きやすいか・どう過ごすとよいか」を、命式の多い星・五行・身強弱とつなげて具体的に助言する。命式との関わり（三合・冲・解空・空亡期など）と今後5年の年運の流れも反映。\n【気をつけたい時期】運気が停滞・低調になりやすい年や月、空亡（天中殺）の期間、日支（配偶宮）や用神が冲・剋される時期、忌神の五行が強まる時期などを、可能な範囲で<b>具体的な西暦・年齢・干支</b>で挙げ、「なぜ運気が下がりやすいか＋無理をせずどう整えるか」をセットで示す。断定的に不運を予言せず、前向きに「整えると良い時期」として伝える。\n【活かし方】この命式と今の流れに即した前向きな行動のヒントを2〜3点。お金との付き合い方（財運）にも触れる場合は、財星(正財=堅実/偏財=人脈・投資)・食神(楽しみながら得る)・十二運から読み、五行「金」の多少を金運と混同しない（「金が少ない＝金運がない」とは言わない）。\n大事な語は**太字**に。\n【深さ】各項目とも、なぜその星・五行・十二運・干支・大運からそう言えるのかという四柱推命の裏付けを一段深く示し、表面的な一般論で終わらせない。`;
@@ -4782,7 +4806,7 @@ async function doCompatAsk(){
   const ask=`【相談者(本人A)からの質問】\n${q}\n\nこの質問に、上の「2人の関係の自動分析」を唯一の根拠として答えてください。挨拶や長い前置き、聞かれていない一般的な性格紹介は書かず、質問にだけまっすぐ答える。2人を「${rt.frame}」という前提で扱う。日干の関係・通変星・日支の合冲・五行の補い合い・大運の重なり・${rt.timing}・2人の命式を合わせた相性ポイント（合わせて三合・方合／互いの不足五行を持ち合う／同じ空亡／月支元命の生剋／印の関係・通変星の相生の流れ／日柱の納音の相性（2人の日柱が同じ納音か））など、関係する要素を名指しで挙げ「この要素があるから、こう言える」という理屈を添える。曖昧で誰にでも当てはまる表現は禁止。${rt.useSpouse?'':'\n※この関係では恋愛・結婚・出会い・配偶者の話題は出さないこと。'}\n構成：1行目に結論を一文（前置き・見出しなし）→【見出し】付きの短いブロックを2〜3個（各2〜4文）。時期を聞かれたら大運・今後の年運から具体的な西暦の年を挙げる（断定せず「動きやすい時期」として）。さらに、良い時期だけでなく<b>2人がすれ違い・衝突しやすい“注意な時期”</b>も、互いの日支が冲される年・比劫や官殺が重なる年などを根拠に具体的な西暦・年齢で1つは挙げ、乗り越え方を添える（断定せず「少し気をつけると良い」とやわらかく）。最後に【できること】を2〜3点。大事な語は**太字**。\n注意:繊細な相談でも中立に扱い、特定の事実を断定せず、誰も責めず建設的に。「相性が悪い」「ダメ」などの強い断定や怖がらせる表現は使わず、注意点は「少し気をつけるとより良い」程度のやわらかく前向きな言い方にとどめる。`;
   const easy=`${head}\n\n${ask}\n【書き方＝最重要】「深く、しかし分かりやすく伝わりやすい言葉」で書く。専門用語は使ってよいが、出たらその場でふつうの言葉に短く言いかえる。内容・根拠・深さは削らない。全体750〜950字。`;
   const pro=`${head}\n\n${ask}\n【書き方】四柱推命の専門用語（通変星名・三合・空亡・月支元命・相生相剋など）はそのままの言葉で明示してよい。通変星の相生の流れ（例:「食傷は比劫に生かされる」）は言いかえず通変星の言葉で根拠として書く。プロ向けの本格鑑定として深く。全体750〜950字。`;
-  runReading(document.getElementById('compatAskBtn'),out,easy,localCompatAnswer(chart,chartB,na,nb,rt,q),pro);
+  runReading(document.getElementById('compatAskBtn'),out,easy,localCompatAnswer(chart,chartB,na,nb,rt,q),pro,undefined,isCrisis(q)?crisisCardHTML():'');
 }
 
 /* ===== 入力・初期化 ===== */
@@ -4947,7 +4971,7 @@ function readingKind(out){return out.id==='compat'?'compat':out.id==='reading'?'
   if(typeof runReading!=='function'||runReading._hl)return;
   var o=runReading;
   runReading=async function(btn,out,user,localText,proUser){
-    var r=await o(btn,out,user,localText,proUser);
+    var r=await o.apply(null, arguments);  // deep・safety など後続引数も落とさず渡す
     try{
       if(out&&out.id==='autoReading'&&typeof chart!=='undefined'&&chart&&!out.querySelector('.chl-box')){
         var txt=(out.innerText||'').replace(/\s/g,''); if(!txt) return r;
