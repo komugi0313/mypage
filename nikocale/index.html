@@ -4250,7 +4250,15 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       resend:function(){ /* mock: 実送信なし */ },
       changeEmail:function(ne){ ne=(ne||'').trim().toLowerCase(); var s=load(SK,null); if(!s)return; var users=load(UK,{}); if(users[s.uid]){ users[s.uid].email=ne; users[s.uid].emailVerified=false; save(UK,users); emit(); } },
       markVerified:function(){ var s=load(SK,null); if(!s)return; var users=load(UK,{}); if(users[s.uid]){ users[s.uid].emailVerified=true; save(UK,users); emit(); } },
-      saveProfile:function(p){ var s=load(SK,null); if(!s)return; var users=load(UK,{}); if(users[s.uid]){ users[s.uid].profile=p; save(UK,users); emit(); } }
+      saveProfile:function(p){ var s=load(SK,null); if(!s)return; var users=load(UK,{}); if(users[s.uid]){ users[s.uid].profile=p; save(UK,users); emit(); } },
+      hasEmail:function(email){ email=(email||'').trim().toLowerCase(); var users=load(UK,{}); for(var k in users){ if(users[k].email===email) return true; } return false; },
+      /* パスワード再設定（モック：本番はFirebaseの再設定メールに委譲）。この端末に登録があれば新パスワードを設定 */
+      resetPassword:function(email,password){ email=(email||'').trim().toLowerCase();
+        if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return {error:'メールアドレスの形式をご確認ください。'};
+        if((password||'').length<8) return {error:'パスワードは8文字以上にしてください。'};
+        var users=load(UK,{}); for(var k in users){ if(users[k].email===email){ users[k].password=hash(password); save(UK,users); return {uid:k}; } }
+        return {error:'このメールアドレスのアカウントが見つかりません。'};
+      }
     };
   })();
 
@@ -4276,6 +4284,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     +'.au-f .eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--accent-2);font-weight:700;cursor:pointer;background:none;border:none}'
     +'.au-typo{background:#fff7e6;border:1px solid #e6cf9a;border-radius:9px;padding:8px 10px;font-size:11.5px;color:#8a6a2a;margin:-3px 2px 8px;cursor:pointer}.au-typo b{color:#6a4f18}'
     +'.au-err{color:#b2554e;font-size:12px;font-weight:700;text-align:center;margin:6px 2px 0;min-height:0}'
+    +'.au-ok{color:#2f8a5b;font-size:12px;font-weight:700;text-align:center;margin:6px 2px 0}.au-ok[hidden]{display:none}'
     +'.au-primary{display:block;width:100%;background:linear-gradient(180deg,var(--accent),var(--accent-2));color:var(--accent-ink,#fff);border:none;border-radius:13px;padding:14px;font-weight:900;font-size:15px;font-family:var(--maru);margin-top:8px;cursor:pointer;box-shadow:0 8px 18px -10px rgba(0,0,0,.4)}'
     +'.au-note{font-size:10.5px;color:var(--muted);text-align:center;line-height:1.7;margin-top:10px}.au-note a{color:var(--accent-2);text-decoration:underline;cursor:pointer}'
     +'.au-foot{text-align:center;font-size:12px;color:var(--ink-soft);margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}.au-foot a{color:var(--accent-2);font-weight:700;cursor:pointer}'
@@ -4354,6 +4363,16 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
         +'<div class="au-err" id="auErr"></div>'
         +'<button class="au-primary" id="auDoLogin">ログイン</button>'
         +'<div class="au-foot">はじめての方は <a data-go="register">新規登録</a></div>';
+    } else if(s==='reset'){
+      body='<div class="au-brand">'+MARK+'<div class="au-bn">NICO CALE</div><div class="au-tt">パスワードの再設定</div></div>'
+        +'<div class="au-copy">登録した<b>メールアドレス</b>と、<br><b>新しいパスワード</b>を入力してください。</div>'
+        +'<div class="au-f"><label>メールアドレス</label><input id="auREmail" type="email" autocomplete="username" inputmode="email" placeholder="you@example.com" value="'+esc(state.email)+'"></div>'
+        +'<div class="au-f"><label>新しいパスワード</label><div class="pw"><input id="auRPass" type="password" autocomplete="new-password" placeholder="8文字以上（英字と数字がおすすめ）"><button type="button" class="eye" data-eye="auRPass">表示</button></div></div>'
+        +'<div class="au-err" id="auErr"></div>'
+        +'<div class="au-ok" id="auROk" hidden></div>'
+        +'<button class="au-primary" id="auDoReset">パスワードを設定</button>'
+        +'<div class="au-note">本番では、ご登録のメールに<b>再設定リンク</b>をお送りします。<br>このデモは同じ端末での再設定に対応しています。</div>'
+        +'<div class="au-foot"><a data-go="login">ログインに戻る</a></div>';
     } else if(s==='account'){
       var vf=u&&u.emailVerified, pf=(u&&u.profile)||null;
       body='<div class="au-brand">'+userMascotMark()+'<div class="au-tt" style="margin-top:6px">アカウント</div></div>'
@@ -4404,8 +4423,14 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       var b=el('auDoProfile'); if(b)b.onclick=function(){ Auth.saveProfile({sex:sex||'x',age:age||''}); finishAuth(); };
     } else if(s==='login'){
       var b=el('auDoLogin'); if(b)b.onclick=function(){ var r=Auth.login((el('auLEmail')||{}).value||'', (el('auLPass')||{}).value||'', (el('auRemember')||{}).checked); if(r.error){ el('auErr').textContent=r.error; } else { var u=Auth.current(); if(u&&!u.emailVerified) open('verify'); else if(u&&!u.profile) open('profile'); else finishAuth(); } };
-      var f=el('auForgot'); if(f)f.onclick=function(){ alert('（デモ）パスワード再設定メールを送ります。'); };
+      var f=el('auForgot'); if(f)f.onclick=function(){ var le0=el('auLEmail'); if(le0&&le0.value)state.email=le0.value; open('reset'); };
       var le=el('auLEmail'); if(le)le.oninput=function(){ state.email=le.value; };
+    } else if(s==='reset'){
+      var re2=el('auREmail'); if(re2)re2.oninput=function(){ state.email=re2.value; };
+      var rb=el('auDoReset'); if(rb)rb.onclick=function(){ var ok=el('auROk'), er=el('auErr'); if(er)er.textContent=''; if(ok){ok.hidden=true;}
+        var r=Auth.resetPassword((el('auREmail')||{}).value||'', (el('auRPass')||{}).value||'');
+        if(r.error){ if(er)er.textContent=r.error; }
+        else { state.email=((el('auREmail')||{}).value||'').trim().toLowerCase(); if(ok){ ok.hidden=false; ok.textContent='✓ 新しいパスワードを設定しました。ログインします…'; } setTimeout(function(){ open('login'); },1100); } };
     } else if(s==='account'){
       var gv=el('auGoVerify'); if(gv)gv.onclick=function(){ open('verify'); };
       var dmb=el('auOpenDM'); if(dmb)dmb.onclick=function(){ close(); window.NicoAuth.requireAuth(function(){ if(window.NicoChat)window.NicoChat.open(); }); };
@@ -4859,10 +4884,9 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     ChatBackend.send(cur.roomId,{from:cur.me, kind:'plan', plan:plan, text:'この日どう？'});
     scrollBottom(); scheduleDemoReply(); }
   // 自分でチャットを消す
-  function clearChat(){ try{ if(!confirm('このチャットの履歴を消しますか？')) return; }catch(e){}
-    var p=loadPlan(cur.roomId);
-    try{ localStorage.removeItem('dc_dm_'+cur.roomId); }catch(e){} savePlan(cur.roomId,null);
-    try{ if(p&&p.ymd){ window.NicoAppt.remove(p.ymd); window.NicoCalRerender(); } }catch(e){}
+  // チャット履歴だけを消す（約束＝カレンダーの予定は消さない。取り消しは別操作）
+  function clearChat(){ try{ if(!confirm('チャットの履歴を消しますか？\n（会う約束はカレンダーに残ります）')) return; }catch(e){}
+    try{ localStorage.removeItem('dc_dm_'+cur.roomId); }catch(e){}
     try{ ChatBackend.markRead(cur.roomId, cur.me); }catch(e){} build(); refreshChip(); }
 
   function wire(){
