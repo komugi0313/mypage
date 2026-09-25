@@ -1078,6 +1078,21 @@ select{
 /* 会う約束が入った日：二重枠＋💕約束チップで一目でわかる */
 .cell.appt{border:2px solid var(--accent);box-shadow:0 0 0 2px color-mix(in oklab,var(--accent) 22%,transparent) inset,0 6px 16px -10px color-mix(in oklab,var(--accent) 55%,transparent)}
 .apptmk{position:absolute;left:3px;top:3px;z-index:2;font-size:9px;line-height:1;font-weight:800;color:#fff;background:var(--accent);border-radius:8px;padding:2px 5px;letter-spacing:.02em;box-shadow:0 2px 5px -2px color-mix(in oklab,var(--accent) 60%,transparent);white-space:nowrap}
+/* 説明は全画面ヘルプに集約。移動前は非表示（チラつき防止）。移動後はJSで.hlpを外す */
+.hlp{display:none!important}
+.howbtn{display:block;width:100%;margin:12px 0 4px;background:var(--panel);border:1px solid color-mix(in oklab,var(--accent) 32%,var(--line));color:var(--ink);border-radius:12px;padding:11px 14px;font-size:13px;font-weight:700;font-family:var(--maru);cursor:pointer;text-align:center;transition:border-color .12s,box-shadow .18s}
+.howbtn:hover{border-color:var(--accent);box-shadow:0 6px 16px -10px color-mix(in oklab,var(--accent) 40%,transparent)}
+.howmodal{position:fixed;inset:0;z-index:10000;display:flex}
+.howmodal[hidden]{display:none}
+.hm-dim{position:absolute;inset:0;background:rgba(20,16,26,.5);backdrop-filter:blur(2px)}
+.hm-card{position:relative;margin:auto;width:100%;max-width:560px;height:100%;background:var(--bg);display:flex;flex-direction:column;box-shadow:0 20px 60px -20px rgba(20,20,50,.6)}
+@media(min-width:600px){.hm-card{height:92vh;border-radius:20px;overflow:hidden}}
+.hm-head{display:flex;align-items:center;gap:10px;padding:15px 16px;background:var(--accent);color:#fff;font-family:var(--serif);font-weight:800;font-size:16px;flex:0 0 auto}
+.hm-x{margin-left:auto;background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:18px;line-height:1;cursor:pointer}
+.hm-body{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px 44px}
+.hm-body>details,.hm-body>.concept{margin:0 0 14px}
+.hm-body>details{display:block}
+.hm-body .concept{margin-top:4px}
 .cell:hover:not(.empty){
   border-color:var(--accent);
   box-shadow:0 6px 16px -10px color-mix(in oklab, var(--accent) 40%, transparent);
@@ -1655,7 +1670,7 @@ select{
     <div class="grid" id="cal"></div>
     <div class="summary" id="summary"></div>
     <div class="charcard-wrap" id="charCard"></div>
-    <details class="help-bad" id="helpBad">
+    <details class="help-bad hlp" id="helpBad">
       <summary>❓ <span class="mk-bad">「×避けたい」</span><span class="mk-warn">「△注意」</span>の日に会うことになったら？</summary>
       <div class="hb-body">
         <p class="hb-lead">マークは“傾向の目安”。禁止ではありません。</p>
@@ -1671,7 +1686,8 @@ select{
       </div>
     </details>
     <div class="legend" id="legend"></div>
-    <details class="help-bad" id="glossary">
+    <button type="button" class="howbtn" id="howOpen">❓ 使い方・記号の意味・用語をみる</button>
+    <details class="help-bad hlp" id="glossary">
       <summary>📖 ことばの意味（かんたん用語ガイド）</summary>
       <div class="hb-body">
         <p class="gl-lead"><b>はじめての方へ。</b>記号（◎○△×）と色（<b style="color:var(--good)">緑＝良い関係</b>／<b style="color:var(--bad)">赤＝軽い注意</b>）が、そのまま結論です。専門用語は、より深く知りたい方のための補足としてまとめています。</p>
@@ -1706,9 +1722,17 @@ select{
   </div>
   <div class="toast" id="toast"></div>
 
-  <!-- 見方・仕組み（結果の下に配置＝入力までを短く） -->
-  <p class="seehow" id="seehow">▽ このアプリの見方・仕組み</p>
-  <details class="explain logicwrap">
+  <!-- 全画面ヘルプ：使い方・記号の意味・用語・仕組みをここに集約 -->
+  <div class="howmodal" id="howModal" hidden>
+    <div class="hm-dim" id="howDim"></div>
+    <div class="hm-card">
+      <div class="hm-head"><span>❓ 使い方・記号の意味</span><button type="button" class="hm-x" id="howClose" aria-label="閉じる">×</button></div>
+      <div class="hm-body" id="howBody"></div>
+    </div>
+  </div>
+
+  <!-- 見方・仕組み（全画面ヘルプモーダルへ集約。「❓使い方」ボタンで開く） -->
+  <details class="explain logicwrap hlp">
     <summary>▽ 判定の仕組み・マークの意味（タップで開く）</summary>
     <div class="xbody">
   <div class="lenses">
@@ -1757,7 +1781,7 @@ select{
     </div>
   </details>
 
-  <div class="concept">
+  <div class="concept hlp">
     <p class="lead">縁は、一人では動きません。</p>
     あなたの運がどんなに良くても、<b>お相手の運と“重なって”はじめて</b>、その日は本当の「いい日」になります。自分だけの運勢では、二人の物語の半分しか分かりません。
   </div>
@@ -4144,7 +4168,22 @@ function pickFocus(interests){
     var h=$('printHint'); if(h){ h.textContent='印刷画面が開いたら「送信先／プリンター」で「PDFに保存」を選べます。スマホは共有メニュー→「プリント」から保存できます。'; h.hidden=false; }
     try{ window.print(); }catch(e){}
   };
-  if($('toSeehow'))$('toSeehow').onclick=function(){ var e=$('seehow'); if(e)e.scrollIntoView({behavior:'smooth',block:'start'}); };
+  /* 説明を全画面ヘルプモーダルに集約。散らばった.hlpブロックをモーダル内へ移動して開閉する */
+  (function(){
+    var modal=$('howModal'), body=$('howBody'); if(!modal||!body) return;
+    // 表示順：判定の仕組み・記号の意味 → ×△の日は？ → ことばの意味 → コンセプト
+    ['.explain.logicwrap.hlp','#helpBad','#glossary','.concept.hlp'].forEach(function(sel){
+      var n=document.querySelector(sel); if(n){ n.classList.remove('hlp'); body.appendChild(n); }
+    });
+    var open=function(){ modal.hidden=false; document.body.style.overflow='hidden'; try{body.scrollTop=0;}catch(e){} };
+    var close=function(){ modal.hidden=true; document.body.style.overflow=''; };
+    var ho=$('howOpen'); if(ho)ho.onclick=open;
+    var hc=$('howClose'); if(hc)hc.onclick=close;
+    var hd=$('howDim'); if(hd)hd.onclick=close;
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&!modal.hidden)close(); });
+    if($('toSeehow'))$('toSeehow').onclick=open;
+    window.NicoHelp={open:open,close:close};
+  })();
   /* 冒頭の説明フックは閉じられる。閉じたらこの端末では次回から非表示 */
   (function(){ var hk=$('hook'), hs=$('hookShow'); if(!hk)return;
     function setHidden(hidden){ hk.hidden=hidden; if(hs)hs.hidden=!hidden; }
