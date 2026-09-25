@@ -2123,6 +2123,22 @@ function detectTensen(c){
     .map(d=>d.ganzhi+'（'+d.startAge+'〜'+d.endAge+'歳）');
   return {day,years,du,any:(years.length>0||du.length>0)};
 }
+// ── 律音（りっちん／干支併臨）＝干支がまったく同じ。命式内の年月日柱どうし＝宿命律音、大運・年運が命式の柱と同干支＝後天運の律音。個人版①の流派ロジックを移植（②の干支・年運・大運を使用）──
+function detectRitchin(c){
+  const P=c.pillars||[],g=[P[0]&&P[0].ganzhi,P[1]&&P[1].ganzhi,P[2]&&P[2].ganzhi];
+  const pairs=[]; if(g[0]&&g[0]===g[1])pairs.push('年柱と月柱'); if(g[1]&&g[1]===g[2])pairs.push('月柱と日柱'); if(g[0]&&g[0]===g[2]&&g[0]!==g[1])pairs.push('年柱と日柱');
+  const allThree=!!(g[0]&&g[0]===g[1]&&g[1]===g[2]);
+  const now=c.now||{},cy=(now.year!=null?now.year:new Date().getFullYear());
+  const by=(now.year!=null&&now.age!=null)?now.year-now.age:null;
+  const matchP=gz=>{const r=[];if(gz&&gz===g[0])r.push('年柱');if(gz&&gz===g[1])r.push('月柱');if(gz&&gz===g[2])r.push('日柱');return r;};
+  const gzOf=a=>a.ganzhi||((a.stem||'')+(a.branch||''));
+  const years=(c.annualFortunes||[]).filter(a=>a.year>=cy&&matchP(gzOf(a)).length).slice(0,6)
+    .map(a=>a.year+'年'+(by!=null?'（'+(a.year-by)+'歳）':'')+'＝'+gzOf(a)+'（'+matchP(gzOf(a)).join('・')+'と同じ）');
+  // ②のdecadeFortunesは立運後の大運のみ（0歳月柱は含まない）ので、全大運をそのまま判定
+  const du=(c.decadeFortunes||[]).filter(d=>matchP(d.ganzhi).length)
+    .map(d=>d.startAge+'歳〜＝'+d.ganzhi+'（'+matchP(d.ganzhi).join('・')+'と同じ）');
+  return {pairs,allThree,years,du,natal:(allThree||pairs.length>0),any:(allThree||pairs.length>0||years.length>0||du.length>0)};
+}
 // 蔵干（余気・中気・本気）— 大運・年運の蔵干判定用
 // 蔵干（吉凶星マッチング用のセット。順序は無関係）。四正(子卯午酉)の余気も含め、本命の命式（エンジン本体のフル蔵干）と大運・年運を揃える。
 const ZOUKAN={子:['癸','壬'],丑:['己','癸','辛'],寅:['甲','丙','戊'],卯:['乙','甲'],辰:['戊','乙','癸'],巳:['丙','庚','戊'],午:['丁','己','丙'],未:['己','丁','乙'],申:['庚','壬','戊'],酉:['辛','庚'],戌:['戊','辛','丁'],亥:['壬','甲','戊']};
@@ -3790,6 +3806,12 @@ function buildChartText(c){
       if(ts.years.length)parts.push('年運で天戦地冲する年（今後）:'+ts.years.join('・'));
       if(ts.du.length)parts.push('大運で天戦地冲する時期:'+ts.du.join('・'));
       return '天戦地冲（日干支「'+ts.day+'」に対し巡る運の天干が同陰陽で相剋＋地支が冲＝最も刺激が強く環境の変化・衝突・予期せぬ出来事が起きやすい“揺れやすい時期”。凶と決めつけず「急がず確認とリスク管理を丁寧に、変化を味方につければ飛躍のきっかけ」と前向きに、該当の西暦・年齢を挙げて助言する）:'+parts.join(' ／ ');})(),
+    (()=>{const r=detectRitchin(c);if(!r.any)return '';const parts=[];
+      if(r.allThree)parts.push('宿命律音＝三柱すべて同じ干支（非常に稀）。生まれた環境を変えず、家業や受け継いだ場で専念すると力が出る');
+      else if(r.pairs.length)parts.push('宿命律音（命式内）＝'+r.pairs.join('・')+'が同じ干支。視野は狭めでも一つのことに集中すると才能が開花、家系との結びつきが強め');
+      if(r.years.length)parts.push('後天運の律音が巡る年（分岐点・変化のチャンス）:'+r.years.join('・'));
+      if(r.du.length)parts.push('後天運の律音が巡る大運:'+r.du.join('・'));
+      return '律音（りっちん／干支併臨＝干支がまったく同じ。物事が大きく変わる分岐点・ターニングポイント・新しいスタートを表す。凶ではなく“変化のチャンス”として、該当の時期を前向きに助言する）:'+parts.join(' ／ ');})(),
     nayinText(c),
     (()=>{const kn=kuuboNow(c);const st=kn.active?`★今は空亡期（天中殺）＝年運${kn.ayVoid}が空亡支(${kn.voids.join('')})に入っている${kn.duVoid?'（大運'+kn.duVoid+'も空亡で背景が長め）':''}`:(kn.duVoid?`今は大運${kn.duVoid}が空亡支(${kn.voids.join('')})＝背景的に空亡の時期`:`今は空亡期ではない`);const fut=kn.future.length?`／近い空亡年:${kn.future.join('・')}`:'';return `空亡期（天中殺）の判定と過ごし方:${st}${fut}。${KUUBOU_GUIDE} ※相談者が空亡期なら、不安を煽らず「準備・充電の時期」として前向きに、上の過ごし方を根拠に助言する。`;})(),
     (()=>{const dt=c.pillars[2].terrain,td=TERR_FULL[dt];const en=junitenEnergy(c);return `十二運（日柱を最重視。年柱=親/目上・月柱=仕事・日柱=恋愛/私生活で表れる。通変星と組み合わせ社会人としての性格も読む）:年柱${c.pillars[0].terrain}/月柱${c.pillars[1].terrain}/日柱${dt}(最重要)${td?'＝'+td.基本:''}${JUNI_FULL[dt]?'／日柱の十二運「'+dt+'」の人物像＝'+JUNI_FULL[dt].seikaku+'／恋愛の傾向＝'+JUNI_FULL[dt].renai:''}／生命力エネルギー(年月日3柱の数値合計・3〜36):${en.each.map(x=>x.label[0]+x.terr+x.e).join('+')}=${en.total}（${en.level}／高いほど活動的・低いほど省エネで内省的。吉凶ではなく力の総量）`;})(),
@@ -3986,6 +4008,15 @@ function localReading(c,worry){
     let s='あなたの日干支**'+ts.day+'**に、巡る運の**天干が相剋＋地支が冲**でぶつかる「天戦地冲」の時期があります。環境の変化・衝突・予期せぬ出来事が起きやすい"揺れやすい時期"の目安です（凶ではなく、備えのカレンダーとして）。';
     if(ts.years.length)s+='　📅 年運で天戦地冲する年：**'+ts.years.join('・')+'**。この年は大きな決断・契約・引越・転職などを急がず、確認とリスク管理を丁寧に。';
     if(ts.du.length)s+='　🌀 大運（10年運）では**'+ts.du.join('・')+'**。人生の大きな転換が起きやすいぶん、変化を味方につければ飛躍のきっかけにもなります。';
+    L.push(s);
+  })();
+  (()=>{const r=detectRitchin(c);if(!r.any)return;
+    L.push('【律音（りっちん・干支併臨）】');
+    let s='律音＝**干支がまったく同じ**こと。物事が大きく変わる**分岐点・ターニングポイント**、新しいスタートを表します（凶ではなく"変化のチャンス"）。';
+    if(r.allThree)s+='　あなたは**三柱すべてが同じ干支（宿命律音）**という非常に稀な命式。生まれた環境を変えず、受け継いだ場で専念するほど力が出ます。';
+    else if(r.pairs.length)s+='　命式に**'+r.pairs.join('・')+'の律音（宿命律音）**があります。視野は狭めでも、一つのことに集中すると才能が開花しやすいタイプ。';
+    if(r.years.length)s+='　📅 律音が巡る年（分岐点）：**'+r.years.join('・')+'**。道が分かれやすい転機です。';
+    if(r.du.length)s+='　🌀 大運では**'+r.du.join('・')+'**。';
     L.push(s);
   })();
   L.push('【お金との付き合い方（金運）】');
