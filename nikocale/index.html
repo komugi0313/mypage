@@ -692,6 +692,8 @@ select{
 
 /* Modes segmented — 二人で占う / 一人で占う */
 .modes{display:flex;gap:8px;margin-top:2px}
+.mode-lock{font-size:10px;font-weight:800;margin-left:5px;padding:1px 6px;border-radius:999px;background:color-mix(in oklab,var(--gold) 20%,transparent);color:var(--gold);letter-spacing:.02em;vertical-align:middle;white-space:nowrap}
+.mode-lock[hidden]{display:none}
 .modes button{
   flex:1;
   border:1px solid var(--line-strong);
@@ -1629,7 +1631,7 @@ select{
     <div class="step"><div class="sec-t">占い方</div>
       <div class="modes">
         <button type="button" data-mode="couple" aria-pressed="true" id="mCouple">二人で占う</button>
-        <button type="button" data-mode="solo" aria-pressed="false" id="mSolo">一人で占う</button>
+        <button type="button" data-mode="solo" aria-pressed="false" id="mSolo">一人で占う<span class="mode-lock" id="soloLock" hidden>🔒登録</span></button>
       </div>
     </div>
 
@@ -3251,9 +3253,13 @@ function pickFocus(interests){
   function renumber(){ var n=0; document.querySelectorAll('.card > .step').forEach(function(st){ if(st.style.display==='none')return; var h=st.querySelector('.sec-t'); if(h){ n++; h.setAttribute('data-n', n); } }); }
   document.querySelectorAll('.modes button').forEach(function(btn){btn.onclick=function(){
     // 一人用の開運鑑定は登録者限定（二人の相性は無料）。未登録で「一人で占う」を選んだら登録へ誘導
-    if(btn.getAttribute('data-mode')==='solo' && !ccLoggedIn() && window.NicoAuth && window.NicoAuth.requireAuth){ window.NicoAuth.requireAuth(function(){ if(ccLoggedIn()) btn.click(); }); return; }
+    if(btn.getAttribute('data-mode')==='solo' && !ccLoggedIn() && window.NicoAuth && window.NicoAuth.requireAuth){ window.NicoAuth.requireAuth(function(){ try{updateSoloLock();}catch(e){} if(ccLoggedIn()) btn.click(); }); return; }
     state.mode=btn.getAttribute('data-mode'); document.querySelectorAll('.modes button').forEach(function(o){o.setAttribute('aria-pressed',o===btn?'true':'false');}); var solo=(state.mode==='solo'); $('rowB').style.display=solo?'none':''; $('purposeWrap').style.display=solo?'none':''; if($('ppResult'))$('ppResult').style.display=solo?'none':''; $('labA').textContent=solo?'あなたの生年月日':'お一人目（あなた）'; renumber(); if($('out').style.display!=='none'){ state.sel=null; render(); scrollResultsIfNeeded(); pulseResults(); try{toast(solo?'あなたの運勢に切り替えました':'二人の相性に切り替えました');}catch(e){} } };});
   renumber();
+  // 「一人で占う」は登録者限定。未登録のときだけ🔒登録の目印を出す
+  function updateSoloLock(){ var l=$('soloLock'); if(l){ l.hidden=!!ccLoggedIn(); } }
+  updateSoloLock();
+  (function bindSoloLock(){ try{ if(window.NicoAuth&&window.NicoAuth.onChange){ window.NicoAuth.onChange(function(){ try{updateSoloLock();}catch(e){} }); return; } }catch(e){} setTimeout(bindSoloLock,60); })();
   function updatePpFade(){ var pr=$('ppResult'); if(!pr)return; var ch=pr.querySelector('.pp-chips'); if(!ch)return;
     var end=ch.scrollWidth-ch.clientWidth; pr.classList.toggle('can-l', ch.scrollLeft>3); pr.classList.toggle('can-r', (end-ch.scrollLeft)>3); }
   (function(){ var pr=$('ppResult'); if(pr){ var ch=pr.querySelector('.pp-chips'); if(ch)ch.addEventListener('scroll',updatePpFade,{passive:true}); } window.addEventListener('resize',function(){setTimeout(updatePpFade,0);}); })();
