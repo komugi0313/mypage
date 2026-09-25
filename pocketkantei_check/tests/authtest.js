@@ -1,0 +1,26 @@
+process.env.AUTH_SECRET='test-secret-0123456789abcdef';
+const h=require('./fx/functions/auth.js').handler;
+const call=async(o,hdr={})=>{const r=await h({httpMethod:'POST',headers:Object.assign({'x-nf-client-connection-ip':'1.2.3.4'},hdr),body:JSON.stringify(o)});return [r.statusCode,JSON.parse(r.body)];};
+(async()=>{
+  const data={pk_profile:'{"y":1990}',pk_msgs:'[]',pk_key:'SECRET',pk_auth:'x',evil:'1'};
+  let [s,j]=await call({action:'register',email:'Test@Example.com',password:'password123',data}); console.log('register',s,j.ok,!!j.token);
+  const tok=j.token;
+  [s,j]=await call({action:'register',email:'test@example.com',password:'password123',data}); console.log('dup',s,j.code);
+  [s,j]=await call({action:'register',email:'bad',password:'password123'}); console.log('bad email',s,j.code);
+  [s,j]=await call({action:'register',email:'a@b.cc',password:'short'}); console.log('short pw',s,j.code);
+  [s,j]=await call({action:'login',email:'test@example.com',password:'password123'}); console.log('login',s,j.ok,JSON.stringify(j.data));
+  [s,j]=await call({action:'login',email:'nobody@example.com',password:'password123'}); console.log('no user',s,j.code);
+  for(let i=0;i<5;i++){[s,j]=await call({action:'login',email:'test@example.com',password:'wrongpass'});} console.log('5 wrong ->',s,j.code);
+  [s,j]=await call({action:'login',email:'test@example.com',password:'password123'}); console.log('locked',s,j.code);
+  [s,j]=await call({action:'save',token:tok,data:{pk_profile:'{"y":1991}'}}); console.log('save',s,j.ok);
+  [s,j]=await call({action:'load',token:tok}); console.log('load',s,JSON.stringify(j.data));
+  [s,j]=await call({action:'load',token:tok.slice(0,-2)+'00'}); console.log('forged token',s,j.code);
+  [s,j]=await call({action:'change',token:tok,password:'password123',newPassword:'newpass999'}); console.log('change',s,j.ok); const tok2=j.token;
+  [s,j]=await call({action:'load',token:tok}); console.log('old token after change',s,j.code);
+  [s,j]=await call({action:'load',token:tok2}); console.log('new token',s,j.ok);
+  [s,j]=await call({action:'delete',token:tok2,password:'wrong'}); console.log('delete wrong pw',s,j.code);
+  [s,j]=await call({action:'delete',token:tok2,password:'newpass999'}); console.log('delete',s,j.ok);
+  [s,j]=await call({action:'load',token:tok2}); console.log('after delete',s,j.code);
+  const r=await h({httpMethod:'POST',headers:{origin:'https://evil.com'},body:'{}'}); process.env.URL='https://pk.netlify.app';
+  const r2=await h({httpMethod:'POST',headers:{origin:'https://evil.com'},body:'{}'}); console.log('origin check',r2.statusCode);
+})();
