@@ -2095,6 +2095,19 @@ function heroHTML(c){
 
 const STEMS=['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
 function kubo(c){const ds=STEMS.indexOf(c.dayMaster.stem),db=BR.indexOf(c.pillars[2].branch);const d=((db-ds)%12+12)%12;return [BR[(d+10)%12],BR[(d+11)%12]];}
+// ── 宿命中殺（天中殺が命式の柱にかかる特別な宿命）＝個人版①の流派ロジックを移植。計算エンジンは非改変で、②が持つ四柱干支＋空亡だけから判定（表示・鑑定データ層）──
+function pillarKuboGz(gz){const STE='甲乙丙丁戊己庚辛壬癸',BRs='子丑寅卯辰巳午未申酉戌亥';
+  if(!gz||gz.length<2)return [];const s=STE.indexOf(gz[0]),b=BRs.indexOf(gz[1]);if(s<0||b<0)return [];
+  const d=((b-s)%12+12)%12;return [BRs.charAt((d+10)%12),BRs.charAt((d+11)%12)];}
+function detectChusatsu(c){
+  const vs=kubo(c),vset={};vs.forEach(x=>vset[x]=1);
+  const P=(c&&c.pillars)||[],gz=i=>((P[i]&&P[i].stem)||'')+((P[i]&&P[i].branch)||'');
+  const yb=P[0]&&P[0].branch,mb=P[1]&&P[1].branch,db=P[2]&&P[2].branch;
+  const ygz=gz(0),dgz=gz(2),yk=pillarKuboGz(ygz);
+  const hasY=!!(yb&&vset[yb]),hasM=!!(mb&&vset[mb]);
+  const hasSeijitsu=!!(db&&yk.indexOf(db)>=0),hasNichiza=(dgz==='甲戌'||dgz==='乙亥');
+  return {voids:vs,hasY,hasM,hasSeijitsu,hasNichiza,ichidai:hasY&&hasM,ygz,dgz,yk,any:(hasY||hasM||hasSeijitsu||hasNichiza)};
+}
 // 蔵干（余気・中気・本気）— 大運・年運の蔵干判定用
 // 蔵干（吉凶星マッチング用のセット。順序は無関係）。四正(子卯午酉)の余気も含め、本命の命式（エンジン本体のフル蔵干）と大運・年運を揃える。
 const ZOUKAN={子:['癸','壬'],丑:['己','癸','辛'],寅:['甲','丙','戊'],卯:['乙','甲'],辰:['戊','乙','癸'],巳:['丙','庚','戊'],午:['丁','己','丙'],未:['己','丁','乙'],申:['庚','壬','戊'],酉:['辛','庚'],戌:['戊','辛','丁'],亥:['壬','甲','戊']};
@@ -3751,6 +3764,13 @@ function buildChartText(c){
       if(gb.nowDominant&&!(gb.taika||[]).some(t=>t.grp===gb.nowDominant))parts.push(`今の大運・年運の巡りで【${gb.nowDominant}】が一時的に強まる（${GROUP_BIAS[gb.nowDominant].多}）→この時期その傾向が出る`);
       return `通変グループ（比劫=自分/食傷=表現/財=現実お金/官殺=責任抑制/印=学び支え）の偏り:${cnt}。${parts.length?parts.join(' ／ ')+'。偏り・欠け・太過・巡りで強まるグループは個性と注意点として鑑定に反映する':'大きな偏りはなくバランス型'}`;})(),
     `空亡（運が抜けやすい支）:${voids.join('')}`,
+    (()=>{const cs=detectChusatsu(c);if(!cs.any)return '';const t=[];
+      if(cs.hasY)t.push('生年中殺（年柱の地支が空亡）＝親・目上と縁が薄めでも、早く親元を離れ経済的・精神的に自立するほど運が伸びる。実家依存・親の言いなりは停滞のもと');
+      if(cs.hasM)t.push('生月中殺（月柱の地支が空亡）＝家系を継ぐより自分が初代となって新しく築く道が向く。起業・独立で開運（約6人に1人）');
+      if(cs.hasSeijitsu)t.push('生日中殺（年柱から見た空亡支が日支にある）＝先入観にとらわれない唯一無二の発想力・カリスマ性。人と違う自分を受け入れ誇りを持つほど魅力が開く');
+      if(cs.hasNichiza)t.push('日座中殺（日柱が'+cs.dgz+'）＝宿命天中殺の中でも特に純粋。型にはまらない柔軟な才能と芸術性。普通に合わせず自分らしい生き方・家庭の形を築くほど開運');
+      if(cs.ichidai)t.push('一代運（生年＋生月中殺の両方・約36人に1人）＝受け継ぐより自分の力で新しく始め、自分の代で築き上げる生き方でこそ輝く');
+      return '宿命中殺（天中殺が命式の柱にかかる特別な宿命。“欠け”ではなく「人と違う道を歩む強み」として必ず前向きに伝える）:'+t.join(' ／ ');})(),
     nayinText(c),
     (()=>{const kn=kuuboNow(c);const st=kn.active?`★今は空亡期（天中殺）＝年運${kn.ayVoid}が空亡支(${kn.voids.join('')})に入っている${kn.duVoid?'（大運'+kn.duVoid+'も空亡で背景が長め）':''}`:(kn.duVoid?`今は大運${kn.duVoid}が空亡支(${kn.voids.join('')})＝背景的に空亡の時期`:`今は空亡期ではない`);const fut=kn.future.length?`／近い空亡年:${kn.future.join('・')}`:'';return `空亡期（天中殺）の判定と過ごし方:${st}${fut}。${KUUBOU_GUIDE} ※相談者が空亡期なら、不安を煽らず「準備・充電の時期」として前向きに、上の過ごし方を根拠に助言する。`;})(),
     (()=>{const dt=c.pillars[2].terrain,td=TERR_FULL[dt];const en=junitenEnergy(c);return `十二運（日柱を最重視。年柱=親/目上・月柱=仕事・日柱=恋愛/私生活で表れる。通変星と組み合わせ社会人としての性格も読む）:年柱${c.pillars[0].terrain}/月柱${c.pillars[1].terrain}/日柱${dt}(最重要)${td?'＝'+td.基本:''}${JUNI_FULL[dt]?'／日柱の十二運「'+dt+'」の人物像＝'+JUNI_FULL[dt].seikaku+'／恋愛の傾向＝'+JUNI_FULL[dt].renai:''}／生命力エネルギー(年月日3柱の数値合計・3〜36):${en.each.map(x=>x.label[0]+x.terr+x.e).join('+')}=${en.total}（${en.level}／高いほど活動的・低いほど省エネで内省的。吉凶ではなく力の総量）`;})(),
@@ -3933,6 +3953,15 @@ function localReading(c,worry){
   L.push(`いちばん多いのは**${strongEl}**、少ないのは**${weakEl}**です。${weakEl}が少ない人は、${WEAK_EL_TRAIT[weakEl]||EL_DESC[weakEl]+'の力が控えめ'}という気質が出やすいと言われます（運の良し悪しではなく、性格のクセです）。日ごろ「${ELEMENT_TIP[weakEl]}」を意識すると、足りない${weakEl}が自然に補われ、バランスが整いやすくなります。`);
   (()=>{const w=weakElTiming(c);if(!w.length)return;const x=w[0];const parts=[...x.dus];if(x.ays.length)parts.push('年運では**'+x.ays.slice(0,3).join('・')+'年**あたり');
     if(parts.length)L.push(`そして足りない**${x.el}**は、${parts.join('／')}に巡ってきて自然に補われ、**バランスが整いやすい時期**になります。この頃は${x.el}に関わることが追い風になりやすいでしょう。`);})();
+  (()=>{const cs=detectChusatsu(c);if(!cs.any)return;const t=[];
+    if(cs.hasY)t.push('**生年中殺**（年柱が天中殺）＝親・目上と縁が薄めでも、早く親元を離れ自立するほど運が伸びます。実家依存や親の言いなりより、自分の意思で人生を選ぶのが開運の鍵。');
+    if(cs.hasM)t.push('**生月中殺**（月柱が天中殺）＝家系を継ぐより、自分が初代となって新しく築く道が向きます。起業・独立で力を発揮（約6人に1人）。');
+    if(cs.hasSeijitsu)t.push('**生日中殺**（年柱から見た天中殺が日支に）＝先入観にとらわれない唯一無二の発想力。人と違う自分を受け入れ誇りを持つほど、魅力・カリスマ性が開きます。');
+    if(cs.hasNichiza)t.push(`**日座中殺**（日柱が${cs.dgz}）＝特に純粋な天中殺。型にはまらない柔軟な才能と芸術性。無理に"普通"へ合わせず、自分らしい生き方・家庭の形を築くほど運が開きます。`);
+    if(cs.ichidai)t.push('**一代運**（生年＋生月中殺の両方・約36人に1人）＝受け継ぐより、自分の力で新しく始め、自分の代で築き上げる生き方でこそ輝きます。');
+    L.push('【宿命中殺（天中殺）】');
+    L.push('天中殺（空亡）が命式の柱にかかる特別な宿命をお持ちです。これは"欠け"ではなく、**人と違う道を歩む強み**。'+t.join(''));
+  })();
   L.push('【お金との付き合い方（金運）】');
   L.push((()=>{const sei=k.正財||0,hen=k.偏財||0,sho=k.食神||0,sha=k.傷官||0,zai=sei+hen;
     const kan=(k.偏官||0)+(k.正官||0),shoku=sho+sha,hikou=(k.比肩||0)+(k.劫財||0),th=c.timeUnknown?3:4,t=[];
