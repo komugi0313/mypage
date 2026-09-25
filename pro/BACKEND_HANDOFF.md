@@ -122,6 +122,25 @@ pricing-pro.html（料金プラン＋メール＋パスワードで登録）
 
 ---
 
+## 5.5 デモ動画（LP）— webm→mp4 変換（任意・互換性向上）
+
+LPの紹介デモは、字幕なし・現行UIで録り直した **`demo.webm`**（VP8）＋ポスター **`demo-poster.png`** を使用中（`index.html` の `<video id="dVP">`）。現行iPhone(iOS16以降)・主要ブラウザで再生可。**古い端末互換のため、H.264のmp4を用意することを推奨**：
+
+```bash
+ffmpeg -i demo.webm -c:v libx264 -pix_fmt yuv420p -movflags +faststart -an demo.mp4
+```
+
+生成した `demo.mp4` を `pro/` に置き、`index.html` の webm の**前**に次を追加：
+
+```html
+<source src="demo.mp4" type="video/mp4">
+<source src="demo.webm" type="video/webm">
+```
+
+（順序は mp4→webm。ブラウザは対応する最初のソースを再生します。※録画環境のffmpegはh264非対応のため、この変換だけ実機ffmpegで行ってください。）
+
+---
+
 ## 6. 本番公開チェックリスト（フラグを切り替えるだけ）
 
 | ファイル | 変更点 |
