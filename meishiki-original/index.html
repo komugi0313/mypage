@@ -152,6 +152,13 @@ table{width:100%;border-collapse:collapse;font-size:15.5px}
 .jxg{background:#e3f3e8;color:#2f7a4e}.jxb{background:#fde3e3;color:#c0453b}.jxmix{background:#fbf0d8;color:#a8791f}
 @media(max-width:560px){.two{grid-template-columns:1fr}.tItem{min-width:0;flex:1 1 100%}}
 @media print{.noprint{display:none}:root{--bg:#fff;--card:#fff;--ink:#000;--soft:#f0f0f0;--line:#ccc}body{background:#fff}.jumpnav{display:none}.kchip,.ybadge{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+.crisis-card{border:2px solid #2A6FD0;background:#EEF4FD;border-radius:14px;padding:14px 16px;margin:0 0 14px;color:#14171D;line-height:1.85;font-size:14px}
+.crisis-card .cc-h{font-weight:900;font-size:16px;margin:0 0 6px;color:#1B4E9B}
+.crisis-card p{margin:6px 0}
+.crisis-card ul{margin:8px 0 4px;padding-left:1.15em}
+.crisis-card li{margin:3px 0}
+.crisis-card a{color:#1B4E9B;font-weight:800;text-decoration:underline}
+.crisis-card .cc-note{font-size:12.5px;color:#555;margin-top:8px}
 </style>
 </head>
 <body>
@@ -3245,31 +3252,46 @@ function aiReading(c,btn,aid){
    .catch(function(){ if(btn) btn.disabled=false; box.innerHTML='<span style="color:var(--warn)">通信エラー。ネット接続をご確認ください。</span>'; });
 }
 
+/* 自傷・希死念慮の検知と命の安全（クライシス）表示。端末側で判定し、AIがブロックされても必ず出す。 */
+function isCrisis(t){ if(!t)return false; return /死にたい|死のう|自殺|自死|消えたい|消えてしまいたい|消え去りたい|いなくなりたい|居なくなりたい|生きていたくない|生きる(意味|価値)が?ない|リストカット|リスカ|自傷|オーバードーズ|飛び降り|首を吊|殺してほしい/.test(String(t)); }
+function crisisCardHTML(){ return '<div class="crisis-card" role="alert">'
+  +'<div class="cc-h">🕊️ ひとりで抱えないでください</div>'
+  +'<p>いま、つらい気持ちがあるのですね。あなたの安全がいちばん大切です。占いよりも先に、気持ちを話せる専門の窓口を頼ってください（無料・秘密は守られます）。</p>'
+  +'<ul>'
+  +'<li><b>よりそいホットライン</b>：0120-279-338（24時間・通話無料）</li>'
+  +'<li><b>いのちの電話</b>：0570-783-556（毎日10〜22時）</li>'
+  +'<li><b>こころの健康相談統一ダイヤル</b>：0570-064-556</li>'
+  +'<li><b>チャット相談・窓口一覧</b>：厚生労働省「まもろうよ こころ」 <a href="https://www.mhlw.go.jp/mamorouyokokoro/" target="_blank" rel="noopener">mhlw.go.jp/mamorouyokokoro</a></li>'
+  +'<li>いますぐ危険を感じるときは <b>110／119</b> へ</li>'
+  +'</ul>'
+  +'<p class="cc-note">つらいときは、上の窓口や身近な信頼できる人に、いま連絡してください。あなたのことが大切です。</p>'
+  +'</div>'; }
 /* 自由質問→その場で鑑定（命式データを根拠にGemini） */
 function aiAsk(deck,question,boxId,btn){
   var key=msKey(), model=(document.getElementById("gmodel")||{}).value||"gemini-2.5-flash";
   var box=document.getElementById(boxId); if(!box) return;
-  if(!question||!question.trim()){ box.className="note"; box.innerHTML='<span style="color:var(--warn)">質問を入力してください。</span>'; return; }
+  if(!question||!question.trim()){ box.className="note"; box.innerHTML=sc+'<span style="color:var(--warn)">質問を入力してください。</span>'; return; }
   var served=/^https?:$/.test(location.protocol);
-  if(!key && !served){ box.className="note"; box.innerHTML='<span style="color:var(--warn)">この端末で使うにはAPIキーが必要です（1人タブの「AI鑑定の設定」）。本番サイトならキー不要。</span>'; return; }
+  if(!key && !served){ box.className="note"; box.innerHTML=sc+'<span style="color:var(--warn)">この端末で使うにはAPIキーが必要です（1人タブの「AI鑑定の設定」）。本番サイトならキー不要。</span>'; return; }
   if(key){ try{ localStorage.setItem("ms_gkey",key); }catch(e){} }
+  var sc=isCrisis(question)?crisisCardHTML():'';
   var sys="あなたは四柱推命の鑑定士『Nico』です。以下の【命式データ】を唯一の根拠に、ユーザーの質問に日本語で具体的に答えてください。専門用語（通変星・神殺の漢字）は避け日常語に翻訳。構成：①結論（まず率直に答える）②命式から見た理由（なぜそう言えるかを詳しく）③具体的なアドバイス。恋愛・復縁・不倫などデリケートな相談も、否定や説教をせず現実的でやさしく、当人の幸せを軸に。相手に交際相手や配偶者がいる相談（略奪・不倫・既婚者への恋・三角関係など）では、可能性・時期・相性は前向きに伝えたうえで、必ず最後に思いやりのある慎重な一言を添える：すでに関係を築いている相手や周囲の人がいること／気持ち・評判・生活面のリスク／相性や良い時期は他者を傷つけてよい理由にはならないこと。責めず説教せず、自分を大切にする選択・誠実な進め方・必要なら信頼できる第三者（カウンセラー等）への相談をやわらかく促す（前向きさと慎重な一言を両立）。断定しすぎず前向きに、過去の出来事は断定しない。600〜1100字。\\n【命式データ】\\n"+deck+"\\n【質問】\\n"+question;
   var gc={temperature:0.9}; if(/gemini-3/.test(model)){ gc.maxOutputTokens=4096; } else { gc.thinkingConfig={thinkingBudget:0}; gc.maxOutputTokens=4096; }
   var body={systemInstruction:{parts:[{text:sys}]},contents:[{role:"user",parts:[{text:question}]}],generationConfig:gc};
   var url,headers;
   if(key){ url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(key); headers={"Content-Type":"application/json"}; }
   else { url="/api/gemini"; headers={"Content-Type":"application/json","x-pk-device":msDevId(),"x-pk-deep":"1","x-pk-owner":msOwner()}; }
-  box.className="note"; box.innerHTML='<span class="note">鑑定中… 🔮</span>'; if(btn) btn.disabled=true;
+  box.className="note"; box.innerHTML=sc+'<span class="note">鑑定中… 🔮</span>'; if(btn) btn.disabled=true;
   fetch(url,{method:"POST",headers:headers,body:JSON.stringify(body)})
    .then(function(r){return r.text().then(function(t){return {ok:r.ok,status:r.status,t:t};});})
    .then(function(res){ if(btn) btn.disabled=false;
-     if(!res.ok){ box.innerHTML='<span style="color:var(--warn)">エラー('+res.status+')：'+(res.status===429?"混み合っています。少し待って再試行を。":res.status===400||res.status===403?"キー/設定に問題があるか、地域制限の可能性。":"接続に失敗しました。")+'</span>'; return; }
-     var j; try{j=JSON.parse(res.t);}catch(e){ box.innerHTML='<span style="color:var(--warn)">応答の解析に失敗しました。</span>'; return; }
+     if(!res.ok){ box.innerHTML=sc+'<span style="color:var(--warn)">エラー('+res.status+')：'+(res.status===429?"混み合っています。少し待って再試行を。":res.status===400||res.status===403?"キー/設定に問題があるか、地域制限の可能性。":"接続に失敗しました。")+'</span>'; return; }
+     var j; try{j=JSON.parse(res.t);}catch(e){ box.innerHTML=sc+'<span style="color:var(--warn)">応答の解析に失敗しました。</span>'; return; }
      var cand=j.candidates&&j.candidates[0], txt=cand&&cand.content&&cand.content.parts?cand.content.parts.map(function(x){return x.text||"";}).join(""):"";
-     if(!txt){ var fr=cand&&cand.finishReason; box.innerHTML='<span style="color:var(--warn)">鑑定文が生成されませんでした'+(fr?'（'+esc(fr)+'）':'')+'。表現を変えてお試しください。</span>'; return; }
-     box.className=""; box.innerHTML='<div style="font-size:15px;line-height:1.7;color:var(--ink)">'+mdLite(txt)+'</div>';
+     if(!txt){ var fr=cand&&cand.finishReason; box.innerHTML=sc+'<span style="color:var(--warn)">鑑定文が生成されませんでした'+(fr?'（'+esc(fr)+'）':'')+'。表現を変えてお試しください。</span>'; return; }
+     box.className=""; box.innerHTML=sc+'<div style="font-size:15px;line-height:1.7;color:var(--ink)">'+mdLite(txt)+'</div>';
    })
-   .catch(function(){ if(btn) btn.disabled=false; box.innerHTML='<span style="color:var(--warn)">通信エラー。ネット接続をご確認ください。</span>'; });
+   .catch(function(){ if(btn) btn.disabled=false; box.innerHTML=sc+'<span style="color:var(--warn)">通信エラー。ネット接続をご確認ください。</span>'; });
 }
 function cell4(pil,fn,tu){var h="";for(var i=0;i<4;i++){var x=pil[i];if(i===3&&(tu||!x)){h+='<td class="note">—</td>';continue;}h+='<td>'+fn(x)+'</td>';}return h;}
 function favList(fav,mark){if(!fav)return"-";var a=EL_ORDER.filter(function(e){return fav[e]===mark;});return a.length?a.map(elc).join("・"):"-";}
