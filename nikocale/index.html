@@ -1166,6 +1166,12 @@ select{
 .detail .dmeta{font-size:12px;color:var(--ink-soft);margin:0 0 14px;font-family:var(--maru)}
 .detail .dmeta .hol{color:var(--sun);font-weight:700;white-space:nowrap}
 .detail .dmeta.dmeta-hol{margin:0 0 6px}
+.detail .dmeta-luck{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px}
+.detail .luck{display:inline-flex;align-items:center;gap:2px;font-size:11.5px;font-weight:800;font-family:var(--maru);padding:3px 11px;border-radius:999px;letter-spacing:.02em;white-space:nowrap}
+.detail .luck-ten{background:linear-gradient(180deg,var(--gold-soft),var(--panel));color:var(--hi);border:1px solid var(--gold)}
+.detail .luck-ich{background:color-mix(in oklab,var(--gold) 14%,var(--panel));color:var(--hi);border:1px solid color-mix(in oklab,var(--gold) 50%,var(--line))}
+.detail .luck-best{font-size:11px;font-weight:800;color:var(--gold);font-family:var(--serif);letter-spacing:.05em;white-space:nowrap}
+.detail .luck-note{font-size:10.5px;color:var(--muted);font-family:var(--maru)}
 
 .why{
   border:1px solid var(--line);
@@ -3968,6 +3974,17 @@ function pickFocus(interests){
     '下弦の月':'夜更け〜明け方に半月が上る頃。',
     '有明の月':'夜明けの空に残る、細い月。'
   };
+  /* ===== 開運日（暦注・縁起の参考）：一粒万倍日・天赦日 =====
+     日付の干支から確定計算。節月は選日暦の慣習に合わせ「その日の終わり(23:59)の月柱」で判定
+     （節入り日は新しい月に属する）。日干支は正午の日柱を使用。2026年の公開暦と一致を確認済み。 */
+  var _ICH1={'寅':['丑','午'],'卯':['寅','酉'],'辰':['子','卯'],'巳':['卯','辰'],'午':['巳','午'],'未':['午','酉'],'申':['子','未'],'酉':['卯','申'],'戌':['午','酉'],'亥':['酉','戌'],'子':['子','亥'],'丑':['子','卯']};
+  var _TEN1={'寅':'戊寅','卯':'戊寅','辰':'戊寅','巳':'甲午','午':'甲午','未':'甲午','申':'戊申','酉':'戊申','戌':'戊申','亥':'甲子','子':'甲子','丑':'甲子'};
+  function luckDays(Y,M,D){ try{
+    if(!window.PersonBazi) return null;
+    var rd=window.PersonBazi(Y,M,D,12,0,false,'f'); var dp=rd&&rd.pillars&&rd.pillars.filter(function(p){return p.label==='日柱';})[0]; if(!dp)return null; var gz=dp.ganzhi;
+    var rm=window.PersonBazi(Y,M,D,23,59,false,'f'); var mp=rm&&rm.pillars&&rm.pillars.filter(function(p){return p.label==='月柱';})[0]; if(!mp)return null; var mB=mp.ganzhi.charAt(1);
+    return { ichiryu:((_ICH1[mB]||[]).indexOf(gz.charAt(1))>=0), tensha:(_TEN1[mB]===gz) };
+  }catch(e){ return null; } }
   function detail(d){
     var x=evalDay(state.y,state.m,d); x.d=d; x.wd=new Date(state.y,state.m-1,d).getDay();
     var wd=['日','月','火','水','木','金','土'][x.wd];
@@ -3978,7 +3995,16 @@ function pickFocus(interests){
     // 祝日は日付のすぐ下に、名前が泣き別れ（語中改行）しないよう独立した1行で表示。
     var _holHtml=_hd?'<p class="dmeta dmeta-hol"><span class="hol">㊗ '+_hd+'</span></p>':'';
     var _moonHtml=_mn?'<p class="dmeta">'+_mn.emoji+' '+_mn.name+_mnNote+'</p>':'';
-    var metaHtml=_holHtml+_moonHtml;
+    // 開運日（暦注・縁起の参考）バッジ。詳細画面にのみ表示（カレンダーの表は触らない）。
+    var _ld=luckDays(state.y,state.m,d), _luckHtml='';
+    if(_ld && (_ld.ichiryu||_ld.tensha)){
+      var _lc='';
+      if(_ld.tensha) _lc+='<span class="luck luck-ten" title="天が万物の罪を赦すとされる、暦で最上の吉日">🌟 天赦日</span>';
+      if(_ld.ichiryu) _lc+='<span class="luck luck-ich" title="一粒が万倍に実る＝始めごと・お金ごとに縁起がいい日">✨ 一粒万倍日</span>';
+      var _best=(_ld.tensha&&_ld.ichiryu)?'<span class="luck-best">最強クラスの開運日</span>':'';
+      _luckHtml='<p class="dmeta dmeta-luck">'+_lc+_best+'<span class="luck-note">暦の吉日（縁起・参考）</span></p>';
+    }
+    var metaHtml=_holHtml+_luckHtml+_moonHtml;
     var _an=annivOnDay(state.m,d); if(_an){ metaHtml='<p class="dmeta" style="color:var(--hi);font-weight:700">'+(_an.icon||'💗')+' '+esc(_an.name)+'</p>'+metaHtml; }
     var h='';
     if(x.solo){
