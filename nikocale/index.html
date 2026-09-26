@@ -1499,6 +1499,13 @@ select{
   padding:15px 16px;box-shadow:var(--shadow-1)}
 .anniv:empty{display:none}
 .anniv-h{font-family:var(--maru);font-weight:700;font-size:13px;color:var(--hi);margin:0 0 8px;display:flex;align-items:center;gap:6px;letter-spacing:.03em}
+.anniv-collapse{margin:0}
+.anniv-collapse>summary.anniv-h{margin:0;cursor:pointer;list-style:none;user-select:none;align-items:center}
+.anniv-collapse>summary.anniv-h::-webkit-details-marker{display:none}
+.anniv-collapse>summary.anniv-h::after{content:"▾";margin-left:auto;font-size:11px;color:var(--muted);transition:transform .18s ease}
+.anniv-collapse[open]>summary.anniv-h::after{transform:rotate(180deg)}
+.anniv-cnt{font-family:var(--sans);font-weight:700;font-size:10px;color:var(--panel);background:var(--hi);border-radius:999px;padding:1px 7px;letter-spacing:.02em}
+.anniv-body{padding-top:11px}
 .anniv-p{font-size:12px;color:var(--ink-soft);line-height:1.8;margin:0 0 11px}
 .anniv-p b{color:var(--hi)}
 .anniv-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -1867,8 +1874,8 @@ select{
   <section class="xpromo" id="xpromo">
     <p class="xpromo-lab">Special Reading</p>
     <div class="xbnr">
-      <a class="xb" id="xb1" href="https://unkiyoho.jp" target="_blank" rel="noopener"><img id="xb1img" src="promo1.png" alt="私だけの運気予報（姉妹サービス）" loading="lazy" decoding="async"></a>
-      <a class="xb" id="xb2" href="https://166unmei.com" target="_blank" rel="noopener"><img id="xb2img" src="promo2.png" alt="1.66 奇跡の相性診断（姉妹サービス）" loading="lazy" decoding="async"></a>
+      <a class="xb" id="xb1" href="https://unkiyoho.jp" target="_blank" rel="noopener"><img id="xb1img" src="promo1.png" alt="私だけの運気予報（姉妹サービス）" decoding="async"></a>
+      <a class="xb" id="xb2" href="https://166unmei.com" target="_blank" rel="noopener"><img id="xb2img" src="promo2.png" alt="1.66 奇跡の相性診断（姉妹サービス）" decoding="async"></a>
     </div>
   </section>
 
@@ -3445,6 +3452,10 @@ function pickFocus(interests){
     try{ localStorage.setItem('dc_lastPair', JSON.stringify({mode:state.mode, pp:state.pp, a:state.A, b:(state.mode==='couple'?state.B:null)})); }catch(e){}
     $('out').style.display='block'; state.sel=null; render();
     renderFoot();
+    // 結果表示中は入力フォームと導入フックを畳んで、主役（カレンダー）を見やすく。「別の二人で占う」で再表示。
+    if($('inputCard'))$('inputCard').hidden=true;
+    if($('hook'))$('hook').hidden=true;
+    var _rf=$('reopenForm'); if(_rf){ _rf.hidden=false; _rf.onclick=function(){ if($('inputCard'))$('inputCard').hidden=false; if($('hook'))$('hook').hidden=false; _rf.hidden=true; if($('inputCard'))$('inputCard').scrollIntoView({behavior:'smooth',block:'start'}); }; }
     if(!noScroll){ setTimeout(function(){ (document.querySelector('.mo-nav')||$('modeHead')||$('summary')).scrollIntoView({behavior:'smooth',block:'start'}); pulseResults(); }, 60); }
     // 歓迎モーダルは「未操作で即POP」ではなく、占って使い始めてから3分後に1回だけ表示する
     // （十分使ってもらった後なので驚きにくく、登録にもつながりやすい）。招待/ログイン済み/既読なら showGeneral 側で抑止。
@@ -3934,7 +3945,7 @@ function pickFocus(interests){
     var box=$('anniv'); if(!box)return;
     if(state.mode==='solo'){ box.innerHTML=''; return; }
     var list=getAnnivs();
-    var h='<p class="anniv-h">💗 記念日・大切な日</p>';
+    var h='<details class="anniv-collapse"><summary class="anniv-h">💗 記念日・大切な日'+(list.length?'<span class="anniv-cnt">'+list.length+'件</span>':'')+'</summary><div class="anniv-body">';
     if(list.length){
       h+='<div class="anniv-list">';
       list.forEach(function(it,idx){
@@ -3965,6 +3976,7 @@ function pickFocus(interests){
       +'<label class="aa-lb">③ 日付をえらぶ</label>'
       +'<div class="anniv-row"><input type="date" id="annDate"><button type="button" class="anniv-btn" id="annAdd">＋ 追加</button></div>'
       +'</div>';
+    h+='</div></details>';
     box.innerHTML=h;
     box.querySelectorAll('.ai-del').forEach(function(b){ b.onclick=function(){ delAnniv(+b.getAttribute('data-i')); render(); }; });
     box.querySelectorAll('#iconPick button').forEach(function(b){ b.onclick=function(){ box.querySelectorAll('#iconPick button').forEach(function(o){o.classList.remove('sel');}); b.classList.add('sel'); var tn=$('annTypeName'); if(tn)tn.textContent=b.getAttribute('data-ic')+' '+b.getAttribute('data-lb'); }; });
@@ -5201,6 +5213,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
 
   // デモ用: 相手役の簡易自動応答（本番Firestoreでは不要。実DMは相手端末から届く）
   function scheduleDemoReply(){
+    return; // デモの自動返信は無効（誤解を招くため）。本番は相手端末から実際の返信が届く。
     if(replyTimer) clearTimeout(replyTimer);
     replyTimer=setTimeout(function(){
       if(!cur) return;
