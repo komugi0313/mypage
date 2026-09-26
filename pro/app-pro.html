@@ -2403,7 +2403,8 @@ function meishiHTML(c){
     ${c.timeUnknown?'<div class="mhint" style="margin-top:8px;background:var(--do-w);border-radius:8px;padding:8px 10px"><b>時刻不明モード：</b>時柱は使わず、年月日の3柱で鑑定しています（五行・通変・合冲・吉凶星も3柱で集計）。生まれた時刻が分かると、時柱（将来・本心）や時刻に関わる星まで読めます。<br><span style="color:var(--muted)">※大運・立運は昼12時とみなして概算しています（時刻が分かれば±数ヶ月の範囲で確定します）。</span></div>':''}
     ${(c.timeUnknown&&c.setsuBoundary)?`<div class="mhint" style="margin-top:8px;background:#FDECEC;border:1px solid #E8392B;border-radius:8px;padding:8px 10px;color:#8a1a12"><b>⚠️ 節入り日の可能性があります</b><br>この生年月日は二十四節気の変わり目（節入り日）にあたり、<b>生まれた時刻によって${[c.setsuBoundary.year?`年柱（${c.setsuBoundary.year[0]}↔${c.setsuBoundary.year[1]}）`:'',c.setsuBoundary.month?`月柱（${c.setsuBoundary.month[0]}↔${c.setsuBoundary.month[1]}）`:''].filter(Boolean).join('・')}が変わります</b>。${c.setsuBoundary.month?'月柱が変わると通変星・十二運・蔵干、そして大運の並びまで変わります。':''}${c.setsuBoundary.year?'年柱が変わると干支年・空亡なども変わります。':''}正確な鑑定には出生時刻の確認が必要です（不明の場合は昼12時基準の結果を表示しています）。</div>`:''}
     ${kglos}
-    <div class="mhint">蔵干は地支に隠れた十干。表には<b>各柱の主となる1つ（司令＝いま最も働く蔵干。月柱は月支元命）</b>だけを既定で表示します。流派によって主役の蔵干が異なる場合は、<b>表の下の「蔵干を切り替える」</b>から各柱で選べます（「司令に戻す」で既定へ復帰。切替中の柱は表に小さく「選」が付きます）。選んだ通変星はオンライン・オフライン鑑定にも反映されます。<b>※蔵干の列は「干（隠れた十干）」だけを表示し、その通変星は「地支通変」列に出します（重複表示を避けるため）。通変星のカウントは各柱「天干1つ＋地支（代表蔵干）1つ」だけです。</b>吉凶星：日干基準（天乙貴人・文昌貴人・金与禄・暗禄・羊刃・飛刃・大極貴人・紅艶・天厨貴人・福星貴人・天官貴人・妨害殺)／月支基準（天徳貴人・天徳合・月徳貴人・月徳合・華蓋)／年支日支基準（咸池・駅馬・劫殺・亡神・血刃・囚獄・隔角)／日柱判定（魁罡〈カイゴウ〉・禄馬貴人）＋空亡。該当した柱に表示。</div>
+    ${inyokuAssessHTML(c)}
+    <div class="mhint">蔵干は地支に隠れた十干。表には<b>各柱の主となる1つ（司令＝いま最も働く蔵干。月柱は月支元命）</b>だけを既定で表示します。流派によって主役の蔵干が異なる場合は、<b>表の下の「蔵干を切り替える」</b>から各柱で選べます（「司令に戻す」で既定へ復帰。切替中の柱は表に小さく「選」が付きます）。選んだ通変星はオンライン・オフライン鑑定にも反映されます。<b>※蔵干の列は「干（隠れた十干）」だけを表示し、その通変星は「地支通変」列に出します（重複表示を避けるため）。通変星のカウントは各柱「天干1つ＋地支（代表蔵干）1つ」だけです。</b>吉凶星：日干基準（天乙貴人・文昌貴人・金与禄・暗禄・羊刃・飛刃・大極貴人・紅艶・天厨貴人・福星貴人・天官貴人・妨害殺)／月支基準（天徳貴人・天徳合・月徳貴人・月徳合・華蓋)／年支日支基準（咸池・駅馬・劫殺・亡神・血刃・囚獄・隔角)／日柱判定（魁罡〈カイゴウ〉・禄馬貴人・淫欲殺）＋空亡。該当した柱に表示。</div>
     ${relHTML(c)}
   </section>`;
 }
@@ -2472,6 +2473,40 @@ function natalTs10(c){
     const h=repHidden(p);
     if(h&&k[h.tenStar]!=null)k[h.tenStar]++;});
   return k;
+}
+// 淫欲殺の「器」診断：淫欲殺は“強いエネルギー”。官星・印星・身強という器があれば長所（表現・カリスマ・創造・情熱）として活き、
+// 足りないと衝動・執着に出やすい。命式のバランスから、この人の活かし方を前向きに示す（吉凶の断定はしない）。
+function inyokuAssessHTML(c){
+  if(!inyokuOn(c)) return '';
+  const k=natalTs10(c);
+  const kan=(k.正官+k.偏官)>0, inn=(k.印綬+k.偏印)>0, shoku=(k.食神+k.傷官), st=strengthType(c), strong=(st==='身強'), weak=(st==='身弱');
+  let stars=[]; try{ stars=[...new Set(c.pillars.flatMap(p=>pillarKichi(c,p)))]; }catch(e){}
+  const kouen=stars.includes('紅艶'), kanchi=stars.includes('咸池');
+  const utsuwa=[kan,inn,strong].filter(Boolean).length;
+  const chk=(on,ttl,sub)=>`<div style="display:flex;gap:7px;align-items:flex-start;margin-top:4px"><span style="font-weight:900;color:${on?'#1FA463':'#B08968'};min-width:1.3em">${on?'✓':'・'}</span><span style="font-size:13px;font-weight:700"><b>${ttl}</b>：${on?'あり':'見当たらず'}<small style="color:var(--muted);font-weight:600"> ── ${sub}</small></span></div>`;
+  const verdict = utsuwa>=2
+    ? '<b style="color:#1FA463">器は十分。</b>強い情熱・魅力を<b>表現・カリスマ・創造・探究の武器</b>として活かせるタイプ。個性を仕事や作品に注ぐほど輝きます。'
+    : utsuwa===1
+    ? '<b style="color:var(--do)">器あり。</b>上の“あり”の要素が支えになります。下の点も少し意識すると、情熱が安定して魅力に変わります。'
+    : '<b style="color:var(--do)">意識して活かすタイプ。</b>ルール・節度・“昇華の回路”を持つほど、同じ強い情熱が<b>魅力・実力</b>として実ります（弱点ではなく伸びしろ）。';
+  const cares=[];
+  if(!kan) cares.push('<b>官星（枠）がない</b>→意識してルール・節度・締切など“外の枠”を持つと安定。');
+  if(!inn&&shoku>=3) cares.push('<b>印星が薄く食傷が強い</b>→衝動は作品・発信・学びに“昇華”させると力に。');
+  if(weak) cares.push('<b>身弱</b>→一人で抱えず、支え合える関係・環境で力を発揮。');
+  if(kouen||kanchi) cares.push('<b>'+[kouen?'紅艶':'',kanchi?'咸池（桃花）':''].filter(Boolean).join('・')+'も重なる</b>→異性の縁が濃いぶん、相手をよく見定め節度を保つと縁が実る。');
+  const careHtml = cares.length?`<div style="margin-top:8px;background:var(--do-w,#FBF3E3);border-radius:9px;padding:8px 11px;font-size:12.5px;line-height:1.7"><b style="color:var(--do)">意識すると伸びる点</b><br>・${cares.join('<br>・')}</div>`:'<div style="margin-top:8px;font-size:12.5px;color:#1FA463;font-weight:800">器がよく整っています。強い情熱を安心して活かせる配置です。</div>';
+  return `<details class="adv" style="margin-top:10px"><summary>淫欲殺（インヨクサツ）の活かし方 ── この人の“器”診断</summary>
+    <div style="margin-top:8px;font-size:13px;line-height:1.7">
+      <div style="font-size:12.5px;color:var(--muted);font-weight:700">淫欲殺は「欲望・情熱・衝動性」が強く出る星。<b>それ自体は吉凶ではなく“強いエネルギー”</b>で、下の3つの“器”があるほど長所（表現・カリスマ・創造・情熱）として活きます。</div>
+      <div style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-top:8px">
+        ${chk(kan,'官星（正官・偏官）','道徳・理性でブレーキ')}
+        ${chk(inn,'印星（印綬・偏印）','情熱を知識・創作に昇華')}
+        ${chk(strong,'身強','強い力を扱える器')}
+        <div style="margin-top:7px;font-size:13px;line-height:1.7;border-top:1px dashed var(--line);padding-top:7px">${verdict}</div>
+      </div>
+      ${careHtml}
+      <div style="margin-top:7px;font-size:11.5px"><a href="inyoku.html" target="_blank" rel="noopener" style="color:var(--sui);font-weight:800">教科書「淫欲殺」でくわしく →</a></div>
+    </div></details>`;
 }
 function gogyoHTML(c){
   const dayEl=c.dayMaster.element, start=SHENG.indexOf(dayEl);
@@ -3979,6 +4014,7 @@ function buildChartText(c){
       const mh=repHidden(c.pillars[1]),ms=mh&&mh.tenStar,tm=TSUUHEN_MENTAL[ms];
       return `メンタル傾向（自己理解・セルフケアの参考。医療ではない）:日干${ds}＝${m.傾向}／陥りやすい認知の癖=${m.バイアス}／セルフケア=${m.ケア}${jm?'／日柱の十二運「'+terr+'」から＝'+jm:''}${tm?'／月支元命「'+ms+'」から＝'+tm:''}。${weak}。心が揺れやすい時期の目安=官殺（プレッシャー）が強まる大運・年、配偶宮(日支)や月支を冲する大運・年。落ち着き/一区切りの目安=その大運や節木運(30年の季節)が切り替わる頃（軽い波は年運・月運で心構え、長引くものは大運の節目が目安）。※不調が続く・つらい時は占いより専門家(医療・カウンセラー)へ`;})(),
     (()=>{const ks=[...new Set(c.pillars.flatMap(p=>pillarKichi(c,p)))].filter(k=>KICHI_DESC[k]);return ks.length?`命式の吉凶星の意味:${ks.map(k=>kichiLabel(k)+'='+KICHI_DESC[k]).join(' / ')}`:'';})(),
+    (()=>{if(!inyokuOn(c))return '';const k=natalTs10(c);const kan=(k.正官+k.偏官)>0,inn=(k.印綬+k.偏印)>0,shoku=(k.食神+k.傷官),st=strengthType(c);let stars=[];try{stars=[...new Set(c.pillars.flatMap(p=>pillarKichi(c,p)))];}catch(e){}const kc=stars.includes('紅艶')||stars.includes('咸池');const utsuwa=[kan,inn,st==='身強'].filter(Boolean).length;const care=[!kan?'官星（枠）なし→意識してルール・節度・締切を':'',(!inn&&shoku>=3)?'印星が薄く食傷が強い→衝動は作品・発信・学びに昇華':'',st==='身弱'?'身弱→支え合える環境で活かす':'',kc?'紅艶/咸池も重なる→異性の縁が濃い分、相手を見定め節度を':''].filter(Boolean);return `淫欲殺の器診断（★前向きに活かす前提で読む）:日柱が淫欲殺＝「欲望・情熱・衝動性」が強い星（それ自体は吉凶ではなく強いエネルギー）。器＝官星${kan?'あり':'なし'}・印星${inn?'あり':'なし'}・${st}（器の数${utsuwa}/3）。${utsuwa>=2?'器が十分＝情熱・カリスマ・表現・創造の武器として活かせるタイプとして描く':utsuwa===1?'器あり＝支えを活かしつつ下の点を意識で補うと安定':'意識して活かすタイプ＝節度・昇華の回路で情熱を魅力・実力に（弱点でなく伸びしろとして描く）'}。${care.length?'意識点:'+care.join('／'):'器が整い強い情熱を安心して活かせる配置'}。長所（表現力・カリスマ・創造力・情熱を極める力）を主役に、注意点は“伸びしろ”として前向きに`;})(),
     `立運:${c.startFortune.text}（${c.startFortune.forward?'順行':'逆行'}）`,
     `大運の流れ（10年ごと・干通変/支通変/補う五行）:\n  ${duFlow}`,
     `各大運・年運で巡る通変星の意味（上の流れの各時期に当てはめ、「その年代＝この星が巡る＝こういう時期・こう過ごす」と時系列で具体的に読む）:${Object.keys(TS_FORTUNE).map(s=>s+'＝'+TS_FORTUNE[s].意).join(' ／ ')}`,

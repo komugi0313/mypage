@@ -3,7 +3,7 @@
    鑑定・60干支の教科書を使えるようにする。
    オンライン鑑定（生成AI）だけは通信が要るが、圏外時は端末内の
    オフライン鑑定に自動で切り替わる。 */
-const CACHE = 'shichu-jidou-v199';  /* 桃花殺（咸池）の成立を大運・年運セクションに3スコープ表示：①命式内／②命式＋年運（該当西暦＝モテ期）／③命式＋年運＋大運（該当期間）。三合相対（現行咸池と同基準）でその人固有の桃花支を判定。app-pro.html のみ（表示追加）。※v198=淫欲殺追加。 */
+const CACHE = 'shichu-jidou-v200';  /* 淫欲殺を鑑定＋教科書に拡充：命式に淫欲殺があると『器診断』（官星・印星・身強で長所に、足りなければ伸びしろとして前向き提示）を命式セクション＆詳細鑑定に追加。教科書ページ inyoku.html 新設（長所4・短所4・器・こじれパターン・例題／実在人名は使わず中立例に）。※v199=桃花殺3スコープ。 */
 
 /* 初回訪問時に先読みしてキャッシュするページ一式（このブランドのみ） */
 const ASSETS = [
@@ -15,7 +15,7 @@ const ASSETS = [
   'pklove.js',
   'jikkan.html', 'tsuhensei.html', 'juniun.html', 'zohkan.html', 'kubo.html',
   'daiun-tenkanki.html', 'ritsuun.html', 'nichiza-tenchusatsu.html', 'ijokanshi.html',
-  'kanshi-aisho.html', 'aisho-pattern.html', 'daiun-tsuhen.html', 'setsuboku.html', 'tensen-chichu.html', 'nayin-aisho.html', 'boko-kaichu.html', 'kaikyoku.html'
+  'kanshi-aisho.html', 'aisho-pattern.html', 'daiun-tsuhen.html', 'setsuboku.html', 'tensen-chichu.html', 'nayin-aisho.html', 'boko-kaichu.html', 'kaikyoku.html', 'inyoku.html'
 ];
 
 self.addEventListener('install', (e) => {
