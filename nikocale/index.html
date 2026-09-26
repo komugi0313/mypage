@@ -854,6 +854,11 @@ select{
 }
 .save-btn:hover{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-2)}
 .save-cap{font-size:10.5px;color:var(--muted);margin:8px 0 0;line-height:1.5}
+/* 名前は必須：未入力の間は赤く染めて「入れないと進めない」と一目でわかるように（“必須”の文字は使わない） */
+.namein.need{border-color:var(--bad);background:color-mix(in oklab,var(--bad) 8%,var(--panel));box-shadow:0 0 0 3px color-mix(in oklab,var(--bad) 15%,transparent)}
+.namein.need::placeholder{color:color-mix(in oklab,var(--bad) 72%,var(--muted));opacity:1}
+@keyframes nameShake{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(2px)}30%,50%,70%{transform:translateX(-4px)}40%,60%{transform:translateX(4px)}}
+.namein.shake{animation:nameShake .38s}
 
 /* ===== 姉妹サイト誘導：細い画像バナー（案1） ===== */
 .xpromo{margin:22px 0 4px}
@@ -1669,7 +1674,7 @@ select{
         <div class="seg"><button type="button" data-p="a" data-sex="f" aria-pressed="true">女性</button><button type="button" data-p="a" data-sex="m" aria-pressed="false">男性</button></div>
       </div>
       <div class="saveline">
-        <input id="aname" placeholder="名前をつけて保存（例：ゆうこ）" maxlength="16">
+        <input id="aname" class="namein" placeholder="お名前（例：ゆうこ）" maxlength="16">
         <button type="button" class="save-btn" id="aSave">＋保存</button>
       </div>
       <p class="save-cap">この端末だけに保存。次回はプルダウンから呼び出せます（🗑で削除）。</p>
@@ -1687,7 +1692,7 @@ select{
         <div class="seg"><button type="button" data-p="b" data-sex="f" aria-pressed="false">女性</button><button type="button" data-p="b" data-sex="m" aria-pressed="true">男性</button></div>
       </div>
       <div class="saveline">
-        <input id="bname" placeholder="名前をつけて保存（例：みき）" maxlength="16">
+        <input id="bname" class="namein" placeholder="お名前（例：みき）" maxlength="16">
         <button type="button" class="save-btn" id="bSave">＋保存</button>
       </div>
     </div>
@@ -3317,13 +3322,19 @@ function pickFocus(interests){
   function loadPeople(){ try{return JSON.parse(localStorage.getItem('dc_people')||'[]');}catch(e){return [];} }
   function savePeople(a){ try{localStorage.setItem('dc_people',JSON.stringify(a));}catch(e){} }
   function refreshSaved(){ var ppl=loadPeople(); var has=ppl.length>0; ['a','b'].forEach(function(x){ var sel=$(x+'Saved'); if(!sel)return; sel.innerHTML='<option value="">― 保存リスト ―</option>'; ppl.forEach(function(p,i){ sel.appendChild(opt(String(i), p.name)); }); var rc=$(x+'Recall'), lb=$(x+'SavedLab'); if(rc)rc.hidden=!has; if(lb)lb.hidden=!has; }); }
-  function setPerson(x,p){ $(x+'y').value=p.y; $(x+'m').value=p.m; $(x+'d').value=p.d; $(x+'h').value=(p.h==null?'':p.h); var _mi=(p.mi==null?'':Math.round(p.mi/5)*5); if(_mi===60)_mi=55; $(x+'i').value=_mi; $(x+'tu').checked=!!p.tu; if($(x+'name'))$(x+'name').value=p.name||''; state.p[x].sex=p.sex||'f'; document.querySelectorAll('.seg button[data-p="'+x+'"]').forEach(function(o){o.setAttribute('aria-pressed', o.getAttribute('data-sex')===state.p[x].sex?'true':'false');}); refreshDays(x); syncTimeUnknown(x); }
+  function setPerson(x,p){ $(x+'y').value=p.y; $(x+'m').value=p.m; $(x+'d').value=p.d; $(x+'h').value=(p.h==null?'':p.h); var _mi=(p.mi==null?'':Math.round(p.mi/5)*5); if(_mi===60)_mi=55; $(x+'i').value=_mi; $(x+'tu').checked=!!p.tu; if($(x+'name'))$(x+'name').value=p.name||''; try{markNameNeed(x);}catch(e){} state.p[x].sex=p.sex||'f'; document.querySelectorAll('.seg button[data-p="'+x+'"]').forEach(function(o){o.setAttribute('aria-pressed', o.getAttribute('data-sex')===state.p[x].sex?'true':'false');}); refreshDays(x); syncTimeUnknown(x); }
   ['a','b'].forEach(function(x){
     var sel=$(x+'Saved'); if(sel)sel.onchange=function(){ if(sel.value==='')return; var p=loadPeople()[+sel.value]; if(p)setPerson(x,p); };
     var sv=$(x+'Save'); if(sv)sv.onclick=function(){ var nm=(($(x+'name')&&$(x+'name').value)||'').trim(); if(!nm){alert('保存する名前を入力してください。');return;} var pp=person(x); if(!pp.y||!pp.m||!pp.d){alert('生年月日（年・月・日）を選んでください。');return;} var arr=loadPeople(); var idx=-1; for(var i=0;i<arr.length;i++){if(arr[i].name===nm){idx=i;break;}} if(idx>=0)arr[idx]=pp; else arr.push(pp); savePeople(arr); refreshSaved(); var sl=$(x+'Saved'); if(sl){for(var j=0;j<sl.options.length;j++){if(sl.options[j].textContent===nm)sl.selectedIndex=j;}} alert('「'+nm+'」を保存しました。次からリストで呼び出せます。'); };
     var dl=$(x+'Del'); if(dl)dl.onclick=function(){ var sl=$(x+'Saved'); if(!sl||sl.value===''){alert('削除する人を「保存リスト」から選んでください。');return;} var arr=loadPeople(); var p=arr[+sl.value]; if(p&&confirm('「'+p.name+'」を保存リストから削除しますか？')){ arr.splice(+sl.value,1); savePeople(arr); refreshSaved(); } };
+    // 名前は必須。空の間は赤く強調（入力したら解除）
+    var nm=$(x+'name'); if(nm){ nm.addEventListener('input', function(){ markNameNeed(x); }); markNameNeed(x); }
   });
   refreshSaved();
+  /* 名前必須：空なら赤（need）、入っていれば解除 */
+  function markNameNeed(x){ var inp=$(x+'name'); if(!inp)return; if((inp.value||'').trim()){ inp.classList.remove('need'); } else { inp.classList.add('need'); } }
+  /* build時の必須チェック：未入力なら赤＋ゆれ＋フォーカスで進行を止める */
+  function reqName(x){ var inp=$(x+'name'); var v=(inp&&inp.value||'').trim(); if(v){ if(inp)inp.classList.remove('need'); return true; } if(inp){ inp.classList.add('need'); try{inp.scrollIntoView({behavior:'smooth',block:'center'});}catch(e){} try{inp.focus({preventScroll:true});}catch(e){inp.focus();} inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake'); } return false; }
   function rel(day, per){
     var sr=KE.stemRel(day.stem, per.stem), br=KE.branchRel(day.branch, per.branch);
     var sc=(ST[sr]||0)+(BR[br]||0), good=[], bad=[];
@@ -3414,11 +3425,13 @@ function pickFocus(interests){
   function build(noScroll){
     readBrand(); applyBrand();
     state.A=person('a'); if(!state.A.y||!state.A.m||!state.A.d){ alert('あなたの生年月日（年・月・日）を選んでください。'); return; }
+    if(!noScroll && !reqName('a')) return;   // 名前は必須（手動表示時のみ。招待URL等の自動表示は妨げない）
     // 一人用の開運鑑定は登録者限定（二人の相性は無料）
     if(state.mode==='solo' && !ccLoggedIn()){ if(window.NicoAuth && window.NicoAuth.requireAuth){ window.NicoAuth.requireAuth(function(){ build(noScroll); }); } return; }
     state.pA=KE.pillar(state.A.y,state.A.m,state.A.d);
     if(state.mode==='couple'){
       state.B=person('b'); if(!state.B.y||!state.B.m||!state.B.d){ alert('お相手の生年月日を選んでください。'); return; }
+      if(!noScroll && !reqName('b')) return;   // お相手の名前も必須（手動表示時のみ）
       state.pB=KE.pillar(state.B.y,state.B.m,state.B.d);
     }
     try{ localStorage.setItem('dc_lastPair', JSON.stringify({mode:state.mode, pp:state.pp, a:state.A, b:(state.mode==='couple'?state.B:null)})); }catch(e){}
