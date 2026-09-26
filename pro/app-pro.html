@@ -3159,7 +3159,11 @@ function jyuZone(c){
   const spYears=(c.annualFortunes||[]).filter(a=>a.year>=nowY&&(spouse.includes(a.tenStar)||spouse.includes(tenStarOf(ds,HONKI[a.branch])))).map(a=>a.year).slice(0,6);
   const dBranch=c.pillars[2].branch, kango=[],shigou=[],chong=[];
   (c.annualFortunes||[]).filter(a=>a.year>=nowY&&a.year<=nowY+12).forEach(a=>{if(KANGO[ds]===a.stem)kango.push(a.year); if(RIKUGO[dBranch]===a.branch)shigou.push(a.year); if(typeof isChong==='function'&&isChong(dBranch,a.branch))chong.push(a.year);});
-  return {spouse,role:spouseRole(c),pos,zoneDu,phases,clipped,spYears,kango,shigou,chong};
+  // 天地徳合の年（巡る年運の干支が命式と干合＋支合）＝結婚・出産・良縁など人生の大きな縁の年
+  const tenchi=(c.annualFortunes||[]).filter(a=>a.year>=nowY&&a.year<=nowY+15&&(typeof tokugoVs==='function')&&tokugoVs(a.stem,a.branch,c).length>0).map(a=>a.year).slice(0,4);
+  // 三合完成の年（年運で三合が成立）＝人生が大きく動く転機（結婚・家族形成など）
+  let sango=[];try{const sc=kaikyokuScan(c);sango=(sc.periods||[]).filter(pr=>pr.when==='年運'&&/三合/.test(pr.kind||'')&&(pr.year0||pr.year)>=nowY).map(pr=>pr.year0||pr.year).slice(0,4);}catch(e){}
+  return {spouse,role:spouseRole(c),pos,zoneDu,phases,clipped,spYears,kango,shigou,chong,tenchi,sango};
 }
 function jyuZoneHTML(c){
   let z; try{z=jyuZone(c);}catch(e){return '';}
@@ -3178,9 +3182,11 @@ function jyuZoneHTML(c){
       <div style="margin-top:7px;font-size:12.5px;font-weight:800;color:var(--ka)">寿ゾーン（起承転結の4年）</div>
       ${ph}
     </div>
-    ${(z.spYears.length||z.kango.length||z.shigou.length||z.chong.length)?`<div style="margin-top:8px;background:var(--bg);border-radius:10px;padding:8px 11px">
+    ${(z.spYears.length||z.kango.length||z.shigou.length||z.chong.length||z.tenchi.length||z.sango.length)?`<div style="margin-top:8px;background:var(--bg);border-radius:10px;padding:8px 11px">
       <div style="font-size:12px;font-weight:900;color:var(--ink2);margin-bottom:3px">ご縁が動きやすい年（今後）</div>
-      ${z.spYears.length?`<div style="margin-top:2px;font-size:12.5px"><span style="display:inline-block;background:var(--ka);color:#fff;border-radius:6px;padding:0 8px;font-weight:800;margin-right:6px">配偶者星</span>${z.spYears.map(y=>y+'年').join('・')} <span style="color:var(--muted)">＝結婚の風が吹く年</span></div>`:''}
+      ${z.tenchi.length?`<div style="margin-top:2px;font-size:12.5px"><span style="display:inline-block;background:#C2185B;color:#fff;border-radius:6px;padding:0 8px;font-weight:900;margin-right:6px">天地徳合</span>${z.tenchi.map(y=>y+'年').join('・')} <span style="color:var(--muted)">＝干合＋支合が同時に成立。結婚・出産・良縁など<b>人生の大きなご縁</b>を受け取りやすい年（最上級）</span></div>`:''}
+      ${z.sango.length?`<div style="margin-top:3px;font-size:12.5px"><span style="display:inline-block;background:#1E7A45;color:#fff;border-radius:6px;padding:0 8px;font-weight:900;margin-right:6px">三合完成</span>${z.sango.map(y=>y+'年').join('・')} <span style="color:var(--muted)">＝三つの支がそろい大きなエネルギーに。結婚・家族形成など<b>人生が大きく動く転機</b>の年</span></div>`:''}
+      ${z.spYears.length?`<div style="margin-top:3px;font-size:12.5px"><span style="display:inline-block;background:var(--ka);color:#fff;border-radius:6px;padding:0 8px;font-weight:800;margin-right:6px">配偶者星</span>${z.spYears.map(y=>y+'年').join('・')} <span style="color:var(--muted)">＝結婚の風が吹く年</span></div>`:''}
       ${sign('干合',z.kango,'強く惹かれる・運命的な出会いの年','#B4472E')}
       ${sign('支合',z.shigou,'安定・結婚に発展しやすい年','#2e7d55')}
       ${sign('冲',z.chong,'関係の変化・転換の年（別れか新しい縁か）','#8A6D3B')}
