@@ -661,6 +661,10 @@
     .past-memo{ font-size:8.6px; line-height:1.4; }
     /* A4横1枚に確実に収める微調整 */
     .sheet{ padding:5mm 5mm 9mm; }  /* 命式表：下だけ9mm確保（表の一番下の線がプリンタの非印字域で切れないように）。フル1枚には収まる */
+    /* 命式表は内容量が多い人ほど背が高くなる。固定210mm＋overflow:hiddenだと下端（時柱の下線）が切れるので、
+       高さは内容なり(auto)にして切り取らない(overflow:visible)。さらに JS(fitPrintSheet)が内容量に応じて
+       zoom(--mfit)を掛け、A4横1枚に必ず収める＝時柱の下線まで必ず印刷される。 */
+    #sheet{ height:auto !important; min-height:0 !important; max-height:none !important; overflow:visible !important; zoom:var(--mfit,1); }
     /* 鑑定書は「名前付きページ」で上下左右に余白を持たせる（継ぎ目に間ができ、2枚目以降も端に詰まらない）。
        命式表はA4フルブリード(margin:0)のままなのではみ出さない。 */
     .sheet-read{ page:pageRead; padding:6mm; } /* 鑑定書：装飾なしなので通常余白でOK（@page 8mm と合わせて読みやすい余白） */
@@ -2994,6 +2998,27 @@ window.KANSHI60_DETAIL={
   window.addEventListener('resize', fitSheet);
   if(window.ResizeObserver){ try{ new ResizeObserver(fitSheet).observe(document.getElementById('paper')); }catch(e){} }
   setTimeout(fitSheet,60); fitSheet();
+  // 印刷時の命式表フィット：内容量が多い人ほど命式表が高くなり、A4横1枚の印字域を超えると
+  //   一番下（時柱の下線）が切れる。内容の自然な高さを測り、1枚に収まる縮小率(--mfit)を計算して
+  //   印刷CSSの #sheet{ zoom:var(--mfit) } に渡す。※短い命式は1.0（縮小なし）＝見た目そのまま。
+  function fitPrintSheet(){
+    try{
+      var sheet=document.getElementById('sheet'); if(!sheet) return;
+      var prevT=sheet.style.transform, prevZ=sheet.style.zoom;
+      sheet.style.transform='none'; sheet.style.zoom='';       // 自然な高さを測る
+      var w=sheet.offsetWidth||1180, h=sheet.scrollHeight;      // この幅での中身の自然高さ
+      sheet.style.transform=prevT; sheet.style.zoom=prevZ;
+      var pageH=w*210/297;                                      // この幅でのA4横1枚の高さ
+      // 画面フォントは印刷より大きい(印刷は@media printで圧縮)ため、画面比 ×0.93 を印刷実比の目安とする。
+      // さらに安全余白(210→205mm)を見込み、必ず下線まで入るよう気持ち強めに縮小する。
+      var printRatio = (h/pageH) * 0.93 * (210/205);
+      var mfit = printRatio>1 ? (1/printRatio) : 1;
+      mfit = Math.max(0.78, Math.min(1, mfit));
+      document.documentElement.style.setProperty('--mfit', String(Math.floor(mfit*1000)/1000));
+    }catch(e){}
+  }
+  fitPrintSheet(); setTimeout(fitPrintSheet, 120);
+  window.addEventListener('beforeprint', fitPrintSheet);
   if(typeof paginateReadingScreen==='function') paginateReadingScreen();   // 初期表示：鑑定書の空A4カードを出す
   // 印刷（Ctrl+P/共有）時：画面用の縮小インラインstyleを解除 → A4横2枚で崩れないように
   function clearFit(){ var w=document.getElementById('sheetsWrap'), pa=document.getElementById('paper');
