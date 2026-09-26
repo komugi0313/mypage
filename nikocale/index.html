@@ -40,8 +40,8 @@
   }catch(e){}
 })();
 </script>
-<script>/* DM/チャットのON/OFF。false=OFF（チャットはLINE等に任せ、予定共有＋カレンダー追加に集中）。将来サーバー連携時にtrueで復活 */
-window.NICO_DM_ON=false;</script>
+<script>/* DM/チャットのON/OFF。true=ON（LINEのような純チャット）。予定提案などの複雑機能は外してある */
+window.NICO_DM_ON=true;</script>
 <script>
 (function(){
   var GA_ID=''; /* 例：'G-XXXXXXXXXX' */
@@ -4610,7 +4610,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       function dismiss(){ dim.remove(); try{sessionStorage.setItem('dc_invite_seen','1');}catch(e){} }
       dim.querySelector('.nkiv-x').onclick=dismiss;
       dim.querySelector('.nkiv-sec').onclick=dismiss;
-      dim.querySelector('.nkiv-cta').onclick=function(){ dismiss(); try{ window.NicoAuth.requireAuth(function(){ if(window.NICO_DM_ON&&window.NicoChat){ window.NicoChat.open(); } else { try{ var _cc=document.getElementById('charCard'); if(_cc)_cc.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} } }); }catch(e){} };
+      dim.querySelector('.nkiv-cta').onclick=function(){ dismiss(); try{ window.NicoAuth.requireAuth(function(){ try{ var _cc=document.getElementById('charCard'); if(_cc)_cc.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }); }catch(e){} };
       document.body.appendChild(dim);
     }catch(e){}
   })();
@@ -4868,9 +4868,6 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     if(ChatBackend.list(roomId).length) return;
     var base=Date.now()-3600000;
     ChatBackend.send(roomId,{from:cur.otherUid, text:'ニコカレ見たよ！相性いい日あったね😊', ts:base});
-    var demo={ymd:defaultYmd(), time:'19:00', mark:'◎', title:'渋谷でごはん', status:'proposed', by:cur.otherUid, at:base+40000};
-    savePlan(roomId, demo);
-    ChatBackend.send(roomId,{from:cur.otherUid, kind:'plan', plan:demo, ts:base+40000});
   }
 
   function build(){
@@ -4883,7 +4880,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     var otherReadIdx=readMap[cur.otherUid]? ids.indexOf(readMap[cur.otherUid]) : -1; // 相手が既読にした位置
 
     var planHtml='';
-    if(plan){
+    if(false && plan){   // 純チャット化：予定ピンは出さない（予定共有機能はオフ）
       var conf=plan.status==='confirmed', mineBy=plan.by===cur.me;
       var labelTxt=conf?'会う日が決まりました':(mineBy?'調整中 — 相手の返事待ち':'調整中 — 提案が届いています');
       planHtml=''
@@ -4949,18 +4946,10 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
         +'<button data-q="何時にする？">何時にする？</button>'
         +'<button data-q="今向かってるよ">今向かってる</button>'
       +'</div>'
-      +'<div class="dm-attach" id="dmAttach">'+'<button data-att="photo">🖼️ 写真</button>'+'<button data-att="video">🎥 動画</button>'+'<button data-att="plan">📅 予定を提案</button>'+'</div>'+'<input type="file" accept="image/*" id="dmPhoto" style="display:none">'+'<input type="file" accept="video/*" id="dmVideo" style="display:none">'+'<div class="dm-comp">'
+      +'<div class="dm-attach" id="dmAttach">'+'<button data-att="photo">🖼️ 写真</button>'+'<button data-att="video">🎥 動画</button>'+'</div>'+'<input type="file" accept="image/*" id="dmPhoto" style="display:none">'+'<input type="file" accept="video/*" id="dmVideo" style="display:none">'+'<div class="dm-comp">'
         +'<button class="dm-plus" id="dmPlus" aria-label="添付">＋</button>'
         +'<textarea class="dm-in" id="dmIn" rows="1" placeholder="メッセージを入力"></textarea>'
         +'<button class="dm-send" id="dmSend" aria-label="送信">➤</button>'
-      +'</div>'
-      +'<div class="dm-sheet" id="dmSheet">'
-        +'<h4>ふたりの予定を提案</h4>'
-        +'<p>相性のいい日を選んで送ると、相手のカレンダーにも追加できます。</p>'
-        +'<div class="frow"><div><label>日付</label><input type="date" id="dmDate" value="'+isoOf((loadPlan(cur.roomId)||{}).ymd||defaultYmd())+'"></div><div><label>時刻</label><input type="time" id="dmTime" value="'+esc((loadPlan(cur.roomId)||{}).time||'19:00')+'"></div></div>'
-        +'<label>ひとこと（任意）</label><input type="text" id="dmTitle" placeholder="例）渋谷でごはん" value="">'
-        +'<button class="go" id="dmPropose">この予定を送る</button>'
-        +'<button class="cancel" id="dmSheetX">閉じる</button>'
       +'</div>'
       +'</div>';
     wire();
