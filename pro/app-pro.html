@@ -3239,19 +3239,43 @@ function relWobble(c){
   const shokuMany=(grp.食傷||0)>=3, shokuTaika=(grp.食傷||0)>=4;
   return {teigo:teigo.slice(0,5),togo:[...new Set(togo)].slice(0,5),ninchi,ds,fem,kaStrong,suiDay,kinNone,shokuMany,shokuTaika};
 }
+// 浮気性の男性の命式（後編①〜④）＝男性のみ。忌神・劫財・比劫争財・咸池/沐浴＋官弱で判定。傾向＋対策、非断定。
+function maleUwaki(c){
+  try{
+    if(!(c.birth&&c.birth.sex==='male'))return [];
+    const dayEl=c.dayMaster.element;
+    const GEN={木:'火',火:'土',土:'金',金:'水',水:'木'},KOKU={木:'土',火:'金',土:'水',金:'木',水:'火'};
+    const shokuEl=GEN[dayEl],zaiEl=KOKU[dayEl];
+    const cnt=natalTsCounts(c),t10=natalTs10(c);
+    let assess=null;try{assess=_kkAssess(c);}catch(e){}
+    const fav=el=>{try{return assess?assess.assess(el).fav:'中';}catch(e){return '中';}};
+    const kanWeak=(cnt.官殺||0)<=1;
+    const out=[];
+    if((cnt.食傷||0)>=3&&fav(shokuEl)==='忌')out.push('<b>食傷が多め（忌神）</b>＝自制の官星・思慮の印星が弱いと、遊び心や欲望を抑えにくい傾向。情熱・表現を仕事や趣味に注ぐと大きな魅力になります。');
+    if((cnt.財||0)>=3&&kanWeak)out.push('<b>財星が多め＋官星が弱め</b>＝情に流されやすく、女性・金銭で脇が甘くなりがち。財を動かす運の時ほど、約束と一線を意識すると安定します。');
+    const gou=t10.劫財||0,hikou=cnt.比劫||0,spouseEl=(typeof BR_EL!=='undefined')?BR_EL[c.pillars[2].branch]:'';
+    if(gou>=2&&hikou>=3&&spouseEl===zaiEl)out.push('<b>劫財が強く「比劫争財」</b>＝妻の座（日支）の財を、多い比劫が奪い合う形。独占より信頼、手にした縁やお金を守る意識を大切にすると家庭が安定します。');
+    else if(gou>=2&&hikou>=4)out.push('<b>劫財が強め</b>＝負けん気・独占欲が出やすい面。勝ち負けより協力・尊重の姿勢だと関係が円満に。');
+    let charmPos=false;try{[1,2].forEach(i=>{const p=c.pillars[i];if((pillarKichi(c,p)||[]).includes('咸池')||p.terrain==='沐浴')charmPos=true;});}catch(e){}
+    if(charmPos&&kanWeak)out.push('<b>桃花（咸池）／沐浴が日・月柱＋官星が弱め</b>＝性的魅力でモテやすく興味も動きやすい。魅力は活かしつつ、大切な人への誠実さを言葉と行動で示すと信頼が続きます。');
+    return out;
+  }catch(e){return [];}
+}
 const NINCHI_NOTE={
   乙:'乙（草花）は空気を読み本音を我慢しやすいタイプ。「わかってくれる人」に心が動きやすいので、<b>不満を少しずつ言葉にして共感を分かち合える関係</b>を意識すると安定します。',
   丁:'丁（ろうそくの灯り）は情が深く一途で、「大切にされている実感」を重視します。記念日・会話を大事にし、<b>気持ちを軽く流されない関わり</b>があると満たされます。',
   辛:'辛（宝石）は繊細で誇りを大切にし、「ちゃんと価値を見てもらえているか」を気にします。<b>変化・努力に気づいて言葉にしてもらえる関係</b>だと心が満ちます。'};
 function relWobbleHTML(c){
   let z; try{z=relWobble(c);}catch(e){return '';}
-  if(!z||(!z.teigo.length&&!z.togo.length&&!z.ninchi&&!z.kaStrong&&!z.suiDay&&!z.shokuMany)) return '';
+  let _male=[]; try{_male=maleUwaki(c);}catch(e){}
+  if(!z||(!z.teigo.length&&!z.togo.length&&!z.ninchi&&!z.kaStrong&&!z.suiDay&&!z.shokuMany&&!_male.length)) return '';
   const chip=(lbl,col)=>`<span style="display:inline-block;background:${col};color:#fff;border-radius:6px;padding:0 8px;font-weight:800;margin-right:6px">${lbl}</span>`;
   const rows=[];
   if(z.teigo.length)rows.push(`<div style="margin-top:3px;font-size:12.5px">${chip('壬丁の合','#B5721A')}${z.teigo.map(y=>y+'年').join('・')} <span style="color:var(--muted)">＝気持ちが育ち距離が縮まりやすい年。心が冷えている時は、外の人が“自分を照らす人”に見えやすいので意識を</span></div>`);
   if(z.togo.length)rows.push(`<div style="margin-top:3px;font-size:12.5px">${chip('妬合／争合','#B5721A')}${z.togo.map(y=>y+'年').join('・')} <span style="color:var(--muted)">＝一つの縁に別の縁が割り込みやすい年。小さなきっかけから関係が複雑になりやすいので、距離感を大切に</span></div>`);
   const ninchi=z.ninchi?`<div style="margin-top:7px;font-size:12.5px;line-height:1.8"><b style="color:var(--accent,#8a6d3b)">日主「${z.ninchi}」の承認欲求</b>：${NINCHI_NOTE[z.ninchi]}</div>`:'';
   const kishitsu=[];
+  _male.forEach(function(s){kishitsu.push(s);});
   if(z.kaStrong)kishitsu.push('<b>火が強め</b>＝情熱的で魅力的な反面、刺激を求めて目移りしやすい面も'+(z.fem?'':'（特に男性は衝動的な恋に走りやすい）')+'。その情熱を一つの関係に注ぐと深い絆になります。');
   if(z.suiDay)kishitsu.push('<b>日主が水（'+z.ds+'）</b>＝感受性豊かでモテるが、自由・流されやすい面も'+(z.kinNone?'（金の星が無く、特に情に流されやすい）':'')+'。「本当に大切な相手か」を一呼吸おいて見極めると安心。');
   if(z.shokuMany)kishitsu.push('<b>食傷が'+(z.shokuTaika?'大過（多すぎ）':'強め')+'</b>＝感性豊かで刺激・変化を好むタイプ。刺激は趣味・表現・グルメなど恋愛以外でも満たすと、心地よくバランスが取れます。');
@@ -4537,7 +4561,8 @@ function localAnswer(c,worry){
     (()=>{let z;try{z=jyuZone(c);}catch(e){return;}if(z&&z.phases){L.push(`**寿ゾーン（恋愛開花期）**：配偶者星が巡る大運の最初の4年＝**${z.phases[0][1]}〜${z.phases[3][1]}年**が、恋愛・結婚のエネルギーが最大化する4年間です。起（${z.phases[0][1]}年＝出会い増）→承（${z.phases[1][1]}年＝交際・安定）→転（${z.phases[2][1]}年＝入籍など決断）→結（${z.phases[3][1]}年＝結婚・同棲など形に）の流れで読みます。${z.kango.length?'また'+z.kango.slice(0,3).join('・')+'年は干合＝運命的な出会いの年。':''}${z.shigou.length?z.shigou.slice(0,3).join('・')+'年は支合＝安定・結婚に発展しやすい年。':''}`);}})();
     if(years.length)L.push(`近い年では**${years.slice(0,5).join('・')}**あたりが、縁・出会いの星が巡って動きやすい年です。`);
     if(!dus.length&&!years.length)L.push('近くに目立つ星の巡りはありませんが、日々の出会いを大切にすると縁は広がります。断定はできないので、気になる年は詳細鑑定で確かめてください。');
-    (()=>{let z;try{z=relWobble(c);}catch(e){return;}if(!z||(!z.teigo.length&&!z.togo.length&&!z.ninchi&&!z.kaStrong&&!z.suiDay&&!z.shokuMany))return;L.push('【関係が揺れやすい・気をつけたい時期（お守り）】');
+    (()=>{let z;try{z=relWobble(c);}catch(e){return;}let _ml=[];try{_ml=maleUwaki(c);}catch(e){}if(!z||(!z.teigo.length&&!z.togo.length&&!z.ninchi&&!z.kaStrong&&!z.suiDay&&!z.shokuMany&&!_ml.length))return;L.push('【関係が揺れやすい・気をつけたい時期（お守り）】');
+      _ml.forEach(function(s){L.push('- '+s.replace(/<\/?b>/g,'**'));});
       if(z.kaStrong)L.push(`**火が強め**で情熱的な魅力がある反面、刺激を求めて目移りしやすい面も${z.fem?'':'（特に男性は衝動的な恋に走りやすい）'}。情熱を一つの関係に注ぐと深い絆になります。`);
       if(z.suiDay)L.push(`**日主が水（${z.ds}）**で感受性豊かでモテる反面、自由・流されやすい面も${z.kinNone?'（金の星が無く特に情に流されやすい）':''}。大切な相手か一呼吸おいて見極めると安心です。`);
       if(z.shokuMany)L.push(`**食傷が${z.shokuTaika?'大過':'強め'}**で刺激・変化を好むタイプ。刺激は趣味・表現・グルメなど恋愛以外でも満たすとバランスが取れます。`);if(z.teigo.length)L.push(`**${z.teigo.join('・')}**年は**壬丁の合**が巡り、気持ちが育ち距離が縮まりやすい年。心が冷えている時ほど外の人が魅力的に見えやすいので意識を。`);if(z.togo.length)L.push(`**${z.togo.join('・')}**年は**妬合／争合**で、一つの縁に別の縁が割り込みやすい年。小さなきっかけから関係が複雑になりやすいので距離感を大切に。`);if(z.ninchi)L.push(`日主「**${z.ninchi}**」は承認欲求が満たされないと外の優しさに動きやすいタイプ。${z.ninchi==='乙'?'不満を少しずつ言葉にし、共感を分かち合える関係を。':z.ninchi==='丁'?'記念日や会話を大事にし、大切にされている実感を持てる関わりを。':'変化・努力に気づいて言葉にしてもらえる関係を。'}運気が来ても必ず浮気するわけではなく、知っておくだけで防げます。`);})();
