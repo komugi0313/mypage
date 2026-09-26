@@ -3020,6 +3020,50 @@ function relHTML(c){
     ${key}
   </div>`;
 }
+// 桃花殺（咸池）の成立を3スコープで判定：命式内／命式＋年運／命式＋年運＋大運。
+// ターゲット支＝年支・日支の三合局から（現行の咸池＝matchKichi4 と同じ基準：子午卯酉のうちその人固有の支）。
+function taohuaScope(c){
+  const PLAB=['年柱','月柱','日柱','時柱'];
+  const bases=[c.pillars[0].branch, c.pillars[2].branch];
+  const targets=[...new Set(bases.map(b=>{var g=SANGO_KEY[b];return g&&KICHI_NICHI[g]?KICHI_NICHI[g].咸池:null;}).filter(Boolean))];
+  if(!targets.length) return null;
+  const natal=[]; c.pillars.forEach((p,i)=>{ if(targets.includes(p.branch)) natal.push({label:PLAB[i], branch:p.branch}); });
+  const nowY=(c.now&&c.now.year)||null;
+  const years=(c.annualFortunes||[]).filter(a=>targets.includes(a.branch));
+  const dus=[...(c.decadeFortunes||[])].filter(d=>targets.includes(d.branch));
+  return {targets, natal, years, dus, nowY};
+}
+function taohuaHTML(c){
+  const t=taohuaScope(c); if(!t) return '';
+  const ec2=el=>ec(el);
+  const bchip=b=>`<span style="display:inline-block;background:${ec2(BR_EL[b]||'木')};color:#fff;border-radius:6px;padding:0 7px;font-weight:900;font-size:12.5px">${b}</span>`;
+  const tgt=t.targets.map(bchip).join(' ');
+  // ① 命式内
+  const natalLine=t.natal.length
+    ? `<b style="color:var(--ka)">成立</b>：${t.natal.map(n=>n.label+'＝'+n.branch).join('・')} が桃花。<b>生まれ持った魅力</b>で、いつも自然と人を惹きつけます。`
+    : `命式内では<b>未成立</b>。巡ってくる運（年運・大運）で魅力が高まるタイプです。`;
+  // ② 命式＋年運
+  const nowY=t.nowY;
+  const upY=t.years.filter(a=>!nowY||a.year>=nowY);
+  const showY=(upY.length?upY:t.years).slice(0,8);
+  const yLine=showY.length
+    ? `<b style="color:var(--ka)">成立</b>：${showY.map(a=>`<b>${a.year}年</b>（${a.ganzhi}）`).join('・')}${((upY.length||t.years.length)>showY.length)?' ほか':''}。<b>その年は魅力・出会いが動きやすい“モテ期”</b>です。`
+    : `この年運の範囲では巡りません。`;
+  // ③ 命式＋年運＋大運
+  const dLine=t.dus.length
+    ? `<b style="color:var(--ka)">成立</b>：${t.dus.map(d=>`<b>${d.startAge}〜${d.endAge}才</b>（${d.startYear}年〜・${d.ganzhi}）`).join('・')}。<b>この10年は桃花の気配が続き、人気・ご縁が育ちやすい追い風</b>です。`
+    : `この大運では巡りません。`;
+  const box=(n,ttl,body)=>`<div style="background:#fff;border:1px solid var(--line);border-left:5px solid var(--ka);border-radius:11px;padding:9px 12px;margin-top:8px">
+    <div style="font-weight:900;font-size:13px;color:var(--ink2)"><span style="background:var(--ka);color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;margin-right:6px">${n}</span>${ttl}</div>
+    <div style="font-size:13px;font-weight:700;margin-top:4px;line-height:1.7">${body}</div></div>`;
+  return `<div class="flowcard">
+    <div class="scry">桃花殺（咸池・とうかさつ）の成立<small style="font-weight:700;color:var(--muted)"> ── 人を惹きつける魅力・出会いが高まる縁の星（この人の桃花＝${tgt}）</small></div>
+    <div style="font-size:12px;color:var(--muted);font-weight:700;margin:2px 0 2px">三合局で決まるこの人固有の桃花支が、①命式・②年運・③大運のどこで巡って成立するかを示します。桃花は魅力・人気の吉星。巡る時期は積極的に、快楽の誘いだけは一呼吸おいて。</div>
+    ${box('①','命式内で成立', natalLine)}
+    ${box('②','命式＋年運で成立', yLine)}
+    ${box('③','命式＋年運＋大運で成立', dLine)}
+  </div>`;
+}
 function flowHTML(c){
   const {cur,sel,dd,sy,ay,monthDu}=curDuYear(c);
   const DUS=[monthDu,...c.decadeFortunes];
@@ -3071,6 +3115,7 @@ function flowHTML(c){
     <div class="scry" style="font-size:14px;font-weight:900;color:var(--ka)">年運（${dd.isMonth?'第一運＝月柱の期間':'この大運の10年'}）</div>
     <div class="flowlist ny-col">${ny}</div>
     </details>
+    ${taohuaHTML(c)}
     ${(sbBlock||bioBlock)?`<details class="adv" style="margin-top:12px"><summary>運気をさらに深掘り（節木運＝人生の季節／バイオリズム＝追い風の波）</summary><div style="margin-top:8px">${sbBlock}${bioBlock}</div></details>`:''}
   </section>`;
 }
