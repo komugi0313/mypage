@@ -3965,17 +3965,23 @@ window.KANSHI60_DETAIL={
   }
   function _fmtSetsuDate(dt){ return dt?(dt.getFullYear()+'年'+(dt.getMonth()+1)+'月'+dt.getDate()+'日 '+String(dt.getHours()).padStart(2,'0')+'時'+String(dt.getMinutes()).padStart(2,'0')+'分'):''; }
   function _fmtSetsuDur(ms){ var t=Math.max(0,Math.round(ms/60000)); var d=Math.floor(t/1440),hh=Math.floor(t%1440/60),mm=t%60; return d+'日'+hh+'時間'+mm+'分'; }
-  /* 節入り情報を横型ヘッダ用の1行テキスト（HTML）に。無ければ空文字。 */
+  /* 節入り情報を横型ヘッダ用の1行テキスト（HTML）に。無ければ空文字。
+     立運は「使用日数 ÷ 節間 × 120ヶ月（＝10年）」の比例配分（＝あなたのやり方／検算8歳6ヶ月に一致）。
+     日数だけを見て“3日=1年”で誤計算されないよう、節間も併記して計算を再現可能にする。 */
   window._setsuLineHTML=function(info){
     if(!info) return '';
+    var spanMs=(info.nextDate&&info.prevDate)?(info.nextDate-info.prevDate):null;   // 節間（前の節→次の節）
+    var spanTxt=spanMs?_fmtSetsuDur(spanMs):'—';
     var base='<b>節入り（月柱の節）</b>：'+_setsuJP(info.prevName)+'　'+_fmtSetsuDate(info.prevDate);
     var lead;
     if(info.forward){
+      var useTxt=(info.nextDate&&info.birth)?_fmtSetsuDur(info.nextDate-info.birth):'—';
       lead='｜ <b>次の節入り</b>：'+_setsuJP(info.nextName)+'　'+_fmtSetsuDate(info.nextDate)+
-           '　｜ 生まれ→次の節入り <b>'+((info.next=info.nextDate)&&info.birth?_fmtSetsuDur(info.nextDate-info.birth):'—')+'</b>'+
+           '　｜ 生まれ→次の節 <b>'+useTxt+'</b> ／ 節間 '+spanTxt+
            '　→ 立運 <b>'+info.ritsu+'</b>・順行';
     }else{
-      lead='｜ 節入りから生まれまで <b>'+(info.prevText||'—')+'</b>　→ 立運 <b>'+info.ritsu+'</b>・逆行';
+      lead='｜ 節入り→生まれ <b>'+(info.prevText||'—')+'</b> ／ 節間 '+spanTxt+
+           '　→ 立運 <b>'+info.ritsu+'</b>・逆行';
     }
     return base+'　'+lead;
   };
