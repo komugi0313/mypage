@@ -3,7 +3,7 @@
    鑑定・60干支の教科書を使えるようにする。
    オンライン鑑定（生成AI）だけは通信が要るが、圏外時は端末内の
    オフライン鑑定に自動で切り替わる。 */
-const CACHE = 'shichu-jidou-v190';  /* 教科書に「相性の見どころ」ページ(aisho-pattern.html)を追加：合去・配偶宮の空亡・官殺混雑・争財の4パターンを、意味・見分け方・伝え方（断定せず乗り越え方とセット）まで解説。教科書索引(textbook-pro.html)にカード追加。SWのASSETSにも登録。※v189=教科書ページ kubo.html（空亡）の解空セクションを拡充。
+const CACHE = 'shichu-jidou-v191';  /* 教科書に「大運・年運の通変星運」ページ(daiun-tsuhen.html)を追加：巡る10星(比肩〜印綬)の意味と過ごし方を5グループで解説。日主甲を例に「巡る天干→通変星」の早見例題テーブル＋各星に場面例を付与。あわせて「相性の見どころ」ページの4パターン(合去・配偶宮空亡・官殺混雑・争財)すべてに実際の干支の例題を追加（生徒が直感的に分かるように）。索引カード・SW登録。※v189=教科書kubo.html解空を拡充。
 
 /* 初回訪問時に先読みしてキャッシュするページ一式（このブランドのみ） */
 const ASSETS = [
@@ -15,7 +15,7 @@ const ASSETS = [
   'pklove.js',
   'jikkan.html', 'tsuhensei.html', 'juniun.html', 'zohkan.html', 'kubo.html',
   'daiun-tenkanki.html', 'ritsuun.html', 'nichiza-tenchusatsu.html', 'ijokanshi.html',
-  'kanshi-aisho.html', 'aisho-pattern.html'
+  'kanshi-aisho.html', 'aisho-pattern.html', 'daiun-tsuhen.html'
 ];
 
 self.addEventListener('install', (e) => {
