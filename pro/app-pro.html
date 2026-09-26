@@ -3318,6 +3318,39 @@ function relWobbleHTML(c){
       <div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:8px">※関係が揺れやすい時期の目安です。断定ではありません。会話・感謝・スキンシップなど日頃の関わりが最大のお守りになります。</div>
     </div></details>`;
 }
+// 気をつけたい運気の時期（お守り）：命式×大運×年運で三刑（寅巳申・丑戌未）が成立する年／水火激冲（子午・巳亥の冲で水と火が激しくぶつかる）年。予防的に。
+function troubleTiming(c){
+  try{
+    const natal=c.pillars.map(p=>p.branch);
+    const nowY=(c.now&&c.now.year)||new Date().getFullYear();
+    let duB=null;try{const cd=curDuYear(c);duB=cd&&cd.dd?cd.dd.branch:null;}catch(e){}
+    const K3=[['寅','巳','申'],['丑','戌','未']];
+    const isWF=(a,b)=>(a==='子'&&b==='午')||(a==='午'&&b==='子')||(a==='巳'&&b==='亥')||(a==='亥'&&b==='巳');
+    let cc={};try{cc=gogyoBalance(c).counts||{};}catch(e){}
+    const bothWF=((cc.水||0)>=2&&(cc.火||0)>=2);
+    const sankei=[],suika=[];
+    (c.annualFortunes||[]).filter(a=>a.year>=nowY&&a.year<=nowY+12).forEach(a=>{
+      const base=[...natal,...(duB?[duB]:[])];
+      if(K3.some(g=>{const pool=[...base,a.branch];return g.every(x=>pool.includes(x))&&!g.every(x=>base.includes(x));}))sankei.push(a.year);
+      if(bothWF&&(base.some(nb=>isWF(nb,a.branch))))suika.push(a.year);
+    });
+    return {sankei:[...new Set(sankei)].slice(0,5),suika:[...new Set(suika)].slice(0,5)};
+  }catch(e){return {sankei:[],suika:[]};}
+}
+function troubleHTML(c){
+  let t;try{t=troubleTiming(c);}catch(e){return '';}
+  if(!t||(!t.sankei.length&&!t.suika.length))return '';
+  const chip=(l,col)=>`<span style="display:inline-block;background:${col};color:#fff;border-radius:6px;padding:0 8px;font-weight:800;margin-right:6px">${l}</span>`;
+  const rows=[];
+  if(t.sankei.length)rows.push(`<div style="margin-top:3px;font-size:12.5px">${chip('三刑','#B4472E')}${t.sankei.map(y=>y+'年').join('・')} <span style="color:var(--muted)">＝寅巳申／丑戌未がそろい、争い・こじれ・トラブルが起きやすい年。急がず、契約・対人トラブルは一呼吸おいて丁寧に</span></div>`);
+  if(t.suika.length)rows.push(`<div style="margin-top:3px;font-size:12.5px">${chip('水火激冲','#B4472E')}${t.suika.map(y=>y+'年').join('・')} <span style="color:var(--muted)">＝水と火が激しくぶつかり、感情の起伏・衝突・体調の波が出やすい年。休息と冷静さを意識すると乗り越えやすい</span></div>`);
+  return `<div class="flowcard">
+    <div class="scry">気をつけたい運気の時期（お守り）<small style="font-weight:700;color:var(--muted)"> ── 三刑・水火激冲＝備えのカレンダー</small></div>
+    <div style="font-size:12px;color:var(--muted);font-weight:700;margin:2px 0 4px">「凶」と決めつけず、あらかじめ揺れやすい年が分かる“お守り”。備えれば飛躍のきっかけにもなります。</div>
+    ${rows.join('')}
+    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:6px">※目安です。断定ではありません。運気に用神（喜神）が巡れば和らぎます。</div>
+  </div>`;
+}
 // 親密な関係の傾向（大人向けの見方）：四旺（子午卯酉）と卯酉の冲から。成熟した相性鑑定用に、露骨・グラフィックな表現は避け折りたたみで提供。
 function seiHTML(c){
   const br=c.pillars.map(p=>p.branch);
@@ -3388,6 +3421,7 @@ function flowHTML(c){
     ${taohuaHTML(c)}
     ${jyuZoneHTML(c)}
     ${relWobbleHTML(c)}
+    ${troubleHTML(c)}
     ${seiHTML(c)}
     ${(sbBlock||bioBlock)?`<details class="adv" style="margin-top:12px"><summary>運気をさらに深掘り（節木運＝人生の季節／バイオリズム＝追い風の波）</summary><div style="margin-top:8px">${sbBlock}${bioBlock}</div></details>`:''}
   </section>`;
