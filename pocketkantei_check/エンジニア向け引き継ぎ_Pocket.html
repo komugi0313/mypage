@@ -79,6 +79,7 @@ html{scroll-behavior:smooth}
     <li><a href="#errors">エラーコード</a></li>
     <li><a href="#rules">運営ルール</a></li>
     <li><a href="#engine">エンジン修正</a></li>
+    <li><a href="#u0926">9/26 v184・時差・10言語</a></li>
     <li><a href="#account">アカウント機能</a></li>
     <li><a href="#api">API・データ</a></li>
     <li><a href="#other">その他の修正</a></li>
@@ -91,14 +92,15 @@ html{scroll-behavior:smooth}
 <main>
 <header class="top">
   <p class="eyebrow">エンジニア向け引き継ぎ</p>
-  <h1>Pocket鑑定 改修内容と運用（2026-09-25）</h1>
-  <p class="meta">2026-09-25 時点。対象：Pocket鑑定（pocketkantei_final_fixed.zip）。<br>同じ内容は zip 内の <code>docs/2026-09-25_変更点と運用ガイド.md</code> にもあります。</p>
+  <h1>Pocket鑑定 改修内容と運用（2026-09-25／09-26追記）</h1>
+  <p class="meta">2026-09-26 時点。対象：Pocket鑑定（pocketkantei_final_fixed.zip）。<br>同じ内容は zip 内の <code>docs/2026-09-25_変更点と運用ガイド.md</code> にもあります。</p>
 </header>
 
 <section id="summary">
 <h2>要点</h2>
 <ol class="summary">
   <li><span><b>命式エンジンの修正</b>：節入り判定が北京時間基準で1時間ずれていたのを直しました。大運は必ず「0歳〜立運＝月柱」から始まる形で扱い、年運は立春で切り替えます。</span></li>
+  <li><span><b>ベースエンジン v184 と同じロジック・時差対応・10言語対策（9/26）</b>：エンジンを PRO v184 に揃え、出生地のタイムゾーンを IANA で正しく扱い、AI回答の言語・年号の崩れを防ぐ仕組みを入れました。詳しくは<a href="#u0926">こちら</a>。</span></li>
   <li><span><b>アカウント機能を新設</b>：メールアドレス＋パスワードで登録・ログインでき、確認メールのリンクは使いません。データはサーバーに自動保存され、パスワードを忘れても利用者が再設定メールで自分で直せます。</span></li>
   <li><span><b>デプロイ前に環境変数が3つ増えます</b>：<code>AUTH_SECRET</code>（必須）、<code>RESEND_API_KEY</code> と <code>MAIL_FROM</code>（パスワード再設定に必須）。デプロイは Git連携 か CLI で行ってください。</span></li>
 </ol>
@@ -183,6 +185,46 @@ html{scroll-behavior:smooth}
 <div class="note info"><p><b>変更していない点：</b>立運の計算式は比例方式 <code>round(節入りまでの日数 ÷ 節の間の日数 × 120ヶ月)</code> のままです。「3日＝1年」とは最大2ヶ月ほど差が出ます。</p></div>
 </section>
 
+<section id="u0926">
+<h2>2026-09-26 追記：v184 との整合・時差・10言語</h2>
+<h3>エンジンを v184 に揃えた</h3>
+<ul>
+  <li><code>pro-bazi.js</code> は PRO v184 のエンジンが土台です。Pocket独自の変更は次の2点だけです。
+    <ul>
+      <li>真太陽時補正 <code>Q2</code> を <code>stdMer</code>（出生地の実効子午線）基準にしたこと。v184 は日本専用で 135° 固定のため、そのままだと海外生まれの命式がずれます（5000件中1636件）。</li>
+      <li><code>lunarToSolar</code> を追加したこと。</li>
+    </ul>
+  </li>
+  <li><code>pro-adapter.js</code> の <code>fukyuList</code>・<code>gogyoBalance</code> を v184 版にしました。共通の27関数は v184 と同一です。</li>
+  <li>日本の出生では v184 と 1667件中 不一致0件です。旧 Pocket とは2万件中 不一致0件でした（柱・通変・十二運・蔵干・司令・立運・大運・年運・五行・元命）。</li>
+</ul>
+<h3>時差（出生地のタイムゾーン）</h3>
+<ul>
+  <li><b>原因：</b>固定の標準子午線と自動の夏時間で時差を出していたため、過去の制度変更を反映できていませんでした（日本1948〜51年の夏時間、中国1986〜91年、韓国1954〜61年の UTC+8:30、英国・メキシコ・ブラジル・ロシア・シンガポール・マレーシアなど）。4160件中140件がずれていました。</li>
+  <li><b>修正：</b><code>PLACES</code> に IANA タイムゾーン名（<code>tz</code>）を追加しました。<code>tzOffsetMin()</code> が <code>Intl.DateTimeFormat</code> からその日時の実際の UTC 差を求め、<code>mer = UTC差(分)÷4</code> としてエンジンへ渡します。<code>tz</code> が無い時は従来の方式に戻ります。</li>
+  <li><b>検証：</b>独立した天文計算（ephem・zoneinfo）と照合し、全地点で6240件中 不一致0件です。</li>
+</ul>
+<h3>AI回答（10言語）</h3>
+<ul>
+  <li>大運の西暦をデータに明記しました（<code>decadeYears()</code>）。AIに年を計算させません。</li>
+  <li><code>YEAR_RULE</code> で次の3点を指示します。
+    <ul>
+      <li>西暦の数字だけを使う（タイの仏暦などは禁止）</li>
+      <li>「A〜B」の期間は A に始まり B で替わる</li>
+      <li>西洋の星座・生まれた曜日は禁止</li>
+    </ul>
+  </li>
+  <li>次の場合は賢いモデルで一度だけ作り直します。
+    <ul>
+      <li>言語が違う（<code>_wrongLang</code>）</li>
+      <li>仏暦の年が出た、または中国語の簡単モードで一字の専門語（「害」「未」など）が出た（<code>_jargonLeak</code>）</li>
+    </ul>
+    挨拶の場合は、その言語の定型の挨拶に切り替えます。</li>
+  <li>専門語の置き換え（<code>_softReplace</code>）は、韓国語の単語の途中・中国語の重複・韓国語の助詞を正しく扱います。仕上げ（<code>_finalTidy</code>）では「,,」、名前なしの「님,」を消し、韓国語の「별자리」（西洋星座の意味）を「타고난 별」に置き換えます。</li>
+  <li>本文に漏れた質問候補（<code>"…" / "…"</code> や改行区切り）は、提案ボタンとして回収します。スペイン語・ポルトガル語は性別に合わせた文法で話します。挨拶の出力上限は 1400 にしました。</li>
+</ul>
+</section>
+
 <section id="account">
 <h2>アカウント機能（新設）</h2>
 <div class="tbl"><table>
@@ -251,6 +293,9 @@ html{scroll-behavior:smooth}
 <tr><td>アカウントAPIの単体テスト（登録〜削除・ロック・偽造トークン・Origin）</td><td>全件期待どおり</td></tr>
 <tr><td>画面の通しテスト（2台の端末：登録・ログイン・ログアウト・変更・削除・再設定）</td><td>エラー0件</td></tr>
 <tr><td>LPへの振り分け、パスワード表示ボタン</td><td>全件期待どおり</td></tr>
+<tr><td>v184 エンジンとの比較（日本135°）／旧Pocketとの比較</td><td>1667件・2万件とも不一致0件</td></tr>
+<tr><td>時差：全出生地×ランダム日時 6240件を独立計算と照合</td><td>不一致0件</td></tr>
+<tr><td>実際の Gemini で10言語をランダム会話（4巡）</td><td>最終巡（4巡目）は10言語すべてで、自動チェックの問題0件（言語混入・仏暦・星座・専門語・提案ボタン漏れ・連続読点）。返事の西暦はすべて正しい</td></tr>
 </tbody></table></div>
 <p>再現用のテストスクリプトは、リポジトリの <code>pocketkantei_check/tests/</code> にあります（手順は同フォルダの README.md）。</p>
 <div class="note"><p><b>本番の Netlify 環境（実際の Blobs・Resend）での確認はまだです。</b>デプロイ後に、次の流れを実機で確認してください。</p>
@@ -270,11 +315,11 @@ html{scroll-behavior:smooth}
   <li><b>計算の仕様（運営判断）：</b>
     <ul>
       <li>立運の比例方式</li>
-      <li>日本のサマータイム（1948〜1951年）は未補正</li>
-      <li>韓国の1954〜61年の標準子午線127.5°は未反映</li>
+      <li>（9/26 解決）日本のサマータイム・韓国の UTC+8:30 時代などの過去の時差は、IANA タイムゾーンで反映済み</li>
       <li>大運は8本（立運＋80年）まで</li>
     </ul>
   </li>
+  <li><b>表示の細部（未変更）：</b>区切りの「・」は全言語共通です。英語などの命式シートでは文中に漢字（例：「Protect 木・水」）が出ます。</li>
   <li><b>古い仕様書：</b><code>docs/技術仕様書.html</code> は 2026-08-21 版のままです。Markdown版が最新です。</li>
 </ul>
 </section>
@@ -284,19 +329,19 @@ html{scroll-behavior:smooth}
 <div class="tbl"><table>
 <thead><tr><th>ファイル</th><th>内容</th></tr></thead>
 <tbody>
-<tr><td><code>pro-bazi.js</code></td><td>節入りの時差、UTC計算、年運の開始年</td></tr>
-<tr><td><code>pro-adapter.js</code></td><td>標準子午線、第一運＝月柱、今年＝立春基準、AI用データ</td></tr>
-<tr><td><code>index.html</code></td><td>大運表示、AIへの指示文、節木運、アカウント画面・同期、パスワード再設定、目のボタン、LP振り分け</td></tr>
+<tr><td><code>pro-bazi.js</code></td><td>v184 を土台に置き換え（<code>stdMer</code> 基準の経度補正・<code>lunarToSolar</code>）、節入りの時差、年運の開始年</td></tr>
+<tr><td><code>pro-adapter.js</code></td><td>標準子午線、第一運＝月柱、今年＝立春基準、AI用データ、大運の西暦（<code>decadeYears</code>）、v184版の <code>fukyuList</code>・<code>gogyoBalance</code></td></tr>
+<tr><td><code>index.html</code></td><td>大運表示、AIへの指示文、節木運、アカウント画面・同期、パスワード再設定、目のボタン、LP振り分け、IANAタイムゾーン、AI回答の言語・年号対策</td></tr>
 <tr><td><code>functions/auth.js</code>（新規）</td><td>アカウントAPI・再設定メール</td></tr>
 <tr><td><code>functions/gemini.js</code></td><td>Blobs接続の修正</td></tr>
 <tr><td><code>netlify.toml</code></td><td><code>/api/auth</code> の転送設定</td></tr>
 <tr><td><code>lp.html</code></td><td>「はじめる」の遷移先、「ログイン」リンク</td></tr>
 <tr><td><code>legal.html</code></td><td>プライバシーポリシー・利用規約（日英）</td></tr>
-<tr><td><code>sw.js</code></td><td>キャッシュ版 v5、<code>/api/</code> を対象外に</td></tr>
+<tr><td><code>sw.js</code></td><td>キャッシュ版 v6、<code>/api/</code> を対象外に</td></tr>
 <tr><td><code>README_デプロイ.md</code> / <code>docs/</code></td><td>環境変数の追記、仕様書の更新、変更点と運用ガイド</td></tr>
 </tbody></table></div>
 </section>
 
-<footer>作成：2026-09-25。質問や食い違いがあれば、この内容と各zip内の資料を突き合わせて確認してください。</footer>
+<footer>作成：2026-09-25（09-26 追記）。質問や食い違いがあれば、この内容と各zip内の資料を突き合わせて確認してください。</footer>
 </main>
 </div>
