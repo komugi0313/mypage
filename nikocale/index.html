@@ -4321,10 +4321,10 @@ function pickFocus(interests){
     }catch(e){ return false; }
   }
   var _fromUrl=initFromUrl();
-  var _ret=_fromUrl?false:initReturning();  /* 内部では最後に鑑定した二人を自動復元（おかえりバーは非表示。消す/新規入力するまで保持） */
-  // 初回訪問（共有URLでも常連でもない）は結果を自動表示しない＝入力してから「カレンダーを見る」で初表示。
-  // 初期値のダミー結果を本物と誤解させないため。共有URL・前回の二人がいる常連のみ自動表示する。
-  if(_fromUrl || _ret){ build(true); if(_ret){ try{ applyReturning(_ret); }catch(e){} } }
+  var _ret=_fromUrl?false:initReturning();  /* 前回の二人を“入力欄に”復元（結果は自動表示しない） */
+  // 最初は必ず正規のトップ（入力）画面から。招待/共有リンク(_fromUrl)だけはその日のカレンダーを自動表示。
+  // 常連(_ret)は入力欄に前回の二人を復元済み。結果は「カレンダーを見る」を押してから表示（新規の人と同じ入口に統一）。
+  if(_fromUrl){ build(true); }
   if(state.invite){ try{ showInviteBanner(); state.sel=state.invite.d; render(); detail(state.invite.d); }catch(e){} }
   try{ window.scrollTo(0,0); }catch(e){}
 })();
@@ -4594,10 +4594,13 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   }
   function renderChip(){
     var u=Auth.current();
-    if(u){ var mk=userMascotThumb(); var av = mk ? '<span class="av"><img src="'+mk+'" alt=""></span>' : '<span class="av">●</span>'; chip.innerHTML=av+'マイページ'+(u.emailVerified?'':' <span class="un">未確認</span>'); }
+    // demoアカウントは“未登録扱い”＝マイページにせず登録導線を出す（登録前の変なアイコンも出さない）
+    if(u && u.email!=='demo@nicocale.app'){ var mk=userMascotThumb(); var av = mk ? '<span class="av"><img src="'+mk+'" alt=""></span>' : '<span class="av av-guest"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0z"/></svg></span>'; chip.innerHTML=av+'マイページ'+(u.emailVerified?'':' <span class="un">未確認</span>'); }
     else { chip.innerHTML='ログイン / 登録'; }
   }
-  chip.onclick=function(){ var u=Auth.current(); open(u?'account':'register'); };
+  chip.onclick=function(){ var u=Auth.current(); open((u && u.email!=='demo@nicocale.app')?'account':'register'); };
+  // 起動時：デモのログインは持ち越さない（前回💬でデモを見ただけの人も、次回は“新規の人”の画面から）
+  try{ var _cu=Auth.current(); if(_cu && _cu.email==='demo@nicocale.app'){ Auth.logout(); } }catch(e){}
   Auth.onChange(function(){ renderChip(); if(!modal.hidden) render(); });
 
   /* 招待リンク（?nf=...）で来た人への歓迎＋登録モーダル（バイラルの入口） */
