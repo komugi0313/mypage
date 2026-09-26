@@ -9,7 +9,7 @@
  *  - バージョンを上げると古いキャッシュを自動削除。
  */
 'use strict';
-var VERSION = 'nikocale-v2';
+var VERSION = 'nikocale-v3';
 var SHELL = './';
 
 self.addEventListener('install', function (e) {
@@ -35,8 +35,11 @@ self.addEventListener('fetch', function (e) {
   if (req.mode === 'navigate' || (req.headers.get('accept') || '').indexOf('text/html') >= 0) {
     e.respondWith(
       fetch(req).then(function (res) {
-        var copy = res.clone();
-        caches.open(VERSION).then(function (c) { c.put(SHELL, copy); });
+        // 正常な応答のときだけシェルを退避（500/503等のエラーページを保存しない）
+        if (res && res.ok) {
+          var copy = res.clone();
+          caches.open(VERSION).then(function (c) { c.put(SHELL, copy); });
+        }
         return res;
       }).catch(function () {
         return caches.match(SHELL).then(function (r) { return r || caches.match(req); });
@@ -55,7 +58,11 @@ self.addEventListener('fetch', function (e) {
           caches.open(VERSION).then(function (c) { c.put(req, copy); });
         }
         return res;
-      }).catch(function () { return cached; });
+      }).catch(function () {
+        // ここに来る時点で cached は無い。オフラインで未キャッシュの資産は
+        // 明示的にネットワークエラー応答を返す（undefined を返すと不定動作になるため）。
+        return cached || Response.error();
+      });
     })
   );
 });

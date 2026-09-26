@@ -4169,8 +4169,8 @@ function pickFocus(interests){
     var data=monthScan();
     // 各日の色（◎/○/△/× ・ ⭐ ・ soloの💮/◎/〇/△）
     var GC={star:'#f4d27a',maru:'#e6cf95',ok:'#9cc7a6',warn:'#e0b168',bad:'#e79a91',none:'rgba(246,239,218,.14)'};
-    var stars={};
-    if(!solo){ data.filter(function(x){return x.mk&&x.mk.s==='◎';}).sort(function(a,b){return b.score-a.score;}).slice(0,3).forEach(function(x){stars[x.d]=true;}); }
+    // ⭐（奇跡の相性日）は render() が作った state.topSet を再利用し、画面のカレンダーと必ず一致させる
+    var stars=(!solo && state.topSet) ? state.topSet : {};
     function dayColor(x){
       if(solo){ if(x.sym==='💮')return GC.star; if(x.sym==='◎')return GC.maru; if(x.sym==='△')return GC.warn; return GC.ok; }
       if(stars[x.d])return GC.star;
@@ -4450,7 +4450,9 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
 
   function ageLabel(a){ return a||'—'; }
   /* ログイン中ユーザーの日柱マスコット（60干支）。マイページ/チップのアイコンに統一 */
-  function userMascotThumb(){ try{ var lp=JSON.parse(localStorage.getItem('dc_lastPair')||'null'); var p=lp&&lp.a; if(p&&window.PersonBazi&&p.y&&p.m&&p.d){ var r=window.PersonBazi(+p.y,+p.m,+p.d,(p.tu?null:p.h),(p.tu?null:p.mi),!!p.tu,p.sex||'f'); if(r&&r.pillars){ var day=r.pillars.filter(function(x){return x.label==='日柱';})[0]; if(day&&day.ganzhi) return 'img/mascot/thumb/'+day.ganzhi+'.webp'; } } }catch(e){} return ''; }
+  // 生年月日→日柱の干支（PersonBazi）。アバター等で共通利用（スコープ跨ぎのためwindowに公開）
+  window.NicoDayGanzhi=window.NicoDayGanzhi||function(p){ try{ if(p&&window.PersonBazi&&p.y&&p.m&&p.d){ var r=window.PersonBazi(+p.y,+p.m,+p.d,(p.tu?null:(p.h==null?null:p.h)),(p.tu?null:(p.mi==null?null:p.mi)),!!p.tu,p.sex||'f'); if(r&&r.pillars){ var day=r.pillars.filter(function(x){return x.label==='日柱';})[0]; if(day&&day.ganzhi) return day.ganzhi; } } }catch(e){} return ''; };
+  function userMascotThumb(){ try{ var lp=JSON.parse(localStorage.getItem('dc_lastPair')||'null'); var gz=window.NicoDayGanzhi(lp&&lp.a); if(gz) return 'img/mascot/thumb/'+gz+'.webp'; }catch(e){} return ''; }
   function userMascotMark(){ var m=userMascotThumb(); return m ? '<span class="au-mk" style="display:inline-block;overflow:hidden;vertical-align:middle"><img src="'+m+'" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></span>' : MARK; }
   function render(){
     var u=Auth.current(); var s=state.screen;
@@ -4717,7 +4719,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     var K='dc_dm_';           // 部屋データ key 接頭
     var subs={};              // roomId -> [cb]
     function load(roomId){ try{ return JSON.parse(localStorage.getItem(K+roomId)||'null')||{msgs:[],read:{}}; }catch(e){ return {msgs:[],read:{}}; } }
-    function save(roomId,data){ try{ localStorage.setItem(K+roomId, JSON.stringify(data)); }catch(e){} }
+    function save(roomId,data){ try{ localStorage.setItem(K+roomId, JSON.stringify(data)); return true; }catch(e){ return false; } }
     function fire(roomId){ (subs[roomId]||[]).forEach(function(cb){ try{cb();}catch(e){} }); }
     // 別タブ/端末の更新も拾う（Firestore の onSnapshot に相当する簡易版）
     window.addEventListener('storage',function(ev){ if(ev.key&&ev.key.indexOf(K)===0){ var rid=ev.key.slice(K.length); fire(rid); } });
@@ -4725,7 +4727,7 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       roomId:function(a,b){ return [String(a),String(b)].sort().join('__'); },
       list:function(roomId){ return load(roomId).msgs; },
       readMap:function(roomId){ return load(roomId).read||{}; },
-      send:function(roomId,msg){ var d=load(roomId); msg.id=msg.id||('m'+Date.now()+Math.random().toString(36).slice(2,6)); msg.ts=msg.ts||Date.now(); d.msgs.push(msg); save(roomId,d); fire(roomId); return msg; },
+      send:function(roomId,msg){ var d=load(roomId); msg.id=msg.id||('m'+Date.now()+Math.random().toString(36).slice(2,6)); msg.ts=msg.ts||Date.now(); d.msgs.push(msg); if(!save(roomId,d)) return null; fire(roomId); return msg; },
       markRead:function(roomId,uid){ var d=load(roomId); d.read=d.read||{}; var last=d.msgs.length?d.msgs[d.msgs.length-1].id:null; d.read[uid]=last; save(roomId,d); fire(roomId); },
       subscribe:function(roomId,cb){ (subs[roomId]=subs[roomId]||[]).push(cb); return function(){ subs[roomId]=(subs[roomId]||[]).filter(function(f){return f!==cb;}); }; }
     };
@@ -4741,13 +4743,8 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   // ---- 日柱干支 → キャラ画像（DMのアバター） ----
   function personFromPair(which){ try{ var lp=JSON.parse(localStorage.getItem('dc_lastPair')||'null'); if(!lp)return null; return which==='a'?lp.a:lp.b; }catch(e){ return null; } }
   function mascotFile(p, fallback){
-    try{
-      if(p && window.PersonBazi && p.y && p.m && p.d){
-        var r=window.PersonBazi(+p.y,+p.m,+p.d,(p.tu?null:(p.h==null?null:p.h)),(p.tu?null:(p.mi==null?null:p.mi)),!!p.tu,p.sex||'f');
-        if(r&&r.pillars){ var day=r.pillars.filter(function(x){return x.label==='日柱';})[0]; if(day&&day.ganzhi) return 'img/mascot/'+day.ganzhi+'.webp'; }
-      }
-    }catch(e){}
-    return fallback||null;
+    var gz=(window.NicoDayGanzhi?window.NicoDayGanzhi(p):'');
+    return gz ? 'img/mascot/'+gz+'.webp' : (fallback||null);
   }
   function avImg(src){ return src? '<img src="'+src+'" alt="">':''; }
   function defaultYmd(){ var d=new Date(); d.setDate(d.getDate()+10); return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate()); }
@@ -5094,20 +5091,20 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
           var ctx=c.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(img,0,0,c.width,c.height);
           out=c.toDataURL('image/jpeg',0.72);
         }catch(e){ out=src; }
-        ChatBackend.send(cur.roomId,{from:cur.me, kind:'media', mtype:'image', src:out});
+        if(!ChatBackend.send(cur.roomId,{from:cur.me, kind:'media', mtype:'image', src:out})){ try{alert('画像を保存できませんでした。端末の空き容量が不足している可能性があります。');}catch(e){} return; }
         scrollBottom(); scheduleDemoReply();
       };
-      img.onerror=function(){ ChatBackend.send(cur.roomId,{from:cur.me, kind:'media', mtype:'image', src:src}); scrollBottom(); scheduleDemoReply(); };
+      img.onerror=function(){ if(!ChatBackend.send(cur.roomId,{from:cur.me, kind:'media', mtype:'image', src:src})){ try{alert('画像を保存できませんでした。端末の空き容量が不足している可能性があります。');}catch(e){} return; } scrollBottom(); scheduleDemoReply(); };
       img.src=src;
     };
     fr.readAsDataURL(file);
   }
   // 動画：デモではプレースホルダ表示（原本の送受信・再生はFirebase Storage後）
-  function addVideo(file){ if(!file) return; ChatBackend.send(cur.roomId,{from:cur.me, kind:'media', mtype:'video', name:(file.name||'動画')}); scrollBottom(); scheduleDemoReply(); }
+  function addVideo(file){ if(!file) return; if(!ChatBackend.send(cur.roomId,{from:cur.me, kind:'media', mtype:'video', name:(file.name||'動画')})){ try{alert('動画を保存できませんでした。端末の空き容量が不足している可能性があります。');}catch(e){} return; } scrollBottom(); scheduleDemoReply(); }
 
   function sendText(t){
     t=(t||'').trim(); if(!t) return;
-    ChatBackend.send(cur.roomId,{from:cur.me, text:t});
+    if(!ChatBackend.send(cur.roomId,{from:cur.me, text:t})){ try{alert('メッセージを保存できませんでした。端末の空き容量をご確認ください。');}catch(e){} return; }
     scrollBottom();
     scheduleDemoReply();
   }
@@ -5146,7 +5143,8 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     if(!pl||!pl.ymd) return;
     var ps=partners();
     pendingDay=pl;
-    if(ps.length<=1){ openChat(ps[0]?ps[0].uid:addPartner(partnerName())); }
+    // partners() は空を返さない（見本の相手を自動生成）ため ps[0] は必ず存在する
+    if(ps.length<=1){ openChat(ps[0].uid); }
     else { openList(); }
   }
   // 自分でチャットを消す
