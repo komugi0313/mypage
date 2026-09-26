@@ -3,7 +3,7 @@
    鑑定・60干支の教科書を使えるようにする。
    オンライン鑑定（生成AI）だけは通信が要るが、圏外時は端末内の
    オフライン鑑定に自動で切り替わる。 */
-const CACHE = 'shichu-jidou-v203';  /* 相性：天地徳合（2人の日柱が干合＋日支支合）と日支の支合（配偶宮どうし）を、オフライン相性の可視カードにも追加（従来はオンラインAIのみ）。最上級の良縁シグナルとして前向きに。※他の資料の概念（財庫の冲＝発財・命式内天地徳合・干合等）は実装済み。v202=日座中殺追記。 */
+const CACHE = 'shichu-jidou-v204';  /* 日座中殺の教科書ページ nichiza.html を新設（とは＝日坐空亡／甲戌・乙亥／自由と結婚観／自己認識ポイント／例題・実在人名なし）。索引カード追加・SW登録。※v203=相性の天地徳合カード。 */
 
 /* 初回訪問時に先読みしてキャッシュするページ一式（このブランドのみ） */
 const ASSETS = [
@@ -15,7 +15,7 @@ const ASSETS = [
   'pklove.js',
   'jikkan.html', 'tsuhensei.html', 'juniun.html', 'zohkan.html', 'kubo.html',
   'daiun-tenkanki.html', 'ritsuun.html', 'nichiza-tenchusatsu.html', 'ijokanshi.html',
-  'kanshi-aisho.html', 'aisho-pattern.html', 'daiun-tsuhen.html', 'setsuboku.html', 'tensen-chichu.html', 'nayin-aisho.html', 'boko-kaichu.html', 'kaikyoku.html', 'inyoku.html'
+  'kanshi-aisho.html', 'aisho-pattern.html', 'daiun-tsuhen.html', 'setsuboku.html', 'tensen-chichu.html', 'nayin-aisho.html', 'boko-kaichu.html', 'kaikyoku.html', 'inyoku.html', 'nichiza.html'
 ];
 
 self.addEventListener('install', (e) => {
