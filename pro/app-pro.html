@@ -4504,7 +4504,7 @@ function compatExtras(a,b,rt){
     if(bForA.length||aForB.length){
       R.push({key:'用神補完',good:'good',
         ai:`用神・喜神の補い合い:本人の喜神(${favA.join('・')||'—'})を相手が持つ=${bForA.join('・')||'なし'}／相手の喜神(${favB.join('・')||'—'})を本人が持つ=${aForB.join('・')||'なし'}。${both2?'互いに相手の"助ける五行(用神・喜神)"を補い合う最良クラスの相性＝主役級の良い知らせとして、会局と並ぶ好材料として1段落で前向きに伝える':'片方向だが相手が"助ける五行"を補ってくれる良い相性として伝える'}。${(rt&&rt.useSpouse===false)?'※この関係では恋愛・結婚・出会いの話は出さないこと。':''}`,
-        local:`${both2?'**互いに**、':''}相手はあなたの調子を整える<b>用神・喜神${bForA.length?'（'+bForA.join('・')+'）':''}</b>を${bForA.length?'持っています':'補いにくいものの'}${aForB.length?`。あなたも相手の喜神（${aForB.join('・')}）を補い合います`:''}。${both2?'**互いを整え合える最良クラスの相性**で、一緒にいると調子が上向きやすい組み合わせです。':'一緒にいると整いやすい良い組み合わせです。'}`});
+        local:`${both2?'**互いに**、':''}相手はあなたの調子を整える**用神・喜神${bForA.length?'（'+bForA.join('・')+'）':''}**を${bForA.length?'持っています':'補いにくいものの'}${aForB.length?`。あなたも相手の喜神（${aForB.join('・')}）を補い合います`:''}。${both2?'**互いを整え合える最良クラスの相性**で、一緒にいると調子が上向きやすい組み合わせです。':'一緒にいると整いやすい良い組み合わせです。'}`});
     }
   }catch(_e){}
   // ③ 同じ空亡
@@ -4723,14 +4723,25 @@ function localCompat(A,B,na,nb,rt,ask){
     ?`日支が**冲（${aB}${bB}）**。刺激的な反面、ペースや価値観の違いでぶつかりやすいので、距離感の調整が鍵です。`
     :`相手から見たあなたは**${tenStarOf(bS,aS)}（${TS_DESC[tenStarOf(bS,aS)]||''}）**。この星が強く出ると、主導権や役割でぶつかることがあります。`);
   L.push('【'+rt.tips+'】');
-  const need=Object.entries(A.fiveElements).sort((x,y)=>x[1]-y[1])[0][0],bHas=B.fiveElements[need]||0;
-  L.push(`あなたに不足の**${need}（${EL_DESC[need]}）**を相手は${bHas}持っています。${bHas>=1?'相手の'+need+'の面を頼ると関係が安定します。':'2人とも'+need+'が弱めなので、'+EL_DESC[need]+'を一緒に意識すると整います。'} 違いを“補い合い”と捉えるのがコツです。`);
+  // コツ：単なる最少五行ではなく、身強弱から出す用神・喜神（助ける五行）を相手が持つかで見る（相性の王道）。失敗時のみ最少五行に退避。
+  (function(){
+    try{
+      const fav=SHENG.filter(el=>_kkAssess(A).assess(el).fav==='喜');          // あなたの用神・喜神
+      const sup=fav.filter(el=>(B.fiveElements[el]||0)>=1);                    // そのうち相手が持つ
+      if(fav.length){
+        L.push(`あなたの調子を整える**用神・喜神（${fav.join('・')}）**のうち、相手は**${sup.join('・')||'—'}**を持っています。${sup.length?'相手の'+sup.join('・')+'の面を頼ると、あなたの調子が整いやすく関係も安定します。':'この五行は2人とも控えめなので、一緒に意識して取り入れると整います。'} 違いを“補い合い”と捉えるのがコツです。`);
+        return;
+      }
+    }catch(_e){}
+    const need=Object.entries(A.fiveElements).sort((x,y)=>x[1]-y[1])[0][0],bHas=B.fiveElements[need]||0;
+    L.push(`あなたに不足の**${need}（${EL_DESC[need]}）**を相手は${bHas}持っています。${bHas>=1?'相手の'+need+'の面を頼ると関係が安定します。':'2人とも'+need+'が弱めなので、'+EL_DESC[need]+'を一緒に意識すると整います。'} 違いを“補い合い”と捉えるのがコツです。`);
+  })();
   const ex=compatExtras(A,B,rt).filter(r=>r.local);
   if(ex.length){L.push('【2人の命式を合わせて見るポイント】');
     ex.forEach(r=>L.push((r.good==='good'?'◎ ':r.good==='soft'?'・':r.good==='bad'?'△ ':'・')+r.local));}
   const good=compatGoodYears(A,B,rt.useSpouse);
   if(good.length){L.push('【'+rt.timing+'】');
-    L.push(`2人の${rt.timingDesc}のは**${good.map(g=>g.split('(')[0]).join('・')}年**あたり。${rt.timingCause}相手の日支とも響き合う時期です。`);}
+    L.push(`2人の${rt.timingDesc}のは**${good.map(g=>g.year).join('・')}年**あたり。${rt.timingCause}相手の日支とも響き合う時期です。`);}
   return L.join('\n');
 }
 /* ===== 相性の質問も、オフラインでテーマ別に答える（同じ文章の繰り返しを解消） =====
@@ -4777,7 +4788,7 @@ function localCompatAnswer(A,B,na,nb,rt,ask){
 
   if(topic==='timing'){
     L.push('【'+rt.timing+'】');
-    L.push(good.length?`2人が${rt.timingDesc}のは**${good.map(g=>g.split('(')[0]).join('・')}年**あたり。${rt.timingCause}相手の日支とも響き合う時期です。`:`近い年に強く目立つ縁の年はありませんが、${rt.timingDesc}かは日々の関わりの積み重ねで変わります。`);
+    L.push(good.length?`2人が${rt.timingDesc}のは**${good.map(g=>g.year).join('・')}年**あたり。${rt.timingCause}相手の日支とも響き合う時期です。`:`近い年に強く目立つ縁の年はありませんが、${rt.timingDesc}かは日々の関わりの積み重ねで変わります。`);
     L.push(...clashBlock('すれ違いに気をつけたい時期'));
     L.push('【2人でできること】');
     L.push('- 上の「動きやすい年」を目安に、大事な話や節目を意識する。');
@@ -4802,7 +4813,7 @@ function localCompatAnswer(A,B,na,nb,rt,ask){
     L.push(bondLine());
     L.push('【'+rt.tips+'】');
     L.push(tipsLine());
-    if(good.length){L.push('【'+rt.timing+'】');L.push(`2人が${rt.timingDesc}のは**${good.map(g=>g.split('(')[0]).join('・')}年**あたりです。`);}
+    if(good.length){L.push('【'+rt.timing+'】');L.push(`2人が${rt.timingDesc}のは**${good.map(g=>g.year).join('・')}年**あたりです。`);}
   }
   else{ // general＝全体像（従来の相性まとめ。お休み中の文言は出さない）
     return L.join('\n')+'\n'+localCompat(A,B,na,nb,rt);
