@@ -3269,7 +3269,7 @@ function pickFocus(interests){
   function renumber(){ var n=0; document.querySelectorAll('.card > .step').forEach(function(st){ if(st.style.display==='none')return; var h=st.querySelector('.sec-t'); if(h){ n++; h.setAttribute('data-n', n); } }); }
   document.querySelectorAll('.modes button').forEach(function(btn){btn.onclick=function(){
     // 一人用の開運鑑定は登録者限定（二人の相性は無料）。未登録で「一人で占う」を選んだら登録へ誘導
-    if(btn.getAttribute('data-mode')==='solo' && !ccLoggedIn() && window.NicoAuth && window.NicoAuth.requireAuth){ window.NicoAuth.requireAuth(function(){ try{updateSoloLock();}catch(e){} if(ccLoggedIn()) btn.click(); }); return; }
+    if(btn.getAttribute('data-mode')==='solo' && !ccLoggedIn() && window.NicoAuth && window.NicoAuth.requireReal){ window.NicoAuth.requireReal(function(){ try{updateSoloLock();}catch(e){} if(ccLoggedIn()) btn.click(); }); return; }
     state.mode=btn.getAttribute('data-mode'); document.querySelectorAll('.modes button').forEach(function(o){o.setAttribute('aria-pressed',o===btn?'true':'false');}); var solo=(state.mode==='solo'); $('rowB').style.display=solo?'none':''; $('purposeWrap').style.display=solo?'none':''; if($('ppResult'))$('ppResult').style.display=solo?'none':''; $('labA').textContent=solo?'あなたの生年月日':'お一人目（あなた）'; renumber(); if($('out').style.display!=='none'){ state.sel=null; render(); scrollResultsIfNeeded(); pulseResults(); try{toast(solo?'あなたの運勢に切り替えました':'二人の相性に切り替えました');}catch(e){} } };});
   renumber();
   // 「一人で占う」は登録者限定。未登録のときだけ🔒登録の目印を出す
@@ -3427,7 +3427,7 @@ function pickFocus(interests){
     state.A=person('a'); if(!state.A.y||!state.A.m||!state.A.d){ alert('あなたの生年月日（年・月・日）を選んでください。'); return; }
     if(!noScroll && !reqName('a')) return;   // 名前は必須（手動表示時のみ。招待URL等の自動表示は妨げない）
     // 一人用の開運鑑定は登録者限定（二人の相性は無料）
-    if(state.mode==='solo' && !ccLoggedIn()){ if(window.NicoAuth && window.NicoAuth.requireAuth){ window.NicoAuth.requireAuth(function(){ build(noScroll); }); } return; }
+    if(state.mode==='solo' && !ccLoggedIn()){ if(window.NicoAuth && window.NicoAuth.requireReal){ window.NicoAuth.requireReal(function(){ build(noScroll); }); } return; }
     state.pA=KE.pillar(state.A.y,state.A.m,state.A.d);
     if(state.mode==='couple'){
       state.B=person('b'); if(!state.B.y||!state.B.m||!state.B.d){ alert('お相手の生年月日を選んでください。'); return; }
@@ -4689,7 +4689,9 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   window.NicoAuth={ current:Auth.current, open:open, onChange:Auth.onChange,
     // 登録画面を挟まずにデモ用アカウントで開始（DMの“すぐデモ”入口用）
     demo:function(cb){ var de='demo@nicocale.app',pw='demo1234'; var r=Auth.register(de,pw); if(r&&r.error){ Auth.login(de,pw,true); } try{ Auth.markVerified(); Auth.saveProfile({sex:'x',age:''}); }catch(e){} if(cb)try{cb(Auth.current());}catch(e){} },
-    requireAuth:function(cb){ var u=Auth.current(); if(u&&u.emailVerified&&u.profile){ cb&&cb(u); } else { pendingCb=cb||null; open(u?(u.emailVerified?'profile':'verify'):'register'); } } };
+    requireAuth:function(cb){ var u=Auth.current(); if(u&&u.emailVerified&&u.profile){ cb&&cb(u); } else { pendingCb=cb||null; open(u?(u.emailVerified?'profile':'verify'):'register'); } },
+    // 本登録が必要な機能（一人用の開運鑑定など）用。demoアカウントは未登録扱いで登録画面へ。
+    requireReal:function(cb){ var u=Auth.current(); if(u&&u.emailVerified&&u.profile&&u.email!=='demo@nicocale.app'){ cb&&cb(u); } else { pendingCb=cb||null; open('register'); } } };
   // 初回ロード時、build() → renderCharCard() は NicoAuth 定義前に走るため、
   // ここで一度だけ再描画してログイン済みユーザーのキャラを正しく表示＆onChange購読させる。
   try{ if(window.NicoRenderCharCard) window.NicoRenderCharCard(); }catch(e){}
