@@ -4636,16 +4636,32 @@ function compatStrainYears(a,b){
   });
   return out;
 }
-/* 本人の運気が低調な年：空亡・用神剋＝本人の総合運の谷（相性とは別軸）。今後25年。 */
+/* 軸の用神（1つ）を決める：身強弱ごとの喜忌の重み(UNKI_FAV)が最も高い喜神グループ＝その人の「頼みの綱の軸」。
+   喜神をすべて拾うと低調年が広がりすぎる（例：身強で喜が3つ→剋す側も3五行→大半の年が該当）ため、軸を1つに絞る。 */
+function _primaryYojin(a){
+  try{
+    const dmEl=a.dayMaster.element, gi=SHENG.indexOf(dmEl);
+    const sType=(typeof strengthType==='function')?strengthType(a):'中和';
+    const fav=UNKI_FAV[sType]||UNKI_FAV['中和'];
+    const GRP=['比劫','食傷','財','官殺','印'];   // 日主からの距離 d=0..4 に対応（_kkAssess の grp と同義）
+    let best=-1,bestScore=-1;
+    GRP.forEach((g,d)=>{const s=fav[g]; if(s>=0.66 && s>bestScore){bestScore=s;best=d;}});  // 喜(>=0.66)の中で最重要
+    if(best<0)return null;
+    const el=SHENG[(gi+best)%5];                  // 軸の用神の五行
+    const attacker=SHENG[(SHENG.indexOf(el)+3)%5];// それを剋す五行（この五行の年支＝用神が剋される年）
+    return {el,attacker,grp:GRP[best]};
+  }catch(e){return null;}
+}
+/* 本人の運気が低調な年：空亡・用神剋＝本人の総合運の谷（相性とは別軸）。今後25年。
+   用神剋は「軸の用神1つ」を、その年の年支（主たる気）が剋す年だけを拾う（喜神すべてで判定して過剰になるのを回避）。 */
 function compatSelfLowYears(a){
   if(!a||!a.now||!a.annualFortunes)return [];
   const ku=(typeof kubo==='function'?kubo(a):[]), out=[];
-  let attackers=new Set();
-  try{ if(typeof _kkAssess==='function'){ const A=_kkAssess(a); SHENG.forEach(el=>{ if(A.assess(el).fav==='喜') attackers.add(SHENG[(SHENG.indexOf(el)+3)%5]); }); } }catch(e){}
+  const yj=_primaryYojin(a);                       // {el,attacker,grp} または null
   a.annualFortunes.filter(y=>y.year>=a.now.year&&y.year<=a.now.year+25).forEach(y=>{
     const tags=[];
     if(ku.includes(y.branch))tags.push('空亡年');
-    if(attackers.size&&y.branchElement&&y.stemElement&&attackers.has(y.branchElement)&&attackers.has(y.stemElement))tags.push('用神が剋される');
+    if(yj && y.branchElement===yj.attacker)tags.push('用神('+yj.el+')が剋される');
     if(tags.length)out.push({year:y.year,ganzhi:y.ganzhi,tags});
   });
   return out;
