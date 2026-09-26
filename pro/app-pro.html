@@ -4441,7 +4441,42 @@ const ICON_SVG={
   '🔹':'<path d="M8 3l3.2 5-3.2 5-3.2-5z"/>'};
 function svgIcon(e){return '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px" aria-hidden="true">'+(ICON_SVG[e]||ICON_SVG['🔹'])+'</svg>';}
 function sectionIcon(t){const k=String(t).replace(/[：:　\s]+$/,'');const e=SECTION_ICON[k]||(/まとめ|結論|総括/.test(k)?'📌':'🔹');return svgIcon(e);}
+/* 専門用語→やさしい言い換え。鑑定文（AI・オフライン共通）で、初めて出た用語に一度だけ
+   「（＝ふつうの言葉）」を自動で添える安全網。長い熟語を先に置き、直後が漢字（別熟語の一部）や
+   既に「（」がある場合は触らない。読み手（お客様）が用語を知らなくても意味が通るようにする。 */
+const READ_GLOSS=[
+  ['天地徳合','干も支もそろう最上級の縁'],['天戦地冲','干と支が同時にぶつかる揺れやすい時期'],
+  ['月支元命','生まれ持った気質の軸'],['傷官見官','才能と規律がぶつかりやすい配置'],
+  ['官印相生','学びと信用で認められる良い配置'],['殺印相生','重圧を学びに変えて伸びる配置'],
+  ['財印交戦','お金と理想で板挟みになりやすい配置'],['劫財奪財','お金を持っていかれやすい配置'],
+  ['食神制殺','重圧を才能で受け流せる良い配置'],['宿命中殺','枠にはまらない特別な宿命'],
+  ['通変星','性格や運を表す10種類の星'],['十二運','運の勢いの段階'],
+  ['比肩','自分らしさ・自立の星'],['劫財','仲間・勝負ごとの星'],['食神','楽しむ・表現の星'],
+  ['傷官','感性・才能の星'],['偏財','人脈・回るお金の星'],['正財','堅実・貯めるお金の星'],
+  ['偏官','行動・度胸の星'],['正官','責任・まじめさの星'],['偏印','ひらめき・専門の星'],
+  ['印綬','学び・知性の星'],['食傷','表現・才能の力'],['比劫','自立・仲間の力'],
+  ['官殺','責任・プレッシャーの力'],['用神','あなたを助ける五行'],['喜神','あると調子が上がる五行'],
+  ['忌神','多すぎると負担になる五行'],['蔵干','地支に隠れた干'],
+  ['三合','支が3つそろって力が強まる関係'],['方合','同じ季節の支がそろって力が強まる関係'],
+  ['半合','支がゆるく結びつく関係'],['支合','支どうしが引き合う縁'],['干合','干どうしが引き合う縁'],
+  ['会局','支がそろって五行の力がまとまること'],['空亡','その支の働きが抜けやすい時期'],
+  ['天中殺','常識にはまらない特別な宿命'],['納音','日柱どうしの相性の組み合わせ'],
+  ['律音','干支がまったく同じ＝変化の分岐点'],['身強','自分の力が強めのタイプ'],
+  ['身弱','まわりの支えが活きるタイプ']];
+function plainGloss(t){
+  if(!t)return t;
+  for(var n=0;n<READ_GLOSS.length;n++){var term=READ_GLOSS[n][0],mean=READ_GLOSS[n][1];
+    var i=t.indexOf(term); if(i<0)continue;
+    var after=t.charAt(i+term.length);
+    if(/[（(）)]/.test(after))continue;                     // 既に言い換えがある／カッコ内で説明語として使われている
+    if(after&&/[一-鿿]/.test(after))continue;       // 直後が漢字＝別の熟語の一部→触らない
+    t=t.slice(0,i+term.length)+'（＝'+mean+'）'+t.slice(i+term.length);
+  }
+  return t;
+}
+const GOGYO_LEGEND='<div class="r-legend" style="font-size:11px;color:var(--muted);font-weight:700;background:#FBF7F0;border:1px solid var(--line);border-radius:9px;padding:7px 10px;margin-bottom:10px;line-height:1.7">言葉の意味：<b>木</b>＝成長・行動／<b>火</b>＝情熱・表現／<b>土</b>＝安定・信頼／<b>金</b>＝決断・技術・けじめ（<b>お金そのものではありません</b>）／<b>水</b>＝知性・柔軟</div>';
 function formatReading(text){
+  text=plainGloss(text);
   const lines=esc(text).split('\n').map(l=>l.trim());
   let html='',pbuf=[],lbuf=[],ltype='',summarySet=false,sawHead=false;
   // 段落を「。」で1文ずつに分け、各文を1ポイントとして表示（内容は変えない・見やすくするだけ）
@@ -4451,6 +4486,7 @@ function formatReading(text){
   const flushP=()=>{if(!pbuf.length)return;const joined=pbuf.join('');const sents=splitSentences(joined);if(sents.length)for(const s of sents){html+=`<p class="r-s">${labelize(s)}</p>`;}else html+=`<p class="r-s">${labelize(joined)}</p>`;pbuf=[];};
   const flushL=()=>{if(lbuf.length){const tag=ltype==='ol'?'ol':'ul',cls=ltype==='ol'?'r-onum':'r-list';html+=`<${tag} class="${cls}">`+lbuf.map(t=>`<li>${t}</li>`).join('')+`</${tag}>`;lbuf=[];ltype='';}};
   const flush=()=>{flushL();flushP();};
+  let _needLegend=/[木火土金水]/.test(text);
   for(const ln of lines){
     if(!ln){flush();continue;}
     const hb=ln.match(/^[【\[](.+?)[】\]]\s*(.*)$/);
@@ -4478,7 +4514,7 @@ function formatReading(text){
   html=html.replace(/`([^`\n]+?)`/g,'$1');                            // `コード`記号を除去
   html=html.replace(/[*#`＊]/g,'');                                   // 残ったAI特有の記号を一掃
   html=colorGogyo(html);
-  return `<div class="reading-card"><button type="button" class="r-copy" onclick="copyReading(this)">コピー</button>${html}</div>`;
+  return `<div class="reading-card"><button type="button" class="r-copy" onclick="copyReading(this)">コピー</button>${_needLegend?GOGYO_LEGEND:''}${html}</div>`;
 }
 function copyReading(btn){
   const card=btn.closest('.reading-card');if(!card)return;
@@ -4817,7 +4853,7 @@ function engineBadge(online,note){
   return '<div class="r-engine off">'+gOff+'オフライン鑑定（端末内で作成）</div>'+(note?'<div class="r-engine-sub">'+esc(note)+'</div>':'');
 }
 /* AI呼び出しの共通処理。Geminiが使えれば生成。キーなし／オフライン／接続エラー／応答が空のときは、端末内のオフライン鑑定に自動で切り替える（エラーで止めない）。 */
-const YOMI_RULE='\n【用語の読みがな＝厳守】読みがなを添える場合は必ず正しい読みで書く：比肩=ひけん／劫財=ごうざい（「ぎょうざい」「きょうざい」は誤り）／食神=しょくじん／傷官=しょうかん／偏財=へんざい／正財=せいざい／偏官=へんかん／正官=せいかん／偏印=へんいん／印綬=いんじゅ／建禄=けんろく／帝旺=ていおう／沐浴=もくよく／冠帯=かんたい／羊刃=ようじん／空亡=くうぼう／冲=ちゅう／三合=さんごう／方合=ほうごう／半合=はんごう／干合=かんごう／支合=しごう／月支元命=げっしげんめい／蔵干=ぞうかん／通変星=つうへんせい／納音=なっちん／律音=りっちん。自信がない用語には読みがなを付けない。\n通変星・十二運・重要な用語は、文章内で初めて出したときに一度だけ読みがなを添える（毎回そろえる）。同じ語の2回目以降は付けない。';
+const YOMI_RULE='\n【用語の読みがな＝厳守】読みがなを添える場合は必ず正しい読みで書く：比肩=ひけん／劫財=ごうざい（「ぎょうざい」「きょうざい」は誤り）／食神=しょくじん／傷官=しょうかん／偏財=へんざい／正財=せいざい／偏官=へんかん／正官=せいかん／偏印=へんいん／印綬=いんじゅ／建禄=けんろく／帝旺=ていおう／沐浴=もくよく／冠帯=かんたい／羊刃=ようじん／空亡=くうぼう／冲=ちゅう／三合=さんごう／方合=ほうごう／半合=はんごう／干合=かんごう／支合=しごう／月支元命=げっしげんめい／蔵干=ぞうかん／通変星=つうへんせい／納音=なっちん／律音=りっちん。自信がない用語には読みがなを付けない。\n通変星・十二運・重要な用語は、文章内で初めて出したときに一度だけ読みがなを添える（毎回そろえる）。同じ語の2回目以降は付けない。\n【いちばん大事な書き方＝専門用語を裸で置かない】読み手は四柱推命をまったく知らない一般のお客様。占い師でも初見で分かるように書く。専門用語（通変星名＝比肩・劫財・食神・傷官・偏財・正財・偏官・正官・偏印・印綬、五行＝木火土金水、十二運、蔵干・月支元命・用神・喜神・忌神・身強・身弱、合冲＝三合・方合・半合・支合・干合・冲・刑・会局、空亡・天中殺・天戦地冲・律音・納音など）は、初めて出したその場で必ず“ふつうの言葉”の言い換えをカッコで添える（例：「傷官（＝感性と才能の星）」「用神（＝あなたを助ける五行）」「冲（＝ぶつかり合い・刺激）」）。とくに五行の「金」は“お金”ではなく「決断・技術・けじめの性質」、「水」は「知性・柔軟さ」の意味だと必ず添え、お金の話（金運）と混同させない。用語を並べただけの文・言い換えのない文は禁止。専門用語を一切知らない人が読んでも、各文の意味がそのまま分かることを最優先にする（用語を消す必要はないが、必ず普通の言葉とセットにする）。';
 // 詳細鑑定(AI)の“ゆるい1日上限”（不正利用防止）。超過はその日だけオフライン鑑定に自動フォールバック・翌日リセット。
 // ※フロント側の簡易カウンタ（同一ブラウザ内・鑑定書ページと共有）。厳密な強制はサーバー側で（BACKEND_HANDOFF.md 参照）。
 const AI_DAILY_CAP=50;
