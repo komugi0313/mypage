@@ -50,4 +50,10 @@ Pocket鑑定の修正（大運・立運・節入り、アカウント、パス�
 | `quotatest.js` | サーバーの回数制限（無料／本格鑑定の月の上限／数えない呼び出し／プラン名の詐称） | `NODE_PATH=mock/node_modules node quotatest.js` |
 | `planui2.js` | 画面：本格鑑定の数え方、使い切った時の案内とシート、深刻な相談は止めない、マイページの残り回数 | `NODE_PATH=mock/node_modules node planui2.js` |
 
+### 2026-09-26 追加（5）：利益65%を守るAI原価の上限
+| ファイル | 内容 | 実行例 |
+|---|---|---|
+| `budgettest.js` | 31日間、毎日止まるまで使い続けた時のAI原価と利益率（3プラン）、無料の話題の判定の上限 | `NODE_PATH=mock/node_modules node budgettest.js` |
+| `budgetui.js` | 雑談の割り当てを使い切った時の画面（案内・本格鑑定は答える・深刻な相談は相談窓口つき） | `NODE_PATH=mock/node_modules node budgetui.js` |
+
 ※本番の Netlify（実際の Blobs・Resend）での確認は含みません。デプロイ後に実機で「登録→別端末でログイン」「パスワードを忘れた→メール→再設定」を確認してください。

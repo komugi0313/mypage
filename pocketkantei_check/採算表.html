@@ -80,7 +80,7 @@ ul.notes{margin:0;padding-left:1.2em;display:grid;gap:6px;max-width:80ch}
 <header>
   <p class="eyebrow">Pocket本格鑑定 ・ 料金設計 2026-09-03 決定版</p>
   <h1>Pocket鑑定 採算表</h1>
-  <p>Standard / Pro / VIP の1人あたり月の利益を、支払い方法（ウェブ・アプリ）と使い方ごとに計算します。下の「前提」の数字を変えると、表がすぐに計算し直されます。黄色の印の数字は、正式な値を確認して入れ直してください。</p>
+  <p>Standard / Pro / VIP の1人あたり月の利益を、支払い方法（ウェブ・アプリ）と使い方ごとに計算します。どんな使い方をされても、手数料を引いた後の手取りの65%以上が利益として残るように、AI原価に上限を設けています。下の「前提」の数字を変えると、表がすぐに計算し直されます。黄色の印の数字は、正式な値を確認して入れ直してください。</p>
 </header>
 
 <section aria-labelledby="k-h">
@@ -106,8 +106,8 @@ ul.notes{margin:0;padding-left:1.2em;display:grid;gap:6px;max-width:80ch}
 </section>
 
 <section class="panel" aria-labelledby="w-h">
-  <h2 id="w-h">安全上限の見直し</h2>
-  <p class="small" style="margin:0 0 10px;max-width:80ch">雑談と「なぜ？」は回数に数えないため、1日の安全上限いっぱいまで使われた時の原価が大きくなります。下の表は、本格鑑定を上限まで使い、さらに安全上限まで使われた時の利益です。</p>
+  <h2 id="w-h">AI原価の上限（利益<span id="mgTxt">65</span>%を守る仕組み）</h2>
+  <p class="small" style="margin:0 0 10px;max-width:80ch">1人あたり・1か月のAI原価に上限を設けて、サーバーで守っています。上限は、手取りがいちばん少ない条件（年額プランの1か月分・アプリ手数料30%）の手取りから決めています。本格鑑定の回数は必ず使えるように先に取っておき、残りを雑談と「なぜ？」に毎日同じくらいずつ割り当てます。そのため、どんな使い方をされても、下の「いちばん使われた時の利益」を下回りません。</p>
   <div class="tbl"><table id="capTbl"></table></div>
   <p class="small muted" style="margin:10px 0 0" id="capNote"></p>
 </section>
@@ -143,7 +143,7 @@ ul.notes{margin:0;padding-left:1.2em;display:grid;gap:6px;max-width:80ch}
     liteIn:0.10, liteOut:0.40, deepIn:0.50, deepOut:3.00,
     inTok:28000, liteOutTok:600, deepOutTok:2500, cacheShare:0, cachePrice:25,
     classifyYen:0.04, retry:5,
-    capLite:300, capFree:100
+    margin:65, feeWorst:30
   };
   var FIELDS=[
     {g:'お金', items:[
@@ -167,9 +167,9 @@ ul.notes{margin:0;padding-left:1.2em;display:grid;gap:6px;max-width:80ch}
       ['classifyYen','話題の判定など1通ごとの追加（円）','小さな呼び出し','est'],
       ['retry','作り直しの割合（%）','品質のため上位モデルでやり直す','est']
     ]},
-    {g:'1日の安全上限（今の設定）', items:[
-      ['capLite','有料プランの雑談（回／日）','gemini.js の LITE_SAFETY',''],
-      ['capFree','数えない上位モデル（回／日）','gemini.js の FREE_DEEP_DAILY','']
+    {g:'守る利益', items:[
+      ['margin','守る利益の割合（%）','手数料を引いた後の手取りに対する割合（運営決定：65%）',''],
+      ['feeWorst','上限の計算に使う手数料（%）','いちばん高い手数料（アプリ30%）','']
     ]}
   ];
   var PLANS=[
@@ -183,8 +183,8 @@ ul.notes{margin:0;padding-left:1.2em;display:grid;gap:6px;max-width:80ch}
     {id:'full',name:'よく使う',deep:1,chat:30,why:5,desc:'本格鑑定を上限まで、雑談を1日30回、「なぜ？」を1日5回。'}
   ];
   var P={}, scen='std', feeMode=null;
-  function load(){ Object.keys(DEF).forEach(function(k){ P[k]=DEF[k]; }); try{ var s=JSON.parse(localStorage.getItem('pk_saisan')||'null'); if(s) Object.keys(DEF).forEach(function(k){ if(typeof s[k]==='number'&&isFinite(s[k])) P[k]=s[k]; }); }catch(e){} }
-  function save(){ try{ localStorage.setItem('pk_saisan',JSON.stringify(P)); }catch(e){} }
+  function load(){ Object.keys(DEF).forEach(function(k){ P[k]=DEF[k]; }); try{ var s=JSON.parse(localStorage.getItem('pk_saisan2')||'null'); if(s) Object.keys(DEF).forEach(function(k){ if(typeof s[k]==='number'&&isFinite(s[k])) P[k]=s[k]; }); }catch(e){} }
+  function save(){ try{ localStorage.setItem('pk_saisan2',JSON.stringify(P)); }catch(e){} }
   function yen(n){ var s=Math.round(n).toLocaleString('ja-JP'); return (n<0?'−¥'+s.replace('-',''):'¥'+s); }
   function yen1(n){ return '¥'+(Math.round(n*100)/100).toFixed(2); }
   // 1回あたりの原価（円）
@@ -204,6 +204,8 @@ ul.notes{margin:0;padding-left:1.2em;display:grid;gap:6px;max-width:80ch}
     if(channel==='web') return ex-price*P.feeWeb/100;
     return ex*(1-P.feeApp/100);
   }
+  // 利益の割合を守るための、1人・1か月のAI原価の上限（手取りがいちばん少ない条件＝年額の1か月分・アプリ手数料30%）
+  function budget(pl){ return (pl.y/12)/(1+P.tax/100)*(1-P.feeWorst/100)*(1-P.margin/100); }
   function pctTag(p){ var c=p>=60?'g':(p>=30?'w':'r'); return '<span class="pct '+c+'">'+(isFinite(p)?Math.round(p)+'%':'—')+'</span>'; }
   function cell(profit, rev){ var p=profit/rev*100; return '<td class="num'+(profit<0?' loss':'')+'">'+yen(profit)+pctTag(p)+'</td>'; }
   function render(){
@@ -227,31 +229,28 @@ ul.notes{margin:0;padding-left:1.2em;display:grid;gap:6px;max-width:80ch}
       +'<tr><td>本格鑑定・「なぜ？」</td><td style="text-align:left">gemini-3.6-flash</td><td class="num">'+P.inTok.toLocaleString()+'</td><td class="num">'+P.deepOutTok.toLocaleString()+'</td><td class="num">'+yen1(dp)+'</td></tr>'
       +'<tr><td>話題の判定など</td><td style="text-align:left">gemini-2.5-flash-lite</td><td class="num">—</td><td class="num">—</td><td class="num">'+yen1(P.classifyYen)+'</td></tr></tbody>';
     document.getElementById('costNote').textContent='本格鑑定1回は雑談の約'+(dp/lt).toFixed(1)+'倍の原価です。入力（毎回の指示文）が原価の'+Math.round(inCost(P.liteIn)*P.fx/lt*100)+'%（雑談）・'+Math.round(inCost(P.deepIn)*P.fx/dp*100)+'%（本格鑑定）を占めます。';
-    // 安全上限いっぱい
-    var ch='<thead><tr><th>プラン（月額）</th><th>売上（税抜）</th><th>原価（上限いっぱい）</th><th>ウェブ版</th><th>アプリ</th><th>赤字にならない雑談の上限</th></tr></thead><tbody>';
-    var worstLoss=false;
+    // AI原価の上限（利益の割合を守る）
+    document.getElementById('mgTxt').textContent=P.margin;
+    var ch='<thead><tr><th>プラン</th><th>AI原価の上限（月）</th><th>本格鑑定の分</th><th>雑談・なぜ？の分</th><th>1日の目安</th><th>いちばん使われた時の利益<span class="sub">手取りに対する割合</span></th></tr></thead><tbody>';
     PLANS.forEach(function(pl){
-      var ex=pl.m/(1+P.tax/100), cost=monthCost(pl, pl.q, P.capLite, P.capFree);
-      var pw=net(pl.m,'web')-cost, pa=net(pl.m,'app')-cost; if(pw<0||pa<0) worstLoss=true;
-      // なぜ？を上限いっぱい使った時に、雑談を1日何回まで許せるか（アプリの手取りで0円になる所）
-      var base=monthCost(pl, pl.q, 0, P.capFree), per=30*(liteYen()*(1+P.retry/100*deepYen()/liteYen())+P.classifyYen);
-      var room=net(pl.m,'app')-base, maxChat=room>0?Math.floor(room/per):0;
-      ch+='<tr><td><span class="planname">'+pl.name+'</span><span class="sub">雑談 '+P.capLite+'回／日・なぜ？ '+P.capFree+'回／日</span></td><td class="num">'+yen(ex)+'</td><td class="num">'+yen(cost)+'</td>'+cell(pw,ex)+cell(pa,ex)+'<td class="num">'+(room>0?maxChat+'回／日':'「なぜ？」の上限だけで赤字')+'</td></tr>';
+      var b=budget(pl), dres=pl.q*deepYen()*(1+P.retry/100), rest=Math.max(0,b-dres), perChat=liteYen()+P.classifyYen, perWhy=deepYen();
+      var chatDay=Math.floor(rest/30/perChat), whyDay=Math.floor(rest/30/perWhy);
+      var ex30=function(pr){ return pr/(1+P.tax/100)*(1-P.feeWorst/100); }, nm=ex30(pl.m), ny=ex30(pl.y/12), nw=net(pl.y/12,'web');
+      ch+='<tr><td><span class="planname">'+pl.name+'</span><span class="sub">本格鑑定 月'+pl.q+'回</span></td><td class="num">'+yen(b)+'</td><td class="num">'+yen(dres)+'</td><td class="num">'+yen(rest)+'</td>'
+        +'<td class="num">雑談だけなら '+chatDay+'回<span class="sub">「なぜ？」だけなら '+whyDay+'回</span></td>'
+        +'<td class="num">'+pctTag((ny-b)/ny*100)+'<span class="sub">アプリ'+P.feeWorst+'%・年額</span>'+pctTag((nm-b)/nm*100)+'<span class="sub">アプリ'+P.feeWorst+'%・月額</span>'+pctTag((nw-b)/nw*100)+'<span class="sub">ウェブ・年額</span></td></tr>';
     });
     document.getElementById('capTbl').innerHTML=ch+'</tbody>';
-    document.getElementById('capNote').textContent=worstLoss
-      ?'今の安全上限では、上限いっぱいまで使う人が1人でもいると赤字になります。「なぜ？」（上位モデル）の上限を先に下げるのが効果的です。前提の「数えない上位モデル（回／日）」を変えて確かめてください。'
-      :'今の前提では、安全上限いっぱいまで使われても赤字になりません。';
+    document.getElementById('capNote').textContent='「1日の目安」は、本格鑑定を上限まで使うとした時に、雑談だけ・「なぜ？」だけに使える1日あたりの回数です（1か月30日）。キャッシュが効くと、1回の原価が下がり、話せる回数が増えます。上限の金額は、サーバーの環境変数 PK_COST_BUDGET_JPY で変えられます（今の値：Standard ¥592・Pro ¥1,204・VIP ¥2,000）。';
     // 要点
     var stdSc=SCEN[1], trialCost=(5*deepYen()+10*liteYen()+15*P.classifyYen);
     var s=PLANS[0], sProfitApp=net(s.m,'app')-monthCost(s,s.q*stdSc.deep,stdSc.chat,stdSc.why), sEx=s.m/(1+P.tax/100);
-    var vWorst=net(PLANS[2].m,'app')-monthCost(PLANS[2],PLANS[2].q,P.capLite,P.capFree);
-    var sWorst=net(s.m,'app')-monthCost(s,s.q,P.capLite,P.capFree);
+    var sB=budget(s), sNY=(s.y/12)/(1+P.tax/100)*(1-P.feeWorst/100);
     document.getElementById('keys').innerHTML=
       '<div class="key"><b>Standard（アプリ・ふつうの使い方）</b><span class="v">'+yen(sProfitApp)+'</span><span class="small muted">売上（税抜）の'+Math.round(sProfitApp/sEx*100)+'%が利益</span></div>'
       +'<div class="key"><b>本格鑑定1回の原価</b><span class="v">'+yen1(deepYen())+'</span><span class="small muted">雑談1回は '+yen1(liteYen())+'</span></div>'
       +'<div class="key"><b>無料お試し1人の原価</b><span class="v">'+yen(trialCost)+'</span><span class="small muted">15通（本格鑑定5・雑談10として）</span></div>'
-      +'<div class="key '+(sWorst<0?'bad':'warn')+'"><b>Standard を安全上限いっぱいまで使われた時</b><span class="v">'+yen(sWorst)+'</span><span class="small muted">VIP でも '+yen(vWorst)+'／月（アプリ）</span></div>';
+      +'<div class="key"><b>いちばん使われた時の利益（Standard）</b><span class="v">'+yen(sNY-sB)+'</span><span class="small muted">手取りの'+Math.round((sNY-sB)/sNY*100)+'%（年額・アプリ'+P.feeWorst+'%）。AI原価の上限 '+yen(sB)+'／月</span></div>';
     // 切り替えの表示
     Array.prototype.forEach.call(document.querySelectorAll('#scSeg button'),function(b){ b.setAttribute('aria-pressed',String(b.dataset.id===scen)); });
     Array.prototype.forEach.call(document.querySelectorAll('#feeSeg button'),function(b){ b.setAttribute('aria-pressed',String(+b.dataset.v===P.feeApp)); });

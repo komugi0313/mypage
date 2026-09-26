@@ -43,8 +43,8 @@ diff -ruN "pk/README_\343\203\207\343\203\227\343\203\255\343\202\244.md" "fx/RE
  - テレコムクレジットの **申込フォーム＋継続課金同意画面**（審査通過後に組み込み）
 diff -ruN "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md" "fx/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"
 --- "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"	1970-01-01 00:00:00.000000000 +0000
-+++ "fx/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"	2026-09-26 19:57:57.953036359 +0000
-@@ -0,0 +1,476 @@
++++ "fx/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"	2026-09-26 20:16:06.157011469 +0000
+@@ -0,0 +1,516 @@
 +# Pocket鑑定 2026-09-25 変更点と運用ガイド（エンジニア向け）
 +
 +この資料は、2026-09-25 の改修内容を、実装・デプロイ・運用するエンジニアが正しく理解するためのものです。
@@ -521,6 +521,46 @@ diff -ruN "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\3
 +| `planui2.js`（画面） | 恋愛の質問は1回として数える／雑談は数えない／使い切り後：Standard は案内とシート、VIP は案内だけ／雑談は続けられる／「死にたい」は必ずAIへ（数えない）／マイページに残り回数 |
 +| 料金画面（ja／en／ko／th） | 月額・年額の価格、切り替え、説明文 |
 +| `billui.js`（模擬ストア） | 月額・年額のストア価格の表示、Pro 年額の購入、別端末での復元 |
++
++---
++
++## 11. 2026-09-26 追記（5）：利益65%を守るAI原価の上限
++
++**運営の決定：** どんな使い方をされても、手数料（アプリ30%・テレコムクレジット5%）を引いた後の手取りの65%以上を利益として残します。
++
++### 11.1 仕組み（`functions/gemini.js`）
++- **1人・1か月のAI原価の上限（`COST_BUDGET`、環境変数 `PK_COST_BUDGET_JPY` で変更できます）：**
++  - Standard ¥592、Pro ¥1,204、VIP ¥2,000
++  - 計算方法：年額÷12÷1.1×（1−0.30）×（1−0.65）。手取りがいちばん少ない条件です。
++- **原価の数え方：** AIが返す `usageMetadata`（入力・キャッシュ済み入力・出力・思考のトークン数）× 料金（`AI_PRICES`、環境変数 `PK_AI_PRICES`）× 為替（`PK_FX`、既定150）で、1回ごとに計算します。月の合計は `c:<区切り>:<uid>`、その日の合計は `cd:<日>:<uid>` に積み上げます（1/100円単位）。
++- **本格鑑定は必ず使えます。** まだ使っていない本格鑑定の分（`DEEP_RESERVE_JPY`＝1回¥4）を先に取っておき、残りを雑談・「なぜ？」・作り直し・話題の判定に「残り÷区切りの残り日数」ずつ毎日割り当てます。
++- **1回ごとの判定：** その1回の見込み原価（`estSen`）を足しても今日の割り当てを超えない時だけ通します。超える時は 429 `DAILY_BUDGET` を返し、アプリは「雑談はまた明日。本格的な相談はこのまま聞ける」と表示します（`BUDGET_NOTE`、10言語）。
++- **つらい気持ちの相談：** 割り当てを超えていたらAIは使いません。その場合でも、アプリが相談窓口つきの安全な返事（`safeReply`）を必ず表示します。
++- **数える期間の区切り（`subWindow`）：** 今の支払い期間（`rec.sub.start`〜`expires`）で区切ります。暦の月ではありません。
++  - 月額：その期間そのもの
++  - 年額：期間を12等分
++  - `billing.js` が RevenueCat の `purchased_at_ms` を `rec.sub.start` に記録します。
++  - これで、月の途中で買った人が2か月分使えることを防ぎます。本格鑑定の回数（`DEEP_QUOTA`）も同じ区切りで数えます。
++- **話題の判定（`x-pk-classify`）の上限を追加しました。** 1日あたり、無料は端末30回・IP200回、有料は端末600回・IP2000回です。以前は上限がなく、「無料で使い放題のAI」として悪用できる状態でした。出力も300トークンまでに制限します。
++- **アプリの「残り回数」の表示：** サーバーが返す `x-pk-win`／`x-pk-deep-used` を優先します。
++
++### 11.2 検証（`budgettest.js`）
++31日間の月に、有料プランの人が毎日、本格鑑定・雑談・「なぜ？」・つらい相談・話題の判定を、止まるまで送り続けた場合（AIの応答は模擬）：
++
++| プラン | 1か月のAI原価 | 上限 | 利益（アプリ30%・月額／年額） |
++|---|---|---|---|
++| Standard | ¥588 | ¥592 | 68%／65% |
++| Pro | ¥1,196 | ¥1,204 | 68%／65% |
++| VIP | ¥1,986 | ¥2,000 | 68%／65% |
++
++- 無料の人の話題の判定：60回送っても、30回で止まります。
++- `budgetui.js`（画面）：割り当てを使い切った後の雑談は案内の文、恋愛の質問（本格鑑定）はAIが答える、「死にたい」は相談窓口つきの返事になることを確認しました。
++
++### 11.3 運用で必ず行うこと
++- **gemini-3.6-flash の正式な料金が分かったら、`PK_AI_PRICES` を入れ直してください。** 今は仮の値（入力 $0.50・出力 $3.00・キャッシュ $0.125）です。実際の料金が高いと、話せる量は減りますが、利益の割合は守られます（上限の中で止まるため）。
++- **為替が円安になったら、`PK_FX` を上げてください。**
++- **採算表（アーティファクト「Pocket鑑定 採算表」）で、上限と「1日に話せる目安」を確かめられます。** 今の前提では、Standard は雑談だけなら1日28回くらい、「なぜ？」だけなら4回くらいです。
++- **話せる量を増やしたい時は、毎回送る指示文（約8万7千文字）にキャッシュが効く並べ方にしてください。** 入力の原価が大きく下がり、同じ上限の中で2〜3倍話せる見込みです。
 diff -ruN "pk/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\273\225\346\247\230\346\233\270.md" "fx/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\273\225\346\247\230\346\233\270.md"
 --- "pk/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\273\225\346\247\230\346\233\270.md"	2026-09-17 13:04:05.000000000 +0000
 +++ "fx/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\273\225\346\247\230\346\233\270.md"	2026-09-26 19:57:57.972422025 +0000
@@ -655,7 +695,7 @@ diff -ruN "pk/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\2
  ---
 diff -ruN pk/functions/auth.js fx/functions/auth.js
 --- pk/functions/auth.js	1970-01-01 00:00:00.000000000 +0000
-+++ fx/functions/auth.js	2026-09-26 19:37:07.581030022 +0000
++++ fx/functions/auth.js	2026-09-26 20:11:49.754768528 +0000
 @@ -0,0 +1,269 @@
 +// Netlify Function：アカウント（メールアドレス＋パスワード）とデータ同期。
 +// ・メール確認リンクは使わない。メールアドレス＋パスワードだけで登録／ログインする。
@@ -887,7 +927,7 @@ diff -ruN pk/functions/auth.js fx/functions/auth.js
 +// 購読の状態：billing.js（ストアからの通知）が rec.sub に書き込む。期限内なら有料プラン、切れていれば free
 +function planInfo(rec) {
 +  const s = rec && rec.sub;
-+  if (s && s.plan && +s.expires > Date.now()) return { plan: s.plan, expires: +s.expires, willRenew: s.willRenew !== false, store: s.store || '' };
++  if (s && s.plan && +s.expires > Date.now()) return { plan: s.plan, start: +s.start || 0, expires: +s.expires, willRenew: s.willRenew !== false, store: s.store || '' };
 +  return { plan: 'free' };
 +}
 +function userId(email) { return crypto.createHash('sha256').update(email).digest('hex'); }
@@ -928,8 +968,8 @@ diff -ruN pk/functions/auth.js fx/functions/auth.js
 +exports._t = { hashPw, makeToken, readToken, cleanData, normEmail, planInfo, getStore, userId, TC };
 diff -ruN pk/functions/billing.js fx/functions/billing.js
 --- pk/functions/billing.js	1970-01-01 00:00:00.000000000 +0000
-+++ fx/functions/billing.js	2026-09-26 19:37:07.580615155 +0000
-@@ -0,0 +1,95 @@
++++ fx/functions/billing.js	2026-09-26 20:11:49.754472175 +0000
+@@ -0,0 +1,96 @@
 +// Netlify Function：購読（App Store / Google Play）の通知を受け取り、アカウントのプランを書き込む。
 +// ・ストアの購入は、アプリ内の課金サービス（RevenueCat を想定）が確認し、ここへ Webhook で知らせる。
 +// ・アプリは RevenueCat の appUserID に「アカウントの uid」（ログイン用トークンの先頭の64桁）を使う。
@@ -989,7 +1029,8 @@ diff -ruN pk/functions/billing.js fx/functions/billing.js
 +      if (cur.eventTs && ts < cur.eventTs) { done++; continue; }   // 古い通知が後から届いた時は無視
 +      if (GRANT.includes(ev.type)) {
 +        if (!plan) return json(200, { ok: true, ignored: 'unknown_product', product });
-+        rec.sub = { plan, product, expires: exp || (Date.now() + 35 * 864e5), willRenew: true, store: String(ev.store || ''), env: String(ev.environment || ''), eventTs: ts, updated: Date.now() };
++        // start＝今の支払い期間の開始（回数と原価の上限を、購読の期間に合わせて区切るのに使う）
++        rec.sub = { plan, product, start: +ev.purchased_at_ms || Date.now(), expires: exp || (Date.now() + 35 * 864e5), willRenew: true, store: String(ev.store || ''), env: String(ev.environment || ''), eventTs: ts, updated: Date.now() };
 +      } else if (ev.type === 'CANCELLATION') {
 +        // 解約（または返金）：期限までは使える。返金（cancel_reason=CUSTOMER_SUPPORT 等で期限が過去）なら即時終了
 +        rec.sub = Object.assign({}, cur, { willRenew: false, eventTs: ts, updated: Date.now() });
@@ -1027,7 +1068,7 @@ diff -ruN pk/functions/billing.js fx/functions/billing.js
 +exports._t = { planOfProduct, uids };
 diff -ruN pk/functions/gemini.js fx/functions/gemini.js
 --- pk/functions/gemini.js	2026-08-20 09:26:04.000000000 +0000
-+++ fx/functions/gemini.js	2026-09-26 19:37:32.181604807 +0000
++++ fx/functions/gemini.js	2026-09-26 20:12:22.683521363 +0000
 @@ -3,7 +3,7 @@
  // ・回数制限は「サーバー側」で強制（localStorage は改ざん可能なので信用しない）。
  //   端末ID(x-pk-device)＋IP を Netlify Blobs に日次カウントし、超過なら 429 を返し
@@ -1037,7 +1078,7 @@ diff -ruN pk/functions/gemini.js fx/functions/gemini.js
  // ※要設定：Site settings → Environment variables → GEMINI_API_KEY
  //          Blobs は Netlify の通常デプロイ（Git連携 / netlify deploy）で自動有効。
  
-@@ -15,12 +15,15 @@
+@@ -15,12 +15,29 @@
  const MODEL_LITE = process.env.GEMINI_MODEL      || 'gemini-2.5-flash-lite';
  const MODEL_DEEP = process.env.GEMINI_MODEL_DEEP || 'gemini-3.6-flash';
  
@@ -1054,24 +1095,40 @@ diff -ruN pk/functions/gemini.js fx/functions/gemini.js
 +const DEEP_QUOTA = { std: 50, pro: 100, vip: 175 };
 +// 有料プランの雑談（軽量モデル）は回数に含めない。ただしbot・悪用対策として1日の安全上限を置く（ふつうの利用では届かない値）
 +const LITE_SAFETY = { device: 300, ip: 1000 };
++// 話題の判定（x-pk-classify）の1日の上限。ほかの回数には数えないが、ここで上限を置かないと「無料で使い放題のAI」になってしまう
++const CLASSIFY_DAILY = { free: { device: 30, ip: 200 }, paid: { device: 600, ip: 2000 } };
 +// 上位モデルだが本格鑑定には数えない呼び出し（「なぜ？」の説明・相づち・韓国語の雑談・作り直しなど）の1日の安全上限（アカウントごと）
 +const FREE_DEEP_DAILY = 100;
++// ---- 1人あたり・1か月の「AI原価の上限」（利益65%を守る。運営決定 2026-09-26）----
++// 手取りがいちばん少ない条件（年額プランの1か月分・アプリ手数料30%）で、手取りの35%までをAIに使える上限とする。
++//   Standard：31,900円÷12÷1.1×0.7×0.35 ≒ ¥592 ／ Pro ≒ ¥1,204 ／ VIP ≒ ¥2,000
++//   本格鑑定の回数（DEEP_QUOTA）は必ず使えるように、まだ使っていない本格鑑定の分を先に取っておき、
++//   残りを雑談・「なぜ？」に「残り÷残りの日数」ずつ毎日割り当てる（月の途中で急に使えなくならないように）。
++//   原価は、AIが返す実際の使用量（usageMetadata のトークン数）から1回ごとに計算して積み上げる。
++function jsonEnv(k) { try { return JSON.parse(process.env[k] || '{}'); } catch (e) { return {}; } }
++const COST_BUDGET = Object.assign({ std: 592, pro: 1204, vip: 2000 }, jsonEnv('PK_COST_BUDGET_JPY'));
++// AIの料金（米ドル／100万トークン。cached＝キャッシュが効いた入力）。gemini-3.6-flash は仮の値（要確認）→ 環境変数 PK_AI_PRICES で差し替え
++const AI_PRICES = Object.assign({ lite: { in: 0.10, out: 0.40, cached: 0.025 }, deep: { in: 0.50, out: 3.00, cached: 0.125 } }, jsonEnv('PK_AI_PRICES'));
++const FX = +process.env.PK_FX || 150;                              // 1ドル＝円（安全側に。円安になったら上げる）
++const DEEP_RESERVE_JPY = +process.env.PK_DEEP_RESERVE_JPY || 4;   // まだ使っていない本格鑑定1回ぶんとして取っておく原価（円）
  const MAX_BODY = 12000; // ユーザーの1発言あたりの最大文字数（トークン浪費・悪用防止。※システムプロンプトは対象外）
  
  exports.handler = async (event) => {
-@@ -52,22 +55,42 @@
+@@ -52,30 +69,74 @@
    const h = lower(event.headers || {});
    const device = clean(h['x-pk-device']) || 'nodev';
    const ip = clean(h['x-nf-client-connection-ip'] || h['x-forwarded-for'] || '').split(',')[0].trim() || 'noip';
 -  const plan = (clean(h['x-pk-plan']) || 'free').toLowerCase();   // 将来サーバーで購読照合して上書き
 -  const lim = LIMITS[plan] || LIMITS.free;
--  const day = jstDay();
--  // 話題分類用の軽量呼び出し（x-pk-classify:1）は、ユーザーの1日カウントに含めない（本体の応答呼び出しだけを課金対象にする）。常に軽量モデルで安価。
 +  // プランは「アカウントに記録された購読」で決める（billing.js がストアの通知で書き込む）。
 +  // x-pk-plan は端末の自己申告で誰でも書き換えられるので使わない（テスト時だけ PK_TRUST_PLAN_HEADER=1 で有効）。
 +  const acct = await accountInfo(event, String(h['x-pk-auth'] || '').replace(/[\r\n]/g, '').slice(0, 400));
 +  if (process.env.PK_TRUST_PLAN_HEADER === '1') { const hp = (clean(h['x-pk-plan']) || 'free').toLowerCase(); acct.plan = hp; if (!acct.uid) acct.uid = 'dev-' + device; }
-+  const day = jstDay(), ym = day.slice(0, 7);
+   const day = jstDay();
+-  // 話題分類用の軽量呼び出し（x-pk-classify:1）は、ユーザーの1日カウントに含めない（本体の応答呼び出しだけを課金対象にする）。常に軽量モデルで安価。
++  // 数える期間：購読の更新日を基準にした1か月ごと（暦の月ではない。月の途中で買った人が2か月ぶん使えないように）
++  const win = subWindow(acct.start, acct.expires, day);
++  const ym = win.id;
 +  // 話題分類用の軽量呼び出し（x-pk-classify:1）は数えない（常に軽量モデルで安価）
    const isClassify = clean(h['x-pk-classify']) === '1';
 +  const wantDeep = clean(h['x-pk-deep']) === '1';
@@ -1110,25 +1167,118 @@ diff -ruN pk/functions/gemini.js fx/functions/gemini.js
 +        if (await readCount(store, lipKey) >= LITE_SAFETY.ip) return limitResp(LITE_SAFETY.ip, 'fair');
 +        countKeys = [lKey, lipKey];
 +      }
++    } catch (e) { degraded = true; }
++  } else if (store && isClassify) {
++    try {
++      const lim = paid ? CLASSIFY_DAILY.paid : CLASSIFY_DAILY.free;
++      const kKey = `k:${day}:${device}`, kipKey = `ki:${day}:${ip}`;
++      if (await readCount(store, kKey) >= lim.device) return limitResp(lim.device, 'classify');
++      if (await readCount(store, kipKey) >= lim.ip) return limitResp(lim.ip, 'classify');
++      countKeys = [kKey, kipKey];
      } catch (e) { degraded = true; }
    } else if (!store) { degraded = true; }
  
-@@ -103,11 +126,7 @@
++  // AI原価の上限（有料プランの雑談・「なぜ？」・作り直し）。本格鑑定（回数に数えるもの）と危機の相談は止めない
++  const budgeted = paid && store && !degraded && !(wantDeep && !freeDeep);
++  if (budgeted) {
++    try {
++      // この1回の見込み原価を足しても、今日の割り当てを超えない時だけ通す（最後の1回で上限を超えないように）。
++      // つらい気持ちの相談もこの範囲で扱う。超えた時は、アプリが相談窓口つきの安全な返事を自分で出す（AI原価なし）
++      const b = budgetToday(acct.plan, await readCount(store, `c:${ym}:${acct.uid}`), await readCount(store, `cd:${day}:${acct.uid}`), await readCount(store, `q:${ym}:${acct.uid}`), win.daysLeft);
++      if (b.spentToday + estSen(wantDeep) > b.allowToday) return json(429, { error: { code: 'DAILY_BUDGET', plan: acct.plan, message: '今日の雑談の分を使い切りました。本格鑑定は引き続き使えます。' } });
++    } catch (e) { degraded = true; }
++  }
++
+   // Gemini 呼び出し（ハイブリッド：深い質問だけ上位モデル）
+-  const MODEL = (clean(h['x-pk-deep']) === '1') ? MODEL_DEEP : MODEL_LITE;
++  const MODEL = (!isClassify && clean(h['x-pk-deep']) === '1') ? MODEL_DEEP : MODEL_LITE;
+   const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(key)}`;
+   // Gemini 3.x 互換：thinkingBudget:0 は 3.x で 400 になるため除去し、思考ぶんの出力トークンを確保する（クライアントが古い形で送ってきても安全に整える）
+   let sendBody = event.body;
++  // 話題の判定は出力を短く制限する（長い返事を作らせる悪用を防ぐ）
++  if (isClassify) { try { const pj = JSON.parse(event.body || '{}'); pj.generationConfig = Object.assign({}, pj.generationConfig, { maxOutputTokens: Math.min(300, (pj.generationConfig && pj.generationConfig.maxOutputTokens) || 300) }); sendBody = JSON.stringify(pj); } catch (e) {} }
+   if (/gemini-3/.test(MODEL)) {
+     try {
+       const pj = JSON.parse(event.body || '{}');
+@@ -86,7 +147,8 @@
+       sendBody = JSON.stringify(pj);
+     } catch (e) {}
+   }
+-  const usedDeep = (clean(h['x-pk-deep']) === '1');
++  const usedDeep = (MODEL === MODEL_DEEP);
++  let modelUsed = MODEL;
+   let resp;
+   try {
+     let r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: sendBody });
+@@ -97,16 +159,23 @@
+         const url2 = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_LITE}:generateContent?key=${encodeURIComponent(key)}`;
+         const r2 = await fetch(url2, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: event.body });
+         const text2 = await r2.text();
+-        if (r2.ok) { r = r2; text = text2; }
++        if (r2.ok) { r = r2; text = text2; modelUsed = MODEL_LITE; }
+       } catch (e2) {}
+     }
      resp = { statusCode: r.status, headers: baseHeaders(degraded), body: text };
      // 正常応答のときだけカウント加算（失敗した回・分類用の軽量呼び出しは数えない）
-     if (r.ok && store && !degraded && !isClassify) {
--      try {
+-    if (r.ok && store && !degraded && !isClassify) {
++    if (r.ok && store && !degraded) {
++      try { for (const k of countKeys) await bump(store, k); } catch (e) {}
++    }
++    // アプリの「残り回数」表示用：今の区切りと、使った本格鑑定の回数
++    if (paid && store && !degraded) {
++      try { resp.headers['x-pk-win'] = win.id; resp.headers['x-pk-deep-used'] = String(await readCount(store, `q:${ym}:${acct.uid}`)); } catch (e) {}
++    }
++    // 有料プラン：実際の使用量から原価を計算して積み上げる（本格鑑定・分類の呼び出しも含む。原価の上限の計算に使う）
++    if (r.ok && paid && store && !degraded) {
+       try {
 -        await bump(store, `d:${day}:${device}`);
 -        await bump(store, `i:${day}:${ip}`);
 -        resp.headers['x-pk-remaining'] = String(Math.max(0, lim.device - (dCount + 1)));
--      } catch (e) {}
-+      try { for (const k of countKeys) await bump(store, k); } catch (e) {}
++        const sen = Math.ceil(costYen(text, modelUsed) * 100);   // 1/100円単位で保存
++        if (sen > 0) { await addTo(store, `c:${ym}:${acct.uid}`, sen); await addTo(store, `cd:${day}:${acct.uid}`, sen); }
+       } catch (e) {}
      }
      return resp;
-   } catch (e) {
-@@ -130,8 +149,24 @@
+@@ -129,9 +198,62 @@
+   return json(429, { error: { code: 'LIMIT', scope, limit, message: '本日の無料相談の上限に達しました。プランに登録すると、もっと相談できます。' } });
  }
  
++// ---- AI原価の計算 ----
++// 返答の usageMetadata（入力・キャッシュ済み入力・出力・思考のトークン数）から、この1回の原価（円）を出す
++function costYen(respText, model) {
++  let u = {}; try { u = (JSON.parse(respText) || {}).usageMetadata || {}; } catch (e) {}
++  const pr = (model === MODEL_LITE) ? AI_PRICES.lite : AI_PRICES.deep;
++  const inTok = +u.promptTokenCount || 0, cached = +u.cachedContentTokenCount || 0;
++  const outTok = (+u.candidatesTokenCount || 0) + (+u.thoughtsTokenCount || 0);
++  return ((inTok - cached) * pr.in + cached * (pr.cached != null ? pr.cached : pr.in) + outTok * pr.out) / 1e6 * FX;
++}
++// 1回の見込み原価（1/100円単位）：入力3万トークン、出力は雑談800・上位モデル3,500（考える分を含む）として多めに見積もる
++function estSen(deep) { const pr = deep ? AI_PRICES.deep : AI_PRICES.lite; return Math.ceil((30000 * pr.in + (deep ? 3500 : 800) * pr.out) / 1e6 * FX * 100); }
++// 今日、雑談・「なぜ？」に使える原価（1/100円単位）
++function budgetToday(plan, spentMonth, spentToday, deepUsed, daysLeft) {
++  const budget = (COST_BUDGET[plan] || 0) * 100;
++  const reserve = Math.max(0, (DEEP_QUOTA[plan] || 0) - deepUsed) * DEEP_RESERVE_JPY * 100;
++  daysLeft = Math.max(1, daysLeft || 1);
++  const allowToday = Math.max(0, (budget - (spentMonth - spentToday) - reserve) / daysLeft);
++  return { allowToday, spentToday, budget, reserve, daysLeft };
++}
++// 数える期間の区切り：今の支払い期間（start〜expires）。月額はその期間そのもの、年額は期間を12等分した1か月ずつ。
++// 支払い期間が分からない時は、期限から1か月さかのぼった所を開始とみなす。期限も無い時（テスト等）は暦の月
++const WIN_MS = 30.436875 * 864e5;
++function subWindow(start, expires, day) {
++  const now = Date.now();
++  if (!(+expires > now)) { const y = +day.slice(0, 4), m = +day.slice(5, 7), d = +day.slice(8, 10); return { id: day.slice(0, 7), daysLeft: new Date(Date.UTC(y, m, 0)).getUTCDate() - d + 1 }; }
++  if (!(+start > 0 && +start < +expires && now >= +start)) start = Math.min(now, expires - WIN_MS);
++  const len = expires - start, n = Math.max(1, Math.round(len / WIN_MS)), seg = len / n;
++  const k = Math.min(n - 1, Math.max(0, Math.floor((now - start) / seg)));
++  const end = start + (k + 1) * seg;
++  return { id: `${Math.round(start)}-${k}`, daysLeft: Math.max(1, Math.ceil((end - now) / 864e5)) };
++}
++async function addTo(store, k, n) {
++  const cur = await readCount(store, k);
++  await store.setJSON(k, { n: cur + n, t: Date.now() });
++}
++
  // ---- ユーティリティ ----
 -async function getStore() {
 -  try { const { getStore } = require('@netlify/blobs'); return getStore('pk-usage'); }
@@ -1143,7 +1293,8 @@ diff -ruN pk/functions/gemini.js fx/functions/gemini.js
 +    const st = await A.getStore(event); if (!st) return none;
 +    const rec = await st.get(`u:${t.uid}`, { type: 'json' });
 +    if (!rec || rec.ver !== t.ver) return none;
-+    return { plan: A.planInfo(rec).plan, uid: t.uid };
++    const pi = A.planInfo(rec);
++    return { plan: pi.plan, uid: t.uid, expires: pi.expires || 0, start: pi.start || 0 };
 +  } catch (e) { return none; }
 +}
 +async function accountPlan(event, tok) { return (await accountInfo(event, tok)).plan; }
@@ -1153,16 +1304,16 @@ diff -ruN pk/functions/gemini.js fx/functions/gemini.js
    catch (e) { return null; } // Blobs 未提供環境（手動zip等）ではフェイルオープン
  }
  function jstDay() { const d = new Date(Date.now() + 9 * 3600 * 1000); return d.toISOString().slice(0, 10); }
-@@ -141,4 +176,5 @@
+@@ -141,4 +263,5 @@
  function json(statusCode, obj) { return { statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) }; }
  
  // ---- テスト用エクスポート（本番動作には影響しない） ----
 -module.exports.__test = { readCount, bump, LIMITS, jstDay };
 +module.exports.__test = { readCount, bump, DEEP_QUOTA, FREE, jstDay };
-+exports._t = { accountPlan, accountInfo, DEEP_QUOTA, FREE, LITE_SAFETY, FREE_DEEP_DAILY };
++exports._t = { accountPlan, accountInfo, DEEP_QUOTA, FREE, LITE_SAFETY, FREE_DEEP_DAILY, COST_BUDGET, AI_PRICES, costYen, budgetToday, subWindow };
 diff -ruN pk/index.html fx/index.html
 --- pk/index.html	2026-09-17 17:10:16.000000000 +0000
-+++ fx/index.html	2026-09-26 19:47:16.357620262 +0000
++++ fx/index.html	2026-09-26 20:10:21.538484390 +0000
 @@ -118,7 +118,13 @@
  .field{margin-top:16px}
  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:7px;font-weight:500}
@@ -1777,15 +1928,17 @@ diff -ruN pk/index.html fx/index.html
  /* ---- 無料お試し：3日間・合計15通（1日5通は既存FREE_LIMITが担当）。体験モード(直キー)は対象外 ---- */
  var TRIAL_DAYS=3, TRIAL_TOTAL=15;
  function _dser(){var d=new Date();return Math.floor((d-new Date(d.getFullYear(),0,0))/864e5)+d.getFullYear()*1000;} /* ローカル暦日 */
-@@ -1223,12 +1293,16 @@
+@@ -1223,12 +1293,18 @@
  function _ym(){var d=new Date();return ''+d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2);}
  function _ymd(){var d=new Date();return _ym()+('0'+d.getDate()).slice(-2);}
  function curPlan(){return (state.profile&&state.profile.plan)||'free';}
 -function useKey(){var p=curPlan();return (p==='light'||p==='std')?('pk_use_'+_ym()):('pk_use_'+_ymd());}
 +function isPaid(){return !!DEEP_QUOTA[curPlan()];}
 +function useKey(){return 'pk_use_'+_ymd();}  /* 1日の回数（無料＝全メッセージ／有料＝雑談の安全上限） */
-+function deepUsed(){try{return parseInt(localStorage.getItem('pk_deep_'+_ym())||'0',10)||0;}catch(e){return 0;}}
-+function bumpDeep(){try{localStorage.setItem('pk_deep_'+_ym(),String(deepUsed()+1));}catch(e){}}
++/* 使った本格鑑定の回数：サーバーが返す値（購読の更新日から1か月ごとの区切り）を優先。無ければ端末の暦月の数 */
++function deepUsed(){try{var w=localStorage.getItem('pk_deep_win'),u=localStorage.getItem('pk_deep_used'),t=+(localStorage.getItem('pk_deep_at')||0);if(w&&u!=null&&Date.now()-t<31*864e5)return parseInt(u,10)||0;return parseInt(localStorage.getItem('pk_deep_'+_ym())||'0',10)||0;}catch(e){return 0;}}
++function _deepFromServer(r){try{var w=r.headers.get('x-pk-win'),u=r.headers.get('x-pk-deep-used');if(w&&u!=null){localStorage.setItem('pk_deep_win',w);localStorage.setItem('pk_deep_used',String(parseInt(u,10)||0));localStorage.setItem('pk_deep_at',String(Date.now()));}}catch(e){}}
++function bumpDeep(){try{var k='pk_deep_'+_ym();localStorage.setItem(k,String((parseInt(localStorage.getItem(k)||'0',10)||0)+1));}catch(e){}}
 +function deepLeft(){var q=DEEP_QUOTA[curPlan()];return q?Math.max(0,q-deepUsed()):0;}
  function usedNow(){try{return parseInt(localStorage.getItem(useKey())||'0',10)||0;}catch(e){return 0;}}
  function bumpUse(){try{localStorage.setItem(useKey(),String(usedNow()+1));}catch(e){}}
@@ -1797,7 +1950,7 @@ diff -ruN pk/index.html fx/index.html
  function $(id){return document.getElementById(id);}
  function T(){ return I18N[state.lang]||I18N.ja; }
  function pick(m){ return (m[state.lang]!=null)?m[state.lang]:m.en; }
-@@ -1363,7 +1437,7 @@
+@@ -1363,7 +1439,7 @@
        var sys=buildSystemPrompt()+ctx+'\n[DAILY GREETING — for THIS reply only, highest priority] Write ONE short, warm, FRESHLY-WORDED morning line in the reply language (1 sentence, about 35 words max), as if texting them just now. First greet by the time of day, then give the single most useful gentle 養生 nudge, grounded in TODAY FLOW above (lean in on a tailwind; be gentle on a headwind), with ONE plain self-care action. Vary the wording EVERY day — never a fixed template or stock phrase, and never reuse an opener seen in recent history. Plain warm words, NO menu, NO question, NO technical terms, never a diagnosis.';
        var payload={ systemInstruction:{parts:[{text:sys}]}, contents:[{role:'user',parts:[{text:'today one-line please'}]}], generationConfig:{temperature:1.0,maxOutputTokens:120,thinkingConfig:{thinkingBudget:0}} };
        var dk=directKey(); var ep=dk?('https://generativelanguage.googleapis.com/v1beta/models/'+(window.PK_DIRECT_MODEL||'gemini-2.5-flash-lite')+':generateContent?key='+encodeURIComponent(dk)):'/api/gemini';
@@ -1806,7 +1959,7 @@ diff -ruN pk/index.html fx/index.html
          .then(function(r){ if(!r.ok) throw 0; return r.json(); })
          .then(function(j){ var t=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0].text; resolve(t?stripMd(t).trim():''); })
          .catch(function(){ resolve(''); });
-@@ -1541,7 +1615,10 @@
+@@ -1541,7 +1617,10 @@
  var PLACES=[];
  var DST_ZONE={us:'us',ca:'us',gb:'eu',fr:'eu',es:'eu',de:'eu',it:'eu',au:'au'};
  var DST_ITEM_NONE={honolulu:1,perth:1,brisbane:1}; /* 夏時間なしの都市 */
@@ -1818,7 +1971,7 @@ diff -ruN pk/index.html fx/index.html
  /* ---- 夏時間（サマータイム）自動判定：主要地域の標準ルール ---- */
  function _nthSun(y,mo,n){ var first=new Date(y,mo-1,1).getDay(); var day=1+((7-first)%7)+(n-1)*7; return day; }
  function _lastSun(y,mo){ var last=new Date(y,mo,0).getDate(); var w=new Date(y,mo-1,last).getDay(); return last-w; }
-@@ -1592,10 +1669,37 @@
+@@ -1592,10 +1671,37 @@
  function loadJSON(k){ try{ var s=localStorage.getItem(k); return s?JSON.parse(s):null; }catch(e){ return null; } }
  function saveProfile(p){ try{ localStorage.setItem(LS_PROF,JSON.stringify(p)); }catch(e){} }
  function saveMsgs(){ try{ localStorage.setItem(LS_MSGS,JSON.stringify(state.msgs.slice(-60))); }catch(e){} }
@@ -1856,7 +2009,7 @@ diff -ruN pk/index.html fx/index.html
    var isDst = (!p.tu) && (pl&&pl.dstZone&&autoDST(pl.dstZone,y,m,d));
    if(isDst){ var dt=new Date(y,m-1,d,hh||0,mi||0,0); dt.setMinutes(dt.getMinutes()-60);
      y=dt.getFullYear(); m=dt.getMonth()+1; d=dt.getDate(); hh=dt.getHours(); mi=dt.getMinutes(); }
-@@ -1611,7 +1715,7 @@
+@@ -1611,7 +1717,7 @@
    document.title=(l==='ja'||l==='zh'||l==='zt')?'Pocket 本格鑑定':'Pocket Kantei';
    if($('langSel')) $('langSel').value=l; if($('langSel2')) $('langSel2').value=l;
    if($('themeLbl')) $('themeLbl').textContent=(state.theme==='green'?T().thGreen:T().thIndigo);
@@ -1865,7 +2018,7 @@ diff -ruN pk/index.html fx/index.html
    if($('scChat').classList.contains('on')){ updateModeBar(); if(onlyGreeting()&&!window.__booting){ greet(); } else { renderChat(); } }
  }
  function onlyGreeting(){ return state.msgs.filter(function(m){return m.role==='me';}).length===0; }
-@@ -1640,7 +1744,18 @@
+@@ -1640,7 +1746,18 @@
    if(_age!=null&&_age<13){ alert(pick(AGE_BLOCK)); return; }
    if(_age!=null&&_age<18){ if(!confirm(pick(AGE_MINOR))){ return; } p.minor=true; p.guardianConsent=true; }
    var c=computeChart(p); if(!c||!c.ok){ alert('計算に失敗しました / calculation failed'); return; }
@@ -1885,7 +2038,7 @@ diff -ruN pk/index.html fx/index.html
  };
  
  /* ---- チャット ---- */
-@@ -1713,20 +1828,20 @@
+@@ -1713,20 +1830,20 @@
  
  /* いまの大運（10年）を、初めての人に伝わる言葉に（十神→テーマ。エンジン計算値のみ使用） */
  var DEC_PHRASE={
@@ -1918,7 +2071,7 @@ diff -ruN pk/index.html fx/index.html
      var M=pick(DEC_PHRASE); return (ts&&M[ts])?M[ts]:M.none;
    }catch(e){ return pick(DEC_PHRASE).none; }
  }
-@@ -1757,13 +1872,15 @@
+@@ -1757,13 +1874,15 @@
    if(typeof _askBusy!=='undefined') _askBusy=true; /* 挨拶中の質問は順番待ち（吹き出しの交錯防止） */
    state.msgs=[]; saveMsgs(); renderChat();
    var box=$('scroll'), t=document.createElement('div'); t.className='row ai'; t.innerHTML='<div class="av"></div><div class="typing"><i></i><i></i><i></i></div>'; box.appendChild(t); box.scrollTop=box.scrollHeight;
@@ -1937,7 +2090,7 @@ diff -ruN pk/index.html fx/index.html
        pushSeq(greetBubbles(_softenJargon(sanitizeOut(tx))),function(){ renderChat(true); if(typeof _askDone==='function') _askDone(); }); })
      .catch(function(){ if(_mt!==_greetTok) return; t.remove(); greetStatic(); });
  }
-@@ -1835,20 +1952,40 @@
+@@ -1835,20 +1954,40 @@
    $('askIn').addEventListener('blur',function(){ setTimeout(function(){ var c=$('scChat'); if(c){ c.style.height=''; c.style.transform=''; } window.scrollTo(0,0); },80); });
  })();
  function sendNow(){ var v=ta.value.trim(); if(!v)return; ta.value=''; ta.style.height='auto'; ask(v); }
@@ -1982,7 +2135,7 @@ diff -ruN pk/index.html fx/index.html
      var cb=(window.PersonBazi)?PersonBazi(y,mo,d,null,null,true,sx):null;
      if(!cb||!cb.ok) return false;
      cb._bkey=y+'-'+mo+'-'+d; cb._sex=sx; state.chartB=cb; state.mode='aisho';
-@@ -1864,7 +2001,9 @@
+@@ -1864,7 +2003,9 @@
    if(!p||!p.y) return null;
    var bday=/誕生日|生年月日|バースデー|いつ生まれ|何年生ま|birth\s?day|birth\s?date|date of birth|when (was|am) i born|생일|생년월일|生日|出生日期|几号出生|aniversário|data de nasc|cumpleañ|fecha de nac|ngày sinh|sinh nhật|tanggal lahir|วันเกิด|เกิดวันไหน|เกิดวันที่/i.test(q);
    if(!bday) return null;
@@ -1993,7 +2146,7 @@ diff -ruN pk/index.html fx/index.html
    if(partner && state.mode==='aisho') return null;
    var self=/私|わたし|自分|僕|俺|うち|\bmy\b|\bmine\b|나의|내 |제 |우리|我的|我几号|meu|minha|mi |mío|của (mình|tôi)|ku\b|saya|ของฉัน|ของผม/i.test(q);
    if(!self && (partner || state.mode==='aisho')) return null;
-@@ -1876,12 +2015,15 @@
+@@ -1876,12 +2017,15 @@
     zt:'當然記得呀，你的生日是 '+y+'年'+m+'月'+d+'日 😊（這個資訊只存在你自己的裝置裡，放心。）',
     ko:'그럼요, 잘 기억하고 있어요. 당신의 생일은 '+y+'년 '+m+'월 '+d+'일 이에요 😊 (이 정보는 당신 기기 안에만 저장돼 있으니 안심하세요.)',
     vi:'Tất nhiên mình nhớ chứ — sinh nhật của bạn là ngày '+d+'/'+m+'/'+y+' 😊 (Thông tin này chỉ lưu trên thiết bị của bạn thôi, yên tâm nhé.)',
@@ -2012,7 +2165,7 @@ diff -ruN pk/index.html fx/index.html
  }
  
  /* 雑談（挨拶・天気・お礼）：命式由来の答えではないので「理由をみる」ボタンは出さない */
-@@ -1898,14 +2040,15 @@
+@@ -1898,14 +2042,15 @@
  function _askDone(){ if(_askQ.length){ _askProc(_askQ.shift()); } else { _askBusy=false; } }
  function _askProc(q){
    _askBusy=true;
@@ -2032,7 +2185,7 @@ diff -ruN pk/index.html fx/index.html
      pushSeq(splitBubbles(pick(noteMap)),function(){ _askDone(); });
      return;
    }
-@@ -1913,7 +2056,7 @@
+@@ -1913,7 +2058,7 @@
    var _bd=_localBirthday(q); if(_bd){ var _bx=$('scroll'), _tt=document.createElement('div'); _tt.className='row ai'; _tt.innerHTML='<div class="av"></div><div class="typing"><i></i><i></i><i></i></div>'; _bx.appendChild(_tt); _bx.scrollTop=_bx.scrollHeight; setTimeout(function(){ _tt.remove(); pushAI(_bd); _askDone(); },700); return; }
    chatPartnerScan(q);
    var box=$('scroll'), t=document.createElement('div'); t.className='row ai'; t.innerHTML='<div class="av"></div><div class="typing"><i></i><i></i><i></i></div>'; box.appendChild(t); if(box.scrollHeight-box.scrollTop-box.clientHeight<160) box.scrollTop=box.scrollHeight;
@@ -2041,7 +2194,7 @@ diff -ruN pk/index.html fx/index.html
    .catch(function(){ try{t.remove();}catch(e){} _askDone(); });
  }
  function pushAI(text){ state.msgs.push({role:'ai',text:stripMd(text)}); saveMsgs(); renderChat(); }
-@@ -1970,8 +2113,14 @@
+@@ -1970,8 +2115,14 @@
    t=t.replace(/^\s*CHIPS[:：][^\n]*$/gm,'');
    /* フォールバック2：CHIPS: を付け忘れ、末尾に裸のJSON配列 ["…","…"] だけ出した場合も必ず本文から除去（吹き出しに ["次どうする？"] が漏れるのを防ぐ） */
    var m4=t.match(/\n?\s*(\[\s*"[^\[\]\n]{2,}"\s*(?:,\s*"[^\[\]\n]{2,}"\s*)*\])\s*$/);
@@ -2057,7 +2210,7 @@ diff -ruN pk/index.html fx/index.html
    /* 安全網：思考モデルがCHIPS生成の推論を本文に漏らした場合（q1: … (13 chars) - continues …／Let's double-check chip lengths／≤16 characters, Natural enticing 等）、その塊を末尾ごと除去 */
    var _cti=t.search(/[\(（]\s*\d{1,2}\s*chars?\b|Let'?s\s+double-check|double-?check chip|≤\s*\d+\s*char|Natural,?\s*enticing|chip length|(?:\n|^)\s*q\s*[1-3]\s*[:：]/i);
    if(_cti>=0){ var _nl=t.lastIndexOf('\n',_cti); if(_nl>=0&&_cti-_nl<120) _cti=_nl; if(_cti>0) t=t.slice(0,_cti); }
-@@ -2044,7 +2193,7 @@
+@@ -2044,7 +2195,7 @@
    if(_askBusy){ _askQ.push(q); return; }
    _askBusy=true;
    var box=$('scroll'), t=document.createElement('div'); t.className='row ai'; t.innerHTML='<div class="av"></div><div class="typing"><i></i><i></i><i></i></div>'; box.appendChild(t); box.scrollTop=box.scrollHeight;
@@ -2066,7 +2219,7 @@ diff -ruN pk/index.html fx/index.html
  }
  /* 吹き出しを順番に送信（間に「入力中…」を挟んで人間のリズムに） */
  function _splitLong(t){ t=String(t||''); if(t.length<=150) return [t];
-@@ -2274,6 +2423,31 @@
+@@ -2274,6 +2425,31 @@
   id:'Jika Anda dalam bahaya, hubungi nomor darurat setempat. Indonesia: 119 ext 8. Anda tidak sendirian.',
   th:'หากคุณกำลังตกอยู่ในอันตราย โปรดโทรหมายเลขฉุกเฉินในพื้นที่ ไทย: สายด่วนสุขภาพจิต 1323 คุณไม่ได้อยู่คนเดียว'
  };
@@ -2098,7 +2251,7 @@ diff -ruN pk/index.html fx/index.html
  function _crisisCd(v){ try{ if(v===undefined) return parseInt(localStorage.getItem('pk_crisis_cd')||'0',10)||0; localStorage.setItem('pk_crisis_cd',String(v)); }catch(e){} return v||0; }
  function aftercareBlock(){ /* 危機発話の直後、数ターンは占いに戻らず寄り添いを維持 */
    try{ var cd=_crisisCd();
-@@ -2363,13 +2537,13 @@
+@@ -2363,13 +2539,13 @@
    (pro.pillars||[]).forEach(function(p){ if(p.tenStar&&p.tenStar!=='日主')present[p.tenStar]=(present[p.tenStar]||0)+1;
      (p.hiddenStems||[]).forEach(function(h){ if(h.tenStar)present[h.tenStar]=(present[h.tenStar]||0)+1; }); });
    var dp=(pro.pillars||[])[2];
@@ -2114,7 +2267,7 @@ diff -ruN pk/index.html fx/index.html
    if(pro.now&&pro.annualFortunes){ var t=pro.annualFortunes.find(function(a){return a.year===pro.now.year;}); var n=pro.annualFortunes.find(function(a){return a.year===pro.now.year+1;}); ty=t?t.tenStar:''; ny=n?n.tenStar:''; }
    var stars=(window.shinsatsuHits?window.shinsatsuHits(pro):[]).map(function(s){return s.split('(')[0];});
    return {present:present,dayBranchStar:dayBranchStar,weak:weak,strong:strong,zero:zero,curDaeun:curDaeun,ty:ty,ny:ny,stars:stars,sex:(state.profile&&state.profile.sex)||'female'};
-@@ -2480,9 +2654,31 @@
+@@ -2480,9 +2656,31 @@
    /* 半角・全角アスタリスクとも完全除去（＊が全角ですり抜けるケース対策） */
    return t.replace(/[*＊✱✳∗﹡]+/g,'').replace(/^[#＃]+\s*/gm,'').replace(/^[-•]\s+/gm,'・').replace(/[`｀]+/g,'').replace(/__/g,'');
  }
@@ -2146,7 +2299,7 @@ diff -ruN pk/index.html fx/index.html
    /* モデルが内部スタイルメモを [Keep register consistent...] 等の角括弧行として出力してしまう事故への防御：
       角括弧だけで構成された行を丸ごと除去（全言語共通） */
    t=t.replace(/ろちゅうび/g,'ろちゅうか');
-@@ -2645,7 +2841,7 @@
+@@ -2645,7 +2843,7 @@
      t+='USAGE: for tiredness/health/self-care topics, weave in the body tendency and 1-2 foods naturally, as caring daily advice \u2014 NEVER diagnose, never predict illness, never contradict doctors. When they mention an actual illness or symptom, do BOTH, always in this order: (1) clearly and warmly advise getting it checked by a doctor/professional in ONE short sentence woven into a substantive bubble — never as a standalone bubble (「ずっと続いてるなら、一度お医者さんに診てもらうと安心だよ」— never a vague もし行くなら), THEN (2) ALWAYS still give your support from the chart and 薬膳 lens \u2014 the element tendency, nourishing foods, rest timing, a good day for the hospital visit. Never leave them with only 病院へ行ってね and nothing else; your role is the warmth and self-care wisdom AROUND the medical care. For hospital/moving/travel direction questions: medical quality and convenience first \u2014 then, as a supportive extra, offer their favorable direction from THIS data and a GOOD DAY for the visit. This direction reading comes from their Four Pillars favorable elements \u2014 never present it as 九星術 and never invent nine-star numbers.\n';
      if(!heavy) t+='CONSTITUTION LENS (気血水 — Eastern self-care patterns you studied a little; use ONLY when the user describes how they FEEL, and as gentle self-care, NEVER a diagnosis): tired / short of breath / easily run-down / poor appetite = 気虚 (depleted qi -> 補気: rest, chew slowly; 山芋・米/もち米・なつめ・かぼちゃ・鶏肉・きのこ・栗・いんげん豆); bloating or moving pains / sighing / mood swings / tension = 気滞 (stuck qi -> 理気: light movement, unwind; 柑橘・陳皮・セロリ・三つ葉/香味野菜・ミント・ジャスミン茶・らっきょう); pale face-nails-hair / dryness / dizziness / light sleep = 血虚 (under-nourished blood -> 補血: avoid late nights; レバー・赤身肉・なつめ・黒豆・ほうれん草・にんじん・黒ごま・竜眼・プルーン・ぶどう・あさり); stiff shoulders / dull complexion / stabbing or period pain = 瘀血 (stagnant blood -> 活血: warmth, gentle exercise; 青魚(いわし/さば)・玉ねぎ・納豆・黒酢・にんにく・らっきょう・生姜・桃); hot flushes / night sweats / dry mouth-throat / red tongue with little coat = 陰虚 (dry-heat -> 滋陰: ease off late nights & strong spice; 白きくらげ・梨・百合・豆腐・山芋・松の実・黒ごま・はちみつ・豆乳・トマト・きゅうり); cold / puffy / low energy / feels the cold = 陽虚 (yang-cold -> 温陽: no cold drinks, keep the lower body warm; 羊肉・鶏肉・えび・ニラ・生姜・ねぎ・シナモン・くるみ・山椒・黒糖); heavy or puffy body / loose stool / worse on damp rainy days = 痰湿・水滞 (damp -> 化湿: fewer sweets & cold things; はと麦・冬瓜・小豆・緑豆・とうもろこし(ひげ茶)・大根・生姜・昆布). Combinations are real — e.g. 気陰両虚 (tired YET flushed or dry; common after illness, overwork or aging) = gently nourish qi AND moisten, plus proper rest. Reflect the pattern in plain, caring everyday words. NEVER print an internal label, tag or heading in your reply — no （薬膳・養生：…）, no （気血水：…）, no （気陰両虚）/（気虚）-style tags, no 養生：/薬膳： prefixes, no bracketed classification of any kind. Write the food-and-rest advice as ONE natural flowing sentence a caring friend would text. The words 気血水・薬膳・養生・気虚・気滞・血虚・瘀血・陰虚・陽虚・痰湿・水滞・気陰両虚 are your INTERNAL lens ONLY and must not appear in the reply. Name the pattern (気虚/陰虚/気陰両虚…) ONLY if they explicitly ask WHY. HARD LINE (never cross): never state or imply a disease or medical diagnosis (only a tendency toward…); never tell them to take a specific 漢方薬 or supplement as treatment — at most, if they ask, suggest that traditional 漢方 has formulas for such patterns and that a 漢方 doctor or pharmacist should choose and advise one — do NOT name a specific formula yourself; and if a symptom is persistent, strong, sudden or alarming, or they are pregnant / chronically ill / on medication, send them to a professional FIRST (this overrides any food or 養生 tip). A weak element in the chart is a 養生 focus, NOT an illness — say so if it matters.\n';
      if(!heavy){ var _si=pkSeasonIdx(); var _SN=(_si<0)?'a tropical, year-round climate with no distinct four seasons — keep seasonal advice light':['spring (春) → nourish 肝: greens, celery, citrus, herbs, gentle sour, and unwinding','summer (夏) → cool 心: bitter foods, tomato, cucumber, mung bean, hydrate and rest (around the rainy season / 長夏, also dry 脾-damp: はと麦, corn, ginger, fewer cold & sweet things)','autumn (秋) → moisten 肺: pear, lotus root, daikon, white fungus, guard against dryness','winter (冬) → warm & store 腎: roots, black foods, walnut, shrimp, ginger, keep warm and sleep early'][_si]; t+='SEASONAL 養生 (right now it is '+_SN+'). Combine the CURRENT season with their weakest element AND any pattern they describe — e.g. spring + a 気滞 feel = gently move qi with greens, citrus and a walk; summer + 陰虚 = cool and moisten. FOODS TO GO EASY ON (match to their weak element / pattern, never a hard ban): heat or dryness types (火/金 weak, 陰虚) → less spicy, fried, alcohol and caffeine; cold or damp types (水/土 weak, 陽虚, 痰湿) → less raw-cold food, icy drinks and excess sweets. Offer this warmly as everyday self-care — 1-2 items woven in, never a long list or a lecture.\n'; }
@@ -2155,7 +2308,7 @@ diff -ruN pk/index.html fx/index.html
      return t;
    }catch(e){ return ''; }
  }
-@@ -3142,14 +3338,14 @@
+@@ -3142,14 +3340,14 @@
    });
    /* --- 大運（各人の現在＋次） --- */
    function decadeTags(pro,who){
@@ -2173,7 +2326,7 @@ diff -ruN pk/index.html fx/index.html
      });
      return out.length?(who+'→'+out.join(' / ')):'';
    }
-@@ -3203,7 +3399,7 @@
+@@ -3203,7 +3401,7 @@
    var out=[];
    try{
      var pro=state.chart.pro, dp=pro.pillars[2], nowY=pro.now.year;
@@ -2182,7 +2335,7 @@ diff -ruN pk/index.html fx/index.html
      var STEMS='甲乙丙丁戊己庚辛壬癸', BRS='子丑寅卯辰巳午未申酉戌亥';
      function elOf(st){ return (STEM[st]||{}).el; }
      function keRel(a,b){ return EL_KE[elOf(a)]===elOf(b)||EL_KE[elOf(b)]===elOf(a); }
-@@ -3234,7 +3430,7 @@
+@@ -3234,7 +3432,7 @@
        [[0,'年柱'],[1,'月柱'],[3,'時柱']].forEach(function(pi){
          var np=pro.pillars[pi[0]]; if(np&&np.ganzhi&&isNatchin(x.ganzhi,np.ganzhi)) tags.push('納音 vs '+pi[1]);
        });
@@ -2191,7 +2344,7 @@ diff -ruN pk/index.html fx/index.html
      });
      if(!out.length) return '';
      return '[DECADE 納音・律音] '+out.join(' | ')+' — a 納音 decade is a 10-year blank-slate chapter: old methods reset, and humbly re-examining oneself lets them ride a wave of renewal (people who struggled before can see life turn 180°). A 律音 decade doubles the day-pillar theme for 10 years. Weigh this heavily: it colors everything inside it.\n';
-@@ -3352,15 +3548,18 @@
+@@ -3352,15 +3550,18 @@
        var se=_SETSU_SEASON[d.branch]||null, el=se?se.el:'';
        var mark=fav[el]||''; /* 喜 / 忌 / '' */
        /* 節木運＝方合(季節)が前の大運から切り替わる大運＝新しい季節に入る"変わり目"。順行・逆行の両方で正しい。 */
@@ -2213,7 +2366,7 @@ diff -ruN pk/index.html fx/index.html
                season:se?se.s:'',seasonEl:el,mark:mark,isSetsu:isSetsu,isTu:isSetsu,intense:intense,
                enterSeason:isSetsu?(se?se.s:''):'',enterEl:isSetsu?el:'',enterMark:isSetsu?mark:'',
                startYear:startY,swayFrom:startY!=null?startY-1.5:null,swayTo:startY!=null?startY+1.5:null,current:current};
-@@ -3369,10 +3568,13 @@
+@@ -3369,10 +3570,13 @@
      var forward=!!(pro.startFortune&&pro.startFortune.forward);
      /* 今から見て次（または現在進行中）の節木運 */
      var next=null;
@@ -2229,7 +2382,7 @@ diff -ruN pk/index.html fx/index.html
      return {blocks:blocks,next:next,nowAge:nowAge,proactive:proactive,forward:forward};
    }catch(e){ return null; }
  }
-@@ -3390,18 +3592,19 @@
+@@ -3390,18 +3594,19 @@
        arc.push(p.label+'='+p.terrain+' ('+(LIFE[p.label]||'')+')');
      });
      var df=pro.decadeFortunes||[], ci=(pro.now&&pro.now.daeunIndex>=0)?pro.now.daeunIndex:-1;
@@ -2254,7 +2407,7 @@ diff -ruN pk/index.html fx/index.html
        t+='\n';
      }
      return t;
-@@ -3411,10 +3614,10 @@
+@@ -3411,10 +3616,10 @@
    try{
      var a=setsubokuAnalysis(); if(!a||!a.blocks.length) return '';
      var SEA={winter:'winter/water',spring:'spring/wood',summer:'summer/fire',autumn:'autumn/metal'};
@@ -2268,7 +2421,7 @@ diff -ruN pk/index.html fx/index.html
      t+='[SETSUBOKU — HOW TO SPEAK OF IT] '+(a.proactive?'A turning-point is within ~1.5 years, so you MAY raise it warmly on your own when relevant. ':'Only discuss this if the user asks about life turning-points / their future direction; do NOT bring it up unprompted. ')+'RULES: (1) NEVER say a season is "30 years of bad luck" or doom — a challenging season is a backdrop, and daily action shapes the lived experience; (2) frame a turning-point as 人生の曲がり角/植え替えの時期 — unsettled for ~1.5 years but a doorway to a new flow once crossed; encourage small steps, a forward-looking mindset, and firming up footing before big decisions; (3) speak in FELT, concrete everyday terms (what tends to shift — work, home, the people around them — and how to steady it), never the bare label "慎重な時期"; (4) HEALTH stays gentle self-care only ("揺らぎやすいから休みながら整えて") — NEVER predict illness or diagnose; (5) NEVER use 九星/本命星/方位学/風水 — if you mention a lucky direction or colour, it must come only from their Four-Pillars 喜神; (6) if a favourable season falls early in life = 早咲き, late = 大器晩成 — say it kindly.\n';
      return t;
    }catch(e){ return ''; }
-@@ -3434,7 +3637,7 @@
+@@ -3434,7 +3639,7 @@
      var segs=a.blocks.map(function(b){
        var star=b.isSetsu?('<span class="sb-star" data-t="節木運">★</span>'):'';
        var nowp=b.current?('<span class="sb-now">'+pick(SB_I18N.now)+'</span>'):'';
@@ -2277,7 +2430,7 @@ diff -ruN pk/index.html fx/index.html
          +'<div class="sb-age">'+b.startAge+'</div><div class="sb-cell">'+nowp+star+'</div></div>';
      }).join('');
      var lg=['spring','summer','autumn','winter'].map(function(s){return '<span class="sb-lg sb-'+s+'"><i></i>'+pick(SB_I18N[s])+'</span>';}).join('');
-@@ -3603,10 +3806,11 @@
+@@ -3603,10 +3808,11 @@
      var nowY=(pro.now&&pro.now.year)||0, curD=(pro.now&&pro.now.daeunIndex>=0)?pro.now.daeunIndex:-1;
      var M=(DEC_PHRASE&&(DEC_PHRASE[state.lang]||DEC_PHRASE.en))||{};
      var decLines=[];
@@ -2290,7 +2443,7 @@ diff -ruN pk/index.html fx/index.html
        decLines.push(age+': '+(M[d.tenStar]||d.tenStar));
      });
      var yrLines=[];
-@@ -3627,8 +3831,9 @@
+@@ -3627,8 +3833,9 @@
      if(!state.chart||!state.chart.pro) return '';
      var deck=(window.richGrounding?window.richGrounding(state.chart.pro):(window.proGrounding?window.proGrounding(state.chart.pro):''));
      var t='\n[COMPUTED CHART — never invent beyond this; translate to everyday language, never output the technical labels. ⚠️ You ALREADY have the user’s own birth date, birth time and full chart (it is registered and computed right here). NEVER ask the user for their own birth date / birth time / age / chart — you have it, and asking is a jarring bug that breaks trust. If they ask you their own birthday, tell it to them. Only when reading COMPATIBILITY with ANOTHER person may you ask for THAT other person’s birth date.]\n'+deck+'\n';
@@ -2301,7 +2454,7 @@ diff -ruN pk/index.html fx/index.html
        if(state.compat&&window.compatGrounding){ t+='\n[COMPATIBILITY — computed]\n'+window.compatGrounding(state.compat)+'\n'; }
        try{ var _ctb=coupleTimingBlock(); if(_ctb) t+='\n'+_ctb; }catch(e){}
        /* 二人の日柱同士の納音・律音（算命学系の相性読み） */
-@@ -3754,11 +3959,42 @@
+@@ -3754,11 +3961,42 @@
    if(L==='ja'){ for(var _r=0;_r<2;_r++){ t=t.replace(/(\u6642\u671f|\u904b\u6c17|\u30a8\u30cd\u30eb\u30ae\u30fc)\u306e\1/g,'$1'); } }
    return t;
  }catch(e){ return t; } }
@@ -2345,7 +2498,7 @@ diff -ruN pk/index.html fx/index.html
    /* 「晩年運」「中年運」等の複合語が「年運」置換に巻き込まれる誤りを復元（晩その年の運→晩年の運） */
    if(L==='ja') t=t.replace(/([晩中幼青老少壮])その年の運/g,'$1年の運');
    /* 干支の地支が「◯年／◯の年運」の形で漏れる誤り（午のその年の運→その年の運）を平易化。午前/子供/未来等は年・運を伴わないので無傷 */
-@@ -3796,6 +4032,17 @@
+@@ -3796,6 +4034,17 @@
  function _isDeepQ(q){ q=(q||''); return /理屈|ロジック|論理|根拠|仕組み|なぜ|なんで|どうして|詳しく|くわしく|深く|why\b|reason|explain|in detail|deeply|logic|为什么|為什麼|原理|道理|详细|詳細|深入|逻辑|邏輯|根据|根據|왜|이유|자세히|깊이|논리|근거|원리|어떻게|tại sao|vì sao|lý do|chi tiết|giải thích|por qué|por qu|porque|porqu|razón|razã|razão|detalle|detalh|profund|lógica|explic|motivo|kenapa|mengapa|alasan|detail|mendalam|logika|jelaskan|ทำไม|เหตุผล|ละเอียด|ลึก|อธิบาย|เพราะ|เจาะลึก/i.test(q); }
  
  /* 過去のAI発言のほぼ丸写しを検知（弱いモデルが履歴をコピーする事故対策） */
@@ -2363,7 +2516,7 @@ diff -ruN pk/index.html fx/index.html
  function _nearDupOfHistory(t){ try{
    if(!t||t.length<60) return false;
    var norm=function(x){ return String(x||'').replace(/[\s　]/g,''); };
-@@ -3857,7 +4104,7 @@
+@@ -3857,7 +4106,7 @@
    var ep=dk?('https://generativelanguage.googleapis.com/v1beta/models/'+mdl+':generateContent?key='+encodeURIComponent(dk)):'/api/gemini';
    var done=false;
    var timeout=new Promise(function(res){ setTimeout(function(){ if(!done) res(null); },4500); });
@@ -2372,7 +2525,7 @@ diff -ruN pk/index.html fx/index.html
      .then(function(r){ return r.ok?r.json():null; })
      .then(function(j){ done=true; var t=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0].text; if(!t) return null;
        var m=t.match(/\{[^{}]*\}/); if(!m) return null; try{ var o=JSON.parse(m[0]); return (o&&o.topic)?o:null; }catch(e){ return null; } })
-@@ -3885,7 +4132,10 @@
+@@ -3885,7 +4134,10 @@
    var _etop=''; try{ _etop=_effectiveTopic(q); }catch(e){}
    var _loveTopic=(_etop==='love'||_etop==='marriage');
    var smart=deep||back||offscope||_loveTopic||(state.lang==='ko')||RE_DECISION.test(q)||RE_HEAVY.test(q)||RE_SELFHARM.test(q)||RE_NICO_SELF.test(q)||RE_LIFEPATH.test(q);
@@ -2384,20 +2537,20 @@ diff -ruN pk/index.html fx/index.html
    /* 体験モード: APIキーがある時はサーバーを介さず直接Geminiへ（回数制限なし。キーは端末内のみ） */
    var dk=directKey();
    var _mdl=smart?(window.PK_DIRECT_MODEL_DEEP||'gemini-3.6-flash'):(window.PK_DIRECT_MODEL||'gemini-2.5-flash-lite');
-@@ -3893,31 +4143,33 @@
+@@ -3893,31 +4145,33 @@
    var _gc={temperature:0.95,maxOutputTokens:(_is3?(deep?4200:(back?1400:(smart?3200:2400))):(deep?1500:(back?300:(smart?1000:700))))};
    if(!_is3) _gc.thinkingConfig={thinkingBudget:0};
    var payload={ systemInstruction:{parts:[{text:buildSystemPrompt()}]}, contents:hist, generationConfig:_gc };
 -  var limitHit=false;
-+  var limitHit=false, quotaHit=false;
++  var limitHit=false, quotaHit=false, budgetHit=false;
    var ep=dk
      ? 'https://generativelanguage.googleapis.com/v1beta/models/'+_mdl+':generateContent?key='+encodeURIComponent(dk)
      : '/api/gemini';
    var errInfo='';
 -  return fetch(ep,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free','x-pk-deep':(smart?'1':'0')},body:JSON.stringify(payload)})
 -    .then(function(r){ if(r.status===429){ limitHit=true; throw 0; } if(!r.ok){ return r.text().then(function(b){ var c=''; try{ var j=JSON.parse(b); c=(j&&j.error&&(j.error.code||j.error.status))||''; }catch(e){} errInfo='HTTP '+r.status+(c?(' '+c):''); throw 0; },function(){ errInfo='HTTP '+r.status; throw 0; }); } return r.json(); })
-+  return fetch(ep,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free','x-pk-auth':((authGet()||{}).token||''),'x-pk-deep':(smart?'1':'0'),'x-pk-nocount':((smart&&!counted)?'1':'0')},body:JSON.stringify(payload)})
-+    .then(function(r){ if(r.status===429){ return r.json().catch(function(){ return {}; }).then(function(b){ if(b&&b.error&&b.error.code==='DEEP_QUOTA'){ quotaHit=true; try{ localStorage.setItem('pk_deep_'+_ym(),String(DEEP_QUOTA[curPlan()]||999)); }catch(e){} } limitHit=true; throw 0; }); } if(!r.ok){ return r.text().then(function(b){ var c=''; try{ var j=JSON.parse(b); c=(j&&j.error&&(j.error.code||j.error.status))||''; }catch(e){} errInfo='HTTP '+r.status+(c?(' '+c):''); throw 0; },function(){ errInfo='HTTP '+r.status; throw 0; }); } return r.json(); })
++  return fetch(ep,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free','x-pk-auth':((authGet()||{}).token||''),'x-pk-deep':(smart?'1':'0'),'x-pk-nocount':((smart&&!counted)?'1':'0'),'x-pk-crisis':(RE_SELFHARM.test(q)?'1':'0')},body:JSON.stringify(payload)})
++    .then(function(r){ if(r.status===429){ return r.json().catch(function(){ return {}; }).then(function(b){ if(b&&b.error&&b.error.code==='DEEP_QUOTA'){ quotaHit=true; try{ localStorage.setItem('pk_deep_'+_ym(),String(DEEP_QUOTA[curPlan()]||999)); localStorage.setItem('pk_deep_used',String(DEEP_QUOTA[curPlan()]||999)); localStorage.setItem('pk_deep_at',String(Date.now())); if(!localStorage.getItem('pk_deep_win')) localStorage.setItem('pk_deep_win','q'); }catch(e){} } if(b&&b.error&&b.error.code==='DAILY_BUDGET') budgetHit=true; limitHit=true; throw 0; }); } if(r.ok) _deepFromServer(r); if(!r.ok){ return r.text().then(function(b){ var c=''; try{ var j=JSON.parse(b); c=(j&&j.error&&(j.error.code||j.error.status))||''; }catch(e){} errInfo='HTTP '+r.status+(c?(' '+c):''); throw 0; },function(){ errInfo='HTTP '+r.status; throw 0; }); } return r.json(); })
      .then(function(j){ var t=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0].text; if(!t){ if(!errInfo) errInfo='EMPTY_REPLY'; throw 0; }
        var _leak=_looksLikeThinkLeak(t); t=_stripThinkLeak(t);   /* 思考モデルの自己レビュー独り言が本文に漏れた場合：救済（引用回収/メタ切り落とし） */
        t=_extractChips(t); var _o=(deep?t:_softenJargon(t)); _o=_stripInternalLabels(_o); _o=_stripScaffold(_o); _o=_stripLeadThink(_o); if(state.lang!=='ja'&&state.lang!=='zh'&&state.lang!=='zt') _o=_stripHan(_o);
@@ -2422,12 +2575,12 @@ diff -ruN pk/index.html fx/index.html
 -      var _out=_stripPreamble(_stripFufu(_o)); if(_out.replace(/\s/g,'').length<12){ if(!errInfo) errInfo='EMPTY_AFTER_GUARD'; throw 0; } return {text:_out,demo:false}; })
 -    .catch(function(){ if(limitHit) return {text:pick(SRV_BUSY),demo:true,limit:true}; /* ブロック/失敗時：安全応答か正直なエラー文のみ（作り置きの鑑定は返さない） */ if(risk) return {text:safeReply(risk),demo:false,noBill:true}; try{ if(errInfo&&window.console) console.warn('[pk] reply failed:',errInfo); }catch(_e){} return {text:pick(ERR_NOTE),demo:true}; });
 +      var _out=_dropRepeatedParas(_stripPreamble(_stripFufu(_o))); if(_out.replace(/\s/g,'').length<12){ if(!errInfo) errInfo='EMPTY_AFTER_GUARD'; throw 0; } return {text:_out,demo:false}; })
-+    .catch(function(){ /* 危機・不適切の相談は、上限や通信エラーでも必ず安全応答を返す */ if(risk) return {text:safeReply(risk),demo:false,noBill:true}; if(quotaHit) return {text:pick(curPlan()==='vip'?DEEP_OUT_VIP:DEEP_OUT),demo:false,noBill:true,quota:true}; if(limitHit) return {text:pick(SRV_BUSY),demo:true,limit:true}; /* ブロック/失敗時：正直なエラー文のみ（作り置きの鑑定は返さない） */ try{ if(errInfo&&window.console) console.warn('[pk] reply failed:',errInfo); }catch(_e){} return {text:pick(ERR_NOTE),demo:true}; })
++    .catch(function(){ /* 危機・不適切の相談は、上限や通信エラーでも必ず安全応答を返す */ if(risk) return {text:safeReply(risk),demo:false,noBill:true}; if(quotaHit) return {text:pick(curPlan()==='vip'?DEEP_OUT_VIP:DEEP_OUT),demo:false,noBill:true,quota:true}; if(budgetHit) return {text:pick(BUDGET_NOTE),demo:false,noBill:true,limit:true}; if(limitHit) return {text:pick(SRV_BUSY),demo:true,limit:true}; /* ブロック/失敗時：正直なエラー文のみ（作り置きの鑑定は返さない） */ try{ if(errInfo&&window.console) console.warn('[pk] reply failed:',errInfo); }catch(_e){} return {text:pick(ERR_NOTE),demo:true}; })
 +    .then(function(r){ if(r&&!r.demo&&!r.noBill) r.counted=counted; return r; });
  }
  /* ---- 長期記憶：8通ごとに「この人のメモ帳」をAIが更新し端末内(pk_mem)に保存 ---- */
  function maybeUpdateMemory(){
-@@ -3932,7 +4184,7 @@
+@@ -3932,7 +4186,7 @@
        generationConfig:{temperature:0.2,maxOutputTokens:320,thinkingConfig:{thinkingBudget:0}} };
      var dk=directKey();
      var ep=dk?('https://generativelanguage.googleapis.com/v1beta/models/'+(window.PK_DIRECT_MODEL||'gemini-2.5-flash-lite')+':generateContent?key='+encodeURIComponent(dk)):'/api/gemini';
@@ -2436,7 +2589,7 @@ diff -ruN pk/index.html fx/index.html
        .then(function(r){ return r.ok?r.json():null; })
        .then(function(j){ var t=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0].text;
          if(t){ try{ var _clean=t.trim().replace(/^[\-\s]*.*(system\s*override|reveal (your )?(system )?prompt|ignore (all )?previous|begin every reply|start (each|every) (reply|response) with).*$/gmi,'').replace(/\n{2,}/g,'\n').trim(); localStorage.setItem('pk_mem',_clean.slice(0,1600)); }catch(e){} } })
-@@ -4021,16 +4273,16 @@
+@@ -4021,16 +4275,16 @@
  };
  var TRI_PILL={ja:'無料お試し：あと{n}通・{d}日',en:'Free trial: {n} msgs \u00b7 {d} days left',zh:'免费体验：剩{n}条\u00b7{d}天',zt:'免費體驗：剩{n}條\u00b7{d}天',ko:'무료 체험: 남은 {n}회 \u00b7 {d}일',vi:'D\u00f9ng th\u1eed: c\u00f2n {n} tin \u00b7 {d} ng\u00e0y',es:'Prueba: quedan {n} \u00b7 {d} d\u00edas',pt:'Teste: restam {n} \u00b7 {d} dias',id:'Uji coba: sisa {n} \u00b7 {d} hari',th:'\u0e17\u0e14\u0e25\u0e2d\u0e07\u0e1f\u0e23\u0e35: \u0e40\u0e2b\u0e25\u0e37\u0e2d {n} \u0e02\u0e49\u0e2d\u0e04\u0e27\u0e32\u0e21 \u00b7 {d} \u0e27\u0e31\u0e19'};
  var LIMIT_MSG={
@@ -2463,7 +2616,7 @@ diff -ruN pk/index.html fx/index.html
  };
  
  /* ---- シート ---- */
-@@ -4079,6 +4331,8 @@
+@@ -4079,6 +4333,8 @@
  };
  if($('devKeyClear')) $('devKeyClear').onclick=function(){ try{ localStorage.removeItem('pk_key'); }catch(e){} $('devKey').value=''; updateDevBox(); };
  (function(){ var seg=$('bsexSeg'); if(seg) seg.addEventListener('click',function(e){ var btn=e.target.closest('.segb'); if(!btn) return; seg.querySelectorAll('.segb').forEach(function(x){x.classList.remove('on');}); btn.classList.add('on'); }); })();
@@ -2472,7 +2625,7 @@ diff -ruN pk/index.html fx/index.html
  if(window.PK_DIRECT_KEY&&$('devPlanWrap')){ $('devPlanWrap').style.display=''; }
    if(window.PK_DIRECT_KEY&&$('devPlan')){ $('devPlan').value=curPlan(); $('devPlan').onchange=function(){ if(!state.profile) return; state.profile.plan=this.value; saveProfile(state.profile); }; }
  updateDevBox();
-@@ -4094,8 +4348,12 @@
+@@ -4094,8 +4350,12 @@
      var rows=pro.decadeFortunes.map(function(x,i){
        var yrs=x.startYear+'〜'+(x.startYear+9);
        var cur=(i===di);
@@ -2486,7 +2639,7 @@ diff -ruN pk/index.html fx/index.html
      var tys=turningYears(11);
      var yb=pro.pillars[0].branch, kr=KOURAN[yb], tk=TENKI[yb], loves=[];
      (pro.annualFortunes||[]).forEach(function(a){ if(a.year>=nowY&&a.year<=nowY+10&&(a.branch===kr||a.branch===tk)) loves.push(a.year); });
-@@ -4133,7 +4391,7 @@
+@@ -4133,7 +4393,7 @@
      daiunHtml='<div class="section-label">'+pick({ja:'大運（10年ごとの運気の流れ）',en:'Decade luck cycles',zh:'大运（每十年的运势）',zt:'大運（每十年的運勢）',ko:'대운 (10년 주기 흐름)',vi:'Đại vận (chu kỳ 10 năm)',es:'Ciclos de suerte (10 años)',pt:'Ciclos de sorte (10 anos)',id:'Siklus 10 tahunan',th:'วัฏจักรโชค 10 ปี'})+'</div>'+
        '<div class="daiun">'+c.pro.decadeFortunes.map(function(df,i){
          var _v=_unV(df.ganzhi,[]),_tn=_TN[_v.k]||_TN['中'];
@@ -2495,7 +2648,7 @@ diff -ruN pk/index.html fx/index.html
        }).join('')+'</div>'+
        '<p class="disc-note" style="margin-top:6px">'+pick({ja:'各10年の色は用神（あなたにとっての喜／忌）で見た傾向です。追い風＝喜神が巡る（相生）／向かい風＝忌神が巡る（相剋）／太過注意＝その気が強まりすぎ（喜神でも過ぎれば負担）。干支をタップで通変星の意味。',en:'Each decade’s color shows its tendency by your 用神 (favorable/unfavorable elements): Tailwind = a favorable element cycles in (nourishing); Headwind = an unfavorable one (draining); Over-strong = that energy runs too high (even a favorable one can burden when excessive). Tap a pillar for its ten-god meaning.',zh:'每个十年的颜色，是按你的用神（对你而言的喜／忌）判断的走势。顺风＝喜神来临（相生）／逆风＝忌神来临（相克）／过旺注意＝该气过强（喜神过头也会成负担）。点按干支看十神含义。',zt:'每個十年的顏色，是依你的用神（對你而言的喜／忌）判斷的走勢。順風＝喜神來臨（相生）／逆風＝忌神來臨（相剋）／過旺注意＝該氣過強（喜神過頭也會成負擔）。點按干支看十神含義。',ko:'각 10년의 색은 용신(당신에게의 희／기)으로 본 흐름입니다. 순풍＝희신이 도는 때(상생)／역풍＝기신이 도는 때(상극)／과다주의＝그 기운이 지나치게 강함(희신도 지나치면 부담). 간지를 탭하면 십성 의미.',vi:'Màu của mỗi thập niên thể hiện xu hướng theo Dụng thần của bạn (hành hỷ/kỵ): Thuận＝hành hỷ tới (tương sinh)／Nghịch＝hành kỵ tới (tương khắc)／Thái quá＝khí đó quá mạnh (hành hỷ dư cũng thành gánh nặng). Chạm vào trụ để xem ý nghĩa thập thần.',es:'El color de cada década muestra su tendencia según tu 用神 (elementos favorables/desfavorables): a favor＝entra un elemento favorable (nutre)／en contra＝uno desfavorable (desgasta)／exceso＝esa energía es demasiado fuerte (incluso una favorable pesa si sobra). Toca un pilar para ver su significado.',pt:'A cor de cada década mostra sua tendência pelo seu 用神 (elementos favoráveis/desfavoráveis): a favor＝entra um elemento favorável (nutre)／contra＝um desfavorável (desgasta)／excesso＝essa energia fica forte demais (até uma favorável pesa em excesso). Toque num pilar para ver o significado.',id:'Warna tiap dekade menunjukkan kecenderungan menurut 用神 Anda (elemen menguntungkan/merugikan): angin baik＝elemen menguntungkan datang (menyuburkan)／angin lawan＝yang merugikan (menguras)／berlebih＝energi itu terlalu kuat (yang baik pun membebani bila berlebih). Ketuk pilar untuk maknanya.',th:'สีของแต่ละทศวรรษบอกแนวโน้มตามอิงสิน (用神) ของคุณ (ธาตุที่ส่งเสริม/ขัดขวาง): ส่งเสริม＝ธาตุดีเวียนมา (เกื้อกูล)／สวนทาง＝ธาตุร้ายเวียนมา (บั่นทอน)／แรงเกิน＝พลังนั้นแรงเกินไป (ธาตุดีถ้ามากไปก็เป็นภาระ) แตะที่เสาเพื่อดูความหมายสิบเทพ'})+'</p>'+
        (c.pro.startFortune?'<p class="disc-note" style="margin-top:8px">'+pick({ja:'運の切り替わりは '+c.pro.startFortune.years+'歳'+c.pro.startFortune.months+'ヶ月から、10年ごと。',en:'Cycles change every 10 years starting at age '+c.pro.startFortune.years+'y '+c.pro.startFortune.months+'m.',zh:'从'+c.pro.startFortune.years+'岁'+c.pro.startFortune.months+'个月起，每十年一换。',zt:'從'+c.pro.startFortune.years+'歲'+c.pro.startFortune.months+'個月起，每十年一換。',ko:c.pro.startFortune.years+'세 '+c.pro.startFortune.months+'개월부터 10년마다 바뀝니다.',vi:'Chu kỳ đổi mỗi 10 năm, bắt đầu từ '+c.pro.startFortune.years+' tuổi '+c.pro.startFortune.months+' tháng.',es:'Los ciclos cambian cada 10 años desde los '+c.pro.startFortune.years+' años y '+c.pro.startFortune.months+' meses.',pt:'Os ciclos mudam a cada 10 anos, a partir de '+c.pro.startFortune.years+' anos e '+c.pro.startFortune.months+' meses.',id:'Siklus berganti tiap 10 tahun mulai usia '+c.pro.startFortune.years+' th '+c.pro.startFortune.months+' bln.',th:'วัฏจักรเปลี่ยนทุก 10 ปี เริ่มตั้งแต่อายุ '+c.pro.startFortune.years+' ปี '+c.pro.startFortune.months+' เดือน'})+'</p>':'');
-@@ -4355,8 +4613,7 @@
+@@ -4355,8 +4615,7 @@
      var BR_E={寅:'木',卯:'木',巳:'火',午:'火',辰:'土',戌:'土',丑:'土',未:'土',申:'金',酉:'金',亥:'水',子:'水'};
      function gzEls(gz){ var o=[]; if(gz&&gz.length>=2){ if(STEM_E[gz.charAt(0)])o.push(STEM_E[gz.charAt(0)]); if(BR_E[gz.charAt(1)])o.push(BR_E[gz.charAt(1)]); } return o; }
      var proo=c.pro||{}, nowY=(proo.now&&proo.now.year)||0;
@@ -2505,7 +2658,7 @@ diff -ruN pk/index.html fx/index.html
      var yy=(proo.annualFortunes||[]).filter(function(a){return a.year===nowY;})[0]||null;
      var seasonEl=(seasonIdx>=0)?['木','火','金','水'][seasonIdx]:'';
      var daeunEls=dd?gzEls(dd.ganzhi):[], yearEls=yy?gzEls(yy.ganzhi):[];
-@@ -4401,7 +4658,7 @@
+@@ -4401,7 +4660,7 @@
    var taikaHtml='';
    try{
      var _pn=c.pro&&c.pro.now, _pdi=(_pn&&_pn.daeunIndex>=0)?_pn.daeunIndex:-1;
@@ -2514,7 +2667,7 @@ diff -ruN pk/index.html fx/index.html
      var _pyy=(c.pro&&c.pro.annualFortunes&&_pn)?c.pro.annualFortunes.filter(function(a){return a.year===_pn.year;})[0]:null;
      var _exNow=[]; if(_pdd)_exNow.push(_pdd.ganzhi); if(_pyy)_exNow.push(_pyy.ganzhi);
      var _natT=EL_ORDER.filter(function(e){return (_fiveM[e]||0)>=3;});
-@@ -4423,7 +4680,7 @@
+@@ -4423,7 +4682,7 @@
        function _natPairs(gz){var r=[];[0,1,2,3].forEach(function(pi){var np=_np2.pillars[pi];if(!np||!np.ganzhi)return;if(gz===np.ganzhi)r.push({pi:pi,rel:'律音'});else if(isNatchin(gz,np.ganzhi))r.push({pi:pi,rel:'納音'});});return r;}
        var _mrows=[];
        var _ndi=(_np2.now&&_np2.now.daeunIndex>=0)?_np2.now.daeunIndex:0;
@@ -2523,7 +2676,7 @@ diff -ruN pk/index.html fx/index.html
        var _ny2=(_np2.now&&_np2.now.year)||0;
        (_np2.annualFortunes||[]).forEach(function(a){if(a.year<_ny2||a.year>_ny2+12)return;var pr=_natPairs(a.ganzhi);if(!pr.length)return;var nm=nayinOf(a.ganzhi);_mrows.push({kind:'年運',when:''+a.year,gz:a.ganzhi,nm:nm?nm[0]:'',pairs:pr,cur:(a.year===_ny2)});});
        if(_mrows.length){
-@@ -4478,9 +4735,234 @@
+@@ -4478,9 +4737,246 @@
  $('exitAisho').onclick=function(){ state.mode='self'; state.chartB=null; state.compat=null; updateModeBar(); pushAI(pick({ja:'自分の鑑定に戻ったよ。またなんでも聞いてね。',en:'Back to your own reading. Ask me anything.',zh:'回到你的命盘了，随时再问我。',zt:'回到你的命盤了，隨時再問我。',ko:'내 명식으로 돌아왔어요. 또 뭐든 물어보세요.',vi:'Đã trở về lá số của bạn. Cứ hỏi tôi bất cứ điều gì nhé.',es:'De vuelta a tu lectura. Pregúntame lo que quieras.',pt:'De volta à sua leitura. Pergunte o que quiser.',id:'Kembali ke bacaan Anda. Silakan tanya apa saja.',th:'กลับมาที่ดวงของคุณแล้ว ถามอะไรก็ได้เลยนะ'})); };
  
  function placeLabel(v){ try{ var i,j,g; for(i=0;i<PLACE_GROUPS.length;i++){ g=PLACE_GROUPS[i]; for(j=0;j<(g.items||[]).length;j++){ if(g.items[j].id===v) return g.label+' · '+g.items[j].label; } if(g.id===v) return g.label; } }catch(e){} return v||'-'; }
@@ -2614,6 +2767,18 @@ diff -ruN pk/index.html fx/index.html
 + pt:'Desculpa, parece que as leituras aprofundadas deste mês acabaram.\n\nMas podemos continuar conversando (conversar não conta). Suas leituras aprofundadas voltam no mês que vem.',
 + id:'Maaf, sepertinya jatah bacaan mendalam bulan ini sudah habis.\n\nTapi kita tetap bisa mengobrol (mengobrol tidak dihitung). Jatah bacaan mendalam akan kembali bulan depan.',
 + th:'ขอโทษนะ ดูเหมือนว่าการดูดวงแบบเจาะลึกของเดือนนี้จะใช้ครบแล้ว\n\nแต่ยังคุยเล่นต่อได้นะ (คุยเล่นไม่นับครั้ง) การดูดวงแบบเจาะลึกจะกลับมาใช้ได้เดือนหน้า'};
++/* 有料プランで、その日の雑談の分（AI原価の上限から1日ずつ割り当て）を使い切った時。本格鑑定はそのまま使える */
++var BUDGET_NOTE={
++ ja:'きょうは雑談をたくさんしたね。雑談は、あしたになるとまた話せるよ。\n\n恋愛・仕事・人生の決断など、本格的な相談はこのまま聞けるからね。',
++ en:'We’ve chatted a lot today! Casual chat will be available again tomorrow.\n\nYou can still ask me for in-depth readings — love, work, life decisions — right now.',
++ zh:'今天聊了好多呀。闲聊明天就能继续。\n\n恋爱、工作、人生抉择等深度咨询，现在也可以照常问我哦。',
++ zt:'今天聊了好多呀。閒聊明天就能繼續。\n\n戀愛、工作、人生抉擇等深度諮詢，現在也可以照常問我喔。',
++ ko:'오늘 잡담을 정말 많이 했네요. 잡담은 내일 다시 할 수 있어요.\n\n연애·일·인생의 결정 같은 본격 상담은 지금도 그대로 물어볼 수 있어요.',
++ vi:'Hôm nay mình trò chuyện nhiều quá! Mai lại tán gẫu tiếp nhé.\n\nNhững câu hỏi chuyên sâu về tình cảm, công việc, quyết định lớn thì bạn vẫn hỏi được ngay bây giờ.',
++ es:'¡Hoy hemos charlado muchísimo! La charla vuelve mañana.\n\nPuedes seguir pidiéndome lecturas a fondo — amor, trabajo, decisiones de vida — ahora mismo.',
++ pt:'Hoje conversamos bastante! O bate-papo volta amanhã.\n\nVocê ainda pode me pedir leituras aprofundadas — amor, trabalho, decisões de vida — agora mesmo.',
++ id:'Hari ini kita banyak mengobrol! Obrolan santai bisa lanjut besok.\n\nKonsultasi mendalam — cinta, pekerjaan, keputusan hidup — tetap bisa kamu tanyakan sekarang.',
++ th:'วันนี้คุยเล่นกันเยอะเลยนะ คุยเล่นต่อได้อีกทีพรุ่งนี้\n\nส่วนการปรึกษาแบบเจาะลึก เช่น ความรัก งาน การตัดสินใจในชีวิต ยังถามได้ตอนนี้เลย'};
 +/* 本格鑑定を使い切った時：Standard・Pro は0.7秒後に料金プランのシート（上位へ）。VIPはチャットの案内だけ */
 +function _quotaPop(){ var p=curPlan(); if(p==='std'||p==='pro') setTimeout(function(){ openSheet('shPlan'); },700); }
 +function _isWeb(){ return PKBilling.platform()==='web'; }
@@ -2759,7 +2924,7 @@ diff -ruN pk/index.html fx/index.html
    function row(k,v){ return '<div class="mp-row"><span>'+k+'</span><b>'+esc(v||'-')+'</b></div>'; }
    var rows=row(d.fName,p.name||'-')
      +row(d.fBday,p.y?(p.y+' / '+p.m+' / '+p.d):'-')
-@@ -4489,21 +4971,24 @@
+@@ -4489,21 +4985,24 @@
      +row(d.fSex,p.sex==='male'?d.sexM:d.sexF);
    $('mpBody').innerHTML=
      '<div class="mp-card">'+rows+'</div>'
@@ -2787,7 +2952,7 @@ diff -ruN pk/index.html fx/index.html
  function backupCode(){ try{ return 'PK1.'+btoa(unescape(encodeURIComponent(JSON.stringify(_pkDump())))); }catch(e){ return ''; } }
  function backupRestore(code){
    try{
-@@ -4517,7 +5002,7 @@
+@@ -4517,7 +5016,7 @@
  function renderBackup(){
    $('bkTitle').textContent=pick(BK.t); $('bkDesc').textContent=pick(BK.d);
    var code=backupCode();
@@ -2796,7 +2961,7 @@ diff -ruN pk/index.html fx/index.html
      '<div class="mp-card"><textarea id="bkOut" readonly style="width:100%;height:78px;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:12px;font-family:monospace;resize:none;background:var(--soft);color:var(--text)"></textarea>'
      +'<button class="btn mini" id="bkCopy" style="margin-top:8px">'+pick(BK.cp)+'</button>'
      +'<p class="note" style="margin-top:8px">'+pick(BK.save)+'</p></div>'
-@@ -4526,6 +5011,7 @@
+@@ -4526,6 +5025,7 @@
    $('bkOut').value=code;
    $('bkCopy').onclick=function(){ var ta=$('bkOut'); ta.select(); try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(ta.value); } else { document.execCommand('copy'); } }catch(e){ try{document.execCommand('copy');}catch(e2){} } $('bkCopy').textContent=pick(BK.cpd); setTimeout(function(){ if($('bkCopy')) $('bkCopy').textContent=pick(BK.cp); },1600); };
    $('bkRestore').onclick=function(){ var v=$('bkIn').value; if(backupRestore(v)){ alert(pick(BK.ok)); location.reload(); } else { alert(pick(BK.err)); } };
@@ -2804,7 +2969,7 @@ diff -ruN pk/index.html fx/index.html
  }
  /* この鑑定について（監修・運営・根拠） */
  function renderAbout(){
-@@ -4653,6 +5139,7 @@
+@@ -4653,6 +5153,7 @@
    _mkChips('svSrcs','svSrcL',SV.srcs,false);
    _mkChips('svFreqs','svFreqL',SV.freqs,false);
    _mkChips('svJobs','svJobL',SV.jobs,false);
@@ -2812,7 +2977,7 @@ diff -ruN pk/index.html fx/index.html
    /* 下書き復元 */
    try{ var d=JSON.parse(localStorage.getItem('pk_svdraft')||'null'); if(d){ if(d.em) $('svEmail').value=d.em;
      [['svTopics',d.tp],['svInterests',d.iv],['svSrcs',d.sr],['svFreqs',d.fq],['svJobs',d.jb]].forEach(function(p){ (p[1]||[]).forEach(function(k){ var b=document.querySelector('#'+p[0]+' button[data-k="'+k+'"]'); if(b) b.classList.add('on'); }); }); } }catch(e){}
-@@ -4690,6 +5177,293 @@
+@@ -4690,6 +5191,293 @@
  /* 送信失敗分は次回起動時に再送 */
  (function(){ try{var q=localStorage.getItem('pk_svq'); if(q){_svPost(q).then(function(r){ if(r.ok) localStorage.removeItem('pk_svq'); }).catch(function(){});} }catch(e){} })();
  
@@ -3106,7 +3271,7 @@ diff -ruN pk/index.html fx/index.html
  /* ---- 起動 ---- */
  (function boot(){
    window.__booting=true;
-@@ -4703,7 +5477,10 @@
+@@ -4703,7 +5491,10 @@
    var savedTheme=null; try{savedTheme=localStorage.getItem(LS_THEME);}catch(e){} setTheme(savedTheme==='indigo'?'indigo':'green');
    state.profile=loadJSON(LS_PROF);
    applyI18n(); rebuildSelects(); setLang(state.lang);
@@ -3120,7 +3285,7 @@ diff -ruN pk/index.html fx/index.html
    else { location.replace('lp.html'); }
 diff -ruN pk/legal.html fx/legal.html
 --- pk/legal.html	2026-08-21 04:39:10.000000000 +0000
-+++ fx/legal.html	2026-09-26 19:45:51.693723367 +0000
++++ fx/legal.html	2026-09-26 20:10:32.552850850 +0000
 @@ -51,7 +51,7 @@
    <div class="card" id="terms">
      <div data-l="ja">
@@ -3147,8 +3312,8 @@ diff -ruN pk/legal.html fx/legal.html
 +        <li>Standard（月額2,900円／年額31,900円・税込）：本格鑑定を月50回までご利用いただけます。</li>
 +        <li>Pro（月額5,900円／年額64,900円・税込）：本格鑑定を月100回までご利用いただけます。</li>
 +        <li>VIP（月額9,800円／年額107,800円・税込）：本格鑑定を月175回までご利用いただけます。</li>
-+        <li>「本格鑑定」とは、恋愛・結婚・仕事や人生の決断・深い悩みなど、命式にもとづく詳しい鑑定をいいます。Nicoとの雑談や、鑑定の理由の確認（「なぜ？」）は回数に含みません。ただし、システム保護のため、雑談にも1日あたりの適正利用の上限を設けています。</li>
-+        <li>本格鑑定の回数は毎月1日（日本時間）に戻ります。上限に達した場合、本格鑑定は翌月まで停止しますが、雑談は引き続きご利用いただけます。鑑定品質保持のため、上限到達後に簡易的な自動応答で鑑定の代わりとすることはありません。上限が近づいた際・到達した際には、アプリ内で上位プランのご案内を表示することがあります。</li>
++        <li>「本格鑑定」とは、恋愛・結婚・仕事や人生の決断・深い悩みなど、命式にもとづく詳しい鑑定をいいます。Nicoとの雑談や、鑑定の理由の確認（「なぜ？」）は回数に含みません。ただし、サービスを安定して提供するため、雑談と「なぜ？」には1日あたりの適正利用の範囲を設けています（範囲を超えた日は、翌日から再びご利用いただけます。本格鑑定と、つらいお気持ちのご相談への応答は止まりません）。</li>
++        <li>本格鑑定の回数は、ご契約日（更新日）を基準に1か月ごとに戻ります（年額プランも1か月ごと）。上限に達した場合、本格鑑定は次の区切りまで停止しますが、雑談は引き続きご利用いただけます。鑑定品質保持のため、上限到達後に簡易的な自動応答で鑑定の代わりとすることはありません。上限が近づいた際・到達した際には、アプリ内で上位プランのご案内を表示することがあります。</li>
 +        <li>上記はウェブ版の価格です。iPhoneアプリ・Androidアプリの価格は、各ストア（App Store／Google Play）に表示される価格となります。</li>
          <li>当社は、サービス品質維持のため、事前の告知のうえで各上限を変更することがあります。</li>
        </ul>
@@ -3185,8 +3350,8 @@ diff -ruN pk/legal.html fx/legal.html
 +        <li>Standard (JPY 2,900/month or JPY 31,900/year, tax incl.): up to 50 in-depth readings per month.</li>
 +        <li>Pro (JPY 5,900/month or JPY 64,900/year, tax incl.): up to 100 in-depth readings per month.</li>
 +        <li>VIP (JPY 9,800/month or JPY 107,800/year, tax incl.): up to 175 in-depth readings per month.</li>
-+        <li>An “in-depth reading” is a detailed reading based on your chart — for example about love, marriage, work or life decisions, or deep worries. Casual chat with Nico and checking the reasons behind a reading (“why?”) do not count. A daily fair-use cap also applies to chat to protect the system.</li>
-+        <li>In-depth reading counts reset on the 1st of each month (Japan time). When the limit is reached, in-depth readings pause until the next month, while chat remains available. To preserve reading quality, no simplified automatic replies are given in place of readings. The app may display guidance on higher plans as the limit approaches or is reached.</li>
++        <li>An “in-depth reading” is a detailed reading based on your chart — for example about love, marriage, work or life decisions, or deep worries. Casual chat with Nico and checking the reasons behind a reading (“why?”) do not count. To keep the service stable, a daily fair-use range applies to chat and “why?” questions (after reaching it, they become available again the next day; in-depth readings and replies to people in distress are never stopped).</li>
++        <li>In-depth reading counts reset every month from your subscription date (renewal date), including on yearly plans. When the limit is reached, in-depth readings pause until the next reset, while chat remains available. To preserve reading quality, no simplified automatic replies are given in place of readings. The app may display guidance on higher plans as the limit approaches or is reached.</li>
 +        <li>These are web-version prices. Prices in the iPhone / Android app are those shown in the App Store / Google Play.</li>
          <li>We may change these caps with prior notice to maintain service quality.</li>
        </ul>
@@ -3810,13 +3975,13 @@ diff -ruN pk/pro-bazi.js fx/pro-bazi.js
 \ No newline at end of file
 diff -ruN pk/sw.js fx/sw.js
 --- pk/sw.js	2026-08-21 05:15:56.000000000 +0000
-+++ fx/sw.js	2026-09-26 19:58:15.202334176 +0000
++++ fx/sw.js	2026-09-26 20:16:06.191513088 +0000
 @@ -4,7 +4,7 @@
     ・JS/画像等は stale-while-revalidate（即表示＋裏で更新）
     ・AI通信（/functions・/.netlify・generativelanguage）は絶対にキャッシュせず常にネットワークへ
     ※アプリを更新したら CACHE の版番号を上げると確実に配信されます。 */
 -var CACHE = 'pocket-kantei-v1';
-+var CACHE = 'pocket-kantei-v11';
++var CACHE = 'pocket-kantei-v12';
  var SHELL = [
    './', './index.html', './pro-bazi.js', './pro-adapter.js',
    './owl.png', './icon-512.png', './icon-192.png', './icon-maskable-512.png', './apple-touch-icon.png',
