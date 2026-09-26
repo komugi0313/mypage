@@ -2279,16 +2279,23 @@ window.KANSHI60_DETAIL={
     function br(y){ return _BR[((y-4)%12+12)%12]; }
     var kubo=String(r.kuboPair||r.tenchusatsu||'').split('').filter(Boolean);
     var natB=[]; ['year','month','day','hour'].forEach(function(k){var p=P[k]; if(p&&p.shi)natB.push(p.shi);});
-    // 空亡は2支あるので、それぞれの直近の過去年＝2年分を出す（新しい順）
+    // 過去の振り返り：直近25年をさかのぼり、空亡・冲・会局(三合/方合)が巡った年を新しい順に集める。
+    // 空亡：直近3年分（2支のどちらか）
     var kubos=[];
-    kubo.forEach(function(kb){
-      for(var y=nowYear-1; y>=nowYear-13; y--){ if(br(y)===kb){ kubos.push({year:y, gz:gz(y)}); break; } }
-    });
-    kubos.sort(function(a,b){ return b.year-a.year; });
-    // 冲は直近1年
-    var pc=null;
-    for(var y2=nowYear-1; y2>=nowYear-13 && !pc; y2--){ var b2=br(y2); var hit=natB.filter(function(x){return _CH[b2]===x;}); if(hit.length) pc={year:y2, gz:gz(y2), hit:hit}; }
-    return (kubos.length||pc)?{kubos:kubos, kubo:kubos[0]||null, chong:pc, nowYear:nowYear}:null;
+    for(var yk=nowYear-1; yk>=nowYear-26 && kubos.length<3; yk--){ if(kubo.indexOf(br(yk))>=0) kubos.push({year:yk, gz:gz(yk)}); }
+    // 冲：命式の支と冲になった直近3年分
+    var chongs=[];
+    for(var yc=nowYear-1; yc>=nowYear-26 && chongs.length<3; yc--){ var bc=br(yc); var hitc=natB.filter(function(x){return _CH[bc]===x;}); if(hitc.length) chongs.push({year:yc, gz:gz(yc), hit:hitc}); }
+    // 会局（三合・方合）：その年の地支が命式の地支2つと合わさって三合/方合を完成させた直近3年分
+    var _SAN=[['申','子','辰','水'],['亥','卯','未','木'],['寅','午','戌','火'],['巳','酉','丑','金']];
+    var _HOU=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','戌','金'],['亥','子','丑','水']];
+    function _kaiHitYear(bb){ var out=null;
+      _SAN.concat(_HOU).forEach(function(g){ if(out) return; var tri=[g[0],g[1],g[2]]; if(tri.indexOf(bb)<0) return;
+        var others=tri.filter(function(x){return x!==bb;}); if(others.every(function(x){return natB.indexOf(x)>=0;})){ out={el:g[3], label:g[3]+'局'+(_SAN.indexOf(g)>=0?'三合':'方合')}; } });
+      return out; }
+    var kaikyokus=[];
+    for(var yg=nowYear-1; yg>=nowYear-26 && kaikyokus.length<3; yg--){ var hk=_kaiHitYear(br(yg)); if(hk) kaikyokus.push({year:yg, gz:gz(yg), label:hk.label, el:hk.el}); }
+    return (kubos.length||chongs.length||kaikyokus.length)?{kubos:kubos, kubo:kubos[0]||null, chong:chongs[0]||null, chongs:chongs, kaikyokus:kaikyokus, nowYear:nowYear}:null;
   }
   if(typeof window!=='undefined') window.pastKuboChong=pastKuboChong;
 
@@ -3663,7 +3670,12 @@ window.KANSHI60_DETAIL={
       if(_kaiRows.length) lines.push('会局が成立する大運・年運：'+_kaiRows.join(' ／ ')+'\n※三合・方合が巡る時期（西暦・年代）は「運の流れ（大運）」の章で必ず具体的に取り上げ、運が大きく動く前向きな開運の時期として伝える（半会・半方はそのゆるい版として軽く）。2027年以降でも該当すれば必ず触れる。');
     }catch(e){}
     var pkc=(window.pastKuboChong?window.pastKuboChong(r):null);
-    if(pkc){ if(pkc.kubos&&pkc.kubos.length) lines.push('直近の空亡の年：'+pkc.kubos.map(function(k){return k.year+'年('+k.gz+')';}).join('・')); if(pkc.chong) lines.push('直近の冲の年：'+pkc.chong.year+'年('+pkc.chong.gz+')'); }
+    if(pkc){ var _pv=[];
+      if(pkc.kubos&&pkc.kubos.length) _pv.push('空亡（努力が実りにくい・価値観が変わりやすい）が巡った年：'+pkc.kubos.map(function(k){return k.year+'年('+k.gz+')';}).join('・'));
+      if(pkc.chongs&&pkc.chongs.length) _pv.push('冲（環境の変化・別れ・引越・転職など揺れやすい）が巡った年：'+pkc.chongs.map(function(k){return k.year+'年('+k.gz+')';}).join('・'));
+      if(pkc.kaikyokus&&pkc.kaikyokus.length) _pv.push('会局（三合・方合）が成立した“転機・チャンス”の年：'+pkc.kaikyokus.map(function(k){return k.year+'年('+k.gz+'／'+k.label+')';}).join('・'));
+      if(_pv.length) lines.push('【過去の振り返り（当たりの確認に使う）】\n'+_pv.join('\n')+'\n※鑑定書に「過去の振り返り」という独立した小見出しを必ず立て、これらの年に「環境の変化・別れ・転職・引越・価値観の転換・新しい挑戦などが起きやすかったのでは」と“過去に起きたことの確認”として語る。会局の年は前向きな転機・チャンスとして。断定せず「〜だったのでは／心当たりは？」と問いかける形で、お客様が振り返って納得できるように。');
+    }
     lines.push('現在の年齢：'+(r.nowAge!=null?r.nowAge+'歳':'不明')+' / 性別：'+((r.sex==='male')?'男性':'女性'));
     return lines.join('\n');
   }
@@ -3724,7 +3736,8 @@ window.KANSHI60_DETAIL={
       '・命式データ（四柱・天干通変・蔵干・十二運・五行・守護神・空亡・大運）に忠実に。命式に無い事実や生年月日を作らない。\n'+
       '・アスタリスク（*）や記号の装飾は一切使わない。\n'+
       '・章立てで書く。各章は行頭に「# 見出し」を置き、続けて本文の段落。箇条書きは行頭「・」。\n'+
-      '・章の順番：総合まとめ／性格と本質／才能・仕事／恋愛・結婚／対人・相性／金運／健康・養生／運の流れ（大運）／開運のヒント\n'+
+      '・章の順番：総合まとめ／性格と本質／才能・仕事／恋愛・結婚／対人・相性／金運／健康・養生／過去の振り返り（当たりの確認）／運の流れ（大運）／開運のヒント\n'+
+      '・「過去の振り返り」章は独立して立て、命式データの【過去の振り返り】にある空亡・冲・会局の年を根拠に、その頃に起きやすかったこと（環境の変化・別れ・転職・引越・価値観の転換・チャンス等）を、断定せず「〜だったのでは／心当たりは？」と問いかける形で書く。\n'+
       '・専門用語は（）で一言かみくだく。読者本人に語りかける、あたたかく具体的な文体。断定しすぎず、日々の行動のヒントを添える。'+
       (isEasy?'\n・やさしい版：中学生にもわかる易しい言葉で。専門用語は最小限、はげます調子で短めに。':'');
     var usr='【鑑定対象】'+(nm||'ご本人')+'さん\n【命式データ】\n'+chartSummaryText(r)+'\n\n上記の命式から、指定の章立てで鑑定書の本文を書いてください。';
