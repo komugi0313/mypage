@@ -3,7 +3,7 @@
    鑑定・60干支の教科書を使えるようにする。
    オンライン鑑定（生成AI）だけは通信が要るが、圏外時は端末内の
    オフライン鑑定に自動で切り替わる。 */
-const CACHE = 'shichu-jidou-v189';  /* 教科書ページ kubo.html（空亡）の解空セクションを拡充：なぜ冲で解けるのか（空亡=眠っている状態／冲=叩き起こす力＝運動・活性化。悪い＋悪いではなく眠り＋目覚め。空逢冲則不空・空っぽの鐘は叩けば鳴る）のメカニズム解説カードと、合解(三合六合=穏やかに整う)／冲解(冲=解けるが波乱)の比較表、吉凶は目覚めた支が用神か忌かで決まるポイントを追加。教科書・鑑定用。※v188=解空の解釈を正しく整理（冲も解空・ただし質を区別）。
+const CACHE = 'shichu-jidou-v190';  /* 教科書に「相性の見どころ」ページ(aisho-pattern.html)を追加：合去・配偶宮の空亡・官殺混雑・争財の4パターンを、意味・見分け方・伝え方（断定せず乗り越え方とセット）まで解説。教科書索引(textbook-pro.html)にカード追加。SWのASSETSにも登録。※v189=教科書ページ kubo.html（空亡）の解空セクションを拡充。
 
 /* 初回訪問時に先読みしてキャッシュするページ一式（このブランドのみ） */
 const ASSETS = [
@@ -15,7 +15,7 @@ const ASSETS = [
   'pklove.js',
   'jikkan.html', 'tsuhensei.html', 'juniun.html', 'zohkan.html', 'kubo.html',
   'daiun-tenkanki.html', 'ritsuun.html', 'nichiza-tenchusatsu.html', 'ijokanshi.html',
-  'kanshi-aisho.html'
+  'kanshi-aisho.html', 'aisho-pattern.html'
 ];
 
 self.addEventListener('install', (e) => {
