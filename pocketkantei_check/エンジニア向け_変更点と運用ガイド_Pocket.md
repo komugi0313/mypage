@@ -514,3 +514,20 @@ gemini.js：x-pk-auth（ログインのトークン）→ rec.sub → プラン�
 - **為替が円安になったら、`PK_FX` を上げてください。**
 - **採算表（アーティファクト「Pocket鑑定 採算表」）で、上限と「1日に話せる目安」を確かめられます。** 今の前提では、Standard は雑談だけなら1日28回くらい、「なぜ？」だけなら4回くらいです。
 - **話せる量を増やしたい時は、毎回送る指示文（約8万7千文字）にキャッシュが効く並べ方にしてください。** 入力の原価が大きく下がり、同じ上限の中で2〜3倍話せる見込みです。
+
+---
+
+## 12. 2026-09-26 追記（6）：AIのキャッシュ割引が効く並び順
+
+Gemini は、前回のリクエストと先頭から同じ部分の入力を割引します（暗黙のキャッシュ。通常の約4分の1の料金）。毎回送る指示文（`buildSystemPrompt`、約8万9千文字）の後半を「変わらない順」に並べ直しました。
+
+- **並び順**
+  1. ルール（言語ごとに全員共通、約5万5千文字）※変更なし
+  2. この人の情報：`nameLine`・`cultureBlock`・`proBlock`・`pastBlock`・`zodiacBlock`・`monthBlock`・`romanceBlock`・`nayinBlock`・`voidReleaseBlock`・`favLogicBlock`
+  3. 相談の内容で出し入れするもの：`healthBlock(_hv)`・`turningBlock`・`yearFactBlock`・`lifeArcBlock`・`setsubokuBlock`・`luckyBlock`（出し入れの条件は従来どおり）
+  4. 長期記憶 `memLine`（6通ごとに変わる）
+  5. `[FOR THIS MESSAGE …]` の見出しに続けて、この1通の分：`_heavyRule`・`timing`（現在時刻）・`crisisBlock`・`aftercareBlock`・`_todayGate`・`topicFocus`・`spotlightBlock`・`loveMandateBlock`
+- **以前の問題：** 分単位の現在時刻（`timing`）が真ん中にありました。そのため、1分たつと後ろ半分がすべて一致しなくなっていました。
+- **効果（`prefix.js` で計測）：** 同じ人の3時間後のリクエストと、先頭から一致する文字数が、56,230文字（63%）から82,072文字（92%）に増えました。別の人でも、同じ言語ならルールの約5万5千文字は共通です。
+- **利益の上限との関係：** サーバーは、AIが返す `cachedContentTokenCount` を割引の料金（`AI_PRICES.*.cached`）で計算します。そのため、割引が効いた分だけ、同じ上限の中で話せる量が自動で増えます。採算表の見込みでは、入力の80%に割引が効けば、Standard の雑談の目安は1日28回から66回になります。
+- **注意：** 危機の相談や重い相談の指示（`crisisBlock`・`_heavyRule`）は、指示文の最後の「この1通の分」に移りました。内容は変えていません。実際のAIでの確認は、テスト用キーが無効になったため、まだ行っていません。新しいキーで、10言語の会話テスト（`finaltest.js`）を一度流してください。

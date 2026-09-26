@@ -56,4 +56,10 @@ Pocket鑑定の修正（大運・立運・節入り、アカウント、パス�
 | `budgettest.js` | 31日間、毎日止まるまで使い続けた時のAI原価と利益率（3プラン）、無料の話題の判定の上限 | `NODE_PATH=mock/node_modules node budgettest.js` |
 | `budgetui.js` | 雑談の割り当てを使い切った時の画面（案内・本格鑑定は答える・深刻な相談は相談窓口つき） | `NODE_PATH=mock/node_modules node budgetui.js` |
 
+### 2026-09-26 追加（6）：キャッシュ割引の並び順
+| ファイル | 内容 | 実行例 |
+|---|---|---|
+| `prefix.js` | 指示文が、別の質問・3時間後・別の人・別の言語で、先頭から何文字一致するか | `node prefix.js` |
+| `blocks.js` | 指示文の各部分が、毎回変わるか・質問で変わるか | `node blocks.js` |
+
 ※本番の Netlify（実際の Blobs・Resend）での確認は含みません。デプロイ後に実機で「登録→別端末でログイン」「パスワードを忘れた→メール→再設定」を確認してください。
