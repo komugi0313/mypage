@@ -398,6 +398,15 @@
   .cv-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px}
   .cv-k{font-size:13px;font-weight:800;color:var(--ink2);line-height:1.4}
   .cv-v{flex:0 0 auto;color:#fff;font-weight:900;font-size:13.5px;border-radius:999px;padding:5px 15px;white-space:nowrap}
+  /* 相性：時期の目安の表（結婚に良い年／揺れやすい年） */
+  .cty{width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:12.5px}
+  .cty th,.cty td{border:1px solid var(--line);padding:5px 7px;text-align:left;vertical-align:top}
+  .cty thead th{background:var(--card);color:var(--ink2);font-weight:800;font-size:11.5px;white-space:nowrap}
+  .cty .cty-y{font-weight:800;white-space:nowrap}.cty .cty-y small{font-weight:600;color:var(--muted);font-size:10px;display:block}
+  .cty .cty-gz{white-space:nowrap;font-weight:700}
+  .cty tr.cty-both{background:#FFF3F8}
+  .cty .cty-none{color:var(--muted);text-align:center}
+  .cty-ttl{font-weight:900;font-size:13px;margin:8px 0 2px}.cty-ttl.good{color:#1f7a44}.cty-ttl.warn{color:#b23b2e}
   /* 五行（通変星ホイール）の連動ミニ図：大運・年運セクションを見ている時だけ画面上部に固定表示 */
   #gogyo-pin{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:55;width:min(94vw,430px);
     background:var(--card);border:1px solid var(--line2);border-radius:14px;box-shadow:0 10px 28px rgba(20,23,29,.22);
@@ -4573,7 +4582,10 @@ function compatAnalysis(a,b,rt){
   L.push(`今の大運の重なり:本人=${grp(a)}運／相手=${grp(b)}運`);
   // 結婚・縁が深まりやすい年（本人の今後10年・相手の日支と響き合う年を優先）
   const good=compatGoodYears(a,b,rt.useSpouse);
-  L.push(`${rt.timing}(本人の今後10年):${good.length?good.join(' / '):'特に強い年は目立たない'}`);
+  const goodTxt=good.map(g=>`${g.year}(${g.ganzhi}:${g.cues.join('・')})`);
+  L.push(`${rt.timing}(今後25年):${goodTxt.length?goodTxt.join(' / '):'特に強い年は目立たない'}`);
+  const strain=compatStrainYears(a,b);
+  L.push(`関係が揺れやすい・見直しの年(今後25年・配偶宮の冲/害/刑・空亡):${strain.length?strain.map(s=>`${s.year}(${s.ganzhi}:${s.tags.join('・')})`).join(' / '):'目立つ年なし'}（「離婚に良い年」と断定せず、関係の転機・話し合いの時期として伝える）`);
   // 2人の命式を突き合わせた相性ポイント（三合・五行補完・空亡・月支元命の生剋・印の関係）
   const ex=compatExtras(a,b,rt);
   if(ex.length)L.push('2人の命式を合わせた相性ポイント:\n'+ex.map(r=>`・[${r.good==='good'?'吉':r.good==='soft'?'やわらかい注意':r.good==='bad'?'注意':'参考'}] ${r.ai}`).join('\n'));
@@ -4585,7 +4597,7 @@ function compatGoodYears(a,b,romantic){
   const spouse=spouseStars(a);
   const bDay=b.pillars[2].branch, out=[];
   if(!a.now)return out;
-  a.annualFortunes.filter(y=>y.year>=a.now.year&&y.year<=a.now.year+10).forEach(y=>{
+  a.annualFortunes.filter(y=>y.year>=a.now.year&&y.year<=a.now.year+25).forEach(y=>{
     const stars=[...matchKichi1(a,y.branch),...matchKichi4(a,y.branch),...matchKichi(kichiTargets(a),y.stem,y.branch,ZOUKAN[y.branch]||[])];
     const r=[];
     if(romantic){
@@ -4597,9 +4609,46 @@ function compatGoodYears(a,b,romantic){
     }
     if(RIKUGO[bDay]===y.branch)r.push('相手と支合');
     if(SANGO.some(g=>{const s=g.slice(0,3);return bDay!==y.branch&&s.includes(bDay)&&s.includes(y.branch)&&(['子','午','卯','酉'].includes(bDay)||['子','午','卯','酉'].includes(y.branch));}))r.push('相手と半合の縁');
-    if(r.length>=2)out.push(`${y.year}(${y.ganzhi}:${[...new Set(r)].join('・')})`);
+    if(r.length>=2)out.push({year:y.year,ganzhi:y.ganzhi,cues:[...new Set(r)]});
   });
   return out;
+}
+/* 関係が揺れやすい・見直しの年（配偶宮＝日支への冲/害/刑・空亡年）。今後25年。別れ・離婚の“転機”の手がかり（断定はしない）。 */
+function compatStrainYears(a,b){
+  if(!a||!a.now||!a.annualFortunes)return [];
+  const dayB=a.pillars[2].branch, ku=(typeof kubo==='function'?kubo(a):[]), out=[];
+  a.annualFortunes.filter(y=>y.year>=a.now.year&&y.year<=a.now.year+25).forEach(y=>{
+    const tags=[];
+    if(isChong(dayB,y.branch))tags.push('配偶宮に冲');
+    if(GAI[dayB]===y.branch)tags.push('配偶宮に害');
+    if(isKei2(dayB,y.branch)||isKei3(dayB,y.branch)||(dayB===y.branch&&JIKEI.has(dayB)))tags.push('配偶宮に刑');
+    if(ku.includes(y.branch))tags.push('空亡年');
+    if(tags.length)out.push({year:y.year,ganzhi:y.ganzhi,tags});
+  });
+  return out;
+}
+/* 相性：時期の目安を表で（結婚・縁が深まる年／揺れやすい年・今後25年） */
+function compatTimingHTML(a,b,rt){
+  try{
+    if(!a||!a.now)return '';
+    rt=rt||RELTYPES.love;
+    const good=compatGoodYears(a,b,rt.useSpouse), strain=compatStrainYears(a,b);
+    const nowY=a.now.year;
+    const goodYs=new Set(good.map(g=>g.year)), strainYs=new Set(strain.map(s=>s.year));
+    const both=good.map(g=>g.year).filter(y=>strainYs.has(y));
+    const rowG=good.length?good.map(g=>`<tr${strainYs.has(g.year)?' class="cty-both"':''}><td class="cty-y">${g.year}<small>（${g.year-nowY}年後）</small></td><td class="cty-gz">${g.ganzhi}</td><td>${esc(g.cues.join('・'))}</td></tr>`).join(''):'<tr><td colspan="3" class="cty-none">目立つ年は見当たりません</td></tr>';
+    const rowS=strain.length?strain.map(s=>`<tr${goodYs.has(s.year)?' class="cty-both"':''}><td class="cty-y">${s.year}<small>（${s.year-nowY}年後）</small></td><td class="cty-gz">${s.ganzhi}</td><td>${esc(s.tags.join('・'))}</td></tr>`).join(''):'<tr><td colspan="3" class="cty-none">目立つ年は見当たりません</td></tr>';
+    return `<section class="card sec" style="border:1.5px solid #E7B8CF;box-shadow:0 6px 18px rgba(232,93,158,.12)">
+      <span class="eyebrow"><b>時期の目安（今後25年）</b>結婚・縁が深まる年／揺れやすい年</span>
+      <h2 style="margin-bottom:2px">いつ動く？——年ごとの目安</h2>
+      <div class="mhint" style="margin:6px 0 10px">年運に配偶者星・出会いの星・貴人が巡り、相手の干支と響き合う年＝<b>縁が深まりやすい年</b>。配偶宮（日支）が冲・害・刑や空亡になる年＝<b>関係が揺れやすい・見直しの年</b>。${both.length?'<b style="color:#C2185B">⚡'+both.join('・')+' は両方に出る＝動きが大きい年</b>（縁も揺れも起きやすい転機）。':''}</div>
+      <div class="cty-ttl good">💗 結婚・縁が深まりやすい年</div>
+      <table class="cty"><thead><tr><th>西暦</th><th>干支</th><th>手がかり</th></tr></thead><tbody>${rowG}</tbody></table>
+      <div class="cty-ttl warn">⚠️ 関係が揺れやすい・見直しの年</div>
+      <table class="cty"><thead><tr><th>西暦</th><th>干支</th><th>内容</th></tr></thead><tbody>${rowS}</tbody></table>
+      <div class="mhint" style="margin-top:8px">※四柱推命は「離婚に良い年」と断定はしません。揺れやすい年は「関係を見直す・話し合う転機」の目安として、無理なく整えるための参考にしてください。深い読みは${esc(rt.label)}の相性鑑定で。</div>
+    </section>`;
+  }catch(e){ return ''; }
 }
 function localCompat(A,B,na,nb,rt,ask){
   rt=rt||RELTYPES.love;
@@ -4793,7 +4842,7 @@ function buildCompatBase(out){
   if(document.getElementById('b-notime')&&document.getElementById('b-notime').checked)markTimeUnknown(chartB);
   const na=personName||'本人', nb=personNameB||'お相手';
   const rt=RELTYPES[document.getElementById('rel-type')?.value||'love']||RELTYPES.love;
-  try{var _cv=document.getElementById('compat-verdict'); if(_cv)_cv.innerHTML=compatVerdictHTML(chart,chartB,rt);}catch(_e){}
+  try{var _cv=document.getElementById('compat-verdict'); if(_cv)_cv.innerHTML=compatVerdictHTML(chart,chartB,rt)+compatTimingHTML(chart,chartB,rt);}catch(_e){}
   try{var _cm=document.getElementById('compat-meishi'); if(_cm)_cm.innerHTML=compatMeishiHTML(chart,chartB,na,nb);}catch(_e){}
   const head=`【本人A】${na}（${chart.birth.sex==='male'?'男性':'女性'}）: ${compatBrief(chart)}\n【お相手B】${nb}（${sexB==='male'?'男性':'女性'}）: ${compatBrief(chartB)}\n\n【2人の関係】${rt.label}\n\n【2人の関係の自動分析（計算済み）】\n${compatAnalysis(chart,chartB,rt)}`;
   return {na,nb,rt,head};
