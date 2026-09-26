@@ -43,8 +43,8 @@ diff -ruN "pk/README_\343\203\207\343\203\227\343\203\255\343\202\244.md" "fx/RE
  - テレコムクレジットの **申込フォーム＋継続課金同意画面**（審査通過後に組み込み）
 diff -ruN "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md" "fx/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"
 --- "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"	1970-01-01 00:00:00.000000000 +0000
-+++ "fx/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"	2026-09-26 20:25:52.084998067 +0000
-@@ -0,0 +1,533 @@
++++ "fx/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"	2026-09-26 20:50:06.796989768 +0000
+@@ -0,0 +1,548 @@
 +# Pocket鑑定 2026-09-25 変更点と運用ガイド（エンジニア向け）
 +
 +この資料は、2026-09-25 の改修内容を、実装・デプロイ・運用するエンジニアが正しく理解するためのものです。
@@ -578,6 +578,21 @@ diff -ruN "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\3
 +- **効果（`prefix.js` で計測）：** 同じ人の3時間後のリクエストと、先頭から一致する文字数が、56,230文字（63%）から82,072文字（92%）に増えました。別の人でも、同じ言語ならルールの約5万5千文字は共通です。
 +- **利益の上限との関係：** サーバーは、AIが返す `cachedContentTokenCount` を割引の料金（`AI_PRICES.*.cached`）で計算します。そのため、割引が効いた分だけ、同じ上限の中で話せる量が自動で増えます。採算表の見込みでは、入力の80%に割引が効けば、Standard の雑談の目安は1日28回から66回になります。
 +- **注意：** 危機の相談や重い相談の指示（`crisisBlock`・`_heavyRule`）は、指示文の最後の「この1通の分」に移りました。内容は変えていません。実際のAIでの確認は、テスト用キーが無効になったため、まだ行っていません。新しいキーで、10言語の会話テスト（`finaltest.js`）を一度流してください。
++
++### 12.1 実際のAIでの確認（9/26、10言語×16問）
++- **文章：** 10言語すべてで、別言語の混入 0・画面エラー 0 でした。前と同じ文はベトナム語の1件だけです。相性の質問で、本人と相手の誕生日を取り違えることもなくなりました。
++- **実測の原価（201回）：**
++
++  | 使い方 | 入力（1回） | キャッシュ | 出力 | 1回の原価 |
++  |---|---|---|---|---|
++  | 雑談 | 約20,400 | 74% | 約240 | 約¥0.15 |
++  | 本格鑑定 | 約26,600 | 50% | 約1,690 | 約¥2.00 |
++
++  採算表の初期値（¥0.46・¥3.22）より大幅に安い結果です。
++- **直したこと：**
++  - `timing` に「今月＝○月／来月＝○月」を明記しました。「来月は？」の次に「今月は？」と聞かれた時、今月を来月と取り違えることがあったためです。ベトナム語とインドネシア語は直りました。タイ語では、まだたまに取り違えます。
++  - 繁体字の「妳和他的你的特質」（置き換えの崩れ）を直しました。
++- **テスト環境についての注意：** テストでは、中国語・日本語の相談窓口に「US: 988」が出ました。テスト用ブラウザの地域が米国だったためです。実際の端末では、その地域の窓口が出ます。
 diff -ruN "pk/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\273\225\346\247\230\346\233\270.md" "fx/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\273\225\346\247\230\346\233\270.md"
 --- "pk/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\273\225\346\247\230\346\233\270.md"	2026-09-17 13:04:05.000000000 +0000
 +++ "fx/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\273\225\346\247\230\346\233\270.md"	2026-09-26 19:57:57.972422025 +0000
@@ -1330,7 +1345,7 @@ diff -ruN pk/functions/gemini.js fx/functions/gemini.js
 +exports._t = { accountPlan, accountInfo, DEEP_QUOTA, FREE, LITE_SAFETY, FREE_DEEP_DAILY, COST_BUDGET, AI_PRICES, costYen, budgetToday, subWindow };
 diff -ruN pk/index.html fx/index.html
 --- pk/index.html	2026-09-17 17:10:16.000000000 +0000
-+++ fx/index.html	2026-09-26 20:23:36.724641395 +0000
++++ fx/index.html	2026-09-26 20:48:25.549307010 +0000
 @@ -118,7 +118,13 @@
  .field{margin-top:16px}
  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:7px;font-weight:500}
@@ -2295,7 +2310,7 @@ diff -ruN pk/index.html fx/index.html
 +  t=t.replace(/([,，、])\s*[,，、]+/g,'$1').replace(/[ \t]*[,，、]+\s*$/,'');
 +  if(state.lang==='ko') t=t.replace(/(^|[\n.!?。]\s*)님\s*[,，]?\s*/g,'$1');
 +  /* 中文：「命盘→你的特质」の置換で「你们的你的特质」「你的你的特质」になる崩れを直す */
-+  if(state.lang==='zh'||state.lang==='zt') t=t.replace(/(你們|你们|他們|他们|兩人|两人|彼此)(的)?(兩人的|两人的)?你的特質/g,'$1的特質').replace(/(你們|你们|他們|他们|兩人|两人|彼此)(的)?(兩人的|两人的)?你的特质/g,'$1的特质').replace(/你的你的/g,'你的');
++  if(state.lang==='zh'||state.lang==='zt') t=t.replace(/(你們|你们|他們|他们|兩人|两人|彼此)(的)?(兩人的|两人的)?你的特質/g,'$1的特質').replace(/(你們|你们|他們|他们|兩人|两人|彼此)(的)?(兩人的|两人的)?你的特质/g,'$1的特质').replace(/的你的(特質|特质)/g,'的$1').replace(/你的你的/g,'你的');
 +  if(state.lang==='ko') if(/별자리/.test(t)){ t=t.replace(/별자리/g,'타고난 별'); t=_koJosa(t,'타고난 별'); } /* 韓国語の「별자리」は西洋星座の意味になる */
 +  return t;
 +}
@@ -2447,6 +2462,15 @@ diff -ruN pk/index.html fx/index.html
          +'<div class="sb-age">'+b.startAge+'</div><div class="sb-cell">'+nowp+star+'</div></div>';
      }).join('');
      var lg=['spring','summer','autumn','winter'].map(function(s){return '<span class="sb-lg sb-'+s+'"><i></i>'+pick(SB_I18N[s])+'</span>';}).join('');
+@@ -3504,7 +3709,7 @@
+   var _slot=_h<4?'deep night — if they are chatting now, gently wonder if they cannot sleep (眠れないのかな？) and be extra soft':(_h<8?'early morning — a bright 早いね！おはよう is welcome; send them into the day warmly':(_h<11?'morning — おはよう mood, energizing':(_h<14?'around lunchtime — a natural, easy time of day (do NOT bring up food unless they raise it)':(_h<18?'afternoon':(_h<22?'evening — おつかれさま mood, unwinding':'late night — wind down gently, nudge toward rest, no heavy new topics')))));
+   var _wd=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][_nw.getDay()];
+   var _yr=_nw.getFullYear();
+-  timing+='[NOW — ABSOLUTE CALENDAR TRUTH] Their local date & time: '+_yr+'-'+(_nw.getMonth()+1)+'-'+_nw.getDate()+' ('+_wd+') '+_h+':'+('0'+_nw.getMinutes()).slice(-2)+'. THIS YEAR (今年) = '+_yr+'. NEXT YEAR (来年) = '+(_yr+1)+'. LAST YEAR (去年) = '+(_yr-1)+'. NEVER assume any other year — your training-era sense of \'this year\' is WRONG; always use these numbers. When they ask about this/next/last year (今年・来年・去年), state the correct numeric year ONCE early in your reply (e.g. 今年、'+_yr+'年は…) so they can trust the calendar — then just say 今年/来年 after that. ('+_slot+')\n';
++  timing+='[NOW — ABSOLUTE CALENDAR TRUTH] Their local date & time: '+_yr+'-'+(_nw.getMonth()+1)+'-'+_nw.getDate()+' ('+_wd+') '+_h+':'+('0'+_nw.getMinutes()).slice(-2)+'. THIS YEAR (今年) = '+_yr+'. NEXT YEAR (来年) = '+(_yr+1)+'. LAST YEAR (去年) = '+(_yr-1)+'. THIS MONTH (今月) = '+['January','February','March','April','May','June','July','August','September','October','November','December'][_nw.getMonth()]+' '+_yr+'. NEXT MONTH (来月) = '+['January','February','March','April','May','June','July','August','September','October','November','December'][(_nw.getMonth()+1)%12]+' '+(_nw.getMonth()===11?_yr+1:_yr)+'. When the user says "this month" in any language, it ALWAYS means THIS MONTH above — even if the previous message was about next month. NEVER assume any other year — your training-era sense of \'this year\' is WRONG; always use these numbers. When they ask about this/next/last year (今年・来年・去年), state the correct numeric year ONCE early in your reply (e.g. 今年、'+_yr+'年は…) so they can trust the calendar — then just say 今年/来年 after that. ('+_slot+')\n';
+   timing+='[TIME-FIT — every suggestion MUST fit this exact clock time & weekday] Assume the ordinary rhythm of life at this hour unless THEY say otherwise: on a weekday from ~8:00 breakfast is already OVER and they are typically commuting or at work/school — NEVER suggest eating breakfast, morning-at-home routines, or taking a nap to someone who is presumably (or says they are) at work; offer only tips that fit where they are right now (at a desk: stretch, water, a short walk at lunch). From ~18:00 think dinner/evening; late night think winding down. Meal advice only for the NEXT upcoming meal, never one that has already passed. If they state their situation (もう出社してる, on a train, at home today, day off), that overrides every assumption — adapt instantly and do not repeat mismatched advice.\n';
+   if(ti) timing+='[TODAY '+today.getFullYear()+'/'+(today.getMonth()+1)+'/'+today.getDate()+'] '+ti.gz+'('+ti.el+','+mk(ti)+')'+(tm?(' | TOMORROW '+tm.gz+'('+tm.el+','+mk(tm)+')'):'')+'\n';
+   var lds=luckyDays(21,4), cds=cautionDays(21,3);
 @@ -3558,7 +3763,15 @@
      (function(){var _hv=(RE_HEAVY.test(_lastUserMsg()||'')||RE_SELFHARM.test(_lastUserMsg()||''));var _heavyRule=_hv?'[SERIOUS / HEAVY TOPIC NOW — the user is in real distress or facing something weighty (pain, fear, illness, loss, self-worth, loneliness). ABSOLUTE: do NOT mention food, meals, snacks, drinks (this INCLUDES 温かい飲み物/お茶/ホットミルク/ココア — a "warm drink" suggestion is forbidden here), cooking, 薬膳, or ask "did you eat"; do NOT give lucky colour / fashion / action / 開運 tips. Comfort must be pure emotional presence — sitting with the feeling, breathing, gentleness, you-are-not-alone — NEVER a suggestion to consume, wear, buy, or do a lifestyle activity. BEREAVEMENT / LOSS: if someone is grieving a death, do NOT pivot into a fortune reading or name any period/year/luck theme (no 「今年は◯◯の時期」, no 大運/運気 talk) — that intrudes on grief; stay entirely with their loss and their feelings, and simply be present. ⚠️ SUICIDE OF A LOVED ONE (親・家族・友人が自殺／自死で亡くなった, esp. a parent lost in childhood): this is one of the most tender wounds a person carries — receive it with the deepest gentleness. ABSOLUTE: (a) NEVER analyze, speculate, or "read" WHY that person died, and NEVER read the deceased\'s chart or fate; (b) NEVER imply anything about the SURVIVOR\'s own risk or that it runs in the family — do NOT treat them as suicidal just because they shared this; (c) gently make clear, if it fits, that a loved one\'s choice was never the child\'s / survivor\'s fault, and that whatever they felt (grief, anger, guilt, numbness, love) is allowed; (d) do NOT rush them toward "healing" or silver linings; sit with them. Only if THEY themselves now express wanting to die/disappear do you shift to the self-harm care (warmth + a real support line). Otherwise: pure, patient presence — 「ずっと抱えてきたんだね。話してくれてありがとう」. ⚠️ A SIBLING\'S / LOVED ONE\'S SUICIDE ATTEMPT (弟が自殺未遂した等): the user is frightened and helpless for that person — hold THEIR fear, do not treat the user as the one at risk; gently support how they can be there for their sibling and themselves, and note that professional help exists FOR the sibling. ⚠️ THE USER\'S OWN PAST ATTEMPT, survived (「昔、自殺未遂した」「10年前に…助かった」「自傷してた時期がある」): do NOT respond with a cold crisis-hotline dump as if it were happening now — that dismisses how far they have come. Honor that they survived and are here talking (「あの時を生き延びて、今こうして話してくれて、本当によかった」), receive the memory gently, and softly, without pressure, check how they are feeling THESE DAYS. Only if they reveal they are struggling AGAIN right now do you move to active crisis care (warmth + a real support line). Never imply they are fragile or broken for having survived. PREGNANCY: if they sound conflicted or troubled (「妊娠してしまった」「どうしよう」), do NOT open with congratulations — receive their feelings first and ask gently how THEY feel about it; congratulate only when they themselves sound happy. UNINTENDED / UNWANTED PREGNANCY (望まない・意図しない妊娠): be completely non-judgmental and NON-DIRECTIVE — NEVER push them toward keeping OR ending it, and never frame it as good/bad luck or fate; it is their body and their choice. Receive the fear, make them feel less alone, and gently note that a doctor or a trusted person can help them think it through at their own pace. ⚠️ ABUSE (親からの虐待・DV・暴力・暴言・ネグレクト・毒親): receive with deep care and believe them; NEVER tell them to endure it, obey, forgive, or that they must have done something to deserve it — it is NOT their fault. Do NOT read the abuser\'s chart to explain or excuse the abuse. If it is ongoing and they may be in danger (especially a child or teen), gently let them know real help exists — in Japan, 児童相談所「いちはやく」189, or 110 if in immediate danger — offered softly as an option, never as a lecture, then stay with their feelings.]\n':'';var _q4=_lastUserMsg()||''; var _lt4=''; try{_lt4=_effectiveTopic(_q4);}catch(e){}
      var _loveImm=((_lt4==='love'||_lt4==='marriage')&&/返信|返事|既読|未読|連絡|line|ライン|メール|どうなる|待って|来ない|音沙汰|反応|今日|昨日/i.test(_q4));
@@ -4009,13 +4033,13 @@ diff -ruN pk/pro-bazi.js fx/pro-bazi.js
 \ No newline at end of file
 diff -ruN pk/sw.js fx/sw.js
 --- pk/sw.js	2026-08-21 05:15:56.000000000 +0000
-+++ fx/sw.js	2026-09-26 20:25:52.113530130 +0000
++++ fx/sw.js	2026-09-26 20:50:06.812964794 +0000
 @@ -4,7 +4,7 @@
     ・JS/画像等は stale-while-revalidate（即表示＋裏で更新）
     ・AI通信（/functions・/.netlify・generativelanguage）は絶対にキャッシュせず常にネットワークへ
     ※アプリを更新したら CACHE の版番号を上げると確実に配信されます。 */
 -var CACHE = 'pocket-kantei-v1';
-+var CACHE = 'pocket-kantei-v13';
++var CACHE = 'pocket-kantei-v14';
  var SHELL = [
    './', './index.html', './pro-bazi.js', './pro-adapter.js',
    './owl.png', './icon-512.png', './icon-192.png', './icon-maskable-512.png', './apple-touch-icon.png',

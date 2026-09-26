@@ -28,6 +28,10 @@ const srv=http.createServer((q,r)=>{let f=path.join('fx',decodeURIComponent(q.ur
   o.push(['chips th改行', _extractChips('ข้อความ "อยากรู้เรื่องช่วงสร้างฐานะ? " / "มีอะไรเกี่ยวกับช่วงเตรียมตัว?\n" / "ช่วงชีวิตนี้มีจุดเปลี่ยน? "'), JSON.stringify(window._pendingChips)]);
   window._pendingChips=null; state.lang='th';
   o.push(['chips th改行区切り', _extractChips('ข้อความ ค่ะ "อยากรู้เรื่องงาน?"\n"แล้วชีวิตช่วงต่อไปเป็นไง? "'), JSON.stringify(window._pendingChips)]);
+  state.lang='zh'; o.push(['zh 你们的你的特质', _finalTidy('从你们的你的特质来看，你的你的特质很好')]); state.lang='zt'; o.push(['zt 妳和他的你的特質', _finalTidy('從妳和他的你的特質來看')]);
+  { const P='Trong lá số của bạn, có một giai đoạn đặc biệt mà bạn có thể thu hút được sự chú ý của người khác, giống như những cánh hoa đào nở rộ trong tình yêu vậy. Điều này sẽ diễn ra rõ nét hơn vào khoảng năm 2027.';
+    const bak=state.msgs; state.msgs=[{role:'ai',text:P}]; state.lang='vi';
+    o.push(['段落の写し', _dropRepeatedParas('Nhược điểm của bạn là đôi khi hơi thiếu quyết đoán khi gặp áp lực, và dễ để ý kiến người khác ảnh hưởng.\n\n'+P+'\n\nHãy chăm sóc bản thân nhé, mỗi ngày một chút thôi cũng được, bạn nhé.')]); state.msgs=bak; }
   state.lang='ko'; o.push(['ko 별자리', _finalTidy('당신의 별자리를 읽고, 별자리가 빛나요')]);
   window._pendingChips=null; state.lang='zh'; o.push(['chips zh改行', _extractChips('迎来新的发展机遇。 ["接下来的十年运势如何？ "\n"我什么时候会迎来转折？ "\n"我现在稳步发展的原因？ "]'), JSON.stringify(window._pendingChips)]);
   state.lang='ko'; o.push(['ko 님', _finalTidy('님, 안녕하세요! 저는 Nico예요.'), _finalTidy('지수님, 안녕하세요')]);
