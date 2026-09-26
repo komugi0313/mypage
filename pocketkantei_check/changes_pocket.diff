@@ -43,8 +43,8 @@ diff -ruN "pk/README_\343\203\207\343\203\227\343\203\255\343\202\244.md" "fx/RE
  - テレコムクレジットの **申込フォーム＋継続課金同意画面**（審査通過後に組み込み）
 diff -ruN "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md" "fx/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"
 --- "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"	1970-01-01 00:00:00.000000000 +0000
-+++ "fx/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"	2026-09-26 18:59:45.161116247 +0000
-@@ -0,0 +1,384 @@
++++ "fx/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"	2026-09-26 19:17:22.566346955 +0000
+@@ -0,0 +1,394 @@
 +# Pocket鑑定 2026-09-25 変更点と運用ガイド（エンジニア向け）
 +
 +この資料は、2026-09-25 の改修内容を、実装・デプロイ・運用するエンジニアが正しく理解するためのものです。
@@ -406,7 +406,7 @@ diff -ruN "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\3
 +
 +| 使う場所 | 支払い方法 | 解約 |
 +|---|---|---|
-+| ウェブ版（ブラウザ・PWA） | クレジットカード（決済代行：テレコムクレジット） | マイページまたはお問い合わせ（info@72k.ai） |
++| ウェブ版（ブラウザ・PWA） | クレジットカード（決済代行：テレコムクレジット） | 料金画面の「解約する」から利用者が自分で（運営の手作業なし） |
 +| iPhone アプリ | App Store のアプリ内課金 | App Store のアカウント設定 |
 +| Android アプリ | Google Play のアプリ内課金 | Google Play のアカウント設定 |
 +
@@ -418,13 +418,23 @@ diff -ruN "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\3
 +  - 「このプランにする」→ `/api/auth` の `checkout` → サーバーが決済画面のURLを作る → テレコムクレジットの決済画面へ移動します。
 +  - URLのひな形は、環境変数 `TELECOM_CHECKOUT_URLS`（JSON。プラン → URL）に入れます。`{uid}` `{email}` `{lang}` は置き換えます。
 +  - 未設定の間は「準備中」と表示します。
-+- **「購読の管理・解約」の行き先（`_manageHref`）：** 購入元が `TELECOM` なら問い合わせ窓口、`APP_STORE` なら Apple、`PLAY_STORE` なら Google です。
++- **解約（手作業なし）：**
++  - ウェブ版でカード決済の購読中の人には、料金画面に「解約する」ボタンを出します。
++  - 押すと `/api/auth` の `cancel` が呼ばれます。サーバーは、決済会社の継続課金を止め（`telecomStopRecurring`）、成功したら `willRenew:false` にします。期限までは使えます。
++  - `telecomStopRecurring` は、接続仕様書を受け取ってから実装します。今は `NOT_READY` を返すだけです。
++  - アプリで買った人には「購読の管理・解約」（ストアの設定画面）を出します（`_manageHref`）。
++  - 運営の問い合わせ窓口に解約を頼む流れは、なくしました。
++- **価格：**
++  - ウェブ版は、今の言語ごとの価格表示のままです（ja：980／1,980／2,980円、en：$9.99／$19.80／$29.80、zh：¥68／¥138／¥198 など）。
++  - アプリは、ストアで登録した価格（`priceString`）を自動で表示します。
++  - 特定商取引法の表記は「ウェブ版：円の価格／アプリ版：各ストアの表示価格」にしました。
 +- **規約類：** 利用規約、特定商取引法の表記、プライバシーポリシーを、3つの支払い方法に合わせて書き直しました（下書き・要確認）。
 +- **未実装（テレコムクレジットの接続仕様書が必要）：**
 +  1. **決済結果の通知の受け取り：** 決済が成功したら `rec.sub` に `{plan, expires, store:'TELECOM', willRenew:true}` を書き込みます。毎月の継続課金の成功・失敗も反映します。
 +  2. **決済画面のURLの作り方：** `clientip`・金額・利用者を見分ける値など、正確なパラメータ名が必要です。
-+  3. **解約の方法：** 利用者が自分で解約できる仕組み（テレコムクレジットの解約用URL・API）があるかを確認します。無い場合、解約はお問い合わせでの手作業になります。
-+- **検証：** `webcard.js` で確認しました。
++  3. **解約（`telecomStopRecurring`）：** テレコムクレジットの継続課金を、こちらのサーバーから止める方法（API または解約用URL）を実装します。**運営の手作業は不可** という方針です。
++  4. **ウェブ版を円以外の通貨で請求できるか：** 英語のドル表示など、海外向けの価格をテレコムクレジットで請求できるかを確認します。
++- **検証：** `webcard.js` と `webcancel.js`（解約の接続がない時は「解約の手続きができませんでした」、ある時は解約されて期限まで利用可）で確認しました。
 +  - ウェブ版の表示（日本語・英語）
 +  - 決済URLが未設定の時は「準備中」になる
 +  - 設定すると、uid・メールアドレス・言語を入れた決済URLへ移動する
@@ -536,8 +546,8 @@ diff -ruN "pk/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\2
  ---
 diff -ruN pk/functions/auth.js fx/functions/auth.js
 --- pk/functions/auth.js	1970-01-01 00:00:00.000000000 +0000
-+++ fx/functions/auth.js	2026-09-26 18:58:07.857566102 +0000
-@@ -0,0 +1,249 @@
++++ fx/functions/auth.js	2026-09-26 19:14:56.057449078 +0000
+@@ -0,0 +1,268 @@
 +// Netlify Function：アカウント（メールアドレス＋パスワード）とデータ同期。
 +// ・メール確認リンクは使わない。メールアドレス＋パスワードだけで登録／ログインする。
 +// ・パスワードは scrypt（ランダムsalt付き）でハッシュ化して保存。平文は保存しない。
@@ -686,6 +696,19 @@ diff -ruN pk/functions/auth.js fx/functions/auth.js
 +      const url = String(tpl).replace(/\{uid\}/g, encodeURIComponent(t.uid)).replace(/\{email\}/g, encodeURIComponent(rec.email)).replace(/\{lang\}/g, encodeURIComponent(String(b.lang || 'ja').slice(0, 5)));
 +      return json(200, { ok: true, url });
 +    }
++    // ウェブ版（テレコムクレジット）の解約：利用者が自分で行う（運営の手作業なし）。
++    //   決済会社の継続課金を止め（telecomStopRecurring）、成功したら「期限まで利用可・自動更新なし」にする。
++    //   アプリ（App Store / Google Play）の購読はストアでしか解約できないため、ここでは扱わない。
++    if (action === 'cancel') {
++      const sub = rec.sub || {};
++      if (String(sub.store || '').toUpperCase() !== 'TELECOM' || !(+sub.expires > Date.now())) return json(400, { ok: false, code: 'NOT_WEB_PLAN' });
++      if (sub.willRenew === false) return json(200, { ok: true, plan: planInfo(rec) });
++      const r = await TC.stop(sub, rec);
++      if (!r.ok) return json(502, { ok: false, code: r.code || 'CANCEL_FAIL' });
++      rec.sub = Object.assign({}, sub, { willRenew: false, cancelledAt: Date.now(), updated: Date.now() });
++      await store.setJSON(key, rec);
++      return json(200, { ok: true, plan: planInfo(rec) });
++    }
 +    // 購入・復元の直後に、ストアからの通知（billing.js）が反映されたかを確かめる軽い問い合わせ
 +    if (action === 'status') return json(200, { ok: true, plan: planInfo(rec) });
 +    if (action === 'change') {
@@ -745,6 +768,12 @@ diff -ruN pk/functions/auth.js fx/functions/auth.js
 +  } catch (e) { return false; }
 +}
 +function normEmail(s) { return String(s || '').trim().toLowerCase().slice(0, 254); }
++// テレコムクレジットの継続課金を止める。※接続仕様書を受け取ってから実装する（解約API／解約用URLの呼び出し）。
++//   実装するまでは NOT_READY を返す（ウェブ版の購入もまだ動かないため、利用者がここに来ることはない）。
++async function telecomStopRecurring(sub, rec) {
++  return { ok: false, code: 'NOT_READY' };
++}
++const TC = { stop: telecomStopRecurring };   // テストで差し替えられるように
 +// 購読の状態：billing.js（ストアからの通知）が rec.sub に書き込む。期限内なら有料プラン、切れていれば free
 +function planInfo(rec) {
 +  const s = rec && rec.sub;
@@ -786,7 +815,7 @@ diff -ruN pk/functions/auth.js fx/functions/auth.js
 +function json(statusCode, obj) { return { statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(obj) }; }
 +
 +// ---- テスト用エクスポート（本番動作には影響しない） ----
-+exports._t = { hashPw, makeToken, readToken, cleanData, normEmail, planInfo, getStore, userId };
++exports._t = { hashPw, makeToken, readToken, cleanData, normEmail, planInfo, getStore, userId, TC };
 diff -ruN pk/functions/billing.js fx/functions/billing.js
 --- pk/functions/billing.js	1970-01-01 00:00:00.000000000 +0000
 +++ fx/functions/billing.js	2026-09-26 18:36:29.313148173 +0000
@@ -962,7 +991,7 @@ diff -ruN pk/functions/gemini.js fx/functions/gemini.js
 +exports._t = { accountPlan };
 diff -ruN pk/index.html fx/index.html
 --- pk/index.html	2026-09-17 17:10:16.000000000 +0000
-+++ fx/index.html	2026-09-26 18:58:07.856282711 +0000
++++ fx/index.html	2026-09-26 19:15:14.520961870 +0000
 @@ -118,7 +118,13 @@
  .field{margin-top:16px}
  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:7px;font-weight:500}
@@ -1947,7 +1976,7 @@ diff -ruN pk/index.html fx/index.html
        var _ny2=(_np2.now&&_np2.now.year)||0;
        (_np2.annualFortunes||[]).forEach(function(a){if(a.year<_ny2||a.year>_ny2+12)return;var pr=_natPairs(a.ganzhi);if(!pr.length)return;var nm=nayinOf(a.ganzhi);_mrows.push({kind:'年運',when:''+a.year,gz:a.ganzhi,nm:nm?nm[0]:'',pairs:pr,cur:(a.year===_ny2)});});
        if(_mrows.length){
-@@ -4478,6 +4724,164 @@
+@@ -4478,6 +4724,179 @@
  $('exitAisho').onclick=function(){ state.mode='self'; state.chartB=null; state.compat=null; updateModeBar(); pushAI(pick({ja:'自分の鑑定に戻ったよ。またなんでも聞いてね。',en:'Back to your own reading. Ask me anything.',zh:'回到你的命盘了，随时再问我。',zt:'回到你的命盤了，隨時再問我。',ko:'내 명식으로 돌아왔어요. 또 뭐든 물어보세요.',vi:'Đã trở về lá số của bạn. Cứ hỏi tôi bất cứ điều gì nhé.',es:'De vuelta a tu lectura. Pregúntame lo que quieras.',pt:'De volta à sua leitura. Pergunte o que quiser.',id:'Kembali ke bacaan Anda. Silakan tanya apa saja.',th:'กลับมาที่ดวงของคุณแล้ว ถามอะไรก็ได้เลยนะ'})); };
  
  function placeLabel(v){ try{ var i,j,g; for(i=0;i<PLACE_GROUPS.length;i++){ g=PLACE_GROUPS[i]; for(j=0;j<(g.items||[]).length;j++){ if(g.items[j].id===v) return g.label+' · '+g.items[j].label; } if(g.id===v) return g.label; } }catch(e){} return v||'-'; }
@@ -1997,17 +2026,21 @@ diff -ruN pk/index.html fx/index.html
 + webAuto:{ja:'月額・自動更新です。次回更新日の前日までに解約しない限り、同じ料金で自動的に更新され、ご登録のクレジットカードに請求されます。',en:'Monthly auto-renewal at the same price unless you cancel by the day before the next renewal date. Charged to your registered credit card.',zh:'按月自动续订。除非在下次续订日前一天之前取消，否则将以相同价格自动续订并从您登记的信用卡扣款。',zt:'按月自動續訂。除非在下次續訂日前一天之前取消，否則將以相同價格自動續訂並向您登記的信用卡收費。',ko:'매월 자동 갱신됩니다. 다음 갱신일 전날까지 해지하지 않으면 같은 요금으로 자동 갱신되어 등록한 신용카드로 청구됩니다.',vi:'Tự động gia hạn hằng tháng với cùng mức giá, trừ khi bạn hủy trước ngày gia hạn tiếp theo một ngày. Phí được tính vào thẻ tín dụng đã đăng ký.',es:'Renovación mensual automática al mismo precio salvo que canceles antes del día previo a la próxima renovación. Se cobra en tu tarjeta registrada.',pt:'Renovação mensal automática pelo mesmo preço, a menos que você cancele até o dia anterior à próxima renovação. Cobrado no cartão cadastrado.',id:'Perpanjangan otomatis bulanan dengan harga yang sama kecuali dibatalkan paling lambat sehari sebelum tanggal perpanjangan berikutnya. Ditagihkan ke kartu kredit terdaftar.',th:'ต่ออายุอัตโนมัติรายเดือนในราคาเดิม เว้นแต่จะยกเลิกภายในวันก่อนวันต่ออายุครั้งถัดไป เรียกเก็บจากบัตรเครดิตที่ลงทะเบียนไว้'},
 + webPay:{ja:'ウェブ版はクレジットカード（テレコムクレジット）、アプリ版は App Store / Google Play のアカウントでのお支払いです（月額・自動更新）。',en:'Web: credit card (Telecom Credit). App: your App Store / Google Play account. Monthly auto-renewal.',zh:'网页版使用信用卡（Telecom Credit），App 版使用 App Store / Google Play 账户付款（按月自动续订）。',zt:'網頁版使用信用卡（Telecom Credit），App 版使用 App Store / Google Play 帳戶付款（按月自動續訂）。',ko:'웹 버전은 신용카드(Telecom Credit), 앱 버전은 App Store / Google Play 계정으로 결제됩니다(매월 자동 갱신).',vi:'Bản web: thẻ tín dụng (Telecom Credit). Ứng dụng: tài khoản App Store / Google Play. Tự động gia hạn hằng tháng.',es:'Web: tarjeta de crédito (Telecom Credit). App: tu cuenta de App Store / Google Play. Renovación mensual automática.',pt:'Web: cartão de crédito (Telecom Credit). App: sua conta da App Store / Google Play. Renovação mensal automática.',id:'Web: kartu kredit (Telecom Credit). Aplikasi: akun App Store / Google Play Anda. Perpanjangan otomatis bulanan.',th:'เว็บ: บัตรเครดิต (Telecom Credit) แอป: บัญชี App Store / Google Play ต่ออายุอัตโนมัติรายเดือน'},
 + webSoon:{ja:'クレジットカードでのお申し込みは準備中です。もうしばらくお待ちください。',en:'Credit card sign-up is coming soon. Please wait a little longer.',zh:'信用卡付款即将开放，请稍候。',zt:'信用卡付款即將開放，請稍候。',ko:'신용카드 결제는 준비 중이에요. 조금만 기다려 주세요.',vi:'Thanh toán bằng thẻ sắp ra mắt. Vui lòng chờ thêm một chút.',es:'El pago con tarjeta estará disponible pronto.',pt:'O pagamento com cartão estará disponível em breve.',id:'Pembayaran kartu kredit segera hadir.',th:'การชำระด้วยบัตรเครดิตกำลังจะเปิดให้บริการเร็วๆ นี้'},
-+ webCancel:{ja:'ウェブ版（クレジットカード）の解約は、お問い合わせ窓口（info@72k.ai）へご連絡ください。',en:'To cancel a web (credit card) plan, please contact info@72k.ai.',zh:'如需取消网页版（信用卡）套餐，请联系 info@72k.ai。',zt:'如需取消網頁版（信用卡）方案，請聯絡 info@72k.ai。',ko:'웹(신용카드) 플랜 해지는 info@72k.ai 로 문의해 주세요.',vi:'Để hủy gói web (thẻ tín dụng), vui lòng liên hệ info@72k.ai.',es:'Para cancelar un plan web (tarjeta), escribe a info@72k.ai.',pt:'Para cancelar um plano web (cartão), escreva para info@72k.ai.',id:'Untuk membatalkan paket web (kartu kredit), hubungi info@72k.ai.',th:'หากต้องการยกเลิกแพ็กเกจเว็บ (บัตรเครดิต) โปรดติดต่อ info@72k.ai'},
++ webCancel:{ja:'ウェブ版（クレジットカード）のプランは、下の「解約する」からいつでもご自身で解約できます。解約後も、支払い済みの期間の終わりまでご利用いただけます。',en:'You can cancel a web (credit card) plan yourself anytime with “Cancel plan” below. You can keep using it until the end of the paid period.',zh:'网页版（信用卡）套餐可随时通过下方的“取消套餐”自行取消。取消后仍可使用至已付费期间结束。',zt:'網頁版（信用卡）方案可隨時透過下方的「取消方案」自行取消。取消後仍可使用至已付費期間結束。',ko:'웹(신용카드) 플랜은 아래의 ‘해지하기’로 언제든 직접 해지할 수 있어요. 해지 후에도 결제한 기간이 끝날 때까지 이용할 수 있어요.',vi:'Bạn có thể tự hủy gói web (thẻ tín dụng) bất cứ lúc nào bằng nút “Hủy gói” bên dưới. Bạn vẫn dùng được đến hết thời gian đã thanh toán.',es:'Puedes cancelar tú mismo un plan web (tarjeta) cuando quieras con “Cancelar plan” abajo. Podrás usarlo hasta el final del periodo pagado.',pt:'Você pode cancelar sozinho um plano web (cartão) quando quiser em “Cancelar plano” abaixo. Poderá usá-lo até o fim do período pago.',id:'Anda dapat membatalkan sendiri paket web (kartu kredit) kapan saja dengan “Batalkan paket” di bawah. Paket tetap bisa digunakan hingga akhir periode yang sudah dibayar.',th:'คุณยกเลิกแพ็กเกจเว็บ (บัตรเครดิต) ได้เองทุกเมื่อด้วยปุ่ม “ยกเลิกแพ็กเกจ” ด้านล่าง และยังใช้งานได้จนถึงสิ้นสุดช่วงที่ชำระแล้ว'},
++ cancelBtn:{ja:'解約する',en:'Cancel plan',zh:'取消套餐',zt:'取消方案',ko:'해지하기',vi:'Hủy gói',es:'Cancelar plan',pt:'Cancelar plano',id:'Batalkan paket',th:'ยกเลิกแพ็กเกจ'},
++ cancelQ:{ja:'プランを解約しますか？次回の更新は行われず、支払い済みの期間の終わりまでご利用いただけます。',en:'Cancel your plan? It will not renew, and you can keep using it until the end of the paid period.',zh:'要取消套餐吗？将不再续订，已付费期间结束前仍可使用。',zt:'要取消方案嗎？將不再續訂，已付費期間結束前仍可使用。',ko:'플랜을 해지할까요? 다음 갱신은 되지 않으며, 결제한 기간이 끝날 때까지 이용할 수 있어요.',vi:'Hủy gói? Gói sẽ không gia hạn và bạn vẫn dùng được đến hết thời gian đã thanh toán.',es:'¿Cancelar tu plan? No se renovará y podrás usarlo hasta el final del periodo pagado.',pt:'Cancelar seu plano? Ele não será renovado e você poderá usá-lo até o fim do período pago.',id:'Batalkan paket? Paket tidak akan diperpanjang dan tetap bisa digunakan hingga akhir periode yang sudah dibayar.',th:'ยกเลิกแพ็กเกจหรือไม่? จะไม่มีการต่ออายุ และยังใช้งานได้จนถึงสิ้นสุดช่วงที่ชำระแล้ว'},
++ cancelFail:{ja:'解約の手続きができませんでした。時間をおいてもう一度お試しください。',en:'We couldn’t process the cancellation. Please try again later.',zh:'无法完成取消手续，请稍后再试。',zt:'無法完成取消手續，請稍後再試。',ko:'해지 처리를 하지 못했어요. 잠시 후 다시 시도해 주세요.',vi:'Không thể xử lý việc hủy gói. Vui lòng thử lại sau.',es:'No pudimos procesar la cancelación. Inténtalo más tarde.',pt:'Não foi possível processar o cancelamento. Tente novamente mais tarde.',id:'Pembatalan tidak dapat diproses. Silakan coba lagi nanti.',th:'ไม่สามารถดำเนินการยกเลิกได้ โปรดลองอีกครั้งภายหลัง'},
++ cancelled:{ja:'解約しました。{d} までご利用いただけます。',en:'Your plan has been cancelled. You can use it until {d}.',zh:'已取消。可使用至 {d}。',zt:'已取消。可使用至 {d}。',ko:'해지되었어요. {d}까지 이용할 수 있어요.',vi:'Đã hủy gói. Bạn dùng được đến {d}.',es:'Tu plan se canceló. Puedes usarlo hasta el {d}.',pt:'Seu plano foi cancelado. Você pode usá-lo até {d}.',id:'Paket dibatalkan. Anda dapat menggunakannya hingga {d}.',th:'ยกเลิกแล้ว ใช้งานได้ถึง {d}'},
 + perMonth:{ja:'{p}<small> / 月</small>',en:'{p}<small> / month</small>',zh:'{p}<small> / 月</small>',zt:'{p}<small> / 月</small>',ko:'{p}<small> / 월</small>',vi:'{p}<small> / tháng</small>',es:'{p}<small> / mes</small>',pt:'{p}<small> / mês</small>',id:'{p}<small> / bulan</small>',th:'{p}<small> / เดือน</small>'}
 +};
 +var PLAN_ORDER=['light','std','unl'];
 +function _isWeb(){ return PKBilling.platform()==='web'; }
 +/* 支払い元ごとの「管理・解約」先：アプリの購読はストア、ウェブ（テレコムクレジット）は問い合わせ窓口 */
 +function _manageHref(){ var st=((state.planInfo||{}).store||'').toUpperCase();
-+  if(st==='TELECOM') return 'mailto:info@72k.ai';
++  if(st==='TELECOM') return '';
 +  if(st==='PLAY_STORE') return 'https://play.google.com/store/account/subscriptions';
 +  if(st==='APP_STORE'||st==='MAC_APP_STORE') return 'https://apps.apple.com/account/subscriptions';
-+  return _isWeb()?'mailto:info@72k.ai':PKBilling.manageUrl(); }
++  return _isWeb()?'':PKBilling.manageUrl(); }
 +function planOfProduct(id){ var s=String(id||'').split(':')[0].toLowerCase(); try{ var m=window.PK_PRODUCTS||{}; if(m[id]) return m[id]; if(m[s]) return m[s]; }catch(e){} if(/unl|unlimited/.test(s)) return 'unl'; if(/std|standard/.test(s)) return 'std'; if(/light|lite/.test(s)) return 'light'; return ''; }
 +var PKBilling=(function(){
 +  function P(){ try{ return (window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Purchases)||null; }catch(e){ return null; } }
@@ -2070,13 +2103,15 @@ diff -ruN pk/index.html fx/index.html
 +    +(avail&&!logged?('<p style="margin:6px 0">'+esc(pick(BILL.needAcct))+'</p>'):'')
 +    +'<p id="billMsg" style="margin:6px 0;color:var(--ink);display:none"></p>'
 +    +'<p style="margin:6px 0">'+esc(pick(web?BILL.webAuto:BILL.auto))+'</p>'
-+    +((web&&((state.planInfo||{}).store||'').toUpperCase()==='TELECOM')?('<p style="margin:6px 0">'+esc(pick(BILL.webCancel))+'</p>'):'')
++    +((((state.planInfo||{}).store||'').toUpperCase()==='TELECOM'&&(state.planInfo||{}).willRenew!==false)?('<p style="margin:6px 0">'+esc(pick(BILL.webCancel))+'</p>'):'')
 +    +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">'
 +    +((!web&&avail)?'<button class="btn mini ghost" id="billRestore">'+esc(pick(BILL.restore))+'</button>':'')
-+    +'<a class="btn mini ghost" id="billManage" style="display:block;width:100%;box-sizing:border-box;text-align:center;text-decoration:none" href="'+_manageHref()+'" target="_blank" rel="noopener">'+esc(pick(BILL.manage))+'</a>'
-+    +'</div>'
++    +(_manageHref()?('<a class="btn mini ghost" id="billManage" style="display:block;width:100%;box-sizing:border-box;text-align:center;text-decoration:none" href="'+_manageHref()+'" target="_blank" rel="noopener">'+esc(pick(BILL.manage))+'</a>'):'')
++    +((((state.planInfo||{}).store||'').toUpperCase()==='TELECOM'&&(state.planInfo||{}).willRenew!==false&&(state.planInfo||{}).plan!=='free')?'<button class="btn mini ghost" id="billCancel">'+esc(pick(BILL.cancelBtn))+'</button>':'')
+++'</div>'
 +    +'<p style="margin:10px 0 0"><a href="legal.html#terms" target="_blank" rel="noopener">'+esc(pick(BILL.terms))+'</a>　<a href="legal.html#privacy" target="_blank" rel="noopener">'+esc(pick(BILL.privacy))+'</a></p>';
 +  var r=$('billRestore'); if(r) r.onclick=billingRestore;
++  var cx=$('billCancel'); if(cx) cx.onclick=billingCancelWeb;
 +  if(!web&&avail&&logged){ PKBilling.offerings().then(function(pk){
 +    cards.forEach(function(c,i){ var a=pk[PLAN_ORDER[i]], pp=c.querySelector('.pp'); if(a&&a.product&&a.product.priceString&&pp) pp.innerHTML=pick(BILL.perMonth).replace('{p}',esc(a.product.priceString)); });
 +  }).catch(function(){}); }
@@ -2098,6 +2133,15 @@ diff -ruN pk/index.html fx/index.html
 +    if(pi&&pi.plan!=='free'){ renderPlanExtras(); _billMsg(pick(BILL.done)); } else _billMsg(pick(BILL.late));
 +  }).catch(function(e){ var c=e&&(e.userCancelled||e.code==='1'||e.code===1||/cancel/i.test(String(e.message||e))); _billMsg(c?'':pick(BILL.fail)); });
 +}
++/* ウェブ版（テレコムクレジット）の解約：利用者が自分で。サーバーが決済会社の継続課金を止める */
++function billingCancelWeb(){
++  var a=authGet(); if(!a) return;
++  if(!confirm(pick(BILL.cancelQ))) return;
++  _billMsg(pick(BILL.checking));
++  authCall('cancel',{token:a.token}).then(function(j){
++    if(j&&j.ok&&j.plan){ applyServerPlan(j.plan); renderPlanExtras(); _billMsg(pick(BILL.cancelled).replace('{d}',_fmtDate(j.plan.expires||Date.now()))); }
++    else _billMsg(pick(BILL.cancelFail)); });
++}
 +function billingRestore(){
 +  if(!authGet()){ _billMsg(pick(BILL.needAcct)); return; }
 +  _billMsg(pick(BILL.checking));
@@ -2112,7 +2156,7 @@ diff -ruN pk/index.html fx/index.html
  function renderMyPage(){
    var p=state.profile||{}, d=T(), pk=curPlan();
    var planName=pk==='light'?d.plan1n:(pk==='std'?d.plan15n:(pk==='unl'?d.plan2n:d.mpFree));
-@@ -4489,21 +4893,24 @@
+@@ -4489,21 +4908,24 @@
      +row(d.fSex,p.sex==='male'?d.sexM:d.sexF);
    $('mpBody').innerHTML=
      '<div class="mp-card">'+rows+'</div>'
@@ -2140,7 +2184,7 @@ diff -ruN pk/index.html fx/index.html
  function backupCode(){ try{ return 'PK1.'+btoa(unescape(encodeURIComponent(JSON.stringify(_pkDump())))); }catch(e){ return ''; } }
  function backupRestore(code){
    try{
-@@ -4517,7 +4924,7 @@
+@@ -4517,7 +4939,7 @@
  function renderBackup(){
    $('bkTitle').textContent=pick(BK.t); $('bkDesc').textContent=pick(BK.d);
    var code=backupCode();
@@ -2149,7 +2193,7 @@ diff -ruN pk/index.html fx/index.html
      '<div class="mp-card"><textarea id="bkOut" readonly style="width:100%;height:78px;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:12px;font-family:monospace;resize:none;background:var(--soft);color:var(--text)"></textarea>'
      +'<button class="btn mini" id="bkCopy" style="margin-top:8px">'+pick(BK.cp)+'</button>'
      +'<p class="note" style="margin-top:8px">'+pick(BK.save)+'</p></div>'
-@@ -4526,6 +4933,7 @@
+@@ -4526,6 +4948,7 @@
    $('bkOut').value=code;
    $('bkCopy').onclick=function(){ var ta=$('bkOut'); ta.select(); try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(ta.value); } else { document.execCommand('copy'); } }catch(e){ try{document.execCommand('copy');}catch(e2){} } $('bkCopy').textContent=pick(BK.cpd); setTimeout(function(){ if($('bkCopy')) $('bkCopy').textContent=pick(BK.cp); },1600); };
    $('bkRestore').onclick=function(){ var v=$('bkIn').value; if(backupRestore(v)){ alert(pick(BK.ok)); location.reload(); } else { alert(pick(BK.err)); } };
@@ -2157,7 +2201,7 @@ diff -ruN pk/index.html fx/index.html
  }
  /* この鑑定について（監修・運営・根拠） */
  function renderAbout(){
-@@ -4653,6 +5061,7 @@
+@@ -4653,6 +5076,7 @@
    _mkChips('svSrcs','svSrcL',SV.srcs,false);
    _mkChips('svFreqs','svFreqL',SV.freqs,false);
    _mkChips('svJobs','svJobL',SV.jobs,false);
@@ -2165,7 +2209,7 @@ diff -ruN pk/index.html fx/index.html
    /* 下書き復元 */
    try{ var d=JSON.parse(localStorage.getItem('pk_svdraft')||'null'); if(d){ if(d.em) $('svEmail').value=d.em;
      [['svTopics',d.tp],['svInterests',d.iv],['svSrcs',d.sr],['svFreqs',d.fq],['svJobs',d.jb]].forEach(function(p){ (p[1]||[]).forEach(function(k){ var b=document.querySelector('#'+p[0]+' button[data-k="'+k+'"]'); if(b) b.classList.add('on'); }); }); } }catch(e){}
-@@ -4690,6 +5099,293 @@
+@@ -4690,6 +5114,293 @@
  /* 送信失敗分は次回起動時に再送 */
  (function(){ try{var q=localStorage.getItem('pk_svq'); if(q){_svPost(q).then(function(r){ if(r.ok) localStorage.removeItem('pk_svq'); }).catch(function(){});} }catch(e){} })();
  
@@ -2459,7 +2503,7 @@ diff -ruN pk/index.html fx/index.html
  /* ---- 起動 ---- */
  (function boot(){
    window.__booting=true;
-@@ -4703,7 +5399,10 @@
+@@ -4703,7 +5414,10 @@
    var savedTheme=null; try{savedTheme=localStorage.getItem(LS_THEME);}catch(e){} setTheme(savedTheme==='indigo'?'indigo':'green');
    state.profile=loadJSON(LS_PROF);
    applyI18n(); rebuildSelects(); setLang(state.lang);
@@ -2473,7 +2517,7 @@ diff -ruN pk/index.html fx/index.html
    else { location.replace('lp.html'); }
 diff -ruN pk/legal.html fx/legal.html
 --- pk/legal.html	2026-08-21 04:39:10.000000000 +0000
-+++ fx/legal.html	2026-09-26 18:57:09.487776344 +0000
++++ fx/legal.html	2026-09-26 19:13:56.861097934 +0000
 @@ -51,7 +51,7 @@
    <div class="card" id="terms">
      <div data-l="ja">
@@ -2496,7 +2540,7 @@ diff -ruN pk/legal.html fx/legal.html
  
        <h2>第5条（購入・解約・返金）</h2>
 -      <p>有料プランの決済は、クレジットカード決済（決済代行：テレコムクレジット）を通じて行われ、解約されない限り毎月自動で継続課金されます。解約はマイページまたはお問い合わせ窓口（info@72k.ai）からいつでも行えます。すでに支払われた利用料金は、法令に定めがある場合を除き返金いたしません。</p>
-+      <p>有料プランのお支払い方法は、ご利用の場所により次のとおりです。いずれも解約されない限り毎月自動で継続課金されます。<br>①ウェブ版：クレジットカード決済（決済代行：テレコムクレジット）。解約はマイページまたはお問い合わせ窓口（info@72k.ai）から、次回更新日の前日までに行えます。すでに支払われた利用料金は、法令に定めがある場合を除き返金いたしません。<br>②iPhoneアプリ・Androidアプリ：App Store（Apple）または Google Play（Google）のアプリ内課金により、ストアのアカウントに請求されます。解約は、更新日の24時間前までに各ストアのアカウント設定（アプリの料金プラン画面の「購読の管理・解約」から開けます）で行えます。返金は各ストアの定める規約・手続きに従います。<br>なお、アカウントを削除しても購読は自動では解約されないため、先に上記の方法で解約してください。</p>
++      <p>有料プランのお支払い方法は、ご利用の場所により次のとおりです。いずれも解約されない限り毎月自動で継続課金されます。<br>①ウェブ版：クレジットカード決済（決済代行：テレコムクレジット）。解約は、料金プラン画面の「解約する」から、次回更新日の前日までにご自身で行えます。すでに支払われた利用料金は、法令に定めがある場合を除き返金いたしません。<br>②iPhoneアプリ・Androidアプリ：App Store（Apple）または Google Play（Google）のアプリ内課金により、ストアのアカウントに請求されます。解約は、更新日の24時間前までに各ストアのアカウント設定（アプリの料金プラン画面の「購読の管理・解約」から開けます）で行えます。返金は各ストアの定める規約・手続きに従います。<br>なお、アカウントを削除しても購読は自動では解約されないため、先に上記の方法で解約してください。</p>
  
        <h2>第6条（禁止事項）</h2>
        <ul>
@@ -2522,7 +2566,7 @@ diff -ruN pk/legal.html fx/legal.html
  
        <h2>5. Purchases, Cancellation and Refunds</h2>
 -      <p>Paid plans are billed by credit card through our payment processor (Telecom Credit) and renew automatically each month unless canceled. You may cancel at any time from My Page or by contacting info@72k.ai. Fees already paid are non-refundable except as required by law.</p>
-+      <p>How you pay for a paid plan depends on where you use the service. In every case the plan renews automatically each month unless canceled.<br>(1) Web version: credit card through our payment processor (Telecom Credit). You may cancel from My Page or by contacting info@72k.ai by the day before the next renewal date. Fees already paid are non-refundable except as required by law.<br>(2) iPhone / Android app: in-app purchase through the App Store (Apple) or Google Play (Google), charged to your store account. Cancel at least 24 hours before the renewal date in your store account settings (open them from “Manage / cancel subscription” on the Plans screen). Refunds follow each store’s terms and procedures.<br>Deleting your account does not cancel your subscription, so please cancel it first as described above.</p>
++      <p>How you pay for a paid plan depends on where you use the service. In every case the plan renews automatically each month unless canceled.<br>(1) Web version: credit card through our payment processor (Telecom Credit). You can cancel yourself with “Cancel plan” on the Plans screen by the day before the next renewal date. Fees already paid are non-refundable except as required by law.<br>(2) iPhone / Android app: in-app purchase through the App Store (Apple) or Google Play (Google), charged to your store account. Cancel at least 24 hours before the renewal date in your store account settings (open them from “Manage / cancel subscription” on the Plans screen). Refunds follow each store’s terms and procedures.<br>Deleting your account does not cancel your subscription, so please cancel it first as described above.</p>
  
        <h2>6. Prohibited Conduct</h2>
        <ul>
@@ -2630,21 +2674,24 @@ diff -ruN pk/legal.html fx/legal.html
  
        <h2>8. Contact</h2>
        <p>For inquiries about this policy:<br>
-@@ -256,14 +264,14 @@
+@@ -254,16 +262,16 @@
+         <tr><td style="padding:9px 8px;border-bottom:1px solid var(--line);color:var(--muted)">運営責任者</td><td style="padding:9px 8px;border-bottom:1px solid var(--line)">保津章一</td></tr>
+         <tr><td style="padding:9px 8px;border-bottom:1px solid var(--line);color:var(--muted)">所在地・電話番号</td><td style="padding:9px 8px;border-bottom:1px solid var(--line)">東京都港区赤坂8-12-28　電話番号：03-6665-0863</td></tr>
          <tr><td style="padding:9px 8px;border-bottom:1px solid var(--line);color:var(--muted)">お問い合わせ</td><td style="padding:9px 8px;border-bottom:1px solid var(--line)">info@72k.ai</td></tr>
-         <tr><td style="padding:9px 8px;border-bottom:1px solid var(--line);color:var(--muted)">販売価格</td><td style="padding:9px 8px;border-bottom:1px solid var(--line)">おてがるプラン 月額980円（税込）／スタンダードプラン 月額1,980円（税込）／使い放題プラン 月額2,980円（税込）</td></tr>
+-        <tr><td style="padding:9px 8px;border-bottom:1px solid var(--line);color:var(--muted)">販売価格</td><td style="padding:9px 8px;border-bottom:1px solid var(--line)">おてがるプラン 月額980円（税込）／スタンダードプラン 月額1,980円（税込）／使い放題プラン 月額2,980円（税込）</td></tr>
++        <tr><td style="padding:9px 8px;border-bottom:1px solid var(--line);color:var(--muted)">販売価格</td><td style="padding:9px 8px;border-bottom:1px solid var(--line)">ウェブ版：おてがるプラン 月額980円（税込）／スタンダードプラン 月額1,980円（税込）／使い放題プラン 月額2,980円（税込）。iPhoneアプリ・Androidアプリ：各ストア（App Store／Google Play）のアプリ内に表示される価格</td></tr>
          <tr><td style="padding:9px 8px;border-bottom:1px solid var(--line);color:var(--muted)">商品代金以外の必要料金</td><td style="padding:9px 8px;border-bottom:1px solid var(--line)">インターネット接続に必要な通信料（お客様負担）</td></tr>
 -        <tr><td style="padding:9px 8px;border-bottom:1px solid var(--line);color:var(--muted)">支払方法・支払時期</td><td style="padding:9px 8px;border-bottom:1px solid var(--line)">クレジットカード決済（決済代行：テレコムクレジット）。お申し込み時に初回課金され、以後は毎月同日に自動で継続課金されます（解約されない限り継続）。</td></tr>
 +        <tr><td style="padding:9px 8px;border-bottom:1px solid var(--line);color:var(--muted)">支払方法・支払時期</td><td style="padding:9px 8px;border-bottom:1px solid var(--line)">ウェブ版：クレジットカード決済（決済代行：テレコムクレジット）。iPhoneアプリ・Androidアプリ：App Store（Apple）または Google Play（Google）のアプリ内課金。いずれもお申し込み時に初回課金され、以後は解約されない限り、毎月自動で継続課金されます。</td></tr>
          <tr><td style="padding:9px 8px;border-bottom:1px solid var(--line);color:var(--muted)">サービスの提供時期</td><td style="padding:9px 8px;border-bottom:1px solid var(--line)">決済完了後、直ちにご利用いただけます。</td></tr>
 -        <tr><td style="padding:9px 8px;color:var(--muted)">返品・キャンセル</td><td style="padding:9px 8px">デジタルコンテンツの性質上、購入後の返金はいたしません（法令に定めがある場合を除く）。継続課金の解約は、マイページまたはお問い合わせ窓口（info@72k.ai）より、次回更新日の前日までにお手続きください。解約手続き後は、次回更新分から課金を停止します。</td></tr>
-+        <tr><td style="padding:9px 8px;color:var(--muted)">返品・キャンセル</td><td style="padding:9px 8px">ウェブ版：デジタルコンテンツの性質上、購入後の返金はいたしません（法令に定めがある場合を除く）。解約は、マイページまたはお問い合わせ窓口（info@72k.ai）より、次回更新日の前日までにお手続きください。アプリ版：返金は各ストア（Apple／Google）の規約・手続きに従い、解約は各ストアのアカウント設定（アプリの料金プラン画面の「購読の管理・解約」）から、次回更新日の24時間前までにお手続きください。いずれも、解約後は支払い済みの期間の終わりまでご利用いただけます。</td></tr>
++        <tr><td style="padding:9px 8px;color:var(--muted)">返品・キャンセル</td><td style="padding:9px 8px">ウェブ版：デジタルコンテンツの性質上、購入後の返金はいたしません（法令に定めがある場合を除く）。解約は、料金プラン画面の「解約する」から、次回更新日の前日までにご自身でお手続きください。アプリ版：返金は各ストア（Apple／Google）の規約・手続きに従い、解約は各ストアのアカウント設定（アプリの料金プラン画面の「購読の管理・解約」）から、次回更新日の24時間前までにお手続きください。いずれも、解約後は支払い済みの期間の終わりまでご利用いただけます。</td></tr>
        </table>
      </div>
      <div data-l="en">
        <h1>Legal Notice under the Specified Commercial Transactions Act (Japan)</h1>
 -      <p>This notice is required under Japanese law and is provided in Japanese. Please refer to the Japanese section. Seller: 72K Inc. Prices: Light Plan JPY 980/month, Standard Plan JPY 1,980/month, Unlimited Plan JPY 2,980/month (all tax incl.). Payment by credit card via our payment processor (Telecom Credit), charged at sign-up and then automatically every month on the same date (recurring until cancelled). To cancel, use My Page or contact info@72k.ai by the day before the next renewal date. No refunds after purchase except as required by law.</p>
-+      <p>This notice is required under Japanese law and is provided in Japanese. Please refer to the Japanese section. Seller: 72K Inc. Prices: Light Plan JPY 980/month, Standard Plan JPY 1,980/month, Unlimited Plan JPY 2,980/month (all tax incl.). Payment: web version — credit card via our payment processor (Telecom Credit); iPhone / Android app — in-app purchase through the App Store (Apple) or Google Play (Google). Charged at sign-up and then automatically every month until cancelled. To cancel: web version — My Page or info@72k.ai by the day before the next renewal date (no refunds after purchase except as required by law); app — your store account settings (“Manage / cancel subscription” on the Plans screen) at least 24 hours before renewal (refunds follow each store’s terms). You can keep using the plan until the end of the paid period.</p>
++      <p>This notice is required under Japanese law and is provided in Japanese. Please refer to the Japanese section. Seller: 72K Inc. Prices: web version — Light Plan JPY 980/month, Standard Plan JPY 1,980/month, Unlimited Plan JPY 2,980/month (all tax incl.); iPhone / Android app — the price shown in the App Store / Google Play. Payment: web version — credit card via our payment processor (Telecom Credit); iPhone / Android app — in-app purchase through the App Store (Apple) or Google Play (Google). Charged at sign-up and then automatically every month until cancelled. To cancel: web version — “Cancel plan” on the Plans screen by the day before the next renewal date (no refunds after purchase except as required by law); app — your store account settings (“Manage / cancel subscription” on the Plans screen) at least 24 hours before renewal (refunds follow each store’s terms). You can keep using the plan until the end of the paid period.</p>
      </div>
    </div>
  
@@ -2906,13 +2953,13 @@ diff -ruN pk/pro-bazi.js fx/pro-bazi.js
 \ No newline at end of file
 diff -ruN pk/sw.js fx/sw.js
 --- pk/sw.js	2026-08-21 05:15:56.000000000 +0000
-+++ fx/sw.js	2026-09-26 18:59:45.188987483 +0000
++++ fx/sw.js	2026-09-26 19:17:22.590833733 +0000
 @@ -4,7 +4,7 @@
     ・JS/画像等は stale-while-revalidate（即表示＋裏で更新）
     ・AI通信（/functions・/.netlify・generativelanguage）は絶対にキャッシュせず常にネットワークへ
     ※アプリを更新したら CACHE の版番号を上げると確実に配信されます。 */
 -var CACHE = 'pocket-kantei-v1';
-+var CACHE = 'pocket-kantei-v9';
++var CACHE = 'pocket-kantei-v10';
  var SHELL = [
    './', './index.html', './pro-bazi.js', './pro-adapter.js',
    './owl.png', './icon-512.png', './icon-192.png', './icon-maskable-512.png', './apple-touch-icon.png',
