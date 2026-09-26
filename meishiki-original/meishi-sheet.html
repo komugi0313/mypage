@@ -451,6 +451,7 @@
   .yk-kai-role.yk-warn{ color:#b23b2e; font-weight:700; }
   .yk-ntag .yk-kai-role{ display:inline; font-size:10px; }
   .yk-sel{ font-family:inherit; font-size:11px; padding:1px 4px; border:1px solid var(--rule2); border-radius:5px; background:#fff; color:var(--ink); }
+  .yk-strength-val{ display:inline-block; font-weight:900; font-size:14px; color:var(--ink); background:#f3efe4; border:1px solid var(--rule2); border-radius:6px; padding:1px 10px; margin-right:9px; letter-spacing:.04em; }  /* 身強・身弱の確定値をはっきり表示（見間違え防止） */
   .yk-hint{ font-size:9.5px; color:#a79f8c; margin-left:8px; }
   .yk-tbl .kanchar.el-moku{color:#2e7d32}.yk-tbl .kanchar.el-ka{color:#c0392b}.yk-tbl .kanchar.el-do{color:#a9791c}.yk-tbl .kanchar.el-kin{color:#b8860b}.yk-tbl .kanchar.el-sui{color:#2a6fd0}
   .sheet-yoko .footline{ margin-top:auto; }
@@ -610,6 +611,7 @@
     html,body{ width:297mm; margin:0; padding:0; }
     body{ background:#fff; } .stage{ padding:0; margin:0; width:297mm; } .bar{ display:none; }
     .yk-hint{ display:none !important; }   /* 操作説明（初期は自動判定…）は画面のみ。印刷（鑑定書）には出さない */
+    .yk-sel{ display:none !important; }    /* 身強弱のプルダウンは印刷では隠し、確定テキスト(.yk-strength-val)だけを出す（見間違え防止） */
     .yk-setsu{ font-size:10px; margin-top:2mm; }   /* 節入り（立運の根拠）行は印刷でも表示 */
     .paper{ width:auto; height:auto; overflow:visible; }
     .sheets{ display:block; gap:0; width:297mm; transform:none !important; margin:0; }
@@ -1411,18 +1413,22 @@
       var day=tc.pillars&&tc.pillars[2]; if(!day) return null;
       var dayEl=day.stemElement||STEM_EL[day.stem]; if(!dayEl) return null;
       var fe=tc.fiveElements||{}, c=function(e){return +(fe[e]||0);};
-      var support=c(dayEl)+c(_GENINV[dayEl]);                         // 比劫＋印
-      var drain=c(_GEN[dayEl])+c(_CON[dayEl])+c(_CONINV[dayEl]);      // 食傷＋財＋官殺
-      // 月令（月支の五行が日主を助けるか）を加味：得令なら支持を強める
-      var mon=tc.pillars[1], monEl=mon&&(mon.branchElement||STEM_EL[repHidden(mon.hiddenStems).stem]);
-      if(monEl===dayEl||monEl===_GENINV[dayEl]) support+=1.5;
-      else if(monEl===_GEN[dayEl]||monEl===_CON[dayEl]||monEl===_CONINV[dayEl]) drain+=1;
-      var diff=support-drain, kind=diff>=1.5?'身強':(diff<=-1.5?'身弱':'中和'), els;
+      // 身強弱＝app-pro(gogyoBalance/strengthType)と同一ロジックに統一：
+      //   得令(月令)を主軸＋月支の十二運の強弱＋比劫印のカウント補助（画面＝相性と同じ判定にして食い違いを解消）。
+      var TOKUREI={甲:['寅','卯','辰'],乙:['寅','卯','辰'],丙:['巳','午','未'],丁:['巳','午','未'],戊:['巳','午','未','辰','戌','丑'],己:['巳','午','未','辰','戌','丑'],庚:['申','酉','戌'],辛:['申','酉','戌'],壬:['亥','子','丑'],癸:['亥','子','丑']};
+      var TERR_STR={帝旺:3,建禄:2,長生:2,冠帯:1,養:1,沐浴:0,胎:0,衰:-1,病:-2,死:-2,墓:-1,絶:-2};
+      var support=c(dayEl)+c(_GENINV[dayEl]);                          // 比劫＋印の数
+      var stem=day.stem, mon=tc.pillars[1]||{}, mb=mon.branch||'', mt=mon.terrain||'';
+      var tokurei=(TOKUREI[stem]||[]).indexOf(mb)>=0;                  // 得令○＝身旺の素
+      var terrScore=(TERR_STR[mt]!=null?TERR_STR[mt]:0);               // 月支十二運の強弱
+      var supScore=support>=5?1:support<=1?-2:support===2?-1:0;        // カウント補助
+      var sScore=(tokurei?3:0)+terrScore+supScore;                    // 総合スコア（app-proと同一）
+      var kind=sScore>=2?'身強':sScore<=-2?'身弱':'中和', els;
       if(kind==='身強') els=[_GEN[dayEl],_CON[dayEl],_CONINV[dayEl]];        // 漏らす・抑える
       else if(kind==='身弱') els=[dayEl,_GENINV[dayEl]];                      // 助ける
       else els=[_GEN[dayEl],_GENINV[dayEl]];                                  // 中和：軽く整える
       var uniq=[]; els.forEach(function(e){ if(e&&uniq.indexOf(e)<0)uniq.push(e); });
-      return {kind:kind, els:uniq};
+      return {kind:kind, els:uniq, sScore:sScore};
     }catch(e){ return null; }
   }
   // 命式表フォーマットが呼ぶ関数。中身はエンジン(computeChart)の出力を写すだけ。
@@ -3874,7 +3880,8 @@ window.KANSHI60_DETAIL={
       var ykFrameHtml='<div class="yk-frame">'+
           '<div class="yk-frow"><span class="yk-flabel">生まれ持った会局（命式内で成立）</span>'+natalKaiHtml+'</div>'+
           '<div class="yk-frow"><span class="yk-flabel">空亡</span><span class="yk-ntag">'+kuboHtml+'</span></div>'+
-          '<div class="yk-frow"><span class="yk-flabel">身強・身弱（自動判定＋上書き可）</span>'+
+          '<div class="yk-frow"><span class="yk-flabel">身強・身弱</span>'+
+            '<b class="yk-strength-val">'+esc(_effStrength||'—')+'</b>'+   /* 確定値をはっきり印字（見間違え防止）。印刷は必ずこの文字が出る */
             '<select class="yk-sel" onchange="if(window.setYkStrength)window.setYkStrength(this.value)">'+
               '<option value=""'+(_ykStrengthOverride==null?' selected':'')+'>自動判定（'+esc(_autoStrength||'—')+'）</option>'+
               ['身強','身弱','中和'].map(function(v){ return '<option value="'+v+'"'+(v===_ykStrengthOverride?' selected':'')+'>'+v+'（手動）</option>'; }).join('')+

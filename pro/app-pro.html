@@ -4493,13 +4493,20 @@ function compatExtras(a,b,rt){
       ai:`2人の命式を合わせると${parts.join('・')}が成立（例:一方の巳と相手の酉・丑がそろって巳酉丑）＝2人でその五行の力がまとまる非常に良い相性。今回の「${(rt&&rt.label)||'この間柄'}」では、${bond}。息が合い自然とまとまる強い縁なので、関係の前提に沿って前向きにはっきり伝える（会局の強さは三合＞方合）。本文では会局名（${parts.join('・')}）を必ず具体的に挙げて、相性の主役級の良い知らせとして1段落かけて伝える。専門用語や干支の文字を書かないモードの場合は用語を出さず「2人がそろうと持ち味がひとつに重なって、力が大きくまとまる特別に良い相性」という意味の言葉で、必ずひと段落しっかり伝える。${(rt&&rt.useSpouse===false)?'※この関係では恋愛・結婚・出会いの話は出さないこと。':''}`,
       local:`2人の地支を合わせると**${parts.join('・')}**が成立します（例:あなたの巳と相手の酉・丑で巳酉丑）。2人でその五行の力がまとまり、**息が合って自然とまとまる非常に良い相性**です。${bond}。`});
   }
-  // ② 互いに不足する五行を持ち合う
-  const needA=Object.entries(a.fiveElements).sort((x,y)=>x[1]-y[1])[0][0], bHasA=b.fiveElements[needA]||0;
-  const needB=Object.entries(b.fiveElements).sort((x,y)=>x[1]-y[1])[0][0], aHasB=a.fiveElements[needB]||0;
-  const both=bHasA>=1&&aHasB>=1;
-  R.push({key:'五行補完',good:both?'good':null,
-    ai:`五行の補い合い:本人に不足の${needA}を相手は${bHasA}／相手に不足の${needB}を本人は${aHasB}持つ${both?'＝互いの足りない五行を持ち合う＝相性が良い':''}`,
-    local:both?`あなたに不足の**${needA}**を相手が、相手に不足の**${needB}**をあなたが持っています。**互いの足りない五行を補い合える相性**で、一緒にいると整いやすい組み合わせです。`:''});
+  // ② 用神・喜神の補い合い（相手が自分の「助ける五行＝用神・喜神」を持つ＝相性の王道。単なる最少五行ではなく身強弱から出す喜神で判定）
+  try{
+    const _aA=_kkAssess(a), _aB=_kkAssess(b);
+    const favA=SHENG.filter(el=>_aA.assess(el).fav==='喜');   // 本人Aの喜神（助ける五行）
+    const favB=SHENG.filter(el=>_aB.assess(el).fav==='喜');   // 相手Bの喜神
+    const bForA=favA.filter(el=>(b.fiveElements[el]||0)>=1);  // 相手Bが本人Aの喜神を持つ
+    const aForB=favB.filter(el=>(a.fiveElements[el]||0)>=1);  // 本人Aが相手Bの喜神を持つ
+    const both2=bForA.length>0&&aForB.length>0;
+    if(bForA.length||aForB.length){
+      R.push({key:'用神補完',good:'good',
+        ai:`用神・喜神の補い合い:本人の喜神(${favA.join('・')||'—'})を相手が持つ=${bForA.join('・')||'なし'}／相手の喜神(${favB.join('・')||'—'})を本人が持つ=${aForB.join('・')||'なし'}。${both2?'互いに相手の"助ける五行(用神・喜神)"を補い合う最良クラスの相性＝主役級の良い知らせとして、会局と並ぶ好材料として1段落で前向きに伝える':'片方向だが相手が"助ける五行"を補ってくれる良い相性として伝える'}。${(rt&&rt.useSpouse===false)?'※この関係では恋愛・結婚・出会いの話は出さないこと。':''}`,
+        local:`${both2?'**互いに**、':''}相手はあなたの調子を整える<b>用神・喜神${bForA.length?'（'+bForA.join('・')+'）':''}</b>を${bForA.length?'持っています':'補いにくいものの'}${aForB.length?`。あなたも相手の喜神（${aForB.join('・')}）を補い合います`:''}。${both2?'**互いを整え合える最良クラスの相性**で、一緒にいると調子が上向きやすい組み合わせです。':'一緒にいると整いやすい良い組み合わせです。'}`});
+    }
+  }catch(_e){}
   // ③ 同じ空亡
   const kA=kubo(a),kB=kubo(b);
   if(kA.join('')===kB.join(''))R.push({key:'空亡',good:'good',
@@ -4582,10 +4589,14 @@ function compatAnalysis(a,b,rt){
   if(KANGO[aS]===bS&&RIKUGO[aB]===bB)L.push('天地徳合:日柱どうしが干合かつ日支が支合＝「天地徳合」（大吉格）。十干も十二支もそろう最高クラスの縁で、出会った瞬間から親近感・一体感があり運命的に強く結ばれやすい、めったにない良縁。基本は最高の相性として前向きに大きく伝える。強いて言えば縁が濃いぶん少し依存に傾きやすい面（晦気＝かいき）はあるが、ほどよい距離感を保てばよい、という軽い補足にとどめる（良い点を主役にする）');
   // 六十干支相性の標準グレード（自動算出）
   {const gc=ganzhiCompat(a.pillars[2].ganzhi,b.pillars[2].ganzhi);L.push(`日柱の総合相性グレード（六十干支相性・自動算出）:十干(性格・心の縁)=${gc.stem}／十二支(縁・つながり)=${gc.branch}（最高＞とてもよい＞よい＞普通＞悪い＞合わない）`);}
-  // 五行の補い合い
+  // 用神・喜神の補い合い（身強弱から出す「助ける五行」を相手が持つか＝相性の王道。参考として最少五行の補完も併記）
+  try{const _fa=SHENG.filter(el=>_kkAssess(a).assess(el).fav==='喜'),_fb=SHENG.filter(el=>_kkAssess(b).assess(el).fav==='喜');
+    const _bfa=_fa.filter(el=>(b.fiveElements[el]||0)>=1),_afb=_fb.filter(el=>(a.fiveElements[el]||0)>=1);
+    L.push(`用神・喜神の補い合い（相性の芯）:本人の喜神(${_fa.join('・')||'—'})を相手が持つ=${_bfa.join('・')||'なし'}／相手の喜神(${_fb.join('・')||'—'})を本人が持つ=${_afb.join('・')||'なし'}${(_bfa.length&&_afb.length)?'＝互いに"助ける五行"を補い合う最良クラス':''}`);
+  }catch(_e){}
   const needA=Object.entries(a.fiveElements).sort((x,y)=>x[1]-y[1])[0][0],bHas=b.fiveElements[needA]||0;
   const needB=Object.entries(b.fiveElements).sort((x,y)=>x[1]-y[1])[0][0],aHas=a.fiveElements[needB]||0;
-  L.push(`五行の補い:本人に不足=${needA}を相手は${bHas}持つ／相手に不足=${needB}を本人は${aHas}持つ`);
+  L.push(`（参考）最少五行の補い:本人に不足=${needA}を相手は${bHas}持つ／相手に不足=${needB}を本人は${aHas}持つ`);
   // 2人の今の大運の重なり
   const grp=c=>c.now?(TS_GROUP[(curDu(c)||{}).tenStar]||'-'):'-';
   L.push(`今の大運の重なり:本人=${grp(a)}運／相手=${grp(b)}運`);
