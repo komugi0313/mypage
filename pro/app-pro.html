@@ -4580,7 +4580,9 @@ function compatAnalysis(a,b,rt){
   const goodTxt=good.map(g=>`${g.year}(${g.ganzhi}:${g.cues.join('・')})`);
   L.push(`${rt.timing}(今後25年):${goodTxt.length?goodTxt.join(' / '):'特に強い年は目立たない'}`);
   const strain=compatStrainYears(a,b);
-  L.push(`関係が揺れやすい・見直しの年(今後25年・配偶宮の冲/刑・空亡・用神剋):${strain.length?strain.map(s=>`${s.year}(${s.ganzhi}:${s.tags.join('・')})`).join(' / '):'目立つ年なし'}（「離婚に良い年」と断定せず、関係の転機・話し合いの時期として伝える）`);
+  L.push(`関係が揺れやすい・見直しの年(今後25年・配偶宮の冲/刑＝この関係が動く年):${strain.length?strain.map(s=>`${s.year}(${s.ganzhi}:${s.tags.join('・')})`).join(' / '):'目立つ年なし'}（「離婚に良い年」と断定せず、関係の転機・話し合いの時期として伝える）`);
+  const selfLow=compatSelfLowYears(a);
+  L.push(`本人の運気が低調な年(今後25年・空亡/用神剋＝本人の総合運の谷・相性とは別軸):${selfLow.length?selfLow.map(s=>`${s.year}(${s.ganzhi}:${s.tags.join('・')})`).join(' / '):'目立つ年なし'}（相性の話ではなく本人の調子の話。無理をしない時期として、関係へは間接的な余波として一言添える程度に）`);
   // 2人の命式を突き合わせた相性ポイント（三合・五行補完・空亡・月支元命の生剋・印の関係）
   const ex=compatExtras(a,b,rt);
   if(ex.length)L.push('2人の命式を合わせた相性ポイント:\n'+ex.map(r=>`・[${r.good==='good'?'吉':r.good==='soft'?'やわらかい注意':r.good==='bad'?'注意':'参考'}] ${r.ai}`).join('\n'));
@@ -4609,17 +4611,26 @@ function compatGoodYears(a,b,romantic){
   return out;
 }
 /* 関係が揺れやすい・見直しの年（配偶宮＝日支への冲/害/刑・空亡年）。今後25年。別れ・離婚の“転機”の手がかり（断定はしない）。 */
+/* 関係が揺れやすい年：配偶宮(日支)への冲・刑のみ＝“この関係そのもの”が動く年。今後25年。害・破は不採用。 */
 function compatStrainYears(a,b){
   if(!a||!a.now||!a.annualFortunes)return [];
-  const dayB=a.pillars[2].branch, ku=(typeof kubo==='function'?kubo(a):[]), out=[];
-  // 用神（喜＝助ける五行）が剋される年：その年の年支の五行が、用神を剋す五行のとき＝頼みの綱が弱る＝低調・停滞
-  let attackers=new Set();
-  try{ if(typeof _kkAssess==='function'){ const A=_kkAssess(a); SHENG.forEach(el=>{ if(A.assess(el).fav==='喜') attackers.add(SHENG[(SHENG.indexOf(el)+3)%5]); }); } }catch(e){}
+  const dayB=a.pillars[2].branch, out=[];
   a.annualFortunes.filter(y=>y.year>=a.now.year&&y.year<=a.now.year+25).forEach(y=>{
     const tags=[];
     if(isChong(dayB,y.branch))tags.push('配偶宮に冲');
     if(isKei2(dayB,y.branch)||isKei3(dayB,y.branch)||(dayB===y.branch&&JIKEI.has(dayB)))tags.push('配偶宮に刑');
-    /* 害（穿）・破は当流派では採らない（外す） */
+    if(tags.length)out.push({year:y.year,ganzhi:y.ganzhi,tags});
+  });
+  return out;
+}
+/* 本人の運気が低調な年：空亡・用神剋＝本人の総合運の谷（相性とは別軸）。今後25年。 */
+function compatSelfLowYears(a){
+  if(!a||!a.now||!a.annualFortunes)return [];
+  const ku=(typeof kubo==='function'?kubo(a):[]), out=[];
+  let attackers=new Set();
+  try{ if(typeof _kkAssess==='function'){ const A=_kkAssess(a); SHENG.forEach(el=>{ if(A.assess(el).fav==='喜') attackers.add(SHENG[(SHENG.indexOf(el)+3)%5]); }); } }catch(e){}
+  a.annualFortunes.filter(y=>y.year>=a.now.year&&y.year<=a.now.year+25).forEach(y=>{
+    const tags=[];
     if(ku.includes(y.branch))tags.push('空亡年');
     if(attackers.size&&y.branchElement&&y.stemElement&&attackers.has(y.branchElement)&&attackers.has(y.stemElement))tags.push('用神が剋される');
     if(tags.length)out.push({year:y.year,ganzhi:y.ganzhi,tags});
@@ -4631,21 +4642,25 @@ function compatTimingHTML(a,b,rt){
   try{
     if(!a||!a.now)return '';
     rt=rt||RELTYPES.love;
-    const good=compatGoodYears(a,b,rt.useSpouse), strain=compatStrainYears(a,b);
+    const good=compatGoodYears(a,b,rt.useSpouse), strain=compatStrainYears(a,b), low=compatSelfLowYears(a);
     const nowY=a.now.year;
     const goodYs=new Set(good.map(g=>g.year)), strainYs=new Set(strain.map(s=>s.year));
     const both=good.map(g=>g.year).filter(y=>strainYs.has(y));
-    const rowG=good.length?good.map(g=>`<tr${strainYs.has(g.year)?' class="cty-both"':''}><td class="cty-y">${g.year}<small>（${g.year-nowY}年後）</small></td><td class="cty-gz">${g.ganzhi}</td><td>${esc(g.cues.join('・'))}</td></tr>`).join(''):'<tr><td colspan="3" class="cty-none">目立つ年は見当たりません</td></tr>';
-    const rowS=strain.length?strain.map(s=>`<tr${goodYs.has(s.year)?' class="cty-both"':''}><td class="cty-y">${s.year}<small>（${s.year-nowY}年後）</small></td><td class="cty-gz">${s.ganzhi}</td><td>${esc(s.tags.join('・'))}</td></tr>`).join(''):'<tr><td colspan="3" class="cty-none">目立つ年は見当たりません</td></tr>';
+    const yrow=(o,cuesKey,markSet)=>o.length?o.map(x=>`<tr${(markSet&&markSet.has(x.year))?' class="cty-both"':''}><td class="cty-y">${x.year}<small>（${x.year-nowY}年後）</small></td><td class="cty-gz">${x.ganzhi}</td><td>${esc((cuesKey==='cues'?x.cues:x.tags).join('・'))}</td></tr>`).join(''):'<tr><td colspan="3" class="cty-none">目立つ年は見当たりません</td></tr>';
+    const rowG=yrow(good,'cues',strainYs);
+    const rowS=yrow(strain,'tags',goodYs);
+    const rowL=yrow(low,'tags',null);
     return `<section class="card sec" style="border:1.5px solid #E7B8CF;box-shadow:0 6px 18px rgba(232,93,158,.12)">
-      <span class="eyebrow"><b>時期の目安（今後25年）</b>結婚・縁が深まる年／揺れやすい年</span>
+      <span class="eyebrow"><b>時期の目安（今後25年）</b>結婚・縁が深まる年／揺れやすい年／運気の谷</span>
       <h2 style="margin-bottom:2px">いつ動く？——年ごとの目安</h2>
-      <div class="mhint" style="margin:6px 0 10px">年運に配偶者星・出会いの星・貴人が巡り、相手の干支と響き合う年＝<b>縁が深まりやすい年</b>。配偶宮（日支）が冲・刑や空亡になる年、本人の用神が剋される年＝<b>関係が揺れやすい・見直しの年</b>。${both.length?'<b style="color:#C2185B">⚡'+both.join('・')+' は両方に出る＝動きが大きい年</b>（縁も揺れも起きやすい転機）。':''}</div>
+      <div class="mhint" style="margin:6px 0 10px">年運に配偶者星・出会いの星・貴人が巡り、相手の干支と響き合う年＝<b>縁が深まりやすい年</b>。配偶宮（日支）が<b>冲・刑</b>になる年＝<b>この関係が揺れやすい年</b>。${both.length?'<b style="color:#C2185B">⚡'+both.join('・')+' は両方に出る＝動きが大きい年</b>（縁も揺れも起きやすい転機）。':''}</div>
       <div class="cty-ttl good">💗 結婚・縁が深まりやすい年</div>
       <table class="cty"><thead><tr><th>西暦</th><th>干支</th><th>手がかり</th></tr></thead><tbody>${rowG}</tbody></table>
-      <div class="cty-ttl warn">⚠️ 関係が揺れやすい・見直しの年</div>
+      <div class="cty-ttl warn">⚠️ 関係が揺れやすい年（配偶宮の冲・刑）</div>
       <table class="cty"><thead><tr><th>西暦</th><th>干支</th><th>内容</th></tr></thead><tbody>${rowS}</tbody></table>
-      <div class="mhint" style="margin-top:8px">※四柱推命は「離婚に良い年」と断定はしません。揺れやすい年は「関係を見直す・話し合う転機」の目安として、無理なく整えるための参考にしてください。深い読みは${esc(rt.label)}の相性鑑定で。</div>
+      <div class="cty-ttl" style="color:#5B6472">🌥 本人の運気が低調な年（空亡・用神剋／相手を問わない本人の総合運）</div>
+      <table class="cty"><thead><tr><th>西暦</th><th>干支</th><th>内容</th></tr></thead><tbody>${rowL}</tbody></table>
+      <div class="mhint" style="margin-top:8px">※四柱推命は「離婚に良い年」と断定はしません。「関係が揺れやすい年」は関係を見直す・話し合う転機の目安。「運気が低調な年」は<b>本人の総合運の谷</b>（相性とは別軸）で、無理をせず整える時期の参考です。深い読みは${esc(rt.label)}の相性鑑定で。</div>
     </section>`;
   }catch(e){ return ''; }
 }
