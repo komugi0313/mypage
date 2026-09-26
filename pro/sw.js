@@ -3,7 +3,7 @@
    鑑定・60干支の教科書を使えるようにする。
    オンライン鑑定（生成AI）だけは通信が要るが、圏外時は端末内の
    オフライン鑑定に自動で切り替わる。 */
-const CACHE = 'shichu-jidou-v192';  /* 教科書に「節木運（人生の季節と節目）」ページ(setsuboku.html)を追加：大運を方合で春夏秋冬の約30年ずつの季節に束ね、季節が切り替わる大運＝節木運＝人生の曲がり角・植え替え（前後1年半が動きやすい）を解説。4季節カード・伝え方（30年の不運とは言わない）・例題（己未の大運の季節と節木運）付き。索引カード・SW登録。※v191=大運の通変星運ページ追加＋全パターン例題。
+const CACHE = 'shichu-jidou-v193';  /* 教科書に「天戦地冲（てんせんちちゅう）」ページ(tensen-chichu.html)を追加：日干支に巡る運の干支が『天干＝同陰陽で相剋（天戦）＋地支＝冲（地冲）』の両方でぶつかる最も刺激の強い揺れやすい時期。凶と決めつけず備えのカレンダーとして前向きに、の姿勢を明記。天戦・地冲の2要素カード＋例題（己未→乙丑癸丑＝2033年52歳・2045年64歳）付き。索引カード・SW登録。※v192=節木運ページ追加。
 
 /* 初回訪問時に先読みしてキャッシュするページ一式（このブランドのみ） */
 const ASSETS = [
@@ -15,7 +15,7 @@ const ASSETS = [
   'pklove.js',
   'jikkan.html', 'tsuhensei.html', 'juniun.html', 'zohkan.html', 'kubo.html',
   'daiun-tenkanki.html', 'ritsuun.html', 'nichiza-tenchusatsu.html', 'ijokanshi.html',
-  'kanshi-aisho.html', 'aisho-pattern.html', 'daiun-tsuhen.html', 'setsuboku.html'
+  'kanshi-aisho.html', 'aisho-pattern.html', 'daiun-tsuhen.html', 'setsuboku.html', 'tensen-chichu.html'
 ];
 
 self.addEventListener('install', (e) => {
