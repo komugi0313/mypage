@@ -851,6 +851,15 @@
         </span>
         <span class="scr-hint" id="engHint">詳細鑑定はネット接続が必要（この命式を詳しく読み解きます）</span>
       </div>
+      <div class="grp">
+        <span class="glabel">身強・身弱<span class="scr-hint">（自動判定を上書き／会局の吉凶に反映）</span></span>
+        <span class="seg" role="group" aria-label="身強弱の上書き">
+          <button type="button" class="st-ovr" data-st="" aria-pressed="true">自動</button>
+          <button type="button" class="st-ovr" data-st="身強" aria-pressed="false">身強</button>
+          <button type="button" class="st-ovr" data-st="身弱" aria-pressed="false">身弱</button>
+          <button type="button" class="st-ovr" data-st="中和" aria-pressed="false">中和</button>
+        </span>
+      </div>
       <!-- 「鑑定テーマ(総合/恋愛/仕事/金運/健康)」「範囲(全体/この項目だけ)」は廃止。
            鑑定書の軸は「エンジン(定型文/AI)×わかりやすさ(本格版/やさしい版)」の4通りに整理。
            本格版はもともと全テーマ(恋愛・仕事・金運・健康)を章として含むため情報は落ちない。 -->
@@ -3009,6 +3018,15 @@ window.KANSHI60_DETAIL={
   document.getElementById('cOff').addEventListener('click', function(){ setColor(false); });
   setColor(true);   // デフォルトはカラー（色付き）
 
+  // ---- 身強・身弱の上書き（設定バー側＝画面のみ。鑑定書本体にはプルダウンを置かない） ----
+  (function(){
+    var btns=document.querySelectorAll('.st-ovr'); if(!btns.length) return;
+    btns.forEach(function(b){ b.addEventListener('click', function(){
+      btns.forEach(function(x){ x.setAttribute('aria-pressed', String(x===b)); });
+      if(window.setYkStrength) window.setYkStrength(b.dataset.st||'');   // ''＝自動判定に戻す
+    }); });
+  })();
+
   // ---- 出力内容パネル ----
   function _txt(id){ var e=document.getElementById(id); return e?(e.textContent||'').trim():''; }
   function _chk(id){ var e=document.getElementById(id); return !!(e&&e.checked); }
@@ -3880,13 +3898,10 @@ window.KANSHI60_DETAIL={
       var ykFrameHtml='<div class="yk-frame">'+
           '<div class="yk-frow"><span class="yk-flabel">生まれ持った会局（命式内で成立）</span>'+natalKaiHtml+'</div>'+
           '<div class="yk-frow"><span class="yk-flabel">空亡</span><span class="yk-ntag">'+kuboHtml+'</span></div>'+
+          /* 鑑定書（書類）には確定テキストだけを印字。上書き操作は書類の外＝「⚙詳細設定」バー（画面のみ・非印刷）に置く。 */
           '<div class="yk-frow"><span class="yk-flabel">身強・身弱</span>'+
-            '<b class="yk-strength-val">'+esc(_effStrength||'—')+'</b>'+   /* 確定値をはっきり印字（見間違え防止）。印刷は必ずこの文字が出る */
-            '<select class="yk-sel" onchange="if(window.setYkStrength)window.setYkStrength(this.value)">'+
-              '<option value=""'+(_ykStrengthOverride==null?' selected':'')+'>自動判定（'+esc(_autoStrength||'—')+'）</option>'+
-              ['身強','身弱','中和'].map(function(v){ return '<option value="'+v+'"'+(v===_ykStrengthOverride?' selected':'')+'>'+v+'（手動）</option>'; }).join('')+
-            '</select>'+
-            '<span class="yk-hint">初期は自動判定。必要なら鑑定者が上書き（中和は色なし）</span>'+
+            '<b class="yk-strength-val">'+esc(_effStrength||'—')+'</b>'+
+            (_ykStrengthOverride!=null?'<span class="yk-hint">（鑑定者が上書き）</span>':'')+
           '</div>'+
         '</div>';
       var _p2=document.getElementById('ykFrameP2'); if(_p2) _p2.innerHTML=ykFrameHtml;
