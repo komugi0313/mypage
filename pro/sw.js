@@ -3,7 +3,7 @@
    鑑定・60干支の教科書を使えるようにする。
    オンライン鑑定（生成AI）だけは通信が要るが、圏外時は端末内の
    オフライン鑑定に自動で切り替わる。 */
-const CACHE = 'shichu-jidou-v205';  /* 冠帯（十二運）と咸池（神殺）の意味に『見栄』の観点を前向きに追加：冠帯＝だらしなく見られたくない見栄＝自分の品格を守る力（完璧求めすぎ注意）／咸池＝見られ方を意識する見せる力・魅せる力＝才能（芸能・SNS・美容・接客・鑑定業）。app-pro＋meishi-sheet（＋①ミラー）。※v204=日座中殺の教科書。 */
+const CACHE = 'shichu-jidou-v206';  /* 孤独になりやすい星：孤辰（年支の方合基準・寡宿は不使用）を神殺として命式表に自動表示＋意味を追加、魁罡の意味に『孤独に強い』観点を追記。教科書ページ kodoku.html 新設（庚・魁罡・孤辰・華蓋＝一人でいる力／前向き・例題・実在人名なし）。app-pro＋meishi-sheet（＋①ミラー）。※v205=見栄観点。 */
 
 /* 初回訪問時に先読みしてキャッシュするページ一式（このブランドのみ） */
 const ASSETS = [
@@ -15,7 +15,7 @@ const ASSETS = [
   'pklove.js',
   'jikkan.html', 'tsuhensei.html', 'juniun.html', 'zohkan.html', 'kubo.html',
   'daiun-tenkanki.html', 'ritsuun.html', 'nichiza-tenchusatsu.html', 'ijokanshi.html',
-  'kanshi-aisho.html', 'aisho-pattern.html', 'daiun-tsuhen.html', 'setsuboku.html', 'tensen-chichu.html', 'nayin-aisho.html', 'boko-kaichu.html', 'kaikyoku.html', 'inyoku.html', 'nichiza.html'
+  'kanshi-aisho.html', 'aisho-pattern.html', 'daiun-tsuhen.html', 'setsuboku.html', 'tensen-chichu.html', 'nayin-aisho.html', 'boko-kaichu.html', 'kaikyoku.html', 'inyoku.html', 'nichiza.html', 'kodoku.html'
 ];
 
 self.addEventListener('install', (e) => {
