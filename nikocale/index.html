@@ -1091,12 +1091,9 @@ select{
   box-shadow:0 1px 0 rgba(60,45,90,.03);
 }
 .cell.empty{background:transparent;border:none;cursor:default;box-shadow:none}
-/* マスの色分け：一目で良い日/避けたい日/奇跡日がわかる（言葉なしで直感的に） */
-.cell.r-star{background:linear-gradient(180deg,var(--gold-soft),var(--panel));border-color:var(--gold)}
-.cell.r-ok{background:var(--ok-bg);border-color:color-mix(in oklab,var(--ok) 42%,var(--line))}
-.cell.r-good{background:color-mix(in oklab,var(--ok-bg) 55%,var(--panel))}
-.cell.r-warn{background:var(--warn-bg);border-color:color-mix(in oklab,var(--warn) 38%,var(--line))}
-.cell.r-bad{background:var(--bad-bg);border-color:color-mix(in oklab,var(--bad) 42%,var(--line))}
+/* マスの背景は無地に統一。相性は中央の記号バッジ（◎○△✕⭐）だけで表現し、
+   ⭐「二人にいい日」を背景ノイズなく際立たせる（見やすさ優先で色分けを戻した）。 */
+.cell.r-star,.cell.r-ok,.cell.r-good,.cell.r-warn,.cell.r-bad{background:var(--panel);border-color:var(--line)}
 /* 会う約束が入った日：二重枠＋💕約束チップで一目でわかる */
 .cell.appt{border:2px solid var(--accent);box-shadow:0 0 0 2px color-mix(in oklab,var(--accent) 22%,transparent) inset,0 6px 16px -10px color-mix(in oklab,var(--accent) 55%,transparent)}
 .apptmk{position:absolute;left:3px;top:3px;z-index:2;font-size:9px;line-height:1;font-weight:800;color:#fff;background:var(--accent);border-radius:8px;padding:2px 5px;letter-spacing:.02em;box-shadow:0 2px 5px -2px color-mix(in oklab,var(--accent) 60%,transparent);white-space:nowrap}
@@ -1158,6 +1155,8 @@ select{
   display:flex;align-items:center;gap:10px;flex-wrap:wrap;
   letter-spacing:.06em;
 }
+.detail .dh .dh-date.dh-sun{color:var(--sun)}
+.detail .dh .dh-date.dh-sat{color:var(--sat)}
 .detail .dsub{font-size:12px;color:var(--muted);margin:0 0 8px;letter-spacing:.04em}
 .detail .dmeta{font-size:12px;color:var(--ink-soft);margin:0 0 14px;font-family:var(--maru)}
 .detail .dmeta .hol{color:var(--sun);font-weight:700;white-space:nowrap}
@@ -1589,7 +1588,6 @@ select{
   .hero{padding:26px 20px 22px;margin:0 -12px 22px}
   .hero h1{font-size:clamp(31px, 9.6vw, 42px);letter-spacing:.2em;text-indent:.2em}
   .cell{min-height:64px}
-  .cell .gz .hol{display:none}
   .mo-nav .mo-t{font-size:17px;min-width:140px}
 }
 
@@ -3970,6 +3968,8 @@ function pickFocus(interests){
     var x=evalDay(state.y,state.m,d); x.d=d; x.wd=new Date(state.y,state.m-1,d).getDay();
     var wd=['日','月','火','水','木','金','土'][x.wd];
     var _mn=(x.dA&&x.dA.moon)?x.dA.moon:null, _hd=jpHol(state.y,state.m,d);
+    // 日本のカレンダー通り、日曜・祝日は日付を赤、土曜は青で表示
+    var _dcls=(_hd||x.wd===0)?' dh-sun':(x.wd===6?' dh-sat':'');
     var _mnNote=(_mn&&MOONNOTE[_mn.name])?'<span class="moonnote">（'+MOONNOTE[_mn.name]+'）</span>':'';
     // 祝日は日付のすぐ下に、名前が泣き別れ（語中改行）しないよう独立した1行で表示。
     var _holHtml=_hd?'<p class="dmeta dmeta-hol"><span class="hol">㊗ '+_hd+'</span></p>':'';
@@ -3980,7 +3980,7 @@ function pickFocus(interests){
     if(x.solo){
       var sym=x.sym, lab=x.dA&&x.dA.grade?x.dA.grade.label:'';
       var cls=sym==='💮'?'sp':sym==='◎'?'ok':sym==='△'?'warn':'good';
-      h+='<p class="dh">'+state.m+'月'+d+'日（'+wd+'）　'+x.day.stem+x.day.branch+'　<span class="dd '+cls+'">'+sym+'</span></p>';
+      h+='<p class="dh"><span class="dh-date'+_dcls+'">'+state.m+'月'+d+'日（'+wd+'）</span>　'+x.day.stem+x.day.branch+'　<span class="dd '+cls+'">'+sym+'</span></p>';
       h+='<p class="dsub">あなたの運勢：<b>'+lab+'</b>'+(x.touka?'　🌷モテ運の日':'')+'</p>'+metaHtml;
       var msg=x.dA&&x.dA.theme?x.dA.theme.message:'';
       h+='<div class="why '+(sym==='△'?'':'ok')+'"><h4>この日のあなた</h4><p>'+(x.touka?'あなたの<b>桃花（モテ星）</b>が巡る日。恋愛運・人気運が高まり、魅力が自然と伝わります。<br>':'')+(msg||'自分のペースで、やりたいことを進めると良い日です。')+(x.dA&&x.dA.todayOne?'<br><b>今日のひとつ：</b>'+x.dA.todayOne:'')+'</p></div>';
@@ -3993,7 +3993,7 @@ function pickFocus(interests){
     var p=PP[state.pp], mk=x.mk;
     var isStar=!!(state.topSet&&state.topSet[d]);
     var headSym=isStar?'<span class="dd star">⭐</span>':'<span class="dd '+(mk.c||'good')+'">'+(mk.s||'—')+'</span>';
-    h+='<p class="dh">'+state.m+'月'+d+'日（'+wd+'）　'+x.day.stem+x.day.branch+'　'+headSym+'</p>';
+    h+='<p class="dh"><span class="dh-date'+_dcls+'">'+state.m+'月'+d+'日（'+wd+'）</span>　'+x.day.stem+x.day.branch+'　'+headSym+'</p>';
     h+='<p class="dsub">'+p.name+'の相性：<b>'+(isStar?'奇跡の相性日':mk.w)+'</b></p>'+metaHtml;
     // WHY
     if(isStar){
