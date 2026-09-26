@@ -26,4 +26,13 @@ Pocket鑑定の修正（大運・立運・節入り、アカウント、パス�
 | `unitguard.js` | AI回答の後処理（言語判定・専門語・提案ボタン・仏暦・韓国語の助詞など）の単体テスト | `node unitguard.js` |
 | `live.js` → `livecheck.py` | 実際の Gemini で10言語をランダムに会話し（`live_all.json`）、言語混入・西暦・漏れを自動チェック。**テスト用のキーを環境変数で渡す。キーはファイルに保存しないこと** | `GEMINI_KEY=... node live.js && python3 livecheck.py` |
 
+### 2026-09-26 追加（2）：発売前の総点検
+| ファイル | 内容 | 実行例 |
+|---|---|---|
+| `bigtest.js` → `bigcheck.py` | 10言語×14問の長い会話（`bigq.json`）→ 言語混入・同じ文のくり返し・決まり文句を集計 | `GEMINI_KEY=... node bigtest.js && python3 bigcheck.py big_all.json` |
+| `finaltest.js` | 上に英語の質問・深刻な相談を足した16問（`finalq.json`） | `GEMINI_KEY=... node finaltest.js && python3 bigcheck.py final_all.json` |
+| `ui10.js` | 10言語で登録エラー・通信エラー・登録済み・ログイン失敗・各画面・チャットのエラー表示を確認（`ui10.json`） | `NODE_PATH=mock/node_modules node ui10.js` |
+| `datep.js` / `bday.js` / `pb.js` | 相手の誕生日の読み取り、自分の誕生日の質問、AI用データの本人・相手の行 | `node datep.js` など |
+| `hl.js` | 端末の地域ごとの相談窓口 | `node hl.js` |
+
 ※本番の Netlify（実際の Blobs・Resend）での確認は含みません。デプロイ後に実機で「登録→別端末でログイン」「パスワードを忘れた→メール→再設定」を確認してください。

@@ -43,8 +43,8 @@ diff -ruN "pk/README_\343\203\207\343\203\227\343\203\255\343\202\244.md" "fx/RE
  - テレコムクレジットの **申込フォーム＋継続課金同意画面**（審査通過後に組み込み）
 diff -ruN "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md" "fx/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"
 --- "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"	1970-01-01 00:00:00.000000000 +0000
-+++ "fx/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"	2026-09-26 17:09:22.593792461 +0000
-@@ -0,0 +1,223 @@
++++ "fx/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"	2026-09-26 18:20:55.744737684 +0000
+@@ -0,0 +1,268 @@
 +# Pocket鑑定 2026-09-25 変更点と運用ガイド（エンジニア向け）
 +
 +この資料は、2026-09-25 の改修内容を、実装・デプロイ・運用するエンジニアが正しく理解するためのものです。
@@ -101,7 +101,7 @@ diff -ruN "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\3
 +| `netlify.toml` | 修正 | `/api/auth` → `/.netlify/functions/auth` のリダイレクトを追加 |
 +| `lp.html` | 修正 | 「はじめる」の遷移先を `index.html?start=1` に変更、「ログイン」リンクを追加 |
 +| `legal.html` | 修正 | プライバシーポリシー（日英）と利用規約第3条（日英）をアカウント機能に合わせて改定 |
-+| `sw.js` | 修正 | キャッシュ版を v6 に（9/26 の修正で v5→v6）、`/api/` を Service Worker の対象外に |
++| `sw.js` | 修正 | キャッシュ版を v7 に（9/26 の修正で v5→v7）、`/api/` を Service Worker の対象外に |
 +| `README_デプロイ.md` | 修正 | 環境変数の追記 |
 +
 +---
@@ -268,6 +268,51 @@ diff -ruN "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\3
 +- **提案ボタンの抽出（`_extractChips`）：** `"…" / "…"` の形で本文末尾に出た質問候補を、引用内に改行があってもボタンとして回収します。
 +- **スペイン語・ポルトガル語：** 利用者の性別に合わせた文法（男性形・女性形）を使うよう指示しました（`_genderRule`）。
 +- **最初の挨拶：** 途中で切れないよう、出力の上限を 820 から 1400 トークンに増やしました。
++
++---
++
++## 8. 2026-09-26 追記（2）：発売前の総点検
++
++### 8.1 修正（`index.html`）
++- **`_localBirthday`：** 相性の入力（相手の誕生日）を「自分の誕生日の質問」と誤判定し、決まり文句を返していました（日本語以外の9言語）。
++  - 日付（西暦4桁・`5/3` など）を含む文は対象外にしました。
++  - 相手を表す語を10言語に拡充しました。
++  - ログイン中は「端末の中だけに保存」の注記を外します。
++  - es・pt は性別で語形を変えます。
++- **`_parseDateAny`（新規）：** `chatPartnerScan` から使います。次の日付の書き方を読みます。
++  - `Y年M月D日`、`Y년 M월 D일`、`Y/M/D`
++  - `D tháng M năm Y`
++  - 月名つき（英・西・葡・印尼・タイ語。`May 3, 1990`／`3 de mayo de 1990`／`3 Mei 1990`／`3 พฤษภาคม 2533`（仏暦は543を引く））
++  - `D/M/Y`（英語は `M/D/Y`。13以上の数字があれば日と確定）
++  - 誕生日を示す語に `cumplea`・`ulang tahun`・`ngày sinh`・`nascimento` を追加しました。
++- **相手の性別の判定：** 10言語の「彼氏／夫／novio／anh ấy／suami／แฟนหนุ่ม」などに対応しました。判定できない時は従来どおり female です。
++- **`proBlock`：** AI用データに2行を追加しました。AIが相手の誕生日を本人のものと取り違えていたためです。
++  - `USER … born Y/M/D`（本人）
++  - `PARTNER … born Y/M/D — NOT the user's birthday`
++- **`_dropRepeatedParas`（新規）：** 返事の2段落目以降で、直近30件のAI吹き出しとの 8文字 n-gram の一致率が 0.6 以上の段落を落とします。返事全体の丸写しは、従来の `_nearDupOfHistory` が作り直しで対応します。
++- **`_finalTidy`：** 中文の「你们的你的特质」「你的你的」を直します（「命盘→你的特质」の置換の副作用）。
++- **相談窓口（`HELPLINE`）：** 端末のタイムゾーン → 端末の言語設定の地域 の順で国を推定します（`_deviceCountry`）。
++  - その言語の既定の国（ja→JP、es→ES、en→US など）と違う国なら、`HL_LOCAL` の窓口（26か国）に差し替えます。
++  - 一覧にない国では「地域の緊急番号へ」だけを出し、他国の番号は出しません。
++- **マイページ：** ログイン中は「アカウント（メールアドレス）に自動保存」と表示します（`MP_CLOUD`、10言語）。
++- **開発者用の体験モード欄（`#devBox`）：** 既定で非表示にしました。次のいずれかの時だけ表示します。
++  - `?dev=1` で開いた（`pk_dev` を保存）
++  - `pk_key` がある
++  - `PK_DIRECT_KEY` がある
++
++### 8.2 修正（`functions/gemini.js`）
++- **プラン名のずれ：** アプリの `std` と `unl` がサーバーの `LIMITS` に無く、free（1日5回）扱いになっていました。`std`（80回/日）と `unl`（150回/日）を追加しました。
++- **`x-pk-plan` を信用しない：** 課金を実装するまでは、全員を free として扱います。環境変数 `PK_TRUST_PLAN_HEADER=1` の時だけヘッダーを使います（テスト用）。
++  - 課金の実装後は、アカウントのトークンからサーバー側で購読状態を引いて判定してください。
++  - 詳しくは `pocketkantei_check/発売前チェックと課金の進め方.md` を参照してください。
++
++### 8.3 検証
++| 検証 | 結果 |
++|---|---|
++| 実際の Gemini で10言語×16問の長い会話（恋愛・仕事・お金・健康・家族・今日・お礼・同じ質問の2回目・詳しく・晩ごはん・落ち込み・相性・短所・来月・英語での質問・深刻な相談）（`bigtest.js`＋`bigcheck.py`） | 別の言語の混入 0／エラー・返事なし 0／前と同じ文 4件（ベトナム語の段落の写し → 8.1 で対処） |
++| 登録・エラー・マイページ・各画面（10言語）（`ui10.js`） | 画面エラー 0。文言はすべてその言語 |
++| 日付の読み取り（10言語＋追加例）（`datep.js`）、自分の誕生日の質問（`bday.js`）、相談窓口の国判定（`hl.js`） | 全件期待どおり |
++| 8.1 の修正後の、実際の AI での再確認 | **未実施**（テスト用キーのクレジットが尽きたため）。AI用データへの反映（`pb.js`）と単体テストは確認済み |
 diff -ruN "pk/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\273\225\346\247\230\346\233\270.md" "fx/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\273\225\346\247\230\346\233\270.md"
 --- "pk/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\273\225\346\247\230\346\233\270.md"	2026-09-17 13:04:05.000000000 +0000
 +++ "fx/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\273\225\346\247\230\346\233\270.md"	2026-09-26 16:47:42.267911705 +0000
@@ -608,8 +653,29 @@ diff -ruN pk/functions/auth.js fx/functions/auth.js
 +exports._t = { hashPw, makeToken, readToken, cleanData, normEmail };
 diff -ruN pk/functions/gemini.js fx/functions/gemini.js
 --- pk/functions/gemini.js	2026-08-20 09:26:04.000000000 +0000
-+++ fx/functions/gemini.js	2026-09-25 06:50:30.857920213 +0000
-@@ -59,7 +59,7 @@
++++ fx/functions/gemini.js	2026-09-26 17:32:12.992908823 +0000
+@@ -19,7 +19,9 @@
+ const LIMITS = {
+   free:      { device: 5,   ip: 40  },   // 無料：端末5回/日、同一IP合計40回/日（悪用抑止）
+   light:     { device: 50,  ip: 200 },   // おてがる 980円：50回/日（満使用でも利益7割が残る計算）
+-  unlimited: { device: 150, ip: 400 },   // 使い放題 2480円：フェアユース150回/日（bot対策）
++  std:       { device: 80,  ip: 300 },   // スタンダード：月500回枠（端末側）に対し1日の上限80回
++  unl:       { device: 150, ip: 400 },   // 使い放題：フェアユース150回/日（bot対策）
++  unlimited: { device: 150, ip: 400 },   // 旧名（互換）
+ };
+ const MAX_BODY = 12000; // ユーザーの1発言あたりの最大文字数（トークン浪費・悪用防止。※システムプロンプトは対象外）
+ 
+@@ -52,14 +54,16 @@
+   const h = lower(event.headers || {});
+   const device = clean(h['x-pk-device']) || 'nodev';
+   const ip = clean(h['x-nf-client-connection-ip'] || h['x-forwarded-for'] || '').split(',')[0].trim() || 'noip';
+-  const plan = (clean(h['x-pk-plan']) || 'free').toLowerCase();   // 将来サーバーで購読照合して上書き
++  // 注意：x-pk-plan は端末が名乗っているだけで、誰でも書き換えられる。課金（App Store / Google Play の購読照合）を
++  // 実装するまでは信用せず、全員を free 扱いにする。テストで有料枠を試す時だけ環境変数 PK_TRUST_PLAN_HEADER=1 を設定する。
++  const plan = process.env.PK_TRUST_PLAN_HEADER === '1' ? ((clean(h['x-pk-plan']) || 'free').toLowerCase()) : 'free';
+   const lim = LIMITS[plan] || LIMITS.free;
+   const day = jstDay();
+   // 話題分類用の軽量呼び出し（x-pk-classify:1）は、ユーザーの1日カウントに含めない（本体の応答呼び出しだけを課金対象にする）。常に軽量モデルで安価。
    const isClassify = clean(h['x-pk-classify']) === '1';
  
    // レート制限（Blobs が使えない環境ではフェイルオープン＝ヘッダで警告）
@@ -618,7 +684,7 @@ diff -ruN pk/functions/gemini.js fx/functions/gemini.js
    let limited = false, degraded = false, dCount = 0;
    if (store && !isClassify) {
      try {
-@@ -130,8 +130,9 @@
+@@ -130,8 +134,9 @@
  }
  
  // ---- ユーティリティ ----
@@ -632,7 +698,7 @@ diff -ruN pk/functions/gemini.js fx/functions/gemini.js
  function jstDay() { const d = new Date(Date.now() + 9 * 3600 * 1000); return d.toISOString().slice(0, 10); }
 diff -ruN pk/index.html fx/index.html
 --- pk/index.html	2026-09-17 17:10:16.000000000 +0000
-+++ fx/index.html	2026-09-26 16:46:31.305299085 +0000
++++ fx/index.html	2026-09-26 18:05:41.597190435 +0000
 @@ -118,7 +118,13 @@
  .field{margin-top:16px}
  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:7px;font-weight:500}
@@ -738,6 +804,15 @@ diff -ruN pk/index.html fx/index.html
  <!-- 登録後アンケート（1画面・15秒） -->
  <section class="screen" id="scSurvey">
    <div class="wrap">
+@@ -509,7 +576,7 @@
+     <button class="menu-item" data-act="reset"><span class="mi-ic">↺</span><span><span data-i18n="miResetT"></span><span class="mi-d" data-i18n="miResetD"></span></span><span class="mi-arrow">›</span></button>
+     <button class="menu-item" data-act="top"><span class="mi-ic">⌂</span><span><span data-i18n="miTopT"></span><span class="mi-d" data-i18n="miTopD"></span></span><span class="mi-arrow">›</span></button>
+   </div>
+-  <details class="devbox" id="devBox">
++  <details class="devbox" id="devBox" style="display:none">
+     <summary id="devSum"></summary>
+     <input type="password" id="devKey" placeholder="API key…" autocomplete="off" autocapitalize="off" spellcheck="false">
+     <div class="devrow"><button class="btn mini" id="devKeySave"></button><button class="btn mini ghost" id="devKeyClear"></button></div>
 @@ -592,8 +659,9 @@
    /* テーマを最初のペイント前に確定（重いエンジン読込中のネイビー点滅を防止） */
    var _th=localStorage.getItem('pk_theme'); document.body.setAttribute('data-theme', _th==='indigo'?'':'green');
@@ -970,7 +1045,82 @@ diff -ruN pk/index.html fx/index.html
        pushSeq(greetBubbles(_softenJargon(sanitizeOut(tx))),function(){ renderChat(true); if(typeof _askDone==='function') _askDone(); }); })
      .catch(function(){ if(_mt!==_greetTok) return; t.remove(); greetStatic(); });
  }
-@@ -1970,8 +2081,14 @@
+@@ -1835,20 +1946,40 @@
+   $('askIn').addEventListener('blur',function(){ setTimeout(function(){ var c=$('scChat'); if(c){ c.style.height=''; c.style.transform=''; } window.scrollTo(0,0); },80); });
+ })();
+ function sendNow(){ var v=ta.value.trim(); if(!v)return; ta.value=''; ta.style.height='auto'; ask(v); }
++/* 10言語の日付の書き方を [年,月,日] に（1990年5月3日／1990년 5월 3일／1990/5/3／May 3, 1990／3 May 1990／3 de mayo de 1990／3 Mei 1990／3 tháng 5 năm 1990／3 พฤษภาคม 2533(仏暦)／3/5/1990 など） */
++var _MON={january:1,jan:1,february:2,feb:2,march:3,mar:3,april:4,apr:4,may:5,june:6,jun:6,july:7,jul:7,august:8,aug:8,september:9,sep:9,sept:9,october:10,oct:10,november:11,nov:11,december:12,dec:12,
++ enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12,
++ janeiro:1,fevereiro:2,'março':3,marco:3,maio:5,junho:6,julho:7,setembro:9,outubro:10,novembro:11,dezembro:12,
++ januari:1,februari:2,maret:3,mei:5,juni:6,juli:7,agustus:8,oktober:10,desember:12,
++ 'มกราคม':1,'กุมภาพันธ์':2,'มีนาคม':3,'เมษายน':4,'พฤษภาคม':5,'มิถุนายน':6,'กรกฎาคม':7,'สิงหาคม':8,'กันยายน':9,'ตุลาคม':10,'พฤศจิกายน':11,'ธันวาคม':12};
++function _parseDateAny(t){
++  var Y='((?:19|20|24|25)\\d{2})', MN='([a-zà-ÿç]+|[\\u0e00-\\u0e7f]+)', m, r=null;
++  function yy(v){ v=+v; return v>2400?v-543:v; }
++  if((m=t.match(new RegExp(Y+'\\s*[年년]\\s*(\\d{1,2})\\s*[月월]\\s*(\\d{1,2})'))))  r=[yy(m[1]),+m[2],+m[3]];
++  else if((m=t.match(new RegExp(Y+'[\\/\\-.](\\d{1,2})[\\/\\-.](\\d{1,2})')))) r=[yy(m[1]),+m[2],+m[3]];
++  else if((m=t.match(new RegExp('(\\d{1,2})\\s*th[aá]ng\\s*(\\d{1,2})\\s*,?\\s*(?:n[aă]m\\s*)?'+Y,'i')))) r=[yy(m[3]),+m[2],+m[1]];
++  else if((m=t.match(new RegExp('(\\d{1,2})(?:st|nd|rd|th)?\\s*(?:de\\s+)?'+MN+'\\.?\\s*,?\\s*(?:de\\s+|del\\s+)?'+Y,'i')))&&_MON[m[2].toLowerCase()]) r=[yy(m[3]),_MON[m[2].toLowerCase()],+m[1]];
++  else if((m=t.match(new RegExp(MN+'\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s*,?\\s*'+Y,'i')))&&_MON[m[1].toLowerCase()]) r=[yy(m[3]),_MON[m[1].toLowerCase()],+m[2]];
++  else if((m=t.match(new RegExp('(\\d{1,2})[\\/\\-.](\\d{1,2})[\\/\\-.]'+Y)))){
++    var a=+m[1],b=+m[2]; /* 英語は 月/日/年、ほかの言語は 日/月/年。13以上なら日と確定 */
++    if(a>12) r=[yy(m[3]),b,a]; else if(b>12) r=[yy(m[3]),a,b]; else r=(state.lang==='en')?[yy(m[3]),a,b]:[yy(m[3]),b,a];
++  }
++  return r;
++}
+ /* チャット文中の生年月日（1990年3月1日 / 1990/3/1 等）を拾い、相手の命式・相性を自動計算して接続 */
+ function chatPartnerScan(q){
+   try{
+     var t=q.replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);});
+     /* 誕生日の文脈がある時だけ相手として扱う（「2020年4月1日に入社」等の誤検出を防ぐ） */
+-    if(!/生まれ|誕生|生日|生年月日|born|birth|생일|태어|sinh nhật|sinh ngày|nació|nacimiento|nasceu|aniversário|lahir|เกิด/i.test(t)) return false;
+-    var m=t.match(/((?:19|20)\d{2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/)||t.match(/((?:19|20)\d{2})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
++    if(!/生まれ|誕生|生日|生年月日|born|birth|생일|태어|sinh nhật|sinh ngày|ngày sinh|nació|nacimiento|cumplea|nasceu|aniversário|nascimento|lahir|ulang tahun|เกิด/i.test(t)) return false;
++    var m=_parseDateAny(t);
+     if(!m) return false;
+-    var y=+m[1],mo=+m[2],d=+m[3];
++    var y=m[0],mo=m[1],d=m[2];
+     if(mo<1||mo>12||d<1||d>31) return false;
+     var _dt=new Date(y,mo-1,d); if(_dt.getFullYear()!==y||_dt.getMonth()!==mo-1||_dt.getDate()!==d) return false; /* 2/30等の実在しない日付 */
+     if(state.profile&&y===+state.profile.y&&mo===+state.profile.m&&d===+state.profile.d) return false;
+     if(state.mode==='aisho'&&state.chartB&&state.chartB._bkey===(y+'-'+mo+'-'+d)) return true;
+-    var sx=/彼女|妻|嫁|母|姉|妹|娘|she|her|여자|她/i.test(t)?'female':(/彼氏|彼|夫|旦那|父|兄|弟|息子|he |him|his |남자|他/i.test(t)?'male':'female');
++    var sx=/彼女|妻|嫁|母|姉|妹|娘|\bshe\b|\bher\b|wife|girlfriend|mother|daughter|sister|여자|아내|언니|누나|엄마|딸|她|老婆|女朋友|妈|媽|女儿|女兒|cô ấy|chị ấy|vợ|bạn gái|\bmẹ\b|\bella\b|novia|esposa|madre|\bhija\b|\bdela\b|namorada|\bmãe\b|filha|istri|perempuan|cewek|\bibu\b|แฟนสาว|ภรรยา|ผู้หญิง|แม่|ลูกสาว/i.test(t)?'female':(/彼氏|彼|夫|旦那|父|兄|弟|息子|\bhe\b|\bhim\b|\bhis\b|husband|boyfriend|father|\bson\b|brother|남자|남편|오빠|형|아빠|아들|他|老公|男朋友|爸|儿子|兒子|anh ấy|chồng|bạn trai|\bbố\b|\bél\b|novio|esposo|marido|padre|\bhijo\b|\bdele\b|namorado|\bpai\b|filho|suami|laki|cowok|\bayah\b|แฟนหนุ่ม|สามี|ผู้ชาย|พ่อ|ลูกชาย/i.test(t)?'male':'female');
+     var cb=(window.PersonBazi)?PersonBazi(y,mo,d,null,null,true,sx):null;
+     if(!cb||!cb.ok) return false;
+     cb._bkey=y+'-'+mo+'-'+d; cb._sex=sx; state.chartB=cb; state.mode='aisho';
+@@ -1864,7 +1995,9 @@
+   if(!p||!p.y) return null;
+   var bday=/誕生日|生年月日|バースデー|いつ生まれ|何年生ま|birth\s?day|birth\s?date|date of birth|when (was|am) i born|생일|생년월일|生日|出生日期|几号出生|aniversário|data de nasc|cumpleañ|fecha de nac|ngày sinh|sinh nhật|tanggal lahir|วันเกิด|เกิดวันไหน|เกิดวันที่/i.test(q);
+   if(!bday) return null;
+-  var partner=/彼|彼女|相手|旦那|夫|妻|恋人|友達|友人|お母|お父|息子|娘|上司|同僚|him\b|her\b|their|partner|friend|boyfriend|girlfriend|남자친구|여자친구|상대|남편|아내|男朋友|女朋友|對方|对方|người ấy|pareja|amig|namorad|teman|pacar/i.test(q);
++  /* 日付（西暦4桁や 5/3 のような日付）を書いている＝誰かの誕生日を「伝えている」ので、自分の誕生日の質問ではない（相性の入力など） */
++  if(/(^|[^0-9])(19|20)[0-9]{2}([^0-9]|$)|[0-9]{1,2}\s*[\/.\-月]\s*[0-9]{1,2}/.test(q)) return null;
++  var partner=/彼|彼女|相手|旦那|夫|妻|恋人|友達|友人|お母|お父|息子|娘|上司|同僚|\bhe\b|\bhis\b|\bshe\b|him\b|her\b|their|partner|friend|boyfriend|girlfriend|husband|wife|mother|father|mom|dad|남자친구|여자친구|상대|남편|아내|그 사람|그의|그녀|엄마|아빠|他|她|男朋友|女朋友|對方|对方|老公|老婆|người ấy|anh ấy|cô ấy|chồng|vợ|pareja|amig|namorad|novio|novia|esposo|esposa|marido|mulher|dele|dela|teman|pacar|suami|istri|dia\b|เขา|เธอ|แฟน|สามี|ภรรยา/i.test(q);
+   if(partner && state.mode==='aisho') return null;
+   var self=/私|わたし|自分|僕|俺|うち|\bmy\b|\bmine\b|나의|내 |제 |우리|我的|我几号|meu|minha|mi |mío|của (mình|tôi)|ku\b|saya|ของฉัน|ของผม/i.test(q);
+   if(!self && (partner || state.mode==='aisho')) return null;
+@@ -1876,12 +2009,15 @@
+    zt:'當然記得呀，你的生日是 '+y+'年'+m+'月'+d+'日 😊（這個資訊只存在你自己的裝置裡，放心。）',
+    ko:'그럼요, 잘 기억하고 있어요. 당신의 생일은 '+y+'년 '+m+'월 '+d+'일 이에요 😊 (이 정보는 당신 기기 안에만 저장돼 있으니 안심하세요.)',
+    vi:'Tất nhiên mình nhớ chứ — sinh nhật của bạn là ngày '+d+'/'+m+'/'+y+' 😊 (Thông tin này chỉ lưu trên thiết bị của bạn thôi, yên tâm nhé.)',
+-   es:'Claro que lo recuerdo: tu cumpleaños es el '+d+'/'+m+'/'+y+' 😊 (Se guarda solo en tu dispositivo, tranquila.)',
+-   pt:'Claro que lembro — seu aniversário é '+d+'/'+m+'/'+y+' 😊 (Fica salvo só no seu aparelho, pode ficar tranquila.)',
++   es:'Claro que lo recuerdo: tu cumpleaños es el '+d+'/'+m+'/'+y+' 😊 (Se guarda solo en tu dispositivo, '+(p.sex==='male'?'tranquilo':'tranquila')+'.)',
++   pt:'Claro que lembro — seu aniversário é '+d+'/'+m+'/'+y+' 😊 (Fica salvo só no seu aparelho, pode ficar '+(p.sex==='male'?'tranquilo':'tranquila')+'.)',
+    id:'Tentu aku ingat — ulang tahunmu tanggal '+d+'/'+m+'/'+y+' 😊 (Data ini hanya tersimpan di perangkatmu, tenang saja.)',
+    th:'จำได้สิ วันเกิดของคุณคือ '+d+'/'+m+'/'+y+' นะ 😊 (ข้อมูลนี้เก็บไว้แค่ในเครื่องของคุณเอง สบายใจได้เลย)'
+   };
+-  return R[state.lang]||R.en;
++  var out=R[state.lang]||R.en;
++  /* アカウント登録済みなら「端末の中だけに保存」は事実と違うので、その注記を外す */
++  if(typeof authGet==='function'&&authGet()) out=out.replace(/\s*[（(][^（()）]*[)）]\s*$/,'');
++  return out;
+ }
+ 
+ /* 雑談（挨拶・天気・お礼）：命式由来の答えではないので「理由をみる」ボタンは出さない */
+@@ -1970,8 +2106,14 @@
    t=t.replace(/^\s*CHIPS[:：][^\n]*$/gm,'');
    /* フォールバック2：CHIPS: を付け忘れ、末尾に裸のJSON配列 ["…","…"] だけ出した場合も必ず本文から除去（吹き出しに ["次どうする？"] が漏れるのを防ぐ） */
    var m4=t.match(/\n?\s*(\[\s*"[^\[\]\n]{2,}"\s*(?:,\s*"[^\[\]\n]{2,}"\s*)*\])\s*$/);
@@ -986,7 +1136,39 @@ diff -ruN pk/index.html fx/index.html
    /* 安全網：思考モデルがCHIPS生成の推論を本文に漏らした場合（q1: … (13 chars) - continues …／Let's double-check chip lengths／≤16 characters, Natural enticing 等）、その塊を末尾ごと除去 */
    var _cti=t.search(/[\(（]\s*\d{1,2}\s*chars?\b|Let'?s\s+double-check|double-?check chip|≤\s*\d+\s*char|Natural,?\s*enticing|chip length|(?:\n|^)\s*q\s*[1-3]\s*[:：]/i);
    if(_cti>=0){ var _nl=t.lastIndexOf('\n',_cti); if(_nl>=0&&_cti-_nl<120) _cti=_nl; if(_cti>0) t=t.slice(0,_cti); }
-@@ -2363,13 +2480,13 @@
+@@ -2274,6 +2416,31 @@
+  id:'Jika Anda dalam bahaya, hubungi nomor darurat setempat. Indonesia: 119 ext 8. Anda tidak sendirian.',
+  th:'หากคุณกำลังตกอยู่ในอันตราย โปรดโทรหมายเลขฉุกเฉินในพื้นที่ ไทย: สายด่วนสุขภาพจิต 1323 คุณไม่ได้อยู่คนเดียว'
+ };
++/* 住んでいる国の相談窓口を優先する（アプリの言語＝国ではない。例：スペイン語でもメキシコ在住ならメキシコの窓口）。
++   端末のタイムゾーン → 端末の言語設定の地域 の順で国を推定し、言語の既定の国と違う時だけ差し替える */
++var HL_HOME={ja:'JP',en:'US',zh:'CN',zt:'TW',ko:'KR',vi:'VN',es:'ES',pt:'BR',id:'ID',th:'TH'};
++var HL_LOCAL={US:'US: 988 (call or text)',CA:'Canada: 988 (call or text)',GB:'UK: Samaritans 116 123',IE:'Ireland: Samaritans 116 123',AU:'Australia: Lifeline 13 11 14',NZ:'New Zealand: 1737 (call or text)',IN:'India: Tele-MANAS 14416',SG:'Singapore: SOS 1767',PH:'Philippines: NCMH 1553',MY:'Malaysia: Befrienders 03-7627 2929',HK:'香港 Hong Kong: 2389 2222',TW:'台灣 Taiwan: 1925',CN:'中国大陆: 400-161-9995',JP:'日本 Japan: 0570-783-556',KR:'한국 Korea: 109',VN:'Việt Nam: 111',TH:'ไทย Thailand: 1323',ID:'Indonesia: 119 ext 8',ES:'España: 024',MX:'México: Línea de la Vida 800 911 2000',AR:'Argentina: 135',CO:'Colombia: 106',CL:'Chile: *4141',PE:'Perú: 113 (opción 5)',BR:'Brasil: CVV 188',PT:'Portugal: SNS 24 808 24 24 24'};
++var HL_PRE={ja:'今すぐ危険を感じるときは、お住まいの地域の緊急番号へ。相談先：',en:'If you’re in immediate danger, please call your local emergency number. Support line —',zh:'如果你有危险，请立即拨打当地急救电话。求助热线：',zt:'如果你有立即危險，請撥打當地緊急電話。求助專線：',ko:'즉시 위험하다면 지역 응급번호로 전화하세요. 상담 전화:',vi:'Nếu bạn đang gặp nguy hiểm, hãy gọi số khẩn cấp tại địa phương. Đường dây hỗ trợ:',es:'Si estás en peligro inmediato, llama a tu número de emergencias local. Línea de ayuda:',pt:'Se você está em perigo imediato, ligue para a emergência local. Linha de apoio:',id:'Jika Anda dalam bahaya, hubungi nomor darurat setempat. Layanan bantuan:',th:'หากคุณกำลังตกอยู่ในอันตราย โปรดโทรหมายเลขฉุกเฉินในพื้นที่ สายด่วน:'};
++var HL_POST={ja:'',en:'You’re not alone.',zh:'你并不孤单。',zt:'你並不孤單。',ko:'당신은 혼자가 아니에요.',vi:'Bạn không đơn độc.',es:'No estás solo/a.',pt:'Você não está sozinho(a).',id:'Anda tidak sendirian.',th:'คุณไม่ได้อยู่คนเดียว'};
++function _deviceCountry(){
++  var tz='',c='';
++  try{ tz=Intl.DateTimeFormat().resolvedOptions().timeZone||''; }catch(e){}
++  var T={'Asia/Tokyo':'JP','Asia/Seoul':'KR','Asia/Shanghai':'CN','Asia/Chongqing':'CN','Asia/Urumqi':'CN','Asia/Harbin':'CN','Asia/Taipei':'TW','Asia/Hong_Kong':'HK','Asia/Macau':'HK','Asia/Ho_Chi_Minh':'VN','Asia/Saigon':'VN','Asia/Bangkok':'TH','Asia/Jakarta':'ID','Asia/Makassar':'ID','Asia/Jayapura':'ID','Asia/Pontianak':'ID','Asia/Singapore':'SG','Asia/Manila':'PH','Asia/Kuala_Lumpur':'MY','Asia/Kuching':'MY','Asia/Kolkata':'IN','Asia/Calcutta':'IN','Europe/London':'GB','Europe/Dublin':'IE','Europe/Madrid':'ES','Atlantic/Canary':'ES','Africa/Ceuta':'ES','Europe/Lisbon':'PT','Atlantic/Madeira':'PT','Atlantic/Azores':'PT','America/Bogota':'CO','America/Santiago':'CL','America/Lima':'PE','America/Buenos_Aires':'AR','Pacific/Auckland':'NZ','Pacific/Honolulu':'US','America/Adak':'US','America/Anchorage':'US','America/Phoenix':'US','America/Boise':'US','America/Detroit':'US','America/New_York':'US','America/Chicago':'US','America/Denver':'US','America/Los_Angeles':'US','America/Toronto':'CA','America/Vancouver':'CA','America/Edmonton':'CA','America/Winnipeg':'CA','America/Halifax':'CA','America/St_Johns':'CA','America/Regina':'CA','America/Montreal':'CA'};
++  if(T[tz]) c=T[tz];
++  else if(/^America\/Argentina\//.test(tz)) c='AR';
++  else if(/^Australia\//.test(tz)) c='AU';
++  else if(/^America\/(Indiana|Kentucky|North_Dakota)\//.test(tz)) c='US';
++  else if(/^America\/(Mexico_City|Monterrey|Cancun|Tijuana|Merida|Chihuahua|Hermosillo|Mazatlan|Bahia_Banderas|Matamoros|Ojinaga|Ciudad_Juarez)$/.test(tz)) c='MX';
++  else if(/^America\/(Sao_Paulo|Fortaleza|Recife|Bahia|Manaus|Belem|Cuiaba|Campo_Grande|Porto_Velho|Boa_Vista|Rio_Branco|Maceio|Araguaina|Santarem|Noronha|Eirunepe)$/.test(tz)) c='BR';
++  if(!c){ try{ var m=(navigator.language||'').match(/-([A-Z]{2})\b/i); if(m) c=m[1].toUpperCase(); }catch(e){} }
++  return c;
++}
++var HL_LBL={ja:'相談先：',en:'Support line —',zh:'求助热线：',zt:'求助專線：',ko:'상담 전화:',vi:'Đường dây hỗ trợ:',es:'Línea de ayuda:',pt:'Linha de apoio:',id:'Layanan bantuan:',th:'สายด่วน:'};
++(function(){ try{ var c=_deviceCountry(); if(!c) return;
++  Object.keys(HELPLINE).forEach(function(L){ if(HL_HOME[L]===c) return;
++    var emg=HL_PRE[L].replace(HL_LBL[L],'').trim(), end=/^(ja|zh|zt)$/.test(L)?'。':(L==='th'?' ':'. ');
++    /* 一覧にある国はその国の窓口、無い国は「地域の緊急番号へ」だけ（別の国の番号は出さない） */
++    HELPLINE[L]=(HL_LOCAL[c]?(HL_PRE[L]+' '+HL_LOCAL[c]+end):(emg+' '))+(HL_POST[L]||''); HELPLINE[L]=HELPLINE[L].trim(); }); }catch(e){} })();
+ function _crisisCd(v){ try{ if(v===undefined) return parseInt(localStorage.getItem('pk_crisis_cd')||'0',10)||0; localStorage.setItem('pk_crisis_cd',String(v)); }catch(e){} return v||0; }
+ function aftercareBlock(){ /* 危機発話の直後、数ターンは占いに戻らず寄り添いを維持 */
+   try{ var cd=_crisisCd();
+@@ -2363,13 +2530,13 @@
    (pro.pillars||[]).forEach(function(p){ if(p.tenStar&&p.tenStar!=='日主')present[p.tenStar]=(present[p.tenStar]||0)+1;
      (p.hiddenStems||[]).forEach(function(h){ if(h.tenStar)present[h.tenStar]=(present[h.tenStar]||0)+1; }); });
    var dp=(pro.pillars||[])[2];
@@ -1002,7 +1184,7 @@ diff -ruN pk/index.html fx/index.html
    if(pro.now&&pro.annualFortunes){ var t=pro.annualFortunes.find(function(a){return a.year===pro.now.year;}); var n=pro.annualFortunes.find(function(a){return a.year===pro.now.year+1;}); ty=t?t.tenStar:''; ny=n?n.tenStar:''; }
    var stars=(window.shinsatsuHits?window.shinsatsuHits(pro):[]).map(function(s){return s.split('(')[0];});
    return {present:present,dayBranchStar:dayBranchStar,weak:weak,strong:strong,zero:zero,curDaeun:curDaeun,ty:ty,ny:ny,stars:stars,sex:(state.profile&&state.profile.sex)||'female'};
-@@ -2480,9 +2597,29 @@
+@@ -2480,9 +2647,31 @@
    /* 半角・全角アスタリスクとも完全除去（＊が全角ですり抜けるケース対策） */
    return t.replace(/[*＊✱✳∗﹡]+/g,'').replace(/^[#＃]+\s*/gm,'').replace(/^[-•]\s+/gm,'・').replace(/[`｀]+/g,'').replace(/__/g,'');
  }
@@ -1012,6 +1194,8 @@ diff -ruN pk/index.html fx/index.html
 +function _finalTidy(t){
 +  t=t.replace(/([,，、])\s*[,，、]+/g,'$1').replace(/[ \t]*[,，、]+\s*$/,'');
 +  if(state.lang==='ko') t=t.replace(/(^|[\n.!?。]\s*)님\s*[,，]?\s*/g,'$1');
++  /* 中文：「命盘→你的特质」の置換で「你们的你的特质」「你的你的特质」になる崩れを直す */
++  if(state.lang==='zh'||state.lang==='zt') t=t.replace(/(你們|你们|他們|他们|兩人|两人|彼此)(的)?(兩人的|两人的)?你的特質/g,'$1的特質').replace(/(你們|你们|他們|他们|兩人|两人|彼此)(的)?(兩人的|两人的)?你的特质/g,'$1的特质').replace(/你的你的/g,'你的');
 +  if(state.lang==='ko') if(/별자리/.test(t)){ t=t.replace(/별자리/g,'타고난 별'); t=_koJosa(t,'타고난 별'); } /* 韓国語の「별자리」は西洋星座の意味になる */
 +  return t;
 +}
@@ -1032,7 +1216,7 @@ diff -ruN pk/index.html fx/index.html
    /* モデルが内部スタイルメモを [Keep register consistent...] 等の角括弧行として出力してしまう事故への防御：
       角括弧だけで構成された行を丸ごと除去（全言語共通） */
    t=t.replace(/ろちゅうび/g,'ろちゅうか');
-@@ -2645,7 +2782,7 @@
+@@ -2645,7 +2834,7 @@
      t+='USAGE: for tiredness/health/self-care topics, weave in the body tendency and 1-2 foods naturally, as caring daily advice \u2014 NEVER diagnose, never predict illness, never contradict doctors. When they mention an actual illness or symptom, do BOTH, always in this order: (1) clearly and warmly advise getting it checked by a doctor/professional in ONE short sentence woven into a substantive bubble — never as a standalone bubble (「ずっと続いてるなら、一度お医者さんに診てもらうと安心だよ」— never a vague もし行くなら), THEN (2) ALWAYS still give your support from the chart and 薬膳 lens \u2014 the element tendency, nourishing foods, rest timing, a good day for the hospital visit. Never leave them with only 病院へ行ってね and nothing else; your role is the warmth and self-care wisdom AROUND the medical care. For hospital/moving/travel direction questions: medical quality and convenience first \u2014 then, as a supportive extra, offer their favorable direction from THIS data and a GOOD DAY for the visit. This direction reading comes from their Four Pillars favorable elements \u2014 never present it as 九星術 and never invent nine-star numbers.\n';
      if(!heavy) t+='CONSTITUTION LENS (気血水 — Eastern self-care patterns you studied a little; use ONLY when the user describes how they FEEL, and as gentle self-care, NEVER a diagnosis): tired / short of breath / easily run-down / poor appetite = 気虚 (depleted qi -> 補気: rest, chew slowly; 山芋・米/もち米・なつめ・かぼちゃ・鶏肉・きのこ・栗・いんげん豆); bloating or moving pains / sighing / mood swings / tension = 気滞 (stuck qi -> 理気: light movement, unwind; 柑橘・陳皮・セロリ・三つ葉/香味野菜・ミント・ジャスミン茶・らっきょう); pale face-nails-hair / dryness / dizziness / light sleep = 血虚 (under-nourished blood -> 補血: avoid late nights; レバー・赤身肉・なつめ・黒豆・ほうれん草・にんじん・黒ごま・竜眼・プルーン・ぶどう・あさり); stiff shoulders / dull complexion / stabbing or period pain = 瘀血 (stagnant blood -> 活血: warmth, gentle exercise; 青魚(いわし/さば)・玉ねぎ・納豆・黒酢・にんにく・らっきょう・生姜・桃); hot flushes / night sweats / dry mouth-throat / red tongue with little coat = 陰虚 (dry-heat -> 滋陰: ease off late nights & strong spice; 白きくらげ・梨・百合・豆腐・山芋・松の実・黒ごま・はちみつ・豆乳・トマト・きゅうり); cold / puffy / low energy / feels the cold = 陽虚 (yang-cold -> 温陽: no cold drinks, keep the lower body warm; 羊肉・鶏肉・えび・ニラ・生姜・ねぎ・シナモン・くるみ・山椒・黒糖); heavy or puffy body / loose stool / worse on damp rainy days = 痰湿・水滞 (damp -> 化湿: fewer sweets & cold things; はと麦・冬瓜・小豆・緑豆・とうもろこし(ひげ茶)・大根・生姜・昆布). Combinations are real — e.g. 気陰両虚 (tired YET flushed or dry; common after illness, overwork or aging) = gently nourish qi AND moisten, plus proper rest. Reflect the pattern in plain, caring everyday words. NEVER print an internal label, tag or heading in your reply — no （薬膳・養生：…）, no （気血水：…）, no （気陰両虚）/（気虚）-style tags, no 養生：/薬膳： prefixes, no bracketed classification of any kind. Write the food-and-rest advice as ONE natural flowing sentence a caring friend would text. The words 気血水・薬膳・養生・気虚・気滞・血虚・瘀血・陰虚・陽虚・痰湿・水滞・気陰両虚 are your INTERNAL lens ONLY and must not appear in the reply. Name the pattern (気虚/陰虚/気陰両虚…) ONLY if they explicitly ask WHY. HARD LINE (never cross): never state or imply a disease or medical diagnosis (only a tendency toward…); never tell them to take a specific 漢方薬 or supplement as treatment — at most, if they ask, suggest that traditional 漢方 has formulas for such patterns and that a 漢方 doctor or pharmacist should choose and advise one — do NOT name a specific formula yourself; and if a symptom is persistent, strong, sudden or alarming, or they are pregnant / chronically ill / on medication, send them to a professional FIRST (this overrides any food or 養生 tip). A weak element in the chart is a 養生 focus, NOT an illness — say so if it matters.\n';
      if(!heavy){ var _si=pkSeasonIdx(); var _SN=(_si<0)?'a tropical, year-round climate with no distinct four seasons — keep seasonal advice light':['spring (春) → nourish 肝: greens, celery, citrus, herbs, gentle sour, and unwinding','summer (夏) → cool 心: bitter foods, tomato, cucumber, mung bean, hydrate and rest (around the rainy season / 長夏, also dry 脾-damp: はと麦, corn, ginger, fewer cold & sweet things)','autumn (秋) → moisten 肺: pear, lotus root, daikon, white fungus, guard against dryness','winter (冬) → warm & store 腎: roots, black foods, walnut, shrimp, ginger, keep warm and sleep early'][_si]; t+='SEASONAL 養生 (right now it is '+_SN+'). Combine the CURRENT season with their weakest element AND any pattern they describe — e.g. spring + a 気滞 feel = gently move qi with greens, citrus and a walk; summer + 陰虚 = cool and moisten. FOODS TO GO EASY ON (match to their weak element / pattern, never a hard ban): heat or dryness types (火/金 weak, 陰虚) → less spicy, fried, alcohol and caffeine; cold or damp types (水/土 weak, 陽虚, 痰湿) → less raw-cold food, icy drinks and excess sweets. Offer this warmly as everyday self-care — 1-2 items woven in, never a long list or a lecture.\n'; }
@@ -1041,7 +1225,7 @@ diff -ruN pk/index.html fx/index.html
      return t;
    }catch(e){ return ''; }
  }
-@@ -3142,14 +3279,14 @@
+@@ -3142,14 +3331,14 @@
    });
    /* --- 大運（各人の現在＋次） --- */
    function decadeTags(pro,who){
@@ -1059,7 +1243,7 @@ diff -ruN pk/index.html fx/index.html
      });
      return out.length?(who+'→'+out.join(' / ')):'';
    }
-@@ -3203,7 +3340,7 @@
+@@ -3203,7 +3392,7 @@
    var out=[];
    try{
      var pro=state.chart.pro, dp=pro.pillars[2], nowY=pro.now.year;
@@ -1068,7 +1252,7 @@ diff -ruN pk/index.html fx/index.html
      var STEMS='甲乙丙丁戊己庚辛壬癸', BRS='子丑寅卯辰巳午未申酉戌亥';
      function elOf(st){ return (STEM[st]||{}).el; }
      function keRel(a,b){ return EL_KE[elOf(a)]===elOf(b)||EL_KE[elOf(b)]===elOf(a); }
-@@ -3234,7 +3371,7 @@
+@@ -3234,7 +3423,7 @@
        [[0,'年柱'],[1,'月柱'],[3,'時柱']].forEach(function(pi){
          var np=pro.pillars[pi[0]]; if(np&&np.ganzhi&&isNatchin(x.ganzhi,np.ganzhi)) tags.push('納音 vs '+pi[1]);
        });
@@ -1077,7 +1261,7 @@ diff -ruN pk/index.html fx/index.html
      });
      if(!out.length) return '';
      return '[DECADE 納音・律音] '+out.join(' | ')+' — a 納音 decade is a 10-year blank-slate chapter: old methods reset, and humbly re-examining oneself lets them ride a wave of renewal (people who struggled before can see life turn 180°). A 律音 decade doubles the day-pillar theme for 10 years. Weigh this heavily: it colors everything inside it.\n';
-@@ -3352,15 +3489,18 @@
+@@ -3352,15 +3541,18 @@
        var se=_SETSU_SEASON[d.branch]||null, el=se?se.el:'';
        var mark=fav[el]||''; /* 喜 / 忌 / '' */
        /* 節木運＝方合(季節)が前の大運から切り替わる大運＝新しい季節に入る"変わり目"。順行・逆行の両方で正しい。 */
@@ -1099,7 +1283,7 @@ diff -ruN pk/index.html fx/index.html
                season:se?se.s:'',seasonEl:el,mark:mark,isSetsu:isSetsu,isTu:isSetsu,intense:intense,
                enterSeason:isSetsu?(se?se.s:''):'',enterEl:isSetsu?el:'',enterMark:isSetsu?mark:'',
                startYear:startY,swayFrom:startY!=null?startY-1.5:null,swayTo:startY!=null?startY+1.5:null,current:current};
-@@ -3369,10 +3509,13 @@
+@@ -3369,10 +3561,13 @@
      var forward=!!(pro.startFortune&&pro.startFortune.forward);
      /* 今から見て次（または現在進行中）の節木運 */
      var next=null;
@@ -1115,7 +1299,7 @@ diff -ruN pk/index.html fx/index.html
      return {blocks:blocks,next:next,nowAge:nowAge,proactive:proactive,forward:forward};
    }catch(e){ return null; }
  }
-@@ -3390,18 +3533,19 @@
+@@ -3390,18 +3585,19 @@
        arc.push(p.label+'='+p.terrain+' ('+(LIFE[p.label]||'')+')');
      });
      var df=pro.decadeFortunes||[], ci=(pro.now&&pro.now.daeunIndex>=0)?pro.now.daeunIndex:-1;
@@ -1140,7 +1324,7 @@ diff -ruN pk/index.html fx/index.html
        t+='\n';
      }
      return t;
-@@ -3411,10 +3555,10 @@
+@@ -3411,10 +3607,10 @@
    try{
      var a=setsubokuAnalysis(); if(!a||!a.blocks.length) return '';
      var SEA={winter:'winter/water',spring:'spring/wood',summer:'summer/fire',autumn:'autumn/metal'};
@@ -1154,7 +1338,7 @@ diff -ruN pk/index.html fx/index.html
      t+='[SETSUBOKU — HOW TO SPEAK OF IT] '+(a.proactive?'A turning-point is within ~1.5 years, so you MAY raise it warmly on your own when relevant. ':'Only discuss this if the user asks about life turning-points / their future direction; do NOT bring it up unprompted. ')+'RULES: (1) NEVER say a season is "30 years of bad luck" or doom — a challenging season is a backdrop, and daily action shapes the lived experience; (2) frame a turning-point as 人生の曲がり角/植え替えの時期 — unsettled for ~1.5 years but a doorway to a new flow once crossed; encourage small steps, a forward-looking mindset, and firming up footing before big decisions; (3) speak in FELT, concrete everyday terms (what tends to shift — work, home, the people around them — and how to steady it), never the bare label "慎重な時期"; (4) HEALTH stays gentle self-care only ("揺らぎやすいから休みながら整えて") — NEVER predict illness or diagnose; (5) NEVER use 九星/本命星/方位学/風水 — if you mention a lucky direction or colour, it must come only from their Four-Pillars 喜神; (6) if a favourable season falls early in life = 早咲き, late = 大器晩成 — say it kindly.\n';
      return t;
    }catch(e){ return ''; }
-@@ -3434,7 +3578,7 @@
+@@ -3434,7 +3630,7 @@
      var segs=a.blocks.map(function(b){
        var star=b.isSetsu?('<span class="sb-star" data-t="節木運">★</span>'):'';
        var nowp=b.current?('<span class="sb-now">'+pick(SB_I18N.now)+'</span>'):'';
@@ -1163,7 +1347,7 @@ diff -ruN pk/index.html fx/index.html
          +'<div class="sb-age">'+b.startAge+'</div><div class="sb-cell">'+nowp+star+'</div></div>';
      }).join('');
      var lg=['spring','summer','autumn','winter'].map(function(s){return '<span class="sb-lg sb-'+s+'"><i></i>'+pick(SB_I18N[s])+'</span>';}).join('');
-@@ -3603,10 +3747,11 @@
+@@ -3603,10 +3799,11 @@
      var nowY=(pro.now&&pro.now.year)||0, curD=(pro.now&&pro.now.daeunIndex>=0)?pro.now.daeunIndex:-1;
      var M=(DEC_PHRASE&&(DEC_PHRASE[state.lang]||DEC_PHRASE.en))||{};
      var decLines=[];
@@ -1176,7 +1360,18 @@ diff -ruN pk/index.html fx/index.html
        decLines.push(age+': '+(M[d.tenStar]||d.tenStar));
      });
      var yrLines=[];
-@@ -3754,11 +3899,42 @@
+@@ -3627,8 +3824,9 @@
+     if(!state.chart||!state.chart.pro) return '';
+     var deck=(window.richGrounding?window.richGrounding(state.chart.pro):(window.proGrounding?window.proGrounding(state.chart.pro):''));
+     var t='\n[COMPUTED CHART — never invent beyond this; translate to everyday language, never output the technical labels. ⚠️ You ALREADY have the user’s own birth date, birth time and full chart (it is registered and computed right here). NEVER ask the user for their own birth date / birth time / age / chart — you have it, and asking is a jarring bug that breaks trust. If they ask you their own birthday, tell it to them. Only when reading COMPATIBILITY with ANOTHER person may you ask for THAT other person’s birth date.]\n'+deck+'\n';
++    try{ var _pf=state.profile||{}; if(_pf.y) t+='USER (the person you are talking to) — born '+_pf.y+'/'+_pf.m+'/'+_pf.d+(_pf.tu?'':(' '+(_pf.hh!=null?_pf.hh:'?')+':'+('0'+(_pf.mi||0)).slice(-2)))+', '+(_pf.sex==='male'?'male':'female')+'. This is the USER’s own birthday.\n'; }catch(e){}
+     if(state.mode==='aisho'&&state.chartB&&state.chartB.pro){
+-      t+='\n[PARTNER CHART (brief) — computed by the engine from the birthdate the user gave (birth time unknown: day pillar is reliable, hour-level detail is not). Ground EVERY statement about this person ONLY in this data — never improvise their traits.]\n'+(window.richGrounding?window.richGrounding(state.chartB.pro,true):'')+'\n';
++      t+='\n[PARTNER CHART (brief) — computed by the engine from the birthdate the user gave (birth time unknown: day pillar is reliable, hour-level detail is not). Ground EVERY statement about this person ONLY in this data — never improvise their traits.]\n'+((state.chartB._bkey)?('PARTNER (the OTHER person) — born '+state.chartB._bkey.replace(/-/g,'/')+', '+(state.chartB._sex==='male'?'male':'female')+'. This is NOT the user’s birthday; never say the user was born on this date, and never say the two birthdays are the same unless the USER line above shows the same date.\n'):'')+(window.richGrounding?window.richGrounding(state.chartB.pro,true):'')+'\n';
+       if(state.compat&&window.compatGrounding){ t+='\n[COMPATIBILITY — computed]\n'+window.compatGrounding(state.compat)+'\n'; }
+       try{ var _ctb=coupleTimingBlock(); if(_ctb) t+='\n'+_ctb; }catch(e){}
+       /* 二人の日柱同士の納音・律音（算命学系の相性読み） */
+@@ -3754,11 +3952,42 @@
    if(L==='ja'){ for(var _r=0;_r<2;_r++){ t=t.replace(/(\u6642\u671f|\u904b\u6c17|\u30a8\u30cd\u30eb\u30ae\u30fc)\u306e\1/g,'$1'); } }
    return t;
  }catch(e){ return t; } }
@@ -1220,7 +1415,25 @@ diff -ruN pk/index.html fx/index.html
    /* 「晩年運」「中年運」等の複合語が「年運」置換に巻き込まれる誤りを復元（晩その年の運→晩年の運） */
    if(L==='ja') t=t.replace(/([晩中幼青老少壮])その年の運/g,'$1年の運');
    /* 干支の地支が「◯年／◯の年運」の形で漏れる誤り（午のその年の運→その年の運）を平易化。午前/子供/未来等は年・運を伴わないので無傷 */
-@@ -3885,7 +4061,7 @@
+@@ -3796,6 +4025,17 @@
+ function _isDeepQ(q){ q=(q||''); return /理屈|ロジック|論理|根拠|仕組み|なぜ|なんで|どうして|詳しく|くわしく|深く|why\b|reason|explain|in detail|deeply|logic|为什么|為什麼|原理|道理|详细|詳細|深入|逻辑|邏輯|根据|根據|왜|이유|자세히|깊이|논리|근거|원리|어떻게|tại sao|vì sao|lý do|chi tiết|giải thích|por qué|por qu|porque|porqu|razón|razã|razão|detalle|detalh|profund|lógica|explic|motivo|kenapa|mengapa|alasan|detail|mendalam|logika|jelaskan|ทำไม|เหตุผล|ละเอียด|ลึก|อธิบาย|เพราะ|เจาะลึก/i.test(q); }
+ 
+ /* 過去のAI発言のほぼ丸写しを検知（弱いモデルが履歴をコピーする事故対策） */
++/* 返事の一部の段落が、前の返事の段落をそのまま写している時は、その段落だけ落とす（最初の段落は残す） */
++function _dropRepeatedParas(t){ try{
++  var ps=String(t||'').split(/\n{2,}/); if(ps.length<2) return t;
++  var norm=function(x){ return String(x||'').replace(/[\s　]/g,''); };
++  var grams=function(x){ var g={}; for(var i=0;i<=x.length-8;i+=2){ g[x.substr(i,8)]=1; } return g; };
++  var prev=state.msgs.filter(function(m){return m.role==='ai';}).slice(-30).map(function(m){ return grams(norm(m.text)); });
++  var keep=ps.filter(function(p,idx){ var a=norm(p); if(idx===0||a.length<60) return true; var ga=grams(a), ka=Object.keys(ga); if(!ka.length) return true;
++    for(var j=0;j<prev.length;j++){ var hit=0; for(var k=0;k<ka.length;k++){ if(prev[j][ka[k]]) hit++; } if(hit/ka.length>=0.6) return false; }
++    return true; });
++  return keep.join('\n\n');
++}catch(e){ return t; } }
+ function _nearDupOfHistory(t){ try{
+   if(!t||t.length<60) return false;
+   var norm=function(x){ return String(x||'').replace(/[\s　]/g,''); };
+@@ -3885,7 +4125,7 @@
    var _etop=''; try{ _etop=_effectiveTopic(q); }catch(e){}
    var _loveTopic=(_etop==='love'||_etop==='marriage');
    var smart=deep||back||offscope||_loveTopic||(state.lang==='ko')||RE_DECISION.test(q)||RE_HEAVY.test(q)||RE_SELFHARM.test(q)||RE_NICO_SELF.test(q)||RE_LIFEPATH.test(q);
@@ -1229,7 +1442,7 @@ diff -ruN pk/index.html fx/index.html
    /* 体験モード: APIキーがある時はサーバーを介さず直接Geminiへ（回数制限なし。キーは端末内のみ） */
    var dk=directKey();
    var _mdl=smart?(window.PK_DIRECT_MODEL_DEEP||'gemini-3.6-flash'):(window.PK_DIRECT_MODEL||'gemini-2.5-flash-lite');
-@@ -3903,11 +4079,12 @@
+@@ -3903,20 +4143,21 @@
      .then(function(j){ var t=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0].text; if(!t){ if(!errInfo) errInfo='EMPTY_REPLY'; throw 0; }
        var _leak=_looksLikeThinkLeak(t); t=_stripThinkLeak(t);   /* 思考モデルの自己レビュー独り言が本文に漏れた場合：救済（引用回収/メタ切り落とし） */
        t=_extractChips(t); var _o=(deep?t:_softenJargon(t)); _o=_stripInternalLabels(_o); _o=_stripScaffold(_o); _o=_stripLeadThink(_o); if(state.lang!=='ja'&&state.lang!=='zh'&&state.lang!=='zt') _o=_stripHan(_o);
@@ -1244,7 +1457,27 @@ diff -ruN pk/index.html fx/index.html
          var ep2=dk?('https://generativelanguage.googleapis.com/v1beta/models/'+_rm+':generateContent?key='+encodeURIComponent(dk)):'/api/gemini';
          return fetch(ep2,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free','x-pk-deep':'1'},body:JSON.stringify(p2)})
            .then(function(r2){ return r2.ok?r2.json():null; })
-@@ -4094,8 +4271,12 @@
+           .then(function(j2){ var t2=j2&&j2.candidates&&j2.candidates[0]&&j2.candidates[0].content&&j2.candidates[0].content.parts&&j2.candidates[0].content.parts[0].text;
+-            if(t2){ t2=_stripThinkLeak(t2); t2=_extractChips(t2); var o2=_softenJargon(t2); o2=_stripInternalLabels(o2); o2=_stripScaffold(o2); o2=_stripLeadThink(o2); if(state.lang!=='ja'&&state.lang!=='zh'&&state.lang!=='zt') o2=_stripHan(o2); o2=_stripPreamble(_stripFufu(o2)); if(o2.replace(/\s/g,'').length>=12) return {text:o2,demo:false}; }
++            if(t2){ t2=_stripThinkLeak(t2); t2=_extractChips(t2); var o2=_softenJargon(t2); o2=_stripInternalLabels(o2); o2=_stripScaffold(o2); o2=_stripLeadThink(o2); if(state.lang!=='ja'&&state.lang!=='zh'&&state.lang!=='zt') o2=_stripHan(o2); o2=_dropRepeatedParas(_stripPreamble(_stripFufu(o2))); if(o2.replace(/\s/g,'').length>=12) return {text:o2,demo:false}; }
+             var _fb=_stripPreamble(_stripFufu(_o)); if(_fb.replace(/\s/g,'').length>=12) return {text:_fb,demo:false}; try{if(window.console)console.warn('[pk] leak/empty after retry');}catch(_e){} return {text:pick(ERR_NOTE),demo:true}; })
+           .catch(function(){ var _fb=_stripPreamble(_stripFufu(_o)); return {text:(_fb.replace(/\s/g,'').length>=12?_fb:pick(ERR_NOTE)),demo:(_fb.replace(/\s/g,'').length>=12?false:true)}; });
+       }
+-      var _out=_stripPreamble(_stripFufu(_o)); if(_out.replace(/\s/g,'').length<12){ if(!errInfo) errInfo='EMPTY_AFTER_GUARD'; throw 0; } return {text:_out,demo:false}; })
++      var _out=_dropRepeatedParas(_stripPreamble(_stripFufu(_o))); if(_out.replace(/\s/g,'').length<12){ if(!errInfo) errInfo='EMPTY_AFTER_GUARD'; throw 0; } return {text:_out,demo:false}; })
+     .catch(function(){ if(limitHit) return {text:pick(SRV_BUSY),demo:true,limit:true}; /* ブロック/失敗時：安全応答か正直なエラー文のみ（作り置きの鑑定は返さない） */ if(risk) return {text:safeReply(risk),demo:false,noBill:true}; try{ if(errInfo&&window.console) console.warn('[pk] reply failed:',errInfo); }catch(_e){} return {text:pick(ERR_NOTE),demo:true}; });
+ }
+ /* ---- 長期記憶：8通ごとに「この人のメモ帳」をAIが更新し端末内(pk_mem)に保存 ---- */
+@@ -4079,6 +4320,8 @@
+ };
+ if($('devKeyClear')) $('devKeyClear').onclick=function(){ try{ localStorage.removeItem('pk_key'); }catch(e){} $('devKey').value=''; updateDevBox(); };
+ (function(){ var seg=$('bsexSeg'); if(seg) seg.addEventListener('click',function(e){ var btn=e.target.closest('.segb'); if(!btn) return; seg.querySelectorAll('.segb').forEach(function(x){x.classList.remove('on');}); btn.classList.add('on'); }); })();
++/* 開発者用の体験モード欄は一般の利用者には出さない（?dev=1 で開いた端末・キー設定済み・PK_DIRECT_KEY のときだけ表示） */
++try{ if(/[?&]dev=1/.test(location.search)) localStorage.setItem('pk_dev','1'); if(window.PK_DIRECT_KEY||localStorage.getItem('pk_dev')||localStorage.getItem('pk_key')) $('devBox').style.display=''; }catch(e){}
+ if(window.PK_DIRECT_KEY&&$('devPlanWrap')){ $('devPlanWrap').style.display=''; }
+   if(window.PK_DIRECT_KEY&&$('devPlan')){ $('devPlan').value=curPlan(); $('devPlan').onchange=function(){ if(!state.profile) return; state.profile.plan=this.value; saveProfile(state.profile); }; }
+ updateDevBox();
+@@ -4094,8 +4337,12 @@
      var rows=pro.decadeFortunes.map(function(x,i){
        var yrs=x.startYear+'〜'+(x.startYear+9);
        var cur=(i===di);
@@ -1258,7 +1491,7 @@ diff -ruN pk/index.html fx/index.html
      var tys=turningYears(11);
      var yb=pro.pillars[0].branch, kr=KOURAN[yb], tk=TENKI[yb], loves=[];
      (pro.annualFortunes||[]).forEach(function(a){ if(a.year>=nowY&&a.year<=nowY+10&&(a.branch===kr||a.branch===tk)) loves.push(a.year); });
-@@ -4133,7 +4314,7 @@
+@@ -4133,7 +4380,7 @@
      daiunHtml='<div class="section-label">'+pick({ja:'大運（10年ごとの運気の流れ）',en:'Decade luck cycles',zh:'大运（每十年的运势）',zt:'大運（每十年的運勢）',ko:'대운 (10년 주기 흐름)',vi:'Đại vận (chu kỳ 10 năm)',es:'Ciclos de suerte (10 años)',pt:'Ciclos de sorte (10 anos)',id:'Siklus 10 tahunan',th:'วัฏจักรโชค 10 ปี'})+'</div>'+
        '<div class="daiun">'+c.pro.decadeFortunes.map(function(df,i){
          var _v=_unV(df.ganzhi,[]),_tn=_TN[_v.k]||_TN['中'];
@@ -1267,7 +1500,7 @@ diff -ruN pk/index.html fx/index.html
        }).join('')+'</div>'+
        '<p class="disc-note" style="margin-top:6px">'+pick({ja:'各10年の色は用神（あなたにとっての喜／忌）で見た傾向です。追い風＝喜神が巡る（相生）／向かい風＝忌神が巡る（相剋）／太過注意＝その気が強まりすぎ（喜神でも過ぎれば負担）。干支をタップで通変星の意味。',en:'Each decade’s color shows its tendency by your 用神 (favorable/unfavorable elements): Tailwind = a favorable element cycles in (nourishing); Headwind = an unfavorable one (draining); Over-strong = that energy runs too high (even a favorable one can burden when excessive). Tap a pillar for its ten-god meaning.',zh:'每个十年的颜色，是按你的用神（对你而言的喜／忌）判断的走势。顺风＝喜神来临（相生）／逆风＝忌神来临（相克）／过旺注意＝该气过强（喜神过头也会成负担）。点按干支看十神含义。',zt:'每個十年的顏色，是依你的用神（對你而言的喜／忌）判斷的走勢。順風＝喜神來臨（相生）／逆風＝忌神來臨（相剋）／過旺注意＝該氣過強（喜神過頭也會成負擔）。點按干支看十神含義。',ko:'각 10년의 색은 용신(당신에게의 희／기)으로 본 흐름입니다. 순풍＝희신이 도는 때(상생)／역풍＝기신이 도는 때(상극)／과다주의＝그 기운이 지나치게 강함(희신도 지나치면 부담). 간지를 탭하면 십성 의미.',vi:'Màu của mỗi thập niên thể hiện xu hướng theo Dụng thần của bạn (hành hỷ/kỵ): Thuận＝hành hỷ tới (tương sinh)／Nghịch＝hành kỵ tới (tương khắc)／Thái quá＝khí đó quá mạnh (hành hỷ dư cũng thành gánh nặng). Chạm vào trụ để xem ý nghĩa thập thần.',es:'El color de cada década muestra su tendencia según tu 用神 (elementos favorables/desfavorables): a favor＝entra un elemento favorable (nutre)／en contra＝uno desfavorable (desgasta)／exceso＝esa energía es demasiado fuerte (incluso una favorable pesa si sobra). Toca un pilar para ver su significado.',pt:'A cor de cada década mostra sua tendência pelo seu 用神 (elementos favoráveis/desfavoráveis): a favor＝entra um elemento favorável (nutre)／contra＝um desfavorável (desgasta)／excesso＝essa energia fica forte demais (até uma favorável pesa em excesso). Toque num pilar para ver o significado.',id:'Warna tiap dekade menunjukkan kecenderungan menurut 用神 Anda (elemen menguntungkan/merugikan): angin baik＝elemen menguntungkan datang (menyuburkan)／angin lawan＝yang merugikan (menguras)／berlebih＝energi itu terlalu kuat (yang baik pun membebani bila berlebih). Ketuk pilar untuk maknanya.',th:'สีของแต่ละทศวรรษบอกแนวโน้มตามอิงสิน (用神) ของคุณ (ธาตุที่ส่งเสริม/ขัดขวาง): ส่งเสริม＝ธาตุดีเวียนมา (เกื้อกูล)／สวนทาง＝ธาตุร้ายเวียนมา (บั่นทอน)／แรงเกิน＝พลังนั้นแรงเกินไป (ธาตุดีถ้ามากไปก็เป็นภาระ) แตะที่เสาเพื่อดูความหมายสิบเทพ'})+'</p>'+
        (c.pro.startFortune?'<p class="disc-note" style="margin-top:8px">'+pick({ja:'運の切り替わりは '+c.pro.startFortune.years+'歳'+c.pro.startFortune.months+'ヶ月から、10年ごと。',en:'Cycles change every 10 years starting at age '+c.pro.startFortune.years+'y '+c.pro.startFortune.months+'m.',zh:'从'+c.pro.startFortune.years+'岁'+c.pro.startFortune.months+'个月起，每十年一换。',zt:'從'+c.pro.startFortune.years+'歲'+c.pro.startFortune.months+'個月起，每十年一換。',ko:c.pro.startFortune.years+'세 '+c.pro.startFortune.months+'개월부터 10년마다 바뀝니다.',vi:'Chu kỳ đổi mỗi 10 năm, bắt đầu từ '+c.pro.startFortune.years+' tuổi '+c.pro.startFortune.months+' tháng.',es:'Los ciclos cambian cada 10 años desde los '+c.pro.startFortune.years+' años y '+c.pro.startFortune.months+' meses.',pt:'Os ciclos mudam a cada 10 anos, a partir de '+c.pro.startFortune.years+' anos e '+c.pro.startFortune.months+' meses.',id:'Siklus berganti tiap 10 tahun mulai usia '+c.pro.startFortune.years+' th '+c.pro.startFortune.months+' bln.',th:'วัฏจักรเปลี่ยนทุก 10 ปี เริ่มตั้งแต่อายุ '+c.pro.startFortune.years+' ปี '+c.pro.startFortune.months+' เดือน'})+'</p>':'');
-@@ -4355,8 +4536,7 @@
+@@ -4355,8 +4602,7 @@
      var BR_E={寅:'木',卯:'木',巳:'火',午:'火',辰:'土',戌:'土',丑:'土',未:'土',申:'金',酉:'金',亥:'水',子:'水'};
      function gzEls(gz){ var o=[]; if(gz&&gz.length>=2){ if(STEM_E[gz.charAt(0)])o.push(STEM_E[gz.charAt(0)]); if(BR_E[gz.charAt(1)])o.push(BR_E[gz.charAt(1)]); } return o; }
      var proo=c.pro||{}, nowY=(proo.now&&proo.now.year)||0;
@@ -1277,7 +1510,7 @@ diff -ruN pk/index.html fx/index.html
      var yy=(proo.annualFortunes||[]).filter(function(a){return a.year===nowY;})[0]||null;
      var seasonEl=(seasonIdx>=0)?['木','火','金','水'][seasonIdx]:'';
      var daeunEls=dd?gzEls(dd.ganzhi):[], yearEls=yy?gzEls(yy.ganzhi):[];
-@@ -4401,7 +4581,7 @@
+@@ -4401,7 +4647,7 @@
    var taikaHtml='';
    try{
      var _pn=c.pro&&c.pro.now, _pdi=(_pn&&_pn.daeunIndex>=0)?_pn.daeunIndex:-1;
@@ -1286,7 +1519,7 @@ diff -ruN pk/index.html fx/index.html
      var _pyy=(c.pro&&c.pro.annualFortunes&&_pn)?c.pro.annualFortunes.filter(function(a){return a.year===_pn.year;})[0]:null;
      var _exNow=[]; if(_pdd)_exNow.push(_pdd.ganzhi); if(_pyy)_exNow.push(_pyy.ganzhi);
      var _natT=EL_ORDER.filter(function(e){return (_fiveM[e]||0)>=3;});
-@@ -4423,7 +4603,7 @@
+@@ -4423,7 +4669,7 @@
        function _natPairs(gz){var r=[];[0,1,2,3].forEach(function(pi){var np=_np2.pillars[pi];if(!np||!np.ganzhi)return;if(gz===np.ganzhi)r.push({pi:pi,rel:'律音'});else if(isNatchin(gz,np.ganzhi))r.push({pi:pi,rel:'納音'});});return r;}
        var _mrows=[];
        var _ndi=(_np2.now&&_np2.now.daeunIndex>=0)?_np2.now.daeunIndex:0;
@@ -1295,7 +1528,32 @@ diff -ruN pk/index.html fx/index.html
        var _ny2=(_np2.now&&_np2.now.year)||0;
        (_np2.annualFortunes||[]).forEach(function(a){if(a.year<_ny2||a.year>_ny2+12)return;var pr=_natPairs(a.ganzhi);if(!pr.length)return;var nm=nayinOf(a.ganzhi);_mrows.push({kind:'年運',when:''+a.year,gz:a.ganzhi,nm:nm?nm[0]:'',pairs:pr,cur:(a.year===_ny2)});});
        if(_mrows.length){
-@@ -4497,13 +4677,16 @@
+@@ -4478,6 +4724,16 @@
+ $('exitAisho').onclick=function(){ state.mode='self'; state.chartB=null; state.compat=null; updateModeBar(); pushAI(pick({ja:'自分の鑑定に戻ったよ。またなんでも聞いてね。',en:'Back to your own reading. Ask me anything.',zh:'回到你的命盘了，随时再问我。',zt:'回到你的命盤了，隨時再問我。',ko:'내 명식으로 돌아왔어요. 또 뭐든 물어보세요.',vi:'Đã trở về lá số của bạn. Cứ hỏi tôi bất cứ điều gì nhé.',es:'De vuelta a tu lectura. Pregúntame lo que quieras.',pt:'De volta à sua leitura. Pergunte o que quiser.',id:'Kembali ke bacaan Anda. Silakan tanya apa saja.',th:'กลับมาที่ดวงของคุณแล้ว ถามอะไรก็ได้เลยนะ'})); };
+ 
+ function placeLabel(v){ try{ var i,j,g; for(i=0;i<PLACE_GROUPS.length;i++){ g=PLACE_GROUPS[i]; for(j=0;j<(g.items||[]).length;j++){ if(g.items[j].id===v) return g.label+' · '+g.items[j].label; } if(g.id===v) return g.label; } }catch(e){} return v||'-'; }
++var MP_CLOUD={ja:'登録情報と会話は、アカウント（{e}）に自動で保存されています。機種変更しても、ログインすれば戻ります。',
++en:'Your details and conversations are saved automatically to your account ({e}). Sign in on a new phone to get them back.',
++zh:'注册信息与对话会自动保存到您的账号（{e}）。换手机后登录即可恢复。',
++zt:'註冊資訊與對話會自動保存到您的帳號（{e}）。換手機後登入即可恢復。',
++ko:'등록 정보와 대화는 계정({e})에 자동으로 저장됩니다. 기기를 바꿔도 로그인하면 그대로 돌아와요.',
++vi:'Thông tin và cuộc trò chuyện được tự động lưu vào tài khoản của bạn ({e}). Đổi điện thoại chỉ cần đăng nhập là khôi phục.',
++es:'Tus datos y conversaciones se guardan automáticamente en tu cuenta ({e}). Si cambias de teléfono, inicia sesión para recuperarlos.',
++pt:'Seus dados e conversas são salvos automaticamente na sua conta ({e}). Se trocar de celular, é só entrar para recuperá-los.',
++id:'Data dan percakapan Anda tersimpan otomatis di akun Anda ({e}). Ganti ponsel? Cukup masuk untuk memulihkannya.',
++th:'ข้อมูลและบทสนทนาของคุณถูกบันทึกอัตโนมัติในบัญชี ({e}) เปลี่ยนมือถือแล้วแค่เข้าสู่ระบบก็กลับมาครบ'};
+ function renderMyPage(){
+   var p=state.profile||{}, d=T(), pk=curPlan();
+   var planName=pk==='light'?d.plan1n:(pk==='std'?d.plan15n:(pk==='unl'?d.plan2n:d.mpFree));
+@@ -4490,20 +4746,23 @@
+   $('mpBody').innerHTML=
+     '<div class="mp-card">'+rows+'</div>'
+     +'<div class="mp-card"><div class="mp-row"><span>'+d.mpPlan+'</span><b>'+planName+'</b></div><p class="note" style="margin-top:6px">'+d.mpPay+'</p></div>'
+-    +'<p class="note" style="margin:10px 2px">'+d.mpDevice+'</p>'
++    +'<p class="note" style="margin:10px 2px">'+(authGet()?pick(MP_CLOUD).replace('{e}',esc((authGet()||{}).email||'')):d.mpDevice)+'</p>'
+     +'<button class="btn mini" id="mpEdit" style="margin-top:4px">'+d.editTitle+'</button>'
+     +'<button class="btn mini" id="mpBackup" style="margin-top:8px">'+pick(BK.t)+'</button>'
+     +'<button class="mp-quit" id="mpQuit">'+d.mpQuit+'</button>';
    $('mpBackup').onclick=function(){ closeSheets(); renderBackup(); openSheet('shBackup'); };
    $('mpEdit').onclick=function(){ closeSheets(); prefillEdit(); openSheet('shEdit'); };
    $('mpQuit').onclick=function(){
@@ -1313,7 +1571,7 @@ diff -ruN pk/index.html fx/index.html
  function backupCode(){ try{ return 'PK1.'+btoa(unescape(encodeURIComponent(JSON.stringify(_pkDump())))); }catch(e){ return ''; } }
  function backupRestore(code){
    try{
-@@ -4517,7 +4700,7 @@
+@@ -4517,7 +4776,7 @@
  function renderBackup(){
    $('bkTitle').textContent=pick(BK.t); $('bkDesc').textContent=pick(BK.d);
    var code=backupCode();
@@ -1322,7 +1580,7 @@ diff -ruN pk/index.html fx/index.html
      '<div class="mp-card"><textarea id="bkOut" readonly style="width:100%;height:78px;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:12px;font-family:monospace;resize:none;background:var(--soft);color:var(--text)"></textarea>'
      +'<button class="btn mini" id="bkCopy" style="margin-top:8px">'+pick(BK.cp)+'</button>'
      +'<p class="note" style="margin-top:8px">'+pick(BK.save)+'</p></div>'
-@@ -4526,6 +4709,7 @@
+@@ -4526,6 +4785,7 @@
    $('bkOut').value=code;
    $('bkCopy').onclick=function(){ var ta=$('bkOut'); ta.select(); try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(ta.value); } else { document.execCommand('copy'); } }catch(e){ try{document.execCommand('copy');}catch(e2){} } $('bkCopy').textContent=pick(BK.cpd); setTimeout(function(){ if($('bkCopy')) $('bkCopy').textContent=pick(BK.cp); },1600); };
    $('bkRestore').onclick=function(){ var v=$('bkIn').value; if(backupRestore(v)){ alert(pick(BK.ok)); location.reload(); } else { alert(pick(BK.err)); } };
@@ -1330,7 +1588,7 @@ diff -ruN pk/index.html fx/index.html
  }
  /* この鑑定について（監修・運営・根拠） */
  function renderAbout(){
-@@ -4653,6 +4837,7 @@
+@@ -4653,6 +4913,7 @@
    _mkChips('svSrcs','svSrcL',SV.srcs,false);
    _mkChips('svFreqs','svFreqL',SV.freqs,false);
    _mkChips('svJobs','svJobL',SV.jobs,false);
@@ -1338,7 +1596,7 @@ diff -ruN pk/index.html fx/index.html
    /* 下書き復元 */
    try{ var d=JSON.parse(localStorage.getItem('pk_svdraft')||'null'); if(d){ if(d.em) $('svEmail').value=d.em;
      [['svTopics',d.tp],['svInterests',d.iv],['svSrcs',d.sr],['svFreqs',d.fq],['svJobs',d.jb]].forEach(function(p){ (p[1]||[]).forEach(function(k){ var b=document.querySelector('#'+p[0]+' button[data-k="'+k+'"]'); if(b) b.classList.add('on'); }); }); } }catch(e){}
-@@ -4690,6 +4875,292 @@
+@@ -4690,6 +4951,292 @@
  /* 送信失敗分は次回起動時に再送 */
  (function(){ try{var q=localStorage.getItem('pk_svq'); if(q){_svPost(q).then(function(r){ if(r.ok) localStorage.removeItem('pk_svq'); }).catch(function(){});} }catch(e){} })();
  
@@ -1631,7 +1889,7 @@ diff -ruN pk/index.html fx/index.html
  /* ---- 起動 ---- */
  (function boot(){
    window.__booting=true;
-@@ -4703,7 +5174,10 @@
+@@ -4703,7 +5250,10 @@
    var savedTheme=null; try{savedTheme=localStorage.getItem(LS_THEME);}catch(e){} setTheme(savedTheme==='indigo'?'indigo':'green');
    state.profile=loadJSON(LS_PROF);
    applyI18n(); rebuildSelects(); setLang(state.lang);
@@ -2019,13 +2277,13 @@ diff -ruN pk/pro-bazi.js fx/pro-bazi.js
 \ No newline at end of file
 diff -ruN pk/sw.js fx/sw.js
 --- pk/sw.js	2026-08-21 05:15:56.000000000 +0000
-+++ fx/sw.js	2026-09-26 16:47:14.471842901 +0000
++++ fx/sw.js	2026-09-26 18:20:55.742076665 +0000
 @@ -4,7 +4,7 @@
     ・JS/画像等は stale-while-revalidate（即表示＋裏で更新）
     ・AI通信（/functions・/.netlify・generativelanguage）は絶対にキャッシュせず常にネットワークへ
     ※アプリを更新したら CACHE の版番号を上げると確実に配信されます。 */
 -var CACHE = 'pocket-kantei-v1';
-+var CACHE = 'pocket-kantei-v6';
++var CACHE = 'pocket-kantei-v7';
  var SHELL = [
    './', './index.html', './pro-bazi.js', './pro-adapter.js',
    './owl.png', './icon-512.png', './icon-192.png', './icon-maskable-512.png', './apple-touch-icon.png',

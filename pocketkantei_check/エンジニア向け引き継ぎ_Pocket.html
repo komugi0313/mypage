@@ -80,6 +80,7 @@ html{scroll-behavior:smooth}
     <li><a href="#rules">運営ルール</a></li>
     <li><a href="#engine">エンジン修正</a></li>
     <li><a href="#u0926">9/26 v184・時差・10言語</a></li>
+    <li><a href="#launch">発売前の総点検・課金</a></li>
     <li><a href="#account">アカウント機能</a></li>
     <li><a href="#api">API・データ</a></li>
     <li><a href="#other">その他の修正</a></li>
@@ -120,7 +121,7 @@ html{scroll-behavior:smooth}
 </tbody></table></div>
 <div class="note"><p><b><code>AUTH_SECRET</code> は一度決めたら変えないでください。</b>変えると全員のログインが切れ、再ログインが必要になります（データは消えません）。</p></div>
 <div class="note info"><p><b>料金について：</b>メールの送信数の上限は <b>Resend 側の料金プラン</b> によるもので、アプリに回数制限を作ったわけではありません。Resend の無料プランには送信数の上限があります（目安：1日100通・月3,000通。<b>最新の料金は Resend 公式サイトで確認</b>）。上限を超えると、その日は再設定メールが送れなくなります。</p></div>
-<p>Service Worker のキャッシュ版は <code>pocket-kantei-v6</code> です。今後も更新時は必ず上げてください。</p>
+<p>Service Worker のキャッシュ版は <code>pocket-kantei-v7</code> です。今後も更新時は必ず上げてください。</p>
 </section>
 
 <section id="errors">
@@ -222,6 +223,43 @@ html{scroll-behavior:smooth}
     挨拶の場合は、その言語の定型の挨拶に切り替えます。</li>
   <li>専門語の置き換え（<code>_softReplace</code>）は、韓国語の単語の途中・中国語の重複・韓国語の助詞を正しく扱います。仕上げ（<code>_finalTidy</code>）では「,,」、名前なしの「님,」を消し、韓国語の「별자리」（西洋星座の意味）を「타고난 별」に置き換えます。</li>
   <li>本文に漏れた質問候補（<code>"…" / "…"</code> や改行区切り）は、提案ボタンとして回収します。スペイン語・ポルトガル語は性別に合わせた文法で話します。挨拶の出力上限は 1400 にしました。</li>
+</ul>
+</section>
+
+<section id="launch">
+<h2>発売前の総点検（9/26）と課金</h2>
+<div class="note"><p><b>課金（App Store / Google Play）は未実装です。</b>購入・復元・購読の照合・料金画面の文言（今は「クレジットカード払い」と表示）が必要です。手順は <code>pocketkantei_check/発売前チェックと課金の進め方.md</code> を参照してください。</p></div>
+<ul>
+  <li><b>サーバー（<code>gemini.js</code>）：</b>
+    <ul>
+      <li><code>x-pk-plan</code> は信用せず、全員を free として扱います。<code>PK_TRUST_PLAN_HEADER=1</code> の時だけヘッダーを使います（テスト用）。</li>
+      <li><code>LIMITS</code> に <code>std</code>（80回/日）と <code>unl</code>（150回/日）を追加しました。以前は名前がずれていて、free 扱いになっていました。</li>
+    </ul>
+  </li>
+  <li><b>相性：</b>
+    <ul>
+      <li>相手の誕生日を「自分の誕生日の質問」と誤判定していたのを直しました（<code>_localBirthday</code>）。</li>
+      <li>10言語の日付の書き方に対応しました（<code>_parseDateAny</code>）。</li>
+      <li>相手の性別の語を10言語に拡充しました。</li>
+      <li>AI用データに、本人と相手の生年月日の行を明記しました（取り違えの防止）。</li>
+    </ul>
+  </li>
+  <li><b>返事の質：</b>前の返事の段落をそのまま写した段落を除きます（<code>_dropRepeatedParas</code>）。中文の「你们的你的特质」も直します。</li>
+  <li><b>相談窓口：</b>端末のタイムゾーンと地域から国を推定し、その国の窓口を出します（26か国）。一覧にない国は「地域の緊急番号へ」だけを出します。</li>
+  <li><b>画面：</b>
+    <ul>
+      <li>開発者用の体験モード欄を非表示にしました（<code>?dev=1</code> で表示）。</li>
+      <li>マイページは、ログイン中なら「アカウントに自動保存」と表示します。</li>
+    </ul>
+  </li>
+  <li><b>検証：</b>
+    <ul>
+      <li>実際の Gemini で10言語×16問を試し、言語の混入は0でした。</li>
+      <li>登録・エラー・各画面を10言語で確認し、画面エラーは0でした。</li>
+      <li>最後の修正のあとの AI 再確認は、テスト用キーのクレジットが尽きたため未実施です。</li>
+    </ul>
+  </li>
+  <li><b>運用：</b>本番の Gemini キーでクレジットが尽きると、全員に「届かなかった」と表示されます。予算アラートと自動チャージを設定してください。</li>
 </ul>
 </section>
 
@@ -337,7 +375,7 @@ html{scroll-behavior:smooth}
 <tr><td><code>netlify.toml</code></td><td><code>/api/auth</code> の転送設定</td></tr>
 <tr><td><code>lp.html</code></td><td>「はじめる」の遷移先、「ログイン」リンク</td></tr>
 <tr><td><code>legal.html</code></td><td>プライバシーポリシー・利用規約（日英）</td></tr>
-<tr><td><code>sw.js</code></td><td>キャッシュ版 v6、<code>/api/</code> を対象外に</td></tr>
+<tr><td><code>sw.js</code></td><td>キャッシュ版 v7、<code>/api/</code> を対象外に</td></tr>
 <tr><td><code>README_デプロイ.md</code> / <code>docs/</code></td><td>環境変数の追記、仕様書の更新、変更点と運用ガイド</td></tr>
 </tbody></table></div>
 </section>
