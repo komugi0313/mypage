@@ -35,4 +35,11 @@ Pocket鑑定の修正（大運・立運・節入り、アカウント、パス�
 | `datep.js` / `bday.js` / `pb.js` | 相手の誕生日の読み取り、自分の誕生日の質問、AI用データの本人・相手の行 | `node datep.js` など |
 | `hl.js` | 端末の地域ごとの相談窓口 | `node hl.js` |
 
+### 2026-09-26 追加（3）：課金の土台
+| ファイル | 内容 | 実行例 |
+|---|---|---|
+| `billtest.js` | 購読の通知（billing.js）の受け付けと、アカウントのプランの変化 | `NODE_PATH=mock/node_modules node billtest.js` |
+| `billtest2.js` | チャットの上限に使うプランの判定（gemini.js） | `NODE_PATH=mock/node_modules node billtest2.js` |
+| `billui.js` | 料金画面・購入・復元・マイページ（RevenueCat のプラグインを模擬） | `NODE_PATH=mock/node_modules node billui.js` |
+
 ※本番の Netlify（実際の Blobs・Resend）での確認は含みません。デプロイ後に実機で「登録→別端末でログイン」「パスワードを忘れた→メール→再設定」を確認してください。

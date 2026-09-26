@@ -54,7 +54,7 @@
 | `netlify.toml` | 修正 | `/api/auth` → `/.netlify/functions/auth` のリダイレクトを追加 |
 | `lp.html` | 修正 | 「はじめる」の遷移先を `index.html?start=1` に変更、「ログイン」リンクを追加 |
 | `legal.html` | 修正 | プライバシーポリシー（日英）と利用規約第3条（日英）をアカウント機能に合わせて改定 |
-| `sw.js` | 修正 | キャッシュ版を v7 に（9/26 の修正で v5→v7）、`/api/` を Service Worker の対象外に |
+| `sw.js` | 修正 | キャッシュ版を v8 に（9/26 の修正で v5→v8）、`/api/` を Service Worker の対象外に |
 | `README_デプロイ.md` | 修正 | 環境変数の追記 |
 
 ---
@@ -266,3 +266,90 @@
 | 登録・エラー・マイページ・各画面（10言語）（`ui10.js`） | 画面エラー 0。文言はすべてその言語 |
 | 日付の読み取り（10言語＋追加例）（`datep.js`）、自分の誕生日の質問（`bday.js`）、相談窓口の国判定（`hl.js`） | 全件期待どおり |
 | 8.1 の修正後の、実際の AI での再確認 | **未実施**（テスト用キーのクレジットが尽きたため）。AI用データへの反映（`pb.js`）と単体テストは確認済み |
+
+---
+
+## 9. 2026-09-26 追記（3）：課金（App Store / Google Play）の土台
+
+ストアの登録が終わる前に準備できる部分を実装しました。**RevenueCat を使う前提** です。ネイティブ化（Capacitor）と、ストアの商品登録が済めばつながります。
+
+### 9.1 仕組み
+```
+アプリ（Capacitor＋RevenueCat の Purchases プラグイン）
+  └ 購入（appUserID ＝ アカウントの uid ＝ トークンの先頭64桁）
+        ↓ ストア → RevenueCat
+RevenueCat の Webhook → POST /api/billing（functions/billing.js）
+        ↓ アカウント u:<uid> の rec.sub に { plan, product, expires, willRenew, store, env, eventTs } を記録
+auth.js：login / load / register / reset / status の応答に plan（{plan, expires, willRenew}）を付けて返す
+gemini.js：x-pk-auth（ログインのトークン）→ rec.sub → プランごとの1日の上限（LIMITS）
+```
+- **プランの正本はサーバーです。** アプリは、受け取った `plan` を `state.profile.plan` に反映し、表示と端末側の上限に使います（`applyServerPlan`）。
+- **購入はログイン中だけ** です。機種変更しても、同じアカウントでログインすればプランが戻ります。
+- **匿名での購入（`$RCAnonymousID`）の通知は無視します。**
+
+### 9.2 `functions/billing.js`（新規）
+- **認証：** `Authorization` ヘッダーが `REVENUECAT_WEBHOOK_AUTH`（または `Bearer ＋同じ値`）と一致する時だけ受け付けます。
+- **通知の種類ごとの処理：**
+  - 付与：`INITIAL_PURCHASE`／`RENEWAL`／`PRODUCT_CHANGE`（`new_product_id`）／`UNCANCELLATION`／`NON_RENEWING_PURCHASE`／`SUBSCRIPTION_EXTENDED`／`TEMPORARY_ENTITLEMENT_GRANT`
+  - 解約（`CANCELLATION`）：期限までは使えます（`willRenew:false`）。
+  - 期限切れ（`EXPIRATION`）：free に戻ります。
+  - 支払いの問題（`BILLING_ISSUE`）：印を付けるだけで、ストアの猶予期間中は使えます。
+  - `TRANSFER`：移動元から移動先へ、購読を付け替えます。
+  - `TEST`：何もしません。
+- **古い通知が後から届いた時**（`event_timestamp_ms` が記録より古い）は無視します。
+- **商品ID → プラン：** 環境変数 `PK_PRODUCTS`（JSON）で対応を決めます。未設定なら、商品IDに `unl`／`std`／`light` などの語を含むかで判定します。Google の `商品ID:基本プランID` は商品IDの部分で引きます。
+- **テスト購入（SANDBOX）も反映します。** Apple の審査はテスト購入で行われるためです。止めたい時だけ `PK_IGNORE_SANDBOX=1` を設定してください。
+- **500 を返すと、RevenueCat が後で再送します。**
+
+### 9.3 アプリ（`index.html`）
+- **`PKBilling`：** 次の2つがそろった時だけ購入できます。
+  - `window.Capacitor.Plugins.Purchases`（RevenueCat の Capacitor プラグイン）がある
+  - `window.PK_RC_KEYS={ios:'appl_…', android:'goog_…'}` が設定されている（RevenueCat の公開SDKキー）
+  - 使う関数：`isConfigured`→`configure`／`logIn`（appUserID＝uid）、`getOfferings`（current の package を商品IDでプランに対応）、`purchasePackage`、`restorePurchases`
+- **料金画面（`renderPlanExtras`、`openSheet('shPlan')` の時に描画）：**
+  - 各プランに「このプランにする」ボタンを出します。利用中のプランは「ご利用中」です。
+  - ストアの価格（`priceString`）で表示を置き換えます。
+  - 「購入を復元」「購読の管理・解約」（iOS：apps.apple.com/account/subscriptions、Android：play.google.com/store/account/subscriptions）を出します。
+  - 自動更新の説明と、利用規約・プライバシーポリシーへのリンクを出します。
+  - 次回の更新日（または、自動更新を止めた時の利用期限）を出します。
+  - Web で開いた時は、ボタンを押せません。「アプリから購入できます」と表示します。
+- **購入・復元のあと（`billingConfirm`）：** `/api/auth` の `status` を2秒ごと・最大10回問い合わせ、サーバーへの反映を待ちます。間に合わない時は「数分後に開き直してください」と表示します。
+- **マイページ：** 支払いの説明をストア課金向けにしました。次回の更新日も表示します。
+- **文言：** `planNote` と `mpPay` を、10言語すべて「App Store / Google Play のアカウントで支払い」に変更しました。
+- **チャットの送信：** `x-pk-auth`（ログインのトークン）を付けます。
+
+### 9.4 `legal.html`（下書き。運営の確認が必要です）
+- **利用規約（日英）：** ストアのアプリ内課金で支払うこと、24時間前までの解約、解約の方法（ストア）、退会しても購読は自動では解約されないこと、返金は各ストアの規定に従うことを書きました。
+- **特定商取引法の表記：** 支払方法と解約・返金を、ストア課金向けに変更しました。販売価格はそのままです（ストアでの価格と合わせてください）。
+- **プライバシーポリシー（日英）：** 外部送信先に Apple・Google・RevenueCat（アカウントを識別する番号と購入の記録のみ）を追加しました。
+- **最終改定日：** 2026-09-26 にしました。
+
+### 9.5 ストアの準備ができたら行う作業
+1. **RevenueCat** でプロジェクトを作り、App Store と Google Play のアプリを登録します。
+2. **ストアに月額の購読商品を3つ登録します**（例：`pk_light_monthly`／`pk_std_monthly`／`pk_unl_monthly`）。
+   - RevenueCat に商品を取り込みます。
+   - Entitlement を1つ（例：`pro`）作り、3商品を付けます。
+   - Offering（current）に3つの Package を置きます。
+3. **RevenueCat の Webhook を設定します。**
+   - URL：`https://<サイト>/api/billing`
+   - Authorization header：長いランダム文字列
+4. **Netlify の環境変数を設定します。**
+   - `REVENUECAT_WEBHOOK_AUTH`（3. と同じ文字列）
+   - `PK_PRODUCTS`（例：`{"pk_light_monthly":"light","pk_std_monthly":"std","pk_unl_monthly":"unl"}`）
+5. **ネイティブアプリ（Capacitor）を作ります。**
+   - `@revenuecat/purchases-capacitor` を入れます。
+   - 起動時に `window.PK_RC_KEYS` を設定します。
+   - 商品IDの語でプランが判定できない場合は、`window.PK_PRODUCTS` も設定します。
+6. **サンドボックス（テスト購入）で次を確認します。**
+   - 購入 → 回数の上限が上がる
+   - 解約 → 期限まで使える → 期限後は無料に戻る
+   - 別の端末で「購入を復元」→ プランが戻る
+7. **`LIMITS`（gemini.js）と、アプリの `PLAN_BUDGET`・`UNL_DAILY` を、最終のプラン内容に合わせます。**
+
+### 9.6 検証（`pocketkantei_check/tests/`）
+| 検証 | 結果 |
+|---|---|
+| `billtest.js`：通知の受け付け（合言葉なし・違い → 401、TEST、匿名ID → 無視、購入、古い通知の無視、プラン変更、解約 → 期限まで有効、期限切れ → free、Google形式の商品ID、不明な商品、TRANSFER、ログインの応答のプラン） | 全件期待どおり |
+| `billtest2.js`：チャットの上限の判定（未購入 → free、購入後 → unl、トークン改ざん・なし → free、パスワード変更後の古いトークン → free） | 全件期待どおり |
+| `billui.js`：ブラウザでの確認。RevenueCat プラグインを模擬しています。<br>・Web：ボタンを押せない＋案内（ja/en/th）<br>・未ログイン：アカウントの作成を案内<br>・価格の置き換え<br>・キャンセル：何も表示しない<br>・購入 → プランが有効・「ご利用中」・次回更新日・マイページの表示<br>・チャットにトークンが付く<br>・別端末で復元 | 全件期待どおり。画面エラー 0 |
+| `ui10.js`・`e2e.js`・`e2e_reset.js`・`lpflow.js`・`eye.js`・`unitguard.js` | 画面エラー 0 |

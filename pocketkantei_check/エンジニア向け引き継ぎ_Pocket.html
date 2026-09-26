@@ -115,13 +115,14 @@ html{scroll-behavior:smooth}
 <tr><td>Netlify 環境変数 <code>GEMINI_API_KEY</code>（既存）</td><td><span class="tag must">必須</span></td><td>鑑定チャットが動かない</td></tr>
 <tr><td>Netlify 環境変数 <code>AUTH_SECRET</code>：32文字以上のランダム文字列（例：<code>openssl rand -hex 32</code>）</td><td><span class="tag must">必須</span></td><td>登録・ログインができない（NO_SECRET）</td></tr>
 <tr><td><a href="https://resend.com">Resend</a> に登録し、送信元ドメイン（例：72k.ai）を DNS で認証して APIキーを発行</td><td><span class="tag need">再設定に必須</span></td><td>―</td></tr>
+<tr><td>（課金の開始時）Netlify 環境変数 <code>REVENUECAT_WEBHOOK_AUTH</code>、<code>PK_PRODUCTS</code></td><td><span class="tag need">課金に必須</span></td><td>購入してもプランが反映されない</td></tr>
 <tr><td>Netlify 環境変数 <code>RESEND_API_KEY</code> と <code>MAIL_FROM</code>（例：<code>Pocket Kantei &lt;no-reply@72k.ai&gt;</code>）</td><td><span class="tag need">再設定に必須</span></td><td>「パスワードを忘れた方」でエラー（NO_MAIL）</td></tr>
 <tr><td><b>Git連携 または <code>netlify deploy</code>（CLI）でデプロイ</b>。管理画面へのzipドラッグ＆ドロップは不可</td><td><span class="tag must">必須</span></td><td>関数・Blobsが動かない（HTTP404 / NO_STORE）</td></tr>
 <tr><td>関数のビルドで <code>@netlify/blobs</code>（^8.1.0）がインストールされること</td><td><span class="tag must">必須</span></td><td>NO_STORE</td></tr>
 </tbody></table></div>
 <div class="note"><p><b><code>AUTH_SECRET</code> は一度決めたら変えないでください。</b>変えると全員のログインが切れ、再ログインが必要になります（データは消えません）。</p></div>
 <div class="note info"><p><b>料金について：</b>メールの送信数の上限は <b>Resend 側の料金プラン</b> によるもので、アプリに回数制限を作ったわけではありません。Resend の無料プランには送信数の上限があります（目安：1日100通・月3,000通。<b>最新の料金は Resend 公式サイトで確認</b>）。上限を超えると、その日は再設定メールが送れなくなります。</p></div>
-<p>Service Worker のキャッシュ版は <code>pocket-kantei-v7</code> です。今後も更新時は必ず上げてください。</p>
+<p>Service Worker のキャッシュ版は <code>pocket-kantei-v8</code> です。今後も更新時は必ず上げてください。</p>
 </section>
 
 <section id="errors">
@@ -228,7 +229,14 @@ html{scroll-behavior:smooth}
 
 <section id="launch">
 <h2>発売前の総点検（9/26）と課金</h2>
-<div class="note"><p><b>課金（App Store / Google Play）は未実装です。</b>購入・復元・購読の照合・料金画面の文言（今は「クレジットカード払い」と表示）が必要です。手順は <code>pocketkantei_check/発売前チェックと課金の進め方.md</code> を参照してください。</p></div>
+<div class="note info"><p><b>課金は、土台が完成しています（9/26）。ストアの準備待ちです。</b>RevenueCat を使う前提です。</p>
+<ul>
+  <li><code>functions/billing.js</code>（新規）が購入の通知（Webhook）を受け取り、アカウントの <code>rec.sub</code> にプランを記録します。</li>
+  <li><code>auth.js</code> の応答に <code>plan</code> を付けます。</li>
+  <li><code>gemini.js</code> は、ログインのトークン（<code>x-pk-auth</code>）からプランを引いて、回数の上限を決めます。</li>
+  <li>料金画面には、購入・復元・管理・自動更新の説明・規約へのリンクを付けました。10言語対応です。</li>
+</ul>
+<p>ストアの準備ができた後の手順は、zip 内の <code>docs/2026-09-25_変更点と運用ガイド.md</code> の「9.5」にあります。</p></div>
 <ul>
   <li><b>サーバー（<code>gemini.js</code>）：</b>
     <ul>
@@ -371,11 +379,12 @@ html{scroll-behavior:smooth}
 <tr><td><code>pro-adapter.js</code></td><td>標準子午線、第一運＝月柱、今年＝立春基準、AI用データ、大運の西暦（<code>decadeYears</code>）、v184版の <code>fukyuList</code>・<code>gogyoBalance</code></td></tr>
 <tr><td><code>index.html</code></td><td>大運表示、AIへの指示文、節木運、アカウント画面・同期、パスワード再設定、目のボタン、LP振り分け、IANAタイムゾーン、AI回答の言語・年号対策</td></tr>
 <tr><td><code>functions/auth.js</code>（新規）</td><td>アカウントAPI・再設定メール</td></tr>
+<tr><td><code>functions/billing.js</code>（新規）</td><td>購読の通知（RevenueCat の Webhook）→ アカウントのプラン</td></tr>
 <tr><td><code>functions/gemini.js</code></td><td>Blobs接続の修正</td></tr>
 <tr><td><code>netlify.toml</code></td><td><code>/api/auth</code> の転送設定</td></tr>
 <tr><td><code>lp.html</code></td><td>「はじめる」の遷移先、「ログイン」リンク</td></tr>
-<tr><td><code>legal.html</code></td><td>プライバシーポリシー・利用規約（日英）</td></tr>
-<tr><td><code>sw.js</code></td><td>キャッシュ版 v7、<code>/api/</code> を対象外に</td></tr>
+<tr><td><code>legal.html</code></td><td>プライバシーポリシー・利用規約（日英）、9/26：ストア課金向けの下書き（要確認）</td></tr>
+<tr><td><code>sw.js</code></td><td>キャッシュ版 v8、<code>/api/</code> を対象外に</td></tr>
 <tr><td><code>README_デプロイ.md</code> / <code>docs/</code></td><td>環境変数の追記、仕様書の更新、変更点と運用ガイド</td></tr>
 </tbody></table></div>
 </section>

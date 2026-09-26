@@ -43,8 +43,8 @@ diff -ruN "pk/README_\343\203\207\343\203\227\343\203\255\343\202\244.md" "fx/RE
  - テレコムクレジットの **申込フォーム＋継続課金同意画面**（審査通過後に組み込み）
 diff -ruN "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md" "fx/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"
 --- "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"	1970-01-01 00:00:00.000000000 +0000
-+++ "fx/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"	2026-09-26 18:20:55.744737684 +0000
-@@ -0,0 +1,268 @@
++++ "fx/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\351\201\213\347\224\250\343\202\254\343\202\244\343\203\211.md"	2026-09-26 18:50:10.683008424 +0000
+@@ -0,0 +1,355 @@
 +# Pocket鑑定 2026-09-25 変更点と運用ガイド（エンジニア向け）
 +
 +この資料は、2026-09-25 の改修内容を、実装・デプロイ・運用するエンジニアが正しく理解するためのものです。
@@ -101,7 +101,7 @@ diff -ruN "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\3
 +| `netlify.toml` | 修正 | `/api/auth` → `/.netlify/functions/auth` のリダイレクトを追加 |
 +| `lp.html` | 修正 | 「はじめる」の遷移先を `index.html?start=1` に変更、「ログイン」リンクを追加 |
 +| `legal.html` | 修正 | プライバシーポリシー（日英）と利用規約第3条（日英）をアカウント機能に合わせて改定 |
-+| `sw.js` | 修正 | キャッシュ版を v7 に（9/26 の修正で v5→v7）、`/api/` を Service Worker の対象外に |
++| `sw.js` | 修正 | キャッシュ版を v8 に（9/26 の修正で v5→v8）、`/api/` を Service Worker の対象外に |
 +| `README_デプロイ.md` | 修正 | 環境変数の追記 |
 +
 +---
@@ -313,6 +313,93 @@ diff -ruN "pk/docs/2026-09-25_\345\244\211\346\233\264\347\202\271\343\201\250\3
 +| 登録・エラー・マイページ・各画面（10言語）（`ui10.js`） | 画面エラー 0。文言はすべてその言語 |
 +| 日付の読み取り（10言語＋追加例）（`datep.js`）、自分の誕生日の質問（`bday.js`）、相談窓口の国判定（`hl.js`） | 全件期待どおり |
 +| 8.1 の修正後の、実際の AI での再確認 | **未実施**（テスト用キーのクレジットが尽きたため）。AI用データへの反映（`pb.js`）と単体テストは確認済み |
++
++---
++
++## 9. 2026-09-26 追記（3）：課金（App Store / Google Play）の土台
++
++ストアの登録が終わる前に準備できる部分を実装しました。**RevenueCat を使う前提** です。ネイティブ化（Capacitor）と、ストアの商品登録が済めばつながります。
++
++### 9.1 仕組み
++```
++アプリ（Capacitor＋RevenueCat の Purchases プラグイン）
++  └ 購入（appUserID ＝ アカウントの uid ＝ トークンの先頭64桁）
++        ↓ ストア → RevenueCat
++RevenueCat の Webhook → POST /api/billing（functions/billing.js）
++        ↓ アカウント u:<uid> の rec.sub に { plan, product, expires, willRenew, store, env, eventTs } を記録
++auth.js：login / load / register / reset / status の応答に plan（{plan, expires, willRenew}）を付けて返す
++gemini.js：x-pk-auth（ログインのトークン）→ rec.sub → プランごとの1日の上限（LIMITS）
++```
++- **プランの正本はサーバーです。** アプリは、受け取った `plan` を `state.profile.plan` に反映し、表示と端末側の上限に使います（`applyServerPlan`）。
++- **購入はログイン中だけ** です。機種変更しても、同じアカウントでログインすればプランが戻ります。
++- **匿名での購入（`$RCAnonymousID`）の通知は無視します。**
++
++### 9.2 `functions/billing.js`（新規）
++- **認証：** `Authorization` ヘッダーが `REVENUECAT_WEBHOOK_AUTH`（または `Bearer ＋同じ値`）と一致する時だけ受け付けます。
++- **通知の種類ごとの処理：**
++  - 付与：`INITIAL_PURCHASE`／`RENEWAL`／`PRODUCT_CHANGE`（`new_product_id`）／`UNCANCELLATION`／`NON_RENEWING_PURCHASE`／`SUBSCRIPTION_EXTENDED`／`TEMPORARY_ENTITLEMENT_GRANT`
++  - 解約（`CANCELLATION`）：期限までは使えます（`willRenew:false`）。
++  - 期限切れ（`EXPIRATION`）：free に戻ります。
++  - 支払いの問題（`BILLING_ISSUE`）：印を付けるだけで、ストアの猶予期間中は使えます。
++  - `TRANSFER`：移動元から移動先へ、購読を付け替えます。
++  - `TEST`：何もしません。
++- **古い通知が後から届いた時**（`event_timestamp_ms` が記録より古い）は無視します。
++- **商品ID → プラン：** 環境変数 `PK_PRODUCTS`（JSON）で対応を決めます。未設定なら、商品IDに `unl`／`std`／`light` などの語を含むかで判定します。Google の `商品ID:基本プランID` は商品IDの部分で引きます。
++- **テスト購入（SANDBOX）も反映します。** Apple の審査はテスト購入で行われるためです。止めたい時だけ `PK_IGNORE_SANDBOX=1` を設定してください。
++- **500 を返すと、RevenueCat が後で再送します。**
++
++### 9.3 アプリ（`index.html`）
++- **`PKBilling`：** 次の2つがそろった時だけ購入できます。
++  - `window.Capacitor.Plugins.Purchases`（RevenueCat の Capacitor プラグイン）がある
++  - `window.PK_RC_KEYS={ios:'appl_…', android:'goog_…'}` が設定されている（RevenueCat の公開SDKキー）
++  - 使う関数：`isConfigured`→`configure`／`logIn`（appUserID＝uid）、`getOfferings`（current の package を商品IDでプランに対応）、`purchasePackage`、`restorePurchases`
++- **料金画面（`renderPlanExtras`、`openSheet('shPlan')` の時に描画）：**
++  - 各プランに「このプランにする」ボタンを出します。利用中のプランは「ご利用中」です。
++  - ストアの価格（`priceString`）で表示を置き換えます。
++  - 「購入を復元」「購読の管理・解約」（iOS：apps.apple.com/account/subscriptions、Android：play.google.com/store/account/subscriptions）を出します。
++  - 自動更新の説明と、利用規約・プライバシーポリシーへのリンクを出します。
++  - 次回の更新日（または、自動更新を止めた時の利用期限）を出します。
++  - Web で開いた時は、ボタンを押せません。「アプリから購入できます」と表示します。
++- **購入・復元のあと（`billingConfirm`）：** `/api/auth` の `status` を2秒ごと・最大10回問い合わせ、サーバーへの反映を待ちます。間に合わない時は「数分後に開き直してください」と表示します。
++- **マイページ：** 支払いの説明をストア課金向けにしました。次回の更新日も表示します。
++- **文言：** `planNote` と `mpPay` を、10言語すべて「App Store / Google Play のアカウントで支払い」に変更しました。
++- **チャットの送信：** `x-pk-auth`（ログインのトークン）を付けます。
++
++### 9.4 `legal.html`（下書き。運営の確認が必要です）
++- **利用規約（日英）：** ストアのアプリ内課金で支払うこと、24時間前までの解約、解約の方法（ストア）、退会しても購読は自動では解約されないこと、返金は各ストアの規定に従うことを書きました。
++- **特定商取引法の表記：** 支払方法と解約・返金を、ストア課金向けに変更しました。販売価格はそのままです（ストアでの価格と合わせてください）。
++- **プライバシーポリシー（日英）：** 外部送信先に Apple・Google・RevenueCat（アカウントを識別する番号と購入の記録のみ）を追加しました。
++- **最終改定日：** 2026-09-26 にしました。
++
++### 9.5 ストアの準備ができたら行う作業
++1. **RevenueCat** でプロジェクトを作り、App Store と Google Play のアプリを登録します。
++2. **ストアに月額の購読商品を3つ登録します**（例：`pk_light_monthly`／`pk_std_monthly`／`pk_unl_monthly`）。
++   - RevenueCat に商品を取り込みます。
++   - Entitlement を1つ（例：`pro`）作り、3商品を付けます。
++   - Offering（current）に3つの Package を置きます。
++3. **RevenueCat の Webhook を設定します。**
++   - URL：`https://<サイト>/api/billing`
++   - Authorization header：長いランダム文字列
++4. **Netlify の環境変数を設定します。**
++   - `REVENUECAT_WEBHOOK_AUTH`（3. と同じ文字列）
++   - `PK_PRODUCTS`（例：`{"pk_light_monthly":"light","pk_std_monthly":"std","pk_unl_monthly":"unl"}`）
++5. **ネイティブアプリ（Capacitor）を作ります。**
++   - `@revenuecat/purchases-capacitor` を入れます。
++   - 起動時に `window.PK_RC_KEYS` を設定します。
++   - 商品IDの語でプランが判定できない場合は、`window.PK_PRODUCTS` も設定します。
++6. **サンドボックス（テスト購入）で次を確認します。**
++   - 購入 → 回数の上限が上がる
++   - 解約 → 期限まで使える → 期限後は無料に戻る
++   - 別の端末で「購入を復元」→ プランが戻る
++7. **`LIMITS`（gemini.js）と、アプリの `PLAN_BUDGET`・`UNL_DAILY` を、最終のプラン内容に合わせます。**
++
++### 9.6 検証（`pocketkantei_check/tests/`）
++| 検証 | 結果 |
++|---|---|
++| `billtest.js`：通知の受け付け（合言葉なし・違い → 401、TEST、匿名ID → 無視、購入、古い通知の無視、プラン変更、解約 → 期限まで有効、期限切れ → free、Google形式の商品ID、不明な商品、TRANSFER、ログインの応答のプラン） | 全件期待どおり |
++| `billtest2.js`：チャットの上限の判定（未購入 → free、購入後 → unl、トークン改ざん・なし → free、パスワード変更後の古いトークン → free） | 全件期待どおり |
++| `billui.js`：ブラウザでの確認。RevenueCat プラグインを模擬しています。<br>・Web：ボタンを押せない＋案内（ja/en/th）<br>・未ログイン：アカウントの作成を案内<br>・価格の置き換え<br>・キャンセル：何も表示しない<br>・購入 → プランが有効・「ご利用中」・次回更新日・マイページの表示<br>・チャットにトークンが付く<br>・別端末で復元 | 全件期待どおり。画面エラー 0 |
++| `ui10.js`・`e2e.js`・`e2e_reset.js`・`lpflow.js`・`eye.js`・`unitguard.js` | 画面エラー 0 |
 diff -ruN "pk/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\273\225\346\247\230\346\233\270.md" "fx/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\273\225\346\247\230\346\233\270.md"
 --- "pk/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\273\225\346\247\230\346\233\270.md"	2026-09-17 13:04:05.000000000 +0000
 +++ "fx/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\273\225\346\247\230\346\233\270.md"	2026-09-26 16:47:42.267911705 +0000
@@ -420,8 +507,8 @@ diff -ruN "pk/docs/Pocket\351\221\221\345\256\232_\346\212\200\350\241\223\344\2
  ---
 diff -ruN pk/functions/auth.js fx/functions/auth.js
 --- pk/functions/auth.js	1970-01-01 00:00:00.000000000 +0000
-+++ fx/functions/auth.js	2026-09-25 09:48:53.571676440 +0000
-@@ -0,0 +1,229 @@
++++ fx/functions/auth.js	2026-09-26 18:35:47.387622418 +0000
+@@ -0,0 +1,237 @@
 +// Netlify Function：アカウント（メールアドレス＋パスワード）とデータ同期。
 +// ・メール確認リンクは使わない。メールアドレス＋パスワードだけで登録／ログインする。
 +// ・パスワードは scrypt（ランダムsalt付き）でハッシュ化して保存。平文は保存しない。
@@ -485,7 +572,7 @@ diff -ruN pk/functions/auth.js fx/functions/auth.js
 +      const rec = { email, salt, hash: hashPw(pw, salt), ver: 1, created: now, updated: now, fails: 0, lockUntil: 0, data };
 +      await store.setJSON(key, rec);
 +      await store.set(rk, String(rc + 1));
-+      return json(200, { ok: true, email, token: makeToken(email, rec.ver, secret) });
++      return json(200, { ok: true, email, token: makeToken(email, rec.ver, secret), plan: planInfo(rec) });
 +    }
 +
 +    if (action === 'login') {
@@ -501,7 +588,7 @@ diff -ruN pk/functions/auth.js fx/functions/auth.js
 +        return json(401, { ok: false, code: 'BAD_LOGIN' });
 +      }
 +      if (rec.fails || rec.lockUntil) { rec.fails = 0; rec.lockUntil = 0; await store.setJSON(key, rec); }
-+      return json(200, { ok: true, email: rec.email, token: makeToken(rec.email, rec.ver, secret), data: rec.data || {}, updated: rec.updated });
++      return json(200, { ok: true, email: rec.email, token: makeToken(rec.email, rec.ver, secret), data: rec.data || {}, updated: rec.updated, plan: planInfo(rec) });
 +    }
 +
 +    // パスワードを忘れた：登録があれば再設定メールを送る。登録の有無は応答で分からないようにする
@@ -541,7 +628,7 @@ diff -ruN pk/functions/auth.js fx/functions/auth.js
 +      rec.ver = (rec.ver || 1) + 1;            // 他の端末のログインは無効になる
 +      rec.reset = null; rec.fails = 0; rec.lockUntil = 0; rec.updated = Date.now();
 +      await store.setJSON(key, rec);
-+      return json(200, { ok: true, email: rec.email, token: makeToken(rec.email, rec.ver, secret), data: rec.data || {}, updated: rec.updated });
++      return json(200, { ok: true, email: rec.email, token: makeToken(rec.email, rec.ver, secret), data: rec.data || {}, updated: rec.updated, plan: planInfo(rec) });
 +    }
 +
 +    // ここから先はトークン必須
@@ -557,7 +644,9 @@ diff -ruN pk/functions/auth.js fx/functions/auth.js
 +      await store.setJSON(key, rec);
 +      return json(200, { ok: true, updated: rec.updated });
 +    }
-+    if (action === 'load') return json(200, { ok: true, email: rec.email, data: rec.data || {}, updated: rec.updated });
++    if (action === 'load') return json(200, { ok: true, email: rec.email, data: rec.data || {}, updated: rec.updated, plan: planInfo(rec) });
++    // 購入・復元の直後に、ストアからの通知（billing.js）が反映されたかを確かめる軽い問い合わせ
++    if (action === 'status') return json(200, { ok: true, plan: planInfo(rec) });
 +    if (action === 'change') {
 +      if (!safeEq(hashPw(String(b.password || ''), rec.salt), rec.hash)) return json(401, { ok: false, code: 'BAD_LOGIN' });
 +      const np = String(b.newPassword || '');
@@ -615,6 +704,12 @@ diff -ruN pk/functions/auth.js fx/functions/auth.js
 +  } catch (e) { return false; }
 +}
 +function normEmail(s) { return String(s || '').trim().toLowerCase().slice(0, 254); }
++// 購読の状態：billing.js（ストアからの通知）が rec.sub に書き込む。期限内なら有料プラン、切れていれば free
++function planInfo(rec) {
++  const s = rec && rec.sub;
++  if (s && s.plan && +s.expires > Date.now()) return { plan: s.plan, expires: +s.expires, willRenew: s.willRenew !== false, store: s.store || '' };
++  return { plan: 'free' };
++}
 +function userId(email) { return crypto.createHash('sha256').update(email).digest('hex'); }
 +function userKey(email) { return `u:${userId(email)}`; }
 +function hashPw(pw, salt) { return crypto.scryptSync(pw, salt, 64, { N: 16384, r: 8, p: 1 }).toString('hex'); }
@@ -650,10 +745,118 @@ diff -ruN pk/functions/auth.js fx/functions/auth.js
 +function json(statusCode, obj) { return { statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(obj) }; }
 +
 +// ---- テスト用エクスポート（本番動作には影響しない） ----
-+exports._t = { hashPw, makeToken, readToken, cleanData, normEmail };
++exports._t = { hashPw, makeToken, readToken, cleanData, normEmail, planInfo, getStore, userId };
+diff -ruN pk/functions/billing.js fx/functions/billing.js
+--- pk/functions/billing.js	1970-01-01 00:00:00.000000000 +0000
++++ fx/functions/billing.js	2026-09-26 18:36:29.313148173 +0000
+@@ -0,0 +1,95 @@
++// Netlify Function：購読（App Store / Google Play）の通知を受け取り、アカウントのプランを書き込む。
++// ・ストアの購入は、アプリ内の課金サービス（RevenueCat を想定）が確認し、ここへ Webhook で知らせる。
++// ・アプリは RevenueCat の appUserID に「アカウントの uid」（ログイン用トークンの先頭の64桁）を使う。
++//   → 通知の app_user_id（または aliases）から、どのアカウントの購読かが分かる。
++// ・書き込み先：Netlify Blobs ストア pk-accounts の u:<uid> の rec.sub
++//     { plan, product, expires(ms), willRenew, store, env, eventTs, updated }
++//   チャットの回数上限（gemini.js）とアプリの表示（auth.js の plan）は、この rec.sub だけを見る。
++// ※要設定（Netlify の環境変数）
++//   REVENUECAT_WEBHOOK_AUTH … RevenueCat の Webhook 設定「Authorization header」に入れる合言葉（長いランダム文字列）
++//   PK_PRODUCTS（任意）… ストアの商品ID → プランの対応（JSON）。例：{"pk_light_monthly":"light","pk_std_monthly":"std","pk_unl_monthly":"unl"}
++//                       未設定なら、商品IDに unl / unlimited → unl、std / standard → std、light / lite → light を含むかで判定
++//   PK_IGNORE_SANDBOX（任意）… "1" ならテスト購入（SANDBOX）を反映しない。
++//                       ※Apple の審査はテスト購入で行われるため、審査中は設定しないこと（既定＝反映する）
++
++const PLANS = ['light', 'std', 'unl'];
++const GRANT = ['INITIAL_PURCHASE', 'RENEWAL', 'PRODUCT_CHANGE', 'UNCANCELLATION', 'NON_RENEWING_PURCHASE', 'SUBSCRIPTION_EXTENDED', 'TEMPORARY_ENTITLEMENT_GRANT'];
++
++exports.handler = async (event) => {
++  if (event.httpMethod !== 'POST') return json(405, { ok: false, code: 'METHOD' });
++  const need = process.env.REVENUECAT_WEBHOOK_AUTH || '';
++  if (need.length < 16) return json(500, { ok: false, code: 'NO_WEBHOOK_AUTH' });
++  const h = lower(event.headers || {});
++  const got = String(h['authorization'] || '');
++  if (!safeEq(got, need) && !safeEq(got, 'Bearer ' + need)) return json(401, { ok: false, code: 'UNAUTHORIZED' });
++
++  let b; try { b = JSON.parse(event.body || '{}'); } catch (e) { return json(400, { ok: false, code: 'BAD_JSON' }); }
++  const ev = b && b.event; if (!ev || !ev.type) return json(400, { ok: false, code: 'NO_EVENT' });
++  if (ev.type === 'TEST') return json(200, { ok: true, test: true });
++  if (process.env.PK_IGNORE_SANDBOX === '1' && String(ev.environment || '').toUpperCase() === 'SANDBOX') return json(200, { ok: true, ignored: 'sandbox' });
++
++  const A = require('./auth.js')._t;
++  const store = await A.getStore(event);
++  if (!store) return json(503, { ok: false, code: 'NO_STORE' });
++
++  try {
++    // 引き継ぎ（別アカウントへ購読が移った）：移動元を解除し、移動先に付け直す
++    if (ev.type === 'TRANSFER') {
++      const from = uids(ev.transferred_from), to = uids(ev.transferred_to);
++      let moved = null;
++      for (const u of from) { const r = await store.get(`u:${u}`, { type: 'json' }); if (r && r.sub) { moved = moved || r.sub; delete r.sub; await store.setJSON(`u:${u}`, r); } }
++      if (moved) for (const u of to) { const r = await store.get(`u:${u}`, { type: 'json' }); if (r) { r.sub = Object.assign({}, moved, { updated: Date.now() }); await store.setJSON(`u:${u}`, r); } }
++      return json(200, { ok: true });
++    }
++
++    const ids = uids([ev.app_user_id, ev.original_app_user_id].concat(ev.aliases || []));
++    if (!ids.length) return json(200, { ok: true, ignored: 'no_account' });   // 未ログインの購入（匿名ID）は対象外。アプリはログイン後にだけ購入させる
++    const product = String((ev.type === 'PRODUCT_CHANGE' && ev.new_product_id) || ev.product_id || '');
++    const plan = planOfProduct(product);
++    const ts = +ev.event_timestamp_ms || Date.now();
++    const exp = +ev.expiration_at_ms || 0;
++    let done = 0;
++    for (const uid of ids) {
++      const key = `u:${uid}`;
++      const rec = await store.get(key, { type: 'json' });
++      if (!rec) continue;                                        // 退会済みなど
++      const cur = rec.sub || {};
++      if (cur.eventTs && ts < cur.eventTs) { done++; continue; }   // 古い通知が後から届いた時は無視
++      if (GRANT.includes(ev.type)) {
++        if (!plan) return json(200, { ok: true, ignored: 'unknown_product', product });
++        rec.sub = { plan, product, expires: exp || (Date.now() + 35 * 864e5), willRenew: true, store: String(ev.store || ''), env: String(ev.environment || ''), eventTs: ts, updated: Date.now() };
++      } else if (ev.type === 'CANCELLATION') {
++        // 解約（または返金）：期限までは使える。返金（cancel_reason=CUSTOMER_SUPPORT 等で期限が過去）なら即時終了
++        rec.sub = Object.assign({}, cur, { willRenew: false, eventTs: ts, updated: Date.now() });
++        if (exp) rec.sub.expires = exp;
++      } else if (ev.type === 'EXPIRATION') {
++        rec.sub = Object.assign({}, cur, { expires: exp || Date.now(), willRenew: false, eventTs: ts, updated: Date.now() });
++      } else if (ev.type === 'BILLING_ISSUE') {
++        // 支払いの問題：ストアの猶予期間中は使える（期限はストアが延長して知らせる）
++        rec.sub = Object.assign({}, cur, { billingIssue: true, eventTs: ts, updated: Date.now() });
++      } else {
++        continue;                                                // SUBSCRIPTION_PAUSED など：変更しない
++      }
++      await store.setJSON(key, rec); done++;
++    }
++    return json(200, { ok: true, updated: done });
++  } catch (e) {
++    return json(500, { ok: false, code: 'SERVER' });              // 500 を返すと RevenueCat が後で再送する
++  }
++};
++
++// アカウントの uid（sha256 の64桁）だけを拾う
++function uids(list) { const o = []; (list || []).forEach(x => { const v = String(x || '').toLowerCase(); if (/^[0-9a-f]{64}$/.test(v) && !o.includes(v)) o.push(v); }); return o; }
++function planOfProduct(id) {
++  const pid = String(id || '').split(':')[0];                   // Google の「商品ID:基本プランID」は商品IDだけで引く
++  try { const m = JSON.parse(process.env.PK_PRODUCTS || '{}'); const v = m[id] || m[pid]; if (PLANS.includes(v)) return v; } catch (e) {}
++  const s = pid.toLowerCase();
++  if (/unl|unlimited/.test(s)) return 'unl';
++  if (/std|standard/.test(s)) return 'std';
++  if (/light|lite/.test(s)) return 'light';
++  return '';
++}
++function safeEq(a, b) { const c = require('crypto'); const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && c.timingSafeEqual(x, y); }
++function lower(o) { const r = {}; for (const k in o) r[k.toLowerCase()] = o[k]; return r; }
++function json(statusCode, obj) { return { statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(obj) }; }
++exports._t = { planOfProduct, uids };
 diff -ruN pk/functions/gemini.js fx/functions/gemini.js
 --- pk/functions/gemini.js	2026-08-20 09:26:04.000000000 +0000
-+++ fx/functions/gemini.js	2026-09-26 17:32:12.992908823 +0000
++++ fx/functions/gemini.js	2026-09-26 18:39:21.721144230 +0000
+@@ -3,7 +3,7 @@
+ // ・回数制限は「サーバー側」で強制（localStorage は改ざん可能なので信用しない）。
+ //   端末ID(x-pk-device)＋IP を Netlify Blobs に日次カウントし、超過なら 429 を返し
+ //   Gemini を呼ばない＝API浪費を防ぐ。
+-// ・プラン連携（Stripe）後は、購読状態で上限(getLimits)を引き上げるだけで拡張可能。
++// ・プランは、アカウントに記録された購読（App Store / Google Play → billing.js）で判定する。
+ // ※要設定：Site settings → Environment variables → GEMINI_API_KEY
+ //          Blobs は Netlify の通常デプロイ（Git連携 / netlify deploy）で自動有効。
+ 
 @@ -19,7 +19,9 @@
  const LIMITS = {
    free:      { device: 5,   ip: 40  },   // 無料：端末5回/日、同一IP合計40回/日（悪用抑止）
@@ -665,14 +868,16 @@ diff -ruN pk/functions/gemini.js fx/functions/gemini.js
  };
  const MAX_BODY = 12000; // ユーザーの1発言あたりの最大文字数（トークン浪費・悪用防止。※システムプロンプトは対象外）
  
-@@ -52,14 +54,16 @@
+@@ -52,14 +54,18 @@
    const h = lower(event.headers || {});
    const device = clean(h['x-pk-device']) || 'nodev';
    const ip = clean(h['x-nf-client-connection-ip'] || h['x-forwarded-for'] || '').split(',')[0].trim() || 'noip';
 -  const plan = (clean(h['x-pk-plan']) || 'free').toLowerCase();   // 将来サーバーで購読照合して上書き
-+  // 注意：x-pk-plan は端末が名乗っているだけで、誰でも書き換えられる。課金（App Store / Google Play の購読照合）を
-+  // 実装するまでは信用せず、全員を free 扱いにする。テストで有料枠を試す時だけ環境変数 PK_TRUST_PLAN_HEADER=1 を設定する。
-+  const plan = process.env.PK_TRUST_PLAN_HEADER === '1' ? ((clean(h['x-pk-plan']) || 'free').toLowerCase()) : 'free';
++  // プランは「アカウントに記録された購読」で決める（billing.js がストアの通知で書き込む）。
++  // x-pk-plan は端末の自己申告で誰でも書き換えられるので使わない（テスト時だけ PK_TRUST_PLAN_HEADER=1 で有効）。
++  const plan = process.env.PK_TRUST_PLAN_HEADER === '1'
++    ? ((clean(h['x-pk-plan']) || 'free').toLowerCase())
++    : await accountPlan(event, String(h['x-pk-auth'] || '').replace(/[\r\n]/g, '').slice(0, 400));
    const lim = LIMITS[plan] || LIMITS.free;
    const day = jstDay();
    // 話題分類用の軽量呼び出し（x-pk-classify:1）は、ユーザーの1日カウントに含めない（本体の応答呼び出しだけを課金対象にする）。常に軽量モデルで安価。
@@ -684,21 +889,39 @@ diff -ruN pk/functions/gemini.js fx/functions/gemini.js
    let limited = false, degraded = false, dCount = 0;
    if (store && !isClassify) {
      try {
-@@ -130,8 +134,9 @@
+@@ -130,8 +136,22 @@
  }
  
  // ---- ユーティリティ ----
 -async function getStore() {
 -  try { const { getStore } = require('@netlify/blobs'); return getStore('pk-usage'); }
++// ログイン中の利用者のトークン（x-pk-auth）を確かめ、アカウントの購読からプランを返す。未ログイン・不正・読めない時は free
++async function accountPlan(event, tok) {
++  if (!tok) return 'free';
++  try {
++    const A = require('./auth.js')._t;
++    const t = A.readToken(tok, process.env.AUTH_SECRET || '');
++    if (!t) return 'free';
++    const st = await A.getStore(event); if (!st) return 'free';
++    const rec = await st.get(`u:${t.uid}`, { type: 'json' });
++    if (!rec || rec.ver !== t.ver) return 'free';
++    return A.planInfo(rec).plan;
++  } catch (e) { return 'free'; }
++}
 +// Lambda互換（exports.handler）の関数では、Blobs を使う前に connectLambda(event) が必要（無いと本番で Blobs に繋がらずレート制限が効かない）
 +async function getStore(event) {
 +  try { const b = require('@netlify/blobs'); if (b.connectLambda && event && event.blobs) b.connectLambda(event); return b.getStore('pk-usage'); }
    catch (e) { return null; } // Blobs 未提供環境（手動zip等）ではフェイルオープン
  }
  function jstDay() { const d = new Date(Date.now() + 9 * 3600 * 1000); return d.toISOString().slice(0, 10); }
+@@ -142,3 +162,4 @@
+ 
+ // ---- テスト用エクスポート（本番動作には影響しない） ----
+ module.exports.__test = { readCount, bump, LIMITS, jstDay };
++exports._t = { accountPlan };
 diff -ruN pk/index.html fx/index.html
 --- pk/index.html	2026-09-17 17:10:16.000000000 +0000
-+++ fx/index.html	2026-09-26 18:05:41.597190435 +0000
++++ fx/index.html	2026-09-26 18:49:28.613130349 +0000
 @@ -118,7 +118,13 @@
  .field{margin-top:16px}
  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:7px;font-weight:500}
@@ -834,6 +1057,18 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'命式', inputPh:'メッセージを入力…', exitAisho:'自分の鑑定に戻る', today:'今日',
    menuTitle:'メニュー', mLang:'言語', mTheme:'配色', thIndigo:'インディゴ', thGreen:'グリーン',
    miTodayT:'今日の運勢', miTodayD:'毎日の運勢とラッキーアクション', miChartT:'あなたの命式をみる', miChartD:'四柱・五行・日主のくわしい中身', miAishoT:'相性を占う', miAishoD:'恋人・友達・仕事仲間、誰とでも',
+@@ -779,9 +847,9 @@
+   discNote:'四柱推命は、生まれた「年・月・日・時」から、あなたの性質や運の流れを読み解く東洋の占いです。この4つを記号でまとめたもの＝「命式（めいしき）」は、いわば“あなたが生まれた瞬間の指紋”。世界にひとつだけの模様で、読み方を覚える必要はありません（アプリが読み取ります）。これがあなたの設計図になります。中心は生まれた日（日主）です。木・火・土・金・水という5つの気＝五行のバランスから、いまのあなたに合った活かし方が見えてきます。',
+   pillYear:'年柱', pillMonth:'月柱', pillDay:'日柱', pillHour:'時柱',
+   aiTitle:'相性を占う', aiSub:'恋人・友達・家族・仕事仲間——誰でもOK。生年月日を入れると、ふたりの相性をみて、そのままチャットで相談できます。', aiLabel:'お相手の生年月日', aiBtn:'相性をみる', aiSexF:'お相手は女性', aiSexM:'お相手は男性',
+-  planSub:'対面の鑑定1回より安く、毎日でも相談できます。', planNote:'※ お支払いはクレジットカード。月額・自動更新で、いつでも解約できます。',
++  planSub:'対面の鑑定1回より安く、毎日でも相談できます。', planNote:'※ お支払いは App Store / Google Play のアカウントで行います。月額・自動更新で、いつでも解約できます。',
+   editTitle:'登録情報を変更', editSub:'生年月日を変えると、命式を計算し直します。', editSave:'保存する',
+-  miMyT:'マイページ', miMyD:'登録情報・プラン・退会', mpPlan:'現在のプラン', mpFree:'無料おためし中', mpPay:'お支払いはクレジットカード（月額・自動更新）です。マイページからいつでもプラン変更・解約ができます。', mpDevice:'登録情報や会話は、この端末の中にだけ保存されています。', mpQuit:'退会する（データを完全削除）', mpQuitConfirm:'退会すると、登録情報・会話・Nicoの記憶など、この端末のすべてのデータが削除され、元に戻せません。本当に退会しますか？',
++  miMyT:'マイページ', miMyD:'登録情報・プラン・退会', mpPlan:'現在のプラン', mpFree:'無料おためし中', mpPay:'お支払いは App Store / Google Play のアカウントで行います（月額・自動更新）。プランの変更・解約は、料金プラン画面の「購読の管理・解約」から行えます。', mpDevice:'登録情報や会話は、この端末の中にだけ保存されています。', mpQuit:'退会する（データを完全削除）', mpQuitConfirm:'退会すると、登録情報・会話・Nicoの記憶など、この端末のすべてのデータが削除され、元に戻せません。本当に退会しますか？',
+   lcTitle:'人生年表（大運の流れ）', lcNow:'いまここ', lcTurn:'節目の年', lcLove:'恋の追い風年',
+   chipsSelf:['恋愛はどう？','向いてる仕事は？','今年の運気は？','金運を上げるには？'], chipsAisho:['この人と長続きする？','ケンカしたときは？','惹かれ合うポイントは？'],
+   limitOver:'ここまで無料でお試しいただけました。\nもっと深く相談したい方は——\n\n・おてがるプラン 980円/月（1日50回）\n・使い放題プラン 2,980円/月\n\n右上の「☰」→「料金プラン」から見られます。',
 @@ -814,7 +882,7 @@
    obTitle:'A one-time setup', obLead:'We build your Four Pillars chart from this and make the reading truly yours. No need to enter it again.', obEditNote:'You can change these details (name, birth date, etc.) anytime later — you can even switch to another person\'s reading.',
    fName:'Nickname (optional)', fNamePh:'What should we call you?', fBday:'Date of birth', fTime:'Time of birth (if known)', fUnknown:'I don’t know the time', fDst:'Born during Daylight Saving (summer) time', fDstNote:'US, Canada, EU, UK and Australia (Sydney etc.) are auto-detected. Only tick this if you were born under daylight-saving time in another country.',
@@ -843,6 +1078,18 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'Chart', inputPh:'Type a message…', exitAisho:'Back to my reading', today:'Today',
    menuTitle:'Menu', mLang:'Language', mTheme:'Color', thIndigo:'Indigo', thGreen:'Green',
    miTodayT:'Today\'s Fortune', miTodayD:'Your daily luck & lucky action', miChartT:'View your chart', miChartD:'Pillars, Five Elements, Day Master', miAishoT:'Compatibility', miAishoD:'Partner, friend or coworker — anyone',
+@@ -824,9 +892,9 @@
+   discNote:'Four Pillars is an Eastern reading that uses your birth Year, Month, Day and Hour to show your natural character and how your luck flows. The four of them, written together as symbols, make your "chart" — think of it as a fingerprint of the moment you were born: a one-of-a-kind pattern you never have to read yourself (the app does that), and it works like a blueprint of you. Its centre is your birth day (called the Day Master). Looking at the balance of the Five Elements — Wood, Fire, Earth, Metal, Water — shows how to make the most of who you are.',
+   pillYear:'Year', pillMonth:'Month', pillDay:'Day', pillHour:'Hour',
+   aiTitle:'Compatibility', aiSub:'Anyone works — a partner, friend, family member or coworker. Enter their birth date to read your compatibility, then keep chatting.', aiLabel:'Their date of birth', aiBtn:'Check compatibility', aiSexF:'She / woman', aiSexM:'He / man',
+-  planSub:'Cheaper than one in-person reading — consult every day.', planNote:'* Payment by credit card. Monthly auto-renewal; cancel anytime.',
++  planSub:'Cheaper than one in-person reading — consult every day.', planNote:'* Paid through your App Store / Google Play account. Monthly auto-renewal; cancel anytime.',
+   editTitle:'Edit your details', editSub:'Changing the birth date recomputes your chart.', editSave:'Save',
+-  miMyT:'My Page', miMyD:'Your details, plan & account', mpPlan:'Current plan', mpFree:'Free trial', mpPay:'Payment is by credit card (monthly auto-renewal). You can change or cancel your plan anytime from My Page.', mpDevice:'Your details and conversations are stored only on this device.', mpQuit:'Delete account (erase all data)', mpQuitConfirm:'Deleting your account will permanently erase your details, conversations and Nico\'s memory from this device. This cannot be undone. Continue?',
++  miMyT:'My Page', miMyD:'Your details, plan & account', mpPlan:'Current plan', mpFree:'Free trial', mpPay:'Payment is through your App Store / Google Play account (monthly auto-renewal). To change or cancel, use “Manage / cancel subscription” on the Plans screen.', mpDevice:'Your details and conversations are stored only on this device.', mpQuit:'Delete account (erase all data)', mpQuitConfirm:'Deleting your account will permanently erase your details, conversations and Nico\'s memory from this device. This cannot be undone. Continue?',
+   lcTitle:'Life Timeline (decade cycles)', lcNow:'You are here', lcTurn:'Turning-point years', lcLove:'Romance tailwind years',
+   chipsSelf:['How’s my love life?','What work suits me?','This year’s luck?','How to boost money luck?'], chipsAisho:['Will we last?','What about fights?','What draws us together?'],
+   limitOver:'That’s the end of the free trial.\nTo consult more deeply—\n\n• Light $9.99/mo (50/day)\n• Unlimited $29.80/mo\n\nOpen “☰” → “Plans” at the top right.',
 @@ -859,7 +927,7 @@
    obTitle:'首次仅需登记一次', obLead:'我们据此计算你的四柱命盘，使咨询专属于你。下次无需再输入。', obEditNote:'注册内容（姓名、出生日期等）以后随时可以更改，也可以切换为其他人的鉴定。',
    fName:'昵称（可选）', fNamePh:'希望怎么称呼你', fBday:'出生年月日', fTime:'出生时刻（若知道）', fUnknown:'不知道时刻', fDst:'出生于夏令时（夏时制）', fDstNote:'若出生时当地实行夏令时（欧美、澳洲等），请勾选，将回拨1小时计算。',
@@ -852,6 +1099,18 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'命盘', inputPh:'输入消息…', exitAisho:'返回我的命盘', today:'今天',
    menuTitle:'菜单', mLang:'语言', mTheme:'配色', thIndigo:'靛蓝', thGreen:'绿色',
    miTodayT:'今日运势', miTodayD:'每日运势与幸运行动', miChartT:'查看你的命盘', miChartD:'四柱・五行・日主详情', miAishoT:'测合盘', miAishoD:'恋人・朋友・同事都可以',
+@@ -869,9 +937,9 @@
+   discNote:'四柱推命是一种东方占卜，用你出生的「年・月・日・时」来看性格和运势走向。把这四项分别写成符号、再组合在一起，就是你的「命盘（命式）」——可以把它想成「你出生那一刻的指纹」：世上独一无二的图案，你自己看不懂也没关系（交给程序读取），它就是你的设计图。核心是你出生的那一天（日主）。从木・火・土・金・水这五种气＝五行的平衡，就能看出最适合现在的你的活法。',
+   pillYear:'年柱', pillMonth:'月柱', pillDay:'日柱', pillHour:'时柱',
+   aiTitle:'测合盘', aiSub:'恋人、朋友、家人、同事都可以。输入生日即可测两人合盘，并直接聊天咨询。', aiLabel:'对方的出生年月日', aiBtn:'查看合盘', aiSexF:'对方为女性', aiSexM:'对方为男性',
+-  planSub:'比面对面算命一次更便宜，天天都能咨询。', planNote:'※ 支持信用卡支付。按月自动续费，可随时取消。',
++  planSub:'比面对面算命一次更便宜，天天都能咨询。', planNote:'※ 通过 App Store / Google Play 账户付款。按月自动续订，可随时取消。',
+   editTitle:'修改登记信息', editSub:'更改生日会重新计算命盘。', editSave:'保存',
+-  miMyT:'我的页面', miMyD:'注册信息·方案·注销', mpPlan:'当前方案', mpFree:'免费体验中', mpPay:'采用信用卡支付（按月自动续费）。可随时在“我的页面”变更或取消套餐。', mpDevice:'注册信息与对话仅保存在本设备中。', mpQuit:'注销（彻底删除数据）', mpQuitConfirm:'注销后，注册信息、对话记录与Nico的记忆将从本设备彻底删除，无法恢复。确定注销吗？',
++  miMyT:'我的页面', miMyD:'注册信息·方案·注销', mpPlan:'当前方案', mpFree:'免费体验中', mpPay:'通过 App Store / Google Play 账户付款（按月自动续订）。变更或取消套餐，请在套餐页面点击“管理・取消订阅”。', mpDevice:'注册信息与对话仅保存在本设备中。', mpQuit:'注销（彻底删除数据）', mpQuitConfirm:'注销后，注册信息、对话记录与Nico的记忆将从本设备彻底删除，无法恢复。确定注销吗？',
+   lcTitle:'人生年表（大运流转）', lcNow:'当前', lcTurn:'转折之年', lcLove:'恋爱顺风年',
+   chipsSelf:['我的感情如何？','适合我的工作？','今年运势？','怎样提升财运？'], chipsAisho:['我们能长久吗？','吵架时怎么办？','互相吸引的地方？'],
+   limitOver:'免费体验到此为止。\n想更深入咨询——\n\n・轻享版 68元/月（每日50次）\n・无限版 198元/月\n\n请点右上「☰」→「价格方案」。',
 @@ -904,7 +972,7 @@
    obTitle:'처음 한 번만 등록', obLead:'이 정보로 사주 명식을 계산해서 당신만을 위한 상담을 준비해요. 다음부터는 입력할 필요 없어요.', obEditNote:'등록 내용(이름·생년월일 등)은 나중에 언제든지 변경할 수 있고, 다른 사람의 감정으로 바꿀 수도 있어요.',
    fName:'닉네임 (선택)', fNamePh:'불러줬으면 하는 이름', fBday:'생년월일', fTime:'태어난 시각 (알면)', fUnknown:'시각을 모름', fDst:'서머타임(일광절약시간)에 태어남', fDstNote:'미국·유럽·호주 등 서머타임 기간에 태어났다면 체크(1시간 되돌려 계산).',
@@ -861,6 +1120,18 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'명식', inputPh:'메시지 입력…', exitAisho:'내 명식으로 돌아가기', today:'오늘',
    menuTitle:'메뉴', mLang:'언어', mTheme:'색상', thIndigo:'인디고', thGreen:'그린',
    miTodayT:'오늘의 운세', miTodayD:'매일의 운세와 행운의 행동', miChartT:'내 명식 보기', miChartD:'사주·오행·일간 상세', miAishoT:'궁합 보기', miAishoD:'연인·친구·동료 누구든',
+@@ -914,9 +982,9 @@
+   discNote:'사주명리는 태어난 해·월·일·시로 당신의 타고난 성향과 운의 흐름을 읽는 동양 점술이에요. 이 넷을 기호로 한데 모은 것이 「명식」(사주표)이에요. 말하자면 「당신이 태어난 순간의 지문」 같은 것 — 세상에 하나뿐인 무늬라, 읽는 법을 몰라도 괜찮아요(앱이 읽어줘요). 이게 곧 당신의 설계도예요. 중심은 태어난 날(일간)이에요. 나무·불·흙·쇠·물, 다섯 기운(오행)의 균형을 보면 지금의 나에게 맞는 살아가는 법이 보여요.',
+   pillYear:'년주', pillMonth:'월주', pillDay:'일주', pillHour:'시주',
+   aiTitle:'궁합 보기', aiSub:'연인・친구・가족・동료 누구든 OK. 생년월일을 넣으면 두 사람의 궁합을 보고, 그대로 채팅으로 상담할 수 있어요.', aiLabel:'상대의 생년월일', aiBtn:'궁합 보기', aiSexF:'상대는 여성', aiSexM:'상대는 남성',
+-  planSub:'대면 상담 1회보다 저렴하게, 매일 상담하세요.', planNote:'※ 신용카드 결제. 매월 자동 갱신되며 언제든 해지할 수 있어요.',
++  planSub:'대면 상담 1회보다 저렴하게, 매일 상담하세요.', planNote:'※ App Store / Google Play 계정으로 결제됩니다. 매월 자동 갱신되며 언제든 해지할 수 있어요.',
+   editTitle:'등록 정보 변경', editSub:'생년월일을 바꾸면 명식을 다시 계산합니다.', editSave:'저장',
+-  miMyT:'마이페이지', miMyD:'등록 정보·플랜·탈퇴', mpPlan:'현재 플랜', mpFree:'무료 체험 중', mpPay:'신용카드 결제(매월 자동 갱신)입니다. 마이페이지에서 언제든 플랜을 변경·해지할 수 있어요.', mpDevice:'등록 정보와 대화는 이 기기 안에만 저장됩니다.', mpQuit:'탈퇴하기 (데이터 완전 삭제)', mpQuitConfirm:'탈퇴하면 등록 정보, 대화, Nico의 기억 등 이 기기의 모든 데이터가 삭제되며 복구할 수 없습니다. 정말 탈퇴할까요?',
++  miMyT:'마이페이지', miMyD:'등록 정보·플랜·탈퇴', mpPlan:'현재 플랜', mpFree:'무료 체험 중', mpPay:'App Store / Google Play 계정으로 결제됩니다(매월 자동 갱신). 플랜 변경·해지는 요금제 화면의 ‘구독 관리·해지’에서 할 수 있어요.', mpDevice:'등록 정보와 대화는 이 기기 안에만 저장됩니다.', mpQuit:'탈퇴하기 (데이터 완전 삭제)', mpQuitConfirm:'탈퇴하면 등록 정보, 대화, Nico의 기억 등 이 기기의 모든 데이터가 삭제되며 복구할 수 없습니다. 정말 탈퇴할까요?',
+   lcTitle:'인생 연표 (대운의 흐름)', lcNow:'지금 여기', lcTurn:'전환점의 해', lcLove:'연애 순풍의 해',
+   chipsSelf:['제 연애운은?','저에게 맞는 일은?','올해 운세는?','재물운 올리려면?'], chipsAisho:['이 사람과 오래갈까요?','다툴 땐 어떻게?','서로 끌리는 점은?'],
+   limitOver:'무료 체험은 여기까지예요.\n더 깊이 상담하려면——\n\n・라이트 9,900원/월 (하루 50회)\n・무제한 29,800원/월\n\n오른쪽 위 「☰」→「요금제」에서 볼 수 있어요.',
 @@ -949,7 +1017,7 @@
    obTitle:'首次僅需登記一次', obLead:'我們據此計算你的四柱命盤，使諮詢專屬於你。下次無需再輸入。', obEditNote:'註冊內容（姓名、出生日期等）之後隨時可以更改，也可以切換為其他人的鑑定。',
    fName:'暱稱（選填）', fNamePh:'希望怎麼稱呼你', fBday:'出生年月日', fTime:'出生時辰（若知道）', fUnknown:'不知道時辰', fDst:'出生於夏令時（日光節約時間）', fDstNote:'若出生時當地實行夏令時（歐美、澳洲等），請勾選，將回撥1小時計算。',
@@ -870,6 +1141,18 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'命盤', inputPh:'輸入訊息…', exitAisho:'返回我的命盤', today:'今天',
    menuTitle:'選單', mLang:'語言', mTheme:'配色', thIndigo:'靛藍', thGreen:'綠色',
    miTodayT:'今日運勢', miTodayD:'每日運勢與幸運行動', miChartT:'查看你的命盤', miChartD:'四柱・五行・日主詳情', miAishoT:'合八字', miAishoD:'戀人・朋友・同事都可以',
+@@ -959,9 +1027,9 @@
+   discNote:'四柱推命是一種東方占卜，用你出生的「年・月・日・時」來看性格和運勢走向。把這四項分別寫成符號、再組合在一起，就是你的「命盤（命式）」——可以把它想成「你出生那一刻的指紋」：世上獨一無二的圖案，你自己看不懂也沒關係（交給程式讀取），它就是你的設計圖。核心是你出生的那一天（日主）。從木・火・土・金・水這五種氣＝五行的平衡，就能看出最適合現在的你的活法。',
+   pillYear:'年柱', pillMonth:'月柱', pillDay:'日柱', pillHour:'時柱',
+   aiTitle:'合八字', aiSub:'戀人、朋友、家人、同事都可以。輸入生日即可合兩人八字，並直接聊天諮詢。', aiLabel:'對方的出生年月日', aiBtn:'查看合盤', aiSexF:'對方為女性', aiSexM:'對方為男性',
+-  planSub:'比面對面算命一次更便宜，天天都能諮詢。', planNote:'※ 支援信用卡付款。按月自動續訂，可隨時取消。',
++  planSub:'比面對面算命一次更便宜，天天都能諮詢。', planNote:'※ 透過 App Store / Google Play 帳戶付款。按月自動續訂，可隨時取消。',
+   editTitle:'修改登記資訊', editSub:'更改生日會重新計算命盤。', editSave:'儲存',
+-  miMyT:'我的頁面', miMyD:'註冊資訊·方案·退出', mpPlan:'目前方案', mpFree:'免費體驗中', mpPay:'採用信用卡付款（按月自動續訂）。可隨時在「我的頁面」變更或取消方案。', mpDevice:'註冊資訊與對話僅保存在本裝置中。', mpQuit:'退出（徹底刪除資料）', mpQuitConfirm:'退出後，註冊資訊、對話紀錄與Nico的記憶將從本裝置徹底刪除，無法復原。確定退出嗎？',
++  miMyT:'我的頁面', miMyD:'註冊資訊·方案·退出', mpPlan:'目前方案', mpFree:'免費體驗中', mpPay:'透過 App Store / Google Play 帳戶付款（按月自動續訂）。變更或取消方案，請在方案頁面點選「管理・取消訂閱」。', mpDevice:'註冊資訊與對話僅保存在本裝置中。', mpQuit:'退出（徹底刪除資料）', mpQuitConfirm:'退出後，註冊資訊、對話紀錄與Nico的記憶將從本裝置徹底刪除，無法復原。確定退出嗎？',
+   lcTitle:'人生年表（大運流轉）', lcNow:'當前', lcTurn:'轉折之年', lcLove:'戀愛順風年',
+   chipsSelf:['我的感情如何？','適合我的工作？','今年運勢？','怎樣提升財運？'], chipsAisho:['我們能長久嗎？','吵架時怎麼辦？','互相吸引的地方？'],
+   limitOver:'免費體驗到此為止。\n想更深入諮詢——\n\n・輕鬆版 NT$299/月（每日50次）\n・無限版 NT$899/月\n\n請點右上「☰」→「價格方案」。',
 @@ -994,7 +1062,7 @@
    obTitle:'Chỉ đăng ký một lần', obLead:'Chúng tôi lập lá số Tứ Trụ từ thông tin này. Lần sau không cần nhập lại.', obEditNote:'Bạn có thể thay đổi thông tin này (tên, ngày sinh...) bất cứ lúc nào, hoặc chuyển sang xem cho người khác.',
    fName:'Biệt danh (tùy chọn)', fNamePh:'Bạn muốn được gọi là gì?', fBday:'Ngày sinh', fTime:'Giờ sinh (nếu biết)', fUnknown:'Không biết giờ sinh', fDst:'Sinh vào giờ mùa hè (DST)', fDstNote:'Tích chọn nếu bạn sinh trong thời gian giờ mùa hè (Mỹ, Âu, Úc...). Chúng tôi trừ 1 giờ.',
@@ -879,6 +1162,18 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'Lá số', inputPh:'Nhập tin nhắn…', exitAisho:'Về lá số của tôi', today:'Hôm nay',
    menuTitle:'Menu', mLang:'Ngôn ngữ', mTheme:'Màu sắc', thIndigo:'Chàm', thGreen:'Xanh lá',
    miTodayT:'Vận may hôm nay', miTodayD:'Vận may và điều nên làm hôm nay', miChartT:'Xem lá số của bạn', miChartD:'Tứ trụ, Ngũ hành, Nhật chủ', miAishoT:'Xem hợp tuổi', miAishoD:'Người yêu, bạn bè, đồng nghiệp — ai cũng được',
+@@ -1004,9 +1072,9 @@
+   discNote:'Tứ Trụ là một môn xem mệnh của phương Đông, dùng Năm, Tháng, Ngày, Giờ sinh của bạn để đọc tính cách và dòng chảy vận mệnh. Gộp bốn yếu tố này thành ký hiệu, ta có “lá số” của bạn — hãy hình dung nó như dấu vân tay của khoảnh khắc bạn chào đời: một hoa văn độc nhất, bạn không cần biết đọc (ứng dụng đọc giúp), và nó chính là bản thiết kế về bạn. Trung tâm là ngày bạn chào đời (gọi là Nhật chủ). Nhìn vào sự cân bằng của Ngũ hành — Mộc, Hỏa, Thổ, Kim, Thủy — sẽ thấy cách để bạn phát huy bản thân tốt nhất.',
+   pillYear:'Trụ năm', pillMonth:'Trụ tháng', pillDay:'Trụ ngày', pillHour:'Trụ giờ',
+   aiTitle:'Xem hợp tuổi', aiSub:'Người yêu, bạn bè, gia đình hay đồng nghiệp đều được. Nhập ngày sinh để xem hai bạn hợp nhau thế nào, rồi hỏi tiếp trong chat.', aiLabel:'Ngày sinh của người ấy', aiBtn:'Xem ngay', aiSexF:'Người ấy là nữ', aiSexM:'Người ấy là nam',
+-  planSub:'Rẻ hơn một lần xem trực tiếp — hỏi mỗi ngày.', planNote:'* Thanh toán bằng thẻ tín dụng. Tự động gia hạn hằng tháng; hủy bất cứ lúc nào.',
++  planSub:'Rẻ hơn một lần xem trực tiếp — hỏi mỗi ngày.', planNote:'* Thanh toán qua tài khoản App Store / Google Play. Tự động gia hạn hằng tháng; hủy bất cứ lúc nào.',
+   editTitle:'Sửa thông tin', editSub:'Đổi ngày sinh sẽ tính lại lá số.', editSave:'Lưu',
+-  miMyT:'Trang của tôi', miMyD:'Thông tin · gói · xóa tài khoản', mpPlan:'Gói hiện tại', mpFree:'Đang dùng thử miễn phí', mpPay:'Thanh toán bằng thẻ tín dụng (tự động gia hạn hằng tháng). Bạn có thể đổi hoặc hủy gói bất cứ lúc nào trong Trang của tôi.', mpDevice:'Thông tin và cuộc trò chuyện chỉ được lưu trên thiết bị này.', mpQuit:'Xóa tài khoản (xóa toàn bộ dữ liệu)', mpQuitConfirm:'Xóa tài khoản sẽ xóa vĩnh viễn thông tin, cuộc trò chuyện và ký ức của Nico khỏi thiết bị này. Không thể hoàn tác. Tiếp tục?',
++  miMyT:'Trang của tôi', miMyD:'Thông tin · gói · xóa tài khoản', mpPlan:'Gói hiện tại', mpFree:'Đang dùng thử miễn phí', mpPay:'Thanh toán qua tài khoản App Store / Google Play (tự động gia hạn hằng tháng). Để đổi hoặc hủy gói, hãy dùng “Quản lý / hủy gói” trong màn hình Gói.', mpDevice:'Thông tin và cuộc trò chuyện chỉ được lưu trên thiết bị này.', mpQuit:'Xóa tài khoản (xóa toàn bộ dữ liệu)', mpQuitConfirm:'Xóa tài khoản sẽ xóa vĩnh viễn thông tin, cuộc trò chuyện và ký ức của Nico khỏi thiết bị này. Không thể hoàn tác. Tiếp tục?',
+   lcTitle:'Dòng thời gian cuộc đời (đại vận)', lcNow:'Bạn đang ở đây', lcTurn:'Năm bước ngoặt', lcLove:'Năm thuận gió tình duyên',
+   chipsSelf:['Chuyện tình cảm của tôi?','Nghề gì hợp với tôi?','Vận may năm nay?','Cách tăng tài lộc?'], chipsAisho:['Chúng tôi có bền lâu?','Khi cãi nhau thì sao?','Điều gì hút nhau?'],
+   limitOver:'Phần dùng thử miễn phí kết thúc tại đây.\nĐể hỏi sâu hơn—\n\n• Gói Nhẹ 249.000₫/tháng (50 lần/ngày)\n• Không giới hạn 749.000₫/tháng\n\nMở «☰» → «Gói dịch vụ» ở góc trên bên phải.',
 @@ -1039,7 +1107,7 @@
    obTitle:'Un único registro', obLead:'Con esto calculamos tu carta de los Cuatro Pilares y personalizamos tu lectura. No tendrás que escribirlo de nuevo.', obEditNote:'Puedes cambiar estos datos (nombre, fecha de nacimiento, etc.) cuando quieras, o cambiar a la lectura de otra persona.',
    fName:'Apodo (opcional)', fNamePh:'¿Cómo quieres que te llamemos?', fBday:'Fecha de nacimiento', fTime:'Hora de nacimiento (si la sabes)', fUnknown:'No sé la hora', fDst:'Nací en horario de verano (DST)', fDstNote:'Marca si naciste en horario de verano (EE. UU., Europa, Australia...). Restamos 1 hora.',
@@ -888,6 +1183,18 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'Carta', inputPh:'Escribe un mensaje…', exitAisho:'Volver a mi lectura', today:'Hoy',
    menuTitle:'Menú', mLang:'Idioma', mTheme:'Color', thIndigo:'Índigo', thGreen:'Verde',
    miTodayT:'Tu día de hoy', miTodayD:'Tu suerte y acción de hoy', miChartT:'Ver tu carta', miChartD:'Pilares, Cinco Elementos, Maestro del Día', miAishoT:'Compatibilidad', miAishoD:'Pareja, amistad o trabajo — cualquiera',
+@@ -1049,9 +1117,9 @@
+   discNote:'Los Cuatro Pilares son una lectura oriental que usa tu Año, Mes, Día y Hora de nacimiento para ver tu carácter y cómo fluye tu suerte. Los cuatro, escritos juntos como símbolos, forman tu “carta” — imagínala como la huella dactilar del instante en que naciste: un dibujo único que no necesitas saber leer (la app lo lee por ti) y que funciona como un plano de quién eres. Su centro es el día en que naciste (el Maestro del Día). Mirar el equilibrio de los Cinco Elementos — Madera, Fuego, Tierra, Metal, Agua — muestra cómo aprovechar mejor quién eres.',
+   pillYear:'Año', pillMonth:'Mes', pillDay:'Día', pillHour:'Hora',
+   aiTitle:'Compatibilidad', aiSub:'Vale cualquiera: pareja, amistad, familia o compañero de trabajo. Introduce su fecha de nacimiento y sigue preguntando en el chat.', aiLabel:'Su fecha de nacimiento', aiBtn:'Ver compatibilidad', aiSexF:'Ella / mujer', aiSexM:'Él / hombre',
+-  planSub:'Más barato que una lectura presencial — consulta cada día.', planNote:'* Pago con tarjeta de crédito. Renovación mensual automática; cancela cuando quieras.',
++  planSub:'Más barato que una lectura presencial — consulta cada día.', planNote:'* Se paga con tu cuenta de App Store / Google Play. Renovación mensual automática; cancela cuando quieras.',
+   editTitle:'Editar tus datos', editSub:'Cambiar la fecha recalcula tu carta.', editSave:'Guardar',
+-  miMyT:'Mi página', miMyD:'Tus datos, plan y cuenta', mpPlan:'Plan actual', mpFree:'Prueba gratuita', mpPay:'El pago es con tarjeta de crédito (renovación mensual automática). Puedes cambiar o cancelar tu plan cuando quieras desde Mi Página.', mpDevice:'Tus datos y conversaciones se guardan solo en este dispositivo.', mpQuit:'Eliminar cuenta (borrar todo)', mpQuitConfirm:'Eliminar tu cuenta borrará permanentemente tus datos, conversaciones y la memoria de Nico de este dispositivo. No se puede deshacer. ¿Continuar?',
++  miMyT:'Mi página', miMyD:'Tus datos, plan y cuenta', mpPlan:'Plan actual', mpFree:'Prueba gratuita', mpPay:'El pago es con tu cuenta de App Store / Google Play (renovación mensual automática). Para cambiar o cancelar, usa “Gestionar / cancelar suscripción” en la pantalla de Planes.', mpDevice:'Tus datos y conversaciones se guardan solo en este dispositivo.', mpQuit:'Eliminar cuenta (borrar todo)', mpQuitConfirm:'Eliminar tu cuenta borrará permanentemente tus datos, conversaciones y la memoria de Nico de este dispositivo. No se puede deshacer. ¿Continuar?',
+   lcTitle:'Línea de vida (ciclos de década)', lcNow:'Estás aquí', lcTurn:'Años de inflexión', lcLove:'Años de viento a favor en el amor',
+   chipsSelf:['¿Cómo va mi amor?','¿Qué trabajo me va?','¿Mi suerte este año?','¿Cómo atraer dinero?'], chipsAisho:['¿Duraremos?','¿Y si discutimos?','¿Qué nos atrae?'],
+   limitOver:'Aquí termina la prueba gratis.\nPara consultar más a fondo—\n\n• Ligero $9.99/mes (50 al día)\n• Ilimitado $29.80/mes\n\nAbre «☰» → «Planes» arriba a la derecha.',
 @@ -1084,7 +1152,7 @@
    obTitle:'Cadastro único', obLead:'Com isso calculamos seu mapa dos Quatro Pilares e personalizamos sua leitura. Não precisará digitar de novo.', obEditNote:'Você pode alterar esses dados (nome, data de nascimento etc.) quando quiser, ou trocar para a leitura de outra pessoa.',
    fName:'Apelido (opcional)', fNamePh:'Como quer ser chamada?', fBday:'Data de nascimento', fTime:'Hora de nascimento (se souber)', fUnknown:'Não sei a hora', fDst:'Nasci no horário de verão (DST)', fDstNote:'Marque se você nasceu no horário de verão (EUA, Europa, Austrália...). Subtraímos 1 hora.',
@@ -897,6 +1204,18 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'Mapa', inputPh:'Digite uma mensagem…', exitAisho:'Voltar à minha leitura', today:'Hoje',
    menuTitle:'Menu', mLang:'Idioma', mTheme:'Cor', thIndigo:'Índigo', thGreen:'Verde',
    miTodayT:'Seu dia de hoje', miTodayD:'Sua sorte e ação de hoje', miChartT:'Ver seu mapa', miChartD:'Pilares, Cinco Elementos, Mestre do Dia', miAishoT:'Compatibilidade', miAishoD:'Par, amizade ou trabalho — qualquer pessoa',
+@@ -1094,9 +1162,9 @@
+   discNote:'Os Quatro Pilares são uma leitura oriental que usa seu Ano, Mês, Dia e Hora de nascimento para ver seu caráter e como sua sorte flui. Os quatro, escritos juntos como símbolos, formam seu “mapa” — imagine-o como a impressão digital do instante em que você nasceu: um desenho único que você não precisa saber ler (o app lê por você) e que funciona como um retrato de quem você é. Seu centro é o dia em que você nasceu (o Mestre do Dia). Olhar o equilíbrio dos Cinco Elementos — Madeira, Fogo, Terra, Metal, Água — mostra como aproveitar melhor quem você é.',
+   pillYear:'Ano', pillMonth:'Mês', pillDay:'Dia', pillHour:'Hora',
+   aiTitle:'Compatibilidade', aiSub:'Vale qualquer pessoa: par romântico, amizade, família ou colega. Informe a data de nascimento e continue perguntando no chat.', aiLabel:'Data de nascimento da pessoa', aiBtn:'Ver compatibilidade', aiSexF:'Ela / mulher', aiSexM:'Ele / homem',
+-  planSub:'Mais barato que uma leitura presencial — consulte todo dia.', planNote:'* Pagamento com cartão de crédito. Renovação mensal automática; cancele quando quiser.',
++  planSub:'Mais barato que uma leitura presencial — consulte todo dia.', planNote:'* Pago pela sua conta da App Store / Google Play. Renovação mensal automática; cancele quando quiser.',
+   editTitle:'Editar seus dados', editSub:'Mudar a data recalcula seu mapa.', editSave:'Salvar',
+-  miMyT:'Minha página', miMyD:'Seus dados, plano e conta', mpPlan:'Plano atual', mpFree:'Teste grátis', mpPay:'O pagamento é com cartão de crédito (renovação mensal automática). Você pode alterar ou cancelar seu plano quando quiser em Minha Página.', mpDevice:'Seus dados e conversas ficam salvos apenas neste aparelho.', mpQuit:'Excluir conta (apagar tudo)', mpQuitConfirm:'Excluir sua conta apagará permanentemente seus dados, conversas e a memória da Nico deste aparelho. Não pode ser desfeito. Continuar?',
++  miMyT:'Minha página', miMyD:'Seus dados, plano e conta', mpPlan:'Plano atual', mpFree:'Teste grátis', mpPay:'O pagamento é pela sua conta da App Store / Google Play (renovação mensal automática). Para alterar ou cancelar, use “Gerenciar / cancelar assinatura” na tela de Planos.', mpDevice:'Seus dados e conversas ficam salvos apenas neste aparelho.', mpQuit:'Excluir conta (apagar tudo)', mpQuitConfirm:'Excluir sua conta apagará permanentemente seus dados, conversas e a memória da Nico deste aparelho. Não pode ser desfeito. Continuar?',
+   lcTitle:'Linha da vida (ciclos de década)', lcNow:'Você está aqui', lcTurn:'Anos de virada', lcLove:'Anos de vento a favor no amor',
+   chipsSelf:['Como vai meu amor?','Que trabalho combina comigo?','Minha sorte este ano?','Como atrair dinheiro?'], chipsAisho:['Vamos durar?','E quando brigamos?','O que nos atrai?'],
+   limitOver:'A avaliação grátis termina aqui.\nPara consultar mais a fundo—\n\n• Leve R$49,90/mês (50 por dia)\n• Ilimitado R$149/mês\n\nAbra «☰» → «Planos» no canto superior direito.',
 @@ -1129,7 +1197,7 @@
    obTitle:'Pendaftaran sekali saja', obLead:'Dari data ini kami hitung bagan Empat Pilar Anda. Tidak perlu mengisi lagi nanti.', obEditNote:'Data ini (nama, tanggal lahir, dll.) bisa diubah kapan saja, atau diganti ke pembacaan orang lain.',
    fName:'Nama panggilan (opsional)', fNamePh:'Ingin dipanggil apa?', fBday:'Tanggal lahir', fTime:'Jam lahir (jika tahu)', fUnknown:'Tidak tahu jamnya', fDst:'Lahir saat waktu musim panas (DST)', fDstNote:'Centang jika lahir saat daylight saving (AS, Eropa, Australia, dll). Kami kurangi 1 jam.',
@@ -906,6 +1225,18 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'Bagan', inputPh:'Ketik pesan…', exitAisho:'Kembali ke bacaan saya', today:'Hari ini',
    menuTitle:'Menu', mLang:'Bahasa', mTheme:'Warna', thIndigo:'Indigo', thGreen:'Hijau',
    miTodayT:'Ramalan Hari Ini', miTodayD:'Keberuntungan & aksi hari ini', miChartT:'Lihat bagan Anda', miChartD:'Pilar, Lima Elemen, Penguasa Hari', miAishoT:'Cek kecocokan', miAishoD:'Pasangan, teman, rekan kerja — siapa pun',
+@@ -1139,9 +1207,9 @@
+   discNote:'Empat Pilar adalah ramalan Timur yang memakai Tahun, Bulan, Hari, dan Jam lahir Anda untuk membaca watak dan arah nasib. Keempatnya, ditulis bersama sebagai simbol, membentuk “bagan” Anda — bayangkan seperti sidik jari dari momen kelahiran Anda: pola yang unik, yang tak perlu Anda baca sendiri (aplikasi yang membacakannya untuk Anda), dan berfungsi seperti cetak biru diri Anda. Pusatnya adalah hari Anda lahir (disebut Penguasa Hari). Melihat keseimbangan Lima Elemen — Kayu, Api, Tanah, Logam, Air — menunjukkan cara terbaik mengembangkan potensi diri Anda.',
+   pillYear:'Tahun', pillMonth:'Bulan', pillDay:'Hari', pillHour:'Jam',
+   aiTitle:'Cek kecocokan', aiSub:'Siapa pun bisa — pasangan, teman, keluarga, atau rekan kerja. Masukkan tanggal lahirnya lalu lanjut bertanya di chat.', aiLabel:'Tanggal lahir si dia', aiBtn:'Lihat kecocokan', aiSexF:'Dia perempuan', aiSexM:'Dia laki-laki',
+-  planSub:'Lebih murah dari sekali ramal tatap muka — konsultasi tiap hari.', planNote:'* Pembayaran dengan kartu kredit. Perpanjangan otomatis bulanan; batalkan kapan saja.',
++  planSub:'Lebih murah dari sekali ramal tatap muka — konsultasi tiap hari.', planNote:'* Dibayar melalui akun App Store / Google Play Anda. Perpanjangan otomatis bulanan; batalkan kapan saja.',
+   editTitle:'Ubah data', editSub:'Mengubah tanggal lahir akan menghitung ulang bagan.', editSave:'Simpan',
+-  miMyT:'Halaman saya', miMyD:'Data, paket & akun', mpPlan:'Paket saat ini', mpFree:'Uji coba gratis', mpPay:'Pembayaran dengan kartu kredit (perpanjangan otomatis bulanan). Anda dapat mengubah atau membatalkan paket kapan saja dari Halaman Saya.', mpDevice:'Data dan percakapan hanya tersimpan di perangkat ini.', mpQuit:'Hapus akun (hapus semua data)', mpQuitConfirm:'Menghapus akun akan menghapus permanen data, percakapan, dan ingatan Nico dari perangkat ini. Tidak bisa dibatalkan. Lanjutkan?',
++  miMyT:'Halaman saya', miMyD:'Data, paket & akun', mpPlan:'Paket saat ini', mpFree:'Uji coba gratis', mpPay:'Pembayaran melalui akun App Store / Google Play Anda (perpanjangan otomatis bulanan). Untuk mengubah atau membatalkan, gunakan “Kelola / batalkan langganan” di layar Paket.', mpDevice:'Data dan percakapan hanya tersimpan di perangkat ini.', mpQuit:'Hapus akun (hapus semua data)', mpQuitConfirm:'Menghapus akun akan menghapus permanen data, percakapan, dan ingatan Nico dari perangkat ini. Tidak bisa dibatalkan. Lanjutkan?',
+   lcTitle:'Garis waktu kehidupan (siklus dekade)', lcNow:'Anda di sini', lcTurn:'Tahun titik balik', lcLove:'Tahun angin cinta',
+   chipsSelf:['Bagaimana asmara saya?','Kerja apa yang cocok?','Keberuntungan tahun ini?','Cara menarik rezeki?'], chipsAisho:['Apakah kami langgeng?','Kalau bertengkar bagaimana?','Apa yang saling menarik?'],
+   limitOver:'Uji coba gratis berakhir di sini.\nUntuk konsultasi lebih dalam—\n\n• Ringan Rp149.000/bulan (50/hari)\n• Tanpa Batas Rp449.000/bulan\n\nBuka «☰» → «Paket» di kanan atas.',
 @@ -1174,7 +1242,7 @@
    obTitle:'ลงทะเบียนครั้งเดียวเท่านั้น', obLead:'เราใช้ข้อมูลนี้คำนวณดวงสี่เสาหลักของคุณ ครั้งหน้าไม่ต้องกรอกอีก', obEditNote:'ข้อมูลนี้ (ชื่อ วันเกิด ฯลฯ) เปลี่ยนได้ทุกเมื่อ หรือสลับไปดูดวงให้คนอื่นก็ได้',
    fName:'ชื่อเล่น (ไม่บังคับ)', fNamePh:'อยากให้เรียกว่าอะไร', fBday:'วันเกิด', fTime:'เวลาเกิด (ถ้าทราบ)', fUnknown:'ไม่ทราบเวลาเกิด', fDst:'เกิดช่วงเวลาออมแสง (DST)', fDstNote:'ติ๊กถ้าเกิดช่วงเวลาออมแสง (สหรัฐฯ ยุโรป ออสเตรเลีย ฯลฯ) ระบบจะลบ 1 ชั่วโมง',
@@ -915,6 +1246,27 @@ diff -ruN pk/index.html fx/index.html
    btnChart:'ดวงชะตา', inputPh:'พิมพ์ข้อความ…', exitAisho:'กลับไปดวงของฉัน', today:'วันนี้',
    menuTitle:'เมนู', mLang:'ภาษา', mTheme:'สี', thIndigo:'คราม', thGreen:'เขียว',
    miTodayT:'ดวงวันนี้', miTodayD:'โชคและสิ่งที่ควรทำวันนี้', miChartT:'ดูดวงชะตาของคุณ', miChartD:'สี่เสา ธาตุทั้งห้า และประธานวัน', miAishoT:'ดูดวงเนื้อคู่', miAishoD:'คนรัก เพื่อน เพื่อนร่วมงาน — ใครก็ได้',
+@@ -1184,9 +1252,9 @@
+   discNote:'สี่เสาหลักคือศาสตร์ทำนายของตะวันออก ที่ใช้ ปี เดือน วัน และเวลาเกิดของคุณ เพื่ออ่านนิสัยและทิศทางของดวงชะตา นำทั้งสี่มาเขียนรวมกันเป็นสัญลักษณ์ ก็ได้เป็น “ดวง (ผังชะตา)” ของคุณ — ลองนึกว่ามันคือลายนิ้วมือของช่วงเวลาที่คุณเกิด ลวดลายหนึ่งเดียวในโลกที่คุณไม่ต้องอ่านออกเองก็ได้ (แอปอ่านให้) และมันทำหน้าที่เหมือนพิมพ์เขียวของตัวคุณ ศูนย์กลางคือวันที่คุณเกิด (เรียกว่าประธานวัน) การดูสมดุลของธาตุทั้งห้า — ไม้ ไฟ ดิน ทอง น้ำ — จะบอกวิธีใช้ตัวตนของคุณให้ดีที่สุด',
+   pillYear:'เสาปี', pillMonth:'เสาเดือน', pillDay:'เสาวัน', pillHour:'เสาเวลา',
+   aiTitle:'ดูดวงเนื้อคู่', aiSub:'ใครก็ได้ ทั้งคนรัก เพื่อน ครอบครัว หรือเพื่อนร่วมงาน ใส่วันเกิดเพื่อดูความเข้ากัน แล้วถามต่อในแชทได้เลย', aiLabel:'วันเกิดของอีกฝ่าย', aiBtn:'ดูความเข้ากัน', aiSexF:'อีกฝ่ายเป็นผู้หญิง', aiSexM:'อีกฝ่ายเป็นผู้ชาย',
+-  planSub:'ถูกกว่าดูดวงตัวต่อตัวหนึ่งครั้ง — ปรึกษาได้ทุกวัน', planNote:'* ชำระด้วยบัตรเครดิต ต่ออายุอัตโนมัติรายเดือน ยกเลิกได้ทุกเมื่อ',
++  planSub:'ถูกกว่าดูดวงตัวต่อตัวหนึ่งครั้ง — ปรึกษาได้ทุกวัน', planNote:'* ชำระผ่านบัญชี App Store / Google Play ต่ออายุอัตโนมัติรายเดือน ยกเลิกได้ทุกเมื่อ',
+   editTitle:'แก้ไขข้อมูล', editSub:'เปลี่ยนวันเกิดจะคำนวณดวงใหม่', editSave:'บันทึก',
+-  miMyT:'หน้าของฉัน', miMyD:'ข้อมูล·แพ็กเกจ·ลบบัญชี', mpPlan:'แพ็กเกจปัจจุบัน', mpFree:'ช่วงทดลองฟรี', mpPay:'ชำระด้วยบัตรเครดิต (ต่ออายุอัตโนมัติรายเดือน) เปลี่ยนหรือยกเลิกแพ็กเกจได้ทุกเมื่อจากหน้าของฉัน', mpDevice:'ข้อมูลและบทสนทนาถูกเก็บไว้ในเครื่องนี้เท่านั้น', mpQuit:'ลบบัญชี (ลบข้อมูลทั้งหมด)', mpQuitConfirm:'การลบบัญชีจะลบข้อมูล บทสนทนา และความทรงจำของ Nico จากเครื่องนี้อย่างถาวร ไม่สามารถกู้คืนได้ ยืนยันไหม?',
++  miMyT:'หน้าของฉัน', miMyD:'ข้อมูล·แพ็กเกจ·ลบบัญชี', mpPlan:'แพ็กเกจปัจจุบัน', mpFree:'ช่วงทดลองฟรี', mpPay:'ชำระผ่านบัญชี App Store / Google Play (ต่ออายุอัตโนมัติรายเดือน) เปลี่ยนหรือยกเลิกแพ็กเกจได้ที่ “จัดการ / ยกเลิกการสมัคร” ในหน้าแพ็กเกจ', mpDevice:'ข้อมูลและบทสนทนาถูกเก็บไว้ในเครื่องนี้เท่านั้น', mpQuit:'ลบบัญชี (ลบข้อมูลทั้งหมด)', mpQuitConfirm:'การลบบัญชีจะลบข้อมูล บทสนทนา และความทรงจำของ Nico จากเครื่องนี้อย่างถาวร ไม่สามารถกู้คืนได้ ยืนยันไหม?',
+   lcTitle:'เส้นเวลาชีวิต (วัฏจักรสิบปี)', lcNow:'คุณอยู่ตรงนี้', lcTurn:'ปีหัวเลี้ยวหัวต่อ', lcLove:'ปีลมส่งด้านความรัก',
+   chipsSelf:['ความรักเป็นยังไง?','งานแบบไหนเหมาะกับฉัน?','ดวงปีนี้เป็นยังไง?','เสริมโชคเงินยังไง?'], chipsAisho:['เราจะยืนยาวไหม?','เวลาทะเลาะกันล่ะ?','อะไรดึงดูดกัน?'],
+   limitOver:'ทดลองฟรีจบเพียงเท่านี้\nหากต้องการปรึกษาลึกขึ้น—\n\n• ไลท์ ฿349/เดือน (วันละ 50 ครั้ง)\n• ไม่จำกัด ฿999/เดือน\n\nแตะ «☰» → «แพ็กเกจ» ที่มุมขวาบน',
+@@ -1363,7 +1431,7 @@
+       var sys=buildSystemPrompt()+ctx+'\n[DAILY GREETING — for THIS reply only, highest priority] Write ONE short, warm, FRESHLY-WORDED morning line in the reply language (1 sentence, about 35 words max), as if texting them just now. First greet by the time of day, then give the single most useful gentle 養生 nudge, grounded in TODAY FLOW above (lean in on a tailwind; be gentle on a headwind), with ONE plain self-care action. Vary the wording EVERY day — never a fixed template or stock phrase, and never reuse an opener seen in recent history. Plain warm words, NO menu, NO question, NO technical terms, never a diagnosis.';
+       var payload={ systemInstruction:{parts:[{text:sys}]}, contents:[{role:'user',parts:[{text:'today one-line please'}]}], generationConfig:{temperature:1.0,maxOutputTokens:120,thinkingConfig:{thinkingBudget:0}} };
+       var dk=directKey(); var ep=dk?('https://generativelanguage.googleapis.com/v1beta/models/'+(window.PK_DIRECT_MODEL||'gemini-2.5-flash-lite')+':generateContent?key='+encodeURIComponent(dk)):'/api/gemini';
+-      fetch(ep,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free'},body:JSON.stringify(payload)})
++      fetch(ep,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free','x-pk-auth':((authGet()||{}).token||'')},body:JSON.stringify(payload)})
+         .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+         .then(function(j){ var t=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0].text; resolve(t?stripMd(t).trim():''); })
+         .catch(function(){ resolve(''); });
 @@ -1541,7 +1609,10 @@
  var PLACES=[];
  var DST_ZONE={us:'us',ca:'us',gb:'eu',fr:'eu',es:'eu',de:'eu',it:'eu',au:'au'};
@@ -1037,7 +1389,8 @@ diff -ruN pk/index.html fx/index.html
 +  var payload={systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:'(The user has just completed registration and opened the chat for the first time. Greet them.)'}]}],generationConfig:{temperature:0.9,maxOutputTokens:1400,thinkingConfig:{thinkingBudget:0}}};
    var dk=directKey();
    var ep=dk?('https://generativelanguage.googleapis.com/v1beta/models/'+(window.PK_DIRECT_MODEL||'gemini-2.5-flash-lite')+':generateContent?key='+encodeURIComponent(dk)):'/api/gemini';
-   fetch(ep,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free'},body:JSON.stringify(payload)})
+-  fetch(ep,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free'},body:JSON.stringify(payload)})
++  fetch(ep,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free','x-pk-auth':((authGet()||{}).token||'')},body:JSON.stringify(payload)})
      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
      .then(function(j){ if(_mt!==_greetTok) return; var tx=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0].text; if(!tx) throw 0; t.remove();
 +      tx=tx.replace(/^\s*[\(（][^)）]{0,200}(?:FIRST GREETING|first message|first thing|The user has|instructions)[^)）]{0,200}[\)）]\s*/i,'').replace(/^\s*\[[^\]]{0,120}\]\s*/,'');
@@ -1433,6 +1786,15 @@ diff -ruN pk/index.html fx/index.html
  function _nearDupOfHistory(t){ try{
    if(!t||t.length<60) return false;
    var norm=function(x){ return String(x||'').replace(/[\s　]/g,''); };
+@@ -3857,7 +4097,7 @@
+   var ep=dk?('https://generativelanguage.googleapis.com/v1beta/models/'+mdl+':generateContent?key='+encodeURIComponent(dk)):'/api/gemini';
+   var done=false;
+   var timeout=new Promise(function(res){ setTimeout(function(){ if(!done) res(null); },4500); });
+-  var call=fetch(ep,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free','x-pk-classify':'1'},body:JSON.stringify(body)})
++  var call=fetch(ep,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free','x-pk-auth':((authGet()||{}).token||''),'x-pk-classify':'1'},body:JSON.stringify(body)})
+     .then(function(r){ return r.ok?r.json():null; })
+     .then(function(j){ done=true; var t=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0].text; if(!t) return null;
+       var m=t.match(/\{[^{}]*\}/); if(!m) return null; try{ var o=JSON.parse(m[0]); return (o&&o.topic)?o:null; }catch(e){ return null; } })
 @@ -3885,7 +4125,7 @@
    var _etop=''; try{ _etop=_effectiveTopic(q); }catch(e){}
    var _loveTopic=(_etop==='love'||_etop==='marriage');
@@ -1442,7 +1804,13 @@ diff -ruN pk/index.html fx/index.html
    /* 体験モード: APIキーがある時はサーバーを介さず直接Geminiへ（回数制限なし。キーは端末内のみ） */
    var dk=directKey();
    var _mdl=smart?(window.PK_DIRECT_MODEL_DEEP||'gemini-3.6-flash'):(window.PK_DIRECT_MODEL||'gemini-2.5-flash-lite');
-@@ -3903,20 +4143,21 @@
+@@ -3898,25 +4138,26 @@
+     ? 'https://generativelanguage.googleapis.com/v1beta/models/'+_mdl+':generateContent?key='+encodeURIComponent(dk)
+     : '/api/gemini';
+   var errInfo='';
+-  return fetch(ep,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free','x-pk-deep':(smart?'1':'0')},body:JSON.stringify(payload)})
++  return fetch(ep,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free','x-pk-auth':((authGet()||{}).token||''),'x-pk-deep':(smart?'1':'0')},body:JSON.stringify(payload)})
+     .then(function(r){ if(r.status===429){ limitHit=true; throw 0; } if(!r.ok){ return r.text().then(function(b){ var c=''; try{ var j=JSON.parse(b); c=(j&&j.error&&(j.error.code||j.error.status))||''; }catch(e){} errInfo='HTTP '+r.status+(c?(' '+c):''); throw 0; },function(){ errInfo='HTTP '+r.status; throw 0; }); } return r.json(); })
      .then(function(j){ var t=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0].text; if(!t){ if(!errInfo) errInfo='EMPTY_REPLY'; throw 0; }
        var _leak=_looksLikeThinkLeak(t); t=_stripThinkLeak(t);   /* 思考モデルの自己レビュー独り言が本文に漏れた場合：救済（引用回収/メタ切り落とし） */
        t=_extractChips(t); var _o=(deep?t:_softenJargon(t)); _o=_stripInternalLabels(_o); _o=_stripScaffold(_o); _o=_stripLeadThink(_o); if(state.lang!=='ja'&&state.lang!=='zh'&&state.lang!=='zt') _o=_stripHan(_o);
@@ -1455,7 +1823,8 @@ diff -ruN pk/index.html fx/index.html
 -        p2.contents[p2.contents.length-1].parts[0].text+='\n\n[CRITICAL: output ONLY Nico\'s final reply to the user, in the reply language — do NOT include ANY of your own planning, self-review, sentence-count checks, rule-compliance notes, or English meta-commentary (no "Tone:", "sentence count", "aligned with rules", "Ready to generate"). If your previous draft repeated an earlier reply, answer the NEW question with completely fresh content instead.]';
 +        p2.contents[p2.contents.length-1].parts[0].text+='\n\n[CRITICAL: output ONLY Nico\'s final reply to the user, in the reply language — do NOT include ANY of your own planning, self-review, sentence-count checks, rule-compliance notes, or English meta-commentary (no "Tone:", "sentence count", "aligned with rules", "Ready to generate"). If your previous draft repeated an earlier reply, answer the NEW question with completely fresh content instead. Write EVERY word in '+langNameOf()+' only — no Japanese, Chinese characters or Korean unless that IS the reply language.]';
          var ep2=dk?('https://generativelanguage.googleapis.com/v1beta/models/'+_rm+':generateContent?key='+encodeURIComponent(dk)):'/api/gemini';
-         return fetch(ep2,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free','x-pk-deep':'1'},body:JSON.stringify(p2)})
+-        return fetch(ep2,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free','x-pk-deep':'1'},body:JSON.stringify(p2)})
++        return fetch(ep2,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free','x-pk-auth':((authGet()||{}).token||''),'x-pk-deep':'1'},body:JSON.stringify(p2)})
            .then(function(r2){ return r2.ok?r2.json():null; })
            .then(function(j2){ var t2=j2&&j2.candidates&&j2.candidates[0]&&j2.candidates[0].content&&j2.candidates[0].content.parts&&j2.candidates[0].content.parts[0].text;
 -            if(t2){ t2=_stripThinkLeak(t2); t2=_extractChips(t2); var o2=_softenJargon(t2); o2=_stripInternalLabels(o2); o2=_stripScaffold(o2); o2=_stripLeadThink(o2); if(state.lang!=='ja'&&state.lang!=='zh'&&state.lang!=='zt') o2=_stripHan(o2); o2=_stripPreamble(_stripFufu(o2)); if(o2.replace(/\s/g,'').length>=12) return {text:o2,demo:false}; }
@@ -1468,6 +1837,15 @@ diff -ruN pk/index.html fx/index.html
      .catch(function(){ if(limitHit) return {text:pick(SRV_BUSY),demo:true,limit:true}; /* ブロック/失敗時：安全応答か正直なエラー文のみ（作り置きの鑑定は返さない） */ if(risk) return {text:safeReply(risk),demo:false,noBill:true}; try{ if(errInfo&&window.console) console.warn('[pk] reply failed:',errInfo); }catch(_e){} return {text:pick(ERR_NOTE),demo:true}; });
  }
  /* ---- 長期記憶：8通ごとに「この人のメモ帳」をAIが更新し端末内(pk_mem)に保存 ---- */
+@@ -3932,7 +4173,7 @@
+       generationConfig:{temperature:0.2,maxOutputTokens:320,thinkingConfig:{thinkingBudget:0}} };
+     var dk=directKey();
+     var ep=dk?('https://generativelanguage.googleapis.com/v1beta/models/'+(window.PK_DIRECT_MODEL||'gemini-2.5-flash-lite')+':generateContent?key='+encodeURIComponent(dk)):'/api/gemini';
+-    fetch(ep,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free'},body:JSON.stringify(payload)})
++    fetch(ep,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free','x-pk-auth':((authGet()||{}).token||'')},body:JSON.stringify(payload)})
+       .then(function(r){ return r.ok?r.json():null; })
+       .then(function(j){ var t=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0].text;
+         if(t){ try{ var _clean=t.trim().replace(/^[\-\s]*.*(system\s*override|reveal (your )?(system )?prompt|ignore (all )?previous|begin every reply|start (each|every) (reply|response) with).*$/gmi,'').replace(/\n{2,}/g,'\n').trim(); localStorage.setItem('pk_mem',_clean.slice(0,1600)); }catch(e){} } })
 @@ -4079,6 +4320,8 @@
  };
  if($('devKeyClear')) $('devKeyClear').onclick=function(){ try{ localStorage.removeItem('pk_key'); }catch(e){} $('devKey').value=''; updateDevBox(); };
@@ -1528,7 +1906,7 @@ diff -ruN pk/index.html fx/index.html
        var _ny2=(_np2.now&&_np2.now.year)||0;
        (_np2.annualFortunes||[]).forEach(function(a){if(a.year<_ny2||a.year>_ny2+12)return;var pr=_natPairs(a.ganzhi);if(!pr.length)return;var nm=nayinOf(a.ganzhi);_mrows.push({kind:'年運',when:''+a.year,gz:a.ganzhi,nm:nm?nm[0]:'',pairs:pr,cur:(a.year===_ny2)});});
        if(_mrows.length){
-@@ -4478,6 +4724,16 @@
+@@ -4478,6 +4724,142 @@
  $('exitAisho').onclick=function(){ state.mode='self'; state.chartB=null; state.compat=null; updateModeBar(); pushAI(pick({ja:'自分の鑑定に戻ったよ。またなんでも聞いてね。',en:'Back to your own reading. Ask me anything.',zh:'回到你的命盘了，随时再问我。',zt:'回到你的命盤了，隨時再問我。',ko:'내 명식으로 돌아왔어요. 또 뭐든 물어보세요.',vi:'Đã trở về lá số của bạn. Cứ hỏi tôi bất cứ điều gì nhé.',es:'De vuelta a tu lectura. Pregúntame lo que quieras.',pt:'De volta à sua leitura. Pergunte o que quiser.',id:'Kembali ke bacaan Anda. Silakan tanya apa saja.',th:'กลับมาที่ดวงของคุณแล้ว ถามอะไรก็ได้เลยนะ'})); };
  
  function placeLabel(v){ try{ var i,j,g; for(i=0;i<PLACE_GROUPS.length;i++){ g=PLACE_GROUPS[i]; for(j=0;j<(g.items||[]).length;j++){ if(g.items[j].id===v) return g.label+' · '+g.items[j].label; } if(g.id===v) return g.label; } }catch(e){} return v||'-'; }
@@ -1542,14 +1920,142 @@ diff -ruN pk/index.html fx/index.html
 +pt:'Seus dados e conversas são salvos automaticamente na sua conta ({e}). Se trocar de celular, é só entrar para recuperá-los.',
 +id:'Data dan percakapan Anda tersimpan otomatis di akun Anda ({e}). Ganti ponsel? Cukup masuk untuk memulihkannya.',
 +th:'ข้อมูลและบทสนทนาของคุณถูกบันทึกอัตโนมัติในบัญชี ({e}) เปลี่ยนมือถือแล้วแค่เข้าสู่ระบบก็กลับมาครบ'};
++/* ===== 課金（App Store / Google Play）=====
++   ・購入はネイティブアプリ（Capacitor ＋ RevenueCat の Purchases プラグイン）で行う。Webで開いた時は購入できない（案内だけ出す）。
++   ・RevenueCat の appUserID ＝ アカウントの uid（トークンの先頭64桁）。購入はログイン中だけ。
++   ・プランの正本はサーバー（billing.js が rec.sub に記録）。アプリはサーバーから受け取ったプランを表示・上限に使う。
++   ・アプリ側で設定するもの：window.PK_RC_KEYS={ios:'appl_…', android:'goog_…'}（RevenueCat の公開SDKキー） */
++var BILL={
++ buy:{ja:'このプランにする',en:'Choose this plan',zh:'选择此套餐',zt:'選擇此方案',ko:'이 플랜 선택',vi:'Chọn gói này',es:'Elegir este plan',pt:'Escolher este plano',id:'Pilih paket ini',th:'เลือกแพ็กเกจนี้'},
++ current:{ja:'ご利用中',en:'Current plan',zh:'使用中',zt:'使用中',ko:'이용 중',vi:'Đang dùng',es:'Plan actual',pt:'Plano atual',id:'Paket aktif',th:'กำลังใช้งาน'},
++ restore:{ja:'購入を復元',en:'Restore purchases',zh:'恢复购买',zt:'恢復購買',ko:'구매 복원',vi:'Khôi phục giao dịch',es:'Restaurar compras',pt:'Restaurar compras',id:'Pulihkan pembelian',th:'กู้คืนการซื้อ'},
++ manage:{ja:'購読の管理・解約',en:'Manage / cancel subscription',zh:'管理・取消订阅',zt:'管理・取消訂閱',ko:'구독 관리·해지',vi:'Quản lý / hủy gói',es:'Gestionar / cancelar suscripción',pt:'Gerenciar / cancelar assinatura',id:'Kelola / batalkan langganan',th:'จัดการ / ยกเลิกการสมัคร'},
++ terms:{ja:'利用規約',en:'Terms of Use',zh:'使用条款',zt:'使用條款',ko:'이용약관',vi:'Điều khoản sử dụng',es:'Términos de uso',pt:'Termos de uso',id:'Ketentuan penggunaan',th:'ข้อกำหนดการใช้งาน'},
++ privacy:{ja:'プライバシーポリシー',en:'Privacy Policy',zh:'隐私政策',zt:'隱私權政策',ko:'개인정보처리방침',vi:'Chính sách quyền riêng tư',es:'Política de privacidad',pt:'Política de privacidade',id:'Kebijakan privasi',th:'นโยบายความเป็นส่วนตัว'},
++ auto:{ja:'サブスクリプションは1か月ごとの自動更新です。更新日の24時間前までに解約しない限り、同じ料金で自動的に更新され、App Store / Google Play のアカウントに請求されます。解約はストアのアカウント設定（「購読の管理・解約」）からいつでも行えます。',
++  en:'Subscriptions renew automatically every month at the same price unless cancelled at least 24 hours before the renewal date. Payment is charged to your App Store / Google Play account. You can cancel anytime in your store account settings (“Manage / cancel subscription”).',
++  zh:'订阅按月自动续订。除非在续订日前至少24小时取消，否则将以相同价格自动续订，并从您的 App Store / Google Play 账户扣款。可随时在商店的账户设置（“管理・取消订阅”）中取消。',
++  zt:'訂閱按月自動續訂。除非在續訂日前至少24小時取消，否則將以相同價格自動續訂，並向您的 App Store / Google Play 帳戶收費。可隨時在商店的帳戶設定（「管理・取消訂閱」）中取消。',
++  ko:'구독은 매월 자동 갱신됩니다. 갱신일 24시간 전까지 해지하지 않으면 같은 요금으로 자동 갱신되며 App Store / Google Play 계정으로 청구됩니다. 해지는 스토어 계정 설정(‘구독 관리·해지’)에서 언제든 할 수 있어요.',
++  vi:'Gói đăng ký tự động gia hạn hằng tháng với cùng mức giá, trừ khi bạn hủy ít nhất 24 giờ trước ngày gia hạn. Phí được tính vào tài khoản App Store / Google Play. Bạn có thể hủy bất cứ lúc nào trong phần cài đặt tài khoản của cửa hàng (“Quản lý / hủy gói”).',
++  es:'La suscripción se renueva automáticamente cada mes al mismo precio, salvo que la canceles al menos 24 horas antes de la fecha de renovación. El cobro se hace en tu cuenta de App Store / Google Play. Puedes cancelar cuando quieras en los ajustes de tu cuenta de la tienda (“Gestionar / cancelar suscripción”).',
++  pt:'A assinatura é renovada automaticamente todo mês pelo mesmo preço, a menos que seja cancelada pelo menos 24 horas antes da data de renovação. A cobrança é feita na sua conta da App Store / Google Play. Você pode cancelar quando quiser nas configurações da conta da loja (“Gerenciar / cancelar assinatura”).',
++  id:'Langganan diperpanjang otomatis setiap bulan dengan harga yang sama, kecuali dibatalkan paling lambat 24 jam sebelum tanggal perpanjangan. Pembayaran ditagihkan ke akun App Store / Google Play Anda. Anda dapat membatalkan kapan saja di pengaturan akun toko (“Kelola / batalkan langganan”).',
++  th:'การสมัครสมาชิกจะต่ออายุอัตโนมัติทุกเดือนในราคาเดิม เว้นแต่จะยกเลิกอย่างน้อย 24 ชั่วโมงก่อนวันต่ออายุ ค่าบริการจะเรียกเก็บจากบัญชี App Store / Google Play ของคุณ ยกเลิกได้ทุกเมื่อในการตั้งค่าบัญชีของสโตร์ (“จัดการ / ยกเลิกการสมัคร”)'},
++ webOnly:{ja:'プランのご購入は、App Store / Google Play のアプリから行えます。',en:'Plans can be purchased in the App Store / Google Play app.',zh:'请在 App Store / Google Play 的应用中购买套餐。',zt:'請在 App Store / Google Play 的 App 中購買方案。',ko:'플랜 구매는 App Store / Google Play 앱에서 할 수 있어요.',vi:'Bạn có thể mua gói trong ứng dụng trên App Store / Google Play.',es:'Los planes se compran en la app de App Store / Google Play.',pt:'Os planos podem ser comprados no app da App Store / Google Play.',id:'Paket dapat dibeli di aplikasi App Store / Google Play.',th:'ซื้อแพ็กเกจได้ในแอปจาก App Store / Google Play'},
++ needAcct:{ja:'ご購入にはアカウントが必要です（機種変更しても購入内容が引き継がれます）。先にアカウントを作成してください。',en:'An account is required to purchase (so your plan carries over to a new phone). Please create an account first.',zh:'购买需要账号（换手机后套餐也能延续）。请先创建账号。',zt:'購買需要帳號（換手機後方案也能延續）。請先建立帳號。',ko:'구매하려면 계정이 필요해요(기기를 바꿔도 플랜이 이어져요). 먼저 계정을 만들어 주세요.',vi:'Cần có tài khoản để mua (để gói được giữ khi đổi điện thoại). Vui lòng tạo tài khoản trước.',es:'Necesitas una cuenta para comprar (así tu plan pasa a un teléfono nuevo). Crea una cuenta primero.',pt:'É preciso ter uma conta para comprar (assim seu plano passa para um novo celular). Crie uma conta primeiro.',id:'Diperlukan akun untuk membeli (agar paket ikut pindah ke ponsel baru). Silakan buat akun terlebih dahulu.',th:'ต้องมีบัญชีจึงจะซื้อได้ (เพื่อให้แพ็กเกจย้ายไปเครื่องใหม่ได้) โปรดสร้างบัญชีก่อน'},
++ checking:{ja:'購入を確認しています…',en:'Confirming your purchase…',zh:'正在确认购买…',zt:'正在確認購買…',ko:'구매를 확인하고 있어요…',vi:'Đang xác nhận giao dịch…',es:'Confirmando tu compra…',pt:'Confirmando sua compra…',id:'Mengonfirmasi pembelian…',th:'กำลังยืนยันการซื้อ…'},
++ done:{ja:'ありがとうございます。プランが有効になりました。',en:'Thank you! Your plan is now active.',zh:'谢谢！套餐已生效。',zt:'謝謝！方案已生效。',ko:'감사합니다! 플랜이 활성화되었어요.',vi:'Cảm ơn bạn! Gói đã được kích hoạt.',es:'¡Gracias! Tu plan ya está activo.',pt:'Obrigado! Seu plano já está ativo.',id:'Terima kasih! Paket Anda sudah aktif.',th:'ขอบคุณค่ะ! แพ็กเกจของคุณเปิดใช้งานแล้ว'},
++ late:{ja:'購入は完了しています。反映まで少し時間がかかることがあります。数分後にアプリを開き直してください。',en:'Your purchase is complete. It can take a little while to apply — please reopen the app in a few minutes.',zh:'购买已完成。生效可能需要一点时间，请几分钟后重新打开应用。',zt:'購買已完成。生效可能需要一點時間，請幾分鐘後重新開啟 App。',ko:'구매는 완료되었어요. 반영까지 조금 걸릴 수 있으니 몇 분 뒤 앱을 다시 열어 주세요.',vi:'Giao dịch đã hoàn tất. Có thể mất một chút thời gian để áp dụng — vui lòng mở lại ứng dụng sau vài phút.',es:'Tu compra se completó. Puede tardar un poco en aplicarse: vuelve a abrir la app en unos minutos.',pt:'Sua compra foi concluída. Pode levar um pouco para ser aplicada — reabra o app em alguns minutos.',id:'Pembelian selesai. Mungkin perlu sedikit waktu untuk diterapkan — buka ulang aplikasi dalam beberapa menit.',th:'การซื้อเสร็จสมบูรณ์แล้ว อาจใช้เวลาสักครู่ในการอัปเดต โปรดเปิดแอปอีกครั้งในอีกไม่กี่นาที'},
++ fail:{ja:'購入を完了できませんでした。時間をおいてもう一度お試しください。',en:'The purchase could not be completed. Please try again later.',zh:'无法完成购买，请稍后再试。',zt:'無法完成購買，請稍後再試。',ko:'구매를 완료하지 못했어요. 잠시 후 다시 시도해 주세요.',vi:'Không thể hoàn tất giao dịch. Vui lòng thử lại sau.',es:'No se pudo completar la compra. Inténtalo más tarde.',pt:'Não foi possível concluir a compra. Tente novamente mais tarde.',id:'Pembelian tidak dapat diselesaikan. Silakan coba lagi nanti.',th:'ไม่สามารถทำการซื้อให้เสร็จได้ โปรดลองอีกครั้งภายหลัง'},
++ restored:{ja:'購入を復元しました。',en:'Your purchases have been restored.',zh:'已恢复购买。',zt:'已恢復購買。',ko:'구매를 복원했어요.',vi:'Đã khôi phục giao dịch.',es:'Se restauraron tus compras.',pt:'Suas compras foram restauradas.',id:'Pembelian telah dipulihkan.',th:'กู้คืนการซื้อแล้ว'},
++ noRestore:{ja:'復元できるご購入が見つかりませんでした。',en:'No purchases were found to restore.',zh:'没有找到可恢复的购买。',zt:'沒有找到可恢復的購買。',ko:'복원할 구매 내역이 없어요.',vi:'Không tìm thấy giao dịch nào để khôi phục.',es:'No se encontraron compras para restaurar.',pt:'Nenhuma compra encontrada para restaurar.',id:'Tidak ada pembelian yang dapat dipulihkan.',th:'ไม่พบรายการซื้อที่กู้คืนได้'},
++ renews:{ja:'次回更新日：{d}',en:'Renews on {d}',zh:'下次续订：{d}',zt:'下次續訂：{d}',ko:'다음 갱신일: {d}',vi:'Gia hạn vào {d}',es:'Se renueva el {d}',pt:'Renova em {d}',id:'Diperpanjang pada {d}',th:'ต่ออายุวันที่ {d}'},
++ ends:{ja:'{d} までご利用いただけます（自動更新は停止中）',en:'Available until {d} (auto-renewal off)',zh:'可使用至 {d}（已关闭自动续订）',zt:'可使用至 {d}（已關閉自動續訂）',ko:'{d}까지 이용할 수 있어요(자동 갱신 해제됨)',vi:'Dùng được đến {d} (đã tắt tự động gia hạn)',es:'Disponible hasta el {d} (renovación automática desactivada)',pt:'Disponível até {d} (renovação automática desativada)',id:'Dapat digunakan hingga {d} (perpanjangan otomatis nonaktif)',th:'ใช้ได้ถึง {d} (ปิดการต่ออายุอัตโนมัติแล้ว)'},
++ perMonth:{ja:'{p}<small> / 月</small>',en:'{p}<small> / month</small>',zh:'{p}<small> / 月</small>',zt:'{p}<small> / 月</small>',ko:'{p}<small> / 월</small>',vi:'{p}<small> / tháng</small>',es:'{p}<small> / mes</small>',pt:'{p}<small> / mês</small>',id:'{p}<small> / bulan</small>',th:'{p}<small> / เดือน</small>'}
++};
++var PLAN_ORDER=['light','std','unl'];
++function planOfProduct(id){ var s=String(id||'').split(':')[0].toLowerCase(); try{ var m=window.PK_PRODUCTS||{}; if(m[id]) return m[id]; if(m[s]) return m[s]; }catch(e){} if(/unl|unlimited/.test(s)) return 'unl'; if(/std|standard/.test(s)) return 'std'; if(/light|lite/.test(s)) return 'light'; return ''; }
++var PKBilling=(function(){
++  function P(){ try{ return (window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Purchases)||null; }catch(e){ return null; } }
++  function platform(){ try{ return (window.Capacitor&&window.Capacitor.getPlatform&&window.Capacitor.getPlatform())||'web'; }catch(e){ return 'web'; } }
++  function key(){ var k=window.PK_RC_KEYS||{}; return k[platform()]||''; }
++  function available(){ return !!(P()&&key()); }
++  function uid(){ var a=authGet(); return (a&&a.token)?String(a.token).split('.')[0]:''; }
++  var configured='', pk={};
++  function setup(){
++    if(!available()) return Promise.reject('NA');
++    var u=uid(); if(!u) return Promise.reject('NEED_ACCOUNT');
++    if(configured===u) return Promise.resolve();
++    var p=P();
++    return Promise.resolve(p.isConfigured?p.isConfigured():{isConfigured:false}).then(function(r){
++      return (r&&r.isConfigured)?p.logIn({appUserID:u}):p.configure({apiKey:key(),appUserID:u});
++    }).then(function(){ configured=u; });
++  }
++  function offerings(){ return setup().then(function(){ return P().getOfferings(); }).then(function(o){
++    var cur=o&&(o.current||(o.all&&o.all['default'])); pk={};
++    ((cur&&cur.availablePackages)||[]).forEach(function(a){ var pl=planOfProduct((a.product&&a.product.identifier)||a.identifier); if(pl&&!pk[pl]) pk[pl]=a; });
++    return pk; }); }
++  function purchase(plan){ return offerings().then(function(){ var a=pk[plan]; if(!a) throw 'NO_PRODUCT'; return P().purchasePackage({aPackage:a}); }); }
++  function restore(){ return setup().then(function(){ return P().restorePurchases(); }); }
++  function manageUrl(){ return platform()==='android'?'https://play.google.com/store/account/subscriptions':'https://apps.apple.com/account/subscriptions'; }
++  return {available:available,offerings:offerings,purchase:purchase,restore:restore,manageUrl:manageUrl,platform:platform};
++})();
++/* サーバーから受け取ったプランを反映（正本はサーバー） */
++function applyServerPlan(pi){
++  if(!pi||!pi.plan) return; state.planInfo=pi;
++  if(window.PK_DIRECT_KEY) return;   /* 開発者の体験モードではテスト用プラン切替を優先 */
++  if(state.profile&&(state.profile.plan||'free')!==pi.plan){ state.profile.plan=pi.plan; try{ saveProfile(state.profile); }catch(e){} }
++  try{ updateTrialPill(); }catch(e){}
++}
++/* 購入・復元のあと：ストアからサーバーへの通知が届くまで少し待って確かめる（最大 約20秒） */
++function billingConfirm(wantPaid){
++  var a=authGet(); if(!a) return Promise.resolve(null);
++  var n=0;
++  return new Promise(function(res){ (function tick(){ authCall('status',{token:a.token}).then(function(j){
++    if(j&&j.ok&&j.plan&&(!wantPaid||j.plan.plan!=='free')){ applyServerPlan(j.plan); return res(j.plan); }
++    if(++n>=10) return res(j&&j.plan||null); setTimeout(tick,2000); }); })(); });
++}
++function _fmtDate(ms){ var d=new Date(+ms); return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate(); }
++function renderPlanExtras(){
++  var sh=$('shPlan'); if(!sh) return;
++  var cur=curPlan(), avail=PKBilling.available(), logged=!!authGet();
++  var cards=sh.querySelectorAll('.plans .plan');
++  cards.forEach(function(c,i){ var pl=PLAN_ORDER[i]; if(!pl) return;
++    var b=c.querySelector('.plan-buy'); if(!b){ b=document.createElement('button'); b.className='btn mini plan-buy'; b.style.marginTop='10px'; c.appendChild(b); }
++    b.setAttribute('data-plan',pl);
++    if(cur===pl){ b.textContent=pick(BILL.current); b.disabled=true; }
++    else { b.textContent=pick(BILL.buy); b.disabled=!avail; }
++    b.onclick=function(){ billingBuy(pl); };
++  });
++  var box=$('planActions'); if(!box){ box=document.createElement('div'); box.id='planActions'; box.style.cssText='margin-top:12px;font-size:12.5px;line-height:1.8;color:var(--muted)'; var fh=sh.querySelector('.free-hint'); (fh?fh.parentNode:sh).insertBefore(box,fh?fh.nextSibling:null); }
++  var pi=state.planInfo||{};
++  var st=(pi.plan&&pi.plan!=='free'&&pi.expires)?('<p style="margin:6px 0;color:var(--ink)">'+pick(pi.willRenew===false?BILL.ends:BILL.renews).replace('{d}',_fmtDate(pi.expires))+'</p>'):'';
++  box.innerHTML=st
++    +(avail?'':('<p style="margin:6px 0">'+esc(pick(BILL.webOnly))+'</p>'))
++    +(avail&&!logged?('<p style="margin:6px 0">'+esc(pick(BILL.needAcct))+'</p>'):'')
++    +'<p id="billMsg" style="margin:6px 0;color:var(--ink);display:none"></p>'
++    +'<p style="margin:6px 0">'+esc(pick(BILL.auto))+'</p>'
++    +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">'
++    +(avail?'<button class="btn mini ghost" id="billRestore">'+esc(pick(BILL.restore))+'</button>':'')
++    +'<a class="btn mini ghost" id="billManage" style="display:block;width:100%;box-sizing:border-box;text-align:center;text-decoration:none" href="'+PKBilling.manageUrl()+'" target="_blank" rel="noopener">'+esc(pick(BILL.manage))+'</a>'
++    +'</div>'
++    +'<p style="margin:10px 0 0"><a href="legal.html#terms" target="_blank" rel="noopener">'+esc(pick(BILL.terms))+'</a>　<a href="legal.html#privacy" target="_blank" rel="noopener">'+esc(pick(BILL.privacy))+'</a></p>';
++  var r=$('billRestore'); if(r) r.onclick=billingRestore;
++  if(avail&&logged){ PKBilling.offerings().then(function(pk){
++    cards.forEach(function(c,i){ var a=pk[PLAN_ORDER[i]], pp=c.querySelector('.pp'); if(a&&a.product&&a.product.priceString&&pp) pp.innerHTML=pick(BILL.perMonth).replace('{p}',esc(a.product.priceString)); });
++  }).catch(function(){}); }
++}
++function _billMsg(t){ var m=$('billMsg'); if(m){ m.textContent=t; m.style.display=t?'':'none'; } }
++function billingBuy(plan){
++  if(!PKBilling.available()){ _billMsg(pick(BILL.webOnly)); return; }
++  if(!authGet()){ _billMsg(pick(BILL.needAcct)); setTimeout(function(){ closeSheets(); renderBackup(); openSheet('shBackup'); },1600); return; }
++  _billMsg(pick(BILL.checking));
++  PKBilling.purchase(plan).then(function(){ return billingConfirm(true); }).then(function(pi){
++    if(pi&&pi.plan!=='free'){ renderPlanExtras(); _billMsg(pick(BILL.done)); } else _billMsg(pick(BILL.late));
++  }).catch(function(e){ var c=e&&(e.userCancelled||e.code==='1'||e.code===1||/cancel/i.test(String(e.message||e))); _billMsg(c?'':pick(BILL.fail)); });
++}
++function billingRestore(){
++  if(!authGet()){ _billMsg(pick(BILL.needAcct)); return; }
++  _billMsg(pick(BILL.checking));
++  PKBilling.restore().then(function(r){
++    var act=r&&r.customerInfo&&r.customerInfo.entitlements&&r.customerInfo.entitlements.active;
++    var has=act&&Object.keys(act).length>0;
++    if(!has){ _billMsg(pick(BILL.noRestore)); return; }
++    return billingConfirm(true).then(function(pi){ renderPlanExtras(); _billMsg(pi&&pi.plan!=='free'?pick(BILL.restored):pick(BILL.late)); });
++  }).catch(function(){ _billMsg(pick(BILL.fail)); });
++}
++(function(){ var _os=openSheet; openSheet=function(id){ _os(id); if(id==='shPlan'){ try{ renderPlanExtras(); }catch(e){} } }; })();
  function renderMyPage(){
    var p=state.profile||{}, d=T(), pk=curPlan();
    var planName=pk==='light'?d.plan1n:(pk==='std'?d.plan15n:(pk==='unl'?d.plan2n:d.mpFree));
-@@ -4490,20 +4746,23 @@
+@@ -4489,21 +4871,24 @@
+     +row(d.fSex,p.sex==='male'?d.sexM:d.sexF);
    $('mpBody').innerHTML=
      '<div class="mp-card">'+rows+'</div>'
-     +'<div class="mp-card"><div class="mp-row"><span>'+d.mpPlan+'</span><b>'+planName+'</b></div><p class="note" style="margin-top:6px">'+d.mpPay+'</p></div>'
+-    +'<div class="mp-card"><div class="mp-row"><span>'+d.mpPlan+'</span><b>'+planName+'</b></div><p class="note" style="margin-top:6px">'+d.mpPay+'</p></div>'
 -    +'<p class="note" style="margin:10px 2px">'+d.mpDevice+'</p>'
++    +'<div class="mp-card"><div class="mp-row"><span>'+d.mpPlan+'</span><b>'+planName+'</b></div><p class="note" style="margin-top:6px">'+d.mpPay+((state.planInfo&&state.planInfo.plan!=='free'&&state.planInfo.expires)?('<br><b>'+esc(pick(state.planInfo.willRenew===false?BILL.ends:BILL.renews).replace('{d}',_fmtDate(state.planInfo.expires)))+'</b>'):'')+'</p></div>'
 +    +'<p class="note" style="margin:10px 2px">'+(authGet()?pick(MP_CLOUD).replace('{e}',esc((authGet()||{}).email||'')):d.mpDevice)+'</p>'
      +'<button class="btn mini" id="mpEdit" style="margin-top:4px">'+d.editTitle+'</button>'
      +'<button class="btn mini" id="mpBackup" style="margin-top:8px">'+pick(BK.t)+'</button>'
@@ -1571,7 +2077,7 @@ diff -ruN pk/index.html fx/index.html
  function backupCode(){ try{ return 'PK1.'+btoa(unescape(encodeURIComponent(JSON.stringify(_pkDump())))); }catch(e){ return ''; } }
  function backupRestore(code){
    try{
-@@ -4517,7 +4776,7 @@
+@@ -4517,7 +4902,7 @@
  function renderBackup(){
    $('bkTitle').textContent=pick(BK.t); $('bkDesc').textContent=pick(BK.d);
    var code=backupCode();
@@ -1580,7 +2086,7 @@ diff -ruN pk/index.html fx/index.html
      '<div class="mp-card"><textarea id="bkOut" readonly style="width:100%;height:78px;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:12px;font-family:monospace;resize:none;background:var(--soft);color:var(--text)"></textarea>'
      +'<button class="btn mini" id="bkCopy" style="margin-top:8px">'+pick(BK.cp)+'</button>'
      +'<p class="note" style="margin-top:8px">'+pick(BK.save)+'</p></div>'
-@@ -4526,6 +4785,7 @@
+@@ -4526,6 +4911,7 @@
    $('bkOut').value=code;
    $('bkCopy').onclick=function(){ var ta=$('bkOut'); ta.select(); try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(ta.value); } else { document.execCommand('copy'); } }catch(e){ try{document.execCommand('copy');}catch(e2){} } $('bkCopy').textContent=pick(BK.cpd); setTimeout(function(){ if($('bkCopy')) $('bkCopy').textContent=pick(BK.cp); },1600); };
    $('bkRestore').onclick=function(){ var v=$('bkIn').value; if(backupRestore(v)){ alert(pick(BK.ok)); location.reload(); } else { alert(pick(BK.err)); } };
@@ -1588,7 +2094,7 @@ diff -ruN pk/index.html fx/index.html
  }
  /* この鑑定について（監修・運営・根拠） */
  function renderAbout(){
-@@ -4653,6 +4913,7 @@
+@@ -4653,6 +5039,7 @@
    _mkChips('svSrcs','svSrcL',SV.srcs,false);
    _mkChips('svFreqs','svFreqL',SV.freqs,false);
    _mkChips('svJobs','svJobL',SV.jobs,false);
@@ -1596,7 +2102,7 @@ diff -ruN pk/index.html fx/index.html
    /* 下書き復元 */
    try{ var d=JSON.parse(localStorage.getItem('pk_svdraft')||'null'); if(d){ if(d.em) $('svEmail').value=d.em;
      [['svTopics',d.tp],['svInterests',d.iv],['svSrcs',d.sr],['svFreqs',d.fq],['svJobs',d.jb]].forEach(function(p){ (p[1]||[]).forEach(function(k){ var b=document.querySelector('#'+p[0]+' button[data-k="'+k+'"]'); if(b) b.classList.add('on'); }); }); } }catch(e){}
-@@ -4690,6 +4951,292 @@
+@@ -4690,6 +5077,293 @@
  /* 送信失敗分は次回起動時に再送 */
  (function(){ try{var q=localStorage.getItem('pk_svq'); if(q){_svPost(q).then(function(r){ if(r.ok) localStorage.removeItem('pk_svq'); }).catch(function(){});} }catch(e){} })();
  
@@ -1687,6 +2193,7 @@ diff -ruN pk/index.html fx/index.html
 +  var body=Object.assign({action:action},obj||{});
 +  return fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),keepalive:(action==='save'&&JSON.stringify(body).length<60000)})
 +    .then(function(r){ return r.json().catch(function(){ return {ok:false,code:'HTTP'+r.status}; }); }) /* 404＝関数が未デプロイ等 */
++    .then(function(j){ try{ if(j&&j.ok&&j.plan&&action!=='status') setTimeout(function(){ applyServerPlan(j.plan); },0); }catch(e){} return j; })
 +    .catch(function(){ return {ok:false,code:'NET'}; });
 +}
 +function acctMsg(code){ return AU['e_'+code]?pick(AU['e_'+code]):(pick(AU.e_SERVER)+'（'+(code||'?')+'）'); } /* 設定の問題はコードを添えて原因を切り分けやすく */
@@ -1889,7 +2396,7 @@ diff -ruN pk/index.html fx/index.html
  /* ---- 起動 ---- */
  (function boot(){
    window.__booting=true;
-@@ -4703,7 +5250,10 @@
+@@ -4703,7 +5377,10 @@
    var savedTheme=null; try{savedTheme=localStorage.getItem(LS_THEME);}catch(e){} setTheme(savedTheme==='indigo'?'indigo':'green');
    state.profile=loadJSON(LS_PROF);
    applyI18n(); rebuildSelects(); setLang(state.lang);
@@ -1903,7 +2410,16 @@ diff -ruN pk/index.html fx/index.html
    else { location.replace('lp.html'); }
 diff -ruN pk/legal.html fx/legal.html
 --- pk/legal.html	2026-08-21 04:39:10.000000000 +0000
-+++ fx/legal.html	2026-09-25 09:52:07.108176779 +0000
++++ fx/legal.html	2026-09-26 18:43:03.892735493 +0000
+@@ -51,7 +51,7 @@
+   <div class="card" id="terms">
+     <div data-l="ja">
+       <h1>利用規約</h1>
+-      <p class="muted">最終改定日：2026年8月10日</p>
++      <p class="muted">最終改定日：2026年9月26日</p>
+       <p>この利用規約（以下「本規約」）は、72K株式会社（以下「当社」）が提供する四柱推命鑑定サービス「Pocket本格鑑定」（以下「本サービス」）の利用条件を定めるものです。本サービスを利用することで、本規約に同意したものとみなされます。</p>
+ 
+       <h2>第1条（サービスの内容と目的）</h2>
 @@ -62,6 +62,7 @@
  
        <h2>第3条（利用資格）</h2>
@@ -1912,6 +2428,24 @@ diff -ruN pk/legal.html fx/legal.html
  
        <h2>第4条（料金プランとフェアユース）</h2>
        <ul>
+@@ -74,7 +75,7 @@
+       </ul>
+ 
+       <h2>第5条（購入・解約・返金）</h2>
+-      <p>有料プランの決済は、クレジットカード決済（決済代行：テレコムクレジット）を通じて行われ、解約されない限り毎月自動で継続課金されます。解約はマイページまたはお問い合わせ窓口（info@72k.ai）からいつでも行えます。すでに支払われた利用料金は、法令に定めがある場合を除き返金いたしません。</p>
++      <p>有料プランは、App Store（Apple）または Google Play（Google）のアプリ内課金により、ユーザーのストアのアカウントに請求されます。更新日の24時間前までに解約されない限り、毎月自動で更新・課金されます。解約は、各ストアのアカウント設定（アプリの料金プラン画面の「購読の管理・解約」から開けます）でいつでも行えます。なお、アカウントを削除しても購読は自動では解約されないため、先にストアで解約してください。返金は、各ストアの定める規約・手続きに従います。</p>
+ 
+       <h2>第6条（禁止事項）</h2>
+       <ul>
+@@ -103,7 +104,7 @@
+ 
+     <div data-l="en">
+       <h1>Terms of Service</h1>
+-      <p class="muted">Last updated: August 10, 2026</p>
++      <p class="muted">Last updated: September 26, 2026</p>
+       <p>These Terms of Service ("Terms") govern the use of "Pocket Reading," a Four Pillars (BaZi) reading service (the "Service") provided by 72K Inc. ("we," "us"). By using the Service, you agree to these Terms.</p>
+ 
+       <h2>1. Nature and Purpose of the Service</h2>
 @@ -114,6 +115,7 @@
  
        <h2>3. Eligibility</h2>
@@ -1920,12 +2454,21 @@ diff -ruN pk/legal.html fx/legal.html
  
        <h2>4. Plans and Fair Use</h2>
        <ul>
+@@ -126,7 +128,7 @@
+       </ul>
+ 
+       <h2>5. Purchases, Cancellation and Refunds</h2>
+-      <p>Paid plans are billed by credit card through our payment processor (Telecom Credit) and renew automatically each month unless canceled. You may cancel at any time from My Page or by contacting info@72k.ai. Fees already paid are non-refundable except as required by law.</p>
++      <p>Paid plans are purchased through in-app purchase on the App Store (Apple) or Google Play (Google) and charged to your store account. Subscriptions renew automatically each month unless canceled at least 24 hours before the renewal date. You can cancel at any time in your store account settings (open them from “Manage / cancel subscription” on the Plans screen). Deleting your account does not cancel your subscription, so please cancel it in the store first. Refunds are handled under the terms and procedures of each store.</p>
+ 
+       <h2>6. Prohibited Conduct</h2>
+       <ul>
 @@ -158,39 +160,42 @@
    <div class="card" id="privacy">
      <div data-l="ja">
        <h1>プライバシーポリシー</h1>
 -      <p class="muted">最終改定日：2026年8月10日</p>
-+      <p class="muted">最終改定日：2026年9月25日</p>
++      <p class="muted">最終改定日：2026年9月26日</p>
        <p>72K株式会社（以下「当社」）は、「Pocket本格鑑定」（以下「本サービス」）におけるユーザーの情報の取り扱いについて、以下のとおり定めます。</p>
  
        <h2>1. 取得する情報と保存場所</h2>
@@ -1954,7 +2497,7 @@ diff -ruN pk/legal.html fx/legal.html
  
        <h2>3. 第三者提供・外部送信</h2>
 -      <p>当社は、法令にもとづく場合を除き、ユーザーの情報を第三者に提供しません。前記のとおり、応答生成のために外部AIサービス（Google LLC）へ、ホスティング・通信のためにインフラ事業者へ、それぞれ必要な範囲で情報が送信されます。これらの事業者のサーバーは日本国外（米国等）に所在する場合があります。</p>
-+      <p>当社は、法令にもとづく場合を除き、ユーザーの情報を第三者に提供しません。前記のとおり、応答生成のために外部AIサービス（Google LLC）へ、ホスティング・通信のためにインフラ事業者へ、パスワード再設定メールの送信のためにメール配信事業者（Resend）へ（メールアドレスのみ）、それぞれ必要な範囲で情報が送信されます。これらの事業者のサーバーは日本国外（米国等）に所在する場合があります。</p>
++      <p>当社は、法令にもとづく場合を除き、ユーザーの情報を第三者に提供しません。前記のとおり、応答生成のために外部AIサービス（Google LLC）へ、ホスティング・通信のためにインフラ事業者へ、パスワード再設定メールの送信のためにメール配信事業者（Resend）へ（メールアドレスのみ）、有料プランの購入の確認のためにアプリ内課金の事業者（Apple、Google）と購読管理サービス（RevenueCat）へ（アカウントを識別する番号と購入の記録のみ）、それぞれ必要な範囲で情報が送信されます。これらの事業者のサーバーは日本国外（米国等）に所在する場合があります。</p>
  
        <h2>4. 広告・トラッキング</h2>
        <p>本サービスは現在、広告配信や行動追跡のためのトラッキング技術（第三者Cookie・広告SDK等）を使用していません。導入する場合は、本ポリシーを改定のうえ事前に告知します。</p>
@@ -1977,7 +2520,7 @@ diff -ruN pk/legal.html fx/legal.html
      <div data-l="en">
        <h1>Privacy Policy</h1>
 -      <p class="muted">Last updated: August 10, 2026</p>
-+      <p class="muted">Last updated: September 25, 2026</p>
++      <p class="muted">Last updated: September 26, 2026</p>
        <p>72K Inc. ("we," "us") handles user information in "Pocket Reading" (the "Service") as follows.</p>
  
        <h2>1. Information We Handle and Where It Lives</h2>
@@ -2006,7 +2549,7 @@ diff -ruN pk/legal.html fx/legal.html
  
        <h2>3. Third Parties and International Transfer</h2>
 -      <p>We do not provide your information to third parties except as required by law. As described above, information is transmitted to the external AI provider (Google LLC) to generate responses and to infrastructure providers for hosting and delivery. Their servers may be located outside Japan (e.g., in the United States).</p>
-+      <p>We do not provide your information to third parties except as required by law. As described above, information is transmitted to the external AI provider (Google LLC) to generate responses, to infrastructure providers for hosting and delivery, and to an email delivery provider (Resend; your email address only) to send password-reset emails. Their servers may be located outside Japan (e.g., in the United States).</p>
++      <p>We do not provide your information to third parties except as required by law. As described above, information is transmitted to the external AI provider (Google LLC) to generate responses, to infrastructure providers for hosting and delivery, to an email delivery provider (Resend; your email address only) to send password-reset emails, and to the in-app purchase providers (Apple, Google) and a subscription management service (RevenueCat; an account identifier and purchase records only) to verify paid-plan purchases. Their servers may be located outside Japan (e.g., in the United States).</p>
  
        <h2>4. Advertising and Tracking</h2>
        <p>The Service currently uses no advertising or behavioral tracking technologies (third-party cookies, ad SDKs, etc.). If introduced, we will update this policy and give prior notice.</p>
@@ -2024,6 +2567,24 @@ diff -ruN pk/legal.html fx/legal.html
  
        <h2>8. Contact</h2>
        <p>For inquiries about this policy:<br>
+@@ -256,14 +264,14 @@
+         <tr><td style="padding:9px 8px;border-bottom:1px solid var(--line);color:var(--muted)">お問い合わせ</td><td style="padding:9px 8px;border-bottom:1px solid var(--line)">info@72k.ai</td></tr>
+         <tr><td style="padding:9px 8px;border-bottom:1px solid var(--line);color:var(--muted)">販売価格</td><td style="padding:9px 8px;border-bottom:1px solid var(--line)">おてがるプラン 月額980円（税込）／スタンダードプラン 月額1,980円（税込）／使い放題プラン 月額2,980円（税込）</td></tr>
+         <tr><td style="padding:9px 8px;border-bottom:1px solid var(--line);color:var(--muted)">商品代金以外の必要料金</td><td style="padding:9px 8px;border-bottom:1px solid var(--line)">インターネット接続に必要な通信料（お客様負担）</td></tr>
+-        <tr><td style="padding:9px 8px;border-bottom:1px solid var(--line);color:var(--muted)">支払方法・支払時期</td><td style="padding:9px 8px;border-bottom:1px solid var(--line)">クレジットカード決済（決済代行：テレコムクレジット）。お申し込み時に初回課金され、以後は毎月同日に自動で継続課金されます（解約されない限り継続）。</td></tr>
++        <tr><td style="padding:9px 8px;border-bottom:1px solid var(--line);color:var(--muted)">支払方法・支払時期</td><td style="padding:9px 8px;border-bottom:1px solid var(--line)">App Store（Apple）または Google Play（Google）のアプリ内課金。お申し込み時に初回課金され、以後は更新日の24時間前までに解約されない限り、毎月自動で継続課金されます。</td></tr>
+         <tr><td style="padding:9px 8px;border-bottom:1px solid var(--line);color:var(--muted)">サービスの提供時期</td><td style="padding:9px 8px;border-bottom:1px solid var(--line)">決済完了後、直ちにご利用いただけます。</td></tr>
+-        <tr><td style="padding:9px 8px;color:var(--muted)">返品・キャンセル</td><td style="padding:9px 8px">デジタルコンテンツの性質上、購入後の返金はいたしません（法令に定めがある場合を除く）。継続課金の解約は、マイページまたはお問い合わせ窓口（info@72k.ai）より、次回更新日の前日までにお手続きください。解約手続き後は、次回更新分から課金を停止します。</td></tr>
++        <tr><td style="padding:9px 8px;color:var(--muted)">返品・キャンセル</td><td style="padding:9px 8px">返金は、各ストア（Apple／Google）の定める規約・手続きに従います。継続課金の解約は、各ストアのアカウント設定（アプリの料金プラン画面の「購読の管理・解約」）から、次回更新日の24時間前までにお手続きください。解約後も、支払い済みの期間の終わりまでご利用いただけます。</td></tr>
+       </table>
+     </div>
+     <div data-l="en">
+       <h1>Legal Notice under the Specified Commercial Transactions Act (Japan)</h1>
+-      <p>This notice is required under Japanese law and is provided in Japanese. Please refer to the Japanese section. Seller: 72K Inc. Prices: Light Plan JPY 980/month, Standard Plan JPY 1,980/month, Unlimited Plan JPY 2,980/month (all tax incl.). Payment by credit card via our payment processor (Telecom Credit), charged at sign-up and then automatically every month on the same date (recurring until cancelled). To cancel, use My Page or contact info@72k.ai by the day before the next renewal date. No refunds after purchase except as required by law.</p>
++      <p>This notice is required under Japanese law and is provided in Japanese. Please refer to the Japanese section. Seller: 72K Inc. Prices: Light Plan JPY 980/month, Standard Plan JPY 1,980/month, Unlimited Plan JPY 2,980/month (all tax incl.). Payment by in-app purchase through the App Store (Apple) or Google Play (Google), charged at sign-up and then automatically every month unless cancelled at least 24 hours before the renewal date. To cancel, use your store account settings (“Manage / cancel subscription” on the Plans screen); you can keep using the plan until the end of the paid period. Refunds follow each store’s terms and procedures.</p>
+     </div>
+   </div>
+ 
 diff -ruN pk/lp.html fx/lp.html
 --- pk/lp.html	2026-08-19 05:45:38.000000000 +0000
 +++ fx/lp.html	2026-09-25 09:17:35.152867166 +0000
@@ -2070,8 +2631,8 @@ diff -ruN pk/lp.html fx/lp.html
  var KANJI_BRAND={ja:1,zh:1,zt:1};
 diff -ruN pk/netlify.toml fx/netlify.toml
 --- pk/netlify.toml	2026-08-14 16:07:46.000000000 +0000
-+++ fx/netlify.toml	2026-09-25 06:39:28.361742852 +0000
-@@ -5,3 +5,8 @@
++++ fx/netlify.toml	2026-09-26 18:38:50.568473014 +0000
+@@ -5,3 +5,13 @@
    from = "/api/gemini"
    to = "/.netlify/functions/gemini"
    status = 200
@@ -2079,6 +2640,11 @@ diff -ruN pk/netlify.toml fx/netlify.toml
 +[[redirects]]
 +  from = "/api/auth"
 +  to = "/.netlify/functions/auth"
++  status = 200
++# 購読の通知（RevenueCat の Webhook）→ サーバーレス関数へ。Webhook の URL は https://<サイト>/api/billing
++[[redirects]]
++  from = "/api/billing"
++  to = "/.netlify/functions/billing"
 +  status = 200
 diff -ruN pk/pro-adapter.js fx/pro-adapter.js
 --- pk/pro-adapter.js	2026-09-16 13:41:04.000000000 +0000
@@ -2277,13 +2843,13 @@ diff -ruN pk/pro-bazi.js fx/pro-bazi.js
 \ No newline at end of file
 diff -ruN pk/sw.js fx/sw.js
 --- pk/sw.js	2026-08-21 05:15:56.000000000 +0000
-+++ fx/sw.js	2026-09-26 18:20:55.742076665 +0000
++++ fx/sw.js	2026-09-26 18:43:03.895670082 +0000
 @@ -4,7 +4,7 @@
     ・JS/画像等は stale-while-revalidate（即表示＋裏で更新）
     ・AI通信（/functions・/.netlify・generativelanguage）は絶対にキャッシュせず常にネットワークへ
     ※アプリを更新したら CACHE の版番号を上げると確実に配信されます。 */
 -var CACHE = 'pocket-kantei-v1';
-+var CACHE = 'pocket-kantei-v7';
++var CACHE = 'pocket-kantei-v8';
  var SHELL = [
    './', './index.html', './pro-bazi.js', './pro-adapter.js',
    './owl.png', './icon-512.png', './icon-192.png', './icon-maskable-512.png', './apple-touch-icon.png',

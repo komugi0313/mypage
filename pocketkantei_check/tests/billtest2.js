@@ -1,0 +1,13 @@
+process.env.AUTH_SECRET='test-secret-0123456789abcdef'; process.env.REVENUECAT_WEBHOOK_AUTH='whsec-0123456789abcdefXYZ';
+const auth=require('./fx/functions/auth.js').handler, bill=require('./fx/functions/billing.js').handler, G=require('./fx/functions/gemini.js')._t;
+const post=(fn,body,headers={})=>fn({httpMethod:'POST',headers,body:JSON.stringify(body)}).then(o=>({s:o.statusCode,j:JSON.parse(o.body)}));
+(async()=>{ const now=Date.now();
+  const r=await post(auth,{action:'register',email:'g@example.com',password:'sakura2026',data:{}}); const tok=r.j.token, uid=tok.split('.')[0];
+  console.log('無料', await G.accountPlan({}, tok));
+  await post(bill,{event:{type:'INITIAL_PURCHASE',app_user_id:uid,product_id:'pk_unl_monthly',expiration_at_ms:now+864e5,event_timestamp_ms:now}},{authorization:'whsec-0123456789abcdefXYZ'});
+  console.log('購入後', await G.accountPlan({}, tok));
+  console.log('トークン改ざん', await G.accountPlan({}, tok.slice(0,-2)+'00'));
+  console.log('トークンなし', await G.accountPlan({}, ''));
+  const c=await post(auth,{action:'change',token:tok,password:'sakura2026',newPassword:'sakura2027'});
+  console.log('パスワード変更後の古いトークン', await G.accountPlan({}, tok), '/ 新トークン', await G.accountPlan({}, c.j.token));
+})();
