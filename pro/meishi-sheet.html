@@ -409,6 +409,8 @@
   .yk-title{ font-family:var(--mincho); font-weight:700; font-size:23px; letter-spacing:.3em; text-indent:.3em; color:var(--ink); }
   .yk-title small{ font-size:12.5px; letter-spacing:.1em; color:var(--ink2); margin-left:8px; }
   .yk-meta{ font-size:13px; color:var(--ink2); margin-top:6px; }
+  .yk-setsu{ font-size:11.5px; color:var(--ink2); margin-top:4px; line-height:1.5; }
+  .yk-setsu b{ color:var(--ink); font-weight:700; }
   .yk-secttl{ font-size:13px; font-weight:700; color:var(--ink2); letter-spacing:.08em; margin:2px 0 4px; }
   .yk-tbl{ width:100%; border-collapse:collapse; table-layout:fixed; margin:0 0 12px; }
   .yk-tbl th,.yk-tbl td{ border:1px solid var(--rule2); padding:3px 3px; text-align:center; font-size:12px; line-height:1.28; vertical-align:middle; word-break:break-all; }
@@ -608,6 +610,7 @@
     html,body{ width:297mm; margin:0; padding:0; }
     body{ background:#fff; } .stage{ padding:0; margin:0; width:297mm; } .bar{ display:none; }
     .yk-hint{ display:none !important; }   /* 操作説明（初期は自動判定…）は画面のみ。印刷（鑑定書）には出さない */
+    .yk-setsu{ font-size:10px; margin-top:2mm; }   /* 節入り（立運の根拠）行は印刷でも表示 */
     .paper{ width:auto; height:auto; overflow:visible; }
     .sheets{ display:block; gap:0; width:297mm; transform:none !important; margin:0; }
     .sheet{ box-shadow:none; max-width:none; width:297mm; height:210mm; aspect-ratio:auto; margin:0; padding:8mm 10mm;
@@ -3858,7 +3861,9 @@ window.KANSHI60_DETAIL={
       var birth=T('mBirth')||'', school=T('schoolName')||'（スクール名を入力）', kdate=T('kanteiDate')||T('rdDate')||'';
       host.innerHTML=
         '<div class="yk-head"><div class="yk-title">四柱推命 命式表</div>'+
-        '<div class="yk-meta">氏名 '+esc(nm||'　')+'　'+esc(birth)+'</div></div>'+
+        '<div class="yk-meta">氏名 '+esc(nm||'　')+'　'+esc(birth)+'</div>'+
+        (function(){ var h=(window._setsuLineHTML?window._setsuLineHTML(_lastResult&&_lastResult.setsuInfo):''); return h?('<div class="yk-setsu">'+h+'</div>'):''; })()+
+        '</div>'+
         '<div class="yk-secttl">大運・年運</div>'+
         '<table class="yk-tbl"><colgroup><col style="width:8%"><col style="width:7%"><col style="width:7%"><col style="width:11%"><col style="width:11%"><col style="width:23%"><col style="width:9%"><col style="width:7%"><col style="width:17%"></colgroup>'+
         '<thead><tr><th>　</th>'+ucols.map(function(h){return '<th>'+h+'</th>';}).join('')+'</tr></thead><tbody>'+unRows+'</tbody></table>'+
@@ -3934,6 +3939,47 @@ window.KANSHI60_DETAIL={
     if(lp) lp.addEventListener('click', function(){ setLevel('pro'); });
     if(le) le.addEventListener('click', function(){ setLevel('easy'); }); })();
 
+  /* 節入り情報（立運の根拠）を算出。エンジン(window.Bazi.computeChart)は無改変で「読むだけ」。
+     ・前の節（月柱の節）＝生時 − 経過分（setsuMin）
+     ・次の節＝前の節+40日をプローブして取得（生時−経過が正確なので、次の節も正確に出る）
+     ・立運の日数：順行＝生まれ→次の節、逆行＝前の節→生まれ（阿部泰山流／CLAUDE.md準拠）
+     戻り値は表示用の情報オブジェクト（無ければ null）。 */
+  function _setsuJP(n){ return ({ '惊蛰':'啓蟄','驚蟄':'啓蟄','芒种':'芒種','小满':'小満','雨水':'雨水','谷雨':'穀雨','处暑':'処暑' }[n]) || n || ''; }
+  function _setsuInfo(y,mo,d,h,mn,sex,corr,lon){
+    try{
+      if(!(window.Bazi&&window.Bazi.computeChart)) return null;
+      function opt(Y,M,D,H,Mi){ var o={year:Y,month:M,day:D,hour:H,minute:Mi,sex:sex,correctionMode:corr||'none'}; if(lon!=null&&lon!==''&&!isNaN(parseFloat(lon))) o.longitude=parseFloat(lon); return o; }
+      var tc=window.Bazi.computeChart(opt(y,mo,d,h,mn));
+      if(!tc||!tc.birth||tc.birth.setsuMin==null) return null;
+      var fwd=!!(tc.startFortune&&tc.startFortune.forward);
+      var birth=new Date(y,mo-1,d,h,mn,0);
+      var prev=new Date(birth.getTime()-tc.birth.setsuMin*60000);            // 前の節（月柱の節）入り
+      var pr=new Date(prev.getTime()+40*86400000);                          // 次の節を確実に含む日でプローブ
+      var tc2=window.Bazi.computeChart(opt(pr.getFullYear(),pr.getMonth()+1,pr.getDate(),pr.getHours(),pr.getMinutes()));
+      var next=(tc2&&tc2.birth&&tc2.birth.setsuMin!=null)?new Date(pr.getTime()-tc2.birth.setsuMin*60000):null;
+      return { forward:fwd, birth:birth,
+        prevName:_setsuJP(tc.birth.setsuName), prevDate:prev, prevText:tc.birth.setsuText,
+        nextName:(tc2&&tc2.birth)?_setsuJP(tc2.birth.setsuName):'', nextDate:next,
+        ritsu:(tc.startFortune?(tc.startFortune.years+'歳'+tc.startFortune.months+'ヶ月'):'') };
+    }catch(e){ return null; }
+  }
+  function _fmtSetsuDate(dt){ return dt?(dt.getFullYear()+'年'+(dt.getMonth()+1)+'月'+dt.getDate()+'日 '+String(dt.getHours()).padStart(2,'0')+'時'+String(dt.getMinutes()).padStart(2,'0')+'分'):''; }
+  function _fmtSetsuDur(ms){ var t=Math.max(0,Math.round(ms/60000)); var d=Math.floor(t/1440),hh=Math.floor(t%1440/60),mm=t%60; return d+'日'+hh+'時間'+mm+'分'; }
+  /* 節入り情報を横型ヘッダ用の1行テキスト（HTML）に。無ければ空文字。 */
+  window._setsuLineHTML=function(info){
+    if(!info) return '';
+    var base='<b>節入り（月柱の節）</b>：'+_setsuJP(info.prevName)+'　'+_fmtSetsuDate(info.prevDate);
+    var lead;
+    if(info.forward){
+      lead='｜ <b>次の節入り</b>：'+_setsuJP(info.nextName)+'　'+_fmtSetsuDate(info.nextDate)+
+           '　｜ 生まれ→次の節入り <b>'+((info.next=info.nextDate)&&info.birth?_fmtSetsuDur(info.nextDate-info.birth):'—')+'</b>'+
+           '　→ 立運 <b>'+info.ritsu+'</b>・順行';
+    }else{
+      lead='｜ 節入りから生まれまで <b>'+(info.prevText||'—')+'</b>　→ 立運 <b>'+info.ritsu+'</b>・逆行';
+    }
+    return base+'　'+lead;
+  };
+
   // ---- フォーム ----
   document.getElementById('calcForm').addEventListener('submit', function(ev){
     ev.preventDefault();
@@ -3954,6 +4000,7 @@ window.KANSHI60_DETAIL={
       r.nowAge = _age;
       if(r.birthYear==null) r.birthYear = y;   // 大運の西暦計算に使用
       r.sex = sex;                              // 2枚目の鑑定文（恋愛の星など）で使用
+      try{ r.setsuInfo = _setsuInfo(y,m,d,h,mn,sex,(_sc.corr||'none'),_sc.lon); }catch(_se){ r.setsuInfo=null; }  // 節入り情報（立運の根拠）※エンジンは読むだけ
       // ★氏名・生年月日は fillFromResult より先に確定する。
       //   横型の命式表（buildYokoSheet）は描画時に #mBirth を読み込むため、
       //   後で設定すると横型ヘッダに前回（初期サンプル）の生年月日が残ってしまう。
