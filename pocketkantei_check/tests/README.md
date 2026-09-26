@@ -44,4 +44,10 @@ Pocket鑑定の修正（大運・立運・節入り、アカウント、パス�
 | `webcancel.js` | ウェブ版の自分で解約（決済会社の解約の成功・失敗） | `NODE_PATH=mock/node_modules node webcancel.js` |
 | `billui.js` | 料金画面・購入・復元・マイページ（RevenueCat のプラグインを模擬） | `NODE_PATH=mock/node_modules node billui.js` |
 
+### 2026-09-26 追加（4）：料金設計（Standard / Pro / VIP）
+| ファイル | 内容 | 実行例 |
+|---|---|---|
+| `quotatest.js` | サーバーの回数制限（無料／本格鑑定の月の上限／数えない呼び出し／プラン名の詐称） | `NODE_PATH=mock/node_modules node quotatest.js` |
+| `planui2.js` | 画面：本格鑑定の数え方、使い切った時の案内とシート、深刻な相談は止めない、マイページの残り回数 | `NODE_PATH=mock/node_modules node planui2.js` |
+
 ※本番の Netlify（実際の Blobs・Resend）での確認は含みません。デプロイ後に実機で「登録→別端末でログイン」「パスワードを忘れた→メール→再設定」を確認してください。

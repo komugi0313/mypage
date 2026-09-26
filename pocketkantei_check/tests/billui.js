@@ -16,7 +16,7 @@ const srv=http.createServer((q,r)=>{
       if(!native) return;
       window.PK_RC_KEYS={ios:'appl_test'}; window.__rc={calls:[]};
       const uid=()=>{const a=JSON.parse(localStorage.getItem('pk_auth')||'null');return a&&a.token.split('.')[0];};
-      const pkgs=[['pk_light_monthly','¥1,000'],['pk_std_monthly','¥2,000'],['pk_unl_monthly','¥3,000']].map(([id,p])=>({identifier:'$rc_'+id,product:{identifier:id,priceString:p}}));
+      const pkgs=[['pk_std_monthly','¥2,900','MONTHLY'],['pk_pro_monthly','¥5,900','MONTHLY'],['pk_vip_monthly','¥9,800','MONTHLY'],['pk_std_annual','¥31,900','ANNUAL'],['pk_pro_annual','¥64,900','ANNUAL'],['pk_vip_annual','¥107,800','ANNUAL']].map(([id,p,t])=>({identifier:'$rc_'+id,packageType:t,product:{identifier:id,priceString:p}}));
       window.Capacitor={getPlatform:()=>'ios',Plugins:{Purchases:{
         isConfigured:async()=>({isConfigured:!!window.__rc.user}),
         configure:async(o)=>{window.__rc.calls.push('configure:'+o.appUserID.slice(0,8));window.__rc.user=o.appUserID;},
@@ -39,7 +39,7 @@ const srv=http.createServer((q,r)=>{
   await pg.evaluate(async()=>{ const j=await authCall('register',{email:'rc@example.com',password:'sakura2026',data:cloudDump()}); authSet(j.email,j.token); closeSheets(); });
   s=await sheet(pg); console.log('【iOS模擬・ログイン】',s.btn.join(' | '),'| 価格',await pg.evaluate(()=>[...document.querySelectorAll('#shPlan .plans .pp')].map(x=>x.textContent).join(' ')));
   await pg.evaluate(()=>{window.__rc.cancelNext=true;}); await pg.evaluate(()=>document.querySelector('#shPlan .plan-buy[data-plan="std"]').click()); await pg.waitForTimeout(800); console.log('   キャンセル→「'+(await pg.textContent('#billMsg'))+'」');
-  await pg.evaluate(()=>document.querySelector('#shPlan .plan-buy[data-plan="std"]').click()); await pg.waitForTimeout(3500);
+  await pg.evaluate(()=>{document.querySelector('#planTop button[data-per="y"]').click();}); await pg.waitForTimeout(400); console.log('   年額表示',await pg.evaluate(()=>[...document.querySelectorAll('#shPlan .plans .pp')].map(x=>x.textContent).join(' '))); await pg.evaluate(()=>document.querySelector('#shPlan .plan-buy[data-plan="pro"]').click()); await pg.waitForTimeout(3500);
   console.log('   購入→',await pg.textContent('#billMsg'),'| curPlan',await pg.evaluate(()=>curPlan()),'| calls',await pg.evaluate(()=>window.__rc.calls.join(',')));
   s=await sheet(pg); console.log('   購入後ボタン',s.btn.join(' | ')); console.log('   ',s.txt.match(/次回更新日：[^\n]*/)&&s.txt.match(/次回更新日：[^\n]*/)[0]);
   const mp=await pg.evaluate(()=>{closeSheets();document.querySelector('#shMenu .menu-item[data-act="mypage"]').click();return new Promise(r=>setTimeout(()=>r(document.getElementById('shMyPage').innerText),400));});

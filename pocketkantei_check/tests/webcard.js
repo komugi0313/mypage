@@ -9,7 +9,7 @@ const srv=http.createServer((q,r)=>{
 }).listen(0,async()=>{
   const base='http://127.0.0.1:'+srv.address().port; const b=await chromium.launch();
   for(const [L,conf] of [['ja',false],['en',false],['ja',true]]){
-    if(conf) process.env.TELECOM_CHECKOUT_URLS=JSON.stringify({std:base+'/paytest?clientip=TEST&money=1980&sendid={uid}&email={email}&lang={lang}'}); else delete process.env.TELECOM_CHECKOUT_URLS;
+    if(conf) process.env.TELECOM_CHECKOUT_URLS=JSON.stringify({std_m:base+'/paytest?clientip=TEST&money=2900&sendid={uid}&email={email}&lang={lang}'}); else delete process.env.TELECOM_CHECKOUT_URLS;
     const ctx=await b.newContext({viewport:{width:420,height:900}});const pg=await ctx.newPage();const errs=[];pg.on('pageerror',e=>errs.push(String(e)));
     await pg.route('**/*',r=>r.request().url().startsWith(base)?r.continue():r.abort());
     await pg.addInitScript((L)=>{localStorage.setItem('pk_lang',L);localStorage.setItem('pk_svd','1');localStorage.setItem('pk_profile',JSON.stringify({name:'t',y:1990,m:6,d:8,tu:false,hh:12,mi:0,sex:'female',place:'tokyo'}));},L);

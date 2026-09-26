@@ -4,7 +4,7 @@ const post=(fn,body,headers={})=>fn({httpMethod:'POST',headers,body:JSON.stringi
 (async()=>{ const now=Date.now();
   const r=await post(auth,{action:'register',email:'g@example.com',password:'sakura2026',data:{}}); const tok=r.j.token, uid=tok.split('.')[0];
   console.log('無料', await G.accountPlan({}, tok));
-  await post(bill,{event:{type:'INITIAL_PURCHASE',app_user_id:uid,product_id:'pk_unl_monthly',expiration_at_ms:now+864e5,event_timestamp_ms:now}},{authorization:'whsec-0123456789abcdefXYZ'});
+  await post(bill,{event:{type:'INITIAL_PURCHASE',app_user_id:uid,product_id:'pk_pro_annual',expiration_at_ms:now+864e5,event_timestamp_ms:now}},{authorization:'whsec-0123456789abcdefXYZ'});
   console.log('購入後', await G.accountPlan({}, tok));
   console.log('トークン改ざん', await G.accountPlan({}, tok.slice(0,-2)+'00'));
   console.log('トークンなし', await G.accountPlan({}, ''));
