@@ -2050,8 +2050,7 @@ function buildShigou(c){
 const bi=b=>BR.indexOf(b), isChong=(a,b)=>(bi(a)+6)%12===bi(b);
 function runBranchRels(t,natal){const o=[];
   natal.forEach(n=>{if(isChong(n.branch,t.branch))o.push({kind:'冲',el:null,text:`${t.branch}－${n.label}${n.branch}`});});
-  natal.forEach(n=>{if(HA[t.branch]===n.branch)o.push({kind:'破',el:null,text:`${t.branch}－${n.label}${n.branch}`});});
-  natal.forEach(n=>{if(GAI[t.branch]===n.branch)o.push({kind:'害',el:null,text:`${t.branch}－${n.label}${n.branch}`});});
+  /* 害（穿）・破は当流派では採らない（外す） */
   natal.forEach(n=>{if(RIKUGO[t.branch]===n.branch)o.push({kind:'支合',el:RIKUGO_EL[t.branch]||RIKUGO_EL[n.branch]||null,text:`${t.branch}${n.branch}`});});
   SANGO.forEach(g=>{const s=g.slice(0,3);if(!s.includes(t.branch))return;
     const u=[...new Set(natal.filter(n=>s.includes(n.branch)&&n.branch!==t.branch).map(n=>n.branch))];
@@ -2066,8 +2065,7 @@ function runStemRels(ts,st){const o=[];st.forEach(n=>{if(KANGO[ts]===n.stem)o.pu
 function natalRels(p){const o=[];const br=p.map(x=>({label:x.label[0],branch:x.branch}));const st=p.map(x=>({stem:x.stem}));
   for(let i=0;i<br.length;i++)for(let j=i+1;j<br.length;j++){
     if(isChong(br[i].branch,br[j].branch))o.push({kind:'冲',el:null,text:`${br[i].branch}${br[j].branch}`});
-    if(HA[br[i].branch]===br[j].branch)o.push({kind:'破',el:null,text:`${br[i].branch}${br[j].branch}`});
-    if(GAI[br[i].branch]===br[j].branch)o.push({kind:'害',el:null,text:`${br[i].branch}${br[j].branch}`});
+    /* 害（穿）・破は当流派では採らない（外す） */
     if(RIKUGO[br[i].branch]===br[j].branch)o.push({kind:'支合',el:RIKUGO_EL[br[i].branch]||RIKUGO_EL[br[j].branch]||null,text:`${br[i].branch}${br[j].branch}`});
     if(KANGO[st[i].stem]===st[j].stem)o.push({kind:'干合',el:KANGO_EL[st[i].stem]||KANGO_EL[st[j].stem]||null,text:`${st[i].stem}${st[j].stem}`});}
   SANGO.forEach(g=>{const s=g.slice(0,3);const pr=[...new Set(br.filter(b=>s.includes(b.branch)).map(b=>b.branch))];
@@ -3678,8 +3676,7 @@ function branchCompat(a,b){
   if(isChong(a,b))return '悪い';
   if(isKei2(a,b))return '悪い';      // 相刑（子卯）
   if(isKei3(a,b))return '合わない';   // 三刑（寅巳申・丑戌未）
-  if(GAI[a]===b)return '合わない';    // 害
-  if(HA[a]===b)return '普通';         // 破（相生でも破があれば普通に下げる）
+  /* 害（穿）・破は当流派では採らない（グレードを下げない） */
   const ea=BR_EL[a],eb=BR_EL[b];
   if(ea===eb)return '普通';           // 比和
   const d=((SHENG.indexOf(eb)-SHENG.indexOf(ea))%5+5)%5;
@@ -3843,7 +3840,7 @@ function buildChartText(c){
     (()=>{const dd=KANSHI60_DETAIL[dp.ganzhi];if(!dd)return '';const gx=c.birth.sex==='male'?dd.男:dd.女;return `日柱「${dp.ganzhi}」の詳しい人物像（性格の核・最重要。通変や十二運より、この人物像を土台に厚く描く）:一言=${dd.一言}／基本性格=${dd.基本}／恋愛傾向=${dd.恋愛}／仕事運=${dd.仕事}／${c.birth.sex==='male'?'男性':'女性'}の特徴=${gx}`;})(),
     (()=>{const bs=KANGO[dp.stem],bb=RIKUGO[dp.branch];if(!bs||!bb)return '';return `最も相性が良い日柱（天地徳合＝十干も十二支も最高の相性）:あなた(日柱${dp.ganzhi})は「${bs}${bb}」の日柱を持つ人と相性が最高。日干が干合(${dp.stem}と${bs})し、日支が支合(${dp.branch}と${bb})する、運命的に深く結ばれやすい組み合わせ（大吉）。基本は最高の相性。強いて言えば縁が濃いぶん少し依存に傾きやすい面（晦気＝かいき）だけ、ほどよい距離感を保てば安心`;})(),
     (()=>{const tg=tokugoNatalReading(c);if(!tg.length)return '';return '命式内の天地徳合（自分の二柱が干合かつ支合で強く結びつく＝大吉で基本は良い縁。縁が濃すぎるときだけ依存・負担に傾く面を「晦気＝かいき」と呼ぶが、軽い注意でよい）:'+tg.map(x=>`【${x.name}】${x.text}`).join(' ');})(),
-    (()=>{const sango=SANGO.find(g=>g.slice(0,3).includes(dp.branch));const tomo=sango?sango.slice(0,3).filter(x=>x!==dp.branch):[];const clash=BR.filter(x=>x!==dp.branch&&(isChong(dp.branch,x)||isKei2(dp.branch,x)||isKei3(dp.branch,x)||GAI[dp.branch]===x));return `相性の自動算出（六十干支相性ルール）:十干相性=干合(${dp.stem}→${KANGO[dp.stem]||'-'})が最高・相生(あなたを生む/あなたが生む干)がよい・同五行が普通・相剋が合わない。十二支相性=支合(${dp.branch}→${RIKUGO[dp.branch]||'-'})が最高・三合(${tomo.join('・')||'-'})がとてもよい・冲/刑/害(${clash.join('・')||'-'})が悪い〜合わない。相手の日柱(干支)が分かれば、この2軸で相性を判定できる`;})(),
+    (()=>{const sango=SANGO.find(g=>g.slice(0,3).includes(dp.branch));const tomo=sango?sango.slice(0,3).filter(x=>x!==dp.branch):[];const clash=BR.filter(x=>x!==dp.branch&&(isChong(dp.branch,x)||isKei2(dp.branch,x)||isKei3(dp.branch,x)));return `相性の自動算出（六十干支相性ルール）:十干相性=干合(${dp.stem}→${KANGO[dp.stem]||'-'})が最高・相生(あなたを生む/あなたが生む干)がよい・同五行が普通・相剋が合わない。十二支相性=支合(${dp.branch}→${RIKUGO[dp.branch]||'-'})が最高・三合(${tomo.join('・')||'-'})がとてもよい・冲/刑(${clash.join('・')||'-'})が悪い〜合わない。相手の日柱(干支)が分かれば、この2軸で相性を判定できる`;})(),
     ekibaText(c),
     (!c.timeUnknown&&c.pillars[3])?(()=>{const hp=c.pillars[3],rep=repHidden(hp);return `時柱（将来・本心・晩年の生き方・子供/部下や後輩との縁）:${hp.ganzhi} 時干通変=${hp.tenStar}／地支通変(代表蔵干${rep.stem})=${rep.tenStar}／十二運=${hp.terrain}。ここから晩年の過ごし方・心の奥の本心・子供運や目下との関係を読む（時刻が分かる人のみ）`;})():'',
     (()=>{const mh=repHidden(c.pillars[1]);if(!mh)return '';const det=GENMEI_DETAIL[mh.tenStar]||'';const f=TS_FULL[mh.tenStar];const ki=TS_KISHITSU[mh.tenStar];const lr=LOVE_STAR_ROLE[mh.tenStar];const kt=ki?`／気質カテゴリー:${ki.cat}（通変星の五行イメージ=${ki.el}の${ki.yy}）`:'';return `月支元命（月柱の地支通変＝先天的な気質の軸・最重視）:${mh.stem}（${mh.tenStar}）＝${det}${kt}${lr?'／'+lr:''}${f?'／適職:'+f.適職:''}`;})(),
@@ -4519,7 +4516,7 @@ function compatExtras(a,b,rt){
     R.push({key:'納音の相性',good:'good',
       ai:`2人の日柱が同じ納音(${na.name})＝納音の相性。${NAYIN_AISHO}`,
       local:`2人の日柱が同じ**${na.name}**＝**納音の相性**です。${NAYIN_AISHO}`});})();
-  // ⑦ お互いの地支の冲・刑・害・破＝マイナスの引っかかり（配偶宮＝日支を最重要に、他の柱も拾う）
+  // ⑦ お互いの地支の冲・刑＝マイナスの引っかかり（害・破は当流派では採らない／配偶宮＝日支を最重要に、他の柱も拾う）
   (()=>{
     const PN={0:'年柱（家系・ルーツ・目上）',1:'月柱（仕事・社会・親）',2:'日柱（自分・パートナー）',3:'時柱（将来・子供・目下）'};
     const clash=(x,y)=>{
@@ -4527,8 +4524,7 @@ function compatExtras(a,b,rt){
       if(isKei3(x,y))return{t:'三刑',s:2,d:'事情が絡んで気持ちがこじれやすく、我を通し合うと消耗しやすい'};
       if(x===y&&JIKEI.has(x))return{t:'自刑',s:2,d:'似た弱点を互いに刺激し、内にため込んで空回りしやすい'};
       if(isKei2(x,y))return{t:'相刑',s:1,d:'距離感や礼のズレから、無意識に相手を傷つけやすい'};
-      if(GAI[x]===y)return{t:'害',s:1,d:'表面は穏やかでも見えない所ですれ違いや足の引っ張り合いがたまりやすい'};
-      if(HA[x]===y)return{t:'破',s:1,d:'約束や予定が崩れやすく、小さなほころびが積もりやすい'};
+      /* 害（穿）・破は当流派では採らない（外す） */
       return null;};
     const aB=a.pillars[2].branch, bB=b.pillars[2].branch;
     const day=clash(aB,bB);
@@ -4565,8 +4561,7 @@ function compatAnalysis(a,b,rt){
   if(RIKUGO[aB]===bB)br.push(`支合(${aB}${bB})＝引き合う縁`);
   if(isChong(aB,bB))br.push(`冲(${aB}${bB})＝ぶつかり・すれ違い注意`);
   if(isKei2(aB,bB)||isKei3(aB,bB)||(aB===bB&&JIKEI.has(aB)))br.push(`刑(${aB}${bB})＝こじれ・摩擦注意`);
-  if(HA[aB]===bB)br.push(`破(${aB}${bB})`);
-  if(GAI[aB]===bB)br.push(`害(${aB}${bB})`);
+  /* 害（穿）・破は当流派では採らない（外す） */
   SANGO.forEach(g=>{const s=g.slice(0,3);if(aB!==bB&&s.includes(aB)&&s.includes(bB)&&(['子','午','卯','酉'].includes(aB)||['子','午','卯','酉'].includes(bB)))br.push(`半三合(${g[3]}が強まる)`);});
   L.push(`日支(配偶宮)の関係:${br.join(' / ')||'強い合冲なし'}`);
   // 天地徳合：日柱どうしが干合(天干)かつ支合(地支)＝運命的に強い特別な縁
@@ -4585,7 +4580,7 @@ function compatAnalysis(a,b,rt){
   const goodTxt=good.map(g=>`${g.year}(${g.ganzhi}:${g.cues.join('・')})`);
   L.push(`${rt.timing}(今後25年):${goodTxt.length?goodTxt.join(' / '):'特に強い年は目立たない'}`);
   const strain=compatStrainYears(a,b);
-  L.push(`関係が揺れやすい・見直しの年(今後25年・配偶宮の冲/害/刑・空亡):${strain.length?strain.map(s=>`${s.year}(${s.ganzhi}:${s.tags.join('・')})`).join(' / '):'目立つ年なし'}（「離婚に良い年」と断定せず、関係の転機・話し合いの時期として伝える）`);
+  L.push(`関係が揺れやすい・見直しの年(今後25年・配偶宮の冲/刑・空亡・用神剋):${strain.length?strain.map(s=>`${s.year}(${s.ganzhi}:${s.tags.join('・')})`).join(' / '):'目立つ年なし'}（「離婚に良い年」と断定せず、関係の転機・話し合いの時期として伝える）`);
   // 2人の命式を突き合わせた相性ポイント（三合・五行補完・空亡・月支元命の生剋・印の関係）
   const ex=compatExtras(a,b,rt);
   if(ex.length)L.push('2人の命式を合わせた相性ポイント:\n'+ex.map(r=>`・[${r.good==='good'?'吉':r.good==='soft'?'やわらかい注意':r.good==='bad'?'注意':'参考'}] ${r.ai}`).join('\n'));
@@ -4623,8 +4618,8 @@ function compatStrainYears(a,b){
   a.annualFortunes.filter(y=>y.year>=a.now.year&&y.year<=a.now.year+25).forEach(y=>{
     const tags=[];
     if(isChong(dayB,y.branch))tags.push('配偶宮に冲');
-    if(GAI[dayB]===y.branch)tags.push('配偶宮に害');
     if(isKei2(dayB,y.branch)||isKei3(dayB,y.branch)||(dayB===y.branch&&JIKEI.has(dayB)))tags.push('配偶宮に刑');
+    /* 害（穿）・破は当流派では採らない（外す） */
     if(ku.includes(y.branch))tags.push('空亡年');
     if(attackers.size&&y.branchElement&&y.stemElement&&attackers.has(y.branchElement)&&attackers.has(y.stemElement))tags.push('用神が剋される');
     if(tags.length)out.push({year:y.year,ganzhi:y.ganzhi,tags});
@@ -4645,7 +4640,7 @@ function compatTimingHTML(a,b,rt){
     return `<section class="card sec" style="border:1.5px solid #E7B8CF;box-shadow:0 6px 18px rgba(232,93,158,.12)">
       <span class="eyebrow"><b>時期の目安（今後25年）</b>結婚・縁が深まる年／揺れやすい年</span>
       <h2 style="margin-bottom:2px">いつ動く？——年ごとの目安</h2>
-      <div class="mhint" style="margin:6px 0 10px">年運に配偶者星・出会いの星・貴人が巡り、相手の干支と響き合う年＝<b>縁が深まりやすい年</b>。配偶宮（日支）が冲・害・刑や空亡になる年＝<b>関係が揺れやすい・見直しの年</b>。${both.length?'<b style="color:#C2185B">⚡'+both.join('・')+' は両方に出る＝動きが大きい年</b>（縁も揺れも起きやすい転機）。':''}</div>
+      <div class="mhint" style="margin:6px 0 10px">年運に配偶者星・出会いの星・貴人が巡り、相手の干支と響き合う年＝<b>縁が深まりやすい年</b>。配偶宮（日支）が冲・刑や空亡になる年、本人の用神が剋される年＝<b>関係が揺れやすい・見直しの年</b>。${both.length?'<b style="color:#C2185B">⚡'+both.join('・')+' は両方に出る＝動きが大きい年</b>（縁も揺れも起きやすい転機）。':''}</div>
       <div class="cty-ttl good">💗 結婚・縁が深まりやすい年</div>
       <table class="cty"><thead><tr><th>西暦</th><th>干支</th><th>手がかり</th></tr></thead><tbody>${rowG}</tbody></table>
       <div class="cty-ttl warn">⚠️ 関係が揺れやすい・見直しの年</div>
