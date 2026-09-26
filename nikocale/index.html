@@ -4686,7 +4686,10 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   })();
 
   /* 将来のゲート用に公開：requireAuth(cb) を各機能から呼ぶ */
-  window.NicoAuth={ current:Auth.current, open:open, onChange:Auth.onChange, requireAuth:function(cb){ var u=Auth.current(); if(u&&u.emailVerified&&u.profile){ cb&&cb(u); } else { pendingCb=cb||null; open(u?(u.emailVerified?'profile':'verify'):'register'); } } };
+  window.NicoAuth={ current:Auth.current, open:open, onChange:Auth.onChange,
+    // 登録画面を挟まずにデモ用アカウントで開始（DMの“すぐデモ”入口用）
+    demo:function(cb){ var de='demo@nicocale.app',pw='demo1234'; var r=Auth.register(de,pw); if(r&&r.error){ Auth.login(de,pw,true); } try{ Auth.markVerified(); Auth.saveProfile({sex:'x',age:''}); }catch(e){} if(cb)try{cb(Auth.current());}catch(e){} },
+    requireAuth:function(cb){ var u=Auth.current(); if(u&&u.emailVerified&&u.profile){ cb&&cb(u); } else { pendingCb=cb||null; open(u?(u.emailVerified?'profile':'verify'):'register'); } } };
   // 初回ロード時、build() → renderCharCard() は NicoAuth 定義前に走るため、
   // ここで一度だけ再描画してログイン済みユーザーのキャラを正しく表示＆onChange購読させる。
   try{ if(window.NicoRenderCharCard) window.NicoRenderCharCard(); }catch(e){}
@@ -4887,7 +4890,12 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   var _lockY=0;
   function lockBody(){ try{ _lockY=window.scrollY||window.pageYOffset||0; var b=document.body; b.style.position='fixed'; b.style.top=(-_lockY)+'px'; b.style.left='0'; b.style.right='0'; b.style.width='100%'; document.documentElement.style.overflow='hidden'; }catch(e){} }
   function unlockBody(){ try{ var b=document.body; b.style.position=''; b.style.top=''; b.style.left=''; b.style.right=''; b.style.width=''; document.documentElement.style.overflow=''; window.scrollTo(0,_lockY); }catch(e){} }
-  function open(){ if(!window.NICO_DM_ON) return; openList(); }   // 入口＝トーク一覧（DM OFF時は無効）
+  function open(){ if(!window.NICO_DM_ON) return;                 // 入口＝トーク一覧（DM OFF時は無効）
+    // 未登録なら登録画面を挟まず、その場でデモとして開始してDMを見せる
+    var A=window.NicoAuth, u=A&&A.current&&A.current();
+    if(!u && A&&A.demo){ A.demo(function(){ openList(); }); return; }
+    openList();
+  }
   function openList(){
     var u=window.NicoAuth.current(); if(!u){ window.NicoAuth.requireAuth(function(){ openList(); }); return; }
     if(unsub){ unsub(); unsub=null; } cur=null; view='list';
