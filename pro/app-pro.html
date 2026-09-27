@@ -1624,7 +1624,7 @@ const UNKI_FAV={
   身弱:{印:0.90,比劫:0.80,食傷:0.42,財:0.30,官殺:0.22},
   中和:{食傷:0.62,財:0.64,官殺:0.58,比劫:0.56,印:0.62}
 };
-function strengthType(c){const s=gogyoBalance(c).sScore;return s>=4?'身強':s<=0?'身弱':'中和';}
+function strengthType(c){const s=gogyoBalance(c).sScore;return s>=4?'身強':s<=0?'身弱':'中和';}  /* score=月令点＋月支十二運＋日支十二運（-4〜9）。身強≥4／身弱≤0／中和 */
 // 干通変と支(本気)通変の喜忌から運気％（18〜98）。干6:支4で加重
 function unkiPct(ganStar,branchBenStar,sType){const f=UNKI_FAV[sType]||UNKI_FAV.中和;
   const g=TS_GROUP[ganStar],s=TS_GROUP[branchBenStar];
@@ -3557,7 +3557,7 @@ function yojoHTML(c){
   return `<section class="card sec" id="yojo-sec">
     <span class="eyebrow"><b>五行バランス</b>養生・薬膳</span>
     <h2>五行のバランスと養生</h2>
-    <p class="lead">五行の数から、<b>${b.verdict}</b>。日主の強弱は<b>${b.strength}</b>（月令点：<b>${b.monthPt}点</b>＝得令${b.tokurei?'○':'×'}／月支${b.monthBranch}の十二運：<b>${b.monthTerr}</b>を重ねて総合）。</p>
+    <p class="lead">五行の数から、<b>${b.verdict}</b>。日主の強弱は<b>${b.strength}</b>（月令点：<b>${b.monthPt}点</b>＝得令${b.tokurei?'○':'×'}／月支${b.monthBranch}の十二運：<b>${b.monthTerr}</b>＋日支${b.dayBranch}の十二運：<b>${b.dayTerr}</b>＝月柱と日柱の根を重ねて総合）。</p>
     <div style="margin:6px 0 10px">${bars}</div>
     ${summary}
     <details class="adv" style="margin-top:8px"><summary>食養生をくわしく（太過・不及と、五行別の食べ方）</summary><div style="margin-top:6px">
@@ -4013,16 +4013,18 @@ function gogyoBalance(c){
   else if(spread===2)verdict='ややバランス型';
   else if(spread<=3)verdict='やや偏り';
   else verdict='偏りが強い';
-  // 身強・身弱（この流派）：月令点表(得令の段階0〜3)＋月支の十二運を重ねる。※比劫印のカウントは使わない。
+  // 身強・身弱（この流派）：月令点表(得令の段階0〜3)＋十二運を重ねる。十二運は「主に月柱と日柱をみる」＝月支＋日支の根の深さ。※比劫印のカウントは使わない。
   const dayEl=c.dayMaster.element;
   const support=counts[dayEl]+counts[GEN[dayEl]];              // 参考表示用（比劫＋印の数。判定には使わない）
   const stem=c.dayMaster.stem, mb=c.pillars[1]?c.pillars[1].branch:'', mt=c.pillars[1]?c.pillars[1].terrain:'';
+  const db=c.pillars[2]?c.pillars[2].branch:'', dt=c.pillars[2]?c.pillars[2].terrain:''; // 日支＝日主の座（通根の深さ）
   const monthPt=geryoPoint(mb,dayEl);                          // 月令点（0〜3）
   const tokurei=monthPt>=2;                                    // 得令＝月令点2以上（＝身旺の素）
-  const terrScore=(TERR_STR[mt]!=null?TERR_STR[mt]:0);          // 月支十二運の強弱
-  const sScore=monthPt+terrScore;                              // 総合スコア＝月令点＋十二運（-2〜6）
-  const strength=sScore>=5?'身強（自我が強くエネルギー旺盛）':sScore>=4?'やや身強':sScore<=-1?'身弱（繊細で消耗しやすい）':sScore<=0?'やや身弱':'中和に近い';
-  return {counts,total,max,min,strong,weak,zero,spread,verdict,dayEl,support,strength,tokurei,monthBranch:mb,monthTerr:mt,monthPt,terrScore,sScore};
+  const terrScore=(TERR_STR[mt]!=null?TERR_STR[mt]:0);          // 月支の十二運（月令の根。季節の弱さは減点あり）
+  const dayTerrScore=Math.max(0,(TERR_STR[dt]!=null?TERR_STR[dt]:0)); // 日支の十二運＝通根ボーナス（根があれば加点／病死など根なしは0＝減点しない）
+  const sScore=monthPt+terrScore+dayTerrScore;                 // 総合＝月令点＋月支十二運＋日支の通根（-2〜9）
+  const strength=sScore>=6?'身強（自我が強くエネルギー旺盛）':sScore>=4?'やや身強':sScore<=-1?'身弱（繊細で消耗しやすい）':sScore<=0?'やや身弱':'中和に近い';
+  return {counts,total,max,min,strong,weak,zero,spread,verdict,dayEl,support,strength,tokurei,monthBranch:mb,monthTerr:mt,monthPt,terrScore,dayBranch:db,dayTerr:dt,dayTerrScore,sScore};
 }
 // 今めぐる大運・年運がもたらす五行（増減の見極め）
 function gogyoNow(c){
@@ -4105,7 +4107,7 @@ function buildYojo(c){
   const nowTxt=nv?`/今の運の五行の傾き:大運${nv.dd.ganzhi}${nv.ay?'＋年運'+nv.ay.ganzhi:''}で「${nv.el}」が強まる→${nv.advice}（${nv.caution}）。食養生:${nv.excess?YOJO[nv.el].過食:nv.food}`:'';
   const lc=luckyColors(c);
   const lcTxt=`／ラッキーカラー（開運色＝${lc.st}の喜神＝「${lc.mode}」五行の色）:${lc.els.map(e=>e+'＝'+LUCKY_COLOR[e].key+'（'+LUCKY_COLOR[e].names+'）').join('・')}（理由:${lc.why}）。服・小物・名刺・持ち物などに取り入れると運を後押しする色`;
-  return `五行バランス判定・養生:[${cnt}]/判定:${b.verdict}/身強弱:${b.strength}（月令点＝${b.monthPt}点/得令判定:${b.tokurei?'○（'+b.dayEl+'を支える月＝身旺の素）':'×（支える季節ではない）'}・月支${b.monthBranch}での十二運=${b.monthTerr}を重ねて総合）/強い五行の養生:${strongTxt}/弱い・欠けの五行の養生:${weakTxt}${nowTxt}${weakElTimingText(c)}${lcTxt}${(()=>{const yt=yojinTrio(c);return `／【用神・喜神・忌神＝心と体が整うコンパス】用神（整えると調子が戻る＝補うとよい五行）:${yt.youTxt}／喜神（自然に後押ししてくれる五行）:${yt.kishinTxt}／忌神（過剰サイン＝バランスが崩れると出るクセ。抑える・流す方向で整える）:${yt.imiTxt}。忌神は"悪いもの"ではなく「頑張りすぎ・出すぎのサイン」＝早めに休む・整える合図。用神=補う／喜神=乗る／忌神=整える、という心と体のガイドとして前向きに伝える`;})()}／※寒涼の食材=熱をとり消炎・鎮静、温熱の食材=体を温め新陳代謝を高める。健康の話題は「なりやすい傾向・養生」として前向きに伝え、診断や断定はしない`;
+  return `五行バランス判定・養生:[${cnt}]/判定:${b.verdict}/身強弱:${b.strength}（月令点＝${b.monthPt}点/得令判定:${b.tokurei?'○（'+b.dayEl+'を支える月＝身旺の素）':'×（支える季節ではない）'}・月支${b.monthBranch}の十二運=${b.monthTerr}＋日支${b.dayBranch}の十二運=${b.dayTerr}（月柱と日柱の根）を重ねて総合）/強い五行の養生:${strongTxt}/弱い・欠けの五行の養生:${weakTxt}${nowTxt}${weakElTimingText(c)}${lcTxt}${(()=>{const yt=yojinTrio(c);return `／【用神・喜神・忌神＝心と体が整うコンパス】用神（整えると調子が戻る＝補うとよい五行）:${yt.youTxt}／喜神（自然に後押ししてくれる五行）:${yt.kishinTxt}／忌神（過剰サイン＝バランスが崩れると出るクセ。抑える・流す方向で整える）:${yt.imiTxt}。忌神は"悪いもの"ではなく「頑張りすぎ・出すぎのサイン」＝早めに休む・整える合図。用神=補う／喜神=乗る／忌神=整える、という心と体のガイドとして前向きに伝える`;})()}／※寒涼の食材=熱をとり消炎・鎮静、温熱の食材=体を温め新陳代謝を高める。健康の話題は「なりやすい傾向・養生」として前向きに伝え、診断や断定はしない`;
 }
 /* ===== ラッキーカラー（開運色）：喜神＝命式を整える助けになる五行の色。
    身弱＝自分を支える五行（比劫＝同じ五行・印＝生んでくれる五行）／身強＝力を流す・活かす五行（食傷＝生む・財＝剋す）／中和＝不足の五行を補う。 ===== */
