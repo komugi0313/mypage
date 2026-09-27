@@ -1460,6 +1460,12 @@
       return {kind:kind, els:uniq, sScore:sScore};
     }catch(e){ return null; }
   }
+  // 鑑定者が身強弱を上書きしたとき、その強弱から守護神(喜神)の五行を再計算する（computeShugoと同一ロジック）。
+  window._shugoElsFor=function(kind,dayEl){ if(!dayEl) return [];
+    var els; if(kind==='身強') els=[_GEN[dayEl],_CON[dayEl],_CONINV[dayEl]];      // 漏らす・抑える
+    else if(kind==='身弱') els=[dayEl,_GENINV[dayEl]];                            // 助ける
+    else els=[_GEN[dayEl],_GENINV[dayEl]];                                        // 中和：軽く整える
+    var u=[]; els.forEach(function(e){ if(e&&u.indexOf(e)<0)u.push(e); }); return u; };
   // 命式表フォーマットが呼ぶ関数。中身はエンジン(computeChart)の出力を写すだけ。
   window.computeMeishiki=function(input){
     if(!(window.Bazi&&window.Bazi.computeChart)) throw new Error('engine(window.Bazi) not loaded');
@@ -3537,12 +3543,22 @@ window.KANSHI60_DETAIL={
     }
     // ── 2枚目：命式から読み解いた鑑定文 ──
     _lastResult = r;
+    _autoShugoKind = r.shugoStrength; _autoShugojin = r.shugojin;   // 自動判定の控え（上書き解除で戻す）
+    _ykStrengthOverride = null; if(typeof _resetStrengthButtons==='function') _resetStrengthButtons();  // 別人を鑑定したら上書きは必ずリセット（喜神忌神の取り違え防止）
     if(_readEngine==='ai'){ setEngine('template'); }   // 別の人を鑑定したら定型文に戻す（古いAI文・不要な課金を防ぐ）
     else renderReading();
     if(_meishikiLayout==='yoko' && typeof buildYokoSheet==='function') buildYokoSheet();  // 横型表示中なら再構築
   }
   // 鑑定テーマ（総合／恋愛重視）
   var _lastResult=null, _readTheme='general', _readScope='full', _readLevel='pro';
+  var _autoShugoKind=null, _autoShugojin=null;  // 自動判定の守護神（上書き解除時に戻すため）
+  function _dayElOf(r){ try{ var s=r&&r.pillars&&r.pillars.day&&r.pillars.day.stem; var M={甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'金',辛:'金',壬:'水',癸:'水'}; return M[s]||''; }catch(e){ return ''; } }
+  // 上書き（_ykStrengthOverride）を _lastResult の shugoStrength/shugojin(＝喜神) に反映。無ければ自動値に戻す。
+  function applyStrengthToResult(){ if(!_lastResult) return;
+    if(_ykStrengthOverride){ _lastResult.shugoStrength=_ykStrengthOverride;
+      _lastResult.shugojin=(window._shugoElsFor?window._shugoElsFor(_ykStrengthOverride,_dayElOf(_lastResult)):_autoShugojin);
+    } else { _lastResult.shugoStrength=_autoShugoKind; _lastResult.shugojin=_autoShugojin; } }
+  function _resetStrengthButtons(){ try{ var bs=document.querySelectorAll('.st-ovr'); bs.forEach(function(x){ x.setAttribute('aria-pressed', String((x.dataset.st||'')==='')); }); }catch(e){} }
   var _readEngine='template';           // 'template'（定型文）or 'ai'（詳細鑑定）
   window._aiReadingHTML=null;           // AI生成HTML（印刷用にも使う）
   function renderReading(){
@@ -3976,7 +3992,11 @@ window.KANSHI60_DETAIL={
     }catch(e){ console.error('buildYokoSheet failed', e); }
   }
   // 鑑定者が身強／身弱を指定 → 横型を再描画して会局の吉凶色を反映
-  window.setYkStrength=function(v){ _ykStrengthOverride=(v==='身強'||v==='身弱'||v==='中和')?v:null; if(typeof buildYokoSheet==='function') buildYokoSheet(); };
+  window.setYkStrength=function(v){ _ykStrengthOverride=(v==='身強'||v==='身弱'||v==='中和')?v:null;
+    applyStrengthToResult();                                            // 喜神(守護神)を上書きに合わせて再計算
+    if(typeof buildYokoSheet==='function') buildYokoSheet();            // 命式表：会局の吉凶色
+    if(_readEngine!=='ai' && typeof renderReading==='function') renderReading();  // 鑑定書：喜神・忌神・ラッキーカラー・養生の文章まで連動
+  };
   function setMeishikiLayout(t){
     _meishikiLayout=(t==='yoko')?'yoko':(t==='tate')?'tate':'std';
     var s=document.getElementById('mtStd'), y=document.getElementById('mtYoko'), tt=document.getElementById('mtTate');
