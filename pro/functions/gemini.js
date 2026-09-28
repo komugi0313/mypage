@@ -30,7 +30,10 @@ const MODEL_DEEP = process.env.GEMINI_MODEL_DEEP || 'gemini-2.5-flash';
 const OWNER_TOKEN = process.env.PK_OWNER_TOKEN || '';
 const MAX_DEVICE_DAY = parseInt(process.env.PK_MAX_DEVICE_DAY || '400', 10) || 400;
 const MAX_IP_DAY = parseInt(process.env.PK_MAX_IP_DAY || '800', 10) || 800;
-const MAX_BODY = 12000;
+// 最後のユーザーメッセージの上限（字）。自動の詳細鑑定は命式データ全文を渡すため最大約24,300字になる。
+// 12000だと正規の詳細鑑定が413で弾かれオンライン生成できず常にオフラインへ落ちていたので、余裕を持って40000に。
+// （巨大な貼り付け等のボット対策の“天井”は維持。総リクエストサイズは別途 900000字で制限）
+const MAX_BODY = 40000;
 
 // 原価計測（USD / 1Mトークン）。既定は gemini-2.5-flash 相当の保守値。キャッシュ入力は75%引きで見積もる。
 const PX_IN   = parseFloat(process.env.PK_PRICE_IN   || '0.30');
