@@ -81,6 +81,11 @@
 
   /* ============ 見出し ============ */
   .head{ text-align:center; margin:4px 0 12px; }
+  /* 屋号ヘッダー（ホワイトラベル）：屋号が設定されている時だけJSで各ヘッダー上部に差し込む */
+  .brandband{ display:none; align-items:center; justify-content:center; gap:9px; margin:0 auto 8px; padding:0 0 7px; max-width:92%; border-bottom:2px solid var(--brand,#8A4FBE); }
+  .brandband.on{ display:flex; }
+  .brandband .bb-logo{ width:26px; height:26px; border-radius:6px; object-fit:cover; flex:0 0 auto; }
+  .brandband .bb-name{ font-family:var(--mincho); font-weight:800; font-size:clamp(14px,1.8vw,19px); letter-spacing:.08em; color:var(--brand,#8A4FBE); }
   .crest{ width:126px; height:32px; margin:0 auto 5px; color:var(--gold); display:block; }
   .title{ font-family:var(--mincho); font-weight:700; color:var(--ink); font-size:clamp(18px,2.4vw,26px);
     letter-spacing:.42em; margin:0; text-indent:.42em; text-wrap:balance; }
@@ -4215,6 +4220,31 @@ window.KANSHI60_DETAIL={
   // 初期表示：自動計算（エンジン連動）。手書きは「記入用」に切替。
   setMode('auto');
   try{ document.getElementById('calcForm').requestSubmit(); }catch(e){}
+
+  // 屋号ヘッダー（ホワイトラベル）：app-proで保存した屋号・差し色・ロゴ(localStorage)を読み、
+  // 命式表・鑑定書の各ヘッダー上部に屋号バンドを差し込む。未設定なら標準ヘッダーのまま（何もしない）。
+  (function(){ try{
+    var name='',color='',logo='';
+    try{ name=localStorage.getItem('bazi_brand_name')||''; color=localStorage.getItem('bazi_brand_color')||''; logo=localStorage.getItem('bazi_brand_logo')||''; }catch(e){}
+    if(!name && !logo) return;
+    if(color){ try{ document.documentElement.style.setProperty('--brand', color); }catch(e){} }
+    var esc=function(s){ return String(s).replace(/[<>&"]/g,function(c){return ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'})[c];}); };
+    var apply=function(){
+      var heads=document.querySelectorAll('.head, .yk-head');   // 命式表(横型)は .yk-head、標準/鑑定書は .head
+      for(var i=0;i<heads.length;i++){ var h=heads[i]; if(h.querySelector('.brandband')) continue;
+        var band=document.createElement('div'); band.className='brandband on';
+        var html=''; if(logo) html+='<img class="bb-logo" src="'+esc(logo)+'" alt="">'; if(name) html+='<span class="bb-name">'+esc(name)+'</span>';
+        band.innerHTML=html; h.insertBefore(band, h.firstChild);
+      }
+    };
+    apply();
+    // 横型命式表(sheetYoko)はJSで後から生成・差し替えされるので、生成後にも再適用
+    setTimeout(apply,500); setTimeout(apply,1300);
+    // 印刷直前にも必ず（横型が再生成された後の状態に載せる）
+    window.addEventListener('beforeprint', apply);
+    // sheetYokoの中身が差し替わったら再適用（バンドが消えないように）
+    try{ var yk=document.getElementById('sheetYoko'); if(yk && window.MutationObserver){ new MutationObserver(function(){ apply(); }).observe(yk,{childList:true}); } }catch(e){}
+  }catch(e){} })();
 
   // 鑑定文の既定＝オンライン（詳細鑑定）。ネットに繋がっていない時だけ定型文（オフライン鑑定書）で出す。
   // ※共有リンクの受け手側では自動でAIを呼ばない（固定表示・都度課金を避ける）。
