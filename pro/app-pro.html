@@ -5873,7 +5873,7 @@ function printHTML(title,inner,auto){
   w.document.write('<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title>'+
     '<style>body{font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;color:#1b1b1b;line-height:1.85;padding:26px;max-width:760px;margin:0 auto}h1{font-size:17px;margin:0 0 16px;color:#444;font-weight:800}.brand{display:flex;align-items:center;gap:11px;border-bottom:2.5px solid '+bc+';padding-bottom:11px;margin-bottom:14px}.brand .bi{width:44px;height:44px;border-radius:9px;object-fit:cover;flex:0 0 auto}.brand .bn{font-size:20px;font-weight:800;letter-spacing:.02em}.brand .bd{color:#777;font-size:11.5px;margin-top:1px}h2,strong{font-weight:800}.r h2{font-size:14.5px;color:'+bc+';margin:18px 0 6px}.r .r-summary{font-size:15px;font-weight:800;line-height:1.7;margin:0 0 14px;padding:11px 13px;background:'+bc+'14;border-radius:10px}.r h4.r-head{font-size:14.5px;font-weight:800;color:'+bc+';margin:18px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #eee}.r h4.r-head .r-ic{margin-right:5px}.r p{margin:0 0 9px;line-height:1.9}.r .r-list,.r ol.r-onum{margin:4px 0 11px}.r .r-list li,.r ol.r-onum li{margin:5px 0;line-height:1.8}.r strong{background:linear-gradient(transparent 62%,'+bc+'22 62%)}.gel{font-weight:800}.tools{margin:14px 0 18px}button{background:'+bc+';color:#fff;border:0;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}@media print{.tools{display:none}body{padding:0}}</style>'+
     '</head><body>'+brand+'<h1>'+esc(title)+'</h1>'+
-    '<div class="tools"><button onclick="window.print()">印刷 / PDFで保存</button></div>'+
+    '<div class="tools"><button onclick="window.print()">印刷 / PDFで保存</button><div class="tiphint" style="font-size:12px;color:#888;font-weight:700;margin-top:8px;line-height:1.7">スマホ：この画面を「PDFに保存」→ LINEの共有からPDFを送れます（お客様は保存・印刷・拡大できます）。<br>iPhone：印刷プレビューの共有アイコン → LINE。Android：印刷 →「PDF形式で保存」→ LINEで添付。</div></div>'+
     '<div class="r">'+inner+'</div></body></html>');
   w.document.close();
   if(auto){try{w.focus();}catch(e){}setTimeout(function(){try{w.print();}catch(e){}},350);}
@@ -5901,65 +5901,6 @@ function copyText(text){
   const done=function(){alert('鑑定文をコピーしました。LINE・メールなどに貼り付けて送れます。');};
   const fb=function(){try{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.focus();ta.select();document.execCommand('copy');ta.remove();done();}catch(e){alert('コピーできませんでした。鑑定文を長押し（PCはドラッグ）で選択してコピーしてください。');}};
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(done,fb);}else{fb();}
-}
-/* 鑑定文を“画像”にして1タップ共有（スマホ＝LINE等の共有シート／非対応端末＝画像を保存）。
-   外部ライブラリ不使用・自前canvas描画。オフライン可。失敗時はテキスト共有へ自動フォールバック。 */
-async function shareAsImage(title,rawText){
-  var btnBusy=null;
-  try{
-    var text=cleanMarkdown(rawText||'').replace(/\n{3,}/g,'\n\n').trim();
-    if(!text){shareText(title,rawText);return;}
-    var bc=brandColor||'#c0392b', brand=brandName||'鑑定書';
-    var W=1080, pad=64, maxW=W-pad*2;
-    var FONT='"Hiragino Kaku Gothic ProN","Hiragino Sans",Meiryo,system-ui,-apple-system,sans-serif';
-    var fBrand='800 46px '+FONT, fSub='700 26px '+FONT, fHead='800 33px '+FONT, fBody='400 30px '+FONT, fFoot='700 24px '+FONT;
-    var lhBody=48, lhHead=52;
-    var mcv=document.createElement('canvas'), mx=mcv.getContext('2d');
-    function wrap(str,font){ mx.font=font; var out=[], cur=''; var arr=Array.from(String(str));
-      for(var i=0;i<arr.length;i++){ var ch=arr[i]; var t=cur+ch; if(mx.measureText(t).width>maxW && cur){ out.push(cur); cur=ch; } else { cur=t; } }
-      if(cur)out.push(cur); return out.length?out:['']; }
-    // ブロック化（【見出し】＝色つき太字／空行＝間隔／その他＝本文）
-    var blocks=[]; text.split('\n').forEach(function(raw){ var line=raw.replace(/\s+$/,'');
-      if(!line.trim()){ blocks.push({t:'sp'}); return; }
-      var isHead=/^【.+?】/.test(line.trim());
-      blocks.push({t:isHead?'head':'body', lines:wrap(line.trim(), isHead?fHead:fBody)}); });
-    // 高さ算出
-    var headerH=pad + 56 /*brand*/ + (title?38:0) + 26 /*rule*/;
-    var H=headerH; blocks.forEach(function(b){ if(b.t==='sp'){H+=22;} else if(b.t==='head'){H+=14+b.lines.length*lhHead;} else {H+=6+b.lines.length*lhBody;} });
-    H+=54+pad; // フッター＋下余白
-    // 端末の解像度は使うが、長い鑑定ほど倍率を下げてメモリ・ファイルサイズが膨れないようにする
-    var dpr0=Math.max(1,Math.min(2,window.devicePixelRatio||1));
-    var dpr=(H>4500)?1:((H>2800)?Math.min(1.5,dpr0):dpr0);
-    // 描画
-    var cv=document.createElement('canvas'); cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
-    var ctx=cv.getContext('2d'); ctx.scale(dpr,dpr); ctx.textBaseline='top';
-    ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle=bc; ctx.fillRect(0,0,14,H); // 左の色帯
-    var y=pad;
-    ctx.fillStyle=bc; ctx.font=fBrand; ctx.fillText(brand,pad,y); y+=56;
-    if(title){ ctx.fillStyle='#8a8f98'; ctx.font=fSub; ctx.fillText(String(title).slice(0,40),pad,y); y+=38; }
-    ctx.strokeStyle=bc; ctx.globalAlpha=.5; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(pad,y+8); ctx.lineTo(W-pad,y+8); ctx.stroke(); ctx.globalAlpha=1; y+=26;
-    blocks.forEach(function(b){
-      if(b.t==='sp'){ y+=22; return; }
-      if(b.t==='head'){ y+=14; ctx.fillStyle=bc; ctx.font=fHead; b.lines.forEach(function(l){ ctx.fillText(l,pad,y); y+=lhHead; }); }
-      else { y+=6; ctx.fillStyle='#1b1b1b'; ctx.font=fBody; b.lines.forEach(function(l){ ctx.fillText(l,pad,y); y+=lhBody; }); }
-    });
-    ctx.fillStyle='#9aa0aa'; ctx.font=fFoot; ctx.fillText((brandName?brandName+'　':'')+nowStr(),pad,H-pad+2);
-    // Blob化→共有
-    var blob=await new Promise(function(res){ cv.toBlob(res,'image/png',0.95); });
-    if(!blob){ shareText(title,rawText); return; }
-    var fname=(brand+'_鑑定書_'+nowStr().replace(/[^0-9]/g,'').slice(0,8)+'.png').replace(/\s/g,'');
-    var file=new File([blob],fname,{type:'image/png'});
-    if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
-      try{ await navigator.share({files:[file], title:brand, text:(title||brand)}); return; }
-      catch(e){ if(e && e.name==='AbortError') return; /* ユーザーがキャンセル＝正常 */ }
-    }
-    // 非対応端末（多くのPC等）：画像を保存してもらう
-    var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(function(){ try{URL.revokeObjectURL(url);}catch(e){} },5000);
-    alert('鑑定書の画像を保存しました。LINEなどで画像を添付して送ってください。\n（この端末は画像の直接共有に未対応でした）');
-  }catch(e){ try{ shareText(title,rawText); }catch(_e){} }
-  finally{ if(btnBusy)btnBusy.disabled=false; }
 }
 function shareReading(cid,rid){const r=getReading(cid,rid);if(!r)return;const c=mpLoad().clients.find(x=>x.id===cid);shareText((c?c.name+'　':'')+(r.title||readingKindLabel(r.kind)),r.text);}
 
@@ -5989,11 +5930,10 @@ function attachReadingTools(out,text){
   const who=kind==='compat'?((personName||'本人')+'×'+(personNameB||'お相手')):(personName||'');
   const title=readingKindLabel(kind)+(who?'（'+who+'）':'')+' '+nowStr();
   const bar=document.createElement('div');bar.className='no-print';bar.style.cssText='display:flex;gap:8px;margin-top:12px;flex-wrap:wrap';
-  bar.innerHTML='<button type="button" class="rd-tool rd-print">🖨 印刷 / PDF保存</button><button type="button" class="rd-tool rd-save">この鑑定を保存</button><button type="button" class="rd-tool rd-edit">編集</button><button type="button" class="rd-tool rd-share">共有</button><button type="button" class="rd-tool rd-shareimg" title="LINE・メールなどに画像で送れます">画像で共有</button>';
+  bar.innerHTML='<button type="button" class="rd-tool rd-print">🖨 印刷 / PDF保存</button><button type="button" class="rd-tool rd-save">この鑑定を保存</button><button type="button" class="rd-tool rd-edit">編集</button><button type="button" class="rd-tool rd-share">共有</button>';
   out.appendChild(bar);
   bar.querySelector('.rd-save').onclick=function(){saveReadingToClient(kind,title,curText);};
   bar.querySelector('.rd-share').onclick=function(){shareText(title,curText);};
-  bar.querySelector('.rd-shareimg').onclick=function(){var _b=this;_b.disabled=true;shareAsImage(title,curText).finally(function(){_b.disabled=false;});};
   bar.querySelector('.rd-print').onclick=function(){
     // 相性＝両者の名前＋相性鑑定書（命式表は付けない）／個人＝本人の名前＋個人鑑定書
     var head=(kind==='compat')
