@@ -5902,6 +5902,65 @@ function copyText(text){
   const fb=function(){try{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.focus();ta.select();document.execCommand('copy');ta.remove();done();}catch(e){alert('コピーできませんでした。鑑定文を長押し（PCはドラッグ）で選択してコピーしてください。');}};
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(done,fb);}else{fb();}
 }
+/* 鑑定文を“画像”にして1タップ共有（スマホ＝LINE等の共有シート／非対応端末＝画像を保存）。
+   外部ライブラリ不使用・自前canvas描画。オフライン可。失敗時はテキスト共有へ自動フォールバック。 */
+async function shareAsImage(title,rawText){
+  var btnBusy=null;
+  try{
+    var text=cleanMarkdown(rawText||'').replace(/\n{3,}/g,'\n\n').trim();
+    if(!text){shareText(title,rawText);return;}
+    var bc=brandColor||'#c0392b', brand=brandName||'鑑定書';
+    var W=1080, pad=64, maxW=W-pad*2;
+    var FONT='"Hiragino Kaku Gothic ProN","Hiragino Sans",Meiryo,system-ui,-apple-system,sans-serif';
+    var fBrand='800 46px '+FONT, fSub='700 26px '+FONT, fHead='800 33px '+FONT, fBody='400 30px '+FONT, fFoot='700 24px '+FONT;
+    var lhBody=48, lhHead=52;
+    var mcv=document.createElement('canvas'), mx=mcv.getContext('2d');
+    function wrap(str,font){ mx.font=font; var out=[], cur=''; var arr=Array.from(String(str));
+      for(var i=0;i<arr.length;i++){ var ch=arr[i]; var t=cur+ch; if(mx.measureText(t).width>maxW && cur){ out.push(cur); cur=ch; } else { cur=t; } }
+      if(cur)out.push(cur); return out.length?out:['']; }
+    // ブロック化（【見出し】＝色つき太字／空行＝間隔／その他＝本文）
+    var blocks=[]; text.split('\n').forEach(function(raw){ var line=raw.replace(/\s+$/,'');
+      if(!line.trim()){ blocks.push({t:'sp'}); return; }
+      var isHead=/^【.+?】/.test(line.trim());
+      blocks.push({t:isHead?'head':'body', lines:wrap(line.trim(), isHead?fHead:fBody)}); });
+    // 高さ算出
+    var headerH=pad + 56 /*brand*/ + (title?38:0) + 26 /*rule*/;
+    var H=headerH; blocks.forEach(function(b){ if(b.t==='sp'){H+=22;} else if(b.t==='head'){H+=14+b.lines.length*lhHead;} else {H+=6+b.lines.length*lhBody;} });
+    H+=54+pad; // フッター＋下余白
+    // 端末の解像度は使うが、長い鑑定ほど倍率を下げてメモリ・ファイルサイズが膨れないようにする
+    var dpr0=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+    var dpr=(H>4500)?1:((H>2800)?Math.min(1.5,dpr0):dpr0);
+    // 描画
+    var cv=document.createElement('canvas'); cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+    var ctx=cv.getContext('2d'); ctx.scale(dpr,dpr); ctx.textBaseline='top';
+    ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle=bc; ctx.fillRect(0,0,14,H); // 左の色帯
+    var y=pad;
+    ctx.fillStyle=bc; ctx.font=fBrand; ctx.fillText(brand,pad,y); y+=56;
+    if(title){ ctx.fillStyle='#8a8f98'; ctx.font=fSub; ctx.fillText(String(title).slice(0,40),pad,y); y+=38; }
+    ctx.strokeStyle=bc; ctx.globalAlpha=.5; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(pad,y+8); ctx.lineTo(W-pad,y+8); ctx.stroke(); ctx.globalAlpha=1; y+=26;
+    blocks.forEach(function(b){
+      if(b.t==='sp'){ y+=22; return; }
+      if(b.t==='head'){ y+=14; ctx.fillStyle=bc; ctx.font=fHead; b.lines.forEach(function(l){ ctx.fillText(l,pad,y); y+=lhHead; }); }
+      else { y+=6; ctx.fillStyle='#1b1b1b'; ctx.font=fBody; b.lines.forEach(function(l){ ctx.fillText(l,pad,y); y+=lhBody; }); }
+    });
+    ctx.fillStyle='#9aa0aa'; ctx.font=fFoot; ctx.fillText((brandName?brandName+'　':'')+nowStr(),pad,H-pad+2);
+    // Blob化→共有
+    var blob=await new Promise(function(res){ cv.toBlob(res,'image/png',0.95); });
+    if(!blob){ shareText(title,rawText); return; }
+    var fname=(brand+'_鑑定書_'+nowStr().replace(/[^0-9]/g,'').slice(0,8)+'.png').replace(/\s/g,'');
+    var file=new File([blob],fname,{type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+      try{ await navigator.share({files:[file], title:brand, text:(title||brand)}); return; }
+      catch(e){ if(e && e.name==='AbortError') return; /* ユーザーがキャンセル＝正常 */ }
+    }
+    // 非対応端末（多くのPC等）：画像を保存してもらう
+    var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ try{URL.revokeObjectURL(url);}catch(e){} },5000);
+    alert('鑑定書の画像を保存しました。LINEなどで画像を添付して送ってください。\n（この端末は画像の直接共有に未対応でした）');
+  }catch(e){ try{ shareText(title,rawText); }catch(_e){} }
+  finally{ if(btnBusy)btnBusy.disabled=false; }
+}
 function shareReading(cid,rid){const r=getReading(cid,rid);if(!r)return;const c=mpLoad().clients.find(x=>x.id===cid);shareText((c?c.name+'　':'')+(r.title||readingKindLabel(r.kind)),r.text);}
 
 /* 鑑定文の下に「保存」「印刷」ボタンを付ける（runReadingから呼ぶ） */
@@ -5930,10 +5989,11 @@ function attachReadingTools(out,text){
   const who=kind==='compat'?((personName||'本人')+'×'+(personNameB||'お相手')):(personName||'');
   const title=readingKindLabel(kind)+(who?'（'+who+'）':'')+' '+nowStr();
   const bar=document.createElement('div');bar.className='no-print';bar.style.cssText='display:flex;gap:8px;margin-top:12px;flex-wrap:wrap';
-  bar.innerHTML='<button type="button" class="rd-tool rd-print">🖨 印刷 / PDF保存</button><button type="button" class="rd-tool rd-save">この鑑定を保存</button><button type="button" class="rd-tool rd-edit">編集</button><button type="button" class="rd-tool rd-share">共有</button>';
+  bar.innerHTML='<button type="button" class="rd-tool rd-print">🖨 印刷 / PDF保存</button><button type="button" class="rd-tool rd-save">この鑑定を保存</button><button type="button" class="rd-tool rd-edit">編集</button><button type="button" class="rd-tool rd-share">共有</button><button type="button" class="rd-tool rd-shareimg" title="LINE・メールなどに画像で送れます">画像で共有</button>';
   out.appendChild(bar);
   bar.querySelector('.rd-save').onclick=function(){saveReadingToClient(kind,title,curText);};
   bar.querySelector('.rd-share').onclick=function(){shareText(title,curText);};
+  bar.querySelector('.rd-shareimg').onclick=function(){var _b=this;_b.disabled=true;shareAsImage(title,curText).finally(function(){_b.disabled=false;});};
   bar.querySelector('.rd-print').onclick=function(){
     // 相性＝両者の名前＋相性鑑定書（命式表は付けない）／個人＝本人の名前＋個人鑑定書
     var head=(kind==='compat')
