@@ -2490,7 +2490,10 @@ function curMonthFortune(c){
     var mp=tc.pillars[1];
     var star=tenStarOf(c.dayMaster.stem,mp.stem);
     var f=TS_FORTUNE[star]||null;
-    return {star:star,ganzhi:mp.ganzhi,branch:mp.branch,month:MONTH_OF_BRANCH[mp.branch]||null,meaning:f?f.意:'',help:f?f.助:''};
+    // 巡り吉凶星：今めぐる月柱の十二支を、大運・年運と同じ照合ロジック（月支基準・三合基準・日干基準）で判定
+    var stars=[];
+    try{ stars=[...new Set([...matchKichi(kichiTargets(c),mp.stem,mp.branch,ZOUKAN[mp.branch]||[]),...matchKichi4(c,mp.branch),...matchKichi1(c,mp.branch)])]; }catch(e){ stars=[]; }
+    return {star:star,ganzhi:mp.ganzhi,branch:mp.branch,month:MONTH_OF_BRANCH[mp.branch]||null,meaning:f?f.意:'',help:f?f.助:'',stars:stars};
   }catch(e){return null;}
 }
 /* 今いる大運：立運前は第一運＝月柱（流派ルール：大運は必ず0歳＝月柱スタート） */
@@ -2649,7 +2652,7 @@ function gogyoHTML(c){
   const ring=col=>`<span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:${col};margin-right:6px;vertical-align:-2px"></span>`;
   const overlay=`<div class="gnote">
     <div class="n">${ring(DU)}<b>大運</b> ${dd.startAge}〜${dd.endAge}歳（${dd.startYear}〜${dd.startYear+9}年）：${dd.ganzhi} → 干<b>${duStar}</b>・支<b>${duStarB}</b></div>
-    ${ay?`<div class="n">${ring(NY)}<b>年運</b>：${ay.year} ${ay.ganzhi} → 干<b>${yrStar}</b>・支<b>${yrStarB}</b></div>`:''}${(function(){var mf=curMonthFortune(c);return (mf&&mf.meaning)?('<div class="n"><span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:#0EA5A5;margin-right:6px;vertical-align:-2px"></span><b>月運</b>：'+(mf.month?'約'+mf.month+'月ごろ ':'')+mf.ganzhi+' → <b>'+mf.star+'</b>（'+mf.meaning+'）</div>'):'';})()}</div>`;
+    ${ay?`<div class="n">${ring(NY)}<b>年運</b>：${ay.year} ${ay.ganzhi} → 干<b>${yrStar}</b>・支<b>${yrStarB}</b></div>`:''}${(function(){var mf=curMonthFortune(c);return (mf&&mf.meaning)?('<div class="n"><span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:#0EA5A5;margin-right:6px;vertical-align:-2px"></span><b>月運</b>：'+(mf.month?'約'+mf.month+'月ごろ ':'')+mf.ganzhi+' → <b>'+mf.star+'</b>（'+mf.meaning+'）'+((mf.stars&&mf.stars.length)?' <span style="color:var(--muted);font-weight:700">巡る吉凶星：'+mf.stars.map(function(s){return kichiLabel(s);}).join('・')+'</span>':'')+'</div>'):'';})()}</div>`;
   const total=Object.values(k).reduce((a,b)=>a+b,0);
   const have=TENSTAR10.filter(s=>k[s]>0).map(s=>`${s}${k[s]}`).join('・');
   return `<section class="card sec" id="gogyo-sec">
@@ -4410,7 +4413,7 @@ function buildChartText(c){
     L.push(`現在の大運（${c.now.age}歳）:${dd.ganzhi}（干${dd.tenStar}/十二運${dd.terrain}）${dd.isMonth?'※立運前＝第一運（月柱・0〜'+dd.endAge+'歳）':''}`);
     (()=>{const nx=c.decadeFortunes[di+1];if(nx){const yrsTo=nx.startAge-c.now.age;const nb=tenStarOf(ds,HONKI[nx.branch]);if(yrsTo>=0&&yrsTo<=1.5){L.push(`★大運の切替が近い（人生の転機）:あと約${yrsTo<1?'1年以内':Math.round(yrsTo)+'年'}（${nx.startYear}年・${nx.startAge}歳頃）で大運が${dd.ganzhi}→${nx.ganzhi}（干${nx.tenStar}/支${nb}）へ切り替わる。大運の変わり目は生き方・環境・テーマが動く節目で、前後半年〜1年は特に流れが変わりやすい。何がどう変わるかを具体的に伝える`);}else if(yrsTo>1.5&&yrsTo<=3){L.push(`大運の次の切替:${nx.startYear}年・${nx.startAge}歳頃に${dd.ganzhi}→${nx.ganzhi}（干${nx.tenStar}）へ（数年内の変わり目）`);}}})();
     if(ay)L.push(`今年の年運（${ay.year}）:${ay.ganzhi}（天干${ay.tenStar}/地支${ay.terrain}/蔵干本気${ay.hiddenStem}=${ay.hiddenTenStar}）`);
-    {const _mf=curMonthFortune(c);if(_mf&&_mf.meaning)L.push('今月の運気（月運。'+(_mf.month?'今の節月＝約'+_mf.month+'月ごろ':'今月')+'・月柱'+_mf.ganzhi+'／通変'+_mf.star+'）:'+_mf.meaning+'／過ごし方:'+_mf.help+'。※月運は大運・年運より影響が小さい短期の流れ。今月〜近い時期の話にのみ使い断定しない');}
+    {const _mf=curMonthFortune(c);if(_mf&&_mf.meaning)L.push('今月の運気（月運。'+(_mf.month?'今の節月＝約'+_mf.month+'月ごろ':'今月')+'・月柱'+_mf.ganzhi+'／通変'+_mf.star+'）:'+_mf.meaning+'／過ごし方:'+_mf.help+((_mf.stars&&_mf.stars.length)?'／今月巡る吉凶星:'+_mf.stars.map(k=>kichiLabel(k)).join('・')+'（短期・影響は小さめ。命式にある同じ星を後押し／注意喚起する程度に軽く触れる）':'')+'。※月運は大運・年運より影響が小さい短期の流れ。今月〜近い時期の話にのみ使い断定しない');}
     // 今めぐる通変星の意味・過ごし方（大運＝干通変を主、年運＝干通変を主に）
     (()=>{const dsb=tenStarOf(ds,HONKI[dd.branch]);
       L.push(`今めぐる通変星と過ごし方（必ず鑑定に反映）:${tsFortuneLine(dd.tenStar,'今の大運(干'+dd.tenStar+')')}${dd.tenStar!==dsb?'。大運の地支は'+dsb+'（'+(TS_FORTUNE[dsb]?TS_FORTUNE[dsb].意:'')+'）も底流に':''}${ay?'。'+tsFortuneLine(ay.tenStar,'今年の年運(干'+ay.tenStar+')'):''}。この大運・年運で巡る通変星が「今この人に何が起きやすく、どう過ごすとよいか」を、命式の多い星・五行・身旺・身弱とつなげて具体的に助言する`);})();
