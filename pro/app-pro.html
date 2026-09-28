@@ -3449,9 +3449,12 @@ function jyuZone(c){
   const PLAB=['年柱','月柱','日柱','時柱'];
   const pos=[]; c.pillars.forEach((p,i)=>{const s=p.label==='日柱'?'比肩':p.tenStar; const h=(p.hiddenStems||[]).find(x=>x.role==='本気'); if(spouse.includes(s)||(h&&spouse.includes(h.tenStar)))pos.push(PLAB[i]);});
   const spDus=(c.decadeFortunes||[]).filter(d=>spouse.includes(d.tenStar)||spouse.includes(tenStarOf(ds,HONKI[d.branch])));
-  let zoneDu=spDus.find(d=>d.endAge>=nowAge)||spDus[spDus.length-1]||null, phases=null, clipped=false;
-  if(zoneDu){let y0=zoneDu.startYear; if(y0<nowY-3){y0=nowY;clipped=true;}
-    phases=[['起',y0,'モテ期突入。出会いが増え、恋愛スイッチが入る'],['承',y0+1,'交際が始まり関係が安定。恋人意識が芽生える'],['転',y0+2,'恋愛運のピーク。プロポーズ・入籍など決断が起きやすい'],['結',y0+3,'結婚・同棲・出産など「形」になりやすい時期']];}
+  let zoneDu=spDus.find(d=>d.endAge>=nowAge)||spDus[spDus.length-1]||null, phases=null, clipped=false, far=false, farAge=null, farYear=null;
+  if(zoneDu){
+    if(zoneDu.startYear>nowY+10){far=true;farAge=zoneDu.startAge;farYear=zoneDu.startYear;}  // 配偶者星の大運が10年より先なら、遠すぎる起承転結は出さず近い将来の縁の年を目安にする
+    else{let y0=zoneDu.startYear; if(y0<nowY-3){y0=nowY;clipped=true;}
+      phases=[['起',y0,'モテ期突入。出会いが増え、恋愛スイッチが入る'],['承',y0+1,'交際が始まり関係が安定。恋人意識が芽生える'],['転',y0+2,'恋愛運のピーク。プロポーズ・入籍など決断が起きやすい'],['結',y0+3,'結婚・同棲・出産など「形」になりやすい時期']];}
+  }
   const spYears=(c.annualFortunes||[]).filter(a=>a.year>=nowY&&(spouse.includes(a.tenStar)||spouse.includes(tenStarOf(ds,HONKI[a.branch])))).map(a=>a.year).slice(0,6);
   const dBranch=c.pillars[2].branch, kango=[],shigou=[],chong=[];
   (c.annualFortunes||[]).filter(a=>a.year>=nowY&&a.year<=nowY+12).forEach(a=>{if(KANGO[ds]===a.stem)kango.push(a.year); if(RIKUGO[dBranch]===a.branch)shigou.push(a.year); if(typeof isChong==='function'&&isChong(dBranch,a.branch))chong.push(a.year);});
@@ -3459,7 +3462,7 @@ function jyuZone(c){
   const tenchi=(c.annualFortunes||[]).filter(a=>a.year>=nowY&&a.year<=nowY+15&&(typeof tokugoVs==='function')&&tokugoVs(a.stem,a.branch,c).length>0).map(a=>a.year).slice(0,4);
   // 三合完成の年（年運で三合が成立）＝人生が大きく動く転機（結婚・家族形成など）
   let sango=[];try{const sc=kaikyokuScan(c);sango=(sc.periods||[]).filter(pr=>pr.when==='年運'&&/三合/.test(pr.kind||'')&&(pr.year0||pr.year)>=nowY).map(pr=>pr.year0||pr.year).slice(0,4);}catch(e){}
-  return {spouse,role:spouseRole(c),pos,zoneDu,phases,clipped,spYears,kango,shigou,chong,tenchi,sango};
+  return {spouse,role:spouseRole(c),pos,zoneDu,phases,clipped,far,farAge,farYear,spYears,kango,shigou,chong,tenchi,sango};
 }
 function jyuZoneHTML(c){
   let z; try{z=jyuZone(c);}catch(e){return '';}
@@ -3468,7 +3471,8 @@ function jyuZoneHTML(c){
   const ph=z.phases?`<table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:12.5px">
     ${z.phases.map(f=>`<tr><td style="padding:5px 7px;border-bottom:1px solid var(--line);white-space:nowrap"><b style="color:var(--ka)">${f[0]}</b> <b>${f[1]}年</b></td><td style="padding:5px 7px;border-bottom:1px solid var(--line)">${f[2]}</td></tr>`).join('')}
   </table>${z.clipped?'<div style="font-size:11px;color:var(--muted);margin-top:3px">※配偶者星の大運はすでに始まっているため、今年からの4年を目安に表示しています。</div>':''}`
-    :'<div style="font-size:12.5px;color:var(--muted);margin-top:4px">向こう数十年の大運では、配偶者星が主役の大運は目立ちません。下の「配偶者星が巡る年」や干合・支合の年を出会い・結婚の目安にしてください。</div>';
+    :(z.far?`<div style="font-size:12.5px;color:var(--muted);margin-top:4px">配偶者星（${z.role}の星）が主役になる大運は<b>${z.farAge}歳ごろ（${z.farYear}年〜）</b>とやや先です。近い将来は、下の「ご縁が動きやすい年」（配偶者星が巡る年・干合・支合・天地徳合・三合）を、出会い・結婚の現実的な目安にしてください。</div>`
+     :'<div style="font-size:12.5px;color:var(--muted);margin-top:4px">向こう数十年の大運では、配偶者星が主役の大運は目立ちません。下の「配偶者星が巡る年」や干合・支合の年を出会い・結婚の目安にしてください。</div>');
   const sign=(lbl,arr,desc,col)=>arr.length?`<div style="margin-top:5px;font-size:12.5px"><span style="display:inline-block;background:${col};color:#fff;border-radius:6px;padding:0 8px;font-weight:800;margin-right:6px">${lbl}</span>${arr.map(y=>y+'年').join('・')} <span style="color:var(--muted)">＝${desc}</span></div>`:'';
   return `<div class="flowcard">
     <div class="scry">寿ゾーン（ことぶきゾーン）<small style="font-weight:700;color:var(--muted)"> ── 恋愛・結婚のエネルギーが最大化する“恋愛開花期”</small></div>
@@ -4921,7 +4925,9 @@ function localAnswer(c,worry){
     L.push(`恋の傾向：${LOVE_TEND[topGrp]}結婚相手の場所（配偶宮）は日支**${dp.branch}**です。`);
     L.push('【縁が動きやすい時期】');
     if(dus.length)L.push(`大運では**${dus.join('・')}**に、パートナーを表す星が巡ります。この年代は出会い・結婚の縁が動きやすい時期です。`);
-    (()=>{let z;try{z=jyuZone(c);}catch(e){return;}if(z&&z.phases){L.push(`**寿ゾーン（恋愛開花期）**：配偶者星が巡る大運の最初の4年＝**${z.phases[0][1]}〜${z.phases[3][1]}年**が、恋愛・結婚のエネルギーが最大化する4年間です。起（${z.phases[0][1]}年＝出会い増）→承（${z.phases[1][1]}年＝交際・安定）→転（${z.phases[2][1]}年＝入籍など決断）→結（${z.phases[3][1]}年＝結婚・同棲など形に）の流れで読みます。${z.kango.length?'また'+z.kango.slice(0,3).join('・')+'年は干合＝運命的な出会いの年。':''}${z.shigou.length?z.shigou.slice(0,3).join('・')+'年は支合＝安定・結婚に発展しやすい年。':''}`);}})();
+    (()=>{let z;try{z=jyuZone(c);}catch(e){return;}
+      if(z&&z.phases){L.push(`**寿ゾーン（恋愛開花期）**：配偶者星が巡る大運の最初の4年＝**${z.phases[0][1]}〜${z.phases[3][1]}年**が、恋愛・結婚のエネルギーが最大化する4年間です。起（${z.phases[0][1]}年＝出会い増）→承（${z.phases[1][1]}年＝交際・安定）→転（${z.phases[2][1]}年＝入籍など決断）→結（${z.phases[3][1]}年＝結婚・同棲など形に）の流れで読みます。${z.kango.length?'また'+z.kango.slice(0,3).join('・')+'年は干合＝運命的な出会いの年。':''}${z.shigou.length?z.shigou.slice(0,3).join('・')+'年は支合＝安定・結婚に発展しやすい年。':''}`);}
+      else if(z&&z.far){L.push(`配偶者星が主役になる大運は**${z.farAge}歳ごろ（${z.farYear}年〜）**とやや先のため、近い将来は「配偶者星が巡る年」や干合・支合・天地徳合・三合の年を、出会い・結婚の現実的な目安にします。${z.kango.length?'特に'+z.kango.slice(0,3).join('・')+'年は干合＝運命的な出会いの年。':''}${z.shigou.length?z.shigou.slice(0,3).join('・')+'年は支合＝安定・結婚に発展しやすい年。':''}`);}})();
     if(years.length)L.push(`近い年では**${years.slice(0,5).join('・')}**あたりが、縁・出会いの星が巡って動きやすい年です。`);
     if(!dus.length&&!years.length)L.push('近くに目立つ星の巡りはありませんが、日々の出会いを大切にすると縁は広がります。断定はできないので、気になる年は詳細鑑定で確かめてください。');
     (()=>{let z;try{z=relWobble(c);}catch(e){return;}let _ml=[];try{_ml=maleUwaki(c);}catch(e){}if(!z||(!z.teigo.length&&!z.togo.length&&!z.ninchi&&!z.kaStrong&&!z.suiDay&&!z.shokuMany&&!_ml.length))return;L.push('【関係が揺れやすい・気をつけたい時期（お守り）】');
