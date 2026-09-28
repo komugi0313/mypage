@@ -274,6 +274,12 @@
   .kg-pick label{font-size:12px;font-weight:800;color:var(--ink2)}
   .kg-pick input{height:40px;padding:0 10px;border:2px solid var(--line2);border-radius:11px;font-family:inherit;font-weight:800;font-size:15px;background:#fff;color:var(--ink)}
   .kg-today{height:40px;padding:0 14px;border:2px solid var(--ka);background:var(--ka-w);color:var(--ka);border-radius:11px;font-family:inherit;font-weight:900;font-size:13px;cursor:pointer}
+  .kg-ai-btn{width:100%;min-height:48px;margin:2px 0 4px;border:0;border-radius:12px;background:linear-gradient(135deg,#7C4DBE,#A05CC8);color:#fff;font-family:inherit;font-weight:900;font-size:14.5px;cursor:pointer;box-shadow:0 3px 10px rgba(124,77,190,.26);text-shadow:0 1px 2px rgba(0,0,0,.14)}
+  .kg-ai-btn:active{transform:translateY(1px);box-shadow:0 1px 5px rgba(124,77,190,.24)}
+  .kg-ai-btn:disabled{opacity:.6}
+  .kg-ai-out{margin:0 0 6px}
+  .kg-ai-out:empty{margin:0}
+  .kg-ai-out .reading,.kg-ai-out .r-body{font-size:14px;line-height:1.85}
   .kg-detail{border-top:1px solid var(--line);border-left:6px solid var(--ka);background:#FBF7F5;border-radius:10px;padding:10px 12px;margin:0 0 8px}
   .kg-detail .kg-h{font-size:15px;font-weight:900;color:var(--ink);margin:0 0 5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .kg-detail .kg-mean{font-size:13px;font-weight:700;color:var(--ink2);line-height:1.75;margin:0 0 6px}
@@ -2594,24 +2600,56 @@ function kingunHTML(c){
     <div class="kg-pane" id="kg-pane-day">
       <div class="kg-pick"><label for="kg-d">日付</label><input type="date" id="kg-d" value="${todayIso}"><button type="button" class="kg-today" id="kg-d-today">今日</button></div>
       <div id="kg-day-detail"></div>
+      <button type="button" class="kg-ai-btn" id="kg-day-ai-btn">🔮 この日をAIで鑑定（文章で）</button>
+      <div class="kg-ai-out" id="kg-day-ai"></div>
       <details class="adv kg-fold"><summary>今日から2週間の一覧</summary><div class="kg-list" id="kg-day-list">${dayRows}</div></details>
     </div>
     <div class="kg-pane" id="kg-pane-mon" hidden>
       <div class="kg-pick"><label for="kg-m">月</label><input type="month" id="kg-m" value="${thisYm}"></div>
       <div id="kg-mon-detail"></div>
+      <button type="button" class="kg-ai-btn" id="kg-mon-ai-btn">🔮 この月をAIで鑑定（文章で）</button>
+      <div class="kg-ai-out" id="kg-mon-ai"></div>
       <details class="adv kg-fold"><summary>これから12ヶ月の一覧</summary><div class="kg-list" id="kg-mon-list">${monRows}</div></details>
     </div>
     <div class="mhint" style="margin-top:8px">※短期の流れ（影響：大運＞年運＞月運＞日運）。近い時期の後押し／注意の材料に。</div>
   </section>`;
 }
+function _kgDayLabel(d){return (d.getMonth()+1)+'月'+d.getDate()+'日（'+['日','月','火','水','木','金','土'][d.getDay()]+'）';}
+function _kgClearAi(id){var a=document.getElementById(id);if(a)a.innerHTML='';}
 function renderKgDay(dateStr){var c=chart;if(!c)return;var el=document.getElementById('kg-day-detail');if(!el)return;
   var d=dateStr?new Date(dateStr+'T12:00:00'):new Date();if(isNaN(d.getTime()))d=new Date();
-  var ev=dayFortuneAt(c,d);el.innerHTML=ev?_kgDetailHTML(ev,'日',(d.getMonth()+1)+'月'+d.getDate()+'日（'+['日','月','火','水','木','金','土'][d.getDay()]+'）'):'';
+  var ev=dayFortuneAt(c,d);el.innerHTML=ev?_kgDetailHTML(ev,'日',_kgDayLabel(d)):'';
+  _kgClearAi('kg-day-ai'); // 日付が変わったらAI鑑定文はクリア（別の日の文章が残らないように）
   var iso=_isoDate(d);document.querySelectorAll('#kg-day-list .kg-row').forEach(function(r){r.classList.toggle('on',r.dataset.d===iso);});}
 function renderKgMonth(ymStr){var c=chart;if(!c)return;var el=document.getElementById('kg-mon-detail');if(!el)return;
   var pa=(ymStr||'').split('-'),d=(pa.length===2&&pa[0]&&pa[1])?new Date(+pa[0],+pa[1]-1,20,12,0,0,0):new Date(new Date().getFullYear(),new Date().getMonth(),20,12,0,0,0);
   var ev=monthFortuneAt(c,d);el.innerHTML=ev?_kgDetailHTML(ev,'月',d.getFullYear()+'年'+(d.getMonth()+1)+'月'):'';
+  _kgClearAi('kg-mon-ai');
   var ym=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');document.querySelectorAll('#kg-mon-list .kg-row').forEach(function(r){r.classList.toggle('on',r.dataset.m===ym);});}
+// 選んだ日/月に絞ったAI鑑定（既存のgenerateReading＝サーバー中継Gemini＋オフライン自動フォールバック＋1日上限を流用）
+function _kgAiUser(c,ev,unit,title){
+  var base=(typeof compatBrief==='function'?compatBrief(c):('日干'+c.dayMaster.stem))+' ／ 身旺身弱='+strengthType(c);
+  var evLine=title+'：'+ev.ganzhi+'（干通変'+ev.star+'／支通変'+ev.bStar+'）／運気の目安'+ev.pct+'%（'+(ev.jud==='good'?'追い風':ev.jud==='warn'?'動き・注意':'平常')+'＝身旺身弱と喜神忌神から算出）／巡る吉凶星'+(ev.stars.length?ev.stars.join('・'):'なし')+'／命式との関係'+(ev.rel.length?ev.rel.map(function(r){return r.s;}).join('／'):'特になし');
+  return '【確定済みの命式（要点）】\n'+base+'\n\n【読む対象＝'+unit+'運】\n'+evLine+'\n\nこの'+unit+'（'+title+'）が、この人にとってどんな'+unit+'かを、命式（日干・身旺身弱・喜神＝味方する五行/忌神）と、巡る星・命式との合冲を根拠に、対面でそのまま読み上げられる短い鑑定にしてください。\n【厳守】全体250〜380字。1行目に「'+title+'は〜な'+unit+'」と結論を一文（前置き・挨拶なし）。続けて「なぜそう言えるか」を巡る干支・通変星・吉凶星・喜忌から1〜2文。最後に【過ごし方】として、この'+unit+'に具体的にどう動くと良いかを1〜2点。断定して不安を煽らない・前向きに。専門用語は出したらその場で普通の言葉で言い換える。全体の性格紹介や長い前置きは書かない。';
+}
+function _kgAiLocal(ev,unit,title){
+  var jl=ev.jud==='good'?'追い風の'+unit:(ev.jud==='warn'?'動きやすい・整える'+unit:'平常の'+unit);
+  var s=title+'は、'+ev.ganzhi+'（'+ev.star+'）が巡る'+jl+'です。'+ev.meaning+'。';
+  if(ev.stars&&ev.stars.length)s+='巡る吉凶星は'+ev.stars.map(function(k){return kichiLabel(k);}).join('・')+'。';
+  if(ev.rel&&ev.rel.length)s+=ev.rel.map(function(r){return r.s;}).join('／')+'。';
+  s+='\n【過ごし方】'+ev.help+'。';
+  return s;
+}
+function kgAiDay(){var c=chart;if(!c)return;var kd=document.getElementById('kg-d');
+  var d=(kd&&kd.value)?new Date(kd.value+'T12:00:00'):new Date();if(isNaN(d.getTime()))d=new Date();
+  var ev=dayFortuneAt(c,d);if(!ev)return;var title=_kgDayLabel(d);
+  var btn=document.getElementById('kg-day-ai-btn'),out=document.getElementById('kg-day-ai');
+  if(typeof runReading==='function')runReading(btn,out,_kgAiUser(c,ev,'日',title),_kgAiLocal(ev,'日',title));}
+function kgAiMonth(){var c=chart;if(!c)return;var km=document.getElementById('kg-m');
+  var pa=(km&&km.value||'').split('-'),d=(pa.length===2&&pa[0]&&pa[1])?new Date(+pa[0],+pa[1]-1,20,12,0,0,0):new Date(new Date().getFullYear(),new Date().getMonth(),20,12,0,0,0);
+  var ev=monthFortuneAt(c,d);if(!ev)return;var title=d.getFullYear()+'年'+(d.getMonth()+1)+'月';
+  var btn=document.getElementById('kg-mon-ai-btn'),out=document.getElementById('kg-mon-ai');
+  if(typeof runReading==='function')runReading(btn,out,_kgAiUser(c,ev,'月',title),_kgAiLocal(ev,'月',title));}
 function wireKingun(){
   var kd=document.getElementById('kg-d'),km=document.getElementById('kg-m');
   if(kd)kd.onchange=function(){renderKgDay(kd.value);};
@@ -2628,6 +2666,8 @@ function wireKingun(){
   };});
   document.querySelectorAll('#kg-day-list .kg-row').forEach(function(r){r.onclick=function(){if(kd)kd.value=r.dataset.d;renderKgDay(r.dataset.d);};});
   document.querySelectorAll('#kg-mon-list .kg-row').forEach(function(r){r.onclick=function(){if(km)km.value=r.dataset.m;renderKgMonth(r.dataset.m);};});
+  var dab=document.getElementById('kg-day-ai-btn');if(dab)dab.onclick=kgAiDay;
+  var mab=document.getElementById('kg-mon-ai-btn');if(mab)mab.onclick=kgAiMonth;
   renderKgDay(kd?kd.value:'');renderKgMonth(km?km.value:'');
 }
 /* 今いる大運：立運前は第一運＝月柱（流派ルール：大運は必ず0歳＝月柱スタート） */
