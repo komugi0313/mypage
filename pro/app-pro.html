@@ -2403,7 +2403,7 @@ const KANCHI_UN='運気で巡る咸池（影響の大きさは 大運＞年運�
 // 既定（基本ロジック）＝月柱は司令(.ling)優先→本気→末尾。手動選択(zouOverride)があればそれを最優先。
 function repOf(hs,label){const ov=zouOverride[label];if(ov!=null&&hs[ov])return hs[ov];return hs.find(h=>h.ling)||hs.find(h=>h.role==='本気')||hs[hs.length-1];}
 function repHidden(p){return repOf(p.hiddenStems,p.label);}
-function meishiHTML(c){
+function meishiHTML(c, topOnly){
   const ku=kubo(c);
   // 各柱の下に「誕生日」を表示（年柱＝年／月柱＝月／日柱＝日／時柱＝時刻。時刻不明は「不明」）
   const _bc=((c.birth&&c.birth.clock)||'').split(' '), _bd=(_bc[0]||'').split('-'), _bt=(_bc[1]||'').split(':');
@@ -2482,7 +2482,8 @@ function meishiHTML(c){
   }
   const allK=[...new Set(cells.flatMap(cc=>cc.kichi))].filter(k=>KICHI_DESC[k]);
   const kglos=allK.length?`<details class="adv" style="margin-top:10px"><summary>この命式の吉凶星の意味（${allK.length}）</summary><div style="margin-top:8px">${allK.map(k=>`<div style="margin-bottom:8px;font-size:13px;line-height:1.65"><b style="color:var(--ka)">${kichiLabel(k)}</b>：${KICHI_DESC[k]}</div>`).join('')}</div></details>`:'';
-  return `<section class="card sec" id="meishi-sec">
+  // 命式表の「表本体」（見出し・縦横切替・空亡・四柱の表・蔵干切替・印刷ボタン）。詳細鑑定の前にもこの部分だけ出すため分離。
+  const _core=`<section class="card sec" id="meishi-sec">
     <span class="eyebrow"><b>命式</b>四つの柱</span>
     <h2>あなたの四つの柱</h2>
     <p class="lead"><b>日柱があなた自身</b>（ピンク）。文字の色が五行です。<b>横＝時柱が左（列）／縦＝年柱が上（行）</b>。蔵干・吉凶星は「詳しく見る」で開きます。</p>
@@ -2492,7 +2493,12 @@ function meishiHTML(c){
     </div>
     ${(()=>{const collapsed=true;const dl='蔵干・吉凶星';return `<div class="mbox${collapsed?' md-collapsed':''}"><div class="mwrap">${table}</div><div class="mleg"><span class="mleg-sw"></span>青ぬり＝<b>月支元命</b>（月柱の地支通変・先天的な気質の軸）</div>${kichiChips}<button type="button" class="md-toggle" onclick="var b=this.closest('.mbox');var c=b.classList.toggle('md-collapsed');this.firstChild.textContent=(c?'＋詳しく見る：${dl}':'閉じる：${dl}');this.lastElementChild.style.transform=c?'':'rotate(180deg)';"><span>${collapsed?('＋詳しく見る：'+dl):('閉じる：'+dl)}</span><svg class="md-arw" style="${collapsed?'':'transform:rotate(180deg)'}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div>`;})()}
     <button type="button" onclick="openMeishiSheet()" style="margin-top:11px;width:100%;min-height:46px;border:1.5px solid var(--ka);background:var(--ka-w);color:var(--ka);border-radius:12px;font-family:inherit;font-weight:900;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>命式表（鑑定書）を印刷用で開く →</button>
-    ${zouPanel}
+    ${zouPanel}`;
+  // 詳細鑑定の前に出す用：表本体だけ（IDは重複しないよう別名）。くわしい分析は下の完全版に続く。
+  if(topOnly) return _core.replace('id="meishi-sec"','id="meishi-sec-top"')
+    +`<div class="mhint" style="margin-top:8px;color:var(--muted)">※納音・相生相剋・吉凶星の意味などのくわしい分析は、下の「命式」に続きます。</div>
+  </section>`;
+  return _core+`
     <details class="adv" style="margin-top:10px"><summary>四つの柱の意味と年齢域（人生の時間軸）</summary><div style="margin-top:8px">${PILLAR_INFO.map(pi=>`<div style="margin-bottom:8px;font-size:13px;line-height:1.65"><b style="color:var(--ka)">${pi.label}</b>　<small style="color:var(--muted);font-weight:800">${pi.age}</small><br>${pi.mean}</div>`).join('')}</div></details>
     ${(()=>{const day=nayinOf(c.pillars[2].stem,c.pillars[2].branch);if(!day)return '';const za=nayinZa(c.pillars[2].stem,c.pillars[2].branch);const sd=shidaiKuubou(c);const combos=nayinCombos(c);const lk=nayinLuckCombos(c);
       return `<details class="adv" style="margin-top:10px"><summary>納音（なっちん）＝生まれ持った宿命の五行</summary><div style="margin-top:8px;font-size:13px;line-height:1.7">
@@ -3849,7 +3855,7 @@ function renderResult(){
   document.getElementById('ai-slot').innerHTML = consultHTML();
   // 要点サマリーは #result に、命式表以降は #result-body に分割（並び：要点→詳細鑑定→相性→命式表→五行→大運年運→恋愛→養生）
   document.getElementById('result').innerHTML =
-    heroHTML(c)+summaryHTML(c)+verdictHTML(c);
+    heroHTML(c)+summaryHTML(c)+verdictHTML(c)+meishiHTML(c,true);  // 命式表の表本体を詳細鑑定の前にも表示（下の完全版と縦横・蔵干は連動）
   (function(){var _rb=document.getElementById('result-body');
     if(!_rb){_rb=document.createElement('div');_rb.id='result-body';var _r=document.getElementById('result');if(_r&&_r.parentNode)_r.parentNode.insertBefore(_rb,_r.nextSibling);}
     _rb.innerHTML = kaikyokuHTML(c)+genmeiHTML(c)+meishiHTML(c)+junitenHTML(c)+gogyoHTML(c)+flowHTML(c)+kingunHTML(c)+(typeof pkLoveCard==='function'?pkLoveCard(c):'')+yojoHTML(c);
