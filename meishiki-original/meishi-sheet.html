@@ -3032,31 +3032,49 @@ window.KANSHI60_DETAIL={
       if(favYears.length) b+='<p class="ez-p">とくに<b>'+favYears.map(function(y){return y+'年';}).join('・')+'</b>は<b>チャンスの年</b>。気になることに一歩ふみ出すと道がひらけます。</p>';
       b+='<p class="ez-note2">むずかしく考えなくて大丈夫。<b>'+(col||'好きな色')+'</b>を身近に置き、追い風の時期に動く——それだけで運は育ちます。</p>';
       H+=ezCard('📌 総合まとめ', b);
-    // 🔔 この1〜2年の身近な「見どころ」＝年運（今年〜再来年の巡り）から、恋愛・結婚・仕事・金運・健康の“動きやすいタイミング”を目安として先取り（既存の年運データを流用・計算エンジン非改変）
+    // 🔔 これからの見どころ＝月柱（月ごとの天文計算）から、恋愛・結婚・仕事・金運・健康の「動きやすい月／注意の月」と「総合の狙い目」を先取り。既存の月スコアリング基盤を流用・計算エンジン非改変。山と谷を両方見せ、全部が良く見えないよう段階表示にする。
     (function(){
-      if(!r.annualByYear || nowYear==null) return;
-      var CHONG={子:'午',午:'子',丑:'未',未:'丑',寅:'申',申:'寅',卯:'酉',酉:'卯',辰:'戌',戌:'辰',巳:'亥',亥:'巳'};
-      var SHIGOU={子:'丑',丑:'子',寅:'亥',亥:'寅',卯:'戌',戌:'卯',辰:'酉',酉:'辰',巳:'申',申:'巳',午:'未',未:'午'};
-      var SANGO={亥:['卯','未'],卯:['亥','未'],未:['亥','卯'],寅:['午','戌'],午:['寅','戌'],戌:['寅','午'],巳:['酉','丑'],酉:['巳','丑'],丑:['巳','酉'],申:['子','辰'],子:['申','辰'],辰:['申','子']};
-      var years=[nowYear,nowYear+1,nowYear+2], female=(sex==='female');
-      function ylabel(y){ return y===nowYear?('今年（'+y+'年）'):(y===nowYear+1?('来年（'+y+'年）'):(y+'年ごろ')); }
-      function scan(fn){ for(var i=0;i<years.length;i++){ var a=r.annualByYear[years[i]]; if(!a)continue; var res=fn(a); if(res) return {y:years[i],t:res.t,tag:res.tag}; } return null; }
-      var GOOD='<span style="display:inline-block;font-size:10.5px;font-weight:800;color:#1E7A45;background:#E7F5EC;border-radius:5px;padding:1px 7px;margin-left:5px;white-space:nowrap">チャンス</span>';
-      var CARE='<span style="display:inline-block;font-size:10.5px;font-weight:800;color:#B5721A;background:#FBF0DC;border-radius:5px;padding:1px 7px;margin-left:5px;white-space:nowrap">ひと呼吸</span>';
-      var REST='<span style="display:inline-block;font-size:10.5px;font-weight:800;color:#127C9C;background:#E4F3F9;border-radius:5px;padding:1px 7px;margin-left:5px;white-space:nowrap">整えどき</span>';
-      function row(icon,area,hit,fb){ return hit?('<li><b>'+icon+' '+area+'</b>：<b>'+ylabel(hit.y)+'</b> — '+hit.t+hit.tag+'</li>'):('<li><b>'+icon+' '+area+'</b>：'+fb+'</li>'); }
-      var L=[];
-      L.push(row('💗','恋愛', scan(function(a){ if((a.kichi&&(a.kichi.indexOf('咸池')>=0||a.kichi.indexOf('紅艶')>=0))||a.tsuhen===(female?'偏官':'偏財')) return {t:'出会い・ときめきが動きやすい時期。気になる人には一歩ふみ出すと吉。',tag:GOOD}; return null; }), '派手な波は控えめ。自分磨きが次の縁を呼び込みます。'));
-      L.push(row('💍','結婚', scan(function(a){ var bond=(spouse&&(a.branch===SHIGOU[spouse]||(SANGO[spouse]||[]).indexOf(a.branch)>=0)); if(a.tsuhen===(female?'正官':'正財')||bond) return {t:'ご縁が深まり、結婚やパートナーの話が進みやすい時期。',tag:GOOD}; return null; }), 'ご縁はゆっくり育つ時期。信頼を積むほど後で実ります。'));
-      L.push(row('💼','仕事', scan(function(a){ if(['正官','偏官','印綬','偏印'].indexOf(a.tsuhen)>=0) return {t:'評価・昇進・学びで前に進みやすい時期。任される役割が力に。',tag:GOOD}; if(a.tsuhen==='傷官'||(spouse&&a.branch===CHONG[spouse])) return {t:'勢い任せや衝突でつまずきやすい時期。大事な決断は一呼吸おいて。',tag:CARE}; return null; }), '落ち着いて実力を積む時期。コツコツが後の評価に。'));
-      L.push(row('💰','金運', scan(function(a){ if(['正財','偏財','食神','傷官'].indexOf(a.tsuhen)>=0) return {t:'収入・商機が動きやすい時期。良い流れは貯えにも回して。',tag:GOOD}; if(['比肩','劫財'].indexOf(a.tsuhen)>=0) return {t:'出費・貸し借りが増えやすい時期。大きな支出は先送りが安全。',tag:CARE}; return null; }), '大きな増減は少なめ。固定費を締めて着実に。'));
-      L.push(row('🌿','健康', scan(function(a){ if(a.tsuhen==='傷官'||(spouse&&a.branch===CHONG[spouse])) return {t:'疲れ・無理が出やすい時期。睡眠と休息を厚めに。',tag:CARE}; if(['印綬','偏印'].indexOf(a.tsuhen)>=0) return {t:'休養・体づくりに向く時期。生活リズムを整える好機。',tag:REST}; return null; }), '大きな波は少なめ。今の習慣を保てば安定します。'));
-      H+=ezCard('🔔 この1〜2年の見どころ（恋愛・結婚・仕事・金運・健康）', '<ul class="ez-ul2">'+L.join('')+'</ul><p class="ez-note2">四柱推命の年運（今年〜再来年の巡り）からの<b>目安</b>です。「ありそう」を先取りするヒントとして、身近に感じられたら◎（断定ではありません）。</p>');
+      if(nowYear==null || !(window.MonthPillar&&window.MonthPillar.monthGZ)) return;
+      var female=(sex==='female'), bday=spouse;
+      var _d=new Date(), curM=(_d.getFullYear()===nowYear?_d.getMonth()+1:1);
+      var MS=[]; [nowYear,nowYear+1].forEach(function(Y){ for(var mo=1;mo<=12;mo++){ if(Y===nowYear&&mo<curM) return; MS.push({Y:Y,mo:mo}); } });
+      function sc(area,Y,mo){ var g=window.MonthPillar.monthGZ(Y,mo,15), tsu=tsuhenOf(dm,g.gan), why='', s=0, cau='';
+        if(area==='love'){ if(TAOHUA[bday]===g.shi){why='モテ期・出会い運';s=3;} else if(GANGO[dm]===g.gan){why='運命的なご縁';s=3;} else if(tsu===(female?'偏官':'偏財')){why='華やかな出会い';s=2;} if(CHONG[bday]===g.shi)cau='気持ちが揺れやすい'; }
+        else if(area==='marry'){ if(tsu===(female?'正官':'正財')){why='結婚向きの誠実なご縁';s=3;} else if(SHIGOU[bday]===g.shi){why='ご縁が結ばれる';s=2;} else if((SANGO_MAP[bday]||[]).indexOf(g.shi)>=0){why='ご縁が動く';s=1;} if(CHONG[bday]===g.shi)cau='関係が揺れやすい'; }
+        else if(area==='work'){ var W={'正官':['昇進・評価',3],'偏官':['抜擢・責任',3],'印綬':['学び・引き立て',2],'偏印':['専門・転換',2]}; if(W[tsu]){why=W[tsu][0];s=W[tsu][1];} if(tsu==='傷官')cau='衝突・勇み足'; if(CHONG[bday]===g.shi)cau=cau||'急な変化'; }
+        else if(area==='money'){ var M={'正財':['堅実な収入',3],'偏財':['臨時収入・商機',3],'食神':['稼ぐ力',2],'傷官':['才能が収入に',2]}; if(M[tsu]){why=M[tsu][0];s=M[tsu][1];} if(tsu==='劫財')cau='散財・貸し借り'; else if(tsu==='比肩')cau='出費が増えやすい'; }
+        else if(area==='health'){ if(tsu==='印綬'||tsu==='偏印'){why='休養・体づくり';s=2;} if(tsu==='傷官')cau='消耗・気の高ぶり'; else if(tsu==='偏官')cau=cau||'重圧・過労'; if(CHONG[bday]===g.shi)cau=cau||'無理が出やすい'; }
+        return {Y:Y,mo:mo,s:s,why:why,cau:cau}; }
+      function best(area){ var arr=MS.map(function(m){return sc(area,m.Y,m.mo);});
+        var good=arr.filter(function(m){return m.s>0;}).sort(function(a,b){return b.s-a.s||(a.Y-b.Y)||(a.mo-b.mo);})[0]||null;
+        var care=arr.filter(function(m){return m.cau&&m.s<=0;}).sort(function(a,b){return (a.Y-b.Y)||(a.mo-b.mo);})[0]||null;
+        return {good:good,care:care}; }
+      function ym(m){ return (m.Y===nowYear?'':(m.Y===nowYear+1?'来年':(m.Y+'年')))+m.mo+'月'; }
+      var GC='#2E9E57', CC='#C77F2A';   // 好調＝緑／ひと呼吸＝オレンジ（月の文字色だけで淡くメリハリ）
+      var AREAS=[['💗','恋愛','love'],['💍','結婚','marry'],['💼','仕事','work'],['💰','金運','money'],['🌿','健康','health']];
+      var rows=[], picks=[];
+      AREAS.forEach(function(A){ var r2=best(A[2]); if(r2.good) picks.push({s:r2.good.s,Y:r2.good.Y,mo:r2.good.mo,area:A[1],why:r2.good.why});
+        var line='<b>'+A[0]+' '+A[1]+'</b>　';
+        if(r2.good){ line+='動く月：<b style="color:'+GC+'">'+ym(r2.good)+'</b>（'+r2.good.why+'）';
+          if(r2.care) line+='　／　ひと呼吸：<b style="color:'+CC+'">'+ym(r2.care)+'</b>';
+        } else if(r2.care){ line+='ひと呼吸：<b style="color:'+CC+'">'+ym(r2.care)+'</b>（'+r2.care.cau+'）'; }
+        else { line+='<span style="color:#7B8794">大きな波は控えめ。今の調子を保てば安定します。</span>'; }
+        rows.push('<li>'+line+'</li>'); });
+      // 総合の狙い目＝最も多くの運が重なる月（＝いちばん動きやすい月）。重なりが同数なら合計の強さ→早い順。
+      var byMonth={};
+      picks.forEach(function(p){ var k=p.Y*100+p.mo; (byMonth[k]=byMonth[k]||{Y:p.Y,mo:p.mo,count:0,sum:0,areas:[],whys:[]}); byMonth[k].count++; byMonth[k].sum+=p.s; byMonth[k].areas.push(p.area); byMonth[k].whys.push(p.why); });
+      var overall=Object.keys(byMonth).map(function(k){return byMonth[k];}).sort(function(a,b){return b.count-a.count||b.sum-a.sum||(a.Y-b.Y)||(a.mo-b.mo);})[0]||null;
+      var head='';
+      if(overall){ head='<div style="background:var(--tbg);border:1px solid var(--tc);border-radius:9px;padding:8px 11px;margin:0 0 10px;font-size:12.5px;line-height:1.65"><b style="color:var(--tc);font-size:13px">⭐ 総合の狙い目：'+overall.Y+'年'+overall.mo+'月ごろ</b><br>'
+          +(overall.count>=2?('<b>'+overall.areas.join('・')+'</b>がこの月に重なる、とくに動きやすい時期です。'):('<b>'+overall.areas[0]+'</b>（'+overall.whys[0]+'）を中心に、流れがいちばん動きやすい時期です。'))+'</div>'; }
+      H+=ezCard('🔔 これからの見どころ（各運のピーク月・ひと呼吸の月）', head+'<ul class="ez-ul2">'+rows.join('')+'</ul><p class="ez-note2">月ごとの巡り（月柱）から、<b>各運がいちばん動く月（ピーク）</b>と<b>無理をひかえたい月</b>の目安を出しています。どの運にも<b>山と谷の両方</b>があり、いつも全部が絶好調ということはありません。当たり外れを競うものではなく、「動きやすい時期の先取り」としてお使いください。</p>');
     })();
     })();
     // こんな人です（生まれ日の60干支の詳しい人物像）
     var konna='';
-    if(kan){ konna='<p class="ez-p">'+kan.基本+'</p>'; var sx=(sex==='female')?kan.女:kan.男; if(sx) konna+='<p class="ez-p"><b>'+(sex==='female'?'女性としては：':'男性としては：')+'</b>'+sx+'</p>'; }
+    if(kan){ var _ELMETA={木:'すくすく伸びる樹のような',火:'あたたかく人を照らす火のような',土:'ものを実らせる大地のような',金:'芯の通った金属のような',水:'流れる水のような'};
+      var _lead='<p class="ez-p"><b>生まれ日は「'+dm+(day.shi||'')+'（'+(STEM_YOMI[dm]||'')+(BR_YOMI[day.shi]?'・'+BR_YOMI[day.shi]:'')+'）」＝'+(_ELMETA[dmEl]||'')+'人。</b>（干支の名前は読み方の目安。むずかしく考えず、下の説明をそのまま読んでください）</p>';
+      konna=_lead+'<p class="ez-p">'+kan.基本+'</p>'; var sx=(sex==='female')?kan.女:kan.男; if(sx) konna+='<p class="ez-p"><b>'+(sex==='female'?'女性としては：':'男性としては：')+'</b>'+sx+'</p>'; }
     else { konna='<p class="ez-p">'+(NATURE[dm]||'')+'</p>'; }
     H+=ezCard('🌱 こんな人です（生まれ日で読むあなた）', konna);
     // 命式の読み解き（要素ごとに、やさしい言葉で箇条書き）＝full版のみ
