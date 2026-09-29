@@ -63,6 +63,13 @@
   .frow{display:flex;flex-wrap:wrap;gap:12px}
   .field{flex:1 1 150px;min-width:130px}
   .field.full{flex:1 1 100%}
+  /* 名前・生年月日をやや広く、性別・時刻をやや狭く（極端にしない）。名前の括弧まで見えるように */
+  .field.f-wide{flex:1.5 1 0;min-width:120px}
+  .field.f-narrow{flex:1 1 0;min-width:94px}
+  /* 必須入力（お名前）未入力の赤表示 */
+  .field input.invalid{border-color:var(--ka)!important;box-shadow:0 0 0 3px rgba(224,57,43,.16)!important}
+  .req-msg{display:none;font-size:11.5px;color:var(--ka);font-weight:800;margin-top:4px}
+  .req-msg.on{display:block}
   .field label{display:block;font-size:12px;font-weight:800;color:var(--ink2);margin:0 0 5px}
   .field input:not([type=checkbox]),.field select{width:100%;height:46px;padding:0 12px;font-size:16px;font-weight:700;color:var(--ink);
     background:#fff;border:2px solid var(--line2);border-radius:12px;font-family:inherit;-webkit-appearance:none;appearance:none}
@@ -70,8 +77,8 @@
   .field input:focus,.field select:focus{outline:none;border-color:var(--sui);box-shadow:0 0 0 3px var(--sui-w)}
   #verTag{position:fixed;right:5px;bottom:3px;font-size:9px;line-height:1;color:#c9ced6;font-weight:700;letter-spacing:.04em;z-index:40;pointer-events:none}
   @media print{#verTag{display:none}}
-  .seg{display:inline-flex;border:2px solid var(--line2);border-radius:12px;overflow:hidden;height:46px}
-  .seg button{border:0;background:#fff;font-family:inherit;font-size:15px;font-weight:800;color:var(--muted);padding:0 18px;cursor:pointer}
+  .seg{display:flex;width:100%;border:2px solid var(--line2);border-radius:12px;overflow:hidden;height:46px}
+  .seg button{flex:1;border:0;background:#fff;font-family:inherit;font-size:15px;font-weight:800;color:var(--muted);padding:0 8px;cursor:pointer;white-space:nowrap}
   .seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
   .go{margin-top:14px;width:100%;height:54px;border:0;border-radius:14px;background:var(--ka);color:#fff;
     font-family:inherit;font-size:18px;font-weight:900;letter-spacing:.06em;cursor:pointer;box-shadow:0 4px 0 #b32a20}
@@ -656,14 +663,14 @@
   <!-- 入力 -->
   <section class="card panel">
     <div class="frow">
-      <div class="field"><label>お名前（任意）</label><input id="f-name" type="text" placeholder="姓 名（ニックネーム可）"><input id="f-kana" type="text" placeholder="ふりがな（並べ替え・検索用／任意）" style="margin-top:6px;font-size:12.5px"></div>
-      <div class="field"><label>性別</label>
+      <div class="field f-wide"><label>お名前<span style="color:var(--ka)">（必須）</span></label><input id="f-name" type="text" placeholder="姓 名（ニックネーム可）" required aria-required="true"><input id="f-kana" type="text" placeholder="ふりがな（並べ替え・検索用／任意）" style="margin-top:6px;font-size:12.5px"><div class="req-msg" id="f-name-msg">お名前を入力してください。</div></div>
+      <div class="field f-narrow"><label>性別</label>
         <div class="seg" id="f-sex"><button type="button" data-v="female" aria-pressed="true">女性</button><button type="button" data-v="male" aria-pressed="false">男性</button></div>
       </div>
     </div>
     <div class="frow" style="margin-top:12px">
-      <div class="field"><label>生年月日</label><div style="display:flex;gap:6px"><select id="f-y" style="flex:1.6 1 0;min-width:0;padding:0 6px"></select><select id="f-m" style="flex:1 1 0;min-width:0;padding:0 6px"></select><select id="f-d" style="flex:1 1 0;min-width:0;padding:0 6px"></select></div><input type="hidden" id="f-date" value="2000-01-01"></div>
-      <div class="field"><label>生まれた時刻</label><input id="f-time" type="time" value="12:00">
+      <div class="field f-wide"><label>生年月日</label><div style="display:flex;gap:6px"><select id="f-y" style="flex:1.6 1 0;min-width:0;padding:0 6px"></select><select id="f-m" style="flex:1 1 0;min-width:0;padding:0 6px"></select><select id="f-d" style="flex:1 1 0;min-width:0;padding:0 6px"></select></div><input type="hidden" id="f-date" value="2000-01-01"></div>
+      <div class="field f-narrow"><label>生まれた時刻</label><input id="f-time" type="time" value="12:00">
         <div id="f-time-unknown" style="height:46px;padding:0 12px;border:2px solid var(--line2);border-radius:12px;background:#F1F3F7;color:var(--muted);font-weight:800;font-size:15px;align-items:center;display:none">不明（時刻なしで鑑定します）</div>
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);font-weight:700;margin-top:6px;cursor:pointer"><input type="checkbox" id="f-notime" style="width:16px;height:16px;flex:0 0 auto"> 生まれた時刻がわからない（時柱を使わず年月日で鑑定）</label>
       </div>
@@ -6362,6 +6369,15 @@ function openMeishiSheet(){
   window.open('meishi-sheet.html?'+q.toString(),'_blank','noopener');
 }
 function compute(){
+  // お名前は必須。未入力なら赤くして進めない。
+  const _nm=document.getElementById('f-name'), _nmMsg=document.getElementById('f-name-msg');
+  if(_nm && !_nm.value.trim()){
+    _nm.classList.add('invalid'); if(_nmMsg)_nmMsg.classList.add('on');
+    try{_nm.scrollIntoView({behavior:'smooth',block:'center'});_nm.focus();}catch(e){}
+    _nm.oninput=function(){ if(_nm.value.trim()){_nm.classList.remove('invalid'); if(_nmMsg)_nmMsg.classList.remove('on');} };
+    return;
+  }
+  if(_nm){_nm.classList.remove('invalid'); if(_nmMsg)_nmMsg.classList.remove('on');}
   const dv=document.getElementById('f-date').value, tv=document.getElementById('f-time').value||'12:00';
   if(!dv){alert('生年月日を入力してください');return;}
   const [y,mo,d]=dv.split('-').map(Number),[h,mi]=tv.split(':').map(Number);
