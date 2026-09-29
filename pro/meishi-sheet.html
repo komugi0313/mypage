@@ -490,6 +490,7 @@
   .mc{ flex:1; text-align:center; border-radius:4px; padding:2px 0; border:1px solid var(--rule2); background:var(--paper); }
   .mc b{ display:block; font-size:8px; color:var(--ink2); font-weight:600; line-height:1.1; }
   .mc i{ font-style:normal; font-size:11px; line-height:1.1; color:var(--faint); }
+  .mc.past{ opacity:.34; }   /* 過ぎた月は薄く（これからの月を目立たせる） */
   .mc.cau{ background:rgba(200,90,40,.13); border-color:rgba(200,90,40,.45); }
   .mc.cau i{ color:#C0563C; font-weight:700; }
   .mcal.t-love  .mc.good{ background:rgba(214,64,122,.16); border-color:rgba(214,64,122,.5); } .mcal.t-love  .mc.good i{ color:#D6407A; font-weight:700; }
@@ -2194,13 +2195,14 @@ window.KANSHI60_DETAIL={
   }
   // 12か月カレンダー（色分け・◎○△）を生成
   function monthCalHTML(Y, months, cfg, lbl){
-    var cells='';
+    var cells='', _t=new Date(), curY=_t.getFullYear(), curM=_t.getMonth()+1;
     for(var i=0;i<12;i++){ var m=months[i]||{mo:i+1,score:0,caution:false,why:[],creas:''};
       var cls='mc', mark='·';
       if(m.score>0){ cls+=' good'; mark=(m.score>=3?'◎':'○'); }
       else if(m.caution){ cls+=' cau'; mark='△'; }
       else { cls+=' neu'; }
       if(m.score>0&&m.caution) cls+=' both';
+      if(Y<curY||(Y===curY&&(i+1)<curM)) cls+=' past';   // 過ぎた月は薄く（これからの月だけ目立たせる）
       var tip=(m.why.join('・'))+(m.caution?((m.why.length?'／':'')+'注意：'+m.creas):'');
       cells+='<span class="'+cls+'" title="'+esc(tip)+'"><b>'+(i+1)+'</b><i>'+mark+'</i></span>';
     }
@@ -2209,14 +2211,15 @@ window.KANSHI60_DETAIL={
   // 月カレンダー＋要点テキスト（今年・来年）をまとめて返す
   function monthlyBlock(nowYear, dm, dayBranch, theme, sex, easy){
     var cfg=themeMonthCfg(theme, sex); if(!cfg||nowYear==null||!window.MonthPillar) return ''; cfg.easy=!!easy;
-    var html='';
+    var html='', _t=new Date(), curY=_t.getFullYear(), curM=_t.getMonth()+1;
     [0,1].forEach(function(off){ var Y=nowYear+off, lbl=(off===0?'（今年）':'（来年）'), ms=themeMonths(Y,dm,dayBranch,cfg);
       html+=monthCalHTML(Y, ms, cfg, lbl);
-      var pos=ms.filter(function(m){return m.score>0;}).sort(function(a,b){return b.score-a.score;}).slice(0,4).sort(function(a,b){return a.mo-b.mo;});
-      var cau=ms.filter(function(m){return m.caution&&m.score<=0;}).map(function(m){return m.mo;});
+      function future(m){ return !(Y<curY || (Y===curY && m.mo<curM)); }   // これからの月だけを要約に出す（過ぎた月は載せない）
+      var pos=ms.filter(function(m){return m.score>0&&future(m);}).sort(function(a,b){return b.score-a.score;}).slice(0,4).sort(function(a,b){return a.mo-b.mo;});
+      var cau=ms.filter(function(m){return m.caution&&m.score<=0&&future(m);}).map(function(m){return m.mo;});
       var line='';
       if(pos.length) line='<b>'+pos.map(function(m){return m.mo+'月';}).join('・')+'</b>（'+pos.slice(0,2).map(function(m){return m.why[0];}).filter(Boolean).join('・')+'ほか）';
-      else line='大きく動く月は控えめ';
+      else line=(Y===curY?'これからの月では大きく動く月は控えめ':'大きく動く月は控えめ');
       if(cau.length) line+='／注意：<b>'+cau.join('・')+'月</b>';
       html+='<p class="rd-mcap">'+Y+'年'+lbl+'：'+line+'</p>';
     });
@@ -3051,8 +3054,8 @@ window.KANSHI60_DETAIL={
         return {good:good,care:care}; }
       function ym(m){ return (m.Y===nowYear?'':(m.Y===nowYear+1?'来年':(m.Y+'年')))+m.mo+'月'; }
       var GC='#2E9E57', CC='#C77F2A';   // 好調＝緑／ひと呼吸＝オレンジ（月の文字色だけで淡くメリハリ）
-      // 運ごとに“良い月/注意月”の呼び方を変える（健康は「動く」より「整う」が自然）
-      var AREAS=[['💗','恋愛','love','動く月','ひと呼吸'],['💍','結婚','marry','動く月','ひと呼吸'],['💼','仕事','work','動く月','ひと呼吸'],['💰','金運','money','動く月','ひと呼吸'],['🌿','健康','health','整えどき','無理に注意']];
+      // 運ごとに“良い月/注意月”の呼び方を変える（健康は「動く」より「整う」が自然）。恋愛は下の「恋愛が動く月」カレンダーに集約し、ここでは扱わない（重複回避）。
+      var AREAS=[['💍','結婚','marry','動く月','ひと呼吸'],['💼','仕事','work','動く月','ひと呼吸'],['💰','金運','money','動く月','ひと呼吸'],['🌿','健康','health','整えどき','無理に注意']];
       var rows=[], picks=[];
       AREAS.forEach(function(A){ var r2=best(A[2]); if(r2.good) picks.push({s:r2.good.s,Y:r2.good.Y,mo:r2.good.mo,area:A[1],why:r2.good.why});
         var line='<b>'+A[0]+' '+A[1]+'</b>　';
@@ -3061,6 +3064,7 @@ window.KANSHI60_DETAIL={
         } else if(r2.care){ line+=A[4]+'：<b style="color:'+CC+'">'+ym(r2.care)+'</b>（'+r2.care.cau+'）'; }
         else { line+='<span style="color:#7B8794">大きな波は控えめ。今の調子を保てば安定します。</span>'; }
         rows.push('<li>'+line+'</li>'); });
+      rows.push('<li><b>💗 恋愛</b>　動きやすい月は、下の<b>「恋愛が動く月」カレンダー</b>で詳しく見られます。</li>');
       // 総合の狙い目＝最も多くの運が重なる月（＝いちばん動きやすい月）。重なりが同数なら合計の強さ→早い順。
       var byMonth={};
       picks.forEach(function(p){ var k=p.Y*100+p.mo; (byMonth[k]=byMonth[k]||{Y:p.Y,mo:p.mo,count:0,sum:0,areas:[],whys:[]}); byMonth[k].count++; byMonth[k].sum+=p.s; byMonth[k].areas.push(p.area); byMonth[k].whys.push(p.why); });
