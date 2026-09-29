@@ -34,6 +34,9 @@ const srv=http.createServer((q,r)=>{let f=path.join('fx',decodeURIComponent(q.ur
   o.push(['理由を聞く（該当）',['なんでそう言えるの？','なぜ？','どうしてそう思うの？','Why do you say that?','为什么这么说？','왜 그렇게 말해?'].map(q=>RE_THEORY.test(q)).join()]);
   o.push(['理由を聞く（該当しない）',['なんで雨なんだろう','今日なにしよう','Why not!'].map(q=>RE_THEORY.test(q)).join()]);
   o.push(['専門用語を頼んだ時だけ用語',[RE_JARGON_OK.test('専門用語で詳しく説明して'),RE_JARGON_OK.test('Explain it in technical terms'),RE_JARGON_OK.test('なんでそう言えるの？'),RE_JARGON_OK.test('Why do you say that?'),whyNote('なんでそう言えるの？').indexOf('PLAIN-EVIDENCE')>0,whyNote('専門用語で詳しく説明して').indexOf('TECHNICAL TERMS REQUESTED')>0,whyNote('今日の運勢は？')===''].join()]);
+  o.push(['恋の結果を聞く（該当）',['彼とまたやり直せる？','Will he come back?',"I'm 40 and still single. Will I ever find someone?",'재회할 수 있을까?','我们还有可能复合吗？','เราจะกลับมาคืนดีกันได้ไหม','Apa dia juga suka aku?','¿Volverá conmigo?','Será que ele volta pra mim?'].map(q=>RE_LOVE_OUTCOME.test(q)).join()]);
+  o.push(['恋の結果を聞く（該当しない）',['今日の運勢は？','仕事が忙しい','How is my career this year?'].map(q=>RE_LOVE_OUTCOME.test(q)).join()]);
+  o.push(['つらい言葉には相談先を必ず',(function(){ state.lang='ja'; var r=_ensureHelpline('何のために生きてるのかわからない',{text:'つらいね。ここにいるよ。'}); var r2=_ensureHelpline('今日の運勢は？',{text:'いい日だよ。'}); return [r.text.indexOf(pick(HELPLINE))>=0, r2.text==='いい日だよ。'].join(); })()]);
   state.lang='ja';
   o.push(['読みがなの残り',_finalTidy('探究心（たいきょくきじん・物事を深く追究する星）と、まじめさ（せいかん）。生まれ持った星の組み合わせ（生まれ持った星）です。お上司が嫌い。')]);
   state.lang='ja';

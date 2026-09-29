@@ -74,5 +74,6 @@ Pocket鑑定の修正（大運・立運・節入り、アカウント、パス�
 |---|---|---|
 | `stance.js`＋`stanceq.json` | 実際のAIで6つの場面（無謀な決断・「私悪くないよね？」・自分責め・合格の報告・同じ無理の繰り返し・欠点を正直に）を、4言語・2つの段階で試す。使ったモデルも記録 | `GEMINI_KEY=… node stance.js 結果.json`（`ONLY=jaS1,enS2` で絞れる） |
 | `convo.js`＋`convo_ja.json`・`convo_en.json` | 1人の利用者として、アプリの画面で続けて会話する（実際のAI）。会話の流れ・言い方の崩れを目で確かめる用 | `GEMINI_KEY=… node convo.js convo_ja.json 結果.json` |
+| `convoall.js`＋`personas.json`＋`convocheck.py` | 10言語の利用者32人（恋愛・仕事・お金、高ぶり・不安・どん底・執着・暴言・借金など）として4〜6往復ずつ話す（実際のAI）。国ごとの時刻で動かす。`convocheck.py` で言語の混入・専門用語・繰り返し・誕生日の聞き直し・相談先を機械的に確かめる | `GEMINI_KEY=… node convoall.js personas.json 結果.json 8` → `python3 convocheck.py 結果.json` |
 
 ※本番の Netlify（実際の Blobs・Resend）での確認は含みません。デプロイ後に実機で「登録→別端末でログイン」「パスワードを忘れた→メール→再設定」を確認してください。
