@@ -2921,22 +2921,34 @@ window.KANSHI60_DETAIL={
       if(rows.length) out.push(box('運の勢い（勢いの段階）', rows.join('')));
     })();
 
-    // 7) 持っている吉凶星
+    // 7) 持っている吉凶星（どの柱にあるか＝どの場面で効くかを、柱ごとにグループ表示）
     (function(){
-      var seen={}, order=[];
-      ['year','month','day','hour'].forEach(function(k){ var p=P[k]; if(!p||!p.kichi) return;
-        String(p.kichi).split('・').forEach(function(s){ s=s.trim(); if(s&&!seen[s]){ seen[s]=true; order.push(s); } }); });
-      if(!order.length) return;
-      var kijin=order.filter(function(s){return KICHI_KIJIN.indexOf(s)>=0;}).length;
-      var good=order.filter(function(s){return KICHI_GOOD.indexOf(s)>=0;});
-      var charm=order.filter(function(s){return KICHI_CHARM.indexOf(s)>=0;});
-      var care=order.filter(function(s){return KICHI_CARE.indexOf(s)>=0;});
+      // 柱ごとの人生テーマ（吉凶星は「どの柱にあるか」で効く場面が変わる）
+      var PL=[['year','年柱','幼少期・家庭・親や目上とのご縁'],['month','月柱','青年期・仕事・社会での役割'],['day','日柱','あなた自身・結婚・パートナー'],['hour','時柱','晩年・将来・子や後輩']];
+      var per=[], allKinds={};
+      PL.forEach(function(pl){ var p=P[pl[0]]; if(!p||!p.kichi) return;
+        var stars=String(p.kichi).split('・').map(function(s){return s.trim();}).filter(Boolean);
+        if(!stars.length) return;
+        // 並び順：吉・貴人→魅力→注意→その他
+        var ordered=stars.filter(function(s){return KICHI_GOOD.indexOf(s)>=0;})
+          .concat(stars.filter(function(s){return KICHI_CHARM.indexOf(s)>=0;}))
+          .concat(stars.filter(function(s){return KICHI_CARE.indexOf(s)>=0;}))
+          .concat(stars.filter(function(s){return KICHI_GOOD.indexOf(s)<0&&KICHI_CHARM.indexOf(s)<0&&KICHI_CARE.indexOf(s)<0;}));
+        ordered.forEach(function(s){allKinds[s]=1;});
+        per.push({k:pl[0],label:pl[1],theme:pl[2],stars:ordered});
+      });
+      if(!per.length) return;
+      var kijin=Object.keys(allKinds).filter(function(s){return KICHI_KIJIN.indexOf(s)>=0;}).length;
       var inner='';
       if(kijin>=3) inner+='<li>助けの星（貴人）が多めです。ひとりで突破するより、要所で人のご縁が運を動かすタイプ。困ったときほど人に頼ると道がひらけます。</li>';
-      good.forEach(function(s){ inner+='<li>「'+s+'」…'+KICHI_EASY[s]+'</li>'; });
-      charm.forEach(function(s){ inner+='<li>「'+s+'」…'+KICHI_EASY[s]+'</li>'; });
-      care.forEach(function(s){ inner+='<li>「'+s+'」…'+KICHI_EASY[s]+'</li>'; });
-      if(inner) out.push(box('持っている吉凶星（星の助けとクセ）', inner));
+      per.forEach(function(g){
+        var tuFlag=(g.k==='hour'&&window.__timeUnknown)?'<span style="color:#8a1a12;font-weight:700">（時刻不明のため参考）</span>':'';
+        inner+='<li><b style="color:#1C6FB4">'+g.label+'の星</b>（'+g.theme+'）'+tuFlag+
+          '<ul style="margin:5px 0 9px;padding-left:1.15em;list-style:disc">'+
+          g.stars.map(function(s){return '<li style="list-style:disc;margin:2px 0">「'+s+'」…'+(KICHI_EASY[s]||'')+'</li>';}).join('')+
+          '</ul></li>';
+      });
+      out.push(box('持っている吉凶星（どの場面で効くか＝柱ごと）', inner));
     })();
 
     // 8) 五行バランス
