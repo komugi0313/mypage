@@ -151,7 +151,43 @@
 
 ---
 
-## 7. 補足（開発ルール：フロント側の不変条件）
+## 7. 登録フロー・会員ゲート・サーバー防御（★万全化の要件）
+
+### 7-1. 登録フロー（パスワード作成込み・カード必須）
+「メール＋パスワード」と「メール＋カード」を**同じメールで1会員に突き合わせる**。両方そろって初めて `trialing`。
+
+1. **新規登録**（`auth.html`）：**メール＋パスワードを作成** → 確認メール（`/auth-verify`）で有効化。※この時点は `status:none`＝まだ使えない。
+2. **カード登録**（`pricing-pro.html`）：プラン選択 → **テレコムクレジットでクレカ登録**。
+3. **決済成功Webhook**（バックエンド）→ 該当メールの会員を **`trialing`**（trial終了日＝登録+7日）に。ここで初めて解錠可能に。
+4. **ログイン**（メール＋パスワード）→ `/auth-login` が `{ok, status, member_token}` を返す。
+5. **7日後**：カードで**自動課金→`active`**（失敗は `past_due`/`unpaid`→ロック）。無料期間中の解約→`canceled`（0円・ロック）。
+
+> パスワードは①で作成、カードは②で登録。順序は前後してもよいが、**両方そろうまで `trialing` にしない**のが要点（＝メール＋カードでスタート、を担保）。
+
+### 7-2. 会員ゲート（画面ロック）
+`app-pro.html` は `status` が **`active`/`trialing` のときだけ解錠**、それ以外はロックして「一週間無料で始める」へ誘導。本番は `PREVIEW_MODE=false`。7日終了後に未課金・未登録なら**解錠されない＝一切操作不可**。
+
+### 7-3. サーバー側の防御（★“万全”の肝）
+クライアントのゲートは見た目のロック。回避対策として**サーバーでも会員確認**する：
+- `/auth-login` 成功時に**長期セッショントークン `member_token`** を発行（パスワードは端末に残さない）。
+- 有料の核 **`/gemini`** は **`member_token` 必須**にし、`trialing`/`active` 以外は 401/403 で拒否（現状はオリジン＋1日上限のみ＝会員確認なし）。
+- `/mypage-get`・`/mypage-put` も同トークン必須（他人の顧客カルテを保護）。
+- フロントは、ログイン後に `member_token` を保存し、`gemini`/`mypage-*` 呼び出しへ付与（ヘッダ名は実装に合わせる：例 `Authorization: Bearer <token>` か `x-pk-token`）。
+  ※このヘッダ付与のフロント対応は、**バックエンドのトークン方式が決まり次第フロント側で実装**します（今は未送信）。
+- 命式表・大運・オフライン鑑定は**元々クライアント計算**なので会員判定の対象外（サーバーを使う有料AIをトークンで守れば、有料価値は保護される）。
+
+### 7-4. 本番切替チェックリスト
+- [ ] `app-pro.html` `PREVIEW_MODE=false`
+- [ ] `auth.html` / `mypage-pro.html` `CONFIG.STUB=false`、`meishi-sheet.html` `CLOUD.STUB=false`
+- [ ] `pricing-pro.html` `TELECOM_PAYMENT_URL{month,year,half}` に決済URLを設定
+- [ ] `/auth-register|login|verify|reset`・`/check-subscription`・`/cancel-subscription`・`/mypage-get|put` をGoogle側に実装
+- [ ] 決済成功Webhook →（両方そろって）`trialing` 作成／終了前日メール／終了後 初回課金
+- [ ] `/gemini`（＋`/mypage-*`）に**サーバー側 会員チェック（`member_token` 必須）**
+- [ ] `gemini.js` のオリジン許可 `URL` env を本番URLに設定
+
+---
+
+## 8. 補足（開発ルール：フロント側の不変条件）
 
 - 計算エンジン（`pklove.js`／`window.Bazi`／`computeChart`／`computeMeishiki`）は**改変しない**（表示・アダプタ層のみ）。
 - `pro/meishi-sheet.html` は `meishiki-original/meishi-sheet.html` に**バイト単位でミラー**。
