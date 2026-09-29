@@ -3259,7 +3259,7 @@ function kaikyokuHTML(c){
   const seenW=new Set();
   const weakUp=up.filter(p=>p.kind==='半合').filter(p=>{const key=p.kind+p.text; if(seenW.has(key))return false; seenW.add(key); return true;});
   const intro=`<div style="margin-top:9px;background:#F1F4F8;border:1px solid #D3DAE3;border-left:4px solid #8A93A6;border-radius:11px;padding:9px 12px;font-size:12.5px;line-height:1.75;color:var(--ink2)">
-    <span style="display:inline-block;background:#6B7480;color:#fff;border-radius:6px;padding:1px 10px;font-size:11px;font-weight:900;letter-spacing:.04em;margin-bottom:5px">解説（用語）</span>
+    <span style="display:inline-block;background:#6B7480;color:#fff;border-radius:6px;padding:1px 10px;font-size:11px;font-weight:900;letter-spacing:.04em;margin-bottom:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" style="vertical-align:-1.5px;margin-right:3px"><circle cx="12" cy="12" r="9"/><path d="M12 11.5v4.5" stroke-linecap="round"/><circle cx="12" cy="7.8" r="1.15" fill="#fff" stroke="none"/></svg>解説（用語）</span>
     <div><b style="color:${GOLD}">会局（かいきょく）とは？</b> 同じ仲間の十二支（じゅうにし）がそろって、ある五行の力が<b>まとまって強まる</b>こと。強さは <b>三合（さんごう）＝最強</b> ＞ <b>方合（ほうごう）＝強</b> ＞ <b>半合（はんごう）＝ゆるめ</b>。</div>
     <div style="margin-top:3px">強まる五行が、あなたにとって〈<b style="color:#1E7A45">喜＝追い風</b>〉か〈<b style="color:#8A5A12">忌＝強すぎ注意</b>〉かで、良い節目か注意の節目かが変わります。</div>
     <div style="margin-top:5px;padding-top:5px;border-top:1px dashed #C9D0DA;font-weight:900">あなた（日主${c.dayMaster.stem}・${k.sType}）→ 追い風：${favEls.length?favEls.map(elc).join('・'):'—'}／強すぎ注意：${kiEls.length?kiEls.map(elc).join('・'):'—'}</div></div>`;
@@ -3410,7 +3410,7 @@ function relHTML(c){
     <h3 style="font-size:14.5px;font-weight:900;margin:0 0 3px">干支の関わり（合・冲・会局）</h3>
     <p class="hint" style="margin:0 0 10px">下の大運・年運の選択に連動します。三合・方合・支合・干合・冲。</p>
     ${(usedKinds.includes('干合')||usedKinds.includes('冲'))?`<div style="background:#F1F4F8;border:1px solid #D3DAE3;border-left:4px solid #8A93A6;border-radius:11px;padding:9px 12px;margin:0 0 10px;font-size:12px;line-height:1.8;color:var(--ink2)">
-      <span style="display:inline-block;background:#6B7480;color:#fff;border-radius:6px;padding:1px 10px;font-size:11px;font-weight:900;letter-spacing:.04em;margin-bottom:5px">解説（用語）</span><br>
+      <span style="display:inline-block;background:#6B7480;color:#fff;border-radius:6px;padding:1px 10px;font-size:11px;font-weight:900;letter-spacing:.04em;margin-bottom:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" style="vertical-align:-1.5px;margin-right:3px"><circle cx="12" cy="12" r="9"/><path d="M12 11.5v4.5" stroke-linecap="round"/><circle cx="12" cy="7.8" r="1.15" fill="#fff" stroke="none"/></svg>解説（用語）</span><br>
       <b style="color:var(--ink2)">合・冲は「良い/悪い」ではなく“どう使うか”</b><br>
       ${usedKinds.includes('干合')?'・<b>干合</b>＝結びつく力（ご縁・出会い・結婚）。反面、依存・執着で<b>変わりにくくなる</b>面も。結びつきを“信頼・建設的な関係”に昇華させると追い風に。<br>':''}${usedKinds.includes('冲')?'・<b>冲</b>＝壊す・離れる力に見えて、<b>前に進むための“脱皮”・転換期</b>。現状維持派には試練でも、変わりたい人にはチャンス（転職・引越・決断が実りやすい）。':''}
     </div>`:''}
@@ -4810,7 +4810,30 @@ const ELEMENT_TIP={木:'体を動かす・自然に触れる・新しいこと�
   土:'生活リズムを整える・身近な人を大切にする・続ける習慣を作る',
   金:'物事に区切りをつける・整理整頓・ルールや計画を決める',
   水:'情報を集める・しっかり休む・考えを書き出して整理する'};
-function localReading(c,worry){
+/* オフライン鑑定を「やさしく・少し長く」する後処理：各見出しの直後に、
+   専門用語を使わないやさしい導入文を1文添える（＝各セクションが少し長く＆分かりやすく）。
+   hard=true（本格版）では付けず、専門用語そのままの従来テンプレを返す。計算エンジンは非改変。 */
+const OFFLINE_INTRO={
+  '【もって生まれた性質】':'まずは、生まれた日と月の干支からわかる“あなたの心の土台”です。むずかしく考えず、素の性格として読んでください。',
+  '【才能・活きる場】':'どんな場面・役割だと、あなたの力が自然に発揮されやすいか、という“得意の方向”を見ます。',
+  '【五行のかたより】':'木・火・土・金・水という5つの気のうち、あなたに多い気と少ない気のクセを見ます（多い少ないは良し悪しではなく、性格の個性です）。',
+  '【宿命中殺（天中殺）】':'これは“欠け”ではなく、人と少し違う道でこそ輝く、という特別な生まれ方の話です。',
+  '【天戦地冲（要注意の時期）】':'運が大きく揺れやすい時期を、あらかじめ知っておくための“備えのカレンダー”です（悪い意味ではありません）。',
+  '【律音（りっちん・干支併臨）】':'物事が切り替わる“分かれ道・新しいスタート”を表すサインです。',
+  '【モテ度・魅力タイプ】':'あなたの魅力や、人を惹きつける力の傾向です（星が控えめでも、行動しだいで伸ばせます）。',
+  '【お金との付き合い方（金運）】':'「金運がある／ない」ではなく、あなたに合ったお金の“つくり方・増やし方”のタイプを読みます。',
+  '【今めぐっている時期】':'いま巡ってきている運（10年の大運・1年の年運）が、あなたに何をもたらしやすい時期かを見ます。',
+  '【蔵が開く時期（墓庫開冲）】':'心の奥にためてきた力が、表に出て活かしやすくなる時期の話です。',
+  '【蔵（墓庫）の手がかり】':'心の奥にためている力と、それが表に出やすくなる“狙い目の時期”です。',
+  '【今できること】':'この命式と今の時期に合わせて、無理なく始められる具体的な一歩です。'
+};
+function enrichOffline(text){
+  return String(text||'').split('\n').map(function(line){
+    var t=line.trim(), intro=OFFLINE_INTRO[t];
+    return intro?(line+'\n'+intro):line;
+  }).join('\n');
+}
+function localReading(c,worry,hard){
   const el=c.dayMaster.element;
   const k=natalTs10(c);
   const g={比劫:0,食傷:0,財:0,官殺:0,印:0};
@@ -4919,7 +4942,8 @@ function localReading(c,worry){
   L.push(`- 足りない${weakEl}を補う：${ELEMENT_TIP[weakEl]}`);
   L.push(`- 強みの${topName}を活かす：${GROUP_ACTION[topName]}`);
   L.push(`- 時期に合わせて：${STAR_TIMING[yrGrp||duGrp].replace(/時期です。$/,'動きを少しずつ。')}`);
-  return L.join('\n');
+  var out=L.join('\n');
+  return hard?out:enrichOffline(out);  // 既定＝やさしい版（導入文つき）／hard＝本格版（専門用語そのまま）
 }
 /* ===== オフラインでも「質問に応じて」答える＝相談内容を分類し、命式から的をしぼって鑑定する =====
    通信不要・命式データのみ使用（計算エンジンには触れない／表示・アダプタ層）。
@@ -5175,17 +5199,17 @@ async function generateReading(user,localText,system,deep){
   aiEngine='オフライン鑑定（端末内）';
   return {ok:true,text:localText,fallback:true,online:false,note:'詳細鑑定に接続できなかったため、端末内で作成した鑑定（オフライン鑑定）を表示しています（自動で再試行しました）。'};
 }
-async function runReading(btn,out,user,localText,proUser,deep,safety){
+async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
   const sc=safety||'';  // 自傷・希死念慮を検知したら、AIを待たずに最上部へ相談窓口を必ず表示（オンライン/オフライン/ブロック時も出す）
   btn.disabled=true;out.innerHTML=sc+'<div class="loading"><span class="spin"></span>命式を読み解いています…</div>';
   try{
     const res=await generateReading(user,localText,undefined,deep);
     out.innerHTML=sc+engineBadge(res.online,res.fallback?res.note:'')+formatReading(res.text);
     attachReadingTools(out,res.text);
-    if(proUser)appendPro(out,proUser,localText,deep);
+    if(proUser)appendPro(out,proUser,localText,deep,proLocal);
   }catch(e){console.error(e); // 想定外のエラーでもオフライン鑑定を出す
     out.innerHTML=sc+engineBadge(false,'通信できないため、端末内で作成した鑑定（オフライン鑑定）を表示しています。')+formatReading(localText);
-    attachReadingTools(out,localText); if(proUser)appendPro(out,proUser,localText,deep);}
+    attachReadingTools(out,localText); if(proUser)appendPro(out,proUser,localText,deep,proLocal);}
   finally{btn.disabled=false;}
 }
 /* 自傷・希死念慮の検知と、命の安全（クライシス）表示。端末側で判定するので、AIがブロックされても必ず出る。 */
@@ -5203,7 +5227,8 @@ function crisisCardHTML(){ return '<div class="crisis-card" role="alert">'
   +'<p class="cc-note">つらいときは、上の窓口や身近な信頼できる人に、いま連絡してください。あなたのことが大切です。</p>'
   +'</div>'; }
 // 鑑定文の下に「本格鑑定（専門用語そのまま）を開く」ボタンを足す（デフォルトはわかりやすい本格鑑定）。
-function appendPro(out,proUser,localText,deep){
+function appendPro(out,proUser,localText,deep,proLocal){
+  const proFallback=proLocal||localText;  // オフライン時に開く本格版：専門用語そのままのオフライン文（無ければ従来のオフライン文）
   const wrap=document.createElement('div');wrap.className='prowrap';
   wrap.innerHTML='<button type="button" class="probtn" style="margin-top:14px;width:100%;min-height:48px;border:0;background:linear-gradient(135deg,#E8392B 0%,#E26A2C 50%,#E2A12B 100%);color:#fff;border-radius:12px;font-family:inherit;font-weight:900;font-size:14px;cursor:pointer;box-shadow:0 3px 11px rgba(226,107,44,.26);text-shadow:0 1px 2px rgba(0,0,0,.16)">本格鑑定を開く（専門用語そのまま）</button><div class="proout" hidden style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--line2)"></div>';
   out.appendChild(wrap);
@@ -5212,8 +5237,8 @@ function appendPro(out,proUser,localText,deep){
   btn.onclick=async()=>{
     if(box.dataset.done){box.hidden=!box.hidden;btn.textContent=box.hidden?closed:opened;return;}
     btn.disabled=true;box.hidden=false;box.innerHTML='<div class="loading"><span class="spin"></span>専門用語そのままの本格鑑定を作成しています…</div>';
-    try{const res=await generateReading(proUser,localText,CONSULT_SYSTEM,deep);box.innerHTML=engineBadge(res.online,res.fallback?res.note:'')+formatReading(res.text);box.dataset.done='1';btn.textContent=opened;}
-    catch(e){console.error(e);box.innerHTML=engineBadge(false,'通信できないため、端末内で作成した鑑定（オフライン鑑定）を表示しています。')+formatReading(localText);box.dataset.done='1';btn.textContent=opened;}
+    try{const res=await generateReading(proUser,proFallback,CONSULT_SYSTEM,deep);box.innerHTML=engineBadge(res.online,res.fallback?res.note:'')+formatReading(res.text);box.dataset.done='1';btn.textContent=opened;}
+    catch(e){console.error(e);box.innerHTML=engineBadge(false,'通信できないため、端末内で作成した鑑定（オフライン鑑定）を表示しています。')+formatReading(proFallback);box.dataset.done='1';btn.textContent=opened;}
     finally{btn.disabled=false;}
   };
 }
@@ -5233,7 +5258,7 @@ function easyReadUser(c){return `【確定済みの命式】\n${buildChartText(c
 async function doAutoRead(){
   const out=document.getElementById('autoReading');
   // 自動鑑定レポートは最重要＝DEEP（x-pk-deep:1）。相談・相性は既定(LITE)。
-  runReading(document.getElementById('autoReadBtn'),out,easyReadUser(chart),localReading(chart,''),proReadUser(chart),true);
+  runReading(document.getElementById('autoReadBtn'),out,easyReadUser(chart),localReading(chart,''),proReadUser(chart),true,undefined,localReading(chart,'',true));
 }
 
 /* ===== 相性診断（2人の命式を比較・計算ロジックは同じ） ===== */
