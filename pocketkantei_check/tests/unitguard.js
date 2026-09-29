@@ -20,6 +20,17 @@ const srv=http.createServer((q,r)=>{let f=path.join('fx',decodeURIComponent(q.ur
   o.push(['wrong ja(正常)',W('ja','こんにちは')]);
   o.push(['wrong ko(正常)',W('ko','안녕하세요')]);
   o.push(['wrong th(正常)',W('th','สวัสดีค่ะ')]);
+  o.push(['wrong ja(ベトナム語の文字が混入)',W('ja','貯金を全部使うとなると、慎ướngも必要だと感じます。')]);
+  o.push(['wrong pt(正常・â ê ô)',W('pt','Você está ótima, que bênção, avô.')]);
+  o.push(['wrong vi(正常)',W('vi','Chào buổi sáng, bạn ăn sáng chưa?')]);
+  o.push(['wrong en(タイ文字が混入)',W('en','Have a nice day ครับ')]);
+  const V=q=>RE_VALIDATE.test(q);
+  o.push(['肯定してほしい（該当）',[V('明日会社辞めて、貯金全部使ってカフェ開こうと思う！絶対うまくいくよね？'),V('彼氏がLINEを3時間返さなかったから、別れるって言ってブロックした。私悪くないよね？'),V("I'm quitting my job tomorrow and putting all my savings into opening a café!"),V("I'm not wrong, am I?"),V('나 잘못한 거 없지?'),V('¡Mañana dejo mi trabajo!'),V('No hice nada malo, ¿verdad?'),V('我没错吧？'),V('Aku gak salah kan?'),V('ไม่ผิดใช่ไหม'),V('Tôi không sai đúng không?'),V('Eu não errei, né?')].join()]);
+  o.push(['肯定してほしい（該当しない）',[V('今日暑いね'),V('おはよう'),V('ありがとう！'),V('明日も仕事かー'),V("It's cold today, right?"),V('오늘 날씨 좋지?'),V('Hace calor, ¿verdad?'),V('今年の恋愛運は？')].join()]);
+  o.push(['上位モデルへ（自分責め・寝ていない・欠点）',[RE_HEAVY.test('何やってもうまくいかない。私ってダメな人間なのかな'),RE_HEAVY.test("Overtime again all this week, barely slept."),RE_HEAVY.test('잠을 못 잤어'),RE_HEAVY.test('No he dormido nada'),RE_DECISION.test('正直に言って、私の性格の欠点って何？'),RE_DECISION.test('What are my flaws?'),RE_DECISION.test('내 단점이 뭐야?')].join()]);
+  o.push(['上位モデルへ（該当しない）',[RE_HEAVY.test('今日はよく寝た！'),RE_HEAVY.test('I slept well'),RE_DECISION.test('今日の運勢は？'),RE_HEAVY.test('お昼何食べよう')].join()]);
+  state.lang='ja';
+  o.push(['十二運の漏れ',_finalTidy('粘り強さ（の病）と、集中力（育ちの土台の堅実さ・死）の賜物。持病（持病）は（病院）へ。')]);
   window._pendingChips=null; state.lang='zh';
   o.push(['chips zh', _extractChips('更深层次的东西。 ["今年有恋爱运吗？" / "工作上会有新机会？" / "今年能顺利吗？"]'), JSON.stringify(window._pendingChips)]);
   window._pendingChips=null; state.lang='pt';
