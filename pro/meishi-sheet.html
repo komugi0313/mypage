@@ -199,14 +199,14 @@
   .ori-toggle.seg button{ padding:3px 12px; font-size:11.5px; }
   #meishikiMount{ height:100%; }
   #meishikiMount > table.pillars{ height:100%; }
-  .pillars .v{ text-align:center; font-size:14px; font-weight:600; }
+  .pillars .v{ text-align:center; font-size:14px; font-weight:700; color:var(--ink); }
   /* 吉凶星が多い柱は文字を自動縮小して枠内に収める */
   .pillars td.v.kichi-cell{ line-height:1.35; word-break:normal; overflow-wrap:normal; }
   .pillars td.v.kichi-cell .kstar{ white-space:nowrap; display:inline-block; }  /* 星の名前は途中で折り返さない */
   .pillars td.v.kichi-cell .ksep{ color:var(--faint); margin:0 -0.5px; }
   .pillars td.v.kichi-cell.k-mid{ font-size:11px; line-height:1.25; }
   .pillars td.v.kichi-cell.k-many{ font-size:9px; line-height:1.2; }
-  .pillars .kanchar{ font-family:var(--mincho); font-size:24px; line-height:1.12; font-weight:600; }
+  .pillars .kanchar{ font-family:var(--mincho); font-size:24px; line-height:1.12; font-weight:800; color:var(--ink); }
   .pillars .p-day{ background:rgba(180,72,60,.05); }
   .pillars thead th.p-day{ background:rgba(180,72,60,.10); }
   /* 干支関係の帯（命式表のすぐ下） */
@@ -228,12 +228,12 @@
   /* 見出し（上段：年月日時／左列：天干・地支…）は薄く色を敷いてメリハリを出す */
   .pillars thead th{ background:#EAE3D3; font-weight:700; color:var(--ink); font-size:13px; letter-spacing:.1em; padding:7px 4px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   .pillars .rowlbl{ background:#F1ECE0; color:var(--ink); font-size:12px; letter-spacing:.08em; white-space:nowrap; width:70px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-  .pillars .govern td{ background:var(--paper2); color:var(--ink2); font-size:12px; letter-spacing:.06em; font-family:var(--gothic); padding:5px 4px; }
+  .pillars .govern td{ background:var(--paper2); color:var(--ink); font-weight:700; font-size:12px; letter-spacing:.06em; font-family:var(--gothic); padding:5px 4px; }
   .pillars .tenchu{ background:var(--paper2); width:56px; color:var(--ink2); }
-  .pillars .tenchu .val{ font-size:14px; line-height:1.35; font-family:var(--mincho); }
+  .pillars .tenchu .val{ font-size:14px; line-height:1.35; font-family:var(--mincho); font-weight:700; color:var(--ink); }
   .pillars .sum{ background:var(--shade); font-family:var(--gothic); font-weight:700; font-size:15px; font-variant-numeric:tabular-nums; }
-  .pillars .num{ font-size:16px; font-variant-numeric:tabular-nums; }
-  .pillars .zokan{ font-size:19px; }
+  .pillars .num{ font-size:16px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .pillars .zokan{ font-size:19px; font-weight:700; color:var(--ink); }
   .pillars .star{ font-size:15px; letter-spacing:.02em; }
 
   .kanshi-cell{ padding:4px 2px 5px !important; }
@@ -3650,7 +3650,10 @@ window.KANSHI60_DETAIL={
         var mp=r.pillars.month, ey0=(by!=null?by+firstAge:null);
         var tr0=document.createElement('tr');
         tr0.className='pre'+((nowAge!=null && nowAge<firstAge)?' now':'')+_duSeasonCls(mp.kanshi);
-        tr0.innerHTML='<td class="age ed" contenteditable="true">0才〜'+_duAge(firstAge)+'</td>'+
+        // 月柱の期間が「一層前（迎える側）」になる場合＝最初の大運が季節替わりなら、その季節ラベルを枠外に添える
+        var setsuTag0='';
+        if(setsuFlags[0] && setsuBlocks[0]){ var sb0=setsuBlocks[0]; var s0=SEASON_JP[sb0.enterSeason||sb0.season]||'', e0=sb0.enterEl||sb0.seasonEl||''; if(s0||e0) setsuTag0='<span class="setsu-tag" contenteditable="false">'+s0+(e0?'・'+e0:'')+'</span>'; }
+        tr0.innerHTML='<td class="age ed" contenteditable="true">'+setsuTag0+'0才〜'+_duAge(firstAge)+'</td>'+
           '<td class="yr2 ed" contenteditable="true">'+((by!=null&&ey0!=null)?(by+'〜'+ey0):'')+'</td>'+
           '<td class="ed" contenteditable="true">'+(mp.kanshi||'')+'</td>'+
           '<td class="ed" contenteditable="true">'+(mp.tsuhen||'')+'</td>'+
@@ -3668,11 +3671,18 @@ window.KANSHI60_DETAIL={
         var sy = d.startYear!=null ? d.startYear : (by!=null ? by + d.ageFrom : null);
         var ey = d.endYear!=null ? d.endYear : (by!=null ? by + d.ageTo : null);
         var seireki = (sy!=null && ey!=null) ? (sy+'〜'+ey) : '';
-        // 節木運ラベル：季節が変わる大運に「節木運 ○へ（五行）」を干支の下に添える
-        var sbk=setsuBlocks[i], setsuTag='';
-        if(setsuFlags[i] && sbk){ var seas=SEASON_JP[sbk.enterSeason||sbk.season]||''; var sel=sbk.enterEl||sbk.seasonEl||'';
-          // 節木運＝季節が変わる“節目”。ぱっと見（太い区切り線）で分かるので、枠の外（左）に「冬・水」のように季節＋五行だけを小さく添える。
-          setsuTag='<span class="setsu-tag" contenteditable="false">'+seas+(sel?'・'+sel:'')+'</span>'; }
+        // 節木運ラベル：季節が変わる“節目”は前後1年半で境界をまたぐため、
+        //   「季節が切り替わる大運」＋「その一層前（前の季節の最後）の大運」の両方の左枠外に、季節＋五行だけを小さく添える。
+        //   ぱっと見の切替は太い区切り線で分かるので、文字は最小限。
+        var setsuTag='';
+        (function(){
+          var sb=null;
+          if(setsuFlags[i] && setsuBlocks[i]) sb=setsuBlocks[i];            // この行が新しい季節に入る
+          else if(setsuFlags[i+1] && setsuBlocks[i+1]) sb=setsuBlocks[i+1]; // 次の行が季節替わり＝この行は「一層前（迎える側）」
+          if(!sb) return;
+          var seas=SEASON_JP[sb.enterSeason||sb.season]||'', sel=sb.enterEl||sb.seasonEl||'';
+          if(seas||sel) setsuTag='<span class="setsu-tag" contenteditable="false">'+seas+(sel?'・'+sel:'')+'</span>';
+        })();
         tr.innerHTML='<td class="age ed" contenteditable="true">'+setsuTag+_duAge(d.ageFrom)+'〜'+_duAge(d.ageTo)+'</td>'+
           '<td class="yr2 ed" contenteditable="true">'+seireki+'</td>'+
           '<td class="ed" contenteditable="true">'+(d.kanshi||'')+'</td>'+
