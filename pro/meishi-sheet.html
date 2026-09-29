@@ -2364,11 +2364,24 @@ window.KANSHI60_DETAIL={
     function inOnly(n){ return !onlySet || onlySet.indexOf(n)>=0; }
     var KNUM=['','１','２','３','４','５','６','７','８','９'];
     var _sn=0;
+    // 各章の冒頭に置くやさしい導入文（専門用語を使わず、その章で何を読むかを一言で／読みやすさ向上）。
+    var CHAP_INTRO={
+      1:'まずは、生まれた日の干支からわかる“あなたの心の土台”です。むずかしく考えず、素の性格として読んでください。',
+      2:'生まれた月から受け継いだ、行動のクセや価値観の中心を見ます。',
+      3:'あなたの力が自然に発揮されやすい場面と、向きやすい仕事の方向です。',
+      4:'恋愛や結婚での縁の傾向と、相手との関わり方のクセを読みます。',
+      5:'「お金があるか／ないか」ではなく、あなたに合ったお金の“つくり方・増やし方”のタイプです。',
+      6:'どんな人と合いやすいか、人との距離の取り方のクセを見ます。',
+      7:'体質として気をつけたい部分と、日ごろの整え方の目安です（医療の診断ではありません）。',
+      8:'これまでとこれから、運の大きな波（10年ごとの大運）の移り変わりを見ます。',
+      9:'ここまでの要点をまとめ、開運のために意識したいことを整理します。'
+    };
+    function introP(t){ return '<p class="rd-p" style="color:#6B6250;font-size:12.5px;margin:0 0 7px">'+t+'</p>'; }
     // 章を積む。フル版は元番号、専用版／章選択は該当章だけを1から振り直して表示。
     function addSec(n, title, body){
       if(soloSet && soloSet.indexOf(n)<0) return;
       if(onlySet && onlySet.indexOf(n)<0) return;
-      _sn++; H+=sec(KNUM[(soloSet||onlySet)?_sn:n]+'．'+title, body);
+      _sn++; H+=sec(KNUM[(soloSet||onlySet)?_sn:n]+'．'+title, (CHAP_INTRO[n]?introP(CHAP_INTRO[n]):'')+body);
     }
     // 冒頭リード
     var LEADF={love:['恋愛・ご縁','出逢いの時期は「恋愛・結婚」に、日々の相性は「対人相性」に'],
@@ -2464,6 +2477,12 @@ window.KANSHI60_DETAIL={
       b+=para('通変星（性格や才能を表す星）の集計から、あなたに強く出るのは<b>'+starList.map(function(s){return s+(tcount[s]?'（'+tcount[s]+'）':'');}).join('・')+'</b>。<span class="rd-gloss">かっこ内の数字は、その星が命式に出ている回数です。</span>これらの星の力を仕事や活動に乗せると、持ち味がまっすぐ発揮されます。');
       if(taika.length){ b+=para('特に<b>'+taika.map(function(s){return s+'（'+tcount[s]+'つ＝太過（たいか＝多すぎて強く出る状態））';}).join('・')+'</b>は非常に強く出ます。'+taika.map(function(s){return TSU[s]?TSU[s].t:'';}).filter(Boolean).join('／')+'が際立つ反面、'+taika.map(function(s){return TSU[s]?TSU[s].c:'';}).filter(Boolean).join('／')+'。強みとして活かしつつ、出すぎに気をつけると安定します。'); }
       b+=para('向いやすい方向は<b>'+jobs.filter(function(v,i,a){return a.indexOf(v)===i;}).join('／')+'</b>など。'+((maxList.length===1&&maxEl)?'五行では<b>'+maxEl+'</b>が強く、その分野の適性も後押しになります。':'')+'（固定の職業名より、この持ち味が活きる働き方を選ぶのがコツです）');
+      // 総合鑑定（テーマ指定なし）でも、働き方の型と今の10年の追い風を添えて厚みを持たせる
+      if(theme!=='work'){
+        var _ws3=(tcount['正官']||tcount['偏官'])?'責任ある役割・組織の中核を任されるほど伸びます。筋を通し、信用を積むのが最大の武器です。':((tcount['食神']||tcount['傷官'])?'表現・専門・技術で抜きん出るタイプ。得意を尖らせ、独立や専門職で力を発揮します。':((tcount['正財']||tcount['偏財'])?'現場で人やお金を動かす実務・商いに強み。成果を数字で示すほど評価されます。':((tcount['印綬']||tcount['偏印'])?'学び・資格・知識が武器。専門性を深め、教える・支える役割で信頼を得ます。':'仲間と組む・独立するなど、自分の裁量で動ける環境ほど力が出ます。')));
+        b+=para('<b>あなたに合う働き方</b>：'+_ws3);
+        if(typeof curDu!=='undefined'&&curDu){ b+=para('<b>いまの10年の追い風</b>：今の大運は'+curDu.tsuhen+'の巡りです。'+((typeof DUTSU!=='undefined'&&DUTSU[curDu.tsuhen])?DUTSU[curDu.tsuhen]:'この巡りを土台に、上の持ち味を仕事に乗せていくとよい時期です。')); }
+      }
       // 仕事重視テーマ：飛躍の年・進め方・注意期を年運から
       if(theme==='work' && nowYear!=null){
         if(window.MonthPillar){ b+='<div class="rd-mwrap"><div class="rd-mhead">◆ 仕事が伸びる月（今年・来年）</div>'+monthlyBlock(nowYear, dm, spouse, 'work', sex)+'</div>'; }
@@ -2592,6 +2611,12 @@ window.KANSHI60_DETAIL={
       if(spc>0&&zc>0){ b+=para('さらに<b>食神・傷官（表現や才能の星）が財を生む形</b>があり、<b>好きなこと・得意を収入に変える力</b>が強い配置。趣味や特技をお金に育てるのが最短ルートです。'); }
       if(hkc>=2){ b+=para('一方で<b>比肩・劫財が多め</b>。仲間づきあいや勝負ごとでお金が出やすい"散財の芽"もあるので、大きな支出は一呼吸おき、共同のお金は取り決めを明確にすると安心です。'); }
       if(curDu&&(curDu.tsuhen==='正財'||curDu.tsuhen==='偏財')){ b+=para('今の大運は財星「'+curDu.tsuhen+'」の巡り。<b>この10年はお金が動きやすい時期</b>——収入源を育て、良い流れを貯えに変えていきましょう。'); }
+      // 総合鑑定（テーマ指定なし）でも、増やし方の型と付き合い方のコツを添えて厚みを持たせる
+      if(theme!=='money'){
+        var _mp5=(sc>hc?'あなたには<b>堅実運用（貯金・積立・現物資産）</b>が向きます。時間を味方につけて、こつこつ増やすのが性に合います。':(hc>sc?'あなたには<b>攻めの運用（副業・商い・人脈への投資）</b>が向きます。ただし利益は一部を必ず確保し、広げすぎないのがコツです。':'あなたは<b>守りと攻めを併用</b>できるバランス型。生活防衛のお金を確保しつつ、一部で挑戦するのが最適です。'));
+        b+=para('<b>あなたに合うお金の増やし方</b>：'+_mp5+(spc>0?'とくに<b>得意・好きを収入源に育てる</b>と、財が太くなります。':''));
+        b+=para('<b>お金と長く付き合うコツ</b>：大きな支出は一呼吸おいて決める／共同のお金は取り決めを明確にする／良い時期に入った収入は使い切らず“貯え”に回す——この3つを守るだけで、お金の巡りが安定します。');
+      }
       // 金運重視テーマ：お金が動く年・増やし方・注意期を年運から
       if(theme==='money' && nowYear!=null){
         if(window.MonthPillar){ b+='<div class="rd-mwrap"><div class="rd-mhead">◆ お金が動く月（今年・来年）</div>'+monthlyBlock(nowYear, dm, spouse, 'money', sex)+'</div>'; }
@@ -2673,6 +2698,10 @@ window.KANSHI60_DETAIL={
     (function(){
       var strong=(domStar&&TSU[domStar])?TSU[domStar].t:'あなたらしい持ち味';
       var b=para('まとめると、<b>'+ruby(dm)+'（'+dmEl+'）</b>を芯に、<b>'+genmei+'</b>の気質を軸として、<b>'+strong+'</b>が最大の強みです。'+(shugoEls.length?'進む方向に迷ったら、守護神の五行<b>「'+shugoEls.join('・')+'」</b>（色なら'+shugoEls.map(function(e){return EL[e]?EL[e].col:'';}).filter(Boolean).join('／')+'）を取り入れると流れが整います。':'')+'持ち味を素直に活かし、巡りの良い時期に一歩を踏み出していきましょう。');
+      b+=para('<b>開運のために意識したい3つ</b>：'
+        +'①強み（'+strong+'）を、日々の仕事や役割にまっすぐ乗せる。'
+        +((typeof lackEls!=='undefined'&&lackEls&&lackEls.length)?'②足りない五行「'+lackEls.join('・')+'」を、色・食べ物・環境で少しずつ補い、バランスを整える。':'②五行のバランスは整っているので、生活リズムを一定に保ち、土台を守る。')
+        +((typeof curDu!=='undefined'&&curDu)?'③いま巡る大運「'+curDu.tsuhen+'」の追い風を活かし、巡りの良い年に一歩を踏み出す。':'③巡りの良い年を選んで、大切な一歩を踏み出す。'));
       addSec(9, '総括と開運の指針', b);
     })();
     return '<div class="rd-cols">'+H+'</div>'+
