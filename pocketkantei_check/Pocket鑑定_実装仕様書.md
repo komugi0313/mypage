@@ -1,4 +1,4 @@
-# Pocket鑑定 実装仕様書（2026-09-26 版）
+# Pocket鑑定 実装仕様書（2026-09-29 版）
 
 この文書は、Pocket鑑定（10言語の四柱推命チャット・PWA／Netlify）の**正本の仕様書**です。
 同じ zip の `docs/` にほかの資料もありますが、内容が食い違う時は**この文書を優先**してください。
@@ -34,6 +34,9 @@
 | `functions/gemini.js` | AIの中継（APIキーを隠す）・回数の上限・AI原価の上限 |
 | `functions/auth.js` | アカウント（登録・ログイン・同期・パスワード再設定・プラン照会・ウェブ決済・ウェブ解約） |
 | `functions/billing.js` | 購読の通知の受け取り（RevenueCat の Webhook）→ アカウントにプランを記録 |
+| `functions/push-lib.js` | ニコからのメッセージ（プッシュ通知）の中身：文面づくり（AI）・送信（Firebase）・受け取り箱（「11.2」） |
+| `functions/nico-push.mjs` | 毎時0分に動く予約関数。送信をバックグラウンド関数に頼む |
+| `functions/nico-push-background.mjs` | バックグラウンド関数（最長15分）。その時刻の人に文面を作って送る |
 | `netlify.toml` | `/api/gemini`・`/api/auth`・`/api/billing` → 各関数への転送 |
 | `package.json` | 関数が使う `@netlify/blobs`（^8.1.0） |
 
@@ -68,6 +71,9 @@
 | `PK_DEEP_RESERVE_JPY` | 任意 | 本格鑑定1回分として先に取っておく原価（既定 4円） | 4 |
 | `GEMINI_MODEL` / `GEMINI_MODEL_DEEP` | 任意 | 既定は `gemini-2.5-flash-lite` ／ `gemini-3.6-flash`（運営決定） | 既定値 |
 | `PK_IGNORE_SANDBOX` | 任意 | `1` でテスト購入を反映しない。**Apple の審査中は設定しない**（審査はテスト購入で行われるため） | テスト購入も反映する |
+| `FCM_PROJECT_ID` / `FCM_CLIENT_EMAIL` / `FCM_PRIVATE_KEY` | ニコのメッセージの開始時に必須 | Firebase のサービスアカウント（JSON）の `project_id` / `client_email` / `private_key`。秘密鍵は `\n` を含む1行のまま貼ってよい | ニコのメッセージが届かない（文面は作られない） |
+| `PK_PUSH_MODEL` | 任意 | ニコのメッセージの文面を作るモデル。既定は `GEMINI_MODEL`（軽量） | 既定値 |
+| `PK_PUSH_ACTIVE_DAYS` | 任意 | 最後にアプリを開いてから、この日数を過ぎた人には送らない。既定 `{"free":14,"paid":45}` | 既定値 |
 | `PK_TRUST_PLAN_HEADER` | **本番では設定しない** | テスト専用 | ― |
 
 `URL` は Netlify が自動で設定します。関数は、これを使って他サイトからの呼び出しを断ります。
@@ -167,6 +173,8 @@
 | `reset` | code, newPassword | 30分・1回限り |
 | `checkout` | token, plan, period(`m`/`y`), lang | ウェブ決済のURL。未設定なら `NOT_READY` |
 | `cancel` | token | ウェブ版（テレコムクレジット）の解約。**`telecomStopRecurring()` は未実装（「7.3」）** |
+| `push_set` | token, pushToken, on, hour(0〜23), tz, lang, platform | ニコのメッセージのオン・オフと時刻。`pushToken` は端末の通知トークン（`token` はログイン用なので別の名前） |
+| `push_inbox` | token | 届いたニコのメッセージ（最新10件・7日まで）。アプリを開いた時に呼ぶ。最後に開いた日時も記録 |
 
 **プランの返し方：** `plan` は `{plan:'free'|'std'|'pro'|'vip', start, expires, willRenew, store}` です。期限が過ぎていれば `free` を返します。
 
@@ -181,7 +189,15 @@ RevenueCat の Webhook の受け口です。
 - **無視するもの：** 古い通知・匿名の購入（`$RCAnonymousID`）・不明な商品。
 - **書き込み先：** `u:<uid>` の `rec.sub = {plan, product, start(purchased_at_ms), expires, willRenew, store, env, eventTs}`
 
-### 5.4 `pk-usage` のキー（参考）
+### 5.4 ニコのメッセージのキー（`pk-accounts` ストア。「11.2」）
+| キー | 中身 |
+|---|---|
+| `ps:<uid>` | 設定と記録 `{on, token, platform, hour, tz, lang, bucket, lastDay, hist, seen}` |
+| `pb:<UTCの時>:<uid>` | その時刻（UTC）に送る人の目印。毎時、その時刻の人だけを読む |
+| `pi:<uid>` | 受け取り箱 `{items:[{id, text, ts}]}` |
+アカウントを削除すると、この3つも消えます。
+
+### 5.5 `pk-usage` のキー（参考）
 | キー | 中身 |
 |---|---|
 | `d:` `i:` | 無料の1日の数（端末・IP） |
@@ -266,7 +282,7 @@ Gemini は、前回と先頭から同じ部分の入力を割引します。そ�
 3. **Webhook を設定します。**
    - URL：`https://<サイト>/api/billing`
    - Authorization header：`REVENUECAT_WEBHOOK_AUTH` と同じ値
-4. **Capacitor でアプリ化します。** 毎朝のお知らせ用に `@capacitor/local-notifications` も入れてください（「11.2」）。
+4. **Capacitor でアプリ化します。** ニコのメッセージ用に `@capacitor-firebase/messaging` も入れてください（手順は「7.4」）。
    - `@revenuecat/purchases-capacitor` を入れます。
    - 起動時に `window.PK_RC_KEYS` を設定します（必要なら `window.PK_PRODUCTS` も）。
 5. **テスト購入で確認します。**
@@ -286,8 +302,22 @@ Gemini は、前回と先頭から同じ部分の入力を割引します。そ�
 - `legal.html`（利用規約・特定商取引法の表記・プライバシーポリシー）の文言。Apple／Google／テレコムクレジット／RevenueCat の記載、価格、解約方法を含みます。
 - LP の文言。
 - `gemini-3.6-flash` の正式な料金 → `PK_AI_PRICES` に入れ直します。
-- プライバシーポリシーに、登録時のアンケート（集める項目・保存先のサーバー・利用目的）を書き足す（「11.3」）。
 - 本番のドメイン（独自ドメインなら、`pocket-kantei.netlify.app` の書き換えが必要。「11.4」）。
+
+### 7.4 ニコからのメッセージ（プッシュ通知）の準備（「11.2」）
+1. **Firebase のプロジェクトを作り**、iOS と Android のアプリを登録します。
+   - Android：`google-services.json` を `android/app/` に置きます。
+   - iOS：`GoogleService-Info.plist` を入れます。Xcode で「Push Notifications」と「Background Modes → Remote notifications」をオンにします。
+   - **Apple の APNs 認証キー（.p8）を Firebase に登録します。** iPhone への通知も Firebase から送るためです。
+2. アプリに **`@capacitor-firebase/messaging`** を入れます（`Capacitor.Plugins.FirebaseMessaging` として使います）。
+   - iOS で、アプリを開いている時も通知を出すには、`capacitor.config` の `FirebaseMessaging.presentationOptions` に `["badge","sound","alert"]` を入れます。
+3. Firebase のサービスアカウントの鍵を作り、`FCM_PROJECT_ID` / `FCM_CLIENT_EMAIL` / `FCM_PRIVATE_KEY` に入れます。**鍵をコードや zip に入れないこと。**
+   - Netlify の関数の環境変数は、**合計4KBまで**という制限があります。サービスアカウントの JSON を丸ごと入れず、この3つだけにしてください。
+4. **Netlify で予約関数が動いているか確かめます。** 管理画面の Functions に `nico-push`（Scheduled）が出ていれば正常です。ログに `nico-push <時> {"total":…,"out":{…}}` が毎時出ます。
+5. **実機で確かめます。**
+   - メニュー「ニコからのメッセージ」→ 時刻を選んで「受け取る」→ 通知の許可
+   - その時刻に通知が届く → タップするとアプリが開き、チャットにニコの発言として出る
+   - 「受け取らない」→ 翌日から届かない
 
 ---
 
@@ -303,6 +333,7 @@ Gemini は、前回と先頭から同じ部分の入力を割引します。そ�
 | 命式 | `chk1.js`（大運1万件）、`tzref.py`＋`tzapp.js`＋`tzcmp.py`（時差6,240件）、`cmp184.js`（v184 と比較） |
 | アカウント | `authtest.js`、`e2e.js`、`e2e_reset.js`、`lpflow.js`、`eye.js` |
 | 課金 | `billtest.js`、`billtest2.js`、`billui.js`、`webcard.js`、`webcancel.js` |
+| ニコのメッセージ | `pushtest.js`（送信の仕組み。AIと Firebase は偽物）、`pushui.js`（画面・10言語）、`pushlive.js`（実際のAIで10言語の文面を作る。`GEMINI_KEY` が必要） |
 | 回数・利益 | `quotatest.js`、`planui2.js`、`budgettest.js`、`budgetui.js` |
 | 10言語 | `ui10.js`（画面）、`unitguard.js`（後処理）、`datep.js`、`bday.js`、`hl.js` |
 | 実際のAI | `finaltest_u.js`＋`bigcheck.py`。環境変数 `GEMINI_KEY` にテスト用のキーを入れて実行します。**キーをファイルに保存しないこと** |
@@ -331,7 +362,7 @@ Gemini は、前回と先頭から同じ部分の入力を割引します。そ�
 9. `sw.js` のキャッシュ名を上げた。
 10. 利用者の画面に、開発者用の体験モードが出ていない（`?dev=1` を付けない時）。
 11. 登録時のアンケートが、本番の保存先（Google のサーバーなど）に届き、国別・言語別に集計できる。
-12. （アプリ版）毎朝のお知らせを設定でき、指定した時刻に届く（`@capacitor/local-notifications`）。
+12. （アプリ版）「ニコからのメッセージ」を設定でき、選んだ時刻に届き、タップするとチャットに出る（「7.4」）。
 
 ---
 
@@ -384,18 +415,33 @@ Gemini は、前回と先頭から同じ部分の入力を割引します。そ�
   - この2つの時は、距離感と記憶も最初からになります（今の仕様です）。
 - **キャッシュとの関係：** `toneBlock` は指示文の先頭側にあります。ただし、変わるのは20通目と60通目の2回だけなので、キャッシュ割引への影響はほとんどありません。
 
-### 11.2 毎朝のお知らせ（アプリ版だけの機能）
-- Capacitor の **`@capacitor/local-notifications`** プラグインを使います（`Capacitor.Plugins.LocalNotifications`）。**アプリ化の時に、このプラグインも必ず入れてください。** 入れ忘れると、アプリでもお知らせを設定できません。
-- ウェブ版では、プラグインが無いため「アプリで使える機能」という表示になります。
+### 11.2 ニコからのメッセージ（プッシュ通知。アプリ版だけ）
+**運勢の案内はしません。** ニコが友だちのように話しかけるメッセージです（運営決定 2026-09-29）。
+- **中身：** 1日1回、利用者が選んだ時刻（その人の地域の時刻）に届きます。「おはよう」「ご飯食べた？」「今日もおつかれさま」「あの件どうなった？」など。
+  - 文面は毎回、軽量モデルがその場で作ります。材料は、ニコとの距離感（`pk_tmsg`）、会話のメモ（`pk_mem`）、最近の会話、ニックネーム、曜日・時間帯です。
+  - 距離感で話し方が変わります（出会ったばかり＝ていねい語 → 親しい相棒＝タメ語）。チャットと同じ3段階です。
+  - 時間帯に合わない話（朝8時に「お昼食べた？」）はしません。直近10通と似た文面は作り直します。
+  - 言語が違う・長すぎる文面は送りません（2回作って駄目なら、その日は送りません）。
+- **ロック画面への配慮：** 通知は家族や職場の人にも見えることがあります。ほかの人の名前、家族、面接や転職、健康、お金、恋愛、つらい話は文面に入れません。「あの件」のようにぼかします。
+- **つらい状況の人：** 会話のメモや最近の会話から、とてもつらい時期だと分かる時は、「ここにいるよ」という静かなメッセージだけにします。
+- **仕組み：**
+  1. アプリで「受け取る」を押す → 通知の許可 → 端末の通知トークンを `push_set` でアカウントに記録
+  2. 毎時0分に `nico-push` が動き、`nico-push-background` がその時刻の人に送る
+  3. 送ったメッセージは受け取り箱（`pi:`）にも入る → アプリを開いた時・通知をタップした時に `push_inbox` で取り出し、ニコの発言としてチャットに足す（同じものは二度足さない）
+- **送らない人：** オフにした人／通知を消した端末（Firebase が「宛先なし」と返したら自動でオフ）／最後にアプリを開いてから、無料の人は14日・有料の人は45日を過ぎた人（`PK_PUSH_ACTIVE_DAYS`）。
+- **条件：** アプリ版とアカウント（ログイン）が必要です。ウェブ版では「アプリ版で使えます」と表示されます。
+- **費用：** 実際のAIで測ると、1通 約0.01円（60通で0.6円）。1人・1か月でも約0.3円です。有料の人の分は、1か月のAI原価の上限（「4」）に含めて数えます。
+- **夏時間：** 送るたびに、その人の地域の時刻を確かめて付け直すので、夏時間の切り替えでも同じ時刻に届きます。
+- 実際のAIで10言語×3段階×3つの時間帯を試し、言語・時間帯・ロック画面の配慮が守られていることを確かめました（`tests/pushlive.js`）。
 
 ### 11.3 登録時のアンケート（国ごとの傾向データ。必ず集めて保存するもの）
-- 登録の時に、メールアドレス・関心のある話題・知ったきっかけ・使う頻度・職業・性別・年代・国・言語を、Netlify Forms（フォーム名 `pk-signup`）へ送ります。`index.html` の末尾に、Netlify が見つけるための隠しフォームがあります。
+- 登録の時に、メールアドレス・関心のある話題・知ったきっかけ・使う頻度・職業・性別・年代・国・言語を集めます。**使い道：国・地域ごとの傾向を知り、サービスをより良くするため、また次の商品開発の情報にするため**（運営決定 2026-09-29）。
 - **送り先はエンジニアが本番の保存先（バックエンド／Google のサーバー）につなぎます。** 今のコードは仮の送り先として Netlify Forms（`/` へ `form-name=pk-signup` で送信。`index.html` の `_svPost()`）を使っています。
   - `_svPost(body)` の送り先を本番のURLに差し替えてください（中身は `application/x-www-form-urlencoded` の文字列）。本番に切り替えたら、`index.html` 末尾の Netlify 用の隠しフォーム `<form name="pk-signup" …>` は削除して構いません。
   - 送る項目：uid（端末ID）、名前、email、topics、interests、source、freq、job、sex、age（年代）、country（出生地の国）、lang（表示言語）。国別・言語別の集計に使います。
   - 送れなかった分は端末に残り、次に開いた時に送り直されます（`pk_svq`）。送り先は、成功した時に 2xx を返すようにしてください。
   - Google Apps Script で受ける場合は、ブラウザから直接送れる形（CORS）か、`functions/` に中継用の関数を置いて、サーバー側から転送してください。受け口のURLや鍵をコードに直接書かず、環境変数に入れてください。
-- **プライバシーポリシーに、このアンケート（集める項目・保存先・利用目的）の記載がまだありません。** 公開前に運営が書き足してください（「7.3」に追加）。
+- **プライバシーポリシーに記載済みです**（集める項目・保存先の Google のクラウド・使い道・削除の依頼先）。保存先を Google 以外にする場合は、プライバシーポリシーも直してください。
 
 ### 11.4 本番のドメイン
 - シェア用のカードの画像とリンクに、**`https://pocket-kantei.netlify.app` が直接書かれています**（`index.html`・`lp.html`）。

@@ -62,4 +62,11 @@ Pocket鑑定の修正（大運・立運・節入り、アカウント、パス�
 | `prefix.js` | 指示文が、別の質問・3時間後・別の人・別の言語で、先頭から何文字一致するか | `node prefix.js` |
 | `blocks.js` | 指示文の各部分が、毎回変わるか・質問で変わるか | `node blocks.js` |
 
+### 2026-09-29 追加（7）：ニコからのメッセージ（プッシュ通知）
+| ファイル | 内容 | 実行例 |
+|---|---|---|
+| `pushtest.js` | 送信の仕組み（設定・時刻の区切り・1日1回・似た文面の作り直し・言語違い・消えた端末・長く開いていない人・夏時間・有料の原価・退会）。AIと Firebase は偽物 | `NODE_PATH=mock/node_modules node pushtest.js` |
+| `pushui.js` | 画面（ウェブ版は案内だけ・未ログイン・オン／オフ・受け取り箱からチャットへ・通知の不許可・10言語のメニュー） | `NODE_PATH=mock/node_modules node pushui.js` |
+| `pushlive.js` | 実際のAIで10言語×3段階×3つの時間帯の文面を作る（送信はしない） | `GEMINI_KEY=… node pushlive.js` |
+
 ※本番の Netlify（実際の Blobs・Resend）での確認は含みません。デプロイ後に実機で「登録→別端末でログイン」「パスワードを忘れた→メール→再設定」を確認してください。
