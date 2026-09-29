@@ -3539,6 +3539,57 @@ function summaryHTML(c){
     </div>
   </section>`;
 }
+/* 📖 この命式の詳しい特徴（教科書ベース・AI不要の決定論）。
+   これまで「詳細鑑定(AI)に渡す材料」としてだけ計算していた教科書レベルの人物像を、
+   画面と鑑定書に“特徴”としてそのまま出す。既存の解説定数を再利用（エンジン非改変）。 */
+function featBookHTML(c){
+  if(!c||!c.pillars)return '';
+  const dp=c.pillars[2]; if(!dp)return '';
+  const sex=(c.birth&&c.birth.sex)||'female';
+  const G=(o,k)=>{try{return (typeof o!=='undefined'&&o)?o[k]:undefined;}catch(e){return undefined;}};
+  const li=(lab,val)=>val?`<div style="margin:2px 0"><b style="color:#8A5A12">${lab}</b>：${val}</div>`:'';
+  const sec=(title,inner)=>{const body=inner.filter(Boolean).join('');return body?`<div style="margin:0 0 11px;padding:9px 11px;background:#fff;border:1px solid #EADFC4;border-radius:10px"><div style="font-weight:900;font-size:12.5px;color:#7A5A16;margin-bottom:3px">${title}</div><div style="font-size:12.5px;line-height:1.72;color:var(--ink2)">${body}</div></div>`:'';};
+  const rows=[];
+  // 1) 日柱60干支の人物像（性格の核）
+  const dd=G(typeof KANSHI60_DETAIL!=='undefined'?KANSHI60_DETAIL:undefined,dp.ganzhi);
+  if(dd){ const gx=sex==='male'?dd.男:dd.女;
+    rows.push(sec('日柱「'+dp.ganzhi+'」の人物像（性格の核）',
+      [li('一言',dd.一言),li('基本',dd.基本),li('恋愛',dd.恋愛),li('仕事',dd.仕事),li((sex==='male'?'男性':'女性')+'の特徴',gx)])); }
+  // 2) 中心の星（月支元命）
+  const mh=(typeof repHidden==='function')?repHidden(c.pillars[1]):null;
+  const gstar=mh?mh.tenStar:'';
+  if(gstar){ const gd=G(typeof GENMEI_DETAIL!=='undefined'?GENMEI_DETAIL:undefined,gstar); const tf=G(typeof TS_FULL!=='undefined'?TS_FULL:undefined,gstar);
+    rows.push(sec('中心の星（月支元命）＝'+gstar,
+      [li('気質',gd),li('性格',tf&&tf.性格),li('向く仕事',tf&&tf.適職)])); }
+  // 3) 十二運（日柱＝最重要）
+  const terr=dp.terrain; const trf=G(typeof TERR_FULL!=='undefined'?TERR_FULL:undefined,terr); const jf=G(typeof JUNI_FULL!=='undefined'?JUNI_FULL:undefined,terr);
+  if(terr&&(trf||jf)){
+    rows.push(sec('十二運（日柱）＝'+terr,
+      [li('基本',trf&&trf.基本),li('人物像',jf&&jf.seikaku),li('恋愛',jf&&jf.renai)])); }
+  // 4) 宿命中殺（前向きに）
+  try{ if(typeof detectChusatsu==='function'){ const cs=detectChusatsu(c); if(cs&&cs.any){ const t=[];
+    if(cs.hasY)t.push(li('生年中殺','親・目上と縁が薄めで、早く自立するほど輝く“常識にはまらない”タイプ。'));
+    if(cs.hasM)t.push(li('生月中殺','仕事・家庭運が特殊で、自由な働き方が向くカリスマ型（約6人に1人）。'));
+    if(cs.hasSeijitsu)t.push(li('生日中殺','個性的で、“変わっている自分＝魅力”を武器にできる人。'));
+    if(cs.hasNichiza)t.push(li('日座中殺','現実に違和感を持ちやすく機転が利く。柔軟な家庭の形が合う。'));
+    if(cs.hasNikkyo)t.push(li('日居中殺','繊細で理想が高い“一人で輝く星”。表現・精神世界で開花。'));
+    if(cs.ichidai)t.push(li('一代運','受け継ぐより、自分の代で新しく築く生き方でこそ輝く。'));
+    rows.push(sec('宿命中殺（“欠け”ではなく人と違う道を歩む強み）',t)); } } }catch(e){}
+  // 5) 異常干支・魁罡・空亡
+  const extra=[];
+  try{ const ij=c.pillars.filter(p=>typeof IJOU_KANSHI!=='undefined'&&IJOU_KANSHI[p.ganzhi]);
+    if(ij.length)extra.push(li('異常干支',ij.map(p=>p.label+p.ganzhi+'（'+IJOU_KANSHI[p.ganzhi]+'）').join('・')+'＝常識にとらわれない独自の視点・天才的な発想（凶ではなく長所のサイン）。')); }catch(e){}
+  try{ if(typeof kaigouOn==='function'&&kaigouOn(c))extra.push(li('魁罡（日柱）','強い決断力・行動力・リーダー性の星。')); }catch(e){}
+  try{ const ku=(typeof kubo==='function')?kubo(c):null; if(ku&&ku.length)extra.push(li('空亡',ku.join('')+'＝縁が薄く努力が空回りしやすい支（＝準備・充電の面として前向きに）。')); }catch(e){}
+  if(extra.length)rows.push(sec('その他の特別な配置',extra));
+  if(!rows.length)return '';
+  return `<details class="adv" style="margin-top:12px;background:#FBF7EE;border:1.5px solid #E3D3AE;border-left:4px solid #B8860B;border-radius:12px;padding:2px 12px 10px">
+    <summary style="font-weight:900;color:#8A6A10;font-size:13.5px;padding:9px 0">📖 この命式の詳しい特徴（教科書ベース）</summary>
+    <div style="margin-top:4px">
+      <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin:0 0 8px">教科書を調べなくても、この命式の人物像をそのまま確認・お渡しできます。</div>
+      ${rows.join('')}
+    </div></details>`;
+}
 function verdictHTML(c){
   const ds=c.dayMaster.stem, sType=strengthType(c);
   const {dd,ay}=curDuYear(c);
@@ -4125,7 +4176,7 @@ function renderResult(){
   // 要点サマリーは #result に、以降は #result-body に分割（並び：要点→命式(納音・相生相剋など分析込みの完全版)→詳細鑑定→相性→会局→五行→大運年運→恋愛→養生）
   // 命式表は「詳細鑑定を読む前に確認したい」という要望で、完全版を要点の直後に一本化（前後で二重に出さない）。
   document.getElementById('result').innerHTML =
-    heroHTML(c)+summaryHTML(c)+verdictHTML(c)+meishiHTML(c);
+    heroHTML(c)+summaryHTML(c)+featBookHTML(c)+verdictHTML(c)+meishiHTML(c);
   (function(){var _rb=document.getElementById('result-body');
     if(!_rb){_rb=document.createElement('div');_rb.id='result-body';var _r=document.getElementById('result');if(_r&&_r.parentNode)_r.parentNode.insertBefore(_rb,_r.nextSibling);}
     _rb.innerHTML = kaikyokuHTML(c)+genmeiHTML(c)+junitenHTML(c)+gogyoHTML(c)+compatPillHTML()+midQuickNavHTML()+flowHTML(c)+kingunHTML(c)+(typeof pkLoveCard==='function'?pkLoveCard(c):'')+yojoHTML(c);
