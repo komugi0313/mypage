@@ -10,6 +10,7 @@
 | `render-daily-mail.js` | `renderDailyMail(r, opts)` → `{ subject, html, text }`。`r` は `generateDaily()` の返り値そのまま |
 | `build-samples.js` | 見本メールを3通生成（`samples/`）。`sample-0924-test-married` は 9/24 に届いたメールと同じ条件（結婚している・9/24）のテスト会員（架空） |
 | `check-engine.js` | ある会員・ある日にロジックが出す文章を一覧表示（送ったメールとの照合用） |
+| `check-quality.js` | メールの中身の品質検査（7日以内の繰り返し・季節外れ・性別・今の状況・土日・遠出・場所の重複）。**ロジックを変えたら必ず実行し、PASS を確認する**：`ENGINE_DIR=.. node check-quality.js` |
 | `samples/*.html` | 生成された本物のメールHTML（テスト送信の本文にそのまま使える） |
 | `samples/*.txt` | 件名＋テキスト版 |
 | `samples/*.jpg` | スマホ幅（390px）での表示イメージ |
