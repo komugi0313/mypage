@@ -372,6 +372,11 @@
   .kkclick .kkarw{margin-left:3px;color:var(--muted);font-weight:900;font-size:11px}
   .kkclick.kkon{outline:2px solid var(--sui);outline-offset:1px}
   .kkclick.kkon .kkarw{color:var(--sui)}
+  .feat-link{cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .feat-link .feat-arw{color:#B8860B;font-weight:900;margin-left:2px}
+  .feat-link:active{opacity:.7}
+  .feat-link.feat-hit{background:#FFF3D6;border-radius:6px}
+  .kkclick.featflash{outline:2px solid #B8860B;outline-offset:1px;background:#FFF3D6}
   .kk-read{background:#FFF8EC;border:1.5px solid #E7B85C;border-left:5px solid #D98A2B;border-radius:10px;
     padding:10px 13px;margin:4px 0 10px;font-size:12.5px;line-height:1.72;color:#4A4130;
     width:100%;max-width:100%;box-sizing:border-box;word-break:break-word;overflow-wrap:anywhere;
@@ -2366,6 +2371,25 @@ if(!window.__kkBound){ window.__kkBound=1;
   document.addEventListener('click',function(e){ const el=e.target.closest&&e.target.closest('.kkclick'); if(el){e.preventDefault();_kkToggle(el);} });
   document.addEventListener('keydown',function(e){ if((e.key==='Enter'||e.key===' ')&&document.activeElement&&document.activeElement.classList&&document.activeElement.classList.contains('kkclick')){e.preventDefault();_kkToggle(document.activeElement);} });
 }
+// ①「この命式の特徴」の各項目タップ → 対応する（命式の中の）ピルの読み解きへスクロール＆展開
+function _featJump(li){
+  const fk=li.getAttribute('data-fk')||'', fc=(li.getAttribute('data-fc')||'').split('');
+  const kinds={'宿命半会':['半合'],'支合':['支合','六合']}[fk]||[fk];
+  const pills=[...document.querySelectorAll('.kkclick[data-kks="natal"]')];
+  let best=null,bestN=-1;
+  pills.forEach(p=>{ if(kinds.indexOf(p.getAttribute('data-kkk')||'')<0)return;
+    const t=(p.getAttribute('data-kkt')||'')+'|'+(p.textContent||'');
+    const n=fc.filter(ch=>t.indexOf(ch)>=0).length;
+    if(n>bestN){bestN=n;best=p;} });
+  if(!best)return;
+  best.scrollIntoView({behavior:'smooth',block:'center'});
+  setTimeout(function(){ if(!best.classList.contains('kkon'))_kkToggle(best);
+    best.classList.add('featflash'); setTimeout(()=>best.classList.remove('featflash'),900); }, 380);
+}
+if(!window.__featBound){ window.__featBound=1;
+  document.addEventListener('click',function(e){ const li=e.target.closest&&e.target.closest('.feat-link'); if(li){e.preventDefault();_featJump(li);} });
+  document.addEventListener('keydown',function(e){ const a=document.activeElement; if((e.key==='Enter'||e.key===' ')&&a&&a.classList&&a.classList.contains('feat-link')){e.preventDefault();_featJump(a);} });
+}
 const YANG=new Set(['甲','丙','戊','庚','壬']);
 const HONKI={子:'癸',丑:'己',寅:'甲',卯:'乙',辰:'戊',巳:'丙',午:'丁',未:'己',申:'庚',酉:'辛',戌:'戊',亥:'壬'};
 /* 干支の訓読み（音読みは使わない。例：丙辰＝ひのえたつ、甲子＝きのえね） */
@@ -2680,6 +2704,17 @@ function meishiHTML(c, topOnly){
     <span class="eyebrow"><b>命式</b>四つの柱</span>
     <h2>あなたの四つの柱</h2>
     <p class="lead"><b>日柱があなた自身</b>（ピンク）。文字の色が五行です。<b>横＝時柱が左（列）／縦＝年柱が上（行）</b>。蔵干・吉凶星は「詳しく見る」で開きます。</p>
+    <details class="adv" style="margin:0 0 10px"><summary>？ 表の用語のかんたんな見方</summary>
+      <div style="margin-top:8px;font-size:12.5px;line-height:1.7;color:var(--ink2)">
+        <div style="margin-bottom:5px"><b style="color:var(--ka)">天干（てんかん）</b>：十干。表に出る性質・才能。</div>
+        <div style="margin-bottom:5px"><b style="color:var(--ka)">地支（ちし）</b>：十二支。土台・内面・環境。</div>
+        <div style="margin-bottom:5px"><b style="color:var(--ka)">蔵干（ぞうかん）</b>：地支に隠れた干。内に秘めた本質（「元」＝月支元命が軸）。</div>
+        <div style="margin-bottom:5px"><b style="color:var(--ka)">通変星（つうへんせい）</b>：日主から見た他の干支の役割（比肩・食神・正財など）＝才能・人間関係の型。「天干通変」＝表に出る面／「地支通変」＝内面の面。</div>
+        <div style="margin-bottom:5px"><b style="color:var(--ka)">十二運（じゅうにうん）</b>：その干支のエネルギーの段階（長生・帝旺・絶など）。日柱が最重要。</div>
+        <div style="margin-bottom:5px"><b style="color:var(--ka)">空亡（くうぼう／天中殺）</b>：縁の薄い十二支。努力が空回りしやすい面。</div>
+        <div style="margin-bottom:5px"><b style="color:var(--ka)">吉凶星（きちきょうせい）</b>：命式にある特別な星（貴人・駅馬など）。</div>
+        <div><b style="color:var(--ka)">月支元命（青ぬり）</b>：先天的な気質の軸（月柱の地支通変）。</div>
+      </div></details>
     <div class="toggles">
       <span class="tg"><button data-or="yoko" aria-pressed="${orient==='yoko'}">横</button><button data-or="tate" aria-pressed="${orient==='tate'}">縦</button></span>
       <span class="tg lab">空亡：${ku.join('')}</span>
@@ -3588,8 +3623,14 @@ function relHTML(c){
   const _feat=(typeof bxFeatureList==='function')?bxFeatureList(_fp):[];
   const featBox=_feat.length?`<div style="background:#FBF7EE;border:1.5px solid #E3D3AE;border-left:4px solid #B8860B;border-radius:11px;padding:10px 13px;margin:0 0 12px">
     <div style="font-weight:900;font-size:12.5px;color:#8A6A10;margin-bottom:5px">🔎 この命式の特徴</div>
-    <ul style="margin:0;padding-left:1.15em;list-style:disc;font-size:12.5px;line-height:1.7;color:var(--ink)">${_feat.map(f=>`<li style="margin:1px 0">${f}があります。</li>`).join('')}</ul>
-    <div style="margin-top:5px;font-size:10.5px;color:var(--muted);font-weight:700">※合冲会局・宿命中殺・異常干支・魁罡を表示（この流派では破・害・自然の刑は扱いません）。</div>
+    <ul style="margin:0;padding-left:1.15em;list-style:disc;font-size:12.5px;line-height:1.7;color:var(--ink)">${_feat.map(f=>{
+      const _mono='子丑寅卯辰巳午未申酉戌亥甲乙丙丁戊己庚辛壬癸';
+      const _kind=(f.match(/^[^（(]+/)||[''])[0];
+      const _chars=(f.match(new RegExp('['+_mono+']','g'))||[]).join('');
+      const _rel=['冲','干合','支合','三合','方合','宿命半会','半合'].indexOf(_kind)>=0;
+      return `<li class="${_rel?'feat-link':''}"${_rel?` data-fk="${_kind}" data-fc="${_chars}" role="button" tabindex="0"`:''} style="margin:1px 0">${f}があります。${_rel?'<span class="feat-arw">› 読み解き</span>':''}</li>`;
+    }).join('')}</ul>
+    <div style="margin-top:5px;font-size:10.5px;color:var(--muted);font-weight:700">※合冲会局・宿命中殺・異常干支・魁罡を表示（この流派では破・害・自然の刑は扱いません）。${_feat.some(f=>/^(冲|干合|支合|三合|方合|宿命半会|半合)/.test(f))?'<br>各項目をタップすると、下の読み解きが開きます。':''}</div>
   </div>`:'';
   return `<div class="rel" style="margin-top:14px;border-top:1px solid var(--line);padding-top:13px">
     <h3 style="font-size:14.5px;font-weight:900;margin:0 0 3px">干支の関わり（合・冲・会局）</h3>
