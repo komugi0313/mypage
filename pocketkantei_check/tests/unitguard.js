@@ -30,6 +30,11 @@ const srv=http.createServer((q,r)=>{let f=path.join('fx',decodeURIComponent(q.ur
   o.push(['上位モデルへ（自分責め・寝ていない・欠点）',[RE_HEAVY.test('何やってもうまくいかない。私ってダメな人間なのかな'),RE_HEAVY.test("Overtime again all this week, barely slept."),RE_HEAVY.test('잠을 못 잤어'),RE_HEAVY.test('No he dormido nada'),RE_DECISION.test('正直に言って、私の性格の欠点って何？'),RE_DECISION.test('What are my flaws?'),RE_DECISION.test('내 단점이 뭐야?')].join()]);
   o.push(['上位モデルへ（該当しない）',[RE_HEAVY.test('今日はよく寝た！'),RE_HEAVY.test('I slept well'),RE_DECISION.test('今日の運勢は？'),RE_HEAVY.test('お昼何食べよう')].join()]);
   o.push(['ニコの性別の質問',['ニコって男の子？女の子？','Nico, are you a boy or a girl?','Nico你是男生還是女生？','니코는 남자야 여자야?','Nico là con trai hay con gái vậy?','Nico, ¿eres chico o chica?','Nico, você é menino ou menina?','Nico itu cowok atau cewek?','Nico เป็นผู้ชายหรือผู้หญิง?'].map(q=>RE_NICO_SELF.test(q)).join()]);
+  o.push(['辞めちゃっていいよね型',[RE_VALIDATE.test('でも正直、今の上司が嫌いなだけかも。すぐ辞めちゃっていいよね？'),RE_VALIDATE.test("Is it okay to just quit?"),RE_VALIDATE.test('그만둬도 되겠지?'),RE_VALIDATE.test('私悪くないよね？'),RE_VALIDATE.test('今日はいい天気だよね？')].join()]);
+  o.push(['理由を聞く（該当）',['なんでそう言えるの？','なぜ？','どうしてそう思うの？','Why do you say that?','为什么这么说？','왜 그렇게 말해?'].map(q=>RE_THEORY.test(q)).join()]);
+  o.push(['理由を聞く（該当しない）',['なんで雨なんだろう','今日なにしよう','Why not!'].map(q=>RE_THEORY.test(q)).join()]);
+  state.lang='ja';
+  o.push(['読みがなの残り',_finalTidy('探究心（たいきょくきじん・物事を深く追究する星）と、まじめさ（せいかん）。生まれ持った星の組み合わせ（生まれ持った星）です。お上司が嫌い。')]);
   state.lang='ja';
   o.push(['十二運の漏れ',_finalTidy('粘り強さ（の病）と、集中力（育ちの土台の堅実さ・死）の賜物。持病（持病）は（病院）へ。')]);
   window._pendingChips=null; state.lang='zh';
