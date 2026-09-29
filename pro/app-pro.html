@@ -85,15 +85,10 @@
   /* 未選択の「相性診断」も薄紫＋紫文字で目立たせる（白のままだと見落とすため） */
   .modetg button[data-mode="compat"]:not([aria-pressed="true"]){background:#F3EAFA;color:#8E44AD}
   .modetg button[data-mode="compat"]:not([aria-pressed="true"]):active{background:#EAD9F5}
-  /* 生まれた時刻：時＝プルダウン／分＝ピル（00/15/30/45＋その他） */
-  .timepick{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .timepick .tp-hour{height:46px;border:2px solid var(--line2);border-radius:12px;padding:0 8px;font-family:inherit;font-weight:800;font-size:15px;min-width:88px;background:#fff;color:var(--ink)}
-  .timepick .tp-mins{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-  .timepick .tp-pill{height:46px;min-width:48px;padding:0 12px;border:2px solid var(--line2);border-radius:999px;background:#fff;font-family:inherit;font-weight:800;font-size:14.5px;color:var(--ink2);cursor:pointer;transition:.12s}
-  .timepick .tp-pill[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
-  .timepick .tp-pill:active{transform:translateY(1px)}
-  .timepick .tp-pill.tp-other{color:var(--muted);font-size:13px}
-  .timepick .tp-mm{height:46px;border:2px solid var(--line2);border-radius:12px;padding:0 6px;font-family:inherit;font-weight:800;font-size:14.5px;background:#fff;color:var(--ink)}
+  /* 生まれた時刻：時＝プルダウン／分＝プルダウン（横並び） */
+  .timepick{display:flex;gap:8px;align-items:center}
+  .timepick .tp-hour{flex:1 1 0;min-width:0;width:auto!important;height:46px;border:2px solid var(--line2);border-radius:12px;padding:0 10px;font-family:inherit;font-weight:800;font-size:15px;background:#fff;color:var(--ink)}
+  .timepick .tp-colon{flex:0 0 auto;font-weight:900;color:var(--muted)}
   /* 相性診断モード：個人鑑定の表示を隠し、相性診断だけを見せる（要素は残すので切替で即戻せる） */
   body.mode-compat #result,body.mode-compat #result-body,body.mode-compat #ai-slot,body.mode-compat #compat-banner,body.mode-compat #jumpnav{display:none!important}
   .seg{display:flex;width:100%;border:2px solid var(--line2);border-radius:12px;overflow:hidden;height:46px}
@@ -699,14 +694,8 @@
       <div class="field" style="flex:1 1 100%"><label>生まれた時刻</label>
         <div class="timepick" id="f-timepick">
           <select id="f-hh" class="tp-hour" aria-label="時"></select>
-          <div class="tp-mins" id="f-mins" role="group" aria-label="分">
-            <button type="button" class="tp-pill" data-m="0">00</button>
-            <button type="button" class="tp-pill" data-m="15">15</button>
-            <button type="button" class="tp-pill" data-m="30">30</button>
-            <button type="button" class="tp-pill" data-m="45">45</button>
-            <button type="button" class="tp-pill tp-other">その他</button>
-            <select id="f-mm" class="tp-mm" aria-label="分（1分刻み）" style="display:none"></select>
-          </div>
+          <span class="tp-colon">：</span>
+          <select id="f-mm" class="tp-hour" aria-label="分"></select>
         </div>
         <input type="hidden" id="f-time" value="12:00">
         <div id="f-time-unknown" style="height:46px;padding:0 12px;border:2px solid var(--line2);border-radius:12px;background:#F1F3F7;color:var(--muted);font-weight:800;font-size:15px;align-items:center;display:none;margin-top:6px">不明（時刻なしで鑑定します）</div>
@@ -832,14 +821,8 @@
       <div class="field" style="flex:1 1 100%"><label>生まれた時刻</label>
         <div class="timepick" id="b-timepick">
           <select id="b-hh" class="tp-hour" aria-label="時"></select>
-          <div class="tp-mins" id="b-mins" role="group" aria-label="分">
-            <button type="button" class="tp-pill" data-m="0">00</button>
-            <button type="button" class="tp-pill" data-m="15">15</button>
-            <button type="button" class="tp-pill" data-m="30">30</button>
-            <button type="button" class="tp-pill" data-m="45">45</button>
-            <button type="button" class="tp-pill tp-other">その他</button>
-            <select id="b-mm" class="tp-mm" aria-label="分（1分刻み）" style="display:none"></select>
-          </div>
+          <span class="tp-colon">：</span>
+          <select id="b-mm" class="tp-hour" aria-label="分"></select>
         </div>
         <input type="hidden" id="b-time" value="12:00">
         <div id="b-time-unknown" style="height:46px;padding:0 12px;border:2px solid var(--line2);border-radius:12px;background:#F1F3F7;color:var(--muted);font-weight:800;font-size:15px;align-items:center;display:none;margin-top:6px">不明（時刻なしで鑑定します）</div>
@@ -6088,32 +6071,18 @@ function _normHM(s){
   mm=Math.max(0,Math.min(59,Number.isFinite(mm)?mm:0));
   return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
 }
-// 生まれた時刻：時＝プルダウン(0〜23時)／分＝ピル(00/15/30/45＋その他=1分刻みの選択)。
+// 生まれた時刻：時＝プルダウン(0〜23時)／分＝プルダウン(0〜59分)。
 // 隠しinput #{p}-time に "HH:MM" を同期するので、既存の読み書き（.value / .syncFromValue）はそのまま動く。
-function attachTimePills(p){
-  const hh=document.getElementById(p+'-hh'), mins=document.getElementById(p+'-mins'),
-        mm=document.getElementById(p+'-mm'), hid=document.getElementById(p+'-time');
-  if(!hh||!mins||!mm||!hid)return;
+function attachTimeSel(p){
+  const hh=document.getElementById(p+'-hh'), mm=document.getElementById(p+'-mm'), hid=document.getElementById(p+'-time');
+  if(!hh||!mm||!hid)return;
   hh.innerHTML=''; for(let v=0;v<=23;v++)hh.appendChild(new Option(v+'時',v));
   mm.innerHTML=''; for(let v=0;v<=59;v++)mm.appendChild(new Option(String(v).padStart(2,'0')+'分',v));
-  const pills=[...mins.querySelectorAll('.tp-pill:not(.tp-other)')];
-  const otherBtn=mins.querySelector('.tp-other');
-  function write(m){ hid.value=String(hh.value).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
-  function setMin(m){
-    m=Math.max(0,Math.min(59,(+m)||0)); write(m);
-    let matched=false;
-    pills.forEach(b=>{const on=(+b.dataset.m===m); b.setAttribute('aria-pressed',on?'true':'false'); if(on)matched=true;});
-    if(matched){ mm.style.display='none'; if(otherBtn)otherBtn.setAttribute('aria-pressed','false'); }
-    else { mm.style.display=''; mm.value=m; if(otherBtn)otherBtn.setAttribute('aria-pressed','true'); }
-  }
-  function curMin(){ return (+((hid.value||'').split(':')[1]))||0; }
-  hh.addEventListener('change',()=>write(curMin()));
-  pills.forEach(b=>b.addEventListener('click',()=>setMin(b.dataset.m)));
-  if(otherBtn)otherBtn.addEventListener('click',()=>{ mm.style.display=''; if(otherBtn)otherBtn.setAttribute('aria-pressed','true'); pills.forEach(b=>b.setAttribute('aria-pressed','false')); try{mm.focus();}catch(e){} });
-  mm.addEventListener('change',()=>setMin(mm.value));
+  function sync(){ hid.value=String(hh.value).padStart(2,'0')+':'+String(mm.value).padStart(2,'0'); }
+  hh.addEventListener('change',sync); mm.addEventListener('change',sync);
   const init=(hid.value||'12:00').split(':').map(Number);
-  hh.value=Number.isFinite(init[0])?init[0]:12; setMin(Number.isFinite(init[1])?init[1]:0);
-  hid.syncFromValue=function(){ const q=(hid.value||'12:00').split(':').map(Number); hh.value=Number.isFinite(q[0])?q[0]:12; setMin(Number.isFinite(q[1])?q[1]:0); };
+  hh.value=Number.isFinite(init[0])?init[0]:12; mm.value=Number.isFinite(init[1])?init[1]:0; sync();
+  hid.syncFromValue=function(){ const q=(hid.value||'12:00').split(':').map(Number); hh.value=Number.isFinite(q[0])?q[0]:12; mm.value=Number.isFinite(q[1])?q[1]:0; sync(); };
 }
 
 /* ===== マイページ：鑑定者の保存・メモ・鑑定保存（クラウド同期対応） =====
@@ -6634,7 +6603,7 @@ geminiKey=store.get('bazi_gkey')||''; geminiModel=store.get('bazi_gmodel')||'gem
   if(k){k.value=geminiKey;k.oninput=()=>{geminiKey=k.value.trim();store.set('bazi_gkey',geminiKey);};}
   if(m){m.value=geminiModel;m.onchange=()=>{geminiModel=m.value;store.set('bazi_gmodel',geminiModel);};}})();
 /* モバイル既定は横（時柱が左の列＝鑑定書の横型に合わせる）。既定値yokoのままとする。 */
-buildLegend();fillPref();fillPrefB();fillDateSel('f-y','f-m','f-d','f-date');fillDateSel('b-y','b-m','b-d','b-date');attachTimePills('f');attachTimePills('b');renderClients();
+buildLegend();fillPref();fillPrefB();fillDateSel('f-y','f-m','f-d','f-date');fillDateSel('b-y','b-m','b-d','b-date');attachTimeSel('f');attachTimeSel('b');renderClients();
 mpSetStatus(mpEmail()?'synced':'guest'); if(mpEmail())mpPull();
 chart=window.Bazi.computeChart({year:2000,month:1,day:1,hour:12,minute:0,sex:'female',longitude:139.69,correctionMode:'full'});
 renderResult();
