@@ -5,7 +5,7 @@ const {execFile}=require('child_process');
 function curlPost(url,body){ return new Promise((res,rej)=>{ const p=execFile('curl',['-s','-m','120','-w','\\n%{http_code}','-X','POST','-H','Content-Type: application/json','--data-binary','@-',url],{maxBuffer:50e6},(err,out)=>{ if(err) return rej(err); const i=out.lastIndexOf('\n'); res({status:+out.slice(i+1)||500,body:out.slice(0,i)}); }); p.stdin.end(body); }); }
 const Q=JSON.parse(fs.readFileSync('stanceq.json','utf8'));
 const OUT=process.argv[2]||'stance_out.json';
-const PL={ja:'osaka',en:'london',ko:'busan',es:'mexico'};
+const PL={ja:'osaka',en:'london',ko:'busan',es:'mexico',zh:'shanghai',zt:'taipei',vi:'hanoi',pt:'saopaulo',id:'jakarta',th:'bangkok'};
 const STAGES=(process.env.STAGES||'5,80').split(',').map(Number);
 const ONLY=process.env.ONLY?process.env.ONLY.split(','):null; const jobs=[]; for(const L of Object.keys(Q)) for(const S of Object.keys(Q[L])) for(const st of (L==='ja'?STAGES:[80])) if(!ONLY||ONLY.includes(L+S)) jobs.push({L,S,st,...Q[L][S]});
 const srv=http.createServer((q,r)=>{let f=path.join('fx',decodeURIComponent(q.url.split('?')[0]));fs.readFile(f,(e,d)=>{if(e){r.writeHead(404);return r.end();}r.writeHead(200,{'content-type':f.endsWith('.html')?'text/html; charset=utf-8':'application/javascript'});r.end(d);});}).listen(0,async()=>{

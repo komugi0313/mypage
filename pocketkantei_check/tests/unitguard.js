@@ -29,6 +29,7 @@ const srv=http.createServer((q,r)=>{let f=path.join('fx',decodeURIComponent(q.ur
   o.push(['肯定してほしい（該当しない）',[V('今日暑いね'),V('おはよう'),V('ありがとう！'),V('明日も仕事かー'),V("It's cold today, right?"),V('오늘 날씨 좋지?'),V('Hace calor, ¿verdad?'),V('今年の恋愛運は？')].join()]);
   o.push(['上位モデルへ（自分責め・寝ていない・欠点）',[RE_HEAVY.test('何やってもうまくいかない。私ってダメな人間なのかな'),RE_HEAVY.test("Overtime again all this week, barely slept."),RE_HEAVY.test('잠을 못 잤어'),RE_HEAVY.test('No he dormido nada'),RE_DECISION.test('正直に言って、私の性格の欠点って何？'),RE_DECISION.test('What are my flaws?'),RE_DECISION.test('내 단점이 뭐야?')].join()]);
   o.push(['上位モデルへ（該当しない）',[RE_HEAVY.test('今日はよく寝た！'),RE_HEAVY.test('I slept well'),RE_DECISION.test('今日の運勢は？'),RE_HEAVY.test('お昼何食べよう')].join()]);
+  o.push(['ニコの性別の質問',['ニコって男の子？女の子？','Nico, are you a boy or a girl?','Nico你是男生還是女生？','니코는 남자야 여자야?','Nico là con trai hay con gái vậy?','Nico, ¿eres chico o chica?','Nico, você é menino ou menina?','Nico itu cowok atau cewek?','Nico เป็นผู้ชายหรือผู้หญิง?'].map(q=>RE_NICO_SELF.test(q)).join()]);
   state.lang='ja';
   o.push(['十二運の漏れ',_finalTidy('粘り強さ（の病）と、集中力（育ちの土台の堅実さ・死）の賜物。持病（持病）は（病院）へ。')]);
   window._pendingChips=null; state.lang='zh';
