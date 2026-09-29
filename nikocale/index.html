@@ -1589,6 +1589,20 @@ select{
 .welcome-bar .wt{font-size:12px;color:var(--ink-soft);line-height:1.5}
 .welcome-bar .wt b{color:var(--hi);font-family:var(--maru);font-size:14px;letter-spacing:.02em}
 .welcome-bar .wt .sm{color:var(--muted);font-size:11px}
+/* 共有カレンダーリンクで来た人への案内バナー */
+.sharectx{display:flex;align-items:center;gap:12px;margin:16px 0 0;padding:14px 16px;border-radius:var(--r-md);
+  background:linear-gradient(180deg,color-mix(in oklab,var(--accent-soft) 70%,var(--panel)),var(--accent-soft));
+  border:1px solid color-mix(in oklab,var(--accent) 34%,var(--line));box-shadow:var(--shadow-1)}
+.sharectx[hidden]{display:none}
+.sharectx .sc-emoji{font-size:24px;flex:0 0 auto}
+.sharectx .sc-body{flex:1 1 auto;min-width:0}
+.sharectx .sc-h{font-family:var(--maru);font-weight:700;font-size:13.5px;color:var(--hi);margin:0 0 3px;letter-spacing:.02em}
+.sharectx .sc-p{font-size:11.5px;color:var(--ink-soft);line-height:1.6;margin:0}
+.sharectx .sc-p b{color:var(--hi)}
+.sharectx .sc-cta{flex:0 0 auto;background:linear-gradient(180deg,var(--accent),var(--accent-2));color:var(--accent-ink,#fff);
+  border:none;border-radius:999px;padding:11px 16px;font-family:var(--maru);font-weight:800;font-size:12.5px;cursor:pointer;
+  box-shadow:0 6px 14px -8px var(--accent);white-space:nowrap}
+@media (max-width:360px){ .sharectx{flex-wrap:wrap} .sharectx .sc-cta{width:100%} }
 /* 別の二人で占う（入力をひらく） */
 .reopen{display:block;width:100%;margin:16px 0 0;border:1px dashed var(--line-strong);background:var(--panel-2);
   color:var(--hi);border-radius:var(--r-md);padding:13px;font-family:var(--maru);font-weight:700;font-size:13px;cursor:pointer;transition:all .15s}
@@ -1665,6 +1679,16 @@ select{
     <br><span class="hooklink" id="toSeehow">▽ このアプリの見方・仕組みは、カレンダーの下にあります</span>
   </div>
   <button type="button" class="hookshow" id="hookShow" hidden>▽ このアプリの説明を見る</button>
+
+  <!-- 共有カレンダーリンク(?a=&b=)で来た人への案内。招待(nf)・お誘い(inv)以外の共有時のみ表示 -->
+  <div class="sharectx" id="shareCtx" hidden>
+    <div class="sc-emoji">💗</div>
+    <div class="sc-body">
+      <p class="sc-h">二人の相性カレンダー（シェアで届いた占い）</p>
+      <p class="sc-p">あなたも生年月日で、<b>大切な人との相性</b>をためせます。</p>
+    </div>
+    <button type="button" class="sc-cta" id="shareCtxCta">自分でも占う</button>
+  </div>
 
   <button type="button" class="reopen" id="reopenForm" hidden>別の二人で占う（入力をひらく）</button>
 
@@ -4457,6 +4481,26 @@ function pickFocus(interests){
   // 保存した人は「保存リスト」のプルダウンから呼び出せる。
   // 招待/共有リンク(_fromUrl)で来たときだけ、そのお二人とその日のカレンダーを自動表示。
   if(_fromUrl){ build(true); }
+  // 共有カレンダーリンク(?a=&b=)で来た人に案内バナーを出す（招待nf・お誘いinv以外の共有時のみ）。
+  try{
+    var _q2=new URLSearchParams(location.search);
+    if(_fromUrl && !state.invite && _q2.get('nf')==null){
+      var _sc=$('shareCtx');
+      if(_sc){ _sc.hidden=false;
+        if($('reopenForm'))$('reopenForm').hidden=true;   // 案内バナーのCTAに一本化（重複を避ける）
+        var _scb=$('shareCtxCta');
+        if(_scb) _scb.onclick=function(){
+          // 訪問者が自分たちで占えるよう、入力欄をまっさらに戻して開く
+          try{ ['a','b'].forEach(function(x){ if($(x+'y'))$(x+'y').value=2008; if($(x+'m'))$(x+'m').value=1; if($(x+'d'))$(x+'d').value=1; if($(x+'h'))$(x+'h').value=6; if($(x+'i'))$(x+'i').value=0; if($(x+'tu'))$(x+'tu').checked=false; if($(x+'name'))$(x+'name').value=''; }); refreshDays('a'); refreshDays('b'); }catch(e){}
+          if($('inputCard'))$('inputCard').hidden=false;
+          if($('hook'))$('hook').hidden=false;
+          if($('reopenForm'))$('reopenForm').hidden=true;
+          _sc.hidden=true;
+          if($('inputCard'))$('inputCard').scrollIntoView({behavior:'smooth',block:'start'});
+        };
+      }
+    }
+  }catch(e){}
   if(state.invite){ try{ showInviteBanner(); state.sel=state.invite.d; render(); detail(state.invite.d); }catch(e){} }
   try{ window.scrollTo(0,0); }catch(e){}
 })();
