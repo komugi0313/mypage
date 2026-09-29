@@ -3542,11 +3542,13 @@ function summaryHTML(c){
 }
 /* 本文中のポイントを自動で色付け（決め台詞「…」＝ハイライト／強み＝緑／注意＝橙／仕事・分野＝青）。
    定数は自作の信頼データ（HTMLを含まない）ため、順に置換しても安全。過剰にならないよう語は厳選。 */
-function _fbHL(s){
+function _fbHL(s, plain){
   if(!s) return '';
   s=String(s);
-  // 1) 決め台詞（かぎ括弧）をハイライト（まだタグが無い生テキストのうちに）
-  s=s.replace(/「([^」]{1,40})」/g,'<span style="background:#FBEFD3;color:#7A5A16;font-weight:800;border-radius:4px;padding:0 3px">「$1」</span>');
+  // 1) 決め台詞（かぎ括弧）を強調。plain（印刷）＝地色なしの太字色文字、通常＝黄ハイライト
+  s= plain
+    ? s.replace(/「([^」]{1,40})」/g,'<b style="color:#8A5A12">「$1」</b>')
+    : s.replace(/「([^」]{1,40})」/g,'<span style="background:#FBEFD3;color:#7A5A16;font-weight:800;border-radius:4px;padding:0 3px">「$1」</span>');
   // 2) カテゴリ別キーワード（1語1回・日本語のみ＝英語の属性値には当たらない）
   const paint=(words,col)=>{ for(const w of words){ if(s.indexOf(w)>=0) s=s.split(w).join('<b style="color:'+col+'">'+w+'</b>'); } };
   paint(['才能','魅力','人望','信用','実力','成功','開花','得意','リーダー','カリスマ','努力家','洞察力','行動力','決断力','人気'], '#1E7A45'); // 強み＝緑
@@ -3564,13 +3566,25 @@ function featBookHTML(c, forPrint){
   const G=(o,k)=>{try{return (typeof o!=='undefined'&&o)?o[k]:undefined;}catch(e){return undefined;}};
   // 大切なところを色分けして読みやすく：項目ラベルごとに色を変え、「一言」は目立つカラー枠に。
   const LC={'一言':'#B8860B','基本':'#232733','恋愛':'#C0398C','仕事':'#2A6FD0','気質':'#1E7A73','性格':'#232733','人物像':'#232733','向く仕事':'#2A6FD0','女性の特徴':'#7C4DBE','男性の特徴':'#7C4DBE'};
+  // forPrint のときは“地色（塗り）なし”のインク軽い版に：印刷でにじまず・トナー節約。色は文字だけで表現。
   const li=(lab,val)=>{ if(!val)return '';
-    if(lab==='一言')return `<div class="fb-it" style="margin:0 0 10px;padding:8px 11px;background:#fff;border:1.5px dashed #E3C77A;border-radius:9px;color:#7A5A16;font-weight:800;font-size:13px;line-height:1.66">💡 ${val}</div>`;
+    if(lab==='一言'){
+      return forPrint
+        ? `<div style="margin:0 0 8px;font-weight:800;color:#7A5A16;line-height:1.72">💡 ${val}</div>`
+        : `<div class="fb-it" style="margin:0 0 10px;padding:8px 11px;background:#fff;border:1.5px dashed #E3C77A;border-radius:9px;color:#7A5A16;font-weight:800;font-size:13px;line-height:1.66">💡 ${val}</div>`;
+    }
     const col=LC[lab]||'#8A5A12';
+    if(forPrint){
+      return `<div style="margin:0 0 7px;line-height:1.85"><b style="color:${col}">${lab}</b><span style="color:#9aa0aa">：</span>${_fbHL(val,true)}</div>`;
+    }
     return `<div class="fb-it" style="margin:0 0 9px;padding:0 0 9px;border-bottom:1px dashed #E4E1D6"><span style="display:inline-block;background:#fff;color:${col};border:1.3px solid ${col}66;font-weight:800;border-radius:6px;padding:1px 8px;font-size:11.5px;margin:0 7px 3px 0;vertical-align:1px">${lab}</span><span style="color:#3f4657">${_fbHL(val)}</span></div>`; };
-  const sec=(title,accent,tint,icon,inner)=>{const body=inner.filter(Boolean).join('');return body?`<div style="margin:0 0 14px;background:${tint};border:1px solid ${accent}40;border-radius:12px;overflow:hidden;break-inside:avoid;page-break-inside:avoid">
+  const sec=(title,accent,tint,icon,inner)=>{const body=inner.filter(Boolean).join('');if(!body)return '';
+    if(forPrint){
+      return `<div style="margin:0 0 13px;break-inside:avoid;page-break-inside:avoid"><div style="font-weight:900;font-size:13px;color:${accent};border-bottom:1.5px solid ${accent};padding-bottom:3px;margin:0 0 6px">${icon} ${title}</div><div style="font-size:12px;line-height:1.85;color:#232733">${body}</div></div>`;
+    }
+    return `<div style="margin:0 0 14px;background:${tint};border:1px solid ${accent}40;border-radius:12px;overflow:hidden;break-inside:avoid;page-break-inside:avoid">
       <div style="background:${accent};color:#fff;font-weight:900;font-size:12.5px;padding:6px 12px">${icon} ${title}</div>
-      <div style="padding:10px 12px 4px;font-size:12.5px;line-height:1.9;color:#3f4657">${body}</div></div>`:'';};
+      <div style="padding:10px 12px 4px;font-size:12.5px;line-height:1.9;color:#3f4657">${body}</div></div>`;};
   const rows=[];
   // 1) 日柱60干支の人物像（性格の核）
   const dd=G(typeof KANSHI60_DETAIL!=='undefined'?KANSHI60_DETAIL:undefined,dp.ganzhi);
