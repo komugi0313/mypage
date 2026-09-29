@@ -2721,8 +2721,10 @@ window.KANSHI60_DETAIL={
   // 持ち味バランス（横バー）。最多を基準に相対表示。低くても"伸びしろ"として最低幅を確保し、弱点に見せない。
   function ezMeter(cat){
     var vals=EZAXIS.map(function(a){return cat[a[1]]||0;}), mx=Math.max.apply(null, vals)||1;
+    var topN=vals.filter(function(v){return v===mx && mx>0;}).length;   // 最上位が何項目あるか
+    var lbl=(topN>=2?'高め':'いちばん');                                  // 複数が同点なら「いちばん」を連発せず「高め」に
     return EZAXIS.map(function(a){ var v=cat[a[1]]||0, w=Math.round(34+66*(v/mx)), top=(v===mx&&mx>0);
-      return '<div class="ez-brow"><span class="ez-blbl">'+a[0]+'</span><span class="ez-btrack"><span class="ez-bfill'+(top?' ez-btop':'')+'" style="width:'+w+'%"></span></span>'+(top?'<span class="ez-bstar">いちばん</span>':'')+'</div>'; }).join('');
+      return '<div class="ez-brow"><span class="ez-blbl">'+a[0]+'</span><span class="ez-btrack"><span class="ez-bfill'+(top?' ez-btop':'')+'" style="width:'+w+'%"></span></span>'+(top?'<span class="ez-bstar">'+lbl+'</span>':'')+'</div>'; }).join('');
   }
   // 月支元命（性格・仕事の軸）の厚めの解説
   var MEIGEN={
@@ -2950,6 +2952,13 @@ window.KANSHI60_DETAIL={
     var cat={比劫:0,食傷:0,財:0,官:0,印:0};
     ['year','month','day','hour'].forEach(function(k){var p=P[k]; if(!p)return; [p.tsuhen,p.zokanTsuhen].forEach(function(t){ if(CAT[t])cat[CAT[t]]++; }); });
     var topCat=Object.keys(cat).sort(function(a,b){return cat[b]-cat[a];})[0];
+    // 同点が複数あるとき「いちばん」を連発しないよう、最上位の集合とやさしい表現をまとめる（表示のみ・計算は非改変）
+    var _catMax=Math.max(cat.比劫,cat.食傷,cat.財,cat.官,cat.印);
+    var topCats=['比劫','食傷','財','官','印'].filter(function(k){return cat[k]===_catMax && _catMax>0;});
+    if(!topCats.length) topCats=[topCat];
+    var isBalanced=(topCats.length>=2);
+    var topGoodText=topCats.map(function(k){return EZGOOD[k];}).filter(Boolean).join('／');
+    var strengthLead=isBalanced?('強みは<b>'+topGoodText+'</b>がバランスよく高いタイプ'):('いちばんの強みは<b>'+(EZGOOD[topCat]||'あなたらしい持ち味')+'</b>');
     var T=EZTYPE[dmEl]||{img:'',name:'あなた',copy:''};
     var shugoEls=r.shugojin||[], col=shugoEls.map(function(e){return EL[e]?EL[e].col:'';}).filter(Boolean).join('・'), care=shugoEls.map(function(e){return EL[e]?EL[e].care:'';}).filter(Boolean).join('／');
     var fe=r.gogyoCount||{};
@@ -2969,7 +2978,7 @@ window.KANSHI60_DETAIL={
       var nowAge=r.nowAge, du=(r.daiun||[]).filter(function(d){return d&&d.kanshi;});
       var b='';
       // どんな人＋強み・クセ
-      b+='<p class="ez-p"><b>あなたは「'+T.img+'」のような'+T.name+'。</b>いちばんの強みは<b>'+(EZGOOD[topCat]||'あなたらしい持ち味')+'</b>。'+((genmei&&TSU[genmei]&&TSU[genmei].c)?'気をつけるとよいのは「'+TSU[genmei].c+'」——気づけば長所に変わります。':'')+'</p>';
+      b+='<p class="ez-p"><b>あなたは「'+T.img+'」のような'+T.name+'。</b>'+strengthLead+'。'+((genmei&&TSU[genmei]&&TSU[genmei].c)?'気をつけるとよいのは「'+TSU[genmei].c+'」——気づけば長所に変わります。':'')+'</p>';
       //（旧「運の流れ・人生の四季」）長期を「充電期間」等と括ると誤解を招くため載せない。今の時期は下で伝える。
       // 今の時期（今の10年）
       var curDu=du.filter(function(d){return nowAge!=null&&nowAge>=d.ageFrom&&nowAge<d.ageTo;})[0];
@@ -3002,10 +3011,10 @@ window.KANSHI60_DETAIL={
     if(!ezSolo){ var yomi=ezYomitoki(r); if(yomi) H+=ezCard('🔎 あなたの命式からわかること', yomi+'<p class="ez-note2">これは生年月日時から出た「生まれ持った傾向」です。良し悪しを決めるものではなく、知って上手に活かすためのもの。行動しだいで運は育ちます。</p>', 'ez-flow'); }
     // 性格・仕事の軸（月支元命）を厚く
     if(ezShow('axis') && genmei&&MEIGEN[genmei]){ H+=ezCard('🧭 あなたの軸（性格と仕事の中心）', '<p class="ez-p"><b>性格：</b>'+MEIGEN[genmei].sei+'</p><p class="ez-p"><b>仕事：</b>'+MEIGEN[genmei].shi+'</p><p class="ez-note2">これは生まれ月から出る"あなたの主役の持ち味"で、社会で見せる顔にもなります。</p>'); }
-    if(ezShow('mochi')) H+=ezCard('⭐ あなたの持ち味バランス', '<div class="ez-meter">'+ezMeter(cat)+'</div><p class="ez-note2">いちばんの持ち味は<b>'+(EZGOOD[topCat]||'')+'</b>。ほかは弱点ではなく<b>"伸びしろ"</b>——意識して使うほど育ちます。これは生まれ持った傾向で、経験や環境で変えていけます（運勢は動きます）。</p>');
+    if(ezShow('mochi')) H+=ezCard('⭐ あなたの持ち味バランス', '<div class="ez-meter">'+ezMeter(cat)+'</div><p class="ez-note2">'+(isBalanced?'いくつかの持ち味が<b>同じ高さで並ぶバランス型</b>です（'+topGoodText+'）':'いちばんの持ち味は<b>'+(EZGOOD[topCat]||'')+'</b>')+'。ほかは弱点ではなく<b>"伸びしろ"</b>——意識して使うほど育ちます。これは生まれ持った傾向で、経験や環境で変えていけます（運勢は動きます）。</p>');
     if(ezShow('gogyo')) H+=ezCard('🌈 五行バランス（生まれ持ったエネルギー）', ezGogyo(fe));
     var kuse=(genmei&&TSU[genmei])?TSU[genmei].c:'';
-    if(ezShow('tsukai')) H+=ezCard('🔧 取扱いのコツ', '<p class="ez-p"><b>良いところ：</b>'+(EZGOOD[topCat]||'')+'。</p>'+(kuse?'<p class="ez-p"><b>クセ（気をつけると◎）：</b>'+kuse+'。気づいて手綱を握れば長所に変わります。</p>':'')+(care?'<p class="ez-p"><b>ごきげんの保ち方：</b>'+care+'。元気が出る色は<b>'+col+'</b>。</p>':''));
+    if(ezShow('tsukai')) H+=ezCard('🔧 取扱いのコツ', '<p class="ez-p"><b>良いところ：</b>'+(isBalanced?topGoodText:(EZGOOD[topCat]||''))+'。</p>'+(kuse?'<p class="ez-p"><b>クセ（気をつけると◎）：</b>'+kuse+'。気づいて手綱を握れば長所に変わります。</p>':'')+(care?'<p class="ez-p"><b>ごきげんの保ち方：</b>'+care+'。元気が出る色は<b>'+col+'</b>。</p>':''));
     if(ezShow('ai')) H+=ezCard('🤝 相性のいい人', '<p class="ez-p">あなたが<b>ラクでいられる</b>のは、あなたを立ててくれる人や褒めてくれる年上。<b>力を発揮できる</b>のは、あなたを頼ってくれる後輩。<b>楽しく過ごせる</b>のは一緒に遊べる人。ちょっと<b>疲れやすい</b>のは、張り合う相手やダメ出しの多い人です。相手のタイプを見て距離を選ぶと、人間関係がぐっとラクになります。</p>');
     // 恋愛・仕事は60干支の詳しい記述で（あれば）
     if(ezShow('koi') && kan && kan.恋愛){ H+=ezCard('❤️ 恋愛のこと', '<p class="ez-p">'+kan.恋愛+'</p>'); }
