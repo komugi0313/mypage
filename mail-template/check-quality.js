@@ -1,6 +1,6 @@
 /* 毎朝メールの「中身の品質」検査（ロジックを変えたら必ず実行する）
    使い方：ENGINE_DIR=<daily-engine.js のあるフォルダ> node check-quality.js [人数=30]
-   いろいろな会員（年齢・性別・今の状況）で1年分のメールを作り、次の7項目がすべて0件かを確かめる。
+   いろいろな会員（年齢・性別・今の状況）で1年分のメールを作り、次の8項目がすべて0件かを確かめる。
      1. 同じ文章が7日以内に戻ってくる（欄ごと）
      2. 季節外れの料理・食材・アイテム・場所
      3. 男性に女性向けのアイテム・行動・言い回し
@@ -8,11 +8,13 @@
      5. 土日に「仕事の段取り」の一言（今日はこれだけ）
      6. 遠出・天気・催し次第の場所（海辺・湖・水族館・雨上がり など）
      7. 同じ場所が7日以内に別の欄（ラッキースポット／ご縁の場所）で出る
+     8. メールのHTMLが壊れている（style="…" の中に " が入って、色・大きさの指定が効かなくなる など）
    1件でも出たら FAIL。すべて0件なら PASS。 */
 const path = require('path');
 const dir = path.resolve(process.env.ENGINE_DIR || '.');
 const D = require(path.join(dir, 'daily-engine.js'));
 const { PersonBazi } = require(path.join(dir, 'bazi.js'));
+const { renderDailyMail } = require('./render-daily-mail.js');
 const N = +process.argv[2] || 30, DAYS = 365, WIN = 7;
 
 const SEASON = [ // [語, 出してよい月]
@@ -37,7 +39,7 @@ const FIELDS = {
 };
 const rels = ['single', 'crush', 'partner', 'married', 'work'];
 const INTEREST = ['恋愛', '仕事・キャリア', 'お金・家計', '健康・ウェルネス', '友達づくり'];
-const fail = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] };
+const fail = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [] };
 const add = (k, msg) => { if (fail[k].length < 5) fail[k].push(msg); else fail[k].more = (fail[k].more || 0) + 1; };
 let rnd = 20260929; const R = () => (rnd = (rnd * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
 let mails = 0;
@@ -68,10 +70,18 @@ for (let u = 0; u < N; u++) {
     if (new Set(places).size < 4) add(7, `${ds} 同じ日に同じ場所が2欄に出ている`);
     for (let w = 1; w <= WIN && w <= hist.length; w++) { const p = hist[hist.length - w]; const pp = [p['ラッキースポット自然'], p['ラッキースポット街'], p['ご縁の場所自然'], p['ご縁の場所街']];
       places.forEach(x => { if (pp.indexOf(x) >= 0) add(7, `${ds} 場所「${x}」が${w}日前にも出ている`); }); }
+    // 8. HTMLの壊れ（属性の " の閉じ忘れ・重複など）…毎月1日と15日ぶんを検査
+    if (dt.getUTCDate() === 1 || dt.getUTCDate() === 15) {
+      const html = renderDailyMail(r).html;
+      const m1 = html.match(/style="[^"]*"[^\s>\/]/); if (m1) add(8, `${ds} style属性が途中で切れている：${m1[0].slice(0, 60)}`);
+      const m2 = html.match(/<[a-z]+[^>]*\s[a-z-]+="[^"]*"[^\s>\/][^>]*>/i); if (!m1 && m2) add(8, `${ds} 属性の書き方が壊れている：${m2[0].slice(0, 60)}`);
+      const opens = (html.match(/<table\b/g) || []).length, closes = (html.match(/<\/table>/g) || []).length;
+      if (opens !== closes) add(8, `${ds} <table> の開き(${opens})と閉じ(${closes})の数が合わない`);
+    }
     hist.push(v);
   }
 }
-const names = { 1: '同じ文章が7日以内に戻る', 2: '季節外れ', 3: '男性に女性向け', 4: '恋人・既婚に「気になる人」系', 5: '土日に仕事の段取り', 6: '遠出が必要な場所', 7: '場所が7日以内に別の欄で出る' };
+const names = { 1: '同じ文章が7日以内に戻る', 2: '季節外れ', 3: '男性に女性向け', 4: '恋人・既婚に「気になる人」系', 5: '土日に仕事の段取り', 6: '遠出が必要な場所', 7: '場所が7日以内に別の欄で出る', 8: 'メールのHTMLが壊れている' };
 let ok = true;
 console.log(`検査：${N}人 × ${DAYS}日 = ${mails}通`);
 for (const k in names) { const n = fail[k].length + (fail[k].more || 0); if (n) ok = false;

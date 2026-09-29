@@ -64,8 +64,9 @@
   }
 
   var WD = ['日','月','火','水','木','金','土'];
-  var SERIF = '"Hiragino Mincho ProN","Yu Mincho","YuMincho",serif';
-  var SANS  = '"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","YuGothic",Meiryo,sans-serif';
+  // 書体名は必ず '（一重引用符）で囲む。style="..." の中に " を書くと属性がそこで切れ、後ろの指定（色・大きさ）が全部効かなくなるため
+  var SERIF = "'Hiragino Mincho ProN','Yu Mincho','YuMincho',serif";
+  var SANS  = "'Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic','YuGothic',Meiryo,sans-serif";
 
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function strip(s){ return String(s == null ? '' : s).replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ''); }
