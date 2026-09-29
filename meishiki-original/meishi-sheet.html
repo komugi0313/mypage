@@ -365,6 +365,12 @@
   .kantei{ grid-column:3; justify-self:end; font-family:var(--gothic); font-size:11px; color:var(--ink2); letter-spacing:.05em; white-space:nowrap; }
   /* 命式表の左下の空きに「前回の空亡・冲の年」をメモ表示 */
   /* 五行バランスの下の空きに置く「前回の空亡・冲」メモ */
+  /* この命式の特徴（合冲会局・宿命中殺・異常干支など）を命式表下のメモ域に列挙 */
+  .feat-memo{ margin-top:8px; padding:7px 9px; border:1px solid #E3D3AE; border-left:3px solid #B8860B; border-radius:7px; background:#FBF7EE; font-family:var(--gothic); line-height:1.6; letter-spacing:.02em; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .feat-memo:empty{ display:none; }
+  .feat-memo .fm-h{ display:block; font-weight:800; font-size:10.5px; color:#8A6A10; margin-bottom:3px; }
+  .feat-memo .fm-row{ display:block; font-size:10.5px; color:var(--ink); font-weight:700; }
+  @media print{ .feat-memo{ font-size:9px; } .feat-memo .fm-h,.feat-memo .fm-row{ font-size:9px; } }
   .past-memo{ margin-top:8px; padding-top:6px; border-top:1px dashed var(--rule2); font-family:var(--gothic); font-size:11px; color:var(--ink2); line-height:1.65; letter-spacing:.02em; }
   .past-memo:empty{ display:none; }
   .past-memo .pm-h{ font-weight:700; color:var(--ink); margin-right:5px; }
@@ -1111,6 +1117,7 @@
                 <div class="pcap">頂点＝日干　外周＝相生　内星＝相剋</div>
               </div>
             </div>
+            <div class="feat-memo" id="featMemo"></div>
             <div class="past-memo" id="pastMemo"></div>
           </section>
       </div>
@@ -2308,6 +2315,41 @@ window.KANSHI60_DETAIL={
     return '<ul class="rd-ul">'+top.join('')+'<li>人生の季節の移り変わり（年齢の目安）'+note+'<ul class="rd-ul2">'+seasons+'</ul></li></ul>';
   }
 
+  // この命式の特徴を「○○（年柱・月柱）があります。」形式で列挙（app-proと同一ロジック・自己完結）。
+  //   当流派どおり：冲・干合・支合・三合・方合・宿命半会（半合）・宿命中殺・異常干支・魁罡のみ（破・害・自然の刑は不採用）。表示層のみ・計算エンジン非改変。
+  function bxFeatureList(pillars){
+    var BRs='子丑寅卯辰巳午未申酉戌亥', STE='甲乙丙丁戊己庚辛壬癸';
+    var RG={子:'丑',丑:'子',寅:'亥',亥:'寅',卯:'戌',戌:'卯',辰:'酉',酉:'辰',巳:'申',申:'巳',午:'未',未:'午'};
+    var KG={甲:'己',己:'甲',乙:'庚',庚:'乙',丙:'辛',辛:'丙',丁:'壬',壬:'丁',戊:'癸',癸:'戊'};
+    var SG=[['申','子','辰'],['寅','午','戌'],['巳','酉','丑'],['亥','卯','未']];
+    var HG=[['寅','卯','辰'],['巳','午','未'],['申','酉','戌'],['亥','子','丑']];
+    var CENs={子:1,午:1,卯:1,酉:1};
+    var IJ={甲戌:1,乙亥:1,戊戌:1,庚子:1,辛亥:1,丁巳:1,辛巳:1,壬午:1,丁亥:1,丙戌:1,戊子:1,癸巳:1,己亥:1};
+    var KG2={庚辰:1,庚戌:1,壬辰:1,戊戌:1,戊辰:1};
+    var P=(pillars||[]).map(function(p){return {stem:(p.stem||p.tenkan||(p.ganzhi||'')[0]||''),branch:(p.branch||p.chishi||(p.ganzhi||'')[1]||''),ganzhi:(p.ganzhi||((p.stem||'')+(p.branch||''))),label:(String(p.label||'')[0]||'')};});
+    var L=function(p){return (p.label||'')+'柱';};
+    var isCh=function(a,b){return BRs.indexOf(a)>=0&&BRs.indexOf(b)>=0&&(BRs.indexOf(a)+6)%12===BRs.indexOf(b);};
+    var out=[];
+    for(var i=0;i<P.length;i++)for(var j=i+1;j<P.length;j++){var a=P[i],b=P[j];
+      if(isCh(a.branch,b.branch))out.push('冲（'+L(a)+'・'+L(b)+'）');
+      if(RG[a.branch]===b.branch)out.push('支合（'+L(a)+'・'+L(b)+'）');
+      if(KG[a.stem]===b.stem)out.push('干合（'+L(a)+'・'+L(b)+'）');}
+    SG.forEach(function(g){var pr=P.filter(function(p){return g.indexOf(p.branch)>=0;});var ub=[];pr.forEach(function(p){if(ub.indexOf(p.branch)<0)ub.push(p.branch);});var ls=[];pr.forEach(function(p){if(ls.indexOf(L(p))<0)ls.push(L(p));});
+      if(ub.length>=3)out.push('三合（'+ls.join('・')+'）');
+      else if(ub.length===2&&ub.some(function(x){return CENs[x];}))out.push('宿命半会（'+ls.join('・')+'）');});
+    HG.forEach(function(g){var pr=P.filter(function(p){return g.indexOf(p.branch)>=0;});var ub=[];pr.forEach(function(p){if(ub.indexOf(p.branch)<0)ub.push(p.branch);});var ls=[];pr.forEach(function(p){if(ls.indexOf(L(p))<0)ls.push(L(p));});
+      if(ub.length>=3)out.push('方合（'+ls.join('・')+'）');});
+    var kubo2=function(gz){var s=STE.indexOf(gz[0]),bb=BRs.indexOf(gz[1]);if(s<0||bb<0)return[];var d=((bb-s)%12+12)%12;return [BRs.charAt((d+10)%12),BRs.charAt((d+11)%12)];};
+    var yr=P[0],day=P[2];
+    if(day&&day.ganzhi){var vs=kubo2(day.ganzhi);if(P[0]&&vs.indexOf(P[0].branch)>=0)out.push('生年中殺');if(P[1]&&vs.indexOf(P[1].branch)>=0)out.push('生月中殺');}
+    if(yr&&yr.ganzhi&&day){var yk=kubo2(yr.ganzhi);if(yk.indexOf(day.branch)>=0)out.push('生日中殺');}
+    if(day){if(day.ganzhi==='甲戌'||day.ganzhi==='乙亥')out.push('日座中殺');if(day.ganzhi==='甲辰'||day.ganzhi==='乙巳')out.push('日居中殺');}
+    P.forEach(function(p){if(IJ[p.ganzhi])out.push('異常干支（'+L(p)+':'+p.ganzhi+'）');});
+    if(day&&KG2[day.ganzhi])out.push('魁罡（日柱:'+day.ganzhi+'）');
+    var seen={},res=[];out.forEach(function(t){if(!seen[t]){seen[t]=1;res.push(t);}});
+    return res;
+  }
+  if(typeof window!=='undefined') window.bxFeatureList=bxFeatureList;
   // 過去のふり返り：いちばん直近（一つ前）の「空亡の年」と「冲の年」を求める（西暦→干支は暦式で算出＝エンジン非依存）
   function pastKuboChong(r){
     var P=r.pillars||{};
@@ -3590,6 +3632,19 @@ window.KANSHI60_DETAIL={
     if(window.MEISHIKI) window.MEISHIKI.fill(r);
     applyKanteiDate();
     // 五行バランス下のメモ：前回（直近）の空亡の年（2支＝2年分）・冲の年
+    // この命式の特徴（合冲会局・宿命中殺・異常干支・魁罡）を命式表下に列挙
+    (function(){ var fm=document.getElementById('featMemo'); if(!fm) return;
+      try{
+        var PP=r.pillars||{}, tu=!!window.__timeUnknown;
+        var arr=[{ganzhi:(PP.year&&(PP.year.ganzhi||PP.year.kanshi))||'',label:'年'},
+                 {ganzhi:(PP.month&&(PP.month.ganzhi||PP.month.kanshi))||'',label:'月'},
+                 {ganzhi:(PP.day&&(PP.day.ganzhi||PP.day.kanshi))||'',label:'日'}];
+        if(!tu) arr.push({ganzhi:(PP.hour&&(PP.hour.ganzhi||PP.hour.kanshi))||'',label:'時'});  // 時刻不明なら時柱を除外
+        var feats=(window.bxFeatureList||function(){return[];})(arr);
+        if(feats.length){ fm.innerHTML='<span class="fm-h">この命式の特徴</span>'+feats.map(function(f){return '<span class="fm-row">・'+f+'があります。</span>';}).join(''); }
+        else fm.innerHTML='';
+      }catch(e){ fm.innerHTML=''; }
+    })();
     (function(){ var pm=document.getElementById('pastMemo'); if(!pm) return;
       var pkc=window.pastKuboChong?window.pastKuboChong(r):null;
       if(!pkc){ pm.innerHTML=''; return; }

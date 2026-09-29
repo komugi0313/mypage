@@ -2216,6 +2216,40 @@ function natalRels(p){const o=[];const br=p.map(x=>({label:x.label[0],branch:x.b
   {const sa=st.map(x=>x.stem);const seen={};sa.forEach(sm=>{const pt=KANGO[sm];if(!pt)return;const key=[sm,pt].sort().join('');if(seen[key])return;const cS=sa.filter(x=>x===sm).length,cP=sa.filter(x=>x===pt).length;if(cS&&cP&&(cS>=2||cP>=2)&&cS+cP>=3){seen[key]=1;o.push({kind:'妬合/争合',el:null,text:`${sm}${cS}・${pt}${cP}＝干合が競合し弱まる`});}});}
   return o;}
 const uniq=a=>{const s=new Set();return a.filter(r=>{const k=r.kind+'|'+r.text+'|'+(r.el||'');if(s.has(k))return false;s.add(k);return true;});};
+// この命式の特徴を「○○（年柱・月柱）があります。」形式で列挙（スクール表と同じ体裁）。自己完結＝meishi-sheetにも同じ物を置ける。
+//   当流派どおり：冲・干合・支合・三合・方合・宿命半会（半合）・宿命中殺・異常干支・魁罡のみ（破・害・自然の刑は不採用）。表示層のみ・計算エンジン非改変。
+function bxFeatureList(pillars){
+  var BRs='子丑寅卯辰巳午未申酉戌亥', STE='甲乙丙丁戊己庚辛壬癸';
+  var RG={子:'丑',丑:'子',寅:'亥',亥:'寅',卯:'戌',戌:'卯',辰:'酉',酉:'辰',巳:'申',申:'巳',午:'未',未:'午'};
+  var KG={甲:'己',己:'甲',乙:'庚',庚:'乙',丙:'辛',辛:'丙',丁:'壬',壬:'丁',戊:'癸',癸:'戊'};
+  var SG=[['申','子','辰'],['寅','午','戌'],['巳','酉','丑'],['亥','卯','未']];
+  var HG=[['寅','卯','辰'],['巳','午','未'],['申','酉','戌'],['亥','子','丑']];
+  var CENs={子:1,午:1,卯:1,酉:1};
+  var IJ={甲戌:1,乙亥:1,戊戌:1,庚子:1,辛亥:1,丁巳:1,辛巳:1,壬午:1,丁亥:1,丙戌:1,戊子:1,癸巳:1,己亥:1};
+  var KG2={庚辰:1,庚戌:1,壬辰:1,戊戌:1,戊辰:1};
+  var P=(pillars||[]).map(function(p){return {stem:(p.stem||p.tenkan||(p.ganzhi||'')[0]||''),branch:(p.branch||p.chishi||(p.ganzhi||'')[1]||''),ganzhi:(p.ganzhi||((p.stem||'')+(p.branch||''))),label:(String(p.label||'')[0]||'')};});
+  var L=function(p){return (p.label||'')+'柱';};
+  var isCh=function(a,b){return BRs.indexOf(a)>=0&&BRs.indexOf(b)>=0&&(BRs.indexOf(a)+6)%12===BRs.indexOf(b);};
+  var out=[];
+  for(var i=0;i<P.length;i++)for(var j=i+1;j<P.length;j++){var a=P[i],b=P[j];
+    if(isCh(a.branch,b.branch))out.push('冲（'+L(a)+'・'+L(b)+'）');
+    if(RG[a.branch]===b.branch)out.push('支合（'+L(a)+'・'+L(b)+'）');
+    if(KG[a.stem]===b.stem)out.push('干合（'+L(a)+'・'+L(b)+'）');}
+  SG.forEach(function(g){var pr=P.filter(function(p){return g.indexOf(p.branch)>=0;});var ub=[];pr.forEach(function(p){if(ub.indexOf(p.branch)<0)ub.push(p.branch);});var ls=[];pr.forEach(function(p){if(ls.indexOf(L(p))<0)ls.push(L(p));});
+    if(ub.length>=3)out.push('三合（'+ls.join('・')+'）');
+    else if(ub.length===2&&ub.some(function(x){return CENs[x];}))out.push('宿命半会（'+ls.join('・')+'）');});
+  HG.forEach(function(g){var pr=P.filter(function(p){return g.indexOf(p.branch)>=0;});var ub=[];pr.forEach(function(p){if(ub.indexOf(p.branch)<0)ub.push(p.branch);});var ls=[];pr.forEach(function(p){if(ls.indexOf(L(p))<0)ls.push(L(p));});
+    if(ub.length>=3)out.push('方合（'+ls.join('・')+'）');});
+  var kubo=function(gz){var s=STE.indexOf(gz[0]),bb=BRs.indexOf(gz[1]);if(s<0||bb<0)return[];var d=((bb-s)%12+12)%12;return [BRs.charAt((d+10)%12),BRs.charAt((d+11)%12)];};
+  var yr=P[0],day=P[2];
+  if(day&&day.ganzhi){var vs=kubo(day.ganzhi);if(P[0]&&vs.indexOf(P[0].branch)>=0)out.push('生年中殺');if(P[1]&&vs.indexOf(P[1].branch)>=0)out.push('生月中殺');}
+  if(yr&&yr.ganzhi&&day){var yk=kubo(yr.ganzhi);if(yk.indexOf(day.branch)>=0)out.push('生日中殺');}
+  if(day){if(day.ganzhi==='甲戌'||day.ganzhi==='乙亥')out.push('日座中殺');if(day.ganzhi==='甲辰'||day.ganzhi==='乙巳')out.push('日居中殺');}
+  P.forEach(function(p){if(IJ[p.ganzhi])out.push('異常干支（'+L(p)+':'+p.ganzhi+'）');});
+  if(day&&KG2[day.ganzhi])out.push('魁罡（日柱:'+day.ganzhi+'）');
+  var seen={},res=[];out.forEach(function(t){if(!seen[t]){seen[t]=1;res.push(t);}});
+  return res;
+}
 const _KK_RELKINDS=['三合','方合','半合','干合','支合','六合','冲','害','刑','破'];
 function badge(r){const dot=r.el?`<i style="background:${ec(r.el)}"></i>`:'<i style="background:var(--ink2)"></i>';
   const kcol=r.el?ec(r.el):'#39414F';
@@ -3505,8 +3539,16 @@ function relHTML(c){
   const grp=(title,sub,arr)=>`<div class="grp"><h4>${title} <small>${sub}</small></h4>${arr.length?arr.map(badge).join(''):'<span class="none">目立った合・冲はありません</span>'}</div>`;
   const usedKinds=[...new Set([...natal,...duR,...yR].map(r=>r.kind))];
   const key=usedKinds.length?`<div class="relkey">${usedKinds.map(k=>`<b>${k}</b>＝${REL_DESC[k]}`).join('　／　')}</div>`:'';
+  const _fp=(c.timeUnknown?c.pillars.slice(0,3):c.pillars);   // 時刻不明なら時柱を除外（3柱で特徴判定）
+  const _feat=(typeof bxFeatureList==='function')?bxFeatureList(_fp):[];
+  const featBox=_feat.length?`<div style="background:#FBF7EE;border:1.5px solid #E3D3AE;border-left:4px solid #B8860B;border-radius:11px;padding:10px 13px;margin:0 0 12px">
+    <div style="font-weight:900;font-size:12.5px;color:#8A6A10;margin-bottom:5px">🔎 この命式の特徴</div>
+    <ul style="margin:0;padding-left:1.15em;list-style:disc;font-size:12.5px;line-height:1.7;color:var(--ink)">${_feat.map(f=>`<li style="margin:1px 0">${f}があります。</li>`).join('')}</ul>
+    <div style="margin-top:5px;font-size:10.5px;color:var(--muted);font-weight:700">※合冲会局・宿命中殺・異常干支・魁罡を表示（この流派では破・害・自然の刑は扱いません）。</div>
+  </div>`:'';
   return `<div class="rel" style="margin-top:14px;border-top:1px solid var(--line);padding-top:13px">
     <h3 style="font-size:14.5px;font-weight:900;margin:0 0 3px">干支の関わり（合・冲・会局）</h3>
+    ${featBox}
     <p class="hint" style="margin:0 0 10px">下の大運・年運の選択に連動します。三合・方合・支合・干合・冲。<b style="color:var(--sui)">💡 各ピルをタップすると、かんたんな読み解きが開きます。</b></p>
     ${(usedKinds.includes('干合')||usedKinds.includes('冲'))?`<div style="background:#F1F4F8;border:1px solid #D3DAE3;border-left:4px solid #8A93A6;border-radius:11px;padding:9px 12px;margin:0 0 10px;font-size:12px;line-height:1.8;color:var(--ink2)">
       <span style="display:inline-block;background:#6B7480;color:#fff;border-radius:6px;padding:1px 10px;font-size:11px;font-weight:900;letter-spacing:.04em;margin-bottom:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" style="vertical-align:-1.5px;margin-right:3px"><circle cx="12" cy="12" r="9"/><path d="M12 11.5v4.5" stroke-linecap="round"/><circle cx="12" cy="7.8" r="1.15" fill="#fff" stroke="none"/></svg>解説（用語）</span><br>
