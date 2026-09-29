@@ -40,11 +40,12 @@ const srv=http.createServer((q,r)=>{
   // 3) アプリ版・ログイン済み：オンにする → サーバーに登録
   pg=await mk('ko',true,true); s=await openNotify(pg);
   eq('アプリ版：押せる',s.onDisabled,false);
-  await pg.evaluate(()=>{document.getElementById('pkNfH').value='21';document.getElementById('pkNfOn').click();}); await pg.waitForTimeout(600);
+  eq('既定はおまかせ（時刻の欄は隠れている）',await pg.evaluate(()=>[document.getElementById('pkNfHRow').style.display,document.getElementById('pkNfAutoD').style.display]),['none','']);
+  await pg.evaluate(()=>{document.getElementById('pkNfFixed').click();document.getElementById('pkNfH').value='21';document.getElementById('pkNfOn').click();}); await pg.waitForTimeout(600);
   const ps=await store.get(`ps:${uid}`,{type:'json'});
-  eq('サーバーに登録（トークン・時刻・言語・端末）',[ps.on,ps.token,ps.hour,ps.lang,ps.platform],[true,'fcm-ui-token',21,'ko','android']);
+  eq('サーバーに登録（トークン・決めた時刻・言語・端末）',[ps.on,ps.token,ps.mode,ps.hour,ps.lang,ps.platform],[true,'fcm-ui-token','fixed',21,'ko','android']);
   eq('登録のお知らせ（韓国語）',pg.dialogs.slice(-1),['설정했어요🦉 또 말 걸게요']);
-  eq('端末にも記録',await pg.evaluate(()=>pkNotifyPref()),{on:true,hour:21});
+  eq('端末にも記録',await pg.evaluate(()=>pkNotifyPref()),{on:true,mode:'fixed',hour:21});
   // 4) 受け取り箱 → チャットにニコの発言として足す（二度足さない）
   await store.setJSON(`pi:${uid}`,{items:[{id:'n1',text:'오늘 하루 고생 많았어! 저녁은 먹었어? 🦉',ts:Date.now()}]});
   await pg.evaluate(()=>window.__fm.ls.notificationActionPerformed({notification:{data:{kind:'nico',id:'n1'}}})); await pg.waitForTimeout(500);
@@ -57,6 +58,13 @@ const srv=http.createServer((q,r)=>{
   await pg.evaluate(()=>document.getElementById('pkNfOff').click()); await pg.waitForTimeout(500);
   eq('サーバーでもオフ',(await store.get(`ps:${uid}`,{type:'json'})).on,false);
   eq('エラーなし',pg.errs,[]); await pg.context().close();
+  // 5b) おまかせでオンにする
+  pg=await mk('ja',true,true); await openNotify(pg);
+  eq('サーバーの設定（前回は時刻を決めた）を画面に反映',await pg.evaluate(()=>document.getElementById('pkNfHRow').style.display),'flex');
+  await pg.evaluate(()=>{document.getElementById('pkNfAuto').click();document.getElementById('pkNfOn').click();}); await pg.waitForTimeout(600);
+  const psa=await store.get(`ps:${uid}`,{type:'json'});
+  eq('おまかせで登録（8〜21時の時刻を選んでいる）',[psa.on,psa.mode,psa.target>=8&&psa.target<=21],[true,'auto',true]);
+  await pg.context().close();
   // 6) 通知を許可しなかった
   pg=await mk('ja',true,true); await pg.evaluate(()=>{window.__fm.deny=true;}); await openNotify(pg);
   await pg.evaluate(()=>document.getElementById('pkNfOn').click()); await pg.waitForTimeout(500);

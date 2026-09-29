@@ -23,8 +23,8 @@ const at=(iso)=>Date.parse(iso);
   const r=await post({action:'register',email:'nico@example.com',password:'sakura2026',data:{pk_lang:'ja',pk_tmsg:'75',pk_profile:JSON.stringify({name:'りえ',sex:'female'}),pk_mem:'- 来週、転職の面接がある（相手：田中さん）',pk_msgs:JSON.stringify([{role:'me',text:'面接が不安'},{role:'ai',text:'大丈夫だよ'}])}});
   const tok=r.token, uid=tok.split('.')[0];
   // 設定：東京の朝8時 → UTC 23時の区切り
-  const s1=await post({action:'push_set',token:tok,pushToken:'fcm-tok-1',on:true,hour:8,tz:'Asia/Tokyo',lang:'ja',platform:'ios'});
-  eq('設定できる',s1.push,{on:true,hour:8,tz:'Asia/Tokyo'});
+  const s1=await post({action:'push_set',token:tok,pushToken:'fcm-tok-1',on:true,mode:'fixed',hour:8,tz:'Asia/Tokyo',lang:'ja',platform:'ios'});
+  eq('設定できる',s1.push,{on:true,mode:'fixed',hour:8,tz:'Asia/Tokyo'});
   eq('UTC23時の目印',!!(await store.get(`pb:23:${uid}`)),true);
   eq('認証トークンなしは拒否',(await post({action:'push_set',pushToken:'x',on:true})).code,'BAD_TOKEN');
   // 東京 8:00 に送る
@@ -56,11 +56,11 @@ const at=(iso)=>Date.parse(iso);
   eq('目印も消える',[await store.get(`pb:23:${uid}`),(await store.get(`ps:${uid}`,{type:'json'})).on],[null,false]);
   fcmStatus=200;
   // 再設定 → オフ
-  await post({action:'push_set',token:tok,pushToken:'fcm-tok-2',on:true,hour:8,tz:'Asia/Tokyo'});
+  await post({action:'push_set',token:tok,pushToken:'fcm-tok-2',on:true,mode:'fixed',hour:8,tz:'Asia/Tokyo'});
   await post({action:'push_set',token:tok,on:false});
   eq('オフにすると目印が消える',[await store.get(`pb:23:${uid}`),(await store.get(`ps:${uid}`,{type:'json'})).on],[null,false]);
   // 長く開いていない無料の人には送らない
-  await post({action:'push_set',token:tok,pushToken:'fcm-tok-3',on:true,hour:8,tz:'Asia/Tokyo'});
+  await post({action:'push_set',token:tok,pushToken:'fcm-tok-3',on:true,mode:'fixed',hour:8,tz:'Asia/Tokyo'});
   const ps=await store.get(`ps:${uid}`,{type:'json'}); ps.seen=at('2026-10-01T00:00:00Z'); await store.setJSON(`ps:${uid}`,ps);
   res=await L.runHour(store,store,23,at('2026-10-20T23:00:05Z'),D); eq('14日以上開いていない無料の人は送らない',res.out,{inactive:1});
   // 夏時間：ニューヨーク朝8時（夏はUTC12時）→ 冬になると UTC13時へ付け直す
@@ -68,7 +68,7 @@ const at=(iso)=>Date.parse(iso);
   const tok2=r2.token, uid2=tok2.split('.')[0];
   const L0=L._t; const b0=L0.utcHourFor('America/New_York',8,at('2026-10-15T00:00:00Z'));
   eq('夏時間のUTC',b0,12);
-  const ps2={on:true,token:'fcm-ny',hour:8,tz:'America/New_York',lang:'en',bucket:12,seen:at('2026-11-05T00:00:00Z')}; await store.setJSON(`ps:${uid2}`,ps2); await store.set(`pb:12:${uid2}`,'1');
+  const ps2={on:true,token:'fcm-ny',mode:'fixed',hour:8,tz:'America/New_York',lang:'en',bucket:12,seen:at('2026-11-05T00:00:00Z')}; await store.setJSON(`ps:${uid2}`,ps2); await store.set(`pb:12:${uid2}`,'1');
   res=await L.runHour(store,store,12,at('2026-11-05T12:00:05Z'),D); eq('冬時間になったら付け直す',[res.out,!!(await store.get(`pb:13:${uid2}`)),await store.get(`pb:12:${uid2}`)],[{moved:1},true,null]);
   aiQueue=['Good morning! Did you sleep okay? ☕'];
   res=await L.runHour(store,store,13,at('2026-11-05T13:00:05Z'),D); eq('付け直した時刻に送る',res.out,{sent:1});
@@ -82,6 +82,42 @@ const at=(iso)=>Date.parse(iso);
   // 退会すると全部消える
   await post({action:'delete',token:tok2,password:'sakura2026'});
   eq('退会で消える',[await store.get(`ps:${uid2}`),await store.get(`pi:${uid2}`),await store.get(`pb:13:${uid2}`)],[null,null,null]);
+  // ---- おまかせ（毎日ちがう時間帯）----
+  const r3=await post({action:'register',email:'auto@example.com',password:'sakura2026',data:{pk_lang:'ja',pk_tmsg:'30'}});
+  const tok3=r3.token, uid3=tok3.split('.')[0];
+  const s3=await post({action:'push_set',token:tok3,pushToken:'fcm-auto',on:true,hour:8,tz:'Asia/Tokyo'});
+  eq('既定はおまかせ',s3.push.mode,'auto');
+  for(const k of [...store._m.keys()]) if(/^pb:/.test(k)&&!k.endsWith(uid3)) store._m.delete(k);   // ほかの人は外して、この人だけで確かめる
+  const hours=[]; let day=Date.parse('2026-10-10T00:00:00Z');
+  for(let d=0;d<12;d++){
+    // その日の8〜21時（東京）を1時間ずつ回す＝本番の毎時実行と同じ
+    { const q=await store.get(`ps:${uid3}`,{type:'json'}); q.seen=day+d*864e5; await store.setJSON(`ps:${uid3}`,q); }
+    const uniq=['さくら','うみ','そら','ほし','かぜ','もり','やま','かわ','はな','つき','ゆき','にじ'][d];
+    for(let h=8;h<=21;h++){ const t=day+d*864e5+(h-9)*3600e3+5e3; const uh=new Date(t).getUTCHours();
+      aiQueue=[uniq+uniq+uniq+'！'+['おはよう','お昼食べた？','午後もね','おつかれさま','休んでね'][L0.slotOf(h)]];
+      const rr=await L.runHour(store,store,uh,t,D); if(process.env.DBG&&rr.total) console.log(d,h,JSON.stringify(rr.out)); }
+  }
+  const got=sent.filter(m=>m.token==='fcm-auto').map(m=>m.notification.body);
+  const psA=await store.get(`ps:${uid3}`,{type:'json'});
+  eq('おまかせ：12日で12通（1日1回）',got.length,12);
+  const slots=psA.hist.map(x=>x.replace(/^.*！/,''));
+  eq('おまかせ：時間帯がばらける（3種類以上）',new Set(slots).size>=3,true);
+  let rep2=0; for(let i=1;i<slots.length;i++) if(slots[i]===slots[i-1]) rep2++;
+  eq('おまかせ：前の日と同じ時間帯が続かない',rep2,0);
+  eq('おまかせ：送るのは8〜21時だけ',L0.AUTO_SLOTS.flat().every(h=>h>=8&&h<=21),true);
+  // 旅行：アプリを開いた地域がニューヨークに変わった → 目印を付け直す
+  const ib3=await post({action:'push_inbox',token:tok3,tz:'America/New_York'});
+  const psB=await store.get(`ps:${uid3}`,{type:'json'});
+  eq('旅行先の地域に合わせ直す',[psB.tz,psB.bucket===L0.utcHourFor('America/New_York',psB.target,Date.now()),!!(await store.get(`pb:${psB.bucket}:${uid3}`))],['America/New_York',true,true]);
+  // 時間帯に合わない言葉は作り直す（夜の「おはよう」）
+  const tOk=L0.timeOk;
+  eq('時間帯チェック',[tOk('おはよう！','ja',20),tOk('今日もおつかれさま','ja',20),tOk('Good morning, Rie!','en',19),tOk('早安！','zh',8),tOk('저녁은 먹었어?','ko',9),tOk('¿Ya cenaste?','es',20),tOk('Bom dia!','pt',21),tOk('Selamat malam!','id',7),tOk('ฝันดีนะ','th',21)],[false,true,false,true,false,true,false,false,true]);
+  const r4=await post({action:'register',email:'night@example.com',password:'sakura2026',data:{pk_lang:'ja'}});
+  const tok4=r4.token, uid4=tok4.split('.')[0];
+  await post({action:'push_set',token:tok4,pushToken:'fcm-night',on:true,mode:'fixed',hour:20,tz:'Asia/Tokyo'});
+  aiQueue=['おはよう！今日もがんばろう','今日もおつかれさま、ゆっくりしてね'];
+  await L.runHour(store,store,11,Date.parse('2026-10-01T11:00:05Z'),D);
+  eq('夜に「おはよう」は送らず作り直す',sent.filter(m=>m.token==='fcm-night').map(m=>m.notification.body),['今日もおつかれさま、ゆっくりしてね']);
   // 言語チェック
   const lk=L0.langOk;
   eq('言語チェック',[lk('おはよう','ja'),lk('早安，吃饭了吗？','zh'),lk('早安，ご飯','zh'),lk('좋은 아침','ko'),lk('อรุณสวัสดิ์','th'),lk('Chào buổi sáng','vi'),lk('Buenos días','es'),lk('Good morning','vi')],[true,true,false,true,true,true,true,false]);
