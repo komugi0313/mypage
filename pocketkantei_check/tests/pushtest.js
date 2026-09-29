@@ -118,6 +118,15 @@ const at=(iso)=>Date.parse(iso);
   aiQueue=['おはよう！今日もがんばろう','今日もおつかれさま、ゆっくりしてね'];
   await L.runHour(store,store,11,Date.parse('2026-10-01T11:00:05Z'),D);
   eq('夜に「おはよう」は送らず作り直す',sent.filter(m=>m.token==='fcm-night').map(m=>m.notification.body),['今日もおつかれさま、ゆっくりしてね']);
+  // 曜日の取り違え（木曜に「週の始まり」、火曜に「週末」、金曜に「水曜」など）は作り直す
+  const dOk=L0.dayOk;
+  eq('曜日チェック',[dOk('Espero que tengas un hermoso comienzo de semana','es','Thursday'),dOk('¡Feliz jueves!','es','Thursday'),dOk('週末楽しんで','ja','Tuesday'),dOk('もう週末だね','ja','Friday'),dOk('Happy Friday!','en','Thursday'),dOk('周三加油','zh','Friday'),dOk('불금이다!','ko','Friday'),dOk('Boa sexta!','pt','Wednesday'),dOk('Chúc cuối tuần vui','vi','Tuesday'),dOk('วันศุกร์แล้ว','th','Friday'),dOk('Semangat hari Senin!','id','Monday')],[false,true,false,true,false,false,true,false,false,true,true]);
+  const r5=await post({action:'register',email:'day@example.com',password:'sakura2026',data:{pk_lang:'es'}});
+  const tok5=r5.token;
+  await post({action:'push_set',token:tok5,pushToken:'fcm-day',on:true,mode:'fixed',hour:9,tz:'Asia/Tokyo',lang:'es'});
+  aiQueue=['¡Buenos días! Feliz inicio de semana 🌞','¡Buenos días! ¿Dormiste bien? ☀️'];
+  await L.runHour(store,store,0,Date.parse('2026-10-08T00:00:05Z'),D);   // 10/8 木曜 9時（東京）
+  eq('木曜に「週の始まり」は送らず作り直す',sent.filter(m=>m.token==='fcm-day').map(m=>m.notification.body),['¡Buenos días! ¿Dormiste bien? ☀️']);
   // 言語チェック
   const lk=L0.langOk;
   eq('言語チェック',[lk('おはよう','ja'),lk('早安，吃饭了吗？','zh'),lk('早安，ご飯','zh'),lk('좋은 아침','ko'),lk('อรุณสวัสดิ์','th'),lk('Chào buổi sáng','vi'),lk('Buenos días','es'),lk('Good morning','vi')],[true,true,false,true,true,true,true,false]);

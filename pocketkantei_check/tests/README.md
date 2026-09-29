@@ -67,6 +67,6 @@ Pocket鑑定の修正（大運・立運・節入り、アカウント、パス�
 |---|---|---|
 | `pushtest.js` | 送信の仕組み（設定・時刻の区切り・1日1回・似た文面の作り直し・言語違い・消えた端末・長く開いていない人・夏時間・有料の原価・退会）。AIと Firebase は偽物 | `NODE_PATH=mock/node_modules node pushtest.js` |
 | `pushui.js` | 画面（ウェブ版は案内だけ・未ログイン・オン／オフ・受け取り箱からチャットへ・通知の不許可・10言語のメニュー） | `NODE_PATH=mock/node_modules node pushui.js` |
-| `pushlive.js`・`pushlive2.js` | 実際のAIで10言語×距離感×時間帯（8〜21時）の文面を作る（送信はしない） | `GEMINI_KEY=… node pushlive.js` |
+| `pushlive.js`・`pushlive2.js`・`pushlive3.js` | 実際のAIで10言語×距離感×時間帯（8〜21時）×曜日（月〜日）の文面を作る（送信はしない）。`pushlive3.js` は曜日の取り違えを数える | `GEMINI_KEY=… node pushlive.js` |
 
 ※本番の Netlify（実際の Blobs・Resend）での確認は含みません。デプロイ後に実機で「登録→別端末でログイン」「パスワードを忘れた→メール→再設定」を確認してください。
