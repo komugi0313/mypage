@@ -3542,13 +3542,13 @@ function summaryHTML(c){
 /* 📖 この命式の詳しい特徴（教科書ベース・AI不要の決定論）。
    これまで「詳細鑑定(AI)に渡す材料」としてだけ計算していた教科書レベルの人物像を、
    画面と鑑定書に“特徴”としてそのまま出す。既存の解説定数を再利用（エンジン非改変）。 */
-function featBookHTML(c){
+function featBookHTML(c, forPrint){
   if(!c||!c.pillars)return '';
   const dp=c.pillars[2]; if(!dp)return '';
   const sex=(c.birth&&c.birth.sex)||'female';
   const G=(o,k)=>{try{return (typeof o!=='undefined'&&o)?o[k]:undefined;}catch(e){return undefined;}};
   const li=(lab,val)=>val?`<div style="margin:2px 0"><b style="color:#8A5A12">${lab}</b>：${val}</div>`:'';
-  const sec=(title,inner)=>{const body=inner.filter(Boolean).join('');return body?`<div style="margin:0 0 11px;padding:9px 11px;background:#fff;border:1px solid #EADFC4;border-radius:10px"><div style="font-weight:900;font-size:12.5px;color:#7A5A16;margin-bottom:3px">${title}</div><div style="font-size:12.5px;line-height:1.72;color:var(--ink2)">${body}</div></div>`:'';};
+  const sec=(title,inner)=>{const body=inner.filter(Boolean).join('');return body?`<div style="margin:0 0 11px;padding:9px 11px;background:#fff;border:1px solid #EADFC4;border-radius:10px;break-inside:avoid;page-break-inside:avoid"><div style="font-weight:900;font-size:12.5px;color:#7A5A16;margin-bottom:3px">${title}</div><div style="font-size:12.5px;line-height:1.72;color:#3f4657">${body}</div></div>`:'';};
   const rows=[];
   // 1) 日柱60干支の人物像（性格の核）
   const dd=G(typeof KANSHI60_DETAIL!=='undefined'?KANSHI60_DETAIL:undefined,dp.ganzhi);
@@ -3583,10 +3583,15 @@ function featBookHTML(c){
   try{ const ku=(typeof kubo==='function')?kubo(c):null; if(ku&&ku.length)extra.push(li('空亡',ku.join('')+'＝縁が薄く努力が空回りしやすい支（＝準備・充電の面として前向きに）。')); }catch(e){}
   if(extra.length)rows.push(sec('その他の特別な配置',extra));
   if(!rows.length)return '';
+  const note='<div style="font-size:11.5px;color:#7B8794;font-weight:700;margin:0 0 8px">教科書を調べなくても、この命式の人物像をそのまま確認・お渡しできます。</div>';
+  if(forPrint){
+    // 印刷鑑定書用：折りたたまず常時表示。上位（meishi-sheet）が独立セクションに流し込む。
+    return `<div style="margin:0 auto;max-width:230mm;color:#232733"><h2 style="font-size:15px;font-weight:900;color:#8A6A10;border-bottom:2px solid #E3D3AE;padding-bottom:5px;margin:0 0 10px">📖 この命式の詳しい特徴（教科書ベース）</h2>${note}${rows.join('')}</div>`;
+  }
   return `<details class="adv" style="margin-top:12px;background:#FBF7EE;border:1.5px solid #E3D3AE;border-left:4px solid #B8860B;border-radius:12px;padding:2px 12px 10px">
     <summary style="font-weight:900;color:#8A6A10;font-size:13.5px;padding:9px 0">📖 この命式の詳しい特徴（教科書ベース）</summary>
     <div style="margin-top:4px">
-      <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin:0 0 8px">教科書を調べなくても、この命式の人物像をそのまま確認・お渡しできます。</div>
+      ${note}
       ${rows.join('')}
     </div></details>`;
 }
@@ -6522,6 +6527,11 @@ function openMeishiSheet(){
   // 生まれた時刻が不明のときは、印刷用鑑定書にも「時刻不明」を伝える（時柱＝晩年・将来・子は仮の値として注記・断定を控える）
   const _tu=((document.getElementById('f-notime')||{}).checked)||(typeof chart!=='undefined'&&chart&&chart.timeUnknown);
   if(_tu)q.set('tu','1');
+  // 「この命式の詳しい特徴（教科書ベース）」を印刷鑑定書へ引き継ぐ（教科書データは重複させず、生成済みHTMLをlocalStorageで受け渡し）。
+  try{ if(typeof chart!=='undefined'&&chart&&typeof featBookHTML==='function'){
+    const _sig=[dv,tv,sex,corr,(lon||''),(_tu?'1':'0')].join('|');
+    localStorage.setItem('bazi_sheet_featbook', JSON.stringify({sig:_sig, html:featBookHTML(chart,true)}));
+  } }catch(e){}
   window.open('meishi-sheet.html?'+q.toString(),'_blank','noopener');
 }
 function compute(){

@@ -369,6 +369,10 @@
   .feat-memo .fm-h{ display:block; font-weight:800; font-size:10.5px; color:#8A6A10; margin-bottom:3px; }
   .feat-memo .fm-row{ display:block; font-size:10.5px; color:var(--ink); font-weight:700; }
   @media print{ .feat-memo{ font-size:9px; } .feat-memo .fm-h,.feat-memo .fm-row{ font-size:9px; } }
+  /* 「この命式の詳しい特徴（教科書ベース）」＝アプリから受け渡した生成HTMLを、命式表の外に独立セクションで表示（縮尺シートは崩さない） */
+  .feat-book-print{ max-width:230mm; margin:16px auto 24px; padding:0 14px; font-family:var(--gothic); -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .feat-book-print:empty{ display:none; }
+  @media print{ .feat-book-print{ break-before:page; page-break-before:always; margin:0; padding:0 10mm; max-width:none; } }
   .past-memo{ margin-top:8px; padding-top:6px; border-top:1px dashed var(--rule2); font-family:var(--gothic); font-size:11px; color:var(--ink2); line-height:1.65; letter-spacing:.02em; }
   .past-memo:empty{ display:none; }
   .past-memo .pm-h{ font-weight:700; color:var(--ink); margin-right:5px; }
@@ -4414,6 +4418,19 @@ window.KANSHI60_DETAIL={
     if(q.get('t')) document.getElementById('iTime').value=q.get('t');
     if(q.get('sex')) document.getElementById('iSex').value=(q.get('sex')==='male'?'male':'female');
     if(q.get('name')) document.getElementById('iName').value=q.get('name');
+  }catch(e){} })();
+
+  // アプリ側で生成した「この命式の詳しい特徴（教科書ベース）」を localStorage 経由で受け取り、
+  // 命式表の外に独立セクションとして流し込む（同一入力＝同一シグネチャの時だけ表示＝食い違い防止）。
+  (function(){ try{
+    var q=new URLSearchParams(location.search);
+    var sig=[q.get('d')||'',q.get('t')||'',(q.get('sex')==='male'?'male':'female'),q.get('corr')||'none',q.get('lon')||'',(q.get('tu')==='1'?'1':'0')].join('|');
+    var raw=localStorage.getItem('bazi_sheet_featbook'); if(!raw) return;
+    var obj=JSON.parse(raw); if(!obj||obj.sig!==sig||!obj.html) return;
+    var sec=document.createElement('section'); sec.className='feat-book-print'; sec.innerHTML=obj.html;
+    var paper=document.getElementById('paper');
+    if(paper&&paper.parentNode){ paper.parentNode.insertBefore(sec, paper.nextSibling); }
+    else { document.body.appendChild(sec); }
   }catch(e){} })();
 
   // 初期表示：自動計算（エンジン連動）。手書きは「記入用」に切替。
