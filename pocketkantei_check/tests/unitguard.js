@@ -33,7 +33,7 @@ const srv=http.createServer((q,r)=>{let f=path.join('fx',decodeURIComponent(q.ur
   o.push(['辞めちゃっていいよね型',[RE_VALIDATE.test('でも正直、今の上司が嫌いなだけかも。すぐ辞めちゃっていいよね？'),RE_VALIDATE.test("Is it okay to just quit?"),RE_VALIDATE.test('그만둬도 되겠지?'),RE_VALIDATE.test('私悪くないよね？'),RE_VALIDATE.test('今日はいい天気だよね？')].join()]);
   o.push(['理由を聞く（該当）',['なんでそう言えるの？','なぜ？','どうしてそう思うの？','Why do you say that?','为什么这么说？','왜 그렇게 말해?'].map(q=>RE_THEORY.test(q)).join()]);
   o.push(['理由を聞く（該当しない）',['なんで雨なんだろう','今日なにしよう','Why not!'].map(q=>RE_THEORY.test(q)).join()]);
-  o.push(['専門用語を頼んだ時だけ用語',[RE_JARGON_OK.test('専門用語で詳しく説明して'),RE_JARGON_OK.test('Explain it in technical terms'),RE_JARGON_OK.test('なんでそう言えるの？'),RE_JARGON_OK.test('Why do you say that?')].join(), whyNote('なんでそう言えるの？').indexOf('PLAIN-EVIDENCE')>0, whyNote('専門用語で詳しく説明して').indexOf('TECHNICAL TERMS REQUESTED')>0, whyNote('今日の運勢は？')===''].join('|'));
+  o.push(['専門用語を頼んだ時だけ用語',[RE_JARGON_OK.test('専門用語で詳しく説明して'),RE_JARGON_OK.test('Explain it in technical terms'),RE_JARGON_OK.test('なんでそう言えるの？'),RE_JARGON_OK.test('Why do you say that?'),whyNote('なんでそう言えるの？').indexOf('PLAIN-EVIDENCE')>0,whyNote('専門用語で詳しく説明して').indexOf('TECHNICAL TERMS REQUESTED')>0,whyNote('今日の運勢は？')===''].join()]);
   state.lang='ja';
   o.push(['読みがなの残り',_finalTidy('探究心（たいきょくきじん・物事を深く追究する星）と、まじめさ（せいかん）。生まれ持った星の組み合わせ（生まれ持った星）です。お上司が嫌い。')]);
   state.lang='ja';
