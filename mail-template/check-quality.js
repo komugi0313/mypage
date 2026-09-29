@@ -1,6 +1,6 @@
 /* 毎朝メールの「中身の品質」検査（ロジックを変えたら必ず実行する）
    使い方：ENGINE_DIR=<daily-engine.js のあるフォルダ> node check-quality.js [人数=30]
-   いろいろな会員（年齢・性別・今の状況）で1年分のメールを作り、次の8項目がすべて0件かを確かめる。
+   いろいろな会員（年齢・性別・今の状況）で1年分のメールを作り、次の9項目がすべて0件かを確かめる。
      1. 同じ文章が7日以内に戻ってくる（欄ごと）
      2. 季節外れの料理・食材・アイテム・場所
      3. 男性に女性向けのアイテム・行動・言い回し
@@ -9,6 +9,7 @@
      6. 遠出・天気・催し次第の場所（海辺・湖・水族館・雨上がり など）
      7. 同じ場所が7日以内に別の欄（ラッキースポット／ご縁の場所）で出る
      8. メールのHTMLが壊れている（style="…" の中に " が入って、色・大きさの指定が効かなくなる など）
+     9. 文章の欠け・混入（undefined／NaN／{C} などの置き換え漏れ、必須の欄が空、メニュー2品が同じ）
    1件でも出たら FAIL。すべて0件なら PASS。 */
 const path = require('path');
 const dir = path.resolve(process.env.ENGINE_DIR || '.');
@@ -39,7 +40,7 @@ const FIELDS = {
 };
 const rels = ['single', 'crush', 'partner', 'married', 'work'];
 const INTEREST = ['恋愛', '仕事・キャリア', 'お金・家計', '健康・ウェルネス', '友達づくり'];
-const fail = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [] };
+const fail = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: [] };
 const add = (k, msg) => { if (fail[k].length < 5) fail[k].push(msg); else fail[k].more = (fail[k].more || 0) + 1; };
 let rnd = 20260929; const R = () => (rnd = (rnd * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
 let mails = 0;
@@ -70,6 +71,10 @@ for (let u = 0; u < N; u++) {
     if (new Set(places).size < 4) add(7, `${ds} 同じ日に同じ場所が2欄に出ている`);
     for (let w = 1; w <= WIN && w <= hist.length; w++) { const p = hist[hist.length - w]; const pp = [p['ラッキースポット自然'], p['ラッキースポット街'], p['ご縁の場所自然'], p['ご縁の場所街']];
       places.forEach(x => { if (pp.indexOf(x) >= 0) add(7, `${ds} 場所「${x}」が${w}日前にも出ている`); }); }
+    // 9. 文章の欠け・混入
+    { const J = JSON.stringify(r); if (/undefined|NaN|\[object|\{[A-Z]\}/.test(J)) add(9, `${ds} undefined/NaN/置き換え漏れ：${(J.match(/.{0,30}(undefined|NaN|\[object|\{[A-Z]\}).{0,10}/) || [''])[0]}`);
+      for (const k of ['subject', 'morning', 'relIntro', 'weatherMsg', 'todayOne', 'habit', 'closeWord', 'onepoint']) if (!r[k]) add(9, `${ds} 必須の欄が空：${k}`);
+      if (!r.lucky.menu || r.lucky.menu.length < 2 || r.lucky.menu[0] === r.lucky.menu[1]) add(9, `${ds} メニュー2品が同じ/空：${JSON.stringify(r.lucky.menu)}`); }
     // 8. HTMLの壊れ（属性の " の閉じ忘れ・重複など）…毎月1日と15日ぶんを検査
     if (dt.getUTCDate() === 1 || dt.getUTCDate() === 15) {
       const html = renderDailyMail(r).html;
@@ -81,7 +86,7 @@ for (let u = 0; u < N; u++) {
     hist.push(v);
   }
 }
-const names = { 1: '同じ文章が7日以内に戻る', 2: '季節外れ', 3: '男性に女性向け', 4: '恋人・既婚に「気になる人」系', 5: '土日に仕事の段取り', 6: '遠出が必要な場所', 7: '場所が7日以内に別の欄で出る', 8: 'メールのHTMLが壊れている' };
+const names = { 1: '同じ文章が7日以内に戻る', 2: '季節外れ', 3: '男性に女性向け', 4: '恋人・既婚に「気になる人」系', 5: '土日に仕事の段取り', 6: '遠出が必要な場所', 7: '場所が7日以内に別の欄で出る', 8: 'メールのHTMLが壊れている', 9: '文章の欠け・混入' };
 let ok = true;
 console.log(`検査：${N}人 × ${DAYS}日 = ${mails}通`);
 for (const k in names) { const n = fail[k].length + (fail[k].more || 0); if (n) ok = false;
