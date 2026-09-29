@@ -25,7 +25,7 @@ const { renderDailyMail } = require('./render-daily-mail.js');
 const r = D.generateDaily(
   { y: 1990, m: 5, d: 20 },                          // 生年月日
   { y: 2026, m: 9, d: 24 },                          // 配信日（JST）
-  { nick, rel, sex, hour, minute, timeUnknown, interests, personBazi: PersonBazi } // personBazi は必ず渡す
+  { nick, rel, sex, hour, minute, timeUnknown, interests, personBazi: PersonBazi } // sex は 'f'/'m'（登録の「女性」「男性」を変換）。personBazi は必ず渡す
 );
 const mail = renderDailyMail(r, {
   assetBase:      'https://unkiyoho.jp/',                                // 画像（icon-crystal.png / bg-*.jpg）の置き場所
