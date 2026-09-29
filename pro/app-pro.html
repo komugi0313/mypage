@@ -3547,24 +3547,29 @@ function featBookHTML(c, forPrint){
   const dp=c.pillars[2]; if(!dp)return '';
   const sex=(c.birth&&c.birth.sex)||'female';
   const G=(o,k)=>{try{return (typeof o!=='undefined'&&o)?o[k]:undefined;}catch(e){return undefined;}};
-  const li=(lab,val)=>val?`<div style="margin:2px 0"><b style="color:#8A5A12">${lab}</b>：${val}</div>`:'';
-  const sec=(title,inner)=>{const body=inner.filter(Boolean).join('');return body?`<div style="margin:0 0 11px;padding:9px 11px;background:#fff;border:1px solid #EADFC4;border-radius:10px;break-inside:avoid;page-break-inside:avoid"><div style="font-weight:900;font-size:12.5px;color:#7A5A16;margin-bottom:3px">${title}</div><div style="font-size:12.5px;line-height:1.72;color:#3f4657">${body}</div></div>`:'';};
+  // 大切なところを色分けして読みやすく：項目ラベルごとに色を変え、「一言」は目立つカラー枠に。
+  const LC={'一言':'#B8860B','基本':'#232733','恋愛':'#C0398C','仕事':'#2A6FD0','気質':'#1E7A73','性格':'#232733','人物像':'#232733','向く仕事':'#2A6FD0','女性の特徴':'#7C4DBE','男性の特徴':'#7C4DBE'};
+  const li=(lab,val)=>{ if(!val)return '';
+    if(lab==='一言')return `<div style="margin:0 0 8px;padding:7px 11px;background:#FFF3D6;border-radius:9px;color:#7A5A16;font-weight:800;font-size:13px;line-height:1.6">💡 ${val}</div>`;
+    const col=LC[lab]||'#8A5A12';
+    return `<div style="margin:4px 0"><b style="color:${col}">${lab}</b><span style="color:#B9C0CB">：</span><span style="color:#3f4657">${val}</span></div>`; };
+  const sec=(title,accent,inner)=>{const body=inner.filter(Boolean).join('');return body?`<div style="margin:0 0 12px;padding:10px 13px;background:#fff;border:1px solid #E7E1D2;border-left:5px solid ${accent};border-radius:11px;break-inside:avoid;page-break-inside:avoid"><div style="font-weight:900;font-size:13px;color:${accent};margin-bottom:5px">${title}</div><div style="font-size:12.5px;line-height:1.82;color:#3f4657">${body}</div></div>`:'';};
   const rows=[];
   // 1) 日柱60干支の人物像（性格の核）
   const dd=G(typeof KANSHI60_DETAIL!=='undefined'?KANSHI60_DETAIL:undefined,dp.ganzhi);
   if(dd){ const gx=sex==='male'?dd.男:dd.女;
-    rows.push(sec('日柱「'+dp.ganzhi+'」の人物像（性格の核）',
+    rows.push(sec('日柱「'+dp.ganzhi+'」の人物像（性格の核）','#B8860B',
       [li('一言',dd.一言),li('基本',dd.基本),li('恋愛',dd.恋愛),li('仕事',dd.仕事),li((sex==='male'?'男性':'女性')+'の特徴',gx)])); }
   // 2) 中心の星（月支元命）
   const mh=(typeof repHidden==='function')?repHidden(c.pillars[1]):null;
   const gstar=mh?mh.tenStar:'';
   if(gstar){ const gd=G(typeof GENMEI_DETAIL!=='undefined'?GENMEI_DETAIL:undefined,gstar); const tf=G(typeof TS_FULL!=='undefined'?TS_FULL:undefined,gstar);
-    rows.push(sec('中心の星（月支元命）＝'+gstar,
+    rows.push(sec('中心の星（月支元命）＝'+gstar,'#2A6FD0',
       [li('気質',gd),li('性格',tf&&tf.性格),li('向く仕事',tf&&tf.適職)])); }
   // 3) 十二運（日柱＝最重要）
   const terr=dp.terrain; const trf=G(typeof TERR_FULL!=='undefined'?TERR_FULL:undefined,terr); const jf=G(typeof JUNI_FULL!=='undefined'?JUNI_FULL:undefined,terr);
   if(terr&&(trf||jf)){
-    rows.push(sec('十二運（日柱）＝'+terr,
+    rows.push(sec('十二運（日柱）＝'+terr,'#1E7A45',
       [li('基本',trf&&trf.基本),li('人物像',jf&&jf.seikaku),li('恋愛',jf&&jf.renai)])); }
   // 4) 宿命中殺（前向きに）
   try{ if(typeof detectChusatsu==='function'){ const cs=detectChusatsu(c); if(cs&&cs.any){ const t=[];
@@ -3574,22 +3579,22 @@ function featBookHTML(c, forPrint){
     if(cs.hasNichiza)t.push(li('日座中殺','現実に違和感を持ちやすく機転が利く。柔軟な家庭の形が合う。'));
     if(cs.hasNikkyo)t.push(li('日居中殺','繊細で理想が高い“一人で輝く星”。表現・精神世界で開花。'));
     if(cs.ichidai)t.push(li('一代運','受け継ぐより、自分の代で新しく築く生き方でこそ輝く。'));
-    rows.push(sec('宿命中殺（“欠け”ではなく人と違う道を歩む強み）',t)); } } }catch(e){}
+    rows.push(sec('宿命中殺（“欠け”ではなく人と違う道を歩む強み）','#7C4DBE',t)); } } }catch(e){}
   // 5) 異常干支・魁罡・空亡
   const extra=[];
   try{ const ij=c.pillars.filter(p=>typeof IJOU_KANSHI!=='undefined'&&IJOU_KANSHI[p.ganzhi]);
     if(ij.length)extra.push(li('異常干支',ij.map(p=>p.label+p.ganzhi+'（'+IJOU_KANSHI[p.ganzhi]+'）').join('・')+'＝常識にとらわれない独自の視点・天才的な発想（凶ではなく長所のサイン）。')); }catch(e){}
   try{ if(typeof kaigouOn==='function'&&kaigouOn(c))extra.push(li('魁罡（日柱）','強い決断力・行動力・リーダー性の星。')); }catch(e){}
   try{ const ku=(typeof kubo==='function')?kubo(c):null; if(ku&&ku.length)extra.push(li('空亡',ku.join('')+'＝縁が薄く努力が空回りしやすい支（＝準備・充電の面として前向きに）。')); }catch(e){}
-  if(extra.length)rows.push(sec('その他の特別な配置',extra));
+  if(extra.length)rows.push(sec('その他の特別な配置','#2E7D8A',extra));
   if(!rows.length)return '';
-  const note='<div style="font-size:11.5px;color:#7B8794;font-weight:700;margin:0 0 8px">教科書を調べなくても、この命式の人物像をそのまま確認・お渡しできます。</div>';
+  const note='<div style="font-size:11.5px;color:#7B8794;font-weight:700;margin:0 0 9px">この命式の人物像を、その場で確認・お渡しできます。</div>';
   if(forPrint){
     // 印刷鑑定書用：折りたたまず常時表示。上位（meishi-sheet）が独立セクションに流し込む。
-    return `<div style="margin:0 auto;max-width:230mm;color:#232733"><h2 style="font-size:15px;font-weight:900;color:#8A6A10;border-bottom:2px solid #E3D3AE;padding-bottom:5px;margin:0 0 10px">📖 この命式の詳しい特徴（教科書ベース）</h2>${note}${rows.join('')}</div>`;
+    return `<div style="margin:0 auto;max-width:230mm;color:#232733"><h2 style="font-size:15px;font-weight:900;color:#8A6A10;border-bottom:2px solid #E3D3AE;padding-bottom:5px;margin:0 0 10px">📖 この命式の詳しい特徴</h2>${note}${rows.join('')}</div>`;
   }
   return `<details class="adv" style="margin-top:12px;background:#FBF7EE;border:1.5px solid #E3D3AE;border-left:4px solid #B8860B;border-radius:12px;padding:2px 12px 10px">
-    <summary style="font-weight:900;color:#8A6A10;font-size:13.5px;padding:9px 0">📖 この命式の詳しい特徴（教科書ベース）</summary>
+    <summary style="font-weight:900;color:#8A6A10;font-size:13.5px;padding:9px 0">📖 この命式の詳しい特徴</summary>
     <div style="margin-top:4px">
       ${note}
       ${rows.join('')}
