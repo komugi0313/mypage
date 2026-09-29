@@ -77,6 +77,13 @@
   .field input:focus,.field select:focus{outline:none;border-color:var(--sui);box-shadow:0 0 0 3px var(--sui-w)}
   #verTag{position:fixed;right:5px;bottom:3px;font-size:9px;line-height:1;color:#c9ced6;font-weight:700;letter-spacing:.04em;z-index:40;pointer-events:none}
   @media print{#verTag{display:none}}
+  /* 上部モード切替（個人鑑定／相性診断） */
+  .modetg{display:flex;border:2px solid var(--line2);border-radius:13px;overflow:hidden;margin:0 0 14px;height:48px;background:#fff}
+  .modetg button{flex:1;border:0;background:#fff;font-family:inherit;font-size:14.5px;font-weight:900;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:.12s}
+  .modetg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .modetg button[data-mode="compat"][aria-pressed="true"]{background:#8E44AD}
+  /* 相性診断モード：個人鑑定の表示を隠し、相性診断だけを見せる（要素は残すので切替で即戻せる） */
+  body.mode-compat #result,body.mode-compat #result-body,body.mode-compat #ai-slot,body.mode-compat #compat-banner,body.mode-compat #jumpnav{display:none!important}
   .seg{display:flex;width:100%;border:2px solid var(--line2);border-radius:12px;overflow:hidden;height:46px}
   .seg button{flex:1;border:0;background:#fff;font-family:inherit;font-size:15px;font-weight:800;color:var(--muted);padding:0 8px;cursor:pointer;white-space:nowrap}
   .seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
@@ -662,6 +669,11 @@
 
   <!-- 入力 -->
   <section class="card panel">
+    <!-- 使い方の切替：個人鑑定／相性診断（相性だけ使いたい人は右を選ぶと個人鑑定を飛ばせる） -->
+    <div class="modetg" id="ui-mode" role="tablist" aria-label="使い方の切替">
+      <button type="button" data-mode="personal" aria-pressed="true">👤 個人鑑定</button>
+      <button type="button" data-mode="compat" aria-pressed="false">❤ 相性診断</button>
+    </div>
     <div class="frow">
       <div class="field f-wide"><label>お名前<span style="color:var(--ka)">（必須）</span></label><input id="f-name" type="text" placeholder="姓 名（ニックネーム可）" required aria-required="true"><input id="f-kana" type="text" placeholder="ふりがな（並べ替え・検索用／任意）" style="margin-top:6px;font-size:12.5px"><div class="req-msg" id="f-name-msg">お名前を入力してください。</div></div>
       <div class="field f-narrow"><label>性別</label>
@@ -759,7 +771,7 @@
   <!-- 相性診断へ誘導する大きなバナー（占う後に表示・タップで一番下の相性診断へ移動）。相性診断の本体は個人鑑定を終えた最下部に配置。 -->
   <button type="button" id="compat-banner" hidden onclick="scrollToCompat()" style="display:none;width:100%;margin:0 0 14px;padding:15px 18px;border:none;border-radius:15px;background:linear-gradient(135deg,#7C4DBE,#A05CC8);color:#fff;font-family:inherit;cursor:pointer;box-shadow:0 4px 14px rgba(124,77,190,.32);align-items:center;gap:12px;text-align:left">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff" style="flex:0 0 auto"><path d="M12 21s-7.5-4.6-10-9.2C.3 8.4 1.8 5 5 5c2 0 3.2 1.1 4 2.3C9.8 6.1 11 5 13 5c3.2 0 4.7 3.4 3 6.8C19.5 16.4 12 21 12 21z"/></svg>
-    <span style="flex:1"><b style="font-size:16px;font-weight:900;display:block;line-height:1.3">この人と“もう一人”の相性を見る</b><small style="opacity:.92;font-weight:700;font-size:12px">恋人・夫婦・親子・仕事仲間…2人の命式で相性診断（タップで下の相性診断へ）</small></span>
+    <span style="flex:1"><b style="font-size:16px;font-weight:900;display:block;line-height:1.3">お相手を追加して「相性診断」する →</b><small style="opacity:.92;font-weight:700;font-size:12px">いま占ったこの人を本人に、お相手の生年月日を足すだけ。恋人・夫婦・親子・仕事仲間の相性を診断（タップで相性入力へ）</small></span>
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 9l6 6 6-6"/></svg>
   </button>
 
@@ -6397,14 +6409,23 @@ function compute(){
       if(_yr||_mn)chart.setsuBoundary={year:_yr?[_a.pillars[0].ganzhi,_b.pillars[0].ganzhi]:null, month:_mn?[_a.pillars[1].ganzhi,_b.pillars[1].ganzhi]:null};
     }catch(_e){}
   }
-  renderResult();
-  doAutoRead();
-  // 占う後は「結果の先頭（要点サマリー→命式表）」に着地する。以前は詳細鑑定(#ai-slot)へ飛び、命式表・大運など上の結果を飛ばしていた。
-  {const _r=document.getElementById('result')||document.getElementById('meishi-sec');
-   if(_r){const _jn=document.getElementById('jumpnav');
-     const _off=((_jn&&_jn.classList.contains('on'))?(_jn.offsetHeight||44):0)+8;
-     const _y=_r.getBoundingClientRect().top+window.scrollY-_off;
-     window.scrollTo({top:_y<0?0:_y, behavior:'smooth'});}}
+  window.__autoReadDone=false;
+  renderResult();   // 命式表など本人の結果は常に用意（相性モードでは隠すだけ＝切替で即戻せる）
+  if(window.__uiMode==='compat'){
+    // 相性診断モード：個人鑑定は出さず（＝詳細鑑定も生成しない）、相性入力へ直行。
+    document.body.classList.add('mode-compat');
+    const _cc=document.getElementById('compat-card');
+    if(_cc){ setTimeout(function(){ try{_cc.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){} }, 60); }
+  } else {
+    document.body.classList.remove('mode-compat');
+    doAutoRead(); window.__autoReadDone=true;
+    // 占う後は「結果の先頭（要点サマリー→命式表）」に着地する。
+    {const _r=document.getElementById('result')||document.getElementById('meishi-sec');
+     if(_r){const _jn=document.getElementById('jumpnav');
+       const _off=((_jn&&_jn.classList.contains('on'))?(_jn.offsetHeight||44):0)+8;
+       const _y=_r.getBoundingClientRect().top+window.scrollY-_off;
+       window.scrollTo({top:_y<0?0:_y, behavior:'smooth'});}}
+  }
 }
 
 document.querySelectorAll('#f-sex button').forEach(b=>b.onclick=()=>setSex(b.dataset.v));
@@ -6412,6 +6433,23 @@ document.querySelectorAll('#theme-tg button').forEach(b=>b.onclick=()=>{theme=b.
   document.getElementById('root').dataset.theme=theme;
   document.querySelectorAll('#theme-tg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.th===theme));});
 document.getElementById('f-go').onclick=compute;
+// 使い方モード切替（個人鑑定／相性診断）。相性モードは個人鑑定を隠して相性入力へ直行。
+window.__uiMode='personal';
+(function(){
+  const tg=document.getElementById('ui-mode'); if(!tg)return;
+  function apply(m){
+    window.__uiMode=m;
+    tg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed', String(x.dataset.mode===m)));
+    document.body.classList.toggle('mode-compat', m==='compat');
+    const go=document.getElementById('f-go'); if(go)go.textContent=(m==='compat')?'本人を登録して相性へ':'この内容で占う';
+    // すでに本人を占っているときは、切替だけで相性/個人へ移動できる
+    try{ if(typeof chart!=='undefined' && chart){
+      if(m==='compat'){ const cc=document.getElementById('compat-card'); if(cc)setTimeout(()=>{try{cc.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}},40); }
+      else { if(!window.__autoReadDone && typeof doAutoRead==='function'){ doAutoRead(); window.__autoReadDone=true; } const r=document.getElementById('result'); if(r)setTimeout(()=>{try{r.scrollIntoView({behavior:'smooth'});}catch(e){}},40); }
+    }}catch(e){}
+  }
+  tg.querySelectorAll('button').forEach(bt=>bt.onclick=()=>apply(bt.dataset.mode));
+})();
 document.querySelectorAll('#b-sex button').forEach(b=>b.onclick=()=>setSexB(b.dataset.v));
 document.getElementById('compatBtn').onclick=doCompat;
 document.getElementById('compatAskBtn').onclick=doCompatAsk;
