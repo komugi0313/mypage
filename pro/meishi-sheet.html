@@ -291,9 +291,7 @@
   .du-legend .dl.natsu{ background:rgba(224,90,70,.16); color:#c0392b; }
   .du-legend .dl.aki{ background:rgba(184,134,11,.2); color:#9a7d18; }
   .du-legend .dl.fuyu{ background:rgba(42,111,208,.16); color:#2a6fd0; }
-  /* 今の大運：季節色は残しつつ、上下の枠線＋赤字で強調（「今ここ」ラベルは外した＝赤字と枠線だけで十分伝わる） */
-  .daiun tr.now td{ color:var(--now); font-weight:700; border-top:2px solid var(--now); border-bottom:2px solid var(--now); }
-  .daiun tr.now td.age{ box-shadow:inset 4px 0 0 var(--now); }
+  /* 今の大運：現在地の枠・強調は表示しない（要望で撤去）。季節色の背景だけで表示する。 */
   .daiun tr.clk{ cursor:pointer; }
   @media(hover:hover){ .daiun tr.clk:hover td{ background:rgba(120,110,90,.10); } }
   .daiun tr.sel td{ background:rgba(46,125,82,.12); }
@@ -3683,7 +3681,10 @@ window.KANSHI60_DETAIL={
       var SEASON_JP={winter:'冬',spring:'春',summer:'夏',autumn:'秋'};
       // 大運の地支の「方合＝季節」で行を薄く色分け（節木運＝色の変わり目が季節の変わり目）。表示のみ・エンジン非依存。
       var _DUSEAS={'寅':'haru','卯':'haru','辰':'haru','巳':'natsu','午':'natsu','未':'natsu','申':'aki','酉':'aki','戌':'aki','亥':'fuyu','子':'fuyu','丑':'fuyu'};
+      var _SEASLBL={haru:'春・木',natsu:'夏・火',aki:'秋・金',fuyu:'冬・水'};  // 各行の色に対応する季節＋五行（赤=夏火／黄=秋金／青=冬水／緑=春木）
       function _duSeasonCls(ganzhi){ var s=_DUSEAS[(ganzhi||'　').charAt(1)]; return s?(' du-'+s):''; }
+      function _seasOf(ganzhi){ return _DUSEAS[(ganzhi||'　').charAt(1)]||''; }
+      var _prevSeas=null;  // 直前の行の季節（季節が切り替わる先頭行だけにラベルを出すため）
       // 立運の端数（○ヶ月）を大運の年齢境界にも反映（立運8歳6ヶ月なら 0才〜8才6ヶ月／8才6ヶ月〜18才6ヶ月…）。表示のみ・エンジン非依存。
       var _ritsuMon=(r.ritsuun && r.ritsuun.months) ? r.ritsuun.months : 0;
       function _duAge(n){ return n+'才'+(_ritsuMon?(_ritsuMon+'ヶ月'):''); }
@@ -3705,9 +3706,10 @@ window.KANSHI60_DETAIL={
         var mp=r.pillars.month, ey0=(by!=null?by+firstAge:null);
         var tr0=document.createElement('tr');
         tr0.className='pre'+((nowAge!=null && nowAge<firstAge)?' now':'')+_duSeasonCls(mp.kanshi);
-        // 月柱の期間が「一層前（迎える側）」になる場合＝最初の大運が季節替わりなら、その季節ラベルを枠外に添える
-        var setsuTag0='';
-        if(setsuFlags[0] && setsuBlocks[0]){ var sb0=setsuBlocks[0]; var s0=SEASON_JP[sb0.enterSeason||sb0.season]||'', e0=sb0.enterEl||sb0.seasonEl||''; if(s0||e0) setsuTag0='<span class="setsu-tag" contenteditable="false">'+s0+(e0?'・'+e0:'')+'</span>'; }
+        // 月柱（立運前）の行にも、その行の色に対応する季節ラベルを枠外に出す（先頭行なので必ず表示）。
+        var _s0=_seasOf(mp.kanshi), setsuTag0='';
+        if(_s0 && _SEASLBL[_s0]) setsuTag0='<span class="setsu-tag" contenteditable="false">'+_SEASLBL[_s0]+'</span>';
+        _prevSeas=_s0;
         tr0.innerHTML='<td class="age ed" contenteditable="true">'+setsuTag0+'0才〜'+_duAge(firstAge)+'</td>'+
           '<td class="yr2 ed" contenteditable="true">'+((by!=null&&ey0!=null)?(by+'〜'+ey0):'')+'</td>'+
           '<td class="ed" contenteditable="true">'+(mp.kanshi||'')+'</td>'+
@@ -3726,18 +3728,11 @@ window.KANSHI60_DETAIL={
         var sy = d.startYear!=null ? d.startYear : (by!=null ? by + d.ageFrom : null);
         var ey = d.endYear!=null ? d.endYear : (by!=null ? by + d.ageTo : null);
         var seireki = (sy!=null && ey!=null) ? (sy+'〜'+ey) : '';
-        // 節木運ラベル：季節が変わる“節目”は前後1年半で境界をまたぐため、
-        //   「季節が切り替わる大運」＋「その一層前（前の季節の最後）の大運」の両方の左枠外に、季節＋五行だけを小さく添える。
-        //   ぱっと見の切替は太い区切り線で分かるので、文字は最小限。
-        var setsuTag='';
-        (function(){
-          var sb=null;
-          if(setsuFlags[i] && setsuBlocks[i]) sb=setsuBlocks[i];            // この行が新しい季節に入る
-          else if(setsuFlags[i+1] && setsuBlocks[i+1]) sb=setsuBlocks[i+1]; // 次の行が季節替わり＝この行は「一層前（迎える側）」
-          if(!sb) return;
-          var seas=SEASON_JP[sb.enterSeason||sb.season]||'', sel=sb.enterEl||sb.seasonEl||'';
-          if(seas||sel) setsuTag='<span class="setsu-tag" contenteditable="false">'+seas+(sel?'・'+sel:'')+'</span>';
-        })();
+        // 季節ラベル：各行に「その行の色に対応する季節＋五行」を枠外へ。季節が切り替わる先頭行だけに出す
+        //   （赤の行＝夏・火、黄の行＝秋・金、青の行＝冬・水…と色と一致）。太い区切り線で切替はぱっと見分かる。
+        var _sN=_seasOf(d.kanshi), setsuTag='';
+        if(_sN && _sN!==_prevSeas && _SEASLBL[_sN]) setsuTag='<span class="setsu-tag" contenteditable="false">'+_SEASLBL[_sN]+'</span>';
+        _prevSeas=_sN;
         tr.innerHTML='<td class="age ed" contenteditable="true">'+setsuTag+_duAge(d.ageFrom)+'〜'+_duAge(d.ageTo)+'</td>'+
           '<td class="yr2 ed" contenteditable="true">'+seireki+'</td>'+
           '<td class="ed" contenteditable="true">'+(d.kanshi||'')+'</td>'+
