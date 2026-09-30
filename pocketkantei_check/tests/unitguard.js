@@ -48,6 +48,13 @@ const srv=http.createServer((q,r)=>{let f=path.join('fx',decodeURIComponent(q.ur
   o.push(['種類の見分け',[RE_LOVE_MARRIAGE.test('プロポーズされた'),RE_LOVE_REUNION.test('復縁したい'),RE_LOVE_LGBT.test('彼女が好き。私も女性です'),RE_LOVE_LGBT.test('同性の先輩が好き'),RE_LOVE_LGBT.test('나 게이야')].join()]);
   o.push(['恋人の浮気',['彼女が浮気してるかもしれない','남편이 바람피우는 것 같아','Descubrí que mi esposo me engaña','แฟนมีคนอื่น','I think my husband is cheating','我老公出轨了','彼が好き'].map(q=>RE_PARTNER_CHEAT.test(q)).join()]);
   o.push(['送る文面の〇〇は残す',(function(){ state.lang='ja'; return _softenJargon('「久しぶり！〇〇のことで教えてほしくて」と送る。〇〇さんは'); })()]);
+  o.push(['深い悩みの決まり文句を除く',(function(){ state.lang='ja'; state.msgs=[]; try{localStorage.setItem('pk_ctxs','0');}catch(e){}
+    var r=_dropFiller('不安で全然眠れない',{text:'眠れないほど不安なのですね。最後に彼と話した言葉が、ずっと頭に残っていませんか？今夜は温かいお茶を飲んで、早めに休んでくださいね。'}).text;
+    var r2=_dropFiller('眠れるコツを教えて',{text:'寝る前に深呼吸をしてみてね。'}).text;
+    var r3=_dropFiller('今日の運勢は？',{text:'今日はお茶でも飲んでのんびりしよう。'}).text;
+    state.lang='en'; var r4=_dropFiller('He broke up with me last night',{text:'I am so sorry. What did he say when he ended it? Maybe have a warm drink and get some rest tonight.'}).text; state.lang='ja';
+    return [r, r2, r3, r4].join(' | '); })()]);
+  o.push(['性格の説明の繰り返しを止める',(function(){ state.msgs=[{role:'me',text:'a'},{role:'ai',text:'さきさんはもともと細やかな気配りができる方です。'}]; var a=natureNote().indexOf('NO PERSONALITY')>0; state.msgs=[{role:'me',text:'a'},{role:'ai',text:'最後に送ったLINEを教えて？'}]; var b=natureNote()===''; state.msgs=[]; return [a,b].join(); })()]);
   state.lang='ja';
   o.push(['読みがなの残り',_finalTidy('探究心（たいきょくきじん・物事を深く追究する星）と、まじめさ（せいかん）。生まれ持った星の組み合わせ（生まれ持った星）です。お上司が嫌い。')]);
   state.lang='ja';
