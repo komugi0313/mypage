@@ -3734,9 +3734,35 @@ function cleanMarkdown(t){return String(t||'')
   .replace(/^[ 　]*[*＊][ 　]+/gm,'・')     // 行頭の*リスト→・
   .replace(/[*#`＊]/g,'')                  // 残った記号を一掃
   .replace(/[ \t]+\n/g,'\n');}
+/* 共有(LINE・メール)の読みやすさ整形：色・太字が使えないプレーン文でも「見出しに絵文字＋空行」
+   「良い点◎→✅／注意△→⚠️」「長文は一文ごとに改行」で“文字の壁”にしない。共有時のみ・画面表示は不変。 */
+function shareEmojiForHeading(h){
+  if(/気をつけ|注意|ぶつか|すれ違|衝突|停滞|低調/.test(h))return '⚠️';
+  if(/コツ|できること|工夫|活かし|長続き|うまく|組む|整|ヒント/.test(h))return '💡';
+  if(/時期|年|タイミング|運の流れ/.test(h))return '📅';
+  if(/ポイント|特徴|性質|才能|適性|本質/.test(h))return '✨';
+  if(/惹|噛|相性|縁|絆|良|好|愛|支え|仲|気が合/.test(h))return '💞';
+  return '🔹';
+}
+function splitSentences(p){ if(p.length<=42)return p; return p.replace(/。(?![」』）\)】\s])/g,'。\n'); }
+function formatForShare(rawText){
+  var s=cleanMarkdown(rawText||'').replace(/\r\n?/g,'\n');
+  var lines=s.split('\n'),out=[];
+  for(var i=0;i<lines.length;i++){
+    var ln=lines[i].replace(/\s+$/,'').replace(/^\s+/,'');
+    if(!ln)continue;
+    var mh=ln.match(/^【(.+?)】\s*(.*)$/);
+    if(mh){ if(out.length)out.push(''); out.push(shareEmojiForHeading(mh[1])+' 【'+mh[1]+'】'); if(mh[2])out.push(splitSentences(mh[2])); continue; }
+    var mg=ln.match(/^◎\s*(.*)$/);  if(mg){ if(out.length)out.push(''); out.push('✅ '+splitSentences(mg[1])); continue; }
+    var mb=ln.match(/^△\s*(.*)$/);  if(mb){ if(out.length)out.push(''); out.push('⚠️ '+splitSentences(mb[1])); continue; }
+    var ms=ln.match(/^[・\-‐–—]\s*(.*)$/); if(ms){ out.push('・'+splitSentences(ms[1])); continue; }
+    out.push(splitSentences(ln));
+  }
+  return out.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+}
 function shareText(title,rawText){
   const head=(brandName?brandName+'\n':'')+(title?title+'\n\n':'');
-  const body=head+cleanMarkdown(rawText||'');
+  const body=head+formatForShare(rawText||'');
   if(navigator.share){navigator.share({title:brandName||title||'鑑定書',text:body}).catch(function(){});return;}
   copyText(body);
 }
