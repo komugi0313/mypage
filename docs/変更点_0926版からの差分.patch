@@ -1,6 +1,6 @@
 diff -uN a/daily-engine.js b/daily-engine.js
---- a/daily-engine.js	2026-09-30 06:26:44.739949080 +0000
-+++ b/daily-engine.js	2026-09-30 06:26:44.745333986 +0000
+--- a/daily-engine.js	2026-09-30 06:58:09.025831083 +0000
++++ b/daily-engine.js	2026-09-30 06:58:09.028483910 +0000
 @@ -115,7 +115,7 @@
  
    /* ===== ここから my-tenki-demo.html より一字一句移設した文言バンク＋純ヘルパー ===== */
@@ -250,8 +250,8 @@ diff -uN a/daily-engine.js b/daily-engine.js
      PTYPE: PTYPE,
      DATEWEAR_F: DATEWEAR_F,
 diff -uN a/index.html b/index.html
---- a/index.html	2026-09-30 06:26:44.795949083 +0000
-+++ b/index.html	2026-09-30 06:26:44.799588870 +0000
+--- a/index.html	2026-09-30 06:58:09.031154607 +0000
++++ b/index.html	2026-09-30 06:58:09.033326934 +0000
 @@ -31,7 +31,8 @@
  {"@type":"Question","name":"すべての機能が無料で使えますか？","acceptedAnswer":{"@type":"Answer","text":"はい。相性診断・毎朝メール・運気カレンダー（Googleカレンダー連携）まで、すべての機能を無料でご利用いただけます。"}},
  {"@type":"Question","name":"占いはどういう仕組みですか？当たりますか？","acceptedAnswer":{"@type":"Answer","text":"千年以上の歴史を持つ四柱推命（日柱・通変星・干合・支合・五行）にもとづき、生年月日から毎日ひとつずつ計算しています。毎朝を前向きに過ごすヒントとしてお使いください。"}},
@@ -329,10 +329,79 @@ diff -uN a/index.html b/index.html
  <a class="sticky" href="register.html"><img src="icon-gift.png" alt="" style="height:1.15em;width:auto;vertical-align:-0.24em;"> 完全無料ではじめる →</a>
  <script>
  /* 未登録の訪問者には「マイページ」を見せず「無料登録」に出し分け（登録後はマイページ表示） */
+diff -uN a/jp-holidays.js b/jp-holidays.js
+--- a/jp-holidays.js	1970-01-01 00:00:00.000000000 +0000
++++ b/jp-holidays.js	2026-09-30 06:58:09.068984777 +0000
+@@ -0,0 +1,65 @@
++/*! jp-holidays.js — 日本の祝日（「国民の祝日に関する法律」にもとづく自動計算）
++ *
++ *  JPHoliday.name(y, m, d) → 祝日名（祝日でなければ ''）
++ *    例：JPHoliday.name(2026, 11, 3) → '文化の日'
++ *  JPHoliday.short(y, m, d) → カレンダーのマス目用の短い名前（例：'勤労感謝'）
++ *  対象：2020年以降のルール（2020・2021年の五輪による特例の移動は含まない）。
++ *  春分・秋分の日は天文計算の近似式（1980〜2099年で官報の発表と一致）。
++ *  ※ 法改正で祝日が変わったときは、このファイルだけを直せばよい（カレンダー・メールの両方に反映される）。
++ */
++(function (root) {
++  'use strict';
++
++  // 第n週の月曜日
++  function nthMonday(y, m, n) {
++    var first = new Date(y, m - 1, 1).getDay();          // 0=日
++    var firstMon = 1 + ((8 - first) % 7);
++    return firstMon + (n - 1) * 7;
++  }
++  function shunbun(y) { return Math.floor(20.8431 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4)); }
++  function shubun(y)  { return Math.floor(23.2488 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4)); }
++
++  // 振替・国民の休日を除いた「国民の祝日」
++  function base(y, m, d) {
++    switch (m) {
++      case 1:  if (d === 1) return '元日'; if (d === nthMonday(y, 1, 2)) return '成人の日'; break;
++      case 2:  if (d === 11) return '建国記念の日'; if (d === 23) return '天皇誕生日'; break;
++      case 3:  if (d === shunbun(y)) return '春分の日'; break;
++      case 4:  if (d === 29) return '昭和の日'; break;
++      case 5:  if (d === 3) return '憲法記念日'; if (d === 4) return 'みどりの日'; if (d === 5) return 'こどもの日'; break;
++      case 7:  if (d === nthMonday(y, 7, 3)) return '海の日'; break;
++      case 8:  if (d === 11) return '山の日'; break;
++      case 9:  if (d === nthMonday(y, 9, 3)) return '敬老の日'; if (d === shubun(y)) return '秋分の日'; break;
++      case 10: if (d === nthMonday(y, 10, 2)) return 'スポーツの日'; break;
++      case 11: if (d === 3) return '文化の日'; if (d === 23) return '勤労感謝の日'; break;
++    }
++    return '';
++  }
++  function shift(y, m, d, k) { var t = new Date(y, m - 1, d + k); return [t.getFullYear(), t.getMonth() + 1, t.getDate()]; }
++
++  function name(y, m, d) {
++    var b = base(y, m, d);
++    if (b) return b;
++    var dow = new Date(y, m - 1, d).getDay();
++    // 振替休日：祝日が日曜なら、その後の最初の「祝日でない日」が休日
++    for (var k = 1; k <= 7; k++) {
++      var p = shift(y, m, d, -k);
++      if (!base(p[0], p[1], p[2])) break;                 // 連続する祝日の並びが途切れた
++      if (new Date(p[0], p[1] - 1, p[2]).getDay() === 0) return '振替休日';
++    }
++    // 国民の休日：前日と翌日が祝日にはさまれた平日（日曜を除く）
++    if (dow !== 0) {
++      var a = shift(y, m, d, -1), c = shift(y, m, d, 1);
++      if (base(a[0], a[1], a[2]) && base(c[0], c[1], c[2])) return '国民の休日';
++    }
++    return '';
++  }
++
++  // カレンダーのマス目用の短い名前（小さなマスで2行以上に折り返さないように。タップ時・メールは正式名）
++  var SHORT = { '建国記念の日': '建国記念', 'スポーツの日': 'スポーツ', '勤労感謝の日': '勤労感謝', '国民の休日': '休日', '憲法記念日': '憲法記念' };
++  function short(y, m, d) { var n = name(y, m, d); return SHORT[n] || n; }
++
++  var api = { name: name, short: short };
++  root.JPHoliday = api;
++  if (typeof module !== 'undefined' && module.exports) module.exports = api;
++})(typeof window !== 'undefined' ? window : this);
 diff -uN a/mail-preview.html b/mail-preview.html
 --- a/mail-preview.html	1970-01-01 00:00:00.000000000 +0000
-+++ b/mail-preview.html	2026-09-30 06:26:45.403177465 +0000
-@@ -0,0 +1,24 @@
++++ b/mail-preview.html	2026-09-30 06:58:09.068969795 +0000
+@@ -0,0 +1,25 @@
 +<!doctype html>
 +<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 +<title>毎朝のメール見本｜私だけの運気予報</title>
@@ -342,6 +411,7 @@ diff -uN a/mail-preview.html b/mail-preview.html
 +<script src="bazi.js"></script>
 +<script src="engine.js"></script>
 +<script src="daily-engine.js"></script>
++<script src="jp-holidays.js"></script>
 +<script src="mail-template/render-daily-mail.js"></script>
 +</head><body style="margin:0;background:#f6eee9;">
 +<script>
@@ -358,8 +428,8 @@ diff -uN a/mail-preview.html b/mail-preview.html
 +</script>
 +</body></html>
 diff -uN a/mail-sample-free.html b/mail-sample-free.html
---- a/mail-sample-free.html	2026-09-30 06:26:45.395949119 +0000
-+++ b/mail-sample-free.html	2026-09-30 06:26:45.401003326 +0000
+--- a/mail-sample-free.html	2026-09-30 06:58:09.064992892 +0000
++++ b/mail-sample-free.html	2026-09-30 06:58:09.066978594 +0000
 @@ -1,215 +1,11 @@
  <!doctype html>
 -<html lang="ja"><head><meta charset="utf-8">
@@ -586,8 +656,8 @@ diff -uN a/mail-sample-free.html b/mail-sample-free.html
 +<a href="mail-preview.html" style="color:#c14e77;">毎朝のメール見本はこちら</a>
  </body></html>
 diff -uN a/mail-sample.html b/mail-sample.html
---- a/mail-sample.html	2026-09-30 06:26:45.308269127 +0000
-+++ b/mail-sample.html	2026-09-30 06:26:45.310266695 +0000
+--- a/mail-sample.html	2026-09-30 06:58:09.060848771 +0000
++++ b/mail-sample.html	2026-09-30 06:58:09.062562346 +0000
 @@ -1,432 +1,11 @@
  <!doctype html>
 -<html lang="ja"><head><meta charset="utf-8">
@@ -1030,8 +1100,8 @@ diff -uN a/mail-sample.html b/mail-sample.html
 +<a href="mail-preview.html" style="color:#c14e77;">毎朝のメール見本はこちら</a>
  </body></html>
 diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
---- a/my-tenki-demo.html	2026-09-30 06:26:45.059949099 +0000
-+++ b/my-tenki-demo.html	2026-09-30 06:26:45.063415346 +0000
+--- a/my-tenki-demo.html	2026-09-30 06:58:09.035805409 +0000
++++ b/my-tenki-demo.html	2026-09-30 06:58:09.037780948 +0000
 @@ -83,7 +83,7 @@
    .mail{margin-top:10px;border:1px solid var(--line);border-radius:12px;background:rgba(7,7,16,.5);overflow:hidden;}
    .mail-sub{padding:12px 14px;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--gold);font-weight:700;background:rgba(230,196,119,.06);}
@@ -1041,7 +1111,17 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    .mail-frame{margin-top:12px;border-radius:22px;padding:22px 13px;overflow:hidden;background:#16234f center/cover;box-shadow:0 16px 38px -18px rgba(40,50,90,.55);}
    .mail-frame .mail-via{display:flex;gap:6px;justify-content:center;margin-bottom:10px;}
    .mail-frame .mail-via b{font-size:10px;font-weight:800;padding:4px 11px;border-radius:20px;background:rgba(255,255,255,.85);color:#7a5a6a;border:1px solid rgba(255,255,255,.9);backdrop-filter:blur(3px);}
-@@ -282,7 +282,7 @@
+@@ -221,6 +221,9 @@
+   .cal-cell:hover{border-color:var(--coral);}
+   .cal-cell.today{border-color:var(--coral);box-shadow:inset 0 0 0 1px var(--coral);}
+   .cal-d{color:var(--ink);}
++  /* 祝日・土日（2026-09-30 追加・控えめ）：日曜・祝日＝赤、土曜＝青。祝日名は日付の下に小さく（jp-holidays.js） */
++  .cal-dow.sun,.cal-d.sun{color:#d0506a;} .cal-dow.sat,.cal-d.sat{color:#4a78c8;}
++  .cal-hol{display:block;font-size:7.5px;line-height:1.15;color:#d0506a;font-weight:600;letter-spacing:-.02em;margin:0 1px 1px;word-break:keep-all;overflow-wrap:anywhere;}
+   .legend{color:var(--muted);}
+   .daydetail{background:#fff7f4;border-color:#d7a29a;}
+   .daydetail textarea{background:#f6f8fc;color:var(--ink);border-color:var(--line);}
+@@ -282,7 +285,7 @@
      <input type="hidden" id="btime">
      <div class="hint" style="margin-top:4px;color:#4d5570;">だいたいの時間で大丈夫です。わからなければ空欄のままでかまいません。わかると、さらに深く占えます。</div>
      <div class="lab" style="margin-top:18px;">― ニックネーム ―</div>
@@ -1050,7 +1130,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
      <div class="lab" style="margin-top:18px;">― 性別 ―</div>
      <select id="sex"><option value="f">女性</option><option value="m">男性</option></select>
      <div class="lab" style="margin-top:18px;">― あなたの「今」について ―</div>
-@@ -337,7 +337,7 @@
+@@ -337,7 +340,7 @@
        <div id="calNote" style="display:none;margin:10px 13px 0;padding:10px 13px;background:#fff4ee;border-radius:11px;font-size:12.5px;color:var(--coral-d);line-height:1.7;text-align:center;">📅 来月以降の運命カレンダーも、無料で毎日お届けします。</div>
        <div class="dtaphint"><span class="tap-big">👇 カレンダーの日付をタップ</span><span class="tap-sub">その日の鑑定・おすすめ服・メモが開きます</span></div>
        <div class="cal-grid" id="calGrid"></div>
@@ -1059,15 +1139,17 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
        <div style="margin-top:8px;color:var(--muted-2);font-size:11.5px;">日付をタップすると、その日が「何の日」か詳しく見られます。</div>
        <div class="daydetail" id="dayDetail"></div>
      </div>
-@@ -371,6 +371,7 @@
+@@ -370,7 +373,9 @@
+ 
  <script src="bazi.js"></script>
  <script src="engine.js"></script>
++<script src="jp-holidays.js"></script>
  <script src="daily-engine.js"></script>
 +<script src="mail-template/render-daily-mail.js"></script><!-- 見本メール＝実際に届くメールと同じひな形 -->
  <script>
  const KD=window.KDaily; // 文言バンクの単一ソース(daily-engine.js)
  const STEMS=["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
-@@ -620,7 +621,10 @@
+@@ -620,7 +625,10 @@
    $("swDot").style.background=lucky.hex; $("swTxt").textContent="今日のラッキーカラー："+lucky.color;
    const strip=v=>v.replace(/<[^>]+>/g,"");
    const adv=ADVICE[god][KD.pickIdx(useed,5,ADVICE[god].length)];
@@ -1079,7 +1161,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    const food=FOOD[fe][KD.pickIdx(pseed,7,FOOD[fe].length)];
    const _mi=KD.pickIdx(pseed,8,MENU[fe].length); const menu=MENU[fe][_mi]; const menu2=MENU[fe][(_mi+1)%MENU[fe].length];
    const _wearSeason=KD.climateSeason(M); // 旬の食材・服装は体感の季節で選ぶ（節気だと立秋直後の8月に秋の味覚が出て夏物の服と矛盾するため月ベースに統一）
-@@ -631,7 +635,8 @@
+@@ -631,7 +639,8 @@
    const ldir=_sp.dir;
    const spotNature=_sp.nature[KD.pickIdx(pseed,11,_sp.nature.length)];
    const spotCity=_sp.city[KD.pickIdx(pseed,12,_sp.city.length)];
@@ -1089,7 +1171,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    // 「縁の方角・スポット」用：ラッキー欄とは別オフセットで、その日の五行(fe)から選ぶ（毎日変化）
    const spotNat2=_sp.nature[KD.pickIdx(pseed,14,_sp.nature.length)];
    const spotCity2=_sp.city[KD.pickIdx(pseed,15,_sp.city.length)];
-@@ -654,7 +659,8 @@
+@@ -654,7 +663,8 @@
    const _placeLine=(cat)=>_pOpen[cat][_pjd%_pOpen[cat].length]+' <b>'+enDir+'</b> の方角。<b>'+spotNat2+'</b> や <b>'+spotCity2+'</b> '+_pTail[cat][(_pjd+2)%_pTail[cat].length];
    const placeCardMsg=_placeLine(_pCat);
    $("cPlace").innerHTML=placeCardMsg;
@@ -1099,7 +1181,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    // 数字：本人差を入れて、五行の2候補から選ぶ
    const lnum=NUM[fe][(pseed+you.branch.charCodeAt(0))%NUM[fe].length];
    const ptype=PTYPE[fe];
-@@ -772,7 +778,7 @@
+@@ -772,7 +782,7 @@
    const _KGC={'g-top':{c:'#d6567e',bg:'#fdeef4'},'g-good':{c:'#c9862a',bg:'#fff6e6'},'g-normal':{c:'#6f7891',bg:'#eef1f6'},'g-care':{c:'#4fa05a',bg:'#edf7ee'}};
    const _kg=_KGC[_kgr.cls]||_KGC['g-normal'];
    // マークは“プラス面”だけを「〇〇あり／アップ」で見せる（ふつう〇・△などのグレードは出さない）
@@ -1108,7 +1190,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    const _posMarks=_kdm.m.filter(function(x){return _MKPOS[x];});
    const _goodGrade=(_kgr.sym==='💮'||_kgr.sym==='◎');
    const _acc=_goodGrade?_kg:(_posMarks.length?{c:'#d6567e',bg:'#fdeef4'}:{c:'#8a93a8',bg:'#eef2f6'});
-@@ -845,18 +851,35 @@
+@@ -845,18 +855,35 @@
        +'<a href="https://166unmei.com/" data-aishou="1" style="display:inline-block;margin-top:8px;background:linear-gradient(135deg,#e86a94,#d8466a);color:#fff;font-size:12.5px;font-weight:800;text-decoration:none;border-radius:999px;padding:9px 20px;"><span style="white-space:nowrap">1.66 相性診断をやってみる</span><span style="white-space:nowrap">（無料）</span></a>'
        +'<div style="margin-top:11px;padding-top:9px;border-top:1px dashed #e8c8d4;font-size:10px;color:#a08a80;"><span style="white-space:nowrap">🎁 お友達にもシェアして、</span><span style="white-space:nowrap">いっしょに占ってみてね</span></div>'
        +'<div style="margin-top:6px;">'
@@ -1150,7 +1232,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    const base=new Date(Y,M-1,D);
    CUR={me:you,partner:p};calY=Y;calM=M;
    /* ③用：年柱・月柱を含む命式をキャッシュ（年月柱は時刻に依存しないため time=不明で計算しても正確） */
-@@ -961,7 +984,7 @@
+@@ -961,7 +988,7 @@
    if(t.branch===TOUKA[CUR.me.branch])m.push('🌷');
    // 分野マークはその日の十神に応じて必ず表示する（案A）。命式で忌神の分野でも隠さず、
    // 「その分野の“気”が動く日」として出し、忌神の日は詳細文と総合ランク(△等)で正直に補足する。
@@ -1159,7 +1241,24 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    if(SOCIAL_GOOD.includes(js))m.push('🌐');
    if(MONEY_GOOD.includes(js))m.push('💰');
    if(WORK_GOOD.includes(js))m.push('💼');
-@@ -1016,7 +1039,7 @@
+@@ -1002,13 +1029,14 @@
+   const todY=_jst.getFullYear(), todM=_jst.getMonth()+1, todD=_jst.getDate();
+   $("calTitle").textContent=calY+'年 '+calM+'月';
+   const dow=['日','月','火','水','木','金','土'];let h='';
+-  dow.forEach(w=>h+='<div class="cal-dow">'+w+'</div>');
++  dow.forEach((w,i)=>h+='<div class="cal-dow'+(i===0?' sun':(i===6?' sat':''))+'">'+w+'</div>');   // 日曜＝赤・土曜＝青
+   for(let i=0;i<startDow;i++)h+='<div class="cal-cell empty"></div>';
+   for(let dn=1;dn<=days;dn++){
+     const d=new Date(calY,calM-1,dn);const dm=dayMarks(d);const mk=(dm.m.includes('🌈')?['🌈']:(dm.m.includes('🌷')?['🌷']:dm.m));const hasMemo=!!getMemo(d);
+     const isTod=(calY===todY&&calM===todM&&dn===todD);
+     const gr=dayGrade(dm);
+-    h+='<div class="cal-cell'+(isTod?' today':'')+'" data-d="'+dn+'"><div class="cal-d">'+dn+(hasMemo?'<span class="cal-memo-dot"></span>':'')+'</div><div class="cal-grade '+gr.cls+'">'+gr.sym+'</div><div class="cal-marks">'+mk.join('')+'</div></div>';
++    const _hol=(window.JPHoliday?JPHoliday.short(calY,calM,dn):''), _wd=d.getDay();   // 祝日（マス目用の短い名前）
++    h+='<div class="cal-cell'+(isTod?' today':'')+'" data-d="'+dn+'"><div class="cal-d'+((_hol||_wd===0)?' sun':(_wd===6?' sat':''))+'">'+dn+(hasMemo?'<span class="cal-memo-dot"></span>':'')+(_hol?'<span class="cal-hol">'+_hol+'</span>':'')+'</div><div class="cal-grade '+gr.cls+'">'+gr.sym+'</div><div class="cal-marks">'+mk.join('')+'</div></div>';
+   }
+   $("calGrid").innerHTML=h;
+   $("calGrid").querySelectorAll('.cal-cell[data-d]').forEach(c=>c.onclick=()=>showDay(new Date(calY,calM-1,+c.dataset.d)));
+@@ -1016,7 +1044,7 @@
  /* 🔎 今日のまとめ：あなたの調子（💮◎〇△）と“縁”マークを1文でつなぎ、「ひと休みなのに対人◯」等の矛盾感を解消 */
  function daySummaryHTML(gr,m){
    var sym=gr.sym;
@@ -1168,7 +1267,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    var social=m.includes('🌐'), work=m.includes('💼'), money=m.includes('💰'), learn=m.includes('📚'), sway=m.includes('⚠️');
    var base, bridge='';
    if(sym==='💮'){ base='今日はあなたにとって<b>特別な一日</b>。ここぞという事に、思いきって動くほど流れに乗れます。'; }
-@@ -1039,14 +1062,14 @@
+@@ -1039,14 +1067,14 @@
  }
  function showDay(d){
    const r=dayMarks(d),t=r.t,m=r.m;
@@ -1187,7 +1286,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    const _swayLove=(m.includes('⚠️')&&_loveMark)
      ? '<div style="margin-top:8px;padding:9px 12px;border-radius:11px;background:rgba(214,86,126,.09);border:1px solid rgba(214,86,126,.3);font-size:12.5px;line-height:1.75"><b style="color:#c14e77">💗 揺らぎ日だけど、恋運はUP</b><br><span style="color:var(--muted)">今日は少しリズムが揺れやすい日。でも恋の追い風は吹いています。急ぎの決断や言い合いだけ控えめに、気になる人へのひと言はむしろ good。</span></div>'
      : '';
-@@ -1060,7 +1083,7 @@
+@@ -1060,7 +1088,7 @@
    const gurl='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('【私だけの運気予報】'+m.join('')+ymd)+'&dates='+gs+'/'+ge+'&details='+encodeURIComponent(info.replace(/<br>/g,' / '));
    const memo=getMemo(d).replace(/</g,'&lt;');
    let extra='';
@@ -1196,19 +1295,33 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
      const dc=dayColor(t);
      const _dwSeason=KD.climateSeason(d.getMonth()+1);
      const _dwSeed=jdn(d.getFullYear(),d.getMonth()+1,d.getDate());
-@@ -1086,7 +1109,7 @@
+@@ -1086,9 +1114,10 @@
    const _summary=daySummaryHTML(_gr,m);
    // 忌神の分野の日は、分野マークを出しつつ「あなたには力の要るテーマ」と正直に補足（案A）
    const _dImi=(CUR_FAV && CUR_FAV[STEM_GOGYO[t.stem]]==='忌');
 -  const _dPresent=['💼','💰','🩷','🌐','📚'].some(function(x){return m.includes(x);});
 +  const _dPresent=['💼','💰','💖','🌐','📚'].some(function(x){return m.includes(x);});
    const _favNote=(_dImi&&_dPresent&&(_gr.sym==='〇'||_gr.sym==='△'))?'<div style="margin-top:8px;font-size:12px;color:#9c7b46;background:rgba(196,137,43,.08);border:1px solid rgba(196,137,43,.22);border-radius:10px;padding:8px 11px;line-height:1.75">※ 今日はこの分野の“気”が動く日。ただし<b>あなたには少し力の要るテーマ</b>なので、チャンスはあっても勢い任せにせず、<b>整えて臨む</b>と◎。</div>':'';
-   $("dayDetail").innerHTML='<b style="color:var(--gold)">'+ymd+'（'+t.stem+t.branch+'）</b>'+gradeHead+_summary+_swayLove+'<p style="margin-top:6px">'+info+'</p>'+_favNote+_bonus+goLine+_mix+extra+'<textarea id="memoBox" placeholder="この日の予定・メモ（仕事/会食/デートなど）">'+memo+'</textarea><div style="margin-top:8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><button class="cal-nav" id="memoSave">メモを保存</button><a class="gcal" href="'+gurl+'" target="_blank" rel="noopener">📅 Googleカレンダーに追加</a></div>';
+-  $("dayDetail").innerHTML='<b style="color:var(--gold)">'+ymd+'（'+t.stem+t.branch+'）</b>'+gradeHead+_summary+_swayLove+'<p style="margin-top:6px">'+info+'</p>'+_favNote+_bonus+goLine+_mix+extra+'<textarea id="memoBox" placeholder="この日の予定・メモ（仕事/会食/デートなど）">'+memo+'</textarea><div style="margin-top:8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><button class="cal-nav" id="memoSave">メモを保存</button><a class="gcal" href="'+gurl+'" target="_blank" rel="noopener">📅 Googleカレンダーに追加</a></div>';
++  const _holD=(window.JPHoliday?JPHoliday.name(d.getFullYear(),d.getMonth()+1,d.getDate()):'');   // 祝日（正式名）
++  $("dayDetail").innerHTML='<b style="color:var(--gold)">'+ymd+'（'+t.stem+t.branch+'）</b>'+(_holD?' <span style="display:inline-block;font-size:11.5px;font-weight:700;color:#d0506a;background:#fdeef1;border-radius:20px;padding:1px 9px;vertical-align:1px;">🎌 '+_holD+'</span>':'')+gradeHead+_summary+_swayLove+'<p style="margin-top:6px">'+info+'</p>'+_favNote+_bonus+goLine+_mix+extra+'<textarea id="memoBox" placeholder="この日の予定・メモ（仕事/会食/デートなど）">'+memo+'</textarea><div style="margin-top:8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><button class="cal-nav" id="memoSave">メモを保存</button><a class="gcal" href="'+gurl+'" target="_blank" rel="noopener">📅 Googleカレンダーに追加</a></div>';
    $("dayDetail").classList.add('show');
+   setTimeout(function(){var _dd=$("dayDetail");if(_dd){var _y=_dd.getBoundingClientRect().top+window.pageYOffset-70;window.scrollTo({top:_y,behavior:'smooth'});}},60);
+   $("memoSave").onclick=()=>{try{localStorage.setItem(memoKey(d),$("memoBox").value);}catch(e){}renderCalendar();$("memoSave").textContent='保存しました ✓';};
 diff -uN a/mypage.html b/mypage.html
---- a/mypage.html	2026-09-30 06:26:45.143949104 +0000
-+++ b/mypage.html	2026-09-30 06:26:45.150212461 +0000
-@@ -231,7 +231,7 @@
+--- a/mypage.html	2026-09-30 06:58:09.040263580 +0000
++++ b/mypage.html	2026-09-30 06:58:09.042006020 +0000
+@@ -113,6 +113,9 @@
+   .cal-cell.empty{background:none;cursor:default;}
+   .cal-cell.today{outline:2px solid var(--coral);}
+   .cal-d{font-size:11px;color:var(--ink-soft);text-align:center;position:relative;}
++  /* 祝日・土日（2026-09-30 追加・控えめ）：日曜・祝日＝赤、土曜＝青。祝日名は日付の下に小さく（jp-holidays.js） */
++  .cal-dow.sun,.cal-d.sun{color:#d0506a;} .cal-dow.sat,.cal-d.sat{color:#4a78c8;}
++  .cal-hol{display:block;font-size:7.5px;line-height:1.15;color:#d0506a;font-weight:600;letter-spacing:-.02em;margin:0 1px 1px;word-break:keep-all;overflow-wrap:anywhere;}
+   .cal-memo-dot{position:absolute;top:0;right:6px;width:5px;height:5px;border-radius:50%;background:var(--sakura);}
+   .cal-grade{text-align:center;font-size:18px;line-height:1;margin-top:1px;font-weight:700;}
+   .g-top{color:#e0699a}.g-good{color:#3c9a63}.g-normal{color:#bcb0a4}.g-care{color:#5b93c2}
+@@ -231,7 +234,7 @@
          <span class="ct-tap">👆 日付をタップで、すべての鑑定が開く</span>
        </div>
        <div class="legend">
@@ -1217,7 +1330,7 @@ diff -uN a/mypage.html b/mypage.html
        </div>
        <div class="leg-note">💮◎〇△は<b>あなた基準</b>のランクです（他人との比較ではなく、あなた自身のリズムの中での“動きやすい日／整える日”）。だから毎日届く運気予報メールとも一致します。日付をタップすると、その日が「何の日」か・メモ・Googleカレンダー追加が開きます。カレンダーは<b>過去も未来も、好きなだけ</b>ご覧いただけます。</div>
        <div id="calRangeNote" style="display:none;"></div>
-@@ -298,6 +298,12 @@
+@@ -298,6 +301,12 @@
      #markGuide .kp-note{margin-top:10px;font-size:10.5px;color:var(--muted);line-height:1.75;}
      #markGuide .kp-note b{color:#3a5674;}
    </style>
@@ -1230,7 +1343,7 @@ diff -uN a/mypage.html b/mypage.html
    <div class="sec" id="markGuide">
      <div class="sec-h">📖 マークの見かた <span class="proto-flag">タップで四柱推命の解説</span></div>
      <p style="font-size:12.5px;color:var(--muted);line-height:1.8;margin:2px 0 4px;">各マークの意味と、なぜその日に出るのか。<b>「＋」をタップ</b>すると四柱推命の専門的な理由と、<b>あなたの命式での実例</b>が開きます。</p>
-@@ -356,11 +362,38 @@
+@@ -356,11 +365,38 @@
        <div class="kv"><span class="k">ニックネーム</span><span class="v" id="infoNick">ゲスト</span></div>
        <div class="kv"><span class="k">メールアドレス</span><span class="v"><span id="infoMail">—</span><button type="button" id="mailEditBtn" style="margin-left:8px;font-size:11px;color:var(--coral-d);border:1px solid var(--line-strong);border-radius:999px;padding:2px 10px;cursor:pointer;font-weight:700;background:#fff;">変更</button></span></div>
        <div class="kv"><span class="k">生年月日</span><span class="v" id="infoBirth">1995年6月15日</span></div>
@@ -1270,16 +1383,18 @@ diff -uN a/mypage.html b/mypage.html
    <!-- メールアドレスの変更（本人確認つき） -->
    <div class="sec" id="mailEditSec" style="display:none;">
      <div class="sec-h">✉️ メールアドレスの変更</div>
-@@ -415,6 +448,8 @@
+@@ -414,7 +450,10 @@
+ 
  <script src="bazi.js"></script>
  <script src="engine.js"></script>
++<script src="jp-holidays.js"></script>
  <script src="daily-engine.js"></script>
 +<script src="share.js"></script>
 +<script>/* 本番：window.UNKIYOHO_MY_REF にこの会員の紹介コード(ref_code)をサーバーから入れる */ UnkiShare.mount(document.getElementById('myShare'), UnkiShare.myCode());</script>
  <script>
  /* ===== 四柱推命ロジック（my-tenki-demo.html と共通） ===== */
  const STEMS=["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
-@@ -559,7 +594,7 @@
+@@ -559,7 +598,7 @@
    if(t.branch===TOUKA[CUR.me.branch])m.push('🌷');
    // 分野マークはその日の十神に応じて必ず表示する（案A）。命式で忌神の分野でも隠さず、
    // 「その分野の“気”が動く日」として出し、忌神の日は詳細文と総合ランク(△等)で正直に補足する。
@@ -1288,7 +1403,24 @@ diff -uN a/mypage.html b/mypage.html
    if(SOCIAL_GOOD.includes(js))m.push('🌐');
    if(MONEY_GOOD.includes(js))m.push('💰');
    if(WORK_GOOD.includes(js))m.push('💼');
-@@ -717,7 +752,7 @@
+@@ -635,13 +674,14 @@
+   const todY=_jst.getFullYear(), todM=_jst.getMonth()+1, todD=_jst.getDate();
+   $("calTitle").textContent=calY+'年 '+calM+'月';
+   const dow=['日','月','火','水','木','金','土'];let h='';
+-  dow.forEach(w=>h+='<div class="cal-dow">'+w+'</div>');
++  dow.forEach((w,i)=>h+='<div class="cal-dow'+(i===0?' sun':(i===6?' sat':''))+'">'+w+'</div>');   // 日曜＝赤・土曜＝青
+   for(let i=0;i<startDow;i++)h+='<div class="cal-cell empty"></div>';
+   for(let dn=1;dn<=days;dn++){
+     const d=new Date(calY,calM-1,dn);const dm=dayMarks(d);const mk=(dm.m.includes('🌈')?['🌈']:(dm.m.includes('🌷')?['🌷']:dm.m));const hasMemo=!!getMemo(d);
+     const isTod=(calY===todY&&calM===todM&&dn===todD);
+     const gr=dayGrade(dm);
+-    h+='<div class="cal-cell'+(isTod?' today':'')+'" data-d="'+dn+'"><div class="cal-d">'+dn+(hasMemo?'<span class="cal-memo-dot"></span>':'')+'</div><div class="cal-grade '+gr.cls+'">'+gr.sym+'</div><div class="cal-marks">'+mk.join('')+'</div></div>';
++    const _hol=(window.JPHoliday?JPHoliday.short(calY,calM,dn):''), _wd=d.getDay();   // 祝日（マス目用の短い名前）
++    h+='<div class="cal-cell'+(isTod?' today':'')+'" data-d="'+dn+'"><div class="cal-d'+((_hol||_wd===0)?' sun':(_wd===6?' sat':''))+'">'+dn+(hasMemo?'<span class="cal-memo-dot"></span>':'')+(_hol?'<span class="cal-hol">'+_hol+'</span>':'')+'</div><div class="cal-grade '+gr.cls+'">'+gr.sym+'</div><div class="cal-marks">'+mk.join('')+'</div></div>';
+   }
+   $("calGrid").innerHTML=h;
+   $("calGrid").querySelectorAll('.cal-cell[data-d]').forEach(c=>c.onclick=()=>showDay(new Date(calY,calM-1,+c.dataset.d)));
+@@ -717,7 +757,7 @@
      '<b>桃花（とうか）</b>＝あなたの日柱の三合局が持つ「華やかさ・魅力」の十二支が巡る日。昔から出会い運・恋愛運の象徴です。', to?('あなたの<b>桃花</b>は【'+to+'】の日です'):'','good');
    h+=_mgCard('🌸','恋チャンスUP','恋が動きやすい吉日',
      '運命の相手と<b>干合・支合</b>で惹かれ合う気が流れる日。恋の進展や出会いのきっかけが生まれやすい日です。', '','good');
@@ -1297,7 +1429,7 @@ diff -uN a/mypage.html b/mypage.html
      'その日の十神が<b>食神・傷官</b>（あなたの日主が生み出す「表現」の星）になる日。発信・人前・おしゃれが映えます。', '','good');
    h+='<div class="mg-group">◆ 毎日の分野（その日の十神＝通変星）</div>';
    h+=_mgCard('🌐','対人の気が動く日','仲間・友達との縁が動く、動くと吉',
-@@ -779,7 +814,7 @@
+@@ -779,7 +819,7 @@
  function _goukuu(dayBranch){ if(!CUR.me)return false; var r=branchRel(dayBranch,CUR.me.branch); return (r==='支合'||r==='三合'); }
  function daySummaryHTML(gr,m,t){
    var sym=gr.sym;
@@ -1306,7 +1438,7 @@ diff -uN a/mypage.html b/mypage.html
    var social=m.includes('🌐'), work=m.includes('💼'), money=m.includes('💰'), learn=m.includes('📚'), sway=m.includes('⚠️');
    var kubou=m.includes('🌫️');
    var goukuu=kubou && t && _goukuu(t.branch);   // 空亡が支合・三合で解ける（合空・填実）
-@@ -809,8 +844,8 @@
+@@ -809,8 +849,8 @@
  }
  function showDay(d){
    const r=dayMarks(d),t=r.t,m=r.m;
@@ -1317,7 +1449,7 @@ diff -uN a/mypage.html b/mypage.html
    const _headline=m.includes('🌈')?'🌈':(m.includes('🌷')?'🌷':null);
    const _extras=m.filter(x=>_exNames[x]);
    const _bonus=(_headline&&_extras.length)?'<div style="margin-top:8px;padding:8px 11px;border-radius:10px;background:rgba(214,86,126,.09);border:1px solid rgba(214,86,126,.28);font-size:12.5px;font-weight:700;color:#c14e77">✨ しかも今日は '+_extras.map(x=>_exNames[x]).join('・')+' も高まる、二重にうれしい日。</div>':'';
-@@ -829,7 +864,7 @@
+@@ -829,7 +869,7 @@
    const gurl='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('【私だけの運気予報】'+m.join('')+ymd)+'&dates='+gs+'/'+ge+'&details='+encodeURIComponent(info.replace(/<br>/g,' / '));
    const memo=getMemo(d).replace(/</g,'&lt;');
    let extra='';
@@ -1326,7 +1458,7 @@ diff -uN a/mypage.html b/mypage.html
      const dc=dayColor(t);
      // 共通エンジン(daily-engine.js)のリッチな文言バンクを再利用：デート服=五行×季×10種、テーマカラー=五行×16色。日替わりで選ぶ
      const _KD=window.KDaily;
-@@ -851,8 +886,8 @@
+@@ -851,8 +891,8 @@
    }
    const gr=dayGrade(r);
    const gradeHead='<div style="display:flex;align-items:center;gap:8px;margin-top:6px;margin-bottom:2px"><span class="'+gr.cls+'" style="font-size:30px;font-weight:800;line-height:1">'+gr.sym+'</span><span style="font-size:14px;font-weight:800">今日の運勢：'+gr.label+'</span></div>';
@@ -1337,7 +1469,7 @@ diff -uN a/mypage.html b/mypage.html
      ? '<div style="margin-top:8px;padding:9px 12px;border-radius:11px;background:rgba(214,86,126,.09);border:1px solid rgba(214,86,126,.3);font-size:12.5px;line-height:1.75"><b style="color:#c14e77">💗 揺らぎ日だけど、恋運はUP</b><br><span style="color:#7a5563">今日は少しリズムが揺れやすい日。でも恋の追い風は吹いています。急ぎの決断や言い合いだけ控えめに、気になる人へのひと言はむしろ good。</span></div>'
      : '';
    // 🔎 今日のまとめ：ランク(あなたの調子)と分野マーク(縁)を1文でつなぎ、「ひと休みなのに対人◯」等の矛盾感を解消
-@@ -860,14 +895,14 @@
+@@ -860,14 +900,14 @@
    // 忌神の分野の日は、分野マークを出しつつ「あなたには力の要るテーマ」と正直に補足（案A）
    var _mpf=memberProfile(), _mfav=(_mpf&&_mpf.ok)?_mpf.fav:null;
    const _dImi=(_mfav && _mfav[STEM_GOGYO[t.stem]]==='忌');
@@ -1355,7 +1487,17 @@ diff -uN a/mypage.html b/mypage.html
    if(!_loveOn)_lb='今日は恋の大きな動きは静か。自分磨き・おしゃれ・気になる人の様子を見るくらいが◎。';
    _lb+=_bonus+_swayLove+extra;
    var _workOn=_has('💼');
-@@ -922,6 +957,34 @@
+@@ -902,7 +942,8 @@
+     +_gSec('📚','学び・成長','自分の学び／子供の学び',false,_studyOn?'good':'quiet',_sb)
+     +_gSec('🌿','健康・コンディション','自分／家族の体調',false,_hTone,_hb)
+     +_gSec('🏠','暮らし・整え','家事／お出かけ／転機',false,_kTone,_kb);
+-  $("dayDetail").innerHTML='<b style="color:#a06517;font-size:15px">'+ymd+'</b>'+gradeHead+_summary+_warnTop+goLine+_favNote
++  const _holD=(window.JPHoliday?JPHoliday.name(d.getFullYear(),d.getMonth()+1,d.getDate()):'');   // 祝日（正式名）
++  $("dayDetail").innerHTML='<b style="color:#a06517;font-size:15px">'+ymd+'</b>'+(_holD?' <span style="display:inline-block;font-size:11.5px;font-weight:700;color:#d0506a;background:#fdeef1;border-radius:20px;padding:1px 9px;vertical-align:1px;">🎌 '+_holD+'</span>':'')+gradeHead+_summary+_warnTop+goLine+_favNote
+     +'<div class="ghint">▼ ジャンル別にタップで開きます（恋愛・仕事・お金・対人・学び・健康・暮らし）</div>'+_secs
+     +'<textarea id="memoBox" placeholder="この日の予定・メモ（仕事/会食/デートなど）">'+memo+'</textarea><div style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="cal-nav" id="memoSave" style="width:auto;padding:0 14px;height:34px;font-size:12.5px;">メモを保存</button><a class="gcal" href="'+gurl+'" target="_blank" rel="noopener">📅 Googleカレンダーに追加</a></div>';
+   $("dayDetail").classList.add('show');
+@@ -922,6 +963,34 @@
  
  /* ===== 会員情報の反映 ===== */
  function relText(r){return {single:"恋の出会いを、これから探したい",crush:"気になる人がいる",partner:"恋人がいる",married:"結婚している",work:"恋愛より、仕事・対人運を重視"}[r]||"—";}
@@ -1390,7 +1532,7 @@ diff -uN a/mypage.html b/mypage.html
  function fmtBirth(b){return b.y+'年'+b.m+'月'+b.d+'日'+((b.tu||b.h==null)?'':' '+String(b.h).padStart(2,'0')+':'+String(b.mi||0).padStart(2,'0'));}
  var EL_COL={木:'#4a9e6b',火:'#d9604f',土:'#c4892b',金:'#b8912e',水:'#4f8fc0'};
  function _pillCard(label,gz,terr){
-@@ -982,6 +1045,7 @@
+@@ -982,6 +1051,7 @@
    $("infoMail").textContent=MEMBER.mail;
    $("infoBirth").textContent=fmtBirth(MEMBER.birth);
    $("infoRel").textContent=relText(MEMBER.rel);
@@ -1398,7 +1540,7 @@ diff -uN a/mypage.html b/mypage.html
    $("infoInterest").textContent=MEMBER.interest;
    // 干支計算
    CUR.me=pillar(MEMBER.birth.y,MEMBER.birth.m,MEMBER.birth.d);
-@@ -1012,7 +1076,20 @@
+@@ -1012,7 +1082,20 @@
    renderCalendar();
  }
  function gconnDemo(){alert("Googleカレンダーの自動連携は現在準備中です。\\n\\nいまは、カレンダーの各日から「Googleカレンダーに追加」で1件ずつ登録できます。");}
@@ -1420,7 +1562,7 @@ diff -uN a/mypage.html b/mypage.html
  
  /* ===== ログアウト ===== */
  function doLogout(){
-@@ -1062,7 +1139,7 @@
+@@ -1062,7 +1145,7 @@
  /* 毎朝メールのトグルを配信フラグと連動（配信停止ページ unsubscribe.html と共有） */
  (function(){var sw=document.getElementById("swMail");if(!sw)return;
    try{sw.checked=(localStorage.getItem("unkiyoho_mail_opt")!=="off");}catch(e){}
@@ -1430,8 +1572,8 @@ diff -uN a/mypage.html b/mypage.html
  
  applyMember();
 diff -uN a/privacy.html b/privacy.html
---- a/privacy.html	2026-09-30 06:26:45.287949113 +0000
-+++ b/privacy.html	2026-09-30 06:26:45.292830352 +0000
+--- a/privacy.html	2026-09-30 06:58:09.044241093 +0000
++++ b/privacy.html	2026-09-30 06:58:09.045961958 +0000
 @@ -45,7 +45,7 @@
      <p>本サービスは無料でご提供しており、クレジットカード情報・お支払い情報など決済に関する情報は一切取得しません。取得する情報は、サービス提供および運営（将来の広告を含む）に必要な範囲にとどめます。</p>
      <ul>
@@ -1463,8 +1605,8 @@ diff -uN a/privacy.html b/privacy.html
  </main>
  
 diff -uN a/register.html b/register.html
---- a/register.html	2026-09-30 06:26:45.295132096 +0000
-+++ b/register.html	2026-09-30 06:26:45.297468365 +0000
+--- a/register.html	2026-09-30 06:58:09.048824675 +0000
++++ b/register.html	2026-09-30 06:58:09.050688846 +0000
 @@ -101,7 +101,7 @@
    </div>
    <div class="card">
@@ -1521,7 +1663,7 @@ diff -uN a/register.html b/register.html
  var _vEmail="";
 diff -uN a/share.js b/share.js
 --- a/share.js	1970-01-01 00:00:00.000000000 +0000
-+++ b/share.js	2026-09-30 06:26:45.403128148 +0000
++++ b/share.js	2026-09-30 06:58:09.068943021 +0000
 @@ -0,0 +1,61 @@
 +/* share.js ── 「友だちに教える」（シェア）と紹介コード（2026-09-30 追加）
 + *
@@ -1585,8 +1727,8 @@ diff -uN a/share.js b/share.js
 +  window.UnkiShare = { ref: ref, myCode: myCode, url: url, mount: mount, TEXT: TEXT };
 +})();
 diff -uN a/terms.html b/terms.html
---- a/terms.html	2026-09-30 06:26:45.299556528 +0000
-+++ b/terms.html	2026-09-30 06:26:45.301438330 +0000
+--- a/terms.html	2026-09-30 06:58:09.052678742 +0000
++++ b/terms.html	2026-09-30 06:58:09.054370418 +0000
 @@ -83,7 +83,7 @@
      <h2>第7条（本サービスの内容・鑑定に関する免責）＝重要</h2>
      <div class="imp">
@@ -1606,8 +1748,8 @@ diff -uN a/terms.html b/terms.html
  
  </main>
 diff -uN a/unsubscribe.html b/unsubscribe.html
---- a/unsubscribe.html	2026-09-30 06:26:45.304385670 +0000
-+++ b/unsubscribe.html	2026-09-30 06:26:45.306240772 +0000
+--- a/unsubscribe.html	2026-09-30 06:58:09.056718247 +0000
++++ b/unsubscribe.html	2026-09-30 06:58:09.058433453 +0000
 @@ -35,6 +35,15 @@
  <div class="bg"></div>
  <div class="wrap">

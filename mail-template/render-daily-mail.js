@@ -115,6 +115,10 @@
     var rel = (r.user && r.user.rel) || 'single';
     var RH = REL_HEAD[rel] || REL_HEAD.single;
     var nick = esc(r.user.nick);
+    // 祝日（jp-holidays.js。ブラウザでは window.JPHoliday、Node では同じフォルダの jp-holidays.js）。祝日の朝は日付の下に「🎌 今日は◯◯」
+    var JPH = root.JPHoliday || null;
+    if (!JPH && typeof require === 'function') { try { JPH = require('./jp-holidays.js'); } catch (e) { JPH = null; } }
+    var hol = JPH ? JPH.name(r.date.y, r.date.m, r.date.d) : '';
     var dateLabel = r.date.y + '年 ' + r.date.m + '月' + r.date.d + '日（' + r.date.wd + '）';
     var subject = '【' + r.date.m + '/' + r.date.d + '(' + r.date.wd + ')】' + r.subject;
     var crystal = '<img src="' + base + 'mail-bg/crystal-30.png" width="15" height="15" alt="" style="width:15px;height:15px;vertical-align:-3px;border:0;">';
@@ -127,6 +131,7 @@
     h.push('<div style="text-align:center;padding-bottom:12px;border-bottom:1.5px dashed ' + T.accent + ';margin-bottom:14px;">'
       + '<div style="font-size:12px;font-weight:800;letter-spacing:.14em;color:' + T.ink + ';"><span style="font-size:15px;">🌤️</span>私だけの運気予報</div>'
       + '<div style="font-family:' + SERIF + ';font-size:13px;color:#6f5f57;margin-top:3px;letter-spacing:.06em;">' + dateLabel + '</div>'
+      + (hol ? '<div style="margin-top:4px;"><span style="display:inline-block;font-size:11px;font-weight:700;color:#c8455f;background:#fdeef1;border-radius:20px;padding:2px 10px;">🎌 今日は' + esc(hol) + '</span></div>' : '')
       + '<div style="font-family:' + SERIF + ';font-size:19px;font-weight:800;color:#e0699a;margin-top:9px;line-height:1.45;">' + nick + 'さん、<span style="white-space:nowrap;">おはようございます☀️</span></div>'
       + (r.morning ? '<div style="font-size:12px;font-weight:700;color:#d06d93;margin-top:4px;">' + r.morning + '</div>' : '')
       + '<div style="font-size:12.5px;color:#6a5b53;line-height:1.7;margin-top:8px;">' + r.relIntro + '</div>'
@@ -299,7 +304,7 @@
 
     /* ── テキスト版（HTMLを表示できない環境・迷惑メール判定対策） ── */
     var t = [];
-    t.push('私だけの運気予報　' + dateLabel, '', r.user.nick + 'さん、おはようございます', strip(r.relIntro), '');
+    t.push('私だけの運気予報　' + dateLabel + (hol ? '（' + hol + '）' : ''), '', r.user.nick + 'さん、おはようございます', strip(r.relIntro), '');
     t.push('■ 今日の運勢：' + r.weather.name + '（運勢指数 ' + idx + '/100）', strip(r.weatherMsg), '');
     if (r.todayOne) t.push('■ 今日はこれだけ', strip(r.todayOne), '');
     t.push('■ 今日のあなた', strip(r.theme.message), '');

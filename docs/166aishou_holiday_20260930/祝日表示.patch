@@ -1,0 +1,165 @@
+diff -ruN ha/jp-holidays.js hb/jp-holidays.js
+--- ha/jp-holidays.js	1970-01-01 00:00:00.000000000 +0000
++++ hb/jp-holidays.js	2026-09-30 06:56:33.346122746 +0000
+@@ -0,0 +1,65 @@
++/*! jp-holidays.js — 日本の祝日（「国民の祝日に関する法律」にもとづく自動計算）
++ *
++ *  JPHoliday.name(y, m, d) → 祝日名（祝日でなければ ''）
++ *    例：JPHoliday.name(2026, 11, 3) → '文化の日'
++ *  JPHoliday.short(y, m, d) → カレンダーのマス目用の短い名前（例：'勤労感謝'）
++ *  対象：2020年以降のルール（2020・2021年の五輪による特例の移動は含まない）。
++ *  春分・秋分の日は天文計算の近似式（1980〜2099年で官報の発表と一致）。
++ *  ※ 法改正で祝日が変わったときは、このファイルだけを直せばよい（カレンダー・メールの両方に反映される）。
++ */
++(function (root) {
++  'use strict';
++
++  // 第n週の月曜日
++  function nthMonday(y, m, n) {
++    var first = new Date(y, m - 1, 1).getDay();          // 0=日
++    var firstMon = 1 + ((8 - first) % 7);
++    return firstMon + (n - 1) * 7;
++  }
++  function shunbun(y) { return Math.floor(20.8431 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4)); }
++  function shubun(y)  { return Math.floor(23.2488 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4)); }
++
++  // 振替・国民の休日を除いた「国民の祝日」
++  function base(y, m, d) {
++    switch (m) {
++      case 1:  if (d === 1) return '元日'; if (d === nthMonday(y, 1, 2)) return '成人の日'; break;
++      case 2:  if (d === 11) return '建国記念の日'; if (d === 23) return '天皇誕生日'; break;
++      case 3:  if (d === shunbun(y)) return '春分の日'; break;
++      case 4:  if (d === 29) return '昭和の日'; break;
++      case 5:  if (d === 3) return '憲法記念日'; if (d === 4) return 'みどりの日'; if (d === 5) return 'こどもの日'; break;
++      case 7:  if (d === nthMonday(y, 7, 3)) return '海の日'; break;
++      case 8:  if (d === 11) return '山の日'; break;
++      case 9:  if (d === nthMonday(y, 9, 3)) return '敬老の日'; if (d === shubun(y)) return '秋分の日'; break;
++      case 10: if (d === nthMonday(y, 10, 2)) return 'スポーツの日'; break;
++      case 11: if (d === 3) return '文化の日'; if (d === 23) return '勤労感謝の日'; break;
++    }
++    return '';
++  }
++  function shift(y, m, d, k) { var t = new Date(y, m - 1, d + k); return [t.getFullYear(), t.getMonth() + 1, t.getDate()]; }
++
++  function name(y, m, d) {
++    var b = base(y, m, d);
++    if (b) return b;
++    var dow = new Date(y, m - 1, d).getDay();
++    // 振替休日：祝日が日曜なら、その後の最初の「祝日でない日」が休日
++    for (var k = 1; k <= 7; k++) {
++      var p = shift(y, m, d, -k);
++      if (!base(p[0], p[1], p[2])) break;                 // 連続する祝日の並びが途切れた
++      if (new Date(p[0], p[1] - 1, p[2]).getDay() === 0) return '振替休日';
++    }
++    // 国民の休日：前日と翌日が祝日にはさまれた平日（日曜を除く）
++    if (dow !== 0) {
++      var a = shift(y, m, d, -1), c = shift(y, m, d, 1);
++      if (base(a[0], a[1], a[2]) && base(c[0], c[1], c[2])) return '国民の休日';
++    }
++    return '';
++  }
++
++  // カレンダーのマス目用の短い名前（小さなマスで2行以上に折り返さないように。タップ時・メールは正式名）
++  var SHORT = { '建国記念の日': '建国記念', 'スポーツの日': 'スポーツ', '勤労感謝の日': '勤労感謝', '国民の休日': '休日', '憲法記念日': '憲法記念' };
++  function short(y, m, d) { var n = name(y, m, d); return SHORT[n] || n; }
++
++  var api = { name: name, short: short };
++  root.JPHoliday = api;
++  if (typeof module !== 'undefined' && module.exports) module.exports = api;
++})(typeof window !== 'undefined' ? window : this);
+diff -ruN ha/my-tenki-demo.html hb/my-tenki-demo.html
+--- ha/my-tenki-demo.html	2026-09-30 06:56:33.211792033 +0000
++++ hb/my-tenki-demo.html	2026-09-30 06:56:51.842559018 +0000
+@@ -221,6 +221,9 @@
+   .cal-cell:hover{border-color:var(--coral);}
+   .cal-cell.today{border-color:var(--coral);box-shadow:inset 0 0 0 1px var(--coral);}
+   .cal-d{color:var(--ink);}
++  /* 祝日・土日（2026-09-30 追加・控えめ）：日曜・祝日＝赤、土曜＝青。祝日名は日付の下に小さく（jp-holidays.js） */
++  .cal-dow.sun,.cal-d.sun{color:#d0506a;} .cal-dow.sat,.cal-d.sat{color:#4a78c8;}
++  .cal-hol{display:block;font-size:7.5px;line-height:1.15;color:#d0506a;font-weight:600;letter-spacing:-.02em;margin:0 1px 1px;word-break:keep-all;overflow-wrap:anywhere;}
+   .legend{color:var(--muted);}
+   .daydetail{background:#fff7f4;border-color:#d7a29a;}
+   .daydetail textarea{background:#f6f8fc;color:var(--ink);border-color:var(--line);}
+@@ -370,6 +373,7 @@
+ 
+ <script src="bazi.js"></script>
+ <script src="engine.js"></script>
++<script src="jp-holidays.js"></script>
+ <script src="daily-engine.js"></script>
+ <script>
+ const KD=window.KDaily; // 文言バンクの単一ソース(daily-engine.js)
+@@ -1002,13 +1006,14 @@
+   const todY=_jst.getFullYear(), todM=_jst.getMonth()+1, todD=_jst.getDate();
+   $("calTitle").textContent=calY+'年 '+calM+'月';
+   const dow=['日','月','火','水','木','金','土'];let h='';
+-  dow.forEach(w=>h+='<div class="cal-dow">'+w+'</div>');
++  dow.forEach((w,i)=>h+='<div class="cal-dow'+(i===0?' sun':(i===6?' sat':''))+'">'+w+'</div>');   // 日曜＝赤・土曜＝青
+   for(let i=0;i<startDow;i++)h+='<div class="cal-cell empty"></div>';
+   for(let dn=1;dn<=days;dn++){
+     const d=new Date(calY,calM-1,dn);const dm=dayMarks(d);const mk=(dm.m.includes('🌈')?['🌈']:(dm.m.includes('🌷')?['🌷']:dm.m));const hasMemo=!!getMemo(d);
+     const isTod=(calY===todY&&calM===todM&&dn===todD);
+     const gr=dayGrade(dm);
+-    h+='<div class="cal-cell'+(isTod?' today':'')+'" data-d="'+dn+'"><div class="cal-d">'+dn+(hasMemo?'<span class="cal-memo-dot"></span>':'')+'</div><div class="cal-grade '+gr.cls+'">'+gr.sym+'</div><div class="cal-marks">'+mk.join('')+'</div></div>';
++    const _hol=(window.JPHoliday?JPHoliday.short(calY,calM,dn):''), _wd=d.getDay();   // 祝日（マス目用の短い名前）
++    h+='<div class="cal-cell'+(isTod?' today':'')+'" data-d="'+dn+'"><div class="cal-d'+((_hol||_wd===0)?' sun':(_wd===6?' sat':''))+'">'+dn+(hasMemo?'<span class="cal-memo-dot"></span>':'')+(_hol?'<span class="cal-hol">'+_hol+'</span>':'')+'</div><div class="cal-grade '+gr.cls+'">'+gr.sym+'</div><div class="cal-marks">'+mk.join('')+'</div></div>';
+   }
+   $("calGrid").innerHTML=h;
+   $("calGrid").querySelectorAll('.cal-cell[data-d]').forEach(c=>c.onclick=()=>showDay(new Date(calY,calM-1,+c.dataset.d)));
+@@ -1088,7 +1093,8 @@
+   const _dImi=(CUR_FAV && CUR_FAV[STEM_GOGYO[t.stem]]==='忌');
+   const _dPresent=['💼','💰','🩷','🌐','📚'].some(function(x){return m.includes(x);});
+   const _favNote=(_dImi&&_dPresent&&(_gr.sym==='〇'||_gr.sym==='△'))?'<div style="margin-top:8px;font-size:12px;color:#9c7b46;background:rgba(196,137,43,.08);border:1px solid rgba(196,137,43,.22);border-radius:10px;padding:8px 11px;line-height:1.75">※ 今日はこの分野の“気”が動く日。ただし<b>あなたには少し力の要るテーマ</b>なので、チャンスはあっても勢い任せにせず、<b>整えて臨む</b>と◎。</div>':'';
+-  $("dayDetail").innerHTML='<b style="color:var(--gold)">'+ymd+'（'+t.stem+t.branch+'）</b>'+gradeHead+_summary+_swayLove+'<p style="margin-top:6px">'+info+'</p>'+_favNote+_bonus+goLine+_mix+extra+'<textarea id="memoBox" placeholder="この日の予定・メモ（仕事/会食/デートなど）">'+memo+'</textarea><div style="margin-top:8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><button class="cal-nav" id="memoSave">メモを保存</button><a class="gcal" href="'+gurl+'" target="_blank" rel="noopener">📅 Googleカレンダーに追加</a></div>';
++  const _holD=(window.JPHoliday?JPHoliday.name(d.getFullYear(),d.getMonth()+1,d.getDate()):'');   // 祝日（正式名）
++  $("dayDetail").innerHTML='<b style="color:var(--gold)">'+ymd+'（'+t.stem+t.branch+'）</b>'+(_holD?' <span style="display:inline-block;font-size:11.5px;font-weight:700;color:#d0506a;background:#fdeef1;border-radius:20px;padding:1px 9px;vertical-align:1px;">🎌 '+_holD+'</span>':'')+gradeHead+_summary+_swayLove+'<p style="margin-top:6px">'+info+'</p>'+_favNote+_bonus+goLine+_mix+extra+'<textarea id="memoBox" placeholder="この日の予定・メモ（仕事/会食/デートなど）">'+memo+'</textarea><div style="margin-top:8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><button class="cal-nav" id="memoSave">メモを保存</button><a class="gcal" href="'+gurl+'" target="_blank" rel="noopener">📅 Googleカレンダーに追加</a></div>';
+   $("dayDetail").classList.add('show');
+   setTimeout(function(){var _dd=$("dayDetail");if(_dd){var _y=_dd.getBoundingClientRect().top+window.pageYOffset-70;window.scrollTo({top:_y,behavior:'smooth'});}},60);
+   $("memoSave").onclick=()=>{try{localStorage.setItem(memoKey(d),$("memoBox").value);}catch(e){}renderCalendar();$("memoSave").textContent='保存しました ✓';};
+diff -ruN ha/mypage.html hb/mypage.html
+--- ha/mypage.html	2026-09-30 06:56:32.933916516 +0000
++++ hb/mypage.html	2026-09-30 06:56:51.839891483 +0000
+@@ -105,6 +105,9 @@
+   .cal-cell.empty{background:none;cursor:default;}
+   .cal-cell.today{outline:2px solid var(--coral);}
+   .cal-d{font-size:11px;color:var(--ink-soft);text-align:center;position:relative;}
++  /* 祝日・土日（2026-09-30 追加・控えめ）：日曜・祝日＝赤、土曜＝青。祝日名は日付の下に小さく（jp-holidays.js） */
++  .cal-dow.sun,.cal-d.sun{color:#d0506a;} .cal-dow.sat,.cal-d.sat{color:#4a78c8;}
++  .cal-hol{display:block;font-size:7.5px;line-height:1.15;color:#d0506a;font-weight:600;letter-spacing:-.02em;margin:0 1px 1px;word-break:keep-all;overflow-wrap:anywhere;}
+   .cal-memo-dot{position:absolute;top:0;right:6px;width:5px;height:5px;border-radius:50%;background:var(--sakura);}
+   .cal-grade{text-align:center;font-size:18px;line-height:1;margin-top:1px;font-weight:700;}
+   .g-top{color:#e0699a}.g-good{color:#3c9a63}.g-normal{color:#bcb0a4}.g-care{color:#5b93c2}
+@@ -371,6 +374,7 @@
+ 
+ <script src="bazi.js"></script>
+ <script src="engine.js"></script>
++<script src="jp-holidays.js"></script>
+ <script src="daily-engine.js"></script>
+ <script>
+ /* ===== 四柱推命ロジック（my-tenki-demo.html と共通） ===== */
+@@ -588,13 +592,14 @@
+   const todY=_jst.getFullYear(), todM=_jst.getMonth()+1, todD=_jst.getDate();
+   $("calTitle").textContent=calY+'年 '+calM+'月';
+   const dow=['日','月','火','水','木','金','土'];let h='';
+-  dow.forEach(w=>h+='<div class="cal-dow">'+w+'</div>');
++  dow.forEach((w,i)=>h+='<div class="cal-dow'+(i===0?' sun':(i===6?' sat':''))+'">'+w+'</div>');   // 日曜＝赤・土曜＝青
+   for(let i=0;i<startDow;i++)h+='<div class="cal-cell empty"></div>';
+   for(let dn=1;dn<=days;dn++){
+     const d=new Date(calY,calM-1,dn);const dm=dayMarks(d);const mk=(dm.m.includes('🌈')?['🌈']:(dm.m.includes('🌷')?['🌷']:dm.m));const hasMemo=!!getMemo(d);
+     const isTod=(calY===todY&&calM===todM&&dn===todD);
+     const gr=dayGrade(dm);
+-    h+='<div class="cal-cell'+(isTod?' today':'')+'" data-d="'+dn+'"><div class="cal-d">'+dn+(hasMemo?'<span class="cal-memo-dot"></span>':'')+'</div><div class="cal-grade '+gr.cls+'">'+gr.sym+'</div><div class="cal-marks">'+mk.join('')+'</div></div>';
++    const _hol=(window.JPHoliday?JPHoliday.short(calY,calM,dn):''), _wd=d.getDay();   // 祝日（マス目用の短い名前）
++    h+='<div class="cal-cell'+(isTod?' today':'')+'" data-d="'+dn+'"><div class="cal-d'+((_hol||_wd===0)?' sun':(_wd===6?' sat':''))+'">'+dn+(hasMemo?'<span class="cal-memo-dot"></span>':'')+(_hol?'<span class="cal-hol">'+_hol+'</span>':'')+'</div><div class="cal-grade '+gr.cls+'">'+gr.sym+'</div><div class="cal-marks">'+mk.join('')+'</div></div>';
+   }
+   $("calGrid").innerHTML=h;
+   $("calGrid").querySelectorAll('.cal-cell[data-d]').forEach(c=>c.onclick=()=>showDay(new Date(calY,calM-1,+c.dataset.d)));
+@@ -855,7 +860,8 @@
+     +_gSec('📚','学び・成長','自分の学び／子供の学び',false,_studyOn?'good':'quiet',_sb)
+     +_gSec('🌿','健康・コンディション','自分／家族の体調',false,_hTone,_hb)
+     +_gSec('🏠','暮らし・整え','家事／お出かけ／転機',false,_kTone,_kb);
+-  $("dayDetail").innerHTML='<b style="color:#a06517;font-size:15px">'+ymd+'</b>'+gradeHead+_summary+_warnTop+goLine+_favNote
++  const _holD=(window.JPHoliday?JPHoliday.name(d.getFullYear(),d.getMonth()+1,d.getDate()):'');   // 祝日（正式名）
++  $("dayDetail").innerHTML='<b style="color:#a06517;font-size:15px">'+ymd+'</b>'+(_holD?' <span style="display:inline-block;font-size:11.5px;font-weight:700;color:#d0506a;background:#fdeef1;border-radius:20px;padding:1px 9px;vertical-align:1px;">🎌 '+_holD+'</span>':'')+gradeHead+_summary+_warnTop+goLine+_favNote
+     +'<div class="ghint">▼ ジャンル別にタップで開きます（恋愛・仕事・お金・対人・学び・健康・暮らし）</div>'+_secs
+     +'<textarea id="memoBox" placeholder="この日の予定・メモ（仕事/会食/デートなど）">'+memo+'</textarea><div style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="cal-nav" id="memoSave" style="width:auto;padding:0 14px;height:34px;font-size:12.5px;">メモを保存</button><a class="gcal" href="'+gurl+'" target="_blank" rel="noopener">📅 Googleカレンダーに追加</a></div>';
+   $("dayDetail").classList.add('show');

@@ -7,6 +7,7 @@
 | ファイル | 内容 |
 |---|---|
 | `mail-bg/` | 12か月分の**動く季節バナー**（`banner-01.gif`〜`banner-12.gif`・各27〜70KB）と小さなアイコン `crystal-30.png`。**`assetBase` の下へアップロードする**（`https://unkiyoho.jp/mail-bg/…`） |
+| `jp-holidays.js` | 日本の祝日の自動計算（2026-09-30 追加）。`render-daily-mail.js` が同じフォルダから読み、祝日の朝は日付の下に「🎌 今日は◯◯」を出す。サイトのルートにも同じものを置く（カレンダー用） |
 | `render-daily-mail.js` | `renderDailyMail(r, opts)` → `{ subject, html, text }`。`r` は `generateDaily()` の返り値そのまま |
 | `build-samples.js` | 見本メールを3通生成（`samples/`）。`sample-0924-test-married` は 9/24 に届いたメールと同じ条件（結婚している・9/24）のテスト会員（架空） |
 | `check-engine.js` | ある会員・ある日にロジックが出す文章を一覧表示（送ったメールとの照合用） |
