@@ -1,79 +1,73 @@
-# 検証スクリプト（2026-09-25 / 09-26 追加）
+# Pocket鑑定 テスト
 
-Pocket鑑定の修正（大運・立運・節入り、アカウント、パスワード再設定、LP振り分け）の検証に使ったスクリプトです。
+どれも公開サイトには置きません。何を確かめるかは、仕様書（`docs/Pocket鑑定_実装仕様書.md`）の「10. テスト」を見てください。
 
 ## 準備
-1. このフォルダに `fx/` という名前で、`pocketkantei_final_fixed.zip` を展開します（`tests/fx/index.html` になるように）。
-2. `npm i playwright` を実行し、`npx playwright install chromium` でブラウザを入れます。
-3. `@netlify/blobs` の代わりに、メモリ上で動く仮の保存領域（`mock/`）を使います。実行時は `NODE_PATH=mock/node_modules` を付けてください。
+1. このフォルダに、`fx/` という名前で `pocketkantei_final_fixed.zip` を展開します（`tests/fx/index.html` になるように）。
+2. `npm i playwright` を実行します。
+3. `@netlify/blobs` の代わりに、仮の保存領域 `mock/` を使います。`NODE_PATH=mock/node_modules` を付けて実行します。
+4. 実際のAIを使うテストは、`GEMINI_KEY=<テスト用のキー>` を付けて実行します。**キーをファイルに保存しないでください。**
 
-## スクリプト
+## 変更したら必ず流すもの（実際のAIは使いません）
+```
+node unitguard.js
+NODE_PATH=mock/node_modules node e2e.js
+NODE_PATH=mock/node_modules node quotatest.js
+NODE_PATH=mock/node_modules node budgettest.js
+NODE_PATH=mock/node_modules node ui10.js
+NODE_PATH=mock/node_modules node pushtest.js
+node prefix.js
+```
+
+## 一覧
+
+### 命式
 | ファイル | 内容 | 実行例 |
 |---|---|---|
-| `chk1.js` | 大運の一括チェック1万件（1番目＝月柱・期間／2番目＝月柱±1・立運から／10年ごと） | `node chk1.js` |
-| `authtest.js` | アカウントAPIの単体テスト（登録〜削除・ロック・偽造トークン・Origin） | `NODE_PATH=mock/node_modules node authtest.js` |
-| `e2e.js` | 画面の通しテスト（2台の端末：登録→別端末ログイン→ログアウト→削除） | `NODE_PATH=mock/node_modules node e2e.js` |
-| `e2e_reset.js` | パスワード再設定の通しテスト（Resendへの送信は仮のものに差し替え） | `NODE_PATH=mock/node_modules node e2e_reset.js` |
-| `lpflow.js` | 未登録時のLP振り分け | `node lpflow.js` |
-| `eye.js` | パスワード表示ボタン | `node eye.js` |
+| `chk1.js` | 大運の一括チェック1万件（第一運＝月柱・期間・10年ごと） | `node chk1.js` |
+| `cmp184.js` | v184 のエンジンとの比較2万件。`pro_prototype_v184.zip` の `pro-bazi.js` を `v184_bazi.js` としてこのフォルダに置く | `node cmp184.js` |
+| `tzref.py` → `tzapp.js` → `tzcmp.py` | 出生地ごとの時差を、独立した計算（`pip install ephem`）とアプリで出して照合 | `python3 tzref.py 1 40 && node tzapp.js && python3 tzcmp.py` |
 
-### 2026-09-26 追加（v184 との整合・時差・10言語）
+### アカウント・課金・回数
 | ファイル | 内容 | 実行例 |
 |---|---|---|
-| `cmp184.js` | v184 エンジンと Pocket エンジンの比較2万件。`pro_prototype_v184.zip` の `pro-bazi.js` を `v184_bazi.js` という名前でこのフォルダに置いて実行 | `node cmp184.js` |
-| `tzref.py` | 出生地ごとの基準値を独立計算（ephem・zoneinfo。`pip install ephem`）→ `tzcases.json` | `python3 tzref.py 1 40` |
-| `tzapp.js` → `tzcmp.py` | アプリで同じ条件の命式を出し（`tzresult.json`）、基準値と照合 | `node tzapp.js && python3 tzcmp.py` |
-| `unitguard.js` | AI回答の後処理（言語判定・専門語・提案ボタン・仏暦・韓国語の助詞など）の単体テスト | `node unitguard.js` |
-| `live.js` → `livecheck.py` | 実際の Gemini で10言語をランダムに会話し（`live_all.json`）、言語混入・西暦・漏れを自動チェック。**テスト用のキーを環境変数で渡す。キーはファイルに保存しないこと** | `GEMINI_KEY=... node live.js && python3 livecheck.py` |
+| `authtest.js` | アカウントAPI（登録〜削除・ロック・偽造トークン・Origin） | `NODE_PATH=mock/node_modules node authtest.js` |
+| `e2e.js` | 2台の端末：登録 → 別の端末でログイン → ログアウト → 削除 | `NODE_PATH=mock/node_modules node e2e.js` |
+| `e2e_reset.js` | パスワード再設定（Resend は偽物） | `NODE_PATH=mock/node_modules node e2e_reset.js` |
+| `lpflow.js` / `eye.js` | 未登録の時のLPへの移動／パスワード表示ボタン | `node lpflow.js` |
+| `billtest.js` / `billtest2.js` | RevenueCat の通知とプランの変化／チャットの上限に使うプラン | `NODE_PATH=mock/node_modules node billtest.js` |
+| `billui.js` | 料金画面・購入・復元・マイページ（RevenueCat は模擬） | `NODE_PATH=mock/node_modules node billui.js` |
+| `webcard.js` / `webcancel.js` | ウェブ版の決済画面への移動／自分で解約 | `NODE_PATH=mock/node_modules node webcard.js` |
+| `quotatest.js` | サーバーの回数の上限（無料・本格鑑定・数えない呼び出し・プランの詐称） | `NODE_PATH=mock/node_modules node quotatest.js` |
+| `planui2.js` | 本格鑑定の数え方と、使い切った時の画面 | `NODE_PATH=mock/node_modules node planui2.js` |
+| `budgettest.js` / `budgetui.js` | 31日間使い続けた時のAI原価と利益率／雑談の割り当てを使い切った時の画面 | `NODE_PATH=mock/node_modules node budgettest.js` |
 
-### 2026-09-26 追加（2）：発売前の総点検
+### 10言語の画面・後処理・キャッシュ
 | ファイル | 内容 | 実行例 |
 |---|---|---|
-| `bigtest.js` → `bigcheck.py` | 10言語×14問の長い会話（`bigq.json`）→ 言語混入・同じ文のくり返し・決まり文句を集計 | `GEMINI_KEY=... node bigtest.js && python3 bigcheck.py big_all.json` |
-| `finaltest.js` | 上に英語の質問・深刻な相談を足した16問（`finalq.json`） | `GEMINI_KEY=... node finaltest.js && python3 bigcheck.py final_all.json` |
-| `ui10.js` | 10言語で登録エラー・通信エラー・登録済み・ログイン失敗・各画面・チャットのエラー表示を確認（`ui10.json`） | `NODE_PATH=mock/node_modules node ui10.js` |
-| `datep.js` / `bday.js` / `pb.js` | 相手の誕生日の読み取り、自分の誕生日の質問、AI用データの本人・相手の行 | `node datep.js` など |
+| `ui10.js` | 10言語のエラー表示と各画面 | `NODE_PATH=mock/node_modules node ui10.js` |
+| `unitguard.js` | AIの返事の後処理（言語違い・専門用語・決まり文句・相談先・〇〇・見分けの正規表現など） | `node unitguard.js` |
+| `datep.js` / `bday.js` / `pb.js` | 相手の誕生日の読み取り／自分の誕生日の質問／AI用データの本人・相手の行 | `node datep.js` |
 | `hl.js` | 端末の地域ごとの相談窓口 | `node hl.js` |
+| `prefix.js` / `blocks.js` | 指示文の先頭の一致率／各部分が毎回変わるか | `node prefix.js` |
 
-### 2026-09-26 追加（3）：課金の土台
+### ニコのメッセージ（プッシュ）
 | ファイル | 内容 | 実行例 |
 |---|---|---|
-| `billtest.js` | 購読の通知（billing.js）の受け付けと、アカウントのプランの変化 | `NODE_PATH=mock/node_modules node billtest.js` |
-| `billtest2.js` | チャットの上限に使うプランの判定（gemini.js） | `NODE_PATH=mock/node_modules node billtest2.js` |
-| `webcard.js` | ウェブ版のカード決済（テレコムクレジット）の表示と決済画面への移動 | `NODE_PATH=mock/node_modules node webcard.js` |
-| `webcancel.js` | ウェブ版の自分で解約（決済会社の解約の成功・失敗） | `NODE_PATH=mock/node_modules node webcancel.js` |
-| `billui.js` | 料金画面・購入・復元・マイページ（RevenueCat のプラグインを模擬） | `NODE_PATH=mock/node_modules node billui.js` |
+| `pushtest.js` | 送信の仕組み（時刻・1日1回・似た文面・言語違い・消えた端末・長く開いていない人・夏時間・旅行・夜の「おはよう」・曜日・退会）。AIと Firebase は偽物 | `NODE_PATH=mock/node_modules node pushtest.js` |
+| `pushui.js` | 画面（ウェブ版・未ログイン・オン／オフ・受け取り箱からチャットへ・10言語） | `NODE_PATH=mock/node_modules node pushui.js` |
+| `pushlive.js` / `pushlive2.js` / `pushlive3.js` | 実際のAIで10言語×距離×時間帯×曜日の文面を作る（送信はしない） | `GEMINI_KEY=… node pushlive3.js` |
 
-### 2026-09-26 追加（4）：料金設計（Standard / Pro / VIP）
+### 会話の質（実際のAI）
 | ファイル | 内容 | 実行例 |
 |---|---|---|
-| `quotatest.js` | サーバーの回数制限（無料／本格鑑定の月の上限／数えない呼び出し／プラン名の詐称） | `NODE_PATH=mock/node_modules node quotatest.js` |
-| `planui2.js` | 画面：本格鑑定の数え方、使い切った時の案内とシート、深刻な相談は止めない、マイページの残り回数 | `NODE_PATH=mock/node_modules node planui2.js` |
+| `convoall.js` | 利用者として、アプリの画面で数往復ずつ話す。国ごとの時刻で動かす。人物は `personas.json`（10言語32人）・`love_personas.json`（恋愛24人）・`crisis_personas.json`（危機） | `GEMINI_KEY=… node convoall.js love_personas.json 結果.json 8` |
+| `convocheck.py` | 言語の混入・専門用語・繰り返し・誕生日の聞き直し・相談先を機械的に確かめる | `python3 convocheck.py 結果.json` |
+| `fillercheck.py` | お茶・休息などの決まり文句の数 | `python3 fillercheck.py 結果.json` |
+| `judge.js` | AIによる採点（具体性・行動・深さ・正直さ・解決・繰り返し・突き放し・決まり文句） | `GEMINI_KEY=… node judge.js 結果.json 採点.json` |
+| `stance.js` + `stanceq.json` | ニコの姿勢（無謀な決断・「私悪くないよね？」・自分責めなど） | `GEMINI_KEY=… node stance.js 結果.json` |
+| `convo.js` + `convo_*.json` | 1人の利用者として続けて会話する（目で確かめる用） | `GEMINI_KEY=… node convo.js convo_ja.json 結果.json` |
+| `bigtest.js` / `finaltest.js` / `finaltest_u.js` → `bigcheck.py` | 10言語の長い会話 | `GEMINI_KEY=… node bigtest.js && python3 bigcheck.py big_all.json` |
+| `live.js` → `livecheck.py` | 10言語のランダムな会話 | `GEMINI_KEY=… node live.js && python3 livecheck.py` |
 
-### 2026-09-26 追加（5）：利益65%を守るAI原価の上限
-| ファイル | 内容 | 実行例 |
-|---|---|---|
-| `budgettest.js` | 31日間、毎日止まるまで使い続けた時のAI原価と利益率（3プラン）、無料の話題の判定の上限 | `NODE_PATH=mock/node_modules node budgettest.js` |
-| `budgetui.js` | 雑談の割り当てを使い切った時の画面（案内・本格鑑定は答える・深刻な相談は相談窓口つき） | `NODE_PATH=mock/node_modules node budgetui.js` |
-
-### 2026-09-26 追加（6）：キャッシュ割引の並び順
-| ファイル | 内容 | 実行例 |
-|---|---|---|
-| `prefix.js` | 指示文が、別の質問・3時間後・別の人・別の言語で、先頭から何文字一致するか | `node prefix.js` |
-| `blocks.js` | 指示文の各部分が、毎回変わるか・質問で変わるか | `node blocks.js` |
-
-### 2026-09-29 追加（7）：ニコからのメッセージ（プッシュ通知）
-| ファイル | 内容 | 実行例 |
-|---|---|---|
-| `pushtest.js` | 送信の仕組み（設定・時刻の区切り・1日1回・似た文面の作り直し・言語違い・消えた端末・長く開いていない人・夏時間・有料の原価・退会）。AIと Firebase は偽物 | `NODE_PATH=mock/node_modules node pushtest.js` |
-| `pushui.js` | 画面（ウェブ版は案内だけ・未ログイン・オン／オフ・受け取り箱からチャットへ・通知の不許可・10言語のメニュー） | `NODE_PATH=mock/node_modules node pushui.js` |
-| `pushlive.js`・`pushlive2.js`・`pushlive3.js` | 実際のAIで10言語×距離感×時間帯（8〜21時）×曜日（月〜日）の文面を作る（送信はしない）。`pushlive3.js` は曜日の取り違えを数える | `GEMINI_KEY=… node pushlive.js` |
-
-### 2026-09-29 追加（8）：ニコの姿勢（都合よく肯定しない）
-| ファイル | 内容 | 実行例 |
-|---|---|---|
-| `stance.js`＋`stanceq.json` | 実際のAIで6つの場面（無謀な決断・「私悪くないよね？」・自分責め・合格の報告・同じ無理の繰り返し・欠点を正直に）を、4言語・2つの段階で試す。使ったモデルも記録 | `GEMINI_KEY=… node stance.js 結果.json`（`ONLY=jaS1,enS2` で絞れる） |
-| `convo.js`＋`convo_ja.json`・`convo_en.json` | 1人の利用者として、アプリの画面で続けて会話する（実際のAI）。会話の流れ・言い方の崩れを目で確かめる用 | `GEMINI_KEY=… node convo.js convo_ja.json 結果.json` |
-| `convoall.js`＋`personas.json`＋`convocheck.py` | 10言語の利用者32人（恋愛・仕事・お金、高ぶり・不安・どん底・執着・暴言・借金など）として4〜6往復ずつ話す（実際のAI）。国ごとの時刻で動かす。`convocheck.py` で言語の混入・専門用語・繰り返し・誕生日の聞き直し・相談先を機械的に確かめる | `GEMINI_KEY=… node convoall.js personas.json 結果.json 8` → `python3 convocheck.py 結果.json` |
-
-※本番の Netlify（実際の Blobs・Resend）での確認は含みません。デプロイ後に実機で「登録→別端末でログイン」「パスワードを忘れた→メール→再設定」を確認してください。
+本番の Netlify（実際の Blobs・Resend・Firebase）での確認は、仕様書の「11. 公開前チェック」で行ってください。
