@@ -1,7 +1,8 @@
 # Pocket鑑定 実装仕様書
 
-この文書が、Pocket鑑定の**唯一の仕様書**です。ほかの資料はありません。この文書と、同じ zip の `site/`・`tests/` だけで、一人で実装・公開できるように書いています。
-- Pocket鑑定は、10言語の四柱推命チャットです。PWA として Netlify で公開し、AI は Gemini を使います。AI の相談相手の名前は「ニコ（Nico）」です。
+この文書が、Pocket鑑定の**唯一の仕様書**です。ほかの資料はありません。この文書と、同じ zip の中身だけで、一人で実装・公開できるように書いています。
+- Pocket鑑定は、10言語の四柱推命チャットです。AI の相談相手の名前は「ニコ（Nico）」です。
+- **動かす場所は Google（Firebase ／ Google Cloud）です。** サイトは Firebase Hosting、サーバーは Cloud Functions for Firebase、データは Firestore、ニコのメッセージは Firebase Cloud Messaging で動きます。AI は Gemini です。
 - この文書には、**今のコードの状態だけ**を書いています。
 - 「実装の手順」（2章）を上から順に進めれば、公開できる状態になります。
 
@@ -10,10 +11,10 @@
 ## 0. 絶対に守ること
 
 1. **秘密の値をコードに書かない。**
-   - 対象：APIキー・`AUTH_SECRET`・Firebase の鍵・決済のURLのひな形。
-   - 置き場所は Netlify の環境変数だけです。zip・テスト・資料には、キーは入っていません。
+   - 対象：Gemini・Resend の APIキー、`AUTH_SECRET`、RevenueCat の Webhook の合言葉、決済のURLのひな形。
+   - 置き場所は Google の **シークレット（Secret Manager）** だけです（2.2）。zip・テスト・資料には、キーは入っていません。
    - `window.PK_DIRECT_KEY` もコードに書かないでください。書くと、キーが誰にでも見えます。
-2. **デプロイは Git 連携か Netlify CLI（`netlify deploy --prod`）で行う。** 管理画面への zip のドラッグ＆ドロップでは、`functions/` と Netlify Blobs が動きません。
+2. **公開は Firebase CLI（`firebase deploy`）で行う**（2.1）。サイトと関数とデータベースの決まりが、まとめて公開されます。
 3. **`AUTH_SECRET` は一度決めたら変えない。** 変えると、全員のログインが切れます。
 4. **`PK_TRUST_PLAN_HEADER` を本番で設定しない。** 設定すると、誰でも有料プランを名乗れます（テスト専用）。
 5. **料金・回数・利益の数字は運営が決めたものです。** 変えないでください（3章・4章）。
@@ -21,8 +22,8 @@
 7. **画面の文言は、10言語そろえて直す。**
    - 対象：ja・en・zh（簡体）・zt（繁体）・ko・vi・es・pt・id・th。
 8. **つらい気持ち・危機の相談への返事は、どの上限でも止めない。** AIが使えない時も、アプリが相談窓口つきの返事を出します（`safeReply`・`HELPLINE`）。
-9. **ファイルを更新したら、`sw.js` のキャッシュ名を1つ上げる。**
-   - 今は `pocket-kantei-v29` です。次の更新では `v30` にします。
+9. **サイトのファイルを更新したら、`site/sw.js` のキャッシュ名を1つ上げる。**
+   - 今は `pocket-kantei-v30` です。次の更新では `v31` にします。
    - 上げないと、利用者の端末に古い画面が残ります。
 10. **Gemini の本番プロジェクトは、前払いの残高と月の支出上限で運用する。** 通知も必ず受け取れるようにしてください（2.3）。残高が切れるか上限に達すると、全員のチャットが止まります。
 
@@ -33,34 +34,52 @@
 ### 1.1 お渡しする zip（`Pocket鑑定_エンジニア渡し.zip`）
 ```
 Pocket鑑定_実装仕様書.md   ← この文書
-site/                      ← サイトのルート。この中身を Netlify に公開します（1.2）
+firebase.json              ← Firebase の設定（サイトの公開・/api の転送・関数・Firestore の決まり）
+.firebaserc                ← Firebase のプロジェクトID（2.1 で書き換える）
+.gitignore                 ← リポジトリに入れないもの（テスト用の設定値とシークレット・部品など）
+firestore.rules            ← Firestore の決まり（アプリから直接は読み書きできない）
+site/                      ← 公開するサイト（Firebase Hosting）
+server/                    ← サーバーの関数（Cloud Functions for Firebase）
 tests/                     ← テスト一式。公開しません（10章）
 ```
 
-### 1.2 `site/` の中身（＝サイトのルート）
+### 1.2 `site/`（Firebase Hosting で公開するもの）
 | ファイル | 役割 |
 |---|---|
-| `index.html` | アプリ本体（画面・10言語の文言・AIへの指示文・後処理・回数・課金の画面・プッシュの設定・アンケート） |
+| `index.html` | アプリ本体（画面・10言語の文言・AIへの指示文・後処理・回数・課金の画面・プッシュの設定・アンケート）。先頭に、エンジニアが入れる設定欄があります（2.5） |
 | `lp.html` | 紹介ページ。未登録の人は必ずここへ移動します |
 | `legal.html` | 利用規約・プライバシーポリシー・特定商取引法の表記（日本語と英語） |
 | `pro-bazi.js` / `pro-adapter.js` / `bazi.js` | 命式の計算エンジン（8章） |
 | `sw.js` | Service Worker。`/api/` はキャッシュしません |
 | `manifest.webmanifest`・`icon-*`・`favicon*`・`apple-touch-icon.png`・`owl.png` | PWA とアイコン。`owl.png` はニコの画像です |
-| `_headers` | `bazi.js` を1日キャッシュする設定 |
-| `netlify.toml` | `/api/gemini`・`/api/auth`・`/api/billing` を各関数へ転送します |
-| `package.json` | 関数が使う `@netlify/blobs`（^8.1.0） |
-| `functions/gemini.js` | AIの中継（キーを隠す）。回数の上限と、AI原価の上限を担当します |
-| `functions/auth.js` | アカウント・データ同期・パスワード再設定・プラン照会・ウェブ決済・ウェブ解約・プッシュの設定と受け取り箱 |
-| `functions/billing.js` | RevenueCat の Webhook を受け、アカウントにプランを記録します |
-| `functions/push-lib.js` | ニコのメッセージの本体。文面をAIで作り、Firebase で送り、受け取り箱に入れます |
-| `functions/nico-push.mjs` | 予約関数。毎時0分に動き、バックグラウンド関数を呼びます |
-| `functions/nico-push-background.mjs` | バックグラウンド関数（最長15分）。その時刻に送る人へ送ります |
 
-- `site/` の中の文書・テストは、公開サイトからも見えてしまいます。資料やテストを `site/` に入れないでください。
-- ウェブ決済の結果を受ける関数（`functions/telecom.js`）は、これから作ります（2.8）。
+- `site/` に置いたものは、誰でも見られます。資料やテストを `site/` に入れないでください。
+- キャッシュの設定は `firebase.json` の `headers` にあります（`bazi.js` だけ1日、ほかは毎回確認）。
 
-### 1.3 データの保存先（Netlify Blobs）
-| ストア | キー | 中身 |
+### 1.3 `server/`（Cloud Functions for Firebase）
+| ファイル | 役割 |
+|---|---|
+| `index.js` | **入口**。関数の名前・地域（東京 `asia-northeast1`）・使うシークレット・毎時の予約を決めています |
+| `gemini.js` | AIの中継（キーを隠す）。回数の上限と、AI原価の上限 |
+| `auth.js` | アカウント・データ同期・パスワード再設定・プラン照会・ウェブ決済・ウェブ解約・プッシュの設定と受け取り箱 |
+| `billing.js` | RevenueCat の Webhook を受け、アカウントにプランを記録します |
+| `survey.js` | 登録時のアンケートを受け、Firestore の `pk-survey` に保存します |
+| `push-lib.js` | ニコのメッセージの本体。文面をAIで作り、Firebase Cloud Messaging で送り、受け取り箱に入れます |
+| `store.js` | データの保存（Firestore）。ほかのファイルは、ここの5つの操作だけを使います（5.6） |
+| `package.json` | `firebase-functions`・`firebase-admin`。Node.js 22 |
+| `.env.example` | 秘密ではない設定値のひな形。`.env` にコピーして値を入れます（2.2）。`.env` はリポジトリに入れて構いません（秘密の値は入れないため） |
+
+| 関数名 | URL（`firebase.json` の転送） | 中身 | 動く時 |
+|---|---|---|---|
+| `gemini` | `/api/gemini` | `gemini.js` | チャットのたび |
+| `auth` | `/api/auth` | `auth.js` | 登録・ログイン・保存など |
+| `billing` | `/api/billing` | `billing.js` | RevenueCat からの通知 |
+| `survey` | `/api/survey` | `survey.js` | 登録時のアンケート |
+| `nicoPush` | なし（予約） | `push-lib.js` | 毎時0分（UTC）。最長9分 |
+| `telecom` | `/api/telecom` | `telecom.js` | **これから作る**（2.8） |
+
+### 1.4 データの保存先（Firestore）
+| コレクション | キー（文書の `k` の値） | 中身 |
 |---|---|---|
 | `pk-accounts` | `u:<uid>` | アカウント（パスワードは scrypt のハッシュ・端末データ・`sub`＝購読） |
 | | `r:<日>:<IP>` / `f:<日>:<IP>` | 登録数／パスワード再設定の依頼数（1日ごと） |
@@ -73,62 +92,101 @@ tests/                     ← テスト一式。公開しません（10章）
 | | `w:` | 本格鑑定に数えない上位モデルの、1日の回数 |
 | | `l:` `li:` | 有料の雑談の1日の回数 |
 | | `k:` `ki:` | 話題の判定の1日の回数 |
+| `pk-accounts__parts` / `pk-usage__parts` | ― | 1MB を超える長い値（会話履歴など）の続き。`store.js` が自動で分けて保存し、読む時につなげます |
+| `pk-survey` | 文書ID＝端末ID | アンケートの回答。**項目ごとの欄**で保存するので、Firestore の画面でそのまま見られます（2.9） |
 
+- `pk-accounts`・`pk-usage` の文書は `{k: キー, v: 値（JSON の文字列）, n: 分けた数, t: 書いた時刻}` の形です。キーそのものは `k` に入っています（文書IDは、キーを文書IDに使える形にしたもの）。
 - `uid` は、メールアドレス（小文字）の SHA-256（16進64桁）です。ログイン用トークンの先頭64桁も `uid` です。
 - アカウントを削除すると、`u:`・`ps:`・`pi:`・`pb:` がすべて消えます。
-- 日ごとのキー（`r:` `f:` `d:` `i:` `cd:` `w:` `l:` `li:` `k:` `ki:`）は自動では消えません。量が増えたら、古い日付のものを定期的に消してください。
+- 日ごとのキー（`r:` `f:` `d:` `i:` `cd:` `w:` `l:` `li:` `k:` `ki:`）は自動では消えません。量が増えたら、Firestore の TTL（有効期限）を設定するか、古い日付のものを定期的に消してください。
+- アプリ（ブラウザ）は Firestore に直接さわれません（`firestore.rules` ですべて拒否）。読み書きするのはサーバーの関数だけです。
 
 ---
 
 ## 2. 実装の手順（この順に進めてください）
 
-### 2.1 Netlify に公開する
-1. **Netlify の契約を確認します。**
-   - `nico-push-background` は Background Function です。Background Function は、Netlify の有料プラン（Pro 以上）でないと動きません。
-   - 無料プランのままだと、ニコのメッセージが届きません（ほかの機能は動きます）。
-   - 契約の前に、Netlify の料金ページで最新の条件を確かめてください。
-2. **`site/` の中身を、リポジトリのルートに置きます。** `netlify.toml` がルートにある状態にしてください。
-3. **Netlify とリポジトリを Git 連携します**（または `netlify deploy --prod`）。
-   - ビルドコマンドは不要です。公開するフォルダ（Publish directory）はルート（`.`）です。
-   - `@netlify/blobs` は、`package.json` から自動でインストールされます。
-4. **2.2 の環境変数を入れて、もう一度デプロイします。**
-5. **管理画面の Functions に、次の5つが出ていれば正常です。**
-   - `gemini`・`auth`・`billing`・`nico-push`（Scheduled）・`nico-push-background`（Background）
-   - `push-lib.js` は、ほかの関数から読み込むだけの部品です。一覧に出なくても問題ありません。
+### 2.1 Firebase のプロジェクトを作って公開する
+1. **Firebase のプロジェクトを作ります**（https://console.firebase.google.com）。
+   - **料金プランは Blaze（従量課金）にします。** Cloud Functions と Secret Manager は、Blaze でないと使えません。
+   - 予算アラートを設定します（Google Cloud の「お支払い → 予算とアラート」）。
+2. **Firestore を作ります。**
+   - 「Firestore Database → データベースを作成」。**本番モード**、場所は `asia-northeast1`（東京）。
+3. **パソコンの準備をします。**
+   - Node.js 22 と Firebase CLI（`npm i -g firebase-tools`）を入れ、`firebase login` します。
+   - 手元で動かす（エミュレーター）には、Java（JDK 11 以上）も入れます。
+4. **zip の中身をリポジトリに置きます**（`firebase.json` がリポジトリの一番上にある状態）。
+5. **`.firebaserc` の `<FirebaseのプロジェクトID>` を、作ったプロジェクトのIDに書き換えます。**
+6. **関数の部品を入れます：** `cd server && npm install`
+7. **先に、2.3（Gemini の APIキー）と 2.4（Resend の APIキー・送信元アドレス）を用意します。**
+8. **2.2 の設定値とシークレットを入れます。**
+   - 独自ドメインを付ける前の `SITE_URL` は、`https://<プロジェクトID>.web.app` にします。
+9. **公開します：** リポジトリの一番上で `firebase deploy`
+   - サイト（`site/`）、関数（`server/`）、Firestore の決まり（`firestore.rules`）が公開されます。
+   - 初回は、使う Google Cloud の機能（Cloud Functions・Cloud Build・Artifact Registry・Cloud Scheduler・Secret Manager など）を有効にするか聞かれます。すべて「はい」にします。
+10. **確かめます。**
+   - Firebase の管理画面の Functions に、`gemini`・`auth`・`billing`・`survey`・`nicoPush` の5つが出ていれば正常です。
+   - `https://<プロジェクトID>.web.app` を開くと、紹介ページが出ます。
+11. **独自ドメインを付けます**（Hosting → カスタムドメインを追加）。付けたら、次の3つを独自ドメインに直します。
+   - `server/.env` の `SITE_URL` → もう一度 `firebase deploy --only functions`
+   - アプリの `capacitor.config.json` の `server.url`（2.5）
+   - RevenueCat の Webhook の URL（2.6。すでに設定していた場合）
 
-**手元で動かす時**
-- Netlify CLI を入れて、`netlify link` でサイトとつないでから、`netlify dev` を実行します。
-- 関数・Blobs・環境変数が、本番と同じように手元で動きます。
+**手元で動かす時（エミュレーター）**
+- テスト用の設定値を `server/.env.local` に、テスト用のシークレットを `server/.secret.local` に入れてから、`firebase emulators:start --project demo-pk` を実行します（書き方は `tests/firebase/README.md`）。
+  - この2つはエミュレーターだけが読みます。本番の `firebase deploy` には使われません。**テスト用の値を `server/.env` に書かないでください**（本番に使われてしまいます）。
+- サイト・関数・Firestore が、本番と同じように手元で動きます（サイトは http://127.0.0.1:5002 。Firestore の中身は http://127.0.0.1:4000 で見られます）。
 - 実際の Gemini につながるので、テスト用のキーを使ってください。
 
 **他のサイトからの呼び出しを断る仕組み（Origin）**
-- `gemini.js` と `auth.js` は、呼び出し元（`Origin`・`Referer`）が環境変数 `URL`（Netlify が自動で入れる、サイトの本番のURL）で始まらない時、403 を返します。
-- 独自ドメインを付けた時は、`URL` が独自ドメインになります。この時、`xxx.netlify.app` やデプロイプレビューの URL から開くと、チャットとログインは 403 になります。**本番のドメインで開いて確かめてください。**
+- `gemini.js`・`auth.js`・`survey.js` は、呼び出し元（`Origin`・`Referer`）が `SITE_URL` で始まらない時、403 を返します。
+- `SITE_URL` を独自ドメインにした後は、`xxx.web.app` から開くとチャットとログインが 403 になります。**本番のドメインで開いて確かめてください。**
 
-### 2.2 環境変数を入れる（Netlify → Site settings → Environment variables）
-| 変数 | 必須 | 値 | 未設定の時 |
+**利用者のIP**
+- IP ごとの上限（無料の1日40回など）に使います。Firebase Hosting 経由では `fastly-client-ip`、無ければ `x-forwarded-for` の先頭を読みます。
+- IP が分からない時は、IP ごとの上限を使いません（全員が同じ枠になって止まるのを防ぐため）。端末ごと・アカウントごとの上限は、そのまま効きます。
+
+### 2.2 設定値とシークレットを入れる
+設定は2種類です。**秘密の値はシークレット、秘密でない値は `server/.env`** に入れます。
+
+**(1) シークレット（Secret Manager）** — リポジトリの一番上で、1つずつ次を実行して値を入れます。
+```
+firebase functions:secrets:set GEMINI_API_KEY
+firebase functions:secrets:set AUTH_SECRET
+firebase functions:secrets:set RESEND_API_KEY
+firebase functions:secrets:set REVENUECAT_WEBHOOK_AUTH
+firebase functions:secrets:set TELECOM_CHECKOUT_URLS
+```
+- **5つとも必ず入れてください。** 入っていないものがあると、`firebase deploy` が止まります。
+- まだ使わないもの（アプリ課金・ウェブ決済を始める前）は、`none` と入れておきます。`none` の時は、その機能だけが「準備中」として動きます。
+- 値を変えた時は、`firebase deploy --only functions` で反映します。
+
+| シークレット | 必須 | 値 | `none` や誤りの時 |
 |---|---|---|---|
 | `GEMINI_API_KEY` | **必須** | 本番用の Gemini API キー（2.3） | チャットが動かない |
 | `AUTH_SECRET` | **必須** | 32文字以上のランダム文字列（例：`openssl rand -hex 32`）。**変えない** | 登録・ログインが動かない（`NO_SECRET`） |
-| `RESEND_API_KEY` | **必須** | Resend の API キー（2.4） | パスワード再設定メールが送れない（`NO_MAIL`） |
-| `MAIL_FROM` | **必須** | 例：`Pocket Kantei <no-reply@72k.ai>` | 同上 |
-| `PK_AI_PRICES` | **必須** | AIの料金（ドル／100万トークン）。例：`{"lite":{"in":0.10,"out":0.40,"cached":0.025},"deep":{"in":0.50,"out":3.00,"cached":0.125}}`。**`deep` は `gemini-3.6-flash` の正式な料金を入れる** | 例の値で原価を計算する（deep は仮の値） |
-| `REVENUECAT_WEBHOOK_AUTH` | アプリ課金の開始時に必須 | 長いランダム文字列。RevenueCat の Webhook の「Authorization header」と同じ値 | 購入してもプランが反映されない |
-| `PK_PRODUCTS` | 推奨 | ストアの商品ID → プラン。例：`{"pk_std_monthly":"std","pk_std_annual":"std","pk_pro_monthly":"pro","pk_pro_annual":"pro","pk_vip_monthly":"vip","pk_vip_annual":"vip"}` | 商品IDに `vip`・`pro`・`std` が入っていれば自動で判定 |
-| `TELECOM_CHECKOUT_URLS` | ウェブ決済の開始時に必須 | 決済画面のURLのひな形。キーは `std_m` `std_y` `pro_m` `pro_y` `vip_m` `vip_y` の6つ。`{uid}` `{email}` `{lang}` は置き換えられます | ウェブ版の購入ボタンが「準備中」になる |
-| `TELECOM_WEBHOOK_SECRET`（名前は例） | ウェブ決済の開始時に必須 | 決済結果の通知が本物か確かめるための値。2.8 で作る `functions/telecom.js` で使う。名前と中身は、決済会社の仕様に合わせて決める | 通知を受け付けない作りにする |
-| `FCM_PROJECT_ID` / `FCM_CLIENT_EMAIL` / `FCM_PRIVATE_KEY` | プッシュの開始時に必須 | Firebase のサービスアカウントの JSON にある `project_id` / `client_email` / `private_key`。秘密鍵は `\n` を含む1行のまま貼ってよい | ニコのメッセージが届かない |
-| `PK_FX` | 任意 | 1ドル＝何円か（既定 150）。円安になったら上げる | 150 |
-| `PK_COST_BUDGET_JPY` | 任意 | 1人・1か月のAI原価の上限（円）。既定 `{"std":592,"pro":1204,"vip":2000}` | 既定値 |
+| `RESEND_API_KEY` | **必須** | Resend の API キー（2.4） | パスワード再設定メールが送れない（`MAIL_FAIL`） |
+| `REVENUECAT_WEBHOOK_AUTH` | アプリ課金の開始時 | 長いランダム文字列。RevenueCat の Webhook の「Authorization header」と同じ値 | 購入してもプランが反映されない（`NO_WEBHOOK_AUTH`） |
+| `TELECOM_CHECKOUT_URLS` | ウェブ決済の開始時 | 決済画面のURLのひな形（JSON）。キーは `std_m` `std_y` `pro_m` `pro_y` `vip_m` `vip_y` の6つ。`{uid}` `{email}` `{lang}` は置き換えられます（2.8） | ウェブ版の購入ボタンが「準備中」になる（`NOT_READY`） |
+
+**(2) 設定値（`server/.env`）** — `server/.env.example` を `server/.env` という名前でコピーして、値を入れます。
+| 設定 | 必須 | 値 | 書かない時 |
+|---|---|---|---|
+| `SITE_URL` | **必須** | サイトの本番のURL（例：`https://pocket-kantei.jp`。最後の `/` は付けない）。呼び出し元の確認と、パスワード再設定メールのリンクに使う | 呼び出し元を確かめない。メールのリンクが崩れる |
+| `MAIL_FROM` | **必須** | 例：`'Pocket Kantei <no-reply@example.jp>'`（Resend で認証したドメイン。空白を含むので `'` で囲む） | パスワード再設定メールが送れない（`NO_MAIL`） |
+| `PK_AI_PRICES` | **必須** | AIの料金（ドル／100万トークン）。例は `.env.example`。**`deep` は `gemini-3.6-flash` の正式な料金を入れる** | 例の値で原価を計算する（deep は仮の値） |
+| `PK_PRODUCTS` | 推奨 | ストアの商品ID → プラン（例は `.env.example`） | 商品IDに `vip`・`pro`・`std` が入っていれば自動で判定 |
+| `PK_FX` | 任意 | 1ドル＝何円か。円安になったら上げる | 150 |
+| `PK_COST_BUDGET_JPY` | 任意 | 1人・1か月のAI原価の上限（円） | `{"std":592,"pro":1204,"vip":2000}` |
 | `PK_DEEP_RESERVE_JPY` | 任意 | 本格鑑定1回分として先に取っておく原価（円） | 4 |
 | `GEMINI_MODEL` / `GEMINI_MODEL_DEEP` | 任意 | 軽量モデル／上位モデル（5.1） | `gemini-2.5-flash-lite` ／ `gemini-3.6-flash` |
 | `PK_PUSH_MODEL` | 任意 | ニコのメッセージの文面を作るモデル | `GEMINI_MODEL` と同じ |
 | `PK_PUSH_ACTIVE_DAYS` | 任意 | 最後にアプリを開いてから、この日数を過ぎた人には送らない | `{"free":14,"paid":45}` |
-| `PK_IGNORE_SANDBOX` | 任意 | `1` にすると、テスト購入を反映しない。**Apple の審査中は設定しない**（審査はテスト購入で行われるため） | テスト購入も反映する |
-| `PK_TRUST_PLAN_HEADER` | **本番では設定しない** | テスト専用 | ― |
+| `PK_IGNORE_SANDBOX` | 任意 | `1` にすると、テスト購入を反映しない。**Apple の審査中は書かない**（審査はテスト購入で行われるため） | テスト購入も反映する |
+| `PK_TRUST_PLAN_HEADER` | **本番では書かない** | テスト専用 | ― |
 
-- `URL` は Netlify が自動で設定します。関数は、これを使って他のサイトからの呼び出しを断ります。
-- Netlify の関数の環境変数は、**合計4KBまで**です。Firebase のサービスアカウントの JSON を丸ごと入れず、上の3つだけを入れてください。
+- JSON の値は `'` で囲んでください（例：`PK_PRODUCTS='{"pk_std_monthly":"std", …}'`）。
+- `server/.env` には秘密の値を書かないでください。秘密の値はシークレットへ。
+- ニコのメッセージの送信に、鍵の設定はいりません。Google 上では、関数のサービスアカウントの権限で送ります（2.7）。`push-lib.js` にある `FCM_PROJECT_ID`・`FCM_CLIENT_EMAIL`・`FCM_PRIVATE_KEY` は、Google 以外で動かす時だけのものです。Firebase では書かないでください。
 
 ### 2.3 Gemini の本番設定（Google AI Studio）
 1. **テスト用とは別の、本番専用のプロジェクトとキーを作ります。** テスト用のキーは本番で使わないでください。
@@ -145,15 +203,16 @@ tests/                     ← テスト一式。公開しません（10章）
 6. **利用枠（1分あたりのリクエスト数・トークン数）を確認します。**
    - 利用者が増えたら、AI Studio から上位の枠を申請します。
    - 枠が足りないと、「いま混み合っている」という表示が増えます。
-7. `PK_AI_PRICES` の `deep` に、`gemini-3.6-flash` の正式な料金を入れます。
+7. `server/.env` の `PK_AI_PRICES` の `deep` に、`gemini-3.6-flash` の正式な料金を入れます（2.2）。
+8. できた APIキーを、シークレット `GEMINI_API_KEY` に入れます（2.2）。
 
 **止まった時に利用者に見える表示**
 - 残高切れ・支出上限・Google の混雑の時は、「いまアクセスが集まっていて混み合っているみたい。少し時間をおいて送ってね」と出ます。
-- 利用者には原因が分からないので、2.3 の通知で運営が先に気づけるようにしてください。
+- 利用者には原因が分からないので、上の 5 の通知で運営が先に気づけるようにしてください。
 
 ### 2.4 パスワード再設定メール（Resend）
 1. Resend に登録し、送信元のドメインを認証します。
-2. API キーを発行して、`RESEND_API_KEY` と `MAIL_FROM` に入れます。
+2. API キーを発行して、シークレット `RESEND_API_KEY` に入れます。送信元のアドレスは、`server/.env` の `MAIL_FROM` に入れます（2.2）。
 3. Resend の無料プランには、送信数の上限があります。利用者数に合わせて契約を選んでください。
 
 ### 2.5 アプリ化（Capacitor）
@@ -165,7 +224,7 @@ tests/                     ← テスト一式。公開しません（10章）
 
 **手順**
 1. Capacitor のプロジェクトを作り、iOS と Android を追加します。
-2. `capacitor.config.json` を次のようにします（`<本番のドメイン>` を置き換える）。
+2. `capacitor.config.json` を次のようにします（`<本番のドメイン>` は、`server/.env` の `SITE_URL` と同じドメイン。独自ドメインを付ける前なら `<プロジェクトID>.web.app`）。
    ```json
    {
      "appId": "<アプリのID。例：ai.k72.pocketkantei>",
@@ -205,7 +264,7 @@ tests/                     ← テスト一式。公開しません（10章）
    | `pk_vip_monthly` | VIP | 1か月 |
    | `pk_vip_annual` | VIP | 1年 |
    - アプリとサーバーは、商品IDに入っている `std`・`pro`・`vip` でプランを、`annual`（または Package の種類が Annual）で年額を見分けます。
-   - 別の名前にする時は、環境変数 `PK_PRODUCTS` と、`index.html` の設定欄の `window.PK_PRODUCTS`（同じ形）の両方に対応を入れてください。
+   - 別の名前にする時は、`server/.env` の `PK_PRODUCTS` と、`index.html` の設定欄の `window.PK_PRODUCTS`（同じ形）の両方に対応を入れてください。
 3. Entitlement を1つ（例：`pro`）作り、6つの商品を付けます。
 4. Offering を1つ作って **current** にし、6つの Package を置きます。
 5. Webhook を設定します。
@@ -219,14 +278,15 @@ tests/                     ← テスト一式。公開しません（10章）
    - 別の端末で「購入を復元」すると、プランが戻る
 
 ### 2.7 ニコのメッセージ（Firebase Cloud Messaging）
-1. Firebase のプロジェクトを作り、iOS と Android のアプリを登録します。
+1. **2.1 で作った Firebase のプロジェクトに、iOS と Android のアプリを登録します。** 別のプロジェクトにしないでください（送信は、同じプロジェクトの権限で行うため）。
    - Android：`google-services.json` を `android/app/` に置きます。
    - iOS：`GoogleService-Info.plist` を入れます。Xcode で「Push Notifications」と「Background Modes → Remote notifications」をオンにします。
-   - Apple の APNs 認証キー（.p8）を Firebase に登録します。iPhone への通知も Firebase から送るためです。
+   - Apple の APNs 認証キー（.p8）を Firebase に登録します（プロジェクトの設定 → Cloud Messaging）。iPhone への通知も Firebase から送るためです。
 2. iOS で、アプリを開いている時も通知を出す設定（`FirebaseMessaging.presentationOptions`）は、2.5 の `capacitor.config.json` に入っています。
-3. サービスアカウントの鍵を作り、`FCM_PROJECT_ID`・`FCM_CLIENT_EMAIL`・`FCM_PRIVATE_KEY` に入れます。**鍵はコードや zip に入れないでください。**
-4. 関数のログに、毎時 `nico-push <時> {"total":…,"out":{…}}` が出ていれば、予約関数は動いています。
-5. 実機で確かめます。
+3. **鍵の設定はいりません。** 関数 `nicoPush` は、関数のサービスアカウントの権限で Firebase Cloud Messaging に送ります。
+   - 送れない時は、Google Cloud の IAM で、関数のサービスアカウント（`<プロジェクト番号>-compute@developer.gserviceaccount.com`）に「Firebase Cloud Messaging API 管理者」の役割があるか確かめてください。
+4. **毎時の予約が動いているか確かめます。** Firebase の管理画面 → Functions → `nicoPush` のログに、毎時 `nico-push <時> {"total":…,"out":{…}}` が出ていれば正常です（Google Cloud の Cloud Scheduler にも、毎時の予約が出ます）。
+5. **実機で確かめます。**
    - メニュー「ニコからのメッセージ」→「ニコにおまかせ」か「時刻を決める」→「受け取る」→ 通知を許可する
    - その時刻に通知が届き、タップするとアプリが開いて、チャットにニコの発言として出る
    - 「受け取らない」にすると、翌日から届かない
@@ -248,10 +308,14 @@ tests/                     ← テスト一式。公開しません（10章）
 - 決済の後の戻り先は、`https://<本番のドメイン>/` にしてください。
 
 **2. 決済結果の通知の受け口を作る（新しく作る）**
-- ファイル：`functions/telecom.js`。`netlify.toml` に `/api/telecom` → `/.netlify/functions/telecom` の転送を足します（ほかの3つと同じ書き方）。
-- 作り方は `functions/billing.js` と同じにします。
-  - 保存先の取り出し：`const A = require('./auth.js')._t; const store = await A.getStore(event);`
-  - 本物の通知か確かめる：決済会社の仕様（署名・送信元のIP・合言葉など）で確かめ、合わなければ 401。合言葉などは新しい環境変数に入れます（例：`TELECOM_WEBHOOK_SECRET`）。
+- ファイル：`server/telecom.js`（中身の形は `server/billing.js` と同じ：`exports.handler = async (event) => ({ statusCode, headers, body })`）。
+- 次の3か所に足します（ほかの関数と同じ書き方）。
+  - `server/index.js`：`exports.telecom = onRequest({ region: REGION, timeoutSeconds: 60, secrets: [AUTH_SECRET, TELECOM_WEBHOOK_SECRET] }, wrap(require('./telecom.js').handler));`（`TELECOM_WEBHOOK_SECRET` は `defineSecret` で作る）
+  - `firebase.json` の `rewrites`：`{ "source": "/api/telecom", "function": { "functionId": "telecom", "region": "asia-northeast1" } }`
+  - シークレット：`firebase functions:secrets:set TELECOM_WEBHOOK_SECRET`（名前は例。決済会社の仕様に合わせる）
+- 作り方は `server/billing.js` と同じにします。
+  - 保存先の取り出し：`const store = require('./store.js').getStore('pk-accounts');`（読み書きは `await store.get(key, {type:'json'})`・`await store.setJSON(key, 値)`）
+  - 本物の通知か確かめる：決済会社の仕様（署名・送信元のIP・合言葉など）で確かめ、合わなければ 401。合言葉などは、上のシークレットに入れます。
   - 同じ通知が2回来ても、結果が変わらないようにします。
 - 書き込み先：`pk-accounts` の `u:<uid>` の `sub`。**`sub` の形は次のとおりにしてください**（チャットの回数・画面の表示は、この値だけを見ます）。
   | 項目 | 値 |
@@ -280,28 +344,33 @@ tests/                     ← テスト一式。公開しません（10章）
 
 **4. 円以外の通貨** で請求できるかを、決済会社に確認します。ウェブ版は、日本語以外では「¥2,900 (≈$19.99)」と表示しています。
 
-### 2.9 登録時のアンケートの送り先（Google のサーバーなど）
-アンケートは、国・地域ごとの傾向を知るためのデータです。サービスをより良くすることと、次の商品開発に使います。**必ず集めて保存してください。**
-1. `index.html` の `_svPost(body)` の送り先を、本番のURLに差し替えます。
-   - 今は、仮の送り先として Netlify Forms を使っています（`/` に `form-name=pk-signup` で送信）。
-2. 送る中身は `application/x-www-form-urlencoded` の文字列です。項目は次のとおりです。
-   - `uid`（端末ID）・`name`・`email`・`topics`・`interests`・`source`・`freq`・`job`・`sex`・`age`（年代）・`country`（出生地の国）・`lang`（表示言語）
-3. 受け口は、成功した時に **2xx** を返してください。
-   - 送れなかった分は端末に残り（`pk_svq`）、次に開いた時に送り直されます。
-4. Google Apps Script で受ける場合は、次のどちらかにします。
-   - ブラウザから直接送れる形（CORS）にする
-   - `functions/` に中継用の関数を作り、サーバー側から転送する
-5. 受け口のURLや鍵は、コードに書かず環境変数に入れてください。
-6. 本番に切り替えたら、`index.html` の末尾にある Netlify 用の隠しフォーム `<form name="pk-signup" …>` は消して構いません。
-7. プライバシーポリシーには、次のことを書いてあります。保存先を Google 以外にする場合は、ポリシーも直してください。
-   - 集める項目、保存先（Google のクラウド）、使い道、削除の依頼先
+### 2.9 登録時のアンケート（Firestore に保存。できています）
+アンケートは、国・地域ごとの傾向を知るためのデータです。サービスをより良くすることと、次の商品開発に使います。**必ず集めて保存します。**
+- **保存先は Google の Firestore です**（コレクション `pk-survey`）。アプリ → `/api/survey` → `server/survey.js` → Firestore の順で届きます。**追加で作るものはありません。**
+- 1端末につき1件です（文書ID＝端末ID。送り直した時は上書き）。
+- 保存する項目（項目ごとの欄）
+  | 欄 | 中身 |
+  |---|---|
+  | `uid` | 端末ID |
+  | `name` | ニックネーム |
+  | `email` | メールアドレス |
+  | `topics` | 相談したいこと（いくつでも。`,` 区切り） |
+  | `interests` | 関心 |
+  | `source` | 知ったきっかけ |
+  | `freq` | 占いを使う頻度 |
+  | `job` | 職業 |
+  | `sex` | 性別 |
+  | `age` | 年代 |
+  | `country` | 出生地の国 |
+  | `lang` | 表示言語 |
+  | `at` | 受け取った日時（UTC） |
+- 送れなかった分は端末に残り（`pk_svq`）、次に開いた時に送り直されます。
+- **集計のしかた**
+  - 件数の確認：Firebase の管理画面 → Firestore → `pk-survey`。
+  - 国別・言語別の集計：Firebase の拡張機能「Stream Firestore to BigQuery」を `pk-survey` に入れると、BigQuery で集計したり、Google スプレッドシート・Looker Studio で表にしたりできます。
+- プライバシーポリシーには、集める項目、保存先（Google のクラウド）、使い道、削除の依頼先を書いてあります。
 
-### 2.10 本番のドメイン
-- シェア用のリンクは、基本的に開いているサイトの URL（`location.origin`）を使います。
-- ただし、URL が取れない時の予備として、`https://pocket-kantei.netlify.app` が直接書かれています（`index.html`・`lp.html`）。
-- 独自ドメインで公開する時は、`pocket-kantei.netlify.app` を検索して、本番のドメインに書き換えてください。
-
-### 2.11 公開前に運営が確認するもの
+### 2.10 公開前に運営が確認するもの
 - `legal.html` の文言：Apple／Google／テレコムクレジット／RevenueCat の記載、価格、解約方法、アンケートとプッシュの記載。
 - LP の文言。
 
@@ -351,7 +420,7 @@ tests/                     ← テスト一式。公開しません（10章）
 
 ---
 
-## 5. サーバー（`functions/`）
+## 5. サーバー（`server/`）
 
 ### 5.1 Gemini の使い分け ※変える時は運営に確認
 
@@ -437,7 +506,7 @@ tests/                     ← テスト一式。公開しません（10章）
 **アプリへ返すヘッダー**
 - `x-pk-win`：今の支払い期間
 - `x-pk-deep-used`：使った本格鑑定の回数
-- `x-pk-ratelimit: degraded`：Blobs につながらず、上限を確かめられなかった時（12.3）
+- `x-pk-ratelimit: degraded`：Firestore につながらず、上限を確かめられなかった時（12.3）
 
 ### 5.3 `/api/auth`（`auth.js`。すべて POST。JSON の `action` で切り替え）
 | action | 入力 | 返すもの・動き |
@@ -460,10 +529,10 @@ tests/                     ← テスト一式。公開しません（10章）
 **アカウントまわりのエラー（画面に出るコード）**
 | コード | 原因 | 対処 |
 |---|---|---|
-| `NO_SECRET` | `AUTH_SECRET` が未設定か、短い | 環境変数を入れて再デプロイ |
-| `NO_STORE` | Netlify Blobs につながらない | Git 連携か CLI でデプロイ。`@netlify/blobs` を確認 |
-| `HTTP404` | 関数がデプロイされていない | `functions/` と `netlify.toml` を含めて再デプロイ |
-| `NO_MAIL` | `RESEND_API_KEY` か `MAIL_FROM` が未設定 | 環境変数を入れる |
+| `NO_SECRET` | シークレット `AUTH_SECRET` が未設定か、16文字未満 | 2.2 のとおり入れて `firebase deploy --only functions` |
+| `NO_STORE` | Firestore につながらない | Firestore を作ったか（2.1 の 2）、関数のログのエラーを確認 |
+| `HTTP404` | 関数がデプロイされていない | `firebase deploy` をやり直す。`firebase.json` の `rewrites` を確認 |
+| `NO_MAIL` | `MAIL_FROM` が未設定 | `server/.env` に入れて `firebase deploy --only functions` |
 | `MAIL_FAIL` | Resend への送信に失敗 | Resend の管理画面のログを確認 |
 
 ### 5.4 `/api/billing`（`billing.js`）
@@ -477,16 +546,32 @@ RevenueCat の Webhook の受け口です。
 - **無視するもの：** 古い通知、匿名の購入（`$RCAnonymousID`）、分からない商品
 - **書き込み先：** `u:<uid>` の `sub = {plan, product, start, expires, willRenew, store, env, eventTs}`
 
-### 5.5 ニコのメッセージの送信（`push-lib.js`・`nico-push*.mjs`）
-1. `nico-push.mjs` が毎時0分（`0 * * * *`）に動きます。
-2. `nico-push-background` を呼びます。この時、ヘッダー `x-pk-push`（`AUTH_SECRET` から作る HMAC）を付け、正しい呼び出しだと証明します。
-3. `runHour` が、その UTC の時刻の目印（`pb:<時>:`）がある人だけを読み、`processUser` で1人ずつ処理します。
+### 5.5 ニコのメッセージの送信（`index.js` の `nicoPush`・`push-lib.js`）
+1. `nicoPush` が毎時0分（UTC）に動きます（Cloud Scheduler の予約。最長9分）。
+2. `runHour` が、その UTC の時刻の目印（`pb:<時>:`）がある人だけを読み、同時に8人ずつ `processUser` で処理します。
    1. 送る条件を確かめる（7章）
    2. 文面をAIで作る（`generate`）
    3. 文面を確かめる（`langOk`・`timeOk`・`dayOk`・`tooSimilar`）
-   4. Firebase で送る（`fcmSend`：FCM HTTP v1。JWT で認証）
+   4. Firebase Cloud Messaging で送る（`fcmSend`：FCM HTTP v1。関数のサービスアカウントの権限で送る）
    5. 受け取り箱（`pi:`）に入れ、次に送る時刻の目印を付け直す
 - Firebase が「宛先なし」と返した時は、その人のプッシュを自動でオフにします。
+- 8分を過ぎたら、その回は打ち切ります（残った人は、翌日の同じ時刻に送られます）。利用者が増えて打ち切りが続く時は、`push-lib.js` の同時に処理する人数（`concurrency`）を上げてください。
+
+### 5.6 データの保存（`store.js`）
+- ほかのファイルは、次の5つの操作だけで Firestore を使います。保存のしかたを変える時は、`store.js` だけを直します。
+  | 操作 | 動き |
+  |---|---|
+  | `get(key)` / `get(key, {type:'json'})` | 文字列／JSON を読んだ値。無ければ `null` |
+  | `set(key, 文字列)` / `setJSON(key, 値)` | 保存（上書き） |
+  | `delete(key)` | 削除 |
+  | `list({prefix})` | キーがその文字で始まるものの一覧 `{blobs:[{key}]}` |
+- 保存箱の名前（`pk-accounts`・`pk-usage`）が、Firestore のコレクション名です。
+- Firestore の1文書は1MBまでなので、長い値は25万文字ずつに分けて `<名前>__parts` に保存し、読む時につなげます。
+- テストでは、環境変数 `PK_STORE=memory` で、メモリ上の仮の保存領域を使います（10章）。
+
+### 5.7 `/api/survey`（`survey.js`）
+- 登録時のアンケートを受け取り、Firestore の `pk-survey` に保存します（2.9）。
+- 入力は `application/x-www-form-urlencoded`。メールの形が違う時は 400、他のサイトからは 403、8000文字を超えると 413、保存できない時は 503 です。
 
 ---
 
@@ -688,7 +773,7 @@ Gemini は、前回と先頭から同じ部分の入力を割り引きます。�
 - **項目：** メールアドレス・相談したいこと・関心・知ったきっかけ・占いを使う頻度・職業。すべて必須で、未回答は赤く示します。
 - **自動で添えるもの：** 性別・年代・国（出生地）・表示言語の区分。
 - **送らないもの：** 生年月日そのものと相談内容。画面にもそう書いています。
-- **送り先：** 2.9 を参照してください。
+- **送り先：** `/api/survey` → Firestore の `pk-survey`（2.9）。
 
 ---
 
@@ -786,28 +871,45 @@ Gemini は、前回と先頭から同じ部分の入力を割り引きます。�
 
 ## 10. テスト（zip の `tests/`）
 
+テストは2種類です。
+- **ふだんのテスト**：Firestore の代わりにメモリ上の仮の保存領域を使い、パソコンだけで速く動きます。
+- **Firebase のエミュレーターでのテスト**（`tests/firebase/`）：本物と同じ Firebase（Hosting → 関数 → Firestore）を手元で動かして確かめます。
+
 **準備**（`tests/` の中で行います）
-1. `site/` を `tests/fx/` にコピーします（`cp -r ../site fx`。`tests/fx/index.html` になるように）。`site/` を直したら、コピーし直してください。
+1. `./setup.sh` を実行します。`site/` と `server/` を、テストが読む場所（`tests/fx/`）にまとめます。**`site/`・`server/` を直したら、もう一度実行してください。**
 2. `npm i playwright` と `npx playwright install chromium` を実行します。
-3. `@netlify/blobs` の代わりに、仮の保存領域を使います。実行する時に `NODE_PATH=mock/node_modules` を付けます。
+3. 次の2つを付けて実行します。
+   - `PK_STORE=memory`：Firestore の代わりに、メモリ上の仮の保存領域を使う
+   - `NODE_PATH=mock/node_modules`：その仮の保存領域の置き場所
+   - 例：`export PK_STORE=memory NODE_PATH=mock/node_modules` としておくと、以下は `node ○○.js` だけで流せます。
 4. 実際のAIを使うテストは、環境変数 `GEMINI_KEY` にテスト用のキーを入れて実行します。**キーをファイルに保存しないでください。**
 
 **変更したら、必ず流すもの（実際のAIは使いません）**
 ```
+./setup.sh
+export PK_STORE=memory NODE_PATH=mock/node_modules
 node unitguard.js
-NODE_PATH=mock/node_modules node e2e.js
-NODE_PATH=mock/node_modules node quotatest.js
-NODE_PATH=mock/node_modules node budgettest.js
-NODE_PATH=mock/node_modules node ui10.js
-NODE_PATH=mock/node_modules node pushtest.js
+node e2e.js
+node quotatest.js
+node budgettest.js
+node ui10.js
+node pushtest.js
+node surveytest.js
 node prefix.js
 ```
+
+**Firebase のエミュレーターでのテスト**（`server/` を直した時と、公開の前に）
+1. リポジトリの一番上で、`server/.env.local` と `server/.secret.local`（テスト用の値）を作ります。見本は `tests/firebase/README.md` にあります。
+2. `firebase emulators:start --project demo-pk` を実行します（別の画面で動かしたままにする）。
+3. `tests/firebase/` で、`node fb_api.js`（APIを全部たたく）と `node fb_ui.js`（アプリの画面で登録 → アンケート → チャット → 別の端末でログイン）を流します。
+   - どちらも、Firestore に実際に保存されること、1MB を超える会話履歴が壊れずに戻ることまで確かめます。
 
 **一覧**（詳しい実行例は `tests/README.md`）
 | 分類 | スクリプト | 実際のAI |
 |---|---|---|
 | 命式 | `chk1.js`（大運1万件）・`cmp184.js`（四柱推命PRO v184 と2万件を比較）・`tzref.py`＋`tzapp.js`＋`tzcmp.py`（時差6,240件） | 使わない |
-| アカウント | `authtest.js`・`e2e.js`・`e2e_reset.js`・`lpflow.js`・`eye.js` | 使わない |
+| アカウント・アンケート | `authtest.js`・`e2e.js`・`e2e_reset.js`・`lpflow.js`・`eye.js`・`surveytest.js` | 使わない |
+| Firebase（エミュレーター） | `firebase/fb_api.js`・`firebase/fb_ui.js` | 使わない（仮のキーで Gemini まで届くことだけ確かめる） |
 | 課金 | `billtest.js`・`billtest2.js`・`billui.js`・`webcard.js`・`webcancel.js` | 使わない |
 | 回数・利益 | `quotatest.js`・`planui2.js`・`budgettest.js`・`budgetui.js` | 使わない |
 | 10言語の画面・後処理 | `ui10.js`・`unitguard.js`・`datep.js`・`bday.js`・`pb.js`・`hl.js` | 使わない |
@@ -830,24 +932,25 @@ node prefix.js
 ---
 
 ## 11. 公開前チェック（本番の環境で、上から順に）
-1. 2.2 の必須の環境変数が、すべて入っている。
+1. 2.2 の必須のシークレットと設定値が、すべて入っている。
 2. Gemini の本番プロジェクトが有料で、残高・月の支出上限・通知が設定されている（2.3）。
-3. `PK_AI_PRICES` に `gemini-3.6-flash` の正式な料金が入っている。
+3. `server/.env` の `PK_AI_PRICES` に `gemini-3.6-flash` の正式な料金が入っている。
 4. 未登録で開くと LP が出る → 「はじめる」→ 登録 → アンケート → チャットで、ニコの最初のあいさつが出る。
-5. アンケートの回答が本番の保存先に届き、国別・言語別に集計できる。
-6. 別の端末でログインすると、名前と会話が戻る。
-7. 「パスワードを忘れた方」→ メールが届く → 再設定 → ログインできる。
-8. 10言語それぞれで、画面の文言がその言語になっている。
-9. 無料で6通目を送ると、案内が出て止まる。
-10. 恋愛の相談（例：「彼から2日返信がない」）に、1往復目から答えが入っている。お茶・休息の決まり文句が出ない。
-11. 「死にたい」と送ると、寄り添いと相談先が出る。「何のために生きてるのかわからない」（初回）では、相談先を出さずに寄り添う。
-12. ニコに性別を聞くと「女性」、年齢を聞くと「ひみつ」と答える。
-13. （アプリ版）`index.html` の設定欄に RevenueCat の公開SDKキーが入っていて、テスト購入 → 回数が増える → 解約 → 期限後に無料に戻る → 別の端末で「購入を復元」。
-14. （ウェブ版）テスト決済 → 戻るとプランが付いている → 「解約する」→ 決済会社側でも継続課金が止まっている。
-15. （アプリ版）ニコのメッセージを設定でき、選んだ時刻に届き、タップするとチャットに出る。
-16. `?dev=1` を付けずに開くと、体験モードが出ていない。
-17. `sw.js` のキャッシュ名を上げた。
-18. 独自ドメインなら、`pocket-kantei.netlify.app` を書き換えた。
+5. アンケートの回答が Firestore の `pk-survey` に届いている（2.9）。
+6. Firestore の `pk-usage` に、`i:<日>:<IPアドレス>` の形のキーができている（`noip` ではない＝利用者のIPが読めている。2.1）。
+7. 別の端末でログインすると、名前と会話が戻る。
+8. 「パスワードを忘れた方」→ メールが届く → 再設定 → ログインできる。
+9. 10言語それぞれで、画面の文言がその言語になっている。
+10. 無料で6通目を送ると、案内が出て止まる。
+11. 恋愛の相談（例：「彼から2日返信がない」）に、1往復目から答えが入っている。お茶・休息の決まり文句が出ない。
+12. 「死にたい」と送ると、寄り添いと相談先が出る。「何のために生きてるのかわからない」（初回）では、相談先を出さずに寄り添う。
+13. ニコに性別を聞くと「女性」、年齢を聞くと「ひみつ」と答える。
+14. （アプリ版）`index.html` の設定欄に RevenueCat の公開SDKキーが入っていて、テスト購入 → 回数が増える → 解約 → 期限後に無料に戻る → 別の端末で「購入を復元」。
+15. （ウェブ版）テスト決済 → 戻るとプランが付いている → 「解約する」→ 決済会社側でも継続課金が止まっている。
+16. （アプリ版）ニコのメッセージを設定でき、選んだ時刻に届き、タップするとチャットに出る。
+17. `?dev=1` を付けずに開くと、体験モードが出ていない。
+18. `sw.js` のキャッシュ名を上げた。
+19. 独自ドメインなら、`server/.env` の `SITE_URL` を独自ドメインにして、関数を公開し直した。
 
 ---
 
@@ -855,10 +958,11 @@ node prefix.js
 
 ### 12.1 毎日・毎週見るもの
 - Gemini の残高と、月の支出の上限までの残り（2.3）
-- Netlify の関数のログ
+- Firebase の管理画面 → Functions のログ（Google Cloud の Logging でも見られます）
   - `degraded`（12.3）が続いていないか
-  - `nico-push` が毎時動いているか
+  - `nicoPush` が毎時動いているか（`nico-push <時> {…}`）
 - 関数のエラーの件数
+- Google Cloud（Firebase の Blaze）の請求額と、予算アラート
 
 ### 12.2 使われすぎへの備え
 - 1人あたりは、上限で止まります（3章・4章・5.2）。
@@ -867,8 +971,8 @@ node prefix.js
   - それでも失敗したら、「混み合っている」と表示します。画面は止まりません。
 - 利用者が増えたら、Gemini の利用枠を上げてください（2.3 の 6）。
 
-### 12.3 Netlify Blobs につながらない時
-- 回数と原価の上限が効かなくなります。
+### 12.3 Firestore につながらない時
+- めったに起きませんが、回数と原価の上限が効かなくなります。
 - サービスを止めないため、チャットは通します。応答には `x-pk-ratelimit: degraded` が付きます。
 - この間の費用は、2.3 の前払いの残高と支出上限で守られます。
 
@@ -888,3 +992,6 @@ node prefix.js
 - **タイ語：** 「来月は？」の直後に「今月は？」と聞くと、今月を来月と取り違えることがまれにあります。
 - **本格鑑定の残り回数の表示：** 別の端末で使った直後は、表示が少しずれることがあります。上限そのものは、サーバーが正しく守ります。
 - **無料お試しの日数と通数：** 端末ごとに数えています。端末のデータを消すと、やり直せます。ただし、サーバーの1日の上限（端末5回・IP40回）は効きます。
+- **Google（Firebase）での確認の範囲：** サイト・関数・Firestore の通しの動きは、Google 公式のエミュレーター（`tests/firebase/`）で確かめました。本物の Google に公開した後の確認は、11章の公開前チェックで行ってください。特に、利用者のIPが読めているか（11章の 6）を必ず確かめてください。
+- **1回の返事の待ち時間：** Firebase Hosting から関数への転送は、60秒で打ち切られます。AI の返事がそれより長くかかると、アプリは「うまく届かなかった」と表示します（送り直せます）。ふだんの返事は数秒〜20秒ほどです。
+- **ニコのメッセージの送信数：** 1時間あたり、9分で送れる人数までです（目安：同時に8人ずつ）。超える時は 5.5 のとおり `concurrency` を上げてください。
