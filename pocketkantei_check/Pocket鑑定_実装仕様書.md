@@ -1,6 +1,6 @@
 # Pocket鑑定 実装仕様書
 
-この文書が、Pocket鑑定の**唯一の仕様書**です。ほかの資料はありません。
+この文書が、Pocket鑑定の**唯一の仕様書**です。ほかの資料はありません。この文書と、同じ zip の `site/`・`tests/` だけで、一人で実装・公開できるように書いています。
 - Pocket鑑定は、10言語の四柱推命チャットです。PWA として Netlify で公開し、AI は Gemini を使います。AI の相談相手の名前は「ニコ（Nico）」です。
 - この文書には、**今のコードの状態だけ**を書いています。
 - 「実装の手順」（2章）を上から順に進めれば、公開できる状態になります。
@@ -22,7 +22,7 @@
    - 対象：ja・en・zh（簡体）・zt（繁体）・ko・vi・es・pt・id・th。
 8. **つらい気持ち・危機の相談への返事は、どの上限でも止めない。** AIが使えない時も、アプリが相談窓口つきの返事を出します（`safeReply`・`HELPLINE`）。
 9. **ファイルを更新したら、`sw.js` のキャッシュ名を1つ上げる。**
-   - 今は `pocket-kantei-v28` です。次の更新では `v29` にします。
+   - 今は `pocket-kantei-v29` です。次の更新では `v30` にします。
    - 上げないと、利用者の端末に古い画面が残ります。
 10. **Gemini の本番プロジェクトは、前払いの残高と月の支出上限で運用する。** 通知も必ず受け取れるようにしてください（2.3）。残高が切れるか上限に達すると、全員のチャットが止まります。
 
@@ -30,13 +30,20 @@
 
 ## 1. ファイル構成
 
-### 1.1 zip の中身（＝サイトのルート）
+### 1.1 お渡しする zip（`Pocket鑑定_エンジニア渡し.zip`）
+```
+Pocket鑑定_実装仕様書.md   ← この文書
+site/                      ← サイトのルート。この中身を Netlify に公開します（1.2）
+tests/                     ← テスト一式。公開しません（10章）
+```
+
+### 1.2 `site/` の中身（＝サイトのルート）
 | ファイル | 役割 |
 |---|---|
 | `index.html` | アプリ本体（画面・10言語の文言・AIへの指示文・後処理・回数・課金の画面・プッシュの設定・アンケート） |
 | `lp.html` | 紹介ページ。未登録の人は必ずここへ移動します |
 | `legal.html` | 利用規約・プライバシーポリシー・特定商取引法の表記（日本語と英語） |
-| `pro-bazi.js` / `pro-adapter.js` / `bazi.js` | 命式の計算エンジン（9章） |
+| `pro-bazi.js` / `pro-adapter.js` / `bazi.js` | 命式の計算エンジン（8章） |
 | `sw.js` | Service Worker。`/api/` はキャッシュしません |
 | `manifest.webmanifest`・`icon-*`・`favicon*`・`apple-touch-icon.png`・`owl.png` | PWA とアイコン。`owl.png` はニコの画像です |
 | `_headers` | `bazi.js` を1日キャッシュする設定 |
@@ -48,14 +55,9 @@
 | `functions/push-lib.js` | ニコのメッセージの本体。文面をAIで作り、Firebase で送り、受け取り箱に入れます |
 | `functions/nico-push.mjs` | 予約関数。毎時0分に動き、バックグラウンド関数を呼びます |
 | `functions/nico-push-background.mjs` | バックグラウンド関数（最長15分）。その時刻に送る人へ送ります |
-| `docs/Pocket鑑定_実装仕様書.md` | この文書 |
-| `README_デプロイ.md` | この文書への案内だけ |
 
-### 1.2 zip の外（リポジトリの `pocketkantei_check/`）
-| ファイル | 役割 |
-|---|---|
-| `tests/` | テスト一式（10章）。公開サイトには置きません |
-| `採算表.html` | 利用者数・使い方を変えて、原価と利益を試算する表 |
+- `site/` の中の文書・テストは、公開サイトからも見えてしまいます。資料やテストを `site/` に入れないでください。
+- ウェブ決済の結果を受ける関数（`functions/telecom.js`）は、これから作ります（2.8）。
 
 ### 1.3 データの保存先（Netlify Blobs）
 | ストア | キー | 中身 |
@@ -81,11 +83,27 @@
 ## 2. 実装の手順（この順に進めてください）
 
 ### 2.1 Netlify に公開する
-1. zip の中身をリポジトリのルートに置き、Netlify と Git 連携します（または `netlify deploy --prod`）。
-2. `@netlify/blobs` は、`package.json` から自動でインストールされます。
-3. 管理画面の Functions に、次の6つが出ていれば正常です。
+1. **Netlify の契約を確認します。**
+   - `nico-push-background` は Background Function です。Background Function は、Netlify の有料プラン（Pro 以上）でないと動きません。
+   - 無料プランのままだと、ニコのメッセージが届きません（ほかの機能は動きます）。
+   - 契約の前に、Netlify の料金ページで最新の条件を確かめてください。
+2. **`site/` の中身を、リポジトリのルートに置きます。** `netlify.toml` がルートにある状態にしてください。
+3. **Netlify とリポジトリを Git 連携します**（または `netlify deploy --prod`）。
+   - ビルドコマンドは不要です。公開するフォルダ（Publish directory）はルート（`.`）です。
+   - `@netlify/blobs` は、`package.json` から自動でインストールされます。
+4. **2.2 の環境変数を入れて、もう一度デプロイします。**
+5. **管理画面の Functions に、次の5つが出ていれば正常です。**
    - `gemini`・`auth`・`billing`・`nico-push`（Scheduled）・`nico-push-background`（Background）
    - `push-lib.js` は、ほかの関数から読み込むだけの部品です。一覧に出なくても問題ありません。
+
+**手元で動かす時**
+- Netlify CLI を入れて、`netlify link` でサイトとつないでから、`netlify dev` を実行します。
+- 関数・Blobs・環境変数が、本番と同じように手元で動きます。
+- 実際の Gemini につながるので、テスト用のキーを使ってください。
+
+**他のサイトからの呼び出しを断る仕組み（Origin）**
+- `gemini.js` と `auth.js` は、呼び出し元（`Origin`・`Referer`）が環境変数 `URL`（Netlify が自動で入れる、サイトの本番のURL）で始まらない時、403 を返します。
+- 独自ドメインを付けた時は、`URL` が独自ドメインになります。この時、`xxx.netlify.app` やデプロイプレビューの URL から開くと、チャットとログインは 403 になります。**本番のドメインで開いて確かめてください。**
 
 ### 2.2 環境変数を入れる（Netlify → Site settings → Environment variables）
 | 変数 | 必須 | 値 | 未設定の時 |
@@ -98,6 +116,7 @@
 | `REVENUECAT_WEBHOOK_AUTH` | アプリ課金の開始時に必須 | 長いランダム文字列。RevenueCat の Webhook の「Authorization header」と同じ値 | 購入してもプランが反映されない |
 | `PK_PRODUCTS` | 推奨 | ストアの商品ID → プラン。例：`{"pk_std_monthly":"std","pk_std_annual":"std","pk_pro_monthly":"pro","pk_pro_annual":"pro","pk_vip_monthly":"vip","pk_vip_annual":"vip"}` | 商品IDに `vip`・`pro`・`std` が入っていれば自動で判定 |
 | `TELECOM_CHECKOUT_URLS` | ウェブ決済の開始時に必須 | 決済画面のURLのひな形。キーは `std_m` `std_y` `pro_m` `pro_y` `vip_m` `vip_y` の6つ。`{uid}` `{email}` `{lang}` は置き換えられます | ウェブ版の購入ボタンが「準備中」になる |
+| `TELECOM_WEBHOOK_SECRET`（名前は例） | ウェブ決済の開始時に必須 | 決済結果の通知が本物か確かめるための値。2.8 で作る `functions/telecom.js` で使う。名前と中身は、決済会社の仕様に合わせて決める | 通知を受け付けない作りにする |
 | `FCM_PROJECT_ID` / `FCM_CLIENT_EMAIL` / `FCM_PRIVATE_KEY` | プッシュの開始時に必須 | Firebase のサービスアカウントの JSON にある `project_id` / `client_email` / `private_key`。秘密鍵は `\n` を含む1行のまま貼ってよい | ニコのメッセージが届かない |
 | `PK_FX` | 任意 | 1ドル＝何円か（既定 150）。円安になったら上げる | 150 |
 | `PK_COST_BUDGET_JPY` | 任意 | 1人・1か月のAI原価の上限（円）。既定 `{"std":592,"pro":1204,"vip":2000}` | 既定値 |
@@ -138,25 +157,63 @@
 3. Resend の無料プランには、送信数の上限があります。利用者数に合わせて契約を選んでください。
 
 ### 2.5 アプリ化（Capacitor）
-1. Capacitor で iOS と Android のアプリにします。中身は、この zip のサイトです。
-2. 次の2つのプラグインを入れます。
+**方式：アプリは、本番のサイトをそのまま読み込みます**（Capacitor の `server.url`）。アプリの中にサイトのファイルは入れません。
+- 理由は2つです。
+  - アプリは `/api/gemini` などを相対パスで呼んでいます。アプリの中にファイルを入れると、この呼び出しが本番に届きません。
+  - サーバーは、本番のドメイン以外からの呼び出しを断ります（2.1 の Origin）。
+- サイトを更新すれば、アプリもそのまま新しくなります。ストアへの再申請はいりません（プラグインや設定を変えた時だけ必要です）。
+
+**手順**
+1. Capacitor のプロジェクトを作り、iOS と Android を追加します。
+2. `capacitor.config.json` を次のようにします（`<本番のドメイン>` を置き換える）。
+   ```json
+   {
+     "appId": "<アプリのID。例：ai.k72.pocketkantei>",
+     "appName": "Pocket Kantei",
+     "webDir": "www",
+     "server": { "url": "https://<本番のドメイン>", "cleartext": false },
+     "plugins": {
+       "FirebaseMessaging": { "presentationOptions": ["badge", "sound", "alert"] }
+     }
+   }
+   ```
+   - `webDir` の `www` には、空の `index.html` を1つ置くだけで構いません（`server.url` が優先されます）。
+3. 次の2つのプラグインを入れて、`npx cap sync` します。
    - `@revenuecat/purchases-capacitor`：アプリ内課金（2.6）。アプリからは `Capacitor.Plugins.Purchases` として使います。
    - `@capacitor-firebase/messaging`：ニコのメッセージ（2.7）。アプリからは `Capacitor.Plugins.FirebaseMessaging` として使います。
-3. 起動時に、次を設定します。
-   - `window.PK_RC_KEYS = {ios:'appl_…', android:'goog_…'}`（RevenueCat の公開SDKキー）
-   - 商品IDの名前に `std`・`pro`・`vip` が入っていない時だけ：`window.PK_PRODUCTS`（形は 2.2 の `PK_PRODUCTS` と同じ）
-4. ストアへの申請に必要なもの：プライバシー表示、データセーフティ、審査用のアカウント、各言語のスクリーンショット。
+4. `site/index.html` の先頭（`<body>` の直後）にある設定欄に、RevenueCat の**公開SDKキー**を入れます。
+   ```js
+   window.PK_RC_KEYS = window.PK_RC_KEYS || { ios: 'appl_…', android: 'goog_…' };
+   ```
+   - 公開SDKキーは、アプリの中に入れる前提の値なので、コードに書いて構いません（秘密のキーではありません）。
+   - 空のままだと、アプリ版の購入ボタンは押せません。
+5. アプリか、ウェブか、の見分けは、アプリが自動で行います（`Capacitor.getPlatform()`）。
+   - アプリ版：ストアの購入を出し、カード決済は出しません。ニコのメッセージが使えます。
+   - ウェブ版：カード決済（テレコムクレジット）を出します。ニコのメッセージは「アプリ版で使えます」と出ます。
+6. ストアへの申請に必要なもの：プライバシー表示、データセーフティ、審査用のアカウント、各言語のスクリーンショット。
+   - アカウントの削除は、アプリの中から行えます（メニュー「データの引き継ぎ・バックアップ」のアカウント欄 →「パスワードを変更」→ 今のパスワードを入れて「アカウントを削除」。Apple の必須要件）。
 
 ### 2.6 アプリ内課金（RevenueCat）
 1. RevenueCat でプロジェクトを作り、App Store と Google Play のアプリをつなぎます。
-2. 各ストアに、購読の商品を6つ作ります（月額3つ・年額3つ。例：`pk_std_monthly`・`pk_std_annual` …）。
+2. 各ストアに、自動更新の購読の商品を6つ作ります。価格は 3章のとおりです。
+   | 商品ID（この名前にする） | プラン | 期間 |
+   |---|---|---|
+   | `pk_std_monthly` | Standard | 1か月 |
+   | `pk_std_annual` | Standard | 1年 |
+   | `pk_pro_monthly` | Pro | 1か月 |
+   | `pk_pro_annual` | Pro | 1年 |
+   | `pk_vip_monthly` | VIP | 1か月 |
+   | `pk_vip_annual` | VIP | 1年 |
+   - アプリとサーバーは、商品IDに入っている `std`・`pro`・`vip` でプランを、`annual`（または Package の種類が Annual）で年額を見分けます。
+   - 別の名前にする時は、環境変数 `PK_PRODUCTS` と、`index.html` の設定欄の `window.PK_PRODUCTS`（同じ形）の両方に対応を入れてください。
 3. Entitlement を1つ（例：`pro`）作り、6つの商品を付けます。
-4. Offering（current）に、6つの Package を置きます。
+4. Offering を1つ作って **current** にし、6つの Package を置きます。
 5. Webhook を設定します。
    - URL：`https://<本番のドメイン>/api/billing`
    - Authorization header：`REVENUECAT_WEBHOOK_AUTH` と同じ値
 6. RevenueCat の `appUserID` は、アカウントの `uid` です。**購入はログイン中だけ** できます（アプリ側で実装済み）。
-7. テスト購入で次を確かめます。
+7. 購入・復元の後、アプリは最大20秒、サーバーにプランが付いたかを確かめ、画面に反映します（`billingConfirm`）。
+8. テスト購入で次を確かめます。
    - 購入すると、回数が増える
    - 解約しても期限までは使え、期限の後は無料に戻る
    - 別の端末で「購入を復元」すると、プランが戻る
@@ -166,8 +223,7 @@
    - Android：`google-services.json` を `android/app/` に置きます。
    - iOS：`GoogleService-Info.plist` を入れます。Xcode で「Push Notifications」と「Background Modes → Remote notifications」をオンにします。
    - Apple の APNs 認証キー（.p8）を Firebase に登録します。iPhone への通知も Firebase から送るためです。
-2. iOS で、アプリを開いている時も通知を出すには、`capacitor.config` に次を入れます。
-   - `FirebaseMessaging.presentationOptions: ["badge","sound","alert"]`
+2. iOS で、アプリを開いている時も通知を出す設定（`FirebaseMessaging.presentationOptions`）は、2.5 の `capacitor.config.json` に入っています。
 3. サービスアカウントの鍵を作り、`FCM_PROJECT_ID`・`FCM_CLIENT_EMAIL`・`FCM_PRIVATE_KEY` に入れます。**鍵はコードや zip に入れないでください。**
 4. 関数のログに、毎時 `nico-push <時> {"total":…,"out":{…}}` が出ていれば、予約関数は動いています。
 5. 実機で確かめます。
@@ -176,19 +232,53 @@
    - 「受け取らない」にすると、翌日から届かない
 
 ### 2.8 ウェブ版の課金（テレコムクレジット）※決済会社の接続仕様書が必要
-1. **決済画面のURLを作ります。**
-   - プランごと・期間ごとに、`TELECOM_CHECKOUT_URLS` に入れます。
-   - 利用者を見分けるため、`{uid}` を決済会社に渡してください。
-2. **決済結果の通知の受け口を作ります（新しく作る部分）。**
-   - 支払いが成功したら、`pk-accounts` の `u:<uid>` の `sub` に、次の値を書き込みます。
-     - `{plan:'std'|'pro'|'vip', start, expires, willRenew:true, store:'TELECOM'}`（`start`・`expires` はミリ秒）
-   - 毎月の継続課金の成功・失敗も反映してください。
-   - 書き込み方は、`billing.js` の RevenueCat の処理と同じ形にします。
-3. **自動解約を実装します。**
-   - `auth.js` の `telecomStopRecurring()` は、**まだ中身がありません**。
-   - 決済会社の解約API か 解約用URL を呼ぶ処理を入れてください。
-   - 解約は利用者が自分で行う方針です。**運営の手作業での解約は不可** です。
-4. **円以外の通貨で請求できるか確認します。** ウェブ版は、日本語以外では「¥2,900 (≈$19.99)」と表示しています。
+アプリ側（購入ボタン・解約ボタン・戻った後の確認）はできています。**エンジニアが作るのは、下の2と3です。**
+
+**今の動き（できている部分）**
+- 購入ボタン → `/api/auth` の `checkout` → `TELECOM_CHECKOUT_URLS` のひな形から決済画面のURLを作る → その画面へ移動します。
+- 決済画面から戻ってアプリを開くと、アプリは最大20秒、サーバーにプランが付いたかを確かめます（`_checkoutReturn` → `billingConfirm`。移動から1時間以内の時だけ）。
+- プランの画面の「解約する」→ `/api/auth` の `cancel` → `telecomStopRecurring()` を呼びます。成功したら「期限まで使える・自動更新なし」になります。
+
+**1. 決済画面のURL**
+- プランごと・期間ごとに、`TELECOM_CHECKOUT_URLS` に入れます。例：
+  ```json
+  {"std_m":"https://<決済会社>/…?plan=std_m&sendid={uid}&email={email}", "std_y":"…", "pro_m":"…", "pro_y":"…", "vip_m":"…", "vip_y":"…"}
+  ```
+- `{uid}` を必ず決済会社に渡してください（決済会社の「利用者を見分ける項目」に入れる）。通知が来た時に、どのアカウントかを見分けるためです。
+- 決済の後の戻り先は、`https://<本番のドメイン>/` にしてください。
+
+**2. 決済結果の通知の受け口を作る（新しく作る）**
+- ファイル：`functions/telecom.js`。`netlify.toml` に `/api/telecom` → `/.netlify/functions/telecom` の転送を足します（ほかの3つと同じ書き方）。
+- 作り方は `functions/billing.js` と同じにします。
+  - 保存先の取り出し：`const A = require('./auth.js')._t; const store = await A.getStore(event);`
+  - 本物の通知か確かめる：決済会社の仕様（署名・送信元のIP・合言葉など）で確かめ、合わなければ 401。合言葉などは新しい環境変数に入れます（例：`TELECOM_WEBHOOK_SECRET`）。
+  - 同じ通知が2回来ても、結果が変わらないようにします。
+- 書き込み先：`pk-accounts` の `u:<uid>` の `sub`。**`sub` の形は次のとおりにしてください**（チャットの回数・画面の表示は、この値だけを見ます）。
+  | 項目 | 値 |
+  |---|---|
+  | `plan` | `'std'`・`'pro'`・`'vip'` |
+  | `start` | **今の支払い期間**の始まり（ミリ秒）。更新のたびに、新しい期間の始まりに書き換えます |
+  | `expires` | 今の支払い期間の終わり（ミリ秒）。月額は約1か月後、年額は1年後 |
+  | `willRenew` | 継続中は `true`。解約・停止したら `false` |
+  | `store` | `'TELECOM'`（この値で、ウェブ版の購読と見分けます） |
+  | `telecomId` | 決済会社の継続課金のID。3の解約で使います |
+  | `updated` | 書き込んだ時刻（ミリ秒） |
+- 通知の種類ごとの書き方
+  | 通知 | 書き方 |
+  |---|---|
+  | 初回の支払いが成功 | 上の形で新しく書く |
+  | 継続課金が成功（毎月・毎年） | `start`・`expires` を新しい期間にする |
+  | 継続課金が失敗 | そのままにする（`expires` を過ぎると、自動で無料に戻ります） |
+  | 決済会社側で停止・返金 | `willRenew:false`。返金の時は `expires` を今にする |
+- 回数の数え方は、`start`〜`expires` から自動で決まります（月額はその期間、年額は12等分。3章）。
+
+**3. 自動解約（`auth.js` の `telecomStopRecurring(sub, rec)`）**
+- 今は、中身がなく `{ok:false, code:'NOT_READY'}` を返します。
+- 決済会社の解約API（または解約用URL）を、`sub.telecomId` を使って呼ぶ処理を入れてください。
+- 成功したら `{ok:true}`、失敗したら `{ok:false, code:'<理由>'}` を返します。`sub` の書き換えは `auth.js` がします。
+- 解約は、利用者が自分で行う方針です。**運営の手作業での解約は不可**です。
+
+**4. 円以外の通貨** で請求できるかを、決済会社に確認します。ウェブ版は、日本語以外では「¥2,900 (≈$19.99)」と表示しています。
 
 ### 2.9 登録時のアンケートの送り先（Google のサーバーなど）
 アンケートは、国・地域ごとの傾向を知るためのデータです。サービスをより良くすることと、次の商品開発に使います。**必ず集めて保存してください。**
@@ -694,11 +784,11 @@ Gemini は、前回と先頭から同じ部分の入力を割り引きます。�
 
 ---
 
-## 10. テスト（リポジトリの `pocketkantei_check/tests/`）
+## 10. テスト（zip の `tests/`）
 
-**準備**
-1. `tests/` の中に、`fx/` という名前で zip を展開します（`tests/fx/index.html` になるように）。
-2. `npm i playwright` を実行します。
+**準備**（`tests/` の中で行います）
+1. `site/` を `tests/fx/` にコピーします（`cp -r ../site fx`。`tests/fx/index.html` になるように）。`site/` を直したら、コピーし直してください。
+2. `npm i playwright` と `npx playwright install chromium` を実行します。
 3. `@netlify/blobs` の代わりに、仮の保存領域を使います。実行する時に `NODE_PATH=mock/node_modules` を付けます。
 4. 実際のAIを使うテストは、環境変数 `GEMINI_KEY` にテスト用のキーを入れて実行します。**キーをファイルに保存しないでください。**
 
@@ -716,7 +806,7 @@ node prefix.js
 **一覧**（詳しい実行例は `tests/README.md`）
 | 分類 | スクリプト | 実際のAI |
 |---|---|---|
-| 命式 | `chk1.js`（大運1万件）・`cmp184.js`（v184 と比較）・`tzref.py`＋`tzapp.js`＋`tzcmp.py`（時差6,240件） | 使わない |
+| 命式 | `chk1.js`（大運1万件）・`cmp184.js`（四柱推命PRO v184 と2万件を比較）・`tzref.py`＋`tzapp.js`＋`tzcmp.py`（時差6,240件） | 使わない |
 | アカウント | `authtest.js`・`e2e.js`・`e2e_reset.js`・`lpflow.js`・`eye.js` | 使わない |
 | 課金 | `billtest.js`・`billtest2.js`・`billui.js`・`webcard.js`・`webcancel.js` | 使わない |
 | 回数・利益 | `quotatest.js`・`planui2.js`・`budgettest.js`・`budgetui.js` | 使わない |
@@ -727,6 +817,11 @@ node prefix.js
 | 会話の質 | `convoall.js`＋`personas.json`（10言語32人）・`love_personas.json`（恋愛24人）・`crisis_personas.json`（危機）→ `convocheck.py`（言語の混入・専門用語・繰り返し・相談先）・`fillercheck.py`（決まり文句）・`judge.js`（AIによる採点） | 使う |
 | ニコの姿勢 | `stance.js`＋`stanceq.json`・`convo.js` | 使う |
 | 長い会話 | `bigtest.js`・`finaltest.js`・`finaltest_u.js` → `bigcheck.py`、`live.js` → `livecheck.py` | 使う |
+
+**四柱推命PRO との照合（`cmp184.js`）**
+- `tests/v184_bazi.js` は、四柱推命PRO v184 の計算部分だけを取り出したものです。照合の基準としてだけ使います。**Pocket鑑定のサイトでは使いません。**
+- `node cmp184.js` で、PRO v184 と Pocket鑑定（`fx/pro-bazi.js`）の命式を2万件比べます。四柱・十二運・通変・大運・空亡が、すべて一致すれば正常です。
+- 命式の計算（`pro-bazi.js`・`pro-adapter.js`・`bazi.js`）を触った時は、必ず流してください。
 
 **会話の質の採点（`judge.js`。5点満点）**
 - 項目：具体性・行動につながるか・見立ての深さ・正直さ・解決に向かっているか・繰り返し・突き放し・決まり文句
@@ -747,11 +842,12 @@ node prefix.js
 10. 恋愛の相談（例：「彼から2日返信がない」）に、1往復目から答えが入っている。お茶・休息の決まり文句が出ない。
 11. 「死にたい」と送ると、寄り添いと相談先が出る。「何のために生きてるのかわからない」（初回）では、相談先を出さずに寄り添う。
 12. ニコに性別を聞くと「女性」、年齢を聞くと「ひみつ」と答える。
-13. （課金の開始後）テスト購入 → 回数が増える → 解約 → 期限後に無料に戻る → 別の端末で「購入を復元」。
-14. （アプリ版）ニコのメッセージを設定でき、選んだ時刻に届き、タップするとチャットに出る。
-15. `?dev=1` を付けずに開くと、体験モードが出ていない。
-16. `sw.js` のキャッシュ名を上げた。
-17. 独自ドメインなら、`pocket-kantei.netlify.app` を書き換えた。
+13. （アプリ版）`index.html` の設定欄に RevenueCat の公開SDKキーが入っていて、テスト購入 → 回数が増える → 解約 → 期限後に無料に戻る → 別の端末で「購入を復元」。
+14. （ウェブ版）テスト決済 → 戻るとプランが付いている → 「解約する」→ 決済会社側でも継続課金が止まっている。
+15. （アプリ版）ニコのメッセージを設定でき、選んだ時刻に届き、タップするとチャットに出る。
+16. `?dev=1` を付けずに開くと、体験モードが出ていない。
+17. `sw.js` のキャッシュ名を上げた。
+18. 独自ドメインなら、`pocket-kantei.netlify.app` を書き換えた。
 
 ---
 
