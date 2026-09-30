@@ -3,11 +3,11 @@
    鑑定・60干支の教科書を使えるようにする。
    オンライン鑑定（生成AI）だけは通信が要るが、圏外時は端末内の
    オフライン鑑定に自動で切り替わる。 */
-const CACHE = 'shichu-jidou-v331';/* v331=共有される特徴カード/特徴ページの隅に“控えめな出どこリンク”（作成：四柱推命 自動鑑定・72k.ai）を追加＝バイラル導線。先生の屋号は主役のまま。本番URLはSHARE_SITEで差替可。表示層のみ・エンジン非改変。*/
+const CACHE = 'shichu-jidou-v332';/* v332=OGP対応：URLをLINE・X・Facebook等に貼ると見出しカード（1200x630のogp.png）を表示。index/pricing/app-pro にog:image・og:url・Twitterカードを追加。ogp.pngをキャッシュ対象に。★本番ドメインが72k.ai以外なら各og:url/og:imageのドメインを差替。表示層のみ・エンジン非改変。*/
 
 /* 初回訪問時に先読みしてキャッシュするページ一式（このブランドのみ） */
 const ASSETS = [
-  'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icon-maskable-512.png', 'icon-crystal.png',
+  'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icon-maskable-512.png', 'icon-crystal.png', 'ogp.png',
   'app-pro.html', 'meishi-sheet.html', 'index.html', 'textbook-pro.html',
   'pricing-pro.html', 'mypage-pro.html', 'auth.html',
   'terms-pro.html', 'tokushoho-pro.html', 'privacy-pro.html',
