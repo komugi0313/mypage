@@ -252,15 +252,15 @@
     var shareUrl = encodeURIComponent(site + '?ref=' + encodeURIComponent(opts.refCode || 'mail'));
     h.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;border-collapse:separate;"><tr><td align="center" style="background:#fdeef4;border:1.5px solid #e8a8bd;border-radius:14px;padding:14px;text-align:center;">'
       + '<div style="font-size:13.5px;font-weight:800;color:#c14e77;line-height:1.6;">💞 気になる人との相性、調べてみない？</div>'
-      + '<div style="margin-top:4px;font-size:11.5px;color:#8a6f7a;line-height:1.7;"><span style="white-space:nowrap;">60組に1組の奇跡【1.66%】</span>── 生年月日ふたつで、<span style="white-space:nowrap;">ふたりの相性</span>がすぐわかります。</div>'
+      + '<div style="margin-top:4px;font-size:11.5px;color:#8a6f7a;line-height:1.7;"><span style="white-space:nowrap;">60組に1組の奇跡【1.66%】──</span><br><span style="white-space:nowrap;">生年月日ふたつで、</span><span style="white-space:nowrap;">ふたりの相性がすぐわかります。</span></div>'
       + '<div style="margin-top:9px;">' + btn(esc(aishou) + '" data-aishou="1', '1.66 相性診断をやってみる（無料）', '#d8466a', '13px', '10px 22px') + '</div>'
-      + '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e8c8d4;font-size:10.5px;color:#a08a80;">🎁 この運気予報を、お友達にも教えてあげてね（無料）</div>'
+      + '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e8c8d4;font-size:10.5px;color:#a08a80;">🎁 <span style="white-space:nowrap;">この運気予報を、</span><span style="white-space:nowrap;">お友達にも教えてあげてね（無料）</span></div>'
       + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:7px auto 0;"><tr>'
       + '<td>' + btn('https://social-plugins.line.me/lineit/share?url=' + shareUrl, 'LINEで送る', '#06c755', '11.5px', '8px 16px') + '</td>'
       + '<td>' + btn('https://twitter.com/intent/tweet?text=' + shareText + '&amp;url=' + shareUrl, '𝕏 でシェア', '#1d1f23', '11.5px', '8px 16px') + '</td>'
       + '</tr></table>'
       // パソコンでは LINE ボタンが LINE のログイン画面になる（LINEの仕様）ので、紹介リンクのURLをそのまま載せてコピーできるようにする
-      + '<div style="margin-top:9px;font-size:10px;color:#a08a80;line-height:1.6;">パソコンの方は、このURLをコピーして送ってね<br><a href="' + esc(decodeURIComponent(shareUrl)) + '" style="color:#c14e77;text-decoration:underline;word-break:break-all;">' + esc(decodeURIComponent(shareUrl)) + '</a></div>'
+      + '<div style="margin-top:9px;font-size:10px;color:#a08a80;line-height:1.6;"><span style="white-space:nowrap;">パソコンの方は、</span><span style="white-space:nowrap;">このURLをコピーして送ってね</span><br><a href="' + esc(decodeURIComponent(shareUrl)) + '" style="color:#c14e77;text-decoration:underline;word-break:break-all;">' + esc(decodeURIComponent(shareUrl)) + '</a></div>'
       + '</td></tr></table>');
 
     /* 📖 ことばのメモ */
