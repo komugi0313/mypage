@@ -6657,9 +6657,42 @@ function cleanMarkdown(t){return String(t||'')
   .replace(/^[ 　]*[*＊][ 　]+/gm,'・')     // 行頭の*リスト→・
   .replace(/[*#`＊]/g,'')                  // 残った記号を一掃
   .replace(/[ \t]+\n/g,'\n');}
+/* 共有(LINE・メール)用の読みやすさ整形：色・太字が使えないプレーンテキストでも
+   「見出しに絵文字＋空行」「良い点◎→✅／注意△→⚠️」「長文は一文ごとに改行」で、
+   詰まった“文字の壁”にならないようにする。画面表示・印刷には影響しない（共有時のみ）。 */
+function shareEmojiForHeading(h){
+  if(/ぶつか|すれ違|衝突|注意|気をつけ/.test(h))return '⚠️';
+  if(/コツ|できること|工夫|長続き|うまく|組む|整/.test(h))return '💡';
+  if(/時期|年|タイミング/.test(h))return '📅';
+  if(/ポイント|命式|合わせ/.test(h))return '✨';
+  if(/惹|噛|相性|縁|絆|良|好|愛/.test(h))return '💞';
+  return '🔹';
+}
+function splitSentences(p){
+  // 一文ごとに改行（。で区切る。閉じ括弧が続く場合は割らない）。短文はそのまま。
+  if(p.length<=42)return p;
+  return p.replace(/。(?![」』）\)】\s])/g,'。\n');
+}
+function formatForShare(rawText){
+  var s=cleanMarkdown(rawText||'').replace(/\r\n?/g,'\n');
+  var lines=s.split('\n'),out=[];
+  for(var i=0;i<lines.length;i++){
+    var ln=lines[i].replace(/\s+$/,'').replace(/^\s+/,'');
+    if(!ln)continue;                                   // 既存の空行は捨てて入れ直す
+    var mh=ln.match(/^【(.+?)】\s*(.*)$/);
+    if(mh){ if(out.length)out.push('');                // 見出しの前に空行
+      out.push(shareEmojiForHeading(mh[1])+' 【'+mh[1]+'】');
+      if(mh[2])out.push(splitSentences(mh[2])); continue; }
+    var mg=ln.match(/^◎\s*(.*)$/);  if(mg){ if(out.length)out.push(''); out.push('✅ '+splitSentences(mg[1])); continue; }
+    var mb=ln.match(/^△\s*(.*)$/);  if(mb){ if(out.length)out.push(''); out.push('⚠️ '+splitSentences(mb[1])); continue; }
+    var ms=ln.match(/^[・\-‐–—]\s*(.*)$/); if(ms){ out.push('・'+splitSentences(ms[1])); continue; }
+    out.push(splitSentences(ln));                      // 通常の段落
+  }
+  return out.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+}
 function shareText(title,rawText){
   const head=(brandName?brandName+'\n':'')+(title?title+'\n\n':'');
-  const body=head+cleanMarkdown(rawText||'');
+  const body=head+formatForShare(rawText||'');
   if(navigator.share){navigator.share({title:brandName||title||'鑑定書',text:body}).catch(function(){});return;}
   copyText(body);
 }
