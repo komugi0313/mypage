@@ -3647,6 +3647,32 @@ function unkiSignal(p){
 /* 要点カルテ：命式そのもの（一生の土台）の核だけを、既存の計算値そのままで上部に集約。
    ここは静的な核（本質・強弱・中心の星・格局・十二運・喜忌・吉凶星）。
    「今の運気・会局」はすぐ下の判定サマリー（verdictHTML）が担当し、重複させない。 */
+/* 時期アラート：次の大運切り替え／次の節木運が「2年以内」に迫っているとき、
+   画面結果の上部にピンク字で予告する（表示層のみ・エンジン非改変）。 */
+function timingAlertHTML(c){
+  try{
+    if(!c||!c.now||typeof c.now.age!=='number') return '';
+    var age=c.now.age, out=[];
+    // 次の節木運（人生の大きな節目・約30年に一度）
+    var sb=null;
+    try{ if(typeof Setsuboku!=='undefined'&&c.decadeFortunes){ sb=Setsuboku.analyze({decadeFortunes:c.decadeFortunes,nowAge:age,birthYear:(c.now.year-age)}); } }catch(_e){}
+    var setsuAge=(sb&&sb.next&&typeof sb.next.startAge==='number')?sb.next.startAge:null;
+    var setsuSoon=(setsuAge!=null)&&(setsuAge>age)&&(setsuAge-age<=2);
+    // 次の大運の切り替え（現在の大運の終わり）
+    var cur=(typeof curDu==='function')?curDu(c):null;
+    var duEnd=(cur&&typeof cur.endAge==='number')?cur.endAge:null;
+    var duSoon=(duEnd!=null)&&(duEnd>age)&&(duEnd-age<=2);
+    // 次の大運境界がそのまま節木運なら、節木運メッセージに一本化（重複回避）
+    var sameEvent=(setsuSoon&&duSoon&&setsuAge!=null&&duEnd!=null&&Math.abs(setsuAge-duEnd)<0.6);
+    var yrTxt=function(n){ n=Math.round(n); return n<=1?'あと約1年':('あと約'+n+'年'); };
+    if(setsuSoon) out.push('まもなく節木運を迎えます（人生の大きな節目・'+yrTxt(setsuAge-age)+'）');
+    if(duSoon&&!sameEvent) out.push('まもなく大運切り替えです（'+yrTxt(duEnd-age)+'）');
+    if(!out.length) return '';
+    return '<div style="margin:10px 0 2px;padding:11px 13px;background:#FFF0F6;border:1.6px solid #E85B9A;border-radius:12px">'
+      + out.map(function(t){return '<div style="color:#D6336C;font-weight:800;font-size:13.5px;line-height:1.75">🔔 '+t+'</div>';}).join('')
+      + '</div>';
+  }catch(e){ return ''; }
+}
 function summaryHTML(c){
   const ds=c.dayMaster.stem, el=c.dayMaster.element, col=ec(el), tx=onEl(el);
   const sType=strengthType(c);
@@ -3774,6 +3800,16 @@ function featBookHTML(c, forPrint){
   if(gstar){ const gd=G(typeof GENMEI_DETAIL!=='undefined'?GENMEI_DETAIL:undefined,gstar); const tf=G(typeof TS_FULL!=='undefined'?TS_FULL:undefined,gstar);
     rows.push(sec('中心の星（月支元命）＝'+gstar,'#2A6FD0','#EEF4FC','⭐',
       [li('気質',gd),li('性格',tf&&tf.性格),li('向く仕事',tf&&tf.適職)])); }
+  // 2.5) 通変星（年・月・時の天干＝場面ごとに表れる顔）。教科書(TS_FULL)の性格＋適職。
+  try{ const tsF=(typeof TS_FULL!=='undefined')?TS_FULL:null;
+    if(tsF){ const tsRows=[];
+      const pushTs=(idx,lab)=>{ const p=c.pillars[idx]; if(!p||!p.tenStar)return; const d=tsF[p.tenStar]; if(!d)return;
+        tsRows.push(li(lab,'（'+p.tenStar+'）'+d.性格+(d.適職?'　向く仕事＝'+d.適職:''))); };
+      pushTs(0,'年柱（目上・社会）');
+      pushTs(1,'月柱（仕事の顔）');
+      if(!c.timeUnknown) pushTs(3,'時柱（晩年・子）');
+      if(tsRows.length) rows.push(sec('通変星（場面ごとの持ち味）','#C0722A','#FBF3E8','🌟',tsRows)); }
+  }catch(_e){}
   // 3) 十二運（日柱＝最重要）
   const terr=dp.terrain; const trf=G(typeof TERR_FULL!=='undefined'?TERR_FULL:undefined,terr); const jf=G(typeof JUNI_FULL!=='undefined'?JUNI_FULL:undefined,terr);
   if(terr&&(trf||jf)){
@@ -4480,7 +4516,7 @@ function renderResult(){
   // 要点サマリーは #result に、以降は #result-body に分割（並び：要点→命式(納音・相生相剋など分析込みの完全版)→詳細鑑定→相性→会局→五行→大運年運→恋愛→養生）
   // 命式表は「詳細鑑定を読む前に確認したい」という要望で、完全版を要点の直後に一本化（前後で二重に出さない）。
   document.getElementById('result').innerHTML =
-    heroHTML(c)+summaryHTML(c)+featBookHTML(c)+kaigouCardHTML(c)+verdictHTML(c)+meishiHTML(c);
+    heroHTML(c)+timingAlertHTML(c)+summaryHTML(c)+featBookHTML(c)+kaigouCardHTML(c)+verdictHTML(c)+meishiHTML(c);
   (function(){var _rb=document.getElementById('result-body');
     if(!_rb){_rb=document.createElement('div');_rb.id='result-body';var _r=document.getElementById('result');if(_r&&_r.parentNode)_r.parentNode.insertBefore(_rb,_r.nextSibling);}
     _rb.innerHTML = kaikyokuHTML(c)+genmeiHTML(c)+junitenHTML(c)+gogyoHTML(c)+compatPillHTML()+midQuickNavHTML()+flowHTML(c)+kingunHTML(c)+(typeof pkLoveCard==='function'?pkLoveCard(c):'')+yojoHTML(c);
