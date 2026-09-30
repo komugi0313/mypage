@@ -46,6 +46,8 @@ const srv=http.createServer((q,r)=>{let f=path.join('fx',decodeURIComponent(q.ur
   o.push(['恋愛の定番を恋愛と見分ける（AI分類なし）',['彼と結婚したいけど迷ってる','元彼とよりを戻したい','同じ職場の女の子を好きになった。私も女です','既婚者の彼を奪いたい','My boyfriend wants to marry me','I want to get back with my ex','I am gay and scared to come out','我想和前任复合','남자친구랑 결혼해도 될까','Tôi là người đồng tính','Quero voltar com meu ex','Aku mau nikah tapi ragu','อยากคืนดีกับแฟนเก่า'].map(q=>_effectiveTopic(q)).join()]);
   o.push(['家族の話は恋愛にしない',['姉が結婚する','My parents are getting a divorce'].map(q=>_effectiveTopic(q)).join()]);
   o.push(['種類の見分け',[RE_LOVE_MARRIAGE.test('プロポーズされた'),RE_LOVE_REUNION.test('復縁したい'),RE_LOVE_LGBT.test('彼女が好き。私も女性です'),RE_LOVE_LGBT.test('同性の先輩が好き'),RE_LOVE_LGBT.test('나 게이야')].join()]);
+  o.push(['恋人の浮気',['彼女が浮気してるかもしれない','남편이 바람피우는 것 같아','Descubrí que mi esposo me engaña','แฟนมีคนอื่น','I think my husband is cheating','我老公出轨了','彼が好き'].map(q=>RE_PARTNER_CHEAT.test(q)).join()]);
+  o.push(['送る文面の〇〇は残す',(function(){ state.lang='ja'; return _softenJargon('「久しぶり！〇〇のことで教えてほしくて」と送る。〇〇さんは'); })()]);
   state.lang='ja';
   o.push(['読みがなの残り',_finalTidy('探究心（たいきょくきじん・物事を深く追究する星）と、まじめさ（せいかん）。生まれ持った星の組み合わせ（生まれ持った星）です。お上司が嫌い。')]);
   state.lang='ja';
