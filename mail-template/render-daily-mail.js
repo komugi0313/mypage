@@ -1,6 +1,6 @@
 /*! render-daily-mail.js — 毎朝の運気予報メール（HTMLメール）テンプレート
  *
- *  見た目・セクションの並びの「正」＝ mail-sample.html。
+ *  毎朝メールの見た目・セクションの並びの「正」＝このファイル（2026-09-30〜。以前の mail-sample.html は廃止し、mail-preview.html へ転送）。
  *  それを Gmail / iPhoneメール / Outlook でも崩れにくい「テーブルレイアウト＋インラインCSS」に移植したもの。
  *  文章はすべて generateDaily() の返り値をそのまま使う（ここでは文章を作らない）。
  *
@@ -73,7 +73,7 @@
   function strip(s){ return String(s == null ? '' : s).replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ''); }
 
   /* ── 部品 ── */
-  // 左に色帯のあるミニカード（mail-sample の .sec）
+  // 左に色帯のあるミニカード
   function sec(emoji, title, bodyHtml, a, bg, t){
     return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:10px;border-collapse:separate;">'
       + '<tr><td style="background:' + bg + ';border:1px solid #efe7e3;border-left:4px solid ' + a + ';border-radius:15px;padding:11px 13px 11px 12px;">'
@@ -81,7 +81,7 @@
       + '<div style="font-size:12.5px;line-height:1.75;color:#5a4d47;">' + bodyHtml + '</div>'
       + '</td></tr></table>';
   }
-  // ジャンル区切り見出し（mail-sample の .genre-h）
+  // ジャンル区切り見出し
   function genre(label, sub, color){
     return '<div style="margin:18px 2px 2px;padding-top:13px;border-top:2px dotted #ecd9c4;font-family:' + SERIF + ';font-weight:800;font-size:14px;color:' + color + ';letter-spacing:.03em;">'
       + label + ' <span style="font-family:' + SANS + ';font-weight:600;font-size:10.5px;color:#9a8d84;">' + sub + '</span></div>';
