@@ -3,7 +3,7 @@
    鑑定・60干支の教科書を使えるようにする。
    オンライン鑑定（生成AI）だけは通信が要るが、圏外時は端末内の
    オフライン鑑定に自動で切り替わる。 */
-const CACHE = 'shichu-jidou-v353';/* v353=相性判定カードの見出し「2人の相性、直感でどう？」→「2人の相性は？」に変更（「直感でどう」を削除）。※相性タブをタップしたときの着地位置は現行コードでは切替タブ最上部で正常（旧版で見えた「2人を比べる」表示や途中停止はv349以降で解消済み＝古いキャッシュを更新してください）。表示層のみ・エンジン非改変。*/
+const CACHE = 'shichu-jidou-v354';/* v354=入口を必ずLP（index.html）からに。(1)index.htmlの「一度ツールに入った端末はLPを飛ばしてapp-proへ自動遷移」処理を撤去。(2)manifestのstart_urlをapp-pro.html→index.htmlに。(3)SWのオフラインfallbackもapp-pro.html→index.htmlに。表示・導線のみ・エンジン非改変。*/
 
 /* 初回訪問時に先読みしてキャッシュするページ一式（このブランドのみ） */
 const ASSETS = [
@@ -48,7 +48,7 @@ self.addEventListener('fetch', (e) => {
           if (res && res.status === 200 && res.type === 'basic') cache.put(req, res.clone());
           return res;
         }).catch(() => null);
-        return cached || network.then((res) => res || cache.match('app-pro.html'));
+        return cached || network.then((res) => res || cache.match('index.html'));
       })
     )
   );
