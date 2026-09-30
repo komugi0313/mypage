@@ -14,6 +14,7 @@
  *      unsubscribeUrl: 'https://unkiyoho.jp/unsubscribe.html?token=XXXX',  // 受信者ごとの解除トークン付き
  *      mypageUrl:      'https://unkiyoho.jp/mypage.html',
  *      aishouUrl:      'https://166unmei.com/',
+ *      refCode:        'k7m2qx',                                           // この会員の紹介コード（シェアのリンクに ?ref= で付く）
  *      operatorUrl:    'https://unkiyoho.jp/tokushoho.html',                 // 運営者情報（住所・問い合わせ先）
  *    });
  *    // mail.subject / mail.html / mail.text を送信サービスへ
@@ -21,23 +22,23 @@
 (function (root) {
   'use strict';
 
-  /* ── 月替わりの季節テーマ（mail-sample.html の THEMES と同一。値を変えるときは両方そろえる） ── */
-  /* ── 月替わりの季節テーマ：12か月すべて写真の便箋（オーナー指定の bg-*.jpg。mail-sample-free.html / my-tenki-demo.html と同一） ──
-     メールでは写真を「上の帯」「下の帯」（mail-bg/bg-*-top.jpg / -bottom.jpg）として <img> で出し、
-     間の左右は写真の背景（対応ソフトのみ）＋ bgcolor で埋める。 */
+  /* ── 月替わりの季節テーマ（2026-09-30 改：写真の便箋をやめ、軽くて動くデザインに） ──
+     上：その月の「動く季節バナー」1枚（mail-bg/banner-MM.gif・660×200・約27〜70KB。3回動いて止まる）
+     枠：月ごとの単色（bgcolor）＝画像なし。下：季節の絵文字のリボン（文字なので0KB）。
+     Windows版Outlookなど動かないメールソフトでは、バナーの1コマ目（完成した絵）が表示される。 */
   var THEMES = {
-    1:{frame1:"#fff7e6",frame2:"#fbedc9",soft:"#fff9ee",accent:"#dcae4a",ink:"#9a7a2c",label:"正月",deco:["🎍","🌅","⛩️","🎌","🎍"],motif:["🎍","🌅","🎌","✨","🌅","🎍"],bgimg:"bg-shogatsu.jpg",bgcolor:"#fdf3dd"},
-    2:{frame1:"#f4ecf5",frame2:"#e7d7ee",soft:"#f8f1f9",accent:"#c76a94",ink:"#a24d74",label:"バレンタイン",deco:["❤️","🍫","💝","🎁","❤️"],motif:["🍫","💝","❤️","🎁","🍫","💝"],bgimg:"bg-valentine.jpg",bgcolor:"#fbe4ee"},
-    3:{frame1:"#fff0f4",frame2:"#ffdde7",soft:"#fff4f7",accent:"#f0a1b8",ink:"#b0576f",label:"ひな祭り",deco:["🎎","🌸","🌷","🍡","🌸"],motif:["🌸","🎎","🌷","🍡","🌸","🌷"],bgimg:"bg-hina.jpg",bgcolor:"#f7edf3"},
-    4:{frame1:"#ffeaf2",frame2:"#ffd3e3",soft:"#fff2f7",accent:"#f39ab9",ink:"#b25c81",label:"桜",deco:["🌸","🌸","🦋","🌸","🌸"],motif:["🌸","🦋","🌸","🌷","🌸","🦋"],bgimg:"bg-sakura.jpg",bgcolor:"#e9f4fb"},
-    5:{frame1:"#ecf9ec",frame2:"#d2efd2",soft:"#f1faf1",accent:"#7fc98a",ink:"#4f8a55",label:"新緑",deco:["🎏","🌿","🍃","🌱","🎏"],motif:["🌿","🎏","🍃","🐝","🌱","🌿"],bgimg:"bg-shinryoku.jpg",bgcolor:"#e6f5ea"},
-    6:{frame1:"#f1ebfa",frame2:"#e0d3f2",soft:"#f5f0fc",accent:"#a98ee0",ink:"#7a5aa0",label:"あじさい",deco:["☔","💜","🐌","🌧️","💜"],motif:["💜","☔","🐌","🌧️","🌷","💜"],bgimg:"bg-ajisai.jpg",bgcolor:"#f6f0e4"},
-    7:{frame1:"#e6f5fd",frame2:"#cee9f9",soft:"#eef8fd",accent:"#6fbde6",ink:"#3f83ac",label:"夏まつり",deco:["🎋","🎐","⭐","💧","🎋"],motif:["🎐","🎋","💧","⭐","🫧","🎐"],bgimg:"bg-natsu.jpg",bgcolor:"#16234f"},
-    8:{frame1:"#201640",frame2:"#3a2866",soft:"#f3eefc",accent:"#f5c542",ink:"#6a4a9a",label:"花火",deco:["🎇","🎆","✨","🎆","🎇"],motif:["🎆","🎇","✨","🏮","🎆","🎇"],big:true,bgimg:"bg-fw.jpg",bgcolor:"#160e2e"},
-    9:{frame1:"#fdf3dd",frame2:"#f8e6bd",soft:"#fdf6ea",accent:"#e2b04a",ink:"#a5792a",label:"お月見",deco:["🌕","🌾","🍇","🐰","🌾"],motif:["🌕","🌾","🍇","🐰","☁️","🌾"],bgimg:"bg-tsukimi.jpg",bgcolor:"#fdf6e3"},
-    10:{frame1:"#ffefdf",frame2:"#ffdcc0",soft:"#fff4ea",accent:"#f0912f",ink:"#bb6a2e",label:"ハロウィン",deco:["🎃","👻","🦇","🍬","🕸️"],motif:["🎃","👻","🦇","🍬","🕸️","🎃"],bgimg:"bg-halloween.jpg",bgcolor:"#4a2b5c"},
-    11:{frame1:"#fdeede",frame2:"#f6dabd",soft:"#fdf3e9",accent:"#dd8a48",ink:"#a05e28",label:"秋の花",deco:["🍁","🍂","🌰","🍄","🍁"],motif:["🍁","🍂","🌰","🍄","🍁","🍂"],bgimg:"bg-autumn.jpg",bgcolor:"#fdf6ef"},
-    12:{frame1:"#f6ecec",frame2:"#ead6d6",soft:"#f7efef",accent:"#c0392b",ink:"#2f7a48",label:"クリスマス",deco:["🎄","🎅","⛄","🎁","✨"],motif:["🎄","🎁","⛄","🦌","❄️","🎄"],bgimg:"bg-xmas.jpg",bgcolor:"#8a2a26"}
+    1:{frame1:"#fff7e6",frame2:"#fbedc9",soft:"#fff9ee",accent:"#dcae4a",ink:"#9a7a2c",label:"正月",deco:["🎍","🌅","⛩️","🎌","🎍"],motif:["🎍","🌅","🎌","✨","🌅","🎍"],banner:"banner-01.gif",bgcolor:"#ffe7bf"},
+    2:{frame1:"#f4ecf5",frame2:"#e7d7ee",soft:"#f8f1f9",accent:"#c76a94",ink:"#a24d74",label:"バレンタイン",deco:["❤️","🍫","💝","🎁","❤️"],motif:["🍫","💝","❤️","🎁","🍫","💝"],banner:"banner-02.gif",bgcolor:"#f8d3e2"},
+    3:{frame1:"#fff0f4",frame2:"#ffdde7",soft:"#fff4f7",accent:"#f0a1b8",ink:"#b0576f",label:"ひな祭り",deco:["🎎","🌸","🌷","🍡","🌸"],motif:["🌸","🎎","🌷","🍡","🌸","🌷"],banner:"banner-03.gif",bgcolor:"#ffe3ea"},
+    4:{frame1:"#ffeaf2",frame2:"#ffd3e3",soft:"#fff2f7",accent:"#f39ab9",ink:"#b25c81",label:"桜",deco:["🌸","🌸","🦋","🌸","🌸"],motif:["🌸","🦋","🌸","🌷","🌸","🦋"],banner:"banner-04.gif",bgcolor:"#f6dbe7"},
+    5:{frame1:"#ecf9ec",frame2:"#d2efd2",soft:"#f1faf1",accent:"#7fc98a",ink:"#4f8a55",label:"新緑",deco:["🎏","🌿","🍃","🌱","🎏"],motif:["🌿","🎏","🍃","🐝","🌱","🌿"],banner:"banner-05.gif",bgcolor:"#d9eecf"},
+    6:{frame1:"#f1ebfa",frame2:"#e0d3f2",soft:"#f5f0fc",accent:"#a98ee0",ink:"#7a5aa0",label:"あじさい",deco:["☔","💜","🐌","🌧️","💜"],motif:["💜","☔","🐌","🌧️","🌷","💜"],banner:"banner-06.gif",bgcolor:"#e1dcf2"},
+    7:{frame1:"#e6f5fd",frame2:"#cee9f9",soft:"#eef8fd",accent:"#6fbde6",ink:"#3f83ac",label:"夏まつり",deco:["🎋","🎐","⭐","💧","🎋"],motif:["🎐","🎋","💧","⭐","🫧","🎐"],banner:"banner-07.gif",bgcolor:"#1f2d63"},
+    8:{frame1:"#201640",frame2:"#3a2866",soft:"#f3eefc",accent:"#f5c542",ink:"#6a4a9a",label:"花火",deco:["🎇","🎆","✨","🎆","🎇"],motif:["🎆","🎇","✨","🏮","🎆","🎇"],big:true,banner:"banner-08.gif",bgcolor:"#1c1340"},
+    9:{frame1:"#fdf3dd",frame2:"#f8e6bd",soft:"#fdf6ea",accent:"#e2b04a",ink:"#a5792a",label:"お月見",deco:["🌕","🌾","🍇","🐰","🌾"],motif:["🌕","🌾","🍇","🐰","☁️","🌾"],banner:"banner-09.gif",bgcolor:"#39417a"},
+    10:{frame1:"#ffefdf",frame2:"#ffdcc0",soft:"#fff4ea",accent:"#f0912f",ink:"#bb6a2e",label:"ハロウィン",deco:["🎃","👻","🦇","🍬","🕸️"],motif:["🎃","👻","🦇","🍬","🕸️","🎃"],banner:"banner-10.gif",bgcolor:"#4a2b5c"},
+    11:{frame1:"#fdeede",frame2:"#f6dabd",soft:"#fdf3e9",accent:"#dd8a48",ink:"#a05e28",label:"紅葉",deco:["🍁","🍂","🌰","🍄","🍁"],motif:["🍁","🍂","🌰","🍄","🍁","🍂"],banner:"banner-11.gif",bgcolor:"#f6d9b6"},
+    12:{frame1:"#f6ecec",frame2:"#ead6d6",soft:"#f7efef",accent:"#c0392b",ink:"#2f7a48",label:"クリスマス",deco:["🎄","🎅","⛄","🎁","✨"],motif:["🎄","🎁","⛄","🦌","❄️","🎄"],banner:"banner-12.gif",bgcolor:"#1d4a3d"}
   };
 
   /* ── 「今日の状況(rel)」で縁の見出しを差し替える（my-tenki-demo.html の run() と同一） ── */
@@ -104,24 +105,25 @@
 
   function renderDailyMail(r, opts){
     opts = opts || {};
-    var base = opts.assetBase || 'https://unkiyoho.jp/';
-    var unsub = opts.unsubscribeUrl || (base + 'unsubscribe.html');
-    var mypage = opts.mypageUrl || (base + 'mypage.html');
+    var base = (opts.assetBase != null) ? opts.assetBase : 'https://unkiyoho.jp/';   // '' ＝同じサイト内の相対パス（デモ・LPの見本用）
+    var site = opts.siteUrl || 'https://unkiyoho.jp/';                                 // シェアのリンク先（運気予報のトップ）
+    var unsub = opts.unsubscribeUrl || (site + 'unsubscribe.html');
+    var mypage = opts.mypageUrl || (site + 'mypage.html');
     var aishou = opts.aishouUrl || 'https://166unmei.com/';
-    var operator = opts.operatorUrl || (base + 'tokushoho.html');   // 運営者情報（住所・問い合わせ先を載せたページ）
+    var operator = opts.operatorUrl || (site + 'tokushoho.html');   // 運営者情報（住所・問い合わせ先を載せたページ）
     var T = THEMES[r.date.m] || THEMES[7];
     var rel = (r.user && r.user.rel) || 'single';
     var RH = REL_HEAD[rel] || REL_HEAD.single;
     var nick = esc(r.user.nick);
     var dateLabel = r.date.y + '年 ' + r.date.m + '月' + r.date.d + '日（' + r.date.wd + '）';
     var subject = '【' + r.date.m + '/' + r.date.d + '(' + r.date.wd + ')】' + r.subject;
-    var crystal = '<img src="' + base + 'icon-crystal.png" width="15" height="15" alt="" style="width:15px;height:15px;vertical-align:-3px;border:0;">';
+    var crystal = '<img src="' + base + 'mail-bg/crystal-30.png" width="15" height="15" alt="" style="width:15px;height:15px;vertical-align:-3px;border:0;">';
     var lk = r.lucky || {}, fo = r.fortunes || {};
     var h = [];
 
     /* ヘッダー */
-    // 背景画像の月（1・2・3・8月）は mail-sample.html と同じく絵文字リボンを出さない
-    if (!T.bgimg) h.push('<div style="text-align:center;font-size:' + (T.big ? 26 : 20) + 'px;letter-spacing:4px;line-height:1;padding:6px 0 9px;margin:2px 0 4px;border-bottom:1.5px dotted ' + T.accent + ';">' + T.deco.join(T.big ? ' ' : '&#12288;') + '</div>');
+    // 上に動く季節バナーがあるので、本文の頭の絵文字リボンは出さない（季節の絵文字は枠の下のリボンに出す）
+    if (!T.banner) h.push('<div style="text-align:center;font-size:' + (T.big ? 26 : 20) + 'px;letter-spacing:4px;line-height:1;padding:6px 0 9px;margin:2px 0 4px;border-bottom:1.5px dotted ' + T.accent + ';">' + T.deco.join(T.big ? ' ' : '&#12288;') + '</div>');
     h.push('<div style="text-align:center;padding-bottom:12px;border-bottom:1.5px dashed ' + T.accent + ';margin-bottom:14px;">'
       + '<div style="font-size:12px;font-weight:800;letter-spacing:.14em;color:' + T.ink + ';"><span style="font-size:15px;">🌤️</span>私だけの運気予報</div>'
       + '<div style="font-family:' + SERIF + ';font-size:13px;color:#6f5f57;margin-top:3px;letter-spacing:.06em;">' + dateLabel + '</div>'
@@ -240,13 +242,14 @@
     if (r.season) h.push(sec('🍵', '季節のたより', r.season.word + (r.season.note ? '<div style="margin-top:6px;color:#8a7d74;">🌱 ' + r.season.note + '</div>' : ''), '#6fae7a', '#eef7ef'));
 
     /* 💞 1.66相性診断への導線＋シェア（全メール共通・必須） */
-    var shareText = encodeURIComponent('毎朝あなただけの運勢が届く「私だけの運気予報」🌤 ずっと無料。60組に1組【1.66%】の奇跡の相性診断も！');
-    var shareUrl = encodeURIComponent(aishou + (aishou.indexOf('?') < 0 ? '?' : '&') + 'ref=mail');
+    // シェアするのは「運気予報」そのもの（リンク先＝運気予報のトップ）。?ref=紹介コード で、だれの紹介で登録したかを数える
+    var shareText = encodeURIComponent('毎朝6時に、生年月日からわたしだけの運勢が届く「私だけの運気予報」🌤 ずっと無料だよ');
+    var shareUrl = encodeURIComponent(site + '?ref=' + encodeURIComponent(opts.refCode || 'mail'));
     h.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;border-collapse:separate;"><tr><td align="center" style="background:#fdeef4;border:1.5px solid #e8a8bd;border-radius:14px;padding:14px;text-align:center;">'
       + '<div style="font-size:13.5px;font-weight:800;color:#c14e77;line-height:1.6;">💞 気になる人との相性、調べてみない？</div>'
       + '<div style="margin-top:4px;font-size:11.5px;color:#8a6f7a;line-height:1.7;">60組に1組の奇跡【1.66%】── 生年月日ふたつで、ふたりの相性がすぐわかります。</div>'
       + '<div style="margin-top:9px;">' + btn(esc(aishou) + '" data-aishou="1', '1.66 相性診断をやってみる（無料）', '#d8466a', '13px', '10px 22px') + '</div>'
-      + '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e8c8d4;font-size:10.5px;color:#a08a80;">🎁 お友達にもシェアして、いっしょに占ってみてね</div>'
+      + '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e8c8d4;font-size:10.5px;color:#a08a80;">🎁 この運気予報を、お友達にも教えてあげてね（無料）</div>'
       + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:7px auto 0;"><tr>'
       + '<td>' + btn('https://social-plugins.line.me/lineit/share?url=' + shareUrl, 'LINEで送る', '#06c755', '11.5px', '8px 16px') + '</td>'
       + '<td>' + btn('https://twitter.com/intent/tweet?text=' + shareText + '&amp;url=' + shareUrl, '𝕏 でシェア', '#1d1f23', '11.5px', '8px 16px') + '</td>'
@@ -270,13 +273,10 @@
       + '<div style="margin-top:10px;font-size:10px;color:#a8998f;letter-spacing:.08em;">produced by Mizuki Nico</div>'
       + '</div>');
 
-    /* ── 外枠：季節の便箋（写真の上帯・下帯は <img>＝どのメールソフトでも表示、ダークモードでも色が変わらない） ── */
+    /* ── 外枠：月ごとの単色の枠＋上に動く季節バナー＋下に季節の絵文字リボン（写真の背景は使わない＝軽い） ── */
     var BG = T.bgcolor || T.frame1;
-    var stem = (T.bgimg || '').replace(/\.jpg$/, '');
-    var band = function(pos){
-      return '<tr><td style="line-height:0;font-size:0;"><img src="' + base + 'mail-bg/' + stem + '-' + pos + '.jpg" width="440" alt="" style="display:block;width:100%;max-width:440px;height:auto;border:0;'
-        + (pos === 'top' ? 'border-radius:26px 26px 0 0;' : 'border-radius:0 0 26px 26px;') + '"></td></tr>';
-    };
+    var bannerRow = '<tr><td style="line-height:0;font-size:0;padding:0;"><img src="' + base + 'mail-bg/' + T.banner + '" width="440" alt="' + esc(T.label) + 'の季節のイラスト" style="display:block;width:100%;max-width:440px;height:auto;border:0;border-radius:26px 26px 0 0;"></td></tr>';
+    var ribbon = '<tr><td align="center" style="padding:10px 10px 14px;font-size:18px;line-height:1;letter-spacing:6px;text-align:center;">' + T.motif.join(' ') + '</td></tr>';
     var preheader = strip(r.todayOne || r.weatherMsg || '');
     var html = '<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
       + '<meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light"><title>' + esc(subject) + '</title></head>'
@@ -287,12 +287,12 @@
       + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:440px;width:100%;border-collapse:separate;font-family:' + SANS + ';color:#4a3f3a;">'
       + '<tr><td bgcolor="' + BG + '" style="background-color:' + BG + ';border-radius:26px;padding:0;">'
       + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
-      + band('top')
-      + '<tr><td bgcolor="' + BG + '" background="' + base + T.bgimg + '" style="background-color:' + BG + ';background-image:url(\'' + base + T.bgimg + '\');background-size:100% auto;background-repeat:repeat-y;background-position:center top;padding:0 14px;">'
+      + bannerRow
+      + '<tr><td bgcolor="' + BG + '" style="background-color:' + BG + ';padding:12px 12px 0;">'
       + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#ffffff" style="background:#ffffff;border-radius:20px;padding:18px 17px 18px;">'
       + h.join('')
       + '</td></tr></table></td></tr>'
-      + band('bottom')
+      + ribbon
       + '</table></td></tr></table>'
       + '<!--[if mso]></td></tr></table><![endif]-->'
       + '</td></tr></table></body></html>';

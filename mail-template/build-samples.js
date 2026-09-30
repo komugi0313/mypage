@@ -15,7 +15,7 @@ const people = [
 fs.mkdirSync(path.join(__dirname, 'samples'), { recursive: true });
 for (const p of people) {
   const r = D.generateDaily(p.birth, p.date, Object.assign({ personBazi: PersonBazi }, p.o));
-  const m = renderDailyMail(r, { assetBase, unsubscribeUrl: assetBase + 'unsubscribe.html?token=SAMPLE', mypageUrl: assetBase + 'mypage.html' });
+  const m = renderDailyMail(r, { assetBase, unsubscribeUrl: assetBase + 'unsubscribe.html?token=SAMPLE', mypageUrl: assetBase + 'mypage.html', refCode: 'SAMPLE' });
   fs.writeFileSync(path.join(__dirname, 'samples', p.file + '.html'), m.html);
   fs.writeFileSync(path.join(__dirname, 'samples', p.file + '.txt'), '件名: ' + m.subject + '\n\n' + m.text);
   console.log(p.file, '|', m.subject, '|', Math.round(m.html.length / 1024) + 'KB');
