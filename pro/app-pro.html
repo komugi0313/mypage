@@ -3659,6 +3659,91 @@ function featBookHTML(c, forPrint){
       ${_shareCredit(false)}
     </div></details>`;
 }
+/* ===== この鑑定を「その場で送る」＝1枚の画像にしてWeb Shareで共有 =====
+   任意HTMLのラスタライズ（Safariで崩れやすい）は使わず、canvasで“鑑定カード”を自前描画。
+   依存なし・オフライン可・崩れない。非対応端末は画像保存へフォールバック。 */
+function shareBtnHTML(){
+  return `<button type="button" onclick="shareReadingCard(this)" style="margin:12px 0 2px;width:100%;min-height:52px;border:none;border-radius:13px;background:linear-gradient(135deg,#1FA463,#128A4F);color:#fff;font-family:inherit;font-weight:900;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(18,138,79,.28)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>この鑑定を画像で送る（LINE・メール）</button>`;
+}
+function _rr(x,X,Y,w,h,r){x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath();}
+function _dlBlob(blob,fn){try{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn||'四柱推命_鑑定.png';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);}catch(e){}}
+async function shareReadingCard(btn){
+  if(typeof chart==='undefined'||!chart){ alert('先に「占う」で鑑定を表示してください。'); return; }
+  const _t=btn?btn.innerHTML:''; if(btn){btn.disabled=true;btn.style.opacity=.7;}
+  try{
+    const blob=await _drawReadingCard(chart);
+    if(!blob){ alert('画像の作成に失敗しました。恐れ入りますが画面のスクリーンショットをご利用ください。'); return; }
+    const file=new File([blob],'四柱推命_鑑定.png',{type:'image/png'});
+    const nm=(personName||'').trim();
+    const txt=(nm?nm+' さんの四柱推命 鑑定':'四柱推命 鑑定')+'（MEISHIKI.K.K）';
+    if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file], title:'四柱推命 鑑定', text:txt}); }
+      catch(e){ if(!(e&&e.name==='AbortError')) _dlBlob(blob); }
+    } else { _dlBlob(blob); }
+  }catch(e){ console.error(e); alert('共有できませんでした。恐れ入りますが画面のスクリーンショットをご利用ください。'); }
+  finally{ if(btn){btn.disabled=false;btn.style.opacity='';btn.innerHTML=_t;} }
+}
+function _drawReadingCard(c){ return new Promise(resolve=>{ try{
+  const W=1080, PAD=64;
+  const nm=(personName||'').trim();
+  const dgz=(c.pillars[2]||{}).ganzhi||'';
+  const ichi=(typeof KANSHI60_DETAIL!=='undefined'&&KANSHI60_DETAIL[dgz])?KANSHI60_DETAIL[dgz].一言:'';
+  const sType=(typeof strengthType==='function')?strengthType(c):'';
+  const d0=c.decadeFortunes&&c.decadeFortunes[0];
+  const ritsu=d0?('立運 '+d0.startAge+'歳'+(d0.months?d0.months+'ヶ月':'')):'';
+  const ku=(typeof kubo==='function')?(kubo(c)||[]):[]; const kuT=ku.length?('空亡 '+ku.join('')):'';
+  let feats=[]; try{ feats=(typeof bxFeatureList==='function')?bxFeatureList(c.timeUnknown?c.pillars.slice(0,3):c.pillars):[]; }catch(e){} feats=feats.slice(0,4);
+  const mctx=document.createElement('canvas').getContext('2d');
+  const wrap=(t,font,maxw)=>{mctx.font=font;const a=[...String(t)],ls=[];let cur='';for(const ch of a){if(ch==='\n'){ls.push(cur);cur='';continue;}if(mctx.measureText(cur+ch).width>maxw){ls.push(cur);cur=ch;}else cur+=ch;}if(cur)ls.push(cur);return ls;};
+  const innerW=W-PAD*2;
+  const ichiLines=ichi?wrap('日柱「'+dgz+'」　'+ichi,'700 31px sans-serif',innerW).slice(0,3):[];
+  const featLines=feats.map(f=>wrap('・'+f+'があります。','700 30px sans-serif',innerW).slice(0,1)[0]);
+  // 高さ算出
+  let H=48+66/*badge*/+ (nm?96:76) + 40+130+30/*pillars*/ + 96/*chips*/;
+  if(ichiLines.length)H+=ichiLines.length*46+18;
+  if(featLines.length)H+=54+featLines.length*44+8;
+  H+=96/*footer*/+40;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const x=cv.getContext('2d');
+  x.fillStyle='#FBF9F3'; x.fillRect(0,0,W,H);
+  x.lineWidth=3; x.strokeStyle='#E3D3AE'; _rr(x,24,24,W-48,H-48,26); x.stroke();
+  let y=88;
+  // badge
+  x.fillStyle='#232733'; _rr(x,PAD,y-44,486,60,30); x.fill();
+  x.fillStyle='#F2C14E'; x.beginPath(); x.arc(PAD+30,y-14,8,0,7); x.fill();
+  x.fillStyle='#fff'; x.font='800 28px sans-serif'; x.textBaseline='middle'; x.fillText('四柱推命 自動鑑定',PAD+50,y-13);
+  x.textBaseline='alphabetic'; y+=52;
+  // name
+  x.fillStyle='#232733'; x.font='900 62px sans-serif'; x.fillText(nm?nm+' さん':'鑑定結果',PAD,y+46); y+=(nm?96:76)+8;
+  // pillars
+  const labs=['年柱','月柱','日柱','時柱']; const pw=(innerW-3*20)/4;
+  for(let i=0;i<4;i++){ const p=c.pillars[i]; const px=PAD+i*(pw+20);
+    x.fillStyle='#7B8794'; x.font='700 25px sans-serif'; x.textAlign='center'; x.fillText(labs[i],px+pw/2,y);
+    x.fillStyle='#fff'; _rr(x,px,y+12,pw,130,18); x.fill(); x.lineWidth=2; x.strokeStyle='#ECE6D8'; _rr(x,px,y+12,pw,130,18); x.stroke();
+    if(p&&!(c.timeUnknown&&i===3)){ x.font='900 72px sans-serif';
+      x.fillStyle=ec(p.stemElement); x.fillText(p.stem,px+pw/2-38,y+12+92);
+      x.fillStyle=ec(p.branchElement); x.fillText(p.branch,px+pw/2+38,y+12+92);
+    } else { x.fillStyle='#B9C0CB'; x.font='800 34px sans-serif'; x.fillText('不明',px+pw/2,y+12+82); }
+    x.textAlign='left';
+  }
+  y+=130+30+40;
+  // chips
+  const chips=[sType&&{t:sType==='中和'?'中庸':sType,bg:'#EEF4FC',fg:'#2A6FD0'}, ritsu&&{t:ritsu,bg:'#EDF7F0',fg:'#1E7A45'}, kuT&&{t:kuT,bg:'#FBF1E1',fg:'#8A5A12'}].filter(Boolean);
+  let cx=PAD; x.font='800 28px sans-serif';
+  chips.forEach(ch=>{ const w=x.measureText(ch.t).width+40; x.fillStyle=ch.bg; _rr(x,cx,y-40,w,54,14); x.fill(); x.fillStyle=ch.fg; x.textBaseline='middle'; x.fillText(ch.t,cx+20,y-12); x.textBaseline='alphabetic'; cx+=w+16; });
+  y+=56;
+  // 一言
+  if(ichiLines.length){ x.fillStyle='#3f4657'; x.font='700 31px sans-serif'; ichiLines.forEach(l=>{x.fillText(l,PAD,y+30);y+=46;}); y+=18; }
+  // 特徴
+  if(featLines.length){ x.fillStyle='#8A6A10'; x.font='900 29px sans-serif'; x.fillText('この命式の特徴',PAD,y+28); y+=54;
+    x.fillStyle='#3f4657'; x.font='700 30px sans-serif'; featLines.forEach(l=>{x.fillText(l,PAD,y+30);y+=44;}); y+=8; }
+  // footer
+  const fy=H-70; x.strokeStyle='#E7E1D2'; x.lineWidth=2; x.beginPath(); x.moveTo(PAD,fy-30); x.lineTo(W-PAD,fy-30); x.stroke();
+  x.fillStyle='#232733'; x.font='900 34px sans-serif'; x.fillText('四柱推命 自動鑑定',PAD,fy+8);
+  x.fillStyle='#B8860B'; x.font='900 34px sans-serif'; x.fillText('MEISHIKI.K.K',PAD+340,fy+8);
+  x.fillStyle='#1E7A45'; x.font='900 28px sans-serif'; x.textAlign='right'; x.fillText('一週間 無料',W-PAD,fy+6); x.textAlign='left';
+  cv.toBlob(b=>resolve(b),'image/png');
+ }catch(e){ console.error(e); resolve(null); } });
+}
 function verdictHTML(c){
   const ds=c.dayMaster.stem, sType=strengthType(c);
   const {dd,ay}=curDuYear(c);
@@ -4245,7 +4330,7 @@ function renderResult(){
   // 要点サマリーは #result に、以降は #result-body に分割（並び：要点→命式(納音・相生相剋など分析込みの完全版)→詳細鑑定→相性→会局→五行→大運年運→恋愛→養生）
   // 命式表は「詳細鑑定を読む前に確認したい」という要望で、完全版を要点の直後に一本化（前後で二重に出さない）。
   document.getElementById('result').innerHTML =
-    heroHTML(c)+summaryHTML(c)+featBookHTML(c)+verdictHTML(c)+meishiHTML(c);
+    heroHTML(c)+summaryHTML(c)+shareBtnHTML()+featBookHTML(c)+verdictHTML(c)+meishiHTML(c);
   (function(){var _rb=document.getElementById('result-body');
     if(!_rb){_rb=document.createElement('div');_rb.id='result-body';var _r=document.getElementById('result');if(_r&&_r.parentNode)_r.parentNode.insertBefore(_rb,_r.nextSibling);}
     _rb.innerHTML = kaikyokuHTML(c)+genmeiHTML(c)+junitenHTML(c)+gogyoHTML(c)+compatPillHTML()+midQuickNavHTML()+flowHTML(c)+kingunHTML(c)+(typeof pkLoveCard==='function'?pkLoveCard(c):'')+yojoHTML(c);
