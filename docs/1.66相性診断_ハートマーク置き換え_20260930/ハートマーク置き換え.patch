@@ -1,0 +1,200 @@
+diff -ru a/HANDOFF.md b/HANDOFF.md
+--- a/HANDOFF.md	2026-09-30 01:38:39.636506150 +0000
++++ b/HANDOFF.md	2026-09-30 01:38:39.674401231 +0000
+@@ -26,7 +26,7 @@
+ >
+ > 1. **【最重要】メール生成 `generateDaily(birth, {..., personBazi})` に `personBazi` を必ず渡す。** 渡さないと喜神/忌神が空（中庸扱い）になり（`daily-engine.js:516-522`）、favSet・忌神・`ymAdjust`・素点がズレて、**喜忌を持つ大多数の人で「メール〇／カレンダー◎」の不一致**が出る。`personBazi` は**カレンダー側と同一バージョンの `bazi.js` / `PersonBazi`** で生成すること（別実装・別バージョン禁止）。CIで「同一 birth → 同一 grade/idx」をメール側とカレンダー側で突合する契約テストを置くと安全。
+ > 2. **神殺・冲マーク（🌫️空亡/🍀貴人/🐴駅馬/⚠️ゆらぎ/🌀大きく動く）は `generateDaily().koyomi.items` で提供済み＝カレンダーと同一表引き（`daily-engine.js:koyomiOf`）。** 配信バッチのメールHTMLは `r.koyomi.items`（`{emoji,label,text,tone,key}`）を描画すること（実装例＝`mail-sample.html` の「🗓 今日のこよみメモ」`#secKoyomi`）。10人×365日で**カレンダーの `dayMarks` 神殺集合と100%一致を検証済み**。年月柱冲🌀は `personBazi` がある時のみ算出（無ければカレンダーと同条件で非表示）。
+->    - 分野マーク（🩷🌐💰💼📚）と恋マーク（🌈🌷🌸）はメールでは文章（テーマ/特別日/5分野）で表現。記号一致が必要ならカレンダーの `dayMarks` を流用のこと。
++>    - 分野マーク（💖🌐💰💼📚）と恋マーク（🌈🌷🌸）はメールでは文章（テーマ/特別日/5分野）で表現。記号一致が必要ならカレンダーの `dayMarks` を流用のこと。
+ >
+ > 3. **流年補正 `ymAdjust` は `YM_SCALE=0.6` 倍で適用中（`daily-engine.js`）。** ここ1か所が3画面すべての正本。倍率を変えると◎/△の分布が全画面で連動して変わる（1.0=本格・正直／0.6=現行・緩和／0.4=均一寄り）。カレンダーとメールのグレードは10人×365日で**不一致0件を検証済み**。
+ >
+diff -ru a/daily-engine.js b/daily-engine.js
+--- a/daily-engine.js	2026-09-30 01:38:39.634765236 +0000
++++ b/daily-engine.js	2026-09-30 01:38:39.673246565 +0000
+@@ -530,7 +530,7 @@
+ const SOCIAL_GOOD=['比肩','劫財'];
+ const MONEY_GOOD=['偏財','正財'];
+ const CLASH=['沖'];
+-// カレンダーの分野印(💰💼🌐🩷📚)を命式で重み付け：その日の十神(=その日の干の五行)が
++// カレンダーの分野印(💰💼🌐💖📚)を命式で重み付け：その日の十神(=その日の干の五行)が
+ // 本人にとって「忌」なら、その分野の“良い印”は出さない（本人には消耗日で、出すと誤誘導になるため）。
+ // favMap は PersonBazi().fav（五行→'喜'/'忌'/'中庸'）。命式が無い(null)ときは true＝従来どおり全部出す（安全側）。
+ function domainFavOk(favMap, dayStem){
+diff -ru a/mail-sample.html b/mail-sample.html
+--- a/mail-sample.html	2026-09-30 01:38:39.637784659 +0000
++++ b/mail-sample.html	2026-09-30 01:38:39.674127884 +0000
+@@ -115,7 +115,7 @@
+ 
+       <div class="kantei">
+         <div class="k-h"><img src="icon-crystal.png" alt="" style="height:1.2em;width:auto;vertical-align:-0.26em;"> 今日のあなたの鑑定</div>
+-        <div><span class="k-chip">🌸 恋チャンスUP</span><span class="k-chip">🩷 モテ運あり</span></div>
++        <div><span class="k-chip">🌸 恋チャンスUP</span><span class="k-chip">💖 モテ運あり</span></div>
+         <div class="k-row"><span class="k-l">🎯 開運アクション</span><span class="k-v" id="kAction">人前で笑顔で話す</span></div>
+         <div class="k-row"><span class="k-l">🎨 ラッキーカラー</span><span class="k-v"><span class="k-sw" id="kColorSw" style="background:#87c7ea"></span><span id="kColor">スカイブルー</span></span></div>
+         <div class="k-foot"><img src="icon-crystal.png" alt="" style="height:1.2em;width:auto;vertical-align:-0.26em;"> あなたの<b>命式（生年月日からの四柱推命）</b>をもとに読み解いた、<b>あなただけの毎日鑑定</b>。<b>運命カレンダー</b>とそのまま連動しています。</div>
+diff -ru a/my-tenki-demo.html b/my-tenki-demo.html
+--- a/my-tenki-demo.html	2026-09-30 01:38:39.637978506 +0000
++++ b/my-tenki-demo.html	2026-09-30 01:38:39.669847230 +0000
+@@ -337,7 +337,7 @@
+       <div id="calNote" style="display:none;margin:10px 13px 0;padding:10px 13px;background:#fff4ee;border-radius:11px;font-size:12.5px;color:var(--coral-d);line-height:1.7;text-align:center;">📅 来月以降の運命カレンダーも、無料で毎日お届けします。</div>
+       <div class="dtaphint"><span class="tap-big">👆 カレンダーの日付を<br>タップしてください</span><span class="tap-sub">その日の鑑定・おすすめ服・メモが開きます。</span></div>
+       <div class="cal-grid" id="calGrid"></div>
+-      <div class="legend"><span style="white-space:nowrap">🌈 運命の人の日</span><span style="white-space:nowrap">🌷 出会い・モテ運の日</span><span style="white-space:nowrap">🌸 恋チャンスUP</span><span style="white-space:nowrap">🩷 魅力・表現の日</span><span style="white-space:nowrap">🌐 対人の気が動く日</span><span style="white-space:nowrap">💰 金運の気が動く日</span><span style="white-space:nowrap">💼 仕事の気が動く日</span><span style="white-space:nowrap">📚 学びの日</span><span style="white-space:nowrap">🍀 貴人の日</span><span style="white-space:nowrap">🐴 動き・変化の日</span><span style="white-space:nowrap">🌫️ 空亡（空回り・整える日）</span><span style="white-space:nowrap">🌀 大きく動く日</span><span style="opacity:.6;white-space:nowrap">｜あなた基準の運気ランク｜</span><span style="white-space:nowrap"><b style="color:#e0699a">💮</b> 特別な日</span><span style="white-space:nowrap"><b style="color:#3c9a63">◎</b> 調子のいい日</span><span style="white-space:nowrap"><b style="color:#bcb0a4">〇</b> 普通の日</span><span style="white-space:nowrap"><b style="color:#5b93c2">△</b> 充電日</span><span style="white-space:nowrap">⚠️ ゆらぎ注意</span></div>
++      <div class="legend"><span style="white-space:nowrap">🌈 運命の人の日</span><span style="white-space:nowrap">🌷 出会い・モテ運の日</span><span style="white-space:nowrap">🌸 恋チャンスUP</span><span style="white-space:nowrap">💖 魅力・表現の日</span><span style="white-space:nowrap">🌐 対人の気が動く日</span><span style="white-space:nowrap">💰 金運の気が動く日</span><span style="white-space:nowrap">💼 仕事の気が動く日</span><span style="white-space:nowrap">📚 学びの日</span><span style="white-space:nowrap">🍀 貴人の日</span><span style="white-space:nowrap">🐴 動き・変化の日</span><span style="white-space:nowrap">🌫️ 空亡（空回り・整える日）</span><span style="white-space:nowrap">🌀 大きく動く日</span><span style="opacity:.6;white-space:nowrap">｜あなた基準の運気ランク｜</span><span style="white-space:nowrap"><b style="color:#e0699a">💮</b> 特別な日</span><span style="white-space:nowrap"><b style="color:#3c9a63">◎</b> 調子のいい日</span><span style="white-space:nowrap"><b style="color:#bcb0a4">〇</b> 普通の日</span><span style="white-space:nowrap"><b style="color:#5b93c2">△</b> 充電日</span><span style="white-space:nowrap">⚠️ ゆらぎ注意</span></div>
+       <div style="margin-top:8px;color:var(--muted-2);font-size:11.5px;">日付をタップすると、その日が「何の日」か詳しく見られます。</div>
+       <div class="daydetail" id="dayDetail"></div>
+     </div>
+@@ -772,7 +772,7 @@
+   const _KGC={'g-top':{c:'#d6567e',bg:'#fdeef4'},'g-good':{c:'#c9862a',bg:'#fff6e6'},'g-normal':{c:'#6f7891',bg:'#eef1f6'},'g-care':{c:'#4fa05a',bg:'#edf7ee'}};
+   const _kg=_KGC[_kgr.cls]||_KGC['g-normal'];
+   // マークは“プラス面”だけを「〇〇あり／アップ」で見せる（ふつう〇・△などのグレードは出さない）
+-  const _MKPOS={'🌈':'運命の人の日','🌷':'出会い・モテ運の日','🌸':'恋が動く日','🩷':'魅力が輝く','💰':'金運アップ','💼':'勝負運アップ','🌐':'対人運アップ','📚':'学びの日'};
++  const _MKPOS={'🌈':'運命の人の日','🌷':'出会い・モテ運の日','🌸':'恋が動く日','💖':'魅力が輝く','💰':'金運アップ','💼':'勝負運アップ','🌐':'対人運アップ','📚':'学びの日'};
+   const _posMarks=_kdm.m.filter(function(x){return _MKPOS[x];});
+   const _goodGrade=(_kgr.sym==='💮'||_kgr.sym==='◎');
+   const _acc=_goodGrade?_kg:(_posMarks.length?{c:'#d6567e',bg:'#fdeef4'}:{c:'#8a93a8',bg:'#eef2f6'});
+@@ -961,7 +961,7 @@
+   if(t.branch===TOUKA[CUR.me.branch])m.push('🌷');
+   // 分野マークはその日の十神に応じて必ず表示する（案A）。命式で忌神の分野でも隠さず、
+   // 「その分野の“気”が動く日」として出し、忌神の日は詳細文と総合ランク(△等)で正直に補足する。
+-  if(js==='食神'||js==='傷官')m.push('🩷');
++  if(js==='食神'||js==='傷官')m.push('💖');
+   if(SOCIAL_GOOD.includes(js))m.push('🌐');
+   if(MONEY_GOOD.includes(js))m.push('💰');
+   if(WORK_GOOD.includes(js))m.push('💼');
+@@ -1016,7 +1016,7 @@
+ /* 🔎 今日のまとめ：あなたの調子（💮◎〇△）と“縁”マークを1文でつなぎ、「充電なのに対人◯」等の矛盾感を解消 */
+ function daySummaryHTML(gr,m){
+   var sym=gr.sym;
+-  var love=m.includes('🌷')||m.includes('🌸')||m.includes('🩷')||m.includes('🌈');
++  var love=m.includes('🌷')||m.includes('🌸')||m.includes('💖')||m.includes('🌈');
+   var social=m.includes('🌐'), work=m.includes('💼'), money=m.includes('💰'), learn=m.includes('📚'), sway=m.includes('⚠️');
+   var base, bridge='';
+   if(sym==='💮'){ base='今日はあなたにとって<b>特別な一日</b>。ここぞという事に、思いきって動くほど流れに乗れます。'; }
+@@ -1039,14 +1039,14 @@
+ }
+ function showDay(d){
+   const r=dayMarks(d),t=r.t,m=r.m;
+-  const labels={'🌈':'運命の人の日 ── 運命の相手と縁が最高に高まる、めったにない特別な日','🌷':'出会い・モテ運の日 ── 出逢い運・魅力が全開。動くほど縁が広がる日。誘いには前向きに、気になる人には自分から一言を','🌸':'恋チャンスUP ── 恋が動きやすい日。気になる人への連絡や誘いに good','🩷':'魅力・表現の日 ── あなたの表現力・センス・華やかさが動く日。人前・発信・デート・おしゃれが向く日','🌐':'対人の気が動く日 ── 仲間・友達との縁が動く日。協力やチームワークが活きやすい','💰':'金運の気が動く日 ── お金やチャンスが巡りやすい日。商談・買い物・投資に縁あり','💼':'仕事の気が動く日 ── 仕事・責任・評価まわりが動く日。全体の調子（💮◎〇△）もあわせて見て、△の日は無理せず整えるのが吉','⚠️':'ゆらぎ注意日 ── あなたの干支と少しぶつかりやすい日。運が悪いわけではなく、急ぎの決断や言い合いだけ控えめにすればOK。いつもより一呼吸おいて過ごすと安心な一日です。','📚':'学びの日 ── 勉強・資格・情報収集に good。インプットや準備がはかどり、あなたを一段のばす日です','🍀':'貴人の日（天乙貴人）── 人の助け・引き立て・チャンスに恵まれやすい日。困ったら遠慮なく頼ると、良いご縁が動きます','🐴':'動き・変化の日（駅馬）── 移動・行動・環境の変化に縁がある日。フットワーク軽く動くと、流れが開けます','🌫️':'空亡（空回り・整える日）── 気が抜けやすく、なぜか空回りしやすい日。大きな決断や勝負より、片づけ・充電・仕込みに向く"整える日"です','🌀':'大きく動く日 ── その日の干支が、あなたの生まれ持つ柱（年柱＝ルーツ・社会／月柱＝仕事・家族）と「冲」になる日。人生の土台が揺さぶられる、いつもより大きな転機・変化が起きやすい日です'};
+-  const _exNames={'💰':'金運','💼':'仕事運','🌐':'対人運','📚':'学び運','🩷':'魅力','🌸':'恋チャンス'};
++  const labels={'🌈':'運命の人の日 ── 運命の相手と縁が最高に高まる、めったにない特別な日','🌷':'出会い・モテ運の日 ── 出逢い運・魅力が全開。動くほど縁が広がる日。誘いには前向きに、気になる人には自分から一言を','🌸':'恋チャンスUP ── 恋が動きやすい日。気になる人への連絡や誘いに good','💖':'魅力・表現の日 ── あなたの表現力・センス・華やかさが動く日。人前・発信・デート・おしゃれが向く日','🌐':'対人の気が動く日 ── 仲間・友達との縁が動く日。協力やチームワークが活きやすい','💰':'金運の気が動く日 ── お金やチャンスが巡りやすい日。商談・買い物・投資に縁あり','💼':'仕事の気が動く日 ── 仕事・責任・評価まわりが動く日。全体の調子（💮◎〇△）もあわせて見て、△の日は無理せず整えるのが吉','⚠️':'ゆらぎ注意日 ── あなたの干支と少しぶつかりやすい日。運が悪いわけではなく、急ぎの決断や言い合いだけ控えめにすればOK。いつもより一呼吸おいて過ごすと安心な一日です。','📚':'学びの日 ── 勉強・資格・情報収集に good。インプットや準備がはかどり、あなたを一段のばす日です','🍀':'貴人の日（天乙貴人）── 人の助け・引き立て・チャンスに恵まれやすい日。困ったら遠慮なく頼ると、良いご縁が動きます','🐴':'動き・変化の日（駅馬）── 移動・行動・環境の変化に縁がある日。フットワーク軽く動くと、流れが開けます','🌫️':'空亡（空回り・整える日）── 気が抜けやすく、なぜか空回りしやすい日。大きな決断や勝負より、片づけ・充電・仕込みに向く"整える日"です','🌀':'大きく動く日 ── その日の干支が、あなたの生まれ持つ柱（年柱＝ルーツ・社会／月柱＝仕事・家族）と「冲」になる日。人生の土台が揺さぶられる、いつもより大きな転機・変化が起きやすい日です'};
++  const _exNames={'💰':'金運','💼':'仕事運','🌐':'対人運','📚':'学び運','💖':'魅力','🌸':'恋チャンス'};
+   const _headline=m.includes('🌈')?'🌈':(m.includes('🌷')?'🌷':null);
+   const _extras=m.filter(x=>_exNames[x]);
+   const _bonus=(_headline&&_extras.length)?'<div style="margin-top:8px;padding:8px 11px;border-radius:10px;background:rgba(214,86,126,.09);border:1px solid rgba(214,86,126,.28);font-size:12.5px;font-weight:700;color:#c14e77">✨ しかも今日は '+_extras.map(x=>_exNames[x]).join('・')+' も高まる、二重にうれしい日。</div>':'';
+   const info=_headline?(_headline+' '+labels[_headline]):(m.length?m.map(x=>x+' '+labels[x]).join('<br>'):'おだやかな一日。自分のペースで。');
+-  // ゆらぎ(⚠️)と恋の合図(🌷/🌸/🩷)が重なる日は、はっきり「揺らぎ日だけど恋運はUP」と言葉で伝える
+-  const _loveMark=m.includes('🌷')||m.includes('🌸')||m.includes('🩷');
++  // ゆらぎ(⚠️)と恋の合図(🌷/🌸/💖)が重なる日は、はっきり「揺らぎ日だけど恋運はUP」と言葉で伝える
++  const _loveMark=m.includes('🌷')||m.includes('🌸')||m.includes('💖');
+   const _swayLove=(m.includes('⚠️')&&_loveMark)
+     ? '<div style="margin-top:8px;padding:9px 12px;border-radius:11px;background:rgba(214,86,126,.09);border:1px solid rgba(214,86,126,.3);font-size:12.5px;line-height:1.75"><b style="color:#c14e77">💗 揺らぎ日だけど、恋運はUP</b><br><span style="color:var(--muted)">今日は少しリズムが揺れやすい日。でも恋の追い風は吹いています。急ぎの決断や言い合いだけ控えめに、気になる人へのひと言はむしろ good。</span></div>'
+     : '';
+@@ -1060,7 +1060,7 @@
+   const gurl='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('【私だけの運気予報】'+m.join('')+ymd)+'&dates='+gs+'/'+ge+'&details='+encodeURIComponent(info.replace(/<br>/g,' / '));
+   const memo=getMemo(d).replace(/</g,'&lt;');
+   let extra='';
+-  if(m.includes('🌈')||m.includes('🌸')||m.includes('🩷')||m.includes('🌷')){
++  if(m.includes('🌈')||m.includes('🌸')||m.includes('💖')||m.includes('🌷')){
+     const dc=dayColor(t);
+     const _dwSeason=KD.climateSeason(d.getMonth()+1);
+     const _dwSeed=jdn(d.getFullYear(),d.getMonth()+1,d.getDate());
+@@ -1086,7 +1086,7 @@
+   const _summary=daySummaryHTML(_gr,m);
+   // 忌神の分野の日は、分野マークを出しつつ「あなたには力の要るテーマ」と正直に補足（案A）
+   const _dImi=(CUR_FAV && CUR_FAV[STEM_GOGYO[t.stem]]==='忌');
+-  const _dPresent=['💼','💰','🩷','🌐','📚'].some(function(x){return m.includes(x);});
++  const _dPresent=['💼','💰','💖','🌐','📚'].some(function(x){return m.includes(x);});
+   const _favNote=(_dImi&&_dPresent&&(_gr.sym==='〇'||_gr.sym==='△'))?'<div style="margin-top:8px;font-size:12px;color:#9c7b46;background:rgba(196,137,43,.08);border:1px solid rgba(196,137,43,.22);border-radius:10px;padding:8px 11px;line-height:1.75">※ 今日はこの分野の“気”が動く日。ただし<b>あなたには少し力の要るテーマ</b>なので、チャンスはあっても勢い任せにせず、<b>整えて臨む</b>と◎。</div>':'';
+   $("dayDetail").innerHTML='<b style="color:var(--gold)">'+ymd+'（'+t.stem+t.branch+'）</b>'+gradeHead+_summary+_swayLove+'<p style="margin-top:6px">'+info+'</p>'+_favNote+_bonus+goLine+_mix+extra+'<textarea id="memoBox" placeholder="この日の予定・メモ（仕事/会食/デートなど）">'+memo+'</textarea><div style="margin-top:8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><button class="cal-nav" id="memoSave">メモを保存</button><a class="gcal" href="'+gurl+'" target="_blank" rel="noopener">📅 Googleカレンダーに追加</a></div>';
+   $("dayDetail").classList.add('show');
+diff -ru a/mypage.html b/mypage.html
+--- a/mypage.html	2026-09-30 01:38:39.635500218 +0000
++++ b/mypage.html	2026-09-30 01:38:39.668499791 +0000
+@@ -221,7 +221,7 @@
+         <span class="ct-tap">👆 日付をタップで、すべての鑑定が開く</span>
+       </div>
+       <div class="legend">
+-        <span>🌈 運命の人の日</span><span>🌷 出会い・モテ運の日</span><span>🌸 恋チャンスUP</span><span>🩷 魅力・表現の日</span><span>🌐 対人の気が動く日</span><span>💰 金運の気が動く日</span><span>💼 仕事の気が動く日</span><span>📚 学びの日</span><span>🍀 貴人の日</span><span>🐴 動き・変化の日</span><span>🌫️ 整える日</span><span>🌀 大きく動く日</span><span style="opacity:.6">｜あなた基準の運気ランク｜</span><span><b style="color:#e0699a">💮</b> 特別な日</span><span><b style="color:#3c9a63">◎</b> 調子のいい日</span><span><b style="color:#bcb0a4">〇</b> 普通の日</span><span><b style="color:#5b93c2">△</b> 充電日</span><span>⚠️ ゆらぎ注意日</span>
++        <span>🌈 運命の人の日</span><span>🌷 出会い・モテ運の日</span><span>🌸 恋チャンスUP</span><span>💖 魅力・表現の日</span><span>🌐 対人の気が動く日</span><span>💰 金運の気が動く日</span><span>💼 仕事の気が動く日</span><span>📚 学びの日</span><span>🍀 貴人の日</span><span>🐴 動き・変化の日</span><span>🌫️ 整える日</span><span>🌀 大きく動く日</span><span style="opacity:.6">｜あなた基準の運気ランク｜</span><span><b style="color:#e0699a">💮</b> 特別な日</span><span><b style="color:#3c9a63">◎</b> 調子のいい日</span><span><b style="color:#bcb0a4">〇</b> 普通の日</span><span><b style="color:#5b93c2">△</b> 充電日</span><span>⚠️ ゆらぎ注意日</span>
+       </div>
+       <div class="leg-note">💮◎〇△は<b>あなた基準</b>のランクです（他人との比較ではなく、あなた自身のリズムの中での“動きやすい日／整える日”）。だから毎日届く運気予報メールとも一致します。日付をタップすると、その日が「何の日」か・メモ・Googleカレンダー追加が開きます。カレンダーは<b>過去も未来も、好きなだけ</b>ご覧いただけます。</div>
+       <div id="calRangeNote" style="display:none;"></div>
+@@ -512,7 +512,7 @@
+   if(t.branch===TOUKA[CUR.me.branch])m.push('🌷');
+   // 分野マークはその日の十神に応じて必ず表示する（案A）。命式で忌神の分野でも隠さず、
+   // 「その分野の“気”が動く日」として出し、忌神の日は詳細文と総合ランク(△等)で正直に補足する。
+-  if(js==='食神'||js==='傷官')m.push('🩷');
++  if(js==='食神'||js==='傷官')m.push('💖');
+   if(SOCIAL_GOOD.includes(js))m.push('🌐');
+   if(MONEY_GOOD.includes(js))m.push('💰');
+   if(WORK_GOOD.includes(js))m.push('💼');
+@@ -670,7 +670,7 @@
+     '<b>桃花（とうか）</b>＝あなたの日柱の三合局が持つ「華やかさ・魅力」の十二支が巡る日。昔から出会い運・恋愛運の象徴です。', to?('あなたの<b>桃花</b>は【'+to+'】の日です'):'','good');
+   h+=_mgCard('🌸','恋チャンスUP','恋が動きやすい吉日',
+     '運命の相手と<b>干合・支合</b>で惹かれ合う気が流れる日。恋の進展や出会いのきっかけが生まれやすい日です。', '','good');
+-  h+=_mgCard('🩷','魅力・表現の日','あなたの表現力・華やかさが出る吉日',
++  h+=_mgCard('💖','魅力・表現の日','あなたの表現力・華やかさが出る吉日',
+     'その日の十神が<b>食神・傷官</b>（あなたの日主が生み出す「表現」の星）になる日。発信・人前・おしゃれが映えます。', '','good');
+   h+='<div class="mg-group">◆ 毎日の分野（その日の十神＝通変星）</div>';
+   h+=_mgCard('🌐','対人の気が動く日','仲間・友達との縁が動く、動くと吉',
+@@ -732,7 +732,7 @@
+ function _goukuu(dayBranch){ if(!CUR.me)return false; var r=branchRel(dayBranch,CUR.me.branch); return (r==='支合'||r==='三合'); }
+ function daySummaryHTML(gr,m,t){
+   var sym=gr.sym;
+-  var love=m.includes('🌷')||m.includes('🌸')||m.includes('🩷')||m.includes('🌈');
++  var love=m.includes('🌷')||m.includes('🌸')||m.includes('💖')||m.includes('🌈');
+   var social=m.includes('🌐'), work=m.includes('💼'), money=m.includes('💰'), learn=m.includes('📚'), sway=m.includes('⚠️');
+   var kubou=m.includes('🌫️');
+   var goukuu=kubou && t && _goukuu(t.branch);   // 空亡が支合・三合で解ける（合空・填実）
+@@ -762,8 +762,8 @@
+ }
+ function showDay(d){
+   const r=dayMarks(d),t=r.t,m=r.m;
+-  const labels={'🌈':'運命の人の日 ── 運命の相手と縁が最高に高まる、めったにない特別な日','🌷':'出会い・モテ運の日 ── 出逢い運・魅力が全開。動くほど縁が広がる日。誘いには前向きに、気になる人には自分から一言を','🌸':'恋チャンスUP ── 恋が動きやすい日。気になる人への連絡や誘いに good','🩷':'魅力・表現の日 ── あなたの表現力・センス・華やかさが動く日。人前・発信・デート・おしゃれが向く日','🌐':'対人の気が動く日 ── 仲間・友達との縁が動く日。協力やチームワークが活きやすい','💰':'金運の気が動く日 ── お金やチャンスが巡りやすい日。商談・買い物・投資に縁あり','💼':'仕事の気が動く日 ── 仕事・責任・評価まわりが動く日。全体の調子（💮◎〇△）もあわせて見て、△の日は無理せず整えるのが吉','⚠️':'ゆらぎ注意日 ── 今日は少しリズムが合いにくい日。運が悪いわけではなく、急ぎの決断や言い合いだけ控えめにすればOK。一呼吸おいて過ごすと安心な一日です。','📚':'学びの日 ── 勉強・資格・情報収集に good。インプットや準備がはかどり、あなたを一段のばす日です','🍀':'貴人の日 ── 人の助け・引き立て・チャンスに恵まれやすい日。困ったら遠慮なく頼ると、良いご縁が動きます','🐴':'動き・変化の日 ── 移動・行動・環境の変化に縁がある日。フットワーク軽く動くと、流れが開けます','🌫️':'整える日 ── 気が抜けやすく、なぜか空回りしやすい日。大きな決断や勝負より、片づけ・充電・仕込みに向く日です','🌀':'大きく動く日 ── いつもより大きな転機・変化が起きやすい日。環境や立場・家庭など、人生の土台が動くような大きな変わり目です','🍃':'追い風の日 ── 今日はあなたに追い風。やりたいことに思い切って動くと good'};
+-  const _exNames={'💰':'金運','💼':'仕事運','🌐':'対人運','📚':'学び運','🩷':'魅力','🌸':'恋チャンス'};
++  const labels={'🌈':'運命の人の日 ── 運命の相手と縁が最高に高まる、めったにない特別な日','🌷':'出会い・モテ運の日 ── 出逢い運・魅力が全開。動くほど縁が広がる日。誘いには前向きに、気になる人には自分から一言を','🌸':'恋チャンスUP ── 恋が動きやすい日。気になる人への連絡や誘いに good','💖':'魅力・表現の日 ── あなたの表現力・センス・華やかさが動く日。人前・発信・デート・おしゃれが向く日','🌐':'対人の気が動く日 ── 仲間・友達との縁が動く日。協力やチームワークが活きやすい','💰':'金運の気が動く日 ── お金やチャンスが巡りやすい日。商談・買い物・投資に縁あり','💼':'仕事の気が動く日 ── 仕事・責任・評価まわりが動く日。全体の調子（💮◎〇△）もあわせて見て、△の日は無理せず整えるのが吉','⚠️':'ゆらぎ注意日 ── 今日は少しリズムが合いにくい日。運が悪いわけではなく、急ぎの決断や言い合いだけ控えめにすればOK。一呼吸おいて過ごすと安心な一日です。','📚':'学びの日 ── 勉強・資格・情報収集に good。インプットや準備がはかどり、あなたを一段のばす日です','🍀':'貴人の日 ── 人の助け・引き立て・チャンスに恵まれやすい日。困ったら遠慮なく頼ると、良いご縁が動きます','🐴':'動き・変化の日 ── 移動・行動・環境の変化に縁がある日。フットワーク軽く動くと、流れが開けます','🌫️':'整える日 ── 気が抜けやすく、なぜか空回りしやすい日。大きな決断や勝負より、片づけ・充電・仕込みに向く日です','🌀':'大きく動く日 ── いつもより大きな転機・変化が起きやすい日。環境や立場・家庭など、人生の土台が動くような大きな変わり目です','🍃':'追い風の日 ── 今日はあなたに追い風。やりたいことに思い切って動くと good'};
++  const _exNames={'💰':'金運','💼':'仕事運','🌐':'対人運','📚':'学び運','💖':'魅力','🌸':'恋チャンス'};
+   const _headline=m.includes('🌈')?'🌈':(m.includes('🌷')?'🌷':null);
+   const _extras=m.filter(x=>_exNames[x]);
+   const _bonus=(_headline&&_extras.length)?'<div style="margin-top:8px;padding:8px 11px;border-radius:10px;background:rgba(214,86,126,.09);border:1px solid rgba(214,86,126,.28);font-size:12.5px;font-weight:700;color:#c14e77">✨ しかも今日は '+_extras.map(x=>_exNames[x]).join('・')+' も高まる、二重にうれしい日。</div>':'';
+@@ -782,7 +782,7 @@
+   const gurl='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('【私だけの運気予報】'+m.join('')+ymd)+'&dates='+gs+'/'+ge+'&details='+encodeURIComponent(info.replace(/<br>/g,' / '));
+   const memo=getMemo(d).replace(/</g,'&lt;');
+   let extra='';
+-  if(m.includes('🌈')||m.includes('🌸')||m.includes('🩷')||m.includes('🌷')){
++  if(m.includes('🌈')||m.includes('🌸')||m.includes('💖')||m.includes('🌷')){
+     const dc=dayColor(t);
+     // 共通エンジン(daily-engine.js)のリッチな文言バンクを再利用：デート服=五行×季×10種、テーマカラー=五行×16色。日替わりで選ぶ
+     const _KD=window.KDaily;
+@@ -804,8 +804,8 @@
+   }
+   const gr=dayGrade(r);
+   const gradeHead='<div style="display:flex;align-items:center;gap:8px;margin-top:6px;margin-bottom:2px"><span class="'+gr.cls+'" style="font-size:30px;font-weight:800;line-height:1">'+gr.sym+'</span><span style="font-size:14px;font-weight:800">今日の運勢：'+gr.label+'</span></div>';
+-  // ゆらぎ(⚠️)と恋の合図(🌷/🌸/🩷)が重なる日は、はっきり「揺らぎ日だけど恋運はUP」と言葉で伝える
+-  const _swayLove=(m.includes('⚠️')&&(m.includes('🌷')||m.includes('🌸')||m.includes('🩷')))
++  // ゆらぎ(⚠️)と恋の合図(🌷/🌸/💖)が重なる日は、はっきり「揺らぎ日だけど恋運はUP」と言葉で伝える
++  const _swayLove=(m.includes('⚠️')&&(m.includes('🌷')||m.includes('🌸')||m.includes('💖')))
+     ? '<div style="margin-top:8px;padding:9px 12px;border-radius:11px;background:rgba(214,86,126,.09);border:1px solid rgba(214,86,126,.3);font-size:12.5px;line-height:1.75"><b style="color:#c14e77">💗 揺らぎ日だけど、恋運はUP</b><br><span style="color:#7a5563">今日は少しリズムが揺れやすい日。でも恋の追い風は吹いています。急ぎの決断や言い合いだけ控えめに、気になる人へのひと言はむしろ good。</span></div>'
+     : '';
+   // 🔎 今日のまとめ：ランク(あなたの調子)と分野マーク(縁)を1文でつなぎ、「充電なのに対人◯」等の矛盾感を解消
+@@ -813,14 +813,14 @@
+   // 忌神の分野の日は、分野マークを出しつつ「あなたには力の要るテーマ」と正直に補足（案A）
+   var _mpf=memberProfile(), _mfav=(_mpf&&_mpf.ok)?_mpf.fav:null;
+   const _dImi=(_mfav && _mfav[STEM_GOGYO[t.stem]]==='忌');
+-  const _dPresent=['💼','💰','🩷','🌐','📚'].some(function(x){return m.includes(x);});
++  const _dPresent=['💼','💰','💖','🌐','📚'].some(function(x){return m.includes(x);});
+   const _favNote=(_dImi&&_dPresent&&(gr.sym==='〇'||gr.sym==='△'))?'<div style="margin-top:8px;font-size:12px;color:#9c7b46;background:rgba(196,137,43,.08);border:1px solid rgba(196,137,43,.22);border-radius:10px;padding:8px 11px;line-height:1.75">※ 今日はこの分野の“気”が動く日。ただし<b>あなたには少し力の要るテーマ</b>なので、チャンスはあっても勢い任せにせず、<b>整えて臨む</b>と◎。</div>':'';
+   // ── ジャンル別セクション（恋愛は先頭・開いたまま＝今の体験を維持。他は畳んで全員に表示） ──
+   function _gBadge(tone){var T={good:['吉日','gb-good'],rest:['整える','gb-rest'],turn:['転機','gb-turn'],care:['注意','gb-care'],quiet:['静か','gb-quiet']}[tone]||['静か','gb-quiet'];return '<span class="gbadge '+T[1]+'">'+T[0]+'</span>';}
+   function _gSec(emoji,name,who,open,tone,body){return '<details class="gsec"'+(open?' open':'')+'><summary><span class="ge">'+emoji+'</span><span class="gn">'+name+'</span>'+_gBadge(tone)+'<span class="gw">'+who+'</span></summary><div class="gb">'+body+'</div></details>';}
+   var _has=function(x){return m.indexOf(x)>=0;};
+-  var _loveOn=(_has('🌈')||_has('🌷')||_has('🌸')||_has('🩷'));
+-  var _lb='';['🌈','🌷','🌸','🩷'].forEach(function(x){if(_has(x))_lb+=x+' '+labels[x]+'<br>';});
++  var _loveOn=(_has('🌈')||_has('🌷')||_has('🌸')||_has('💖'));
++  var _lb='';['🌈','🌷','🌸','💖'].forEach(function(x){if(_has(x))_lb+=x+' '+labels[x]+'<br>';});
+   if(!_loveOn)_lb='今日は恋の大きな動きは静か。自分磨き・おしゃれ・気になる人の様子を見るくらいが◎。';
+   _lb+=_bonus+_swayLove+extra;
+   var _workOn=_has('💼');
