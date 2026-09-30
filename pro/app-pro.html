@@ -210,6 +210,17 @@
   .mkval{flex:1;line-height:1.9}
   .mkval .none{color:var(--muted);font-weight:700}
   .mkchip{display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:7px;padding:2px 8px;margin:0 5px 5px 0;font-size:11.5px;font-weight:700;color:var(--ink)}
+  /* 吉凶星チップ＝タップで解説（柱の意味つき）。年配の方にも分かるよう「タップ」を明示。 */
+  .mkichi-hint{display:inline-block;font-size:10.5px;font-weight:800;color:#8A5A12;background:#F6E7C6;border:1px solid #E2C98A;border-radius:999px;padding:1px 8px;margin-left:8px;vertical-align:1px}
+  .mkchip.tapk{cursor:pointer}
+  .mkchip.tapk::after{content:"？";margin-left:4px;font-size:10px;font-weight:900;color:#fff;background:#C79A34;border-radius:50%;padding:0 4px;vertical-align:1px}
+  .mkchip.tapk:active{transform:translateY(1px)}
+  .mkchip.tapk.kon{background:#FBEEDD;border-color:#E2A12B;color:#8A5A12}
+  .mkichi-detail{margin:6px 2px 2px;background:#FFFBF0;border:1.5px solid #E3D3AE;border-left:4px solid #B8860B;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.78;color:#3f4657}
+  .mkd-ttl{font-weight:900;color:#8A5A12;font-size:14.5px}
+  .mkd-pil{display:inline-block;font-size:11px;font-weight:800;color:#B8860B;background:#F3E3BE;border-radius:999px;padding:2px 9px;margin-left:8px;vertical-align:2px;white-space:nowrap}
+  .mkd-area{font-size:12px;color:#7A5A16;font-weight:700;margin:4px 0 6px;padding:6px 9px;background:#FBF3E2;border-radius:8px}
+  .mkd-close{float:right;font-size:11px;font-weight:800;color:#8A5A12;cursor:pointer;border:1px solid #E2C98A;border-radius:999px;padding:1px 9px;background:#fff}
   .mbox.md-collapsed .md-detail{display:none}
   .mtable .ts{font-weight:900;font-size:13.5px;color:var(--ink);white-space:nowrap}
   .mtable .ts small{display:block;font-size:9.5px;font-weight:700;color:var(--muted);line-height:1.2;margin-top:1px}
@@ -2420,6 +2431,27 @@ if(!window.__featBound){ window.__featBound=1;
   document.addEventListener('click',function(e){ const li=e.target.closest&&e.target.closest('.feat-link'); if(li){e.preventDefault();_featJump(li);} });
   document.addEventListener('keydown',function(e){ const a=document.activeElement; if((e.key==='Enter'||e.key===' ')&&a&&a.classList&&a.classList.contains('feat-link')){e.preventDefault();_featJump(a);} });
 }
+/* 吉凶星チップ＝タップで解説（＋その柱＝人生の領域の注記）。柱ごとに全文は書き分けず、柱＝領域の注記で意味の違いを伝える。表示層のみ。 */
+const PILLAR_AREA={年柱:'年柱＝幼少期・ご先祖／親や目上との縁、人生の土台に関わる領域', 月柱:'月柱＝青年期・仕事や社会での活動、ご両親との縁に関わる領域', 日柱:'日柱＝あなた自身・配偶者・人生の中心に関わる領域', 時柱:'時柱＝晩年・お子さんや部下、将来に関わる領域'};
+(function(){
+  document.addEventListener('click',function(e){
+    var close=e.target.closest&&e.target.closest('.mkd-close');
+    if(close){ var mk0=close.closest('.mkichi'); if(mk0){var d=mk0.querySelector('.mkichi-detail'); if(d){d.hidden=true;d.innerHTML='';} mk0.querySelectorAll('.mkchip.kon').forEach(function(x){x.classList.remove('kon');});} return; }
+    var chip=e.target.closest&&e.target.closest('.mkchip.tapk'); if(!chip)return;
+    var mk=chip.closest('.mkichi'); var box=mk&&mk.querySelector('.mkichi-detail'); if(!box)return;
+    if(chip.classList.contains('kon')){ chip.classList.remove('kon'); box.hidden=true; box.innerHTML=''; return; }
+    mk.querySelectorAll('.mkchip.kon').forEach(function(x){x.classList.remove('kon');});
+    chip.classList.add('kon');
+    var k=chip.getAttribute('data-k'), pil=chip.getAttribute('data-p');
+    var lab=(typeof kichiLabel==='function')?kichiLabel(k):k;
+    var desc=(typeof KICHI_DESC!=='undefined'&&KICHI_DESC[k])?KICHI_DESC[k]:'この星の解説は命式表の用語集をご覧ください。';
+    var area=PILLAR_AREA[pil]||pil;
+    box.hidden=false;
+    box.innerHTML='<span class="mkd-close">閉じる ✕</span><div class="mkd-ttl">'+lab+'<span class="mkd-pil">'+pil+'に出現</span></div><div class="mkd-area">'+area+'</div><div class="mkd-body">'+desc+'</div>';
+    try{box.scrollIntoView({block:'nearest',behavior:'smooth'});}catch(_e){}
+  });
+  document.addEventListener('keydown',function(e){ var a=document.activeElement; if((e.key==='Enter'||e.key===' ')&&a&&a.classList&&a.classList.contains('mkchip')&&a.classList.contains('tapk')){e.preventDefault();a.click();} });
+})();
 const YANG=new Set(['甲','丙','戊','庚','壬']);
 const HONKI={子:'癸',丑:'己',寅:'甲',卯:'乙',辰:'戊',巳:'丙',午:'丁',未:'己',申:'庚',酉:'辛',戌:'戊',亥:'壬'};
 /* 干支の訓読み（音読みは使わない。例：丙辰＝ひのえたつ、甲子＝きのえね） */
@@ -2741,7 +2773,7 @@ function meishiHTML(c, topOnly){
   const mkbl=(a,cc)=>(a[0]==='地支通変'&&cc.isMonth)?'mkblue':'';
   const cH=(a,cc)=>cc.unknown?'<span class="none">—</span>':a[1](cc);
   // 吉凶星＝柱ごとの全幅チップ（表の外・開閉の中）
-  const kichiChips=`<div class="mkichi md-detail"><div class="mkichi-h">吉凶星（柱ごと）</div>${cells.map(cc=>`<div class="mkrow"><span class="mkpil${cc.me?' me':''}">${cc.label}${cc.unknown?'':' '+cc.stem+cc.branch}</span><span class="mkval">${cc.unknown?'<span class="none">時刻不明のため参考外</span>':(cc.kichi.length?cc.kichi.map(k=>`<span class="mkchip">${kichiLabel(k)}</span>`).join(''):'<span class="none">－</span>')}</span></div>`).join('')}</div>`;
+  const kichiChips=`<div class="mkichi md-detail"><div class="mkichi-h">吉凶星（柱ごと）<span class="mkichi-hint">？ タップで解説</span></div>${cells.map(cc=>`<div class="mkrow"><span class="mkpil${cc.me?' me':''}">${cc.label}${cc.unknown?'':' '+cc.stem+cc.branch}</span><span class="mkval">${cc.unknown?'<span class="none">時刻不明のため参考外</span>':(cc.kichi.length?cc.kichi.map(k=>`<span class="mkchip tapk" role="button" tabindex="0" data-k="${k}" data-p="${cc.label}">${kichiLabel(k)}</span>`).join(''):'<span class="none">－</span>')}</span></div>`).join('')}<div class="mkichi-detail" hidden></div></div>`;
   let table;
   if(orient==='yoko'){ // 横：柱を列に（時柱→日柱→月柱→年柱＝時柱が左）。蔵干は最下段の行（開閉）。
     const attrs=[A.gan,A.shi,A.tts,A.cts,A.jun,A.zou];
@@ -4339,7 +4371,7 @@ function junitenHTML(c){
       <div style="font-size:14px;line-height:1.9">${txt}</div></div>`;
   const body=d?`<div style="background:var(--ka-w);border-radius:12px;padding:11px 14px;font-size:14.5px;font-weight:800;line-height:1.8">${d.一言}</div>`
     :`<div class="mhint">${t}：${TERR_DESC[t]||''}（詳しい解説は順次追加します）</div>`;
-  const detail=d?`<details class="adv" style="margin-top:10px"><summary>性格・仕事・恋愛をくわしく見る</summary><div style="margin-top:6px">${block('性格',d.基本)}${block('仕事・適職',d.適職)}${block('恋愛・結婚',d.恋愛)}</div></details>`:'';
+  const detail=d?`<details class="adv feat-fold" style="margin-top:10px"><summary style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>性格・仕事・恋愛をくわしく見る</span><span class="ff-tag" style="font-weight:800;font-size:11.5px;color:#7A5A16;background:#F3E3BE;border-radius:999px;padding:3px 11px;white-space:nowrap"></span></summary><div style="margin-top:6px">${block('性格',d.基本)}${block('仕事・適職',d.適職)}${block('恋愛・結婚',d.恋愛)}</div></details>`:'';
   return `<section class="card sec">
     <span class="eyebrow"><b>十二運</b>日柱が最重要</span>
     <h2>あなたの十二運（日柱）：<span style="color:var(--ka)">${t}</span></h2>
@@ -6278,7 +6310,7 @@ function meishiTableHTML(c,orient){
   const isZou=a=>a[0]==='蔵干';
   const mkbl=(a,cc)=>(a[0]==='地支通変'&&cc.isMonth)?'mkblue':'';
   const cH=(a,cc)=>cc.unknown?'<span class="none">—</span>':a[1](cc);
-  const kichiChips=`<div class="mkichi md-detail"><div class="mkichi-h">吉凶星（柱ごと）</div>${cells.map(cc=>`<div class="mkrow"><span class="mkpil${cc.me?' me':''}">${cc.label}${cc.unknown?'':' '+cc.stem+cc.branch}</span><span class="mkval">${cc.unknown?'<span class="none">時刻不明のため参考外</span>':(cc.kichi.length?cc.kichi.map(k=>`<span class="mkchip">${kichiLabel(k)}</span>`).join(''):'<span class="none">－</span>')}</span></div>`).join('')}</div>`;
+  const kichiChips=`<div class="mkichi md-detail"><div class="mkichi-h">吉凶星（柱ごと）<span class="mkichi-hint">？ タップで解説</span></div>${cells.map(cc=>`<div class="mkrow"><span class="mkpil${cc.me?' me':''}">${cc.label}${cc.unknown?'':' '+cc.stem+cc.branch}</span><span class="mkval">${cc.unknown?'<span class="none">時刻不明のため参考外</span>':(cc.kichi.length?cc.kichi.map(k=>`<span class="mkchip tapk" role="button" tabindex="0" data-k="${k}" data-p="${cc.label}">${kichiLabel(k)}</span>`).join(''):'<span class="none">－</span>')}</span></div>`).join('')}<div class="mkichi-detail" hidden></div></div>`;
   let table;
   if(orient==='yoko'){
     const attrs=[A.gan,A.shi,A.tts,A.cts,A.jun,A.zou];
