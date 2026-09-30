@@ -106,6 +106,12 @@
   .timepick .tp-colon{flex:0 0 auto;font-weight:900;color:var(--muted)}
   /* 相性診断モード：個人鑑定の表示を隠し、相性診断だけを見せる（要素は残すので切替で即戻せる） */
   body.mode-compat #result,body.mode-compat #result-body,body.mode-compat #ai-slot,body.mode-compat #compat-banner,body.mode-compat #jumpnav{display:none!important}
+  /* モード別の案内・ボタン制御：相性モードは「本人（あなた側）＋お相手」を1画面で入力し、相性ボタンだけで完結（占うボタンは不要なので隠す） */
+  .compat-only{display:none}
+  body.mode-compat .compat-only{display:block}
+  body.mode-compat .personal-only{display:none}
+  body.mode-compat #f-go{display:none}
+  body.mode-compat #f-save{flex:1 1 100%}
   .seg{display:flex;width:100%;border:2px solid var(--line2);border-radius:12px;overflow:hidden;height:46px}
   .seg button{flex:1;border:0;background:#fff;font-family:inherit;font-size:15px;font-weight:800;color:var(--muted);padding:0 8px;cursor:pointer;white-space:nowrap}
   .seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
@@ -702,6 +708,7 @@
       <button type="button" data-mode="personal" aria-pressed="true">👤 個人鑑定</button>
       <button type="button" data-mode="compat" aria-pressed="false">❤ 相性診断</button>
     </div>
+    <div class="compat-only" style="margin:0 0 10px;padding:10px 12px;background:#F3EAFA;border:1.5px solid #D9C2EC;border-radius:12px;color:#6B3FA0;font-weight:800;font-size:13px;line-height:1.7">❤ 相性診断は<b>2人ぶん</b>入力します。まず下に <b>①本人（あなた側）</b>、さらに下の <b>②お相手</b> を入れて「この2人の相性を見る」を押してください。</div>
     <div class="frow">
       <div class="field f-wide"><label>お名前<span style="color:var(--ka)">（必須）</span></label><input id="f-name" type="text" placeholder="姓 名（ニックネーム可）" required aria-required="true"><input id="f-kana" type="text" placeholder="ふりがな（並べ替え・検索用／任意）" style="margin-top:6px;font-size:12.5px"><div class="req-msg" id="f-name-msg">お名前を入力してください。</div></div>
       <div class="field f-narrow"><label>性別</label>
@@ -805,9 +812,9 @@
   <script>(function(){try{fetch('sw.js',{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){var m=t.match(/shichu-jidou-(v\d+)/);var e=document.getElementById('verTag');if(m&&e)e.textContent=m[1];}).catch(function(){});}catch(e){}})();</script>
 
   <!-- 相性診断へ誘導する大きなバナー（占う後に表示・タップで一番下の相性診断へ移動）。相性診断の本体は個人鑑定を終えた最下部に配置。 -->
-  <button type="button" id="compat-banner" hidden onclick="scrollToCompat()" style="display:none;width:100%;margin:0 0 14px;padding:15px 18px;border:none;border-radius:15px;background:linear-gradient(135deg,#7C4DBE,#A05CC8);color:#fff;font-family:inherit;cursor:pointer;box-shadow:0 4px 14px rgba(124,77,190,.32);align-items:center;gap:12px;text-align:left">
+  <button type="button" id="compat-banner" hidden onclick="var _b=document.querySelector('#ui-mode [data-mode=compat]');_b&&_b.click();" style="display:none;width:100%;margin:0 0 14px;padding:15px 18px;border:none;border-radius:15px;background:linear-gradient(135deg,#7C4DBE,#A05CC8);color:#fff;font-family:inherit;cursor:pointer;box-shadow:0 4px 14px rgba(124,77,190,.32);align-items:center;gap:12px;text-align:left">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff" style="flex:0 0 auto"><path d="M12 21s-7.5-4.6-10-9.2C.3 8.4 1.8 5 5 5c2 0 3.2 1.1 4 2.3C9.8 6.1 11 5 13 5c3.2 0 4.7 3.4 3 6.8C19.5 16.4 12 21 12 21z"/></svg>
-    <span style="flex:1"><b style="font-size:16px;font-weight:900;display:block;line-height:1.3">お相手を追加して「相性診断」する →</b><small style="opacity:.92;font-weight:700;font-size:12px">いま占ったこの人を本人に、お相手の生年月日を足すだけ。恋人・夫婦・親子・仕事仲間の相性を診断（タップで相性入力へ）</small></span>
+    <span style="flex:1"><b style="font-size:16px;font-weight:900;display:block;line-height:1.3">この人の相性も見る →</b><small style="opacity:.92;font-weight:700;font-size:12px">いま占ったこの人を①本人に、②お相手を足すだけ。恋人・夫婦・親子・仕事仲間の相性を診断（タップで相性診断へ）</small></span>
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 9l6 6 6-6"/></svg>
   </button>
 
@@ -815,8 +822,8 @@
   <div id="ai-slot"></div>
   <section class="card sec" id="compat-card">
     <span class="eyebrow"><b>相性診断</b>2人を比べる</span>
-    <h2>相性を細かく見る</h2>
-    <p class="lead">上で「占う」した人を<b>本人</b>として、お相手の生年月日と<b>2人の関係</b>を選ぶと、<b>2人の命式</b>から相性を深く読み解きます（日干の関係・通変星・五行の補い合い）。関係に合わせて読み方が変わります。</p>
+    <h2>② お相手の情報</h2>
+    <p class="lead"><b>①本人（上の欄）</b>と<b>②お相手</b>、2人ぶんの情報を入れて<b>2人の関係</b>を選ぶと、<b>2人の命式</b>から相性を深く読み解きます（日干の関係・通変星・五行の補い合い）。関係に合わせて読み方が変わります。<br><span style="color:var(--muted);font-weight:700">※個人鑑定をしていなくても、このまま2人ぶん入れれば相性だけでも使えます。</span></p>
     <div class="frow">
       <div class="field"><label>2人の関係</label>
         <select id="rel-type">
@@ -4310,7 +4317,7 @@ function junitenHTML(c){
 // 相性診断（最下部）へスムーズスクロール（jumpnavの高さ分だけ上に余白）。バナー・ピル・目次から共通で使う。
 function scrollToCompat(){var e=document.getElementById('compat-card');if(!e)return;var nav=document.getElementById('jumpnav');var off=((nav&&nav.offsetHeight)||44)+8;window.scrollTo({top:Math.max(0,e.getBoundingClientRect().top+window.scrollY-off),behavior:'smooth'});}
 // 個人鑑定の中ほどに置く「相性診断」ピルボタン（タップで最下部の相性診断へ）
-function compatPillHTML(){return `<div style="text-align:center;margin:16px 0 6px"><button type="button" onclick="scrollToCompat()" style="display:inline-flex;align-items:center;gap:7px;padding:11px 22px;border:none;border-radius:999px;background:linear-gradient(135deg,#7C4DBE,#A05CC8);color:#fff;font-family:inherit;font-weight:900;font-size:14px;cursor:pointer;box-shadow:0 3px 10px rgba(124,77,190,.3)"><svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7.5-4.6-10-9.2C.3 8.4 1.8 5 5 5c2 0 3.2 1.1 4 2.3C9.8 6.1 11 5 13 5c3.2 0 4.7 3.4 3 6.8C19.5 16.4 12 21 12 21z"/></svg>相性診断<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div>`;}
+function compatPillHTML(){return `<div style="text-align:center;margin:16px 0 6px"><button type="button" onclick="var _b=document.querySelector('#ui-mode [data-mode=compat]');_b&&_b.click();" style="display:inline-flex;align-items:center;gap:7px;padding:11px 22px;border:none;border-radius:999px;background:linear-gradient(135deg,#7C4DBE,#A05CC8);color:#fff;font-family:inherit;font-weight:900;font-size:14px;cursor:pointer;box-shadow:0 3px 10px rgba(124,77,190,.3)"><svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7.5-4.6-10-9.2C.3 8.4 1.8 5 5 5c2 0 3.2 1.1 4 2.3C9.8 6.1 11 5 13 5c3.2 0 4.7 3.4 3 6.8C19.5 16.4 12 21 12 21z"/></svg>この人の相性も見る<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div>`;}
 // 教科書を開く：PCは別タブ（作業しながら参照）、スマホは同じタブ（別アプリに飛ばさず、教科書側の「もどる」で鑑定へ復帰）。
 function openTextbook(){
   var mobile=false;
@@ -6253,7 +6260,7 @@ function compatMeishiHTML(a,b,na,nb){
   return `<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px"><div style="font-size:14.5px;font-weight:900;margin:0 2px">2人の命式表</div><div class="mhint" style="margin:2px 2px 0">日柱＝本人（ピンク）／青ぬり＝月支元命。「詳しく見る」で蔵干・吉凶星が開きます。</div>${one(a,na,'本人')}${one(b,nb,'お相手')}</div>`;
 }
 function buildCompatBase(out){
-  if(!chart){out.innerHTML='<div class="err">先に上の入力で「占う」を押し、本人の命式を出してください。</div>';return null;}
+  if(!chart){out.innerHTML='<div class="err">本人（あなた側）の情報を入力してください。</div>';return null;}
   const dv=document.getElementById('b-date').value, tv=(_normHM(document.getElementById('b-time').value)||'12:00');
   if(!dv){out.innerHTML='<div class="err">お相手の生年月日を入力してください。</div>';return null;}
   const [y,mo,d]=dv.split('-').map(Number),[h,mi]=tv.split(':').map(Number);
@@ -6268,7 +6275,28 @@ function buildCompatBase(out){
   const head=`【本人A】${na}（${chart.birth.sex==='male'?'男性':'女性'}）: ${compatBrief(chart)}\n【お相手B】${nb}（${sexB==='male'?'男性':'女性'}）: ${compatBrief(chartB)}\n\n【2人の関係】${rt.label}\n\n【2人の関係の自動分析（計算済み）】\n${compatAnalysis(chart,chartB,rt)}`;
   return {na,nb,rt,head};
 }
+// 相性診断を単独で使えるよう、本人A（上の入力欄）の命式をその場で用意する（個人鑑定を先に押す必要をなくす）。表示層のみ・エンジン非改変。
+function ensureChartAFromForm(){
+  const _nm=document.getElementById('f-name'), _nmMsg=document.getElementById('f-name-msg');
+  if(_nm && !_nm.value.trim()){
+    _nm.classList.add('invalid'); if(_nmMsg)_nmMsg.classList.add('on');
+    try{_nm.scrollIntoView({behavior:'smooth',block:'center'});_nm.focus();}catch(e){}
+    _nm.oninput=function(){ if(_nm.value.trim()){_nm.classList.remove('invalid'); if(_nmMsg)_nmMsg.classList.remove('on');} };
+    return false;
+  }
+  if(_nm){_nm.classList.remove('invalid'); if(_nmMsg)_nmMsg.classList.remove('on');}
+  const dv=document.getElementById('f-date').value, tv=(_normHM(document.getElementById('f-time').value)||'12:00');
+  if(!dv){alert('本人（あなた側）の生年月日を入力してください');return false;}
+  const [y,mo,d]=dv.split('-').map(Number),[h,mi]=tv.split(':').map(Number);
+  const lon=document.getElementById('f-pref').value, corr=document.getElementById('f-corr').value;
+  const timeUnknown=document.getElementById('f-notime')&&document.getElementById('f-notime').checked;
+  personName=document.getElementById('f-name').value.trim();
+  chart=baziCompute({year:y,month:mo,day:d,hour:h,minute:mi,sex}, lon, corr);
+  if(timeUnknown) markTimeUnknown(chart);
+  return true;
+}
 async function doCompat(){
+  if(!ensureChartAFromForm())return;   // 本人A（上の欄）をその場で計算＝相性だけでも使える
   const out=document.getElementById('compat');
   const base=buildCompatBase(out); if(!base)return;
   const {na,nb,rt,head}=base;
@@ -6282,6 +6310,7 @@ async function doCompatAsk(){
   const out=document.getElementById('compat');
   const q=document.getElementById('compat-worry').value.trim();
   if(!q){out.innerHTML='<div class="err">この2人について聞きたいことを入力してください。</div>';return;}
+  if(!ensureChartAFromForm())return;   // 本人A（上の欄）をその場で計算＝相性だけでも使える
   const base=buildCompatBase(out); if(!base)return;
   const {na,nb,rt,head}=base;
   const ask=`【相談者(本人A)からの質問】\n${q}\n\nこの質問に、上の「2人の関係の自動分析」を唯一の根拠として答えてください。挨拶や長い前置き、聞かれていない一般的な性格紹介は書かず、質問にだけまっすぐ答える。2人を「${rt.frame}」という前提で扱う。日干の関係・通変星・日支の合冲・五行の補い合い・大運の重なり・${rt.timing}・2人の命式を合わせた相性ポイント（合わせて三合・方合／互いの不足五行を持ち合う／同じ空亡／月支元命の生剋／印の関係・通変星の相生の流れ／日柱の納音の相性（2人の日柱が同じ納音か））など、関係する要素を名指しで挙げ「この要素があるから、こう言える」という理屈を添える。曖昧で誰にでも当てはまる表現は禁止。${rt.useSpouse?'':'\n※この関係では恋愛・結婚・出会い・配偶者の話題は出さないこと。'}\n構成：1行目に結論を一文（前置き・見出しなし）→【見出し】付きの短いブロックを2〜3個（各2〜4文）。時期を聞かれたら大運・今後の年運から具体的な西暦の年を挙げる（断定せず「動きやすい時期」として）。さらに、良い時期だけでなく<b>2人がすれ違い・衝突しやすい“注意な時期”</b>も、互いの日支が冲される年・比劫や官殺が重なる年などを根拠に具体的な西暦・年齢で1つは挙げ、乗り越え方を添える（断定せず「少し気をつけると良い」とやわらかく）。最後に【できること】を2〜3点。大事な語は**太字**。\n注意:繊細な相談でも中立に扱い、特定の事実を断定せず、誰も責めず建設的に。「相性が悪い」「ダメ」などの強い断定や怖がらせる表現は使わず、注意点は「少し気をつけるとより良い」程度のやわらかく前向きな言い方にとどめる。`;
@@ -6754,12 +6783,10 @@ window.__uiMode='personal';
     window.__uiMode=m;
     tg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed', String(x.dataset.mode===m)));
     document.body.classList.toggle('mode-compat', m==='compat');
-    const go=document.getElementById('f-go'); if(go)go.textContent=(m==='compat')?'本人を登録して相性へ':'この内容で占う';
-    // すでに本人を占っているときは、切替だけで相性/個人へ移動できる
-    try{ if(typeof chart!=='undefined' && chart){
-      if(m==='compat'){ const cc=document.getElementById('compat-card'); if(cc)setTimeout(()=>{try{cc.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}},40); }
-      else { if(!window.__autoReadDone && typeof doAutoRead==='function'){ doAutoRead(); window.__autoReadDone=true; } const r=document.getElementById('result'); if(r)setTimeout(()=>{try{r.scrollIntoView({behavior:'smooth'});}catch(e){}},40); }
-    }}catch(e){}
+    // どちらのモードも「入力から始める」＝入力欄の先頭へスクロール（結果へは飛ばさない）。
+    try{ const panel=document.getElementById('ui-mode');
+      if(panel)setTimeout(()=>{try{panel.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}},40);
+    }catch(e){}
   }
   tg.querySelectorAll('button').forEach(bt=>bt.onclick=()=>apply(bt.dataset.mode));
 })();
