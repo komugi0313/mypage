@@ -3,7 +3,7 @@
    鑑定・60干支の教科書を使えるようにする。
    オンライン鑑定（生成AI）だけは通信が要るが、圏外時は端末内の
    オフライン鑑定に自動で切り替わる。 */
-const CACHE = 'shichu-jidou-v332';/* v332=OGP対応：URLをLINE・X・Facebook等に貼ると見出しカード（1200x630のogp.png）を表示。index/pricing/app-pro にog:image・og:url・Twitterカードを追加。ogp.pngをキャッシュ対象に。★本番ドメインが72k.ai以外なら各og:url/og:imageのドメインを差替。表示層のみ・エンジン非改変。*/
+const CACHE = 'shichu-jidou-v333';/* v333=出どこ表記とOGPのブランドを 72k.ai → MEISHIKI.K.K に変更（スクール名）。OGP画像を作り直し「鑑定書までその場で作成・共有」を打ち出し。og:site_nameもMEISHIKI.K.Kに。★本番ドメイン/QRは決定後に反映。表示層のみ・エンジン非改変。*/
 
 /* 初回訪問時に先読みしてキャッシュするページ一式（このブランドのみ） */
 const ASSETS = [
