@@ -535,6 +535,14 @@
   .sm-el{display:inline-flex;align-items:center;border-radius:999px;padding:1px 9px;font-weight:900;font-size:12.5px;margin:2px 5px 0 0}
   .sm-star{display:inline-block;font-size:12.5px;font-weight:800;color:var(--ink2);margin:1px 8px 0 0;white-space:nowrap}
   .sm-feat{display:inline-block;font-size:13px;font-weight:900;color:#7A3E00;background:#FBE7C6;border:1px solid #EAD09A;border-radius:8px;padding:3px 10px;margin:3px 6px 0 0;white-space:nowrap}
+  .sm-feat.tapf{cursor:pointer}
+  .sm-feat.tapf::after{content:"？";margin-left:5px;font-size:9.5px;font-weight:900;color:#fff;background:#C79A34;border-radius:50%;padding:0 4px;vertical-align:1px}
+  .sm-feat.tapf:active{transform:translateY(1px)}
+  .sm-feat.fon{background:#F6D08A;border-color:#C79A34}
+  .sm-feat-hint{font-weight:800;font-size:11px;color:#B8860B;margin-left:7px}
+  .sm-feat-detail{margin:8px 2px 2px;background:#FFFBF0;border:1.5px solid #E3D3AE;border-left:4px solid #B8860B;border-radius:10px;padding:11px 13px;font-size:13px;line-height:1.8;color:#3f4657}
+  .smf-close{float:right;font-size:11px;font-weight:800;color:#B8860B;cursor:pointer;background:#FBEEDD;border:1px solid #E3D3AE;border-radius:8px;padding:2px 9px;margin:-2px 0 0 8px}
+  .smf-ttl{font-weight:900;font-size:14px;color:#7A5A16;margin-bottom:5px}
   /* 相性ひと目：ラベル（左）＋判定チップ（右）を1行に。チップは折り返さない */
   .cv-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px}
   .cv-k{font-size:13px;font-weight:800;color:var(--ink2);line-height:1.4}
@@ -2464,6 +2472,38 @@ const PILLAR_AREA={年柱:'年柱＝幼少期・ご先祖／親や目上との�
   });
   document.addEventListener('keydown',function(e){ var a=document.activeElement; if((e.key==='Enter'||e.key===' ')&&a&&a.classList&&a.classList.contains('mkchip')&&a.classList.contains('tapk')){e.preventDefault();a.click();} });
 })();
+/* 要点「この命式の際立つ特徴」チップ → タップで意味・位置の理由を解説（表示層のみ・エンジン非改変）。 */
+function featExplain(label){
+  var kind=String(label).replace(/（.*/,'').trim();
+  var inParen=(String(label).match(/（([^）]*)）/)||[])[1]||'';
+  if(kind==='天地徳合'){
+    var ls=(inParen.match(/[年月日時]/g)||[]); var key=(ls[0]||'')+(ls[1]||'');
+    var pos=(typeof TOKUGO_POS!=='undefined'&&TOKUGO_POS[key])?TOKUGO_POS[key].text:'二つの分野が強く結びつく、縁の濃い形です。';
+    return {t:label, b:'<b>天地徳合（てんちとくごう）</b>＝二つの柱が「天干は<b>干合</b>・地支は<b>支合</b>」で<b>二重に結びつく</b>、縁がとても濃い<b>大吉</b>の配置。とても珍しく、この方の際立った持ち味です。<br><br><b>なぜ'+(inParen||'この二柱')+'か</b>：'+pos};
+  }
+  if(kind==='魁罡')return {t:label, b:'<b>魁罡（かいごう）</b>＝日柱に宿る特別なエネルギー。決断力・行動力・信念に富み、リーダーの資質。海外・遠方に縁を持つ人が多い。強い星なので、使いこなすと大きな武器になります。'};
+  if(kind==='異常干支')return {t:label, b:'<b>異常干支（いじょうかんし）</b>＝ごく限られた干支だけに現れる<b>特別な感受性・才能</b>の印です（「異常＝悪い」という意味ではありません）。直感・感性・専門性が際立ち、独自の世界観で活躍しやすい一方、繊細さや浮き沈みも出やすいので、個性として活かすのが吉。'};
+  if(/中殺/.test(kind))return {t:label, b:'<b>宿命中殺（しゅくめいちゅうさつ）</b>＝その柱の分野（年＝家族・目上／月＝仕事・社会／日＝自分・配偶／時＝子・晩年）に、生まれつき空亡が重なる配置。その分野の縁が独特になりやすい分、精神性・自立心が育ちます。マイナスと決めつけず、その分野で無理をしすぎないのがコツ。'};
+  var relmap={'三合':'三合','方合':'方合','宿命半会':'半合','冲':'冲','支合':'支合','干合':'干合'};
+  if(relmap[kind]){ var d=(typeof REL_DESC!=='undefined'&&REL_DESC[relmap[kind]])?REL_DESC[relmap[kind]]:''; var extra=(kind==='三合'||kind==='方合')?'（＝会局。その五行が大きく強まり、運の土台となる配置）':''; return {t:label, b:'<b>'+kind+'</b>'+extra+'＝'+d+'。'+(inParen?'<br>該当：'+inParen:'')}; }
+  return {t:label, b:'この配置の詳しい意味は、下の「この命式の詳しい特徴」や命式表・教科書でご覧いただけます。'};
+}
+(function(){
+  document.addEventListener('click',function(e){
+    var cl=e.target.closest&&e.target.closest('.smf-close');
+    if(cl){ var cell0=cl.closest('.sm-cell'); if(cell0){var d0=cell0.querySelector('.sm-feat-detail'); if(d0){d0.hidden=true;d0.innerHTML='';} cell0.querySelectorAll('.sm-feat.fon').forEach(function(x){x.classList.remove('fon');});} return; }
+    var chip=e.target.closest&&e.target.closest('.sm-feat.tapf'); if(!chip)return;
+    var cell=chip.closest('.sm-cell'); var box=cell&&cell.querySelector('.sm-feat-detail'); if(!box)return;
+    if(chip.classList.contains('fon')){ chip.classList.remove('fon'); box.hidden=true; box.innerHTML=''; return; }
+    cell.querySelectorAll('.sm-feat.fon').forEach(function(x){x.classList.remove('fon');});
+    chip.classList.add('fon');
+    var ex=featExplain(chip.getAttribute('data-f')||chip.textContent);
+    box.hidden=false;
+    box.innerHTML='<span class="smf-close">閉じる ✕</span><div class="smf-ttl">'+ex.t+'</div><div class="smf-body">'+ex.b+'</div>';
+    try{box.scrollIntoView({block:'nearest',behavior:'smooth'});}catch(_e){}
+  });
+  document.addEventListener('keydown',function(e){ var a=document.activeElement; if((e.key==='Enter'||e.key===' ')&&a&&a.classList&&a.classList.contains('sm-feat')&&a.classList.contains('tapf')){e.preventDefault();a.click();} });
+})();
 const YANG=new Set(['甲','丙','戊','庚','壬']);
 const HONKI={子:'癸',丑:'己',寅:'甲',卯:'乙',辰:'戊',巳:'丙',午:'丁',未:'己',申:'庚',酉:'辛',戌:'戊',亥:'壬'};
 /* 干支の訓読み（音読みは使わない。例：丙辰＝ひのえたつ、甲子＝きのえね） */
@@ -3633,8 +3673,9 @@ function summaryHTML(c){
     const _fp=c.timeUnknown?c.pillars.slice(0,3):c.pillars;
     const fl=(typeof bxFeatureList==='function')?bxFeatureList(_fp):[];
     if(fl&&fl.length){
-      featStr=`<div class="sm-cell wide"><div class="sm-lab">この命式の際立つ特徴</div>
-        <div class="sm-val" style="margin-top:5px">${fl.map(f=>`<span class="sm-feat">${f}</span>`).join('')}</div></div>`;
+      featStr=`<div class="sm-cell wide"><div class="sm-lab">この命式の際立つ特徴<span class="sm-feat-hint">？ タップで解説</span></div>
+        <div class="sm-val" style="margin-top:5px">${fl.map(f=>`<span class="sm-feat tapf" role="button" tabindex="0" data-f="${esc(f)}">${f}</span>`).join('')}</div>
+        <div class="sm-feat-detail" hidden></div></div>`;
     }
   }catch(_e){}
   return `<section class="card sec" id="summary-sec" style="--accent:${col}">
