@@ -3,7 +3,7 @@
    鑑定・60干支の教科書を使えるようにする。
    オンライン鑑定（生成AI）だけは通信が要るが、圏外時は端末内の
    オフライン鑑定に自動で切り替わる。 */
-const CACHE = 'shichu-jidou-v346';/* v346=鑑定文の読みやすさ改善。(1)要約・本文の両端揃え(text-align:justify;inter-character)を左揃えに変更＝狭い幅で字間が不均一に広がる問題を解消。(2)相性判定カードの小見出しを黒→色分け（心の縁＝マゼンタ／縁・つながり＝青）で話題の変わり目が分かるメリハリを付与。表示層のみ・ロジック非改変。個人/相性で共通に効く（印刷は元々justify不使用で無影響）。*/
+const CACHE = 'shichu-jidou-v347';/* v347=魁罡（かいごう）を拡充（完全オリジナル文・海外の縁を明記）。(1)教科書に専用ページ kaigou.html を追加（基本/金運/恋愛/海外・環境/通変星の兼ね合い/例題）。(2)鑑定文プロンプトに魁罡の詳細＋「海外・遠方の縁を必ず明記」指示を追加。(3)鑑定結果に魁罡カード（一言＋タップで要約・全文）を表示。日柱が魁罡のときのみ。表示層のみ・計算エンジン非改変。*/
 
 /* 初回訪問時に先読みしてキャッシュするページ一式（このブランドのみ） */
 const ASSETS = [
@@ -15,7 +15,7 @@ const ASSETS = [
   'pklove.js',
   'jikkan.html', 'tsuhensei.html', 'juniun.html', 'zohkan.html', 'kubo.html',
   'daiun-tenkanki.html', 'ritsuun.html', 'nichiza-tenchusatsu.html', 'ijokanshi.html',
-  'kanshi-aisho.html', 'aisho-pattern.html', 'daiun-tsuhen.html', 'setsuboku.html', 'tensen-chichu.html', 'nayin-aisho.html', 'boko-kaichu.html', 'kaikyoku.html', 'inyoku.html', 'nichiza.html', 'kodoku.html'
+  'kanshi-aisho.html', 'aisho-pattern.html', 'daiun-tsuhen.html', 'setsuboku.html', 'tensen-chichu.html', 'nayin-aisho.html', 'boko-kaichu.html', 'kaikyoku.html', 'inyoku.html', 'nichiza.html', 'kodoku.html', 'kaigou.html'
 ];
 
 self.addEventListener('install', (e) => {
