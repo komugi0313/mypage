@@ -5560,4 +5560,61 @@ function sbxSection(c,lang){
 function sbxCard(c,lang){var s=sbxSection(c,lang);return s?('<section class="card" style="margin-top:12px">'+s+'</section>'):'';}
 </script>
 
+<script>
+/* ===== Phase2a: 宿命中殺（しゅくめいちゅうさつ）をやさしい言葉で追加。
+   PROの検出ロジック(pillarKuboGz/detectChusatsu)を移植。表示のみ・エンジン非改変。
+   既存セクション（本質・中心の気質・十二運など）と重複しない“人と違う道の強み”だけを足す。 ===== */
+(function(){
+  if(typeof window.pillarKuboGz!=='function'){
+    window.pillarKuboGz=function(gz){var STE='甲乙丙丁戊己庚辛壬癸',BRs='子丑寅卯辰巳午未申酉戌亥';
+      if(!gz||gz.length<2)return [];var s=STE.indexOf(gz[0]),b=BRs.indexOf(gz[1]);if(s<0||b<0)return [];
+      var d=((b-s)%12+12)%12;return [BRs.charAt((d+10)%12),BRs.charAt((d+11)%12)];};
+  }
+  if(typeof window.detectChusatsu!=='function'){
+    window.detectChusatsu=function(c){
+      var vs=(typeof kubo==='function'?(kubo(c)||[]):[]),vset={};vs.forEach(function(x){vset[x]=1;});
+      var P=(c&&c.pillars)||[],gz=function(i){return ((P[i]&&P[i].stem)||'')+((P[i]&&P[i].branch)||'');};
+      var yb=P[0]&&P[0].branch,mb=P[1]&&P[1].branch,db=P[2]&&P[2].branch;
+      var ygz=gz(0),dgz=gz(2),yk=window.pillarKuboGz(ygz);
+      var hasY=!!(yb&&vset[yb]),hasM=!!(mb&&vset[mb]);
+      var hasSeijitsu=!!(db&&yk.indexOf(db)>=0),hasNichiza=(dgz==='甲戌'||dgz==='乙亥'),hasNikkyo=(dgz==='甲辰'||dgz==='乙巳');
+      return {hasY:hasY,hasM:hasM,hasSeijitsu:hasSeijitsu,hasNichiza:hasNichiza,hasNikkyo:hasNikkyo,ichidai:hasY&&hasM,any:(hasY||hasM||hasSeijitsu||hasNichiza||hasNikkyo)};
+    };
+  }
+  function chusatsuCardHTML(c){
+    try{
+      var cs=window.detectChusatsu(c); if(!cs||!cs.any) return '';
+      var items=[];
+      function add(lb,tx){ items.push('<div style="display:flex;gap:8px;align-items:flex-start;margin:6px 0;padding:8px 10px;background:#F4EEFB;border-left:4px solid #7C4DBE;border-radius:8px">'+
+        '<span style="font-size:12.5px;line-height:1.7;overflow-wrap:anywhere"><b style="color:#7C4DBE">'+lb+'</b><br><span style="color:#3a3a3a">'+tx+'</span></span></div>'); }
+      if(cs.hasY) add('目上・親との縁','目上や親とは価値観が少し違うタイプ。早めに自分の足で立つほど、のびのび力を発揮できます。');
+      if(cs.hasM) add('仕事・家庭','決まった枠より“自分らしいやり方”が向く人。自由な働き方でこそ輝きます（およそ6人に1人）。');
+      if(cs.hasSeijitsu) add('個性','「人と違う自分」がそのまま魅力になる、個性派タイプ。');
+      if(cs.hasNichiza) add('感性','世の中の“当たり前”に少し違和感を持ちやすく、機転がききます。家庭の形も自由でOK。');
+      if(cs.hasNikkyo) add('心・表現','繊細で理想が高く、“一人の時間”で力を充電するタイプ。表現や心の世界で花開きます。');
+      if(cs.ichidai) add('生き方','受け継ぐより、自分の代で新しく築いていく生き方が合っています。');
+      if(!items.length) return '';
+      return '<section class="card" id="chusatsu-card" style="margin-top:14px">'+
+        '<h2 style="font-size:16px;font-weight:900;color:#7C4DBE;margin:0 0 6px">✴️ 人と違う道でこそ輝くサイン</h2>'+
+        '<p style="font-size:12.5px;color:#4a4a4a;font-weight:700;line-height:1.7;margin:0 0 8px">生まれた日の組み合わせに、“みんなと同じ道より、自分らしい道を歩むほど力が出る”サインが出ています。弱点ではなく、あなたの<b style="color:#7C4DBE">個性の強み</b>です。（占いでは「宿命中殺＝しゅくめいちゅうさつ」と呼びます）</p>'+
+        items.join('')+'</section>';
+    }catch(e){ return ''; }
+  }
+  function addChusatsu(){
+    try{
+      if(typeof chart==='undefined'||!chart) return;
+      var out=document.getElementById('result'); if(!out) return;
+      if(out.querySelector('#chusatsu-card')) return;
+      var html=chusatsuCardHTML(chart); if(!html) return;
+      var wrap=document.createElement('div'); wrap.innerHTML=html;
+      var node=wrap.firstElementChild; if(node) out.appendChild(node);
+    }catch(e){}
+  }
+  if(typeof window.renderResult==='function' && !window.renderResult._chusatsu){
+    var orig=window.renderResult;
+    window.renderResult=function(){ var r=orig.apply(this,arguments); try{addChusatsu();}catch(e){} return r; };
+    window.renderResult._chusatsu=1;
+  }
+})();
+</script>
 </body><umsdataelement id="UMSDataElement" style="display: none;"></umsdataelement><div id="tmtoolbar_manual_rating_injected" style="display: none;">init</div><div id="UMSSendDataEventElement" style="display: none;">init</div></html>
