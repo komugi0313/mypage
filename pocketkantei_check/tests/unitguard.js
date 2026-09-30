@@ -55,6 +55,7 @@ const srv=http.createServer((q,r)=>{let f=path.join('fx',decodeURIComponent(q.ur
     state.lang='en'; var r4=_dropFiller('He broke up with me last night',{text:'I am so sorry. What did he say when he ended it? Maybe have a warm drink and get some rest tonight.'}).text; state.lang='ja';
     return [r, r2, r3, r4].join(' | '); })()]);
   o.push(['性格の説明の繰り返しを止める',(function(){ state.msgs=[{role:'me',text:'a'},{role:'ai',text:'さきさんはもともと細やかな気配りができる方です。'}]; var a=natureNote().indexOf('NO PERSONALITY')>0; state.msgs=[{role:'me',text:'a'},{role:'ai',text:'最後に送ったLINEを教えて？'}]; var b=natureNote()===''; state.msgs=[]; return [a,b].join(); })()]);
+  o.push(['相談への答えを必ず入れる念押し',(function(){ state.msgs=[]; try{localStorage.setItem('pk_ctxs','0');localStorage.setItem('pk_crisis_cd','0');}catch(e){} window._aiTopicHint=null; return [answerNote('不安で全然眠れない').indexOf('ANSWER THE CONSULTATION')>0, answerNote('今日の運勢は？')==='', answerNote('何のために生きてるのかわからない')===''].join(); })()]);
   state.lang='ja';
   o.push(['読みがなの残り',_finalTidy('探究心（たいきょくきじん・物事を深く追究する星）と、まじめさ（せいかん）。生まれ持った星の組み合わせ（生まれ持った星）です。お上司が嫌い。')]);
   state.lang='ja';
