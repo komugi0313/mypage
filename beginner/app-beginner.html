@@ -5617,4 +5617,53 @@ function sbxCard(c,lang){var s=sbxSection(c,lang);return s?('<section class="car
   }
 })();
 </script>
+<script>
+/* ===== Phase2a-①: 時期アラート（まもなくの運の節目）をやさしい言葉で追加。
+   PROのtimingAlertHTMLロジックを移植。次の大運の切り替え／次の節木運が2年以内なら、
+   鑑定結果の先頭にピンクで予告。大運境界はdecadeFortunesから直接取得。表示のみ・エンジン非改変。 ===== */
+(function(){
+  function nextDuEnd(c){
+    try{
+      var di=c.now&&c.now.daeunIndex;
+      if(typeof di==='number'&&di>=0&&c.decadeFortunes&&c.decadeFortunes[di]&&typeof c.decadeFortunes[di].endAge==='number') return c.decadeFortunes[di].endAge;
+      if(c.decadeFortunes&&c.decadeFortunes[0]&&typeof c.decadeFortunes[0].startAge==='number') return c.decadeFortunes[0].startAge; /* 立運前＝第一運の終わり */
+    }catch(e){}
+    return null;
+  }
+  function timingAlertHTML(c){
+    try{
+      if(!c||!c.now||typeof c.now.age!=='number') return '';
+      var age=c.now.age, msgs=[];
+      var sb=null; try{ if(typeof Setsuboku!=='undefined'&&c.decadeFortunes){ sb=Setsuboku.analyze({decadeFortunes:c.decadeFortunes,nowAge:age,birthYear:(c.now.year?c.now.year-age:undefined)}); } }catch(_e){}
+      var setsuAge=(sb&&sb.next&&typeof sb.next.startAge==='number')?sb.next.startAge:null;
+      var setsuSoon=(setsuAge!=null)&&(setsuAge>age)&&(setsuAge-age<=2);
+      var duEnd=nextDuEnd(c);
+      var duSoon=(duEnd!=null)&&(duEnd>age)&&(duEnd-age<=2);
+      var sameEvent=(setsuSoon&&duSoon&&setsuAge!=null&&duEnd!=null&&Math.abs(setsuAge-duEnd)<0.6);
+      var yr=function(n){n=Math.round(n);return n<=1?'あと約1年':('あと約'+n+'年');};
+      if(setsuSoon) msgs.push('まもなく<b>人生の大きな転換点</b>を迎えます（約30年に一度の大きな節目・'+yr(setsuAge-age)+'）。新しい環境やテーマへ移りやすい、前向きな変わり目です。');
+      if(duSoon&&!sameEvent) msgs.push('まもなく<b>運の大きな流れが変わります</b>（約10年ごとの節目・'+yr(duEnd-age)+'）。次の流れに乗る準備を始めると良い時期です。');
+      if(!msgs.length) return '';
+      return '<section class="card" id="timing-alert" style="margin:0 0 12px;background:#FFF0F6;border:1.6px solid #E85B9A;border-radius:12px">'+
+        '<div style="font-size:15px;font-weight:900;color:#C2185B;margin:0 0 4px">🔔 まもなく“運の節目”です</div>'+
+        msgs.map(function(t){return '<div style="color:#C2185B;font-weight:700;font-size:12.5px;line-height:1.75;margin:4px 0">'+t+'</div>';}).join('')+'</section>';
+    }catch(e){ return ''; }
+  }
+  function addTiming(){
+    try{
+      if(typeof chart==='undefined'||!chart) return;
+      var out=document.getElementById('result'); if(!out) return;
+      if(out.querySelector('#timing-alert')) return;
+      var html=timingAlertHTML(chart); if(!html) return;
+      var wrap=document.createElement('div'); wrap.innerHTML=html; var node=wrap.firstElementChild;
+      if(node) out.insertBefore(node, out.firstChild);
+    }catch(e){}
+  }
+  if(typeof window.renderResult==='function' && !window.renderResult._timing){
+    var orig=window.renderResult;
+    window.renderResult=function(){ var r=orig.apply(this,arguments); try{addTiming();}catch(e){} return r; };
+    window.renderResult._timing=1;
+  }
+})();
+</script>
 </body><umsdataelement id="UMSDataElement" style="display: none;"></umsdataelement><div id="tmtoolbar_manual_rating_injected" style="display: none;">init</div><div id="UMSSendDataEventElement" style="display: none;">init</div></html>
