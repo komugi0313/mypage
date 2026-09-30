@@ -11,7 +11,7 @@
      8. メールのHTMLが壊れている（style="…" の中に " が入って、色・大きさの指定が効かなくなる など）
      9. 文章の欠け・混入（undefined／NaN／{C} などの置き換え漏れ、必須の欄が空、メニュー2品が同じ）
     10. ランクと文章の矛盾（△の日に「攻め・勝負・思い切り」、◎💮の日に「休むのが正解」）
-    11. 件名が長すぎる（「｜」より前の要点が28字を超え、iPhoneの一覧で切れる）
+    11. 件名が長すぎる（今日の一言までが28字を超え、iPhoneの一覧で切れる。6字と20字のニックネームで確認）
    1件でも出たら FAIL。すべて0件なら PASS。 */
 const path = require('path');
 const dir = path.resolve(process.env.ENGINE_DIR || '.');
@@ -80,8 +80,12 @@ for (let u = 0; u < N; u++) {
     { const g = r.grade.sym; for (const k of TONE_FIELDS) { const t = v[k].replace(/<[^>]+>/g, '');
         if ((g === '△' && TONE_AGG.test(t)) || ((g === '◎' || g === '💮') && TONE_REST.test(t))) add(10, `${ds} ${g}の日 ${k}「${t.slice(0, 40)}」`); } }
     // 11. 件名の要点（｜より前）が28字以内か（【M/D(曜)】を含む。ニックネームは5字で計算）
-    { const head = ('【' + M + '/' + dt.getUTCDate() + '(日)】' + r.subject.split('｜')[0]).replace(/テスト/, 'あいうえお');
-      if ([...head].length > 28) add(11, `${ds} 件名の前半が${[...head].length}字：${head}`); }
+    //     ※長いニックネーム（7字以上）は「絵文字＋今日の一言」が先に来るので、20字の名前でも要点は切れない
+    for (const nk of ['あいうえおか', 'あいうえおかきくけこさしすせそたちつてと']) {
+      const r2 = D.generateDaily(b, { y: dt.getUTCFullYear(), m: M, d: dt.getUTCDate() }, Object.assign({}, o, { nick: nk }));
+      const pre = '【' + M + '/' + dt.getUTCDate() + '(日)】', h2 = r2.subject.split('｜')[0];
+      const key = h2.indexOf(nk) === 0 ? pre + h2 : pre + h2.split('、')[0];   // 要点（今日の一言）まで
+      if ([...key].length > 28) add(11, `${ds} 件名の要点までが${[...key].length}字：${pre + h2}`); }
     // 9. 文章の欠け・混入
     { const J = JSON.stringify(r); if (/undefined|NaN|\[object|\{[A-Z]\}/.test(J)) add(9, `${ds} undefined/NaN/置き換え漏れ：${(J.match(/.{0,30}(undefined|NaN|\[object|\{[A-Z]\}).{0,10}/) || [''])[0]}`);
       for (const k of ['subject', 'morning', 'relIntro', 'weatherMsg', 'todayOne', 'habit', 'closeWord', 'onepoint']) if (!r[k]) add(9, `${ds} 必須の欄が空：${k}`);

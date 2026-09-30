@@ -33,7 +33,7 @@
     4:{frame1:"#ffeaf2",frame2:"#ffd3e3",soft:"#fff2f7",accent:"#f39ab9",ink:"#b25c81",label:"桜",deco:["🌸","🌸","🦋","🌸","🌸"],motif:["🌸","🦋","🌸","🌷","🌸","🦋"],banner:"banner-04.gif",bgcolor:"#f6dbe7"},
     5:{frame1:"#ecf9ec",frame2:"#d2efd2",soft:"#f1faf1",accent:"#7fc98a",ink:"#4f8a55",label:"新緑",deco:["🎏","🌿","🍃","🌱","🎏"],motif:["🌿","🎏","🍃","🐝","🌱","🌿"],banner:"banner-05.gif",bgcolor:"#d9eecf"},
     6:{frame1:"#f1ebfa",frame2:"#e0d3f2",soft:"#f5f0fc",accent:"#a98ee0",ink:"#7a5aa0",label:"あじさい",deco:["☔","💜","🐌","🌧️","💜"],motif:["💜","☔","🐌","🌧️","🌷","💜"],banner:"banner-06.gif",bgcolor:"#e1dcf2"},
-    7:{frame1:"#e6f5fd",frame2:"#cee9f9",soft:"#eef8fd",accent:"#6fbde6",ink:"#3f83ac",label:"夏まつり",deco:["🎋","🎐","⭐","💧","🎋"],motif:["🎐","🎋","💧","⭐","🫧","🎐"],banner:"banner-07.gif",bgcolor:"#1f2d63"},
+    7:{frame1:"#e6f5fd",frame2:"#cee9f9",soft:"#eef8fd",accent:"#6fbde6",ink:"#3f83ac",label:"夏まつり",deco:["🎋","🎐","⭐","💧","🎋"],motif:["🎐","🎋","💧","⭐","🌌","🎐"],banner:"banner-07.gif",bgcolor:"#1f2d63"},
     8:{frame1:"#201640",frame2:"#3a2866",soft:"#f3eefc",accent:"#f5c542",ink:"#6a4a9a",label:"花火",deco:["🎇","🎆","✨","🎆","🎇"],motif:["🎆","🎇","✨","🏮","🎆","🎇"],big:true,banner:"banner-08.gif",bgcolor:"#1c1340"},
     9:{frame1:"#fdf3dd",frame2:"#f8e6bd",soft:"#fdf6ea",accent:"#e2b04a",ink:"#a5792a",label:"お月見",deco:["🌕","🌾","🍇","🐰","🌾"],motif:["🌕","🌾","🍇","🐰","☁️","🌾"],banner:"banner-09.gif",bgcolor:"#39417a"},
     10:{frame1:"#ffefdf",frame2:"#ffdcc0",soft:"#fff4ea",accent:"#f0912f",ink:"#bb6a2e",label:"ハロウィン",deco:["🎃","👻","🦇","🍬","🕸️"],motif:["🎃","👻","🦇","🍬","🕸️","🎃"],banner:"banner-10.gif",bgcolor:"#4a2b5c"},
@@ -51,12 +51,12 @@
   };
 
   /* ── 鑑定チップ（運命カレンダーの dayMarks と同じ判定。プラス面だけ見せる） ── */
-  var MK = {'🌈':'運命の人の日','🌷':'出会い・モテ運の日','🌸':'恋が動く日','🩷':'魅力が輝く','💰':'金運アップ','💼':'勝負運アップ','🌐':'対人運アップ','📚':'学びの日'};
+  var MK = {'🌈':'運命の人の日','🌷':'出会い・モテ運の日','🌸':'恋が動く日','💖':'魅力が輝く','💰':'金運アップ','💼':'勝負運アップ','🌐':'対人運アップ','📚':'学びの日'};
   function chipMarks(r){
     var m = [], g = r.theme && r.theme.god;
     if (r.en && r.en.lv === 3) m.push('🌈'); else if (r.en && r.en.lv === 2) m.push('🌸');
     if (r.touka) m.push('🌷');
-    if (g === '食神' || g === '傷官') m.push('🩷');
+    if (g === '食神' || g === '傷官') m.push('💖');
     if (g === '比肩' || g === '劫財') m.push('🌐');
     if (g === '偏財' || g === '正財') m.push('💰');
     if (g === '正官' || g === '偏官') m.push('💼');
