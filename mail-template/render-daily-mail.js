@@ -15,7 +15,7 @@
  *      mypageUrl:      'https://unkiyoho.jp/mypage.html',
  *      aishouUrl:      'https://166unmei.com/',
  *      refCode:        'k7m2qx',                                           // この会員の紹介コード（シェアのリンクに ?ref= で付く）
- *      operatorUrl:    'https://unkiyoho.jp/tokushoho.html',                 // 運営者情報（住所・問い合わせ先）
+ *      operatorUrl:    'https://unkiyoho.jp/tokushoho.html',                 // 運営者情報（事業者名・問い合わせ先。住所は載せない）
  *    });
  *    // mail.subject / mail.html / mail.text を送信サービスへ
  */
@@ -47,7 +47,7 @@
     crush:   { en:'気になる人との距離', place:'縁が動きやすい場所' },
     partner: { en:'ふたりの縁',       place:'ふたりの時間のヒント' },
     married: { en:'夫婦・家庭の縁',    place:'家庭の時間のヒント' },
-    work:    { en:null,               place:'縁が活きる場所' }   // work は恋愛の項目を出さない
+    work:    { en:'今日のご縁',         place:'縁が活きる場所' }   // 2026-10-02 改：恋愛が主役のメールなので work にも恋愛・ご縁を出す（見出しは相手の有無を決めつけない「今日のご縁」）
   };
 
   /* ── 鑑定チップ（運命カレンダーの dayMarks と同じ判定。プラス面だけ見せる） ── */
@@ -192,14 +192,14 @@
     h.push(sec('🌅', '今日のあなた', '今日のテーマは「' + r.theme.axis + '」（' + r.theme.mean + 'の巡り）。' + (r.theme.line ? r.theme.line + ' ' : '') + r.theme.message, '#c9862a', '#fff6e6'));
     if (r.juni && r.juni.text) h.push(sec('🔄', '今日の運気の巡り', r.juni.text, '#9a6cc4', '#f3eefb'));
 
-    /* 💗 恋愛・ご縁（work は出さない） */
+    /* 💗 恋愛・ご縁（全員に出す。見出しは rel で変わる） */
     var placeText = (rel === 'married' || rel === 'partner')
       ? '<b style="color:#9a6cc4;">' + esc(r.place.direction) + '</b> の方角や、<b style="color:#9a6cc4;">' + esc(r.place.nature) + '</b>・<b style="color:#9a6cc4;">' + esc(r.place.city) + '</b> で' + (rel === 'married' ? '家族と' : 'ふたりで') + '過ごすと、温かい流れが生まれやすいかもしれません。'
       : '良いご縁に出会いやすいのは <b style="color:#9a6cc4;">' + esc(r.place.direction) + '</b> の方角。<b style="color:#9a6cc4;">' + esc(r.place.nature) + '</b> や <b style="color:#9a6cc4;">' + esc(r.place.city) + '</b> あたりに、新しい出会いのきっかけがあるかも。';
     if (RH.en){
       h.push(genre('💗 恋愛・ご縁', '片想い／恋人／夫婦', '#d6567e'));
       h.push(sec('💗', RH.en, '<span style="display:inline-block;font-size:10.5px;font-weight:800;color:#ffffff;background:' + T.accent + ';padding:2px 9px;border-radius:20px;margin-right:5px;">' + esc(r.en.tag) + '</span>' + r.en.body, '#d6567e', '#fdeef4'));
-      if (r.love && (rel === 'single' || rel === 'crush')) h.push(sec('💕', '今日の恋愛運', r.love, '#e0629a', '#fdeef5'));
+      if (r.love && (rel === 'single' || rel === 'crush' || rel === 'work')) h.push(sec('💕', '今日の恋愛運', r.love, '#e0629a', '#fdeef5'));
       if (r.loveMove) h.push(sec('💌', '今日の恋の一手', r.loveMove, '#e0629a', '#fdeef5'));
       h.push(sec('📍', RH.place, placeText, '#9a6cc4', '#f4eefb'));
     }
@@ -246,15 +246,21 @@
     if (r.onepoint) h.push(sec('💡', '今日のワンポイント', r.onepoint, '#d38a12', '#fdf2d9'));
     if (r.season) h.push(sec('🍵', '季節のたより', r.season.word + (r.season.note ? '<div style="margin-top:6px;color:#8a7d74;">🌱 ' + r.season.note + '</div>' : ''), '#6fae7a', '#eef7ef'));
 
-    /* 💞 1.66相性診断への導線＋シェア（全メール共通・必須） */
+    /* 💞 シェアのリンク（運気予報そのものを紹介する） */
     // シェアするのは「運気予報」そのもの（リンク先＝運気予報のトップ）。?ref=紹介コード で、だれの紹介で登録したかを数える
     var shareText = encodeURIComponent('毎朝6時に、生年月日からわたしだけの運勢が届く「私だけの運気予報」🌤 ずっと無料だよ');
     var shareUrl = encodeURIComponent(site + '?ref=' + encodeURIComponent(opts.refCode || 'mail'));
-    h.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;border-collapse:separate;"><tr><td align="center" style="background:#fdeef4;border:1.5px solid #e8a8bd;border-radius:14px;padding:14px;text-align:center;">'
-      + '<div style="font-size:13.5px;font-weight:800;color:#c14e77;line-height:1.6;">💞 気になる人との相性、調べてみない？</div>'
-      + '<div style="margin-top:4px;font-size:11.5px;color:#8a6f7a;line-height:1.7;"><span style="white-space:nowrap;">60組に1組の奇跡【1.66%】──</span><br><span style="white-space:nowrap;">生年月日ふたつで、</span><span style="white-space:nowrap;">ふたりの相性がすぐわかります。</span></div>'
-      + '<div style="margin-top:9px;">' + btn(esc(aishou) + '" data-aishou="1', '1.66 相性診断をやってみる（無料）', '#d8466a', '13px', '10px 22px') + '</div>'
-      + '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e8c8d4;font-size:10.5px;color:#a08a80;">🎁 <span style="white-space:nowrap;">この運気予報を、</span><span style="white-space:nowrap;">お友達にも教えてあげてね（無料）</span></div>'
+    /* ✦ Special Reading（姉妹サービスの細いバナー3枚。2026-10-02 追加）
+       LPの「Special Reading」と同じ色・書体の画像（mail-bg/sr-*.jpg・各12〜15KB）。画像なのでグラデーションもダークモードで崩れない。
+       1.66 は公開中＝直接リンク。ニコカレ・Pocket鑑定は「近日公開」＝運気予報トップの紹介（#sisters）へ。公開したら画像とリンク先を差し替える */
+    function srImg(file, href, alt, attr){ return '<a href="' + esc(href) + '"' + (attr || '') + ' style="display:block;margin-top:4px;text-decoration:none;"><img src="' + base + 'mail-bg/' + file + '" width="400" alt="' + alt + '" style="display:block;width:100%;max-width:400px;height:auto;border:0;margin:0 auto;"></a>'; }
+    h.push('<div style="margin-top:18px;text-align:center;font-family:Georgia,\'Times New Roman\',serif;font-weight:700;font-size:13px;letter-spacing:.14em;color:#c4892b;">― Special Reading ―</div>'
+      + srImg('sr-166.jpg', aishou, '1.66 奇跡の相性診断｜この人とは、運命？ 無料で占う', ' data-aishou="1"')
+      + srImg('sr-nicocale.jpg', site + '#sisters', 'ニコカレ｜二人の運命が、動く日。近日公開')
+      + srImg('sr-pocket.jpg', site + '#sisters', 'Pocket鑑定｜夜中の不安も、朝の迷いも。近日公開'));
+    /* 🎁 運気予報のシェア（全メール共通・必須） */
+    h.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;border-collapse:separate;"><tr><td align="center" style="background:#fdeef4;border:1.5px solid #e8a8bd;border-radius:14px;padding:4px 14px 14px;text-align:center;">'
+      + '<div style="margin-top:10px;font-size:10.5px;color:#a08a80;">🎁 <span style="white-space:nowrap;">この運気予報を、</span><span style="white-space:nowrap;">お友達にも教えてあげてね（無料）</span></div>'
       + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:7px auto 0;"><tr>'
       + '<td>' + btn('https://social-plugins.line.me/lineit/share?url=' + shareUrl, 'LINEで送る', '#06c755', '11.5px', '8px 16px') + '</td>'
       + '<td>' + btn('https://twitter.com/intent/tweet?text=' + shareText + '&amp;url=' + shareUrl, '𝕏 でシェア', '#1d1f23', '11.5px', '8px 16px') + '</td>'
@@ -312,9 +318,10 @@
     if (r.todayOne) t.push('■ 今日はこれだけ', strip(r.todayOne), '');
     t.push('■ 今日のあなた', strip(r.theme.message), '');
     if (RH.en) t.push('■ ' + RH.en, '[' + r.en.tag + '] ' + strip(r.en.body), '');
+    if (r.love && (rel === 'single' || rel === 'crush' || rel === 'work')) t.push('■ 今日の恋愛運', strip(r.love), '');
     t.push('■ 仕事・勝負運', strip(fo.work), '', '■ 金運', strip(fo.money), '', '■ 友達・対人運', strip(fo.friend), '', '■ 体調・リラックス', strip(fo.health), '');
     t.push('■ ラッキー', 'カラー：' + lk.color + '／方角：' + lk.direction + '／食材：' + lk.food + '／ナンバー：' + lk.number, '');
-    t.push('1.66 相性診断（無料）：' + aishou, '', '配信停止（ログイン不要）：' + unsub, '設定変更：' + mypage, '運営：72k株式会社（運営者情報：' + operator + '）', '', 'produced by Mizuki Nico');
+    t.push('― Special Reading ―', '1.66 奇跡の相性診断（無料）：' + aishou, 'ニコカレ（近日公開）／Pocket鑑定（近日公開）：' + site + '#sisters', '', '配信停止（ログイン不要）：' + unsub, '設定変更：' + mypage, '運営：72k株式会社（運営者情報：' + operator + '）', '', 'produced by Mizuki Nico');
 
     return { subject: subject, html: html, text: t.join('\n') };
   }
