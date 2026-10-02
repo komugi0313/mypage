@@ -1,7 +1,16 @@
 diff -u a/daily-engine.js b/daily-engine.js
---- a/daily-engine.js	2026-10-02 07:24:21.447964387 +0000
-+++ b/daily-engine.js	2026-10-02 07:24:21.450028177 +0000
-@@ -639,16 +639,16 @@
+--- a/daily-engine.js	2026-10-02 16:12:30.355300768 +0000
++++ b/daily-engine.js	2026-10-02 16:12:30.360964340 +0000
+@@ -559,6 +559,8 @@
+  * 運勢の計算（指数・天気・グレード・五行）には一切影響しない。 */
+ var MALE_NG=/リップ|ピアス|イヤリング|ヘアピン|ヘアクリップ|ヘアゴム|ネックレス|パール|真珠のアクセ|真珠風|ネイル|コスメ|化粧品|ハート|スカーフ|手鏡/;
+ var PARTNERED_NG=/気になる人|出会い/;   // 恋人・既婚の人には出さない
++var MARRIED_LOVE_NG=/交際|入籍|婚約|プロポーズ|恋人|結婚に向け|紹介|付き合い|デート|膠着|次のステップ|周囲の女性|周囲の男性|周囲を魅了/;   // 結婚している人の「今日の恋愛運」に出さない言葉（恋人どうし向け）
++var PARTNER_LOVE_NG=/出会い|気になる|片想い|片思い|告白|アプローチ|異性|ライバル|恋人候補|運命の人|新しい恋|モテ|合コン|婚活|アプリ|新しい関係|関係がスタート|新しい出会い/;   // 恋人がいる人の「今日の恋愛運」に出さない言葉
+ var PLACE_NG=/海辺|岬|堤防|湖|陶芸の里|星の見える丘|夜景|水族館|足湯|雨上がり|交流会|イベント会場|イベント広場|桜のある|イルミネーション|新緑の|色づく/;  // 遠出・天気・催し・季節次第の場所
+ var WEEKEND_NG=/上司|取引先|面接|商談|会議|プレゼン|報連相|仕事|提出/;   // 土日に出さない“仕事の段取り”
+ // ランクと文章の矛盾をなくす（言い回しの選び方だけ。ランク・十神・テーマなど運勢の計算は変えない）
+@@ -639,16 +641,16 @@
        '“家庭を大切にするあなた”へ。今日のご家族との運気を、そっとお伝えします。',
        '“家庭を大切にするあなた”へ。今日はどんな一日になるか、のぞいてみましょう。'],
      work:[
@@ -23,9 +32,25 @@ diff -u a/daily-engine.js b/daily-engine.js
    };
    var REL_TAILS=[
      '今日の運気の動きを、そっとお届けします。','今日のあなたの運勢を、お届けします。',
+@@ -938,6 +940,15 @@
+       var _lg=LOVE_GEN[god]||[];
+       love=_lg.length?_lg[pickSeq(ubase,57,_lg.length,_occ)]:'';
+     }
++    // 恋人がいる人・結婚している人（2026-10-02〜「ふたりの恋愛運」を出す）：独身向けの言葉（出会い・気になる人・アプローチ等）を含まない組み合わせだけを使う。
++    // 結婚している人は、恋人どうし向けの言葉（交際・入籍・デート等）も除く。文章の選び方だけで、計算は同じ
++    var _plNG=function(t){ return PARTNER_LOVE_NG.test(t) || (rel==='married' && MARRIED_LOVE_NG.test(t)); };
++    if((rel==='partner'||rel==='married') && love && _plNG(love)){
++      var _pl='';
++      if(lf.length>=4){ for(var _pi=0;_pi<_lc.length && !_pl;_pi++){ var _t=lf[_lc[_pi][0]]+lf[_lc[_pi][1]]; if(!_plNG(_t)&&toneOk(_t,_grade.sym)) _pl=_t; }
++        for(var _pj=0;_pj<lf.length && !_pl;_pj++){ if(_pj!==2 && !_plNG(lf[_pj])&&toneOk(lf[_pj],_grade.sym)) _pl=lf[_pj]; } }
++      love=_pl;   // 合うものがなければ、その日は出さない
++    }
+     var _lms=LM_SITU[rel]||LM_SITU.single, loveMove=_lms[pickSeq(ubase,45,_lms.length,seed)]+LM_EFFECT[pickSeq(ubase,86,LM_EFFECT.length,seed)];
+ 
+     var w=weather(idx);
 diff -u a/my-tenki-demo.html b/my-tenki-demo.html
---- a/my-tenki-demo.html	2026-10-02 07:24:21.444452364 +0000
-+++ b/my-tenki-demo.html	2026-10-02 07:24:21.446132473 +0000
+--- a/my-tenki-demo.html	2026-10-02 16:12:30.345063473 +0000
++++ b/my-tenki-demo.html	2026-10-02 16:12:30.351374913 +0000
 @@ -290,7 +290,7 @@
      <select id="sex"><option value="f">女性</option><option value="m">男性</option></select>
      <div class="lab" style="margin-top:18px;">― あなたの「今」について ―</div>
@@ -45,8 +70,8 @@ diff -u a/my-tenki-demo.html b/my-tenki-demo.html
    const _wm=WEATHER_MSG[w.name]||[]; const wmsg=_wm.length?_wm[useed%_wm.length]:'';
    let _spc='';
 diff -u a/mypage.html b/mypage.html
---- a/mypage.html	2026-10-02 07:24:21.440557661 +0000
-+++ b/mypage.html	2026-10-02 07:24:21.442719044 +0000
+--- a/mypage.html	2026-10-02 16:12:30.193063475 +0000
++++ b/mypage.html	2026-10-02 16:12:30.197378890 +0000
 @@ -395,7 +395,7 @@
          <option value="crush">気になる人がいる</option>
          <option value="partner">恋人がいる</option>
@@ -66,8 +91,8 @@ diff -u a/mypage.html b/mypage.html
  function sexText(v){return sexCode(v)==="m"?"男性":"女性";}
  /* ===== 性別・今の状況の変更：本番はサーバーの会員データを更新し、成功したときだけ画面と端末の記録を変える ===== */
 diff -u a/register.html b/register.html
---- a/register.html	2026-10-02 07:24:21.436820966 +0000
-+++ b/register.html	2026-10-02 07:24:21.438614241 +0000
+--- a/register.html	2026-10-02 16:12:30.185063475 +0000
++++ b/register.html	2026-10-02 16:12:30.190331078 +0000
 @@ -112,7 +112,7 @@
        if(hh)hh.onchange=sync; sync();
      })();</script>
