@@ -1,6 +1,6 @@
 diff -uN a/daily-engine.js b/daily-engine.js
---- a/daily-engine.js	2026-10-03 18:18:47.611308372 +0000
-+++ b/daily-engine.js	2026-10-03 18:18:47.614489477 +0000
+--- a/daily-engine.js	2026-10-03 18:47:49.926698456 +0000
++++ b/daily-engine.js	2026-10-03 18:47:49.929691105 +0000
 @@ -115,7 +115,7 @@
  
    /* ===== ここから my-tenki-demo.html より一字一句移設した文言バンク＋純ヘルパー ===== */
@@ -65,7 +65,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  // 本人にとって「忌」なら、その分野の“良い印”は出さない（本人には消耗日で、出すと誤誘導になるため）。
  // favMap は PersonBazi().fav（五行→'喜'/'忌'/'中庸'）。命式が無い(null)ときは true＝従来どおり全部出す（安全側）。
  function domainFavOk(favMap, dayStem){
-@@ -552,6 +552,101 @@
+@@ -552,6 +552,103 @@
   *  保証：バンク件数(len)日間は同じ値が絶対に出ない（len≥7なら1週間内の重複ゼロ）。
   *  ub=個人だけのシード（日付を含まない）。順序も開始位置も個人ごとに違うので、他人と同じ並びにならない。
   *  決定的（同じ入力→同じ結果）なので、メールとカレンダー・デモ画面の一致もそのまま保たれる。 */
@@ -77,6 +77,8 @@ diff -uN a/daily-engine.js b/daily-engine.js
 +var MALE_NG=/リップ|ピアス|イヤリング|ヘアピン|ヘアクリップ|ヘアゴム|ネックレス|パール|真珠のアクセ|真珠風|ネイル|コスメ|化粧品|ハート|スカーフ|手鏡/;
 +var PARTNERED_NG=/気になる人|出会い/;   // 恋人・既婚の人には出さない
 +var MARRIED_LOVE_NG=/交際|入籍|婚約|プロポーズ|恋人|結婚に向け|紹介|付き合い|デート|膠着|次のステップ|周囲の女性|周囲の男性|周囲を魅了/;   // 結婚している人の「今日の恋愛運」に出さない言葉（恋人どうし向け）
++var LOVE_PUSH=/積極的に|大胆|臆せず|告白|一気に|押して|ストレートなアプローチ/;   // △の日の恋愛運に出さない、押しの強い描写
++var LOVE_DIRECT=/ストレートに|はっきり伝え|本音をぶつけ|思い切って伝え|言い切/;   // 言葉の注意が出る日の恋愛運に出さない描写
 +var PARTNER_LOVE_NG=/出会い|気になる|片想い|片思い|告白|アプローチ|異性|ライバル|恋人候補|運命の人|新しい恋|モテ|合コン|婚活|アプリ|新しい関係|関係がスタート|新しい出会い/;   // 恋人がいる人の「今日の恋愛運」に出さない言葉
 +var PLACE_NG=/海辺|岬|堤防|湖|陶芸の里|星の見える丘|夜景|水族館|足湯|雨上がり|交流会|イベント会場|イベント広場|桜のある|イルミネーション|新緑の|色づく/;  // 遠出・天気・催し・季節次第の場所
 +var WEEKEND_NG=/上司|取引先|面接|商談|会議|プレゼン|報連相|仕事|提出/;   // 土日に出さない“仕事の段取り”
@@ -167,7 +169,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  function pickSeq(ub, salt, len, dayn){
    if(!len) return 0;
    if(len===1) return 0;
-@@ -614,16 +709,16 @@
+@@ -614,16 +711,16 @@
        '“家庭を大切にするあなた”へ。今日のご家族との運気を、そっとお伝えします。',
        '“家庭を大切にするあなた”へ。今日はどんな一日になるか、のぞいてみましょう。'],
      work:[
@@ -189,7 +191,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
    };
    var REL_TAILS=[
      '今日の運気の動きを、そっとお届けします。','今日のあなたの運勢を、お届けします。',
-@@ -736,7 +831,8 @@
+@@ -736,7 +833,8 @@
    function generateDaily(birth, dateJST, opts){
      opts = opts || {};
      var rel = opts.rel || 'single';
@@ -199,7 +201,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var nick = (opts.nick && String(opts.nick).trim()) || 'あなた';
      var T = dateJST || E.todayJST();
      var Y=T.y, M=T.m, D=T.d;
-@@ -780,11 +876,12 @@
+@@ -780,11 +878,12 @@
      var _gm=(g.msg!=null)?g.msg:(sex==='f'?g.msgF:g.msgM);
      // メッセージは日付だけの seed%len だと同じ十神の人が全員同じ・かつ10日ごとに近い並びで戻るため、
      // 個人シード×その日で選ぶ。10日後に軸が巡ってきても文面が変わり、1ヶ月は被りにくい。
@@ -213,7 +215,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  
      var dayElem=STEM_GOGYO[t.stem], myElem=STEM_GOGYO[you.stem];
      var motherOf={}; for(var k in SHENG){ motherOf[SHENG[k]]=k; }
-@@ -830,8 +927,12 @@
+@@ -830,8 +929,12 @@
      var snzArr=SEASON_NUANCE[season]||[], snz=snzArr.length?snzArr[pickSeq(ubase,4,snzArr.length,seed)]:'';
      var seasonWord='いまは「'+sekki.name+'（'+sekki.yomi+'）」の頃。'+sekki.word+(snz?' '+snz:'');
  
@@ -227,7 +229,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var food=FOOD[fe][pickSeq(ubase,7,FOOD[fe].length,seed)];
      var mi=pickSeq(ubase,8,MENU[fe].length,seed), menu=MENU[fe][mi];
      // 2品目は「体感の季節」の定番メニュー＝季節感を出す（無ければ従来どおり五行メニュー）
-@@ -848,13 +949,17 @@
+@@ -848,13 +951,17 @@
      // ラッキースポットは個人シードのハッシュ(pickIdx)でバンク全体に分散（年間の実効＝fe種数×バンク数）。
      // ご縁の場所(spotNat2/City2)は ラッキースポット(spotNature/City) からバンク半周ずらして導出し、
      // 同じ日に同じ場所が両欄に出る“衝突”を構造的に防ぐ（半周のオフセットは0にならない＝必ず別の場所）。
@@ -251,7 +253,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var lnum=NUM[fe][pickRand(ubase,79,NUM[fe].length,seed)];
      var ptype=PTYPE[fe];
  
-@@ -865,7 +970,7 @@
+@@ -865,7 +972,7 @@
      var _occ=Math.floor(seed/10);
      var fPool=_pool(TAIJIN[you.stem]&&TAIJIN[you.stem][god], FRIEND[god]);
      var friend=fPool.length?fPool[pickSeq(ubase,51,fPool.length,_occ)]:'';
@@ -260,7 +262,22 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var study=STUDY[god]?STUDY[god][pickSeq(ubase,53,STUDY[god].length,_occ)]:'';   // 学び・成長（印星の理）
      // 今日の服＝ラッキーカラー×季節テンプレの合成（色が毎日変わるので数週間まず被らない）
      var wTplSet=(sex==='m'?WEARTPL_M:WEARTPL_F);
-@@ -894,12 +999,24 @@
+@@ -883,6 +990,14 @@
+     var money=mPool.length?mPool[pickSeq(ubase,55,mPool.length,_occ)]:'';
+     var hPool=_pool(HEALTH_TJ[god], HEALTH[god]);
+     var health=hPool.length?hPool[pickSeq(ubase,56,hPool.length,_occ)]:'';
++    var _koy=koyomiOf(you, t, _prof);
++    var _koyCare=(_koy.items||[]).some(function(x){ return x.tone==='care' || x.tone==='rest'; });
++    var _cbr=branchRel(t.branch, you.branch);
++    // いちばん良い日（💮）は、注意を出さずに気持ちよく送り出す（ランクと文章を矛盾させない）
++    var _cBr=(_koyCare || _grade.sym==='💮') ? null : CAUTION_BR[_cbr];
++    var _cGod=(_koyCare || _grade.sym==='💮' || _cBr) ? null : CAUTION_GOD[god];
++    // 同じ文章が近い日に戻らないよう「何回目の登場か」で順に回す（地支の関係＝3日以上あいて現れる／十神＝10日周期）
++    var caution=_cBr ? _cBr[pickSeq(ubase,95,_cBr.length,Math.floor(seed/3))] : (_cGod ? _cGod[pickSeq(ubase,96,_cGod.length,_occ)] : '');
+     var loveSet=(sex==='m')?LOVE_M:LOVE_F;
+     var lf=(loveSet[you.stem]&&loveSet[you.stem][god])||[];
+     var love='';
+@@ -894,13 +1009,32 @@
        // 同じ日干どうしで文面が丸かぶりしにくいよう、生まれ日の地支もシードに混ぜて分散させる。
        var _cc=_lc[pickSeq(ubase+you.branch.charCodeAt(0)*7,57,_lc.length,_occ)];
        love=lf[_cc[0]]+lf[_cc[1]];
@@ -273,19 +290,28 @@ diff -uN a/daily-engine.js b/daily-engine.js
        var _lg=LOVE_GEN[god]||[];
        love=_lg.length?_lg[pickSeq(ubase,57,_lg.length,_occ)]:'';
      }
-+    // 恋人がいる人・結婚している人（2026-10-02〜「ふたりの恋愛運」を出す）：独身向けの言葉（出会い・気になる人・アプローチ等）を含まない組み合わせだけを使う。
-+    // 結婚している人は、恋人どうし向けの言葉（交際・入籍・デート等）も除く。文章の選び方だけで、計算は同じ
+-    var _lms=LM_SITU[rel]||LM_SITU.single, loveMove=_lms[pickSeq(ubase,45,_lms.length,seed)]+LM_EFFECT[pickSeq(ubase,86,LM_EFFECT.length,seed)];
++    // 恋愛運の文章の選び直し（2026-10-02〜。文章の選び方だけで、計算は同じ）
++    //  ・恋人がいる人・結婚している人（「ふたりの恋愛運」）：独身向けの言葉（出会い・気になる人・アプローチ等）を含まない組み合わせだけ。
++    //    結婚している人は、恋人どうし向けの言葉（交際・入籍・デート等）も除く。合うものがなければ、その日は出さない。
++    //  ・△の日：「積極的に」「臆せず声をかける」など、押しの強い描写は避ける。
++    //  ・「今日の気をつけたいこと」が言葉の行き違い・言葉が強く出る日は、「ストレートに伝える」系の描写は避ける（注意と恋愛を矛盾させない）。
 +    var _plNG=function(t){ return PARTNER_LOVE_NG.test(t) || (rel==='married' && MARRIED_LOVE_NG.test(t)); };
-+    if((rel==='partner'||rel==='married') && love && _plNG(love)){
++    var _cWordy=!!(_cBr && _cbr==='害') || !!(_cGod && god==='傷官');
++    var _loveBad=function(tx){ return ((rel==='partner'||rel==='married') && _plNG(tx)) || (_grade.sym==='△' && LOVE_PUSH.test(tx)) || (_cWordy && LOVE_DIRECT.test(tx)); };
++    if(love && _loveBad(love)){
 +      var _pl='';
-+      if(lf.length>=4){ for(var _pi=0;_pi<_lc.length && !_pl;_pi++){ var _t=lf[_lc[_pi][0]]+lf[_lc[_pi][1]]; if(!_plNG(_t)&&toneOk(_t,_grade.sym)) _pl=_t; }
-+        for(var _pj=0;_pj<lf.length && !_pl;_pj++){ if(_pj!==2 && !_plNG(lf[_pj])&&toneOk(lf[_pj],_grade.sym)) _pl=lf[_pj]; } }
-+      love=_pl;   // 合うものがなければ、その日は出さない
++      if(lf.length>=4){ for(var _pi=0;_pi<_lc.length && !_pl;_pi++){ var _t=lf[_lc[_pi][0]]+lf[_lc[_pi][1]]; if(!_loveBad(_t)&&toneOk(_t,_grade.sym)) _pl=_t; }
++        for(var _pj=0;_pj<lf.length && !_pl;_pj++){ if(_pj!==2 && !_loveBad(lf[_pj])&&toneOk(lf[_pj],_grade.sym)) _pl=lf[_pj]; } }
++      if(_pl || rel==='partner' || rel==='married') love=_pl;   // 恋人・既婚で合うものがなければ、その日は出さない
 +    }
-     var _lms=LM_SITU[rel]||LM_SITU.single, loveMove=_lms[pickSeq(ubase,45,_lms.length,seed)]+LM_EFFECT[pickSeq(ubase,86,LM_EFFECT.length,seed)];
++    // 恋の一手の結び：恋人がいる人・結婚している人には「出会い」の結びを使わない（2026-10-02 修正）
++    var _lmE=(rel==='partner'||rel==='married') ? LM_EFFECT.filter(function(x){ return !PARTNERED_NG.test(x); }) : LM_EFFECT;
++    var _lms=LM_SITU[rel]||LM_SITU.single, loveMove=_lms[pickSeq(ubase,45,_lms.length,seed)]+_lmE[pickSeq(ubase,86,_lmE.length,seed)];
  
      var w=weather(idx);
-@@ -941,22 +1058,16 @@
+     var _wob=WOBS[w.name]||WOBS['晴れ時々くもり'], wmsg=_wob[pickSeq(ubase,59,_wob.length,seed)]+ADV_SHARED[pickSeq(ubase,88,ADV_SHARED.length,seed)];
+@@ -941,22 +1075,16 @@
      // 段階ごとの言い回しを日替わりで選ぶ（12日で同じ段階が巡っても文が変わり、繰り返しに気づかれにくい）。
      var juniStage=juniOf(you.stem, t.branch);
      var _jph=JUNI_PHRASES[juniStage]||['今日は、おだやかな運気の流れの日。'];
@@ -312,7 +338,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
        '開運アクションは「'+luckyAct+'」',
        'ラッキーは'+lucky.color+'×'+food,
        '今日の月は'+_mo[1]+_mo[0],
-@@ -973,8 +1084,35 @@
+@@ -973,8 +1101,27 @@
        'テーマ「'+themeAxis.ax+'」＆運気'+idx,
        '開運は'+luckyAct
      ];
@@ -338,18 +364,10 @@ diff -uN a/daily-engine.js b/daily-engine.js
 +    var subject=_subjHead+'｜'+_subjTail[_ti];
  
 +        // 今日の気をつけたいこと（文章だけ。指数・ランクには影響しない）
-+    var _koy=koyomiOf(you, t, _prof);
-+    var _koyCare=(_koy.items||[]).some(function(x){ return x.tone==='care' || x.tone==='rest'; });
-+    var _cbr=branchRel(t.branch, you.branch);
-+    // いちばん良い日（💮）は、注意を出さずに気持ちよく送り出す（ランクと文章を矛盾させない）
-+    var _cBr=(_koyCare || _grade.sym==='💮') ? null : CAUTION_BR[_cbr];
-+    var _cGod=(_koyCare || _grade.sym==='💮' || _cBr) ? null : CAUTION_GOD[god];
-+    // 同じ文章が近い日に戻らないよう「何回目の登場か」で順に回す（地支の関係＝3日以上あいて現れる／十神＝10日周期）
-+    var caution=_cBr ? _cBr[pickSeq(ubase,95,_cBr.length,Math.floor(seed/3))] : (_cGod ? _cGod[pickSeq(ubase,96,_cGod.length,_occ)] : '');
      return {
        version:'daily-1.0.0',
        subject:subject,
-@@ -991,7 +1129,8 @@
+@@ -991,7 +1138,8 @@
        en:{lv:en.lv, tag:enTag, body:enBody},
        love:love, loveMove:loveMove,
        touka:touka, special:special,
@@ -359,7 +377,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
        element:{day:dayElem, mine:myElem, supplement:fe, reason:feReason, feFood:feFood},
        bazi:favInfo,
        lucky:{color:lucky.color, hex:lucky.hex, direction:ldir, food:food, number:lnum,
-@@ -1008,6 +1147,8 @@
+@@ -1008,6 +1156,8 @@
          else if(_grade.sym==='◎')_b=TODAY_ONE.maru[grp][pickSeq(ubase,42,TODAY_ONE.maru[grp].length,seed)];
          else if(_grade.sym==='△')_b=TODAY_ONE.tri[pickSeq(ubase,43,TODAY_ONE.tri.length,seed)];
          else _b=TODAY_ONE.norm[grp][pickSeq(ubase,44,TODAY_ONE.norm[grp].length,seed)];
@@ -368,7 +386,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
          return _b.split('。')[0]+'。'+TODAY_WHY[pickSeq(ubase,93,TODAY_WHY.length,seed)];
        })(),
        seed:seed, pseed:pseed
-@@ -1023,6 +1164,7 @@
+@@ -1023,6 +1173,7 @@
      REL_INTRO: REL_INTRO, EN_TAG_BY_REL: EN_TAG_BY_REL, LV1_TAGS: LV1_TAGS, CLOSE_WORD: CLOSE_WORD,
      GEN_OF: GEN_OF,
      ITEM: ITEM,
@@ -377,8 +395,8 @@ diff -uN a/daily-engine.js b/daily-engine.js
      PTYPE: PTYPE,
      DATEWEAR_F: DATEWEAR_F,
 diff -uN a/index.html b/index.html
---- a/index.html	2026-10-03 18:18:47.617119551 +0000
-+++ b/index.html	2026-10-03 18:18:47.619274859 +0000
+--- a/index.html	2026-10-03 18:47:49.932796575 +0000
++++ b/index.html	2026-10-03 18:47:49.934698457 +0000
 @@ -31,7 +31,8 @@
  {"@type":"Question","name":"すべての機能が無料で使えますか？","acceptedAnswer":{"@type":"Answer","text":"はい。相性診断・毎朝メール・運気カレンダー（Googleカレンダー連携）まで、すべての機能を無料でご利用いただけます。"}},
  {"@type":"Question","name":"占いはどういう仕組みですか？当たりますか？","acceptedAnswer":{"@type":"Answer","text":"千年以上の歴史を持つ四柱推命（日柱・通変星・干合・支合・五行）にもとづき、生年月日から毎日ひとつずつ計算しています。毎朝を前向きに過ごすヒントとしてお使いください。"}},
@@ -549,7 +567,7 @@ diff -uN a/index.html b/index.html
  /* 未登録の訪問者には「マイページ」を見せず「無料登録」に出し分け（登録後はマイページ表示） */
 diff -uN a/jp-holidays.js b/jp-holidays.js
 --- a/jp-holidays.js	1970-01-01 00:00:00.000000000 +0000
-+++ b/jp-holidays.js	2026-10-03 18:18:47.621469338 +0000
++++ b/jp-holidays.js	2026-10-03 18:47:49.937450971 +0000
 @@ -0,0 +1,65 @@
 +/*! jp-holidays.js — 日本の祝日（「国民の祝日に関する法律」にもとづく自動計算）
 + *
@@ -618,7 +636,7 @@ diff -uN a/jp-holidays.js b/jp-holidays.js
 +})(typeof window !== 'undefined' ? window : this);
 diff -uN a/mail-preview.html b/mail-preview.html
 --- a/mail-preview.html	1970-01-01 00:00:00.000000000 +0000
-+++ b/mail-preview.html	2026-10-03 18:18:47.624084865 +0000
++++ b/mail-preview.html	2026-10-03 18:47:49.940092623 +0000
 @@ -0,0 +1,25 @@
 +<!doctype html>
 +<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
@@ -646,8 +664,8 @@ diff -uN a/mail-preview.html b/mail-preview.html
 +</script>
 +</body></html>
 diff -uN a/mail-sample-free.html b/mail-sample-free.html
---- a/mail-sample-free.html	2026-10-03 18:18:47.626295908 +0000
-+++ b/mail-sample-free.html	2026-10-03 18:18:47.628649245 +0000
+--- a/mail-sample-free.html	2026-10-03 18:47:49.942698457 +0000
++++ b/mail-sample-free.html	2026-10-03 18:47:49.945403159 +0000
 @@ -1,215 +1,11 @@
  <!doctype html>
 -<html lang="ja"><head><meta charset="utf-8">
@@ -874,8 +892,8 @@ diff -uN a/mail-sample-free.html b/mail-sample-free.html
 +<a href="mail-preview.html" style="color:#c14e77;">毎朝のメール見本はこちら</a>
  </body></html>
 diff -uN a/mail-sample.html b/mail-sample.html
---- a/mail-sample.html	2026-10-03 18:18:47.630803055 +0000
-+++ b/mail-sample.html	2026-10-03 18:18:47.632958028 +0000
+--- a/mail-sample.html	2026-10-03 18:47:49.947921903 +0000
++++ b/mail-sample.html	2026-10-03 18:47:49.950422862 +0000
 @@ -1,432 +1,11 @@
  <!doctype html>
 -<html lang="ja"><head><meta charset="utf-8">
@@ -1318,8 +1336,8 @@ diff -uN a/mail-sample.html b/mail-sample.html
 +<a href="mail-preview.html" style="color:#c14e77;">毎朝のメール見本はこちら</a>
  </body></html>
 diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
---- a/my-tenki-demo.html	2026-10-03 18:18:47.635470308 +0000
-+++ b/my-tenki-demo.html	2026-10-03 18:18:47.638741768 +0000
+--- a/my-tenki-demo.html	2026-10-03 18:47:49.953501460 +0000
++++ b/my-tenki-demo.html	2026-10-03 18:47:49.956033487 +0000
 @@ -83,7 +83,7 @@
    .mail{margin-top:10px;border:1px solid var(--line);border-radius:12px;background:rgba(7,7,16,.5);overflow:hidden;}
    .mail-sub{padding:12px 14px;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--gold);font-weight:700;background:rgba(230,196,119,.06);}
@@ -1542,8 +1560,8 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    setTimeout(function(){var _dd=$("dayDetail");if(_dd){var _y=_dd.getBoundingClientRect().top+window.pageYOffset-70;window.scrollTo({top:_y,behavior:'smooth'});}},60);
    $("memoSave").onclick=()=>{try{localStorage.setItem(memoKey(d),$("memoBox").value);}catch(e){}renderCalendar();$("memoSave").textContent='保存しました ✓';};
 diff -uN a/mypage.html b/mypage.html
---- a/mypage.html	2026-10-03 18:18:47.641333206 +0000
-+++ b/mypage.html	2026-10-03 18:18:47.643308374 +0000
+--- a/mypage.html	2026-10-03 18:47:49.958698458 +0000
++++ b/mypage.html	2026-10-03 18:47:49.961702771 +0000
 @@ -113,6 +113,9 @@
    .cal-cell.empty{background:none;cursor:default;}
    .cal-cell.today{outline:2px solid var(--coral);}
@@ -1814,8 +1832,8 @@ diff -uN a/mypage.html b/mypage.html
  
  applyMember();
 diff -uN a/privacy.html b/privacy.html
---- a/privacy.html	2026-10-03 18:18:47.645618937 +0000
-+++ b/privacy.html	2026-10-03 18:18:47.647505462 +0000
+--- a/privacy.html	2026-10-03 18:47:49.963971313 +0000
++++ b/privacy.html	2026-10-03 18:47:49.966543765 +0000
 @@ -45,7 +45,7 @@
      <p>本サービスは無料でご提供しており、クレジットカード情報・お支払い情報など決済に関する情報は一切取得しません。取得する情報は、サービス提供および運営（将来の広告を含む）に必要な範囲にとどめます。</p>
      <ul>
@@ -1847,8 +1865,8 @@ diff -uN a/privacy.html b/privacy.html
  </main>
  
 diff -uN a/register.html b/register.html
---- a/register.html	2026-10-03 18:18:47.649656760 +0000
-+++ b/register.html	2026-10-03 18:18:47.651308375 +0000
+--- a/register.html	2026-10-03 18:47:49.969090850 +0000
++++ b/register.html	2026-10-03 18:47:49.971898924 +0000
 @@ -101,7 +101,7 @@
    </div>
    <div class="card">
@@ -1907,7 +1925,7 @@ diff -uN a/register.html b/register.html
  var _vEmail="";
 diff -uN a/share.js b/share.js
 --- a/share.js	1970-01-01 00:00:00.000000000 +0000
-+++ b/share.js	2026-10-03 18:18:47.653972110 +0000
++++ b/share.js	2026-10-03 18:47:49.974034714 +0000
 @@ -0,0 +1,72 @@
 +/* share.js ── 「友だちに教える」（シェア）と紹介コード（2026-09-30 追加）
 + *
@@ -1982,8 +2000,8 @@ diff -uN a/share.js b/share.js
 +  window.UnkiShare = { ref: ref, myCode: myCode, url: url, mount: mount, TEXT: TEXT };
 +})();
 diff -uN a/terms.html b/terms.html
---- a/terms.html	2026-10-03 18:18:47.656091398 +0000
-+++ b/terms.html	2026-10-03 18:18:47.657814432 +0000
+--- a/terms.html	2026-10-03 18:47:49.976299059 +0000
++++ b/terms.html	2026-10-03 18:47:49.978657990 +0000
 @@ -83,7 +83,7 @@
      <h2>第7条（本サービスの内容・鑑定に関する免責）＝重要</h2>
      <div class="imp">
@@ -2003,8 +2021,8 @@ diff -uN a/terms.html b/terms.html
  
  </main>
 diff -uN a/unsubscribe.html b/unsubscribe.html
---- a/unsubscribe.html	2026-10-03 18:18:47.659308375 +0000
-+++ b/unsubscribe.html	2026-10-03 18:18:47.661681522 +0000
+--- a/unsubscribe.html	2026-10-03 18:47:49.981265364 +0000
++++ b/unsubscribe.html	2026-10-03 18:47:49.983388853 +0000
 @@ -35,6 +35,15 @@
  <div class="bg"></div>
  <div class="wrap">

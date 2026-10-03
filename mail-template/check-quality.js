@@ -69,6 +69,8 @@ for (let u = 0; u < N; u++) {
     if (o.sex === 'm') for (const k in v) { const t = v[k].replace(/パールベージュ|パール|真珠色/g, ''); if (MALE_NG.test(t)) add(3, `${ds} ${k}「${v[k].slice(0, 30)}」`); }
     // 4. 恋人・既婚に「気になる人」系の行動
     if (o.rel === 'married' || o.rel === 'partner') for (const k of ['開運アクション', 'おすすめの行動']) if (PARTNERED_NG.test(v[k])) add(4, `${ds} ${o.rel} ${k}「${v[k]}」`);
+    //    （2026-10-02〜）恋の一手に「出会い」系の言葉が混ざっていないか
+    if ((o.rel === 'married' || o.rel === 'partner') && PARTNERED_NG.test(r.loveMove || '')) add(4, `${ds} ${o.rel} 恋の一手「${r.loveMove}」`);
     //    （2026-10-02〜）「ふたりの恋愛運」に独身向け・恋人どうし向けの言葉が混ざっていないか
     if ((o.rel === 'married' || o.rel === 'partner') && r.love && (LOVE_SINGLE_NG.test(r.love) || (o.rel === 'married' && LOVE_COUPLE_NG.test(r.love)))) add(4, `${ds} ${o.rel} ふたりの恋愛運「${r.love.slice(0, 40)}」`);
     // 5. 土日の仕事の段取り
