@@ -191,6 +191,8 @@
     if (r.focus) h.push(sec(r.focus.emoji || '🎯', '今日の注目：あなたが大切にしている「' + esc(r.focus.label) + '」', r.focus.text, '#c0392b', '#fff0ee'));
     h.push(sec('🌅', '今日のあなた', '今日のテーマは「' + r.theme.axis + '」（' + r.theme.mean + 'の巡り）。' + (r.theme.line ? r.theme.line + ' ' : '') + r.theme.message, '#c9862a', '#fff6e6'));
     if (r.juni && r.juni.text) h.push(sec('🔄', '今日の運気の巡り', r.juni.text, '#9a6cc4', '#f3eefb'));
+    /* 🔔 今日の気をつけたいこと（2026-10-02 追加。サインがある日だけ。落ち着いた色で目立たせすぎない） */
+    if (r.caution) h.push(sec('🔔', '今日の気をつけたいこと', r.caution, '#5f7f9a', '#eef3f7'));
 
     /* 💗 恋愛・ご縁（全員に出す。見出しは rel で変わる） */
     var placeText = (rel === 'married' || rel === 'partner')
@@ -318,6 +320,7 @@
     t.push('■ 今日の運勢：' + r.weather.name + '（運勢指数 ' + idx + '/100）', strip(r.weatherMsg), '');
     if (r.todayOne) t.push('■ 今日はこれだけ', strip(r.todayOne), '');
     t.push('■ 今日のあなた', strip(r.theme.message), '');
+    if (r.caution) t.push('■ 今日の気をつけたいこと', strip(r.caution), '');
     if (RH.en) t.push('■ ' + RH.en, '[' + r.en.tag + '] ' + strip(r.en.body), '');
     if (r.love && RH.en) t.push('■ ' + ((rel === 'partner' || rel === 'married') ? 'ふたりの恋愛運' : '今日の恋愛運'), strip(r.love), '');
     t.push('■ 仕事・勝負運', strip(fo.work), '', '■ 金運', strip(fo.money), '', '■ 友達・対人運', strip(fo.friend), '', '■ 体調・リラックス', strip(fo.health), '');

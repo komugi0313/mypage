@@ -37,7 +37,7 @@ const FIELDS = {
   件名: r => r.subject, 朝のひとこと: r => r.morning, 今日はこれだけ: r => r.todayOne, 開運習慣: r => r.habit,
   今日のあなた: r => r.theme.message, 縁: r => r.en.body, 恋愛運: r => r.love, 恋の一手: r => r.loveMove,
   仕事: r => r.fortunes.work, 金運: r => r.fortunes.money, 対人: r => r.fortunes.friend, 健康: r => r.fortunes.health, 学び: r => r.fortunes.study,
-  運気の巡り: r => r.juni && r.juni.text, ワンポイント: r => r.onepoint, 締め: r => r.closeWord, 注目テーマ: r => r.focus && r.focus.text,
+  運気の巡り: r => r.juni && r.juni.text, 気をつけたいこと: r => r.caution, ワンポイント: r => r.onepoint, 締め: r => r.closeWord, 注目テーマ: r => r.focus && r.focus.text,
   開運アクション: r => r.lucky.action, おすすめの行動: r => r.lucky.act, アイテム: r => r.lucky.item, 食材: r => r.lucky.food,
   メニュー1: r => r.lucky.menu[0], メニュー2: r => r.lucky.menu[1], 今日の服: r => r.lucky.wear,
   ラッキースポット自然: r => r.lucky.spotNature, ラッキースポット街: r => r.lucky.spotCity, ご縁の場所自然: r => r.place.nature, ご縁の場所街: r => r.place.city
