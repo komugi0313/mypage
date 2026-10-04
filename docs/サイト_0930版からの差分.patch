@@ -1,6 +1,32 @@
-diff -u a/daily-engine.js b/daily-engine.js
---- a/daily-engine.js	2026-10-04 08:01:02.498058781 +0000
-+++ b/daily-engine.js	2026-10-04 08:01:02.501537114 +0000
+diff -uN a/auth.js b/auth.js
+--- a/auth.js	2026-10-04 09:17:10.834196352 +0000
++++ b/auth.js	2026-10-04 09:17:10.836187181 +0000
+@@ -1,5 +1,5 @@
+ /* =============================================================================
+- * 私だけの運気予報 ── 認証クライアント (auth.js)
++ * 私だけの開運予報 ── 認証クライアント (auth.js)
+  * -----------------------------------------------------------------------------
+  * パスワードレス（メール確認コード / OTP）方式のログインをフロント側で扱う共通部品。
+  * register.html / login.html / mypage.html から読み込んで使う。
+@@ -106,7 +106,7 @@
+       sentAt: now(), expiresAt: now() + CONFIG.codeTTLms, attempts: 0
+     });
+     // 開発モードでは「コンソールにも」出す（実機テストの補助）
+-    try { console.info('[運気予報:開発モード] ' + email + ' 宛の確認コード = ' + code); } catch (e) {}
++    try { console.info('[開運予報:開発モード] ' + email + ' 宛の確認コード = ' + code); } catch (e) {}
+     return Promise.resolve({ devCode: code, cooldownMs: CONFIG.resendCooldownMs });
+   }
+ 
+diff -uN a/daily-engine.js b/daily-engine.js
+--- a/daily-engine.js	2026-10-04 09:17:10.838096541 +0000
++++ b/daily-engine.js	2026-10-04 09:17:10.840342949 +0000
+@@ -1,5 +1,5 @@
+ /*!
+- * daily-engine.js — 「私だけの運気予報」日運の文言バンク＋鑑定文の正本（単一ソース）
++ * daily-engine.js — 「私だけの開運予報」日運の文言バンク＋鑑定文の正本（単一ソース）
+  * ------------------------------------------------------------------
+  * 目的：毎朝メールと画面(my-tenki-demo)が “同じ文言・同じ選び方” を使うための単一ソース。
+  *       計算(四柱推命の確定ロジック)は engine.js を正本として参照し、ここでは重複させない。
 @@ -559,6 +559,10 @@
   * 運勢の計算（指数・天気・グレード・五行）には一切影響しない。 */
  var MALE_NG=/リップ|ピアス|イヤリング|ヘアピン|ヘアクリップ|ヘアゴム|ネックレス|パール|真珠のアクセ|真珠風|ネイル|コスメ|化粧品|ハート|スカーフ|手鏡/;
@@ -109,6 +135,15 @@ diff -u a/daily-engine.js b/daily-engine.js
    };
    var REL_TAILS=[
      '今日の運気の動きを、そっとお届けします。','今日のあなたの運勢を、お届けします。',
+@@ -656,7 +728,7 @@
+     '今日のあなたに動く運を、お届けします。','今日の過ごし方のヒントを、お届けします。',
+     '今日の運勢を、朝いちばんにお届けします。','今日の運気を、いっしょに味方にしていきましょう。',
+     '今日という日の運勢を、お伝えします。','今日も良い一日になるヒントを、お届けします。',
+-    '今日の運気予報を、お届けします。','今日の縁と運気を、ぎゅっとまとめてお届けします。',
++    '今日の開運予報を、お届けします。','今日の縁と運気を、ぎゅっとまとめてお届けします。',
+     '今日のあなたに効く、開運のヒントをお届けします。','今日の空模様（運勢）を、そっとのぞいてみましょう。',
+     '今日のあなたへ、朝いちばんの運気だよりです。','今日の一日が良くなるコツを、お届けします。',
+     '今日の運気とラッキーを、まとめてお伝えします。','今日のあなたの一日を、そっと応援します。'
 @@ -918,6 +990,14 @@
      var money=mPool.length?mPool[pickSeq(ubase,55,mPool.length,_occ)]:'';
      var hPool=_pool(HEALTH_TJ[god], HEALTH[god]);
@@ -149,6 +184,15 @@ diff -u a/daily-engine.js b/daily-engine.js
  
      var w=weather(idx);
      var _wob=WOBS[w.name]||WOBS['晴れ時々くもり'], wmsg=_wob[pickSeq(ubase,59,_wob.length,seed)]+ADV_SHARED[pickSeq(ubase,88,ADV_SHARED.length,seed)];
+@@ -972,7 +1068,7 @@
+     }
+ 
+     // ===== 件名（メールのタイトル）＝開封率のカギ。毎日ちがう“開けたくなる”件名を作る。
+-    // どのパターンも必ず「運気予報／今日の運勢」等のブランド語を含め、名前は「◯◯さん」と
++    // どのパターンも必ず「開運予報／今日の運勢」等のブランド語を含め、名前は「◯◯さん」と
+     // 呼びかけ形にして、件名が相性診断や本文と取り違えられないようにする。
+     var _gl=GRADE_LABEL[_grade.sym]||'';
+     // 十二運（今日のあなたの運気の巡り）＝日主 × その日の地支。段階名(墓/死/病等)はユーザーに出さず、
 @@ -1025,6 +1121,7 @@
      while(_tn<_subjTail.length && !(toneOk(_subjTail[_ti],_grade.sym) && _subjTail[_ti].indexOf(_gl)<0)){ _ti=(_ti+1)%_subjTail.length; _tn++; }
      var subject=_subjHead+'｜'+_subjTail[_ti];
@@ -167,10 +211,40 @@ diff -u a/daily-engine.js b/daily-engine.js
        element:{day:dayElem, mine:myElem, supplement:fe, reason:feReason, feFood:feFood},
        bazi:favInfo,
        lucky:{color:lucky.color, hex:lucky.hex, direction:ldir, food:food, number:lnum,
-diff -u a/index.html b/index.html
---- a/index.html	2026-10-04 08:01:02.504030480 +0000
-+++ b/index.html	2026-10-04 08:01:02.506108736 +0000
-@@ -28,7 +28,7 @@
+diff -uN a/index.html b/index.html
+--- a/index.html	2026-10-04 09:17:10.777798845 +0000
++++ b/index.html	2026-10-04 09:17:10.780063884 +0000
+@@ -3,32 +3,32 @@
+ <head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+-<title>私だけの運気予報 ── 毎朝、あなただけの運勢が届く</title>
++<title>私だけの開運予報 ── 毎朝、あなただけの運勢が届く</title>
+ <link rel="icon" type="image/png" href="favicon-tenki.png">
+ <link rel="apple-touch-icon" href="favicon-tenki-180.png">
+ <meta name="description" content="生年月日から、毎朝あなただけの運勢（恋・仕事・対人・ラッキー・勝負日）を天気予報のようにお届け。誰でもずっと完全無料。">
+ <link rel="canonical" href="https://unkiyoho.jp/">
+ <!-- OGP / SNSシェア用 -->
+ <meta property="og:type" content="website">
+-<meta property="og:site_name" content="私だけの運気予報">
++<meta property="og:site_name" content="私だけの開運予報">
+ <meta property="og:locale" content="ja_JP">
+-<meta property="og:title" content="私だけの運気予報 ── 毎朝、あなただけの運勢が届く">
++<meta property="og:title" content="私だけの開運予報 ── 毎朝、あなただけの運勢が届く">
+ <meta property="og:description" content="生年月日から毎朝あなただけの運勢を天気予報のようにお届け。誰でもずっと完全無料。">
+ <meta property="og:image" content="https://unkiyoho.jp/ogp-tenki.png">
+ <meta property="og:url" content="https://unkiyoho.jp/">
+ <meta name="twitter:card" content="summary_large_image">
+-<meta name="twitter:title" content="私だけの運気予報 ── 毎朝、あなただけの運勢が届く">
++<meta name="twitter:title" content="私だけの開運予報 ── 毎朝、あなただけの運勢が届く">
+ <meta name="twitter:description" content="生年月日から毎朝あなただけの運勢を天気予報のようにお届け。誰でもずっと完全無料。">
+ <meta name="twitter:image" content="https://unkiyoho.jp/ogp-tenki.png">
+ <script type="application/ld+json">
+ {"@context":"https://schema.org","@graph":[
+ {"@type":"Organization","@id":"https://unkiyoho.jp/#org","name":"72k株式会社","url":"https://unkiyoho.jp/","email":"info@72k.ai"},
+-{"@type":"WebSite","@id":"https://unkiyoho.jp/#website","url":"https://unkiyoho.jp/","name":"私だけの運気予報","inLanguage":"ja","publisher":{"@id":"https://unkiyoho.jp/#org"}},
++{"@type":"WebSite","@id":"https://unkiyoho.jp/#website","url":"https://unkiyoho.jp/","name":"私だけの開運予報","inLanguage":"ja","publisher":{"@id":"https://unkiyoho.jp/#org"}},
+ {"@type":"FAQPage","mainEntity":[
  {"@type":"Question","name":"本当に無料ですか？料金はかかりませんか？","acceptedAnswer":{"@type":"Answer","text":"はい。誰でもずっと完全無料です。お支払い方法の登録も不要で、料金は一切かかりません。"}},
  {"@type":"Question","name":"あとから料金がかかることはありますか？","acceptedAnswer":{"@type":"Answer","text":"いいえ。ずっと完全無料で、あとから料金がかかることはありません。会員のランク分けや追加料金はなく、すべての機能を全員に開放しています。"}},
  {"@type":"Question","name":"配信を止めたくなったら？","acceptedAnswer":{"@type":"Answer","text":"マイページからいつでも配信を停止できます。引き止めや面倒な手続きはありません。"}},
@@ -179,6 +253,31 @@ diff -u a/index.html b/index.html
  {"@type":"Question","name":"占いはどういう仕組みですか？当たりますか？","acceptedAnswer":{"@type":"Answer","text":"千年以上の歴史を持つ四柱推命（日柱・通変星・干合・支合・五行）にもとづき、生年月日から毎日ひとつずつ計算しています。毎朝を前向きに過ごすヒントとしてお使いください。"}},
  {"@type":"Question","name":"生年月日などの個人情報は安全ですか？","acceptedAnswer":{"@type":"Answer","text":"いただいた情報は占いの計算とお届けに使用し、大切に管理します。詳しくはプライバシーポリシーをご覧ください。"}},
  {"@type":"Question","name":"男性でも使えますか？","acceptedAnswer":{"@type":"Answer","text":"はい、もちろんご利用いただけます。今日の服・恋愛運・ラッキーアイテムなどは、男性の方には男性向けの内容でお届けします。"}},
+@@ -384,7 +384,7 @@
+ <div class="sky"></div>
+ <div class="stars"></div>
+ <div class="sun"></div>
+-<!-- 運気予報LPの上部バー（青水色＋枠付きピル。1.66は🏠付きで相性診断トップへ戻る） -->
++<!-- 開運予報LPの上部バー（青水色＋枠付きピル。1.66は🏠付きで相性診断トップへ戻る） -->
+ <header style="position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 16px;background:linear-gradient(118deg,#2f6fb5 0%,#4a8fcf 48%,#7cb8e6 100%);border-bottom:1px solid rgba(255,255,255,.2);box-shadow:0 8px 24px -14px rgba(20,55,110,.6);">
+   <a class="lph-home" href="https://166unmei.com/" title="1.66 相性診断トップへ戻る">
+     <span class="lph-emoji" style="font-size:15px;line-height:1;">🏠</span>
+@@ -397,13 +397,13 @@
+ <div class="wrap">
+   <div class="brand">
+     <div class="en">MY DAILY FORECAST</div>
+-    <div class="jp">私だけの運気予報</div>
++    <div class="jp">私だけの開運予報</div>
+   </div>
+ 
+   <div class="hero">
+     <div class="lp-eyebrow">朝6:00、起きたらもう届いている</div>
+     <h1>今日のあなたが、<br><b>一通の手紙</b>になって届く。</h1>
+-    <p class="lead">恋も、仕事も、人づきあいも。<br>あなただけの「縁の運気予報」を、毎朝。</p>
++    <p class="lead">恋も、仕事も、人づきあいも。<br>あなただけの「縁の開運予報」を、毎朝。</p>
+     <div style="display:inline-flex;align-items:center;gap:7px;margin:12px auto 2px;background:linear-gradient(135deg,#ffdf94,#ffb64d 54%,#ff9838);color:#7a4406;font-family:var(--serif);font-weight:800;font-size:14px;letter-spacing:.03em;border-radius:999px;padding:9px 20px;box-shadow:0 10px 24px -8px rgba(240,150,40,.55);white-space:nowrap;">🎁 誰でも、<b style="color:#b23410">ずっと完全無料</b></div>
+     <div style="font-size:11px;color:#8a6a55;margin:5px auto 0;letter-spacing:.02em;">登録1分・いつでも停止OK・料金は一切かかりません</div>
+     <p style="font-size:11.5px;color:#5a4650;margin:10px auto 0;max-width:340px;line-height:1.7;">四柱推命の<b style="color:#b25c81">命式</b>にもとづく、当サービス独自の運勢予報です。</p>
 @@ -540,7 +540,7 @@
    <div style="text-align:center;max-width:440px;margin:30px auto 0;"><div style="font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.75;">メールで<b style="color:var(--coral-d)">“今日”</b>を。<br>次は、この先1か月を<b style="color:var(--coral-d)">“見る”</b>。</div><div style="font-size:22px;color:var(--coral-d);line-height:1;margin-top:2px;">▼</div></div>
  
@@ -219,7 +318,7 @@ diff -u a/index.html b/index.html
        <div class="tile"><div class="ic">⚜</div><div class="tt">四柱推命の理論で分析</div><div class="td">千年の歴史を持つ四柱推命のロジックで丁寧に分析して、毎朝メールでお届けします。</div></div>
        <div class="tile" style="grid-column:1/-1"><div class="ic">👗👔</div><div class="tt">もちろん男性の方にも</div><div class="td">今日の服・恋愛運・ラッキーアイテムまで、男性の方には男性向けの内容でお届けします。</div></div>
      </div>
-@@ -628,13 +628,13 @@
+@@ -628,15 +628,15 @@
          <tr><td>気になる人との相性</td><td class="yes">○</td></tr>
          <tr><td>対人運・仕事運・金運・体調</td><td class="yes">○</td></tr>
          <tr><td>ラッキー一式・おすすめ服</td><td class="yes">○</td></tr>
@@ -233,8 +332,11 @@ diff -u a/index.html b/index.html
 -    <div class="note">毎朝メール・運気カレンダー（Googleカレンダー連携）まで、<b>すべて無料</b>でお使いいただけます。配信が不要になれば、マイページからいつでも停止できます。</div>
 +    <div class="note">毎朝メール・開運カレンダー（Googleカレンダー連携）まで、<b>すべて無料</b>でお使いいただけます。配信が不要になれば、マイページからいつでも停止できます。</div>
      <a class="cta" href="register.html" style="margin-top:18px;">無料ではじめる →<span class="s">登録1分・カンタン</span></a>
-     <!-- 干支キャラ図鑑は 1.66相性診断のものが正（2026-09-30 オーナー決定）。運気予報内のコピー zukan.html ではなく、1.66相性診断の図鑑へ -->
+-    <!-- 干支キャラ図鑑は 1.66相性診断のものが正（2026-09-30 オーナー決定）。運気予報内のコピー zukan.html ではなく、1.66相性診断の図鑑へ -->
++    <!-- 干支キャラ図鑑は 1.66相性診断のものが正（2026-09-30 オーナー決定）。開運予報内のコピー zukan.html ではなく、1.66相性診断の図鑑へ -->
      <a href="https://166unmei.com/zukan.html" style="display:block;max-width:330px;margin:16px auto 0;text-align:center;text-decoration:none;background:#fff;border:1.5px solid rgba(239,95,60,.42);border-radius:14px;padding:13px 18px;box-shadow:0 10px 24px -12px rgba(239,95,60,.4);line-height:1.5;">
+       <span style="display:block;font-family:var(--serif);font-weight:700;font-size:14.5px;color:var(--coral-d);">🐰 あなたは、どの干支キャラ？</span>
+       <span style="display:block;font-family:var(--sans);font-size:11.5px;font-weight:600;color:#a2694a;margin-top:4px;">生年月日でわかる、<span style="white-space:nowrap">60種のキャラクター図鑑</span> →</span>
 @@ -648,7 +648,7 @@
      <div class="voices-h">― お客様の声 ―</div>
      <div class="voice-grid">
@@ -253,9 +355,134 @@ diff -u a/index.html b/index.html
      <details class="faq-item"><summary>占いはどういう仕組みですか？当たりますか？</summary><div class="faq-a">千年以上の歴史を持つ<b>四柱推命</b>（日柱・通変星・干合・支合・五行）にもとづき、生年月日から<b>毎日1日ずつ計算</b>しています。「当てる」よりも、毎朝を前向きに過ごすヒントとしてお使いください。</div></details>
      <details class="faq-item"><summary>生年月日などの個人情報は安全ですか？</summary><div class="faq-a">いただいた情報は、<b>占いの計算とお届け</b>に使用し、大切に管理します。詳しくは<a href="privacy.html">プライバシーポリシー</a>をご覧ください。</div></details>
      <details class="faq-item"><summary>男性でも使えますか？</summary><div class="faq-a">はい、<b>もちろんご利用いただけます。</b>今日の服・恋愛運・ラッキーアイテムなどは、男性の方には男性向けの内容でお届けします。</div></details>
-diff -u a/my-tenki-demo.html b/my-tenki-demo.html
---- a/my-tenki-demo.html	2026-10-04 08:01:02.493412148 +0000
-+++ b/my-tenki-demo.html	2026-10-04 08:01:02.495664205 +0000
+@@ -711,7 +711,7 @@
+       <div style="display:flex;align-items:center;justify-content:center;gap:12px;font-family:'Cormorant Garamond',serif;font-weight:700;font-size:22px;letter-spacing:.12em;color:#c4892b;"><span style="flex:0 1 70px;height:1px;background:linear-gradient(90deg,transparent,#d9b36a);"></span><span style="white-space:nowrap;">Special Reading</span><span style="flex:0 1 70px;height:1px;background:linear-gradient(90deg,#d9b36a,transparent);"></span></div>
+       <div style="font-family:'Shippori Mincho B1',serif;font-weight:700;font-size:13px;color:#9a8d94;letter-spacing:.08em;margin-top:2px;">あなたの運命を、もっと深く</div>
+     </div>
+-    <!-- 1.66 奇跡の相性診断（公開中・リンクあり）2026-09-30 追加：運気予報から来た人が 1.66 へ行ける入口 -->
++    <!-- 1.66 奇跡の相性診断（公開中・リンクあり）2026-09-30 追加：開運予報から来た人が 1.66 へ行ける入口 -->
+     <a href="https://166unmei.com/" style="display:block;text-decoration:none;border-radius:20px;overflow:hidden;box-shadow:0 18px 40px -18px rgba(200,70,80,.5);">
+       <div style="position:relative;padding:22px 18px 22px;color:#fff;text-align:center;font-family:'Zen Kaku Gothic New',sans-serif;
+         background:radial-gradient(120% 90% at 50% 4%,rgba(255,255,255,.18),transparent 58%),linear-gradient(125deg,#d8466a 0%,#ff7e5f 55%,#f3b25e 100%);">
+@@ -768,7 +768,7 @@
+     </div>
+   </div>
+ 
+-  <div class="foot">私だけの運気予報 ／ 毎朝の運勢を、天気予報のように。<br>誰でもずっと完全無料・登録1分・配信はいつでも停止OK。
++  <div class="foot">私だけの開運予報 ／ 毎朝の運勢を、天気予報のように。<br>誰でもずっと完全無料・登録1分・配信はいつでも停止OK。
+     <div class="foot-links">
+       <a href="tokushoho.html">特定商取引法に基づく表記</a>
+       <a href="terms.html">利用規約</a>
+diff -uN a/login.html b/login.html
+--- a/login.html	2026-10-04 09:17:10.781996198 +0000
++++ b/login.html	2026-10-04 09:17:10.784034480 +0000
+@@ -3,10 +3,10 @@
+ <head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+-<title>ログイン ── 私だけの運気予報</title>
++<title>ログイン ── 私だけの開運予報</title>
+ <link rel="icon" type="image/png" href="favicon-tenki.png">
+ <link rel="apple-touch-icon" href="favicon-tenki-180.png">
+-<meta name="description" content="私だけの運気予報 ログイン。ご登録のメールアドレスに届く確認コードで、マイページにお入りいただけます。">
++<meta name="description" content="私だけの開運予報 ログイン。ご登録のメールアドレスに届く確認コードで、マイページにお入りいただけます。">
+ <meta name="robots" content="noindex,nofollow">
+ <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&display=optional" rel="stylesheet">
+ <style>
+@@ -63,7 +63,7 @@
+ <body>
+ <div class="bg"></div>
+ <header class="hdr">
+-  <a class="back" href="index.html">← 運気予報TOPへ</a>
++  <a class="back" href="index.html">← 開運予報TOPへ</a>
+   <a class="reg" href="register.html">はじめての方は登録</a>
+ </header>
+ <div class="wrap">
+@@ -141,7 +141,7 @@
+ 
+   <div class="foot">
+     ログインでお困りのときは <a href="mailto:info@72k.ai">お問い合わせ</a> へ。<br>
+-    「私だけの運気予報」は、誰でもずっと完全無料です。
++    「私だけの開運予報」は、誰でもずっと完全無料です。
+   </div>
+ </div>
+ 
+diff -uN a/mail-preview.html b/mail-preview.html
+--- a/mail-preview.html	2026-10-04 09:17:10.785911717 +0000
++++ b/mail-preview.html	2026-10-04 09:17:10.788423808 +0000
+@@ -1,6 +1,6 @@
+ <!doctype html>
+ <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+-<title>毎朝のメール見本｜私だけの運気予報</title>
++<title>毎朝のメール見本｜私だけの開運予報</title>
+ <!-- LP（index.html）の「こんな“お手紙”が、毎朝届きます」に埋め込む見本。
+      実際に届くメールと同じひな形（mail-template/render-daily-mail.js）で、今月（JST）のメールを見本の会員で作って表示する。
+      ?m=1〜12 で月を指定できる。 -->
+diff -uN a/mail-sample-free.html b/mail-sample-free.html
+--- a/mail-sample-free.html	2026-10-04 09:17:10.790315438 +0000
++++ b/mail-sample-free.html	2026-10-04 09:17:10.792383430 +0000
+@@ -1,6 +1,6 @@
+ <!doctype html>
+ <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+-<title>私だけの運気予報｜配信メール見本</title>
++<title>私だけの開運予報｜配信メール見本</title>
+ <!-- 2026-09-30：古いメール見本（写真の背景・固定の文章）は廃止しました。
+      毎朝メールの見本は mail-preview.html（実際に届くメールと同じひな形 mail-template/render-daily-mail.js で作る）へ転送します。
+      メールの見た目・並びの参考にはしないでください。正は【最初に読む】エンジニア実装仕様書（最終版）と mail-template/ だけです。 -->
+diff -uN a/mail-sample.html b/mail-sample.html
+--- a/mail-sample.html	2026-10-04 09:17:10.794258625 +0000
++++ b/mail-sample.html	2026-10-04 09:17:10.796868083 +0000
+@@ -1,6 +1,6 @@
+ <!doctype html>
+ <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+-<title>私だけの運気予報｜配信メール見本</title>
++<title>私だけの開運予報｜配信メール見本</title>
+ <!-- 2026-09-30：古いメール見本（写真の背景・固定の文章）は廃止しました。
+      毎朝メールの見本は mail-preview.html（実際に届くメールと同じひな形 mail-template/render-daily-mail.js で作る）へ転送します。
+      メールの見た目・並びの参考にはしないでください。正は【最初に読む】エンジニア実装仕様書（最終版）と mail-template/ だけです。 -->
+diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
+--- a/my-tenki-demo.html	2026-10-04 09:17:10.798969281 +0000
++++ b/my-tenki-demo.html	2026-10-04 09:17:10.801177920 +0000
+@@ -3,16 +3,16 @@
+ <head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+-<title>私だけの運気予報 ── デモ（中身を試す）</title>
++<title>私だけの開運予報 ── デモ（中身を試す）</title>
+ <link rel="icon" type="image/png" href="favicon-tenki.png">
+ <link rel="apple-touch-icon" href="favicon-tenki-180.png">
+-<meta name="description" content="「私だけの運気予報」の中身を試せるデモ。生年月日を入れると、毎朝届くあなただけの運勢メールがその場で読めます。登録不要。">
++<meta name="description" content="「私だけの開運予報」の中身を試せるデモ。生年月日を入れると、毎朝届くあなただけの運勢メールがその場で読めます。登録不要。">
+ <link rel="canonical" href="https://unkiyoho.jp/my-tenki-demo.html">
+ <!-- OGP / SNSシェア用 -->
+ <meta property="og:type" content="website">
+-<meta property="og:site_name" content="私だけの運気予報">
++<meta property="og:site_name" content="私だけの開運予報">
+ <meta property="og:locale" content="ja_JP">
+-<meta property="og:title" content="私だけの運気予報 ── デモ（中身を試す）">
++<meta property="og:title" content="私だけの開運予報 ── デモ（中身を試す）">
+ <meta property="og:description" content="生年月日を入れるだけで、毎朝届くあなただけの運勢メールをその場で体験。登録不要。">
+ <meta property="og:image" content="https://unkiyoho.jp/ogp-tenki.png">
+ <meta property="og:url" content="https://unkiyoho.jp/my-tenki-demo.html">
+@@ -258,15 +258,15 @@
+ <body>
+ <div class="bg"></div>
+ <header class="topbar">
+-  <div class="tb-brand"><span class="tb-name"><small>MY DAILY FORECAST</small>私だけの運気予報</span></div>
++  <div class="tb-brand"><span class="tb-name"><small>MY DAILY FORECAST</small>私だけの開運予報</span></div>
+   <div class="tb-actions">
+-    <a class="tb-top" href="index.html">🏠 運気予報TOP</a>
++    <a class="tb-top" href="index.html">🏠 開運予報TOP</a>
+     <a class="tb-mypage" href="mypage.html"><img src="icon-sun.png" alt="" style="height:1.15em;width:auto;vertical-align:-0.22em;"> マイページ</a>
+   </div>
+ </header>
+ <a class="stickyCta" href="register.html"><img src="icon-gift.png" alt="" style="height:1.15em;width:auto;vertical-align:-0.24em;"> 無料で登録する →</a>
+ <div class="wrap">
+-  <h1><span class="read">MY DAILY FORECAST</span><span class="title-pink">私だけの運気予報</span><span class="yomi">― 毎朝の運勢を、天気予報のように ―</span></h1>
++  <h1><span class="read">MY DAILY FORECAST</span><span class="title-pink">私だけの開運予報</span><span class="yomi">― 毎朝の運勢を、天気予報のように ―</span></h1>
+   <p class="sub">生年月日を入れるだけ。<b style="color:var(--gold)">四柱推命</b>をもとに、あなたの「今日」をお届けします。<br>恋愛も、仕事も、対人も、ラッキーも。日付を変えれば、その日ごとの運勢がわかります。</p>
+   <div style="margin-top:12px;text-align:center;"><span style="display:inline-block;font-size:13px;color:#1a1305;font-weight:700;background:linear-gradient(135deg,var(--sakura),var(--gold));border-radius:999px;padding:8px 18px;"><img src="icon-gift.png" alt="" style="height:1.15em;width:auto;vertical-align:-0.24em;"> 誰でも、ずっと完全無料</span></div>
+ 
 @@ -290,7 +290,7 @@
      <select id="sex"><option value="f">女性</option><option value="m">男性</option></select>
      <div class="lab" style="margin-top:18px;">― あなたの「今」について ―</div>
@@ -265,7 +492,15 @@ diff -u a/my-tenki-demo.html b/my-tenki-demo.html
      <div class="lab" style="margin-top:18px;">― お相手の生年月日（任意）―</div>
      <input type="date" id="crush">
      <div class="lab" style="margin-top:18px;">― 占う日（毎朝この内容が届くイメージ）―</div>
-@@ -334,10 +334,10 @@
+@@ -327,17 +327,17 @@
+         <div class="mail-via"><b>✉️ Eメールでお届け</b></div>
+         <div class="mail">
+           <div class="mail-sub" id="mSub"></div>
+-          <div class="mail-brand"><div class="b1"><span class="ic">🌤️</span>私だけの運気予報</div><div class="b2" id="mDate"></div></div>
++          <div class="mail-brand"><div class="b1"><span class="ic">🌤️</span>私だけの開運予報</div><div class="b2" id="mDate"></div></div>
+           <div class="mail-body" id="mBody"></div>
+         </div>
+       </div>
      </div>
  
      <div class="card" id="calCard" style="display:none;border-color:var(--line-strong)">
@@ -278,8 +513,12 @@ diff -u a/my-tenki-demo.html b/my-tenki-demo.html
        <div class="dtaphint"><span class="tap-big">👇 カレンダーの日付をタップ</span><span class="tap-sub">その日の鑑定・おすすめ服・メモが開きます</span></div>
        <div class="cal-grid" id="calGrid"></div>
        <div class="legend"><span style="white-space:nowrap">🌈 運命の人の日</span><span style="white-space:nowrap">🌷 出会い・モテ運の日</span><span style="white-space:nowrap">🌸 恋チャンスUP</span><span style="white-space:nowrap">💖 魅力・表現の日</span><span style="white-space:nowrap">🌐 対人の気が動く日</span><span style="white-space:nowrap">💰 金運の気が動く日</span><span style="white-space:nowrap">💼 仕事の気が動く日</span><span style="white-space:nowrap">📚 学びの日</span><span style="white-space:nowrap">🍀 貴人の日</span><span style="white-space:nowrap">🐴 動き・変化の日</span><span style="white-space:nowrap">🌫️ 空亡（空回り・整える日）</span><span style="white-space:nowrap">🌀 大きく動く日</span><span style="opacity:.6;white-space:nowrap">｜あなた基準の運気ランク｜</span><span style="white-space:nowrap"><b style="color:#e0699a">💮</b> 特別な日</span><span style="white-space:nowrap"><b style="color:#3c9a63">◎</b> 調子のいい日</span><span style="white-space:nowrap"><b style="color:#bcb0a4">〇</b> 普通の日</span><span style="white-space:nowrap"><b style="color:#5b93c2">△</b> 無理しない日</span><span style="white-space:nowrap">⚠️ ゆらぎ注意</span></div>
-@@ -363,7 +363,7 @@
-   <div style="max-width:560px;margin:34px auto 0;text-align:center;font-family:var(--serif);font-weight:700;font-size:16px;color:var(--gold);letter-spacing:.06em;">― 「私だけの運気予報」とは ―</div>
+@@ -360,14 +360,14 @@
+     </div>
+     <div class="note">これは<b>配信のみほん</b>です。あなたの四柱推命（通変星＝十神・桃花・支合・三合・五行）をもとに、毎朝あなただけの内容をお届けします。実サービスでは、これを<b>毎朝、無料で自動配信</b>します（相手が"誰"か／"いつ・どこで・どう近づくか"を毎日）。</div>
+   </div>
+-  <div style="max-width:560px;margin:34px auto 0;text-align:center;font-family:var(--serif);font-weight:700;font-size:16px;color:var(--gold);letter-spacing:.06em;">― 「私だけの運気予報」とは ―</div>
++  <div style="max-width:560px;margin:34px auto 0;text-align:center;font-family:var(--serif);font-weight:700;font-size:16px;color:var(--gold);letter-spacing:.06em;">― 「私だけの開運予報」とは ―</div>
    <div class="authentic"><div class="au-h">⚜ このサイトの鑑定について</div><p>千年の歴史を持つ<b>四柱推命</b>の理論にもとづいて、あなた専用に<b>毎日ていねいに計算</b>してお届けしています。<br><span style="font-size:11.5px;color:var(--muted-2)">（日柱・通変星・干合・支合・五行 ほか）</span></p><p style="font-size:11px;color:var(--muted-2);line-height:1.65;margin-top:8px">※流派により解釈は異なります。本鑑定は四柱推命の伝統的な考え方（扶抑を軸とした解釈）にもとづく目安です。<b>運勢指数は当サービス独自の指数</b>で、四柱推命に公式の点数はありません。娯楽・参考としてお楽しみください。</p></div>
    <div class="pitch"><div class="ph"><img src="icon-crystal.png" alt="" style="height:1.2em;width:auto;vertical-align:-0.26em;"> これは「誰との縁」？</div><p class="plead"><span class="hl">「今日あなたに、どんな縁が動くか」</span>の天気予報。</p><ul class="pfeat"><li><b>恋愛も、友達も、仕事も</b>──あらゆるご縁を毎朝。</li><li>気になる人がいれば、<b>その人との相性</b>も占えます。</li></ul></div>
 -  <div class="pitch"><div class="ph">📅 先が読めるから、毎日が動かせる</div><p class="plead">その日で終わらない。<span class="hl">いい日を、先取りできる。</span></p><ul class="pfeat"><li><b>運気が最高の日</b>を前もって予約。</li><li><b>勝負日カレンダー</b>（Googleカレンダー連携）。</li><li><b>デート服</b>も<b>ビジネスの好機</b>も、先に分かる。</li></ul></div>
@@ -287,6 +526,11 @@ diff -u a/my-tenki-demo.html b/my-tenki-demo.html
    <!-- デモで価値を体感した人は、別の同じ訴求LPへ回さず、そのまま登録へ導線を集約 -->
    <div class="navbtns">
      <a class="nb" href="register.html"><img src="icon-gift.png" alt="" style="height:1.15em;width:auto;vertical-align:-0.24em;"> 無料ではじめる →</a>
+-    <a class="nb sub" href="index.html">← 運気予報TOPへ</a>
++    <a class="nb sub" href="index.html">← 開運予報TOPへ</a>
+   </div>
+ </div>
+ 
 @@ -766,7 +766,7 @@
      crush:'“気になる人がいるあなた”へ。今日は距離の縮め方をお届けします。',
      partner:'“恋人と縁を深めたいあなた”へ。今日のふたりの時間をお届けします。',
@@ -314,6 +558,15 @@ diff -u a/my-tenki-demo.html b/my-tenki-demo.html
    +'</div>';
    // ── ラッキー欄を配信見本(mail-sample)と同じ2列グリッドで組み立てる ──
    const _lkCell=function(l,v){return '<div style="background:#faf6f0;border:1px solid rgba(0,0,0,.045);border-radius:10px;padding:7px 9px"><b style="display:block;font-size:9.5px;color:#a08a80;font-weight:800;margin-bottom:1px;letter-spacing:.02em">'+l+'</b><span style="font-size:11.5px;color:#5a4d47;font-weight:700">'+v+'</span></div>';};
+@@ -859,7 +859,7 @@
+         +'<a href="https://twitter.com/intent/tweet?text=%E6%AF%8E%E6%9C%9D6%E6%99%82%E3%81%AB%E3%80%81%E7%94%9F%E5%B9%B4%E6%9C%88%E6%97%A5%E3%81%8B%E3%82%89%E3%82%8F%E3%81%9F%E3%81%97%E3%81%A0%E3%81%91%E3%81%AE%E9%81%8B%E5%8B%A2%E3%81%8C%E5%B1%8A%E3%81%8F%E3%80%8C%E7%A7%81%E3%81%A0%E3%81%91%E3%81%AE%E9%81%8B%E6%B0%97%E4%BA%88%E5%A0%B1%E3%80%8D%F0%9F%8C%A4%20%E3%81%9A%E3%81%A3%E3%81%A8%E7%84%A1%E6%96%99%E3%81%A0%E3%82%88&url=https%3A%2F%2Funkiyoho.jp%2F%3Fref%3Dmail" target="_blank" rel="noopener" style="display:inline-block;background:#1d1f23;color:#fff;font-size:11px;font-weight:800;text-decoration:none;border-radius:999px;padding:7px 14px;margin:2px;">𝕏 でシェア</a>'
+       +'</div>'
+     +'</div>'
+-    +'<div style="margin-top:12px;color:var(--gold-soft)">'+closeWord+'<br>私だけの運気予報</div>';
++    +'<div style="margin-top:12px;color:var(--gold-soft)">'+closeWord+'<br>私だけの開運予報</div>';
+   $("mSub").textContent="【"+M+"/"+D+"("+wd+")】"+nick+"さんの"+subWord+subEmoji;
+   $("mBody").innerHTML=mbHTML;
+   // 季節の枠の色（選んだ日付の月に合わせる。メールのひな形 render-daily-mail.js の枠の色と同じ。写真の背景は 2026-09-30 に廃止）
 @@ -909,7 +909,7 @@
      if(rel==="partner"||rel==="married"){
        const base=tk?"60組に1組の、最高のご縁（天地徳合）。出会えたことが奇跡の二人です。":(PAIRBASE[br0]||"大切に育てていける、ご縁のある二人です。");
@@ -323,15 +576,28 @@ diff -u a/my-tenki-demo.html b/my-tenki-demo.html
        _hideRel();$("pairCard").style.display="";
      }else{
        const RLAB={支合:"息ぴったりの",三合:"強い絆の",同:"似た者同士の",沖:"惹かれて刺激し合う",刑:"試練で深まる",害:"すれ違いに注意の",破:"ほどよい距離が心地よい",支相生:"自然に育て合う",支比和:"気が合う",支相剋:"切磋琢磨の"};
-diff -u a/mypage.html b/mypage.html
---- a/mypage.html	2026-10-04 08:01:02.488823314 +0000
-+++ b/mypage.html	2026-10-04 08:01:02.490970883 +0000
-@@ -6,7 +6,7 @@
- <title>マイページ ── 私だけの運気予報</title>
+@@ -1085,7 +1085,7 @@
+   const z=n=>String(n).padStart(2,'0');
+   const gs=d.getFullYear()+z(d.getMonth()+1)+z(d.getDate());
+   const gn=new Date(d.getTime()+86400000),ge=gn.getFullYear()+z(gn.getMonth()+1)+z(gn.getDate());
+-  const gurl='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('【私だけの運気予報】'+m.join('')+ymd)+'&dates='+gs+'/'+ge+'&details='+encodeURIComponent(info.replace(/<br>/g,' / '));
++  const gurl='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('【私だけの開運予報】'+m.join('')+ymd)+'&dates='+gs+'/'+ge+'&details='+encodeURIComponent(info.replace(/<br>/g,' / '));
+   const memo=getMemo(d).replace(/</g,'&lt;');
+   let extra='';
+   if(m.includes('🌈')||m.includes('🌸')||m.includes('💖')||m.includes('🌷')){
+diff -uN a/mypage.html b/mypage.html
+--- a/mypage.html	2026-10-04 09:17:10.803328595 +0000
++++ b/mypage.html	2026-10-04 09:17:10.805527830 +0000
+@@ -3,10 +3,10 @@
+ <head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+-<title>マイページ ── 私だけの運気予報</title>
++<title>マイページ ── 私だけの開運予報</title>
  <link rel="icon" type="image/png" href="favicon-tenki.png">
  <link rel="apple-touch-icon" href="favicon-tenki-180.png">
 -<meta name="description" content="私だけの運気予報 マイページ。会員ステータス・運命カレンダー・配信設定。">
-+<meta name="description" content="私だけの運気予報 マイページ。会員ステータス・開運カレンダー・配信設定。">
++<meta name="description" content="私だけの開運予報 マイページ。会員ステータス・開運カレンダー・配信設定。">
  <!-- 会員専用ページのため検索エンジンに登録しない -->
  <meta name="robots" content="noindex,nofollow">
  <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -345,6 +611,18 @@ diff -u a/mypage.html b/mypage.html
  </script>
  <style>
    :root{
+@@ -203,9 +204,9 @@
+ <canvas id="stars"></canvas>
+ 
+ <header class="topbar">
+-  <div class="tb-brand"><span class="tb-name"><small>MY DAILY FORECAST</small>私だけの運気予報</span></div>
++  <div class="tb-brand"><span class="tb-name"><small>MY DAILY FORECAST</small>私だけの開運予報</span></div>
+   <div class="tb-actions">
+-    <a class="tb-top" href="index.html">🏠 運気予報TOP</a>
++    <a class="tb-top" href="index.html">🏠 開運予報TOP</a>
+     <a class="tb-logout" href="index.html">ログアウト</a>
+   </div>
+ </header>
 @@ -218,9 +219,9 @@
      <div class="plan-meta" id="planMeta"></div>
    </div>
@@ -357,6 +635,15 @@ diff -u a/mypage.html b/mypage.html
      <div class="cal-wrap" id="calWrap">
        <div class="cal-top">
          <button class="cal-nav" id="calPrev">‹</button>
+@@ -236,7 +237,7 @@
+       <div class="legend">
+         <span>🌈 運命の人の日</span><span>🌷 出会い・モテ運の日</span><span>🌸 恋チャンスUP</span><span>💖 魅力・表現の日</span><span>🌐 対人の気が動く日</span><span>💰 金運の気が動く日</span><span>💼 仕事の気が動く日</span><span>📚 学びの日</span><span>🍀 貴人の日</span><span>🐴 動き・変化の日</span><span>🌫️ 整える日</span><span>🌀 大きく動く日</span><span style="opacity:.6">｜あなた基準の運気ランク｜</span><span><b style="color:#e0699a">💮</b> 特別な日</span><span><b style="color:#3c9a63">◎</b> 調子のいい日</span><span><b style="color:#bcb0a4">〇</b> 普通の日</span><span><b style="color:#5b93c2">△</b> 無理しない日</span><span>⚠️ ゆらぎ注意日</span>
+       </div>
+-      <div class="leg-note">💮◎〇△は<b>あなた基準</b>のランクです（他人との比較ではなく、あなた自身のリズムの中での“動きやすい日／整える日”）。だから毎日届く運気予報メールとも一致します。日付をタップすると、その日が「何の日」か・メモ・Googleカレンダー追加が開きます。カレンダーは<b>過去も未来も、好きなだけ</b>ご覧いただけます。</div>
++      <div class="leg-note">💮◎〇△は<b>あなた基準</b>のランクです（他人との比較ではなく、あなた自身のリズムの中での“動きやすい日／整える日”）。だから毎日届く開運予報メールとも一致します。日付をタップすると、その日が「何の日」か・メモ・Googleカレンダー追加が開きます。カレンダーは<b>過去も未来も、好きなだけ</b>ご覧いただけます。</div>
+       <div id="calRangeNote" style="display:none;"></div>
+       <div class="daydetail" id="dayDetail"></div>
+     </div>
 @@ -395,7 +396,7 @@
          <option value="crush">気になる人がいる</option>
          <option value="partner">恋人がいる</option>
@@ -366,6 +653,24 @@ diff -u a/mypage.html b/mypage.html
        </select>
        <button type="button" id="profSaveBtn" onclick="profSave()" style="margin-top:14px;width:100%;border:none;cursor:pointer;border-radius:11px;padding:13px;font-family:var(--serif);font-weight:800;font-size:15px;color:#fff;background:linear-gradient(135deg,var(--coral),var(--coral-d));">変更を保存する</button>
        <div style="color:var(--coral-d);font-size:12.5px;text-align:center;margin-top:10px;min-height:1em;font-weight:700;" id="profErr"></div>
+@@ -450,7 +451,7 @@
+   </div>
+ 
+   <div style="text-align:center;margin:34px 0 10px;">
+-    <a class="mp-back" href="index.html">← 運気予報TOPへ</a>
++    <a class="mp-back" href="index.html">← 開運予報TOPへ</a>
+   </div>
+ 
+ </div>
+@@ -873,7 +874,7 @@
+   const z=n=>String(n).padStart(2,'0');
+   const gs=d.getFullYear()+z(d.getMonth()+1)+z(d.getDate());
+   const gn=new Date(d.getTime()+86400000),ge=gn.getFullYear()+z(gn.getMonth()+1)+z(gn.getDate());
+-  const gurl='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('【私だけの運気予報】'+m.join('')+ymd)+'&dates='+gs+'/'+ge+'&details='+encodeURIComponent(info.replace(/<br>/g,' / '));
++  const gurl='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('【私だけの開運予報】'+m.join('')+ymd)+'&dates='+gs+'/'+ge+'&details='+encodeURIComponent(info.replace(/<br>/g,' / '));
+   const memo=getMemo(d).replace(/</g,'&lt;');
+   let extra='';
+   if(m.includes('🌈')||m.includes('🌸')||m.includes('💖')||m.includes('🌷')){
 @@ -969,7 +970,7 @@
  $("calNext").onclick=()=>{let y=calY,m=calM+1;if(m>12){m=1;y++;}if(!_calInRange(y,m)){_calRangeNote();return;}calY=y;calM=m;renderCalendar();$("dayDetail").classList.remove('show');};
  
@@ -388,9 +693,43 @@ diff -u a/mypage.html b/mypage.html
  }
  function gconnDemo(){alert("Googleカレンダーの自動連携は現在準備中です。\\n\\nいまは、カレンダーの各日から「Googleカレンダーに追加」で1件ずつ登録できます。");}
  /* 毎朝メールの配信ON/OFF：本番はサーバーに保存し、保存できたときだけ切り替える（止めたつもりで届き続ける、を防ぐ） */
-diff -u a/privacy.html b/privacy.html
---- a/privacy.html	2026-10-04 08:01:02.508305274 +0000
-+++ b/privacy.html	2026-10-04 08:01:02.510321891 +0000
+@@ -1100,7 +1107,7 @@
+     .catch(function(){ if(sw) sw.checked=!on; alert("配信設定を保存できませんでした。時間をおいてもう一度お試しください。\n解決しない場合は info@72k.ai までご連絡ください。"); return false; });
+ }
+ function cancelDemo(){
+-  if(!confirm("毎朝の運気予報メールの配信を停止しますか？\n（「私だけの運気予報」はずっと完全無料です。いつでも再開できます）")) return;
++  if(!confirm("毎朝の開運予報メールの配信を停止しますか？\n（「私だけの開運予報」はずっと完全無料です。いつでも再開できます）")) return;
+   setMailOpt(false).then(function(ok){ if(ok) alert("配信を停止しました。明日の朝からメールは届きません。"); });
+ }
+ 
+diff -uN a/privacy.html b/privacy.html
+--- a/privacy.html	2026-10-04 09:17:10.807721217 +0000
++++ b/privacy.html	2026-10-04 09:17:10.809753078 +0000
+@@ -5,7 +5,7 @@
+ <meta name="viewport" content="width=device-width, initial-scale=1">
+ <link rel="icon" type="image/png" href="favicon-tenki.png">
+ <link rel="apple-touch-icon" href="favicon-tenki-180.png">
+-<title>プライバシーポリシー｜私だけの運気予報</title>
++<title>プライバシーポリシー｜私だけの開運予報</title>
+ <style>
+   :root{--bg:#f2f5fb;--card:#fff;--ink:#1d2333;--ink2:#3f4663;--muted:#8189a3;--line:#e6e8f0;--coral-d:#f0623f;--sui:#5b7cc4}
+   *{box-sizing:border-box}html,body{margin:0}
+@@ -32,13 +32,13 @@
+ </head>
+ <body>
+ <header class="topbar"><div class="tb-in">
+-  <a href="index.html" style="display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit;"><div class="tb-logo">🌤️</div><div class="tb-title">私だけの <span>運気予報</span></div></a>
++  <a href="index.html" style="display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit;"><div class="tb-logo">🌤️</div><div class="tb-title">私だけの <span>開運予報</span></div></a>
+   <div class="tb-spacer"></div><a class="tb-back" href="index.html" onclick="if(document.referrer){history.back();return false;}">← もどる</a>
+ </div></header>
+ 
+ <main>
+   <h1>プライバシーポリシー</h1>
+-  <p class="lead">72k株式会社（以下「当社」）は、本サービス「私だけの運気予報」における利用者情報の取り扱いについて、以下のとおり定めます。</p>
++  <p class="lead">72k株式会社（以下「当社」）は、本サービス「私だけの開運予報」における利用者情報の取り扱いについて、以下のとおり定めます。</p>
+ 
+   <div class="card">
+     <h2>1. 取得する情報</h2>
 @@ -52,7 +52,7 @@
  
      <h2>2. 利用目的</h2>
@@ -400,10 +739,55 @@ diff -u a/privacy.html b/privacy.html
        <li>会員登録・ログイン状態の確認</li>
        <li>お問い合わせ対応、サービスの改善・不具合対応</li>
        <li><b>将来の広告の配信・表示、および最適化（ターゲティング）</b>。本サービスは無料でご提供しています。<b>現時点では広告配信を行っていません</b>が、将来、メール・サイト内等での広告表示により運営する場合があります。その際は、性別・年代・居住地（都道府県）・興味・関心などの属性を、広告の選定・最適化に利用することがあります。</li>
-diff -u a/register.html b/register.html
---- a/register.html	2026-10-04 08:01:02.484151401 +0000
-+++ b/register.html	2026-10-04 08:01:02.486389852 +0000
-@@ -112,7 +112,7 @@
+@@ -90,12 +90,12 @@
+     <h2>9. 改定</h2>
+     <p>本ポリシーは、必要に応じて改定することがあります。重要な変更がある場合は、本ページ等でお知らせします。</p>
+ 
+-    <p class="note">制定日：2026年8月23日／最終改定日：2026年9月30日</p>
++    <p class="note">制定日：2026年8月23日／最終改定日：2026年10月4日</p>
+   </div>
+ </main>
+ 
+ <footer>
+   <a href="index.html">サービス紹介</a>・<a href="terms.html">利用規約</a>・<a href="tokushoho.html">特定商取引法に基づく表記</a>
+-  <div style="margin-top:8px;color:#8189a3">© 私だけの運気予報<br><span style="letter-spacing:.08em">Produced by <b style="color:#6d7488">Mizuki Nico</b></span></div>
++  <div style="margin-top:8px;color:#8189a3">© 私だけの開運予報<br><span style="letter-spacing:.08em">Produced by <b style="color:#6d7488">Mizuki Nico</b></span></div>
+ </footer></body>
+ </html>
+diff -uN a/register.html b/register.html
+--- a/register.html	2026-10-04 09:17:10.811731663 +0000
++++ b/register.html	2026-10-04 09:17:10.813876636 +0000
+@@ -3,16 +3,16 @@
+ <head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+-<title>私だけの運気予報 ── 無料登録</title>
++<title>私だけの開運予報 ── 無料登録</title>
+ <link rel="icon" type="image/png" href="favicon-tenki.png">
+ <link rel="apple-touch-icon" href="favicon-tenki-180.png">
+-<meta name="description" content="「私だけの運気予報」無料登録。生年月日から毎朝あなただけの占いをお届け。登録1分・誰でもずっと完全無料。">
++<meta name="description" content="「私だけの開運予報」無料登録。生年月日から毎朝あなただけの占いをお届け。登録1分・誰でもずっと完全無料。">
+ <link rel="canonical" href="https://unkiyoho.jp/register.html">
+ <!-- OGP / SNSシェア用 -->
+ <meta property="og:type" content="website">
+-<meta property="og:site_name" content="私だけの運気予報">
++<meta property="og:site_name" content="私だけの開運予報">
+ <meta property="og:locale" content="ja_JP">
+-<meta property="og:title" content="私だけの運気予報 ── 無料登録">
++<meta property="og:title" content="私だけの開運予報 ── 無料登録">
+ <meta property="og:description" content="登録1分・誰でもずっと完全無料。毎朝あなただけの占いをお届けします。">
+ <meta property="og:image" content="https://unkiyoho.jp/ogp-tenki.png">
+ <meta property="og:url" content="https://unkiyoho.jp/register.html">
+@@ -88,7 +88,7 @@
+   <a class="hdr-my" href="login.html">すでに登録済みの方はログイン</a>
+ </header>
+ <div class="wrap">
+-  <h1><span class="read">MY DAILY FORECAST</span><span class="title-pink">私だけの運気予報</span><br>無料登録</h1>
++  <h1><span class="read">MY DAILY FORECAST</span><span class="title-pink">私だけの開運予報</span><br>無料登録</h1>
+   <div class="free"><img src="icon-gift.png" alt="" style="height:1.15em;width:auto;vertical-align:-0.24em;"> 誰でも、ずっと完全無料</div>
+   <p class="sub">生年月日から、毎朝あなただけの占いをお届けします。</p>
+   <div id="regIntro" style="max-width:560px;margin:16px auto 0;background:rgba(255,255,255,.9);border:1px solid var(--line-strong);border-radius:14px;padding:15px 16px;text-align:left;">
+@@ -112,11 +112,11 @@
        if(hh)hh.onchange=sync; sync();
      })();</script>
      <div class="grp"><label>性別<span class="req">必須</span></label><div class="seg"><label><input type="radio" name="sex" value="女性"><span>女性</span></label><label><input type="radio" name="sex" value="男性"><span>男性</span></label></div><div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.6;">※ 占いの文章の出し分けに使います。自認する性でお選びください。どなたでも安心してご利用いただけます。</div></div>
@@ -412,3 +796,186 @@ diff -u a/register.html b/register.html
      <div class="grp"><label>お住まいの都道府県<span class="req">必須</span></label><select id="pref"></select></div>
      <div class="grp"><label>関心のあること（いくつでも）<span class="req">必須</span></label><div class="tags" id="tags"></div></div>
      <label class="consent"><input type="checkbox" id="agreeTerms"><span><a href="terms.html" target="_blank" rel="noopener" style="color:var(--coral-d);text-decoration:underline;">利用規約</a>・<a href="privacy.html" target="_blank" rel="noopener" style="color:var(--coral-d);text-decoration:underline;">プライバシーポリシー</a>に同意します。<br><span style="color:var(--muted-2);font-size:11.5px;"><a href="tokushoho.html" target="_blank" rel="noopener" style="color:var(--muted-2);text-decoration:underline;">特定商取引法に基づく表記</a></span></span></label>
+-    <label class="consent"><input type="checkbox" id="agree"><span>毎日の運気予報メールと、サービスのアップデート配信（月1回程度）を受け取ることに同意します。<br><span style="color:var(--muted-2);font-size:11.5px;">※ 本サービスは無料です。配信はいつでも停止できます。</span></span></label>
++    <label class="consent"><input type="checkbox" id="agree"><span>毎日の開運予報メールと、サービスのアップデート配信（月1回程度）を受け取ることに同意します。<br><span style="color:var(--muted-2);font-size:11.5px;">※ 本サービスは無料です。配信はいつでも停止できます。</span></span></label>
+     <button type="submit" class="submit" id="submitBtn">無料で登録して、<br>明日の朝から受け取る</button>
+     <div class="err" id="err"></div>
+   </form>
+@@ -143,9 +143,9 @@
+   </div>
+   <div class="done" id="done">
+     <h2>メール確認、完了しました！</h2>
+-    <p><b style="color:var(--coral-d)">明日の朝</b>から、あなただけの<b style="color:var(--coral)">運気予報</b>が届きます。<br>すべての機能を、ずっと無料でお楽しみください。</p>
++    <p><b style="color:var(--coral-d)">明日の朝</b>から、あなただけの<b style="color:var(--coral)">開運予報</b>が届きます。<br>すべての機能を、ずっと無料でお楽しみください。</p>
+     <a href="mypage.html" class="submit" style="display:inline-block;text-decoration:none;margin-top:20px;">マイページを開く</a>
+-    <p style="color:var(--muted-2);margin-top:20px;font-size:13px;">※ 明日以降、毎朝の運気予報をお届けします。配信はマイページからいつでも停止できます。</p>
++    <p style="color:var(--muted-2);margin-top:20px;font-size:13px;">※ 明日以降、毎朝の開運予報をお届けします。配信はマイページからいつでも停止できます。</p>
+   </div>
+   </div>
+   <div class="faq">
+diff -uN a/share.js b/share.js
+--- a/share.js	2026-10-04 09:17:10.842953698 +0000
++++ b/share.js	2026-10-04 09:17:10.844981171 +0000
+@@ -13,7 +13,7 @@
+ (function(){
+   var SITE = 'https://unkiyoho.jp/';
+   var KEY = 'unkiyoho_ref', DAYS = 30;
+-  var TEXT = '毎朝6時に、生年月日からわたしだけの運勢が届く「私だけの運気予報」🌤 ずっと無料だよ';
++  var TEXT = '毎朝6時に、生年月日からわたしだけの運勢が届く「私だけの開運予報」🌤 ずっと無料だよ';
+ 
+   // 1) ?ref= を覚える
+   try{
+@@ -65,7 +65,7 @@
+       else window.prompt('このリンクをコピーしてください', u);
+     };
+     var nv = el.querySelector('[data-native]');
+-    if (nv) nv.onclick = function(){ navigator.share({ title: '私だけの運気予報', text: TEXT, url: u }).catch(function(){}); };
++    if (nv) nv.onclick = function(){ navigator.share({ title: '私だけの開運予報', text: TEXT, url: u }).catch(function(){}); };
+   }
+ 
+   window.UnkiShare = { ref: ref, myCode: myCode, url: url, mount: mount, TEXT: TEXT };
+diff -uN a/terms.html b/terms.html
+--- a/terms.html	2026-10-04 09:17:10.816001656 +0000
++++ b/terms.html	2026-10-04 09:17:10.818711693 +0000
+@@ -5,7 +5,7 @@
+ <meta name="viewport" content="width=device-width, initial-scale=1">
+ <link rel="icon" type="image/png" href="favicon-tenki.png">
+ <link rel="apple-touch-icon" href="favicon-tenki-180.png">
+-<title>利用規約｜私だけの運気予報</title>
++<title>利用規約｜私だけの開運予報</title>
+ <style>
+   :root{--bg:#f2f5fb;--card:#fff;--ink:#1d2333;--ink2:#3f4663;--muted:#8189a3;--line:#e6e8f0;--coral-d:#f0623f;--sui:#5b7cc4}
+   *{box-sizing:border-box}html,body{margin:0}
+@@ -34,13 +34,13 @@
+ </head>
+ <body>
+ <header class="topbar"><div class="tb-in">
+-  <a href="index.html" style="display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit;"><div class="tb-logo">🌤️</div><div class="tb-title">私だけの <span>運気予報</span></div></a>
++  <a href="index.html" style="display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit;"><div class="tb-logo">🌤️</div><div class="tb-title">私だけの <span>開運予報</span></div></a>
+   <div class="tb-spacer"></div><a class="tb-back" href="index.html" onclick="if(document.referrer){history.back();return false;}">← もどる</a>
+ </div></header>
+ 
+ <main>
+   <h1>利用規約</h1>
+-  <p class="lead">本規約は、72k株式会社（以下「当社」）が提供する「私だけの運気予報」（以下「本サービス」）の利用条件を定めるものです。ご利用の前に必ずお読みください。</p>
++  <p class="lead">本規約は、72k株式会社（以下「当社」）が提供する「私だけの開運予報」（以下「本サービス」）の利用条件を定めるものです。ご利用の前に必ずお読みください。</p>
+ 
+   <div class="card">
+     <h2>第1条（適用）</h2>
+@@ -109,13 +109,13 @@
+     <h2>第13条（準拠法・管轄）</h2>
+     <p>本規約の準拠法は日本法とし、本サービスに関して紛争が生じた場合、当社所在地を管轄する裁判所を第一審の専属的合意管轄裁判所とします。</p>
+ 
+-    <p class="note">制定日：2026年8月23日／最終改定日：2026年9月29日　事業者：72k株式会社</p>
++    <p class="note">制定日：2026年8月23日／最終改定日：2026年10月4日　事業者：72k株式会社</p>
+   </div>
+ 
+ </main>
+ 
+ <footer>
+   <a href="index.html">サービス紹介</a>・<a href="tokushoho.html">特定商取引法に基づく表記</a>・<a href="privacy.html">プライバシーポリシー</a>
+-  <div style="margin-top:8px;color:#8189a3">© 私だけの運気予報<br><span style="letter-spacing:.08em">Produced by <b style="color:#6d7488">Mizuki Nico</b></span></div>
++  <div style="margin-top:8px;color:#8189a3">© 私だけの開運予報<br><span style="letter-spacing:.08em">Produced by <b style="color:#6d7488">Mizuki Nico</b></span></div>
+ </footer></body>
+ </html>
+diff -uN a/tokushoho.html b/tokushoho.html
+--- a/tokushoho.html	2026-10-04 09:17:10.820802524 +0000
++++ b/tokushoho.html	2026-10-04 09:17:10.823181875 +0000
+@@ -5,7 +5,7 @@
+ <meta name="viewport" content="width=device-width, initial-scale=1">
+ <link rel="icon" type="image/png" href="favicon-tenki.png">
+ <link rel="apple-touch-icon" href="favicon-tenki-180.png">
+-<title>特定商取引法に基づく表記｜私だけの運気予報</title>
++<title>特定商取引法に基づく表記｜私だけの開運予報</title>
+ <style>
+   :root{--bg:#f2f5fb;--card:#fff;--ink:#1d2333;--ink2:#3f4663;--muted:#8189a3;--line:#e6e8f0;--coral-d:#f0623f;--sui:#5b7cc4}
+   *{box-sizing:border-box}html,body{margin:0}
+@@ -34,13 +34,13 @@
+ </head>
+ <body>
+ <header class="topbar"><div class="tb-in">
+-  <a href="index.html" style="display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit;"><div class="tb-logo">🌤️</div><div class="tb-title">私だけの <span>運気予報</span></div></a>
++  <a href="index.html" style="display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit;"><div class="tb-logo">🌤️</div><div class="tb-title">私だけの <span>開運予報</span></div></a>
+   <div class="tb-spacer"></div><a class="tb-back" href="index.html" onclick="if(document.referrer){history.back();return false;}">← もどる</a>
+ </div></header>
+ 
+ <main>
+   <h1>事業者情報</h1>
+-  <p class="lead">本サービス「私だけの運気予報」は、どなたでもずっと無料でご利用いただけるサービスであり、有料販売は行っておりません。そのため特定商取引法に基づく販売条項（価格・支払方法・引渡時期・返品等）の表示は対象外ですが、運営事業者の情報を以下のとおり表示します。</p>
++  <p class="lead">本サービス「私だけの開運予報」は、どなたでもずっと無料でご利用いただけるサービスであり、有料販売は行っておりません。そのため特定商取引法に基づく販売条項（価格・支払方法・引渡時期・返品等）の表示は対象外ですが、運営事業者の情報を以下のとおり表示します。</p>
+ 
+   <!-- 将来、有料プラン・課金を導入する際は、特定商取引法に基づく表記（販売価格・支払方法・支払時期・提供時期・解約/返品条件等）を本ページに改めて整備すること。 -->
+   <div class="card"><dl>
+@@ -56,6 +56,6 @@
+ 
+ <footer>
+   <a href="index.html">サービス紹介</a>・<a href="terms.html">利用規約</a>・<a href="privacy.html">プライバシーポリシー</a>
+-  <div style="margin-top:8px;color:#8189a3">© 私だけの運気予報<br><span style="letter-spacing:.08em">Produced by <b style="color:#6d7488">Mizuki Nico</b></span></div>
++  <div style="margin-top:8px;color:#8189a3">© 私だけの開運予報<br><span style="letter-spacing:.08em">Produced by <b style="color:#6d7488">Mizuki Nico</b></span></div>
+ </footer></body>
+ </html>
+diff -uN a/unsubscribe.html b/unsubscribe.html
+--- a/unsubscribe.html	2026-10-04 09:17:10.825183144 +0000
++++ b/unsubscribe.html	2026-10-04 09:17:10.827236456 +0000
+@@ -3,10 +3,10 @@
+ <head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+-<title>配信停止 ── 私だけの運気予報</title>
++<title>配信停止 ── 私だけの開運予報</title>
+ <link rel="icon" type="image/png" href="favicon-tenki.png">
+ <link rel="apple-touch-icon" href="favicon-tenki-180.png">
+-<meta name="description" content="私だけの運気予報 メール配信の停止。ログイン不要・ワンクリックで停止できます。">
++<meta name="description" content="私だけの開運予報 メール配信の停止。ログイン不要・ワンクリックで停止できます。">
+ <meta name="robots" content="noindex,nofollow">
+ <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&display=optional" rel="stylesheet">
+ <style>
+@@ -48,23 +48,23 @@
+     <div id="stopped">
+       <div class="ic stop">✔</div>
+       <h1>メール配信を停止しました</h1>
+-      <div class="sub">毎朝の運気予報メールの配信を停止しました。<br>手続きは以上です（ログイン不要）。</div>
++      <div class="sub">毎朝の開運予報メールの配信を停止しました。<br>手続きは以上です（ログイン不要）。</div>
+       <div class="mail" id="mailRow" hidden>対象：<b id="mailAddr"></b></div>
+-      <div class="note">「私だけの運気予報」はずっと完全無料です。<br>また受け取りたくなったら、いつでも再開できます。</div>
++      <div class="note">「私だけの開運予報」はずっと完全無料です。<br>また受け取りたくなったら、いつでも再開できます。</div>
+       <button class="btn ghost" onclick="resume()">やっぱり毎朝の配信を受け取る</button>
+       <div class="links">
+         <a href="mypage.html">マイページで他の設定を見る</a>
+-        <a href="index.html">運気予報TOPへ</a>
++        <a href="index.html">開運予報TOPへ</a>
+       </div>
+     </div>
+     <!-- 再開完了 -->
+     <div id="resumed" hidden>
+       <div class="ic on">☀</div>
+       <h1>配信を再開しました</h1>
+-      <div class="sub">明日の朝から、また運気予報メールをお届けします。</div>
++      <div class="sub">明日の朝から、また開運予報メールをお届けします。</div>
+       <div class="links" style="margin-top:22px;">
+         <a href="mypage.html">マイページへ</a>
+-        <a href="index.html">運気予報TOPへ</a>
++        <a href="index.html">開運予報TOPへ</a>
+       </div>
+     </div>
+   </div>
+diff -uN a/zukan.html b/zukan.html
+--- a/zukan.html	2026-10-04 09:17:10.829805923 +0000
++++ b/zukan.html	2026-10-04 09:17:10.831745781 +0000
+@@ -1,6 +1,6 @@
+ <!doctype html><html lang="ja"><head><meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1">
+-<title>干支キャラ図鑑 ｜ 私だけの運気予報</title>
++<title>干支キャラ図鑑 ｜ 私だけの開運予報</title>
+ <meta name="description" content="60干支のマスコットキャラクター図鑑。あなたの干支キャラを見つけよう。">
+ <style>
+ :root{--serif:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;--latin:Georgia,serif;--sans:"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",sans-serif;
+@@ -70,7 +70,7 @@
+ <div class="legend">五行（ごぎょう）＝生まれ持った気質のもと。<b style="background:#7fae661a;color:#7fae66">木</b>成長 <b style="background:#e0506e1a;color:#e0506e">火</b>情熱 <b style="background:#cf9a3f1a;color:#cf9a3f">土</b>安定 <b style="background:#b0902f1a;color:#b0902f">金</b>美意識 <b style="background:#4f8fca1a;color:#4f8fca">水</b>知性</div>
+ <div class="grid" id="grid"></div>
+ <a class="back" href="https://166unmei.com/">▶ 自分の干支キャラを診断する（1分・無料）</a>
+-<div class="foot">1.66 奇跡の相性診断 ／ 私だけの運気予報</div>
++<div class="foot">1.66 奇跡の相性診断 ／ 私だけの開運予報</div>
+ </div>
+ <div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+ <script>
