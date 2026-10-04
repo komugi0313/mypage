@@ -50,7 +50,7 @@
     work:    { en:'今日のご縁',         place:'縁が活きる場所' }   // 2026-10-02 改：恋愛が主役のメールなので work にも恋愛・ご縁を出す（見出しは相手の有無を決めつけない「今日のご縁」）
   };
 
-  /* ── 鑑定チップ（運命カレンダーの dayMarks と同じ判定。プラス面だけ見せる） ── */
+  /* ── 鑑定チップ（開運カレンダーの dayMarks と同じ判定。プラス面だけ見せる） ── */
   var MK = {'🌈':'運命の人の日','🌷':'出会い・モテ運の日','🌸':'恋が動く日','💖':'魅力が輝く','💰':'金運アップ','💼':'勝負運アップ','🌐':'対人運アップ','📚':'学びの日'};
   function chipMarks(r){
     var m = [], g = r.theme && r.theme.god;
@@ -147,7 +147,7 @@
         + '</td></tr></table>');
     }
 
-    /* 🔮 今日のあなたの鑑定（運命カレンダーと同じ判定のチップ） */
+    /* 🔮 今日のあなたの鑑定（開運カレンダーと同じ判定のチップ） */
     var good = r.grade && (r.grade.sym === '💮' || r.grade.sym === '◎');
     var marks = chipMarks(r);
     var kc = good ? (r.grade.sym === '💮' ? '#d6567e' : '#c9862a') : (marks.length ? '#d6567e' : '#8a93a8');
@@ -166,7 +166,7 @@
       + '<div>' + chips + '</div>'
       + krow('🎯 開運アクション', esc(lk.action))
       + krow('🎨 ラッキーカラー', dot(lk.hex, 12) + esc(lk.color))
-      + '<div style="font-size:10.5px;color:#8a7d74;line-height:1.55;margin-top:10px;">' + crystal + ' あなたの<b style="color:#d6567e;">命式（生年月日からの四柱推命）</b>をもとに読み解いた、<b style="color:#d6567e;">あなただけの毎日鑑定</b>。<b style="color:#d6567e;">運命カレンダー</b>とそのまま連動しています。</div>'
+      + '<div style="font-size:10.5px;color:#8a7d74;line-height:1.55;margin-top:10px;">' + crystal + ' あなたの<b style="color:#d6567e;">命式（生年月日からの四柱推命）</b>をもとに読み解いた、<b style="color:#d6567e;">あなただけの毎日鑑定</b>。<b style="color:#d6567e;">開運カレンダー</b>とそのまま連動しています。</div>'
       // 📅 開運カレンダーへのボタン（2026-10-02 追加・必須）：マイページのカレンダーの位置（#calWrap）へ直接飛ぶ
       + '<div style="margin-top:10px;text-align:center;">' + btn(esc(mypage + '#calWrap'), '📅 開運カレンダーを見る', '#d6567e', '12px', '9px 16px') + '</div>'
       + '</td></tr></table>');
