@@ -167,6 +167,8 @@
       + krow('🎯 開運アクション', esc(lk.action))
       + krow('🎨 ラッキーカラー', dot(lk.hex, 12) + esc(lk.color))
       + '<div style="font-size:10.5px;color:#8a7d74;line-height:1.55;margin-top:10px;">' + crystal + ' あなたの<b style="color:#d6567e;">命式（生年月日からの四柱推命）</b>をもとに読み解いた、<b style="color:#d6567e;">あなただけの毎日鑑定</b>。<b style="color:#d6567e;">運命カレンダー</b>とそのまま連動しています。</div>'
+      // 📅 運命カレンダーへのボタン（2026-10-02 追加・必須）：マイページのカレンダーの位置（#calWrap）へ直接飛ぶ
+      + '<div style="margin-top:10px;text-align:center;">' + btn(esc(mypage + '#calWrap'), '📅 運命カレンダーで、今月の流れを見る →', '#d6567e', '12px', '9px 16px') + '</div>'
       + '</td></tr></table>');
 
     /* ☁️ 天気・運勢指数 */
@@ -317,7 +319,7 @@
     /* ── テキスト版（HTMLを表示できない環境・迷惑メール判定対策） ── */
     var t = [];
     t.push('私だけの運気予報　' + dateLabel + (hol ? '（' + hol + '）' : ''), '', r.user.nick + 'さん、おはようございます', strip(r.relIntro), '');
-    t.push('■ 今日の運勢：' + r.weather.name + '（運勢指数 ' + idx + '/100）', strip(r.weatherMsg), '');
+    t.push('■ 今日の運勢：' + r.weather.name + '（運勢指数 ' + idx + '/100）', strip(r.weatherMsg), '', '📅 運命カレンダー：' + mypage + '#calWrap', '');
     if (r.todayOne) t.push('■ 今日はこれだけ', strip(r.todayOne), '');
     t.push('■ 今日のあなた', strip(r.theme.message), '');
     if (r.caution) t.push('■ 今日の気をつけたいこと', strip(r.caution), '');

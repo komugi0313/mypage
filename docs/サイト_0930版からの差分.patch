@@ -1,6 +1,6 @@
 diff -u a/daily-engine.js b/daily-engine.js
---- a/daily-engine.js	2026-10-03 18:47:50.012815418 +0000
-+++ b/daily-engine.js	2026-10-03 18:47:50.015127216 +0000
+--- a/daily-engine.js	2026-10-04 05:41:07.370767648 +0000
++++ b/daily-engine.js	2026-10-04 05:41:07.376774564 +0000
 @@ -559,6 +559,10 @@
   * 運勢の計算（指数・天気・グレード・五行）には一切影響しない。 */
  var MALE_NG=/リップ|ピアス|イヤリング|ヘアピン|ヘアクリップ|ヘアゴム|ネックレス|パール|真珠のアクセ|真珠風|ネイル|コスメ|化粧品|ハート|スカーフ|手鏡/;
@@ -168,8 +168,8 @@ diff -u a/daily-engine.js b/daily-engine.js
        bazi:favInfo,
        lucky:{color:lucky.color, hex:lucky.hex, direction:ldir, food:food, number:lnum,
 diff -u a/my-tenki-demo.html b/my-tenki-demo.html
---- a/my-tenki-demo.html	2026-10-03 18:47:50.008395935 +0000
-+++ b/my-tenki-demo.html	2026-10-03 18:47:50.010665274 +0000
+--- a/my-tenki-demo.html	2026-10-04 05:41:07.274767651 +0000
++++ b/my-tenki-demo.html	2026-10-04 05:41:07.278819808 +0000
 @@ -290,7 +290,7 @@
      <select id="sex"><option value="f">女性</option><option value="m">男性</option></select>
      <div class="lab" style="margin-top:18px;">― あなたの「今」について ―</div>
@@ -189,9 +189,19 @@ diff -u a/my-tenki-demo.html b/my-tenki-demo.html
    const _wm=WEATHER_MSG[w.name]||[]; const wmsg=_wm.length?_wm[useed%_wm.length]:'';
    let _spc='';
 diff -u a/mypage.html b/mypage.html
---- a/mypage.html	2026-10-03 18:47:50.003545952 +0000
-+++ b/mypage.html	2026-10-03 18:47:50.005620739 +0000
-@@ -395,7 +395,7 @@
+--- a/mypage.html	2026-10-04 05:41:07.234767652 +0000
++++ b/mypage.html	2026-10-04 05:41:07.239386992 +0000
+@@ -17,7 +17,8 @@
+ <script>
+   /* マイページはログイン必須（施錠はこのページだけ）。未ログインならログイン画面へ即移動。
+      ※ これは画面の出し分け（UX）。本当の保護はサーバー側で、会員データAPIがセッションを検証すること。 */
+-  if(!window.Auth || !Auth.isLoggedIn()){ location.replace("login.html?next=mypage.html"); }
++  /* メールの「運命カレンダーで…」ボタン（mypage.html#calWrap）から来た人は、ログイン後もカレンダーの位置へ（2026-10-02） */
++  if(!window.Auth || !Auth.isLoggedIn()){ try{ if(location.hash) sessionStorage.setItem("unkiyoho_jump", location.hash); }catch(e){} location.replace("login.html?next=mypage.html"); }
+ </script>
+ <style>
+   :root{
+@@ -395,7 +396,7 @@
          <option value="crush">気になる人がいる</option>
          <option value="partner">恋人がいる</option>
          <option value="married">結婚している</option>
@@ -200,7 +210,7 @@ diff -u a/mypage.html b/mypage.html
        </select>
        <button type="button" id="profSaveBtn" onclick="profSave()" style="margin-top:14px;width:100%;border:none;cursor:pointer;border-radius:11px;padding:13px;font-family:var(--serif);font-weight:800;font-size:15px;color:#fff;background:linear-gradient(135deg,var(--coral),var(--coral-d));">変更を保存する</button>
        <div style="color:var(--coral-d);font-size:12.5px;text-align:center;margin-top:10px;min-height:1em;font-weight:700;" id="profErr"></div>
-@@ -969,7 +969,7 @@
+@@ -969,7 +970,7 @@
  $("calNext").onclick=()=>{let y=calY,m=calM+1;if(m>12){m=1;y++;}if(!_calInRange(y,m)){_calRangeNote();return;}calY=y;calM=m;renderCalendar();$("dayDetail").classList.remove('show');};
  
  /* ===== 会員情報の反映 ===== */
@@ -209,9 +219,22 @@ diff -u a/mypage.html b/mypage.html
  function sexCode(v){return (v==="m"||v==="male"||v==="男性")?"m":"f";}
  function sexText(v){return sexCode(v)==="m"?"男性":"女性";}
  /* ===== 性別・今の状況の変更：本番はサーバーの会員データを更新し、成功したときだけ画面と端末の記録を変える ===== */
+@@ -1087,6 +1088,12 @@
+   $("calWrap").style.display="";
+   $("gsecWrap").style.display="";
+   renderCalendar();
++  /* メールの「📅 運命カレンダー」ボタンから来たら、カレンダーの位置までスクロール（ログインをはさんでも有効） */
++  try{
++    var _jump=location.hash||sessionStorage.getItem("unkiyoho_jump")||"";
++    sessionStorage.removeItem("unkiyoho_jump");
++    if(_jump==="#calWrap") setTimeout(function(){ var c=document.getElementById("calWrap"); if(c) c.scrollIntoView({behavior:"smooth",block:"start"}); },350);
++  }catch(e){}
+ }
+ function gconnDemo(){alert("Googleカレンダーの自動連携は現在準備中です。\\n\\nいまは、カレンダーの各日から「Googleカレンダーに追加」で1件ずつ登録できます。");}
+ /* 毎朝メールの配信ON/OFF：本番はサーバーに保存し、保存できたときだけ切り替える（止めたつもりで届き続ける、を防ぐ） */
 diff -u a/register.html b/register.html
---- a/register.html	2026-10-03 18:47:49.998698460 +0000
-+++ b/register.html	2026-10-03 18:47:50.001396666 +0000
+--- a/register.html	2026-10-04 05:41:07.182767653 +0000
++++ b/register.html	2026-10-04 05:41:07.189914755 +0000
 @@ -112,7 +112,7 @@
        if(hh)hh.onchange=sync; sync();
      })();</script>
