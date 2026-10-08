@@ -461,24 +461,22 @@ function gradeThresholds(youStem, youBranch, favSet, imiSet){
   for(var i=0;i<60;i++){ var d=new Date(2020,0,1+i); arr.push(dayRawScore(youStem,youBranch,pillar(d.getFullYear(),d.getMonth()+1,d.getDate()),favSet,imiSet)); }
   arr.sort(function(a,b){return a-b;});
   var q=function(pp){return arr[Math.min(59,Math.floor(pp*60))];};
-  // tri は「実測の△割合」が設計意図(≈下位15%＝週1回程度)になるよう較正した値。
-  // スコアは離散で同点が多く、公称 q(0.15) だと実測は約22%に膨らむため q(0.10) を採用（実測≈15%）。
-  // ◎は上位28%(q0.72)。案Bにより判定は日柱の関係のみ＝流月・流年に依らず毎月ほぼ一定・人により偏らない。
-  return (_GRADE_TH[key]={maru:q(0.72),tri:q(0.10)});
+  // tri=△ライン。1.66/開運予報と判定を統一するため下位15%(q0.15)。◎は上位28%(q0.72)。
+  // ＋dailyGradeで流年・流月(ym)もスコアに加算し、姉妹サービスと同一判定にする（連動時の○/△食い違い解消）。
+  return (_GRADE_TH[key]={maru:q(0.72),tri:q(0.15)});
 }
 /* 統一グレード（案C：💮はレア＝全員一律／恋の底上げは正直版）
    ・🌈(運命の人)＝無条件💮
    ・💮は「桃花×高得点×非沖」のみに限定（🌸恋チャンス×高得点は◎に留める）→ 💮の人ごとの二極化を解消し全員一律≈5%に
    ・恋の合図(桃花/恋チャンス・非沖)の底上げは「中位以上(下位15%より上)」のみ◎。下位15%は正直に△
-   ・上位28%◎・下位15%△（判定は日柱の関係のみ＝流月・流年に依らず毎月一定／案B） */
+   ・上位28%◎・下位15%△。流年・流月(ym)もスコアに加算＝1.66/開運予報と同一判定。 */
 function dailyGrade(you, tt, favSet, imiSet, touka, enlv, ymd){
   var th=gradeThresholds(you.stem, you.branch, favSet, imiSet);
   var s=dayRawScore(you.stem, you.branch, tt, favSet, imiSet);
-  // 【案B】流月・流年の補正は「その月の全日に一律にかかる定数」。以前はこれをグレード判定に足していたが、
-  // 閾値は補正なしで作っていたため“巡りの悪い月は△だらけ／良い月は△ゼロ”という矛盾（設計は下位15%△の
-  // はずが実際は月27%等）が出ていた。→ グレード(◎〇△)は日柱の関係だけで判定して毎月ほぼ一定にし、
-  // 流月・流年は ym に切り出して「今月の巡り」の一言でまとめて見せる。
+  // 流月・流年(ym)は「その月の全日に一律の定数」。1.66/開運予報と判定を統一するため、
+  // グレード(◎〇△)にも ym を加算する（姉妹サービス連動時の○/△の食い違いを解消）。
   var ym = ymd ? ymAdjust(ymd.y, ymd.m, ymd.d, favSet, imiSet, STEM_GOGYO[you.stem]) : 0;
+  s += ym;
   var sok=(CLASH.indexOf(branchRel(tt.branch, you.branch))>=0);
   var love=(touka||enlv===2);
   var sym;
