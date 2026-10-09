@@ -5666,6 +5666,60 @@ function sbxCard(c,lang){var s=sbxSection(c,lang);return s?('<section class="car
 })();
 </script>
 <script>
+/* ===== 天戦地冲（てんせんちちゅう）をやさしく追加＝命式内（生まれ持った）＋運気（年運・大運）。
+   PROのTENSEN_MAP/isTensenChichu/detectTensen/detectTensenNatalを移植。表示・鑑定データ層のみ・エンジン非改変。 ===== */
+(function(){
+  var TMAP={甲:['戊','庚'],乙:['己','辛'],丙:['庚','壬'],丁:['辛','癸'],戊:['甲','壬'],己:['乙','癸'],庚:['甲','丙'],辛:['乙','丁'],壬:['丙','戊'],癸:['丁','己']};
+  var BRs='子丑寅卯辰巳午未申酉戌亥';
+  function isTensen(a,b){ if(!a||!b||a.length<2||b.length<2)return false;
+    return (TMAP[a[0]]||[]).indexOf(b[0])>=0 && ((BRs.indexOf(a[1])+6)%12===BRs.indexOf(b[1])); }
+  function gzOf(p){return p?(p.ganzhi||((p.stem||'')+(p.branch||''))):'';}
+  function natal(c){var P=(c&&c.pillars)||[],NM=['年柱','月柱','日柱'],pairs=[];
+    for(var i=0;i<3;i++){for(var j=i+1;j<3;j++){var a=gzOf(P[i]),b=gzOf(P[j]);if(a.length<2||b.length<2)continue;if(isTensen(a,b))pairs.push(NM[i]+'と'+NM[j]+'（'+a+'×'+b+'）');}}
+    return pairs;}
+  function timing(c){var day=gzOf((c&&c.pillars&&c.pillars[2])||null);
+    var now=(c&&c.now)||{},cy=(now.year!=null?now.year:new Date().getFullYear());
+    var by=(now.year!=null&&now.age!=null)?now.year-now.age:null;
+    var years=((c&&c.annualFortunes)||[]).filter(function(a){return isTensen(day,gzOf(a))&&a.year>=cy-1&&a.year<=cy+20;})
+      .map(function(a){return a.year+'年'+(by!=null?'（'+(a.year-by)+'歳）':'');});
+    var du=((c&&c.decadeFortunes)||[]).filter(function(d){return isTensen(day,d.ganzhi);})
+      .map(function(d){return d.ganzhi+'（'+d.startAge+'〜'+d.endAge+'歳）';});
+    return {day:day,years:years,du:du,any:(years.length>0||du.length>0)};}
+  function cardHTML(c){
+    try{
+      var np=natal(c), tm=timing(c);
+      if((!np||!np.length)&&(!tm||!tm.any))return '';
+      var html='<section class="card" id="tensen-card" style="margin-top:14px">'+
+        '<h2 style="font-size:16px;font-weight:900;color:#7C4DBE;margin:0 0 6px">⚡ 正反対の力が同居する「天戦地冲」</h2>';
+      if(np&&np.length){
+        html+='<div style="margin:6px 0;padding:8px 10px;background:#F4EEFB;border-left:4px solid #7C4DBE;border-radius:8px;font-size:12.5px;line-height:1.7;color:#3a3a3a">'+
+          '<b style="color:#7C4DBE">生まれ持った天戦地冲</b>（'+np.join('・')+'）<br>'+
+          'あなたの中に<b>正反対の強い力が同居</b>しています。心の中でいつも何かがせめぎ合い、大きな葛藤と強いエネルギーを併せ持つタイプ。その力は外にも出て、思い切って現状を変えることも。でも欠点ではなく、<b>人を惹きつけ物事を大きく動かすカリスマ</b>の素質。「壊れた先に新しいステージがある」と知って、恐れず活かしていきましょう。</div>';
+      }
+      if(tm&&tm.any){
+        var s='<b style="color:#7C4DBE">運が大きく揺れる時期</b>：日の干支「'+tm.day+'」に、巡る運が正面からぶつかる時期です（悪い意味ではなく“備えのカレンダー”）。';
+        if(tm.years.length)s+='<br>📅 その年：<b>'+tm.years.join('・')+'</b>（大きな決断・契約・引っ越し・転職は急がず、ていねいに）。';
+        if(tm.du.length)s+='<br>10年運では <b>'+tm.du.join('・')+'</b>（大きな転換点。変化を味方にできれば飛躍のきっかけに）。';
+        html+='<div style="margin:6px 0;padding:8px 10px;background:#FFF4E6;border-left:4px solid #E0A33B;border-radius:8px;font-size:12.5px;line-height:1.7;color:#3a3a3a">'+s+'</div>';
+      }
+      return html+'</section>';
+    }catch(e){return '';}
+  }
+  function add(){try{
+    if(typeof chart==='undefined'||!chart)return;
+    var out=document.getElementById('result'); if(!out)return;
+    if(out.querySelector('#tensen-card'))return;
+    var html=cardHTML(chart); if(!html)return;
+    var w=document.createElement('div'); w.innerHTML=html; var n=w.firstElementChild; if(n)out.appendChild(n);
+  }catch(e){}}
+  if(typeof window.renderResult==='function' && !window.renderResult._tensen){
+    var orig=window.renderResult;
+    window.renderResult=function(){var r=orig.apply(this,arguments);try{add();}catch(e){}return r;};
+    window.renderResult._tensen=1;
+  }
+})();
+</script>
+<script>
 /* ===== Phase2a-①: 時期アラート（まもなくの運の節目）をやさしい言葉で追加。
    PROのtimingAlertHTMLロジックを移植。次の大運の切り替え／次の節木運が2年以内なら、
    鑑定結果の先頭にピンクで予告。大運境界はdecadeFortunesから直接取得。表示のみ・エンジン非改変。 ===== */

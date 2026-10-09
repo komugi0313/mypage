@@ -2600,6 +2600,14 @@ function detectTensen(c){
     .map(d=>d.ganzhi+'（'+d.startAge+'〜'+d.endAge+'歳）');
   return {day,years,du,any:(years.length>0||du.length>0)};
 }
+// ── 命式内の天戦地冲（生まれ持った）＝年月日の柱どうしで「天干が同陰陽で相剋＋地支が冲」。表示・鑑定データ層のみ（エンジン非改変。isTensenChichu/TENSEN_MAPを再利用）──
+function detectTensenNatal(c){
+  const P=(c&&c.pillars)||[],NM=['年柱','月柱','日柱'];
+  const gzOf=p=>p?(p.ganzhi||((p.stem||'')+(p.branch||''))):'';
+  const pairs=[];
+  for(let i=0;i<3;i++){for(let j=i+1;j<3;j++){const a=gzOf(P[i]),b=gzOf(P[j]);if(a.length<2||b.length<2)continue;if(isTensenChichu(a,b))pairs.push(NM[i]+'と'+NM[j]+'（'+a+'×'+b+'）');}}
+  return {pairs,any:pairs.length>0};
+}
 // ── 律音（りっちん／干支併臨）＝干支がまったく同じ。命式内の年月日柱どうし＝宿命律音、大運・年運が命式の柱と同干支＝後天運の律音。個人版①の流派ロジックを移植（②の干支・年運・大運を使用）──
 function detectRitchin(c){
   const P=c.pillars||[],g=[P[0]&&P[0].ganzhi,P[1]&&P[1].ganzhi,P[2]&&P[2].ganzhi];
@@ -5246,6 +5254,8 @@ function buildChartText(c){
       if(ts.years.length)parts.push('年運で天戦地冲する年（今後）:'+ts.years.join('・'));
       if(ts.du.length)parts.push('大運で天戦地冲する時期:'+ts.du.join('・'));
       return '天戦地冲（日干支「'+ts.day+'」に対し巡る運の天干が同陰陽で相剋＋地支が冲＝最も刺激が強く環境の変化・衝突・予期せぬ出来事が起きやすい“揺れやすい時期”。凶と決めつけず「急がず確認とリスク管理を丁寧に、変化を味方につければ飛躍のきっかけ」と前向きに、該当の西暦・年齢を挙げて助言する）:'+parts.join(' ／ ');})(),
+    (()=>{const tn=detectTensenNatal(c);if(!tn.any)return '';
+      return '天戦地冲（命式内・生まれ持った）：命式の'+tn.pairs.join('・')+'が天戦地冲（天干が同陰陽で相剋＋地支が冲）＝生まれつき正反対の強い力が同居。精神と現実の間で葛藤が激しく、内に大きなエネルギーと推進力を持つ。その力は外にも出て、衝突や急な方向転換（突然の決断・環境を壊す動き）として表れることも。欠点ではなく、人を惹きつけ物事を大きく動かすカリスマの源。「破壊の先に新しいステージがある」前提で、恐れず活かすよう前向きに助言する。';})(),
     (()=>{const r=detectRitchin(c);if(!r.any)return '';const parts=[];
       if(r.allThree)parts.push('宿命律音＝三柱すべて同じ干支（非常に稀）。生まれた環境を変えず、家業や受け継いだ場で専念すると力が出る');
       else if(r.pairs.length)parts.push('宿命律音（命式内）＝'+r.pairs.join('・')+'が同じ干支。視野は狭めでも一つのことに集中すると才能が開花、家系との結びつきが強め');
@@ -5525,6 +5535,10 @@ function localReading(c,worry,hard){
     if(ts.years.length)s+='　📅 年運で天戦地冲する年：**'+ts.years.join('・')+'**。この年は大きな決断・契約・引越・転職などを急がず、確認とリスク管理を丁寧に。';
     if(ts.du.length)s+='　大運（10年運）では**'+ts.du.join('・')+'**。人生の大きな転換が起きやすいぶん、変化を味方につければ飛躍のきっかけにもなります。';
     L.push(s);
+  })();
+  (()=>{const tn=detectTensenNatal(c);if(!tn.any)return;
+    L.push('【天戦地冲（生まれ持った性質）】');
+    L.push('あなたの命式そのものに、天干が相剋（剋し合う）＋地支が冲（ぶつかり合う）でそろう**天戦地冲（てんせんちちゅう）**があります（'+tn.pairs.join('・')+'）。これは**正反対の強い力が同居**している証。精神と現実の間でいつも何かがせめぎ合い、内に大きな葛藤と強い推進力を併せ持つタイプです。その力は外にも出て、時に衝突したり、思い切って現状をぶち壊す（急な方向転換）ことも。でもこれは欠点ではなく、**人を惹きつけ、物事を大きく動かすカリスマ**の源。「壊れた先には新しいステージがある」と知って恐れず活かせば、大きく飛躍できます。');
   })();
   (()=>{const r=detectRitchin(c);if(!r.any)return;
     L.push('【律音（りっちん・干支併臨）】');
