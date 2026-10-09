@@ -2321,7 +2321,7 @@ window.KANSHI60_DETAIL={
   }
 
   // この命式の特徴を「○○（年柱・月柱）があります。」形式で列挙（app-proと同一ロジック・自己完結）。
-  //   当流派どおり：冲・干合・支合・三合・方合・宿命半会（半合）・宿命中殺・異常干支・魁罡のみ（破・害・自然の刑は不採用）。表示層のみ・計算エンジン非改変。
+  //   当流派どおり：冲・破・害・干合・支合・三合・方合・宿命半会（半合）・宿命中殺・異常干支・魁罡（自然の刑は不採用）。表示層のみ・計算エンジン非改変。
   function bxFeatureList(pillars){
     var BRs='子丑寅卯辰巳午未申酉戌亥', STE='甲乙丙丁戊己庚辛壬癸';
     var RG={子:'丑',丑:'子',寅:'亥',亥:'寅',卯:'戌',戌:'卯',辰:'酉',酉:'辰',巳:'申',申:'巳',午:'未',未:'午'};
@@ -2331,6 +2331,8 @@ window.KANSHI60_DETAIL={
     var CENs={子:1,午:1,卯:1,酉:1};
     var IJ={甲戌:1,乙亥:1,戊戌:1,庚子:1,辛亥:1,丁巳:1,辛巳:1,壬午:1,丁亥:1,丙戌:1,戊子:1,癸巳:1,己亥:1};
     var KG2={庚辰:1,庚戌:1,壬辰:1,戊戌:1,戊辰:1};
+    var HAx={子:'酉',酉:'子',丑:'辰',辰:'丑',寅:'亥',亥:'寅',卯:'午',午:'卯',巳:'申',申:'巳',未:'戌',戌:'未'}; // 六破
+    var GAIx={子:'未',未:'子',丑:'午',午:'丑',寅:'巳',巳:'寅',卯:'辰',辰:'卯',申:'亥',亥:'申',酉:'戌',戌:'酉'}; // 六害
     // 天戦地冲（天干が同陰陽で相剋＋地支が冲）用の天干相剋表。[自分が剋す, 剋される]。表示層のみ。
     var TSM={甲:['戊','庚'],乙:['己','辛'],丙:['庚','壬'],丁:['辛','癸'],戊:['壬','甲'],己:['癸','乙'],庚:['甲','丙'],辛:['乙','丁'],壬:['丙','戊'],癸:['丁','己']};
     var P=(pillars||[]).map(function(p){return {stem:(p.stem||p.tenkan||(p.ganzhi||'')[0]||''),branch:(p.branch||p.chishi||(p.ganzhi||'')[1]||''),ganzhi:(p.ganzhi||((p.stem||'')+(p.branch||''))),label:(String(p.label||'')[0]||'')};});
@@ -2342,6 +2344,8 @@ window.KANSHI60_DETAIL={
     // 2柱関係は、同じ干支ペア（例：庚乙）が複数柱にまたがる場合は最初の1件に集約（正典natalRelsと同じ挙動＝二重計上しない）。
     for(var i=0;i<P.length;i++)for(var j=i+1;j<P.length;j++){var a=P[i],b=P[j];
       if(isCh(a.branch,b.branch)){var kc='冲|'+a.branch+b.branch;if(!_s2[kc]){_s2[kc]=1;out.push('冲（'+Lb(a)+'・'+Lb(b)+'）');}}
+      if(HAx[a.branch]===b.branch){var kh='破|'+a.branch+b.branch;if(!_s2[kh]){_s2[kh]=1;out.push('破（'+Lb(a)+'・'+Lb(b)+'）');}}
+      if(GAIx[a.branch]===b.branch){var kg='害|'+a.branch+b.branch;if(!_s2[kg]){_s2[kg]=1;out.push('害（'+Lb(a)+'・'+Lb(b)+'）');}}
       if(isCh(a.branch,b.branch)&&(TSM[a.stem]||[]).indexOf(b.stem)>=0){
         var aC=(TSM[a.stem][0]===b.stem), ci=aC?i:j, ri=aC?j:i, pc=P[ci], pr=P[ri], tlab;
         if(ri===2) tlab=L(pc)+'→日柱 '+pc.ganzhi+'×'+pr.ganzhi+'・外から試練/内省';
@@ -3537,7 +3541,8 @@ window.KANSHI60_DETAIL={
       if(CHONG[key]) out.push({t:'冲',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:6});
       if(KEI[key]){ var inSan=false; sankeiHit.forEach(function(s){ if(s.indexOf(B[i])>=0&&s.indexOf(B[j])>=0) inSan=true; }); if(!inSan) out.push({t:'刑',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:7}); }
       if(B[i]===B[j]&&SELFKEI[B[i]]) out.push({t:'刑',d:lab[i]+lab[j]+'（自刑）',o:7});
-      /* 害（穿）・破は当流派では採らない（外す） */
+      if(HA[key]) out.push({t:'破',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:8});
+      if(GAI[key]) out.push({t:'害',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:9});
     }
     out.sort(function(a,b){return a.o-b.o;});
     return out;
