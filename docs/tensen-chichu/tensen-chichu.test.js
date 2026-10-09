@@ -36,4 +36,11 @@ assert.deepStrictEqual(t.map(function (x) { return x.label + ':' + x.dir; }), ['
 var c = T.compat(['戊午', '丙寅', '甲子', '乙亥'], ['庚午', '丙寅', '庚午', '乙亥']);
 assert.deepStrictEqual(c.map(function (x) { return x.aPillar + '×' + x.bPillar + (x.isDay ? '(核)' : '') + (x.aControls ? '本人剋す' : '相手剋す'); }),
   ['日柱×年柱相手剋す', '日柱×日柱(核)相手剋す']);
+// 運気×月柱：日柱 甲子・月柱 丙寅。壬申＝月柱の丙が剋される、庚申＝月柱の丙が剋す
+var tb = T.timingBoth('甲子', '丙寅', [{ kind: '年運', label: '2027年', ganzhi: '庚午' }, { kind: '年運', label: '2028年', ganzhi: '壬申' }, { kind: '年運', label: '2030年', ganzhi: '庚申' }]);
+assert.deepStrictEqual(tb.self.map(function (x) { return x.label + ':' + x.dir; }), ['2027年:pressured']);
+assert.deepStrictEqual(tb.work.map(function (x) { return x.label + ':' + x.dir; }), ['2028年:pressured', '2030年:attack']);
+// 相性：日柱×月柱は important
+var ci = T.compat(['', '', '甲子', ''], ['', '庚午', '', '']);
+assert.ok(ci.length === 1 && ci[0].important && !ci[0].isDay);
 console.log('OK: 3600組の判定・向き一致 / 成立120通り / 検算例すべて合格');

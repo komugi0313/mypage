@@ -2595,25 +2595,51 @@ function detectChusatsu(c){
 const TENSEN_MAP={甲:['戊','庚'],乙:['己','辛'],丙:['庚','壬'],丁:['辛','癸'],戊:['壬','甲'],己:['癸','乙'],庚:['甲','丙'],辛:['乙','丁'],壬:['丙','戊'],癸:['丁','己']};
 function isTensenChichu(gzA,gzB){ if(!gzA||!gzB||gzA.length<2||gzB.length<2)return false;
   return (TENSEN_MAP[gzA[0]]||[]).indexOf(gzB[0])>=0 && ((BR.indexOf(gzA[1])+6)%12===BR.indexOf(gzB[1])); }
-function detectTensen(c){
-  const day=(c&&c.pillars&&c.pillars[2]&&c.pillars[2].ganzhi)||'';
-  const ds=day.charAt(0), map=TENSEN_MAP[ds]||['',''];
+// 運気の天戦地冲を1本の柱（日柱または月柱）について走査。dir 0＝柱の干が運の干を剋す（自分側から壊す）／1＝運の干が柱の干を剋す（外から壊される）
+function _tsScan(c,target){
+  const r={yA:[],yU:[],dA:[],dU:[],mA:[],mU:[],attack:false,pressured:false,any:false};
+  if(!target||target.length<2)return r;
+  const map=TENSEN_MAP[target.charAt(0)]||['',''];
   const now=(c&&c.now)||{}, cy=(now.year!=null?now.year:new Date().getFullYear());
   const by=(now.year!=null&&now.age!=null)?now.year-now.age:null;
   const gzOf=a=>a.ganzhi||((a.stem||'')+(a.branch||''));
-  const dir=gz=>map.indexOf(gz.charAt(0)); // 0=日干が運干を剋す（自分が剋す側）／1=運干が日干を剋す（自分が剋される側）
-  const yA=[],yU=[],dA=[],dU=[],mA=[],mU=[];
-  (c.annualFortunes||[]).forEach(a=>{const gz=gzOf(a);if(!isTensenChichu(day,gz)||a.year<cy-1||a.year>cy+20)return;
-    const lab=a.year+'年'+(by!=null?'（'+(a.year-by)+'歳）':'');(dir(gz)===0?yA:yU).push(lab);});
-  (c.decadeFortunes||[]).forEach(d=>{if(!isTensenChichu(day,d.ganzhi))return;
-    const lab=d.ganzhi+'（'+d.startAge+'〜'+d.endAge+'歳）';(dir(d.ganzhi)===0?dA:dU).push(lab);});
-  // 月運（今月から12ヶ月）にも天戦地冲が巡る場合を拾う（短期・影響小。向きは日干基準で区別）
-  try{(monthFortuneList(c,12)||[]).forEach(m=>{const gz=m.ganzhi||'';if(!isTensenChichu(day,gz))return;
-    const lab=(m.calYear?m.calYear+'年':'')+(m.calMonth?m.calMonth+'月ごろ':'')+'（'+gz+'）';(dir(gz)===0?mA:mU).push(lab);});}catch(e){}
-  return {day,yA,yU,dA,dU,mA,mU,
-    attack:(yA.length+dA.length+mA.length)>0,pressured:(yU.length+dU.length+mU.length)>0,
-    any:(yA.length+yU.length+dA.length+dU.length+mA.length+mU.length)>0};
+  const dir=gz=>map.indexOf(gz.charAt(0));
+  (c.annualFortunes||[]).forEach(a=>{const gz=gzOf(a);if(!isTensenChichu(target,gz)||a.year<cy-1||a.year>cy+20)return;
+    const lab=a.year+'年'+(by!=null?'（'+(a.year-by)+'歳）':'');(dir(gz)===0?r.yA:r.yU).push(lab);});
+  (c.decadeFortunes||[]).forEach(d=>{if(!isTensenChichu(target,d.ganzhi))return;
+    const lab=d.ganzhi+'（'+d.startAge+'〜'+d.endAge+'歳）';(dir(d.ganzhi)===0?r.dA:r.dU).push(lab);});
+  // 月運（今月から12ヶ月）＝短期・影響小
+  try{(monthFortuneList(c,12)||[]).forEach(m=>{const gz=m.ganzhi||'';if(!isTensenChichu(target,gz))return;
+    const lab=(m.calYear?m.calYear+'年':'')+(m.calMonth?m.calMonth+'月ごろ':'')+'（'+gz+'）';(dir(gz)===0?r.mA:r.mU).push(lab);});}catch(e){}
+  r.attack=(r.yA.length+r.dA.length+r.mA.length)>0; r.pressured=(r.yU.length+r.dU.length+r.mU.length)>0; r.any=r.attack||r.pressured;
+  return r;
 }
+// 運気の天戦地冲＝巡る運（大運・年運・月運）が ①日柱（本質・プライベート）②月柱（仕事・社会運）とぶつかる時期。
+// 戻り値の yA〜mU / attack / pressured は日柱ぶん（従来どおり）。月柱ぶんは work に入る。
+function detectTensen(c){
+  const day=(c&&c.pillars&&c.pillars[2]&&c.pillars[2].ganzhi)||'';
+  const mon=(c&&c.pillars&&c.pillars[1]&&c.pillars[1].ganzhi)||'';
+  const s=_tsScan(c,day), w=_tsScan(c,mon);
+  return Object.assign({},s,{day,mon,work:w,selfAny:s.any,any:s.any||w.any});
+}
+// 大運・年運・月運の該当を「大運＝…　年運＝…　月運＝…」に整形（b=true で太字）
+function _tsRuns(x,side,b){const o=[],w=t=>b?'<b>'+t+'</b>':t;
+  if(x['d'+side].length)o.push('大運＝'+w(x['d'+side].join('・')));
+  if(x['y'+side].length)o.push('年運＝'+w(x['y'+side].join('・')));
+  if(x['m'+side].length)o.push('月運＝'+w(x['m'+side].join('・')));
+  return o.join('　');}
+// 天戦地冲の説明文（基本は凶。現象→心構え→良い面は最後に短く）
+const TS_TXT={
+  head:'天干どうしが同じ陰陽で剋し合い、地支どうしも真向かいで冲する組み合わせです。上（天干）と下（地支）が同時にぶつかるため、干支の関係の中でもっとも衝撃が大きく、基本的には凶として注意します。強く出る順は 大運＞年運＞命式内（月運は短い期間の目安）。',
+  self:'日柱は本人そのものと私生活を表す柱です。ここに天戦地冲が巡る時期は、暮らしの土台が大きく揺らぎやすくなります。夫婦・パートナーや家族との関係に区切りがつく、親しい人と離れる、住まいが変わるなど、望む・望まないにかかわらず身の回りが入れ替わる出来事が起こりやすい時期です。',
+  work:'月柱は仕事や社会での立場を表す柱です。ここに天戦地冲が巡る時期は、職場や仕事の状況が大きく動きやすくなります。異動や配置換え、勤め先の業績悪化や組織の再編、取引の打ち切り、思わぬトラブルでの信用低下などに注意が必要です。退職・転職・独立といった決断も重なりやすく、立場を落とすか、逆に大きく伸びるかの境目になります。',
+  body:'心と体への負担も大きくなりやすい時期です。疲れやストレスの蓄積、気分の落ち込み、思いがけないケガや体調の崩れに気をつけてください。それまで当たり前だと思っていた考え方が通用しなくなり、気持ちが大きく揺さぶられることもあります。',
+  U:'剋される側（外から壊される）＝本人の望みとは別のところで、周囲や環境の側から圧力・試練が持ち込まれる形で起こりやすい。',
+  A:'剋す側（自分から壊す）＝本人の言動がきっかけで、今の関係や状態を自ら崩してしまう形で起こりやすい。押し切る・独断で決めるといった強引さに注意。',
+  care:'備え：①大きな投資や事業の拡大、一か八かの勝負はこの時期を外し、今あるものを守る　②起きた変化を無理に元へ戻そうとしない（しがみつくほど傷が深くなる）　③休養と体調管理を予定に組み込み、無理を重ねない。',
+  pos:'なお、役目を終えた関係や合わなくなった環境に区切りをつけ、次の段階へ移るきっかけになる面もあります。',
+  natal:'命式の中に天戦地冲がある人は、相反する気持ちを同時に抱えやすく、心の中で折り合いがつきにくい傾向があります。人生の起伏や試練も多くなりがちです（大運・年運で巡るときより影響は穏やか）。その反面、エネルギーが強く個性がはっきりしているため、自分のやり方を貫ける分野（表現・競技・独立した仕事など）では大きな力を発揮することがあります。'
+};
 // ── 命式内の天戦地冲（生まれ持った）＝年月日（時刻が分かれば時柱も）の柱どうしで「天干が同陰陽で相剋＋地支が冲」。表示・鑑定データ層のみ（エンジン非改変。isTensenChichu/TENSEN_MAPを再利用）──
 function detectTensenNatal(c){
   const P=(c&&c.pillars)||[],NM=['年柱','月柱','日柱','時柱'];
@@ -2626,9 +2652,9 @@ function detectTensenNatal(c){
     const aCtrl=((TENSEN_MAP[a.charAt(0)]||[])[0]===b.charAt(0)); // a.charAt(0) が剋す相手に b があれば a→b
     const ci=aCtrl?i:j, ri=aCtrl?j:i; // ci=剋す側の柱, ri=剋される側の柱
     let txt;
-    if(ri===2) txt='「'+NM[ci]+'→日柱」（'+a+'×'+b+'）＝外（'+AREA[NM[ci]]+'）から自分へ強い圧力・試練がかかる向き。内面の葛藤になりやすい反面、受けて立てば逆転・急成長の起爆剤。';
-    else if(ci===2) txt='「日柱→'+NM[ri]+'」（'+a+'×'+b+'）＝自分から外（'+AREA[NM[ri]]+'）へ強く働きかける向き。主導して現状を変える推進力だが、ねじ伏せ・衝突に注意。';
-    else txt='「'+NM[ci]+'→'+NM[ri]+'」（'+a+'×'+b+'）＝'+AREA[NM[ci]]+'と'+AREA[NM[ri]]+'の間で激しい綱引き。内側に相反する力が同居。';
+    if(ri===2) txt='「'+NM[ci]+'→日柱」（'+a+'×'+b+'）＝外（'+AREA[NM[ci]]+'）から自分が剋される形。その領域から強い圧力や試練を受けやすく、内面の葛藤や消耗につながりやすい。';
+    else if(ci===2) txt='「日柱→'+NM[ri]+'」（'+a+'×'+b+'）＝自分が外（'+AREA[NM[ri]]+'）を剋す形。その領域と正面からぶつかり、関係を壊しやすい。強引さ・独断に注意。';
+    else txt='「'+NM[ci]+'→'+NM[ri]+'」（'+a+'×'+b+'）＝'+AREA[NM[ci]]+'と'+AREA[NM[ri]]+'の間で激しい衝突。2つの領域が両立しにくく、どちらかが崩れやすい。';
     items.push(txt);
   }}
   return {items,any:items.length>0};
@@ -2637,22 +2663,16 @@ function detectTensenNatal(c){
 function tensenCardHTML(c){
   const tn=detectTensenNatal(c), ts=detectTensen(c);
   if((!tn||!tn.any)&&(!ts||!ts.any))return '';
-  let body='';
-  if(tn&&tn.any){
-    body+='<div style="margin-top:8px;background:#FBF4FF;border:1px solid #E6CFF2;border-left:5px solid #7C4DBE;border-radius:11px;padding:10px 13px;font-size:12.5px;line-height:1.85">'+
-      '<div style="font-weight:900;color:#6B3FA0;margin-bottom:3px">生まれ持った天戦地冲（命式内）</div>'+
-      '<div><b>正反対の強い力が同居</b>し、内に大きな葛藤と推進力を併せ持つ——<b>人を惹きつけ物事を大きく動かすカリスマ</b>の素質。「壊れた先に新しいステージがある」縁です。剋の向きで現れ方が変わります：</div>'+
-      tn.items.map(t=>'<div style="margin-top:3px">▶ '+t+'</div>').join('')+'</div>';
-  }
-  if(ts&&ts.any){
-    const seg=[];
-    if(ts.attack)seg.push('<div style="margin-top:3px">▶ <b>自分が剋す側（発散・主導）</b>：'+(ts.dA.length?'大運＝<b>'+ts.dA.join('・')+'</b>　':'')+(ts.yA.length?'年運＝<b>'+ts.yA.join('・')+'</b>　':'')+(ts.mA.length?'月運＝<b>'+ts.mA.join('・')+'</b>':'')+'。自分から動いて現状を変えられる反面、ねじ伏せ・衝突・独断に注意。</div>');
-    if(ts.pressured)seg.push('<div style="margin-top:3px">▶ <b>自分が剋される側（試練・内省）</b>：'+(ts.dU.length?'大運＝<b>'+ts.dU.join('・')+'</b>　':'')+(ts.yU.length?'年運＝<b>'+ts.yU.join('・')+'</b>　':'')+(ts.mU.length?'月運＝<b>'+ts.mU.join('・')+'</b>':'')+'。外からの圧力・試練がかかりやすいが、受けて立てば逆転・急成長のきっかけに。</div>');
-    body+='<div style="margin-top:8px;background:#FFF7EB;border:1px solid #F0D9A8;border-left:5px solid #E0A33B;border-radius:11px;padding:10px 13px;font-size:12.5px;line-height:1.85">'+
-      '<div style="font-weight:900;color:#B8860B;margin-bottom:3px">運が大きく揺れる時期（運気の天戦地冲）</div>'+
-      '<div>日の干支「'+ts.day+'」に巡る運が正面からぶつかる時期です（悪い意味ではなく“備えのカレンダー”）。剋の向きで出方が真逆になります：</div>'+seg.join('')+'</div>';
-  }
-  return '<section class="card sec"><span class="eyebrow"><b>刺激と転機</b>天戦地冲（てんせんちちゅう）</span><h2 style="margin-bottom:2px">正反対の力が同居する「天戦地冲」</h2>'+body+'</section>';
+  const box=(title,inner)=>'<div style="margin-top:8px;background:#FDF2F1;border:1px solid #F1C9C5;border-left:5px solid #B3261E;border-radius:11px;padding:10px 13px;font-size:12.5px;line-height:1.85">'+
+    '<div style="font-weight:900;color:#9A1F17;margin-bottom:3px">'+title+'</div>'+inner+'</div>';
+  const dirs=x=>(x.pressured?'<div style="margin-top:4px">▶ <b>'+TS_TXT.U.split('＝')[0]+'</b>：'+_tsRuns(x,'U',true)+'。'+TS_TXT.U.split('＝')[1]+'</div>':'')+
+               (x.attack?'<div style="margin-top:4px">▶ <b>'+TS_TXT.A.split('＝')[0]+'</b>：'+_tsRuns(x,'A',true)+'。'+TS_TXT.A.split('＝')[1]+'</div>':'');
+  let body='<div style="font-size:12.5px;line-height:1.85;margin-top:6px">'+TS_TXT.head+'</div>';
+  if(ts.selfAny)body+=box('日柱に巡る時期（本質・プライベート）',TS_TXT.self+dirs(ts));
+  if(ts.work.any)body+=box('月柱に巡る時期（仕事・社会運）',TS_TXT.work+dirs(ts.work));
+  if(ts.any)body+=box('巡ってきたときの注意と心構え','<div>'+TS_TXT.body+'</div><div style="margin-top:4px">'+TS_TXT.care+'</div><div style="margin-top:4px;color:var(--muted)">'+TS_TXT.pos+'</div>');
+  if(tn&&tn.any)body+=box('生まれ持った天戦地冲（命式内）','<div>'+TS_TXT.natal+'</div>'+tn.items.map(t=>'<div style="margin-top:3px">▶ '+t+'</div>').join(''));
+  return '<section class="card sec"><span class="eyebrow"><b>要注意</b>天戦地冲（てんせんちちゅう）</span><h2 style="margin-bottom:2px">干と支が同時にぶつかる「天戦地冲」</h2>'+body+'</section>';
 }
 // ── 律音（りっちん／干支併臨）＝干支がまったく同じ。命式内の年月日柱どうし＝宿命律音、大運・年運が命式の柱と同干支＝後天運の律音。個人版①の流派ロジックを移植（②の干支・年運・大運を使用）──
 function detectRitchin(c){
@@ -5297,12 +5317,14 @@ function buildChartText(c){
       if(cs.hasNikkyo)t.push('日居中殺（日柱が'+cs.dgz+'／甲辰・乙巳）＝精神と現実のギャップがあり、繊細で孤独を感じやすいが、気高い理想を持つ「一人で輝く星」。孤独を否定せず、表現・芸能・精神世界で才能が開花する');
       if(cs.ichidai)t.push('一代運（生年＋生月中殺の両方・約36人に1人）＝受け継ぐより自分の力で新しく始め、自分の代で築き上げる生き方でこそ輝く');
       return '宿命中殺（天中殺が命式の柱にかかる特別な宿命。“欠け”ではなく「選ばれた人が持つ、人と違う道を歩む強み」として必ず前向きに伝える。成功の共通点＝①普通になろうとしない②常識より自分の感覚を信じる③早めに自立する④人と違う人生を楽しむ⑤心の声に沿って生きる）:'+t.join(' ／ ');})(),
-    (()=>{const ts=detectTensen(c);if(!ts.any)return '';const seg=[];
-      if(ts.attack)seg.push('【自分が剋す側＝発散・外へ強く働きかける（主導的に動けるが周囲との摩擦・衝突・独断に注意）】'+(ts.dA.length?'大運:'+ts.dA.join('・')+' ':'')+(ts.yA.length?'年運:'+ts.yA.join('・')+' ':'')+(ts.mA.length?'月運:'+ts.mA.join('・'):''));
-      if(ts.pressured)seg.push('【自分が剋される側＝外から強い圧力・試練を受ける（内面の葛藤。受けて立てば逆転・急成長のチャンス）】'+(ts.dU.length?'大運:'+ts.dU.join('・')+' ':'')+(ts.yU.length?'年運:'+ts.yU.join('・')+' ':'')+(ts.mU.length?'月運:'+ts.mU.join('・'):''));
-      return '天戦地冲（運気／日干支「'+ts.day+'」に巡る運の天干が同陰陽で相剋＋地支が冲＝環境の変化・衝突が起きやすい揺れやすい時期。剋の“向き”で現象が真逆になるので必ず区別し、該当の西暦・年齢を挙げて助言。凶と決めつけず、破壊の先の再生＝飛躍の起爆剤として前向きに）:'+seg.join(' ／ ');})(),
+    (()=>{const ts=detectTensen(c);if(!ts.any)return '';
+      const seg=(x,lab)=>{const o=[];if(x.pressured)o.push('剋される側（外から壊される）:'+_tsRuns(x,'U',false));if(x.attack)o.push('剋す側（自分から壊す）:'+_tsRuns(x,'A',false));return o.length?'【'+lab+'】'+o.join(' ／ '):'';};
+      return '天戦地冲（運気＝巡る運の天干が日柱・月柱の天干と同陰陽で相剋＋地支が冲。干と支が同時にぶつかる、干支関係でもっとも衝撃の大きい凶。影響は大運＞年運＞命式内）:'+
+        [seg(ts,'日柱に巡る＝本人・私生活：暮らしの土台が揺らぐ（夫婦・パートナーや家族との関係に区切り・親しい人と離れる・住まいが変わるなど、望む望まないにかかわらず身の回りが入れ替わる）'),
+         seg(ts.work,'月柱に巡る＝仕事・社会での立場：職場や仕事の状況が大きく動く（異動・配置換え・勤め先の業績悪化や組織再編・取引の打ち切り・トラブルでの信用低下・退職や転職や独立の決断）。立場を落とすか大きく伸びるかの境目')].filter(Boolean).join(' ')+
+        '。心身の負担（疲れやストレスの蓄積・気分の落ち込み・思いがけないケガや体調の崩れ・それまでの考え方が通用しなくなる動揺）にも触れる。剋の向きは必ず区別：剋される側＝本人の望みと別に周囲や環境から持ち込まれる試練／剋す側＝本人の言動がきっかけで自ら崩す・強引さで失う。書き方：基本は凶として、該当の西暦・年齢を挙げ、起こりやすい出来事を具体的に伝える（断定はせず「起こりやすい」）。備え（大きな投資や拡大・勝負はこの時期を外し今あるものを守る／起きた変化を無理に元へ戻そうとしない／休養と体調管理を優先）を必ず添える。良い面（役目を終えた関係や環境に区切りをつけ次の段階へ移るきっかけ）は最後に短く触れる程度にし、凶を薄めない';})(),
     (()=>{const tn=detectTensenNatal(c);if(!tn.any)return '';
-      return '天戦地冲（命式内・生まれ持った／天干が同陰陽で相剋＋地支が冲）＝正反対の強い力が同居し、内に大きな葛藤と推進力を持つ“カリスマの素質”。剋の向き（どの柱からどの柱へ）で現れ方が変わるので、各組を区別して助言。破壊の先の再生＝飛躍の起爆剤として前向きに：'+tn.items.join(' ／ ');})(),
+      return '天戦地冲（命式内・生まれ持った／天干が同陰陽で相剋＋地支が冲）＝相反する気持ちを同時に抱えやすく心の中で折り合いがつきにくい、人生の起伏や試練が多くなりがちな生まれつきの傾向（影響は大運・年運で巡るときより穏やか）。剋の向き（どの柱からどの柱へ）で、どの領域が崩れやすいかが変わるので各組を区別して書く。良い面（エネルギーが強く個性がはっきりしており、自分のやり方を貫ける分野＝表現・競技・独立した仕事などで力を発揮しやすい）は短く添える程度に：'+tn.items.join(' ／ ');})(),
     (()=>{const r=detectRitchin(c);if(!r.any)return '';const parts=[];
       if(r.allThree)parts.push('宿命律音＝三柱すべて同じ干支（非常に稀）。生まれた環境を変えず、家業や受け継いだ場で専念すると力が出る');
       else if(r.pairs.length)parts.push('宿命律音（命式内）＝'+r.pairs.join('・')+'が同じ干支。視野は狭めでも一つのことに集中すると才能が開花、家系との結びつきが強め');
@@ -5405,7 +5427,7 @@ function sectionIcon(t){const k=String(t).replace(/[：:　\s]+$/,'');const e=SE
    「（＝ふつうの言葉）」を自動で添える安全網。長い熟語を先に置き、直後が漢字（別熟語の一部）や
    既に「（」がある場合は触らない。読み手（お客様）が用語を知らなくても意味が通るようにする。 */
 const READ_GLOSS=[
-  ['天地徳合','干も支もそろう最上級の縁'],['天戦地冲','干と支が同時にぶつかる揺れやすい時期'],
+  ['天地徳合','干も支もそろう最上級の縁'],['天戦地冲','干と支が同時にぶつかる、もっとも衝撃の大きい組み合わせ（基本は凶）'],
   ['月支元命','生まれ持った気質の軸'],['傷官見官','才能と規律がぶつかりやすい配置'],
   ['官印相生','学びと信用で認められる良い配置'],['殺印相生','重圧を学びに変えて伸びる配置'],
   ['財印交戦','お金と理想で板挟みになりやすい配置'],['劫財奪財','お金を持っていかれやすい配置'],
@@ -5510,7 +5532,7 @@ const OFFLINE_INTRO={
   '【才能・活きる場】':'どんな場面・役割だと、あなたの力が自然に発揮されやすいか、という“得意の方向”を見ます。',
   '【五行のかたより】':'木・火・土・金・水という5つの気のうち、あなたに多い気と少ない気のクセを見ます（多い少ないは良し悪しではなく、性格の個性です）。',
   '【宿命中殺（天中殺）】':'これは“欠け”ではなく、人と少し違う道でこそ輝く、という特別な生まれ方の話です。',
-  '【天戦地冲（要注意の時期）】':'運が大きく揺れやすい時期を、あらかじめ知っておくための“備えのカレンダー”です（悪い意味ではありません）。',
+  '【天戦地冲（大きく揺らぎ、入れ替わる時期）】':'干と支が同時にぶつかる、四柱推命の中でもとくに衝撃の大きい時期です。基本的には注意が必要なものとして、起こりやすいことと備え方を見ます。',
   '【律音（りっちん・干支併臨）】':'物事が切り替わる“分かれ道・新しいスタート”を表すサインです。',
   '【モテ度・魅力タイプ】':'あなたの魅力や、人を惹きつける力の傾向です（星が控えめでも、行動しだいで伸ばせます）。',
   '【お金との付き合い方（金運）】':'「金運がある／ない」ではなく、あなたに合ったお金の“つくり方・増やし方”のタイプを読みます。',
@@ -5577,14 +5599,18 @@ function localReading(c,worry,hard){
     L.push('天中殺（空亡）が命式の柱にかかる特別な宿命をお持ちです。これは"欠け"ではなく、**人と違う道を歩む強み**。'+t.join(''));
   })();
   (()=>{const ts=detectTensen(c);if(!ts.any)return;
-    L.push('【天戦地冲（運が大きく揺れる時期）】');
-    L.push('あなたの日干支**'+ts.day+'**に、巡る運が**天干の相剋＋地支の冲**でぶつかる時期です。剋の"向き"で現れ方が真逆になるので分けて見ます（凶ではなく"備えのカレンダー"）。');
-    if(ts.attack)L.push('▶ **自分が剋す側（発散・主導）**：'+(ts.dA.length?'大運＝**'+ts.dA.join('・')+'**　':'')+(ts.yA.length?'年運＝**'+ts.yA.join('・')+'**　':'')+(ts.mA.length?'月運＝**'+ts.mA.join('・')+'**':'')+'。自分から強く動いて現状を変えられる反面、ねじ伏せ・衝突・独断になりやすい時期。周りへの配慮と確認を丁寧に。');
-    if(ts.pressured)L.push('▶ **自分が剋される側（試練・内省）**：'+(ts.dU.length?'大運＝**'+ts.dU.join('・')+'**　':'')+(ts.yU.length?'年運＝**'+ts.yU.join('・')+'**　':'')+(ts.mU.length?'月運＝**'+ts.mU.join('・')+'**':'')+'。外からの圧力や試練がかかりやすい時期。抱え込みすぎず、受けて立てば逆転・急成長のきっかけに。');
+    const md=t=>t.replace(/<b>/g,'**').replace(/<\/b>/g,'**');
+    const dl=x=>{if(x.pressured)L.push('▶ **'+TS_TXT.U.split('＝')[0]+'**：'+md(_tsRuns(x,'U',true))+'。'+TS_TXT.U.split('＝')[1]);
+                 if(x.attack)L.push('▶ **'+TS_TXT.A.split('＝')[0]+'**：'+md(_tsRuns(x,'A',true))+'。'+TS_TXT.A.split('＝')[1]);};
+    L.push('【天戦地冲（大きく揺らぎ、入れ替わる時期）】');
+    L.push(TS_TXT.head);
+    if(ts.selfAny){L.push(TS_TXT.self);dl(ts);}
+    if(ts.work.any){L.push(TS_TXT.work);dl(ts.work);}
+    L.push(TS_TXT.body); L.push(TS_TXT.care); L.push(TS_TXT.pos);
   })();
   (()=>{const tn=detectTensenNatal(c);if(!tn.any)return;
     L.push('【天戦地冲（生まれ持った性質）】');
-    L.push('あなたの命式そのものに、天干が相剋（剋し合う）＋地支が冲（ぶつかり合う）でそろう**天戦地冲（てんせんちちゅう）**があります。**正反対の強い力が同居**し、内に大きな葛藤と推進力を併せ持つ——**人を惹きつけ物事を大きく動かすカリスマ**の素質です。「壊れた先に新しいステージがある」と知って恐れず活かせば、大きく飛躍できます。剋の"向き"で現れ方が変わるので、組ごとに見ます：');
+    L.push(TS_TXT.natal+' 剋の向きで、どの領域が崩れやすいかが変わります：');
     tn.items.forEach(function(t){L.push('▶ '+t);});
   })();
   (()=>{const r=detectRitchin(c);if(!r.any)return;
@@ -6151,6 +6177,14 @@ function compatExtras(a,b,rt){
 // ── 相性の天戦地冲（2人の命式クロス）＝本人A×相手Bの各柱で「天干が同陰陽で相剋＋地支が冲」。日柱どうし＝2人の核（最重要）、他柱は領域どうしのぶつかり。向き（どちらが剋す側か）で主導/受けが変わる。時刻不明の時柱は除外。表示・鑑定データ層のみ（isTensenChichu/TENSEN_MAP再利用）──
 const TSC_PN=['年柱','月柱','日柱','時柱'];
 const TSC_DOMA={年柱:'親・目上・家柄・育った環境',月柱:'仕事・社会的立場・暮らしの基盤',日柱:'本人自身・配偶者としての距離感',時柱:'子ども・将来・晩年・本音の部分'};
+const TSC_TXT={
+  base:'2人の柱の間に天戦地冲がある場合、相性としては刺激が強く、衝突の多い組み合わせとして注意します。最初は相手の自分と違う部分に強く引きつけられやすい一方、距離が縮まるにつれて、物事の判断基準や進め方、何を正しいと思うかの違いがはっきりし、言い争いやすれ違いが増えがちです。一緒にいるだけで互いの調子が崩れ、気疲れしやすい関係でもあります。',
+  love:'惹かれる気持ちと傷つく経験が繰り返されやすく、離れたりくっついたりを続ける関係になりがちです。相手の「普通」が自分の「普通」と大きく違うため、話し合いや歩み寄りに多くの労力がかかります。',
+  work:'目指す方向ややり方で意見が割れやすい組み合わせです。ただ、攻める役と守る役のように担当を分けられれば、片方だけでは出てこない発想や成果につながることもあります。',
+  how:'相手を自分の考えに合わせさせよう、思いどおりに動かそうとするほど、関係は決定的に壊れやすくなります。踏み込みすぎない距離を保ち、違いを相手の持ち味として認めることが、関係を続けるための前提です。すぐに離れるべき相性と決めつける必要はありませんが、手間のかかる関係であることは知っておきましょう。'
+};
+// 日柱×月柱（どちら向きでも）＝相性で重要な組
+function tscImportant(e){return (e.i===2&&e.j===1)||(e.i===1&&e.j===2);}
 function detectTensenCompat(a,b){
   const gz=p=>p?(p.ganzhi||((p.stem||'')+(p.branch||''))):'';
   const PA=(a&&a.pillars)||[], PB=(b&&b.pillars)||[], list=[];
@@ -6217,9 +6251,9 @@ function compatAnalysis(a,b,rt){
   if(ex.length)L.push('2人の命式を合わせた相性ポイント:\n'+ex.map(r=>`・[${r.good==='good'?'吉':r.good==='soft'?'やわらかい注意':r.good==='bad'?'注意':'参考'}] ${r.ai}`).join('\n'));
   {const tc=detectTensenCompat(a,b); if(tc.any){const PN=tc.PN,DOMA=tc.DOMA;
     const lines=tc.list.map(e=>{const aL=PN[e.i],bL=PN[e.j];
-      const dir=e.aCtrl?('本人側（'+DOMA[aL]+'）が主導・発散→お相手側（'+DOMA[bL]+'）が受けとめる'):('お相手側（'+DOMA[bL]+'）が主導・発散→本人側（'+DOMA[aL]+'）が受けとめる');
-      return '本人の'+aL+'×お相手の'+bL+'（'+e.ga+'×'+e.gb+'）'+(e.isDay?'【日柱どうし＝最重要・2人の核】':'')+'：'+dir;});
-    L.push('天戦地冲（相性・2人の命式クロス）＝天干が同陰陽で相剋＋地支が冲でそろう、最も刺激の強い“運命的な縁”。真逆の磁力で強く惹かれ合い大きな成長をもたらす一方、衝突・消耗も激しく「傷つけ合うのに離れられない」深い因縁（腐れ縁・前世からの縁とも）になりやすい。日柱どうしが2人の核（最重要）、他の柱は下記の“領域どうし”でぶつかり/刺激し合う（例:本人の日柱×相手の年柱＝本人自身と相手の親・家柄がぶつかる）:\n'+lines.map(s=>'・'+s).join('\n')+'\n各組の向き（どちらが主導/受けとめか）を踏まえて助言。剋す側＝リード・圧をかけがち、受けとめる側＝刺激・試練だが受けて立てば伸びる。助言は "程よい距離感・お互いのプライベートと違いの尊重" と、ぶつかり合いを "修行・成長の機会" と捉えること。凶と決めつけず破壊と再生＝2人を大きく成長させる好機として前向きに。');}}
+      const dir=e.aCtrl?('本人側（'+DOMA[aL]+'）が剋す側→お相手側（'+DOMA[bL]+'）が剋される側'):('お相手側（'+DOMA[bL]+'）が剋す側→本人側（'+DOMA[aL]+'）が剋される側');
+      return '本人の'+aL+'×お相手の'+bL+'（'+e.ga+'×'+e.gb+'）'+(e.isDay?'【日柱どうし＝最重要・2人の核】':(tscImportant(e)?'【日柱×月柱＝重要】':''))+'：'+dir;});
+    L.push('天戦地冲（相性・2人の命式クロス）＝天干が同陰陽で相剋＋地支が冲。相性としては刺激が強く衝突の多い組み合わせ（基本は注意）。最初は相手の自分と違う部分に強く引きつけられやすいが、距離が縮まるにつれ判断基準・進め方・何を正しいと思うかの違いがはっきりし、言い争いやすれ違いが増え、一緒にいるだけで互いの調子が崩れやすい。とくに日柱どうし（最重要）と日柱×月柱（重要）は強く出る:\n'+lines.map(s=>'・'+s).join('\n')+'\n恋愛・夫婦＝惹かれる気持ちと傷つく経験が繰り返されやすく、離れたりくっついたりを続けがち。話し合いや歩み寄りに多くの労力がかかる／仕事＝方向ややり方で意見が割れやすいが、攻める役と守る役のように担当を分ければ片方だけでは出ない成果につながることも。向きを区別：剋す側＝相手を押さえつけ傷つけやすい側、剋される側＝圧力を受け気疲れしやすい側。向き合い方＝相手を自分に合わせさせよう・思いどおりに動かそうとするほど関係は決定的に壊れやすい／踏み込みすぎない距離と、違いを相手の持ち味として認めること。すぐに離れるべき相性と決めつけないが、手間のかかる関係であることは正直に伝える。');}}
   return L.join('\n');
 }
 // 結婚・縁が深まりやすい年：本人の年運に配偶者星/桃花/貴人が来て、かつ相手の日支と支合・三合する年を優先
@@ -6460,27 +6494,29 @@ function compatVerdictHTML(a,b,rt){
     let head;
     if(day){
       const dirLine=day.aCtrl
-        ?'▶ <b>向き：本人 → お相手</b>（本人が主導・発散する側／お相手が受けとめる側）。本人がリードや刺激を与えやすく、お相手がそれを強く受け止める関係。'
-        :'▶ <b>向き：お相手 → 本人</b>（お相手が主導・発散する側／本人が受けとめる側）。お相手からの刺激・働きかけが強く、本人がそれを受け止める関係。';
-      head=`<div style="font-weight:900;color:#6B3FA0;margin-bottom:3px">⚡ 天戦地冲（てんせんちちゅう）の縁 ＝ 日柱どうし ${day.ga}×${day.gb}</div>
-      <div>2人の<b>核（本人自身どうし）の日柱</b>が<b>天干は相剋（考え方が真逆）・地支は冲（行動や環境が激しくぶつかる）</b>でそろう、めったにない<b>強烈な縁</b>です。真逆だからこそ「自分にないもの」を感じて<b>強く惹かれ合い</b>、"魂の引き合い"に。相反するエネルギーが葛藤を生む一方で、<b>お互いを大きく成長させる</b>好機にもなります。</div>
+        ?'▶ <b>向き：本人 → お相手</b>（本人が剋す側／お相手が剋される側）。本人の言動がお相手を押さえつけ、傷つけやすい形です。'
+        :'▶ <b>向き：お相手 → 本人</b>（お相手が剋す側／本人が剋される側）。お相手からの圧力を本人が受け、ストレスをためやすい形です。';
+      head=`<div style="font-weight:900;color:#9A1F17;margin-bottom:3px">⚡ 天戦地冲（てんせんちちゅう）＝ 日柱どうし ${day.ga}×${day.gb}</div>
+      <div>${TSC_TXT.base}2人の核（日柱どうし）での天戦地冲は、この性質がいちばん強く出ます。</div>
       <div style="margin-top:5px">${dirLine}</div>`;
     } else {
-      head=`<div style="font-weight:900;color:#6B3FA0;margin-bottom:3px">⚡ 天戦地冲（てんせんちちゅう）のぶつかり</div>
-      <div>2人の命式の一部の柱に、<b>天干は相剋・地支は冲</b>でそろう<b>強い刺激の縁</b>があります（下記）。真逆だからこそ惹かれ合い、ぶつかりながら成長できる関係です。</div>`;
+      head=`<div style="font-weight:900;color:#9A1F17;margin-bottom:3px">⚡ 天戦地冲（てんせんちちゅう）のぶつかり</div>
+      <div>${TSC_TXT.base}</div>`;
     }
     const others=tc.list.filter(e=>!e.isDay);
     let oth='';
     if(others.length){
-      oth='<div style="margin-top:7px"><b style="color:#6B3FA0">ぶつかり合う領域（本人の柱 × お相手の柱）</b><div style="margin-top:3px">'+
+      oth='<div style="margin-top:7px"><b style="color:#9A1F17">ぶつかり合う領域（本人の柱 × お相手の柱）</b><div style="margin-top:3px">'+
         others.map(e=>{const aL=PN[e.i],bL=PN[e.j];
-          const d=e.aCtrl?('本人の'+aL+'（'+DOMA[aL]+'）が主導 → お相手の'+bL+'（'+DOMA[bL]+'）が受けとめる'):('お相手の'+bL+'（'+DOMA[bL]+'）が主導 → 本人の'+aL+'（'+DOMA[aL]+'）が受けとめる');
-          return '<div style="margin:3px 0">▶ <b>'+e.ga+'×'+e.gb+'</b>：'+d+'</div>';}).join('')+
+          const d=e.aCtrl?('本人の'+aL+'（'+DOMA[aL]+'）が剋す側 → お相手の'+bL+'（'+DOMA[bL]+'）が剋される側'):('お相手の'+bL+'（'+DOMA[bL]+'）が剋す側 → 本人の'+aL+'（'+DOMA[aL]+'）が剋される側');
+          return '<div style="margin:3px 0">▶ '+(tscImportant(e)?'<b style="color:#9A1F17">【重要】</b>':'')+'<b>'+e.ga+'×'+e.gb+'</b>：'+d+'</div>';}).join('')+
         '</div></div>';
     }
-    tsBlock=`<div style="margin-top:12px;background:#FBF4FF;border:1px solid #E6CFF2;border-left:5px solid #7C4DBE;border-radius:11px;padding:11px 13px;font-size:12.5px;line-height:1.85">
+    tsBlock=`<div style="margin-top:12px;background:#FDF2F1;border:1px solid #F1C9C5;border-left:5px solid #B3261E;border-radius:11px;padding:11px 13px;font-size:12.5px;line-height:1.85">
       ${head}${oth}
-      <div style="margin-top:5px"><b style="color:#C2185B">付き合い方のコツ</b>：ベッタリ依存せず<b>程よい距離感</b>と<b>お互いのプライベート・違いの尊重</b>を。ぶつかり合いを否定せず「修行・成長の機会」と捉えると、関係が安定します。「壊れた先に新しいステージがある」縁です。</div>
+      <div style="margin-top:6px"><b>恋愛・夫婦</b>：${TSC_TXT.love}</div>
+      <div style="margin-top:4px"><b>仕事</b>：${TSC_TXT.work}</div>
+      <div style="margin-top:4px"><b>向き合い方</b>：${TSC_TXT.how}</div>
     </div>`;
   }}
   return `<section class="card sec" style="border:2px solid #E85D9E;box-shadow:0 8px 24px rgba(232,93,158,.16)">

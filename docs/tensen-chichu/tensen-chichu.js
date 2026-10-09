@@ -5,7 +5,7 @@
  * 判定条件（3つすべて）：
  *   ① 天干の陰陽が同じ　② 天干が相剋（木剋土・土剋水・水剋火・火剋金・金剋木。土＝戊己を含む）
  *   ③ 地支が冲（子午・丑未・寅申・卯酉・辰戌・巳亥）
- * 向き：どちらの天干が「剋す側」かを必ず区別する（剋す＝発散・主導／剋される＝試練・内省）。
+ * 基本は凶。向き：どちらの天干が「剋す側」かを必ず区別する（剋す＝自分から壊す／剋される＝外から壊される）。
  * 干支はすべて「甲子」のような2文字の文字列で渡す。命式の計算エンジンには触れない。
  */
 var TensenChichu = (function () {
@@ -68,20 +68,27 @@ var TensenChichu = (function () {
   }
 
   /**
+   * 運気を日柱・月柱の両方で調べる（4-2 の正式な使い方）
+   * @return {{self:Array, work:Array}} self＝日柱（本人・私生活）、work＝月柱（仕事・社会での立場）
+   */
+  function timingBoth(dayGz, monthGz, runs) { return { self: timing(dayGz, runs), work: timing(monthGz, runs) }; }
+
+  /**
    * 相性（2人の命式クロス）＝本人4柱 × 相手4柱
    * @param {string[]} a 本人の [年,月,日,時]（時刻不明なら時柱 ''）
    * @param {string[]} b 相手の [年,月,日,時]
-   * @return {Array} {aPillar,bPillar,ga,gb,aControls,isDay}（isDay＝日柱どうし＝2人の核）
+   * @return {Array} {aPillar,bPillar,ga,gb,aControls,isDay,important}（isDay＝日柱どうし＝最重要、important＝日柱×月柱＝重要）
    */
   function compat(a, b) {
     var out = [];
     for (var i = 0; i < Math.min(a.length, 4); i++) for (var j = 0; j < Math.min(b.length, 4); j++) {
       if (!isTensen(a[i], b[j])) continue;
-      out.push({ aPillar: PILLAR[i], bPillar: PILLAR[j], ga: a[i], gb: b[j], aControls: aControlsB(a[i], b[j]), isDay: i === 2 && j === 2 });
+      out.push({ aPillar: PILLAR[i], bPillar: PILLAR[j], ga: a[i], gb: b[j], aControls: aControlsB(a[i], b[j]), isDay: i === 2 && j === 2,
+        important: (i === 2 && j === 1) || (i === 1 && j === 2) }); // important＝日柱×月柱
     }
     return out;
   }
 
-  return { MAP: MAP, BR: BR, PILLAR: PILLAR, isChong: isChong, isTensen: isTensen, aControlsB: aControlsB, natal: natal, timing: timing, compat: compat };
+  return { MAP: MAP, BR: BR, PILLAR: PILLAR, isChong: isChong, isTensen: isTensen, aControlsB: aControlsB, natal: natal, timing: timing, timingBoth: timingBoth, compat: compat };
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = TensenChichu;
