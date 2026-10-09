@@ -48,7 +48,7 @@
 | 2 | `app-pro.html` | `var DEMO_MODE = false;` | `false`（そのまま） | 647行目付近 |
 | 3 | `app-pro.html` | テストキー欄 `<details id="gtest-wrap" …>` が存在 | **ブロックごと削除**（コメントに削除指示あり） | 800行目付近 |
 | 4 | `auth.html` | `CONFIG.STUB = true` | **`false`** | 177行目付近 |
-| 5 | `pricing-pro.html` | `TELECOM_PAYMENT_URL = { month:'', year:'', half:'' }` | **審査通過後の各決済URL**を設定 | 274行目付近 |
+| 5 | `pricing-pro.html` | `TELECOM_PAYMENT_URL = { month:'' }` | **審査通過後の決済URL**を設定 | 274行目付近 |
 | 6 | 連絡先ドメイン | 旧ブランド `72k.ai` が残存 | **Meishiki の実メール/ドメイン**へ一括置換 | §9 |
 
 - **`PREVIEW_MODE=true` の意味**：`app-pro.html` 起動時のログインゲートを無条件解除（`if(PREVIEW_MODE){ unlock(); return; }`）。**本番で true のままだと誰でも無料で全機能を使えてしまう**ので必ず `false`。
@@ -133,11 +133,9 @@
   | キー | プラン | 価格 | 更新 |
   |---|---|---|---|
   | `month` | 月額 | **9,800円** | 1か月ごと自動更新 |
-  | `half` | 半年 | **52,800円** | 6か月ごと自動更新 |
-  | `year` | 年間 | **98,000円** | 1年ごと自動更新 |
 
 - **無料トライアル**：**メール＋クレジットカード登録で7日間無料**。トライアル中は `status=trialing`（解錠）。7日経過で自動本課金 → `active`。
-- **決済URL**：`TELECOM_PAYMENT_URL={month:'',year:'',half:''}` は現在**空**。空の間は「ただいま決済ページの接続を準備中です」を表示し課金導線は無効（安全）。**テレコムクレジット審査通過後、各プランの決済URL（加盟店ID・プラン等パラメータ付き）を設定**。
+- **決済URL**：`TELECOM_PAYMENT_URL={month:''}` は現在**空**。空の間は「ただいま決済ページの接続を準備中です」を表示し課金導線は無効（安全）。**テレコムクレジット審査通過後、月額プランの決済URL（加盟店ID・プラン等パラメータ付き）を設定**。
 - 決済完了 → テレコムクレジットの通知（Webhook/戻りURL）を**署名検証**して会員の `status` を更新（`active`/`trialing`等）。フロントは次回ログインの `auth-login` 応答 `status` を見て解錠。
 - **不正トライアル対策（推奨）**：同一カード指紋・同一端末での無料再取得をサーバーで弾く（カード登録必須が前提）。
 - 特商法・規約は同梱：`tokushoho-pro.html`（販売事業者/所在地/電話/価格/支払方法/解約）、`terms-pro.html`、`privacy-pro.html`。**事業者情報・ドメインは実データへ差し替え**。
@@ -216,7 +214,7 @@
 | `MP_API` | app-pro.html:6460 | `'/.netlify/functions'` | 同上 |
 | `PREVIEW_MODE` | app-pro.html:650 | `true` | `false` |
 | `CONFIG.API` / `CONFIG.STUB` | auth.html:178 / 177 | `'/.netlify/functions'` / `true` | 実ベースパス / `false` |
-| `TELECOM_PAYMENT_URL` | pricing-pro.html:274 | 空 | 決済URL3種 |
+| `TELECOM_PAYMENT_URL` | pricing-pro.html:274 | 空 | 月額プランの決済URL |
 | `geminiModel` | app-pro.html:2478 | `'gemini-2.5-flash'` | 必要なら変更（サーバー側でも可） |
 
 **localStorage キー**：`member_email` / `member_pw` / `member_remember`（会員）、`bazi_mypage_v2`（同期・DKEY）、`bazi_clients_v1`（旧）、`bazi_sheet_featbook`（鑑定書受け渡し）、`bazi_gkey`/`bazi_gmodel`（テスト専用・本番は欄ごと削除）。
