@@ -32,6 +32,7 @@
   変更は表示・アダプタ層のみ。鑑定結果の見せ方だけを扱う。
 - `pro/meishi-sheet.html` は `meishiki-original/meishi-sheet.html` に**バイト単位でミラー**する。
 - 変更のたびに `pro/sw.js` の `CACHE` バージョンを1つ上げる。
+- ビギナー（`beginner/app-beginner.html`）は PRO と **100% 同じロジック・画面**。`tools/sync_beginner_from_pro.py` で `pro/app-pro.html` から生成する（違いは名前・アイコン・説明文・リンク先のみ）。**ビギナーを直接編集しない**。PRO を直したら生成し直し、`beginner/sw.js` の `CACHE` も1つ上げる。
 
 ## 表現ルール
 
