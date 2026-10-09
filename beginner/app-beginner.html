@@ -528,6 +528,7 @@
     <div style="margin-top:12px;font-size:13.5px;font-weight:900;color:var(--ink2)">✏️ 自由に入力してください</div><textarea class="worry" id="compat-worry" placeholder="例：この人とは結婚を考えても大丈夫でしょうか？　価値観は合いますか？" style="margin-top:6px"></textarea><div class="hint" style="margin-top:6px">🔒 入力した相談内容は鑑定文の生成にのみ使われます。保存した鑑定者・メモを見られるのはあなただけで、第三者に公開・提供されることはありません。</div>
     <button class="ask" id="compatAskBtn">この質問に答えてもらう</button>
     <button id="compat-reset" type="button" style="margin-top:8px;width:100%;height:40px;border:2px solid var(--line2);background:#fff;color:var(--ink2);border-radius:11px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer">↺ お相手の入力をリセット</button>
+    <div id="compat-tensen-slot"></div>
     <div class="reading" id="compat"></div>
   </section>
 
@@ -3489,6 +3490,26 @@ function compatExtras(a,b,rt){
   })();
   return R;
 }
+// ── 相性の天戦地冲（日柱どうし）＝2人の日柱で「天干が同陰陽で相剋＋地支が冲」。真逆が強烈に引き合う運命的な縁。向き（どちらが剋す側か）で主導/受けが変わる。表示・鑑定データ層のみ ──
+var _TENSEN_CB={甲:['戊','庚'],乙:['己','辛'],丙:['庚','壬'],丁:['辛','癸'],戊:['壬','甲'],己:['癸','乙'],庚:['甲','丙'],辛:['乙','丁'],壬:['丙','戊'],癸:['丁','己']};
+function isTensenCB(gA,gB){ if(!gA||!gB||gA.length<2||gB.length<2)return false; return (_TENSEN_CB[gA[0]]||[]).indexOf(gB[0])>=0 && isChong(gA[1],gB[1]); }
+function detectTensenCompat(a,b){
+  var ga=(a&&a.pillars&&a.pillars[2]&&a.pillars[2].ganzhi)||'', gb=(b&&b.pillars&&b.pillars[2]&&b.pillars[2].ganzhi)||'';
+  if(!isTensenCB(ga,gb))return {any:false};
+  var aCtrl=((_TENSEN_CB[ga.charAt(0)]||[])[0]===gb.charAt(0));
+  return {any:true,ga:ga,gb:gb,aCtrl:aCtrl,who:aCtrl?'本人が相手を剋す側（本人＝主導・発散／相手＝受けとめる側）':'相手が本人を剋す側（相手＝主導・発散／本人＝受けとめる側）'};
+}
+function compatTensenCardHTML(a,b){
+  var tc=detectTensenCompat(a,b); if(!tc.any)return '';
+  var dir=tc.aCtrl
+    ?'▶ <b>向き：本人 → お相手</b>（本人が主導・発散する側／お相手が受けとめる側）。本人がリードや刺激を与えやすく、お相手がそれを強く受け止める関係。'
+    :'▶ <b>向き：お相手 → 本人</b>（お相手が主導・発散する側／本人が受けとめる側）。お相手からの刺激・働きかけが強く、本人がそれを受け止める関係。';
+  return '<section class="card" id="compat-tensen" style="margin-top:12px;border:2px solid #7C4DBE">'+
+    '<div style="font-weight:900;color:#6B3FA0;font-size:15px;margin-bottom:4px">⚡ 天戦地冲（てんせんちちゅう）の縁 ＝ '+tc.ga+'×'+tc.gb+'</div>'+
+    '<div style="font-size:12.5px;line-height:1.85;color:#3a3a3a">2人の日柱が<b>天干は相剋（考え方が真逆）・地支は冲（行動や環境が激しくぶつかる）</b>でそろう、めったにない<b>強烈な縁</b>です。真逆だからこそ「自分にないもの」を感じて<b>強く惹かれ合い</b>、稲妻のような情熱や"魂の引き合い"になりやすい関係。相反するエネルギーが大きな葛藤を生む一方で、<b>お互いを大きく成長させる</b>好機にもなります。'+
+    '<div style="margin-top:5px">'+dir+'</div>'+
+    '<div style="margin-top:5px"><b style="color:#C2185B">付き合い方のコツ</b>：ベッタリ依存せず<b>程よい距離感</b>と<b>お互いのプライベート・違いの尊重</b>を。ぶつかり合いを否定せず「修行・成長の機会」と捉えると、関係が安定します。「壊れた先に新しいステージがある」縁です。</div></div></section>';
+}
 function compatAnalysis(a,b,rt){
   rt=rt||RELTYPES.love;
   const aS=a.dayMaster.stem,bS=b.dayMaster.stem,aB=a.pillars[2].branch,bB=b.pillars[2].branch;
@@ -3529,6 +3550,7 @@ function compatAnalysis(a,b,rt){
   // 2人の命式を突き合わせた相性ポイント（三合・五行補完・空亡・月支元命の生剋・印の関係）
   const ex=compatExtras(a,b,rt);
   if(ex.length)L.push('2人の命式を合わせた相性ポイント:\n'+ex.map(r=>`・[${r.good==='good'?'吉':r.good==='soft'?'やわらかい注意':r.good==='bad'?'注意':'参考'}] ${r.ai}`).join('\n'));
+  {const tc=detectTensenCompat(a,b); if(tc.any)L.push('天戦地冲（相性・日柱どうし '+tc.ga+'×'+tc.gb+'）＝天干が同陰陽で相剋＋地支が冲でそろう、最も刺激の強い“運命的な縁”。真逆の性質・強烈な磁力で強く惹かれ合い、他にはない刺激と成長をもたらす一方、衝突・消耗も激しく「傷つけ合うのに離れられない」深い因縁になりやすい。向き＝'+tc.who+'（剋す側がリード・圧をかけがち、受けとめる側は刺激・試練を受けるが受けて立てば大きく伸びる）。助言は "程よい距離感・お互いの違いの尊重" と、ぶつかり合いを "成長の機会" と捉えること。凶と決めつけず、破壊と再生＝2人を大きく成長させる好機として前向きに伝える。');}
   return L.join('\n');
 }
 // 結婚・縁が深まりやすい年：本人の年運に配偶者星/桃花/貴人が来て、かつ相手の日支と支合・三合する年を優先
@@ -3593,6 +3615,7 @@ function buildCompatBase(out){
   if(document.getElementById('b-notime')&&document.getElementById('b-notime').checked)markTimeUnknown(chartB);
   const na=personName||'本人', nb=personNameB||'お相手';
   const rt=RELTYPES[document.getElementById('rel-type')?.value||'love']||RELTYPES.love;
+  try{var _cts=document.getElementById('compat-tensen-slot'); if(_cts)_cts.innerHTML=compatTensenCardHTML(chart,chartB);}catch(_e){}
   const head=`【本人A】${na}（${chart.birth.sex==='male'?'男性':'女性'}）: ${compatBrief(chart)}\n【お相手B】${nb}（${sexB==='male'?'男性':'女性'}）: ${compatBrief(chartB)}\n\n【2人の関係】${rt.label}\n\n【2人の関係の自動分析（計算済み）】\n${compatAnalysis(chart,chartB,rt)}`;
   return {na,nb,rt,head};
 }
@@ -3999,6 +4022,7 @@ function resetCompat(){
   const cw=document.getElementById('compat-worry');if(cw)cw.value='';
   chartB=null;
   document.getElementById('compat').innerHTML='';
+  {const _cts=document.getElementById('compat-tensen-slot');if(_cts)_cts.innerHTML='';}
 }
 document.getElementById('compat-reset').onclick=resetCompat;
 // フローティング「最初へ戻る」
@@ -5669,22 +5693,27 @@ function sbxCard(c,lang){var s=sbxSection(c,lang);return s?('<section class="car
 /* ===== 天戦地冲（てんせんちちゅう）をやさしく追加＝命式内（生まれ持った）＋運気（年運・大運）。
    PROのTENSEN_MAP/isTensenChichu/detectTensen/detectTensenNatalを移植。表示・鑑定データ層のみ・エンジン非改変。 ===== */
 (function(){
-  var TMAP={甲:['戊','庚'],乙:['己','辛'],丙:['庚','壬'],丁:['辛','癸'],戊:['甲','壬'],己:['乙','癸'],庚:['甲','丙'],辛:['乙','丁'],壬:['丙','戊'],癸:['丁','己']};
+  var TMAP={甲:['戊','庚'],乙:['己','辛'],丙:['庚','壬'],丁:['辛','癸'],戊:['壬','甲'],己:['癸','乙'],庚:['甲','丙'],辛:['乙','丁'],壬:['丙','戊'],癸:['丁','己']};
   var BRs='子丑寅卯辰巳午未申酉戌亥';
   function isTensen(a,b){ if(!a||!b||a.length<2||b.length<2)return false;
     return (TMAP[a[0]]||[]).indexOf(b[0])>=0 && ((BRs.indexOf(a[1])+6)%12===BRs.indexOf(b[1])); }
   function gzOf(p){return p?(p.ganzhi||((p.stem||'')+(p.branch||''))):'';}
-  function natal(c){var P=(c&&c.pillars)||[],NM=['年柱','月柱','日柱'],pairs=[];
-    for(var i=0;i<3;i++){for(var j=i+1;j<3;j++){var a=gzOf(P[i]),b=gzOf(P[j]);if(a.length<2||b.length<2)continue;if(isTensen(a,b))pairs.push(NM[i]+'と'+NM[j]+'（'+a+'×'+b+'）');}}
-    return pairs;}
-  function timing(c){var day=gzOf((c&&c.pillars&&c.pillars[2])||null);
+  function natal(c){var P=(c&&c.pillars)||[],NM=['年柱','月柱','日柱'],
+    AREA={年柱:'目上・親・ルーツ',月柱:'仕事・家庭・社会での立場',日柱:'自分自身・パートナー'},items=[];
+    for(var i=0;i<3;i++){for(var j=i+1;j<3;j++){var a=gzOf(P[i]),b=gzOf(P[j]);if(a.length<2||b.length<2||!isTensen(a,b))continue;
+      var aCtrl=((TMAP[a.charAt(0)]||[])[0]===b.charAt(0));var ci=aCtrl?i:j,ri=aCtrl?j:i;var t;
+      if(ri===2)t='<b>'+NM[ci]+'→日柱</b>（'+a+'×'+b+'）：外（'+AREA[NM[ci]]+'）から自分へ強いプレッシャー・試練がかかる向き。内で葛藤しやすい反面、受けて立つと逆転・急成長のきっかけに。';
+      else if(ci===2)t='<b>日柱→'+NM[ri]+'</b>（'+a+'×'+b+'）：自分から外（'+AREA[NM[ri]]+'）へ強く働きかける向き。現状を変える推進力が強い反面、ぶつかり・押しすぎに注意。';
+      else t='<b>'+NM[ci]+'→'+NM[ri]+'</b>（'+a+'×'+b+'）：'+AREA[NM[ci]]+'と'+AREA[NM[ri]]+'の間で激しい綱引き。相反する力が内に同居。';
+      items.push(t);}}
+    return items;}
+  function timing(c){var day=gzOf((c&&c.pillars&&c.pillars[2])||null),ds=day.charAt(0),map=TMAP[ds]||['',''];
     var now=(c&&c.now)||{},cy=(now.year!=null?now.year:new Date().getFullYear());
     var by=(now.year!=null&&now.age!=null)?now.year-now.age:null;
-    var years=((c&&c.annualFortunes)||[]).filter(function(a){return isTensen(day,gzOf(a))&&a.year>=cy-1&&a.year<=cy+20;})
-      .map(function(a){return a.year+'年'+(by!=null?'（'+(a.year-by)+'歳）':'');});
-    var du=((c&&c.decadeFortunes)||[]).filter(function(d){return isTensen(day,d.ganzhi);})
-      .map(function(d){return d.ganzhi+'（'+d.startAge+'〜'+d.endAge+'歳）';});
-    return {day:day,years:years,du:du,any:(years.length>0||du.length>0)};}
+    var yA=[],yU=[],dA=[],dU=[];
+    ((c&&c.annualFortunes)||[]).forEach(function(a){var gz=gzOf(a);if(!isTensen(day,gz)||a.year<cy-1||a.year>cy+20)return;var lab=a.year+'年'+(by!=null?'（'+(a.year-by)+'歳）':'');(map.indexOf(gz.charAt(0))===0?yA:yU).push(lab);});
+    ((c&&c.decadeFortunes)||[]).forEach(function(d){if(!isTensen(day,d.ganzhi))return;var lab=d.ganzhi+'（'+d.startAge+'〜'+d.endAge+'歳）';(map.indexOf(d.ganzhi.charAt(0))===0?dA:dU).push(lab);});
+    return {day:day,yA:yA,yU:yU,dA:dA,dU:dU,attack:(yA.length+dA.length)>0,pressured:(yU.length+dU.length)>0,any:(yA.length+yU.length+dA.length+dU.length)>0};}
   function cardHTML(c){
     try{
       var np=natal(c), tm=timing(c);
@@ -5692,14 +5721,14 @@ function sbxCard(c,lang){var s=sbxSection(c,lang);return s?('<section class="car
       var html='<section class="card" id="tensen-card" style="margin-top:14px">'+
         '<h2 style="font-size:16px;font-weight:900;color:#7C4DBE;margin:0 0 6px">⚡ 正反対の力が同居する「天戦地冲」</h2>';
       if(np&&np.length){
+        var ni='';for(var k=0;k<np.length;k++)ni+='<div style="margin:4px 0">▶ '+np[k]+'</div>';
         html+='<div style="margin:6px 0;padding:8px 10px;background:#F4EEFB;border-left:4px solid #7C4DBE;border-radius:8px;font-size:12.5px;line-height:1.7;color:#3a3a3a">'+
-          '<b style="color:#7C4DBE">生まれ持った天戦地冲</b>（'+np.join('・')+'）<br>'+
-          'あなたの中に<b>正反対の強い力が同居</b>しています。心の中でいつも何かがせめぎ合い、大きな葛藤と強いエネルギーを併せ持つタイプ。その力は外にも出て、思い切って現状を変えることも。でも欠点ではなく、<b>人を惹きつけ物事を大きく動かすカリスマ</b>の素質。「壊れた先に新しいステージがある」と知って、恐れず活かしていきましょう。</div>';
+          '<b style="color:#7C4DBE">生まれ持った天戦地冲</b>：あなたの中に<b>正反対の強い力が同居</b>しています。大きな葛藤と強いエネルギーを併せ持つ、<b>人を惹きつけ物事を大きく動かすカリスマ</b>の素質。「壊れた先に新しいステージがある」と知って、恐れず活かしましょう。剋の“向き”で出方が変わります：'+ni+'</div>';
       }
       if(tm&&tm.any){
-        var s='<b style="color:#7C4DBE">運が大きく揺れる時期</b>：日の干支「'+tm.day+'」に、巡る運が正面からぶつかる時期です（悪い意味ではなく“備えのカレンダー”）。';
-        if(tm.years.length)s+='<br>📅 その年：<b>'+tm.years.join('・')+'</b>（大きな決断・契約・引っ越し・転職は急がず、ていねいに）。';
-        if(tm.du.length)s+='<br>10年運では <b>'+tm.du.join('・')+'</b>（大きな転換点。変化を味方にできれば飛躍のきっかけに）。';
+        var s='<b style="color:#7C4DBE">運が大きく揺れる時期</b>：日の干支「'+tm.day+'」に巡る運が正面からぶつかる時期です（悪い意味でなく“備えのカレンダー”）。剋の向きで出方が真逆になります。';
+        if(tm.attack)s+='<br>▶ <b>自分が剋す側（発散・主導）</b>：'+(tm.yA.length?'その年＝<b>'+tm.yA.join('・')+'</b>　':'')+(tm.dA.length?'10年運＝<b>'+tm.dA.join('・')+'</b>':'')+'。自分から動いて変えられる反面、ぶつかり・押しすぎに注意。';
+        if(tm.pressured)s+='<br>▶ <b>自分が剋される側（試練・内省）</b>：'+(tm.yU.length?'その年＝<b>'+tm.yU.join('・')+'</b>　':'')+(tm.dU.length?'10年運＝<b>'+tm.dU.join('・')+'</b>':'')+'。外からの圧力・試練がかかりやすいが、受けて立てば逆転・急成長のきっかけに。';
         html+='<div style="margin:6px 0;padding:8px 10px;background:#FFF4E6;border-left:4px solid #E0A33B;border-radius:8px;font-size:12.5px;line-height:1.7;color:#3a3a3a">'+s+'</div>';
       }
       return html+'</section>';
