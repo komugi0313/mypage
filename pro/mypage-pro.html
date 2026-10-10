@@ -65,6 +65,9 @@
   .qa summary{cursor:pointer;padding:13px 0;font-size:13.5px;font-weight:900;color:var(--ink);line-height:1.6}
   .qa p{margin:0 0 13px;font-size:13px;color:var(--ink2);font-weight:700;line-height:1.85}
   .qa a{color:var(--sui);font-weight:900}
+  .fl{display:block;font-size:12.5px;font-weight:900;color:var(--ink2);margin:12px 0 6px}
+  .in{width:100%;height:48px;padding:0 14px;font-size:16px;font-weight:700;color:var(--ink);background:#fff;border:2px solid var(--line2);border-radius:12px;font-family:inherit}
+  .in:focus{outline:none;border-color:var(--sui)}
   .row .k{white-space:nowrap;flex:0 0 auto}
   .row .v{min-width:0}
   .nb{white-space:nowrap}
@@ -115,6 +118,19 @@
   </div>
   <p class="tip">カード情報は、決済代行会社の<span class="nb">テレコムクレジット</span>の安全なページで入力します。当サイトがカード番号を保持することはありません。</p>
 
+  <div class="sec-t">ご登録のメールアドレス</div>
+  <div class="card">
+    <div class="row"><span class="k">メールアドレス</span><span class="v"><button class="mini" id="emailBtn">変更する</button></span></div>
+    <div id="email-form" hidden style="padding:4px 0 16px">
+      <label class="fl" for="em1">新しいメールアドレス</label>
+      <input class="in" id="em1" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com">
+      <label class="fl" for="em2">新しいメールアドレス（もう一度）</label>
+      <input class="in" id="em2" type="email" inputmode="email" autocomplete="off" placeholder="同じアドレスをもう一度">
+      <button class="ghost" id="emailSend">新しいアドレスに確認メールを送る</button>
+    </div>
+  </div>
+  <p class="tip">新しいアドレスに届く確認メールのリンクを押すと、変更が完了します（それまでは今のアドレスのままです）。</p>
+
   <div class="sec-t">解約のお手続き</div>
   <div class="card">
     <div class="row"><span class="k">プランの解約</span><span class="v"><button class="mini danger" id="cancelBtn">解約する</button></span></div>
@@ -125,8 +141,6 @@
 
   <div class="sec-t">困ったとき</div>
   <div class="qa">
-    <details><summary>メールアドレスを変えたい・間違えた</summary>
-      <p><a href="mailto:info@72k.ai?subject=%E3%83%A1%E3%83%BC%E3%83%AB%E3%82%A2%E3%83%89%E3%83%AC%E3%82%B9%E3%81%AE%E5%A4%89%E6%9B%B4">info@72k.ai</a> へご連絡ください。お申し込み番号・お申し込み日・カード名義・新しいメールアドレスをお知らせいただければ、こちらで変更します。</p></details>
     <details><summary>カードを変えたい・有効期限が切れた</summary>
       <p>上の「お支払いカードを変更する」から、新しいカードをご登録ください。ご契約や無料期間はそのまま引き継がれます。</p></details>
     <details><summary>二重に申し込んでしまった</summary>
@@ -165,6 +179,7 @@
     STATUS: '/check-subscription',       // POST {email} → {status, plan, orderId, trialEnd, nextChargeAt, periodEnd} 契約状況の取得
     CARD:   '/card-update-url',          // POST {email} → {url}  テレコムクレジットのカード変更ページのURL（サーバーで発行）
     CANCEL: '/cancel-subscription',      // POST {email} → {ok:true, status, periodEnd}  解約（次回更新分から停止。無料期間中は課金しない）
+    EMAIL:  '/email-change',             // POST {email, newEmail} → {ok:true}  新しいアドレスへ確認メール（リンク：auth.html?view=email&token=…）。確認されるまで変更しない
     PRICING: 'pricing-pro.html'
   };
 
@@ -246,6 +261,25 @@
       if(j && j.url){ location.href=j.url; return; }
       throw new Error('no url');
     }catch(e){ b.disabled=false; say('ただいまカード変更ページをひらけませんでした。時間をおいて再度お試しください。', false); }
+  };
+
+  /* ★エンジニア接続ポイント：メールアドレスの変更（新しいアドレスへ確認メール → リンクで確定） */
+  $('emailBtn').onclick=function(){ var f=$('email-form'); f.hidden=!f.hidden; if(!f.hidden) $('em1').focus(); };
+  $('emailSend').onclick=async function(){
+    var a=($('em1').value||'').trim().toLowerCase(), a2=($('em2').value||'').trim().toLowerCase();
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a)){ say('新しいメールアドレスを正しく入力してください。', false); return; }
+    if(a!==a2){ say('確認用のメールアドレスが一致しません。', false); return; }
+    if(a===email){ say('今と同じメールアドレスです。', false); return; }
+    var b=this; b.disabled=true;
+    try{
+      if(!CONFIG.STUB){
+        var r=await fetch(CONFIG.API+CONFIG.EMAIL,{method:'POST',headers:headers(),body:JSON.stringify({email:email,newEmail:a})});
+        if(!r.ok) throw new Error('email '+r.status);
+      }
+      $('email-form').hidden=true; $('em1').value=''; $('em2').value='';
+      say('<b>'+a.replace(/[<>&"]/g,'')+'</b> 宛に確認メールを送りました。メールのリンクを押すと、変更が完了します。', true);
+    }catch(e){ say('ただいま変更のお手続きができませんでした。時間をおいてお試しください。', false); }
+    b.disabled=false;
   };
 
   /* ★エンジニア接続ポイント：解約処理 */

@@ -128,6 +128,11 @@
   .help details p a{color:var(--sui);font-weight:900}
   .help .contact{margin-top:12px;font-size:12.5px;color:var(--muted);font-weight:700;line-height:1.85}
   .help .contact a{color:var(--sui);font-weight:900}
+  .fixmail{text-align:left;margin:14px 0 4px;background:var(--paper);border:1.5px solid var(--line2);border-radius:12px;padding:0 14px 14px}
+  .fixmail summary{cursor:pointer;padding:13px 0 0;font-size:13.5px;font-weight:900;color:var(--sui)}
+  .fixmail .field{margin-top:12px}
+  .fixmail .cf-back{margin-top:12px;color:var(--sui);border-color:var(--sui)}
+  .okmsg{margin-top:10px;padding:10px 12px;background:#E7F7EE;color:#127a45;border-radius:10px;font-weight:800;font-size:13px;line-height:1.7}
   .result p,.result ul,.help p,.help summary,.cf-warn,.already,.field .hint{text-wrap:pretty;line-break:strict}
 </style>
 </head>
@@ -213,13 +218,19 @@
       <h2>お申し込みが完了しました</h2>
       <p>ありがとうございます。<br>下記のアドレスに<b>「ログイン用パスワードの設定」メール</b>をお送りしました。</p>
       <div class="mail" id="ok-mail">ご登録のメールアドレス</div>
-      <p class="order" id="ok-order-wrap" hidden>お申し込み番号：<b id="ok-order"></b><br>（お問い合わせの際にお伝えください）</p>
+      <p class="order" id="ok-order-wrap" hidden>お申し込み番号：<b id="ok-order"></b><br>（メールアドレスを忘れたときに使います。<span class="nb">控えておいてください）</span></p>
       <ul>
         <li>メールのリンクからパスワードを決めると、すぐに鑑定をはじめられます。</li>
         <li><b>10分たっても届かないとき</b>は、迷惑メールフォルダをご確認ください。</li>
         <li>それでも届かないときは、<a href="auth.html?view=reset">設定メールをもう一度送る</a>をお試しください。</li>
-        <li><b>メールアドレスを間違えて申し込んだとき</b>は、もう一度お申し込みはせず、<a href="mailto:info@72k.ai?subject=%E7%94%B3%E8%BE%BC%E3%83%A1%E3%83%BC%E3%83%AB%E3%82%A2%E3%83%89%E3%83%AC%E3%82%B9%E3%81%AE%E8%A8%82%E6%AD%A3">info@72k.ai</a> へご連絡ください（お申し込み番号・お名前・正しいアドレスをお書き添えください）。こちらで正しいアドレスに直します。</li>
+        <li><b>アドレスを間違えていたとき</b>は、下の「アドレスを直して送り直す」から、この画面で直せます。</li>
       </ul>
+      <details class="fixmail" id="fixmail" hidden><summary>アドレスを直して送り直す</summary>
+        <div class="field"><label for="fix1">正しいメールアドレス</label><input id="fix1" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com"></div>
+        <div class="field"><label for="fix2">正しいメールアドレス（もう一度）</label><input id="fix2" type="email" inputmode="email" autocomplete="off" placeholder="同じアドレスをもう一度"></div>
+        <button class="cf-back" type="button" id="fix-btn">このアドレスに直して送り直す</button>
+        <div id="fix-msg"></div>
+      </details>
       <a class="cta" href="auth.html">▶ ログイン画面へ</a>
     </div>
 
@@ -249,7 +260,7 @@
     <section class="help" id="help">
       <h2>お申し込みで困ったとき</h2>
       <details><summary>メールアドレスを間違えて申し込んでしまった</summary>
-        <p>もう一度お申し込みはせず（二重のご請求になります）、<a href="mailto:info@72k.ai?subject=%E7%94%B3%E8%BE%BC%E3%83%A1%E3%83%BC%E3%83%AB%E3%82%A2%E3%83%89%E3%83%AC%E3%82%B9%E3%81%AE%E8%A8%82%E6%AD%A3">info@72k.ai</a> へご連絡ください。お申し込み番号（完了画面に表示）・お申し込み日・カード名義・正しいメールアドレスをお知らせいただければ、こちらで正しいアドレスに直し、パスワードの設定メールをお送りします。</p></details>
+        <p>お申し込み完了画面の「アドレスを直して送り直す」から、その場で直せます。画面を閉じてしまったときは、<a href="auth.html?view=forgot">ログイン画面の「メールアドレスを忘れた・間違えた」</a>で、お申し込み番号を入れて直せます（パスワードを設定する前まで）。</p></details>
       <details><summary>パスワードの設定メールが届かない</summary>
         <p>迷惑メールフォルダをご確認のうえ、<b>info@72k.ai</b> からのメールを受け取れるよう設定してください。そのうえで<a href="auth.html?view=reset">設定メールの再送</a>をお試しください。それでも届かない場合は、アドレスの入力間違いの可能性があります（上の項目をご覧ください）。</p></details>
       <details><summary>カードの決済ができない・エラーになる</summary>
@@ -327,11 +338,13 @@
   function esc(t){ return String(t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
   var EMAIL_RE=/^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-  // お申し込み番号（例：P-20261010-7K3QXA）。決済結果の通知とお客様をひも付けるキー。
+  // お申し込み番号（例：P-20261010-7K3QX-A9M2Z）。決済結果の通知とお客様をひも付けるキー。
+  // メールアドレスを忘れた・間違えたときの本人確認にも使うので、推測されにくい長さにしている。
   function newOrderId(){
     var d=new Date(), p=function(n){return (n<10?'0':'')+n;};
     var r=''; var cs='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    for(var i=0;i<6;i++){ r+=cs.charAt(Math.floor(Math.random()*cs.length)); }
+    var rnd=new Uint32Array(10); try{ crypto.getRandomValues(rnd); }catch(_){ for(var k=0;k<10;k++){ rnd[k]=Math.floor(Math.random()*4294967296); } }
+    for(var i=0;i<10;i++){ r+=cs.charAt(rnd[i]%cs.length); if(i===4) r+='-'; }
     return ORDER_PREFIX+'-'+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+r;
   }
   function pending(){ try{ return JSON.parse(g('pending_order')||'null'); }catch(_){ return null; } }
@@ -407,11 +420,32 @@
     document.getElementById('apply').hidden=true;
     document.getElementById('res-ok').hidden=false;
     if(po.email){ document.getElementById('ok-mail').textContent=po.email; s('member_email', po.email); }
-    if(po.id){ document.getElementById('ok-order').textContent=po.id; document.getElementById('ok-order-wrap').hidden=false; }
+    if(po.id){ document.getElementById('ok-order').textContent=po.id; document.getElementById('ok-order-wrap').hidden=false; document.getElementById('fixmail').hidden=false; }
   }else if(result==='ng' || result==='back'){
     document.getElementById('apply').hidden=true;
     document.getElementById('res-ng').hidden=false;
   }
+  /* ★エンジニア接続ポイント：申し込み時のメールアドレスの打ち間違いを、お客様が自分で直す
+     POST {orderId, email} → {ok:true}。お申し込み番号を持っている本人だけが直せる。
+     サーバーは「まだパスワードを設定していない会員」に限って受け付け、新しいアドレスへ設定メールを送り直す
+     （回数制限をかけること）。 */
+  var FIX={ STUB:true, URL:'/.netlify/functions/auth-fix-email' };
+  document.getElementById('fix-btn').addEventListener('click', function(){
+    var po=pending()||{}, m=document.getElementById('fix-msg');
+    var a=(document.getElementById('fix1').value||'').trim().toLowerCase(), b2=(document.getElementById('fix2').value||'').trim().toLowerCase();
+    m.innerHTML='';
+    if(!EMAIL_RE.test(a)){ m.innerHTML='<div class="err">メールアドレスを正しく入力してください。</div>'; return; }
+    if(a!==b2){ m.innerHTML='<div class="err">確認用のメールアドレスが一致しません。</div>'; return; }
+    var btn=this; btn.disabled=true;
+    var done=function(){ po.email=a; s('pending_order', JSON.stringify(po)); s('member_email', a);
+      document.getElementById('ok-mail').textContent=a; btn.disabled=false;
+      m.innerHTML='<div class="okmsg">'+esc(a)+' 宛に、パスワード設定メールを送り直しました。</div>'; };
+    if(FIX.STUB){ setTimeout(done, 500); return; }
+    fetch(FIX.URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({orderId:po.id,email:a})})
+      .then(function(r){ if(!r.ok) throw 0; done(); })
+      .catch(function(){ btn.disabled=false; m.innerHTML='<div class="err">ただいま直せませんでした。時間をおいてお試しください。</div>'; });
+  });
+
   document.getElementById('ng-retry').addEventListener('click', function(){
     document.getElementById('res-ng').hidden=true;
     document.getElementById('apply').hidden=false;
