@@ -38,7 +38,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
   * ------------------------------------------------------------------
   * 目的：毎朝メールと画面(my-tenki-demo)が “同じ文言・同じ選び方” を使うための単一ソース。
   *       計算(四柱推命の確定ロジック)は engine.js を正本として参照し、ここでは重複させない。
-@@ -30,20 +30,79 @@
+@@ -30,20 +30,80 @@
    var TENOTSU_T={甲:["丑","未"],戊:["丑","未"],庚:["丑","未"],乙:["子","申"],己:["子","申"],丙:["亥","酉"],丁:["亥","酉"],壬:["巳","卯"],癸:["巳","卯"],辛:["午","寅"]}; // 天乙貴人
    var EKIBA_T={申:"寅",子:"寅",辰:"寅",寅:"申",午:"申",戌:"申",巳:"亥",酉:"亥",丑:"亥",亥:"巳",卯:"巳",未:"巳"}; // 駅馬
    function _shunIdx(stem,branch){for(var i=0;i<60;i++)if(STEMS[i%10]===stem&&BRANCHES[i%12]===branch)return i;return 0;}
@@ -108,9 +108,12 @@ diff -uN a/daily-engine.js b/daily-engine.js
        else    items.push({key:'kubou',emoji:'🌫️',label:'整える日',tone:'rest',text:'今日は空回りしやすい日。勝負より、片づけ・ひと休み・仕込みが吉。'});
      }
      var tn=TENOTSU_T[you.stem]||[];
-     if(tn.indexOf(t.branch)>=0) items.push({key:'kijin',emoji:'🍀',label:'貴人の日',tone:'good',text:'人の助け・引き立てに恵まれる日。困ったら遠慮なく頼ると良いご縁が動きます。'});
-     if(EKIBA_T[you.branch]===t.branch) items.push({key:'ekiba',emoji:'🐴',label:'動き・変化の日',tone:'good',text:'移動・行動・変化に縁があり good。じっとするより動くほど流れが開けます。'});
+-    if(tn.indexOf(t.branch)>=0) items.push({key:'kijin',emoji:'🍀',label:'貴人の日',tone:'good',text:'人の助け・引き立てに恵まれる日。困ったら遠慮なく頼ると良いご縁が動きます。'});
+-    if(EKIBA_T[you.branch]===t.branch) items.push({key:'ekiba',emoji:'🐴',label:'動き・変化の日',tone:'good',text:'移動・行動・変化に縁があり good。じっとするより動くほど流れが開けます。'});
 -    if(branchRel(t.branch, you.branch)==='沖') items.push({key:'yuragi',emoji:'⚠️',label:'ゆらぎ注意日',tone:'care',text:'リズムが少し乱れやすい日。悪い日ではなく気分転換向き。大事な決断・言い合いは一呼吸おいて。'});
++    var _tsDay=isTensen(you, t);   // 天戦地冲の日は良い印（貴人・駅馬）を出さない（10/10 オーナー決定）
++    if(!_tsDay && tn.indexOf(t.branch)>=0) items.push({key:'kijin',emoji:'🍀',label:'貴人の日',tone:'good',text:'人の助け・引き立てに恵まれる日。困ったら遠慮なく頼ると良いご縁が動きます。'});
++    if(!_tsDay && EKIBA_T[you.branch]===t.branch) items.push({key:'ekiba',emoji:'🐴',label:'動き・変化の日',tone:'good',text:'移動・行動・変化に縁があり good。じっとするより動くほど流れが開けます。'});
 +    if(isTensen(you, t)){
 +      var _tsIn=(TENSEN_MAP[you.stem][1]===t.stem);   // その日の干が自分を剋す＝圧を受けやすい／自分が剋す＝強く出やすい
 +      items.push({key:'tensen',emoji:'⚡',label:'波乱が起きやすい日',tone:'care',note:TENSEN_NOTE,
@@ -120,7 +123,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      if(prof && prof.ok && prof.pillars){
        var reso=false;
        [0,1].forEach(function(pi){ var pp=prof.pillars[pi]; if(!pp)return;
-@@ -75,7 +134,7 @@
+@@ -75,7 +135,7 @@
      var out = null, Bz = _bazi();
      if(Bz && Bz.computeChart){
        try{
@@ -129,7 +132,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
          out = { ys:c.pillars[0].stem, yb:c.pillars[0].branch, ms:c.pillars[1].stem, mb:c.pillars[1].branch };
        }catch(_e){ out = null; }
      }
-@@ -472,6 +531,7 @@
+@@ -472,6 +532,7 @@
    var th=gradeThresholds(you.stem, you.branch, favSet, imiSet);
    var s=dayRawScore(you.stem, you.branch, tt, favSet, imiSet);
    if(ymd) s+=ymAdjust(ymd.y, ymd.m, ymd.d, favSet, imiSet, STEM_GOGYO[you.stem]);   // 流年・流月の補正（日付を渡した時のみ）
@@ -137,7 +140,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
    var sok=(CLASH.indexOf(branchRel(tt.branch, you.branch))>=0);
    var love=(touka||enlv===2);
    var sym;
-@@ -559,6 +619,10 @@
+@@ -559,6 +620,10 @@
   * 運勢の計算（指数・天気・グレード・五行）には一切影響しない。 */
  var MALE_NG=/リップ|ピアス|イヤリング|ヘアピン|ヘアクリップ|ヘアゴム|ネックレス|パール|真珠のアクセ|真珠風|ネイル|コスメ|化粧品|ハート|スカーフ|手鏡/;
  var PARTNERED_NG=/気になる人|出会い/;   // 恋人・既婚の人には出さない
@@ -148,7 +151,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  var PLACE_NG=/海辺|岬|堤防|湖|陶芸の里|星の見える丘|夜景|水族館|足湯|雨上がり|交流会|イベント会場|イベント広場|桜のある|イルミネーション|新緑の|色づく/;  // 遠出・天気・催し・季節次第の場所
  var WEEKEND_NG=/上司|取引先|面接|商談|会議|プレゼン|報連相|仕事|提出/;   // 土日に出さない“仕事の段取り”
  // ランクと文章の矛盾をなくす（言い回しの選び方だけ。ランク・十神・テーマなど運勢の計算は変えない）
-@@ -577,6 +641,74 @@
+@@ -577,6 +642,74 @@
    "誰かの頼みごとに、ひとつ応えてみて","朝の時間を少し早めて、ゆとりをつくって"];
  function fitList(arr, ok){ var a=[]; for(var i=0;i<arr.length;i++) if(ok(arr[i])) a.push(arr[i]); return a.length?a:arr; }
  
@@ -223,7 +226,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  function pickSeq(ub, salt, len, dayn){
    if(!len) return 0;
    if(len===1) return 0;
-@@ -639,16 +771,16 @@
+@@ -639,16 +772,16 @@
        '“家庭を大切にするあなた”へ。今日のご家族との運気を、そっとお伝えします。',
        '“家庭を大切にするあなた”へ。今日はどんな一日になるか、のぞいてみましょう。'],
      work:[
@@ -245,7 +248,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
    };
    var REL_TAILS=[
      '今日の運気の動きを、そっとお届けします。','今日のあなたの運勢を、お届けします。',
-@@ -656,7 +788,7 @@
+@@ -656,7 +789,7 @@
      '今日のあなたに動く運を、お届けします。','今日の過ごし方のヒントを、お届けします。',
      '今日の運勢を、朝いちばんにお届けします。','今日の運気を、いっしょに味方にしていきましょう。',
      '今日という日の運勢を、お伝えします。','今日も良い一日になるヒントを、お届けします。',
@@ -254,7 +257,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      '今日のあなたに効く、開運のヒントをお届けします。','今日の空模様（運勢）を、そっとのぞいてみましょう。',
      '今日のあなたへ、朝いちばんの運気だよりです。','今日の一日が良くなるコツを、お届けします。',
      '今日の運気とラッキーを、まとめてお伝えします。','今日のあなたの一日を、そっと応援します。'
-@@ -918,6 +1050,15 @@
+@@ -918,6 +1051,15 @@
      var money=mPool.length?mPool[pickSeq(ubase,55,mPool.length,_occ)]:'';
      var hPool=_pool(HEALTH_TJ[god], HEALTH[god]);
      var health=hPool.length?hPool[pickSeq(ubase,56,hPool.length,_occ)]:'';
@@ -270,7 +273,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var loveSet=(sex==='m')?LOVE_M:LOVE_F;
      var lf=(loveSet[you.stem]&&loveSet[you.stem][god])||[];
      var love='';
-@@ -938,7 +1079,23 @@
+@@ -938,7 +1080,23 @@
        var _lg=LOVE_GEN[god]||[];
        love=_lg.length?_lg[pickSeq(ubase,57,_lg.length,_occ)]:'';
      }
@@ -295,7 +298,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  
      var w=weather(idx);
      var _wob=WOBS[w.name]||WOBS['晴れ時々くもり'], wmsg=_wob[pickSeq(ubase,59,_wob.length,seed)]+ADV_SHARED[pickSeq(ubase,88,ADV_SHARED.length,seed)];
-@@ -972,7 +1129,7 @@
+@@ -972,7 +1130,7 @@
      }
  
      // ===== 件名（メールのタイトル）＝開封率のカギ。毎日ちがう“開けたくなる”件名を作る。
@@ -304,7 +307,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      // 呼びかけ形にして、件名が相性診断や本文と取り違えられないようにする。
      var _gl=GRADE_LABEL[_grade.sym]||'';
      // 十二運（今日のあなたの運気の巡り）＝日主 × その日の地支。段階名(墓/死/病等)はユーザーに出さず、
-@@ -1025,6 +1182,7 @@
+@@ -1025,6 +1183,7 @@
      while(_tn<_subjTail.length && !(toneOk(_subjTail[_ti],_grade.sym) && _subjTail[_ti].indexOf(_gl)<0)){ _ti=(_ti+1)%_subjTail.length; _tn++; }
      var subject=_subjHead+'｜'+_subjTail[_ti];
  
@@ -312,7 +315,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      return {
        version:'daily-1.0.0',
        subject:subject,
-@@ -1041,7 +1199,9 @@
+@@ -1041,7 +1200,9 @@
        en:{lv:en.lv, tag:enTag, body:enBody},
        love:love, loveMove:loveMove,
        touka:touka, special:special,
@@ -323,7 +326,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
        element:{day:dayElem, mine:myElem, supplement:fe, reason:feReason, feFood:feFood},
        bazi:favInfo,
        lucky:{color:lucky.color, hex:lucky.hex, direction:ldir, food:food, number:lnum,
-@@ -1069,6 +1229,7 @@
+@@ -1069,6 +1230,7 @@
    /* ===== 公開（画面・メール・サーバが同じ文言/ヘルパーを参照） ===== */
    return {
      generateDaily: generateDaily,
@@ -925,7 +928,15 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    const _kdm=dayMarks(new Date(Y,M-1,D));   // カレンダーと同一のマーク＆五行の巡り
    const _kgr=dayGrade(_kdm);                 // 💮絶好調 / ◎好調 / 〇ふつう / △ゆったり
    const _KGC={'g-top':{c:'#d6567e',bg:'#fdeef4'},'g-good':{c:'#c9862a',bg:'#fff6e6'},'g-normal':{c:'#6f7891',bg:'#eef1f6'},'g-care':{c:'#4fa05a',bg:'#edf7ee'}};
-@@ -796,7 +799,7 @@
+@@ -789,14 +792,14 @@
+   let _chipHTML='';
+   if(_goodGrade)_chipHTML+='<span style="display:inline-block;font-size:11px;font-weight:800;background:'+_acc.c+';border:1px solid '+_acc.c+';color:#fff;border-radius:20px;padding:3px 11px;margin:3px 4px 0 0">'+_kgr.sym+' '+_kgr.label+'</span>';
+   _posMarks.forEach(function(x){_chipHTML+='<span style="display:inline-block;font-size:11px;font-weight:800;background:#fff;border:1px solid '+_acc.c+'66;color:'+_acc.c+';border-radius:20px;padding:3px 10px;margin:3px 4px 0 0">'+x+' '+_MKPOS[x]+'</span>';});
+-  if(!_chipHTML)_chipHTML='<span style="display:inline-block;font-size:12px;color:#8a7d74;margin-top:3px">今日はおだやかに、縁を育てる日 🌱</span>';
++  if(!_chipHTML)_chipHTML='<span style="display:inline-block;font-size:12px;color:#8a7d74;margin-top:3px">'+(_kdm.m.includes('⚡')?'今日はゆとりを持って、慎重に過ごす日':'今日はおだやかに、縁を育てる日 🌱')+'</span>';
+   const _kRow=function(lbl,val){return '<div style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:11px;padding:9px 12px;border:1px solid rgba(0,0,0,.05);margin-top:8px"><span style="flex:none;font-size:11px;color:#a08a80;font-weight:800;white-space:nowrap">'+lbl+'</span><span style="flex:1;min-width:0;font-size:13px;font-weight:800;color:#5a4d47;text-align:right">'+val+'</span></div>';};
+   const _kanteiHTML='<div style="margin-top:9px;border-radius:16px;padding:13px;background:linear-gradient(135deg,'+_acc.bg+',#ffffff);border:1.5px solid '+_acc.c+'44;box-shadow:0 12px 28px -16px '+_acc.c+'99">'
+     +'<div style="font-size:11.5px;font-weight:800;color:'+_acc.c+';letter-spacing:.03em"><img src="icon-crystal.png" alt="" style="height:1.2em;width:auto;vertical-align:-0.26em;"> 今日のあなたの鑑定</div>'
      +'<div style="margin-top:1px;margin-bottom:2px">'+_chipHTML+'</div>'
      +_kRow('🎯 開運アクション',luckyAct)
      +_kRow('🎨 ラッキーカラー','<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:'+lucky.hex+';border:1px solid rgba(0,0,0,.15);vertical-align:-1px;margin-right:4px"></span>'+lucky.color)
@@ -978,7 +989,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    var sok=CLASH.includes(branchRel(r.t.branch,CUR.me.branch));                // 沖＝ゆらぎ
    // ★メール(daily-engine.dailyGrade)と完全に同じ判定順（案C：💮レア＝全員一律／恋の底上げは正直版）。
    if(r.m.includes('🌈'))return {sym:'💮',label:'特別な日',cls:'g-top'};
-@@ -993,7 +997,8 @@
+@@ -993,12 +997,14 @@
    if(MONEY_GOOD.includes(js))m.push('💰');
    if(WORK_GOOD.includes(js))m.push('💼');
    if(['偏印','印綬'].includes(js))m.push('📚');
@@ -988,7 +999,13 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    shinsatsuMarks(t.branch).forEach(function(x){m.push(x);}); // 空亡🌫️・貴人🍀・駅馬🐴
    /* ③ 年柱・月柱との響き（冲＝転機／支合・三合＝まとまり）。グレードには反映せずマーク情報のみ */
    var _mp=CUR.prof;
-@@ -1056,7 +1061,7 @@
+   if(_mp&&_mp.ok&&_mp.pillars){var _reso=false;[0,1].forEach(function(pi){var _pp=_mp.pillars[pi];if(!_pp)return;var pb=(typeof _pp.branch==='string'&&_pp.branch)?_pp.branch:((_pp.ganzhi||'').slice(-1)||'');if(BRANCHES.indexOf(pb)<0)return;var r=branchRel(t.branch,pb);if(r==='沖')_reso=true;});if(_reso)m.push('🌀');}
+   const dg=dayGogyo(t);
++  if(m.includes('⚡'))for(var _gi=m.length-1;_gi>=0;_gi--){if(['🌷','🌸','💖','🌐','💰','💼','📚','🍀','🐴'].indexOf(m[_gi])>=0)m.splice(_gi,1);}   // 天戦地冲の日は良い印を出さない（10/10 オーナー決定。メールのチップも同じ）
+   return {t,m,dg,d};
+ }
+ /* 流年・流月の補正（メール＝daily-engine.ymAdjust と同一計算）。エンジン未読込なら0。
+@@ -1056,7 +1062,7 @@
      else if(work){ bridge='仕事は“力むより丁寧に”。新しい勝負より、準備・確認・仕込みに向く日です。'; }
      else if(money){ bridge='大きな決断や散財は控えめに。コツコツ整えるお金づかいが吉。'; }
      else if(learn){ bridge='勉強・資格・情報収集に向く日。インプットに時間を使うと、あとで効いてきます。'; }
@@ -997,7 +1014,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    } else {
      var ups=[];
      if(love)ups.push('恋'); if(social)ups.push('人づきあい'); if(work)ups.push('仕事'); if(money)ups.push('お金'); if(learn)ups.push('学び');
-@@ -1067,7 +1072,7 @@
+@@ -1067,7 +1073,7 @@
  }
  function showDay(d){
    const r=dayMarks(d),t=r.t,m=r.m;
@@ -1006,7 +1023,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    const _exNames={'💰':'金運','💼':'仕事運','🌐':'対人運','📚':'学び運','💖':'魅力','🌸':'恋チャンス'};
    const _headline=m.includes('🌈')?'🌈':(m.includes('🌷')?'🌷':null);
    const _extras=m.filter(x=>_exNames[x]);
-@@ -1085,7 +1090,7 @@
+@@ -1085,7 +1091,7 @@
    const z=n=>String(n).padStart(2,'0');
    const gs=d.getFullYear()+z(d.getMonth()+1)+z(d.getDate());
    const gn=new Date(d.getTime()+86400000),ge=gn.getFullYear()+z(gn.getMonth()+1)+z(gn.getDate());
@@ -1015,7 +1032,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    const memo=getMemo(d).replace(/</g,'&lt;');
    let extra='';
    if(m.includes('🌈')||m.includes('🌸')||m.includes('💖')||m.includes('🌷')){
-@@ -1133,7 +1138,7 @@
+@@ -1133,7 +1139,7 @@
    if(reg&&reg.length)return;
    document.querySelectorAll('a[href="mypage.html"]').forEach(function(a){
      a.setAttribute("href","register.html");
@@ -1198,7 +1215,7 @@ diff -uN a/mypage.html b/mypage.html
   衰:{yomi:"すい",body:"落ち着いていて控えめ、穏やかな安定型。派手さよりも堅実さで、聞き上手で、まわりに安心感を与えます。経験を積むほど深い味わいが出る人。じっくり熟成していく、しなやかで芯のある“気”の持ち主です。"},
   病:{yomi:"びょう",body:"繊細で空想力ゆたか、優しく共感力の高い人。人の気持ちの機微に敏感で、そっと寄り添うのが得意です。感受性が強いぶん、想像や表現、人をケアする世界で輝くタイプ。やわらかな心が、いちばんの魅力です。"},
   死:{yomi:"し",body:"一途で集中力があり、ひとつのことを深く極めるタイプ。研究熱心でまじめ、決めたことをコツコツ最後まで貫きます。派手ではなくても、その芯の強さと誠実さが厚い信頼を生む人。静かに、深く極めていく“気”です。"},
-@@ -610,7 +626,8 @@
+@@ -610,12 +626,14 @@
    if(MONEY_GOOD.includes(js))m.push('💰');
    if(WORK_GOOD.includes(js))m.push('💼');
    if(['偏印','印綬'].includes(js))m.push('📚');
@@ -1208,7 +1225,13 @@ diff -uN a/mypage.html b/mypage.html
    shinsatsuMarks(t.branch).forEach(function(x){m.push(x);}); // 空亡🌫️・貴人🍀・駅馬🐴
    /* ③ 年柱・月柱との響き（冲＝転機／支合・三合＝まとまり）。検証済みbazi.jsの年月柱を再利用。グレードには反映せずマーク情報のみ */
    var _mp=memberProfile();
-@@ -661,6 +678,7 @@
+   if(_mp&&_mp.ok&&_mp.pillars){var _reso=false;[0,1].forEach(function(pi){var _pp=_mp.pillars[pi];if(!_pp)return;var pb=(typeof _pp.branch==='string'&&_pp.branch)?_pp.branch:((_pp.ganzhi||'').slice(-1)||'');if(BRANCHES.indexOf(pb)<0)return;var r=branchRel(t.branch,pb);if(r==='沖')_reso=true;});if(_reso)m.push('🌀');}
+   const dg=dayGogyo(t);
++  if(m.includes('⚡'))for(var _gi=m.length-1;_gi>=0;_gi--){if(['🌷','🌸','💖','🌐','💰','💼','📚','🍀','🐴'].indexOf(m[_gi])>=0)m.splice(_gi,1);}   // 天戦地冲の日は良い印を出さない（10/10 オーナー決定。メールのチップも同じ）
+   return {t,m,dg,d};
+ }
+ /* 流年・流月の補正（メール＝daily-engine.ymAdjust と同一計算）。エンジン未読込なら0。
+@@ -661,6 +679,7 @@
    var th=_gradeTh(), s=_dayRaw(r.t)+_ymAdj(r.d);   // 年月補正（閾値は従来どおり日の分布のみ）
    var touka=(r.t.branch===TOUKA[CUR.me.branch]);
    var love=(touka||r.m.includes('🌸'));                                       // モテ運/恋チャンス＝恋の合図日
@@ -1216,7 +1239,7 @@ diff -uN a/mypage.html b/mypage.html
    var sok=CLASH.includes(branchRel(r.t.branch,CUR.me.branch));                // 沖＝ゆらぎ
    // ★メール(daily-engine.dailyGrade)と完全に同じ判定順（案C：💮レア＝全員一律／恋の底上げは正直版）。
    if(r.m.includes('🌈'))return {sym:'💮',label:'特別な日',cls:'g-top'};        // 運命の人の日
-@@ -725,7 +743,7 @@
+@@ -725,7 +744,7 @@
    var mate=(typeof KANGOU!=='undefined'&&typeof SHIGOU!=='undefined')?((KANGOU[CUR.me.stem]||'')+(SHIGOU[CUR.me.branch]||'')):'';
    var kiEls=[]; if(prof&&prof.ok&&prof.fav){['木','火','土','金','水'].forEach(function(e){if(prof.fav[e]==='喜')kiEls.push(e);});}
    var timeKnown=!((MEMBER.birth&&MEMBER.birth.tu===true)||(MEMBER.birth&&MEMBER.birth.h==null));
@@ -1225,7 +1248,7 @@ diff -uN a/mypage.html b/mypage.html
    var _SYM='<span class="mg-s-top">💮</span><span class="mg-s-good">◎</span><span class="mg-s-norm">〇</span><span class="mg-s-care">△</span>';
    var h='';
    // ── よく見るマーク早わかり（全部読まなくても要点がつかめるミニ目次） ──
-@@ -746,54 +764,56 @@
+@@ -746,54 +765,56 @@
      +'あります。例えば <b>💰お金が動く＋⚠️ゆらぎ</b> が同じ日＝「<span class="warn">チャンスはあるけど足元が少しゆらぐ日</span>」。'
      +'総合記号を見て、<b>勢いだけで決めない</b>のが吉。急ぎでなければ一呼吸おくと安心です。</div>'
      +'<div class="mg-flow"><div class="mg-flow-h">🔄 運気は毎年、動いています</div>'
@@ -1306,7 +1329,7 @@ diff -uN a/mypage.html b/mypage.html
    // ── あなたの空亡（日・月・年）＝天中殺の周期。日だけでなく月・年の空亡も提示 ──
    try{
      var _pair=KUBOU_T[Math.floor(_meIdx()/10)]||[];
-@@ -807,17 +827,18 @@
+@@ -807,17 +828,18 @@
      var _tcy=_pair.map(_nextYearFor).filter(function(x){return x!=null;}).sort(function(a,b){return a-b;});
      var _yn=['子年','丑年','寅年','卯年','辰年','巳年','午年','未年','申年','酉年','戌年','亥年'];
      var _brYr=_pair.map(function(b){return _yn[BRANCHES.indexOf(b)];}).join('・');
@@ -1333,16 +1356,16 @@ diff -uN a/mypage.html b/mypage.html
    host.innerHTML=h;
  }
  /* 🔎 今日のまとめ：あなたの調子（💮◎〇△）と、その日の“縁”マークを1文でつなぐ。
-@@ -829,7 +850,7 @@
+@@ -829,7 +851,7 @@
    var love=m.includes('🌷')||m.includes('🌸')||m.includes('💖')||m.includes('🌈');
    var social=m.includes('🌐'), work=m.includes('💼'), money=m.includes('💰'), learn=m.includes('📚'), sway=m.includes('⚠️');
    var kubou=m.includes('🌫️');
 -  var goukuu=kubou && t && _goukuu(t.branch);   // 空亡が支合・三合で解ける（合空・填実）
-+  var goukuu=kubou && t && _goukuu(t.branch);   // 空亡が支合・三合で解ける（解空＝合で解ける）
++  var goukuu=kubou && t && !m.includes('⚡') && _goukuu(t.branch);   // 空亡が支合・三合で解ける（解空＝合で解ける）
    var base, bridge='';
    if(sym==='💮'){ base=(kubou&&!goukuu)?'今日はあなたにとって<b>特別な縁の予感がある日</b>。最高クラスの縁が近づいています。':'今日はあなたにとって<b>特別な一日</b>。ここぞという事に、思いきって動くほど流れに乗れます。'; }
    else if(sym==='◎'){ base='今日は<b>追い風</b>。やりたいことに前向きに動くと、いい形で返ってきやすい日です。'; }
-@@ -840,13 +861,14 @@
+@@ -840,13 +862,14 @@
      else if(work){ bridge='仕事は“力むより丁寧に”。新しい勝負より、準備・確認・仕込みに向く日です。'; }
      else if(money){ bridge='大きな決断や散財は控えめに。コツコツ整えるお金づかいが吉。'; }
      else if(learn){ bridge='勉強・資格・情報収集に向く日。インプットに時間を使うと、あとで効いてきます。'; }
@@ -1358,7 +1381,7 @@ diff -uN a/mypage.html b/mypage.html
    // 💮◎〇に空亡が重なる日の“結局どっち？”を一文で束ねる（良い気は来ているが、今日は形にするより育てる）
    if(kubou && sym!=='△'){
      if(goukuu){ bridge+=(bridge?'<br>':'')+'（今日は<b>良い流れが後押し</b>してくれるので、あまり気にせず、<b>いつも通り前向きに動いてOK</b>な日です。）'; }
-@@ -856,7 +878,7 @@
+@@ -856,7 +879,7 @@
  }
  function showDay(d){
    const r=dayMarks(d),t=r.t,m=r.m;
@@ -1367,7 +1390,7 @@ diff -uN a/mypage.html b/mypage.html
    const _exNames={'💰':'金運','💼':'仕事運','🌐':'対人運','📚':'学び運','💖':'魅力','🌸':'恋チャンス'};
    const _headline=m.includes('🌈')?'🌈':(m.includes('🌷')?'🌷':null);
    const _extras=m.filter(x=>_exNames[x]);
-@@ -873,7 +895,7 @@
+@@ -873,7 +896,7 @@
    const z=n=>String(n).padStart(2,'0');
    const gs=d.getFullYear()+z(d.getMonth()+1)+z(d.getDate());
    const gn=new Date(d.getTime()+86400000),ge=gn.getFullYear()+z(gn.getMonth()+1)+z(gn.getDate());
@@ -1376,12 +1399,12 @@ diff -uN a/mypage.html b/mypage.html
    const memo=getMemo(d).replace(/</g,'&lt;');
    let extra='';
    if(m.includes('🌈')||m.includes('🌸')||m.includes('💖')||m.includes('🌷')){
-@@ -928,11 +950,12 @@
+@@ -928,11 +951,12 @@
    var _studyOn=_has('📚');
    var _sb=(_studyOn?('📚 '+labels['📚']):'今日は学びの気は控えめ。気になる本を1ページ、くらいの軽さでOK。')+'<div class="whos">自分の勉強・資格にも、お子さんの勉強・習い事の後押しにも。</div>';
    // ── 神殺×分野の“合成の読み方”：空亡や冲が分野に重なった日は、その分野の使い方を1つに束ねて提示（例：空亡×仕事＝勝負より仕込み） ──
 -  var _gk=_has('🌫️') && _goukuu(t.branch);   // 内部判定：良い巡り合わせで“整える”が解ける日（説明欄で四柱推命の「合空」として解説）
-+  var _gk=_has('🌫️') && _goukuu(t.branch);   // 内部判定：良い巡り合わせで“整える”が解ける日（説明欄で四柱推命の「解空」として解説）
++  var _gk=_has('🌫️') && !_has('⚡') && _goukuu(t.branch);   // 内部判定：良い巡り合わせで“整える”が解ける日（説明欄で四柱推命の「解空」として解説）
    var _combo='';
    if(_has('🌫️') && _gk) _combo='<div class="gcombo ok"><b>✅ 今日は前向きに動いてOK</b><br>本来はひと休み向きの気配でしたが、<b>今日は良い流れが後押し</b>してくれます。<b>ほぼ通常どおり・前向きに動いてOK</b>。せっかくの流れ、活かしてください。</div>';
    else if(_has('🌫️')) _combo='<div class="gcombo"><b>🌫️ 「整える」が重なる日</b><br>この分野の“気”は動きますが、今日は<b>ものごとが“形になりにくい・宙に浮きやすい”日</b>。大きな決断・踏み込みは焦らず、<b>“育てる・整える・仕込む”</b>つもりで臨むと、空回りせず次につながります。</div>';
@@ -1390,16 +1413,18 @@ diff -uN a/mypage.html b/mypage.html
    else if(_has('⚠️')) _combo='<div class="gcombo"><b>⚠️ ゆらぎが重なる日の活かし方</b><br>この分野は動きますが、<b>勢いだけで進めず確認・ダブルチェックを</b>。急ぎでなければ一呼吸おくと安心です。</div>';
    if(_combo){ if(_loveOn)_lb+=_combo; if(_workOn)_wb+=_combo; if(_moneyOn)_mb+=_combo; if(_ijinOn)_ib+=_combo; if(_studyOn)_sb+=_combo; }
    var _hOn=(gr.sym==='💮'||gr.sym==='◎'), _hTone=_hOn?'good':(gr.sym==='△'?'rest':'quiet');
-@@ -941,7 +964,7 @@
+@@ -941,8 +965,8 @@
    var _kb='';['🌫️','🐴','🌀'].forEach(function(x){if(_has(x)){var _lx=labels[x];if(x==='🌫️'&&_gk)_lx+=' <b style="color:#2b8a5c">→ 今日は良い流れが後押し。気にせず前向きでOK</b>';_kb+=x+' '+_lx+'<br>';}});
    if(!_kOn)_kb='今日は暮らしは平常運転。気になった所を少しだけ整えると気分◎。';
    _kb+='<div class="whos">家事の段取り・断捨離／お出かけ／暮らしの変わり目に。</div>';
 -  var _warnTop=_has('⚠️')?'<div class="gwarn">⚠️ <b>ゆらぎ注意日</b>：少しリズムが乱れやすい日。急ぎの決断・言い合いは一呼吸おいて。悪い日ではありません。</div>':'';
+-  var _secs=_gSec('💗','恋愛・ご縁','片想い／恋人／夫婦',true,'good',_lb)
 +  var _warnTop=_has('⚡')?'<div class="gwarn">⚡ <b>波乱が起きやすい日</b>：流れが急に変わりやすい日。大事な決断・大きな買い物・言い争いは避けて、予定はゆとりを持って。<br><span style="font-size:11px;opacity:.75">※ 四柱推命でいう「天戦地冲（てんせんちちゅう）」</span></div>':_has('⚠️')?'<div class="gwarn">⚠️ <b>ゆらぎ注意日</b>：少しリズムが乱れやすい日。急ぎの決断・言い合いは一呼吸おいて。悪い日ではありません。</div>':'';
-   var _secs=_gSec('💗','恋愛・ご縁','片想い／恋人／夫婦',true,'good',_lb)
++  var _secs=_gSec('💗','恋愛・ご縁','片想い／恋人／夫婦',true,_has('⚡')?'quiet':'good',_lb)
      +_gSec('💼','仕事・チャレンジ','会社員／営業／起業・面接',false,_workOn?'good':'quiet',_wb)
      +_gSec('💰','お金・金運','家計／投資／ビジネス',false,_moneyOn?'good':'quiet',_mb)
-@@ -969,7 +992,7 @@
+     +_gSec('🌐','対人・人間関係','同僚／ママ友／仲間',false,_ijinOn?'good':'quiet',_ib)
+@@ -969,7 +993,7 @@
  $("calNext").onclick=()=>{let y=calY,m=calM+1;if(m>12){m=1;y++;}if(!_calInRange(y,m)){_calRangeNote();return;}calY=y;calM=m;renderCalendar();$("dayDetail").classList.remove('show');};
  
  /* ===== 会員情報の反映 ===== */
@@ -1408,7 +1433,7 @@ diff -uN a/mypage.html b/mypage.html
  function sexCode(v){return (v==="m"||v==="male"||v==="男性")?"m":"f";}
  function sexText(v){return sexCode(v)==="m"?"男性":"女性";}
  /* ===== 性別・今の状況の変更：本番はサーバーの会員データを更新し、成功したときだけ画面と端末の記録を変える ===== */
-@@ -1011,43 +1034,43 @@
+@@ -1011,43 +1035,43 @@
    var tu=(b.tu===true)||(b.h==null);
    var prof=(typeof window.PersonBazi==='function')?window.PersonBazi(b.y,b.m,b.d,tu?null:b.h,tu?null:b.mi,tu,MEMBER.sex||'female'):null;
    if(prof&&prof.ok){
@@ -1465,7 +1490,7 @@ diff -uN a/mypage.html b/mypage.html
      $("dayInfo").innerHTML='';$("gogyoWrap").innerHTML='';$("favWrap").innerHTML='';
      $("kanshiBody").innerHTML=jt2.body||'';
    }
-@@ -1082,13 +1105,19 @@
+@@ -1082,13 +1106,19 @@
    MEMBER.plan="premium";
    const card=$("statusCard"),badge=$("planBadge");
    card.className="status-card premium";
@@ -1488,7 +1513,7 @@ diff -uN a/mypage.html b/mypage.html
  /* 毎朝メールの配信ON/OFF：本番はサーバーに保存し、保存できたときだけ切り替える（止めたつもりで届き続ける、を防ぐ） */
  function setMailOpt(on){
    var sw=document.getElementById("swMail");
-@@ -1100,7 +1129,7 @@
+@@ -1100,7 +1130,7 @@
      .catch(function(){ if(sw) sw.checked=!on; alert("配信設定を保存できませんでした。時間をおいてもう一度お試しください。\n解決しない場合は info@72k.ai までご連絡ください。"); return false; });
  }
  function cancelDemo(){
