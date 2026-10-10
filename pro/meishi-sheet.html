@@ -49,6 +49,14 @@
   .bar .act #shareBtn{ background:#2A6FD0; color:#fff; border-color:#2A6FD0; font-weight:800; }
   .bar .act #printBtn:hover,.bar .act #shareBtn:hover{ filter:brightness(.96); }
   .bar .act .primary:hover{ background:#96793c; }
+  /* スマホ：操作ボタンの文字が途中で折れて丸く潰れないように（1行で、はみ出す分は次の行へ） */
+  .bar .act{ flex-wrap:wrap; }
+  .bar .act button{ white-space:nowrap; }
+  .calcbox input.tm{ width:auto; min-width:92px; }
+  @media (max-width:560px){ .bar .act{ margin-left:0; width:100%; } .bar .act button{ flex:1 1 auto; padding:9px 12px; } }
+  /* ビギナー（初心者モード）：専門用語の設定は隠し、専門の表（命式表）は選んだときだけ出す */
+  body.bg-mode #strengthRow, body.bg-mode .grp:has(#lvPro), body.bg-mode #verGrp, body.bg-mode #chapGrp, body.bg-mode .grp:has(#mtStd){ display:none !important; }
+  body.bg-mode.bg-nomei #sheet, body.bg-mode.bg-nomei #sheetYoko{ display:none !important; }
 
   .calcbox{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px 12px; }
   .calcbox .f{ display:flex; flex-direction:column; gap:3px; }
@@ -816,6 +824,51 @@
 </style>
 
 <div class="stage">
+<script>
+/* ===== ビギナー（初心者モード）から開いたとき（?bg=1）：専門用語を出さない「やさしい鑑定書」にする =====
+   ・計算・判定はそのまま（表示の言葉だけを言いかえる）。PRO・個人版・ビギナー上級者モードでは何もしない。 */
+(function(){
+  if(!/[?&]bg=1(&|$)/.test(location.search)) return;
+  document.body.classList.add('bg-mode','bg-nomei');
+  var R=[
+    [/（(?:比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬)）/g,''],
+    [/（(?:長生|沐浴|冠帯|建禄|帝旺|衰|病|死|墓|絶|胎|養)）/g,''],
+    [/（(?:月柱|年柱|日柱|時柱|空亡|冲|天中殺|桃花|大運|年運|月運|日運|干合|支合|三合|半合|方合|会局)）/g,''],
+    [/年柱の星/g,'子どもの頃の星'],[/月柱の星/g,'仕事・社会の星'],[/日柱の星/g,'あなた自身の星'],[/時柱の星/g,'将来の星'],
+    [/（[^（）]*[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥][^（）]*）/g,''],
+    [/同じ十二支の重なり/g,'同じ性質の重なり'],
+    [/持っている吉凶星（どの場面で効くか＝柱ごと）/g,'持っている助けの星・注意の星（どの場面で効くか）'],
+    [/助けの星（貴人）/g,'助けの星'],
+    [/「[^「」]{1,8}」…/g,''],
+    [/月徳を後押しする星/g,'人の縁を後押しする星'],
+    [/あなたの命式からわかること/g,'生まれ持った性質からわかること'],
+    [/命式が示す/g,'生まれ持った'],
+    [/この命式ならでは/g,'あなたならでは'],
+    [/日主「[^（」]*（[^／）]*／([木火土金水])の[陰陽]）」/g,'「$1」の性質'],
+    [/（干支の名前は読み方の目安。[^）]*）/g,''],
+    [/生まれ日は「[^」]+」＝/g,'生まれ日から見ると、'],
+    [/[甲乙丙丁戊己庚辛壬癸]の([^、。「」]{1,14}?)と[子丑寅卯辰巳午未申酉戌亥]の/g,'$1と'],
+    [/五行バランス/g,'5つの気のバランス'],[/五行/g,'気'],
+    [/命式/g,'生まれ持った性質']
+  ];
+  function plainText(t){ for(var i=0;i<R.length;i++) t=t.replace(R[i][0],R[i][1]); return t; }
+  window.__bgPlain=function(html){
+    try{
+      var tp=document.createElement('template'); tp.innerHTML=String(html||'');
+      var w=document.createTreeWalker(tp.content, NodeFilter.SHOW_TEXT), n, list=[];
+      while((n=w.nextNode())) list.push(n);
+      list.forEach(function(x){ x.nodeValue=plainText(x.nodeValue); });
+      // カッコだけ残った見出し・つなぎ目を整える
+      return tp.innerHTML.replace(/（\s*）/g,'');
+    }catch(e){ return html; }
+  };
+  // やさしい版の文章（画面・印刷とも）を、専門用語なしに言いかえる
+  var _ez=null;
+  try{ Object.defineProperty(window,'buildEasyHTML',{configurable:true,
+    get:function(){ return _ez && function(){ return window.__bgPlain(_ez.apply(this,arguments)); }; },
+    set:function(fn){ _ez=fn; } }); }catch(e){}
+})();
+</script>
   <!-- ============ コントロール ============ -->
   <div class="bar">
     <!-- 入口：まずはここだけ。生年月日を入れて「鑑定する」を押すだけで出ます。
@@ -3990,6 +4043,11 @@ window.KANSHI60_DETAIL={
       '・「過去の振り返り」章は独立して立てる。命式を根拠に鑑定士として落ち着いて言い切る文体で、具体年は最も印象的な1〜2年に絞る。言い切るのは「その時期は変化・区切りが起きやすい配置でした」という“時期の質”まで（具体的な出来事は断定しない）。「もし」「かもしれません」等の逃げ言葉は多用せず、確認は章末に一度だけ軽く。会局の年は前向きな転機・実りの年として言い切る。全体2〜4文で簡潔に。\n'+
       '・専門用語は（）で一言かみくだく。読者本人に語りかける、あたたかく具体的な文体。断定しすぎず、日々の行動のヒントを添える。'+
       (isEasy?'\n・やさしい版：中学生にもわかる易しい言葉で。専門用語は最小限、はげます調子で短めに。':'');
+    if(window.__bgPlain){   // ビギナー（初心者モード）：専門用語を一切使わない
+      sys=sys.replace('・専門用語は（）で一言かみくだく。','・占いの専門用語は一切書かない（命式・通変星・十二運・五行・干支の名前・柱の名前・吉凶星の名前・空亡・大運など。言いかえをカッコで添えることもしない）。')
+             .replace('運の流れ（大運）','運の流れ（10年ごと）')+
+          '\n・読み手は占いをまったく知らない人。日常の場面がイメージできる言葉で、一文は短く書く。';
+    }
     var usr='【鑑定対象】'+(nm||'ご本人')+'さん\n【命式データ】\n'+chartSummaryText(r)+'\n\n上記の命式から、指定の章立てで鑑定書の本文を書いてください。';
     var body=JSON.stringify({ system_instruction:{parts:[{text:sys}]}, contents:[{role:'user',parts:[{text:usr}]}], generationConfig:{maxOutputTokens:3200} });
     // まず1回オンライン生成。失敗（レート制限・一時エラー・空応答）なら数秒待って自動で1回だけ再試行。
@@ -4005,6 +4063,7 @@ window.KANSHI60_DETAIL={
             _aiBusy=false; aiFallbackToTemplate(); return;
           }
           var html=parseAIToHTML(txt);
+          if(html && window.__bgPlain) html=window.__bgPlain(html);
           if(!html){ if(!isRetry){ setTimeout(function(){ attempt(true); }, 2500); return; } aiCardMsg('返答を整形できませんでした。','もう一度お試しください。'); _aiBusy=false; return; }
           window._aiReadingHTML=html;
           aiCountInc();   // 成功したAI生成だけカウント（不正防止のゆるい1日上限）
@@ -4304,7 +4363,7 @@ window.KANSHI60_DETAIL={
       return { forward:fwd, birth:birth,
         prevName:_setsuJP(tc.birth.setsuName), prevDate:prev, prevText:tc.birth.setsuText,
         nextName:(tc2&&tc2.birth)?_setsuJP(tc2.birth.setsuName):'', nextDate:next,
-        ritsu:(tc.startFortune?(tc.startFortune.years+'歳'+tc.startFortune.months+'ヶ月'):'') };
+        ritsu:(tc.startFortune?(tc.startFortune.years+'年'+tc.startFortune.months+'ヶ月'):'') };
     }catch(e){ return null; }
   }
   function _fmtSetsuDate(dt){ return dt?(dt.getFullYear()+'年'+(dt.getMonth()+1)+'月'+dt.getDate()+'日 '+String(dt.getHours()).padStart(2,'0')+'時'+String(dt.getMinutes()).padStart(2,'0')+'分'):''; }
@@ -4551,5 +4610,27 @@ window.KANSHI60_DETAIL={
       setTimeout(function(){ apply(d); if(sMsg) sMsg.textContent='あなたの既定を適用しています（「既定を消す」で初期設定に戻せます）。'; }, 280);
     }catch(e){} })();
   })();
+})();
+</script>
+<script>
+/* ビギナー（初心者モード ?bg=1）の初期状態：鑑定書はやさしい版だけ・専門の表（命式表）は外す（「専門の表も付ける」で付けられる） */
+(function(){
+  if(!document.body.classList.contains('bg-mode')) return;
+  function setup(){
+    try{
+      var mei=document.getElementById('outMeishiki');
+      if(mei){
+        var lb=mei.parentNode; if(lb && lb.lastChild && lb.lastChild.nodeType===3) lb.lastChild.nodeValue=' 専門の表も付ける（上級者向け）';
+        if(!mei._bg){ mei._bg=1; mei.addEventListener('change', function(){ document.body.classList.toggle('bg-nomei', !mei.checked); try{ window.dispatchEvent(new Event('resize')); }catch(e){} }); }
+        if(mei.checked){ mei.checked=false; }
+        document.body.classList.add('bg-nomei');
+      }
+      var rd=document.getElementById('outReading'); if(rd && !rd.checked) rd.checked=true;
+      var e=document.getElementById('ovEasy'); if(e) e.click();
+      var l=document.getElementById('lvEasy'); if(l) l.click();
+      try{ window.dispatchEvent(new Event('resize')); }catch(e){}
+    }catch(e){}
+  }
+  setTimeout(setup, 200); setTimeout(setup, 900);   // わたしの既定（保存した出力設定）の適用より後にそろえる
 })();
 </script>
