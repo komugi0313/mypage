@@ -2590,7 +2590,7 @@ function heroHTML(c){
     <div class="meta">
       <span>生年月日 <b>${c.birth.clock}</b></span>
       <span>${corr?`真太陽時 <b>${corr.solar}</b>`:'<b>時差補正なし</b>'}</span>
-      <span>立運 <b>${String(c.startFortune.text).replace('歳','年')}・${c.startFortune.forward?'順行':'逆行'}</b></span>
+      <span>立運 <b>${String(c.startFortune.text).replace('歳','年').replace('カ月','ヶ月')}・${c.startFortune.forward?'順行':'逆行'}</b></span>
     </div>
   </section>`;
 }
@@ -2626,7 +2626,7 @@ function _tsScan(c,target){
   (c.annualFortunes||[]).forEach(a=>{const gz=gzOf(a);if(!isTensenChichu(target,gz)||a.year<cy-1||a.year>cy+20)return;
     const lab=a.year+'年'+(by!=null?'（'+(a.year-by)+'歳）':'');(dir(gz)===0?r.yA:r.yU).push(lab);});
   (c.decadeFortunes||[]).forEach(d=>{if(!isTensenChichu(target,d.ganzhi))return;
-    const lab=d.ganzhi+'（'+d.startAge+'〜'+d.endAge+'歳）';(dir(d.ganzhi)===0?r.dA:r.dU).push(lab);});
+    const lab=d.ganzhi+'（'+duAgeRange(d)+'）';(dir(d.ganzhi)===0?r.dA:r.dU).push(lab);});
   // 月運（今月から12ヶ月）＝短期・影響小
   try{(monthFortuneList(c,12)||[]).forEach(m=>{const gz=m.ganzhi||'';if(!isTensenChichu(target,gz))return;
     const lab=(m.calYear?m.calYear+'年':'')+(m.calMonth?m.calMonth+'月ごろ':'')+'（'+gz+'）';(dir(gz)===0?r.mA:r.mU).push(lab);});}catch(e){}
@@ -2706,7 +2706,7 @@ function detectRitchin(c){
     .map(a=>a.year+'年'+(by!=null?'（'+(a.year-by)+'歳）':'')+'＝'+gzOf(a)+'（'+matchP(gzOf(a)).join('・')+'と同じ）');
   // ②のdecadeFortunesは立運後の大運のみ（0歳月柱は含まない）ので、全大運をそのまま判定
   const du=(c.decadeFortunes||[]).filter(d=>matchP(d.ganzhi).length)
-    .map(d=>d.startAge+'歳〜＝'+d.ganzhi+'（'+matchP(d.ganzhi).join('・')+'と同じ）');
+    .map(d=>duAgeAt(d.startAge,d.months)+'〜＝'+d.ganzhi+'（'+matchP(d.ganzhi).join('・')+'と同じ）');
   return {pairs,allThree,years,du,natal:(allThree||pairs.length>0),any:(allThree||pairs.length>0||years.length>0||du.length>0)};
 }
 // ── モテ度・魅力タイプ＝個人版①の式（桃花+2/紅艶+2/沐浴+1/食傷2つ+1→starCurveで★1〜5）。②純正データ（既存の吉凶星pillarKichi・十二運・通変natalTs10）で算出 ──
@@ -3166,6 +3166,11 @@ function duListWithMonth(c){
   const md=monthDuOf(c);
   return ((md&&(md.endAge||md.endMonths))?[md]:[]).concat(c.decadeFortunes||[]);
 }
+/* 大運の年齢の区切り（流派ルール：立運の端数〇ヶ月を年齢境界にも反映。例 立運8年6ヶ月→「8歳6ヶ月〜18歳6ヶ月」、第一運＝月柱は「0歳〜8歳6ヶ月」） */
+function duAgeAt(a,m,u){u=u||'歳';return a+u+(m?m+'ヶ月':'');}
+function duAgeRange(d,u){u=u||'歳';if(!d)return '';
+  if(d.isMonth)return '0'+u+'〜'+duAgeAt(d.endAge,d.endMonths,u);
+  const m=d.months||0; return m?(duAgeAt(d.startAge,m,u)+'〜'+duAgeAt(d.endAge,m,u)):(d.startAge+'〜'+d.endAge+u);}
 function curDu(c){
   if(!c||!c.now||!c.decadeFortunes)return null;
   const di=c.now.daeunIndex;
@@ -3310,7 +3315,7 @@ function gogyoHTML(c){
     ${sectors}${band}${center}${tslabels}${elLabels}${overlayMk}</svg>`;
   const ring=col=>`<span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:${col};margin-right:6px;vertical-align:-2px"></span>`;
   const overlay=`<div class="gnote">
-    <div class="n">${ring(DU)}<b>大運</b> ${dd.startAge}〜${dd.endAge}歳（${dd.startYear}〜${dd.startYear+9}年）：${dd.ganzhi} → 干<b>${duStar}</b>・支<b>${duStarB}</b></div>
+    <div class="n">${ring(DU)}<b>大運</b> ${duAgeRange(dd)}（${dd.startYear}〜${dd.startYear+9}年）：${dd.ganzhi} → 干<b>${duStar}</b>・支<b>${duStarB}</b></div>
     ${ay?`<div class="n">${ring(NY)}<b>年運</b>：${ay.year} ${ay.ganzhi} → 干<b>${yrStar}</b>・支<b>${yrStarB}</b></div>`:''}${(function(){var mf=curMonthFortune(c);return (mf&&mf.meaning)?('<div class="n"><span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:#0EA5A5;margin-right:6px;vertical-align:-2px"></span><b>月運</b>：'+(mf.month?'約'+mf.month+'月ごろ ':'')+mf.ganzhi+' → <b>'+mf.star+'</b>（'+mf.meaning+'）'+((mf.stars&&mf.stars.length)?' <span style="color:var(--muted);font-weight:700">巡る吉凶星：'+mf.stars.map(function(s){return kichiLabel(s);}).join('・')+'</span>':'')+'</div>'):'';})()}</div>`;
   const total=Object.values(k).reduce((a,b)=>a+b,0);
   const have=TENSTAR10.filter(s=>k[s]>0).map(s=>`${s}${k[s]}`).join('・');
@@ -3637,7 +3642,7 @@ function bokoKaichu(c){
     k.ayOpen = ay&&ay.branch===k.partner ? (ay.year+' '+ay.ganzhi) : null;
   });
   const future=[];
-  if(c.decadeFortunes)c.decadeFortunes.forEach(d=>list.forEach(k=>{if(d.branch===k.partner)future.push({when:`${d.startAge}〜${d.endAge}歳の大運${d.ganzhi}`,grp:k.grp});}));
+  if(c.decadeFortunes)c.decadeFortunes.forEach(d=>list.forEach(k=>{if(d.branch===k.partner)future.push({when:`${duAgeRange(d)}の大運${d.ganzhi}`,grp:k.grp});}));
   return {list,future};
 }
 function bokoText(c){
@@ -3685,7 +3690,7 @@ function kaikyokuScan(c){
   const nowYear=c.now?c.now.year:c.annualFortunes[0].year, nowAge=c.now?c.now.age:0;
   const y2age=y=>nowAge+(y-nowYear);
   c.decadeFortunes.forEach(d=>{const endY=d.startYear+10;if(endY<=nowYear)return;
-    _kaikyokuHits(natalBr,d.branch).forEach(h=>res.periods.push(Object.assign({when:'大運',ganzhi:d.ganzhi,year0:Math.max(d.startYear,nowYear),year1:endY-1,age0:d.startAge,age1:d.endAge,current:(c.now&&c.now.age>=d.startAge&&c.now.age<d.endAge)},h)));});
+    _kaikyokuHits(natalBr,d.branch).forEach(h=>res.periods.push(Object.assign({when:'大運',ganzhi:d.ganzhi,year0:Math.max(d.startYear,nowYear),year1:endY-1,age0:d.startAge,age1:d.endAge,ageLab:duAgeRange(d),current:(c.now&&c.now.age>=d.startAge&&c.now.age<d.endAge)},h)));});
   const horizon=nowYear+30;
   c.annualFortunes.forEach(a=>{if(a.year<nowYear||a.year>horizon)return;
     const dd=c.decadeFortunes.find(d=>a.year>=d.startYear&&a.year<d.startYear+10);
@@ -3704,7 +3709,7 @@ function kaikyokuHTML(c){
   const GOLD='#b8860b';
   const tag=r=>r.tone==='good'?'<span style="margin-left:6px;background:#E7F4EA;color:#1E7A45;border-radius:5px;padding:0 6px;font-size:10.5px;font-weight:900">喜・追い風</span>':r.tone==='caution'?'<span style="margin-left:6px;background:#F6E4C4;color:#8A5A12;border-radius:5px;padding:0 6px;font-size:10.5px;font-weight:900">'+(r.excess?'太過・注意':'忌・注意')+'</span>':'<span style="margin-left:6px;background:#EDEFF3;color:#5B6472;border-radius:5px;padding:0 6px;font-size:10.5px;font-weight:900">中庸</span>';
   const chip=(r)=>{const col=ec(r.el),tx=onEl(r.el);const fav=r.excess?'太過':(r.fav||'');return `<span class="kkclick" data-kkk="${r.kind}" data-kke="${r.el||''}" data-kkf="${fav}" data-kkt="${String(r.text||'').replace(/"/g,'')}" data-kks="natal" role="button" tabindex="0" style="display:inline-flex;align-items:center;gap:4px;background:${col};color:${tx};border-radius:999px;padding:3px 11px;font-weight:900;font-size:12.5px;margin:4px 5px 0 0"><b>${r.kind}</b>${r.text}<span style="font-weight:800;opacity:.9;font-size:11px">${r.el}</span><span class="kkarw" style="color:${tx};opacity:.9">▾</span></span>${tag(r)}`;};
-  const line=(p)=>{const when=p.when==='大運'?`${p.year0}〜${p.year1}年ごろ<span style="color:var(--muted)">（${p.age0}〜${p.age1}歳・大運${p.ganzhi}）</span>`:`${p.year0}年<span style="color:var(--muted)">（${p.age0}歳・年運${p.ganzhi}）</span>`;const fav=p.excess?'太過':(p.fav||'');
+  const line=(p)=>{const when=p.when==='大運'?`${p.year0}〜${p.year1}年ごろ<span style="color:var(--muted)">（${p.ageLab||(p.age0+'〜'+p.age1+'歳')}・大運${p.ganzhi}）</span>`:`${p.year0}年<span style="color:var(--muted)">（${p.age0}歳・年運${p.ganzhi}）</span>`;const fav=p.excess?'太過':(p.fav||'');
     return `<li class="kkclick" data-kkk="${p.kind}" data-kke="${p.el||''}" data-kkf="${fav}" data-kkt="${String(p.text||'').replace(/"/g,'')}" data-kks="run" role="button" tabindex="0" style="margin:7px 0;line-height:1.55;list-style:none;display:flex;gap:9px;align-items:flex-start;cursor:pointer"><span style="flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:${ec(p.el)};margin-top:5px"></span><span><b style="color:${ec(p.el)}">${p.kind} ${p.text}（${p.el}が強まる${p.kind==='半合'?'・ゆるい結びつき':''}）</b>${tag(p)} <span class="kkarw">▾</span><br><span style="font-weight:800;font-size:12.5px">${when}</span></span></li>`;};
   // この人にとって各五行が喜／忌か（会局の吉凶の物差し）
   const A=_kkAssess(c);
@@ -4132,7 +4137,7 @@ function relHTML(c){
       ${usedKinds.includes('干合')?'・<b>干合</b>＝結びつく力（ご縁・出会い・結婚）。反面、依存・執着で<b>変わりにくくなる</b>面も。結びつきを“信頼・建設的な関係”に昇華させると追い風に。<br>':''}${usedKinds.includes('冲')?'・<b>冲</b>＝壊す・離れる力に見えて、<b>前に進むための“脱皮”・転換期</b>。現状維持派には試練でも、変わりたい人にはチャンス（転職・引越・決断が実りやすい）。':''}
     </div>`:''}
     ${grp('命式の中の関わり','生まれ持った配置',natal)}
-    ${grp(`大運 ${dd.ganzhi} × 命式`,`${dd.startAge}〜${dd.endAge}歳`,duR)}
+    ${grp(`大運 ${dd.ganzhi} × 命式`,`${duAgeRange(dd)}`,duR)}
     ${ay?grp(`年運 ${ay.year} ${ay.ganzhi} × 命式・大運`,'',yR):''}
     ${tgHTML}
     ${kkHTML}
@@ -4172,7 +4177,7 @@ function taohuaHTML(c){
     : `この年運の範囲では巡りません。`;
   // ③ 命式＋年運＋大運
   const dLine=t.dus.length
-    ? `<b style="color:var(--ka)">成立</b>：${t.dus.map(d=>`<b>${d.startAge}〜${d.endAge}才</b>（${d.startYear}年〜・${d.ganzhi}）`).join('・')}。<b>この10年は桃花の気配が続き、人気・ご縁が育ちやすい追い風</b>です。`
+    ? `<b style="color:var(--ka)">成立</b>：${t.dus.map(d=>`<b>${duAgeRange(d,'才')}</b>（${d.startYear}年〜・${d.ganzhi}）`).join('・')}。<b>この10年は桃花の気配が続き、人気・ご縁が育ちやすい追い風</b>です。`
     : `この大運では巡りません。`;
   const box=(n,ttl,body)=>`<div style="background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px 12px;margin-top:8px">
     <div style="font-weight:900;font-size:13px;color:var(--ink2)"><span style="background:var(--ka);color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;margin-right:6px">${n}</span>${ttl}</div>
@@ -4399,9 +4404,9 @@ function flowHTML(c){
   const bioBlock=(()=>{const df=c.decadeFortunes;if(!df||!df.length)return '';const d0=df[0],birthY=d0.startYear-d0.startAge;
       const ds=c.dayMaster.stem,sType=strengthType(c);
       const rows=[];
-      {const mp=c.pillars[1],bs=tenStarOf(ds,HONKI[mp.branch]);rows.push({y0:birthY,y1:d0.startYear,a0:0,a1:d0.startAge,e:unkiPct(mp.tenStar,bs,sType),col:ec(mp.stemElement),now:(c.now&&c.now.age<d0.startAge),pre:true,tip:'立運前(月柱'+mp.ganzhi+')'});}
-      df.forEach(d=>{const bs=tenStarOf(ds,HONKI[d.branch]);rows.push({y0:d.startYear,y1:d.startYear+10,a0:d.startAge,a1:d.endAge,e:unkiPct(d.tenStar,bs,sType),col:ec(d.stemElement),now:(c.now&&c.now.age>=d.startAge&&c.now.age<d.endAge),tip:d.ganzhi+' 干'+d.tenStar+'/支'+bs});});
-      const bars=rows.map(r=>`<div class="ebar-row ${r.now?'now':''}"><div class="ebar-lab">${r.y0}–${r.y1}年<br><small>${r.a0}–${r.a1}歳${r.pre?'・立運前':''}</small></div><div class="ebar-track" title="${r.tip}"><div class="ebar-fill" style="width:${r.e}%;background:${r.col}"></div></div><div class="ebar-val">${r.e}%${r.now?'<span class="rt">今</span>':''}</div></div>`).join('');
+      {const mp=c.pillars[1],bs=tenStarOf(ds,HONKI[mp.branch]);rows.push({y0:birthY,y1:d0.startYear,a0:0,a1:d0.startAge,al:duAgeRange({isMonth:true,endAge:d0.startAge,endMonths:d0.months||0}),e:unkiPct(mp.tenStar,bs,sType),col:ec(mp.stemElement),now:(c.now&&c.now.age<d0.startAge),pre:true,tip:'立運前(月柱'+mp.ganzhi+')'});}
+      df.forEach(d=>{const bs=tenStarOf(ds,HONKI[d.branch]);rows.push({y0:d.startYear,y1:d.startYear+10,a0:d.startAge,a1:d.endAge,al:duAgeRange(d),e:unkiPct(d.tenStar,bs,sType),col:ec(d.stemElement),now:(c.now&&c.now.age>=d.startAge&&c.now.age<d.endAge),tip:d.ganzhi+' 干'+d.tenStar+'/支'+bs});});
+      const bars=rows.map(r=>`<div class="ebar-row ${r.now?'now':''}"><div class="ebar-lab">${r.y0}–${r.y1}年<br><small>${r.al}${r.pre?'・立運前':''}</small></div><div class="ebar-track" title="${r.tip}"><div class="ebar-fill" style="width:${r.e}%;background:${r.col}"></div></div><div class="ebar-val">${r.e}%${r.now?'<span class="rt">今</span>':''}</div></div>`).join('');
       return `<div class="flowcard"><div class="scry">大運の運気推移（バイオリズム）<small style="font-weight:700;color:var(--muted)"> ── あなたの<b>${gogyoBalance(c).strength}</b>と用神（喜神・忌神）から算出</small></div>
       <div class="ebars">${bars}</div>
       <div class="mhint" style="margin-bottom:6px">運気％は、その10年の大運があなたに<b>味方するか</b>を、<b>身旺/身弱と用神（喜神・忌神）</b>から数値化したもの（${sType}のあなたは${sType==='身旺'?'食傷・財・官殺（漏らす/抑える）が喜、印・比劫（生じる/助ける）が忌':sType==='身弱'?'印・比劫（生じる/助ける）が喜、食傷・財・官殺（漏らす/抑える）が忌':'全体に中庸'}）。<b>高い時期は追い風で挑戦向き、低い時期は守り・土台づくり</b>の目安です（吉凶の断定ではありません）。最初の帯は立運前（月柱）。</div></div>`;})();
@@ -4533,7 +4538,7 @@ function yojoHTML(c){
     ${(()=>{try{const cc=b.counts||{};const w=cc.水||0,ed=cc.土||0,fi=cc.火||0;const ts=natalTsCounts(c);const shoku=ts.食傷||0;
       const wstate=w>=4?'多め':(w<=1?'控えめ':'適度');const ds=c.dayMaster.stem;const nowY=(c.now&&c.now.year)||new Date().getFullYear();
       const isWater=x=>['壬','癸'].includes(x.stem)||['子','亥'].includes(x.branch);
-      const duHit=(c.decadeFortunes||[]).filter(d=>{const bs=tenStarOf(ds,HONKI[d.branch]);return ['食神','傷官','正財','偏財'].includes(d.tenStar)||['食神','傷官','正財','偏財'].includes(bs)||isWater(d);}).filter(d=>!(c.now&&c.now.age>=d.endAge)).map(d=>`${d.startAge}〜${d.endAge}歳(${d.ganzhi})`).slice(0,3);
+      const duHit=(c.decadeFortunes||[]).filter(d=>{const bs=tenStarOf(ds,HONKI[d.branch]);return ['食神','傷官','正財','偏財'].includes(d.tenStar)||['食神','傷官','正財','偏財'].includes(bs)||isWater(d);}).filter(d=>!(c.now&&c.now.age>=d.endAge)).map(d=>`${duAgeRange(d)}(${d.ganzhi})`).slice(0,3);
       const yrHit=(c.annualFortunes||[]).filter(a=>a.year>=nowY&&a.year<=nowY+10&&(['食神','傷官','正財','偏財'].includes(a.tenStar)||isWater(a))).map(a=>a.year).slice(0,6);
       const tip=wstate==='多め'?'水が多めで冷えやすいので、<b>体を温める食べ物（生姜・クルミ・黒豆）</b>とヨガ・ウォーキングで血流を良くすると整いやすい':wstate==='控えめ'?'水が控えめで乾きやすいので、<b>腎を養う食べ物（黒ごま・山芋・ナッツ）</b>と水分・保湿で潤いを保つとよい':'今のバランスを保つ養生を';
       return `<div style="background:${ec('水')}0e;border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-top:10px">
@@ -4923,7 +4928,7 @@ function buildRomance(c){
   const natal=[];
   c.pillars.forEach(p=>{const s=p.label==='日柱'?'比肩':p.tenStar;if(spouse.includes(s))natal.push(p.label[0]+'天干'+s);
     const h=p.hiddenStems.find(x=>x.role==='本気');if(h&&spouse.includes(h.tenStar))natal.push(p.label[0]+'蔵干'+h.tenStar);});
-  const duS=c.decadeFortunes.filter(d=>spouse.includes(d.tenStar)||spouse.includes(tenStarOf(ds,HONKI[d.branch]))).map(d=>`${d.startAge}-${d.endAge}歳(${d.ganzhi})`);
+  const duS=c.decadeFortunes.filter(d=>spouse.includes(d.tenStar)||spouse.includes(tenStarOf(ds,HONKI[d.branch]))).map(d=>`${duAgeRange(d)}(${d.ganzhi})`);
   const yrs=[];
   if(c.now){c.annualFortunes.filter(a=>a.year>=c.now.year&&a.year<=c.now.year+8).forEach(a=>{
     const stars=[...matchKichi1(c,a.branch),...matchKichi4(c,a.branch),...matchKichi(kichiTargets(c),a.stem,a.branch,ZOUKAN[a.branch]||[])];
@@ -5267,7 +5272,7 @@ function ekibaText(c){
   const yYears=[];
   if(c.annualFortunes&&now!=null)c.annualFortunes.forEach(a=>{if(a.year>=now&&eb.has(a.branch))yYears.push(`${a.year}年(${age+(a.year-now)}歳)${a.ganzhi}${dayClash(a.branch)?'＝日支を冲＝移動/転居/環境の変化が強い年':''}`);});
   const yDu=[];
-  if(c.decadeFortunes)c.decadeFortunes.forEach(d=>{if((now==null||d.startYear+9>=now)&&eb.has(d.branch))yDu.push(`${d.startAge}〜${d.endAge}歳(${d.startYear}年-)大運${d.ganzhi}`);});
+  if(c.decadeFortunes)c.decadeFortunes.forEach(d=>{if((now==null||d.startYear+9>=now)&&eb.has(d.branch))yDu.push(`${duAgeRange(d)}(${d.startYear}年-)大運${d.ganzhi}`);});
   return `駅馬（えきば＝移動・遠方・海外の星。年支${yb}・日支${db}の三合から算出）:駅馬の支=${ebArr.join('・')}。命式内の駅馬=${natal.length?natal.join('・')+'（生まれつき移動・遠方と縁があり、地元に留まるより動いて発展するタイプ）':'なし（基本は地元・国内が軸で、下の巡りの時期に遠方の縁が開く）'}。駅馬が巡る年=${yYears.slice(0,4).join(' / ')||'当面は目立たない'}${yDu.length?'／駅馬の大運='+yDu.slice(0,3).join(' / '):''}。【鑑定文で必ず言語化する。この人が〈国内に根を張るタイプ／遠方・海外に縁があるタイプ／その両方（地元が軸だが特定の年に遠方の縁が開く）〉のどれかを、駅馬の命式内有無と巡りを根拠にはっきり述べ、起こりえる形（転勤・転職・転居・海外赴任や海外取引・留学・移住など）と、最も動きやすい年（駅馬＋日支を冲する年は特に強い）を西暦で名指しする。用神が金の人は“金＝西・外の世界・外国”の巡り（申酉の年）とも結びつけて海外の縁を補強してよい。断定せず可能性として、根こそぎの移住ではなく“踏み出しの好機”として前向きに述べる】`;
 }
 function buildChartText(c){
@@ -5280,7 +5285,7 @@ function buildChartText(c){
     const sb=tenStarOf(ds,HONKI[d.branch]);
     const els=[...new Set([STEM_EL[d.stem],STEM_EL[HONKI[d.branch]]])].join('・');
     const cur=(c.now&&c.now.age>=d.startAge&&c.now.age<d.endAge)?' ←今ここ':'';
-    return `${d.startAge}-${d.endAge}歳(${d.startYear}年-) ${d.isMonth?'【第一運＝月柱】':''}${d.ganzhi} 干${d.tenStar}/支${sb}・補う五行${els}${cur}`;
+    return `${duAgeRange(d)}(${d.startYear}年-) ${d.isMonth?'【第一運＝月柱】':''}${d.ganzhi} 干${d.tenStar}/支${sb}・補う五行${els}${cur}`;
   }).join('\n  ');
   const grpFlow=c.decadeFortunes.map(d=>TS_GROUP[d.tenStar]).join('→');
   // 節木運（せつぼくうん）：大運を方合で30年の季節に束ね、季節（方合）が切り替わる大運＝季節の変わり目を人生の曲がり角として読む
@@ -5375,18 +5380,18 @@ function buildChartText(c){
     (()=>{const ks=[...new Set(c.pillars.flatMap(p=>pillarKichi(c,p)))].filter(k=>KICHI_DESC[k]);return ks.length?`命式の吉凶星の意味:${ks.map(k=>kichiLabel(k)+'='+KICHI_DESC[k]).join(' / ')}`:'';})(),
     (()=>{if(!kaigouOn(c))return '';return `魁罡（日柱${c.pillars[2].ganzhi}＝特殊星）の読み解き（重要・命式の核として厚めに描く）:${KAIGOU_DETAIL.yoten}／${KAIGOU_DETAIL.secs.map(s=>s.t+'＝'+s.d).join('／')}　※この人には「海外・遠方との縁が強い／早くから独立し海外を舞台に活躍しやすい」ことを必ず一度は明記し、決断力・独立心・実力勝負・大きな器を前向きに描く`;})(),
     (()=>{if(!inyokuOn(c))return '';const k=natalTs10(c);const kan=(k.正官+k.偏官)>0,inn=(k.印綬+k.偏印)>0,shoku=(k.食神+k.傷官),st=strengthType(c);let stars=[];try{stars=[...new Set(c.pillars.flatMap(p=>pillarKichi(c,p)))];}catch(e){}const kc=stars.includes('紅艶')||stars.includes('咸池');const utsuwa=[kan,inn,st==='身旺'].filter(Boolean).length;const care=[!kan?'官星（枠）なし→意識してルール・節度・締切を':'',(!inn&&shoku>=3)?'印星が薄く食傷が強い→衝動は作品・発信・学びに昇華':'',st==='身弱'?'身弱→支え合える環境で活かす':'',kc?'紅艶/咸池も重なる→異性の縁が濃い分、相手を見定め節度を':''].filter(Boolean);return `淫欲殺の器診断（★前向きに活かす前提で読む）:日柱が淫欲殺＝「欲望・情熱・衝動性」が強い星（それ自体は吉凶ではなく強いエネルギー）。器＝官星${kan?'あり':'なし'}・印星${inn?'あり':'なし'}・${st}（器の数${utsuwa}/3）。${utsuwa>=2?'器が十分＝情熱・カリスマ・表現・創造の武器として活かせるタイプとして描く':utsuwa===1?'器あり＝支えを活かしつつ下の点を意識で補うと安定':'意識して活かすタイプ＝節度・昇華の回路で情熱を魅力・実力に（弱点でなく伸びしろとして描く）'}。${care.length?'意識点:'+care.join('／'):'器が整い強い情熱を安心して活かせる配置'}。長所（表現力・カリスマ・創造力・情熱を極める力）を主役に、注意点は“伸びしろ”として前向きに`;})(),
-    `立運:${String(c.startFortune.text).replace('歳','年')}（${c.startFortune.forward?'順行':'逆行'}）`,
+    `立運:${String(c.startFortune.text).replace('歳','年').replace('カ月','ヶ月')}（${c.startFortune.forward?'順行':'逆行'}）`,
     `大運の流れ（10年ごと・干通変/支通変/補う五行）:\n  ${duFlow}`,
     `各大運・年運で巡る通変星の意味（上の流れの各時期に当てはめ、「その年代＝この星が巡る＝こういう時期・こう過ごす」と時系列で具体的に読む）:${Object.keys(TS_FORTUNE).map(s=>s+'＝'+TS_FORTUNE[s].意).join(' ／ ')}`,
     `大運の通変グループの移り変わり（人生の大きな流れ）:${grpFlow}`,
-    (()=>{const sType=strengthType(c);const sLabel=gogyoBalance(c).strength;return `大運の運気推移（バイオリズム・あなたの${sLabel}と用神＝喜神/忌神から％化。高=追い風で挑戦向き、低=守り/土台づくり。吉凶の断定ではなく運気の波）:\n  ${duListWithMonth(c).map(d=>{const bs=tenStarOf(c.dayMaster.stem,HONKI[d.branch]);return `${d.startAge}-${d.endAge}歳(${d.startYear}年-) ${d.isMonth?'【第一運＝月柱】':''}${d.ganzhi} 干${d.tenStar}/支${bs} 運気約${unkiPct(d.tenStar,bs,sType)}%${(c.now&&c.now.age>=d.startAge&&c.now.age<d.endAge)?' ←今':''}`;}).join('\n  ')}`;})(),
+    (()=>{const sType=strengthType(c);const sLabel=gogyoBalance(c).strength;return `大運の運気推移（バイオリズム・あなたの${sLabel}と用神＝喜神/忌神から％化。高=追い風で挑戦向き、低=守り/土台づくり。吉凶の断定ではなく運気の波）:\n  ${duListWithMonth(c).map(d=>{const bs=tenStarOf(c.dayMaster.stem,HONKI[d.branch]);return `${duAgeRange(d)}(${d.startYear}年-) ${d.isMonth?'【第一運＝月柱】':''}${d.ganzhi} 干${d.tenStar}/支${bs} 運気約${unkiPct(d.tenStar,bs,sType)}%${(c.now&&c.now.age>=d.startAge&&c.now.age<d.endAge)?' ←今':''}`;}).join('\n  ')}`;})(),
     (typeof Setsuboku!=='undefined'&&sbA)?Setsuboku.promptBlock(sbA):''];
   if(c.now){const di=c.now.daeunIndex,dd=curDu(c);
     const ay=c.annualFortunes.find(a=>a.year===c.now.year);
     const rel=r=>`${r.kind}${r.text}${r.el?'('+r.el+')':''}`;
     const br=c.pillars.map(p=>({label:p.label[0],branch:p.branch})),st=c.pillars.map(p=>({label:p.label[0],stem:p.stem}));
     const uq=a=>[...new Set(a)];
-    L.push(`現在の大運（${c.now.age}歳）:${dd.ganzhi}（干${dd.tenStar}/十二運${dd.terrain}）${dd.isMonth?'※立運前＝第一運（月柱・0〜'+dd.endAge+'歳）':''}`);
+    L.push(`現在の大運（${c.now.age}歳）:${dd.ganzhi}（干${dd.tenStar}/十二運${dd.terrain}）${dd.isMonth?'※立運前＝第一運（月柱・'+duAgeRange(dd)+'）':''}`);
     (()=>{const nx=c.decadeFortunes[di+1];if(nx){const yrsTo=nx.startAge-c.now.age;const nb=tenStarOf(ds,HONKI[nx.branch]);if(yrsTo>=0&&yrsTo<=1.5){L.push(`★大運の切替が近い（人生の転機）:あと約${yrsTo<1?'1年以内':Math.round(yrsTo)+'年'}（${nx.startYear}年・${nx.startAge}歳頃）で大運が${dd.ganzhi}→${nx.ganzhi}（干${nx.tenStar}/支${nb}）へ切り替わる。大運の変わり目は生き方・環境・テーマが動く節目で、前後半年〜1年は特に流れが変わりやすい。何がどう変わるかを具体的に伝える`);}else if(yrsTo>1.5&&yrsTo<=3){L.push(`大運の次の切替:${nx.startYear}年・${nx.startAge}歳頃に${dd.ganzhi}→${nx.ganzhi}（干${nx.tenStar}）へ（数年内の変わり目）`);}}})();
     if(ay)L.push(`今年の年運（${ay.year}）:${ay.ganzhi}（天干${ay.tenStar}/地支${ay.terrain}/蔵干本気${ay.hiddenStem}=${ay.hiddenTenStar}）`);
     {const _mf=curMonthFortune(c);if(_mf&&_mf.meaning)L.push('今月の運気（月運。'+(_mf.month?'今の節月＝約'+_mf.month+'月ごろ':'今月')+'・月柱'+_mf.ganzhi+'／通変'+_mf.star+'）:'+_mf.meaning+'／過ごし方:'+_mf.help+((_mf.stars&&_mf.stars.length)?'／今月巡る吉凶星:'+_mf.stars.map(k=>kichiLabel(k)).join('・')+'（短期・影響は小さめ。命式にある同じ星を後押し／注意喚起する程度に軽く触れる）':'')+'。※月運は大運・年運より影響が小さい短期の流れ。今月〜近い時期の話にのみ使い断定しない');}
@@ -5737,7 +5742,7 @@ function localAnswer(c,worry){
     let natalSp=0;
     c.pillars.forEach(p=>{const s=p.label==='日柱'?'比肩':p.tenStar;if(spouse.includes(s))natalSp++;const h=(p.hiddenStems||[]).find(x=>x.role==='本気');if(h&&spouse.includes(h.tenStar))natalSp++;});
     const nowAge=(c.now&&c.now.age)||0;
-    const dus=(c.decadeFortunes||[]).filter(d=>(spouse.includes(d.tenStar)||spouse.includes(tenStarOf(ds,HONKI[d.branch])))&&(!nowAge||d.endAge>=nowAge)).map(d=>`${d.startAge}〜${d.endAge}歳（${d.ganzhi}）`);
+    const dus=(c.decadeFortunes||[]).filter(d=>(spouse.includes(d.tenStar)||spouse.includes(tenStarOf(ds,HONKI[d.branch])))&&(!nowAge||d.endAge>=nowAge)).map(d=>`${duAgeRange(d)}（${d.ganzhi}）`);
     const years=[];
     if(c.now)(c.annualFortunes||[]).filter(a=>a.year>=c.now.year&&a.year<=c.now.year+8).forEach(a=>{
       const stars=[...matchKichi1(c,a.branch),...matchKichi4(c,a.branch),...matchKichi(kichiTargets(c),a.stem,a.branch,ZOUKAN[a.branch]||[])];
@@ -7507,7 +7512,7 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
   /* ---------- ⑤ とくに大きく揺れやすい時期（判定はPROと同じ） ---------- */
   function clean(lab){ return String(lab).replace(/^[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]（(.+)）$/,'$1').replace(/（[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]）$/,''); }
   // 10年の区切りは、上の「10年ごとの大きな流れ」と同じ表記（○歳○ヶ月〜）にそろえる
-  function duOfLab(c,lab){ var gz=String(lab).slice(0,2), d=(c.decadeFortunes||[]).filter(function(x){return x.ganzhi===gz&&lab.indexOf('（'+x.startAge+'〜')===2;})[0]; return d?duLab(d):clean(lab); }
+  function duOfLab(c,lab){ return clean(lab); }  // 判定側のラベルが「58歳6ヶ月〜68歳6ヶ月」の形で来る
   function whenList(x,side,c){ var o=[];
     if(x['d'+side].length) o.push('10年の流れ：'+x['d'+side].map(function(l){return duOfLab(c,l);}).join('・'));
     if(x['y'+side].length) o.push(x['y'+side].map(clean).join('・'));
@@ -7709,8 +7714,9 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
       if(el.dataset.no) return; el.dataset.no='1';
       var t=el.lastChild; while(t&&t.nodeType===1&&t.lastChild) t=t.lastChild;
       if(!t||t.nodeType!==3||(t.parentNode.classList&&t.parentNode.classList.contains('nobr'))) return; var v=t.nodeValue.replace(/\s+$/,''); if(v.length<6) return;
-      var sp=document.createElement('span'); sp.className='nobr'; sp.textContent=v.slice(-4);
-      t.nodeValue=v.slice(0,-4); t.parentNode.insertBefore(sp,t.nextSibling);
+      var k=4, W=/[ァ-ヶーA-Za-z0-9]/; while(k<9&&k<v.length&&W.test(v.charAt(v.length-k))&&W.test(v.charAt(v.length-k-1))) k++;  // カタカナ語・英数字の途中では切らない
+      var sp=document.createElement('span'); sp.className='nobr'; sp.textContent=v.slice(-k);
+      t.nodeValue=v.slice(0,-k); t.parentNode.insertBefore(sp,t.nextSibling);
     });
   }
   /* ---------- 画面の組み立て ---------- */
