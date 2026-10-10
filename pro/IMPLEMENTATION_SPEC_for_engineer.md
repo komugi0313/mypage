@@ -51,6 +51,7 @@
 | 5 | `pricing-pro.html` | `TELECOM_PAYMENT_URL = { month:'' }` ／ `TELECOM_PARAM` | **審査通過後の決済URL**を設定し、渡す値のパラメータ名を接続仕様書に合わせる | `var TELECOM_PAYMENT_URL` |
 | 6 | 連絡先ドメイン | 旧ブランド `72k.ai` が残存 | **Meishiki の実メール/ドメイン**へ一括置換 | §9 |
 
+- **圏外での利用**：会員ゲートは、30日以内にネットでログイン確認できた会員（`member_status` が active/trialing・`member_checked_at` が30日以内）なら、通信できないときもアプリを開ける（イベント会場など圏外での利用のため）。サーバーで解約・停止された場合は、次にネットにつながったときのログイン確認で止まる。
 - **`PREVIEW_MODE=true` の意味**：`app-pro.html` 起動時のログインゲートを無条件解除（`if(PREVIEW_MODE){ unlock(); return; }`）。**本番で true のままだと誰でも無料で全機能を使えてしまう**ので必ず `false`。
 - `file://` で直接開いた場合のみローカル確認用に自動解除（https配信では発動しない）。
 

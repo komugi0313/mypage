@@ -685,20 +685,24 @@
       else { localStorage.removeItem('member_pw'); localStorage.removeItem('member_remember'); }
     }catch(e){}
   }
+  // 圏外（イベント会場など）でも使えるように：最近（30日以内）ネットでログイン確認できた会員は、通信できないときもそのまま開ける
+  var OFFLINE_DAYS=30;
+  function offlineOK(){ try{ var st=localStorage.getItem('member_status'), at=+(localStorage.getItem('member_checked_at')||0);
+    return !!localStorage.getItem('member_email') && (st==='active'||st==='trialing') && at>0 && (Date.now()-at)<OFFLINE_DAYS*86400000; }catch(e){ return false; } }
   function doLogin(email,pw,remember){
     statusEl.textContent='確認中…'; msg.innerHTML='';
     login(email,pw).then(function(s){
       statusEl.textContent='';
       if(s&&s.ok){
         rememberSave(email,pw,remember);
-        try{ localStorage.setItem('member_status',s.status||'none'); if(s.token){ localStorage.setItem('member_token',s.token); } }catch(e){}
+        try{ localStorage.setItem('member_status',s.status||'none'); localStorage.setItem('member_checked_at',String(Date.now())); if(s.token){ localStorage.setItem('member_token',s.token); } }catch(e){}
         if(s.status==='active'||s.status==='trialing'){ unlock(); }
         else if(s.status==='past_due'||s.status==='unpaid'){ showErr('お支払いが確認できていません。<br><a href="mypage-pro.html">マイページでカード情報を更新する</a>'); }
         else{ showErr('このアカウントは現在ご利用いただけません（'+statusJa(s.status)+'）。<br><a href="pricing-pro.html">お申し込みページへ</a>'); }
       } else {
         showErr('メールアドレスまたはパスワードが違います。<br><a href="auth.html?view=reset">パスワードを忘れた方</a>');
       }
-    }).catch(function(){ statusEl.textContent=''; showErr('ただいま確認できませんでした。しばらくしてからもう一度お試しください。'); });
+    }).catch(function(){ statusEl.textContent=''; if(offlineOK()){ unlock(); return; } showErr('ただいま確認できませんでした。電波の良い場所で、もう一度お試しください。'); });
   }
   document.getElementById('mg-login-btn').onclick=function(){
     var email=(document.getElementById('mg-email').value||'').trim().toLowerCase();
@@ -719,6 +723,7 @@
   if(location.protocol==='file:'){ unlock(); return; }
   // ★公開前プレビュー：決済接続まではログイン不要で全開放（本番公開時は PREVIEW_MODE=false に戻す）。バナー表示は本番向けに撤去済み。
   if(PREVIEW_MODE){ unlock(); return; }
+  if(!navigator.onLine && offlineOK()){ unlock(); return; }   // 圏外：最近ログインできていれば、そのまま使える
   document.body.style.overflow='hidden';
   var savedEmail=localStorage.getItem('member_email')||'';
   var savedPw=localStorage.getItem('member_pw')||'';
