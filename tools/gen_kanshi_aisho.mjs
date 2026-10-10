@@ -19,11 +19,12 @@ const body=await p.evaluate(()=>{
   const legend='<div class=legend><b>凡例：</b>'+['最高','とてもよい','よい','普通','悪い','合わない'].map(g=>`<span><i class="sw" style="background:${BG[g]};color:${FG[g]}">${({'最高':'★','とてもよい':'◎','よい':'○','普通':'・','悪い':'△','合わない':'▽'})[g]}</i>${lab(g)}</span>`).join('')+'</div>';
   return {stem:tbl(ST,sRel,stemCompat),branch:tbl(BRS,bRel,branchCompat),legend};
 });
-for(const [d,back] of [['pro','textbook-pro.html'],['beginner','textbook.html']]){
+for(const [d,back] of [['pro','textbook-pro.html'],['beginner','textbook.html'],['meishiki-original','']]){
   const f=`/home/user/mypage/${d}/kanshi-aisho.html`; let s=fs.readFileSync(f,'utf8');
   const i=s.indexOf('<p class=note>'), j=s.indexOf('<footer');
   if(i<0||j<0) throw new Error('markers '+f);
-  const mid='<p class=note>アプリの相性判定と同じ基準で色分けしています（日柱どうしの十干・十二支）。並びは 最高＞とてもよい＞よい＞普通＞かみ合いにくい＞違いが大きめ。各マスの上は2つの干支の関係、下の記号が相性です（★最高・◎とてもよい・○よい・・普通・△かみ合いにくい・▽違いが大きめ）。表は横にスクロールできます。</p>'+
+  const lead=d==='meishiki-original'?'<p class=note>干支どうしの関係（干合・支合・三合・冲・刑・害・破・五行の生剋）から、相性を6段階で色分けした早見表です（日柱どうしの十干・十二支）。':'<p class=note>アプリの相性判定と同じ基準で色分けしています（日柱どうしの十干・十二支）。';
+  const mid=lead+'並びは 最高＞とてもよい＞よい＞普通＞かみ合いにくい＞違いが大きめ。各マスの上は2つの干支の関係、下の記号が相性です（★最高・◎とてもよい・○よい・・普通・△かみ合いにくい・▽違いが大きめ）。表は横にスクロールできます。</p>'+
     body.legend+'<h2>日主 × 日主（十干の相性）</h2>'+body.stem+'<p class=note>干合＝最高／相生（生じ合う）＝よい／比和（同じ五行）＝普通／相剋（剋し合う）＝違いが大きめ。</p>'+
     '<h2>日支 × 日支（十二支の相性）</h2>'+body.branch+'<p class=note>支合＝最高／三合（半会）＝とてもよい／相生＝よい／同支・比和・破＝普通／冲・刑（子卯）＝かみ合いにくい／三刑・害・自刑・相剋＝違いが大きめ。</p>'+'';
   s=s.slice(0,i)+mid+s.slice(j);
