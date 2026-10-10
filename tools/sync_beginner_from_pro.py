@@ -3,7 +3,8 @@
 ビギナー（今日から占い師）を、PRO（四柱推命 自動鑑定）の最新コードから生成する。
 
 方針：計算・判定・画面・詳細鑑定の中身は PRO と 100% 同じ。
-      ビギナーで変えるのは「名前・アイコン・説明文・リンク先・マニフェスト・SW版番号の読み取り」だけ。
+      ビギナーで変えるのは「名前・アイコン・説明文・リンク先・マニフェスト・SW版番号の読み取り」と
+      「見た目（色・縁取り・ボタン文言）」だけ。見た目は CSS と文言のみで、中身には影響しない。
 
 使い方（リポジトリのルートで）：
     python3 tools/sync_beginner_from_pro.py
@@ -25,6 +26,22 @@ B_NAME = '今日から占い師'
 B_DESC = '生年月日を入れるだけで、命式・大運・年運・相性まで自動で読み解く四柱推命ツール。はじめてでも、やさしい言葉で本格鑑定ができます。'
 B_URL = 'https://www.suimei.jp/app-beginner.html'
 B_OGP = 'https://www.suimei.jp/og-image.png'
+
+# ビギナーの見た目（色・縁取り・ボタン文言）。CSS と文言だけで、計算・判定・鑑定文には一切影響しない。
+BEGINNER_SKIN = """<style id="beginner-skin">
+/* ===== ビギナーの見た目（tools/sync_beginner_from_pro.py が付与）。色・縁取りのみ。計算・判定・鑑定文には影響しない ===== */
+.card.ai-box{background:linear-gradient(0deg,rgba(31,164,99,.15),rgba(31,164,99,.15)),var(--card);border-color:rgba(31,164,99,.6);border-left:5px solid #1FA463}
+#compat-card{background:linear-gradient(0deg,rgba(229,51,140,.13),rgba(229,51,140,.13)),var(--card);border-color:rgba(229,51,140,.6);border-left:5px solid #E5338C}
+.reading-card{border:2px solid var(--line);border-left:6px solid var(--ka);box-shadow:none}
+.reading-card .r-summary{background:var(--ka-w);border-left:4px solid var(--ka);color:inherit}
+.brand .sub{display:block;font-weight:800;color:var(--ink2)}
+#bg-intro{background:linear-gradient(135deg,#FDF3E2,#FCE9E6);border:2px solid #F2D9A6;border-radius:16px;padding:16px 18px;margin:0 0 14px}
+#bg-intro .t{font-weight:900;font-size:16px;color:#B4471F;margin-bottom:8px}
+#bg-intro .steps{display:flex;gap:8px;flex-wrap:wrap}
+#bg-intro .s{flex:1 1 150px;background:#fff;border:1px solid #F0DFBE;border-radius:12px;padding:10px 12px;font-size:13.5px;font-weight:800;color:#4A4030}
+#bg-intro .s b{color:#E8392B}
+</style>
+"""
 
 
 def rep(s, old, new, count=None, label=''):
@@ -82,6 +99,18 @@ def build_app():
     s = rep(s, 'pricing-pro.html', 'pricing.html')
     s = rep(s, 'mypage-pro.html', 'mypage.html')
     s = rep(s, 'textbook-pro.html', 'textbook.html')
+
+    # ---- ビギナーの見た目（色・縁取り）と「占ってみる」ボタン ----
+    hi = s.find('</head>')
+    if hi < 0 or hi > s.find('<body'):
+        sys.exit('[止めました] </head> が見つかりません。')
+    s = s[:hi] + BEGINNER_SKIN + s[hi:]
+    s = rep(s, '  <section class="card panel">',
+            '  <div id="bg-intro"><div class="t">むずかしい知識は、いりません。</div><div class="steps">'
+            '<div class="s"><b>①</b> 生年月日を入れる</div><div class="s"><b>②</b> 「占ってみる」を押す</div>'
+            '<div class="s"><b>③</b> 出てきた文章を読むだけ</div></div></div>\n  <section class="card panel">', 1)
+    s = rep(s, '<button class="go" id="f-go" style="flex:1">この内容で占う</button>',
+            '<button class="go" id="f-go" style="flex:1"><img src="icon-crystal.png" alt="" style="height:1.2em;width:auto;vertical-align:-0.26em;"> 占ってみる</button>', 1)
 
     # ---- アプリ内のバージョン表示（SWのキャッシュ名から読む） ----
     s = rep(s, 'match(/shichu-jidou-(v\\d+)/)', 'match(/kyoukara-uranaishi-(v\\d+)/)', 1)
