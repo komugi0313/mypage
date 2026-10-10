@@ -3142,15 +3142,15 @@ function monthDuOf(c){
   return {isMonth:true,startAge:0,months:0,endAge:d0.startAge,endMonths:d0.months||0,startYear:d0.startYear-d0.startAge,
     ganzhi:mp.ganzhi,stem:mp.stem,branch:mp.branch,stemElement:mp.stemElement,branchElement:mp.branchElement,tenStar:mp.tenStar,terrain:mp.terrain};
 }
-/* 大運の一覧（第一運＝月柱を先頭に。立運0年0ヶ月なら月柱の期間はゼロなので省く） */
+/* 大運の一覧（流派ルール：大運は必ず月柱の干支からスタート。立運0年0ヶ月（節入りちょうど生まれ）でも第一運＝月柱を先頭に置く） */
 function duListWithMonth(c){
   const md=monthDuOf(c);
-  return ((md&&(md.endAge||md.endMonths))?[md]:[]).concat(c.decadeFortunes||[]);
+  return (md?[md]:[]).concat(c.decadeFortunes||[]);
 }
 /* 大運の年齢の区切り（流派ルール：立運の端数〇ヶ月を年齢境界にも反映。例 立運8年6ヶ月→「8歳6ヶ月〜18歳6ヶ月」、第一運＝月柱は「0歳〜8歳6ヶ月」） */
 function duAgeAt(a,m,u){u=u||'歳';return a+u+(m?m+'ヶ月':'');}
 function duAgeRange(d,u){u=u||'歳';if(!d)return '';
-  if(d.isMonth)return '0'+u+'〜'+duAgeAt(d.endAge,d.endMonths,u);
+  if(d.isMonth)return (d.endAge||d.endMonths)?('0'+u+'〜'+duAgeAt(d.endAge,d.endMonths,u)):('0'+u+'（立運0年0ヶ月）');
   const m=d.months||0; return m?(duAgeAt(d.startAge,m,u)+'〜'+duAgeAt(d.endAge,m,u)):(d.startAge+'〜'+d.endAge+u);}
 function curDu(c){
   if(!c||!c.now||!c.decadeFortunes)return null;
@@ -4359,12 +4359,12 @@ function flowHTML(c){
     const ks=[...matchKichi(kichiTargets(c),o.stem,o.branch,ZOUKAN[o.branch]||[]),...matchKichi4(c,o.branch),...matchKichi1(c,o.branch)];
     const stars=[...new Set(ks)];
     const when=(kind==='大運')
-      ?(o.isMonth?`0〜${o.endAge}才${o.endMonths?o.endMonths+'ヶ月':''}（${o.startYear}年〜）`:`${o.startAge}才${o.months?o.months+'ヶ月':''}〜（${o.startYear}年〜）`)
+      ?(o.isMonth?`${duAgeRange(o,'才')}（${o.startYear}年〜）`:`${o.startAge}才${o.months?o.months+'ヶ月':''}〜（${o.startYear}年〜）`)
       :`${o.year}年`;
     return `<div class="flowpanel"><div class="fp-h">選択中の${kind}：<b>${o.ganzhi}</b>（${o.tenStar}）　${when}${o.isMonth?'<span class="dutag">第一運＝月柱</span>':''}</div>${stars.length?`<div class="fp-stars">吉凶星：${stars.map(s=>`<span class="star">${s}</span>`).join('')}</div>`:''}${doukanUnsei(c,o,kind)}</div>`;
   };
   const du=DUS.map((d,idx)=>{const dataI=d.isMonth?-2:(idx-1);const isSel=(dataI===sel);const isNow=d.isMonth?(cur===-2):((idx-1)===cur);const col=ec(d.stemElement);
-    const ageLab=d.isMonth?`0〜${d.endAge}才${d.endMonths?d.endMonths+'ヶ月':''}`:`${d.startAge}才${d.months?d.months+'ヶ月':''}〜`;
+    const ageLab=d.isMonth?duAgeRange(d,'才'):`${d.startAge}才${d.months?d.months+'ヶ月':''}〜`;
     return `<div class="dur ${isSel?'on':''} ${isNow?'now':''}" data-i="${dataI}" style="border-left-color:${col}">
       <div class="meta"><div class="age">${ageLab}</div><div class="yr">${d.startYear}年〜</div></div>
       <div class="gz"><span style="color:${col}">${d.stem}</span><span style="color:${ec(d.branchElement)}">${d.branch}</span></div>
