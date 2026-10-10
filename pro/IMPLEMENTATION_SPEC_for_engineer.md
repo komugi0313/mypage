@@ -44,7 +44,7 @@
 
 | # | ファイル | 現在（デモ） | 本番 | 目印 |
 |---|---|---|---|---|
-| 1 | `app-pro.html` | `var PREVIEW_MODE = true;` | **`false`** | 650行目付近 |
+| 1 | `app-pro.html`（ビギナーは `app-beginner.html`、EKI は `app/index.html` も同じ） | `var PREVIEW_MODE = true;` | **`false`** | 会員ゲートのスクリプト内 |
 | 2 | `app-pro.html` | `var DEMO_MODE = false;` | `false`（そのまま） | 647行目付近 |
 | 3 | `app-pro.html` | テストキー欄 `<details id="gtest-wrap" …>` が存在 | **ブロックごと削除**（コメントに削除指示あり） | 800行目付近 |
 | 4 | `auth.html` / `mypage-pro.html` | `CONFIG.STUB = true` | **`false`** | 各ファイルの `var CONFIG` |
