@@ -31,10 +31,10 @@ B_OGP = 'https://www.suimei.jp/og-image.png'
 # ビギナーの見た目（色・縁取り・ボタン文言）。CSS と文言だけで、計算・判定・鑑定文には一切影響しない。
 BEGINNER_SKIN = """<style id="beginner-skin">
 /* ===== ビギナーの見た目（tools/sync_beginner_from_pro.py が付与）。色・縁取りのみ。計算・判定・鑑定文には影響しない ===== */
-.card.ai-box{background:linear-gradient(0deg,rgba(31,164,99,.15),rgba(31,164,99,.15)),var(--card);border-color:rgba(31,164,99,.6);border-left:5px solid #1FA463}
-#compat-card{background:linear-gradient(0deg,rgba(229,51,140,.13),rgba(229,51,140,.13)),var(--card);border-color:rgba(229,51,140,.6);border-left:5px solid #E5338C}
-.reading-card{border:2px solid var(--line);border-left:6px solid var(--ka);box-shadow:none}
-.reading-card .r-summary{background:var(--ka-w);border-left:4px solid var(--ka);color:inherit}
+.card.ai-box{background:linear-gradient(0deg,rgba(31,164,99,.15),rgba(31,164,99,.15)),var(--card);border-color:rgba(31,164,99,.6);}
+#compat-card{background:linear-gradient(0deg,rgba(229,51,140,.13),rgba(229,51,140,.13)),var(--card);border-color:rgba(229,51,140,.6);}
+.reading-card{border:2px solid var(--line);box-shadow:none}
+.reading-card .r-summary{background:var(--ka-w);color:inherit}
 .brand .sub{display:block;font-weight:800;color:var(--ink2)}
 #bg-intro{background:linear-gradient(135deg,#FDF3E2,#FCE9E6);border:2px solid #F2D9A6;border-radius:16px;padding:16px 18px;margin:0 0 14px}
 #bg-intro .t{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:900;font-size:16px;color:#B4471F;margin-bottom:8px}
