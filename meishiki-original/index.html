@@ -2055,7 +2055,7 @@ function renderSolo(p,inp){
   // 詳細鑑定（特性・直すべき点・恋愛・運気の波を細かく／自動）
   H+='<div class="card"><h2>詳細鑑定書 <span class="note" style="font-weight:400">v3・自動生成</span></h2>'+targetLine(whoFull)+'<div id="aiOut" class="note">生年月日を入れて「命式を作成」すると、特性・直すべき点・恋愛・運気の波まで自動で鑑定します。</div>'
     +'<button class="btn" id="aiBtn" style="margin-top:10px">🔍 詳細鑑定する（手動）</button></div>';
-  H+='<div class="card"><h2>質問して鑑定 <span class="note" style="font-weight:400">GEMINI</span></h2>'+targetLine(whoFull)
+  H+='<div class="card"><h2>質問して鑑定 <span class="note" style="font-weight:400">オンライン鑑定</span></h2>'+targetLine(whoFull)
     +'<textarea id="askIn" rows="2" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:15px;font-family:inherit;background:var(--card);color:inherit" placeholder="例）転職を考えています。今年動いても大丈夫？／この人と結婚したらどう？"></textarea>'
     +'<button class="btn" id="askBtn" style="margin-top:8px">この命式に質問する</button>'
     +'<div id="askOut" class="note" style="margin-top:10px"></div></div>';
@@ -3227,7 +3227,9 @@ function aiCacheGet(id){try{return aiCacheLoad()[id]||null;}catch(e){return null
 function aiCacheSet(id,text,trunc){try{var o=aiCacheLoad();o[id]={t:text,tr:!!trunc,at:Date.now()};
   var ks=Object.keys(o).sort(function(a,b){return o[b].at-o[a].at;}); if(ks.length>40)ks.slice(40).forEach(function(k){delete o[k];});
   localStorage.setItem(AICACHE,JSON.stringify(o));}catch(e){}}
-function aiRenderText(box,text,trunc){if(!box)return;box.className="";box.innerHTML='<div style="font-size:15px;line-height:1.7;color:var(--ink)">'+mdLite(text)+'</div>'+(trunc?'<p class="note" style="color:var(--warn);margin:8px 0 0">※長さの上限で途中までの表示です。もう一度押すと続きが変わります。</p>':'');}
+/* 詳細鑑定の結果は、オンラインで作成された鑑定であることが分かるよう印を付ける */
+var ONLINE_BADGE='<div style="display:inline-block;white-space:nowrap;margin:0 0 8px;padding:3px 10px;border-radius:999px;background:#E6F4EC;color:#2f7a4e;font-weight:800;font-size:12px" class="no-glue">🌐 オンライン鑑定（詳細鑑定）</div>';
+function aiRenderText(box,text,trunc){if(!box)return;box.className="";box.innerHTML=ONLINE_BADGE+'<div style="font-size:15px;line-height:1.7;color:var(--ink)">'+mdLite(text)+'</div>'+(trunc?'<p class="note" style="color:var(--warn);margin:8px 0 0">※長さの上限で途中までの表示です。もう一度押すと続きが変わります。</p>':'');}
 function aiIdSolo(i){return "s:"+i.y+"/"+i.mo+"/"+i.d+"/"+(i.tu?"u":i.hh+":"+i.mi)+"/"+i.sex;}
 function aiIdPair(a,b){function k(x){return x.y+"/"+x.mo+"/"+x.d+"/"+(x.tu?"u":x.hh+":"+x.mi)+"/"+x.sex;}return "p:"+k(a)+"__"+k(b);}
 function aiReading(c,btn,aid){
@@ -3245,7 +3247,7 @@ function aiReading(c,btn,aid){
   var url,headers;
   if(key){ url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(key); headers={"Content-Type":"application/json"}; }
   else { url="/api/gemini"; headers={"Content-Type":"application/json","x-pk-device":msDevId(),"x-pk-deep":"1","x-pk-owner":msOwner()}; }
-  box.className="note"; box.innerHTML='<span class="note">鑑定中… 🔮（数十秒かかることがあります）</span>'; if(btn) btn.disabled=true;
+  box.className="note"; box.innerHTML='<span class="note">🌐 オンラインで詳細鑑定しています…（数十秒かかることがあります）</span>'; if(btn) btn.disabled=true;
   fetch(url,{method:"POST",headers:headers,body:JSON.stringify(body)})
    .then(function(r){return r.text().then(function(t){return {ok:r.ok,status:r.status,t:t};});})
    .then(function(res){ if(btn) btn.disabled=false;
@@ -3289,7 +3291,7 @@ function aiAsk(deck,question,boxId,btn){
   var url,headers;
   if(key){ url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(key); headers={"Content-Type":"application/json"}; }
   else { url="/api/gemini"; headers={"Content-Type":"application/json","x-pk-device":msDevId(),"x-pk-deep":"1","x-pk-owner":msOwner()}; }
-  box.className="note"; box.innerHTML=sc+'<span class="note">鑑定中… 🔮</span>'; if(btn) btn.disabled=true;
+  box.className="note"; box.innerHTML=sc+'<span class="note">🌐 オンラインで詳細鑑定しています…</span>'; if(btn) btn.disabled=true;
   fetch(url,{method:"POST",headers:headers,body:JSON.stringify(body)})
    .then(function(r){return r.text().then(function(t){return {ok:r.ok,status:r.status,t:t};});})
    .then(function(res){ if(btn) btn.disabled=false;
@@ -3297,7 +3299,7 @@ function aiAsk(deck,question,boxId,btn){
      var j; try{j=JSON.parse(res.t);}catch(e){ box.innerHTML=sc+'<span style="color:var(--warn)">応答の解析に失敗しました。</span>'; return; }
      var cand=j.candidates&&j.candidates[0], txt=cand&&cand.content&&cand.content.parts?cand.content.parts.map(function(x){return x.text||"";}).join(""):"";
      if(!txt){ var fr=cand&&cand.finishReason; box.innerHTML=sc+'<span style="color:var(--warn)">鑑定文が生成されませんでした'+(fr?'（'+esc(fr)+'）':'')+'。表現を変えてお試しください。</span>'; return; }
-     box.className=""; box.innerHTML=sc+'<div style="font-size:15px;line-height:1.7;color:var(--ink)">'+mdLite(txt)+'</div>';
+     box.className=""; box.innerHTML=sc+ONLINE_BADGE+'<div style="font-size:15px;line-height:1.7;color:var(--ink)">'+mdLite(txt)+'</div>';
    })
    .catch(function(){ if(btn) btn.disabled=false; box.innerHTML=sc+'<span style="color:var(--warn)">通信エラー。ネット接続をご確認ください。</span>'; });
 }
@@ -3700,7 +3702,7 @@ function renderTrio(arr){
   } else H+='<p class="note" style="margin:0">あと1支で完成する形は今のところありません。</p>';
   H+='</div>';
   /* AI質問BOX（3人グループ） */
-  H+='<div class="card"><h2>3人について質問して鑑定 <span class="note" style="font-weight:400">GEMINI</span></h2>'
+  H+='<div class="card"><h2>3人について質問して鑑定 <span class="note" style="font-weight:400">オンライン鑑定</span></h2>'
     +'<p class="note" style="margin:0 0 6px">3人の命式とグループ相性を根拠に、気になることを質問できます。</p>'
     +'<textarea id="askTrioIn" rows="2" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:15px;font-family:inherit;background:var(--card);color:inherit" placeholder="例）この3人でチームを組むとどう？／誰と誰が一番合う？／この3人で旅行するなら？／グループ内で気をつけることは？"></textarea>'
     +'<button class="btn" id="askTrioBtn" style="margin-top:8px">3人について質問する</button>'
@@ -4071,7 +4073,7 @@ function renderPair(pa,pb,a,b){
   // 相性の詳細鑑定（辛口・詳細）
   H+='<div class="card"><h2>相性の詳細鑑定 <span class="note" style="font-weight:400">v3・自動生成</span></h2>'+targetLine(pairFull)+'<div id="aiPair" class="note">「相性を見る」で、二人の特性・惹かれ合う所・強み/魅力・合わない所・攻略法・仲直り法・仲良くなる/すれ違う時期・ラブラブな過ごし方まで自動鑑定します。</div>'
     +'<button class="btn" id="aiPairBtn" style="margin-top:10px">🔍 相性を詳細鑑定する（手動）</button></div>';
-  H+='<div class="card"><h2>二人について質問 <span class="note" style="font-weight:400">GEMINI</span></h2>'+targetLine(pairFull)
+  H+='<div class="card"><h2>二人について質問 <span class="note" style="font-weight:400">オンライン鑑定</span></h2>'+targetLine(pairFull)
     +'<textarea id="askPairIn" rows="2" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:15px;font-family:inherit;background:var(--card);color:inherit" placeholder="例）この二人が不倫関係だったらどうなる？／別れた方がいい？／結婚に向く？"></textarea>'
     +'<button class="btn" id="askPairBtn" style="margin-top:8px">二人について質問する</button>'
     +'<div id="askPairOut" class="note" style="margin-top:10px"></div></div>';
@@ -4121,7 +4123,7 @@ function aiCompat(cA,cB,btn,aid){
   var url,headers;
   if(key){ url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(key); headers={"Content-Type":"application/json"}; }
   else { url="/api/gemini"; headers={"Content-Type":"application/json","x-pk-device":msDevId(),"x-pk-deep":"1","x-pk-owner":msOwner()}; }
-  box.className="note"; box.innerHTML='<span class="note">鑑定中… 🔮（数十秒かかることがあります）</span>'; if(btn) btn.disabled=true;
+  box.className="note"; box.innerHTML='<span class="note">🌐 オンラインで詳細鑑定しています…（数十秒かかることがあります）</span>'; if(btn) btn.disabled=true;
   fetch(url,{method:"POST",headers:headers,body:JSON.stringify(body)})
    .then(function(r){return r.text().then(function(t){return {ok:r.ok,status:r.status,t:t};});})
    .then(function(res){ if(btn) btn.disabled=false;
@@ -4230,12 +4232,12 @@ try{ var _gk=localStorage.getItem("ms_gkey"); if(_gk&&document.getElementById("g
   var served=/^https?:$/.test(location.protocol);
   var hasKey=false; try{hasKey=!!(localStorage.getItem("ms_gkey")||"").trim();}catch(e){}
   if(served){
-    el.innerHTML='<span style="display:inline-block;background:#e3f3e8;color:#2f7a4e;border-radius:8px;padding:5px 10px;font-weight:700">✅ 詳細鑑定：このサイトで自動で使えます（閲覧者のキー入力は不要）</span>'
+    el.innerHTML='<span style="display:inline-block;background:#e3f3e8;color:#2f7a4e;border-radius:8px;padding:5px 10px;font-weight:700">✅ 詳細鑑定（オンライン鑑定）：このサイトで自動で使えます（閲覧者のキー入力は不要）</span>'
       +'<br><span style="font-size:12.5px">※動かない場合は、Netlifyの環境変数 <code>GEMINI_API_KEY</code> の設定をご確認ください（サーバー側にキーが隠れて動く仕組みです）。</span>';
   }else if(hasKey){
-    el.innerHTML='<span style="display:inline-block;background:#fbf0d8;color:#a8791f;border-radius:8px;padding:5px 10px;font-weight:700">🔑 この端末に保存したキーで詳細鑑定を使えます（お試し）</span>';
+    el.innerHTML='<span style="display:inline-block;background:#fbf0d8;color:#a8791f;border-radius:8px;padding:5px 10px;font-weight:700">🔑 この端末に保存したキーで詳細鑑定（オンライン鑑定）を使えます（お試し）</span>';
   }else{
-    el.innerHTML='<span style="display:inline-block;background:#f0f0f0;color:#565a80;border-radius:8px;padding:5px 10px;font-weight:700">ℹ️ 詳細鑑定：本番サイト（Netlify等）に設置すればキー不要で自動。この単体ファイルだけで試す時は下の設定でキーを入れてください。</span>';
+    el.innerHTML='<span style="display:inline-block;background:#f0f0f0;color:#565a80;border-radius:8px;padding:5px 10px;font-weight:700">ℹ️ 詳細鑑定（オンライン鑑定）：本番サイト（Netlify等）に設置すればキー不要で自動。この単体ファイルだけで試す時は下の設定でキーを入れてください。</span>';
   }
 })();
 function scrollYearsToNow(){try{document.querySelectorAll(".yearsBox").forEach(function(box){var n=box.querySelector(".yNow");if(n){box.scrollTop+=n.getBoundingClientRect().top-box.getBoundingClientRect().top-8;}});}catch(e){}}
@@ -4277,7 +4279,7 @@ setTimeout(msWireToTop,500);
    結果は後から描き変わるので、画面が変わるたびに少し待ってから整える。文言・計算は変えない。 */
 (function(){
   var W=/[ァ-ヶーA-Za-z0-9]/, INL=/^(inline|inline-block|contents)$/, done=new WeakSet();
-  var SKIP='table,select,button,nav,svg,script,style,textarea,.tb-nb,summary';
+  var SKIP='table,select,button,nav,svg,script,style,textarea,.tb-nb,summary,.no-glue,.ybadge,.pill';
   function isBlock(n){ return n.nodeType===1&&(n.tagName==='BR'||!INL.test(getComputedStyle(n).display)); }
   function nextReal(n){ n=n.nextSibling; while(n&&n.nodeType===3&&!n.nodeValue.trim()) n=n.nextSibling; return n; }
   function lineEnd(t){ var n=t; for(var d=0;d<6;d++){ var x=nextReal(n); if(x) return isBlock(x); var p=n.parentNode; if(!p||p===document.body||isBlock(p)) return true; n=p; } return false; }
