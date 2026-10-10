@@ -135,7 +135,7 @@ table{width:100%;border-collapse:collapse;font-size:15.5px}
 /* 時期の視覚化（空亡・恋愛・結婚） */
 .chk{display:inline-flex;align-items:center;gap:7px;margin-top:7px;padding:7px 11px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:14px;font-weight:700;cursor:pointer;color:var(--ink)}
 .chk input{width:17px;height:17px;accent-color:var(--accent);cursor:pointer}
-.cardlead{margin:0 0 10px;padding:7px 11px;background:var(--soft);border-left:4px solid var(--title);border-radius:0 8px 8px 0;font-size:13.5px;font-weight:700;color:var(--sub);line-height:1.5}
+.cardlead{margin:0 0 10px;padding:7px 11px;background:var(--soft);border-radius:8px;font-size:13.5px;font-weight:700;color:var(--sub);line-height:1.5}
 .cardlead b{color:var(--title)}
 .chipwrap{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
 .kchip{display:inline-flex;align-items:center;gap:3px;border:2px solid var(--line);border-radius:999px;padding:4px 11px;font-size:14.5px;font-weight:800;background:var(--card);white-space:nowrap}
@@ -355,9 +355,9 @@ table{width:100%;border-collapse:collapse;font-size:15.5px}
 
 <script src="./pro-bazi.js"></script>
 <script src="./pro-adapter.js?v=2"></script>
-<script src="./pk_summary.js?v=10c"></script>
+<script src="./pk_summary.js?v=10e"></script>
 <script src="./tenkanki.js?v=1"></script>
-<script src="./ijokanshi.js?v=1"></script>
+<script src="./ijokanshi.js?v=2"></script>
 <script>
 /* 出生地（真太陽時の経度補正用）。日本＝47都道府県庁所在地・韓国＝主要都市。標準子午線はどちらも135° */
 var PLACES={"日本":[["北海道（札幌）",141.35],["青森",140.74],["岩手（盛岡）",141.15],["宮城（仙台）",140.87],["秋田",140.10],["山形",140.36],["福島",140.47],["茨城（水戸）",140.45],["栃木（宇都宮）",139.88],["群馬（前橋）",139.06],["埼玉（さいたま）",139.65],["千葉",140.12],["東京",139.69],["神奈川（横浜）",139.64],["新潟",139.02],["富山",137.21],["石川（金沢）",136.63],["福井",136.22],["山梨（甲府）",138.57],["長野",138.18],["岐阜",136.72],["静岡",138.38],["愛知（名古屋）",136.91],["三重（津）",136.51],["滋賀（大津）",135.87],["京都",135.77],["大阪",135.50],["兵庫（神戸）",135.18],["奈良",135.83],["和歌山",135.17],["鳥取",134.24],["島根（松江）",133.05],["岡山",133.93],["広島",132.46],["山口",131.47],["徳島",134.55],["香川（高松）",134.04],["愛媛（松山）",132.77],["高知",133.53],["福岡",130.40],["佐賀",130.30],["長崎",129.87],["熊本",130.74],["大分",131.61],["宮崎",131.42],["鹿児島",130.56],["沖縄（那覇）",127.68]],
@@ -895,6 +895,10 @@ function luckFav(el,fav){var f=fav&&fav[el];return f==="喜"?{m:"◎",t:"追い�
 function juniShort(t){return (JUNI_MEAN[t]||"").split("。")[0];}
 /* 年齢を「X歳Yヶ月」表記に */
 function ageJ(m){m=Math.max(0,Math.round(m));var y=Math.floor(m/12),mo=m%12;return y+'歳'+(mo?mo+'ヶ月':'');}
+/* 立運の数は「大運入りまでの年数」なので「年」表記（例 立運8年6ヶ月）。人の年齢を指す区切りは ageJ（歳）のまま */
+function ritsuJ(m){m=Math.max(0,Math.round(m));var y=Math.floor(m/12),mo=m%12;return y+'年'+(mo?mo+'ヶ月':'');}
+/* 大運の始まる西暦＝生まれ年＋満年齢（PRO版・エンジンの startYear と同じ数え方。四捨五入しない） */
+function duYearAt(by,m){return by+Math.floor(Math.max(0,m)/12);}
 /* 大運リスト（先生の流派：第一運＝月柱を必ず先頭に置き、以降は立運起点で各10年） */
 function daeunList(c){var sf=c.startFortune||{},ritsuRaw=(sf.years||0)*12+(sf.months||0),ritsu=Math.max(0,ritsuRaw),mp=c.pillars[1]||{};
   var list=[{ganzhi:mp.ganzhi,stem:mp.ganzhi[0],branch:mp.ganzhi[1],tenStar:mp.tenStar||'',terrain:mp.terrain||'',startM:0,endM:ritsu,first:true}];
@@ -904,14 +908,14 @@ function daeunList(c){var sf=c.startFortune||{},ritsuRaw=(sf.years||0)*12+(sf.mo
   var bm=(c.birth&&typeof c.birth.setsuMin==="number")?c.birth.setsuMin:0;
   return {items:list,cur:ci,ritsu:ritsu,boundary:(ritsuRaw<0||bm<0)};}
 /* 立運の表示（節の変わり目で稀にエンジンの立運が不安定になる境界ケースを正直に注記） */
-function ritsuLabel(sf,boundary){if(boundary)return "要確認（節の変わり目の境界ケース）";if(!sf||sf.years==null)return "-";var m=(sf.years||0)*12+(sf.months||0);if(m<0)return "要確認（節の変わり目の境界ケース）";return (sf.years||0)+"歳"+(sf.months||0)+"ヶ月";}
+function ritsuLabel(sf,boundary){if(boundary)return "要確認（節の変わり目の境界ケース）";if(!sf||sf.years==null)return "-";var m=(sf.years||0)*12+(sf.months||0);if(m<0)return "要確認（節の変わり目の境界ケース）";return (sf.years||0)+"年"+(sf.months||0)+"ヶ月";}
 function ageRange(s,e){return (s>=e)?'誕生ごろ':ageJ(s)+'〜'+ageJ(e);}
 /* 人生の節目（大運の切替＝運の季節が変わる年）を西暦つきで“ひと目”。次にいつ変わるかを明示 */
 function lifeMilestonesCard(c,fav){
   var dl=daeunList(c),items=dl.items,by=birthYearOf(c),now=c.now||{},curAge=(now.age!=null?now.age:null);
-  var ritsuLab=ageJ(dl.ritsu),ritsuYr=(by!=null?by+Math.round(dl.ritsu/12):null);
+  var ritsuLab=ritsuJ(dl.ritsu),ritsuYr=(by!=null?duYearAt(by,dl.ritsu):null);
   var rows=[];
-  for(var i=1;i<items.length;i++){var it=items[i],ageY=Math.round(it.startM/12),yr=(by!=null?by+ageY:null);
+  for(var i=1;i<items.length;i++){var it=items[i],ageY=Math.floor(it.startM/12),yr=(by!=null?duYearAt(by,it.startM):null);
     var lf=luckFav(MSTEM_EL[it.stem]||'',fav);
     rows.push({age:ageY,ageLab:ageJ(it.startM),yr:yr,ten:it.ten||it.tenStar||'',gz:it.ganzhi,lf:lf,cur:(i===dl.cur)});}
   var nextRow=null;for(var k=0;k<rows.length;k++){if(curAge!=null&&rows[k].age>curAge){nextRow=rows[k];break;}}
@@ -946,7 +950,7 @@ function tenkankiCardHTML(c){
   var dl=daeunList(c),items=dl.items,by=birthYearOf(c),now=c.now||{},curAge=(now.age!=null?now.age:null);
   var rows=[];
   for(var i=1;i<items.length;i++){
-    var prev=items[i-1],cur=items[i],a=Math.round(cur.startM/12),yr=(by!=null?by+a:null);
+    var prev=items[i-1],cur=items[i],a=Math.floor(cur.startM/12),yr=(by!=null?duYearAt(by,cur.startM):null);
     var pt=prev.tenStar||'',nt=cur.tenStar||'',key=pt+'→'+nt;
     rows.push({startM:cur.startM,age:a,yr:yr,prevTen:pt,nextTen:nt,rd:T.trans[key]||null,idx:i});
   }
@@ -1374,7 +1378,7 @@ function setsubokuCard(c,fav,birthYear){
     var a0=Math.max(0,Math.round(b.age-1.5)),a1=Math.max(0,Math.round(b.age+1.5)),y0=birthYear+a0,y1=birthYear+a1;
     var doyo=DOYO[b.prevBr]?'<br><span style="color:var(--warn)">※季節末（土用：'+esc(b.prevBr)+'）の変わり目＝心身が特に揺れやすい時期。無理は禁物。</span>':'';
     return '<div style="border-top:1px solid var(--soft);padding:9px 2px">'
-      +'<b style="font-size:15px">約'+esc(a0)+'〜'+esc(a1)+'歳ごろ（'+esc(y0)+'〜'+esc(y1)+'年）</b>：<b>'+esc(SEASON_JP[b.fromEl])+'</b> → <b>'+esc(SEASON_JP[b.toEl])+'</b> へ移行'
+      +'<b style="font-size:15px">'+esc(ageJ(b.age*12))+'の切り替え</b><span class="note">（前後1年半＝約'+esc(a0)+'〜'+esc(a1)+'歳ごろ・'+esc(y0)+'〜'+esc(y1)+'年）</span>：<b>'+esc(SEASON_JP[b.fromEl])+'</b> → <b>'+esc(SEASON_JP[b.toEl])+'</b> へ移行'
       +'<br>次の季節「'+esc(SEASON_JP[b.toEl])+'」は、あなたに <b style="color:'+tf.c+'">'+tf.m+' '+tf.t+'</b>（'+tf.lbl+'）の30年。'+(fav&&fav[b.toEl]==="喜"?'思い切った転身・挑戦が吉と出やすい季節。':(fav&&fav[b.toEl]==="忌"?'守り・整え・工夫が活きる季節。焦らず土台を固めて。':'穏やかに移行できる季節。'))
       +'<br><b>予習：</b>次の「'+esc(SEASON_JP[b.toEl])+'」に向け＝'+esc(SEASON_PREP[b.toEl]||'')+'を先取りするとスムーズ。'
       +doyo+'</div>';}).join("");
@@ -1607,18 +1611,21 @@ function nichizaChusatsuCard(p){var c=p.pro,dgz=c.pillars[2]&&c.pillars[2].ganzh
     +'<p style="margin:0 0 8px;line-height:1.85">日座天中殺（甲戌・乙亥）は必ず<b>申酉天中殺＝「西」の欠落</b>。さらに天干の<b>甲・乙は「東」</b>にあたり、<b>東と西の両方を除いて</b>読み解きます。残るのは<b>中央＝「現在」</b>。そのため<b>未来を見通す力（東）とまとめ上げる力（西）が現実の形になりにくく</b>（＝精神が弱いのではなく“形”になりにくいだけ）、代わりに<b>「今」という一点に才能が輝きます</b>。積み重ねよりも<b>常に新しく前へ進む</b>ため「活動的・行動的」と評されます。身内（親・兄弟・親類）と縁が深く、女性は婚期が遅れやすく、結婚運は<b>「反華運型」</b>（若い頃に結ばれにくい恋を経て、やがて穏やかな結婚に入る形。波乱の後の結婚ほど平和）とされます。<span class="note">※これは伝統的な運命論で、<b>断定ではなく傾向の目安</b>です。</span></p>'
     +'<p style="margin:4px 0 0"><a href="./nichiza-tenchusatsu.html" target="_blank" rel="noopener" style="font-weight:700;color:var(--title);text-decoration:none">📖 「日座中殺（くわしく）」の教科書ページで詳しく読む →</a></p>'
     +'</div>';}
-/* 異常干支（いじょうかんし）＝日干支のみで判定（年・月・時からは取らない）。目立つ専用色で表示 */
-function IJO_COLOR(grp){ return (grp==='code')?'#1565c0':'#0e8f7e'; }   /* 通常＝ティール／暗号＝ブルー（中殺の赤・律音の紫と区別） */
-function ijokanshiCardHTML(c){
+/* 異常干支（いじょうかんし）＝四柱すべてで判定（生まれた時刻がわからないときは年・月・日の三柱）。目立つ専用色で表示 */
+function IJO_COLOR(grp){ return (grp==='code')?'#1565c0':'#0e8f7e'; }   /* 通常＝ティール／暗合＝ブルー（中殺の赤・律音の紫と区別） */
+function ijokanshiCardHTML(c,tu){
   var J=window.IJOKANSHI; if(!J)return '';
-  var pil=c.pillars||[];
-  var gz=pil[2]&&pil[2].ganzhi;                 // 日干支のみ判定
-  if(!gz||!J.set[gz])return '';
+  var pil=c.pillars||[], H='';
+  for(var i=0;i<4;i++){ if(i===3&&tu)continue; var g=pil[i]&&pil[i].ganzhi; if(g&&J.set[g])H+=ijokanshiOneHTML(c,i,g); }
+  return H;
+}
+function ijokanshiOneHTML(c,pi,gz){
+  var J=window.IJOKANSHI, PL=['年柱','月柱','日柱','時柱'][pi], PK=['年','月','日','時'][pi];
   var rd=J.read[gz]||{}, grp=rd.group||'normal';
   var gname=(J.group[grp]?J.group[grp].name:'異常干支'), gnote=(J.group[grp]?J.group[grp].note:'');
   var col=IJO_COLOR(grp);
-  var H='<div class="card" style="border:2px solid '+col+'"><h2 style="color:'+col+';border-color:'+col+'">異常干支（日柱） <span class="ybadge" style="background:'+col+';color:#fff;font-size:13px">'+esc(gname)+'</span></h2>'
-    +'<p style="margin:0 0 8px;line-height:1.85">この方は<b>日柱（日干支）＝'+esc(gz)+'</b>で、<b style="color:'+col+'">異常干支</b>に当たります。異常干支は六十干支のうち<b>13種</b>（通常異常干支6種＋暗号異常干支7種）。<br><span class="note">※異常干支は<b>日柱（自分の本質）で見る</b>のが基本です。年柱・月柱に同じ干支があっても本人の事象とは切り離すため、ここでは<b>日干支だけ</b>を判定しています。</span></p>'
+  var H='<div class="card" style="border:2px solid '+col+'"><h2 style="color:'+col+';border-color:'+col+'">異常干支（'+PL+'） <span class="ybadge" style="background:'+col+';color:#fff;font-size:13px">'+esc(gname)+'</span></h2>'
+    +'<p style="margin:0 0 8px;line-height:1.85">この方は<b>'+PL+'＝'+esc(gz)+'</b>で、<b style="color:'+col+'">異常干支</b>に当たります。異常干支は六十干支のうち<b>13種</b>（通常異常干支6種＋暗合異常干支7種）。<br><span class="note">※異常干支は<b>日柱（自分の本質）で見る</b>のが基本です。年柱・月柱に同じ干支があっても本人の事象とは切り離すため、ここでは<b>日干支だけ</b>を判定しています。</span></p>'
     +'<p style="margin:6px 0 8px;padding:9px 12px;background:var(--soft);border-left:4px solid '+col+';border-radius:0 8px 8px 0;line-height:1.8"><b style="color:'+col+'">'+esc(gname)+'：</b>'+esc(gnote)+'</p>';
   if(rd.ten||rd.juni)H+='<p class="note" style="margin:2px 0 6px">干支の性質：通変星＝<b>'+esc(rd.ten||'-')+'</b>／十二運星＝<b>'+esc(rd.juni||'-')+'</b></p>';
   H+='<ul style="margin:0;padding-left:1.2em;line-height:1.85">'+(rd.points||[]).map(function(p){return '<li>'+esc(p)+'</li>';}).join('')+'</ul>';
@@ -1628,7 +1635,8 @@ function ijokanshiCardHTML(c){
       +'<ul style="margin:4px 0 0;padding-left:1.2em;line-height:1.85">'+(rd.extra.points||[]).map(function(p){return '<li>'+esc(p)+'</li>';}).join('')+'</ul>'
       +(rd.extra.love?'<div style="margin-top:6px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 10px"><b style="color:var(--good)">活かし方：</b>'+esc(rd.extra.love)+'</div>':'')+'</div>';
   }
-  H+='<p class="note" style="margin:8px 0 0">参考：この見方では、日柱＝プライベートや恋愛の領域（人生ではとくに60〜80歳ごろに表れやすい）とされます。</p>'
+  var _pd=(typeof PILLAR_DOMAIN!=='undefined'&&PILLAR_DOMAIN[PK])||{};
+  H+='<p class="note" style="margin:8px 0 0">参考：'+PL+'は、'+esc(_pd.area||'')+'の領域（人生では'+esc(_pd.life||'')+'）に表れやすいとされます。いちばん強く表れるのは日柱です。</p>'
     +'<p style="margin:6px 0 0"><a href="./ijokanshi.html" target="_blank" rel="noopener" style="font-weight:700;color:'+col+';text-decoration:none">📖 「異常干支」の教科書ページで詳しく読む →</a></p>'
     +'<p class="note" style="margin:6px 0 0">※これは伝統的な見方で、<b>断定ではなく傾向の目安</b>です。解説は要約し独自表現で再構成したものです（原典の転載ではありません）。</p>'
     +'</div>';
@@ -1754,12 +1762,12 @@ function natalDataBoard(p,inp,sex){
   var seiName=female?'正官':'正財',henName=female?'偏官':'偏財';
   var seiTou=false;(fp&&fp.pillars||[]).forEach(function(pl,i){if(i!==2&&pl.tenStar===seiName)seiTou=true;});
   var seiState=seiTou?'透干（表に出る）':((sc[seiName]||0)>0?'蔵干のみ（内に秘める）':'命中になし');
-  var dl=daeunList(c),ritsuLab=ageJ(dl.ritsu),sf=c.startFortune||{};
+  var dl=daeunList(c),ritsuLab=ritsuJ(dl.ritsu),sf=c.startFortune||{};
   var en=ndSec('◆ 縁・運の座標',
     '<div class="note" style="font-size:12px;line-height:1.9">'
     +'配偶者宮＝<b>日支 '+elB(c.pillars[2].branch)+'</b>／配偶者星（'+seiName+'）＝<b>'+esc(seiState)+'</b>／恋愛星＝'+henName+'<b>'+(sc[henName]||0)+'</b>'
     +'<br>桃花（咸池）<b>'+(sl.indexOf('咸池')>=0?'有':'無')+'</b>／紅艶<b>'+(sl.indexOf('紅艶')>=0?'有':'無')+'</b>／空亡（天中殺）＝<b>'+(ks.list&&ks.list.length?ks.list.join('・'):'-')+'</b>'
-    +'<br>立運（大運の始まり）＝<b>'+ritsuLab+'ごろ</b>／大運の進み方＝<b>'+(sf.forward?'順行':'逆行')+'</b>'
+    +'<br>立運（大運の始まり）＝<b>'+ritsuLab+'</b>／大運の進み方＝<b>'+(sf.forward?'順行':'逆行')+'</b>'
     +'</div>'
     +'<details style="margin:4px 0 0"><summary class="note" style="cursor:pointer;font-weight:700;color:var(--accent)">❓ 配偶者宮・配偶者星・透干とは？（良し悪しの見方つき）</summary>'
       +'<div class="note" style="font-size:11px;line-height:1.85;margin-top:5px">'
@@ -1793,7 +1801,7 @@ function ritchinSelfCard(c){
   var allThree=(gz[0]===gz[1]&&gz[1]===gz[2]);
   var now=c.now||{},cy=now.year||0,af=c.annualFortunes||[];
   var yearsHit=[]; af.forEach(function(a){ if(a.year>=cy){ var m=matchP(a.ganzhi); if(m.length)yearsHit.push({year:a.year,gz:a.ganzhi,pil:m}); } }); yearsHit=yearsHit.slice(0,6);
-  var decHit=[]; daeunList(c).items.forEach(function(d){ if(!d.first){ var m=matchP(d.ganzhi); if(m.length)decHit.push({age:Math.round(d.startM/12),gz:d.ganzhi,pil:m}); } });
+  var decHit=[]; daeunList(c).items.forEach(function(d){ if(!d.first){ var m=matchP(d.ganzhi); if(m.length)decHit.push({age:ageJ(d.startM),gz:d.ganzhi,pil:m}); } });
   var H='<p class="note" style="margin:0 0 8px">律音（りっちん）＝<b>干支がまったく同じ</b>こと。<b>干支併臨（かんしへいりん）</b>とも呼ばれ（流派で呼び名が違うだけで同じ意味）、命式の中で年・月・日柱どうしが同じなら<b>宿命律音</b>、大運・年運が命式の柱と同じ干支になる時期は<b>後天運の律音（干支併臨）</b>。どちらも「物事が大きく変わる分岐点・チャンス」を表します。</p>';
   H+='<details style="margin:0 0 10px"><summary style="cursor:pointer;font-weight:700;color:var(--accent)">干支併臨（律音）の時期に起きやすいこと・影響の大きさ</summary><div style="margin-top:8px;line-height:1.8">'
     +'<p class="note" style="margin:0 0 6px">巡ってくる頻度：<b>大運</b>＝巡ってこない場合もあり／<b>年</b>＝60年に一度／<b>月</b>＝5年に一度。</p>'
@@ -1824,7 +1832,7 @@ function ritchinSelfCard(c){
   H+='<p style="margin:6px 0 4px"><b class="sech">◆ 後天運で律音が巡る時期（分岐点・変化のチャンス）</b></p>';
   H+='<p class="note" style="margin:0 0 6px">律音の年は<b>道が二つに分かれやすい</b>分岐点。その年の十二支が強調され、親に反抗的になりやすい（親よりも親戚など目上に可愛がられる）時期でもあります。還暦（60歳ごろ）は誰でも一度、年柱が律音になります。</p>';
   if(decHit.length){ H+='<p style="margin:0 0 3px"><b>大運（10年）で律音：</b></p>';
-    decHit.forEach(function(d){ H+='<p style="margin:0 0 6px;line-height:1.8">・<b>'+d.age+'歳〜</b>（'+esc(d.gz)+'）＝<b>'+d.pil.join('・')+'</b>と律音<br><span class="note">'+RITCHIN_TRANSIT[d.pil[0]]+'</span></p>'; }); }
+    decHit.forEach(function(d){ H+='<p style="margin:0 0 6px;line-height:1.8">・<b>'+d.age+'〜</b>（'+esc(d.gz)+'）＝<b>'+d.pil.join('・')+'</b>と律音<br><span class="note">'+RITCHIN_TRANSIT[d.pil[0]]+'</span></p>'; }); }
   if(yearsHit.length){ H+='<p style="margin:6px 0 3px"><b>年運で律音（今年以降）：</b></p>';
     yearsHit.forEach(function(y){ H+='<p style="margin:0 0 6px;line-height:1.8">・<b>'+esc(y.year)+'年</b>（'+esc(y.gz)+'）＝<b>'+y.pil.join('・')+'</b>と律音<br><span class="note">'+RITCHIN_TRANSIT[y.pil[0]]+'</span></p>'; }); }
   if(!decHit.length&&!yearsHit.length){ H+='<p class="note" style="margin:0">表示範囲内に、運が命式の柱と律音する時期は見当たりません（還暦の年柱律音は必ず一度訪れます）。</p>'; }
@@ -2027,7 +2035,7 @@ function renderSolo(p,inp){
   H+=seigetsuChusatsuCard(p);  /* 月柱が空亡なら生月中殺の宿命を出力 */
   H+=seijitsuChusatsuCard(p);  /* 年柱由来の空亡が日支にあれば生日中殺を出力 */
   H+=nichizaChusatsuCard(p);  /* 日柱が甲戌・乙亥なら日座中殺を出力 */
-  H+=ijokanshiCardHTML(c);  /* 各柱の干支が異常干支13種なら出力 */
+  H+=ijokanshiCardHTML(c,inp&&inp.tu);  /* 四柱（時刻不明は三柱）の干支が異常干支13種なら出力 */
   H+=ichidaiUnCard(p);  /* 生年中殺かつ生月中殺なら一代運を出力 */
   // 運勢カレンダー（各時期カードの一望サマリー）
   H+='<div class="card"><h2>🗓 運勢カレンダー（これから約15年の一望）</h2>'+calendarCard(p,inp.sex)+'</div>';
@@ -2246,10 +2254,10 @@ function tenGroup(ten){return /比肩|劫財/.test(ten)?"比劫":/食神|傷官/
 
 /* --- 四柱の宮位（どの柱に何が出たら何の意味か）--- */
 var PILLAR_DOMAIN={
- 年:{life:"幼少期（0〜15歳ごろ）",area:"先祖・家系・親の代・社会運の土台・目上との縁"},
- 月:{life:"青年期（16〜30歳ごろ）",area:"両親・育った環境・仕事／社会的な立場（命式の重心＝最重要）"},
- 日:{life:"中年期（31〜45歳ごろ）",area:"あなた自身（日干）・配偶者や結婚（日支）・心の内側"},
- 時:{life:"晩年（46歳ごろ〜）",area:"子ども・部下や後輩・晩年の姿・秘めた才能／人生の結実"}};
+ 年:{life:"若年期（〜20歳ごろ）",area:"先祖・家系・親の代・社会運の土台・目上との縁"},
+ 月:{life:"働き盛り（20〜40歳ごろ）",area:"両親・育った環境・仕事／社会的な立場（命式の重心＝最重要）"},
+ 日:{life:"中年期（40〜60歳ごろ）",area:"あなた自身（日干）・配偶者や結婚（日支）・心の内側"},
+ 時:{life:"晩年（60歳以降）",area:"子ども・部下や後輩・晩年の姿・秘めた才能／人生の結実"}};
 var GROUP_IN_PILLAR={
  比劫:{年:"若くから自立心が強く、兄弟・仲間の縁。家業を継ぐより独立に向かう",月:"独立・自営が仕事の軸。同業の仲間やライバルと切磋琢磨する",日:"配偶者とは対等な友達夫婦、または我が強くぶつかりやすく晩婚傾向",時:"子ども・後輩・仲間と対等に付き合い、自分も晩年まで現役。人に囲まれるが出費も"},
  食傷:{年:"幼少から表現好きで目立つ子。祖先や親に芸術・技術の才",月:"才能・技術・表現がそのまま仕事に。自由業・クリエイティブ向き",日:"明るく魅力的な配偶者。恋愛は華やか（女性は子どもとの縁も強い）",時:"晩年に自分の才能が花開く。子どもや後輩・教え子を育て、作品や仕事を遺す"},
@@ -2858,7 +2866,7 @@ function glossaryCard(){
     ]],
     ['🏛 四柱＝4本の柱が表すもの（宮位）',[
       ['年柱（ねんちゅう）','先祖・家系・幼少期。人生全体の大きな流れや、社会的な立場を表します。'],
-      ['月柱（げっちゅう）','仕事・社会運・青年期（20〜30代）。両親や育った環境も表す、命式の要の柱。'],
+      ['月柱（げっちゅう）','仕事・社会運・働き盛り（20〜40歳ごろ）。両親や育った環境も表す、命式の要の柱。'],
       ['日柱（にっちゅう）','あなた自身の本質・性格の核。結婚運・配偶者との関係を読む柱です。'],
       ['時柱（じちゅう）','晩年・老後と、子供・子孫の縁。隠れた才能・潜在能力も表します。'],
     ]],
@@ -3329,9 +3337,9 @@ function meishikiTable(c,tu){var labs=["年","月","日","時"],pil=c.pillars,sb
     var st=(sbp[i]||[]).join('・')||'—';
     var rzb=_rp[i]?' <span class="ybadge" style="background:#7a5cc0;color:#fff" title="'+_rp[i].join('・')+'と同一干支＝律音（干支併臨）">律音</span>':'';
     var chb=(_chu[i]||[]).map(function(nm){return ' <span class="ybadge" style="background:var(--warn);color:#fff" title="'+nm+'">'+nm+'</span>';}).join('');
-    /* 異常干支バッジ：日柱のみ・専用色（通常＝ティール／暗号＝ブルー） */
+    /* 異常干支バッジ：四柱すべて（時刻不明の時柱は除く）・専用色（通常＝ティール／暗合＝ブルー） */
     var ijb='';
-    if(i===2 && window.IJOKANSHI && x && x.ganzhi && window.IJOKANSHI.set[x.ganzhi]){
+    if(!(i===3&&tu) && window.IJOKANSHI && x && x.ganzhi && window.IJOKANSHI.set[x.ganzhi]){
       var _ig=window.IJOKANSHI.read[x.ganzhi]||{}, _ign=(window.IJOKANSHI.group[_ig.group]?window.IJOKANSHI.group[_ig.group].name:'異常干支'), _igc=(typeof IJO_COLOR==='function'?IJO_COLOR(_ig.group):'#0e8f7e');
       ijb=' <span class="ybadge" style="background:'+_igc+';color:#fff" title="'+_ign+'（'+esc(x.ganzhi)+'）">'+esc(_ign)+'</span>';
     }
@@ -3345,7 +3353,7 @@ function meishikiTable(c,tu){var labs=["年","月","日","時"],pil=c.pillars,sb
       +'<td class="stc">'+esc(st)+rzb+chb+ijb+'</td></tr>';}
   H+='</tbody></table>';
   var nn=ritchinNowNote(c);
-  if(nn.length)H+='<p class="note" style="margin:8px 2px 0;padding:7px 10px;background:#f3eefb;border-left:4px solid #7a5cc0;border-radius:0 8px 8px 0;line-height:1.7"><b style="color:#6a4bb0">🔁 干支併臨（律音）が出現中：</b>'+nn.join('／')+'<br><span class="note">運の追い風・人生のターニングポイント（転職・新スタート・自分と向き合う）が起きやすい時期。影響の大きさは 大運＞年運＞月運＞日運。</span></p>';
+  if(nn.length)H+='<p class="note" style="margin:8px 2px 0;padding:7px 10px;background:#f3eefb;border-radius:8px;line-height:1.7"><b style="color:#6a4bb0">🔁 干支併臨（律音）が出現中：</b>'+nn.join('／')+'<br><span class="note">運の追い風・人生のターニングポイント（転職・新スタート・自分と向き合う）が起きやすい時期。影響の大きさは 大運＞年運＞月運＞日運。</span></p>';
   return H;}
 /* 通変星の柱別の意味 */
 var PILLAR_POS={年:"若い頃・ご先祖・目上や社会との縁に表れる",月:"仕事・才能・人生の主軸（最重要）に表れる",日:"自分自身・パートナー(配偶者)との関係に表れる",時:"晩年・子ども・部下・秘めた本音に表れる"};
@@ -4263,5 +4271,32 @@ window.addEventListener("load",msWireToTop);
 setTimeout(msWireToTop,500);
 </script>
 <button id="toTop" type="button" aria-label="トップへ戻る" title="トップへ戻る" onclick="msToTop()">▲ トップへ</button>
+<style id="orig-read-css">.tb-nb{white-space:nowrap}</style>
+<script id="orig-read">
+/* 読みやすさ：各行の終わりの数文字を1かたまりにして、最終行が1〜2文字だけになる「泣き別れ」を防ぐ（行数は増えない・表の中は触らない）。
+   結果は後から描き変わるので、画面が変わるたびに少し待ってから整える。文言・計算は変えない。 */
+(function(){
+  var W=/[ァ-ヶーA-Za-z0-9]/, INL=/^(inline|inline-block|contents)$/, done=new WeakSet();
+  var SKIP='table,select,button,nav,svg,script,style,textarea,.tb-nb,summary';
+  function isBlock(n){ return n.nodeType===1&&(n.tagName==='BR'||!INL.test(getComputedStyle(n).display)); }
+  function nextReal(n){ n=n.nextSibling; while(n&&n.nodeType===3&&!n.nodeValue.trim()) n=n.nextSibling; return n; }
+  function lineEnd(t){ var n=t; for(var d=0;d<6;d++){ var x=nextReal(n); if(x) return isBlock(x); var p=n.parentNode; if(!p||p===document.body||isBlock(p)) return true; n=p; } return false; }
+  function glue(t){
+    var v=t.nodeValue.replace(/\s+$/,''), tail=t.nodeValue.slice(v.length); if(v.length<2) return;
+    var k=Math.min(4,v.length); while(k<9&&k<v.length&&W.test(v.charAt(v.length-k))&&W.test(v.charAt(v.length-k-1))) k++;
+    var sp=document.createElement('span'); sp.className='tb-nb'; sp.textContent=v.slice(-k);
+    t.nodeValue=v.slice(0,-k); t.parentNode.insertBefore(sp,t.nextSibling); if(tail) sp.parentNode.insertBefore(document.createTextNode(tail),sp.nextSibling);
+    done.add(t);
+  }
+  function fix(){
+    var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT), list=[], n;
+    while(n=w.nextNode()){ if(done.has(n)||!n.nodeValue.trim()) continue; var e=n.parentElement; if(!e||e.closest(SKIP)) continue; list.push(n); }
+    list.forEach(function(t){ done.add(t); if(t.nodeValue.trim().length>=2&&lineEnd(t)) glue(t); });
+  }
+  var tm=null; function later(){ clearTimeout(tm); tm=setTimeout(fix,250); }
+  function start(){ fix(); try{ new MutationObserver(later).observe(document.body,{childList:true,subtree:true}); }catch(e){} }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
+</script>
 </body>
 </html>

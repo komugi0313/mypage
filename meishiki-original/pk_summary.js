@@ -200,8 +200,8 @@ function favListStr(fav,kind){return ['木','火','土','金','水'].filter(func
 function nowPhrase(lab){return {追い風:'今は運の<b>追い風</b>の時期。やりたいことに素直に動いていい。自分を大事にしながら前へ。',良:'今は穏やかに前進できる時期。コツコツ積めば報われる。',仕込み:'今は勢いはあるが<b>"種まきの時期"</b>。大きな確定（転職・独立・引越し等）を急がず、人脈と準備を広げて次に効かせる。',穏やか:'今は大きな波のない<b>安定期</b>。足元を固める時。','小さな注意':'今は少し<b>守りの時期</b>。無理な勝負は控えめに、土台を整えて。',要注意:'今は<b>踏ん張りどき</b>。大きな決断や勝負は避け、守りを固める時期。'}[lab]||'';}
 function cell(a,sub,seasonTop,di){var isDec=(di!=null);
   return '<div '+(isDec?'class="pk-dec" data-di="'+di+'" ':'')+'style="background:'+a.color+'14;border-left:4px solid '+a.color+';border-radius:9px;padding:7px 9px;min-width:0'+(isDec?';cursor:pointer':'')+'">'+(seasonTop||'')
-  +'<div style="font-size:12px;font-weight:800;color:#333">'+esc(sub)+' <b style="font-size:14px">'+esc(a.stem+a.branch)+'</b></div>'
-  +'<div style="display:inline-block;background:'+a.color+';color:#fff;font-weight:800;font-size:10.5px;border-radius:5px;padding:1px 7px;margin-top:2px">'+esc(window.__pkSy(a.label))+'</div>'
+  +'<div style="font-size:12px;font-weight:800;color:#333;line-height:1.45">'+esc(sub)+'</div><b style="display:block;font-size:15px;line-height:1.4">'+esc(a.stem+a.branch)+'</b>'
+  +'<div style="display:inline-block;white-space:nowrap;background:'+a.color+';color:#fff;font-weight:800;font-size:10.5px;border-radius:5px;padding:1px 7px;margin-top:2px">'+esc(window.__pkSy(a.label))+'</div>'
   +(a.rs&&a.rs.length&&a.rs.join('').match(/[⚡◎⚠]/)?'<div style="font-size:9.5px;color:#7a6f5c;margin-top:2px">'+esc(a.rs.filter(function(x){return /⚡|◎|⚠/.test(x);}).join(' '))+'</div>':'')
   +(isDec?'<div style="font-size:9px;color:#4E8060;font-weight:700;margin-top:3px">▼ タップで10年</div>':'')
   +'</div>';}
@@ -210,6 +210,9 @@ window.pkProSummaryHTML=function(p,inp){
   var kbStr=(window.kuboX?window.kuboX(c):kb).join('・');
   // daeun cells
   var ds=c.decadeFortunes||[], nowI=(c.now&&c.now.daeunIndex)||0;
+  /* 大運の年齢の区切りには立運の端数（○ヶ月）も付ける（流派ルール：例 8歳6ヶ月〜） */
+  var _mo=(ds[0]&&ds[0].months)||0, _ag=function(a){return a+'歳'+(_mo?_mo+'ヶ月':'');};
+  var _inMonth=(nowI<0); if(nowI<0)nowI=0;
   var BRS={寅:'木',卯:'木',辰:'木',巳:'火',午:'火',未:'火',申:'金',酉:'金',戌:'金',亥:'水',子:'水',丑:'水'};
   var SJP={木:'春',火:'夏',金:'秋',水:'冬'};
   var seasons=ds.map(function(d){return BRS[d.ganzhi[1]];});
@@ -223,8 +226,12 @@ window.pkProSummaryHTML=function(p,inp){
     var seasTop=badge+seasTag;
     prevS=seas;
     var dmk=window.__pkMarry(d.tenStar,(inp&&inp.sex)||'');
-    return cell(a,(d.age!=null?d.age:d.startAge)+'歳〜'+(i===nowI?' ★今':'')+(dmk?' '+dmk:''),seasTop,i);
+    return cell(a,_ag(d.age!=null?d.age:d.startAge)+'〜'+(i===nowI&&!_inMonth?' ★今':'')+(dmk?' '+dmk:''),seasTop,i);
   }).join('');
+  /* 第一運＝月柱（0歳〜立運）を必ず先頭に置く（流派ルール：大運は0歳＝月柱スタート） */
+  try{ var _mp=c.pillars&&c.pillars[1]; if(_mp&&_mp.ganzhi&&ds[0]){
+    var _ma=window.__pkAssess(_mp.ganzhi[0],_mp.ganzhi[1],fav,natal,null,kb,_mp.tenStar), _ms=BRS[_mp.ganzhi[1]];
+    decCells=cell(_ma,'0歳〜'+(_inMonth?' ★今':''),'<div style="font-size:9.5px;color:#8a7f6b;font-weight:700;margin-bottom:1px">第一運＝月柱・'+(SJP[_ms]||'')+'</div>',null)+decCells; } }catch(e){}
   /* 節木運：今の季節と次の切替 */
   var bornY=(inp&&parseInt(inp.y,10))||null, curS=seasons[nowI];
   var bandStart=nowI; while(bandStart>0&&seasons[bandStart-1]===curS)bandStart--;
@@ -249,8 +256,8 @@ window.pkProSummaryHTML=function(p,inp){
       ima:{say:'停滞感・孤独・気力ダウンが出やすく、動いても手応えが薄い時期。',ad:'大きな勝負は避け、守りと健康管理に徹する。嵐が過ぎるのを待つ。'},
       neu:{say:'充電向きの季節。表で無理に成果を急がなければ穏やかに進む。',ad:'守りを基本に、次の準備を静かに進める。'}}
   };
-  var setsuLine='<div style="background:#F1F8F0;border:1px solid #CFE6D6;border-radius:10px;padding:9px 11px;font-size:13px;line-height:1.7;margin:4px 0 10px">🍃 <b>人生の季節（節木運）</b>：今は【<b>'+SJP[curS]+'（'+curS+'）</b>】の30年（約'+curStartAge+'〜'+((nextI<ds.length?(ds[nextI].age!=null?ds[nextI].age:ds[nextI].startAge):curStartAge+30)-1)+'歳・<b>'+toneS+'</b>の季節）。';
-  if(nextI<ds.length){var na=(ds[nextI].age!=null?ds[nextI].age:ds[nextI].startAge),ns=seasons[nextI];setsuLine+='<br><b style="color:#B0483F">次の切替は約'+na+'歳'+(bornY?'（'+(bornY+na)+'年ごろ）':'')+'＝【'+SJP[ns]+'（'+ns+'）】へ。</b>その<b>切替の前後1年半（約'+(na-1.5)+'〜'+(na+1.5)+'歳ごろ）が"節木運"</b>＝価値観や環境がガラッと変わる、揺れやすい踏ん張りどき。';
+  var setsuLine='<div style="background:#F1F8F0;border:1px solid #CFE6D6;border-radius:10px;padding:9px 11px;font-size:13px;line-height:1.7;margin:4px 0 10px">🍃 <b>人生の季節（節木運）</b>：今は【<b>'+SJP[curS]+'（'+curS+'）</b>】の30年（'+_ag(curStartAge)+'〜'+_ag(nextI<ds.length?(ds[nextI].age!=null?ds[nextI].age:ds[nextI].startAge):curStartAge+30)+'・<b>'+toneS+'</b>の季節）。';
+  if(nextI<ds.length){var na=(ds[nextI].age!=null?ds[nextI].age:ds[nextI].startAge),ns=seasons[nextI];var _nc=na+_mo/12; setsuLine+='<br><b style="color:#B0483F">次の切替は'+_ag(na)+(bornY?'（'+(bornY+na)+'年ごろ）':'')+'＝【'+SJP[ns]+'（'+ns+'）】へ。</b>その<b>切替の前後1年半（約'+Math.round(_nc-1.5)+'〜'+Math.round(_nc+1.5)+'歳ごろ）が"節木運"</b>＝価値観や環境がガラッと変わる、揺れやすい踏ん張りどき。';
     var chg=CHG[ns]||CHG['木'];
     var fn=fav[ns], lens=(fn==='喜'?chg.ki:fn==='忌'?chg.ima:chg.neu),
         lensTtl=(fn==='喜'?'あなたにとって'+ns+'は【喜神】＝追い風':fn==='忌'?'あなたにとって'+ns+'は【忌神】＝試練・負荷':'あなたにとって'+ns+'は中立'),
@@ -345,7 +352,7 @@ window.pkProSummaryHTML=function(p,inp){
     +workHTML
     +'<details open style="margin-bottom:6px"><summary style="font-weight:800;font-size:13px;cursor:pointer;padding:5px 0;color:#333">大運（10年ごと）— 五行の底流で／節木運</summary>'
     +'<div class="note" style="margin:2px 0 6px;font-size:11.5px;color:#4E8060">▼ 各10年を<b>タップ</b>すると、その中の<b>1年ずつの吉凶</b>（特に注意の年・狙い目の年）が開きます。</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px">'+decCells+'</div>'
+    +'<div class="pk-decgrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin-bottom:8px">'+decCells+'</div>'
     +'<div id="pkDecDetail"></div>'+setsuLine
     +'</details>'
     +'<details style="margin-bottom:2px"><summary style="font-weight:800;font-size:13px;cursor:pointer;padding:5px 0;color:#333">これから約9年（年運）— タップで開く</summary>'
@@ -654,7 +661,7 @@ window.pkKaikyokuSummaryHTML=function(p,inp){
     /* 2) 大運×命式：各大運支の全会局 */
     var deR=[];
     ds.forEach(function(d){ if(!d||!d.ganzhi) return; var b=d.ganzhi.charAt(1);
-      kaiOf(b,natalB).forEach(function(k){ deR.push(E(d.startAge)+'歳 '+E(d.ganzhi)+' '+tag(k)); }); });
+      kaiOf(b,natalB).forEach(function(k){ deR.push(E(d.startAge+'歳'+(d.months?d.months+'ヶ月':''))+'〜 '+E(d.ganzhi)+' '+tag(k)); }); });
     /* 3) 年運×(命式+大運)：今年以降・近い順に最大20年ぶん */
     var cy=(c.now&&c.now.year)||(af[0]&&af[0].year)||null;
     var daeBr=function(y){for(var i=ds.length-1;i>=0;i--){var sy=ds[i].year||ds[i].startYear;if(sy!=null&&y>=sy)return ds[i].ganzhi.charAt(1);}return ds[0]&&ds[0].ganzhi.charAt(1);};
