@@ -49,6 +49,26 @@
   #msg.ok{background:#E7F7EE;color:#127a45;border:1px solid #B7E6CC;display:block}
   footer{border-top:1px solid var(--line);margin-top:30px;padding:20px;text-align:center;font-size:12px;color:var(--muted);line-height:1.9}
   footer a{color:var(--sui);text-decoration:none}
+  footer a{white-space:nowrap}
+  .pill.active{background:#E7F7EE;color:#127a45;border:1px solid #B7E6CC}
+  .pill.warn,.pill.stop{background:#FCE7E5;color:#b32a20;border:1px solid #f3c2bd}
+  .tip{font-size:12px;color:var(--muted);font-weight:700;line-height:1.75;margin:10px 4px 0}
+  .tip a{color:var(--sui);font-weight:900}
+  .mini{margin:0;width:auto;padding:9px 14px;background:#fff;color:var(--ink2);border:2px solid var(--line2);border-radius:999px;font-weight:900;font-size:12.5px;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .mini.danger{color:#b32a20;border-color:#f3c2bd}
+  .mini:disabled{opacity:.55;cursor:default}
+  .notice{padding:18px 20px;text-align:center}
+  .notice p{font-size:14px;font-weight:800;color:var(--ink2);margin:4px 0 14px}
+  .alert{background:#FCE7E5;border:1.5px solid #f3c2bd;color:#8d2219;border-radius:14px;padding:14px 16px;font-size:13px;font-weight:700;line-height:1.8;margin-bottom:6px}
+  #msg.ng{background:#FCE7E5;color:#b32a20;border:1px solid #f3c2bd;display:block}
+  .qa details{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:8px 0;padding:0 14px}
+  .qa summary{cursor:pointer;padding:13px 0;font-size:13.5px;font-weight:900;color:var(--ink);line-height:1.6}
+  .qa p{margin:0 0 13px;font-size:13px;color:var(--ink2);font-weight:700;line-height:1.85}
+  .qa a{color:var(--sui);font-weight:900}
+  .row .k{white-space:nowrap;flex:0 0 auto}
+  .row .v{min-width:0}
+  .nb{white-space:nowrap}
+  .tip,.qa p,.qa summary,.alert,.notice p,#msg{text-wrap:pretty;line-break:strict}
 </style>
 </head>
 <body>
@@ -59,33 +79,64 @@
 
 <main>
   <h1>マイページ</h1>
-  <p class="lead">ご契約状況の確認と、解約のお手続きができます。</p>
+  <p class="lead">ご契約状況の確認、お支払いカードの変更、解約のお手続きができます。</p>
+
+  <!-- 未ログイン -->
+  <div class="card notice" id="need-login" hidden>
+    <p>マイページをご覧いただくには、ログインが必要です。</p>
+    <a class="cta" href="auth.html">▶ ログインする</a>
+    <a class="ghost" href="auth.html?view=help">ログインできないとき</a>
+  </div>
+
+  <div id="member" hidden>
+  <!-- お支払いが確認できないとき -->
+  <div class="alert" id="pay-alert" hidden>
+    <b>お支払いが確認できていません。</b><br>カードの有効期限切れやご利用限度額などで、毎月のお支払いができなかった可能性があります。下の「お支払いカードを変更する」から、カード情報を更新してください。更新されるまで、鑑定ツールはお使いいただけません。
+  </div>
 
   <div class="sec-t">ご契約状況</div>
   <div class="card">
     <div class="row"><span class="k">ログイン中</span><span class="v" id="v-email">—</span></div>
     <div class="row"><span class="k">ご契約プラン</span><span class="v" id="v-plan">—</span></div>
-    <div class="row"><span class="k">お支払い方法</span><span class="v" id="v-card">—</span></div>
-    <div class="row"><span class="k">ステータス</span><span class="v"><span class="pill trial" id="v-status">無料トライアル中</span></span></div>
-    <div class="row"><span class="k">無料期間</span><span class="v">一週間（この期間中の解約は費用0円）</span></div>
-    <div class="row"><span class="k">次回のお支払い予定</span><span class="v" id="v-next">無料期間の終了後</span></div>
+    <div class="row"><span class="k">ステータス</span><span class="v"><span class="pill trial" id="v-status">確認中…</span></span></div>
+    <div class="row" id="row-trial"><span class="k">無料期間</span><span class="v" id="v-trial">一週間</span></div>
+    <div class="row" id="row-next"><span class="k" id="k-next">次回のお支払い</span><span class="v" id="v-next">無料期間の終了後</span></div>
+    <div class="row"><span class="k">お申し込み番号</span><span class="v" id="v-order">—</span></div>
   </div>
 
   <div class="sec-t">鑑定をつづける</div>
-  <a class="cta" href="app-pro.html">▶ 鑑定ツールをひらく</a>
-  <p style="font-size:12px;color:var(--muted);font-weight:700;line-height:1.7;margin:10px 4px 0">鑑定結果やお客様の保存・メモは、ツール内の「🔖 保存・メモ」からご利用いただけます。</p>
+  <a class="cta" href="app-pro.html" id="open-app">▶ 鑑定ツールをひらく</a>
+  <p class="tip">鑑定結果やお客様の保存・メモは、ツール内の「👥 顧客カルテ」からご利用いただけます。</p>
+
+  <div class="sec-t">お支払い</div>
+  <div class="card">
+    <div class="row"><span class="k">お支払い方法</span><span class="v" id="v-card">クレジットカード</span></div>
+    <div class="row"><span class="k">カードの変更</span><span class="v"><button class="mini" id="cardBtn">お支払いカードを変更する</button></span></div>
+  </div>
+  <p class="tip">カード情報は、決済代行会社の<span class="nb">テレコムクレジット</span>の安全なページで入力します。当サイトがカード番号を保持することはありません。</p>
 
   <div class="sec-t">解約のお手続き</div>
   <div class="card">
-    <div class="row"><span class="k">プランの解約</span><span class="v"><button class="ghost" style="margin:0;width:auto;padding:9px 16px" id="cancelBtn">解約する</button></span></div>
+    <div class="row"><span class="k">プランの解約</span><span class="v"><button class="mini danger" id="cancelBtn">解約する</button></span></div>
   </div>
+  <p class="tip" id="cancel-tip">無料期間中に解約すれば、料金は一切かかりません。無料期間の終了後に解約した場合は、お支払い済みの期間の終わりまでご利用いただけ、次回分からは請求されません。</p>
   <div id="msg"></div>
-  <!-- ※ この画面はフロントのみ。ご契約状況の取得と解約処理はバックエンド（エンジニア担当）に接続してください。
-       接続点は下の CONFIG（auth-verify と同じ Netlify Functions 想定）。CONFIG.STUB=false で本番接続。 -->
-
-  <div class="demo-note">
-    ※ ご登録のプラン・お支払い方法・ご契約状況を表示します。解約はこの画面からいつでもお手続きいただけます（無料期間中の解約は費用0円）。
   </div>
+
+  <div class="sec-t">困ったとき</div>
+  <div class="qa">
+    <details><summary>メールアドレスを変えたい・間違えた</summary>
+      <p><a href="mailto:info@72k.ai?subject=%E3%83%A1%E3%83%BC%E3%83%AB%E3%82%A2%E3%83%89%E3%83%AC%E3%82%B9%E3%81%AE%E5%A4%89%E6%9B%B4">info@72k.ai</a> へご連絡ください。お申し込み番号・お申し込み日・カード名義・新しいメールアドレスをお知らせいただければ、こちらで変更します。</p></details>
+    <details><summary>カードを変えたい・有効期限が切れた</summary>
+      <p>上の「お支払いカードを変更する」から、新しいカードをご登録ください。ご契約や無料期間はそのまま引き継がれます。</p></details>
+    <details><summary>二重に申し込んでしまった</summary>
+      <p><a href="mailto:info@72k.ai?subject=%E4%BA%8C%E9%87%8D%E7%94%B3%E8%BE%BC%E3%81%AE%E7%A2%BA%E8%AA%8D">info@72k.ai</a> へご連絡ください。重複分はこちらで取り消し、ご請求しないよう対応します。</p></details>
+    <details><summary>解約後の請求・見覚えのない請求</summary>
+      <p>無料期間の終了後に解約された場合、解約日より前の更新分のお支払いは発生します（返金・日割りはありません）。それ以外でお心当たりのないご請求は、お申し込み番号・ご請求日・金額を添えて <a href="mailto:info@72k.ai?subject=%E3%81%94%E8%AB%8B%E6%B1%82%E3%81%AE%E7%A2%BA%E8%AA%8D">info@72k.ai</a> へご連絡ください。お調べしてご回答します。</p></details>
+    <details><summary>解約を取り消したい・もう一度使いたい</summary>
+      <p>解約済みの方は、<a href="pricing-pro.html">お申し込みページ</a>から改めてお手続きください（無料お試しはお一人様1回限りです）。</p></details>
+  </div>
+  <p class="tip">お問い合わせ：<a href="mailto:info@72k.ai">info@72k.ai</a>（平日10:00〜18:00／原則メールにてご回答します）</p>
 </main>
 
 <footer>
@@ -102,65 +153,164 @@
 
   /* ============================================================
      ★エンジニア接続ポイント（CONFIG）
-     ご契約状況の取得と解約処理はバックエンド（エンジニア担当）で実装してください。
-     STUB=true の間はネットワークを叩かず、登録時に保存したブラウザ内の値で表示します（画面確認用）。
+     ご契約状況の取得・カード変更・解約はバックエンド（エンジニア担当）で実装してください。
+     STUB=true の間はネットワークを叩かず、ブラウザ内の値で表示します（画面確認用）。
      バックエンド接続時は STUB=false にしてください。
+     ★セキュリティ：サーバーは必ずログイン中の本人であることを確認してから応答すること
+       （メールアドレスだけで他人の契約を見たり解約したりできないように。Authorization のトークンで本人確認）。
      ============================================================ */
   var CONFIG = {
     STUB: true,                          // ← バックエンド未接続の間は true
     API:  '/.netlify/functions',
-    STATUS: '/check-subscription',       // POST {email} → {status, plan, cardLast4, nextChargeAt} 契約状況の取得
-    CANCEL: '/cancel-subscription'       // POST {email} → {ok:true} 解約処理（次回更新分から停止）
+    STATUS: '/check-subscription',       // POST {email} → {status, plan, orderId, trialEnd, nextChargeAt, periodEnd} 契約状況の取得
+    CARD:   '/card-update-url',          // POST {email} → {url}  テレコムクレジットのカード変更ページのURL（サーバーで発行）
+    CANCEL: '/cancel-subscription',      // POST {email} → {ok:true, status, periodEnd}  解約（次回更新分から停止。無料期間中は課金しない）
+    PRICING: 'pricing-pro.html'
   };
 
   function g(k){ try{return localStorage.getItem(k)||'';}catch(e){return '';} }
+  function sv(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+  function $(id){ return document.getElementById(id); }
   var email=g('member_email');
-  var PLAN={month:'月額プラン（9,800円／月・税込）'};
-  var STATUS_JA={active:'課金中',trialing:'無料トライアル中',past_due:'支払い遅延',canceled:'解約手続き済み',unpaid:'未払い',none:'未契約'};
-  var msg=document.getElementById('msg');
+  var PRICE='9,800円';
+  var PLAN={month:'月額プラン<span class="nb">（9,800円／月・税込）</span>'};
+  var STATUS_JA={active:'ご利用中',trialing:'無料お試し中',past_due:'お支払いが確認できません',unpaid:'お支払いが確認できません',canceled:'解約済み',none:'ご契約がありません'};
+  var msg=$('msg');
+  var cur={};
+  function headers(){ var h={'Content-Type':'application/json'}; var t=g('member_token'); if(t){ h['Authorization']='Bearer '+t; } return h; }
+  function post(path){ return fetch(CONFIG.API+path,{method:'POST',headers:headers(),body:JSON.stringify({email:email})}); }
+  function say(text, ok){ msg.className=ok?'ok':'ng'; msg.innerHTML=text; msg.scrollIntoView({behavior:'smooth',block:'center'}); }
+
+  if(!email){ $('need-login').hidden=false; return; }
+  $('member').hidden=false;
 
   // 画面にご契約状況を反映（STUB=ブラウザ内の値／本番=STATUSエンドポイントの返り値）
   function render(s){
-    document.getElementById('v-email').textContent = email || '未ログイン';
-    document.getElementById('v-plan').textContent  = PLAN[s.plan] || PLAN[g('selected_plan')] || '月額プラン（9,800円／月・税込）';
-    document.getElementById('v-card').textContent  = s.cardLast4 ? ('クレジットカード（**** '+s.cardLast4+'）') : 'クレジットカード（登録済み）';
-    if(s.status){ document.getElementById('v-status').textContent = STATUS_JA[s.status]||s.status; }
-    if(s.nextChargeAt){ document.getElementById('v-next').textContent = s.nextChargeAt; }
+    cur=s||{};
+    var st=cur.status||'none';
+    sv('member_status', st);
+    $('v-email').textContent = email;
+    $('v-plan').innerHTML  = PLAN[cur.plan] || PLAN[g('selected_plan')] || PLAN.month;
+    $('v-order').textContent = cur.orderId || '—';
+    var pill=$('v-status'); pill.textContent=STATUS_JA[st]||st;
+    pill.className='pill '+(st==='trialing'?'trial':st==='active'?'active':'warn');
+    $('pay-alert').hidden = !(st==='past_due'||st==='unpaid');
+    $('row-trial').hidden = st!=='trialing';
+    if(st==='trialing'){
+      $('v-trial').innerHTML = '<span class="nb">'+(cur.trialEnd? cur.trialEnd+'まで' : '一週間')+'</span><span class="nb">（期間中の解約は0円）</span>';
+      $('k-next').textContent='初回のお支払い';
+      $('v-next').innerHTML = '<span class="nb">'+(cur.nextChargeAt||'無料期間の終了後')+'</span><span class="nb">（'+PRICE+'）</span>';
+    }else if(st==='active'){
+      $('k-next').textContent='次回のお支払い';
+      $('v-next').innerHTML = '<span class="nb">'+(cur.nextChargeAt||'毎月の更新日')+'</span><span class="nb">（'+PRICE+'）</span>';
+    }else if(st==='canceled'){
+      $('k-next').textContent='ご利用期間';
+      $('v-next').textContent = cur.periodEnd ? cur.periodEnd+'まで' : '終了しました';
+    }else if(st==='past_due'||st==='unpaid'){
+      $('k-next').textContent='お支払い';
+      $('v-next').textContent = 'カード情報の更新が必要です';
+    }else{
+      $('k-next').textContent='ご契約';
+      $('v-next').innerHTML = '<a href="'+CONFIG.PRICING+'" style="color:var(--sui)">お申し込みページへ</a>';
+    }
+    var cancelBtn=$('cancelBtn'), cardBtn=$('cardBtn');
+    cancelBtn.disabled = (st==='canceled'||st==='none');
+    cancelBtn.textContent = st==='canceled' ? '解約済み' : '解約する';
+    cardBtn.disabled = (st==='canceled'||st==='none');
+    $('cancel-tip').hidden = (st==='canceled'||st==='none');
   }
 
   /* ★エンジニア接続ポイント：ご契約状況の取得 */
   async function loadStatus(){
-    if(CONFIG.STUB){ render({ plan:g('selected_plan'), cardLast4:g('card_last4') }); return; }
+    if(CONFIG.STUB){
+      var po={}; try{ po=JSON.parse(g('pending_order')||'{}')||{}; }catch(e){}
+      render({ status:g('member_status')||'trialing', plan:g('selected_plan'), orderId:po.id||'' }); return;
+    }
     try{
-      var r=await fetch(CONFIG.API+CONFIG.STATUS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})});
+      var r=await post(CONFIG.STATUS);
+      if(r.status===401){ $('member').hidden=true; $('need-login').hidden=false; return; }
       render(await r.json());
-    }catch(e){ render({ plan:g('selected_plan'), cardLast4:g('card_last4') }); }
+    }catch(e){
+      render({ status:g('member_status')||'none', plan:g('selected_plan') });
+      say('ただいまご契約状況を取得できませんでした。時間をおいて、ページを読み込み直してください。', false);
+    }
   }
   loadStatus();
 
+  /* ★エンジニア接続ポイント：お支払いカードの変更（テレコムクレジットのカード変更ページへ） */
+  $('cardBtn').onclick=async function(){
+    if(CONFIG.STUB){ say('決済代行会社（テレコムクレジット）のカード変更ページへ移動します。<br>（ただいま接続の準備中です）', true); return; }
+    var b=this; b.disabled=true;
+    try{
+      var r=await post(CONFIG.CARD); var j=await r.json();
+      if(j && j.url){ location.href=j.url; return; }
+      throw new Error('no url');
+    }catch(e){ b.disabled=false; say('ただいまカード変更ページをひらけませんでした。時間をおいて再度お試しください。', false); }
+  };
+
   /* ★エンジニア接続ポイント：解約処理 */
   async function doCancel(){
-    if(CONFIG.STUB){ return {ok:true}; }
-    var r=await fetch(CONFIG.API+CONFIG.CANCEL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})});
+    if(CONFIG.STUB){ return {ok:true, status:'canceled', periodEnd:cur.periodEnd||''}; }
+    var r=await post(CONFIG.CANCEL);
     if(!r.ok) throw new Error('cancel failed '+r.status);
     return r.json();
   }
-  var btn=document.getElementById('cancelBtn');
+  var btn=$('cancelBtn');
   btn.onclick=function(){
-    if(!confirm('本当に解約しますか？\n（無料期間中の解約は費用0円です）')) return;
+    var st=cur.status||'none';
+    var q = st==='trialing'
+      ? '本当に解約しますか？\n無料期間中のため、料金はかかりません。'
+      : '本当に解約しますか？\nお支払い済みの期間の終わりまではご利用いただけ、次回分からは請求されません。';
+    if(!confirm(q)) return;
     btn.disabled=true;
-    doCancel().then(function(){
-      document.getElementById('v-status').textContent='解約手続き済み';
-      document.getElementById('v-status').style.cssText='background:#FCE7E5;color:#b32a20;border:1px solid #f3c2bd';
-      msg.className='ok';
-      msg.innerHTML='解約のお手続きを受け付けました。無料期間中のため、料金は一切かかりません。ご利用ありがとうございました。';
-      window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+    doCancel().then(function(res){
+      var was=st;
+      render({ status:'canceled', plan:cur.plan, orderId:cur.orderId, periodEnd:(res&&res.periodEnd)||cur.periodEnd||'' });
+      say(was==='trialing'
+        ? '解約のお手続きが完了しました。<b>無料期間中のため、料金は一切かかりません。</b>ご利用ありがとうございました。'
+        : '解約のお手続きが完了しました。<b>次回分からの請求は停止します。</b>'+((res&&res.periodEnd)?res.periodEnd+'まで':'お支払い済みの期間の終わりまで')+'ご利用いただけます。ご利用ありがとうございました。', true);
     }).catch(function(){
       btn.disabled=false;
-      msg.className='ok'; msg.style.cssText='background:#FCE7E5;color:#b32a20;border:1px solid #f3c2bd;display:block';
-      msg.textContent='ただいま解約手続きができませんでした。時間をおいて再度お試しください。';
+      say('ただいま解約のお手続きができませんでした。時間をおいて再度お試しください。<br>くり返しできない場合は <a href="mailto:info@72k.ai">info@72k.ai</a> へご連絡ください（ご連絡いただいた日を解約日として扱います）。', false);
     });
   };
+})();
+</script>
+<style id="pay-read-css">
+/* 読みやすさ（tools/add_pay_read.py が付与）：行末の泣き別れ防止。文言・内容は変えない */
+p,li,dd,dt,summary,h1,h2,h3{line-break:strict}
+.tb-nb{white-space:nowrap}
+</style>
+<script id="pay-read">
+/* 申込・ログイン・マイページ用：段落の最後の4文字（句読点・かっこは数えない）を1かたまりにして、最終行が1〜2文字だけになる「泣き別れ」を防ぐ（行数は増えない）。
+   あとから差し込まれる文（確認画面・お知らせ）にも効くよう、変化を見張ってかけ直す。 */
+(function(){
+  var SEL='p,li,dd,dt,summary,h1,h2,h3,.lead,.sub,.alert,.hint,.cta-sub,.pay-note,.tip,.terms,.fine,.msg,#msg,.err,.cf-warn,.already';
+  function glue(el){
+    if(el.dataset.tbno===el.textContent||el.closest('table')) return;
+    if(/flex|grid/.test(getComputedStyle(el).display)) return;  // 横並びの箱（チェック印つきの行など）は崩れるので触らない
+    var len=el.textContent.trim().length;
+    var t=el.lastChild;
+    while(t&&t.nodeType===3&&!t.nodeValue.trim()) t=t.previousSibling;
+    while(t&&t.nodeType===1&&t.lastChild&&/^(inline|inline-block)$/.test(getComputedStyle(t).display)&&!t.classList.contains('tb-nb')) t=t.lastChild;
+    if(t&&t.nodeType===3&&len>=10){
+      var v=t.nodeValue.replace(/\s+$/,'');
+      if(v.length>=6){
+        var k=4+((v.match(/[。、．，）」』】！？!?.,:：・）)]+$/)||[''])[0].length), W=/[ァ-ヶーA-Za-z0-9@.]/; while(k<9&&k<v.length&&W.test(v.charAt(v.length-k))&&W.test(v.charAt(v.length-k-1))) k++;  // カタカナ語・英数字の途中では切らない
+        var sp=document.createElement('span'); sp.className='tb-nb'; sp.textContent=v.slice(-k);
+        t.nodeValue=v.slice(0,-k); t.parentNode.insertBefore(sp,t.nextSibling);
+      }
+    }
+    el.dataset.tbno=el.textContent;
+  }
+  function fix(root){ (root||document).querySelectorAll(SEL).forEach(glue); }
+  function start(){
+    fix();
+    var busy=false;
+    new MutationObserver(function(){ if(busy) return; busy=true; requestAnimationFrame(function(){ fix(); busy=false; }); })
+      .observe(document.body,{childList:true,subtree:true,characterData:true});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
 })();
 </script>
 </body>

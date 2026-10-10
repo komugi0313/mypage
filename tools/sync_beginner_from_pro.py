@@ -12,6 +12,8 @@
 生成・更新するもの：
     beginner/app-beginner.html   … pro/app-pro.html から生成
     beginner/auth.html           … pro/auth.html から生成
+    beginner/pricing.html        … pro/pricing-pro.html から生成（申込・決済の流れはPROと同じ。違いは名前・説明文・リンク先のみ）
+    beginner/mypage.html         … pro/mypage-pro.html から生成（同上）
     beginner/pklove.js           … pro/pklove.js をコピー
 ※ beginner/sw.js の CACHE 版数は手で1つ上げること（CLAUDE.md の運用どおり）。
 ※ PRO 側の該当箇所が見つからないと止まる（黙って崩れたまま出力しない）。
@@ -148,9 +150,50 @@ def build_auth():
     (BEG / 'auth.html').write_text(s, encoding='utf-8')
 
 
+def common_links(s):
+    s = rep(s, '四柱推命 <span>自動鑑定</span>', '今日から <span>占い師</span>', 1, 'ヘッダーの名前')
+    s = s.replace('app-pro.html', 'app-beginner.html').replace('mypage-pro.html', 'mypage.html').replace('pricing-pro.html', 'pricing.html')
+    s = s.replace('terms-pro.html', 'terms.html').replace('tokushoho-pro.html', 'tokushoho.html').replace('privacy-pro.html', 'privacy.html')
+    s = rep(s, '© 四柱推命占い自動鑑定（72k株式会社）', f'© {B_NAME}（72k株式会社）', 1, 'フッターの社名')
+    return s
+
+
+def build_pricing():
+    s = (PRO / 'pricing-pro.html').read_text(encoding='utf-8')
+    # 頭（タイトル・説明・OGP・PWA）はビギナー用に差し替え
+    i = s.index('<meta name="theme-color"'); j = s.index('<style>')
+    s = s[:i] + ('<title>無料ではじめる｜今日から占い師（四柱推命 自動鑑定）</title>\n'
+                 '<meta name="description" content="一週間の無料トライアル。今日から四柱推命の自動鑑定をはじめられます。無料期間中の解約は費用0円。">\n') + s[j:]
+    s = common_links(s)
+    s = rep(s, '<span class="badge">経験を、もっと速く・深く。</span>', '<span class="badge">習ったことがなくて、大丈夫。</span>', 1)
+    s = rep(s, '<br>本格鑑定を、はじめる。</h1>', '<br>今日から占い師をはじめる。</h1>', 1)
+    s = rep(s, '<span class="desc">いつでも解約できます</span>', '<span class="desc">鑑定は回数無制限で使い放題</span>', 1)
+    s = rep(s, '    <!-- お申し込みで困ったとき -->', '''    <ul class="rz">
+      <li><span class="ck">✓</span>知識ゼロ・勉強ゼロでOK。生年月日を入れるだけで、やさしい文章が出てきます。</li>
+      <li><span class="ck">✓</span>鑑定は回数無制限で使い放題。1件ごとの追加料金はかかりません。</li>
+      <li><span class="ck">✓</span>スマホひとつで、場所を問わず鑑定。鑑定文はそのままLINEで送れます。</li>
+      <li><span class="ck">✓</span>合わなければ、いつでも解約OK。無料期間中の解約は費用0円です。</li>
+    </ul>
+
+    <!-- お申し込みで困ったとき -->''', 1)
+    s = rep(s, "var ORDER_PREFIX='P';", "var ORDER_PREFIX='B';", 1)
+    (BEG / 'pricing.html').write_text(s, encoding='utf-8')
+
+
+def build_mypage():
+    s = (PRO / 'mypage-pro.html').read_text(encoding='utf-8')
+    i = s.index('<meta name="theme-color"'); j = s.index('<style>')
+    s = s[:i] + '<title>マイページ｜今日から占い師</title>\n<meta name="robots" content="noindex">\n' + s[j:]
+    s = common_links(s)
+    s = rep(s, '<a href="index.html">本格版の紹介</a>', '<a href="index.html">サービス紹介</a>', 1)
+    (BEG / 'mypage.html').write_text(s, encoding='utf-8')
+
+
 if __name__ == '__main__':
     build_app()
     build_auth()
+    build_pricing()
+    build_mypage()
     shutil.copyfile(PRO / 'pklove.js', BEG / 'pklove.js')
-    print('OK: beginner/app-beginner.html, beginner/auth.html, beginner/pklove.js を生成しました。'
+    print('OK: beginner/app-beginner.html, beginner/auth.html, beginner/pricing.html, beginner/mypage.html, beginner/pklove.js を生成しました。'
           ' beginner/sw.js の CACHE を1つ上げてください。')

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>ログイン・新規登録｜今日から占い師</title>
+<title>ログイン｜今日から占い師</title>
 <meta name="description" content="会員ログイン・新規登録（メールアドレスとパスワード）・パスワード再設定">
 <style>
   :root{
@@ -69,22 +69,32 @@
   .hide{display:none!important}
   .icon{font-size:40px;line-height:1;margin-bottom:6px}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  .qa{text-align:left;margin-top:6px}
+  .qa details{border:1.5px solid var(--line);border-radius:12px;margin:8px 0;padding:0 12px;background:var(--card)}
+  .qa summary{cursor:pointer;padding:12px 0;font-size:13.5px;font-weight:900;color:var(--ink);line-height:1.6}
+  .qa p{margin:0 0 12px;font-size:12.5px;color:var(--ink2);font-weight:700;line-height:1.85}
+  .qa a{color:var(--sui);font-weight:800}
+  .qa p,.qa summary,.msg{text-wrap:pretty;line-break:strict}
+  .note a{color:var(--sui)}
+  .msg a{color:inherit;font-weight:900}
 </style>
 </head>
 <body>
-
 <!-- ============================================================
-     認証画面（フロントのみ・スタブ）　方式＝メールアドレス＋パスワード
+     ログイン画面（フロントのみ・スタブ）　方式＝メールアドレス＋パスワード
      ------------------------------------------------------------
-     ● ログイン／新規登録／確認メール送信完了／確認リンク着地／パスワード再設定 を1ファイルで扱う。
+     ● お申し込みの流れ（決済：テレコムクレジット）
+         料金ページ（メール2回入力・最終確認）→ テレコムクレジットの決済ページでカード登録
+         → サーバーが「決済結果の通知」を受けて会員を作成（status=trialing）
+         → 「ログイン用パスワードの設定」メールを送信（リンク先：auth.html?view=setpw&token=…）
+         → このページでパスワードを決める → ログイン → 鑑定ツール
+     ● このページで扱う画面：ログイン／パスワードの設定（初回・再設定 共通）／設定メールの再送／ログインできないとき
      ● 「パスワードをこの端末に保存」で、次回からメール＋パスワードを自動入力（任意で自動ログイン）。
-     ● 登録時に確認メールを送信。メールアドレスの打ち間違い等で届かない場合は、登録し直し導線へ。
      ● サーバー／バックエンドはエンジニア担当。下の CONFIG のエンドポイントを実装して差し替える。
        （★エンジニア接続ポイント）現状は STUB=true で画面遷移だけ再現。接続時は STUB=false。
      ● セキュリティ注意：本番の「端末に保存」は“パスワードそのもの”ではなく
        長期セッショントークンの保存を推奨（下の rememberSave のコメント参照）。
      ============================================================ -->
-
 <div class="card" role="main" aria-live="polite">
 
   <!-- ① ログイン -->
@@ -98,70 +108,69 @@
     <label class="remember"><input type="checkbox" id="remember"> パスワードをこの端末に保存する</label>
     <button class="btn primary" id="login-btn">ログイン</button>
     <div id="login-msg" class="msg hide"></div>
-    <div class="switch">はじめての方は <button type="button" class="link-btn" id="to-register">新規登録（一週間無料）</button><br>
-      <button type="button" class="link-btn" id="to-reset">パスワードを忘れた方</button></div>
+    <div class="switch">はじめての方は <a class="link-btn" href="pricing.html">お申し込み（一週間無料）</a><br>
+      <button type="button" class="link-btn" id="to-reset">パスワードを忘れた・設定メールが届かない</button><br>
+      <button type="button" class="link-btn" id="to-help">ログインできないとき</button></div>
     <div class="foot"><a href="mypage.html">マイページ・契約状況</a></div>
   </section>
 
-  <!-- ② 新規登録 -->
-  <section id="v-register" class="hide">
-    <h1>新規登録</h1>
-    <p class="lead">メールアドレスと<wbr>パスワードを<wbr>決めて<wbr>登録してください。<br>ご登録の<wbr>アドレスに<wbr>確認メールを<wbr>お送りします<wbr>（一週間無料）。</p>
-    <label for="reg-email">メールアドレス</label>
-    <input id="reg-email" type="email" placeholder="you@example.com" autocomplete="email" inputmode="email">
-    <label for="reg-pw" style="margin-top:12px">パスワード（8文字以上）</label>
-    <input id="reg-pw" type="password" placeholder="パスワード" autocomplete="new-password">
-    <label for="reg-pw2" style="margin-top:12px">パスワード（確認）</label>
-    <input id="reg-pw2" type="password" placeholder="もう一度入力" autocomplete="new-password">
-    <button class="btn primary" id="register-btn">登録して確認メールを送る</button>
-    <div id="register-msg" class="msg hide"></div>
-    <div class="switch">アカウントをお持ちの方は <button type="button" class="link-btn" id="to-login">ログイン</button></div>
-  </section>
-
-  <!-- ③ 確認メール送信完了（登録後） -->
-  <section id="v-sent" class="hide">
-    <div class="icon" aria-hidden="true">📩</div>
-    <h1>確認メールを送りました</h1>
-    <p class="lead">下記の<wbr>アドレス宛に<wbr>確認メールを<wbr>お送りしました。<br>メール内の<wbr>リンクを<wbr>押すと<wbr>登録が<wbr>完了します。</p>
-    <div class="sent-mail" id="sent-mail">you@example.com</div>
-    <p class="note"><b>メールが届かないときは、メールアドレスの打ち間違いの可能性があります。</b><br>迷惑メールフォルダも<wbr>ご確認のうえ、<wbr>届かなければ<wbr>アドレスを<wbr>入れ直して<wbr>登録し直してください。</p>
-    <button class="btn primary" id="resend-btn">確認メールを再送する</button>
-    <button class="btn ghost" id="reenter-btn">メールアドレスが違う（登録し直す）</button>
-    <div id="sent-msg" class="msg hide"></div>
-  </section>
-
-  <!-- ④ 確認リンク着地（?token=…）：検証中／成功／失敗 -->
-  <section id="v-verify" class="hide">
-    <div id="verify-loading">
-      <div class="icon" aria-hidden="true"><span class="spin"></span></div>
-      <h1>確認しています…</h1>
-      <p class="lead">メールの<wbr>リンクを<wbr>確認しています。<br>少しお待ちください。</p>
+  <!-- ② パスワードの設定（申込完了メール／再設定メールのリンク着地：?view=setpw&token=…） -->
+  <section id="v-setpw" class="hide">
+    <div id="setpw-form">
+      <h1>パスワードを決める</h1>
+      <p class="lead">ログインに使う<wbr>パスワードを<wbr>決めてください。</p>
+      <label for="new-pw">新しいパスワード（8文字以上）</label>
+      <input id="new-pw" type="password" placeholder="パスワード" autocomplete="new-password">
+      <label for="new-pw2" style="margin-top:12px">新しいパスワード（確認）</label>
+      <input id="new-pw2" type="password" placeholder="もう一度入力" autocomplete="new-password">
+      <button class="btn primary" id="setpw-btn">このパスワードで設定する</button>
+      <div id="setpw-msg" class="msg hide"></div>
     </div>
-    <div id="verify-ok" class="hide">
+    <div id="setpw-ok" class="hide">
       <div class="icon" aria-hidden="true">✅</div>
-      <h1>登録が完了しました</h1>
-      <p class="lead">メールアドレスの<wbr>確認が<wbr>できました。<br>ログインして<wbr>鑑定を<wbr>はじめられます。</p>
-      <button class="btn primary" id="verify-to-login">ログインへ進む</button>
+      <h1>パスワードを設定しました</h1>
+      <p class="lead">ログインして<wbr>鑑定を<wbr>はじめられます。</p>
+      <button class="btn primary" id="setpw-to-login">ログインへ進む</button>
     </div>
-    <div id="verify-ng" class="hide">
+    <div id="setpw-ng" class="hide">
       <div class="icon" aria-hidden="true">⚠️</div>
       <h1>リンクを確認できませんでした</h1>
-      <p class="lead">リンクの<wbr>有効期限が<wbr>切れているか、<wbr>すでに<wbr>使用済みの<wbr>可能性があります。<br>お手数ですが、<wbr>もう一度<wbr>登録し直してください。</p>
-      <button class="btn primary" id="verify-retry">新規登録へ</button>
+      <p class="lead">リンクの<wbr>有効期限が<wbr>切れているか、<wbr>すでに<wbr>使用済みの<wbr>可能性があります。<br>お手数ですが、<wbr>設定メールを<wbr>もう一度<wbr>お送りください。</p>
+      <button class="btn primary" id="setpw-retry">設定メールをもう一度送る</button>
     </div>
   </section>
 
-  <!-- ⑤ パスワード再設定 -->
+  <!-- ③ 設定メールの送信（パスワードを忘れた／設定メールが届かない） -->
   <section id="v-reset" class="hide">
-    <h1>パスワードの再設定</h1>
-    <p class="lead">ご登録の<wbr>メールアドレスを<wbr>入力してください。<br>再設定用の<wbr>リンクを<wbr>メールで<wbr>お送りします。</p>
+    <h1>パスワード設定メールを送る</h1>
+    <p class="lead">お申し込みの<wbr>メールアドレスを<wbr>入力してください。<br>パスワードを<wbr>決めるための<wbr>リンクを<wbr>お送りします。</p>
     <label for="reset-email">メールアドレス</label>
     <input id="reset-email" type="email" placeholder="you@example.com" autocomplete="email" inputmode="email">
-    <button class="btn primary" id="reset-btn">再設定メールを送る</button>
+    <button class="btn primary" id="reset-btn">設定メールを送る</button>
     <div id="reset-msg" class="msg hide"></div>
-    <div class="switch"><button type="button" class="link-btn" id="reset-to-login">ログインに戻る</button></div>
+    <p class="note">10分たっても届かないときは、<wbr>迷惑メールフォルダを<wbr>ご確認ください。<br><b>info@72k.ai</b> からの<wbr>メールを<wbr>受け取れるよう<wbr>設定してください。</p>
+    <div class="switch"><button type="button" class="link-btn" id="reset-to-help">それでも届かないとき</button><br>
+      <button type="button" class="link-btn" id="reset-to-login">ログインに戻る</button></div>
   </section>
 
+  <!-- ④ ログインできないとき -->
+  <section id="v-help" class="hide">
+    <h1>ログインできないとき</h1>
+    <div class="qa">
+      <details><summary>パスワードを忘れた</summary>
+        <p><button type="button" class="link-btn" data-go="reset">パスワード設定メール</button>を送り、メールのリンクから新しいパスワードを決めてください。</p></details>
+      <details><summary>設定メールが届かない</summary>
+        <p>迷惑メールフォルダをご確認ください。携帯会社のアドレスの方は、<b>info@72k.ai</b> からのメールを受け取れるよう設定してから、もう一度お試しください。<br><button type="button" class="link-btn" data-go="reset">▶ 設定メールを送る</button></p></details>
+      <details><summary>申し込んだメールアドレスが分からない・間違えて申し込んだ</summary>
+        <p>もう一度お申し込みはせず（二重のご請求になります）、<a href="mailto:info@72k.ai?subject=%E7%94%B3%E8%BE%BC%E3%83%A1%E3%83%BC%E3%83%AB%E3%82%A2%E3%83%89%E3%83%AC%E3%82%B9%E3%81%AE%E8%A8%82%E6%AD%A3">info@72k.ai</a> へご連絡ください。お申し込み番号・お申し込み日・カード名義・正しいメールアドレスをお知らせいただければ、こちらでお調べして直します。</p></details>
+      <details><summary>「お支払いが確認できません」と出る</summary>
+        <p>カードの有効期限切れや、ご利用限度額などで毎月のお支払いができなかった状態です。<a href="mypage.html">マイページ</a>の「お支払いカードを変更する」から、カード情報を更新してください。</p></details>
+      <details><summary>「解約済み」「ご契約がありません」と出る</summary>
+        <p>ご契約が終了しています。もう一度ご利用になる場合は、<a href="pricing.html">お申し込みページ</a>からお手続きください（無料お試しはお一人様1回限りです）。</p></details>
+    </div>
+    <p class="note">そのほかのお問い合わせ：<a href="mailto:info@72k.ai">info@72k.ai</a><br>（平日10:00〜18:00／原則メールにてご回答します）</p>
+    <div class="switch"><button type="button" class="link-btn" id="help-to-login">ログインに戻る</button></div>
+  </section>
 </div>
 
 <script>
@@ -176,16 +185,17 @@
   var CONFIG = {
     STUB: true,
     API:  '/.netlify/functions',
-    REGISTER: '/auth-register',   // POST {email,password} → {ok:true}          登録＆確認メール送信
-    LOGIN:    '/auth-login',      // POST {email,password} → {ok:true, status, email} ／ {ok:false, error}
-    VERIFY:   '/auth-verify',     // POST {token}          → {ok:true, email}    確認メールリンクの検証（登録有効化）
-    RESET:    '/auth-reset',      // POST {email}          → {ok:true}           パスワード再設定メール
+    LOGIN:    '/auth-login',      // POST {email,password} → {ok:true, status, email, token?} ／ HTTP401
+    SETPW:    '/auth-setpw',      // POST {token,password} → {ok:true, email}    設定メールのリンクでパスワードを決める（初回・再設定 共通）
+    RESET:    '/auth-reset',      // POST {email}          → {ok:true}           パスワード設定メールの送信（登録の有無にかかわらず同じ応答）
+    PRICING:  'pricing.html', // お申し込みページ
+    MYPAGE:   'mypage.html',  // マイページ
     AFTER_LOGIN: 'app-beginner.html'   // ログイン成功後の遷移先
   };
 
   var $ = function(id){ return document.getElementById(id); };
-  var views = { login:$('v-login'), register:$('v-register'), sent:$('v-sent'), verify:$('v-verify'), reset:$('v-reset') };
-  function show(name){ for(var k in views){ if(views[k]) views[k].classList.toggle('hide', k!==name); } }
+  var views = { login:$('v-login'), setpw:$('v-setpw'), reset:$('v-reset'), help:$('v-help') };
+  function show(name){ for(var k in views){ if(views[k]) views[k].classList.toggle('hide', k!==name); } window.scrollTo(0,0); }
   function setMsg(el, text, kind){ if(!el) return;
     if(!text){ el.classList.add('hide'); el.innerHTML=''; return; }
     el.className = 'msg ' + (kind==='err'?'err':'ok'); el.innerHTML = text;
@@ -205,29 +215,28 @@
   }
 
   /* ---- API（STUB対応） ---- */
-  async function apiRegister(email, pw){
-    if(CONFIG.STUB){ await wait(600); return {ok:true}; }
-    var r = await fetch(CONFIG.API+CONFIG.REGISTER, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pw})});
-    if(!r.ok) throw new Error('register '+r.status); return r.json();
+  function post(path, body){
+    return fetch(CONFIG.API+path, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   }
   async function apiLogin(email, pw){
     if(CONFIG.STUB){ await wait(600); return {ok:true, status:'trialing', email:email}; }
-    var r = await fetch(CONFIG.API+CONFIG.LOGIN, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pw})});
+    var r = await post(CONFIG.LOGIN, {email:email,password:pw});
     if(r.status===401){ return {ok:false, error:'invalid'}; }
     if(!r.ok) throw new Error('login '+r.status); return r.json();
   }
-  async function apiVerify(token){
-    if(CONFIG.STUB){ await wait(900); return {ok:true, email:g('member_email')||'you@example.com'}; }
-    var r = await fetch(CONFIG.API+CONFIG.VERIFY, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token})});
-    if(!r.ok) throw new Error('verify '+r.status); return r.json();
+  async function apiSetpw(token, pw){
+    if(CONFIG.STUB){ await wait(700); return {ok:true, email:g('member_email')||''}; }
+    var r = await post(CONFIG.SETPW, {token:token,password:pw});
+    if(r.status===400 || r.status===410){ return {ok:false, error:'expired'}; }
+    if(!r.ok) throw new Error('setpw '+r.status); return r.json();
   }
   async function apiReset(email){
     if(CONFIG.STUB){ await wait(600); return {ok:true}; }
-    var r = await fetch(CONFIG.API+CONFIG.RESET, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})});
+    var r = await post(CONFIG.RESET, {email:email});
     if(!r.ok) throw new Error('reset '+r.status); return r.json();
   }
   function wait(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
-  function statusJa(st){ return ({active:'課金中',trialing:'無料トライアル中',past_due:'支払い遅延',canceled:'解約済み',unpaid:'未払い',none:'未契約'})[st]||st||'未契約'; }
+  function statusJa(st){ return ({active:'ご利用中',trialing:'無料お試し中',past_due:'お支払いが確認できません',canceled:'解約済み',unpaid:'お支払いが確認できません',none:'ご契約がありません'})[st]||st||'ご契約がありません'; }
 
   /* ---- ① ログイン ---- */
   var loginBtn=$('login-btn'), emailI=$('email'), pwI=$('password'), remI=$('remember'), loginMsg=$('login-msg');
@@ -240,10 +249,14 @@
     apiLogin(email, pw).then(function(res){
       if(res && res.ok){
         rememberSave(email, pw, !!(remI && remI.checked));
+        if(res.token){ s('member_token', res.token); }
+        s('member_status', res.status||'none');
         if(res.status==='active' || res.status==='trialing'){ location.href = CONFIG.AFTER_LOGIN; }
-        else { setMsg(loginMsg,'このアカウントは現在ご利用いただけません（状態：'+statusJa(res.status)+'）。<br><a href="pricing.html">一週間無料で始める</a>','err'); }
+        else if(res.status==='past_due' || res.status==='unpaid'){
+          setMsg(loginMsg,'お支払いが確認できていません。<br><a href="'+CONFIG.MYPAGE+'">マイページでカード情報を更新する</a>','err'); }
+        else { setMsg(loginMsg,'このアカウントは現在ご利用いただけません（'+statusJa(res.status)+'）。<br><a href="'+CONFIG.PRICING+'">お申し込みページへ</a>','err'); }
       } else {
-        setMsg(loginMsg,'メールアドレスまたはパスワードが違います。','err');
+        setMsg(loginMsg,'メールアドレスまたはパスワードが違います。<br><button type="button" class="link-btn" data-go="reset">パスワードを忘れた方</button>','err');
       }
     }).catch(function(){
       setMsg(loginMsg,'ただいまログインできませんでした。しばらくしてからお試しください。','err');
@@ -252,77 +265,100 @@
   loginBtn.onclick=doLogin;
   pwI.addEventListener('keydown', function(e){ if(e.key==='Enter'){ doLogin(); } });
 
-  /* ---- ② 新規登録 ---- */
-  var regBtn=$('register-btn'), regE=$('reg-email'), regP=$('reg-pw'), regP2=$('reg-pw2'), regMsg=$('register-msg');
-  function doRegister(){
-    var email=(regE.value||'').trim().toLowerCase(), pw=regP.value||'', pw2=regP2.value||'';
-    setMsg(regMsg,'','');
-    if(!EMAIL_RE.test(email)){ setMsg(regMsg,'メールアドレスを正しく入力してください。','err'); return; }
-    if(pw.length<8){ setMsg(regMsg,'パスワードは8文字以上にしてください。','err'); return; }
-    if(pw!==pw2){ setMsg(regMsg,'パスワード（確認）が一致しません。','err'); return; }
-    regBtn.disabled=true; regBtn.innerHTML='<span class="spin"></span>送信中…';
-    apiRegister(email, pw).then(function(){
-      s('member_email', email);
-      $('sent-mail').textContent = email;
-      show('sent');
-    }).catch(function(){
-      setMsg(regMsg,'ただいま登録できませんでした。しばらくしてからお試しください。','err');
-    }).finally(function(){ regBtn.disabled=false; regBtn.textContent='登録して確認メールを送る'; });
+  /* ---- ② パスワードの設定（メールのリンク着地） ---- */
+  var setBtn=$('setpw-btn'), np=$('new-pw'), np2=$('new-pw2'), setMsgEl=$('setpw-msg'), TOKEN='';
+  function openSetpw(token){
+    TOKEN=token||''; show('setpw');
+    $('setpw-form').classList.toggle('hide', !TOKEN); $('setpw-ok').classList.add('hide'); $('setpw-ng').classList.toggle('hide', !!TOKEN);
   }
-  regBtn.onclick=doRegister;
-
-  /* ---- ③ 送信完了：再送／登録し直し（メール誤り対策） ---- */
-  var resendBtn=$('resend-btn'), sentMsg=$('sent-msg');
-  resendBtn.onclick=function(){
-    setMsg(sentMsg,'','');
-    resendBtn.disabled=true; resendBtn.innerHTML='<span class="spin"></span>再送中…';
-    apiRegister(g('member_email'), '').then(function(){ setMsg(sentMsg,'確認メールを再送しました。','ok'); })
-      .catch(function(){ setMsg(sentMsg,'再送できませんでした。時間をおいてお試しください。','err'); })
-      .finally(function(){ resendBtn.disabled=false; resendBtn.textContent='確認メールを再送する'; });
+  setBtn.onclick=function(){
+    var pw=np.value||'', pw2=np2.value||''; setMsg(setMsgEl,'','');
+    if(pw.length<8){ setMsg(setMsgEl,'パスワードは8文字以上にしてください。','err'); return; }
+    if(pw!==pw2){ setMsg(setMsgEl,'パスワード（確認）が一致しません。','err'); return; }
+    setBtn.disabled=true; setBtn.innerHTML='<span class="spin"></span>設定中…';
+    apiSetpw(TOKEN, pw).then(function(res){
+      if(res && res.ok){ if(res.email){ s('member_email', String(res.email).toLowerCase()); }
+        $('setpw-form').classList.add('hide'); $('setpw-ok').classList.remove('hide'); }
+      else { $('setpw-form').classList.add('hide'); $('setpw-ng').classList.remove('hide'); }
+    }).catch(function(){ setMsg(setMsgEl,'ただいま設定できませんでした。しばらくしてからお試しください。','err'); })
+      .finally(function(){ setBtn.disabled=false; setBtn.textContent='このパスワードで設定する'; });
   };
-  $('reenter-btn').onclick=function(){ setMsg(sentMsg,'','');
-    regE.value=g('member_email'); show('register'); setTimeout(function(){ regE.focus(); regE.select(); }, 40); };
+  $('setpw-to-login').onclick=function(){ emailI.value=g('member_email'); show('login'); setTimeout(function(){ pwI.focus(); }, 40); };
+  $('setpw-retry').onclick=function(){ openReset(); };
 
-  /* ---- ④ 確認リンク着地 ---- */
-  function runVerify(token){
-    show('verify'); $('verify-loading').classList.remove('hide');
-    $('verify-ok').classList.add('hide'); $('verify-ng').classList.add('hide');
-    apiVerify(token).then(function(res){
-      $('verify-loading').classList.add('hide');
-      if(res && res.ok){ if(res.email){ s('member_email', String(res.email).toLowerCase()); } $('verify-ok').classList.remove('hide'); }
-      else { $('verify-ng').classList.remove('hide'); }
-    }).catch(function(){ $('verify-loading').classList.add('hide'); $('verify-ng').classList.remove('hide'); });
-  }
-  $('verify-to-login').onclick=function(){ emailI.value=g('member_email'); show('login'); setTimeout(function(){ pwI.focus(); }, 40); };
-  $('verify-retry').onclick=function(){ show('register'); };
-
-  /* ---- ⑤ パスワード再設定 ---- */
+  /* ---- ③ 設定メールの送信 ---- */
   var resetBtn=$('reset-btn'), resetE=$('reset-email'), resetMsg=$('reset-msg');
+  function openReset(){ resetE.value=g('member_email')||emailI.value||''; setMsg(resetMsg,'',''); show('reset'); }
   resetBtn.onclick=function(){
     var email=(resetE.value||'').trim().toLowerCase(); setMsg(resetMsg,'','');
     if(!EMAIL_RE.test(email)){ setMsg(resetMsg,'メールアドレスを正しく入力してください。','err'); return; }
     resetBtn.disabled=true; resetBtn.innerHTML='<span class="spin"></span>送信中…';
-    apiReset(email).then(function(){ setMsg(resetMsg,'再設定用のメールをお送りしました。メールのリンクから新しいパスワードを設定してください。','ok'); })
+    apiReset(email).then(function(){ setMsg(resetMsg,'<b>'+email.replace(/[<>&"]/g,'')+'</b> 宛に、パスワード設定用のメールをお送りしました（ご登録がある場合）。メールのリンクから新しいパスワードを決めてください。','ok'); })
       .catch(function(){ setMsg(resetMsg,'送信できませんでした。時間をおいてお試しください。','err'); })
-      .finally(function(){ resetBtn.disabled=false; resetBtn.textContent='再設定メールを送る'; });
+      .finally(function(){ resetBtn.disabled=false; resetBtn.textContent='設定メールを送る'; });
   };
 
   /* ---- ビュー切り替え ---- */
-  $('to-register').onclick=function(){ regE.value=g('member_email')||emailI.value||''; show('register'); };
-  $('to-login').onclick=function(){ show('login'); };
-  $('to-reset').onclick=function(){ resetE.value=g('member_email')||emailI.value||''; show('reset'); };
+  $('to-reset').onclick=openReset;
+  $('to-help').onclick=function(){ show('help'); };
   $('reset-to-login').onclick=function(){ show('login'); };
+  $('reset-to-help').onclick=function(){ show('help'); };
+  $('help-to-login').onclick=function(){ show('login'); };
+  document.addEventListener('click', function(e){
+    var b=e.target.closest && e.target.closest('[data-go]'); if(!b) return;
+    var v=b.getAttribute('data-go'); if(v==='reset'){ openReset(); } else if(views[v]){ show(v); }
+  });
 
   /* ---- 起動時：URLから初期ビュー、＋端末保存の自動入力 ---- */
   function param(name){ try{ return new URLSearchParams(location.search).get(name); }catch(e){ return null; } }
   var token = param('token'), view = param('view');
+  // 旧リンク（?view=register）はお申し込みページへ（会員はお支払い登録と同時に作成されるため）
+  if(view==='register'){ location.replace(CONFIG.PRICING); return; }
   // 端末保存の自動入力（ログイン画面）
   var savedEmail=g('member_email'), savedPw=g('member_pw'), remembered=g('member_remember')==='1';
   if(savedEmail){ emailI.value=savedEmail; }
   if(remembered && savedPw){ pwI.value=savedPw; if(remI) remI.checked=true; }
-  if(token){ runVerify(token); }
+  if(view==='setpw' || token){ openSetpw(token); }
+  else if(view==='reset'){ openReset(); }
   else if(view && views[view]){ show(view); }
   else { show('login'); }
+})();
+</script>
+<style id="pay-read-css">
+/* 読みやすさ（tools/add_pay_read.py が付与）：行末の泣き別れ防止。文言・内容は変えない */
+p,li,dd,dt,summary,h1,h2,h3{line-break:strict}
+.tb-nb{white-space:nowrap}
+</style>
+<script id="pay-read">
+/* 申込・ログイン・マイページ用：段落の最後の4文字（句読点・かっこは数えない）を1かたまりにして、最終行が1〜2文字だけになる「泣き別れ」を防ぐ（行数は増えない）。
+   あとから差し込まれる文（確認画面・お知らせ）にも効くよう、変化を見張ってかけ直す。 */
+(function(){
+  var SEL='p,li,dd,dt,summary,h1,h2,h3,.lead,.sub,.alert,.hint,.cta-sub,.pay-note,.tip,.terms,.fine,.msg,#msg,.err,.cf-warn,.already';
+  function glue(el){
+    if(el.dataset.tbno===el.textContent||el.closest('table')) return;
+    if(/flex|grid/.test(getComputedStyle(el).display)) return;  // 横並びの箱（チェック印つきの行など）は崩れるので触らない
+    var len=el.textContent.trim().length;
+    var t=el.lastChild;
+    while(t&&t.nodeType===3&&!t.nodeValue.trim()) t=t.previousSibling;
+    while(t&&t.nodeType===1&&t.lastChild&&/^(inline|inline-block)$/.test(getComputedStyle(t).display)&&!t.classList.contains('tb-nb')) t=t.lastChild;
+    if(t&&t.nodeType===3&&len>=10){
+      var v=t.nodeValue.replace(/\s+$/,'');
+      if(v.length>=6){
+        var k=4+((v.match(/[。、．，）」』】！？!?.,:：・）)]+$/)||[''])[0].length), W=/[ァ-ヶーA-Za-z0-9@.]/; while(k<9&&k<v.length&&W.test(v.charAt(v.length-k))&&W.test(v.charAt(v.length-k-1))) k++;  // カタカナ語・英数字の途中では切らない
+        var sp=document.createElement('span'); sp.className='tb-nb'; sp.textContent=v.slice(-k);
+        t.nodeValue=v.slice(0,-k); t.parentNode.insertBefore(sp,t.nextSibling);
+      }
+    }
+    el.dataset.tbno=el.textContent;
+  }
+  function fix(root){ (root||document).querySelectorAll(SEL).forEach(glue); }
+  function start(){
+    fix();
+    var busy=false;
+    new MutationObserver(function(){ if(busy) return; busy=true; requestAnimationFrame(function(){ fix(); busy=false; }); })
+      .observe(document.body,{childList:true,subtree:true,characterData:true});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
 })();
 </script>
 </body>

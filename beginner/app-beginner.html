@@ -666,11 +666,11 @@ html.bg-intro-done #bg-intro{display:none}
     <input id="mg-pw" type="password" placeholder="パスワード" autocomplete="current-password">
     <label class="mg-remember"><input type="checkbox" id="mg-remember"> パスワードをこの端末に保存する</label>
     <button class="mg-btn mg-primary" id="mg-login-btn">ログインして鑑定をはじめる</button>
-    <a class="mg-btn mg-ghost" href="auth.html?view=register">はじめての方はこちら（新規登録・一週間無料）</a>
+    <a class="mg-btn mg-ghost" href="pricing.html">はじめての方はこちら（お申し込み・一週間無料）</a>
     <button class="mg-btn mg-ghost" id="mg-demo-btn" style="display:none">ログインせずに体験する（デモ）</button>
     <div id="mg-status" class="mg-status"></div>
     <div id="mg-msg"></div>
-    <div class="mg-foot"><a href="auth.html">新規登録・パスワードの再設定</a> ・ <a href="mypage.html">マイページ・契約状況</a></div>
+    <div class="mg-foot"><a href="auth.html?view=reset">パスワードを忘れた方</a> ・ <a href="auth.html?view=help">ログインできないとき</a> ・ <a href="mypage.html">マイページ・契約状況</a></div>
   </div>
 </div>
 <script>
@@ -686,7 +686,7 @@ html.bg-intro-done #bg-intro{display:none}
   var statusEl=document.getElementById('mg-status');
   function unlock(){ gate.classList.add('unlocked'); document.body.style.overflow=''; }
   function showErr(t){ msg.innerHTML='<div class="mg-err">'+t+'</div>'; }
-  function statusJa(s){ return ({active:'課金中',trialing:'無料トライアル中',past_due:'支払い遅延',canceled:'解約済み',unpaid:'未払い',none:'未契約'})[s]||s||'未契約'; }
+  function statusJa(s){ return ({active:'ご利用中',trialing:'無料お試し中',past_due:'お支払いが確認できません',canceled:'解約済み',unpaid:'お支払いが確認できません',none:'ご契約がありません'})[s]||s||'ご契約がありません'; }
   // ★エンジニア接続ポイント：メール＋パスワードでログイン（契約状況も一緒に返す想定）
   //   POST {email,password} → {ok:true, status} ／ 認証失敗は 401 か {ok:false}
   async function login(email,pw){
@@ -708,10 +708,12 @@ html.bg-intro-done #bg-intro{display:none}
       statusEl.textContent='';
       if(s&&s.ok){
         rememberSave(email,pw,remember);
+        try{ localStorage.setItem('member_status',s.status||'none'); if(s.token){ localStorage.setItem('member_token',s.token); } }catch(e){}
         if(s.status==='active'||s.status==='trialing'){ unlock(); }
-        else{ showErr('このアカウントは現在ご利用いただけません（状態：'+statusJa(s.status)+'）。<br><a href="pricing.html">一週間無料で始める</a>'); }
+        else if(s.status==='past_due'||s.status==='unpaid'){ showErr('お支払いが確認できていません。<br><a href="mypage.html">マイページでカード情報を更新する</a>'); }
+        else{ showErr('このアカウントは現在ご利用いただけません（'+statusJa(s.status)+'）。<br><a href="pricing.html">お申し込みページへ</a>'); }
       } else {
-        showErr('メールアドレスまたはパスワードが違います。<br><a href="auth.html">新規登録・パスワード再設定</a>');
+        showErr('メールアドレスまたはパスワードが違います。<br><a href="auth.html?view=reset">パスワードを忘れた方</a>');
       }
     }).catch(function(){ statusEl.textContent=''; showErr('ただいま確認できませんでした。しばらくしてからもう一度お試しください。'); });
   }
