@@ -37,7 +37,9 @@ BEGINNER_SKIN = """<style id="beginner-skin">
 .reading-card .r-summary{background:var(--ka-w);border-left:4px solid var(--ka);color:inherit}
 .brand .sub{display:block;font-weight:800;color:var(--ink2)}
 #bg-intro{background:linear-gradient(135deg,#FDF3E2,#FCE9E6);border:2px solid #F2D9A6;border-radius:16px;padding:16px 18px;margin:0 0 14px}
-#bg-intro .t{font-weight:900;font-size:16px;color:#B4471F;margin-bottom:8px}
+#bg-intro .t{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:900;font-size:16px;color:#B4471F;margin-bottom:8px}
+#bg-intro-x{flex:0 0 auto;width:30px;height:30px;border:1px solid #E9CF9E;background:#fff;color:#8A5A12;border-radius:50%;padding:0;font-family:inherit;font-weight:900;font-size:14px;line-height:1;cursor:pointer}
+html.bg-intro-done #bg-intro{display:none}
 #bg-intro .steps{display:flex;gap:8px;flex-wrap:wrap}
 #bg-intro .s{flex:1 1 150px;background:#fff;border:1px solid #F0DFBE;border-radius:12px;padding:10px 12px;font-size:13.5px;font-weight:800;color:#4A4030}
 #bg-intro .s b{color:#E8392B}
@@ -111,7 +113,8 @@ def build_app():
         sys.exit('[止めました] </head> が見つかりません。')
     s = s[:hi] + BEGINNER_SKIN + s[hi:]
     s = rep(s, '  <section class="card panel">',
-            '  <div id="bg-intro"><div class="t">むずかしい知識は、いりません。</div><div class="steps">'
+            '  <div id="bg-intro"><div class="t"><span><span class="nobr">むずかしい知識は、</span><span class="nobr">いりません。</span></span>'
+            '<button type="button" id="bg-intro-x" aria-label="この案内を閉じる" title="閉じる">✕</button></div><div class="steps">'
             '<div class="s"><b>①</b> 生年月日を入れる</div><div class="s"><b>②</b> 「占ってみる」を押す</div>'
             '<div class="s"><b>③</b> 出てきた文章を読むだけ</div></div></div>\n  <section class="card panel">', 1)
     s = rep(s, '<button class="go" id="f-go" style="flex:1">この内容で占う</button>',
