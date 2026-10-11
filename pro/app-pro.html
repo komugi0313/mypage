@@ -4688,11 +4688,13 @@ function midQuickNavHTML(){return `<div style="display:flex;gap:10px;justify-con
 </div>`;}
 function renderResult(){
   const c=chart;
+  // 起動直後の見本には、見本であることを結果の一番上に出す（自分で占うと消える）
+  const sampleNote=window.__isSample?'<div class="sample-note" style="margin:0 0 12px;padding:11px 14px;border:2px dashed #E2A12B;border-radius:12px;background:#FFF8E8;color:#7A5200;font-size:13.5px;font-weight:800;line-height:1.75">📝 これは<b>見本</b>です（2000年1月1日 12時生まれの例）。<br>上の欄に生年月日を入れて「この内容で占う」を押すと、その方の鑑定になります。</div>':'';
   document.getElementById('ai-slot').innerHTML = consultHTML();
   // 要点サマリーは #result に、以降は #result-body に分割（並び：要点→命式(納音・相生相剋など分析込みの完全版)→詳細鑑定→相性→会局→五行→大運年運→恋愛→養生）
   // 命式表は「詳細鑑定を読む前に確認したい」という要望で、完全版を要点の直後に一本化（前後で二重に出さない）。
   document.getElementById('result').innerHTML =
-    heroHTML(c)+timingAlertHTML(c)+summaryHTML(c)+featBookHTML(c)+kaigouCardHTML(c)+verdictHTML(c)+tensenCardHTML(c)+meishiHTML(c);
+    sampleNote+heroHTML(c)+timingAlertHTML(c)+summaryHTML(c)+featBookHTML(c)+kaigouCardHTML(c)+verdictHTML(c)+tensenCardHTML(c)+meishiHTML(c);
   (function(){var _rb=document.getElementById('result-body');
     if(!_rb){_rb=document.createElement('div');_rb.id='result-body';var _r=document.getElementById('result');if(_r&&_r.parentNode)_r.parentNode.insertBefore(_rb,_r.nextSibling);}
     _rb.innerHTML = kaikyokuHTML(c)+genmeiHTML(c)+junitenHTML(c)+gogyoHTML(c)+compatPillHTML()+midQuickNavHTML()+flowHTML(c)+kingunHTML(c)+(typeof pkLoveCard==='function'?pkLoveCard(c):'')+yojoHTML(c);
@@ -7264,6 +7266,7 @@ function compute(){
   const timeUnknown=document.getElementById('f-notime')&&document.getElementById('f-notime').checked;
   personName=document.getElementById('f-name').value.trim();
   selDu=-1;selYear=null;zouOverride={};flowOpen=false;
+  window.__isSample=false;
   chart=baziCompute({year:y,month:mo,day:d,hour:h,minute:mi,sex}, lon, corr);
   clearCompatResult();   // 本人が変わったら、前の本人で出した相性結果は無効なので消す（お相手の入力欄は残す）
   if(timeUnknown){
@@ -7420,7 +7423,9 @@ geminiKey=store.get('bazi_gkey')||''; geminiModel=store.get('bazi_gmodel')||'gem
 /* モバイル既定は横（時柱が左の列＝鑑定書の横型に合わせる）。既定値yokoのままとする。 */
 buildLegend();fillPref();fillPrefB();fillDateSel('f-y','f-m','f-d','f-date');fillDateSel('b-y','b-m','b-d','b-date');attachTimeSel('f');attachTimeSel('b');renderClients();
 mpSetStatus(mpEmail()?'synced':'guest'); if(mpEmail())mpPull();
-chart=window.Bazi.computeChart({year:2000,month:1,day:1,hour:12,minute:0,sex:'female',longitude:139.69,correctionMode:'full'});
+// 起動時は見本（2000年1月1日12時・補正なし＝入力欄の初期値と同じ条件）を表示し、見本であることをはっきり書く
+window.__isSample=true;
+chart=baziCompute({year:2000,month:1,day:1,hour:12,minute:0,sex:'female'}, '', 'none');
 renderResult();
 </script>
 
