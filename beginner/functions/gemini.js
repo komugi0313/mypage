@@ -46,7 +46,27 @@ exports.handler = async (event) => {
 
   const site = process.env.URL || '';
   const origin = event.headers.origin || event.headers.referer || '';
-  if (site && origin && !origin.startsWith(site)) return json(403, { error: { code: 'ORIGIN', message: 'Forbidden' } });
+  // 本番（URL が設定された環境）では、自サイトからの呼び出し以外を断る（Origin/Referer の無い呼び出しも断る）
+  if (site && (!origin || !origin.startsWith(site))) return json(403, { error: { code: 'ORIGIN', message: 'Forbidden' } });
+
+  // 会員確認（実装仕様 §3-3・必須）：MEMBER_CHECK_URL（auth-check と同じ確認を行うサーバー内の関数）が設定されていれば、
+  // Authorization: Bearer <member_token> を検証し、使える状態の会員だけ中継する。未設定（公開前の確認環境）のときは確認しない。
+  const memberCheck = process.env.MEMBER_CHECK_URL || '';
+  if (memberCheck) {
+    const hh = lower(event.headers || {});
+    const tk = clean(String(hh['authorization'] || '').replace(/^Bearer\s+/i, ''));
+    if (!tk) return json(401, { error: { code: 'LOGIN', message: 'ログインが必要です' } });
+    try {
+      const r = await fetch(memberCheck, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: tk }) });
+      if (!r.ok) return json(401, { error: { code: 'LOGIN', message: 'ログインが必要です' } });
+      const m = await r.json();
+      const st = m && m.status, pe = m && m.periodEnd;
+      const usable = st === 'active' || st === 'trialing' || st === 'canceling' || (st === 'canceled' && pe && Date.parse(pe + 'T23:59:59+09:00') > Date.now());
+      if (!m || !m.ok || !usable) return json(403, { error: { code: 'MEMBER', message: 'ご利用いただけない状態です' } });
+    } catch (e) {
+      return json(503, { error: { code: 'MEMBER_CHECK', message: '会員確認ができませんでした' } });
+    }
+  }
 
   let parsed = {};
   try {

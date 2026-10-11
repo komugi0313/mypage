@@ -79,7 +79,7 @@ def build_app():
     s = rep(s, '<title>四柱推命占い自動鑑定</title>', f'<title>{B_TITLE}</title>\n{link_icon}', 1)
     s = re.sub(r'<meta name="description" content="[^"]*">', f'<meta name="description" content="{B_DESC}">', s, count=1)
     s = rep(s, '★本番ドメインが72k.ai以外なら', '★本番ドメインがsuimei.jp以外なら', 1)
-    s = rep(s, '<meta property="og:site_name" content="Meishiki Inc.">', f'<meta property="og:site_name" content="{B_NAME}">', 1)
+    s = rep(s, '<meta property="og:site_name" content="72k株式会社">', f'<meta property="og:site_name" content="{B_NAME}">', 1)
     s = rep(s, '<meta property="og:title" content="四柱推命 自動鑑定">', f'<meta property="og:title" content="{B_NAME}">', 1)
     s = rep(s, '<meta name="twitter:title" content="四柱推命 自動鑑定">', f'<meta name="twitter:title" content="{B_NAME}">', 1)
     s = re.sub(r'<meta property="og:description" content="[^"]*">', f'<meta property="og:description" content="{B_DESC}">', s, count=1)
@@ -131,6 +131,9 @@ def build_app():
     # ---- アプリ内のバージョン表示（SWのキャッシュ名から読む） ----
     s = rep(s, 'match(/shichu-jidou-(v\\d+)/)', 'match(/kyoukara-uranaishi-(v\\d+)/)', 1)
 
+    # アプリ下部の「マイページ・規約・特商法・プライバシー」リンクをビギナーのページへ
+    s = s.replace('terms-pro.html', 'terms.html').replace('tokushoho-pro.html', 'tokushoho.html').replace('privacy-pro.html', 'privacy.html')
+
     left = [w for w in ('app-pro.html', '-pro.html', 'manifest-pro', 'shichu-jidou', '72k.ai/app') if w in s]
     if left:
         sys.exit(f'[止めました] PRO固有の参照が残っています：{left}')
@@ -147,6 +150,10 @@ def build_auth():
     s = rep(s, 'mypage-pro.html', 'mypage.html')
     s = rep(s, 'pricing-pro.html', 'pricing.html')
     s = rep(s, "AFTER_LOGIN: 'app-pro.html'", "AFTER_LOGIN: 'app-beginner.html'", 1)
+    s = s.replace('terms-pro.html', 'terms.html').replace('tokushoho-pro.html', 'tokushoho.html').replace('privacy-pro.html', 'privacy.html')
+    s = rep(s, '© 四柱推命占い自動鑑定（72k株式会社）', f'© {B_NAME}（72k株式会社）', 1, 'フッターの社名')
+    s = rep(s, 'P-20261010-7K3QX-A9M2Z', 'B-20261010-7K3QX-A9M2Z', 2, 'お申し込み番号の例')
+    s = rep(s, 'href="icon-crystal.png"', 'href="icon-beginner.svg"', 1, 'ファビコン')
     (BEG / 'auth.html').write_text(s, encoding='utf-8')
 
 

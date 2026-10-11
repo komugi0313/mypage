@@ -31,6 +31,7 @@
   .lead{color:var(--muted);font-size:13px;font-weight:700;margin:0 0 22px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:6px 20px;margin-bottom:16px}
   .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 0;border-top:1px solid var(--line)}
+  [hidden]{display:none !important}   /* .row などの display 指定より「隠す」を優先 */
   .row:first-child{border-top:0}
   .row .k{font-size:13px;font-weight:900;color:var(--ink2)}
   .row .v{font-size:14px;font-weight:800;color:var(--ink);text-align:right}
@@ -87,7 +88,7 @@
   <!-- 未ログイン -->
   <div class="card notice" id="need-login" hidden>
     <p>マイページをご覧いただくには、ログインが必要です。</p>
-    <a class="cta" href="auth.html">▶ ログインする</a>
+    <a class="cta" href="auth.html?next=mypage">▶ ログインする</a>
     <a class="ghost" href="auth.html?view=help">ログインできないとき</a>
   </div>
 
@@ -107,7 +108,7 @@
     <div class="row"><span class="k">お申し込み番号</span><span class="v" id="v-order">—</span></div>
   </div>
 
-  <div class="sec-t">鑑定をつづける</div>
+  <div class="sec-t" id="open-app-t">鑑定をつづける</div>
   <a class="cta" href="app-pro.html" id="open-app">▶ 鑑定ツールをひらく</a>
   <p class="tip">鑑定結果やお客様の保存・メモは、ツール内の「👥 顧客カルテ」からご利用いただけます。</p>
 
@@ -130,6 +131,13 @@
     </div>
   </div>
   <p class="tip">新しいアドレスに届く確認メールのリンクを押すと、変更が完了します（それまでは今のアドレスのままです）。</p>
+
+  <div class="sec-t">パスワード・ログアウト</div>
+  <div class="card">
+    <div class="row"><span class="k">パスワードの変更</span><span class="v"><a class="mini" id="pwBtn" href="auth.html?view=reset" style="text-decoration:none;display:inline-block">変更する</a></span></div>
+    <div class="row"><span class="k">この端末からログアウト</span><span class="v"><button class="mini" id="logoutBtn">ログアウト</button></span></div>
+  </div>
+  <p class="tip">パスワードの変更は、ご登録のアドレスに届くメールのリンクから行います。共用の端末を使ったときは、最後にログアウトしてください。</p>
 
   <div class="sec-t">解約のお手続き</div>
   <div class="card">
@@ -183,13 +191,19 @@
     PRICING: 'pricing-pro.html'
   };
 
-  function g(k){ try{return localStorage.getItem(k)||'';}catch(e){return '';} }
+  function g(k){ try{return localStorage.getItem(k)||sessionStorage.getItem(k)||'';}catch(e){return '';} }
   function sv(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
   function $(id){ return document.getElementById(id); }
   var email=g('member_email');
   var PRICE='9,800円';
   var PLAN={month:'月額プラン<span class="nb">（9,800円／月・税込）</span>'};
-  var STATUS_JA={active:'ご利用中',trialing:'無料お試し中',past_due:'お支払いが確認できません',unpaid:'お支払いが確認できません',canceled:'解約済み',none:'ご契約がありません'};
+  var STATUS_JA={active:'ご利用中',trialing:'無料お試し中',canceling:'解約手続き済み',past_due:'お支払いが確認できません',unpaid:'お支払いが確認できません',canceled:'解約済み',none:'ご契約がありません'};
+  /* 使える状態か（アプリの会員ゲートと同じ判定）：解約しても、今の期間（無料期間・お支払い済みの期間）の最終日までは使える */
+  function usable(st,pe){
+    if(st==='active'||st==='trialing'||st==='canceling') return true;
+    if(st==='canceled' && pe){ var t=Date.parse(pe+'T23:59:59+09:00'); return !isNaN(t) && t>Date.now(); }
+    return false;
+  }
   var msg=$('msg');
   var cur={};
   function headers(){ var h={'Content-Type':'application/json'}; var t=g('member_token'); if(t){ h['Authorization']='Bearer '+t; } return h; }
@@ -203,7 +217,7 @@
   function render(s){
     cur=s||{};
     var st=cur.status||'none';
-    sv('member_status', st);
+    sv('member_status', st); sv('member_period_end', cur.periodEnd||'');
     $('v-email').textContent = email;
     $('v-plan').innerHTML  = PLAN[cur.plan] || PLAN[g('selected_plan')] || PLAN.month;
     $('v-order').textContent = cur.orderId || '—';
@@ -218,9 +232,10 @@
     }else if(st==='active'){
       $('k-next').textContent='次回のお支払い';
       $('v-next').innerHTML = '<span class="nb">'+(cur.nextChargeAt||'毎月の更新日')+'</span><span class="nb">（'+PRICE+'）</span>';
-    }else if(st==='canceled'){
+    }else if(st==='canceling' || st==='canceled'){
       $('k-next').textContent='ご利用期間';
-      $('v-next').textContent = cur.periodEnd ? cur.periodEnd+'まで' : '終了しました';
+      $('v-next').innerHTML = (cur.periodEnd && usable(st,cur.periodEnd)) ? '<span class="nb">'+cur.periodEnd+'まで</span><span class="nb">（以後の請求はありません）</span>'
+        : (st==='canceling' ? '<span class="nb">今の期間の最終日まで</span><span class="nb">（以後の請求はありません）</span>' : '終了しました');
     }else if(st==='past_due'||st==='unpaid'){
       $('k-next').textContent='お支払い';
       $('v-next').textContent = 'カード情報の更新が必要です';
@@ -228,11 +243,13 @@
       $('k-next').textContent='ご契約';
       $('v-next').innerHTML = '<a href="'+CONFIG.PRICING+'" style="color:var(--sui)">お申し込みページへ</a>';
     }
-    var cancelBtn=$('cancelBtn'), cardBtn=$('cardBtn');
-    cancelBtn.disabled = (st==='canceled'||st==='none');
-    cancelBtn.textContent = st==='canceled' ? '解約済み' : '解約する';
-    cardBtn.disabled = (st==='canceled'||st==='none');
-    $('cancel-tip').hidden = (st==='canceled'||st==='none');
+    var cancelBtn=$('cancelBtn'), cardBtn=$('cardBtn'), done=(st==='canceled'||st==='canceling'||st==='none');
+    cancelBtn.disabled = done;
+    cancelBtn.textContent = (st==='canceled'||st==='canceling') ? '解約済み' : '解約する';
+    cardBtn.disabled = done;
+    $('cancel-tip').hidden = done;
+    // 使えない状態（期間が終わった解約済み・ご契約なし）のときは「鑑定ツールをひらく」を出さない
+    var ok=usable(st,cur.periodEnd); $('open-app').hidden=!ok; $('open-app-t').hidden=!ok;
   }
 
   /* ★エンジニア接続ポイント：ご契約状況の取得 */
@@ -251,6 +268,14 @@
     }
   }
   loadStatus();
+
+  /* ログアウト：この端末に保存したログイン状態を消す */
+  $('logoutBtn').onclick=function(){
+    var tk=g('member_token');
+    try{ if(tk && !CONFIG.STUB) fetch(CONFIG.API+'/auth-logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:tk}),keepalive:true}).catch(function(){}); }catch(e){}
+    try{ ['member_token','member_status','member_period_end','member_checked_at','member_pw','member_remember'].forEach(function(k){ localStorage.removeItem(k); sessionStorage.removeItem(k); }); }catch(e){}
+    location.href='auth.html?out=1';
+  };
 
   /* ★エンジニア接続ポイント：お支払いカードの変更（テレコムクレジットのカード変更ページへ） */
   $('cardBtn').onclick=async function(){
@@ -284,7 +309,7 @@
 
   /* ★エンジニア接続ポイント：解約処理 */
   async function doCancel(){
-    if(CONFIG.STUB){ return {ok:true, status:'canceled', periodEnd:cur.periodEnd||''}; }
+    if(CONFIG.STUB){ return {ok:true, status:'canceling', periodEnd:cur.periodEnd||cur.trialEnd||''}; }
     var r=await post(CONFIG.CANCEL);
     if(!r.ok) throw new Error('cancel failed '+r.status);
     return r.json();
@@ -293,16 +318,17 @@
   btn.onclick=function(){
     var st=cur.status||'none';
     var q = st==='trialing'
-      ? '本当に解約しますか？\n無料期間中のため、料金はかかりません。'
+      ? '本当に解約しますか？\n無料期間中のため、料金はかかりません（無料期間の最終日までは、引き続きお使いいただけます）。'
       : '本当に解約しますか？\nお支払い済みの期間の終わりまではご利用いただけ、次回分からは請求されません。';
     if(!confirm(q)) return;
     btn.disabled=true;
     doCancel().then(function(res){
       var was=st;
-      render({ status:'canceled', plan:cur.plan, orderId:cur.orderId, periodEnd:(res&&res.periodEnd)||cur.periodEnd||'' });
+      var pe=(res&&res.periodEnd)||cur.periodEnd||cur.trialEnd||'';
+      render({ status:(res&&res.status)||'canceling', plan:cur.plan, orderId:cur.orderId, periodEnd:pe });
       say(was==='trialing'
-        ? '解約のお手続きが完了しました。<b>無料期間中のため、料金は一切かかりません。</b>ご利用ありがとうございました。'
-        : '解約のお手続きが完了しました。<b>次回分からの請求は停止します。</b>'+((res&&res.periodEnd)?res.periodEnd+'まで':'お支払い済みの期間の終わりまで')+'ご利用いただけます。ご利用ありがとうございました。', true);
+        ? '解約のお手続きが完了しました。<b>無料期間中のため、料金は一切かかりません。</b>'+(pe?pe+'まで':'無料期間の終わりまで')+'は、引き続きご利用いただけます。'
+        : '解約のお手続きが完了しました。<b>次回分からの請求は停止します。</b>'+(pe?pe+'まで':'お支払い済みの期間の終わりまで')+'は、引き続きご利用いただけます。ご利用ありがとうございました。', true);
     }).catch(function(){
       btn.disabled=false;
       say('ただいま解約のお手続きができませんでした。時間をおいて再度お試しください。<br>くり返しできない場合は <a href="mailto:info@72k.ai">info@72k.ai</a> へご連絡ください（ご連絡いただいた日を解約日として扱います）。', false);

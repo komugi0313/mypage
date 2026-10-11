@@ -78,6 +78,8 @@ s = rep(s, '</body>', '''<script>
 # ---- auth.html（ログイン）----
 s = (PRO / 'auth.html').read_text(encoding='utf-8')
 s = head(s, 'ログイン｜易 EKI Pro'); s = theme(links(s))
+s = rep(s, 'P-20261010-7K3QX-A9M2Z', 'E-20261010-7K3QX-A9M2Z', 2)
+s = s.replace("'pricing-pro.html'","'register.html'")
 (EKI / 'auth.html').write_text(s, encoding='utf-8')
 
 # ---- mypage.html（マイページ）----

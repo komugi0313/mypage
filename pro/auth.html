@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
+<link rel="icon" href="icon-crystal.png" type="image/png">
 <title>ログイン｜四柱推命占い 自動鑑定</title>
-<meta name="description" content="会員ログイン・新規登録（メールアドレスとパスワード）・パスワード再設定">
+<meta name="description" content="会員ログイン（メールアドレスとパスワード）・パスワードの設定と再設定・メールアドレスを忘れたとき">
 <style>
   :root{
     --mok:#2e7d32; --ka:#E8392B; --do:#b8860b; --kin:#8A93A6; --sui:#2A6FD0;
@@ -105,9 +106,10 @@
     <input id="email" type="email" placeholder="you@example.com" autocomplete="email" inputmode="email">
     <label for="password" style="margin-top:12px">パスワード</label>
     <input id="password" type="password" placeholder="パスワード" autocomplete="current-password">
-    <label class="remember"><input type="checkbox" id="remember"> パスワードをこの端末に保存する</label>
+    <label class="remember"><input type="checkbox" id="remember" checked> この端末でログインしたままにする<span style="font-size:.85em;font-weight:600;white-space:nowrap">（共用の端末では外す）</span></label>
     <button class="btn primary" id="login-btn">ログイン</button>
     <div id="login-msg" class="msg hide"></div>
+    <div id="out-msg" class="msg ok hide">ログアウトしました。</div>
     <div class="switch">はじめての方は <a class="link-btn" href="pricing-pro.html">お申し込み（一週間無料）</a><br>
       <button type="button" class="link-btn" id="to-reset">パスワードを忘れた・設定メールが届かない</button><br>
       <button type="button" class="link-btn" data-go="forgot">メールアドレスを忘れた・間違えた</button><br>
@@ -159,7 +161,7 @@
     <h1>メールアドレスを<wbr>忘れた・間違えた</h1>
     <p class="lead">お申し込み完了画面に<wbr>表示された<wbr>お申し込み番号を<wbr>入力してください。</p>
     <label for="fg-order">お申し込み番号</label>
-    <input id="fg-order" type="text" autocomplete="off" placeholder="例：P-20261010-7K3QX-A9M2Z" style="width:100%;height:50px;padding:0 10px;font-size:15px;font-weight:700;color:var(--ink);background:var(--card);border:2px solid var(--line2);border-radius:12px;font-family:inherit;text-align:center;text-transform:uppercase">
+    <input id="fg-order" type="text" autocomplete="off" placeholder="例：P-20261010-7K3QX-A9M2Z" style="width:100%;height:50px;padding:0 10px;font-size:16px;font-weight:700;color:var(--ink);background:var(--card);border:2px solid var(--line2);border-radius:12px;font-family:inherit;text-align:center;text-transform:uppercase">
     <button class="btn primary" id="fg-hint-btn">ご登録のアドレスを確かめる</button>
     <div id="fg-hint-msg" class="msg hide"></div>
     <div class="qa" style="margin-top:18px">
@@ -209,6 +211,10 @@
     <div class="switch"><button type="button" class="link-btn" id="help-to-login">ログインに戻る</button></div>
   </section>
 </div>
+<footer class="auth-foot" style="text-align:center;font-size:12.5px;line-height:2.2;color:#8B7E68;padding:18px 16px 28px">
+  <a href="index.html" style="color:inherit;white-space:nowrap">サービス紹介</a>　<a href="mypage-pro.html" style="color:inherit;white-space:nowrap">マイページ</a>　<a href="terms-pro.html" style="color:inherit;white-space:nowrap">利用規約</a>　<a href="tokushoho-pro.html" style="color:inherit;white-space:nowrap">特定商取引法に基づく表記</a>　<a href="privacy-pro.html" style="color:inherit;white-space:nowrap">プライバシーポリシー</a>
+  <div style="margin-top:4px">© 四柱推命占い自動鑑定（72k株式会社）</div>
+</footer>
 
 <script>
 (function(){
@@ -245,21 +251,31 @@
   function s(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
   function del(k){ try{ localStorage.removeItem(k); }catch(e){} }
 
-  /* 「パスワードをこの端末に保存」
-     ★セキュリティ推奨：本番ではパスワードそのものではなく、サーバー発行の長期セッショントークンを
-       保存する方式を推奨（member_token 等）。ここではUI要望に沿ってメール＋パスワードを端末保存する。 */
-  function rememberSave(email, pw, on){
+  /* ログイン状態の保存：パスワードは端末に保存しない。サーバーが発行するログイン用の鍵（token）と、
+     契約状況（status）・今の期間の最終日（periodEnd）・確認した日時だけを保存する（アプリの会員ゲートと共通の形）。
+     「ログインしたままにする」を外したときは、鍵をこのタブの間だけ（sessionStorage）保存し、圏外での利用もしない。 */
+  function saveSession(res, email, keep){
+    del('member_pw'); del('member_remember');
     s('member_email', email);
-    if(on){ s('member_pw', pw); s('member_remember', '1'); }
-    else  { del('member_pw'); del('member_remember'); }
+    try{ if(res.token){ (keep?localStorage:sessionStorage).setItem('member_token', res.token); (keep?sessionStorage:localStorage).removeItem('member_token'); } }catch(e){}
+    s('member_status', res.status||'none'); s('member_period_end', res.periodEnd||'');
+    if(keep){ s('member_checked_at', String(Date.now())); } else { del('member_checked_at'); }
   }
+  /* 使える状態か：ご利用中・無料お試し中・解約手続き済み（期間の最終日まで）・解約済みでも期間の最終日までは使える */
+  function usable(st, pe){
+    if(st==='active'||st==='trialing'||st==='canceling') return true;
+    if(st==='canceled' && pe){ var t=Date.parse(pe+'T23:59:59+09:00'); return !isNaN(t) && t>Date.now(); }
+    return false;
+  }
+  /* ログイン後の戻り先：?next=mypage ならマイページへ（それ以外はツール） */
+  function afterLogin(){ var n=param('next'); return n==='mypage' ? CONFIG.MYPAGE : CONFIG.AFTER_LOGIN; }
 
   /* ---- API（STUB対応） ---- */
   function post(path, body){
     return fetch(CONFIG.API+path, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   }
   async function apiLogin(email, pw){
-    if(CONFIG.STUB){ await wait(600); return {ok:true, status:'trialing', email:email}; }
+    if(CONFIG.STUB){ await wait(600); return {ok:true, status:'trialing', email:email, token:'stub-token', periodEnd:''}; }
     var r = await post(CONFIG.LOGIN, {email:email,password:pw});
     if(r.status===401){ return {ok:false, error:'invalid'}; }
     if(!r.ok) throw new Error('login '+r.status); return r.json();
@@ -288,18 +304,17 @@
     loginBtn.disabled=true; loginBtn.innerHTML='<span class="spin"></span>確認中…';
     apiLogin(email, pw).then(function(res){
       if(res && res.ok){
-        rememberSave(email, pw, !!(remI && remI.checked));
-        if(res.token){ s('member_token', res.token); }
-        s('member_status', res.status||'none');
-        if(res.status==='active' || res.status==='trialing'){ location.href = CONFIG.AFTER_LOGIN; }
+        saveSession(res, email, !remI || !!remI.checked);
+        if(usable(res.status, res.periodEnd) || param('next')==='mypage'){ location.href = afterLogin(); }
         else if(res.status==='past_due' || res.status==='unpaid'){
           setMsg(loginMsg,'お支払いが確認できていません。<br><a href="'+CONFIG.MYPAGE+'">マイページでカード情報を更新する</a>','err'); }
+        else if(res.status==='canceled'){ setMsg(loginMsg,'ご利用期間が終了しました（解約済み）。<br><a href="'+CONFIG.MYPAGE+'">マイページ</a>・<a href="'+CONFIG.PRICING+'">お申し込みページへ</a>','err'); }
         else { setMsg(loginMsg,'このアカウントは現在ご利用いただけません（'+statusJa(res.status)+'）。<br><a href="'+CONFIG.PRICING+'">お申し込みページへ</a>','err'); }
       } else {
         setMsg(loginMsg,'メールアドレスまたはパスワードが違います。<br><button type="button" class="link-btn" data-go="reset">パスワードを忘れた方</button>','err');
       }
     }).catch(function(){
-      setMsg(loginMsg,'ただいまログインできませんでした。しばらくしてからお試しください。','err');
+      setMsg(loginMsg, navigator.onLine ? 'ただいまログインできませんでした（サーバーにつながりません）。しばらくしてからお試しください。' : '通信できませんでした。電波の良い場所で、もう一度お試しください。','err');
     }).finally(function(){ loginBtn.disabled=false; loginBtn.textContent='ログイン'; });
   }
   loginBtn.onclick=doLogin;
@@ -396,9 +411,12 @@
   // 旧リンク（?view=register）はお申し込みページへ（会員はお支払い登録と同時に作成されるため）
   if(view==='register'){ location.replace(CONFIG.PRICING); return; }
   // 端末保存の自動入力（ログイン画面）
-  var savedEmail=g('member_email'), savedPw=g('member_pw'), remembered=g('member_remember')==='1';
+  del('member_pw'); del('member_remember');   // 旧版でパスワードを保存していた端末から消す
+  var savedEmail=g('member_email');
   if(savedEmail){ emailI.value=savedEmail; }
-  if(remembered && savedPw){ pwI.value=savedPw; if(remI) remI.checked=true; }
+  if(param('out')==='1'){ var om=$('out-msg'); if(om) om.classList.remove('hide'); }
+  // メールアドレスを忘れたとき：この端末でお申し込みしていれば、お申し込み番号を自動で入れる
+  try{ var po=JSON.parse(g('pending_order')||'{}')||{}; var fo=$('fg-order'); if(fo && po.id && !fo.value){ fo.value=po.id; } }catch(e){}
   if(view==='email'){ runEmailConfirm(token); }
   else if(view==='setpw' || token){ openSetpw(token); }
   else if(view==='reset'){ openReset(); }

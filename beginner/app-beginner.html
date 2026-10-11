@@ -667,7 +667,7 @@ html.bg-intro-done #bg-intro{display:none}
     <p class="mg-lead">会員専用です。<span class="mg-nb">ご登録のメールアドレスと</span><span class="mg-nb">パスワードでログインしてください。</span><br>一週間は無料でお試しいただけます。</p>
     <input id="mg-email" type="email" placeholder="you@example.com" autocomplete="email">
     <input id="mg-pw" type="password" placeholder="パスワード" autocomplete="current-password">
-    <label class="mg-remember"><input type="checkbox" id="mg-remember"> パスワードをこの端末に保存する</label>
+    <label class="mg-remember"><input type="checkbox" id="mg-remember" checked> この端末でログインしたままにする<span class="mg-nb" style="font-weight:600;font-size:11px">（共用の端末では外す）</span></label>
     <button class="mg-btn mg-primary" id="mg-login-btn">ログインして鑑定をはじめる</button>
     <a class="mg-btn mg-ghost" href="pricing.html"><span class="mg-nb">はじめての方はこちら</span><span class="mg-nb">（お申し込み・一週間無料）</span></a>
     <button class="mg-btn mg-ghost" id="mg-demo-btn" style="display:none">ログインせずに体験する（デモ）</button>
@@ -690,49 +690,92 @@ html.bg-intro-done #bg-intro{display:none}
   function unlock(){ gate.classList.add('unlocked'); document.body.style.overflow=''; }
   function showErr(t){ msg.innerHTML='<div class="mg-err">'+t+'</div>'; }
   function statusJa(s){ return ({active:'ご利用中',trialing:'無料お試し中',past_due:'お支払いが確認できません',canceled:'解約済み',unpaid:'お支払いが確認できません',none:'ご契約がありません'})[s]||s||'ご契約がありません'; }
-  // ★エンジニア接続ポイント：メール＋パスワードでログイン（契約状況も一緒に返す想定）
-  //   POST {email,password} → {ok:true, status} ／ 認証失敗は 401 か {ok:false}
-  async function login(email,pw){
-    var r=await fetch(API+'/auth-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pw})});
-    if(r.status===401){ return {ok:false, error:'invalid'}; }
-    if(!r.ok) throw new Error('login '+r.status);
-    return r.json();
+  /* ===== 会員のログイン状態（パスワードは端末に保存しない。サーバーが発行するログイン用の鍵＝トークンだけを保存） =====
+     ★エンジニア接続ポイント（実装仕様 §3）：
+       POST /auth-login {email,password} → {ok:true, status, periodEnd, token} ／ 401
+       POST /auth-check {token}          → {ok:true, status, periodEnd}        ／ 401（鍵が無効・期限切れ）
+       POST /auth-logout {token}         → {ok:true}
+     status：active（ご利用中）／trialing（無料お試し中）／canceling（解約手続き済み・期間の最終日まで利用可）／
+             canceled（解約済み）／past_due・unpaid（お支払い未確認）／none
+     periodEnd：今の期間（無料期間・お支払い済みの期間）の最終日 YYYY-MM-DD。解約しても、この日までは使える。 */
+  function lsg(k){ try{ return localStorage.getItem(k)||sessionStorage.getItem(k)||''; }catch(e){ return ''; } }
+  function usable(st,pe){
+    if(st==='active'||st==='trialing'||st==='canceling') return true;
+    if(st==='canceled' && pe){ var t=Date.parse(pe+'T23:59:59+09:00'); return !isNaN(t) && t>Date.now(); }
+    return false;
   }
-  // 「パスワードをこの端末に保存」。※本番はトークン保存方式を推奨（auth.html の注記参照）。
-  function rememberSave(email,pw,on){
-    try{ localStorage.setItem('member_email',email);
-      if(on){ localStorage.setItem('member_pw',pw); localStorage.setItem('member_remember','1'); }
-      else { localStorage.removeItem('member_pw'); localStorage.removeItem('member_remember'); }
+  function saveSession(res,email,keep){
+    try{
+      ['member_pw','member_remember'].forEach(function(k){ localStorage.removeItem(k); });   // 旧版でパスワードを保存していた端末から消す
+      var st=keep?localStorage:sessionStorage, other=keep?sessionStorage:localStorage;
+      localStorage.setItem('member_email',email);
+      if(res.token){ st.setItem('member_token',res.token); other.removeItem('member_token'); }
+      localStorage.setItem('member_status',res.status||'none');
+      localStorage.setItem('member_period_end',res.periodEnd||'');
+      if(keep) localStorage.setItem('member_checked_at',String(Date.now())); else localStorage.removeItem('member_checked_at');
     }catch(e){}
   }
-  // 圏外（イベント会場など）でも使えるように：最近（30日以内）ネットでログイン確認できた会員は、通信できないときもそのまま開ける
+  function clearSession(){ try{ ['member_token','member_status','member_period_end','member_checked_at','member_pw','member_remember'].forEach(function(k){ localStorage.removeItem(k); sessionStorage.removeItem(k); }); }catch(e){} }
+  // ログアウト（どの画面からでも呼べる）
+  window.memberLogout=function(){
+    var tk=lsg('member_token');
+    try{ if(tk) fetch(API+'/auth-logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:tk}),keepalive:true}).catch(function(){}); }catch(e){}
+    clearSession(); location.href='auth.html?out=1';
+  };
+  // 通信は8秒で打ち切る（電波が弱い会場で「確認中…」のまま止まらないように）
+  function postJSON(path,body){
+    var ctl=('AbortController' in window)?new AbortController():null, tm=setTimeout(function(){ if(ctl) ctl.abort(); },8000);
+    return fetch(API+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:ctl?ctl.signal:undefined})
+      .finally(function(){ clearTimeout(tm); });
+  }
+  async function login(email,pw){
+    var r=await postJSON('/auth-login',{email:email,password:pw});
+    if(r.status===401){ return {ok:false, error:'invalid'}; }
+    if(!r.ok){ var e=new Error('server'); e.server=true; throw e; }
+    return r.json();
+  }
+  async function check(tk){
+    var r=await postJSON('/auth-check',{token:tk});
+    if(r.status===401){ return {ok:false, error:'invalid'}; }
+    if(!r.ok){ var e=new Error('server'); e.server=true; throw e; }
+    return r.json();
+  }
+  // 圏外（イベント会場など）でも使えるように：30日以内にネットでログインを確認できた会員は、通信できないときもそのまま開ける
   var OFFLINE_DAYS=30;
-  function offlineOK(){ try{ var st=localStorage.getItem('member_status'), at=+(localStorage.getItem('member_checked_at')||0);
-    return !!localStorage.getItem('member_email') && (st==='active'||st==='trialing') && at>0 && (Date.now()-at)<OFFLINE_DAYS*86400000; }catch(e){ return false; } }
-  function doLogin(email,pw,remember){
+  function offlineOK(){ try{ var at=+(localStorage.getItem('member_checked_at')||0);
+    return !!localStorage.getItem('member_token') && usable(localStorage.getItem('member_status'),localStorage.getItem('member_period_end')) && at>0 && (Date.now()-at)<OFFLINE_DAYS*86400000; }catch(e){ return false; } }
+  function lock(){ gate.classList.remove('unlocked'); document.body.style.overflow='hidden'; }
+  function statusMsg(st){
+    if(st==='past_due'||st==='unpaid') return 'お支払いが確認できていません。<br><a href="mypage.html">マイページでカード情報を更新する</a>';
+    if(st==='canceled') return 'ご利用期間が終了しました（解約済み）。<br>もう一度お使いになる場合は <a href="pricing.html">お申し込みページへ</a>';
+    return 'このアカウントは現在ご利用いただけません（'+statusJa(st)+'）。<br><a href="pricing.html">お申し込みページへ</a>';
+  }
+  function netErr(e){
+    if(e&&e.server) return 'ただいまログインの確認ができません（サーバーの不具合の可能性があります）。時間をおいて、もう一度お試しください。';
+    return '通信できませんでした。電波の良い場所で、もう一度お試しください。<br><span style="font-size:11.5px">※圏外で使うには、30日以内にネットにつないでログインしておく必要があります。</span>';
+  }
+  function doLogin(email,pw,keep){
     statusEl.textContent='確認中…'; msg.innerHTML='';
     login(email,pw).then(function(s){
       statusEl.textContent='';
       if(s&&s.ok){
-        rememberSave(email,pw,remember);
-        try{ localStorage.setItem('member_status',s.status||'none'); localStorage.setItem('member_checked_at',String(Date.now())); if(s.token){ localStorage.setItem('member_token',s.token); } }catch(e){}
-        if(s.status==='active'||s.status==='trialing'){ unlock(); }
-        else if(s.status==='past_due'||s.status==='unpaid'){ showErr('お支払いが確認できていません。<br><a href="mypage.html">マイページでカード情報を更新する</a>'); }
-        else{ showErr('このアカウントは現在ご利用いただけません（'+statusJa(s.status)+'）。<br><a href="pricing.html">お申し込みページへ</a>'); }
+        saveSession(s,email,keep);
+        if(usable(s.status,s.periodEnd)){ unlock(); } else { showErr(statusMsg(s.status)); }
       } else {
         showErr('メールアドレスまたはパスワードが違います。<br><a href="auth.html?view=reset">パスワードを忘れた方</a>');
       }
-    }).catch(function(){ statusEl.textContent=''; if(offlineOK()){ unlock(); return; } showErr('ただいま確認できませんでした。電波の良い場所で、もう一度お試しください。'); });
+    }).catch(function(e){ statusEl.textContent=''; if(offlineOK()){ unlock(); return; } showErr(netErr(e)); });
   }
   document.getElementById('mg-login-btn').onclick=function(){
     var email=(document.getElementById('mg-email').value||'').trim().toLowerCase();
     var pw=(document.getElementById('mg-pw').value||'');
-    var remember=!!(document.getElementById('mg-remember')&&document.getElementById('mg-remember').checked);
+    var keep=!document.getElementById('mg-remember') || !!document.getElementById('mg-remember').checked;
     msg.innerHTML='';
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ showErr('メールアドレスを正しく入力してください。'); return; }
     if(!pw){ showErr('パスワードを入力してください。'); return; }
-    doLogin(email,pw,remember);
+    doLogin(email,pw,keep);
   };
+  document.getElementById('mg-pw').addEventListener('keydown',function(e){ if(e.key==='Enter'){ document.getElementById('mg-login-btn').click(); } });
   // 開発確認用：DEMO_MODE=true のときのみ、ログイン不要の確認導線を表示（本番は false）
   if(DEMO_MODE){
     var demoBtn=document.getElementById('mg-demo-btn');
@@ -743,13 +786,30 @@ html.bg-intro-done #bg-intro{display:none}
   if(location.protocol==='file:'){ unlock(); return; }
   // ★公開前プレビュー：決済接続まではログイン不要で全開放（本番公開時は PREVIEW_MODE=false に戻す）。バナー表示は本番向けに撤去済み。
   if(PREVIEW_MODE){ unlock(); return; }
-  if(!navigator.onLine && offlineOK()){ unlock(); return; }   // 圏外：最近ログインできていれば、そのまま使える
-  document.body.style.overflow='hidden';
+  try{ ['member_pw','member_remember'].forEach(function(k){ localStorage.removeItem(k); }); }catch(e){}
   var savedEmail=localStorage.getItem('member_email')||'';
-  var savedPw=localStorage.getItem('member_pw')||'';
-  var remembered=localStorage.getItem('member_remember')==='1';
   if(savedEmail){ document.getElementById('mg-email').value=savedEmail; }
-  if(remembered&&savedPw){ document.getElementById('mg-pw').value=savedPw; var rc=document.getElementById('mg-remember'); if(rc)rc.checked=true; doLogin(savedEmail,savedPw,true); }
+  var tk=lsg('member_token');
+  // 30日以内に確認できている会員は、待たずにすぐ開く（裏で最新の契約状況を確認し、使えなくなっていたら閉じる）
+  if(offlineOK()){
+    unlock();
+    if(navigator.onLine && tk){ check(tk).then(function(s){
+      if(s&&s.ok){ saveSession(s,savedEmail,true); if(!usable(s.status,s.periodEnd)){ lock(); showErr(statusMsg(s.status)); } }
+      else { clearSession(); lock(); showErr('ログインの有効期限が切れました。もう一度ログインしてください。'); }
+    }).catch(function(){}); }
+    return;
+  }
+  document.body.style.overflow='hidden';
+  if(tk && navigator.onLine){
+    statusEl.textContent='確認中…';
+    check(tk).then(function(s){
+      statusEl.textContent='';
+      if(s&&s.ok){ saveSession(s,savedEmail,!!localStorage.getItem('member_token')); if(usable(s.status,s.periodEnd)){ unlock(); } else { showErr(statusMsg(s.status)); } }
+      else { clearSession(); }
+    }).catch(function(e){ statusEl.textContent=''; showErr(netErr(e)); });
+  } else if(!navigator.onLine){
+    showErr('圏外のため、ログインを確認できません。<br><span style="font-size:11.5px">※圏外で使うには、30日以内にネットにつないでログインしておく必要があります。</span>');
+  }
 })();
 </script>
 <!-- ▲▲▲ 会員ゲート ▲▲▲ -->
@@ -976,6 +1036,7 @@ html.bg-intro-done #bg-intro{display:none}
     <div style="background:var(--sui-w);border:1.5px solid var(--sui);border-radius:11px;padding:10px 13px;margin-bottom:10px;font-size:12.5px;line-height:1.7;color:var(--ink2)"><b style="color:var(--sui)">かんたん3ステップ</b><br><b>①</b> 上の入力欄で <b>「＋鑑定者を保存」</b> → <b>②</b> ここの一覧で <b>「呼び出す」</b>（ワンタップで再表示）→ <b>③</b> 各カルテの <b>メモ欄</b> に特徴・相談内容・約束ごとを書いておく。<br>名前・生年月日・メモ・タグ（VIP／常連など）で<b>検索</b>もできます。</div>
     <p class="lead">お客様（鑑定者）・メモ・鑑定結果をここに保存できます。<b>ログイン中はサーバーにも保存</b>され、機種変更・別の端末でも同じデータが見られます（電波がないときは、この端末の中に保存されます）。</p>
     <a href="mypage.html" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-weight:800;font-size:12.5px;color:var(--sui);background:var(--sui-w);border:1.5px solid var(--sui);border-radius:10px;padding:7px 12px;margin-bottom:12px">👤 ご契約状況・解約（別ページ）→</a>
+    <button type="button" onclick="memberLogout()" style="display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:12.5px;color:var(--ink2);background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:7px 12px;margin:0 0 12px 6px;cursor:pointer">ログアウト</button>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
       <span style="font-size:12px;font-weight:800;color:var(--ink2)">同期状態：<span id="mp-status" style="color:var(--ka)">—</span></span>
       <button id="mp-sync" type="button" class="mp-mini">↻ 今すぐ同期</button>
@@ -1251,6 +1312,14 @@ html.bg-intro-done #bg-intro{display:none}
   <div class="foot">
     命式（四柱・蔵干・通変星・十二運・大運・年運）は決定論的に計算した確定値です。やさしい一言は一般的な目安で、深い鑑定は命式をもとに行います。<br>
     四柱推命は自己理解のための道具です。大切な判断はご自身で。
+    <div class="app-legal" style="margin-top:12px;font-size:12.5px;line-height:2.2">
+      <a href="mypage.html" style="white-space:nowrap">マイページ（ご契約・解約）</a>　
+      <a href="terms.html" style="white-space:nowrap">利用規約</a>　
+      <a href="tokushoho.html" style="white-space:nowrap">特定商取引法に基づく表記</a>　
+      <a href="privacy.html" style="white-space:nowrap">プライバシーポリシー</a>　
+      <a href="auth.html?view=help" style="white-space:nowrap">お困りのとき</a>　
+      <button type="button" onclick="memberLogout()" style="white-space:nowrap;background:none;border:1px solid currentColor;border-radius:8px;padding:4px 12px;font:inherit;font-weight:700;color:inherit;cursor:pointer">ログアウト</button>
+    </div>
   </div>
 </div>
 
@@ -3845,7 +3914,7 @@ function summaryHTML(c){
 /* 共有される鑑定書・特徴カードの隅に入れる“控えめな出どこリンク”（バイラル導線）。
    先生の屋号（bazi_brand_name）は主役のまま、ここは小さなクレジットとして添える。
    ★本番URLが決まったら url/href を差し替え（既定はブランドドメイン）。 */
-const SHARE_SITE={ label:'今日から占い師', brand:'Meishiki Inc.', href:'' };  /* href を設定すると出どこがリンクに（QR/本番URL決定後に） */
+const SHARE_SITE={ label:'今日から占い師', brand:'72k株式会社', href:'' };  /* href を設定すると出どこがリンクに（QR/本番URL決定後に） */
 function _shareCredit(forPrint){
   const t='作成：'+SHARE_SITE.label+'　'+SHARE_SITE.brand;
   if(forPrint) return `<div style="margin:12px 0 0;text-align:right;font-size:10px;color:#9AA0AA">${t}</div>`;
@@ -3977,7 +4046,7 @@ async function shareReadingCard(btn){
     if(!blob){ alert('画像の作成に失敗しました。恐れ入りますが画面のスクリーンショットをご利用ください。'); return; }
     const file=new File([blob],'四柱推命_鑑定.png',{type:'image/png'});
     const nm=(personName||'').trim();
-    const txt=(nm?nm+' さんの四柱推命 鑑定':'四柱推命 鑑定')+'（Meishiki Inc.）';
+    const txt=(nm?nm+' さんの四柱推命 鑑定':'四柱推命 鑑定')+'（72k株式会社）';
     if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
       try{ await navigator.share({files:[file], title:'四柱推命 鑑定', text:txt}); }
       catch(e){ if(!(e&&e.name==='AbortError')) _dlBlob(blob); }
@@ -4041,7 +4110,7 @@ function _drawReadingCard(c){ return new Promise(resolve=>{ try{
   // footer
   const fy=H-70; x.strokeStyle='#E7E1D2'; x.lineWidth=2; x.beginPath(); x.moveTo(PAD,fy-30); x.lineTo(W-PAD,fy-30); x.stroke();
   x.fillStyle='#232733'; x.font='900 34px sans-serif'; x.fillText('四柱推命 自動鑑定',PAD,fy+8);
-  x.fillStyle='#B8860B'; x.font='900 34px sans-serif'; x.fillText('Meishiki Inc.',PAD+340,fy+8);
+  x.fillStyle='#B8860B'; x.font='900 34px sans-serif'; x.fillText('72k株式会社',PAD+340,fy+8);
   x.fillStyle='#1E7A45'; x.font='900 28px sans-serif'; x.textAlign='right'; x.fillText('一週間 無料',W-PAD,fy+6); x.textAlign='left';
   cv.toBlob(b=>resolve(b),'image/png');
  }catch(e){ console.error(e); resolve(null); } });
@@ -5954,7 +6023,7 @@ async function generateReading(user,localText,system,deep){
     let data;
     try{
       let r;
-      if(useServer){ var _hdr={"Content-Type":"application/json"}; if(deep)_hdr["x-pk-deep"]="1";
+      if(useServer){ var _hdr={"Content-Type":"application/json"}; if(deep)_hdr["x-pk-deep"]="1"; try{ var _tk=localStorage.getItem("member_token")||sessionStorage.getItem("member_token"); if(_tk)_hdr["Authorization"]="Bearer "+_tk; }catch(_e){}  /* 会員確認（サーバーで検証） */
         r=await fetch('/.netlify/functions/gemini',{method:"POST",headers:_hdr,body:_body}); }
       else{ r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${encodeURIComponent(geminiKey)}`,
         {method:"POST",headers:{"Content-Type":"application/json"},body:_body}); }
