@@ -20,7 +20,15 @@ diff -uN a/auth.js b/auth.js
 diff -uN a/bazi.js b/bazi.js
 --- a/bazi.js
 +++ b/bazi.js
-@@ -55,6 +55,7 @@
+@@ -46,6 +46,7 @@
+ /* 公開API：生年月日(+時刻/不明)から、その人の命式プロフィールを返す。失敗時は null（呼び出し側でフォールバック） */
+ window.PersonBazi=function(y,m,d,hour,minute,timeUnknown,sex){
+   try{
++    y=+y;m=+m;d=+d;if(hour!=null&&hour!=="")hour=+hour;else hour=null;minute=minute?+minute:0;   /* 必ず数値で計算する（10/11） */
+     if(!window.Bazi)return null;
+     var h=timeUnknown?12:(hour==null?12:hour), mi=timeUnknown?0:(minute||0);
+     var sx=(sex==='m'||sex==='male'||sex==='MAN'||sex===1)?'male':'female';
+@@ -55,6 +56,7 @@
      return {ok:true,dayMaster:c.dayMaster,
        pillars:c.pillars.map(function(p){return {stem:p.stem,branch:p.branch,ganzhi:p.ganzhi,terrain:p.terrain,label:p.label};}),
        hourPillar:c.hourPillar?{stem:c.hourPillar.stem,branch:c.hourPillar.branch,ganzhi:c.hourPillar.ganzhi,terrain:c.hourPillar.terrain}:null,
@@ -339,7 +347,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      '今日のあなたに効く、開運のヒントをお届けします。','今日の空模様（運勢）を、そっとのぞいてみましょう。',
      '今日のあなたへ、朝いちばんの運気だよりです。','今日の一日が良くなるコツを、お届けします。',
      '今日の運気とラッキーを、まとめてお伝えします。','今日のあなたの一日を、そっと応援します。'
-@@ -736,7 +894,8 @@
+@@ -736,11 +894,18 @@
    function generateDaily(birth, dateJST, opts){
      opts = opts || {};
      var rel = opts.rel || 'single';
@@ -349,7 +357,18 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var nick = (opts.nick && String(opts.nick).trim()) || 'あなた';
      var T = dateJST || E.todayJST();
      var Y=T.y, M=T.m, D=T.d;
-@@ -780,11 +939,12 @@
+-    var by=birth.y, bm=birth.m, bd=birth.d;
++    /* 生年月日・日付は必ず数値にして、実在する日付かを確かめる（文字で渡されると干支が別のものになるため。10/11）。
++       実在しない日付（2月31日など）は、別人の運勢を送らないよう、エラーにして止める（送信バッチ側でその人だけ飛ばして記録すること） */
++    var by=+birth.y, bm=+birth.m, bd=+birth.d;
++    Y=+Y; M=+M; D=+D;
++    function _okDate(y,m,d){ if(!(y>=1900&&y<=2100&&m>=1&&m<=12&&d>=1&&d<=31)||y%1||m%1||d%1) return false; var t=E.jdnToDate(E.jdn(y,m,d)); return t.y===y&&t.m===m&&t.d===d; }
++    if(!_okDate(by,bm,bd)) throw new Error('generateDaily: 生年月日が正しくありません（'+birth.y+'-'+birth.m+'-'+birth.d+'）');
++    if(!_okDate(Y,M,D)) throw new Error('generateDaily: 配信日が正しくありません（'+T.y+'-'+T.m+'-'+T.d+'）');
+ 
+     var you=pillar(by,bm,bd), p=partner(you.stem,you.branch), t=pillar(Y,M,D);
+     var br=branchRel(t.branch, you.branch);
+@@ -780,11 +945,12 @@
      var _gm=(g.msg!=null)?g.msg:(sex==='f'?g.msgF:g.msgM);
      // メッセージは日付だけの seed%len だと同じ十神の人が全員同じ・かつ10日ごとに近い並びで戻るため、
      // 個人シード×その日で選ぶ。10日後に軸が巡ってきても文面が変わり、1ヶ月は被りにくい。
@@ -363,7 +382,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  
      var dayElem=STEM_GOGYO[t.stem], myElem=STEM_GOGYO[you.stem];
      var motherOf={}; for(var k in SHENG){ motherOf[SHENG[k]]=k; }
-@@ -830,8 +990,12 @@
+@@ -830,8 +996,12 @@
      var snzArr=SEASON_NUANCE[season]||[], snz=snzArr.length?snzArr[pickSeq(ubase,4,snzArr.length,seed)]:'';
      var seasonWord='いまは「'+sekki.name+'（'+sekki.yomi+'）」の頃。'+sekki.word+(snz?' '+snz:'');
  
@@ -377,7 +396,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var food=FOOD[fe][pickSeq(ubase,7,FOOD[fe].length,seed)];
      var mi=pickSeq(ubase,8,MENU[fe].length,seed), menu=MENU[fe][mi];
      // 2品目は「体感の季節」の定番メニュー＝季節感を出す（無ければ従来どおり五行メニュー）
-@@ -848,13 +1012,17 @@
+@@ -848,13 +1018,17 @@
      // ラッキースポットは個人シードのハッシュ(pickIdx)でバンク全体に分散（年間の実効＝fe種数×バンク数）。
      // ご縁の場所(spotNat2/City2)は ラッキースポット(spotNature/City) からバンク半周ずらして導出し、
      // 同じ日に同じ場所が両欄に出る“衝突”を構造的に防ぐ（半周のオフセットは0にならない＝必ず別の場所）。
@@ -401,7 +420,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var lnum=NUM[fe][pickRand(ubase,79,NUM[fe].length,seed)];
      var ptype=PTYPE[fe];
  
-@@ -865,7 +1033,7 @@
+@@ -865,7 +1039,7 @@
      var _occ=Math.floor(seed/10);
      var fPool=_pool(TAIJIN[you.stem]&&TAIJIN[you.stem][god], FRIEND[god]);
      var friend=fPool.length?fPool[pickSeq(ubase,51,fPool.length,_occ)]:'';
@@ -410,7 +429,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var study=STUDY[god]?STUDY[god][pickSeq(ubase,53,STUDY[god].length,_occ)]:'';   // 学び・成長（印星の理）
      // 今日の服＝ラッキーカラー×季節テンプレの合成（色が毎日変わるので数週間まず被らない）
      var wTplSet=(sex==='m'?WEARTPL_M:WEARTPL_F);
-@@ -883,6 +1051,15 @@
+@@ -883,6 +1057,15 @@
      var money=mPool.length?mPool[pickSeq(ubase,55,mPool.length,_occ)]:'';
      var hPool=_pool(HEALTH_TJ[god], HEALTH[god]);
      var health=hPool.length?hPool[pickSeq(ubase,56,hPool.length,_occ)]:'';
@@ -426,7 +445,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var loveSet=(sex==='m')?LOVE_M:LOVE_F;
      var lf=(loveSet[you.stem]&&loveSet[you.stem][god])||[];
      var love='';
-@@ -894,13 +1071,32 @@
+@@ -894,13 +1077,32 @@
        // 同じ日干どうしで文面が丸かぶりしにくいよう、生まれ日の地支もシードに混ぜて分散させる。
        var _cc=_lc[pickSeq(ubase+you.branch.charCodeAt(0)*7,57,_lc.length,_occ)];
        love=lf[_cc[0]]+lf[_cc[1]];
@@ -460,7 +479,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  
      var w=weather(idx);
      var _wob=WOBS[w.name]||WOBS['晴れ時々くもり'], wmsg=_wob[pickSeq(ubase,59,_wob.length,seed)]+ADV_SHARED[pickSeq(ubase,88,ADV_SHARED.length,seed)];
-@@ -934,29 +1130,23 @@
+@@ -934,29 +1136,23 @@
      }
  
      // ===== 件名（メールのタイトル）＝開封率のカギ。毎日ちがう“開けたくなる”件名を作る。
@@ -495,7 +514,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
        '開運アクションは「'+luckyAct+'」',
        'ラッキーは'+lucky.color+'×'+food,
        '今日の月は'+_mo[1]+_mo[0],
-@@ -973,8 +1163,27 @@
+@@ -973,8 +1169,27 @@
        'テーマ「'+themeAxis.ax+'」＆運気'+idx,
        '開運は'+luckyAct
      ];
@@ -524,7 +543,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      return {
        version:'daily-1.0.0',
        subject:subject,
-@@ -991,7 +1200,9 @@
+@@ -991,7 +1206,9 @@
        en:{lv:en.lv, tag:enTag, body:enBody},
        love:love, loveMove:loveMove,
        touka:touka, special:special,
@@ -535,7 +554,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
        element:{day:dayElem, mine:myElem, supplement:fe, reason:feReason, feFood:feFood},
        bazi:favInfo,
        lucky:{color:lucky.color, hex:lucky.hex, direction:ldir, food:food, number:lnum,
-@@ -1008,6 +1219,8 @@
+@@ -1008,6 +1225,8 @@
          else if(_grade.sym==='◎')_b=TODAY_ONE.maru[grp][pickSeq(ubase,42,TODAY_ONE.maru[grp].length,seed)];
          else if(_grade.sym==='△')_b=TODAY_ONE.tri[pickSeq(ubase,43,TODAY_ONE.tri.length,seed)];
          else _b=TODAY_ONE.norm[grp][pickSeq(ubase,44,TODAY_ONE.norm[grp].length,seed)];
@@ -544,7 +563,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
          return _b.split('。')[0]+'。'+TODAY_WHY[pickSeq(ubase,93,TODAY_WHY.length,seed)];
        })(),
        seed:seed, pseed:pseed
-@@ -1017,12 +1230,14 @@
+@@ -1017,12 +1236,14 @@
    /* ===== 公開（画面・メール・サーバが同じ文言/ヘルパーを参照） ===== */
    return {
      generateDaily: generateDaily,

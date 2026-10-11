@@ -20,7 +20,15 @@ diff -uN a/auth.js b/auth.js
 diff -uN a/bazi.js b/bazi.js
 --- a/bazi.js
 +++ b/bazi.js
-@@ -55,6 +55,7 @@
+@@ -46,6 +46,7 @@
+ /* 公開API：生年月日(+時刻/不明)から、その人の命式プロフィールを返す。失敗時は null（呼び出し側でフォールバック） */
+ window.PersonBazi=function(y,m,d,hour,minute,timeUnknown,sex){
+   try{
++    y=+y;m=+m;d=+d;if(hour!=null&&hour!=="")hour=+hour;else hour=null;minute=minute?+minute:0;   /* 必ず数値で計算する（10/11） */
+     if(!window.Bazi)return null;
+     var h=timeUnknown?12:(hour==null?12:hour), mi=timeUnknown?0:(minute||0);
+     var sx=(sex==='m'||sex==='male'||sex==='MAN'||sex===1)?'male':'female';
+@@ -55,6 +56,7 @@
      return {ok:true,dayMaster:c.dayMaster,
        pillars:c.pillars.map(function(p){return {stem:p.stem,branch:p.branch,ganzhi:p.ganzhi,terrain:p.terrain,label:p.label};}),
        hourPillar:c.hourPillar?{stem:c.hourPillar.stem,branch:c.hourPillar.branch,ganzhi:c.hourPillar.ganzhi,terrain:c.hourPillar.terrain}:null,
@@ -257,7 +265,22 @@ diff -uN a/daily-engine.js b/daily-engine.js
      '今日のあなたに効く、開運のヒントをお届けします。','今日の空模様（運勢）を、そっとのぞいてみましょう。',
      '今日のあなたへ、朝いちばんの運気だよりです。','今日の一日が良くなるコツを、お届けします。',
      '今日の運気とラッキーを、まとめてお伝えします。','今日のあなたの一日を、そっと応援します。'
-@@ -918,6 +1051,15 @@
+@@ -766,7 +899,13 @@
+     var nick = (opts.nick && String(opts.nick).trim()) || 'あなた';
+     var T = dateJST || E.todayJST();
+     var Y=T.y, M=T.m, D=T.d;
+-    var by=birth.y, bm=birth.m, bd=birth.d;
++    /* 生年月日・日付は必ず数値にして、実在する日付かを確かめる（文字で渡されると干支が別のものになるため。10/11）。
++       実在しない日付（2月31日など）は、別人の運勢を送らないよう、エラーにして止める（送信バッチ側でその人だけ飛ばして記録すること） */
++    var by=+birth.y, bm=+birth.m, bd=+birth.d;
++    Y=+Y; M=+M; D=+D;
++    function _okDate(y,m,d){ if(!(y>=1900&&y<=2100&&m>=1&&m<=12&&d>=1&&d<=31)||y%1||m%1||d%1) return false; var t=E.jdnToDate(E.jdn(y,m,d)); return t.y===y&&t.m===m&&t.d===d; }
++    if(!_okDate(by,bm,bd)) throw new Error('generateDaily: 生年月日が正しくありません（'+birth.y+'-'+birth.m+'-'+birth.d+'）');
++    if(!_okDate(Y,M,D)) throw new Error('generateDaily: 配信日が正しくありません（'+T.y+'-'+T.m+'-'+T.d+'）');
+ 
+     var you=pillar(by,bm,bd), p=partner(you.stem,you.branch), t=pillar(Y,M,D);
+     var br=branchRel(t.branch, you.branch);
+@@ -918,6 +1057,15 @@
      var money=mPool.length?mPool[pickSeq(ubase,55,mPool.length,_occ)]:'';
      var hPool=_pool(HEALTH_TJ[god], HEALTH[god]);
      var health=hPool.length?hPool[pickSeq(ubase,56,hPool.length,_occ)]:'';
@@ -273,7 +296,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var loveSet=(sex==='m')?LOVE_M:LOVE_F;
      var lf=(loveSet[you.stem]&&loveSet[you.stem][god])||[];
      var love='';
-@@ -938,7 +1080,23 @@
+@@ -938,7 +1086,23 @@
        var _lg=LOVE_GEN[god]||[];
        love=_lg.length?_lg[pickSeq(ubase,57,_lg.length,_occ)]:'';
      }
@@ -298,7 +321,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  
      var w=weather(idx);
      var _wob=WOBS[w.name]||WOBS['晴れ時々くもり'], wmsg=_wob[pickSeq(ubase,59,_wob.length,seed)]+ADV_SHARED[pickSeq(ubase,88,ADV_SHARED.length,seed)];
-@@ -972,7 +1130,7 @@
+@@ -972,7 +1136,7 @@
      }
  
      // ===== 件名（メールのタイトル）＝開封率のカギ。毎日ちがう“開けたくなる”件名を作る。
@@ -307,7 +330,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      // 呼びかけ形にして、件名が相性診断や本文と取り違えられないようにする。
      var _gl=GRADE_LABEL[_grade.sym]||'';
      // 十二運（今日のあなたの運気の巡り）＝日主 × その日の地支。段階名(墓/死/病等)はユーザーに出さず、
-@@ -1025,6 +1183,7 @@
+@@ -1025,6 +1189,7 @@
      while(_tn<_subjTail.length && !(toneOk(_subjTail[_ti],_grade.sym) && _subjTail[_ti].indexOf(_gl)<0)){ _ti=(_ti+1)%_subjTail.length; _tn++; }
      var subject=_subjHead+'｜'+_subjTail[_ti];
  
@@ -315,7 +338,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      return {
        version:'daily-1.0.0',
        subject:subject,
-@@ -1041,7 +1200,9 @@
+@@ -1041,7 +1206,9 @@
        en:{lv:en.lv, tag:enTag, body:enBody},
        love:love, loveMove:loveMove,
        touka:touka, special:special,
@@ -326,7 +349,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
        element:{day:dayElem, mine:myElem, supplement:fe, reason:feReason, feFood:feFood},
        bazi:favInfo,
        lucky:{color:lucky.color, hex:lucky.hex, direction:ldir, food:food, number:lnum,
-@@ -1069,6 +1230,7 @@
+@@ -1069,6 +1236,7 @@
    /* ===== 公開（画面・メール・サーバが同じ文言/ヘルパーを参照） ===== */
    return {
      generateDaily: generateDaily,

@@ -204,6 +204,16 @@ diff -uN a/engine.js b/engine.js
   * ------------------------------------------------------------------
   * 目的：画面（ブラウザ）とサーバ（メール配信バッチ）で “同じ計算” を使うための
   *       DOMに依存しない純ロジック。四柱推命の確定計算＋決定論シードを提供する。
+@@ -61,7 +61,8 @@
+   var DAILY_BR_PEN = {沖:30,刑:20,害:16,破:12};
+ 
+   /* ===== 暦（ユリウス通日） ===== */
+-  function jdn(y,m,d){var a=Math.floor((14-m)/12),yy=y+4800-a,mm=m+12*a-3;
++  /* 年・月・日は必ず数値にしてから計算する（"1960" のような文字で渡されると足し算が文字の連結になり、干支が別のものになるため。10/11） */
++  function jdn(y,m,d){y=+y;m=+m;d=+d;var a=Math.floor((14-m)/12),yy=y+4800-a,mm=m+12*a-3;
+     return d+Math.floor((153*mm+2)/5)+365*yy+Math.floor(yy/4)-Math.floor(yy/100)+Math.floor(yy/400)-32045;}
+   function jdnToDate(J){var a=J+32044,b=Math.floor((4*a+3)/146097),c=a-Math.floor(146097*b/4);
+     var dd=Math.floor((4*c+3)/1461),e=c-Math.floor(1461*dd/4),mm=Math.floor((5*e+2)/153);
 diff -uN a/index.html b/index.html
 --- a/index.html
 +++ b/index.html
@@ -680,7 +690,17 @@ diff -uN a/index.html b/index.html
  const STEMS=["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
  /* マスコット画像は日本語ファイル名だと一部の静的ホストで404になるため、干支→ASCIIファイル名（文字コード）に変換して参照する。例: 甲子 → u7532u5b50.webp */
  function _mfile(gz){return String(gz).split("").map(function(c){return "u"+c.charCodeAt(0).toString(16);}).join("");}
-@@ -1478,6 +1639,16 @@
+@@ -1458,7 +1619,8 @@
+   壬:{img:"陽の水・大河",body:"自由で社交的、頭の回転が速くて発想が豊かな人。<b class=\"kw\">型にはまらない魅力があります。</b>",shadow:"気まぐれだったり、飽きっぽい面も。",hint:"束縛せず、面白がって付き合うと長続きします。",aru:"話題が豊富で初対面でもすぐ打ち解ける／興味があちこちに飛ぶ／束縛されると一気に冷める、でも放っておかれるのも寂しい／予定を詰め込みすぎて、ふと一人になりたくなる／話は上手いのに、本音は意外と見せない。"},
+   癸:{img:"陰の水・雨露",body:"知的で慎ましく、想像力が豊かで献身的な人。<b class=\"kw\">静かに、周りをそっと支えます。</b>",shadow:"優柔不断だったり、心配性になりやすいことも。",hint:"小さな不安にそっと寄り添うと、深い信頼で応えてくれます。",aru:"妄想・空想が止まらない／察してほしいタイプ／心配性で、まだ起きてないことまで先回りして悩んでいる／頼まれると嫌と言えず、つい抱え込む／優しくされた記憶を、長く大切に持っている。"}};
+ 
+-function jdn(y,m,d){const a=Math.floor((14-m)/12),yy=y+4800-a,mm=m+12*a-3;return d+Math.floor((153*mm+2)/5)+365*yy+Math.floor(yy/4)-Math.floor(yy/100)+Math.floor(yy/400)-32045;}
++/* 年・月・日は必ず数値にしてから計算する（文字のままだと足し算が文字の連結になり、干支が別のものになるため。10/11） */
++function jdn(y,m,d){y=+y;m=+m;d=+d;const a=Math.floor((14-m)/12),yy=y+4800-a,mm=m+12*a-3;return d+Math.floor((153*mm+2)/5)+365*yy+Math.floor(yy/4)-Math.floor(yy/100)+Math.floor(yy/400)-32045;}
+ const ANCHOR_JDN=jdn(2000,1,1), ANCHOR_INDEX=54; // 2000-01-01=戊午 / 検証:2008-03-28=丁卯
+ function pillar(y,m,d){const i=(((ANCHOR_INDEX+(jdn(y,m,d)-ANCHOR_JDN))%60)+60)%60;return{stem:STEMS[i%10],branch:BRANCHES[i%12]};}
+ function jdnToDate(J){let a=J+32044,b=Math.floor((4*a+3)/146097),c=a-Math.floor(146097*b/4);let dd=Math.floor((4*c+3)/1461),e=c-Math.floor(1461*dd/4),mm=Math.floor((5*e+2)/153);return{y:100*b+dd-4800+Math.floor(mm/10),m:mm+3-12*Math.floor(mm/10),d:e-Math.floor((153*mm+2)/5)+1};}
+@@ -1478,6 +1640,16 @@
  /* 学年（同級生）ベースで同じ干支の生まれ日を返す。早生まれ考慮：
     4〜12月生まれ→その年4/2〜翌年4/1、1〜3月生まれ→前年4/2〜その年4/1。
     時系列（早い順）で n 件。 */
@@ -697,7 +717,7 @@ diff -uN a/index.html b/index.html
  function matchingDatesInGrade(s,b,by,bm,bd,n){
    const t=targetIndex(s,b);
    const startY=(bm>=4)?by:by-1;                 /* 学年開始（4月）の年 */
-@@ -1495,9 +1666,18 @@
+@@ -1495,9 +1667,18 @@
    function fill(){const days=new Date(+y.value,+m.value,0).getDate();const cur=+d.value||defD;d.innerHTML="";for(let v=1;v<=days;v++)d.add(new Option(v,v));d.value=Math.min(cur,days);}
    y.value=defY;m.value=defM;fill();d.value=defD;y.onchange=fill;m.onchange=fill;
  }
@@ -719,7 +739,7 @@ diff -uN a/index.html b/index.html
  
  /* ── 自分の生年月日を記憶（同一サイト内で共有・solo↔pair同期） ── */
  var SELF_BIRTH_KEY="enbiyori_self_birth";
-@@ -1529,7 +1709,7 @@
+@@ -1529,7 +1710,7 @@
    list.forEach(function(c,i){sel.add(new Option(c.name+"（"+c.y+"/"+c.m+"/"+c.d+"）",i));});
    if(typeof selectId!=="undefined"&&selectId!==null)sel.value=selectId;
  }
@@ -728,7 +748,7 @@ diff -uN a/index.html b/index.html
  if($("contactSel"))$("contactSel").onchange=function(){
    var v=this.value,del=$("contactDel");
    if(v===""){if(del)del.style.display="none";return;}
-@@ -1566,7 +1746,7 @@
+@@ -1566,7 +1747,7 @@
    document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===t));
    $("soloInputs").style.display=mode==="solo"?"":"none";
    $("pairInputs").style.display=mode==="pair"?"":"none";
@@ -737,7 +757,7 @@ diff -uN a/index.html b/index.html
    $("err").textContent="";
  });
  
-@@ -1578,105 +1758,119 @@
+@@ -1578,105 +1759,119 @@
  function showPanel(id,on){$(id).style.display=on?"":"none";}
  /* ── 干支タイプのハッシュタグ（60干支それぞれ専用の8個。日干かぶりでも同じタグは出ない） ── */
  var KANSHI_TAGS={
@@ -928,7 +948,7 @@ diff -uN a/index.html b/index.html
    var html='<div class="tr-inner two">'
      +'<div class="tr-col you">'+_head(roleA,A,'you')+kwHtml(A)+loveHtml(A)+chipHtml(typeTags(A))+'</div>'
      +'<div class="tr-col fate">'+_head(roleB,B,'fate')+kwHtml(B)+loveHtml(B)+chipHtml(typeTags(B))+'</div>'
-@@ -1685,14 +1879,27 @@
+@@ -1685,14 +1880,27 @@
      var sp=(RITSUIN_TAGS[A.stem+A.branch]||[]).concat(["共同事業に向いている"]);
      if(sp.length){
        html+='<div class="tr-sp">'
@@ -957,7 +977,7 @@ diff -uN a/index.html b/index.html
  /* ② 運命度メーター：スコア(0-100)に合わせて数字とマーカー位置を表示 */
  function renderMeter(score){
    var s=Math.max(0,Math.min(100,Math.round(score||0)));
-@@ -1704,11 +1911,11 @@
+@@ -1704,11 +1912,11 @@
  function showRarePop(p){
    var pop=document.getElementById("rarePop"); if(!pop)return;
    var e="✨",t="",r="",bd="";
@@ -974,7 +994,7 @@ diff -uN a/index.html b/index.html
      bd="相性 <b>"+p.score+"%</b> は、全体の中でもかなりの上位。<br>深く響き合う、いいご縁の二人です。";}
    else{e="✨";t="かなりの好相性！";r="相性上位クラス";
      bd="相性 <b>"+p.score+"%</b> は、全体でも上位のいいご縁。<br>自然体で、心地よく過ごせる二人です。";}
-@@ -1752,8 +1959,28 @@
+@@ -1752,8 +1960,28 @@
    document.getElementById("rpShare").onclick=function(){ if(typeof shareOrSaveImage==="function"){shareOrSaveImage();} };
    pop.style.display="";requestAnimationFrame(function(){pop.classList.add("show");});
  }
@@ -1005,7 +1025,7 @@ diff -uN a/index.html b/index.html
  function setMascotCap(capId,stem,branch){
    var el=$(capId);if(!el)return;var info=MASCOT_INFO[stem+branch];
    if(!info){el.innerHTML="";el.style.display="none";return;}
-@@ -1767,7 +1994,7 @@
+@@ -1767,7 +1995,7 @@
      if(s.length>=2 && !/[ァ-ヶー⁠]/.test(s.slice(-2,-1))){ s=s.slice(0,-1)+'⁠'+s.slice(-1); }
      return s;
    };
@@ -1014,7 +1034,7 @@ diff -uN a/index.html b/index.html
  }
  function setMascot(imgId,stem,branch){
    var el=$(imgId);if(!el)return;
-@@ -1777,8 +2004,8 @@
+@@ -1777,8 +2005,8 @@
    el.src="img/mascot/"+_mfile(stem+branch)+".webp";
  }
  function fillPillars(A,B,roleA,roleB){
@@ -1025,7 +1045,7 @@ diff -uN a/index.html b/index.html
    setMascot("youMascot",A.stem,A.branch);setMascot("fateMascot",B.stem,B.branch);
    setMascotCap("youCap",A.stem,A.branch);setMascotCap("fateCap",B.stem,B.branch);
    /* 「◯◯タイプ」タップで特徴（ハッシュタグ）を開閉。同一干支は“お揃い”表示。 */
-@@ -1903,7 +2130,7 @@
+@@ -1903,7 +2131,7 @@
    }
    $("closing").innerHTML='1.66%の奇跡。<br>その人は案外、<span class="hl">すぐそばにいるのかも</span><br>しれません。';
    fillRankPanel(me,dt.Y,dt.M,dt.D);showPanel("panelRank",true);
@@ -1034,7 +1054,7 @@ diff -uN a/index.html b/index.html
  }
  
  /* ===== 拡張：地支(十二支)の縁の判定とスコア ===== */
-@@ -1950,9 +2177,9 @@
+@@ -1950,9 +2178,9 @@
    刑:{plain:"山を越えるほど、強くなる二人",knot:"刑",title:"山を越えるほど強くなる ― 鍛えられる二人",body:"最初はちょっと噛み合わなくて、戸惑うこともあるかも。でもこの二人は、山を越えるたびに強くなるタイプ。困った時こそ離れずに、一緒に乗り越えられたら——他の誰とも違う、深い信頼で結ばれます。<b class=\"kw\">ラクじゃないぶん、本物になれる二人です。</b>",note:"考え方が違うからこそ、一人では気づけない視点をくれる組み合わせです。",close:'試練を越えるほど、<br>深まっていく縁です。'},
    害:{plain:"すれ違うけど、話せば近づく二人",knot:"害",title:"すれ違うけど、話せば近づく二人",body:"気持ちはあるのに、なぜかタイミングがずれる。連絡の間や温度感がすれ違って、もどかしくなることも。でもそれは相性が悪いんじゃなく、ただ“言葉が少し足りない”だけ。<b class=\"kw\">思ってることを素直に伝えたら、ちゃんと近づける二人です。</b>",note:"少しすれ違いやすいけれど、言葉を交わせば近づける組み合わせです。",close:'言葉を尽くすほど、<br>わかり合える二人です。'},
    破:{plain:"ほどよい距離が、心地いい二人",knot:"破",title:"ほどよい距離が、心地いい二人",body:"ベッタリしすぎると、なぜか小さなほころびが出る。でも仲が悪いわけじゃなく、“ちょうどいい距離”がある二人。お互いの時間や世界を大事にできたとき、いちばん心地よくいられる。<b class=\"kw\">毎日一緒じゃなくても、ふと「元気かな」と思い出せる、ゆるくてあたたかい関係です。</b>",note:"少し距離をとるくらいが、ちょうどいい組み合わせです。",close:'ほどよい距離が、<br>二人をちょうどよく保ちます。'},
@@ -1047,7 +1067,7 @@ diff -uN a/index.html b/index.html
  };
  
  /* ===== 二人診断・項目別の詳しい鑑定文（増量版） ===== */
-@@ -1970,9 +2197,9 @@
+@@ -1970,9 +2198,9 @@
  };
  const CORE={
    tokugou:{
@@ -1059,7 +1079,7 @@ diff -uN a/index.html b/index.html
      y:'友情としても一生もの。価値観が根っこから近いため、どんな話も安心して打ち明けられ、お互いの人生の支えになります。久しぶりに会っても、すぐに距離が戻る関係です。何年連絡が空いても、会えば昨日の続きのように話せます。',
      pt:'互いの“素”がそのまま響き合うので、無理をせず自然体でいられること。背伸びも遠慮もいらない——それが、この縁の最大の強みです。一緒にいる時間そのものが、何よりの休息になります。',
      c:'近すぎる縁は、ときに相手の心を読みすぎたり、離れがたくて依存的になったりします（これを四柱推命では「晦気」と呼びます）。距離が近いほど、ひとりの時間や自分の世界も大切にしてください。お互いに別の居場所を持つことが、長続きの支えになります。',
-@@ -2137,7 +2364,8 @@
+@@ -2137,7 +2365,8 @@
    const sr=stemRel(A.stem,B.stem), br=branchRel(A.branch,B.branch);
    const identical=A.stem===B.stem&&A.branch===B.branch;
    let key;
@@ -1069,7 +1089,7 @@ diff -uN a/index.html b/index.html
    else if(identical)key="ritsuin";
    else if(sr==="干合")key=["沖","刑","害","破","支相剋"].includes(br)?"kangou_clash":"kangou_smooth";
    else key=effKeyBr(A,B);
-@@ -2377,7 +2605,21 @@
+@@ -2377,7 +2606,21 @@
    壬:"あなたの世界を広げてくれる、自由な",
    癸:"静かに寄り添ってくれる、知的な"
  };
@@ -1091,7 +1111,7 @@ diff -uN a/index.html b/index.html
    const sr=stemRel(A.stem,B.stem), br=branchRel(A.branch,B.branch);
    if(sr==="干合"&&br==="支合")return"tokugou";
    if(A.stem===B.stem&&A.branch===B.branch)return"ritsuin";
-@@ -2407,30 +2649,39 @@
+@@ -2407,30 +2650,39 @@
    /* 💗 ケンカ・すれ違いの仲直りのコツ：縁のかたち別の全文を常時表示（旧「もっと詳細」内の🌧すれ違ってしまったら＝c.k を格上げ） */
    if(c.k) s+='<div style="margin:14px 0 6px;padding:15px 16px;border-radius:16px;background:linear-gradient(135deg,#fff2f6,#fdf1ea);border:1px solid rgba(216,70,106,.22);box-shadow:0 12px 30px -18px rgba(216,70,106,.35)"><div style="font-family:var(--serif,serif);font-weight:800;font-size:15.5px;color:#d8466a;letter-spacing:.02em">💗 ケンカ・すれ違いの仲直りのコツ</div><p style="margin:8px 0 0;font-size:14.5px;line-height:1.95;color:var(--ink);text-wrap:pretty">'+c.k+'</p></div>';
    if(c.hint) s+='<div class="pd-key">💡 長く続く鍵：'+first(c.hint)+'</div>';
@@ -1137,7 +1157,7 @@ diff -uN a/index.html b/index.html
        closing:clash?'惹かれて、ぶつかって。<br>それでも<span class="hl">離れがたい縁</span>です。':'惹かれ合う縁。<br>一緒にいるほど<span class="hl">安心できる</span>二人です。'};
    }
    const ek=effKeyBr(A,B);
-@@ -2501,37 +2752,37 @@
+@@ -2501,37 +2753,37 @@
  }
  /* もう一歩踏み込んだ鑑定（詳細を読む） */
  var _DEEP_HEART={
@@ -1194,7 +1214,7 @@ diff -uN a/index.html b/index.html
      html+='<div class="rank-row"><div class="rank-head"><span class="rank-medal">'+medal+'</span><span class="rank-lbl">'+rank+'番目に縁が深い</span><span class="rank-pct">'+tier.score+'<span>%</span></span></div>'
        +'<div class="rank-kanshi">「<b class="rk-gz">'+rep.stem+rep.branch+'</b>」の日に生まれた人</div>'
        +(rep.plain?'<div class="rank-plain">'+noOrphan(rep.plain)+'</div>':'')
-@@ -2540,9 +2791,18 @@
+@@ -2540,9 +2792,18 @@
        +'<div class="dates">'+dchips+'</div></div>';
    });
    $("rankLead").innerHTML='天地徳合（1.66%）の運命の相手のほかにも、あなたと<b>縁が深い生まれ日</b>があります。同世代の例で見てみましょう。';
@@ -1213,7 +1233,7 @@ diff -uN a/index.html b/index.html
  function noOrphan(s){
    if(!s) return s;
    var parts=String(s).split("、"), out="";
-@@ -2553,6 +2813,7 @@
+@@ -2553,6 +2814,7 @@
    return out;
  }
  function diagnosePair(){
@@ -1221,7 +1241,7 @@ diff -uN a/index.html b/index.html
    const a=readDate("ay","am","ad"), b=readDate("by","bm","bd");
    if(!a||!b){$("err").textContent="存在しない日付があります。もう一度ご確認ください。";return;}
    saveSelfBirth({y:a.Y,m:a.M,d:a.D}); /* 「あなた」の生年月日を保存→登録フォームへ自動補完 */
-@@ -2568,13 +2829,12 @@
+@@ -2568,13 +2830,12 @@
    if(p.gogyo){setGogyoPanel(p.gogyo);showPanel("panelGogyo",true);}else{showPanel("panelGogyo",false);}
    if(p.key==="tokugou"){
      $("rKicker").textContent="the 1.66% miracle";
@@ -1237,7 +1257,7 @@ diff -uN a/index.html b/index.html
      /* 点数帯に応じた前向きなひとこと（紙吹雪などの演出は出さず、テキストで「良い相性」を伝える） */
      var _sc=p.score;
      /* 惹かれ合いつつぶつかる縁（干合＋衝突）は、点数だけで「良い相性」と言い切ると本文とズレる。
-@@ -2582,22 +2842,35 @@
+@@ -2582,22 +2843,35 @@
      var _goodTxt=p.ambivalent?'惹かれ合う、刺激的な相性'
                 :(_sc>=80?'とても良い相性です':(_sc>=72?'しっかり良い相性です':''));
      var _goodBadge=_goodTxt?'<div style="margin:12px auto 2px;display:inline-block;background:linear-gradient(135deg,#fff5e0,#ffe9bf);border:2px solid #e6b357;border-radius:999px;padding:8px 18px;font-weight:800;font-size:14px;color:#b8862b;box-shadow:0 6px 16px -6px rgba(230,179,87,.4);line-height:1.5;">◎ '+_goodTxt+'</div>':'';
@@ -1282,7 +1302,7 @@ diff -uN a/index.html b/index.html
  /* 図鑑を開く前に診断入力を保存し、図鑑から「戻る」で結果を自動復元する */
  (function(){
    var g=function(id){var e=$(id);return e?e.value:"";};
-@@ -2634,11 +2907,12 @@
+@@ -2634,11 +2908,12 @@
  };
  function shareText(){
    if(!last)return "";
@@ -1298,7 +1318,7 @@ diff -uN a/index.html b/index.html
  function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove("show");},2000);}
  function roundRect(x,X,Y,W,H,r){x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+W,Y,X+W,Y+H,r);x.arcTo(X+W,Y+H,X,Y+H,r);x.arcTo(X,Y+H,X,Y,r);x.arcTo(X,Y,X+W,Y,r);x.closePath();}
  
-@@ -2652,14 +2926,20 @@
+@@ -2652,14 +2927,20 @@
    for(let i=0;i<100;i++){x.globalAlpha=Math.random()*.6+.2;x.fillStyle="#fff7e0";x.beginPath();x.arc(Math.random()*W,Math.random()*H,Math.random()*2+.5,0,7);x.fill();}x.globalAlpha=1;
    x.strokeStyle="rgba(230,196,119,.45)";x.lineWidth=2;x.strokeRect(38,38,W-76,H-76);
    x.textAlign="center";x.textBaseline="alphabetic";
@@ -1322,7 +1342,7 @@ diff -uN a/index.html b/index.html
    /* クリーム色の丸台の上にキャラを乗せる */
    function drawMascot(img,cx,cy){
      /* A案：土台なし・ふんわり発光オーラ＋足元の影＋きらめき */
-@@ -2684,27 +2964,25 @@
+@@ -2684,27 +2965,25 @@
      drawMascot(youImg,300,320);drawMascot(fateImg,780,320);
      x.fillStyle="#e6c477";x.font='56px '+SER;x.fillText("✕",W/2,338);
      x.font='26px '+SER;x.fillStyle="#f3c9d2";x.fillText("あなた",300,470);x.fillStyle="#e6c477";x.fillText("お相手",780,470);
@@ -1355,7 +1375,7 @@ diff -uN a/index.html b/index.html
    x.fillText(tags,W/2,1030);
    /* CTA帯（あなたも占ってみて＋ドメイン） */
    var cy=1170;x.fillStyle="rgba(230,196,119,.13)";roundRect(x,150,cy-58,W-300,116,58);x.fill();
-@@ -2712,9 +2990,12 @@
+@@ -2712,9 +2991,12 @@
    x.fillStyle="#ffe9b0";x.font='bold 40px '+SER;x.fillText("あなたの相性も、占ってみて",W/2,cy-4);
    var host="166unmei.com";
    x.fillStyle="#e6c477";x.font='28px '+SER;x.fillText("▶  1分・無料"+(host?"　"+host:""),W/2,cy+44);
@@ -1368,7 +1388,7 @@ diff -uN a/index.html b/index.html
    toast("画像を作成中…");
    let cv;try{cv=await makeCard();}catch(e){toast("画像を作れませんでした");return;}
    cv.toBlob(async function(blob){
-@@ -2724,7 +3005,7 @@
+@@ -2724,7 +3006,7 @@
        try{await navigator.share({files:[file],text:shareText()+" "+shareUrl()+shareTags()});return;}catch(e){}
      }
      const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="kiseki-166-match.png";document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1500);
@@ -1377,7 +1397,7 @@ diff -uN a/index.html b/index.html
    },"image/png");
  }
  /* ── 拡散用URLに自分の紹介コード(?ref=)を付与（K係数計測・招待ループ用）── */
-@@ -2739,10 +3020,10 @@
+@@ -2739,10 +3021,10 @@
  (function(){var _su=$("saveUnder");if(_su)_su.onclick=function(){shareOrSaveImage();};})();
  if(navigator.share){var sn=$("shareNative");if(sn){sn.style.display="";sn.onclick=async function(){try{await navigator.share({title:"1.66 奇跡の相性診断",text:shareText()+shareTags(),url:shareUrl()});}catch(e){}};}}
  
@@ -1391,7 +1411,7 @@ diff -uN a/index.html b/index.html
  (function starfield(){
    const c=$("stars"); if(!c) return;
    const x=c.getContext("2d"); let stars=[],W=0,H=0,lastW=-1,raf=0,last=0;
-@@ -2822,7 +3103,7 @@
+@@ -2822,7 +3104,7 @@
    function render(){
      var link=document.getElementById("inviteLink");if(link)link.value=inviteUrl();
    }
@@ -1400,7 +1420,7 @@ diff -uN a/index.html b/index.html
    function wire(){
      var c=document.getElementById("inviteCopy");if(c)c.onclick=async function(){try{await navigator.clipboard.writeText(inviteUrl());if(window.toast)window.toast("リンクをコピーしました");}catch(e){}};
      var l=document.getElementById("inviteLine");if(l)l.onclick=function(){window.open("https://line.me/R/msg/text/?"+encodeURIComponent(txt()+inviteUrl()),"_blank","noopener");};
-@@ -2833,17 +3114,7 @@
+@@ -2833,17 +3115,7 @@
    window._inviteRender=render; /* reveal() から結果表示のたびに呼ぶ */
  })();
  </script>
@@ -1419,7 +1439,7 @@ diff -uN a/index.html b/index.html
  <!-- 🥉 レア当たりPOP -->
  <div class="rare-pop" id="rarePop" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="rpTitle">
    <div class="rp-backdrop" id="rpBackdrop"></div>
-@@ -2904,20 +3175,20 @@
+@@ -2904,20 +3176,20 @@
  #regWall .rw-bonus b{color:#1b3a6b;}
  #regWall .rw-bonus .big{font-size:1.12em;color:#1b3a6b;}
  </style>
@@ -1449,7 +1469,7 @@ diff -uN a/index.html b/index.html
    </div>
  </div>
  <script>
-@@ -2956,5 +3227,61 @@
+@@ -2956,5 +3228,61 @@
  window.__glueKata=glue;
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){glue(document.body);});else glue(document.body);
  })();</script>
