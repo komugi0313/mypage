@@ -1536,7 +1536,16 @@ const App=(function(){
     if(s.plans) delete s.plans;
     db.customers=db.customers||[];
   }
-  function save(){ try{localStorage.setItem(SKEY,JSON.stringify(db));}catch(e){} }
+  /* 顧客名簿は端末（ブラウザ）の保存領域に置く。件数の上限は無いが、端末の容量（目安：約500万文字）を使い切ると保存できない。
+     黙って失敗しないよう、いっぱいのときは必ず知らせ、8割を超えたら早めに書き出し（バックアップ）を案内する。 */
+  let _nearWarned=false;
+  function storageUse(){ let n=0; try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); n+=k.length+(localStorage.getItem(k)||'').length; } }catch(e){} return n; }
+  function save(){
+    try{ localStorage.setItem(SKEY,JSON.stringify(db)); }
+    catch(e){ if(true){ alert('この端末の保存容量がいっぱいのため、顧客名簿を保存できませんでした。\n\n「設定」タブの「データのバックアップ」→「書き出す」でファイルに保存してから、使わなくなった顧客や記録を削除してください。'); } return false; }
+    if(!_nearWarned && storageUse()>4000000){ _nearWarned=true; setTimeout(function(){ alert('この端末の保存容量が残り少なくなっています（8割以上を使用）。\n\n「設定」タブの「データのバックアップ」→「書き出す」でファイルに保存し、使わなくなった顧客や記録を削除しておくと安心です。'); },300); }
+    return true;
+  }
 
   /* ---- 立卦 ---- */
   function castCoin(){
@@ -2372,7 +2381,8 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     // 同じ鑑定を2回保存しても、履歴が重複しないように（2回目はメモなどを上書き）
     const dup=c.history.findIndex(x=>x.at===rec.at);
     if(dup>=0) c.history[dup]=Object.assign(c.history[dup],rec); else c.history.unshift(rec);
-    save(); refreshCustSelect(); document.getElementById('custSelect').value=id;
+    if(!save()) return;   // 端末の容量がいっぱいで保存できなかった（お知らせは save が出す）
+    refreshCustSelect(); document.getElementById('custSelect').value=id;
     document.getElementById('custNewName').value='';
     document.getElementById('readingMemo').value='';
     toast(t('t_saved_reading'));
@@ -2407,7 +2417,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
   function saveHistMemo(i){
     const c=db.customers.find(x=>x.id===editingId); if(!c||!c.history||!c.history[i])return;
     c.history[i].memo=(document.getElementById('histMemo'+i).value||'').trim();
-    save(); toast(t('t_saved_memo'));
+    if(save()) toast(t('t_saved_memo'));
   }
   function saveCust(){ const c=db.customers.find(x=>x.id===editingId); if(!c)return; c.name=document.getElementById('coEditName').value.trim()||c.name; c.memo=document.getElementById('coMemo').value; save(); renderCustList(); refreshCustSelect(); toast(t('t_saved')); }
   function deleteCust(){ if(!confirm('このお客様を削除しますか？履歴も消えます。'))return; db.customers=db.customers.filter(x=>x.id!==editingId); save(); renderCustList(); refreshCustSelect(); closeCust(); }

@@ -6865,16 +6865,27 @@ function mpLoad(){
   try{const old=JSON.parse(store.get(CKEY)||'[]'); clients=old.map(c=>({...c,memo:c.memo||'',readings:c.readings||[],ts:c.ts||Date.now(),deleted:false}));}catch(e){}
   return {schema:1,updatedAt:0,clients};
 }
-function mpWrite(doc){doc.schema=1;store.set(DKEY,JSON.stringify(doc));}
+/* 顧客カルテは端末（ブラウザ）の保存領域に置く。件数の上限は無いが、端末の容量（目安：約500万文字）を使い切ると保存できない。
+   黙って失敗しないよう、いっぱいのときは必ず知らせ、8割を超えたら早めに書き出し（バックアップ）を案内する。 */
+let _mpNearWarned=false;
+function mpStorageUse(){ let n=0; try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); n+=k.length+(localStorage.getItem(k)||'').length; } }catch(e){} return n; }
+function mpWrite(doc){doc.schema=1;const v=JSON.stringify(doc);
+  try{ localStorage.setItem(DKEY,v); }
+  catch(e){ store.set(DKEY,v); if(true){ alert('この端末の保存容量がいっぱいのため、顧客カルテを保存できませんでした。\n\n顧客カルテの「⬇ バックアップ書き出し」でファイルに保存してから、使わなくなった顧客や鑑定を削除してください。'); } return false; }
+  if(!_mpNearWarned && mpStorageUse()>4000000){ _mpNearWarned=true; setTimeout(function(){ alert('この端末の保存容量が残り少なくなっています（8割以上を使用）。\n\n顧客カルテの「⬇ バックアップ書き出し」でファイルに保存し、使わなくなった顧客や鑑定を削除しておくと安心です。'); },300); }
+  return true;
+}
 function mpMerge(a,b){const m=new Map();for(const c of [...((a&&a.clients)||[]),...((b&&b.clients)||[])]){const p=m.get(c.id);if(!p||(c.ts||0)>=(p.ts||0))m.set(c.id,c);}return {schema:1,updatedAt:Math.max((a&&a.updatedAt)||0,(b&&b.updatedAt)||0),clients:[...m.values()]};}
 function mpActive(){return mpLoad().clients.filter(c=>!c.deleted).sort((a,b)=>(b.ts||0)-(a.ts||0));}
 function mpSetStatus(s){mpStatus=s;const el=document.getElementById('mp-status');if(el)el.textContent=({guest:'未ログイン（端末内のみ）',local:'端末内に保存',offline:'オフライン（端末内のみ）',syncing:'同期中…',synced:'クラウド同期済み'})[s]||s;}
 function mpTouch(){ if(!mpEmail()){mpSetStatus('guest');return;} clearTimeout(mpPushTimer); mpPushTimer=setTimeout(mpPush,1500); }
+/* 顧客カルテの同期にもログインの鍵（トークン）を付ける＝サーバーで本人確認できるように */
+function mpHeaders(){ const h={'Content-Type':'application/json'}; try{ const tk=localStorage.getItem('member_token')||sessionStorage.getItem('member_token'); if(tk) h['Authorization']='Bearer '+tk; }catch(e){} return h; }
 async function mpPush(){
   const email=mpEmail(); if(!email){mpSetStatus('guest');return;}
   mpSetStatus('syncing');
   try{
-    const r=await fetch(MP_API+'/mypage-put',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,data:mpLoad()})});
+    const r=await fetch(MP_API+'/mypage-put',{method:'POST',headers:mpHeaders(),body:JSON.stringify({email,data:mpLoad()})});
     if(!r.ok)throw 0; const j=await r.json(); if(j&&j.data){mpWrite(j.data);renderClients();}
     mpSetStatus('synced');
   }catch(e){mpSetStatus('offline');}
@@ -6883,7 +6894,7 @@ async function mpPull(){
   const email=mpEmail(); if(!email){mpSetStatus('guest');return;}
   mpSetStatus('syncing');
   try{
-    const r=await fetch(MP_API+'/mypage-get',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const r=await fetch(MP_API+'/mypage-get',{method:'POST',headers:mpHeaders(),body:JSON.stringify({email})});
     if(!r.ok)throw 0; const j=await r.json();
     if(j&&j.data){mpWrite(mpMerge(mpLoad(),j.data));renderClients();}
     mpSetStatus('synced'); mpPush();
@@ -6941,7 +6952,8 @@ function saveReadingToClient(kind,title,text){
   if(!cur){const dv=document.getElementById('f-date').value;if(!dv){alert('先に「＋鑑定者を保存」で鑑定者を登録してください。');return;}addClient();cur=mpLoad().clients.find(x=>x.id===currentClientId);if(!cur)return;}
   const doc=mpLoad();const c=doc.clients.find(x=>x.id===cur.id);
   c.readings=c.readings||[];c.readings.unshift({id:mpNewId('r_'),kind,title,text,ts:Date.now()});c.ts=Date.now();
-  mpWrite(doc);renderClients();mpTouch();
+  if(!mpWrite(doc))return;   // 端末の容量がいっぱいで保存できなかった（お知らせは mpWrite が出す）
+  renderClients();mpTouch();
   const my=document.getElementById('mypage-card');if(my)my.scrollIntoView({behavior:'smooth',block:'start'});
   alert('「'+c.name+'」に鑑定を保存しました。ヘッダの「👥 顧客カルテ」から見返せます。');
 }
@@ -7154,7 +7166,7 @@ function renderClients(){
 /* バックアップ：書き出し／読み込み（クラウド不調時の保険・手動移行用） */
 function mpExport(){
   const blob=new Blob([JSON.stringify(mpLoad(),null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='meishiban-mypage-'+nowStr().replace(/[^0-9]/g,'')+'.json';
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='karte-backup-'+nowStr().replace(/[^0-9]/g,'')+'.json';
   document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},100);
 }
 function mpImport(file){

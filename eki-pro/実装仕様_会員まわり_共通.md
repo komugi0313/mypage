@@ -2,7 +2,7 @@
 
 > **この1枚が唯一の正です。** 過去のやり取り・旧ドキュメントは破棄し、本書の内容だけで実装してください。
 > フロント（このリポジトリ `pro/` 一式）は**完成済み**。エンジニアが作るのは **サーバー側API・決済・本番切替の3つだけ** です。
-> 対応バージョン: PRO `pro/sw.js` の `CACHE = shichu-jidou-v422`／ビギナー `beginner/sw.js` `kyoukara-uranaishi-v59`／易 EKI Pro `eki-pro/app/sw.js` `eki-pro-v28` ／ 最終更新: 2026-10-11
+> 対応バージョン: PRO `pro/sw.js` の `CACHE = shichu-jidou-v423`／ビギナー `beginner/sw.js` `kyoukara-uranaishi-v60`／易 EKI Pro `eki-pro/app/sw.js` `eki-pro-v29` ／ 最終更新: 2026-10-11
 > 3サイトの全体の依頼内容は、リポジトリ直下の `エンジニアへの実装依頼_3サイト.md` を先に読むこと。
 > 前提（発注者確認済み）：**Gemini（生成AI）はサーバー内蔵**（キーはサーバー保持・フロントに出さない）／**決済はテレコムクレジット**／**Web先行 → のちに iOS・Android アプリ**。
 
@@ -100,8 +100,8 @@
 
 | 関数 | body | 成功レスポンス | 役割 |
 |---|---|---|---|
-| `mypage-get` | `{ email }` | `{ data: <ドキュメント> }` | 保存データ取得 |
-| `mypage-put` | `{ email, data: <ドキュメント> }` | `{ data: <保存後ドキュメント> }` | 保存（サーバー側マージ推奨） |
+| `mypage-get` | `{ email }`＋`Authorization: Bearer <member_token>` | `{ data: <ドキュメント> }` | 保存データ取得（トークンの本人のデータだけを返す） |
+| `mypage-put` | `{ email, data: <ドキュメント> }`＋`Authorization: Bearer <member_token>` | `{ data: <保存後ドキュメント> }` | 保存（サーバー側マージ推奨）。1会員あたり数MB程度を想定 |
 
 **ドキュメント形式（`data`）** — フロント実装準拠：
 ```json
