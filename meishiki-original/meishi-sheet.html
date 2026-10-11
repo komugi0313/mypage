@@ -856,6 +856,8 @@
     [/[甲乙丙丁戊己庚辛壬癸]の([^、。「」]{1,14}?)と[子丑寅卯辰巳午未申酉戌亥]の/g,'$1と'],
     [/五行バランス/g,'5つの気のバランス'],[/五行/g,'気'],
     [/月の区切りは節入りの日で/g,'月の区切りは季節の変わり目の日で'],
+    [/時柱（晩年・将来・本心・お子さんとの縁）は/g,'晩年・将来・本心・お子さんとの縁の部分は'],
+    [/※この鑑定文は、あなたの命式（[^）]*）をもとに詳しく読み解いたものです。命式表の数値が正となります。/g,'※この鑑定文は、あなたの生年月日から詳しく読み解いたものです。'],
     [/命式/g,'生まれ持った性質']
   ];
   function plainText(t){ for(var i=0;i<R.length;i++) t=t.replace(R[i][0],R[i][1]); return t; }
@@ -2259,7 +2261,7 @@ window.KANSHI60_DETAIL={
       }
       var g=cfg.good[tsu]; if(g){ why.push(g.label); score+=g.score; }
       if(cfg.caution[tsu]){ caution=true; creas=cfg.caution[tsu]; }
-      if(cfg.chong && CHONG[dayBranch]===mp.shi){ caution=true; creas=creas||'冲（急変）'; }
+      if(cfg.chong && CHONG[dayBranch]===mp.shi){ caution=true; creas=creas||(document.body.classList.contains('bg-mode')?'急な変化':'冲（急変）'); }
       out.push({mo:mo, why:why, score:score, caution:caution, creas:creas});
     }
     return out;
@@ -3922,7 +3924,7 @@ window.KANSHI60_DETAIL={
         pg.innerHTML=
           '<div class="rd-page-head">鑑定書 <small>'+(nm?esc(nm)+' ・ ':'')+'No.'+pageNo+'</small></div>'+
           '<div class="rd-body"><div class="'+colsCls+'"></div></div>'+
-          '<div class="rd-page-foot">四柱推命 鑑定書'+(sc?' ・ '+esc(sc):'')+(dt?' ・ 鑑定日：'+esc(dt):'')+'</div>';
+          '<div class="rd-page-foot">'+(document.body.classList.contains('bg-mode')?'生まれ持った性質の鑑定書':'四柱推命 鑑定書')+(sc?' ・ '+esc(sc):'')+(dt?' ・ 鑑定日：'+esc(dt):'')+'</div>';
         pages.appendChild(pg);
         var cols=pg.querySelector('.rd-page-cols');
         cols.style.height=(pg.querySelector('.rd-body').clientHeight||600)+'px';
@@ -4099,6 +4101,13 @@ window.KANSHI60_DETAIL={
           txt=noAIWord(txt);   // 「私はAIなので」等の言い回しを画面・印刷に出さない
           var html=parseAIToHTML(txt);
           if(html && window.__bgPlain) html=window.__bgPlain(html);
+          // ビギナー（初心者モード）：専門用語が残った文章は出さない（1回だけ作り直し、それでも残れば専門用語なしの定型文にする）
+          if(html && window.__bgPlain && BG_JARGON.test(html.replace(/<[^>]+>/g,''))){
+            if(!isRetry){ setTimeout(function(){ attempt(true); }, 1500); return; }
+            _aiBusy=false; aiFallbackToTemplate();
+            var eh=document.getElementById('engHint'); if(eh) eh.textContent='やさしい言葉の鑑定書（定型文）で表示しています。';
+            return;
+          }
           if(!html){ if(!isRetry){ setTimeout(function(){ attempt(true); }, 2500); return; } aiCardMsg('返答を整形できませんでした。','もう一度お試しください。'); _aiBusy=false; return; }
           window._aiReadingHTML=html;
           aiCountInc();   // 成功したAI生成だけカウント（不正防止のゆるい1日上限）
@@ -4114,6 +4123,7 @@ window.KANSHI60_DETAIL={
     attempt(false);
   }
   // 圏外・接続不可のときは、自動で定型文（オフラインの鑑定書）に切り替えて表示する
+  var BG_JARGON=/命式|通変星|十二運|大運|年運|月運|日運|五行|干支|日主|日干|蔵干|空亡|天中殺|比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬|身旺|身強|身弱|喜神|忌神|用神|日柱|月柱|年柱|時柱|天戦地冲|三合|方合|干合|支合|会局|帝旺|[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/;
   function aiFallbackToTemplate(){
     setEngine('template');
     var h=document.getElementById('engHint');
@@ -4702,6 +4712,7 @@ window.KANSHI60_DETAIL={
       var dm=document.getElementById('defMsg'); if(dm) dm.textContent='紙・版・模様・色分け・表の型・章の選択を、次に開いたときも同じにします（この端末内）。';
       var eh=document.getElementById('engHint'); if(eh && /命式/.test(eh.textContent)) eh.textContent=eh.textContent.replace(/この命式を/,'生まれ持った性質を');
       document.title='生まれ持った性質の鑑定書';
+      [].slice.call(document.querySelectorAll('p.footline')).forEach(function(p){ var t=p.firstChild; if(t&&t.nodeType===3&&/^四柱推命 鑑定書/.test(t.nodeValue)) t.nodeValue=t.nodeValue.replace('四柱推命 鑑定書','生まれ持った性質の鑑定書'); });
       var e=document.getElementById('ovEasy'); if(e) e.click();
       var l=document.getElementById('lvEasy'); if(l) l.click();
       try{ window.dispatchEvent(new Event('resize')); }catch(e){}
