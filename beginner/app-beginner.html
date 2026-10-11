@@ -5997,8 +5997,15 @@ function _nameMasks(){
 }
 function _maskNames(t,m){ t=String(t||''); m.forEach(([n,k])=>{ t=t.split(n).join(k); }); return t; }
 function _unmaskNames(t,m){ t=String(t||''); m.forEach(([n,k])=>{ t=t.split(k).join(n); }); return t; }
+/* 返ってきた文章に「私はAIなので」「AIの分析では」のような言い回しが混じっても、画面には出さない（相談内容としてのAIの話題はそのまま） */
+function noAIWord(t){ return String(t||'')
+    .replace(/(?:私|わたし|わたくし)(?:は|も)(?:AI|ＡＩ|人工知能)(?:です|でございます|だ|な)?(?:ので|から|のため|として)[^、。！？\n]*[、]?/g,'')
+    .replace(/(?:私|わたし|わたくし)(?:は|も)(?:AI|ＡＩ|人工知能)[^。！？\n]*[。！？]?/g,'')
+    .replace(/(?:AI|ＡＩ|人工知能)(?:である|なので|ですので|ですから|のため|として)(?:私|わたし)?[^、。！？\n]*[、]?/g,'')
+    .replace(/(?:AI|ＡＩ|人工知能)(?:による|が行う|の|が)?(分析|鑑定|診断|回答|判断|読み解き|占い)/g,'$1'); }
+const NO_AI_RULE='\n【言葉の決まり】「AI」「人工知能」という言葉は使わない。自分が何者か（AIである等）の説明や断り書きも書かない。鑑定者として自然に書く。';
 async function generateReading(user,localText,system,deep){
-  system=(system||CONSULT_SYSTEM)+YOMI_RULE+NO_REPEAT_RULE;
+  system=(system||CONSULT_SYSTEM)+YOMI_RULE+NO_REPEAT_RULE+NO_AI_RULE;
   const _nm=_nameMasks();
   if(_nm.length){ user=_maskNames(user,_nm); system=_maskNames(system,_nm)+'\n【お名前の印】文章の中の「〔本人〕」「〔お相手〕」は、実際のお名前の代わりの印です。お名前で呼ぶときは、この印を一字も変えずにそのまま書いてください（例：〔本人〕さん）。'; }
   // 電波がない（オフライン）ときはAIを呼ばず、端末内鑑定を出す
@@ -6037,7 +6044,7 @@ async function generateReading(user,localText,system,deep){
   // それでもダメなときだけオフライン鑑定に切替（ユーザーが質問を打ち直す必要はありません）。
   let text=await callOnce();
   if(!text){ await new Promise(r=>setTimeout(r,2500)); text=await callOnce(); }
-  if(text){ aiCountInc(); return {ok:true,text:_unmaskNames(text,_nm),online:true}; }
+  if(text){ aiCountInc(); return {ok:true,text:noAIWord(_unmaskNames(text,_nm)),online:true}; }
   aiEngine='オフライン鑑定（端末内）';
   return {ok:true,text:localText,fallback:true,online:false,note:'詳細鑑定に接続できなかったため、端末内で作成した鑑定（オフライン鑑定）を表示しています（自動で再試行しました）。'};
 }

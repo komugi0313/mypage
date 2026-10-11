@@ -1704,12 +1704,18 @@ const App=(function(){
   const NAME_TOKEN='〔お名前〕';
   function clientName(){ return ((document.getElementById('custNewName')||{}).value||'').trim()||currentCustName()||''; }
   function fillName(txt){ const n=clientName(); txt=String(txt||''); return n ? txt.split(NAME_TOKEN).join(n) : txt.split(NAME_TOKEN+'さん').join('あなた').split(NAME_TOKEN).join(''); }
+  /* 返ってきた文章に「私はAIなので」「AIの分析では」のような言い回しが混じっても、画面には出さない（相談内容としてのAIの話題はそのまま） */
+  function noAIWord(t){ return String(t||'')
+      .replace(/(?:私|わたし|わたくし)(?:は|も)(?:AI|ＡＩ|人工知能)(?:です|でございます|だ|な)?(?:ので|から|のため|として)[^、。！？\n]*[、]?/g,'')
+      .replace(/(?:私|わたし|わたくし)(?:は|も)(?:AI|ＡＩ|人工知能)[^。！？\n]*[。！？]?/g,'')
+      .replace(/(?:AI|ＡＩ|人工知能)(?:である|なので|ですので|ですから|のため|として)(?:私|わたし)?[^、。！？\n]*[、]?/g,'')
+      .replace(/(?:AI|ＡＩ|人工知能)(?:による|が行う|の|が)?(分析|鑑定|診断|回答|判断|読み解き|占い)/g,'$1'); }
   async function callGemini(prompt,kind){
     if(!canOnline()){
       throw new Error('オンライン鑑定の接続先が設定されていません。');
     }
     const body=JSON.stringify({
-      contents:[{parts:[{text:prompt}]}],
+      contents:[{parts:[{text:prompt+'\n【言葉の決まり】「AI」「人工知能」という言葉は使わない。自分が何者か（AIである等）の説明や断り書きも書かない。鑑定者として自然に書く。'}]}],
       generationConfig:{maxOutputTokens:3072,temperature:0.8,thinkingConfig:{thinkingBudget:0}}
     });
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -1717,7 +1723,7 @@ const App=(function(){
       let res;
       try{ res=await geminiPost(body,kind); }
       catch(e){ if(a<2){await sleep(2500);continue;} throw new Error('通信に失敗しました。電波の良い場所で再度お試しください。'); }
-      if(res.ok){ const d=await res.json(); const t=d.candidates?.[0]?.content?.parts?.[0]?.text; if(!t)throw new Error('応答が空でした'); return fillName(t.replace(/[＊*]/g,'')); }
+      if(res.ok){ const d=await res.json(); const t=d.candidates?.[0]?.content?.parts?.[0]?.text; if(!t)throw new Error('応答が空でした'); return fillName(noAIWord(t.replace(/[＊*]/g,''))); }
       let msg=`HTTP ${res.status}`; try{const e=await res.json();msg=e.error?.message||msg;}catch(_){}
       const busy=res.status===429||res.status===503||/overload|unavailable|rate|demand/i.test(msg);
       if(busy&&a<2){await sleep(3000);continue;}

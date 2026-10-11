@@ -4007,6 +4007,11 @@ window.KANSHI60_DETAIL={
     return lines.join('\n');
   }
   // AIの返答（見出し#・段落・箇条書き・）をA4カード用のHTML(.rd-cols>.rd-sec)へ変換
+  function noAIWord(t){ return String(t||'')
+      .replace(/(?:私|わたし|わたくし)(?:は|も)(?:AI|ＡＩ|人工知能)(?:です|でございます|だ|な)?(?:ので|から|のため|として)[^、。！？\n]*[、]?/g,'')
+      .replace(/(?:私|わたし|わたくし)(?:は|も)(?:AI|ＡＩ|人工知能)[^。！？\n]*[。！？]?/g,'')
+      .replace(/(?:AI|ＡＩ|人工知能)(?:である|なので|ですので|ですから|のため|として)(?:私|わたし)?[^、。！？\n]*[、]?/g,'')
+      .replace(/(?:AI|ＡＩ|人工知能)(?:による|が行う|の|が)?(分析|鑑定|診断|回答|判断|読み解き|占い)/g,'$1'); }
   function parseAIToHTML(text){
     text=String(text||'').replace(/[*＊`>#]{1,}\s?/g, function(m){ return /^#/.test(m)?m:''; }); // アスタリスク等の装飾を除去（見出し#は残す）
     text=text.replace(/\r/g,'');
@@ -4074,6 +4079,7 @@ window.KANSHI60_DETAIL={
     }
     // お名前は外部の文章作成サービスに送らない（印「〔ご本人〕」で送り、受け取った文章の中で本当のお名前に戻す）
     var NMTK='〔ご本人〕';
+    sys+='\n【言葉の決まり】「AI」「人工知能」という言葉は使わない。自分が何者か（AIである等）の説明や断り書きも書かない。鑑定者として自然に書く。';
     var usr='【鑑定対象】'+NMTK+'さん（お名前の代わりの印。呼びかけるときは、この印を一字も変えずに書く）\n【命式データ】\n'+chartSummaryText(r)+'\n\n上記の命式から、指定の章立てで鑑定書の本文を書いてください。';
     var body=JSON.stringify({ system_instruction:{parts:[{text:sys}]}, contents:[{role:'user',parts:[{text:usr}]}], generationConfig:{maxOutputTokens:3200} });
     // まず1回オンライン生成。失敗（レート制限・一時エラー・空応答）なら数秒待って自動で1回だけ再試行。
@@ -4090,6 +4096,7 @@ window.KANSHI60_DETAIL={
             _aiBusy=false; aiFallbackToTemplate(); return;
           }
           txt=nm ? txt.split(NMTK).join(nm) : txt.split(NMTK+'さん').join('あなた').split(NMTK).join('あなた');
+          txt=noAIWord(txt);   // 「私はAIなので」等の言い回しを画面・印刷に出さない
           var html=parseAIToHTML(txt);
           if(html && window.__bgPlain) html=window.__bgPlain(html);
           if(!html){ if(!isRetry){ setTimeout(function(){ attempt(true); }, 2500); return; } aiCardMsg('返答を整形できませんでした。','もう一度お試しください。'); _aiBusy=false; return; }
