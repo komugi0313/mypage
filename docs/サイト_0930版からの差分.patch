@@ -453,10 +453,25 @@ diff -uN a/daily-engine.js b/daily-engine.js
        element:{day:dayElem, mine:myElem, supplement:fe, reason:feReason, feFood:feFood},
        bazi:favInfo,
        lucky:{color:lucky.color, hex:lucky.hex, direction:ldir, food:food, number:lnum,
-@@ -1069,6 +1236,7 @@
+@@ -1066,9 +1233,21 @@
+     };
+   }
+ 
++  /* 文字の整え（10/11）：文をつないだときの「。 」「） 」の半角すき間を取る。文字だけで、計算・ランクには触れない */
++  function _tidyText(v, depth){
++    if(typeof v==='string') return v.replace(/([。！？）」])[ \u3000]+(?=[^\s])/g, '$1');
++    if(depth>6 || !v || typeof v!=='object') return v;
++    if(Array.isArray(v)){ for(var i=0;i<v.length;i++) v[i]=_tidyText(v[i], depth+1); return v; }
++    if(Object.getPrototypeOf(v)!==Object.prototype) return v;
++    for(var k in v){ if(Object.prototype.hasOwnProperty.call(v,k)) v[k]=_tidyText(v[k], depth+1); }
++    return v;
++  }
++  function generateDailyTidy(birth, dateJST, opts){ return _tidyText(generateDaily(birth, dateJST, opts), 0); }
++
    /* ===== 公開（画面・メール・サーバが同じ文言/ヘルパーを参照） ===== */
    return {
-     generateDaily: generateDaily,
+-    generateDaily: generateDaily,
++    generateDaily: generateDailyTidy,
 +    isTensen: isTensen, TENSEN_MAP: TENSEN_MAP, tensenFlow: tensenFlow,
      dailyGrade: dailyGrade, GRADE_LABEL: GRADE_LABEL, dayRawScore: dayRawScore, gradeThresholds: gradeThresholds,
      ymAdjust: ymAdjust, ymPillars: ymPillars,
@@ -2115,6 +2130,15 @@ diff -uN a/mypage.html b/mypage.html
      $("dayInfo").innerHTML='';$("gogyoWrap").innerHTML='';$("favWrap").innerHTML='';
      $("kanshiBody").innerHTML=jt2.body||'';
    }
+@@ -1059,7 +1113,7 @@
+   $("infoBirth").textContent=fmtBirth(MEMBER.birth);
+   $("infoRel").textContent=relText(MEMBER.rel);
+   if($("infoSex")) $("infoSex").textContent=sexText(MEMBER.sex);
+-  $("infoInterest").textContent=MEMBER.interest;
++  $("infoInterest").textContent=String(MEMBER.interest||"").replace(/友達/g,"友だち");   // 表示だけ「友だち」（保存値は「友達づくり」のまま）
+   // 干支計算
+   CUR.me=pillar(MEMBER.birth.y,MEMBER.birth.m,MEMBER.birth.d);
+   CUR.partner=partner(CUR.me.stem,CUR.me.branch);
 @@ -1078,17 +1132,23 @@
    setPlan(MEMBER.plan);
  }
@@ -2370,10 +2394,12 @@ diff -uN a/register.html b/register.html
      <details class="faq-item"><summary>年齢による制限はありますか？</summary><div class="faq-a">どなたでもご利用いただけます（機能の制限はありません）。未成年の方は、保護者の同意を得たうえでご利用ください。お預かりした情報は、<b>占いのお届けとサービス運営のために大切に扱います</b>。</div></details>
    </div>
    <!-- 登録ページは離脱を増やさないため、横移動リンク（相性診断/配信デモ）は置かず、控えめな戻る1つに集約 -->
-@@ -196,6 +201,19 @@
+@@ -195,7 +200,20 @@
+ function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);}
  (function(){var y=$("y"),m=$("m"),d=$("d"),ty=new Date().getFullYear();y.add(new Option("年",""));for(var v=ty;v>=1940;v--)y.add(new Option(v+"年",v));m.add(new Option("月",""));for(var v=1;v<=12;v++)m.add(new Option(v+"月",v));function fill(){var days=(y.value&&m.value)?new Date(+y.value,+m.value,0).getDate():31;var cur=+d.value||0;d.innerHTML="";d.add(new Option("日",""));for(var v=1;v<=days;v++)d.add(new Option(v+"日",v));if(cur&&cur<=days)d.value=cur;}fill();y.onchange=fill;m.onchange=fill;})();
  (function(){var pr=["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県","海外・その他"];var s=$("pref");s.add(new Option("選択してください",""));pr.forEach(function(p){s.add(new Option(p,p));});})();
- (function(){var its=["恋愛","結婚","友達づくり","仕事・キャリア","グルメ","カフェ巡り","旅行","映画・ドラマ","音楽・ライブ","美容・コスメ","ファッション","健康・ウェルネス","ヨガ・ピラティス","占い・スピリチュアル","投資","お金・家計","子育て","介護","ペット","アート・読書","アウトドア","習い事・勉強"];var box=$("tags");its.forEach(function(it){var l=document.createElement("label");l.className="tag";l.innerHTML='<input type="checkbox" name="interest" value="'+it+'"><span>'+it+'</span>';box.appendChild(l);});})();
+-(function(){var its=["恋愛","結婚","友達づくり","仕事・キャリア","グルメ","カフェ巡り","旅行","映画・ドラマ","音楽・ライブ","美容・コスメ","ファッション","健康・ウェルネス","ヨガ・ピラティス","占い・スピリチュアル","投資","お金・家計","子育て","介護","ペット","アート・読書","アウトドア","習い事・勉強"];var box=$("tags");its.forEach(function(it){var l=document.createElement("label");l.className="tag";l.innerHTML='<input type="checkbox" name="interest" value="'+it+'"><span>'+it+'</span>';box.appendChild(l);});})();
++(function(){var its=["恋愛","結婚","友達づくり","仕事・キャリア","グルメ","カフェ巡り","旅行","映画・ドラマ","音楽・ライブ","美容・コスメ","ファッション","健康・ウェルネス","ヨガ・ピラティス","占い・スピリチュアル","投資","お金・家計","子育て","介護","ペット","アート・読書","アウトドア","習い事・勉強"];var box=$("tags");its.forEach(function(it){var l=document.createElement("label");l.className="tag";l.innerHTML='<input type="checkbox" name="interest" value="'+it+'"><span>'+it.replace('友達','友だち')+'</span>';box.appendChild(l);});})();
 +/* 1.66（166unmei.com）から来た人：リンクの「#」のうしろの生年月日・メールを受け取る（10/11 追加。サイトが違うと保存内容が共有されないため）。
 +   受け取ったら、いつもの保存場所に入れて、アドレス欄から「#」以降を消す */
 +(function(){try{
