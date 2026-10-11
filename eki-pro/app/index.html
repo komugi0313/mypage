@@ -209,6 +209,7 @@ select.field{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg 
 .hist-memo{width:100%;margin-top:8px;padding:8px 10px;border:1px solid var(--line2);border-radius:8px;background:#fffdf9;color:var(--ink);font-size:13.5px;font-family:var(--sans);line-height:1.6;resize:vertical;min-height:44px;box-sizing:border-box;outline:none;}
 .hist-memo:focus{border-color:var(--gold);}
 .hist-memo-btn{margin-top:6px;padding:8px;font-size:12.5px;}
+.legal-links a{color:var(--shu-d);text-decoration:none;font-weight:700;border-bottom:1px solid currentColor;padding-bottom:1px;}
 
 /* 用語 */
 .term{margin-bottom:13px;padding-bottom:13px;border-bottom:1px solid var(--line);}
@@ -342,6 +343,8 @@ select.field{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg 
   .ks-p,.ks-ul,.ks-li{font-size:13px!important;line-height:1.68!important;}
 }
 .ks-body{text-wrap:pretty;line-break:strict;}
+/* 泣き別れ防止（画面・カード立卦・鑑定書の共通） */
+p,li,label,.muted,.cast-hint,.ks-ans,.ks-v,.v-txt,.card-msg,#cardStepMsg,[class*="cdk"] p{text-wrap:pretty;word-break:auto-phrase;line-break:strict;}
 </style>
 <style id="procard-css">
 #castCard .pdeck-step{text-align:center;font-size:13px;color:var(--gold-d,#8a6d2f);margin:8px 0;font-weight:600;}
@@ -506,6 +509,8 @@ input[type=checkbox]{width:20px;height:20px;}
   // ★公開前プレビュー：決済（テレコムクレジット）接続までは true にして、ログイン不要で誰でも試せる状態にする。
   //   本番公開（決済URL設定＋会員サーバー準備）時に false へ戻すと、ログインした会員だけが使える。
   var PREVIEW_MODE = true;
+  // 安全装置：本番のドメイン（72k.ai・suimei.jp・ekipro.jp）では、書きかえ忘れがあっても必ず会員ゲートを有効にする
+  if(/(^|\.)(72k\.ai|suimei\.jp|ekipro\.jp)$/i.test(location.hostname)) PREVIEW_MODE = false;
   var API='/.netlify/functions';
   var gate=document.getElementById('member-gate');
   var msg=document.getElementById('mg-msg');
@@ -711,7 +716,7 @@ input[type=checkbox]{width:20px;height:20px;}
           <div style="padding:2px 14px 15px;font-size:12.5px;line-height:1.95;color:var(--ink2,#5b5563);">
             昔ながらの「コインを投げて卦を立てる」方法を、アプリが自動で行います。<br><br>
             <b>① 6本の線をつくる</b><br>3枚のコインを1回投げるごとに、線（爻＝こう）が1本決まります。これを6回くり返し、<b>下から上へ</b>6本の線を積み上げます。<br><br>
-            <b>② 陽か陰かが決まる</b><br>コインの表が多ければ「<b>陽</b>（——）」、裏（☯）が多ければ「<b>陰</b>（- -）」の線に。6本そろうと、64種類の中の<b>ひとつの卦</b>になります。<br><br>
+            <b>② 陽か陰かが決まる</b><br>昔からの決まりで、<b>表を3、裏（☯）を2</b>と数えて3枚を足します。合計が<b>奇数（7か9）なら「陽」</b>（——）、<b>偶数（6か8）なら「陰」</b>（- -）の線に。つまり<b>表が1枚か3枚なら陽、表が0枚か2枚なら陰</b>です（少ない方の面が線を決める、と覚えると簡単です）。6本そろうと、64種類の中の<b>ひとつの卦</b>になります。<br><br>
             <b>③ 変爻（へんこう）＝「動く1本」を選ぶ</b><br>変爻とは、6本の線のうち<b>「いま、変わろうとしている1本」</b>のこと。この1本が“これからの流れ”のカギになります。<br>
             えらび方はかんたんです：<br>
             ・<b>3枚のコインがそろって同じ面</b>（全部“表”か、全部“☯”）で出た線は、<b>とくに強く動く線</b>。それがあれば、そこから1本を変爻にします。<br>
@@ -723,7 +728,7 @@ input[type=checkbox]{width:20px;height:20px;}
         </details>
       </div>
       <div id="castManual" style="margin-top:12px;display:none;">
-        <div class="cast-hint" data-i18n="manual_hint">🎲 サイコロなど、ご自身で立てた卦は、こちらで入力できます。出た上卦・下卦・変爻を選んでください。</div>
+        <div class="cast-hint" data-i18n="manual_hint">🎲 サイコロで立てるときは、8面サイコロを2回振り、1回目の目を上卦、2回目の目を下卦の番号で選びます。続けて6面サイコロを振り、出た目を変爻（下から何本目か）で選んでください。</div>
         <div class="row2">
           <div><label class="fl" data-i18n="lbl_upper">上卦（じょうか）</label><select class="field" id="mUpper"></select></div>
           <div><label class="fl" data-i18n="lbl_lower">下卦（かか）</label><select class="field" id="mLower"></select></div>
@@ -913,7 +918,7 @@ input[type=checkbox]{width:20px;height:20px;}
       <input class="field" id="setContact" placeholder="例：LINE @seieidou ／ TEL 000-0000">
       <label class="fl" data-i18n="set_accent">アクセントカラー（屋号のブランドカラーに）</label>
       <div style="display:flex;align-items:center;gap:10px;">
-        <input type="color" id="setAccent" value="#c0392b" style="width:48px;height:38px;border:1px solid var(--line2);border-radius:8px;background:#fff;padding:2px;cursor:pointer;">
+        <input type="color" id="setAccent" value="#8E72A8" style="width:48px;height:38px;border:1px solid var(--line2);border-radius:8px;background:#fff;padding:2px;cursor:pointer;">
         <span class="muted" data-i18n="set_accent_note">アプリと鑑定書の差し色（朱印・見出し）に反映されます。</span>
       </div>
       <button class="btn dark sm" id="saveSettings" style="margin-top:14px;" data-i18n="btn_save_settings">保存する</button>
@@ -940,11 +945,12 @@ input[type=checkbox]{width:20px;height:20px;}
         <button class="btn ghost sm" id="impData" data-i18n="btn_import">読み込む</button>
       </div>
       <input type="file" id="impFile" accept="application/json" style="display:none;">
+      <button class="btn ghost sm" id="wipeData" style="margin-top:10px;width:100%;color:#b03a2e;border-color:#e3c4bf;">データの消去（この端末の名簿・メモ・設定をすべて消す）</button>
     </div>
 
     <div class="card">
       <div class="card-h">ご契約・ログイン</div>
-      <p class="muted" style="line-height:2.1">
+      <p class="muted legal-links" style="line-height:2.1">
         <a href="../mypage.html" style="white-space:nowrap">マイページ（ご契約・解約）</a>　
         <a href="../auth.html?view=reset" style="white-space:nowrap">パスワードの変更</a>　
         <a href="../auth.html?view=help" style="white-space:nowrap">お困りのとき</a><br>
@@ -1351,7 +1357,12 @@ const TAI_FIX={
 };
 function mTheme(h){ return h&&MODERN64[h.no]?MODERN64[h.no][0]:(h?h.theme:''); }
 function mMsg(h){ return h&&MODERN64[h.no]?MODERN64[h.no][1]:(h?h.unsei_txt:''); }
-function mTai(h,k){ if(!h) return ''; const f=TAI_FIX[h.no+'-'+k]; if(f) return f; const t=(h.ko&&h.ko[k])?h.ko[k].tai:''; return String(t||'').replace(/◎/g,'').trim(); }
+function mTai(h,k){ if(!h) return ''; const f=TAI_FIX[h.no+'-'+k]; const t=f||((h.ko&&h.ko[k])?h.ko[k].tai:'');
+  let x=String(t||'').trim();
+  // 「…時です。◎良い時です。」のように同じ締めが二重になるものは、後ろの「良い時です」を落とす
+  x=x.replace(/(時です。|時。)\s*◎?(大変)?良い時です。$/,'$1');
+  x=x.replace(/^(.*?)◎大変良い時です。$/,'$1とても良い時です。');
+  return x.replace(/◎/g,'').replace(/閉じこまらないで時の流れに順応していよい時です/,'閉じこもらず、時の流れに合わせて動くとよい時です').trim(); }
 /* お客様向けの文から、卦の名前・番号・卦辞などを取り除き、現代語に置きかえる（オンライン鑑定の取りこぼし対策） */
 function plainEki(text){
   let s=String(text||'');
@@ -1391,7 +1402,7 @@ const I18N={
   coin_result:'コインの出目（初爻→上爻・6/9＝動きの強い線／枠＝今回の変爻）',
   coin_anim_toss:'コインを投げています…',coin_anim_done:'卦が立ちました',
   terms_bagua:'八卦（はっけ）',terms_basic:'基本用語',terms_all64:'全64卦・384爻 一覧（古典＋現代語訳・吉凶）',set_sho_title:'鑑定書の題字（空欄なら「鑑定書」）',
-  manual_hint:'🎲 サイコロなど、ご自身で立てた卦は、こちらで入力できます。出た上卦（じょうか）・下卦（かか）・変爻（へんこう）を選んでください。',
+  manual_hint:'🎲 サイコロで立てるときは、8面サイコロを2回振り、1回目の目を上卦（じょうか）、2回目の目を下卦（かか）の番号で選びます。続けて6面サイコロを振り、出た目を変爻（へんこう）＝下から何本目かで選んでください。ご自身で立てた卦も、そのままこちらで入力できます。',
   lbl_upper:'上卦（じょうか）',lbl_lower:'下卦（かか）',lbl_moving:'変爻（へんこう）',
   number_hint:'お客様が思い浮かべた数字を3つ伺います（2桁でもOK・4桁まで）。〈梅花心易（ばいかしんえき）〉の数字卦の考え方で、各数を「8で割った余り」で八卦（上卦・下卦）に、3つの合計を「6で割った余り」で変爻に変換して卦を立てます。',
   lbl_tone:'語り口',lbl_blend:'掛け合わせ（易だけでも／他占術と合わせても）',lbl_jargon:'専門用語',jargon_hint:'「噛み砕く」＝互卦・之卦などの専門語を使わず日常語に。「専門的に」＝易の用語も使い、意味を添えます。',
@@ -1421,7 +1432,7 @@ const I18N={
   BLENDS:[{id:'none',label:'易のみ'},{id:'shichu',label:'四柱推命＋易'},{id:'reiji',label:'霊視＋易'},{id:'astro',label:'西洋占星術＋易'},{id:'tarot',label:'タロット＋易'}],
   JARGON:[{id:'plain',label:'噛み砕く'},{id:'pro',label:'専門的に'}],
   UNKI:{A:'絶好調',B:'良好',C:'平',D:'やや慎重に',E:'要注意（難）'},
-  unki_lbl:'運気：',ref_kaji:'卦辞（かじ）',ref_koji:'爻辞（こうじ）',ref_modern:'現代語訳：',ref_none:'（記載なし）',ref_good:'◎吉',ref_notfound:'該当する卦が見つかりません。',
+  unki_lbl:'今回の運気：',ref_kaji:'卦辞（かじ）',ref_koji:'爻辞（こうじ）',ref_modern:'現代語訳：',ref_none:'（記載なし）',ref_good:'◎吉',ref_notfound:'該当する卦が見つかりません。',
   KO:{1:'初爻（しょこう）',2:'二爻（にこう）',3:'三爻（さんこう）',4:'四爻（しこう）',5:'五爻（ごこう）',6:'上爻（じょうこう）'}
  },
  en:{
@@ -1527,12 +1538,30 @@ setLangGlobals();
 
 const App=(function(){
   const SKEY='eki_pro_v1';
-  let db={ settings:{brand:'',name:'',role:'',logo:'',contact:'',accent:'#c0392b'}, customers:[] };
+  let db={ settings:{brand:'',name:'',role:'',logo:'',contact:'',accent:'#8E72A8'}, customers:[] };
   let cur={cast:'coin', topic:null, tone:'soft', blend:'none', jargon:'plain', offlineMode:false, last:null};
 
-  function load(){ try{const r=localStorage.getItem(SKEY); if(r) db=JSON.parse(r);}catch(e){}
+  /* 名簿データの中身を検査して整える（端末内・読み込みファイルのどちらでも）。決まった形の値だけを通し、
+     記号入りのIDや数字でない卦番号などで画面が止まったり、紛れた文字列が画面で動いたりしないようにする */
+  function cleanDb(j){
+    if(!j||typeof j!=='object'||Array.isArray(j)||!Array.isArray(j.customers)) return null;
+    const str=(v,n)=>(typeof v==='string'?v:(v==null?'':String(v))).slice(0,n||2000);
+    const seen=new Set();
+    const customers=j.customers.filter(c=>c&&typeof c==='object'&&typeof c.name==='string').map(c=>{
+      let id=(typeof c.id==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(c.id))?c.id:('c'+Date.now()+Math.random().toString(36).slice(2,6)); if(seen.has(id)) id='c'+Date.now()+Math.random().toString(36).slice(2,6); seen.add(id);
+      const history=(Array.isArray(c.history)?c.history:[]).filter(h=>h&&typeof h==='object').map(h=>({
+        at:Number(h.at)||0, hex:str(h.hex,20), no:Math.max(0,Math.min(64,parseInt(h.no,10)||0)), ko:str(h.ko,30), shika:str(h.shika,20),
+        q:str(h.q,4000), script:str(h.script,40000), topic:(typeof h.topic==='string'&&/^[A-Za-z0-9_-]{0,32}$/.test(h.topic))?h.topic:null, memo:str(h.memo,8000) }));
+      return {id, name:str(c.name,100), memo:str(c.memo,20000), history};
+    });
+    const st=(j.settings&&typeof j.settings==='object'&&!Array.isArray(j.settings))?j.settings:{};
+    const settings={brand:str(st.brand,60),name:str(st.name,60),role:str(st.role,60),logo:str(st.logo,2),shoTitle:str(st.shoTitle,12),contact:str(st.contact,300),
+      accent:/^#[0-9a-fA-F]{6}$/.test(str(st.accent,7))?st.accent:'#8E72A8'};
+    return {settings, customers};
+  }
+  function load(){ try{const r=localStorage.getItem(SKEY); if(r){ const c=cleanDb(JSON.parse(r)); if(c) db=c; } }catch(e){}
     db.settings=db.settings||{}; const s=db.settings;
-    if(!s.accent) s.accent='#c0392b';
+    if(!s.accent||String(s.accent).toLowerCase()==='#c0392b') s.accent='#8E72A8';   // 旧い初期値（朱色）は実際の色（ラベンダー）にそろえる
     if(s.plans) delete s.plans;
     db.customers=db.customers||[];
   }
@@ -1600,7 +1629,7 @@ const App=(function(){
     const koData=h&&h.ko?(h.ko[ko]||h.ko[1]):null;
     // 今回の答えは、卦全体の運気（hexRank）に、動いた爻の言葉の吉凶を重ねて決める
     // （爻辞が「凶」なのに「進んで大丈夫」と出る、といった食い違いを防ぐ）
-    return {upper,lower,ko,key,h,hexRank:rank,rank:koAdjustRank(rank,koData?koData.jd:''),goka,shika,soka,sakka,koData,uT:TG[upper-1],lT:TG[lower-1]};
+    return {upper,lower,ko,key,h,hexRank:rank,rank:koAdjustRank(rank,koData?koData.jd:'',koData?koData.tai:'',mTai(h,koData===(h&&h.ko&&h.ko[ko])?ko:1)),goka,shika,soka,sakka,koData,uT:TG[upper-1],lT:TG[lower-1]};
   }
 
   /* ---- Gemini ---- */
@@ -1786,7 +1815,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
       `この易の卦は「${name}${rd}」と申します。${h?`易経（えききょう）には「${h.qt}」とあります。${h.kd?`読み下すと「${h.kd.replace(/。$/,'')}」となります。`:''}`:''}現代の言葉にすると、「${theme}」ということです。${blendLead}${unsei}`,
       koJd?`今回は${KO_NAME[r.ko]}「${koJd}」が動いています。${(r.koData&&r.koData.kd)?`読み下すと「${r.koData.kd.replace(/。$/,'')}」となります。`:''}現代の言葉にすると、${koTai}`:(koTai?`今回いちばん大切なのは、${koTai}`:''),
       shika?`そしてこの先は、之卦（しか）の「${shika.nm}（${shika.rd}）」へと移っていきます。現代の言葉にすると「${mTheme(shika)}」。${mMsg(shika)}`:'',
-      `${lead}全体の運気は「${unki}」。${(KO_KYO.test(koJd)&&(r.hexRank==='A'||r.hexRank==='B'))?'ただし今回動いた爻は「凶」と注意を促しているので、勢いに任せず、慎重に進めることが大切です。':''}${close}`
+      `${lead}今回の運気は「${unki}」。${(KO_KYO.test(koJd)&&(r.hexRank==='A'||r.hexRank==='B'))?'ただし今回動いた爻は「凶」と注意を促しているので、勢いに任せず、慎重に進めることが大切です。':''}${close}`
     ].filter(Boolean).join('\n');
     // 要点（鑑定士が話すときのメモ。これも専門用語なし）
     const goodRank=(r.rank==='A'||r.rank==='B');
@@ -1833,18 +1862,25 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
   function koTone(jd){
     jd=jd||'';
     const bad=KO_KYO.test(jd);
-    const warn=/厲|吝|勿用|无攸利|不利|悔(?!亡)/.test(jd);
+    const warn=/厲|吝|勿用|无攸利|不利|悔(?!亡)/.test(jd.replace(/无不利/g,''));   // 「无不利（利あらざるなし）」は良い言葉なので除く
     const good=/元吉|大吉|吉|无不利|悔亡/.test(jd.replace(/凶/g,''));
     const great=/元吉|大吉/.test(jd);
     return {bad,warn,good,great};
   }
-  function koAdjustRank(rank,jd){
+  // 画面に出す現代語訳の向き（訳と答えの記号が逆にならないようにする）
+  const TAI_POS=/良い時|好調|開運|報われ|うまくいき|成功に至|喜びとなる|喜びを得|盛運|名誉を得|利益の上がる|利を得/;
+  const TAI_NEG=/退き時|控えること|控えるべし|失敗の元|泣きの涙|止まって現状を維持|負け戦|労して功無し|欠陥があります|うまくいきません|傷つきやすい|目立たず過ごし|一歩退いて静観|うまい話に注意|骨折り損|不安定な時です|下手に動かず|何もできない時|慎重に動きましょう/;
+  function koAdjustRank(rank,jd,rawTai,tai){
     const t=koTone(jd);
     const ord='ABCDE'; let i=ord.indexOf(rank); if(i<0) i=2;
     if(t.bad){ i=Math.max(i, (i>=3)?4:3); }                       // 凶：△以下（もともと低い卦なら✖）
     else if(t.warn){ i=Math.max(i, t.good?1:2); }                 // 厲・吝・勿用など：吉が添えてあれば〇まで、無ければ△まで
     else if(t.great){ i=Math.min(i,1); }                          // 元吉・大吉：〇以上
     else if(t.good && i>=3){ i=2; }                               // 吉・无不利：低い卦でも△まで引き上げ
+    tai=String(tai||''); rawTai=String(rawTai||'');
+    const rel=/の中では/.test(tai);                                // 「困難な時期の中では良い」は相対的な良さ＝据え置き
+    if(TAI_NEG.test(tai)){ i=Math.max(i,2); }                     // 訳が「控える・退く」なのに◎〇と出さない
+    else if(!t.bad && !rel && (/◎/.test(rawTai)||TAI_POS.test(tai))){ i=Math.min(i,1); } // 訳が「良い時」なのに△✖と出さない
     return ord[i];
   }
   function rankToVerdict(rank){
@@ -2111,11 +2147,13 @@ ${hist?('これまでのやりとり：\n'+hist+'\n'):''}相談者の新しい�
       trialInc(); // 深掘り相談（AI生成）を1回消費
       cur.chat.push({role:'ai',text:(ans||'').trim()}); renderChat();
     }catch(e){
-      cur.chat.push({role:'ai',text:'うまく読み解けませんでした。少し言い換えて、もう一度お試しください。'}); renderChat();
+      // 失敗のほとんどは通信・混雑。言い回しのせいにせず、入力した文は欄に戻す
+      el.value=q;
+      cur.chat.push({role:'ai',text:'いま、つながりにくいようです。通信の状態を確かめて、少し時間をおいてから、もう一度「送る」を押してください。（ご相談の文は入力欄に戻してあります）'}); renderChat();
     }finally{ btn.disabled=false; }
   }
   function kpiItem(l,v){ return v?`<div class="kpi-item"><div class="kpi-lbl">${l}</div><div class="kpi-val">${fmtPlain(v)}</div></div>`:''; }
-  function esc(s){ return String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
   // 【…】でくくられた「大事なポイント」をハイライト表示に変換（台本・裏卦・判定のみ）
   function fmtRich(s){ return esc(s).replace(/【([^】]{1,50})】/g,'<span class="hl">$1</span>').replace(/[【】]/g,''); }
   // ハイライトを付けない項目用：万一混ざった【】は消すだけ
@@ -2224,10 +2262,10 @@ ${hist?('これまでのやりとり：\n'+hist+'\n'):''}相談者の新しい�
     S.push({h:'いまの状況', t:[
       `いまは「${mTheme(h)}」。`,
       mMsg(h),
-      `全体の運気は「${unki}」。${grp==='g'?'追い風が吹いています。':grp==='b'?'向かい風の中にいるので、慎重さがあなたを守ります。':'大きな波はなく、足元を整えるのに向いた時期です。'}`
+      `今回の運気は「${unki}」。${grp==='g'?'追い風が吹いています。':grp==='b'?'向かい風の中にいるので、慎重さがあなたを守ります。':'大きな波はなく、足元を整えるのに向いた時期です。'}`
     ].filter(Boolean).join('\n')});
     const flow=[];
-    if(koTai) flow.push(`なかでも今回いちばん大切なメッセージは、こちらです。${koTai}`);
+    if(koTai) flow.push(`今回の占いで、いちばん大切なメッセージはこちらです。${koTai}`);
     if(sh) flow.push(`そしてこの先は、「${mTheme(sh)}」へと流れが移っていきます。${mMsg(sh)}`);
     flow.push(grp==='g'?'今の良い流れを活かして、一歩ずつ形にしていきましょう。':grp==='b'?'今は種をまいて待つ時。やがて流れが変わったとき、準備していたことが生きてきます。':'焦らずに進めば、流れは少しずつ良い方へ向かっていきます。');
     S.push({h:'これからの流れ', t:flow.join('\n')});
@@ -2384,7 +2422,6 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     if(!save()) return;   // 端末の容量がいっぱいで保存できなかった（お知らせは save が出す）
     refreshCustSelect(); document.getElementById('custSelect').value=id;
     document.getElementById('custNewName').value='';
-    document.getElementById('readingMemo').value='';
     toast(t('t_saved_reading'));
     renderCustList();
   }
@@ -2407,7 +2444,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     document.getElementById('coMemo').value=c.memo||'';
     document.getElementById('coHist').innerHTML=(c.history&&c.history.length)?c.history.map((h,i)=>`
       <div class="hist"><div class="hist-top"><span>${fmt(h.at)}</span><span>${esc(h.topic?topicLabel(h.topic):'')}</span></div>
-      <div class="hist-hex">第${h.no}卦 ${esc(h.hex)}・${esc(h.ko)}</div>
+      <div class="hist-hex">${h.no?'第'+(parseInt(h.no,10)||0)+'卦 ':''}${esc(h.hex||'')}・${esc(h.ko||'')}</div>
       <div class="hist-q">相談：${esc(h.q||'')}</div>
       <textarea class="hist-memo" id="histMemo${i}" placeholder="この回のメモ（任意）">${esc(h.memo||'')}</textarea>
       <button class="btn ghost sm hist-memo-btn" onclick="App.saveHistMemo(${i})">メモを保存</button>
@@ -2424,7 +2461,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
   function addCust(){ const n=prompt('お客様のお名前'); if(!n)return; const id='c'+Date.now(); db.customers.push({id,name:n.trim(),memo:'',history:[]}); save(); renderCustList(); refreshCustSelect(); openCust(id); }
   function closeCust(){ document.getElementById('custOverlay').classList.remove('open'); }
   function closeSho(){ document.getElementById('shoOverlay').classList.remove('open'); document.body.classList.remove('sho-open'); }
-  function fmt(ms){ const d=new Date(ms); return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; }
+  function fmt(ms){ const d=new Date(ms); if(!ms||isNaN(d)) return '—'; return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; }
 
   /* ---- 設定 ---- */
   function applyBranding(){
@@ -2432,10 +2469,11 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     document.getElementById('brandName').textContent=s.brand||'易 EKI Pro';
     document.getElementById('brandRole').textContent=s.role||t('role_default');
     document.getElementById('brandSeal').textContent=s.logo||'易';
-    const acc=s.accent||'#c0392b';
-    document.documentElement.style.setProperty('--shu',acc);
-    document.documentElement.style.setProperty('--shu-d',darken(acc,0.18));
-    document.documentElement.style.setProperty('--shu-l',darken(acc,-0.18));
+    const acc=s.accent||'#8E72A8';
+    // 見た目の既定色は CSS 側で !important 指定のため、設定色も important で上書きする
+    document.documentElement.style.setProperty('--shu',acc,'important');
+    document.documentElement.style.setProperty('--shu-d',darken(acc,0.18),'important');
+    document.documentElement.style.setProperty('--shu-l',darken(acc,-0.18),'important');
   }
   function darken(hex,amt){
     const h=hex.replace('#',''); if(h.length!==6) return hex;
@@ -2443,9 +2481,9 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     const f=v=>Math.max(0,Math.min(255,Math.round(v*(1-amt))));
     return '#'+[f(r),f(g),f(b)].map(v=>v.toString(16).padStart(2,'0')).join('');
   }
-  function loadSettingsForm(){ const s=db.settings; document.getElementById('setBrand').value=s.brand||''; document.getElementById('setName').value=s.name||''; document.getElementById('setRole').value=s.role||''; document.getElementById('setLogo').value=s.logo||''; document.getElementById('setShoTitle').value=s.shoTitle||''; document.getElementById('setContact').value=s.contact||''; document.getElementById('setAccent').value=s.accent||'#c0392b';
+  function loadSettingsForm(){ const s=db.settings; document.getElementById('setBrand').value=s.brand||''; document.getElementById('setName').value=s.name||''; document.getElementById('setRole').value=s.role||''; document.getElementById('setLogo').value=s.logo||''; document.getElementById('setShoTitle').value=s.shoTitle||''; document.getElementById('setContact').value=s.contact||''; document.getElementById('setAccent').value=s.accent||'#8E72A8';
     document.getElementById('setKey').value=getTestKey(); }
-  function saveSettings(){ db.settings={brand:val('setBrand'),name:val('setName'),role:val('setRole'),logo:val('setLogo'),shoTitle:val('setShoTitle'),contact:val('setContact'),accent:document.getElementById('setAccent').value||'#c0392b'}; save(); applyBranding(); toast(t('t_saved_settings')); }
+  function saveSettings(){ db.settings={brand:val('setBrand'),name:val('setName'),role:val('setRole'),logo:val('setLogo'),shoTitle:val('setShoTitle'),contact:val('setContact'),accent:document.getElementById('setAccent').value||'#8E72A8'}; save(); applyBranding(); toast(t('t_saved_settings')); }
   const KEYSTORE='eki_pro_key';
   function getTestKey(){ try{return localStorage.getItem(KEYSTORE)||'';}catch(e){return '';} }
   /* 本番サイト（http/https で公開）では、サーバー中継（/.netlify/functions/gemini）でオンライン鑑定する。
@@ -2518,7 +2556,8 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
       ['coin','manual','number','card'].forEach(k=>document.getElementById('cast'+k.charAt(0).toUpperCase()+k.slice(1)).style.display=(k===cur.cast?'block':'none'));
     });
     // 手動セレクト
-    const tgOpts=TG.map(t=>`<option value="${t.n}">${SYM[t.n-1]} ${t.k}（${t.r}）</option>`).join('');
+    const HIRA={テン:'てん',サワ:'たく',カ:'か',ライ:'らい',フウ:'ふう',スイ:'すい',サン:'さん',チ:'ち'};
+    const tgOpts=TG.map(t=>`<option value="${t.n}">${t.n}　${SYM[t.n-1]} ${t.k}（${HIRA[t.r]||t.r}）</option>`).join('');
     document.getElementById('mUpper').innerHTML=tgOpts;
     document.getElementById('mLower').innerHTML=tgOpts;
     document.getElementById('mKo').innerHTML=Object.entries(KO_NAME).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
@@ -2552,7 +2591,15 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     document.getElementById('setAccent').addEventListener('input',e=>{ document.documentElement.style.setProperty('--shu',e.target.value); document.documentElement.style.setProperty('--shu-d',darken(e.target.value,0.18)); });
     document.getElementById('expData').onclick=exportData;
     document.getElementById('impData').onclick=importData;
-    document.getElementById('impFile').onchange=e=>{ const f=e.target.files[0]; if(!f)return; const rd=new FileReader(); rd.onload=()=>{ try{ const j=JSON.parse(rd.result); if(!j||typeof j!=='object') throw 0; j.settings=j.settings||{}; j.customers=Array.isArray(j.customers)?j.customers:[]; const nowN=(db&&db.customers||[]).length; if(nowN && !confirm('読み込むと、いまこの端末に入っている顧客名簿（'+nowN+'人）と設定は、ファイルの内容（'+j.customers.length+'人）に置きかわります。\nよろしいですか？\n（心配なときは、先に「書き出す」でバックアップを取ってください）')){ e.target.value=''; return; } db=j; save(); applyBranding(); loadSettingsForm(); refreshCustSelect(); renderCustList(); toast(t('t_imported')); }catch(_){alert(t('a_import_fail'));} e.target.value=''; }; rd.readAsText(f); };
+    document.getElementById('wipeData').onclick=()=>{
+      const n=(db.customers||[]).length;
+      if(!confirm('この端末に保存されている顧客名簿（'+n+'人）・鑑定の履歴とメモ・設定を、すべて消去します。\n元に戻せません。必要なら先に「書き出す」でバックアップを取ってください。\n消去してよろしいですか？')) return;
+      if(!confirm('本当に消去しますか？（最後の確認です）')) return;
+      try{ [SKEY,KEYSTORE,'eki_pro_lang'].forEach(k=>localStorage.removeItem(k)); }catch(_){}
+      db={ settings:{brand:'',name:'',role:'',logo:'',contact:'',accent:'#8E72A8'}, customers:[] };
+      applyBranding(); loadSettingsForm(); refreshCustSelect(); renderCustList(); toast('この端末のデータを消去しました');
+    };
+    document.getElementById('impFile').onchange=e=>{ const f=e.target.files[0]; if(!f)return; const rd=new FileReader(); rd.onload=()=>{ try{ const j0=JSON.parse(rd.result); const j=cleanDb(j0); if(!j||(j0.settings!=null&&typeof j0.settings!=='object')||j.customers.length!==j0.customers.length){ alert('このファイルは、易 EKI Pro の「書き出す」で作ったバックアップではないようです。\nいまのデータはそのままです。'); e.target.value=''; return; } const nowN=(db&&db.customers||[]).length; if(nowN && !confirm('読み込むと、いまこの端末に入っている顧客名簿（'+nowN+'人）と設定は、ファイルの内容（'+j.customers.length+'人）に置きかわります。\nよろしいですか？\n（心配なときは、先に「書き出す」でバックアップを取ってください）')){ e.target.value=''; return; } const prevDb=db; db=j; if(!save()){ db=prevDb; e.target.value=''; return; } applyBranding(); loadSettingsForm(); refreshCustSelect(); renderCustList(); toast(t('t_imported')); }catch(_){alert(t('a_import_fail'));} e.target.value=''; }; rd.readAsText(f); };
     // 用語・八卦・64卦一覧
     renderBagua(); renderTerms(); renderRef('');
     document.getElementById('refSearch').oninput=e=>renderRef(e.target.value);
@@ -2636,8 +2683,10 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     return Object.entries(HEXDB).map(([key,h])=>{ const [u,l]=key.split('-').map(Number); return {key,u,l,h,rank:HEXKK[key]||'C'}; }).sort((a,b)=>a.h.no-b.h.no);
   }
   function renderRef(filter){
-    const term=(filter||'').trim();
-    const data=refData().filter(d=>!term || d.h.nm.includes(term) || d.h.rd.includes(term) || String(d.h.no)===term);
+    // 「無妄」「无妄」・全角数字・カタカナでも見つかるようにそろえる
+    const norm=x=>String(x||'').trim().replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60)).replace(/無/g,'无').replace(/濟/g,'済').replace(/^第|卦$/g,'');
+    const term=norm(filter);
+    const data=refData().filter(d=>!term || norm(d.h.nm).includes(term) || d.h.rd.includes(term) || String(d.h.no)===term);
     const el=document.getElementById('refList');
     el.innerHTML=data.map(d=>{
       const h=d.h;
@@ -2649,7 +2698,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
         <div class="ref-head" onclick="App.toggleRef(this)">
           <span class="ref-no">${h.no}</span>
           <span><span class="ref-nm">${esc(h.nm)}</span><span class="ref-rd">${esc(h.rd)}</span></span>
-          <span class="ref-kk ${d.rank}">${UNKI_LABEL[d.rank]}</span>
+          <span class="ref-kk ${d.rank}">${LANG==='ja'?'卦全体：':''}${UNKI_LABEL[d.rank]}</span>
           <span class="ref-arrow">▶</span>
         </div>
         <div class="ref-body">

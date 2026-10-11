@@ -109,6 +109,11 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
 
   /* ---------- ① あなたはこんな人 ---------- */
   // 生まれた時刻が分からないときのお知らせ（専門用語なし）
+  /* お子さま（15歳未満）：恋愛・仕事・お金の項目は「将来その年頃になったときの傾向」として読むよう、最初に一言そえる */
+  function secChildNote(c){
+    if(!c.now||c.now.age>=15) return '';
+    return '<div class="bgc" id="bg-childnote" style="border-color:#9CC9A8;background:#F2FAF4"><p style="font-size:13.5px;margin:0">🌱 <b>お子さまの鑑定です。</b>恋愛・仕事・お金などの項目は、<b>大きくなってその年頃になったときの傾向</b>として読んでください。いまは、<b>性格や得意なこと・のびのび伸ばしてあげたい面</b>を中心に見てあげると、ご家族の方にも伝わりやすくなります。</p></div>';
+  }
   function secTimeNote(c){
     if(!c.timeUnknown) return '';
     var h='<div class="bgc" id="bg-timenote" style="border-color:#E2B04A;background:#FFF9EC"><p style="font-size:13.5px;margin:0">🕰 生まれた時刻が分からないため、<b>生年月日だけで占っています</b>。時刻が分かると、さらにくわしく読めます。運の切りかわる年齢は、お昼の12時生まれとして計算した目安です（数ヶ月ずれることがあります）。</p>';
@@ -279,6 +284,12 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     var gc=ganzhiCompat(a.pillars[2].ganzhi,b.pillars[2].ganzhi);
     var tc=safe(function(){return detectTensenCompat(a,b);},{any:false,list:[]});
     var good=safe(function(){return compatGoodYears(a,b,rt.useSpouse);},[]), strain=safe(function(){return compatStrainYears(a,b);},[]), low=safe(function(){return compatSelfLowYears(a);},[]);
+    // 「あなたが整えたい年」は、あなた個人の画面の判定（◎○◦△）と食い違わないよう、個人の判定が△の年と、◦/△で注意の重なる年だけにする
+    low=safe(function(){ var ny=a.now.year, out=[], seen={};
+      var mk=function(y){ var e=(a.annualFortunes||[]).filter(function(x){return x.year===y;})[0]; return e?sig(a,e).mk:''; };
+      low.forEach(function(x){ var m=mk(x.year); if(m==='◦'||m==='△'){ out.push(x); seen[x.year]=1; } });
+      (a.annualFortunes||[]).forEach(function(e){ if(e.year>=ny&&e.year<=ny+25&&!seen[e.year]&&sig(a,e).mk==='△'){ out.push({year:e.year}); seen[e.year]=1; } });
+      return out.sort(function(p,q){return p.year-q.year;}); },low);
     return {gc:gc,tc:tc,good:good,strain:strain,low:low};
   }
   function tsBase(){ return String(TSC_TXT.base).replace(/^2人の柱の間に天戦地冲がある場合、/,''); }
@@ -315,8 +326,8 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
       h+='<div class="bgc"><div class="bgh"><span class="ic">📅</span>2人の関係が動きやすい年</div><div class="bgl">これから25年のあいだで、目安になる年です。</div>'+
         '<div class="sub" style="color:#1F8A55">💗 縁が深まりやすい年</div>'+li(d.good,'good')+''+
         '<div class="sub" style="color:#B3261E">🌀 関係が揺れやすい年</div>'+li(d.strain,'strain')+''+
-        '<div class="sub" style="color:#5B6472">🌙 あなたの運気が低めの年</div>'+li(d.low,'low')+''+
-        '<div class="note">※「揺れやすい年」は、別れの年という意味ではありません。関係を見直したり話し合ったりする節目の目安です。「運気が低めの年」は相性とは別に、あなた自身が無理をせず整えたい年です。</div></div>'; }
+        '<div class="sub" style="color:#5B6472">🌙 あなた自身が無理をせず整えたい年</div>'+li(d.low,'low')+''+
+        '<div class="note">※「揺れやすい年」は、別れの年という意味ではありません。関係を見直したり話し合ったりする節目の目安です。「整えたい年」は相性とは別に、あなた自身の運の流れから見た目安です（上の「あなた」の画面の判定と同じ物差しです）。</div></div>'; }
     return h+'</div>';
   }
   function plainCompatText(a,b,rt){
@@ -496,7 +507,7 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
       var res=document.getElementById('result'), body=document.getElementById('result-body'); if(!res) return;
       if(!document.getElementById('bg-easy')){
         var easy=document.createElement('div'); easy.id='bg-easy';
-        easy.innerHTML=[secTimeNote,secMe,secPower,secNow,secFlow,secShake,secLoveWork,secCare].map(function(f){return safe(function(){return f(c);},'');}).join('');
+        easy.innerHTML=[secChildNote,secTimeNote,secMe,secPower,secNow,secFlow,secShake,secLoveWork,secCare].map(function(f){return safe(function(){return f(c);},'');}).join('');
         res.insertBefore(easy,res.firstChild);
         noOrphan(easy);
         safe(function(){ var sn=res.querySelector('.sample-note'); if(sn) res.insertBefore(sn,res.firstChild); });   // 見本のお知らせは、やさしい画面より上に

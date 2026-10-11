@@ -48,15 +48,27 @@ exports.handler = async (event) => {
   const site = process.env.URL || '';
   const origin = event.headers.origin || event.headers.referer || '';
   // 本番（URL が設定された環境）では、自サイトからの呼び出し以外を断る（Origin/Referer の無い呼び出しも断る）
-  if (site && (!origin || !origin.startsWith(site))) return json(403, { error: { code: 'ORIGIN', message: 'Forbidden' } });
+  // 前方一致だと https://72k.ai.evil.example なども通ってしまうため、オリジン（https://ドメイン）が完全に一致するものだけ通す。
+  // 追加で許可したいオリジン（独自ドメインと netlify.app の併用など）は ALLOWED_ORIGINS にカンマ区切りで指定。
+  if (site) {
+    const oOf = (u) => { try { return new URL(u).origin; } catch (e) { return ''; } };
+    const allowed = [site, process.env.DEPLOY_PRIME_URL || '', ...(process.env.ALLOWED_ORIGINS || '').split(',')].map((x) => oOf(String(x).trim())).filter(Boolean);
+    if (!origin || !allowed.includes(oOf(origin))) return json(403, { error: { code: 'ORIGIN', message: 'Forbidden' } });
+  }
 
   // 会員確認（実装仕様 §3-3・必須）：MEMBER_CHECK_URL（auth-check と同じ確認を行うサーバー内の関数）が設定されていれば、
   // Authorization: Bearer <member_token> を検証し、使える状態の会員だけ中継する。未設定（公開前の確認環境）のときは確認しない。
   const memberCheck = process.env.MEMBER_CHECK_URL || '';
+  // 本番（URL が設定された環境）で会員確認が未設定のままだと、誰でもAPIキーを使えてしまう。設定忘れに気づけるよう、本番では止める。
+  // （公開前の確認環境でどうしても会員確認なしで動かすときだけ、PK_ALLOW_NO_MEMBER_CHECK=1 を設定する）
+  if (site && !memberCheck && process.env.PK_ALLOW_NO_MEMBER_CHECK !== '1') return json(503, { error: { code: 'SETUP', message: 'サーバー設定が未完了です（MEMBER_CHECK_URL 未設定）' } });
+  let memberKey = '';
   if (memberCheck) {
     const hh = lower(event.headers || {});
     const tk = clean(String(hh['authorization'] || '').replace(/^Bearer\s+/i, ''));
     if (!tk) return json(401, { error: { code: 'LOGIN', message: 'ログインが必要です' } });
+    // 回数の天井は、書きかえられる端末ヘッダではなく会員ごとに数える（トークンの要約だけを使い、トークン自体は保存しない）
+    memberKey = 'm' + require('crypto').createHash('sha256').update(tk).digest('hex').slice(0, 24);
     try {
       const r = await fetch(memberCheck, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: tk }) });
       if (!r.ok) return json(401, { error: { code: 'LOGIN', message: 'ログインが必要です' } });
@@ -87,7 +99,7 @@ exports.handler = async (event) => {
 
   const h = lower(event.headers || {});
   const isOwner = !!OWNER_TOKEN && clean(h['x-pk-owner']) === OWNER_TOKEN;
-  const device = clean(h['x-pk-device']) || 'nodev';
+  const device = memberKey || clean(h['x-pk-device']) || 'nodev';
   const ip = clean(h['x-nf-client-connection-ip'] || h['x-forwarded-for'] || '').split(',')[0].trim() || 'noip';
   const day = jstDay();
   const usedDeep = (clean(h['x-pk-deep']) === '1');

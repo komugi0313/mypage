@@ -682,6 +682,8 @@ html.bg-intro-done #bg-intro{display:none}
   // ★公開前プレビュー：決済（テレコムクレジット）接続までは true にして、ログイン不要で誰でも試せる状態にする。
   //   本番公開（決済URL設定＋会員バックエンド準備）時に false へ戻すと、通常の会員制ゲートに戻る。
   var PREVIEW_MODE = true;
+  // 安全装置：本番のドメイン（72k.ai・suimei.jp・ekipro.jp）では、書きかえ忘れがあっても必ず会員ゲートを有効にする
+  if(/(^|\.)(72k\.ai|suimei\.jp|ekipro\.jp)$/i.test(location.hostname)) PREVIEW_MODE = false;
   var API='/.netlify/functions';
   var gate=document.getElementById('member-gate');
   var msg=document.getElementById('mg-msg');
@@ -4731,7 +4733,7 @@ function midQuickNavHTML(){return `<div style="display:flex;gap:10px;justify-con
 function renderResult(){
   const c=chart;
   // 起動直後の見本には、見本であることを結果の一番上に出す（自分で占うと消える）
-  const sampleNote=window.__isSample?'<div class="sample-note" style="margin:0 0 12px;padding:11px 14px;border:2px dashed #E2A12B;border-radius:12px;background:#FFF8E8;color:#7A5200;font-size:13.5px;font-weight:800;line-height:1.75">📝 これは<b>見本</b>です（2000年1月1日 12時生まれの例）。<br>上の欄に生年月日を入れて「この内容で占う」を押すと、その方の鑑定になります。</div>':'';
+  const sampleNote=window.__isSample?'<div class="sample-note" style="margin:0 0 12px;padding:11px 14px;border:2px dashed #E2A12B;border-radius:12px;background:#FFF8E8;color:#7A5200;font-size:13.5px;font-weight:800;line-height:1.75">📝 これは<b>見本</b>です（2000年1月1日 12時生まれの例）。<br>上の欄に生年月日を入れて「'+(((document.getElementById('f-go')||{}).textContent||'この内容で占う').trim())+'」を押すと、その方の鑑定になります。</div>':'';
   document.getElementById('ai-slot').innerHTML = consultHTML();
   // 要点サマリーは #result に、以降は #result-body に分割（並び：要点→命式(納音・相生相剋など分析込みの完全版)→詳細鑑定→相性→会局→五行→大運年運→恋愛→養生）
   // 命式表は「詳細鑑定を読む前に確認したい」という要望で、完全版を要点の直後に一本化（前後で二重に出さない）。
@@ -5542,7 +5544,7 @@ function buildChartText(c){
   return L.filter(Boolean).join('\n');
 }
 
-const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 // 五行の語（木火土金水）をその五行カラーで着色（曜日・お金・土台などの誤着色は除外）
 function colorGogyo(s){return s.replace(/(?<![おご料資賃現貯借税香海淡])([木火土金水])(?![曜事災分台地壌運額銭融産業])/g,(m,c)=>`<span class="gel" style="color:${ec(c)};font-weight:800">${c}</span>`);}
 /* 鑑定レポートの見出し→アイコン（【】付き・素の見出しの両方に対応） */
@@ -6073,6 +6075,7 @@ async function generateReading(user,localText,system,deep){
         r=await fetch('/.netlify/functions/gemini',{method:"POST",headers:_hdr,body:_body}); }
       else{ r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${encodeURIComponent(geminiKey)}`,
         {method:"POST",headers:{"Content-Type":"application/json"},body:_body}); }
+      if(useServer&&(r.status===401||r.status===403)){ _authErr=r.status; return null; }   // ログイン切れ・ご利用できない状態
       data=await r.json();
     }catch(e){ return null; }        // 通信失敗
     if(data&&data.error) return null; // APIエラー
@@ -6082,10 +6085,13 @@ async function generateReading(user,localText,system,deep){
   }
   // まず1回オンライン生成。失敗（レート制限・一時的エラー・空応答）なら数秒待って“自動で1回だけ再試行”。
   // それでもダメなときだけオフライン鑑定に切替（ユーザーが質問を打ち直す必要はありません）。
+  let _authErr=0;
   let text=await callOnce();
-  if(!text){ await new Promise(r=>setTimeout(r,2500)); text=await callOnce(); }
+  if(!text&&!_authErr){ await new Promise(r=>setTimeout(r,2500)); text=await callOnce(); }
   if(text){ aiCountInc(); return {ok:true,text:noAIWord(_unmaskNames(text,_nm)),online:true}; }
   aiEngine='オフライン鑑定（端末内）';
+  if(_authErr===401) return {ok:true,text:localText,fallback:true,online:false,note:'ログインの有効期限が切れたため、詳細鑑定を使えませんでした。いまは端末内で作成した鑑定（オフライン鑑定）を表示しています。もう一度ログインすると、詳細鑑定が使えるようになります（ページを開き直すとログイン画面が出ます）。'};
+  if(_authErr===403) return {ok:true,text:localText,fallback:true,online:false,note:'ご契約の状態を確認できなかったため、詳細鑑定を使えませんでした。いまは端末内で作成した鑑定（オフライン鑑定）を表示しています。マイページでご契約状況をご確認ください。'};
   return {ok:true,text:localText,fallback:true,online:false,note:'詳細鑑定に接続できなかったため、端末内で作成した鑑定（オフライン鑑定）を表示しています（自動で再試行しました）。'};
 }
 async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
@@ -6546,7 +6552,7 @@ function localCompat(A,B,na,nb,rt,ask){
       }
     }catch(_e){}
     const need=Object.entries(A.fiveElements).sort((x,y)=>x[1]-y[1])[0][0],bHas=B.fiveElements[need]||0;
-    L.push(`あなたに不足の**${need}（${EL_DESC[need]}）**を相手は${bHas}持っています。${bHas>=1?'相手の'+need+'の面を頼ると関係が安定します。':'2人とも'+need+'が弱めなので、'+EL_DESC[need]+'を一緒に意識すると整います。'} 違いを“補い合い”と捉えるのがコツです。`);
+    L.push(bHas>=1?`あなたに少ない**${need}（${EL_DESC[need]}）**を、相手は${bHas}つ持っています。相手の${need}の面を頼ると関係が安定します。違いを“補い合い”と捉えるのがコツです。`:`あなたに少ない**${need}（${EL_DESC[need]}）**は、相手も持っていません。2人とも${need}が弱めなので、${EL_DESC[need]}を一緒に意識して取り入れると整います。`);
   })();
   const ex=compatExtras(A,B,rt).filter(r=>r.local);
   if(ex.length){L.push('【2人の命式を合わせて見るポイント】');
@@ -6761,7 +6767,7 @@ function meishiTableHTML(c,orient){
 }
 /* 相性診断：2人の命式表を本表と同じ見た目で並べる */
 function compatMeishiHTML(a,b,na,nb){
-  const one=(c,name,role)=>{const nm=(name&&name!==role)?`：<b>${name}</b>`:'';return `<div style="margin-top:12px"><div style="font-size:13.5px;font-weight:900;color:var(--ink2);margin:0 2px 7px">${role}${nm}（日柱 ${c.dayMaster.stem}${c.pillars[2].branch}）</div>${meishiTableHTML(c,orient)}</div>`;};
+  const one=(c,name,role)=>{const nm=(name&&name!==role)?`：<b>${esc(name)}</b>`:'';return `<div style="margin-top:12px"><div style="font-size:13.5px;font-weight:900;color:var(--ink2);margin:0 2px 7px">${role}${nm}（日柱 ${c.dayMaster.stem}${c.pillars[2].branch}）</div>${meishiTableHTML(c,orient)}</div>`;};
   return `<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px"><div style="font-size:14.5px;font-weight:900;margin:0 2px">2人の命式表</div><div class="mhint" style="margin:2px 2px 0">日柱＝本人（ピンク）／青ぬり＝月支元命。「詳しく見る」で蔵干・吉凶星が開きます。</div>${one(a,na,'本人')}${one(b,nb,'お相手')}</div>`;
 }
 function buildCompatBase(out){
@@ -6770,6 +6776,8 @@ function buildCompatBase(out){
   const dv=document.getElementById('b-date').value, tv=_bNoTime?'12:00':(_normHM(document.getElementById('b-time').value)||'12:00');
   if(!dv){out.innerHTML='<div class="err">お相手の生年月日を入力してください。</div>';return null;}
   const [y,mo,d]=dv.split('-').map(Number),[h,mi]=tv.split(':').map(Number);
+  { const _bd=new Date(y,mo-1,d), _td=new Date(); _td.setHours(23,59,59,999);
+    if(isNaN(_bd)||_bd.getMonth()!==mo-1||_bd>_td||y<1900){ out.innerHTML='<div class="err">お相手の生年月日をご確認ください（今日より先の日付や、実在しない日付は選べません）。</div>'; return null; } }
   const lon=document.getElementById('b-pref').value;
   personNameB=document.getElementById('b-name').value.trim();
   try{chartB=baziCompute({year:y,month:mo,day:d,hour:h,minute:mi,sex:sexB}, lon, lon?((document.getElementById('f-corr')||{}).value||'full'):'none');}catch(e){out.innerHTML='<div class="err">お相手の命式の計算に失敗しました。日付・時刻をご確認ください。</div>';return null;}
@@ -6893,8 +6901,31 @@ function mpEmail(){try{return (localStorage.getItem('member_email')||'').trim().
 function mpNewId(p){return (p||'')+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function nowStr(){const d=new Date(),z=n=>('0'+n).slice(-2);return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes());}
 
+/* 顧客カルテの中身を検査して整える（バックアップ読み込み・クラウド同期・端末内のどれから来ても同じ）。
+   形のおかしい値（文字列のタグ、壊れた日付、記号入りのIDなど）で画面が止まったり、
+   名前などに紛れた不正な文字列が画面で動いたりしないよう、決まった形の値だけを通す。 */
+function mpSanitize(doc){
+  if(!doc||typeof doc!=='object'||!Array.isArray(doc.clients))return null;
+  const str=(v,n)=>(typeof v==='string'?v:(v==null?'':String(v))).slice(0,n||2000);
+  const idOk=v=>typeof v==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(v);
+  const seen=new Set(), clients=[];
+  for(const c of doc.clients){
+    if(!c||typeof c!=='object')continue;
+    const date=str(c.date,10); if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
+    let id=idOk(c.id)?c.id:mpNewId('c_'); if(seen.has(id))id=mpNewId('c_'); seen.add(id);
+    const time=/^\d{2}:\d{2}$/.test(str(c.time,5))?str(c.time,5):'12:00';
+    let tags=c.tags; if(typeof tags==='string')tags=tags.split(/[,、，]/); tags=Array.isArray(tags)?tags.map(t=>str(t,40).trim()).filter(Boolean).slice(0,30):[];
+    const readings=(Array.isArray(c.readings)?c.readings:[]).filter(r=>r&&typeof r==='object').map(r=>({
+      id:idOk(r.id)?r.id:mpNewId('r_'), kind:/^[A-Za-z0-9_-]{0,32}$/.test(str(r.kind,32))?str(r.kind,32):'', title:str(r.title,200), text:str(r.text,200000), ts:Number(r.ts)||0 }));
+    clients.push({ id, name:str(c.name,100).trim()||'（名前なし）', kana:str(c.kana,100), date, time,
+      sex:c.sex==='male'?'male':'female', pref:/^-?[0-9.]{0,12}$/.test(str(c.pref,12))?str(c.pref,12):'',
+      corr:['none','full','longitude'].includes(c.corr)?c.corr:'full', zishi:c.zishi==='next'?'next':'today', notime:!!c.notime,
+      memo:str(c.memo,20000), tags, readings, ts:Number(c.ts)||0, deleted:!!c.deleted });
+  }
+  return {schema:1,updatedAt:Number(doc.updatedAt)||0,clients};
+}
 function mpLoad(){
-  try{const d=JSON.parse(store.get(DKEY)||'null'); if(d&&d.clients)return d;}catch(e){}
+  try{const d=mpSanitize(JSON.parse(store.get(DKEY)||'null')); if(d)return d;}catch(e){}
   let clients=[];
   try{const old=JSON.parse(store.get(CKEY)||'[]'); clients=old.map(c=>({...c,memo:c.memo||'',readings:c.readings||[],ts:c.ts||Date.now(),deleted:false}));}catch(e){}
   return {schema:1,updatedAt:0,clients};
@@ -6920,7 +6951,7 @@ async function mpPush(){
   mpSetStatus('syncing');
   try{
     const r=await fetch(MP_API+'/mypage-put',{method:'POST',headers:mpHeaders(),body:JSON.stringify({email,data:mpLoad()})});
-    if(!r.ok)throw 0; const j=await r.json(); if(j&&j.data){mpWrite(j.data);renderClients();}
+    if(!r.ok)throw 0; const j=await r.json(); const sv=j&&mpSanitize(j.data); if(sv){mpWrite(mpMerge(mpLoad(),sv));renderClients();}   // サーバーの返事で端末のカルテを丸ごと置きかえない（統合する）
     mpSetStatus('synced');
   }catch(e){mpSetStatus('offline');}
 }
@@ -6930,7 +6961,7 @@ async function mpPull(){
   try{
     const r=await fetch(MP_API+'/mypage-get',{method:'POST',headers:mpHeaders(),body:JSON.stringify({email})});
     if(!r.ok)throw 0; const j=await r.json();
-    if(j&&j.data){mpWrite(mpMerge(mpLoad(),j.data));renderClients();}
+    const sv=j&&mpSanitize(j.data); if(sv){mpWrite(mpMerge(mpLoad(),sv));renderClients();}
     mpSetStatus('synced'); mpPush();
   }catch(e){mpSetStatus('offline');}
 }
@@ -7205,7 +7236,7 @@ function mpExport(){
 }
 function mpImport(file){
   const rd=new FileReader();
-  rd.onload=function(){try{const inc=JSON.parse(rd.result);if(!inc||!inc.clients)throw 0;mpWrite(mpMerge(mpLoad(),inc));renderClients();mpTouch();alert('バックアップを読み込み、現在のデータと統合しました。');}catch(e){alert('読み込みに失敗しました。バックアップファイルをご確認ください。');}};
+  rd.onload=function(){try{const inc=mpSanitize(JSON.parse(rd.result));if(!inc||!inc.clients.length)throw 0;if(!mpWrite(mpMerge(mpLoad(),inc)))return;renderClients();mpTouch();alert('バックアップを読み込み、現在のデータと統合しました（'+inc.clients.filter(c=>!c.deleted).length+'人分）。');}catch(e){alert('読み込みに失敗しました。バックアップファイルをご確認ください。');}};
   rd.readAsText(file);
 }
 
@@ -7250,7 +7281,46 @@ function baziCompute(base, lon, corr){
       c.now.year=(_std&&_std.ganzhi!==_tp)?_gy-1:_gy;
     }
   }catch(_e){}
+  try{ extendLongLife(c); }catch(_e){}
   return zishiFix(c);
+}
+/* ご高齢の方（80歳代〜）：エンジンの大運は8運（約80歳代）まで・年運は生まれ年から91年分のため、
+   「いまの10年」「今年」が欠ける。エンジン本体は変えず、エンジン自身の結果から先を補う（表示・アダプタ層）。
+   ・年運の通変星・十二運・蔵干は「日干」と「その年の干支」だけで決まる → 同じ日干の人の命式（エンジン計算）から、その年の年運をそのまま借りる。
+   ・大運は月柱からの順逆の並びをそのまま延長し、星・十二運は同じ日干の年運（同じ干支）から借りる。 */
+function extendLongLife(c){
+  if(!c||!c.now||!c.decadeFortunes||!c.decadeFortunes.length||!c.annualFortunes)return c;
+  const ny=c.now.year, af=c.annualFortunes, df=c.decadeFortunes, ds=c.dayMaster&&c.dayMaster.stem;
+  const lastY=af.length?af[af.length-1].year:0;
+  const lastD=df[df.length-1];
+  const needY=lastY<ny+10, needD=(c.now.age+20)>=lastD.endAge;
+  if(!needY&&!needD||!ds)return c;
+  // 同じ日干の「助っ人の命式」：基準年の1月1日から10日のうちに必ず同じ日干の日がある
+  const helpers={};
+  const helperFor=Y=>{ const base=Y-40; if(helpers[base])return helpers[base];
+    for(let k=0;k<10;k++){ const d=new Date(base,0,1+k);
+      const h=window.Bazi.computeChart({year:d.getFullYear(),month:d.getMonth()+1,day:d.getDate(),hour:12,minute:0,sex:'male',correctionMode:'none'});
+      if(h.dayMaster&&h.dayMaster.stem===ds){ helpers[base]=h; return h; } }
+    return null; };
+  const annualOf=Y=>{ const h=helperFor(Y); const a=h&&h.annualFortunes.find(x=>x.year===Y); return a?Object.assign({},a):null; };
+  if(needY){ for(let Y=lastY+1;Y<=ny+10;Y++){ const a=annualOf(Y); if(a)af.push(a); } }
+  if(needD){
+    const GZ60=[];const ST='甲乙丙丁戊己庚辛壬癸',BR='子丑寅卯辰巳午未申酉戌亥';for(let i=0;i<60;i++)GZ60.push(ST[i%10]+BR[i%12]);
+    const prev=df[df.length-2], dir=prev?((GZ60.indexOf(lastD.ganzhi)-GZ60.indexOf(prev.ganzhi)+60)%60===1?1:-1):1;
+    // 星・十二運を借りるための「同じ干支の年運」の一覧（同じ日干・60年分）
+    const pool={}; const h0=helperFor(ny); (h0?h0.annualFortunes:[]).forEach(a=>{pool[a.ganzhi]=a;});
+    let cur=lastD;
+    while(c.now.age+20>=cur.endAge && df.length<14){
+      const gz=GZ60[(GZ60.indexOf(cur.ganzhi)+dir+60)%60], a=pool[gz]; if(!a)break;
+      const nd={startAge:cur.endAge,endAge:cur.endAge+10,months:cur.months,ganzhi:gz,stem:a.stem,branch:a.branch,stemElement:a.stemElement,branchElement:a.branchElement,tenStar:a.tenStar,terrain:a.terrain,startYear:(cur.startYear||0)+10,startMonth:cur.startMonth};
+      df.push(nd); cur=nd;
+    }
+    // いまの大運の位置を、立運の端数（〇ヶ月）込みで数え直す
+    const am=(typeof c.now.ageMonths==='number')?c.now.ageMonths:c.now.age*12;
+    const idx=df.findIndex(d=>am>=d.startAge*12+(d.months||0) && am<d.endAge*12+(d.months||0));
+    if(idx>=0)c.now.daeunIndex=idx;
+  }
+  return c;
 }
 // 時刻不明：時柱を分析から外し（年月日の3柱で見る）、五行も時柱分を引いて数え直す。表示用に時柱は保持。
 function markTimeUnknown(c){
@@ -7313,6 +7383,10 @@ function compute(){
   const dv=document.getElementById('f-date').value, tv=timeUnknown0?'12:00':(_normHM(document.getElementById('f-time').value)||'12:00');
   if(!dv){alert('生年月日を入力してください');return;}
   const [y,mo,d]=dv.split('-').map(Number),[h,mi]=tv.split(':').map(Number);
+  { const _bd=new Date(y,mo-1,d), _td=new Date(); _td.setHours(23,59,59,999);
+    if(isNaN(_bd)||_bd.getMonth()!==mo-1){ alert('生年月日の日付が正しくありません（例：2月30日などは選べません）。'); return; }
+    if(_bd>_td){ alert('生年月日が今日より先の日付になっています。生年月日をご確認ください。'); return; }
+    if(y<1900){ alert('1900年以降の生年月日を入力してください。'); return; } }
   const lon=document.getElementById('f-pref').value, corr=document.getElementById('f-corr').value;
   const timeUnknown=document.getElementById('f-notime')&&document.getElementById('f-notime').checked;
   personName=document.getElementById('f-name').value.trim();
@@ -7592,6 +7666,11 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
 
   /* ---------- ① あなたはこんな人 ---------- */
   // 生まれた時刻が分からないときのお知らせ（専門用語なし）
+  /* お子さま（15歳未満）：恋愛・仕事・お金の項目は「将来その年頃になったときの傾向」として読むよう、最初に一言そえる */
+  function secChildNote(c){
+    if(!c.now||c.now.age>=15) return '';
+    return '<div class="bgc" id="bg-childnote" style="border-color:#9CC9A8;background:#F2FAF4"><p style="font-size:13.5px;margin:0">🌱 <b>お子さまの鑑定です。</b>恋愛・仕事・お金などの項目は、<b>大きくなってその年頃になったときの傾向</b>として読んでください。いまは、<b>性格や得意なこと・のびのび伸ばしてあげたい面</b>を中心に見てあげると、ご家族の方にも伝わりやすくなります。</p></div>';
+  }
   function secTimeNote(c){
     if(!c.timeUnknown) return '';
     var h='<div class="bgc" id="bg-timenote" style="border-color:#E2B04A;background:#FFF9EC"><p style="font-size:13.5px;margin:0">🕰 生まれた時刻が分からないため、<b>生年月日だけで占っています</b>。時刻が分かると、さらにくわしく読めます。運の切りかわる年齢は、お昼の12時生まれとして計算した目安です（数ヶ月ずれることがあります）。</p>';
@@ -7762,6 +7841,12 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     var gc=ganzhiCompat(a.pillars[2].ganzhi,b.pillars[2].ganzhi);
     var tc=safe(function(){return detectTensenCompat(a,b);},{any:false,list:[]});
     var good=safe(function(){return compatGoodYears(a,b,rt.useSpouse);},[]), strain=safe(function(){return compatStrainYears(a,b);},[]), low=safe(function(){return compatSelfLowYears(a);},[]);
+    // 「あなたが整えたい年」は、あなた個人の画面の判定（◎○◦△）と食い違わないよう、個人の判定が△の年と、◦/△で注意の重なる年だけにする
+    low=safe(function(){ var ny=a.now.year, out=[], seen={};
+      var mk=function(y){ var e=(a.annualFortunes||[]).filter(function(x){return x.year===y;})[0]; return e?sig(a,e).mk:''; };
+      low.forEach(function(x){ var m=mk(x.year); if(m==='◦'||m==='△'){ out.push(x); seen[x.year]=1; } });
+      (a.annualFortunes||[]).forEach(function(e){ if(e.year>=ny&&e.year<=ny+25&&!seen[e.year]&&sig(a,e).mk==='△'){ out.push({year:e.year}); seen[e.year]=1; } });
+      return out.sort(function(p,q){return p.year-q.year;}); },low);
     return {gc:gc,tc:tc,good:good,strain:strain,low:low};
   }
   function tsBase(){ return String(TSC_TXT.base).replace(/^2人の柱の間に天戦地冲がある場合、/,''); }
@@ -7798,8 +7883,8 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
       h+='<div class="bgc"><div class="bgh"><span class="ic">📅</span>2人の関係が動きやすい年</div><div class="bgl">これから25年のあいだで、目安になる年です。</div>'+
         '<div class="sub" style="color:#1F8A55">💗 縁が深まりやすい年</div>'+li(d.good,'good')+''+
         '<div class="sub" style="color:#B3261E">🌀 関係が揺れやすい年</div>'+li(d.strain,'strain')+''+
-        '<div class="sub" style="color:#5B6472">🌙 あなたの運気が低めの年</div>'+li(d.low,'low')+''+
-        '<div class="note">※「揺れやすい年」は、別れの年という意味ではありません。関係を見直したり話し合ったりする節目の目安です。「運気が低めの年」は相性とは別に、あなた自身が無理をせず整えたい年です。</div></div>'; }
+        '<div class="sub" style="color:#5B6472">🌙 あなた自身が無理をせず整えたい年</div>'+li(d.low,'low')+''+
+        '<div class="note">※「揺れやすい年」は、別れの年という意味ではありません。関係を見直したり話し合ったりする節目の目安です。「整えたい年」は相性とは別に、あなた自身の運の流れから見た目安です（上の「あなた」の画面の判定と同じ物差しです）。</div></div>'; }
     return h+'</div>';
   }
   function plainCompatText(a,b,rt){
@@ -7979,7 +8064,7 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
       var res=document.getElementById('result'), body=document.getElementById('result-body'); if(!res) return;
       if(!document.getElementById('bg-easy')){
         var easy=document.createElement('div'); easy.id='bg-easy';
-        easy.innerHTML=[secTimeNote,secMe,secPower,secNow,secFlow,secShake,secLoveWork,secCare].map(function(f){return safe(function(){return f(c);},'');}).join('');
+        easy.innerHTML=[secChildNote,secTimeNote,secMe,secPower,secNow,secFlow,secShake,secLoveWork,secCare].map(function(f){return safe(function(){return f(c);},'');}).join('');
         res.insertBefore(easy,res.firstChild);
         noOrphan(easy);
         safe(function(){ var sn=res.querySelector('.sample-note'); if(sn) res.insertBefore(sn,res.firstChild); });   // 見本のお知らせは、やさしい画面より上に
