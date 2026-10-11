@@ -7205,6 +7205,15 @@ function openMeishiSheet(){
   // 生まれた時刻が不明のときは、印刷用鑑定書にも「時刻不明」を伝える（時柱＝晩年・将来・子は仮の値として注記・断定を控える）
   const _tu=((document.getElementById('f-notime')||{}).checked)||(typeof chart!=='undefined'&&chart&&chart.timeUnknown);
   if(_tu)q.set('tu','1');
+  // 画面の判定（年・10年の運気の信号、とくに揺れやすい年）を鑑定書にも渡し、紙と画面で言うことをそろえる
+  try{ if(typeof chart!=='undefined'&&chart&&chart.now&&chart.dayMaster){
+    const c=chart, ds=c.dayMaster.stem, st=strengthType(c), y0=c.now.year;
+    const pc=o=>unkiPct(o.tenStar, tenStarOf(ds,HONKI[o.branch]), st);
+    const sk={}; try{ const ts=detectTensen(c); if(ts&&ts.any)[ts,ts.work||{}].forEach(x=>['yU','yA'].forEach(k=>(x[k]||[]).forEach(l=>{const m=String(l).match(/(\d{4})年/); if(m)sk[+m[1]]=1;}))); }catch(e){}
+    const fy=(c.annualFortunes||[]).filter(a=>a.year>=y0&&a.year<y0+12&&!sk[a.year]&&'◎○'.indexOf(unkiSignal(pc(a)).mk)>=0).map(a=>a.year).slice(0,3);
+    q.set('fy', fy.join(',')||'-');
+    const dd=curDu(c); if(dd&&dd.tenStar) q.set('dk', unkiSignal(pc(dd)).mk);
+  } }catch(e){}
   // 「この命式の詳しい特徴（教科書ベース）」を印刷鑑定書へ引き継ぐ（教科書データは重複させず、生成済みHTMLをlocalStorageで受け渡し）。
   try{ if(typeof chart!=='undefined'&&chart&&typeof featBookHTML==='function'){
     const _sig=[dv,tv,sex,corr,(lon||''),(_tu?'1':'0')].join('|');

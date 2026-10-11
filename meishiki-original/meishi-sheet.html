@@ -855,6 +855,7 @@
     [/生まれ日は「[^」]+」＝/g,'生まれ日から見ると、'],
     [/[甲乙丙丁戊己庚辛壬癸]の([^、。「」]{1,14}?)と[子丑寅卯辰巳午未申酉戌亥]の/g,'$1と'],
     [/五行バランス/g,'5つの気のバランス'],[/五行/g,'気'],
+    [/月の区切りは節入りの日で/g,'月の区切りは季節の変わり目の日で'],
     [/命式/g,'生まれ持った性質']
   ];
   function plainText(t){ for(var i=0;i<R.length;i++) t=t.replace(R[i][0],R[i][1]); return t; }
@@ -2293,7 +2294,7 @@ window.KANSHI60_DETAIL={
       if(cau.length) line+='／注意：<b>'+cau.join('・')+'月</b>';
       html+='<p class="rd-mcap">'+Y+'年'+lbl+'：'+line+'</p>';
     });
-    html+='<p class="rd-mleg">'+cfg.legend+'（各月にカーソルで理由。節入りで数日前後する目安）</p>';
+    html+='<p class="rd-mleg">'+cfg.legend+'（月の区切りは節入りの日で、数日前後する目安です）</p>';
     return html;
   }
   // 大運（今の10年）で巡る通変星の傾向
@@ -3155,9 +3156,11 @@ window.KANSHI60_DETAIL={
       b+='<p class="ez-p"><b>あなたは「'+T.img+'」のような'+T.name+'。</b>'+strengthLead+axisAddon+'。'+((genmei&&TSU[genmei]&&TSU[genmei].c)?'気をつけるとよいのは「'+TSU[genmei].c+'」——気づけば長所に変わります。':'')+'</p>';
       //（旧「運の流れ・人生の四季」）長期を「充電期間」等と括ると誤解を招くため載せない。今の時期は下で伝える。
       // 今の時期（今の10年）
+      var AJ=null; try{ var aj=window.__appJudge; if(aj&&aj.key===[document.getElementById('iDate').value,document.getElementById('iTime').value,document.getElementById('iSex').value].join('|')) AJ=aj; }catch(e){}
       var curDu=du.filter(function(d){return nowAge!=null&&nowAge>=d.ageFrom&&nowAge<d.ageTo;})[0];
       if(curDu){ var cel=BREL[(curDu.kanshi.length>1?curDu.kanshi.charAt(1):'')]||''; var cf=fav(cel);
-        var now=(cf>0?'いまは<b>攻めどき</b>。やりたいことを前に進めるのに向いています。':(cf<0?'いまは<b>整えどき</b>。土台を整えて、つぎの追い風にそなえる時期です。':'いまは<b>おだやかな時期</b>。ふだんの積み重ねが力になります。'));
+        var DK={'◎':'いまは<b>攻めどき</b>。やりたいことを前に進めるのに向いています。','○':'いまは<b>追い風の時期</b>。やりたいことを少しずつ前に進めるのに向いています。','◦':'いまは<b>おだやかな時期</b>。ふだんの積み重ねが力になります。','△':'いまは<b>整えどき</b>。土台を整えて、つぎの追い風にそなえる時期です。'};
+        var now=(AJ&&DK[AJ.dk])?DK[AJ.dk]:(cf>0?'いまは<b>攻めどき</b>。やりたいことを前に進めるのに向いています。':(cf<0?'いまは<b>整えどき</b>。土台を整えて、つぎの追い風にそなえる時期です。':'いまは<b>おだやかな時期</b>。ふだんの積み重ねが力になります。'));
         b+='<p class="ez-p">'+(nowAge!=null?'今（'+nowAge+'歳）：':'')+'今の10年（'+_duRng(curDu)+'）は、'+now+'</p>';
       }
       // チャンスの年
@@ -3178,6 +3181,7 @@ window.KANSHI60_DETAIL={
           if(ok) favYears.push(y);
         }
       }
+      if(AJ&&AJ.fy) favYears=AJ.fy.slice(0,3);   // アプリから開いたときは、画面の「良い時期」と同じ年にそろえる
       if(favYears.length) b+='<p class="ez-p">とくに<b>'+favYears.map(function(y){return y+'年';}).join('・')+'</b>は<b>チャンスの年</b>。気になることに一歩ふみ出すと道がひらけます。</p>';
       b+='<p class="ez-note2">むずかしく考えなくて大丈夫。<b>'+(col||'好きな色')+'</b>を身近に置き、追い風の時期に動く——それだけで運は育ちます。</p>';
       H+=ezCard('📌 総合まとめ', b);
@@ -4122,7 +4126,7 @@ window.KANSHI60_DETAIL={
     var a=document.getElementById('engAI'), h=document.getElementById('engHint');
     var online=navigator.onLine;
     if(a){ a.disabled=!online; a.style.opacity=online?'':'.45'; a.style.cursor=online?'':'not-allowed'; a.title=online?'':'オフライン中は使えません'; }
-    if(h) h.textContent=online ? 'オンライン：定型文か詳細鑑定を選べます（この命式を詳しく読み解きます）'
+    if(h) h.textContent=online ? 'オンライン：定型文か詳細鑑定を選べます（'+(document.body.classList.contains('bg-mode')?'生まれ持った性質':'この命式')+'を詳しく読み解きます）'
                                 : 'オフライン中：定型文のみ（ネットに繋ぐと詳細鑑定が選べます）';
     if(!online && _readEngine==='ai'){ setEngine('template'); }   // 途中でオフラインになったら定型文へ戻す
   }
@@ -4553,6 +4557,9 @@ window.KANSHI60_DETAIL={
     window.__sheetZ=(q.get('z')==='next'?'next':'today');   // 日付の変わり目（早子時）…アプリと同じ扱いにする
     window.__sheetClk=(q.get('clk')==='1');                 // クロック時刻優先（真太陽時で日付をまたがない）
     window.__timeUnknown=(q.get('tu')==='1');   // 生まれた時刻が不明（時柱＝晩年・将来・子は仮の値・参考）
+    // アプリ画面の判定（チャンスの年・今の10年）。同じ生年月日・時刻・性別で開いている間だけ使う（紙と画面の食い違い防止）
+    if(q.get('fy')||q.get('dk')) window.__appJudge={key:[q.get('d')||'',q.get('t')||'',(q.get('sex')==='male'?'male':'female')].join('|'),
+      fy:(q.get('fy')&&q.get('fy')!=='-')?q.get('fy').split(',').map(Number).filter(function(n){return n>1900;}):(q.get('fy')==='-'?[]:null), dk:q.get('dk')||''};
     if(q.get('d')) document.getElementById('iDate').value=q.get('d');
     if(q.get('t')) document.getElementById('iTime').value=q.get('t');
     if(q.get('sex')) document.getElementById('iSex').value=(q.get('sex')==='male'?'male':'female');
@@ -4682,6 +4689,12 @@ window.KANSHI60_DETAIL={
         document.body.classList.add('bg-nomei');
       }
       var rd=document.getElementById('outReading'); if(rd && !rd.checked) rd.checked=true;
+      // 設定欄の名前も専門用語なしに
+      [].slice.call(document.querySelectorAll('.glabel')).forEach(function(g){ var t=g.firstChild; if(!t||t.nodeType!==3) return;
+        if(t.nodeValue==='五行カラー') t.nodeValue='色分け'; else if(t.nodeValue==='命式表の型') t.nodeValue='専門の表の型（上級者向け）'; });
+      var dm=document.getElementById('defMsg'); if(dm) dm.textContent='紙・版・模様・色分け・表の型・章の選択を、次に開いたときも同じにします（この端末内）。';
+      var eh=document.getElementById('engHint'); if(eh && /命式/.test(eh.textContent)) eh.textContent=eh.textContent.replace(/この命式を/,'生まれ持った性質を');
+      document.title='生まれ持った性質の鑑定書';
       var e=document.getElementById('ovEasy'); if(e) e.click();
       var l=document.getElementById('lvEasy'); if(l) l.click();
       try{ window.dispatchEvent(new Event('resize')); }catch(e){}
