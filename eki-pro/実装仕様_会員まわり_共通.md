@@ -2,7 +2,7 @@
 
 > **この1枚が唯一の正です。** 過去のやり取り・旧ドキュメントは破棄し、本書の内容だけで実装してください。
 > フロント（このリポジトリ `pro/` 一式）は**完成済み**。エンジニアが作るのは **サーバー側API・決済・本番切替の3つだけ** です。
-> 対応バージョン: PRO `pro/sw.js` の `CACHE = shichu-jidou-v418`／ビギナー `beginner/sw.js` `kyoukara-uranaishi-v55`／易 EKI Pro `eki-pro/app/sw.js` `eki-pro-v24` ／ 最終更新: 2026-10-11
+> 対応バージョン: PRO `pro/sw.js` の `CACHE = shichu-jidou-v419`／ビギナー `beginner/sw.js` `kyoukara-uranaishi-v56`／易 EKI Pro `eki-pro/app/sw.js` `eki-pro-v25` ／ 最終更新: 2026-10-11
 > 3サイトの全体の依頼内容は、リポジトリ直下の `エンジニアへの実装依頼_3サイト.md` を先に読むこと。
 > 前提（発注者確認済み）：**Gemini（生成AI）はサーバー内蔵**（キーはサーバー保持・フロントに出さない）／**決済はテレコムクレジット**／**Web先行 → のちに iOS・Android アプリ**。
 
@@ -46,8 +46,8 @@
 | # | ファイル | 現在（デモ） | 本番 | 目印 |
 |---|---|---|---|---|
 | 1 | `app-pro.html`（ビギナーは `app-beginner.html`、EKI は `app/index.html` も同じ） | `var PREVIEW_MODE = true;` | **`false`** | 会員ゲートのスクリプト内 |
-| 2 | `app-pro.html` | `var DEMO_MODE = false;` | `false`（そのまま） | 664行目付近 |
-| 3 | `app-pro.html` | テストキー欄 `<details id="gtest-wrap" …>` が存在 | **ブロックごと削除**（コメントに削除指示あり） | 896行目付近 |
+| 2 | `app-pro.html` | `var DEMO_MODE = false;` | `false`（そのまま） | 663行目付近 |
+| 3 | `app-pro.html` | テストキー欄 `<details id="gtest-wrap" …>` が存在 | **ブロックごと削除**（コメントに削除指示あり） | 895行目付近 |
 | 4 | `auth.html` / `mypage-pro.html` | `CONFIG.STUB = true` | **`false`** | 各ファイルの `var CONFIG` |
 | 5 | `pricing-pro.html` | `TELECOM_PAYMENT_URL = { month:'' }` ／ `TELECOM_PARAM` | **審査通過後の決済URL**を設定し、渡す値のパラメータ名を接続仕様書に合わせる | `var TELECOM_PAYMENT_URL` |
 | 6 | `functions/gemini.js` | 会員確認なし | **§3-3 の会員確認（トークン）を必ず実装** | §3-3 |
@@ -259,13 +259,13 @@
 
 | 定数 | ファイル:目安行 | 現在値 | 本番 |
 |---|---|---|---|
-| `API` | app-pro.html:668 | `'/.netlify/functions'` | 実APIベースパス（リライトなら据置） |
-| `MP_API` | app-pro.html:6822 | `'/.netlify/functions'` | 同上 |
-| `PREVIEW_MODE` | app-pro.html:667 | `true` | `false` |
+| `API` | app-pro.html:667 | `'/.netlify/functions'` | 実APIベースパス（リライトなら据置） |
+| `MP_API` | app-pro.html:6821 | `'/.netlify/functions'` | 同上 |
+| `PREVIEW_MODE` | app-pro.html:666 | `true` | `false` |
 | `CONFIG.API` / `CONFIG.STUB` | auth.html・mypage-pro.html の `var CONFIG` | `'/.netlify/functions'` / `true` | 実ベースパス / `false` |
 | `TELECOM_PAYMENT_URL` / `TELECOM_PARAM` | pricing-pro.html | 空 / 仮の名前（`sendid`・`email`） | 月額プランの決済URL / 接続仕様書のパラメータ名 |
 | `FIX.STUB` | pricing-pro.html（完了画面のアドレス直し） | `true` | `false` |
-| `geminiModel` | app-pro.html:2619 | `'gemini-2.5-flash'` | 必要なら変更（サーバー側でも可） |
+| `geminiModel` | app-pro.html:2618 | `'gemini-2.5-flash'` | 必要なら変更（サーバー側でも可） |
 
 **localStorage キー**：`member_email` / `member_token` / `member_status` / `member_period_end` / `member_checked_at`（会員。「ログインしたままにする」を外したときは sessionStorage。旧版の `member_pw`・`member_remember` は起動時に削除）、`pending_order`（お申し込み番号・メールの控え）、`selected_plan`、`bazi_mypage_v2`（同期・DKEY）、`bazi_clients_v1`（旧）、`bazi_sheet_featbook`（鑑定書受け渡し）、`bazi_gkey`/`bazi_gmodel`（テスト専用・本番は欄ごと削除）。
 
