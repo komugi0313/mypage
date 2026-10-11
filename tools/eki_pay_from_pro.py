@@ -60,6 +60,7 @@ s = rep(s, '<span class="desc">いつでも解約できます</span>', '<span cl
 s = rep(s, '※ 本サービスは四柱推命にもとづく自己理解・エンターテインメントを目的としたものです。', '※ 本ツールは占いを目的としたものです。', 1)
 s = rep(s, '<a class="tb-login" href="app/index.html">ログインはこちら</a>', '<a class="tb-login" href="auth.html">ログインはこちら</a>', 1)
 s = rep(s, "var ORDER_PREFIX='P';", "var ORDER_PREFIX='E';", 1)
+s = rep(s, "var TRIAL_EXTRA='';", "var TRIAL_EXTRA='<br>無料期間中のオンライン鑑定・追加のご相談は合計1日3回まで（内蔵データでの鑑定は回数制限なし）。';", 1)
 s = rep(s, '</body>', '''<script>
 /* 登録ページ（register.html）から来たときは、入力済みのメールアドレスで「お申し込み内容の確認」をすぐ表示する */
 (function(){
