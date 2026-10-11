@@ -183,6 +183,7 @@
     body.sv-only-meishi #sheetRead{ display:none !important; }
     body.sv-only-meishi #readPages{ display:none !important; }   /* 命式表だけ共有：鑑定書ページも隠す */
     body.sv-only-reading #sheet{ display:none !important; }
+    body.sv-only-reading #sheetYoko{ display:none !important; }   /* 鑑定書だけ共有：横型命式表も隠す */
   }
   /* 表紙・両方出力シート（通常は非表示。印刷時にモードで表示） */
   #coverSheet, #sheetReadPro, #sheetReadEasy{ display:none; }
@@ -570,6 +571,8 @@
   .ez-grid{ display:block; font-size:12px; line-height:1.6; }
   .ez-grid > div{ margin:0 0 6px; } .ez-grid > div:last-child{ margin:0; }
   .ez-grid b{ color:var(--el-sui); }
+  .ez-txt{ font-size:12.5px; line-height:1.8; color:var(--ink); }
+  body.mobile-view .ez-txt{ font-size:15px; }
   .ez-ul{ margin:0; padding-left:1.2em; font-size:12.5px; line-height:1.75; }
   /* 命式の読み解き＝要素ごとの「見出し＋箇条書き」。区切り線＋色付き見出し（左アクセント）＋ドット箇条書きで、文章の壁にせず一目で読める構造に。長いので“項目の境目で改ページ”する */
   .ez-yomi{ list-style:none; padding-left:0; margin:0; }
@@ -763,6 +766,7 @@
     body.pm-vpro #sheetReadPro{ display:block; }
     body.pm-veasy #sheetReadEasy{ display:block; }
     body.pm-nomeishiki #sheet{ display:none; }
+    body.pm-nomeishiki #sheetYoko, body.pm-nomeishiki #sheet{ display:none !important; }   /* 命式表OFFなら横型命式表・2枚目（五行・年運・大運）も出さない（横型ONの強い指定に負けないように） */
     /* 命式表【横型】：横型ONなら1枚目＝横型命式表、2枚目＝五行・年運・大運（命式表OFF時は両方出さない） */
     #sheetYoko{ display:none; }
     body.ml-yoko:not(.pm-nomeishiki) #sheetYoko{ display:flex; }
@@ -821,6 +825,8 @@
     @page{ size:A4 landscape; margin:0; }
     @page pageRead{ size:A4 landscape; margin:9mm 9mm 13mm; }  /* 鑑定書：下は必ず1cm以上あけて区切り良く（上9mm 左右9mm 下13mm） */
   }
+  /* iPhoneで入力時に画面が拡大されないよう、スマホでは入力欄の文字を16px以上に */
+  @media screen and (max-width:760px){ input[type=text],input[type=date],input[type=time],input:not([type]),textarea,select{ font-size:16px !important; } }
 </style>
 
 <div class="stage">
@@ -999,7 +1005,7 @@
       </div>
       <div class="grp" id="dateGrp">
         <span class="glabel">鑑定日</span>
-        <label class="pchk"><input type="checkbox" id="autoDate"> 今日の日付を自動で入れる</label>
+        <label class="pchk"><input type="checkbox" id="autoDate" checked> 今日の日付を自動で入れる</label>
         <span class="share-hint">チェックを外すと、命式表・鑑定書の「鑑定日：」欄を自分で入力できます</span>
       </div>
       <div class="grp" id="defGrp">
@@ -2446,6 +2452,8 @@ window.KANSHI60_DETAIL={
     // 空亡：直近3年分（2支のどちらか）
     var kubos=[];
     for(var yk=nowYear-1; yk>=nowYear-26 && kubos.length<3; yk--){ if(kubo.indexOf(br(yk))>=0) kubos.push({year:yk, gz:gz(yk)}); }
+    // 「前回の空亡」は、いちばん近い連続した2年だけを古い順に（例：2020年・2021年）。12年前の1年が混ざらないように
+    if(kubos.length){ var _top=kubos[0].year; kubos=kubos.filter(function(k){return k.year===_top||k.year===_top-1;}).sort(function(a,b){return a.year-b.year;}); }
     // 冲：命式の支と冲になった直近3年分
     var chongs=[];
     for(var yc=nowYear-1; yc>=nowYear-26 && chongs.length<3; yc--){ var bc=br(yc); var hitc=natB.filter(function(x){return _CH[bc]===x;}); if(hitc.length) chongs.push({year:yc, gz:gz(yc), hit:hitc}); }
@@ -3158,7 +3166,13 @@ window.KANSHI60_DETAIL={
         var natB=[]; ['year','month','day','hour'].forEach(function(k){var p=P[k]; if(p&&p.shi)natB.push(p.shi);});
         var SAN=[['申','子','辰','水'],['亥','卯','未','木'],['寅','午','戌','火'],['巳','酉','丑','金']];
         var HOU=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','戌','金'],['亥','子','丑','水']];
-        for(var y=nowYear; y<nowYear+12 && favYears.length<3; y++){ var a=r.annualByYear[y]; if(!a||!a.branch)continue; var ab=a.branch, ok=false;
+        // アプリで「要注意」と出る年（日支・月支との冲、空亡、三刑がそろう年）はチャンスの年に入れない（画面と鑑定書の食い違い防止）
+        var CHG={子:'午',午:'子',丑:'未',未:'丑',寅:'申',申:'寅',卯:'酉',酉:'卯',辰:'戌',戌:'辰',巳:'亥',亥:'巳'};
+        var dayB=(P.day&&P.day.shi)||'', monB=(P.month&&P.month.shi)||'', kp=r.kuboPair||'';
+        var K3=[['寅','巳','申'],['丑','戌','未']];
+        var caution=function(ab){ if(CHG[ab]&&(CHG[ab]===dayB||CHG[ab]===monB)) return true; if(kp&&kp.indexOf(ab)>=0) return true;
+          return K3.some(function(g){ if(g.indexOf(ab)<0) return false; var pool=natB.concat([ab]); return g.every(function(x){return pool.indexOf(x)>=0;}) && !g.every(function(x){return natB.indexOf(x)>=0;}); }); };
+        for(var y=nowYear; y<nowYear+12 && favYears.length<3; y++){ var a=r.annualByYear[y]; if(!a||!a.branch)continue; var ab=a.branch, ok=false; if(caution(ab)) continue;
           SAN.forEach(function(g){ if(g.indexOf(ab)>=0&&fav(g[3])>0){ if([g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}).length>=1)ok=true; } });
           HOU.forEach(function(g){ if(g.indexOf(ab)>=0&&fav(g[3])>0){ if([g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}).length>=2)ok=true; } });
           if(ok) favYears.push(y);
@@ -3233,7 +3247,7 @@ window.KANSHI60_DETAIL={
     if(ezShow('shigoto') && kan && kan.仕事){ H+=ezCard('💼 仕事・適職のこと', '<p class="ez-p">'+kan.仕事+'</p>'); }
     var moneyOne=(cat.財>=2?'お金を動かす・増やすのが上手なタイプ。収入源を複数持つと安定します。':cat.財===1?'コツコツ堅実に貯めるのが向くタイプ。計画的な積立が力になります。':'得意なこと・好きなことを収入につなげると金運が育つタイプです。');
     var healthOne=(shugoEls.length? '疲れたら「'+care+'」を意識するとすぐ整います。元気が出る色は'+col+'。':'生活リズムを一定に保つのが一番の元気の秘訣です。');
-    if(ezShow('money')) H+=ezCard('💰🌿 お金・健康のヒント', '<div class="ez-grid"><div><b>💰 お金</b><br>'+moneyOne+'</div><div><b>🌿 健康</b><br>'+healthOne+'</div></div>');
+    if(ezShow('money')) H+=ezCard('💰🌿 お金・健康のヒント', '<div class="ez-grid"><div><b>💰 お金</b><br><span class="ez-txt">'+moneyOne+'</span></div><div><b>🌿 健康</b><br><span class="ez-txt">'+healthOne+'</span></div></div>');
     if(ezShow('cal') && spouse && window.MonthPillar){ H+=ezCard('📅 恋愛が動く月（今年・来年）', monthlyBlock(nowYear, dm, spouse, 'love', sex, true), 'wide'); }
     // 過去のふり返りメモ（直近の空亡の年・冲の年）
     if(!ezSolo){ (function(){ var pkc=pastKuboChong(r); if(!pkc) return; var li='';
@@ -3421,6 +3435,11 @@ window.KANSHI60_DETAIL={
       var base=(location.protocol==='file:')? location.href.split('?')[0] : (location.origin+location.pathname);
       if(!d) return location.href.split('#')[0];
       var q='?d='+encodeURIComponent(d)+'&t='+encodeURIComponent(t)+'&sex='+encodeURIComponent(sx)+(nm?'&name='+encodeURIComponent(nm):'');
+      // 計算の設定（出身地・補正方法・日付の変わり目・クロック時刻優先・時刻不明）も引き継ぎ、受け取った側でも同じ命式にする
+      try{ var _sc=window.__sheetCorr||{}; if(_sc.lon) q+='&lon='+encodeURIComponent(_sc.lon); q+='&corr='+encodeURIComponent(_sc.corr||'none');
+        q+='&z='+(window.__sheetZ==='next'?'next':'today')+'&clk='+(window.__sheetClk?'1':'0'); if(window.__timeUnknown) q+='&tu=1';
+        if(document.body.classList.contains('bg-mode')) q+='&bg=1';   // 初心者向け（専門用語なし）の鑑定書は、受け取った側でも専門用語なしで開く
+      }catch(_e){}
       // 「⚙出力内容」の選択を共有リンクにも反映（開いた側は操作バーなしで、選んだものだけ表示）
       var wantMei=_chk('outMeishiki'), wantRead=_chk('outReading');
       var show=(wantMei&&wantRead)?'both':(wantRead?'reading':(wantMei?'meishi':'both'));
@@ -3810,7 +3829,8 @@ window.KANSHI60_DETAIL={
         var _sc=_duSeasonCls(d.kanshi); if(_sc) cls.push(_sc.trim());
         if(cls.length) tr.className=cls.join(' ');
         var sy = d.startYear!=null ? d.startYear : (by!=null ? by + d.ageFrom : null);
-        var ey = d.endYear!=null ? d.endYear : (by!=null ? by + d.ageTo : null);
+        // 西暦の終わりはアプリと同じ「開始年＋9年」（その大運に主に入る年運の年）。開始年＋10年だと次の大運と重なって見えるため
+        var ey = sy!=null ? sy+9 : (d.endYear!=null ? d.endYear : (by!=null ? by + d.ageTo : null));
         var seireki = (sy!=null && ey!=null) ? (sy+'〜'+ey) : '';
         // 季節ラベル：各行に「その行の色に対応する季節＋五行」を枠外へ。季節が切り替わる先頭行だけに出す
         //   （赤の行＝夏・火、黄の行＝秋・金、青の行＝冬・水…と色と一致）。太い区切り線で切替はぱっと見分かる。
@@ -4017,7 +4037,7 @@ window.KANSHI60_DETAIL={
   var _aiBusy=false;
   // 詳細鑑定(AI)の“ゆるい1日上限”（不正利用防止）。超過はその日だけ定型文に自動フォールバック・翌日リセット。
   // ※フロント側の簡易カウンタ（同一ブラウザ内・アプリと共有）。厳密な強制はサーバー側で（BACKEND_HANDOFF.md 参照）。
-  var AI_DAILY_CAP=50;
+  var AI_DAILY_CAP=200;
   function _aiDayKey(){ var d=new Date(); return 'ai_daily_'+d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2); }
   function aiCount(){ try{ return parseInt(localStorage.getItem(_aiDayKey())||'0',10)||0; }catch(e){ return 0; } }
   function aiCountInc(){ try{ localStorage.setItem(_aiDayKey(), String(aiCount()+1)); }catch(e){} }
@@ -4030,7 +4050,7 @@ window.KANSHI60_DETAIL={
       return;
     }
     _aiBusy=true;
-    aiCardMsg('🔍 この命式を詳しく読み解いています…','（十数秒かかることがあります。ネット接続が必要です）');
+    aiCardMsg(window.__bgPlain?'🔍 生まれ持った性質を詳しく読み解いています…':'🔍 この命式を詳しく読み解いています…','（十数秒かかることがあります。ネット接続が必要です）');
     var r=_lastResult;
     var nm=((document.getElementById('rdName')||{}).textContent||'').replace(/[　\s]*様$/,'').trim();
     var isEasy=(_readLevel==='easy');
@@ -4048,7 +4068,9 @@ window.KANSHI60_DETAIL={
              .replace('運の流れ（大運）','運の流れ（10年ごと）')+
           '\n・読み手は占いをまったく知らない人。日常の場面がイメージできる言葉で、一文は短く書く。';
     }
-    var usr='【鑑定対象】'+(nm||'ご本人')+'さん\n【命式データ】\n'+chartSummaryText(r)+'\n\n上記の命式から、指定の章立てで鑑定書の本文を書いてください。';
+    // お名前は外部の文章作成サービスに送らない（印「〔ご本人〕」で送り、受け取った文章の中で本当のお名前に戻す）
+    var NMTK='〔ご本人〕';
+    var usr='【鑑定対象】'+NMTK+'さん（お名前の代わりの印。呼びかけるときは、この印を一字も変えずに書く）\n【命式データ】\n'+chartSummaryText(r)+'\n\n上記の命式から、指定の章立てで鑑定書の本文を書いてください。';
     var body=JSON.stringify({ system_instruction:{parts:[{text:sys}]}, contents:[{role:'user',parts:[{text:usr}]}], generationConfig:{maxOutputTokens:3200} });
     // まず1回オンライン生成。失敗（レート制限・一時エラー・空応答）なら数秒待って自動で1回だけ再試行。
     // それでもダメなときだけ定型文（オフライン鑑定書）に切替（打ち直し不要）。
@@ -4062,6 +4084,7 @@ window.KANSHI60_DETAIL={
             if(!isRetry){ setTimeout(function(){ attempt(true); }, 2500); return; }
             _aiBusy=false; aiFallbackToTemplate(); return;
           }
+          txt=nm ? txt.split(NMTK).join(nm) : txt.split(NMTK+'さん').join('あなた').split(NMTK).join('あなた');
           var html=parseAIToHTML(txt);
           if(html && window.__bgPlain) html=window.__bgPlain(html);
           if(!html){ if(!isRetry){ setTimeout(function(){ attempt(true); }, 2500); return; } aiCardMsg('返答を整形できませんでした。','もう一度お試しください。'); _aiBusy=false; return; }
@@ -4389,6 +4412,34 @@ window.KANSHI60_DETAIL={
     return base+'　'+lead;
   };
 
+  // ---- アプリと同じ「日付の変わり目」「クロック時刻優先」「出身地なし＝補正なし」を、計算前の入力に反映する ----
+  function _sheetEffInput(y,m,d,h,mn,sex,_sc){
+    var corr=(_sc.lon? (_sc.corr||'none') : 'none');
+    var out={y:y,m:m,d:d,h:h,mn:mn,corr:corr};
+    try{
+      var B=window.Bazi; if(!(B&&B.computeChart)) return out;
+      var z=(window.__sheetZ==='next'), db=z?'zi':'midnight';
+      var base={year:y,month:m,day:d,hour:h,minute:mn,sex:sex};
+      var opt=function(c){ var x={}; for(var k in base) x[k]=base[k]; x.correctionMode=c; x.dayBoundary=db; if(_sc.lon && c!=='none') x.longitude=parseFloat(_sc.lon); return x; };
+      var c=B.computeChart(opt(corr));
+      if(window.__sheetClk && _sc.lon && corr!=='none'){
+        var cg=B.computeChart({year:y,month:m,day:d,hour:12,minute:0,sex:sex,correctionMode:'none',dayBoundary:db}).pillars[2].ganzhi;
+        if(c.pillars[2].ganzhi!==cg){ corr='none'; out.corr='none'; c=B.computeChart(opt('none')); }
+      }
+      if(z){
+        // 早子時：補正後の時刻（真太陽時）が23時台なら翌日の日柱。computeMeishiki は日付の変わり目を受け取れないため、
+        // 時計を「補正後に翌日0時を少し過ぎる」所まで進めて渡す（日柱＝翌日・時柱＝子で、アプリと同じ結果になる）。
+        var sh=h, sm=mn;
+        if(corr!=='none' && c.birth && c.birth.correction && c.birth.correction.solar){ var p=String(c.birth.correction.solar).split(':'); sh=+p[0]; sm=+p[1]; }
+        if(sh===23){
+          var dt=new Date(y,m-1,d,h,mn,0); dt.setMinutes(dt.getMinutes()+(60-sm)+1);
+          out.y=dt.getFullYear(); out.m=dt.getMonth()+1; out.d=dt.getDate(); out.h=dt.getHours(); out.mn=dt.getMinutes();
+        }
+      }
+    }catch(e){}
+    return out;
+  }
+
   // ---- フォーム ----
   document.getElementById('calcForm').addEventListener('submit', function(ev){
     ev.preventDefault();
@@ -4404,12 +4455,14 @@ window.KANSHI60_DETAIL={
     var nm=(document.getElementById('iName').value||'').trim();
     try{
       var _sc=window.__sheetCorr||{};
-      var r=window.computeMeishiki({year:y,month:m,day:d,hour:h,minute:mn,sex:sex, longitude:_sc.lon, correctionMode:_sc.corr||'none'});
+      // アプリ（app-pro の baziCompute）と同じ日柱・時柱にするための入力の調整（表示・アダプタ層。エンジンは無改変）
+      var _e=_sheetEffInput(y,m,d,h,mn,sex,_sc);
+      var r=window.computeMeishiki({year:_e.y,month:_e.m,day:_e.d,hour:_e.h,minute:_e.mn,sex:sex, longitude:_sc.lon, correctionMode:_e.corr});
       var _now=new Date(); var _age=_now.getFullYear()-y; if(((_now.getMonth()+1)*100+_now.getDate()) < (m*100+d)) _age--;  // 満年齢（誕生日前なら-1）
       r.nowAge = _age;
       if(r.birthYear==null) r.birthYear = y;   // 大運の西暦計算に使用
       r.sex = sex;                              // 2枚目の鑑定文（恋愛の星など）で使用
-      try{ r.setsuInfo = _setsuInfo(y,m,d,h,mn,sex,(_sc.corr||'none'),_sc.lon); }catch(_se){ r.setsuInfo=null; }  // 節入り情報（立運の根拠）※エンジンは読むだけ
+      try{ r.setsuInfo = _setsuInfo(y,m,d,h,mn,sex,_e.corr,_sc.lon); }catch(_se){ r.setsuInfo=null; }  // 節入り情報（立運の根拠）※エンジンは読むだけ
       // ★氏名・生年月日は fillFromResult より先に確定する。
       //   横型の命式表（buildYokoSheet）は描画時に #mBirth を読み込むため、
       //   後で設定すると横型ヘッダに前回（初期サンプル）の生年月日が残ってしまう。
@@ -4496,6 +4549,8 @@ window.KANSHI60_DETAIL={
   (function(){ try{
     var q=new URLSearchParams(location.search);
     window.__sheetCorr={lon:q.get('lon')||'', corr:q.get('corr')||'none'};
+    window.__sheetZ=(q.get('z')==='next'?'next':'today');   // 日付の変わり目（早子時）…アプリと同じ扱いにする
+    window.__sheetClk=(q.get('clk')==='1');                 // クロック時刻優先（真太陽時で日付をまたがない）
     window.__timeUnknown=(q.get('tu')==='1');   // 生まれた時刻が不明（時柱＝晩年・将来・子は仮の値・参考）
     if(q.get('d')) document.getElementById('iDate').value=q.get('d');
     if(q.get('t')) document.getElementById('iTime').value=q.get('t');
