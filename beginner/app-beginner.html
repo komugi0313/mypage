@@ -1636,10 +1636,32 @@ const TS_FORTUNE={
   正官:{意:'地位・信用・公的な役割が高まる時期。昇進・良縁・社会的な信頼に恵まれる',助:'規律と誠実さで評価が上がる。重圧を一人で抱え込まず、世間体に縛られすぎない'},
   偏印:{意:'学び・転換・ひらめきの時期。資格・専門・環境や仕事の変化が起きやすい',助:'一つに集中して極めると活きる。気移りで中途半端になりやすいので軸を決める'},
   印綬:{意:'学び・支え・名誉の時期。勉強・資格・目上の引き立て・不動産や書類の縁',助:'インプットを行動・アウトプットに変えると吉。受け身や甘え・考えすぎに注意'}};
+/* 相性の「ぶつかりやすいところ」：相手から見たあなたの星の種類ごとに、すれ違いやすい点を書く（配偶者の星などを一律に「ぶつかる」とは書かない） */
+const CLASH_BY_GRP={
+  比劫:'対等な関係になりやすい分、どちらが主導するか・役割分担でぶつかることがあります。',
+  食傷:'相手はあなたに楽しさや自由さを感じやすい一方、ペースや気分の違いからすれ違うことがあります。',
+  財:'相手にとってあなたは大切にしたい・支えたい相手になりやすい星です。そのぶん、お金や生活の考え方の違いが出たときは、早めに話し合うのが鍵です。',
+  官殺:'相手はあなたに責任感やきちんとした態度を求めやすく、あなたが窮屈さを感じることがあります。',
+  印:'相手はあなたに安心や支えを感じやすい一方、頼りすぎ・頼られすぎになりやすい点に注意しましょう。'};
+function clashByStar(st){ const g=TS_GROUP[st]; return `相手から見たあなたは**${st}（${TS_DESC[st]||''}）**。${CLASH_BY_GRP[g]||'この星が強く出る場面で、役割をめぐってすれ違うことがあります。'}`; }
+/* 巡る星の意味文（TS_FORTUNE）を、その人の運気の目安（扶抑＝unkiPct）に合わせて出す。
+   「ふつう・低め」と判定した時期に「大きく前進できる活気の時期」とだけ書くと、見出しの判定と本文が食い違うため。
+   unit：'時期'（大運・年運）／'日'（日運）／'月'（月運） */
+const STAR_KW={比肩:'自立・自分らしさ',劫財:'仲間・勝負ごと',食神:'楽しむ・表現',傷官:'感性・才能',偏財:'人脈・回るお金',正財:'堅実・貯めるお金',偏官:'行動・度胸',正官:'責任・まじめさ',偏印:'ひらめき・専門',印綬:'学び・知性'};
+function tsFortuneFor(c,star,bStar,unit){
+  const f=TS_FORTUNE[star]; if(!f) return null; unit=unit||'時期';
+  let pct=null; try{ pct=unkiPct(star,bStar||star,strengthType(c)); }catch(e){}
+  const mk=(pct==null)?'':unkiSignal(pct).mk;
+  const u=s=>unit==='時期'?s:String(s).replace(/時期/g,unit);
+  if(mk==='△') return {意:`${STAR_KW[star]||star}の働きが出る${unit}。ただし、あなたの場合はこの力が強まりすぎたり負担になったりしやすいので、無理に広げず、守りと土台づくりを優先すると良い${unit}です`,助:'大きな勝負や拡大は控えめにし、体調と足元を整えましょう',mk};
+  if(mk==='◦') return {意:u(f.意)+`（ただし、あなたの場合は大きな追い風というほどではないので、大きく攻めるより、日々の積み重ねが力になる${unit}です）`,助:u(f.助),mk};
+  return {意:u(f.意),助:u(f.助),mk};
+}
 function tsFortuneLine(star,when){const f=TS_FORTUNE[star];return f?`${when}＝${star}が巡る：${f.意}／過ごし方:${f.助}`:'';}
 /* 選択中の大運・年運に巡る通変星から「起こりやすいこと・過ごし方」を生成（切替のたびに更新） */
-function doukanUnsei(c,o,kindLabel){if(!o)return '';const fd=TS_FORTUNE[o.tenStar];if(!fd)return '';
+function doukanUnsei(c,o,kindLabel){if(!o)return '';
   const bs=(o.branch&&HONKI[o.branch])?tenStarOf(c.dayMaster.stem,HONKI[o.branch]):'';
+  const fd=tsFortuneFor(c,o.tenStar,bs);if(!fd)return '';
   const bfd=(bs&&bs!==o.tenStar)?TS_FORTUNE[bs]:null;
   var tilt='';try{var sType=strengthType(c);var grp=TS_GROUP[o.tenStar];
     if(sType==='身旺'){ if(['食傷','財','官殺'].indexOf(grp)>=0)tilt='身旺のあなたには、この星（'+grp+'）が巡るこの時期は<b>追い風</b>。力を外に出す・挑戦する・成果を狙うのに向きます。';
@@ -3130,11 +3152,12 @@ function kingunEval(c,pillar){
   var jud=pct>=60?'good':(pct<=44?'warn':'flat');
   var stars=meguriKichi(c,pillar.stem,pillar.branch);
   var rel=meguriRel(c,pillar.branch);
-  var f=TS_FORTUNE[star]||null;
-  return {ganzhi:pillar.ganzhi,stem:pillar.stem,branch:pillar.branch,star:star,bStar:bStar,pct:pct,jud:jud,stars:stars,rel:rel,meaning:f?f.意:'',help:f?f.助:''};
+  return {ganzhi:pillar.ganzhi,stem:pillar.stem,branch:pillar.branch,star:star,bStar:bStar,pct:pct,jud:jud,stars:stars,rel:rel,meaning:'',help:''};
 }
-function dayFortuneAt(c,dateObj){try{return kingunEval(c,_pillarForDate(dateObj,'day'));}catch(e){return null;}}
-function monthFortuneAt(c,dateObj){try{return kingunEval(c,_pillarForDate(dateObj,'month'));}catch(e){return null;}}
+// 日運は「日」、月運は「月」の言葉で（大運用の「〜な時期」をそのまま流用しない）
+function _kgWithText(c,ev,unit){ if(!ev) return ev; try{ var f=tsFortuneFor(c,ev.star,ev.bStar,unit); if(f){ ev.meaning=f.意; ev.help=f.助; } }catch(e){} return ev; }
+function dayFortuneAt(c,dateObj){try{return _kgWithText(c,kingunEval(c,_pillarForDate(dateObj,'day')),'日');}catch(e){return null;}}
+function monthFortuneAt(c,dateObj){try{return _kgWithText(c,kingunEval(c,_pillarForDate(dateObj,'month')),'月');}catch(e){return null;}}
 // 今日から days 日ぶんの日運一覧
 function dayFortuneList(c,days){var out=[],base=new Date();base.setHours(12,0,0,0);
   for(var i=0;i<days;i++){var d=new Date(base.getTime()+i*86400000);var ev=dayFortuneAt(c,d);if(ev){ev.date=d;out.push(ev);}}return out;}
@@ -3490,7 +3513,7 @@ function chartHighlights(c,plain){
   try{var br4=c.pillars.map(function(p){return p.branch;});
     var sio=br4.filter(function(x){return ['子','午','卯','酉'].indexOf(x)>=0;});
     if(sio.length){var boku=sio.some(function(x){return x==='卯'||x==='酉';}),hika=sio.some(function(x){return x==='午'||x==='子';});
-      var det=[];if(boku)det.push('卯・酉あり＝刺激や新しさを好み、経験を通じて自分を知っていくタイプ');if(hika)det.push('午・子あり＝情熱的で、関係をじっくり継続・深めることを大切にする');if(sio.length>=2)det.push('複数持つほどエネルギーは強まり、行動力・情熱がいっそう豊かに');
+      var det=[],_has=function(xs){return xs.filter(function(x){return sio.indexOf(x)>=0;}).join('・');};if(boku)det.push(_has(['卯','酉'])+'あり＝刺激や新しさを好み、経験を通じて自分を知っていくタイプ');if(hika)det.push(_has(['午','子'])+'あり＝情熱的で、関係をじっくり継続・深めることを大切にする');if(sio.length>=2)det.push('複数持つほどエネルギーは強まり、行動力・情熱がいっそう豊かに');
       push('day','🔥',plain?'エネルギーが強い（四旺）':'四旺（子午卯酉）のエネルギー',(plain?'生命力・情熱が強い十二支（四旺＝子午卯酉）を'+sio.length+'つ持っています。パワフルで行動力・恋愛のエネルギーが豊かなタイプ。':'四旺（子午卯酉＝生命エネルギーの強い十二支）を'+sio.length+'つ持つ＝生命力・情熱・行動力が豊かで、恋愛でもエネルギッシュ。')+(det.length?'　'+det.join('。')+'。':''));}
     if(br4.indexOf('卯')>=0&&br4.indexOf('酉')>=0){
       push('day','⚖️',plain?'理性と本能の二面性（卯酉の冲）':'卯酉の冲＝二面性の魅力',
@@ -3535,7 +3558,7 @@ function chartHighlights(c,plain){
   }catch(e){}
   try{var g=kakukyoku(c); if(g&&g.name){
     if(g.kind==='外格'){push('special','⭐',plain?'特別な型（めったにない命式）':'特別な格局「'+g.name+'」',plain?'大きな成功や富に恵まれやすい、ごく稀な形です。':g.mean);}
-    else{ if(g.subs&&g.subs.length)g.subs.forEach(function(s){push('good','📛',plain?'特に良い配置':'格局「'+s.name+'」',s.mean+((typeof KAKU_SUB_ADVICE!=='undefined'&&KAKU_SUB_ADVICE[s.name])?'　→ 【活かし方】'+KAKU_SUB_ADVICE[s.name]:''));});
+    else{ if(g.subs&&g.subs.length)g.subs.forEach(function(s){push('good','📛',plain?'特に良い配置':'型の中の好配置「'+s.name+'」',s.mean+((typeof KAKU_SUB_ADVICE!=='undefined'&&KAKU_SUB_ADVICE[s.name])?'　→ 【活かし方】'+KAKU_SUB_ADVICE[s.name]:''));});
           push('info','📛',plain?'基本の型':'命式の型：'+g.name,g.base+((typeof KAKU_ADVICE!=='undefined'&&KAKU_ADVICE[g.name])?'　→ 【活かし方】'+KAKU_ADVICE[g.name]:''));} }}catch(e){}
   try{var tg=(typeof tokugoNatalReading==='function')?tokugoNatalReading(c):[];
     tg.forEach(function(x){push('special','💞',plain?'とても強い運命的な縁（天地徳合）':'天地徳合（'+x.name+'）',
@@ -4583,7 +4606,7 @@ function yojoHTML(c){
   const summary=`<div style="background:var(--bg);border-radius:12px;padding:11px 12px;margin:8px 0 4px">
     <div style="font-size:12px;font-weight:900;color:var(--ink2);margin-bottom:8px">ひと目でわかる養生の方針</div>
     <div style="display:flex;flex-wrap:wrap;gap:7px">${sumChips.length?sumChips.join(''):'<span style="font-weight:800;color:var(--mok);font-size:12.5px">五行はバランス良好（大きな偏りなし）</span>'}${nowChip}</div>
-    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:8px">多い五行＝同じ味を増やさず「流す・冷ます」で整える（食べないのではない）／不足の五行＝その食材を食べて補う。詳しくは下のカードへ。</div>
+    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:8px">多い五行＝同じ味を増やさず「流す・冷ます」で整える（食べないのではない）／不足の五行＝その食材を食べて補う。詳しくは下のカードへ。<br>※ここは体と食事のバランス（養生）の目安です。運勢の追い風・向かい風（喜神・忌神）の判定とは別の見方なので、少ない五行がそのまま「運を上げる五行」とは限りません。</div>
   </div>`;
   const nowBlock=nv?`<div class="mhint" style="margin-top:10px;background:${ec(nv.el)}10;border-radius:10px;padding:9px 11px">
     <b>今の時期の傾き：</b>大運${nv.dd.ganzhi}${nv.ay?'＋年運'+nv.ay.ganzhi:''}で<b style="color:${ec(nv.el)}">${dot(nv.el)}${nv.el}</b>が強まる流れ。${nv.advice}。食養生（${nv.excess?'整える':'補う'}）：${nv.excess?YOJO[nv.el].過食:nv.food}</div>`:'';
@@ -5150,7 +5173,10 @@ function gogyoTaika(c){
 /* 足りない五行が、今後の大運・年運で巡って補われる（バランスが整う）時期を示す */
 function weakElTiming(c){
   if(!c.decadeFortunes||!c.now)return [];
-  const b=gogyoBalance(c);const weak=(b.zero.length?b.zero:b.weak);if(!weak.length)return [];
+  const b=gogyoBalance(c);let weak=(b.zero.length?b.zero:b.weak);
+  // 足りない五行でも、扶抑で「忌」（控えめが吉）の五行は「巡ると追い風」とは言わない（要点の喜・忌と食い違わないように）
+  try{ const A=(typeof _kkAssess==='function')?_kkAssess(c):null; if(A) weak=weak.filter(we=>A.assess(we).fav!=='忌'); }catch(e){}
+  if(!weak.length)return [];
   const nowY=c.now.year||0;
   return weak.map(we=>{
     const dus=(c.decadeFortunes||[]).filter(f=>(f.startYear+10)>nowY&&(STEM_EL[f.stem]===we||STEM_EL[HONKI[f.branch]]===we)).slice(0,2)
@@ -5669,10 +5695,16 @@ function localReading(c,worry,hard){
   const k=natalTs10(c);
   const g={比劫:0,食傷:0,財:0,官殺:0,印:0};
   for(const s in k){if(k[s])g[TS_GROUP[s]]+=k[s];}
-  const topName=Object.entries(g).sort((a,b)=>b[1]-a[1])[0][0];
+  // 「星の中心」は日主（あなた自身）を数えずに比べる。同数のときは月支元命（気質の軸）の星を優先（同じ鑑定内の格・元命と食い違わないように）
+  const g2=Object.assign({},g); g2.比劫=Math.max(0,g2.比劫-1);
+  const gs=Object.entries(g2).sort((a,b)=>b[1]-a[1]); let topName=gs[0][0];
+  try{ const gm=(typeof genmeiStar==='function')?genmeiStar(c):null, gmg=gm?TS_GROUP[gm.star]:null; if(gmg&&g2[gmg]===gs[0][1]) topName=gmg; }catch(e){}
   const fe=c.fiveElements||{};
   const feArr=Object.entries(fe).sort((a,b)=>b[1]-a[1]);
   const strongEl=feArr[0][0], weakEl=feArr[feArr.length-1][0];
+  // 同数のときは並べて書く（「いちばん多いのは木」と言い切ると、同じ数の土・金と食い違う）
+  const _mx=feArr[0][1], _mn=feArr[feArr.length-1][1];
+  const strongEls=feArr.filter(x=>x[1]===_mx).map(x=>x[0]).join('・'), weakEls=feArr.filter(x=>x[1]===_mn).map(x=>x[0]).join('・');
   const {dd,ay}=curDuYear(c);
   const duGrp=TS_GROUP[dd.tenStar], yrGrp=ay?TS_GROUP[ay.tenStar]:null;
   const dp=c.pillars[2], terr=dp.terrain;
@@ -5701,7 +5733,7 @@ function localReading(c,worry,hard){
     const tt=tsTerrCombos(c);if(tt.length){const y=tt[0];
     L.push(`通変星と十二運の組み合わせ：**${y.name}**（${y.where}）＝${y.意}。${y.助}。`);}})();
   L.push('【五行のかたより】');
-  L.push(`いちばん多いのは**${strongEl}**、少ないのは**${weakEl}**です。${weakEl}が少ない人は、${WEAK_EL_TRAIT[weakEl]||EL_DESC[weakEl]+'の力が控えめ'}という気質が出やすいと言われます（運の良し悪しではなく、性格のクセです）。日ごろ「${ELEMENT_TIP[weakEl]}」を意識すると、足りない${weakEl}が自然に補われ、バランスが整いやすくなります。`);
+  L.push(_mx===_mn?`五行（木・火・土・金・水）は**ほぼ均等**に持っています。`:`いちばん多いのは**${strongEls}**、少ないのは**${weakEls}**です。${weakEl}が少ない人は、${WEAK_EL_TRAIT[weakEl]||EL_DESC[weakEl]+'の力が控えめ'}という気質が出やすいと言われます（運の良し悪しではなく、性格のクセです）。日ごろ「${ELEMENT_TIP[weakEl]}」を意識すると、足りない${weakEl}が自然に補われ、バランスが整いやすくなります。`);
   (()=>{const w=weakElTiming(c);if(!w.length)return;const x=w[0];const parts=[...x.dus];if(x.ays.length)parts.push('年運では**'+x.ays.slice(0,3).join('・')+'年**あたり');
     if(parts.length)L.push(`そして足りない**${x.el}**は、${parts.join('／')}に巡ってきて自然に補われ、**バランスが整いやすい時期**になります。この頃は${x.el}に関わることが追い風になりやすいでしょう。`);})();
   (()=>{const cs=detectChusatsu(c);if(!cs.any)return;const t=[];
@@ -5767,8 +5799,8 @@ function localReading(c,worry,hard){
     return t.join('')||'お金は堅実な範囲で、楽しみや人とのつながりから縁が広がるタイプです。';})());
   L.push('【今めぐっている時期】');
   L.push(`今の大運は**${dd.ganzhi}（${dd.tenStar}）**${ay?`、年運は**${ay.year}年 ${ay.ganzhi}（${ay.tenStar}）**`:''}。${STAR_TIMING[yrGrp||duGrp]}`);
-  (()=>{const fd=TS_FORTUNE[dd.tenStar];if(fd)L.push(`いまは**${dd.tenStar}が巡る大運**。${fd.意}。**過ごし方**：${fd.助}。`);
-    if(ay){const fy=TS_FORTUNE[ay.tenStar];if(fy)L.push(`今年は**${ay.tenStar}が巡る年**。${fy.意}。**過ごし方**：${fy.助}。`);}})();
+  (()=>{const fd=tsFortuneFor(c,dd.tenStar,tenStarOf(c.dayMaster.stem,HONKI[dd.branch]));if(fd)L.push(`いまは**${dd.tenStar}が巡る大運**。${fd.意}。**過ごし方**：${fd.助}。`);
+    if(ay){const fy=tsFortuneFor(c,ay.tenStar,tenStarOf(c.dayMaster.stem,HONKI[ay.branch]));if(fy)L.push(`今年は**${ay.tenStar}が巡る年**。${fy.意}。**過ごし方**：${fy.助}。`);}})();
   (()=>{const bk=bokoKaichu(c);if(!bk)return;
     const now=bk.list.filter(k=>(k.natalOpen||k.duOpen||k.ayOpen)&&!k.locked);
     if(now.length){L.push('【'+'蔵が開く時期（墓庫開冲）'+'】');
@@ -5935,8 +5967,8 @@ function localAnswer(c,worry){
   else if(topic==='timing'){
     L.push('【今めぐっている運】');
     L.push(`今の大運は**${dd.ganzhi}（${dd.tenStar}）**${ay?`、今年の年運は**${ay.year}年 ${ay.ganzhi}（${ay.tenStar}）**`:''}。${STAR_TIMING[yrGrp||duGrp]}`);
-    const fd=TS_FORTUNE[dd.tenStar];if(fd)L.push(`**${dd.tenStar}の大運**：${fd.意}。過ごし方：${fd.助}。`);
-    if(ay){const fy=TS_FORTUNE[ay.tenStar];if(fy)L.push(`**今年（${ay.tenStar}）**：${fy.意}。過ごし方：${fy.助}。`);}
+    const fd=tsFortuneFor(c,dd.tenStar,tenStarOf(c.dayMaster.stem,HONKI[dd.branch]));if(fd)L.push(`**${dd.tenStar}の大運**：${fd.意}。過ごし方：${fd.助}。`);
+    if(ay){const fy=tsFortuneFor(c,ay.tenStar,tenStarOf(c.dayMaster.stem,HONKI[ay.branch]));if(fy)L.push(`**今年（${ay.tenStar}）**：${fy.意}。過ごし方：${fy.助}。`);}
     if(c.now){const up=(c.annualFortunes||[]).filter(a=>a.year>c.now.year&&a.year<=c.now.year+5).map(a=>`${a.year}年 ${a.ganzhi}（${a.tenStar}）`);if(up.length){L.push('【これからの数年】');up.forEach(x=>L.push('- '+x));}}
   }
   else if(topic==='children'){
@@ -6501,7 +6533,7 @@ function localCompat(A,B,na,nb,rt,ask){
   L.push('【'+rt.clash+'】');
   L.push(isChong(aB,bB)
     ?`日支が**冲（${aB}${bB}）**。刺激的な反面、ペースや価値観の違いでぶつかりやすいので、距離感の調整が鍵です。`
-    :`相手から見たあなたは**${tenStarOf(bS,aS)}（${TS_DESC[tenStarOf(bS,aS)]||''}）**。この星が強く出ると、主導権や役割でぶつかることがあります。`);
+    :clashByStar(tenStarOf(bS,aS)));
   L.push('【'+rt.tips+'】');
   // コツ：単なる最少五行ではなく、身旺・身弱から出す用神・喜神（助ける五行）を相手が持つかで見る（相性の王道）。失敗時のみ最少五行に退避。
   (function(){
@@ -6553,7 +6585,7 @@ function localCompatAnswer(A,B,na,nb,rt,ask){
   };
   const clashLine=()=>isChong(aB,bB)
     ?`2人の日支が**冲（ちゅう＝${aB}と${bB}）**。惹かれ合う反面、ペースや価値観の違いでぶつかりやすい配置。距離感の調整が鍵です。`
-    :`相手から見たあなたは**${tenStarOf(bS,aS)}（${TS_DESC[tenStarOf(bS,aS)]||''}）**。この星が強く出る場面で、主導権や役割をめぐりすれ違うことがあります。`;
+    :clashByStar(tenStarOf(bS,aS));
   const tipsLine=()=>{const need=Object.entries(A.fiveElements).sort((x,y)=>x[1]-y[1])[0][0],bHas=B.fiveElements[need]||0;
     return `あなたに不足の**${need}（${EL_DESC[need]}）**を、相手は${bHas}持っています。${bHas>=1?'相手の'+need+'の面を頼ると関係が安定します。':'2人とも'+need+'が弱めなので、'+EL_DESC[need]+'を一緒に意識すると整います。'} 違いを“補い合い”ととらえるのがコツです。`;};
   const clashYears=[];
@@ -7618,7 +7650,8 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
   function meanOf(o){ var f=(typeof TS_FORTUNE!=='undefined')?TS_FORTUNE[o.tenStar]:null; return f||{意:'',助:''}; }
   // 「△ 静かに整える時期」なのに「飛躍の時期」などと書かないよう、△の時期は控えめな説明にそろえる
   var CALM={意:'今は無理に広げず、足元を整えて力をためる時期です。',助:'体調と生活リズムを整え、次の良い時期に向けて準備しておきましょう。'};
-  function meanFor(c,o){ return sig(c,o).mk==='△'?CALM:meanOf(o); }
+  // PROと同じ物差し（tsFortuneFor）で、「ふつう」の時期には控えめな但し書き、「△」は落ち着いた説明にする（見出しの判定と本文を食い違わせない）
+  function meanFor(c,o){ if(sig(c,o).mk==='△') return CALM; var f=safe(function(){ return tsFortuneFor(c,o.tenStar,tenStarOf(c.dayMaster.stem,HONKI[o.branch])); },null); return f||meanOf(o); }
   // とくに大きく揺れやすい年（下の「揺れやすい時期」と同じ判定）。良い時期の一覧に、その年だと分かる印を付けるために使う
   function shakyYears(c){ var ys={}; var ts=safe(function(){return detectTensen(c);},null); if(!ts||!ts.any) return ys;
     [ts,ts.work||{}].forEach(function(x){ ['yU','yA'].forEach(function(k){ (x[k]||[]).forEach(function(l){ var m=String(l).match(/(\d{4})年/); if(m) ys[+m[1]]=1; }); }); });
