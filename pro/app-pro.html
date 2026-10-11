@@ -378,7 +378,13 @@
   .flowcard .mhint:last-child{margin-bottom:0}
   /* 人生のエネルギー推移（大運バイオリズム・横棒グラフ） */
   .ebars{display:flex;flex-direction:column;gap:5px;margin:2px 0 4px}
-  .ebar-row{display:grid;grid-template-columns:84px 1fr 40px;gap:8px;align-items:center}
+  .ebar-row{display:grid;grid-template-columns:104px 1fr 92px;gap:8px;align-items:center}
+  .ebar-lab small{white-space:nowrap}   /* 「〜12歳2ヶ月」の「月」だけが次の行に落ちないように */
+  .ebar-lab .ebar-pre{display:block}
+  .ebar-val{display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-weight:900;font-size:15px}
+  .ebar-tag{font-size:9.5px;font-weight:800;border-radius:999px;padding:1px 6px;white-space:nowrap}
+  .ebar-tag.up{background:#E7F6EC;color:#1F8A55}.ebar-tag.dn{background:#FFF4E0;color:#A0670E}
+  @media (max-width:420px){ .ebar-row{grid-template-columns:96px 1fr 64px;gap:6px} .ebar-tag{font-size:8.5px;padding:1px 4px} }
   .ebar-lab{font-size:10px;font-weight:800;color:var(--ink2);text-align:right;line-height:1.15}
   .ebar-lab small{font-size:8.5px;font-weight:700;color:var(--muted)}
   .ebar-row.now .ebar-lab{color:var(--now)}
@@ -2708,7 +2714,7 @@ function _tsScan(c,target){
   if(!target||target.length<2)return r;
   const map=TENSEN_MAP[target.charAt(0)]||['',''];
   const now=(c&&c.now)||{}, cy=(now.year!=null?now.year:new Date().getFullYear());
-  const by=(now.year!=null&&now.age!=null)?now.year-now.age:null;
+  const by=(typeof birthYearOf==='function'&&birthYearOf(c))||((now.year!=null&&now.age!=null)?now.year-now.age:null);   // 生まれ年（見る日によって1歳ぶれないように）
   const gzOf=a=>a.ganzhi||((a.stem||'')+(a.branch||''));
   const dir=gz=>map.indexOf(gz.charAt(0));
   (c.annualFortunes||[]).forEach(a=>{const gz=gzOf(a);if(!isTensenChichu(target,gz)||a.year<cy-1||a.year>cy+20)return;
@@ -2787,7 +2793,7 @@ function detectRitchin(c){
   const pairs=[]; if(g[0]&&g[0]===g[1])pairs.push('年柱と月柱'); if(g[1]&&g[1]===g[2])pairs.push('月柱と日柱'); if(g[0]&&g[0]===g[2]&&g[0]!==g[1])pairs.push('年柱と日柱');
   const allThree=!!(g[0]&&g[0]===g[1]&&g[1]===g[2]);
   const now=c.now||{},cy=(now.year!=null?now.year:new Date().getFullYear());
-  const by=(now.year!=null&&now.age!=null)?now.year-now.age:null;
+  const by=(typeof birthYearOf==='function'&&birthYearOf(c))||((now.year!=null&&now.age!=null)?now.year-now.age:null);   // 生まれ年（見る日によって1歳ぶれないように）
   const matchP=gz=>{const r=[];if(gz&&gz===g[0])r.push('年柱');if(gz&&gz===g[1])r.push('月柱');if(gz&&gz===g[2])r.push('日柱');return r;};
   const gzOf=a=>a.ganzhi||((a.stem||'')+(a.branch||''));
   const years=(c.annualFortunes||[]).filter(a=>a.year>=cy&&matchP(gzOf(a)).length).slice(0,6)
@@ -3103,8 +3109,8 @@ const MONTH_OF_BRANCH={'寅':2,'卯':3,'辰':4,'巳':5,'午':6,'未':7,'申':8,'
 function curMonthFortune(c){
   try{
     if(!(window.Bazi&&window.Bazi.computeChart))return null;
-    var td=new Date();
-    var tc=window.Bazi.computeChart({year:td.getFullYear(),month:td.getMonth()+1,day:td.getDate(),hour:12,minute:0,sex:'male',correctionMode:'none'});
+    var J=jstNow();   // 日本時間のいま（節入りの当日も、いまの時刻で判定）
+    var tc=window.Bazi.computeChart({year:J.y,month:J.m,day:J.d,hour:J.h,minute:J.mi,sex:'male',correctionMode:'none'});
     var mp=tc.pillars[1];
     var star=tenStarOf(c.dayMaster.stem,mp.stem);
     var f=TS_FORTUNE[star]||null;
@@ -3147,18 +3153,24 @@ function _kgWithText(c,ev,unit){ if(!ev) return ev; try{ var f=tsFortuneFor(c,ev
 function dayFortuneAt(c,dateObj){try{return _kgWithText(c,kingunEval(c,_pillarForDate(dateObj,'day')),'日');}catch(e){return null;}}
 function monthFortuneAt(c,dateObj){try{return _kgWithText(c,kingunEval(c,_pillarForDate(dateObj,'month')),'月');}catch(e){return null;}}
 // 今日から days 日ぶんの日運一覧
-function dayFortuneList(c,days){var out=[],base=new Date();base.setHours(12,0,0,0);
+function _jstToday(){var J=jstNow();return new Date(J.y,J.m-1,J.d,12,0,0,0);}   // 日本時間の今日（正午）
+function dayFortuneList(c,days){var out=[],base=_jstToday();
   for(var i=0;i<days;i++){var d=new Date(base.getTime()+i*86400000);var ev=dayFortuneAt(c,d);if(ev){ev.date=d;out.push(ev);}}return out;}
 // 今月から n ヶ月ぶんの月運一覧（各暦月の20日＝節月がひとつに定まる日で判定）
-function monthFortuneList(c,n){var out=[],t=new Date();
-  for(var i=0;i<n;i++){var d=new Date(t.getFullYear(),t.getMonth()+i,20,12,0,0,0);var ev=monthFortuneAt(c,d);if(ev){ev.date=d;ev.calMonth=d.getMonth()+1;ev.calYear=d.getFullYear();out.push(ev);}}return out;}
+// ※月初め（節入りの前）は、まだ前の月の節月が続いている。そのときは先頭に「いまの節月」を前の月の名前で入れる（月運の「今月」がずれないように）
+function monthFortuneList(c,n){var out=[],t=_jstToday(),J=jstNow();
+  var evNow=null; try{ var tc=window.Bazi.computeChart({year:J.y,month:J.m,day:J.d,hour:J.h,minute:J.mi,sex:'male',correctionMode:'none'}); evNow=_kgWithText(c,kingunEval(c,tc.pillars[1]),'月'); }catch(e){}
+  var first=new Date(t.getFullYear(),t.getMonth(),20,12,0,0,0), evFirst=monthFortuneAt(c,first);
+  var start=0;
+  if(evNow&&evFirst&&evNow.ganzhi!==evFirst.ganzhi){ var pd=new Date(t.getFullYear(),t.getMonth()-1,20,12,0,0,0); evNow.date=pd; evNow.calMonth=pd.getMonth()+1; evNow.calYear=pd.getFullYear(); out.push(evNow); start=0; n=n-1; }
+  for(var i=start;i<n;i++){var d=new Date(t.getFullYear(),t.getMonth()+i,20,12,0,0,0);var ev=monthFortuneAt(c,d);if(ev){ev.date=d;ev.calMonth=d.getMonth()+1;ev.calYear=d.getFullYear();out.push(ev);}}return out;}
 function _isoDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function _kgBadge(j){return j==='good'?'追い風':j==='warn'?'動き・注意':'ふつう';}
 function _kgDetailHTML(ev,unit,title){
   var judL=ev.jud==='good'?'追い風の'+unit+'（挑戦・行動向き）':ev.jud==='warn'?'動きやすい・整える'+unit+'（守り・確認向き）':'ふつうの'+unit+'（平常運転）';
   var starsH=ev.stars&&ev.stars.length?`<div class="kg-stars">巡る吉凶星：${ev.stars.map(function(s){return `<span class="kg-chip">${kichiLabel(s)}</span>`;}).join('')}</div>`:'';
   var relH=ev.rel&&ev.rel.length?`<div class="kg-rel">${ev.rel.map(function(r){return `<div class="${r.t==='good'?'r-good':'r-warn'}">${r.t==='good'?'◯':'△'} ${r.s}</div>`;}).join('')}</div>`:'';
-  return `<div class="kg-detail"><div class="kg-h"><b>${title}</b>：${ev.ganzhi}（${ev.star}）<span class="kg-badge ${ev.jud}">${_kgBadge(ev.jud)}</span><small style="color:var(--muted);font-weight:700">運気${ev.pct}%</small></div>
+  return `<div class="kg-detail"><div class="kg-h"><b>${title}</b>：${ev.ganzhi}（${ev.star}）<span class="kg-badge ${ev.jud}">${_kgBadge(ev.jud)}</span></div>
     <div class="kg-mean">${judL}。${ev.meaning}</div>${starsH}${relH}
     <div class="kg-help">過ごし方：${ev.help}</div></div>`;
 }
@@ -3168,9 +3180,10 @@ function _kgDayRow(ev){var wd=['日','月','火','水','木','金','土'][ev.dat
 function _kgMonRow(ev){var ym=ev.calYear+'-'+String(ev.calMonth).padStart(2,'0');var mini=(ev.stars&&ev.stars.length?ev.stars.slice(0,3).join('・'):'');
   return `<div class="kg-row ${ev.jud}" data-m="${ym}"><span class="kg-date">${ev.calYear}年${ev.calMonth}月</span><span class="kg-gz">${ev.ganzhi}</span><span class="kg-star">${ev.star}</span><span class="kg-badge ${ev.jud}">${_kgBadge(ev.jud)}</span>${mini?`<span class="kg-mini">${mini}</span>`:''}</div>`;}
 function kingunHTML(c){
-  var today=new Date(),todayIso=_isoDate(today);
-  var thisYm=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0');
+  var today=_jstToday(),todayIso=_isoDate(today);
   var dl=dayFortuneList(c,14),ml=monthFortuneList(c,12);
+  // 「今月」＝いまの節月（月初めの節入り前は、前の月の名前の節月）
+  var thisYm=ml.length?(ml[0].calYear+'-'+String(ml[0].calMonth).padStart(2,'0')):(today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0'));
   var dayRows=dl.map(_kgDayRow).join(''),monRows=ml.map(_kgMonRow).join('');
   return `<section class="card sec" id="kingun-sec">
     <span class="eyebrow"><b>目の前の運</b>日運・月運</span>
@@ -3268,6 +3281,10 @@ function duAgeAt(a,m,u){u=u||'歳';return a+u+(m?m+'ヶ月':'');}
 function duAgeRange(d,u){u=u||'歳';if(!d)return '';
   if(d.isMonth)return (d.endAge||d.endMonths)?('0'+u+'〜'+duAgeAt(d.endAge,d.endMonths,u)):('0'+u+'（立運0年0ヶ月）');
   const m=d.months||0; return m?(duAgeAt(d.startAge,m,u)+'〜'+duAgeAt(d.endAge,m,u)):(d.startAge+'〜'+d.endAge+u);}
+/* 「いま」の位置は、立運の端数（〇ヶ月）まで含めて月単位で判定する（流派ルール：0歳〜立運〇年〇ヶ月＝月柱） */
+function _nowMonths(c){ return (c&&c.now)?((typeof c.now.ageMonths==='number')?c.now.ageMonths:c.now.age*12):0; }
+function duIsNow(c,d){ if(!c||!c.now||!d||d.isMonth) return d&&d.isMonth?duMonthNow(c):false; const am=_nowMonths(c), m=d.months||0; return am>=d.startAge*12+m && am<d.endAge*12+m; }
+function duMonthNow(c){ const d0=c&&c.decadeFortunes&&c.decadeFortunes[0]; if(!c||!c.now||!d0) return false; return _nowMonths(c)<d0.startAge*12+(d0.months||0); }
 function curDu(c){
   if(!c||!c.now||!c.decadeFortunes)return null;
   const di=c.now.daeunIndex;
@@ -3278,13 +3295,15 @@ function curDuYear(c){
   const df=c.decadeFortunes,d0=df[0],mp=c.pillars[1],birthY=birthYearOf(c);
   const monthDu={isMonth:true,startAge:0,months:0,endAge:d0.startAge,endMonths:d0.months||0,startYear:birthY,
     ganzhi:mp.ganzhi,stem:mp.stem,branch:mp.branch,stemElement:mp.stemElement,branchElement:mp.branchElement,tenStar:mp.tenStar};
-  const inMonth=!!(c.now&&c.now.age<d0.startAge);
+  const inMonth=duMonthNow(c);
   const cur=inMonth?-2:(c.now?c.now.daeunIndex:-1);
   const sel=(selDu===-2)?-2:(selDu>=0?selDu:(cur>=0?cur:(inMonth?-2:0)));
   const dd=(sel===-2)?monthDu:df[sel];
-  const y0=dd.startYear,y1=dd.isMonth?d0.startYear:dd.startYear+10;
+  // 大運は「開始年の開始月」から10年（立運の端数の月があるので、暦年では11年にまたがる）。いまの大運なら今年（立春基準）を必ず使う
+  const y0=dd.startYear,y1=dd.isMonth?d0.startYear+1:dd.startYear+11;
+  const isCurDu=(sel===cur)||(sel===-2&&inMonth);
   const sy=(selYear&&selYear>=y0&&selYear<y1)?selYear
-    :((c.now&&c.now.year>=y0&&c.now.year<y1)?c.now.year:y0);
+    :((c.now&&isCurDu)?c.now.year:((c.now&&c.now.year>=y0&&c.now.year<y1)?c.now.year:y0));
   const ay=c.annualFortunes.find(a=>a.year===sy)||c.annualFortunes.find(a=>a.year>=y0)||c.annualFortunes[0];
   return {cur,sel,dd,sy,ay,monthDu,inMonth,birthY};
 }
@@ -3787,7 +3806,7 @@ function kaikyokuScan(c){
   const nowYear=c.now?c.now.year:c.annualFortunes[0].year, nowAge=c.now?c.now.age:0;
   const y2age=y=>nowAge+(y-nowYear);
   c.decadeFortunes.forEach(d=>{const endY=d.startYear+10;if(endY<=nowYear)return;
-    _kaikyokuHits(natalBr,d.branch).forEach(h=>res.periods.push(Object.assign({when:'大運',ganzhi:d.ganzhi,year0:Math.max(d.startYear,nowYear),year1:endY-1,age0:d.startAge,age1:d.endAge,ageLab:duAgeRange(d),current:(c.now&&c.now.age>=d.startAge&&c.now.age<d.endAge)},h)));});
+    _kaikyokuHits(natalBr,d.branch).forEach(h=>res.periods.push(Object.assign({when:'大運',ganzhi:d.ganzhi,year0:Math.max(d.startYear,nowYear),year1:endY-1,age0:d.startAge,age1:d.endAge,ageLab:duAgeRange(d),current:duIsNow(c,d)},h)));});
   const horizon=nowYear+30;
   c.annualFortunes.forEach(a=>{if(a.year<nowYear||a.year>horizon)return;
     const dd=c.decadeFortunes.find(d=>a.year>=d.startYear&&a.year<d.startYear+10);
@@ -3856,7 +3875,7 @@ function timingAlertHTML(c){
     var age=c.now.age, out=[];
     // 次の節木運（人生の大きな節目・約30年に一度）
     var sb=null;
-    try{ if(typeof Setsuboku!=='undefined'&&c.decadeFortunes){ sb=Setsuboku.analyze({decadeFortunes:c.decadeFortunes,nowAge:age,birthYear:(c.now.year-age)}); } }catch(_e){}
+    try{ if(typeof Setsuboku!=='undefined'&&c.decadeFortunes){ sb=Setsuboku.analyze({decadeFortunes:c.decadeFortunes,nowAge:age,birthYear:(birthYearOf(c)||(c.now.year-age))}); } }catch(_e){}
     var setsuAge=(sb&&sb.next&&typeof sb.next.startAge==='number')?sb.next.startAge:null;
     var setsuSoon=(setsuAge!=null)&&(setsuAge>age)&&(setsuAge-age<=2);
     // 次の大運の切り替え（現在の大運の終わり）
@@ -4140,7 +4159,7 @@ function verdictHTML(c){
   const item=(lab,sig,pct,sub)=>`<div class="vd-item"><div class="vd-lab">${lab}</div>
     <div class="vd-sig" style="color:${sig.col}">${sig.mk} ${sig.lab}</div>
     <div class="vd-bar"><i style="width:${pct}%;background:${sig.col}"></i></div>
-    <div class="vd-sub">運気の目安 ${pct}%・巡る星＝${sub}</div></div>`;
+    <div class="vd-sub">巡る星＝${sub}</div></div>`;
   const scan=(typeof kaikyokuScan==='function')?kaikyokuScan(c):{natal:[]};
   const rank={三合:3,方合:2,半合:1};
   const natal=(scan.natal||[]).slice().sort((a,b)=>(rank[b.kind]||0)-(rank[a.kind]||0));
@@ -4506,12 +4525,20 @@ function flowHTML(c){
   const bioBlock=(()=>{const df=c.decadeFortunes;if(!df||!df.length)return '';const d0=df[0],birthY=birthYearOf(c);
       const ds=c.dayMaster.stem,sType=strengthType(c);
       const rows=[];
-      {const mp=c.pillars[1],bs=tenStarOf(ds,HONKI[mp.branch]);rows.push({y0:birthY,y1:d0.startYear,a0:0,a1:d0.startAge,al:duAgeRange({isMonth:true,endAge:d0.startAge,endMonths:d0.months||0}),e:unkiPct(mp.tenStar,bs,sType),col:ec(mp.stemElement),now:(c.now&&c.now.age<d0.startAge),pre:true,tip:'立運前(月柱'+mp.ganzhi+')'});}
-      df.forEach(d=>{const bs=tenStarOf(ds,HONKI[d.branch]);rows.push({y0:d.startYear,y1:d.startYear+10,a0:d.startAge,a1:d.endAge,al:duAgeRange(d),e:unkiPct(d.tenStar,bs,sType),col:ec(d.stemElement),now:(c.now&&c.now.age>=d.startAge&&c.now.age<d.endAge),tip:d.ganzhi+' 干'+d.tenStar+'/支'+bs});});
-      const bars=rows.map(r=>`<div class="ebar-row ${r.now?'now':''}"><div class="ebar-lab">${r.y0}–${r.y1}年<br><small>${r.al}${r.pre?'・立運前':''}</small></div><div class="ebar-track" title="${r.tip}"><div class="ebar-fill" style="width:${r.e}%;background:${r.col}"></div></div><div class="ebar-val">${r.e}%${r.now?'<span class="rt">今</span>':''}</div></div>`).join('');
+      {const mp=c.pillars[1],bs=tenStarOf(ds,HONKI[mp.branch]);rows.push({y0:birthY,y1:d0.startYear,a0:0,a1:d0.startAge,al:duAgeRange({isMonth:true,endAge:d0.startAge,endMonths:d0.months||0}),e:unkiPct(mp.tenStar,bs,sType),col:ec(mp.stemElement),now:duMonthNow(c),pre:true,tip:'立運前(月柱'+mp.ganzhi+')'});}
+      df.forEach(d=>{const bs=tenStarOf(ds,HONKI[d.branch]);rows.push({y0:d.startYear,y1:d.startYear+10,a0:d.startAge,a1:d.endAge,al:duAgeRange(d),e:unkiPct(d.tenStar,bs,sType),col:ec(d.stemElement),now:duIsNow(c,d),tip:d.ganzhi+' 干'+d.tenStar+'/支'+bs});});
+      // 西暦は次の大運の開始年と重ならないように（例：1990–1991／1992–2001）
+      rows.forEach((r,i)=>{ if(rows[i+1]&&r.y1>=rows[i+1].y0) r.y1=rows[i+1].y0-1; if(r.y1<r.y0) r.y1=r.y0; });
+      // 数字（％）は出さない：中和の人などは全期間が60％台に並び、％の差に意味がないため。
+      // 代わりに、この人の中で比べた「追い風の強さ」を棒の長さで見せ、印（◎○◦△）で判定を示す。
+      const es=rows.map(r=>r.e), mn=Math.min(...es), mx=Math.max(...es), spread=mx-mn, flat=spread<10;   // 差が10ポイント未満なら「大きな差なし」として棒をそろえる（わずかな差を大げさに見せない）
+      const rel=e=>flat?60:Math.round(25+70*(e-mn)/spread);
+      const tag=r=>flat?'':(r.e===mx?'<span class="ebar-tag up">この中で追い風</span>':(r.e===mn?'<span class="ebar-tag dn">この中で控えめ</span>':''));
+      const bars=rows.map(r=>{const sg=unkiSignal(r.e);return `<div class="ebar-row ${r.now?'now':''}"><div class="ebar-lab">${r.y0===r.y1?r.y0:r.y0+'–'+r.y1}年<br><small>${r.al}</small>${r.pre?'<small class="ebar-pre">立運前（月柱）</small>':''}</div><div class="ebar-track" title="${r.tip}"><div class="ebar-fill" style="width:${rel(r.e)}%;background:${r.col}"></div></div><div class="ebar-val"><span style="color:${sg.col}">${sg.mk}</span>${r.now?'<span class="rt">今</span>':''}${tag(r)}</div></div>`;}).join('');
+      const flatNote=flat?`<div class="mhint" style="margin:4px 0 6px;color:var(--ink2);font-weight:800">この方は、どの10年も追い風の強さに<b>大きな差がない安定型</b>です（${sType}）。良い・悪いの波よりも、上の一覧の<b>各10年に巡る星のテーマ</b>（学び・人脈・仕事など）で読むのがおすすめです。</div>`:'';
       return `<div class="flowcard"><div class="scry">大運の運気推移（バイオリズム）<small style="font-weight:700;color:var(--muted)"> ── あなたの<b>${gogyoBalance(c).strength}</b>と用神（喜神・忌神）から算出</small></div>
-      <div class="ebars">${bars}</div>
-      <div class="mhint" style="margin-bottom:6px">運気％は、その10年の大運があなたに<b>味方するか</b>を、<b>身旺/身弱と用神（喜神・忌神）</b>から数値化したもの（${sType}のあなたは${sType==='身旺'?'食傷・財・官殺（漏らす/抑える）が喜、印・比劫（生じる/助ける）が忌':sType==='身弱'?'印・比劫（生じる/助ける）が喜、食傷・財・官殺（漏らす/抑える）が忌':'全体に中庸'}）。<b>高い時期は追い風で挑戦向き、低い時期は守り・土台づくり</b>の目安です（吉凶の断定ではありません）。最初の帯は立運前（月柱）。</div></div>`;})();
+      <div class="ebars">${bars}</div>${flatNote}
+      <div class="mhint" style="margin-bottom:6px">棒の長さは、その10年の大運があなたに<b>味方する度合い</b>を<b>この方の一生の中で比べたもの</b>、印は判定（◎好調／○順調／◦ふつう／△整える時期）です。判定は、<b>身旺/身弱と用神（喜神・忌神）</b>から数値化したもの（${sType}のあなたは${sType==='身旺'?'食傷・財・官殺（漏らす/抑える）が喜、印・比劫（生じる/助ける）が忌':sType==='身弱'?'印・比劫（生じる/助ける）が喜、食傷・財・官殺（漏らす/抑える）が忌':'全体に中庸'}）から出しています。<b>長い時期は追い風で挑戦向き、短い時期は守り・土台づくり</b>の目安です（吉凶の断定ではありません）。最初の帯は立運前（月柱）。</div></div>`;})();
   return `<section class="card sec" id="flow-sec">
     <span class="eyebrow"><b>運勢</b>大運・年運</span>
     <h2>運の流れ ── <span style="white-space:nowrap">今どこ？</span><span style="white-space:nowrap">これから何が巡る？</span></h2>
@@ -4640,7 +4667,7 @@ function yojoHTML(c){
     ${(()=>{try{const cc=b.counts||{};const w=cc.水||0,ed=cc.土||0,fi=cc.火||0;const ts=natalTsCounts(c);const shoku=ts.食傷||0;
       const wstate=w>=4?'多め':(w<=1?'控えめ':'適度');const ds=c.dayMaster.stem;const nowY=(c.now&&c.now.year)||new Date().getFullYear();
       const isWater=x=>['壬','癸'].includes(x.stem)||['子','亥'].includes(x.branch);
-      const duHit=(c.decadeFortunes||[]).filter(d=>{const bs=tenStarOf(ds,HONKI[d.branch]);return ['食神','傷官','正財','偏財'].includes(d.tenStar)||['食神','傷官','正財','偏財'].includes(bs)||isWater(d);}).filter(d=>!(c.now&&c.now.age>=d.endAge)).map(d=>`${duAgeRange(d)}(${d.ganzhi})`).slice(0,3);
+      const duHit=(c.decadeFortunes||[]).filter(d=>{const bs=tenStarOf(ds,HONKI[d.branch]);return ['食神','傷官','正財','偏財'].includes(d.tenStar)||['食神','傷官','正財','偏財'].includes(bs)||isWater(d);}).filter(d=>!(c.now&&_nowMonths(c)>=d.endAge*12+(d.months||0))).map(d=>`${duAgeRange(d)}(${d.ganzhi})`).slice(0,3);
       const yrHit=(c.annualFortunes||[]).filter(a=>a.year>=nowY&&a.year<=nowY+10&&(['食神','傷官','正財','偏財'].includes(a.tenStar)||isWater(a))).map(a=>a.year).slice(0,6);
       const tip=wstate==='多め'?'水が多めで冷えやすいので、<b>体を温める食べ物（生姜・クルミ・黒豆）</b>とヨガ・ウォーキングで血流を良くすると整いやすい':wstate==='控えめ'?'水が控えめで乾きやすいので、<b>腎を養う食べ物（黒ごま・山芋・ナッツ）</b>と水分・保湿で潤いを保つとよい':'今のバランスを保つ養生を';
       return `<div style="background:${ec('水')}0e;border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-top:10px">
@@ -5391,7 +5418,7 @@ function buildChartText(c){
   const duFlow=duListWithMonth(c).map(d=>{
     const sb=tenStarOf(ds,HONKI[d.branch]);
     const els=[...new Set([STEM_EL[d.stem],STEM_EL[HONKI[d.branch]]])].join('・');
-    const cur=(c.now&&c.now.age>=d.startAge&&c.now.age<d.endAge)?' ←今ここ':'';
+    const cur=duIsNow(c,d)?' ←今ここ':'';
     return `${duAgeRange(d)}(${d.startYear}年-) ${d.isMonth?'【第一運＝月柱】':''}${d.ganzhi} 干${d.tenStar}/支${sb}・補う五行${els}${cur}`;
   }).join('\n  ');
   const grpFlow=c.decadeFortunes.map(d=>TS_GROUP[d.tenStar]).join('→');
@@ -5532,7 +5559,8 @@ function buildChartText(c){
 
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 // 五行の語（木火土金水）をその五行カラーで着色（曜日・お金・土台などの誤着色は除外）
-function colorGogyo(s){return s.replace(/(?<![おご料資賃現貯借税香海淡])([木火土金水])(?![曜事災分台地壌運額銭融産業])/g,(m,c)=>`<span class="gel" style="color:${ec(c)};font-weight:800">${c}</span>`);}
+/* 後読み（?<!…）は古い iPhone（iOS 16.3 以前）で画面全体が動かなくなるため使わない。直前の1文字は先頭のグループで受けて判定する */
+function colorGogyo(s){return s.replace(/[木火土金水]/g,(c,off,str)=>(/[おご料資賃現貯借税香海淡]/.test(str.charAt(off-1))||/[曜事災分台地壌運額銭融産業]/.test(str.charAt(off+1)))?c:`<span class="gel" style="color:${ec(c)};font-weight:800">${c}</span>`);}
 /* 鑑定レポートの見出し→アイコン（【】付き・素の見出しの両方に対応） */
 const SECTION_ICON={'基本性質':'🌿','基本性格':'🌿','性格':'🌿','性格の核':'🌿',
   '才能・適性':'💼','才能と適性':'💼','才能':'💼','適性':'💼','仕事・適職':'💼','適職':'💼','仕事運':'💼',
@@ -7303,6 +7331,8 @@ function zishiFix(c){
 }
 function clockPriority(){const e=document.getElementById('f-clockday');return e?e.checked:false;}
 /* 命式計算の共通入口：真太陽時補正→（クロック優先なら日付を跨いだ時のみクロック日付に固定）→子刻補正 */
+/* 日本時間の「いま」（端末の時間帯の設定に左右されない） */
+function jstNow(){ const t=new Date(Date.now()+9*3600000); return {y:t.getUTCFullYear(),m:t.getUTCMonth()+1,d:t.getUTCDate(),h:t.getUTCHours(),mi:t.getUTCMinutes()}; }
 function baziCompute(base, lon, corr){
   // 出身地を「指定しない」ときは時差補正もしない（ラベルどおり「補正なし」。均時差だけがかかるのを防ぐ）
   if(!lon) corr='none';
@@ -7320,11 +7350,18 @@ function baziCompute(base, lon, corr){
   // 立春補正：年運（流年）は暦年1/1ではなく立春（節）で切り替わる。エンジンが立春を正しく扱う「今日の年柱」を用い、現在の干支年をnow.yearへ反映（1/1〜立春前は前年扱い）。
   try{
     if(c&&c.now&&c.annualFortunes&&c.annualFortunes.length){
-      const _td=new Date();
-      const _tp=window.Bazi.computeChart({year:_td.getFullYear(),month:_td.getMonth()+1,day:_td.getDate(),hour:12,minute:0,sex:'male',correctionMode:'none'}).pillars[0].ganzhi;
-      const _gy=_td.getFullYear();
-      const _std=c.annualFortunes.find(a=>a.year===_gy);
-      c.now.year=(_std&&_std.ganzhi!==_tp)?_gy-1:_gy;
+      // 「いま」は端末の時間帯にかかわらず日本時間で数える（海外の端末・時間帯の設定ちがいで年運・年齢がずれないように）
+      const J=jstNow();
+      // 立春の当日は、立春の時刻の前後で年が変わる（正午ではなく、いまの時刻で判定）
+      const _tp=window.Bazi.computeChart({year:J.y,month:J.m,day:J.d,hour:J.h,minute:J.mi,sex:'male',correctionMode:'none'}).pillars[0].ganzhi;
+      const _std=c.annualFortunes.find(a=>a.year===J.y);
+      c.now.year=(_std&&_std.ganzhi!==_tp)?J.y-1:J.y;
+      // 満年齢・月数も日本時間の今日で数え直し、いまの大運を立運の端数（〇ヶ月）込みで決め直す
+      const by=+base.year,bm=+base.month,bd=+base.day;
+      if(by&&bm&&bd){ let am=(J.y-by)*12+(J.m-bm)-(J.d<bd?1:0); if(am<0)am=0;
+        c.now.ageMonths=am; c.now.age=Math.floor(am/12); c.now.date=J.y+'-'+('0'+J.m).slice(-2)+'-'+('0'+J.d).slice(-2);
+        const df=c.decadeFortunes||[]; const idx=df.findIndex(d=>am>=d.startAge*12+(d.months||0)&&am<d.endAge*12+(d.months||0));
+        c.now.daeunIndex=(df[0]&&am<df[0].startAge*12+(df[0].months||0))?-1:idx; }
     }
   }catch(_e){}
   try{ extendLongLife(c); }catch(_e){}
