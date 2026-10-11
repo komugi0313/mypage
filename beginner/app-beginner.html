@@ -896,6 +896,7 @@ html.bg-intro-done #bg-intro{display:none}
         </select>
         <div style="font-size:11px;color:var(--muted);font-weight:600;margin-top:4px;line-height:1.6">男×男・女×女でも鑑定できます。同性のパートナーの方は、お相手の性別を選んでください。</div>
       </div>
+      <label style="display:flex;align-items:flex-start;gap:8px;margin-top:12px;font-size:13px;font-weight:800;color:var(--ink2);cursor:pointer"><input type="checkbox" id="f-dst" checked style="width:18px;height:18px;margin-top:2px;flex:0 0 auto"><span>日本のサマータイム（1948〜51年の夏）に生まれた方は、1時間戻して計算する<small style="display:block;font-weight:600;color:var(--muted);line-height:1.6">当時は時計を1時間進めていたため、母子手帳などの時刻は夏時間です。該当する方だけに自動で効きます（ふつうはオンのまま）。</small></span></label>
       <div class="field full" style="margin-top:12px"><label>日付の変わり目（夜23時台に生まれた方）</label><select id="f-zishi">
         <option value="today" selected="">通常はこちら：23:59まで当日として扱う（おすすめ）</option>
         <option value="next">23時から翌日の日柱として扱う（早子時＝夜23時を翌日の始まりとする考え方・流派により選択）</option>
@@ -2703,6 +2704,7 @@ function heroHTML(c){
     <div class="meta">
       <span>生年月日 <b>${c.timeUnknown?String(c.birth.clock).slice(0,10)+'（時刻不明）':c.birth.clock}</b></span>
       <span>${c.timeUnknown?'<b>時柱なし（年月日の3柱で鑑定）</b>':corr?`真太陽時 <b>${corr.solar}</b>`:'<b>時差補正なし</b>'}</span>
+      ${c.dstStd&&!c.timeUnknown?`<span>サマータイム期間の生まれ：時計の <b>${c.dstFrom}</b>（夏時間）→ 標準時 <b>${c.dstStd}</b> で計算</span>`:''}
       <span>立運 <b>${String(c.startFortune.text).replace('歳','年').replace('カ月','ヶ月')}・${c.startFortune.forward?'順行':'逆行'}</b></span>
     </div>
   </section>`;
@@ -6813,7 +6815,7 @@ function buildCompatBase(out){
     if(isNaN(_bd)||_bd.getMonth()!==mo-1||_bd>_td||y<1900){ out.innerHTML='<div class="err">お相手の生年月日をご確認ください（今日より先の日付や、実在しない日付は選べません）。</div>'; return null; } }
   const lon=document.getElementById('b-pref').value;
   personNameB=document.getElementById('b-name').value.trim();
-  try{chartB=baziCompute({year:y,month:mo,day:d,hour:h,minute:mi,sex:sexB}, lon, lon?((document.getElementById('f-corr')||{}).value||'full'):'none');}catch(e){out.innerHTML='<div class="err">お相手の命式の計算に失敗しました。日付・時刻をご確認ください。</div>';return null;}
+  try{chartB=baziCompute({year:y,month:mo,day:d,hour:h,minute:mi,sex:sexB,tu:!!_bNoTime}, lon, lon?((document.getElementById('f-corr')||{}).value||'full'):'none');}catch(e){out.innerHTML='<div class="err">お相手の命式の計算に失敗しました。日付・時刻をご確認ください。</div>';return null;}
   if(document.getElementById('b-notime')&&document.getElementById('b-notime').checked)markTimeUnknown(chartB);
   const na=personName||'本人', nb=personNameB||'お相手';
   const rt=RELTYPES[document.getElementById('rel-type')?.value||'love']||RELTYPES.love;
@@ -6839,7 +6841,7 @@ function ensureChartAFromForm(){
   const lon=document.getElementById('f-pref').value, corr=document.getElementById('f-corr').value;
   const timeUnknown=document.getElementById('f-notime')&&document.getElementById('f-notime').checked;
   personName=document.getElementById('f-name').value.trim();
-  chart=baziCompute({year:y,month:mo,day:d,hour:h,minute:mi,sex}, lon, corr);
+  chart=baziCompute({year:y,month:mo,day:d,hour:h,minute:mi,sex,tu:!!timeUnknown}, lon, corr);
   if(timeUnknown) markTimeUnknown(chart);
   return true;
 }
@@ -7352,7 +7354,22 @@ function clockPriority(){const e=document.getElementById('f-clockday');return e?
 /* 命式計算の共通入口：真太陽時補正→（クロック優先なら日付を跨いだ時のみクロック日付に固定）→子刻補正 */
 /* 日本時間の「いま」（端末の時間帯の設定に左右されない） */
 function jstNow(){ const t=new Date(Date.now()+9*3600000); return {y:t.getUTCFullYear(),m:t.getUTCMonth()+1,d:t.getUTCDate(),h:t.getUTCHours(),mi:t.getUTCMinutes()}; }
+/* 日本のサマータイム（1948〜1951年）：その期間の時計の時刻（夏時間）を、標準時（1時間前）に直す。
+   期間＝各年の開始日 1:00 〜 終了日 1:00（夏時間）。1948/5/2〜9/12、1949/4/3〜9/11、1950/5/7〜9/10、1951/5/6〜9/9。 */
+const JP_DST={1948:[[5,2],[9,12]],1949:[[4,3],[9,11]],1950:[[5,7],[9,10]],1951:[[5,6],[9,9]]};
+function jpDstToStd(y,m,d,h,mi){
+  const r=JP_DST[y]; if(!r) return null;
+  const t=Date.UTC(y,m-1,d,h,mi), st=Date.UTC(y,r[0][0]-1,r[0][1],1,0), en=Date.UTC(y,r[1][0]-1,r[1][1],1,0);
+  if(t<st||t>=en) return null;
+  const u=new Date(t-3600000); return {y:u.getUTCFullYear(),m:u.getUTCMonth()+1,d:u.getUTCDate(),h:u.getUTCHours(),mi:u.getUTCMinutes()};
+}
+function dstOn(){ const e=document.getElementById('f-dst'); return e?e.checked:true; }
 function baziCompute(base, lon, corr){
+  // サマータイム期間の生まれ（時刻が分かる人だけ）：時計の時刻を標準時に直してから計算する（表示・アダプタ層。エンジンは無改変）
+  let _dst=null;
+  const _dstIn={h:+base.hour,mi:+base.minute};
+  if(!base.tu && dstOn()){ _dst=jpDstToStd(+base.year,+base.month,+base.day,+base.hour,+base.minute);
+    if(_dst) base=Object.assign({},base,{year:_dst.y,month:_dst.m,day:_dst.d,hour:_dst.h,minute:_dst.mi}); }
   // 出身地を「指定しない」ときは時差補正もしない（ラベルどおり「補正なし」。均時差だけがかかるのを防ぐ）
   if(!lon) corr='none';
   // 早子時（「23時から翌日」）：エンジンの dayBoundary オプションで、時差補正後の時刻（真太陽時）が23時台なら翌日の日柱にする。
@@ -7384,6 +7401,7 @@ function baziCompute(base, lon, corr){
     }
   }catch(_e){}
   try{ extendLongLife(c); }catch(_e){}
+  if(_dst&&c){ c.dstStd=('0'+_dst.h).slice(-2)+':'+('0'+_dst.mi).slice(-2); c.dstFrom=('0'+_dstIn.h).slice(-2)+':'+('0'+_dstIn.mi).slice(-2); }   // 夏時間を直した標準時（表示用）
   return zishiFix(c);
 }
 /* ご高齢の方（80歳代〜）：エンジンの大運は8運（約80歳代）まで・年運は生まれ年から91年分のため、
@@ -7454,6 +7472,7 @@ function openMeishiSheet(){
   // 生まれた時刻が不明のときは、印刷用鑑定書にも「時刻不明」を伝える（時柱＝晩年・将来・子は仮の値として注記・断定を控える）
   const _tu=((document.getElementById('f-notime')||{}).checked)||(typeof chart!=='undefined'&&chart&&chart.timeUnknown);
   if(_tu)q.set('tu','1');
+  if(!dstOn())q.set('dst','0');   // サマータイム補正をしない設定も鑑定書へ引き継ぐ
   // 画面の判定（年・10年の運気の信号、とくに揺れやすい年）を鑑定書にも渡し、紙と画面で言うことをそろえる
   try{ if(typeof chart!=='undefined'&&chart&&chart.now&&chart.dayMaster){
     const c=chart, ds=c.dayMaster.stem, st=strengthType(c), y0=c.now.year;
@@ -7494,7 +7513,7 @@ function compute(){
   personName=document.getElementById('f-name').value.trim();
   selDu=-1;selYear=null;zouOverride={};flowOpen=false;
   window.__isSample=false;
-  chart=baziCompute({year:y,month:mo,day:d,hour:h,minute:mi,sex}, lon, corr);
+  chart=baziCompute({year:y,month:mo,day:d,hour:h,minute:mi,sex,tu:!!timeUnknown}, lon, corr);
   clearCompatResult();   // 本人が変わったら、前の本人で出した相性結果は無効なので消す（お相手の入力欄は残す）
   if(timeUnknown){
     markTimeUnknown(chart);

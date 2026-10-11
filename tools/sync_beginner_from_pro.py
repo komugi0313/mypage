@@ -153,7 +153,6 @@ def build_auth():
     s = s.replace('terms-pro.html', 'terms.html').replace('tokushoho-pro.html', 'tokushoho.html').replace('privacy-pro.html', 'privacy.html')
     s = rep(s, '© 四柱推命占い自動鑑定（72k株式会社）', f'© {B_NAME}（72k株式会社）', 1, 'フッターの社名')
     s = rep(s, 'P-20261010-7K3QX-A9M2Z', 'B-20261010-7K3QX-A9M2Z', 2, 'お申し込み番号の例')
-    s = rep(s, 'href="icon-crystal.png"', 'href="icon-beginner.svg"', 1, 'ファビコン')
     (BEG / 'auth.html').write_text(s, encoding='utf-8')
 
 

@@ -722,7 +722,7 @@
     .daiun .setsu-tag{ position:static !important; transform:none !important; display:inline-block; margin:0 4px 0 0 !important; }
     /* 鑑定書は「名前付きページ」で上下左右に余白を持たせる（継ぎ目に間ができ、2枚目以降も端に詰まらない）。
        命式表はA4フルブリード(margin:0)のままなのではみ出さない。 */
-    .sheet-read{ page:pageRead; padding:6mm; } /* 鑑定書：装飾なしなので通常余白でOK（@page 8mm と合わせて読みやすい余白） */
+    .sheet-read{ page:pageRead; padding:6mm 6mm 0; } /* 下の余白は@pageの余白にまかせる（ここに余白があると、本文がページいっぱいで終わったとき白紙が1枚付く）。鑑定書：装飾なしなので通常余白でOK（@page 8mm と合わせて読みやすい余白） */
     .body{ margin-top:2mm; gap:4mm; } .col{ gap:2.4mm; } .subgrid{ gap:3mm; }
     .head{ margin:0 0 1mm; } .crest{ height:6mm; } .meta{ margin:1mm 0 0; }
     .note{ padding:4px 9px; line-height:1.45; }
@@ -835,6 +835,10 @@
 
 <script>
 /* 日本時間の「いま」（端末の時間帯の設定に左右されない） */
+/* 日本のサマータイム（1948〜1951年）の時刻を標準時に直す（アプリと同じ。期間＝開始日1:00〜終了日1:00（夏時間）） */
+var _JP_DST={1948:[[5,2],[9,12]],1949:[[4,3],[9,11]],1950:[[5,7],[9,10]],1951:[[5,6],[9,9]]};
+function _jpDstToStd(y,m,d,h,mi){ var r=_JP_DST[y]; if(!r) return null; var t=Date.UTC(y,m-1,d,h,mi), st=Date.UTC(y,r[0][0]-1,r[0][1],1,0), en=Date.UTC(y,r[1][0]-1,r[1][1],1,0);
+  if(t<st||t>=en) return null; var u=new Date(t-3600000); return {y:u.getUTCFullYear(),m:u.getUTCMonth()+1,d:u.getUTCDate(),h:u.getUTCHours(),mi:u.getUTCMinutes()}; }
 function _jstNow(){ var t=new Date(Date.now()+9*3600000); return {y:t.getUTCFullYear(),m:t.getUTCMonth()+1,d:t.getUTCDate(),h:t.getUTCHours(),mi:t.getUTCMinutes()}; }
 /* いまの年齢（立運の端数〇ヶ月まで含む）と、いまの大運かどうか（流派ルール：0歳〜立運〇年〇ヶ月＝月柱） */
 function _nowX(r){ return (r&&r.nowAgeX!=null)?r.nowAgeX:(r?r.nowAge:null); }
@@ -3340,6 +3344,26 @@ window.KANSHI60_DETAIL={
     }catch(e){}
   }
   window.addEventListener('beforeprint', function(){ setTimeout(fitPrintSheetExact,0); });
+  // 鑑定書の印刷：本文（段組）のすぐ後に「※注意書き」と「鑑定日などのフッター」が全幅で続くと、本文がページいっぱいで終わったときに
+  //   注意書きとフッターだけの、ほぼ白紙のページが付いてしまう。印刷の間だけ、この2つを段組の最後に入れて本文と一緒に流す。
+  function readFootInflow(on){
+    try{ document.querySelectorAll('.sheet-read').forEach(function(sh){
+      var body=sh.querySelector('.rd-body'); if(!body) return; var cols=body.querySelector('.rd-cols, .ez-wrap'); var foot=sh.querySelector(':scope > .footrow');
+      if(on){
+        if(!cols||cols.querySelector('.rd-inflow')) return;
+        [].slice.call(body.children).forEach(function(n){ if(n!==cols && n.classList && n.classList.contains('rd-note')){ n.setAttribute('data-inflow','1'); cols.appendChild(n); } });
+        if(foot){ var c=document.createElement('div'); c.className='rd-inflow'; c.style.cssText='break-inside:avoid;margin-top:3mm;font-size:9px;color:#6B6458;letter-spacing:.06em;text-align:right';
+          var fl=foot.querySelector('.footline'), kd=foot.querySelector('.kantei'); c.textContent=((fl?fl.textContent.trim().replace(/\s*・\s*$/,''):'')+'　'+(kd?kd.textContent.trim():'')).trim();
+          cols.appendChild(c); foot.setAttribute('data-inflow-hide','1'); foot.style.display='none'; }
+      } else {
+        [].slice.call(sh.querySelectorAll('[data-inflow]')).forEach(function(n){ n.removeAttribute('data-inflow'); body.appendChild(n); });
+        [].slice.call(sh.querySelectorAll('.rd-inflow')).forEach(function(n){ n.remove(); });
+        if(foot&&foot.getAttribute('data-inflow-hide')){ foot.removeAttribute('data-inflow-hide'); foot.style.display=''; }
+      } }); }catch(e){}
+  }
+  window.addEventListener('beforeprint', function(){ readFootInflow(true); });
+  window.addEventListener('afterprint', function(){ readFootInflow(false); });
+  try{ if(window.matchMedia){ var _mqR=window.matchMedia('print'); (_mqR.addEventListener?_mqR.addEventListener.bind(_mqR,'change'):_mqR.addListener.bind(_mqR))(function(e){ readFootInflow(!!e.matches); }); } }catch(e){}
   fitPrintSheet(); setTimeout(fitPrintSheet, 120);
   window.addEventListener('beforeprint', fitPrintSheet);
   if(typeof paginateReadingScreen==='function') paginateReadingScreen();   // 初期表示：鑑定書の空A4カードを出す
@@ -3468,7 +3492,7 @@ window.KANSHI60_DETAIL={
       var q='?d='+encodeURIComponent(d)+'&t='+encodeURIComponent(t)+'&sex='+encodeURIComponent(sx)+(nm?'&name='+encodeURIComponent(nm):'');
       // 計算の設定（出身地・補正方法・日付の変わり目・クロック時刻優先・時刻不明）も引き継ぎ、受け取った側でも同じ命式にする
       try{ var _sc=window.__sheetCorr||{}; if(_sc.lon) q+='&lon='+encodeURIComponent(_sc.lon); q+='&corr='+encodeURIComponent(_sc.corr||'none');
-        q+='&z='+(window.__sheetZ==='next'?'next':'today')+'&clk='+(window.__sheetClk?'1':'0'); if(window.__timeUnknown) q+='&tu=1';
+        q+='&z='+(window.__sheetZ==='next'?'next':'today')+'&clk='+(window.__sheetClk?'1':'0'); if(window.__timeUnknown) q+='&tu=1'; if(/[?&]dst=0(&|$)/.test(location.search)) q+='&dst=0';
         if(document.body.classList.contains('bg-mode')) q+='&bg=1';   // 初心者向け（専門用語なし）の鑑定書は、受け取った側でも専門用語なしで開く
       }catch(_e){}
       // 「⚙出力内容」の選択を共有リンクにも反映（開いた側は操作バーなしで、選んだものだけ表示）
@@ -4517,14 +4541,18 @@ window.KANSHI60_DETAIL={
     try{
       var _sc=window.__sheetCorr||{};
       // アプリ（app-pro の baziCompute）と同じ日柱・時柱にするための入力の調整（表示・アダプタ層。エンジンは無改変）
-      var _e=_sheetEffInput(y,m,d,h,mn,sex,_sc);
+      // サマータイム期間の生まれ（時刻が分かる人だけ）：時計の時刻を標準時に直して計算（アプリと同じ。dst=0 で補正しない）
+      var _cy=y,_cm=m,_cd=d,_ch=h,_cmn=mn;
+      if(!window.__timeUnknown && !/[?&]dst=0(&|$)/.test(location.search)){ var _ds=_jpDstToStd(y,m,d,h,mn);
+        if(_ds){ _cy=_ds.y;_cm=_ds.m;_cd=_ds.d;_ch=_ds.h;_cmn=_ds.mi; msg.textContent='サマータイム期間の生まれのため、時計の'+h+'時'+('0'+mn).slice(-2)+'分（夏時間）を標準時'+_ch+'時'+('0'+_cmn).slice(-2)+'分に直して計算しています。'; } }
+      var _e=_sheetEffInput(_cy,_cm,_cd,_ch,_cmn,sex,_sc);
       var r=window.computeMeishiki({year:_e.y,month:_e.m,day:_e.d,hour:_e.h,minute:_e.mn,sex:sex, longitude:_sc.lon, correctionMode:_e.corr});
       var _J=_jstNow(); var _age=_J.y-y; if((_J.m*100+_J.d) < (m*100+d)) _age--;  // 満年齢（誕生日前なら-1）。日本時間の今日で数える
       var _am=(_J.y-y)*12+(_J.m-m)-(_J.d<d?1:0); r.nowAgeX=Math.max(0,_am)/12;   // 立運の端数（〇ヶ月）まで含めた「いま」の年齢
       r.nowAge = _age;
       if(r.birthYear==null) r.birthYear = y;   // 大運の西暦計算に使用
       r.sex = sex;                              // 2枚目の鑑定文（恋愛の星など）で使用
-      try{ r.setsuInfo = _setsuInfo(y,m,d,h,mn,sex,_e.corr,_sc.lon); }catch(_se){ r.setsuInfo=null; }  // 節入り情報（立運の根拠）※エンジンは読むだけ
+      try{ r.setsuInfo = _setsuInfo(_cy,_cm,_cd,_ch,_cmn,sex,_e.corr,_sc.lon); }catch(_se){ r.setsuInfo=null; }  // 節入り情報（立運の根拠）※エンジンは読むだけ
       // ★氏名・生年月日は fillFromResult より先に確定する。
       //   横型の命式表（buildYokoSheet）は描画時に #mBirth を読み込むため、
       //   後で設定すると横型ヘッダに前回（初期サンプル）の生年月日が残ってしまう。

@@ -872,7 +872,7 @@ input[type=checkbox]{width:20px;height:20px;}
   <!-- ===== 顧客 ===== -->
   <div class="view" id="view-customers">
     <h2 class="sec" data-i18n="h_roster">顧客名簿</h2>
-    <input class="field" id="custSearch" data-i18n-ph="ph_search_cust" placeholder="🔍 名前で検索" style="margin-bottom:8px;">
+    <input class="field" id="custSearch" data-i18n-ph="ph_search_cust" placeholder="🔍 名前・ふりがな・メモで検索" style="margin-bottom:8px;">
     <button class="btn ghost sm" id="addCust" style="margin-bottom:14px;" data-i18n="btn_add_cust">＋ 新しいお客様を追加</button>
     <div id="custList"></div>
     <p class="muted" id="custEmpty" style="text-align:center;padding:30px 0;display:none;" data-i18n="cust_empty">まだお客様が登録されていません。</p>
@@ -1016,6 +1016,8 @@ input[type=checkbox]{width:20px;height:20px;}
     <div class="sheet-b">
       <label class="fl">お名前</label>
       <input class="field" id="coEditName" maxlength="40">
+      <label class="fl">ふりがな（検索・並べ替え用／任意）</label>
+      <input class="field" id="coEditKana" maxlength="40" placeholder="例：やまだ はなこ">
       <label class="fl">メモ（特徴・前回の話・好みなど）</label>
       <textarea class="field" id="coMemo" placeholder="例：40代・転職相談がメイン。前回は風火家人。"></textarea>
       <div class="row2" style="margin-top:12px;">
@@ -1351,6 +1353,15 @@ const TAI_FIX={
 };
 function mTheme(h){ return h&&MODERN64[h.no]?MODERN64[h.no][0]:(h?h.theme:''); }
 function mMsg(h){ return h&&MODERN64[h.no]?MODERN64[h.no][1]:(h?h.unsei_txt:''); }
+/* 生年月日（＋時）から計算用の入力を作る。日本のサマータイム（1948〜51年の夏）の時刻は標準時（1時間前）に直す（PROと同じ） */
+const EKI_JP_DST={1948:[[5,2],[9,12]],1949:[[4,3],[9,11]],1950:[[5,7],[9,10]],1951:[[5,6],[9,9]]};
+function ekiBirthOpt(Y,M,D,H){
+  let y=Y,m=M,d=D,h=(H==null?12:H);
+  const r=EKI_JP_DST[Y];
+  if(H!=null&&r){ const t=Date.UTC(Y,M-1,D,H,0), st=Date.UTC(Y,r[0][0]-1,r[0][1],1,0), en=Date.UTC(Y,r[1][0]-1,r[1][1],1,0);
+    if(t>=st&&t<en){ const u=new Date(t-3600000); y=u.getUTCFullYear(); m=u.getUTCMonth()+1; d=u.getUTCDate(); h=u.getUTCHours(); } }
+  return {year:y,month:m,day:d,hour:h,minute:0,sex:'female',correctionMode:'none'};
+}
 function mTai(h,k){ if(!h) return ''; const f=TAI_FIX[h.no+'-'+k]; const t=f||((h.ko&&h.ko[k])?h.ko[k].tai:'');
   let x=String(t||'').trim();
   // 「…時です。◎良い時です。」のように同じ締めが二重になるものは、後ろの「良い時です」を落とす
@@ -1406,7 +1417,7 @@ const I18N={
   kpi_hitokoto:'一言まとめ',kpi_jokyo:'今の状況',kpi_nagare:'この先の流れ',kpi_urakka:'裏の卦の読み解き（互卦・綜卦・錯卦）',kpi_jogen:'具体的な助言',kpi_chui:'避けたいこと',kpi_musubi:'結びの言葉',
   lbl_reading_memo:'この鑑定へのメモ（任意・お客様には見えません）',
   btn_makeSho:'鑑定書を作成',btn_saveReading:'この鑑定を保存',btn_newReading:'新しい鑑定をする',
-  ph_search_cust:'🔍 名前で検索',btn_add_cust:'＋ 新しいお客様を追加',cust_empty:'まだお客様が登録されていません。',
+  ph_search_cust:'🔍 名前・ふりがな・メモで検索',btn_add_cust:'＋ 新しいお客様を追加',cust_empty:'まだお客様が登録されていません。',
   btn_ref_export:'全文をテキストで書き出す',ph_search_ref:'🔍 卦名・読み・番号で検索（例：乾、けん、1）',
   ref_note:'卦名をタップすると6本の爻（こう）の爻辞（こうじ）と現代語訳が開きます。',
   set_profile:'屋号・プロフィール（鑑定書とアプリに反映）',set_brand:'屋号・店名',set_name:'鑑定師名',set_role:'肩書き',
@@ -1546,7 +1557,7 @@ const App=(function(){
       const history=(Array.isArray(c.history)?c.history:[]).filter(h=>h&&typeof h==='object').map(h=>({
         at:Number(h.at)||0, hex:str(h.hex,20), no:Math.max(0,Math.min(64,parseInt(h.no,10)||0)), ko:str(h.ko,30), shika:str(h.shika,20),
         q:str(h.q,4000), script:str(h.script,40000), topic:(typeof h.topic==='string'&&/^[A-Za-z0-9_-]{0,32}$/.test(h.topic))?h.topic:null, memo:str(h.memo,8000) }));
-      return {id, name:str(c.name,100), memo:str(c.memo,20000), history};
+      return {id, name:str(c.name,100), kana:str(c.kana,40), memo:str(c.memo,20000), history};
     });
     const st=(j.settings&&typeof j.settings==='object'&&!Array.isArray(j.settings))?j.settings:{};
     const settings={brand:str(st.brand,60),name:str(st.name,60),role:str(st.role,60),logo:str(st.logo,2),shoTitle:str(st.shoTitle,12),contact:str(st.contact,300),
@@ -2044,7 +2055,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
     // 年柱・月柱・日柱・時柱は PRO版と同じ計算エンジンで、節入りの時刻まで正確に出す（エンジンが無い時だけ下の簡易計算）
     const hasH=(hourStr!==''&&hourStr!=null);
     let EP=null;
-    try{ if(window.Bazi&&window.Bazi.computeChart){ EP=window.Bazi.computeChart({year:Y,month:M,day:D,hour:hasH?Number(hourStr):12,minute:0,sex:'female',correctionMode:'none'}).pillars.map(x=>x.ganzhi); } }catch(e){ EP=null; }
+    try{ if(window.Bazi&&window.Bazi.computeChart){ EP=window.Bazi.computeChart(ekiBirthOpt(Y,M,D,hasH?Number(hourStr):null)).pillars.map(x=>x.ganzhi); } }catch(e){ EP=null; }
     // JDN（グレゴリオ暦）
     const a=Math.floor((14-M)/12), y=Y+4800-a, m=M+12*a-3;
     const jdn=D+Math.floor((153*m+2)/5)+365*y+Math.floor(y/4)-Math.floor(y/100)+Math.floor(y/400)-32045;
@@ -2224,7 +2235,7 @@ ${hist?('これまでのやりとり：\n'+hist+'\n'):''}相談者の新しい�
       if(!bd||!bd.value||!window.Bazi||!window.Bazi.computeChart) return null;
       const [Y,M,D]=bd.value.split('-').map(Number); if(!Y||!M||!D) return null;
       const hasH=!!(bt&&bt.value!=='');
-      const c=window.Bazi.computeChart({year:Y,month:M,day:D,hour:hasH?Number(bt.value):12,minute:0,sex:'female',correctionMode:'none'});
+      const c=window.Bazi.computeChart(ekiBirthOpt(Y,M,D,hasH?Number(bt.value):null));
       const dm=c.pillars[2].stem, el=GOGYO_KAN[dm];
       const fe=c.fiveElements||{}; const els=['木','火','土','金','水'];
       const strong=els.slice().sort((a,b)=>(fe[b]||0)-(fe[a]||0))[0], weak=els.slice().sort((a,b)=>(fe[a]||0)-(fe[b]||0))[0];
@@ -2399,7 +2410,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
   }
   function refreshCustSelect(){
     const sel=document.getElementById('custSelect'); const v=sel.value;
-    sel.innerHTML='<option value="">'+t('opt_new_client')+'</option>'+db.customers.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+    sel.innerHTML='<option value="">'+t('opt_new_client')+'</option>'+db.customers.map(c=>`<option value="${c.id}">${esc(c.name)}${c.kana?'（'+esc(c.kana)+'）':''}${(c.history&&c.history.length)?'・最終 '+fmt(c.history[0].at):''}</option>`).join('');   // 同じ名前の人も見分けられるように
     sel.value=v;
   }
   function saveReadingToCust(){
@@ -2425,13 +2436,16 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     renderCustList();
   }
   function renderCustList(){
-    const term=(document.getElementById('custSearch').value||'').trim();
-    const list=db.customers.filter(c=>!term||c.name.includes(term));
+    // 検索：ひらがな⇔カタカナ・全角/半角・空白の有無を区別しない。名前・ふりがな・メモから探す。並びはふりがな（なければ名前）順
+    const nq=x=>String(x||'').normalize('NFKC').toLowerCase().replace(/[\u30a1-\u30f6]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0x60)).replace(/\s+/g,'');
+    const term=nq(document.getElementById('custSearch').value);
+    const list=db.customers.filter(c=>!term||nq(c.name+' '+(c.kana||'')+' '+(c.memo||'')).includes(term))
+      .slice().sort((a,b)=>nq(a.kana||a.name).localeCompare(nq(b.kana||b.name),'ja'));
     const el=document.getElementById('custList');
     document.getElementById('custEmpty').style.display=db.customers.length?'none':'block';
     el.innerHTML=list.map(c=>`<div class="cust-item" onclick="App.openCust('${c.id}')">
       <div class="cust-av">${esc(c.name.slice(0,1)||'客')}</div>
-      <div class="cust-info"><div class="cust-name">${esc(c.name)}</div><div class="cust-sub">${(c.history&&c.history.length)?'最終：'+fmt(c.history[0].at):'履歴なし'}</div></div>
+      <div class="cust-info"><div class="cust-name">${esc(c.name)}${c.kana?'<small style="font-weight:600;color:var(--ink3,#8a8390);margin-left:6px">'+esc(c.kana)+'</small>':''}</div><div class="cust-sub">${(c.history&&c.history.length)?'最終：'+fmt(c.history[0].at):'履歴なし'}</div></div>
       <div class="cust-cnt">${(c.history&&c.history.length)||0}件</div>
     </div>`).join('');
   }
@@ -2440,6 +2454,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     editingId=id; const c=db.customers.find(x=>x.id===id); if(!c)return;
     document.getElementById('coName').textContent=c.name;
     document.getElementById('coEditName').value=c.name;
+    document.getElementById('coEditKana').value=c.kana||'';
     document.getElementById('coMemo').value=c.memo||'';
     document.getElementById('coHist').innerHTML=(c.history&&c.history.length)?c.history.map((h,i)=>`
       <div class="hist"><div class="hist-top"><span>${fmt(h.at)}</span><span>${esc(h.topic?topicLabel(h.topic):'')}</span></div>
@@ -2455,7 +2470,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     c.history[i].memo=(document.getElementById('histMemo'+i).value||'').trim();
     if(save()) toast(t('t_saved_memo'));
   }
-  function saveCust(){ const c=db.customers.find(x=>x.id===editingId); if(!c)return; c.name=document.getElementById('coEditName').value.trim()||c.name; c.memo=document.getElementById('coMemo').value; save(); renderCustList(); refreshCustSelect(); toast(t('t_saved')); }
+  function saveCust(){ const c=db.customers.find(x=>x.id===editingId); if(!c)return; c.name=document.getElementById('coEditName').value.trim()||c.name; c.kana=(document.getElementById('coEditKana').value||'').trim().slice(0,40); c.memo=document.getElementById('coMemo').value; save(); renderCustList(); refreshCustSelect(); toast(t('t_saved')); }
   function deleteCust(){ if(!confirm('このお客様を削除しますか？履歴も消えます。'))return; db.customers=db.customers.filter(x=>x.id!==editingId); save(); renderCustList(); refreshCustSelect(); closeCust(); }
   function addCust(){ const n=prompt('お客様のお名前'); if(!n||!n.trim())return; const id='c'+Date.now(); db.customers.push({id,name:n.trim().slice(0,40),memo:'',history:[]}); save(); renderCustList(); refreshCustSelect(); openCust(id); }
   function closeCust(){ document.getElementById('custOverlay').classList.remove('open'); }
