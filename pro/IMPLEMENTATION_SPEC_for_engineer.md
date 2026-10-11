@@ -2,7 +2,8 @@
 
 > **この1枚が唯一の正です。** 過去のやり取り・旧ドキュメントは破棄し、本書の内容だけで実装してください。
 > フロント（このリポジトリ `pro/` 一式）は**完成済み**。エンジニアが作るのは **サーバー側API・決済・本番切替の3つだけ** です。
-> 対応バージョン: `sw.js` の `CACHE = shichu-jidou-v376` ／ 最終更新: 2026-09-30
+> 対応バージョン: PRO `pro/sw.js` の `CACHE = shichu-jidou-v418`／ビギナー `beginner/sw.js` `kyoukara-uranaishi-v55`／易 EKI Pro `eki-pro/app/sw.js` `eki-pro-v23` ／ 最終更新: 2026-10-11
+> 3サイトの全体の依頼内容は、リポジトリ直下の `エンジニアへの実装依頼_3サイト.md` を先に読むこと。
 > 前提（発注者確認済み）：**Gemini（生成AI）はサーバー内蔵**（キーはサーバー保持・フロントに出さない）／**決済はテレコムクレジット**／**Web先行 → のちに iOS・Android アプリ**。
 
 ---
@@ -11,7 +12,7 @@
 
 - **プロダクト**：四柱推命の自動鑑定ツール（プロ鑑定者向けB2B）。販売事業者 **72k株式会社**（ツールはすべて72kが販売。MEISHIKI株式会社はこのツールを使ってスクールを運営）、月額 **9,800円（税込）**。
 - **フロント**：ビルド不要の**静的PWA**（HTML/CSS/JSのみ）。`pro/` 配下がそのまま本番フロント。
-- **バックエンド**：**あなたが Google 基盤（Cloud Run / Cloud Functions 等）で構築**。下記の **API 13本**（認証6・マイページ同期2・Gemini中継1・契約4） ＋ **決済（テレコムクレジット）** ＋ **本番切替**。
+- **バックエンド**：**あなたが Google 基盤（Cloud Run / Cloud Functions 等）で構築**。下記の **API 15本**（認証・会員8・マイページ同期2・Gemini中継1・契約4。易 EKI Pro だけ申込前の `apply-start` を加えて16本） ＋ **決済（テレコムクレジット）** ＋ **本番切替**。
 - **売り（最重要）**：利用者が**自分で質問文を打ち込み、その命式に沿った詳細鑑定をその場で受け取る**こと。この鑑定文の生成が Gemini（サーバー内蔵）。
 
 ### 構成図
@@ -19,7 +20,7 @@
 [ ブラウザ / PWA / 将来アプリ ]
         │  fetch( /.netlify/functions/<関数名> )   ※下記「API_BASE」参照
         ▼
-[ あなたのサーバー（Google） ]  ── サーバーレス関数 13本 ＋ 決済結果の受け口
+[ あなたのサーバー（Google） ]  ── サーバーレス関数 15本（EKIは＋1） ＋ 決済結果の受け口
    ├─ 認証・会員（メール＋パスワード、契約ステータス管理）
    ├─ マイページ同期（鑑定者＝顧客カルテの保存/読込）
    ├─ Gemini 中継（GEMINI_API_KEY をサーバーが保持して呼ぶ＝内蔵）
@@ -45,8 +46,8 @@
 | # | ファイル | 現在（デモ） | 本番 | 目印 |
 |---|---|---|---|---|
 | 1 | `app-pro.html`（ビギナーは `app-beginner.html`、EKI は `app/index.html` も同じ） | `var PREVIEW_MODE = true;` | **`false`** | 会員ゲートのスクリプト内 |
-| 2 | `app-pro.html` | `var DEMO_MODE = false;` | `false`（そのまま） | 647行目付近 |
-| 3 | `app-pro.html` | テストキー欄 `<details id="gtest-wrap" …>` が存在 | **ブロックごと削除**（コメントに削除指示あり） | 800行目付近 |
+| 2 | `app-pro.html` | `var DEMO_MODE = false;` | `false`（そのまま） | 664行目付近 |
+| 3 | `app-pro.html` | テストキー欄 `<details id="gtest-wrap" …>` が存在 | **ブロックごと削除**（コメントに削除指示あり） | 896行目付近 |
 | 4 | `auth.html` / `mypage-pro.html` | `CONFIG.STUB = true` | **`false`** | 各ファイルの `var CONFIG` |
 | 5 | `pricing-pro.html` | `TELECOM_PAYMENT_URL = { month:'' }` ／ `TELECOM_PARAM` | **審査通過後の決済URL**を設定し、渡す値のパラメータ名を接続仕様書に合わせる | `var TELECOM_PAYMENT_URL` |
 | 6 | `functions/gemini.js` | 会員確認なし | **§3-3 の会員確認（トークン）を必ず実装** | §3-3 |
@@ -111,7 +112,7 @@
 - **マージ規則（フロントの `mpMerge` と一致させる）**：両者の `clients[]` を **`id` 単位で `ts`（更新時刻）が新しい方を採用**して統合。`deleted:true` は墓石として保持（複数端末でも消えない）。`updatedAt` は両者の最大値。
 
 ### 3-3. Gemini 中継（1本）＝ 生成AIはここに内蔵
-呼び出し元：`app-pro.html` の詳細鑑定・相性鑑定。**APIキーは絶対にフロントに出さず、サーバーが環境変数で保持して呼ぶ**（フロント 5702行に「クライアントにAPIキーは置かない。サーバー中継がキーを保持」と明記）。
+呼び出し元：`app-pro.html` の詳細鑑定・相性鑑定。**APIキーは絶対にフロントに出さず、サーバーが環境変数で保持して呼ぶ**。
 
 | 関数 | 役割 |
 |---|---|
@@ -258,15 +259,15 @@
 
 | 定数 | ファイル:目安行 | 現在値 | 本番 |
 |---|---|---|---|
-| `API` | app-pro.html:651 | `'/.netlify/functions'` | 実APIベースパス（リライトなら据置） |
-| `MP_API` | app-pro.html:6460 | `'/.netlify/functions'` | 同上 |
-| `PREVIEW_MODE` | app-pro.html:650 | `true` | `false` |
+| `API` | app-pro.html:668 | `'/.netlify/functions'` | 実APIベースパス（リライトなら据置） |
+| `MP_API` | app-pro.html:6822 | `'/.netlify/functions'` | 同上 |
+| `PREVIEW_MODE` | app-pro.html:667 | `true` | `false` |
 | `CONFIG.API` / `CONFIG.STUB` | auth.html・mypage-pro.html の `var CONFIG` | `'/.netlify/functions'` / `true` | 実ベースパス / `false` |
 | `TELECOM_PAYMENT_URL` / `TELECOM_PARAM` | pricing-pro.html | 空 / 仮の名前（`sendid`・`email`） | 月額プランの決済URL / 接続仕様書のパラメータ名 |
 | `FIX.STUB` | pricing-pro.html（完了画面のアドレス直し） | `true` | `false` |
-| `geminiModel` | app-pro.html:2478 | `'gemini-2.5-flash'` | 必要なら変更（サーバー側でも可） |
+| `geminiModel` | app-pro.html:2619 | `'gemini-2.5-flash'` | 必要なら変更（サーバー側でも可） |
 
-**localStorage キー**：`member_email` / `member_pw` / `member_remember` / `member_status` / `member_token`（会員）、`pending_order`（お申し込み番号・メールの控え）、`selected_plan`、`bazi_mypage_v2`（同期・DKEY）、`bazi_clients_v1`（旧）、`bazi_sheet_featbook`（鑑定書受け渡し）、`bazi_gkey`/`bazi_gmodel`（テスト専用・本番は欄ごと削除）。
+**localStorage キー**：`member_email` / `member_token` / `member_status` / `member_period_end` / `member_checked_at`（会員。「ログインしたままにする」を外したときは sessionStorage。旧版の `member_pw`・`member_remember` は起動時に削除）、`pending_order`（お申し込み番号・メールの控え）、`selected_plan`、`bazi_mypage_v2`（同期・DKEY）、`bazi_clients_v1`（旧）、`bazi_sheet_featbook`（鑑定書受け渡し）、`bazi_gkey`/`bazi_gmodel`（テスト専用・本番は欄ごと削除）。
 
 ---
 
@@ -275,8 +276,8 @@
 - [ ] 料金ページ→決済→**結果通知で会員作成（trialing）**→設定メール到達→`auth.html?view=setpw` でパスワード設定→ログイン、が通る。
 - [ ] 決済を中断・失敗すると `?result=ng` 画面になり、会員は作られない。`?result=ok` を手で打っても会員は作られない。
 - [ ] 同じメールで2回申し込んでも二重に契約・請求されない。
-- [ ] `auth-login`：正しい資格情報で `{ok:true,status,email}`、誤りで 401/`{ok:false}`。
-- [ ] `status=active`/`trialing` で `app-pro.html` 解錠、`canceled` 等で非解錠（`PREVIEW_MODE=false` で確認）。
+- [ ] `auth-login`：正しい資格情報で `{ok:true,status,email,token,periodEnd}`、誤りで 401/`{ok:false}`。`auth-check`・`auth-logout` もトークンで動作。
+- [ ] `status=active`/`trialing`/`canceling` で `app-pro.html` 解錠、`canceled` は `periodEnd` の最終日まで解錠・翌日から非解錠、`past_due`/`unpaid`/`none` は非解錠（`PREVIEW_MODE=false` で確認）。
 - [ ] `auth-setpw`（期限切れ・使用済みは400/410）／`auth-reset`（会員の有無で応答を変えない）が動作。
 - [ ] メールアドレスの自己解決：`auth-email-hint`（一部だけ表示）・`auth-fix-email`（パスワード設定後は不可）・`email-change`→`email-change-confirm` が動作し、いずれも回数制限がかかっている。
 - [ ] マイページ：状態ごとの表示（無料お試し中／ご利用中／お支払いが確認できません／解約済み）、カード変更ページへの移動、解約（無料期間中は0円）が動作。他人のメールアドレスを送っても他人の契約は見えない・解約できない。
@@ -284,7 +285,7 @@
 - [ ] `gemini` 中継：詳細鑑定・相性の鑑定文が返る。5秒超/障害時はフロントがオフライン鑑定へ自動フォールバック。
 - [ ] 決済完了でサーバーの `status` が更新され、再ログインで解錠。
 - [ ] `TELECOM_PAYMENT_URL` 設定後、料金ページから決済へ遷移。
-- [ ] §2 の本番切替を全実施。`72k.ai` 残存ゼロ。`sw.js` の `CACHE` を上げた。
+- [ ] §2 の本番切替を全実施（3サイトとも）。`Meishiki Inc.` の表記・デモ用の仮URL（`*.netlify.app` 等）の残存ゼロ。`sw.js` の `CACHE` を上げた。
 - [ ] 会員（`member_email`あり）でLPを開くと即アプリへ遷移。新規訪問はLP表示。
 - [ ] 計算エンジン `pklove.js` は無改変。基準ケース `1981-06-10 22:28 女性` で 月柱=甲午／順行／立運8年6ヶ月／大運 甲午→乙未→丙申→丁酉 が不変。
 
