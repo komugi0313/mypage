@@ -2374,6 +2374,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
 ・標準語の、ていねいで温かい文章で（方言は使わない）。
 ・運気（${UNKI_LABEL[r.rank]}）は全体の目安。いちばん大切なメッセージに注意の内容があるときや、答え（${rankToVerdict(r.rank).sym}）と食い違うときは、答えとメッセージを重く見て、矛盾のないように書く（運気の言葉だけで、答えと逆のことを勧めない）。
 ・アスタリスク（*）や記号の装飾は使わない。「AI」という言葉は使わない。`;
+    for(let attempt=0;attempt<2;attempt++){
     const txt=await callGemini(prompt,'sho');
     const S=[]; let curS=null;
     String(txt||'').split('\n').forEach(line=>{
@@ -2382,8 +2383,15 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
       else if(curS){ curS.t+=(curS.t?'\n':'')+line.trim(); }
     });
     S.forEach(s=>{ s.t=plainEki(s.t.replace(/\n{2,}/g,'\n').trim()); s.h=plainEki(s.h); });
-    return S.filter(s=>s.t).length>=3 ? S.filter(s=>s.t) : null;
+    const ok=S.filter(s=>s.t);
+    if(ok.length<3) return null;
+    if(SHO_JARGON.test(ok.map(s=>s.h+'\n'+s.t).join('\n'))) continue;   // 専門用語・漢文が残ったら1回だけ作り直す
+    return ok;
+    }
+    return null;   // 2回とも残ったときは、専門用語なしの定型文（内蔵データ）の鑑定書にする
   }
+  /* お客様にお渡しする鑑定書に残ってはいけない言葉（易の専門用語・漢文の決まり文句・四柱推命の専門用語） */
+  const SHO_JARGON=/易経|卦|爻|无咎|元亨|利貞|君子|[吝厲孚]|貞|悔い亡|初[九六]|[九六][二三四五]|上[九六]|[坎艮巽兌]|命式|通変星|十二運|大運|年運|五行|干支|日主|日干|蔵干|空亡|天中殺|比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬|身強|身弱|身旺|喜神|忌神|用神|[日月年時]柱|会局|[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥木火土金水]/;
   function shoSectionsHTML(S){
     return S.map(s=>{
       const lines=String(s.t).split('\n').filter(Boolean);
