@@ -884,7 +884,7 @@
          こまかい設定（版・テーマ・章・装飾など）は「⚙詳細設定」の中にしまってあります。 -->
     <div class="bar-row" id="calcRow">
       <form class="calcbox" id="calcForm">
-        <div class="f"><label for="iName">氏名</label><input class="nm" id="iName" type="text" placeholder="お名前（任意）"></div>
+        <div class="f"><label for="iName">氏名</label><input class="nm" id="iName" type="text" maxlength="40" placeholder="お名前（任意）"></div>
         <div class="f"><label for="iDate">生年月日</label><input class="dt" id="iDate" type="date" value="2024-01-01" min="1900-01-01" max="2100-12-31"></div>
         <div class="f"><label for="iTime">時刻</label><input class="tm" id="iTime" type="time" value="12:00"></div>
         <div class="f"><label for="iSex">性別</label>
@@ -897,7 +897,7 @@
         <button type="button" id="advToggle" class="ghost" aria-expanded="false">⚙ 詳細設定</button>
         <button type="button" id="outToggle" class="ghost" aria-expanded="false">⚙ 出力内容</button>
         <button type="button" id="printBtn">🖨 印刷 / PDF保存</button>
-        <button type="button" id="shareBtn" title="PDFにして LINE・メールで送る">📄 共有</button>
+        <button type="button" id="shareBtn" title="この鑑定書を開けるリンクを、LINE・メールで送る（PDFで送るときは「印刷」→PDFに保存）">📄 共有</button>
       </div>
     </div>
     <div class="bar-row" id="calcRow2">
@@ -3450,6 +3450,12 @@ window.KANSHI60_DETAIL={
       var wantMei=_chk('outMeishiki'), wantRead=_chk('outReading');
       var show=(wantMei&&wantRead)?'both':(wantRead?'reading':(wantMei?'meishi':'both'));
       q+='&share=1&show='+show;
+      // 鑑定者の画面と同じ判定（チャンスの年・今の10年）と屋号を、受け取った側にもそのまま渡す（開く端末・開く時期で中身が変わらないように）
+      try{ var _pq=new URLSearchParams(location.search); if(_pq.get('fy')) q+='&fy='+encodeURIComponent(_pq.get('fy')); if(_pq.get('dk')) q+='&dk='+encodeURIComponent(_pq.get('dk'));
+        var _bn=_pq.get('bn')||localStorage.getItem('bazi_brand_name')||'', _bc=_pq.get('bc')||localStorage.getItem('bazi_brand_color')||'';
+        if(_bn) q+='&bn='+encodeURIComponent(_bn.slice(0,60)); if(/^#[0-9a-fA-F]{6}$/.test(_bc)) q+='&bc='+encodeURIComponent(_bc);
+        q+='&at='+encodeURIComponent((function(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);})(new Date()));
+      }catch(_e){}
       if(wantRead){
         q+='&lv='+((_printVer==='easy')?'easy':'pro');
         if(_readTheme && _readTheme!=='general') q+='&th='+_readTheme;
@@ -4470,9 +4476,14 @@ window.KANSHI60_DETAIL={
       msg.textContent='自動計算にはご自身の計算エンジン（window.computeMeishiki）の接続が必要です。未接続の場合は「記入用」でご入力ください。'; return;
     }
     var dv=(document.getElementById('iDate').value||'').split('-');
+    if(window.__badTimeParam){ msg.textContent='リンクの生まれた時刻（'+String(window.__badTimeParam).slice(0,10).replace(/[<>&]/g,'')+'）が正しくありません。時刻を入れ直してから「計算」を押してください。'; window.__badTimeParam=null; return; }
     var tv=(document.getElementById('iTime').value||'12:00').split(':');
     var y=+dv[0], m=+dv[1], d=+dv[2], h=+(tv[0]||0), mn=+(tv[1]||0);
     if(!y||!m||!d){ msg.textContent='生年月日を入力してください。'; return; }
+    { var _bd=new Date(y,m-1,d), _td=new Date(); _td.setHours(23,59,59,999);
+      if(isNaN(_bd)||_bd.getMonth()!==m-1||y<1900){ msg.textContent='生年月日の日付が正しくありません（1900年以降の、実在する日付を入れてください）。'; return; }
+      if(_bd>_td){ msg.textContent='生年月日が今日より先の日付になっています。生年月日をご確認ください。'; return; }
+      if(!(h>=0&&h<=23&&mn>=0&&mn<=59)){ msg.textContent='生まれた時刻が正しくありません（0:00〜23:59で入れてください）。'; return; } }
     var sex=document.getElementById('iSex').value;
     var nm=(document.getElementById('iName').value||'').trim();
     try{
@@ -4580,8 +4591,9 @@ window.KANSHI60_DETAIL={
       fy:(q.get('fy')&&q.get('fy')!=='-')?q.get('fy').split(',').map(Number).filter(function(n){return n>1900;}):(q.get('fy')==='-'?[]:null), dk:q.get('dk')||''};
     if(q.get('d')) document.getElementById('iDate').value=q.get('d');
     if(q.get('t')) document.getElementById('iTime').value=q.get('t');
+    if(q.get('t') && !/^([01]\d|2[0-3]):[0-5]\d$/.test(q.get('t'))) window.__badTimeParam=q.get('t');   // 24:00 などは黙って12時にしない
     if(q.get('sex')) document.getElementById('iSex').value=(q.get('sex')==='male'?'male':'female');
-    if(q.get('name')) document.getElementById('iName').value=q.get('name');
+    if(q.get('name')) document.getElementById('iName').value=q.get('name').slice(0,40);
   }catch(e){} })();
 
   // アプリ側で生成した「この命式の詳しい特徴（教科書ベース）」を localStorage 経由で受け取り、
@@ -4598,6 +4610,14 @@ window.KANSHI60_DETAIL={
     else { document.body.appendChild(sec); }
   }catch(e){} })();
 
+  // 共有リンクで開いたとき：いつ作った鑑定書かを上に小さく出す（後から見返したときに「今年」などの基準が分かるように）
+  (function(){ try{ var q=new URLSearchParams(location.search); var at=q.get('at')||'';
+    if(q.get('share')!=='1'||!/^\d{4}-\d{2}-\d{2}$/.test(at)) return;
+    var p=at.split('-'); var n=document.createElement('div'); n.className='share-at';
+    n.style.cssText='max-width:1100px;margin:8px auto 0;padding:0 12px;font-size:12px;color:#7a7066;font-weight:700;text-align:right';
+    n.textContent='この鑑定書は '+(+p[0])+'年'+(+p[1])+'月'+(+p[2])+'日 に作成されました。「今年」「いま」は、開いた日を基準に表示されます。';
+    var st=document.querySelector('.stage')||document.body; st.parentNode.insertBefore(n,st);
+  }catch(e){} })();
   // 初期表示：自動計算（エンジン連動）。手書きは「記入用」に切替。
   setMode('auto');
   try{ document.getElementById('calcForm').requestSubmit(); }catch(e){}
@@ -4607,6 +4627,8 @@ window.KANSHI60_DETAIL={
   (function(){ try{
     var name='',color='',logo='';
     try{ name=localStorage.getItem('bazi_brand_name')||''; color=localStorage.getItem('bazi_brand_color')||''; logo=localStorage.getItem('bazi_brand_logo')||''; }catch(e){}
+    // 共有リンクで開いたときは、送った鑑定者の屋号（リンクに入っている）を使う（受け取った人の端末の設定ではなく）
+    try{ var _q=new URLSearchParams(location.search); if(_q.get('share')==='1'){ name=(_q.get('bn')||'').slice(0,60); color=/^#[0-9a-fA-F]{6}$/.test(_q.get('bc')||'')?_q.get('bc'):''; logo=''; } }catch(e){}
     if(!name && !logo) return;
     if(color){ try{ document.documentElement.style.setProperty('--brand', color); }catch(e){} }
     var esc=function(s){ return String(s).replace(/[<>&"]/g,function(c){return ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'})[c];}); };

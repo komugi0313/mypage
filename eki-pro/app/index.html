@@ -690,7 +690,7 @@ input[type=checkbox]{width:20px;height:20px;}
     <div class="card">
       <div class="card-h"><span class="n">1</span><span data-i18n="c1_client">お客様</span></div>
       <select class="field" id="custSelect"><option value="" data-i18n="opt_new_client">新規のお客様</option></select>
-      <input class="field" id="custNewName" data-i18n-ph="ph_client_name" placeholder="お客様のお名前（新規の場合）" style="margin-top:8px;">
+      <input class="field" id="custNewName" maxlength="40" data-i18n-ph="ph_client_name" placeholder="お客様のお名前（新規の場合）" style="margin-top:8px;">
       <button class="btn ghost sm" id="saveNewCust" style="margin-top:8px;" data-i18n="btn_save_to_roster">＋ このお名前を名簿に保存</button>
       <p class="muted" style="margin-top:6px;" data-i18n="note_save">※保存しなくても鑑定はできます。名簿に残したい場合に押してください（鑑定後の「この鑑定を保存」でも登録されます）。</p>
     </div>
@@ -1015,7 +1015,7 @@ input[type=checkbox]{width:20px;height:20px;}
     <div class="sheet-h"><h3 id="coName">お客様</h3><button class="x" onclick="App.closeCust()">×</button></div>
     <div class="sheet-b">
       <label class="fl">お名前</label>
-      <input class="field" id="coEditName">
+      <input class="field" id="coEditName" maxlength="40">
       <label class="fl">メモ（特徴・前回の話・好みなど）</label>
       <textarea class="field" id="coMemo" placeholder="例：40代・転職相談がメイン。前回は風火家人。"></textarea>
       <div class="row2" style="margin-top:12px;">
@@ -1151,24 +1151,11 @@ function showTrialLimit(show){
   if(show!==false){ try{ el.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }
 }
 
-/* ===== 有料プランの上限（「使い放題」＝通常利用は無制限。赤字を絶対に出さないハード上限） =====
-   ★「使い放題」は通常利用では本当。以下は bot・自動化・アカウント共有/使い回し・転売など
-     “不正利用”を止めつつ、万一の暴走でも赤字にならないための上限。普通のプロの使い方
-     （1日20〜40鑑定＝月1,000鑑定程度）では絶対に届かない高さ。数値は公開せず「通常の
-     ご利用に回数制限なし」と案内する。
-   ★赤字にならない根拠（1鑑定≈¥0.41／月額¥9,800で計算）：
-       ・1日ハード上限 100回 → 月最大 約3,100回 → AIコスト 約¥1,271／月
-         ＝ 売上¥9,800 の約13%（＝粗利87%以上を常に確保）。
-       ・損益分岐は 1人あたり 月約20,000鑑定（＝1日約650）で、人間には到達不可能。
-       ・つまり下記の上限に達しても、AIコストは売上の2割未満に収まり「絶対に赤字にならない」。
-   ★本番は必ずサーバー側で認証ユーザー単位に判定・集計すること（下記はフロントの目安値）。
-     ・PAID_DAILY_CAP    ：1日あたりのハード上限（到達で当日停止。通常利用では未到達）
-     ・PAID_MONTHLY_CAP  ：1か月あたりのハード上限（赤字防止の最終ライン）
-     ・PAID_RATE_PER_MIN ：1分あたりのバースト上限（スクリプト連打の防止）
-     ・上限や停止の根拠は利用規約 第6条（禁止事項・公正利用）に置く。 */
-const PAID_DAILY_CAP    = 100;   // 有料：1日のハード上限（月最大~3,000回=コスト~¥1,710で粗利79%+を保証）
-const PAID_MONTHLY_CAP  = 3000;  // 有料：1か月のハード上限（赤字防止の最終ライン）
-const PAID_RATE_PER_MIN = 15;    // 1分あたりのバースト上限（スクリプト連打防止）
+/* ===== 有料プランの安全上限（通常のご利用では届かない高さ。自動化・アカウント共有などの不正利用を止めるためのもの） =====
+   本番は必ずサーバー側で会員ごとに判定・集計すること（ここの値は画面側の目安）。根拠は利用規約の禁止事項・公正利用。 */
+const PAID_DAILY_CAP    = 100;   // 1日あたりの上限
+const PAID_MONTHLY_CAP  = 3000;  // 1か月あたりの上限
+const PAID_RATE_PER_MIN = 15;    // 1分あたりの上限（連打防止）
 
 /* ===== 無料体験・最終日の有料案内（7日目に #trialFinalDay を表示） =====
    ★本番はサーバーが正とする：無料開始日はサーバーDBが持つ（決済代行の満了日管理と同じ日付）。
@@ -1353,7 +1340,14 @@ const TAI_FIX={
 '57-5':'多少時間がかかっても、臨機応変に、しかしきっぱりとやり遂げるべき時です。良い時です。',
 '60-6':'締めつけすぎると、かえってうまくいきません。ほどよい加減を心がけましょう。',
 '61-1':'よく考えればうまくいきます。本業をしっかり固める時です。良い時です。',
-'62-4':'むやみに人を信用したり、自分から事を起こしたりしないことです。'
+'62-4':'むやみに人を信用したり、自分から事を起こしたりしないことです。',
+/* お客様に渡す文として、きつすぎる・健康や寿命に触れる言い方をやわらげる（意味は原文どおり） */
+'16-5':'無理がききにくい時です。体と心をいたわりながら、長く続けられるペースで進めましょう。',
+'18-5':'行き詰まっていたことを立て直し、まわりの信頼を取り戻せる時です。',
+'23-2':'思わぬトラブルを避けられるよう、早めに備えを固めておく時です。',
+'25-3':'思いがけない出来事に巻き込まれやすい時です。自分に非がなくても慎重に。',
+'45-6':'思うようにいかず、つらさを感じやすい時です。今は無理に進めることは控えること。',
+'58-3':'うまい話には乗らないことです。足元を確かめて進みましょう。'
 };
 function mTheme(h){ return h&&MODERN64[h.no]?MODERN64[h.no][0]:(h?h.theme:''); }
 function mMsg(h){ return h&&MODERN64[h.no]?MODERN64[h.no][1]:(h?h.unsei_txt:''); }
@@ -1658,6 +1652,8 @@ const App=(function(){
       try{ res=await geminiPost(body,kind); }
       catch(e){ if(a<2){await sleep(2500);continue;} throw new Error('通信に失敗しました。電波の良い場所で再度お試しください。'); }
       if(res.ok){ const d=await res.json(); const t=d.candidates?.[0]?.content?.parts?.[0]?.text; if(!t)throw new Error('応答が空でした'); return fillName(noAIWord(t.replace(/[＊*]/g,''))); }
+      if(res.status===401) throw new Error('ログインの有効期限が切れました。ページを開き直して、もう一度ログインしてください。');
+      if(res.status===403) throw new Error('ご契約の状態を確認できませんでした。マイページでご契約状況をご確認ください。');
       let msg=`HTTP ${res.status}`; try{const e=await res.json();msg=e.error?.message||msg;}catch(_){}
       const busy=res.status===429||res.status===503||/overload|unavailable|rate|demand/i.test(msg);
       if(busy&&a<2){await sleep(3000);continue;}
@@ -1771,8 +1767,8 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
       renderResult(r,q,p); markOffline('',true);
       L.classList.remove('show');
     }catch(e){
-      // Geminiが不調 → 内蔵データへ自動フォールバック
-      goOffline(t('off_error'));
+      // Geminiが不調 → 内蔵データへ自動フォールバック（ログイン切れ・契約状態は、その理由をそのまま知らせる）
+      goOffline((e&&/ログイン|ご契約/.test(e.message||''))?('内蔵データで鑑定しました。'+e.message):t('off_error'));
     }
   }
   function markOffline(reason,online){
@@ -2149,7 +2145,8 @@ ${hist?('これまでのやりとり：\n'+hist+'\n'):''}相談者の新しい�
     }catch(e){
       // 失敗のほとんどは通信・混雑。言い回しのせいにせず、入力した文は欄に戻す
       el.value=q;
-      cur.chat.push({role:'ai',text:'いま、つながりにくいようです。通信の状態を確かめて、少し時間をおいてから、もう一度「送る」を押してください。（ご相談の文は入力欄に戻してあります）'}); renderChat();
+      const _am=(e&&/ログイン|ご契約/.test(e.message||''))?e.message+'（ご相談の文は入力欄に戻してあります）':'いま、つながりにくいようです。通信の状態を確かめて、少し時間をおいてから、もう一度「送る」を押してください。（ご相談の文は入力欄に戻してあります）';
+      cur.chat.push({role:'ai',text:_am}); renderChat();
     }finally{ btn.disabled=false; }
   }
   function kpiItem(l,v){ return v?`<div class="kpi-item"><div class="kpi-lbl">${l}</div><div class="kpi-val">${fmtPlain(v)}</div></div>`:''; }
@@ -2370,7 +2367,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     box.innerHTML=`
       <div class="ks-head">
         <div class="ks-seal">${esc((s.logo||'易'))}<br>鑑定</div>
-        <div class="ks-brand">${esc(s.brand||'易 EKI Pro')}</div>
+        <div class="ks-brand">${esc(s.brand||'')}</div>
         <div class="ks-title">${esc(s.shoTitle||'鑑定書')}</div>
         <div class="ks-date">${ds}${cust?'　／　'+esc(cust)+' 様':''}${ch?'<br>生年月日　'+esc(ch.birth)+'生':''}</div>
       </div>
@@ -2458,7 +2455,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
   }
   function saveCust(){ const c=db.customers.find(x=>x.id===editingId); if(!c)return; c.name=document.getElementById('coEditName').value.trim()||c.name; c.memo=document.getElementById('coMemo').value; save(); renderCustList(); refreshCustSelect(); toast(t('t_saved')); }
   function deleteCust(){ if(!confirm('このお客様を削除しますか？履歴も消えます。'))return; db.customers=db.customers.filter(x=>x.id!==editingId); save(); renderCustList(); refreshCustSelect(); closeCust(); }
-  function addCust(){ const n=prompt('お客様のお名前'); if(!n)return; const id='c'+Date.now(); db.customers.push({id,name:n.trim(),memo:'',history:[]}); save(); renderCustList(); refreshCustSelect(); openCust(id); }
+  function addCust(){ const n=prompt('お客様のお名前'); if(!n||!n.trim())return; const id='c'+Date.now(); db.customers.push({id,name:n.trim().slice(0,40),memo:'',history:[]}); save(); renderCustList(); refreshCustSelect(); openCust(id); }
   function closeCust(){ document.getElementById('custOverlay').classList.remove('open'); }
   function closeSho(){ document.getElementById('shoOverlay').classList.remove('open'); document.body.classList.remove('sho-open'); }
   function fmt(ms){ const d=new Date(ms); if(!ms||isNaN(d)) return '—'; return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; }
@@ -2781,6 +2778,11 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
 <script>
 /* 本番サイトではAPIキーの入力欄（デモ用・テスト接続）を出さない：オンライン鑑定はサーバー中継で自動。お客様にキー入力を求めない */
 (function(){ if(/^https?:$/.test(location.protocol)){ ['demoKeyCard','geminiCard'].forEach(function(id){ var e=document.getElementById(id); if(e) e.style.display='none'; }); } })();
+</script>
+<script>
+/* 未ログインのときは「この端末からログアウト」を出さない */
+(function(){ try{ var tk=localStorage.getItem('member_token')||sessionStorage.getItem('member_token');
+  if(!tk) document.querySelectorAll('[onclick="memberLogout()"]').forEach(function(b){ b.style.display='none'; }); }catch(e){} })();
 </script>
 </body>
 </html>

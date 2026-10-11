@@ -158,7 +158,7 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     var same=hi.length===ORD.length;
     var msg=same?'あなたは5つの力をバランスよく持っています。どの場面でも力を発揮しやすいタイプです。'
       :('あなたは'+nm(hi)+'の力が強めで、'+ws(hi)+'が持ち味です。'+
-        ((fe[weak]||0)===0?('いっぽう、'+nm(lo)+'の力は持っていません。'+ws(lo)+'を意識すると、バランスが整います。')
+        ((fe[weak]||0)===0?('いっぽう、'+nm(lo)+'の力は、生まれ持った中にはありません（いちばん少なめです）。'+ws(lo)+'を意識すると、バランスが整います。')
                           :('少なめなのは'+nm(lo)+'の力。'+ws(lo)+'を少し意識すると◎。')));
     return '<div class="bgc" id="bg-gogyo"><div class="bgh"><span class="ic">🌿</span>あなたの中にある5つの力</div>'+
       '<div class="bgl">人は生まれた日から、木・火・土・金・水という5つの自然の力を持っています。どの力が多いか少ないかが、あなたの性格や運のクセになります。</div>'+
@@ -173,6 +173,8 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
   // 「△ 静かに整える時期」なのに「飛躍の時期」などと書かないよう、△の時期は控えめな説明にそろえる
   var CALM={意:'今は無理に広げず、足元を整えて力をためる時期です。',助:'体調と生活リズムを整え、次の良い時期に向けて準備しておきましょう。'};
   // PROと同じ物差し（tsFortuneFor）で、「ふつう」の時期には控えめな但し書き、「△」は落ち着いた説明にする（見出しの判定と本文を食い違わせない）
+  // 一覧（1年ごと・10年ごと）用の短い説明。「ふつうの時期」は最初の一文だけだと良いことばかりに読めるので、控えめな一言をそえる
+  function shortMean(c,o){ var m=sig(c,o).mk, t=first(meanFor(c,o).意); return m==='◦'?t.replace(/。$/,'')+'（大きな追い風ではないので、日々の積み重ねを大切に）。':t; }
   function meanFor(c,o){ if(sig(c,o).mk==='△') return CALM; var f=safe(function(){ return tsFortuneFor(c,o.tenStar,tenStarOf(c.dayMaster.stem,HONKI[o.branch])); },null); return f||meanOf(o); }
   // とくに大きく揺れやすい年（下の「揺れやすい時期」と同じ判定）。良い時期の一覧に、その年だと分かる印を付けるために使う
   function shakyYears(c){ var ys={}; var ts=safe(function(){return detectTensen(c);},null); if(!ts||!ts.any) return ys;
@@ -215,10 +217,10 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     var y0=c.now.year, by=c.now.year-c.now.age;
     var ys=(c.annualFortunes||[]).filter(function(a){return a.year>=y0&&a.year<y0+10;});
     var sk=shakyYears(c);
-    var rows=ys.map(function(a){var s=sig(c,a);return '<div class="yr'+(a.year===y0?' cur':'')+'" style="--sc:'+s.col+'"><div class="hd"><div class="w">'+a.year+'年<small>'+(a.year-by)+'歳'+(a.year===y0?'・今年':'')+'</small></div><div class="s">'+s.mk+' '+s.lab+'</div></div><div class="m">'+esc(first(meanFor(c,a).意))+(sk[a.year]?'<br><span style="color:#B4472E;font-weight:800">⚡ '+((s.mk==='◎'||s.mk==='○')?'良い流れの年ですが、':'')+'暮らしや仕事が大きく揺れやすい年でもあります（下の「とくに大きく揺れやすい時期」）</span>':'')+'</div></div>';}).join('');
+    var rows=ys.map(function(a){var s=sig(c,a);return '<div class="yr'+(a.year===y0?' cur':'')+'" style="--sc:'+s.col+'"><div class="hd"><div class="w">'+a.year+'年<small>'+(a.year-by)+'歳'+(a.year===y0?'・今年':'')+'</small></div><div class="s">'+s.mk+' '+s.lab+'</div></div><div class="m">'+esc(shortMean(c,a))+(sk[a.year]?'<br><span style="color:#B4472E;font-weight:800">⚡ '+((s.mk==='◎'||s.mk==='○')?'良い流れの年ですが、':'')+'暮らしや仕事が大きく揺れやすい年でもあります（下の「とくに大きく揺れやすい時期」）</span>':'')+'</div></div>';}).join('');
     var dl=safe(function(){return duListWithMonth(c);},[])||[], cur=safe(function(){return curDu(c);},null), age=c.now.age;
     var drows=dl.filter(function(d){var end=d.isMonth?d.endAge:d.startAge+10;return end>age;}).slice(0,5).map(function(d){var s=sig(c,d),isCur=(cur&&d.startAge===cur.startAge&&!!d.isMonth===!!cur.isMonth);
-      return '<div class="yr'+(isCur?' cur':'')+'" style="--sc:'+s.col+'"><div class="hd"><div class="w">'+duLab(d)+(isCur?'<small>いま</small>':'')+'</div><div class="s">'+s.mk+' '+s.lab+'</div></div><div class="m">'+esc(first(meanFor(c,d).意))+'</div></div>';}).join('');
+      return '<div class="yr'+(isCur?' cur':'')+'" style="--sc:'+s.col+'"><div class="hd"><div class="w">'+duLab(d)+(isCur?'<small>いま</small>':'')+'</div><div class="s">'+s.mk+' '+s.lab+'</div></div><div class="m">'+esc(shortMean(c,d))+'</div></div>';}).join('');
     return '<div class="bgc" id="bg-flow"><div class="bgh"><span class="ic">📅</span>これからの運の流れ</div>'+
       '<div class="bgl">◎とても良い時期・○良い時期・◦ふつう・△静かに整える時期。良い時期は動き出すチャンス、△の時期は準備やお休みに向いています。</div>'+
       '<div class="sub">これからの10年（1年ごと）</div><div class="yl">'+rows+'</div>'+
