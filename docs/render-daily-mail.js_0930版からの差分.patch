@@ -106,7 +106,7 @@
      var good = r.grade && (r.grade.sym === '💮' || r.grade.sym === '◎');
      var marks = chipMarks(r);
      var kc = good ? (r.grade.sym === '💮' ? '#d6567e' : '#c9862a') : (marks.length ? '#d6567e' : '#8a93a8');
-@@ -155,33 +169,35 @@
+@@ -155,66 +169,73 @@
      var chips = '';
      if (good) chips += '<span style="display:inline-block;font-size:11px;font-weight:800;background:' + kc + ';color:#ffffff;border:1px solid ' + kc + ';border-radius:20px;padding:3px 11px;margin:3px 4px 0 0;">' + r.grade.sym + ' ' + r.grade.label + '</span>';
      marks.forEach(function(x){ chips += '<span style="display:inline-block;font-size:11px;font-weight:800;background:#ffffff;color:' + kc + ';border:1px solid ' + kc + ';border-radius:20px;padding:3px 10px;margin:3px 4px 0 0;">' + x + ' ' + MK[x] + '</span>'; });
@@ -158,7 +158,11 @@
  
      /* ✅ 今日はこれだけ／🌱 今日の開運習慣 */
      if (r.todayOne) h.push(box('#fff0ec', '#f0b060', '#c9862a', '✅ 今日はこれだけ', '#3a3f4e', r.todayOne));
-@@ -191,15 +207,18 @@
+     if (r.habit) h.push(box('#eaf6ed', '#7bbd8a', '#3f9d68', '🌱 今日の開運習慣　<span style="font-weight:600;color:#6a9a78;">コツコツ運気貯金</span>', '#33463a', r.habit).replace('margin-top:12px', 'margin-top:10px'));
+ 
+     /* 🎯 注目テーマ（関心登録がある人のみ）／🌅 今日のあなた／🔄 運気の巡り */
++    // 「今日の注目」に上げた運は、下の同じ欄には出さない（同じ文が2回届かないように。10/12）
++    var FD = r.focus && r.focus.text ? r.focus.domain : '';
      if (r.focus) h.push(sec(r.focus.emoji || '🎯', '今日の注目：あなたが大切にしている「' + esc(r.focus.label) + '」', r.focus.text, '#c0392b', '#fff0ee'));
      h.push(sec('🌅', '今日のあなた', '今日のテーマは「' + r.theme.axis + '」（' + r.theme.mean + 'の巡り）。' + (r.theme.line ? r.theme.line + ' ' : '') + r.theme.message, '#c9862a', '#fff6e6'));
      if (r.juni && r.juni.text) h.push(sec('🔄', '今日の運気の巡り', r.juni.text, '#9a6cc4', '#f3eefb'));
@@ -176,20 +180,35 @@
 -      if (r.love && (rel === 'single' || rel === 'crush')) h.push(sec('💕', '今日の恋愛運', r.love, '#e0629a', '#fdeef5'));
 +      h.push(sec('💗', RH.en, '<span style="display:inline-block;font-size:10.5px;font-weight:800;color:' + onAccent(T.accent) + ';background:' + T.accent + ';padding:2px 9px;border-radius:20px;margin-right:5px;">' + esc(r.en.tag) + '</span>' + r.en.body, '#d6567e', '#fdeef4'));
 +      // 今日の恋愛運：全員に出す（恋人がいる・結婚している人は「ふたりの恋愛運」。文章はエンジン側で独身向けの言葉を除いてある。合う文章がない日は出さない）
-+      if (r.love) h.push(sec('💕', (rel === 'partner' || rel === 'married') ? 'ふたりの恋愛運' : '今日の恋愛運', r.love, '#e0629a', '#fdeef5'));
++      if (r.love && FD !== 'love') h.push(sec('💕', (rel === 'partner' || rel === 'married') ? 'ふたりの恋愛運' : '今日の恋愛運', r.love, '#e0629a', '#fdeef5'));
        if (r.loveMove) h.push(sec('💌', '今日の恋の一手', r.loveMove, '#e0629a', '#fdeef5'));
        h.push(sec('📍', RH.place, placeText, '#9a6cc4', '#f4eefb'));
      }
-@@ -210,7 +229,7 @@
-     h.push(genre('💰 お金・金運', '家計／投資／ビジネス', '#c9a227'));
-     h.push(sec('💰', '金運', fo.money, '#c9a227', '#fdf7e3'));
-     h.push(genre('🌐 対人・人間関係', '同僚／ママ友／仲間', '#4a90c2'));
+ 
+     /* 💼 仕事／💰 金運／🌐 対人／📚 学び／🌿 健康 */
+-    h.push(genre('💼 仕事・チャレンジ', '会社員／営業／起業・面接', '#7a6cc4'));
+-    h.push(sec('💼', '仕事・勝負運', fo.work, '#7a6cc4', '#f0eefb'));
+-    h.push(genre('💰 お金・金運', '家計／投資／ビジネス', '#c9a227'));
+-    h.push(sec('💰', '金運', fo.money, '#c9a227', '#fdf7e3'));
+-    h.push(genre('🌐 対人・人間関係', '同僚／ママ友／仲間', '#4a90c2'));
 -    h.push(sec('🌐', '友達・対人運', fo.friend, '#4a90c2', '#eef5fb'));
-+    h.push(sec('🌐', '友だち・対人運', fo.friend, '#4a90c2', '#eef5fb'));
++    if (FD !== 'work'){ h.push(genre('💼 仕事・チャレンジ', '会社員／営業／起業・面接', '#7a6cc4'));
++    h.push(sec('💼', '仕事・勝負運', fo.work, '#7a6cc4', '#f0eefb')); }
++    if (FD !== 'money'){ h.push(genre('💰 お金・金運', '家計／投資／ビジネス', '#c9a227'));
++    h.push(sec('💰', '金運', fo.money, '#c9a227', '#fdf7e3')); }
++    if (FD !== 'friend'){ h.push(genre('🌐 対人・人間関係', '同僚／ママ友／仲間', '#4a90c2'));
++    h.push(sec('🌐', '友だち・対人運', fo.friend, '#4a90c2', '#eef5fb')); }
      if (!RH.en) h.push(sec('📍', RH.place, placeText, '#9a6cc4', '#f4eefb'));
-     if (fo.study){ h.push(genre('📚 学び・成長', '自分の学び／子供の学び', '#b5732a')); h.push(sec('📚', '今日の学び', fo.study, '#c08a2e', '#fbf3e3')); }
-     h.push(genre('🌿 健康・コンディション', '自分／家族の体調', '#5fae8a'));
-@@ -222,39 +241,68 @@
+-    if (fo.study){ h.push(genre('📚 学び・成長', '自分の学び／子供の学び', '#b5732a')); h.push(sec('📚', '今日の学び', fo.study, '#c08a2e', '#fbf3e3')); }
+-    h.push(genre('🌿 健康・コンディション', '自分／家族の体調', '#5fae8a'));
+-    h.push(sec('🌿', '体調・リラックス', fo.health, '#5fae8a', '#eef7f2'));
++    if (fo.study && FD !== 'study'){ h.push(genre('📚 学び・成長', '自分の学び／子供の学び', '#b5732a')); h.push(sec('📚', '今日の学び', fo.study, '#c08a2e', '#fbf3e3')); }
++    if (FD !== 'health'){ h.push(genre('🌿 健康・コンディション', '自分／家族の体調', '#5fae8a'));
++    h.push(sec('🌿', '体調・リラックス', fo.health, '#5fae8a', '#eef7f2')); }
+ 
+     /* 🗓 こよみメモ（該当日のみ） */
+     var ki = (r.koyomi && r.koyomi.items) || [];
+@@ -222,39 +243,68 @@
        var TC = {good:'#2f8b56', rest:'#3f7bb8', care:'#cd5b56', turn:'#c07d28'};
        h.push(genre('🏠 暮らし・整え', '家事／お出かけ／転機', '#6a7a8f'));
        h.push(sec('🗓', '今日のこよみメモ', ki.map(function(it){
@@ -276,7 +295,7 @@
        + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:7px auto 0;"><tr>'
        + '<td>' + btn('https://social-plugins.line.me/lineit/share?url=' + shareUrl, 'LINEで送る', '#06c755', '11.5px', '8px 16px') + '</td>'
        + '<td>' + btn('https://twitter.com/intent/tweet?text=' + shareText + '&amp;url=' + shareUrl, '𝕏 でシェア', '#1d1f23', '11.5px', '8px 16px') + '</td>'
-@@ -263,6 +311,16 @@
+@@ -263,6 +313,16 @@
        + '<div style="margin-top:9px;font-size:10px;color:#a08a80;line-height:1.6;"><span style="white-space:nowrap;">パソコンの方は、</span><span style="white-space:nowrap;">このURLをコピーして送ってね</span><br><a href="' + esc(decodeURIComponent(shareUrl)) + '" style="color:#c14e77;text-decoration:underline;word-break:break-all;">' + esc(decodeURIComponent(shareUrl)) + '</a></div>'
        + '</td></tr></table>');
  
@@ -293,7 +312,7 @@
      /* 📖 ことばのメモ */
      h.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;border-collapse:separate;"><tr><td style="background:#f3f1f6;border:1px solid #e2dced;border-radius:12px;padding:11px 13px;">'
        + '<div style="font-size:11px;font-weight:800;color:#8a7fb0;letter-spacing:.04em;margin-bottom:6px;">📖 ことばのメモ</div>'
-@@ -272,13 +330,13 @@
+@@ -272,13 +332,13 @@
  
      /* 締め＋法定フッター */
      h.push('<div style="text-align:center;margin-top:15px;padding-top:13px;border-top:1.5px dashed ' + T.accent + ';">'
@@ -314,7 +333,7 @@
        + '</div>');
  
      /* ── 外枠：月ごとの単色の枠＋上に動く季節バナー＋下に季節の絵文字リボン（写真の背景は使わない＝軽い） ── */
-@@ -307,16 +365,20 @@
+@@ -307,16 +367,20 @@
  
      /* ── テキスト版（HTMLを表示できない環境・迷惑メール判定対策） ── */
      var t = [];
