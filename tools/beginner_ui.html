@@ -183,7 +183,13 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
   // とくに大きく揺れやすい年（下の「揺れやすい時期」と同じ判定）。良い時期の一覧に、その年だと分かる印を付けるために使う
   function shakyYears(c){ var ys={}; var ts=safe(function(){return detectTensen(c);},null); if(!ts||!ts.any) return ys;
     [ts,ts.work||{}].forEach(function(x){ ['yU','yA'].forEach(function(k){ (x[k]||[]).forEach(function(l){ var m=String(l).match(/(\d{4})年/); if(m) ys[+m[1]]=1; }); }); });
+    // 10年単位で揺れやすい時期（大運の天戦地冲）に入る年も含める（「動き出す年」と「揺れやすい時期」が重ならないように）
+    safe(function(){ var P=c.pillars||[], g=[P[2]&&P[2].ganzhi, P[1]&&P[1].ganzhi];
+      (c.decadeFortunes||[]).forEach(function(d){ if(!d.startYear) return; if(!g.some(function(t){ return t&&isTensenChichu(t,d.ganzhi); })) return;
+        for(var y=d.startYear; y<d.startYear+10; y++) ys[y]=1; }); });
     return ys; }
+  // 空亡の年（環境を大きく変えないほうがよい年）
+  function kuboYears(c){ var o={}; safe(function(){ var v=(kuuboNow(c).voids)||[]; (c.annualFortunes||[]).forEach(function(a){ if(v.indexOf(a.branch)>=0) o[a.year]=1; }); }); return o; }
   // 過ぎてしまった時期は「これから備えましょう」の一覧に出さない
   function futureLab(c,l,kind){ l=String(l); var now=c.now||{}, m;
     if(kind==='d'){ m=l.match(/〜(\d+)歳(?:(\d+)ヶ月)?/); if(m) return (+m[1]+(+(m[2]||0))/12) > (now.age||0); return true; }
@@ -422,13 +428,14 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     var fe=c.fiveElements||{}, so=ORD.slice().sort(function(x,y){return (fe[y]||0)-(fe[x]||0);});
     t.push('【あなたの持ち味】\n'+MEAN[so[0]].n.split('（')[0]+'の力が強めで、'+MEAN[so[0]].w.split('。')[0]+'が持ち味です。'+MEAN[so[4]].n.split('（')[0]+'の力は少なめなので、'+MEAN[so[4]].w.split('。')[0]+'を意識するとバランスが整います。');
     var y=c.now&&c.now.year, ay=(c.annualFortunes||[]).filter(function(a){return a.year===y;})[0], dd=safe(function(){return curDu(c);},null), nw=[];
-    var dot=function(t){ t=String(t||'').trim(); return (!t||/[。！？）)]$/.test(t))?t:t+'。'; };
-    if(ay){ var s=sig(c,ay), ma=meanFor(c,ay); nw.push('今年は「'+s.lab+'」。'+dot(ma.意)+(ma.助?'過ごし方のコツは、'+dot(ma.助):'')); }
+    var dot=function(t){ t=String(t||'').trim(); return (!t||/[。！？]$/.test(t))?t:t+'。'; };   // 「…大切に）」で終わっても句点を付けて、次の文とつながらないようにする
+    if(ay){ var s=sig(c,ay), ma=meanFor(c,ay); nw.push('今年は「'+s.lab+'」。'+dot(ma.意)+(ma.助?'過ごし方のコツ：'+dot(ma.助):'')); }
     if(dd){ var s2=sig(c,dd); nw.push('いまの10年は「'+s2.lab+'」。'+dot(meanFor(c,dd).意)); }
     if(nw.length) t.push('【いまの運気】\n'+nw.join('\n'));
     if(c.now){ var ys=(c.annualFortunes||[]).filter(function(a){return a.year>y&&a.year<y+10;});
       var skY=shakyYears(c);
-      var gd=ys.filter(function(a){var m=sig(c,a).mk;return (m==='◎'||m==='○')&&!skY[a.year];}).map(function(a){return a.year+'年';}), lw=ys.filter(function(a){return sig(c,a).mk==='△';}).map(function(a){return a.year+'年';});
+      var kbY=kuboYears(c);
+      var gd=ys.filter(function(a){var m=sig(c,a).mk;return (m==='◎'||m==='○')&&!skY[a.year]&&!kbY[a.year];}).map(function(a){return a.year+'年';}), lw=ys.filter(function(a){return sig(c,a).mk==='△';}).map(function(a){return a.year+'年';});
       var fl=[]; if(gd.length) fl.push('動き出すのに向いている年：'+gd.join('・').replace(/(\d)年/g,'$1\u2060年')); if(lw.length) fl.push('静かに整えたい年：'+lw.join('・').replace(/(\d)年/g,'$1\u2060年'));
       if(fl.length) t.push('【これからの流れ】\n'+fl.join('\n')); }
     var ts=safe(function(){return detectTensen(c);},null);

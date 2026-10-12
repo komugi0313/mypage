@@ -1596,11 +1596,47 @@ function _inDu(r,d){ var x=_nowX(r); if(x==null||!d) return false; var m=(d.ageM
     else els=[_GEN[dayEl],_GENINV[dayEl]];                                        // 中和：軽く整える
     var u=[]; els.forEach(function(e){ if(e&&u.indexOf(e)<0)u.push(e); }); return u; };
   // 命式表フォーマットが呼ぶ関数。中身はエンジン(computeChart)の出力を写すだけ。
+  /* ご高齢の方：エンジンの大運・年運が今より先まで届かないとき、同じエンジンの結果から先を補う（アプリと同じ処理。エンジン本体は無改変） */
+  function _extendLongLife(c){
+    if(!c||!c.now||!c.decadeFortunes||!c.decadeFortunes.length||!c.annualFortunes)return c;
+    const ny=c.now.year, af=c.annualFortunes, df=c.decadeFortunes, ds=c.dayMaster&&c.dayMaster.stem;
+    const lastY=af.length?af[af.length-1].year:0;
+    const lastD=df[df.length-1];
+    const needY=lastY<ny+10, needD=(c.now.age+20)>=lastD.endAge;
+    if(!needY&&!needD||!ds)return c;
+    // 同じ日干の「助っ人の命式」：基準年の1月1日から10日のうちに必ず同じ日干の日がある
+    const helpers={};
+    const helperFor=Y=>{ const base=Y-40; if(helpers[base])return helpers[base];
+      for(let k=0;k<10;k++){ const d=new Date(base,0,1+k);
+        const h=window.Bazi.computeChart({year:d.getFullYear(),month:d.getMonth()+1,day:d.getDate(),hour:12,minute:0,sex:'male',correctionMode:'none'});
+        if(h.dayMaster&&h.dayMaster.stem===ds){ helpers[base]=h; return h; } }
+      return null; };
+    const annualOf=Y=>{ const h=helperFor(Y); const a=h&&h.annualFortunes.find(x=>x.year===Y); return a?Object.assign({},a):null; };
+    if(needY){ for(let Y=lastY+1;Y<=ny+10;Y++){ const a=annualOf(Y); if(a)af.push(a); } }
+    if(needD){
+      const GZ60=[];const ST='甲乙丙丁戊己庚辛壬癸',BR='子丑寅卯辰巳午未申酉戌亥';for(let i=0;i<60;i++)GZ60.push(ST[i%10]+BR[i%12]);
+      const prev=df[df.length-2], dir=prev?((GZ60.indexOf(lastD.ganzhi)-GZ60.indexOf(prev.ganzhi)+60)%60===1?1:-1):1;
+      // 星・十二運を借りるための「同じ干支の年運」の一覧（同じ日干・60年分）
+      const pool={}; const h0=helperFor(ny); (h0?h0.annualFortunes:[]).forEach(a=>{pool[a.ganzhi]=a;});
+      let cur=lastD;
+      while(c.now.age+20>=cur.endAge && df.length<14){
+        const gz=GZ60[(GZ60.indexOf(cur.ganzhi)+dir+60)%60], a=pool[gz]; if(!a)break;
+        const nd={startAge:cur.endAge,endAge:cur.endAge+10,months:cur.months,ganzhi:gz,stem:a.stem,branch:a.branch,stemElement:a.stemElement,branchElement:a.branchElement,tenStar:a.tenStar,terrain:a.terrain,startYear:(cur.startYear||0)+10,startMonth:cur.startMonth};
+        df.push(nd); cur=nd;
+      }
+      // いまの大運の位置を、立運の端数（〇ヶ月）込みで数え直す
+      const am=(typeof c.now.ageMonths==='number')?c.now.ageMonths:c.now.age*12;
+      const idx=df.findIndex(d=>am>=d.startAge*12+(d.months||0) && am<d.endAge*12+(d.months||0));
+      if(idx>=0)c.now.daeunIndex=idx;
+    }
+    return c;
+  }
   window.computeMeishiki=function(input){
     if(!(window.Bazi&&window.Bazi.computeChart)) throw new Error('engine(window.Bazi) not loaded');
     var _opt={year:input.year,month:input.month,day:input.day,hour:input.hour,minute:input.minute,sex:input.sex,correctionMode:(input.correctionMode||'none')};
     if(input.longitude!=null && input.longitude!=='' && !isNaN(parseFloat(input.longitude))) _opt.longitude=parseFloat(input.longitude);
     var tc=window.Bazi.computeChart(_opt);
+    try{ _extendLongLife(tc); }catch(_e){}
     var P=tc.pillars||[];
     var kichi=(window.computeKichi?window.computeKichi(tc):{});  // 吉凶星(別モジュール)。エンジンは無改変
     function kichiOf(key){ return (kichi[key]||[]).join('・'); }
@@ -3355,6 +3391,7 @@ window.KANSHI60_DETAIL={
       root.style.setProperty('--mfit',String(mfit));
     }catch(e){}
   }
+  window.addEventListener('beforeprint', function(){ try{ _bpPrep(); }catch(e){} });   // ブラウザのメニューから印刷したときも、ボタンと同じ準備を先に行う
   window.addEventListener('beforeprint', function(){ setTimeout(fitPrintSheetExact,0); });
   // 鑑定書の印刷：本文（段組）のすぐ後に「※注意書き」と「鑑定日などのフッター」が全幅で続くと、本文がページいっぱいで終わったときに
   //   注意書きとフッターだけの、ほぼ白紙のページが付いてしまう。印刷の間だけ、この2つを段組の最後に入れて本文と一緒に流す。
@@ -3463,12 +3500,13 @@ window.KANSHI60_DETAIL={
   function selectedChapters(){ var a=[]; [].forEach.call(document.querySelectorAll('.chap'), function(c){ if(c.checked) a.push(Number(c.value)); }); return a; }
 
   // ---- 印刷（紙・版・章の選択を反映。専用シートに流し込み） ----
-  function runOutput(){
+  /* 印刷の準備（「🖨 印刷」ボタンでも、ブラウザのメニュー・Ctrl+P・スマホの共有→プリントでも同じ内容にする） */
+  function prepareOutput(quiet){
     try{
       var wantCover=_chk('outCover'), wantMei=_chk('outMeishiki'), wantRead=_chk('outReading');
       var verPro=(wantRead && (_printVer==='pro'||_printVer==='both'));
       var verEasy=(wantRead && (_printVer==='easy'||_printVer==='both'));
-      if(!wantMei && !verPro && !verEasy && !wantCover){ alert('出力する内容が選ばれていません（命式表／鑑定書／表紙のいずれかを選んでください）。'); return false; }
+      if(!wantMei && !verPro && !verEasy && !wantCover){ if(quiet) return false; alert('出力する内容が選ばれていません（命式表／鑑定書／表紙のいずれかを選んでください）。'); return false; }
       var sx=(_lastResult?(_lastResult.sex||'female'):'female');
       // 表紙
       if(wantCover){
@@ -3496,9 +3534,16 @@ window.KANSHI60_DETAIL={
       B.classList.toggle('pm-vpro', verPro);
       B.classList.toggle('pm-veasy', verEasy);
     }catch(e){}
-    try{ window.print(); }catch(e){}
     return true;
   }
+  function runOutput(){
+    window.__prepByBtn=true;
+    try{ if(prepareOutput(false)===false) return false; }finally{}
+    try{ window.print(); }catch(e){}
+    setTimeout(function(){ window.__prepByBtn=false; },0);
+    return true;
+  }
+  function _bpPrep(){ if(window.__prepByBtn || !_lastResult) return; try{ prepareOutput(true); }catch(e){} }
   document.getElementById('printBtn').addEventListener('click', runOutput);
   // 現在の入力から、鑑定を再現できる共有リンクを作る
   function buildShareURL(){
@@ -4288,7 +4333,7 @@ window.KANSHI60_DETAIL={
       var c=function(pk,a){ return (cell[pk]&&cell[pk][a]!=null)?cell[pk][a]:''; };
       var iDate=(document.getElementById('iDate')||{}).value||'', iTime=(document.getElementById('iTime')||{}).value||'';
       var dp=iDate.split('-'), tp=iTime.split(':');
-      var rlab={ year:(dp[0]?dp[0]+'年':'年柱'), month:(dp[1]?(+dp[1])+'月':'月柱'), day:(dp[2]?(+dp[2])+'日':'日柱'), hour:(tp[0]!=null&&tp[0]!==''?(+tp[0])+'時'+(tp[1]!=null&&tp[1]!==''?(+tp[1])+'分':''):'時柱') };
+      var rlab={ year:(dp[0]?dp[0]+'年':'年柱'), month:(dp[1]?(+dp[1])+'月':'月柱'), day:(dp[2]?(+dp[2])+'日':'日柱'), hour:(window.__timeUnknown?'時刻不明（参考）':(tp[0]!=null&&tp[0]!==''?(+tp[0])+'時'+(tp[1]!=null&&tp[1]!==''?String(+tp[1]).padStart(2,'0')+'分':''):'時柱')) };
       // 命式の地支（会局の検出に使う）
       var P=_lastResult.pillars||{};
       var natB=['year','month','day','hour'].map(function(k){return (P[k]||{}).shi||'';}).filter(Boolean);
@@ -4583,7 +4628,7 @@ window.KANSHI60_DETAIL={
       // ★氏名・生年月日は fillFromResult より先に確定する。
       //   横型の命式表（buildYokoSheet）は描画時に #mBirth を読み込むため、
       //   後で設定すると横型ヘッダに前回（初期サンプル）の生年月日が残ってしまう。
-      var _birthTxt='西暦'+y+'年'+m+'月'+d+'日 '+h+'時'+mn+'分 生　（現在 '+_age+'歳）';
+      var _birthTxt='西暦'+y+'年'+m+'月'+d+'日 '+(window.__timeUnknown?'生（時刻不明）':(h+'時'+String(mn).padStart(2,'0')+'分 生'))+'　（現在 '+_age+'歳）';   /* 時刻不明のときに仮の「12時0分」を印字しない */
       setEl('mName', nm ? (nm+'　様') : '　　　　　　様');
       setEl('mBirth', _birthTxt);
       setEl('mSex', sex==='female'?'女性':'男性');

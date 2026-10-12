@@ -1032,7 +1032,7 @@ html.bg-intro-done #bg-intro{display:none}
     </details>
     <button class="ask primary" id="compatBtn" style="margin-top:12px">この2人の相性を見る</button>
     <div style="margin-top:14px;font-size:13px;font-weight:800;color:var(--ink2)">この2人について、自由に質問できます（任意）</div>
-    <div class="chips" style="margin-top:8px"><button class="chip cwchip" data-w="この2人が長く良い関係を続けるために、それぞれが気をつけるとよいことを教えてください。">長続きのコツ</button><button class="chip cwchip" data-w="この2人がぶつかりやすいのはどんな時か、どう乗り越えればよいか教えてください。">ぶつかる時</button><button class="chip cwchip" data-w="この2人の縁が深まりやすい時期を、大運と今後の年運から具体的な年で教えてください。">縁が深まる時期</button><button class="chip cwchip" data-w="この2人は結婚に向いている相性か、決め手になる要素を教えてください。">結婚の相性</button><button class="chip cwchip" data-w="一緒に仕事・物事を進めるとき、どう役割分担すればうまくいくか教えてください。">一緒に組むなら</button></div>
+    <div class="chips" style="margin-top:8px"><button class="chip cwchip" data-w="この2人が長く良い関係を続けるために、それぞれが気をつけるとよいことを教えてください。">長続きのコツ</button><button class="chip cwchip" data-w="この2人がぶつかりやすいのはどんな時か、どう乗り越えればよいか教えてください。">ぶつかる時</button><button class="chip cwchip" data-w="この2人の縁が深まりやすい時期を、大運と今後の年運から具体的な年で教えてください。">縁が深まる時期</button><button class="chip cwchip cw-spouse" data-w="この2人は結婚に向いている相性か、決め手になる要素を教えてください。">結婚の相性</button><button class="chip cwchip" data-w="一緒に仕事・物事を進めるとき、どう役割分担すればうまくいくか教えてください。">一緒に組むなら</button></div>
     <div class="qbox"><div class="qbox-ttl">自由に質問を入力してください</div><div class="qbox-sub">気になることを書くと、2人の命式に沿って詳しくお答えします。</div><textarea class="worry" id="compat-worry" placeholder="例：この人とは結婚を考えても大丈夫でしょうか？　価値観は合いますか？" style="margin-top:8px"></textarea></div>
     <button class="ask" id="compatAskBtn">この質問に答えてもらう</button>
     <button id="compat-reset" type="button" style="margin-top:8px;width:100%;height:40px;border:2px solid var(--line2);background:#fff;color:var(--ink2);border-radius:11px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer">↺ お相手の入力をリセット</button>
@@ -1465,7 +1465,7 @@ html.bg-intro-done #bg-intro{display:none}
       return {
         startAge: d.startAge, endAge: d.endAge, ganzhi: d.ganzhi || '', branch: br,
         terrain: d.terrain || '', season: se ? se.s : '', seasonEl: el, mark: mark,
-        isSetsu: isSetsu, intense: isSetsu && amp,
+        isSetsu: isSetsu, intense: isSetsu && amp, voidHit: (voids.indexOf(br) >= 0) && !AMP_TERRAIN[d.terrain],
         /* 変わり目でこれから入る季節＝この大運自身の季節（新季節の先頭） */
         enterSeason: isSetsu ? (se ? se.s : '') : '', enterEl: isSetsu ? el : '', enterMark: isSetsu ? mark : '',
         /* 節木運の窓＝季節切替（この大運の開始）の前後1年半 */
@@ -1693,7 +1693,7 @@ function tsFortuneFor(c,star,bStar,unit){
   const mk=(pct==null)?'':unkiSignal(pct).mk;
   const u=s=>unit==='時期'?s:String(s).replace(/時期/g,unit);
   if(mk==='△') return {意:`${STAR_KW[star]||star}の働きが出る${unit}。ただし、あなたの場合はこの力が強まりすぎたり負担になったりしやすいので、無理に広げず、守りと土台づくりを優先すると良い${unit}です`,助:'大きな勝負や拡大は控えめにし、体調と足元を整えましょう',mk};
-  if(mk==='◦') return {意:u(f.意)+`（ただし、あなたの場合は大きな追い風というほどではないので、大きく攻めるより、日々の積み重ねが力になる${unit}です）`,助:u(f.助),mk};
+  if(mk==='◦') return {意:String(u(f.意)).replace(/。$/,'')+`。とはいえ、あなたの場合は大きな追い風というほどではないので、大きく攻めるより、日々の積み重ねが力になる${unit}です`,助:u(f.助),mk};   // かっこの重ね書き「（…）（ただし…）」をやめて、文で区切る
   return {意:u(f.意),助:u(f.助),mk};
 }
 function tsFortuneLine(star,when){const f=TS_FORTUNE[star];return f?`${when}＝${star}が巡る：${f.意}／過ごし方:${f.助}`:'';}
@@ -2763,9 +2763,10 @@ function _tsScan(c,target){
   const by=(typeof birthYearOf==='function'&&birthYearOf(c))||((now.year!=null&&now.age!=null)?now.year-now.age:null);   // 生まれ年（見る日によって1歳ぶれないように）
   const gzOf=a=>a.ganzhi||((a.stem||'')+(a.branch||''));
   const dir=gz=>map.indexOf(gz.charAt(0));
-  (c.annualFortunes||[]).forEach(a=>{const gz=gzOf(a);if(!isTensenChichu(target,gz)||a.year<cy-1||a.year>cy+20)return;
+  (c.annualFortunes||[]).forEach(a=>{const gz=gzOf(a);if(!isTensenChichu(target,gz)||a.year<cy||a.year>cy+20)return;   /* 今年より前の年は「これからの注意」として出さない */
     const lab=a.year+'年'+(by!=null?'（'+(a.year-by)+'歳）':'');(dir(gz)===0?r.yA:r.yU).push(lab);});
   (c.decadeFortunes||[]).forEach(d=>{if(!isTensenChichu(target,d.ganzhi))return;
+    if(c.now&&_nowMonths(c)>=d.endAge*12+(d.months||0))return;   /* すでに終わった大運は出さない */
     const lab=d.ganzhi+'（'+duAgeRange(d)+'）';(dir(d.ganzhi)===0?r.dA:r.dU).push(lab);});
   // 月運（今月から12ヶ月）＝短期・影響小
   try{(monthFortuneList(c,12)||[]).forEach(m=>{const gz=m.ganzhi||'';if(!isTensenChichu(target,gz))return;
@@ -2859,7 +2860,10 @@ function detectMote(c){
   let raw=1;const why=[];
   if(hasKa){raw+=2;why.push('桃花(咸池)');} if(hasKo){raw+=2;why.push('紅艶');}
   if(boku){raw+=1;why.push('日柱が沐浴');} if(ss>=2){raw+=1;why.push('食傷が2つ以上');}
-  const star=moteStarCurve(raw);
+  let star=moteStarCurve(raw);
+  // 恋愛カード（pklove.js）と同じ★にそろえる（要点と恋愛ステータスで★の数が食い違わないように。生まれ持ちの値で比べる）
+  try{ if(typeof pkLoveCard==='function'){ const _sv=selYear; selYear=null; let h=''; try{ h=pkLoveCard(c)||''; }finally{ selYear=_sv; }
+    const m=h.match(/モテ度（人気・魅力）<\/b>\s*<span[^>]*>([★☆]+)/); if(m){ const n=(m[1].match(/★/g)||[]).length; if(n>=1&&n<=5) star=n; } } }catch(e){}
   const type=(hasKa||hasKo)?'人を惹きつける"色気・華の星"（桃花・紅艶）を持つタイプ。黙っていても自然と目に留まる':'派手さより、知るほど好きになる"じわじわ本命"タイプ';
   return {star,raw,why,hasKa,hasKo,boku,ss,type};
 }
@@ -3478,7 +3482,7 @@ function gogyoHTML(c){
   const ring=col=>`<span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:${col};margin-right:6px;vertical-align:-2px"></span>`;
   const overlay=`<div class="gnote">
     <div class="n">${ring(DU)}<b>大運</b> ${duAgeRange(dd)}（${dd.startYear}〜${dd.startYear+9}年）：${dd.ganzhi} → 干<b>${duStar}</b>・支<b>${duStarB}</b></div>
-    ${ay?`<div class="n">${ring(NY)}<b>年運</b>：${ay.year} ${ay.ganzhi} → 干<b>${yrStar}</b>・支<b>${yrStarB}</b></div>`:''}${(function(){var mf=curMonthFortune(c);return (mf&&mf.meaning)?('<div class="n"><span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:#0EA5A5;margin-right:6px;vertical-align:-2px"></span><b>月運</b>：'+(mf.month?'約'+mf.month+'月ごろ ':'')+mf.ganzhi+' → <b>'+mf.star+'</b>（'+mf.meaning+'）'+((mf.stars&&mf.stars.length)?' <span style="color:var(--muted);font-weight:700">巡る吉凶星：'+mf.stars.map(function(s){return kichiLabel(s);}).join('・')+'</span>':'')+'</div>'):'';})()}</div>`;
+    ${ay?`<div class="n">${ring(NY)}<b>年運</b>：${ay.year} ${ay.ganzhi} → 干<b>${yrStar}</b>・支<b>${yrStarB}</b></div>`:''}${(function(){var mf=curMonthFortune(c);return (mf&&mf.meaning)?('<div class="n"><span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:#0EA5A5;margin-right:6px;vertical-align:-2px"></span><b>月運</b>：'+(mf.month?mf.month+'月ごろ ':'')+mf.ganzhi+' → <b>'+mf.star+'</b>（'+mf.meaning+'）'+((mf.stars&&mf.stars.length)?' <span style="color:var(--muted);font-weight:700">巡る吉凶星：'+mf.stars.map(function(s){return kichiLabel(s);}).join('・')+'</span>':'')+'</div>'):'';})()}</div>`;
   const total=Object.values(k).reduce((a,b)=>a+b,0);
   const have=TENSTAR10.filter(s=>k[s]>0).map(s=>`${s}${k[s]}`).join('・');
   return `<section class="card sec" id="gogyo-sec">
@@ -3621,7 +3625,7 @@ function chartHighlights(c,plain){
     push(d.n>=4?'warn':'good',d.n>=4?'🔥':'✨',lb,(ex.良||'')+(ex.注?'　→ 【活かし方・注意】'+ex.注:''));});}catch(e){}
   try{tsCombos(c).forEach(function(x){if(x.where!=='命式内')return;
     if(plain){push(x.type==='good'?'good':'warn',x.type==='good'?'🀄':'⚠️',x.type==='good'?'活きる配置':'気をつけたい配置',(COMBOP[x.name]||x.意)+(x.助?'　→ お客様へ：'+x.助:''));}
-    else{push(x.type==='good'?'good':'warn',x.type==='good'?'🀄':'⚠️',x.name,x.意+(x.助?'　→ 【'+(x.type==='good'?'活かし方':'お客様への助言')+'】'+x.助:''));}});}catch(e){}
+    else{push(x.type==='good'?'good':'warn',x.type==='good'?'🀄':'⚠️',x.name,x.意+(x.助?'　→ 【'+(x.type==='good'?'活かし方':'過ごし方のヒント')+'】'+x.助:''));}});}catch(e){}
   try{natalRels(c.pillars).forEach(function(r){if(r.kind!=='三合'&&r.kind!=='方合')return;
     var _em=EL_MEAN[r.el]||'';
     var _base=(r.el?r.el+'の力が大きく強まる強い結びつき。'+(_em?_em+'の分野が一気に強まります。':''):'強い結びつき。');
@@ -3749,15 +3753,16 @@ function sbListHtml(a){
     const col=ec(b.enterEl||b.seasonEl)||'#B5623A';
     const tag=b.enterMark==='喜'?'<span class="sb-tag ki">発展の30年</span>':(b.enterMark==='忌'?'<span class="sb-tag imi">備えの30年</span>':'');
     const yr=b.startYear?`${b.startYear}年`:'';
-    const sway=b.swayFrom?`${b.swayFrom}〜${b.swayTo}年ごろは環境が動きやすい`:'前後1年半は環境が動きやすい';
+    const _hy=v=>{ v=+v; return Number.isInteger(v)?v+'年':(Math.floor(v)+'年'+(v-Math.floor(v)>=0.5?'後半':'前半')); };   // 「1997.5年」のような小数の年を出さない
+    const sway=b.swayFrom?`${_hy(b.swayFrom)}〜${_hy(b.swayTo)}ごろは環境が動きやすい`:'前後1年半は環境が動きやすい';
     const why=b.enterMark==='喜'?'この季節の五行はあなたの<b>喜神</b>。追い風のなかで伸ばしていける30年です。'
              :(b.enterMark==='忌'?'この季節の五行はあなたの<b>忌神</b>。土台を整えながら進むと安定する30年です（悪い30年という意味ではありません）。':'');
     return `<div class="sb-item ${isNext?'next':''}" style="--sbc:${col}">
       <div style="flex:1 1 auto"><b>${b.startAge}歳ごろ（${yr}）・大運${b.ganzhi}${isNext?'　← 次の節目':''}${b.current?'　← 今この節目':''}</b>
-      <small>ここから<b>${SB_SEASON_JA[b.enterSeason]||''}</b>の30年へ植え替え。${sway}。${why}${b.intense?'十二運「'+b.terrain+'」または空亡が重なり、<b>動きが大きめ</b>に出やすい節目です。':''}</small></div>${tag}</div>`;
+      <small>ここから<b>${SB_SEASON_JA[b.enterSeason]||''}</b>の30年へ植え替え。${sway}。${why}${b.intense?''+(b.voidHit?'空亡':'十二運「'+b.terrain+'」')+'が重なり、<b>動きが大きめ</b>に出やすい節目です。':''}</small></div>${tag}</div>`;
   }).join('');
   const lead=a.next
-    ?`<div class="mhint" style="margin-top:8px">次の（または今まさに巡っている）節木運は<b>${a.next.startAge}歳ごろ${a.next.startYear?'＝'+a.next.startYear+'年':''}</b>。人生の「植え替え」の時期で、越えると新しい運気が進みます。</div>`
+    ?`<div class="mhint" style="margin-top:8px">${a.next.current?'今まさに巡っている':'次の'}節木運は<b>${a.next.startAge}歳ごろ${a.next.startYear?'＝'+a.next.startYear+'年':''}</b>。人生の「植え替え」の時期で、越えると新しい運気が進みます。</div>`
     :'<div class="mhint" style="margin-top:8px">今後の大運のなかに、次の節木運は含まれていません。</div>';
   return `<div class="sb-list">${rows}</div>${lead}`;
 }
@@ -4098,7 +4103,7 @@ function featBookHTML(c, forPrint){
   try{ const ku=(typeof kubo==='function')?kubo(c):null; if(ku&&ku.length)extra.push(li('空亡',ku.join('')+'＝縁が薄く努力が空回りしやすい支（＝準備・充電の面として前向きに）。')); }catch(e){}
   if(extra.length)rows.push(sec('その他の特別な配置','#2E7D8A','#EAF5F6','✨',extra));
   if(!rows.length)return '';
-  const note='<div style="font-size:11.5px;color:#7B8794;font-weight:700;margin:0 0 9px">この命式の人物像を、その場で確認・お渡しできます。</div>';
+  const note='';
   if(forPrint){
     // 印刷鑑定書用：折りたたまず常時表示。上位（meishi-sheet）が独立セクションに流し込む。
     return `<div style="margin:0 auto;max-width:230mm;color:#232733"><h2 style="font-size:15px;font-weight:900;color:#8A6A10;border-bottom:2px solid #E3D3AE;padding-bottom:5px;margin:0 0 10px">📖 この命式の詳しい特徴</h2>${note}${rows.join('')}${_shareCredit(true)}</div>`;
@@ -4228,7 +4233,7 @@ function verdictHTML(c){
       ${ay?item(`${ay.year}年の運気（年運 ${ay.ganzhi}）`,yS,yPct,ay.tenStar):''}
     </div>
     ${kaiHTML}
-    <div class="mhint" style="margin-top:9px">※ 運気％は<b>身旺・身弱と用神（喜神・忌神）</b>からの<b>目安</b>で、吉凶の断定ではありません（${sType}）。<b>下の大運・年運をタップ</b>すると、この判定も連動して変わります。</div>
+    <div class="mhint" style="margin-top:9px">※ 運気の印（◎○△）は<b>身旺・身弱と用神（喜神・忌神）</b>からの<b>目安</b>で、吉凶の断定ではありません（${sType}）。<b>下の大運・年運をタップ</b>すると、この判定も連動して変わります。</div>
   </section>`;
 }
 function relHTML(c){
@@ -4380,13 +4385,14 @@ function jyuZone(c){
   return {spouse,role:spouseRole(c),pos,zoneDu,phases,clipped,far,past,farAge,farYear,spYears,kango,shigou,chong,tenchi,sango,romance};
 }
 function jyuZoneHTML(c){
+  { const _ag=(c.now&&c.now.age)||0; if(_ag<18||_ag>60) return ''; }   // 恋愛・結婚・出産の“起承転結”は、18歳未満・61歳以上の方には出さない（年齢に合わない内容になるため）
   let z; try{z=jyuZone(c);}catch(e){return '';}
   if(!z) return '';
   const posLine=z.pos.length?z.pos.map(pp=>`<b>${pp}</b>＝${KONKI_POS[pp]}`).join('／'):'命式の表には出ていません（巡ってくる運で縁が動くタイプ）';
   const ph=z.phases?`<table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:12.5px">
     ${z.phases.map(f=>`<tr><td style="padding:5px 7px;border-bottom:1px solid var(--line);white-space:nowrap"><b style="color:var(--ka)">${f[0]}</b> <b>${f[1]}年</b></td><td style="padding:5px 7px;border-bottom:1px solid var(--line)">${f[2]}</td></tr>`).join('')}
   </table>${z.clipped?'<div style="font-size:11px;color:var(--muted);margin-top:3px">※配偶者星の大運はすでに始まっているため、今年からの4年を目安に表示しています。</div>':''}`
-    :(z.far?`<div style="font-size:12.5px;color:var(--muted);margin-top:4px">配偶者星（${z.role}の星）が主役になる大運は<b>${z.farAge}歳ごろ（${z.farYear}年〜）</b>とやや先です。数十年先は実務では使いにくいため、近い将来は下の「ご縁が動きやすい年」（配偶者星が巡る年・干合・支合・天地徳合・三合・桃花・紅艶）を、出会い・結婚の現実的な目安にしてください。</div>`
+    :(z.far?`<div style="font-size:12.5px;color:var(--muted);margin-top:4px">配偶者星（${z.role}の星）が主役になる大運は<b>${z.farAge}歳ごろ（${z.farYear}年〜）</b>とまだ先です。近い将来は下の「ご縁が動きやすい年」（配偶者星が巡る年・干合・支合・天地徳合・三合・桃花・紅艶）を、出会い・結婚の現実的な目安にしてください。</div>`
      :(z.past?`<div style="font-size:12.5px;color:var(--muted);margin-top:4px">配偶者星（${z.role}の星）が主役になる大運は<b>すでに過ぎています</b>。近い将来は下の「ご縁が動きやすい年」（配偶者星が巡る年・干合・支合・天地徳合・三合・桃花・紅艶）を、出会い・結婚（ご縁）の現実的な目安にしてください。</div>`
      :'<div style="font-size:12.5px;color:var(--muted);margin-top:4px">向こう数十年の大運では、配偶者星が主役の大運は目立ちません。下の「配偶者星が巡る年」や干合・支合の年を出会い・結婚の目安にしてください。</div>'));
   const sign=(lbl,arr,desc,col)=>arr.length?`<div style="margin-top:5px;font-size:12.5px"><span style="display:inline-block;background:${col};color:#fff;border-radius:6px;padding:0 8px;font-weight:800;margin-right:6px">${lbl}</span>${arr.map(y=>y+'年').join('・')} <span style="color:var(--muted)">＝${desc}</span></div>`:'';
@@ -4572,7 +4578,7 @@ function flowHTML(c){
       const ds=c.dayMaster.stem,sType=strengthType(c);
       const rows=[];
       {const mp=c.pillars[1],bs=tenStarOf(ds,HONKI[mp.branch]);rows.push({y0:birthY,y1:d0.startYear,a0:0,a1:d0.startAge,al:duAgeRange({isMonth:true,endAge:d0.startAge,endMonths:d0.months||0}),e:unkiPct(mp.tenStar,bs,sType),col:ec(mp.stemElement),now:duMonthNow(c),pre:true,tip:'立運前(月柱'+mp.ganzhi+')'});}
-      df.forEach(d=>{const bs=tenStarOf(ds,HONKI[d.branch]);rows.push({y0:d.startYear,y1:d.startYear+10,a0:d.startAge,a1:d.endAge,al:duAgeRange(d),e:unkiPct(d.tenStar,bs,sType),col:ec(d.stemElement),now:duIsNow(c,d),tip:d.ganzhi+' 干'+d.tenStar+'/支'+bs});});
+      df.forEach(d=>{const bs=tenStarOf(ds,HONKI[d.branch]);rows.push({y0:d.startYear,y1:d.startYear+9,a0:d.startAge,a1:d.endAge,al:duAgeRange(d),e:unkiPct(d.tenStar,bs,sType),col:ec(d.stemElement),now:duIsNow(c,d),tip:d.ganzhi+' 干'+d.tenStar+'/支'+bs});});
       // 西暦は次の大運の開始年と重ならないように（例：1990–1991／1992–2001）
       rows.forEach((r,i)=>{ if(rows[i+1]&&r.y1>=rows[i+1].y0) r.y1=rows[i+1].y0-1; if(r.y1<r.y0) r.y1=r.y0; });
       // 数字（％）は出さない：中和の人などは全期間が60％台に並び、％の差に意味がないため。
@@ -4713,11 +4719,11 @@ function yojoHTML(c){
       </div>`;})()}
     ${(()=>{try{const cc=b.counts||{};const w=cc.水||0,ed=cc.土||0,fi=cc.火||0;const ts=natalTsCounts(c);const shoku=ts.食傷||0;
       // 子宝の目安は、ご年齢的に現実的な範囲（46歳ごろまで）だけで出す。50歳以上の方には、この欄自体を出さない
-      const _by=birthYearOf(c), _age=(c.now&&c.now.age)||0, KID_MAX=46; if(_age>=50) return '';
+      const _by=birthYearOf(c), _age=(c.now&&c.now.age)||0, KID_MAX=46, KID_MIN=18; if(_age>=50||_age<KID_MIN) return '';
       const wstate=w>=4?'多め':(w<=1?'控えめ':'適度');const ds=c.dayMaster.stem;const nowY=(c.now&&c.now.year)||new Date().getFullYear();
       const isWater=x=>['壬','癸'].includes(x.stem)||['子','亥'].includes(x.branch);
       const duHit=(c.decadeFortunes||[]).filter(d=>{const bs=tenStarOf(ds,HONKI[d.branch]);return ['食神','傷官','正財','偏財'].includes(d.tenStar)||['食神','傷官','正財','偏財'].includes(bs)||isWater(d);}).filter(d=>!(c.now&&_nowMonths(c)>=d.endAge*12+(d.months||0))).filter(d=>d.startAge<KID_MAX).map(d=>`${duAgeRange(d)}(${d.ganzhi})`).slice(0,3);
-      const yrHit=(c.annualFortunes||[]).filter(a=>a.year>=nowY&&a.year<=nowY+10&&(!_by||a.year-_by<=KID_MAX)&&(['食神','傷官','正財','偏財'].includes(a.tenStar)||isWater(a))).map(a=>a.year).slice(0,6);
+      const yrHit=(c.annualFortunes||[]).filter(a=>a.year>=nowY&&a.year<=nowY+10&&(!_by||(a.year-_by<=KID_MAX&&a.year-_by>=KID_MIN))&&(['食神','傷官','正財','偏財'].includes(a.tenStar)||isWater(a))).map(a=>a.year).slice(0,6);
       const tip=wstate==='多め'?'水が多めで冷えやすいので、<b>体を温める食べ物（生姜・クルミ・黒豆）</b>とヨガ・ウォーキングで血流を良くすると整いやすい':wstate==='控えめ'?'水が控えめで乾きやすいので、<b>腎を養う食べ物（黒ごま・山芋・ナッツ）</b>と水分・保湿で潤いを保つとよい':'今のバランスを保つ養生を';
       return `<div style="background:${ec('水')}0e;border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-top:10px">
         <div style="font-size:12.5px;font-weight:900;color:var(--ink2);margin-bottom:6px">子宝・家庭のご縁（養生の目安） <span style="font-weight:700;color:var(--muted)">── 水＝腎（生命の源）／食傷＝子の星（東洋医学の目安）</span></div>
@@ -4740,7 +4746,7 @@ function genmeiHTML(c){
     <p class="lead">月柱の地支通変＝<b>月支元命</b>。四柱推命で特に重視される、<b>その人の先天的な気質の軸</b>です。経験で人格が洗練されても、ここに根ざした気質は<b>一生あまり変わりません</b>（命式表で<span style="background:var(--ka);color:#fff;border-radius:3px;padding:0 4px;font-size:11px;font-weight:900">元</span>の印）。</p>
     <div style="background:${col}12;border:1px solid var(--line);border-radius:12px;padding:12px 14px">
       <div style="font-size:14px;font-weight:700;line-height:1.8">${detail}</div>
-      <div style="font-size:13px;font-weight:800;color:var(--ink2);margin-top:10px">向いやすい仕事：${d.適職}</div>
+      <div style="font-size:13px;font-weight:800;color:var(--ink2);margin-top:10px">向いている仕事：${d.適職}</div>
     </div>
     ${(()=>{const kg=kakukyoku(c);if(!kg||!kg.name)return '';const out=kg.kind==='外格';const kcol=out?'#B45309':col;
       const subHtml=(!out&&kg.subs&&kg.subs.length)?`<div style="font-size:12px;font-weight:700;color:var(--ink2);margin-top:7px">この格をさらに細かくした型（条件の星がそろって成立）：${kg.subs.map(s=>`<b>${s.name}</b>（${s.mean}）`).join('・')}</div>`:'';
@@ -4807,7 +4813,7 @@ function renderResult(){
     sampleNote+heroHTML(c)+timingAlertHTML(c)+summaryHTML(c)+featBookHTML(c)+kaigouCardHTML(c)+verdictHTML(c)+tensenCardHTML(c)+meishiHTML(c);
   (function(){var _rb=document.getElementById('result-body');
     if(!_rb){_rb=document.createElement('div');_rb.id='result-body';var _r=document.getElementById('result');if(_r&&_r.parentNode)_r.parentNode.insertBefore(_rb,_r.nextSibling);}
-    _rb.innerHTML = kaikyokuHTML(c)+genmeiHTML(c)+junitenHTML(c)+gogyoHTML(c)+compatPillHTML()+midQuickNavHTML()+flowHTML(c)+kingunHTML(c)+(typeof pkLoveCard==='function'?pkLoveCard(c):'')+yojoHTML(c);
+    _rb.innerHTML = kaikyokuHTML(c)+genmeiHTML(c)+junitenHTML(c)+gogyoHTML(c)+compatPillHTML()+midQuickNavHTML()+flowHTML(c)+kingunHTML(c)+(typeof pkLoveCard==='function'?(((c.now&&c.now.age)||0)<18?'<section class="card sec" id="love-card"><span class="eyebrow"><b>恋愛</b></span><h2>恋愛・結婚の目安</h2><p class="mhint" style="margin:4px 0 0">恋愛・結婚・パートナーの目安は、18歳以上の方に表示します。いまは学びや成長、人との出会いを大切にする時期です。</p></section>':pkLoveCard(c)):'')+yojoHTML(c);
   })();
   // 末尾が「→ ›」等で終わるリンク（例：干支相性 早見表→）で、スマホ幅のとき矢印が一文字だけ次行に泣き別れしないよう、末尾3文字をひとまとまり(nowrap)にする。表示層のみ・pklove.jsは非改変。
   (function(){document.querySelectorAll('#result a, #result-body a').forEach(function(a){
@@ -4829,7 +4835,7 @@ function renderResult(){
   document.getElementById('autoReadBtn').onclick=doAutoRead;
   // 恋愛カード（モテ度欄など）の装飾絵文字（💖💍🌹💐💘 等のピクトグラム＋❤）を除去。★☆◆や通変色は保持。表示層のみ・pklove.jsは非改変。
   (function(){var lc=document.getElementById('love-card');if(!lc)return;
-    var h=lc.innerHTML, h2=h.replace(/(?:[\u{1F000}-\u{1FAFF}]|[❤❥♡♥❣])️?[ 　]?/gu,'');
+    var h=lc.innerHTML, h2=h.replace(/[❤♥]️?/gu,'★').replace('専門用語／先生の検算用','専門用語').replace(/神殺・通変・代表蔵干は②エンジン算出。?/g,'').replace(/お客様への一言：/g,'ひとこと：').replace(/♡️?/gu,'☆').replace(/(?:[\u{1F000}-\u{1FAFF}]|[❥❣])️?[ 　]?/gu,'');   /* ❤は★に置きかえる（消すと「生まれ持ったに」「（）」のように文が崩れ、年ごとの強さも見えなくなる） */
     if(h2!==h)lc.innerHTML=h2;})();
   // 恋愛カードは要点（❤ステータス）だけ表示し、以降（輝く年・配偶者像ほか）は開閉に。表示層のみ・pklove.jsは非改変。
   (function(){var lc=document.getElementById('love-card');if(!lc||lc.querySelector(':scope>details.tailfold'))return;
@@ -5155,11 +5161,11 @@ const GERYO_PT={
 function geryoPoint(branch,el){const r=GERYO_PT[branch];return (r&&r[el]!=null)?r[el]:0;}
 // 食＝不足のとき「補う（積極的に食べる）」食材／過食＝過多のとき「整える」食養生（同じ味を増やさず、流す・冷ます・潤す）
 const YOJO={
-  木:{臓:'肝・胆',体:'目・筋・自律神経',味:'酸（すっぱい）',作用:'肝・胆・眼によい。酢のように筋肉を引き締める収斂作用',病:'肝臓病・眼の疲れ・不眠症・胆嚢炎・筋肉のケイレン・自律神経失調症・精神病・皮膚病・子宮病など婦人病',過多:'のぼせ・頭痛・目の疲れ・怒りっぽさ・肩こりが出やすい',不足:'疲れ目・筋のこわばり・決断力ややる気の低下が出やすい',食:'酸味（梅・酢・柑橘）、緑の葉物、レバー、しじみを補う',過食:'酸味は摂りすぎない。香味野菜・セロリ・春菊・菊花茶で“高ぶり・のぼせ”を冷まし巡らせる',寒涼:'トマト・ミカン・レモン・林檎・梅・スモモ・ビワ',温熱:'桃・キンカン・ブリ',暮:'早寝と適度な運動でストレス発散、目を休める'},
-  火:{臓:'心・小腸',体:'血管・舌・睡眠・精神',味:'苦（にがい）',作用:'心・小腸・舌によい。炎症をおさえ物を固める（苦い茶は強心作用）',病:'心臓病・動悸・息切れ・立ちくらみ・高血圧・動脈硬化・脳卒中',過多:'動悸・のぼせ・不眠・焦り・口内炎が出やすい',不足:'冷え・気力低下・血行不良・気分の落ち込みが出やすい',食:'赤い食材（トマト・なつめ）と温かい食事で心の力を補う',過食:'辛い・脂っこい・刺激物は控えめに。苦味（ゴーヤ・緑茶）や海藻・黒豆で“こもった熱”を冷ます',寒涼:'レタス・ミョウガ・クワイ',温熱:'春菊・銀杏・ウド・フキ',暮:'夜更かしを避け心を静める、深呼吸・瞑想'},
-  土:{臓:'脾・胃',体:'消化・口・肌肉',味:'甘（あまい）',作用:'脾・胃・口唇によい。緊張を緩め滋養強壮・痛みをとる',病:'めまい・低血圧・胃腸病・手足のだるさ・食欲不振・痔・便秘・下痢・糖尿病・口臭・口内炎・出血性疾患',過多:'食べ過ぎ・むくみ・重だるさ・くよくよ思い悩みが出やすい',不足:'胃腸虚弱・疲れやすさ・食後の眠気・低血圧が出やすい',食:'自然な甘味（かぼちゃ・さつまいも・米・棗）、黄色い食材を、よく噛み温かくして補う',過食:'甘いもの・脂っこいものは控えめに。はとむぎ・小豆・大根で“余分な湿（むくみ・重だるさ）”を流す',寒涼:'ホウレンソウ・白菜・ゴボウ・キュウリ・ナス・筍・セロリ・バナナ・スイカ・柿・小麦・ハモ・牡蠣・蒟蒻・豆腐・キャベツ・ジャガイモ・薩摩芋・山芋・蓮根・トウモロコシ・エンドウ豆・鰹・カレイ・鰻・鯛・卵・蕎麦・椎茸・牛乳・大豆・胡麻',温熱:'カボチャ・鰺・鮪・鮭・海老・牛肉・鶏肉・米・サクランボ',暮:'規則正しい食事、考えすぎを手放す、よく歩く'},
-  金:{臓:'肺・大腸',体:'呼吸・鼻・皮膚',味:'辛（からい）',作用:'肺・鼻・大腸によい。発散作用があり、風邪のとき発汗を促す',病:'結核・喘息・気管支炎・扁桃炎・鼻炎・蓄膿症・風邪・皮膚病・痔・脱肛',過多:'乾燥・便秘・神経質・悲観が出やすい',不足:'風邪をひきやすい・喉や肌の乾燥・呼吸が浅い・気力低下が出やすい',食:'辛味（生姜・ねぎ・大根）、白い食材（れんこん・梨・白きくらげ・豆腐）で肺を補う',過食:'辛味（生姜・ねぎ）は摂りすぎない。梨・白きくらげ・豆腐など“潤す”食材で乾燥をやわらげる',寒涼:'大根・サトイモ',温熱:'アブラナ・人参・紫蘇・パセリ・ネギ・玉葱・ニンニク・生姜・唐辛子・山椒・胡椒',暮:'深い呼吸、保湿と換気、悲しみをため込まない'},
-  水:{臓:'腎・膀胱',体:'骨・耳・ホルモン・生殖',味:'鹹（塩からい）',作用:'腎・膀胱・耳・骨によい。塩のように物を軟らげる作用',病:'腎臓病・膀胱炎・インポテンツ・糖尿病・痛風・冷え性・腰痛・神経痛・リウマチ・婦人病・脱毛・白髪・難聴',過多:'冷え・むくみ・気力の沈み・恐れが出やすい',不足:'腰や膝のだるさ・耳鳴り・冷え・老化や精力の低下が出やすい',食:'鹹味（海藻・黒豆・黒ごま・牡蠣）、黒い食材で腎を温め補う',過食:'塩辛いもの・水分の摂りすぎに注意。生姜・シナモンなど“体を温める”食材で冷え・むくみを防ぐ',寒涼:'アサリ・シジミ・ハマグリ・昆布・ヒジキ・海苔・蟹・アシタバ・大麦',温熱:'鮑・クラゲ・栗',暮:'体を冷やさない、十分な休息、無理をしない'}
+  木:{臓:'肝・胆',体:'目・筋・自律神経',味:'酸（すっぱい）',作用:'肝・胆・眼によい。酢のように筋肉を引き締める収斂作用',病:'目の疲れ・肩や筋肉のこわばり・寝つきの悪さ・イライラ・自律神経の乱れ・肌あれ・婦人科系の不調',過多:'のぼせ・頭痛・目の疲れ・怒りっぽさ・肩こりが出やすい',不足:'疲れ目・筋のこわばり・決断力ややる気の低下が出やすい',食:'酸味（梅・酢・柑橘）、緑の葉物、レバー、しじみを補う',過食:'酸味は摂りすぎない。香味野菜・セロリ・春菊・菊花茶で“高ぶり・のぼせ”を冷まし巡らせる',寒涼:'トマト・ミカン・レモン・林檎・梅・スモモ・ビワ',温熱:'桃・キンカン・ブリ',暮:'早寝と適度な運動でストレス発散、目を休める'},
+  火:{臓:'心・小腸',体:'血管・舌・睡眠・精神',味:'苦（にがい）',作用:'心・小腸・舌によい。炎症をおさえ物を固める（苦い茶は強心作用）',病:'動悸・息切れ・立ちくらみ・のぼせ・血圧や血のめぐりの乱れ・眠りの浅さ',過多:'動悸・のぼせ・不眠・焦り・口内炎が出やすい',不足:'冷え・気力低下・血行不良・気分の落ち込みが出やすい',食:'赤い食材（トマト・なつめ）と温かい食事で心の力を補う',過食:'辛い・脂っこい・刺激物は控えめに。苦味（ゴーヤ・緑茶）や海藻・黒豆で“こもった熱”を冷ます',寒涼:'レタス・ミョウガ・クワイ',温熱:'春菊・銀杏・ウド・フキ',暮:'夜更かしを避け心を静める、深呼吸・瞑想'},
+  土:{臓:'脾・胃',体:'消化・口・肌肉',味:'甘（あまい）',作用:'脾・胃・口唇によい。緊張を緩め滋養強壮・痛みをとる',病:'胃腸の弱り・食欲の乱れ・手足のだるさ・めまい・便秘や下痢・口内炎・むくみ',過多:'食べ過ぎ・むくみ・重だるさ・くよくよ思い悩みが出やすい',不足:'胃腸虚弱・疲れやすさ・食後の眠気・低血圧が出やすい',食:'自然な甘味（かぼちゃ・さつまいも・米・棗）、黄色い食材を、よく噛み温かくして補う',過食:'甘いもの・脂っこいものは控えめに。はとむぎ・小豆・大根で“余分な湿（むくみ・重だるさ）”を流す',寒涼:'ホウレンソウ・白菜・ゴボウ・キュウリ・ナス・筍・セロリ・バナナ・スイカ・柿・小麦・ハモ・牡蠣・蒟蒻・豆腐・キャベツ・ジャガイモ・薩摩芋・山芋・蓮根・トウモロコシ・エンドウ豆・鰹・カレイ・鰻・鯛・卵・蕎麦・椎茸・牛乳・大豆・胡麻',温熱:'カボチャ・鰺・鮪・鮭・海老・牛肉・鶏肉・米・サクランボ',暮:'規則正しい食事、考えすぎを手放す、よく歩く'},
+  金:{臓:'肺・大腸',体:'呼吸・鼻・皮膚',味:'辛（からい）',作用:'肺・鼻・大腸によい。発散作用があり、風邪のとき発汗を促す',病:'のど・鼻・気管支の不調・風邪をひきやすい・肌の乾燥・便通の乱れ',過多:'乾燥・便秘・神経質・悲観が出やすい',不足:'風邪をひきやすい・喉や肌の乾燥・呼吸が浅い・気力低下が出やすい',食:'辛味（生姜・ねぎ・大根）、白い食材（れんこん・梨・白きくらげ・豆腐）で肺を補う',過食:'辛味（生姜・ねぎ）は摂りすぎない。梨・白きくらげ・豆腐など“潤す”食材で乾燥をやわらげる',寒涼:'大根・サトイモ',温熱:'アブラナ・人参・紫蘇・パセリ・ネギ・玉葱・ニンニク・生姜・唐辛子・山椒・胡椒',暮:'深い呼吸、保湿と換気、悲しみをため込まない'},
+  水:{臓:'腎・膀胱',体:'骨・耳・ホルモン・生殖',味:'鹹（塩からい）',作用:'腎・膀胱・耳・骨によい。塩のように物を軟らげる作用',病:'冷え・腰や膝の痛み・むくみ・疲れやすさ・耳や髪の悩み・婦人科系の不調',過多:'冷え・むくみ・気力の沈み・恐れが出やすい',不足:'腰や膝のだるさ・耳鳴り・冷え・疲れが抜けにくい・年齢による衰えを感じやすい',食:'鹹味（海藻・黒豆・黒ごま・牡蠣）、黒い食材で腎を温め補う',過食:'塩辛いもの・水分の摂りすぎに注意。生姜・シナモンなど“体を温める”食材で冷え・むくみを防ぐ',寒涼:'アサリ・シジミ・ハマグリ・昆布・ヒジキ・海苔・蟹・アシタバ・大麦',温熱:'鮑・クラゲ・栗',暮:'体を冷やさない、十分な休息、無理をしない'}
 };
 /* 寒涼＝熱をとり消炎・鎮静／温熱＝新陳代謝を高め興奮させる。体質や季節で使い分ける。 */
 function gogyoBalance(c){
@@ -5265,9 +5271,9 @@ function yojinTrio(c){const b=gogyoBalance(c);const you=(b.zero.length?b.zero:b.
 function buildYojo(c){
   const b=gogyoBalance(c);
   const cnt=SHENG.map(k=>`${k}${b.counts[k]}`).join(' ');
-  const strongTxt=b.strong.map(k=>`${k}＝${YOJO[k].臓}/${YOJO[k].味}(過多で出やすい不調・病:${YOJO[k].過多}〔関連する病気:${YOJO[k].病}〕/整える食(同じ味は増やさず流す・冷ます・潤す):${YOJO[k].過食}〔冷ます食材:${YOJO[k].寒涼}〕)`).join(' ; ');
+  const strongTxt=b.strong.map(k=>`${k}＝${YOJO[k].臓}/${YOJO[k].味}(過多で出やすい不調・病:${YOJO[k].過多}〔関連しやすい不調:${YOJO[k].病}〕/整える食(同じ味は増やさず流す・冷ます・潤す):${YOJO[k].過食}〔冷ます食材:${YOJO[k].寒涼}〕)`).join(' ; ');
   const weakK=b.zero.length?b.zero:b.weak;
-  const weakTxt=weakK.map(k=>`${k}＝${YOJO[k].臓}/${YOJO[k].味}(不足で出やすい不調・病:${YOJO[k].不足}〔関連する病気:${YOJO[k].病}〕/補う食(積極的に食べる):${YOJO[k].食}〔体を温める温熱食材:${YOJO[k].温熱}〕)`).join(' ; ');
+  const weakTxt=weakK.map(k=>`${k}＝${YOJO[k].臓}/${YOJO[k].味}(不足で出やすい不調・病:${YOJO[k].不足}〔関連しやすい不調:${YOJO[k].病}〕/補う食(積極的に食べる):${YOJO[k].食}〔体を温める温熱食材:${YOJO[k].温熱}〕)`).join(' ; ');
   const nv=gogyoNowVerdict(c);
   const nowTxt=nv?`/今の運の五行の傾き:大運${nv.dd.ganzhi}${nv.ay?'＋年運'+nv.ay.ganzhi:''}で「${nv.el}」が強まる→${nv.advice}（${nv.caution}）。食養生:${nv.excess?YOJO[nv.el].過食:nv.food}`:'';
   const lc=luckyColors(c);
@@ -5581,7 +5587,7 @@ function buildChartText(c){
     L.push(`現在の大運（${c.now.age}歳）:${dd.ganzhi}（干${dd.tenStar}/十二運${dd.terrain}）${dd.isMonth?'※立運前＝第一運（月柱・'+duAgeRange(dd)+'）':''}`);
     (()=>{const nx=c.decadeFortunes[di+1];if(nx){const yrsTo=nx.startAge-c.now.age;const nb=tenStarOf(ds,HONKI[nx.branch]);if(yrsTo>=0&&yrsTo<=1.5){L.push(`★大運の切替が近い（人生の転機）:あと約${yrsTo<1?'1年以内':Math.round(yrsTo)+'年'}（${nx.startYear}年・${nx.startAge}歳頃）で大運が${dd.ganzhi}→${nx.ganzhi}（干${nx.tenStar}/支${nb}）へ切り替わる。大運の変わり目は生き方・環境・テーマが動く節目で、前後半年〜1年は特に流れが変わりやすい。何がどう変わるかを具体的に伝える`);}else if(yrsTo>1.5&&yrsTo<=3){L.push(`大運の次の切替:${nx.startYear}年・${nx.startAge}歳頃に${dd.ganzhi}→${nx.ganzhi}（干${nx.tenStar}）へ（数年内の変わり目）`);}}})();
     if(ay)L.push(`今年の年運（${ay.year}）:${ay.ganzhi}（天干${ay.tenStar}/地支${ay.terrain}/蔵干本気${ay.hiddenStem}=${ay.hiddenTenStar}）`);
-    {const _mf=curMonthFortune(c);if(_mf&&_mf.meaning)L.push('今月の運気（月運。'+(_mf.month?'今の節月＝約'+_mf.month+'月ごろ':'今月')+'・月柱'+_mf.ganzhi+'／通変'+_mf.star+'）:'+_mf.meaning+'／過ごし方:'+_mf.help+((_mf.stars&&_mf.stars.length)?'／今月巡る吉凶星:'+_mf.stars.map(k=>kichiLabel(k)).join('・')+'（短期・影響は小さめ。命式にある同じ星を後押し／注意喚起する程度に軽く触れる）':'')+'。※月運は大運・年運より影響が小さい短期の流れ。今月〜近い時期の話にのみ使い断定しない');}
+    {const _mf=curMonthFortune(c);if(_mf&&_mf.meaning)L.push('今月の運気（月運。'+(_mf.month?'今の節月＝'+_mf.month+'月ごろ':'今月')+'・月柱'+_mf.ganzhi+'／通変'+_mf.star+'）:'+_mf.meaning+'／過ごし方:'+_mf.help+((_mf.stars&&_mf.stars.length)?'／今月巡る吉凶星:'+_mf.stars.map(k=>kichiLabel(k)).join('・')+'（短期・影響は小さめ。命式にある同じ星を後押し／注意喚起する程度に軽く触れる）':'')+'。※月運は大運・年運より影響が小さい短期の流れ。今月〜近い時期の話にのみ使い断定しない');}
     // 目の前の運（対面で「日・月」を語れるよう、今後2週間の日運の山谷＋今後12ヶ月の月運の流れを渡す）
     (()=>{try{const _dl=dayFortuneList(c,14),_ml=monthFortuneList(c,12);
       const _gd=_dl.filter(x=>x.jud==='good').slice(0,4).map(x=>`${x.date.getMonth()+1}/${x.date.getDate()}(${x.ganzhi}・${x.star}${x.stars.length?'・'+x.stars.slice(0,2).join(''):''})`);
@@ -5812,7 +5818,7 @@ function localReading(c,worry,hard){
     if(cs.hasNichiza)t.push(`**日座中殺**（日柱が${cs.dgz}＝甲戌・乙亥）＝現実に違和感を持ちやすく、頭の回転が速くきっかけ作りが得意。家庭と仕事の両立は難しめで結婚しない選択をする人も。親元を離れる・別居婚や事実婚など柔軟な形・他人の事業を引き継ぐと成功しやすい。情に流されすぎないのが大切です。`);
     if(cs.hasNikkyo)t.push(`**日居中殺**（日柱が${cs.dgz}＝甲辰・乙巳）＝精神と現実のギャップがあり、繊細で孤独を感じやすい半面、気高い理想を持つ「一人で輝く星」。孤独を否定せず、表現・芸能・精神世界で才能が花開きます。`);
     if(cs.ichidai)t.push('**一代運**（生年＋生月中殺の両方・約36人に1人）＝受け継ぐより、自分の力で新しく始め、自分の代で築き上げる生き方でこそ輝きます。');
-    t.push('宿命中殺で成功する人の共通点：①普通になろうとしない ②常識より自分の感覚を信じる ③早めに自立する ④人と違う人生を楽しむ ⑤心の声に沿って生きる。「小さな枠で生きる人生」ではなく「枠から飛び出し、意味のある人生を生きる宿命」として前向きに伝えます。');
+    t.push('宿命中殺で成功する人の共通点：①普通になろうとしない ②常識より自分の感覚を信じる ③早めに自立する ④人と違う人生を楽しむ ⑤心の声に沿って生きる。「小さな枠で生きる人生」ではなく「枠から飛び出し、意味のある人生を生きる宿命」です。');
     L.push('【宿命中殺（天中殺）】');
     L.push('天中殺（空亡）が命式の柱にかかる特別な宿命をお持ちです。これは"欠け"ではなく、**人と違う道を歩む強み**。'+t.join(''));
   })();
@@ -5894,7 +5900,7 @@ const WORRY_TOPICS=[
   {key:'study',   re:/受験|入試|試験|模試|学業|勉強|進学|留学|合格|受か|偏差値|TOEIC|英検|資格試験|国家試験|卒業|学校|大学/},
   {key:'work',    re:/仕事|転職|就職|求職|退職|独立|起業|開業|キャリア|職業|適職|天職|昇進|出世|会社|職場|事業|ビジネス|副業|フリー|進路|資格/},
   {key:'money',   re:/お金|金運|金銭|財|収入|給料|年収|貯金|貯蓄|投資|資産|借金|ローン|儲|稼|豊か|経済|支出|買/},
-  {key:'health',  re:/健康|体調|病気|病|不調|メンタル|気持ち|不安|眠れ|不眠|うつ|鬱|疲れ|しんど|つら|辛|ストレス|痩|太|ダイエット|更年期/},
+  {key:'health',  re:/健康|体調|体の傾向|体質|養生|薬膳|食べ物|病気|病|不調|メンタル|気持ち|不安|眠れ|不眠|うつ|鬱|疲れ|しんど|つら|辛|ストレス|痩|太|ダイエット|更年期/},
   {key:'move',    re:/引越|引っ越|転居|移動|移転|方位|マイホーム|不動産|マンション|土地|海外|上京|旅/},
   {key:'relation',re:/人間関係|対人|人付き合|人づきあい|友達|友人|仲間|上司|部下|同僚|ママ友|近所|嫁姑|義理|義母|義父|親子|家族/},
 ];
@@ -5948,7 +5954,7 @@ function localAnswer(c,worry){
     L.push(`恋の傾向：${LOVE_TEND[topGrp]}結婚相手の場所（配偶宮）は日支**${dp.branch}**です。`);
     L.push('【縁が動きやすい時期】');
     if(dus.length)L.push(`大運では**${dus.join('・')}**に、パートナーを表す星が巡ります。この年代は出会い・結婚の縁が動きやすい時期です。`);
-    (()=>{let z;try{z=jyuZone(c);}catch(e){return;}
+    (()=>{let z;const _ag=(c.now&&c.now.age)||0;if(_ag<18||_ag>60)return;try{z=jyuZone(c);}catch(e){return;}
       if(z&&z.phases){L.push(`**寿ゾーン（恋愛開花期）**：配偶者星が巡る大運の最初の4年＝**${z.phases[0][1]}〜${z.phases[3][1]}年**が、恋愛・結婚のエネルギーが最大化する4年間です。起（${z.phases[0][1]}年＝出会い増）→承（${z.phases[1][1]}年＝交際・安定）→転（${z.phases[2][1]}年＝入籍など決断）→結（${z.phases[3][1]}年＝結婚・同棲など形に）の流れで読みます。${z.kango.length?'また'+z.kango.slice(0,3).join('・')+'年は干合＝運命的な出会いの年。':''}${z.shigou.length?z.shigou.slice(0,3).join('・')+'年は支合＝安定・結婚に発展しやすい年。':''}`);}
       else if(z&&z.far){L.push(`配偶者星が主役になる大運は**${z.farAge}歳ごろ（${z.farYear}年〜）**とやや先のため、近い将来は「配偶者星が巡る年」や干合・支合・天地徳合・三合・桃花（咸池）・紅艶の年を、出会い・結婚の現実的な目安にします。${z.romance.length?'特に'+z.romance.slice(0,3).join('・')+'年は桃花・紅艶＝異性の縁・魅力が高まる年。':''}${z.kango.length?z.kango.slice(0,3).join('・')+'年は干合＝運命的な出会いの年。':''}${z.shigou.length?z.shigou.slice(0,3).join('・')+'年は支合＝安定・結婚に発展しやすい年。':''}`);}
       else if(z&&z.past){L.push(`配偶者星が主役になる大運はすでに過ぎているため、近い将来は「配偶者星が巡る年」や干合・支合・天地徳合・三合・桃花（咸池）・紅艶の年を、出会い・結婚（ご縁）の現実的な目安にします。${z.romance.length?'特に'+z.romance.slice(0,3).join('・')+'年は桃花・紅艶＝異性の縁・魅力が高まる年。':''}${z.kango.length?z.kango.slice(0,3).join('・')+'年は干合＝運命的な出会いの年。':''}${z.shigou.length?z.shigou.slice(0,3).join('・')+'年は支合＝安定・結婚に発展しやすい年。':''}`);}})();
@@ -6076,7 +6082,7 @@ function localAnswer(c,worry){
     L.push('【今できること】');
     L.push(`- 強みの**${topGrp}**を活かす：${GROUP_ACTION[topGrp]}。`);
     L.push(`- 足りない**${weakEl}**を補う：${ELEMENT_TIP[weakEl]}。`);
-    L.push('もっと詳しく全体を知りたいときは、上の「命式全体をまとめて鑑定」もお試しください。');
+    L.push('もっと詳しく全体を知りたいときは、上の「この命式を詳細に読み解く」もお試しください。');
   }
   return L.join('\n');
 }
@@ -6577,22 +6583,31 @@ function compatTimingHTML(a,b,rt){
     const nowY=a.now.year;
     const goodYs=new Set(good.map(g=>g.year)), strainYs=new Set(strain.map(s=>s.year));
     const both=good.map(g=>g.year).filter(y=>strainYs.has(y));
-    const yrow=(o,cuesKey,markSet)=>o.length?o.map(x=>`<tr${(markSet&&markSet.has(x.year))?' class="cty-both"':''}><td class="cty-y">${x.year}<small>（${x.year-nowY}年後）</small></td><td class="cty-gz">${x.ganzhi}</td><td>${esc((cuesKey==='cues'?x.cues:x.tags).join('・'))}</td></tr>`).join(''):'<tr><td colspan="3" class="cty-none">目立つ年は見当たりません</td></tr>';
+    const yrow=(o,cuesKey,markSet)=>o.length?o.map(x=>`<tr${(markSet&&markSet.has(x.year))?' class="cty-both"':''}><td class="cty-y">${x.year}<small>（${x.year===nowY?'今年':(x.year-nowY)+'年後'}）</small></td><td class="cty-gz">${x.ganzhi}</td><td>${esc((cuesKey==='cues'?x.cues:x.tags).join('・'))}</td></tr>`).join(''):'<tr><td colspan="3" class="cty-none">目立つ年は見当たりません</td></tr>';
     const rowG=yrow(good,'cues',strainYs);
-    const rowS=yrow(strain,'tags',goodYs);
+    let rowS=yrow(strain,'tags',goodYs); if(!rt.useSpouse) rowS=rowS.replace(/配偶宮/g,'関係の土台（日支）');
     const rowL=yrow(low,'tags',null);
+    // 家族・友人・仕事の相性では「結婚」「離婚」「配偶宮」の言葉を出さない（関係に合った言い方にする）
+    const sp=!!rt.useSpouse;
+    const tGood=sp?'結婚・縁が深まりやすい年':rt.timing.replace(/時期$/,'年');
+    const tStrain=sp?'関係が揺れやすい年（配偶宮の冲・刑）':'すれ違いやすい年';
+    const tHead=sp?'結婚・縁が深まる年／揺れやすい年／運気の谷':tGood+'／'+tStrain+'／運気の谷';
+    const tHint=sp?`年運に配偶者星・出会いの星・貴人が巡り、相手の干支と響き合う年＝<b>縁が深まりやすい年</b>。配偶宮（日支）が<b>冲・害・刑</b>になる年＝<b>この関係が揺れやすい年</b>。`
+                  :`相手の干支と響き合う年＝<b>${esc(tGood)}</b>。2人の関係の土台が動く年＝<b>${esc(tStrain)}</b>（話し合い・役割の見直しの目安）。`;
+    const tNote=sp?'※四柱推命は「離婚に良い年」と断定はしません。「関係が揺れやすい年」は関係を見直す・話し合う転機の目安。'
+                  :'※「すれ違いやすい年」は、関係を見直す・よく話し合う目安です。悪いことが起きると決まっているわけではありません。';
     return `<section class="card sec" style="border:1.5px solid #E7B8CF;box-shadow:0 6px 18px rgba(232,93,158,.12)">
       <span class="eyebrow"><b>時期の目安</b>今後25年</span>
       <h2 style="margin-bottom:2px">いつ動く？——年ごとの目安</h2>
-      <div style="font-size:12.5px;font-weight:800;color:var(--ink2);margin:1px 0 4px;line-height:1.6">結婚・縁が深まる年／揺れやすい年／運気の谷</div>
-      <div class="mhint" style="margin:6px 0 10px">年運に配偶者星・出会いの星・貴人が巡り、相手の干支と響き合う年＝<b>縁が深まりやすい年</b>。配偶宮（日支）が<b>冲・害・刑</b>になる年＝<b>この関係が揺れやすい年</b>。${both.length?'<b style="color:#C2185B">'+both.join('・')+' は両方に出る＝動きが大きい年</b>（縁も揺れも起きやすい転機）。':''}</div>
-      <details class="cty-fold"><summary><span class="cty-ttl good">結婚・縁が深まりやすい年</span><span class="cty-cnt">${good.length}件</span><span class="cty-arw">▼</span></summary>
+      <div style="font-size:12.5px;font-weight:800;color:var(--ink2);margin:1px 0 4px;line-height:1.6">${esc(tHead)}</div>
+      <div class="mhint" style="margin:6px 0 10px">${tHint}${both.length?'<b style="color:#C2185B">'+both.join('・')+' は両方に出る＝動きが大きい年</b>（縁も揺れも起きやすい転機）。':''}</div>
+      <details class="cty-fold"><summary><span class="cty-ttl good">${esc(tGood)}</span><span class="cty-cnt">${good.length}件</span><span class="cty-arw">▼</span></summary>
         <table class="cty"><thead><tr><th>西暦</th><th>干支</th><th>手がかり</th></tr></thead><tbody>${rowG}</tbody></table></details>
-      <details class="cty-fold"><summary><span class="cty-ttl warn">関係が揺れやすい年（配偶宮の冲・刑）</span><span class="cty-cnt">${strain.length}件</span><span class="cty-arw">▼</span></summary>
+      <details class="cty-fold"><summary><span class="cty-ttl warn">${esc(tStrain)}</span><span class="cty-cnt">${strain.length}件</span><span class="cty-arw">▼</span></summary>
         <table class="cty"><thead><tr><th>西暦</th><th>干支</th><th>内容</th></tr></thead><tbody>${rowS}</tbody></table></details>
       <details class="cty-fold"><summary><span class="cty-ttl" style="color:#5B6472">本人の運気が低調な年（空亡・用神剋）</span><span class="cty-cnt">${low.length}件</span><span class="cty-arw">▼</span></summary>
         <table class="cty"><thead><tr><th>西暦</th><th>干支</th><th>内容</th></tr></thead><tbody>${rowL}</tbody></table></details>
-      <div class="mhint" style="margin-top:8px">※四柱推命は「離婚に良い年」と断定はしません。「関係が揺れやすい年」は関係を見直す・話し合う転機の目安。「運気が低調な年」は<b>本人の総合運の谷</b>（相性とは別軸）で、無理をせず整える時期の参考です。深い読みは${esc(rt.label)}の相性鑑定で。</div>
+      <div class="mhint" style="margin-top:8px">${tNote}「運気が低調な年」は<b>本人の総合運の谷</b>（相性とは別軸）で、無理をせず整える時期の参考です。深い読みは${esc(rt.label)}の相性鑑定で。</div>
     </section>`;
   }catch(e){ return ''; }
 }
@@ -6666,7 +6681,7 @@ function localCompatAnswer(A,B,na,nb,rt,ask){
     ?`2人の日支が**冲（ちゅう＝${aB}と${bB}）**。惹かれ合う反面、ペースや価値観の違いでぶつかりやすい配置。距離感の調整が鍵です。`
     :clashByStar(tenStarOf(bS,aS));
   const tipsLine=()=>{const need=Object.entries(A.fiveElements).sort((x,y)=>x[1]-y[1])[0][0],bHas=B.fiveElements[need]||0;
-    return `あなたに不足の**${need}（${EL_DESC[need]}）**を、相手は${bHas}持っています。${bHas>=1?'相手の'+need+'の面を頼ると関係が安定します。':'2人とも'+need+'が弱めなので、'+EL_DESC[need]+'を一緒に意識すると整います。'} 違いを“補い合い”ととらえるのがコツです。`;};
+    return (bHas>=1?`あなたに不足の**${need}（${EL_DESC[need]}）**を、相手は${bHas}つ持っています。`:`あなたに少ない**${need}（${EL_DESC[need]}）**は、お相手も控えめです。`)+`${bHas>=1?'相手の'+need+'の面を頼ると関係が安定します。':'2人とも'+need+'が弱めなので、'+EL_DESC[need]+'を一緒に意識すると整います。'} 違いを“補い合い”ととらえるのがコツです。`;};
   const clashYears=[];
   if(A.now)A.annualFortunes.filter(y=>y.year>=A.now.year&&y.year<=A.now.year+10).forEach(y=>{if(isChong(aB,y.branch)||isChong(bB,y.branch))clashYears.push(`${y.year}年（${y.ganzhi}）`);});
   const clashBlock=(head)=>{const L=['【'+head+'】'];
@@ -6857,7 +6872,7 @@ function buildCompatBase(out){
   if(document.getElementById('b-notime')&&document.getElementById('b-notime').checked)markTimeUnknown(chartB);
   const na=personName||'本人', nb=personNameB||'お相手';
   const rt=RELTYPES[document.getElementById('rel-type')?.value||'love']||RELTYPES.love;
-  try{var _cv=document.getElementById('compat-verdict'); if(_cv)_cv.innerHTML=compatVerdictHTML(chart,chartB,rt)+compatTimingHTML(chart,chartB,rt);}catch(_e){}
+  try{var _cv=document.getElementById('compat-verdict'); if(_cv){ let _h=compatVerdictHTML(chart,chartB,rt)+compatTimingHTML(chart,chartB,rt); if(!rt.useSpouse)_h=_h.replace(/配偶者宮|配偶宮/g,'関係の土台（日支）').replace(/配偶者星/g,'縁の星'); _cv.innerHTML=_h; }}catch(_e){}   // 家族・友人・仕事の相性では「配偶宮」などの夫婦向けの言葉を使わない
   try{var _cm=document.getElementById('compat-meishi'); if(_cm)_cm.innerHTML=compatMeishiHTML(chart,chartB,na,nb);}catch(_e){}
   const head=`【本人A】${na}（${chart.birth.sex==='male'?'男性':'女性'}）: ${compatBrief(chart)}\n【お相手B】${nb}（${sexB==='male'?'男性':'女性'}）: ${compatBrief(chartB)}\n\n【2人の関係】${rt.label}\n\n【2人の関係の自動分析（計算済み）】\n${compatAnalysis(chart,chartB,rt)}`;
   return {na,nb,rt,head};
@@ -6883,6 +6898,10 @@ function ensureChartAFromForm(){
   if(timeUnknown) markTimeUnknown(chart);
   return true;
 }
+// 家族・友人・仕事の相性では、夫婦・恋人向けの言葉（配偶宮・配偶者星・結婚・離婚）を使わない
+function rtWords(t,rt,isText){ if(!rt||rt.useSpouse||!t) return t;
+  if(isText) return String(t).replace(/配偶者宮|配偶宮/g,'関係の土台（日支）').replace(/配偶者星/g,'縁の星').replace(/結婚・離婚/g,'関係の節目').replace(/結婚/g,'関係の深まり');
+  return String(t)+'\n【言葉の決まり】この2人は「'+rt.label+'」の関係です。夫婦・恋人向けの言葉（配偶宮・配偶者・結婚・離婚・恋愛）は使わず、「関係の土台」「絆」「協力」など、この関係に合った言葉で書く。'; }
 async function doCompat(){
   if(!ensureChartAFromForm())return;   // 本人A（上の欄）をその場で計算＝相性だけでも使える
   const out=document.getElementById('compat');
@@ -6891,7 +6910,7 @@ async function doCompat(){
   const ask=`この2人を「${rt.frame}」という前提で鑑定してください。上の分析を唯一の根拠に、日干の関係・通変星・日支の合冲・五行の補い合い・2人の大運の重なり・${rt.timing}、および「2人の命式を合わせた相性ポイント（合わせて三合・方合成立／互いの不足五行を持ち合う／同じ空亡／月支元命の生剋／印の関係・通変星の相生の流れ／日柱の納音の相性（2人の日柱が同じ納音か））」を必ず使い、「この要素があるから、こう言える」という理屈を添える。良い面と注意点の両方に触れる。${rt.useSpouse?'':'\n※この関係では恋愛・結婚・出会い・配偶者の話題は出さないこと。あくまで'+rt.label+'としての相性に徹する。'}\n構成：1行目に結論を一文（前置きなし）→【${rt.kizuna}】【${rt.clash}】【${rt.timing}】（${rt.useSpouse?'良い年':'関係が動きやすい年'}を具体的な西暦で）【すれ違いに注意な時期】（2人がすれ違い・衝突しやすい時期を、互いの日支が冲される年・比劫や官殺が重なる年などを根拠に具体的な西暦・年齢で挙げ、乗り越え方もセットで。断定せず「少し気をつけると良い時期」とやわらかく）【${rt.tips}】の5ブロック（各2〜4文・見出しは【】）。大事な語は**太字**。\n注意:繊細な相談でも中立に扱い、特定の事実を断定せず、相談者を責めず建設的に。「相性が悪い」「ダメ」などの強い断定や怖がらせる表現は使わず、注意点は「少し気をつけるとより良い」程度のやわらかく前向きな言い方にとどめる。`;
   const easy=`${head}\n\n${ask}\n【書き方＝最重要】鑑定は「深く、しかし分かりやすく伝わりやすい言葉」で書く。専門用語（通変星・十二運・蔵干・干支・五行・三合・空亡・月支元命など）は使ってよいが、出てきたら必ずその場で“ふつうの言葉”で短く言いかえる（例:「正官（規律と責任を大切にする星）」「三合（息が合って力がまとまること）」）。内容・根拠・深さは削らず、伝わりやすさだけを上げる。全体850〜1050字。`;
   const pro=`${head}\n\n${ask}\n【書き方】四柱推命の専門用語（通変星名・三合・半合・空亡・月支元命・相生相剋など）はそのままの言葉で明示してよい。とくに「2人の命式を合わせた相性ポイント」の“通変星の相生の流れ”（例:「食傷は比劫に生かされる」「比劫は印に生かされる」）は、言いかえずに通変星の言葉のまま根拠として書く。プロの鑑定家に通用する本格鑑定として、専門用語を省かず深く。全体850〜1050字。`;
-  runReading(document.getElementById('compatBtn'),out,easy,localCompat(chart,chartB,na,nb,rt),pro);
+  runReading(document.getElementById('compatBtn'),out,rtWords(easy,rt),rtWords(localCompat(chart,chartB,na,nb,rt),rt,true),rtWords(pro,rt));
   try{ const v=document.getElementById('compat-verdict'); (v&&v.innerHTML.trim()?v:out).scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){}   // 結果が画面外に出て「何も起きない」ように見えないように
 }
 // 相性について自由にAIへ質問
@@ -6905,7 +6924,7 @@ async function doCompatAsk(){
   const ask=`【相談者(本人A)からの質問】\n${q}\n\nこの質問に、上の「2人の関係の自動分析」を唯一の根拠として答えてください。挨拶や長い前置き、聞かれていない一般的な性格紹介は書かず、質問にだけまっすぐ答える。2人を「${rt.frame}」という前提で扱う。日干の関係・通変星・日支の合冲・五行の補い合い・大運の重なり・${rt.timing}・2人の命式を合わせた相性ポイント（合わせて三合・方合／互いの不足五行を持ち合う／同じ空亡／月支元命の生剋／印の関係・通変星の相生の流れ／日柱の納音の相性（2人の日柱が同じ納音か））など、関係する要素を名指しで挙げ「この要素があるから、こう言える」という理屈を添える。曖昧で誰にでも当てはまる表現は禁止。${rt.useSpouse?'':'\n※この関係では恋愛・結婚・出会い・配偶者の話題は出さないこと。'}\n構成：1行目に結論を一文（前置き・見出しなし）→【見出し】付きの短いブロックを2〜3個（各2〜4文）。時期を聞かれたら大運・今後の年運から具体的な西暦の年を挙げる（断定せず「動きやすい時期」として）。さらに、良い時期だけでなく<b>2人がすれ違い・衝突しやすい“注意な時期”</b>も、互いの日支が冲される年・比劫や官殺が重なる年などを根拠に具体的な西暦・年齢で1つは挙げ、乗り越え方を添える（断定せず「少し気をつけると良い」とやわらかく）。最後に【できること】を2〜3点。大事な語は**太字**。\n注意:繊細な相談でも中立に扱い、特定の事実を断定せず、誰も責めず建設的に。「相性が悪い」「ダメ」などの強い断定や怖がらせる表現は使わず、注意点は「少し気をつけるとより良い」程度のやわらかく前向きな言い方にとどめる。`;
   const easy=`${head}\n\n${ask}\n【書き方＝最重要】「深く、しかし分かりやすく伝わりやすい言葉」で書く。専門用語は使ってよいが、出たらその場でふつうの言葉に短く言いかえる。内容・根拠・深さは削らない。全体750〜950字。`;
   const pro=`${head}\n\n${ask}\n【書き方】四柱推命の専門用語（通変星名・三合・空亡・月支元命・相生相剋など）はそのままの言葉で明示してよい。通変星の相生の流れ（例:「食傷は比劫に生かされる」）は言いかえず通変星の言葉で根拠として書く。プロ向けの本格鑑定として深く。全体750〜950字。`;
-  runReading(document.getElementById('compatAskBtn'),out,easy,localCompatAnswer(chart,chartB,na,nb,rt,q),pro,undefined,isCrisis(q)?crisisCardHTML():'');
+  runReading(document.getElementById('compatAskBtn'),out,rtWords(easy,rt),rtWords(localCompatAnswer(chart,chartB,na,nb,rt,q),rt,true),rtWords(pro,rt),undefined,isCrisis(q)?crisisCardHTML():'');
 }
 
 /* ===== 入力・初期化 ===== */
@@ -7619,6 +7638,8 @@ window.__uiMode='personal';
 })();
 document.querySelectorAll('#b-sex button').forEach(b=>b.onclick=()=>setSexB(b.dataset.v));
 document.getElementById('compatBtn').onclick=doCompat;
+// 相性の種類が家族・友人・仕事のときは「結婚の相性」の質問ボタンを出さない
+(function(){ const rs=document.getElementById('rel-type'); if(!rs)return; const f=()=>{ const sp=(RELTYPES[rs.value]||RELTYPES.love).useSpouse; document.querySelectorAll('.cw-spouse').forEach(b=>b.style.display=sp?'':'none'); }; rs.addEventListener('change',f); f(); })();
 document.getElementById('compatAskBtn').onclick=doCompatAsk;
 document.querySelectorAll('.cwchip').forEach(b=>b.onclick=()=>{document.getElementById('compat-worry').value=b.dataset.w;});
 document.getElementById('f-save').onclick=addClient;
@@ -7929,7 +7950,13 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
   // とくに大きく揺れやすい年（下の「揺れやすい時期」と同じ判定）。良い時期の一覧に、その年だと分かる印を付けるために使う
   function shakyYears(c){ var ys={}; var ts=safe(function(){return detectTensen(c);},null); if(!ts||!ts.any) return ys;
     [ts,ts.work||{}].forEach(function(x){ ['yU','yA'].forEach(function(k){ (x[k]||[]).forEach(function(l){ var m=String(l).match(/(\d{4})年/); if(m) ys[+m[1]]=1; }); }); });
+    // 10年単位で揺れやすい時期（大運の天戦地冲）に入る年も含める（「動き出す年」と「揺れやすい時期」が重ならないように）
+    safe(function(){ var P=c.pillars||[], g=[P[2]&&P[2].ganzhi, P[1]&&P[1].ganzhi];
+      (c.decadeFortunes||[]).forEach(function(d){ if(!d.startYear) return; if(!g.some(function(t){ return t&&isTensenChichu(t,d.ganzhi); })) return;
+        for(var y=d.startYear; y<d.startYear+10; y++) ys[y]=1; }); });
     return ys; }
+  // 空亡の年（環境を大きく変えないほうがよい年）
+  function kuboYears(c){ var o={}; safe(function(){ var v=(kuuboNow(c).voids)||[]; (c.annualFortunes||[]).forEach(function(a){ if(v.indexOf(a.branch)>=0) o[a.year]=1; }); }); return o; }
   // 過ぎてしまった時期は「これから備えましょう」の一覧に出さない
   function futureLab(c,l,kind){ l=String(l); var now=c.now||{}, m;
     if(kind==='d'){ m=l.match(/〜(\d+)歳(?:(\d+)ヶ月)?/); if(m) return (+m[1]+(+(m[2]||0))/12) > (now.age||0); return true; }
@@ -8168,13 +8195,14 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     var fe=c.fiveElements||{}, so=ORD.slice().sort(function(x,y){return (fe[y]||0)-(fe[x]||0);});
     t.push('【あなたの持ち味】\n'+MEAN[so[0]].n.split('（')[0]+'の力が強めで、'+MEAN[so[0]].w.split('。')[0]+'が持ち味です。'+MEAN[so[4]].n.split('（')[0]+'の力は少なめなので、'+MEAN[so[4]].w.split('。')[0]+'を意識するとバランスが整います。');
     var y=c.now&&c.now.year, ay=(c.annualFortunes||[]).filter(function(a){return a.year===y;})[0], dd=safe(function(){return curDu(c);},null), nw=[];
-    var dot=function(t){ t=String(t||'').trim(); return (!t||/[。！？）)]$/.test(t))?t:t+'。'; };
-    if(ay){ var s=sig(c,ay), ma=meanFor(c,ay); nw.push('今年は「'+s.lab+'」。'+dot(ma.意)+(ma.助?'過ごし方のコツは、'+dot(ma.助):'')); }
+    var dot=function(t){ t=String(t||'').trim(); return (!t||/[。！？]$/.test(t))?t:t+'。'; };   // 「…大切に）」で終わっても句点を付けて、次の文とつながらないようにする
+    if(ay){ var s=sig(c,ay), ma=meanFor(c,ay); nw.push('今年は「'+s.lab+'」。'+dot(ma.意)+(ma.助?'過ごし方のコツ：'+dot(ma.助):'')); }
     if(dd){ var s2=sig(c,dd); nw.push('いまの10年は「'+s2.lab+'」。'+dot(meanFor(c,dd).意)); }
     if(nw.length) t.push('【いまの運気】\n'+nw.join('\n'));
     if(c.now){ var ys=(c.annualFortunes||[]).filter(function(a){return a.year>y&&a.year<y+10;});
       var skY=shakyYears(c);
-      var gd=ys.filter(function(a){var m=sig(c,a).mk;return (m==='◎'||m==='○')&&!skY[a.year];}).map(function(a){return a.year+'年';}), lw=ys.filter(function(a){return sig(c,a).mk==='△';}).map(function(a){return a.year+'年';});
+      var kbY=kuboYears(c);
+      var gd=ys.filter(function(a){var m=sig(c,a).mk;return (m==='◎'||m==='○')&&!skY[a.year]&&!kbY[a.year];}).map(function(a){return a.year+'年';}), lw=ys.filter(function(a){return sig(c,a).mk==='△';}).map(function(a){return a.year+'年';});
       var fl=[]; if(gd.length) fl.push('動き出すのに向いている年：'+gd.join('・').replace(/(\d)年/g,'$1\u2060年')); if(lw.length) fl.push('静かに整えたい年：'+lw.join('・').replace(/(\d)年/g,'$1\u2060年'));
       if(fl.length) t.push('【これからの流れ】\n'+fl.join('\n')); }
     var ts=safe(function(){return detectTensen(c);},null);
