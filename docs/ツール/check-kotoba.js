@@ -18,8 +18,8 @@ const ALWAYS=[ // どこにも出さない
  ['絶好調日','今は「特別な日」「とても調子のいい日」'],['空模様：晴れ、絶好調','古いメール見本'],['引き寄せの過ごし方','古いメール見本'],
 ];
 // 決めたうえで残している使い方（ここに当たるものは数えない）
-// 印の名前ではなく、ふつうの文として使っているもの（「縁が大きく動く日。」＝運命の人の日の一言、「がんばりすぎ注意。意識して休憩を。」＝体調の一言）
-const ALLOW={'6時ごろ':/[0-9]時ごろ\s*6時ごろ\s*7時ごろ/,'大殺界':/「大殺界」は別の占/,'大きく動く日':/縁が大きく動く日。/,'がんばりすぎ注意':/がんばりすぎ注意。意識して休憩を。/};
+// 印の名前ではなく、ふつうの文として使っているもの（「縁が大きく動く日。」＝運命の人の日の一言、「今日は土台を整える日。」など文の中の言い方、「がんばりすぎ注意。意識して休憩を。」＝体調の一言）
+const ALLOW={'6時ごろ':/[0-9]時ごろ\s*6時ごろ\s*7時ごろ/,'大殺界':/「大殺界」は別の占/,'大きく動く日':/縁が大きく動く日。|大きく動く日ではない/,'土台を整える日':/土台を整える日。/,'がんばりすぎ注意':/がんばりすぎ注意。意識して休憩を。/};
 const ALLOW_JARGON=/「天地徳合」について知る/;
 const PAGE_MARKS=['⚡','🌫️','🌀','🔮']; // カレンダー・ページに出さない古い印
 const JARGON=['天干','地支','命式','喜神','忌神','日柱','通変星','十神','律音','干合','支合','天戦地冲']; // ふだんの画面には出さない（タップで開く説明の中はOK）
@@ -64,6 +64,16 @@ function scan(where,t,{jargon=false,marks=false,kanshi=false}={}){
   }
   await c.close();}
  await b.close();
+ // ── ファイルの中身（画面には1日分しか出ない文の一覧も、ここで全部見る）──
+ // 文字列（'…' "…"）と、タグの間の文字だけを見る。注釈（// … や /* … */ や <!-- … -->）は数えない
+ const fs=require('fs');const DIRS=[SITE,process.env.X166_SITE].filter(Boolean);
+ for(const d of DIRS)for(const fn of fs.readdirSync(d).filter(x=>/\.(html|js)$/.test(x)).concat(fs.existsSync(path.join(d,'mail-template'))?['mail-template/render-daily-mail.js']:[])){
+   if(/^check-|^build-samples|^_/.test(path.basename(fn)))continue;
+   let src=fs.readFileSync(path.join(d,fn),'utf8').replace(/<!--[\s\S]*?-->/g,'').replace(/\/\*[\s\S]*?\*\//g,'').split('\n').map(l=>l.replace(/(^|[^:'"\\])\/\/.*$/,'$1')).join('\n');
+   const strs=(src.match(/'[^'\n]*'|"[^"\n]*"|>[^<>]+</g)||[]).join(' \n ');
+   scan('ファイル '+path.basename(d)+'/'+fn,strs);
+   { const m=src.match(/'[^'。「」\n]{0,8}を整える日'/); if(m) add('ファイル '+path.basename(d)+'/'+fn,`札の名前に「整える」${m[0]}（「整える」は伝わりにくい・10/11）`); }
+ }
  // ── 毎朝のメール ──
  if(SITE){const D=require(path.join(SITE,'daily-engine.js'));const {renderDailyMail}=require(path.join(SITE,'mail-template/render-daily-mail.js'));
   let n=0;for(const rel of ['single','crush','partner','married','work'])for(const sex of ['f','m'])for(let k=0;k<12;k++){const bd={y:1972+k*3,m:1+(k*5)%12,d:1+(k*11)%28};
