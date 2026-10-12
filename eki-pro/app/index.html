@@ -174,6 +174,7 @@ select.field{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg 
 /* 泣き別れ（行末に1〜2文字が孤立する現象）を防ぐ。非対応ブラウザでは無害 */
 .script-text p,.conc-list li,.kpi-val,.kpi-val li,.verdict .v-txt,.shika-txt,.fu-msg{text-wrap:pretty;word-break:auto-phrase;line-break:strict;}
 .script-text p{margin:0 0 15px;}
+.script-text .sq{color:#6E4E96;font-weight:700;}
 
 .kpi{margin-top:14px;}
 .kpi-item{padding:11px 0;border-top:1px solid var(--line);}
@@ -2043,7 +2044,10 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
     document.getElementById('concList').innerHTML=conc.length?conc.map(c=>`<li>${fmtPlain(c)}</li>`).join(''):`<li>${esc(p.hitokoto||'要点を取得できませんでした')}</li>`;
     // 台本
     const scr=document.getElementById('scriptText');
-    scr.innerHTML=(p.script||'').split(/\n+/).filter(Boolean).map(x=>`<p>${fmtRich(x)}</p>`).join('')||'<p>（台本が取得できませんでした）</p>';
+    // 読み上げ台本は長いので、2文ごとに段落を分けて読みやすく（文章そのものは変えない）
+    const _sent=x=>{ const out=[]; let cur='', d=0; for(const ch of String(x)){ cur+=ch; if(ch==='「'||ch==='（') d++; else if((ch==='」'||ch==='）')&&d>0) d--; else if(ch==='。'&&d===0){ out.push(cur); cur=''; } } if(cur.trim()) out.push(cur); return out; };   // 「」（）の中の「。」では区切らない
+    const _para2=x=>{ const ss=_sent(x).filter(t=>t.trim()); const o=[]; for(let i=0;i<ss.length;i+=2) o.push(ss.slice(i,i+2).join('')); return o; };
+    scr.innerHTML=(p.script||'').split(/\n+/).filter(Boolean).flatMap(_para2).map(x=>`<p>${fmtRich(x).replace(/「([^「」<>]{2,40})」/g,'「<span class="sq">$1</span>」')}</p>`).join('')||'<p>（台本が取得できませんでした）</p>';   // 「卦の言葉」は色で目立たせる
     // KPI
     const kpi=document.getElementById('kpiCard');
     const adv=(p.jogen||'').split(/\n|・/).map(s=>s.trim()).filter(Boolean);
