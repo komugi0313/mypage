@@ -35,8 +35,9 @@
    };
  
 -  /* ── 鑑定チップ（運命カレンダーの dayMarks と同じ判定。プラス面だけ見せる） ── */
+-  var MK = {'🌈':'運命の人の日','🌷':'出会い・モテ運の日','🌸':'恋が動く日','💖':'魅力が輝く','💰':'金運アップ','💼':'勝負運アップ','🌐':'対人運アップ','📚':'学びの日'};
 +  /* ── 鑑定チップ（開運カレンダーの dayMarks と同じ判定。プラス面だけ見せる） ── */
-   var MK = {'🌈':'運命の人の日','🌷':'出会い・モテ運の日','🌸':'恋が動く日','💖':'魅力が輝く','💰':'金運アップ','💼':'勝負運アップ','🌐':'対人運アップ','📚':'学びの日'};
++  var MK = {'🌈':'運命の人の日','🌷':'出会い・モテ運の日','🌸':'恋が動く日','💖':'魅力が輝く日','💰':'金運アップ','💼':'勝負運アップ','🌐':'対人運アップ','📚':'学びの日'};
    function chipMarks(r){
 +    if (r.koyomi && (r.koyomi.items || []).some(function(x){ return x.key === 'tensen'; })) return [];   // 天戦地冲の日は良い印を出さない（カレンダーと同じ）
      var m = [], g = r.theme && r.theme.god;
@@ -54,7 +55,7 @@
 -    var operator = opts.operatorUrl || (site + 'tokushoho.html');   // 運営者情報（住所・問い合わせ先を載せたページ）
 +    if (!opts.preview) aishou += (aishou.indexOf('?') < 0 ? '?' : '&') + 'registered=1';   // 毎朝のメールは登録済みの人だけに届く → 1.66 側で「登録済み」と覚え、登録の案内を出さない（10/11）。サイトの見本（preview:true）では付けない
 +    var operator = opts.operatorUrl || (site + 'tokushoho.html');
-+    var lineUrl = opts.lineUrl || '';   // 公式LINEの友だち追加URL。空なら公式LINEの欄は出さない   // 運営者情報（住所・問い合わせ先を載せたページ）
++    var lineUrl = opts.lineUrl || '';   // 公式LINEの友だち追加URL。空なら公式LINEの欄は出さない   // 運営者情報（事業者名・問い合わせ先。個人名・住所は絶対に載せない）
      var T = THEMES[r.date.m] || THEMES[7];
      var rel = (r.user && r.user.rel) || 'single';
      var RH = REL_HEAD[rel] || REL_HEAD.single;
@@ -100,12 +101,15 @@
      var good = r.grade && (r.grade.sym === '💮' || r.grade.sym === '◎');
      var marks = chipMarks(r);
      var kc = good ? (r.grade.sym === '💮' ? '#d6567e' : '#c9862a') : (marks.length ? '#d6567e' : '#8a93a8');
-@@ -155,33 +165,32 @@
+@@ -155,33 +165,35 @@
      var chips = '';
      if (good) chips += '<span style="display:inline-block;font-size:11px;font-weight:800;background:' + kc + ';color:#ffffff;border:1px solid ' + kc + ';border-radius:20px;padding:3px 11px;margin:3px 4px 0 0;">' + r.grade.sym + ' ' + r.grade.label + '</span>';
      marks.forEach(function(x){ chips += '<span style="display:inline-block;font-size:11px;font-weight:800;background:#ffffff;color:' + kc + ';border:1px solid ' + kc + ';border-radius:20px;padding:3px 10px;margin:3px 4px 0 0;">' + x + ' ' + MK[x] + '</span>'; });
 -    if (!chips) chips = '<span style="font-size:12px;color:#8a7d74;">今日はおだやかに、縁を育てる日 🌱</span>';
 +    var _ts = r.koyomi && (r.koyomi.items || []).some(function(x){ return x.key === 'tensen'; });
++    /* 10/11 案3：天戦地冲・日の冲の日は「⚠️ 注意の日」のチップを出す（カレンダーの⚠️と同じ日） */
++    var _caut = r.koyomi && (r.koyomi.items || []).some(function(x){ return x.key === 'tensen' || x.key === 'yuragi'; });
++    if (_caut) chips += '<span style="display:inline-block;font-size:11px;font-weight:800;background:#fff3e2;color:#b5651d;border:1px solid #e39a3b;border-radius:20px;padding:3px 10px;margin:3px 4px 0 0;">⚠️ 注意の日</span>';
 +    if (!chips) chips = '<span style="font-size:12px;color:#8a7d74;">' + (_ts ? '今日はゆとりを持って、慎重に過ごす日' : '今日はおだやかに、縁を育てる日 🌱') + '</span>';
      function krow(l, v){
        return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;border-collapse:separate;"><tr>'
@@ -119,7 +123,7 @@
        + krow('🎯 開運アクション', esc(lk.action))
        + krow('🎨 ラッキーカラー', dot(lk.hex, 12) + esc(lk.color))
 -      + '<div style="font-size:10.5px;color:#8a7d74;line-height:1.55;margin-top:10px;">' + crystal + ' あなたの<b style="color:#d6567e;">命式（生年月日からの四柱推命）</b>をもとに読み解いた、<b style="color:#d6567e;">あなただけの毎日鑑定</b>。<b style="color:#d6567e;">運命カレンダー</b>とそのまま連動しています。</div>'
-+      + '<div style="font-size:10.5px;color:#8a7d74;line-height:1.55;margin-top:10px;">' + crystal + ' あなたの<b style="color:#d6567e;">命式（生年月日からの四柱推命）</b>をもとに読み解いた、<b style="color:#d6567e;">あなただけの毎日鑑定</b>。<b style="color:#d6567e;">開運カレンダー</b>とそのまま連動しています。</div>'
++      + '<div style="font-size:10.5px;color:#8a7d74;line-height:1.55;margin-top:10px;">' + crystal + ' あなたの<b style="color:#d6567e;">生年月日</b>をもとに読み解いた、<b style="color:#d6567e;">あなただけの毎日鑑定</b>。<b style="color:#d6567e;">開運カレンダー</b>とそのまま連動しています。</div>'
 +      // 📅 開運カレンダーへのボタン（2026-10-02 追加・必須）：マイページのカレンダーの位置（#calWrap）へ直接飛ぶ
 +      + '<div style="margin-top:10px;text-align:center;">' + btn(esc(mypage + '#calWrap'), '📅 開運カレンダーを見る', '#d6567e', '12px', '9px 16px') + '</div>'
        + '</td></tr></table>');
@@ -149,12 +153,12 @@
  
      /* ✅ 今日はこれだけ／🌱 今日の開運習慣 */
      if (r.todayOne) h.push(box('#fff0ec', '#f0b060', '#c9862a', '✅ 今日はこれだけ', '#3a3f4e', r.todayOne));
-@@ -191,15 +200,18 @@
+@@ -191,15 +203,18 @@
      if (r.focus) h.push(sec(r.focus.emoji || '🎯', '今日の注目：あなたが大切にしている「' + esc(r.focus.label) + '」', r.focus.text, '#c0392b', '#fff0ee'));
      h.push(sec('🌅', '今日のあなた', '今日のテーマは「' + r.theme.axis + '」（' + r.theme.mean + 'の巡り）。' + (r.theme.line ? r.theme.line + ' ' : '') + r.theme.message, '#c9862a', '#fff6e6'));
      if (r.juni && r.juni.text) h.push(sec('🔄', '今日の運気の巡り', r.juni.text, '#9a6cc4', '#f3eefb'));
-+    /* 🔔 今日の気をつけたいこと（2026-10-02 追加。サインがある日だけ。落ち着いた色で目立たせすぎない） */
-+    if (r.caution) h.push(sec('🔔', '今日の気をつけたいこと', r.caution, '#5f7f9a', '#eef3f7'));
++    /* 🔑 今日のちょっとしたコツ（2026-10-02 追加・10/11 名前を変更：注意ではなく「うまく過ごすヒント」として。サインがある日だけ） */
++    if (r.caution) h.push(sec('🔑', '今日のちょっとしたコツ', r.caution, '#5f8a6a', '#eef6f0'));
  
 -    /* 💗 恋愛・ご縁（work は出さない） */
 +    /* 💗 恋愛・ご縁（全員に出す。見出しは rel で変わる） */
@@ -170,7 +174,7 @@
        if (r.loveMove) h.push(sec('💌', '今日の恋の一手', r.loveMove, '#e0629a', '#fdeef5'));
        h.push(sec('📍', RH.place, placeText, '#9a6cc4', '#f4eefb'));
      }
-@@ -210,7 +222,7 @@
+@@ -210,7 +225,7 @@
      h.push(genre('💰 お金・金運', '家計／投資／ビジネス', '#c9a227'));
      h.push(sec('💰', '金運', fo.money, '#c9a227', '#fdf7e3'));
      h.push(genre('🌐 対人・人間関係', '同僚／ママ友／仲間', '#4a90c2'));
@@ -179,7 +183,7 @@
      if (!RH.en) h.push(sec('📍', RH.place, placeText, '#9a6cc4', '#f4eefb'));
      if (fo.study){ h.push(genre('📚 学び・成長', '自分の学び／子供の学び', '#b5732a')); h.push(sec('📚', '今日の学び', fo.study, '#c08a2e', '#fbf3e3')); }
      h.push(genre('🌿 健康・コンディション', '自分／家族の体調', '#5fae8a'));
-@@ -222,12 +234,21 @@
+@@ -222,12 +237,21 @@
        var TC = {good:'#2f8b56', rest:'#3f7bb8', care:'#cd5b56', turn:'#c07d28'};
        h.push(genre('🏠 暮らし・整え', '家事／お出かけ／転機', '#6a7a8f'));
        h.push(sec('🗓', '今日のこよみメモ', ki.map(function(it){
@@ -203,7 +207,7 @@
      var cells = [
        ['ラッキーカラー', dot(lk.hex, 11) + esc(lk.color)], ['ラッキー方角', esc(lk.direction)],
        ['ラッキー食材', esc(lk.food)], ['ラッキーナンバー', esc(lk.number)],
-@@ -239,22 +260,28 @@
+@@ -239,22 +263,28 @@
      grid += '</table>';
      var wear = lk.wear || (r.season && r.season.wear) || '';
      h.push(sec('🍀', '今日のあなたのラッキー', grid
@@ -212,8 +216,10 @@
 +      + (lk.menu && lk.menu.length ? '<div style="margin-top:8px;border:1.5px solid #f2c9a2;border-radius:10px;padding:7px 10px;background:#ffffff;font-size:13.5px;color:#33292a;">🍽 おすすめメニュー：<b style="color:#e08637;">' + lk.menu.slice(0, 2).map(esc).join('・') + '</b></div>' : '')
 +      + (wear ? '<div style="margin-top:6px;border:1.5px solid #f2c9a2;border-radius:10px;padding:7px 10px;background:#ffffff;font-size:13.5px;color:#33292a;">👗 今日の服：' + esc(wear) + '</div>' : ''), '#e08637', '#fff1e4'));
  
-     /* 💡 ワンポイント／🍵 季節のたより */
-     if (r.onepoint) h.push(sec('💡', '今日のワンポイント', r.onepoint, '#d38a12', '#fdf2d9'));
+-    /* 💡 ワンポイント／🍵 季節のたより */
+-    if (r.onepoint) h.push(sec('💡', '今日のワンポイント', r.onepoint, '#d38a12', '#fdf2d9'));
++    /* 🌟 ワンポイント（💡は空亡の「ひとこと」専用にするため🌟に。10/12）／🍵 季節のたより */
++    if (r.onepoint) h.push(sec('🌟', '今日のワンポイント', r.onepoint, '#d38a12', '#fdf2d9'));
      if (r.season) h.push(sec('🍵', '季節のたより', r.season.word + (r.season.note ? '<div style="margin-top:6px;color:#8a7d74;">🌱 ' + r.season.note + '</div>' : ''), '#6fae7a', '#eef7ef'));
  
 -    /* 💞 1.66相性診断への導線＋シェア（全メール共通・必須） */
@@ -233,16 +239,16 @@
 +       1.66 は公開中＝直接リンク。ニコカレ・Pocket鑑定は「近日公開」＝開運予報トップの紹介（#sisters）へ。公開したら画像とリンク先を差し替える */
 +    function srImg(file, href, alt, attr){ return '<a href="' + esc(href) + '"' + (attr || '') + ' style="display:block;margin-top:4px;text-decoration:none;"><img src="' + base + 'mail-bg/' + file + '" width="400" alt="' + alt + '" style="display:block;width:100%;max-width:400px;height:auto;border:0;margin:0 auto;"></a>'; }
 +    h.push('<div style="margin-top:18px;text-align:center;font-family:Georgia,\'Times New Roman\',serif;font-weight:700;font-size:13px;letter-spacing:.14em;color:#c4892b;">― Special Reading ―</div>'
-+      + srImg('sr-166.jpg', aishou, '1.66 奇跡の相性診断｜この人とは、運命？ 無料で占う', ' data-aishou="1"')
++      + srImg('sr-166.jpg', aishou, '1.66 奇跡の相性診断｜この人とは、運命？ 1分で占う', ' data-aishou="1"')
 +      + srImg('sr-nicocale.jpg', site + '#sisters', 'ニコカレ｜二人の運命が、動く日。近日公開')
 +      + srImg('sr-pocket.jpg', site + '#sisters', 'Pocket鑑定｜夜中の不安も、朝の迷いも。近日公開'));
 +    /* 🎁 開運予報のシェア（全メール共通・必須） */
 +    h.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;border-collapse:separate;"><tr><td align="center" style="background:#fdeef4;border:1.5px solid #e8a8bd;border-radius:14px;padding:4px 14px 14px;text-align:center;">'
-+      + '<div style="margin-top:10px;font-size:10.5px;color:#a08a80;">🎁 <span style="white-space:nowrap;">この開運予報を、</span><span style="white-space:nowrap;">お友だちにも教えてあげてね（無料）</span></div>'
++      + '<div style="margin-top:10px;font-size:10.5px;color:#a08a80;">🎁 <span style="white-space:nowrap;">この開運予報を、</span><span style="white-space:nowrap;">お友だちにも教えてあげてね</span><span style="white-space:nowrap;">（料金はかかりません）</span></div>'
        + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:7px auto 0;"><tr>'
        + '<td>' + btn('https://social-plugins.line.me/lineit/share?url=' + shareUrl, 'LINEで送る', '#06c755', '11.5px', '8px 16px') + '</td>'
        + '<td>' + btn('https://twitter.com/intent/tweet?text=' + shareText + '&amp;url=' + shareUrl, '𝕏 でシェア', '#1d1f23', '11.5px', '8px 16px') + '</td>'
-@@ -263,6 +290,16 @@
+@@ -263,6 +293,16 @@
        + '<div style="margin-top:9px;font-size:10px;color:#a08a80;line-height:1.6;"><span style="white-space:nowrap;">パソコンの方は、</span><span style="white-space:nowrap;">このURLをコピーして送ってね</span><br><a href="' + esc(decodeURIComponent(shareUrl)) + '" style="color:#c14e77;text-decoration:underline;word-break:break-all;">' + esc(decodeURIComponent(shareUrl)) + '</a></div>'
        + '</td></tr></table>');
  
@@ -259,21 +265,24 @@
      /* 📖 ことばのメモ */
      h.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;border-collapse:separate;"><tr><td style="background:#f3f1f6;border:1px solid #e2dced;border-radius:12px;padding:11px 13px;">'
        + '<div style="font-size:11px;font-weight:800;color:#8a7fb0;letter-spacing:.04em;margin-bottom:6px;">📖 ことばのメモ</div>'
-@@ -273,11 +310,11 @@
+@@ -273,12 +313,12 @@
      /* 締め＋法定フッター */
      h.push('<div style="text-align:center;margin-top:15px;padding-top:13px;border-top:1.5px dashed ' + T.accent + ';">'
        + '<div style="font-family:' + SERIF + ';font-size:12.5px;color:' + T.ink + ';line-height:1.7;">' + (r.closeWord || '— あなたの縁が、また一歩<br>ひらけますように。') + '</div>'
 -      + '<div style="font-family:' + SERIF + ';font-size:13px;font-weight:800;color:' + T.ink + ';margin-top:6px;letter-spacing:.06em;">🌤️ 私だけの運気予報</div>'
+-      + '<div style="display:inline-block;margin-top:9px;font-size:10px;color:#b0a09a;border:1px dashed #ccbbbb;border-radius:10px;padding:4px 10px;">毎朝6時ごろ・あなた専用にお届け 💌</div>'
 +      + '<div style="font-family:' + SERIF + ';font-size:13px;font-weight:800;color:' + T.ink + ';margin-top:6px;letter-spacing:.06em;">🌤️ 私だけの開運予報</div>'
-       + '<div style="display:inline-block;margin-top:9px;font-size:10px;color:#b0a09a;border:1px dashed #ccbbbb;border-radius:10px;padding:4px 10px;">毎朝6時ごろ・あなた専用にお届け 💌</div>'
++      + '<div style="display:inline-block;margin-top:9px;font-size:10px;color:#b0a09a;border:1px dashed #ccbbbb;border-radius:10px;padding:4px 10px;">毎朝6時・あなた専用にお届け 💌</div>'
        + '<div style="margin-top:8px;font-size:11px;color:#8a7d75;line-height:1.8;">配信を停止する場合は <a href="' + esc(unsub) + '" style="color:#7a675e;text-decoration:underline;">こちら（ログイン不要で停止）</a>、設定変更は <a href="' + esc(mypage) + '" style="color:#7a675e;text-decoration:underline;">マイページ</a> から</div>'
        + '<div style="margin-top:4px;font-size:9px;color:#c4b8b0;line-height:1.6;">運営：72k株式会社｜<a href="' + esc(operator) + '" style="color:#c4b8b0;text-decoration:underline;">運営者情報</a></div>'
 -      + '<div style="margin-top:6px;font-size:9px;color:#b8aba3;line-height:1.65;">本鑑定は四柱推命の伝統的な考え方（扶抑を軸とした解釈）にもとづく目安です。運勢指数は当サービス独自の指数で、四柱推命に公式の点数はありません。娯楽・参考としてお楽しみください。</div>'
+-      + '<div style="margin-top:10px;font-size:10px;color:#a8998f;letter-spacing:.08em;">produced by Mizuki Nico</div>'
 +      + '<div style="margin-top:6px;font-size:9px;color:#b8aba3;line-height:1.65;">本鑑定は四柱推命の伝統的な考え方にもとづく目安です。運勢指数は当サービス独自の指数で、四柱推命に公式の点数はありません。娯楽・参考としてお楽しみください。</div>'
-       + '<div style="margin-top:10px;font-size:10px;color:#a8998f;letter-spacing:.08em;">produced by Mizuki Nico</div>'
++      + '<div style="margin-top:10px;font-size:10px;color:#a8998f;letter-spacing:.08em;">Produced by Mizuki Nico</div>'
        + '</div>');
  
-@@ -307,14 +344,16 @@
+     /* ── 外枠：月ごとの単色の枠＋上に動く季節バナー＋下に季節の絵文字リボン（写真の背景は使わない＝軽い） ── */
+@@ -307,16 +347,20 @@
  
      /* ── テキスト版（HTMLを表示できない環境・迷惑メール判定対策） ── */
      var t = [];
@@ -283,14 +292,19 @@
 +    t.push('■ 今日の運勢：' + r.weather.name + '（運勢指数 ' + idx + '/100）', strip(r.weatherMsg), '', '📅 開運カレンダー：' + mypage + '#calWrap', '');
      if (r.todayOne) t.push('■ 今日はこれだけ', strip(r.todayOne), '');
      t.push('■ 今日のあなた', strip(r.theme.message), '');
-+    if (r.caution) t.push('■ 今日の気をつけたいこと', strip(r.caution), '');
++    if (r.caution) t.push('■ 今日のちょっとしたコツ', strip(r.caution), '');
      if (RH.en) t.push('■ ' + RH.en, '[' + r.en.tag + '] ' + strip(r.en.body), '');
 -    t.push('■ 仕事・勝負運', strip(fo.work), '', '■ 金運', strip(fo.money), '', '■ 友達・対人運', strip(fo.friend), '', '■ 体調・リラックス', strip(fo.health), '');
 +    if (r.love && RH.en) t.push('■ ' + ((rel === 'partner' || rel === 'married') ? 'ふたりの恋愛運' : '今日の恋愛運'), strip(r.love), '');
 +    t.push('■ 仕事・勝負運', strip(fo.work), '', '■ 金運', strip(fo.money), '', '■ 友だち・対人運', strip(fo.friend), '', '■ 体調・リラックス', strip(fo.health), '');
      t.push('■ ラッキー', 'カラー：' + lk.color + '／方角：' + lk.direction + '／食材：' + lk.food + '／ナンバー：' + lk.number, '');
 -    t.push('1.66 相性診断（無料）：' + aishou, '', '配信停止（ログイン不要）：' + unsub, '設定変更：' + mypage, '運営：72k株式会社（運営者情報：' + operator + '）', '', 'produced by Mizuki Nico');
-+    t.push('― Special Reading ―', '1.66 奇跡の相性診断（無料）：' + aishou, 'ニコカレ（近日公開）／Pocket鑑定（近日公開）：' + site + '#sisters', '', (lineUrl ? '公式LINE「Nicoの開運サロン」（毎月2名に、Nicoの鑑定が当たる・料金はかかりません）：' + lineUrl + '\n' : '') + '配信停止（ログイン不要）：' + unsub, '設定変更：' + mypage, '運営：72k株式会社（運営者情報：' + operator + '）', '', 'produced by Mizuki Nico');
++    t.push('― Special Reading ―', '1.66 奇跡の相性診断（料金はかかりません）：' + aishou, 'ニコカレ（近日公開）／Pocket鑑定（近日公開）：' + site + '#sisters', '', (lineUrl ? '公式LINE「Nicoの開運サロン」（毎月2名に、Nicoの鑑定が当たる・料金はかかりません）：' + lineUrl + '\n' : '') + '配信停止（ログイン不要）：' + unsub, '設定変更：' + mypage, '運営：72k株式会社（運営者情報：' + operator + '）', '', 'Produced by Mizuki Nico');
  
-     return { subject: subject, html: html, text: t.join('\n') };
+-    return { subject: subject, html: html, text: t.join('\n') };
++    /* 文と文のあいだの半角すき間（「。 今日は…」）を取る（10/11）。文字だけで中身は変えない */
++    var _tidy = function(x){ return String(x).replace(/([。！？）」])[ \u3000]+(?=[^\s<])/g, '$1'); };
++    return { subject: _tidy(subject), html: _tidy(html), text: t.join('\n').split('\n').map(_tidy).join('\n') };
    }
+ 
+   var api = { renderDailyMail: renderDailyMail, THEMES: THEMES };
