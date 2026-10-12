@@ -3,6 +3,7 @@
 ビギナー（今日から占い師）を、PRO（四柱推命占い自動鑑定）の最新コードから生成する。
 
 方針：計算・判定・画面・詳細鑑定の中身は PRO と 100% 同じ。
+      ただし PRO だけの機能（<!--PRO-ONLY:start-->〜<!--PRO-ONLY:end-->で囲んだ部分＝今月の運勢まとめて作成など）は取り除く。
       ビギナーで変えるのは「名前・アイコン・説明文・リンク先・マニフェスト・SW版番号の読み取り」と
       「見た目（色・縁取り・ボタン文言）」と「初心者モードの見せ方（五行のやさしい表示・専門的な表の折りたたみ・切替ボタン）」だけ。
       どれも表示の後処理で、計算・判定・鑑定文には影響しない。
@@ -123,6 +124,12 @@ def build_app():
             '<div class="s"><b>③</b> 出てきた文章を読むだけ</div></div></div>\n  <section class="card panel">', 1)
     s = rep(s, '<button class="go" id="f-go" style="flex:1">この内容で占う</button>',
             '<button class="go" id="f-go" style="flex:1">詳細を鑑定する</button>', 1)
+
+    # ---- PROだけの機能（<!--PRO-ONLY:start-->〜<!--PRO-ONLY:end-->）はビギナーに入れない ----
+    n_pro_only = s.count('<!--PRO-ONLY:start')
+    if n_pro_only != s.count('<!--PRO-ONLY:end-->') or n_pro_only == 0:
+        sys.exit('[止めました] PROだけの機能の印（PRO-ONLY:start / end）の数が合いません。')
+    s = re.sub(r'<!--PRO-ONLY:start[\s\S]*?<!--PRO-ONLY:end-->\n?', '', s)
 
     # ---- ビギナー専用の見せ方（初心者モード）を本体スクリプトの後に付ける ----
     bi = s.rfind('</body>')

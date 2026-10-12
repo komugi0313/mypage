@@ -7182,7 +7182,7 @@ function mpSanitize(doc){
     clients.push({ id, name:str(c.name,100).trim()||'（名前なし）', kana:str(c.kana,100), date, time,
       sex:c.sex==='male'?'male':'female', pref:/^-?[0-9.]{0,12}$/.test(str(c.pref,12))?str(c.pref,12):'',
       corr:['none','full','longitude'].includes(c.corr)?c.corr:'full', zishi:c.zishi==='next'?'next':'today', notime:!!c.notime,
-      memo:str(c.memo,20000), tags, readings, ts:Number(c.ts)||0, deleted:!!c.deleted });
+      memo:str(c.memo,20000), next:str(c.next,4000), tags, readings, ts:Number(c.ts)||0, deleted:!!c.deleted });
   }
   return {schema:1,updatedAt:Number(doc.updatedAt)||0,clients};
 }
@@ -7934,4 +7934,303 @@ renderResult();
 (function(){ try{ var tk=localStorage.getItem('member_token')||sessionStorage.getItem('member_token');
   if(!tk) document.querySelectorAll('[onclick="memberLogout()"]').forEach(function(b){ b.style.display='none'; }); }catch(e){} })();
 </script>
+<!--PRO-ONLY:start（ここから下の「今月の運勢まとめて作成」はPROだけの機能。tools/sync_beginner_from_pro.py がビギナーを作るときに取り除く）-->
+<style>
+#bm-open{display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin:0 0 12px;padding:12px 14px;border:2px solid var(--ka);border-radius:13px;background:linear-gradient(135deg,#FFF7EF,#FDEEE3);color:var(--ink);font-family:inherit;cursor:pointer}
+#bm-open .i{font-size:24px;flex:none}
+#bm-open .t{display:block;font-weight:900;font-size:15px;color:var(--ka)}
+#bm-open .d{display:block;font-size:13px;font-weight:600;color:var(--ink2);line-height:1.6;margin-top:2px}
+#bm-open .tag{flex:none;margin-left:auto;background:var(--ka);color:#fff;font-size:11.5px;font-weight:900;border-radius:999px;padding:2px 10px}
+#bm-wrap{position:fixed;inset:0;z-index:9000;background:rgba(30,20,15,.45);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:16px 10px}
+#bm-wrap[hidden]{display:none}
+#bm-box{background:var(--card,#fff);color:var(--ink);width:100%;max-width:760px;border-radius:16px;padding:18px 16px 22px;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+#bm-box h2{font-size:19px;font-weight:900;margin:0 0 6px}
+#bm-box .bm-lead{font-size:14px;color:var(--ink2);line-height:1.8;margin:0 0 12px}
+#bm-box .bm-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+#bm-box .bm-row label{font-size:13.5px;font-weight:800;color:var(--ink2)}
+#bm-box select,#bm-box input[type=month]{height:40px;padding:0 10px;border:1.5px solid var(--line2);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;color:var(--ink)}
+#bm-box textarea{width:100%;box-sizing:border-box;border:1.5px solid var(--line2);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:14.5px;line-height:1.8;color:var(--ink);background:#fff;resize:vertical}
+#bm-sign-wrap{margin:0 0 12px}
+#bm-sign-wrap summary{cursor:pointer;font-size:14px;font-weight:800;color:var(--sui)}
+#bm-sum{font-size:14px;font-weight:800;color:var(--ink2);margin:4px 0 10px}
+#bm-sum b{color:var(--ka)}
+.bm-card{border:1.5px solid var(--line);border-radius:14px;padding:12px 12px 14px;margin-bottom:12px;background:#fff}
+.bm-card.sent{border-color:#7FC4A0;background:#F4FBF6}
+.bm-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.bm-name{font-size:16px;font-weight:900}
+.bm-badge{font-size:12.5px;font-weight:900;border-radius:999px;padding:2px 10px;background:#EEE;color:#555}
+.bm-badge.good{background:#E3F4EA;color:#1E7A4C}.bm-badge.warn{background:#FCEBDD;color:#B4531F}
+.bm-done{margin-left:auto;font-size:12.5px;font-weight:800;color:#1E7A4C}
+.bm-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.bm-acts button{flex:1 1 120px;min-height:44px;border-radius:11px;font-family:inherit;font-weight:900;font-size:14.5px;cursor:pointer;border:1.5px solid var(--line2);background:#fff;color:var(--ink)}
+.bm-acts .bm-line{background:#06C755;border-color:#06C755;color:#fff}
+.bm-acts .bm-sent{flex:0 1 auto}
+.bm-card.sent .bm-acts .bm-sent{background:#E3F4EA;border-color:#7FC4A0;color:#1E7A4C}
+#bm-more{width:100%;min-height:46px;border:1.5px dashed var(--line2);border-radius:12px;background:#fff;font-family:inherit;font-weight:800;font-size:14px;color:var(--ink2);cursor:pointer}
+#bm-close-x{float:right;border:1px solid var(--line2);background:#fff;border-radius:10px;padding:6px 12px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;color:var(--ink2)}
+@media print{#bm-wrap,#bm-open{display:none!important}}
+</style>
+<div id="bm-wrap" hidden role="dialog" aria-modal="true" aria-labelledby="bm-title">
+  <div id="bm-box">
+    <button type="button" id="bm-close-x">✕ 閉じる</button>
+    <h2 id="bm-title">📅 今月の運勢<span style="white-space:nowrap">（お客様全員分）</span></h2>
+    <p class="bm-lead">顧客カルテのお客様全員分を、そのまま送れる文章にしました。専門用語は使っていません。文章はその場で直せます。「LINEで送る」を押すとLINEが開き、送る相手を選べます。</p>
+    <div class="bm-row">
+      <label for="bm-month">月</label><input type="month" id="bm-month">
+      <label for="bm-tag" style="margin-left:6px">お客様</label><select id="bm-tag"><option value="">全員</option></select>
+    </div>
+    <details id="bm-sign-wrap">
+      <summary>結びのことば（全員の文章の最後に入ります）</summary>
+      <textarea id="bm-sign" rows="3" style="margin-top:8px"></textarea>
+      <div class="bm-row" style="margin-top:8px"><button type="button" id="bm-sign-save" class="mp-mini">この結びで作り直す</button></div>
+    </details>
+    <div id="bm-sum"></div>
+    <div id="bm-list"></div>
+    <button type="button" id="bm-more" hidden>さらに表示</button>
+  </div>
+</div>
+<script>
+/* ===== PROだけ：お客様全員の「今月の運勢」をまとめて作る =====
+   顧客カルテの各お客様の命式を、いつもと同じ入口（baziCompute）で出し、月運（monthFortuneAt）で判定する。
+   計算エンジンは変えない。ここでは判定結果を、お客様にそのまま送れるやさしい文章にするだけ。 */
+(function(){
+  // 星ごとの「今月のテーマ」と、判定（追い風／ふつう／慎重に）ごとの文。お客様に送るので専門用語は使わない
+  var BM_TXT={
+    比肩:{t:'自分らしさを大切に、自分の力で進む',g:'自分で決めて動くほど、物事が前に進みやすい月です。始めたかったことに手をつけるのにも向いています。',f:'自分のペースを守りながら、できることを一つずつ進めていくと良い月です。',w:'人と張り合ったり、ひとりで抱え込んだりしやすい月です。意地を張らず、まわりの人を頼ってください。',tg:'迷ったら、人任せにせず自分で決めてみてください。',tw:'無理に競わず、体調と出費を整えることを優先してください。'},
+    劫財:{t:'仲間との協力と、思い切った行動',g:'まわりの人の後押しを受けて、大きく前に進みやすい月です。チャンスが来たら、ためらわずにつかんでください。',f:'人とのつながりが力になる月です。気の合う人と一緒に動くと、物事がはかどります。',w:'勢いで動くと、お金や人間関係で行き違いが起きやすい月です。大きな決断は、一晩おいてからにしましょう。',tg:'仲間に声をかけて、一緒に動いてみてください。',tw:'大きな買い物・お金の貸し借り・保証人は、今月は控えめに。'},
+    食神:{t:'楽しむこと、好きなことを表現すること',g:'楽しいことや好きなことに、うれしい流れが来る月です。おいしいもの・趣味・発信など、心がはずむことを増やしてください。',f:'心にゆとりを持って、楽しみながら過ごせる月です。',w:'ついのんびりして、やるべきことが後回しになりやすい月です。小さな目標を決めておくと安心です。',tg:'「楽しい」と感じることに、時間を使ってください。',tw:'締め切りや約束は、早めに片づけておきましょう。'},
+    傷官:{t:'センスや才能を、形にすること',g:'感性がさえて、あなたの才能が評価されやすい月です。作品づくり・発信・技術を磨くことに向いています。',f:'あなたならではのアイデアが浮かびやすい月です。思いついたことはメモしておいてください。',w:'気持ちが鋭くなり、言葉がきつく伝わりやすい月です。ひと呼吸おいて、やさしい言葉を選んでください。',tg:'思いついたアイデアを、ひとつ形にしてみてください。',tw:'言いにくいことは、時間をおいてから伝えましょう。'},
+    偏財:{t:'人とのつながりと、お金の流れ',g:'人との出会いやお金の動きが活発になる月です。誘いには積極的に乗ってみてください。',f:'人とのつながりから、うれしい話が入ってきやすい月です。',w:'お付き合いや出費が増えて、気づくとお金が出ていきやすい月です。予定と予算を決めてから動きましょう。',tg:'人に会う機会を、いつもより一つ増やしてみてください。',tw:'「ついで買い」と、付き合いでの無理な出費に気をつけて。'},
+    正財:{t:'コツコツ積み重ねて、信用と蓄えを育てる',g:'まじめに積み重ねてきたことが、形になりやすい月です。貯金や家のこと、大切な人との約束にも良い流れです。',f:'落ち着いて、毎日の暮らしを丁寧に整えるのに向いた月です。',w:'こまかいことが気になって、気持ちが縮こまりやすい月です。きっちりしすぎず、ゆるめる時間もつくってください。',tg:'毎日続けられる、小さな習慣をひとつ決めてみてください。',tw:'節約しすぎず、自分をいたわる時間も大切に。'},
+    偏官:{t:'決断と行動で、チャンスをつかむ',g:'思い切った決断が良い結果につながりやすい月です。大きなチャンスや、新しい役割が来たら前向きに受けてみてください。',f:'やるべきことがはっきりして、てきぱき動ける月です。',w:'忙しさや急な用事が重なって、疲れがたまりやすい月です。予定を詰めこみすぎないようにしましょう。',tg:'迷っていたことに、今月は答えを出してみてください。',tw:'睡眠と休みを先に予定に入れておきましょう。'},
+    正官:{t:'責任ある役割と、まわりからの信頼',g:'まじめな姿勢が認められ、信頼や評価が高まりやすい月です。ご縁や、仕事での引き立ても期待できます。',f:'約束やルールを大切にすると、まわりとの関係が安定する月です。',w:'責任やプレッシャーを、ひとりで背負いこみやすい月です。できないことは、正直に相談してください。',tg:'約束や期限をきちんと守ると、信頼がぐっと高まります。',tw:'「ちゃんとしなきゃ」と思いすぎず、肩の力を抜いて。'},
+    偏印:{t:'ひらめきと、新しい学び・変化',g:'ひらめきがさえて、新しいことを学ぶのに向いた月です。環境や仕事の変化も、良いきっかけになりそうです。',f:'興味のあることを調べたり、学んだりするのに向いた月です。',w:'気持ちがあちこちに移って、物事が中途半端になりやすい月です。今月はひとつに絞ると安心です。',tg:'気になっていたことを、ひとつ学び始めてみてください。',tw:'やることを一つに絞って、最後までやりきりましょう。'},
+    印綬:{t:'学びと、目上の人からの支え',g:'学んだことが身につきやすく、目上の人からの応援も受けやすい月です。資格の勉強や、書類・手続きにも良い流れです。',f:'落ち着いて考えをまとめるのに向いた月です。読書や勉強がはかどります。',w:'考えすぎて、なかなか動けなくなりやすい月です。考えたことは、小さくても行動に移してみてください。',tg:'学んだことを、人に話したり書いたりしてみてください。',tw:'考えすぎたら、まず体を動かしてみましょう。'}
+  };
+  var BM_JUD={good:'追い風が吹いています。',flat:'穏やかで、安定しています。',warn:'少し慎重に進みたいときです。'};
+  var BM_BADGE={good:'追い風',flat:'ふつう',warn:'慎重に'};
+  // 命式との関係（合・冲）を、お客様向けのやさしい言葉に
+  function relPlain(r){var s=r.s||'';
+    if(/日支.*支合/.test(s))return '家族やパートナーなど、身近な人との距離が縮まりやすい月でもあります。';
+    if(/日支.*冲/.test(s))return '身近な人間関係や住まいに動きが出やすい月でもあります。体調も含めて、いつもより丁寧に整えてください。';
+    if(/月支.*支合/.test(s))return '仕事や生活のリズムがかみ合いやすく、物事がスムーズに進みそうです。';
+    if(/月支.*冲/.test(s))return '仕事や環境に変化が出やすい月でもあります。予定には余裕を持たせておくと安心です。';
+    return '';}
+  function h(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+  function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+  function signKey(){return 'pk_bm_sign|'+(typeof mpKey==='function'?mpKey():'');}
+  function sentKey(ym){return 'pk_bm_sent|'+(typeof mpKey==='function'?mpKey():'')+'|'+ym;}
+  function defaultSign(){var b=(typeof brandName==='string'&&brandName)?brandName:'';return '気になることがあれば、いつでもご相談くださいね。'+(b?'\n'+b:'');}
+  function getSign(){var v=lsGet(signKey());return v==null?defaultSign():v;}
+  function getSent(ym){try{return JSON.parse(lsGet(sentKey(ym))||'{}')||{};}catch(e){return {};}}
+  function setSent(ym,id,on){var m=getSent(ym);if(on)m[id]=1;else delete m[id];lsSet(sentKey(ym),JSON.stringify(m));}
+  // 「今月」＝いまの節月（月初めの節入り前は、前の月の名前）。日運・月運の欄と同じ決め方
+  function thisYm(){try{var J=jstNow();var now=window.Bazi.computeChart({year:J.y,month:J.m,day:J.d,hour:J.h,minute:J.mi,sex:'male',correctionMode:'none'}).pillars[1].ganzhi;
+      var mid=window.Bazi.computeChart({year:J.y,month:J.m,day:20,hour:12,minute:0,sex:'male',correctionMode:'none'}).pillars[1].ganzhi;
+      var d=new Date(J.y,J.m-1+(now===mid?0:-1),1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+    catch(e){var t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0');}}
+  // お客様1人ぶんの命式（呼び出したときと同じ条件で計算）
+  function chartOf(cl){var p=cl.date.split('-').map(Number),tm=(cl.notime?'12:00':(cl.time||'12:00')).split(':').map(Number);
+    var c=baziCompute({year:p[0],month:p[1],day:p[2],hour:tm[0],minute:tm[1],sex:cl.sex==='male'?'male':'female',tu:!!cl.notime},cl.pref||'',cl.corr||'full');
+    if(cl.notime&&typeof markTimeUnknown==='function')markTimeUnknown(c);return c;}
+  function messageFor(cl,ev,y,m){var T=BM_TXT[ev.star];if(!T)return '';
+    var nm=String(cl.name||'').replace(/^（名前なし）$/,'');
+    var lines=[(nm?nm+'様':'こんにちは'),'いつもありがとうございます。',y+'年'+m+'月の運勢をお届けします。','',
+      '【今月のテーマ】',T.t,'','【今月の運気】',BM_JUD[ev.jud],(ev.jud==='good'?T.g:ev.jud==='warn'?T.w:T.f)];
+    var rp=(ev.rel||[]).map(relPlain).filter(Boolean);if(rp.length)lines.push(rp.join(''));
+    lines.push('','【今月の過ごし方】',ev.jud==='warn'?T.tw:T.tg);
+    var sg=getSign();if(sg&&sg.trim())lines.push('',sg.trim());
+    return lines.join('\n');}
+  var state={ym:'',items:[],shown:0,edits:{}};
+  var STEP=30;
+  function clients(){var tag=(document.getElementById('bm-tag')||{}).value||'';
+    return (typeof mpActive==='function'?mpActive():[]).filter(function(c){return !tag||(c.tags||[]).indexOf(tag)>=0;})
+      .sort(function(a,b){return String(a.kana||a.name).localeCompare(String(b.kana||b.name),'ja');});}
+  function build(){var ym=(document.getElementById('bm-month')||{}).value||thisYm();state.ym=ym;
+    var pa=ym.split('-').map(Number),d=new Date(pa[0],pa[1]-1,20,12,0,0,0);
+    state.items=clients().map(function(cl){return {cl:cl,y:pa[0],m:pa[1],d:d,ev:null,text:null,err:false};});
+    state.shown=0;document.getElementById('bm-list').innerHTML='';more();}
+  function fill(it){if(it.text!=null||it.err)return;
+    try{var c=chartOf(it.cl),ev=monthFortuneAt(c,it.d);if(!ev||!BM_TXT[ev.star])throw 0;it.ev=ev;it.text=messageFor(it.cl,ev,it.y,it.m);}catch(e){it.err=true;}}
+  function cardHTML(it,i){var sent=!!getSent(state.ym)[it.cl.id];var k=state.ym+'|'+it.cl.id;
+    if(it.err)return '<div class="bm-card"><div class="bm-head"><span class="bm-name">'+h(it.cl.name)+'</span></div><div class="mhint">生年月日を確認できなかったため、作れませんでした。顧客カルテで生年月日を確かめてください。</div></div>';
+    var txt=state.edits[k]!=null?state.edits[k]:it.text;
+    return '<div class="bm-card'+(sent?' sent':'')+'" data-i="'+i+'"><div class="bm-head"><span class="bm-name">'+h(it.cl.name)+'</span><span class="bm-badge '+it.ev.jud+'">'+BM_BADGE[it.ev.jud]+'</span>'+(sent?'<span class="bm-done">✓ 送りました</span>':'')+'</div>'
+      +'<textarea rows="11" aria-label="'+h(it.cl.name)+'様への文章">'+h(txt)+'</textarea>'
+      +'<div class="bm-acts"><button type="button" class="bm-line">LINEで送る</button><button type="button" class="bm-copy">コピー</button><button type="button" class="bm-sent">'+(sent?'✓ 送った':'送った印をつける')+'</button></div></div>';}
+  function more(){var list=document.getElementById('bm-list'),end=Math.min(state.items.length,state.shown+STEP),html='';
+    for(var i=state.shown;i<end;i++){fill(state.items[i]);html+=cardHTML(state.items[i],i);}
+    list.insertAdjacentHTML('beforeend',html);state.shown=end;
+    list.querySelectorAll('textarea').forEach(fit);
+    var mb=document.getElementById('bm-more');mb.hidden=state.shown>=state.items.length;mb.textContent='さらに表示（残り'+(state.items.length-state.shown)+'人）';
+    summary();
+    if(!state.items.length)list.innerHTML='<div class="mhint">顧客カルテにお客様がいません。入力欄で「＋お客様を保存」すると、ここに並びます。</div>';}
+  function summary(){var n=state.items.length,s=getSent(state.ym),k=state.items.filter(function(it){return s[it.cl.id];}).length;
+    var pa=state.ym.split('-');document.getElementById('bm-sum').innerHTML=n?(Number(pa[0])+'年'+Number(pa[1])+'月：全'+n+'人のうち <b>'+k+'人</b> に送りました'):'';}
+  function fit(ta){ta.style.height='auto';ta.style.height=(ta.scrollHeight+4)+'px';}   // 文章の長さに合わせて欄を伸ばす（欄の中でスクロールさせない）
+  function textOf(card){var ta=card.querySelector('textarea');return ta?ta.value:'';}
+  function copy(t,cb){var done=function(){if(cb)cb();};var fb=function(){try{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();done();}catch(e){alert('コピーできませんでした。文章を長押し（PCはドラッグ）で選んでコピーしてください。');}};
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(done,fb);else fb();}
+  function markSent(card,on){var it=state.items[+card.dataset.i];if(!it)return;setSent(state.ym,it.cl.id,on);
+    card.classList.toggle('sent',on);var b=card.querySelector('.bm-sent');if(b)b.textContent=on?'✓ 送った':'送った印をつける';
+    var hd=card.querySelector('.bm-head'),dn=card.querySelector('.bm-done');if(on&&!dn)hd.insertAdjacentHTML('beforeend','<span class="bm-done">✓ 送りました</span>');if(!on&&dn)dn.remove();summary();}
+  function open(){var w=document.getElementById('bm-wrap');
+    var tg=document.getElementById('bm-tag'),cur=tg.value,tags={};(typeof mpActive==='function'?mpActive():[]).forEach(function(c){(c.tags||[]).forEach(function(t){tags[t]=1;});});
+    tg.innerHTML='<option value="">全員</option>'+Object.keys(tags).sort().map(function(t){return '<option value="'+h(t)+'">タグ：'+h(t)+'</option>';}).join('');if(tags[cur])tg.value=cur;
+    var mi=document.getElementById('bm-month');if(!mi.value)mi.value=thisYm();
+    document.getElementById('bm-sign').value=getSign();
+    w.hidden=false;document.documentElement.style.overflow='hidden';build();
+    try{document.getElementById('bm-box').scrollIntoView({block:'start'});}catch(e){}}
+  function close(){document.getElementById('bm-wrap').hidden=true;document.documentElement.style.overflow='';}
+  function wire(){
+    var anchor=document.getElementById('mp-sync');if(!anchor||document.getElementById('bm-open'))return;
+    var row=anchor.parentNode;
+    row.insertAdjacentHTML('afterend','<button type="button" id="bm-open"><span class="i">📅</span><span><span class="t">今月の運勢をまとめて作る</span><span class="d">お客様全員分を、LINEで送れる文章に</span></span><span class="tag">PRO</span></button>');
+    document.getElementById('bm-open').onclick=open;
+    document.getElementById('bm-close-x').onclick=close;
+    document.getElementById('bm-wrap').addEventListener('click',function(e){if(e.target===this)close();});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!document.getElementById('bm-wrap').hidden)close();});
+    document.getElementById('bm-month').onchange=build;
+    document.getElementById('bm-tag').onchange=build;
+    document.getElementById('bm-more').onclick=more;
+    document.getElementById('bm-sign-save').onclick=function(){lsSet(signKey(),document.getElementById('bm-sign').value);state.edits={};build();};
+    var list=document.getElementById('bm-list');
+    list.addEventListener('input',function(e){var card=e.target.closest('.bm-card');if(!card||e.target.tagName!=='TEXTAREA')return;var it=state.items[+card.dataset.i];if(it)state.edits[state.ym+'|'+it.cl.id]=e.target.value;fit(e.target);});
+    list.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var card=b.closest('.bm-card');if(!card)return;var t=textOf(card);
+      if(b.classList.contains('bm-line')){window.open('https://line.me/R/msg/text/?'+encodeURIComponent(t),'_blank','noopener');markSent(card,true);}
+      else if(b.classList.contains('bm-copy')){copy(t,function(){b.textContent='コピーしました';setTimeout(function(){b.textContent='コピー';},1600);});}
+      else if(b.classList.contains('bm-sent')){markSent(card,!card.classList.contains('sent'));}});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
+})();
+</script>
+<style>
+#fb-card{border:2px solid var(--sui);background:linear-gradient(0deg,rgba(42,111,208,.06),rgba(42,111,208,.06)),var(--card)}
+#fb-card h2{font-size:18px;margin:2px 0 8px}
+#fb-card .fb-box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-top:9px;font-size:14.5px;line-height:1.8;color:var(--ink)}
+#fb-card .fb-l{display:block;font-size:13px;font-weight:900;color:var(--sui);margin-bottom:2px}
+#fb-card .fb-sub{font-size:13px;color:var(--ink2);font-weight:600}
+#fb-card textarea{width:100%;box-sizing:border-box;min-height:84px;border:1.5px solid var(--sui);border-radius:10px;padding:9px 11px;font-family:inherit;font-size:14.5px;line-height:1.8;color:var(--ink);background:#fff;resize:vertical}
+#fb-card .fb-saved{font-size:12.5px;font-weight:800;color:#1E7A4C;margin-left:6px}
+#fb-card a{color:var(--sui);font-weight:800;cursor:pointer;text-decoration:underline}
+body.mode-compat #fb-card{display:none}
+#tk-open{display:inline-flex;align-items:center;gap:6px;margin:0 0 12px;padding:8px 14px;border:1.5px solid var(--ka);border-radius:999px;background:#fff;color:var(--ka);font-family:inherit;font-weight:900;font-size:14px;cursor:pointer}
+#tk-open .tag{background:var(--ka);color:#fff;font-size:11px;border-radius:999px;padding:1px 8px}
+#tk-wrap{position:fixed;inset:0;z-index:9000;background:rgba(30,20,15,.45);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:16px 10px}
+#tk-wrap[hidden]{display:none}
+#tk-box{background:var(--card,#fff);color:var(--ink);width:100%;max-width:760px;border-radius:16px;padding:18px 16px 22px;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+#tk-box h2{font-size:19px;font-weight:900;margin:0 0 6px}
+#tk-box .tk-lead{font-size:14px;color:var(--ink2);line-height:1.8;margin:0 0 12px}
+#tk-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+#tk-tabs button{border:1.5px solid var(--line2);background:#fff;border-radius:999px;padding:7px 13px;font-family:inherit;font-weight:800;font-size:14px;color:var(--ink2);cursor:pointer}
+#tk-tabs button[aria-pressed="true"]{background:var(--ka);border-color:var(--ka);color:#fff}
+.tk-sec{border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px;background:#fff}
+.tk-sec h3{font-size:15.5px;font-weight:900;margin:0 0 6px;color:var(--ka)}
+.tk-sec.ng h3{color:#8A6D00}
+.tk-sec.ng{background:#FFFBEA;border-color:#F1E2A6}
+.tk-sec ul{margin:0;padding-left:1.2em}
+.tk-sec li{font-size:14.5px;line-height:1.85;margin:3px 0}
+#tk-close-x{float:right;border:1px solid var(--line2);background:#fff;border-radius:10px;padding:6px 12px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;color:var(--ink2)}
+@media print{#fb-card,#tk-open,#tk-wrap{display:none!important}}
+</style>
+<div id="tk-wrap" hidden role="dialog" aria-modal="true" aria-labelledby="tk-title">
+  <div id="tk-box">
+    <button type="button" id="tk-close-x">✕ 閉じる</button>
+    <h2 id="tk-title">🗣️ 鑑定トーク例</h2>
+    <p class="tk-lead">相談の種類ごとの、話し方の見本です。鑑定結果に合わせて、あなたの言葉に言い換えて使ってください。</p>
+    <div id="tk-tabs"></div>
+    <div id="tk-body"></div>
+  </div>
+</div>
+<script>
+/* ===== PROだけ：鑑定のふり返りメモ ＆ 鑑定トーク例 ===== */
+(function(){
+  function h(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  /* ---- ふり返りメモ：顧客カルテのお客様を呼び出したとき、前回の鑑定と「次回お伝えすること」を結果の上に出す ---- */
+  function curClient(){var id=(typeof currentClientId!=='undefined')?currentClientId:null;if(!id||typeof mpLoad!=='function')return null;
+    var c=mpLoad().clients.find(function(x){return x.id===id&&!x.deleted;});if(!c)return null;
+    var fn=((document.getElementById('f-name')||{}).value||'').trim(),fd=(document.getElementById('f-date')||{}).value||'';
+    if(c.date!==fd)return null; if(c.name!==fn&&!(c.name.indexOf('無題')===0&&!fn))return null; return c;}
+  function ymd(ts){var d=new Date(ts);return isNaN(d.getTime())||!ts?'':d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';}
+  // 保存した鑑定文の最初の段落（＝先に出している答え）を、見出し記号を除いて短く取り出す
+  function gist(t){var ps=String(t||'').replace(/\r/g,'').split(/\n+/).map(function(x){return x.replace(/^[【〔■●◆▼・\s]+|[】〕]$/g,'').trim();})
+      .filter(function(x){return x&&x.length>8&&!/^(鑑定の答え|お客様への(お)?伝え方|どうすればよいか|くわしい読み解き)/.test(x);});
+    var g=ps.slice(0,2).join(' ');return g.length>160?g.slice(0,160)+'…':g;}
+  function fbRender(){var r=document.getElementById('result');if(!r)return;var el=document.getElementById('fb-card');
+    if(!el){r.insertAdjacentHTML('beforebegin','<section class="card sec" id="fb-card" hidden></section>');el=document.getElementById('fb-card');}
+    var c=curClient();if(!c){el.hidden=true;el.innerHTML='';return;}
+    var rs=(c.readings||[]).slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);}),last=rs[0];
+    var lastH=last?('<div class="fb-box"><span class="fb-l">前回の鑑定（'+h(ymd(last.ts))+'）</span><b>'+h(last.title||'鑑定')+'</b>'+(gist(last.text)?'<div class="fb-sub" style="margin-top:3px">'+h(gist(last.text))+'</div>':'')+'<div style="margin-top:4px"><a data-fb-open="'+h(last.id)+'">前回の鑑定を開く</a>'+(rs.length>1?'<span class="fb-sub">（保存した鑑定 '+rs.length+'件）</span>':'')+'</div></div>')
+      :'<div class="fb-box"><span class="fb-l">前回の鑑定</span><span class="fb-sub">まだ保存した鑑定はありません。鑑定文の下の「この鑑定を保存」で残すと、次に呼び出したときここに出ます。</span></div>';
+    var memoH=c.memo?('<div class="fb-box"><span class="fb-l">メモ</span>'+h(c.memo.length>200?c.memo.slice(0,200)+'…':c.memo).replace(/\n/g,'<br>')+'</div>'):'';
+    el.innerHTML='<span class="eyebrow"><b>ふり返り</b>'+h(c.name)+'様</span><h2>📝 前回のふり返り</h2>'+lastH+memoH
+      +'<div class="fb-box"><label class="fb-l" for="fb-next">次回お伝えすること<span class="fb-saved" id="fb-saved" hidden>保存しました</span></label>'
+      +'<textarea id="fb-next" placeholder="例：来月の転職面接の結果を聞く／10月は体調に気をつけるよう伝える">'+h(c.next||'')+'</textarea>'
+      +'<div class="fb-sub" style="margin-top:4px">ここに書いておくと、次にこのお客様を呼び出したとき、この欄に出ます（顧客カルテに保存）。</div></div>';
+    el.hidden=false;
+    var ta=document.getElementById('fb-next');
+    ta.onchange=function(){var doc=mpLoad(),x=doc.clients.find(function(y){return y.id===c.id;});if(!x)return;x.next=ta.value;x.ts=Date.now();mpWrite(doc);if(typeof mpTouch==='function')mpTouch();
+      var sv=document.getElementById('fb-saved');if(sv){sv.hidden=false;setTimeout(function(){sv.hidden=true;},1800);}};
+    var op=el.querySelector('[data-fb-open]');if(op)op.onclick=function(){if(typeof viewReading==='function')viewReading(c.id,op.getAttribute('data-fb-open'));};}
+
+  /* ---- 鑑定トーク例：相談の種類ごとの話し方の見本（PROだけ） ---- */
+  var TK=[
+    {k:'はじめ方',s:[
+      ['最初のひと言',['「今日はどんなことが気になっていますか？ 話しやすいところからで大丈夫ですよ。」','「生年月日から、あなたの持って生まれた性質と、今の運の流れを見ていきますね。」','「当たっているところ・違うところがあれば、遠慮なく言ってくださいね。一緒に確かめながら進めます。」']],
+      ['性格から入るとき',['「あなたは〇〇な面を持っている方ですね。まわりからはどう見られることが多いですか？」','「この性質は、強みにも、疲れやすさにもなります。最近は、どちらに出ていると感じますか？」']],
+      ['生まれた時間がわからない方へ',['「時間がわからなくても、生まれた日まででしっかり読めます。今日は日付でわかる部分を中心にお伝えしますね。」']]]},
+    {k:'恋愛・結婚',s:[
+      ['聞き出し方',['「今、お相手はいらっしゃいますか？ それとも、これからの出会いのお話ですか？」','「どんな関係になれたら、いちばん安心できそうですか？」']],
+      ['良い流れを伝えるとき',['「〇年ごろは、ご縁が動きやすい時期です。人が集まる場所に、いつもより一歩出てみてください。」','「あなたの魅力が伝わりやすい流れです。自然体でいることが、いちばんの近道ですよ。」']],
+      ['厳しい流れを伝えるとき',['「今は、関係を急いで決めるより、気持ちを整える時期です。焦らないことが、良いご縁につながります。」','「すれ違いが起きやすい時期なので、大事な話は落ち着いたタイミングを選ぶと安心です。」']],
+      ['締めくくり',['「〇月ごろに、また流れを一緒に見てみましょう。その間に何か動きがあったら教えてくださいね。」']]]},
+    {k:'仕事・転職',s:[
+      ['聞き出し方',['「今のお仕事で、いちばん引っかかっているのはどんなところですか？」','「辞めたい気持ちと、続けたい気持ち、今はどちらが大きいですか？」']],
+      ['良い流れを伝えるとき',['「〇年は、力を外に出すのに向いた年です。準備してきたことを、形にしていきましょう。」','「あなたの〇〇な力が評価されやすい流れです。役割や話が来たら、前向きに受けてみてください。」']],
+      ['厳しい流れを伝えるとき',['「今は大きく動くより、足場を固める時期です。次の追い風の〇年に向けて、準備を進めておきましょう。」','「無理を重ねやすい時期なので、できることとできないことを、はっきり伝えて大丈夫ですよ。」']],
+      ['締めくくり',['「決めるのはあなたです。ただ、動くなら〇月以降のほうが流れに乗りやすいですよ。」']]]},
+    {k:'お金',s:[
+      ['聞き出し方',['「増やしたいお話ですか？ それとも、出ていくのを落ち着かせたいお話ですか？」']],
+      ['良い流れを伝えるとき',['「お金の巡りが良くなる時期です。人とのつながりから、良い話が入ってきやすいですよ。」','「コツコツ積み重ねたことが、形になりやすい流れです。」']],
+      ['厳しい流れを伝えるとき',['「出ていくお金が増えやすい時期です。大きな買い物や貸し借りは、ひと呼吸おいてから決めましょう。」']],
+      ['締めくくり',['「お金の稼ぎ方にも、その人に合った形があります。あなたに合ったやり方を、一緒に見つけていきましょう。」']]]},
+    {k:'家族・子ども',s:[
+      ['聞き出し方',['「ご家族のどなたのことが、いちばん気になっていますか？」','「お子さんの生年月日がわかれば、お子さんの性質も一緒に見られますよ。」']],
+      ['伝え方のコツ',['「お子さんは〇〇な性質なので、ほめられると伸びるタイプです。」','「性格の違いは、どちらが悪いということではありません。持って生まれた個性の違いなんです。」']],
+      ['締めくくり',['「あなたが元気でいることが、ご家族にとっていちばんの支えになります。ご自分のことも大切にしてくださいね。」']]]},
+    {k:'人間関係',s:[
+      ['聞き出し方',['「その方とは、どんな関係ですか？（職場・友人・ご近所など）」','「その方の生年月日がわかれば、お二人の相性も見られますよ。」']],
+      ['伝え方のコツ',['「お二人は、考え方の出発点が違うタイプです。違うからこそ、お互いに補い合える面もあります。」','「今は距離が近すぎるのかもしれません。少し間をとると、関係が楽になりますよ。」']],
+      ['締めくくり',['「相手を変えるより、関わり方を少し変えるほうが、ずっと楽になります。」']]]},
+    {k:'健康・心',s:[
+      ['伝え方の前提',['「ここでお伝えするのは、体質の傾向と、過ごし方のヒントです。気になる症状があるときは、お医者さんに相談してくださいね。」']],
+      ['伝え方のコツ',['「あなたは〇〇の気が強めなので、疲れが〇〇に出やすいタイプです。〇〇を意識して取り入れてみてください。」','「心が揺れやすい時期は、休むことも大切な準備です。がんばりすぎていませんか？」']],
+      ['締めくくり',['「ご自分をいたわる時間を、予定の中に先に入れておいてくださいね。」']]]},
+    {k:'言わないこと',s:[
+      ['避けたい言い方',['「必ず〇〇になります」と言い切る（占いは流れの目安です）','「最悪の年です」「別れたほうがいい」など、不安をあおる・決めつける言葉','病気の名前を挙げて、診断のように話すこと','高額なお守りや追加の鑑定を、不安につけこんで勧めること'],'ng'],
+      ['代わりにこう言う',['「流れとしては〇〇になりやすいので、〇〇しておくと安心です。」','「今は守りの時期です。〇年からは、また流れが変わりますよ。」']]]}
+  ];
+  var tkCur=0;
+  function tkRender(){document.getElementById('tk-tabs').innerHTML=TK.map(function(t,i){return '<button type="button" data-i="'+i+'" aria-pressed="'+(i===tkCur)+'">'+h(t.k)+'</button>';}).join('');
+    document.getElementById('tk-body').innerHTML=TK[tkCur].s.map(function(sec){return '<div class="tk-sec'+(sec[2]==='ng'?' ng':'')+'"><h3>'+h(sec[0])+'</h3><ul>'+sec[1].map(function(x){return '<li>'+h(x)+'</li>';}).join('')+'</ul></div>';}).join('');}
+  function tkOpen(){tkRender();document.getElementById('tk-wrap').hidden=false;document.documentElement.style.overflow='hidden';}
+  function tkClose(){document.getElementById('tk-wrap').hidden=true;document.documentElement.style.overflow='';}
+  function tkButton(){var box=document.querySelector('#ai-slot .ai-box');if(!box||box.querySelector('#tk-open'))return;var ld=box.querySelector('.lead');
+    (ld||box.firstElementChild).insertAdjacentHTML('afterend','<button type="button" id="tk-open">🗣️ 鑑定トーク例を見る <span class="tag">PRO</span></button>');
+    document.getElementById('tk-open').onclick=tkOpen;}
+  function after(){try{fbRender();}catch(e){}try{tkButton();}catch(e){}}
+  function wire(){
+    if(typeof window.compute==='function'&&!window.compute.__pkPro){var _c=window.compute;window.compute=function(){var r=_c.apply(this,arguments);after();return r;};window.compute.__pkPro=true;}
+    if(typeof window.renderResult==='function'&&!window.renderResult.__pkPro){var _r=window.renderResult;window.renderResult=function(){var r=_r.apply(this,arguments);try{tkButton();}catch(e){}return r;};window.renderResult.__pkPro=true;}
+    document.getElementById('tk-close-x').onclick=tkClose;
+    document.getElementById('tk-wrap').addEventListener('click',function(e){if(e.target===this)tkClose();});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!document.getElementById('tk-wrap').hidden)tkClose();});
+    document.getElementById('tk-tabs').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;tkCur=+b.dataset.i;tkRender();});
+    after();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
+})();
+</script>
+<!--PRO-ONLY:end-->
 </body><umsdataelement id="UMSDataElement" style="display: none;"></umsdataelement><div id="tmtoolbar_manual_rating_injected" style="display: none;">init</div><div id="UMSSendDataEventElement" style="display: none;">init</div></html>

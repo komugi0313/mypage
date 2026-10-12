@@ -2,7 +2,7 @@
 
 > **この1枚が唯一の正です。** 過去のやり取り・旧ドキュメントは破棄し、本書の内容だけで実装してください。
 > フロント（このリポジトリ `pro/` 一式）は**完成済み**。エンジニアが作るのは **サーバー側API・決済・本番切替の3つだけ** です。
-> 対応バージョン: PRO `pro/sw.js` の `CACHE = shichu-jidou-v444`／ビギナー `beginner/sw.js` `kyoukara-uranaishi-v82`／易 EKI Pro `eki-pro/app/sw.js` `eki-pro-v53` ／ 最終更新: 2026-10-11
+> 対応バージョン: PRO `pro/sw.js` の `CACHE = shichu-jidou-v445`／ビギナー `beginner/sw.js` `kyoukara-uranaishi-v83`／易 EKI Pro `eki-pro/app/sw.js` `eki-pro-v53` ／ 最終更新: 2026-10-11
 > 3サイトの全体の依頼内容は、リポジトリ直下の `エンジニアへの実装依頼_3サイト.md` を先に読むこと。
 > 前提（発注者確認済み）：**Gemini（生成AI）はサーバー内蔵**（キーはサーバー保持・フロントに出さない）／**決済はテレコムクレジット**／**Web先行 → のちに iOS・Android アプリ**。
 
@@ -106,7 +106,7 @@
 **ドキュメント形式（`data`）** — フロント実装準拠：
 ```json
 { "schema": 1, "updatedAt": 1727600000000,
-  "clients": [ { "id": "一意ID", "name": "顧客名", "ts": 1727600000000, "deleted": false /* 他に鑑定メモ・保存命式など任意 */ } ] }
+  "clients": [ { "id": "一意ID", "name": "顧客名", "ts": 1727600000000, "deleted": false /* 他に鑑定メモ（memo）・次回お伝えすること（next）・保存した鑑定など任意 */ } ] }
 ```
 - キー：`DKEY='bazi_mypage_v2'`（新）、`CKEY='bazi_clients_v1'`（旧・初回移行用）。
 - **マージ規則（フロントの `mpMerge` と一致させる）**：両者の `clients[]` を **`id` 単位で `ts`（更新時刻）が新しい方を採用**して統合。`deleted:true` は墓石として保持（複数端末でも消えない）。`updatedAt` は両者の最大値。
