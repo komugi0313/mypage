@@ -1742,7 +1742,7 @@ diff -uN a/index.html b/index.html
    /* クリーム色の丸台の上にキャラを乗せる */
    function drawMascot(img,cx,cy){
      /* A案：土台なし・ふんわり発光オーラ＋足元の影＋きらめき */
-@@ -2684,65 +2965,88 @@
+@@ -2684,65 +2965,91 @@
      drawMascot(youImg,300,320);drawMascot(fateImg,780,320);
      x.fillStyle="#e6c477";x.font='56px '+SER;x.fillText("✕",W/2,338);
      x.font='26px '+SER;x.fillStyle="#f3c9d2";x.fillText("あなた",300,470);x.fillStyle="#e6c477";x.fillText("お相手",780,470);
@@ -1793,14 +1793,17 @@ diff -uN a/index.html b/index.html
 +/* LINE・Instagram・Facebook の中のブラウザは、画像の「保存」ができないことが多い */
 +function _inAppBrowser(){return /Line\/|Instagram|FBAN|FBAV/i.test(navigator.userAgent||"");}
 +/* 画像を大きく出して「長押しで保存」と案内する（保存ボタンが効かないとき用） */
-+function showImageForSave(url){
++function showImageForSave(url,copied){
 +  var w=document.getElementById("imgSaveWrap");if(w)w.remove();
 +  w=document.createElement("div");w.id="imgSaveWrap";
 +  w.style.cssText="position:fixed;inset:0;z-index:10000;background:rgba(30,20,28,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;";
 +  w.innerHTML='<div style="color:#fff;font-weight:800;font-size:15px;margin-bottom:10px;text-align:center;line-height:1.6;">画像を<b style="color:#ffe3a6">長押し</b>して保存してください</div>'
 +    +'<img src="'+url+'" alt="診断結果の画像" style="max-width:100%;max-height:72vh;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.4);">'
-+    +'<button type="button" style="margin-top:14px;background:#fff;color:#c14e77;border:0;border-radius:999px;padding:11px 28px;font-weight:800;font-size:14px;">閉じる</button>';
-+  w.querySelector("button").onclick=function(){w.remove();};
++    +'<div style="color:#fff;font-size:13px;margin-top:12px;text-align:center;line-height:1.6;">'+(copied?'<span style="white-space:nowrap">リンクもコピーしました。</span><span style="white-space:nowrap">投稿の文に<b style="color:#ffe3a6">はりつけて</b>ください</span>':'<span style="white-space:nowrap">投稿の文に、</span><span style="white-space:nowrap">下のボタンでリンクを入れてください</span>')+'</div>'
++    +'<div style="display:flex;gap:10px;margin-top:10px;"><button type="button" data-k="link" style="background:#ffe3a6;color:#5a3a1a;border:0;border-radius:999px;padding:11px 22px;font-weight:800;font-size:14px;">🔗 リンクをコピー</button>'
++    +'<button type="button" data-k="close" style="background:#fff;color:#c14e77;border:0;border-radius:999px;padding:11px 28px;font-weight:800;font-size:14px;">閉じる</button></div>';
++  w.querySelector('[data-k="close"]').onclick=function(){w.remove();};
++  w.querySelector('[data-k="link"]').onclick=async function(){ var bt=this; if(await copyText(shareUrl())){ bt.textContent="✓ コピーしました"; } };
 +  document.body.appendChild(w);
 +}
  async function shareOrSaveImage(){
@@ -1813,9 +1816,9 @@ diff -uN a/index.html b/index.html
      const file=new File([blob],"kiseki-166-match.png",{type:"image/png"});
      if(navigator.canShare&&navigator.canShare({files:[file]})){
 -      try{await navigator.share({files:[file],text:shareText()+" "+shareUrl()+shareTags()});return;}catch(e){}
-+      try{await navigator.share({files:[file],text:shareText()+" "+shareUrl()+shareTags()});return;}catch(e){if(e&&e.name==="AbortError")return;}
++      try{await navigator.share({files:[file],text:shareText()+" "+shareUrl()+shareTags()});if(_copied)toast("リンクもコピーしてあります。文が消えていたら、はりつけてください");return;}catch(e){if(e&&e.name==="AbortError")return;}
      }
-+    if(_inAppBrowser()){showImageForSave(cv.toDataURL("image/png"));return;}
++    if(_inAppBrowser()){showImageForSave(cv.toDataURL("image/png"),_copied);return;}
      const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="kiseki-166-match.png";document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1500);
 -    toast("画像を保存しました");
 +    toast(_copied?"画像を保存し、リンクをコピーしました。投稿の文にはりつけてください":"画像を保存しました");
@@ -1846,7 +1849,7 @@ diff -uN a/index.html b/index.html
  (function starfield(){
    const c=$("stars"); if(!c) return;
    const x=c.getContext("2d"); let stars=[],W=0,H=0,lastW=-1,raf=0,last=0;
-@@ -2822,9 +3126,9 @@
+@@ -2822,9 +3129,9 @@
    function render(){
      var link=document.getElementById("inviteLink");if(link)link.value=inviteUrl();
    }
@@ -1858,7 +1861,7 @@ diff -uN a/index.html b/index.html
      var l=document.getElementById("inviteLine");if(l)l.onclick=function(){window.open("https://line.me/R/msg/text/?"+encodeURIComponent(txt()+inviteUrl()),"_blank","noopener");};
      var xx=document.getElementById("inviteX");if(xx)xx.onclick=function(){window.open("https://twitter.com/intent/tweet?text="+encodeURIComponent(txt())+"&url="+encodeURIComponent(inviteUrl()),"_blank","noopener");};
      if(navigator.share){var nb=document.getElementById("inviteNative");if(nb){nb.style.display="";nb.onclick=async function(){try{await navigator.share({title:"1.66 奇跡の相性診断",text:txt(),url:inviteUrl()});}catch(e){}};}}
-@@ -2833,17 +3137,7 @@
+@@ -2833,17 +3140,7 @@
    window._inviteRender=render; /* reveal() から結果表示のたびに呼ぶ */
  })();
  </script>
@@ -1877,7 +1880,7 @@ diff -uN a/index.html b/index.html
  <!-- 🥉 レア当たりPOP -->
  <div class="rare-pop" id="rarePop" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="rpTitle">
    <div class="rp-backdrop" id="rpBackdrop"></div>
-@@ -2904,20 +3198,20 @@
+@@ -2904,20 +3201,20 @@
  #regWall .rw-bonus b{color:#1b3a6b;}
  #regWall .rw-bonus .big{font-size:1.12em;color:#1b3a6b;}
  </style>
@@ -1907,7 +1910,7 @@ diff -uN a/index.html b/index.html
    </div>
  </div>
  <script>
-@@ -2928,7 +3222,7 @@
+@@ -2928,7 +3225,7 @@
    function q(id){return document.getElementById(id);}
    function diagCount(){try{return parseInt(localStorage.getItem(DIAG_KEY)||"0",10)||0;}catch(e){return 0;}}
    function bumpDiag(){try{localStorage.setItem(DIAG_KEY,String(diagCount()+1));}catch(e){}}
@@ -1916,7 +1919,7 @@ diff -uN a/index.html b/index.html
    function openWall(){var w=q("regWall");if(w){w.classList.add("on");document.body.style.overflow="hidden";}}
    function closeWall(){var w=q("regWall");if(w){w.classList.remove("on");document.body.style.overflow="";}}
    var xb=q("rwClose"); if(xb) xb.onclick=closeWall;
-@@ -2948,7 +3242,6 @@
+@@ -2948,7 +3245,6 @@
  
  
  
@@ -1924,7 +1927,7 @@ diff -uN a/index.html b/index.html
  <script>/* カタカナ語の泣き別れ防止：短い見出し・ラベルのみ連続カタカナをU+2060で連結（長い本文は自然な折返し＝隙間を作らない）。全ブラウザ対応 */
  (function(){var SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,NOSCRIPT:1,CODE:1,PRE:1};var MAX=24;
  function blockLen(node){var el=node.parentNode;while(el&&el.nodeType===1){var d=getComputedStyle(el).display;if(d.indexOf('inline')<0&&d!=='contents')return (el.textContent||'').replace(/\s/g,'').length;el=el.parentNode;}return (node.nodeValue||'').length;}
-@@ -2956,5 +3249,61 @@
+@@ -2956,5 +3252,61 @@
  window.__glueKata=glue;
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){glue(document.body);});else glue(document.body);
  })();</script>
