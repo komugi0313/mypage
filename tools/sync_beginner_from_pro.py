@@ -119,10 +119,10 @@ def build_app():
     s = rep(s, '  <section class="card panel">',
             '  <div id="bg-intro"><div class="t"><span><span class="nobr">むずかしい知識は、</span><span class="nobr">いりません。</span></span>'
             '<button type="button" id="bg-intro-x" aria-label="この案内を閉じる" title="閉じる">✕</button></div><div class="steps">'
-            '<div class="s"><b>①</b> 生年月日を入れる</div><div class="s"><b>②</b> 「占ってみる」を押す</div>'
+            '<div class="s"><b>①</b> 生年月日を入れる</div><div class="s"><b>②</b> 「詳細を鑑定する」を押す</div>'
             '<div class="s"><b>③</b> 出てきた文章を読むだけ</div></div></div>\n  <section class="card panel">', 1)
     s = rep(s, '<button class="go" id="f-go" style="flex:1">この内容で占う</button>',
-            '<button class="go" id="f-go" style="flex:1"><img src="icon-crystal.png" alt="" style="height:1.2em;width:auto;vertical-align:-0.26em;"> 占ってみる</button>', 1)
+            '<button class="go" id="f-go" style="flex:1">詳細を鑑定する</button>', 1)
 
     # ---- ビギナー専用の見せ方（初心者モード）を本体スクリプトの後に付ける ----
     bi = s.rfind('</body>')
