@@ -34,7 +34,7 @@ function scan(where,t,{jargon=false,marks=false,kanshi=false}={}){
   if(marks)for(const w of PAGE_MARKS){let i=t.indexOf(w);if(i>=0)add(where,`古い印「${w}」｜…${ctx14(t,i,w)}…`);}
   if(jargon){for(const w of JARGON){let i=t.indexOf(w);if(i>=0)add(where,`専門用語「${w}」（ふだんの画面）｜…${ctx14(t,i,w)}…`);}
     const m=kanshi&&t.match(KANSHI);if(m)add(where,`干支の漢字「${m[0]}」（ふだんの画面）｜…${ctx14(t,m.index,m[0])}…`);
-    let i=t.indexOf('天地徳合');while(i>=0){const near=t.slice(Math.max(0,i-30),i+40);if(!near.includes('奇跡の縁')&&!ALLOW_JARGON.test(t.slice(Math.max(0,i-1),i+12)))add(where,`「天地徳合」の近くに「＝奇跡の縁」がない｜…${ctx14(t,i,'天地徳合')}…`);i=t.indexOf('天地徳合',i+1);} }
+    let i=t.indexOf('天地徳合');while(i>=0){const near=t.slice(Math.max(0,i-30),i+40);if(!near.includes('奇跡の縁')&&!/奇跡の相性診断・天地徳合/.test(t.slice(Math.max(0,i-11),i+4))&&!ALLOW_JARGON.test(t.slice(Math.max(0,i-1),i+12)))add(where,`「天地徳合」の近くに「＝奇跡の縁」がない｜…${ctx14(t,i,'天地徳合')}…`);i=t.indexOf('天地徳合',i+1);} }
 }
 (async()=>{
  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
