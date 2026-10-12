@@ -26,7 +26,7 @@ async function run(label, prep, btnSel, outSel, pick) {
     if (!busy) break; await page.waitForTimeout(1000);
   }
   await page.waitForTimeout(600);
-  const text = await page.evaluate(([o, pk]) => { const out = document.querySelector(o); if (!out) return '(出力欄なし)'; let el = out; if (pk) { const all = out.querySelectorAll(pk); if (all.length) el = all[all.length - 1]; } return el.innerText; }, [outSel, pick || '']);
+  const text = await page.evaluate(([o, pk]) => { const out = document.querySelector(o); if (!out) return '(出力欄なし)'; let el = out; if (pk) { const all = out.querySelectorAll(pk); if (all.length) el = all[all.length - 1]; } return (el.innerText || '').trim() ? el.innerText : (el.textContent || ''); }, [outSel, pick || '']);
   const online = !/オフライン鑑定（端末内で作成）/.test(text);
   results.push({ label, online, sec: Math.round((Date.now() - t0) / 1000), text });
   save(); console.log(label, online ? 'ONLINE' : 'OFFLINE', text.length);
@@ -34,8 +34,8 @@ async function run(label, prep, btnSel, outSel, pick) {
 }
 const ask = q => async () => { await page.evaluate(v => { const w = document.getElementById('worry'); w.value = v; w.dispatchEvent(new Event('input', { bubbles: true })); }, q); };
 // 1) 命式の詳細鑑定
-await run('詳細鑑定（自動）', null, '#autoReadBtn', '#reading');
-await page.evaluate(() => document.getElementById('reading').scrollIntoView()); await page.waitForTimeout(400);
+await run('詳細鑑定（自動）', null, '#autoReadBtn', '#autoReading');
+await page.evaluate(() => document.getElementById('autoReading').scrollIntoView()); await page.waitForTimeout(400);
 await page.screenshot({ path: SHOT + site + '_detail.png' });
 // 2) いろいろな質問
 const LONG = '去年の春から付き合っている彼がいます。最初はとても優しかったのですが、最近は連絡が減り、会っても仕事の話ばかりで、私の話をあまり聞いてくれません。私は来年までに結婚したいと思っていますが、彼は「まだ考えられない」と言います。私の両親も心配していて、別れたほうがいいのか、もう少し待つべきなのか、毎日悩んで眠れません。仕事にも集中できず、上司にも注意されてしまいました。どうしたらいいでしょうか。';
