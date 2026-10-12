@@ -244,8 +244,8 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
   function whenList(x,side,c){ var o=[];
     var d=(x['d'+side]||[]).filter(function(l){return futureLab(c,l,'d');}), y=(x['y'+side]||[]).filter(function(l){return futureLab(c,l,'y');}), m=(x['m'+side]||[]).filter(function(l){return futureLab(c,l,'m');});
     if(d.length) o.push('10年の流れ：'+d.map(function(l){return duOfLab(c,l);}).join('・'));
-    if(y.length) o.push(y.map(clean).join('・'));
-    if(m.length) o.push(m.map(clean).join('・'));
+    if(y.length) o.push('とくにこの年：'+y.map(clean).join('・'));   // 10年単位と1年単位が1つの項目に見えないよう、見出しを付ける
+    if(m.length) o.push('とくにこの月：'+m.map(clean).join('・'));
     return o.join('<br>'); }
   function block(title,x,c){
     var h='', wu=x.pressured?whenList(x,'U',c):'', wa=x.attack?whenList(x,'A',c):'';
@@ -349,9 +349,9 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     t.push('【一緒にいるときの居心地】\n'+(CGRADE_BRANCH_TAKE[d.gc.branch]||CGRADE_BRANCH_TAKE['普通']));
     if(d.tc.any) t.push('【正面からぶつかりやすいところ】\n2人には、正面からぶつかりやすい組み合わせがあります。刺激が強く、注意したい相性です。\n'+tsPoints(d.tc).map(function(x){ return '・**'+x[1]+'**'+x[2]; }).join('\n'));
     if(a.now){ var ny=a.now.year;
-      var wj=function(L){ return L.map(function(x){ return x.split('').join('\u2060'); }).join('・'); };  // 「2032／年」のような途中改行を防ぐ
-      if(d.good.length) t.push('【縁が深まりやすい年】\n'+wj(yrs(d.good.slice(0,6),ny)));
-      if(d.strain.length) t.push('【関係が揺れやすい年】\n'+wj(yrs(d.strain.slice(0,6),ny))+'。関係を見直したり、話し合ったりする節目の目安です。'); }
+      var wj=function(L){ return L.join('・'); };  // 見えない文字は入れない（コピー・共有したときに文字化け・検索できない原因になるため）
+      if(d.good.length) t.push('【縁が深まりやすい年】\n'+wj(yrs(d.good,ny)));
+      if(d.strain.length) t.push('【関係が揺れやすい年】\n'+wj(yrs(d.strain,ny))+'。関係を見直したり、話し合ったりする節目の目安です。'); }
     return t.join('\n\n');
   }
   function curRt(){ return (typeof RELTYPES!=='undefined')?(RELTYPES[(document.getElementById('rel-type')||{}).value||'love']||RELTYPES.love):{useSpouse:true,label:''}; }
@@ -420,30 +420,53 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     var c=(typeof chart!=='undefined')?chart:null; if(!c) return '';
     var cb=(typeof chartB!=='undefined')?chartB:null;
     if(cb && /2人/.test(user)){ var pc=plainCompatText(c,cb,curRt()); return (/【相談者\(本人A\)からの質問】/.test(user)?'通信できないため、ご質問への個別のお答えの代わりに、2人の相性の全体をお伝えします。\n\n':'')+pc; }
-    var det=(typeof KANSHI60_DETAIL!=='undefined')?KANSHI60_DETAIL[c.pillars[2].ganzhi]:null, t=[];
+    var det=(typeof KANSHI60_DETAIL!=='undefined')?KANSHI60_DETAIL[c.pillars[2].ganzhi]:null, P={};
     var phrase=safe(function(){ var d=document.createElement('div'); d.innerHTML=heroHTML(c); var p=d.querySelector('.phrase'); return p?p.textContent.trim():''; },'');
-    if(/【相談者の悩み】/.test(user)) t.push('通信できないため、ご相談への個別のお答えの代わりに、あなたの生まれ持った性質と運の流れをお伝えします。');
-    if(phrase) t.push(phrase);
-    if(det){ var base=String(det.基本||'').replace(/^[^。]*?が合わさ(り|った)、/,''); if(base) t.push('【あなたの性格】\n'+base); }
+    if(det){ var base=String(det.基本||'').replace(/^[^。]*?が合わさ(り|った)、/,''); if(base) P.me='【あなたの性格】\n'+base; }
     var fe=c.fiveElements||{}, so=ORD.slice().sort(function(x,y){return (fe[y]||0)-(fe[x]||0);});
-    t.push('【あなたの持ち味】\n'+MEAN[so[0]].n.split('（')[0]+'の力が強めで、'+MEAN[so[0]].w.split('。')[0]+'が持ち味です。'+MEAN[so[4]].n.split('（')[0]+'の力は少なめなので、'+MEAN[so[4]].w.split('。')[0]+'を意識するとバランスが整います。');
+    P.power='【あなたの持ち味】\n'+MEAN[so[0]].n.split('（')[0]+'の力が強めで、'+MEAN[so[0]].w.split('。')[0]+'が持ち味です。'+MEAN[so[4]].n.split('（')[0]+'の力は少なめなので、'+MEAN[so[4]].w.split('。')[0]+'を意識するとバランスが整います。';
     var y=c.now&&c.now.year, ay=(c.annualFortunes||[]).filter(function(a){return a.year===y;})[0], dd=safe(function(){return curDu(c);},null), nw=[];
     var dot=function(t){ t=String(t||'').trim(); return (!t||/[。！？]$/.test(t))?t:t+'。'; };   // 「…大切に）」で終わっても句点を付けて、次の文とつながらないようにする
-    if(ay){ var s=sig(c,ay), ma=meanFor(c,ay); nw.push('今年は「'+s.lab+'」。'+dot(ma.意)+(ma.助?'過ごし方のコツ：'+dot(ma.助):'')); }
+    if(ay){ var s=sig(c,ay), ma=meanFor(c,ay); nw.push('今年は「'+s.lab+'」。'+dot(ma.意)+(ma.助?'\n過ごし方のコツ：'+dot(ma.助):'')); }
     if(dd){ var s2=sig(c,dd); nw.push('いまの10年は「'+s2.lab+'」。'+dot(meanFor(c,dd).意)); }
-    if(nw.length) t.push('【いまの運気】\n'+nw.join('\n'));
+    if(nw.length) P.now='【いまの運気】\n'+nw.join('\n');
+    var gd=[];
     if(c.now){ var ys=(c.annualFortunes||[]).filter(function(a){return a.year>y&&a.year<y+10;});
       var skY=shakyYears(c);
       var kbY=kuboYears(c);
-      var gd=ys.filter(function(a){var m=sig(c,a).mk;return (m==='◎'||m==='○')&&!skY[a.year]&&!kbY[a.year];}).map(function(a){return a.year+'年';}), lw=ys.filter(function(a){return sig(c,a).mk==='△';}).map(function(a){return a.year+'年';});
-      var fl=[]; if(gd.length) fl.push('動き出すのに向いている年：'+gd.join('・').replace(/(\d)年/g,'$1\u2060年')); if(lw.length) fl.push('静かに整えたい年：'+lw.join('・').replace(/(\d)年/g,'$1\u2060年'));
-      if(fl.length) t.push('【これからの流れ】\n'+fl.join('\n')); }
+      gd=ys.filter(function(a){var m=sig(c,a).mk;return (m==='◎'||m==='○')&&!skY[a.year]&&!kbY[a.year];}).map(function(a){return a.year+'年';});
+      var lw=ys.filter(function(a){return sig(c,a).mk==='△';}).map(function(a){return a.year+'年';});
+      var fl=[]; if(gd.length) fl.push('動き出すのに向いている年：'+gd.join('・')); if(lw.length) fl.push('静かに整えたい年：'+lw.join('・'));
+      if(fl.length) P.flow='【これからの流れ】\n'+fl.join('\n'); }
     var ts=safe(function(){return detectTensen(c);},null);
-    if(ts&&ts.any){ var wl=[]; ['U','A'].forEach(function(sd){ [ts,ts.work||{}].forEach(function(x){ if(!x['d'+sd]) return; x['d'+sd].filter(function(l){return futureLab(c,l,'d');}).map(function(l){return duOfLab(c,l);}).concat(x['y'+sd].filter(function(l){return futureLab(c,l,'y');}).map(clean)).forEach(function(v){ if(wl.indexOf(v)<0) wl.push(v); }); }); });
-      if(wl.length) t.push('【とくに揺れやすい時期】\n'+wl.join('・')+'。暮らしや仕事が大きく入れ替わりやすい時期です。大きな買い物や一か八かの勝負は避け、休む日を先に予定へ入れておきましょう。'); }
-    if(det&&det.恋愛) t.push('【恋愛・結婚】\n'+det.恋愛);
-    if(det&&det.仕事) t.push('【仕事・向いていること】\n'+det.仕事);
-    return t.join('\n\n');
+    if(ts&&ts.any){ var wl=[]; ['U','A'].forEach(function(sd){ [ts,ts.work||{}].forEach(function(x){ if(!x['d'+sd]) return; x['d'+sd].filter(function(l){return futureLab(c,l,'d');}).map(function(l){return duOfLab(c,l);}).concat(x['y'+sd].filter(function(l){return futureLab(c,l,'y');}).map(clean)).forEach(function(l){ if(wl.indexOf(l)<0) wl.push(l); }); }); });
+      if(wl.length) P.shake='【とくに揺れやすい時期】\n'+wl.join('・')+'。暮らしや仕事が大きく入れ替わりやすい時期です。大きな買い物や一か八かの勝負は避け、休む日を先に予定へ入れておきましょう。'; }
+    var age=(c.now&&c.now.age)||0;
+    if(det&&det.恋愛&&age>=18) P.love='【恋愛・結婚】\n'+det.恋愛;
+    if(det&&det.仕事) P.work='【仕事・向いていること】\n'+det.仕事;
+    P.care=safe(function(){ var d=document.createElement('div'); d.innerHTML=secCare(c); var h=d.querySelector('.bgh'); if(h) h.remove();
+      return '【心と体のケア】\n'+[].map.call(d.querySelectorAll('p,.note'),function(p){return p.textContent.trim();}).filter(Boolean).join('\n'); },'');
+    var J=function(keys){ return keys.map(function(k){return P[k];}).filter(Boolean); };
+    // ご相談があるときは、質問のテーマにしぼって答える（通信できないときも「どの質問にも同じ文」にしない）
+    var mQ=user.match(/【相談者の悩み】\n([\s\S]*?)\n\n/), q=mQ?mQ[1].trim():'';
+    if(q){
+      var cav=safe(function(){return worryCaveat(q);},null), topic=cav?cav.to:safe(function(){return classifyWorry(q);},'general');
+      var lead=[];
+      lead.push('ご相談：「'+(q.length>40?q.slice(0,40)+'…':q)+'」');
+      lead.push(cav?cav.say:'いまは通信できないため、生まれ持った性質と運の流れから、このご相談のテーマにしぼってお答えします。');
+      var body;
+      if(topic==='love'||topic==='children') body=age<18?['【恋愛・結婚】\n恋愛・結婚の目安は、18歳以上の方にお伝えしています。いまは学びや成長、人との出会いを大切にする時期です。'].concat(J(['now'])):J(['love','now','flow']);
+      else if(topic==='work'||topic==='study') body=J(['work','power','now','flow','shake']);
+      else if(topic==='money') body=['【お金との付き合い方】\n大きな勝負で一気に増やすより、あなたの持ち味を活かした積み重ねが、お金の流れを安定させます。'+(gd.length?'動き出すのに向いている年は、新しい収入の道を広げるのにも向いています。':'')].concat(J(['power','now','flow','shake']));
+      else if(topic==='health') body=J(['care','now']);
+      else if(topic==='relation') body=J(['me','power','now']);
+      else if(topic==='move') body=J(['now','flow','shake']);
+      else if(topic==='timing') body=J(['now','flow','shake']);
+      else body=J(['me','power','now','flow']);
+      return lead.concat(body).join('\n\n');
+    }
+    var t=[]; if(phrase) t.push(phrase);
+    return t.concat(J(['me','power','now','flow','shake','love','work'])).join('\n\n');
   }
 
   /* 行末の泣き別れ防止：段落の最後の4文字を1かたまりにして、最終行が1〜2文字だけにならないようにする */

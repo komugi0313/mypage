@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ビギナー（今日から占い師）を、PRO（四柱推命 自動鑑定）の最新コードから生成する。
+ビギナー（今日から占い師）を、PRO（四柱推命占い自動鑑定）の最新コードから生成する。
 
 方針：計算・判定・画面・詳細鑑定の中身は PRO と 100% 同じ。
       ビギナーで変えるのは「名前・アイコン・説明文・リンク先・マニフェスト・SW版番号の読み取り」と
@@ -80,8 +80,8 @@ def build_app():
     s = re.sub(r'<meta name="description" content="[^"]*">', f'<meta name="description" content="{B_DESC}">', s, count=1)
     s = rep(s, '★本番ドメインが72k.ai以外なら', '★本番ドメインがsuimei.jp以外なら', 1)
     s = rep(s, '<meta property="og:site_name" content="72k株式会社">', f'<meta property="og:site_name" content="{B_NAME}">', 1)
-    s = rep(s, '<meta property="og:title" content="四柱推命 自動鑑定">', f'<meta property="og:title" content="{B_NAME}">', 1)
-    s = rep(s, '<meta name="twitter:title" content="四柱推命 自動鑑定">', f'<meta name="twitter:title" content="{B_NAME}">', 1)
+    s = rep(s, '<meta property="og:title" content="四柱推命占い自動鑑定">', f'<meta property="og:title" content="{B_NAME}">', 1)
+    s = rep(s, '<meta name="twitter:title" content="四柱推命占い自動鑑定">', f'<meta name="twitter:title" content="{B_NAME}">', 1)
     s = re.sub(r'<meta property="og:description" content="[^"]*">', f'<meta property="og:description" content="{B_DESC}">', s, count=1)
     s = re.sub(r'<meta name="twitter:description" content="[^"]*">', f'<meta name="twitter:description" content="{B_DESC}">', s, count=1)
     s = rep(s, 'https://72k.ai/app-pro.html', B_URL, 1)
@@ -102,7 +102,9 @@ def build_app():
             '<div class="sub"><span class="nb">毎日使える、</span> <span class="nb">自分だけの鑑定ツール</span></div>', 1)
 
     # ---- 共有カードの表示名（社名は共通） ----
-    s = rep(s, "SHARE_SITE={ label:'四柱推命 自動鑑定',", f"SHARE_SITE={{ label:'{B_NAME}',", 1)
+    s = rep(s, "SHARE_SITE={ label:'四柱推命占い自動鑑定',", f"SHARE_SITE={{ label:'{B_NAME}',", 1)
+    # 共有画像（canvas）に描く商品名もビギナーの名前にする
+    s = s.replace("x.fillText('四柱推命占い自動鑑定',", f"x.fillText('{B_NAME}',")
 
     # ---- リンク先（ビギナーのページへ） ----
     s = rep(s, 'pricing-pro.html', 'pricing.html')
@@ -157,7 +159,7 @@ def build_auth():
 
 
 def common_links(s):
-    s = rep(s, '四柱推命 <span>自動鑑定</span>', '今日から <span>占い師</span>', 1, 'ヘッダーの名前')
+    s = rep(s, '四柱推命占い<span>自動鑑定</span>', '今日から <span>占い師</span>', 1, 'ヘッダーの名前')
     s = s.replace('app-pro.html', 'app-beginner.html').replace('mypage-pro.html', 'mypage.html').replace('pricing-pro.html', 'pricing.html')
     s = s.replace('terms-pro.html', 'terms.html').replace('tokushoho-pro.html', 'tokushoho.html').replace('privacy-pro.html', 'privacy.html')
     s = rep(s, '© 四柱推命占い自動鑑定（72k株式会社）', f'© {B_NAME}（72k株式会社）', 1, 'フッターの社名')
@@ -168,7 +170,7 @@ def build_pricing():
     s = (PRO / 'pricing-pro.html').read_text(encoding='utf-8')
     # 頭（タイトル・説明・OGP・PWA）はビギナー用に差し替え
     i = s.index('<meta name="theme-color"'); j = s.index('<style>')
-    s = s[:i] + ('<title>無料ではじめる｜今日から占い師（四柱推命 自動鑑定）</title>\n'
+    s = s[:i] + ('<title>無料ではじめる｜今日から占い師</title>\n'
                  '<meta name="description" content="一週間の無料トライアル。今日から四柱推命の自動鑑定をはじめられます。無料期間中の解約は費用0円。">\n') + s[j:]
     s = common_links(s)
     s = rep(s, '<span class="badge">経験を、もっと速く・深く。</span>', '<span class="badge">習ったことがなくて、大丈夫。</span>', 1)

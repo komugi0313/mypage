@@ -42,7 +42,7 @@ def theme(s):
     return s
 
 def links(s):
-    s = s.replace('四柱推命 <span>自動鑑定</span>', '易 <span>EKI Pro</span>')
+    s = s.replace('四柱推命占い<span>自動鑑定</span>', '易 <span>EKI Pro</span>')
     s = s.replace('© 四柱推命占い自動鑑定（72k株式会社）', '© 易 EKI Pro（72k株式会社）')
     s = s.replace('app-pro.html', 'app/index.html').replace('mypage-pro.html', 'mypage.html').replace('pricing-pro.html', 'register.html')
     s = s.replace('terms-pro.html', 'terms.html').replace('tokushoho-pro.html', 'tokushoho.html').replace('privacy-pro.html', 'privacy.html')
