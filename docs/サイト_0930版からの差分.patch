@@ -308,7 +308,28 @@ diff -uN a/daily-engine.js b/daily-engine.js
    else if(love && !sok && s>th.tri) sym='◎';             // 恋の合図(非沖・中位以上)は底上げ◎
    else if(s<=th.tri) sym='△';                            // 下位15%は正直に△
    else sym='〇';
-@@ -559,6 +620,10 @@
+@@ -498,6 +559,20 @@
+   偏印:"今日は直感を信じて。ふと気になった相手やお誘いに、良い縁が隠れているかも。",
+   印綬:"今日は焦らず育てる恋の日。すぐ結果を求めず、ゆっくり距離を縮めて。"
+ };
++/* 恋人がいない人向けの置きかえ（10/12）。1文ずつ見て、恋人がいる前提の文だけを置きかえる。 */
++/* 恋人がいない人には選ばない、恋人がいる前提の文（「パートナーがいる人は」「二人の関係」「マンネリ」など）。同じ日の別の組み合わせ→汎用文から選び直す */
++var SOLO_LOVE_NG=/マンネリ|二人の関係|二人の絆|パートナーがいる|交際中|本命の女性との絆|目の前のお相手|お互いの家で|お家デート|生活設計|先回りしたお世話|膠着していた二人|デートの時間を少し短め/;
++var SOLO_LOVE_A='将来を真剣に考えられる人との縁が動きやすいタイミング。';
++var SOLO_LOVE_B='紹介やきちんとした場での出会いを大切にすると、本命につながりやすい最重要日です。';
++function soloLove(t){
++  var parts=String(t).match(/[^。]+。?/g)||[t], out=[];
++  for(var i=0;i<parts.length;i++){ var p=parts[i];
++    if(/^(交際中のお相手がいるなら|交際中の人は、相手の親御さん|交際中の女性を)/.test(p)) p=SOLO_LOVE_A;
++    else if(/本命のお相手との(間で)?真剣な約束/.test(p)) p=SOLO_LOVE_B;
++    if(out.indexOf(p)<0) out.push(p); }
++  if(out.indexOf(SOLO_LOVE_A)>0 && out.indexOf(SOLO_LOVE_B)>=0){ out.splice(out.indexOf(SOLO_LOVE_A),1); out.unshift(SOLO_LOVE_A); }
++  return out.join('');
++}
+ /* 恋愛の汎用文（十神別）。個人別バンク(LOVE_F/M)と合体して恋愛欄の多様性を底上げ（4件→10件プール） */
+ const LOVE_GEN={
+   比肩:["自然体のあなたが、いちばん魅力的に映る日。飾らずいこう。","自分の気持ちに正直になると、恋が動きやすい日。","対等でいられる相手との縁が心地よい日。","無理に合わせないほうが、かえって好かれる日。","マイペースを崩さないあなたに、安心感を覚える人がいそう。","ひとりの時間を楽しむ余裕が、あなたの魅力を高める日。"],
+@@ -559,6 +634,10 @@
   * 運勢の計算（指数・天気・グレード・五行）には一切影響しない。 */
  var MALE_NG=/リップ|ピアス|イヤリング|ヘアピン|ヘアクリップ|ヘアゴム|ネックレス|パール|真珠のアクセ|真珠風|ネイル|コスメ|化粧品|ハート|スカーフ|手鏡/;
  var PARTNERED_NG=/気になる人|出会い/;   // 恋人・既婚の人には出さない
@@ -319,7 +340,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  var PLACE_NG=/海辺|岬|堤防|湖|陶芸の里|星の見える丘|夜景|水族館|足湯|雨上がり|交流会|イベント会場|イベント広場|桜のある|イルミネーション|新緑の|色づく/;  // 遠出・天気・催し・季節次第の場所
  var WEEKEND_NG=/上司|取引先|面接|商談|会議|プレゼン|報連相|仕事|提出/;   // 土日に出さない“仕事の段取り”
  // ランクと文章の矛盾をなくす（言い回しの選び方だけ。ランク・十神・テーマなど運勢の計算は変えない）
-@@ -577,6 +642,74 @@
+@@ -577,6 +656,74 @@
    "誰かの頼みごとに、ひとつ応えてみて","朝の時間を少し早めて、ゆとりをつくって"];
  function fitList(arr, ok){ var a=[]; for(var i=0;i<arr.length;i++) if(ok(arr[i])) a.push(arr[i]); return a.length?a:arr; }
  
@@ -394,7 +415,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  function pickSeq(ub, salt, len, dayn){
    if(!len) return 0;
    if(len===1) return 0;
-@@ -639,16 +772,16 @@
+@@ -639,16 +786,16 @@
        '“家庭を大切にするあなた”へ。今日のご家族との運気を、そっとお伝えします。',
        '“家庭を大切にするあなた”へ。今日はどんな一日になるか、のぞいてみましょう。'],
      work:[
@@ -416,7 +437,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
    };
    var REL_TAILS=[
      '今日の運気の動きを、そっとお届けします。','今日のあなたの運勢を、お届けします。',
-@@ -656,7 +789,7 @@
+@@ -656,7 +803,7 @@
      '今日のあなたに動く運を、お届けします。','今日の過ごし方のヒントを、お届けします。',
      '今日の運勢を、朝いちばんにお届けします。','今日の運気を、いっしょに味方にしていきましょう。',
      '今日という日の運勢を、お伝えします。','今日も良い一日になるヒントを、お届けします。',
@@ -425,7 +446,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      '今日のあなたに効く、開運のヒントをお届けします。','今日の空模様（運勢）を、そっとのぞいてみましょう。',
      '今日のあなたへ、朝いちばんの運気だよりです。','今日の一日が良くなるコツを、お届けします。',
      '今日の運気とラッキーを、まとめてお伝えします。','今日のあなたの一日を、そっと応援します。'
-@@ -667,11 +800,11 @@
+@@ -667,11 +814,11 @@
      work:{3:'ご縁が活きる日',2:'ご縁が動く日',1:'土台を整える日'}
    };
    var LV1_TAGS={
@@ -440,7 +461,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
    };
    // 締めの言葉は関係タイプごとに4種。毎日同じにならないよう、その人×その日で日替わりに選ぶ。
    var CLOSE_WORD={
-@@ -766,7 +899,13 @@
+@@ -766,7 +913,13 @@
      var nick = (opts.nick && String(opts.nick).trim()) || 'あなた';
      var T = dateJST || E.todayJST();
      var Y=T.y, M=T.m, D=T.d;
@@ -455,7 +476,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  
      var you=pillar(by,bm,bd), p=partner(you.stem,you.branch), t=pillar(Y,M,D);
      var br=branchRel(t.branch, you.branch);
-@@ -855,7 +994,7 @@
+@@ -855,7 +1008,7 @@
      var habit=HABIT_ACT[pickSeq(ubase,81,HABIT_ACT.length,seed)]+'。'+HABIT_WHY[pickSeq(ubase,82,HABIT_WHY.length,seed)];
      var morning=MORNING[pickSeq(ubase,3,MORNING.length,seed)];
      var snzArr=SEASON_NUANCE[season]||[], snz=snzArr.length?snzArr[pickSeq(ubase,4,snzArr.length,seed)]:'';
@@ -464,7 +485,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  
      var _okSex=function(t){ return sex!=='m' || !MALE_NG.test(t); };
      var _okRel=function(t){ return (rel!=='married' && rel!=='partner') || !PARTNERED_NG.test(t); };
-@@ -918,6 +1057,15 @@
+@@ -918,6 +1071,15 @@
      var money=mPool.length?mPool[pickSeq(ubase,55,mPool.length,_occ)]:'';
      var hPool=_pool(HEALTH_TJ[god], HEALTH[god]);
      var health=hPool.length?hPool[pickSeq(ubase,56,hPool.length,_occ)]:'';
@@ -480,7 +501,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var loveSet=(sex==='m')?LOVE_M:LOVE_F;
      var lf=(loveSet[you.stem]&&loveSet[you.stem][god])||[];
      var love='';
-@@ -938,7 +1086,23 @@
+@@ -938,7 +1100,28 @@
        var _lg=LOVE_GEN[god]||[];
        love=_lg.length?_lg[pickSeq(ubase,57,_lg.length,_occ)]:'';
      }
@@ -492,20 +513,25 @@ diff -uN a/daily-engine.js b/daily-engine.js
 +    //  ・「今日の気をつけたいこと」が言葉の行き違い・言葉が強く出る日は、「ストレートに伝える」系の描写は避ける（注意と恋愛を矛盾させない）。
 +    var _plNG=function(t){ return PARTNER_LOVE_NG.test(t) || (rel==='married' && MARRIED_LOVE_NG.test(t)); };
 +    var _cWordy=!!(_cBr && _cbr==='害') || !!(_cGod && god==='傷官');
-+    var _loveBad=function(tx){ return ((rel==='partner'||rel==='married') && _plNG(tx)) || (_grade.sym==='△' && LOVE_PUSH.test(tx)) || (_cWordy && LOVE_DIRECT.test(tx)); };
++    var _solo=(rel==='single'||rel==='crush');
++    var _loveBad=function(tx){ return ((rel==='partner'||rel==='married') && _plNG(tx)) || (_solo && SOLO_LOVE_NG.test(soloLove(tx))) || (_grade.sym==='△' && LOVE_PUSH.test(tx)) || (_cWordy && LOVE_DIRECT.test(tx)); };
 +    if(love && _loveBad(love)){
 +      var _pl='';
 +      if(lf.length>=4){ for(var _pi=0;_pi<_lc.length && !_pl;_pi++){ var _t=lf[_lc[_pi][0]]+lf[_lc[_pi][1]]; if(!_loveBad(_t)&&toneOk(_t,_grade.sym)) _pl=_t; }
 +        for(var _pj=0;_pj<lf.length && !_pl;_pj++){ if(_pj!==2 && !_loveBad(lf[_pj])&&toneOk(lf[_pj],_grade.sym)) _pl=lf[_pj]; } }
++      if(!_pl && _solo){ var _g=(LOVE_GEN[god]||[]).filter(function(x){ return !_loveBad(x)&&toneOk(x,_grade.sym); }); if(_g.length) _pl=_g[pickSeq(ubase,57,_g.length,_occ)]; }
 +      if(_pl || rel==='partner' || rel==='married') love=_pl;   // 恋人・既婚で合うものがなければ、その日は出さない
 +    }
++    // 恋人がいない人（恋人募集中・片想い）には、恋人がいる前提の文（「交際中のお相手がいるなら…」「本命のお相手との間で真剣な約束…」）を
++    // 出会い向けの言い方に置きかえる（10/12 オーナー決定。文字だけで、運勢・ランク・印は変わらない）
++    if(love && (rel==='single'||rel==='crush')) love=soloLove(love);
 +    // 恋の一手の結び：恋人がいる人・結婚している人には「出会い」の結びを使わない（2026-10-02 修正）
 +    var _lmE=(rel==='partner'||rel==='married') ? LM_EFFECT.filter(function(x){ return !PARTNERED_NG.test(x); }) : LM_EFFECT;
 +    var _lms=LM_SITU[rel]||LM_SITU.single, loveMove=_lms[pickSeq(ubase,45,_lms.length,seed)]+_lmE[pickSeq(ubase,86,_lmE.length,seed)];
  
      var w=weather(idx);
      var _wob=WOBS[w.name]||WOBS['晴れ時々くもり'], wmsg=_wob[pickSeq(ubase,59,_wob.length,seed)]+ADV_SHARED[pickSeq(ubase,88,ADV_SHARED.length,seed)];
-@@ -972,7 +1136,7 @@
+@@ -972,7 +1155,7 @@
      }
  
      // ===== 件名（メールのタイトル）＝開封率のカギ。毎日ちがう“開けたくなる”件名を作る。
@@ -514,7 +540,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      // 呼びかけ形にして、件名が相性診断や本文と取り違えられないようにする。
      var _gl=GRADE_LABEL[_grade.sym]||'';
      // 十二運（今日のあなたの運気の巡り）＝日主 × その日の地支。段階名(墓/死/病等)はユーザーに出さず、
-@@ -987,7 +1151,7 @@
+@@ -987,7 +1170,7 @@
        '今日は「'+w.name+'」',
        'ラッキーカラーは'+lucky.color,
        'テーマは「'+themeAxis.ax+'」',
@@ -523,7 +549,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
        'ご縁は「'+enTag+'」',
        '開運アクションは「'+luckyAct+'」',
        'ラッキーは'+lucky.color+'×'+food,
-@@ -995,14 +1159,14 @@
+@@ -995,14 +1178,14 @@
        'ラッキーナンバーは'+lnum,
        'キーワードは「'+themeAxis.ax+'」',
        'ラッキー食材は'+food,
@@ -540,7 +566,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
        '開運は'+luckyAct
      ];
      // 件名（2026-09-30 改）：iPhoneの一覧は先頭およそ28字しか見えないため、
-@@ -1012,9 +1176,9 @@
+@@ -1012,9 +1195,9 @@
      var SUBJ_EMO=['🎍','💝','🌸','🌷','🌿','☔','🎋','🌻','🎑','🎃','🍁','🎄'];
      var _hk=(en.lv===3)?['運命の人の日','ご縁が極まる日','特別なご縁の日']
        :touka?['モテ運の日','出会い運が輝く日','魅力が光る日']
@@ -552,7 +578,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
        :['マイペース吉の日','コツコツ吉の日','いつも通りが吉','おだやかな日','小さな幸せの日'];
      var _hkPick=_hk[pickSeq(ubase,77,_hk.length,seed)];
      // ニックネームが長い人（7字以上）は、要点が切れないように「絵文字＋今日の一言」を先に、名前を後に置く
-@@ -1025,6 +1189,7 @@
+@@ -1025,6 +1208,7 @@
      while(_tn<_subjTail.length && !(toneOk(_subjTail[_ti],_grade.sym) && _subjTail[_ti].indexOf(_gl)<0)){ _ti=(_ti+1)%_subjTail.length; _tn++; }
      var subject=_subjHead+'｜'+_subjTail[_ti];
  
@@ -560,7 +586,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      return {
        version:'daily-1.0.0',
        subject:subject,
-@@ -1041,7 +1206,9 @@
+@@ -1041,7 +1225,9 @@
        en:{lv:en.lv, tag:enTag, body:enBody},
        love:love, loveMove:loveMove,
        touka:touka, special:special,
@@ -571,7 +597,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
        element:{day:dayElem, mine:myElem, supplement:fe, reason:feReason, feFood:feFood},
        bazi:favInfo,
        lucky:{color:lucky.color, hex:lucky.hex, direction:ldir, food:food, number:lnum,
-@@ -1066,9 +1233,21 @@
+@@ -1066,9 +1252,21 @@
      };
    }
  
