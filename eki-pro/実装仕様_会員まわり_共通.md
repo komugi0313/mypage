@@ -2,7 +2,7 @@
 
 > **この1枚が唯一の正です。** 過去のやり取り・旧ドキュメントは破棄し、本書の内容だけで実装してください。
 > フロント（このリポジトリ `pro/` 一式）は**完成済み**。エンジニアが作るのは **サーバー側API・決済・本番切替の3つだけ** です。
-> 対応バージョン: PRO `pro/sw.js` の `CACHE = shichu-jidou-v437`／ビギナー `beginner/sw.js` `kyoukara-uranaishi-v74`／易 EKI Pro `eki-pro/app/sw.js` `eki-pro-v44` ／ 最終更新: 2026-10-11
+> 対応バージョン: PRO `pro/sw.js` の `CACHE = shichu-jidou-v438`／ビギナー `beginner/sw.js` `kyoukara-uranaishi-v75`／易 EKI Pro `eki-pro/app/sw.js` `eki-pro-v45` ／ 最終更新: 2026-10-11
 > 3サイトの全体の依頼内容は、リポジトリ直下の `エンジニアへの実装依頼_3サイト.md` を先に読むこと。
 > 前提（発注者確認済み）：**Gemini（生成AI）はサーバー内蔵**（キーはサーバー保持・フロントに出さない）／**決済はテレコムクレジット**／**Web先行 → のちに iOS・Android アプリ**。
 
@@ -47,7 +47,7 @@
 |---|---|---|---|---|
 | 1 | `app-pro.html`（ビギナーは `app-beginner.html`、EKI は `app/index.html` も同じ） | `var PREVIEW_MODE = true;` | **`false`** | 会員ゲートのスクリプト内 |
 | 2 | `app-pro.html` | `var DEMO_MODE = false;` | `false`（そのまま） | 663行目付近 |
-| 3 | `app-pro.html` | テストキー欄 `<details id="gtest-wrap" …>` が存在 | **ブロックごと削除**（コメントに削除指示あり） | 895行目付近 |
+| 3 | `app-pro.html` | テストキー欄 `<details id="gtest-wrap" …>` が存在（URLに `?gtest=1` を付けたときだけ表示） | **ブロックごと削除**＋`gtest=1` で表示する1行も削除（コメントに削除指示あり） | `gtest` で検索 |
 | 4 | `auth.html` / `mypage-pro.html` | `CONFIG.STUB = true` | **`false`** | 各ファイルの `var CONFIG` |
 | 5 | `pricing-pro.html` | `TELECOM_PAYMENT_URL = { month:'' }` ／ `TELECOM_PARAM` | **審査通過後の決済URL**を設定し、渡す値のパラメータ名を接続仕様書に合わせる | `var TELECOM_PAYMENT_URL` |
 | 6 | `functions/gemini.js` | 会員確認なし | **§3-3 の会員確認（トークン）を必ず実装** | §3-3 |
