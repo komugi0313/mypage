@@ -7974,7 +7974,7 @@ renderResult();
   <div id="bm-box">
     <button type="button" id="bm-close-x">✕ 閉じる</button>
     <h2 id="bm-title">📅 今月の運勢<span style="white-space:nowrap">（お客様全員分）</span></h2>
-    <p class="bm-lead">顧客カルテのお客様全員分を、そのまま送れる文章にしました。専門用語は使っていません。文章はその場で直せます。「LINEで送る」を押すとLINEが開き、送る相手を選べます。</p>
+    <p class="bm-lead">顧客カルテのお客様全員分を、そのまま送れる文章にしました。専門用語は使っていません。文章はその場で直せます。<br>スマホでは「LINEで送る」を押すとLINEが開き、送る相手を選べます。パソコンでは「LINE用にコピー」で文章をコピーし、LINEのトークに貼り付けて送ってください（パソコン版のLINEには、ボタンから直接は送れないため）。</p>
     <div class="bm-row">
       <label for="bm-month">月</label><input type="month" id="bm-month">
       <label for="bm-tag" style="margin-left:6px">お客様</label><select id="bm-tag"><option value="">全員</option></select>
@@ -8058,7 +8058,7 @@ renderResult();
     var txt=state.edits[k]!=null?state.edits[k]:it.text;
     return '<div class="bm-card'+(sent?' sent':'')+'" data-i="'+i+'"><div class="bm-head"><span class="bm-name">'+h(it.cl.name)+'</span><span class="bm-badge '+it.ev.jud+'">'+BM_BADGE[it.ev.jud]+'</span>'+(sent?'<span class="bm-done">✓ 送りました</span>':'')+'</div>'
       +'<textarea rows="11" aria-label="'+h(it.cl.name)+'様への文章">'+h(txt)+'</textarea>'
-      +'<div class="bm-acts"><button type="button" class="bm-line">LINEで送る</button><button type="button" class="bm-copy">コピー</button><button type="button" class="bm-sent">'+(sent?'✓ 送った':'送った印をつける')+'</button></div></div>';}
+      +'<div class="bm-acts"><button type="button" class="bm-line">'+(isPhone()?'LINEで送る':'LINE用にコピー')+'</button><button type="button" class="bm-copy">コピー</button><button type="button" class="bm-sent">'+(sent?'✓ 送った':'送った印をつける')+'</button></div></div>';}
   function more(){var list=document.getElementById('bm-list'),end=Math.min(state.items.length,state.shown+STEP),html='';
     for(var i=state.shown;i<end;i++){fill(state.items[i]);html+=cardHTML(state.items[i],i);}
     list.insertAdjacentHTML('beforeend',html);state.shown=end;
@@ -8069,6 +8069,8 @@ renderResult();
   function summary(){var n=state.items.length,s=getSent(state.ym),k=state.items.filter(function(it){return s[it.cl.id];}).length;
     var pa=state.ym.split('-');document.getElementById('bm-sum').innerHTML=n?(Number(pa[0])+'年'+Number(pa[1])+'月：全'+n+'人のうち <b>'+k+'人</b> に送りました'):'';}
   function fit(ta){ta.style.height='auto';ta.style.height=(ta.scrollHeight+4)+'px';}   // 文章の長さに合わせて欄を伸ばす（欄の中でスクロールさせない）
+  // スマホ・タブレットか（iPadは「Mac」と名乗るので、タッチの有無でも見る）
+  function isPhone(){var u=navigator.userAgent||'';return /iPhone|iPad|iPod|Android/i.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1);}
   function textOf(card){var ta=card.querySelector('textarea');return ta?ta.value:'';}
   function copy(t,cb){var done=function(){if(cb)cb();};var fb=function(){try{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();done();}catch(e){alert('コピーできませんでした。文章を長押し（PCはドラッグ）で選んでコピーしてください。');}};
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(done,fb);else fb();}
@@ -8098,7 +8100,13 @@ renderResult();
     var list=document.getElementById('bm-list');
     list.addEventListener('input',function(e){var card=e.target.closest('.bm-card');if(!card||e.target.tagName!=='TEXTAREA')return;var it=state.items[+card.dataset.i];if(it)state.edits[state.ym+'|'+it.cl.id]=e.target.value;fit(e.target);});
     list.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var card=b.closest('.bm-card');if(!card)return;var t=textOf(card);
-      if(b.classList.contains('bm-line')){window.open('https://line.me/R/msg/text/?'+encodeURIComponent(t),'_blank','noopener');markSent(card,true);}
+      if(b.classList.contains('bm-line')){
+        if(isPhone()){   // スマホ：LINEアプリを開いて、送る相手を選ぶ画面へ（LINE公式の送信用URL）
+          var a=document.createElement('a');a.href='https://line.me/R/share?text='+encodeURIComponent(t);a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();markSent(card,true);
+        }else{           // パソコン：パソコン版のLINEはこのURLに対応していないので、コピーして貼り付けてもらう
+          copy(t,function(){b.textContent='コピーしました';setTimeout(function(){b.textContent='LINE用にコピー';},1800);
+            alert('文章をコピーしました。\nLINEで送りたいお客様のトークを開いて、貼り付けて送ってください。\n送ったら「送った印をつける」を押すと、送り忘れを防げます。');});
+        }}
       else if(b.classList.contains('bm-copy')){copy(t,function(){b.textContent='コピーしました';setTimeout(function(){b.textContent='コピー';},1600);});}
       else if(b.classList.contains('bm-sent')){markSent(card,!card.classList.contains('sent'));}});
   }
