@@ -509,6 +509,12 @@
   .reading-card .r-summary{font-size:15.5px;font-weight:900;line-height:1.7;margin:2px 0 15px;padding:12px 13px;background:#E9F1E2;color:#2f3d24;border-radius:11px;text-align:left}
   /* コピーボタン分の余白は「最初の1行だけ」確保（下の行は横幅いっぱい使う） */
   .reading-card .r-summary::before{content:"";float:right;width:66px;height:30px}
+  .reading-card .r-answer{margin:0 0 14px;padding:10px 13px 12px;background:#E3F4EF;border:1.5px solid #7CC4B4;border-left:5px solid #0F766E;border-radius:11px}
+  .reading-card .r-answer h4.r-head{margin:0 0 8px;background:#0F766E;color:#fff;display:inline-flex;font-size:14px;padding:4px 11px;border-radius:7px}
+  .reading-card .r-answer h4.r-head .r-ic{display:none}
+  .reading-card .r-answer p.r-talk{margin:0;font-size:15.5px;font-weight:700;line-height:1.95;color:#0B3B36}
+  .reading-card .r-answer .r-list li,.reading-card .r-answer p.r-s{font-size:15px;font-weight:700;color:#0B3B36}
+  .reading-card h4.r-head.r-detail{background:none;border-top:1.5px dashed var(--line2);border-radius:0;padding:14px 2px 0;margin-top:18px;color:var(--muted)}
   .reading-card h4.r-head{display:flex;align-items:center;gap:7px;font-size:15px;font-weight:900;margin:26px 0 10px;color:var(--ka);padding:7px 11px;background:var(--ka-w);border-radius:9px}
   .reading-card h4.r-head .r-ic{font-size:16px;line-height:1}
   .reading-card h4.r-head:first-of-type{margin-top:8px}
@@ -5789,12 +5795,13 @@ const GOGYO_LEGEND='<div class="r-legend" style="font-size:11px;color:var(--mute
 function formatReading(text){
   text=plainGloss(text);
   const lines=esc(text).split('\n').map(l=>l.trim());
-  let html='',pbuf=[],lbuf=[],ltype='',summarySet=false,sawHead=false;
+  let html='',pbuf=[],lbuf=[],ltype='',summarySet=false,sawHead=false,inAns=false,talk=false;
+  const ANS_HEAD=/お客様への(お)?伝え方|どうすればよいか|どうすれば良いか|鑑定の答え/, DETAIL_HEAD=/^くわしい読み解き|^詳しい読み解き/;
   // 段落を「。」で1文ずつに分け、各文を1ポイントとして表示（内容は変えない・見やすくするだけ）
   const splitSentences=(t)=>{const out=[];let cur='',depth=0;for(const ch of t){cur+=ch;if(ch==='（'||ch==='(')depth++;else if(ch==='）'||ch===')')depth=Math.max(0,depth-1);if(ch==='。'&&depth===0){out.push(cur);cur='';}}if(cur.trim())out.push(cur);return out.map(s=>s.trim()).filter(Boolean);};  // カッコ内の「。」では区切らない（例:「日柱は◯（説明。説明。）で…」が途中で切れて「）で…」が孤立するのを防ぐ）
   // 文頭の「ラベル：…」「ラベル＝…」の見出し部分を強調（要点が一目でわかるように）
   const labelize=(s)=>{const m=s.match(/^([^：:＝\s][^：:＝]{0,21}[：:＝])([\s\S]+)$/);return m?`<b class="r-lbl">${m[1]}</b>${m[2]}`:s;};
-  const flushP=()=>{if(!pbuf.length)return;const joined=pbuf.join('');const sents=splitSentences(joined);if(sents.length)for(const s of sents){html+=`<p class="r-s">${labelize(s)}</p>`;}else html+=`<p class="r-s">${labelize(joined)}</p>`;pbuf=[];};
+  const flushP=()=>{if(!pbuf.length)return;const joined=pbuf.join('');if(talk){html+=`<p class="r-talk">${joined}</p>`;pbuf=[];return;}const sents=splitSentences(joined);if(sents.length)for(const s of sents){html+=`<p class="r-s">${labelize(s)}</p>`;}else html+=`<p class="r-s">${labelize(joined)}</p>`;pbuf=[];};
   const flushL=()=>{if(lbuf.length){const tag=ltype==='ol'?'ol':'ul',cls=ltype==='ol'?'r-onum':'r-list';html+=`<${tag} class="${cls}">`+lbuf.map(t=>`<li>${t}</li>`).join('')+`</${tag}>`;lbuf=[];ltype='';}};
   const flush=()=>{flushL();flushP();};
   let _needLegend=/[木火土金水]/.test(text);
@@ -5809,7 +5816,9 @@ function formatReading(text){
     if(hb||hash||isBareHead){
       flush();sawHead=true;
       const title=hb?hb[1]:(isBareHead?bare:(hash?hash[1].replace(/^\*{1,2}\s*/,'').replace(/\s*\*{1,2}$/,''):bare));
-      html+=`<h4 class="r-head"><span class="r-ic">${sectionIcon(title)}</span>${title}</h4>`;
+      if(inAns){html+='</div>';inAns=false;} talk=false;
+      if(ANS_HEAD.test(title)){html+='<div class="r-answer">';inAns=true;talk=/伝え方/.test(title);}
+      html+=`<h4 class="r-head${DETAIL_HEAD.test(title)?' r-detail':''}"><span class="r-ic">${sectionIcon(title)}</span>${title}</h4>`;
       if(hb&&hb[2])pbuf.push(hb[2]);
       continue;
     }
@@ -5819,7 +5828,7 @@ function formatReading(text){
     if(mOl){flushP();if(ltype&&ltype!=='ol')flushL();ltype='ol';lbuf.push(mOl[2]);continue;}
     flushL();pbuf.push(ln);
   }
-  flush();
+  flush(); if(inAns){html+='</div>';inAns=false;}
   html=html.replace(/\*\*([^*\n]+?)\*\*/g,'<strong>$1</strong>');   // **太字**
   html=html.replace(/\*([^*\n]+?)\*/g,'<strong>$1</strong>');        // *強調* も太字に
   html=html.replace(/`([^`\n]+?)`/g,'$1');                            // `コード`記号を除去
@@ -6245,9 +6254,10 @@ function noAIWord(t){ return String(t||'')
     .replace(/(?:私|わたし|わたくし)(?:は|も)(?:AI|ＡＩ|人工知能)[^。！？\n]*[。！？]?/g,'')
     .replace(/(?:AI|ＡＩ|人工知能)(?:である|なので|ですので|ですから|のため|として)(?:私|わたし)?[^、。！？\n]*[、]?/g,'')
     .replace(/(?:AI|ＡＩ|人工知能)(?:による|が行う|の|が)?(分析|鑑定|診断|回答|判断|読み解き|占い)/g,'$1'); }
+const ANSWER_RULE='\n【答えの出し方＝最優先・ほかの構成指示より先に、どの鑑定でも必ずこの順で書き始める】このツールは、鑑定士がお客様の前で、その場ですぐアドバイスするためのもの。読んだ鑑定士がひと目で「良いのか悪いのか」「どうすればよいのか」を言えるように書く。\n1行目：結論を一文だけ（見出しなし）。相談に良し悪しがあるときは「おすすめです」「条件つきで良い」「今は慎重に」「おすすめできません」のどれかがはっきり分かる言い方にし、あいまいにぼかさない。相談がない鑑定（命式の読み解き・その日/その月の運気など）では、いちばん伝えたいことを一文で。\n【お客様へのお伝え方】鑑定士がそのまま声に出して伝えられる、やさしい話し言葉の文章を3〜5文（専門用語は使わない。「〜ですね」「〜していきましょう」）。良いか悪いか、その理由をひとこと、どうすればよいか、時期の目安（あれば西暦）を必ず入れる。\n【どうすればよいか】具体的な行動を「・」の箇条書きで3つ（時期があれば西暦で）。\nこのあとに「【くわしい読み解き】」と1行書き、その下に、ここまでの答えの根拠となる読み解きを、指定された構成（見出し・ブロック）で続ける。指定の構成にある「1行目の結論」はすでに書いたので繰り返さない。最後の【今できること】は【どうすればよいか】と重なるので書かない。\n略奪・相手を不幸にするなど人を傷つける望みには、その方法は勧めず、相談者が幸せになれる別の道を結論にする（責めずに、やさしく）。';
 const NO_AI_RULE='\n【言葉の決まり】「AI」「人工知能」という言葉は使わない。自分が何者か（AIである等）の説明や断り書きも書かない。鑑定者として自然に書く。';
 async function generateReading(user,localText,system,deep){
-  system=(system||CONSULT_SYSTEM)+YOMI_RULE+NO_REPEAT_RULE+NO_AI_RULE;
+  system=(system||CONSULT_SYSTEM)+YOMI_RULE+NO_REPEAT_RULE+NO_AI_RULE+ANSWER_RULE;
   const _nm=_nameMasks();
   if(_nm.length){ user=_maskNames(user,_nm); system=_maskNames(system,_nm)+'\n【お名前の印】文章の中の「〔本人〕」「〔お相手〕」は、実際のお名前の代わりの印です。お名前で呼ぶときは、この印を一字も変えずにそのまま書いてください（例：〔本人〕さん）。'; }
   // 電波がない（オフライン）ときはAIを呼ばず、端末内鑑定を出す
@@ -6347,7 +6357,7 @@ async function doConsult(){
   const worry=document.getElementById('worry').value.trim();const out=document.getElementById('reading');
   if(!worry){out.innerHTML='<div class="err">相談したい内容を入力してください。</div>';return;}
   const head=`【確定済みの命式】\n${buildChartText(chart)}\n\n【相談者の悩み】\n${worry}\n\nこの悩みに、上の命式を唯一の根拠として答えてください。\n`;
-  const struct=`重要:必ず命式の具体的な要素（星名・五行の数・干支・大運/年運の干支）を文中に挙げ、「この要素があるから、こう言える」という理屈をセットで示すこと。曖昧で誰にでも当てはまる表現は禁止。\n【この相談への集中＝最優先で厳守】目的はただ一つ、相談者が聞いた質問にまっすぐ答えること。挨拶・長い前置き・聞かれていない全体的な性格紹介や自分史は書かない。無関係なテーマへ脱線せず、同じ内容を言い換えて何度も繰り返さない（水増し・引き延ばし禁止）。\n構成（必ず守る）：\n・1行目に結論を一文だけ（前置き・見出しなし）。\n・「【見出し】」付きの短いブロックを2〜3個（各2〜4文）。悩みに直接答える根拠を、星・五行・大運/年運を名指しで示す。\n・「いつ?」を含む質問（恋愛・結婚・婚活・転職・来年の運気など）は、「大運の流れ」「今後5年の年運の流れ」「恋愛・結婚の手がかり」を根拠に、具体的な年代・西暦の年を必ず挙げて時期を示す（断定せず「縁が動きやすい時期」として）。\n・最後に【今できること】として、この命式と今の時期に即した具体的な行動を2〜3点。\n・大事な語は**太字**に。全体700〜900字。読み応えのある十分な分量で、根拠と具体例を厚めに（ただし水増し・繰り返しはしない）。`;
+  const struct=`重要:必ず命式の具体的な要素（星名・五行の数・干支・大運/年運の干支）を文中に挙げ、「この要素があるから、こう言える」という理屈をセットで示すこと。曖昧で誰にでも当てはまる表現は禁止。\n【この相談への集中＝最優先で厳守】目的はただ一つ、相談者が聞いた質問にまっすぐ答えること。挨拶・長い前置き・聞かれていない全体的な性格紹介や自分史は書かない。無関係なテーマへ脱線せず、同じ内容を言い換えて何度も繰り返さない（水増し・引き延ばし禁止）。\n構成（必ず守る）：\n・1行目に結論を一文だけ（前置き・見出しなし）。\n・「【見出し】」付きの短いブロックを2〜3個（各2〜4文）。悩みに直接答える根拠を、星・五行・大運/年運を名指しで示す。\n・「いつ?」を含む質問（恋愛・結婚・婚活・転職・来年の運気など）は、「大運の流れ」「今後5年の年運の流れ」「恋愛・結婚の手がかり」を根拠に、具体的な年代・西暦の年を必ず挙げて時期を示す（断定せず「縁が動きやすい時期」として）。\n・大事な語は**太字**に。全体700〜900字。読み応えのある十分な分量で、根拠と具体例を厚めに（ただし水増し・繰り返しはしない）。`;
   const easy=head+`【書き方＝最重要】占い師にも占い初心者にも、すっと頭に入るように書く。専門用語（通変星・十二運・蔵干・干支・五行など）は省かず使ってよいが、出てきたら必ずその場で“ふつうの言葉”で短く言いかえる（例:「正官（規律と責任を大切にする星）」）。一文は短めにし、つなぎを丁寧に。内容・根拠・結論は変えない。\n`+struct;
   const pro=head+struct;
   runReading(document.getElementById('consultBtn'),out,easy,localAnswer(chart,worry),pro,undefined,isCrisis(worry)?crisisCardHTML():'');
@@ -7321,6 +7331,7 @@ function printHTML(title,inner,auto){
     '@media print{.tools{display:none}body{padding:0;max-width:none}'+
     '.r h2,.r h4.r-head{break-after:avoid;page-break-after:avoid}'+   /* 見出しをページ末に孤立させない */
     '.r .r-summary{break-inside:avoid;page-break-inside:avoid}'+
+    '.r .r-answer{border:1px solid #7CC4B4;border-left:4px solid #0F766E;border-radius:8px;padding:8px 11px;margin:0 0 12px;break-inside:avoid;page-break-inside:avoid}.r .r-answer h4.r-head{margin:0 0 6px}.r h4.r-detail{border-top:1px dashed #bbb;padding-top:10px}'+
     '.r p,.r .r-list li,.r ol.r-onum li{break-inside:avoid;page-break-inside:avoid;orphans:2;widows:2}'+  /* 段落・箇条書きを途中で切らない */
     '.brand{break-after:avoid;page-break-after:avoid}}</style>'+
     '</head><body>'+brand+'<h1>'+esc(title)+'</h1>'+
