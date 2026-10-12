@@ -6274,9 +6274,13 @@ function noAIWord(t){ return String(t||'')
     .replace(/(?:AI|ＡＩ|人工知能)(?:である|なので|ですので|ですから|のため|として)(?:私|わたし)?[^、。！？\n]*[、]?/g,'')
     .replace(/(?:AI|ＡＩ|人工知能)(?:による|が行う|の|が)?(分析|鑑定|診断|回答|判断|読み解き|占い)/g,'$1'); }
 const ANSWER_RULE='\n【答えの出し方＝最優先・ほかの構成指示より先に、どの鑑定でも必ずこの順で書き始める】このツールは、鑑定士がお客様の前で、その場ですぐアドバイスするためのもの。読んだ鑑定士がひと目で「良いのか悪いのか」「どうすればよいのか」を言えるように書く。\n1行目：結論を一文だけ（見出しなし）。相談に良し悪しがあるときは「おすすめです」「条件つきで良い」「今は慎重に」「おすすめできません」のどれかがはっきり分かる言い方にし、あいまいにぼかさない。相談がない鑑定（命式の読み解き・その日/その月の運気など）では、いちばん伝えたいことを一文で。\n【お客様へのお伝え方】鑑定士がそのまま声に出して伝えられる、やさしい話し言葉の文章を8〜12文（300〜450字ほど。後に続く「くわしい読み解き」の字数とは別枠）。専門用語は使わず、ふつうの言葉で（「〜ですね」「〜していきましょう」）。次の流れで、読んだ鑑定士がこれだけで十分にアドバイスできる厚みにする：①結論（良いか悪いか）→②そう言える理由を、生まれ持った性質やいまの運の流れから、ふつうの言葉で2〜3文→③いまの状況や気持ちへの共感→④具体的にどうすればよいか（人との関わり方・気をつけること）→⑤時期の目安（あれば西暦。良い時期と気をつけたい時期）→⑥前向きになれる励ましのひとこと。同じことの言いかえや水増しはしない。\n【どうすればよいか】具体的な行動を「・」の箇条書きで3つ（時期があれば西暦で）。\nこのあとに「【くわしい読み解き】」と1行書き、その下に、ここまでの答えの根拠となる読み解きを、指定された構成（見出し・ブロック）で続ける。指定の構成にある「1行目の結論」はすでに書いたので繰り返さない。最後の【今できること】は【どうすればよいか】と重なるので書かない。\n略奪・相手を不幸にするなど人を傷つける望みには、その方法は勧めず、相談者が幸せになれる別の道を結論にする（責めずに、やさしく）。';
+const ANSWER_ONLY_RULE='\n【今回書くのは冒頭の答えだけ＝最優先】1行目の結論・【お客様へのお伝え方】・【どうすればよいか】の3つだけを書いて終える。【くわしい読み解き】以降は別に作るので、一切書かない。';
+const DETAIL_ONLY_RULE='\n【今回書くのは、くわしい読み解きだけ＝最優先】冒頭の結論・お客様へのお伝え方・どうすればよいかは別に作成済み（下に示す）なので書かない。1行目の結論も「【くわしい読み解き】」の見出しも書かず、指定された構成の【見出し】ブロックからいきなり書き始める。最後の【今できること】も書かない。先に作成した答えと食い違わないように、その根拠を命式の要素を名指しで、指定の字数どおり十分に書く。';
 const NO_AI_RULE='\n【言葉の決まり】「AI」「人工知能」という言葉は使わない。自分が何者か（AIである等）の説明や断り書きも書かない。鑑定者として自然に書く。';
 async function generateReading(user,localText,system,deep){
-  system=(system||CONSULT_SYSTEM)+YOMI_RULE+NO_REPEAT_RULE+NO_AI_RULE+ANSWER_RULE;
+  // 〔PART:answer〕＝冒頭の答えだけ（短いので数秒で届く）／〔PART:detail〕＝くわしい読み解きだけ。印がなければ従来どおり全部
+  let _part=''; user=String(user).replace(/〔PART:(answer|detail)〕\n?/,function(_m,k){ _part=k; return ''; });
+  system=(system||CONSULT_SYSTEM)+YOMI_RULE+NO_REPEAT_RULE+NO_AI_RULE+(_part==='detail'?DETAIL_ONLY_RULE:ANSWER_RULE+(_part==='answer'?ANSWER_ONLY_RULE:''));
   const _nm=_nameMasks();
   if(_nm.length){ user=_maskNames(user,_nm); system=_maskNames(system,_nm)+'\n【お名前の印】文章の中の「〔本人〕」「〔お相手〕」は、実際のお名前の代わりの印です。お名前で呼ぶときは、この印を一字も変えずにそのまま書いてください（例：〔本人〕さん）。'; }
   // 電波がない（オフライン）ときはAIを呼ばず、端末内鑑定を出す
@@ -6289,7 +6293,7 @@ async function generateReading(user,localText,system,deep){
     return {ok:true,text:localText,fallback:true,online:false,note:'本日の詳細鑑定（オンライン）のご利用上限に達したため、端末内のオフライン鑑定を表示しています。日付が変わるとまたご利用いただけます。'};}
   // 2.5系は思考(thinking)がデフォルトONで、maxOutputTokensを思考だけで使い切ると本文が空になる。
   // flash/flash-lite は思考をオフにして本文を確実に出す。pro は最小思考のまま余裕を持たせる。
-  const genCfg={maxOutputTokens:3072};   // 冒頭の「お客様へのお伝え方」（300〜450字）を厚くしたぶん、途中で切れないよう余裕を持たせる
+  const genCfg={maxOutputTokens:_part==='answer'?1536:3072};   // 答えだけは短く（すぐ届く）。全体・くわしい読み解きは途中で切れないよう余裕を持たせる
   if(/flash/.test(geminiModel))genCfg.thinkingConfig={thinkingBudget:0};
   // ★本番：クライアントにAPIキーは置かない。サーバー中継 /.netlify/functions/gemini がキーを保持して呼ぶ（キーがブラウザに出ない）。
   //   動作確認用にだけ geminiKey が入っている場合は、従来どおりブラウザから直接呼ぶ（テスト専用・本番UIにキー入力欄は無い）。
@@ -6329,12 +6333,26 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
   const sc=safety||'';  // 自傷・希死念慮を検知したら、AIを待たずに最上部へ相談窓口を必ず表示（オンライン/オフライン/ブロック時も出す）
   const gen=(out.__rg=(out.__rg||0)+1);   // 生成中に人・表示が変わったら、後から届いた古い結果は捨てる（別の人の欄に出さない）
   const stale=()=>out.__rg!==gen||!out.isConnected;
-  btn.disabled=true;out.innerHTML=sc+'<div class="loading"><span class="spin"></span>命式を読み解いています…</div>';
+  btn.disabled=true;out.innerHTML=sc+'<div class="loading"><span class="spin"></span>まず答えを作成しています…（数秒〜20秒ほど）</div>';
   try{
-    const res=await generateReading(user,localText,undefined,deep);
+    // ① 冒頭の答え（結論・お伝え方・どうすればよいか）だけを先に作る＝お客様をお待たせしない
+    const A=await generateReading('〔PART:answer〕\n'+user,localText,undefined,deep);
     if(stale())return;
-    out.innerHTML=sc+engineBadge(res.online,res.fallback?res.note:'')+formatReading(res.text);
-    attachReadingTools(out,res.text);
+    if(!A.online){   // 通信できないときは、これまでどおり端末内の鑑定を表示
+      out.innerHTML=sc+engineBadge(false,A.fallback?A.note:'')+formatReading(A.text);
+      attachReadingTools(out,A.text);
+      if(proUser)appendPro(out,proUser,localText,deep,proLocal);
+      return;
+    }
+    const ans=String(A.text).split(/\n[ 　]*[【\[]?くわしい読み解き[】\]]?/)[0].trim();
+    out.innerHTML=sc+engineBadge(true,'')+formatReading(ans)+'<div class="loading r-more"><span class="spin"></span>くわしい読み解きを作成しています…（答えは上に出ています。読みながらお待ちください）</div>';
+    // ② くわしい読み解き：先に出した答えと食い違わないよう、答えを渡して根拠を書かせる
+    const D=await generateReading('〔PART:detail〕\n'+user+'\n\n【先に作成した答え（これと食い違わないように、その根拠を書く）】\n'+ans,localText,undefined,deep);
+    if(stale())return;
+    const det=D.online?String(D.text).replace(/^[\s　]*[【\[]?くわしい読み解き[】\]]?[\s　]*/,''):localText;
+    const full=ans+'\n\n【くわしい読み解き】\n'+det;
+    out.innerHTML=sc+engineBadge(true,D.online?'':'くわしい読み解きは通信できなかったため、端末内で作成した内容を表示しています。')+formatReading(full);
+    attachReadingTools(out,full);
     if(proUser)appendPro(out,proUser,localText,deep,proLocal);
   }catch(e){console.error(e); // 想定外のエラーでもオフライン鑑定を出す
     if(stale())return;
