@@ -79,7 +79,8 @@ function scan(where,t,{jargon=false,marks=false,kanshi=false}={}){
   let n=0;for(const rel of ['single','crush','partner','married','work'])for(const sex of ['f','m'])for(let k=0;k<12;k++){const bd={y:1972+k*3,m:1+(k*5)%12,d:1+(k*11)%28};
    for(let i=0;i<365;i+=4){const dt=new Date(Date.UTC(2026,10,1+i));const r=D.generateDaily(bd,{y:dt.getUTCFullYear(),m:dt.getUTCMonth()+1,d:dt.getUTCDate()},{nick:'あかり',rel,sex,interests:['恋愛','仕事','金運']});const m=renderDailyMail(r);n++;
     const W=`メール ${rel}/${sex} ${bd.y}-${bd.m}-${bd.d} ${dt.toISOString().slice(0,10)}`;scan(W,m.subject+' \n '+m.text);
-    if((rel==='single'||rel==='crush')){const x=m.text.match(COUPLE);if(x)add(W,`恋人がいない人に恋人前提の文「${x[0]}」｜…${ctx14(m.text,x.index,x[0])}…`);}}}
+    // 「恋人がいない人に恋人前提の文を出さない」は 10/12 夕方のオーナー判断で取りやめ（恋愛運は恋人の有無で厳密に分けない）
+   }}
   console.log('メール',n,'通を確認');}
  const uniq=[...new Set(out)];console.log(uniq.length?uniq.slice(0,80).join('\n'):'言葉のチェック：問題なし（0件）');if(uniq.length)console.log('合計',uniq.length,'件');process.exit(uniq.length?1:0);
 })();
