@@ -174,6 +174,7 @@ select.field{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg 
 /* 泣き別れ（行末に1〜2文字が孤立する現象）を防ぐ。非対応ブラウザでは無害 */
 .script-text p,.conc-list li,.kpi-val,.kpi-val li,.verdict .v-txt,.shika-txt,.fu-msg{text-wrap:pretty;word-break:auto-phrase;line-break:strict;}
 .script-text p{margin:0 0 15px;}
+#result ruby{ruby-position:over;ruby-align:center;} #result rt{font-size:.5em;font-weight:500;color:var(--ink3);letter-spacing:0;line-height:1;} .conc-list li{line-height:1.9;} .verdict .v-txt,.kpi-val,.fu-msg,.shika-txt,.hex-modern{line-height:1.9;}
 .script-text .sq{color:#6E4E96;font-weight:700;}
 
 .kpi{margin-top:14px;}
@@ -1849,8 +1850,8 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
       unsei,
       `運気は今「${unki}」と出ています。${goodRank?'よい流れですから、安心して進んで大丈夫ですよ。':'焦らず、慎重に進んでいきましょうね。'}`,
       koTai?`${koJd?`${KO_NAME[r.ko]}「${koJd}」は、`:''}現代の言葉でいうと「${koTai.replace(/。$/,'').replace(/(時)です$/,'$1')}」ということですよ`:'',
-      goka?`表には見えない背景（互卦（ごか）「${r.goka.hex.nm}（${r.goka.hex.rd}）」）として、「${goka}」という面も隠れていますよ`:'',
-      soka?`${/彼|彼女|夫|妻|相手|上司|部下|同僚|友|親|子|家族|お客|取引|恋|結婚|離婚|人/.test(q||'')?'相手の立場':'立場を変えて'}（綜卦（そうか）「${r.soka.hex.nm}（${r.soka.hex.rd}）」）から見ると、「${soka}」という景色になっています`:'',   // 株・体調など「相手」がいない相談では「相手の立場」と言わない
+      goka?`表には見えない背景として、互卦（ごか）の「${r.goka.hex.nm}（${r.goka.hex.rd}）」が示す「${goka}」という面も隠れていますよ`:'',
+      soka?`${/彼|彼女|夫|妻|相手|上司|部下|同僚|友|親|子|家族|お客|取引|恋|結婚|離婚|人/.test(q||'')?'相手の立場から':'立場を変えて'}見る綜卦（そうか）の「${r.soka.hex.nm}（${r.soka.hex.rd}）」では、「${soka}」という景色になっています`:'',   // 株・体調など「相手」がいない相談では「相手の立場」と言わない
       goodRank?'今のよい流れを活かして、思いきって一歩を踏み出していきましょうね':'今は無理に動かず、じっくり力を蓄える時だと考えてくださいね',
       'どうか焦らず、ご自身のペースで向き合っていけば、きっと大丈夫ですよ'
     ].filter(Boolean).join('\n');
@@ -2211,6 +2212,35 @@ ${hist?('これまでのやりとり：\n'+hist+'\n'):''}相談者の新しい�
   function fmtRich(s){ return esc(s).replace(/【([^】]{1,50})】/g,'<span class="hl">$1</span>').replace(/[【】]/g,''); }
   // ハイライトを付けない項目用：万一混ざった【】は消すだけ
   function fmtPlain(s){ return esc(s).replace(/[【】]/g,''); }
+  // 読み仮名「漢字（かな）」を、かっこではなく漢字の上の小さな「ふりがな」で見せる（表示だけ・文章やコピーする内容は変えない）
+  const RUBY_RE=/([㐀-鿿豈-﫿々〆]+)（([ぁ-ゖー]+)）/g;
+  function rubyize(root){
+    if(!root) return;
+    const tw=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>{
+      if(!n.nodeValue||n.nodeValue.indexOf('（')<0) return NodeFilter.FILTER_REJECT;
+      if(n.parentElement&&n.parentElement.closest('ruby,rt,script,style,textarea,input,select,button,.no-ruby')) return NodeFilter.FILTER_REJECT;
+      RUBY_RE.lastIndex=0; return RUBY_RE.test(n.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT; }});
+    const list=[]; while(tw.nextNode()) list.push(tw.currentNode);
+    list.forEach(n=>{
+      const fr=document.createDocumentFragment(); const v=n.nodeValue; let last=0, m; RUBY_RE.lastIndex=0;
+      while((m=RUBY_RE.exec(v))){
+        if(m.index>last) fr.appendChild(document.createTextNode(v.slice(last,m.index)));
+        const rb=document.createElement('ruby'); rb.appendChild(document.createTextNode(m[1]));
+        const rp1=document.createElement('rp'); rp1.textContent='（'; const rt=document.createElement('rt'); rt.textContent=m[2]; const rp2=document.createElement('rp'); rp2.textContent='）';
+        rb.appendChild(rp1); rb.appendChild(rt); rb.appendChild(rp2); fr.appendChild(rb); last=m.index+m[0].length;
+      }
+      if(last<v.length) fr.appendChild(document.createTextNode(v.slice(last)));
+      n.parentNode.replaceChild(fr,n);
+    });
+  }
+  // 鑑定結果の欄は、中身が書きかわるたびに自動でふりがな表示にする
+  (function(){
+    const res=document.getElementById('result'); if(!res||!window.MutationObserver) return;
+    let busy=false, queued=false;
+    const run=()=>{ queued=false; busy=true; try{ rubyize(res); }catch(_e){} obs.takeRecords(); busy=false; };
+    const obs=new MutationObserver(()=>{ if(busy||queued) return; queued=true; requestAnimationFrame(run); });
+    obs.observe(res,{childList:true,subtree:true,characterData:true});
+  })();
   // 裏卦：卦名ラベル（互卦/綜卦/錯卦＝◯◯）を卦ごとの色で強調
   function fmtUra(s){
     let x=fmtRich(s);
