@@ -169,6 +169,13 @@
   .tg{display:inline-flex;border:2px solid var(--line2);border-radius:11px;overflow:hidden}
   .tg button{border:0;background:var(--card);font-family:inherit;font-size:13px;font-weight:900;color:var(--muted);padding:7px 16px;cursor:pointer}
   .tg button[aria-pressed="true"]{background:var(--ink);color:var(--card)}
+  /* スマホ（指で操作）：小さすぎるボタン・リンクを押しやすい大きさに（見た目はほぼそのまま） */
+  @media (pointer:coarse){
+    .tg button{min-height:40px;min-width:44px}
+    #love-target{min-height:40px}
+    .app-legal a{display:inline-block;padding:9px 2px}
+    details > summary{padding-top:9px;padding-bottom:9px}
+  }
   .tg .lab{align-self:center;font-size:11px;font-weight:800;color:var(--muted);padding:0 2px}
 
   /* 命式テーブル */
@@ -503,6 +510,10 @@
     margin:0 0 4px;padding:8px 12px;background:#FBF7EF;
     border-top:1px solid var(--line);border-bottom:1px solid var(--line);box-shadow:0 4px 10px rgba(60,40,10,.08);scrollbar-width:none}
   #jumpnav.on{display:flex}
+  /* 上部に固定した項目ナビの下に見出し・ボタンが隠れないよう、移動先の位置をずらす（高さはJSで実測） */
+  html{scroll-padding-top:var(--jn-h,0px)}
+  /* スマホ：項目ナビを横にはみ出させず2段に折り返す（「大運・年運」「日運・月運」も最初から見えるように）。押しやすい高さに */
+  @media (max-width:760px){ #jumpnav{flex-wrap:wrap;overflow-x:visible;gap:6px;padding:7px 10px} #jumpnav button{padding:8px 12px;font-size:12.5px;min-height:38px} }
   #jumpnav::-webkit-scrollbar{display:none}
   #jumpnav button{flex:0 0 auto;border:1.5px solid var(--line2);background:#fff;color:var(--ink2);
     border-radius:999px;padding:7px 14px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap}
@@ -662,8 +673,20 @@
     <div id="mg-status" class="mg-status"></div>
     <div id="mg-msg"></div>
     <div class="mg-foot"><a href="auth.html?view=reset">パスワードを忘れた方</a> ・ <a href="auth.html?view=forgot">メールアドレスを忘れた方</a><br><a href="auth.html?view=help">ログインできないとき</a> ・ <a href="mypage-pro.html">マイページ・契約状況</a></div>
+    <div class="mg-foot" id="mg-export-wrap" style="display:none;border-top:1px dashed var(--line);padding-top:12px">この端末に保存されている顧客カルテは、ご契約がなくても書き出せます。<br><button type="button" id="mg-export" style="margin-top:8px;height:40px;padding:0 16px;border:1.5px solid var(--sui);border-radius:10px;background:#fff;color:var(--sui);font:inherit;font-weight:800;cursor:pointer">⬇ 顧客カルテを書き出す（バックアップ）</button></div>
   </div>
 </div>
+<script>
+/* ロック中（解約後・お支払いの確認ができないときなど）でも、端末内の顧客カルテだけは必ずファイルに書き出せるようにする（お客様の大切な記録を取り出せなくならないように） */
+(function(){ try{
+  var keys=[]; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.indexOf('bazi_mypage_v2')===0) keys.push(k); }
+  if(!keys.length) return; document.getElementById('mg-export-wrap').style.display='';
+  document.getElementById('mg-export').onclick=function(){ var out={schema:1,clients:[]};
+    keys.forEach(function(k){ try{ var d=JSON.parse(localStorage.getItem(k)||'null'); if(d&&d.clients) out.clients=out.clients.concat(d.clients.filter(function(c){return c&&!c.deleted;})); }catch(e){} });
+    var b=new Blob([JSON.stringify(out,null,2)],{type:'application/json'}), a=document.createElement('a'); a.href=URL.createObjectURL(b);
+    var d=new Date(); a.download='karte-backup-'+d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2)+'.json'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },200); };
+}catch(e){} })();
+</script>
 <script>
 (function(){
   // 本番モード（会員ゲート有効）。開発時のみ true にするとログイン不要で確認できます。
@@ -815,7 +838,8 @@
     </div>
     <div style="margin-left:auto;align-self:center;display:flex;gap:8px;align-items:center">
       <button type="button" id="mypageToggle" aria-expanded="false" title="保存した顧客の呼び出し・メモ・鑑定結果の一覧" style="height:38px;background:var(--sui);border:1.5px solid var(--sui);color:#fff;border-radius:10px;padding:0 14px;font-family:inherit;font-weight:900;font-size:13px;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(42,111,208,.28)">👥 顧客カルテ</button>
-      <div class="tg" id="theme-tg">
+      <a href="mypage-pro.html" title="ご契約の確認・解約・パスワード変更" style="height:38px;display:inline-flex;align-items:center;padding:0 11px;border:1.5px solid var(--line2);border-radius:10px;background:#fff;color:var(--ink2);font-weight:800;font-size:12.5px;text-decoration:none;white-space:nowrap">👤 ご契約</a>
+      <div class="tg" id="theme-tg" title="画面の色：白／和紙" aria-label="画面の色（白・和紙）">
         <button data-th="" aria-pressed="true">白</button><button data-th="washi" aria-pressed="false">和</button>
       </div>
     </div>
@@ -835,7 +859,7 @@
       </div>
     </div>
     <div class="frow">
-      <div class="field f-wide"><label>お名前<span style="color:var(--ka)">（必須）</span></label><input id="f-name" type="text" maxlength="40" placeholder="姓 名（ニックネーム可）" required aria-required="true"><input id="f-kana" type="text" placeholder="ふりがな（並べ替え・検索用／任意）" style="margin-top:6px;font-size:12.5px"><div class="req-msg" id="f-name-msg">お名前を入力してください。</div></div>
+      <div class="field f-wide"><label>お名前<span style="color:var(--ka)">（必須）</span></label><input id="f-name" type="text" maxlength="40" placeholder="姓 名（ニックネーム可）" required aria-required="true"><input id="f-kana" type="text" placeholder="ふりがな（任意）" style="margin-top:6px;font-size:12.5px"><div class="req-msg" id="f-name-msg">お名前を入力してください。</div></div>
       <div class="field f-narrow"><label>性別</label>
         <div class="seg" id="f-sex"><button type="button" data-v="female" aria-pressed="true">女性</button><button type="button" data-v="male" aria-pressed="false">男性</button></div>
       </div>
@@ -859,7 +883,7 @@
       <div class="field full"><label>出身地（生まれた場所）</label><select id="f-pref"><option value="">指定しない（補正なし）</option><option value="141.35">北海道</option><option value="140.74">青森</option><option value="141.15">岩手</option><option value="140.87">宮城</option><option value="140.1">秋田</option><option value="140.36">山形</option><option value="140.47">福島</option><option value="140.45">茨城</option><option value="139.88">栃木</option><option value="139.06">群馬</option><option value="139.65">埼玉</option><option value="140.12">千葉</option><option value="139.69">東京</option><option value="139.64">神奈川</option><option value="139.02">新潟</option><option value="137.21">富山</option><option value="136.63">石川</option><option value="136.22">福井</option><option value="138.57">山梨</option><option value="138.18">長野</option><option value="136.72">岐阜</option><option value="138.38">静岡</option><option value="136.91">愛知</option><option value="136.51">三重</option><option value="135.87">滋賀</option><option value="135.76">京都</option><option value="135.5">大阪</option><option value="135.18">兵庫</option><option value="135.83">奈良</option><option value="135.17">和歌山</option><option value="134.24">鳥取</option><option value="133.05">島根</option><option value="133.93">岡山</option><option value="132.46">広島</option><option value="131.47">山口</option><option value="134.56">徳島</option><option value="134.04">香川</option><option value="132.77">愛媛</option><option value="133.53">高知</option><option value="130.42">福岡</option><option value="130.3">佐賀</option><option value="129.87">長崎</option><option value="130.74">熊本</option><option value="131.61">大分</option><option value="131.42">宮崎</option><option value="130.56">鹿児島</option><option value="127.68">沖縄</option></select><div style="font-size:11px;color:var(--muted);font-weight:600;margin-top:4px;line-height:1.6">生まれた都道府県を選ぶと、その土地の時刻（真太陽時）でより正確に鑑定します。分からなければ「指定しない」のままでOKです。</div></div>
     </div>
     <details class="adv personal-only">
-      <summary style="font-size:15.5px;font-weight:900;color:var(--ka);border:2px solid var(--ka);border-radius:11px;padding:10px 13px;background:var(--ka-w)">詳細設定（時差の補正・23時台の扱い・恋愛で見るお相手）</summary>
+      <summary style="font-size:15.5px;font-weight:900;color:var(--ink);border:2px solid var(--line2);border-radius:11px;padding:10px 13px;background:var(--card)">⚙ 詳細設定（時差の補正・23時台の扱い・恋愛で見るお相手）</summary>
       <div class="frow" style="margin-top:12px">
         
         <div class="field"><label>補正方法</label><select id="f-corr">
@@ -892,14 +916,14 @@
     </details>
     <div class="frow personal-only" style="margin-top:0;gap:8px">
       <button class="go" id="f-go" style="flex:1">この内容で占う</button>
-      <button class="go" id="f-save" type="button" style="flex:0 0 auto;background:var(--ink2)">＋鑑定者を保存</button>
+      <button class="go" id="f-save" type="button" style="flex:0 0 auto;background:var(--ink2)">＋お客様を保存</button>
     </div>
     <button id="f-reset" type="button" title="いま画面に出ている入力と鑑定結果だけを消します。保存した顧客カルテは消えません。" style="margin-top:8px;width:100%;min-height:48px;padding:6px 10px;border:2px solid var(--ka);background:#FFF1EE;color:var(--ka);border-radius:12px;font-family:inherit;font-weight:900;font-size:14px;line-height:1.4;cursor:pointer" class="personal-only">🧹 入力をクリア<span style="white-space:nowrap">（本人・お相手・鑑定結果）</span></button>
     <div class="personal-only" style="margin-top:5px;font-size:11.5px;color:var(--muted);text-align:center;line-height:1.6">✅ 保存した<b>顧客カルテ</b>は消えません。全部を消したいときは「👥 顧客カルテ」→ 一番下の「⚠ 全データを完全に消去」から。</div>
     <details class="adv personal-only" id="clients-wrap" style="margin-top:12px">
-      <summary>保存した鑑定者 <span id="clients-count">（0）</span></summary>
+      <summary>保存したお客様 <span id="clients-count">（0）</span></summary>
       <input id="cl-search" type="search" placeholder="🔍 名前・生年月日・メモ・タグで検索" oninput="renderClientsSoon()" style="width:100%;height:40px;margin-top:10px;padding:0 12px;border:1.5px solid var(--line2);border-radius:11px;font-family:inherit;font-size:14px;box-sizing:border-box">
-      <div id="clients-list" style="margin-top:10px"><div class="hint">まだ保存された鑑定者はいません。名前と生年月日を入れて「＋鑑定者を保存」を押すと、ここに一覧表示され、ワンタップで呼び出せます。</div></div>
+      <div id="clients-list" style="margin-top:10px"><div class="hint">まだ保存されたお客様はいません。名前と生年月日を入れて「＋お客様を保存」を押すと、ここに一覧表示され、ワンタップで呼び出せます。</div></div>
     </details>
     <!-- Gemini APIキー入力欄：本番では非表示にする（キーはサーバ側で保持しサーバ経由で呼ぶ）。
          下は「動作確認専用」の一時入力欄。キーを入れると generateReading() がブラウザから直接Geminiを呼ぶ（サーバ未デプロイでもテスト可）。
@@ -923,7 +947,7 @@
 
   <!-- セクション・ジャンプ目次（占う後に表示・上部固定） -->
   <nav id="jumpnav" aria-label="セクションの目次">
-    <button type="button" id="jn-print" title="命式表（鑑定書）を印刷用で開く（別タブ）" style="background:var(--ka);color:#fff;border-color:var(--ka);font-weight:900">🖨 印刷</button>
+    <button type="button" id="jn-print" title="命式表・鑑定書のページを開く（そこで印刷・PDF保存・共有ができます）" style="background:var(--ka);color:#fff;border-color:var(--ka);font-weight:900">📄 鑑定書</button>
     <button type="button" id="jn-book" title="教科書（60干支・通変星・十二運・立運・会局など）を別タブで開く" style="background:#2E7D8A;color:#fff;border-color:#2E7D8A;font-weight:900">📖 教科書</button>
     <button type="button" data-t="compat-card" style="background:linear-gradient(135deg,#7C4DBE,#A05CC8);color:#fff;border-color:transparent;font-weight:900;box-shadow:0 2px 7px rgba(124,77,190,.28)">❤ 相性診断</button>
     <button type="button" data-t="ai-slot">詳細鑑定</button>
@@ -1027,7 +1051,7 @@
     <div style="display:flex;justify-content:flex-end;margin:-4px 0 2px"><button type="button" id="mypageClose" class="mp-mini" aria-label="顧客カルテを閉じる">✕ 閉じる</button></div>
     <span class="eyebrow"><b>顧客カルテ</b>お客様の保存・呼び出し・メモ</span>
     <h2>👥 顧客カルテ</h2>
-    <div style="background:var(--sui-w);border:1.5px solid var(--sui);border-radius:11px;padding:10px 13px;margin-bottom:10px;font-size:12.5px;line-height:1.7;color:var(--ink2)"><b style="color:var(--sui)">かんたん3ステップ</b><br><b>①</b> 上の入力欄で <b>「＋鑑定者を保存」</b> → <b>②</b> ここの一覧で <b>「呼び出す」</b>（ワンタップで再表示）→ <b>③</b> 各カルテの <b>メモ欄</b> に特徴・相談内容・約束ごとを書いておく。<br>名前・生年月日・メモ・タグ（VIP／常連など）で<b>検索</b>もできます。</div>
+    <div style="background:var(--sui-w);border:1.5px solid var(--sui);border-radius:11px;padding:10px 13px;margin-bottom:10px;font-size:12.5px;line-height:1.7;color:var(--ink2)"><b style="color:var(--sui)">かんたん3ステップ</b><br><b>①</b> ページ一番上の入力欄で <b>「＋お客様を保存」</b> → <b>②</b> ここの一覧で <b>「呼び出す」</b>（ワンタップで再表示）→ <b>③</b> 各カルテの <b>メモ欄</b> に特徴・相談内容・約束ごとを書いておく。<br>名前・生年月日・メモ・タグ（VIP／常連など）で<b>検索</b>もできます。</div>
     <p class="lead">お客様（鑑定者）・メモ・鑑定結果をここに保存できます。<b>ログイン中はサーバーにも保存</b>され、機種変更・別の端末でも同じデータが見られます（電波がないときは、この端末の中に保存されます）。</p>
     <a href="mypage-pro.html" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-weight:800;font-size:12.5px;color:var(--sui);background:var(--sui-w);border:1.5px solid var(--sui);border-radius:10px;padding:7px 12px;margin-bottom:12px">👤 ご契約状況・解約（別ページ）→</a>
     <button type="button" onclick="memberLogout()" style="display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:12.5px;color:var(--ink2);background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:7px 12px;margin:0 0 12px 6px;cursor:pointer">ログアウト</button>
@@ -1039,9 +1063,9 @@
       <input type="file" id="mp-import-file" accept="application/json" style="display:none">
     </div>
     <details class="adv" id="brand-set" style="margin-bottom:12px">
-      <summary>ブランド設定（印刷・共有の上部に表示）</summary>
+      <summary>屋号・お名前の設定（鑑定書・印刷・共有の上部に表示）</summary>
       <div style="margin-top:10px">
-        <div class="field"><label>ブランド名・お名前（屋号がなければお名前だけでOK）</label><input id="brand-name" type="text" placeholder="〇〇鑑定所／鑑定士〇〇（屋号がなければお名前）"></div>
+        <div class="field"><label>屋号・お名前（屋号がなければお名前だけでOK）</label><input id="brand-name" type="text" placeholder="〇〇鑑定所／鑑定士〇〇（屋号がなければお名前）"></div>
         <div class="field" style="margin-top:10px"><label>ロゴ画像（任意・なくてもOK）</label>
           <input id="brand-logo-file" type="file" accept="image/*">
           <div id="brand-logo-prev" style="margin-top:6px"></div>
@@ -1125,6 +1149,7 @@
     <button class="ask primary" id="autoReadBtn">この命式を詳細に読み解く</button>
     <div class="reading" id="autoReading"></div>
     <div class="or-sep">さらに、気になることを質問する</div>
+    <div style="font-size:11.5px;color:var(--muted);font-weight:700;text-align:center;margin:-2px 0 8px">下の例を押すと質問欄に入ります。内容を確かめてから一番下のボタンを押してください。</div>
     <div class="chips"><button class="chip wchip" data-w="命式から見た性格の本質と、全体運の流れを教えてください。">全体運</button><button class="chip wchip" data-w="仕事や適職について、私に向いている方向を教えてください。">仕事・適職</button><button class="chip wchip" data-w="人付き合いや相性の傾向について教えてください。">人間関係</button><button class="chip wchip" data-w="お金との付き合い方や金運について教えてください。">金運</button><button class="chip wchip" data-w="恋愛や結婚について、私の傾向を教えてください。">恋愛・結婚</button><button class="chip wchip" data-w="恋人ができやすい・恋愛の縁が動きやすいのはいつ頃か、大運と今後の年運から具体的な年で教えてください。">いつ恋愛できる?</button><button class="chip wchip" data-w="婚活を始めるなら、結婚の縁が動きやすいのはいつ頃か、配偶者星と年運から具体的な年で教えてください。">婚活の時期</button><button class="chip wchip" data-w="夫婦・パートナーとの関係の傾向と、これから気をつける時期を教えてください。">夫婦・パートナー</button><button class="chip wchip" data-w="浮気や不倫に関わる悩みです。命式の傾向と、関係が揺れやすい時期、どう向き合えばよいかを教えてください。">浮気・不倫の悩み</button><button class="chip wchip" data-w="別れや復縁について、関係の転機になりやすい時期を大運と年運から教えてください。">別れ・復縁の時期</button><button class="chip wchip" data-w="五行のバランスから、気をつけたい体の傾向と、過ごし方・おすすめの食べ物（薬膳）を教えてください。">健康・養生</button><button class="chip wchip" data-w="来年の年運の流れと、過ごし方のヒントを教えてください。">来年の運気</button><button class="chip wchip" data-w="今年の年運をふまえて、過ごし方のヒントを教えてください。">今年の運勢</button></div>
     <div class="qbox"><div class="qbox-ttl">自由に質問を入力してください</div><div class="qbox-sub">気になることを書くと、この命式に沿って詳しくお答えします。</div><textarea class="worry" id="worry" placeholder="例：今年は転職してもいい時期でしょうか？" style="margin-top:8px"></textarea></div>
     <button class="ask" id="consultBtn">この相談に答えてもらう</button>
@@ -3210,7 +3235,7 @@ function kingunHTML(c){
   </section>`;
 }
 function _kgDayLabel(d){return (d.getMonth()+1)+'月'+d.getDate()+'日（'+['日','月','火','水','木','金','土'][d.getDay()]+'）';}
-function _kgClearAi(id){var a=document.getElementById(id);if(a)a.innerHTML='';}
+function _kgClearAi(id){var a=document.getElementById(id);if(a){a.innerHTML='';a.__rg=(a.__rg||0)+1;}}   // 生成中の文が後から届いても、別の日・月の欄には出さない
 function renderKgDay(dateStr){var c=chart;if(!c)return;var el=document.getElementById('kg-day-detail');if(!el)return;
   var d=dateStr?new Date(dateStr+'T12:00:00'):new Date();if(isNaN(d.getTime()))d=new Date();
   var ev=dayFortuneAt(c,d);el.innerHTML=ev?_kgDetailHTML(ev,'日',_kgDayLabel(d)):'';
@@ -4583,6 +4608,7 @@ function consultHTML(){
     <button class="ask primary" id="autoReadBtn">この命式を詳細に読み解く</button>
     <div class="reading" id="autoReading"></div>
     <div class="or-sep">さらに、気になることを質問する</div>
+    <div style="font-size:11.5px;color:var(--muted);font-weight:700;text-align:center;margin:-2px 0 8px">下の例を押すと質問欄に入ります。内容を確かめてから一番下のボタンを押してください。</div>
     <div class="chips">${WORRIES.map(w=>`<button class="chip wchip" data-w="${w[1]}">${w[0]}</button>`).join('')}</div>
     <div class="qbox"><div class="qbox-ttl">自由に質問を入力してください</div><div class="qbox-sub">気になることを書くと、この命式に沿って詳しくお答えします。</div><textarea class="worry" id="worry" placeholder="例：今年は転職してもいい時期でしょうか？" style="margin-top:8px"></textarea></div>
     <button class="ask" id="consultBtn">この相談に答えてもらう</button>
@@ -4667,14 +4693,16 @@ function yojoHTML(c){
         <div style="font-size:12.5px;line-height:1.9;margin-top:6px">${tips.join('<br>')}</div>
       </div>`;})()}
     ${(()=>{try{const cc=b.counts||{};const w=cc.水||0,ed=cc.土||0,fi=cc.火||0;const ts=natalTsCounts(c);const shoku=ts.食傷||0;
+      // 子宝の目安は、ご年齢的に現実的な範囲（46歳ごろまで）だけで出す。50歳以上の方には、この欄自体を出さない
+      const _by=birthYearOf(c), _age=(c.now&&c.now.age)||0, KID_MAX=46; if(_age>=50) return '';
       const wstate=w>=4?'多め':(w<=1?'控えめ':'適度');const ds=c.dayMaster.stem;const nowY=(c.now&&c.now.year)||new Date().getFullYear();
       const isWater=x=>['壬','癸'].includes(x.stem)||['子','亥'].includes(x.branch);
-      const duHit=(c.decadeFortunes||[]).filter(d=>{const bs=tenStarOf(ds,HONKI[d.branch]);return ['食神','傷官','正財','偏財'].includes(d.tenStar)||['食神','傷官','正財','偏財'].includes(bs)||isWater(d);}).filter(d=>!(c.now&&_nowMonths(c)>=d.endAge*12+(d.months||0))).map(d=>`${duAgeRange(d)}(${d.ganzhi})`).slice(0,3);
-      const yrHit=(c.annualFortunes||[]).filter(a=>a.year>=nowY&&a.year<=nowY+10&&(['食神','傷官','正財','偏財'].includes(a.tenStar)||isWater(a))).map(a=>a.year).slice(0,6);
+      const duHit=(c.decadeFortunes||[]).filter(d=>{const bs=tenStarOf(ds,HONKI[d.branch]);return ['食神','傷官','正財','偏財'].includes(d.tenStar)||['食神','傷官','正財','偏財'].includes(bs)||isWater(d);}).filter(d=>!(c.now&&_nowMonths(c)>=d.endAge*12+(d.months||0))).filter(d=>d.startAge<KID_MAX).map(d=>`${duAgeRange(d)}(${d.ganzhi})`).slice(0,3);
+      const yrHit=(c.annualFortunes||[]).filter(a=>a.year>=nowY&&a.year<=nowY+10&&(!_by||a.year-_by<=KID_MAX)&&(['食神','傷官','正財','偏財'].includes(a.tenStar)||isWater(a))).map(a=>a.year).slice(0,6);
       const tip=wstate==='多め'?'水が多めで冷えやすいので、<b>体を温める食べ物（生姜・クルミ・黒豆）</b>とヨガ・ウォーキングで血流を良くすると整いやすい':wstate==='控えめ'?'水が控えめで乾きやすいので、<b>腎を養う食べ物（黒ごま・山芋・ナッツ）</b>と水分・保湿で潤いを保つとよい':'今のバランスを保つ養生を';
       return `<div style="background:${ec('水')}0e;border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-top:10px">
-        <div style="font-size:12.5px;font-weight:900;color:var(--ink2);margin-bottom:6px">子宝・妊娠のしやすさ <span style="font-weight:700;color:var(--muted)">── 水＝腎（生命の源）／食傷＝子の星（東洋医学の目安）</span></div>
-        <div style="font-size:12.5px;line-height:1.75">水（腎・うるおい）は<b>${wstate}</b>${w>=4?'（冷えやすいので温めを意識）':w<=1?'（乾きやすいので潤いを意識）':'（整いやすい傾向）'}。土（子宮）${ed}・火（温め）${fi}・食傷（子の星）${shoku>0?'あり':'控えめ'}。水がバランス良く、食傷・土が適度で冷えすぎない命式が子宝に恵まれやすいとされます。<br><b>養生</b>：${tip}。</div>
+        <div style="font-size:12.5px;font-weight:900;color:var(--ink2);margin-bottom:6px">子宝・家庭のご縁（養生の目安） <span style="font-weight:700;color:var(--muted)">── 水＝腎（生命の源）／食傷＝子の星（東洋医学の目安）</span></div>
+        <div style="font-size:12.5px;line-height:1.75">水（腎・うるおい）は<b>${wstate}</b>${w>=4?'（冷えやすいので温めを意識）':w<=1?'（乾きやすいので潤いを意識）':'（整いやすい傾向）'}。土（お腹まわり）${ed}・火（温め）${fi}・食傷（子の星）${shoku>0?'あり':'控えめ'}。水がバランス良く、食傷・土が適度で冷えすぎない命式が子宝に恵まれやすいとされます。<br><b>養生</b>：${tip}。</div>
         ${(duHit.length||yrHit.length)?`<div style="font-size:12.5px;margin-top:6px"><b style="color:${ec('水')}">子宝・家庭の縁が動きやすい時期の目安</b>：${duHit.length?'大運 '+duHit.join('・'):''}${(duHit.length&&yrHit.length)?'／':''}${yrHit.length?'年 '+yrHit.map(y=>y+'年').join('・'):''}<span style="color:var(--muted)">（水・食傷・財星が巡る時）</span></div>`:''}
         <div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:6px">※東洋医学の養生・傾向の目安です。妊娠は多くの要因で決まり、命式で決まるものではありません。妊活・体調のことは医療機関にご相談ください。</div>
       </div>`;}catch(e){return '';}})()}
@@ -4749,7 +4777,11 @@ function renderResult(){
   const c=chart;
   // 起動直後の見本には、見本であることを結果の一番上に出す（自分で占うと消える）
   const sampleNote=window.__isSample?'<div class="sample-note" style="margin:0 0 12px;padding:11px 14px;border:2px dashed #E2A12B;border-radius:12px;background:#FFF8E8;color:#7A5200;font-size:13.5px;font-weight:800;line-height:1.75">📝 これは<b>見本</b>です（2000年1月1日 12時生まれの例）。<br>上の欄に生年月日を入れて「'+(((document.getElementById('f-go')||{}).textContent||'この内容で占う').trim())+'」を押すと、その方の鑑定になります。</div>':'';
-  document.getElementById('ai-slot').innerHTML = consultHTML();
+  // 同じ人の表示切替（縦横・大運/年運の行・蔵干の切替）では、詳細鑑定・相談の回答・入力中の相談文を消さない（作り直すのは人が変わったときだけ）
+  (function(){ var _s=document.getElementById('ai-slot'), _w=document.getElementById('worry'), _wv=_w?_w.value:'';
+    if(window.__keepAiSlot && _s && _s.querySelector('#autoReading')) return;
+    _s.innerHTML = consultHTML();
+    var _w2=document.getElementById('worry'); if(_w2 && _wv && window.__keepWorry) _w2.value=_wv; })();
   // 要点サマリーは #result に、以降は #result-body に分割（並び：要点→命式(納音・相生相剋など分析込みの完全版)→詳細鑑定→相性→会局→五行→大運年運→恋愛→養生）
   // 命式表は「詳細鑑定を読む前に確認したい」という要望で、完全版を要点の直後に一本化（前後で二重に出さない）。
   document.getElementById('result').innerHTML =
@@ -4840,7 +4872,7 @@ if(!window.__gogyoPinBound){ window.__gogyoPinBound=1;
 function selectZou(label,idx){ if(idx<0) delete zouOverride[label]; else zouOverride[label]=idx; reRenderKeep(); }
 /* 再描画してもスクロール位置を保つ（縦/横・大運・年運・蔵干の切替でページ先頭へ飛ばさない）。
    再描画の前に現在位置を控え、直後に復元する。以前は_sk=0固定で常に最上部へ飛んでいた不具合を修正。 */
-function reRenderKeep(){ const y=window.scrollY||window.pageYOffset||0; renderResult(); window.scrollTo(0,y); }
+function reRenderKeep(){ const y=window.scrollY||window.pageYOffset||0; window.__keepAiSlot=true; try{ renderResult(); }finally{ window.__keepAiSlot=false; } window.scrollTo(0,y); }
 function scrollKeep(){ reRenderKeep(); }
 document.addEventListener('scroll',()=>{_sk=window.scrollY;},{passive:true});
 
@@ -6083,13 +6115,15 @@ async function generateReading(user,localText,system,deep){
   const useServer=!geminiKey;
   aiEngine=useServer?'詳細鑑定':('詳細鑑定 '+geminiModel);
   const _body=JSON.stringify({system_instruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:user}]}],generationConfig:genCfg});
+  // 電波が途中で止まったときに待ち続けないよう、70秒で打ち切って端末内の鑑定へ切り替える
+  const _fetchT=(u,o)=>{ try{ const ac=new AbortController(); setTimeout(()=>ac.abort(),70000); return fetch(u,Object.assign({},o,{signal:ac.signal}));   /* 本文の受信中に止まった場合も打ち切る（完了後の中断は何も起きない） */ }catch(e){ return fetch(u,o); } };
   async function callOnce(){
     let data;
     try{
       let r;
       if(useServer){ var _hdr={"Content-Type":"application/json"}; if(deep)_hdr["x-pk-deep"]="1"; try{ var _tk=localStorage.getItem("member_token")||sessionStorage.getItem("member_token"); if(_tk)_hdr["Authorization"]="Bearer "+_tk; }catch(_e){}  /* 会員確認（サーバーで検証） */
-        r=await fetch('/.netlify/functions/gemini',{method:"POST",headers:_hdr,body:_body}); }
-      else{ r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${encodeURIComponent(geminiKey)}`,
+        r=await _fetchT('/.netlify/functions/gemini',{method:"POST",headers:_hdr,body:_body}); }
+      else{ r=await _fetchT(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${encodeURIComponent(geminiKey)}`,
         {method:"POST",headers:{"Content-Type":"application/json"},body:_body}); }
       if(useServer&&(r.status===401||r.status===403)){ _authErr=r.status; return null; }   // ログイン切れ・ご利用できない状態
       data=await r.json();
@@ -6112,13 +6146,17 @@ async function generateReading(user,localText,system,deep){
 }
 async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
   const sc=safety||'';  // 自傷・希死念慮を検知したら、AIを待たずに最上部へ相談窓口を必ず表示（オンライン/オフライン/ブロック時も出す）
+  const gen=(out.__rg=(out.__rg||0)+1);   // 生成中に人・表示が変わったら、後から届いた古い結果は捨てる（別の人の欄に出さない）
+  const stale=()=>out.__rg!==gen||!out.isConnected;
   btn.disabled=true;out.innerHTML=sc+'<div class="loading"><span class="spin"></span>命式を読み解いています…</div>';
   try{
     const res=await generateReading(user,localText,undefined,deep);
+    if(stale())return;
     out.innerHTML=sc+engineBadge(res.online,res.fallback?res.note:'')+formatReading(res.text);
     attachReadingTools(out,res.text);
     if(proUser)appendPro(out,proUser,localText,deep,proLocal);
   }catch(e){console.error(e); // 想定外のエラーでもオフライン鑑定を出す
+    if(stale())return;
     out.innerHTML=sc+engineBadge(false,'通信できないため、端末内で作成した鑑定（オフライン鑑定）を表示しています。')+formatReading(localText);
     attachReadingTools(out,localText); if(proUser)appendPro(out,proUser,localText,deep,proLocal);}
   finally{btn.disabled=false;}
@@ -6790,7 +6828,7 @@ function buildCompatBase(out){
   if(!chart){out.innerHTML='<div class="err">本人（あなた側）の情報を入力してください。</div>';return null;}
   const _bNoTime=document.getElementById('b-notime')&&document.getElementById('b-notime').checked;
   const dv=document.getElementById('b-date').value, tv=_bNoTime?'12:00':(_normHM(document.getElementById('b-time').value)||'12:00');
-  if(!dv){out.innerHTML='<div class="err">お相手の生年月日を入力してください。</div>';return null;}
+  if(!dv||!window.__bTouched){out.innerHTML='<div class="err">お相手の生年月日を選んでください（まだ選ばれていません）。</div>';try{out.scrollIntoView({behavior:'smooth',block:'center'});}catch(e){}return null;}
   const [y,mo,d]=dv.split('-').map(Number),[h,mi]=tv.split(':').map(Number);
   { const _bd=new Date(y,mo-1,d), _td=new Date(); _td.setHours(23,59,59,999);
     if(isNaN(_bd)||_bd.getMonth()!==mo-1||_bd>_td||y<1900){ out.innerHTML='<div class="err">お相手の生年月日をご確認ください（今日より先の日付や、実在しない日付は選べません）。</div>'; return null; } }
@@ -6835,6 +6873,7 @@ async function doCompat(){
   const easy=`${head}\n\n${ask}\n【書き方＝最重要】鑑定は「深く、しかし分かりやすく伝わりやすい言葉」で書く。専門用語（通変星・十二運・蔵干・干支・五行・三合・空亡・月支元命など）は使ってよいが、出てきたら必ずその場で“ふつうの言葉”で短く言いかえる（例:「正官（規律と責任を大切にする星）」「三合（息が合って力がまとまること）」）。内容・根拠・深さは削らず、伝わりやすさだけを上げる。全体850〜1050字。`;
   const pro=`${head}\n\n${ask}\n【書き方】四柱推命の専門用語（通変星名・三合・半合・空亡・月支元命・相生相剋など）はそのままの言葉で明示してよい。とくに「2人の命式を合わせた相性ポイント」の“通変星の相生の流れ”（例:「食傷は比劫に生かされる」「比劫は印に生かされる」）は、言いかえずに通変星の言葉のまま根拠として書く。プロの鑑定家に通用する本格鑑定として、専門用語を省かず深く。全体850〜1050字。`;
   runReading(document.getElementById('compatBtn'),out,easy,localCompat(chart,chartB,na,nb,rt),pro);
+  try{ const v=document.getElementById('compat-verdict'); (v&&v.innerHTML.trim()?v:out).scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){}   // 結果が画面外に出て「何も起きない」ように見えないように
 }
 // 相性について自由にAIへ質問
 async function doCompatAsk(){
@@ -7025,7 +7064,7 @@ function addClient(){
       return;
     }
   }
-  if(i>=0){if(!confirm('同じ名前・生年月日時の鑑定者がいます。上書きしますか？'))return;doc.clients[i]=Object.assign(doc.clients[i],base,{ts:Date.now()});currentClientId=doc.clients[i].id;}
+  if(i>=0){if(!confirm('同じ名前・生年月日時のお客様がいます。上書きしますか？'))return;doc.clients[i]=Object.assign(doc.clients[i],base,{ts:Date.now()});currentClientId=doc.clients[i].id;}
   else{const rec=Object.assign({id:mpNewId('c_')},base,{memo:'',readings:[],ts:Date.now(),deleted:false});doc.clients.unshift(rec);currentClientId=rec.id;}
   mpWrite(doc);renderClients();mpTouch();
   /* カルテ一覧は自動で開かない（フォームの邪魔にならないよう閉じたまま）。保存はボタン表示で通知。 */
@@ -7057,7 +7096,7 @@ function loadPartner(id){const c=mpLoad().clients.find(x=>x.id===id&&!x.deleted)
   {const bt=document.getElementById('b-time');bt.value=c.time||'12:00';if(bt.syncFromValue)bt.syncFromValue();}
   {const nt=document.getElementById('b-notime');if(nt){nt.checked=!!c.notime;if(nt.onchange)nt.onchange();}}
   {const bp=document.getElementById('b-pref');if(bp)bp.value=c.pref||'';}
-  setSexB(c.sex==='male'?'male':'female'); clearCompatResult();
+  setSexB(c.sex==='male'?'male':'female'); clearCompatResult(); window.__bTouched=true;
 }
 function loadClient(id){const c=mpLoad().clients.find(x=>x.id===id&&!x.deleted);if(!c)return;
   // 別のお客様を呼び出したら、前のお客様の「お相手」の入力は消す（次のお客様の前に前の人の情報を出さない）
@@ -7073,9 +7112,14 @@ function setMemo(id,v){const doc=mpLoad();const c=doc.clients.find(x=>x.id===id)
 function saveReadingToClient(kind,title,text){
   if(!text){alert('保存する鑑定がありません。先に鑑定を表示してください。');return;}
   let cur=mpLoad().clients.find(x=>x.id===currentClientId&&!x.deleted);
-  if(!cur){const dv=document.getElementById('f-date').value;if(!dv){alert('先に「＋鑑定者を保存」で鑑定者を登録してください。');return;}addClient();cur=mpLoad().clients.find(x=>x.id===currentClientId);if(!cur)return;}
+  // 入力欄が別の人に変わっていたら、前に呼び出したお客様のカルテには入れない（いまの入力の人として保存する）
+  if(cur){const _fn=document.getElementById('f-name').value.trim(), _fd=document.getElementById('f-date').value;
+    if(cur.name!==_fn||cur.date!==_fd){cur=null;currentClientId=null;}}
+  if(!cur){const dv=document.getElementById('f-date').value;if(!dv){alert('先に「＋お客様を保存」でお客様を登録してください。');return;}addClient();cur=mpLoad().clients.find(x=>x.id===currentClientId);if(!cur)return;}
   const doc=mpLoad();const c=doc.clients.find(x=>x.id===cur.id);
-  c.readings=c.readings||[];c.readings.unshift({id:mpNewId('r_'),kind,title,text,ts:Date.now()});c.ts=Date.now();
+  c.readings=c.readings||[];
+  if(c.readings[0]&&c.readings[0].text===text){alert('この鑑定は「'+c.name+'」にすでに保存されています。');return;}   // 2回押しても同じ鑑定を二重に保存しない
+  c.readings.unshift({id:mpNewId('r_'),kind,title,text,ts:Date.now()});c.ts=Date.now();
   if(!mpWrite(doc))return;   // 端末の容量がいっぱいで保存できなかった（お知らせは mpWrite が出す）
   renderClients();mpTouch();
   const my=document.getElementById('mypage-card');if(my)my.scrollIntoView({behavior:'smooth',block:'start'});
@@ -7201,14 +7245,16 @@ function attachReadingTools(out,text){
   var _shint=document.createElement('div');_shint.className='no-print';_shint.style.cssText='margin:6px 2px 0;font-size:11.5px;color:#6E7480;font-weight:700;line-height:1.7';
   _shint.innerHTML='「共有」はLINE等に<b>文章として</b>送ります（相手は読める・コピー可）。相手も<b>印刷・保存</b>したいときは「🖨 印刷 / PDF保存」で<b style="color:var(--ka)">PDF</b>にして送ってください。';
   out.appendChild(_shint);
-  bar.querySelector('.rd-save').onclick=function(){saveReadingToClient(kind,title,curText);};
-  bar.querySelector('.rd-share').onclick=function(){shareText(title,curText);};
+  // 編集中（「✓ 編集を反映」を押す前）でも、保存・共有・印刷は編集欄のいまの文章を使う
+  const live=function(){ const ta=out.querySelector('.rd-edit-area'); if(ta){curText=ta.value;_lastReading[kind]=curText;} return curText; };
+  bar.querySelector('.rd-save').onclick=function(){saveReadingToClient(kind,title,live());};
+  bar.querySelector('.rd-share').onclick=function(){shareText(title,live());};
   bar.querySelector('.rd-print').onclick=function(){
     // 相性＝両者の名前＋相性鑑定書（命式表は付けない）／個人＝本人の名前＋個人鑑定書
     var head=(kind==='compat')
       ? '<div style="font-size:15px;font-weight:900;margin:0 0 12px;padding-bottom:8px;border-bottom:1.5px solid #eee">'+esc((personName||'本人')+' さん　×　'+(personNameB||'お相手')+' さん　の相性鑑定')+'</div>'
       : (personName? '<div style="font-size:15px;font-weight:900;margin:0 0 12px;padding-bottom:8px;border-bottom:1.5px solid #eee">'+esc(personName+' さん　の鑑定')+'</div>' : '');
-    printHTML(title,head+formatReading(curText),true);
+    printHTML(title,head+formatReading(live()),true);
   };
   let editing=false;
   bar.querySelector('.rd-edit').onclick=function(){
@@ -7253,11 +7299,11 @@ function renderClients(){
     if(ql){
       if(all.length){
         ql.disabled=false; ql.style.color='var(--sui)'; ql.style.borderColor='var(--sui)'; ql.style.background='#F2F7FF';
-        ql.innerHTML='<option value="">保存した鑑定者を選ぶとここに読み込めます（'+all.length+'人）</option>'+
+        ql.innerHTML='<option value="">保存したお客様を選ぶとここに読み込めます（'+all.length+'人）</option>'+
           all.map(c=>`<option value="${c.id}">${esc(c.name)}（${c.date}・${c.sex==='female'?'女性':'男性'}）</option>`).join('');
       }else{
         ql.disabled=true; ql.style.color='var(--muted)'; ql.style.borderColor='var(--line2)'; ql.style.background='#F6F6F8';
-        ql.innerHTML='<option value="">まだ保存した人がいません（下の「＋鑑定者を保存」で追加）</option>';
+        ql.innerHTML='<option value="">まだ保存したお客様はいません</option>';
       }
     }}
   {const bq=document.getElementById('b-quickload'),row=document.getElementById('b-quickload-row');
@@ -7273,9 +7319,9 @@ function renderClients(){
       <button class="client-load" data-id="${c.id}" style="flex:1;text-align:left;background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px">
         <b style="color:var(--ink)">${esc(c.name)}</b><small style="color:var(--muted)">${c.date} ${c.time}・${c.sex==='female'?'女性':'男性'}${(c.readings&&c.readings.length)?'・鑑定'+c.readings.length+'件':''}${(c.tags&&c.tags.length)?'・#'+esc(c.tags.slice(0,3).join(' #')):''}</small></button>
       <button class="client-del" data-id="${c.id}" title="削除" style="flex:0 0 auto;width:40px;background:transparent;border:1.5px solid var(--line);border-radius:12px;color:var(--muted);font-size:18px;cursor:pointer">×</button>
-    </div>`).join(''):'<div class="hint">「'+esc(q)+'」に一致する鑑定者はいません。</div>'):'<div class="hint">まだ保存された鑑定者はいません。名前と生年月日を入れて「＋鑑定者を保存」を押すと、ここに一覧表示され、ワンタップで呼び出せます。</div>';
+    </div>`).join(''):'<div class="hint">「'+esc(q)+'」に一致するお客様はいません。</div>'):'<div class="hint">まだ保存されたお客様はいません。名前と生年月日を入れて「＋お客様を保存」を押すと、ここに一覧表示され、ワンタップで呼び出せます。</div>';
     box.querySelectorAll('.client-load').forEach(b=>b.onclick=()=>loadClient(b.dataset.id));
-    box.querySelectorAll('.client-del').forEach(b=>b.onclick=()=>{if(confirm('この鑑定者を削除しますか？\nメモ・タグ・保存した鑑定もすべて消え、元に戻せません。'))delClient(b.dataset.id);});
+    box.querySelectorAll('.client-del').forEach(b=>b.onclick=()=>{if(confirm('このお客様を削除しますか？\nメモ・タグ・保存した鑑定もすべて消え、元に戻せません。'))delClient(b.dataset.id);});
   }
   const my=document.getElementById('mypage-list');
   if(my){
@@ -7287,18 +7333,20 @@ function renderClients(){
       const rd=(c.readings||[]).map(r=>`<div class="mp-rd"><span class="mp-rd-t">${esc(r.title||readingKindLabel(r.kind))}</span><span class="mp-rd-a"><a onclick="viewReading('${c.id}','${r.id}')">開く</a>・<a onclick="shareReading('${c.id}','${r.id}')">共有</a>・<a onclick="if(confirm('この鑑定を削除しますか？'))delReading('${c.id}','${r.id}')">削除</a></span></div>`).join('')||'<div class="hint" style="margin:6px 0 0">保存された鑑定はまだありません。鑑定文の下の「この鑑定を保存」で追加できます。</div>';
       return `<div class="mp-item">
         <div class="mp-head"><div><b>${esc(c.name)}</b>${c.kana?'<span style="font-size:11px;color:var(--muted);font-weight:700;margin-left:6px">'+esc(c.kana)+'</span>':''}<br><small>${c.date} ${c.time}・${c.sex==='female'?'女性':'男性'}</small></div>
-          <div class="mp-actions"><button onclick="loadClient('${c.id}')">呼び出す</button><button class="del" onclick="if(confirm('この鑑定者を削除しますか？\\nメモ・タグ・保存した鑑定もすべて消え、元に戻せません。'))delClient('${c.id}')">×</button></div></div>
+          <div class="mp-actions"><button onclick="loadClient('${c.id}')">呼び出す</button><button class="del" onclick="if(confirm('このお客様を削除しますか？\\nメモ・タグ・保存した鑑定もすべて消え、元に戻せません。'))delClient('${c.id}')">×</button></div></div>
         ${_tagChips(c)}
-        <input class="mp-kanain" placeholder="ふりがな（並べ替え用／任意）" value="${esc(c.kana||'')}" onchange="setKana('${c.id}',this.value)" style="width:100%;margin-top:6px;height:34px;padding:0 10px;border:1px solid var(--line2);border-radius:9px;font-family:inherit;font-size:12.5px;box-sizing:border-box">
+        <input class="mp-kanain" placeholder="ふりがな（任意）" value="${esc(c.kana||'')}" onchange="setKana('${c.id}',this.value)" style="width:100%;margin-top:6px;height:34px;padding:0 10px;border:1px solid var(--line2);border-radius:9px;font-family:inherit;font-size:12.5px;box-sizing:border-box">
         <input class="mp-tagin" placeholder="タグ（カンマ区切り。例: VIP, 常連, 恋愛）" value="${esc((c.tags||[]).join(', '))}" onchange="setTags('${c.id}',this.value)" style="width:100%;margin-top:6px;height:34px;padding:0 10px;border:1px solid var(--line2);border-radius:9px;font-family:inherit;font-size:12.5px;box-sizing:border-box">
         <textarea class="mp-memo" placeholder="メモ（特徴・相談内容・約束ごとなど）" onchange="setMemo('${c.id}',this.value)">${esc(c.memo||'')}</textarea>
         <div class="mp-rds">${rd}</div>
       </div>`;
-    }).join('')+(list.length>_shown.length?'<button type="button" onclick="mpShowN+=40;renderClients()" style="width:100%;margin-top:8px;height:44px;border:1.5px solid var(--line2);border-radius:12px;background:#fff;font:inherit;font-weight:800;color:var(--ink2);cursor:pointer">さらに表示（残り'+(list.length-_shown.length)+'人）</button>':''):'<div class="hint">「'+esc(q)+'」に一致する鑑定者はいません。</div>'):'<div class="hint">まだ保存された鑑定者はいません。上の入力で「＋鑑定者を保存」を押すと、ここに表示されます。鑑定文の下の「この鑑定を保存」で鑑定結果も残せます。</div>';
+    }).join('')+(list.length>_shown.length?'<button type="button" onclick="mpShowN+=40;renderClients()" style="width:100%;margin-top:8px;height:44px;border:1.5px solid var(--line2);border-radius:12px;background:#fff;font:inherit;font-weight:800;color:var(--ink2);cursor:pointer">さらに表示（残り'+(list.length-_shown.length)+'人）</button>':''):'<div class="hint">「'+esc(q)+'」に一致するお客様はいません。</div>'):'<div class="hint">まだ保存されたお客様はいません。上の入力で「＋お客様を保存」を押すと、ここに表示されます。鑑定文の下の「この鑑定を保存」で鑑定結果も残せます。</div>';
   }
 }
 /* 検索は打ち終わるのを少し待ってから一覧を作り直す（1文字ごとに全員分を描き直さない） */
 let _rcT=null; function renderClientsSoon(){ clearTimeout(_rcT); _rcT=setTimeout(renderClients,180); }
+// 別のタブで顧客カルテを保存したら、こちらの一覧もすぐ最新にする（データは書き込みのたびに統合済み。表示だけの更新）
+window.addEventListener('storage',function(e){ try{ if(e.key&&e.key.indexOf('bazi_mypage_v2')===0&&typeof renderClientsSoon==='function') renderClientsSoon(); }catch(_e){} });
 /* バックアップ：書き出し／読み込み（クラウド不調時の保険・手動移行用） */
 function mpExport(){
   // 機種変更でも屋号・ロゴ・差し色が引き継がれるよう、ブランド設定も一緒に書き出す
@@ -7529,7 +7577,12 @@ document.querySelectorAll('#f-sex button').forEach(b=>b.onclick=()=>setSex(b.dat
 document.querySelectorAll('#theme-tg button').forEach(b=>b.onclick=()=>{theme=b.dataset.th;
   document.getElementById('root').dataset.theme=theme;
   document.querySelectorAll('#theme-tg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.th===theme));});
-document.getElementById('f-go').onclick=compute;
+document.getElementById('f-go').onclick=function(){
+  // 同じ入力でのダブルクリック・連打は1回として扱う（詳細鑑定が二重に作られ、1日の回数を余分に使うのを防ぐ）
+  const k=['f-name','f-date','f-time','f-pref','f-corr'].map(id=>{const e=document.getElementById(id);return e?e.value:'';}).join('|')+'|'+sex+'|'+(document.getElementById('f-notime')||{}).checked;
+  const t=Date.now(); if(window.__lastGo&&window.__lastGo.k===k&&t-window.__lastGo.t<2000)return;
+  window.__lastGo={k,t}; try{ compute(); }finally{ window.__lastGo.t=Date.now(); }   // 計算中にたまった2回目のクリックも、計算の終わりから数える
+};
 // 使い方モード切替（個人鑑定／相性診断）。相性モードは個人鑑定を隠して相性入力へ直行。
 window.__uiMode='personal';
 (function(){
@@ -7578,17 +7631,18 @@ function resetMain(){
   const cr=document.getElementById('f-corr');if(cr)cr.value='full';
   const lt=document.getElementById('love-target');if(lt)lt.value='';
   setSex('female');
-  chart=null;zouOverride={};selDu=-1;selYear=null;
+  chart=null;zouOverride={};selDu=-1;selYear=null;currentClientId=null;
   document.getElementById('result').innerHTML='';
   {const _rb=document.getElementById('result-body');if(_rb)_rb.innerHTML='';}
   document.getElementById('ai-slot').innerHTML='';
   resetCompat();   // 「最初からやり直す」＝相性（お相手・結果）もまるごとリセット
   window.scrollTo({top:0,behavior:'smooth'});
 }
-document.getElementById('f-reset').onclick=resetMain;
+document.getElementById('f-reset').onclick=function(){ if(confirm('いま画面に出ている入力と鑑定結果を消します。\n（保存したお客様・顧客カルテは消えません）\nよろしいですか？')) resetMain(); };
 // 相性の「結果だけ」消す（お相手の入力欄は残す）＝本人を占い直したときに古い相性結果を残さないため
 function clearCompatResult(){
   chartB=null;
+  {const _c=document.getElementById('compat'); if(_c)_c.__rg=(_c.__rg||0)+1;}   // 生成中の相性文が後から届いても出さない
   ['compat','compat-verdict','compat-meishi'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});
 }
 // リセット（相性のお相手）
@@ -7599,7 +7653,7 @@ function resetCompat(){
   const bnt=document.getElementById('b-notime');if(bnt)bnt.checked=false;
   const bp=document.getElementById('b-pref');if(bp)bp.value='';
   const rt=document.getElementById('rel-type');if(rt)rt.value='love';
-  setSexB('male');
+  setSexB('male'); window.__bTouched=false;
   const cw=document.getElementById('compat-worry');if(cw)cw.value='';
   chartB=null;
   document.getElementById('compat').innerHTML='';
@@ -7607,11 +7661,19 @@ function resetCompat(){
   var _cm=document.getElementById('compat-meishi');if(_cm)_cm.innerHTML='';
 }
 document.getElementById('compat-reset').onclick=resetCompat;
+// お相手の生年月日を実際に選んだか（初期値の2000年1月1日のまま、架空の相手で相性を出さないため）
+window.__bTouched=false;
+['b-y','b-m','b-d','b-date'].forEach(id=>{const e=document.getElementById(id); if(e) e.addEventListener('change',()=>{window.__bTouched=true;});});
 // フローティング「最初へ戻る」
 (function(){const t=document.createElement('button');t.id='toTop';t.type='button';t.textContent='↑ 最初へ';
   t.style.cssText='position:fixed;right:14px;bottom:16px;z-index:9000;padding:10px 15px;border:0;border-radius:999px;background:var(--ink);color:#fff;font-family:inherit;font-weight:900;font-size:13px;box-shadow:0 6px 18px rgba(0,0,0,.28);cursor:pointer;opacity:.92';
   t.onclick=()=>window.scrollTo({top:0,behavior:'smooth'});
-  document.body.appendChild(t);})();
+  document.body.appendChild(t);
+  // ページの上の方では出さない（入力欄やボタンに重ならないように）
+  const vis=()=>{ t.style.display=(window.scrollY>900)?'':'none'; }; vis(); window.addEventListener('scroll',vis,{passive:true});})();
+/* 固定ナビの実際の高さ（2段に折り返すとき等）を測って、移動先がナビの下に隠れないようにする */
+(function(){ function upd(){ const j=document.getElementById('jumpnav'); const h=(j&&j.classList.contains('on')&&getComputedStyle(j).display!=='none')?j.offsetHeight+8:0; document.documentElement.style.setProperty('--jn-h',h+'px'); }
+  upd(); window.addEventListener('resize',upd); try{ new MutationObserver(upd).observe(document.getElementById('jumpnav'),{attributes:true,attributeFilter:['class','style'],childList:true,subtree:true}); new MutationObserver(upd).observe(document.documentElement,{attributes:true,attributeFilter:['class']}); }catch(e){} setInterval(upd,1500); })();
 /* ブランド設定（ホワイトラベル：このブラウザ内に保存。印刷・共有に反映） */
 brandName=store.get('bazi_brand_name')||''; brandLogo=store.get('bazi_brand_logo')||''; brandColor=store.get('bazi_brand_color')||'';
 function loadBrandUI(keepInputs){
@@ -7636,7 +7698,7 @@ function loadBrandUI(keepInputs){
     brandColor=(document.getElementById('brand-color')||{}).value||'';
     store.set('bazi_brand_name',brandName);store.set('bazi_brand_color',brandColor||'');
     try{store.set('bazi_brand_logo',brandLogo||'');}catch(e){alert('ロゴ画像が大きすぎて保存できませんでした。小さめの画像をお使いください。');}
-    alert('ブランド設定を保存しました。印刷・共有の上部に反映されます。');};
+    alert('屋号・お名前を保存しました。鑑定書・印刷・共有の上部に反映されます。');};
   const cl=document.getElementById('brand-clear');if(cl)cl.onclick=function(){
     brandName='';brandLogo='';brandColor='';
     store.set('bazi_brand_name','');store.set('bazi_brand_logo','');store.set('bazi_brand_color','');

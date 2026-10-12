@@ -411,6 +411,14 @@
   .rd-cols{ column-count:3; column-gap:26px; }
   /* ===== 画面プレビュー：鑑定書を「A4横カード」に分割（命式表と同じ用紙・同じ位置・1枚＝A4横） ===== */
   #sheetRead{ display:none; }                     /* 旧・単一カードは裏の生成バッファに（表示は #readPages） */
+  /* 共有リンクをスマホで開いたとき：鑑定書はA4カードに区切らず1列で流し、表は横にスクロールして読む */
+  body.share-mobile #readPages{ display:none !important; }
+  body.share-mobile #sheetRead{ display:block !important; }
+  body.share-mobile .sheet, body.share-mobile .sheet-yoko{ width:100% !important; max-width:100% !important; min-width:0 !important; height:auto !important; box-sizing:border-box; overflow-x:auto; }
+  body.share-mobile #sheetsWrap{ display:block !important; width:100% !important; transform:none !important; }
+  body.share-mobile #paper{ height:auto !important; overflow:visible !important; }
+  body.share-mobile .sheet table{ min-width:0; }
+  body.share-mobile .sch-ph:empty, body.share-mobile .sch-sep{ display:none !important; }
   .rd-pages{ display:flex; flex-direction:column; gap:26px; }
   .rd-page{ height:834px; overflow:hidden; }      /* 1180×834 ＝ A4横1枚 */
   .rd-page .rd-body{ flex:1 1 auto; min-height:0; margin-top:0; }
@@ -917,12 +925,12 @@ function _inDu(r,d){ var x=_nowX(r); if(x==null||!d) return false; var m=(d.ageM
     </div>
     <div class="bar-row" id="calcRow2">
       <div class="savebox">
-        <button type="button" id="saveBtn" title="この生年月日を保存">💾 保存</button>
-        <label for="savedList" class="glabel">保存済み</label>
+        <button type="button" id="saveBtn" title="この生年月日を、この端末だけに簡易保存">💾 この端末に保存</button>
+        <label for="savedList" class="glabel">この端末の保存</label>
         <select id="savedList"><option value="">— 呼び出す —</option></select>
         <button type="button" id="delBtn" title="選択中の保存を削除">削除</button>
       </div>
-      <span class="share-hint"><b style="color:#b06a00">※「💾保存」はこの端末内のみ</b>（別の端末・ブラウザには出ません）。大切な鑑定書は <b>🖨PDF保存</b> か <b>📄共有</b> で残してください。</span>
+      <span class="share-hint"><b style="color:#b06a00">※ここでの保存は、この端末だけの簡易メモです</b>（別の端末・ブラウザには出ません）。お客様の記録はアプリの<b>「顧客カルテ」</b>へ。大切な鑑定書は <b>🖨PDF保存</b> か <b>📄共有</b> で残してください。</span>
     </div>
     <!-- 身旺・身弱の上書き：鑑定書を見ながらいつでも切り替えられるよう、常時表示（詳細設定の中には入れない） -->
     <div class="bar-row" id="strengthRow">
@@ -3298,8 +3306,12 @@ window.KANSHI60_DETAIL={
   //       ピンチで拡大して見られる（幅にはピッタリ収まり、横スクロールも見切れも無し）。
   function fitSheet(){
     var sheet=document.getElementById('sheetsWrap')||document.getElementById('sheet'), paper=document.getElementById('paper'); if(!sheet||!paper) return;
-    document.body.classList.remove('mobile-view');   // 常にA4：縦読みには切り替えない
     var isPrint=(window.matchMedia && window.matchMedia('print').matches);
+    // 共有リンクをスマホで開いたお客様には、A4を縮めた小さな表示ではなく、スマホで読める1列の表示にする（印刷は従来どおりA4）
+    var shareMob=!isPrint && document.body.classList.contains('share-view') && (window.innerWidth||1000)<760;
+    document.body.classList.toggle('share-mobile',shareMob);
+    if(shareMob){ document.body.classList.add('mobile-view'); sheet.style.transform='none'; sheet.style.marginLeft=''; paper.style.height=''; return; }
+    document.body.classList.remove('mobile-view');   // 常にA4：縦読みには切り替えない
     if(isPrint){                                      // 印刷/PDFはA4のまま（@media print が担当）
       sheet.style.transform='none'; sheet.style.marginLeft=''; paper.style.height=''; return;
     }
@@ -3393,10 +3405,16 @@ window.KANSHI60_DETAIL={
 
   // ---- モード ----
   function setMode(mode){
+    var prev=body.getAttribute('data-mode');
+    if(mode==='blank' && prev!=='blank' && window.__sheetEdited && !confirm('「記入用（空欄）」にすると、表と、画面で書き直した文章が空欄になります。よろしいですか？')) return;
     body.setAttribute('data-mode', mode);
     document.getElementById('mAuto').setAttribute('aria-pressed', String(mode==='auto'));
     document.getElementById('mBlank').setAttribute('aria-pressed', String(mode==='blank'));
     if(mode==='blank') clearSheet();
+    // 空欄から「自動計算」に戻したら、入っている生年月日でもう一度計算して表を埋める（空欄のまま残さない）
+    if(mode==='auto' && prev==='blank' && (document.getElementById('iDate')||{}).value){
+      try{ var f=document.getElementById('calcForm'); if(f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('submit',{cancelable:true})); }catch(e){}
+    }
   }
   document.getElementById('mAuto').addEventListener('click', function(){ setMode('auto'); });
   document.getElementById('mBlank').addEventListener('click', function(){ setMode('blank'); });
@@ -3516,7 +3534,10 @@ window.KANSHI60_DETAIL={
   // 📄 共有：スマホは共有シート（LINE・メール等）にリンクを渡す。非対応はコピー。
   (function(){
     var sb=document.getElementById('shareBtn'); if(!sb) return;
+    // 画面で文章を書き直したかを覚えておく（リンクには書き直しは入らないため、送る前に知らせる）
+    document.addEventListener('input', function(e){ var t=e.target; if(t&&t.isContentEditable&&t.closest&&t.closest('.sheet-read, #readPages')) window.__sheetEdited=true; }, true);
     sb.addEventListener('click', function(){
+      if(window.__sheetEdited && !confirm('画面で書き直した文章は、リンクには入りません（お客様には、生年月日から作られた元の鑑定書が表示されます）。\n\n書き直した内容のまま送りたいときは「キャンセル」を押し、「🖨 印刷 / PDF保存」でPDFにして送ってください。\n\nこのままリンクを送りますか？')) return;
       var url=buildShareURL();
       var nm=(function(){var e=document.getElementById('iName');return e&&e.value?e.value:'';})();
       var title='四柱推命 鑑定書', text=(nm?nm+'さんの':'')+'鑑定書です。リンクを開くと表示されます。';
@@ -4122,6 +4143,10 @@ window.KANSHI60_DETAIL={
     var r=_lastResult;
     var nm=((document.getElementById('rdName')||{}).textContent||'').replace(/[　\s]*様$/,'').trim();
     var isEasy=(_readLevel==='easy');
+    var myLevel=_readLevel, myPlain=!!window.__bgPlain;
+    /* 作成中に「別の人で鑑定する」「やさしい版／本格版の切替」「定型文に切替」があったら、届いた文章は使わない（いまの内容で作り直す） */
+    function stale(){ return _lastResult!==r || _readLevel!==myLevel || !!window.__bgPlain!==myPlain || _readEngine!=='ai'; }
+    function redo(){ _aiBusy=false; if(_readEngine==='ai' && _lastResult) generateAIReading(); }
     var sys='あなたは四柱推命のプロ鑑定士です。与えられた【命式データ】だけを根拠に、鑑定書の本文を日本語で書きます。\n'+
       '厳守事項：\n'+
       '・命式データ（四柱・天干通変・蔵干・十二運・五行・守護神・空亡・大運）に忠実に。命式に無い事実や生年月日を作らない。\n'+
@@ -4148,6 +4173,7 @@ window.KANSHI60_DETAIL={
       fetch('/.netlify/functions/gemini',{ method:'POST', headers:_h, body:body })
         .then(function(res){ return res.text().then(function(t){ return {ok:res.ok, t:t}; }); })
         .then(function(o){
+          if(stale()){ redo(); return; }
           var data={}; try{ data=JSON.parse(o.t); }catch(e){}
           var txt=''; try{ txt=(data.candidates[0].content.parts||[]).map(function(p){return p.text||'';}).join(''); }catch(e){}
           if(!o.ok || !txt.trim()){
@@ -4173,6 +4199,7 @@ window.KANSHI60_DETAIL={
           _aiBusy=false;
         })
         .catch(function(){
+          if(stale()){ redo(); return; }
           if(!isRetry){ setTimeout(function(){ attempt(true); }, 2500); return; }
           _aiBusy=false; aiFallbackToTemplate();
         });

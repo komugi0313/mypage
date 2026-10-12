@@ -35,6 +35,8 @@ def theme(s):
                  ('linear-gradient(160deg,#F2A03A,#EE5B48,#E8508E)', 'linear-gradient(135deg,#C9B5D4,#8E72A8)'),
                  ('rgba(42,111,208,.15)', 'rgba(142,114,168,.18)')]:
         s = s.replace(a, b)
+    s = s.replace('<div class="tb-logo" style="background:none;box-shadow:none"><img src="favicon.png" alt="" style="width:100%;height:100%;border-radius:9px;display:block"></div>',
+                  '<div class="tb-logo"><span style="color:#fff;font-family:\'Noto Serif JP\',serif;font-weight:700">易</span></div>')
     s = s.replace('<img src="icon-crystal.png" alt="" style="height:1.2em;width:auto;vertical-align:-0.26em;">',
                   '<span style="color:#fff;font-family:\'Noto Serif JP\',serif;font-weight:700">易</span>')
     return s
@@ -54,12 +56,13 @@ def head(s, title):
 # ---- upgrade.html（お申し込み内容の確認・決済へ）----
 s = (PRO / 'pricing-pro.html').read_text(encoding='utf-8')
 s = head(s, 'お申し込み｜易 EKI Pro'); s = theme(links(s))
-s = rep(s, '<span class="badge">経験を、もっと速く・深く。</span>', '<span class="badge">勉強いらずで、易の占い師に。</span>', 1)
+s = rep(s, '<span class="badge">経験を、もっと速く・深く。</span>', '<span class="badge">勉強いらずで、易の鑑定を。</span>', 1)
 s = rep(s, '<br>本格鑑定を、はじめる。</h1>', '<br>易の鑑定を、はじめる。</h1>', 1)
 s = rep(s, '<span class="desc">いつでも解約できます</span>', '<span class="desc">追加料金なし・いつでも解約OK</span>', 1)
 s = rep(s, '※ 本サービスは四柱推命にもとづく自己理解・エンターテインメントを目的としたものです。', '※ 本ツールは占いを目的としたものです。', 1)
-s = rep(s, '<a class="tb-login" href="app/index.html">ログインはこちら</a>', '<a class="tb-login" href="auth.html">ログインはこちら</a>', 1)
+# （PRO側のログインのリンクは auth.html になったので、そのまま写る）
 s = rep(s, "var ORDER_PREFIX='P';", "var ORDER_PREFIX='E';", 1)
+s = rep(s, "var CAP_TEXT='詳細鑑定（オンラインでの鑑定文の作成）は1日200回まで。上限に達した日も、端末内の鑑定・命式表・鑑定書・顧客カルテはご利用いただけます';", "var CAP_TEXT='オンライン鑑定（鑑定文の作成・追加のご相談）は1日100回・1か月3,000回まで。上限に達しても、内蔵データでの鑑定・顧客管理・印刷はご利用いただけます';", 1)
 s = rep(s, "var TRIAL_EXTRA='';", "var TRIAL_EXTRA='<br>無料期間中のオンライン鑑定・追加のご相談は合計1日3回まで（内蔵データでの鑑定は回数制限なし）。';", 1)
 s = rep(s, '</body>', '''<script>
 /* 登録ページ（register.html）から来たときは、入力済みのメールアドレスで「お申し込み内容の確認」をすぐ表示する */
@@ -86,8 +89,8 @@ s = s.replace("'pricing-pro.html'","'register.html'")
 # ---- mypage.html（マイページ）----
 s = (PRO / 'mypage-pro.html').read_text(encoding='utf-8')
 s = head(s, 'マイページ｜易 EKI Pro'); s = theme(links(s))
-s = rep(s, '<a href="index.html">本格版の紹介</a>', '<a href="index.html">サービス紹介</a>', 1)
 s = rep(s, '鑑定結果やお客様の保存・メモは、ツール内の「👥 顧客カルテ」からご利用いただけます。', '鑑定したお客様の記録は、ツール内の「顧客」からご覧いただけます。', 1)
 s = rep(s, '<a class="tb-link" href="register.html">料金プラン</a>', '<a class="tb-link" href="index.html#price">料金プラン</a>', 1)
+s = s.replace('<a href="register.html">料金</a>', '<a href="index.html#price">料金</a>')   # 料金はLPの料金欄へ（申込ページに直接行かない）
 (EKI / 'mypage.html').write_text(s, encoding='utf-8')
 print('OK:', EKI / 'upgrade.html', EKI / 'auth.html', EKI / 'mypage.html')

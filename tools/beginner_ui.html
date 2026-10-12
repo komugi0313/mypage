@@ -84,9 +84,13 @@ html.bg-on .reading-card .r-summary.bg-short{word-break:auto-phrase;text-wrap:ba
 html.bg-on #toTop{width:44px!important;height:44px!important;padding:0!important;font-size:0!important;right:12px!important;bottom:14px!important;opacity:.85!important}
 html.bg-on #toTop::before{content:'↑';font-size:20px;line-height:44px}
 html.bg-on #jumpnav .bg-hide{display:none!important}
+/* 初心者モードでは、専門用語の多い「教科書」はナビに出さない（上級者モードで表示） */
+html.bg-on #jn-book{display:none!important}
+#jumpnav #bg-navmode{background:#3A3226;color:#fff;border-color:#3A3226;font-weight:800}
 html.bg-on .bg-hide-on{display:none!important}
 html.bg-on #autoReading .chl-box{display:none!important}
 html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
+@media (pointer:coarse){ #bg-modebar button{min-height:40px} #jumpnav button{min-height:40px} }
 @media print{#bg-modebar{display:none!important}}
 </style>
 <script id="beginner-ui">
@@ -560,7 +564,7 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     return sys.replace(/【この鑑定の読み手＝経験者】[^\n]*\n?/g,'').replace(/^①用語は出したら[^\n]*\n?/mg,'')+PLAIN;
   }
   // 返ってきた文章に専門用語が残っていないかの確認（残っていれば1回だけ作り直し、それでも残れば端末内のやさしい鑑定にする）
-  var JARGON=/命式|通変星|十二運|大運|年運|五行|干支|日主|日干|蔵干|空亡|天中殺|比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬|身旺|身弱|喜神|忌神|用神|日柱|月柱|年柱|時柱|天戦地冲|三合|方合|干合|支合/;
+  var JARGON=/命式|通変星|十二運|大運|年運|五行|干支|日主|日干|蔵干|空亡|天中殺|比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬|身旺|身弱|喜神|忌神|用神|日柱|月柱|年柱|時柱|天戦地冲|三合|方合|干合|支合|会局|納音|天乙貴人|駅馬|立運|陰陽|十二支|十干|格局|神殺|冲|三刑|自刑/;
   if(typeof window.generateReading==='function' && !window.generateReading._bgplain){
     var g0=window.generateReading;
     window.generateReading=async function(user,localText,system,deep){
@@ -617,12 +621,15 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     var m=document.getElementById('bg-modebar'); if(!m) return;
     m.querySelector('span').textContent=on()?'🔰 やさしい表示で見ています':'⚙ 上級者向けの表示（専門用語あり）';
     m.querySelector('button').textContent=on()?'上級者向けの表示にする':'やさしい表示に戻す';
+    var nb=document.getElementById('bg-navmode'); if(nb) nb.textContent=on()?'⚙ 上級者の表示へ':'🔰 やさしい表示へ';
   }
   function setMode(v){
     try{ localStorage.setItem(KEY,v?'1':'0'); }catch(e){}
     label(); document.documentElement.classList.toggle('bg-on',v);
     [].slice.call(document.querySelectorAll('details.beginner-pro-collapse')).forEach(function(d){ d.open=false; });   // 切り替えたら「くわしい内容」は閉じた状態から
-    safe(function(){ if(typeof chart!=='undefined' && chart) window.renderResult(); else apply(); });
+    /* 詳細鑑定・相性の文章は表示モード（専門用語の有無）に合わせて作るため、切り替えたら作り直してもらう。入力中の相談文は残す */
+    safe(function(){ if(typeof chart!=='undefined' && chart){ window.__keepWorry=true; try{ window.renderResult(); }finally{ window.__keepWorry=false; } } else apply(); });
+    safe(function(){ var cp=document.getElementById('compat'); if(cp && cp.textContent.trim()){ cp.__rg=(cp.__rg||0)+1; cp.innerHTML='<p style="margin:10px 0;padding:10px 12px;border-radius:10px;background:#F4EFE4;font-size:13.5px;font-weight:700;line-height:1.7">表示を切り替えたので、相性の文章はいったん閉じました。もう一度「この2人の相性を見る」を押すと、いまの表示に合った文章で出ます。</p>'; } });
     safe(function(){ if(v) compatOn(); else compatOff(); });
   }
   // 表示の切り替えは、画面に重ならないよう項目ナビのすぐ下に置く（占った後だけ表示）
@@ -633,6 +640,9 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
       m.querySelector('button').onclick=function(){ setMode(!on()); };
       if(jn&&jn.parentNode) jn.parentNode.insertBefore(m,jn.nextSibling); else document.body.appendChild(m);
     }
+    // 上の項目ナビ（常に画面上に固定）にも切り替えボタンを置く＝どこまで読み進めても切り替えられる
+    var jn2=document.getElementById('jumpnav');
+    if(jn2&&!document.getElementById('bg-navmode')){ var nb=document.createElement('button'); nb.type='button'; nb.id='bg-navmode'; nb.onclick=function(){ setMode(!on()); }; jn2.appendChild(nb); }
     label(); apply();
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();

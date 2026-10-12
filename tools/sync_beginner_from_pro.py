@@ -24,7 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PRO, BEG = ROOT / 'pro', ROOT / 'beginner'
 
-B_TITLE = '今日から占い師｜一生使える、自分だけの鑑定ツール'
+B_TITLE = '今日から占い師｜毎日使える、自分だけの鑑定ツール'
 B_NAME = '今日から占い師'
 B_DESC = '生年月日を入れるだけで、命式・大運・年運・相性まで自動で読み解く四柱推命ツール。はじめてでも、やさしい言葉で本格鑑定ができます。'
 B_URL = 'https://www.suimei.jp/app-beginner.html'
@@ -95,11 +95,11 @@ def build_app():
     s = rep(s, 'alt="四柱推命占い自動鑑定"', f'alt="{B_NAME}"', 2)
     s = rep(s, '<h2 class="mg-title">四柱推命占い<span style="color:var(--do)">自動鑑定</span></h2>',
             '<h2 class="mg-title">今日から<span style="color:var(--do)">占い師</span></h2>\n'
-            '    <div style="font-size:11.5px;font-weight:800;letter-spacing:.08em;color:var(--muted);margin:-2px 0 4px">一生使える、自分だけの鑑定ツール</div>', 1)
+            '    <div style="font-size:11.5px;font-weight:800;letter-spacing:.08em;color:var(--muted);margin:-2px 0 4px">毎日使える、自分だけの鑑定ツール</div>', 1)
     s = rep(s, '<h1>四柱推命占い<span style="color:var(--do)">自動鑑定</span></h1>',
             '<h1>今日から<span style="color:var(--do)">占い師</span></h1>', 1)
     s = rep(s, '<div class="sub"><span class="nb">命式・運勢・相性・鑑定書、</span> <span class="nb">全てこれ一つで。</span></div>',
-            '<div class="sub"><span class="nb">一生使える、</span> <span class="nb">自分だけの鑑定ツール</span></div>', 1)
+            '<div class="sub"><span class="nb">毎日使える、</span> <span class="nb">自分だけの鑑定ツール</span></div>', 1)
 
     # ---- 共有カードの表示名（社名は共通） ----
     s = rep(s, "SHARE_SITE={ label:'四柱推命 自動鑑定',", f"SHARE_SITE={{ label:'{B_NAME}',", 1)
@@ -173,10 +173,10 @@ def build_pricing():
     s = common_links(s)
     s = rep(s, '<span class="badge">経験を、もっと速く・深く。</span>', '<span class="badge">習ったことがなくて、大丈夫。</span>', 1)
     s = rep(s, '<br>本格鑑定を、はじめる。</h1>', '<br>今日から占い師をはじめる。</h1>', 1)
-    s = rep(s, '<span class="desc">いつでも解約できます</span>', '<span class="desc">鑑定は回数無制限で使い放題</span>', 1)
+    s = rep(s, '<span class="desc">いつでも解約できます</span>', '<span class="desc">1件ごとの追加料金なし（詳細鑑定は1日200回まで）</span>', 1)
     s = rep(s, '    <!-- お申し込みで困ったとき -->', '''    <ul class="rz">
-      <li><span class="ck">✓</span>知識ゼロ・勉強ゼロでOK。生年月日を入れるだけで、やさしい文章が出てきます。</li>
-      <li><span class="ck">✓</span>鑑定は回数無制限で使い放題。1件ごとの追加料金はかかりません。</li>
+      <li><span class="ck">✓</span>知識ゼロからでも大丈夫。生年月日を入れるだけで、やさしい文章が出てきます。</li>
+      <li><span class="ck">✓</span>鑑定は1件ごとの追加料金なし。詳細鑑定は1日200回まで（超えた日は端末内の鑑定に切り替わります）。</li>
       <li><span class="ck">✓</span>スマホひとつで、場所を問わず鑑定。鑑定文はそのままLINEで送れます。</li>
       <li><span class="ck">✓</span>合わなければ、いつでも解約OK。無料期間中の解約は費用0円です。</li>
     </ul>
@@ -191,7 +191,6 @@ def build_mypage():
     i = s.index('<meta name="theme-color"'); j = s.index('<style>')
     s = s[:i] + '<title>マイページ｜今日から占い師</title>\n<meta name="robots" content="noindex">\n' + s[j:]
     s = common_links(s)
-    s = rep(s, '<a href="index.html">本格版の紹介</a>', '<a href="index.html">サービス紹介</a>', 1)
     (BEG / 'mypage.html').write_text(s, encoding='utf-8')
 
 

@@ -96,6 +96,7 @@ label.fl{display:block;font-size:12px;font-weight:700;color:var(--ink2);margin:1
 .field,select.field,textarea.field{width:100%;padding:11px 13px;border:1px solid var(--line2);border-radius:10px;background:#fff;color:var(--ink);font-size:15px;font-family:var(--sans);outline:none;transition:border-color .15s;}
 .field:focus,textarea.field:focus,select.field:focus{border-color:var(--gold);}
 textarea.field{resize:vertical;min-height:80px;line-height:1.6;}
+#mUpper,#mLower{padding-left:10px;padding-right:26px;background-position:right 8px center;font-size:14.5px;}
 select.field{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' fill='none' stroke='%238a8474' stroke-width='1.5'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
 
 .chips{display:flex;flex-wrap:wrap;gap:7px;}
@@ -210,6 +211,7 @@ select.field{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg 
 .hist-memo:focus{border-color:var(--gold);}
 .hist-memo-btn{margin-top:6px;padding:8px;font-size:12.5px;}
 .legal-links a{color:var(--shu-d);text-decoration:none;font-weight:700;border-bottom:1px solid currentColor;padding-bottom:1px;}
+@media (pointer:coarse){ .legal-links a{display:inline-block;padding:8px 0 2px;} .sheet-h .x{min-width:44px;min-height:44px;} }
 
 /* 用語 */
 .term{margin-bottom:13px;padding-bottom:13px;border-bottom:1px solid var(--line);}
@@ -241,8 +243,6 @@ select.field{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg 
 
 /* 設定 */
 .note{font-size:11.5px;color:var(--ink3);line-height:1.65;background:var(--paper2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-top:12px;}
-.handoff{display:none!important;} /* エンジニア向けの引き継ぎメモ：お客様の画面には出さない（内容は 実装仕様_エンジニア向け.md と同じ） */
-.handoff b{color:var(--blue);}
 
 .copy-toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 20px;border-radius:22px;font-size:13px;z-index:300;opacity:0;transition:opacity .25s;pointer-events:none;}
 .copy-toast.show{opacity:1;}
@@ -370,6 +370,8 @@ p,li,label,.muted,.cast-hint,.ks-ans,.ks-v,.v-txt,.card-msg,#cardStepMsg,[class*
 
 /* 横はみ出しガード（スマホで右が切れない／PC縮小表示にならない） */
 html,body{ overflow-x:hidden !important; max-width:100% !important; }
+/* overflow-x:hidden は上部の屋号バー・タブの固定（sticky）を効かなくするため、対応ブラウザでは clip に（横はみ出し防止の効果は同じ） */
+@supports (overflow:clip){ html,body{ overflow-x:clip !important; } }
 .nw{ white-space:normal !important; }
 *{ overflow-wrap:anywhere; }
 .card, .view, .topbar, .tabs{ max-width:100%; }
@@ -502,6 +504,15 @@ input[type=checkbox]{width:20px;height:20px;}
     <div id="mg-status" class="mg-status"></div>
     <div id="mg-msg"></div>
     <div class="mg-foot"><a href="../auth.html?view=reset">パスワードを忘れた方</a> ・ <a href="../auth.html?view=forgot">メールアドレスを忘れた方</a><br><a href="../auth.html?view=help">ログインできないとき</a> ・ <a href="../mypage.html">マイページ・契約状況</a></div>
+    <div class="mg-foot" id="mg-export-wrap" style="display:none;border-top:1px dashed #D9CCBB;padding-top:12px">この端末に保存されている顧客名簿は、ご契約がなくても書き出せます。<br><button type="button" id="mg-export" style="margin-top:8px;height:40px;padding:0 16px;border:1.5px solid #8E72A8;border-radius:10px;background:#fff;color:#8E72A8;font:inherit;font-weight:800;cursor:pointer">⬇ 顧客名簿を書き出す（バックアップ）</button></div>
+    <script>
+    /* ロック中（解約後など）でも、端末内の顧客名簿だけは必ず書き出せるようにする */
+    (function(){ try{ var raw=localStorage.getItem('eki_pro_v1'); if(!raw) return; var d=JSON.parse(raw); if(!d||!d.customers||!d.customers.length) return;
+      document.getElementById('mg-export-wrap').style.display='';
+      document.getElementById('mg-export').onclick=function(){ var b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'}), a=document.createElement('a'); a.href=URL.createObjectURL(b);
+        var t=new Date(); a.download='eki_pro_backup_'+t.getFullYear()+('0'+(t.getMonth()+1)).slice(-2)+('0'+t.getDate()).slice(-2)+'.json'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },200); };
+    }catch(e){} })();
+    </script>
   </div>
 </div>
 <script>
@@ -728,7 +739,7 @@ input[type=checkbox]{width:20px;height:20px;}
         </details>
       </div>
       <div id="castManual" style="margin-top:12px;display:none;">
-        <div class="cast-hint" data-i18n="manual_hint">🎲 サイコロで立てるときは、8面サイコロを2回振り、1回目の目を上卦、2回目の目を下卦の番号で選びます。続けて6面サイコロを振り、出た目を変爻（下から何本目か）で選んでください。</div>
+        <div class="cast-hint" data-i18n="manual_hint">🎲 サイコロで立てるときは、8面サイコロを2回振り、出た目を下卦・上卦の番号で選びます（1回目＝下卦、2回目＝上卦）。続けて6面サイコロを振り、出た目を変爻（下から何本目か）で選んでください。</div>
         <div class="row2">
           <div><label class="fl" data-i18n="lbl_upper">上卦（じょうか）</label><select class="field" id="mUpper"></select></div>
           <div><label class="fl" data-i18n="lbl_lower">下卦（かか）</label><select class="field" id="mLower"></select></div>
@@ -775,7 +786,8 @@ input[type=checkbox]{width:20px;height:20px;}
       <div style="font-size:30px;line-height:1;margin-bottom:8px;">🌙</div>
       <div style="font-size:16px;font-weight:800;color:var(--lav-deep,#8E72A8);">本日の無料お試し（オンライン鑑定）を使い切りました</div>
       <p style="font-size:13.5px;color:var(--ink2,#5b5563);font-weight:600;line-height:1.85;margin:8px auto 0;max-width:23em;">無料お試し中の<span style="white-space:nowrap;">オンライン鑑定・追加のご相談は</span><span style="white-space:nowrap;"><b>合計1日3回まで</b>です。</span>このあとも<b>内蔵データでの鑑定はそのまま使えます。</b><br><b style="color:var(--lav-deep,#8E72A8);">オンライン鑑定は明日また使えます。</b></p>
-      <a href="../index.html#price" class="btn primary" style="display:inline-block;margin-top:14px;padding:11px 26px;font-size:14px;">料金プランを見る</a>
+      <a href="../mypage.html" class="btn primary" style="display:inline-block;margin-top:14px;padding:11px 26px;font-size:14px;">ご契約内容を見る（マイページ）</a>
+      <p style="font-size:12px;color:var(--ink3,#8a8390);font-weight:600;margin:8px 0 0">内蔵データでの鑑定は、回数の制限なくこのままお使いいただけます。無料期間が終わると、自動で月額プランになり上限が広がります（新しくお申し込みいただく必要はありません）。</p>
     </div>
 
     <!-- 結果 -->
@@ -863,7 +875,7 @@ input[type=checkbox]{width:20px;height:20px;}
         <button class="btn dark sm" id="makeSho" data-i18n="btn_makeSho">鑑定書を作成</button>
         <button class="btn gold sm" id="saveReading" data-i18n="btn_saveReading">この鑑定を保存</button>
       </div>
-      <p class="muted" style="margin:8px 2px 0;font-size:12px;line-height:1.7;">🎂 上の「相談者の生年月日」を入れると、鑑定書に四柱推命の内容（生まれ持った性質・今年から3年の時期の目安）も入ります。</p>
+      <p class="muted" style="margin:8px 2px 0;font-size:12px;line-height:1.7;">🎂 <a href="#fuBirthBox" onclick="var d=document.getElementById('fuBirthBox');d.open=true;setTimeout(function(){var i=document.getElementById('fuBd');if(i){i.focus();}},300);" style="color:var(--gold-d,#8a6a10);font-weight:700">すぐ上の「深掘り相談」の中にある「相談者の生年月日」</a>を入れると、鑑定書に四柱推命の内容（生まれ持った性質・今年から3年の時期の目安）も入ります。</p>
       <button class="btn ghost sm" id="newReading" style="margin-top:10px;" data-i18n="btn_newReading">新しい鑑定をする</button>
       <div style="height:10px;"></div>
     </div>
@@ -913,7 +925,7 @@ input[type=checkbox]{width:20px;height:20px;}
       <label class="fl" data-i18n="set_logo">ロゴ文字（1〜2文字／空欄なら「易」）</label>
       <input class="field" id="setLogo" placeholder="易" maxlength="2">
       <label class="fl" data-i18n="set_sho_title">鑑定書の題字（空欄なら「鑑定書」）</label>
-      <input class="field" id="setShoTitle" placeholder="例：易断書 ／ 御神託 ／ ◯◯鑑定書" maxlength="12">
+      <input class="field" id="setShoTitle" placeholder="例：易断書 ／ ◯◯鑑定書" maxlength="12">
       <label class="fl" data-i18n="set_contact">連絡先（鑑定書に記載・任意）</label>
       <input class="field" id="setContact" placeholder="例：LINE @seieidou ／ TEL 000-0000">
       <label class="fl" data-i18n="set_accent">アクセントカラー（屋号のブランドカラーに）</label>
@@ -961,17 +973,6 @@ input[type=checkbox]{width:20px;height:20px;}
       <button class="btn ghost sm" type="button" onclick="memberLogout()" style="margin-top:8px;">この端末からログアウト</button>
     </div>
 
-    <div class="note handoff">
-      <b>エンジニアへの引き継ぎメモ：</b><br>
-      ① Gemini APIキーはコード冒頭の <code>GEMINI_API_KEY</code> に埋め込み（RIE側で対応）。公開時はサーバー側に置き、キーを表に出さない構成へ。<br>
-      ② 顧客名簿・設定は現在ブラウザ内（localStorage）保存。複数端末・事業利用ならサーバー＋アカウントが必要。<br>
-      ③ 課金モデルは<b>方針A：カード必須＋自動更新</b>。決済代行は<b>テレコムクレジット</b>（PRO・ビギナーと共通）。無料体験の開始時にカード登録（トークン決済）を必須とし、無料期間中は請求しない。月額¥9,800の課金と契約状態の判定はサーバー側（SBPSは自動trialが無いため満了日を自社管理して初回課金APIを実行）。<br>
-      ④ OEM（屋号入れ）はサブスク契約者向けの機能。屋号・色・料金は契約者ごとに設定できる。ただしファイル単体では契約終了後の停止・無断コピーを防げないため、サーバー側でエンジン＋ログインを持ち、契約者ごとにライセンス（有効/無効）を発行・管理する必要がある。<br>
-      ⑤ <b>無料お試しは「1週間（開始日を1日目として7日間）」をサーバー側で判定</b>。開始にはカード登録が必要（無料期間中は請求なし）。<b>期間終了時に登録カードで自動課金（自動更新）</b>し、選択プランへ移行する。<br>
-      ⑥ <b>無料お試しはお一人様1回限り。メールアドレスを変えても再取得できないようロックする。</b>方針Aではカード登録必須なので<b>カードが第一のロック</b>（同一カードの識別子で無料済みなら付与しない。※SBPSで同一カード判定用の恒久識別子が取得可能か要確認）。加えてメール以外の識別子も併用：端末フィンガープリント＋Cookie/localStorage、IP・サブネット、必要ならSMS認証。既利用者を検出したら「無料体験は利用済み」を表示し有料開始のみ可能とする。※判定・保存は必ずサーバー側（localStorage削除・シークレットモードで破られない設計に）。<br>
-      ⑦ <b>API費用対策：</b>無料期間中の AI 生成は<b>1日3回まで（本格鑑定＋深掘りチャットの合計）</b>（サーバー側で日次カウント／日本時間の暦日でリセット）。立卦・顧客管理・印刷（AI不使用）は無制限。有料移行後の上限は別途設定。サーバー側でレート制限＋従量監視。<br>
-      ⑧ 上記は本サービス（易 EKI Pro）の契約管理そのもの。GitHubは使わず、この一式（LP/register/app/upgrade＋法務ページ＋実装仕様_エンジニア向け.md）を土台に、認証・アカウント・無料期間・課金・ライセンスをサーバー側で実装してください。
-    </div>
     <div style="height:20px;"></div>
   </div>
 
@@ -1033,7 +1034,11 @@ input[type=checkbox]{width:20px;height:20px;}
 <!-- 鑑定書 -->
 <div class="overlay" id="shoOverlay">
   <div class="sheet">
-    <div class="sheet-h no-print"><h3>鑑定書</h3><button class="x" onclick="App.closeSho()">×</button></div>
+    <div class="sheet-h no-print"><h3>鑑定書</h3><button class="x" onclick="App.closeSho()" aria-label="閉じる" style="width:44px;height:44px">×</button></div>
+    <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;padding:0 14px 10px">
+      <button class="btn primary sm" style="flex:1 1 140px" onclick="App.shareSho()">共有（LINE・メール）</button>
+      <button class="btn ghost sm" style="flex:1 1 140px" onclick="window.print()">印刷 / PDFで保存</button>
+    </div>
     <div id="printArea"><div class="kanteisho" id="shoContent" contenteditable="true" spellcheck="false"></div></div>
     <div class="sheet-b no-print">
       <p class="muted edit-hint" style="text-align:center;margin:0 0 10px;font-weight:700;">✎ 本文をクリックすると、その場で編集できます。直してから印刷／PDFにできます。</p>
@@ -1123,7 +1128,7 @@ function calcSakka(upperN, lowerN){
 }
 
 /* ================= アプリ本体 ================= */
-// ★Gemini APIキー（内蔵）：RIE側でここに本番キーを設定。公開時はサーバーへ移すこと。
+// Gemini APIキーはブラウザに置かない（空のまま）。本番はサーバー中継（/api/gemini）を使う。
 const GEMINI_API_KEY = "";
 
 /* ===== 無料トライアルの1日あたり回数制限（AIコスト対策：本格鑑定=AI生成のみ対象） =====
@@ -1407,7 +1412,7 @@ const I18N={
   coin_result:'コインの出目（初爻→上爻・6/9＝動きの強い線／枠＝今回の変爻）',
   coin_anim_toss:'コインを投げています…',coin_anim_done:'卦が立ちました',
   terms_bagua:'八卦（はっけ）',terms_basic:'基本用語',terms_all64:'全64卦・384爻 一覧（古典＋現代語訳・吉凶）',set_sho_title:'鑑定書の題字（空欄なら「鑑定書」）',
-  manual_hint:'🎲 サイコロで立てるときは、8面サイコロを2回振り、1回目の目を上卦（じょうか）、2回目の目を下卦（かか）の番号で選びます。続けて6面サイコロを振り、出た目を変爻（へんこう）＝下から何本目かで選んでください。ご自身で立てた卦も、そのままこちらで入力できます。',
+  manual_hint:'🎲 サイコロで立てるときは、8面サイコロを2回振り、出た目を下卦（かか）・上卦（じょうか）の番号で選びます（カードと同じく下から立てるなら、1回目＝下卦、2回目＝上卦）。続けて6面サイコロを振り、出た目を変爻（へんこう）＝下から何本目かで選んでください。ご自身で立てた卦も、そのままこちらで入力できます。',
   lbl_upper:'上卦（じょうか）',lbl_lower:'下卦（かか）',lbl_moving:'変爻（へんこう）',
   number_hint:'お客様が思い浮かべた数字を3つ伺います（2桁でもOK・4桁まで）。〈梅花心易（ばいかしんえき）〉の数字卦の考え方で、各数を「8で割った余り」で八卦（上卦・下卦）に、3つの合計を「6で割った余り」で変爻に変換して卦を立てます。',
   lbl_tone:'語り口',lbl_blend:'掛け合わせ（易だけでも／他占術と合わせても）',lbl_jargon:'専門用語',jargon_hint:'「噛み砕く」＝互卦・之卦などの専門語を使わず日常語に。「専門的に」＝易の用語も使い、意味を添えます。',
@@ -1570,6 +1575,11 @@ const App=(function(){
     if(s.plans) delete s.plans;
     db.customers=db.customers||[];
   }
+  /* 同じ端末で2つのタブ（ブラウザとホーム画面のアプリなど）を開いているとき、もう一方で保存した顧客名簿を取り込んでから使う。
+     （取り込まないと、古い名簿のまま保存して、もう一方で追加したお客様を上書きで消してしまう） */
+  window.addEventListener('storage',function(e){ if(e.key!==SKEY) return;
+    try{ load(); }catch(_){}
+    try{ refreshCustSelect(); }catch(_){} try{ renderCustList(); }catch(_){} });
   /* 顧客名簿は端末（ブラウザ）の保存領域に置く。件数の上限は無いが、端末の容量（目安：約500万文字）を使い切ると保存できない。
      黙って失敗しないよう、いっぱいのときは必ず知らせ、8割を超えたら早めに書き出し（バックアップ）を案内する。 */
   let _nearWarned=false;
@@ -1661,7 +1671,7 @@ const App=(function(){
     for(let a=0;a<=2;a++){
       let res;
       try{ res=await geminiPost(body,kind); }
-      catch(e){ if(a<2){await sleep(2500);continue;} throw new Error('通信に失敗しました。電波の良い場所で再度お試しください。'); }
+      catch(e){ if(a<2&&!(e&&e.name==='AbortError')){await sleep(2500);continue;} throw new Error('通信に失敗しました。電波の良い場所で再度お試しください。'); }
       if(res.ok){ const d=await res.json(); const t=d.candidates?.[0]?.content?.parts?.[0]?.text; if(!t)throw new Error('応答が空でした'); return fillName(noAIWord(t.replace(/[＊*]/g,''))); }
       if(res.status===401) throw new Error('ログインの有効期限が切れました。ページを開き直して、もう一度ログインしてください。');
       if(res.status===403) throw new Error('ご契約の状態を確認できませんでした。マイページでご契約状況をご確認ください。');
@@ -1674,7 +1684,7 @@ const App=(function(){
   function buildPrompt(r, question){
     const _cn=clientName()?NAME_TOKEN:'';
     const tone={soft:'やさしく寄り添う、安心させる口調',firm:'きっぱりと、背中を押す力強い口調',spiritual:'スピリチュアルで神秘的な、魂に語りかける口調',business:'現実的で具体的、論理的にアドバイスする口調'}[cur.tone];
-    const blend={none:'',shichu:'占い師は四柱推命も併用します。生まれ持った命式（生年月日からの宿命）と、易が示す「今の時の運び」が響き合っているという前提で、四柱推命の傾向を易の卦が後押し・補足しているように語ってください。',reiji:'占い師は霊視も併用します。「霊視で感じた印象を、易の卦が裏付けています」という前提で、霊視と易が一致しているように語ってください。',astro:'占い師は西洋占星術も併用します。星の動きと易の卦が響き合っているという前提で語ってください。',tarot:'占い師はタロットも併用します。引いたカードと易の卦が同じ方向を示しているという前提で語ってください。'}[cur.blend];
+    const blend={none:'',shichu:'占い師は四柱推命も併用します。生まれ持った命式（生年月日からの宿命）と、易が示す「今の時の運び」が響き合っているという前提で、四柱推命の傾向を易の卦が後押し・補足しているように語ってください。',reiji:'占い師は霊視も併用する鑑定スタイルです。ただし霊視の内容はここには入力されていないため、霊視で何が見えたか・霊視と易が一致している・易が霊視を裏付けている、といったことは一切書かないこと。「霊」「霊視の結果」を根拠にした断定や、不安をあおる表現も使わない。易の読みだけを丁寧に伝え、最後に「お感じになったことと照らし合わせてみてください」と添える程度にとどめる。',astro:'占い師は西洋占星術も併用する鑑定スタイルです。ただし星の配置はここには入力されていないため、具体的な星の動きや、星と易が響き合っている、といったことは書かないこと。易の読みだけを丁寧に伝え、最後に「星の流れとも照らし合わせてみてください」と添える程度にとどめる。',tarot:'占い師はタロットも併用する鑑定スタイルです。ただし引いたカードはここには入力されていないため、カードの名前や、カードと易が同じ方向を示している、といったことは書かないこと。易の読みだけを丁寧に伝え、最後に「タロットの結果とも照らし合わせてみてください」と添える程度にとどめる。'}[cur.blend];
     // このツールは「易経の正しい言葉を示し、それを現代語で解き明かす」もの。原文は正確に引用し、必ず現代語の意味を添える。
     // ※お客様にお渡しする鑑定書だけは専門用語なし（makeSho）。「専門的に／噛み砕く」の切り替えは廃止。
     const jargonLine='【読み仮名（必ず守る）】易の言葉や卦の名前を出すときは、その文章の中で初めて出るところに必ず読み仮名を（）で付ける。読みは次のとおり（ほかの読みにしない）：易経（えききょう）・卦辞（かじ）・爻辞（こうじ）・本卦（ほんか）・之卦（しか）・互卦（ごか）・綜卦（そうか）・錯卦（さくか）・変爻（へんこう）・立卦（りっか）・上卦（じょうか）・下卦（かか）・内卦（ないか）・外卦（がいか）・初爻（しょこう）・二爻（にこう）・三爻（さんこう）・四爻（しこう）・五爻（ごこう）・上爻（じょうこう）・乾（けん）・兌（だ）・離（り）・震（しん）・巽（そん）・坎（かん）・艮（ごん）・坤（こん）。卦の名前の読みは、材料に書かれた読みのとおりにする。漢文の原文（卦辞・爻辞）には読み仮名を勝手に付けない。原文を読み下して伝えるときは、材料の「読み下し」を読み仮名も含めて一字一句そのまま使い、自分で読み下さない。【最重要・言葉づかい】このツールは、易経の正しい言葉を示しながら、それを現代の言葉で解き明かすものです。▼台本と▼結論では、卦の名前（読みも）と、卦辞・爻辞の原文を、下の材料にあるとおり句読点も含めて一字一句そのまま正確に引用し、そのすぐ後に必ず「現代の言葉にすると〜」と、今の暮らしの言葉・身近なたとえで意味を添えること。原文を書きかえたり、材料にない原文を作ったりしないこと。互卦・綜卦・錯卦・之卦などの専門用語を使うときも、必ず一言で意味を添える。▼判定・▼一言・▼状況・▼流れ・▼助言・▼注意・▼結びは、お客様にそのまま伝わる現代の言葉で書く。';
@@ -1721,7 +1731,14 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
   }
 
   /* ---- 鑑定実行 ---- */
+  /* 鑑定中（コインの演出・作成中の表示が出ている間）は、キーボードの連打でも二重に実行しない */
   async function run(){
+    const L0=document.getElementById('loading');
+    if(window.__runBusy || (L0&&L0.classList.contains('show'))) return;
+    window.__runBusy=true;
+    try{ await run1(); }finally{ window.__runBusy=false; }
+  }
+  async function run1(){
     const q=(document.getElementById('question').value||'').trim();
     if(!q){ alert(t('a_question')); return; }
     // 相談テーマを選んでいないときは、相談文から推定する（鑑定書のアドバイスが別のテーマにならないように）
@@ -1983,7 +2000,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
         <div class="hm-mod"><b>現代語にすると</b>${esc(mTai(r.h,r.ko))}</div></div>`:'';
     document.getElementById('hexName').textContent=r.h?r.h.nm:`${r.uT.k}＋${r.lT.k}`;
     document.getElementById('hexRd').textContent=r.h?r.h.rd:'';
-    document.getElementById('hexSym').innerHTML=`<span style="white-space:nowrap;">${SYM[r.upper-1]} ${r.uT.k}〔${KAMEI[r.upper-1]}（${KAMEI_RD[r.upper-1]}）〕</span> <span style="white-space:nowrap;font-size:.9em;">上卦（じょうか）・外卦（がいか）</span><br><span style="white-space:nowrap;">${SYM[r.lower-1]} ${r.lT.k}〔${KAMEI[r.lower-1]}（${KAMEI_RD[r.lower-1]}）〕</span> <span style="white-space:nowrap;font-size:.9em;">下卦（かか）・内卦（ないか）</span>`;
+    document.getElementById('hexSym').innerHTML=`<span style="white-space:nowrap;">${SYM[r.upper-1]} ${r.uT.k}〔${KAMEI[r.upper-1]}（${KAMEI_RD[r.upper-1]}）〕</span> <span style="font-size:.9em;"><span style="white-space:nowrap;">上卦（じょうか）</span>・<span style="white-space:nowrap;">外卦（がいか）</span></span><br><span style="white-space:nowrap;">${SYM[r.lower-1]} ${r.lT.k}〔${KAMEI[r.lower-1]}（${KAMEI_RD[r.lower-1]}）〕</span> <span style="font-size:.9em;"><span style="white-space:nowrap;">下卦（かか）</span>・<span style="white-space:nowrap;">内卦（ないか）</span></span>`;
     document.getElementById('hexUnki').innerHTML=`<span class="unki ${r.rank}">${t('unki_lbl')}${UNKI_LABEL[r.rank]}</span>`;
     document.getElementById('hexQt').style.display='none';   // 原文は下の「原文と現代語」の欄でまとめて示す
     renderCoinCast();
@@ -2136,7 +2153,7 @@ ${hist?('これまでのやりとり：\n'+hist+'\n'):''}相談者の新しい�
   }
   async function sendFollowup(){
     const el=document.getElementById('fuText'); const q=(el.value||'').trim();
-    if(!q)return;
+    if(!q){ toast('聞きたいことを入力してから「相談する」を押してください。'); try{el.focus();}catch(_){} return; }
     if(!cur.last){ alert('先に鑑定を行ってください。'); return; }
     if(!navigator.onLine || !canOnline()){ alert('追加のご相談には、インターネット接続が必要です（オフラインでは使えません）。'); return; }
     // 無料トライアル：深掘り相談も1問=AI生成1回として上限に含める
@@ -2149,14 +2166,17 @@ ${hist?('これまでのやりとり：\n'+hist+'\n'):''}相談者の新しい�
     const btn=document.getElementById('fuSend'); btn.disabled=true;
     const log=document.getElementById('fuLog');
     const think=document.createElement('div'); think.className='fu-msg think'; think.textContent='卦を読み解いています…'; log.appendChild(think);
+    const mine=cur.last, chat=cur.chat;   // 送った時点の鑑定（待っている間に別の鑑定へ移ったら、その欄には出さない）
     try{
       const ans=await callGemini(buildFollowupPrompt(q));
       trialInc(); // 深掘り相談（AI生成）を1回消費
+      if(cur.last!==mine||cur.chat!==chat){ think.remove(); return; }
       cur.chat.push({role:'ai',text:(ans||'').trim()}); renderChat();
     }catch(e){
       // 失敗のほとんどは通信・混雑。言い回しのせいにせず、入力した文は欄に戻す
+      if(cur.last!==mine||cur.chat!==chat){ think.remove(); return; }
       el.value=q;
-      const _am=(e&&/ログイン|ご契約/.test(e.message||''))?e.message+'（ご相談の文は入力欄に戻してあります）':'いま、つながりにくいようです。通信の状態を確かめて、少し時間をおいてから、もう一度「送る」を押してください。（ご相談の文は入力欄に戻してあります）';
+      const _am=(e&&/ログイン|ご契約/.test(e.message||''))?e.message+'（ご相談の文は入力欄に戻してあります）':'いま、つながりにくいようです。通信の状態を確かめて、少し時間をおいてから、もう一度「相談する」を押してください。（ご相談の文は入力欄に戻してあります）';
       cur.chat.push({role:'ai',text:_am}); renderChat();
     }finally{ btn.disabled=false; }
   }
@@ -2364,7 +2384,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     const ch=shoChart();
     const key=[cur.last.at, ch?ch.birth+(ch.hasH?'h':''):'-', cur.topic, cur.tone].join('|');
     const box=document.getElementById('shoContent');
-    document.getElementById('shoOverlay').classList.add('open');
+    document.getElementById('shoOverlay').classList.add('open'); try{ if(!(history.state&&history.state.ekiSho)) history.pushState({ekiSho:1},''); }catch(e){}
     document.body.classList.add('sho-open');
     let S=(cur.last.sho&&cur.last.sho.key===key)?cur.last.sho.S:null;
     if(!S){
@@ -2382,7 +2402,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
         <div class="ks-seal">${esc((s.logo||'易'))}<br>鑑定</div>
         <div class="ks-brand">${esc(s.brand||'')}</div>
         <div class="ks-title">${esc(s.shoTitle||'鑑定書')}</div>
-        <div class="ks-date">${ds}${cust?'　／　'+esc(cust)+' 様':''}${ch?'<br>生年月日　'+esc(ch.birth)+'生':''}</div>
+        <div class="ks-date">${ds}${cust?'　／　'+esc(String(cust).replace(/\s*(様|さま|さん)\s*$/,''))+' 様':''}${ch?'<br>生年月日　'+esc(ch.birth)+'生':''}</div>
       </div>
       ${q?`<div class="ks-row"><span class="ks-lbl">ご相談</span><br>${esc(q)}</div>`:''}
       <div class="ks-hexbox">
@@ -2420,7 +2440,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     if(!id && newName){
       id='c'+Date.now(); db.customers.push({id,name:newName,memo:'',history:[]});
     }
-    if(!id){ alert(t('a_select_or_name')); return; }
+    if(!id){ const nm=(prompt('保存するお客様のお名前を入れてください（名簿に新しく登録します）')||'').trim().slice(0,40); if(!nm) return; id='c'+Date.now(); db.customers.push({id,name:nm,memo:'',history:[]}); }
     const c=db.customers.find(x=>x.id===id);
     const {r,q,p}=cur.last;
     const memo=(document.getElementById('readingMemo').value||'').trim();
@@ -2474,7 +2494,16 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
   function deleteCust(){ if(!confirm('このお客様を削除しますか？履歴も消えます。'))return; db.customers=db.customers.filter(x=>x.id!==editingId); save(); renderCustList(); refreshCustSelect(); closeCust(); }
   function addCust(){ const n=prompt('お客様のお名前'); if(!n||!n.trim())return; const id='c'+Date.now(); db.customers.push({id,name:n.trim().slice(0,40),memo:'',history:[]}); save(); renderCustList(); refreshCustSelect(); openCust(id); }
   function closeCust(){ document.getElementById('custOverlay').classList.remove('open'); }
-  function closeSho(){ document.getElementById('shoOverlay').classList.remove('open'); document.body.classList.remove('sho-open'); }
+  function closeSho(fromPop){ const ov=document.getElementById('shoOverlay'); if(!ov.classList.contains('open')) return; ov.classList.remove('open'); document.body.classList.remove('sho-open');
+    if(!fromPop && history.state && history.state.ekiSho){ try{ history.back(); }catch(e){} } }
+  /* 鑑定書を文章としてLINE・メールで送る（スマホは共有メニュー、PCはコピー） */
+  function shareSho(){ const el=document.getElementById('shoContent'); const txt=(el?el.innerText:'').replace(/\n{3,}/g,'\n\n').trim(); if(!txt) return;
+    const title=(document.querySelector('#shoContent .ks-title')||{}).textContent||'鑑定書';
+    if(navigator.share){ navigator.share({title:title,text:txt}).catch(function(){}); return; }
+    try{ navigator.clipboard.writeText(txt).then(function(){ toast('鑑定書の文章をコピーしました。LINEやメールに貼り付けて送れます'); },function(){ alert('コピーできませんでした。「印刷 / PDFで保存」でPDFにして送ってください。'); }); }catch(e){ alert('コピーできませんでした。「印刷 / PDFで保存」でPDFにして送ってください。'); } }
+  // 戻るボタン・Escキーで鑑定書を閉じる（アプリごと閉じて結果が消えないように）
+  window.addEventListener('popstate', function(){ closeSho(true); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeSho(); });
   function fmt(ms){ const d=new Date(ms); if(!ms||isNaN(d)) return '—'; return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; }
 
   /* ---- 設定 ---- */
@@ -2509,9 +2538,11 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
   /* Gemini の生リクエストを送る：キーがあれば直接、なければ本番のサーバー中継へ（どちらも同じ形の応答が返る） */
   async function geminiPost(body,kind){   // kind：'sho'＝鑑定書の作成（1回の鑑定に付随するので、サーバー側で回数に数えない目印）
     const key=GEMINI_API_KEY||getTestKey();
-    if(key) return fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`,{method:'POST',headers:{'Content-Type':'application/json'},body});
+    /* 電波が途中で止まったときに「作成中…」のまま待ち続けないよう、70秒で打ち切る（内蔵データの鑑定に切り替わる） */
+    let _sig; try{ const ac=new AbortController(); setTimeout(function(){ ac.abort(); },70000); _sig=ac.signal; }catch(e){}
+    if(key) return fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`,{method:'POST',headers:{'Content-Type':'application/json'},body,signal:_sig});
     if(isServed()){ let tk=''; try{ tk=localStorage.getItem('member_token')||sessionStorage.getItem('member_token')||''; }catch(e){}   // 会員確認（サーバーで検証）
-      return fetch('/.netlify/functions/gemini',{method:'POST',headers:Object.assign({'Content-Type':'application/json','x-pk-device':ekiDevId()},kind?{'x-eki-kind':kind}:{},tk?{'Authorization':'Bearer '+tk}:{}),body}); }
+      return fetch('/.netlify/functions/gemini',{method:'POST',headers:Object.assign({'Content-Type':'application/json','x-pk-device':ekiDevId()},kind?{'x-eki-kind':kind}:{},tk?{'Authorization':'Bearer '+tk}:{}),body,signal:_sig}); }
     throw new Error('オンライン鑑定の接続先が設定されていません。');
   }
   function saveTestKey(){ try{localStorage.setItem(KEYSTORE,(document.getElementById('setKey').value||'').trim());}catch(e){} toast(t('t_saved_key')); }
@@ -2571,7 +2602,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     });
     // 手動セレクト
     const HIRA={テン:'てん',サワ:'たく',カ:'か',ライ:'らい',フウ:'ふう',スイ:'すい',サン:'さん',チ:'ち'};
-    const tgOpts=TG.map(t=>`<option value="${t.n}">${t.n}　${SYM[t.n-1]} ${t.k}（${HIRA[t.r]||t.r}）</option>`).join('');
+    const tgOpts=TG.map(t=>`<option value="${t.n}">${t.n} ${SYM[t.n-1]}${t.k}（${HIRA[t.r]||t.r}）</option>`).join('');
     document.getElementById('mUpper').innerHTML=tgOpts;
     document.getElementById('mLower').innerHTML=tgOpts;
     document.getElementById('mKo').innerHTML=Object.entries(KO_NAME).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
@@ -2581,7 +2612,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     trialFinalDayInit();
     document.querySelectorAll('.numfield').forEach(el=>el.addEventListener('input',()=>{
       let v=el.value.replace(/[^0-9]/g,'');
-      if(v!==''){ let n=parseInt(v,10); if(n>9999)n=9999; if(n<1)n=1; v=String(n); }
+      if(v!==''){ let n=parseInt(v,10); if(n>9999){ n=9999; toast('数字は4桁（9999）までです'); } if(n<1)n=1; v=String(n); }
       el.value=v;
     }));
     document.getElementById('saveNewCust').onclick=saveNewCustomer;
@@ -2736,7 +2767,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     const blob=new Blob([t],{type:'text/plain;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='易EKI_64卦384爻_一覧.txt'; a.click();
   }
 
-  return { init, openCust, saveCust, deleteCust, closeCust, closeSho, toggleRef, saveHistMemo };
+  return { init, openCust, saveCust, deleteCust, closeCust, closeSho, shareSho, toggleRef, saveHistMemo };
 })();
 document.addEventListener('DOMContentLoaded', App.init);
 </script>
@@ -2748,9 +2779,9 @@ document.addEventListener('DOMContentLoaded', App.init);
   var step=0;
   var steps=[{label:'まず1枚目（下卦）を選びます',n:8,key:'lower'},{label:'次に2枚目（上卦）を選びます',n:8,key:'upper'},{label:'最後に変爻（1〜6）を選びます',n:6,key:'ko'}];
   function el(id){return document.getElementById(id);}
-  function build(){ if(!el("proDeck"))return; step=0; window.proCard={upper:null,lower:null,ko:null}; updateResult(); render(); }
+  function build(){ window.__pickBusy=false; if(!el("proDeck"))return; step=0; window.proCard={upper:null,lower:null,ko:null}; updateResult(); render(); }
   function render(){ var deck=el("proDeck"); var st=steps[step]; el("pdeckStep").textContent=st?st.label:""; el("pdeckReset").style.display=(step>0)?"inline-block":"none"; if(step>2){deck.innerHTML="";return;} var vals=[];for(var i=1;i<=st.n;i++)vals.push(i); for(var k=vals.length-1;k>0;k--){var j=Math.floor(Math.random()*(k+1));var tmp=vals[k];vals[k]=vals[j];vals[j]=tmp;} deck.style.display="grid";deck.style.gridTemplateColumns="repeat("+Math.ceil(st.n/2)+",64px)";deck.style.justifyContent="center";deck.innerHTML=""; vals.forEach(function(v){ var c=document.createElement("button"); c.type="button"; c.className="pcard"; c.dataset.val=v; c.innerHTML="<span class=\"pc-back\">\u262f</span>"; c.onclick=function(){pick(c,v);}; deck.appendChild(c); }); }
-  function pick(card,v){ if(card.classList.contains("flip"))return; var st=steps[step]; card.classList.add("flip","chosen"); var face=(st.key==="ko")?String(v):(SYMS[v-1]+"<br><b>"+KN[v-1]+"</b>"); setTimeout(function(){card.innerHTML="<span class=\"pc-face\">"+face+"</span>";},150); window.proCard[st.key]=v; var deck=el("proDeck"); [].forEach.call(deck.children,function(x){if(x!==card)x.classList.add("dim");}); updateResult(); step++; setTimeout(function(){ if(step<=2){render();} else {el("pdeckStep").textContent="\u2713 3枚そろいました。下の「鑑定する」を押してください"; el("pdeckReset").style.display="inline-block";} },1300); }
+  function pick(card,v){ if(card.classList.contains("flip")||card.classList.contains("dim")||window.__pickBusy||step>2)return; window.__pickBusy=true; /* 1組につき1枚だけ（素早く続けて押しても2枚目は受け付けない） */ var st=steps[step]; card.classList.add("flip","chosen"); var face=(st.key==="ko")?String(v):(SYMS[v-1]+"<br><b>"+KN[v-1]+"</b>"); setTimeout(function(){card.innerHTML="<span class=\"pc-face\">"+face+"</span>";},150); window.proCard[st.key]=v; var deck=el("proDeck"); [].forEach.call(deck.children,function(x){if(x!==card)x.classList.add("dim");}); updateResult(); step++; setTimeout(function(){ window.__pickBusy=false; if(step<=2){render();} else {el("pdeckStep").textContent="\u2713 3枚そろいました。下の「鑑定する」を押してください"; el("pdeckReset").style.display="inline-block";} },1300); }
   function updateResult(){ var pc=window.proCard; var r=el("pdeckResult"); if(!r)return; function lab(n,k){ if(n==null)return "\u2014"; return k?("変爻 "+n):(SYMS[n-1]+KN[n-1]); } r.innerHTML="<span class=\"pr\">下卦："+lab(pc.lower)+"</span><span class=\"pr\">上卦："+lab(pc.upper)+"</span><span class=\"pr\">"+lab(pc.ko,true)+"</span>"; }
   function init(){ if(!el("proDeck"))return; build(); var rb=el("pdeckReset"); if(rb)rb.onclick=build; document.querySelectorAll("#castSeg button[data-cast=\"card\"]").forEach(function(b){b.addEventListener("click",build);}); }
   if(document.readyState!=="loading")init(); else document.addEventListener("DOMContentLoaded",init);
