@@ -174,7 +174,7 @@ select.field{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg 
 /* 泣き別れ（行末に1〜2文字が孤立する現象）を防ぐ。非対応ブラウザでは無害 */
 .script-text p,.conc-list li,.kpi-val,.kpi-val li,.verdict .v-txt,.shika-txt,.fu-msg{text-wrap:pretty;word-break:auto-phrase;line-break:strict;}
 .script-text p{margin:0 0 15px;}
-#result ruby{ruby-position:over;ruby-align:center;} #result rt{font-size:.5em;font-weight:500;color:var(--ink3);letter-spacing:0;line-height:1;} .conc-list li{line-height:1.9;} .verdict .v-txt,.kpi-val,.fu-msg,.shika-txt,.hex-modern{line-height:1.9;}
+#result .yomi{font-size:max(13px,.82em);font-weight:700;color:#3F2F55;background:#EFE7F8;border-radius:6px;padding:.05em .4em;margin:0 .2em 0 .12em;letter-spacing:.02em;-webkit-box-decoration-break:clone;box-decoration-break:clone;line-height:1.5;} #result .yomi.yl{display:block;white-space:pre-line;width:fit-content;max-width:100%;margin:.35em 0 .25em;padding:.2em .7em;line-height:1.75;font-size:max(14px,.88em);}   /* 読み方は「かっこ」ではなく、薄紫の札で漢字のすぐ後ろに（老眼でも読める大きさ） */ .conc-list li{line-height:1.9;} .verdict .v-txt,.kpi-val,.fu-msg,.shika-txt,.hex-modern{line-height:1.9;}
 .script-text .sq{color:#6E4E96;font-weight:700;}
 
 .kpi{margin-top:14px;}
@@ -2212,24 +2212,42 @@ ${hist?('これまでのやりとり：\n'+hist+'\n'):''}相談者の新しい�
   function fmtRich(s){ return esc(s).replace(/【([^】]{1,50})】/g,'<span class="hl">$1</span>').replace(/[【】]/g,''); }
   // ハイライトを付けない項目用：万一混ざった【】は消すだけ
   function fmtPlain(s){ return esc(s).replace(/[【】]/g,''); }
-  // 読み仮名「漢字（かな）」を、かっこではなく漢字の上の小さな「ふりがな」で見せる（表示だけ・文章やコピーする内容は変えない）
+  // 読み仮名「漢字（かな）」を、かっこではなく漢字のすぐ後ろの「読み方の札」で見せる（表示だけ・文章やコピーする内容・鑑定書は変えない）
+  //  ・ふつうの言葉：易経［えききょう］のように、その言葉の後ろに札
+  //  ・読み下し（「」の中に読みが2つ以上）：漢字だけの文の後ろに、ぜんぶ ひらがな の札を1つ（読み上げやすく）
   const RUBY_RE=/([㐀-鿿豈-﫿々〆]+)（([ぁ-ゖー]+)）/g;
+  const yomiEl=(t,line)=>{ const e=document.createElement('span'); e.className=line?'yomi yl':'yomi'; e.textContent=line?t.replace(/。(?=.)/g,'。\n'):t; return e; };   // 読み下しのひらがなは1行に独立させる
+  const nPairs=t=>{ RUBY_RE.lastIndex=0; return (String(t).match(RUBY_RE)||[]).length; };
+  function yomiWords(fr,t){ let last=0,m; RUBY_RE.lastIndex=0;
+    while((m=RUBY_RE.exec(t))){ if(m.index>last) fr.appendChild(document.createTextNode(t.slice(last,m.index))); fr.appendChild(document.createTextNode(m[1])); fr.appendChild(yomiEl(m[2])); last=m.index+m[0].length; }
+    if(last<t.length) fr.appendChild(document.createTextNode(t.slice(last))); }
+  const kanjiOnly=t=>t.replace(RUBY_RE,'$1'), kanaOnly=t=>t.replace(RUBY_RE,'$2');
   function rubyize(root){
     if(!root) return;
     const tw=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>{
       if(!n.nodeValue||n.nodeValue.indexOf('（')<0) return NodeFilter.FILTER_REJECT;
-      if(n.parentElement&&n.parentElement.closest('ruby,rt,script,style,textarea,input,select,button,.no-ruby')) return NodeFilter.FILTER_REJECT;
-      RUBY_RE.lastIndex=0; return RUBY_RE.test(n.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT; }});
+      if(n.parentElement&&n.parentElement.closest('.yomi,script,style,textarea,input,select,button,.no-ruby')) return NodeFilter.FILTER_REJECT;
+      return nPairs(n.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT; }});
     const list=[]; while(tw.nextNode()) list.push(tw.currentNode);
     list.forEach(n=>{
-      const fr=document.createDocumentFragment(); const v=n.nodeValue; let last=0, m; RUBY_RE.lastIndex=0;
-      while((m=RUBY_RE.exec(v))){
-        if(m.index>last) fr.appendChild(document.createTextNode(v.slice(last,m.index)));
-        const rb=document.createElement('ruby'); rb.appendChild(document.createTextNode(m[1]));
-        const rp1=document.createElement('rp'); rp1.textContent='（'; const rt=document.createElement('rt'); rt.textContent=m[2]; const rp2=document.createElement('rp'); rp2.textContent='）';
-        rb.appendChild(rp1); rb.appendChild(rt); rb.appendChild(rp2); fr.appendChild(rb); last=m.index+m[0].length;
+      const v=n.nodeValue, pe=n.parentElement, fr=document.createDocumentFragment();
+      // 「」の中身だけが入っている欄（台本の色付き引用・読み下しの欄）は、まるごと1つの文として扱う
+      if(pe&&pe.matches('.sq,.hm-kd')&&nPairs(v)>=2){
+        fr.appendChild(document.createTextNode(kanjiOnly(v)));
+        const y=yomiEl(kanaOnly(v).replace(/。$/,''),1);
+        const nx=pe.classList.contains('sq')?pe.nextSibling:null;
+        if(nx&&nx.nodeType===3&&nx.nodeValue.charAt(0)==='」'){ const rest=nx.splitText(1); rest.parentNode.insertBefore(y,rest); }   // 」の後ろに札
+        else fr.appendChild(y);
+        n.parentNode.replaceChild(fr,n); return;
       }
-      if(last<v.length) fr.appendChild(document.createTextNode(v.slice(last)));
+      let last=0,m; const QR=/「([^「」]*)」/g;
+      while((m=QR.exec(v))){
+        if(nPairs(m[1])<2) continue;
+        yomiWords(fr,v.slice(last,m.index));
+        fr.appendChild(document.createTextNode('「'+kanjiOnly(m[1])+'」')); fr.appendChild(yomiEl(kanaOnly(m[1]).replace(/。$/,''),1));
+        last=m.index+m[0].length;
+      }
+      yomiWords(fr,v.slice(last));
       n.parentNode.replaceChild(fr,n);
     });
   }
