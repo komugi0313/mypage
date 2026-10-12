@@ -171,6 +171,18 @@
   .tg button[aria-pressed="true"]{background:var(--ink);color:var(--card)}
   @media (max-width:400px){ .brand>div:nth-child(3){flex-basis:100%;margin-left:0!important;justify-content:flex-start;flex-wrap:wrap} .brand>div:nth-child(3) #theme-tg{margin-left:auto!important;flex-basis:auto;order:0;margin-top:0} }
   /* 読みやすさ：2文ごとの区切り・年と注意の言葉の色（pkReadable） */
+  /* 読みやすさ（表示だけ。文章・コピー・保存される内容は変えない）
+     ・読み方：「納音（なっちん）」→ 漢字の後ろに薄紫の札（元の（よみ）は画面の裏に残すのでコピーしても同じ文）
+     ・活かし方・過ごし方：緑の囲みで独立させる
+     ・小さすぎる灰色の文字：画面では14px・濃い色に（印刷は従来どおり） */
+  .yomi{position:relative;display:inline;font-size:max(12.5px,.82em);font-weight:700;color:#3F2F55;background:#EFE7F8;border-radius:6px;padding:.05em .4em;margin:0 .2em 0 .12em;letter-spacing:.02em;line-height:1.5;-webkit-box-decoration-break:clone;box-decoration-break:clone;}
+  .yomi::before{content:attr(data-y);}
+  .ysr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;}
+  .pk-tip{display:block;margin:8px 0 4px;padding:9px 12px 10px;background:#E3F4EF;border:1.5px solid #7CC4B4;border-left:5px solid #0F766E;border-radius:10px;color:#0B3B36;font-weight:600;font-size:max(15px,1em);line-height:1.8;text-align:left;}
+  .pk-tip-l{position:relative;display:block;width:fit-content;background:#0F766E;color:#fff;font-size:13.5px;font-weight:800;letter-spacing:.04em;line-height:1.4;padding:.15em .65em;border-radius:6px;margin:0 0 5px;}
+  .pk-tip-l::before{content:attr(data-l);}
+  @media screen{ .pk-big{font-size:14px!important;line-height:1.7!important;} .pk-dark{color:#3A3631!important;} }
+  @media print{ .pk-tip{background:none;border:1px solid #7CC4B4;border-left:4px solid #0F766E;} .pk-tip-l{background:none;color:#0F766E;padding:0;} .yomi{background:none;padding:0;} }
   .rd-gap{display:block;height:.5em}
   b.rd-yr{color:#C2410C;font-weight:800}
   b.rd-warn{color:#B3261E;font-weight:800}
@@ -4793,6 +4805,83 @@ function midQuickNavHTML(){return `<div style="display:flex;gap:10px;justify-con
 </div>`;}
 /* 読みやすさ（表示だけ）：長い文の塊を2文ごとに区切り、年と注意の言葉に色をつける。「／」で長く並ぶ説明は1項目ずつ改行。
    文章の中身・保存・共有・印刷用の文は変えない（画面の見え方だけ） */
+/* ==== 読みやすさの仕上げ（表示だけ・計算と文章は変えない） ====
+   画面の中身が書きかわるたびに自動で：①読み方の（）を札に ②活かし方・過ごし方を緑の囲みに ③小さすぎる灰色の文字を大きく濃く */
+var PK_SKIP='script,style,textarea,input,select,option,button,svg,table,[contenteditable="true"],.yomi,.pk-tip-l,.no-yomi';
+var PK_YOMI_RE=/([㐀-鿿豈-﫿々〆]+)（([ぁ-ゖー]+|[ァ-ヺー]{2,})(＝[^（）]*)?）/g;
+var PK_NOT_YOMI=/^(おすすめ|バイオリズム|ぶつかり)$/;
+function pkYomiEl(y){ var e=document.createElement('span'); e.className='yomi'; e.setAttribute('data-y',y); var h=document.createElement('span'); h.className='ysr'; h.textContent='（'+y+'）'; e.appendChild(h); return e; }
+function pkYomi(root){
+  var tw=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:function(n){
+    var v=n.nodeValue; if(!v||v.indexOf('（')<0) return NodeFilter.FILTER_REJECT;
+    if(n.parentElement&&n.parentElement.closest(PK_SKIP)) return NodeFilter.FILTER_REJECT;
+    PK_YOMI_RE.lastIndex=0; return PK_YOMI_RE.test(v)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT; }});
+  var list=[]; while(tw.nextNode()) list.push(tw.currentNode);
+  list.forEach(function(n){
+    var v=n.nodeValue, fr=document.createDocumentFragment(), last=0, m; PK_YOMI_RE.lastIndex=0;
+    while((m=PK_YOMI_RE.exec(v))){
+      if(PK_NOT_YOMI.test(m[2])) continue;   // 読み方ではない言いかえは（）のまま
+      if(m.index>last) fr.appendChild(document.createTextNode(v.slice(last,m.index)));
+      fr.appendChild(document.createTextNode(m[1])); fr.appendChild(pkYomiEl(m[2]));
+      if(m[3]) fr.appendChild(document.createTextNode('（'+m[3].slice(1)+'）'));   // 倒食（とうしょく＝梟神奪食）→ 倒食［とうしょく］（梟神奪食）
+      last=m.index+m[0].length;
+    }
+    if(last<v.length) fr.appendChild(document.createTextNode(v.slice(last)));
+    n.parentNode.replaceChild(fr,n);
+  });
+}
+var PK_TIP_RE=/(?:[ 　]*→[ 　]*)?(?:【(活かし方|過ごし方のヒント)】|(?:💡[ 　]*)?(過ごし方のコツ|過ごし方のヒント|過ごし方)[：:])/;
+function pkTipLabel(orig,label){ var b=document.createElement('b'); b.className='pk-tip-l'; b.setAttribute('data-l',label); var h=document.createElement('span'); h.className='ysr'; h.textContent=orig; b.appendChild(h); return b; }
+function pkTips(root){
+  // 「過ごし方のヒント」だけが太字で、すぐ後ろが「：」の形 → 太字を目印として扱う
+  [].slice.call(root.querySelectorAll('b,strong')).forEach(function(b){
+    if(b.closest('.pk-tip')||b.closest(PK_SKIP)) return;
+    var t=(b.textContent||'').trim(), nx=b.nextSibling;
+    if(/^(活かし方|過ごし方のヒント|過ごし方のコツ|過ごし方)$/.test(t)&&nx&&nx.nodeType===3&&/^[：:]/.test(nx.nodeValue)){ b.textContent=t+nx.nodeValue.charAt(0); nx.nodeValue=nx.nodeValue.slice(1); }
+  });
+  var tw=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:function(n){
+    var v=n.nodeValue; if(!v||v.indexOf('方')<0) return NodeFilter.FILTER_REJECT;
+    var pe=n.parentElement; if(!pe||pe.closest(PK_SKIP)||pe.closest('.pk-tip,.chip,.chips,label,a')) return NodeFilter.FILTER_REJECT;
+    return PK_TIP_RE.test(v)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT; }});
+  var list=[]; while(tw.nextNode()) list.push(tw.currentNode);
+  list.forEach(function(n){
+    if(!n.parentNode||(n.parentElement&&n.parentElement.closest('.pk-tip'))) return;
+    var m=n.nodeValue.match(PK_TIP_RE); if(!m) return;
+    var label=m[1]||m[2], after=n.splitText(m.index), rest=after.splitText(m[0].length), markText=after.nodeValue;
+    var start=after, parent=after.parentNode;
+    // 目印だけが入った小さな飾り（色付きの文字など）なら、その飾りごと目印として扱う
+    while(parent&&parent!==root&&(parent.textContent||'').trim()===markText.trim()&&getComputedStyle(parent).display==='inline'){ start=parent; parent=parent.parentNode; }
+    if(start!==after){ rest=start.nextSibling; }
+    var box=document.createElement('span'); box.className='pk-tip';
+    box.appendChild(pkTipLabel(markText.trim(),label));
+    var cur=rest; while(cur){ var nx=cur.nextSibling; box.appendChild(cur); cur=nx; }
+    if(start===after){ after.parentNode.replaceChild(box,after); } else { parent.replaceChild(box,start); }
+    // 前に残った「　→」などの空白・矢印は消す（意味は囲みで伝わる）
+    var pv=box.previousSibling; if(pv&&pv.nodeType===3) pv.nodeValue=pv.nodeValue.replace(/[ 　]*→?[ 　]*$/,'');
+  });
+}
+var pkBigDone=new WeakSet();
+function pkBig(root){
+  var els=root.querySelectorAll('div,p,span,li,small,b,strong,em,dd,dt,summary,h3,h4,h5,h6');
+  for(var i=0;i<els.length;i++){
+    var e=els[i]; if(pkBigDone.has(e)) continue; pkBigDone.add(e);
+    if(e.closest(PK_SKIP+',.yomi,.ysr,.pk-tip-l,.chip,.chips,.tg,.brand,nav,header,.badge,.pill,.kg-row')) continue;
+    var own=''; for(var c=e.firstChild;c;c=c.nextSibling) if(c.nodeType===3) own+=c.nodeValue; own=own.trim();
+    if(own.length<8) continue;
+    var cs=getComputedStyle(e); if(cs.whiteSpace==='nowrap'||cs.position==='absolute'||cs.position==='fixed') continue;
+    var fs=parseFloat(cs.fontSize); if(!(fs<13.5)||fs<9) continue;
+    e.classList.add('pk-big');
+    var mm=cs.color.match(/\d+(\.\d+)?/g); if(mm){ var r=+mm[0],g=+mm[1],b=+mm[2]; if(Math.max(r,g,b)-Math.min(r,g,b)<40&&r>85) e.classList.add('pk-dark'); }   // 灰色だけ濃くする（赤・青などの色文字はそのまま）
+  }
+}
+function pkPolish(root){ root=root||document.body; if(!root) return; try{ pkYomi(root); }catch(_e){} try{ pkTips(root); }catch(_e){} try{ pkBig(root); }catch(_e){} }
+(function(){
+  if(!window.MutationObserver) return;
+  var busy=false, queued=false, obs;
+  function run(){ queued=false; busy=true; pkPolish(document.body); if(obs) obs.takeRecords(); busy=false; }
+  function start(){ obs=new MutationObserver(function(){ if(busy||queued) return; queued=true; requestAnimationFrame(run); }); obs.observe(document.body,{childList:true,subtree:true,characterData:true}); run(); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
 function pkReadable(root){
   if(!root) return;
   const SKIP='table,svg,button,select,textarea,input,script,style,.no-rd,.reading-card,.rd-tool,.kg-row,.cty,.jn';
