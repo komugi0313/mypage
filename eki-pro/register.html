@@ -131,6 +131,7 @@ select.field{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w
   <button class="go" id="goBtn">次へ：お申し込み内容の確認</button>
   <div id="err" role="alert"></div>
   <p class="fine">次の画面でお申し込み内容を確認し、決済代行会社（テレコムクレジット）の安全なページでお支払いカードを登録します（<b>無料期間中は請求なし</b>）。1週間、全機能を無料でお試しいただけます。</p>
+  <p class="fine" style="text-align:center">すでにお申し込み済みの方は <a href="auth.html" style="color:var(--lav-deep);font-weight:800">ログイン</a>・<a href="mypage.html" style="color:var(--lav-deep);font-weight:800">マイページ</a>へ。<br>お困りのときは <a href="mailto:info@72k.ai" style="color:var(--lav-deep);font-weight:800">info@72k.ai</a> へ。</p>
   <!-- 開発確認用（本番公開前に削除。詳細は 実装仕様_エンジニア向け.md §8） -->
   <a id="demoLink" href="app/index.html" hidden style="display:none;text-align:center;margin-top:14px;font-size:13px;font-weight:700;color:var(--lav-deep);text-decoration:none;">▶ 登録せずに、そのまま鑑定を体験する（デモ）</a>
   <script>/* 開発確認用のデモリンクは、手元の確認環境（file:／localhost）でだけ表示する。本番のドメインでは出ない。 */
@@ -149,11 +150,17 @@ select.field{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w
   });
   /* ★エンジニア接続ポイント：登録内容（お名前・年代など）をサーバーへ送る。
      STUB=true の間は送らない。会員の作成は、決済（テレコムクレジット）の結果通知を受けてから行う
-     （ここで送った内容は、メールアドレスとお申し込み番号で決済結果とひも付ける）。 */
+     （ここで送った内容は、メールアドレスで決済結果とひも付ける。お申し込み番号はまだ無い）。 */
   var CONFIG={ STUB:!/(^|\.)(72k\.ai|suimei\.jp|ekipro\.jp)$/i.test(location.hostname), APPLY:'/.netlify/functions/apply-start' };  // POST {email, profile} → {ok:true}
   var EMAIL_RE=/^[^@\s]+@[^@\s]+\.[^@\s]+$/;
   function v(id){ var e=document.getElementById(id); return e?(e.value||'').trim():''; }
   function fail(m){ document.getElementById('err').innerHTML='<div class="errbox">'+m+'</div>'; }
+  // 確認画面から戻ってきたときは、さきほどの入力を戻す（同意のチェックは、もう一度お願いする）
+  try{ var dr=JSON.parse(sessionStorage.getItem('eki_reg_draft')||'null');
+    if(dr&&dr.email){ var set=function(id,val){ var e=document.getElementById(id); if(e&&val) e.value=val; };
+      set('rName',dr.profile&&dr.profile.name); set('rMail',dr.email); set('rMail2',dr.email);
+      if(dr.profile){ set('rSex',dr.profile.sex); set('rAge',dr.profile.age); set('rPref',dr.profile.pref); set('rJob',dr.profile.job);
+        if(dr.profile.exp){ var ri=document.querySelector('#rExp input[value="'+dr.profile.exp.replace(/"/g,'')+'"]'); if(ri){ ri.checked=true; ri.dispatchEvent(new Event('change')); } } } } }catch(e){}
   document.getElementById('goBtn').addEventListener('click',function(){
     document.getElementById('err').innerHTML='';
     var email=v('rMail').toLowerCase(), email2=v('rMail2').toLowerCase();
@@ -164,6 +171,7 @@ select.field{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w
     var exp=document.querySelector('#rExp input:checked');
     var profile={name:v('rName'),sex:v('rSex'),age:v('rAge'),pref:v('rPref'),job:v('rJob'),exp:exp?exp.value:''};
     try{ localStorage.setItem('eki_apply', JSON.stringify({email:email, ts:Date.now()})); }catch(e){}
+    try{ sessionStorage.setItem('eki_reg_draft', JSON.stringify({email:email, profile:profile})); }catch(e){}   // 確認画面から「内容を修正する」で戻ったとき、入力をやり直さなくてよいように（このタブの間だけ）
     var go=function(){ location.href='upgrade.html'; };
     if(CONFIG.STUB){ go(); return; }
     fetch(CONFIG.APPLY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,profile:profile})}).then(go,go);

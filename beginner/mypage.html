@@ -63,7 +63,7 @@
   .in{width:100%;height:48px;padding:0 14px;font-size:16px;font-weight:700;color:var(--ink);background:#fff;border:2px solid var(--line2);border-radius:12px;font-family:inherit}
   .in:focus{outline:none;border-color:var(--sui)}
   .row .k{white-space:nowrap;flex:0 0 auto}
-  .row .v{min-width:0}
+  .row .v{min-width:0;overflow-wrap:anywhere;word-break:break-all}   /* 長いメールアドレスでも横にはみ出さない */
   .nb{white-space:nowrap}
   .tip,.qa p,.qa summary,.alert,.notice p,#msg{text-wrap:pretty;line-break:strict}
 </style>
@@ -149,14 +149,14 @@
     <details><summary>解約後の請求・見覚えのない請求</summary>
       <p>無料期間の終了後に解約された場合、解約日より前の更新分のお支払いは発生します（返金・日割りはありません）。それ以外でお心当たりのないご請求は、お申し込み番号・ご請求日・金額を添えて <a href="mailto:info@72k.ai?subject=%E3%81%94%E8%AB%8B%E6%B1%82%E3%81%AE%E7%A2%BA%E8%AA%8D">info@72k.ai</a> へご連絡ください。お調べしてご回答します。</p></details>
     <details><summary>解約を取り消したい・もう一度使いたい</summary>
-      <p>解約済みの方は、<a href="pricing.html">お申し込みページ</a>から改めてお手続きください（無料お試しはお一人様1回限りです）。</p></details>
+      <p>解約手続き済みで、まだご利用期間中の方は、期間の最終日までそのままお使いいただけます。続けて使いたい場合は、<b>期間の最終日を過ぎてから</b><a href="pricing.html">お申し込みページ</a>で改めてお手続きください（期間中に申し込むと、料金が重なります）。期間中に解約を取り消したい場合は、<a href="mailto:info@72k.ai?subject=%E8%A7%A3%E7%B4%84%E3%81%AE%E5%8F%96%E3%82%8A%E6%B6%88%E3%81%97">info@72k.ai</a> へご連絡ください。<br>ご利用期間が終わった方は、<a href="pricing.html">お申し込みページ</a>から改めてお手続きください（無料お試しはお一人様1回限りです）。</p></details>
   </div>
   <p class="tip">お問い合わせ：<a href="mailto:info@72k.ai">info@72k.ai</a>（平日10:00〜18:00／原則メールにてご回答します）</p>
 </main>
 
 <footer>
   <div>
-    <a href="index.html">サービス紹介</a>・<a href="pricing.html">料金</a>・
+    <a href="index.html?lp=1">サービス紹介</a>・<a href="pricing.html">料金</a>・
     <a href="terms.html">利用規約</a>・<a href="tokushoho.html">特定商取引法に基づく表記</a>・<a href="privacy.html">プライバシーポリシー</a>
   </div>
   <div style="margin-top:8px;color:#8B7E68">© 今日から占い師（72k株式会社）</div>
@@ -201,16 +201,18 @@
   var cur={};
   function headers(){ var h={'Content-Type':'application/json'}; var t=g('member_token'); if(t){ h['Authorization']='Bearer '+t; } return h; }
   function post(path,extra){ var b={email:email}; if(extra) for(var k in extra) b[k]=extra[k]; return fetch(CONFIG.API+path,{method:'POST',headers:headers(),body:JSON.stringify(b)}); }
+  var RELOGIN='ログインの有効期限が切れました。<a href="auth.html?next=mypage">もう一度ログイン</a>してから、お手続きください。';
   function say(text, ok){ msg.className=ok?'ok':'ng'; msg.innerHTML=text; msg.scrollIntoView({behavior:'smooth',block:'center'}); }
 
   if(!email){ $('need-login').hidden=false; return; }
   $('member').hidden=false;
 
   // 画面にご契約状況を反映（STUB=ブラウザ内の値／本番=STATUSエンドポイントの返り値）
-  function render(s){
+  function fmtD(d){ var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(d||'')); return m ? (+m[1])+'年'+(+m[2])+'月'+(+m[3])+'日' : String(d||''); }   // 2026-10-17 → 2026年10月17日（表示用）
+  function render(s, nosave){
     cur=s||{};
     var st=cur.status||'none';
-    sv('member_status', st); sv('member_period_end', cur.periodEnd||'');
+    if(!nosave){ sv('member_status', st); sv('member_period_end', cur.periodEnd||''); }   // 取得できなかったときは、端末に保存した状態を消さない
     $('v-email').textContent = email;
     $('v-plan').innerHTML  = PLAN[cur.plan] || PLAN[g('selected_plan')] || PLAN.month;
     $('v-order').textContent = cur.orderId || '—';
@@ -227,7 +229,7 @@
       $('v-next').innerHTML = '<span class="nb">'+(cur.nextChargeAt||'毎月の更新日')+'</span><span class="nb">（'+PRICE+'）</span>';
     }else if(st==='canceling' || st==='canceled'){
       $('k-next').textContent='ご利用期間';
-      $('v-next').innerHTML = (cur.periodEnd && usable(st,cur.periodEnd)) ? '<span class="nb">'+cur.periodEnd+'まで</span><span class="nb">（以後の請求はありません）</span>'
+      $('v-next').innerHTML = (cur.periodEnd && usable(st,cur.periodEnd)) ? '<span class="nb">'+fmtD(cur.periodEnd)+'まで</span><span class="nb">（以後の請求はありません）</span>'
         : (st==='canceling' ? '<span class="nb">今の期間の最終日まで</span><span class="nb">（以後の請求はありません）</span>' : '終了しました');
     }else if(st==='past_due'||st==='unpaid'){
       $('k-next').textContent='お支払い';
@@ -242,7 +244,7 @@
     cardBtn.disabled = done;
     $('cancel-tip').hidden = done;
     // 使えない状態（期間が終わった解約済み・ご契約なし）のときは「鑑定ツールをひらく」を出さない
-    var ok=usable(st,cur.periodEnd); $('open-app').hidden=!ok; $('open-app-t').hidden=!ok; if($('open-app-tip')) $('open-app-tip').hidden=!ok;
+    var ok=usable(st,cur.periodEnd) && !cur.unpaidBefore; $('open-app').hidden=!ok; $('open-app-t').hidden=!ok; if($('open-app-tip')) $('open-app-tip').hidden=!ok;
   }
 
   /* ★エンジニア接続ポイント：ご契約状況の取得 */
@@ -254,10 +256,15 @@
     try{
       var r=await post(CONFIG.STATUS);
       if(r.status===401){ $('member').hidden=true; $('need-login').hidden=false; return; }
-      render(await r.json());
+      if(!r.ok) throw new Error('status '+r.status);
+      var j=await r.json();
+      if(!j || !STATUS_JA[j.status]) throw new Error('bad status');   // 決まった状態以外は「取得できなかった」として扱う（「ご契約がありません」と誤って出さない）
+      render(j);
     }catch(e){
-      render({ status:g('member_status')||'none', plan:g('selected_plan') });
-      say('ただいまご契約状況を取得できませんでした。時間をおいて、ページを読み込み直してください。', false);
+      // 取得できなかったとき：端末に保存した状態で仮に表示し（保存はしない）、解約・カード変更は押せないようにする
+      render({ status:g('member_status')||'none', plan:g('selected_plan'), periodEnd:g('member_period_end') }, true);
+      $('cancelBtn').disabled=true; $('cardBtn').disabled=true; $('v-status').textContent='確認できません'; $('v-status').className='pill warn';
+      say('ただいまご契約状況を取得できませんでした。時間をおいて、ページを読み込み直してください。<br>解約・カード変更は、ご契約状況を確認できてからお手続きいただけます。', false);
     }
   }
   loadStatus();
@@ -275,7 +282,9 @@
     if(CONFIG.STUB){ say('決済代行会社（テレコムクレジット）のカード変更ページへ移動します。<br>（ただいま接続の準備中です）', true); return; }
     var b=this; b.disabled=true;
     try{
-      var r=await post(CONFIG.CARD); var j=await r.json();
+      var r=await post(CONFIG.CARD);
+      if(r.status===401){ b.disabled=false; say(RELOGIN, false); return; }
+      var j=await r.json();
       if(j && j.url){ location.href=j.url; return; }
       throw new Error('no url');
     }catch(e){ b.disabled=false; say('ただいまカード変更ページをひらけませんでした。時間をおいて再度お試しください。', false); }
@@ -292,6 +301,8 @@
     try{
       if(!CONFIG.STUB){
         var r=await fetch(CONFIG.API+CONFIG.EMAIL,{method:'POST',headers:headers(),body:JSON.stringify({email:email,newEmail:a})});
+        if(r.status===401){ b.disabled=false; say(RELOGIN, false); return; }
+        if(r.status===409){ b.disabled=false; say('このメールアドレスは、すでにほかのご契約で使われています。別のアドレスを入力してください。', false); return; }
         if(!r.ok) throw new Error('email '+r.status);
       }
       $('email-form').hidden=true; $('em1').value=''; $('em2').value='';
@@ -304,13 +315,19 @@
   async function doCancel(){
     if(CONFIG.STUB){ return {ok:true, status:'canceling', periodEnd:cur.periodEnd||cur.trialEnd||''}; }
     var r=await post(CONFIG.CANCEL, cur.orderId?{orderId:cur.orderId}:null);   // 表示中の契約（同じメールで2件あるときも、どちらを解約するかが分かるように）
+    if(r.status===401){ var e1=new Error('login'); e1.login=true; throw e1; }
     if(!r.ok) throw new Error('cancel failed '+r.status);
-    return r.json();
+    var j=await r.json();
+    if(!j || j.ok!==true) throw new Error('cancel not ok');   // サーバーが「できなかった」と返したときに「完了しました」と出さない
+    return j;
   }
   var btn=$('cancelBtn');
   btn.onclick=function(){
     var st=cur.status||'none';
-    var q = st==='trialing'
+    var unpaid=(st==='past_due'||st==='unpaid');
+    var q = unpaid
+      ? '本当に解約しますか？\n次回分からは請求されません。お支払いが確認できていないため、アプリは引き続きご利用いただけません。'+'\n\n※お客様の記録（顧客カルテ・名簿）は、アプリのロック画面の「書き出す」からファイルに保存できます。'
+      : st==='trialing'
       ? '本当に解約しますか？\n無料期間中のため、料金はかかりません（無料期間の最終日までは、引き続きお使いいただけます）。'+'\n\n※お客様の記録（顧客カルテ・名簿）は、ご利用の最終日までに、アプリの「書き出し（バックアップ）」でファイルに保存しておいてください。'
       : '本当に解約しますか？\nお支払い済みの期間の終わりまではご利用いただけ、次回分からは請求されません。'+'\n\n※お客様の記録（顧客カルテ・名簿）は、ご利用の最終日までに、アプリの「書き出し（バックアップ）」でファイルに保存しておいてください。';
     if(!confirm(q)) return;
@@ -321,12 +338,15 @@
       // 解約の受付の控え（サーバーが canceledAt＝受付日時・cancelId＝受付番号 を返したときだけ表示。同じ内容を解約受付メールにも記載）
       var esc=function(v){ return String(v||'').replace(/[<>&"]/g,''); };
       var rc=(res&&(res.canceledAt||res.cancelId))?'<br><span style="font-size:.92em">受付日時：'+esc(res.canceledAt||'―')+'／受付番号：'+esc(res.cancelId||'―')+'（同じ内容を、解約受付のメールでもお送りします）</span>':'';
-      render({ status:(res&&res.status)||'canceling', plan:cur.plan, orderId:cur.orderId, periodEnd:pe });
+      render({ status:(res&&res.status)||'canceling', plan:cur.plan, orderId:cur.orderId, periodEnd:pe, unpaidBefore:unpaid });
+      if(unpaid){ say('解約のお手続きが完了しました。<b>次回分からの請求は停止します。</b>'+rc, true); return; }
+      pe=fmtD(pe);
       say(was==='trialing'
         ? '解約のお手続きが完了しました。<b>無料期間中のため、料金は一切かかりません。</b>'+(pe?pe+'まで':'無料期間の終わりまで')+'は、引き続きご利用いただけます。'+rc
         : '解約のお手続きが完了しました。<b>次回分からの請求は停止します。</b>'+(pe?pe+'まで':'お支払い済みの期間の終わりまで')+'は、引き続きご利用いただけます。ご利用ありがとうございました。'+rc, true);
-    }).catch(function(){
+    }).catch(function(e){
       btn.disabled=false;
+      if(e&&e.login){ say(RELOGIN, false); return; }
       say('ただいま解約のお手続きができませんでした。時間をおいて再度お試しください。<br>くり返しできない場合は <a href="mailto:info@72k.ai">info@72k.ai</a> へご連絡ください（ご連絡いただいた日を解約日として扱います）。', false);
     });
   };

@@ -2,7 +2,7 @@
 
 > **会員・決済・API の正はこの文書です。** 過去のやり取り・旧ドキュメントより、本書を優先してください。
 > フロント（画面）は**完成済み**。エンジニアが作るのは **サーバー側API・決済・本番切替** です。
-> 対応バージョン：PRO `pro/sw.js` の `CACHE = 'shichu-jidou-v461'`／ビギナー `beginner/sw.js` `'kyoukara-uranaishi-v99'`／易 EKI Pro `eki-pro/app/sw.js` `'eki-pro-v63'` ／ 最終更新：2026-10-13
+> 対応バージョン：PRO `pro/sw.js` の `CACHE = 'shichu-jidou-v462'`／ビギナー `beginner/sw.js` `'kyoukara-uranaishi-v100'`／易 EKI Pro `eki-pro/app/sw.js` `'eki-pro-v64'` ／ 最終更新：2026-10-13
 > 3サイトの全体の依頼内容は、リポジトリ直下の `エンジニアへの実装依頼_3サイト.md` を先に読んでください。易 EKI Pro だけの追加分は `eki-pro/実装仕様_エンジニア向け.md`。
 > `eki-pro/実装仕様_会員まわり_共通.md` は本書と**同じ内容の写し**です（食い違ったら本書が正）。
 > 前提（発注者確認済み）：**Gemini（文章生成）はサーバー経由**（キーはサーバーだけに置く）／**決済はテレコムクレジット**／**Web先行 → のちに iOS・Android アプリ**。
@@ -50,9 +50,9 @@
 | # | 内容 | PRO | ビギナー | EKI |
 |---|---|---|---|---|
 | 1 | 会員ゲート：`var PREVIEW_MODE = true;` → **`false`** | `app-pro.html` 746行 | `app-beginner.html` 764行 | `app/index.html` 547行 |
-| 2 | 仮動作：`STUB: !/(^\|\.)(72k\.ai\|suimei\.jp\|ekipro\.jp)$/i.test(location.hostname)` → **`STUB: false`** | `auth.html` 229行・`mypage-pro.html` 185行・`pricing-pro.html` 376行（`TRIAL_CHECK`）・483行（`FIX`） | `auth.html` 229行・`mypage.html` 178行・`pricing.html` 362行（`TRIAL_CHECK`）・469行（`FIX`） | `auth.html` 231行・`mypage.html` 180行・`upgrade.html` 357行（`TRIAL_CHECK`）・464行（`FIX`）・`register.html` 153行（`CONFIG`） |
+| 2 | 仮動作：`STUB: !/(^\|\.)(72k\.ai\|suimei\.jp\|ekipro\.jp)$/i.test(location.hostname)` → **`STUB: false`** | `auth.html` 229行・`mypage-pro.html` 185行・`pricing-pro.html` 376行（`TRIAL_CHECK`）・488行（`FIX`） | `auth.html` 229行・`mypage.html` 178行・`pricing.html` 362行（`TRIAL_CHECK`）・474行（`FIX`） | `auth.html` 231行・`mypage.html` 180行・`upgrade.html` 357行（`TRIAL_CHECK`）・469行（`FIX`）・`register.html` 154行（`CONFIG`） |
 | 3 | 決済ページURL `var TELECOM_PAYMENT_URL={ month:'' };` と `var TELECOM_PARAM={ email:'email', order:'sendid' };` | `pricing-pro.html` 346〜347行 | `pricing.html` 332〜333行 | `upgrade.html` 327〜328行 |
-| 4 | テスト用キー欄を削除 | `app-pro.html` の `<details id="gtest-wrap">`（988行）と `?gtest=1` で表示する1行（7991行）と、テスト用キーを読む1行（7985行 `geminiKey=…bazi_gkey…`。`geminiKey='';` に固定してもよい） | 同左（生成元の PRO を直して生成） | `app/index.html` の `#demoKeyCard`（707行）・`#geminiCard`（962行）と、`?gtest=1` で表示する1行（2949行）。2つの欄を消してもアプリは止まらない作り（2026-10-13 確認済み）。1155行の `GEMINI_API_KEY = ""` は空のまま |
+| 4 | テスト用キー欄を削除 | `app-pro.html` の `<details id="gtest-wrap">`（988行）と `?gtest=1` で表示する1行（7991行）と、テスト用キーを読む1行（7985行 `geminiKey=…bazi_gkey…`。`geminiKey='';` に固定してもよい） | 同左（生成元の PRO を直して生成） | `app/index.html` の `#demoKeyCard`（708行）・`#geminiCard`（963行）と、`?gtest=1` で表示する1行（2950行）。2つの欄を消してもアプリは止まらない作り（2026-10-13 確認済み）。1156行の `GEMINI_API_KEY = ""` は空のまま |
 | 5 | `DEMO_MODE` は `false` のまま | `app-pro.html` 743行 | `app-beginner.html` 761行 | `app/index.html` 557行 |
 | 6 | `functions/gemini.js` | 会員確認は実装済み → **本番で環境変数 `MEMBER_CHECK_URL` を必ず設定**（§5） | 同左 | 同左 |
 
@@ -78,15 +78,16 @@
 
 | API | body | 成功 | 失敗 | 役割 |
 |---|---|---|---|---|
-| `auth-login` | `{ email, password }` | `{ ok:true, status, email, token, periodEnd }` | HTTP 401 | ログイン。フロントは `member_email`・`member_token`・`member_status`・`member_period_end`・`member_checked_at` を保存（「ログインしたままにする」を外すと `member_token` だけ sessionStorage、`member_checked_at` は保存しない） |
+| `auth-login` | `{ email, password }` | `{ ok:true, status, email, token, periodEnd }` | HTTP 401（違う）／429・403（失敗が続いて一時的に止めたとき。画面は「しばらくログインできません」と案内） | ログイン。フロントは `member_email`・`member_token`・`member_status`・`member_period_end`・`member_checked_at` を保存（「ログインしたままにする」を外すと `member_token` だけ sessionStorage、`member_checked_at` は保存しない） |
 | `auth-check` | `{ token }` | `{ ok:true, status, periodEnd }` | HTTP 401（無効・ログアウト済み） | アプリ起動時のログイン確認。401 ならログイン状態を消してログイン画面へ |
 | `auth-logout` | `{ token }` | `{ ok:true }` | ― | トークンを失効。フロントは結果を待たない |
-| `auth-setpw` | `{ token, password }` | `{ ok:true, email }` | HTTP 400／410（期限切れ・使用済み） | 設定メールのリンク（`auth.html?view=setpw&token=…`）でパスワードを決める。初回と再設定で共通。パスワードは8文字以上（画面で確認済み）。トークンは短命・ワンタイム |
+| `auth-setpw` | `{ token, password }` | `{ ok:true, email }` | HTTP 400／401／404／410（期限切れ・使用済み・見つからない。画面は「送り直し」へ） | 設定メールのリンク（`auth.html?view=setpw&token=…`）でパスワードを決める。初回と再設定で共通。パスワードは8文字以上（画面で確認済み）。トークンは短命・ワンタイム |
 | `auth-reset` | `{ email }` | `{ ok:true }` | ― | 設定メールの送信。**登録の有無にかかわらず同じ応答** |
 | `auth-email-hint` | `{ orderId }` | `{ ok:true, hint }`（例 `ta***@ex***.com`） | **HTTP 400 または 404**（body `{ ok:false }`） | メールアドレスを忘れた：お申し込み番号から登録アドレスの一部を返す。回数制限必須 |
 | `auth-fix-email` | `{ orderId, email }` | `{ ok:true }` | **HTTP 400 または 404**（body `{ ok:false }`） | 申込時の打ち間違いをお客様が自分で直し、設定メールを送り直す。**パスワード未設定の会員に限る**・回数制限必須 |
 | `email-change-confirm` | `{ token }` | `{ ok:true, email }` | HTTP 400 等＋`{ ok:false }` | マイページで申請したアドレス変更の確定（`auth.html?view=email&token=…`）。短命・ワンタイム |
 
+- **ご契約状況の取得に失敗したら 2xx 以外で返す**：マイページは、2xx 以外や決まった `status` 以外の返事を「取得できなかった」として扱い、解約・カード変更を押せないようにする（2026-10-14 修正。以前は「ご契約がありません」と誤って出ていた）。
 - **失敗は HTTP ステータスで返す**：料金ページの完了画面（`auth-fix-email`）は**HTTP ステータスだけ**で成否を判断する。HTTP 200 で `{ok:false}` を返すと「送り直しました」と表示されてしまう。
 
 **`status`（契約ステータス）**
@@ -142,7 +143,7 @@
 - PRO・ビギナー：`app-pro.html`／`app-beginner.html`（相談・自動鑑定・日運/月運・本格鑑定・相性）、`meishi-sheet.html`（鑑定書）。
 - EKI：`app/index.html`（鑑定・深掘り相談・鑑定書）。
 
-いずれも URL は定数ではなく `'/.netlify/functions/gemini'` と直接書いてある（`app-pro.html` 6332行・`meishi-sheet.html` 4223行・`app-beginner.html` 6351行・EKI `app/index.html` 2667行）。`netlify.toml` では `/api/gemini` も同じ関数の別名。
+いずれも URL は定数ではなく `'/.netlify/functions/gemini'` と直接書いてある（`app-pro.html` 6332行・`meishi-sheet.html` 4223行・`app-beginner.html` 6351行・EKI `app/index.html` 2668行）。`netlify.toml` では `/api/gemini` も同じ関数の別名。
 
 **APIキーは絶対にフロントに出さず、サーバーの環境変数で持つ。** 雛形 `functions/gemini.js`（3サイトとも同じ仕組み。EKI は全体の大きさの上限だけ5,800,000字）あり。
 
@@ -188,8 +189,8 @@
 |---|---|---|---|
 | `check-subscription` | `{ email }`＋Bearer | `{ status, plan, orderId, trialEnd, nextChargeAt, periodEnd }` | ご契約状況。**`trialEnd`・`nextChargeAt` は表示用の文字列**（例 `2026年10月17日`。そのまま表示）、**`periodEnd` だけは必ず `YYYY-MM-DD`**（判定に使う）。未ログインは HTTP 401（ログイン案内を表示） |
 | `card-update-url` | `{ email }`＋Bearer | `{ url }` | テレコムクレジットの**カード変更ページのURL**（フロントはそこへ移動）。変更後も無料期間・契約を引き継ぐ |
-| `email-change` | `{ email, newEmail }`＋Bearer | `{ ok:true }` | 新しいアドレスへ確認メールを送り、`email-change-confirm` で確定（確定までは旧アドレスのまま） |
-| `cancel-subscription` | `{ email, orderId }`＋Bearer（`orderId`＝マイページに表示中の契約。`check-subscription` で返したもの） | `{ ok:true, status:'canceling', periodEnd }`（任意で `canceledAt`・`cancelId`） | 解約。継続課金を停止。**無料期間中なら初回課金をしない（0円）**。無料期間中・課金後とも `periodEnd` の最終日まで利用可。**`periodEnd` は必ず返す**。`canceledAt`（受付日時）・`cancelId`（受付番号）を返すと完了画面にも表示する（解約受付メールと同じ内容）。`orderId` がトークン本人の契約でなければ断る |
+| `email-change` | `{ email, newEmail }`＋Bearer | `{ ok:true }`（新しいアドレスがほかの契約で使われているときは HTTP 409。画面がその旨を案内） | 新しいアドレスへ確認メールを送り、`email-change-confirm` で確定（確定までは旧アドレスのまま） |
+| `cancel-subscription` | `{ email, orderId }`＋Bearer（`orderId`＝マイページに表示中の契約。`check-subscription` で返したもの） | `{ ok:true, status:'canceling', periodEnd }`（任意で `canceledAt`・`cancelId`） | 解約。継続課金を停止。**無料期間中なら初回課金をしない（0円）**。無料期間中・課金後とも `periodEnd` の最終日まで利用可。**`periodEnd` は必ず返す**。`canceledAt`（受付日時）・`cancelId`（受付番号）を返すと完了画面にも表示する（解約受付メールと同じ内容）。`orderId` がトークン本人の契約でなければ断る。**解約できなかったときは 2xx 以外か `{ ok:false }` を返す**（画面は `ok:true` のときだけ「完了しました」と出す）。401 なら画面は「もう一度ログイン」を案内 |
 
 - **同じメール・同じ商品で契約が2件あるとき**（二重申込。自動で取り消さない＝§4-2）：`check-subscription` は「まだ解約していない契約のうち新しい方」（なければ最新）を返し、`cancel-subscription` は送られた `orderId` の契約を解約する。解約後にマイページを開き直すと、もう1件が表示されて、それも解約できる。アプリ（`auth-login`／`auth-check` の `status`）は、使える契約が1件でもあればその状態を返す。
 
@@ -217,7 +218,7 @@
 5. 決済ページの**戻り先**：PRO `pricing-pro.html`／ビギナー `pricing.html`／EKI `upgrade.html` の `?result=ok`（完了：送り先メール・お申し込み番号・届かないときの案内。番号とメールはこの端末の `pending_order` から表示）／`?result=ng`（中断・失敗。`?result=back` も同じ表示）。**戻り先URLの表示だけで会員を作らない**（URLは誰でも打てる）。
 6. メールのリンクでパスワードを決める → ログイン → アプリ。
 7. 無料期間は**お申し込み日を1日目とする7日間**。**8日目に初回 9,800円** → `active`。以後その日が毎月の更新日（**その日がない月は月末日**）。次回の請求を止める期限は**更新日の前日23:59（日本時間）**。課金失敗 → `past_due`（アプリは開かず、マイページでカード変更へ誘導）。
-8. **無料期間の終わりのお知らせはしない**（発注者決定 2026-10-13。終了前のお知らせメールなし）。代わりに、**何日まで無料で、何日から自動で月額9,800円になるか**を、確認画面・完了画面（`?result=ok`。`pending_order` の日時から日本時間で計算）・マイページ・特商法に日付で明記し、「終了前のお知らせメールはお送りしません」とも書いている。**パスワード設定メールにも、無料期間の最終日と初回課金日を日付で書く**。
+8. **無料期間の終わりのお知らせはしない**（発注者決定 2026-10-13。終了前のお知らせメールなし）。代わりに、**何日まで無料で、何日から自動で月額9,800円になるか**を、確認画面・完了画面（`?result=ok`。`pending_order` の日時から日本時間で計算）・マイページ・特商法に日付で明記し、「終了前のお知らせメールはお送りしません」とも書いている。**パスワード設定メールにも、無料期間の最終日と初回課金日を日付で書く**。あわせて**お申し込み番号も書く**（別のブラウザで決済した等で完了画面に番号が出ないことがあり、「メールアドレスを忘れた・間違えた」に必要なため）。
 
 - **易 EKI Pro の `apply-start`**：`register.html` が `{ email, profile:{ name, sex, age, pref, job, exp } }` を送る（返事は読まない・失敗しても先へ進む）。お申し込み番号はまだ無いので、決済結果とは**メールでひも付ける**。会員はまだ作らない。
 - 無料期間・継続課金・カード変更・解約・結果通知の具体的なやり方（APIか管理画面か、無料期間を決済ページ側で設定できるか、通知の形式と検証方法、カード変更ページのURLの作り方）は、**テレコムクレジットの接続仕様書で確認**する。
@@ -319,7 +320,7 @@
 | `PREVIEW_MODE` | `app-pro.html` 746行 | `true` | `false` |
 | `CONFIG.API`／`CONFIG.STUB` | `auth.html`・`mypage-pro.html` の `var CONFIG` | `'/.netlify/functions'`／本番ドメイン以外で true の式 | 実ベース／`false` |
 | `TRIAL_CHECK.URL`／`TRIAL_CHECK.STUB` | `pricing-pro.html`（`var TRIAL_CHECK`） | `'/.netlify/functions/trial-check'`／本番ドメイン以外で true の式 | 実URL／`false` |
-| `FIX.URL`／`FIX.STUB` | `pricing-pro.html` 483行 | `'/.netlify/functions/auth-fix-email'`／同上の式 | 実URL／`false` |
+| `FIX.URL`／`FIX.STUB` | `pricing-pro.html` 488行 | `'/.netlify/functions/auth-fix-email'`／同上の式 | 実URL／`false` |
 | `TELECOM_PAYMENT_URL`／`TELECOM_PARAM`／`ORDER_PREFIX` | `pricing-pro.html` 346〜348行 | `{month:''}`／`{email:'email',order:'sendid'}`／`'P'` | 決済URL／接続仕様書の名前／そのまま |
 | `geminiModel` | `app-pro.html` 2740行 | `'gemini-2.5-flash'` | 変更不要（本番のモデルはサーバーの `GEMINI_MODEL` で決まる。フロントの値はテスト用の直接呼び出しと `thinkingConfig` の有無だけに効く） |
 | `AI_DAILY_CAP` | `app-pro.html` 6277行・`meishi-sheet.html` 4179行 | `200` | 規約と同じ値のまま |

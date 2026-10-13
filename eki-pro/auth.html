@@ -214,7 +214,7 @@
   </section>
 </div>
 <footer class="auth-foot" style="max-width:100%;box-sizing:border-box;text-align:center;font-size:12.5px;line-height:2.2;color:#8B7E68;padding:18px 16px 28px">
-  <a href="index.html" style="color:inherit;white-space:nowrap">サービス紹介</a>　<a href="mypage.html" style="color:inherit;white-space:nowrap">マイページ</a>　<a href="terms.html" style="color:inherit;white-space:nowrap">利用規約</a>　<a href="tokushoho.html" style="color:inherit;white-space:nowrap">特定商取引法に基づく表記</a>　<a href="privacy.html" style="color:inherit;white-space:nowrap">プライバシーポリシー</a>
+  <a href="index.html?lp=1" style="color:inherit;white-space:nowrap">サービス紹介</a>　<a href="mypage.html" style="color:inherit;white-space:nowrap">マイページ</a>　<a href="terms.html" style="color:inherit;white-space:nowrap">利用規約</a>　<a href="tokushoho.html" style="color:inherit;white-space:nowrap">特定商取引法に基づく表記</a>　<a href="privacy.html" style="color:inherit;white-space:nowrap">プライバシーポリシー</a>
   <div style="margin-top:4px">© 易 EKI Pro（72k株式会社）</div>
 </footer>
 
@@ -280,12 +280,14 @@
     if(CONFIG.STUB){ await wait(600); return {ok:true, status:'trialing', email:email, token:'stub-token', periodEnd:''}; }
     var r = await post(CONFIG.LOGIN, {email:email,password:pw});
     if(r.status===401){ return {ok:false, error:'invalid'}; }
+    if(r.status===429){ return {ok:false, error:'busy'}; }   // 回数制限（何度も失敗したとき）
+    if(r.status===403){ return {ok:false, error:'locked'}; }
     if(!r.ok) throw new Error('login '+r.status); return r.json();
   }
   async function apiSetpw(token, pw){
     if(CONFIG.STUB){ await wait(700); return {ok:true, email:g('member_email')||''}; }
     var r = await post(CONFIG.SETPW, {token:token,password:pw});
-    if(r.status===400 || r.status===410){ return {ok:false, error:'expired'}; }
+    if(r.status===400 || r.status===401 || r.status===404 || r.status===410){ return {ok:false, error:'expired'}; }   // 期限切れ・使用済み・見つからないリンクは「送り直し」の画面へ
     if(!r.ok) throw new Error('setpw '+r.status); return r.json();
   }
   async function apiReset(email){
@@ -312,6 +314,8 @@
           setMsg(loginMsg,'お支払いが確認できていません。<br><a href="'+CONFIG.MYPAGE+'">マイページでカード情報を更新する</a>','err'); }
         else if(res.status==='canceled'){ setMsg(loginMsg,'ご利用期間が終了しました（解約済み）。<br><a href="'+CONFIG.MYPAGE+'">マイページ</a>・<a href="'+CONFIG.PRICING+'">お申し込みページへ</a>','err'); }
         else { setMsg(loginMsg,'このアカウントは現在ご利用いただけません（'+statusJa(res.status)+'）。<br><a href="'+CONFIG.PRICING+'">お申し込みページへ</a>','err'); }
+      } else if(res && (res.error==='busy' || res.error==='locked')){
+        setMsg(loginMsg,'ログインの失敗が続いたため、しばらくログインできません。時間をおいてからお試しいただくか、<button type="button" class="link-btn" data-go="reset">パスワードを設定し直してください</button>。','err');
       } else {
         setMsg(loginMsg,'メールアドレスまたはパスワードが違います。<br><button type="button" class="link-btn" data-go="reset">パスワードを忘れた方</button>','err');
       }
@@ -368,7 +372,7 @@
     if(!ORDER_RE.test(o)){ setMsg(m,'お申し込み番号を正しく入力してください（例：E-20261010-7K3QX-A9M2Z）。','err'); return; }
     b.disabled=true;
     apiPost(CONFIG.HINT,{orderId:o},{ok:true,hint:'ta***@ex***.com'}).then(function(res){
-      if(res&&res.ok){ setMsg(m,'ご登録のアドレスは <b>'+String(res.hint).replace(/[<>&"]/g,'')+'</b> です。<br><button type="button" class="link-btn" data-go="reset">▶ このアドレスに設定メールを送る</button><br>違うアドレスなら、下の「直す」へ。','ok'); }
+      if(res&&res.ok){ setMsg(m,'ご登録のアドレスは <b>'+String(res.hint).replace(/[<>&"]/g,'')+'</b> です（一部を隠しています）。<br>思い出したアドレスを入れて、<button type="button" class="link-btn" data-go="reset-blank">▶ パスワード設定メールを送る</button><br>違うアドレスで申し込んでいたら、下の「直す」へ。','ok'); }
       else { setMsg(m,'このお申し込み番号は見つかりませんでした。','err'); }
     }).catch(function(){ setMsg(m,'ただいま確かめられませんでした。時間をおいてお試しください。','err'); })
       .finally(function(){ b.disabled=false; });
@@ -391,7 +395,7 @@
     show('email'); $('em-loading').classList.remove('hide'); $('em-ok').classList.add('hide'); $('em-ng').classList.add('hide');
     (CONFIG.STUB ? wait(700).then(function(){ return {ok:!!token}; }) : post(CONFIG.EMAIL_OK,{token:token}).then(function(r){ return r.ok?r.json():{ok:false}; }))
       .then(function(res){ $('em-loading').classList.add('hide');
-        if(res&&res.ok){ if(res.email){ s('member_email', String(res.email).toLowerCase()); del('member_pw'); del('member_remember'); } $('em-ok').classList.remove('hide'); }
+        if(res&&res.ok){ if(res.email){ s('member_email', String(res.email).toLowerCase()); emailI.value=String(res.email).toLowerCase(); del('member_pw'); del('member_remember'); } $('em-ok').classList.remove('hide'); }   // ログイン欄も新しいアドレスに
         else { $('em-ng').classList.remove('hide'); } })
       .catch(function(){ $('em-loading').classList.add('hide'); $('em-ng').classList.remove('hide'); });
   }
@@ -404,7 +408,7 @@
   $('help-to-login').onclick=function(){ show('login'); };
   document.addEventListener('click', function(e){
     var b=e.target.closest && e.target.closest('[data-go]'); if(!b) return;
-    var v=b.getAttribute('data-go'); if(v==='reset'){ openReset(); } else if(views[v]){ show(v); }
+    var v=b.getAttribute('data-go'); if(v==='reset'){ openReset(); } else if(v==='reset-blank'){ openReset(); resetE.value=''; resetE.focus(); } else if(v==='login'){ var se=g('member_email'); if(se) emailI.value=se; show('login'); } else if(views[v]){ show(v); }
   });
 
   /* ---- 起動時：URLから初期ビュー、＋端末保存の自動入力 ---- */

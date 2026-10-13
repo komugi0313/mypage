@@ -90,6 +90,8 @@ s = s.replace("'pricing-pro.html'","'register.html'")
 s = (PRO / 'mypage-pro.html').read_text(encoding='utf-8')
 s = head(s, 'マイページ｜易 EKI Pro'); s = theme(links(s))
 s = rep(s, '鑑定結果やお客様の保存・メモは、ツール内の「👥 顧客カルテ」からご利用いただけます。', '鑑定したお客様の記録は、ツール内の「顧客」からご覧いただけます。', 1)
+s = rep(s, 'お客様の記録（顧客カルテ・名簿）は、ご利用の最終日までに、アプリの「書き出し（バックアップ）」でファイルに保存しておいてください。', 'お客様の記録（顧客名簿）は、ご利用の最終日までに、アプリの⚙設定「データのバックアップ」の「書き出す」でファイルに保存しておいてください。', 2)
+s = rep(s, 'お客様の記録（顧客カルテ・名簿）は、アプリのロック画面の「書き出す」', 'お客様の記録（顧客名簿）は、アプリのロック画面の「書き出す」', 1)
 s = rep(s, '<a class="tb-link" href="register.html">料金プラン</a>', '<a class="tb-link" href="index.html#price">料金プラン</a>', 1)
 s = s.replace('<a href="register.html">料金</a>', '<a href="index.html#price">料金</a>')   # 料金はLPの料金欄へ（申込ページに直接行かない）
 (EKI / 'mypage.html').write_text(s, encoding='utf-8')

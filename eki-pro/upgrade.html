@@ -229,7 +229,7 @@
         <li>メールのリンクからパスワードを決めると、すぐに鑑定をはじめられます。</li>
         <li><b>10分たっても届かないとき</b>は、迷惑メールフォルダをご確認ください。</li>
         <li>それでも届かないときは、<a href="auth.html?view=reset">設定メールをもう一度送る</a>をお試しください。</li>
-        <li><b>アドレスを間違えていたとき</b>は、下の「アドレスを直して送り直す」から、この画面で直せます。</li>
+        <li id="ok-fix-li"><b>アドレスを間違えていたとき</b>は、下の「アドレスを直して送り直す」から、この画面で直せます。</li>
       </ul>
       <details class="fixmail" id="fixmail" hidden><summary>アドレスを直して送り直す</summary>
         <div class="field"><label for="fix1">正しいメールアドレス</label><input id="fix1" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com"></div>
@@ -417,6 +417,9 @@
     form.scrollIntoView({behavior:'smooth', block:'start'});
   });
 
+  // 決済ページから「戻る」で戻ってきたとき（iPhone の Safari などは画面をそのまま復元する）：申し込むボタンを押せる状態に戻す
+  window.addEventListener('pageshow', function(e){ if(e.persisted){ var b=document.getElementById('cf-go'); if(b){ delete b.dataset.sent; b.disabled=false; } } });
+
   // ②「この内容で申し込む」：決済代行（テレコムクレジット）の決済ページへ遷移
   document.getElementById('cf-go').addEventListener('click', function(){
     var email=confirmBox.dataset.email||'';
@@ -448,6 +451,8 @@
     document.getElementById('apply').hidden=true;
     document.getElementById('res-ok').hidden=false;
     if(po.email){ document.getElementById('ok-mail').textContent=po.email; s('member_email', po.email); }
+    else { document.getElementById('ok-mail').textContent='お申し込みのときに入力したメールアドレス'; }   // 別のブラウザで決済した等で、この端末に控えが無いとき
+    if(!po.id){ var _fl=document.getElementById('ok-fix-li'); if(_fl) _fl.hidden=true; }   // お申し込み番号が無いと直せないので、案内も出さない
     if(po.id){ document.getElementById('ok-order').textContent=po.id; document.getElementById('ok-order-wrap').hidden=false; document.getElementById('fixmail').hidden=false; }
     // 無料期間の最終日と、自動で有料になる日を日付で示す（終了前のお知らせメールは送らないため）。日本時間・お申し込み日＝1日目
     if(po.ts){ var _b=new Date(po.ts+(new Date().getTimezoneOffset()+540)*60000), _f=function(n){ var x=new Date(_b.getFullYear(),_b.getMonth(),_b.getDate()+n); return (x.getMonth()+1)+'月'+x.getDate()+'日'; };
@@ -474,8 +479,10 @@
       m.innerHTML='<div class="okmsg">'+esc(a)+' 宛に、パスワード設定メールを送り直しました。</div>'; };
     if(FIX.STUB){ setTimeout(done, 500); return; }
     fetch(FIX.URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({orderId:po.id,email:a})})
-      .then(function(r){ if(!r.ok) throw 0; done(); })
-      .catch(function(){ btn.disabled=false; m.innerHTML='<div class="err">ただいま直せませんでした。時間をおいてお試しください。</div>'; });
+      .then(function(r){ if(r.status===400||r.status===404){ var e=new Error('ng'); e.ng=true; throw e; } if(!r.ok) throw 0; done(); })
+      .catch(function(e){ btn.disabled=false; m.innerHTML = (e&&e.ng)
+        ? '<div class="err">このお申し込みでは、アドレスを直せませんでした。すでにパスワードを設定済みの場合は、ログイン後にマイページでアドレスを変更できます。</div>'
+        : '<div class="err">ただいま直せませんでした。時間をおいてお試しください。</div>'; });
   });
 
   document.getElementById('ng-retry').addEventListener('click', function(){
