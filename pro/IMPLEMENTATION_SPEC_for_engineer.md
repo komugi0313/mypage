@@ -2,7 +2,7 @@
 
 > **会員・決済・API の正はこの文書です。** 過去のやり取り・旧ドキュメントより、本書を優先してください。
 > フロント（画面）は**完成済み**。エンジニアが作るのは **サーバー側API・決済・本番切替** です。
-> 対応バージョン：PRO `pro/sw.js` の `CACHE = 'shichu-jidou-v462'`／ビギナー `beginner/sw.js` `'kyoukara-uranaishi-v100'`／易 EKI Pro `eki-pro/app/sw.js` `'eki-pro-v64'` ／ 最終更新：2026-10-13
+> 対応バージョン：PRO `pro/sw.js` の `CACHE = 'shichu-jidou-v463'`／ビギナー `beginner/sw.js` `'kyoukara-uranaishi-v101'`／易 EKI Pro `eki-pro/app/sw.js` `'eki-pro-v65'` ／ 最終更新：2026-10-13
 > 3サイトの全体の依頼内容は、リポジトリ直下の `エンジニアへの実装依頼_3サイト.md` を先に読んでください。易 EKI Pro だけの追加分は `eki-pro/実装仕様_エンジニア向け.md`。
 > `eki-pro/実装仕様_会員まわり_共通.md` は本書と**同じ内容の写し**です（食い違ったら本書が正）。
 > 前提（発注者確認済み）：**Gemini（文章生成）はサーバー経由**（キーはサーバーだけに置く）／**決済はテレコムクレジット**／**Web先行 → のちに iOS・Android アプリ**。
@@ -50,8 +50,8 @@
 | # | 内容 | PRO | ビギナー | EKI |
 |---|---|---|---|---|
 | 1 | 会員ゲート：`var PREVIEW_MODE = true;` → **`false`** | `app-pro.html` 746行 | `app-beginner.html` 764行 | `app/index.html` 547行 |
-| 2 | 仮動作：`STUB: !/(^\|\.)(72k\.ai\|suimei\.jp\|ekipro\.jp)$/i.test(location.hostname)` → **`STUB: false`** | `auth.html` 229行・`mypage-pro.html` 185行・`pricing-pro.html` 376行（`TRIAL_CHECK`）・488行（`FIX`） | `auth.html` 229行・`mypage.html` 178行・`pricing.html` 362行（`TRIAL_CHECK`）・474行（`FIX`） | `auth.html` 231行・`mypage.html` 180行・`upgrade.html` 357行（`TRIAL_CHECK`）・469行（`FIX`）・`register.html` 154行（`CONFIG`） |
-| 3 | 決済ページURL `var TELECOM_PAYMENT_URL={ month:'' };` と `var TELECOM_PARAM={ email:'email', order:'sendid' };` | `pricing-pro.html` 346〜347行 | `pricing.html` 332〜333行 | `upgrade.html` 327〜328行 |
+| 2 | 仮動作：`STUB: !/(^\|\.)(72k\.ai\|suimei\.jp\|ekipro\.jp)$/i.test(location.hostname)` → **`STUB: false`** | `auth.html` 229行・`mypage-pro.html` 185行・`pricing-pro.html` 378行（`TRIAL_CHECK`）・490行（`FIX`） | `auth.html` 229行・`mypage.html` 178行・`pricing.html` 364行（`TRIAL_CHECK`）・476行（`FIX`） | `auth.html` 231行・`mypage.html` 180行・`upgrade.html` 359行（`TRIAL_CHECK`）・471行（`FIX`）・`register.html` 154行（`CONFIG`） |
+| 3 | 決済ページURL `var TELECOM_PAYMENT_URL={ month:'' };` と `var TELECOM_PARAM={ email:'email', order:'sendid' };` | `pricing-pro.html` 348〜349行 | `pricing.html` 334〜335行 | `upgrade.html` 329〜330行 |
 | 4 | テスト用キー欄を削除 | `app-pro.html` の `<details id="gtest-wrap">`（988行）と `?gtest=1` で表示する1行（7991行）と、テスト用キーを読む1行（7985行 `geminiKey=…bazi_gkey…`。`geminiKey='';` に固定してもよい） | 同左（生成元の PRO を直して生成） | `app/index.html` の `#demoKeyCard`（708行）・`#geminiCard`（963行）と、`?gtest=1` で表示する1行（2950行）。2つの欄を消してもアプリは止まらない作り（2026-10-13 確認済み）。1156行の `GEMINI_API_KEY = ""` は空のまま |
 | 5 | `DEMO_MODE` は `false` のまま | `app-pro.html` 743行 | `app-beginner.html` 761行 | `app/index.html` 557行 |
 | 6 | `functions/gemini.js` | 会員確認は実装済み → **本番で環境変数 `MEMBER_CHECK_URL` を必ず設定**（§5） | 同左 | 同左 |
@@ -320,8 +320,8 @@
 | `PREVIEW_MODE` | `app-pro.html` 746行 | `true` | `false` |
 | `CONFIG.API`／`CONFIG.STUB` | `auth.html`・`mypage-pro.html` の `var CONFIG` | `'/.netlify/functions'`／本番ドメイン以外で true の式 | 実ベース／`false` |
 | `TRIAL_CHECK.URL`／`TRIAL_CHECK.STUB` | `pricing-pro.html`（`var TRIAL_CHECK`） | `'/.netlify/functions/trial-check'`／本番ドメイン以外で true の式 | 実URL／`false` |
-| `FIX.URL`／`FIX.STUB` | `pricing-pro.html` 488行 | `'/.netlify/functions/auth-fix-email'`／同上の式 | 実URL／`false` |
-| `TELECOM_PAYMENT_URL`／`TELECOM_PARAM`／`ORDER_PREFIX` | `pricing-pro.html` 346〜348行 | `{month:''}`／`{email:'email',order:'sendid'}`／`'P'` | 決済URL／接続仕様書の名前／そのまま |
+| `FIX.URL`／`FIX.STUB` | `pricing-pro.html` 490行 | `'/.netlify/functions/auth-fix-email'`／同上の式 | 実URL／`false` |
+| `TELECOM_PAYMENT_URL`／`TELECOM_PARAM`／`ORDER_PREFIX` | `pricing-pro.html` 348〜350行 | `{month:''}`／`{email:'email',order:'sendid'}`／`'P'` | 決済URL／接続仕様書の名前／そのまま |
 | `geminiModel` | `app-pro.html` 2740行 | `'gemini-2.5-flash'` | 変更不要（本番のモデルはサーバーの `GEMINI_MODEL` で決まる。フロントの値はテスト用の直接呼び出しと `thinkingConfig` の有無だけに効く） |
 | `AI_DAILY_CAP` | `app-pro.html` 6277行・`meishi-sheet.html` 4179行 | `200` | 規約と同じ値のまま |
 
