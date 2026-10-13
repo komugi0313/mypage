@@ -106,6 +106,8 @@
   /* 申込の結果画面・困ったとき（決済：テレコムクレジット） */
   .field .hint{margin:7px 2px 0;font-size:11.5px;color:var(--muted);font-weight:700;line-height:1.7}
   .cf-dl dd.cf-mail{font-size:15px;font-weight:900;color:var(--ka-d);word-break:break-all}
+  .cf-trial{margin:12px 0 0;padding:12px 14px;background:#FDECEA;border:1.5px solid #E5534B;border-radius:10px;font-size:13.5px;color:#B42318;font-weight:800;line-height:1.75}
+  .ok-trial{margin:14px 0 0;padding:12px 14px;background:#FFF7E6;border:1px solid #EBD3B4;border-radius:10px;font-size:14px;color:#5A3D10;line-height:1.8;text-align:left}
   .cf-warn{margin:12px 0 0;padding:11px 13px;background:var(--gold-w);border:1px solid #EBD3B4;border-radius:10px;font-size:12.5px;color:#7A551C;font-weight:800;line-height:1.75}
   .already{margin:22px 0 0;padding:14px 16px;background:#EEF4FC;border:1.5px solid #BFD3F0;border-radius:14px;font-size:13px;color:var(--ink2);font-weight:700;line-height:1.8}
   .already a{color:var(--sui);font-weight:900}
@@ -186,7 +188,7 @@
         <ul class="terms-list">
           <li><b>お支払い方法</b>：クレジットカード決済</li>
           <li><b>無料お試し</b>：ご登録から一週間（7日間）。無料期間中に解約された場合、料金は一切かかりません（費用0円）。</li>
-          <li><b>課金の開始</b>：無料期間の終了後に初回のお支払いが発生します（終了前日にメールでお知らせします）。</li>
+          <li><b>課金の開始</b>：無料期間の終了日の翌日から、自動で月額プランになり初回のお支払いが発生します（日付は確認画面に表示します。終了前のお知らせメールはお送りしません）。</li>
           <li><b>自動更新（継続課金）</b>：解約のない限り、毎月自動的に更新・継続課金されます。</li>
           <li><b>解約</b>：マイページからいつでも解約できます。解約後は次回更新分から請求が停止します。</li>
           <li><b>返金</b>：デジタルサービスの性質上、決済済み期間の途中解約による返金・日割り返金はいたしかねます（無料期間中の解約を除く）。</li>
@@ -205,6 +207,7 @@
     <div id="confirm" class="confirm" hidden>
       <h2 class="cf-h">お申し込み内容の確認</h2>
       <dl class="cf-dl" id="cf-body"></dl>
+      <div class="cf-trial" id="cf-trial" role="alert" hidden></div>
       <p class="cf-warn">⚠ <b>メールアドレスは<span class="nb">合っていますか？</span></b><br>ログイン用パスワードの設定メールは、このアドレスに届きます。間違っていると、お申し込み後にログインできません。</p>
       <button class="cta" id="cf-go" type="button" style="flex-wrap:wrap;column-gap:0"><span class="nb">この内容で申し込む</span><span class="nb">（決済ページへ）</span></button>
       <button class="cf-back" id="cf-back" type="button">← 内容を修正する</button>
@@ -219,6 +222,7 @@
       <p>ありがとうございます。<br>下記のアドレスに<b>「ログイン用パスワードの設定」メール</b>をお送りしました。</p>
       <div class="mail" id="ok-mail">ご登録のメールアドレス</div>
       <p class="order" id="ok-order-wrap" hidden>お申し込み番号：<b id="ok-order"></b><br>（メールアドレスを忘れたときに使います。<span class="nb">控えておいてください）</span></p>
+      <p class="ok-trial" id="ok-trial" hidden></p>
       <ul>
         <li>メールのリンクからパスワードを決めると、すぐに鑑定をはじめられます。</li>
         <li><b>10分たっても届かないとき</b>は、迷惑メールフォルダをご確認ください。</li>
@@ -351,6 +355,25 @@
   }
   function pending(){ try{ return JSON.parse(g('pending_order')||'null'); }catch(_){ return null; } }
 
+  /* 無料体験は、お一人様1回まで：同じメールアドレスで以前にお申し込みの記録があれば、確認画面に赤字で示す（申し込み自体は止めない）。
+     この端末の記録（ログインしたアドレス・お申し込み完了の記録）と、サーバーの確認（trial-check）の両方を見る。
+     ★エンジニア接続ポイント：POST /trial-check {email} → {ok:true, used:true|false}（そのメールで、この商品の無料体験を使ったことがあるか。回数制限をかける）。
+       カードが2回目かどうかは、決済ページより前には分からないため、ここでは確かめない。 */
+  var TRIAL_CHECK={ STUB:!/(^|\.)(72k\.ai|suimei\.jp|ekipro\.jp)$/i.test(location.hostname), URL:'/.netlify/functions/trial-check' };
+  function usedHere(email){ var list=[]; try{ list=JSON.parse(g('trial_used')||'[]')||[]; }catch(_){}
+    return email===(g('member_email')||'').trim().toLowerCase() || (Array.isArray(list) && list.indexOf(email)>=0); }
+  function trialWarn(email){
+    var box=document.getElementById('cf-trial'); if(!box) return; box.hidden=true; box.innerHTML='';
+    var show=function(){ if((confirmBox.dataset.email||'')!==email) return;
+      box.innerHTML='⚠ 無料体験は、お一人様1回までです。<br><span style="font-weight:700">このメールアドレスでは、以前にお申し込みいただいた記録があります。</span>'; box.hidden=false; };
+    if(usedHere(email)){ show(); return; }
+    if(TRIAL_CHECK.STUB) return;
+    try{ var ctl=('AbortController' in window)?new AbortController():null; setTimeout(function(){ if(ctl) ctl.abort(); },5000);
+      fetch(TRIAL_CHECK.URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email}),signal:ctl?ctl.signal:undefined})
+        .then(function(r){ return r.ok?r.json():null; }).then(function(j){ if(j&&j.used) show(); }).catch(function(){});
+    }catch(_){}
+  }
+
   // すでにログイン中（お申し込み済み）の方には、二重申込を防ぐ案内を出す
   if(g('member_email') && g('member_status')!=='canceled' && g('member_status')!=='none'){
     document.getElementById('already').hidden=false;
@@ -380,7 +403,7 @@
       '<div class="r"><dt>料金</dt><dd>'+p.price+' ／ '+p.cycle+'（1件ごとの追加料金なし）</dd></div>'+
       '<div class="r"><dt>ご利用回数</dt><dd>'+CAP_TEXT+'</dd></div>'+
       '<div class="r"><dt>お支払い方法</dt><dd>クレジットカード（決済代行：テレコムクレジット株式会社）</dd></div>'+
-      '<div class="r"><dt>無料お試し</dt><dd>本日（'+_today+'）〜'+_last+'まで（7日間）。開始にはカードの登録が必要です（無料期間中は請求なし）。お一人様1回限り。'+TRIAL_EXTRA+'</dd></div>'+
+      '<div class="r"><dt>無料お試し</dt><dd>本日（'+_today+'）〜'+_last+'まで（7日間）。開始にはカードの登録が必要です（無料期間中は請求なし）。お一人様1回限り。<b>終了前のお知らせメールはお送りしません</b>ので、続けない場合は'+_last+'までに解約してください。'+TRIAL_EXTRA+'</dd></div>'+
       '<div class="r"><dt>初回のお支払い</dt><dd><b>'+_first+'</b>に9,800円（税込）。以後、毎月'+_day+'日'+(_day>28?'（その日がない月は月末日）':'')+'に自動で9,800円（税込）をお支払い（継続課金）</dd></div>'+
       '<div class="r"><dt>解約の方法・期限</dt><dd>マイページの「解約する」からいつでも。'+_last+'までに解約すれば0円。以後は更新日の前日までに解約すれば、次回分は請求されません。解約後も、その期間の最終日まで利用できます</dd></div>'+
       '<div class="r"><dt>提供時期</dt><dd>カード登録後、届いたメールからパスワードを設定すると、ただちに利用開始</dd></div>'+
@@ -389,6 +412,7 @@
     s('selected_plan', selected);
     form.hidden=true; confirmBox.hidden=false;
     confirmBox.dataset.email=email;
+    trialWarn(email);
     confirmBox.scrollIntoView({behavior:'smooth', block:'start'});
   });
 
@@ -430,6 +454,10 @@
     document.getElementById('res-ok').hidden=false;
     if(po.email){ document.getElementById('ok-mail').textContent=po.email; s('member_email', po.email); }
     if(po.id){ document.getElementById('ok-order').textContent=po.id; document.getElementById('ok-order-wrap').hidden=false; document.getElementById('fixmail').hidden=false; }
+    // 無料期間の最終日と、自動で有料になる日を日付で示す（終了前のお知らせメールは送らないため）。日本時間・お申し込み日＝1日目
+    if(po.ts){ var _b=new Date(po.ts+(new Date().getTimezoneOffset()+540)*60000), _f=function(n){ var x=new Date(_b.getFullYear(),_b.getMonth(),_b.getDate()+n); return (x.getMonth()+1)+'月'+x.getDate()+'日'; };
+      var ot=document.getElementById('ok-trial'); ot.innerHTML='無料期間は <b>'+_f(6)+'まで</b>です。<b>'+_f(7)+'から自動で月額プラン（9,800円・税込）</b>になります。<br>続けない場合は、'+_f(6)+'までにマイページから解約してください（終了前のお知らせメールはお送りしません）。'; ot.hidden=false; }
+    if(po.email){ try{ var _u=JSON.parse(g('trial_used')||'[]')||[]; if(Array.isArray(_u)&&_u.indexOf(po.email)<0){ _u.push(po.email); s('trial_used', JSON.stringify(_u.slice(-20))); } }catch(_){} }   // 無料体験の記録（次に申し込むとき確認画面に赤字で示す）
   }else if(result==='ng' || result==='back'){
     document.getElementById('apply').hidden=true;
     document.getElementById('res-ng').hidden=false;

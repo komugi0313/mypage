@@ -557,8 +557,8 @@ input[type=checkbox]{width:20px;height:20px;}
   var DEMO_MODE=false;
   /* ===== 会員のログイン状態（パスワードは端末に保存しない。サーバーが発行するログイン用の鍵＝トークンだけを保存） =====
      ★エンジニア接続ポイント（実装仕様 §3）：
-       POST /auth-login {email,password} → {ok:true, status, periodEnd, token, trialEnd} ／ 401（trialEnd＝無料期間の最終日 YYYY-MM-DD。無料お試し中だけ）
-       POST /auth-check {token}          → {ok:true, status, periodEnd, trialEnd} ／ 401（鍵が無効・期限切れ）
+       POST /auth-login {email,password} → {ok:true, status, periodEnd, token} ／ 401
+       POST /auth-check {token}          → {ok:true, status, periodEnd}        ／ 401（鍵が無効・期限切れ）
        POST /auth-logout {token}         → {ok:true}
      status：active（ご利用中）／trialing（無料お試し中）／canceling（解約手続き済み・期間の最終日まで利用可）／
              canceled（解約済み）／past_due・unpaid（お支払い未確認）／none
@@ -577,7 +577,6 @@ input[type=checkbox]{width:20px;height:20px;}
       if(res.token){ st.setItem('member_token',res.token); other.removeItem('member_token'); }
       localStorage.setItem('member_status',res.status||'none');
       localStorage.setItem('member_period_end',res.periodEnd||'');
-      if(res.trialEnd&&/^\d{4}-\d{2}-\d{2}$/.test(res.trialEnd)) localStorage.setItem('member_trial_end',res.trialEnd); else localStorage.removeItem('member_trial_end');   // 無料期間の最終日（最終日の案内に使う）
       if(keep) localStorage.setItem('member_checked_at',String(Date.now())); else localStorage.removeItem('member_checked_at');
     }catch(e){}
   }
@@ -703,13 +702,6 @@ input[type=checkbox]{width:20px;height:20px;}
   <!-- ===== 鑑定 ===== -->
   <div class="view active" id="view-kantei">
     <h2 class="sec" data-i18n="h_new">新規鑑定</h2>
-
-    <!-- 無料体験・最終日の有料案内（7日目に表示。本番はサーバーが残日数を判定） -->
-    <div id="trialFinalDay" style="display:none;margin:0 0 14px;padding:18px 18px 16px;border-radius:16px;background:linear-gradient(160deg,#3E2E59,#4C3B6A);border:1px solid rgba(201,181,212,.4);text-align:center;box-shadow:0 10px 26px rgba(62,46,89,.28);">
-      <div style="font-size:13px;font-weight:800;letter-spacing:.06em;color:#F4CE8B;">本日が、無料体験の最終日です</div>
-      <p style="font-size:13.5px;color:#EFE9F6;font-weight:600;line-height:1.85;margin:8px auto 0;max-width:24em;">明日からは<span style="white-space:nowrap;">月額プラン（9,800円・税込）</span>で、引き続きすべての機能をお使いいただけます。<br><span style="white-space:nowrap;">続けない場合は、</span><span style="white-space:nowrap;">本日中に</span><span style="white-space:nowrap;">マイページから解約すると、</span><span style="white-space:nowrap;">料金はかかりません。</span></p>
-      <a href="../mypage.html" style="display:inline-block;margin-top:12px;padding:11px 26px;font-size:14px;font-weight:700;color:#4C3B6A;background:#fff;border-radius:999px;text-decoration:none;box-shadow:0 6px 16px rgba(0,0,0,.2);">料金・お支払いを確認する</a>
-    </div>
 
     <!-- DEMO-ONLY：本番では削除（キーはサーバー側に隠す） -->
     <details class="card" id="demoKeyCard" style="border-color:var(--gold-l);background:linear-gradient(180deg,rgba(216,189,114,.10),var(--card));">
@@ -1194,35 +1186,6 @@ function showTrialLimit(show){
 const PAID_DAILY_CAP    = 100;   // 1日あたりの上限
 const PAID_MONTHLY_CAP  = 3000;  // 1か月あたりの上限
 const PAID_RATE_PER_MIN = 15;    // 1分あたりの上限（連打防止）
-
-/* ===== 無料体験・最終日の有料案内（7日目に #trialFinalDay を表示） =====
-   ★本番はサーバーが正とする：無料開始日はサーバーDBが持つ（決済代行の満了日管理と同じ日付）。
-     サーバーから「残日数」または「最終日フラグ」を受け取って表示を切り替えること。
-     下記の localStorage（初回起動日を起点）はデモ用の仮実装。あわせて満了前日〜当日の
-     案内メール送信もサーバー側で（実装仕様書§6参照）。 */
-const TRIAL_DAYS = 7;
-function trialStartDate(){
-  try{
-    let v=localStorage.getItem('eki_trial_start');
-    if(!v){ v=trialDayKey().replace('eki_trial_',''); localStorage.setItem('eki_trial_start',v); }
-    return v;
-  }catch(e){ return null; }
-}
-function trialDayNum(){ // 開始日を1日目とした経過日数（JST）
-  const s=trialStartDate(); if(!s) return 1;
-  const cur=trialDayKey().replace('eki_trial_','');
-  const d1=new Date(+s.slice(0,4), +s.slice(4,6)-1, +s.slice(6,8));
-  const d2=new Date(+cur.slice(0,4), +cur.slice(4,6)-1, +cur.slice(6,8));
-  return Math.floor((d2-d1)/86400000)+1;
-}
-function trialFinalDayInit(){
-  const el=document.getElementById('trialFinalDay'); if(!el) return;
-  if(!isTrialMember()) return;
-  // サーバーから無料期間の終了日（member_trial_end：YYYY-MM-DD）を受け取っていればそれを正とする
-  let last=false;
-  try{ const te=localStorage.getItem('member_trial_end'); if(te){ last = te.replace(/-/g,'')===trialDayKey().replace('eki_trial_',''); } else { last = trialDayNum()===TRIAL_DAYS; } }catch(e){}
-  if(last){ el.style.display='block'; }
-}
 
 const HXT={
  en:{
@@ -2768,7 +2731,6 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     // ボタン
     document.getElementById('goBtn').onclick=run;
     { const trl=document.getElementById('trialResetLink'); if(trl) trl.onclick=function(e){ e.preventDefault(); trialReset(); showTrialLimit(false); }; }
-    trialFinalDayInit();
     document.querySelectorAll('.numfield').forEach(el=>el.addEventListener('input',()=>{
       let v=el.value.replace(/[^0-9]/g,'');
       if(v!==''){ let n=parseInt(v,10); if(n>9999){ n=9999; toast('数字は4桁（9999）までです'); } if(n<1)n=1; v=String(n); }
