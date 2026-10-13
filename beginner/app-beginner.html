@@ -665,6 +665,7 @@
   .cs-h{display:flex;align-items:center;gap:10px;font-weight:900;font-size:19px;color:#2A1838;margin-bottom:4px;line-height:1.35}
   .cs-h .cs-ic{font-size:42px}
   .cs-sub{font-size:14px;color:#4A3B55;font-weight:600;margin:2px 0 10px;line-height:1.7}
+  .cs-sub,.cs-h,.cs-note{word-break:auto-phrase;line-break:strict}
   .cs-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
   .cs-chips button{border:1.5px solid #E3D3F0;background:#FBF7FE;color:#4A2E6E;border-radius:999px;padding:7px 12px;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer}
   .cs-chips button:active{background:#F1E6FB}
@@ -7360,6 +7361,8 @@ function loadPartner(id){const c=mpLoad().clients.find(x=>x.id===id&&!x.deleted)
 function loadClient(id){const c=mpLoad().clients.find(x=>x.id===id&&!x.deleted);if(!c)return;
   // 別のお客様を呼び出したら、前のお客様の「お相手」の入力は消す（次のお客様の前に前の人の情報を出さない）
   if(currentClientId!==id&&typeof resetCompat==='function'){try{resetCompat();}catch(e){}}
+  // 別のお客様に替えたら、前のお客様のご相談の文は消す（別の人の相談で鑑定しないように）
+  if(currentClientId!==id){const cq=document.getElementById('cs-q');if(cq)cq.value='';}
   currentClientId=id;
   document.getElementById('f-name').value=c.name.indexOf('無題')===0?'':c.name;
   {const fk=document.getElementById('f-kana');if(fk)fk.value=c.kana||'';}
@@ -7895,7 +7898,7 @@ document.getElementById('f-save').onclick=addClient;
 };})();
 // リセット（本人）
 function resetMain(){
-  document.getElementById('f-name').value='';{const fk=document.getElementById('f-kana');if(fk)fk.value='';}{const fd=document.getElementById('f-date');fd.value='2000-01-01';if(fd.syncFromValue)fd.syncFromValue();}
+  document.getElementById('f-name').value='';{const cq=document.getElementById('cs-q');if(cq)cq.value='';}{const fk=document.getElementById('f-kana');if(fk)fk.value='';}{const fd=document.getElementById('f-date');fd.value='2000-01-01';if(fd.syncFromValue)fd.syncFromValue();}
   const ft=document.getElementById('f-time');ft.value='12:00';if(ft.syncFromValue)ft.syncFromValue();{const tp=document.getElementById('f-timepick');if(tp)tp.style.display='flex';}
   const tu=document.getElementById('f-time-unknown');if(tu)tu.style.display='none';
   const nt=document.getElementById('f-notime');if(nt)nt.checked=false;
@@ -7946,11 +7949,12 @@ window.__bTouched=false;
   function target(){ if(window.__uiMode==='compat'){ return document.getElementById('compat-worry'); } return document.getElementById('worry'); }
   function inView(el){ if(!el) return true; var r=el.getBoundingClientRect(); return r.bottom>0&&r.top<window.innerHeight; }
   function upd(){ var t=target(); var ready=!window.__isSample&&t&&t.offsetParent!==null;
-    var on=ready&&window.scrollY>700&&!inView(t)&&!inView(document.getElementById('cs-box'));
+    var modal=['bm-wrap','tk-wrap'].some(function(id){var m=document.getElementById(id);return m&&!m.hidden;});   // 今月の運勢・トーク例の画面を開いているときは出さない
+    var on=ready&&!modal&&window.scrollY>700&&!inView(t)&&!inView(document.getElementById('cs-box'));
     f.classList.toggle('on',!!on); document.body.classList.toggle('cs-fab-on',!!on);
     var ent=document.getElementById('cs-box'), go=document.getElementById('f-go'); document.body.classList.toggle('cs-entry-view',!!((ent&&ent.offsetParent!==null&&inView(ent))||(go&&go.offsetParent!==null&&inView(go)))); }
   f.onclick=function(){ var t=target(); if(!t) return; var y=t.getBoundingClientRect().top+window.scrollY-Math.round(window.innerHeight*0.3); window.scrollTo({top:y<0?0:y,behavior:'smooth'}); setTimeout(function(){ try{t.focus({preventScroll:true});}catch(_e){} },450); };
-  window.addEventListener('scroll',upd,{passive:true}); window.addEventListener('resize',upd); setInterval(upd,1200); upd();
+  window.addEventListener('scroll',upd,{passive:true}); window.addEventListener('resize',upd); document.addEventListener('click',function(){ setTimeout(upd,60); },true); setInterval(upd,1200); upd();
 })();
 // フローティング「最初へ戻る」
 (function(){const t=document.createElement('button');t.id='toTop';t.type='button';t.textContent='↑ 最初へ';
@@ -8069,12 +8073,18 @@ renderResult();
     var light=((bg.lo+bg.hi)/2)>0.4, to=light?[0,0,0]:[255,255,255], c2=null;
     for(var t=0.1;t<=1.0001;t+=0.1){ var cand=mix([fg[0],fg[1],fg[2]],to,t); if(CR(over([cand[0],cand[1],cand[2],a],base),base)>=need){ c2=cand; break; } }
     if(!c2) c2=to;                                     // 透明度は変えない（隠している表示を出してしまわないように）
+    if(!e.hasAttribute('data-pkcg')) e.setAttribute('data-pkcg',e.style.getPropertyValue('color')||'');   // 元の色を覚えておく（印刷のときに戻す）
     e.style.setProperty('color','rgb('+Math.round(c2[0])+','+Math.round(c2[1])+','+Math.round(c2[2])+')','important');
   }
   var SKIP='script,style,noscript,svg,canvas,video,option,select,textarea,input,img,.yomi,.ysr,[aria-hidden="true"]';
-  function pass(root){ if(!root||root.nodeType!==1) return; BG=new Map(); OP=new Map(); var list=[root].concat([].slice.call(root.querySelectorAll('*')));
+  function pass(root){ if(printing||!root||root.nodeType!==1) return; BG=new Map(); OP=new Map(); var list=[root].concat([].slice.call(root.querySelectorAll('*')));
     for(var i=0;i<list.length;i++){ var e=list[i]; if(e.matches&&e.matches(SKIP)) continue; try{ fix(e); }catch(_e){} } BG=null; OP=null; }
   var tm=null; function full(){ clearTimeout(tm); tm=setTimeout(function(){ pass(document.body); },350); }
+  // 印刷では背景色が出ないことがあるので、画面用に変えた色を元に戻してから印刷し、終わったら画面用に戻す
+  function unfixAll(){ [].forEach.call(document.querySelectorAll('[data-pkcg]'),function(e){ var o=e.getAttribute('data-pkcg'); if(o) e.style.setProperty('color',o); else e.style.removeProperty('color'); e.removeAttribute('data-pkcg'); }); }
+  window.addEventListener('beforeprint',function(){ printing=true; unfixAll(); });
+  window.addEventListener('afterprint',function(){ printing=false; pass(document.body); });
+  var printing=false;
   function start(){
     pass(document.body); setTimeout(function(){ pass(document.body); },1500);
     document.addEventListener('click',full,true); document.addEventListener('toggle',full,true); window.addEventListener('resize',full);

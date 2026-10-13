@@ -182,12 +182,18 @@ p,li,dd,h1,h2,h3,h4,figcaption{line-break:strict}
     var light=((bg.lo+bg.hi)/2)>0.4, to=light?[0,0,0]:[255,255,255], c2=null;
     for(var t=0.1;t<=1.0001;t+=0.1){ var cand=mix([fg[0],fg[1],fg[2]],to,t); if(CR(over([cand[0],cand[1],cand[2],a],base),base)>=need){ c2=cand; break; } }
     if(!c2) c2=to;                                     // 透明度は変えない（隠している表示を出してしまわないように）
+    if(!e.hasAttribute('data-pkcg')) e.setAttribute('data-pkcg',e.style.getPropertyValue('color')||'');   // 元の色を覚えておく（印刷のときに戻す）
     e.style.setProperty('color','rgb('+Math.round(c2[0])+','+Math.round(c2[1])+','+Math.round(c2[2])+')','important');
   }
   var SKIP='script,style,noscript,svg,canvas,video,option,select,textarea,input,img,.yomi,.ysr,[aria-hidden="true"]';
-  function pass(root){ if(!root||root.nodeType!==1) return; BG=new Map(); OP=new Map(); var list=[root].concat([].slice.call(root.querySelectorAll('*')));
+  function pass(root){ if(printing||!root||root.nodeType!==1) return; BG=new Map(); OP=new Map(); var list=[root].concat([].slice.call(root.querySelectorAll('*')));
     for(var i=0;i<list.length;i++){ var e=list[i]; if(e.matches&&e.matches(SKIP)) continue; try{ fix(e); }catch(_e){} } BG=null; OP=null; }
   var tm=null; function full(){ clearTimeout(tm); tm=setTimeout(function(){ pass(document.body); },350); }
+  // 印刷では背景色が出ないことがあるので、画面用に変えた色を元に戻してから印刷し、終わったら画面用に戻す
+  function unfixAll(){ [].forEach.call(document.querySelectorAll('[data-pkcg]'),function(e){ var o=e.getAttribute('data-pkcg'); if(o) e.style.setProperty('color',o); else e.style.removeProperty('color'); e.removeAttribute('data-pkcg'); }); }
+  window.addEventListener('beforeprint',function(){ printing=true; unfixAll(); });
+  window.addEventListener('afterprint',function(){ printing=false; pass(document.body); });
+  var printing=false;
   function start(){
     pass(document.body); setTimeout(function(){ pass(document.body); },1500);
     document.addEventListener('click',full,true); document.addEventListener('toggle',full,true); window.addEventListener('resize',full);
