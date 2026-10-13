@@ -4218,8 +4218,8 @@ window.KANSHI60_DETAIL={
     var body=JSON.stringify({ system_instruction:{parts:[{text:sys}]}, contents:[{role:'user',parts:[{text:usr}]}], generationConfig:{maxOutputTokens:3200} });
     // まず1回オンライン生成。失敗（レート制限・一時エラー・空応答）なら数秒待って自動で1回だけ再試行。
     // それでもダメなときだけ定型文（オフライン鑑定書）に切替（打ち直し不要）。
-    function attempt(isRetry){
-      var _h={'Content-Type':'application/json','x-pk-deep':'1'}; try{ var _tk=localStorage.getItem('member_token')||sessionStorage.getItem('member_token'); if(_tk) _h['Authorization']='Bearer '+_tk; }catch(_e){}   // 会員確認（サーバーで検証）
+    function attempt(isRetry,noCount){   // noCount＝前の回は届いていた（作り直し）＝サーバーで回数に数えない目印を付ける
+      var _h={'Content-Type':'application/json','x-pk-deep':'1'}; if(noCount) _h['x-pk-part']='detail'; try{ var _tk=localStorage.getItem('member_token')||sessionStorage.getItem('member_token'); if(_tk) _h['Authorization']='Bearer '+_tk; }catch(_e){}   // 会員確認（サーバーで検証）
       fetch('/.netlify/functions/gemini',{ method:'POST', headers:_h, body:body })
         .then(function(res){ return res.text().then(function(t){ return {ok:res.ok, t:t}; }); })
         .then(function(o){
@@ -4236,12 +4236,12 @@ window.KANSHI60_DETAIL={
           if(html && window.__bgPlain) html=window.__bgPlain(html);
           // ビギナー（初心者モード）：専門用語が残った文章は出さない（1回だけ作り直し、それでも残れば専門用語なしの定型文にする）
           if(html && window.__bgPlain && BG_JARGON.test(html.replace(/<[^>]+>/g,''))){
-            if(!isRetry){ setTimeout(function(){ attempt(true); }, 1500); return; }
+            if(!isRetry){ setTimeout(function(){ attempt(true,true); }, 1500); return; }
             _aiBusy=false; aiFallbackToTemplate();
             var eh=document.getElementById('engHint'); if(eh) eh.textContent='やさしい言葉の鑑定書（定型文）で表示しています。';
             return;
           }
-          if(!html){ if(!isRetry){ setTimeout(function(){ attempt(true); }, 2500); return; } aiCardMsg('返答を整形できませんでした。','もう一度お試しください。'); _aiBusy=false; return; }
+          if(!html){ if(!isRetry){ setTimeout(function(){ attempt(true,true); }, 2500); return; } aiCardMsg('返答を整形できませんでした。','もう一度お試しください。'); _aiBusy=false; return; }
           window._aiReadingHTML=html;
           aiCountInc();   // 成功したAI生成だけカウント（不正防止のゆるい1日上限）
           var mount=document.getElementById('readMount'); if(mount) mount.innerHTML=html;
