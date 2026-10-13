@@ -120,10 +120,10 @@ def build_app():
     s = rep(s, '  <section class="card panel">',
             '  <div id="bg-intro"><div class="t"><span><span class="nobr">むずかしい知識は、</span><span class="nobr">いりません。</span></span>'
             '<button type="button" id="bg-intro-x" aria-label="この案内を閉じる" title="閉じる">✕</button></div><div class="steps">'
-            '<div class="s"><b>①</b> 生年月日を入れる</div><div class="s"><b>②</b> 「詳細を鑑定する」を押す</div>'
+            '<div class="s"><b>①</b> 生年月日を入れる</div><div class="s"><b>②</b> 相談を書いて「この相談を鑑定する」を押す</div>'
             '<div class="s"><b>③</b> 出てきた文章を読むだけ</div></div></div>\n  <section class="card panel">', 1)
-    s = rep(s, '<button class="go" id="f-go" style="flex:1">この内容で占う</button>',
-            '<button class="go" id="f-go" style="flex:1">詳細を鑑定する</button>', 1)
+    # 相談の入口（何を占いますか？）と「この相談を鑑定する」ボタンはPROと同じ（ことばも専門用語なし）。あることだけ確かめる
+    rep(s, '<span>この相談を鑑定する</span></button>', '', 1, label='相談ボタン（この相談を鑑定する）')
 
     # ---- PROだけの機能（<!--PRO-ONLY:start-->〜<!--PRO-ONLY:end-->）はビギナーに入れない ----
     n_pro_only = s.count('<!--PRO-ONLY:start')
