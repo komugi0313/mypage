@@ -746,7 +746,8 @@ html.bg-intro-done #bg-intro{display:none}
 <script>
 /* ロック中（解約後・お支払いの確認ができないときなど）でも、端末内の顧客カルテだけは必ずファイルに書き出せるようにする（お客様の大切な記録を取り出せなくならないように） */
 (function(){ try{
-  var keys=[]; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.indexOf('bazi_mypage_v2')===0) keys.push(k); }
+  var me=(localStorage.getItem('member_email')||'').trim().toLowerCase();   /* 共用の端末でも、ほかの会員のカルテは書き出さない */
+  var keys=['bazi_mypage_v2'].concat(me?['bazi_mypage_v2@'+me]:[]).filter(function(k){ return localStorage.getItem(k)!==null; });
   if(!keys.length) return; document.getElementById('mg-export-wrap').style.display='';
   document.getElementById('mg-export').onclick=function(){ var out={schema:1,clients:[]};
     keys.forEach(function(k){ try{ var d=JSON.parse(localStorage.getItem(k)||'null'); if(d&&d.clients) out.clients=out.clients.concat(d.clients.filter(function(c){return c&&!c.deleted;})); }catch(e){} });
@@ -6346,7 +6347,7 @@ async function generateReading(user,localText,system,deep){
     let data;
     try{
       let r;
-      if(useServer){ var _hdr={"Content-Type":"application/json"}; if(deep)_hdr["x-pk-deep"]="1"; try{ var _tk=localStorage.getItem("member_token")||sessionStorage.getItem("member_token"); if(_tk)_hdr["Authorization"]="Bearer "+_tk; }catch(_e){}  /* 会員確認（サーバーで検証） */
+      if(useServer){ var _hdr={"Content-Type":"application/json"}; if(deep)_hdr["x-pk-deep"]="1"; if(_part==='detail')_hdr["x-pk-part"]="detail";   /* 相談1件の2回目（くわしい読み解き）＝回数に数えない目印 */ try{ var _tk=localStorage.getItem("member_token")||sessionStorage.getItem("member_token"); if(_tk)_hdr["Authorization"]="Bearer "+_tk; }catch(_e){}  /* 会員確認（サーバーで検証） */
         r=await _fetchT('/.netlify/functions/gemini',{method:"POST",headers:_hdr,body:_body}); }
       else{ r=await _fetchT(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${encodeURIComponent(geminiKey)}`,
         {method:"POST",headers:{"Content-Type":"application/json"},body:_body}); }
@@ -6363,7 +6364,7 @@ async function generateReading(user,localText,system,deep){
   let _authErr=0;
   let text=await callOnce();
   if(!text&&!_authErr){ await new Promise(r=>setTimeout(r,2500)); text=await callOnce(); }
-  if(text){ aiCountInc(); return {ok:true,text:noAIWord(_unmaskNames(text,_nm)),online:true}; }
+  if(text){ if(_part!=='detail') aiCountInc(); return {ok:true,text:noAIWord(_unmaskNames(text,_nm)),online:true}; }   // 相談1件＝1回（答え＋くわしい読み解きの2回の生成で1回と数える）
   aiEngine='オフライン鑑定（端末内）';
   if(_authErr===401) return {ok:true,text:localText,fallback:true,online:false,note:'ログインの有効期限が切れたため、詳細鑑定を使えませんでした。いまは端末内で作成した鑑定（オフライン鑑定）を表示しています。もう一度ログインすると、詳細鑑定が使えるようになります（ページを開き直すとログイン画面が出ます）。'};
   if(_authErr===403) return {ok:true,text:localText,fallback:true,online:false,note:'ご契約の状態を確認できなかったため、詳細鑑定を使えませんでした。いまは端末内で作成した鑑定（オフライン鑑定）を表示しています。マイページでご契約状況をご確認ください。'};
@@ -8000,7 +8001,7 @@ function loadBrandUI(keepInputs){
   loadBrandUI();
 })();
 /* Gemini テスト設定（このブラウザ内にのみ保存） */
-geminiKey=store.get('bazi_gkey')||''; geminiModel=store.get('bazi_gmodel')||'gemini-2.5-flash';
+geminiKey=(/[?&#]gtest=1\b/.test(location.search+location.hash)||location.protocol==='file:')?(store.get('bazi_gkey')||''):'';   /* 本番では、過去にテスト用キーを保存した端末でも必ずサーバー中継を使う */ geminiModel=store.get('bazi_gmodel')||'gemini-2.5-flash';
 (function(){const k=document.getElementById('g-key'),m=document.getElementById('g-model');
   if(k){k.value=geminiKey;k.oninput=()=>{geminiKey=k.value.trim();store.set('bazi_gkey',geminiKey);};}
   if(m){m.value=geminiModel;m.onchange=()=>{geminiModel=m.value;store.set('bazi_gmodel',geminiModel);};}})();

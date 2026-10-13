@@ -557,8 +557,8 @@ input[type=checkbox]{width:20px;height:20px;}
   var DEMO_MODE=false;
   /* ===== 会員のログイン状態（パスワードは端末に保存しない。サーバーが発行するログイン用の鍵＝トークンだけを保存） =====
      ★エンジニア接続ポイント（実装仕様 §3）：
-       POST /auth-login {email,password} → {ok:true, status, periodEnd, token} ／ 401
-       POST /auth-check {token}          → {ok:true, status, periodEnd}        ／ 401（鍵が無効・期限切れ）
+       POST /auth-login {email,password} → {ok:true, status, periodEnd, token, trialEnd} ／ 401（trialEnd＝無料期間の最終日 YYYY-MM-DD。無料お試し中だけ）
+       POST /auth-check {token}          → {ok:true, status, periodEnd, trialEnd} ／ 401（鍵が無効・期限切れ）
        POST /auth-logout {token}         → {ok:true}
      status：active（ご利用中）／trialing（無料お試し中）／canceling（解約手続き済み・期間の最終日まで利用可）／
              canceled（解約済み）／past_due・unpaid（お支払い未確認）／none
@@ -577,6 +577,7 @@ input[type=checkbox]{width:20px;height:20px;}
       if(res.token){ st.setItem('member_token',res.token); other.removeItem('member_token'); }
       localStorage.setItem('member_status',res.status||'none');
       localStorage.setItem('member_period_end',res.periodEnd||'');
+      if(res.trialEnd&&/^\d{4}-\d{2}-\d{2}$/.test(res.trialEnd)) localStorage.setItem('member_trial_end',res.trialEnd); else localStorage.removeItem('member_trial_end');   // 無料期間の最終日（最終日の案内に使う）
       if(keep) localStorage.setItem('member_checked_at',String(Date.now())); else localStorage.removeItem('member_checked_at');
     }catch(e){}
   }
@@ -1158,7 +1159,7 @@ function calcSakka(upperN, lowerN){
 }
 
 /* ================= アプリ本体 ================= */
-// Gemini APIキーはブラウザに置かない（空のまま）。本番はサーバー中継（/api/gemini）を使う。
+// Gemini APIキーはブラウザに置かない（空のまま）。本番はサーバー中継（/.netlify/functions/gemini。netlify.toml で /api/gemini も同じ）を使う。
 const GEMINI_API_KEY = "";
 
 /* ===== 無料トライアルの1日あたり回数制限（AIコスト対策：本格鑑定=AI生成のみ対象） =====
@@ -1846,7 +1847,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
       }
       // ② 台本・要点・裏卦などの残り。先に出した答えと食い違わないように、答えを渡して書かせる
       const ansNote=A?`\n\n【先に作成した答え（▼判定・▼伝え方・▼助言は、これと同じ内容にする）】\n▼判定：${A.hantei}\n▼伝え方：${A.tsutae}\n▼助言：${A.jogen}`:'';
-      const text=await callGemini(base+ansNote);
+      const text=await callGemini(base+ansNote,A?'detail':undefined);   // 'detail'＝鑑定1件の2回目（サーバーで回数に数えない目印）
       const p=parseReading(text);
       if(A){ if(A.hantei) p.hantei=A.hantei; if(A.tsutae) p.tsutae=A.tsutae; if(A.jogen) p.jogen=A.jogen; }   // 先に見せた答えは変えない
       trialInc(); // 本格鑑定（AI生成）を1回消費
@@ -2685,7 +2686,8 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     document.getElementById('setKey').value=getTestKey(); }
   function saveSettings(){ db.settings={brand:val('setBrand'),name:val('setName'),role:val('setRole'),logo:val('setLogo'),shoTitle:val('setShoTitle'),contact:val('setContact'),accent:document.getElementById('setAccent').value||'#8E72A8'}; save(); applyBranding(); toast(t('t_saved_settings')); }
   const KEYSTORE='eki_pro_key';
-  function getTestKey(){ try{return localStorage.getItem(KEYSTORE)||'';}catch(e){return '';} }
+  function getTestKey(){ try{ if(/^https?:$/.test(location.protocol)&&!/[?&#]gtest=1\b/.test(location.search+location.hash)) return '';   /* 本番では、過去にテスト用キーを保存した端末でも必ずサーバー中継を使う */
+    return localStorage.getItem(KEYSTORE)||''; }catch(e){return '';} }
   /* 本番サイト（http/https で公開）では、サーバー中継（/.netlify/functions/gemini）でオンライン鑑定する。
      APIキーはサーバー側（Netlify の環境変数 GEMINI_API_KEY）だけに置き、お客様にキー入力は求めない。
      テスト用にこの端末へキーを保存した場合だけ、ブラウザから直接つなぐ（ファイルを直接開いて試すとき用）。 */

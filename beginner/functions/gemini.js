@@ -1,6 +1,11 @@
 // Netlify Function：四柱推命ビギナー版のAI鑑定（Gemini）サーバー中継。
 // 目的＝APIキーをブラウザに出さない（フロント直叩きを廃止）。会員ゲートで購読者のみアプリを使える前提のため、
-//       「鑑定回数は無制限（有料プランの約束）」を守り、回数では止めない。ボット・暴走対策の“高い天井”だけを持つ。
+//       この雛形が持つのは、ボット・暴走対策の“高い天井”（下の PK_MAX_DEVICE_DAY／PK_MAX_IP_DAY）だけ。
+//       規約・料金ページで約束した回数の上限（PRO・ビギナー＝詳細鑑定1日200回／易 EKI Pro＝1日100回・月3,000回・1分15回、
+//       無料期間中は1日3回）は、この雛形には入っていない。本番のサーバーで会員ごとに数えて実装すること（実装依頼書 §3-5）。
+//       数え方：鑑定1件＝1回。次の目印が付いた呼び出しは、同じ鑑定の続きなので数えない（この雛形の天井でも数えない）。
+//         x-pk-part: detail … PRO・ビギナーの相談1件の2回目（くわしい読み解き）
+//         x-eki-kind: detail … 易の鑑定1件の2回目（台本・要点などの残り）／ x-eki-kind: sho … 易の鑑定書の作成
 //
 // ハイブリッド運用：重い自動鑑定レポートだけ上位モデル(DEEP)、ふだんの相談・相性は軽量モデル(LITE)。
 //   クライアントが x-pk-deep:'1' を付けた時だけ DEEP を使う。どちらも環境変数で差し替え可能。
@@ -8,13 +13,17 @@
 //
 // ※要設定：Netlify → Site settings → Environment variables
 //   必須 GEMINI_API_KEY … Gemini APIキー（ブラウザには一切出さない）
-//   任意 GEMINI_MODEL      … LITE（相談・相性）モデル。既定 gemini-2.5-flash-lite（最安）
+//   任意 GEMINI_MODEL      … LITE（相談・相性）モデル。既定 gemini-2.5-flash（原価を下げたいときだけ gemini-2.5-flash-lite 等に）
 //   任意 GEMINI_MODEL_DEEP … DEEP（自動鑑定レポート）モデル。既定 gemini-2.5-flash（品質重視。pro等へ差替可）
 //   任意 PK_OWNER_TOKEN … 自分専用の合言葉。ヘッダ x-pk-owner が一致した時だけ、天井カウントを完全スキップ（動作確認用）。
 //   任意 PK_MAX_DEVICE_DAY … 端末あたり1日の安全上限（既定 400。純粋なボット対策。通常利用では到達しない）。
 //   任意 PK_MAX_IP_DAY     … 同一IPあたり1日の安全上限（既定 800）。
 //   任意 PK_PRICE_IN / PK_PRICE_OUT / PK_PRICE_CACHE / PK_FX_JPY … 原価計測の単価（USD/1Mトークン・円レート）。既定はflash相当。
 //        Blobs は Netlify の通常デプロイで自動有効。使えない環境ではフェイルオープン（天井なしで通す）。
+//   自動 URL / DEPLOY_PRIME_URL … Netlify が自動で入れる自サイトのURL。Netlify 以外で動かすときは URL を必ず手で設定する
+//        （URL が空だと、送信元（Origin）の確認と「MEMBER_CHECK_URL 未設定なら止める」安全装置が両方とも働かない）。
+//   本番 MEMBER_CHECK_URL … 会員確認の関数のURL（必須）。任意 ALLOWED_ORIGINS … 追加で許可する送信元（カンマ区切り・完全一致）。
+//   確認環境のみ PK_ALLOW_NO_MEMBER_CHECK=1 … 会員確認なしで動かす（本番では設定しない）。
 //
 // クライアント（app-beginner.html generateReading）は Geminiの生リクエスト
 //   { system_instruction, contents, generationConfig } を JSON で POST（modelはサーバーが決める）。
@@ -102,6 +111,8 @@ exports.handler = async (event) => {
   const ip = clean(h['x-nf-client-connection-ip'] || h['x-forwarded-for'] || '').split(',')[0].trim() || 'noip';
   const day = jstDay();
   const usedDeep = (clean(h['x-pk-deep']) === '1');
+  // 同じ鑑定の続き（2回目）・鑑定書の作成は、回数に数えない（鑑定1件＝1回。画面の数え方と同じ）
+  const noCount = clean(h['x-pk-part']) === 'detail' || /^(detail|sho)$/.test(clean(h['x-eki-kind']));
 
   // 安全天井（回数制限ではなく、ボット・暴走対策のみ）。Blobs 不可ならフェイルオープン
   const store = await getStore();
@@ -152,7 +163,7 @@ exports.handler = async (event) => {
         }
       } catch (e) {}
     }
-    if (answered && store && !degraded && !isOwner) {
+    if (answered && store && !degraded && !isOwner && !noCount) {
       try { await bump(store, `d:${day}:${device}`); await bump(store, `i:${day}:${ip}`); } catch (e) {}
     }
     if (!r.ok) { try { console.error('[pro-gemini] upstream not-ok:', r.status, model, String(text).slice(0, 200)); } catch (e) {} }

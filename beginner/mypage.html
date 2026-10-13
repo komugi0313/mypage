@@ -266,7 +266,7 @@
   $('logoutBtn').onclick=function(){
     var tk=g('member_token');
     try{ if(tk && !CONFIG.STUB) fetch(CONFIG.API+'/auth-logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:tk}),keepalive:true}).catch(function(){}); }catch(e){}
-    try{ ['member_token','member_status','member_period_end','member_checked_at','member_pw','member_remember'].forEach(function(k){ localStorage.removeItem(k); sessionStorage.removeItem(k); }); }catch(e){}
+    try{ ['member_token','member_status','member_period_end','member_checked_at','member_pw','member_remember'].forEach(function(k){ localStorage.removeItem(k); sessionStorage.removeItem(k); }); localStorage.removeItem('member_email'); }catch(e){}   // 共用PCで次の人にアドレスを残さない（アプリのログアウトと同じ）
     location.href='auth.html?out=1';
   };
 
@@ -318,10 +318,13 @@
     doCancel().then(function(res){
       var was=st;
       var pe=(res&&res.periodEnd)||cur.periodEnd||cur.trialEnd||'';
+      // 解約の受付の控え（サーバーが canceledAt＝受付日時・cancelId＝受付番号 を返したときだけ表示。同じ内容を解約受付メールにも記載）
+      var esc=function(v){ return String(v||'').replace(/[<>&"]/g,''); };
+      var rc=(res&&(res.canceledAt||res.cancelId))?'<br><span style="font-size:.92em">受付日時：'+esc(res.canceledAt||'―')+'／受付番号：'+esc(res.cancelId||'―')+'（同じ内容を、解約受付のメールでもお送りします）</span>':'';
       render({ status:(res&&res.status)||'canceling', plan:cur.plan, orderId:cur.orderId, periodEnd:pe });
       say(was==='trialing'
-        ? '解約のお手続きが完了しました。<b>無料期間中のため、料金は一切かかりません。</b>'+(pe?pe+'まで':'無料期間の終わりまで')+'は、引き続きご利用いただけます。'
-        : '解約のお手続きが完了しました。<b>次回分からの請求は停止します。</b>'+(pe?pe+'まで':'お支払い済みの期間の終わりまで')+'は、引き続きご利用いただけます。ご利用ありがとうございました。', true);
+        ? '解約のお手続きが完了しました。<b>無料期間中のため、料金は一切かかりません。</b>'+(pe?pe+'まで':'無料期間の終わりまで')+'は、引き続きご利用いただけます。'+rc
+        : '解約のお手続きが完了しました。<b>次回分からの請求は停止します。</b>'+(pe?pe+'まで':'お支払い済みの期間の終わりまで')+'は、引き続きご利用いただけます。ご利用ありがとうございました。'+rc, true);
     }).catch(function(){
       btn.disabled=false;
       say('ただいま解約のお手続きができませんでした。時間をおいて再度お試しください。<br>くり返しできない場合は <a href="mailto:info@72k.ai">info@72k.ai</a> へご連絡ください（ご連絡いただいた日を解約日として扱います）。', false);
