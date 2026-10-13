@@ -1,7 +1,7 @@
 # CLAUDE.md — このリポジトリの絶対ルール（毎回必ず守る）
 
 四柱推命ツール（①個人版 `meishiki-original/` ②経験者版 `pro/`）。
-販売する3サイト＝PRO `pro/`・ビギナー `beginner/`・易 EKI Pro `eki-pro/`（`ekipro_9_修正版.zip` は `eki-pro/` から作る）。エンジニアへの依頼の入口は `エンジニアへの実装依頼_3サイト.md`。
+販売する3サイト＝PRO `pro/`・ビギナー `beginner/`・易 EKI Pro `eki-pro/`（エンジニアへの引き渡しZIP＝`【最終完成版】①エンジニア渡し_PRO・生成ツール_2026-10-14.zip`〈依頼書・CLAUDE.md・pro・tools・meishiki-original〉／`【最終完成版】②エンジニア渡し_ビギナー・易EKI_2026-10-14.zip`〈依頼書・CLAUDE.md・beginner・eki-pro〉／`【最終完成版】③易EKI_Pro単体（②にも同梱）_2026-10-14.zip`〈eki-pro〉）。エンジニアへの依頼の入口は `エンジニアへの実装依頼_3サイト.md`。
 作業前にこのファイルと `pro/ritsuun.html`（立運の教科書）を必ず読むこと。
 
 ## 四柱推命の計算・表示ルール（既定・絶対遵守 ／ 勝手に「標準ルール」に変えない）
