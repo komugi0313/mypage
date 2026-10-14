@@ -449,7 +449,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
 +var WEEKEND_NG=/上司|取引先|面接|商談|会議|プレゼン|報連相|仕事|提出/;   // 土日に出さない“仕事の段取り”
 +// ランクと文章の矛盾をなくす（言い回しの選び方だけ。ランク・十神・テーマなど運勢の計算は変えない）
 +//  △の日に「攻め・勝負・思い切り」、◎💮の日に「休むのが正解」を出さない。
-+var TONE_AGG=/攻め|勝負|思い切|最高潮|全力|一気に|即断即決|押すべき|手を挙げ|引っ張って|大チャンス|チャンスをつかみ|波がいちばん高い|エネルギー満タン|パワーがみなぎる|挑む/;
++var TONE_AGG=/攻め|勝負|思い切|最高潮|全力|一気に|即断即決|押すべき|手を挙げ|引っ張って|大チャンス|チャンスをつかみ|波がいちばん高い|エネルギー満タン|パワーがみなぎる|挑む|燃える|見せどころ|挑戦|踏み出|度胸|飛び込|どんどん|ガンガン|積極的/;   // 10/13：燃える・見せどころ・挑戦・踏み出す 等を追加（△の日に出さない）
 +var TONE_REST=/休む|休息|ひと休み|休める|動かず|静かに過ごす|無理に攻めず|がんばりすぎず/;
 +function toneOk(s, sym){ if(sym==='△') return !TONE_AGG.test(s); if(sym==='◎'||sym==='💮') return !TONE_REST.test(s); return true; }
 +var JUNI_TRI_SOFT=['力はたっぷりある日。今日は使いどころを選んで、大事な一手は次の好調日に。','エネルギーは十分な日。飛ばしすぎず、七分目で動くとちょうどいい。','底力のある日。今日はその力を準備に使うと、あとで大きく実ります。','勢いはある日。だからこそ、今日は足元を固めるのに使って。','やる気が満ちる日。今日は下ごしらえに回すと、次の好調日がぐんと楽に。','内側に力がたまる日。今日は温存して、ここぞの日に取っておいて。'];
@@ -700,9 +700,11 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var lnum=NUM[fe][pickRand(ubase,79,NUM[fe].length,seed)];
      var ptype=PTYPE[fe];
  
-@@ -865,7 +1079,9 @@
+@@ -864,8 +1078,11 @@
+     var _pool=function(a,b){return (a||[]).concat(b||[]);};
      var _occ=Math.floor(seed/10);
      var fPool=_pool(TAIJIN[you.stem]&&TAIJIN[you.stem][god], FRIEND[god]);
++    fPool=toneList(fPool,_grade.sym);   // △の日に「燃える」などの攻めの文を出さない（10/13）
      var friend=fPool.length?fPool[pickSeq(ubase,51,fPool.length,_occ)]:'';
 -    var work=WORK[god]?WORK[god][pickSeq(ubase,52,WORK[god].length,_occ)]:'';
 +    var _wk=toneList(WORK[god],_grade.sym);
@@ -711,7 +713,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var study=STUDY[god]?STUDY[god][pickSeq(ubase,53,STUDY[god].length,_occ)]:'';   // 学び・成長（印星の理）
      // 今日の服＝ラッキーカラー×季節テンプレの合成（色が毎日変わるので数週間まず被らない）
      var wTplSet=(sex==='m'?WEARTPL_M:WEARTPL_F);
-@@ -878,11 +1094,27 @@
+@@ -878,11 +1095,27 @@
        '（{C}の服がなくても大丈夫。{C}のハンカチやアクセサリーなど、小物でひと足しを）'
      ];
      var _wn=_wnotes[pickSeq(ubase,80,_wnotes.length,seed)].replace(/\{C\}/g, lucky.color);
@@ -740,7 +742,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var loveSet=(sex==='m')?LOVE_M:LOVE_F;
      var lf=(loveSet[you.stem]&&loveSet[you.stem][god])||[];
      var love='';
-@@ -894,24 +1126,66 @@
+@@ -894,24 +1127,66 @@
        // 同じ日干どうしで文面が丸かぶりしにくいよう、生まれ日の地支もシードに混ぜて分散させる。
        var _cc=_lc[pickSeq(ubase+you.branch.charCodeAt(0)*7,57,_lc.length,_occ)];
        love=lf[_cc[0]]+lf[_cc[1]];
@@ -810,7 +812,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  
      // 特別な日
      var special=null;
-@@ -934,47 +1208,61 @@
+@@ -934,47 +1209,61 @@
      }
  
      // ===== 件名（メールのタイトル）＝開封率のカギ。毎日ちがう“開けたくなる”件名を作る。
@@ -868,8 +870,8 @@ diff -uN a/daily-engine.js b/daily-engine.js
 +    //   今日の一言はランク（💮◎〇△）と縁（運命の人の日・モテ運の日）に必ず一致する＝本文と矛盾しない。
 +    var SUBJ_EMO=['🎍','💝','🌸','🌷','🌿','🐸',   // 6月は☔だと「悪い日？」と見えるので🐸に（10/12 オーナー決定）
 +      '🎋','🌻','🎑','🎃','🍁','🎄'];
-+    var _hk=(en.lv===3)?['運命の人の日','ご縁が極まる日','特別なご縁の日']
-+      :touka?['モテ運の日','出会い運が輝く日','魅力が光る日']
++    var _hk=(en.lv===3)?((rel==='partner'||rel==='married')?['縁が深まる日','絆が深まる日','特別なご縁の日']:['運命の人の日','最高のご縁の日','特別なご縁の日'])   // 恋人・既婚の人に「運命の人の日」の件名を出さない（10/13）
++      :touka?((rel==='partner'||rel==='married')?['愛され運の日','ご縁が輝く日','魅力が光る日']:['モテ運の日','出会い運が輝く日','魅力が光る日'])   // 恋人・既婚の人に「モテ・出会い」の件名を出さない（10/13）
 +      :(_grade.sym==='💮')?['最高の一日','花まるの日','特別な日','ここぞの日']
 +      :(_grade.sym==='◎')?['追い風の日','運気上々の日','いい流れの日','調子のいい日','背中を押される日']
 +      :(_grade.sym==='△')?['充電の日','やさしく過ごす日','守りが吉の日','ひかえめの日','ていねいに過ごす日']
@@ -887,7 +889,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      return {
        version:'daily-1.0.0',
        subject:subject,
-@@ -991,7 +1279,9 @@
+@@ -991,7 +1280,9 @@
        en:{lv:en.lv, tag:enTag, body:enBody},
        love:love, loveMove:loveMove,
        touka:touka, special:special,
@@ -898,7 +900,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
        element:{day:dayElem, mine:myElem, supplement:fe, reason:feReason, feFood:feFood},
        bazi:favInfo,
        lucky:{color:lucky.color, hex:lucky.hex, direction:ldir, food:food, number:lnum,
-@@ -1008,21 +1298,53 @@
+@@ -1008,21 +1299,53 @@
          else if(_grade.sym==='◎')_b=TODAY_ONE.maru[grp][pickSeq(ubase,42,TODAY_ONE.maru[grp].length,seed)];
          else if(_grade.sym==='△')_b=TODAY_ONE.tri[pickSeq(ubase,43,TODAY_ONE.tri.length,seed)];
          else _b=TODAY_ONE.norm[grp][pickSeq(ubase,44,TODAY_ONE.norm[grp].length,seed)];
@@ -2867,7 +2869,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
  function renderCalendar(){
    if(!CUR.me)return;
    const startDow=new Date(calY,calM-1,1).getDay(), days=new Date(calY,calM,0).getDate();
-@@ -1002,53 +1068,60 @@
+@@ -1002,53 +1068,62 @@
    const todY=_jst.getFullYear(), todM=_jst.getMonth()+1, todD=_jst.getDate();
    $("calTitle").textContent=calY+'年 '+calM+'月';
    const dow=['日','月','火','水','木','金','土'];let h='';
@@ -2927,6 +2929,8 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
 +  const _rl=branchRel(t.branch,CUR.me.branch), _gkD=r.m.includes('🌫️')&&!r.m.includes('⚡')&&(_rl==='支合'||_rl==='三合');
 +  const m=_gkD?r.m.filter(function(x){return x!=='🌫️';}):r.m;
 +  const labels={'🌈':'運命の人の日 ── 運命の相手と縁が最高に高まる、めったにない特別な日','🌷':'出会い・モテ運の日 ── 出逢い運・魅力が全開。動くほど縁が広がる日。誘いには前向きに、気になる人には自分から一言を','🌸':'恋が動く日 ── 恋が動きやすい日。気になる人への連絡や誘いに good','💖':'魅力が輝く日 ── あなたの表現力・センス・華やかさが動く日。人前・発信・デート・おしゃれが向く日','🌐':'対人運アップ ── 仲間・友だちとの縁が動く日。協力やチームワークが活きやすい','💰':'金運アップ ── お金やチャンスが巡りやすい日。商談・買い物・投資に縁あり','💼':'勝負運アップ ── 仕事・責任・評価まわりが動く日。全体の調子（💮◎〇△）もあわせて見て、△の日は無理せず整えるのが吉','⚡':'注意の日（注意：強め） ── 気持ちや予定がぶつかりやすい、いちばん慎重に過ごしたい日。大事な決断・契約・大きな買い物・言い争いは避けて、予定はゆとりを持って。<br><span style="font-size:11px;opacity:.75">※ 四柱推命で「天戦地冲（てんせんちちゅう）」と呼ばれる、気がぶつかり合いやすい巡りです</span>','⚠️':'注意の日（注意：ふつう） ── リズムが乱れやすい日。急ぎの決断や言い合いは控えめに。気分転換には向く日です。','📚':'学びの日 ── 勉強・資格・情報収集に吉。インプットや準備がはかどり、あなたを一段のばす日です','🍀':'貴人の日（天乙貴人）── 人の助け・引き立て・チャンスに恵まれやすい日。困ったら遠慮なく頼ると、良いご縁が動きます','🐴':'動き・変化の日（駅馬）── 移動・行動・環境の変化に縁がある日。フットワーク軽く動くと、流れが開けます','🌫️':'ひとこと ── 今日は少し空回りしやすいかも。大事な決断だけは、急がずにひと晩おいて','🌀':'動き・変化の日（大きな転機） ── 環境や立場・家庭など、まわりが大きく動きやすい日。変えたいことには追い風、守りたいものは慎重に'};
++  /* 恋人がいる・結婚している人には、出会い・気になる人・運命の相手の言い方をしない（メールの件名と同じ。10/13 オーナー決定） */
++  if(['partner','married'].indexOf((document.getElementById('rel')&&document.getElementById('rel').value))>=0){labels['🌈']='絆が深まる日 ── 大切な人との絆が、いちばん深まる特別な日';labels['🌷']='愛され運の日 ── 魅力が輝く日。いつもより素直な気持ちが伝わりやすい日';labels['🌸']='恋が動く日 ── ふたりの気持ちが通い合いやすい日。素直なひとことが届きやすい日';}
 +  const _exNames={'💰':'金運','💼':'勝負運','🌐':'対人運','📚':'学び運','💖':'魅力','🌸':'恋愛運'};
    const _headline=m.includes('🌈')?'🌈':(m.includes('🌷')?'🌷':null);
    const _extras=m.filter(x=>_exNames[x]);
@@ -2944,7 +2948,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
      : '';
    // 恋以外(仕事/金運/対人)の追い風とゆらぎが同居する日
    const _good=m.includes('💼')||m.includes('💰')||m.includes('🌐');
-@@ -1057,10 +1130,10 @@
+@@ -1057,10 +1132,10 @@
    const z=n=>String(n).padStart(2,'0');
    const gs=d.getFullYear()+z(d.getMonth()+1)+z(d.getDate());
    const gn=new Date(d.getTime()+86400000),ge=gn.getFullYear()+z(gn.getMonth()+1)+z(gn.getDate());
@@ -2957,7 +2961,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
      const dc=dayColor(t);
      const _dwSeason=KD.climateSeason(d.getMonth()+1);
      const _dwSeed=jdn(d.getFullYear(),d.getMonth()+1,d.getDate());
-@@ -1078,17 +1151,18 @@
+@@ -1078,17 +1153,18 @@
    let goLine='';
    if(r.dg){
      if(r.dg.kind==='kishin')goLine='<div style="margin-top:9px;padding:9px 11px;border-radius:10px;background:rgba(74,158,107,.12);border:1px solid rgba(74,158,107,.3);font-size:12.5px;line-height:1.65">🍃 <b style="color:#3c8a5a">追い風の日</b> ── 今日はあなたに追い風が吹く日。やりたいことに、思い切って動くほど流れに乗れます。</div>';
@@ -2980,7 +2984,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    $("dayDetail").classList.add('show');
    setTimeout(function(){var _dd=$("dayDetail");if(_dd){var _y=_dd.getBoundingClientRect().top+window.pageYOffset-70;window.scrollTo({top:_y,behavior:'smooth'});}},60);
    $("memoSave").onclick=()=>{try{localStorage.setItem(memoKey(d),$("memoBox").value);}catch(e){}renderCalendar();$("memoSave").textContent='保存しました ✓';};
-@@ -1104,9 +1178,16 @@
+@@ -1104,9 +1180,41 @@
    if(reg&&reg.length)return;
    document.querySelectorAll('a[href="mypage.html"]').forEach(function(a){
      a.setAttribute("href","register.html");
@@ -2997,6 +3001,31 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
 +})();</script>
 +
 +<!-- 10/12：規約・プライバシー・運営者情報へのリンク（個人名・住所は載せない） -->
++<script>
++/* 恋人がいる・結婚している人には、画面の印の名前を言いかえる（メールの件名・チップと同じ。10/13 オーナー決定）
++   「運命の人の日」→「絆が深まる日」、「出会い・モテ運の日」「モテ運の日」→「愛され運の日」。印（絵文字）と計算は変えない。
++   状況を「出会いを探したい」などに戻したときは、元の言葉に戻す。 */
++(function(){
++  var REP=[['出会い・モテ運の日','愛され運の日'],['運命の人の日','絆が深まる日'],['モテ運の日','愛され運の日'],['魅力が全開・出会いも動く吉日','魅力が輝く吉日']];
++  // 画面の改行調整（jp-wrap）が言葉の途中に見えない区切り（\u200b・\u2060）を入れても見つけられるようにする
++  var ZW='[\\u200b\\u2060\\u00ad]*';
++  REP=REP.map(function(r){ return [new RegExp(r[0].split('').map(function(c){return c.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}).join(ZW),'g'), r[1]]; });
++  var ANY=new RegExp(['運命の人の日','モテ運の日','出会いも動く吉日'].map(function(w){return w.split('').join(ZW);}).join('|'));
++  function isPartner(){ return ['partner','married'].indexOf((document.getElementById('rel')&&document.getElementById('rel').value))>=0; }
++  var busy=false;
++  function fix(){ if(busy) return; busy=true; try{
++    var p=isPartner(), w=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null), n;
++    while((n=w.nextNode())){ var pe=n.parentNode&&n.parentNode.nodeName; if(pe==='SCRIPT'||pe==='STYLE'||pe==='TEXTAREA'||pe==='OPTION') continue;
++      if(n.__orig===undefined){ if(!ANY.test(n.nodeValue)) continue; n.__orig=n.nodeValue; }
++      var v=n.__orig; if(p) REP.forEach(function(r){ v=v.replace(r[0],r[1]); }); if(n.nodeValue!==v) n.nodeValue=v; }
++  }finally{ busy=false; } }
++  var t=null; function later(){ clearTimeout(t); t=setTimeout(fix,30); }
++  if(document.readyState!=='loading') later(); else document.addEventListener('DOMContentLoaded',later);
++  try{ new MutationObserver(later).observe(document.documentElement,{childList:true,subtree:true,characterData:true}); }catch(e){}
++  document.addEventListener('change',later,true);
++  window.__relNameFix=fix;
++})();
++</script>
  </body>
  </html>
 diff -uN a/mypage.html b/mypage.html
@@ -3549,7 +3578,7 @@ diff -uN a/mypage.html b/mypage.html
    host.innerHTML=h;
  }
  /* 🔎 今日のまとめ：あなたの調子（💮◎〇△）と、その日の“縁”マークを1文でつなぐ。
-@@ -779,57 +874,59 @@
+@@ -779,57 +874,61 @@
  function _goukuu(dayBranch){ if(!CUR.me)return false; var r=branchRel(dayBranch,CUR.me.branch); return (r==='支合'||r==='三合'); }
  function daySummaryHTML(gr,m,t){
    var sym=gr.sym;
@@ -3596,6 +3625,8 @@ diff -uN a/mypage.html b/mypage.html
 -  const labels={'🌈':'運命の人の日 ── 運命の相手と縁が最高に高まる、めったにない特別な日','🌷':'出会い・モテ運の日 ── 出逢い運・魅力が全開。動くほど縁が広がる日。誘いには前向きに、気になる人には自分から一言を','🌸':'恋チャンスUP ── 恋が動きやすい日。気になる人への連絡や誘いに good','🩷':'魅力・表現の日 ── あなたの表現力・センス・華やかさが動く日。人前・発信・デート・おしゃれが向く日','🌐':'対人の気が動く日 ── 仲間・友達との縁が動く日。協力やチームワークが活きやすい','💰':'金運の気が動く日 ── お金やチャンスが巡りやすい日。商談・買い物・投資に縁あり','💼':'仕事の気が動く日 ── 仕事・責任・評価まわりが動く日。全体の調子（💮◎〇△）もあわせて見て、△の日は無理せず整えるのが吉','⚠️':'ゆらぎ注意日 ── 今日は少しリズムが合いにくい日。運が悪いわけではなく、急ぎの決断や言い合いだけ控えめにすればOK。一呼吸おいて過ごすと安心な一日です。','📚':'学びの日 ── 勉強・資格・情報収集に good。インプットや準備がはかどり、あなたを一段のばす日です','🍀':'貴人の日 ── 人の助け・引き立て・チャンスに恵まれやすい日。困ったら遠慮なく頼ると、良いご縁が動きます','🐴':'動き・変化の日 ── 移動・行動・環境の変化に縁がある日。フットワーク軽く動くと、流れが開けます','🌫️':'整える日 ── 気が抜けやすく、なぜか空回りしやすい日。大きな決断や勝負より、片づけ・ひと休み・仕込みに向く日です','🌀':'大きく動く日 ── いつもより大きな転機・変化が起きやすい日。環境や立場・家庭など、人生の土台が動くような大きな変わり目です','🍃':'追い風の日 ── 今日はあなたに追い風。やりたいことに思い切って動くと good'};
 -  const _exNames={'💰':'金運','💼':'仕事運','🌐':'対人運','📚':'学び運','🩷':'魅力','🌸':'恋チャンス'};
 +  const labels={'🌈':'運命の人の日 ── 運命の相手と縁が最高に高まる、めったにない特別な日','🌷':'出会い・モテ運の日 ── 出逢い運・魅力が全開。動くほど縁が広がる日。誘いには前向きに、気になる人には自分から一言を','🌸':'恋が動く日 ── 恋が動きやすい日。気になる人への連絡や誘いに good','💖':'魅力が輝く日 ── あなたの表現力・センス・華やかさが動く日。人前・発信・デート・おしゃれが向く日','🌐':'対人運アップ ── 仲間・友だちとの縁が動く日。協力やチームワークが活きやすい','💰':'金運アップ ── お金やチャンスが巡りやすい日。商談・買い物・投資に縁あり','💼':'勝負運アップ ── 仕事・責任・評価まわりが動く日。全体の調子（💮◎〇△）もあわせて見て、△の日は無理せず整えるのが吉','⚡':'注意の日（注意：強め） ── 気持ちや予定がぶつかりやすい、いちばん慎重に過ごしたい日。大事な決断・契約・大きな買い物・言い争いは避けて、予定はゆとりを持って。<br><span style="font-size:11px;opacity:.75">※ 四柱推命で「天戦地冲（てんせんちちゅう）」と呼ばれる、気がぶつかり合いやすい巡りです</span>','⚠️':'注意の日（注意：ふつう） ── リズムが乱れやすい日。急ぎの決断や言い合いは控えめに。気分転換には向く日です。','📚':'学びの日 ── 勉強・資格・情報収集に吉。インプットや準備がはかどり、あなたを一段のばす日です','🍀':'貴人の日 ── 人の助け・引き立て・チャンスに恵まれやすい日。困ったら遠慮なく頼ると、良いご縁が動きます','🐴':'動き・変化の日 ── 移動・行動・環境の変化に縁がある日。フットワーク軽く動くと、流れが開けます','🌫️':'ひとこと ── 今日は少し空回りしやすいかも。大事な決断だけは、急がずにひと晩おいて','🌀':'動き・変化の日（大きな転機） ── 環境や立場・家庭など、まわりが大きく動きやすい日。変えたいことには追い風、守りたいものは慎重に','🍃':'追い風の日 ── 今日はあなたに追い風。やりたいことに思い切って動くと good'};
++  /* 恋人がいる・結婚している人には、出会い・気になる人・運命の相手の言い方をしない（メールの件名と同じ。10/13 オーナー決定） */
++  if(['partner','married'].indexOf((typeof MEMBER!=='undefined'&&MEMBER&&MEMBER.rel))>=0){labels['🌈']='絆が深まる日 ── 大切な人との絆が、いちばん深まる特別な日';labels['🌷']='愛され運の日 ── 魅力が輝く日。いつもより素直な気持ちが伝わりやすい日';labels['🌸']='恋が動く日 ── ふたりの気持ちが通い合いやすい日。素直なひとことが届きやすい日';}
 +  const _exNames={'💰':'金運','💼':'勝負運','🌐':'対人運','📚':'学び運','💖':'魅力','🌸':'恋愛運'};
    const _headline=m.includes('🌈')?'🌈':(m.includes('🌷')?'🌷':null);
    const _extras=m.filter(x=>_exNames[x]);
@@ -3624,7 +3655,7 @@ diff -uN a/mypage.html b/mypage.html
      const dc=dayColor(t);
      // 共通エンジン(daily-engine.js)のリッチな文言バンクを再利用：デート服=五行×季×10種、テーマカラー=五行×16色。日替わりで選ぶ
      const _KD=window.KDaily;
-@@ -851,23 +948,23 @@
+@@ -851,23 +950,23 @@
    }
    const gr=dayGrade(r);
    const gradeHead='<div style="display:flex;align-items:center;gap:8px;margin-top:6px;margin-bottom:2px"><span class="'+gr.cls+'" style="font-size:30px;font-weight:800;line-height:1">'+gr.sym+'</span><span style="font-size:14px;font-weight:800">今日の運勢：'+gr.label+'</span></div>';
@@ -3655,7 +3686,7 @@ diff -uN a/mypage.html b/mypage.html
    if(!_loveOn)_lb='今日は恋の大きな動きは静か。自分磨き・おしゃれ・気になる人の様子を見るくらいが◎。';
    _lb+=_bonus+_swayLove+extra;
    var _workOn=_has('💼');
-@@ -881,28 +978,31 @@
+@@ -881,28 +980,31 @@
    var _studyOn=_has('📚');
    var _sb=(_studyOn?('📚 '+labels['📚']):'今日は学びの気は控えめ。気になる本を1ページ、くらいの軽さでOK。')+'<div class="whos">自分の勉強・資格にも、お子さんの勉強・習い事の後押しにも。</div>';
    // ── 神殺×分野の“合成の読み方”：空亡や冲が分野に重なった日は、その分野の使い方を1つに束ねて提示（例：空亡×仕事＝勝負より仕込み） ──
@@ -3697,7 +3728,7 @@ diff -uN a/mypage.html b/mypage.html
      +'<div class="ghint">▼ ジャンル別にタップで開きます（恋愛・仕事・お金・対人・学び・健康・暮らし）</div>'+_secs
      +'<textarea id="memoBox" placeholder="この日の予定・メモ（仕事/会食/デートなど）">'+memo+'</textarea><div style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="cal-nav" id="memoSave" style="width:auto;padding:0 14px;height:34px;font-size:12.5px;">メモを保存</button><a class="gcal" href="'+gurl+'" target="_blank" rel="noopener">📅 Googleカレンダーに追加</a></div>';
    $("dayDetail").classList.add('show');
-@@ -921,9 +1021,37 @@
+@@ -921,9 +1023,37 @@
  $("calNext").onclick=()=>{let y=calY,m=calM+1;if(m>12){m=1;y++;}if(!_calInRange(y,m)){_calRangeNote();return;}calY=y;calM=m;renderCalendar();$("dayDetail").classList.remove('show');};
  
  /* ===== 会員情報の反映 ===== */
@@ -3737,7 +3768,7 @@ diff -uN a/mypage.html b/mypage.html
  function _pillCard(label,gz,terr){
    return '<div style="flex:1 1 60px;min-width:58px;text-align:center;background:rgba(207,74,38,.05);border:1px solid rgba(207,74,38,.14);border-radius:10px;padding:8px 4px;">'
      +'<div style="font-size:10px;color:var(--muted);">'+label+'</div>'
-@@ -935,43 +1063,43 @@
+@@ -935,43 +1065,43 @@
    var tu=(b.tu===true)||(b.h==null);
    var prof=(typeof window.PersonBazi==='function')?window.PersonBazi(b.y,b.m,b.d,tu?null:b.h,tu?null:b.mi,tu,MEMBER.sex||'female'):null;
    if(prof&&prof.ok){
@@ -3794,7 +3825,7 @@ diff -uN a/mypage.html b/mypage.html
      $("dayInfo").innerHTML='';$("gogyoWrap").innerHTML='';$("favWrap").innerHTML='';
      $("kanshiBody").innerHTML=jt2.body||'';
    }
-@@ -982,7 +1110,8 @@
+@@ -982,7 +1112,8 @@
    $("infoMail").textContent=MEMBER.mail;
    $("infoBirth").textContent=fmtBirth(MEMBER.birth);
    $("infoRel").textContent=relText(MEMBER.rel);
@@ -3804,7 +3835,7 @@ diff -uN a/mypage.html b/mypage.html
    // 干支計算
    CUR.me=pillar(MEMBER.birth.y,MEMBER.birth.m,MEMBER.birth.d);
    CUR.partner=partner(CUR.me.stem,CUR.me.branch);
-@@ -1001,18 +1130,37 @@
+@@ -1001,18 +1132,37 @@
    setPlan(MEMBER.plan);
  }
  function setPlan(plan){
@@ -3849,7 +3880,7 @@ diff -uN a/mypage.html b/mypage.html
  
  /* ===== ログアウト ===== */
  function doLogout(){
-@@ -1062,10 +1210,12 @@
+@@ -1062,10 +1212,37 @@
  /* 毎朝メールのトグルを配信フラグと連動（配信停止ページ unsubscribe.html と共有） */
  (function(){var sw=document.getElementById("swMail");if(!sw)return;
    try{sw.checked=(localStorage.getItem("unkiyoho_mail_opt")!=="off");}catch(e){}
@@ -3862,6 +3893,31 @@ diff -uN a/mypage.html b/mypage.html
 +</script>
 +<!-- 10/12：規約・プライバシー・運営者情報へのリンク（個人名・住所は載せない） -->
 +<div class="legal-links" style="text-align:center;font-size:11.5px;line-height:1.9;color:#9a8d86;padding:22px 16px 26px;font-family:sans-serif;"><a href="terms.html" style="color:inherit;text-decoration:underline;text-underline-offset:2px;">利用規約</a>　・　<a href="privacy.html" style="color:inherit;text-decoration:underline;text-underline-offset:2px;">プライバシーポリシー</a>　・　<a href="tokushoho.html" style="color:inherit;text-decoration:underline;text-underline-offset:2px;">運営者情報</a></div>
++<script>
++/* 恋人がいる・結婚している人には、画面の印の名前を言いかえる（メールの件名・チップと同じ。10/13 オーナー決定）
++   「運命の人の日」→「絆が深まる日」、「出会い・モテ運の日」「モテ運の日」→「愛され運の日」。印（絵文字）と計算は変えない。
++   状況を「出会いを探したい」などに戻したときは、元の言葉に戻す。 */
++(function(){
++  var REP=[['出会い・モテ運の日','愛され運の日'],['運命の人の日','絆が深まる日'],['モテ運の日','愛され運の日'],['魅力が全開・出会いも動く吉日','魅力が輝く吉日']];
++  // 画面の改行調整（jp-wrap）が言葉の途中に見えない区切り（\u200b・\u2060）を入れても見つけられるようにする
++  var ZW='[\\u200b\\u2060\\u00ad]*';
++  REP=REP.map(function(r){ return [new RegExp(r[0].split('').map(function(c){return c.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}).join(ZW),'g'), r[1]]; });
++  var ANY=new RegExp(['運命の人の日','モテ運の日','出会いも動く吉日'].map(function(w){return w.split('').join(ZW);}).join('|'));
++  function isPartner(){ return ['partner','married'].indexOf((typeof MEMBER!=='undefined'&&MEMBER&&MEMBER.rel))>=0; }
++  var busy=false;
++  function fix(){ if(busy) return; busy=true; try{
++    var p=isPartner(), w=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null), n;
++    while((n=w.nextNode())){ var pe=n.parentNode&&n.parentNode.nodeName; if(pe==='SCRIPT'||pe==='STYLE'||pe==='TEXTAREA'||pe==='OPTION') continue;
++      if(n.__orig===undefined){ if(!ANY.test(n.nodeValue)) continue; n.__orig=n.nodeValue; }
++      var v=n.__orig; if(p) REP.forEach(function(r){ v=v.replace(r[0],r[1]); }); if(n.nodeValue!==v) n.nodeValue=v; }
++  }finally{ busy=false; } }
++  var t=null; function later(){ clearTimeout(t); t=setTimeout(fix,30); }
++  if(document.readyState!=='loading') later(); else document.addEventListener('DOMContentLoaded',later);
++  try{ new MutationObserver(later).observe(document.documentElement,{childList:true,subtree:true,characterData:true}); }catch(e){}
++  document.addEventListener('change',later,true);
++  window.__relNameFix=fix;
++})();
++</script>
  </body>
  </html>
 diff -uN a/privacy.html b/privacy.html
