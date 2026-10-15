@@ -1671,11 +1671,11 @@ diff -uN a/index.html b/index.html
 -      <iframe id="mailSampleFrame" src="mail-sample.html?m=7" title="配信メール見本" loading="lazy" scrolling="no" style="width:100%;height:1600px;border:0;display:block;background:#eef6fb;"></iframe>
 +    <div style="position:relative;max-width:466px;margin:6px auto 0;border-radius:24px;overflow:hidden;box-shadow:0 14px 40px rgba(140,110,120,.2);background:#f6eee9;">
 +      <div id="mailSampleWait" style="position:absolute;left:0;right:0;top:48px;text-align:center;font-size:14px;font-weight:700;color:#9a7a6e;">✉️ メールの見本を読み込んでいます…</div>
-+      <iframe id="mailSampleFrame" src="mail-preview.html" title="配信メール見本（実際に届くメールと同じひな形・今月の見本）" scrolling="no" style="position:relative;width:1px;min-width:100%;max-width:100%;height:1600px;border:0;display:block;background:transparent;"></iframe>
++      <iframe id="mailSampleFrame" title="配信メール見本（実際に届くメールと同じひな形・今月の見本）" scrolling="no" style="position:relative;width:1px;min-width:100%;max-width:100%;height:1600px;border:0;display:block;background:transparent;"></iframe>
      </div>
 -    <script>(function(){var f=document.getElementById('mailSampleFrame');if(!f)return;function fit(){try{var h=f.contentWindow.document.body.scrollHeight;if(h>200)f.style.height=h+'px';}catch(e){}}f.addEventListener('load',fit);window.addEventListener('resize',function(){setTimeout(fit,100);});setTimeout(fit,400);setTimeout(fit,1200);})();</script>
 -    <p style="font-size:12px;color:var(--muted);margin:10px auto 0;max-width:440px;line-height:1.7;">※ 上は<b>七夕の見本</b>です。背景は<b>毎月の季節でかわります</b>──1月お正月／2月バレンタイン／3月ひな祭り／4月桜／5月新緑／6月あじさい／7月七夕／8月花火／9月お月見／10月ハロウィン／11月秋の花／12月クリスマス…と、四季をお届け。</p>
-+    <script>(function(){var f=document.getElementById('mailSampleFrame');if(!f)return;function fit(){try{var h=f.contentWindow.document.body.scrollHeight;if(h>200){f.style.height=h+'px';var w=document.getElementById('mailSampleWait');if(w)w.style.display='none';}}catch(e){}}f.addEventListener('load',fit);window.addEventListener('resize',function(){setTimeout(fit,100);});setTimeout(fit,400);setTimeout(fit,1200);})();</script>
++    <script>(function(){var f=document.getElementById('mailSampleFrame');if(!f)return;/* iPhoneは枠の幅を中身に合わせて広げてしまうので、中身の幅を枠の幅にぴったり固定する（10/15） */var lastW=0;function cw(){return Math.round(f.parentNode.getBoundingClientRect().width)||340;}lastW=cw();f.src='mail-preview.html?w='+lastW;window.addEventListener('resize',function(){var w=cw();if(Math.abs(w-lastW)>2){lastW=w;try{f.contentWindow.postMessage({type:'unkiMailW',w:w},'*');}catch(e){}}});function fit(){try{var h=f.contentWindow.document.body.scrollHeight;if(h>200){f.style.height=h+'px';var w=document.getElementById('mailSampleWait');if(w)w.style.display='none';}}catch(e){}}f.addEventListener('load',fit);window.addEventListener('resize',function(){setTimeout(fit,100);});setTimeout(fit,400);setTimeout(fit,1200);})();</script>
 +    <p class="mailcap" style="font-size:12px;color:var(--muted);margin:10px auto 0;max-width:440px;line-height:1.7;">※ 上は<b>今月の見本</b>です。いちばん上の<b>動くイラストと色は、毎月の季節でかわります</b>──1月お正月／2月バレンタイン／3月ひな祭り／4月桜／5月こいのぼり／6月あじさい／7月七夕／8月花火／9月お月見／10月ハロウィン／11月紅葉／12月クリスマス…と、四季をお届け。</p>
    </div>
  
@@ -2132,7 +2132,7 @@ diff -uN a/login.html b/login.html
 diff -uN a/mail-preview.html b/mail-preview.html
 --- a/mail-preview.html
 +++ b/mail-preview.html
-@@ -0,0 +1,30 @@
+@@ -0,0 +1,36 @@
 +<!doctype html>
 +<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 +<title>毎朝のメール見本｜私だけの開運予報</title>
@@ -2148,6 +2148,12 @@ diff -uN a/mail-preview.html b/mail-preview.html
 +<style>html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%;max-width:100%;overflow-x:hidden;}</style>
 +</head><body style="margin:0;background:#f6eee9;-webkit-text-size-adjust:100%;">
 +<script>
++/* 親ページから幅（?w=）をもらったら、その幅にぴったり固定する（iPhoneで枠が広がって右が切れるのを防ぐ） */
++(function(){
++  function setW(w){ w=Math.round(+w); if(!(w>=200&&w<=1200))return; var st=document.getElementById('pvW'); if(!st){st=document.createElement('style');st.id='pvW';document.head.appendChild(st);} st.textContent='html,body{width:'+w+'px!important;max-width:'+w+'px!important;overflow:hidden;}'; }
++  var m=location.search.match(/[?&]w=(\d{3,4})/); if(m)setW(m[1]);
++  window.addEventListener('message',function(e){ if(e.data&&e.data.type==='unkiMailW')setW(e.data.w); });
++})();
 +(function(){
 +  var now=new Date(Date.now()+9*3600e3), Y=now.getUTCFullYear(), M=now.getUTCMonth()+1, D=now.getUTCDate();
 +  var q=location.search.match(/[?&]m=(\d{1,2})/); if(q&&+q[1]>=1&&+q[1]<=12){ if(+q[1]!==M){ M=+q[1]; D=8; } }
@@ -3297,7 +3303,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
      +_lkCell('ラッキー食材',food)
      +_lkCell('ラッキーナンバー',lnum)
      +_lkCell('開運アクション',luckyAct)
-@@ -834,39 +893,57 @@
+@@ -834,39 +893,58 @@
      +peopleSecs
      +_sec('体調・リラックス',health)
      +placeSection
@@ -3346,8 +3352,9 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
 +      $("mSub").textContent=_pv_fix(_pv_ml.subject);
 +      var _pv_mb=$("mBody"); _pv_mb.innerHTML=""; _pv_mb.style.padding="0";
 +      var _pv_if=document.createElement("iframe"); _pv_if.title="毎朝届くメールの見本"; _pv_if.setAttribute("scrolling","no"); _pv_if.style.cssText="width:1px;min-width:100%;max-width:100%;border:0;display:block;min-height:600px;";
-+      _pv_if.onload=function(){ try{ _pv_if.style.height=_pv_if.contentDocument.documentElement.scrollHeight+"px"; }catch(e){} };
-+      _pv_if.srcdoc=_pv_fix(_pv_ml.html); _pv_mb.appendChild(_pv_if);
++      _pv_if.onload=function(){ try{ var _d=_pv_if.contentDocument,_w=Math.round(_pv_if.getBoundingClientRect().width); if(_w>=200){var _st=_d.createElement("style");_st.textContent="html,body{width:"+_w+"px!important;max-width:"+_w+"px!important}";_d.head.appendChild(_st);} _pv_if.style.height=_d.documentElement.scrollHeight+"px"; }catch(e){} };
++      _pv_mb.appendChild(_pv_if); var _pv_w=Math.round(_pv_if.getBoundingClientRect().width)||Math.round(_pv_mb.getBoundingClientRect().width)||320; var _pv_h=_pv_fix(_pv_ml.html).replace("</head>","<style>html,body{width:"+_pv_w+"px!important;max-width:"+_pv_w+"px!important;overflow:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%;}</style></head>");   // iPhoneで枠が広がって右が切れるのを防ぐ（10/15）
++      _pv_if.srcdoc=_pv_h;
 +      var _pv_mbr=document.querySelector("#mailFrame .mail-brand"); if(_pv_mbr)_pv_mbr.style.display="none";   // 見本メール側に見出しと日付があるので重ねない
 +      if(_mf){ _mf.style.background="transparent"; _mf.style.padding="0"; _mf.style.boxShadow="none"; }   // 季節の便箋は見本メール側に入っている
 +    }
@@ -3369,7 +3376,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    $("cliffCard").style.display="";
    $("calCard").style.display="";renderCalendar();$("dayDetail").classList.remove("show");
    $("swDot").style.border="1px solid rgba(255,255,255,.3)";
-@@ -880,15 +957,15 @@
+@@ -880,15 +958,15 @@
      const tk=(sr0==="干合"&&br0==="支合");
      const good=(sr2==="干合"||["支合","三合","同"].includes(br2)), bad=["沖","刑","害","破","支相剋"].includes(br2);
      if(rel==="partner"||rel==="married"){
@@ -3389,7 +3396,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
        $("crushBody").innerHTML='<b style="color:var(--sakura)">二人の相性：'+pscore+'%「'+pplain+'」</b><br><span style="color:var(--gold-soft)">今日のアプローチ：</span>'+move;
        _hideRel();$("crushCard").style.display="";
      }
-@@ -945,13 +1022,14 @@
+@@ -945,13 +1023,14 @@
    var th=_gradeTh(), s=_dayRaw(r.t)+_ymAdj(r.d);   // 年月補正（閾値は従来どおり日の分布のみ）
    var touka=(r.t.branch===TOUKA[CUR.me.branch]);
    var love=(touka||r.m.includes('🌸'));                                       // モテ運/恋チャンス＝恋の合図日
@@ -3406,7 +3413,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    return {sym:'〇',label:'普通の日',cls:'g-normal'};
  }
  function dayMarks(d){
-@@ -961,17 +1039,19 @@
+@@ -961,17 +1040,19 @@
    if(t.branch===TOUKA[CUR.me.branch])m.push('🌷');
    // 分野マークはその日の十神に応じて必ず表示する（案A）。命式で忌神の分野でも隠さず、
    // 「その分野の“気”が動く日」として出し、忌神の日は詳細文と総合ランク(△等)で正直に補足する。
@@ -3428,7 +3435,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    return {t,m,dg,d};
  }
  /* 流年・流月の補正（メール＝daily-engine.ymAdjust と同一計算）。エンジン未読込なら0。
-@@ -994,6 +1074,16 @@
+@@ -994,6 +1075,16 @@
  function dayColor(t){const e=BRANCH_GOGYO[t.branch];const E=ELEM[e];return {e:e,color:E.color,hex:E.hex,dir:E.dir};}
  function memoKey(d){return 'enbiyori_memo_'+d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
  function getMemo(d){try{return localStorage.getItem(memoKey(d))||'';}catch(e){return '';}}
@@ -3445,7 +3452,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
  function renderCalendar(){
    if(!CUR.me)return;
    const startDow=new Date(calY,calM-1,1).getDay(), days=new Date(calY,calM,0).getDate();
-@@ -1002,65 +1092,71 @@
+@@ -1002,65 +1093,71 @@
    const todY=_jst.getFullYear(), todM=_jst.getMonth()+1, todD=_jst.getDate();
    $("calTitle").textContent=calY+'年 '+calM+'月';
    const dow=['日','月','火','水','木','金','土'];let h='';
@@ -3537,7 +3544,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
      const dc=dayColor(t);
      const _dwSeason=KD.climateSeason(d.getMonth()+1);
      const _dwSeed=jdn(d.getFullYear(),d.getMonth()+1,d.getDate());
-@@ -1078,17 +1174,18 @@
+@@ -1078,17 +1175,18 @@
    let goLine='';
    if(r.dg){
      if(r.dg.kind==='kishin')goLine='<div style="margin-top:9px;padding:9px 11px;border-radius:10px;background:rgba(74,158,107,.12);border:1px solid rgba(74,158,107,.3);font-size:12.5px;line-height:1.65">🍃 <b style="color:#3c8a5a">追い風の日</b> ── 今日はあなたに追い風が吹く日。やりたいことに、思い切って動くほど流れに乗れます。</div>';
@@ -3560,7 +3567,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    $("dayDetail").classList.add('show');
    setTimeout(function(){var _dd=$("dayDetail");if(_dd){var _y=_dd.getBoundingClientRect().top+window.pageYOffset-70;window.scrollTo({top:_y,behavior:'smooth'});}},60);
    $("memoSave").onclick=()=>{try{localStorage.setItem(memoKey(d),$("memoBox").value);}catch(e){}renderCalendar();$("memoSave").textContent='保存しました ✓';};
-@@ -1104,9 +1201,41 @@
+@@ -1104,9 +1202,41 @@
    if(reg&&reg.length)return;
    document.querySelectorAll('a[href="mypage.html"]').forEach(function(a){
      a.setAttribute("href","register.html");
