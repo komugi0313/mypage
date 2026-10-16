@@ -2,7 +2,7 @@
 
 > **会員・決済・API の正はこの文書です。** 過去のやり取り・旧ドキュメントより、本書を優先してください。
 > フロント（画面）は**完成済み**。エンジニアが作るのは **サーバー側API・決済・本番切替** です。
-> 対応バージョン：PRO `pro/sw.js` の `CACHE = 'shichu-jidou-v475'`／ビギナー `beginner/sw.js` `'kyoukara-uranaishi-v112'`／易 EKI Pro `eki-pro/app/sw.js` `'eki-pro-v74'` ／ 最終更新：2026-10-14
+> 対応バージョン：PRO `pro/sw.js` の `CACHE = 'shichu-jidou-v476'`／ビギナー `beginner/sw.js` `'kyoukara-uranaishi-v113'`／易 EKI Pro `eki-pro/app/sw.js` `'eki-pro-v74'` ／ 最終更新：2026-10-14
 > 3サイトの全体の依頼内容は、リポジトリ直下の `エンジニアへの実装依頼_3サイト.md` を先に読んでください。易 EKI Pro だけの追加分は `eki-pro/実装仕様_エンジニア向け.md`。
 > `eki-pro/実装仕様_会員まわり_共通.md` は本書と**同じ内容の写し**です（食い違ったら本書が正）。
 > 前提（発注者確認済み）：**Gemini（文章生成）はサーバー経由**（キーはサーバーだけに置く）／**決済はテレコムクレジット**／**Web先行 → のちに iOS・Android アプリ**。
@@ -52,7 +52,7 @@
 | 1 | 会員ゲート：`var PREVIEW_MODE = true;` → **`false`** | `app-pro.html` 747行 | `app-beginner.html` 765行 | `app/index.html` 548行 |
 | 2 | 仮動作：`STUB: !/(^\|\.)(72k\.ai\|suimei\.jp\|ekipro\.jp)$/i.test(location.hostname)` → **`STUB: false`** | `auth.html` 230行・`mypage-pro.html` 186行・`pricing-pro.html` 379行（`TRIAL_CHECK`）・491行（`FIX`） | `auth.html` 230行・`mypage.html` 179行・`pricing.html` 365行（`TRIAL_CHECK`）・477行（`FIX`） | `auth.html` 232行・`mypage.html` 181行・`upgrade.html` 360行（`TRIAL_CHECK`）・472行（`FIX`）・`register.html` 155行（`CONFIG`） |
 | 3 | 決済ページURL `var TELECOM_PAYMENT_URL={ month:'' };` と `var TELECOM_PARAM={ email:'email', order:'sendid' };` | `pricing-pro.html` 349〜350行 | `pricing.html` 335〜336行 | `upgrade.html` 330〜331行 |
-| 4 | テスト用キー欄を削除 | `app-pro.html` の `<details id="gtest-wrap">`（1006行）と `?gtest=1` で表示する1行（8028行）と、テスト用キーを読む1行（8022行 `geminiKey=…bazi_gkey…`。`geminiKey='';` に固定してもよい） | 同左（生成元の PRO を直して生成） | `app/index.html` の `#demoKeyCard`（726行）・`#geminiCard`（981行）と、`?gtest=1` で表示する1行（2970行）。2つの欄を消してもアプリは止まらない作り（2026-10-13 確認済み）。1174行の `GEMINI_API_KEY = ""` は空のまま |
+| 4 | テスト用キー欄を削除 | `app-pro.html` の `<details id="gtest-wrap">`（1006行）と `?gtest=1` で表示する1行（8084行）と、テスト用キーを読む1行（8078行 `geminiKey=…bazi_gkey…`。`geminiKey='';` に固定してもよい） | 同左（生成元の PRO を直して生成） | `app/index.html` の `#demoKeyCard`（726行）・`#geminiCard`（981行）と、`?gtest=1` で表示する1行（2970行）。2つの欄を消してもアプリは止まらない作り（2026-10-13 確認済み）。1174行の `GEMINI_API_KEY = ""` は空のまま |
 | 5 | `DEMO_MODE` は `false` のまま | `app-pro.html` 744行 | `app-beginner.html` 762行 | `app/index.html` 558行 |
 | 6 | `functions/gemini.js` | 会員確認は実装済み → **本番で環境変数 `MEMBER_CHECK_URL` を必ず設定**（§5） | 同左 | 同左 |
 
@@ -115,7 +115,7 @@
 | `mypage-get` | `{ email }`＋`Authorization: Bearer` | `{ data: <ドキュメント> }` | トークン本人のデータを返す |
 | `mypage-put` | `{ email, data: <ドキュメント> }`＋`Authorization: Bearer` | `{ data: <保存後のドキュメント> }` | 保存（サーバー側でも統合。下記）。1会員あたり数MBを想定 |
 
-**ドキュメント形式（`data`）** — フロントの `mpSanitize`（`app-pro.html` 7245〜7266行）が受け付ける形。決まった形以外の値は捨てられる：
+**ドキュメント形式（`data`）** — フロントの `mpSanitize`（`app-pro.html` 7301〜7322行）が受け付ける形。決まった形以外の値は捨てられる：
 ```json
 { "schema": 1, "updatedAt": 0,
   "clients": [ {
@@ -143,7 +143,7 @@
 - PRO・ビギナー：`app-pro.html`／`app-beginner.html`（相談・自動鑑定・日運/月運・本格鑑定・相性）、`meishi-sheet.html`（鑑定書）。
 - EKI：`app/index.html`（鑑定・深掘り相談・鑑定書）。
 
-いずれも URL は定数ではなく `'/.netlify/functions/gemini'` と直接書いてある（`app-pro.html` 6367行・`meishi-sheet.html` 4227行・`app-beginner.html` 6386行・EKI `app/index.html` 2688行）。`netlify.toml` では `/api/gemini` も同じ関数の別名。
+いずれも URL は定数ではなく `'/.netlify/functions/gemini'` と直接書いてある（`app-pro.html` 6422行・`meishi-sheet.html` 4227行・`app-beginner.html` 6441行・EKI `app/index.html` 2688行）。`netlify.toml` では `/api/gemini` も同じ関数の別名。
 
 **APIキーは絶対にフロントに出さず、サーバーの環境変数で持つ。** 雛形 `functions/gemini.js`（3サイトとも同じ仕組み。EKI は全体の大きさの上限だけ5,800,000字）あり。
 
@@ -163,6 +163,7 @@
   - `x-eki-kind: detail` … 易の鑑定1件の**2回目**（台本・要点などの残り）。**回数に数えない**
   - `x-eki-kind: sho` … 易の鑑定書の作成。**回数に数えない**
   - `x-pk-device` … 易だけが送る端末の識別子（会員確認がないときの予備）
+- **相談で送る文章は、質問に関係する分だけ（2026-10-16）**：相談（`doConsult`）では、命式データ全文（約2万字）ではなく、`consultChartText(c, topics)` で質問のテーマ（`consultTopics`：恋愛・仕事・お金・健康・移動・人生・人間関係・自分）に合う項目と、時期の判断に要る項目（四柱・五行と身旺身弱・喜神忌神・大運／年運／月運・合冲・会局・空亡期・天戦地冲 など）だけを送る。指示（`CONSULT_SYSTEM`）も、関係しないテーマ別の段落（お金・健康・心・恋愛の繊細なテーマ）を外す（`consultSystemSlim`）。相談1件で送る量は約6.2万字→約3.6〜4.7万字。自動の詳細鑑定・鑑定書は全文のまま。`app-pro.html` の `PK_SLIM_PROMPT=false` で元の全文に戻せる。**本番前に `tools/live_ai_test` で、文章の質が落ちていないか（根拠の星・時期が出ているか）を確かめる**。
 - **答えを先に出す2回呼び出し**：相談1件（易は鑑定1件）で、まず短い「答え」を作ってすぐ表示し、続けて残りを作る＝**サーバーへの呼び出しは2回**。2回目には上の目印ヘッダが付く。**回数は「鑑定1件＝1回」で数える**（画面の数え方・規約の「1日200回」と同じ）。
 - **応答**：Google の generateContent 応答JSONをステータスコードごとそのまま返す（フロントは `candidates[0].content.parts` の text を読む。PRO・ビギナーは parts を連結、EKI は `parts[0]` だけ。`error` があれば失敗扱い）。
 - **フロントの待ち方**（アプリ本体）：70秒で打ち切り。失敗（エラー・空の応答）のときは PRO・ビギナーは2.5秒後に1回、EKI は混雑・通信エラーのときに最大2回まで再試行し、それでもだめなら**端末内の鑑定に自動で切り替える**（サーバーが落ちてもアプリは止まらない）。**401＝「ログインし直してください」、403＝「マイページでご契約状況をご確認ください」**と案内し分けるので、`gemini` は未ログインに 401、使えない状態に 403 を返す。※PRO・ビギナーの鑑定書（`meishi-sheet.html`）は打ち切り時間なし・401／403 も区別せず、失敗したら2.5秒後に1回やり直して定型文の鑑定書に切り替える。
@@ -174,8 +175,8 @@
 
 | サイト | 上限 | フロントの定数（目安。改ざんできるので正はサーバー） |
 |---|---|---|
-| PRO・ビギナー（無料期間中） | **1日3回**（相談・自動の詳細鑑定・日運月運・相性・鑑定書の作成の合計。発注者決定 2026-10-16） | `AI_TRIAL_CAP=3`（`app-pro.html` 6297行・`meishi-sheet.html`。`member_status==='trialing'` のとき。超えた日は「明日0時からまた3回」と案内し端末内の鑑定に切替）。**雛形 `functions/gemini.js` に実装済み**（会員確認の status が `trialing` のとき会員ごとに数え、4回目から 429 `{error:{code:'TRIAL_LIMIT'}}`。画面はこの返事でも同じ案内を出す） |
-| PRO・ビギナー（有料） | **詳細鑑定 1日200回**（鑑定1件＝1回） | `AI_DAILY_CAP=200`（`app-pro.html` 6296行。日本時間の日付で数え、超えた日は端末内の鑑定に切替） |
+| PRO・ビギナー（無料期間中） | **1日3回**（相談・自動の詳細鑑定・日運月運・相性・鑑定書の作成の合計。発注者決定 2026-10-16） | `AI_TRIAL_CAP=3`（`app-pro.html` 6350行・`meishi-sheet.html`。`member_status==='trialing'` のとき。超えた日は「明日0時からまた3回」と案内し端末内の鑑定に切替）。**雛形 `functions/gemini.js` に実装済み**（会員確認の status が `trialing` のとき会員ごとに数え、4回目から 429 `{error:{code:'TRIAL_LIMIT'}}`。画面はこの返事でも同じ案内を出す） |
+| PRO・ビギナー（有料） | **詳細鑑定 1日200回**（鑑定1件＝1回） | `AI_DAILY_CAP=200`（`app-pro.html` 6349行。日本時間の日付で数え、超えた日は端末内の鑑定に切替） |
 | EKI（無料期間中） | **1日3回**（鑑定＋深掘り相談の合計。鑑定書の作成は数えない） | `TRIAL_DAILY_LIMIT=3`（日本時間の暦日で数える。超えても内蔵データの鑑定は使える） |
 | EKI（有料） | **1日100回・1か月3,000回**（＋1分15回の連打制限。1分の数値は非公表＝規約第8条「頻度に上限」が根拠） | `PAID_DAILY_CAP=100`・`PAID_MONTHLY_CAP=3000`・`PAID_RATE_PER_MIN=15`（定義のみ・画面では未使用） |
 
@@ -290,7 +291,7 @@
 
 - **Service Worker**：ページを開くとき（navigate）はネット優先（PRO・ビギナー3.5秒、EKI 3秒で応答がなければ保存版で開く）。PRO・ビギナーは、それ以外の GET は保存版を先に返して裏で更新（stale-while-revalidate）、POST（API）と別オリジンには触らない。EKI の `app/sw.js` は、ページ以外は保存版優先（あれば裏で更新しない）で、Google Fonts だけは別オリジンでも保存する。ファイルを増やしたら `ASSETS[]` に足して `CACHE` を上げる。
 - **文字の見えやすさの安全装置**：全 HTML の `</body>` 直前に `<script id="pk-contrast-guard">`（中身は `tools/contrast_guard.js`）。読みにくい文字色だけを自動で直す（計算・鑑定・API には関係なし）。ページを足したら `python3 tools/add_contrast_guard.py` → 生成スクリプトの順に実行。
-- **PRO だけの機能**：`app-pro.html` の `<!--PRO-ONLY:start（説明）-->`〜`<!--PRO-ONLY:end-->`（8044〜8353行の1ブロック）。「今月の運勢をまとめて作る（LINE用の文章）」「前回のふり返り（次回お伝えすること＝顧客の `next`）」「鑑定トーク例」。すべて端末内で動き、**サーバーの追加作業はない**（`next` が同期データに入るだけ）。今月の運勢の結び・送信済みの印は端末内（`pk_bm_sign|…`・`pk_bm_sent|…`）で同期しない。生成時にビギナーから取り除かれる。
+- **PRO だけの機能**：`app-pro.html` の `<!--PRO-ONLY:start（説明）-->`〜`<!--PRO-ONLY:end-->`（8100〜8409行の1ブロック）。「今月の運勢をまとめて作る（LINE用の文章）」「前回のふり返り（次回お伝えすること＝顧客の `next`）」「鑑定トーク例」。すべて端末内で動き、**サーバーの追加作業はない**（`next` が同期データに入るだけ）。今月の運勢の結び・送信済みの印は端末内（`pk_bm_sign|…`・`pk_bm_sent|…`）で同期しない。生成時にビギナーから取り除かれる。
 - **相談の入口**：入力欄の下の `#cs-box`（相談の例 `#cs-chips`・入力 `#cs-q`）と「この相談を鑑定する」（`#f-go`）。相談を書いて押すと命式を出したあと相談の鑑定をし、空欄なら命式全体の自動鑑定をする。画面の右下に「相談する」（`#cs-fab`）。画面だけの機能でサーバーは関係しない。
 
 ---
@@ -319,15 +320,15 @@
 | 定数 | 場所 | 現在値 | 本番 |
 |---|---|---|---|
 | `API` | `app-pro.html` 750行（ビギナー 768行） | `'/.netlify/functions'` | 実APIのベース（リライトなら据え置き） |
-| `MP_API` | `app-pro.html` 7233行（ビギナー 7252行） | `'/.netlify/functions'` | 同上 |
-| `'/.netlify/functions/gemini'`（直接記述） | `app-pro.html` 6367行・`meishi-sheet.html` 4227行 | ― | 同上 |
+| `MP_API` | `app-pro.html` 7289行（ビギナー 7308行） | `'/.netlify/functions'` | 同上 |
+| `'/.netlify/functions/gemini'`（直接記述） | `app-pro.html` 6422行・`meishi-sheet.html` 4227行 | ― | 同上 |
 | `PREVIEW_MODE` | `app-pro.html` 747行 | `true` | `false` |
 | `CONFIG.API`／`CONFIG.STUB` | `auth.html`・`mypage-pro.html` の `var CONFIG` | `'/.netlify/functions'`／本番ドメイン以外で true の式 | 実ベース／`false` |
 | `TRIAL_CHECK.URL`／`TRIAL_CHECK.STUB` | `pricing-pro.html`（`var TRIAL_CHECK`） | `'/.netlify/functions/trial-check'`／本番ドメイン以外で true の式 | 実URL／`false` |
 | `FIX.URL`／`FIX.STUB` | `pricing-pro.html` 491行 | `'/.netlify/functions/auth-fix-email'`／同上の式 | 実URL／`false` |
 | `TELECOM_PAYMENT_URL`／`TELECOM_PARAM`／`ORDER_PREFIX` | `pricing-pro.html` 349〜351行 | `{month:''}`／`{email:'email',order:'sendid'}`／`'P'` | 決済URL／接続仕様書の名前／そのまま |
 | `geminiModel` | `app-pro.html` 2759行 | `'gemini-2.5-flash'` | 変更不要（本番のモデルはサーバーの `GEMINI_MODEL` で決まる。フロントの値はテスト用の直接呼び出しと `thinkingConfig` の有無だけに効く） |
-| `AI_DAILY_CAP`／`AI_TRIAL_CAP` | `app-pro.html` 6296・6297行・`meishi-sheet.html` 4179・4180行 | `200`／`3` | 規約と同じ値のまま |
+| `AI_DAILY_CAP`／`AI_TRIAL_CAP` | `app-pro.html` 6349・6350行・`meishi-sheet.html` 4179・4180行 | `200`／`3` | 規約と同じ値のまま |
 
 - **生成で写る値**：ビギナーには PRO の `PREVIEW_MODE`・`STUB`・決済URL が、EKI の `upgrade.html`・`auth.html`・`mypage.html` には `STUB`・決済URL がそのまま写る（`ORDER_PREFIX` だけ B／E に置きかわる）。決済URLが商品ごとに違うなら、生成後に各サイトで設定する。
 

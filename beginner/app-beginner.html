@@ -5809,6 +5809,59 @@ function buildChartText(c){
   }
   return L.filter(Boolean).join('\n');
 }
+/* ===== 相談（質問への答え）で送る文章を、質問に関係する分だけにする（原価を下げ、聞かれていないことを書かせない） =====
+   ・計算・表示は一切変えない（送る文章だけ）。自動の詳細鑑定（全体の鑑定レポート）・鑑定書は今までどおり全文。
+   ・どの相談でも残す：四柱・日柱の人物像・月支元命・格局・五行と身旺身弱・喜神忌神・大運/年運/月運・今後5年・合冲・会局・空亡期・天戦地冲・律音（時期の判断に必要なもの）。
+   ・質問の内容（恋愛・仕事・お金・健康など）に合わせて、関係する項目だけを足す。どれにも当てはまらない質問は、辞書のような解説だけを外して送る。
+   ・PK_SLIM_PROMPT=false で、今までどおり全文を送る（品質の比べ直し用）。 */
+const PK_SLIM_PROMPT=true;
+function consultTopics(q){ q=String(q||''); const t=[];
+  if(/恋|愛|彼氏|彼女|彼と|彼が|彼は|彼の|夫|妻|旦那|嫁|結婚|婚|離婚|復縁|浮気|不倫|片思い|片想い|相手|パートナー|出会い|交際|付き合|別れ|元カレ|元彼|元カノ|好きな人|相性/.test(q)) t.push('love');
+  if(/仕事|転職|職|就活|就職|会社|上司|部下|同僚|独立|起業|開業|事業|キャリア|昇進|異動|働|副業|資格|試験|受験|勉強|学校|進学|進路/.test(q)) t.push('work');
+  if(/お金|金運|収入|貯金|貯め|投資|借金|給料|年収|財|商売|売上|お店|金銭/.test(q)) t.push('money');
+  if(/健康|体調|病|身体|体が|体の|心|メンタル|疲|眠|ストレス|不安|落ち込|気分|養生/.test(q)) t.push('health');
+  if(/引っ越|引越|移住|海外|留学|転勤|旅行|移動|遠方/.test(q)) t.push('move');
+  if(/人生|将来|転機|これから|今後|老後|晩年|生き方|節目/.test(q)) t.push('life');
+  if(/家族|親|母|父|子供|子ども|息子|娘|兄弟|姉妹|友|人間関係|職場の人|ママ友|近所|義/.test(q)) t.push('people');
+  if(/性格|自分|向いて|才能|強み|弱み|長所|短所|適性|本質/.test(q)) t.push('self');
+  return t; }
+function consultChartText(c,topics){
+  const full=buildChartText(c); if(!PK_SLIM_PROMPT) return full;
+  const T=topics||[], any=T.length===0, has=k=>T.indexOf(k)>=0;
+  // 行の見出し → 送る条件（true=送る）。見出しの無い行（字下げした続きの行）は、直前の見出しと同じ扱い
+  const RULES=[
+    [/^四柱それぞれの意味/,()=>false],                      // 柱の意味の一般論（辞書的）
+    [/^各大運・年運で巡る通変星の意味/,()=>false],            // 星の意味の一般論（辞書的）
+    [/^\[SETSUBOKU/,()=>has('life')],
+    [/^納音/,()=>has('self')],
+    [/^命式の吉凶星の意味/,()=>has('self')],
+    [/^十二運（日柱を最重視/,()=>has('self')||has('work')||any],
+    [/^柱ごとの十二運の出方|^【(年|月|日|時)柱】十二運/,()=>has('self')||has('work')],
+    [/^通変星の集計/,()=>true],
+    [/^  ■|^  月支元命（生まれ持った気質の軸）の星/,()=>has('self')||has('work')],   // 星ごとの意味の解説（辞書的）
+    [/^適職の読み方|^通変グループの才能・適職|^知性・頭の良さ/,()=>has('work')||has('self')||any],
+    [/^最も相性が良い日柱|^相性の自動算出/,()=>has('love')||has('people')],
+    [/^恋愛・結婚の手がかり|^夫婦関係の注意サイン|^モテ度/,()=>has('love')||any],
+    [/^駅馬/,()=>has('move')||has('work')||has('life')||any],
+    [/^金運|^墓庫開冲/,()=>has('money')||has('work')||any],
+    [/^五行の太過|^五行で最も弱い|^メンタル傾向/,()=>has('health')||has('self')||any],
+  ];
+  const out=[]; let keep=true;
+  full.split('\n').forEach(function(line){
+    let rule=null; for(const r of RULES){ if(r[0].test(line)){ rule=r; break; } }
+    if(rule) keep=!!rule[1]();
+    else if(/^\S/.test(line)) keep=true;      // ほかの見出しの行は送る
+    if(keep) out.push(line);
+  });
+  return out.join('\n');
+}
+// 相談の指示（CONSULT_SYSTEM）も、質問に関係しないテーマ別の指示（お金・健康・心・恋愛の繊細なテーマ）を外す
+function consultSystemSlim(sys,topics){
+  if(!PK_SLIM_PROMPT||!topics||!topics.length) return sys;
+  const has=k=>topics.indexOf(k)>=0;
+  const DROP=[[/^【金運・お金/,()=>!has('money')&&!has('work')],[/^【健康・養生・薬膳/,()=>!has('health')],[/^【メンタル・心の波/,()=>!has('health')&&!has('self')],[/^【繊細なテーマ（不倫/,()=>!has('love')]];
+  return String(sys).split(/\n(?=【)/).filter(function(b){ for(const d of DROP){ if(d[0].test(b)) return !d[1](); } return true; }).join('\n');
+}
 
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 // 五行の語（木火土金水）をその五行カラーで着色（曜日・お金・土台などの誤着色は除外）
@@ -6356,6 +6409,8 @@ const NO_AI_RULE='\n【言葉の決まり】「AI」「人工知能」という�
 async function generateReading(user,localText,system,deep){
   // 〔PART:answer〕＝冒頭の答えだけ（短いので数秒で届く）／〔PART:detail〕＝くわしい読み解きだけ。印がなければ従来どおり全部
   let _part=''; user=String(user).replace(/〔PART:(answer|detail)〕\n?/,function(_m,k){ _part=k; return ''; });
+  let _topics=null; user=user.replace(/〔TOPIC:([a-z,\-]*)〕\n?/,function(_m,k){ _topics=k==='-'?[]:k.split(',').filter(Boolean); return ''; });   // 相談のときだけ付く印（送る指示を質問に関係する分だけにする）
+  if(_topics) system=consultSystemSlim(system||CONSULT_SYSTEM,_topics);   // ビギナー（やさしい言葉の指示に差し替えた後）でも同じように外す
   system=(system||CONSULT_SYSTEM)+YOMI_RULE+NO_REPEAT_RULE+NO_AI_RULE+(_part==='detail'?DETAIL_ONLY_RULE:ANSWER_RULE+(_part==='answer'?ANSWER_ONLY_RULE:''));
   const _nm=_nameMasks();
   if(_nm.length){ user=_maskNames(user,_nm); system=_maskNames(system,_nm)+'\n【お名前の印】文章の中の「〔本人〕」「〔お相手〕」は、実際のお名前の代わりの印です。お名前で呼ぶときは、この印を一字も変えずにそのまま書いてください（例：〔本人〕さん）。'; }
@@ -6471,7 +6526,8 @@ function appendPro(out,proUser,localText,deep,proLocal){
 async function doConsult(){
   const worry=document.getElementById('worry').value.trim();const out=document.getElementById('reading');
   if(!worry){out.innerHTML='<div class="err">相談したい内容を入力してください。</div>';return;}
-  const head=`【確定済みの命式】\n${buildChartText(chart)}\n\n【相談者の悩み】\n${worry}\n\nこの悩みに、上の命式を唯一の根拠として答えてください。\n`;
+  const _tp=consultTopics(worry);   // 質問の内容（恋愛・仕事など）→ 送る命式データと指示を、関係する分だけにする
+  const head=`〔TOPIC:${_tp.join(',')||'-'}〕\n【確定済みの命式】\n${consultChartText(chart,_tp)}\n\n【相談者の悩み】\n${worry}\n\nこの悩みに、上の命式を唯一の根拠として答えてください。聞かれていないことは書かない。\n`;
   const struct=`重要:必ず命式の具体的な要素（星名・五行の数・干支・大運/年運の干支）を文中に挙げ、「この要素があるから、こう言える」という理屈をセットで示すこと。曖昧で誰にでも当てはまる表現は禁止。\n【この相談への集中＝最優先で厳守】目的はただ一つ、相談者が聞いた質問にまっすぐ答えること。挨拶・長い前置き・聞かれていない全体的な性格紹介や自分史は書かない。無関係なテーマへ脱線せず、同じ内容を言い換えて何度も繰り返さない（水増し・引き延ばし禁止）。\n構成（必ず守る）：\n・1行目に結論を一文だけ（前置き・見出しなし）。\n・「【見出し】」付きの短いブロックを2〜3個（各2〜4文）。悩みに直接答える根拠を、星・五行・大運/年運を名指しで示す。\n・「いつ?」を含む質問（恋愛・結婚・婚活・転職・来年の運気など）は、「大運の流れ」「今後5年の年運の流れ」「恋愛・結婚の手がかり」を根拠に、具体的な年代・西暦の年を必ず挙げて時期を示す（断定せず「縁が動きやすい時期」として）。\n・大事な語は**太字**に。全体700〜900字。読み応えのある十分な分量で、根拠と具体例を厚めに（ただし水増し・繰り返しはしない）。`;
   const easy=head+`【書き方＝最重要】占い師にも占い初心者にも、すっと頭に入るように書く。専門用語（通変星・十二運・蔵干・干支・五行など）は省かず使ってよいが、出てきたら必ずその場で“ふつうの言葉”で短く言いかえる（例:「正官（規律と責任を大切にする星）」）。一文は短めにし、つなぎを丁寧に。内容・根拠・結論は変えない。\n`+struct;
   const pro=head+struct;
