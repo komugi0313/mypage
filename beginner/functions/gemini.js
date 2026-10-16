@@ -82,7 +82,7 @@ exports.handler = async (event) => {
       if (!r.ok) return json(401, { error: { code: 'LOGIN', message: 'ログインが必要です' } });
       const m = await r.json();
       const st = m && m.status, pe = m && m.periodEnd;
-      const usable = st === 'active' || st === 'trialing' || st === 'canceling' || (st === 'canceled' && pe && Date.parse(pe + 'T23:59:59+09:00') > Date.now());
+      const usable = st === 'active' || st === 'trialing' || ((st === 'canceled' || st === 'canceling') && pe ? Date.parse(pe + 'T23:59:59+09:00') > Date.now() : st === 'canceling');   // 解約した人は最終日（日本時間23:59:59）まで
       if (!m || !m.ok || !usable) return json(403, { error: { code: 'MEMBER', message: 'ご利用いただけない状態です' } });
     } catch (e) {
       return json(503, { error: { code: 'MEMBER_CHECK', message: '会員確認ができませんでした' } });
