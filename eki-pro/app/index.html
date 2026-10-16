@@ -1688,6 +1688,8 @@ const App=(function(){
       if(res.ok){ const d=await res.json(); const t=d.candidates?.[0]?.content?.parts?.[0]?.text; if(!t)throw new Error('応答が空でした'); return fillName(noAIWord(t.replace(/[＊*]/g,''))); }
       if(res.status===401) throw new Error('ログインの有効期限が切れました。ページを開き直して、もう一度ログインしてください。');
       if(res.status===403) throw new Error('ご契約の状態を確認できませんでした。マイページでご契約状況をご確認ください。');
+      if(res.status===429){ let e0=null; try{ e0=await res.clone().json(); }catch(_){}   // 無料お試しの1日3回（サーバーで数えた結果。別の端末で使った分も含む）
+        if(e0&&e0.error&&e0.error.code==='TRIAL_LIMIT'){ try{ localStorage.setItem(trialDayKey(), String(Math.max(trialCount(),TRIAL_DAILY_LIMIT))); }catch(_){} try{ showTrialLimit(true); }catch(_){} throw new Error('本日の無料お試しは上限（1日3回）に達しました。明日（日本時間の0時から）また3回ご利用いただけます。'); } }
       let msg=`HTTP ${res.status}`; try{const e=await res.json();msg=e.error?.message||msg;}catch(_){}
       const busy=res.status===429||res.status===503||/overload|unavailable|rate|demand/i.test(msg);
       if(busy&&a<2){await sleep(3000);continue;}

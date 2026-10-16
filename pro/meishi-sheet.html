@@ -4177,15 +4177,19 @@ window.KANSHI60_DETAIL={
   // 詳細鑑定(AI)の“ゆるい1日上限”（不正利用防止）。超過はその日だけ定型文に自動フォールバック・翌日リセット。
   // ※フロント側の簡易カウンタ（同一ブラウザ内・アプリと共有）。厳密な強制はサーバー側で（BACKEND_HANDOFF.md 参照）。
   var AI_DAILY_CAP=200;
-  function _aiDayKey(){ var d=new Date(); return 'ai_daily_'+d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2); }
+  var AI_TRIAL_CAP=3;   // 無料お試し中は1日3回まで（アプリの相談などと合計。日本時間の0時に戻る）
+  function aiIsTrial(){ try{ return (localStorage.getItem('member_status')||'')==='trialing'; }catch(e){ return false; } }
+  function aiCap(){ return aiIsTrial()?AI_TRIAL_CAP:AI_DAILY_CAP; }
+  var AI_TRIAL_NOTE='無料お試し中の詳細鑑定は1日3回まで（相談・鑑定書の作成などの合計）です。今日の3回を使い切りました。明日（日本時間の0時から）また3回ご利用いただけます。いまは定型文（オフラインの鑑定書）で表示しています。';
+  function _aiDayKey(){ var d=new Date(Date.now()+9*3600000); return 'ai_daily_'+d.getUTCFullYear()+('0'+(d.getUTCMonth()+1)).slice(-2)+('0'+d.getUTCDate()).slice(-2); }   // 日本時間の日付で数える（アプリと同じ）
   function aiCount(){ try{ return parseInt(localStorage.getItem(_aiDayKey())||'0',10)||0; }catch(e){ return 0; } }
   function aiCountInc(){ try{ localStorage.setItem(_aiDayKey(), String(aiCount()+1)); }catch(e){} }
   function generateAIReading(){
     if(!_lastResult){ aiCardMsg('先に生年月日を入れて「鑑定する」を押してください。'); return; }
     if(_aiBusy) return;
-    if(aiCount()>=AI_DAILY_CAP){   // 本日の上限 → 定型文（オフライン鑑定書）で表示
+    if(aiCount()>=aiCap()){   // 本日の上限 → 定型文（オフライン鑑定書）で表示
       setEngine('template');
-      var _hc=document.getElementById('engHint'); if(_hc) _hc.textContent='本日の詳細鑑定（オンライン）のご利用上限に達したため、定型文（オフラインの鑑定書）で表示しています。日付が変わるとまたご利用いただけます。';
+      var _hc=document.getElementById('engHint'); if(_hc) _hc.textContent=aiIsTrial()?AI_TRIAL_NOTE:'本日の詳細鑑定（オンライン）のご利用上限に達したため、定型文（オフラインの鑑定書）で表示しています。日付が変わるとまたご利用いただけます。';
       return;
     }
     _aiBusy=true;
@@ -4221,11 +4225,15 @@ window.KANSHI60_DETAIL={
     function attempt(isRetry,noCount){   // noCount＝前の回は届いていた（作り直し）＝サーバーで回数に数えない目印を付ける
       var _h={'Content-Type':'application/json','x-pk-deep':'1'}; if(noCount) _h['x-pk-part']='detail'; try{ var _pp=localStorage.getItem('pk_product'); if(_pp) _h['X-Product']=_pp; }catch(_e){}   // 共通基盤に商品を伝える（同じサイトのアプリが書いた商品ID） try{ var _tk=localStorage.getItem('member_token')||sessionStorage.getItem('member_token'); if(_tk) _h['Authorization']='Bearer '+_tk; }catch(_e){}   // 会員確認（サーバーで検証）
       fetch('/.netlify/functions/gemini',{ method:'POST', headers:_h, body:body })
-        .then(function(res){ return res.text().then(function(t){ return {ok:res.ok, t:t}; }); })
+        .then(function(res){ return res.text().then(function(t){ return {ok:res.ok, status:res.status, t:t}; }); })
         .then(function(o){
           if(stale()){ redo(); return; }
           var data={}; try{ data=JSON.parse(o.t); }catch(e){}
           var txt=''; try{ txt=(data.candidates[0].content.parts||[]).map(function(p){return p.text||'';}).join(''); }catch(e){}
+          if(o.status===429 && data && data.error && data.error.code==='TRIAL_LIMIT'){   // 無料お試しの1日3回（サーバーで数えた結果）
+            try{ localStorage.setItem(_aiDayKey(), String(Math.max(aiCount(),aiCap()))); }catch(_e){}
+            _aiBusy=false; setEngine('template'); var _ht=document.getElementById('engHint'); if(_ht) _ht.textContent=AI_TRIAL_NOTE; return;
+          }
           if(!o.ok || !txt.trim()){
             if(!isRetry){ setTimeout(function(){ attempt(true); }, 2500); return; }
             _aiBusy=false; aiFallbackToTemplate(); return;
