@@ -3145,14 +3145,16 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
  <script>
  const KD=window.KDaily; // 文言バンクの単一ソース(daily-engine.js)
  const STEMS=["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
-@@ -459,17 +508,22 @@
+@@ -459,17 +508,23 @@
  const $=id=>document.getElementById(id);
  (function init(){
    const y=$("y"),m=$("m"),d=$("d"),thisY=new Date().getFullYear();
 -  for(let v=thisY;v>=1940;v--)y.add(new Option(v+"年",v));
 +  for(let v=thisY;v>=1920;v--)y.add(new Option(v+"年",v));
    for(let v=1;v<=12;v++)m.add(new Option(v+"月",v));
-   function fill(){const days=new Date(+y.value,+m.value,0).getDate();const cur=+d.value||15;d.innerHTML="";for(let v=1;v<=days;v++)d.add(new Option(v+"日",v));d.value=Math.min(cur,days);}
+-  function fill(){const days=new Date(+y.value,+m.value,0).getDate();const cur=+d.value||15;d.innerHTML="";for(let v=1;v<=days;v++)d.add(new Option(v+"日",v));d.value=Math.min(cur,days);}
++  function fill(){/* 今日より先の月・日は選択肢に出さない（10/16） */const N=new Date(),lim=(+y.value===N.getFullYear())?N.getMonth()+1:12;if(m.options.length!==lim){const km=+m.value||1;m.innerHTML="";for(let v=1;v<=lim;v++)m.add(new Option(v+"月",v));m.value=Math.min(km,lim);}
++    let days=new Date(+y.value,+m.value,0).getDate();if(+y.value===N.getFullYear()&&+m.value===N.getMonth()+1)days=Math.min(days,N.getDate());const cur=+d.value||15;d.innerHTML="";for(let v=1;v<=days;v++)d.add(new Option(v+"日",v));d.value=Math.min(cur,days);}
    y.value=1995;m.value=6;fill();d.value=15;y.onchange=fill;m.onchange=fill;
 -  const t=new Date();$("day").value=t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
 +  const t=new Date();
@@ -3170,7 +3172,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
  /* 時プルダウンを生成（時柱は2時間区切りで決まるため“何時ごろ”で十分。分は取らない） */
  (function(){var hh=$("bhh");
    if(hh&&!hh.dataset.f){for(var i=0;i<24;i++){var o=document.createElement("option");o.value=i;o.textContent=i+"時ごろ";hh.appendChild(o);}hh.dataset.f=1;}
-@@ -500,6 +554,10 @@
+@@ -500,6 +555,10 @@
  function run(){
    const by=+$("y").value,bm=+$("m").value,bd=+$("d").value;
    const dv=$("day").value; if(!dv)return; const [Y,M,D]=dv.split("-").map(Number);
@@ -3181,7 +3183,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    const useed=(jdn(Y,M,D)+(Math.imul((by*10000+bm*100+bd),2654435761)>>>0)); // 文言用の個人シード：生年月日で分散＝コピペ回避（骨格＝指数/天気/テーマ/縁Lv/五行は you×today で不変）
    if(!$("rel").value){var _re=$("rel");if(_re&&_re.scrollIntoView)_re.scrollIntoView({behavior:"smooth",block:"center"});alert("「あなたの今について」を選択してください。");return;}
    const you=pillar(by,bm,bd), p=partner(you.stem,you.branch), t=pillar(Y,M,D);
-@@ -511,33 +569,34 @@
+@@ -511,33 +570,34 @@
    const god=juushin(you.stem,t.stem), g=TENGOD[god];
    const meanP=g.mean.replace("を表す配置","").replace("配置","");  // 専門用語を外した"やさしい今日のテーマ"
    const lw=(g.w!=null)?g.w:(sex==="f"?g.wF:g.wM);
@@ -3224,7 +3226,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    };
    if(en.lv===1){var _lt=_lv1Tags[relNow]||_lv1Tags.single; enTagText=_lt[useed%_lt.length];}
    // 日タイプの本文も、意味を保ったまま日替わりで複数から出し分け
-@@ -588,11 +647,11 @@
+@@ -588,11 +648,11 @@
    // 表示用：その日の巡り(dayElem)と、あなたが補うとよい五行(fe)を正確に伝える一文
    let feNote;
    if(feReason==="kishinDay"){
@@ -3239,7 +3241,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    }else if(feReason==="kokusare"){
      feNote='今日は<b>「'+dayElem+'」の気</b>が強く巡り、あなたの<b>「'+myElem+'」</b>がやや消耗しやすい日。<b style="color:var(--sakura)">「'+fe+'」</b>を補うと、バランスが整います。';
    }else if(feReason==="shoumou"){
-@@ -608,7 +667,7 @@
+@@ -608,7 +668,7 @@
    const onepoint=ONEPOINT[KD.pickIdx(useed,2,ONEPOINT.length)];
    const morning=MORNING[KD.pickIdx(useed,3,MORNING.length)];
    const _snz=SEASON_NUANCE[season]||[]; const snz=_snz.length?_snz[KD.pickIdx(useed,4,_snz.length)]:'';
@@ -3248,7 +3250,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    const wd=["日","月","火","水","木","金","土"][new Date(Y,M-1,D).getDay()];
    $("dateLine").textContent=Y+"年"+M+"月"+D+"日（"+wd+"）のあなた";
    $("idxN").textContent=idx; $("bar").style.width=idx+"%";
-@@ -620,7 +679,10 @@
+@@ -620,7 +680,10 @@
    $("swDot").style.background=lucky.hex; $("swTxt").textContent="今日のラッキーカラー："+lucky.color;
    const strip=v=>v.replace(/<[^>]+>/g,"");
    const adv=ADVICE[god][KD.pickIdx(useed,5,ADVICE[god].length)];
@@ -3260,7 +3262,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    const food=FOOD[fe][KD.pickIdx(pseed,7,FOOD[fe].length)];
    const _mi=KD.pickIdx(pseed,8,MENU[fe].length); const menu=MENU[fe][_mi]; const menu2=MENU[fe][(_mi+1)%MENU[fe].length];
    const _wearSeason=KD.climateSeason(M); // 旬の食材・服装は体感の季節で選ぶ（節気だと立秋直後の8月に秋の味覚が出て夏物の服と矛盾するため月ベースに統一）
-@@ -631,7 +693,8 @@
+@@ -631,7 +694,8 @@
    const ldir=_sp.dir;
    const spotNature=_sp.nature[KD.pickIdx(pseed,11,_sp.nature.length)];
    const spotCity=_sp.city[KD.pickIdx(pseed,12,_sp.city.length)];
@@ -3270,7 +3272,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    // 「縁の方角・スポット」用：ラッキー欄とは別オフセットで、その日の五行(fe)から選ぶ（毎日変化）
    const spotNat2=_sp.nature[KD.pickIdx(pseed,14,_sp.nature.length)];
    const spotCity2=_sp.city[KD.pickIdx(pseed,15,_sp.city.length)];
-@@ -651,10 +714,11 @@
+@@ -651,10 +715,11 @@
    };
    const _pCat=relNow==="work"?"work":(relNow==="partner"||relNow==="married")?"couple":relNow==="crush"?"crush":"single";
    const _pjd=jdn(Y,M,D);
@@ -3284,7 +3286,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    // 数字：本人差を入れて、五行の2候補から選ぶ
    const lnum=NUM[fe][(pseed+you.branch.charCodeAt(0))%NUM[fe].length];
    const ptype=PTYPE[fe];
-@@ -686,13 +750,13 @@
+@@ -686,13 +751,13 @@
      if(/恋の一手/.test(ti))return{ic:'💌',c:'#e0629a',bg:'#fdeef5'};
      if(/恋愛/.test(ti))return{ic:'💕',c:'#e0629a',bg:'#fdeef5'};
      if(/距離|の縁|家庭の縁|夫婦/.test(ti))return{ic:'💫',c:'#d6567e',bg:'#fdeef4'};
@@ -3300,7 +3302,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
      if(/ワンポイント/.test(ti))return{ic:'💡',c:'#d38a12',bg:'#fdf2d9'};
      if(/季節/.test(ti))return{ic:'🍃',c:'#6f9e3a',bg:'#f1f7e3'};
      if(/あなた/.test(ti))return{ic:'🌅',c:'#c9862a',bg:'#fff6e6'};
-@@ -709,12 +773,12 @@
+@@ -709,12 +774,12 @@
      const _pp=_tk?"奇跡の最高相性（天地徳合）":(_RL[_cbr]||"ご縁のある")+"相性";
      const _sr2=stemRel(t.stem,_C.stem), _br2=branchRel(t.branch,_C.branch);
      let _mv;
@@ -3315,7 +3317,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
        crushSec=_sec('ふたりの縁',_base+'<br>今日の過ごし方：'+_mv);
      }else{
        crushSec=_sec('気になる人との相性','<b style="color:var(--sakura)">'+_ps+'%「'+_pp+'」</b><br>今日の過ごし方：'+_mv);
-@@ -724,11 +788,11 @@
+@@ -724,11 +789,11 @@
    let enSection, placeSection, subEmoji, subWord, closeWord;
    if(relNow==="partner"){
      enSection='';
@@ -3329,7 +3331,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
      subEmoji='🏠'; subWord='今日の運勢'; closeWord='— あなたとご家族に、<br>穏やかな一日が訪れますように。';
    }else if(relNow==="crush"){
      enSection=_sec('気になる人との距離','<b style="color:var(--sakura)">['+enTagText+']</b> '+enBodyText);
-@@ -749,51 +813,51 @@
+@@ -749,51 +814,51 @@
    const loveMoveSec=_lmArr?_sec('今日の恋の一手',_lmArr[useed%_lmArr.length]):'';
    // 仕事重視の人は、仕事運→対人運→金運を前面に。それ以外は恋愛まわりを先に。
    const peopleSecs = relNow==="work"
@@ -3394,7 +3396,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
      +_lkCell('ラッキー食材',food)
      +_lkCell('ラッキーナンバー',lnum)
      +_lkCell('開運アクション',luckyAct)
-@@ -834,39 +898,58 @@
+@@ -834,39 +899,58 @@
      +peopleSecs
      +_sec('体調・リラックス',health)
      +placeSection
@@ -3467,7 +3469,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    $("cliffCard").style.display="";
    $("calCard").style.display="";renderCalendar();$("dayDetail").classList.remove("show");
    $("swDot").style.border="1px solid rgba(255,255,255,.3)";
-@@ -880,15 +963,15 @@
+@@ -880,15 +964,15 @@
      const tk=(sr0==="干合"&&br0==="支合");
      const good=(sr2==="干合"||["支合","三合","同"].includes(br2)), bad=["沖","刑","害","破","支相剋"].includes(br2);
      if(rel==="partner"||rel==="married"){
@@ -3487,7 +3489,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
        $("crushBody").innerHTML='<b style="color:var(--sakura)">二人の相性：'+pscore+'%「'+pplain+'」</b><br><span style="color:var(--gold-soft)">今日のアプローチ：</span>'+move;
        _hideRel();$("crushCard").style.display="";
      }
-@@ -945,13 +1028,14 @@
+@@ -945,13 +1029,14 @@
    var th=_gradeTh(), s=_dayRaw(r.t)+_ymAdj(r.d);   // 年月補正（閾値は従来どおり日の分布のみ）
    var touka=(r.t.branch===TOUKA[CUR.me.branch]);
    var love=(touka||r.m.includes('🌸'));                                       // モテ運/恋チャンス＝恋の合図日
@@ -3504,7 +3506,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    return {sym:'〇',label:'普通の日',cls:'g-normal'};
  }
  function dayMarks(d){
-@@ -961,17 +1045,19 @@
+@@ -961,17 +1046,19 @@
    if(t.branch===TOUKA[CUR.me.branch])m.push('🌷');
    // 分野マークはその日の十神に応じて必ず表示する（案A）。命式で忌神の分野でも隠さず、
    // 「その分野の“気”が動く日」として出し、忌神の日は詳細文と総合ランク(△等)で正直に補足する。
@@ -3526,7 +3528,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    return {t,m,dg,d};
  }
  /* 流年・流月の補正（メール＝daily-engine.ymAdjust と同一計算）。エンジン未読込なら0。
-@@ -994,6 +1080,16 @@
+@@ -994,6 +1081,16 @@
  function dayColor(t){const e=BRANCH_GOGYO[t.branch];const E=ELEM[e];return {e:e,color:E.color,hex:E.hex,dir:E.dir};}
  function memoKey(d){return 'enbiyori_memo_'+d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
  function getMemo(d){try{return localStorage.getItem(memoKey(d))||'';}catch(e){return '';}}
@@ -3543,7 +3545,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
  function renderCalendar(){
    if(!CUR.me)return;
    const startDow=new Date(calY,calM-1,1).getDay(), days=new Date(calY,calM,0).getDate();
-@@ -1002,65 +1098,71 @@
+@@ -1002,65 +1099,71 @@
    const todY=_jst.getFullYear(), todM=_jst.getMonth()+1, todD=_jst.getDate();
    $("calTitle").textContent=calY+'年 '+calM+'月';
    const dow=['日','月','火','水','木','金','土'];let h='';
@@ -3635,7 +3637,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
      const dc=dayColor(t);
      const _dwSeason=KD.climateSeason(d.getMonth()+1);
      const _dwSeed=jdn(d.getFullYear(),d.getMonth()+1,d.getDate());
-@@ -1078,17 +1180,18 @@
+@@ -1078,17 +1181,18 @@
    let goLine='';
    if(r.dg){
      if(r.dg.kind==='kishin')goLine='<div style="margin-top:9px;padding:9px 11px;border-radius:10px;background:rgba(74,158,107,.12);border:1px solid rgba(74,158,107,.3);font-size:12.5px;line-height:1.65">🍃 <b style="color:#3c8a5a">追い風の日</b> ── 今日はあなたに追い風が吹く日。やりたいことに、思い切って動くほど流れに乗れます。</div>';
@@ -3658,7 +3660,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    $("dayDetail").classList.add('show');
    setTimeout(function(){var _dd=$("dayDetail");if(_dd){var _y=_dd.getBoundingClientRect().top+window.pageYOffset-70;window.scrollTo({top:_y,behavior:'smooth'});}},60);
    $("memoSave").onclick=()=>{try{localStorage.setItem(memoKey(d),$("memoBox").value);}catch(e){}renderCalendar();$("memoSave").textContent='保存しました ✓';};
-@@ -1104,9 +1207,41 @@
+@@ -1104,9 +1208,41 @@
    if(reg&&reg.length)return;
    document.querySelectorAll('a[href="mypage.html"]').forEach(function(a){
      a.setAttribute("href","register.html");
@@ -4950,7 +4952,7 @@ diff -uN a/register.html b/register.html
  }
  function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);}
 -(function(){var y=$("y"),m=$("m"),d=$("d"),ty=new Date().getFullYear();y.add(new Option("年",""));for(var v=ty;v>=1940;v--)y.add(new Option(v+"年",v));m.add(new Option("月",""));for(var v=1;v<=12;v++)m.add(new Option(v+"月",v));function fill(){var days=(y.value&&m.value)?new Date(+y.value,+m.value,0).getDate():31;var cur=+d.value||0;d.innerHTML="";d.add(new Option("日",""));for(var v=1;v<=days;v++)d.add(new Option(v+"日",v));if(cur&&cur<=days)d.value=cur;}fill();y.onchange=fill;m.onchange=fill;})();
-+(function(){var y=$("y"),m=$("m"),d=$("d"),ty=new Date().getFullYear();y.add(new Option("年",""));for(var v=ty;v>=1920;v--)y.add(new Option(v+"年",v));m.add(new Option("月",""));for(var v=1;v<=12;v++)m.add(new Option(v+"月",v));function fill(){var days=(y.value&&m.value)?new Date(+y.value,+m.value,0).getDate():31;var cur=+d.value||0;d.innerHTML="";d.add(new Option("日",""));for(var v=1;v<=days;v++)d.add(new Option(v+"日",v));if(cur&&cur<=days)d.value=cur;}fill();y.onchange=fill;m.onchange=fill;})();
++(function(){var y=$("y"),m=$("m"),d=$("d"),ty=new Date().getFullYear();y.add(new Option("年",""));for(var v=ty;v>=1920;v--)y.add(new Option(v+"年",v));m.add(new Option("月",""));for(var v=1;v<=12;v++)m.add(new Option(v+"月",v));function fill(){/* 今日より先の月・日は選択肢に出さない（10/16） */var N=new Date(),lim=(+y.value===N.getFullYear())?N.getMonth()+1:12,km=m.value;if(m.options.length-1!==lim){m.innerHTML="";m.add(new Option("月",""));for(var v=1;v<=lim;v++)m.add(new Option(v+"月",v));m.value=(km&&+km<=lim)?km:"";}var days=(y.value&&m.value)?new Date(+y.value,+m.value,0).getDate():31;if(+y.value===N.getFullYear()&&+m.value===N.getMonth()+1)days=Math.min(days,N.getDate());var cur=+d.value||0;d.innerHTML="";d.add(new Option("日",""));for(var v=1;v<=days;v++)d.add(new Option(v+"日",v));if(cur&&cur<=days)d.value=cur;}fill();y.onchange=fill;m.onchange=fill;})();
  (function(){var pr=["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県","海外・その他"];var s=$("pref");s.add(new Option("選択してください",""));pr.forEach(function(p){s.add(new Option(p,p));});})();
 -(function(){var its=["恋愛","結婚","友達づくり","仕事・キャリア","グルメ","カフェ巡り","旅行","映画・ドラマ","音楽・ライブ","美容・コスメ","ファッション","健康・ウェルネス","ヨガ・ピラティス","占い・スピリチュアル","投資","お金・家計","子育て","介護","ペット","アート・読書","アウトドア","習い事・勉強"];var box=$("tags");its.forEach(function(it){var l=document.createElement("label");l.className="tag";l.innerHTML='<input type="checkbox" name="interest" value="'+it+'"><span>'+it+'</span>';box.appendChild(l);});})();
 +(function(){var its=["恋愛","結婚","友達づくり","仕事・キャリア","グルメ","カフェ巡り","旅行","映画・ドラマ","音楽・ライブ","美容・コスメ","ファッション","健康・ウェルネス","ヨガ・ピラティス","占い・スピリチュアル","投資","お金・家計","子育て","介護","ペット","アート・読書","アウトドア","習い事・勉強"];var box=$("tags");its.forEach(function(it){var l=document.createElement("label");l.className="tag";l.innerHTML='<input type="checkbox" name="interest" value="'+it+'"><span>'+it.replace('友達','友だち')+'</span>';box.appendChild(l);});})();
