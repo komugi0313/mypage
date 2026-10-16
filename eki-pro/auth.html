@@ -266,8 +266,9 @@
   }
   /* 使える状態か：ご利用中・無料お試し中・解約手続き済み（期間の最終日まで）・解約済みでも期間の最終日までは使える */
   function usable(st, pe){
-    if(st==='active'||st==='trialing'||st==='canceling') return true;
-    if(st==='canceled' && pe){ var t=Date.parse(pe+'T23:59:59+09:00'); return !isNaN(t) && t>Date.now(); }
+    if(st==='active'||st==='trialing') return true;
+    if((st==='canceled'||st==='canceling') && pe){ var t=Date.parse(pe+'T23:59:59+09:00'); return !isNaN(t) && t>Date.now(); }   // 解約した人は、最終日（日本時間23:59:59）を過ぎたら使えない（サーバーの切替を待たない）
+    if(st==='canceling') return true;
     return false;
   }
   /* ログイン後の戻り先：?next=mypage ならマイページへ（それ以外はツール） */
@@ -297,7 +298,7 @@
     if(!r.ok) throw new Error('reset '+r.status); return r.json();
   }
   function wait(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
-  function statusJa(st){ return ({active:'ご利用中',trialing:'無料お試し中',past_due:'お支払いが確認できません',canceled:'解約済み',unpaid:'お支払いが確認できません',none:'ご契約がありません'})[st]||st||'ご契約がありません'; }
+  function statusJa(st){ return ({active:'ご利用中',trialing:'無料お試し中',past_due:'お支払いが確認できません',canceled:'解約済み',canceling:'解約手続き済み',unpaid:'お支払いが確認できません',none:'ご契約がありません'})[st]||st||'ご契約がありません'; }
 
   /* ---- ① ログイン ---- */
   var loginBtn=$('login-btn'), emailI=$('email'), pwI=$('password'), remI=$('remember'), loginMsg=$('login-msg');
@@ -313,7 +314,7 @@
         if(usable(res.status, res.periodEnd) || param('next')==='mypage'){ location.href = afterLogin(); }
         else if(res.status==='past_due' || res.status==='unpaid'){
           setMsg(loginMsg,'お支払いが確認できていません。<br><a href="'+CONFIG.MYPAGE+'">マイページでカード情報を更新する</a>','err'); }
-        else if(res.status==='canceled'){ setMsg(loginMsg,'ご利用期間が終了しました（解約済み）。<br><a href="'+CONFIG.MYPAGE+'">マイページ</a>・<a href="'+CONFIG.PRICING+'">お申し込みページへ</a>','err'); }
+        else if(res.status==='canceled'||res.status==='canceling'){ setMsg(loginMsg,'ご利用期間が終了しました（解約済み）。<br><a href="'+CONFIG.MYPAGE+'">マイページ</a>・<a href="'+CONFIG.PRICING+'">お申し込みページへ</a>','err'); }
         else { setMsg(loginMsg,'このアカウントは現在ご利用いただけません（'+statusJa(res.status)+'）。<br><a href="'+CONFIG.PRICING+'">お申し込みページへ</a>','err'); }
       } else if(res && (res.error==='busy' || res.error==='locked')){
         setMsg(loginMsg,'ログインの失敗が続いたため、しばらくログインできません。時間をおいてからお試しいただくか、<button type="button" class="link-btn" data-go="reset">パスワードを設定し直してください</button>。','err');

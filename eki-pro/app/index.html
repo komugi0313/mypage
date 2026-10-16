@@ -554,7 +554,7 @@ input[type=checkbox]{width:20px;height:20px;}
   var statusEl=document.getElementById('mg-status');
   function unlock(){ gate.classList.add('unlocked'); document.body.style.overflow=''; }
   function showErr(t){ msg.innerHTML='<div class="mg-err">'+t+'</div>'; }
-  function statusJa(s){ return ({active:'ご利用中',trialing:'無料お試し中',past_due:'お支払いが確認できません',canceled:'解約済み',unpaid:'お支払いが確認できません',none:'ご契約がありません'})[s]||s||'ご契約がありません'; }
+  function statusJa(s){ return ({active:'ご利用中',trialing:'無料お試し中',past_due:'お支払いが確認できません',canceled:'解約済み',canceling:'解約手続き済み',unpaid:'お支払いが確認できません',none:'ご契約がありません'})[s]||s||'ご契約がありません'; }
   var DEMO_MODE=false;
   /* ===== 会員のログイン状態（パスワードは端末に保存しない。サーバーが発行するログイン用の鍵＝トークンだけを保存） =====
      ★エンジニア接続ポイント（実装仕様 §3）：
@@ -566,8 +566,9 @@ input[type=checkbox]{width:20px;height:20px;}
      periodEnd：今の期間（無料期間・お支払い済みの期間）の最終日 YYYY-MM-DD。解約しても、この日までは使える。 */
   function lsg(k){ try{ return localStorage.getItem(k)||sessionStorage.getItem(k)||''; }catch(e){ return ''; } }
   function usable(st,pe){
-    if(st==='active'||st==='trialing'||st==='canceling') return true;
-    if(st==='canceled' && pe){ var t=Date.parse(pe+'T23:59:59+09:00'); return !isNaN(t) && t>Date.now(); }
+    if(st==='active'||st==='trialing') return true;
+    if((st==='canceled'||st==='canceling') && pe){ var t=Date.parse(pe+'T23:59:59+09:00'); return !isNaN(t) && t>Date.now(); }   // 解約した人は、最終日（日本時間23:59:59）を過ぎたら使えない（サーバーの切替を待たない）
+    if(st==='canceling') return true;
     return false;
   }
   function saveSession(res,email,keep){
@@ -614,7 +615,7 @@ input[type=checkbox]{width:20px;height:20px;}
   function lock(){ gate.classList.remove('unlocked'); document.body.style.overflow='hidden'; }
   function statusMsg(st){
     if(st==='past_due'||st==='unpaid') return 'お支払いが確認できていません。<br><a href="../mypage.html">マイページでカード情報を更新する</a>';
-    if(st==='canceled') return 'ご利用期間が終了しました（解約済み）。<br>もう一度お使いになる場合は <a href="../register.html">お申し込みページへ</a>';
+    if(st==='canceled'||st==='canceling') return 'ご利用期間が終了しました（解約済み）。<br>もう一度お使いになる場合は <a href="../register.html">お申し込みページへ</a>';
     return 'このアカウントは現在ご利用いただけません（'+statusJa(st)+'）。<br><a href="../register.html">お申し込みページへ</a>';
   }
   function netErr(e){
@@ -654,6 +655,22 @@ input[type=checkbox]{width:20px;height:20px;}
   // ★公開前プレビュー：決済接続まではログイン不要で全開放（本番公開時は PREVIEW_MODE=false に戻す）。バナー表示は本番向けに撤去済み。
   if(PREVIEW_MODE){ unlock(); return; }
   try{ ['member_pw','member_remember'].forEach(function(k){ localStorage.removeItem(k); }); }catch(e){}
+  // 開いたまま日付が変わったとき（無料期間・解約後の最終日の翌日0時）も閉じる：画面に戻ったとき・10分ごとに端末の記録で確認し、30分に1回はサーバーにも確認する
+  var lastCheck=Date.now();
+  function recheck(){
+    if(!gate.classList.contains('unlocked')) return;
+    var tk1=lsg('member_token'); if(!tk1) return;
+    var st0=localStorage.getItem('member_status'), pe0=localStorage.getItem('member_period_end');
+    if(!usable(st0,pe0)){ lock(); showErr(statusMsg(st0)); return; }
+    if(!navigator.onLine || Date.now()-lastCheck<30*60000) return;
+    lastCheck=Date.now();
+    check(tk1).then(function(s){
+      if(s&&s.ok){ saveSession(s,localStorage.getItem('member_email')||'',!!localStorage.getItem('member_token')); if(!usable(s.status,s.periodEnd)){ lock(); showErr(statusMsg(s.status)); } }
+      else { clearSession(); lock(); showErr('ログインの有効期限が切れました。もう一度ログインしてください。'); }
+    }).catch(function(){});
+  }
+  document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') recheck(); });
+  setInterval(recheck,10*60000);
   var savedEmail=localStorage.getItem('member_email')||'';
   if(savedEmail){ document.getElementById('mg-email').value=savedEmail; }
   var tk=lsg('member_token');

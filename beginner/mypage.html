@@ -194,8 +194,9 @@
   var STATUS_JA={active:'ご利用中',trialing:'無料お試し中',canceling:'解約手続き済み',past_due:'お支払いが確認できません',unpaid:'お支払いが確認できません',canceled:'解約済み',none:'ご契約がありません'};
   /* 使える状態か（アプリの会員ゲートと同じ判定）：解約しても、今の期間（無料期間・お支払い済みの期間）の最終日までは使える */
   function usable(st,pe){
-    if(st==='active'||st==='trialing'||st==='canceling') return true;
-    if(st==='canceled' && pe){ var t=Date.parse(pe+'T23:59:59+09:00'); return !isNaN(t) && t>Date.now(); }
+    if(st==='active'||st==='trialing') return true;
+    if((st==='canceled'||st==='canceling') && pe){ var t=Date.parse(pe+'T23:59:59+09:00'); return !isNaN(t) && t>Date.now(); }   // 解約した人は、最終日（日本時間23:59:59）を過ぎたら使えない（サーバーの切替を待たない）
+    if(st==='canceling') return true;
     return false;
   }
   var msg=$('msg');
@@ -231,7 +232,7 @@
     }else if(st==='canceling' || st==='canceled'){
       $('k-next').textContent='ご利用期間';
       $('v-next').innerHTML = (cur.periodEnd && usable(st,cur.periodEnd)) ? '<span class="nb">'+fmtD(cur.periodEnd)+'まで</span><span class="nb">（以後の請求はありません）</span>'
-        : (st==='canceling' ? '<span class="nb">今の期間の最終日まで</span><span class="nb">（以後の請求はありません）</span>' : '終了しました');
+        : ((st==='canceling' && !cur.periodEnd) ? '<span class="nb">今の期間の最終日まで</span><span class="nb">（以後の請求はありません）</span>' : '終了しました');
     }else if(st==='past_due'||st==='unpaid'){
       $('k-next').textContent='お支払い';
       $('v-next').textContent = 'カード情報の更新が必要です';

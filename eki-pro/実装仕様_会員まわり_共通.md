@@ -2,7 +2,7 @@
 
 > **会員・決済・API の正はこの文書です。** 過去のやり取り・旧ドキュメントより、本書を優先してください。
 > フロント（画面）は**完成済み**。エンジニアが作るのは **サーバー側API・決済・本番切替** です。
-> 対応バージョン：PRO `pro/sw.js` の `CACHE = 'shichu-jidou-v472'`／ビギナー `beginner/sw.js` `'kyoukara-uranaishi-v109'`／易 EKI Pro `eki-pro/app/sw.js` `'eki-pro-v69'` ／ 最終更新：2026-10-14
+> 対応バージョン：PRO `pro/sw.js` の `CACHE = 'shichu-jidou-v473'`／ビギナー `beginner/sw.js` `'kyoukara-uranaishi-v110'`／易 EKI Pro `eki-pro/app/sw.js` `'eki-pro-v70'` ／ 最終更新：2026-10-14
 > 3サイトの全体の依頼内容は、リポジトリ直下の `エンジニアへの実装依頼_3サイト.md` を先に読んでください。易 EKI Pro だけの追加分は `eki-pro/実装仕様_エンジニア向け.md`。
 > `eki-pro/実装仕様_会員まわり_共通.md` は本書と**同じ内容の写し**です（食い違ったら本書が正）。
 > 前提（発注者確認済み）：**Gemini（文章生成）はサーバー経由**（キーはサーバーだけに置く）／**決済はテレコムクレジット**／**Web先行 → のちに iOS・Android アプリ**。
@@ -60,7 +60,7 @@
 - **テスト用キー**：URL に `?gtest=1` を付けたとき（またはファイルを直接開いたとき）だけ、端末に保存したテスト用キーで Google を直接呼ぶ。本番のURLでは、キーを保存した端末でも必ずサーバー中継を使う（2026-10-13 修正）。
 - **`PREVIEW_MODE=true` の意味**：会員ゲートを無条件に解除（`if(PREVIEW_MODE){ unlock(); return; }`）。`file://` で直接開いたときも確認用に自動解除。
 - **圏外での利用**：30日以内にネットでログイン確認できた会員（`member_token` があり、`member_status`・`member_period_end` が「使える状態」、`member_checked_at` が30日以内）は、通信できないときも待たずにアプリが開く。つながっていれば裏で `auth-check` を呼び、使えなくなっていたら閉じる。
-- **使える状態**（フロントの `usable()`。アプリ・`auth.html`・マイページで同じ）：`active`／`trialing`／`canceling`、または `canceled` でも `periodEnd`（YYYY-MM-DD・日本時間）の23:59:59まで。＝**解約しても、無料期間・お支払い済みの期間の最終日までは使える**（規約・特商法の約束どおり）。
+- **使える状態**（フロントの `usable()`。アプリ・`auth.html`・マイページで同じ）：`active`／`trialing`、`canceling`・`canceled` は `periodEnd`（YYYY-MM-DD・日本時間）の23:59:59まで（`canceling` で `periodEnd` が無いときは開く）。アプリは開いたまま日付が変わっても、画面に戻ったとき・10分ごとに端末の記録で確かめ、30分に1回 `auth-check` で最新の状態を確かめて閉じる。＝**解約しても、無料期間・お支払い済みの期間の最終日までは使える**（規約・特商法の約束どおり）。
 
 ---
 
