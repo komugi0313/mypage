@@ -2,10 +2,11 @@
 // EKI では鑑定文（答え→残りの2回）・深掘り相談・鑑定書の作成に使う。
 // 目的＝APIキーをブラウザに出さない（フロント直叩きを廃止）。会員ゲートで購読者のみアプリを使える前提のため、
 //       この雛形が持つのは、ボット・暴走対策の“高い天井”（下の PK_MAX_DEVICE_DAY／PK_MAX_IP_DAY）だけ。
-//       規約・料金ページで約束した回数の上限（PRO・ビギナー＝詳細鑑定1日200回／易 EKI Pro＝1日100回・月3,000回・1分15回、
+//       規約・料金ページで約束した回数の上限（PRO・ビギナー＝詳細鑑定1日25回／易 EKI Pro＝1日50回・1分15回、
 //       無料期間中は3サイトとも1日3回）のうち、無料期間中の1日3回だけはこの雛形に入っている（会員確認の status が trialing のとき、
 //       会員ごと・日本時間の1日ごとに数え、4回目から 429 {error:{code:'TRIAL_LIMIT'}} を返す。PK_TRIAL_DAY で変更可）。
-//       有料の上限（1日200回など）は、本番のサーバーで会員ごとに数えて実装すること（実装依頼書 §3-5）。
+//       有料の1日の上限（PRO・ビギナー25回／易50回。PK_PAID_DAY で変更可）も、会員確認ができたときは会員ごと・日本時間の1日ごとに数え、超えたら 429 {error:{code:'DAY_LIMIT'}}。
+//       （易の1分15回の連打制限は、本番のサーバーで実装すること＝実装依頼書 §3-5）。
 //       数え方：鑑定1件＝1回。次の目印が付いた呼び出しは、同じ鑑定の続きなので数えない（この雛形の天井でも数えない）。
 //         x-pk-part: detail … PRO・ビギナーの相談1件の2回目（くわしい読み解き）
 //         x-eki-kind: detail … 易の鑑定1件の2回目（台本・要点などの残り）／ x-eki-kind: sho … 易の鑑定書の作成
@@ -44,6 +45,8 @@ const MAX_DEVICE_DAY = parseInt(process.env.PK_MAX_DEVICE_DAY || '400', 10) || 4
 const MAX_IP_DAY = parseInt(process.env.PK_MAX_IP_DAY || '800', 10) || 800;
 // 無料お試し中（status=trialing）の1日の上限（鑑定1件＝1回。続きの2回目・鑑定書の作成は数えない）。3サイト共通で3回（発注者決定 2026-10-16）
 const TRIAL_DAY = parseInt(process.env.PK_TRIAL_DAY || '3', 10) || 3;
+// 有料（trialing 以外の使える会員）の1日の上限（鑑定1件＝1回）。原価で利益65%を守る上限（発注者決定 2026-10-16）
+const PAID_DAY = parseInt(process.env.PK_PAID_DAY || '50', 10) || 50;
 // 最後のユーザーメッセージの上限（字）。自動の詳細鑑定は命式データ全文を渡すため最大約24,300字になる。
 // 12000だと正規の詳細鑑定が413で弾かれオンライン生成できず常にオフラインへ落ちていたので、余裕を持って40000に。
 // （巨大な貼り付け等のボット対策の“天井”は維持。総リクエストサイズは別途 5,800,000字で制限）
@@ -130,6 +133,7 @@ exports.handler = async (event) => {
       if (dCount >= MAX_DEVICE_DAY) return json(429, { error: { code: 'BUSY', message: 'アクセスが集中しています。時間をおいて再度お試しください。' } });
       if (ipCount >= MAX_IP_DAY) return json(429, { error: { code: 'BUSY', message: 'アクセスが集中しています。時間をおいて再度お試しください。' } });
       // 無料お試し中は1日3回まで（会員ごと。日本時間の0時に戻る）
+      if (memberStatus && memberStatus !== 'trialing' && !noCount && dCount >= PAID_DAY) return json(429, { error: { code: 'DAY_LIMIT', message: '本日のご利用は1日' + PAID_DAY + '回までです。明日（日本時間の0時から）またご利用いただけます。' } });
       if (memberStatus === 'trialing' && !noCount && dCount >= TRIAL_DAY) return json(429, { error: { code: 'TRIAL_LIMIT', message: '無料お試し中のご利用は1日' + TRIAL_DAY + '回までです。明日（日本時間の0時から）またご利用いただけます。' } });
     } catch (e) { degraded = true; }
   } else if (!store) { degraded = true; }

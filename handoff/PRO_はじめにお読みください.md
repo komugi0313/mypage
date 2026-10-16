@@ -1,6 +1,6 @@
 # 四柱推命 自動鑑定 PRO ― 引き渡しメモ（この商品だけ）
 
-最終更新：2026-10-14　／　販売事業者：72k株式会社　／　対応バージョン：`pro/sw.js` の `CACHE = 'shichu-jidou-v476'`
+最終更新：2026-10-14　／　販売事業者：72k株式会社　／　対応バージョン：`pro/sw.js` の `CACHE = 'shichu-jidou-v477'`
 
 > **この ZIP は「四柱推命 自動鑑定 PRO」だけ**です。ビギナー（今日から占い師）・易 EKI Pro は**別の商品**で、別の ZIP です。混ぜないでください。
 > サーバー（会員・決済・詳細鑑定の中継）は全商品で共通の基盤です。依頼の全体と基盤の仕様は「【最終完成版】0_共通サーバー基盤」ZIP の `エンジニアへの実装依頼_3サイト.md` を先に読んでください。この ZIP の `pro/IMPLEMENTATION_SPEC_for_engineer.md` は、その基盤の仕様（会員・決済・API）と同じものです。
@@ -16,7 +16,7 @@
 | 商品ID（ヘッダ `X-Product`） | `pro` |
 | お申し込み番号 | `P-YYYYMMDD-XXXXX-XXXXX` |
 | 料金 | 月額 9,800円（税込）のみ・7日間無料（お申し込み日を1日目とする7日間。8日目に初回、以後毎月その日） |
-| 回数上限 | 詳細鑑定 1日200回・**無料期間中は1日3回**（鑑定1件＝1回。2回目の `x-pk-part: detail` は数えない。鑑定書の作成は1回と数える。無料期間中の3回は雛形 `functions/gemini.js` でも会員ごとに数える） |
+| 回数上限 | 詳細鑑定 1日25回・**無料期間中は1日3回**（鑑定1件＝1回。2回目の `x-pk-part: detail` は数えない。鑑定書の作成は1回と数える。無料期間中の3回は雛形 `functions/gemini.js` でも会員ごとに数える） |
 | 顧客カルテ | 端末＋ログイン中はサーバーに同期（`mypage-get`／`mypage-put`） |
 | PRO だけの機能 | 今月の運勢をまとめて作る（LINE用の文章）・前回のふり返り（顧客の `next`）・鑑定トーク例。端末内で動き、サーバーの追加作業なし |
 
@@ -27,7 +27,7 @@
 | 1 | `var PREVIEW_MODE = true;` → **`false`** | `pro/app-pro.html` 747行 |
 | 2 | `STUB: !/(^\|\.)(72k\.ai\|suimei\.jp\|ekipro\.jp)$/i.test(location.hostname)` → **`STUB: false`** | `pro/auth.html` 230行・`pro/mypage-pro.html` 186行・`pro/pricing-pro.html` 379行（`TRIAL_CHECK`）・491行（`FIX`） |
 | 3 | 決済ページURL `TELECOM_PAYMENT_URL={ month:'' }`・`TELECOM_PARAM`（`ORDER_PREFIX='P'` はそのまま） | `pro/pricing-pro.html` 349〜351行 |
-| 4 | テスト用キー欄 `<details id="gtest-wrap">` をブロックごと削除、`?gtest=1` で表示する1行、テスト用キーを読む1行（`geminiKey='';` に固定でも可） | `pro/app-pro.html` 1006行・8084行・8078行 |
+| 4 | テスト用キー欄 `<details id="gtest-wrap">` をブロックごと削除、`?gtest=1` で表示する1行、テスト用キーを読む1行（`geminiKey='';` に固定でも可） | `pro/app-pro.html` 1006行・8091行・8085行 |
 | 5 | `DEMO_MODE` は `false` のまま | `pro/app-pro.html` 744行 |
 | 6 | サーバー中継 `pro/functions/gemini.js` の環境変数（`GEMINI_API_KEY`・`MEMBER_CHECK_URL` ほか） | 共通仕様 §5 |
 | 7 | 変えたら `pro/sw.js` の `CACHE` を1つ上げる | `pro/sw.js` 6行 |

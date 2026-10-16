@@ -6365,10 +6365,11 @@ const YOMI_RULE='\n【用語の読みがな＝厳守】読みがなを添える�
 const NO_REPEAT_RULE='\n【繰り返し厳禁＝最優先】各段落・各見出しは必ず“新しい論点”だけを書く。前の段落・前の見出しで述べたことを、言い換えて繰り返さない（同じ結論・同じ趣旨・同じ助言を、言葉を変えて二度書かない）。要約・まとめ直しだけの段落や文は作らない。同じ内容を場所を変えて再登場させない。字数を埋めるための水増し・引き延ばしは禁止で、書くべきことを書き終えたら短くても構わず終える（薄い一般論で伸ばさない）。';
 // 詳細鑑定(AI)の“ゆるい1日上限”（不正利用防止）。超過はその日だけオフライン鑑定に自動フォールバック・翌日リセット。
 // ※フロント側の簡易カウンタ（同一ブラウザ内・鑑定書ページと共有）。厳密な強制はサーバー側で（BACKEND_HANDOFF.md 参照）。
-const AI_DAILY_CAP=200;   /* 通常のご利用（イベントで1日数十件）では届かない高さ。異常な連打・自動化だけを止める */
+const AI_DAILY_CAP=25;    /* 有料：1日25回まで（相談・自動の詳細鑑定・日運月運・相性・鑑定書の作成の合計。原価で利益65%を守る上限。発注者決定 2026-10-16） */
 const AI_TRIAL_CAP=3;     /* 無料お試し中は1日3回まで（相談・自動の詳細鑑定・日運月運・相性・鑑定書の作成の合計。発注者決定 2026-10-16。サーバーでも会員ごとに数える） */
 function aiIsTrial(){try{return (localStorage.getItem('member_status')||'')==='trialing';}catch(e){return false;}}
 function aiCap(){return aiIsTrial()?AI_TRIAL_CAP:AI_DAILY_CAP;}
+const AI_DAY_NOTE='本日の詳細鑑定（1日25回まで）を使い切りました。明日（日本時間の0時から）また25回ご利用いただけます。いまは端末内で作成した鑑定（オフライン鑑定）を表示しています。';
 const AI_TRIAL_NOTE='無料お試し中の詳細鑑定は1日3回まで（相談・鑑定書の作成などの合計）です。今日の3回を使い切りました。明日（日本時間の0時から）また3回ご利用いただけます。いまは端末内で作成した鑑定（オフライン鑑定）を表示しています。';
 function _aiDayKey(){const d=new Date(Date.now()+9*3600000);return 'ai_daily_'+d.getUTCFullYear()+('0'+(d.getUTCMonth()+1)).slice(-2)+('0'+d.getUTCDate()).slice(-2);}   /* 日本時間の日付で数える（0時に戻る） */
 function aiCount(){try{return parseInt(localStorage.getItem(_aiDayKey())||'0',10)||0;}catch(e){return 0;}}
@@ -6378,7 +6379,13 @@ function aiCountFull(){try{localStorage.setItem(_aiDayKey(),String(Math.max(aiCo
 function aiTrialChip(){
   var go=document.getElementById('f-go'); if(!go) return;
   var el=document.getElementById('ai-trial-left');
-  if(!aiIsTrial()){ if(el) el.remove(); return; }
+  if(!aiIsTrial()){   // 有料：残りが5回以下になったら知らせる
+    var lp=Math.max(0,AI_DAILY_CAP-aiCount());
+    if(lp>5){ if(el) el.remove(); return; }
+    if(!el){ el=document.createElement('div'); el.id='ai-trial-left'; el.style.cssText='margin:8px 0 0;font-size:12.5px;font-weight:800;line-height:1.7;color:#5A4636;text-align:center;word-break:keep-all;overflow-wrap:anywhere'; go.insertAdjacentElement('afterend',el); }
+    el.innerHTML=lp>0?'<span style="display:inline-block">今日の詳細鑑定は</span><span style="display:inline-block">あと<b style="color:#B4471F">'+lp+'回</b>（1日25回まで）</span>'
+      :'<span style="display:inline-block;color:#B4471F">今日の詳細鑑定（1日25回）を使い切りました。</span><span style="display:inline-block">明日0時から、また使えます。</span>';
+    return; }
   if(!el){ el=document.createElement('div'); el.id='ai-trial-left'; el.style.cssText='margin:8px 0 0;font-size:12.5px;font-weight:800;line-height:1.7;color:#5A4636;text-align:center;word-break:keep-all;overflow-wrap:anywhere'; go.insertAdjacentElement('afterend',el); }
   var left=Math.max(0,AI_TRIAL_CAP-aiCount());
   el.innerHTML=left>0?'<span style="display:inline-block">無料お試し中：今日の詳細鑑定は</span><span style="display:inline-block">あと<b style="color:#B4471F">'+left+'回</b>（1日3回まで）</span>'
@@ -6421,7 +6428,7 @@ async function generateReading(user,localText,system,deep){
   // 本日の詳細鑑定（オンライン）の上限に達したら、その日はオフライン鑑定に切替（翌日リセット）
   if(_part!=='detail' && aiCount()>=aiCap()){   // 相談1件の2回目（くわしい読み解き）は、1回目が通っていれば止めない
     aiEngine='オフライン鑑定（端末内）';
-    return {ok:true,text:localText,fallback:true,online:false,note:aiIsTrial()?AI_TRIAL_NOTE:'本日の詳細鑑定（オンライン）のご利用上限に達したため、端末内のオフライン鑑定を表示しています。日付が変わるとまたご利用いただけます。'};}
+    return {ok:true,text:localText,fallback:true,online:false,note:aiIsTrial()?AI_TRIAL_NOTE:AI_DAY_NOTE};}
   // 2.5系は思考(thinking)がデフォルトONで、maxOutputTokensを思考だけで使い切ると本文が空になる。
   // flash/flash-lite は思考をオフにして本文を確実に出す。pro は最小思考のまま余裕を持たせる。
   const genCfg={maxOutputTokens:_part==='answer'?1536:3072};   // 答えだけは短く（すぐ届く）。全体・くわしい読み解きは途中で切れないよう余裕を持たせる
@@ -6442,7 +6449,7 @@ async function generateReading(user,localText,system,deep){
       else{ r=await _fetchT(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${encodeURIComponent(geminiKey)}`,
         {method:"POST",headers:{"Content-Type":"application/json"},body:_body}); }
       if(useServer&&(r.status===401||r.status===403)){ _authErr=r.status; return null; }   // ログイン切れ・ご利用できない状態
-      if(useServer&&r.status===429){ let _e=null; try{ _e=await r.json(); }catch(_x){} if(_e&&_e.error&&_e.error.code==='TRIAL_LIMIT'){ _authErr=429; return null; } return null; }   // 無料お試しの1日3回（サーバーで数えた結果。別の端末で使った分も含む）
+      if(useServer&&r.status===429){ let _e=null; try{ _e=await r.json(); }catch(_x){} if(_e&&_e.error&&(_e.error.code==='TRIAL_LIMIT'||_e.error.code==='DAY_LIMIT')){ _authErr=429; return null; } return null; }   // 無料お試しの1日3回（サーバーで数えた結果。別の端末で使った分も含む）
       data=await r.json();
     }catch(e){ return null; }        // 通信失敗
     if(data&&data.error) return null; // APIエラー
@@ -6457,7 +6464,7 @@ async function generateReading(user,localText,system,deep){
   if(!text&&!_authErr){ await new Promise(r=>setTimeout(r,2500)); text=await callOnce(); }
   if(text){ if(_part!=='detail') aiCountInc(); return {ok:true,text:noAIWord(_unmaskNames(text,_nm)),online:true}; }   // 相談1件＝1回（答え＋くわしい読み解きの2回の生成で1回と数える）
   aiEngine='オフライン鑑定（端末内）';
-  if(_authErr===429){ aiCountFull(); return {ok:true,text:localText,fallback:true,online:false,note:AI_TRIAL_NOTE}; }
+  if(_authErr===429){ aiCountFull(); return {ok:true,text:localText,fallback:true,online:false,note:aiIsTrial()?AI_TRIAL_NOTE:AI_DAY_NOTE}; }
   if(_authErr===401) return {ok:true,text:localText,fallback:true,online:false,note:'ログインの有効期限が切れたため、詳細鑑定を使えませんでした。いまは端末内で作成した鑑定（オフライン鑑定）を表示しています。もう一度ログインすると、詳細鑑定が使えるようになります（ページを開き直すとログイン画面が出ます）。'};
   if(_authErr===403) return {ok:true,text:localText,fallback:true,online:false,note:'ご契約の状態を確認できなかったため、詳細鑑定を使えませんでした。いまは端末内で作成した鑑定（オフライン鑑定）を表示しています。マイページでご契約状況をご確認ください。'};
   return {ok:true,text:localText,fallback:true,online:false,note:'詳細鑑定に接続できなかったため、端末内で作成した鑑定（オフライン鑑定）を表示しています（自動で再試行しました）。'};

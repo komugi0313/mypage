@@ -4176,7 +4176,7 @@ window.KANSHI60_DETAIL={
   var _aiBusy=false;
   // 詳細鑑定(AI)の“ゆるい1日上限”（不正利用防止）。超過はその日だけ定型文に自動フォールバック・翌日リセット。
   // ※フロント側の簡易カウンタ（同一ブラウザ内・アプリと共有）。厳密な強制はサーバー側で（BACKEND_HANDOFF.md 参照）。
-  var AI_DAILY_CAP=200;
+  var AI_DAILY_CAP=25;   // 有料：1日25回まで（アプリの相談などと合計）
   var AI_TRIAL_CAP=3;   // 無料お試し中は1日3回まで（アプリの相談などと合計。日本時間の0時に戻る）
   function aiIsTrial(){ try{ return (localStorage.getItem('member_status')||'')==='trialing'; }catch(e){ return false; } }
   function aiCap(){ return aiIsTrial()?AI_TRIAL_CAP:AI_DAILY_CAP; }
@@ -4189,7 +4189,7 @@ window.KANSHI60_DETAIL={
     if(_aiBusy) return;
     if(aiCount()>=aiCap()){   // 本日の上限 → 定型文（オフライン鑑定書）で表示
       setEngine('template');
-      var _hc=document.getElementById('engHint'); if(_hc) _hc.textContent=aiIsTrial()?AI_TRIAL_NOTE:'本日の詳細鑑定（オンライン）のご利用上限に達したため、定型文（オフラインの鑑定書）で表示しています。日付が変わるとまたご利用いただけます。';
+      var _hc=document.getElementById('engHint'); if(_hc) _hc.textContent=aiIsTrial()?AI_TRIAL_NOTE:'本日の詳細鑑定（1日25回まで）を使い切りました。明日（日本時間の0時から）またご利用いただけます。いまは定型文（オフラインの鑑定書）で表示しています。';
       return;
     }
     _aiBusy=true;
@@ -4230,9 +4230,9 @@ window.KANSHI60_DETAIL={
           if(stale()){ redo(); return; }
           var data={}; try{ data=JSON.parse(o.t); }catch(e){}
           var txt=''; try{ txt=(data.candidates[0].content.parts||[]).map(function(p){return p.text||'';}).join(''); }catch(e){}
-          if(o.status===429 && data && data.error && data.error.code==='TRIAL_LIMIT'){   // 無料お試しの1日3回（サーバーで数えた結果）
+          if(o.status===429 && data && data.error && (data.error.code==='TRIAL_LIMIT'||data.error.code==='DAY_LIMIT')){   // 無料お試しの1日3回（サーバーで数えた結果）
             try{ localStorage.setItem(_aiDayKey(), String(Math.max(aiCount(),aiCap()))); }catch(_e){}
-            _aiBusy=false; setEngine('template'); var _ht=document.getElementById('engHint'); if(_ht) _ht.textContent=AI_TRIAL_NOTE; return;
+            _aiBusy=false; setEngine('template'); var _ht=document.getElementById('engHint'); if(_ht) _ht.textContent=aiIsTrial()?AI_TRIAL_NOTE:'本日の詳細鑑定（1日25回まで）を使い切りました。明日（日本時間の0時から）またご利用いただけます。いまは定型文（オフラインの鑑定書）で表示しています。'; return;
           }
           if(!o.ok || !txt.trim()){
             if(!isRetry){ setTimeout(function(){ attempt(true); }, 2500); return; }

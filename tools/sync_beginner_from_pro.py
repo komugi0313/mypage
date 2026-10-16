@@ -182,10 +182,10 @@ def build_pricing():
     s = common_links(s)
     s = rep(s, '<span class="badge">経験を、もっと速く・深く。</span>', '<span class="badge">習ったことがなくて、大丈夫。</span>', 1)
     s = rep(s, '<br>本格鑑定を、はじめる。</h1>', '<br>今日から占い師をはじめる。</h1>', 1)
-    s = rep(s, '<span class="desc">いつでも解約できます</span>', '<span class="desc">1件ごとの追加料金なし（詳細鑑定は1日200回まで・無料期間中は1日3回まで）</span>', 1)
+    s = rep(s, '<span class="desc">いつでも解約できます</span>', '<span class="desc">1件ごとの追加料金なし（詳細鑑定は1日25回まで・無料期間中は1日3回まで）</span>', 1)
     s = rep(s, '    <!-- お申し込みで困ったとき -->', '''    <ul class="rz">
       <li><span class="ck">✓</span>知識ゼロからでも大丈夫。生年月日を入れるだけで、やさしい文章が出てきます。</li>
-      <li><span class="ck">✓</span>鑑定は1件ごとの追加料金なし。詳細鑑定は1日200回まで・無料期間中は1日3回まで（超えた日は端末内の鑑定に切り替わります）。</li>
+      <li><span class="ck">✓</span>鑑定は1件ごとの追加料金なし。詳細鑑定は1日25回まで・無料期間中は1日3回まで（超えた日は端末内の鑑定に切り替わります）。</li>
       <li><span class="ck">✓</span>スマホひとつで、場所を問わず鑑定。鑑定文はそのままLINEで送れます。</li>
       <li><span class="ck">✓</span>合わなければ、いつでも解約OK。無料期間中の解約は費用0円です。</li>
     </ul>

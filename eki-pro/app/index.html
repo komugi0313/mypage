@@ -1193,6 +1193,7 @@ function trialDayKey(){          // 日本時間(JST)の暦日でリセット
 function trialCount(){ try{ return parseInt(localStorage.getItem(trialDayKey())||'0',10)||0; }catch(e){ return 0; } }
 function trialInc(){ try{ localStorage.setItem(trialDayKey(), String(trialCount()+1)); }catch(e){} }
 function trialReached(){ return isTrialMember() && trialCount() >= TRIAL_DAILY_LIMIT; }
+function paidReached(){ return !isTrialMember() && trialCount() >= PAID_DAILY_CAP; }   // 有料：1日50回（同じ日の数で数える）
 function trialReset(){ try{ localStorage.removeItem(trialDayKey()); }catch(e){} }
 function showTrialLimit(show){
   const el=document.getElementById('trialLimit'); if(!el) return;
@@ -1200,10 +1201,9 @@ function showTrialLimit(show){
   if(show!==false){ try{ el.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }
 }
 
-/* ===== 有料プランの安全上限（通常のご利用では届かない高さ。自動化・アカウント共有などの不正利用を止めるためのもの） =====
+/* ===== 有料プランの上限（原価で利益65%を守る上限。発注者決定 2026-10-16：1日50回） =====
    本番は必ずサーバー側で会員ごとに判定・集計すること（ここの値は画面側の目安）。根拠は利用規約の禁止事項・公正利用。 */
-const PAID_DAILY_CAP    = 100;   // 1日あたりの上限
-const PAID_MONTHLY_CAP  = 3000;  // 1か月あたりの上限
+const PAID_DAILY_CAP    = 50;    // 1日あたりの上限（鑑定＋追加のご相談の合計。日本時間の0時に戻る。月の上限は設けない）
 const PAID_RATE_PER_MIN = 15;    // 1分あたりの上限（連打防止）
 
 const HXT={
@@ -1689,7 +1689,8 @@ const App=(function(){
       if(res.status===401) throw new Error('ログインの有効期限が切れました。ページを開き直して、もう一度ログインしてください。');
       if(res.status===403) throw new Error('ご契約の状態を確認できませんでした。マイページでご契約状況をご確認ください。');
       if(res.status===429){ let e0=null; try{ e0=await res.clone().json(); }catch(_){}   // 無料お試しの1日3回（サーバーで数えた結果。別の端末で使った分も含む）
-        if(e0&&e0.error&&e0.error.code==='TRIAL_LIMIT'){ try{ localStorage.setItem(trialDayKey(), String(Math.max(trialCount(),TRIAL_DAILY_LIMIT))); }catch(_){} try{ showTrialLimit(true); }catch(_){} throw new Error('本日の無料お試しは上限（1日3回）に達しました。明日（日本時間の0時から）また3回ご利用いただけます。'); } }
+        if(e0&&e0.error&&e0.error.code==='TRIAL_LIMIT'){ try{ localStorage.setItem(trialDayKey(), String(Math.max(trialCount(),TRIAL_DAILY_LIMIT))); }catch(_){} try{ showTrialLimit(true); }catch(_){} throw new Error('本日の無料お試しは上限（1日3回）に達しました。明日（日本時間の0時から）また3回ご利用いただけます。'); }
+        if(e0&&e0.error&&e0.error.code==='DAY_LIMIT'){ try{ localStorage.setItem(trialDayKey(), String(Math.max(trialCount(),PAID_DAILY_CAP))); }catch(_){} throw new Error('本日のオンライン鑑定（1日50回まで）を使い切りました。明日（日本時間の0時から）またご利用いただけます。'); } }
       let msg=`HTTP ${res.status}`; try{const e=await res.json();msg=e.error?.message||msg;}catch(_){}
       const busy=res.status===429||res.status===503||/overload|unavailable|rate|demand/i.test(msg);
       if(busy&&a<2){await sleep(3000);continue;}
@@ -1807,6 +1808,11 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
       // 無料お試しのオンライン鑑定（1日3回）を使い切ったときも、鑑定は止めずに内蔵データで出す
       LM.textContent=t('load_offline');
       setTimeout(()=>{ goOffline('本日の無料お試し（オンライン鑑定 1日3回）を使い切ったため、内蔵データで鑑定しました'); showTrialLimit(true); },350);
+      return;
+    }
+    if(!forceOffline && paidReached()){
+      LM.textContent=t('load_offline');
+      setTimeout(()=>{ goOffline('本日のオンライン鑑定（1日50回まで）を使い切ったため、内蔵データで鑑定しました。明日0時から、またご利用いただけます'); },350);
       return;
     }
     if(forceOffline){
@@ -2249,6 +2255,11 @@ ${hist?('これまでのやりとり：\n'+hist+'\n'):''}相談者の新しい�
     if(trialReached()){
       cur.chat=cur.chat||[]; cur.chat.push({role:'user',text:q}); renderChat(); el.value='';
       cur.chat.push({role:'ai',text:'🌙 本日の無料お試しは上限（1日3回）に達しました。また明日、続きをお楽しみいただけます。'}); renderChat();
+      return;
+    }
+    if(paidReached()){
+      cur.chat=cur.chat||[]; cur.chat.push({role:'user',text:q}); renderChat(); el.value='';
+      cur.chat.push({role:'ai',text:'🌙 本日のオンライン鑑定・追加のご相談（1日50回まで）を使い切りました。明日0時から、またご利用いただけます。'}); renderChat();
       return;
     }
     cur.chat=cur.chat||[]; cur.chat.push({role:'user',text:q}); renderChat(); el.value='';

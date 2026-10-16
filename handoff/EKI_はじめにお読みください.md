@@ -1,6 +1,6 @@
 # 易 EKI Pro ― 引き渡しメモ（この商品だけ）
 
-最終更新：2026-10-14　／　販売事業者：72k株式会社　／　対応バージョン：`eki-pro/app/sw.js` の `CACHE = 'eki-pro-v74'`
+最終更新：2026-10-14　／　販売事業者：72k株式会社　／　対応バージョン：`eki-pro/app/sw.js` の `CACHE = 'eki-pro-v75'`
 
 > **この ZIP は「易 EKI Pro」だけ**です。四柱推命 PRO・今日から占い師（ビギナー）は**別の商品**で、別の ZIP です。混ぜないでください。
 > サーバー（会員・決済・オンライン鑑定の中継）は全商品で共通の基盤です。依頼の全体は「【最終完成版】0_共通サーバー基盤」ZIP の `エンジニアへの実装依頼_3サイト.md` を先に読んでください。
@@ -17,7 +17,7 @@
 | 商品ID（ヘッダ `X-Product`） | `eki` |
 | お申し込み番号 | `E-YYYYMMDD-XXXXX-XXXXX` |
 | 料金 | 月額 9,800円（税込）のみ・7日間無料（お申し込み日を1日目とする7日間。8日目に初回、以後毎月その日） |
-| 回数上限 | 無料期間中：オンライン鑑定＋深掘り相談の合計 1日3回／有料：1日100回・1か月3,000回・1分15回。鑑定1件＝1回（2回目の `x-eki-kind: detail` と鑑定書 `x-eki-kind: sho` は数えない） |
+| 回数上限 | 無料期間中：オンライン鑑定＋深掘り相談の合計 1日3回／有料：1日50回・1分15回。鑑定1件＝1回（2回目の `x-eki-kind: detail` と鑑定書 `x-eki-kind: sho` は数えない） |
 | 顧客名簿 | 端末内だけ（サーバーに保存しない。規約どおり）。`mypage-get`／`mypage-put` は使わない |
 | この商品だけのAPI | `apply-start`（登録画面のプロフィールを控える。会員はまだ作らない） |
 
@@ -28,7 +28,7 @@
 | 1 | `var PREVIEW_MODE = true;` → **`false`** | `eki-pro/app/index.html` 548行 |
 | 2 | `STUB` の式 → **`STUB: false`** | `eki-pro/auth.html` 232行・`eki-pro/mypage.html` 181行・`eki-pro/upgrade.html` 360行（`TRIAL_CHECK`）・472行（`FIX`）・`eki-pro/register.html` 155行（`CONFIG`） |
 | 3 | 決済ページURL `TELECOM_PAYMENT_URL={ month:'' }`・`TELECOM_PARAM`（`ORDER_PREFIX='E'` はそのまま） | `eki-pro/upgrade.html` 330〜332行 |
-| 4 | テスト用キー欄 `#demoKeyCard`・`#geminiCard` と、`?gtest=1` で表示する1行を削除（欄を消してもアプリは止まらない作り）。`GEMINI_API_KEY = ""` は空のまま | `eki-pro/app/index.html` 726行・981行・2970行・1174行 |
+| 4 | テスト用キー欄 `#demoKeyCard`・`#geminiCard` と、`?gtest=1` で表示する1行を削除（欄を消してもアプリは止まらない作り）。`GEMINI_API_KEY = ""` は空のまま | `eki-pro/app/index.html` 726行・981行・2981行・1174行 |
 | 5 | 「▶ 登録せずに、そのまま鑑定を体験する（デモ）」リンク（`#demoLink`）を削除 | `eki-pro/register.html` 137行 |
 | 6 | `DEMO_MODE` は `false` のまま | `eki-pro/app/index.html` 558行 |
 | 7 | サーバー中継 `eki-pro/functions/gemini.js` の環境変数 | 共通仕様 §5 |
