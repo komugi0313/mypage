@@ -254,12 +254,14 @@
 | `URL` | **必須（Netlify 以外）** | 自サイトのURL。Netlify では自動で入る。**Netlify 以外では自動で入らないので手で設定**（未設定だと、送信元の確認と「`MEMBER_CHECK_URL` 未設定なら止める」安全装置が両方とも働かない） |
 | `ALLOWED_ORIGINS` | 1つのサーバーで3商品を扱うなら**必須** | 追加で許可する送信元（カンマ区切り・**オリジンの完全一致**。例 `https://72k.ai,https://www.suimei.jp,https://ekipro.jp`） |
 | `DEPLOY_PRIME_URL` | 自動（Netlify） | Netlify のプレビューURL（許可に含まれる） |
-| `GEMINI_MODEL`／`GEMINI_MODEL_DEEP` | 任意 | 通常／`x-pk-deep:1` のときのモデル。どちらも既定 `gemini-2.5-flash` |
+| `GEMINI_MODEL`／`GEMINI_MODEL_DEEP` | 任意 | 通常／`x-pk-deep:1` のときのモデル。どちらも既定 `gemini-2.5-flash`。新しいプロジェクトで 2.5 が使えないときは `gemini-3.5-flash-lite`（下の注意） |
 | `PK_ALLOW_NO_MEMBER_CHECK` | **本番では設定しない** | `1` で会員確認なしで動かす（公開前の確認環境だけ） |
 | `PK_OWNER_TOKEN` | 任意 | ヘッダ `x-pk-owner` が一致したとき天井を数えない（動作確認用） |
 | `PK_MAX_DEVICE_DAY`／`PK_MAX_IP_DAY` | 任意 | ボット対策の天井（既定 400／800） |
 | `PK_TRIAL_DAY` | 任意 | 無料お試し中（`status=trialing`）の1日の上限（既定 3。3サイト共通。変えるときは規約・特商法・申込画面の表示も同時に直す） |
 | `PK_PRICE_IN`／`PK_PRICE_OUT`／`PK_PRICE_CACHE`／`PK_FX_JPY` | 任意 | 原価の記録用の単価（ログ `[pro-cost]` と応答ヘッダ `x-pk-tok` に出す） |
+
+- **モデルの注意（2026-10-16 確認）**：Google は 2026-09-18 から、2.5系（`gemini-2.5-flash` など）を「最近使っていた利用者だけ」に限っている（終了の発表はないが、**新しく作るプロジェクトでは使えないことがある**）。新しいプロジェクトには `gemini-3.5-flash-lite`（料金は 2.5 Flash と同じ 入力$0.30／出力$2.50 per 1M・第三者の価格表による）または `gemini-3.8-flash`（入力$0.75／出力$3.75、2027-01-01 から2倍の予定・同）が案内されている。本番の API キーで 2.5 が使えなければ `GEMINI_MODEL`・`GEMINI_MODEL_DEEP` を `gemini-3.5-flash-lite` にする。雛形は名前に `gemini-3` を含むとき `thinkingBudget:0` を外して出力の上限を広げるが、**3系は考える分（thinking）も出力として課金される**ので、3系の思考を最小にする設定（`thinkingConfig` の `thinkingLevel` 等）を公式の資料で確認して入れ、原価ログ（`[pro-cost]`・`x-pk-tok`）で相談1件あたりの費用を測り直すこと（回数の上限は1件 約4.5円で計算している）。
 
 - **雛形は Netlify Functions 用の書き方**（`exports.handler`、`event.httpMethod/headers/body` を受けて `{statusCode,headers,body}` を返す。数えるのは `@netlify/blobs`）。他の基盤で動かすときは作り直す。
 - 雛形が返すエラー：401 `LOGIN`、403 `MEMBER`／`ORIGIN`、405（POST以外）、413 `TOO_LONG`（`role:'user'` の付いた最後の入力が40,000字超、または全体が900,000字超。EKI は `role` を送らないので全体の上限5,800,000字だけが効く）、429 `BUSY`、451 `REGION`、500 `NO_KEY`、502 `UPSTREAM`、503 `SETUP`／`MEMBER_CHECK`。
