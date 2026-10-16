@@ -65,6 +65,10 @@
   .in:focus{outline:none;border-color:var(--sui)}
   .row .k{white-space:nowrap;flex:0 0 auto}
   .row .v{min-width:0;overflow-wrap:anywhere;word-break:break-all}   /* 長いメールアドレスでも横にはみ出さない */
+  #row-use{display:block}   /* ご利用回数は説明が長いので、見出しの下に全幅で出す */
+  #row-use .v{display:block;text-align:left;margin-top:6px;word-break:keep-all;overflow-wrap:anywhere}
+  #row-use .use-n{font-size:16px}
+  #row-use .use-sub{font-size:12.5px;font-weight:700;color:var(--ink2);margin-top:4px;line-height:1.75}
   .nb{white-space:nowrap}
   .tip,.qa p,.qa summary,.alert,.notice p,#msg{text-wrap:pretty;line-break:strict}
 </style>
@@ -99,6 +103,7 @@
     <div class="row"><span class="k">ステータス</span><span class="v"><span class="pill trial" id="v-status">確認中…</span></span></div>
     <div class="row" id="row-trial"><span class="k">無料期間</span><span class="v" id="v-trial">一週間</span></div>
     <div class="row" id="row-next"><span class="k" id="k-next">次回のお支払い</span><span class="v" id="v-next">無料期間の終了後</span></div>
+    <div class="row" id="row-use" hidden><span class="k" id="k-use">今月の詳細鑑定</span><span class="v" id="v-use">—</span></div>
     <div class="row"><span class="k">お申し込み番号</span><span class="v" id="v-order">—</span></div>
   </div>
 
@@ -190,6 +195,8 @@
   function $(id){ return document.getElementById(id); }
   var email=g('member_email');
   var PRICE='9,800円・税込';
+  /* ご利用回数（有料＝ご契約の1か月ごと・無料お試し＝1日ごと）。数はサーバーの check-subscription が usage:{used,limit} を返せばそれを、なければこの端末で数えた分を出す */
+  var USAGE={cap:750, trialCap:3, mKey:'ai_month_', dKey:'ai_daily_', name:'詳細鑑定', rule:'相談1件・鑑定書1通＝1回（同じ相談の「くわしい読み解き」と、鑑定書の作り直しは数えません）'};
   var PLAN={month:'月額プラン<span class="nb">（9,800円／月・税込）</span>'};
   var STATUS_JA={active:'ご利用中',trialing:'無料お試し中',canceling:'解約手続き済み',past_due:'お支払いが確認できません',unpaid:'お支払いが確認できません',canceled:'解約済み',none:'ご契約がありません'};
   /* 使える状態か（アプリの会員ゲートと同じ判定）：解約しても、今の期間（無料期間・お支払い済みの期間）の最終日までは使える */
@@ -240,6 +247,7 @@
       $('k-next').textContent='ご契約';
       $('v-next').innerHTML = '<a href="'+CONFIG.PRICING+'" style="color:var(--sui)">お申し込みページへ</a>';
     }
+    renderUse(st);
     var cancelBtn=$('cancelBtn'), cardBtn=$('cardBtn'), done=(st==='canceled'||st==='canceling'||st==='none');
     cancelBtn.disabled = done;
     cancelBtn.textContent = (st==='canceled'||st==='canceling') ? '解約済み' : '解約する';
@@ -249,11 +257,30 @@
     var ok=usable(st,cur.periodEnd) && !cur.unpaidBefore; $('open-app').hidden=!ok; $('open-app-t').hidden=!ok; if($('open-app-tip')) $('open-app-tip').hidden=!ok;
   }
 
+  function renderUse(st){
+    var row=$('row-use'); if(!row) return;
+    var trial=st==='trialing', ok=usable(st,cur.periodEnd)&&!cur.unpaidBefore;
+    if(!ok){ row.hidden=true; return; }
+    var jst=new Date(Date.now()+9*3600000), today=jst.toISOString().slice(0,10), pe=String(cur.periodEnd||g('member_period_end')||'');
+    var pid=(/^\d{4}-\d{2}-\d{2}$/.test(pe)&&pe>=today)?pe:'m'+today.slice(0,4)+today.slice(5,7);
+    var cap=trial?USAGE.trialCap:USAGE.cap, used=0, fromServer=false, u=cur.usage;
+    if(u && typeof u.used==='number'){ used=u.used; if(typeof u.limit==='number') cap=u.limit; fromServer=true; }
+    else { try{ used=parseInt(localStorage.getItem(trial?USAGE.dKey+today.replace(/-/g,''):USAGE.mKey+pid)||'0',10)||0; }catch(e){} }
+    var left=Math.max(0,cap-used), n=function(x){ return Number(x).toLocaleString(); };
+    var reset=''; if(!trial && !/^cancel/.test(st)){ var d=(pid.charAt(0)!=='m')?new Date(Date.parse(pid+'T00:00:00Z')+86400000):new Date(Date.UTC(+pid.slice(1,5),+pid.slice(5,7),1)); reset=(d.getUTCMonth()+1)+'月'+d.getUTCDate()+'日'; }
+    $('k-use').textContent=trial?'今日の'+USAGE.name:'今月の'+USAGE.name;
+    var IB='<span style="display:inline-block">', E='</span>';
+    $('v-use').innerHTML='<div class="use-n">あと<b style="color:'+(left<=Math.ceil(cap*0.1)?'#B4471F':'inherit')+'">'+n(left)+'回</b>'+IB+'（'+(trial?'無料お試し中は1日'+n(cap)+'回まで':n(cap)+'回のうち'+n(used)+'回使用')+'）'+E+'</div>'
+      +'<div class="use-sub">'+(trial?IB+'明日0時に'+n(cap)+'回に戻ります。'+E:(reset?IB+reset+'の更新日に'+E+IB+n(cap)+'回に戻ります。'+E:'')+IB+'1日の上限はありません。'+E)
+      +'<br>'+IB+'数え方：'+E+IB+USAGE.rule+E+(fromServer?'':'<br>'+IB+'（この端末で使った回数から計算しています）'+E)+'</div>';
+    row.hidden=false;
+  }
+
   /* ★エンジニア接続ポイント：ご契約状況の取得 */
   async function loadStatus(){
     if(CONFIG.STUB){
       var po={}; try{ po=JSON.parse(g('pending_order')||'{}')||{}; }catch(e){}
-      render({ status:g('member_status')||'trialing', plan:g('selected_plan'), orderId:po.id||'' }); return;
+      render({ status:g('member_status')||'trialing', plan:g('selected_plan'), orderId:po.id||'', periodEnd:g('member_period_end') }); return;
     }
     try{
       var r=await post(CONFIG.STATUS);

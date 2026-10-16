@@ -1,10 +1,13 @@
 // Netlify Function：四柱推命ビギナー版のAI鑑定（Gemini）サーバー中継。
 // 目的＝APIキーをブラウザに出さない（フロント直叩きを廃止）。会員ゲートで購読者のみアプリを使える前提のため、
-//       この雛形が持つのは、ボット・暴走対策の“高い天井”（下の PK_MAX_DEVICE_DAY／PK_MAX_IP_DAY）だけ。
-//       規約・料金ページで約束した回数の上限（PRO・ビギナー＝詳細鑑定1日25回／易 EKI Pro＝1日50回・1分15回、
-//       無料期間中は3サイトとも1日3回）のうち、無料期間中の1日3回だけはこの雛形に入っている（会員確認の status が trialing のとき、
-//       会員ごと・日本時間の1日ごとに数え、4回目から 429 {error:{code:'TRIAL_LIMIT'}} を返す。PK_TRIAL_DAY で変更可）。
-//       有料の1日の上限（PRO・ビギナー25回／易50回。PK_PAID_DAY で変更可）も、会員確認ができたときは会員ごと・日本時間の1日ごとに数え、超えたら 429 {error:{code:'DAY_LIMIT'}}。
+//       回数の上限（下の「回数の上限」）と、ボット・暴走対策の“高い天井”（PK_MAX_DEVICE_DAY＝会員確認がない環境だけ／PK_MAX_IP_DAY）を持つ。
+//       規約・料金ページで約束した回数の上限（PRO・ビギナー＝詳細鑑定 ご契約の1か月ごとに750回／易 EKI Pro＝1か月ごとに1,500回・1分15回。
+//       1日の上限はなし。無料期間中は3サイトとも1日3回）は、この雛形に入っている：
+//         無料お試し中（会員確認の status が trialing）… 会員ごと・日本時間の1日ごとに数え、4回目から 429 {error:{code:'TRIAL_LIMIT'}}（PK_TRIAL_DAY で変更可）。
+//         有料（trialing 以外の使える会員）… 会員ごと・ご契約の期間（periodEnd まで）ごとに数え、上限を超えたら 429 {error:{code:'MONTH_LIMIT'}}（PK_PAID_MONTH。既定 750）。
+//           期間は会員確認が返す periodEnd（YYYY-MM-DD＝今の期間の最終日）で区切る（更新日に0回へ戻る）。periodEnd が無い・過ぎているときは日本時間の暦月。
+//         どちらも、答えを返すときヘッダ x-pk-left（残り回数）と x-pk-cap（上限）を付ける。画面はこれで「あと○回」を合わせる。
+//         会員確認が memberId（会員ごとに変わらないID）を返すと、ログインし直しても同じ会員として数える（返さないときはログインの鍵ごと）。
 //       （易の1分15回の連打制限は、本番のサーバーで実装すること＝実装依頼書 §3-5）。
 //       数え方：鑑定1件＝1回。次の目印が付いた呼び出しは、同じ鑑定の続きなので数えない（この雛形の天井でも数えない）。
 //         x-pk-part: detail … PRO・ビギナーの相談1件の2回目（くわしい読み解き）
@@ -19,8 +22,9 @@
 //   任意 GEMINI_MODEL      … LITE（相談・相性）モデル。既定 gemini-2.5-flash（原価を下げたいときだけ gemini-2.5-flash-lite 等に）
 //   任意 GEMINI_MODEL_DEEP … DEEP（自動鑑定レポート）モデル。既定 gemini-2.5-flash（品質重視。pro等へ差替可）
 //   任意 PK_OWNER_TOKEN … 自分専用の合言葉。ヘッダ x-pk-owner が一致した時だけ、天井カウントを完全スキップ（動作確認用）。
-//   任意 PK_MAX_DEVICE_DAY … 端末あたり1日の安全上限（既定 400。純粋なボット対策。通常利用では到達しない）。
-//   任意 PK_MAX_IP_DAY     … 同一IPあたり1日の安全上限（既定 800）。
+//   任意 PK_MAX_DEVICE_DAY … 端末あたり1日の安全上限（既定 400。会員確認がない環境だけのボット対策。会員は1か月の回数で管理し、1日の上限はかけない）。
+//   任意 PK_PAID_MONTH … 有料会員のご契約1か月あたりの回数（既定 PRO・ビギナー750／易1500）。任意 PK_TRIAL_DAY … 無料お試し中の1日の回数（既定 3）。
+//   任意 PK_MAX_IP_DAY     … 同一IPあたり1日の安全上限（既定 800。これも会員確認がない環境だけ）。
 //   任意 PK_PRICE_IN / PK_PRICE_OUT / PK_PRICE_CACHE / PK_FX_JPY … 原価計測の単価（USD/1Mトークン・円レート）。既定はflash相当。
 //        Blobs は Netlify の通常デプロイで自動有効。使えない環境ではフェイルオープン（天井なしで通す）。
 //   自動 URL / DEPLOY_PRIME_URL … Netlify が自動で入れる自サイトのURL。Netlify 以外で動かすときは URL を必ず手で設定する
@@ -44,8 +48,9 @@ const MAX_DEVICE_DAY = parseInt(process.env.PK_MAX_DEVICE_DAY || '400', 10) || 4
 const MAX_IP_DAY = parseInt(process.env.PK_MAX_IP_DAY || '800', 10) || 800;
 // 無料お試し中（status=trialing）の1日の上限（鑑定1件＝1回。続きの2回目・鑑定書の作成は数えない）。3サイト共通で3回（発注者決定 2026-10-16）
 const TRIAL_DAY = parseInt(process.env.PK_TRIAL_DAY || '3', 10) || 3;
-// 有料（trialing 以外の使える会員）の1日の上限（鑑定1件＝1回）。原価で利益65%を守る上限（発注者決定 2026-10-16）
-const PAID_DAY = parseInt(process.env.PK_PAID_DAY || '25', 10) || 25;
+// 有料（trialing 以外の使える会員）の上限＝ご契約の1か月（periodEnd までの期間）ごと。鑑定1件＝1回。1日の上限はなし。
+// 原価で利益65%（手数料・税を引いたあと）を守る回数（発注者決定 2026-10-16）
+const PAID_MONTH = parseInt(process.env.PK_PAID_MONTH || '750', 10) || 750;
 // 最後のユーザーメッセージの上限（字）。自動の詳細鑑定は命式データ全文を渡すため最大約24,300字になる。
 // 12000だと正規の詳細鑑定が413で弾かれオンライン生成できず常にオフラインへ落ちていたので、余裕を持って40000に。
 // （巨大な貼り付け等のボット対策の“天井”は維持。総リクエストサイズは別途 900000字で制限）
@@ -77,7 +82,7 @@ exports.handler = async (event) => {
   // 本番（URL が設定された環境）で会員確認が未設定のままだと、誰でもAPIキーを使えてしまう。設定忘れに気づけるよう、本番では止める。
   // （公開前の確認環境でどうしても会員確認なしで動かすときだけ、PK_ALLOW_NO_MEMBER_CHECK=1 を設定する）
   if (site && !memberCheck && process.env.PK_ALLOW_NO_MEMBER_CHECK !== '1') return json(503, { error: { code: 'SETUP', message: 'サーバー設定が未完了です（MEMBER_CHECK_URL 未設定）' } });
-  let memberKey = '', memberStatus = '';
+  let memberKey = '', memberStatus = '', memberPeriodEnd = '';
   if (memberCheck) {
     const hh = lower(event.headers || {});
     const tk = clean(String(hh['authorization'] || '').replace(/^Bearer\s+/i, ''));
@@ -90,6 +95,9 @@ exports.handler = async (event) => {
       const m = await r.json();
       const st = m && m.status, pe = m && m.periodEnd;
       memberStatus = st || '';
+      memberPeriodEnd = /^\d{4}-\d{2}-\d{2}$/.test(String(pe || '')) ? String(pe) : '';
+      // 会員ごとに変わらないID（memberId）を返してくれる場合は、それで数える（ログインし直しても回数が戻らない）
+      if (m && m.memberId) memberKey = 'u' + require('crypto').createHash('sha256').update(String(m.memberId)).digest('hex').slice(0, 24);
       const usable = st === 'active' || st === 'trialing' || ((st === 'canceled' || st === 'canceling') && pe ? Date.parse(pe + 'T23:59:59+09:00') > Date.now() : st === 'canceling');   // 解約した人は最終日（日本時間23:59:59）まで
       if (!m || !m.ok || !usable) return json(403, { error: { code: 'MEMBER', message: 'ご利用いただけない状態です' } });
     } catch (e) {
@@ -125,15 +133,20 @@ exports.handler = async (event) => {
   // 安全天井（回数制限ではなく、ボット・暴走対策のみ）。Blobs 不可ならフェイルオープン
   const store = await getStore();
   let degraded = false;
+  const isPaid = !!memberStatus && memberStatus !== 'trialing';
+  const monthKey = `mo:${periodId(memberPeriodEnd)}:${device}`;
+  let dCount = 0, mCount = 0;
   if (store && !isOwner) {
     try {
-      const dCount = await readCount(store, `d:${day}:${device}`);
+      dCount = await readCount(store, `d:${day}:${device}`);
       const ipCount = await readCount(store, `i:${day}:${ip}`);
-      if (dCount >= MAX_DEVICE_DAY) return json(429, { error: { code: 'BUSY', message: 'アクセスが集中しています。時間をおいて再度お試しください。' } });
-      if (ipCount >= MAX_IP_DAY) return json(429, { error: { code: 'BUSY', message: 'アクセスが集中しています。時間をおいて再度お試しください。' } });
+      // 端末・IPあたり1日の安全天井（ボット対策）は、会員確認がない環境だけ。会員は下の回数で管理する（1日の上限はなし）
+      if (!memberStatus && dCount >= MAX_DEVICE_DAY) return json(429, { error: { code: 'BUSY', message: 'アクセスが集中しています。時間をおいて再度お試しください。' } });
+      if (!memberStatus && ipCount >= MAX_IP_DAY) return json(429, { error: { code: 'BUSY', message: 'アクセスが集中しています。時間をおいて再度お試しください。' } });
+      // 有料：ご契約の1か月ごとの回数（更新日に戻る）
+      if (isPaid) { mCount = await readCount(store, monthKey); if (!noCount && mCount >= PAID_MONTH) return json(429, { error: { code: 'MONTH_LIMIT', message: '今月のご利用回数（' + PAID_MONTH + '回）を使い切りました。次の更新日からまたご利用いただけます。' } }, { 'x-pk-left': '0', 'x-pk-cap': String(PAID_MONTH) }); }
       // 無料お試し中は1日3回まで（会員ごと。日本時間の0時に戻る）
-      if (memberStatus && memberStatus !== 'trialing' && !noCount && dCount >= PAID_DAY) return json(429, { error: { code: 'DAY_LIMIT', message: '本日のご利用は1日' + PAID_DAY + '回までです。明日（日本時間の0時から）またご利用いただけます。' } });
-      if (memberStatus === 'trialing' && !noCount && dCount >= TRIAL_DAY) return json(429, { error: { code: 'TRIAL_LIMIT', message: '無料お試し中のご利用は1日' + TRIAL_DAY + '回までです。明日（日本時間の0時から）またご利用いただけます。' } });
+      if (memberStatus === 'trialing' && !noCount && dCount >= TRIAL_DAY) return json(429, { error: { code: 'TRIAL_LIMIT', message: '無料お試し中のご利用は1日' + TRIAL_DAY + '回までです。明日（日本時間の0時から）またご利用いただけます。' } }, { 'x-pk-left': '0', 'x-pk-cap': String(TRIAL_DAY) });
     } catch (e) { degraded = true; }
   } else if (!store) { degraded = true; }
 
@@ -175,7 +188,12 @@ exports.handler = async (event) => {
       } catch (e) {}
     }
     if (answered && store && !degraded && !isOwner && !noCount) {
-      try { await bump(store, `d:${day}:${device}`); await bump(store, `i:${day}:${ip}`); } catch (e) {}
+      try { dCount = await bump(store, `d:${day}:${device}`); await bump(store, `i:${day}:${ip}`); if (isPaid) mCount = await bump(store, monthKey); } catch (e) {}
+    }
+    // 残り回数を画面に伝える（画面の「あと○回」をサーバーの数に合わせる）
+    if (answered && store && !degraded && !isOwner) {
+      if (isPaid) { resp.headers['x-pk-left'] = String(Math.max(0, PAID_MONTH - mCount)); resp.headers['x-pk-cap'] = String(PAID_MONTH); }
+      else if (memberStatus === 'trialing') { resp.headers['x-pk-left'] = String(Math.max(0, TRIAL_DAY - dCount)); resp.headers['x-pk-cap'] = String(TRIAL_DAY); }
     }
     if (!r.ok) { try { console.error('[pro-gemini] upstream not-ok:', r.status, model, String(text).slice(0, 200)); } catch (e) {} }
     return resp;
@@ -235,11 +253,13 @@ function usageYen(u) {
 async function readCount(store, k) { const v = await store.get(k, { type: 'json' }).catch(() => null); return (v && typeof v.n === 'number') ? v.n : 0; }
 async function bump(store, k) { const cur = await readCount(store, k); await store.setJSON(k, { n: cur + 1, t: Date.now() }); return cur + 1; }
 async function getStore() { try { const { getStore } = require('@netlify/blobs'); return getStore('pro-usage'); } catch (e) { return null; } }
+// 有料の回数を区切る期間：periodEnd（今の期間の最終日）が今日以降ならそれ、無い・過ぎているときは日本時間の暦月
+function periodId(pe) { const today = jstDay(); return (pe && pe >= today) ? pe : 'm' + today.slice(0, 7); }
 function jstDay() { const d = new Date(Date.now() + 9 * 3600 * 1000); return d.toISOString().slice(0, 10); }
 function lower(o) { const r = {}; for (const k in o) r[k.toLowerCase()] = o[k]; return r; }
 function clean(s) { return (s == null ? '' : String(s)).replace(/[\r\n]/g, '').slice(0, 200); }
 function baseHeaders(degraded) { const x = { 'Content-Type': 'application/json' }; if (degraded) x['x-pk-ratelimit'] = 'degraded'; return x; }
-function json(statusCode, obj) { return { statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) }; }
+function json(statusCode, obj, extra) { return { statusCode, headers: Object.assign({ 'Content-Type': 'application/json' }, extra || {}), body: JSON.stringify(obj) }; }
 
 // ---- テスト用エクスポート（本番動作には影響しない） ----
-module.exports.__test = { readCount, bump, hasAnswerText, isRegionBlock, jstDay, readUsage, usageYen, buildBody };
+module.exports.__test = { readCount, bump, hasAnswerText, isRegionBlock, jstDay, periodId, readUsage, usageYen, buildBody };
