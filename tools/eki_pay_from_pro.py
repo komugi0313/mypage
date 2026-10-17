@@ -63,7 +63,7 @@ s = (PRO / 'pricing-pro.html').read_text(encoding='utf-8')
 s = head(s, 'お申し込み｜易 EKI Pro'); s = theme(links(s))
 s = rep(s, '<span class="badge">経験を、もっと速く・深く。</span>', '<span class="badge">勉強いらずで、易の鑑定を。</span>', 1)
 s = rep(s, '<br>本格鑑定を、はじめる。</h1>', '<br>易の鑑定を、はじめる。</h1>', 1)
-s = rep(s, '<span class="desc">いつでも解約できます</span>', '<span class="desc">追加料金なし・いつでも解約OK</span>', 1)
+s = rep(s, '<span class="nm">月額プラン</span></span>', '<span class="nm">月額プラン</span><span class="desc">追加料金なし・いつでも解約OK</span></span>', 1)   # PRO・ビギナーは説明文なし（2026-10-17）。易だけ表示
 s = rep(s, '※ 本サービスは四柱推命にもとづく自己理解・エンターテインメントを目的としたものです。', '※ 本ツールは占いを目的としたものです。', 1)
 # （PRO側のログインのリンクは auth.html になったので、そのまま写る）
 s = rep(s, "var ORDER_PREFIX='P';", "var ORDER_PREFIX='E';", 1)
