@@ -24,11 +24,11 @@
 
 | # | 内容 | 場所 |
 |---|---|---|
-| 1 | `var PREVIEW_MODE = true;` → **`false`** | `pro/app-pro.html` 747行 |
+| 1 | `var PREVIEW_MODE = true;` → **`false`** | `pro/app-pro.html` 761行 |
 | 2 | `STUB: !/(^\|\.)(72k\.ai\|suimei\.jp\|ekipro\.jp)$/i.test(location.hostname)` → **`STUB: false`** | `pro/auth.html` 230行・`pro/mypage-pro.html` 191行・`pro/pricing-pro.html` 379行（`TRIAL_CHECK`）・491行（`FIX`） |
 | 3 | 決済ページURL `TELECOM_PAYMENT_URL={ month:'' }`・`TELECOM_PARAM`（`ORDER_PREFIX='P'` はそのまま） | `pro/pricing-pro.html` 349〜351行 |
-| 4 | テスト用キー欄 `<details id="gtest-wrap">` をブロックごと削除、`?gtest=1` で表示する1行、テスト用キーを読む1行（`geminiKey='';` に固定でも可） | `pro/app-pro.html` 1006行・8109行・8103行 |
-| 5 | `DEMO_MODE` は `false` のまま | `pro/app-pro.html` 744行 |
+| 4 | テスト用キー欄 `<details id="gtest-wrap">` をブロックごと削除、`?gtest=1` で表示する1行、テスト用キーを読む1行（`geminiKey='';` に固定でも可） | `pro/app-pro.html` 1021行・8236行・8230行 |
+| 5 | `DEMO_MODE` は `false` のまま | `pro/app-pro.html` 758行 |
 | 6 | サーバー中継 `pro/functions/gemini.js` の環境変数（`GEMINI_API_KEY`・`MEMBER_CHECK_URL` ほか） | 共通仕様 §5 |
 | 7 | 変えたら `pro/sw.js` の `CACHE` を1つ上げる | `pro/sw.js` 6行 |
 
