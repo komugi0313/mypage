@@ -1215,14 +1215,14 @@ function ekiSyncUsage(u){ if(!u) return; try{ if(isTrialMember()){ if(typeof u.u
   else if(typeof u.paused==='boolean'){ if(u.paused) localStorage.setItem(ekiStopKey(),'1'); else localStorage.removeItem(ekiStopKey()); } }catch(e){} try{ ekiLeftLine(); }catch(e){} }
 function trialReached(){ return isTrialMember() && trialCount() >= TRIAL_DAILY_LIMIT; }
 function paidReached(){ if(isTrialMember()) return false; try{ return localStorage.getItem(ekiStopKey())==='1'; }catch(e){ return false; } }   // 有料：今月お休み中
-function ekiPaidNote(){ return '今月のオンライン鑑定が、月額料金でまかなえる範囲に達しました（ふつうのご利用では届かない量です）。'+(ekiEnding()?'':ekiResetLabel()+'の更新日までは、')+'オフライン鑑定（内蔵データで作成）で、そのまま鑑定を続けられます。顧客管理・印刷もいつもどおり使えます'; }
+function ekiPaidNote(){ return '今月の利用枠を使い切りました。'+(ekiEnding()?'':ekiResetLabel()+'の更新日までは、')+'オフライン鑑定で、そのまま鑑定を続けられます'; }
 function trialReset(){ try{ localStorage.removeItem(trialDayKey()); localStorage.removeItem(ekiStopKey()); }catch(e){} try{ ekiLeftLine(); }catch(e){} }
 /* 「鑑定する」ボタンの下のお知らせ：無料お試し中は今日の回数、有料は「今月お休み中」のときだけ（ふだんは何も出さない） */
 function ekiLeftLine(){
   const el=document.getElementById('ekiLeft'); if(!el) return;
   if(!ekiIsMember()||(!isTrialMember()&&!paidReached())){ el.style.display='none'; el.innerHTML=''; return; }
   const S='<span style="display:inline-block">', Rd='<span style="display:inline-block;color:#B4471F">', E='</span>';
-  if(!isTrialMember()){ el.innerHTML=Rd+'今月はオフライン鑑定（内蔵データで作成）で'+E+Rd+'鑑定を続けられます。'+E+(ekiEnding()?'':S+'（オンラインは'+ekiResetLabel()+'の更新日から再開）'+E); el.style.display='block'; return; }
+  if(!isTrialMember()){ el.innerHTML=S+'今月はオフライン鑑定で続けられます。'+E+(ekiEnding()?'':S+'（'+ekiResetLabel()+'の更新日に元に戻ります）'+E); el.style.display='block'; return; }
   const left=Math.max(0,TRIAL_DAILY_LIMIT-trialCount());
   const rule='<div style="font-size:11.5px;font-weight:700;color:#6B5A4C;margin-top:2px">'+S+'数え方：'+E+S+'鑑定1件・追加のご相談1問＝1回'+E+S+'（鑑定書の作成は数えません）'+E+'</div>';
   const h=!ekiSrv()?S+'無料お試し中：オンライン鑑定は'+E+S+'1日3回まで'+E+S+'（明日0時に戻ります）'+E   // サーバーの数をまだ受け取っていない：決まりだけ
@@ -1847,7 +1847,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
     }
     if(!forceOffline && paidReached()){
       LM.textContent=t('load_offline');
-      setTimeout(()=>{ goOffline('今月はオフライン鑑定（内蔵データで作成）で鑑定しました。'+(ekiEnding()?'':'オンラインは'+ekiResetLabel()+'の更新日から再開します')); },350);
+      setTimeout(()=>{ goOffline('今月の利用枠を使い切ったため、オフライン鑑定で鑑定しました'); },350);
       return;
     }
     if(forceOffline){
@@ -1888,7 +1888,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
         return;
       }
       // Geminiが不調 → 内蔵データへ自動フォールバック（ログイン切れ・契約状態は、その理由をそのまま知らせる）
-      goOffline((e&&/ログイン|ご契約|使い切|上限|まかなえる|お休み/.test(e.message||''))?('内蔵データで鑑定しました。'+e.message):t('off_error'));
+      goOffline((e&&/ログイン|ご契約|使い切|上限|まかなえる|お休み|利用枠/.test(e.message||''))?('内蔵データで鑑定しました。'+e.message):t('off_error'));
     }
   }
   function markOffline(reason,online){
@@ -2294,7 +2294,7 @@ ${hist?('これまでのやりとり：\n'+hist+'\n'):''}相談者の新しい�
     }
     if(paidReached()){
       cur.chat=cur.chat||[]; cur.chat.push({role:'user',text:q}); renderChat(); el.value='';
-      cur.chat.push({role:'ai',text:'🌙 '+ekiPaidNote()+'（追加のご相談はオンラインのみのため、それまでお休みです）。'}); renderChat();
+      cur.chat.push({role:'ai',text:'🌙 今月の利用枠を使い切りました。追加のご相談は'+(ekiEnding()?'':ekiResetLabel()+'の更新日から')+'また使えます。鑑定はオフライン鑑定でそのまま続けられます。'}); renderChat();
       return;
     }
     cur.chat=cur.chat||[]; cur.chat.push({role:'user',text:q}); renderChat(); el.value='';
@@ -2311,7 +2311,7 @@ ${hist?('これまでのやりとり：\n'+hist+'\n'):''}相談者の新しい�
       // 失敗のほとんどは通信・混雑。言い回しのせいにせず、入力した文は欄に戻す
       if(cur.last!==mine||cur.chat!==chat){ think.remove(); return; }
       el.value=q;
-      const _am=(e&&/ログイン|ご契約|使い切|上限|まかなえる|お休み/.test(e.message||''))?e.message+'（ご相談の文は入力欄に戻してあります）':'いま、つながりにくいようです。通信の状態を確かめて、少し時間をおいてから、もう一度「相談する」を押してください。（ご相談の文は入力欄に戻してあります）';
+      const _am=(e&&/ログイン|ご契約|使い切|上限|まかなえる|お休み|利用枠/.test(e.message||''))?e.message+'（ご相談の文は入力欄に戻してあります）':'いま、つながりにくいようです。通信の状態を確かめて、少し時間をおいてから、もう一度「相談する」を押してください。（ご相談の文は入力欄に戻してあります）';
       cur.chat.push({role:'ai',text:_am}); renderChat();
     }finally{ btn.disabled=false; }
   }
