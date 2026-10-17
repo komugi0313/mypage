@@ -465,11 +465,20 @@ diff -uN a/daily-engine.js b/daily-engine.js
  function dayRawScore(youStem, youBranch, tt, favSet, imiSet){
    var js=juushin(youStem, tt.stem);
    var s=(GRADE_BASE[js]!==undefined?GRADE_BASE[js]:0);
-@@ -472,12 +537,13 @@
+@@ -461,7 +526,7 @@
+   for(var i=0;i<60;i++){ var d=new Date(2020,0,1+i); arr.push(dayRawScore(youStem,youBranch,pillar(d.getFullYear(),d.getMonth()+1,d.getDate()),favSet,imiSet)); }
+   arr.sort(function(a,b){return a-b;});
+   var q=function(pp){return arr[Math.min(59,Math.floor(pp*60))];};
+-  return (_GRADE_TH[key]={maru:q(0.72),tri:q(0.15)});
++  return (_GRADE_TH[key]={maru:q(0.72),tri:q(0.15),min:arr[0],max:arr[59]});
+ }
+ /* 統一グレード（案C：💮はレア＝全員一律／恋の底上げは正直版）
+    ・🌈(運命の人)＝無条件💮
+@@ -472,19 +537,28 @@
    var th=gradeThresholds(you.stem, you.branch, favSet, imiSet);
    var s=dayRawScore(you.stem, you.branch, tt, favSet, imiSet);
    if(ymd) s+=ymAdjust(ymd.y, ymd.m, ymd.d, favSet, imiSet, STEM_GOGYO[you.stem]);   // 流年・流月の補正（日付を渡した時のみ）
-+  if(isTensen(you, tt)) return {sym:'△', idx:45, tensen:true};   // 天戦地冲の日は、天気・カレンダーとも一番下（にわか雨のち晴れ・△）にそろえる
++  if(isTensen(you, tt)) return {sym:'△', idx:60, widx:45, tensen:true};   // 天戦地冲の日は、天気・カレンダーとも一番下（にわか雨のち晴れ・△）にそろえる
    var sok=(CLASH.indexOf(branchRel(tt.branch, you.branch))>=0);
    var love=(touka||enlv===2);
    var sym;
@@ -480,7 +489,25 @@ diff -uN a/daily-engine.js b/daily-engine.js
    else if(love && !sok && s>th.tri) sym='◎';             // 恋の合図(非沖・中位以上)は底上げ◎
    else if(s<=th.tri) sym='△';                            // 下位15%は正直に△
    else sym='〇';
-@@ -498,9 +564,47 @@
+   // 恋の合図日(モテ運/恋チャンス)は、たとえ△でも天気は“くもり”以上に留める（にわか雨まで落とさない）。
+-  var triIdx = (sok && !love) ? 45 : 55;
+-  var idx = sym==='💮'?96 : sym==='◎'?84 : sym==='〇'?68 : triIdx;
+-  return {sym:sym, idx:idx};
++  // 10/17 オーナー決定：同じ印の日でも、その日の巡りの強さに合わせて点数を少しずつ変える（印・天気・カレンダーは今までと同じ）
++  //   💮 95〜99（🌈は100）／◎ 85〜94／〇 75〜84／△ 65〜74（注意の日に重なる△は 60〜64、天戦地冲は60）。60点未満は出さない（10/17 オーナー「いつも60点台だとげんなり」）
++  //   天気は点数ではなく印で決める（widx：前と同じ天気になるよう、前の固定点を残す）
++  var _lp=function(a,b,lo,hi){ if(!(hi>lo)) return a; var r=(s-lo)/(hi-lo); r=r<0?0:(r>1?1:r); return Math.round(a+(b-a)*r); };
++  var idx, widx;
++  if(sym==='💮'){ idx=_lp(95,99,th.maru,th.max); widx=96; }
++  else if(sym==='◎'){ idx=(s>=th.maru)?_lp(88,94,th.maru,th.max):_lp(85,87,th.tri,th.maru); widx=84; }
++  else if(sym==='〇'){ idx=_lp(75,84,th.tri,th.max); widx=68; }
++  else if(sok && !love){ idx=_lp(60,64,th.min,th.tri); widx=45; }
++  else { idx=_lp(65,74,th.min,th.tri); widx=55; }
++  return {sym:sym, idx:idx, widx:widx};
+ }
+ const LOVE_ADVICE={
+   比肩:"今日は自分の気持ちに正直に。無理に相手へ合わせるより、自然体のあなたがいちばん魅力的です。",
+@@ -498,9 +572,47 @@
    偏印:"今日は直感を信じて。ふと気になった相手やお誘いに、良い縁が隠れているかも。",
    印綬:"今日は焦らず育てる恋の日。すぐ結果を求めず、ゆっくり距離を縮めて。"
  };
@@ -529,7 +556,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
    劫財:["恋の話を友人にすると、気持ちが整理できる日。","みんなでいる場から、恋のきっかけが生まれやすい日。","勢いで動ける日。気になる人には一歩踏み出して。","仲間の紹介に、良いご縁が隠れている日。","にぎやかな場であなたの人柄が伝わる日。","張り合うより、素直に甘えるほうが可愛げが出る日。"],
    食神:["笑顔と“好き”が、まっすぐ伝わる日。","楽しい雰囲気が恋の味方。おいしいものを一緒に。","気取らない自然な会話が、距離を縮める日。","一緒に笑える相手との時間が、恋を育てる日。","素直な気持ちを、今日はそのまま言葉に。","おしゃれや食事を楽しむ姿に、惹かれる人がいそう。"],
    傷官:["言葉選びをやわらかく。それだけで恋がうまく運ぶ日。","センスや感性が、あなたの魅力になる日。","ストレートより、ひとひねりの表現が効く日。","相手の良いところを言葉にすると、ぐっと近づく日。","気の利いたひと言が、印象に残る日。","繊細な気づかいが、相手の心を動かす日。"],
-@@ -516,22 +620,22 @@
+@@ -516,22 +628,22 @@
    single:["今日は自分から動くと吉。","今日は新しい場所に足を運ぶと吉。","今日は笑顔を意識してみて。","今日は聞き役に回ると◎。","今日はひとこと連絡を送ってみて。","今日は身だしなみを整えると吉。","今日は気になる人に声をかけてみて。","今日は共通の話題を探してみて。","今日は人の集まる場所へ出かけて。","今日は素直な気持ちを大切に。","今日は自分磨きに時間を使って。","今日はSNSのひとことを添えて。","今日はいつもと違う道を歩いてみて。","今日は誘いに前向きに乗ってみて。","今日は明るいあいさつを心がけて。","今日は相手の良いところをほめてみて。","今日はさりげない気づかいをひとつ。","今日は自分の予定も大切にして。","今日はお礼をていねいに伝えて。","今日はタイプ外の人にも目を向けて。"],
    crush:["今日は自分から連絡してみて。","今日は相手のペースを尊重して。","今日は共通の話題を振ってみて。","今日はさりげない気づかいをひとつ。","今日は会う口実を作ってみて。","今日は聞き役に徹してみて。","今日は追いすぎず余白を残して。","今日は笑顔とリアクション大きめで。","今日は連絡のテンポを意識して。","今日は素直なひとことを添えて。","今日は相手の変化に気づいてみて。","今日は「また今度」で次を残して。","今日は自分の時間も大切にして。","今日はお礼をていねいに。","今日は相手の好きなものを覚えておいて。","今日は焦らず自然体で。","今日は小さな「ありがとう」を伝えて。","今日は既読を焦らないで。","今日は相手の話をよく聞いて。","今日はまっすぐ気持ちを向けて。"],
    partner:["今日は「ありがとう」を言葉にして。","今日は一緒の時間を大切に。","今日は小さなサプライズをひとつ。","今日は相手の話をじっくり聞いて。","今日はやわらかい言い方を意識して。","今日はデートの提案をしてみて。","今日はねぎらいの言葉をかけて。","今日は素直な気持ちを伝えて。","今日は一緒に笑う時間を持って。","今日はさりげないスキンシップを。","今日は相手の時間も尊重して。","今日は思い出を振り返ってみて。","今日は小さな約束を守って。","今日は笑顔で送り出して。","今日は好物をひとつ用意して。","今日は言いそびれた言葉を伝えて。","今日は感謝をたっぷり伝えて。","今日はふたりの予定を立ててみて。","今日は相手の良いところに気づいて。","今日はやさしい一言を添えて。"],
@@ -557,7 +584,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  // 本人にとって「忌」なら、その分野の“良い印”は出さない（本人には消耗日で、出すと誤誘導になるため）。
  // favMap は PersonBazi().fav（五行→'喜'/'忌'/'中庸'）。命式が無い(null)ときは true＝従来どおり全部出す（安全側）。
  function domainFavOk(favMap, dayStem){
-@@ -552,6 +656,229 @@
+@@ -552,6 +664,229 @@
   *  保証：バンク件数(len)日間は同じ値が絶対に出ない（len≥7なら1週間内の重複ゼロ）。
   *  ub=個人だけのシード（日付を含まない）。順序も開始位置も個人ごとに違うので、他人と同じ並びにならない。
   *  決定的（同じ入力→同じ結果）なので、メールとカレンダー・デモ画面の一致もそのまま保たれる。 */
@@ -787,7 +814,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  function pickSeq(ub, salt, len, dayn){
    if(!len) return 0;
    if(len===1) return 0;
-@@ -614,16 +941,16 @@
+@@ -614,16 +949,16 @@
        '“家庭を大切にするあなた”へ。今日のご家族との運気を、そっとお伝えします。',
        '“家庭を大切にするあなた”へ。今日はどんな一日になるか、のぞいてみましょう。'],
      work:[
@@ -809,7 +836,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
    };
    var REL_TAILS=[
      '今日の運気の動きを、そっとお届けします。','今日のあなたの運勢を、お届けします。',
-@@ -631,7 +958,7 @@
+@@ -631,7 +966,7 @@
      '今日のあなたに動く運を、お届けします。','今日の過ごし方のヒントを、お届けします。',
      '今日の運勢を、朝いちばんにお届けします。','今日の運気を、いっしょに味方にしていきましょう。',
      '今日という日の運勢を、お伝えします。','今日も良い一日になるヒントを、お届けします。',
@@ -818,7 +845,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      '今日のあなたに効く、開運のヒントをお届けします。','今日の空模様（運勢）を、そっとのぞいてみましょう。',
      '今日のあなたへ、朝いちばんの運気だよりです。','今日の一日が良くなるコツを、お届けします。',
      '今日の運気とラッキーを、まとめてお伝えします。','今日のあなたの一日を、そっと応援します。'
-@@ -639,14 +966,14 @@
+@@ -639,14 +974,14 @@
    var EN_TAG_BY_REL={
      married:{3:'縁が深まる日',2:'縁が動く日',1:'準備の日'},
      partner:{3:'縁が深まる日',2:'縁が動く日',1:'おだやかな日'},
@@ -839,7 +866,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
    };
    // 締めの言葉は関係タイプごとに4種。毎日同じにならないよう、その人×その日で日替わりに選ぶ。
    var CLOSE_WORD={
-@@ -703,29 +1030,19 @@
+@@ -703,29 +1038,19 @@
      '今日の運気の動きを、','今日のあなたの運勢を、','今日の縁の巡りを、','今日の過ごし方のヒントを、',
      '今日の運気とご縁を、','今日のあなたに動く運を、','今日の空模様（運勢）を、','今日の開運のヒントを、',
      '今日の一日の流れを、','今日のあなたの運の巡りを、','今日のラッキーと運勢を、','今日の縁と運気を、',
@@ -876,7 +903,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  
    /* ===== 日運の“完成データ”を返す（メール配信サーバの正式契約。DOMなし・決定論・命式は任意） =====
       入力: birth={y,m,d} / dateJST={y,m,d}（省略時はJST今日） /
-@@ -736,11 +1053,18 @@
+@@ -736,11 +1061,18 @@
    function generateDaily(birth, dateJST, opts){
      opts = opts || {};
      var rel = opts.rel || 'single';
@@ -897,7 +924,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  
      var you=pillar(by,bm,bd), p=partner(you.stem,you.branch), t=pillar(Y,M,D);
      var br=branchRel(t.branch, you.branch);
-@@ -755,7 +1079,7 @@
+@@ -755,7 +1087,7 @@
          imiSet=_ES.filter(function(e){return _prof.fav[e]==='忌';}); }
      }
      var god=juushin(you.stem, t.stem), g=TENGOD[god];
@@ -906,7 +933,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var lw=(g.w!=null)?g.w:(sex==='f'?g.wF:g.wM);
      var seed=jdn(Y,M,D), gv=seed;
      // 今日の月相（誰でも同じ＝天文）。単純な平均朔望月だと実際の満月/新月と最大1日ずれるため、
-@@ -780,11 +1104,41 @@
+@@ -780,11 +1112,41 @@
      var _gm=(g.msg!=null)?g.msg:(sex==='f'?g.msgF:g.msgM);
      // メッセージは日付だけの seed%len だと同じ十神の人が全員同じ・かつ10日ごとに近い並びで戻るため、
      // 個人シード×その日で選ぶ。10日後に軸が巡ってきても文面が変わり、1ヶ月は被りにくい。
@@ -949,7 +976,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
  
      var dayElem=STEM_GOGYO[t.stem], myElem=STEM_GOGYO[you.stem];
      var motherOf={}; for(var k in SHENG){ motherOf[SHENG[k]]=k; }
-@@ -821,25 +1175,39 @@
+@@ -821,25 +1183,39 @@
      // ubase＝日付を含まない“個人だけ”のシード。pickSeq（巡回方式）用：
      // 文言バンクを個人固有の順序で1日1つずつ巡回＝バンク件数の日数は同じ文言が絶対に出ない（重複頻発の防止）。
      var ubase = pseed - seed;
@@ -1004,7 +1031,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var sp=SPOT[fe];
      // 方角は五行(fe)由来だと同じ日に多くの人が同一方位（例：金→西）に偏るため、
      // 毎日メールでは「個人シード×その日」で8方位に散らし、人ごと・日ごとにばらける形にする。
-@@ -848,13 +1216,23 @@
+@@ -848,13 +1224,23 @@
      // ラッキースポットは個人シードのハッシュ(pickIdx)でバンク全体に分散（年間の実効＝fe種数×バンク数）。
      // ご縁の場所(spotNat2/City2)は ラッキースポット(spotNature/City) からバンク半周ずらして導出し、
      // 同じ日に同じ場所が両欄に出る“衝突”を構造的に防ぐ（半周のオフセットは0にならない＝必ず別の場所）。
@@ -1034,7 +1061,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var lnum=NUM[fe][pickRand(ubase,79,NUM[fe].length,seed)];
      var ptype=PTYPE[fe];
  
-@@ -864,12 +1242,15 @@
+@@ -864,12 +1250,15 @@
      var _pool=function(a,b){return (a||[]).concat(b||[]);};
      var _occ=Math.floor(seed/10);
      var fPool=_pool(TAIJIN[you.stem]&&TAIJIN[you.stem][god], FRIEND[god]);
@@ -1054,7 +1081,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      // その色の服を持っていない人向けに「小物・アクセサリーで取り入れてもOK」の一言を毎回そえる。
      var _wnotes=[
        '（{C}の服がなくても、{C}のアクセサリーやバッグなど小物で取り入れれば◎）',
-@@ -878,11 +1259,34 @@
+@@ -878,11 +1267,34 @@
        '（{C}の服がなくても大丈夫。{C}のハンカチやアクセサリーなど、小物でひと足しを）'
      ];
      var _wn=_wnotes[pickSeq(ubase,80,_wnotes.length,seed)].replace(/\{C\}/g, lucky.color);
@@ -1094,7 +1121,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var loveSet=(sex==='m')?LOVE_M:LOVE_F;
      var lf=(loveSet[you.stem]&&loveSet[you.stem][god])||[];
      var love='';
-@@ -894,36 +1298,99 @@
+@@ -894,36 +1306,99 @@
        // 同じ日干どうしで文面が丸かぶりしにくいよう、生まれ日の地支もシードに混ぜて分散させる。
        var _cc=_lc[pickSeq(ubase+you.branch.charCodeAt(0)*7,57,_lc.length,_occ)];
        love=lf[_cc[0]]+lf[_cc[1]];
@@ -1144,8 +1171,9 @@ diff -uN a/daily-engine.js b/daily-engine.js
 +    var _lmE2=_lmE.filter(function(x){ return !_LMKW.some(function(k){ return _lmS.indexOf(k)>=0 && x.indexOf(k)>=0; }); });
 +    var loveMove=_lmS+P(_lmE2.length?_lmE2:_lmE,86,seed);
  
-     var w=weather(idx);
+-    var w=weather(idx);
 -    var _wob=WOBS[w.name]||WOBS['晴れ時々くもり'], wmsg=_wob[pickSeq(ubase,59,_wob.length,seed)]+ADV_SHARED[pickSeq(ubase,88,ADV_SHARED.length,seed)];
++    var w=weather(en.lv===3?100:(_grade.widx!=null?_grade.widx:idx));   // 10/17：天気は印で決める（点数の幅を変えても天気は前と同じ）
 +    var _advL=_C(ADV_SHARED);   // 10/15
 +    var _wob=_C(WOBS[w.name]||WOBS['晴れ時々くもり']), wmsg=P(_wob,59,seed)+P(_advL,88,seed);
  
@@ -1182,7 +1210,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
 +    var _paired=(rel==='partner'||rel==='married');
 +    if(en.lv===3) special={type:'unmei', label:_paired?'絆が深まる日':'ご縁がいちばん高まる日', text:(function(a){ return a[useed%a.length]; })(ctxList(_paired?SPECIAL_UNMEI_PAIR:SPECIAL_UNMEI,_cx))};
 +    else if(touka) special={type:'touka', label:_paired?'愛され運の日':'出会い・モテ運の日', text:(function(a){ return a[useed%a.length]; })(ctxList(_paired?SPECIAL_TOUKA_PAIR:SPECIAL_TOUKA,_cx))};
-+    else if(idx>=95) special={type:'kaisei', label:'縁・快晴', text:(function(a){ return a[useed%a.length]; })(ctxList(SPECIAL_KAISEI,_cx))};
++    else if((_grade.widx!=null?_grade.widx:idx)>=95) special={type:'kaisei', label:'縁・快晴', text:(function(a){ return a[useed%a.length]; })(ctxList(SPECIAL_KAISEI,_cx))};
  
      var wd=['日','月','火','水','木','金','土'][new Date(Y,M-1,D).getDay()];
      var themeAxis=THEME_AXIS[god]||{ax:meanP,lines:['']};
@@ -1204,7 +1232,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
      var feFood=FEFOOD[fe];
  
      // 関心に合わせた“今日の注目テーマ”（登録の関心→主役の運を先頭で強調）。関心なし/未対応はnull
-@@ -934,47 +1401,70 @@
+@@ -934,47 +1409,70 @@
      }
  
      // ===== 件名（メールのタイトル）＝開封率のカギ。毎日ちがう“開けたくなる”件名を作る。
@@ -1291,7 +1319,13 @@ diff -uN a/daily-engine.js b/daily-engine.js
      return {
        version:'daily-1.0.0',
        subject:subject,
-@@ -991,7 +1481,9 @@
+@@ -986,12 +1484,14 @@
+       relIntro:(REL_PREFIX[rel]||REL_PREFIX.single)+RI_OPEN[pickSeq(ubase,76,RI_OPEN.length,seed)]+RI_CLOSE[pickSeq(ubase,83,RI_CLOSE.length,seed)],
+       pillars:{you:you, partner:p, today:t},
+       index:idx, weather:{icon:w.ic, name:w.name}, weatherMsg:wmsg,
+-      grade:{sym:_grade.sym, label:(GRADE_LABEL[_grade.sym]||'')},
++      grade:{sym:_grade.sym, label:(GRADE_LABEL[_grade.sym]||''), widx:(en.lv===3?100:_grade.widx)},
+       theme:{god:god, mean:meanP, axis:themeAxis.ax, line:themeLine, message:godMsg},
        en:{lv:en.lv, tag:enTag, body:enBody},
        love:love, loveMove:loveMove,
        touka:touka, special:special,
@@ -1302,7 +1336,7 @@ diff -uN a/daily-engine.js b/daily-engine.js
        element:{day:dayElem, mine:myElem, supplement:fe, reason:feReason, feFood:feFood},
        bazi:favInfo,
        lucky:{color:lucky.color, hex:lucky.hex, direction:ldir, food:food, number:lnum,
-@@ -1000,29 +1492,109 @@
+@@ -1000,29 +1500,109 @@
        place:{direction:enDir, nature:spotNat2, city:spotCity2},
        fortunes:{friend:friend, work:work, money:money, health:health, study:study},
        focus:focus,
@@ -3466,7 +3500,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    const useed=(jdn(Y,M,D)+(Math.imul((by*10000+bm*100+bd),2654435761)>>>0)); // 文言用の個人シード：生年月日で分散＝コピペ回避（骨格＝指数/天気/テーマ/縁Lv/五行は you×today で不変）
    if(!$("rel").value){var _re=$("rel");if(_re&&_re.scrollIntoView)_re.scrollIntoView({behavior:"smooth",block:"center"});alert("「あなたの今について」を選択してください。");return;}
    const you=pillar(by,bm,bd), p=partner(you.stem,you.branch), t=pillar(Y,M,D);
-@@ -511,33 +572,38 @@
+@@ -511,39 +572,45 @@
    const god=juushin(you.stem,t.stem), g=TENGOD[god];
    const meanP=g.mean.replace("を表す配置","").replace("配置","");  // 専門用語を外した"やさしい今日のテーマ"
    const lw=(g.w!=null)?g.w:(sex==="f"?g.wF:g.wM);
@@ -3477,10 +3511,11 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    let idx=40+lw+(touka?8:0)+(en.lv===2?10:0)+Math.round((BR_PTS[br]||0)/4)-Math.round((BR_PEN[br]||0)/4);
    idx=Math.max(40,Math.min(99,idx)); if(en.lv===3)idx=100;
 +  if(KD.isTensen&&KD.isTensen(you,t))idx=Math.min(idx,45);   // 天戦地冲の日は天気を一番下（にわか雨のち晴れ）に
++  var _wIdx=idx;   // 天気と色は印で決める（メールと同じ）
 +  // 10/17：運勢指数は、毎朝のメール（generateDaily）とまったく同じ数字を出す（体験ページだけ別の計算で食い違っていたため）
 +  try{ if(window.KDaily&&KDaily.generateDaily){ var _ix_bt=($("btime")&&$("btime").value)||"";
 +    var _ix_r=KDaily.generateDaily({y:by,m:bm,d:bd},{y:Y,m:M,d:D},{nick:"あなた",rel:$("rel").value,sex:sex,hour:_ix_bt?(+_ix_bt.split(":")[0]):null,minute:_ix_bt?(+(_ix_bt.split(":")[1]||0)):null,timeUnknown:!_ix_bt,personBazi:window.PersonBazi});
-+    if(_ix_r&&typeof _ix_r.index==="number") idx=_ix_r.index; } }catch(_e){}
++    if(_ix_r&&typeof _ix_r.index==="number") idx=_ix_r.index; if(_ix_r&&_ix_r.grade&&_ix_r.grade.widx!=null) _wIdx=_ix_r.grade.widx; } }catch(_e){}
    const pe=STEM_GOGYO[p.stem], place=ELEM[pe], dayElem=STEM_GOGYO[t.stem];
    // ── 状況（relNow）別の「縁」見出し・本文・場所文（画面カードとメール本文で共通利用） ──
    const relNow=$("rel").value; // single/crush/partner/married/work
@@ -3515,7 +3550,14 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    };
    if(en.lv===1){var _lt=_lv1Tags[relNow]||_lv1Tags.single; enTagText=_lt[useed%_lt.length];}
    // 日タイプの本文も、意味を保ったまま日替わりで複数から出し分け
-@@ -588,11 +654,11 @@
+   var _eb=(EN_BODY[relNow]&&EN_BODY[relNow][en.lv]);
+   var enBodyText=_eb?_eb[useed%_eb.length]:(enCardMsg||en.msg);
+-  const w=weather(idx);
++  const w=weather(_wIdx);
+   const seed=jdn(Y,M,D);
+   // ── その人の日干の五行(myElem)と、その日の五行(dayElem)の関係で「補う五行(fe)」を決める ──
+   // 剋される日／消耗する日は、自分を生んでくれる相生の五行を補う。それ以外はその日の気を活かす。
+@@ -588,11 +655,11 @@
    // 表示用：その日の巡り(dayElem)と、あなたが補うとよい五行(fe)を正確に伝える一文
    let feNote;
    if(feReason==="kishinDay"){
@@ -3530,7 +3572,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    }else if(feReason==="kokusare"){
      feNote='今日は<b>「'+dayElem+'」の気</b>が強く巡り、あなたの<b>「'+myElem+'」</b>がやや消耗しやすい日。<b style="color:var(--sakura)">「'+fe+'」</b>を補うと、バランスが整います。';
    }else if(feReason==="shoumou"){
-@@ -608,11 +674,12 @@
+@@ -608,11 +675,12 @@
    const onepoint=ONEPOINT[KD.pickIdx(useed,2,ONEPOINT.length)];
    const morning=MORNING[KD.pickIdx(useed,3,MORNING.length)];
    const _snz=SEASON_NUANCE[season]||[]; const snz=_snz.length?_snz[KD.pickIdx(useed,4,_snz.length)]:'';
@@ -3545,7 +3587,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    $("cYou").innerHTML='<b style="color:var(--gold);font-size:16px;">今日のテーマ：'+meanP+'</b><br>'+godMsg+'<br><span style="color:var(--gold-soft);font-size:13px;">💡 今日のワンポイント：'+onepoint+'</span><br><span style="color:var(--coral-d);font-size:13px;">🍃 季節のたより：'+sword+'</span>'+(touka?'<span class="badge">モテ・恋愛運UP</span>':"");
    $("enTag").innerHTML='<span class="lvtag">'+enTagText+'</span>';
    $("cEn").innerHTML=enBodyText;
-@@ -620,7 +687,10 @@
+@@ -620,7 +688,10 @@
    $("swDot").style.background=lucky.hex; $("swTxt").textContent="今日のラッキーカラー："+lucky.color;
    const strip=v=>v.replace(/<[^>]+>/g,"");
    const adv=ADVICE[god][KD.pickIdx(useed,5,ADVICE[god].length)];
@@ -3557,7 +3599,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    const food=FOOD[fe][KD.pickIdx(pseed,7,FOOD[fe].length)];
    const _mi=KD.pickIdx(pseed,8,MENU[fe].length); const menu=MENU[fe][_mi]; const menu2=MENU[fe][(_mi+1)%MENU[fe].length];
    const _wearSeason=KD.climateSeason(M); // 旬の食材・服装は体感の季節で選ぶ（節気だと立秋直後の8月に秋の味覚が出て夏物の服と矛盾するため月ベースに統一）
-@@ -631,7 +701,8 @@
+@@ -631,7 +702,8 @@
    const ldir=_sp.dir;
    const spotNature=_sp.nature[KD.pickIdx(pseed,11,_sp.nature.length)];
    const spotCity=_sp.city[KD.pickIdx(pseed,12,_sp.city.length)];
@@ -3567,7 +3609,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    // 「縁の方角・スポット」用：ラッキー欄とは別オフセットで、その日の五行(fe)から選ぶ（毎日変化）
    const spotNat2=_sp.nature[KD.pickIdx(pseed,14,_sp.nature.length)];
    const spotCity2=_sp.city[KD.pickIdx(pseed,15,_sp.city.length)];
-@@ -651,10 +722,11 @@
+@@ -651,10 +723,11 @@
    };
    const _pCat=relNow==="work"?"work":(relNow==="partner"||relNow==="married")?"couple":relNow==="crush"?"crush":"single";
    const _pjd=jdn(Y,M,D);
@@ -3581,7 +3623,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    // 数字：本人差を入れて、五行の2候補から選ぶ
    const lnum=NUM[fe][(pseed+you.branch.charCodeAt(0))%NUM[fe].length];
    const ptype=PTYPE[fe];
-@@ -686,13 +758,13 @@
+@@ -686,13 +759,13 @@
      if(/恋の一手/.test(ti))return{ic:'💌',c:'#e0629a',bg:'#fdeef5'};
      if(/恋愛/.test(ti))return{ic:'💕',c:'#e0629a',bg:'#fdeef5'};
      if(/距離|の縁|家庭の縁|夫婦/.test(ti))return{ic:'💫',c:'#d6567e',bg:'#fdeef4'};
@@ -3597,7 +3639,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
      if(/ワンポイント/.test(ti))return{ic:'💡',c:'#d38a12',bg:'#fdf2d9'};
      if(/季節/.test(ti))return{ic:'🍃',c:'#6f9e3a',bg:'#f1f7e3'};
      if(/あなた/.test(ti))return{ic:'🌅',c:'#c9862a',bg:'#fff6e6'};
-@@ -709,12 +781,12 @@
+@@ -709,12 +782,12 @@
      const _pp=_tk?"奇跡の最高相性（天地徳合）":(_RL[_cbr]||"ご縁のある")+"相性";
      const _sr2=stemRel(t.stem,_C.stem), _br2=branchRel(t.branch,_C.branch);
      let _mv;
@@ -3612,7 +3654,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
        crushSec=_sec('ふたりの縁',_base+'<br>今日の過ごし方：'+_mv);
      }else{
        crushSec=_sec('気になる人との相性','<b style="color:var(--sakura)">'+_ps+'%「'+_pp+'」</b><br>今日の過ごし方：'+_mv);
-@@ -724,76 +796,76 @@
+@@ -724,76 +797,76 @@
    let enSection, placeSection, subEmoji, subWord, closeWord;
    if(relNow==="partner"){
      enSection='';
@@ -3667,11 +3709,13 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
 -  else if(idx>=95){_spc='<div class="mail-special ms-kaisei"><span class="ms-h">☀️ 今日は「縁・快晴」</span><span class="ms-gloss">＝一年でも上位の絶好調日。追い風がいちばん強い日</span>'+SPECIAL_KAISEI[useed%SPECIAL_KAISEI.length]+'</div>';}
 +  if(en.lv===3){_spc='<div class="mail-special ms-unmei"><span class="ms-h">🌈 今日は「ご縁がいちばん高まる日」</span><span class="ms-gloss">＝約2か月に一度の、とびきりの吉日。出会いや人とのつながりはもちろん、大事な予定や新しいことを始めるのにも向いています</span>'+SPECIAL_UNMEI[useed%SPECIAL_UNMEI.length]+'</div>';}
 +  else if(touka){_spc='<div class="mail-special ms-touka"><span class="ms-h">🌷 今日は「出会い・モテ運の日」</span><span class="ms-gloss">＝人から好かれ・注目が集まりやすい、あなたの魅力が自然と伝わる日</span>'+SPECIAL_TOUKA[useed%SPECIAL_TOUKA.length]+'</div>';}
-+  else if(idx>=95){_spc='<div class="mail-special ms-kaisei"><span class="ms-h">☀️ 今日は「縁・快晴」</span><span class="ms-gloss">＝一年でも上位の、とても調子のいい日。追い風がいちばん強い日</span>'+SPECIAL_KAISEI[useed%SPECIAL_KAISEI.length]+'</div>';}
++  else if(_wIdx>=95){_spc='<div class="mail-special ms-kaisei"><span class="ms-h">☀️ 今日は「縁・快晴」</span><span class="ms-gloss">＝一年でも上位の、とても調子のいい日。追い風がいちばん強い日</span>'+SPECIAL_KAISEI[useed%SPECIAL_KAISEI.length]+'</div>';}
    // 運勢指数に応じて天気ヒーローの色を変える（高い＝あたたかいコーラル／低い＝クールなブルーグレー）
-   const _wxC=idx>=80?'#e2673f':idx>=65?'#d98a1e':idx>=52?'#7d8aa8':'#6f86b0';
-   const _wxBg=idx>=80?'#fdeee7':idx>=65?'#fdf4e2':idx>=52?'#eef1f7':'#eaeef6';
+-  const _wxC=idx>=80?'#e2673f':idx>=65?'#d98a1e':idx>=52?'#7d8aa8':'#6f86b0';
+-  const _wxBg=idx>=80?'#fdeee7':idx>=65?'#fdf4e2':idx>=52?'#eef1f7':'#eaeef6';
 -  // ── トップの“掴み”＝運命カレンダーと同じ計算（dayMarks/dayGrade）で作る「今日の鑑定ヘッダー」 ──
++  const _wxC=_wIdx>=80?'#e2673f':_wIdx>=65?'#d98a1e':_wIdx>=52?'#7d8aa8':'#6f86b0';
++  const _wxBg=_wIdx>=80?'#fdeee7':_wIdx>=65?'#fdf4e2':_wIdx>=52?'#eef1f7':'#eaeef6';
 +  // ── トップの“掴み”＝開運カレンダーと同じ計算（dayMarks/dayGrade）で作る「今日の鑑定ヘッダー」 ──
    const _kdm=dayMarks(new Date(Y,M-1,D));   // カレンダーと同一のマーク＆五行の巡り
 -  const _kgr=dayGrade(_kdm);                 // 💮絶好調 / ◎好調 / 〇ふつう / △ゆったり
@@ -3711,7 +3755,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
      +_lkCell('ラッキー食材',food)
      +_lkCell('ラッキーナンバー',lnum)
      +_lkCell('開運アクション',luckyAct)
-@@ -814,7 +886,7 @@
+@@ -814,7 +887,7 @@
          +'<div style="font-weight:800;color:'+_wxC+';font-size:15px">'+w.name+'</div>'
          +'<div style="height:7px;border-radius:5px;background:rgba(0,0,0,.08);margin-top:6px;overflow:hidden"><div style="height:100%;width:'+idx+'%;background:'+_wxC+';border-radius:5px"></div></div>'
        +'</div>'
@@ -3720,7 +3764,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
      +'</div>'
      +(wmsg?'<div style="margin-top:7px;font-size:13px;color:#5a5058;line-height:1.7;padding:0 2px">'+wmsg+'</div>':'')
      +(function(){ /* 「今日はこれだけ」＝メール(generateDaily.todayOne)と同一の選び方（ランク×十神×同一シード） */
-@@ -834,39 +906,58 @@
+@@ -834,39 +907,58 @@
      +peopleSecs
      +_sec('体調・リラックス',health)
      +placeSection
@@ -3795,7 +3839,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    $("cliffCard").style.display="";
    $("calCard").style.display="";renderCalendar();$("dayDetail").classList.remove("show");
    $("swDot").style.border="1px solid rgba(255,255,255,.3)";
-@@ -880,15 +971,15 @@
+@@ -880,15 +972,15 @@
      const tk=(sr0==="干合"&&br0==="支合");
      const good=(sr2==="干合"||["支合","三合","同"].includes(br2)), bad=["沖","刑","害","破","支相剋"].includes(br2);
      if(rel==="partner"||rel==="married"){
@@ -3815,7 +3859,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
        $("crushBody").innerHTML='<b style="color:var(--sakura)">二人の相性：'+pscore+'%「'+pplain+'」</b><br><span style="color:var(--gold-soft)">今日のアプローチ：</span>'+move;
        _hideRel();$("crushCard").style.display="";
      }
-@@ -945,13 +1036,14 @@
+@@ -945,13 +1037,14 @@
    var th=_gradeTh(), s=_dayRaw(r.t)+_ymAdj(r.d);   // 年月補正（閾値は従来どおり日の分布のみ）
    var touka=(r.t.branch===TOUKA[CUR.me.branch]);
    var love=(touka||r.m.includes('🌸'));                                       // モテ運/恋チャンス＝恋の合図日
@@ -3832,7 +3876,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    return {sym:'〇',label:'普通の日',cls:'g-normal'};
  }
  function dayMarks(d){
-@@ -961,17 +1053,19 @@
+@@ -961,17 +1054,19 @@
    if(t.branch===TOUKA[CUR.me.branch])m.push('🌷');
    // 分野マークはその日の十神に応じて必ず表示する（案A）。命式で忌神の分野でも隠さず、
    // 「その分野の“気”が動く日」として出し、忌神の日は詳細文と総合ランク(△等)で正直に補足する。
@@ -3854,7 +3898,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    return {t,m,dg,d};
  }
  /* 流年・流月の補正（メール＝daily-engine.ymAdjust と同一計算）。エンジン未読込なら0。
-@@ -994,6 +1088,16 @@
+@@ -994,6 +1089,16 @@
  function dayColor(t){const e=BRANCH_GOGYO[t.branch];const E=ELEM[e];return {e:e,color:E.color,hex:E.hex,dir:E.dir};}
  function memoKey(d){return 'enbiyori_memo_'+d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
  function getMemo(d){try{return localStorage.getItem(memoKey(d))||'';}catch(e){return '';}}
@@ -3871,7 +3915,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
  function renderCalendar(){
    if(!CUR.me)return;
    const startDow=new Date(calY,calM-1,1).getDay(), days=new Date(calY,calM,0).getDate();
-@@ -1002,65 +1106,73 @@
+@@ -1002,65 +1107,73 @@
    const todY=_jst.getFullYear(), todM=_jst.getMonth()+1, todD=_jst.getDate();
    $("calTitle").textContent=calY+'年 '+calM+'月';
    const dow=['日','月','火','水','木','金','土'];let h='';
@@ -3967,7 +4011,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
      const dc=dayColor(t);
      const _dwSeason=KD.climateSeason(d.getMonth()+1);
      const _dwSeed=jdn(d.getFullYear(),d.getMonth()+1,d.getDate());
-@@ -1068,7 +1180,7 @@
+@@ -1068,7 +1181,7 @@
      /* テーマカラーは基本5色ではなく、その五行の詳細パレット(COLORVAR=五行×16色)から日替わりで選ぶ */
      const _cv=(COLORVAR&&COLORVAR[dc.e])?COLORVAR[dc.e][_dwSeed%COLORVAR[dc.e].length]:[dc.color,dc.hex];
      const _cvSwatch='<span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:'+_cv[1]+';border:1px solid rgba(0,0,0,.12);vertical-align:-1px;margin-right:4px"></span>';
@@ -3976,7 +4020,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
      const _charge=dayGrade(r).sym==='△';
      const _dwHead=_charge?'💄 お誘いがあれば◎ ── この日のゆるっとデート服':'💄 デート日和！この日のおすすめデート服';
      const _chargeNote=_charge?'<div style="margin-top:8px;font-size:11.5px;color:#3f78a8;background:rgba(79,143,192,.09);border:1px solid rgba(79,143,192,.24);border-radius:9px;padding:7px 10px;line-height:1.75">今日はあなた自身は<b>ひと休みモード</b>。自分から予定を詰め込むより、<b>誘われたら軽やかに乗る</b>くらいが、恋も心地よく運びます。</div>':'';
-@@ -1077,18 +1189,20 @@
+@@ -1077,18 +1190,20 @@
    // 命式ベース（メール配信と同一ルール）：その日の五行の巡り→追い風/整える/穏やか
    let goLine='';
    if(r.dg){
@@ -4002,7 +4046,7 @@ diff -uN a/my-tenki-demo.html b/my-tenki-demo.html
    $("dayDetail").classList.add('show');
    setTimeout(function(){var _dd=$("dayDetail");if(_dd){var _y=_dd.getBoundingClientRect().top+window.pageYOffset-70;window.scrollTo({top:_y,behavior:'smooth'});}},60);
    $("memoSave").onclick=()=>{try{localStorage.setItem(memoKey(d),$("memoBox").value);}catch(e){}renderCalendar();$("memoSave").textContent='保存しました ✓';};
-@@ -1104,9 +1218,42 @@
+@@ -1104,9 +1219,42 @@
    if(reg&&reg.length)return;
    document.querySelectorAll('a[href="mypage.html"]').forEach(function(a){
      a.setAttribute("href","register.html");
