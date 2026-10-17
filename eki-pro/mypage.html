@@ -265,16 +265,18 @@
     if(!ok){ row.hidden=true; return; }
     var jst=new Date(Date.now()+9*3600000), today=jst.toISOString().slice(0,10), pe=String(cur.periodEnd||g('member_period_end')||'');
     var pid=(/^\d{4}-\d{2}-\d{2}$/.test(pe)&&pe>=today)?pe:'m'+today.slice(0,4)+today.slice(5,7);
-    var cap=trial?USAGE.trialCap:USAGE.cap, used=0, fromServer=false, u=cur.usage;
-    if(u && typeof u.used==='number'){ used=u.used; if(typeof u.limit==='number') cap=u.limit; fromServer=true; }
-    else { try{ used=parseInt(localStorage.getItem(trial?USAGE.dKey+today.replace(/-/g,''):USAGE.mKey+pid)||'0',10)||0; }catch(e){} }
+    var cap=trial?USAGE.trialCap:USAGE.cap, u=cur.usage, fromServer=!!(u && typeof u.used==='number');
+    var used=fromServer?u.used:0; if(fromServer && typeof u.limit==='number') cap=u.limit;
     var left=Math.max(0,cap-used), n=function(x){ return Number(x).toLocaleString(); };
     var reset=''; if(!trial && !/^cancel/.test(st)){ var d=(pid.charAt(0)!=='m')?new Date(Date.parse(pid+'T00:00:00Z')+86400000):new Date(Date.UTC(+pid.slice(1,5),+pid.slice(5,7),1)); reset=(d.getUTCMonth()+1)+'月'+d.getUTCDate()+'日'; }
-    $('k-use').textContent=trial?'今日の'+USAGE.name:'今月の'+USAGE.name;
     var IB='<span style="display:inline-block">', E='</span>';
-    $('v-use').innerHTML='<div class="use-n">あと<b style="color:'+(left<=Math.ceil(cap*0.1)?'#B4471F':'inherit')+'">'+n(left)+'回</b>'+IB+'（'+(trial?'無料お試し中は1日'+n(cap)+'回まで':n(cap)+'回のうち'+n(used)+'回使用')+'）'+E+'</div>'
+    // 残り回数は、サーバーが数えた数（check-subscription の usage）を受け取れたときだけ出す。この端末だけの数は、別の端末で使った分が入らず正確でないので出さない
+    $('k-use').textContent=fromServer?(trial?'今日の'+USAGE.name:'今月の'+USAGE.name):USAGE.name+'の回数';
+    $('v-use').innerHTML=(fromServer
+        ? '<div class="use-n">あと<b style="color:'+(left<=Math.ceil(cap*0.1)?'#B4471F':'inherit')+'">'+n(left)+'回</b>'+IB+'（'+(trial?'無料お試し中は1日'+n(cap)+'回まで':n(cap)+'回のうち'+n(used)+'回使用')+'）'+E+'</div>'
+        : '<div class="use-n">'+(trial?IB+'無料お試し中は'+E+IB+'1日'+n(cap)+'回まで'+E:IB+'月'+n(cap)+'回まで'+E)+'</div>')
       +'<div class="use-sub">'+(trial?IB+'明日0時に'+n(cap)+'回に戻ります。'+E:(reset?IB+reset+'の更新日に'+E+IB+n(cap)+'回に戻ります。'+E:'')+IB+'1日の上限はありません。'+E)
-      +'<br>'+IB+'数え方：'+E+IB+USAGE.rule+E+(fromServer?'':'<br>'+IB+'（この端末で使った回数から計算しています）'+E)+'</div>';
+      +'<br>'+IB+'数え方：'+E+IB+USAGE.rule+E+(fromServer?'':'<br>'+IB+'残りの回数は、鑑定ツールの画面に表示されます。'+E)+'</div>';
     row.hidden=false;
   }
 

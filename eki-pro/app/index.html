@@ -581,6 +581,7 @@ input[type=checkbox]{width:20px;height:20px;}
       localStorage.setItem('member_period_end',res.periodEnd||'');
       if(keep) localStorage.setItem('member_checked_at',String(Date.now())); else localStorage.removeItem('member_checked_at');
     }catch(e){}
+    try{ if(res.usage && window.ekiSyncUsage) window.ekiSyncUsage(res.usage); }catch(e){}   // サーバーが数えた今の期間の回数（あれば）
     try{ if(window.ekiLeftLine) window.ekiLeftLine(); }catch(e){}   // 残り回数（無料お試し＝今日／有料＝今月）を出し直す
   }
   function clearSession(){ try{ ['member_token','member_status','member_period_end','member_checked_at','member_pw','member_remember'].forEach(function(k){ localStorage.removeItem(k); sessionStorage.removeItem(k); }); }catch(e){} }
@@ -1203,8 +1204,12 @@ function ekiEnding(){ try{ return /^cancel/.test(localStorage.getItem('member_st
 function ekiResetLabel(){ const p=ekiPeriodId(); let d; if(p.charAt(0)!=='m') d=new Date(Date.parse(p+'T00:00:00Z')+86400000); else d=new Date(Date.UTC(+p.slice(1,5),+p.slice(5,7),1)); return (d.getUTCMonth()+1)+'月'+d.getUTCDate()+'日'; }
 var _ekiLeft=null;   // サーバーが数えた残り回数（ヘッダ x-pk-left。別の端末で使った分も含む）
 function trialCount(){ try{ return parseInt(localStorage.getItem(ekiCountKey())||'0',10)||0; }catch(e){ return 0; } }
-function trialInc(){ try{ let n=trialCount()+1; if(_ekiLeft!=null&&/^\d+$/.test(String(_ekiLeft))) n=Math.max(0,ekiCap()-parseInt(_ekiLeft,10)); _ekiLeft=null; localStorage.setItem(ekiCountKey(), String(n)); }catch(e){} try{ ekiLeftLine(); }catch(e){} }
-function ekiCountFull(){ try{ localStorage.setItem(ekiCountKey(), String(Math.max(trialCount(),ekiCap()))); }catch(e){} try{ ekiLeftLine(); }catch(e){} }
+/* 残り回数は「サーバーが数えた数」を受け取れたときだけ画面に出す（この端末だけの数では、別の端末・別のブラウザで使った分が入らず正確でないため）。
+   サーバーの数＝応答ヘッダ x-pk-left（使うたび）／auth-login・auth-check の usage:{used}（開いたとき・30分ごと）。受け取った数には _srv の印を付ける */
+function ekiSrv(){ try{ return localStorage.getItem(ekiCountKey()+'_srv')==='1'; }catch(e){ return false; } }
+function trialInc(){ try{ let n=trialCount()+1; if(_ekiLeft!=null&&/^\d+$/.test(String(_ekiLeft))){ n=Math.max(0,ekiCap()-parseInt(_ekiLeft,10)); localStorage.setItem(ekiCountKey()+'_srv','1'); } _ekiLeft=null; localStorage.setItem(ekiCountKey(), String(n)); }catch(e){} try{ ekiLeftLine(); }catch(e){} }
+function ekiCountFull(){ try{ localStorage.setItem(ekiCountKey(), String(Math.max(trialCount(),ekiCap()))); localStorage.setItem(ekiCountKey()+'_srv','1'); }catch(e){} try{ ekiLeftLine(); }catch(e){} }
+function ekiSyncUsage(u){ if(!u||typeof u.used!=='number') return; try{ localStorage.setItem(ekiCountKey(), String(Math.max(0,u.used))); localStorage.setItem(ekiCountKey()+'_srv','1'); }catch(e){} try{ ekiLeftLine(); }catch(e){} }
 function trialReached(){ return isTrialMember() && trialCount() >= TRIAL_DAILY_LIMIT; }
 function paidReached(){ return !isTrialMember() && trialCount() >= PAID_MONTH_CAP; }   // 有料：ご契約の1か月で1,400回（更新日に戻る）
 function ekiPaidNote(){ return '今月のオンライン鑑定（'+PAID_MONTH_CAP.toLocaleString()+'回）を使い切りました。'+(ekiEnding()?'':ekiResetLabel()+'の更新日から、また'+PAID_MONTH_CAP.toLocaleString()+'回ご利用いただけます。')+'それまでは内蔵データでの鑑定・顧客管理・印刷はそのまま使えます'; }
@@ -1216,6 +1221,10 @@ function ekiLeftLine(){
   const cap=ekiCap(), left=Math.max(0,cap-trialCount()), S='<span style="display:inline-block">', Rd='<span style="display:inline-block;color:#B4471F">', E='</span>';
   const rule='<div style="font-size:11.5px;font-weight:700;color:#6B5A4C;margin-top:2px">'+S+'数え方：'+E+S+'鑑定1件・追加のご相談1問＝1回'+E+S+'（鑑定書の作成は数えません）'+E+'</div>';
   let h;
+  if(!ekiSrv()){   // サーバーの数をまだ受け取っていない：回数の決まりだけを出す（不正確な「あと○回」は出さない）
+    h=isTrialMember()?S+'無料お試し中：オンライン鑑定は'+E+S+'1日3回まで'+E+S+'（明日0時に戻ります）'+E
+      :S+'オンライン鑑定は月'+cap.toLocaleString()+'回まで'+E+S+'・1日の上限なし'+E+(ekiEnding()?'':S+'（'+ekiResetLabel()+'の更新日に戻ります）'+E);
+    el.innerHTML=h+rule; el.style.display='block'; return; }
   if(isTrialMember()) h=left>0?S+'無料お試し中：今日のオンライン鑑定は'+E+S+'あと<b style="color:#B4471F">'+left+'回</b>（1日3回まで）'+E
                              :Rd+'今日の無料お試し（1日3回）を使い切りました。'+E+S+'明日0時から、また3回使えます。'+E;
   else { const low=left<=Math.ceil(cap*0.1);   // 残り1割を切ったら赤で知らせる
