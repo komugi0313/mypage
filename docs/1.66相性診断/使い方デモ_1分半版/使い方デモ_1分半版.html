@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>使い方デモ｜1.66 奇跡の相性診断</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=optional" rel="stylesheet">
+<style>
+  :root{--ink:#2a3047;--muted:#5a6078;--coral:#ff7e5f;--coral-d:#cf4a26;--gold:#c4892b;--rose:#d8466a;--plum:#5b3b8c;
+    --serif:"Shippori Mincho B1",serif;--sans:"Zen Kaku Gothic New",sans-serif;}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+  html,body{height:100%;width:100%;overflow:hidden;}
+  body{font-family:var(--sans);color:var(--ink);background:transparent;}
+  .stage{position:relative;width:100%;height:100%;overflow:hidden;
+    background:radial-gradient(120% 120% at 12% 0%,#fff7ef 0%,#fdeee2 50%,#fbe4d4 100%);transition:background .8s;}
+  .stage.k{background:radial-gradient(120% 120% at 12% 0%,#fbf4ff 0%,#f6eafc 50%,#efe0f7 100%);}
+  /* 上：章のチップと進み具合 */
+  .top{position:absolute;left:0;right:0;top:0;z-index:6;padding:10px 12px 0;display:flex;gap:6px;justify-content:center;}
+  .chip{font-family:var(--sans);font-size:11.5px;font-weight:700;border:1px solid rgba(207,74,38,.35);background:rgba(255,255,255,.75);color:var(--coral-d);
+    border-radius:999px;padding:5px 11px;cursor:pointer;white-space:nowrap;}
+  .chip.on{background:var(--coral-d);color:#fff;border-color:var(--coral-d);}
+  .chip.kc{border-color:rgba(91,59,140,.35);color:var(--plum);}
+  .chip.kc.on{background:var(--plum);color:#fff;border-color:var(--plum);}
+  .prog{position:absolute;left:0;top:0;height:3px;width:0;z-index:7;background:linear-gradient(90deg,var(--coral),var(--gold));}
+  .stage.k .prog{background:linear-gradient(90deg,#b07ad8,var(--plum));}
+  .pp{position:absolute;right:10px;bottom:10px;z-index:7;width:34px;height:34px;border-radius:50%;border:none;background:rgba(42,48,71,.55);color:#fff;font-size:13px;cursor:pointer;}
+  /* シーン */
+  .scene{position:absolute;inset:0;display:flex;align-items:center;gap:26px;padding:48px 34px 22px;opacity:0;visibility:hidden;transition:opacity .25s ease,visibility 0s .25s;}
+  .scene.active{opacity:1;visibility:visible;transition:opacity .4s ease .22s;}
+  .info{flex:0 0 50%;max-width:50%;}
+  .tag{display:inline-block;font-size:11.5px;font-weight:900;letter-spacing:.06em;color:#fff;background:linear-gradient(135deg,var(--coral),var(--gold));border-radius:999px;padding:4px 11px;}
+  .k .tag{background:linear-gradient(135deg,#b07ad8,var(--plum));}
+  .info h2{font-family:var(--serif);font-weight:800;font-size:22px;line-height:1.42;margin-top:10px;letter-spacing:.01em;}
+  .info h2 .c{color:var(--coral-d);}
+  .k .info h2 .c{color:var(--rose);}
+  .info p{font-size:13.5px;color:var(--muted);line-height:1.8;margin-top:9px;font-weight:500;}
+  .info p b{color:var(--ink);}
+  .scene.active .fa{animation:rise .6s cubic-bezier(.2,.7,.2,1) both;}
+  .scene.active .fb{animation:rise .6s .15s cubic-bezier(.2,.7,.2,1) both;}
+  .scene.active .fc{animation:rise .6s .3s cubic-bezier(.2,.7,.2,1) both;}
+  @keyframes rise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+  /* スマホの画面（実際の画面の画像を動かす） */
+  .ui{flex:1;display:flex;align-items:center;justify-content:center;gap:14px;height:100%;min-height:0;}
+  .phone{position:relative;height:100%;max-height:430px;aspect-ratio:9/16.6;border-radius:26px;background:#1f2233;padding:7px;box-shadow:0 22px 44px -18px rgba(60,30,20,.45);flex:0 0 auto;}
+  .scr{position:relative;width:100%;height:100%;border-radius:20px;overflow:hidden;background:#fff;}
+  .scr img{position:absolute;left:0;top:0;width:100%;height:auto;transform-origin:0 0;will-change:transform;display:block;}
+  .tap{position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:rgba(255,255,255,.55);border:2px solid rgba(207,74,38,.9);opacity:0;z-index:3;pointer-events:none;}
+  .tap.go{animation:tap 1s ease-out both;}
+  @keyframes tap{0%{opacity:0;transform:scale(1.6);}25%{opacity:1;transform:scale(.8);}60%{opacity:1;transform:scale(1);}100%{opacity:0;transform:scale(2.2);}}
+  .plabel{position:absolute;left:50%;top:-24px;transform:translateX(-50%);white-space:nowrap;font-size:11px;font-weight:900;color:var(--plum);background:#fff;border-radius:999px;padding:3px 10px;box-shadow:0 4px 10px -4px rgba(91,59,140,.4);}
+  .pair .ui{padding-top:24px;gap:10px;}
+  .pair .phone{height:auto;width:calc(50% - 5px);max-width:165px;max-height:none;}
+  /* 計算のしくみ（図） */
+  .calc{display:grid;grid-template-columns:1fr;gap:7px;width:100%;max-width:330px;}
+  .in{display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #ead9f3;border-radius:12px;padding:8px 11px;font-size:12.5px;font-weight:700;line-height:1.45;box-shadow:0 6px 14px -10px rgba(91,59,140,.5);opacity:0;}
+  .in i{font-style:normal;font-size:19px;flex:0 0 auto;}
+  .in small{display:block;font-weight:500;color:var(--muted);font-size:11px;}
+  .arrow{text-align:center;color:var(--plum);font-size:16px;font-weight:900;opacity:0;line-height:1;}
+  .res{text-align:center;color:#fff;font-family:var(--serif);font-weight:800;font-size:15px;border-radius:13px;padding:10px;background:linear-gradient(135deg,#ff7e9b,#b07ad8);box-shadow:0 12px 24px -10px rgba(176,122,216,.7);opacity:0;}
+  .res small{display:block;font-family:var(--sans);font-size:11px;font-weight:700;opacity:.95;margin-top:2px;}
+  .scene.active .in,.scene.active .arrow,.scene.active .res{animation:rise .55s cubic-bezier(.2,.7,.2,1) both;}
+  .scene.active .in:nth-child(1){animation-delay:.3s}.scene.active .in:nth-child(2){animation-delay:.9s}
+  .scene.active .in:nth-child(3){animation-delay:1.5s}.scene.active .in:nth-child(4){animation-delay:2.1s}
+  .scene.active .arrow{animation-delay:2.8s}.scene.active .res{animation-delay:3.2s}
+  /* 区切り・最後 */
+  .center{flex-direction:column;justify-content:center;text-align:center;}
+  .center .info{flex:none;max-width:560px;}
+  .center h2{font-size:28px;}
+  .big166{font-family:var(--serif);font-weight:800;font-size:40px;color:var(--coral-d);line-height:1;}
+  .endrow{display:flex;flex-direction:column;gap:9px;margin-top:16px;align-items:center;}
+  .endrow div{font-size:13px;font-weight:700;background:#fff;border-radius:12px;padding:9px 18px;box-shadow:0 8px 18px -12px rgba(120,80,40,.5);min-width:250px;}
+  .endrow div small{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin-top:2px;}
+  .endrow div b{font-family:var(--serif);font-size:15px;}
+  .endrow .a b{color:var(--coral-d);} .endrow .k2 b{color:var(--plum);}
+  .note{font-size:11px;color:var(--muted);margin-top:10px;}
+  /* ===== スマホ：縦にならべる ===== */
+  @media(max-width:560px){
+    .top{padding-top:9px;gap:5px;} .chip{font-size:10.5px;padding:4px 9px;}
+    .scene{flex-direction:column;justify-content:flex-start;gap:10px;padding:42px 14px 14px;text-align:center;}
+    .info{flex:none;max-width:100%;width:100%;}
+    .info h2{font-size:19.5px;margin-top:7px;line-height:1.38;}
+    .info p{font-size:12px;line-height:1.7;margin-top:5px;}
+    .tag{font-size:10.5px;padding:3px 10px;}
+    .ui{flex:1 1 auto;width:100%;}
+    .phone{max-height:none;border-radius:22px;padding:6px;}
+    .scr{border-radius:17px;}
+    .pair .ui{gap:10px;padding-top:22px;align-items:flex-start;}
+    .pair .phone{width:calc(50% - 5px);max-width:none;}
+    .plabel{font-size:10px;top:-21px;}
+    .calc{max-width:310px;gap:6px;} .in{font-size:12px;padding:7px 10px;} .in i{font-size:17px;}
+    .center{justify-content:center;} .center h2{font-size:22px;} .big166{font-size:34px;}
+    .pp{width:30px;height:30px;right:8px;bottom:8px;}
+  }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="prog" id="prog"></div>
+  <div class="top">
+    <button class="chip" data-ch="0">① 相性診断の使い方</button>
+    <button class="chip kc" data-ch="5">② 毎朝の開運予報</button>
+  </div>
+
+  <!-- ===== ① 相性診断 ===== -->
+  <div class="scene" data-dur="6000" data-img="img/demo/dm-a-form.webp" data-ar="2.1646"
+       data-kf='[[0,0.5,0.5,1],[0.45,0.5,0.62,1.25],[1,0.5,0.62,1.25]]' data-tap="0.5,0.683,2600">
+    <div class="info"><span class="tag fa">STEP 1</span>
+      <h2 class="fa">二人の生年月日を、<br><span class="c">選ぶだけ</span>。</h2>
+      <p class="fb">年・月・日を選んで、<b>「二人の相性を見る」</b>をタップ。<br>1分でできます。</p></div>
+    <div class="ui"><div class="phone"><div class="scr"><img alt="実際の入力画面"><span class="tap"></span></div></div></div>
+  </div>
+
+  <div class="scene" data-dur="6500" data-img="img/demo/dm-a-res.webp" data-ar="2.1646"
+       data-kf='[[0,0.5,0.3,1],[0.35,0.5,0.3,1],[0.7,0.5,0.62,1.35],[1,0.5,0.62,1.35]]'>
+    <div class="info"><span class="tag fa">STEP 2</span>
+      <h2 class="fa">二人のキャラと<br><span class="c">運命度</span>が、<br>すぐわかる。</h2>
+      <p class="fb">生まれた日から、二人それぞれのキャラ（<b>全60タイプ</b>）と、縁の深さを計算して表示します。</p></div>
+    <div class="ui"><div class="phone"><div class="scr"><img alt="実際の結果画面"></div></div></div>
+  </div>
+
+  <div class="scene" data-dur="6000" data-img="img/demo/dm-a-verdict.webp" data-ar="2.0521"
+       data-kf='[[0,0.5,0.2,1.15],[0.45,0.5,0.2,1.15],[1,0.5,0.7,1.05]]'>
+    <div class="info"><span class="tag fa">STEP 3</span>
+      <h2 class="fa">どんな二人か、<br><span class="c">ことばで読める</span>。</h2>
+      <p class="fb">「会うたび本気になる、燃える二人」のように、二人の関係をひとことで。キャラをタップすると図鑑も見られます。</p></div>
+    <div class="ui"><div class="phone"><div class="scr"><img alt="実際の結果画面（二人の関係）"></div></div></div>
+  </div>
+
+  <div class="scene" data-dur="7000" data-img="img/demo/dm-a-love.webp" data-ar="2.0521"
+       data-kf='[[0,0.5,0.15,1],[0.15,0.5,0.15,1],[1,0.5,0.9,1]]'>
+    <div class="info"><span class="tag fa">STEP 4</span>
+      <h2 class="fa">恋人になったら・<br><span class="c">ケンカの仲直り</span>まで。</h2>
+      <p class="fb">恋人になったら・ケンカの仲直り・お相手の性格。知りたいところを、タップで開いて読めます。</p></div>
+    <div class="ui"><div class="phone"><div class="scr"><img alt="実際の結果画面（恋人になったら）"></div></div></div>
+  </div>
+
+  <div class="scene" data-dur="6000" data-img="img/demo/dm-a-dates.webp" data-ar="2.0521"
+       data-kf='[[0,0.5,0.1,1],[0.2,0.5,0.1,1],[1,0.5,0.75,1]]'>
+    <div class="info"><span class="tag fa">STEP 5</span>
+      <h2 class="fa"><span class="c">縁が深い生まれ日</span>も<br>わかる。</h2>
+      <p class="fb">あなたと縁が深い生まれ日を、1番目から3番目まで。実際の日付で見られます。</p></div>
+    <div class="ui"><div class="phone"><div class="scr"><img alt="実際の結果画面（縁が深い生まれ日）"></div></div></div>
+  </div>
+
+  <!-- ===== ② 開運予報 ===== -->
+  <div class="scene center" data-dur="5000" data-k="1">
+    <div class="info"><span class="tag fa">もうひとつ</span>
+      <h2 class="fa" style="margin-top:12px">そして、毎朝届く<br><span class="c">「私だけの開運予報」</span></h2>
+      <p class="fb">相性診断のあとは、あなた一人の毎日を。<br>朝6時、今日の運勢がメールで届きます。<b>料金はかかりません。</b></p></div>
+  </div>
+
+  <div class="scene" data-dur="9000" data-k="1">
+    <div class="info"><span class="tag fa">しくみ</span>
+      <h2 class="fa">一人ひとり、<br><span class="c">一日ずつ計算</span>しています。</h2>
+      <p class="fb">決まった文を全員に送るのではありません。あなたの生まれた日と、その日のめぐりを照らし合わせて、<b>その日のあなたのための鑑定</b>を毎朝組み立てます。</p></div>
+    <div class="ui"><div class="calc">
+      <div class="in"><i>🎂</i><div>あなたの生まれた年・月・日<small>生まれた時間がわかれば、それも</small></div></div>
+      <div class="in"><i>🌗</i><div>その日のめぐり<small>365日、毎日ちがいます（季節・月の満ち欠けも）</small></div></div>
+      <div class="in"><i>💗</i><div>今のあなた<small>恋の状況（出会いを探す・気になる人・恋人・結婚）</small></div></div>
+      <div class="in"><i>🧭</i><div>性別・知りたいこと<small>恋愛・仕事・お金・健康など、選んだ関心</small></div></div>
+      <div class="arrow">▼</div>
+      <div class="res">今日の、あなただけの鑑定<small>恋・仕事・お金・人づきあい・ラッキーまで</small></div>
+    </div></div>
+  </div>
+
+  <div class="scene" data-dur="7500" data-k="1" data-img="img/demo/dm-k-top.webp" data-ar="2.6229"
+       data-kf='[[0,0.5,0.22,1],[0.25,0.5,0.22,1],[0.55,0.45,0.6,1.3],[0.75,0.45,0.82,1.25],[1,0.45,0.82,1.25]]'>
+    <div class="info"><span class="tag fa">毎朝のメール</span>
+      <h2 class="fa">朝6時、<br><span class="c">今日の運勢</span>が届く。</h2>
+      <p class="fb">今日の運勢は、天気と点数でひと目で。<b>「調子のいい日」「出会い・モテ運の日」</b>など、今日の印もつきます。</p></div>
+    <div class="ui"><div class="phone"><div class="scr"><img alt="実際の毎朝のメール（上）"></div></div></div>
+  </div>
+
+  <div class="scene" data-dur="11000" data-k="1" data-img="img/demo/dm-k-body.webp" data-ar="6.7979"
+       data-kf='[[0,0.5,0.04,1],[0.08,0.5,0.04,1],[1,0.5,0.96,1]]'>
+    <div class="info"><span class="tag fa">毎朝のメール</span>
+      <h2 class="fa">恋愛も、仕事も、<br><span class="c">お金も、人づきあいも</span>。</h2>
+      <p class="fb">今日はこれだけ・今日のあなた・気になる人との距離・恋の一手・縁が動きやすい場所・仕事・お金・対人・学び・健康。<b>毎日ちがう内容</b>が届きます。</p></div>
+    <div class="ui"><div class="phone"><div class="scr"><img alt="実際の毎朝のメール（中）"></div></div></div>
+  </div>
+
+  <div class="scene" data-dur="7500" data-k="1" data-img="img/demo/dm-k-lucky.webp" data-ar="2.8542"
+       data-kf='[[0,0.5,0.1,1],[0.15,0.5,0.1,1],[1,0.5,0.85,1]]'>
+    <div class="info"><span class="tag fa">毎朝のメール</span>
+      <h2 class="fa">ラッキーカラーや、<br><span class="c">今日の服</span>まで。</h2>
+      <p class="fb">ラッキーカラー・方角・食べもの・アイテム・おすすめメニュー・今日の服。季節に合わせて、毎日選んでいます。</p></div>
+    <div class="ui"><div class="phone"><div class="scr"><img alt="実際の毎朝のメール（ラッキー）"></div></div></div>
+  </div>
+
+  <div class="scene pair" data-dur="9000" data-k="1">
+    <div class="info"><span class="tag fa">あなただけ</span>
+      <h2 class="fa">同じ日でも、<br><span class="c">人によって</span><br><span class="c">中身がちがう</span>。</h2>
+      <p class="fb">同じ10月20日でも、Aさんは<b>「87点・調子のいい日」</b>、Bさんは<b>「100点・特別な日」</b>。言葉も、ラッキーカラーも、一人ずつちがいます。</p></div>
+    <div class="ui">
+      <div class="phone" data-img="img/demo/dm-k-top.webp" data-ar="2.6229" data-kf='[[0,0.5,0.45,1.2],[0.4,0.5,0.45,1.2],[1,0.5,0.72,1.2]]'><span class="plabel">Aさん</span><div class="scr"><img alt="Aさんのメール"></div></div>
+      <div class="phone" data-img="img/demo/dm-k-topB.webp" data-ar="2.6229" data-kf='[[0,0.5,0.45,1.2],[0.4,0.5,0.45,1.2],[1,0.5,0.72,1.2]]'><span class="plabel">Bさん</span><div class="scr"><img alt="Bさんのメール"></div></div>
+    </div>
+  </div>
+
+  <div class="scene" data-dur="7500" data-k="1" data-img="img/demo/dm-k-cal.webp" data-ar="2.1542"
+       data-kf='[[0,0.5,0.25,1],[0.3,0.5,0.62,1.15],[1,0.5,0.62,1.15]]' data-tap="0.11,0.737,3600">
+    <div class="info"><span class="tag fa">開運カレンダー</span>
+      <h2 class="fa">いい日を、<br><span class="c">先取り</span>できる。</h2>
+      <p class="fb">1か月の運気が、印でひと目で。日付をタップすると、その日のくわしい運勢が見られます。Googleカレンダーとも同期できます。</p></div>
+    <div class="ui"><div class="phone"><div class="scr"><img alt="実際の開運カレンダー"><span class="tap"></span></div></div></div>
+  </div>
+
+  <div class="scene center" data-dur="6500" data-k="1">
+    <div class="info">
+      <div class="big166 fa">1.66<span style="font-size:.5em">%</span></div>
+      <h2 class="fa" style="margin-top:8px">まずは、<span class="c">二人の相性</span>から。</h2>
+      <div class="endrow fb">
+        <div class="a">💗 <b>1.66 奇跡の相性診断</b><small>二人の生年月日を選ぶだけ</small></div>
+        <div class="k2">🌤 <b>私だけの開運予報</b><small>毎朝6時に、あなただけの運勢をメールで</small></div>
+      </div>
+      <p class="note fc">どちらも料金はかかりません・開運予報はいつでも停止できます</p>
+    </div>
+  </div>
+
+  <button class="pp" id="pp" aria-label="一時停止">❚❚</button>
+</div>
+
+<script>
+(function(){
+  var RM=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var stage=document.getElementById("stage"),prog=document.getElementById("prog"),pp=document.getElementById("pp");
+  var scenes=[].slice.call(document.querySelectorAll(".scene"));
+  var chips=[].slice.call(document.querySelectorAll(".chip"));
+  var durs=scenes.map(function(s){return parseInt(s.getAttribute("data-dur"),10);});
+  var total=durs.reduce(function(a,b){return a+b;},0);
+  var idx=0,timer=null,t0=0,elapsed=0,paused=false,anims=[],raf=0,tapT=null;
+  /* 画像は、そのシーンの少し前に読み込む（重くしないため） */
+  function load(i){var s=scenes[i];if(!s)return;[].slice.call(s.querySelectorAll("[data-img]")).concat(s.hasAttribute("data-img")?[s]:[]).forEach(function(h){var im=h.querySelector("img");if(im&&!im.getAttribute("src"))im.src=h.getAttribute("data-img");});}
+  /* 画像の動き：kf=[時刻(0〜1), 見せたい点x, 見せたい点y(画像の割合), 拡大] */
+  function frame(W,H,ar,x,y,s){var Hi=W*ar*s,Wi=W*s;var tx=W/2-x*Wi,ty=H/2-y*Hi;tx=Math.min(0,Math.max(W-Wi,tx));ty=Math.min(0,Math.max(H-Hi,ty));return "translate("+tx.toFixed(1)+"px,"+ty.toFixed(1)+"px) scale("+s+")";}
+  function animHolder(h,dur){var im=h.querySelector("img"),scr=h.querySelector(".scr");if(!im||!scr)return;var kf=JSON.parse(h.getAttribute("data-kf")||"[[0,0.5,0,1]]"),ar=parseFloat(h.getAttribute("data-ar"));
+    var W=scr.clientWidth,H=scr.clientHeight;
+    var frames=kf.map(function(k){return {offset:k[0],transform:frame(W,H,ar,k[1],k[2],k[3])};});
+    if(RM||!im.animate){im.style.transform=frames[RM?Math.min(1,frames.length-1):0].transform;return;}
+    var a=im.animate(frames,{duration:dur,easing:"ease-in-out",fill:"both"});anims.push(a);}
+  function show(i){
+    anims.forEach(function(a){try{a.cancel();}catch(e){}});anims=[];clearTimeout(tapT);
+    idx=i;var s=scenes[i];load(i);load(i+1);
+    scenes.forEach(function(x,n){x.classList.toggle("active",n===i);});
+    stage.classList.toggle("k",s.hasAttribute("data-k"));
+    chips[0].classList.toggle("on",!s.hasAttribute("data-k"));chips[1].classList.toggle("on",s.hasAttribute("data-k"));
+    var holders=[].slice.call(s.querySelectorAll(".phone[data-img]"));if(s.hasAttribute("data-img"))holders=[s];
+    holders.forEach(function(h){animHolder(h,durs[i]);});
+    var tp=s.getAttribute("data-tap"),tap=s.querySelector(".tap");
+    if(tp&&tap){var v=tp.split(",");tap.classList.remove("go");tapT=setTimeout(function(){
+      var scr=s.querySelector(".scr"),im=s.querySelector(".scr img");var r=scr.getBoundingClientRect(),ri=im.getBoundingClientRect();
+      tap.style.left=(ri.left-r.left+parseFloat(v[0])*ri.width)+"px";tap.style.top=(ri.top-r.top+parseFloat(v[1])*ri.height)+"px";
+      void tap.offsetWidth;tap.classList.add("go");},parseInt(v[2],10));}
+  }
+  function startAt(i){show(i);elapsed=0;t0=performance.now();schedule();}
+  function schedule(){clearTimeout(timer);timer=setTimeout(function(){startAt((idx+1)%scenes.length);},durs[idx]-elapsed);}
+  function tick(){cancelAnimationFrame(raf);(function f(){var before=0;for(var k=0;k<idx;k++)before+=durs[k];var e=paused?elapsed:elapsed+(performance.now()-t0);
+    prog.style.width=Math.min(100,(before+e)/total*100)+"%";raf=requestAnimationFrame(f);})();}
+  function pause(){if(paused)return;paused=true;elapsed+=performance.now()-t0;clearTimeout(timer);clearTimeout(tapT);anims.forEach(function(a){a.pause();});pp.textContent="▶";pp.setAttribute("aria-label","再生");}
+  function play(){if(!paused)return;paused=false;t0=performance.now();anims.forEach(function(a){a.play();});schedule();pp.textContent="❚❚";pp.setAttribute("aria-label","一時停止");}
+  pp.addEventListener("click",function(){paused?play():pause();});
+  chips.forEach(function(c){c.addEventListener("click",function(){paused=false;pp.textContent="❚❚";startAt(parseInt(c.getAttribute("data-ch"),10));});});
+  document.addEventListener("visibilitychange",function(){if(document.hidden)pause();});
+  var rs;window.addEventListener("resize",function(){clearTimeout(rs);rs=setTimeout(function(){var e=elapsed+(paused?0:performance.now()-t0);show(idx);anims.forEach(function(a){a.currentTime=e;if(paused)a.pause();});},200);});
+  load(0);startAt(0);tick();
+})();
+</script>
+</body>
+</html>
