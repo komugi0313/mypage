@@ -21,8 +21,8 @@
 //
 // ※要設定：Netlify → Site settings → Environment variables
 //   必須 GEMINI_API_KEY … Gemini APIキー（ブラウザには一切出さない）
-//   任意 GEMINI_MODEL      … LITE（相談・相性）モデル。既定 gemini-2.5-flash（原価を下げたいときだけ gemini-2.5-flash-lite 等に）
-//   任意 GEMINI_MODEL_DEEP … DEEP（自動鑑定レポート）モデル。既定 gemini-2.5-flash（品質重視。pro等へ差替可）
+//   任意 GEMINI_MODEL      … LITE（相談・相性）モデル。既定 gemini-3.5-flash-lite（Google が新規向けにすすめるモデル。2.5系は新しいプロジェクトでは使えない）
+//   任意 GEMINI_MODEL_DEEP … DEEP（自動鑑定レポート・鑑定書）モデル。既定 gemini-3.5-flash-lite（差し替えるときは単価 PK_PRICE_* も合わせる）
 //   任意 PK_OWNER_TOKEN … 自分専用の合言葉。ヘッダ x-pk-owner が一致した時だけ、天井カウントを完全スキップ（動作確認用）。
 //   任意 PK_MAX_DEVICE_DAY … 端末あたり1日の安全上限（既定 400。会員確認がない環境だけのボット対策。会員は1か月の費用で管理し、1日の上限はかけない）。
 //   任意 PK_MONTH_YEN … 有料会員1人あたり、ご契約の1か月に使える文章作成の費用（円。既定 2940＝利益65%の線）。PK_RESERVE_YEN（既定5）・PK_FALLBACK_YEN（既定5）。
@@ -40,11 +40,11 @@
 // 本関数は Google へ中継し、Gemini の“生レスポンス”をそのまま（statusCodeも）返す
 //   → クライアント側の既存パース（data.candidates / data.error）を一切変えずに動く。
 
-// 既定は現行②と同じ gemini-2.5-flash（＝既定では品質・挙動を変えない）。
-// 原価を下げたいときだけ、環境変数 GEMINI_MODEL=gemini-2.5-flash-lite（相談・相性用の軽量モデル）を設定すればよい。
-// 自動鑑定レポートの品質を上げたいときは GEMINI_MODEL_DEEP=gemini-2.5-pro 等に。
-const MODEL_LITE = process.env.GEMINI_MODEL      || 'gemini-2.5-flash';
-const MODEL_DEEP = process.env.GEMINI_MODEL_DEEP || 'gemini-2.5-flash';
+// 既定は gemini-3.5-flash-lite（2026-10 時点で Google が新しいプロジェクト向けにすすめるモデル。料金は入力 $0.30／出力 $2.50 ／100万トークン＝
+// 以前の 2.5 Flash と同じ）。2.5系は 2026-09 から、以前から使っている利用者だけに限られ、新しいプロジェクトでは使えない。
+// モデルを替えるときは、下の単価（PK_PRICE_IN／PK_PRICE_OUT／PK_PRICE_CACHE）も必ずそのモデルの料金に合わせる（1人あたりの費用の上限の計算に使うため）。
+const MODEL_LITE = process.env.GEMINI_MODEL      || 'gemini-3.5-flash-lite';
+const MODEL_DEEP = process.env.GEMINI_MODEL_DEEP || 'gemini-3.5-flash-lite';
 
 const OWNER_TOKEN = process.env.PK_OWNER_TOKEN || '';
 const MAX_DEVICE_DAY = parseInt(process.env.PK_MAX_DEVICE_DAY || '400', 10) || 400;
@@ -61,10 +61,10 @@ const FALLBACK_YEN = parseFloat(process.env.PK_FALLBACK_YEN || '5') || 5;   // �
 // （巨大な貼り付け等のボット対策の“天井”は維持。総リクエストサイズは別途 5,800,000字で制限）
 const MAX_BODY = 40000;
 
-// 原価計測（USD / 1Mトークン）。既定は gemini-2.5-flash 相当の保守値。キャッシュ入力は75%引きで見積もる。
+// 原価計測（USD / 1Mトークン）。既定は gemini-3.5-flash-lite の料金（入力 0.30／出力 2.50／キャッシュ済み入力 0.03）。思考（thinking）も出力として課金される。
 const PX_IN   = parseFloat(process.env.PK_PRICE_IN   || '0.30');
 const PX_OUT  = parseFloat(process.env.PK_PRICE_OUT  || '2.50');
-const PX_CACHE= parseFloat(process.env.PK_PRICE_CACHE|| String(0.30 * 0.25));
+const PX_CACHE= parseFloat(process.env.PK_PRICE_CACHE|| '0.03');
 const PX_FX   = parseFloat(process.env.PK_FX_JPY     || '150');
 
 exports.handler = async (event) => {
@@ -213,8 +213,9 @@ exports.handler = async (event) => {
 function buildBody(parsed, model, usedDeep) {
   const genCfg = Object.assign({}, (parsed && parsed.generationConfig) || {});
   if (/gemini-3/.test(model)) {
-    // Gemini 3.x は thinkingBudget:0 が 400 になるため除去し、出力トークンを確保
-    if (genCfg.thinkingConfig) delete genCfg.thinkingConfig;
+    // Gemini 3.x は thinkingBudget:0 が 400 になる。思考は止められないので、いちばん少ない minimal にする
+    // （外すと既定の思考が走り、その分も出力として課金される）。出力トークンも確保する
+    genCfg.thinkingConfig = { thinkingLevel: 'minimal' };
     const want = usedDeep ? 3200 : 2400;
     if (!genCfg.maxOutputTokens || genCfg.maxOutputTokens < want) genCfg.maxOutputTokens = want;
   } else if (/flash/.test(model)) {

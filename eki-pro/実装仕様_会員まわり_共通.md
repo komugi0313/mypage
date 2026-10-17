@@ -2,7 +2,7 @@
 
 > **会員・決済・API の正はこの文書です。** 過去のやり取り・旧ドキュメントより、本書を優先してください。
 > フロント（画面）は**完成済み**。エンジニアが作るのは **サーバー側API・決済・本番切替** です。
-> 対応バージョン：PRO `pro/sw.js` の `CACHE = 'shichu-jidou-v482'`／ビギナー `beginner/sw.js` `'kyoukara-uranaishi-v119'`／易 EKI Pro `eki-pro/app/sw.js` `'eki-pro-v80'` ／ 最終更新：2026-10-17
+> 対応バージョン：PRO `pro/sw.js` の `CACHE = 'shichu-jidou-v483'`／ビギナー `beginner/sw.js` `'kyoukara-uranaishi-v120'`／易 EKI Pro `eki-pro/app/sw.js` `'eki-pro-v81'` ／ 最終更新：2026-10-17
 > 3サイトの全体の依頼内容は、リポジトリ直下の `エンジニアへの実装依頼_3サイト.md` を先に読んでください。易 EKI Pro だけの追加分は `eki-pro/実装仕様_エンジニア向け.md`。
 > `eki-pro/実装仕様_会員まわり_共通.md` は本書と**同じ内容の写し**です（食い違ったら本書が正）。
 > 前提（発注者確認済み）：**Gemini（文章生成）はサーバー経由**（キーはサーバーだけに置く）／**決済はテレコムクレジット**／**Web先行 → のちに iOS・Android アプリ**。
@@ -52,7 +52,7 @@
 | 1 | 会員ゲート：`var PREVIEW_MODE = true;` → **`false`** | `app-pro.html` 747行 | `app-beginner.html` 765行 | `app/index.html` 548行 |
 | 2 | 仮動作：`STUB: !/(^\|\.)(72k\.ai\|suimei\.jp\|ekipro\.jp)$/i.test(location.hostname)` → **`STUB: false`** | `auth.html` 230行・`mypage-pro.html` 191行・`pricing-pro.html` 379行（`TRIAL_CHECK`）・491行（`FIX`） | `auth.html` 230行・`mypage.html` 184行・`pricing.html` 365行（`TRIAL_CHECK`）・477行（`FIX`） | `auth.html` 232行・`mypage.html` 186行・`upgrade.html` 360行（`TRIAL_CHECK`）・472行（`FIX`）・`register.html` 155行（`CONFIG`） |
 | 3 | 決済ページURL `var TELECOM_PAYMENT_URL={ month:'' };` と `var TELECOM_PARAM={ email:'email', order:'sendid' };` | `pricing-pro.html` 349〜350行 | `pricing.html` 335〜336行 | `upgrade.html` 330〜331行 |
-| 4 | テスト用キー欄を削除 | `app-pro.html` の `<details id="gtest-wrap">`（1006行）と `?gtest=1` で表示する1行（8109行）と、テスト用キーを読む1行（8103行 `geminiKey=…bazi_gkey…`。`geminiKey='';` に固定してもよい） | 同左（生成元の PRO を直して生成） | `app/index.html` の `#demoKeyCard`（728行）・`#geminiCard`（984行）と、`?gtest=1` で表示する1行（3016行）。2つの欄を消してもアプリは止まらない作り（2026-10-13 確認済み）。1177行の `GEMINI_API_KEY = ""` は空のまま |
+| 4 | テスト用キー欄を削除 | `app-pro.html` の `<details id="gtest-wrap">`（1006行）と `?gtest=1` で表示する1行（8109行）と、テスト用キーを読む1行（8103行 `geminiKey=…bazi_gkey…`。`geminiKey='';` に固定してもよい） | 同左（生成元の PRO を直して生成） | `app/index.html` の `#demoKeyCard`（728行）・`#geminiCard`（984行）と、`?gtest=1` で表示する1行（3017行）。2つの欄を消してもアプリは止まらない作り（2026-10-13 確認済み）。1177行の `GEMINI_API_KEY = ""` は空のまま |
 | 5 | `DEMO_MODE` は `false` のまま | `app-pro.html` 744行 | `app-beginner.html` 762行 | `app/index.html` 558行 |
 | 6 | `functions/gemini.js` | 会員確認は実装済み → **本番で環境変数 `MEMBER_CHECK_URL` を必ず設定**（§5） | 同左 | 同左 |
 
@@ -143,7 +143,7 @@
 - PRO・ビギナー：`app-pro.html`／`app-beginner.html`（相談・自動鑑定・日運/月運・本格鑑定・相性）、`meishi-sheet.html`（鑑定書）。
 - EKI：`app/index.html`（鑑定・深掘り相談・鑑定書）。
 
-いずれも URL は定数ではなく `'/.netlify/functions/gemini'` と直接書いてある（`app-pro.html` 6446行・`meishi-sheet.html` 4234行・`app-beginner.html` 6465行・EKI `app/index.html` 2734行）。`netlify.toml` では `/api/gemini` も同じ関数の別名。
+いずれも URL は定数ではなく `'/.netlify/functions/gemini'` と直接書いてある（`app-pro.html` 6446行・`meishi-sheet.html` 4234行・`app-beginner.html` 6465行・EKI `app/index.html` 2735行）。`netlify.toml` では `/api/gemini` も同じ関数の別名。
 
 **APIキーは絶対にフロントに出さず、サーバーの環境変数で持つ。** 雛形 `functions/gemini.js`（3サイトとも同じ仕組み。EKI は全体の大きさの上限だけ5,800,000字）あり。
 
@@ -177,10 +177,11 @@
   - 月額9,800円 − 決済手数料5%（490円）− 利益65%（6,370円）＝**文章作成に使える費用は1人あたり月2,940円まで**（`PK_MONTH_YEN`）。
   - サーバーは文章を作るたびに、Google の応答の `usageMetadata`（入力・出力・思考〈thinking〉のトークン数）から実際の費用（円）を出し、**会員ごと・ご契約の期間（`periodEnd` まで。更新日に0円へ戻す）ごと**に足していく。続き（目印付きの2回目）・鑑定書・自動の詳細鑑定も、作ったものはすべて足す。
   - 合計が2,940円に届いたら、**次の更新日まで** 429 `{error:{code:'MONTH_BUDGET'}}` を返す。画面は端末内の鑑定（易は内蔵データの鑑定）に切り替え、「今月の詳細鑑定はお休み中・○月○日の更新日から再開」と出す。新しい鑑定は取り置き（`PK_RESERVE_YEN`＝5円）だけ手前で止め、始まった鑑定の続きは最後まで出す＝合計は2,940円を超えない。費用が読めない応答は `PK_FALLBACK_YEN`（5円）として足す。
-  - **お客様には回数も残りも見せない。1日の上限もない**。表示は「1日の上限なし・回数を気にせず使える・月○件以上はいつでも使える」だけ。
-  - **最低保証**：1件の費用がいちばん高いとき（文章が最長）でも、PRO・ビギナーは約4.05円（相談1件＝呼び出し2回。時期の材料を省かず送る）→ 2,940円で**月700件以上**、易は約2円 → **月1,400件以上**。この数を規約・特商法・LPに「少なくとも月○件分は使える」として載せている。ふつうの長さ（PRO約2.4円）なら月1,200件ほどまで届かない。
-  - 単価は使うモデルの料金に必ず合わせる（`PK_PRICE_IN`・`PK_PRICE_OUT`・`PK_PRICE_CACHE`・`PK_FX_JPY`。既定は 2.5 Flash 相当＝入力 $0.30／出力 $2.50 ／100万トークン・1ドル150円）。モデルを替えて1件の最大費用が上がると最低保証の件数が下がるので、`x-pk-tok`（1回ごとの費用をヘッダとログに出す）で測り直し、規約・LPの「月○件以上」も直す。
-  - アプリ版（手数料15%）は 9,800 − 1,470 − 6,370 ＝ 月1,960円（最低保証は PRO・ビギナー約480件／易約980件）。アプリを出すときに決め直す。
+  - **お客様には回数も残りも見せない。1日の上限もない**。表示は「1日の上限なし・回数を気にせず使える・目安：ふつうの使い方で月○件以上」と「届いた月もオフラインで続けられる」だけ。
+  - **お客様に見せる目安**：ふつうの長さの文章で、PRO・ビギナーは1件 約2.6円（相談1件＝呼び出し2回。時期の材料を省かず送る）→ 2,940円で**月1,100件ほど**、易は1件 約1.5円 → **月1,900件ほど**。これを控えめに「目安：ふつうの使い方で月1,000件以上（易1,500件以上）・文章の長さで変わります」と規約・特商法・LP・マイページに載せている（保証の件数ではない）。文章がいちばん長いときは PRO 約4.05円・易 約2円なので、極端に長い使い方では月700件・1,400件ほどで届く。
+  - **届いたあとも鑑定は続けられる**：次の更新日まで、オフラインの詳細鑑定（端末内で作成。易はオフライン鑑定＝内蔵データで作成）に切り替わるだけ。画面・規約にもそう書いている。
+  - 単価は使うモデルの料金に必ず合わせる（`PK_PRICE_IN`・`PK_PRICE_OUT`・`PK_PRICE_CACHE`・`PK_FX_JPY`）。**既定のモデルは `gemini-3.5-flash-lite`**（Google が新しいプロジェクト向けにすすめるモデル。2.5系は新しいプロジェクトでは使えない）で、既定の単価もその料金＝入力 $0.30／出力 $2.50／キャッシュ済み入力 $0.03 ／100万トークン・1ドル150円。3系は思考（thinking）を止められず、思考分も出力として課金されるので、雛形は `thinkingLevel:'minimal'`（いちばん少ない）にし、費用には `thoughtsTokenCount` も足している。モデルを替えたら `x-pk-tok`（1回ごとの費用をヘッダとログに出す）で測り直し、目安の件数（表示）も確かめる。
+  - アプリ版（手数料15%）は 9,800 − 1,470 − 6,370 ＝ 月1,960円（目安は PRO・ビギナー月700件ほど／易月1,300件ほど）。アプリを出すときに決め直す。
   - 追加の利用枠の販売（追加パック）はしない。
 - **無料期間中だけは回数で数える**：3サイトとも1日3回（相談・鑑定書の作成などの合計。日本時間の暦日で0に戻す。`PK_TRIAL_DAY`）。4回目から 429 `TRIAL_LIMIT`。答えにヘッダ `x-pk-left`（今日の残り）を付け、画面はそれを受け取ったときだけ「今日はあと○回」を出す。
 - **数える単位は会員ID**：会員確認は `memberId`（会員ごとに変わらないID）も返す（返さないとログインの鍵ごとに足すので、ログインし直すと0からになってしまう）。`periodEnd` は有料会員にも必ず `YYYY-MM-DD`（今の期間の最終日）で返す。
@@ -189,10 +190,10 @@
 
 | サイト | 上限 | フロント（改ざんできるので正はサーバー） |
 |---|---|---|
-| PRO・ビギナー（無料期間中） | **1日3回**（相談・自動の詳細鑑定・日運月運・相性・鑑定書の作成の合計） | `AI_TRIAL_CAP=3`（`app-pro.html` 6354行・`meishi-sheet.html` 4179行。`member_status==='trialing'` のとき。超えた日は「明日0時からまた3回」と案内し端末内の鑑定に切替）。サーバーの 429 `TRIAL_LIMIT` でも同じ |
-| PRO・ビギナー（有料） | **回数なし・1日の上限なし**。費用が月2,940円に届いたら次の更新日までお休み（最低保証 月700件以上） | 回数は数えない。429 `MONTH_BUDGET` または `usage.paused:true` で「お休み中」の印（`aiPaused()` 6366行・`ai_pause_<periodEnd>`）。ふだんは何も表示しない |
+| PRO・ビギナー（無料期間中） | **1日3回**（相談・自動の詳細鑑定・日運月運・相性・鑑定書の作成の合計） | `AI_TRIAL_CAP=3`（`app-pro.html` 6353行・`meishi-sheet.html` 4179行。`member_status==='trialing'` のとき。超えた日は「明日0時からまた3回」と案内し端末内の鑑定に切替）。サーバーの 429 `TRIAL_LIMIT` でも同じ |
+| PRO・ビギナー（有料） | **回数なし・1日の上限なし**。費用が月2,940円に届いたら次の更新日までお休み（目安 月1,000件以上） | 回数は数えない。429 `MONTH_BUDGET` または `usage.paused:true` で「お休み中」の印（`aiPaused()` 6365行・`ai_pause_<periodEnd>`）。ふだんは何も表示しない |
 | EKI（無料期間中） | **1日3回**（鑑定＋追加のご相談の合計。鑑定書の作成は数えない） | `TRIAL_DAILY_LIMIT=3`（1189行） |
-| EKI（有料） | **回数なし・1日の上限なし**（最低保証 月1,400件以上）＋1分15回の連打制限（非公表＝規約第8条「頻度に上限」が根拠） | 回数は数えない。429 `MONTH_BUDGET`／`usage.paused:true` で「お休み中」（`paidReached()` 1217行・`eki_pause_<periodEnd>`）。`PAID_RATE_PER_MIN=15`（1242行）は定義だけ＝サーバーで実装 |
+| EKI（有料） | **回数なし・1日の上限なし**（目安 月1,500件以上）＋1分15回の連打制限（非公表＝規約第8条「頻度に上限」が根拠） | 回数は数えない。429 `MONTH_BUDGET`／`usage.paused:true` で「お休み中」（`paidReached()` 1217行・`eki_pause_<periodEnd>`）。`PAID_RATE_PER_MIN=15`（1242行）は定義だけ＝サーバーで実装 |
 
 ### 3-4. 契約・マイページ（4本）
 呼び出し元：マイページ（`mypage-pro.html`／`mypage.html`）。**必ずトークンで本人確認してから応答**（メールアドレスだけで他人の契約を見たり解約したりできないように）。
@@ -265,7 +266,7 @@
 | `URL` | **必須（Netlify 以外）** | 自サイトのURL。Netlify では自動で入る。**Netlify 以外では自動で入らないので手で設定**（未設定だと、送信元の確認と「`MEMBER_CHECK_URL` 未設定なら止める」安全装置が両方とも働かない） |
 | `ALLOWED_ORIGINS` | 1つのサーバーで3商品を扱うなら**必須** | 追加で許可する送信元（カンマ区切り・**オリジンの完全一致**。例 `https://72k.ai,https://www.suimei.jp,https://ekipro.jp`） |
 | `DEPLOY_PRIME_URL` | 自動（Netlify） | Netlify のプレビューURL（許可に含まれる） |
-| `GEMINI_MODEL`／`GEMINI_MODEL_DEEP` | 任意 | 通常／`x-pk-deep:1` のときのモデル。どちらも既定 `gemini-2.5-flash`。新しいプロジェクトで 2.5 が使えないときは `gemini-3.5-flash-lite`（下の注意） |
+| `GEMINI_MODEL`／`GEMINI_MODEL_DEEP` | 任意 | 通常／`x-pk-deep:1` のときのモデル。どちらも既定 `gemini-3.5-flash-lite`（下の注意）。替えるときは単価 `PK_PRICE_IN`／`PK_PRICE_OUT`／`PK_PRICE_CACHE` も必ず合わせる |
 | `PK_ALLOW_NO_MEMBER_CHECK` | **本番では設定しない** | `1` で会員確認なしで動かす（公開前の確認環境だけ） |
 | `PK_OWNER_TOKEN` | 任意 | ヘッダ `x-pk-owner` が一致したとき天井を数えない（動作確認用） |
 | `PK_MAX_DEVICE_DAY`／`PK_MAX_IP_DAY` | 任意 | ボット対策の天井（既定 400／800） |
@@ -273,7 +274,7 @@
 | `PK_TRIAL_DAY` | 任意 | 無料お試し中（`status=trialing`）の1日の上限（既定 3。3サイト共通。変えるときは規約・特商法・申込画面の表示も同時に直す） |
 | `PK_PRICE_IN`／`PK_PRICE_OUT`／`PK_PRICE_CACHE`／`PK_FX_JPY` | 任意 | 原価の記録用の単価（ログ `[pro-cost]` と応答ヘッダ `x-pk-tok` に出す） |
 
-- **モデルの注意（2026-10-16 確認）**：Google は 2026-09-18 から、2.5系（`gemini-2.5-flash` など）を「最近使っていた利用者だけ」に限っている（終了の発表はないが、**新しく作るプロジェクトでは使えないことがある**）。新しいプロジェクトには `gemini-3.5-flash-lite`（料金は 2.5 Flash と同じ 入力$0.30／出力$2.50 per 1M・第三者の価格表による）または `gemini-3.8-flash`（入力$0.75／出力$3.75、2027-01-01 から2倍の予定・同）が案内されている。本番の API キーで 2.5 が使えなければ `GEMINI_MODEL`・`GEMINI_MODEL_DEEP` を `gemini-3.5-flash-lite` にする。雛形は名前に `gemini-3` を含むとき `thinkingBudget:0` を外して出力の上限を広げるが、**3系は考える分（thinking）も出力として課金される**ので、3系の思考を最小にする設定（`thinkingConfig` の `thinkingLevel` 等）を公式の資料で確認して入れ、原価ログ（`[pro-cost]`・`x-pk-tok`）で相談1件あたりの費用を測り直すこと（回数の上限は1件 約4.5円で計算している）。
+- **モデルの注意（2026-10-17 更新）**：Google は 2026-09 から、2.5系（`gemini-2.5-flash`・`gemini-2.5-flash-lite` など）を「以前から使っていた利用者だけ」に限っており、**新しく作るプロジェクトでは使えない**（Vertex AI では 2026-10-20 に終了と案内されている）。そのため雛形の既定を **`gemini-3.5-flash-lite`**（新しいプロジェクト向けにすすめられているモデル。料金は 入力 $0.30／出力 $2.50 per 1M＝以前の 2.5 Flash と同じ・第三者の価格表による）にした。3系は思考（thinking）を止められず（`thinkingBudget:0` は 400 エラー）、思考分も出力として課金されるので、雛形は `thinkingConfig:{thinkingLevel:'minimal'}` を付け、費用には `thoughtsTokenCount` も足す。**本番の API キーで料金・動作を公式の資料で確かめ**、原価ログ（`[pro-cost]`・`x-pk-tok`）で相談1件あたりの費用を測り直すこと（1人あたりの上限は費用で見ているので、高いモデルにしても65%は守られるが、使える件数の目安が減る）。
 
 - **雛形は Netlify Functions 用の書き方**（`exports.handler`、`event.httpMethod/headers/body` を受けて `{statusCode,headers,body}` を返す。数えるのは `@netlify/blobs`）。他の基盤で動かすときは作り直す。
 - 雛形が返すエラー：401 `LOGIN`、403 `MEMBER`／`ORIGIN`、405（POST以外）、413 `TOO_LONG`（`role:'user'` の付いた最後の入力が40,000字超、または全体が900,000字超。EKI は `role` を送らないので全体の上限5,800,000字だけが効く）、429 `BUSY`、451 `REGION`、500 `NO_KEY`、502 `UPSTREAM`、503 `SETUP`／`MEMBER_CHECK`。
@@ -338,8 +339,8 @@
 | `TRIAL_CHECK.URL`／`TRIAL_CHECK.STUB` | `pricing-pro.html`（`var TRIAL_CHECK`） | `'/.netlify/functions/trial-check'`／本番ドメイン以外で true の式 | 実URL／`false` |
 | `FIX.URL`／`FIX.STUB` | `pricing-pro.html` 491行 | `'/.netlify/functions/auth-fix-email'`／同上の式 | 実URL／`false` |
 | `TELECOM_PAYMENT_URL`／`TELECOM_PARAM`／`ORDER_PREFIX` | `pricing-pro.html` 349〜351行 | `{month:''}`／`{email:'email',order:'sendid'}`／`'P'` | 決済URL／接続仕様書の名前／そのまま |
-| `geminiModel` | `app-pro.html` 2759行 | `'gemini-2.5-flash'` | 変更不要（本番のモデルはサーバーの `GEMINI_MODEL` で決まる。フロントの値はテスト用の直接呼び出しと `thinkingConfig` の有無だけに効く） |
-| `AI_TRIAL_CAP` | `app-pro.html` 6354行・`meishi-sheet.html` 4179行 | `3` | 規約と同じ値のまま（有料は回数の定数なし） |
+| `geminiModel` | `app-pro.html` 2759行 | `'gemini-3.5-flash-lite'` | 変更不要（本番のモデルはサーバーの `GEMINI_MODEL` で決まる。フロントの値はテスト用の直接呼び出しと `thinkingConfig` の有無だけに効く） |
+| `AI_TRIAL_CAP` | `app-pro.html` 6353行・`meishi-sheet.html` 4179行 | `3` | 規約と同じ値のまま（有料は回数の定数なし） |
 
 - **生成で写る値**：ビギナーには PRO の `PREVIEW_MODE`・`STUB`・決済URL が、EKI の `upgrade.html`・`auth.html`・`mypage.html` には `STUB`・決済URL がそのまま写る（`ORDER_PREFIX` だけ B／E に置きかわる）。決済URLが商品ごとに違うなら、生成後に各サイトで設定する。
 
@@ -394,7 +395,7 @@
 | アプリのID | iOS バンドルID・Android パッケージ名（アプリ版を出すとき） |
 | お申し込み番号の頭文字 | `P` |
 | 料金・無料日数 | 月額 9,800円（税込）・7日 |
-| 回数上限 | 有料は1日の上限なし・回数なし（1人あたりの費用が月2,940円に届いたら次の更新日までお休み。最低保証 月700件以上／易1,400件以上）・易は1分15回。無料期間中は1日3回 |
+| 回数上限 | 有料は1日の上限なし・回数なし（1人あたりの費用が月2,940円に届いたら次の更新日までお休み。目安 月1,000件以上／易1,500件以上）・易は1分15回。無料期間中は1日3回 |
 | 回数に数えない目印 | `x-pk-part: detail`（EKI は `x-eki-kind: detail`／`sho`） |
 | テレコムクレジット | 決済ページURL・店舗の識別子・パラメータ名・結果通知の検証方法 |
 | メール | 差出人の表示名・各メールの文面（商品名・ログインURL・マイページURL） |

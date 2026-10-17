@@ -1196,7 +1196,7 @@ function trialDayKey(){          // 日本時間(JST)の暦日でリセット
 /* 上限（四柱推命PROと同じ考え方。発注者決定 2026-10-17）：
    ・無料お試し中＝オンライン鑑定＋追加のご相談の合計1日3回（数える。サーバーの残り x-pk-left に合わせる）
    ・有料＝回数は数えない・見せない・1日の上限もない。サーバーが1人あたりの実際の費用を見て、月額料金でまかなえる範囲に届いた月だけ
-     429 MONTH_BUDGET を返す → 次の更新日まで内蔵データの鑑定に切替（ふつうの使い方では届かない。最低でも月1,400件分） */
+     429 MONTH_BUDGET を返す → 次の更新日まで内蔵データの鑑定に切替（ふつうの使い方では届かない。目安：月1,500件以上） */
 function ekiPeriodId(){ let pe=''; try{ pe=localStorage.getItem('member_period_end')||''; }catch(e){} const d=new Date(Date.now()+9*3600000), today=d.toISOString().slice(0,10);
   if(/^\d{4}-\d{2}-\d{2}$/.test(pe)&&pe>=today) return pe; return 'm'+d.getUTCFullYear()+('0'+(d.getUTCMonth()+1)).slice(-2); }
 function ekiStopKey(){ return 'eki_pause_'+ekiPeriodId(); }   // 有料：今月お休み中の印（期間が変われば自然に消える）
@@ -1215,14 +1215,14 @@ function ekiSyncUsage(u){ if(!u) return; try{ if(isTrialMember()){ if(typeof u.u
   else if(typeof u.paused==='boolean'){ if(u.paused) localStorage.setItem(ekiStopKey(),'1'); else localStorage.removeItem(ekiStopKey()); } }catch(e){} try{ ekiLeftLine(); }catch(e){} }
 function trialReached(){ return isTrialMember() && trialCount() >= TRIAL_DAILY_LIMIT; }
 function paidReached(){ if(isTrialMember()) return false; try{ return localStorage.getItem(ekiStopKey())==='1'; }catch(e){ return false; } }   // 有料：今月お休み中
-function ekiPaidNote(){ return '今月のオンライン鑑定のご利用が、月額料金でまかなえる範囲に達しました（ふつうのご利用では届かない量です）。'+(ekiEnding()?'':ekiResetLabel()+'の更新日から再開します。')+'それまでは内蔵データでの鑑定・顧客管理・印刷はそのまま使えます'; }
+function ekiPaidNote(){ return '今月のオンライン鑑定が、月額料金でまかなえる範囲に達しました（ふつうのご利用では届かない量です）。'+(ekiEnding()?'':ekiResetLabel()+'の更新日までは、')+'オフライン鑑定（内蔵データで作成）で、そのまま鑑定を続けられます。顧客管理・印刷もいつもどおり使えます'; }
 function trialReset(){ try{ localStorage.removeItem(trialDayKey()); localStorage.removeItem(ekiStopKey()); }catch(e){} try{ ekiLeftLine(); }catch(e){} }
 /* 「鑑定する」ボタンの下のお知らせ：無料お試し中は今日の回数、有料は「今月お休み中」のときだけ（ふだんは何も出さない） */
 function ekiLeftLine(){
   const el=document.getElementById('ekiLeft'); if(!el) return;
   if(!ekiIsMember()||(!isTrialMember()&&!paidReached())){ el.style.display='none'; el.innerHTML=''; return; }
   const S='<span style="display:inline-block">', Rd='<span style="display:inline-block;color:#B4471F">', E='</span>';
-  if(!isTrialMember()){ el.innerHTML=Rd+'今月のオンライン鑑定はお休み中です。'+E+(ekiEnding()?'':S+ekiResetLabel()+'の更新日から再開します。'+E)+S+'内蔵データの鑑定はそのまま使えます。'+E; el.style.display='block'; return; }
+  if(!isTrialMember()){ el.innerHTML=Rd+'今月はオフライン鑑定（内蔵データで作成）で'+E+Rd+'鑑定を続けられます。'+E+(ekiEnding()?'':S+'（オンラインは'+ekiResetLabel()+'の更新日から再開）'+E); el.style.display='block'; return; }
   const left=Math.max(0,TRIAL_DAILY_LIMIT-trialCount());
   const rule='<div style="font-size:11.5px;font-weight:700;color:#6B5A4C;margin-top:2px">'+S+'数え方：'+E+S+'鑑定1件・追加のご相談1問＝1回'+E+S+'（鑑定書の作成は数えません）'+E+'</div>';
   const h=!ekiSrv()?S+'無料お試し中：オンライン鑑定は'+E+S+'1日3回まで'+E+S+'（明日0時に戻ります）'+E   // サーバーの数をまだ受け取っていない：決まりだけ
@@ -1847,7 +1847,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
     }
     if(!forceOffline && paidReached()){
       LM.textContent=t('load_offline');
-      setTimeout(()=>{ goOffline('今月のオンライン鑑定はお休み中のため、内蔵データで鑑定しました。'+(ekiEnding()?'':ekiResetLabel()+'の更新日から再開します')); },350);
+      setTimeout(()=>{ goOffline('今月はオフライン鑑定（内蔵データで作成）で鑑定しました。'+(ekiEnding()?'':'オンラインは'+ekiResetLabel()+'の更新日から再開します')); },350);
       return;
     }
     if(forceOffline){
@@ -2729,7 +2729,8 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     const key=GEMINI_API_KEY||getTestKey();
     /* 電波が途中で止まったときに「作成中…」のまま待ち続けないよう、70秒で打ち切る（内蔵データの鑑定に切り替わる） */
     let _sig; try{ const ac=new AbortController(); setTimeout(function(){ ac.abort(); },70000); _sig=ac.signal; }catch(e){}
-    if(key) return fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`,{method:'POST',headers:{'Content-Type':'application/json'},body,signal:_sig});
+    if(key){ let b2=body; try{ const j=JSON.parse(body); j.generationConfig=Object.assign({},j.generationConfig||{},{thinkingConfig:{thinkingLevel:'minimal'}}); b2=JSON.stringify(j); }catch(e){}   // 3系は思考を止められない（thinkingBudget:0 は400）。いちばん少ない minimal に
+      return fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${encodeURIComponent(key)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:b2,signal:_sig}); }
     if(isServed()){ let tk=''; try{ tk=localStorage.getItem('member_token')||sessionStorage.getItem('member_token')||''; }catch(e){}   // 会員確認（サーバーで検証）
       return fetch('/.netlify/functions/gemini',{method:'POST',headers:Object.assign({'Content-Type':'application/json','x-pk-device':ekiDevId()},kind?{'x-eki-kind':kind}:{},tk?{'Authorization':'Bearer '+tk}:{}),body,signal:_sig}); }
     throw new Error('オンライン鑑定の接続先が設定されていません。');
