@@ -1,6 +1,6 @@
 # 易 EKI Pro ― 引き渡しメモ（この商品だけ）
 
-最終更新：2026-10-17　／　販売事業者：72k株式会社　／　対応バージョン：`eki-pro/app/sw.js` の `CACHE = 'eki-pro-v97'`
+最終更新：2026-10-17　／　販売事業者：72k株式会社　／　対応バージョン：`eki-pro/app/sw.js` の `CACHE = 'eki-pro-v98'`
 
 > **この ZIP は「易 EKI Pro」だけ**です。四柱推命 PRO・今日から占い師（ビギナー）は**別の商品**で、別の ZIP です。混ぜないでください。
 > サーバー（会員・決済・オンライン鑑定の中継）は全商品で共通の基盤です。依頼の全体は「【最終完成版】0_共通サーバー基盤」ZIP の `エンジニアへの実装依頼_3サイト.md` を先に読んでください。
@@ -28,7 +28,7 @@
 | 1 | `var PREVIEW_MODE = true;` → **`false`** | `eki-pro/app/index.html` 777行 |
 | 2 | `STUB` の式 → **`STUB: false`** | `eki-pro/auth.html` 241行・`eki-pro/mypage.html` 195行・`eki-pro/upgrade.html` 372行（`TRIAL_CHECK`）・543行（`FIX`）・`eki-pro/register.html` 164行（`CONFIG`） |
 | 3 | 決済ページURL `TELECOM_PAYMENT_URL={ month:'' }`・`TELECOM_PARAM`（`ORDER_PREFIX='E'` はそのまま） | `eki-pro/upgrade.html` 342〜344行 |
-| 4 | テスト用キー欄 `#demoKeyCard`・`#geminiCard` と、`?gtest=1` で表示する1行を削除（欄を消してもアプリは止まらない作り）。`GEMINI_API_KEY = ""` は空のまま | `eki-pro/app/index.html` 957行・1249行・3667行・1451行 |
+| 4 | テスト用キー欄 `#demoKeyCard`・`#geminiCard` と、`?gtest=1` で表示する1行を削除（欄を消してもアプリは止まらない作り）。`GEMINI_API_KEY = ""` は空のまま | `eki-pro/app/index.html` 957行・1249行・3729行・1451行 |
 | 5 | 「▶ 登録せずに、そのまま鑑定を体験する（デモ）」リンク（`#demoLink`）を削除 | `eki-pro/register.html` 146行 |
 | 6 | `DEMO_MODE` は `false` のまま | `eki-pro/app/index.html` 787行 |
 | 7 | サーバー中継 `eki-pro/functions/gemini.js` の環境変数 | 共通仕様 §5 |

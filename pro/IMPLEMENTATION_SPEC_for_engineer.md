@@ -2,7 +2,7 @@
 
 > **会員・決済・API の正はこの文書です。** 過去のやり取り・旧ドキュメントより、本書を優先してください。
 > フロント（画面）は**完成済み**。エンジニアが作るのは **サーバー側API・決済・本番切替** です。
-> 対応バージョン：PRO `pro/sw.js` の `CACHE = 'shichu-jidou-v495'`／ビギナー `beginner/sw.js` `'kyoukara-uranaishi-v132'`／易 EKI Pro `eki-pro/app/sw.js` `'eki-pro-v97'` ／ 最終更新：2026-10-17
+> 対応バージョン：PRO `pro/sw.js` の `CACHE = 'shichu-jidou-v495'`／ビギナー `beginner/sw.js` `'kyoukara-uranaishi-v132'`／易 EKI Pro `eki-pro/app/sw.js` `'eki-pro-v98'` ／ 最終更新：2026-10-17
 > 3サイトの全体の依頼内容は、リポジトリ直下の `エンジニアへの実装依頼_3サイト.md` を先に読んでください。易 EKI Pro だけの追加分は `eki-pro/実装仕様_エンジニア向け.md`。
 > `eki-pro/実装仕様_会員まわり_共通.md` は本書と**同じ内容の写し**です（食い違ったら本書が正）。
 > 前提（発注者確認済み）：**Gemini（文章生成）はサーバー経由**（キーはサーバーだけに置く）／**決済はテレコムクレジット**／**Web先行 → のちに iOS・Android アプリ**。
@@ -52,7 +52,7 @@
 | 1 | 会員ゲート：`var PREVIEW_MODE = true;` → **`false`** | `app-pro.html` 803行 | `app-beginner.html` 821行 | `app/index.html` 777行 |
 | 2 | 仮動作：`STUB: !/(^\|\.)(72k\.ai\|suimei\.jp\|ekipro\.jp)$/i.test(location.hostname)` → **`STUB: false`** | `auth.html` 239行・`mypage-pro.html` 191行・`pricing-pro.html` 379行（`TRIAL_CHECK`）・491行（`FIX`） | `auth.html` 230行・`mypage.html` 184行・`pricing.html` 365行（`TRIAL_CHECK`）・477行（`FIX`） | `auth.html` 232行・`mypage.html` 186行・`upgrade.html` 360行（`TRIAL_CHECK`）・472行（`FIX`）・`register.html` 155行（`CONFIG`） |
 | 3 | 決済ページURL `var TELECOM_PAYMENT_URL={ month:'' };` と `var TELECOM_PARAM={ email:'email', order:'sendid' };` | `pricing-pro.html` 349〜350行 | `pricing.html` 335〜336行 | `upgrade.html` 330〜331行 |
-| 4 | テスト用キー欄を削除 | `app-pro.html` の `<details id="gtest-wrap">`（1063行）と `?gtest=1` で表示する1行（8320行）と、テスト用キーを読む1行（8314行 `geminiKey=…bazi_gkey…`。`geminiKey='';` に固定してもよい） | 同左（生成元の PRO を直して生成） | `app/index.html` の `#demoKeyCard`（957行）・`#geminiCard`（1249行）と、`?gtest=1` で表示する1行（3667行）。2つの欄を消してもアプリは止まらない作り（2026-10-13 確認済み）。1451行の `GEMINI_API_KEY = ""` は空のまま |
+| 4 | テスト用キー欄を削除 | `app-pro.html` の `<details id="gtest-wrap">`（1063行）と `?gtest=1` で表示する1行（8320行）と、テスト用キーを読む1行（8314行 `geminiKey=…bazi_gkey…`。`geminiKey='';` に固定してもよい） | 同左（生成元の PRO を直して生成） | `app/index.html` の `#demoKeyCard`（957行）・`#geminiCard`（1249行）と、`?gtest=1` で表示する1行（3729行）。2つの欄を消してもアプリは止まらない作り（2026-10-13 確認済み）。1451行の `GEMINI_API_KEY = ""` は空のまま |
 | 5 | `DEMO_MODE` は `false` のまま | `app-pro.html` 800行 | `app-beginner.html` 818行 | `app/index.html` 787行 |
 | 6 | `functions/gemini.js` | 会員確認は実装済み → **本番で環境変数 `MEMBER_CHECK_URL` を必ず設定**（§5） | 同左 | 同左 |
 
@@ -145,7 +145,7 @@
 - PRO・ビギナー：`app-pro.html`／`app-beginner.html`（相談・自動鑑定・日運/月運・本格鑑定・相性）、`meishi-sheet.html`（鑑定書）。
 - EKI：`app/index.html`（鑑定・深掘り相談・鑑定書）。
 
-いずれも URL は定数ではなく `'/.netlify/functions/gemini'` と直接書いてある（`app-pro.html` 6507行・`meishi-sheet.html` 4235行・`app-beginner.html` 6526行・EKI `app/index.html` 3293行）。`netlify.toml` では `/api/gemini` も同じ関数の別名。
+いずれも URL は定数ではなく `'/.netlify/functions/gemini'` と直接書いてある（`app-pro.html` 6507行・`meishi-sheet.html` 4235行・`app-beginner.html` 6526行・EKI `app/index.html` 3355行）。`netlify.toml` では `/api/gemini` も同じ関数の別名。
 
 **APIキーは絶対にフロントに出さず、サーバーの環境変数で持つ。** 雛形 `functions/gemini.js`（3サイトとも同じ仕組み。EKI は全体の大きさの上限だけ5,800,000字）あり。
 
