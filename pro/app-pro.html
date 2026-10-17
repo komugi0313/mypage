@@ -8432,6 +8432,63 @@ body.mode-compat #fb-card{display:none}
 })();
 </script>
 <!--PRO-ONLY:end-->
+<!--PRO-ONLY:start（声で入力（🎤）＝PROだけで試す機能（発注者決定 2026-10-17）。ブラウザに入っている音声認識（Web Speech API）を使う＝費用0円・サーバー不要。
+     話した言葉は質問欄に文字で入るだけ（自動では送らない）。専門用語は聞き間違えやすいので、送る前に欄の中で直せる。外すときはこの印の中を消すだけ） -->
+<style>
+  .vmic-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
+  .vmic-btn{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6px 14px;border-radius:999px;border:1.5px solid #C9A27A;background:#FFFFFF;color:#3C2A1C;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer}
+  .vmic-btn.on{background:#B4471F;border-color:#B4471F;color:#FFFFFF}
+  .vmic-msg{font-size:12px;font-weight:700;color:#5A4636;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}
+</style>
+<script>
+(function(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  var SEL='#cs-q, textarea.worry';   // 相談の欄・自由に質問する欄・相性の質問欄
+  var cur=null;
+  var IDLE='🎤 声で入力', ON='■ 止める';
+  function joinText(base,add){ add=String(add||'').trim(); if(!add) return base; if(!base) return add; return base+(/[\s。、！？!?]$/.test(base)?'':'　')+add; }
+  function say(m,t){ m.textContent=t||''; }
+  function start(ta,b,m){
+    if(cur){ try{ cur.stop(); }catch(e){} return; }
+    if(!SR){ say(m,'この画面では声の入力が使えません。キーボードのマイクボタンからお話しください。'); return; }
+    var r; try{ r=new SR(); }catch(e){ say(m,'この画面では声の入力が使えません。キーボードのマイクボタンからお話しください。'); return; }
+    r.lang='ja-JP'; r.interimResults=true; r.continuous=false; r.maxAlternatives=1;
+    var base=ta.value, fin='', shown='', got=false, err='';
+    r.onstart=function(){ b.classList.add('on'); b.textContent=ON; say(m,'お話しください…（話し終わると自動で止まります）'); };
+    r.onresult=function(e){
+      var interim=''; for(var i=e.resultIndex;i<e.results.length;i++){ var t=e.results[i][0].transcript; if(e.results[i].isFinal) fin+=t; else interim+=t; }
+      shown=fin+interim; got=got||!!shown.trim();
+      ta.value=joinText(base,shown); try{ ta.dispatchEvent(new Event('input',{bubbles:true})); }catch(_){}
+    };
+    r.onerror=function(e){ err=(e&&e.error)||''; };
+    r.onend=function(){
+      cur=null; b.classList.remove('on'); b.textContent=IDLE;
+      if(got){ ta.value=joinText(base,(fin||shown)); try{ ta.dispatchEvent(new Event('input',{bubbles:true})); ta.focus(); var n=ta.value.length; ta.setSelectionRange(n,n); }catch(_){}
+        say(m,'入力しました。専門用語は聞き間違えることがあります。送る前に確かめて、欄の中で直してください。'); return; }
+      if(err==='not-allowed'||err==='service-not-allowed') say(m,'マイクが許可されていません。端末の設定でマイクを許可するか、キーボードのマイクボタンからお話しください。');
+      else if(err==='network') say(m,'通信できないため、声の入力が使えませんでした。');
+      else if(err==='audio-capture') say(m,'マイクが見つかりませんでした。');
+      else say(m,'声が聞き取れませんでした。もう一度、🎤を押してお話しください。');
+    };
+    cur=r; try{ r.start(); }catch(e){ cur=null; say(m,'声の入力を始められませんでした。もう一度お試しください。'); }
+  }
+  function attach(ta){
+    if(!ta||ta.dataset.vmic) return; ta.dataset.vmic='1';
+    var row=document.createElement('div'); row.className='vmic-row';
+    var b=document.createElement('button'); b.type='button'; b.className='vmic-btn'; b.textContent=IDLE; b.setAttribute('aria-label','声で入力する');
+    var m=document.createElement('span'); m.className='vmic-msg'; m.setAttribute('aria-live','polite');
+    row.appendChild(b); row.appendChild(m); ta.insertAdjacentElement('afterend',row);
+    b.addEventListener('click',function(){ start(ta,b,m); });
+  }
+  function scan(root){ try{ (root||document).querySelectorAll(SEL).forEach(attach); }catch(e){} }
+  function wire(){
+    scan(document);
+    try{ new MutationObserver(function(ms){ ms.forEach(function(x){ x.addedNodes&&x.addedNodes.forEach(function(n){ if(n.nodeType===1){ if(n.matches&&n.matches(SEL)) attach(n); else scan(n); } }); }); }).observe(document.body,{childList:true,subtree:true}); }catch(e){}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wire); else wire();
+})();
+</script>
+<!--PRO-ONLY:end-->
 <script id="pk-contrast-guard">
 /* 文字の見えやすさの安全装置（tools/add_contrast_guard.py が3サイトの全ページに埋め込む。直すときはこのファイルを直して再実行）
    文字の色と、その後ろの背景の色を比べて、読みにくい組み合わせ（薄い背景に薄い文字／濃い背景に濃い文字）を見つけたら、
