@@ -90,6 +90,10 @@ html.bg-on #toTop::before{content:'↑';font-size:20px;line-height:44px}
 html.bg-on #jumpnav .bg-hide{display:none!important}
 /* 初心者モードでは、専門用語の多い「教科書」はナビに出さない（上級者モードで表示） */
 html.bg-on #jn-book{display:none!important}
+/* 中ほどの「教科書」ボタン（専門用語のページへ行く入口）も、やさしい表示では出さない */
+html.bg-on .mq-book{display:none!important}
+/* 「相談する」が出ているときは、↑ボタンをその上に上げて重ならないようにする */
+html.bg-on body.cs-fab-on #toTop{bottom:84px!important}
 #jumpnav #bg-navmode{background:#3A3226;color:#fff;border-color:#3A3226;font-weight:800}
 html.bg-on .bg-hide-on{display:none!important}
 html.bg-on #autoReading .chl-box{display:none!important}
@@ -109,6 +113,9 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
   function on(){ try{ return localStorage.getItem(KEY)!=='0'; }catch(e){ return true; } }
   function safe(fn,dflt){ try{ return fn(); }catch(e){ return dflt; } }
   function esc(t){ return String(t==null?'':t).replace(/[&<>"]/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch];}); }
+  // 鑑定する相手（お客様）の呼び方：「あなた」ではなく「〇〇さん」。名前がないとき・見本のときは「この方」。HTML用（WHO）と文字用（WHOt）
+  function WHOt(){ try{ var n=(typeof personName!=='undefined'&&personName)?String(personName).trim():''; if(window.__isSample||!n) return 'この方'; return n+'さん'; }catch(e){ return 'この方'; } }
+  function WHO(){ return esc(WHOt()); }
   function col(e){ return (typeof ec==='function')?ec(e):'#666'; }
   // 長い文章は2文ずつの段落に分けて読みやすくする
   function paras(t,n){ var ss=String(t||'').match(/[^。！？]+[。！？]?/g)||[], o=[]; n=n||2;
@@ -131,7 +138,7 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
   function secMe(c){
     var dp=c.pillars[2], det=(typeof KANSHI60_DETAIL!=='undefined')?KANSHI60_DETAIL[dp.ganzhi]:null;
     var phrase=safe(function(){ var d=document.createElement('div'); d.innerHTML=heroHTML(c); var p=d.querySelector('.phrase'); return p?p.textContent.trim():''; },'');
-    var h='<div class="bgc" id="bg-me"><div class="bgh"><span class="ic">🌟</span>あなたはこんな人</div>';
+    var h='<div class="bgc" id="bg-me"><div class="bgh"><span class="ic">🌟</span>'+WHO()+'はこんな人</div>';
     if(phrase) h+='<div class="phrase">'+esc(phrase)+'</div>';
     if(det){
       var tags=String(det.一言||'').split('・').filter(Boolean);
@@ -139,7 +146,7 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
       var base=String(det.基本||'').replace(/^[^。]*?が合わさ(り|った)、/,'');
       if(base) h+=paras(base);
       var sx=(c.birth&&c.birth.sex==='male')?'男':'女';
-      if(det[sx]) h+='<div class="sub">'+(sx==='男'?'男性':'女性')+'としてのあなた</div>'+paras(det[sx]);
+      if(det[sx]) h+='<div class="sub">'+(sx==='男'?'男性':'女性')+'としての'+WHO()+'</div>'+paras(det[sx]);
     }
     return h+'</div>';
   }
@@ -162,14 +169,14 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     var nm=function(L){return L.map(function(e){return '<b style="color:'+col(e)+'">'+short(e)+'</b>';}).join('・');};
     var ws=function(L){return L.map(function(e){return MEAN[e].w.split('。')[0].split('・')[0];}).join('・');};
     var bars=ORD.map(function(e){var n=fe[e]||0,pct=Math.round(n/max*100),k=col(e),isDay=e===dayEl;
-      return '<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-weight:900;font-size:13.5px;color:'+k+'">'+MEAN[e].n+(isDay?' <span class="nobr" style="font-size:10.5px;background:'+k+';color:#fff;border-radius:4px;padding:1px 6px;vertical-align:1px">あなたの中心</span>':'')+'</span><span style="font-weight:900;font-size:13px;color:var(--muted)">'+n+'</span></div><div style="height:9px;background:#EFEADD;border-radius:6px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+pct+'%;background:'+k+';border-radius:6px"></div></div><div class="bw" style="font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.7">'+MEAN[e].w+'</div></div>';}).join('');
+      return '<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-weight:900;font-size:13.5px;color:'+k+'">'+MEAN[e].n+(isDay?' <span class="nobr" style="font-size:10.5px;background:'+k+';color:#fff;border-radius:4px;padding:1px 6px;vertical-align:1px">'+(WHOt().length<=6?WHO()+'の':'')+'中心</span>':'')+'</span><span style="font-weight:900;font-size:13px;color:var(--muted)">'+n+'</span></div><div style="height:9px;background:#EFEADD;border-radius:6px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+pct+'%;background:'+k+';border-radius:6px"></div></div><div class="bw" style="font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.7">'+MEAN[e].w+'</div></div>';}).join('');
     var same=hi.length===ORD.length;
-    var msg=same?'あなたは5つの力をバランスよく持っています。どの場面でも力を発揮しやすいタイプです。'
-      :('あなたは'+nm(hi)+'の力が強めで、'+ws(hi)+'が持ち味です。'+
+    var msg=same?WHO()+'は5つの力をバランスよく持っています。どの場面でも力を発揮しやすいタイプです。'
+      :(WHO()+'は'+nm(hi)+'の力が強めで、'+ws(hi)+'が持ち味です。'+
         ((fe[weak]||0)===0?('いっぽう、'+nm(lo)+'の力は、生まれ持った中にはありません（いちばん少なめです）。'+ws(lo)+'を意識すると、バランスが整います。')
                           :('少なめなのは'+nm(lo)+'の力。'+ws(lo)+'を少し意識すると◎。')));
-    return '<div class="bgc" id="bg-gogyo"><div class="bgh"><span class="ic">🌿</span>あなたの中にある5つの力</div>'+
-      '<div class="bgl">人は生まれた日から、木・火・土・金・水という5つの自然の力を持っています。どの力が多いか少ないかが、あなたの性格や運のクセになります。</div>'+
+    return '<div class="bgc" id="bg-gogyo"><div class="bgh"><span class="ic">🌿</span>'+WHO()+'の中にある5つの力</div>'+
+      '<div class="bgl">人は生まれた日から、木・火・土・金・水という5つの自然の力を持っています。どの力が多いか少ないかが、'+WHO()+'の性格や運のクセになります。</div>'+
       bars+'<p style="margin-top:10px;background:#FBF6EA;border-radius:10px;padding:10px 12px;font-size:14px">'+msg+'</p></div>';
   }
 
@@ -262,7 +269,7 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     var ts=safe(function(){return detectTensen(c);},null), tn=safe(function(){return detectTensenNatal(c);},null);
     if((!ts||!ts.any)&&(!tn||!tn.any)) return '';
     var h='<div class="bgc" id="bg-shake"><div class="bgh"><span class="ic">⚡</span>とくに大きく揺れやすい時期</div>';
-    var b1=(ts&&ts.any&&ts.selfAny)?block('あなた自身・家族やパートナーとの暮らしが揺れやすい時期',ts,c):'', b2=(ts&&ts.any&&ts.work&&ts.work.any)?block('仕事・立場が揺れやすい時期',ts.work,c):'';
+    var b1=(ts&&ts.any&&ts.selfAny)?block(WHO()+'自身・家族やパートナーとの暮らしが揺れやすい時期',ts,c):'', b2=(ts&&ts.any&&ts.work&&ts.work.any)?block('仕事・立場が揺れやすい時期',ts.work,c):'';
     if(!b1 && !b2 && (!tn||!tn.any)) return '';
     if(b1||b2){
       h+='<div class="bgl">生まれ持った力と、めぐってくる運が、正面から強くぶつかる時期です。暮らしや仕事が大きく入れ替わりやすく、基本的には注意が必要な時期として、早めに備えておきましょう。</div>';
@@ -309,7 +316,7 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     return {gc:gc,tc:tc,good:good,strain:strain,low:low};
   }
   function tsBase(){ return String(TSC_TXT.base).replace(/^2人の柱の間に天戦地冲がある場合、/,''); }
-  function tsDir(tc){ var x=tc.day||tc.list[0]; return x.aCtrl?'あなたの言動が、お相手を押さえつけたり傷つけたりしやすい形です。':'お相手からの圧力を、あなたが受けとめてストレスをためやすい形です。'; }
+  function tsDir(tc){ var x=tc.day||tc.list[0]; return x.aCtrl?WHO()+'の言動が、お相手を押さえつけたり傷つけたりしやすい形です。':'お相手からの圧力を、'+WHO()+'が受けとめてストレスをためやすい形です。'; }
   // 天戦地冲の相性を、短い要点に分けて見せる（文章の壁にしない）
   function tsPoints(tc){
     var x=tc.day||tc.list[0];
@@ -317,7 +324,7 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
       ['🔥','最初は：','自分と違うところに、強く惹かれ合いやすい。'],
       ['⚡','近づくと：','考え方や進め方の違いがはっきりして、言い争いやすれ違いが増えやすい。'],
       ['😣','一緒にいると：','お互いの調子が崩れて、気疲れしやすい。'],
-      ['▶','2人の形：',x.aCtrl?'あなたの言動が、お相手を押さえつけたり傷つけたりしやすい。':'お相手からの圧力を、あなたが受けとめてストレスをためやすい。'],
+      ['▶','2人の形：',x.aCtrl?WHO()+'の言動が、お相手を押さえつけたり傷つけたりしやすい。':'お相手からの圧力を、'+WHO()+'が受けとめてストレスをためやすい。'],
       ['💗','恋愛・夫婦：','惹かれては傷つくことをくり返し、離れたりくっついたりしやすい。'],
       ['💼','仕事：','意見が割れやすい。攻める役と守る役に分けると、成果につながることも。'],
       ['🌱','うまくいくコツ：','相手を思いどおりに動かそうとしない。踏み込みすぎない距離を保ち、違いを持ち味として認める。']
@@ -342,8 +349,8 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
       h+='<div class="bgc"><div class="bgh"><span class="ic">📅</span>2人の関係が動きやすい年</div><div class="bgl">これから25年のあいだで、目安になる年です。</div>'+
         '<div class="sub" style="color:#1F8A55">💗 縁が深まりやすい年</div>'+li(d.good,'good')+''+
         '<div class="sub" style="color:#B3261E">🌀 関係が揺れやすい年</div>'+li(d.strain,'strain')+''+
-        '<div class="sub" style="color:#5B6472">🌙 あなた自身が無理をせず整えたい年</div>'+li(d.low,'low')+''+
-        '<div class="note">※「揺れやすい年」は、別れの年という意味ではありません。関係を見直したり話し合ったりする節目の目安です。「整えたい年」は相性とは別に、あなた自身の運の流れから見た目安です（上の「あなた」の画面の判定と同じ物差しです）。</div></div>'; }
+        '<div class="sub" style="color:#5B6472">🌙 '+WHO()+'自身が無理をせず整えたい年</div>'+li(d.low,'low')+''+
+        '<div class="note">※「揺れやすい年」は、別れの年という意味ではありません。関係を見直したり話し合ったりする節目の目安です。「整えたい年」は相性とは別に、'+WHO()+'自身の運の流れから見た目安です（上の「'+WHO()+'」の画面の判定と同じ物差しです）。</div></div>'; }
     return h+'</div>';
   }
   function plainCompatText(a,b,rt){
@@ -426,9 +433,9 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     if(cb && /2人/.test(user)){ var pc=plainCompatText(c,cb,curRt()); return (/【相談者\(本人A\)からの質問】/.test(user)?'通信できないため、ご質問への個別のお答えの代わりに、2人の相性の全体をお伝えします。\n\n':'')+pc; }
     var det=(typeof KANSHI60_DETAIL!=='undefined')?KANSHI60_DETAIL[c.pillars[2].ganzhi]:null, P={};
     var phrase=safe(function(){ var d=document.createElement('div'); d.innerHTML=heroHTML(c); var p=d.querySelector('.phrase'); return p?p.textContent.trim():''; },'');
-    if(det){ var base=String(det.基本||'').replace(/^[^。]*?が合わさ(り|った)、/,''); if(base) P.me='【あなたの性格】\n'+base; }
+    if(det){ var base=String(det.基本||'').replace(/^[^。]*?が合わさ(り|った)、/,''); if(base) P.me='【'+WHOt()+'の性格】\n'+base; }
     var fe=c.fiveElements||{}, so=ORD.slice().sort(function(x,y){return (fe[y]||0)-(fe[x]||0);});
-    P.power='【あなたの持ち味】\n'+MEAN[so[0]].n.split('（')[0]+'の力が強めで、'+MEAN[so[0]].w.split('。')[0]+'が持ち味です。'+MEAN[so[4]].n.split('（')[0]+'の力は少なめなので、'+MEAN[so[4]].w.split('。')[0]+'を意識するとバランスが整います。';
+    P.power='【'+WHOt()+'の持ち味】\n'+MEAN[so[0]].n.split('（')[0]+'の力が強めで、'+MEAN[so[0]].w.split('。')[0]+'が持ち味です。'+MEAN[so[4]].n.split('（')[0]+'の力は少なめなので、'+MEAN[so[4]].w.split('。')[0]+'を意識するとバランスが整います。';
     var y=c.now&&c.now.year, ay=(c.annualFortunes||[]).filter(function(a){return a.year===y;})[0], dd=safe(function(){return curDu(c);},null), nw=[];
     var dot=function(t){ t=String(t||'').trim(); return (!t||/[。！？]$/.test(t))?t:t+'。'; };   // 「…大切に）」で終わっても句点を付けて、次の文とつながらないようにする
     if(ay){ var s=sig(c,ay), ma=meanFor(c,ay); nw.push('今年は「'+s.lab+'」。'+dot(ma.意)+(ma.助?'\n過ごし方のコツ：'+dot(ma.助):'')); }
@@ -461,7 +468,7 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
       var body;
       if(topic==='love'||topic==='children') body=age<18?['【恋愛・結婚】\n恋愛・結婚の目安は、18歳以上の方にお伝えしています。いまは学びや成長、人との出会いを大切にする時期です。'].concat(J(['now'])):J(['love','now','flow']);
       else if(topic==='work'||topic==='study') body=J(['work','power','now','flow','shake']);
-      else if(topic==='money') body=['【お金との付き合い方】\n大きな勝負で一気に増やすより、あなたの持ち味を活かした積み重ねが、お金の流れを安定させます。'+(gd.length?'動き出すのに向いている年は、新しい収入の道を広げるのにも向いています。':'')].concat(J(['power','now','flow','shake']));
+      else if(topic==='money') body=['【お金との付き合い方】\n大きな勝負で一気に増やすより、'+WHOt()+'の持ち味を活かした積み重ねが、お金の流れを安定させます。'+(gd.length?'動き出すのに向いている年は、新しい収入の道を広げるのにも向いています。':'')].concat(J(['power','now','flow','shake']));
       else if(topic==='health') body=J(['care','now']);
       else if(topic==='relation') body=J(['me','power','now']);
       else if(topic==='move') body=J(['now','flow','shake']);
@@ -486,7 +493,7 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     });
   }
   /* ---------- 画面の組み立て ---------- */
-  var NAV=[['bg-me','あなた'],['bg-now','運気'],['bg-love','恋愛'],['bg-care','心と体']];
+  var NAV=[['bg-me','人柄'],['bg-now','運気'],['bg-love','恋愛'],['bg-care','心と体']];
   function navOn(){
     var jn=document.getElementById('jumpnav'); if(!jn) return;
     jn.querySelectorAll('button[data-t]').forEach(function(b){ var t=b.getAttribute('data-t'); if(t!=='compat-card'&&t!=='ai-slot'&&!b.hasAttribute('data-bg')) b.classList.add('bg-hide'); });
@@ -503,10 +510,10 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
   }
   function relabelAi(){
     var s=document.getElementById('ai-slot'); if(!s) return;
-    var h2=s.querySelector('h2'); if(h2&&!h2.dataset.bg){ h2.dataset.bg=h2.textContent; h2.textContent='あなたへの鑑定（やさしい言葉で）'; }
+    var h2=s.querySelector('h2'); if(h2&&!h2.dataset.bg){ h2.dataset.bg=h2.textContent; h2.textContent=WHOt()+'への鑑定（やさしい言葉で）'; }
     var eb=s.querySelector('.eyebrow'); if(eb&&!eb.dataset.bg){ eb.dataset.bg=eb.innerHTML; eb.innerHTML='<b>鑑定</b>文章で読む'; }
-    var p=s.querySelector('h2+p, .lead'); if(p&&!p.dataset.bg){ p.dataset.bg=p.innerHTML; p.innerHTML='下のボタンを押すと、あなたの生まれ持った性格や、これからの運の流れを、むずかしい言葉を使わずに文章でお伝えします。'; }
-    var qs=s.querySelector('.qbox-sub'); if(qs&&!qs.dataset.bg){ qs.dataset.bg='1'; qs.textContent='気になることを書くと、あなたの生まれ持った性質と運の流れから、詳しくお答えします。'; }
+    var p=s.querySelector('h2+p, .lead'); if(p&&!p.dataset.bg){ p.dataset.bg=p.innerHTML; p.innerHTML='下のボタンを押すと、'+WHO()+'の生まれ持った性格や、これからの運の流れを、むずかしい言葉を使わずに文章でお伝えします。'; }
+    var qs=s.querySelector('.qbox-sub'); if(qs&&!qs.dataset.bg){ qs.dataset.bg='1'; qs.textContent='気になることを書くと、'+WHOt()+'の生まれ持った性質と運の流れから、詳しくお答えします。'; }
     var b=document.getElementById('autoReadBtn'); if(b&&!b.dataset.bg){ b.dataset.bg=b.innerHTML; b.innerHTML='やさしい言葉で詳細鑑定'; }
   }
   var foldOpen=false;
@@ -523,7 +530,7 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     ['#compat-card .qbox-sub','気になることを書くと、2人の生まれ持った性質と運の流れから、詳しくお答えします。'],
     [function(){ return document.getElementById('adv-sum'); },'⚙ 恋愛のお相手などの設定<span style="display:inline-block;margin-left:6px;background:#E3F4EA;color:#1E7A4C;border:1px solid #9FD3B4;border-radius:999px;padding:1px 10px;font-size:13px;font-weight:900;vertical-align:1px;white-space:nowrap">ふだんは触らなくてOK</span><span style="display:block;margin:4px 0 0 1.2em;font-size:13.5px;font-weight:600;color:var(--ink2);line-height:1.7;word-break:auto-phrase;line-break:strict">恋愛相手を変えるときだけ使います。</span>'],
     [function(){ var p=document.getElementById('f-pref'); return p?p.nextElementSibling:null; },'生まれた都道府県を選ぶと、その土地の時刻に合わせて、より正確に占います。分からなければ「指定しない」のままでOKです。'],
-    ['.foot','結果は、生年月日から決まった計算で出しています。文章はひとつの目安です。<br>占いは自分を知るための道具です。大切な判断はご自身で。']
+    ['.foot','結果は、生年月日から決まった計算で出しています。文章はひとつの目安です。<br>占いは自分を知るための道具です。<span class="nobr">大切な判断はご自身で。</span>']
   ];
   function relabelStatic(v){
     STATIC.forEach(function(x){
