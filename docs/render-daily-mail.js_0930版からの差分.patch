@@ -339,26 +339,67 @@
        + '</div>');
  
      /* ── 外枠：月ごとの単色の枠＋上に動く季節バナー＋下に季節の絵文字リボン（写真の背景は使わない＝軽い） ── */
-@@ -307,16 +362,23 @@
+@@ -306,17 +361,61 @@
+       + '</td></tr></table></body></html>';
  
      /* ── テキスト版（HTMLを表示できない環境・迷惑メール判定対策） ── */
++    /* 10/17 総点検O16：文字だけのメールソフト向け（text版）も、HTML版と同じ欄を同じ順番で入れる */
      var t = [];
 -    t.push('私だけの運気予報　' + dateLabel + (hol ? '（' + hol + '）' : ''), '', r.user.nick + 'さん、おはようございます', strip(r.relIntro), '');
 -    t.push('■ 今日の運勢：' + r.weather.name + '（運勢指数 ' + idx + '/100）', strip(r.weatherMsg), '');
-+    t.push('私だけの開運予報　' + dateLabel + (hol ? '（' + hol + '）' : ''), '', r.user.nick + 'さん、おはようございます', strip(r.relIntro), '');
-+    t.push('■ 今日の運勢：' + r.weather.name + '（' + idx + '点）', strip(r.weatherMsg), '', '📅 開運カレンダー：' + mypage + '#calWrap', '');
-     if (r.todayOne) t.push('■ 今日はこれだけ', strip(r.todayOne), '');
-     t.push('■ 今日のあなた', strip(r.theme.message), '');
-+    if (r.caution) t.push('■ 今日のちょっとしたコツ', strip(r.caution), '');
-     if (RH.en) t.push('■ ' + RH.en, '[' + r.en.tag + '] ' + strip(r.en.body), '');
+-    if (r.todayOne) t.push('■ 今日はこれだけ', strip(r.todayOne), '');
+-    t.push('■ 今日のあなた', strip(r.theme.message), '');
+-    if (RH.en) t.push('■ ' + RH.en, '[' + r.en.tag + '] ' + strip(r.en.body), '');
 -    t.push('■ 仕事・勝負運', strip(fo.work), '', '■ 金運', strip(fo.money), '', '■ 友達・対人運', strip(fo.friend), '', '■ 体調・リラックス', strip(fo.health), '');
 -    t.push('■ ラッキー', 'カラー：' + lk.color + '／方角：' + lk.direction + '／食材：' + lk.food + '／ナンバー：' + lk.number, '');
 -    t.push('1.66 相性診断（無料）：' + aishou, '', '配信停止（ログイン不要）：' + unsub, '設定変更：' + mypage, '運営：72k株式会社（運営者情報：' + operator + '）', '', 'produced by Mizuki Nico');
 -
 -    return { subject: subject, html: html, text: t.join('\n') };
-+    if (r.love && RH.en) t.push('■ ' + ((rel === 'partner' || rel === 'married') ? 'ふたりの恋愛運' : '今日の恋愛運'), strip(r.love), '');
-+    t.push('■ 仕事・チャレンジ', strip(fo.work), '', '■ お金・金運', strip(fo.money), '', '■ 対人・人間関係', strip(fo.friend), '', '■ 健康・コンディション', strip(fo.health), '', '📅 分野ごとのくわしい運勢は、マイページのカレンダーで：' + mypage + '#today', '');
-+    t.push('■ ラッキー', 'カラー：' + lk.color + '／方角：' + lk.direction + '（自宅から見て）／食材：' + lk.food + '／ナンバー：' + lk.number, '');
++    var _ent = function(x){ return String(x).replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'"); };
++    var tx = function(x){ return _ent(strip(x)).replace(/[ \u3000]+\n/g,'\n').trim(); };
++    t.push('私だけの開運予報　' + dateLabel + (hol ? '（' + hol + '）' : ''), '', r.user.nick + 'さん、おはようございます', tx(r.relIntro), '');
++    t.push('■ 今日の運勢：' + r.weather.name + '（' + idx + '点）', tx(r.weatherMsg), '');
++    var _kt = [];
++    if (good) _kt.push(r.grade.sym + ' ' + r.grade.label);
++    marks.forEach(function(x){ _kt.push(tx(x)); });
++    if (_caut) _kt.push('⚠️ 注意の日');
++    t.push('■ 今日のあなたの鑑定', _kt.length ? _kt.join('／') : (_ts ? '今日はゆとりを持って、慎重に過ごす日' : '今日はおだやかに、縁を育てる日 🌱'),
++      '開運アクション：' + tx(lk.action) + '／ラッキーカラー：' + tx(lk.color), '📅 開運カレンダー：' + mypage + '#calWrap', '');
++    if (r.moon || r.kou){
++      if (r.moon) t.push('🌙 今日の月：' + tx(r.moon.name) + (r.moon.text ? ' ― ' + tx(r.moon.text) : '') + '（月齢' + r.moon.age + '）');
++      if (r.kou) t.push('🍃 七十二候：' + tx(r.kou.sekki) + '・' + tx(r.kou.third) + '「' + tx(r.kou.name) + '」' + (r.kou.yomi ? '（' + tx(r.kou.yomi) + '）' : ''));
++      t.push('');
++    }
++    if (r.todayOne) t.push('■ 今日はこれだけ', tx(r.todayOne), '');
++    if (r.habit) t.push('■ 今日の開運習慣（コツコツ運気を育てる）', tx(r.habit), '');
++    if (r.focus) t.push('■ 今日の注目：あなたが大切にしている「' + tx(r.focus.label) + '」', tx(r.focus.text), '');
++    t.push('■ 今日のあなた', tx('今日のテーマは「' + r.theme.axis + '」（' + r.theme.mean + 'の巡り）。' + (r.theme.line ? r.theme.line + ' ' : '') + r.theme.message), '');
++    if (r.juni && r.juni.text) t.push('■ 今日の運気の巡り', tx(r.juni.text), '');
++    if (r.caution) t.push('■ 今日のちょっとしたコツ', tx(r.caution), '');
++    if (RH.en){
++      t.push('■ ' + RH.en, '[' + r.en.tag + '] ' + tx(r.en.body), '');
++      if (r.love && FD !== 'love') t.push('■ ' + ((rel === 'partner' || rel === 'married') ? 'ふたりの恋愛運' : '今日の恋愛運'), tx(r.love), '');
++      if (r.loveMove) t.push('■ 今日の恋の一手', tx(r.loveMove), '');
++      t.push('■ ' + RH.place, tx(placeText), '');
++    }
++    if (FD !== 'work') t.push('■ 仕事・チャレンジ', tx(fo.work), '');
++    if (FD !== 'money') t.push('■ お金・金運', tx(fo.money), '');
++    if (FD !== 'friend') t.push('■ 対人・人間関係', tx(fo.friend), '');
++    if (!RH.en) t.push('■ ' + RH.place, tx(placeText), '');
++    if (fo.study && FD !== 'study') t.push('■ 学び・成長', tx(fo.study), '');
++    if (FD !== 'health') t.push('■ 健康・コンディション', tx(fo.health), '');
++    t.push('📅 分野ごとのくわしい運勢は、マイページのカレンダーで：' + mypage + '#today', '');
++    if (ki.length){ t.push('■ 今日のこよみメモ'); ki.forEach(function(it){ t.push(it.emoji + ' ' + tx(it.label) + '　' + tx(it.text) + (it.note ? '（' + tx(it.note) + '）' : '')); }); t.push(''); }
++    if (fl && fl.items && fl.items.length){ t.push('■ 今の大きな流れ'); fl.items.forEach(function(it){ t.push(tx(it.label) + '　' + tx(it.text)); }); if (fl.note) t.push(tx(fl.note)); t.push(''); }
++    t.push('■ 今日のあなたのラッキー',
++      'カラー：' + tx(lk.color) + '／方角：' + tx(lk.direction) + '（自宅から見て）／食材：' + tx(lk.food) + '／ナンバー：' + tx(lk.number),
++      '開運アクション：' + tx(lk.action) + '／アイテム：' + tx(lk.item) + '／スポット：' + tx(lk.spotNature) + (lk.spotCity ? '・' + tx(lk.spotCity) : '') + '／おすすめの行動：' + tx(lk.act));
++    if (lk.menu && lk.menu.length) t.push('🍽 おすすめメニュー：' + lk.menu.map(tx).join('・'));
++    if (wear) t.push('👗 今日の服：' + tx(wear));
++    t.push('');
++    if (r.onepoint) t.push('■ 今日のワンポイント', tx(r.onepoint), '');
++    if (r.season) t.push('■ 季節のたより', tx(r.season.word) + (r.season.note ? '\n' + tx(r.season.note) : ''), '');
++    t.push(tx(String(r.closeWord || '— あなたの縁が、また一歩ひらけますように。').replace(/<br\s*\/?>/gi, '')), '');
 +    t.push('― Special Reading ―', '1.66 奇跡の相性診断（料金はかかりません）：' + aishou, 'ニコカレ（準備中）／Pocket鑑定（準備中）：' + site + '#sisters', '', (lineUrl ? 'LINE友だち限定：毎月抽選で2名さまにオンライン鑑定：' + lineUrl + '\n抽選の応募規約：https://166unmei.com/campaign.html\n' : '') + '配信停止（ログイン不要）：' + unsub, '設定変更：' + mypage, '運営：72k株式会社', '運営者情報： ' + operator, '', 'Produced by Mizuki Nico');
 +
 +    /* 文と文のあいだの半角すき間（「。 今日は…」）を取る（10/11）。文字だけで中身は変えない */
