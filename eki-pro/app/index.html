@@ -53,7 +53,8 @@ body{
 .brand-seal img{width:100%;height:100%;object-fit:cover;}
 .brand-txt{min-width:0;line-height:1.25;}
 .brand-name{font-family:var(--serif);font-weight:700;font-size:17px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.brand-role{font-size:11px;color:var(--ink3);letter-spacing:.04em;}
+.brand-role{font-size:12.5px;color:var(--ink2);letter-spacing:.04em;}
+input[type=checkbox]{width:22px;height:22px;flex:0 0 auto;}
 .lang-seg{display:flex;gap:3px;margin-left:auto;align-self:flex-start;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;}
 .lang-seg button{border:0;background:#fff;color:var(--ink3);font-size:13px;font-weight:700;padding:8px 11px;cursor:pointer;font-family:var(--sans);line-height:1.1;white-space:nowrap;}
 .lang-seg button.on{background:var(--shu);color:#fff;}
@@ -3490,6 +3491,43 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
       .observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','hidden','open']}); }
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
+</script>
+<script>
+/* 行末の1〜2文字だけが次の行に残らないようにする（表示だけ・文章は変えない）。
+   見つけたら、まず行の長さをそろえ（text-wrap:balance）、それでも残るときは最後の数文字を改行させずにひとまとまりにする。
+   新しく表示された部分・開いた折りたたみにも自動でかかる */
+(function(){
+  function lines(e){ const rg=document.createRange(); rg.selectNodeContents(e); const L={};
+    [...rg.getClientRects()].forEach(r=>{ if(!(r.width>0&&r.height>0))return; const k=Math.round((r.top+r.bottom)/8); const o=L[k]||(L[k]={l:1e9,r:-1e9}); o.l=Math.min(o.l,r.left); o.r=Math.max(o.r,r.right); });
+    return Object.keys(L).map(Number).sort((a,b)=>a-b).map(k=>L[k]); }
+  function isShort(e){ const ls=lines(e); if(ls.length<2) return false; const fs=parseFloat(getComputedStyle(e).fontSize)||14; const z=ls[ls.length-1]; return (z.r-z.l)<fs*2.3; }
+  function glue(nodes){ const sp=document.createElement('span'); sp.className='og-t'; sp.style.whiteSpace='nowrap'; nodes[0].parentNode.insertBefore(sp,nodes[0]); nodes.forEach(n=>sp.appendChild(n)); }
+  function tail(e){
+    const w=document.createTreeWalker(e,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.nodeValue.trim()?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_SKIP}); let last=null,n; while((n=w.nextNode())) last=n; if(!last) return;
+    const v=last.nodeValue.replace(/\s+$/,'');
+    if(v.length>=4){ glue([last.splitText(v.length-4)]); return; }
+    // 「▾」など短い文字：その前の数文字と一緒にする
+    let t=last, p=t.parentNode; while(p&&p!==e&&!t.previousSibling){ t=p; p=p.parentNode; }
+    const prev=t.previousSibling; if(!prev) return;
+    if(prev.nodeType===3){ const pv=prev.nodeValue; if(pv.trim().length<1) return; glue([prev.splitText(Math.max(0,pv.length-3)),t]); }
+    else glue([prev,t]);
+  }
+  function run(){
+    document.querySelectorAll('p,li,h1,h2,h3,h4,label,summary,div,span,b,small,a,button,td').forEach(e=>{
+      if(e.dataset.og||!e.offsetParent) return;
+      if(e.closest('table:not(.og-ok),svg,select,textarea,[contenteditable],.no-og,#verTag')) return;
+      let own=false; for(const c of e.childNodes){ if(c.nodeType===3&&c.nodeValue.trim()){own=true;break;} } if(!own) return;
+      if((e.textContent||'').trim().length<5) return;
+      e.dataset.og='1';
+      if(!isShort(e)) return;
+      e.style.textWrap='balance'; if(!isShort(e)) return;
+      e.style.textWrap=''; tail(e);
+    }); }
+  let t=null; const sch=()=>{ clearTimeout(t); t=setTimeout(()=>{ try{run();}catch(_e){} },220); };
+  try{ new MutationObserver(sch).observe(document.body,{childList:true,subtree:true}); }catch(e){}
+  document.addEventListener('toggle',sch,true); document.addEventListener('click',sch,true);
+  sch();
 })();
 </script>
 </body>
