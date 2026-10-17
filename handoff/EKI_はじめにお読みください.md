@@ -1,6 +1,6 @@
 # 易 EKI Pro ― 引き渡しメモ（この商品だけ）
 
-最終更新：2026-10-17　／　販売事業者：72k株式会社　／　対応バージョン：`eki-pro/app/sw.js` の `CACHE = 'eki-pro-v78'`
+最終更新：2026-10-17　／　販売事業者：72k株式会社　／　対応バージョン：`eki-pro/app/sw.js` の `CACHE = 'eki-pro-v79'`
 
 > **この ZIP は「易 EKI Pro」だけ**です。四柱推命 PRO・今日から占い師（ビギナー）は**別の商品**で、別の ZIP です。混ぜないでください。
 > サーバー（会員・決済・オンライン鑑定の中継）は全商品で共通の基盤です。依頼の全体は「【最終完成版】0_共通サーバー基盤」ZIP の `エンジニアへの実装依頼_3サイト.md` を先に読んでください。
@@ -17,7 +17,7 @@
 | 商品ID（ヘッダ `X-Product`） | `eki` |
 | お申し込み番号 | `E-YYYYMMDD-XXXXX-XXXXX` |
 | 料金 | 月額 9,800円（税込）のみ・7日間無料（お申し込み日を1日目とする7日間。8日目に初回、以後毎月その日） |
-| 回数上限 | 無料期間中：オンライン鑑定＋深掘り相談の合計 1日3回／有料：**ご契約の1か月で1,400回**（更新日に戻る・1日の上限なし・追加販売なし）・1分15回。鑑定1件・追加のご相談1問＝1回（2回目の `x-eki-kind: detail` と鑑定書 `x-eki-kind: sho` は数えない）。雛形 `functions/gemini.js` で会員ごとに数え、残り回数をヘッダ `x-pk-left` で返す。画面は「鑑定する」の下とマイページに残り回数をいつも表示 |
+| 利用の上限 | 有料：**回数は数えない・1日の上限なし**（お客様に回数・残りは見せない）。サーバーが1人あたりの実際の費用をご契約の期間ごとに足し、月2,940円（利益65%の線）に届いたら次の更新日までお休み（429 `MONTH_BUDGET`。最低保証 月1,400件以上）＋1分15回。無料期間中：オンライン鑑定＋追加のご相談の合計 **1日3回**（2回目の `x-eki-kind: detail` と鑑定書 `sho` は数えない）。くわしくは `eki-pro/実装仕様_会員まわり_共通.md` §3-3 |
 | 顧客名簿 | 端末内だけ（サーバーに保存しない。規約どおり）。`mypage-get`／`mypage-put` は使わない |
 | この商品だけのAPI | `apply-start`（登録画面のプロフィールを控える。会員はまだ作らない） |
 
@@ -28,7 +28,7 @@
 | 1 | `var PREVIEW_MODE = true;` → **`false`** | `eki-pro/app/index.html` 548行 |
 | 2 | `STUB` の式 → **`STUB: false`** | `eki-pro/auth.html` 232行・`eki-pro/mypage.html` 186行・`eki-pro/upgrade.html` 360行（`TRIAL_CHECK`）・472行（`FIX`）・`eki-pro/register.html` 155行（`CONFIG`） |
 | 3 | 決済ページURL `TELECOM_PAYMENT_URL={ month:'' }`・`TELECOM_PARAM`（`ORDER_PREFIX='E'` はそのまま） | `eki-pro/upgrade.html` 330〜332行 |
-| 4 | テスト用キー欄 `#demoKeyCard`・`#geminiCard` と、`?gtest=1` で表示する1行を削除（欄を消してもアプリは止まらない作り）。`GEMINI_API_KEY = ""` は空のまま | `eki-pro/app/index.html` 728行・984行・3019行・1177行 |
+| 4 | テスト用キー欄 `#demoKeyCard`・`#geminiCard` と、`?gtest=1` で表示する1行を削除（欄を消してもアプリは止まらない作り）。`GEMINI_API_KEY = ""` は空のまま | `eki-pro/app/index.html` 728行・984行・3016行・1177行 |
 | 5 | 「▶ 登録せずに、そのまま鑑定を体験する（デモ）」リンク（`#demoLink`）を削除 | `eki-pro/register.html` 137行 |
 | 6 | `DEMO_MODE` は `false` のまま | `eki-pro/app/index.html` 558行 |
 | 7 | サーバー中継 `eki-pro/functions/gemini.js` の環境変数 | 共通仕様 §5 |

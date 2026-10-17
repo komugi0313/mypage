@@ -4174,27 +4174,27 @@ window.KANSHI60_DETAIL={
     if(typeof fitSheet==='function') fitSheet();
   }
   var _aiBusy=false;
-  // 詳細鑑定（オンライン）の回数：有料＝ご契約の1か月ごとに700回まで（1日の上限はなし）／無料お試し中＝1日3回まで。アプリの相談などと合計（同じ数え方・同じ記録）。
-  // 使い切ったら定型文（オフラインの鑑定書）に自動で切り替わる。厳密な数はサーバーが会員ごとに数え、残り回数をヘッダ x-pk-left で返す。
-  var AI_MONTH_CAP=700;   // 有料：ご契約の1か月で700回まで
+  // 詳細鑑定（オンライン）の上限（アプリと同じ・同じ記録）：無料お試し中＝1日3回まで（数える）。
+  // 有料＝回数は数えない。サーバーが1人あたりの実際の費用を見て、月額料金でまかなえる範囲に届いた月だけ 429 MONTH_BUDGET を返す → 次の更新日まで定型文の鑑定書に切替。
   var AI_TRIAL_CAP=3;   // 無料お試し中は1日3回まで（日本時間の0時に戻る）
   function aiIsTrial(){ try{ return (localStorage.getItem('member_status')||'')==='trialing'; }catch(e){ return false; } }
-  function aiCap(){ return aiIsTrial()?AI_TRIAL_CAP:AI_MONTH_CAP; }
   function _aiJst(){ return new Date(Date.now()+9*3600000); }
   function _aiDayKey(){ var d=_aiJst(); return 'ai_daily_'+d.getUTCFullYear()+('0'+(d.getUTCMonth()+1)).slice(-2)+('0'+d.getUTCDate()).slice(-2); }   // 無料お試し：日本時間の日付で数える（アプリと同じ）
   function _aiPeriodId(){ var pe=''; try{ pe=localStorage.getItem('member_period_end')||''; }catch(e){} var d=_aiJst(), today=d.toISOString().slice(0,10);
-    if(/^\d{4}-\d{2}-\d{2}$/.test(pe) && pe>=today) return pe; return 'm'+d.getUTCFullYear()+('0'+(d.getUTCMonth()+1)).slice(-2); }   // 有料：ご契約の期間ごと（アプリと同じ）
-  function _aiKey(){ return aiIsTrial()?_aiDayKey():'ai_month_'+_aiPeriodId(); }
+    if(/^\d{4}-\d{2}-\d{2}$/.test(pe) && pe>=today) return pe; return 'm'+d.getUTCFullYear()+('0'+(d.getUTCMonth()+1)).slice(-2); }   // 有料：ご契約の期間（アプリと同じ）
+  function _aiStopKey(){ return 'ai_pause_'+_aiPeriodId(); }   // 有料：今月お休み中の印（アプリと同じ）
   function aiResetLabel(){ var p=_aiPeriodId(), d; if(p.charAt(0)!=='m') d=new Date(Date.parse(p+'T00:00:00Z')+86400000); else d=new Date(Date.UTC(+p.slice(1,5),+p.slice(5,7),1)); return (d.getUTCMonth()+1)+'月'+d.getUTCDate()+'日'; }
   function aiLimitNote(){ if(aiIsTrial()) return '無料お試し中の詳細鑑定は1日3回まで（相談・鑑定書の作成などの合計）です。今日の3回を使い切りました。明日（日本時間の0時から）また3回ご利用いただけます。いまは定型文（オフラインの鑑定書）で表示しています。';
     var ending=false; try{ ending=/^cancel/.test(localStorage.getItem('member_status')||''); }catch(e){}
-    return '今月の詳細鑑定（'+AI_MONTH_CAP+'回）を使い切りました。'+(ending?'':aiResetLabel()+'の更新日から、また'+AI_MONTH_CAP+'回ご利用いただけます。')+'いまは定型文（オフラインの鑑定書）で表示しています。'; }
-  function aiCount(){ try{ return parseInt(localStorage.getItem(_aiKey())||'0',10)||0; }catch(e){ return 0; } }
-  function aiCountInc(left){ try{ var n=aiCount()+1; if(left!=null && /^\d+$/.test(String(left))){ n=Math.max(0,aiCap()-parseInt(left,10)); localStorage.setItem(_aiKey()+'_srv','1'); } localStorage.setItem(_aiKey(), String(n)); }catch(e){} }   // left＝サーバーが数えた残り回数
+    return '今月の詳細鑑定のご利用が、月額料金でまかなえる範囲に達しました（ふつうのご利用では届かない量です）。'+(ending?'':aiResetLabel()+'の更新日から再開します。')+'いまは定型文（オフラインの鑑定書）で表示しています。'; }
+  function aiCount(){ try{ return parseInt(localStorage.getItem(_aiDayKey())||'0',10)||0; }catch(e){ return 0; } }
+  function aiOver(){ if(aiIsTrial()) return aiCount()>=AI_TRIAL_CAP; try{ return localStorage.getItem(_aiStopKey())==='1'; }catch(e){ return false; } }
+  function aiCountInc(left){ if(!aiIsTrial()) return; try{ var n=aiCount()+1; if(left!=null && /^\d+$/.test(String(left))){ n=Math.max(0,AI_TRIAL_CAP-parseInt(left,10)); localStorage.setItem(_aiDayKey()+'_srv','1'); } localStorage.setItem(_aiDayKey(), String(n)); }catch(e){} }   // 無料お試しだけ数える。left＝サーバーが数えた今日の残り
+  function aiCountFull(){ try{ if(aiIsTrial()){ localStorage.setItem(_aiDayKey(), String(Math.max(aiCount(),AI_TRIAL_CAP))); localStorage.setItem(_aiDayKey()+'_srv','1'); } else localStorage.setItem(_aiStopKey(),'1'); }catch(e){} }
   function generateAIReading(){
     if(!_lastResult){ aiCardMsg('先に生年月日を入れて「鑑定する」を押してください。'); return; }
     if(_aiBusy) return;
-    if(aiCount()>=aiCap()){   // 回数を使い切った → 定型文（オフライン鑑定書）で表示
+    if(aiOver()){   // 無料お試しの今日の3回を使い切った／有料で今月お休み中 → 定型文（オフライン鑑定書）で表示
       setEngine('template');
       var _hc=document.getElementById('engHint'); if(_hc) _hc.textContent=aiLimitNote();
       return;
@@ -4237,8 +4237,8 @@ window.KANSHI60_DETAIL={
           if(stale()){ redo(); return; }
           var data={}; try{ data=JSON.parse(o.t); }catch(e){}
           var txt=''; try{ txt=(data.candidates[0].content.parts||[]).map(function(p){return p.text||'';}).join(''); }catch(e){}
-          if(o.status===429 && data && data.error && /^(TRIAL|DAY|MONTH)_LIMIT$/.test(data.error.code)){   // 回数を使い切った（サーバーで数えた結果。別の端末で使った分も含む）
-            try{ localStorage.setItem(_aiDayKey(), String(Math.max(aiCount(),aiCap()))); }catch(_e){}
+          if(o.status===429 && data && data.error && /^(TRIAL_LIMIT|DAY_LIMIT|MONTH_LIMIT|MONTH_BUDGET)$/.test(data.error.code)){   // サーバーの判定（無料お試しの1日3回／有料の今月お休み）
+            aiCountFull();   // 無料お試し＝今日はおしまい／有料＝今月お休みの印
             _aiBusy=false; setEngine('template'); var _ht=document.getElementById('engHint'); if(_ht) _ht.textContent=aiLimitNote(); return;
           }
           if(!o.ok || !txt.trim()){

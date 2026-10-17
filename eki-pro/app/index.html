@@ -581,7 +581,7 @@ input[type=checkbox]{width:20px;height:20px;}
       localStorage.setItem('member_period_end',res.periodEnd||'');
       if(keep) localStorage.setItem('member_checked_at',String(Date.now())); else localStorage.removeItem('member_checked_at');
     }catch(e){}
-    try{ if(res.usage && window.ekiSyncUsage) window.ekiSyncUsage(res.usage); }catch(e){}   // サーバーが数えた今の期間の回数（あれば）
+    try{ if(res.usage && window.ekiSyncUsage) window.ekiSyncUsage(res.usage); }catch(e){}   // サーバーの利用状況（無料お試し＝今日の回数／有料＝今月お休み中か）
     try{ if(window.ekiLeftLine) window.ekiLeftLine(); }catch(e){}   // 残り回数（無料お試し＝今日／有料＝今月）を出し直す
   }
   function clearSession(){ try{ ['member_token','member_status','member_period_end','member_checked_at','member_pw','member_remember'].forEach(function(k){ localStorage.removeItem(k); sessionStorage.removeItem(k); }); }catch(e){} }
@@ -1193,43 +1193,41 @@ function trialDayKey(){          // 日本時間(JST)の暦日でリセット
   const y=jst.getFullYear(), m=('0'+(jst.getMonth()+1)).slice(-2), d=('0'+jst.getDate()).slice(-2);
   return 'eki_trial_'+y+m+d;
 }
-/* 有料：ご契約の期間ごとに数える（期間の最終日 member_period_end。分からないときや過ぎているときは日本時間の暦月）。四柱推命PROと同じ数え方 */
+/* 上限（四柱推命PROと同じ考え方。発注者決定 2026-10-17）：
+   ・無料お試し中＝オンライン鑑定＋追加のご相談の合計1日3回（数える。サーバーの残り x-pk-left に合わせる）
+   ・有料＝回数は数えない・見せない・1日の上限もない。サーバーが1人あたりの実際の費用を見て、月額料金でまかなえる範囲に届いた月だけ
+     429 MONTH_BUDGET を返す → 次の更新日まで内蔵データの鑑定に切替（ふつうの使い方では届かない。最低でも月1,400件分） */
 function ekiPeriodId(){ let pe=''; try{ pe=localStorage.getItem('member_period_end')||''; }catch(e){} const d=new Date(Date.now()+9*3600000), today=d.toISOString().slice(0,10);
   if(/^\d{4}-\d{2}-\d{2}$/.test(pe)&&pe>=today) return pe; return 'm'+d.getUTCFullYear()+('0'+(d.getUTCMonth()+1)).slice(-2); }
-function ekiCountKey(){ return isTrialMember()?trialDayKey():'eki_month_'+ekiPeriodId(); }
-function ekiCap(){ return isTrialMember()?TRIAL_DAILY_LIMIT:PAID_MONTH_CAP; }
+function ekiStopKey(){ return 'eki_pause_'+ekiPeriodId(); }   // 有料：今月お休み中の印（期間が変われば自然に消える）
 function ekiIsMember(){ try{ return !!(localStorage.getItem('member_token')||sessionStorage.getItem('member_token')); }catch(e){ return false; } }
 function ekiEnding(){ try{ return /^cancel/.test(localStorage.getItem('member_status')||''); }catch(e){ return false; } }   // 解約手続き済み（次の更新がない）
-/* 回数が戻る日（「11月17日」）＝期間の最終日の翌日（更新日） */
+/* 再開する日（「11月17日」）＝期間の最終日の翌日（更新日） */
 function ekiResetLabel(){ const p=ekiPeriodId(); let d; if(p.charAt(0)!=='m') d=new Date(Date.parse(p+'T00:00:00Z')+86400000); else d=new Date(Date.UTC(+p.slice(1,5),+p.slice(5,7),1)); return (d.getUTCMonth()+1)+'月'+d.getUTCDate()+'日'; }
-var _ekiLeft=null;   // サーバーが数えた残り回数（ヘッダ x-pk-left。別の端末で使った分も含む）
-function trialCount(){ try{ return parseInt(localStorage.getItem(ekiCountKey())||'0',10)||0; }catch(e){ return 0; } }
-/* 残り回数は「サーバーが数えた数」を受け取れたときだけ画面に出す（この端末だけの数では、別の端末・別のブラウザで使った分が入らず正確でないため）。
-   サーバーの数＝応答ヘッダ x-pk-left（使うたび）／auth-login・auth-check の usage:{used}（開いたとき・30分ごと）。受け取った数には _srv の印を付ける */
-function ekiSrv(){ try{ return localStorage.getItem(ekiCountKey()+'_srv')==='1'; }catch(e){ return false; } }
-function trialInc(){ try{ let n=trialCount()+1; if(_ekiLeft!=null&&/^\d+$/.test(String(_ekiLeft))){ n=Math.max(0,ekiCap()-parseInt(_ekiLeft,10)); localStorage.setItem(ekiCountKey()+'_srv','1'); } _ekiLeft=null; localStorage.setItem(ekiCountKey(), String(n)); }catch(e){} try{ ekiLeftLine(); }catch(e){} }
-function ekiCountFull(){ try{ localStorage.setItem(ekiCountKey(), String(Math.max(trialCount(),ekiCap()))); localStorage.setItem(ekiCountKey()+'_srv','1'); }catch(e){} try{ ekiLeftLine(); }catch(e){} }
-function ekiSyncUsage(u){ if(!u||typeof u.used!=='number') return; try{ localStorage.setItem(ekiCountKey(), String(Math.max(0,u.used))); localStorage.setItem(ekiCountKey()+'_srv','1'); }catch(e){} try{ ekiLeftLine(); }catch(e){} }
+var _ekiLeft=null;   // サーバーが数えた無料お試しの今日の残り回数（ヘッダ x-pk-left）
+function trialCount(){ try{ return parseInt(localStorage.getItem(trialDayKey())||'0',10)||0; }catch(e){ return 0; } }
+/* 無料お試しの残り回数は「サーバーが数えた数」を受け取れたときだけ出す（この端末だけの数では、別の端末で使った分が入らないため）。受け取った数には _srv の印 */
+function ekiSrv(){ try{ return localStorage.getItem(trialDayKey()+'_srv')==='1'; }catch(e){ return false; } }
+function trialInc(){ const lf=_ekiLeft; _ekiLeft=null; if(!isTrialMember()) return; try{ let n=trialCount()+1; if(lf!=null&&/^\d+$/.test(String(lf))){ n=Math.max(0,TRIAL_DAILY_LIMIT-parseInt(lf,10)); localStorage.setItem(trialDayKey()+'_srv','1'); } localStorage.setItem(trialDayKey(), String(n)); }catch(e){} try{ ekiLeftLine(); }catch(e){} }
+function ekiCountFull(){ try{ if(isTrialMember()){ localStorage.setItem(trialDayKey(), String(Math.max(trialCount(),TRIAL_DAILY_LIMIT))); localStorage.setItem(trialDayKey()+'_srv','1'); } else localStorage.setItem(ekiStopKey(),'1'); }catch(e){} try{ ekiLeftLine(); }catch(e){} }
+/* auth-login・auth-check の usage：無料お試し中は {used}（今日の回数）、有料は {paused}（今月お休み中か） */
+function ekiSyncUsage(u){ if(!u) return; try{ if(isTrialMember()){ if(typeof u.used==='number'){ localStorage.setItem(trialDayKey(), String(Math.max(0,u.used))); localStorage.setItem(trialDayKey()+'_srv','1'); } }
+  else if(typeof u.paused==='boolean'){ if(u.paused) localStorage.setItem(ekiStopKey(),'1'); else localStorage.removeItem(ekiStopKey()); } }catch(e){} try{ ekiLeftLine(); }catch(e){} }
 function trialReached(){ return isTrialMember() && trialCount() >= TRIAL_DAILY_LIMIT; }
-function paidReached(){ return !isTrialMember() && trialCount() >= PAID_MONTH_CAP; }   // 有料：ご契約の1か月で1,400回（更新日に戻る）
-function ekiPaidNote(){ return '今月のオンライン鑑定（'+PAID_MONTH_CAP.toLocaleString()+'回）を使い切りました。'+(ekiEnding()?'':ekiResetLabel()+'の更新日から、また'+PAID_MONTH_CAP.toLocaleString()+'回ご利用いただけます。')+'それまでは内蔵データでの鑑定・顧客管理・印刷はそのまま使えます'; }
-function trialReset(){ try{ localStorage.removeItem(ekiCountKey()); }catch(e){} try{ ekiLeftLine(); }catch(e){} }
-/* 「鑑定する」ボタンの下に残り回数をいつも出す（ログイン中の会員だけ） */
+function paidReached(){ if(isTrialMember()) return false; try{ return localStorage.getItem(ekiStopKey())==='1'; }catch(e){ return false; } }   // 有料：今月お休み中
+function ekiPaidNote(){ return '今月のオンライン鑑定のご利用が、月額料金でまかなえる範囲に達しました（ふつうのご利用では届かない量です）。'+(ekiEnding()?'':ekiResetLabel()+'の更新日から再開します。')+'それまでは内蔵データでの鑑定・顧客管理・印刷はそのまま使えます'; }
+function trialReset(){ try{ localStorage.removeItem(trialDayKey()); localStorage.removeItem(ekiStopKey()); }catch(e){} try{ ekiLeftLine(); }catch(e){} }
+/* 「鑑定する」ボタンの下のお知らせ：無料お試し中は今日の回数、有料は「今月お休み中」のときだけ（ふだんは何も出さない） */
 function ekiLeftLine(){
   const el=document.getElementById('ekiLeft'); if(!el) return;
-  if(!ekiIsMember()){ el.style.display='none'; el.innerHTML=''; return; }
-  const cap=ekiCap(), left=Math.max(0,cap-trialCount()), S='<span style="display:inline-block">', Rd='<span style="display:inline-block;color:#B4471F">', E='</span>';
+  if(!ekiIsMember()||(!isTrialMember()&&!paidReached())){ el.style.display='none'; el.innerHTML=''; return; }
+  const S='<span style="display:inline-block">', Rd='<span style="display:inline-block;color:#B4471F">', E='</span>';
+  if(!isTrialMember()){ el.innerHTML=Rd+'今月のオンライン鑑定はお休み中です。'+E+(ekiEnding()?'':S+ekiResetLabel()+'の更新日から再開します。'+E)+S+'内蔵データの鑑定はそのまま使えます。'+E; el.style.display='block'; return; }
+  const left=Math.max(0,TRIAL_DAILY_LIMIT-trialCount());
   const rule='<div style="font-size:11.5px;font-weight:700;color:#6B5A4C;margin-top:2px">'+S+'数え方：'+E+S+'鑑定1件・追加のご相談1問＝1回'+E+S+'（鑑定書の作成は数えません）'+E+'</div>';
-  let h;
-  if(!ekiSrv()){   // サーバーの数をまだ受け取っていない：回数の決まりだけを出す（不正確な「あと○回」は出さない）
-    h=isTrialMember()?S+'無料お試し中：オンライン鑑定は'+E+S+'1日3回まで'+E+S+'（明日0時に戻ります）'+E
-      :S+'オンライン鑑定は月'+cap.toLocaleString()+'回まで'+E+S+'・1日の上限なし'+E+(ekiEnding()?'':S+'（'+ekiResetLabel()+'の更新日に戻ります）'+E);
-    el.innerHTML=h+rule; el.style.display='block'; return; }
-  if(isTrialMember()) h=left>0?S+'無料お試し中：今日のオンライン鑑定は'+E+S+'あと<b style="color:#B4471F">'+left+'回</b>（1日3回まで）'+E
-                             :Rd+'今日の無料お試し（1日3回）を使い切りました。'+E+S+'明日0時から、また3回使えます。'+E;
-  else { const low=left<=Math.ceil(cap*0.1);   // 残り1割を切ったら赤で知らせる
-    h=left>0?S+'今月のオンライン鑑定は'+E+S+'あと<b style="color:'+(low?'#B4471F':'#3C2A1C')+'">'+left.toLocaleString()+'回</b>（'+cap.toLocaleString()+'回まで）'+E+(ekiEnding()?'':S+'・'+ekiResetLabel()+'に'+cap.toLocaleString()+'回に戻ります'+E)
-            :Rd+'今月のオンライン鑑定（'+cap.toLocaleString()+'回）を使い切りました。'+E+(ekiEnding()?'':S+ekiResetLabel()+'の更新日から、また使えます。'+E); }
+  const h=!ekiSrv()?S+'無料お試し中：オンライン鑑定は'+E+S+'1日3回まで'+E+S+'（明日0時に戻ります）'+E   // サーバーの数をまだ受け取っていない：決まりだけ
+    :(left>0?S+'無料お試し中：今日のオンライン鑑定は'+E+S+'あと<b style="color:#B4471F">'+left+'回</b>（1日3回まで）'+E
+            :Rd+'今日の無料お試し（1日3回）を使い切りました。'+E+S+'明日0時から、また3回使えます。'+E);
   el.innerHTML=h+rule; el.style.display='block';
 }
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){ try{ ekiLeftLine(); }catch(e){} }); else setTimeout(function(){ try{ ekiLeftLine(); }catch(e){} },0);
@@ -1239,9 +1237,8 @@ function showTrialLimit(show){
   if(show!==false){ try{ el.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }
 }
 
-/* ===== 有料プランの上限（原価で利益65%を守る上限。発注者決定 2026-10-16：ご契約の1か月で1,400回・1日の上限はなし） =====
-   本番は必ずサーバー側で会員ごとに判定・集計すること（ここの値は画面側の目安。サーバーの残り回数 x-pk-left に合わせる）。根拠は利用規約の禁止事項・公正利用。 */
-const PAID_MONTH_CAP    = 1400;  // ご契約の1か月（更新日〜次の更新日の前日）の上限（鑑定＋追加のご相談の合計。鑑定書の作成は数えない）
+/* ===== 有料プランの上限（発注者決定 2026-10-17）：回数では数えない。サーバーが1人あたりの実際の費用（月2,940円＝利益65%の線）で見て、
+   届いた月だけ 429 MONTH_BUDGET → 次の更新日まで内蔵データの鑑定に切替。1日の上限はない。根拠は利用規約の禁止事項・公正利用。 */
 const PAID_RATE_PER_MIN = 15;    // 1分あたりの上限（連打防止）
 
 const HXT={
@@ -1728,7 +1725,7 @@ const App=(function(){
       if(res.status===403) throw new Error('ご契約の状態を確認できませんでした。マイページでご契約状況をご確認ください。');
       if(res.status===429){ let e0=null; try{ e0=await res.clone().json(); }catch(_){}   // 無料お試しの1日3回（サーバーで数えた結果。別の端末で使った分も含む）
         if(e0&&e0.error&&e0.error.code==='TRIAL_LIMIT'){ ekiCountFull(); try{ showTrialLimit(true); }catch(_){} throw new Error('本日の無料お試しは上限（1日3回）に達しました。明日（日本時間の0時から）また3回ご利用いただけます。'); }
-        if(e0&&e0.error&&/^(MONTH|DAY)_LIMIT$/.test(e0.error.code)){ ekiCountFull(); throw new Error(ekiPaidNote()+'。'); } }
+        if(e0&&e0.error&&/^(MONTH_BUDGET|MONTH_LIMIT|DAY_LIMIT)$/.test(e0.error.code)){ ekiCountFull(); throw new Error(ekiPaidNote()+'。'); } }
       let msg=`HTTP ${res.status}`; try{const e=await res.json();msg=e.error?.message||msg;}catch(_){}
       const busy=res.status===429||res.status===503||/overload|unavailable|rate|demand/i.test(msg);
       if(busy&&a<2){await sleep(3000);continue;}
@@ -1850,7 +1847,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
     }
     if(!forceOffline && paidReached()){
       LM.textContent=t('load_offline');
-      setTimeout(()=>{ goOffline('今月のオンライン鑑定（'+PAID_MONTH_CAP.toLocaleString()+'回）を使い切ったため、内蔵データで鑑定しました。'+(ekiEnding()?'':ekiResetLabel()+'の更新日から、またご利用いただけます')); },350);
+      setTimeout(()=>{ goOffline('今月のオンライン鑑定はお休み中のため、内蔵データで鑑定しました。'+(ekiEnding()?'':ekiResetLabel()+'の更新日から再開します')); },350);
       return;
     }
     if(forceOffline){
@@ -1864,7 +1861,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
       // ① まず「答え」（判定・お伝え方・どうすればよいか）だけを短く作って、すぐ表示する（お客様をお待たせしない）
       const base=buildPrompt(r,q);
       let A=null;
-      try{ A=parseReading(await callGemini(base+'\n\n【今回書くのは答えだけ＝最優先】▼判定・▼伝え方・▼助言 の3つだけを、上の決まりどおりに書いて終える。ほかの見出し（▼結論・▼台本など）は別に作るので書かない。')); }catch(_e){ A=null; }
+      try{ A=parseReading(await callGemini(base+'\n\n【今回書くのは答えだけ＝最優先】▼判定・▼伝え方・▼助言 の3つだけを、上の決まりどおりに書いて終える。ほかの見出し（▼結論・▼台本など）は別に作るので書かない。')); }catch(_e){ A=null; if(paidReached()||trialReached()) throw _e; }   // 今月お休み・今日の無料分おしまいなら、残りは作りに行かない
       if(A&&(A.hantei||A.tsutae)){
         const off=buildOfflineReading(r,q);
         const pA=Object.assign({},off,{hantei:A.hantei||off.hantei, tsutae:A.tsutae||off.tsutae, jogen:A.jogen||off.jogen});
@@ -1891,7 +1888,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
         return;
       }
       // Geminiが不調 → 内蔵データへ自動フォールバック（ログイン切れ・契約状態は、その理由をそのまま知らせる）
-      goOffline((e&&/ログイン|ご契約|使い切|上限/.test(e.message||''))?('内蔵データで鑑定しました。'+e.message):t('off_error'));
+      goOffline((e&&/ログイン|ご契約|使い切|上限|まかなえる|お休み/.test(e.message||''))?('内蔵データで鑑定しました。'+e.message):t('off_error'));
     }
   }
   function markOffline(reason,online){
@@ -2314,7 +2311,7 @@ ${hist?('これまでのやりとり：\n'+hist+'\n'):''}相談者の新しい�
       // 失敗のほとんどは通信・混雑。言い回しのせいにせず、入力した文は欄に戻す
       if(cur.last!==mine||cur.chat!==chat){ think.remove(); return; }
       el.value=q;
-      const _am=(e&&/ログイン|ご契約|使い切|上限/.test(e.message||''))?e.message+'（ご相談の文は入力欄に戻してあります）':'いま、つながりにくいようです。通信の状態を確かめて、少し時間をおいてから、もう一度「相談する」を押してください。（ご相談の文は入力欄に戻してあります）';
+      const _am=(e&&/ログイン|ご契約|使い切|上限|まかなえる|お休み/.test(e.message||''))?e.message+'（ご相談の文は入力欄に戻してあります）':'いま、つながりにくいようです。通信の状態を確かめて、少し時間をおいてから、もう一度「相談する」を押してください。（ご相談の文は入力欄に戻してあります）';
       cur.chat.push({role:'ai',text:_am}); renderChat();
     }finally{ btn.disabled=false; }
   }

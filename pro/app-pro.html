@@ -779,7 +779,7 @@
       localStorage.setItem('member_period_end',res.periodEnd||'');
       if(keep) localStorage.setItem('member_checked_at',String(Date.now())); else localStorage.removeItem('member_checked_at');
     }catch(e){}
-    try{ if(res.usage && window.aiSyncUsage) window.aiSyncUsage(res.usage); }catch(e){}   // サーバーが数えた今の期間の回数（あれば）
+    try{ if(res.usage && window.aiSyncUsage) window.aiSyncUsage(res.usage); }catch(e){}   // サーバーの利用状況（無料お試し＝今日の回数／有料＝今月お休み中か）
     try{ if(window.aiTrialChip) window.aiTrialChip(); }catch(e){}   // 残り回数（無料お試し＝今日／有料＝今月）を出し直す
   }
   function clearSession(){ try{ ['member_token','member_status','member_period_end','member_checked_at','member_pw','member_remember'].forEach(function(k){ localStorage.removeItem(k); sessionStorage.removeItem(k); }); }catch(e){} }
@@ -6347,53 +6347,47 @@ function engineBadge(online,note){
 const YOMI_RULE='\n【用語の読みがな＝厳守】読みがなを添える場合は必ず正しい読みで書く：比肩=ひけん／劫財=ごうざい（「ぎょうざい」「きょうざい」は誤り）／食神=しょくじん／傷官=しょうかん／偏財=へんざい／正財=せいざい／偏官=へんかん／正官=せいかん／偏印=へんいん／印綬=いんじゅ／建禄=けんろく／帝旺=ていおう／沐浴=もくよく／冠帯=かんたい／羊刃=ようじん／空亡=くうぼう／冲=ちゅう／害=がい／破=は／三合=さんごう／方合=ほうごう／半合=はんごう／干合=かんごう／支合=しごう／月支元命=げっしげんめい／蔵干=ぞうかん／通変星=つうへんせい／納音=なっちん／律音=りっちん／天乙貴人=てんおつきじん（「てんいつきじん」は誤り）'+(typeof KICHI_YOMI==='object'?Object.keys(KICHI_YOMI).map(function(k){return '／'+k+'='+String(KICHI_YOMI[k]).replace(/[ァ-ン]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0x60);});}).join(''):'')+'。自信がない用語には読みがなを付けない。\n通変星・十二運・重要な用語は、文章内で初めて出したときに一度だけ読みがなを添える（毎回そろえる）。同じ語の2回目以降は付けない。\n【いちばん大事な書き方＝専門用語を裸で置かない】読み手は四柱推命をまったく知らない一般のお客様。占い師でも初見で分かるように書く。専門用語（通変星名＝比肩・劫財・食神・傷官・偏財・正財・偏官・正官・偏印・印綬、五行＝木火土金水、十二運、蔵干・月支元命・用神・喜神・忌神・身旺・身弱、合冲＝三合・方合・半合・支合・干合・冲・刑・会局、空亡・天中殺・天戦地冲・律音・納音など）は、初めて出したその場で必ず“ふつうの言葉”の言い換えをカッコで添える（例：「傷官（＝感性と才能の星）」「用神（＝あなたを助ける五行）」「冲（＝ぶつかり合い・刺激）」）。とくに五行の「金」は“お金”ではなく「決断・技術・けじめの性質」、「水」は「知性・柔軟さ」の意味だと必ず添え、お金の話（金運）と混同させない。用語を並べただけの文・言い換えのない文は禁止。専門用語を一切知らない人が読んでも、各文の意味がそのまま分かることを最優先にする（用語を消す必要はないが、必ず普通の言葉とセットにする）。';
 // 冗長・繰り返しの防止（鑑定者の要望）＝全AI鑑定に適用。generateReadingでsystemに連結。
 const NO_REPEAT_RULE='\n【繰り返し厳禁＝最優先】各段落・各見出しは必ず“新しい論点”だけを書く。前の段落・前の見出しで述べたことを、言い換えて繰り返さない（同じ結論・同じ趣旨・同じ助言を、言葉を変えて二度書かない）。要約・まとめ直しだけの段落や文は作らない。同じ内容を場所を変えて再登場させない。字数を埋めるための水増し・引き延ばしは禁止で、書くべきことを書き終えたら短くても構わず終える（薄い一般論で伸ばさない）。';
-// 詳細鑑定（オンライン）の回数：有料＝ご契約の1か月ごとに700回まで（1日の上限はなし）／無料お試し中＝1日3回まで。
-// 使い切ったら、次の更新日まではオフライン鑑定（端末内）に自動で切り替わる。厳密な数はサーバーが会員ごとに数え、残り回数をヘッダ x-pk-left で返す（この画面はそれに合わせる）。
-const AI_MONTH_CAP=700;   /* 有料：ご契約の1か月（更新日〜次の更新日の前日）で700回まで。相談・自動の詳細鑑定・日運月運・相性・鑑定書の作成の合計。原価で利益65%を守る上限（発注者決定 2026-10-16） */
-const AI_TRIAL_CAP=3;     /* 無料お試し中は1日3回まで（同じものの合計。発注者決定 2026-10-16。サーバーでも会員ごとに数える） */
+// 詳細鑑定（オンライン）の上限（発注者決定 2026-10-17）：
+//  ・無料お試し中＝1日3回まで（数える。サーバーの残り回数 x-pk-left に合わせる。明日0時に戻る）
+//  ・有料＝回数は数えない・見せない。1日の上限もない。サーバーが1人あたりの実際の費用を見て、月額料金でまかなえる範囲（利益65%の線）に
+//    届いた月だけ 429 MONTH_BUDGET を返す → 次の更新日まで端末内の鑑定（オフライン鑑定）に切替。ふつうの使い方では届かない（最低でも月700件分）。
+const AI_TRIAL_CAP=3;     /* 無料お試し中は1日3回まで（相談・自動の詳細鑑定・日運月運・相性・鑑定書の作成の合計。サーバーでも会員ごとに数える） */
 function aiIsTrial(){try{return (localStorage.getItem('member_status')||'')==='trialing';}catch(e){return false;}}
 function aiIsMember(){try{return !!(localStorage.getItem('member_token')||sessionStorage.getItem('member_token'));}catch(e){return false;}}
-function aiCap(){return aiIsTrial()?AI_TRIAL_CAP:AI_MONTH_CAP;}
 function _aiJst(){return new Date(Date.now()+9*3600000);}
 function _aiDayKey(){const d=_aiJst();return 'ai_daily_'+d.getUTCFullYear()+('0'+(d.getUTCMonth()+1)).slice(-2)+('0'+d.getUTCDate()).slice(-2);}   /* 無料お試し：日本時間の日付で数える（0時に戻る） */
-/* 有料：ご契約の期間ごとに数える（期間の最終日 member_period_end。分からないときや過ぎているときは日本時間の暦月） */
+/* 有料：ご契約の期間（期間の最終日 member_period_end。分からないときや過ぎているときは日本時間の暦月） */
 function _aiPeriodId(){let pe='';try{pe=localStorage.getItem('member_period_end')||'';}catch(e){} const d=_aiJst(), today=d.toISOString().slice(0,10);
   if(/^\d{4}-\d{2}-\d{2}$/.test(pe)&&pe>=today) return pe; return 'm'+d.getUTCFullYear()+('0'+(d.getUTCMonth()+1)).slice(-2);}
-function _aiMonthKey(){return 'ai_month_'+_aiPeriodId();}
-function _aiKey(){return aiIsTrial()?_aiDayKey():_aiMonthKey();}
-/* 回数が戻る日（「11月17日」）。期間の最終日の翌日＝更新日 */
+/* 再開する日（「11月17日」）＝期間の最終日の翌日（更新日） */
 function aiResetLabel(){const p=_aiPeriodId(); let d; if(p.charAt(0)!=='m') d=new Date(Date.parse(p+'T00:00:00Z')+86400000); else d=new Date(Date.UTC(+p.slice(1,5),+p.slice(5,7),1)); return (d.getUTCMonth()+1)+'月'+d.getUTCDate()+'日';}
 function aiEnding(){try{return /^cancel/.test(localStorage.getItem('member_status')||'');}catch(e){return false;}}   /* 解約手続き済み（次の更新がない） */
-function aiCount(){try{return parseInt(localStorage.getItem(_aiKey())||'0',10)||0;}catch(e){return 0;}}
-function aiLeft(){return Math.max(0,aiCap()-aiCount());}
-/* 残り回数は「サーバーが数えた数」を受け取れたときだけ画面に出す（この端末だけの数では、別の端末・別のブラウザで使った分が入らず正確でないため）。
-   サーバーの数＝応答ヘッダ x-pk-left（使うたび）／auth-login・auth-check の usage:{used}（開いたとき・30分ごと）。受け取った数には _srv の印を付ける */
-function aiSrv(){try{return localStorage.getItem(_aiKey()+'_srv')==='1';}catch(e){return false;}}
-function aiCountInc(left){try{const k=_aiKey(); let n=aiCount()+1; if(left!=null&&/^\d+$/.test(String(left))){ n=Math.max(0,aiCap()-parseInt(left,10)); localStorage.setItem(k+'_srv','1'); } localStorage.setItem(k,String(n));}catch(e){} try{aiTrialChip();}catch(e){}}   /* left＝サーバーが数えた残り回数（別の端末で使った分も含む） */
-function aiCountFull(){try{localStorage.setItem(_aiKey(),String(Math.max(aiCount(),aiCap()))); localStorage.setItem(_aiKey()+'_srv','1');}catch(e){} try{aiTrialChip();}catch(e){}}   /* サーバーが「使い切り」と返したとき */
-function aiSyncUsage(u){ if(!u||typeof u.used!=='number') return; try{ localStorage.setItem(_aiKey(),String(Math.max(0,u.used))); localStorage.setItem(_aiKey()+'_srv','1'); }catch(e){} try{aiTrialChip();}catch(e){} }
+function _aiStopKey(){return 'ai_pause_'+_aiPeriodId();}   /* 有料：サーバーが「今月はお休み」と返した印（期間が変われば自然に消える） */
+function aiPaused(){ if(aiIsTrial()) return false; try{return localStorage.getItem(_aiStopKey())==='1';}catch(e){return false;} }
+function aiCount(){try{return parseInt(localStorage.getItem(_aiDayKey())||'0',10)||0;}catch(e){return 0;}}   /* 無料お試しの今日の回数 */
+function aiOver(){ return aiIsTrial()? aiCount()>=AI_TRIAL_CAP : aiPaused(); }
+/* 無料お試しの残り回数は「サーバーが数えた数」を受け取れたときだけ出す（この端末だけの数では、別の端末で使った分が入らないため）。受け取った数には _srv の印 */
+function aiSrv(){try{return localStorage.getItem(_aiDayKey()+'_srv')==='1';}catch(e){return false;}}
+function aiCountInc(left){ if(!aiIsTrial()) return; try{const k=_aiDayKey(); let n=aiCount()+1; if(left!=null&&/^\d+$/.test(String(left))){ n=Math.max(0,AI_TRIAL_CAP-parseInt(left,10)); localStorage.setItem(k+'_srv','1'); } localStorage.setItem(k,String(n));}catch(e){} try{aiTrialChip();}catch(e){}}   /* left＝サーバーが数えた今日の残り回数 */
+function aiCountFull(){try{ if(aiIsTrial()){ localStorage.setItem(_aiDayKey(),String(Math.max(aiCount(),AI_TRIAL_CAP))); localStorage.setItem(_aiDayKey()+'_srv','1'); } else localStorage.setItem(_aiStopKey(),'1'); }catch(e){} try{aiTrialChip();}catch(e){}}   /* サーバーが「今日はおしまい／今月はお休み」と返したとき */
+/* auth-login・auth-check の usage：無料お試し中は {used}（今日の回数）、有料は {paused}（今月お休み中か） */
+function aiSyncUsage(u){ if(!u) return; try{ if(aiIsTrial()){ if(typeof u.used==='number'){ localStorage.setItem(_aiDayKey(),String(Math.max(0,u.used))); localStorage.setItem(_aiDayKey()+'_srv','1'); } }
+  else if(typeof u.paused==='boolean'){ if(u.paused) localStorage.setItem(_aiStopKey(),'1'); else localStorage.removeItem(_aiStopKey()); } }catch(e){} try{aiTrialChip();}catch(e){} }
 function aiLimitNote(){ if(aiIsTrial()) return '無料お試し中の詳細鑑定は1日3回まで（相談・鑑定書の作成などの合計）です。今日の3回を使い切りました。明日（日本時間の0時から）また3回ご利用いただけます。いまは端末内で作成した鑑定（オフライン鑑定）を表示しています。';
-  return '今月の詳細鑑定（'+AI_MONTH_CAP+'回）を使い切りました。'+(aiEnding()?'':aiResetLabel()+'の更新日から、また'+AI_MONTH_CAP+'回ご利用いただけます。')+'それまでは、端末内で作成した鑑定（オフライン鑑定）・命式表・鑑定書（定型文）・顧客カルテはそのままお使いいただけます。いまはオフライン鑑定を表示しています。'; }
-const AI_COUNT_RULE='相談1件・鑑定書1通＝1回（同じ相談の「くわしい読み解き」と、鑑定書の作り直しは数えません）';
-/* 相談ボタンの下に、残り回数をいつも出す（ログイン中の会員だけ。公開前の確認では出さない） */
+  return '今月の詳細鑑定のご利用が、月額料金でまかなえる範囲に達しました（ふつうのご利用では届かない量です）。'+(aiEnding()?'':aiResetLabel()+'の更新日から再開します。')+'それまでは、端末内で作成した鑑定（オフライン鑑定）・命式表・鑑定書（定型文）・顧客カルテはそのままお使いいただけます。いまはオフライン鑑定を表示しています。'; }
+/* 相談ボタンの下のお知らせ：無料お試し中は今日の回数、有料は「今月お休み中」のときだけ（ふだんは何も出さない） */
 function aiTrialChip(){
   const go=document.getElementById('f-go'); if(!go) return;
   let el=document.getElementById('ai-trial-left');
-  if(!aiIsMember()){ if(el) el.remove(); return; }
+  if(!aiIsMember()||(!aiIsTrial()&&!aiPaused())){ if(el) el.remove(); return; }
   if(!el){ el=document.createElement('div'); el.id='ai-trial-left'; el.style.cssText='margin:8px 0 0;font-size:12.5px;font-weight:800;line-height:1.7;color:#5A4636;text-align:center;word-break:keep-all;overflow-wrap:anywhere'; go.insertAdjacentElement('afterend',el); }
-  const left=aiLeft(), S='<span style="display:inline-block">', R='<span style="display:inline-block;color:#B4471F">', E='</span>';
+  const S='<span style="display:inline-block">', R='<span style="display:inline-block;color:#B4471F">', E='</span>';
+  if(!aiIsTrial()){ el.innerHTML=R+'今月の詳細鑑定はお休み中です。'+E+(aiEnding()?'':S+aiResetLabel()+'の更新日から再開します。'+E)+S+'端末内の鑑定はそのまま使えます。'+E; return; }
+  const left=Math.max(0,AI_TRIAL_CAP-aiCount());
   const rule='<div style="font-size:11.5px;font-weight:700;color:#6B5A4C;margin-top:2px">'+S+'数え方：'+E+S+'相談1件・鑑定書1通＝1回'+E+S+'（くわしい読み解き・作り直しは数えません）'+E+'</div>';
-  if(!aiSrv()){   // サーバーの数をまだ受け取っていない：回数の決まりだけを出す（不正確な「あと○回」は出さない）
-    el.innerHTML=(aiIsTrial()?S+'無料お試し中：詳細鑑定は'+E+S+'1日3回まで'+E+S+'（明日0時に戻ります）'+E
-      :S+'詳細鑑定は月'+AI_MONTH_CAP+'回まで'+E+S+'・1日の上限なし'+E+(aiEnding()?'':S+'（'+aiResetLabel()+'の更新日に戻ります）'+E))+rule;
-    return; }
-  if(aiIsTrial()){
-    el.innerHTML=(left>0?S+'無料お試し中：今日の詳細鑑定は'+E+S+'あと<b style="color:#B4471F">'+left+'回</b>（1日3回まで）'+E
-      :R+'今日の無料お試し（1日3回）を使い切りました。'+E+S+'明日0時から、また3回使えます。'+E)+rule;
-    return; }
-  const low=left<=Math.ceil(AI_MONTH_CAP*0.1);   // 残り1割を切ったら赤で知らせる
-  el.innerHTML=(left>0?S+'今月の詳細鑑定は'+E+S+'あと<b style="color:'+(low?'#B4471F':'#3C2A1C')+'">'+left+'回</b>（'+AI_MONTH_CAP+'回まで）'+E+(aiEnding()?'':S+'・'+aiResetLabel()+'に'+AI_MONTH_CAP+'回に戻ります'+E)
-    :R+'今月の詳細鑑定（'+AI_MONTH_CAP+'回）を使い切りました。'+E+(aiEnding()?'':S+aiResetLabel()+'の更新日から、また使えます。'+E))+rule;
+  if(!aiSrv()){ el.innerHTML=S+'無料お試し中：詳細鑑定は'+E+S+'1日3回まで'+E+S+'（明日0時に戻ります）'+E+rule; return; }   // サーバーの数をまだ受け取っていない：決まりだけ
+  el.innerHTML=(left>0?S+'無料お試し中：今日の詳細鑑定は'+E+S+'あと<b style="color:#B4471F">'+left+'回</b>（1日3回まで）'+E
+    :R+'今日の無料お試し（1日3回）を使い切りました。'+E+S+'明日0時から、また3回使えます。'+E)+rule;
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){try{aiTrialChip();}catch(e){}});else setTimeout(function(){try{aiTrialChip();}catch(e){}},0);
 /* お客様のお名前は外部の文章作成サービスに送らない：送る文章の中では印（〔本人〕〔お相手〕）に置きかえ、
@@ -6429,8 +6423,8 @@ async function generateReading(user,localText,system,deep){
   if(typeof navigator!=='undefined'&&navigator.onLine===false){
     aiEngine='オフライン鑑定（端末内）';
     return {ok:true,text:localText,fallback:true,online:false,note:'通信がオフラインのため、端末内で命式から作成した鑑定（オフライン鑑定）を表示しています。'};}
-  // 詳細鑑定（オンライン）の回数を使い切ったら、オフライン鑑定に切替（有料＝次の更新日／無料お試し＝翌日に戻る）
-  if(_part!=='detail' && aiCount()>=aiCap()){   // 相談1件の2回目（くわしい読み解き）は、1回目が通っていれば止めない
+  // 無料お試しの今日の3回を使い切った／有料で今月お休み中なら、オフライン鑑定に切替（無料お試し＝翌日・有料＝次の更新日に戻る）
+  if(_part!=='detail' && aiOver()){   // 相談1件の2回目（くわしい読み解き）は、1回目が通っていれば止めない
     aiEngine='オフライン鑑定（端末内）';
     return {ok:true,text:localText,fallback:true,online:false,note:aiLimitNote()};}
   // 2.5系は思考(thinking)がデフォルトONで、maxOutputTokensを思考だけで使い切ると本文が空になる。
@@ -6453,7 +6447,7 @@ async function generateReading(user,localText,system,deep){
       else{ r=await _fetchT(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${encodeURIComponent(geminiKey)}`,
         {method:"POST",headers:{"Content-Type":"application/json"},body:_body}); }
       if(useServer&&(r.status===401||r.status===403)){ _authErr=r.status; return null; }   // ログイン切れ・ご利用できない状態
-      if(useServer&&r.status===429){ let _e=null; try{ _e=await r.json(); }catch(_x){} if(_e&&_e.error&&/^(TRIAL|DAY|MONTH)_LIMIT$/.test(_e.error.code)){ _authErr=429; return null; } return null; }   // 無料お試しの1日3回（サーバーで数えた結果。別の端末で使った分も含む）
+      if(useServer&&r.status===429){ let _e=null; try{ _e=await r.json(); }catch(_x){} if(_e&&_e.error&&/^(TRIAL_LIMIT|DAY_LIMIT|MONTH_LIMIT|MONTH_BUDGET)$/.test(_e.error.code)){ _authErr=429; return null; } return null; }   // 無料お試しの1日3回（サーバーで数えた結果。別の端末で使った分も含む）
       if(useServer){ try{ _left=r.headers.get('x-pk-left'); }catch(_x){} }   // サーバーが数えた残り回数
       data=await r.json();
     }catch(e){ return null; }        // 通信失敗
