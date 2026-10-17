@@ -23,17 +23,19 @@ HEAD = '''<meta name="robots" content="noindex">
 '''
 
 def theme(s):
-    # 色：PROの朱色・青 → EKIのラベンダー（エラーの赤はそのまま）
-    for a, b in [('--ka:#E8392B', '--ka:#8E72A8'), ('--ka-d:#C0452F', '--ka-d:#6E5689'), ('--sui:#2A6FD0', '--sui:#7A5C98'),
-                 ('linear-gradient(135deg,#F0533F 0%,#E8392B 60%,#C0452F 100%)', 'linear-gradient(135deg,#A58BBE 0%,#8E72A8 60%,#6E5689 100%)'),
-                 ('linear-gradient(135deg,#F0533F,#E8392B 60%,#C0452F)', 'linear-gradient(135deg,#A58BBE,#8E72A8 60%,#6E5689)'),
-                 ('rgba(232,57,43,', 'rgba(142,114,168,'), ('0 4px 0 #b32a20', '0 4px 0 #6E5689'), ('0 2px 0 #b32a20', '0 2px 0 #6E5689'),
-                 ('rgba(232,93,158,.22)', 'rgba(142,114,168,.30)'), ('rgba(232,93,158,.16)', 'rgba(142,114,168,.26)'),
-                 ('rgba(226,161,43,.18)', 'rgba(224,156,98,.22)'), ('rgba(226,161,43,.16)', 'rgba(224,156,98,.20)'),
-                 ('linear-gradient(180deg,#FBF6EA 0%,#F7F1E4 100%)', 'linear-gradient(180deg,#F7F2EA 0%,#F5F1E8 100%)'),
-                 ('linear-gradient(180deg,#FBF6EA,#F7F1E4)', 'linear-gradient(180deg,#F7F2EA,#F5F1E8)'),
-                 ('linear-gradient(160deg,#F2A03A,#EE5B48,#E8508E)', 'linear-gradient(135deg,#C9B5D4,#8E72A8)'),
-                 ('rgba(42,111,208,.15)', 'rgba(142,114,168,.18)')]:
+    # 色：PROの朱色・青 → EKIの明るい紫＋インスタ風の易カラー（アプリ・紹介ページと同じ。2026-10-17）。エラーの赤はそのまま
+    for a, b in [('--ka:#E8392B', '--ka:#7A4FA0'), ('--ka-d:#C0452F', '--ka-d:#5E3A82'), ('--sui:#2A6FD0', '--sui:#6B4C8A'),
+                 ('linear-gradient(135deg,#F0533F 0%,#E8392B 60%,#C0452F 100%)', 'linear-gradient(135deg,#6B4C8A 0%,#A0508F 52%,#C9814F 100%)'),
+                 ('linear-gradient(135deg,#F0533F,#E8392B 60%,#C0452F)', 'linear-gradient(135deg,#6B4C8A,#A0508F 52%,#C9814F)'),
+                 ('rgba(232,57,43,', 'rgba(122,79,160,'), ('0 4px 0 #b32a20', '0 4px 0 #5E3A82'), ('0 2px 0 #b32a20', '0 2px 0 #5E3A82'),
+                 ('rgba(232,93,158,.22)', 'rgba(214,178,232,.40)'), ('rgba(232,93,158,.16)', 'rgba(214,178,232,.36)'),
+                 ('rgba(226,161,43,.18)', 'rgba(255,210,224,.34)'), ('rgba(226,161,43,.16)', 'rgba(255,210,224,.30)'),
+                 ('linear-gradient(180deg,#FBF6EA 0%,#F7F1E4 100%)', 'linear-gradient(180deg,#FBF7FD 0%,#F7F3FB 100%)'),
+                 ('linear-gradient(180deg,#FBF6EA,#F7F1E4)', 'linear-gradient(180deg,#FBF7FD,#F7F3FB)'),
+                 ('linear-gradient(160deg,#F2A03A,#EE5B48,#E8508E)', 'linear-gradient(135deg,#B99AD6,#7A4FA0)'),
+                 ('rgba(42,111,208,.15)', 'rgba(142,114,168,.18)'),
+                 ('.topbar{background:rgba(251,246,234,.9);', '.topbar{background:rgba(255,255,255,.94);'), ('.topbar{background:rgba(251,246,234,.92);', '.topbar{background:rgba(255,255,255,.94);'),
+                 ('--line:#E7DCC4;', '--line:#E7DDF1;'), ('--line2:#D8C9A8;', '--line2:#D5C6E6;')]:
         s = s.replace(a, b)
     s = s.replace('<div class="tb-logo" style="background:none;box-shadow:none"><img src="favicon.png" alt="" style="width:100%;height:100%;border-radius:9px;display:block"></div>',
                   '<div class="tb-logo"><span style="color:#fff;font-family:\'Noto Serif JP\',serif;font-weight:700">易</span></div>')
