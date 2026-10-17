@@ -35,7 +35,7 @@ B_OGP = 'https://www.suimei.jp/og-image.png'
 BEGINNER_SKIN = """<style id="beginner-skin">
 /* ===== ビギナーの見た目（tools/sync_beginner_from_pro.py が付与）。色・縁取りのみ。計算・判定・鑑定文には影響しない ===== */
 .card.ai-box{background:var(--wm-bg);border-color:var(--wm-bd);}
-#compat-card{background:linear-gradient(0deg,rgba(229,51,140,.13),rgba(229,51,140,.13)),var(--card);border-color:rgba(229,51,140,.6);}
+#compat-card{background:#FFF8FA;border-color:#F0C9D6;}
 .reading-card{border:2px solid var(--line);box-shadow:none}
 .reading-card .r-summary{background:var(--ka-w);color:inherit}
 .brand .sub{display:block;font-weight:800;color:var(--ink2)}
