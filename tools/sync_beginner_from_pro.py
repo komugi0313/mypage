@@ -70,8 +70,16 @@ def beginner_icons(cur):
     return link.group(0), icon.group(0)
 
 
+# PRO＝朱色・オレンジ／ビギナー＝ローズピンク（発注者指示 2026-10-17：2つの商品が色で見分けられるように）
+PRO_TO_BEG_COLORS = [('#C8502E', '#C2416B'), ('#A8401F', '#A8335A'), ('#E0763E', '#D9577F'), ('rgba(200,80,46', 'rgba(194,65,107'), ('#FFF3EC', '#FDF1F4'), ('#FCE4D6', '#F9E1E8'), ('#F2CDB8', '#F0C9D6'), ('#EDB496', '#E8A9BD'), ('#FFF8F3', '#FFF7F9'), ('#FFF1E8', '#FCEFF2'), ('#9C3A1B', '#9E2F55'), ('#E08A57', '#D96A8C'), ('#FFF9F5', '#FFF8FA'), ('#8A3418', '#8E2A4C'), ('#FFFAF5', '#FFF9FB'), ('#FFF3EA', '#FDF3F6'), ('#F2DCCD', '#F0DCE3'), ('#EAC3AA', '#E6C3CF'), ('rgba(240,150,90,.20)', 'rgba(232,93,158,.22)'), ('rgba(240,150,90,.16)', 'rgba(232,93,158,.16)')]
+def to_beginner_colors(s):
+    for pro_c, beg_c in PRO_TO_BEG_COLORS:
+        s = s.replace(pro_c, beg_c)
+    return s
+
 def build_app():
     pro = (PRO / 'app-pro.html').read_text(encoding='utf-8')
+    pro = to_beginner_colors(pro)
     cur = (BEG / 'app-beginner.html').read_text(encoding='utf-8')
     link_icon, icon_script = beginner_icons(cur)
     s = pro
@@ -155,6 +163,7 @@ def build_app():
 
 def build_auth():
     s = (PRO / 'auth.html').read_text(encoding='utf-8')
+    s = to_beginner_colors(s)
     s = rep(s, '｜四柱推命占い 自動鑑定</title>', f'｜{B_NAME}</title>', 1)
     s = rep(s, 'mypage-pro.html', 'mypage.html')
     s = rep(s, 'pricing-pro.html', 'pricing.html')
@@ -175,6 +184,7 @@ def common_links(s):
 
 def build_pricing():
     s = (PRO / 'pricing-pro.html').read_text(encoding='utf-8')
+    s = to_beginner_colors(s)
     # 頭（タイトル・説明・OGP・PWA）はビギナー用に差し替え
     i = s.index('<meta name="theme-color"'); j = s.index('<style>')
     s = s[:i] + ('<title>無料ではじめる｜今日から占い師</title>\n'
@@ -197,6 +207,7 @@ def build_pricing():
 
 def build_mypage():
     s = (PRO / 'mypage-pro.html').read_text(encoding='utf-8')
+    s = to_beginner_colors(s)
     i = s.index('<meta name="theme-color"'); j = s.index('<style>')
     s = s[:i] + '<title>マイページ｜今日から占い師</title>\n<meta name="robots" content="noindex">\n' + s[j:]
     s = common_links(s)

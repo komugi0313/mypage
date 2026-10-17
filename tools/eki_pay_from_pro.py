@@ -23,6 +23,9 @@ HEAD = '''<meta name="robots" content="noindex">
 '''
 
 def theme(s):
+    # PROの朱色・オレンジを、いったんローズ（ビギナーと同じ）に戻してから易の色へ置きかえる（2026-10-17）
+    for pro_c, rose_c in [('#C8502E', '#C2416B'), ('#A8401F', '#A8335A'), ('#E0763E', '#D9577F'), ('rgba(200,80,46', 'rgba(194,65,107'), ('#FFF3EC', '#FDF1F4'), ('#FCE4D6', '#F9E1E8'), ('#F2CDB8', '#F0C9D6'), ('#EDB496', '#E8A9BD'), ('#FFF8F3', '#FFF7F9'), ('#FFF1E8', '#FCEFF2'), ('#9C3A1B', '#9E2F55'), ('#E08A57', '#D96A8C'), ('#FFF9F5', '#FFF8FA'), ('#8A3418', '#8E2A4C'), ('#FFFAF5', '#FFF9FB'), ('#FFF3EA', '#FDF3F6'), ('#F2DCCD', '#F0DCE3'), ('#EAC3AA', '#E6C3CF'), ('rgba(240,150,90,.20)', 'rgba(232,93,158,.22)'), ('rgba(240,150,90,.16)', 'rgba(232,93,158,.16)')]:
+        s = s.replace(pro_c, rose_c)
     # 色：PROのローズ・紫（2026-10-17 間の案）→ EKIの明るい紫＋インスタ風の易カラー（アプリ・紹介ページと同じ。2026-10-17）。エラーの赤はそのまま
     for a, b in [('--ka:#C2416B', '--ka:#7A4FA0'), ('--ka-d:#A8335A', '--ka-d:#5E3A82'), ('--sui:#8A4FA8', '--sui:#6B4C8A'),
                  ('linear-gradient(135deg,#D9577F 0%,#C2416B 55%,#A8335A 100%)', 'linear-gradient(135deg,#6B4C8A 0%,#A0508F 52%,#C9814F 100%)'),
