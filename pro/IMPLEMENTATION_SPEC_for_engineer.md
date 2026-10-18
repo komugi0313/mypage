@@ -2,7 +2,7 @@
 
 > **会員・決済・API の正はこの文書です。** 過去のやり取り・旧ドキュメントより、本書を優先してください。
 > フロント（画面）は**完成済み**。エンジニアが作るのは **サーバー側API・決済・本番切替** です。
-> 対応バージョン：PRO `pro/sw.js` の `CACHE = 'shichu-jidou-v506'`／ビギナー `beginner/sw.js` `'kyoukara-uranaishi-v143'`／易 EKI Pro `eki-pro/app/sw.js` `'eki-pro-v110'` ／ 最終更新：2026-10-18
+> 対応バージョン：PRO `pro/sw.js` の `CACHE = 'shichu-jidou-v507'`／ビギナー `beginner/sw.js` `'kyoukara-uranaishi-v144'`／易 EKI Pro `eki-pro/app/sw.js` `'eki-pro-v111'` ／ 最終更新：2026-10-18
 > 3サイトの全体の依頼内容は、リポジトリ直下の `エンジニアへの実装依頼_3サイト.md` を先に読んでください。易 EKI Pro だけの追加分は `eki-pro/実装仕様_エンジニア向け.md`。
 > `eki-pro/実装仕様_会員まわり_共通.md` は本書と**同じ内容の写し**です（食い違ったら本書が正）。
 > 前提（発注者確認済み）：**Gemini（文章生成）はサーバー経由**（キーはサーバーだけに置く）／**決済はテレコムクレジット**／**Web先行 → のちに iOS・Android アプリ**。
