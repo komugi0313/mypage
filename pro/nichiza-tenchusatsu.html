@@ -199,7 +199,7 @@ p,li,dd,h1,h2,h3,h4,figcaption{line-break:strict}
 /* 文字の見えやすさの安全装置（tools/add_contrast_guard.py が3サイトの全ページに埋め込む。直すときはこのファイルを直して再実行）
    文字の色と、その後ろの背景の色を比べて、読みにくい組み合わせ（薄い背景に薄い文字／濃い背景に濃い文字）を見つけたら、
    その文字だけ色を自動で調整する（明るい背景→同じ色みのまま濃く、暗い背景→白く）。計算・鑑定の中身には一切さわらない。
-   目安：ふつうの文字はコントラスト比4.5以上、大きい文字（18.66px以上、または14px以上の太字）は3以上（WCAG AA）。 */
+   目安：ふつうの文字はコントラスト比4.5以上、大きい文字（24px以上、または18.66px以上の太字）は3以上（WCAG AA）。 */
 (function(){
   if(window.__pkContrast) return; window.__pkContrast=true;
   function P(c){ var m=c&&c.match(/[\d.]+/g); return m?[+m[0],+m[1],+m[2],m.length>3?+m[3]:1]:null; }
@@ -240,14 +240,18 @@ p,li,dd,h1,h2,h3,h4,figcaption{line-break:strict}
     var bg=bgOf(e); if(!bg) return;
     if(bg.hi-bg.lo>0.35) return;                       // 明暗が大きく混ざった背景は判定しない
     var fs=parseFloat(cs.fontSize)||14, bold=(+cs.fontWeight||400)>=700;
-    var need=(fs>=18.66||(fs>=14&&bold))?3:4.5;
+    var need=(fs>=24||(fs>=18.66&&bold))?3:4.5;
     var op=opac(e); if(op<0.6) return;                 // 透明・半透明で隠している途中のもの（通知・ふわっと出る表示など）は触らない
     var a=(fg[3]==null?1:fg[3])*op;
     var base=bg.rgb, seen=over([fg[0],fg[1],fg[2],a],base);
     if(CR(seen,base)>=need) return;
     var light=((bg.lo+bg.hi)/2)>0.4, to=light?[0,0,0]:[255,255,255], c2=null;
     for(var t=0.1;t<=1.0001;t+=0.1){ var cand=mix([fg[0],fg[1],fg[2]],to,t); if(CR(over([cand[0],cand[1],cand[2],a],base),base)>=need){ c2=cand; break; } }
-    if(!c2) c2=to;                                     // 透明度は変えない（隠している表示を出してしまわないように）
+    if(!c2){   // 中くらいの明るさの色の上（白い文字＋黄土色の札など）：白くしても足りないときは、濃い文字にする
+      var to2=light?[255,255,255]:[0,0,0];
+      for(var t2=0.1;t2<=1.0001;t2+=0.1){ var cand2=mix([fg[0],fg[1],fg[2]],to2,t2); if(CR(over([cand2[0],cand2[1],cand2[2],a],base),base)>=need){ c2=cand2; break; } }
+    }
+    if(!c2) c2=(CR(to,base)>=CR(light?[255,255,255]:[0,0,0],base))?to:(light?[255,255,255]:[0,0,0]);                                     // 透明度は変えない（隠している表示を出してしまわないように）
     if(!e.hasAttribute('data-pkcg')) e.setAttribute('data-pkcg',e.style.getPropertyValue('color')||'');   // 元の色を覚えておく（印刷のときに戻す）
     e.style.setProperty('color','rgb('+Math.round(c2[0])+','+Math.round(c2[1])+','+Math.round(c2[2])+')','important');
   }
@@ -268,6 +272,41 @@ p,li,dd,h1,h2,h3,h4,figcaption{line-break:strict}
       .observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','hidden','open']}); }
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
+/* 行末の1〜2文字残り（泣き別れ）を防ぐ：紹介ページ・教科書・申し込み画面にも同じ仕組みを入れる（アプリと同じ処理。横並び（flex/grid）の中では触らない） */
+(function(){
+  if(window.__pkOrphan) return; window.__pkOrphan=true;   // 行末の1〜2文字残りを防ぐ仕組みは、ページに1つだけ動かす
+  function lines(e){ const rg=document.createRange(); rg.selectNodeContents(e); const L={};
+    [...rg.getClientRects()].forEach(r=>{ if(!(r.width>0&&r.height>0))return; const k=Math.round((r.top+r.bottom)/8); const o=L[k]||(L[k]={l:1e9,r:-1e9}); o.l=Math.min(o.l,r.left); o.r=Math.max(o.r,r.right); });
+    return Object.keys(L).map(Number).sort((a,b)=>a-b).map(k=>L[k]); }
+  function isShort(e){ const ls=lines(e); if(ls.length<2) return false; const fs=parseFloat(getComputedStyle(e).fontSize)||14; const z=ls[ls.length-1]; return (z.r-z.l)<fs*2.3; }
+  function glue(nodes){ const sp=document.createElement('span'); sp.className='og-t'; sp.style.whiteSpace='nowrap'; nodes[0].parentNode.insertBefore(sp,nodes[0]); nodes.forEach(n=>sp.appendChild(n)); }
+  function tail(e){
+    const w=document.createTreeWalker(e,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.nodeValue.trim()?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_SKIP}); let last=null,n; while((n=w.nextNode())) last=n; if(!last) return;
+    const v=last.nodeValue.replace(/\s+$/,'');
+    if(v.length>=4){ glue([last.splitText(v.length-4)]); return; }
+    // 「▾」など短い文字：その前の数文字と一緒にする
+    let t=last, p=t.parentNode; while(p&&p!==e&&!t.previousSibling){ t=p; p=p.parentNode; }
+    const prev=t.previousSibling; if(!prev) return;
+    if(prev.nodeType===3){ const pv=prev.nodeValue; if(pv.trim().length<1) return; glue([prev.splitText(Math.max(0,pv.length-3)),t]); }
+    else glue([prev,t]);
+  }
+  function run(){
+    document.querySelectorAll('p,li,h1,h2,h3,h4,label,summary,div,span,b,small,a,button,td').forEach(e=>{
+      if(e.dataset.og||!e.offsetParent) return;
+      if(e.closest('table:not(.og-ok),svg,select,textarea,[contenteditable],.no-og,#verTag')) return;
+      if(/flex|grid/.test(getComputedStyle(e).display)) return;   // 横並び（flex/grid）の中で包むと、文字の途中にすき間ができるので触らない
+      let own=false; for(const c of e.childNodes){ if(c.nodeType===3&&c.nodeValue.trim()){own=true;break;} } if(!own) return;
+      if((e.textContent||'').trim().length<5) return;
+      e.dataset.og='1';
+      if(!isShort(e)) return;
+      e.style.textWrap='balance'; if(!isShort(e)) return;
+      e.style.textWrap=''; tail(e);
+    }); }
+  let t=null; const sch=()=>{ clearTimeout(t); t=setTimeout(()=>{ try{run();}catch(_e){} },220); };
+  try{ new MutationObserver(sch).observe(document.body,{childList:true,subtree:true}); }catch(e){}
+  document.addEventListener('toggle',sch,true); document.addEventListener('click',sch,true);
+  sch();
 })();
 </script>
 </body>
