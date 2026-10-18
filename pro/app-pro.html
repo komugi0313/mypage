@@ -2851,7 +2851,7 @@ function heroHTML(c){
       <span>生年月日 <b>${c.timeUnknown?String(c.birth.clock).slice(0,10)+'（時刻不明）':c.birth.clock}</b></span>
       <span>${c.timeUnknown?'<b>時柱なし（年月日の3柱で鑑定）</b>':corr?`真太陽時 <b>${corr.solar}</b>`:'<b>時差補正なし</b>'}</span>
       ${c.dstStd&&!c.timeUnknown?`<span>サマータイム期間の生まれ：時計の <b>${c.dstFrom}</b>（夏時間）→ 標準時 <b>${c.dstStd}</b> で計算</span>`:''}
-      <span>立運 <b>${String(c.startFortune.text).replace('歳','年').replace('カ月','ヶ月')}・${c.startFortune.forward?'順行':'逆行'}</b></span>
+      <span>立運 <b>${String(c.startFortune.text).replace('歳','年').replace('カ月','ヶ月')}・${c.startFortune.forward?'順行':'逆行'}</b>${c.timeUnknown?'<small class="ritsu-approx" title="生まれた時刻が分からないため、昼12時として計算した目安です">（概算・昼12時として）</small>':''}</span>
     </div>
   </section>`;
 }
@@ -3435,6 +3435,9 @@ function wireKingun(){
   renderKgDay(kd?kd.value:'');renderKgMonth(km?km.value:'');
 }
 /* 今いる大運：立運前は第一運＝月柱（流派ルール：大運は必ず0歳＝月柱スタート） */
+function birthYMOf(c){ const m=String((c&&c.birth&&c.birth.clock)||'').match(/^(\d{4})-(\d{2})/); return m?{y:+m[1],m:+m[2]}:null; }
+function duStartYM(c,d){ if(!d) return ''; if(d.isMonth){ const b=birthYMOf(c); return b?(b.y+'年'+b.m+'月'):(d.startYear+'年'); } return d.startYear+'年'+(d.startMonth?d.startMonth+'月':''); }
+function duEndYM(c,d){ if(!d) return ''; if(d.isMonth){ const d0=(c.decadeFortunes||[])[0]; return d0?duStartYM(c,d0):''; } return (d.startYear+10)+'年'+(d.startMonth?d.startMonth+'月':''); }
 function birthYearOf(c){ const y=parseInt(String((c&&c.birth&&c.birth.clock)||'').slice(0,4),10); if(y) return y; const d0=(c.decadeFortunes||[])[0]; return d0?d0.startYear-d0.startAge:null; }
 function monthDuOf(c){
   const df=c.decadeFortunes||[],d0=df[0],mp=c.pillars[1]; if(!d0||!mp)return null;
@@ -3602,7 +3605,7 @@ function gogyoHTML(c){
     ${sectors}${band}${center}${tslabels}${elLabels}${overlayMk}</svg>`;
   const ring=col=>`<span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:${col};margin-right:6px;vertical-align:-2px"></span>`;
   const overlay=`<div class="gnote">
-    <div class="n">${ring(DU)}<b>大運</b> ${duAgeRange(dd)}（${dd.startYear}〜${dd.isMonth?((c.decadeFortunes[0]||{}).startYear||dd.startYear):dd.startYear+9}年）：${dd.ganzhi} → 干<b>${duStar}</b>・支<b>${duStarB}</b></div>
+    <div class="n">${ring(DU)}<b>大運</b> ${duAgeRange(dd)}（${duStartYM(c,dd)}〜${duEndYM(c,dd)}）：${dd.ganzhi} → 干<b>${duStar}</b>・支<b>${duStarB}</b></div>
     ${ay?`<div class="n">${ring(NY)}<b>年運</b>：${ay.year} ${ay.ganzhi} → 干<b>${yrStar}</b>・支<b>${yrStarB}</b></div>`:''}${(function(){var mf=curMonthFortune(c);return (mf&&mf.meaning)?('<div class="n"><span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:#0EA5A5;margin-right:6px;vertical-align:-2px"></span><b>月運</b>：'+(mf.month?mf.month+'月ごろ ':'')+mf.ganzhi+' → <b>'+mf.star+'</b>：'+mf.meaning+((mf.stars&&mf.stars.length)?' <span style="color:var(--muted);font-weight:700">巡る吉凶星：'+mf.stars.map(function(s){return kichiLabel(s);}).join('・')+'</span>':'')+'</div>'):'';})()}</div>`;
   const total=Object.values(k).reduce((a,b)=>a+b,0);
   const have=TENSTAR10.filter(s=>k[s]>0).map(s=>`${s}${k[s]}`).join('・');
@@ -4268,7 +4271,7 @@ function _drawReadingCard(c){ return new Promise(resolve=>{ try{
   const ichi=(typeof KANSHI60_DETAIL!=='undefined'&&KANSHI60_DETAIL[dgz])?KANSHI60_DETAIL[dgz].一言:'';
   const sType=(typeof strengthType==='function')?strengthType(c):'';
   const d0=c.decadeFortunes&&c.decadeFortunes[0];
-  const ritsu=d0?('立運 '+d0.startAge+'年'+(d0.months||0)+'ヶ月'):'';   // 画面の表示（〇年0ヶ月）とそろえる
+  const ritsu=d0?('立運 '+d0.startAge+'年'+(d0.months||0)+'ヶ月'+(c.timeUnknown?'（概算）':'')):'';   // 画面の表示（〇年0ヶ月）とそろえる。時刻不明は概算と明記
   const ku=(typeof kubo==='function')?(kubo(c)||[]):[]; const kuT=ku.length?('空亡 '+ku.join('')):'';
   let feats=[]; try{ feats=(typeof bxFeatureList==='function')?bxFeatureList(c.timeUnknown?c.pillars.slice(0,3):c.pillars):[]; }catch(e){} feats=feats.slice(0,4);
   const mctx=document.createElement('canvas').getContext('2d');
@@ -4698,8 +4701,8 @@ function flowHTML(c){
   const bioBlock=(()=>{const df=c.decadeFortunes;if(!df||!df.length)return '';const d0=df[0],birthY=birthYearOf(c);
       const ds=c.dayMaster.stem,sType=strengthType(c);
       const rows=[];
-      {const mp=c.pillars[1],bs=tenStarOf(ds,HONKI[mp.branch]);rows.push({y0:birthY,y1:d0.startYear,a0:0,a1:d0.startAge,al:duAgeRange({isMonth:true,endAge:d0.startAge,endMonths:d0.months||0}),e:unkiPct(mp.tenStar,bs,sType),col:ec(mp.stemElement),now:duMonthNow(c),pre:true,tip:'立運前(月柱'+mp.ganzhi+')'});}
-      df.forEach(d=>{const bs=tenStarOf(ds,HONKI[d.branch]);rows.push({y0:d.startYear,y1:d.startYear+9,a0:d.startAge,a1:d.endAge,al:duAgeRange(d),e:unkiPct(d.tenStar,bs,sType),col:ec(d.stemElement),now:duIsNow(c,d),tip:d.ganzhi+' 干'+d.tenStar+'/支'+bs});});
+      {const mp=c.pillars[1],bs=tenStarOf(ds,HONKI[mp.branch]);rows.push({ym:duStartYM(c,{isMonth:true}),y0:birthY,y1:d0.startYear,a0:0,a1:d0.startAge,al:duAgeRange({isMonth:true,endAge:d0.startAge,endMonths:d0.months||0}),e:unkiPct(mp.tenStar,bs,sType),col:ec(mp.stemElement),now:duMonthNow(c),pre:true,tip:'立運前(月柱'+mp.ganzhi+')'});}
+      df.forEach(d=>{const bs=tenStarOf(ds,HONKI[d.branch]);rows.push({ym:duStartYM(c,d),y0:d.startYear,y1:d.startYear+9,a0:d.startAge,a1:d.endAge,al:duAgeRange(d),e:unkiPct(d.tenStar,bs,sType),col:ec(d.stemElement),now:duIsNow(c,d),tip:d.ganzhi+' 干'+d.tenStar+'/支'+bs});});
       // 西暦は次の大運の開始年と重ならないように（例：1990–1991／1992–2001）
       rows.forEach((r,i)=>{ if(rows[i+1]&&r.y1>=rows[i+1].y0) r.y1=rows[i+1].y0-1; if(r.y1<r.y0) r.y1=r.y0; });
       // 数字（％）は出さない：中和の人などは全期間が60％台に並び、％の差に意味がないため。
@@ -4707,7 +4710,7 @@ function flowHTML(c){
       const es=rows.map(r=>r.e), mn=Math.min(...es), mx=Math.max(...es), spread=mx-mn, flat=spread<10;   // 差が10ポイント未満なら「大きな差なし」として棒をそろえる（わずかな差を大げさに見せない）
       const rel=e=>flat?60:Math.round(25+70*(e-mn)/spread);
       const tag=r=>flat?'':(r.e===mx?'<span class="ebar-tag up">この中で追い風</span>':(r.e===mn?'<span class="ebar-tag dn">この中で控えめ</span>':''));
-      const bars=rows.map(r=>{const sg=unkiSignal(r.e);return `<div class="ebar-row ${r.now?'now':''}"><div class="ebar-lab">${r.y0===r.y1?r.y0:r.y0+'–'+r.y1}年<br><small>${r.al}</small>${r.pre?'<small class="ebar-pre">立運前（月柱）</small>':''}</div><div class="ebar-track" title="${r.tip}"><div class="ebar-fill" style="width:${rel(r.e)}%;background:${r.col}"></div></div><div class="ebar-val"><span style="color:${sg.col}">${sg.mk}</span>${r.now?'<span class="rt">今</span>':''}${tag(r)}</div></div>`;}).join('');
+      const bars=rows.map(r=>{const sg=unkiSignal(r.e);return `<div class="ebar-row ${r.now?'now':''}"><div class="ebar-lab">${r.ym}〜<br><small>${r.al}</small>${r.pre?'<small class="ebar-pre">立運前（月柱）</small>':''}</div><div class="ebar-track" title="${r.tip}"><div class="ebar-fill" style="width:${rel(r.e)}%;background:${r.col}"></div></div><div class="ebar-val"><span style="color:${sg.col}">${sg.mk}</span>${r.now?'<span class="rt">今</span>':''}${tag(r)}</div></div>`;}).join('');
       const flatNote=flat?`<div class="mhint" style="margin:4px 0 6px;color:var(--ink2);font-weight:800">この方は、どの10年も追い風の強さに<b>大きな差がない安定型</b>です（${sType}）。良い・悪いの波よりも、上の一覧の<b>各10年に巡る星のテーマ</b>（学び・人脈・仕事など）で読むのがおすすめです。</div>`:'';
       return `<div class="flowcard"><div class="scry">大運の運気推移（バイオリズム）<small style="font-weight:700;color:var(--muted)"> ── あなたの<b>${gogyoBalance(c).strength}</b>と用神（喜神・忌神）から算出</small></div>
       <div class="ebars">${bars}</div>${flatNote}
@@ -5810,7 +5813,7 @@ function buildChartText(c){
     (()=>{const ks=[...new Set(c.pillars.flatMap(p=>pillarKichi(c,p)))].filter(k=>KICHI_DESC[k]);return ks.length?`命式の吉凶星の意味:${ks.map(k=>kichiLabel(k)+'='+KICHI_DESC[k]).join(' / ')}`:'';})(),
     (()=>{if(!kaigouOn(c))return '';return `魁罡（日柱${c.pillars[2].ganzhi}＝特殊星）の読み解き（重要・命式の核として厚めに描く）:${KAIGOU_DETAIL.yoten}／${KAIGOU_DETAIL.secs.map(s=>s.t+'＝'+s.d).join('／')}　※この人には「海外・遠方との縁が強い／早くから独立し海外を舞台に活躍しやすい」ことを必ず一度は明記し、決断力・独立心・実力勝負・大きな器を前向きに描く`;})(),
     (()=>{if(!inyokuOn(c))return '';const k=natalTs10(c);const kan=(k.正官+k.偏官)>0,inn=(k.印綬+k.偏印)>0,shoku=(k.食神+k.傷官),st=strengthType(c);let stars=[];try{stars=[...new Set(c.pillars.flatMap(p=>pillarKichi(c,p)))];}catch(e){}const kc=stars.includes('紅艶')||stars.includes('咸池');const utsuwa=[kan,inn,st==='身旺'].filter(Boolean).length;const care=[!kan?'官星（枠）なし→意識してルール・節度・締切を':'',(!inn&&shoku>=3)?'印星が薄く食傷が強い→衝動は作品・発信・学びに昇華':'',st==='身弱'?'身弱→支え合える環境で活かす':'',kc?'紅艶/咸池も重なる→異性の縁が濃い分、相手を見定め節度を':''].filter(Boolean);return `淫欲殺の器診断（★前向きに活かす前提で読む）:日柱が淫欲殺＝「欲望・情熱・衝動性」が強い星（それ自体は吉凶ではなく強いエネルギー）。器＝官星${kan?'あり':'なし'}・印星${inn?'あり':'なし'}・${st}（器の数${utsuwa}/3）。${utsuwa>=2?'器が十分＝情熱・カリスマ・表現・創造の武器として活かせるタイプとして描く':utsuwa===1?'器あり＝支えを活かしつつ下の点を意識で補うと安定':'意識して活かすタイプ＝節度・昇華の回路で情熱を魅力・実力に（弱点でなく伸びしろとして描く）'}。${care.length?'意識点:'+care.join('／'):'器が整い強い情熱を安心して活かせる配置'}。長所（表現力・カリスマ・創造力・情熱を極める力）を主役に、注意点は“伸びしろ”として前向きに`;})(),
-    `立運:${String(c.startFortune.text).replace('歳','年').replace('カ月','ヶ月')}（${c.startFortune.forward?'順行':'逆行'}）`,
+    `立運:${String(c.startFortune.text).replace('歳','年').replace('カ月','ヶ月')}（${c.startFortune.forward?'順行':'逆行'}）${c.timeUnknown?'※生まれた時刻が不明のため昼12時とみなした概算（大運の切り替え時期は数ヶ月前後しうる。断定しない）':''}`,
     `大運の流れ（10年ごと・干通変/支通変/補う五行）:\n  ${duFlow}`,
     `各大運・年運で巡る通変星の意味（上の流れの各時期に当てはめ、「その年代＝この星が巡る＝こういう時期・こう過ごす」と時系列で具体的に読む）:${Object.keys(TS_FORTUNE).map(s=>s+'＝'+TS_FORTUNE[s].意).join(' ／ ')}`,
     `大運の通変グループの移り変わり（人生の大きな流れ）:${grpFlow}`,
@@ -6500,8 +6503,9 @@ async function generateReading(user,localText,system,deep){
   const useServer=!geminiKey;
   aiEngine=useServer?'詳細鑑定':('詳細鑑定 '+geminiModel);
   const _body=JSON.stringify({system_instruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:user}]}],generationConfig:genCfg});
-  // 電波が途中で止まったときに待ち続けないよう、70秒で打ち切って端末内の鑑定へ切り替える
-  const _fetchT=(u,o)=>{ try{ const ac=new AbortController(); setTimeout(()=>ac.abort(),70000); return fetch(u,Object.assign({},o,{signal:ac.signal}));   /* 本文の受信中に止まった場合も打ち切る（完了後の中断は何も起きない） */ }catch(e){ return fetch(u,o); } };
+  // 電波が途中で止まったときに待ち続けないよう、45秒で打ち切って端末内の鑑定へ切り替える（打ち切ったときは、もう一度は待たない）
+  let _timedOut=false;
+  const _fetchT=(u,o)=>{ try{ const ac=new AbortController(); setTimeout(()=>{ _timedOut=true; ac.abort(); },45000); return fetch(u,Object.assign({},o,{signal:ac.signal}));   /* 本文の受信中に止まった場合も打ち切る（完了後の中断は何も起きない） */ }catch(e){ return fetch(u,o); } };
   async function callOnce(){
     let data;
     try{
@@ -6524,7 +6528,7 @@ async function generateReading(user,localText,system,deep){
   // それでもダメなときだけオフライン鑑定に切替（ユーザーが質問を打ち直す必要はありません）。
   let _authErr=0, _left=null;
   let text=await callOnce();
-  if(!text&&!_authErr){ await new Promise(r=>setTimeout(r,2500)); text=await callOnce(); }
+  if(!text&&!_authErr&&!_timedOut){ await new Promise(r=>setTimeout(r,2500)); text=await callOnce(); }   // すぐ失敗したときだけ1回やり直す（45秒待って返事がないときは、すぐ端末内の鑑定へ）
   if(text){ if(_part!=='detail') aiCountInc(_left); return {ok:true,text:noAIWord(_unmaskNames(text,_nm)),online:true}; }   // 相談1件＝1回（答え＋くわしい読み解きの2回の生成で1回と数える）
   aiEngine='オフライン鑑定（端末内）';
   if(_authErr===429){ aiCountFull(); return {ok:true,text:localText,fallback:true,online:false,note:aiLimitNote()}; }

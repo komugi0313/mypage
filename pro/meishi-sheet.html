@@ -3910,7 +3910,7 @@ window.KANSHI60_DETAIL={
     renderNenunFor(_nenunState.nowYear);
     // 大運（年齢＋西暦）
     if(r.direction) setEl('daiunDir', r.direction);
-    setEl('ritsuun', r.ritsuun ? (r.ritsuun.years+'年'+r.ritsuun.months+'ヶ月') : '　年　ヶ月');
+    setEl('ritsuun', r.ritsuun ? (r.ritsuun.years+'年'+r.ritsuun.months+'ヶ月'+(window.__timeUnknown?'（概算）':'')) : '　年　ヶ月');   // 時刻不明は昼12時とみなした概算
     if(Array.isArray(r.daiun)){
       var tb=document.getElementById('daiunBody'); tb.innerHTML='';
       var nowAge = r.nowAge, by = r.birthYear;
@@ -3949,7 +3949,7 @@ window.KANSHI60_DETAIL={
         if(_s0 && _SEASLBL[_s0]) setsuTag0='<span class="setsu-tag" contenteditable="false">'+_SEASLBL[_s0]+'</span>';
         _prevSeas=_s0;
         tr0.innerHTML='<td class="age ed" contenteditable="true">'+setsuTag0+((firstAge>0||_ritsuMon>0)?('0歳〜'+_duAge(firstAge)):'0歳（立運0年0ヶ月）')+'</td>'+
-          '<td class="yr2 ed" contenteditable="true">'+((by!=null&&ey0!=null)?(by+'〜'+ey0):'')+'</td>'+
+          '<td class="yr2 ed" contenteditable="true">'+((by!=null)?(by+'年'+(r.birthMonth?r.birthMonth+'月':'')+'〜'):'')+'</td>'+
           '<td class="ed" contenteditable="true">'+(mp.kanshi||'')+'</td>'+
           '<td class="ed" contenteditable="true">'+(mp.tsuhen||'')+'</td>'+
           '<td class="ed" contenteditable="true">'+(mp.junishi||'')+'</td>';
@@ -3968,7 +3968,9 @@ window.KANSHI60_DETAIL={
         var ey = sy!=null ? sy+9 : (d.endYear!=null ? d.endYear : (by!=null ? by + d.ageTo : null));
         // 次の大運の開始年と重ならないようにそろえる（例：0才〜8才6ヶ月の行が「〜1989」、次の行が「1989〜」と重なっていた）
         var _nd=r.daiun[i+1]; if(_nd && ey!=null){ var _nsy=_nd.startYear!=null?_nd.startYear:(by!=null?by+_nd.ageFrom:null); if(_nsy!=null && ey>=_nsy) ey=_nsy-1; }
-        var seireki = (sy!=null && ey!=null) ? (sy+'〜'+ey) : '';
+        // 西暦は、その大運が実際に切り替わる「年・月」から（生まれ月＋立運の〇ヶ月。10年きざみの目安だと年をまたぐ人は1年ずれて見えるため）
+        var _swM = r.birthMonth ? (((r.birthMonth-1+(_ritsuMon||0))%12)+1) : 0;
+        var seireki = (sy!=null) ? (sy+'年'+(_swM?_swM+'月':'')+'〜') : '';
         // 季節ラベル：各行に「その行の色に対応する季節＋五行」を枠外へ。季節が切り替わる先頭行だけに出す
         //   （赤の行＝夏・火、黄の行＝秋・金、青の行＝冬・水…と色と一致）。太い区切り線で切替はぱっと見分かる。
         var _sN=_seasOf(d.kanshi), setsuTag='';
@@ -4646,6 +4648,7 @@ window.KANSHI60_DETAIL={
       var _am=(_J.y-y)*12+(_J.m-m)-(_J.d<d?1:0); r.nowAgeX=Math.max(0,_am)/12;   // 立運の端数（〇ヶ月）まで含めた「いま」の年齢
       r.nowAge = _age;
       if(r.birthYear==null) r.birthYear = y;   // 大運の西暦計算に使用
+      r.birthMonth = m;                         // 大運が切り替わる「月」の表示に使用（生まれ月＋立運の〇ヶ月）
       r.sex = sex;                              // 2枚目の鑑定文（恋愛の星など）で使用
       try{ r.setsuInfo = _setsuInfo(_cy,_cm,_cd,_ch,_cmn,sex,_e.corr,_sc.lon); }catch(_se){ r.setsuInfo=null; }  // 節入り情報（立運の根拠）※エンジンは読むだけ
       // ★氏名・生年月日は fillFromResult より先に確定する。
