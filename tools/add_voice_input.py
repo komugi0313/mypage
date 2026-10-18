@@ -23,6 +23,8 @@ def block(sel, border, accent, ink, msg):
             '  .vmic-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 4px}\n'
             f'  .vmic-btn{{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:6px 16px;border-radius:999px;border:1.5px solid {border};background:#FFFFFF;color:{ink};font-family:inherit;font-size:14px;font-weight:800;cursor:pointer}}\n'
             f'  .vmic-btn.on{{background:{accent};border-color:{accent};color:#FFFFFF}}\n'
+            f'  .vmic-clr{{display:inline-flex;align-items:center;min-height:44px;padding:6px 16px;border-radius:999px;border:1.5px solid #B8B0A6;background:#FFFFFF;color:#3A3530;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer}}\n'
+            f'  .vmic-clr.undo{{border-color:{accent};color:{accent}}}\n'
             f'  .vmic-msg{{flex:1 1 100%;font-size:12.5px;font-weight:700;color:{msg};line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}}\n'
             '</style>\n'
             f'<script>window.__VMIC_CFG={{sel:{sel!r}}};</script>\n'

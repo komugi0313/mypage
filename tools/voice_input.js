@@ -1,4 +1,4 @@
-/* 声で入力（🎤）＝3サイト共通（PRO・ビギナー・易 EKI Pro）。発注者決定 2026-10-18（2026-10-17 に PRO で試験導入→3サイト共通に）。
+/* 声で入力（🎤）と「✕ 全部消す」＝3サイト共通（PRO・ビギナー・易 EKI Pro）。発注者決定 2026-10-18（2026-10-17 に PRO で試験導入→3サイト共通に）。
    ・ブラウザに入っている音声認識（Web Speech API）を使う＝費用0円・サーバー不要・Gemini の利用料も増えない。
    ・話した言葉は欄に文字で入るだけ（自動では送らない）。送る前に欄の中で直せる。
    ・聞き間違い直し表（下の FIX）：占いの言葉の聞き間違いを、文字になったあとで自動で直す。
@@ -85,13 +85,29 @@
     };
     cur=r; try{ r.start(); }catch(e){ cur=null; say(m,'声の入力を始められませんでした。もう一度お試しください。'); }
   }
+  // 「✕ 全部消す」：欄の文字を1回で全部消す（1文字ずつ消すのは大変なため。発注者指示 2026-10-18）。
+  //   押しまちがえても戻せるように、消したあと8秒間は「↩ 元に戻す」に変わる。欄が空のときは出さない。
+  var CLR='✕ 全部消す', UNDO='↩ 元に戻す';
   function attach(ta){
     if(!ta||ta.dataset.vmic) return; ta.dataset.vmic='1';
     var row=document.createElement('div'); row.className='vmic-row';
     var b=document.createElement('button'); b.type='button'; b.className='vmic-btn'; b.textContent=IDLE; b.setAttribute('aria-label','声で入力する');
+    var c=document.createElement('button'); c.type='button'; c.className='vmic-clr'; c.textContent=CLR; c.setAttribute('aria-label','入力した文字を全部消す');
     var m=document.createElement('span'); m.className='vmic-msg'; m.setAttribute('aria-live','polite');
-    row.appendChild(b); row.appendChild(m); ta.insertAdjacentElement('afterend',row);
+    row.appendChild(b); row.appendChild(c); row.appendChild(m); ta.insertAdjacentElement('afterend',row);
     b.addEventListener('click',function(){ start(ta,b,m); });
+    var saved=null, timer=0;
+    function sync(){ c.style.display=(saved!==null||String(ta.value||'').length)?'':'none'; }
+    function endUndo(){ saved=null; clearTimeout(timer); c.textContent=CLR; c.classList.remove('undo'); sync(); }
+    c.addEventListener('click',function(){
+      if(cur){ try{ cur.stop(); }catch(e){} }
+      if(saved!==null){ ta.value=saved; fire(ta); endUndo(); try{ ta.focus(); }catch(_){} return; }
+      if(!String(ta.value||'').length) return;
+      saved=ta.value; ta.value=''; fire(ta); say(m,'');
+      c.textContent=UNDO; c.classList.add('undo'); clearTimeout(timer); timer=setTimeout(endUndo,8000);
+    });
+    ta.addEventListener('input',function(){ if(saved!==null&&ta.value.length) endUndo(); else sync(); });
+    setInterval(sync,700); sync();   // 例文ボタンなどで欄に文字が入ったときも出す
   }
   function scan(root){ try{ (root||document).querySelectorAll(SEL).forEach(attach); }catch(e){} }
   function wire(){
