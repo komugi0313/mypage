@@ -66,7 +66,18 @@
      var rel = (r.user && r.user.rel) || 'single';
      var RH = REL_HEAD[rel] || REL_HEAD.single;
      var nick = esc(r.user.nick);
-@@ -129,140 +140,184 @@
+@@ -120,6 +131,10 @@
+     if (!JPH && typeof require === 'function') { try { JPH = require('./jp-holidays.js'); } catch (e) { JPH = null; } }
+     var hol = JPH ? JPH.name(r.date.y, r.date.m, r.date.d) : '';
+     var dateLabel = r.date.y + '年 ' + r.date.m + '月' + r.date.d + '日（' + r.date.wd + '）';
++    // 10/18 オーナー依頼：元日・大晦日・クリスマスは、あいさつにひとこと添える（日付は配信日＝日本時間の r.date だけで判定）
++    var _md = r.date.m * 100 + r.date.d;
++    var greet = (_md === 101) ? 'あけましておめでとうございます🎍' : 'おはようございます☀️';
++    var evLine = ({101:'今年もどうぞよろしくお願いします。すてきな一年になりますように。', 1224:'今日はクリスマスイブ。あたたかな夜になりますように🎄', 1225:'メリークリスマス🎄 やさしい気持ちで過ごせる一日になりますように。', 1231:'今日は大晦日。今年も一年、おつかれさまでした。よいお年をお迎えください。'})[_md] || '';
+     var subject = '【' + r.date.m + '/' + r.date.d + '(' + r.date.wd + ')】' + r.subject;
+     var crystal = '<img src="' + base + 'mail-bg/crystal-30.png" width="15" height="15" alt="" style="width:15px;height:15px;vertical-align:-3px;border:0;">';
+     var lk = r.lucky || {}, fo = r.fortunes || {};
+@@ -129,140 +144,185 @@
      // 上に動く季節バナーがあるので、本文の頭の絵文字リボンは出さない（季節の絵文字は枠の下のリボンに出す）
      if (!T.banner) h.push('<div style="text-align:center;font-size:' + (T.big ? 26 : 20) + 'px;letter-spacing:4px;line-height:1;padding:6px 0 9px;margin:2px 0 4px;border-bottom:1.5px dotted ' + T.accent + ';">' + T.deco.join(T.big ? ' ' : '&#12288;') + '</div>');
      h.push('<div style="text-align:center;padding-bottom:12px;border-bottom:1.5px dashed ' + T.accent + ';margin-bottom:14px;">'
@@ -75,7 +86,8 @@
        + '<div style="font-family:' + SERIF + ';font-size:13px;color:#6f5f57;margin-top:3px;letter-spacing:.06em;">' + dateLabel + '</div>'
        + (hol ? '<div style="margin-top:4px;"><span style="display:inline-block;font-size:11px;font-weight:700;color:#c8455f;background:#fdeef1;border-radius:20px;padding:2px 10px;">🎌 今日は' + esc(hol) + '</span></div>' : '')
 -      + '<div style="font-family:' + SERIF + ';font-size:19px;font-weight:800;color:#e0699a;margin-top:9px;line-height:1.45;">' + nick + 'さん、<span style="white-space:nowrap;">おはようございます☀️</span></div>'
-+      + '<div style="font-family:' + SERIF + ';font-size:19px;font-weight:800;color:#e0699a;margin-top:9px;line-height:1.45;">' + nick + 'さん、<span style="white-space:nowrap;">おはよう</span><span style="white-space:nowrap;">ございます☀️</span></div>'
++      + '<div style="font-family:' + SERIF + ';font-size:19px;font-weight:800;color:#e0699a;margin-top:9px;line-height:1.45;">' + nick + 'さん、' + (_md === 101 ? '<span style="white-space:nowrap;">あけまして</span><span style="white-space:nowrap;">おめでとう</span><span style="white-space:nowrap;">ございます🎍</span>' : '<span style="white-space:nowrap;">おはよう</span><span style="white-space:nowrap;">ございます☀️</span>') + '</div>'
++      + (evLine ? '<div style="font-size:12.5px;font-weight:700;color:#c8455f;margin-top:5px;line-height:1.6;">' + evLine + '</div>' : '')
        + (r.morning ? '<div style="font-size:12px;font-weight:700;color:#d06d93;margin-top:4px;">' + r.morning + '</div>' : '')
        + '<div style="font-size:12.5px;color:#6a5b53;line-height:1.7;margin-top:8px;">' + r.relIntro + '</div>'
        + '</div>');
@@ -318,7 +330,7 @@
      /* 📖 ことばのメモ */
      h.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;border-collapse:separate;"><tr><td style="background:#f3f1f6;border:1px solid #e2dced;border-radius:12px;padding:11px 13px;">'
        + '<div style="font-size:11px;font-weight:800;color:#8a7fb0;letter-spacing:.04em;margin-bottom:6px;">📖 ことばのメモ</div>'
-@@ -272,13 +327,13 @@
+@@ -272,13 +332,13 @@
  
      /* 締め＋法定フッター */
      h.push('<div style="text-align:center;margin-top:15px;padding-top:13px;border-top:1.5px dashed ' + T.accent + ';">'
@@ -339,7 +351,7 @@
        + '</div>');
  
      /* ── 外枠：月ごとの単色の枠＋上に動く季節バナー＋下に季節の絵文字リボン（写真の背景は使わない＝軽い） ── */
-@@ -306,17 +361,61 @@
+@@ -306,17 +366,61 @@
        + '</td></tr></table></body></html>';
  
      /* ── テキスト版（HTMLを表示できない環境・迷惑メール判定対策） ── */
@@ -357,7 +369,7 @@
 -    return { subject: subject, html: html, text: t.join('\n') };
 +    var _ent = function(x){ return String(x).replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'"); };
 +    var tx = function(x){ return _ent(strip(x)).replace(/[ \u3000]+\n/g,'\n').trim(); };
-+    t.push('私だけの開運予報　' + dateLabel + (hol ? '（' + hol + '）' : ''), '', r.user.nick + 'さん、おはようございます', tx(r.relIntro), '');
++    t.push('私だけの開運予報　' + dateLabel + (hol ? '（' + hol + '）' : ''), '', r.user.nick + 'さん、' + greet.replace(/[☀️🎍]/g,'').replace(/\uFE0F/g,'')); if (evLine) t.push(evLine.replace(/🎄/g,'').trim()); t.push(tx(r.relIntro), '');
 +    t.push('■ 今日の運勢：' + r.weather.name + '（' + idx + '点）', tx(r.weatherMsg), '');
 +    var _kt = [];
 +    if (good) _kt.push(r.grade.sym + ' ' + r.grade.label);
