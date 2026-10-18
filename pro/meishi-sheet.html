@@ -1527,22 +1527,24 @@ function _inDu(r,d){ var x=_nowX(r); if(x==null||!d) return false; var m=(d.ageM
       var amp = (!!AMP_TERRAIN[d.terrain]) || (voids.indexOf(br) >= 0);
       var startY = (d.startYear != null) ? +d.startYear
                  : (birthY != null) ? birthY + d.startAge : null;
-      var current = (nowAge != null) && (nowAge >= d.startAge) && (nowAge <= d.endAge);
+      /* 立運の端数（〇ヶ月）まで含めて「いま」を判定する（例：43歳1ヶ月で切り替わる人が43歳0ヶ月のときは、まだ前の大運） */
+      var m0 = (d.months || 0) / 12, startAt = d.startAge + m0, endAt = d.endAge + m0;
+      var current = (nowAge != null) && (nowAge >= startAt) && (nowAge < endAt);
       return {
         startAge: d.startAge, endAge: d.endAge, ganzhi: d.ganzhi || '', branch: br,
         terrain: d.terrain || '', season: se ? se.s : '', seasonEl: el, mark: mark,
         isSetsu: isSetsu, intense: isSetsu && amp,
         enterSeason: isSetsu ? (se ? se.s : '') : '', enterEl: isSetsu ? el : '', enterMark: isSetsu ? mark : '',
         startYear: startY, swayFrom: startY != null ? startY - 1.5 : null,
-        swayTo: startY != null ? startY + 1.5 : null, current: current
+        swayTo: startY != null ? startY + 1.5 : null, current: current, startAt: startAt, endAt: endAt
       };
     });
     var next = null;
     for (var i = 0; i < blocks.length; i++) {
-      if (blocks[i].isSetsu && nowAge != null && blocks[i].endAge >= nowAge) { next = blocks[i]; break; }
+      if (blocks[i].isSetsu && nowAge != null && blocks[i].endAt > nowAge) { next = blocks[i]; break; }
     }
     var proactive = false;
-    if (next && nowAge != null) proactive = (next.startAge - 1.5 <= nowAge) && (nowAge <= next.startAge + 1.5);
+    if (next && nowAge != null) proactive = (next.startAt - 1.5 <= nowAge) && (nowAge <= next.startAt + 1.5);
     return { blocks: blocks, next: next, nowAge: nowAge, proactive: proactive, forward: forward };
   }
   return { version:'1.1', analyze:analyze, isForward:isForward, SEASON:SEASON, TU:TU };
@@ -3927,10 +3929,10 @@ window.KANSHI60_DETAIL={
       try{
         if(window.Setsuboku && window.Setsuboku.analyze){
           var decs = r.daiun.map(function(d){
-            return { startAge:d.ageFrom, endAge:d.ageTo, ganzhi:d.kanshi||'',
+            return { startAge:d.ageFrom, endAge:d.ageTo, months:_ritsuMon, ganzhi:d.kanshi||'',
                      branch:(d.kanshi||'　').charAt(1), terrain:d.junishi||'', startYear:d.startYear };
           });
-          var sb = window.Setsuboku.analyze({ decadeFortunes:decs, birthYear:by, nowAge:nowAge,
+          var sb = window.Setsuboku.analyze({ decadeFortunes:decs, birthYear:by, nowAge:(nowAge!=null?_nowX(r):null),
                      forward:(r.direction ? r.direction.indexOf('順')>=0 : undefined),
                      voids:(r.tenchusatsu||'').split('') });
           if(sb && sb.blocks){ setsuBlocks = sb.blocks; setsuFlags = sb.blocks.map(function(b){ return !!b.isSetsu; }); }

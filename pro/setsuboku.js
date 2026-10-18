@@ -91,7 +91,9 @@
          無ければ従来どおり 生年+年齢 で近似する。 */
       var startY = (d.startYear != null) ? +d.startYear
                  : (birthY != null) ? birthY + d.startAge : null;
-      var current = (nowAge != null) && (nowAge >= d.startAge) && (nowAge <= d.endAge);
+      /* 立運の端数（〇ヶ月）まで含めて「いま」を判定する（例：43歳1ヶ月で切り替わる人が43歳0ヶ月のときは、まだ前の大運） */
+      var m0 = (d.months || 0) / 12, startAt = d.startAge + m0, endAt = d.endAge + m0;
+      var current = (nowAge != null) && (nowAge >= startAt) && (nowAge < endAt);
       return {
         startAge: d.startAge, endAge: d.endAge, ganzhi: d.ganzhi || '', branch: br,
         terrain: d.terrain || '', season: se ? se.s : '', seasonEl: el, mark: mark,
@@ -100,18 +102,18 @@
         enterSeason: isSetsu ? (se ? se.s : '') : '', enterEl: isSetsu ? el : '', enterMark: isSetsu ? mark : '',
         /* 節木運の窓＝季節切替（この大運の開始）の前後1年半 */
         startYear: startY, swayFrom: startY != null ? startY - 1.5 : null,
-        swayTo: startY != null ? startY + 1.5 : null, current: current
+        swayTo: startY != null ? startY + 1.5 : null, current: current, startAt: startAt, endAt: endAt
       };
     });
 
     /* 今から見て現在進行中/次の節木運 */
     var next = null;
     for (var i = 0; i < blocks.length; i++) {
-      if (blocks[i].isSetsu && nowAge != null && blocks[i].endAge >= nowAge) { next = blocks[i]; break; }
+      if (blocks[i].isSetsu && nowAge != null && blocks[i].endAt > nowAge) { next = blocks[i]; break; }
     }
     /* 自発的に触れてよいか＝節木運（季節の変わり目）が現在±1.5年 */
     var proactive = false;
-    if (next && nowAge != null) proactive = (next.startAge - 1.5 <= nowAge) && (nowAge <= next.startAge + 1.5);
+    if (next && nowAge != null) proactive = (next.startAt - 1.5 <= nowAge) && (nowAge <= next.startAt + 1.5);
 
     return { blocks: blocks, next: next, nowAge: nowAge, proactive: proactive, forward: forward };
   }

@@ -1576,7 +1576,9 @@
          無ければ従来どおり 生年+年齢 で近似する。 */
       var startY = (d.startYear != null) ? +d.startYear
                  : (birthY != null) ? birthY + d.startAge : null;
-      var current = (nowAge != null) && (nowAge >= d.startAge) && (nowAge <= d.endAge);
+      /* 立運の端数（〇ヶ月）まで含めて「いま」を判定する（例：43歳1ヶ月で切り替わる人が43歳0ヶ月のときは、まだ前の大運） */
+      var m0 = (d.months || 0) / 12, startAt = d.startAge + m0, endAt = d.endAge + m0;
+      var current = (nowAge != null) && (nowAge >= startAt) && (nowAge < endAt);
       return {
         startAge: d.startAge, endAge: d.endAge, ganzhi: d.ganzhi || '', branch: br,
         terrain: d.terrain || '', season: se ? se.s : '', seasonEl: el, mark: mark,
@@ -1585,18 +1587,18 @@
         enterSeason: isSetsu ? (se ? se.s : '') : '', enterEl: isSetsu ? el : '', enterMark: isSetsu ? mark : '',
         /* 節木運の窓＝季節切替（この大運の開始）の前後1年半 */
         startYear: startY, swayFrom: startY != null ? startY - 1.5 : null,
-        swayTo: startY != null ? startY + 1.5 : null, current: current
+        swayTo: startY != null ? startY + 1.5 : null, current: current, startAt: startAt, endAt: endAt
       };
     });
 
     /* 今から見て現在進行中/次の節木運 */
     var next = null;
     for (var i = 0; i < blocks.length; i++) {
-      if (blocks[i].isSetsu && nowAge != null && blocks[i].endAge >= nowAge) { next = blocks[i]; break; }
+      if (blocks[i].isSetsu && nowAge != null && blocks[i].endAt > nowAge) { next = blocks[i]; break; }
     }
     /* 自発的に触れてよいか＝節木運（季節の変わり目）が現在±1.5年 */
     var proactive = false;
-    if (next && nowAge != null) proactive = (next.startAge - 1.5 <= nowAge) && (nowAge <= next.startAge + 1.5);
+    if (next && nowAge != null) proactive = (next.startAt - 1.5 <= nowAge) && (nowAge <= next.startAt + 1.5);
 
     return { blocks: blocks, next: next, nowAge: nowAge, proactive: proactive, forward: forward };
   }
@@ -3600,7 +3602,7 @@ function gogyoHTML(c){
     ${sectors}${band}${center}${tslabels}${elLabels}${overlayMk}</svg>`;
   const ring=col=>`<span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:${col};margin-right:6px;vertical-align:-2px"></span>`;
   const overlay=`<div class="gnote">
-    <div class="n">${ring(DU)}<b>大運</b> ${duAgeRange(dd)}（${dd.startYear}〜${dd.startYear+9}年）：${dd.ganzhi} → 干<b>${duStar}</b>・支<b>${duStarB}</b></div>
+    <div class="n">${ring(DU)}<b>大運</b> ${duAgeRange(dd)}（${dd.startYear}〜${dd.isMonth?((c.decadeFortunes[0]||{}).startYear||dd.startYear):dd.startYear+9}年）：${dd.ganzhi} → 干<b>${duStar}</b>・支<b>${duStarB}</b></div>
     ${ay?`<div class="n">${ring(NY)}<b>年運</b>：${ay.year} ${ay.ganzhi} → 干<b>${yrStar}</b>・支<b>${yrStarB}</b></div>`:''}${(function(){var mf=curMonthFortune(c);return (mf&&mf.meaning)?('<div class="n"><span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:#0EA5A5;margin-right:6px;vertical-align:-2px"></span><b>月運</b>：'+(mf.month?mf.month+'月ごろ ':'')+mf.ganzhi+' → <b>'+mf.star+'</b>：'+mf.meaning+((mf.stars&&mf.stars.length)?' <span style="color:var(--muted);font-weight:700">巡る吉凶星：'+mf.stars.map(function(s){return kichiLabel(s);}).join('・')+'</span>':'')+'</div>'):'';})()}</div>`;
   const total=Object.values(k).reduce((a,b)=>a+b,0);
   const have=TENSTAR10.filter(s=>k[s]>0).map(s=>`${s}${k[s]}`).join('・');
@@ -3803,7 +3805,7 @@ function sbAnalyze(c){
   //  ・喜忌＝用神判定(_kkAssess)を五行へ落とした fav を渡す
   return Setsuboku.analyze({
     decadeFortunes:c.decadeFortunes,
-    nowAge:c.now?c.now.age:null,
+    nowAge:c.now?_nowMonths(c)/12:null,   // 〇ヶ月まで含めた「いま」の年齢
     fav:sbFav(c),
     voids:kubo(c),
     forward:c.startFortune?c.startFortune.forward:null
@@ -4042,19 +4044,19 @@ function unkiSignal(p){
 function timingAlertHTML(c){
   try{
     if(!c||!c.now||typeof c.now.age!=='number') return '';
-    var age=c.now.age, out=[];
+    var age=_nowMonths(c)/12, out=[];   // 〇ヶ月まで含めた「いま」の年齢（切り替えの目安を正しく出す）
     // 次の節木運（人生の大きな節目・約30年に一度）
     var sb=null;
     try{ if(typeof Setsuboku!=='undefined'&&c.decadeFortunes){ sb=Setsuboku.analyze({decadeFortunes:c.decadeFortunes,nowAge:age,birthYear:(birthYearOf(c)||(c.now.year-age))}); } }catch(_e){}
-    var setsuAge=(sb&&sb.next&&typeof sb.next.startAge==='number')?sb.next.startAge:null;
+    var setsuAge=(sb&&sb.next&&typeof sb.next.startAt==='number')?sb.next.startAt:null;
     var setsuSoon=(setsuAge!=null)&&(setsuAge>age)&&(setsuAge-age<=2);
     // 次の大運の切り替え（現在の大運の終わり）
     var cur=(typeof curDu==='function')?curDu(c):null;
-    var duEnd=(cur&&typeof cur.endAge==='number')?cur.endAge:null;
+    var duEnd=(cur&&typeof cur.endAge==='number')?cur.endAge+((cur.isMonth?cur.endMonths:cur.months)||0)/12:null;
     var duSoon=(duEnd!=null)&&(duEnd>age)&&(duEnd-age<=2);
     // 次の大運境界がそのまま節木運なら、節木運メッセージに一本化（重複回避）
     var sameEvent=(setsuSoon&&duSoon&&setsuAge!=null&&duEnd!=null&&Math.abs(setsuAge-duEnd)<0.6);
-    var yrTxt=function(n){ n=Math.round(n); return n<=1?'あと約1年':('あと約'+n+'年'); };
+    var yrTxt=function(n){ if(n<0.75) return 'あと数ヶ月'; n=Math.round(n); return n<=1?'あと約1年':('あと約'+n+'年'); };
     if(setsuSoon) out.push('まもなく節木運を迎えます（人生の大きな節目・'+yrTxt(setsuAge-age)+'）');
     if(duSoon&&!sameEvent) out.push('まもなく大運切り替えです（'+yrTxt(duEnd-age)+'）');
     if(!out.length) return '';
@@ -4266,7 +4268,7 @@ function _drawReadingCard(c){ return new Promise(resolve=>{ try{
   const ichi=(typeof KANSHI60_DETAIL!=='undefined'&&KANSHI60_DETAIL[dgz])?KANSHI60_DETAIL[dgz].一言:'';
   const sType=(typeof strengthType==='function')?strengthType(c):'';
   const d0=c.decadeFortunes&&c.decadeFortunes[0];
-  const ritsu=d0?('立運 '+d0.startAge+'年'+(d0.months?d0.months+'ヶ月':'')):'';
+  const ritsu=d0?('立運 '+d0.startAge+'年'+(d0.months||0)+'ヶ月'):'';   // 画面の表示（〇年0ヶ月）とそろえる
   const ku=(typeof kubo==='function')?(kubo(c)||[]):[]; const kuT=ku.length?('空亡 '+ku.join('')):'';
   let feats=[]; try{ feats=(typeof bxFeatureList==='function')?bxFeatureList(c.timeUnknown?c.pillars.slice(0,3):c.pillars):[]; }catch(e){} feats=feats.slice(0,4);
   const mctx=document.createElement('canvas').getContext('2d');
@@ -4681,7 +4683,7 @@ function flowHTML(c){
       <div class="gz"><span style="color:${col}">${d.stem}</span><span style="color:${ec(d.branchElement)}">${d.branch}</span></div>
       <div class="ts"><span class="n">${d.tenStar}${d.isMonth?'<span class="dutag">第一運＝月柱</span>':''}</span><small>${TS_DESC[d.tenStar]||''}</small></div>
       ${isNow?'<span class="nowtag rt">今ここ</span>':''}</div>${isSel?fpanel(d,'大運'):''}`;}).join('');
-  const _y0=dd.startYear,_y1=dd.isMonth?c.decadeFortunes[0].startYear:dd.startYear+10;
+  const _y0=dd.startYear,_y1=dd.isMonth?c.decadeFortunes[0].startYear+1:dd.startYear+11;   // 立運の〇ヶ月で年をまたぐので、切り替わる年も含める（curDuYear と同じ）
   const years=c.annualFortunes.filter(a=>a.year>=_y0&&a.year<_y1);
   const ny=years.length?years.map(a=>{const col=ec(a.stemElement);const isSel=a.year===sy;const isNow=nowY&&a.year===nowY;
     return `<div class="nyr ${isSel?'on':''} ${isNow?'now':''}" data-y="${a.year}" style="border-left-color:${col}">
@@ -5812,7 +5814,7 @@ function buildChartText(c){
     `大運の流れ（10年ごと・干通変/支通変/補う五行）:\n  ${duFlow}`,
     `各大運・年運で巡る通変星の意味（上の流れの各時期に当てはめ、「その年代＝この星が巡る＝こういう時期・こう過ごす」と時系列で具体的に読む）:${Object.keys(TS_FORTUNE).map(s=>s+'＝'+TS_FORTUNE[s].意).join(' ／ ')}`,
     `大運の通変グループの移り変わり（人生の大きな流れ）:${grpFlow}`,
-    (()=>{const sType=strengthType(c);const sLabel=gogyoBalance(c).strength;return `大運の運気推移（バイオリズム・あなたの${sLabel}と用神＝喜神/忌神から％化。高=追い風で挑戦向き、低=守り/土台づくり。吉凶の断定ではなく運気の波）:\n  ${duListWithMonth(c).map(d=>{const bs=tenStarOf(c.dayMaster.stem,HONKI[d.branch]);return `${duAgeRange(d)}(${d.startYear}年-) ${d.isMonth?'【第一運＝月柱】':''}${d.ganzhi} 干${d.tenStar}/支${bs} 運気約${unkiPct(d.tenStar,bs,sType)}%${(c.now&&c.now.age>=d.startAge&&c.now.age<d.endAge)?' ←今':''}`;}).join('\n  ')}`;})(),
+    (()=>{const sType=strengthType(c);const sLabel=gogyoBalance(c).strength;return `大運の運気推移（バイオリズム・あなたの${sLabel}と用神＝喜神/忌神から％化。高=追い風で挑戦向き、低=守り/土台づくり。吉凶の断定ではなく運気の波）:\n  ${duListWithMonth(c).map(d=>{const bs=tenStarOf(c.dayMaster.stem,HONKI[d.branch]);return `${duAgeRange(d)}(${d.startYear}年-) ${d.isMonth?'【第一運＝月柱】':''}${d.ganzhi} 干${d.tenStar}/支${bs} 運気約${unkiPct(d.tenStar,bs,sType)}%${duIsNow(c,d)?' ←今':''}`;}).join('\n  ')}`;})(),
     (typeof Setsuboku!=='undefined'&&sbA)?Setsuboku.promptBlock(sbA):''];
   if(c.now){const di=c.now.daeunIndex,dd=curDu(c);
     const ay=c.annualFortunes.find(a=>a.year===c.now.year);
