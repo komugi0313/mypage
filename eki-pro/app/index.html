@@ -317,6 +317,12 @@ select.field{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg 
 .hm-kd b,.ref-kd b{color:var(--sub,#8a7a66);font-weight:600;font-size:12px;margin-right:4px;}
 .hm-mod{font-size:16px;font-weight:600;line-height:1.85;color:#0B3B36;margin-top:8px;text-wrap:pretty;word-break:auto-phrase;line-break:strict;background:#E3F4EF;border:1.5px solid #7CC4B4;border-left:5px solid #0F766E;border-radius:10px;padding:10px 12px 11px;}
 .ans-box{margin:12px 0 0;display:grid;gap:10px;}
+.eki-ans-wait{display:flex;align-items:center;gap:12px;margin:8px 0 0;padding:16px 16px;border:2px dashed #B9A3D6;border-radius:14px;background:#FBF8FF;color:#3E2F52;font-size:14.5px;font-weight:700;line-height:1.7;}
+.eki-ans-wait b{font-size:16px;color:#2B2236;}
+.eki-ans-wait>span:last-child{text-wrap:balance;word-break:auto-phrase;line-break:strict;}
+.eki-ans-wait .spin{flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:3px solid #E3D8F0;border-top-color:#6B4C8A;animation:ekiSpin .9s linear infinite;}
+@keyframes ekiSpin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){ .eki-ans-wait .spin{animation:none;} }
 .ans-box:empty{display:none;}
 .ans-sec{background:#E3F4EF;border:1.5px solid #7CC4B4;border-left:5px solid #0F766E;border-radius:12px;padding:11px 13px 12px;color:#0B3B36;}
 .ans-sec .ans-h{display:block;width:fit-content;background:#0F766E;color:#fff;font-size:14px;font-weight:800;letter-spacing:.04em;line-height:1.4;padding:.15em .65em;border-radius:6px;margin:0 0 7px;}
@@ -2086,11 +2092,28 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
 ▼注意：(避けたいこと・1文)
 ▼結び：(お客様を勇気づける締めの一言)`;
   }
+  /* 答えの欄（判定・お伝え方・どうすればよいか）だけを「作成中」にする。卦や原文はもう見られる */
+  function ekiAnsWait(on){
+    const vc=document.getElementById('verdictCard'), ab=document.getElementById('ansBox');
+    let w=document.getElementById('ekiAnsWait');
+    if(on){
+      if(vc) vc.style.display='none'; if(ab) ab.style.display='none';
+      { const mo=document.getElementById('ekiMore'); if(mo) mo.style.display='none'; }
+      if(!w){ w=document.createElement('div'); w.id='ekiAnsWait'; w.className='eki-ans-wait'; w.setAttribute('role','status');
+        w.innerHTML='<span class="spin" aria-hidden="true"></span><span><b>この相談への答えを作成しています…</b><br>数秒〜20秒ほどで、ここに出ます。下の卦の説明は、もう読めます。</span>';
+        if(vc&&vc.parentNode) vc.parentNode.insertBefore(w,vc); }
+    }else{
+      if(w) w.remove(); if(vc) vc.style.display=''; if(ab) ab.style.display='';
+      const mo=document.getElementById('ekiMore'); if(mo) mo.style.display='';
+    }
+    const ms=document.getElementById('makeSho'); if(ms) ms.disabled=!!on;   // 答えが出るまでは鑑定書を作らない（答えのない鑑定書にならないように）
+  }
   function ekiPending(on){
     const ids=['concBox','scriptText','kpiCard'];
     let n=document.getElementById('ekiMore');
     if(on){
       if(!n){ n=document.createElement('div'); n.id='ekiMore'; n.className='loading-inline'; n.style.cssText='margin:12px 0;padding:12px 14px;border:1.5px dashed var(--line2,#D9CCBB);border-radius:12px;font-size:14px;font-weight:700;color:var(--ink2,#5C5650);text-align:center'; n.innerHTML='<span class="ib">要点メモ・台本・くわしい読み解きを</span><span class="ib">作成しています…</span><span class="ib">（答えは上に出ています。</span><span class="ib">読みながらお待ちください）</span>'; const ab=document.getElementById('ansBox'); if(ab&&ab.parentNode) ab.parentNode.insertBefore(n,ab.nextSibling); }
+      if(document.getElementById('ekiAnsWait')) n.style.display='none';   // 答えを待っている間は「答えは上に出ています」と言わない
       ids.forEach(id=>{ const e=document.getElementById(id); if(e) e.style.opacity='.35'; });
       const fs=document.getElementById('fuSend'); if(fs) fs.disabled=true; const fg=document.getElementById('fuBdGo'); if(fg) fg.disabled=true;
       const fw=document.getElementById('fuWait'); if(fw) fw.style.display='block';
@@ -2172,7 +2195,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
     const goOffline=(reason)=>{
       const p=buildOfflineReading(r,q);
       cur.last={ r, q, p, at:at0, offline:true, topic:cur.topic };
-      renderResult(r,q,p); markOffline(reason);
+      renderResult(r,q,p); markOffline(reason); ekiAnsWait(false); ekiPending(false);
       L.classList.remove('show');
       persistReading(cur.last);
     };
@@ -2193,7 +2216,14 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
       setTimeout(()=>goOffline(reason),350);
       return;
     }
-    setTimeout(()=>{ if(L.classList.contains('show')) LM.textContent=t('load_script'); },900);
+    // 卦はもう決まっているので、全体を覆って待たせず、結果の画面（卦・原文と現代語など）をすぐ出す。
+    // 答え（判定・お伝え方・どうすればよいか）の欄だけ「作成中」にして、届いたところから入れ替える。
+    let _early0=false;
+    try{ const off0=buildOfflineReading(r,q);
+      cur.last={ r, q, p:off0, at:at0, offline:false, pending:true, early:true, topic:cur.topic };
+      renderResult(r,q,off0); markOffline('',true); ekiAnsWait(true); ekiPending(true);
+      L.classList.remove('show'); _early0=true;
+    }catch(_e){ setTimeout(()=>{ if(L.classList.contains('show')) LM.textContent=t('load_script'); },900); }
     try{
       // ① まず「答え」（判定・お伝え方・どうすればよいか）だけを短く作って、すぐ表示する（お客様をお待たせしない）
       let A=null;
@@ -2202,13 +2232,13 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
         if(ra.e.net) throw ra.e; }   // 電波が切れている：2回目は送らず、すぐ内蔵データの鑑定に切り替える
       else A=parseReading(ra.t);
       if(A&&!(A.hantei||A.tsutae)) A=null;   // 形が読み取れない答えは「答えなし」として扱う（読み込み中のまま止まらないように）
-      if(A&&(A.hantei||A.tsutae)){
+      if(A&&(A.hantei||A.tsutae)&&(!_early0||isCur())){   // 待っている間に「新しい鑑定をする」を押したときは、今の画面に出さない
         const off=buildOfflineReading(r,q);
         const pA=Object.assign({},off,{hantei:A.hantei||off.hantei, tsutae:A.tsutae||off.tsutae, jogen:A.jogen||off.jogen});
+        const _early=!!(cur.last&&cur.last.early&&cur.last.at===at0);
         cur.last={ r, q, p:pA, at:at0, offline:false, pending:true, topic:cur.topic };
-        renderResult(r,q,pA); markOffline('',true);
+        (_early?keepView:(f=>f()))(()=>{ renderResult(r,q,pA); markOffline('',true); ekiAnsWait(false); ekiPending(true); });   // 読んでいる場所を動かさない
         L.classList.remove('show');
-        ekiPending(true);
         persistReading(cur.last);
       }
       // ② 台本・要点・裏卦などの残り。先に出した答えと食い違わないように、答えを渡して書かせる
@@ -2218,20 +2248,22 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
       if(!A&&!(p&&(p.hantei||p.tsutae))) throw new Error('形の読み取れない応答');   // 答えも残りも読み取れない → 内蔵データの鑑定に切り替える
       if(A){ if(A.hantei) p.hantei=A.hantei; if(A.tsutae) p.tsutae=A.tsutae; if(A.jogen) p.jogen=A.jogen; }   // 先に見せた答えは変えない
       trialInc(); // 本格鑑定（AI生成）を1回消費
-      if(A&&!isCur()){   // 待っている間に「新しい鑑定をする」を押した：画面には出さず、保存した記録にだけ書き足す
+      if((A||_early0)&&!isCur()){   // 待っている間に「新しい鑑定をする」を押した：画面には出さず、保存した記録にだけ書き足す
         persistReading({ r, q, p, at:at0, offline:false, topic:cur.topic });
         return;
       }
       const prevL=cur.last;
       cur.last={ r, q, p, at:at0, offline:false, topic:(prevL&&prevL.at===at0&&prevL.topic)||cur.topic };
       if(prevL&&prevL.at===at0){ cur.last.memo=prevL.memo; cur.last.memoTouched=prevL.memoTouched; }
-      keepView(()=>{ renderResult(r,q,p); markOffline('',true); ekiPending(false); });   // 読んでいる場所を動かさない
+      keepView(()=>{ renderResult(r,q,p); markOffline('',true); ekiAnsWait(false); ekiPending(false); });   // 読んでいる場所を動かさない
       L.classList.remove('show');
       persistReading(cur.last);
     }catch(e){
-      if((at0 in _dest)&&!isCur()){ return; }   // 新しい鑑定に移ったあと：今の画面には触らない（答えまでは保存ずみ）
-      keepView(()=>ekiPending(false));
-      if(cur.last&&cur.last.pending&&cur.last.r===r){   // 答えは出せたが残りが作れなかった：答えはそのまま、残りは内蔵データで
+      if((at0 in _dest)&&!isCur()){ return; }
+      if(_early0&&!isCur()){ return; }   // 答えを待っている間に新しい鑑定へ移った：今の画面には触らない
+      // 新しい鑑定に移ったあと：今の画面には触らない（答えまでは保存ずみ）
+      keepView(()=>{ ekiPending(false); ekiAnsWait(false); });
+      if(cur.last&&cur.last.pending&&!cur.last.early&&cur.last.r===r){   // 答えは出せたが残りが作れなかった：答えはそのまま、残りは内蔵データで
         cur.last.pending=false; cur.last.offline=false;
         L.classList.remove('show');
         persistReading(cur.last);
@@ -3529,7 +3561,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
     setv('question',''); setv('custNewName',''); setv('fuBd',''); setv('fuBt',''); setv('fuText',''); setv('readingMemo','');
     setv('num1',''); setv('num2',''); setv('num3',''); { const np=document.getElementById('nPreview'); if(np) np.innerHTML=''; }
     cur.topic=null; document.querySelectorAll('#topicChips .chip').forEach(x=>x.classList.remove('on'));
-    cur.last=null; cur.chat=[]; _shownR=null; const fl=document.getElementById('fuLog'); if(fl) fl.innerHTML='';
+    cur.last=null; cur.chat=[]; _shownR=null; try{ ekiAnsWait(false); ekiPending(false); }catch(_e){} const fl=document.getElementById('fuLog'); if(fl) fl.innerHTML='';
     { const an=document.getElementById('autoSaveNote'); if(an) an.style.display='none'; }
     ekiPending(false);
     try{ if(typeof fuBirthInfo==='function') fuBirthInfo(); }catch(e){}

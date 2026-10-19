@@ -718,6 +718,8 @@
   .qbox-ttl{display:flex;align-items:center;gap:10px;color:#A8401F;font-family:inherit;font-size:18px;font-weight:900;letter-spacing:.02em}
   .qbox-ttl::before{content:'';width:42px;height:42px;flex:0 0 auto;border-radius:50%;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M13 15h22a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H22l-6 5v-5h-3a4 4 0 0 1-4-4V19a4 4 0 0 1 4-4z' fill='white'/%3E%3Ccircle cx='18' cy='24' r='2.3' fill='rgba(0,0,0,.38)'/%3E%3Ccircle cx='24' cy='24' r='2.3' fill='rgba(0,0,0,.38)'/%3E%3Ccircle cx='30' cy='24' r='2.3' fill='rgba(0,0,0,.38)'/%3E%3C/svg%3E") center/42px 42px no-repeat,linear-gradient(135deg,#8A3418,#A8401F 55%,#C8502E);box-shadow:0 3px 8px rgba(0,0,0,.18)}
   /* 上の欄で相談して鑑定したとき：答えと「続けて質問する」欄を、結果の一番上の「ご相談への答え」にまとめる */
+  .qbox-ttl,.loading,.busy-note{text-wrap:balance;word-break:auto-phrase;line-break:strict}   /* スマホで1〜2文字だけ次の行に落ちない・言葉の途中で切れない */
+  .busy-note{margin:8px 0 0;text-align:center;font-size:13.5px;font-weight:800;color:#5A4636;background:#F6EFE6;border-radius:10px;padding:7px 10px}
   #cs-ans .ca-h{display:flex;align-items:center;gap:10px;margin:0 0 10px;font-size:21px;font-weight:900;color:#2A1A12}
   #cs-ans .ca-next{margin:16px 0 0;padding:10px 14px;border-radius:12px;background:#F6EFE6;color:#4A3A30;font-weight:700;font-size:14px;line-height:1.6;text-align:center}
   .qbox .worry{border:1.5px solid #F2CDB8!important;border-radius:12px!important;background:#fff!important}
@@ -6580,11 +6582,15 @@ async function generateReading(user,localText,system,deep){
 }
 function rdRetryHTML(){ return '<div class="rd-offnote no-print">📵 いまは通信できなかったため、<b>端末の中で作った簡単な答え</b>を出しています。電波の良い所で、下のボタンからもう一度ためせます。</div><button type="button" class="rd-retry no-print">🔄 もう一度オンラインで鑑定する</button>'; }
 function rdWireRetry(out,btn,user,localText,proUser,deep,safety,proLocal){ const b=out.querySelector('.rd-retry'); if(b) b.onclick=function(){ runReading(btn,out,user,localText,proUser,deep,safety,proLocal); }; }
+/* 答えを作っている間、ボタンが押せない理由を、ボタンのすぐ下に一言出す（できあがると消える） */
+function rdBusyNote(btn,on){ try{ if(!btn||!btn.id) return; let n=document.getElementById(btn.id+'-busy');
+  if(on){ if(!n){ n=document.createElement('div'); n.id=btn.id+'-busy'; n.className='busy-note'; n.setAttribute('role','status'); n.textContent='いま答えを作成中です。できあがると、また押せます。'; btn.insertAdjacentElement('afterend',n); } }
+  else if(n) n.remove(); }catch(e){} }
 async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
   const sc=safety||'';  // 自傷・希死念慮を検知したら、AIを待たずに最上部へ相談窓口を必ず表示（オンライン/オフライン/ブロック時も出す）
   const gen=(out.__rg=(out.__rg||0)+1);   // 生成中に人・表示が変わったら、後から届いた古い結果は捨てる（別の人の欄に出さない）
   const stale=()=>out.__rg!==gen||!out.isConnected;
-  btn.disabled=true;out.innerHTML=sc+'<div class="loading"><span class="spin"></span>まず答えを作成しています…（数秒〜20秒ほど）</div>';
+  btn.disabled=true;rdBusyNote(btn,true);out.innerHTML=sc+'<div class="loading"><span class="spin"></span>まず答えを作成しています…（数秒〜20秒ほど）</div>';
   try{
     // ① 冒頭の答え（結論・お伝え方・どうすればよいか）だけを先に作る＝お客様をお待たせしない
     // 鑑定ボタンで、命式の画面づくりより先に同じ文面で頼んであれば、その答えを使う（2回は頼まない）
@@ -6613,7 +6619,7 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
     out.innerHTML=sc+engineBadge(false,'通信できないため、端末内で作成した鑑定（オフライン鑑定）を表示しています。')+rdRetryHTML()+formatReading(localText);
     rdWireRetry(out,btn,user,localText,proUser,deep,safety,proLocal);
     attachReadingTools(out,localText); if(proUser)appendPro(out,proUser,localText,deep,proLocal);}
-  finally{btn.disabled=false;}
+  finally{btn.disabled=false;rdBusyNote(btn,false);}
 }
 /* 自傷・希死念慮の検知と、命の安全（クライシス）表示。端末側で判定するので、AIがブロックされても必ず出る。 */
 function isCrisis(t){ if(!t)return false; return /死にたい|死にたく|死んでしまいたい|死のうと|死のうか|自殺(したい|しよう|しそう|を考え)|自死(したい|しよう|を考え)|消えたい|消えてしまいたい|消え去りたい|いなくなりたい|居なくなりたい|生きていたくない|生きる(意味|価値)が?ない|生きるのが(つらい|辛い|しんどい|苦しい)|生きているのが(つらい|辛い|しんどい|苦しい)|自分を傷つけ|自分を傷付け|リストカット|リスカ|自傷(して|したい|してしまう|行為)|手首を切|オーバードーズ|飛び降り(たい|よう|そう)|首を吊(りたい|ろう)|命を絶(ちたい|とう|ちそう)|殺してほしい/.test(String(t)); }
