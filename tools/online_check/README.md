@@ -27,6 +27,7 @@ PRO・ビギナー・易 EKI Pro の画面を実際に動かし、**本物のサ
    node tools/online_check/run.mjs                 # 3サイトすべて（Gemini を呼ぶ・少額の費用がかかります）
    node tools/online_check/run.mjs --only=eki      # サイトをしぼる（pro, beginner, eki）
    node tools/online_check/run.mjs --dry           # Gemini を呼ばずに、道具の動作だけ確かめる
+   node tools/online_check/run.mjs --personas      # 中学生〜80代・男女15人になりきって、それぞれの本気の相談をする（3サイト・約75件）
    ```
 3. 結果は `online_check_out/report_日時.md`（要約）と `texts_日時.json`（全文）に書かれます。このフォルダは git に入れません。
 

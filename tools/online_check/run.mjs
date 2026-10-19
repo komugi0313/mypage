@@ -1,6 +1,7 @@
 // オンライン鑑定の文章を、本物のサーバー中継（各サイトの functions/gemini.js）と本物の Gemini で作って点検する道具。
 // ・APIキーは環境変数 GEMINI_API_KEY からだけ読む（画面・ログ・ファイルに書き出さない）。
 // ・PRO／ビギナー／易 EKI Pro の画面を実際に動かし、出てきた文章を自動で点検して online_check_out/ に報告を書く。
+//   node tools/online_check/run.mjs --personas … いろいろな年代・性別の人になりきって相談する（15人）
 // 使い方：GEMINI_API_KEY をサーバー側（または環境変数）に設定してから
 //   node tools/online_check/run.mjs            … 本番と同じく Gemini を呼ぶ（少額の費用がかかります）
 //   node tools/online_check/run.mjs --dry      … Gemini を呼ばずに、道具そのものの動作だけ確かめる
@@ -114,6 +115,34 @@ const HEAVY_Q = ['母の病気は治りますか', 'あと何年生きられま�
 const COLD = /お答えできません|お答えしかねます|判断できません|答えられません|お答えすることはできません|お伝えすることはできません|言い切ることはできません/;
 const NORMAL_Q = ['今の会社を辞めて転職すべきか迷っています', '彼との恋愛はうまくいきますか', '来年の運気はどうですか', '金運を上げるには？', '職場の人間関係に悩んでいます', ...ANSWER_Q];
 const LIMIT = +((ARGS.find(a => a.startsWith('--limit=')) || '').split('=')[1] || 0);
+// --personas：いろいろな年代・性別の人になりきって相談する（鑑定者本人の指示 2026-10-19）
+const PERSONAS_MODE = ARGS.includes('--personas');
+const PERSONAS = [
+  { who: '中学生・女子（14歳）', name: 'ひなた', bd: [2012, 3, 15, 7, 30], sex: 'female', q: '学校に行くのがつらいです。クラスで無視されています。' },
+  { who: '高校生・女子（17歳）', name: 'さくら', bd: [2009, 5, 21, 6, 10], sex: 'female', q: '志望校に受かるか不安で夜眠れません。親には言えなくて…' },
+  { who: '大学生・男子（20歳）', name: 'ゆうと', bd: [2005, 11, 2, null, null], sex: 'male', q: '就活がうまくいかなくて、自分に向いてる仕事がわかりません' },
+  { who: '20代・女性（26歳）', name: 'みゆ', bd: [2000, 7, 21, 13, 10], sex: 'female', q: 'マッチングアプリで出会った人と付き合うか迷っています。年上でバツイチです' },
+  { who: '20代・男性（28歳）', name: 'れん', bd: [1998, 2, 28, 23, 40], sex: 'male', q: '同性の恋人がいます。親にいつ打ち明けたらいいでしょうか' },
+  { who: '30代・男性（33歳）', name: 'たくや', bd: [1993, 1, 8, 5, 45], sex: 'male', q: '妻と子育てのことでケンカが増えました。このままで大丈夫でしょうか' },
+  { who: '30代・女性（35歳）', name: 'あやか', bd: [1990, 12, 24, 18, 0], sex: 'female', q: '不妊治療を続けるか、もうやめるか悩んでいます' },
+  { who: '30代・男性（37歳）', name: 'けんじ', bd: [1989, 6, 3, null, null], sex: 'male', q: '借金が300万円あります。どうしたら返せますか' },
+  { who: '40代・女性（42歳）', name: 'まき', bd: [1984, 5, 5, 9, 0], sex: 'female', q: 'シングルマザーです。お金の不安が消えません。副業を始めるべきですか' },
+  { who: '40代・男性（47歳）', name: 'ひろし', bd: [1979, 9, 30, 11, 20], sex: 'male', q: '会社で早期退職を勧められました。独立するか残るか迷っています' },
+  { who: '50代・女性（54歳）', name: 'のりこ', bd: [1972, 2, 14, null, null], sex: 'female', q: '更年期でイライラして家族に当たってしまいます。自分が嫌になります' },
+  { who: '50代・男性（58歳）', name: 'まさる', bd: [1968, 8, 8, 4, 15], sex: 'male', q: '親の介護と仕事の両立がつらいです。兄弟は手伝ってくれません' },
+  { who: '60代・女性（66歳）', name: 'かずこ', bd: [1960, 4, 1, 15, 30], sex: 'female', q: '夫が定年退職して毎日家にいます。正直しんどいです' },
+  { who: '70代・男性（74歳）', name: 'しげる', bd: [1952, 10, 10, 8, 0], sex: 'male', q: '妻を亡くして一人暮らしです。これからどう過ごせばいいでしょうか' },
+  { who: '80代・女性（83歳）', name: 'ふみ', bd: [1943, 6, 6, null, null], sex: 'female', q: '足腰が弱ってきました。施設に入るか、息子と同居するか迷っています' },
+];
+function personaIssues(pe, t) {   // なりきり点検：性別・家族の呼び方の取り違え、突き放す言い方、名前の取り違え
+  const out = [];
+  if (pe.sex === 'male' && /妻/.test(pe.q) && /ご主人|旦那さ|夫さん|夫婦の夫として/.test(t)) out.push('男性の相談なのに「ご主人・旦那さん」と書いている');
+  if (pe.sex === 'female' && /夫/.test(pe.q) && /奥様|奥さん/.test(t)) out.push('女性の相談なのに「奥様・奥さん」と書いている');
+  if (/同性/.test(pe.q) && /彼女|異性/.test(t) && !/彼女(たち)?も|彼女の/.test(pe.q)) out.push('同性の恋人の相談で「彼女・異性」と書いている（確認）');
+  const m = t.match(COLD); if (m) out.push(`突き放す言い方：「${t.slice(Math.max(0, m.index - 25), m.index + 15).replace(/\n/g, ' ')}」`);
+  if (REFUSE.test(t)) out.push('鑑定を断っている');
+  for (const o of PERSONAS) if (o !== pe && new RegExp(o.name + '(さん|様)').test(t)) out.push(`別の人の名前（${o.name}）が出ている`);
+  return out; }
 const ALL_Q = [...NORMAL_Q, ...CAVEAT_Q, ...BLOCK_Q, ...CRISIS_Q].filter((q, i, a) => !LIMIT || i < LIMIT || i >= a.length - 1);
 
 const results = [];
@@ -151,8 +180,9 @@ function check(site, kind, q, text, extra) {
   if (HEAVY_Q.includes(q)) { const m = t.match(COLD); if (m) issues.push(`突き放す言い方：「${t.slice(Math.max(0, m.index - 25), m.index + 15).replace(/\n/g, ' ')}」`); }
   if (ANSWER_Q.includes(q) && REFUSE.test(t)) issues.push('答えるべき相談なのに断っている');
   if (BLOCK_Q.includes(q)) { if (!/占いでお答えできません/.test(t)) issues.push('答えない相談なのに、答えない旨の案内がない'); if (extra && extra.calls > 0) issues.push(`答えない相談なのにサーバーへ ${extra.calls} 回送った`); }
-  if (extra && extra.years) { const ys = (t.match(/20\d\d年/g) || []).map(s => +s.slice(0, 4)); const bad = ys.filter(y => !extra.years.includes(y)); if (bad.length) issues.push(`材料にない年：${[...new Set(bad)].join('・')}年`); }
-  results.push({ site, kind, q, issues, text: t });
+  if (extra && extra.persona) for (const x of personaIssues(extra.persona, t)) issues.push(x);
+  if (extra && extra.years) { const ys = (t.replace(/\d{4}年\d{1,2}月\d{1,2}日生/g, '').match(/20\d\d年/g) || []).map(s => +s.slice(0, 4)); const bad = ys.filter(y => !extra.years.includes(y)); if (bad.length) issues.push(`材料にない年：${[...new Set(bad)].join('・')}年`); }
+  results.push(Object.assign({ site, kind, q, issues, text: t }, extra && extra.persona ? { who: extra.persona.who } : {}));
   process.stderr.write(`[${site}] ${kind}「${q || '相談なし'}」… ${issues.length ? '気になる点 ' + issues.length : 'OK'}\n`);
 }
 async function waitFor(p, fn, ms = 150000, arg) { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await p.evaluate(fn, arg).catch(() => false)) return true; await p.waitForTimeout(400); }
@@ -248,16 +278,80 @@ async function runEki() {
   await ctx.close(); s.close();
 }
 
+// ---------- なりきり（--personas） ----------
+async function runShichuPersonas(site, pageName) {
+  const { s, port } = await serve(path.join(ROOT, site));
+  const ctx = await browser.newContext({ serviceWorkers: 'block' }); const counter = { n: 0 };
+  await ctx.route('**/.netlify/functions/**', r => r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
+  await ctx.route('**/.netlify/functions/gemini', r => relay(site, r, counter));
+  const p = await ctx.newPage(); p.on('dialog', d => d.accept());
+  await p.goto(`http://127.0.0.1:${port}/${pageName}`); await p.waitForTimeout(2500);
+  const jargon = site === 'beginner' ? JARGON_BEG : null;
+  for (const pe of PERSONAS) {
+    await p.evaluate(([nm, [y, mo, d, h, mi], sx]) => {
+      const set = (id, v) => { const e = document.getElementById(id); if (e) { e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); } };
+      set('f-name', nm); set('f-y', String(y)); set('f-m', String(mo)); set('f-d', String(d));
+      const tu = h == null; const nt = document.getElementById('f-notime'); if (nt && nt.checked !== tu) nt.click();
+      if (!tu) { set('f-hh', String(h)); set('f-mm', String(mi)); }
+      if (typeof setSex === 'function') setSex(sx);
+      const o = document.getElementById('autoReading'); if (o) o.innerHTML = '';
+      document.getElementById('f-go').click();
+    }, [pe.name, pe.bd, pe.sex]);
+    await waitFor(p, () => { const o = document.getElementById('autoReading'); return o && o.innerText.trim().length > 50 && !o.querySelector('.loading'); });
+    counter.n = 0;
+    await p.evaluate(q => { const w = document.getElementById('worry'); w.value = q; window.__ocIt = doConsult(); }, pe.q);
+    await waitFor(p, () => { const it = window.__ocIt; return it && !it.querySelector('.loading') && !document.getElementById('consultBtn').disabled; });
+    check(site, '相談（' + pe.who + '）', pe.q, await p.evaluate(() => window.__ocIt ? window.__ocIt.querySelector('.rd-body').innerText : ''), { jargon, calls: counter.n, persona: pe });
+  }
+  await ctx.close(); s.close();
+}
+async function runEkiPersonas() {
+  const site = 'eki-pro';
+  const { s, port } = await serve(path.join(ROOT, site));
+  const ctx = await browser.newContext({ serviceWorkers: 'block' }); const counter = { n: 0 };
+  await ctx.route('**/.netlify/functions/**', r => r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
+  await ctx.route('**/.netlify/functions/gemini', r => relay(site, r, counter));
+  const p = await ctx.newPage(); p.on('dialog', d => d.accept());
+  await p.goto(`http://127.0.0.1:${port}/app/index.html`); await p.waitForTimeout(2000);
+  await p.evaluate(() => { const o = document.getElementById('offlineToggle'); if (o && o.checked) o.click(); });
+  for (const pe of PERSONAS) {
+    await p.evaluate(nm => { ['hexName', 'shikaBox'].forEach(i => { const e = document.getElementById(i); if (e) e.innerHTML = ''; }); const c = document.getElementById('custNewName'); if (c) { c.value = nm; c.dispatchEvent(new Event('input', { bubbles: true })); } }, pe.name);
+    counter.n = 0;
+    await p.fill('#question', pe.q); await p.click('#goBtn');
+    await waitFor(p, () => { const w = document.getElementById('fuWait'); const fs_ = document.getElementById('fuSend'); return document.getElementById('shikaBox').textContent.trim().length > 0 && (!w || getComputedStyle(w).display === 'none') && fs_ && !fs_.disabled; });
+    await p.waitForTimeout(800);
+    check('eki-pro', '鑑定（画面・' + pe.who + '）', pe.q, await p.evaluate(() => { const r = document.getElementById('result'); return r ? r.innerText : ''; }), { calls: counter.n, persona: pe });
+    await p.evaluate(([y, mo, d, h]) => { const b = document.getElementById('fuBirthBox'); if (b) b.open = true; document.getElementById('fuBd').value = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`; document.getElementById('fuBt').value = h == null ? '' : String(h); document.getElementById('fuBd').dispatchEvent(new Event('change')); }, pe.bd);
+    const years = await p.evaluate(() => [...document.querySelectorAll('#fuBdInfo .fu-bd-yn')].map(e => parseInt(e.textContent)));
+    counter.n = 0;
+    await p.evaluate(() => { document.getElementById('shoContent').innerHTML = ''; document.getElementById('makeSho').click(); });
+    await waitFor(p, () => { const t = document.getElementById('shoContent').innerText; return /結びのことば|ご相談について/.test(t) && !/作成しています/.test(t); });
+    check('eki-pro', '鑑定書（' + pe.who + '）', pe.q, await p.evaluate(() => document.getElementById('shoContent').innerText), { jargon: JARGON_SHO, noSymbol: true, calls: counter.n, years: years.length ? years : null, persona: pe });
+    await p.evaluate(() => { document.getElementById('shoOverlay').classList.remove('open'); document.body.classList.remove('sho-open'); });
+    const before = await p.evaluate(() => document.querySelectorAll('#fuLog .fu-msg.ai').length);
+    await p.evaluate(() => { document.getElementById('fuText').value = 'これから、どんな気持ちで過ごせばいいですか？'; document.getElementById('fuSend').click(); });
+    await waitFor(p, b => document.querySelectorAll('#fuLog .fu-msg.ai').length > b && !document.querySelector('#fuLog .fu-msg.think'), 150000, before);
+    check('eki-pro', '深掘り相談（' + pe.who + '）', pe.q + ' → これから、どんな気持ちで過ごせばいいですか？', await p.evaluate(() => { const a = document.querySelectorAll('#fuLog .fu-msg.ai'); return a.length ? a[a.length - 1].innerText : ''; }), { jargon: /命式|通変星|十二運|大運|年運|五行|干支|日主|[日月年時]柱/, years: years.length ? years : null, persona: pe });
+  }
+  await ctx.close(); s.close();
+}
+
 const t0 = Date.now();
+if (PERSONAS_MODE) {
+  if (ONLY.includes('pro')) await runShichuPersonas('pro', 'app-pro.html');
+  if (ONLY.includes('beginner')) await runShichuPersonas('beginner', 'app-beginner.html');
+  if (ONLY.includes('eki')) await runEkiPersonas();
+} else {
 if (ONLY.includes('pro')) await runShichu('pro', 'app-pro.html');
 if (ONLY.includes('beginner')) await runShichu('beginner', 'app-beginner.html');
 if (ONLY.includes('eki')) await runEki();
+}
 await browser.close();
 console.log = _log;
 
 // ---------- 報告 ----------
 fs.mkdirSync(OUT, { recursive: true });
-const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-') + (PERSONAS_MODE ? '_personas' : '');
 const ng = results.filter(r => r.issues.length);
 const SITE = { pro: 'PRO', beginner: 'ビギナー', 'eki-pro': '易 EKI Pro' };
 let md = `# オンライン鑑定の点検結果（${stamp}${DRY ? '・動作確認（Gemini未使用）' : ''}）\n\n`;
