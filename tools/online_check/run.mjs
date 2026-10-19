@@ -18,9 +18,27 @@ const DRY = ARGS.includes('--dry');
 const ONLY = ((ARGS.find(a => a.startsWith('--only=')) || '').split('=')[1] || 'pro,beginner,eki').split(',');
 const require_ = createRequire(import.meta.url);
 
+// 鍵の渡し方は2通り：①環境変数 GEMINI_API_KEY ②クラウド環境の「ネットワークシークレット」
+// （generativelanguage.googleapis.com あてに、ヘッダー x-goog-api-key で鍵を自動で付ける設定。鍵はこのセッションから見えない）
+let VIA_PROXY = false;
 if (!DRY && !process.env.GEMINI_API_KEY) {
-  console.error('GEMINI_API_KEY が設定されていません。環境変数に設定してから実行してください（キーをチャットに貼らないでください）。');
-  process.exit(2);
+  let ok = false;
+  try { const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1'); ok = r.status === 200; } catch (e) {}
+  if (!ok) {
+    console.error('Gemini の鍵が見つかりません。次のどちらかで設定してから実行してください（キーをチャットに貼らないでください）。\n'
+      + '  ① 環境変数 GEMINI_API_KEY\n'
+      + '  ② クラウド環境の「ネットワークシークレット」：許可するサイト generativelanguage.googleapis.com ／ ヘッダー名 x-goog-api-key（前につける文字は空）／ 値＝鍵');
+    process.exit(2);
+  }
+  VIA_PROXY = true;
+  process.env.GEMINI_API_KEY = 'via-network-secret';   // 中継プログラムを動かすための仮の値（本物の鍵は、通信の途中で自動で付く）
+  const real0 = globalThis.fetch;
+  globalThis.fetch = (url, opt) => {   // 仮の値を Google に送らない（本物の鍵はヘッダーで付く）
+    let u = String(url);
+    if (u.includes('generativelanguage.googleapis.com')) u = u.replace(/([?&])key=via-network-secret(&|$)/, (m, a, b) => (b ? a : '')).replace(/[?&]$/, '');
+    return real0(u, opt);
+  };
+  console.log('鍵：ネットワークシークレットを使います（このセッションからは鍵は見えません）');
 }
 if (DRY) process.env.GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'dry-run-no-key';
 // サーバー中継をローカルで動かすため、本番用の設定（自サイト判定・会員確認）は外す
