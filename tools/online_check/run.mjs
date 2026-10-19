@@ -139,7 +139,7 @@ function check(site, kind, q, text, extra) {
   if (CAVEAT_Q.includes(q)) {
     const tq = q ? t.split(q).join('') : t;
     const m = tq.match(ASSERT); if (m) issues.push(`言い切り：「${tq.slice(Math.max(0, m.index - 25), m.index + 20).replace(/\n/g, ' ')}」`);
-    if (!/占いでは|占いで(決め|確かめ|断定|判断)/.test(t)) issues.push('「占いでは決めつけない」ことわりがない');
+    if (!/占いでは|占いで(決め|確かめ|断定|判断|言い切)/.test(t)) issues.push('「占いでは決めつけない」ことわりがない');
     if (extra && extra.noSymbol && /[◎〇○△✖×]/.test(t)) issues.push('答えの記号（◎〇△✖）が出ている');
   }
   if (CRISIS_Q.includes(q)) {   // 深い悩み：小さな案内を出しつつ、断らずにふだんどおり答える
