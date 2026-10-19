@@ -1992,7 +1992,19 @@ const App=(function(){
   function clientName(){ return ((document.getElementById('custNewName')||{}).value||'').trim()||currentCustName()||''; }
   function fillName(txt){ const n=clientName(); txt=String(txt||''); return n ? txt.split(NAME_TOKEN).join(n) : txt.split(NAME_TOKEN+'さん').join('あなた').split(NAME_TOKEN).join(''); }
   /* 返ってきた文章に「私はAIなので」「AIの分析では」のような言い回しが混じっても、画面には出さない（相談内容としてのAIの話題はそのまま） */
-  function noAIWord(t){t=String(t||'').replace(/てんいつきじん/g,'てんおつきじん').replace(/テンイツキジン/g,'テンオツキジン').replace(/ぎょうざい|きょうざい/g,'ごうざい'); return String(t||'')
+/* 読み仮名の直し（発注者が確認した表 2026-10-19）：ジェミニが付けた読みが表とちがえば、画面・保存・印刷の前に直す。
+     表＝六十干支（甲子＝きのえね…）・年柱ねんちゅう・月柱げっちゅう・日柱にっちゅう・時柱じちゅう・大運だいうん。
+     1文字の十干・十二支は、ほかの意味（辛＝からい、易経の甲＝こう等）があるので、まちがいが干支の読みのときだけ直す（壬（きのえ）→壬（みずのえ））。 */
+  var pkFixYomi=(function(){ var G='甲乙丙丁戊己庚辛壬癸', GY=['きのえ','きのと','ひのえ','ひのと','つちのえ','つちのと','かのえ','かのと','みずのえ','みずのと'], Z='子丑寅卯辰巳午未申酉戌亥', ZY=['ね','うし','とら','う','たつ','み','うま','ひつじ','さる','とり','いぬ','い'];
+    var t={}, one={}, kana={}, i; for(i=0;i<60;i++) t[G.charAt(i%10)+Z.charAt(i%12)]=GY[i%10]+ZY[i%12];
+    for(i=0;i<10;i++){ one[G.charAt(i)]=GY[i]; kana[GY[i]]=1; } for(i=0;i<12;i++){ one[Z.charAt(i)]=ZY[i]; kana[ZY[i]]=1; }
+    t['年柱']='ねんちゅう'; t['月柱']='げっちゅう'; t['日柱']='にっちゅう'; t['時柱']='じちゅう'; t['大運']='だいうん';
+    return function(s){ return String(s==null?'':s).replace(/([㐀-鿿豈-﫿々]+)([（(])([ぁ-ゖー・]+)([）)])/g,function(m,k,a,y,b){
+      var ok=t[k]; if(!ok && k.length===1 && one[k] && kana[y]) ok=one[k];
+      return (ok && ok!==y) ? k+a+ok+b : m; }); };
+  })();
+    window.pkFixYomi=pkFixYomi;
+  function noAIWord(t){t=pkFixYomi(t);t=String(t||'').replace(/てんいつきじん/g,'てんおつきじん').replace(/テンイツキジン/g,'テンオツキジン').replace(/ぎょうざい|きょうざい/g,'ごうざい'); return String(t||'')
       .replace(/(?:私|わたし|わたくし)(?:は|も)(?:AI|ＡＩ|人工知能)(?:です|でございます|だ|な)?(?:ので|から|のため|として)[^、。！？\n]*[、]?/g,'')
       .replace(/(?:私|わたし|わたくし)(?:は|も)(?:AI|ＡＩ|人工知能)[^。！？\n]*[。！？]?/g,'')
       .replace(/(?:AI|ＡＩ|人工知能)(?:である|なので|ですので|ですから|のため|として)(?:私|わたし)?[^、。！？\n]*[、]?/g,'')
@@ -2724,10 +2736,11 @@ ${hist?('これまでのやりとり：\n'+hist+'\n'):''}相談者の新しい�
   //  ・ふつうの言葉：易経［えききょう］のように、その言葉の後ろに札
   //  ・読み下し（「」の中に読みが2つ以上）：漢字だけの文の後ろに、ぜんぶ ひらがな の札を1つ（読み上げやすく）
   const RUBY_RE=/([㐀-鿿豈-﫿々〆]+)（([ぁ-ゖー]+)）/g;
+  function _pkFy(k,y){ try{ var r=window.pkFixYomi(k+'（'+y+'）'); return r.slice(k.length+1,-1)||y; }catch(e){ return y; } }   // 保存済みの昔の鑑定文も、札にするときに表の読みへ
   const yomiEl=(t,line)=>{ const e=document.createElement('span'); e.className=line?'yomi yl':'yomi'; e.textContent=line?t.replace(/。(?=.)/g,'。\n'):t; return e; };   // 読み下しのひらがなは1行に独立させる
   const nPairs=t=>{ RUBY_RE.lastIndex=0; return (String(t).match(RUBY_RE)||[]).length; };
   function yomiWords(fr,t){ let last=0,m; RUBY_RE.lastIndex=0;
-    while((m=RUBY_RE.exec(t))){ if(m.index>last) fr.appendChild(document.createTextNode(t.slice(last,m.index))); fr.appendChild(document.createTextNode(m[1])); fr.appendChild(yomiEl(m[2])); last=m.index+m[0].length; }
+    while((m=RUBY_RE.exec(t))){ if(m.index>last) fr.appendChild(document.createTextNode(t.slice(last,m.index))); fr.appendChild(document.createTextNode(m[1])); fr.appendChild(yomiEl(_pkFy(m[1],m[2]))); last=m.index+m[0].length; }
     if(last<t.length) fr.appendChild(document.createTextNode(t.slice(last))); }
   const kanjiOnly=t=>t.replace(RUBY_RE,'$1'), kanaOnly=t=>t.replace(RUBY_RE,'$2');
   function rubyize(root){
@@ -3569,7 +3582,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
       ['十二運','じゅうにうん','エネルギーの強さを、人の一生にたとえて12段階で表したもの。長生（ちょうせい）・沐浴（もくよく）・冠帯（かんたい）・建禄（けんろく）・帝旺（ていおう）・衰（すい）・病（びょう）・死（し）・墓（ぼ）・絶（ぜつ）・胎（たい）・養（よう）。「死」「病」などの名前でも、悪い意味ではなく勢いの段階です。'],
       ['年運','ねんうん','その年に巡ってくる運。本アプリでは、これから3年の流れとして、ふつうの言葉で表示します。年の切り替わりは1月1日ではなく立春（りっしゅん）（2月4日ごろ）です。'],
       ['空亡','くうぼう','12年のうち2年ずつ巡ってくる、空回りしやすいとされる時期の目印。天中殺（てんちゅうさつ）とも呼びます。本アプリでは参考の表示だけで、鑑定の文章には使いません。'],
-      ['大運','たいうん','10年ごとに切り替わる大きな運の流れ。易のアプリでは使いません（姉妹ソフト「四柱推命占い自動鑑定」で見られます）。'],
+      ['大運','だいうん','10年ごとに切り替わる大きな運の流れ。易のアプリでは使いません（姉妹ソフト「四柱推命占い自動鑑定」で見られます）。'],
     ];
     const _sl=document.getElementById('termsShichuList'); if(_sl) _sl.innerHTML=sterms.map(t=>`<div class="term"><span class="term-t">${t[0]}<span class="term-r">${t[1]}</span></span><div class="term-d">${t[2]}</div></div>`).join('');
     const _sc=document.getElementById('termsShichu'); if(_sc) _sc.style.display=(typeof LANG==='undefined'||LANG==='ja')?'':'none';
@@ -3745,7 +3758,7 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
     // 四柱推命
     ['しちゅうすいめい','四柱推命'],['支柱推命','四柱推命'],['四柱推名','四柱推命'],['4柱推命','四柱推命'],['四中推命','四柱推命'],
     ['めいしき','命式'],
-    ['たいうん','大運'],['体運','大運','全身肉'],['大雲','大運'],
+    ['たいうん','大運'],['だいうん','大運'],['体運','大運','全身肉'],['大雲','大運'],
     ['りつうん','立運'],['立雲','立運'],
     ['ねんうん','年運'],['年雲','年運'],['げつうん','月運'],['にちうん','日運'],
     ['つうへんせい','通変星'],['通変性','通変星'],['通辺星','通変星'],['通変製','通変星'],
