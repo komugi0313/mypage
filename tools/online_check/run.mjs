@@ -119,10 +119,10 @@ const YOMI_OK = (() => { const G = '甲乙丙丁戊己庚辛壬癸', GY = ['き�
   const t = {}; for (let i = 0; i < 60; i++) t[G[i % 10] + Z[i % 12]] = GY[i % 10] + ZY[i % 12];
   Object.assign(t, { 年柱: 'ねんちゅう', 月柱: 'げっちゅう', 日柱: 'にっちゅう', 時柱: 'じちゅう', 大運: 'だいうん' }); return t; })();
 function yomiIssues(t) { const out = []; const K = '[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]|年柱|月柱|日柱|時柱|大運';
-  // 「大運癸未（だいうん・みずのとひつじ）」のようにつながった形や、改行をはさんだ形も点検する
+  // 「大運癸未（だいうん・みずのとひつじ）」のようにつながった形や、改行をはさんだ形も点検する（「時柱乙亥（きのとい）」のように後ろの干支だけの読みは正しい）
   const re = new RegExp('((?:' + K + ')+)\\s*[（(]([ぁ-ゖー・]+)(?=[）)：:＝=、，,／/・ 　])', 'g'); let m;
   while ((m = re.exec(t))) { const parts = m[1].match(new RegExp(K, 'g')).map(k => YOMI_OK[k]);
-    if (m[2] !== parts.join('') && m[2] !== parts.join('・')) out.push(`読み仮名：「${m[1]}（${m[2]}）」→ 正しくは「${parts.join('')}」`); }
+    if (!parts.some((_, i) => m[2] === parts.slice(i).join('') || m[2] === parts.slice(i).join('・'))) out.push(`読み仮名：「${m[1]}（${m[2]}）」→ 正しくは「${parts.join('')}」`); }
   if (/たいうん/.test(t)) out.push('読み仮名：「たいうん」（正しくは「だいうん」）');
   return [...new Set(out)]; }
 function check(site, kind, q, text, extra) {
