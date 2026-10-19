@@ -96,10 +96,19 @@ const LIMIT = +((ARGS.find(a => a.startsWith('--limit=')) || '').split('=')[1] |
 const ALL_Q = [...NORMAL_Q, ...CAVEAT_Q, ...BLOCK_Q, ...CRISIS_Q].filter((q, i, a) => !LIMIT || i < LIMIT || i >= a.length - 1);
 
 const results = [];
+// 読み仮名の点検（鑑定者本人の確認済みの表：干支は訓読み、年柱＝ねんちゅう・月柱＝げっちゅう・日柱＝にっちゅう・時柱＝じちゅう・大運＝だいうん）
+const YOMI_OK = (() => { const G = '甲乙丙丁戊己庚辛壬癸', GY = ['きのえ','きのと','ひのえ','ひのと','つちのえ','つちのと','かのえ','かのと','みずのえ','みずのと'], Z = '子丑寅卯辰巳午未申酉戌亥', ZY = ['ね','うし','とら','う','たつ','み','うま','ひつじ','さる','とり','いぬ','い'];
+  const t = {}; for (let i = 0; i < 60; i++) t[G[i % 10] + Z[i % 12]] = GY[i % 10] + ZY[i % 12];
+  Object.assign(t, { 年柱: 'ねんちゅう', 月柱: 'げっちゅう', 日柱: 'にっちゅう', 時柱: 'じちゅう', 大運: 'だいうん' }); return t; })();
+function yomiIssues(t) { const out = []; const re = /([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]|年柱|月柱|日柱|時柱|大運)[（(]([ぁ-ゖー・]+)(?=[）)：:＝=、，,／/・ 　])/g; let m;
+  while ((m = re.exec(t))) { if (YOMI_OK[m[1]] !== m[2]) out.push(`読み仮名：「${m[1]}（${m[2]}）」→ 正しくは「${YOMI_OK[m[1]]}」`); }
+  if (/たいうん/.test(t)) out.push('読み仮名：「たいうん」（正しくは「だいうん」）');
+  return [...new Set(out)]; }
 function check(site, kind, q, text, extra) {
   const issues = [];
   const t = String(text || '');
   if (!t.trim()) issues.push('文章が空');
+  for (const x of yomiIssues(t)) issues.push(x);
   for (const [nm, re] of NG_COMMON) { const m = t.match(re); if (m) issues.push(`${nm}：「${t.slice(Math.max(0, m.index - 20), m.index + 20).replace(/\n/g, ' ')}」`); }
   if (/通信できないため|端末内で作成|オフライン鑑定/.test(t) && !BLOCK_Q.includes(q)) issues.push('オンラインで作れず、端末内の文章になった（通信・設定を確認）');
   if (extra && extra.jargon) { const m = t.match(extra.jargon); if (m) issues.push(`専門用語：「${t.slice(Math.max(0, m.index - 20), m.index + 20).replace(/\n/g, ' ')}」`); }
