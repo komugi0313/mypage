@@ -118,8 +118,12 @@ const results = [];
 const YOMI_OK = (() => { const G = '甲乙丙丁戊己庚辛壬癸', GY = ['きのえ','きのと','ひのえ','ひのと','つちのえ','つちのと','かのえ','かのと','みずのえ','みずのと'], Z = '子丑寅卯辰巳午未申酉戌亥', ZY = ['ね','うし','とら','う','たつ','み','うま','ひつじ','さる','とり','いぬ','い'];
   const t = {}; for (let i = 0; i < 60; i++) t[G[i % 10] + Z[i % 12]] = GY[i % 10] + ZY[i % 12];
   Object.assign(t, { 年柱: 'ねんちゅう', 月柱: 'げっちゅう', 日柱: 'にっちゅう', 時柱: 'じちゅう', 大運: 'だいうん' }); return t; })();
-function yomiIssues(t) { const out = []; const re = /([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]|年柱|月柱|日柱|時柱|大運)[（(]([ぁ-ゖー・]+)(?=[）)：:＝=、，,／/・ 　])/g; let m;
-  while ((m = re.exec(t))) { if (YOMI_OK[m[1]] !== m[2]) out.push(`読み仮名：「${m[1]}（${m[2]}）」→ 正しくは「${YOMI_OK[m[1]]}」`); }
+function yomiIssues(t) { const out = []; const re = /([㐀-鿿]+)[（(]([ぁ-ゖー・]+)(?=[）)：:＝=、，,／/・ 　])/g; let m;
+  while ((m = re.exec(t))) { const k = m[1], y = m[2], y0 = y.replace(/・/g, '');
+    if (YOMI_OK[k]) { if (YOMI_OK[k] !== y) out.push(`読み仮名：「${k}（${y}）」→ 正しくは「${YOMI_OK[k]}」`); continue; }
+    if (k.length > 2 && /[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]$/.test(k)) { const pre = k.slice(0, -2), gz = YOMI_OK[k.slice(-2)];   // 大運癸未（だいうんみずのとひつじ）のような、ひと続きの読み
+      if (YOMI_OK[pre]) { if (y0 !== YOMI_OK[pre] + gz) out.push(`読み仮名：「${k}（${y}）」→ 正しくは「${YOMI_OK[pre] + gz}」`); }
+      else if (y0.slice(-gz.length) !== gz) out.push(`読み仮名：「${k}（${y}）」→ 干支の読みは「${gz}」`); } }
   if (/たいうん/.test(t)) out.push('読み仮名：「たいうん」（正しくは「だいうん」）');
   return [...new Set(out)]; }
 function check(site, kind, q, text, extra) {
