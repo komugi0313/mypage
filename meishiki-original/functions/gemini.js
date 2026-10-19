@@ -3,7 +3,7 @@
 // ・回数制限は「サーバー側」で強制（localStorage は改ざん可能なので信用しない）。
 //   端末ID(x-pk-device)＋IP を Netlify Blobs に日次カウントし、超過なら 429 を返し
 //   Gemini を呼ばない＝API浪費を防ぐ。
-// ・プラン連携（Stripe）後は、購読状態で上限(getLimits)を引き上げるだけで拡張可能。
+// ・プラン連携（決済）後は、購読状態で上限(getLimits)を引き上げるだけで拡張可能。
 // ※要設定：Site settings → Environment variables
 //   必須 GEMINI_API_KEY … Gemini APIキー（ブラウザには出さない）
 //   任意 GEMINI_MODEL / GEMINI_MODEL_DEEP … モデル差し替え（障害時の緊急切替や将来の値上げ対策）
