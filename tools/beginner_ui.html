@@ -75,7 +75,8 @@ html.bg-on body.sample-fold #bg-easy > .bgc:nth-of-type(n+3){display:none!import
 #jumpnav.on ~ #bg-modebar{display:flex}
 #bg-modebar button{flex:0 0 auto;border:0;border-radius:999px;padding:7px 13px;background:#3A3226;color:#fff;font-family:inherit;font-weight:800;font-size:12.5px;cursor:pointer;white-space:nowrap}
 /* 初心者モードの項目ナビ：横にはみ出さず、2段に折り返して全部見えるように */
-html.bg-on #jumpnav{flex-wrap:wrap;overflow-x:visible;gap:6px;padding:7px 10px}
+html.bg-on #jumpnav{flex-wrap:nowrap;overflow-x:auto;gap:6px;padding:6px 10px}   /* 1段で横にすべらせる（画面をふさがない。発注者指示 2026-10-20） */
+html.bg-on #jumpnav #bg-navmode{display:none!important}   /* 表示の切りかえは、すぐ下の帯のボタンで（うっかり押さない） */
 /* 初心者モード：時差の補正・日付の変わり目などの専門的な設定は隠す（既定のままでOK。上級者モードで表示） */
 html.bg-on .field:has(> #f-corr), html.bg-on .field:has(> #f-zishi), html.bg-on label:has(> #f-clockday), html.bg-on details.adv > .hint{display:none!important}
 html.bg-on #jumpnav button{padding:6px 11px;font-size:12.5px}
@@ -94,6 +95,8 @@ html.bg-on #toTop::before{content:'↑';font-size:20px;line-height:44px}
 html.bg-on #jumpnav .bg-hide{display:none!important}
 /* 初心者モードでは、専門用語の多い「教科書」はナビに出さない（上級者モードで表示） */
 html.bg-on #jn-book{display:none!important}
+/* やさしい表示では、用語の「？」（専門用語のページへ行く入口）は出さない（上級者表示・くわしい内容では出る） */
+html.bg-on:not(.bg-fold-open) .gl-q{display:none!important}
 /* 中ほどの「教科書」ボタン（専門用語のページへ行く入口）も、やさしい表示では出さない */
 html.bg-on .mq-book{display:none!important}
 /* 「相談する」が出ているときは、↑ボタンをその上に上げて重ならないようにする */
@@ -180,7 +183,7 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     var same=hi.length===ORD.length;
     var msg=same?WHO()+'は5つの力をバランスよく持っています。どの場面でも力を発揮しやすいタイプです。'
       :(WHO()+'は'+nm(hi)+'の力が強めで、'+ws(hi)+'が持ち味です。'+
-        ((fe[weak]||0)===0?('いっぽう、'+nm(lo)+'の力は、生まれ持った中にはありません（いちばん少なめです）。'+ws(lo)+'を意識すると、バランスが整います。')
+        ((fe[weak]||0)===0?('いっぽう、'+nm(lo)+'の力は、生まれ持った中にはありません。'+ws(lo)+'を意識すると、バランスが整います。')
                           :('少なめなのは'+nm(lo)+'の力。'+ws(lo)+'を少し意識すると◎。')));
     return '<div class="bgc" id="bg-gogyo"><div class="bgh"><span class="ic">🌿</span>'+WHO()+'の中にある5つの力</div>'+
       '<div class="bgl">人は生まれた日から、木・火・土・金・水という5つの自然の力を持っています。どの力が多いか少ないかが、'+WHO()+'の性格や運のクセになります。</div>'+
@@ -248,9 +251,10 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     var rows=ys.map(function(a){var s=sig(c,a);return '<div class="yr'+(a.year===y0?' cur':'')+'" style="--sc:'+s.col+'"><div class="hd"><div class="w">'+a.year+'年<small>'+(a.year-by)+'歳'+(a.year===y0?'・今年':'')+'</small></div><div class="s">'+s.mk+' '+s.lab+'</div></div><div class="m">'+esc(shortMean(c,a))+(sk[a.year]?'<br><span style="color:#B4472E;font-weight:800">⚡ '+((s.mk==='◎'||s.mk==='○')?'良い流れの年ですが、':'')+'暮らしや仕事が大きく揺れやすい年でもあります（下の「とくに大きく揺れやすい時期」）</span>':'')+'</div></div>';}).join('');
     var dl=safe(function(){return duListWithMonth(c);},[])||[], cur=safe(function(){return curDu(c);},null), age=(typeof _nowMonths==='function')?_nowMonths(c)/12:c.now.age;
     var drows=dl.filter(function(d){var end=d.isMonth?d.endAge+(d.endMonths||0)/12:d.startAge+10+(d.months||0)/12;return end>age;}).slice(0,5).map(function(d){var s=sig(c,d),isCur=(cur&&d.startAge===cur.startAge&&!!d.isMonth===!!cur.isMonth);
-      return '<div class="yr'+(isCur?' cur':'')+'" style="--sc:'+s.col+'"><div class="hd"><div class="w">'+duLab(d)+(isCur?'<small>いま</small>':'')+'</div><div class="s">'+s.mk+' '+s.lab+'</div></div><div class="m">'+esc(shortMean(c,d))+'</div></div>';}).join('');
+      var shk=safe(function(){ var P=c.pillars||[], g=[P[2]&&P[2].ganzhi, P[1]&&P[1].ganzhi]; return !d.isMonth && g.some(function(t){ return t&&isTensenChichu(t,d.ganzhi); }); },false);   // 下の「揺れやすい時期」と同じ判定。良い時期でも、ここは印を分ける（発注者指示 2026-10-20）
+      return '<div class="yr'+(isCur?' cur':'')+'" style="--sc:'+s.col+'"><div class="hd"><div class="w">'+duLab(d)+(isCur?'<small>いま</small>':'')+'</div><div class="s">'+s.mk+' '+s.lab+(shk?'<span style="display:inline-block;color:#B4472E">・⚡大きな変化に注意</span>':'')+'</div></div><div class="m">'+esc(shortMean(c,d))+(shk?'<br><span style="color:#B4472E;font-weight:800">⚡ この10年は、良い流れの中でも大きな変化が起きやすい時期です（下の「とくに大きく揺れやすい時期」）。</span>':'')+'</div></div>';}).join('');
     return '<div class="bgc" id="bg-flow"><div class="bgh"><span class="ic">📅</span>これからの運の流れ</div>'+
-      '<div class="bgl">◎とても良い時期・○良い時期・◦ふつう・△静かに整える時期。良い時期は動き出すチャンス、△の時期は準備やお休みに向いています。</div>'+
+      '<div class="bgl">◎とても良い時期・○良い時期・◦ふつう・△静かに整える時期・⚡大きな変化に注意。良い時期は動き出すチャンス、△の時期は準備やお休みに向いています。⚡は悪い時期ではなく、変化が起きやすい目印です。</div>'+
       '<div class="sub">これからの10年（1年ごと）</div><div class="yl">'+rows+'</div>'+
       (drows?'<div class="sub" style="margin-top:14px">10年ごとの大きな流れ</div><div class="yl">'+drows+'</div>':'')+'</div>';
   }
@@ -504,7 +508,7 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
   var NAV=[['bg-me','人柄'],['bg-now','運気'],['bg-love','恋愛'],['bg-care','心と体']];
   function navOn(){
     var jn=document.getElementById('jumpnav'); if(!jn) return;
-    jn.querySelectorAll('button[data-t]').forEach(function(b){ var t=b.getAttribute('data-t'); if(t!=='compat-card'&&t!=='ai-slot'&&!b.hasAttribute('data-bg')) b.classList.add('bg-hide'); });
+    jn.querySelectorAll('button[data-t]').forEach(function(b){ var t=b.getAttribute('data-t'); if(t!=='compat-card'&&t!=='ai-slot'&&t!=='cs-ans'&&!b.hasAttribute('data-bg')) b.classList.add('bg-hide'); });
     if(!jn.querySelector('[data-bg]')){
       var anchor=jn.querySelector('button[data-t="ai-slot"]');
       NAV.forEach(function(n){ var b=document.createElement('button'); b.type='button'; b.setAttribute('data-t',n[0]); b.setAttribute('data-bg','1'); b.textContent=n[1];
@@ -522,7 +526,7 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     var eb=s.querySelector('.eyebrow'); if(eb&&!eb.dataset.bg){ eb.dataset.bg=eb.innerHTML; eb.innerHTML='<b>鑑定</b>文章で読む'; }
     var p=s.querySelector('h2+p, .lead'); if(p&&!p.dataset.bg){ p.dataset.bg=p.innerHTML; p.innerHTML='下のボタンを押すと、'+WHO()+'の生まれ持った性格や、これからの運の流れを、むずかしい言葉を使わずに文章でお伝えします。'; }
     var qs=s.querySelector('.qbox-sub'); if(qs&&!qs.dataset.bg){ qs.dataset.bg='1'; qs.textContent=''; qs.appendChild(document.createTextNode('気になることを書くと、')); var _nm=document.createElement('span'); _nm.style.whiteSpace='nowrap'; _nm.textContent=WHOt(); qs.appendChild(_nm); qs.appendChild(document.createTextNode('の生まれ持った性質と運の流れから、詳しくお答えします。')); }
-    var b=document.getElementById('autoReadBtn'); if(b&&!b.dataset.bg){ b.dataset.bg=b.innerHTML; b.innerHTML='やさしい言葉で詳細鑑定'; }
+    var b=document.getElementById('autoReadBtn'); if(b&&!b.dataset.bg){ b.dataset.bg=b.innerHTML; b.innerHTML='鑑定文を作る（やさしい言葉）'; var _bd=b.nextElementSibling; if(_bd&&_bd.classList.contains('btn-desc')&&!_bd.dataset.bg){ _bd.dataset.bg=_bd.textContent; _bd.textContent='質問なしで、性格と運の流れを、やさしい言葉の文章にします'; } }
   }
   var foldOpen=false;
   // 相談の例（チップ）を押したときに入る文章も、専門用語を使わない言い方にする
@@ -532,11 +536,11 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
   }
   // 画面に最初からある文言（入力欄・相性欄・ページ下の注意書き）を、初心者モードではふつうの言葉にする（OFFで元に戻す）
   var STATIC=[
-    ['#f-notime',' 生まれた時刻がわからない（年月日だけで占います）'],
-    ['#b-notime',' お相手の生まれた時刻がわからない（年月日だけで占います）'],
+    ['#f-notime',' 生まれた時刻がわからない'],
+    ['#b-notime',' お相手の時刻がわからない'],
     ['.cs-note','空欄のままなら、生まれ持った性質と運の流れ全体を占います'],
     ['#compat-card .qbox-sub','気になることを書くと、2人の生まれ持った性質と運の流れから、詳しくお答えします。'],
-    [function(){ return document.getElementById('adv-sum'); },'⚙ 恋愛のお相手などの設定<span style="display:inline-block;margin-left:6px;background:#E3F4EA;color:#1E7A4C;border:1px solid #9FD3B4;border-radius:999px;padding:1px 10px;font-size:13px;font-weight:900;vertical-align:1px;white-space:nowrap">ふだんは触らなくてOK</span><span style="display:block;margin:4px 0 0 1.2em;font-size:13.5px;font-weight:600;color:var(--ink2);line-height:1.7;word-break:auto-phrase;line-break:strict">恋愛相手を変えるときだけ使います。</span>'],
+    [function(){ return document.getElementById('adv-sum'); },'⚙ 同性のパートナーなどの設定<span style="display:inline-block;margin-left:6px;background:#E3F4EA;color:#1E7A4C;border:1px solid #9FD3B4;border-radius:999px;padding:1px 10px;font-size:13px;font-weight:900;vertical-align:1px;white-space:nowrap">ふだんは触らなくてOK</span><span style="display:block;margin:4px 0 0 1.2em;font-size:13.5px;font-weight:600;color:var(--ink2);line-height:1.7;word-break:auto-phrase;line-break:strict">同性のパートナーの方を占うときなどに使います。</span>'],
     [function(){ var p=document.getElementById('f-pref'); return p?p.nextElementSibling:null; },'生まれた都道府県を選ぶと、その土地の時刻に合わせて、より正確に占います。分からなければ「指定しない」のままでOKです。'],
     ['.foot','結果は、生年月日から決まった計算で出しています。文章はひとつの目安です。<br>占いは自分を知るための道具です。<span class="nobr">大切な判断はご自身で。</span>']
   ];
@@ -679,7 +683,15 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
     label(); document.documentElement.classList.toggle('bg-on',v);
     [].slice.call(document.querySelectorAll('details.beginner-pro-collapse')).forEach(function(d){ d.open=false; });   // 切り替えたら「くわしい内容」は閉じた状態から
     /* 詳細鑑定・相性の文章は表示モード（専門用語の有無）に合わせて作るため、切り替えたら作り直してもらう。入力中の相談文は残す */
-    safe(function(){ if(typeof chart!=='undefined' && chart){ window.__keepWorry=true; try{ window.renderResult(); }finally{ window.__keepWorry=false; } } else apply(); });
+    /* 切りかえても、作った答え（ご相談への答え・鑑定文）は画面に残す（発注者指示 2026-10-20）。言葉は作ったときの表示のまま、と一言そえる */
+    safe(function(){ if(typeof chart!=='undefined' && chart){
+      var _sl=document.getElementById('ai-slot'), _txt=function(el){ return el?(el.textContent||'').trim():''; };
+      var _has=!!(document.querySelector('#cs-ans .rd-body') || _txt(document.getElementById('reading')) || _txt(document.getElementById('autoReading')));
+      window.__keepWorry=true; window.__keepAiSlot=_has;
+      try{ window.renderResult(); }finally{ window.__keepWorry=false; window.__keepAiSlot=false; }
+      if(_has){ var _host=document.getElementById('cs-ans')||_sl; if(_host){ var _n=document.getElementById('bg-keepnote'); if(!_n){ _n=document.createElement('p'); _n.id='bg-keepnote'; _n.style.cssText='margin:8px 0;padding:8px 12px;border-radius:10px;background:#F4EFE4;color:#4A3B22;font-size:13px;font-weight:700;line-height:1.7'; var _h=_host.querySelector('h2'); if(_h&&_h.nextSibling) _host.insertBefore(_n,_h.nextSibling); else _host.insertBefore(_n,_host.firstChild); }
+        _n.textContent='この答えは、表示を切りかえる前に作ったものです（顧客カルテにも保存ずみ）。いまの表示の言葉で読みたいときは、もう一度ボタンを押してください。'; } }
+    } else apply(); });
     safe(function(){ var cp=document.getElementById('compat'); if(cp && cp.textContent.trim()){ cp.__rg=(cp.__rg||0)+1; cp.innerHTML='<p style="margin:10px 0;padding:10px 12px;border-radius:10px;background:#F4EFE4;font-size:13.5px;font-weight:700;line-height:1.7">表示を切り替えたので、相性の文章はいったん閉じました。もう一度「この2人の相性を見る」を押すと、いまの表示に合った文章で出ます。</p>'; } });
     safe(function(){ if(v) compatOn(); else compatOff(); });
   }
@@ -713,3 +725,34 @@ html.bg-on:not(.bg-fold-open) #gogyo-pin{display:none!important}
   })();
 })();
 </script>
+<script>
+/* やさしい表示：①「📖 はじめての学び方」を目次の帯に ②相性の入力欄は「相性を見る」を押したときだけ開く（発注者指示 2026-10-20） */
+(function(){
+  function onB(){ return document.documentElement.classList.contains('bg-on'); }
+  function setup(){
+    var jn=document.getElementById('jumpnav');
+    if(jn&&!document.getElementById('jn-manabi')){ var a=document.createElement('button'); a.type='button'; a.id='jn-manabi'; a.textContent='📖 はじめての学び方'; a.style.cssText='background:#E4F3F1;color:#1F625A;border-color:#A9D6CF;font-weight:900';
+      a.onclick=function(){ window.open('manabi.html','_blank','noopener'); }; var ref=jn.querySelector('#jn-print'); if(ref&&ref.nextSibling) jn.insertBefore(a,ref.nextSibling); else jn.appendChild(a); }
+    var rs=document.getElementById('result');
+    if(rs&&rs.parentNode&&!document.getElementById('bg-advnote')){ var nt=document.createElement('div'); nt.id='bg-advnote';
+      nt.innerHTML='<b>上級者向けの表示をはじめて見る方へ</b><br><span style="display:inline-block">まずは「命式」の表と、</span><span style="display:inline-block">「大運・年運」だけ見れば大丈夫です。</span><span style="display:inline-block">用語の横の「？」を押すと、</span><span style="display:inline-block">やさしい説明が開きます。</span><span style="display:inline-block">「🔰 やさしい表示へ」でいつでも戻れます。</span>';
+      rs.parentNode.insertBefore(nt,rs); }
+    var an=document.getElementById('bg-advnote'), jno=document.getElementById('jumpnav'); if(an) an.style.display=(!onB()&&jno&&jno.classList.contains('on')&&!window.__isSample)?'block':'none';
+    var cc=document.getElementById('compat-card');
+    if(cc&&!document.getElementById('cc-opener')){ var h=cc.querySelector('h2'); var b=document.createElement('button'); b.type='button'; b.id='cc-opener'; b.className='cc-opener';
+      b.textContent='💞 この人との相性を見る（ひらく）'; b.onclick=function(){ cc.classList.add('cc-open'); };
+      if(h&&h.parentNode) h.parentNode.insertBefore(b,h.nextSibling); else cc.insertBefore(b,cc.firstChild); }
+  }
+  document.addEventListener('click',function(e){ var t=e.target; if(!t||!t.closest) return;
+    if(t.closest('#jumpnav [data-t="compat-card"], #compat-banner, .compat-pill, [onclick*="scrollToCompat"]')){ var cc=document.getElementById('compat-card'); if(cc) cc.classList.add('cc-open'); } },true);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',setup); else setup();
+  setInterval(setup,800);
+})();
+</script>
+<style>
+html:not(.bg-on) #jn-manabi{display:none!important}
+#bg-advnote{display:none;margin:0 0 12px;padding:11px 14px;border-radius:12px;background:#EAF4F2;border:1.5px solid #A9D6CF;color:#1F3F3A;font-size:13.5px;font-weight:700;line-height:1.8}
+html.bg-on #compat-card:not(.cc-open) > :not(h2):not(.cc-opener){display:none!important}
+#cc-opener{display:none}
+html.bg-on #compat-card:not(.cc-open) #cc-opener{display:block;width:100%;min-height:48px;margin:8px 0 0;border:2px solid #D5B8E6;border-radius:14px;background:#F4EAF9;color:#5E2C7A;font-family:inherit;font-weight:900;font-size:15px;cursor:pointer}
+</style>
