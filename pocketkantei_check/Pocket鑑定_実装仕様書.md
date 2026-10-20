@@ -24,7 +24,7 @@
    - 非公開：zh（簡体）・vi・es・pt・id・th。訳文はコードに残してありますが、選べません（6.8）。直す時は、できればこの6言語もそろえてください（いつか戻す時のため）。
 8. **つらい気持ち・危機の相談への返事は、どの上限でも止めない。** AIが使えない時も、アプリが相談窓口つきの返事を出します（`safeReply`・`HELPLINE`）。
 9. **サイトのファイルを更新したら、`site/sw.js` のキャッシュ名を1つ上げる。**
-   - 今は `pocket-kantei-v118` です。次の更新では `v119` にします。
+   - 今は `pocket-kantei-v119` です。次の更新では `v120` にします。
    - 上げないと、利用者の端末に古い画面が残ります。
 10. **Gemini の本番プロジェクトは、前払いの残高と月の支出上限で運用する。** 通知も必ず受け取れるようにしてください（2.3）。残高が切れるか上限に達すると、全員のチャットが止まります。
 
@@ -41,6 +41,7 @@ firebase.json              ← Firebase の設定（サイトの公開・/api �
 firestore.rules            ← Firestore の決まり（アプリから直接は読み書きできない）
 site/                      ← 公開するサイト（Firebase Hosting）
 server/                    ← サーバーの関数（Cloud Functions for Firebase）
+tools/build-lp.js          ← 紹介ページを言語ごとに書き出す（1.2）
 tests/                     ← テスト一式。公開しません（10章）
 ```
 
@@ -48,7 +49,8 @@ tests/                     ← テスト一式。公開しません（10章）
 | ファイル | 役割 |
 |---|---|
 | `index.html` | アプリ本体（画面・10言語の文言・AIへの指示文・後処理・回数・課金の画面・プッシュの設定・アンケート）。先頭に、エンジニアが入れる設定欄があります（2.5） |
-| `lp.html` | 紹介ページ。未登録の人は必ずここへ移動します |
+| `lp.html` | 紹介ページ（日本語。ほかの言語の人には、その人の言語に切りかわります）。未登録の人は必ずここへ移動します。**文章を直すのはこのファイルだけです** |
+| `en/`・`ko/`・`zt/` の `index.html`、`sitemap.xml`、`robots.txt` | 言語ごとの紹介ページなど。**`node tools/build-lp.js` で `lp.html` から作ります。手で直さないでください**（下の「言語ごとの紹介ページ」） |
 | `legal.html` | 利用規約・プライバシーポリシー・特定商取引法の表記（日本語と英語） |
 | `pro-bazi.js` / `pro-adapter.js` / `bazi.js` | 命式の計算エンジン（8章） |
 | `sw.js` | Service Worker。`/api/` はキャッシュしません |
@@ -56,6 +58,18 @@ tests/                     ← テスト一式。公開しません（10章）
 
 - `site/` に置いたものは、誰でも見られます。資料やテストを `site/` に入れないでください。
 - キャッシュの設定は `firebase.json` の `headers` にあります（`bazi.js` だけ1日、ほかは毎回確認）。
+
+**言語ごとの紹介ページ（運営決定 2026-10-20）**
+- 検索とシェアのために、紹介ページを言語ごとに別のアドレスにします。ドメインは1つです。
+  - 日本語：`https://pocket-kantei.jp/lp.html`　英語：`/en/`　韓国語：`/ko/`　繁体中国語：`/zt/`
+- `/en/` などは、開いた瞬間から本文・タイトル・説明・シェアした時のカード（og）がその言語です。前に別の言語を選んだ人が開いても、そのページの言語で出ます。
+- `lp.html` は、ブラウザの言語（または前に選んだ言語）に自動で切りかわり、アドレスもその言語のページ（`/en/` など）に変わります。言語を切りかえた時も、アドレスが変わります。検索エンジンのロボットには、いつも日本語で見せます。
+- どのページにも、`canonical`・`hreflang`（ja・en・ko・zh-Hant、x-default は `lp.html`）・og の情報が入ります。アプリと紹介ページの「シェア」は、その人の言語のページを送ります。
+- 紹介ページの中のリンクと画像は `/index.html` `/owl.png` のように、先頭が `/` の書き方にしています（`/en/` の下でも動くように）。
+- **`lp.html` の文章（`I18N`・`PAGE_TITLE`・`PAGE_DESC`）を直したら、必ず `node tools/build-lp.js` を実行し、できたファイルも一緒にデプロイします。**
+  - 本番のドメインがちがう時は `PK_SITE=https://○○ node tools/build-lp.js` で作ります。
+  - 確認は `node tests/lppages.js`（25項目）です。
+- 公開したら、Google Search Console にドメインを登録し、`https://pocket-kantei.jp/sitemap.xml` を送ってください。
 
 ### 1.3 `server/`（Cloud Functions for Firebase）
 | ファイル | 役割 |
@@ -1121,6 +1135,7 @@ Gemini は、前回と先頭から同じ部分の入力を割り引きます。�
 ./setup.sh
 export PK_STORE=memory NODE_PATH=mock/node_modules
 node unitguard.js
+node lppages.js        # 言語ごとの紹介ページ（先に ../tools/build-lp.js を実行）
 node e2e.js
 node quotatest.js
 node budgettest.js
