@@ -150,6 +150,18 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
 .verdict b{display:block;font-size:17px;margin-bottom:2px}
 .opt-mini{display:flex;gap:6px}
 .opt-mini select{flex:1;min-width:0;font:inherit;font-size:16px;padding:9px 6px;border:1px solid var(--rule);border-radius:10px;background:var(--surface);color:var(--ink)}
+/* invite */
+.invbar{display:flex;gap:14px;align-items:center;border-color:var(--plus)}
+.invbar img{width:64px;height:64px;border-radius:50%;background:var(--soft);object-fit:contain;flex:none}
+.invbar>div{min-width:0}
+.invt{margin:2px 0 0;font-size:14px;line-height:1.7}
+.send{display:flex;flex-direction:column;gap:10px}
+.send .lbl{font-weight:700;font-size:14px}
+.txt{font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--rule);border-radius:10px;background:var(--surface);color:var(--ink);width:100%;box-sizing:border-box;min-width:0}
+.lnkbox{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.lnkbox .txt{font-size:13px;color:var(--muted)}
+.lnkacts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn.line{background:#06C755;border-color:#06C755;color:#fff;text-decoration:none}
 /* gap */
 .gaprow{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:6px}
 .gapnum{font-family:var(--mono);font-weight:600;font-size:40px;color:var(--plus);line-height:1;font-variant-numeric:tabular-nums}
@@ -218,6 +230,11 @@ button.alt{width:100%;border:0;font-family:inherit;line-height:1.7;cursor:pointe
     <nav class="lang" aria-label="言語"><a href="#" aria-current="true">日本語</a><a href="#">EN</a><a href="#">한국어</a></nav>
   </header>
   <p class="note">デザイン見本（実際に診断できます）</p>
+
+  <section class="card invbar" id="invBar" hidden>
+    <img id="invImg" alt="送ってくれた人の相棒キャラクター">
+    <div><p class="eyebrow">相性診断が届きました</p><p class="invt"><b id="invWho"></b>（<span id="invPair"></span>）から。あなたの診断が終わると、2人の相性がわかります。</p></div>
+  </section>
 
   <section class="card intro">
     <p class="eyebrow">16タイプの、その先へ</p>
@@ -313,14 +330,28 @@ button.alt{width:100%;border:0;font-family:inherit;line-height:1.7;cursor:pointe
   </section>
 
   <section class="card" id="partner">
-    <h2>あの人との相性</h2>
+    <h2 id="partnerH">あの人との相性</h2>
+    <div id="pForm">
     <p class="hint" style="margin:-6px 0 12px">生年月日だけでOK。16タイプもわかれば、「今の相性」も出ます。</p>
     <div class="pf">
       <div class="opt-mini"><select id="py" aria-label="相手の生まれ年"></select><select id="pm" aria-label="相手の生まれ月"></select><select id="pd" aria-label="相手の生まれ日"></select></div>
       <div class="opt-mini"><select id="pt" aria-label="相手の16タイプ"><option value="">相手の16タイプ（わからなければ空欄）</option></select></div>
       <button class="btn" type="button" id="pGo">相性を見る</button>
     </div>
+    </div>
     <div class="pres" id="pRes" hidden></div>
+  </section>
+
+  <section class="card send" id="send">
+    <h2>あの人に送って、相性を見る</h2>
+    <p class="hint" style="margin:-6px 0 14px">相手がリンクを開いて診断すると、2人の相性がすぐにわかります。あなたの生年月日は送られません。</p>
+    <label class="lbl" for="myName">あなたの名前（ニックネーム）</label>
+    <input id="myName" class="txt" maxlength="12" placeholder="例：りえ" autocomplete="nickname">
+    <button class="btn primary" type="button" id="mkLink">送るリンクをつくる</button>
+    <div id="lnkBox" class="lnkbox" hidden>
+      <input id="lnk" class="txt" readonly aria-label="送るリンク">
+      <div class="lnkacts"><a class="btn line" id="lnkLine" href="#" target="_blank" rel="noopener">LINEで送る</a><button class="btn" type="button" id="cpLink">リンクをコピー</button></div>
+    </div>
   </section>
 
   <div class="cta">
@@ -351,28 +382,7 @@ const st={y:1998,m:7,d:15,t:["E","N","F","P"],pct:null,half:{}};
 const $=id=>document.getElementById(id);
 function opts(el,a,b,cur){el.innerHTML="";for(let v=a;v<=b;v++){const o=document.createElement("option");o.value=v;o.textContent=v;if(v===cur)o.selected=true;el.appendChild(o);}}
 function fillDate(){opts($("y"),1930,2020,st.y);opts($("m"),1,12,st.m);const mx=new Date(st.y,st.m,0).getDate();if(st.d>mx)st.d=mx;opts($("d"),1,mx,st.d);}
-["y","m","d"].forEach(id=>$(id).addEventListener("change",e=>{st[id]=+e.target.value;/* ---- 相性 ---- */
-const ps={y:1995,m:4,d:20};
-function fillP(){opts($("py"),1930,2020,ps.y);opts($("pm"),1,12,ps.m);const mx=new Date(ps.y,ps.m,0).getDate();if(ps.d>mx)ps.d=mx;opts($("pd"),1,mx,ps.d);}
-["py","pm","pd"].forEach(id=>$(id).addEventListener("change",e=>{ps[id.slice(1)]=+e.target.value;fillP();}));
-Object.keys(D.NICK).forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t+"　"+D.NICK[t];$("pt").appendChild(o);});
-function same(a,b){let n=0;for(let i=0;i<4;i++)if(a[i]===b[i])n++;return n;}
-const TIER=[["正反対の刺激コンビ","お互いにないものを持っている2人。組めば最強、ぶつかれば大波乱。"],["別ルートの発見コンビ","考え方は別ルート。だからこそ話すたびに発見がある。"],["ほどよいバランス型","半分同じで、半分ちがう。ほどよい距離で長く続く。"],["似た者同士の安心ペア","感覚がよく似ていて、無理せず自然体でいられる。"],["鏡みたいな2人","長所も弱点もそっくり。いちばんの理解者になれる。"]];
-$("pGo").onclick=()=>{const me=window.__me,P=natal(ps.y,ps.m,ps.d),pt=$("pt").value;
- const sb=same(me.born,P.t),tb=TIER[sb];let html='<div class="phead"><img src="img/mascot/c'+String(P.num).padStart(2,"0")+'.webp" alt="あの人の相棒キャラクター"><div><small>あの人の生まれつき</small><span class="t">'+P.t+'</span><small>'+D.NICK[P.t]+'</small></div></div>';
- html+='<div class="mx"><div><span class="l">本当の相性</span><div class="v">'+tb[0]+'</div></div>';
- if(pt){const sn=same(me.now,pt),tn=TIER[sn];html+='<div><span class="l">今の相性</span><div class="v">'+tn[0]+'</div></div></div>';
-  const hiB=sb>=2,hiN=sn>=2;
-  const V=hiB&&hiN?["どこから見ても相性のいい2人","今も本当の部分も、自然と波長が合う。一緒にいて疲れない相手。"]
-   :hiB&&!hiN?["今はすれ違って見えても、根っこは似た者同士","今の2人は噛み合わない場面があっても、本当の部分ではわかり合える。時間をかけるほど仲良くなる。"]
-   :!hiB&&hiN?["今は気が合う。でも本音は別ルート","今の2人は話が合うけれど、本当の部分は考え方が違う。大事な決断のときに差が出やすいので、本音を話す時間を。"]
-   :["正反対だからこそ、組めば最強","今も本当の部分も違うからこそ、お互いの足りないところを埋め合える。ぶつかったら、違いを面白がって。"];
-  html+='<p class="verdict"><b>'+V[0]+'</b>'+V[1]+'</p>';}
- else html+='<div><span class="l">今の相性</span><div class="v" style="color:var(--muted);font-weight:500">16タイプを入れると出ます</div></div></div><p class="verdict">'+tb[1]+'</p>';
- html+='<button class="chip" type="button">この診断をあの人に送る</button>';
- $("pRes").innerHTML=html;$("pRes").hidden=false;};
-fillP();
-fillDate();render();}));
+["y","m","d"].forEach(id=>$(id).addEventListener("change",e=>{st[id]=+e.target.value;fillDate();render();}));
 const pk=$("picker"),sel=[null,null,null,null];
 function drawSlots(popI){$("slots").innerHTML=AX.map((A,i)=>'<span style="--c:var('+A.c+')" class="'+(sel[i]?"fill":"empty")+(i===popI?" pop":"")+'">'+(sel[i]||"?")+'</span>').join("");
  const left=sel.filter(v=>!v).length,go=$("go");go.disabled=left>0;go.textContent=left?"あと"+left+"つ選んでください":"結果を見る";}
@@ -388,7 +398,7 @@ const AXN={EI:0,SN:1,TF:2,JP:3};
 let qa=[],qi=0,tbList=[],tbAns={};
 function setPicker(){st.t.forEach((v,i)=>sel[i]=v);[...pk.children].forEach((g,i)=>{g.classList.add("done");[...g.children].forEach(c=>c.setAttribute("aria-pressed",c.firstChild.textContent===st.t[i]));});drawSlots(-1);}
 let shown=false;
-function showResult(){shown=true;$("result").style.display="contents";}
+function showResult(){shown=true;$("result").style.display="contents";setTimeout(showInvitePair,0);}
 function showQuiz(on){$("quizCard").hidden=!on;$("formCard").hidden=on;$("result").style.display=(!on&&shown)?"contents":"none";}
 $("hasType").onclick=()=>{$("hasType").setAttribute("aria-pressed","true");$("pickField").hidden=false;$("pickField").scrollIntoView({behavior:"smooth",block:"nearest"});};
 $("quiz").onclick=()=>{qa=new Array(QZ.Q.length).fill(null);qi=0;tbList=[];tbAns={};showQuiz(true);drawQ();$("quizCard").scrollIntoView({behavior:"smooth",block:"start"});};
@@ -463,10 +473,12 @@ function fillP(){opts($("py"),1930,2020,ps.y);opts($("pm"),1,12,ps.m);const mx=n
 Object.keys(D.NICK).forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t+"　"+D.NICK[t];$("pt").appendChild(o);});
 function same(a,b){let n=0;for(let i=0;i<4;i++)if(a[i]===b[i])n++;return n;}
 const TIER=[["正反対の刺激コンビ","お互いにないものを持っている2人。組めば最強、ぶつかれば大波乱。"],["別ルートの発見コンビ","考え方は別ルート。だからこそ話すたびに発見がある。"],["ほどよいバランス型","半分同じで、半分ちがう。ほどよい距離で長く続く。"],["似た者同士の安心ペア","感覚がよく似ていて、無理せず自然体でいられる。"],["鏡みたいな2人","長所も弱点もそっくり。いちばんの理解者になれる。"]];
-$("pGo").onclick=()=>{const me=window.__me,P=natal(ps.y,ps.m,ps.d),pt=$("pt").value;
- const sb=same(me.born,P.t),tb=TIER[sb];let html='<div class="phead"><img src="img/mascot/c'+String(P.num).padStart(2,"0")+'.webp" alt="あの人の相棒キャラクター"><div><small>あの人の生まれつき</small><span class="t">'+P.t+'</span><small>'+D.NICK[P.t]+'</small></div></div>';
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+/* P = {born, num, now(任意), who} */
+function pairHTML(P){const me=window.__me,sb=same(me.born,P.born),tb=TIER[sb];
+ let html='<div class="phead"><img src="img/mascot/c'+String(P.num).padStart(2,"0")+'.webp" alt="'+esc(P.who)+'の相棒キャラクター"><div><small>'+esc(P.who)+'の生まれつき</small><span class="t">'+P.born+'</span><small>'+D.NICK[P.born]+(P.now?'（今は '+P.now+'）':'')+'</small></div></div>';
  html+='<div class="mx"><div><span class="l">本当の相性</span><div class="v">'+tb[0]+'</div></div>';
- if(pt){const sn=same(me.now,pt),tn=TIER[sn];html+='<div><span class="l">今の相性</span><div class="v">'+tn[0]+'</div></div></div>';
+ if(P.now){const sn=same(me.now,P.now),tn=TIER[sn];html+='<div><span class="l">今の相性</span><div class="v">'+tn[0]+'</div></div></div>';
   const hiB=sb>=2,hiN=sn>=2;
   const V=hiB&&hiN?["どこから見ても相性のいい2人","今も本当の部分も、自然と波長が合う。一緒にいて疲れない相手。"]
    :hiB&&!hiN?["今はすれ違って見えても、根っこは似た者同士","今の2人は噛み合わない場面があっても、本当の部分ではわかり合える。時間をかけるほど仲良くなる。"]
@@ -474,8 +486,31 @@ $("pGo").onclick=()=>{const me=window.__me,P=natal(ps.y,ps.m,ps.d),pt=$("pt").va
    :["正反対だからこそ、組めば最強","今も本当の部分も違うからこそ、お互いの足りないところを埋め合える。ぶつかったら、違いを面白がって。"];
   html+='<p class="verdict"><b>'+V[0]+'</b>'+V[1]+'</p>';}
  else html+='<div><span class="l">今の相性</span><div class="v" style="color:var(--muted);font-weight:500">16タイプを入れると出ます</div></div></div><p class="verdict">'+tb[1]+'</p>';
- html+='<button class="chip" type="button">この診断をあの人に送る</button>';
- $("pRes").innerHTML=html;$("pRes").hidden=false;};
+ return html;}
+$("pGo").onclick=()=>{const N=natal(ps.y,ps.m,ps.d);$("pRes").innerHTML=pairHTML({born:N.t,num:N.num,now:$("pt").value||null,who:"あの人"});$("pRes").hidden=false;};
+
+/* ---- あの人に送る（招待リンク） ---- */
+/* 生年月日は送らず、タイプとキャラ番号と名前だけを載せる */
+const SITE=/16typeplus\.jp$/.test(location.hostname)?location.origin+"/":"https://claude.ai/artifact/GxvDBQNx6fvapiXBHVgYXH";
+const b64e=t=>btoa(String.fromCharCode(...new TextEncoder().encode(t))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const b64d=t=>new TextDecoder().decode(Uint8Array.from(atob(t.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0)));
+function inviteURL(){const me=window.__me,nm=$("myName").value.trim().slice(0,12);
+ const tok="from."+me.born+"."+me.now+"."+me.N.num+(nm?"."+b64e(nm):"");
+ return /16typeplus\.jp$/.test(location.hostname)?SITE+"?"+tok.replace(/^from\./,"from=").replace(/\./g,"_"):SITE+"#"+tok;}
+function parseInvite(){try{let t=location.hash.replace(/^#/,"");const q=new URLSearchParams(location.search).get("from");
+  if(q)t="from."+q.replace(/_/g,".");if(!/^from\./.test(t))return null;const a=t.split(".");
+  const ok=x=>/^[EI][SN][TF][JP]$/.test(x);if(!ok(a[1])||!ok(a[2]))return null;const num=+a[3];if(!(num>=1&&num<=60))return null;
+  return {born:a[1],now:a[2],num,who:a[4]?b64d(a[4])+"さん":"送ってくれた人"};}catch(e){return null;}}
+const INV=parseInvite();
+$("mkLink").onclick=()=>{const u=inviteURL(),nm=$("myName").value.trim();
+ const msg=(nm?nm+"から":"")+"相性診断が届いたよ。生まれつきのタイプと今のタイプ、2人の相性がわかる👇\n"+u;
+ $("lnk").value=u;$("lnkLine").href="https://line.me/R/msg/text/?"+encodeURIComponent(msg);$("lnkBox").hidden=false;window.__msg=msg;};
+$("cpLink").onclick=()=>{const t=$("lnk");const done=()=>{$("cpLink").textContent="コピーしました";setTimeout(()=>$("cpLink").textContent="リンクをコピー",1600);};
+ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(window.__msg||t.value).then(done).catch(()=>{t.select();});}else t.select();};
+if(INV){$("invBar").hidden=false;$("invWho").textContent=INV.who;$("invPair").textContent=INV.born+" → "+INV.now;
+ $("invImg").src="img/mascot/c"+String(INV.num).padStart(2,"0")+".webp";
+ $("partnerH").textContent=INV.who+"との相性";}
+function showInvitePair(){if(!INV)return;$("pRes").innerHTML=pairHTML(INV);$("pRes").hidden=false;$("pForm").hidden=true;}
 fillP();
 fillDate();render();
 </script>
