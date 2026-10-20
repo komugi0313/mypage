@@ -2015,27 +2015,36 @@ const App=(function(){
     var t={}, one={}, kana={}, i; for(i=0;i<60;i++) t[G.charAt(i%10)+Z.charAt(i%12)]=GY[i%10]+ZY[i%12];
     for(i=0;i<10;i++){ one[G.charAt(i)]=GY[i]; kana[GY[i]]=1; } for(i=0;i<12;i++){ one[Z.charAt(i)]=ZY[i]; kana[ZY[i]]=1; }
     t['年柱']='ねんちゅう'; t['月柱']='げっちゅう'; t['日柱']='にっちゅう'; t['時柱']='じちゅう'; t['大運']='だいうん';
+  var J={'劫財':'ごうざい','劫財奪財':'ごうざいだつざい','比肩':'ひけん','食神':'しょくじん','傷官':'しょうかん','偏財':'へんざい','正財':'せいざい','偏官':'へんかん','正官':'せいかん','偏印':'へんいん','印綬':'いんじゅ','通変星':'つうへんせい','十二運':'じゅうにうん','蔵干':'ぞうかん','日干':'にっかん','日主':'にっしゅ','空亡':'くうぼう','天中殺':'てんちゅうさつ','喜神':'きしん','忌神':'きじん','用神':'ようじん','天戦地冲':'てんせんちちゅう','財星混雑':'ざいせいこんざつ','三合':'さんごう','方合':'ほうごう','支合':'しごう','干合':'かんごう','会局':'かいきょく','長生':'ちょうせい','沐浴':'もくよく','冠帯':'かんたい','建禄':'けんろく','帝旺':'ていおう','天乙貴人':'てんおつきじん'}; for(var jk in J) t[jk]=J[jk];   // 専門用語の読み（鑑定者本人の承認済み 2026-10-20）
     return function(s){ s=String(s==null?'':s).replace(/([（(])([ぁ-ゖー・\*＊]*[\*＊][ぁ-ゖー・\*＊]*)(?=[）)：:＝=、，,／/])/g,function(m,a,y){ return a+y.replace(/[\*＊]/g,''); });   // 読みの中に入った太字の記号（ひのえ**たうま**）を先に取る
+    s=s.replace(/([子丑寅卯辰巳午未申酉戌亥](?:・[子丑寅卯辰巳午未申酉戌亥]){1,3})(\s*[（(])([ぁ-ゖー・]+)(?=[）)：:＝=、，,／/ 　])/g,function(m,k,a,y){ var bp=k.split('・').map(function(ch){ return one[ch]; }); return (y===bp.join('')||y===bp.join('・'))?m:k+a+bp.join('・'); });   // 寅・午・戌（いぬまうま）→（とら・うま・いぬ）
+    s=s.replace(/([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])([・：:])([ぁ-ゖー]+)(?=[）)、，,／/・：:＝=])/g,function(m,k,sp,y){ var ok=t[k]; return (ok&&ok!==y)?k+sp+ok:m; });   // （丁未・ひとのとひつじ）→（丁未・ひのとひつじ）
     return s.replace(/([㐀-鿿豈-﫿々]+)(\s*[（(])([ぁ-ゖー・]+)(?=[）)：:＝=、，,／/・ 　])/g,function(m,k,a,y){   // 読みのあとに「：比肩」などが続く形（壬子（じんし：比肩））も直す
-      var ok=t[k]; if(!ok && k.length===1 && one[k] && kana[y]) ok=one[k];
+      var ok=t[k]; if(!ok && k.length===1 && one[k] && kana[y]) ok=one[k]; if(!ok && /^[子丑寅卯辰巳午未申酉戌亥]{3}$/.test(k)){ var bp=k.split('').map(function(ch){ return one[ch]; }); ok=(y===bp.join('')||y===bp.join('・'))?y:bp.join('・'); }   // 三つの十二支（亥卯未＝い・う・ひつじ）
     if(!ok && k.length>=4 && k.length%2===0){ var p=[],j; for(j=0;j<k.length;j+=2){ if(!t[k.substr(j,2)]){ p=null; break; } p.push(t[k.substr(j,2)]); } if(p){ var sp=y.indexOf('・')>=0?'・':'', q; for(q=0;q<p.length;q++){ if(y===p.slice(q).join('')||y===p.slice(q).join('・')){ ok=y; break; } } if(ok!==y) ok=(y.indexOf(p[0])===0)?p.join(sp):p[p.length-1]; } }   // 「大運癸未（だいうん・きび）」のように、つながった言葉もそれぞれ表の読みに（「時柱乙亥（きのとい）」のように後ろの干支だけの読みはそのまま）
       if(!ok){ for(var c=1;c<k.length-1&&!ok;c++){ var r2=k.slice(c), q2=t[r2]; if(!q2 && r2.length>=4 && r2.length%2===0){ var p2=[],j2; for(j2=0;j2<r2.length;j2+=2){ if(!t[r2.substr(j2,2)]){ p2=null; break; } p2.push(t[r2.substr(j2,2)]); } if(p2) q2=p2; } else if(q2) q2=[q2]; if(q2){ var hit=false,q3; for(q3=0;q3<q2.length;q3++){ if(y===q2.slice(q3).join('')||y===q2.slice(q3).join('・')) hit=true; } ok=hit?y:((q2.length>1&&y.indexOf(q2[0])===0)?q2.join(y.indexOf('・')>=0?'・':''):q2[q2.length-1]); } } }   // 「2028年戊申（ぼしん）」のように、前に漢字が付いた形も後ろの干支で直す
     return (ok && ok!==y) ? k+a+ok : m; }); };
   })();
     window.pkFixYomi=pkFixYomi;
   var pkSoftWord=function(s){ return String(s==null?'':s).replace(/(このご相談には、)?(占いで(?:は)?[^。\n]{0,10}?)お答え(?:すること[はが]?)?できません/g,function(m,p,a){ return p?m:a+'言い切ることはしません'; }).replace(/(占いで(?:は)?[^。\n]{0,10}?)判断(?:すること[はが]?)?できません/g,'$1言い切ることはしません').replace(/(このご相談には、)?(占いで(?:は)?[^。\n]{0,10}?)お伝え(?:すること[はが]?)?できません/g,function(m,p,a){ return p?m:a+'言い切ることはしません'; }).replace(/言い切ること[はが]?できません/g,'言い切ることはしません').replace(/(数字で|ハッキリと?|はっきりと?)お(伝え|答え)すること[はが]?できません/g,'$1お$2することはしません'); };   // 「占いではお答えできません」のような突き放す言い方を、やわらかく（鑑定者本人の指示 2026-10-19。答えない相談の決まった案内はそのまま）
-  function noAIWord(t){ return pkSoftWord(pkFixYomi(_noAIWord0(t))); }   // 記号（**など）を消したあとにも、読み仮名とやわらげをもう一度
+  function noAIWord(t){ t=String(t||'').replace(/【見出し[：:]?\s*/g,'【').replace(/【([^】\n]{0,40})\n+\s*([^】\n]{0,60})】/g,'【$1$2】').replace(/【\s*】/g,'');   // 【 】の中で改行した見出しをつなぐ（【見出し⏎…】のくずれ）
+    return pkSoftWord(pkFixYomi(_noAIWord0(t))); }   // 記号（**など）を消したあとにも、読み仮名とやわらげをもう一度
   function _noAIWord0(t){t=pkSoftWord(pkFixYomi(t));t=String(t||'').replace(/てんいつきじん/g,'てんおつきじん').replace(/テンイツキジン/g,'テンオツキジン').replace(/ぎょうざい|きょうざい/g,'ごうざい'); return String(t||'')
       .replace(/(?:私|わたし|わたくし)(?:は|も)(?:AI|ＡＩ|人工知能)(?:です|でございます|だ|な)?(?:ので|から|のため|として)[^、。！？\n]*[、]?/g,'')
       .replace(/(?:私|わたし|わたくし)(?:は|も)(?:AI|ＡＩ|人工知能)[^。！？\n]*[。！？]?/g,'')
       .replace(/(?:AI|ＡＩ|人工知能)(?:である|なので|ですので|ですから|のため|として)(?:私|わたし)?[^、。！？\n]*[、]?/g,'')
       .replace(/(?:AI|ＡＩ|人工知能)(?:による|が行う|の|が)?(分析|鑑定|診断|回答|判断|読み解き|占い)/g,'$1'); }
+  function ekiLifeGuide(){ try{   // 暮らしに寄り添う答え方の決まり（なりきり点検の結果から。PROと同じ考え方。発注者指示 2026-10-20）
+    var _d=new Date(), Y=_d.getFullYear(), M=_d.getMonth()+1, D=_d.getDate(), left=12-M+(D<15?1:0);
+    var s='\n【暮らしの答え方（どの相談でも守る）】\n・今日は'+Y+'年'+M+'月'+D+'日。'+Y+'年は残り約'+left+'か月なので、'+Y+'年のことは「年内」「この先の数か月」として書き、これからの時期の話は'+(Y+1)+'年以降を中心にする。'+Y+'年を「これから来る年」のように書かない。\n';
+    var bd=((document.getElementById('fuBd')||{}).value||'').split('-'), by=+bd[0], bm=+bd[1], bdd=+bd[2]; if(by>1900&&by<=Y){ var age=Y-by-((M<bm||(M===bm&&D<bdd))?1:0), T=[]; for(var y=Y;y<=Y+12;y++) T.push(y+'年＝'+(y-by)+'歳'); s+='・相談者はいま'+age+'歳。年齢を書くときは次の表だけを使う（その年の誕生日を迎えたときの年齢）：'+T.join('、')+'。\n'; }
+    return s+'・言い切らない：「必ず」「確実に」「絶対に」「間違いなく」「十分に可能」「〜できます（と断定する言い方）」は使わない。「〜しやすい流れ」「〜の目安」のように書く。\n・相談の中身に合う相談先を、関係があるときだけ最後に一言添える：お金・借金＝法テラスや市区町村の相談窓口／体調・更年期など＝かかりつけ医や婦人科などの医療機関／治療中のこと（不妊治療など）＝主治医／いじめ・学校のこと＝家族・担任の先生・スクールカウンセラー・24時間子供SOSダイヤル（0120-0-78310）／介護・高齢の暮らしや住まい＝ケアマネジャーや地域包括支援センター／法律のこと＝弁護士など。\n・人生の大きな決断（仕事を辞める・独立・治療を続けるか・住まいを変える・離婚など）は、どちらか一方に押さない。選ぶときの目安と、いまから1年ほどの動き方を中心に書く。5年以上先まで決めるのを待たせない。健康・安全・高齢の暮らしに関わることは先送りをすすめない。治療の進め方（続ける・やめる・ペースを落とす）は指示せず、主治医と相談しながら決めるよう添える。\n・年代に合わせる：未成年には大人向けの話（投資・お酒・恋愛のかけひきなど）をせず、本人を責める言い方（調子に乗る・反省する・わがまま等）をしない。高齢の方には仕事の話ではなく、暮らし・健康・家族・楽しみ・生きがいの言葉で書く。\n・お客様のご家族は敬って呼ぶ（奥様・ご主人・お母さま・息子さんなど）。\n・死別や一人暮らしの相談では、お悔やみをていねいに述べ、ひとりでこもることはすすめない（無理のない範囲での人とのつながりをすすめる）。\n・同じ時期について「挑戦を」と「控えて」を同時に書かない。説明のカッコを二重にしない。見出しは1行で書き切り、途中で改行しない。'+'\n・卦や爻の言葉（「我慢」「耐える」「控える」「待つ」など）は、相談の中身に合わせて言いかえる。いじめ・暴力・家族とのしんどさ・介護疲れの相談では「我慢して待つ」と書かず、「無理に合わせず自分を守る」「信頼できる人に助けを求める」と書く。\n・未成年や学校の悩みには、原文に異性・恋愛・女難などの話があっても書かない。\n・材料の説明に「男性には〜、女性には〜」のような男女で分かれる言い方があっても、相談者の性別はわからないので書かない（相談の中身に合う部分だけを使う）。'; }catch(e){ return ''; } }
   async function callGemini(prompt,kind){
     if(!canOnline()){
       throw new Error('オンライン鑑定の接続先が設定されていません。');
     }
     const body=JSON.stringify({
-      contents:[{parts:[{text:prompt+'\n【言葉の決まり】「AI」「人工知能」という言葉は使わない。自分が何者か（AIである等）の説明や断り書きも書かない。鑑定者として自然に書く。'}]}],
+      contents:[{parts:[{text:prompt+ekiLifeGuide()+'\n【言葉の決まり】「AI」「人工知能」という言葉は使わない。自分が何者か（AIである等）の説明や断り書きも書かない。鑑定者として自然に書く。'}]}],
       generationConfig:{maxOutputTokens:4096,temperature:0.8,thinkingConfig:{thinkingBudget:0}}
     });
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -2084,7 +2093,7 @@ const App=(function(){
 語り口：${tone}。${blend}
 ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰にでも当てはまる一般論ではなく、「この卦が出たからこう読める」という根拠が伝わる鑑定にすること。特に▼台本では、卦の名前と卦辞・爻辞の原文を正確に示し、「現代の言葉にすると〜」と意味を解き明かしながら、自然や暮らしのたとえで具体的に語ること。時期に触れるときは、具体的な年月日を断定せず、今の局面から次の局面への移り変わりや「◯◯が整った頃」という合図で示すこと。断定しすぎず、しかし頼りになる導きを。医療・法律・生死の断定はしない。【記号ルール】アスタリスク（「＊」「*」）は一切使わないこと。強調やマークが必要なときは「＊」ではなく、かぎ括弧「」や記号（■・□・★・▶ 等）を使う。【重要ポイントの強調】読み手が大事な所をひと目で掴めるよう、核心の語句を 【 】 で囲むこと（例：【今は動かず、準備を整える時】）。囲むのは ▼台本（各段落に1か所ずつ）・▼裏卦（卦ごとに1か所ずつ）・▼判定（1か所）だけ。それ以外の項目（▼結論・▼一言・▼運気・▼状況・▼流れ・▼助言・▼注意・▼結び）には【】を付けないこと。囲むのは核心の語句だけ（12字以内が目安。文の途中の短い一句にする。長い文全体は囲まない）。1文・1段落につき【】は1回まで。${langLine}
 次の形式で、各見出しの後に内容を書いてください（見出し記号▼は必ず残す）：
-▼判定：(お客様の相談への「答え」を、記号◎〇△✖のどれか1つ＋15〜30字の一言で示す。◎=とても良い・その方向で大吉、〇=良い・進んで大丈夫、△=慎重に・どちらとも言えない、✖=避けた方がよい。相談が「〜すべきか」「〜してよいか」なら、その行動に対する判定にする。例：「別れたら道が開けます ◎」「今の転職は急がない方が △」「この話は見送るのが賢明です ✖」)
+▼判定：(お客様の相談への「答え」を、記号◎〇△✖のどれか1つ＋15〜30字の一言で示す。◎=とても良い・その方向で大吉、〇=良い・進んで大丈夫、△=慎重に・どちらとも言えない、✖=避けた方がよい。相談が「〜すべきか」「〜してよいか」なら、その行動に対する判定にする。例：「別れたら道が開けます ◎」「今の転職は急がない方がよいでしょう △」「この話は見送るのが賢明です ✖」。一言は文として最後まで書き切る（「〜方が」「〜のが」のように途中で終わらせない）)
 ▼伝え方：(鑑定士がそのまま声に出してお客様に伝えられる、やさしい話し言葉の文章を8〜12文（300〜450字ほど）。流れは ①結論（良いか悪いか）→②そう言える理由を、出た卦が表す自然のイメージや今の流れから、ふつうの言葉で2〜3文→③いまの状況や気持ちへの共感→④具体的にどうすればよいか（人との関わり方・気をつけること）→⑤この先の流れと時期の合図→⑥前向きになれる励まし。同じことの言いかえや水増しはしない。このツールは鑑定士がその場ですぐアドバイスするためのものなので、ひと目で「良いのか悪いのか」「どうすればよいのか」が分かるように書く。卦の名前・原文・専門用語は使わない。良いか悪いか、その理由をひとこと、どうすればよいか、時期の合図（「〜が整った頃」など）を必ず入れる。「〜ですね」「〜していきましょう」の口調で、改行せず1つの段落に)
 ▼結論：(占い師であるあなたが、このお客様に伝えることを「・」で必ず7個。各項目は40〜70字程度の、やさしい話し言葉の一文にする。「〜ですよ」「〜していきましょうね」のように、お客様に直接語りかける口調で、はっきりと、しかし温かく伝える。占い師がそのまま声に出して言える、少し長めの要点メモにする。)
 ▼一言：(20字程度で核心を一言)
@@ -2179,6 +2188,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
       upper=c.upper;lower=c.lower;ko=c.ko;
     }
     const at0=Date.now();   // この鑑定の目印（自動保存で同じ記録を上書きするため、作り直しても変えない）
+    try{ if(typeof pickDest==='function' && _destPre[at0]===undefined) _destPre[at0]=pickDest(); }catch(_){}   // 保存先は「鑑定を押した時点のお客様」で決める（答えを待つ間に次のお客様の名前を入れても、混ざらない）
     const r=buildResult(upper,lower,ko);
     const L=document.getElementById('loading'); const LM=document.getElementById('loadingMsg');
     const hasKey = canOnline();
@@ -3139,6 +3149,7 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
      ・どちらも無ければ「最近の鑑定（お客様未選択）」に（30件まで）。保存先は結果の下の「保存先」でいつでも変えられる。
      ・同じ鑑定は、同じ記録を上書きする（鑑定の目印 at で見分ける） */
   const _dest={};   // 鑑定の目印 at → 保存先（お客様のID、または 'recent'）
+  const _destPre={};   // 鑑定を押した時点で決めた保存先（はじめて保存するときに使う）
   function recOf(L){
     const r=L.r, q=L.q, p=L.p||{};
     const chat=Array.isArray(L.chat)?L.chat:[];
@@ -3158,8 +3169,9 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
   function newCustomer(name){ const id='c'+Date.now()+Math.random().toString(36).slice(2,5); db.customers.push({id,name:String(name).trim().slice(0,40),kana:'',memo:'',history:[]}); return id; }
   function pickDest(){
     const id=document.getElementById('custSelect').value;
-    if(id && db.customers.some(c=>c.id===id)) return id;
     const nmEl=document.getElementById('custNewName'), nm=(nmEl.value||'').trim();
+    // 「＋ 新規」で新しいお名前を入れたときは、そのお名前を優先する（前に選んでいたお客様の記録に混ざらないように。発注者指示 2026-10-20）
+    if(!nm && id && db.customers.some(c=>c.id===id)) return id;
     if(nm){ const nid=newCustomer(nm); refreshCustSelect(); document.getElementById('custSelect').value=nid; nmEl.value=''; return nid; }
     return 'recent';
   }
@@ -3167,7 +3179,7 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
     if(!L||!L.r) return false;
     try{
       let dest=_dest[L.at];
-      if(dest===undefined){ dest=pickDest(); _dest[L.at]=dest; }
+      if(dest===undefined){ dest=(_destPre[L.at]!==undefined)?_destPre[L.at]:pickDest(); _dest[L.at]=dest; }
       let target=(dest==='recent')?null:db.customers.find(c=>c.id===dest);
       if(dest!=='recent'&&!target){ dest='recent'; _dest[L.at]=dest; }   // 保存先のお客様が削除されていたとき
       const rec=recOf(L);
@@ -3492,8 +3504,12 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
       window.__ekiFlushMemo=()=>{ if(tm) flush(); }; }
     // お客様：「＋ 新規」でお名前の欄を開く
     { const tg=document.getElementById('custNewToggle'), bx=document.getElementById('custNewBox');
-      tg.onclick=()=>{ const open=bx.hidden; bx.hidden=!open; tg.setAttribute('aria-expanded',open?'true':'false'); tg.textContent=open?'閉じる':'＋ 新規'; if(open){ const i=document.getElementById('custNewName'); if(i) i.focus(); } }; }
-    document.getElementById('custSelect').addEventListener('change',e=>{ if(e.target.value){ const bx=document.getElementById('custNewBox'), tg=document.getElementById('custNewToggle'), nm=document.getElementById('custNewName'); if(nm&&!nm.value.trim()&&bx&&!bx.hidden){ bx.hidden=true; tg.setAttribute('aria-expanded','false'); tg.textContent='＋ 新規'; } } });
+      tg.onclick=()=>{ const open=bx.hidden; bx.hidden=!open; tg.setAttribute('aria-expanded',open?'true':'false'); tg.textContent=open?'閉じる':'＋ 新規'; if(open){ const cs=document.getElementById('custSelect'); if(cs) cs.value=''; try{ if(cur.last){ const b1=document.getElementById('fuBd'), b2=document.getElementById('fuBt'); if(b1&&b1.value){ b1.value=''; if(b2) b2.value=''; if(typeof fuBirthInfo==='function') fuBirthInfo(); } } }catch(_){}   // 前のお客様の生年月日を、次のお客様に持ち越さない
+          // 新規を開いたら「未選択」にして、どのお客様の鑑定かを画面でもはっきりさせる
+        const i=document.getElementById('custNewName'); if(i) i.focus(); } }; }
+    { const nmI=document.getElementById('custNewName'); if(nmI) nmI.addEventListener('input',()=>{ try{ if(nmI.value.trim()){ const cs=document.getElementById('custSelect'); if(cs&&cs.value) cs.value=''; } if(cur.last && !cur.last.__bdNew){ cur.last.__bdNew=1; const b1=document.getElementById('fuBd'), b2=document.getElementById('fuBt'); if(b1&&b1.value){ b1.value=''; if(b2) b2.value=''; if(typeof fuBirthInfo==='function') fuBirthInfo(); } } }catch(_){} }); }   // 新しいお客様の名前を入れはじめたら、前の方の生年月日は消す
+    document.getElementById('custSelect').addEventListener('change',e=>{ try{ if(cur.last){ const b1=document.getElementById('fuBd'), b2=document.getElementById('fuBt'); if(b1&&b1.value){ b1.value=''; if(b2) b2.value=''; if(typeof fuBirthInfo==='function') fuBirthInfo(); } } }catch(_){}   // 前のお客様の生年月日を、次のお客様に持ち越さない
+    if(e.target.value){ const bx=document.getElementById('custNewBox'), tg=document.getElementById('custNewToggle'), nm=document.getElementById('custNewName'); if(nm&&!nm.value.trim()&&bx&&!bx.hidden){ bx.hidden=true; tg.setAttribute('aria-expanded','false'); tg.textContent='＋ 新規'; } } });
     // 4 台本の仕立て：たたんだ見出しに、今の設定（語り口・掛け合わせ・オフライン）を出す
     const styleNow=()=>{ const el=document.getElementById('styleNow'); if(!el) return; const lb=(arr,id)=>((arr||[]).find(x=>x.id===id)||{}).label||'';
       el.innerHTML='<span class="ib">語り口：'+esc(lb(TONES,cur.tone))+'</span>'+(cur.blend&&cur.blend!=='none'?'<span class="ib">・'+esc(lb(BLENDS,cur.blend))+'</span>':'')+(cur.offlineMode?'<span class="ib">・📵 オフライン</span>':''); };
