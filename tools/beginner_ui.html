@@ -138,6 +138,17 @@ html.bg-on .reading-card .bg-legend li{font-size:13.5px;font-weight:700;color:va
 #pk-prev-line button{margin-left:6px;border:1.5px solid #6F8FB3;background:#fff;color:#1E3550;border-radius:999px;padding:3px 12px;font-family:inherit;font-weight:900;font-size:13px;cursor:pointer;white-space:nowrap}
 #pk-prev-line .pl-body{margin-top:8px;font-weight:400}
 @media (pointer:coarse){ #bg-modebar button{min-height:40px} #jumpnav button{min-height:40px} }
+/* 「なぜそう言えるの？」（初心者モードだけ・答えの下。使ううちに四柱推命が身につく。発注者指示 2026-10-20） */
+.bg-why{display:none;margin:14px 0 4px;padding:12px 14px;border:1.5px solid #B9D8C9;border-radius:14px;background:#F2FAF5;color:#203A2C;line-height:1.85;font-size:14.5px}
+html.bg-on .bg-why{display:block}
+.bg-why .bw-h{font-weight:900;font-size:15.5px;color:#1B5E3B;margin:0 0 6px}
+.bg-why ul{margin:0;padding-left:1.2em}.bg-why li{margin:2px 0}
+.bg-why details{margin-top:8px;border-top:1px dashed #A9CDB9;padding-top:8px}
+.bg-why summary{cursor:pointer;font-weight:800;color:#1B5E3B;min-height:36px;display:flex;align-items:center}
+.bg-why .bw-t{font-size:13.5px;color:#2B3A31}
+.bg-why .bw-t a{color:#0E5A8A;font-weight:800}
+.bg-why .bw-note{font-size:12.5px;color:#4A5A50;margin-top:6px}
+@media print{.bg-why{display:none!important}}
 @media print{#bg-modebar{display:none!important}}
 </style>
 <script id="beginner-ui">
@@ -811,6 +822,57 @@ html.bg-on .reading-card .bg-legend li{font-size:13.5px;font-weight:700;color:va
     var at0=window.attachReadingTools;
     window.attachReadingTools=function(out){ var r=at0.apply(this,arguments); safe(function(){ shareHint(out); }); return r; };
     window.attachReadingTools._bgsh=1;
+  }
+  /* ---------- 「📖 なぜそう言えるの？」：答えの下に、命式の計算結果から理由をふつうの言葉で1〜3つ。
+     専門用語は、閉じた「🎓 占い師の言葉で言うと」の中だけ（読み仮名と教科書へのリンクつき）。文章作成には頼らない（教科書とずれない）。
+     お客様に送る文・印刷には入らない（鑑定する人の学び用）。発注者指示 2026-10-20 ---------- */
+  var GP={比劫:'自分の力・仲間',食傷:'表現する力・楽しむ力',財:'お金・人を動かす力',官殺:'仕事・責任',印:'学び・支え'};
+  var TSY={比肩:'ひけん',劫財:'ごうざい',食神:'しょくじん',傷官:'しょうかん',偏財:'へんざい',正財:'せいざい',偏官:'へんかん',正官:'せいかん',偏印:'へんいん',印綬:'いんじゅ'};
+  function ty(t){ return esc(t)+'（'+(TSY[t]||'')+'）'; }
+  function sy(st){ return esc(st)+'（'+((typeof STEM_YOMI!=='undefined'&&STEM_YOMI[st])||'')+'）'; }
+  function gzy(g){ g=String(g||''); return esc(g)+'（'+safe(function(){ return ganzhiYomi(g[0],g[1]); },'')+'）'; }
+  function whyHTML(c,q){
+    if(!c||!c.dayMaster||!c.now) return '';
+    var who=WHO(), el=c.dayMaster.element, ds=c.dayMaster.stem, M=MEAN[el]||{n:el,w:''};
+    var cy=safe(function(){ return curDuYear(c); },{}), dd=cy.dd||{}, ay=cy.ay;
+    var topic=safe(function(){ return q?classifyWorry(q):'general'; },'general');
+    var E=[], T=[];
+    E.push(who+'の生まれた日の性質は「'+esc(M.n)+'」。'+esc(M.w));
+    T.push('生まれた日の性質＝<b>日主</b>（にっしゅ）：'+sy(ds)+'。<b>五行</b>（ごぎょう）は'+esc(el)+'。<a href="jikkan.html" target="_blank" rel="noopener">十の性質を教科書で見る</a>');
+    if(ay&&TS_GROUP[ay.tenStar]){ var s1=sig(c,ay); E.push('今年（'+ay.year+'年）は「'+esc(GP[TS_GROUP[ay.tenStar]])+'」がめぐる年で、運の流れは「'+esc(s1.lab)+'」です。');
+      T.push('今年の星＝<b>年運</b>（ねんうん）'+gzy(ay.ganzhi)+'の<b>通変星</b>（つうへんせい）：'+ty(ay.tenStar)+'。<a href="tsuhensei.html" target="_blank" rel="noopener">通変星を教科書で見る</a>'); }
+    if(dd&&TS_GROUP[dd.tenStar]){ E.push('いまの10年は「'+esc(GP[TS_GROUP[dd.tenStar]])+'」が中心の流れです。');
+      T.push('いまの10年＝<b>大運</b>（だいうん）'+gzy(dd.ganzhi)+'の通変星：'+ty(dd.tenStar)+'。<a href="daiun-tsuhen.html" target="_blank" rel="noopener">大運の読み方を教科書で見る</a>'); }
+    if(topic==='love'){ var sp=safe(function(){ return spouseStars(c); },[]), ys=[];
+      (c.annualFortunes||[]).forEach(function(a){ if(a.year>=c.now.year&&a.year<=c.now.year+8&&sp.indexOf(a.tenStar)>=0) ys.push(a.year+'年'); });
+      if(sp.length){ E.push('恋愛・結婚は「パートナーを表す星」がめぐる年に動きやすく、近いところでは'+(ys.length?ys.slice(0,3).join('・')+'です。':'目立つ年はありません。'));
+        T.push('パートナーを表す星＝<b>配偶者星</b>（はいぐうしゃせい）：'+sp.map(ty).join('・')+'。年運の通変星がこの星になる年を見ます。'); } }
+    else if(topic==='work'||topic==='money'){ var gy=safe(function(){ return goodYearsAhead(c,3); },[]);
+      if(gy.length){ E.push('これからの年で運の流れが良いのは'+gy.map(function(y){return y+'年';}).join('・')+'です。'+(topic==='work'?'動くときの目安になります。':'大きなお金を動かす目安になります。'));
+        T.push('年ごとの運の流れ（◎○）は、その年の通変星が、この方にとって助けになる星かどうかで決めています。'); } }
+    else if(topic==='health'){ var gb=safe(function(){ return gogyoBalance(c); },null);
+      if(gb&&gb.strong&&gb.weak){ E.push('5つの力のうち「'+esc((MEAN[gb.strong[0]]||{}).n||gb.strong[0])+'」が強く、「'+esc((MEAN[gb.weak[0]]||{}).n||gb.weak[0])+'」が少なめです。少ない力を補う過ごし方がすすめられます。');
+        T.push('<b>五行</b>（ごぎょう）のかたより：多い＝'+esc(gb.strong[0])+'／少ない＝'+esc(gb.weak[0])+'。'); } }
+    var h='<div class="bw-h">📖 なぜそう言えるの？</div><ul>'+E.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';
+    h+='<details><summary>🎓 占い師の言葉で言うと（勉強したい人向け）</summary><div class="bw-t"><ul>'+T.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div></details>';
+    h+='<div class="bw-note">※ここは鑑定する人の学び用です。お客様に送る文・印刷には入りません。</div>';
+    return h;
+  }
+  function addWhy(out){
+    if(!out||!out.querySelector||window.__isSample) return;
+    var card=out.querySelector('.reading-card'); if(!card) return;
+    var c=(typeof chart!=='undefined')?chart:null; if(!c) return;
+    if(out.id==='compat'||(out.closest&&out.closest('#compat,#compat-card'))) return;   // 相性は2人分なので出さない
+    var it=out.closest?out.closest('.rd-item'):null, q=(it&&it.dataset.q)||((document.getElementById('cs-q')||{}).value||'')||((document.getElementById('worry')||{}).value||'');
+    var old=out.querySelector('.bg-why'); if(old) old.remove();
+    var html=safe(function(){ return whyHTML(c,q); },''); if(!html) return;
+    var box=document.createElement('div'); box.className='bg-why no-print no-yomi'; box.innerHTML=html;
+    card.insertAdjacentElement('afterend',box);
+  }
+  if(typeof window.attachReadingTools==='function' && !window.attachReadingTools._bgwhy){
+    var at1=window.attachReadingTools;
+    window.attachReadingTools=function(out){ var r=at1.apply(this,arguments); safe(function(){ addWhy(out); }); return r; };
+    window.attachReadingTools._bgwhy=1;
   }
   /* ---------- 小12：目次の帯の右はしに「→」（横にすべることが分かるように）。押すと少し右へ ---------- */
   function navHint(){
