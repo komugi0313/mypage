@@ -24,7 +24,7 @@
    - 非公開：zh（簡体）・vi・es・pt・id・th。訳文はコードに残してありますが、選べません（6.8）。直す時は、できればこの6言語もそろえてください（いつか戻す時のため）。
 8. **つらい気持ち・危機の相談への返事は、どの上限でも止めない。** AIが使えない時も、アプリが相談窓口つきの返事を出します（`safeReply`・`HELPLINE`）。
 9. **サイトのファイルを更新したら、`site/sw.js` のキャッシュ名を1つ上げる。**
-   - 今は `pocket-kantei-v119` です。次の更新では `v120` にします。
+   - 今は `pocket-kantei-v120` です。次の更新では `v121` にします。
    - 上げないと、利用者の端末に古い画面が残ります。
 10. **Gemini の本番プロジェクトは、前払いの残高と月の支出上限で運用する。** 通知も必ず受け取れるようにしてください（2.3）。残高が切れるか上限に達すると、全員のチャットが止まります。
 
@@ -61,7 +61,7 @@ tests/                     ← テスト一式。公開しません（10章）
 
 **言語ごとの紹介ページ（運営決定 2026-10-20）**
 - 検索とシェアのために、紹介ページを言語ごとに別のアドレスにします。ドメインは1つです。
-  - 日本語：`https://pocket-kantei.jp/lp.html`　英語：`/en/`　韓国語：`/ko/`　繁体中国語：`/zt/`
+  - 日本語：`https://pocketkantei.jp/lp.html`　英語：`/en/`　韓国語：`/ko/`　繁体中国語：`/zt/`
 - `/en/` などは、開いた瞬間から本文・タイトル・説明・シェアした時のカード（og）がその言語です。前に別の言語を選んだ人が開いても、そのページの言語で出ます。
 - `lp.html` は、ブラウザの言語（または前に選んだ言語）に自動で切りかわり、アドレスもその言語のページ（`/en/` など）に変わります。言語を切りかえた時も、アドレスが変わります。検索エンジンのロボットには、いつも日本語で見せます。
 - どのページにも、`canonical`・`hreflang`（ja・en・ko・zh-Hant、x-default は `lp.html`）・og の情報が入ります。アプリと紹介ページの「シェア」は、その人の言語のページを送ります。
@@ -69,7 +69,7 @@ tests/                     ← テスト一式。公開しません（10章）
 - **`lp.html` の文章（`I18N`・`PAGE_TITLE`・`PAGE_DESC`）を直したら、必ず `node tools/build-lp.js` を実行し、できたファイルも一緒にデプロイします。**
   - 本番のドメインがちがう時は `PK_SITE=https://○○ node tools/build-lp.js` で作ります。
   - 確認は `node tests/lppages.js`（25項目）です。
-- 公開したら、Google Search Console にドメインを登録し、`https://pocket-kantei.jp/sitemap.xml` を送ってください。
+- 公開したら、Google Search Console にドメインを登録し、`https://pocketkantei.jp/sitemap.xml` を送ってください。
 
 ### 1.3 `server/`（Cloud Functions for Firebase）
 | ファイル | 役割 |
@@ -190,7 +190,7 @@ firebase functions:secrets:set TELECOM_CHECKOUT_URLS
 **(2) 設定値（`server/.env`）** — `server/.env.example` を `server/.env` という名前でコピーして、値を入れます。
 | 設定 | 必須 | 値 | 書かない時 |
 |---|---|---|---|
-| `SITE_URL` | **必須** | サイトの本番のURL（例：`https://pocket-kantei.jp`。最後の `/` は付けない）。呼び出し元の確認と、パスワード再設定メールのリンクに使う | 呼び出し元を確かめない。メールのリンクが崩れる |
+| `SITE_URL` | **必須** | サイトの本番のURL（例：`https://pocketkantei.jp`。最後の `/` は付けない）。呼び出し元の確認と、パスワード再設定メールのリンクに使う | 呼び出し元を確かめない。メールのリンクが崩れる |
 | `MAIL_FROM` | **必須** | 例：`'Pocket Kantei <no-reply@example.jp>'`（Resend で認証したドメイン。空白を含むので `'` で囲む） | パスワード再設定メールが送れない（`NO_MAIL`） |
 | `PK_AI_PRICES` | **必須** | AIの料金（ドル／100万トークン）。例は `.env.example`。**`deep` は `gemini-3.6-flash` の正式な料金を入れる** | 例の値で原価を計算する（deep は仮の値） |
 | `PK_PRODUCTS` | 推奨 | ストアの商品ID → プラン（例は `.env.example`） | 商品IDに `vip`・`pro`・`std` が入っていれば自動で判定 |
