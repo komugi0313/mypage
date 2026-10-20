@@ -142,7 +142,7 @@ function personaIssues(pe, t) {   // なりきり点検：性別・家族の呼�
   if (/同性/.test(pe.q) && /彼女|異性/.test(t) && !/彼女(たち)?も|彼女の/.test(pe.q)) out.push('同性の恋人の相談で「彼女・異性」と書いている（確認）');
   const m = t.match(COLD); if (m) out.push(`突き放す言い方：「${t.slice(Math.max(0, m.index - 25), m.index + 15).replace(/\n/g, ' ')}」`);
   if (REFUSE.test(t)) out.push('鑑定を断っている');
-  { const m = [...t.replace(/必ずしも/g, '').matchAll(/(必ず|十分に可能|間違いなく|絶対に)([^。！\n]{0,40})/g)].find(x => !/ください|ましょう|避け|相談|休|作って|守|気をつけ|確認|しないで|ないように|頼っ|話して|なければ/.test(x[2])); if (m) out.push(`言い切り：「${t.slice(Math.max(0, m.index - 20), m.index + 15).replace(/\n/g, ' ')}」`); }
+  { const m = [...t.replace(/必ずしも/g, '').replace(/待てば必ずチャンスはやってきます/g, '').matchAll(/(必ず|十分に可能|間違いなく|絶対に)([^。！\n]{0,40})/g)].find(x => !/ください|ましょう|避け|相談|休|作って|作る|取る|守|気をつけ|確認|しないで|ないように|頼っ|話して|なければ/.test(x[2]) && !/^ずチャンスはやってきます/.test(x[2])); if (m) out.push(`言い切り：「${t.slice(Math.max(0, m.index - 20), m.index + 15).replace(/\n/g, ' ')}」`); }
   { const by = pe.bd[0]; const bad = []; for (const m of t.matchAll(/(20\d\d)年[^。\n（(\d]{0,4}[（(]?[^。\n）)\d年]{0,14}?(?<!\d)(\d{1,3})歳/g)) { const exp = +m[1] - by; if (Math.abs(+m[2] - exp) > 1) bad.push(`${m[1]}年に${m[2]}歳（正しくは${exp}歳）`); } if (bad.length) out.push('年齢のずれ：' + [...new Set(bad)].join('・')); }
   if (pe.need && !pe.need.test(t)) out.push('相談先（専門の窓口など）が書かれていない');
   if (pe.noGaman && /(じっと|ぐっと)?我慢(しましょう|して(ください|待|おき|過ご)|する(とき|時)です|が大切)|(じっと|ぐっと)我慢|耐え(ましょう|て(ください|待|過ご))|耐える(とき|時)です/.test(t)) out.push(`「我慢・耐える」をすすめている：「${(t.match(/.{0,20}((じっと|ぐっと)?我慢(しましょう|して|する|が)|耐え(ましょう|て|る)).{0,10}/) || [''])[0].replace(/\n/g, ' ')}」`);
