@@ -81,6 +81,10 @@ h2{font-size:17px;margin:0 0 14px;text-wrap:balance}
 .seg button:active{transform:translateY(1px)}
 .seg.done button:not([aria-pressed="true"]){color:var(--muted)}
 .btn:disabled{background:var(--soft);color:var(--muted);border-color:var(--rule);cursor:default}
+.slotname{margin:0;text-align:center;font-size:13px;color:var(--muted);min-height:1.5em}
+.slotname b{color:var(--ink)}
+.p16{font-size:13px;color:var(--ink);margin-top:4px;line-height:1.4}
+.p16 small{display:block;font-size:10.5px;color:var(--muted);white-space:nowrap}
 .alt{display:block;text-align:center;font-size:13.5px;color:var(--ink);background:var(--soft);border-radius:10px;padding:10px 12px;text-decoration:none}
 .alt b{color:var(--plus)}
 .btn{display:block;width:100%;text-align:center;padding:14px 16px;border-radius:10px;font-weight:700;font-family:inherit;font-size:16px;cursor:pointer;border:1px solid var(--rule);background:var(--surface);color:var(--ink)}
@@ -334,6 +338,7 @@ button.alt{width:100%;border:0;font-family:inherit;line-height:1.7;cursor:pointe
     <div class="field" id="pickField" hidden>
       <span class="lbl">③ そのとき出たタイプを選んでください</span>
       <div class="slots" id="slots" aria-live="polite"></div>
+      <p class="slotname" id="slotName"></p>
       <div class="picker" id="picker"></div>
       <p class="hint">ほかのサイトやアプリで出た結果でOK。迷ったら、いちばん最近の結果を。</p>
       <button class="btn primary" type="button" id="go">結果を見る</button>
@@ -360,9 +365,9 @@ button.alt{width:100%;border:0;font-family:inherit;line-height:1.7;cursor:pointe
     <div class="flip" id="flip" role="img"></div>
     <p class="flipsum" id="rSum"></p>
     <div class="nicks">
-      <div class="nk born"><span class="nl">生まれつき</span><span class="nn" id="nkBorn"></span></div>
+      <div class="nk born"><span class="nl">生まれつき</span><span class="nn" id="nkBorn"></span><span class="p16" id="p16Born"></span></div>
       <span class="nar" aria-hidden="true">→</span>
-      <div class="nk now"><span class="nl">いま</span><span class="nn" id="nkNow"></span></div>
+      <div class="nk now"><span class="nl">いま</span><span class="nn" id="nkNow"></span><span class="p16" id="p16Now"></span></div>
     </div>
   </section>
 
@@ -443,7 +448,7 @@ button.alt{width:100%;border:0;font-family:inherit;line-height:1.7;cursor:pointe
 
   <div class="cta">
     <button class="btn primary" type="button">結果をシェアする</button>
-    <p class="fine">16TYPE+ は独自の性格診断です。MBTI®とは関係ありません。</p>
+    <p class="fine">16TYPE+ は独自の性格診断です。MBTI®、16Personalities とは関係ありません。「主人公」などのタイプ名は、16Personalities での呼び名を参考として表示しています。</p>
   </div>
   </div>
 </div>
@@ -760,13 +765,16 @@ function natal(y,m,d){const days=Math.floor(Date.UTC(y,m-1,d)/864e5);const num=(
  return {num,kan:STEMS[s]+BR[b],t,str:{EI:STR_EI[s],SN:STR_SN[s],TF:STR_TF[b],JP:STR_JP[u]}};}
 const st={y:1998,m:7,d:15,t:["E","N","F","P"],pct:null,half:{}};
 const $=id=>document.getElementById(id);
+/* 16Personalities での呼び名（参考表示用） */
+const P16={INTJ:"建築家",INTP:"論理学者",ENTJ:"指揮官",ENTP:"討論者",INFJ:"提唱者",INFP:"仲介者",ENFJ:"主人公",ENFP:"運動家",ISTJ:"管理者",ISFJ:"擁護者",ESTJ:"幹部",ESFJ:"領事",ISTP:"巨匠",ISFP:"冒険家",ESTP:"起業家",ESFP:"エンターテイナー"};
+const p16=t=>"16Personalitiesでは「"+P16[t]+"」";
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function opts(el,a,b,cur){el.innerHTML="";for(let v=a;v<=b;v++){const o=document.createElement("option");o.value=v;o.textContent=v;if(v===cur)o.selected=true;el.appendChild(o);}}
 function fillDate(){opts($("y"),1930,2020,st.y);opts($("m"),1,12,st.m);const mx=new Date(st.y,st.m,0).getDate();if(st.d>mx)st.d=mx;opts($("d"),1,mx,st.d);}
 ["y","m","d"].forEach(id=>$(id).addEventListener("change",e=>{st[id]=+e.target.value;fillDate();render();}));
 const pk=$("picker"),sel=[null,null,null,null];
 function drawSlots(popI){$("slots").innerHTML=AX.map((A,i)=>'<span style="--c:var('+A.c+')" class="'+(sel[i]?"fill":"empty")+(i===popI?" pop":"")+'">'+(sel[i]||"?")+'</span>').join("");
- const left=sel.filter(v=>!v).length,go=$("go");go.disabled=left>0;go.textContent=left?"あと"+left+"つ選んでください":"結果を見る";}
+ const left=sel.filter(v=>!v).length,go=$("go");const tt=sel.join("");$("slotName").innerHTML=left?"":'<b>'+tt+'</b>　'+p16(tt);go.disabled=left>0;go.textContent=left?"あと"+left+"つ選んでください":"結果を見る";}
 AX.forEach((A,i)=>{const g=document.createElement("div");g.className="seg";g.style.setProperty("--c","var("+A.c+")");g.setAttribute("role","group");g.setAttribute("aria-label",A.name);
  [[A.a,A.aw],[A.b,A.bw]].forEach(([l,w])=>{const bt=document.createElement("button");bt.type="button";bt.innerHTML=l+"<small>"+w+"</small>";
   bt.setAttribute("aria-pressed","false");bt.onclick=()=>{sel[i]=l;g.classList.add("done");[...g.children].forEach(c=>c.setAttribute("aria-pressed",c===bt));drawSlots(i);};g.appendChild(bt);});
@@ -837,6 +845,7 @@ function render(){
  $("hJobW").textContent=HB.work;$("hJobs").innerHTML=HB.jobs.map(t=>"<li>"+t+"</li>").join("");
  $("ccKarai").textContent=strip(C.karai);
  window.__me={born,now,N};drawToday();
+ const p16h=t=>'<small>16Personalitiesでは</small>「'+P16[t]+'」';$("p16Born").innerHTML=p16h(born);$("p16Now").innerHTML=p16h(now);
  $("nkBorn").textContent=D.NICK[born];$("nkNow").textContent=D.NICK[now];
  let pct=0,ch=[];
  const axHTML=AX.map((A,i)=>{const n=now[i],b=born[i],c=n!==b;
@@ -860,7 +869,7 @@ function render(){
 const ps={y:1995,m:4,d:20};
 function fillP(){opts($("py"),1930,2020,ps.y);opts($("pm"),1,12,ps.m);const mx=new Date(ps.y,ps.m,0).getDate();if(ps.d>mx)ps.d=mx;opts($("pd"),1,mx,ps.d);}
 ["py","pm","pd"].forEach(id=>$(id).addEventListener("change",e=>{ps[id.slice(1)]=+e.target.value;fillP();}));
-Object.keys(D.NICK).forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t+"　"+D.NICK[t];$("pt").appendChild(o);});
+Object.keys(D.NICK).forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t+"（"+P16[t]+"）";$("pt").appendChild(o);});
 function same(a,b){let n=0;for(let i=0;i<4;i++)if(a[i]===b[i])n++;return n;}
 const TIER=[["正反対の刺激コンビ","お互いにないものを持っている2人。組めば最強、ぶつかれば大波乱。"],["別ルートの発見コンビ","考え方は別ルート。だからこそ話すたびに発見がある。"],["ほどよいバランス型","半分同じで、半分ちがう。ほどよい距離で長く続く。"],["似た者同士の安心ペア","感覚がよく似ていて、無理せず自然体でいられる。"],["鏡みたいな2人","長所も弱点もそっくり。いちばんの理解者になれる。"]];
 /* P = {born, num, now(任意), who} */
