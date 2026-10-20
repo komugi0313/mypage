@@ -2027,13 +2027,20 @@ const App=(function(){
   })();
     window.pkFixYomi=pkFixYomi;
   var pkSoftWord=function(s){ return String(s==null?'':s).replace(/(このご相談には、)?(占いで(?:は)?[^。\n]{0,10}?)お答え(?:すること[はが]?)?できません/g,function(m,p,a){ return p?m:a+'言い切ることはしません'; }).replace(/(占いで(?:は)?[^。\n]{0,10}?)判断(?:すること[はが]?)?できません/g,'$1言い切ることはしません').replace(/(このご相談には、)?(占いで(?:は)?[^。\n]{0,10}?)お伝え(?:すること[はが]?)?できません/g,function(m,p,a){ return p?m:a+'言い切ることはしません'; }).replace(/言い切ること[はが]?できません/g,'言い切ることはしません').replace(/(数字で|ハッキリと?|はっきりと?)お(伝え|答え)すること[はが]?できません/g,'$1お$2することはしません').replace(/必ず(?!しも)(?=[^。\n]{0,24}?(開け|ひらけ|来ま|来る|やって|訪れ|過ぎ|乗り越え|戻|見えて|叶|実を|実り|報われ|理解|力になって|良くな|よくな|うまく|好転|届き|伝わ|道が|チャンス|光))/g,'きっと').replace(/必ず(?!しも)([^。！\n]{0,40}?)(ます|でしょう)/g,function(m,mid,end){ return /ください|ましょう|避け|相談|休|作って|守|気をつけ|確認|しないで|ないように|頼っ|話して/.test(mid)?m:'きっと'+mid+end; }); };   // 未来を言い切る「必ず〜ます」は「きっと」に（「必ず〜ください」「必ず相談を」などのすすめはそのまま）   // 「占いではお答えできません」のような突き放す言い方を、やわらかく（鑑定者本人の指示 2026-10-19。答えない相談の決まった案内はそのまま）
-  function noAIWord(t){ t=String(t||'').replace(/주치(의|医)/g,'主治医').replace(/【見出し[：:]?\s*/g,'【').replace(/【([^】\n]{0,40})\n+\s*([^】\n]{0,60})】/g,'【$1$2】').replace(/【\s*】/g,'');   // 【 】の中で改行した見出しをつなぐ（【見出し⏎…】のくずれ）
+  function noAIWord(t){ return pkFixAge(_noAIWord1(t),parseInt(((document.getElementById('fuBd')||{}).value||'').slice(0,4),10)||0); }   // 年齢は生年月日（入れたときだけ）から計算し直す
+  function _noAIWord1(t){ t=String(t||'').replace(/주치(의|医)/g,'主治医').replace(/【見出し[：:]?\s*/g,'【').replace(/【([^】\n]{0,40})\n+\s*([^】\n]{0,60})】/g,'【$1$2】').replace(/【\s*】/g,'');   // 【 】の中で改行した見出しをつなぐ（【見出し⏎…】のくずれ）
     return pkSoftWord(pkFixYomi(_noAIWord0(t))); }   // 記号（**など）を消したあとにも、読み仮名とやわらげをもう一度
   function _noAIWord0(t){t=pkSoftWord(pkFixYomi(t));t=String(t||'').replace(/てんいつきじん/g,'てんおつきじん').replace(/テンイツキジン/g,'テンオツキジン').replace(/ぎょうざい|きょうざい/g,'ごうざい'); return String(t||'')
       .replace(/(?:私|わたし|わたくし)(?:は|も)(?:AI|ＡＩ|人工知能)(?:です|でございます|だ|な)?(?:ので|から|のため|として)[^、。！？\n]*[、]?/g,'')
       .replace(/(?:私|わたし|わたくし)(?:は|も)(?:AI|ＡＩ|人工知能)[^。！？\n]*[。！？]?/g,'')
       .replace(/(?:AI|ＡＩ|人工知能)(?:である|なので|ですので|ですから|のため|として)(?:私|わたし)?[^、。！？\n]*[、]?/g,'')
       .replace(/(?:AI|ＡＩ|人工知能)(?:による|が行う|の|が)?(分析|鑑定|診断|回答|判断|読み解き|占い)/g,'$1'); }
+  function pkFixAge(s,by,other){ try{   // 西暦と年齢が並んだところ（2029年（31歳）・2029年の31歳・31歳（2029年））を、生年月日から計算し直す。ジェミニの年齢の計算ちがいを画面に出さない（発注者指示 2026-10-20）
+    s=String(s==null?'':s); by=+by||0; other=+other||0; if(!by) return s;
+    var fix=function(y,a,keep){ y=+y; a=+a; var e=y-by; if(e<0||e>130) return keep; if(a===e||a===e-1) return keep; if(other) return keep; return null; };   // その年の誕生日の前後で1つちがうのはそのまま。2人分の文（相性）で、どちらにも合わないときは決めつけない
+    s=s.replace(/((?:19|20)\d\d)年([（(][甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥年・、\s]{0,8}|の|は|、|・|頃の|ごろの|[ 　])?(\d{1,3})(歳|才)/g,function(m,y,mid,a,u,off,str){ if(/^[）)]?(の|になる|を迎える)?(お子|子ども|子供|娘|息子|お孫|孫|お母|お父|母|父|ご主人|奥様|夫|妻|彼|相手|兄|姉|弟|妹|ご両親|親)/.test(String(str).slice(off+m.length,off+m.length+10))) return m; if(other&&(+a===+y-other||+a===+y-other-1)) return m; var k=fix(y,a,m); return k!==null?k:(y+'年'+(mid||'')+(+y-by)+u); });
+    s=s.replace(/(\d{1,3})(歳|才)([（(])((?:19|20)\d\d)年([）)])/g,function(m,a,u,p1,y,p2){ if(other&&(+a===+y-other||+a===+y-other-1)) return m; var k=fix(y,a,m); return k!==null?k:((+y-by)+u+p1+y+'年'+p2); });
+    return s; }catch(e){ return s; } }
   function ekiLifeGuide(q){ try{   // 暮らしに寄り添う答え方の決まり（なりきり点検の結果から。PROと同じ考え方。発注者指示 2026-10-20）
     var _d=new Date(), Y=_d.getFullYear(), M=_d.getMonth()+1, D=_d.getDate(), left=12-M+(D<15?1:0);
     var s='\n【暮らしの答え方（どの相談でも守る）】\n・今日は'+Y+'年'+M+'月'+D+'日。'+Y+'年は残り約'+left+'か月なので、'+Y+'年のことは「年内」「この先の数か月」として書き、これからの時期の話は'+(Y+1)+'年以降を中心にする。'+Y+'年を「これから来る年」のように書かない。\n';
