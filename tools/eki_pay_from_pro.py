@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+"""易 EKI Pro の「申込・ログイン・マイページ」を、PRO（pro/pricing-pro.html・auth.html・mypage-pro.html）から作る。
+申込〜決済（テレコムクレジット）〜パスワード設定〜マイページの流れは PRO・ビギナーと同じ。違いは色・名前・リンク先・説明文のみ。
+使い方：python3 tools/eki_pay_from_pro.py <eki-pro フォルダ>
+  → <eki-pro>/upgrade.html（お申し込み内容の確認・決済へ）／auth.html（ログイン）／mypage.html（マイページ）を書き出す。"""
+import sys
+from pathlib import Path
+ROOT = Path(__file__).resolve().parent.parent
+PRO = ROOT / 'pro'
+if len(sys.argv) < 2: sys.exit('使い方：python3 tools/eki_pay_from_pro.py <eki-pro フォルダ>')
+EKI = Path(sys.argv[1])
+
+def rep(s, old, new, count=None):
+    n = s.count(old)
+    if n == 0 or (count is not None and n != count):
+        sys.exit(f'[止めました] {old[:60]!r} が想定どおり見つかりません（{n}件）')
+    return s.replace(old, new)
+
+HEAD = '''<meta name="robots" content="noindex">
+<meta name="theme-color" content="#C9B5D4">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-180.png">
+'''
+
+def theme(s):
+    # PROの朱色・オレンジを、いったんローズ（ビギナーと同じ）に戻してから易の色へ置きかえる（2026-10-17）
+    for pro_c, rose_c in [('#C8502E', '#C2416B'), ('#A8401F', '#A8335A'), ('#E0763E', '#D9577F'), ('rgba(200,80,46', 'rgba(194,65,107'), ('#FFF3EC', '#FDF1F4'), ('#FCE4D6', '#F9E1E8'), ('#F2CDB8', '#F0C9D6'), ('#EDB496', '#E8A9BD'), ('#FFF8F3', '#FFF7F9'), ('#FFF1E8', '#FCEFF2'), ('#9C3A1B', '#9E2F55'), ('#E08A57', '#D96A8C'), ('#FFF9F5', '#FFF8FA'), ('#8A3418', '#8E2A4C'), ('#FFFAF5', '#FFF9FB'), ('#FFF3EA', '#FDF3F6'), ('#F2DCCD', '#F0DCE3'), ('#EAC3AA', '#E6C3CF'), ('rgba(240,150,90,.20)', 'rgba(232,93,158,.22)'), ('rgba(240,150,90,.16)', 'rgba(232,93,158,.16)')]:
+        s = s.replace(pro_c, rose_c)
+    # 色：PROのローズ・紫（2026-10-17 間の案）→ EKIの明るい紫＋インスタ風の易カラー（アプリ・紹介ページと同じ。2026-10-17）。エラーの赤はそのまま
+    for a, b in [('--ka:#C2416B', '--ka:#7A4FA0'), ('--ka-d:#A8335A', '--ka-d:#5E3A82'), ('--sui:#8A4FA8', '--sui:#6B4C8A'),
+                 ('linear-gradient(135deg,#D9577F 0%,#C2416B 55%,#A8335A 100%)', 'linear-gradient(135deg,#6B4C8A 0%,#A0508F 52%,#C9814F 100%)'),
+                 ('linear-gradient(135deg,#D9577F,#C2416B 55%,#A8335A)', 'linear-gradient(135deg,#6B4C8A,#A0508F 52%,#C9814F)'),
+                 ('rgba(194,65,107,', 'rgba(122,79,160,'), ('0 4px 0 #8E2A4C', '0 4px 0 #5E3A82'), ('0 2px 0 #8E2A4C', '0 2px 0 #5E3A82'),
+                 ('rgba(232,93,158,.22)', 'rgba(214,178,232,.40)'), ('rgba(232,93,158,.16)', 'rgba(214,178,232,.36)'),
+                 ('rgba(226,161,43,.18)', 'rgba(255,210,224,.34)'), ('rgba(226,161,43,.16)', 'rgba(255,210,224,.30)'),
+                 ('linear-gradient(180deg,#FFF9FB 0%,#FDF3F6 100%)', 'linear-gradient(180deg,#FBF7FD 0%,#F7F3FB 100%)'),
+                 ('linear-gradient(180deg,#FFF9FB,#FDF3F6)', 'linear-gradient(180deg,#FBF7FD,#F7F3FB)'),
+                 ('linear-gradient(160deg,#F2A03A,#EE5B48,#E8508E)', 'linear-gradient(135deg,#B99AD6,#7A4FA0)'),
+                 ('rgba(138,79,168,.15)', 'rgba(142,114,168,.18)'),
+                 ('.topbar{background:rgba(251,246,234,.9);', '.topbar{background:rgba(255,255,255,.94);'), ('.topbar{background:rgba(251,246,234,.92);', '.topbar{background:rgba(255,255,255,.94);'),
+                 ('--line:#F0DCE3;', '--line:#E7DDF1;'), ('--line2:#E6C3CF;', '--line2:#D5C6E6;')]:
+        s = s.replace(a, b)
+    s = s.replace('<div class="tb-logo" style="background:none;box-shadow:none"><img src="favicon.png" alt="" style="width:100%;height:100%;border-radius:9px;display:block"></div>',
+                  '<div class="tb-logo"><span style="color:#fff;font-family:\'Noto Serif JP\',serif;font-weight:700">易</span></div>')
+    s = s.replace('<img src="icon-crystal.png" alt="" style="height:1.2em;width:auto;vertical-align:-0.26em;">',
+                  '<span style="color:#fff;font-family:\'Noto Serif JP\',serif;font-weight:700">易</span>')
+    return s
+
+def links(s):
+    s = s.replace('四柱推命占い<span>自動鑑定</span>', '易 <span>EKI Pro</span>')
+    s = s.replace('© 四柱推命占い自動鑑定（72k株式会社）', '© 易 EKI Pro（72k株式会社）')
+    s = s.replace('app-pro.html', 'app/index.html').replace('mypage-pro.html', 'mypage.html').replace('pricing-pro.html', 'register.html')
+    s = s.replace('terms-pro.html', 'terms.html').replace('tokushoho-pro.html', 'tokushoho.html').replace('privacy-pro.html', 'privacy.html')
+    return s
+
+def head(s, title):
+    i = s.index('<link rel="icon"') if '<link rel="icon"' in s[:2000] else s.index('<title>')
+    j = s.index('<style>')
+    return s[:i] + f'<title>{title}</title>\n' + HEAD + s[j:]
+
+# ---- upgrade.html（お申し込み内容の確認・決済へ）----
+s = (PRO / 'pricing-pro.html').read_text(encoding='utf-8')
+s = head(s, 'お申し込み｜易 EKI Pro'); s = theme(links(s))
+s = rep(s, '<span class="badge">経験を、もっと速く・深く。</span>', '<span class="badge">勉強いらずで、易の鑑定を。</span>', 1)
+s = rep(s, '<br>本格鑑定を、はじめる。</h1>', '<br>易の鑑定を、はじめる。</h1>', 1)
+s = rep(s, '<span class="nm">月額プラン</span></span>', '<span class="nm">月額プラン</span><span class="desc">追加料金なし・いつでも解約OK</span></span>', 1)   # PRO・ビギナーは説明文なし（2026-10-17）。易だけ表示
+s = rep(s, '※ 本サービスは四柱推命にもとづく自己理解・エンターテインメントを目的としたものです。', '※ 本ツールは占いを目的としたものです。', 1)
+# （PRO側のログインのリンクは auth.html になったので、そのまま写る）
+s = rep(s, "var ORDER_PREFIX='P';", "var ORDER_PREFIX='E';", 1)
+s = rep(s, "var CAP_TEXT='詳細鑑定は1日の上限なし（月700〜1,000回ほど使えます）。月の利用枠を使い切っても、次の更新日まではオフラインの詳細鑑定で、そのまま鑑定を続けられます';", "var CAP_TEXT='オンライン鑑定は1日の上限なし（月1,400〜1,900回ほど使えます）。月の利用枠を使い切っても、次の更新日まではオフライン鑑定で、そのまま鑑定を続けられます';", 1)
+s = rep(s, "var TRIAL_EXTRA='<br>無料期間中の詳細鑑定は1日3回まで（相談・鑑定書の作成などの合計。日本時間の0時に戻ります）。端末内の鑑定・命式表・顧客カルテは回数制限なし。';", "var TRIAL_EXTRA='<br>無料期間中のオンライン鑑定・追加のご相談は合計1日3回まで（内蔵データでの鑑定は回数制限なし）。';", 1)
+s = rep(s, '</body>', '''<script>
+/* 登録ページ（register.html）から来たときは、入力済みのメールアドレスで「お申し込み内容の確認」をすぐ表示する */
+(function(){
+  var q=new URLSearchParams(location.search); if(q.get('result')) return;
+  var a=null; try{ a=JSON.parse(localStorage.getItem('eki_apply')||'null'); }catch(e){}
+  if(!a||!a.email||Date.now()-(a.ts||0)>3600000) return;
+  document.getElementById('email').value=a.email; document.getElementById('email2').value=a.email;
+  document.getElementById('agree').checked=true;
+  document.getElementById('cf-back').addEventListener('click',function(e){ e.stopImmediatePropagation(); location.href='register.html'; },true);
+  document.getElementById('signup').requestSubmit();
+})();
+</script>
+</body>''', 1)
+(EKI / 'upgrade.html').write_text(s, encoding='utf-8')
+
+# ---- auth.html（ログイン）----
+s = (PRO / 'auth.html').read_text(encoding='utf-8')
+s = head(s, 'ログイン｜易 EKI Pro'); s = theme(links(s))
+s = rep(s, 'P-20261010-7K3QX-A9M2Z', 'E-20261010-7K3QX-A9M2Z', 2)
+s = s.replace("'pricing-pro.html'","'register.html'")
+(EKI / 'auth.html').write_text(s, encoding='utf-8')
+
+# ---- mypage.html（マイページ）----
+s = (PRO / 'mypage-pro.html').read_text(encoding='utf-8')
+s = head(s, 'マイページ｜易 EKI Pro'); s = theme(links(s))
+s = rep(s, "  var USAGE={trialCap:3, name:'詳細鑑定', per:'月700〜1,000回ほど使えます', off:'オフラインの詳細鑑定', rule:'相談1件・鑑定書1通＝1回（同じ相談の「くわしい読み解き」と、鑑定書の作り直しは数えません）'};",
+        "  var USAGE={trialCap:3, name:'オンライン鑑定', per:'月1,400〜1,900回ほど使えます', off:'オフライン鑑定', rule:'鑑定1件・追加のご相談1問＝1回（鑑定書の作成は数えません）'};", 1)
+s = rep(s, '鑑定結果やお客様の保存・メモは、ツール内の「👥 顧客カルテ」からご利用いただけます。', '鑑定したお客様の記録は、ツール内の「顧客」からご覧いただけます。', 1)
+s = rep(s, 'お客様の記録（顧客カルテ・名簿）は、ご利用の最終日までに、アプリの「書き出し（バックアップ）」でファイルに保存しておいてください。', 'お客様の記録（顧客名簿）は、ご利用の最終日までに、アプリの⚙設定「データのバックアップ」の「書き出す」でファイルに保存しておいてください。', 2)
+s = rep(s, 'お客様の記録（顧客カルテ・名簿）は、アプリのロック画面の「書き出す」', 'お客様の記録（顧客名簿）は、アプリのロック画面の「書き出す」', 1)
+s = rep(s, '<a class="tb-link" href="register.html">料金プラン</a>', '<a class="tb-link" href="index.html#price">料金プラン</a>', 1)
+s = s.replace('<a href="register.html">料金</a>', '<a href="index.html#price">料金</a>')   # 料金はLPの料金欄へ（申込ページに直接行かない）
+(EKI / 'mypage.html').write_text(s, encoding='utf-8')
+print('OK:', EKI / 'upgrade.html', EKI / 'auth.html', EKI / 'mypage.html')

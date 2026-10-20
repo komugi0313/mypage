@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+"""
+ビギナー（今日から占い師）を、PRO（四柱推命占い自動鑑定）の最新コードから生成する。
+
+方針：計算・判定・画面・詳細鑑定の中身は PRO と 100% 同じ。
+      ただし PRO だけの機能（<!--PRO-ONLY:start-->〜<!--PRO-ONLY:end-->で囲んだ部分＝今月の運勢まとめて作成など）は取り除く。
+      ビギナーで変えるのは「名前・アイコン・説明文・リンク先・マニフェスト・SW版番号の読み取り」と
+      「見た目（色・縁取り・ボタン文言）」と「初心者モードの見せ方（五行のやさしい表示・専門的な表の折りたたみ・切替ボタン）」だけ。
+      どれも表示の後処理で、計算・判定・鑑定文には影響しない。
+
+使い方（リポジトリのルートで）：
+    python3 tools/sync_beginner_from_pro.py
+生成・更新するもの：
+    beginner/app-beginner.html   … pro/app-pro.html から生成
+    beginner/auth.html           … pro/auth.html から生成
+    beginner/pricing.html        … pro/pricing-pro.html から生成（申込・決済の流れはPROと同じ。違いは名前・説明文・リンク先のみ）
+    beginner/mypage.html         … pro/mypage-pro.html から生成（同上）
+    beginner/pklove.js           … pro/pklove.js をコピー
+※ beginner/sw.js の CACHE 版数は手で1つ上げること（CLAUDE.md の運用どおり）。
+※ PRO 側の該当箇所が見つからないと止まる（黙って崩れたまま出力しない）。
+"""
+import re, shutil, sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+PRO, BEG = ROOT / 'pro', ROOT / 'beginner'
+
+B_TITLE = '今日から占い師｜毎日使える、自分だけの鑑定ツール'
+B_NAME = '今日から占い師'
+B_DESC = '生年月日を入れるだけで、命式・大運・年運・相性まで自動で読み解く四柱推命ツール。はじめてでも、やさしい言葉で本格鑑定ができます。'
+B_URL = 'https://www.suimei.jp/app-beginner.html'
+B_OGP = 'https://www.suimei.jp/og-image.png'
+
+# ビギナーの見た目（色・縁取り・ボタン文言）。CSS と文言だけで、計算・判定・鑑定文には一切影響しない。
+BEGINNER_SKIN = """<style id="beginner-skin">
+/* ===== ビギナーの見た目（tools/sync_beginner_from_pro.py が付与）。色・縁取りのみ。計算・判定・鑑定文には影響しない ===== */
+.card.ai-box{background:var(--wm-bg);border-color:var(--wm-bd);}
+#compat-card{background:#FFF8FA;border-color:#F0C9D6;}
+.reading-card{border:2px solid var(--line);box-shadow:none}
+.reading-card .r-summary{background:var(--ka-w);color:inherit}
+.brand .sub{display:block;font-weight:800;color:var(--ink2)}
+#bg-intro{background:linear-gradient(135deg,#FDF3E2,#FCE9E6);border:2px solid #F2D9A6;border-radius:16px;padding:16px 18px;margin:0 0 14px}
+#bg-intro .t{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:900;font-size:16px;color:#B4471F;margin-bottom:8px}
+#bg-intro-x{flex:0 0 auto;width:40px;height:40px;border:1px solid #E9CF9E;background:#fff;color:#8A5A12;border-radius:50%;padding:0;font-family:inherit;font-weight:900;font-size:14px;line-height:1;cursor:pointer}
+html.bg-intro-done #bg-intro{display:none}
+#bg-intro .steps{display:flex;gap:8px;flex-wrap:wrap}
+#bg-intro .s{flex:1 1 150px;background:#fff;border:1px solid #F0DFBE;border-radius:12px;padding:10px 12px;font-size:13.5px;font-weight:800;color:#4A4030}
+#bg-intro .s b{color:#E8392B}
+</style>
+"""
+
+# ビギナー専用の見せ方（初心者モード：五行のやさしい棒グラフ・専門的な表の折りたたみ・上級者モード切替）。
+# 表示の後処理だけで、計算・判定・鑑定文には影響しない。初心者モードOFFでPROと同じ画面になる。
+BEGINNER_UI = (ROOT / 'tools' / 'beginner_ui.html').read_text(encoding='utf-8')
+
+
+def rep(s, old, new, count=None, label=''):
+    n = s.count(old)
+    if n == 0 or (count is not None and n != count):
+        sys.exit(f'[止めました] {label or old[:60]!r} が想定どおり見つかりません（{n}件）。PRO側の変更を確認してください。')
+    return s.replace(old, new)
+
+
+def beginner_icons(cur):
+    """現在のビギナーから、アイコン（静的link と window.__ICON__ スクリプト）を取り出す"""
+    link = re.search(r'<link rel="icon" type="image/png" href="data:image/png;base64,[^"]+">', cur)
+    icon = re.search(r'<script>window\.__ICON__=[\s\S]*?</script>', cur)
+    if not (link and icon):
+        sys.exit('[止めました] 現在のビギナーからアイコンを取り出せません。')
+    return link.group(0), icon.group(0)
+
+
+# PRO＝朱色・オレンジ／ビギナー＝ローズピンク（発注者指示 2026-10-17：2つの商品が色で見分けられるように）
+PRO_TO_BEG_COLORS = [('#C8502E', '#C2416B'), ('#A8401F', '#A8335A'), ('#E0763E', '#D9577F'), ('rgba(200,80,46', 'rgba(194,65,107'), ('#FFF3EC', '#FDF1F4'), ('#FCE4D6', '#F9E1E8'), ('#F2CDB8', '#F0C9D6'), ('#EDB496', '#E8A9BD'), ('#FFF8F3', '#FFF7F9'), ('#FFF1E8', '#FCEFF2'), ('#9C3A1B', '#9E2F55'), ('#E08A57', '#D96A8C'), ('#FFF9F5', '#FFF8FA'), ('#8A3418', '#8E2A4C'), ('#FFFAF5', '#FFF9FB'), ('#FFF3EA', '#FDF3F6'), ('#F2DCCD', '#F0DCE3'), ('#EAC3AA', '#E6C3CF'), ('rgba(240,150,90,.20)', 'rgba(232,93,158,.22)'), ('rgba(240,150,90,.16)', 'rgba(232,93,158,.16)')]
+def to_beginner_colors(s):
+    for pro_c, beg_c in PRO_TO_BEG_COLORS:
+        s = s.replace(pro_c, beg_c)
+    return s
+
+def build_app():
+    pro = (PRO / 'app-pro.html').read_text(encoding='utf-8')
+    pro = to_beginner_colors(pro)
+    cur = (BEG / 'app-beginner.html').read_text(encoding='utf-8')
+    link_icon, icon_script = beginner_icons(cur)
+    s = pro
+
+    # ---- head：タイトル・説明・OGP・アイコン・マニフェスト ----
+    s = rep(s, '<title>四柱推命占い自動鑑定</title>', f'<title>{B_TITLE}</title>\n{link_icon}', 1)
+    s = re.sub(r'<meta name="description" content="[^"]*">', f'<meta name="description" content="{B_DESC}">', s, count=1)
+    s = rep(s, '★本番ドメインが72k.ai以外なら', '★本番ドメインがsuimei.jp以外なら', 1)
+    s = rep(s, '<meta property="og:site_name" content="72k株式会社">', f'<meta property="og:site_name" content="{B_NAME}">', 1)
+    s = rep(s, '<meta property="og:title" content="四柱推命占い自動鑑定">', f'<meta property="og:title" content="{B_NAME}">', 1)
+    s = rep(s, '<meta name="twitter:title" content="四柱推命占い自動鑑定">', f'<meta name="twitter:title" content="{B_NAME}">', 1)
+    s = re.sub(r'<meta property="og:description" content="[^"]*">', f'<meta property="og:description" content="{B_DESC}">', s, count=1)
+    s = re.sub(r'<meta name="twitter:description" content="[^"]*">', f'<meta name="twitter:description" content="{B_DESC}">', s, count=1)
+    s = rep(s, 'https://72k.ai/app-pro.html', B_URL, 1)
+    s = rep(s, 'https://72k.ai/ogp.png', B_OGP, 2)
+    s = re.sub(r'<script>window\.__ICON__=[\s\S]*?</script>', lambda m: icon_script, s, count=1)
+    s = rep(s, '<meta name="apple-mobile-web-app-title" content="四柱推命占い自動鑑定">',
+            f'<meta name="apple-mobile-web-app-title" content="{B_NAME}">', 1)
+    s = rep(s, 'manifest-pro.webmanifest', 'manifest-beginner.webmanifest', 1)
+
+    # ---- 画面の名前（会員ゲート・ヘッダー） ----
+    s = rep(s, 'alt="四柱推命占い自動鑑定"', f'alt="{B_NAME}"', 2)
+    s = rep(s, '<h2 class="mg-title">四柱推命占い<span style="color:var(--do)">自動鑑定</span></h2>',
+            '<h2 class="mg-title">今日から<span style="color:var(--do)">占い師</span></h2>\n'
+            '    <div style="font-size:11.5px;font-weight:800;letter-spacing:.08em;color:var(--muted);margin:-2px 0 4px">毎日使える、自分だけの鑑定ツール</div>', 1)
+    s = rep(s, '<h1>四柱推命占い<span style="color:var(--do)">自動鑑定</span></h1>',
+            '<h1>今日から<span style="color:var(--do)">占い師</span></h1>', 1)
+    s = rep(s, '<div class="sub"><span class="nb">命式・運勢・相性・鑑定書、</span> <span class="nb">全てこれ一つで。</span></div>',
+            '<div class="sub"><span class="nb">毎日使える、</span> <span class="nb">自分だけの鑑定ツール</span></div>', 1)
+
+    # ---- 共有カードの表示名（社名は共通） ----
+    s = rep(s, "SHARE_SITE={ label:'四柱推命占い自動鑑定',", f"SHARE_SITE={{ label:'{B_NAME}',", 1)
+    # 共有画像（canvas）に描く商品名もビギナーの名前にする
+    s = s.replace("x.fillText('四柱推命占い自動鑑定',", f"x.fillText('{B_NAME}',")
+
+    # ---- リンク先（ビギナーのページへ） ----
+    s = rep(s, 'pricing-pro.html', 'pricing.html')
+    s = rep(s, 'mypage-pro.html', 'mypage.html')
+    s = rep(s, 'textbook-pro.html', 'textbook.html')
+
+    # ---- ビギナーの見た目（色・縁取り）と「占ってみる」ボタン ----
+    hi = s.find('</head>')
+    if hi < 0 or hi > s.find('<body'):
+        sys.exit('[止めました] </head> が見つかりません。')
+    s = s[:hi] + BEGINNER_SKIN + s[hi:]
+    s = rep(s, '  <section class="card panel">',
+            '  <div id="bg-intro"><div class="t"><span><span class="nobr">むずかしい知識は、</span><span class="nobr">いりません。</span></span>'
+            '<button type="button" id="bg-intro-x" aria-label="この案内を閉じる" title="閉じる">✕</button></div><div class="steps">'
+            '<div class="s"><b>①</b> 生年月日を入れる</div><div class="s"><b>②</b> 相談を書いて「この相談を鑑定する」を押す</div>'
+            '<div class="s"><b>③</b> 出てきた文章を読むだけ</div></div></div>\n  <section class="card panel">', 1)
+    # 相談の入口（何を占いますか？）と「この相談を鑑定する」ボタンはPROと同じ（ことばも専門用語なし）。あることだけ確かめる
+    rep(s, '<span>この相談を鑑定する</span></button>', '', 1, label='相談ボタン（この相談を鑑定する）')
+
+    # ---- PROだけの機能（<!--PRO-ONLY:start-->〜<!--PRO-ONLY:end-->）はビギナーに入れない ----
+    n_pro_only = s.count('<!--PRO-ONLY:start')
+    if n_pro_only != s.count('<!--PRO-ONLY:end-->') or n_pro_only == 0:
+        sys.exit('[止めました] PROだけの機能の印（PRO-ONLY:start / end）の数が合いません。')
+    s = re.sub(r'<!--PRO-ONLY:start[\s\S]*?<!--PRO-ONLY:end-->\n?', '', s)
+
+    # ---- ビギナー専用の見せ方（初心者モード）を本体スクリプトの後に付ける ----
+    bi = s.rfind('</body>')
+    if bi < 0:
+        sys.exit('[止めました] </body> が見つかりません。')
+    s = s[:bi] + BEGINNER_UI + s[bi:]
+
+    # ---- アプリ内のバージョン表示（SWのキャッシュ名から読む） ----
+    s = rep(s, 'match(/shichu-jidou-(v\\d+)/)', 'match(/kyoukara-uranaishi-(v\\d+)/)', 1)
+
+    # アプリ下部の「マイページ・規約・特商法・プライバシー」リンクをビギナーのページへ
+    s = s.replace('terms-pro.html', 'terms.html').replace('tokushoho-pro.html', 'tokushoho.html').replace('privacy-pro.html', 'privacy.html')
+
+    left = [w for w in ('app-pro.html', '-pro.html', 'manifest-pro', 'shichu-jidou', '72k.ai/app') if w in s]
+    if left:
+        sys.exit(f'[止めました] PRO固有の参照が残っています：{left}')
+    head = ('<!-- このファイルは tools/sync_beginner_from_pro.py が pro/app-pro.html から生成しています。'
+            '直接編集せず、PROを直してから生成し直してください。 -->\n')
+    s = s.replace('<html lang="ja">', head + '<html lang="ja">', 1)
+    (BEG / 'app-beginner.html').write_text(s, encoding='utf-8')
+    return s
+
+
+def build_auth():
+    s = (PRO / 'auth.html').read_text(encoding='utf-8')
+    s = to_beginner_colors(s)
+    s = rep(s, '｜四柱推命占い 自動鑑定</title>', f'｜{B_NAME}</title>', 1)
+    s = rep(s, 'mypage-pro.html', 'mypage.html')
+    s = rep(s, 'pricing-pro.html', 'pricing.html')
+    s = rep(s, "AFTER_LOGIN: 'app-pro.html'", "AFTER_LOGIN: 'app-beginner.html'", 1)
+    s = s.replace('terms-pro.html', 'terms.html').replace('tokushoho-pro.html', 'tokushoho.html').replace('privacy-pro.html', 'privacy.html')
+    s = rep(s, '© 四柱推命占い自動鑑定（72k株式会社）', f'© {B_NAME}（72k株式会社）', 1, 'フッターの社名')
+    s = rep(s, 'P-20261010-7K3QX-A9M2Z', 'B-20261010-7K3QX-A9M2Z', 2, 'お申し込み番号の例')
+    (BEG / 'auth.html').write_text(s, encoding='utf-8')
+
+
+def common_links(s):
+    s = rep(s, '四柱推命占い<span>自動鑑定</span>', '今日から <span>占い師</span>', 1, 'ヘッダーの名前')
+    s = s.replace('app-pro.html', 'app-beginner.html').replace('mypage-pro.html', 'mypage.html').replace('pricing-pro.html', 'pricing.html')
+    s = s.replace('terms-pro.html', 'terms.html').replace('tokushoho-pro.html', 'tokushoho.html').replace('privacy-pro.html', 'privacy.html')
+    s = rep(s, '© 四柱推命占い自動鑑定（72k株式会社）', f'© {B_NAME}（72k株式会社）', 1, 'フッターの社名')
+    return s
+
+
+def build_pricing():
+    s = (PRO / 'pricing-pro.html').read_text(encoding='utf-8')
+    s = to_beginner_colors(s)
+    # 頭（タイトル・説明・OGP・PWA）はビギナー用に差し替え
+    i = s.index('<meta name="theme-color"'); j = s.index('<style>')
+    s = s[:i] + ('<title>無料ではじめる｜今日から占い師</title>\n'
+                 '<meta name="description" content="一週間の無料トライアル。今日から四柱推命の自動鑑定をはじめられます。無料期間中の解約は費用0円。">\n') + s[j:]
+    s = common_links(s)
+    s = rep(s, '<span class="badge">経験を、もっと速く・深く。</span>', '<span class="badge">習ったことがなくて、大丈夫。</span>', 1)
+    s = rep(s, '<br>本格鑑定を、はじめる。</h1>', '<br>今日から占い師をはじめる。</h1>', 1)
+    s = rep(s, '    <!-- お申し込みで困ったとき -->', '''    <ul class="rz">
+      <li><span class="ck">✓</span>知識ゼロからでも大丈夫。生年月日を入れるだけで、やさしい文章が出てきます。</li>
+      <li><span class="ck">✓</span>鑑定は1件ごとの追加料金なし。詳細鑑定は1日の上限なし。月の利用枠を使い切っても、オフラインの詳細鑑定で続けられます。無料期間中は1日3回までです。</li>
+      <li><span class="ck">✓</span>スマホひとつで、場所を問わず鑑定。鑑定文はそのままLINEで送れます。</li>
+      <li><span class="ck">✓</span>合わなければ、いつでも解約OK。無料期間中の解約は費用0円です。</li>
+    </ul>
+
+    <!-- お申し込みで困ったとき -->''', 1)
+    s = rep(s, "var ORDER_PREFIX='P';", "var ORDER_PREFIX='B';", 1)
+    (BEG / 'pricing.html').write_text(s, encoding='utf-8')
+
+
+def build_mypage():
+    s = (PRO / 'mypage-pro.html').read_text(encoding='utf-8')
+    s = to_beginner_colors(s)
+    i = s.index('<meta name="theme-color"'); j = s.index('<style>')
+    s = s[:i] + '<title>マイページ｜今日から占い師</title>\n<meta name="robots" content="noindex">\n' + s[j:]
+    s = common_links(s)
+    (BEG / 'mypage.html').write_text(s, encoding='utf-8')
+
+
+if __name__ == '__main__':
+    build_app()
+    build_auth()
+    build_pricing()
+    build_mypage()
+    shutil.copyfile(PRO / 'pklove.js', BEG / 'pklove.js')
+    print('OK: beginner/app-beginner.html, beginner/auth.html, beginner/pricing.html, beginner/mypage.html, beginner/pklove.js を生成しました。'
+          ' beginner/sw.js の CACHE を1つ上げてください。')

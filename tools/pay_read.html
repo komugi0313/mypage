@@ -1,0 +1,37 @@
+<style id="pay-read-css">
+/* 読みやすさ（tools/add_pay_read.py が付与）：行末の泣き別れ防止。文言・内容は変えない */
+p,li,dd,dt,summary,h1,h2,h3{line-break:strict}
+.tb-nb{white-space:nowrap}
+</style>
+<script id="pay-read">
+/* 申込・ログイン・マイページ用：段落の最後の4文字（句読点・かっこは数えない）を1かたまりにして、最終行が1〜2文字だけになる「泣き別れ」を防ぐ（行数は増えない）。
+   あとから差し込まれる文（確認画面・お知らせ）にも効くよう、変化を見張ってかけ直す。 */
+(function(){
+  var SEL='p,li,dd,dt,summary,h1,h2,h3,.lead,.sub,.alert,.hint,.cta-sub,.pay-note,.tip,.terms,.fine,.msg,#msg,.err,.cf-warn,.already';
+  function glue(el){
+    if(el.dataset.tbno===el.textContent||el.closest('table')) return;
+    if(/flex|grid/.test(getComputedStyle(el).display)) return;  // 横並びの箱（チェック印つきの行など）は崩れるので触らない
+    var len=el.textContent.trim().length;
+    var t=el.lastChild;
+    while(t&&t.nodeType===3&&!t.nodeValue.trim()) t=t.previousSibling;
+    while(t&&t.nodeType===1&&t.lastChild&&/^(inline|inline-block)$/.test(getComputedStyle(t).display)&&!t.classList.contains('tb-nb')) t=t.lastChild;
+    if(t&&t.nodeType===3&&len>=10){
+      var v=t.nodeValue.replace(/\s+$/,'');
+      if(v.length>=6){
+        var k=4+((v.match(/[。、．，）」』】！？!?.,:：・）)]+$/)||[''])[0].length), W=/[ァ-ヶーA-Za-z0-9@.]/; while(k<9&&k<v.length&&W.test(v.charAt(v.length-k))&&W.test(v.charAt(v.length-k-1))) k++;  // カタカナ語・英数字の途中では切らない
+        var sp=document.createElement('span'); sp.className='tb-nb'; sp.textContent=v.slice(-k);
+        t.nodeValue=v.slice(0,-k); t.parentNode.insertBefore(sp,t.nextSibling);
+      }
+    }
+    el.dataset.tbno=el.textContent;
+  }
+  function fix(root){ (root||document).querySelectorAll(SEL).forEach(glue); }
+  function start(){
+    fix();
+    var busy=false;
+    new MutationObserver(function(){ if(busy) return; busy=true; requestAnimationFrame(function(){ fix(); busy=false; }); })
+      .observe(document.body,{childList:true,subtree:true,characterData:true});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
+</script>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja" translate="no" class="notranslate">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google" content="notranslate">
+<title>Numinous エンジン診断</title>
+<style>
+  body{font-family:-apple-system,system-ui,sans-serif;background:#111;color:#eee;margin:0;padding:16px;line-height:1.6}
+  h1{font-size:18px;color:#e8c37a}
+  .step{border:1px solid #333;border-radius:10px;padding:10px 12px;margin:8px 0;font-size:14px}
+  .ok{border-color:#3a7} .ng{border-color:#e55;background:#2a1414}
+  .wait{border-color:#886}
+  b{font-size:15px}
+  .v{color:#9ad;word-break:break-all}
+  #verdict{font-size:16px;font-weight:800;padding:14px;border-radius:10px;margin-top:12px}
+  .vok{background:#123a2a;color:#7fd6a8} .vng{background:#3a1212;color:#ff9a8a}
+  small{color:#999}
+</style>
+</head>
+<body>
+<h1>Numinous エンジン診断ページ</h1>
+<div><small>このページは、お使いの端末で計算エンジンが動くかを1段階ずつ検査します。最後まで進んだら（または止まったら）この画面全体のスクリーンショットを送ってください。</small></div>
+<div id="steps"></div>
+<div id="verdict"></div>
+<!-- A: アプリ本体と同じ条件（fixed・幅800px：狭幅だとエンジンが縦書きになり
+     iOSで文字が泣き別れる／fixedでないと親ページがスクロールで飛ぶ）。
+     Bは A 失敗時にだけ動的生成（2枚同時起動は互いに干渉するため） -->
+<iframe id="engA" src="meishiban_pillars.html" style="position:fixed;width:800px;height:640px;opacity:0.01;left:-99999px;top:0;border:0;pointer-events:none" title="engineA" translate="no"></iframe>
+<script src="bazi-bridge.js"></script>
+<script>
+const steps=document.getElementById('steps');
+function add(id,label){const d=document.createElement('div');d.className='step wait';d.id='s'+id;d.innerHTML='<b>'+id+'. '+label+'</b><div class="v">検査中…</div>';steps.appendChild(d);return d;}
+function set(id,ok,val){const d=document.getElementById('s'+id);d.className='step '+(ok?'ok':'ng');d.querySelector('.v').textContent=(ok?'✅ ':'❌ ')+val;}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const frameErrors=[];
+window.addEventListener('error',e=>frameErrors.push('page: '+(e.message||e.type)+' @'+(e.filename||'').split('/').pop()+':'+(e.lineno||'')));
+
+async function probe(iframe,tag){
+  // アプリ本体と同じ流儀：contentDocument を毎回取り直しながら、
+  // フォームのボタンに「動作の配線」が済むまで待つ（最大40秒）
+  let doc=null, go=null, sawDoc=false, hooked=false, sawBtn=false;
+  for(let i=0;i<134;i++){
+    try{doc=iframe.contentDocument;}catch(e){doc=null;}
+    if(doc){
+      sawDoc=true;
+      if(!hooked){ try{ iframe.contentWindow.addEventListener('error',e=>frameErrors.push(tag+': '+(e.message||e.type))); hooked=true; }catch(e){} }
+      const g=doc.getElementById('f-go');
+      if(g){ sawBtn=true; if(typeof g.onclick==='function'){ go=g; break; } }
+    }
+    await sleep(300);
+  }
+  if(!sawDoc)return {fail:'access',msg:'エンジン内部にアクセスできません'};
+  if(!go)return {fail:'form',msg: sawBtn
+    ? '40秒待ってもエンジンの初期化（ボタンの配線）が終わりません — 端末が非常に遅いかJSが途中停止'
+    : '40秒待っても入力フォーム(f-go)が現れません — エンジン内のJSが止まっています'};
+  let bc=false; try{bc=typeof iframe.contentWindow.baziCompute==='function';}catch(e){}
+  // full run
+  let out=null,err='';
+  try{ out=await BaZiBridge.readChartFromEngine(iframe,{date:'1985-07-20',time:'14:30',sex:'F'}); }catch(e){ err=e.message; }
+  return {fail:null,go:true,bc,out,err};
+}
+
+(async()=>{
+  add(0,'ブラウザ情報'); set(0,true,navigator.userAgent);
+
+  add(1,'localStorage');
+  try{localStorage.setItem('__t','1');localStorage.removeItem('__t');set(1,true,'使用可能');}
+  catch(e){set(1,false,'使用不可: '+e.message+'（プライベートブラウズ？）');}
+
+  add(2,'検査A：アプリと同じ非表示エンジンで計算（1985-07-20 14:30 女性）');
+  const A=await probe(document.getElementById('engA'),'engineA');
+  const okA=!A.fail&&A.out&&A.out.ok;
+  set(2, okA, okA
+    ? '成功: 日主='+A.out.dayMaster+' 強弱='+A.out.strength+' 用神='+A.out.favorable+' 月支元命='+A.out.tenGod+(A.out.pillars?' 日柱='+A.out.pillars.day:'')
+    : '失敗['+(A.fail||'run')+']: '+(A.msg||A.err||(A.out?('強弱='+A.out.strength+' 日主='+A.out.dayMaster+' 中心星='+A.out.tenGod+' — 必須項目が読めません'):'結果なし(null)'))
+      +(A.bc===false?' / baziCompute関数なし':''));
+
+  let okB=null;
+  if(!okA){
+    add(3,'検査B：エンジンをもう一度起動し直して再計算');
+    const fb=document.createElement('iframe');
+    fb.src='meishiban_pillars.html'; fb.title='engineB'; fb.setAttribute('translate','no');
+    fb.style.cssText='position:fixed;width:800px;height:640px;opacity:0.01;left:-99999px;top:0;border:0;pointer-events:none';
+    document.body.appendChild(fb);
+    const B=await probe(fb,'engineB');
+    okB=!B.fail&&B.out&&B.out.ok;
+    set(3, okB, okB
+      ? '成功: 日主='+B.out.dayMaster+' 強弱='+B.out.strength+' — 起動し直せば動く端末です（1回目は起動が間に合わなかっただけ）'
+      : '失敗['+(B.fail||'run')+']: '+(B.msg||B.err||'結果なし'));
+  }
+
+  add(4,'エンジン内部のJSエラー記録');
+  await sleep(300);
+  set(4,frameErrors.length===0,frameErrors.length?frameErrors.slice(0,4).join(' / '):'エラーなし');
+
+  const v=document.getElementById('verdict');
+  if(okA){
+    const good=A.out.dayMaster==='庚'&&A.out.strength==='strong';
+    v.className=good?'vok':'vng';
+    v.textContent=good?'✅ 診断結果：この端末でエンジンは完全に動作しています（期待値と一致）。それでもアプリ本体が赤文字の場合は、この画面と一緒に教えてください。'
+                      :'⚠️ 動作しましたが期待値(庚・身強)と異なります。この画面を送ってください。';
+  }else if(okB){
+    v.className='vng';
+    v.textContent='⚠️ 原因特定：エンジンの1回目の起動が間に合っていません（起動し直しの検査Bは成功）。最新版アプリは自動で再試行するので直っているはずです — この画面を送ってください。';
+  }else{
+    v.className='vng';
+    v.textContent='❌ 診断結果：この端末でエンジンが動いていません。上の各項目（特に検査A/Bと4番）を含む画面全体を送ってください。';
+  }
+})();
+</script>
+</body>
+</html>
