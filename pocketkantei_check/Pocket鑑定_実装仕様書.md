@@ -24,7 +24,7 @@
    - 非公開：zh（簡体）・vi・es・pt・id・th。訳文はコードに残してありますが、選べません（6.8）。直す時は、できればこの6言語もそろえてください（いつか戻す時のため）。
 8. **つらい気持ち・危機の相談への返事は、どの上限でも止めない。** AIが使えない時も、アプリが相談窓口つきの返事を出します（`safeReply`・`HELPLINE`）。
 9. **サイトのファイルを更新したら、`site/sw.js` のキャッシュ名を1つ上げる。**
-   - 今は `pocket-kantei-v120` です。次の更新では `v121` にします。
+   - 今は `pocket-kantei-v121` です。次の更新では `v122` にします。
    - 上げないと、利用者の端末に古い画面が残ります。
 10. **Gemini の本番プロジェクトは、前払いの残高と月の支出上限で運用する。** 通知も必ず受け取れるようにしてください（2.3）。残高が切れるか上限に達すると、全員のチャットが止まります。
 
@@ -69,6 +69,13 @@ tests/                     ← テスト一式。公開しません（10章）
 - **`lp.html` の文章（`I18N`・`PAGE_TITLE`・`PAGE_DESC`）を直したら、必ず `node tools/build-lp.js` を実行し、できたファイルも一緒にデプロイします。**
   - 本番のドメインがちがう時は `PK_SITE=https://○○ node tools/build-lp.js` で作ります。
   - 確認は `node tests/lppages.js`（25項目）です。
+- **海外はアプリだけで公開します（運営決定 2026-10-20）。** ストアのURLが決まったら、`lp.html` の `PK_STORE` に入れて `node tools/build-lp.js` を実行します。
+  - 例：`var PK_STORE=window.PK_STORE||{ios:'https://apps.apple.com/app/id○○',android:'https://play.google.com/store/apps/details?id=○○',langs:['en','ko','zt']};`
+  - 入れると、英語・韓国語・繁体中国語のページの「始める」ボタン（上・下・固定ボタン）がストアへ変わります。iPhone は App Store、Android は Google Play、パソコンはボタンの下に両方を出します。ログインの案内は隠します（ログインはアプリの中で）。
+  - 日本語のページはウェブ版のままです。日本でもストアへ送る時は `langs` に `'ja'` を足します。
+  - ストアのボタンは、今は文字と簡単な印で作っています。Apple・Google の公式バッジ画像に差しかえてもかまいません（各社の使い方の決まりに従ってください）。
+  - ストアで無料期間をカード登録ありの無料トライアルにする場合は、「カード不要」の表示（`ctaBadges`・`ctaNote`）を、その言語のページだけ直す必要があります。
+- ストアに載せる文章の下書きは `ストア掲載文_下書き.md` にあります（4言語。文字数は上限以内）。
 - 公開したら、Google Search Console にドメインを登録し、`https://pocketkantei.jp/sitemap.xml` を送ってください。
 
 ### 1.3 `server/`（Cloud Functions for Firebase）
