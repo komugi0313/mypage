@@ -240,6 +240,12 @@ async function runShichu(site, pageName) {
   await ctx.close(); s.close();
 }
 
+// 易：前の結果が出ているときは「次のお客様へ」で空にしてから次を鑑定する（結果が出たまま「鑑定する」を押すと、立て直しの確認が出るため）
+async function ekiNext(p) {
+  await p.evaluate(() => { const rs = document.getElementById('result'); const b = [...document.querySelectorAll('[data-next-cust]')][0]; if (rs && rs.style.display === 'block' && b) b.click(); const m = document.getElementById('nrModal'); if (m) m.remove(); });
+  await p.waitForTimeout(500);
+  await p.evaluate(() => { const c = document.querySelector('.ct-coin'); if (c && !c.classList.contains('on') && c.getAttribute('aria-pressed') !== 'true') c.click(); });
+}
 // ---------- 易 EKI Pro ----------
 async function runEki() {
   const site = 'eki-pro';
@@ -254,7 +260,7 @@ async function runEki() {
   for (const q of ALL_Q) {
     await p.evaluate(() => { ['hexName', 'shikaBox'].forEach(i => { const e = document.getElementById(i); if (e) e.innerHTML = ''; }); });
     counter.n = 0;
-    await p.fill('#question', q); await p.click('#goBtn');
+    await ekiNext(p); await p.fill('#question', q); await p.click('#goBtn');
     if (BLOCK_Q.includes(q)) { await p.waitForTimeout(1500); check('eki-pro', '鑑定（画面）', q, await p.evaluate(() => (document.getElementById('crisisPanel') || {}).innerText || ''), { calls: counter.n }); continue; }
     await waitFor(p, () => { const w = document.getElementById('fuWait'); const fs_ = document.getElementById('fuSend'); return document.getElementById('shikaBox').textContent.trim().length > 0 && (!w || getComputedStyle(w).display === 'none') && fs_ && !fs_.disabled; });
     await p.waitForTimeout(800);
@@ -326,7 +332,7 @@ async function runEkiPersonas() {
       const c = document.getElementById('custNewName'); if (c) { c.value = nm; c.dispatchEvent(new Event('input', { bubbles: true })); }
       const b = document.getElementById('fuBirthBox'); if (b) b.open = true; document.getElementById('fuBd').value = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`; document.getElementById('fuBt').value = h == null ? '' : String(h); document.getElementById('fuBd').dispatchEvent(new Event('change')); }, [pe.name, pe.bd]);
     counter.n = 0;
-    await p.fill('#question', pe.q); await p.click('#goBtn');
+    await ekiNext(p); await p.fill('#question', pe.q); await p.click('#goBtn');
     await waitFor(p, () => { const w = document.getElementById('fuWait'); const fs_ = document.getElementById('fuSend'); return document.getElementById('shikaBox').textContent.trim().length > 0 && (!w || getComputedStyle(w).display === 'none') && fs_ && !fs_.disabled; });
     await p.waitForTimeout(800);
     check('eki-pro', '鑑定（画面・' + pe.who + '）', pe.q, await p.evaluate(() => { const r = document.getElementById('result'); return r ? r.innerText : ''; }), { calls: counter.n, persona: pe });
