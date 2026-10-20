@@ -21,6 +21,7 @@
   --bg:#12161C; --surface:#1A2028; --ink:#E7EBF0; --muted:#9AA5B4; --rule:#2B333E; --soft:#222934; --born:#8792A2; --plus:#E27B64;
   --ei:#6AA9CF; --sn:#DDB65A; --tf:#62BE94; --jp:#A68BD3;
   --tint-ei:#1C2A35; --tint-sn:#2D2717; --tint-tf:#182B23; --tint-jp:#262033; color-scheme:dark}
+[hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.8;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .page{max-width:640px;margin:0 auto;padding-block:0 56px;display:flex;flex-direction:column;gap:20px}
@@ -52,6 +53,13 @@ h2{font-size:17px;margin:0 0 14px;text-wrap:balance}
 .seg button small{display:block;font-family:var(--sans);font-size:10.5px;font-weight:500;padding-bottom:6px}
 .seg button+button{border-top:1px solid var(--rule)}
 .seg button[aria-pressed="true"]{background:var(--c);color:#fff}
+.fork{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt{display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;font:inherit;padding:14px;border:1px solid var(--rule);border-radius:12px;background:var(--surface);color:var(--ink);cursor:pointer;box-shadow:0 2px 0 var(--rule)}
+.opt b{font-size:15px}
+.opt small{font-size:12px;color:var(--muted)}
+.opt:hover{background:var(--soft)}
+.opt[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+#pickField .btn{margin-top:8px}
 .slots{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:2px 0 2px}
 .slots span{font-family:var(--mono);font-weight:600;font-size:34px;line-height:1.3;text-align:center;border-bottom:3px solid var(--rule);color:var(--ink);transition:border-color .2s}
 .slots span.empty{color:var(--rule)}
@@ -151,7 +159,7 @@ button.alt{width:100%;border:0;font-family:inherit;line-height:1.7;cursor:pointe
     <div class="logo">16TYPE<em>+</em></div>
     <nav class="lang" aria-label="言語"><a href="#" aria-current="true">日本語</a><a href="#">EN</a><a href="#">한국어</a></nav>
   </header>
-  <p class="note">デザイン見本：生年月日とタイプを変えると、下の結果が実際に変わります</p>
+  <p class="note">デザイン見本（実際に診断できます）</p>
 
   <section class="card intro">
     <p class="eyebrow">16タイプの、その先へ</p>
@@ -160,23 +168,28 @@ button.alt{width:100%;border:0;font-family:inherit;line-height:1.7;cursor:pointe
     <div class="eq" aria-hidden="true"><span>いまのタイプ</span><b>+</b><span>生まれつきタイプ</span></div>
   </section>
 
-  <section class="card" aria-labelledby="formh">
-    <h2 id="formh">30秒でわかる</h2>
+  <section class="card" id="formCard" aria-labelledby="formh">
+    <h2 id="formh">診断をはじめる</h2>
     <div class="field">
       <span class="lbl">① 生年月日</span>
       <div class="date">
         <select id="y" aria-label="年"></select><select id="m" aria-label="月"></select><select id="d" aria-label="日"></select>
       </div>
     </div>
-    <div class="field" id="pickField">
-      <span class="lbl">② あなたの16タイプ</span>
+    <div class="field">
+      <span class="lbl">② 16タイプ診断を受けたことはありますか？</span>
+      <div class="fork">
+        <button type="button" class="opt" id="hasType" aria-pressed="false"><b>ある・覚えている</b><small>4文字を選ぶだけ（30秒）</small></button>
+        <button type="button" class="opt" id="quiz"><b>ない・忘れた</b><small>32問で診断する（約5分）</small></button>
+      </div>
+    </div>
+    <div class="field" id="pickField" hidden>
+      <span class="lbl">③ そのとき出たタイプを選んでください</span>
       <div class="slots" id="slots" aria-live="polite"></div>
       <div class="picker" id="picker"></div>
-      <p class="hint">ほかの診断で出たタイプでOK</p>
+      <p class="hint">ほかのサイトやアプリで出た結果でOK。迷ったら、いちばん最近の結果を。</p>
+      <button class="btn primary" type="button" id="go">結果を見る</button>
     </div>
-    <button class="alt" type="button" id="quiz">タイプを知らない・最近変わった気がする<br><b>→ 32問の診断で調べる（約5分）</b></button>
-    <div style="height:14px"></div>
-    <button class="btn primary" type="button" id="go">結果を見る</button>
   </section>
 
   <section class="card quiz" id="quizCard" hidden aria-live="polite">
@@ -190,7 +203,7 @@ button.alt{width:100%;border:0;font-family:inherit;line-height:1.7;cursor:pointe
     <button type="button" class="qlink qquit" id="qQuit">診断をやめて、タイプを選ぶ</button>
   </section>
 
-  <div id="result" style="display:contents">
+  <div id="result" style="display:none">
   <section class="card hero" aria-live="polite">
     <p class="eyebrow" id="rSrc">あなたのタイプ</p>
     <div class="combo"><span id="rNow">ENFP</span><span class="p">+</span><span class="b" id="rBorn">ISTJ</span></div>
@@ -268,13 +281,16 @@ AX.forEach((A,i)=>{const g=document.createElement("div");g.className="seg";g.sty
   bt.setAttribute("aria-pressed","false");bt.onclick=()=>{sel[i]=l;g.classList.add("done");[...g.children].forEach(c=>c.setAttribute("aria-pressed",c===bt));drawSlots(i);};g.appendChild(bt);});
  pk.appendChild(g);});
 drawSlots(-1);
-$("go").onclick=()=>{if(sel.includes(null))return;st.t=sel.slice();st.pct=null;st.half={};render();document.querySelector(".hero").scrollIntoView({behavior:"smooth"});};
+$("go").onclick=()=>{if(sel.includes(null))return;st.t=sel.slice();st.pct=null;st.half={};showResult();render();document.querySelector(".hero").scrollIntoView({behavior:"smooth"});};
 /* ---- 32問 ---- */
 const SCALE=[["とても当てはまる",5,22],["当てはまる",4,18],["やや当てはまる",3,14],["やや当てはまらない",2,14],["当てはまらない",1,18],["まったく当てはまらない",0,22]];
 const AXN={EI:0,SN:1,TF:2,JP:3};
 let qa=[],qi=0,tbList=[],tbAns={};
 function setPicker(){st.t.forEach((v,i)=>sel[i]=v);[...pk.children].forEach((g,i)=>{g.classList.add("done");[...g.children].forEach(c=>c.setAttribute("aria-pressed",c.firstChild.textContent===st.t[i]));});drawSlots(-1);}
-function showQuiz(on){$("quizCard").hidden=!on;$("pickField").hidden=on;$("quiz").hidden=on;$("go").hidden=on;$("result").style.display=on?"none":"contents";}
+let shown=false;
+function showResult(){shown=true;$("result").style.display="contents";}
+function showQuiz(on){$("quizCard").hidden=!on;$("formCard").hidden=on;$("result").style.display=(!on&&shown)?"contents":"none";}
+$("hasType").onclick=()=>{$("hasType").setAttribute("aria-pressed","true");$("pickField").hidden=false;$("pickField").scrollIntoView({behavior:"smooth",block:"nearest"});};
 $("quiz").onclick=()=>{qa=new Array(QZ.Q.length).fill(null);qi=0;tbList=[];tbAns={};showQuiz(true);drawQ();$("quizCard").scrollIntoView({behavior:"smooth",block:"start"});};
 $("qQuit").onclick=()=>{showQuiz(false);};
 $("qBack").onclick=()=>{if(qi>0){qi--;drawQ();}else showQuiz(false);};
@@ -298,7 +314,7 @@ function next(){qi++;
  if(qi>=QZ.Q.length+tbList.length){finish();return;}drawQ();}
 function finish(){const sc=scoreAll();st.pct={};st.half={};
  AX.forEach((A,i)=>{const[a,b]=sc[A.k],tot=a+b||1;st.t[i]=a>b?A.a:a<b?A.b:natal(st.y,st.m,st.d).t[i];st.pct[A.k]=Math.round(b/tot*100);st.half[A.k]=Math.abs(a-b)<=4||tbAns[A.k]!=null;});
- setPicker();showQuiz(false);render();document.querySelector(".hero").scrollIntoView({behavior:"smooth"});}
+ setPicker();showResult();showQuiz(false);render();document.querySelector(".hero").scrollIntoView({behavior:"smooth"});}
 function render(){
  const N=natal(st.y,st.m,st.d),now=st.t.join(""),born=N.t;
  $("rSrc").textContent=st.pct?"32問の診断結果":"あなたのタイプ";
