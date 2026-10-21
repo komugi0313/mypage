@@ -27,7 +27,7 @@ PRO, BEG = ROOT / 'pro', ROOT / 'beginner'
 
 B_TITLE = '今日から占い師｜毎日使える、自分だけの鑑定ツール'
 B_NAME = '今日から占い師'
-B_DESC = '生年月日を入れるだけで、命式・大運・年運・相性まで自動で読み解く四柱推命ツール。はじめてでも、やさしい言葉で本格鑑定ができます。'
+B_DESC = '生年月日を入れるだけで、生まれ持った性質・運の流れ・相性まで、ふつうの言葉で読み解く鑑定ツール。知識ゼロでも、今日から鑑定ができます。'
 B_URL = 'https://www.suimei.jp/app-beginner.html'
 B_OGP = 'https://www.suimei.jp/og-image.png'
 
