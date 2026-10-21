@@ -503,6 +503,9 @@
   .rd-q .rd-tg{display:block;font-size:13px;color:var(--ink2);font-weight:800;margin-top:5px}
   .rd-item.closed .rd-body{display:none}
   .rd-item.closed .rd-q .tx{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .rd-item:not(.closed):not(.qfull) .rd-q .tx{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}   /* 長い相談文（チャットの貼りつけなど）は3行まで。答えを下に押し出さない */
+  .rd-qfull{display:inline-block;margin:-4px 0 8px 6px;border:0;background:none;color:var(--sui);font:inherit;font-size:13px;font-weight:800;cursor:pointer;text-decoration:underline}
+  .rd-item.closed .rd-qfull{display:none}
   .rd-item .rd-prev{display:none}
   .rd-item.closed .rd-prev{display:block;font-size:14px;color:var(--ink2);line-height:1.7;margin:-2px 0 4px 6px}
   .go.busy{opacity:.85;pointer-events:none}
@@ -6094,7 +6097,7 @@ function formatReading(text){
 function copyReading(btn){
   const card=btn.closest('.reading-card');if(!card)return;
   const _it=card.closest('.rd-item'), _q=_it?(_it.dataset.q||''):'';
-  const txt=((_q?'ご相談：'+_q+'\n\n':'')+Array.from(card.childNodes).filter(n=>n!==btn&&!(n.classList&&(n.classList.contains('r-teller')||n.classList.contains('r-legend')))).map(n=>(n.innerText||n.textContent)).join('\n')).replace(/\n{3,}/g,'\n\n').trim();   // お客様に渡す文章なので、鑑定士向けの「お伝え方」は入れない
+  const txt=((_q?'ご相談：'+pkQShort(_q)+'\n\n':'')+Array.from(card.childNodes).filter(n=>n!==btn&&!(n.classList&&(n.classList.contains('r-teller')||n.classList.contains('r-legend')))).map(n=>(n.innerText||n.textContent)).join('\n')).replace(/\n{3,}/g,'\n\n').trim();   // お客様に渡す文章なので、鑑定士向けの「お伝え方」は入れない
   const done=()=>{const t=btn.textContent;btn.textContent='✓ コピー';btn.classList.add('done');setTimeout(()=>{btn.textContent=t;btn.classList.remove('done');},1400);};
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt,done));}
   else fallbackCopy(txt,done);
@@ -6569,14 +6572,15 @@ var pkFixYomi=(function(){ var G='甲乙丙丁戊己庚辛壬癸', GY=['きの�
 window.pkFixYomi=pkFixYomi;
 const YOMI_FIX=[[/てんいつきじん/g,'てんおつきじん'],[/テンイツキジン/g,'テンオツキジン'],[/天乙貴人（てんいつ/g,'天乙貴人（てんおつ'],[/ぎょうざい|きょうざい/g,'ごうざい']];
 var pkSoftWord=function(s){ return String(s==null?'':s).replace(/(このご相談には、)?(占いで(?:は)?[^。\n]{0,10}?)お答え(?:すること[はが]?)?できません/g,function(m,p,a){ return p?m:a+'言い切ることはしません'; }).replace(/(占いで(?:は)?[^。\n]{0,10}?)判断(?:すること[はが]?)?できません/g,'$1言い切ることはしません').replace(/(このご相談には、)?(占いで(?:は)?[^。\n]{0,10}?)お伝え(?:すること[はが]?)?できません/g,function(m,p,a){ return p?m:a+'言い切ることはしません'; }).replace(/言い切ること[はが]?できません/g,'言い切ることはしません').replace(/(数字で|ハッキリと?|はっきりと?)お(伝え|答え)すること[はが]?できません/g,'$1お$2することはしません').replace(/必ず(?!しも)(?=[^。\n]{0,24}?(開け|ひらけ|来ま|来る|やって|訪れ|過ぎ|乗り越え|戻|見えて|叶|実を|実り|報われ|理解|力になって|良くな|よくな|うまく|好転|届き|伝わ|道が|チャンス|光))/g,'きっと').replace(/必ず(?!しも)([^。！？\n]*)/g,function(m,mid){ return /ください|ましょう|避け|相談|休|作って|作る|取る|守|気をつけ|確認|しないで|ないように|頼っ|話して|なければ|ね。?$/.test(mid)?m:'きっと'+mid; }); };   // 文の終わり方に関係なく、未来を言い切る「必ず」は「きっと」に   // 未来を言い切る「必ず〜ます」は「きっと」に（「必ず〜ください」「必ず相談を」などのすすめはそのまま）   // 「占いではお答えできません」のような突き放す言い方を、やわらかく（鑑定者本人の指示 2026-10-19。答えない相談の決まった案内はそのまま）
-function noAIWord(t){ t=String(t||'').replace(/주치(의|医)/g,'主治医').replace(/【見出し[：:]?\s*/g,'【').replace(/【([^】\n]{0,40})\n+\s*([^】\n]{0,60})】/g,'【$1$2】').replace(/【\s*】/g,'');   // 【 】の中で改行した見出しをつなぐ（【見出し⏎…】のくずれ）
+function pkFixHangul(t){ t=String(t==null?'':t); if(!/[ᄀ-ᇿ㄰-㆏가-힯]/.test(t)) return t; const M=[['에는','には'],['에서','で'],['에게','に'],['으로','で'],['하다','する'],['로','で'],['은','は'],['는','は'],['이','が'],['가','が'],['을','を'],['를','を'],['의','の'],['에','に'],['도','も'],['와','と'],['과','と']]; M.forEach(function(p){ t=t.split(p[0]).join(p[1]); }); return t.replace(/[ᄀ-ᇿ㄰-㆏가-힯]/g,''); }   /* 文章に韓国語の文字がまざったときは、日本語に直してから出す（発注者指示 2026-10-21） */
+function noAIWord(t){ t=pkFixHangul(String(t||'').replace(/주치(의|医)/g,'主治医')).replace(/【見出し[：:]?\s*/g,'【').replace(/【([^】\n]{0,40})\n+\s*([^】\n]{0,60})】/g,'【$1$2】').replace(/【\s*】/g,'');   // 【 】の中で改行した見出しをつなぐ（【見出し⏎…】のくずれ）
     return pkSoftWord(pkFixYomi(_noAIWord0(t))); }   // 記号（**など）を消したあとにも、読み仮名とやわらげをもう一度
   function _noAIWord0(t){ t=pkSoftWord(pkFixYomi(t)); YOMI_FIX.forEach(function(f){ t=String(t||'').replace(f[0],f[1]); }); return String(t||'')
     .replace(/(?:私|わたし|わたくし)(?:は|も)(?:AI|ＡＩ|人工知能)(?:です|でございます|だ|な)?(?:ので|から|のため|として)[^、。！？\n]*[、]?/g,'')
     .replace(/(?:私|わたし|わたくし)(?:は|も)(?:AI|ＡＩ|人工知能)[^。！？\n]*[。！？]?/g,'')
     .replace(/(?:AI|ＡＩ|人工知能)(?:である|なので|ですので|ですから|のため|として)(?:私|わたし)?[^、。！？\n]*[、]?/g,'')
     .replace(/(?:AI|ＡＩ|人工知能)(?:による|が行う|の|が)?(分析|鑑定|診断|回答|判断|読み解き|占い)/g,'$1'); }
-const ANSWER_RULE='\n【答えの出し方＝最優先・ほかの構成指示より先に、どの鑑定でも必ずこの順で書き始める】このツールは、鑑定士がお客様の前で、その場ですぐアドバイスするためのもの。読んだ鑑定士がひと目で「良いのか悪いのか」「どうすればよいのか」を言えるように書く。\n1行目：結論を一文だけ（見出しなし）。相談に良し悪しがあるときは「おすすめです」「条件つきで良い」「今は慎重に」「おすすめできません」のどれかがはっきり分かる言い方にし、あいまいにぼかさない。相談がない鑑定（命式の読み解き・その日/その月の運気など）では、いちばん伝えたいことを一文で。\n【お客様へのお伝え方】鑑定士がそのまま声に出して伝えられる、やさしい話し言葉の文章を8〜12文（300〜450字ほど。後に続く「くわしい読み解き」の字数とは別枠）。専門用語は使わず、ふつうの言葉で（「〜ですね」「〜していきましょう」）。次の流れで、読んだ鑑定士がこれだけで十分にアドバイスできる厚みにする：①結論（良いか悪いか）→②そう言える理由を、生まれ持った性質やいまの運の流れから、ふつうの言葉で2〜3文→③いまの状況や気持ちへの共感→④具体的にどうすればよいか（人との関わり方・気をつけること）→⑤時期の目安（あれば西暦。良い時期と気をつけたい時期）→⑥前向きになれる励ましのひとこと。同じことの言いかえや水増しはしない。\n【どうすればよいか】具体的な行動を「・」の箇条書きで3つ（時期があれば西暦で）。\nこのあとに「【くわしい読み解き】」と1行書き、その下に、ここまでの答えの根拠となる読み解きを、指定された構成（見出し・ブロック）で続ける。指定の構成にある「1行目の結論」はすでに書いたので繰り返さない。最後の【今できること】は【どうすればよいか】と重なるので書かない。\n略奪・相手を不幸にするなど人を傷つける望みには、その方法は勧めず、相談者が幸せになれる別の道を結論にする（責めずに、やさしく）。';
+const ANSWER_RULE='\n【答えの出し方＝最優先・ほかの構成指示より先に、どの鑑定でも必ずこの順で書き始める】このツールは、鑑定士がお客様の前で、その場ですぐアドバイスするためのもの。読んだ鑑定士がひと目で「良いのか悪いのか」「どうすればよいのか」を言えるように書く。\n1行目：結論を一文だけ（見出しなし）。相談に良し悪しがあるときは「おすすめです」「条件つきで良い」「今は慎重に」「おすすめできません」のどれかがはっきり分かる言い方にし、あいまいにぼかさない。相談がない鑑定（命式の読み解き・その日/その月の運気など）では、いちばん伝えたいことを一文で。\n【お客様へのお伝え方】鑑定士がそのまま声に出して伝えられる、やさしい話し言葉の文章を8〜12文（300〜450字ほど。後に続く「くわしい読み解き」の字数とは別枠）。専門用語は使わず、ふつうの言葉で（「〜ですね」「〜していきましょう」）。お客様に直接話しかける文だけで書き、「〜とお伝えください」「〜と声をかけてあげてください」「お客様には」のような鑑定士への指示や説明は書かない（この文はそのままお客様に送られることがある）。次の流れで、読んだ鑑定士がこれだけで十分にアドバイスできる厚みにする：①結論（良いか悪いか）→②そう言える理由を、生まれ持った性質やいまの運の流れから、ふつうの言葉で2〜3文→③いまの状況や気持ちへの共感→④具体的にどうすればよいか（人との関わり方・気をつけること）→⑤時期の目安（あれば西暦。良い時期と気をつけたい時期）→⑥前向きになれる励ましのひとこと。同じことの言いかえや水増しはしない。\n【どうすればよいか】具体的な行動を「・」の箇条書きで3つ（時期があれば西暦で）。\nこのあとに「【くわしい読み解き】」と1行書き、その下に、ここまでの答えの根拠となる読み解きを、指定された構成（見出し・ブロック）で続ける。指定の構成にある「1行目の結論」はすでに書いたので繰り返さない。最後の【今できること】は【どうすればよいか】と重なるので書かない。\n略奪・相手を不幸にするなど人を傷つける望みには、その方法は勧めず、相談者が幸せになれる別の道を結論にする（責めずに、やさしく）。';
 const ANSWER_ONLY_RULE='\n【今回書くのは冒頭の答えだけ＝最優先】1行目の結論・【お客様へのお伝え方】・【どうすればよいか】の3つだけを書いて終える。【くわしい読み解き】以降は別に作るので、一切書かない。';
 const DETAIL_ONLY_RULE='\n【今回書くのは、くわしい読み解きだけ＝最優先】冒頭の結論・お客様へのお伝え方・どうすればよいかは別に作成済み（下に示す）なので書かない。1行目の結論も「【くわしい読み解き】」の見出しも書かず、指定された構成の【見出し】ブロックからいきなり書き始める。最後の【今できること】も書かない。先に作成した答えと食い違わないように、その根拠を命式の要素を名指しで、指定の字数どおり十分に書く。';
 const NO_AI_RULE='\n【言葉の決まり】「AI」「人工知能」という言葉は使わない。自分が何者か（AIである等）の説明や断り書きも書かない。鑑定者として自然に書く。';
@@ -6703,7 +6707,7 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
     // ② くわしい読み解き：先に出した答えと食い違わないよう、答えを渡して根拠を書かせる
     const D=await generateReading('〔PART:detail〕\n'+user+'\n\n【先に作成した答え（これと食い違わないように、その根拠を書く）】\n'+ans,localText,undefined,deep);
     if(stale())return;
-    const det=D.online?String(D.text).replace(/^[\s　]*[【\[]?くわしい読み解き[】\]]?[\s　]*/,''):localText;
+    const det=D.online?String(D.text).replace(/^[\s　]*[【\[]?くわしい読み解き[】\]]?[\s　]*/,''):(D.text||localText);   // 端末内の文に切りかえたときも、generateReading が用意した文（ビギナーならやさしい文）を使う
     const full=ans+'\n\n【くわしい読み解き】\n'+det;
     out.innerHTML=sc+engineBadge(true,D.online?'':'くわしい読み解きは通信できなかったため、端末内で作成した内容を表示しています。')+formatReading(full);
     attachReadingTools(out,full);
@@ -6769,7 +6773,7 @@ function rdJumpTo(el){ if(!el)return; try{ const _jn=document.getElementById('ju
   const y=el.getBoundingClientRect().top+window.scrollY-_off; window.scrollTo({top:y<0?0:y,behavior:'auto'}); }catch(e){} }
 function consultParts(worry){
   const _tp=consultTopics(worry);   // 質問の内容（恋愛・仕事など）→ 送る命式データと指示を、関係する分だけにする
-  const head=`〔TOPIC:${_tp.join(',')||'-'}〕\n【確定済みの命式】\n${consultChartText(chart,_tp)}\n\n【相談者の悩み】\n${worry}\n\nこの悩みに、上の命式を唯一の根拠として答えてください。聞かれていないテーマ（恋愛の相談でのお金の話など）は書かない。ただし時期は省かない：日運・月運・年運・大運・30年の流れ（節木運）まで確かめ、「いつ」を西暦・月で示す（恋愛・結婚・人間関係は特に時期で答えが変わる）。\n`;
+  const head=`〔TOPIC:${_tp.join(',')||'-'}〕\n【確定済みの命式】\n${consultChartText(chart,_tp)}${pkPrevContext()}\n\n【相談者の悩み】\n${worry}\n\nこの悩みに、上の命式を唯一の根拠として答えてください。聞かれていないテーマ（恋愛の相談でのお金の話など）は書かない。ただし時期は省かない：日運・月運・年運・大運・30年の流れ（節木運）まで確かめ、「いつ」を西暦・月で示す（恋愛・結婚・人間関係は特に時期で答えが変わる）。\n`;
   const struct=`重要:必ず命式の具体的な要素（星名・五行の数・干支・大運/年運の干支）を文中に挙げ、「この要素があるから、こう言える」という理屈をセットで示すこと。曖昧で誰にでも当てはまる表現は禁止。\n【この相談への集中＝最優先で厳守】目的はただ一つ、相談者が聞いた質問にまっすぐ答えること。挨拶・長い前置き・聞かれていない全体的な性格紹介や自分史は書かない。無関係なテーマへ脱線せず、同じ内容を言い換えて何度も繰り返さない（水増し・引き延ばし禁止）。\n構成（必ず守る）：\n・1行目に結論を一文だけ（前置き・見出しなし）。\n・「【見出し】」付きの短いブロックを2〜3個（各2〜4文）。悩みに直接答える根拠を、星・五行・大運/年運を名指しで示す。\n・「いつ?」を含む質問（恋愛・結婚・婚活・転職・来年の運気など）は、「大運の流れ」「今後5年の年運の流れ」「恋愛・結婚の手がかり」を根拠に、具体的な年代・西暦の年を必ず挙げて時期を示す（断定せず「縁が動きやすい時期」として）。\n・大事な語は**太字**に。全体700〜900字。読み応えのある十分な分量で、根拠と具体例を厚めに（ただし水増し・繰り返しはしない）。`;
   const easy=head+`【書き方＝最重要】占い師にも占い初心者にも、すっと頭に入るように書く。専門用語（通変星・十二運・蔵干・干支・五行など）は省かず使ってよいが、出てきたら必ずその場で“ふつうの言葉”で短く言いかえる（例:「正官（規律と責任を大切にする星）」）。一文は短めにし、つなぎを丁寧に。内容・根拠・結論は変えない。\n`+struct;
   const pro=head+struct;
@@ -6785,11 +6789,14 @@ function doConsult(){
     er.textContent='相談したい内容を入力してください。'; try{wEl.focus();}catch(e){} return null; }
   if(er) er.remove();
   if(!box||!chart) return null;
+  { const st=pkStale(); if(st){ if(!er){ er=document.createElement('div'); er.id='worry-err'; er.className='err'; const qb=wEl&&wEl.closest('.qbox'); (qb||wEl||box).insertAdjacentElement('afterend',er); }
+      er.textContent=st; return null; } }   // 名前・生年月日を書きかえたのに、前の方の命式のまま答えない
   const P=(window.__pf&&window.__pf.q===worry&&window.__pf.P)||consultParts(worry);   // 鑑定ボタンで先に頼んだ答えと同じ文面を使う（二重に頼まない）
   box.querySelectorAll('.rd-item').forEach(rdCloseItem);
   const it=document.createElement('div'); it.className='rd-item'; it.dataset.q=worry;
   it.innerHTML='<button type="button" class="rd-q" aria-expanded="true"><span class="lb">ご相談</span><span class="tx"></span><span class="rd-tg">▲ この答えを閉じる</span></button><div class="rd-prev"></div><div class="reading rd-body"></div>';
   it.querySelector('.rd-q .tx').textContent=worry;
+  if(worry.length>80||/\n.*\n.*\n/.test(worry)){ const fb=document.createElement('button'); fb.type='button'; fb.className='rd-qfull no-print'; fb.textContent='相談の全文を見る'; fb.onclick=function(){ const on=it.classList.toggle('qfull'); fb.textContent=on?'相談を短く表示する':'相談の全文を見る'; }; it.querySelector('.rd-q').insertAdjacentElement('afterend',fb); }
   it.querySelector('.rd-q').onclick=function(){ if(it.classList.contains('closed')) rdOpenItem(it); else rdCloseItem(it); };
   box.appendChild(it);
   if(wEl) wEl.value='';   // 質問は見出しに残るので、欄は次の質問のために空ける
@@ -6802,7 +6809,20 @@ function doConsult(){
 const READ_STRUCT=`重要:各項目で必ず命式の具体的な要素（星名・五行の数・干支・蔵干・大運/年運の干支・合冲）を名指しで挙げ、「この要素があるから、こう言える」という理屈をセットで示すこと。曖昧で誰にでも当てはまる表現は禁止。この人だけの特徴を語る。\n構成（必ず守る・各見出しは【】で囲む）：\n・1行目に「どんな人か」を一文で結論（前置き・見出しなし）。\n【基本性質】日主と五行バランス（数を明示）から、性格の核を根拠込みで。★提供データの「命式内の会局」に三合・方合が成立していれば、その人は生まれつき運が強く良い暗示を持つ「会局を持つ強運の型」なので、冒頭の結論か【基本性質】で必ず前向きにはっきり触れる（何も巡らなくても常時働く土台の強み。強さは三合＞方合。該当の五行が既に太過のときだけ偏りに一言添える）。\n【才能・適性】通変星の構成（どの星が何個あるか）から、活きる場・向く動き方を根拠込みで。とくに提供データの「通変星の集計」で<b>最も多い星（3つ以上＝強く出る／4つ以上＝太過）</b>は、その人の個性を最も強く決める核なので<b>必ず主役として目立たせ</b>、強み（際立つ才能）と注意点（過多で出やすいクセ）の両面を、その星名と個数を挙げて具体的に描く（例:「食神が4つで太過＝表現や楽しむ力が突出する一方、のんびり・詰めの甘さに注意」）。多い星を一般論で薄めない。<b>適職は一つの星の固定リストをそのまま答えにせず</b>、多い星・五行の強弱・十二運・身旺・身弱・今の大運を総合して、その人に合う職種と働き方を導く。提供データに<b>「通変星の特定の組み合わせ」（倒食・傷官見官・食神制殺・官印相生・財印交戦・劫財奪財など）</b>や<b>「通変グループの偏り」</b>があれば、その意味（吉/注意）とアドバイスを必ず織り込む（命式内だけでなく大運・年運の巡りで成立するものも、その時期の注意/好機として述べる）。\n【対人・関係性】命式内の合・冲・干合など（あれば干支を挙げて）の意味を根拠込みで。なければ五行配置から対人傾向を。\n【運の流れ】「大運の流れ」「大運の通変グループの移り変わり」「節木運（30年周期の季節と節目）」から、人生の大きな転換期を時系列で読み解く。まず節木運で30年単位の季節と★の節目（何歳・西暦）を示し、その中の10年大運を<b>「その年代＝○○星が巡る大運＝こういう時期（提供データの“通変星が巡る時の意味”を使う）＝こう過ごすとよい」</b>と、各大運で何の通変星が巡り本人がどうなるか・どう動くべきかを具体的に述べる（単に星名を並べない）。★大運は10年という長い期間なので、各大運は<b>必ず前向きな良い面を主に（多めに）描く</b>。注意点も書いてよいが、良い面を多く・悪い面は短く、必ず乗り越え方とセットにする（10年をネガティブ一色にしない）。\n【今の時期】今めぐる<b>大運の通変星（何が巡っているか）と年運の通変星</b>を必ず名指しし、それぞれ「今この人に何が起きやすいか・どう過ごすとよいか」を、命式の多い星・五行・身旺・身弱とつなげて具体的に助言する。命式との関わり（三合・冲・解空・空亡期など）と今後5年の年運の流れも反映。\n【気をつけたい時期】運気が停滞・低調になりやすい年や月、空亡（天中殺）の期間、日支（配偶宮）や用神が冲・剋される時期、忌神の五行が強まる時期などを、可能な範囲で<b>具体的な西暦・年齢・干支</b>で挙げ、「なぜ運気が下がりやすいか＋無理をせずどう整えるか」をセットで示す。断定的に不運を予言せず、前向きに「整えると良い時期」として伝える。\n【活かし方】この命式と今の流れに即した前向きな行動のヒントを2〜3点。お金との付き合い方（財運）にも触れる場合は、財星(正財=堅実/偏財=人脈・投資)・食神（楽しみながら得る）・十二運から読み、五行「金」の多少を金運と混同しない（「金が少ない＝金運がない」とは言わない）。\n大事な語は**太字**に。\n【深さ】各項目とも、なぜその星・五行・十二運・干支・大運からそう言えるのかという四柱推命の裏付けを一段深く示し、表面的な一般論で終わらせない。`;
 function proReadUser(c){return `【確定済みの命式】\n${buildChartText(c)}\n\nこの命式そのものを、相談がなくても通用するプロの「鑑定レポート」として読み解いてください。\n${READ_STRUCT}\n全体800〜1000字。`;}
 function easyReadUser(c){return `【確定済みの命式】\n${buildChartText(c)}\n\nこの命式そのものを、相談がなくても通用するプロの「鑑定レポート」として読み解いてください。\n【書き方＝最重要】鑑定は「深く、しかし分かりやすく・伝わりやすい言葉」で書く。占い師にも占い初心者にも、すっと頭に入るように。専門用語（通変星・十二運・蔵干・干支・五行など）は省かず使ってよいが、出てきたら必ずその場で“ふつうの言葉”で短く言いかえる（例:「正官（規律と責任を大切にする星）」「冲（ぶつかり合い・刺激）」）。一文は短めにし、つなぎを丁寧に。内容・結論・深さ・構成・根拠は本格鑑定とまったく同じにし、やさしくするために情報を削ったり薄めたりしない（＝浅くしない）。\n${READ_STRUCT}\n全体900〜1100字。`;}
+/* 入力欄（名前・生年月日・時刻・性別）が、いま画面に出ている命式と同じ人かを確かめる。違えば、その理由を返す */
+function pkStale(){ try{ if(typeof chart==='undefined'||!chart||window.__isSample) return '';
+  const nm=((document.getElementById('f-name')||{}).value||'').trim(), dv=(document.getElementById('f-date')||{}).value||'';
+  const cd=String((chart.birth&&chart.birth.clock)||'').slice(0,10).replace(/\//g,'-');
+  const pn=(typeof personName!=='undefined'?String(personName||''):'').trim();
+  if((cd&&dv&&cd!==dv)||(pn&&nm&&pn!==nm)) return '上の名前や生年月日が、いま出ている鑑定の方と違います。前の方の命式のまま答えないよう、上の「この相談を鑑定する」を押し直してください。';
+  return ''; }catch(e){ return ''; } }
+/* 続けての質問・呼び戻したお客様の質問に、前のやりとり（同じ方）の要点を添える */
+function pkPrevContext(){ try{ const box=document.getElementById('reading'); if(!box) return '';
+  const L=[]; box.querySelectorAll('.rd-item').forEach(function(it){ const q=it.dataset.q||''; const b=it.querySelector('.rd-body'); if(!q||!b) return;
+    const sm=b.querySelector('.r-summary'); let a=(sm?sm.textContent:b.textContent||'').replace(/\s+/g,' ').trim(); if(a.length>220) a=a.slice(0,220)+'…'; if(a) L.push('・相談：'+q.slice(0,120)+'\n　答えの要点：'+a); });
+  return L.length?'\n\n【これまでのやりとり（同じ方・古い順。今回の相談はこれをふまえて、話がつながるように答える。前の答えと食い違わない）】\n'+L.slice(-3).join('\n'):''; }catch(e){ return ''; } }
 async function doAutoRead(){
+  { const st=pkStale(); if(st){ const out=document.getElementById('autoReading'); if(out) out.innerHTML='<div class="err">'+esc(st)+'</div>'; return; } }
   const out=document.getElementById('autoReading');
   // 自動鑑定レポートは最重要＝DEEP（x-pk-deep:1）。相談・相性は既定(LITE)。
   runReading(document.getElementById('autoReadBtn'),out,easyReadUser(chart),localReading(chart,''),proReadUser(chart),true,undefined,localReading(chart,'',true));
@@ -7738,7 +7758,19 @@ function loadClient(id){const c=mpLoad().clients.find(x=>x.id===id&&!x.deleted);
   {const fd=document.getElementById('f-date');fd.value=c.date;if(fd.syncFromValue)fd.syncFromValue();}{const ft=document.getElementById('f-time');ft.value=c.time||'12:00';if(ft.syncFromValue)ft.syncFromValue();}
   setSex(c.sex);document.getElementById('f-pref').value=c.pref||'';document.getElementById('f-corr').value=c.corr||'full';
   const nt=document.getElementById('f-notime');if(nt)nt.checked=!!c.notime;
-  compute();}
+  window.__noAutoOnce=true; compute();
+  setTimeout(function(){ try{ pkShowPrev(c); }catch(e){} },300);}
+/* 呼び戻したお客様の、前回のご相談と答えを、答えの欄に（閉じた形で）出す。続けての質問は、このやりとりもふまえて答える（チャット占い向け。発注者指示 2026-10-21） */
+function pkShowPrev(c){ const box=document.getElementById('reading'); if(!box||!c) return;
+  const rs=(c.readings||[]).filter(r=>r&&r.kind==='consult'&&r.q).slice(0,3).reverse(); if(!rs.length) return;
+  rs.forEach(function(r){ const it=document.createElement('div'); it.className='rd-item rd-past closed'; it.dataset.q=r.q;
+    it.innerHTML='<button type="button" class="rd-q" aria-expanded="false"><span class="lb">前回 '+(typeof _mpDay==='function'?_mpDay(r.ts):'')+'</span><span class="tx"></span><span class="rd-tg">▼ この答えを開く</span></button><div class="rd-prev"></div><div class="reading rd-body"></div>';
+    it.querySelector('.rd-q .tx').textContent=r.q;
+    it.querySelector('.rd-body').innerHTML=formatReading(r.text);
+    const sm=it.querySelector('.r-summary'); const pv=it.querySelector('.rd-prev'); if(pv) pv.textContent=sm?sm.textContent.trim():'';
+    it.querySelector('.rd-q').onclick=function(){ if(it.classList.contains('closed')) rdOpenItem(it); else rdCloseItem(it); };
+    box.appendChild(it); });
+  const os=box.parentNode&&box.parentNode.querySelector('.or-sep'); if(os) os.textContent='続けて、気になることを質問する（前回のやりとりもふまえて答えます）'; }
 function setMemo(id,v){const doc=mpLoad();const c=doc.clients.find(x=>x.id===id);if(c){c.memo=v;c.ts=Date.now();}mpWrite(doc);mpTouch();}
 function saveReadingToClient(kind,title,text){
   if(!text){alert('保存する鑑定がありません。先に鑑定を表示してください。');return;}
@@ -7861,9 +7893,18 @@ function forClient(t){
   if(out.length && /^[🔹#＊*\s]*[【\[]?(くわしい|詳しい)読み解き[】\]]?\s*$/.test(out[out.length-1].trim())) out.pop();   // 中身のない見出しは送らない
   return out.join('\n').replace(/\n{3,}/g,'\n\n').trim();
 }
-function clientText(t,q){ return (q?'ご相談：'+q+'\n\n':'')+forClient(t); }
+function pkQShort(q){ q=String(q||'').replace(/\s+/g,' ').trim(); return q.length>40?q.slice(0,40)+'…':q; }   // 送る文の頭の「ご相談：」は短く（お客様の文をそのまま返さない）
+function clientText(t,q){ return (q?'ご相談：'+pkQShort(q)+'\n\n':'')+forClient(t); }
+/* 鑑定士への指示（「〜とお伝えください」「〜と声をかけてあげてください」「〜と伝えると安心されるでしょう」など）を外す。共有・チャット用コピーで使う（発注者指示 2026-10-21） */
+function pkTalkClean(t){ const V='(?:お)?(?:伝え|声をかけ|励まし|話し|語りかけ|寄り添っ)(?:て)?(?:あげ|さしあげ)?(?:て)?';
+  const END='(?:ください|ましょう|ると(?:よい|良い|いい)でしょう|ると(?:安心|喜ば|心が軽くな)(?:され|り)?(?:る|ます)?(?:でしょう)?|るとよいです|てみてください)';
+  return String(t||'')
+  .replace(new RegExp('(?:^|(?<=[。\\n]))\\s*(?:お客様|相談者|ご相談者)(?:さま|様)?(?:に|には)、?[^。\\n]{0,8}?(?=「)','g'),'')
+  .replace(new RegExp('「([^「」]{4,})」と(?:やさしく|優しく|そっと|丁寧に|笑顔で|はっきり|あたたかく|温かく)?'+V+END+'[。．]?','g'),function(m,a){ return /[。！？!?]$/.test(a)?a:a+'。'; })
+  .replace(new RegExp('[、，]?\\s*と(?:やさしく|優しく|そっと|丁寧に|笑顔で|あたたかく|温かく)?'+V+END+'[。．]?','g'),'。')
+  .replace(/。。/g,'。'); }
 /* 「お伝え方の文章も入れる」とき：鑑定士への指示（「〜とお伝えください」など）を外し、お客様あての言葉にする。発注者指示 2026-10-20 */
-function withTalk(t){ return String(t||'')
+function withTalk(t){ return pkTalkClean(String(t||''))
   .replace(/([【\[])お客様への(お)?伝え方([】\]])/g,'$1あなたへのメッセージ$3')
   .replace(/「([^「」]{4,})」と(?:やさしく|優しく|そっと|丁寧に|笑顔で|はっきり)?(?:お)?伝え(?:ください|てください|しましょう|てあげてください|ると良いでしょう|るとよいでしょう)[。．]?/g,function(m,a){ return /[。！？!?]$/.test(a)?a:a+'。'; })
   .replace(/[、，]?\s*と(?:やさしく|優しく|そっと|丁寧に|笑顔で)?(?:お)?伝え(?:ください|てください|しましょう|てあげてください)[。．]?/g,'。')
@@ -7924,7 +7965,7 @@ function attachReadingTools(out,text){
   const who=kind==='compat'?((personName||'本人')+'×'+(personNameB||'お相手')):(personName||'');
   const title=(q?('相談「'+(q.length>16?q.slice(0,16)+'…':q)+'」'):readingKindLabel(kind))+(who?'（'+who+'）':'')+' '+nowStr();   // 何の相談か、記録の名前で見分けられるように
   const bar=document.createElement('div');bar.className='no-print rd-bar';bar.style.cssText='display:flex;gap:8px;margin-top:12px;flex-wrap:wrap';
-  bar.innerHTML='<button type="button" class="rd-tool rd-print">🖨 印刷 / PDF保存</button><button type="button" class="rd-tool rd-edit">編集</button><button type="button" class="rd-tool rd-share">共有</button><label class="rd-incl-l" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--ink2);cursor:pointer;min-height:40px"><input type="checkbox" class="rd-incl" style="width:20px;height:20px">お伝え方の文章も入れる</label>';
+  bar.innerHTML='<button type="button" class="rd-tool rd-print">🖨 印刷 / PDF保存</button><button type="button" class="rd-tool rd-edit">編集</button><button type="button" class="rd-tool rd-share">共有</button><button type="button" class="rd-tool rd-chat" title="チャット・LINEにそのまま貼れる短い文（結論・メッセージ・どうすればよいか）をコピー">💬 チャット用にコピー</button><label class="rd-incl-l" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--ink2);cursor:pointer;min-height:40px"><input type="checkbox" class="rd-incl" style="width:20px;height:20px">お伝え方の文章も入れる</label>';
   out.appendChild(bar);
   // 顧客カルテへ自動で保存（ボタンを押さなくても消えない）
   const _sv=autoSaveReading(kind,title,curText,q), rid=_sv&&_sv.rid;
@@ -7936,7 +7977,14 @@ function attachReadingTools(out,text){
   const live=function(){ const ta=out.querySelector('.rd-edit-area'); if(ta){curText=ta.value;_lastReading[kind]=curText;} return curText; };
   const _incl=function(){ const c=bar.querySelector('.rd-incl'); return !!(c&&c.checked); };
   const _shTitle=function(){ const d=new Date(), ds=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'; const nm=kind==='compat'?((personName||'')+(personNameB?'さん・'+personNameB:'')):(personName||''); return (nm?nm+'さんへ':'鑑定のご案内')+'（'+ds+'）'; };
-  bar.querySelector('.rd-share').onclick=function(){shareText(_shTitle(),_incl()?((q?'ご相談：'+q+'\n\n':'')+withTalk(live())):clientText(live(),q));};
+  bar.querySelector('.rd-share').onclick=function(){shareText(_shTitle(),_incl()?((q?'ご相談：'+pkQShort(q)+'\n\n':'')+withTalk(live())):clientText(live(),q));};
+  /* チャット用：結論＋あなたへのメッセージ＋どうすればよいか（くわしい読み解きと相談文は入れない。鑑定士への指示は外す）。発注者指示 2026-10-21 */
+  bar.querySelector('.rd-chat').onclick=function(){ const b=this;
+    let t=String(live()).split(/\n[ 　]*[#＊*🔹\s]*[【\[]?(?:くわしい|詳しい)読み解き[】\]]?/)[0];
+    t=cleanMarkdown(withTalk(t)).replace(/^[ 　]*[・･]?[ 　]*(?=\S)/gm,function(m){ return m; }).replace(/\n{3,}/g,'\n\n').trim();
+    const nm=(kind==='compat')?'':(personName||''); if(nm&&!t.startsWith(nm)) t=nm+'さんへ\n\n'+t;
+    const done=function(){ const o=b.textContent; b.textContent='✓ コピーしました'; setTimeout(function(){ b.textContent=o; },1500); };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done).catch(function(){ fallbackCopy(t,done); }); else fallbackCopy(t,done); };
   bar.querySelector('.rd-print').onclick=function(){
     // 相性＝両者の名前＋相性鑑定書（命式表は付けない）／個人＝本人の名前＋個人鑑定書
     var head=(kind==='compat')
@@ -8270,7 +8318,8 @@ function compute(){
     if(_cc){ setTimeout(function(){ try{_cc.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){} }, 60); }
   } else {
     document.body.classList.remove('mode-compat');
-    if(!window.__csSkipAuto){ doAutoRead(); window.__autoReadDone=true; }
+    if(!window.__csSkipAuto&&!window.__noAutoOnce){ doAutoRead(); window.__autoReadDone=true; }   // カルテから呼び戻したときは自動で作らない（利用回数を使わない。発注者指示 2026-10-21）
+    window.__noAutoOnce=false;
     window.__csComputedAt=Date.now();
     // 占う後は「結果の先頭（要点サマリー→命式表）」に着地する（相談つきのときは答えの欄へ移るので、ここでは動かさない）。長い距離はなめらかに動かさず、すぐ移る
     if(!window.__csSkipAuto){const _r=document.getElementById('result')||document.getElementById('meishi-sec');
@@ -8477,6 +8526,19 @@ window.__bTouched=false;
 })();
 
 
+/* 相談文の中に生年月日が書いてあるとき（チャットの貼りつけなど）、入力欄と違えば「この生年月日を使いますか？」と知らせる（発注者指示 2026-10-21） */
+(function(){
+  function find(t){ t=String(t||'').replace(/[０-９]/g,function(c){ return String.fromCharCode(c.charCodeAt(0)-0xFEE0); });
+    const m=t.match(/((?:19|20)\d{2})\s*[年\/\.\-]\s*(\d{1,2})\s*[月\/\.\-]\s*(\d{1,2})\s*日?/); if(!m) return null;
+    const y=+m[1], mo=+m[2], d=+m[3]; if(mo<1||mo>12||d<1||d>new Date(y,mo,0).getDate()) return null;
+    return {v:y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0'), lab:y+'年'+mo+'月'+d+'日'}; }
+  function upd(ta){ if(!ta) return; let n=ta.parentNode&&ta.parentNode.querySelector('.q-bd-note'); const f=find(ta.value), cur=(document.getElementById('f-date')||{}).value||'';
+    if(!f||f.v===cur){ if(n) n.remove(); return; }
+    if(!n){ n=document.createElement('div'); n.className='q-bd-note no-print'; n.style.cssText='margin:6px 0 0;padding:8px 10px;border:1.5px solid #E9C27A;border-radius:10px;background:#FFF8EA;color:#5A3A00;font-size:13.5px;font-weight:700;line-height:1.6'; ta.insertAdjacentElement('afterend',n); }
+    n.innerHTML='相談文に「'+esc(f.lab)+'」と書かれています。'+(cur?'入力欄の生年月日と違います。':'')+'<button type="button" style="margin-left:6px;min-height:36px;padding:4px 12px;border:0;border-radius:999px;background:#7A4A00;color:#fff;font:inherit;font-weight:800;cursor:pointer">この生年月日を使う</button>';
+    n.querySelector('button').onclick=function(){ const q=document.getElementById('f-quick'); if(q){ q.value=f.v.replace(/-/g,''); q.dispatchEvent(new Event('input',{bubbles:true})); q.dispatchEvent(new Event('change',{bubbles:true})); } n.remove(); try{ (q||document.getElementById('f-name')).scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){} }; }
+  document.addEventListener('input',function(e){ const t=e.target; if(t&&(t.id==='cs-q'||t.id==='worry')) upd(t); });
+})();
 /* 生年月日を数字でまとめて打てる欄（例 19810610 2228 → 1981年6月10日 22時28分）。年の一覧を長くスクロールしなくてよい（発注者指示 2026-10-20） */
 (function(){
   function apply(inp){ var p=inp.getAttribute('data-p'), msg=document.getElementById(p+'-quick-msg'), dg=(inp.value||'').replace(/[０-９]/g,function(c){ return String.fromCharCode(c.charCodeAt(0)-0xFEE0); }).replace(/\D/g,'');
