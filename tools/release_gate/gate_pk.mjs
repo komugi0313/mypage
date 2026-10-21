@@ -84,6 +84,6 @@ if(!pop){ ok('鑑定書が開く', false); } else {
   if(MODE==='online') ok('鑑定書：呼び出し回数（目安1〜3回）', calls-c2>=1&&calls-c2<=3, 'calls='+(calls-c2));
   await pop.close(); }
 const _e=errs.filter(x=>!/reqfail: .*gemini/.test(x)&&!(MODE!=='online'&&/ERR_INTERNET_DISCONNECTED/.test(x))); ok('画面のエラー0件', _e.length===0, _e.slice(0,3).join(' | '));
-fs.writeFileSync(`gate_${site}_${MODE}.json`,JSON.stringify({R,A,A2,chat,sh},null,1));
+
 console.log(JSON.stringify(CL)); console.log(`  → ${R.filter(x=>!x.pass).length===0?'合格':'不合格'}（${R.filter(x=>x.pass).length}/${R.length}）  呼び出し合計 ${calls}`);
 await b.close(); srv.close();
