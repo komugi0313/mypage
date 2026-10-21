@@ -200,7 +200,7 @@ function render(instant){
  }else{$("hWorryQ").hidden=true;$("hWorry").innerHTML='<div class="it"><p>'+HN.same.worry+TR('</p><p class="key"><b>ほどき方</b>')+HN.same.key+'</p></div>';$("hWork").innerHTML='<div class="it"><p>'+HN.same.work+'</p></div>';}
  $("hJobW").textContent=HB.work;$("hJobs").innerHTML=HB.jobs.map(t=>"<li>"+t+"</li>").join("");
  $("ccKarai").textContent=strip(C.karai);
- window.__me={born,now,N,bAT,nAT};drawPersona("now");drawToday();
+ window.__me={born,now,N,bAT,nAT};drawPersona("now");
  $("p16Born").textContent=bornF+p16(born);$("p16Now").textContent=nowF+p16(now);
  $("nkBorn").textContent=D.NICK[born];$("nkNow").textContent=D.NICK[now];
  const pct=Math.round(dn/tot*100),lv=dn===0?0:Math.min(4,Math.ceil(dn/tot*4));window.__me.pct=pct;
@@ -217,7 +217,7 @@ function same(a,b){let n=0;for(let i=0;i<4;i++)if(a[i]===b[i])n++;return n;}
 const TIER=[[TR("正反対の刺激コンビ"),TR("お互いにないものを持っている2人。組めば最強、ぶつかれば大波乱。")],[TR("別ルートの発見コンビ"),TR("考え方は別ルート。だからこそ話すたびに発見がある。")],[TR("ほどよいバランス型"),TR("半分同じで、半分ちがう。ほどよい距離で長く続く。")],[TR("似た者同士の安心ペア"),TR("感覚がよく似ていて、無理せず自然体でいられる。")],[TR("鏡みたいな2人"),TR("長所も弱点もそっくり。いちばんの理解者になれる。")]];
 /* P = {born, num, now(任意), who} */
 function pairHTML(P){const me=window.__me,sb=same(me.born,P.born),tb=TIER[sb];
- let html='<div class="phead"><img src="img/mascot/c'+String(P.num).padStart(2,"0")+'.webp" alt="'+esc(P.who)+TR('の相棒キャラクター"><div><small>')+esc(P.who)+TR('の生まれつき</small><span class="t">')+P.born+'</span><small>'+D.NICK[P.born]+(P.now?TR('（今は ')+P.now+TR('）'):'')+'</small></div></div>';
+ let html='<div class="phead"><div><small>'+esc(P.who)+TR('の生まれつき</small><span class="t">')+P.born+'</span><small>'+D.NICK[P.born]+(P.now?TR('（今は ')+P.now+TR('）'):'')+'</small></div></div>';
  html+=TR('<div class="mx"><div><span class="l">本当の相性</span><div class="v">')+tb[0]+'</div></div>';
  if(P.now){const sn=same(me.now,P.now),tn=TIER[sn];html+=TR('<div><span class="l">今の相性</span><div class="v">')+tn[0]+'</div></div></div>';
   const hiB=sb>=2,hiN=sn>=2;
@@ -229,29 +229,6 @@ function pairHTML(P){const me=window.__me,sb=same(me.born,P.born),tb=TIER[sb];
  else html+=TR('<div><span class="l">今の相性</span><div class="v" style="color:var(--muted);font-weight:500">16タイプを入れると出ます</div></div></div><p class="verdict">')+tb[1]+'</p>';
  return html;}
 $("pGo").onclick=()=>{const N=natal(ps.y,ps.m,ps.d);$("pRes").innerHTML=pairHTML({born:N.t,num:N.num,now:$("pt").value||null,who:TR("あの人")});$("pRes").hidden=false;};
-
-/* ---- 相棒の今日のひと言 ---- */
-/* 生まれた日の干と、その日の干の関係（10パターン）でテーマを、
-   生まれた日の干から見たその日の支の強さ（12段階→3段階）でパワーを決める */
-const GODS=[["比肩","劫財"],["食神","傷官"],["偏財","正財"],["偏官","正官"],["偏印","印綬"]];
-function godOf(me,ot){const em=Math.floor(me/2),eo=Math.floor(ot/2),samePol=(me%2)===(ot%2);
- const rel=eo===em?0:eo===(em+1)%5?1:eo===(em+2)%5?2:em===(eo+2)%5?3:4;return GODS[rel][samePol?0:1];}
-function stageOf(s,b){const L=CH[s],i=s%2===0?((b-L)%12+12)%12:((L-b)%12+12)%12;return ST[i];}
-const POW={"長生":"high","冠帯":"high","建禄":"high","帝旺":"high","沐浴":"mid","衰":"mid","養":"mid","胎":"mid","病":"low","死":"low","墓":"low","絶":"low"};
-let tdOff=0;
-function drawToday(){const me=window.__me;if(!me)return;const dt=new Date();dt.setDate(dt.getDate()+tdOff);
- const T=natal(dt.getFullYear(),dt.getMonth()+1,dt.getDate()),ms=(me.N.num-1)%10,ts=(T.num-1)%10,tb=(T.num-1)%12;
- const th=TD.themes[godOf(ms,ts)],pw=TD.power[POW[stageOf(ms,tb)]];
- const line=th.lines[(T.num+me.N.num)%th.lines.length].replace("{B}",me.born).replace("{N}",me.now);
- const wk="日月火水木金土"[dt.getDay()];
- $("tdDate").textContent=TR("今日のひと言　")+(LANG==="ja"?(dt.getMonth()+1)+"月"+dt.getDate()+"日（"+wk+"）":dt.toLocaleDateString(LANG==="ko"?"ko-KR":"en-US",{month:"short",day:"numeric",weekday:"short"}));
- $("tdImg").src="img/mascot/c"+String(me.N.num).padStart(2,"0")+".webp";$("tdImg").alt=buddyName(me.N.num);
- {const eb=document.querySelector("#today .tdintro .eyebrow");if(!eb.dataset.base)eb.dataset.base=eb.textContent;eb.innerHTML=esc(eb.dataset.base)+'<b class="tdnm">'+esc(buddyName(me.N.num))+'</b>';}
- $("tdLine").textContent=line;
- $("tdWho").textContent=th.who==="born"?TR("生まれつきの ")+me.born:TR("今の ")+me.now;
- $("tdPowL").textContent=pw.label;$("tdPow").innerHTML='<span class="st">'+"★★★".slice(0,pw.stars)+'</span><span style="color:var(--rule)">'+"★★★".slice(pw.stars)+'</span><small class="pwadd">'+pw.add+'</small>';
- $("tdTitle").textContent=th.title;$("tdTip").textContent=th.tip;
-}
 
 /* ---- あの人に送る（招待リンク） ---- */
 /* 生年月日は送らず、タイプとキャラ番号と名前だけを載せる */
@@ -272,15 +249,10 @@ $("mkLink").onclick=()=>{const u=inviteURL(),nm=$("myName").value.trim();
 $("cpLink").onclick=()=>{const t=$("lnk");const done=()=>{$("cpLink").textContent=TR("コピーしました");setTimeout(()=>$("cpLink").textContent=TR("リンクをコピー"),1600);};
  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(window.__msg||t.value).then(done).catch(()=>{t.select();});}else t.select();};
 if(INV){$("invBar").hidden=false;$("invWho").textContent=INV.who;$("invPair").textContent=INV.bornF+" → "+INV.nowF;
- $("invImg").src="img/mascot/c"+String(INV.num).padStart(2,"0")+".webp";
+
  $("partnerH").textContent=INV.who+TR("との相性");}
 function showInvitePair(){if(!INV)return;$("pRes").innerHTML=pairHTML(INV);$("pRes").hidden=false;$("pForm").hidden=true;}
 fillP();
-
-/* ---- 相棒の名前（生まれた日の干＝持ち物、支＝動物） ---- */
-const BUDDY_P=[TR("わかば"),TR("おはな"),TR("ほのお"),TR("ランタン"),TR("ちきゅう"),TR("はたけ"),TR("ナイト"),TR("ティアラ"),TR("パイロット"),TR("まほう")];
-const BUDDY_A=[TR("ねずみ"),TR("うし"),TR("とら"),TR("うさぎ"),TR("ドラゴン"),TR("へび"),TR("ポニー"),TR("ひつじ"),TR("おさる"),TR("ひよこ"),TR("わんこ"),TR("うりぼう")];
-function buddyName(num){return TR("{p}の{a}").replace("{p}",BUDDY_P[(num-1)%10]).replace("{a}",BUDDY_A[(num-1)%12]);}
 
 /* ---- 結果を画像でシェア ---- */
 const SHARE_URL="https://16typeplus.jp/"+(LANG==="ja"?"":LANG+"/");
@@ -371,9 +343,8 @@ function boot(){drawResume();const R=sget(KR);
   document.querySelectorAll(".intro,.how").forEach(e=>e.hidden=true);
   const res=$("result");res.after($("quizCard"));res.after($("formCard"));$("formh").textContent=TR("もう一度診断する");
   const wb=document.createElement("section");wb.className="card welcome";
-  wb.innerHTML='<p class="eyebrow">'+TR("おかえりなさい")+'</p><p class="wbt">'+TR("前回の結果を表示しています。")+'</p><div class="wbacts"><button type="button" class="btn primary" id="wbToday">'+TR("相棒の今日のひと言を見る")+'</button><button type="button" class="btn" id="wbRedo">'+TR("診断をやり直す")+'</button></div>';
+  wb.innerHTML='<p class="eyebrow">'+TR("おかえりなさい")+'</p><p class="wbt">'+TR("前回の結果を表示しています。")+'</p><div class="wbacts"><button type="button" class="btn primary" id="wbRedo">'+TR("診断をやり直す")+'</button></div>';
   const hero=document.querySelector(".hero");hero.before(wb);
-  $("wbToday").onclick=()=>$("today").scrollIntoView({behavior:"smooth",block:"start"});
   $("wbRedo").onclick=()=>$("formCard").scrollIntoView({behavior:"smooth",block:"start"});
  }else{fillDate();render();}}
 $("reset").onclick=()=>{if(!confirm(TR("保存している結果を消して、はじめからやり直しますか？")))return;sset(KR,null);sset(KQ,null);location.reload();};
