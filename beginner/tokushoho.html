@@ -75,7 +75,7 @@
 /* 文字の見えやすさの安全装置（tools/add_contrast_guard.py が3サイトの全ページに埋め込む。直すときはこのファイルを直して再実行）
    文字の色と、その後ろの背景の色を比べて、読みにくい組み合わせ（薄い背景に薄い文字／濃い背景に濃い文字）を見つけたら、
    その文字だけ色を自動で調整する（明るい背景→同じ色みのまま濃く、暗い背景→白く）。計算・鑑定の中身には一切さわらない。
-   目安：ふつうの文字はコントラスト比4.5以上、大きい文字（24px以上、または18.66px以上の太字）は3以上（WCAG AA）。 */
+   目安：明るい背景の上の文字はコントラスト比7以上（大きい文字＝24px以上、または18.66px以上の太字は4.5以上）。濃い色の上の白い文字は4.5以上（大きい文字は3以上）。 */
 (function(){
   if(window.__pkContrast) return; window.__pkContrast=true;
   function P(c){ var m=c&&c.match(/[\d.]+/g); return m?[+m[0],+m[1],+m[2],m.length>3?+m[3]:1]:null; }
@@ -90,7 +90,7 @@
     if(BG&&BG.has(n)) return BG.get(n);
     var cs=getComputedStyle(n), bi=cs.backgroundImage, r;
     // 飾りの層（::before／::after に背景がある）が文字の後ろにあるときは、正しく判定できないので触らない
-    var deco=false; ['::before','::after'].forEach(function(ps){ try{ var pc=getComputedStyle(n,ps); if(pc.content&&pc.content!=='none'&&(pc.position==='absolute'||pc.position==='fixed')){ var pb=P(pc.backgroundColor); if((pb&&pb[3]>0.3)||(pc.backgroundImage&&pc.backgroundImage!=='none')) deco=true; } }catch(_e){} });
+    var deco=false; ['::before','::after'].forEach(function(ps){ try{ var pc=getComputedStyle(n,ps); if(pc.content&&pc.content!=='none'&&(pc.position==='absolute'||pc.position==='fixed')){ var pb=P(pc.backgroundColor); if((pb&&pb[3]>0.3)||(pc.backgroundImage&&pc.backgroundImage!=='none')){ var pw=parseFloat(pc.width)||0, ph=parseFloat(pc.height)||0, nr=n.getBoundingClientRect(); /* 端の細い帯・小さな飾りは文字の後ろにかからないので測ってよい */ var thin=(pw>0&&pw<=12)||(ph>0&&ph<=12)||(nr.width>0&&pw>0&&pw<nr.width*0.2)||(nr.height>0&&ph>0&&ph<nr.height*0.2); if(!thin) deco=true; } } }catch(_e){} });
     if(deco||(bi&&bi!=='none'&&/url\(/.test(bi))) r=null;
     else{
       var parent=bgOf(n.parentElement);
@@ -112,31 +112,33 @@
     var own=''; for(var c=e.firstChild;c;c=c.nextSibling) if(c.nodeType===3) own+=c.nodeValue; if(!own.trim()) return;
     var cs=getComputedStyle(e); if(cs.display==='none'||cs.visibility==='hidden') return;
     var fill=cs.webkitTextFillColor; if(fill&&/rgba\(0, 0, 0, 0\)|transparent/.test(fill)) return;   // 文字そのものがグラデーションのもの
-    var fg=P(cs.color); if(!fg) return;
-    var bg=bgOf(e); if(!bg) return;
-    if(bg.hi-bg.lo>0.35) return;                       // 明暗が大きく混ざった背景は判定しない
+    var fixed=e.hasAttribute('data-pkcg'), fg=P(fixed?(e.getAttribute('data-pkco')||cs.color):cs.color); if(!fg) return;   // 前に直した文字は、元の色で測り直す（背景が変わったら戻す・直し直す）
+    var undo=function(){ if(!fixed) return; var o=e.getAttribute('data-pkcg'); if(o) e.style.setProperty('color',o); else e.style.removeProperty('color'); e.removeAttribute('data-pkcg'); e.removeAttribute('data-pkco'); };
+    var bg=bgOf(e); if(!bg){ undo(); return; }
+    if(bg.hi-bg.lo>0.35){ undo(); return; }                       // 明暗が大きく混ざった背景は判定しない
     var fs=parseFloat(cs.fontSize)||14, bold=(+cs.fontWeight||400)>=700;
-    var need=(fs>=24||(fs>=18.66&&bold))?3:4.5;
+    var big=(fs>=24||(fs>=18.66&&bold)), need=big?3:4.5;
     var op=opac(e); if(op<0.6) return;                 // 透明・半透明で隠している途中のもの（通知・ふわっと出る表示など）は触らない
     var a=(fg[3]==null?1:fg[3])*op;
-    var base=bg.rgb, seen=over([fg[0],fg[1],fg[2],a],base);
-    if(CR(seen,base)>=need) return;
     var light=((bg.lo+bg.hi)/2)>0.4, to=light?[0,0,0]:[255,255,255], c2=null;
+    if(light) need=big?4.5:7;   // 明るい背景の上の文字は一段きびしく（ふつうの文字7以上・大きい文字4.5以上）。濃い色の上の白い文字は4.5のまま（発注者指示 2026-10-21）
+    var base=bg.rgb, seen=over([fg[0],fg[1],fg[2],a],base);
+    if(CR(seen,base)>=need){ undo(); return; }
     for(var t=0.1;t<=1.0001;t+=0.1){ var cand=mix([fg[0],fg[1],fg[2]],to,t); if(CR(over([cand[0],cand[1],cand[2],a],base),base)>=need){ c2=cand; break; } }
     if(!c2){   // 中くらいの明るさの色の上（白い文字＋黄土色の札など）：白くしても足りないときは、濃い文字にする
       var to2=light?[255,255,255]:[0,0,0];
       for(var t2=0.1;t2<=1.0001;t2+=0.1){ var cand2=mix([fg[0],fg[1],fg[2]],to2,t2); if(CR(over([cand2[0],cand2[1],cand2[2],a],base),base)>=need){ c2=cand2; break; } }
     }
     if(!c2) c2=(CR(to,base)>=CR(light?[255,255,255]:[0,0,0],base))?to:(light?[255,255,255]:[0,0,0]);                                     // 透明度は変えない（隠している表示を出してしまわないように）
-    if(!e.hasAttribute('data-pkcg')) e.setAttribute('data-pkcg',e.style.getPropertyValue('color')||'');   // 元の色を覚えておく（印刷のときに戻す）
-    e.style.setProperty('color','rgb('+Math.round(c2[0])+','+Math.round(c2[1])+','+Math.round(c2[2])+')','important');
+    if(!fixed){ e.setAttribute('data-pkcg',e.style.getPropertyValue('color')||''); e.setAttribute('data-pkco',cs.color); }   // 元の色を覚えておく（印刷のとき・背景が変わったときに戻す）
+    var nv='rgb('+Math.round(c2[0])+', '+Math.round(c2[1])+', '+Math.round(c2[2])+')'; if(e.style.getPropertyValue('color')!==nv||e.style.getPropertyPriority('color')!=='important') e.style.setProperty('color',nv,'important');   // 同じ色なら触らない（自分の変更で何度も点検が走らないように）
   }
   var SKIP='script,style,noscript,svg,canvas,video,option,select,textarea,input,img,.yomi,.ysr,[aria-hidden="true"]';
   function pass(root){ if(printing||!root||root.nodeType!==1) return; BG=new Map(); OP=new Map(); var list=[root].concat([].slice.call(root.querySelectorAll('*')));
     for(var i=0;i<list.length;i++){ var e=list[i]; if(e.matches&&e.matches(SKIP)) continue; try{ fix(e); }catch(_e){} } BG=null; OP=null; }
   var tm=null; function full(){ clearTimeout(tm); tm=setTimeout(function(){ pass(document.body); },350); }
   // 印刷では背景色が出ないことがあるので、画面用に変えた色を元に戻してから印刷し、終わったら画面用に戻す
-  function unfixAll(){ [].forEach.call(document.querySelectorAll('[data-pkcg]'),function(e){ var o=e.getAttribute('data-pkcg'); if(o) e.style.setProperty('color',o); else e.style.removeProperty('color'); e.removeAttribute('data-pkcg'); }); }
+  function unfixAll(){ [].forEach.call(document.querySelectorAll('[data-pkcg]'),function(e){ var o=e.getAttribute('data-pkcg'); if(o) e.style.setProperty('color',o); else e.style.removeProperty('color'); e.removeAttribute('data-pkcg'); e.removeAttribute('data-pkco'); }); }
   window.addEventListener('beforeprint',function(){ printing=true; unfixAll(); });
   window.addEventListener('afterprint',function(){ printing=false; pass(document.body); });
   var printing=false;
