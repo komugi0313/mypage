@@ -356,7 +356,7 @@ function tagHTML(t){return esc(t).replace(/\[\[今:(.*?)\]\]/g,'<span class="tn"
 function drawCombo(C){let el=$("cmb");
  if(!el){el=document.createElement("div");el.id="cmb";el.className="cmb pend";document.querySelector(".hero .karai").before(el);}
  if(!C.name){el.hidden=true;return;}el.hidden=false;
- el.innerHTML='<span class="kl">'+TR("あなたの組み合わせの名前")+'</span><p class="cnm">'+esc(C.name)+'</p>'+(C.atari&&C.atari[0]?'<ul class="cat">'+C.atari.map(a=>'<li>'+tagHTML(a)+'</li>').join("")+'</ul><p class="clg">'+TR('<span class="tn">今のあなた</span>と<span class="tb">生まれつきのあなた</span>が、同時に出ている場面です。')+'</p>':'');
+ el.innerHTML='<span class="kl">'+TR("あなたの組み合わせの名前")+'</span><p class="cnm">'+esc(C.name)+'</p>'+(C.atari&&C.atari[0]?'<ul class="cat">'+C.atari.map(a=>'<li>'+tagHTML(a)+'</li>').join("")+'</ul>'+(C.atari.some(x=>/\[\[本:/.test(x))?'<p class="clg">'+TR('<span class="tn">今のあなた</span>と<span class="tb">生まれつきのあなた</span>が、同時に出ている場面です。')+'</p>':''):'');
  if(document.querySelector(".hero .karai.wait"))el.classList.add("wait");}
 
 /* ---- 生まれつきの力のバランス（生年月日ごとにちがう） ---- */
