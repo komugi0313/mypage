@@ -19,26 +19,35 @@ function godC(me,o){const S0="甲乙丙丁戊己庚辛壬癸",a=S0.indexOf(me),b
 function chartC(y,m,d){const S0="甲乙丙丁戊己庚辛壬癸";const r=window.PersonBazi(y,m,d,12,0,true,1);const P=r.pillars,me=r.dayMaster.stem,g={},el=[0,0,0,0,0];let temp=0;
  P.forEach(p=>{const M=p.label==="月柱"?3:1;el[S0.indexOf(p.stem)>>1]+=1;if(p.label!=="日柱"){const x=godC(me,p.stem);g[x]=(g[x]||0)+1;}ZGC[p.branch].forEach((s2,i)=>{const w=i===0?M:0.5;el[S0.indexOf(s2)>>1]+=w;const x=godC(me,s2);g[x]=(g[x]||0)+w;});temp+=TMP[p.branch]*M;});
  const G=a=>a.reduce((t,x)=>t+(g[x]||0),0);
- return {strong:r.sType==="身強",temp,ex:G(["食神","傷官"]),en:G(["偏財","正財"]),in_:G(["偏印","印綬"]),self:G(["比肩","劫財"]),
+ return {g,el,strong:r.sType==="身強",temp,ex:G(["食神","傷官"]),en:G(["偏財","正財"]),in_:G(["偏印","印綬"]),self:G(["比肩","劫財"]),
   EI:G(["食神","傷官","偏財","正財"])-G(["比肩","劫財","偏印","印綬"]),SN:(el[2]+el[3])-(el[0]+el[4]),TF:(el[3]+el[4])-(el[0]+el[1])-temp*0.5,JP:G(["正官","正財","印綬","比肩"])-G(["偏官","偏財","偏印","傷官","劫財"])};}
 function reasonC(k,L,c){
+ const top=a=>a.reduce((m,x)=>((c.g[x]||0)>(c.g[m]||0)?x:m),a[0]);
  if(k==="EI")return L==="E"?(c.ex>=c.en?TR("生まれた日に、思ったことを外に出す「表現の星」が強く出ています。気持ちや考えを外へ出すほど元気になる人。"):TR("生まれた日に、人やモノと関わる「縁の星」が強く出ています。人と会い、外の世界と関わるほど力が出る人。"))
   :(c.in_>=c.self?TR("生まれた日に、学んだことを内にためる「学びの星」が強く出ています。ひとりで考え、吸収する時間に力がたまる人。"):TR("生まれた日に、自分の軸を守る「自分の星」が強く出ています。人に合わせるより、自分のペースで力を出す人。"));
- if(k==="SN")return L==="S"?TR("生まれた日に、「支える力」「決める力」が強く出ています。目に見えるもの、確かなものを土台に考える人。"):TR("生まれた日に、「伸びる力」「めぐる力」が強く出ています。まだ形のない可能性やつながりを感じ取る人。");
+ if(k==="SN")return L==="S"?(c.el[2]>=c.el[3]?TR("生まれた日に、どっしり「支える力」が強く出ています。目に見えるもの、確かなものを土台に考える人。"):TR("生まれた日に、すっぱり「決める力」が強く出ています。事実をもとに、白黒をはっきりつけて考える人。"))
+  :(c.el[0]>=c.el[4]?TR("生まれた日に、ぐんと「伸びる力」が強く出ています。まだ形のない可能性に、先回りして気づく人。"):TR("生まれた日に、さらさら「めぐる力」が強く出ています。物事のつながりや流れを、感覚でつかむ人。"));
  if(k==="TF")return L==="T"?(c.temp<0?TR("涼しい季節の生まれで、ものごとを冷静に見る力が強く出ています。熱くなる場面でも、一歩引いて筋道を見られる人。"):TR("生まれた日に、「決める力」「めぐる力」が強く出ています。気持ちより先に、筋道で考える人。"))
   :(c.temp>0?TR("あたたかい季節の生まれで、人の気持ちに寄り添う力が強く出ています。思いやりで決める人。"):TR("生まれた日に、「伸びる力」「燃える力」が強く出ています。理屈より、気持ちや思いを大事にして決める人。"));
- if(k==="JP")return L==="J"?TR("生まれた日に、決まった形を守って着実に積み上げる星が多く出ています。見通しが立つと力を出せる人。"):TR("生まれた日に、変化や自由に強い星が多く出ています。状況に合わせて柔軟に動けるほど力を出せる人。");
- return L==="A"?TR("生まれた日に、自分を支える力が強く出ています。人の評価にゆれにくく、自分の判断で進める人。"):TR("生まれた日に、まわりの影響を受け取る力が強く出ています。そのぶん空気をよく読み、慎重に動ける人。");}
+ if(k==="JP"){if(L==="J")return {"正官":TR("生まれた日に、ルールや約束を大事にする「けじめの星」が強く出ています。決まった形を守るほど力を出せる人。"),"正財":TR("生まれた日に、こつこつ積み上げる「堅実の星」が強く出ています。見通しが立つと、着実に進める人。"),"印綬":TR("生まれた日に、じっくり学ぶ「学びの星」が強く出ています。準備を整えてから動くほど、力を出せる人。"),"比肩":TR("生まれた日に、自分の軸を守る「自分の星」が強く出ています。自分で決めた手順を守るほど、力を出せる人。")}[top(["正官","正財","印綬","比肩"])];
+  return {"偏官":TR("生まれた日に、勢いで切り開く「挑戦の星」が強く出ています。予定外の場面ほど、力を出せる人。"),"偏財":TR("生まれた日に、チャンスをつかむ「めぐり合わせの星」が強く出ています。その場の流れに乗るほど、力を出せる人。"),"偏印":TR("生まれた日に、ひらめきを大事にする「個性の星」が強く出ています。決まった型より、自分なりのやり方で力を出す人。"),"傷官":TR("生まれた日に、感性で動く「感性の星」が強く出ています。気分が乗ったときに、一気に力を出す人。"),"劫財":TR("生まれた日に、負けずぎらいの「勝負の星」が強く出ています。状況が動くほど、燃えて力を出す人。")}[top(["偏官","偏財","偏印","傷官","劫財"])];}
+ if(L==="A")return c.in_>c.self?TR("生まれた日に、まわりから支えてもらう力が強く出ています。安心できる土台があるので、自分の判断で進める人。"):TR("生まれた日に、自分を支える力が強く出ています。人の評価にゆれにくく、自分の判断で進める人。");
+ const off=(c.g["偏官"]||0)+(c.g["正官"]||0),mx=Math.max(c.ex,c.en,off);
+ return mx===c.ex?TR("生まれた日に、表現に力を注ぐ星が多く出ています。そのぶん気持ちが動きやすく、細やかに感じ取れる人。"):mx===c.en?TR("生まれた日に、人やモノと関わる星が多く出ています。そのぶんまわりの変化に敏感で、慎重に動ける人。"):TR("生まれた日に、まわりの期待を受け取る星が多く出ています。そのぶん空気をよく読み、慎重に動ける人。");}
 function natal(y,m,d){const days=Math.floor(Date.UTC(y,m-1,d)/864e5);const num=(((days+17)%60)+60)%60+1;const s=(num-1)%10,b=(num-1)%12;
  const L=CH[s],i=s%2===0?((b-L)%12+12)%12:((L-b)%12+12)%12,u=ST[i];
  let t=(s%2===0?"E":"I")+(s>=4?"S":"N")+([0,1,4,8,9,11].includes(b)?"T":"F")+G[u];
- let at=null,str={EI:75,SN:75,TF:75,JP:75},strong={},why={};
+ let at=null,str={EI:75,SN:75,TF:75,JP:75},strong={},vs={},why={};
  try{const c=chartC(y,m,d);at=c.strong?"A":"T";const AXK=[["EI","E","I"],["SN","S","N"],["TF","T","F"],["JP","J","P"]];
-  t=AXK.map(([k,a,b2])=>{const v=c[k]-MC.med[k]+1e-6,L=v>0?a:b2,half=v>0?(MC.q[k][1]-MC.med[k]):(MC.med[k]-MC.q[k][0]);strong[k]=Math.abs(v)>=half*0.6;str[k]=Math.round(55+40*Math.min(1,Math.abs(v)/(2*half)));why[k]=reasonC(k,L,c);return L;}).join("");
+  t=AXK.map(([k,a,b2])=>{const v=c[k]-MC.med[k]+1e-6,L=v>0?a:b2,half=v>0?(MC.q[k][1]-MC.med[k]):(MC.med[k]-MC.q[k][0]);strong[k]=Math.abs(v)>=half*0.6;vs[k]=Math.abs(v)>=half;str[k]=Math.round(55+40*Math.min(1,Math.abs(v)/(2*half)));why[k]=reasonC(k,L,c);return L;}).join("");
   why.AT=reasonC("AT",at,c);}catch(e){}
- return {num,at,kan:STEMS[s]+BR[b],t,str,strong,why};}
+ return {num,at,kan:STEMS[s]+BR[b],t,str,strong,vs,why};}
 const st={y:1998,m:7,d:15,t:["E","N","F","P"],at:null,pct:null,half:{}};let selAT=null;
 const $=id=>document.getElementById(id);
+/* 端末に覚えておく（使えない環境では何もしない） */
+const KQ="16tp.quiz.v1",KR="16tp.result.v1";
+const sget=k=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}};
+const sset=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
 /* 16Personalities での呼び名（参考表示用） */
 const P16={INTJ:TR("建築家"),INTP:TR("論理学者"),ENTJ:TR("指揮官"),ENTP:TR("討論者"),INFJ:TR("提唱者"),INFP:TR("仲介者"),ENFJ:TR("主人公"),ENFP:TR("運動家"),ISTJ:TR("管理者"),ISFJ:TR("擁護者"),ESTJ:TR("幹部"),ESFJ:TR("領事"),ISTP:TR("巨匠"),ISFP:TR("冒険家"),ESTP:TR("起業家"),ESFP:TR("エンターテイナー")};
 const p16=t=>"（"+P16[t]+"）";
@@ -62,17 +71,30 @@ const AXN={EI:0,SN:1,TF:2,JP:3,AT:4};const AXQ=AX.concat([{k:"AT",a:"A",b:"T",c:
 let qa=[],qi=0,tbList=[],tbAns={};
 function setPicker(){st.t.forEach((v,i)=>sel[i]=v);[...pk.children].forEach((g,i)=>{g.classList.add("done");[...g.children].forEach(c=>c.setAttribute("aria-pressed",c.firstChild.textContent===st.t[i]));});drawSlots(-1);}
 let shown=false;
+function saveResult(){if(!shown)return;sset(KR,{y:st.y,m:st.m,d:st.d,t:st.t,at:st.at,pct:st.pct,half:st.half,sway:st.sway});}
 function showResult(){shown=true;$("result").style.display="contents";setTimeout(showInvitePair,0);}
 function showQuiz(on){$("quizCard").hidden=!on;$("formCard").hidden=on;$("result").style.display=(!on&&shown)?"contents":"none";}
 $("hasType").onclick=()=>{$("hasType").setAttribute("aria-pressed","true");$("pickField").hidden=false;$("pickField").scrollIntoView({behavior:"smooth",block:"nearest"});};
-$("quiz").onclick=()=>{qa=new Array(QZ.Q.length).fill(null);qi=0;tbList=[];tbAns={};showQuiz(true);drawQ();$("quizCard").scrollIntoView({behavior:"smooth",block:"start"});};
-$("qQuit").onclick=()=>{showQuiz(false);};
-$("qBack").onclick=()=>{if(qi>0){qi--;drawQ();}else showQuiz(false);};
+function startQuiz(saved){if(saved){qa=saved.qa;qi=saved.qi;tbList=saved.tbList||[];tbAns=saved.tbAns||{};}else{qa=new Array(QZ.Q.length).fill(null);qi=0;tbList=[];tbAns={};sset(KQ,null);}
+ showQuiz(true);drawQ();$("quizCard").scrollIntoView({behavior:"smooth",block:"start"});}
+function saveQuiz(){sset(KQ,{n:QZ.Q.length,qa,qi,tbList,tbAns,y:st.y,m:st.m,d:st.d});}
+function savedQuiz(){const q=sget(KQ);return q&&q.n===QZ.Q.length&&Array.isArray(q.qa)&&q.qi>0&&q.qi<q.n+(q.tbList||[]).length?q:null;}
+function drawResume(){let r=$("qResume");const q=savedQuiz();
+ if(!q){if(r)r.hidden=true;return;}
+ if(!r){r=document.createElement("button");r.type="button";r.id="qResume";r.className="btn resume";document.querySelector("#formCard .fork").after(r);
+  r.onclick=()=>{const q2=savedQuiz();if(!q2)return;st.y=q2.y||st.y;st.m=q2.m||st.m;st.d=q2.d||st.d;fillDate();startQuiz(q2);};}
+ r.hidden=false;r.innerHTML=TR("前回の続きから再開する")+"<small>"+TR("{n}問目から（全{t}問）").replace("{n}",Math.min(q.qi+1,q.n)).replace("{t}",q.n)+"</small>";}
+$("quiz").onclick=()=>startQuiz(null);
+$("qQuit").onclick=()=>{showQuiz(false);drawResume();};
+$("qBack").onclick=()=>{if(qi>0){qi--;saveQuiz();drawQ();}else{showQuiz(false);drawResume();}};
 function scoreAll(){const sc={EI:[0,0],SN:[0,0],TF:[0,0],JP:[0,0],AT:[0,0]};
  QZ.Q.forEach((q,i)=>{const v=qa[i];if(v==null)return;const A=AXQ[AXN[q.ax]];if(q.p===A.a){sc[q.ax][0]+=v;sc[q.ax][1]+=5-v;}else{sc[q.ax][1]+=v;sc[q.ax][0]+=5-v;}});
  Object.keys(tbAns).forEach(k=>{const A=AXQ[AXN[k]];if(tbAns[k]===A.a)sc[k][0]+=3;else sc[k][1]+=3;});return sc;}
 function drawQ(){const total=QZ.Q.length+tbList.length;$("qCount").textContent=Math.min(qi+1,total)+" / "+total;
  $("qProg").style.width=(qi/total*100)+"%";$("qNote").hidden=qi>0&&qi<QZ.Q.length;
+ let ch=$("qCheer");if(!ch){ch=document.createElement("p");ch.id="qCheer";ch.className="qcheer";$("qAxis").before(ch);}
+ const CH=[[15,TR("4分の1が終わりました。いいペースです。")],[30,TR("半分まで来ました。途中で閉じても、続きから再開できます。")],[45,TR("あと15問。もうひと息です。")]].find(([n])=>qi>=n&&qi<n+3);
+ ch.hidden=!CH;ch.textContent=CH?CH[1]:"";
  const o=$("qOpts");o.innerHTML="";
  if(qi<QZ.Q.length){const q=QZ.Q[qi],A=AXQ[AXN[q.ax]];
   $("qAxis").textContent=A.name;$("qAxis").style.color="var("+A.c+")";$("qText").textContent=q.q;$("qEx").textContent=q.ex;$("qExW").hidden=false;$("qExW").open=false;
@@ -85,38 +107,40 @@ function drawQ(){const total=QZ.Q.length+tbList.length;$("qCount").textContent=M
    bt.onclick=()=>{tbAns[k]=p;setTimeout(next,180);};o.appendChild(bt);});}}
 function next(){qi++;
  if(qi===QZ.Q.length&&tbList.length===0){const sc=scoreAll();tbList=Object.keys(sc).filter(k=>Math.abs(sc[k][0]-sc[k][1])<=6&&QZ.TB[k]);}
- if(qi>=QZ.Q.length+tbList.length){finish();return;}drawQ();}
+ if(qi>=QZ.Q.length+tbList.length){finish();return;}saveQuiz();drawQ();}
 function swayOf(){/* 揺れやすさ：同じ指標を、向きを変えた質問どうしで答えが食い違っていないか */
  const sw={};AXQ.forEach(A=>{const a=[],b=[];QZ.Q.forEach((q,i)=>{if(q.ax!==A.k||qa[i]==null)return;(q.p===A.a?a:b).push(qa[i]);});
   const av=x=>x.length?x.reduce((s,v)=>s+v,0)/x.length:2.5;sw[A.k]=Math.abs(av(a)-av(b))<1.5;});return sw;}
-function finish(){const sc=scoreAll();st.pct={};st.half={};st.sway=swayOf();
+function finish(){sset(KQ,null);drawResume();const sc=scoreAll();st.pct={};st.half={};st.sway=swayOf();
  AX.forEach((A,i)=>{const[a,b]=sc[A.k],tot=a+b||1;st.t[i]=a>b?A.a:a<b?A.b:natal(st.y,st.m,st.d).t[i];st.pct[A.k]=Math.round(b/tot*100);st.half[A.k]=Math.abs(a-b)<=4||tbAns[A.k]!=null;});
  {const [a,b]=sc.AT;st.at=a>b?"A":a<b?"T":null;}setPicker();showResult();showQuiz(false);render();document.querySelector(".hero").scrollIntoView({behavior:"smooth"});}
 /* ---- 1列ずつめくって比べる ---- */
 const AXW={EI:[TR("外向型"),TR("内向型")],SN:[TR("現実型"),TR("直感型")],TF:[TR("思考型"),TR("感情型")],JP:[TR("計画型"),TR("柔軟型")],AT:[TR("自己主張型"),TR("慎重型")]};
 let RV=null;
-function setupReveal(N,born,now,bAT,nAT,diff,atDiff){
+function setupReveal(N,born,now,bAT,nAT,diff,atDiff,why,aligned,instant){
  const fl=$("flip"),bt=[...fl.querySelectorAll(".tile.b")],nt=[...fl.querySelectorAll(".tile.n")],ar=[...fl.querySelectorAll(".arw")];
  const cols=["EI","SN","TF","JP","AT"],colors=["--ei","--sn","--tf","--jp","--plus"],names=[TR("エネルギー"),TR("ものの見方"),TR("判断のしかた"),TR("行動のしかた"),TR("心の構え")];
  RV={opened:new Set(),story:$("rStory").innerHTML};
  [...bt,...nt].forEach(t=>t.classList.add("hid"));ar.forEach(a=>a.classList.add("hid"));
- cols.forEach((k,i)=>{if(k!=="AT"&&N.strong[k]===false)bt[i].classList.add("weak");});
  document.querySelectorAll(".hero .pend").forEach(e=>e.classList.add("wait"));
  $("rStory").innerHTML=TR('<span class="ln">タイルをタップして、</span><span class="ln">1列ずつめくってください</span>');
  $("revs").innerHTML="";$("flipAll").hidden=false;$("flipHint").textContent=TR("上が生まれつき、下が今のあなた。あと5列");
  const open=i=>{if(RV.opened.has(i))return;RV.opened.add(i);const k=cols[i];
   bt[i].classList.remove("hid");bt[i].classList.add("show");
-  setTimeout(()=>{nt[i].classList.remove("hid");nt[i].classList.add("show");ar[i].classList.remove("hid");},260);
+  const shN=()=>{nt[i].classList.remove("hid");nt[i].classList.add("show");ar[i].classList.remove("hid");};instant?shN():setTimeout(shN,260);
   const bl=k==="AT"?bAT:born[i],nl=k==="AT"?nAT:now[i],ws=AXW[k],wOf=L=>L===({EI:"E",SN:"S",TF:"T",JP:"J",AT:"A"})[k]?ws[0]:ws[1];
-  const d=k==="AT"?atDiff:diff[i],weak=k!=="AT"&&N.strong[k]===false;
-  const tg=nl==null?TR('<span class="tg same">比べない</span>'):!d?TR('<span class="tg same">そのまま</span>'):weak?TR('<span class="tg small">小さなギャップ</span>'):TR('<span class="tg gap">ギャップ</span>');
-  const div=document.createElement("div");div.className="rv";div.style.setProperty("--c","var("+colors[i]+")");
-  div.innerHTML='<div class="h"><span class="ax">'+names[i]+'</span><span class="cd">'+bl+'</span><span>'+wOf(bl)+'</span>'+(nl?TR('<span>→ 今</span><span class="cd">')+nl+'</span>':'')+tg+'</div><p>'+(N.why&&N.why[k]?N.why[k]:"")+'</p>';
+  const d=k==="AT"?atDiff:diff[i];
+  const tg=nl==null?TR('<span class="tg same">比べない</span>'):!d?TR('<span class="tg same">そのまま</span>'):TR('<span class="tg gap">ギャップ</span>');
+  let q="";if(st.pct&&k!=="AT"&&st.pct[k]!=null){const A=AX[i],sh=nl===A.a?100-st.pct[k]:st.pct[k];
+   q='<p class="rvq">'+TR("60問での今の強さ：")+wOf(nl)+" "+Math.max(50,sh)+"%"+(st.sway&&st.sway[k]?TR('<span class="half sway">揺れやすい</span>'):'')+(st.half&&st.half[k]?TR('<span class="half">ほぼ半々</span>'):'')+'</p>';}
+  const div=document.createElement("div");div.className="rv";div.style.setProperty("--c","var("+colors[i]+")");if(instant)div.style.animation="none";
+  div.innerHTML='<div class="h"><span class="ax">'+names[i]+'</span><span class="cd">'+bl+'</span><span>'+wOf(bl)+'</span>'+(nl?TR('<span>→ 今</span><span class="cd">')+nl+'</span>':'')+tg+'</div><p>'+(why[k]||"")+(k!=="AT"&&!aligned[k]&&N.vs&&N.vs[k]?TR("この傾向は、生まれつきかなりはっきりしています。"):"")+'</p>'+q;
   $("revs").appendChild(div);
   const left=5-RV.opened.size;$("flipHint").textContent=left?TR("あと")+left+TR("列"):"";
-  if(!left){$("flipAll").hidden=true;setTimeout(()=>{$("rStory").innerHTML=RV.story;document.querySelectorAll(".hero .pend").forEach(e=>e.classList.remove("wait"));},500);}};
+  if(!left){$("flipAll").hidden=true;const fin=()=>{$("rStory").innerHTML=RV.story;document.querySelectorAll(".hero .pend").forEach(e=>e.classList.remove("wait"));};instant?fin():setTimeout(fin,500);}};
  [...bt,...nt].forEach(t=>{const i=(bt.indexOf(t)>=0?bt.indexOf(t):nt.indexOf(t));t.addEventListener("click",()=>open(i));});
- $("flipAll").onclick=()=>{let j=0;cols.forEach((_,i)=>{if(!RV.opened.has(i)){setTimeout(()=>open(i),j*320);j++;}});};}
+ $("flipAll").onclick=()=>{let j=0;cols.forEach((_,i)=>{if(!RV.opened.has(i)){setTimeout(()=>open(i),j*320);j++;}});};
+ if(instant)cols.forEach((_,i)=>open(i));}
 /* ---- 人物像 ---- */
 function drawPersona(which){const me=window.__me;if(!me||typeof PS==="undefined")return;
  const t=which==="now"?me.now:me.born,at=which==="now"?me.nAT:me.bAT,P=PS[t];
@@ -127,10 +151,14 @@ function drawPersona(which){const me=window.__me;if(!me||typeof PS==="undefined"
  $("psCode").textContent=t+(at?"-"+at:"")+"（"+P16[t]+"）";$("psCatch").textContent=P.catch;$("psOv").textContent=P.overview;
  $("psStr").innerHTML=li(P.strengths);$("psPit").innerHTML=li(P.pitfalls);
  $("psAT").innerHTML=at?'<b>'+(at==="A"?TR("自己主張型（A）"):TR("慎重型（T）"))+TR('のあなたは</b>')+P[at]:"";$("psAT").hidden=!at;
+ $("aruH").textContent=t+TR(" のあるある");$("aru").innerHTML=(D.ARUARU[t]||[]).map(x=>"<li>"+x+"</li>").join("");
+ $("cT").textContent=D.TCOMPAT[t].m;$("cW").textContent=D.TCOMPAT[t].why;
  $("psRel").textContent=P.relationships;$("psLove").textContent=P.love;$("psWork").textContent=P.work;$("psJobs").innerHTML=P.jobs.map(j=>"<li>"+j+"</li>").join("");$("psGrow").textContent=P.growth;}
 $("pNow").onclick=()=>drawPersona("now");$("pBorn").onclick=()=>drawPersona("born");
-function render(){
- const N=natal(st.y,st.m,st.d),now=st.t.join(""),born=N.t;
+function render(instant){
+ const N=natal(st.y,st.m,st.d),now=st.t.join(""),aligned={},why=Object.assign({},N.why);
+ /* 生まれつきの星がはっきりしない文字は、今のタイプに合わせる（ギャップは無理に作らない） */
+ const born=AX.map((A,i)=>{if(N.strong[A.k]===false){aligned[A.k]=true;const w=AXW[A.k][now[i]===A.a?0:1];why[A.k]=TR("この文字は、生まれつきの星がどちらにもはっきり傾いていません。そのため、今のあなたの「")+w+TR("」を、本来の姿としても見ています。");return now[i];}return N.t[i];}).join("");
  $("rSrc").textContent=st.pct?TR("60問の診断結果"):TR("あなたの診断結果");
  const bAT=N.at,nAT=st.at,bornF=born+(bAT?"-"+bAT:""),nowF=now+(nAT?"-"+nAT:"");
  const diff=AX.map((A,i)=>now[i]!==born[i]),atDiff=!!(bAT&&nAT&&bAT!==nAT),dn=diff.filter(Boolean).length+(atDiff?1:0);
@@ -142,7 +170,7 @@ function render(){
  fh+=TR('<span class="rl"><b>いま</b>今の自分</span>')+AX.map((A,i)=>'<span class="tile n'+(diff[i]?' c':'')+'" style="--c:var('+A.c+');--i:'+i+'">'+now[i]+'</span>').join("")+'<span class="tile n at'+(atDiff?' c':'')+(nAT?'':' none')+'" style="--c:var('+ATC+');--i:4">'+(nAT||"?")+'</span>';
  fh+='<span class="rl e"></span>'+AX.map(A=>'<span class="axl">'+A.sh+'</span>').join("")+TR('<span class="axl">構え</span>');
  $("flip").innerHTML=fh;
- setupReveal(N,born,now,bAT,nAT,diff,atDiff);
+ setupReveal(N,born,now,bAT,nAT,diff,atDiff,why,aligned,instant);
  const ch1=AX.filter((A,i)=>diff[i]).map(A=>'<span class="nw">'+A.name+'</span>').concat(atDiff?[TR('<span class="nw">心の構え</span>')]:[]);
  const tot=nAT?5:4;
  $("rSum").innerHTML=(dn===0?tot+TR('文字すべて、<b>生まれつきのまま</b>です。'):TR('変わったのは <b>')+dn+TR('文字</b>')+(dn<tot?'<br>'+ch1.join(TR("・")):TR('（すべて）')))+(nAT?'':TR('<br><small class="atnote">最後の1文字（A/T）は、選んだ人だけ比べます</small>'));
@@ -158,7 +186,7 @@ function render(){
   const wi=k=>{const g=HN.gap[k];return '<div class="it" style="--c:var('+cOf(k)+');--t:var('+tOf(k)+')"><div class="gc"><div class="gtiles"><span class="gtl"><span class="gt b">'+k[0]+'</span><b>'+g.from+'</b></span><span class="gar">→</span><span class="gtl"><span class="gt n">'+k[1]+'</span><b>'+g.to+'</b></span></div>'
    +'<div class="gtx"><small>'+g.axis+TR('</small><span class="row"><i>本当は</i>')+(isAT(k)?HN.letter['AT_'+k[0]]:HN.letter[k[0]])+TR('</span><span class="row n"><i>今は</i>')+(isAT(k)?HN.letter['AT_'+k[1]]:HN.letter[k[1]])+'</span></div></div>'
    +'<p>'+g.worry+TR('</p><p class="key"><b>ほどき方</b>')+g.key+'</p></div>';};
-  $("hWorry").innerHTML=gk.slice(0,2).map(wi).join("")+(gk.length>2?TR('<details class="hmore"><summary>ほかの悩みのヒントも見る（')+(gk.length-2)+TR('つ）</summary><div class="hw">')+gk.slice(2).map(wi).join("")+'</div></details>':"");
+  $("hWorry").innerHTML=gk.slice(0,1).map(wi).join("")+(gk.length>1?TR('<details class="hmore"><summary>ほかの悩みのヒントも見る（')+(gk.length-1)+TR('つ）</summary><div class="hw">')+gk.slice(1).map(wi).join("")+'</div></details>':"");
   $("hWork").innerHTML=gk.slice(0,2).map(k=>'<div class="it wk" style="--c:var('+cOf(k)+')"><span class="ax">'+HN.gap[k].axis+'</span><p>'+HN.gap[k].work+'</p></div>').join("");
  }else{$("hWorryQ").hidden=true;$("hWorry").innerHTML='<div class="it"><p>'+HN.same.worry+TR('</p><p class="key"><b>ほどき方</b>')+HN.same.key+'</p></div>';$("hWork").innerHTML='<div class="it"><p>'+HN.same.work+'</p></div>';}
  $("hJobW").textContent=HB.work;$("hJobs").innerHTML=HB.jobs.map(t=>"<li>"+t+"</li>").join("");
@@ -166,21 +194,10 @@ function render(){
  window.__me={born,now,N,bAT,nAT};drawPersona("now");drawToday();
  $("p16Born").textContent=born+p16(born);$("p16Now").textContent=now+p16(now);
  $("nkBorn").textContent=D.NICK[born];$("nkNow").textContent=D.NICK[now];
- let pct=0,ch=[];
- const axHTML=AX.map((A,i)=>{const n=now[i],b=born[i],c=n!==b;
-  if(c){pct+=N.strong[A.k]===false?12:25;ch.push(b+n);}
-  const bPos=b===A.a?100-N.str[A.k]:N.str[A.k],nPos=st.pct?st.pct[A.k]:(n===A.a?25:75),shown=n===A.a?100-nPos:nPos;
-  const pc=st.pct?Math.max(50,shown)+'% ':'',hf=(st.pct&&st.sway&&st.sway[A.k]?TR('<span class="half sway">揺れやすい</span>'):'')+(st.pct&&st.half[A.k]?TR('<span class="half">ほぼ半々</span>'):'');
-  return '<div class="axis" style="--c:var('+A.c+')"><div class="axhead"><span>'+A.name+'：<b style="color:var('+A.c+')">'+pc+(n===A.a?A.aw:A.bw)+'</b>'+hf+'</span>'+(c?TR('<span class="chg">変化</span>'):TR('<span class="same">そのまま</span>'))+'</div>'
-  +'<div class="track" style="background:var(--tint-'+A.k.toLowerCase()+')"><span class="m born" style="left:'+bPos+'%"></span><span class="m now" style="left:'+nPos+'%;background:var('+A.c+')"></span></div>'
-  +'<div class="ends"><span class="'+(n===A.a?"on":"")+'">'+A.aw+' '+A.a+'</span><span class="'+(n===A.b?"on":"")+'">'+A.bw+' '+A.b+'</span></div></div>';}).join("");
- $("axes").innerHTML=axHTML;
- pct=Math.round(pct);const n=ch.length;
+ const pct=Math.round(dn/tot*100),lv=dn===0?0:Math.min(4,Math.ceil(dn/tot*4));window.__me.pct=pct;
  $("gNum").textContent=pct;$("gBar").style.width=pct+"%";$("gMeter").setAttribute("aria-label",TR("ギャップ度 ")+pct+"%");
- $("gLbl").textContent=[TR("生まれつきのまま"),TR("ちょっとだけ変化"),TR("ほどよく変化"),TR("かなり変化"),TR("ほぼ別人レベルの変化")][n];
- $("aruH").textContent=now+TR(" のあるある");
- $("aru").innerHTML=D.ARUARU[now].map(t=>"<li>"+t+"</li>").join("");
- $("cT").textContent=D.TCOMPAT[now].m;$("cW").textContent=D.TCOMPAT[now].why;
+ $("gLbl").textContent=[TR("生まれつきのまま"),TR("ちょっとだけ変化"),TR("ほどよく変化"),TR("かなり変化"),TR("ほぼ別人レベルの変化")][lv];
+ window.__me.karai=strip(C.karai);saveResult();
 }
 /* ---- 相性 ---- */
 const ps={y:1995,m:4,d:20};
@@ -219,7 +236,8 @@ function drawToday(){const me=window.__me;if(!me)return;const dt=new Date();dt.s
  const line=th.lines[(T.num+me.N.num)%th.lines.length].replace("{B}",me.born).replace("{N}",me.now);
  const wk="日月火水木金土"[dt.getDay()];
  $("tdDate").textContent=TR("今日のひと言　")+(LANG==="ja"?(dt.getMonth()+1)+"月"+dt.getDate()+"日（"+wk+"）":dt.toLocaleDateString(LANG==="ko"?"ko-KR":"en-US",{month:"short",day:"numeric",weekday:"short"}));
- $("tdImg").src="img/mascot/c"+String(me.N.num).padStart(2,"0")+".webp";
+ $("tdImg").src="img/mascot/c"+String(me.N.num).padStart(2,"0")+".webp";$("tdImg").alt=buddyName(me.N.num);
+ {const eb=document.querySelector("#today .tdintro .eyebrow");if(!eb.dataset.base)eb.dataset.base=eb.textContent;eb.innerHTML=esc(eb.dataset.base)+'<b class="tdnm">'+esc(buddyName(me.N.num))+'</b>';}
  $("tdLine").textContent=line;
  $("tdWho").textContent=th.who==="born"?TR("生まれつきの ")+me.born:TR("今の ")+me.now;
  $("tdPowL").textContent=pw.label;$("tdPow").innerHTML='<span class="st">'+"★★★".slice(0,pw.stars)+'</span><span style="color:var(--rule)">'+"★★★".slice(pw.stars)+'</span><small class="pwadd">'+pw.add+'</small>';
@@ -249,4 +267,81 @@ if(INV){$("invBar").hidden=false;$("invWho").textContent=INV.who;$("invPair").te
  $("partnerH").textContent=INV.who+TR("との相性");}
 function showInvitePair(){if(!INV)return;$("pRes").innerHTML=pairHTML(INV);$("pRes").hidden=false;$("pForm").hidden=true;}
 fillP();
-fillDate();render();
+
+/* ---- 相棒の名前（生まれた日の干＝持ち物、支＝動物） ---- */
+const BUDDY_P=[TR("わかば"),TR("おはな"),TR("ほのお"),TR("ランタン"),TR("ちきゅう"),TR("はたけ"),TR("ナイト"),TR("ティアラ"),TR("パイロット"),TR("まほう")];
+const BUDDY_A=[TR("ねずみ"),TR("うし"),TR("とら"),TR("うさぎ"),TR("ドラゴン"),TR("へび"),TR("ポニー"),TR("ひつじ"),TR("おさる"),TR("ひよこ"),TR("わんこ"),TR("うりぼう")];
+function buddyName(num){return TR("{p}の{a}").replace("{p}",BUDDY_P[(num-1)%10]).replace("{a}",BUDDY_A[(num-1)%12]);}
+
+/* ---- 結果を画像でシェア ---- */
+const SHARE_URL="https://16typeplus.jp/"+(LANG==="ja"?"":LANG+"/");
+const SC={ei:"#3E7FA6",sn:"#C29A3A",tf:"#3F9A72",jp:"#7A5EA8",plus:"#C2553F",ink:"#1F2733",muted:"#5E6A7A",rule:"#E2E6EC",bg:"#F6F7F9",soft:"#EEF1F5"};
+function wrapLines(ctx,text,maxW,maxLines){
+ const units=LANG==="ja"&&typeof BX!=="undefined"?BX.seg(text.replace(/​/g,"")).split("​"):text.split(/(?<=\s)/);
+ const lines=[];let cur="";
+ const push=u=>{if(ctx.measureText(cur+u).width<=maxW||!cur){if(ctx.measureText(u).width>maxW&&!cur){for(const ch of u){if(ctx.measureText(cur+ch).width>maxW){lines.push(cur);cur="";}cur+=ch;}}else cur+=u;}else{lines.push(cur.trimEnd());cur=u.trimStart();}};
+ units.forEach(push);if(cur)lines.push(cur);
+ if(lines.length>maxLines){lines.length=maxLines;let l=lines[maxLines-1];while(l&&ctx.measureText(l+"…").width>maxW)l=l.slice(0,-1);lines[maxLines-1]=l+"…";}
+ return lines;}
+function rrect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+async function drawShare(){
+ const me=window.__me,W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const ctx=cv.getContext("2d");
+ const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
+ try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"16TYPE+ あア가A")));}catch(e){}
+ ctx.fillStyle=SC.bg;ctx.fillRect(0,0,W,H);
+ ctx.fillStyle="#fff";rrect(ctx,48,48,W-96,H-96,36);ctx.fill();ctx.strokeStyle=SC.rule;ctx.lineWidth=2;ctx.stroke();
+ ctx.textBaseline="alphabetic";ctx.textAlign="left";
+ ctx.font="600 54px "+MONO;ctx.fillStyle=SC.ink;ctx.fillText("16TYPE",110,160);const lw=ctx.measureText("16TYPE").width;ctx.fillStyle=SC.plus;ctx.fillText("+",110+lw,160);
+ ctx.font="500 26px "+SANS;ctx.fillStyle=SC.muted;ctx.textAlign="right";ctx.fillText(TR("生まれつきと、今のわたし"),W-110,156);ctx.textAlign="left";
+ const NC=me.nAT?5:4,cols=[SC.ei,SC.sn,SC.tf,SC.jp,SC.plus],bl=me.born.split("").concat(me.nAT?[me.bAT||"–"]:[]),nl=me.now.split("").concat(me.nAT?[me.nAT]:[]);
+ const tw=148,gap=22,x0=(W-(tw*5+gap*4))/2,xs=(W-(tw*NC+gap*(NC-1)))/2,y1=270,y2=y1+tw+120;
+ ctx.font="700 28px "+SANS;ctx.fillStyle=SC.ink;ctx.fillText(TR("生まれつき"),xs,y1-22);ctx.fillText(TR("いま"),xs,y2-16);
+ for(let i=0;i<NC;i++){const x=xs+i*(tw+gap),c=cols[i],ch=bl[i]!==nl[i]&&nl[i]!=="?"&&bl[i]!=="–";
+  ctx.setLineDash([12,9]);ctx.lineWidth=5;ctx.strokeStyle=c;rrect(ctx,x+3,y1+3,tw-6,tw-6,22);ctx.stroke();ctx.setLineDash([]);
+  ctx.font="600 84px "+MONO;ctx.textAlign="center";ctx.fillStyle=SC.ink;ctx.fillText(bl[i],x+tw/2,y1+tw/2+30);
+  ctx.fillStyle=ch?c:SC.rule;ctx.font="700 44px "+SANS;ctx.fillText(ch?"↓":"｜",x+tw/2,y1+tw+64);
+  if(nl[i]==="?"){ctx.strokeStyle=SC.rule;ctx.lineWidth=4;rrect(ctx,x+2,y2+2,tw-4,tw-4,22);ctx.stroke();ctx.fillStyle=SC.muted;}else{ctx.fillStyle=c;rrect(ctx,x,y2,tw,tw,22);ctx.fill();ctx.fillStyle="#fff";}
+  ctx.font="600 84px "+MONO;ctx.fillText(nl[i],x+tw/2,y2+tw/2+30);ctx.textAlign="left";}
+ let y=y2+tw+90;
+ ctx.font="700 34px "+SANS;ctx.fillStyle=SC.ink;const g=TR("ギャップ度 ")+me.pct+"%";ctx.fillText(g,x0,y);
+ const gx=x0+ctx.measureText(g).width+28,gw=W-110-gx;ctx.fillStyle=SC.soft;rrect(ctx,gx,y-24,gw,20,10);ctx.fill();if(me.pct>0){ctx.fillStyle=SC.plus;rrect(ctx,gx,y-24,Math.max(20,gw*me.pct/100),20,10);ctx.fill();}
+ y+=62;ctx.font="500 30px "+SANS;ctx.fillStyle=SC.muted;
+ wrapLines(ctx,D.NICK[me.born]+"  →  "+D.NICK[me.now],W-220,2).forEach(l=>{ctx.fillText(l,x0,y);y+=44;});
+ y+=26;const kx=x0,kw=W-2*x0,room=H-200-y;let fs=38,kl,lh,kh;
+ for(;fs>=26;fs-=2){ctx.font="700 "+fs+"px "+SANS;lh=Math.round(fs*1.5);kl=wrapLines(ctx,me.karai||"",kw-72,6);kh=kl.length*lh+80+lh*0.5;if(kh<=room)break;}
+ ctx.fillStyle=SC.soft;rrect(ctx,kx,y,kw,kh,24);ctx.fill();ctx.fillStyle=SC.plus;ctx.font="700 24px "+SANS;ctx.fillText(TR("辛口のひと言"),kx+36,y+50);
+ ctx.fillStyle=SC.ink;ctx.font="700 "+fs+"px "+SANS;kl.forEach((l,i)=>ctx.fillText(l,kx+36,y+64+lh*0.9+i*lh));
+ ctx.textAlign="center";ctx.font="500 28px "+SANS;ctx.fillStyle=SC.muted;ctx.fillText(TR("あなたのギャップも見てみる →"),W/2,H-138);
+ ctx.font="600 34px "+MONO;ctx.fillStyle=SC.ink;ctx.fillText(SHARE_URL.replace("https://",""),W/2,H-90);
+ return cv;}
+function shareText(){const me=window.__me;return TR("生まれつきは ")+me.born+(me.bAT?"-"+me.bAT:"")+TR("、今は ")+me.now+(me.nAT?"-"+me.nAT:"")+TR("。ギャップ度 ")+me.pct+"%"+TR("｜16TYPE+（16タイププラス）");}
+async function shareResult(){const b=$("shareBtn"),lbl=b.textContent;b.disabled=true;b.textContent=TR("画像をつくっています…");
+ try{const cv=await drawShare();const blob=await new Promise(r=>cv.toBlob(r,"image/png"));const file=new File([blob],"16typeplus.png",{type:"image/png"});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],text:shareText()+" "+SHARE_URL});}catch(e){if(e&&e.name!=="AbortError")showShareBox(cv);}}
+  else showShareBox(cv);}
+ catch(e){alert(TR("画像をつくれませんでした。もう一度お試しください。"));}
+ finally{b.disabled=false;b.textContent=lbl;}}
+function showShareBox(cv){let box=$("shareBox");const url=cv.toDataURL("image/png");
+ if(!box){box=document.createElement("div");box.id="shareBox";box.className="sharebox";box.setAttribute("role","dialog");box.setAttribute("aria-modal","true");document.body.appendChild(box);
+  box.addEventListener("click",e=>{if(e.target===box)box.hidden=true;});}
+ const tw="https://twitter.com/intent/tweet?text="+encodeURIComponent(shareText())+"&url="+encodeURIComponent(SHARE_URL);
+ box.innerHTML='<div class="sbin"><img alt="'+esc(TR("シェア用の画像"))+'"><p class="fine">'+TR("画像を長押し（パソコンは右クリック）でも保存できます。")+'</p><div class="sbacts"><a class="btn primary" download="16typeplus.png">'+TR("画像を保存")+'</a><a class="btn" target="_blank" rel="noopener">'+TR("Xでシェア")+'</a></div><button type="button" class="qlink">'+TR("閉じる")+'</button></div>';
+ box.querySelector("img").src=url;const as=box.querySelectorAll("a");as[0].href=url;as[1].href=tw;box.querySelector(".qlink").onclick=()=>{box.hidden=true;};box.hidden=false;
+ /* プレビュー（claude.ai）では、保存は見る人の確認を通して行う */
+ if(window.claude&&claude.use)claude.use("downloads").then(dl=>{if(!dl)return;as[0].onclick=e=>{e.preventDefault();cv.toBlob(bl=>{dl.save({filename:"16typeplus.png",data:bl}).catch(()=>{});},"image/png");};}).catch(()=>{});}
+$("shareBtn").onclick=shareResult;
+
+/* ---- 最初に開いたとき：前回の結果があれば、すぐ見せる ---- */
+function boot(){drawResume();const R=sget(KR);
+ if(R&&Array.isArray(R.t)&&R.t.length===4&&R.y){st.y=R.y;st.m=R.m;st.d=R.d;st.t=R.t.slice();st.at=R.at||null;st.pct=R.pct||null;st.half=R.half||{};st.sway=R.sway||null;
+  fillDate();setPicker();selAT=st.at;showResult();render(true);
+  document.querySelectorAll(".intro,.how").forEach(e=>e.hidden=true);
+  const res=$("result");res.after($("quizCard"));res.after($("formCard"));$("formh").textContent=TR("もう一度診断する");
+  const wb=document.createElement("section");wb.className="card welcome";
+  wb.innerHTML='<p class="eyebrow">'+TR("おかえりなさい")+'</p><p class="wbt">'+TR("前回の結果を表示しています。")+'</p><div class="wbacts"><button type="button" class="btn primary" id="wbToday">'+TR("相棒の今日のひと言を見る")+'</button><button type="button" class="btn" id="wbRedo">'+TR("診断をやり直す")+'</button></div>';
+  const hero=document.querySelector(".hero");hero.before(wb);
+  $("wbToday").onclick=()=>$("today").scrollIntoView({behavior:"smooth",block:"start"});
+  $("wbRedo").onclick=()=>$("formCard").scrollIntoView({behavior:"smooth",block:"start"});
+ }else{fillDate();render();}}
+$("reset").onclick=()=>{if(!confirm(TR("保存している結果を消して、はじめからやり直しますか？")))return;sset(KR,null);sset(KQ,null);location.reload();};
+boot();
