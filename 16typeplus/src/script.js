@@ -49,8 +49,10 @@ const KQ="16tp.quiz.v1",KR="16tp.result.v1";
 const sget=k=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}};
 const sset=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
 /* 16Personalities での呼び名（参考表示用） */
-const P16={INTJ:TR("建築家"),INTP:TR("論理学者"),ENTJ:TR("指揮官"),ENTP:TR("討論者"),INFJ:TR("提唱者"),INFP:TR("仲介者"),ENFJ:TR("主人公"),ENFP:TR("運動家"),ISTJ:TR("管理者"),ISFJ:TR("擁護者"),ESTJ:TR("幹部"),ESFJ:TR("領事"),ISTP:TR("巨匠"),ISFP:TR("冒険家"),ESTP:TR("起業家"),ESFP:TR("エンターテイナー")};
-const p16=t=>"（"+P16[t]+"）";
+/* 16タイプの動物（16TYPE+ のオリジナル） */
+const ANI={INTJ:[TR("フクロウ"),TR("静かな作戦家")],INTP:[TR("ネコ"),TR("気まぐれな研究者")],ENTJ:[TR("ライオン"),TR("頼れる司令塔")],ENTP:[TR("キツネ"),TR("ひらめきのいたずら屋")],INFJ:[TR("クジラ"),TR("静かな導き手")],INFP:[TR("ハリネズミ"),TR("やわらかな詩人")],ENFJ:[TR("イルカ"),TR("みんなの応援団長")],ENFP:[TR("カワウソ"),TR("好奇心の冒険家")],ISTJ:[TR("ビーバー"),TR("こつこつ職人")],ISFJ:[TR("クマ"),TR("そっと守る人")],ESTJ:[TR("ゾウ"),TR("しっかり者のまとめ役")],ESFJ:[TR("ペンギン"),TR("みんなの世話役")],ISTP:[TR("オオカミ"),TR("一匹狼の腕利き")],ISFP:[TR("パンダ"),TR("マイペースな芸術家")],ESTP:[TR("チーター"),TR("スリル好きの勝負師")],ESFP:[TR("インコ"),TR("場の人気者")]};
+const an=t=>(ANI[t]||[t])[0],atag=t=>(ANI[t]||["",""])[1];
+const p16=t=>TR("（")+an(t)+TR("）");
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function opts(el,a,b,cur){el.innerHTML="";for(let v=a;v<=b;v++){const o=document.createElement("option");o.value=v;o.textContent=v;if(v===cur)o.selected=true;el.appendChild(o);}}
 function fillDate(){opts($("y"),1930,2020,st.y);opts($("m"),1,12,st.m);const mx=new Date(st.y,st.m,0).getDate();if(st.d>mx)st.d=mx;opts($("d"),1,mx,st.d);}
@@ -154,7 +156,7 @@ function drawPersona(which){const me=window.__me;if(!me||typeof PS==="undefined"
  $("pNow").setAttribute("aria-selected",which==="now");$("pBorn").setAttribute("aria-selected",which!=="now");
  if(!P){$("psCatch").textContent="（"+t+TR("の人物像は準備中です）");["psOv","psRel","psLove","psWork","psGrow","psAT"].forEach(id=>$(id).textContent="");$("psStr").innerHTML=$("psPit").innerHTML=$("psJobs").innerHTML="";return;}
  const li=a=>a.map(x=>{const [h,d]=x.split("｜");return "<li><b>"+h+"</b><span>"+(d||"")+"</span></li>";}).join("");
- $("psCode").textContent=t+(at?"-"+at:"")+"（"+P16[t]+"）";$("psCatch").textContent=P.catch;$("psOv").textContent=P.overview;
+ $("psCode").textContent=t+(at?"-"+at:"")+p16(t);$("psCatch").textContent=P.catch;$("psOv").textContent=P.overview;
  $("psStr").innerHTML=li(P.strengths);$("psPit").innerHTML=li(P.pitfalls);
  $("psAT").innerHTML=at?'<b>'+(at==="A"?TR("自己主張型（A）"):TR("慎重型（T）"))+TR('のあなたは</b>')+P[at]:"";$("psAT").hidden=!at;
  $("aruH").textContent=t+TR(" のあるある");$("aru").innerHTML=(D.ARUARU[t]||[]).map(x=>"<li>"+x+"</li>").join("");
@@ -168,8 +170,9 @@ function render(instant){
  $("rSrc").textContent=st.pct?TR("質問への回答から出した結果"):TR("あなたの診断結果");
  const bAT=N.at,nAT=st.at,bornF=born+(bAT?"-"+bAT:""),nowF=now+(nAT?"-"+nAT:"");
  const diff=AX.map((A,i)=>now[i]!==born[i]),atDiff=!!(bAT&&nAT&&bAT!==nAT),dn=diff.filter(Boolean).length+(atDiff?1:0);
- $("rStory").innerHTML=dn===0?TR('<span class="ln">本当のあなたは <span class="b">')+bornF+TR('</span>。</span><br><span class="ln">今も、そのまま <span class="n">')+nowF+TR('</span>。</span>')
-   :TR('<span class="ln">本当のあなたは <span class="b">')+bornF+TR('</span>。</span><br><span class="ln">今は <span class="n">')+nowF+TR('</span> を生きている。</span>');
+ const cp=x=>'<span class="sc">'+TR("（")+x+TR("）")+'</span>';
+ $("rStory").innerHTML=born===now?TR('<span class="ln">あなたは、生まれつきも今も</span><span class="ln"><span class="n">')+an(now)+'</span>'+cp(nowF)+TR('。</span>')
+   :TR('<span class="ln">あなたの中には、</span><span class="ln"><span class="b">')+an(born)+'</span>'+cp(bornF)+TR('と</span><span class="ln"><span class="n">')+an(now)+'</span>'+cp(nowF)+TR('がいる。</span>');
  const ATC="--plus";
  let fh=TR('<span class="rl"><b>生まれつき</b>本当の自分</span>')+AX.map((A,i)=>'<span class="tile b'+(diff[i]?' c':'')+'" style="--c:var('+A.c+')">'+born[i]+'</span>').join("")+'<span class="tile b at'+(atDiff?' c':'')+'" style="--c:var('+ATC+')">'+(bAT||"–")+'</span>';
  fh+='<span class="rl e"></span>'+AX.map((A,i)=>'<span class="arw'+(diff[i]?' c':'')+'" style="--c:var('+A.c+')">'+(diff[i]?'↓':'｜')+'</span>').join("")+'<span class="arw'+(atDiff?' c':'')+'" style="--c:var('+ATC+')">'+(atDiff?'↓':'｜')+'</span>';
@@ -179,7 +182,7 @@ function render(instant){
  setupReveal(N,born,now,bAT,nAT,diff,atDiff,why,aligned,instant);
  const ch1=AX.filter((A,i)=>diff[i]).map(A=>'<span class="nw">'+A.name+'</span>').concat(atDiff?[TR('<span class="nw">心の構え</span>')]:[]);
  const tot=nAT?5:4;
- $("rSum").innerHTML=(dn===0?tot+TR('文字すべて、<b>生まれつきのまま</b>です。'):TR('変わったのは <b>')+dn+TR('文字</b>')+(dn<tot?'<br>'+ch1.join(TR("・")):TR('（すべて）')))+(nAT?'':TR('<br><small class="atnote">最後の1文字（A/T）は、選んだ人だけ比べます</small>'));
+ $("rSum").innerHTML=(dn===0?tot+TR('文字すべて、<b>生まれつきのまま</b>です。'):TR('2匹がちがうのは <b>')+dn+TR('文字</b>')+(dn<tot?'<br>'+ch1.join(TR("・")):TR('（すべて）')))+(nAT?'':TR('<br><small class="atnote">最後の1文字（A/T）は、選んだ人だけ比べます</small>'));
  const C=(typeof COMBO!=="undefined"&&COMBO[born+">"+now])||{name:TR("（文章を準備中）"),atari:["",""],karai:""};
  const strip=t=>t.replace(/\[\[(今|本):(.*?)\]\]/g,"$2");
  const HB=HN.type[born],HW=HN.type[now];
@@ -198,8 +201,8 @@ function render(instant){
  $("hJobW").textContent=HB.work;$("hJobs").innerHTML=HB.jobs.map(t=>"<li>"+t+"</li>").join("");
  $("ccKarai").textContent=strip(C.karai);
  window.__me={born,now,N,bAT,nAT};drawPersona("now");drawToday();
- $("p16Born").textContent=born+p16(born);$("p16Now").textContent=now+p16(now);
- $("nkBorn").textContent=D.NICK[born];$("nkNow").textContent=D.NICK[now];
+ $("p16Born").textContent=bornF;$("p16Now").textContent=nowF;
+ $("nkBorn").innerHTML=esc(an(born))+'<small>'+esc(atag(born))+'</small>';$("nkNow").innerHTML=esc(an(now))+'<small>'+esc(atag(now))+'</small>';
  const pct=Math.round(dn/tot*100),lv=dn===0?0:Math.min(4,Math.ceil(dn/tot*4));window.__me.pct=pct;
  $("gNum").textContent=pct;$("gBar").style.width=pct+"%";$("gMeter").setAttribute("aria-label",TR("ギャップ度 ")+pct+"%");
  $("gLbl").textContent=[TR("生まれつきのまま"),TR("ちょっとだけ変化"),TR("ほどよく変化"),TR("かなり変化"),TR("ほぼ別人レベルの変化")][lv];
@@ -209,12 +212,12 @@ function render(instant){
 const ps={y:1995,m:4,d:20};
 function fillP(){opts($("py"),1930,2020,ps.y);opts($("pm"),1,12,ps.m);const mx=new Date(ps.y,ps.m,0).getDate();if(ps.d>mx)ps.d=mx;opts($("pd"),1,mx,ps.d);}
 ["py","pm","pd"].forEach(id=>$(id).addEventListener("change",e=>{ps[id.slice(1)]=+e.target.value;fillP();}));
-Object.keys(D.NICK).forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t+"（"+P16[t]+"）";$("pt").appendChild(o);});
+Object.keys(D.NICK).forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t+p16(t);$("pt").appendChild(o);});
 function same(a,b){let n=0;for(let i=0;i<4;i++)if(a[i]===b[i])n++;return n;}
 const TIER=[[TR("正反対の刺激コンビ"),TR("お互いにないものを持っている2人。組めば最強、ぶつかれば大波乱。")],[TR("別ルートの発見コンビ"),TR("考え方は別ルート。だからこそ話すたびに発見がある。")],[TR("ほどよいバランス型"),TR("半分同じで、半分ちがう。ほどよい距離で長く続く。")],[TR("似た者同士の安心ペア"),TR("感覚がよく似ていて、無理せず自然体でいられる。")],[TR("鏡みたいな2人"),TR("長所も弱点もそっくり。いちばんの理解者になれる。")]];
 /* P = {born, num, now(任意), who} */
 function pairHTML(P){const me=window.__me,sb=same(me.born,P.born),tb=TIER[sb];
- let html='<div class="phead"><img src="img/mascot/c'+String(P.num).padStart(2,"0")+'.webp" alt="'+esc(P.who)+TR('の相棒キャラクター"><div><small>')+esc(P.who)+TR('の生まれつき</small><span class="t">')+P.born+'</span><small>'+D.NICK[P.born]+(P.now?TR('（今は ')+P.now+TR('）'):'')+'</small></div></div>';
+ let html='<div class="phead"><img src="img/mascot/c'+String(P.num).padStart(2,"0")+'.webp" alt="'+esc(P.who)+TR('の相棒キャラクター"><div><small>')+esc(P.who)+TR('の生まれつき</small><span class="t">')+P.born+'</span><small>'+esc(an(P.born))+(P.now?TR('（今は ')+P.now+TR('）'):'')+'</small></div></div>';
  html+=TR('<div class="mx"><div><span class="l">本当の相性</span><div class="v">')+tb[0]+'</div></div>';
  if(P.now){const sn=same(me.now,P.now),tn=TIER[sn];html+=TR('<div><span class="l">今の相性</span><div class="v">')+tn[0]+'</div></div></div>';
   const hiB=sb>=2,hiN=sn>=2;
@@ -312,7 +315,7 @@ async function drawShare(){
  ctx.font="700 34px "+SANS;ctx.fillStyle=SC.ink;const g=TR("ギャップ度 ")+me.pct+"%";ctx.fillText(g,x0,y);
  const gx=x0+ctx.measureText(g).width+28,gw=W-110-gx;ctx.fillStyle=SC.soft;rrect(ctx,gx,y-24,gw,20,10);ctx.fill();if(me.pct>0){ctx.fillStyle=SC.plus;rrect(ctx,gx,y-24,Math.max(20,gw*me.pct/100),20,10);ctx.fill();}
  y+=62;ctx.font="500 30px "+SANS;ctx.fillStyle=SC.muted;
- wrapLines(ctx,D.NICK[me.born]+"  →  "+D.NICK[me.now],W-220,2).forEach(l=>{ctx.fillText(l,x0,y);y+=44;});
+ wrapLines(ctx,an(me.born)+TR("（")+me.born+TR("）")+"  ×  "+an(me.now)+TR("（")+me.now+TR("）"),W-220,2).forEach(l=>{ctx.fillText(l,x0,y);y+=44;});
  y+=26;const kx=x0,kw=W-2*x0,room=H-200-y;let fs=38,kl,lh,kh;
  for(;fs>=26;fs-=2){ctx.font="700 "+fs+"px "+SANS;lh=Math.round(fs*1.5);kl=wrapLines(ctx,me.karai||"",kw-72,6);kh=kl.length*lh+80+lh*0.5;if(kh<=room)break;}
  ctx.fillStyle=SC.soft;rrect(ctx,kx,y,kw,kh,24);ctx.fill();ctx.fillStyle=SC.plus;ctx.font="700 24px "+SANS;ctx.fillText(TR("辛口のひと言"),kx+36,y+50);
@@ -320,21 +323,45 @@ async function drawShare(){
  ctx.textAlign="center";ctx.font="500 28px "+SANS;ctx.fillStyle=SC.muted;ctx.fillText(TR("あなたのギャップも見てみる →"),W/2,H-138);
  ctx.font="600 34px "+MONO;ctx.fillStyle=SC.ink;ctx.fillText(SHARE_URL.replace("https://",""),W/2,H-90);
  return cv;}
-function shareText(){const me=window.__me;return TR("生まれつきは ")+me.born+(me.bAT?"-"+me.bAT:"")+TR("、今は ")+me.now+(me.nAT?"-"+me.nAT:"")+TR("。ギャップ度 ")+me.pct+"%"+TR("｜16TYPE+（16タイププラス）");}
+function shareText(){const me=window.__me;return TR("わたしの中には ")+an(me.born)+TR("（")+me.born+TR("）")+TR(" と ")+an(me.now)+TR("（")+me.now+TR("）")+TR(" がいる。ギャップ度 ")+me.pct+"%"+TR("｜16TYPE+（16タイププラス）");}
 async function shareResult(){const b=$("shareBtn"),lbl=b.textContent;b.disabled=true;b.textContent=TR("画像をつくっています…");
- try{const cv=await drawShare();const blob=await new Promise(r=>cv.toBlob(r,"image/png"));const file=new File([blob],"16typeplus.png",{type:"image/png"});
-  if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],text:shareText()+" "+SHARE_URL});}catch(e){if(e&&e.name!=="AbortError")showShareBox(cv);}}
-  else showShareBox(cv);}
+ try{const cvs=[await drawShare(),await drawCloud()];const blobs=await Promise.all(cvs.map(cv=>new Promise(r=>cv.toBlob(r,"image/png"))));
+  const files=blobs.map((bl,i)=>new File([bl],"16typeplus-"+(i+1)+".png",{type:"image/png"}));
+  if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,text:shareText()+" "+SHARE_URL});}catch(e){if(e&&e.name!=="AbortError")showShareBox(cvs);}}
+  else showShareBox(cvs);}
  catch(e){alert(TR("画像をつくれませんでした。もう一度お試しください。"));}
  finally{b.disabled=false;b.textContent=lbl;}}
-function showShareBox(cv){let box=$("shareBox");const url=cv.toDataURL("image/png");
+function showShareBox(cvs){let box=$("shareBox");
  if(!box){box=document.createElement("div");box.id="shareBox";box.className="sharebox";box.setAttribute("role","dialog");box.setAttribute("aria-modal","true");document.body.appendChild(box);
   box.addEventListener("click",e=>{if(e.target===box)box.hidden=true;});}
  const tw="https://twitter.com/intent/tweet?text="+encodeURIComponent(shareText())+"&url="+encodeURIComponent(SHARE_URL);
- box.innerHTML='<div class="sbin"><img alt="'+esc(TR("シェア用の画像"))+'"><p class="fine">'+TR("画像を長押し（パソコンは右クリック）でも保存できます。")+'</p><div class="sbacts"><a class="btn primary" download="16typeplus.png">'+TR("画像を保存")+'</a><a class="btn" target="_blank" rel="noopener">'+TR("Xでシェア")+'</a></div><button type="button" class="qlink">'+TR("閉じる")+'</button></div>';
- box.querySelector("img").src=url;const as=box.querySelectorAll("a");as[0].href=url;as[1].href=tw;box.querySelector(".qlink").onclick=()=>{box.hidden=true;};box.hidden=false;
+ box.innerHTML='<div class="sbin">'+cvs.map((_,i)=>'<figure class="sbf"><img alt="'+esc(TR("シェア用の画像"))+'"><a class="btn primary sv" download="16typeplus-'+(i+1)+'.png">'+TR("この画像を保存")+'</a></figure>').join("")+'<p class="fine">'+TR("画像を長押し（パソコンは右クリック）でも保存できます。")+'</p><div class="sbacts"><a class="btn tw" target="_blank" rel="noopener">'+TR("Xでシェア")+'</a></div><button type="button" class="qlink">'+TR("閉じる")+'</button></div>';
+ const imgs=box.querySelectorAll("img"),svs=box.querySelectorAll(".sv");cvs.forEach((cv,i)=>{const u=cv.toDataURL("image/png");imgs[i].src=u;svs[i].href=u;});
+ box.querySelector(".tw").href=tw;box.querySelector(".qlink").onclick=()=>{box.hidden=true;};box.hidden=false;
  /* プレビュー（claude.ai）では、保存は見る人の確認を通して行う */
- if(window.claude&&claude.use)claude.use("downloads").then(dl=>{if(!dl)return;as[0].onclick=e=>{e.preventDefault();cv.toBlob(bl=>{dl.save({filename:"16typeplus.png",data:bl}).catch(()=>{});},"image/png");};}).catch(()=>{});}
+ if(window.claude&&claude.use)claude.use("downloads").then(dl=>{if(!dl)return;svs.forEach((a,i)=>a.onclick=e=>{e.preventDefault();cvs[i].toBlob(bl=>{dl.save({filename:"16typeplus-"+(i+1)+".png",data:bl}).catch(()=>{});},"image/png");});}).catch(()=>{});}
+/* 2匹のキーワード画像：生まれつき（左）と今（右）の言葉を、それぞれの色で並べる */
+async function drawCloud(){const me=window.__me,W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
+ const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
+ try{await Promise.all(["700 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"あア가A")));}catch(e){}
+ const GC={NT:"#7A5EA8",NF:"#3F9A72",SJ:"#3E7FA6",SP:"#C29A3A"},grp=t=>t[1]==="N"?"N"+t[2]:"S"+t[3];
+ const one=me.born===me.now,cb=GC[grp(me.born)],cn=one?cb:(grp(me.born)===grp(me.now)?"#1F2733":GC[grp(me.now)]);
+ const words=t=>{const P=PS[t]||{},out=[];(P.strengths||[]).forEach((x,i)=>out.push([x.split("｜")[0],i<2?3:2]));(D.ARUARU[t]||[]).forEach(x=>out.push([x,1]));(P.pitfalls||[]).forEach(x=>out.push([x.split("｜")[0],1]));return out;};
+ c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);const cx=W/2,cy=H/2-10,placed=[[cx-220,cy-150,440,300]];
+ c.textAlign="center";c.font="500 26px "+SANS;c.fillStyle="#5E6A7A";c.fillText(one?TR("生まれつきも今も"):TR("わたしの中の2匹"),cx,cy-90);
+ c.font="700 52px "+SANS;c.fillStyle="#1F2733";c.fillText(one?an(me.now):an(me.born)+" × "+an(me.now),cx,cy-22);
+ c.font="600 36px "+MONO;if(one){c.fillStyle=cb;c.fillText(me.now,cx,cy+40);}else{c.fillStyle=cb;c.fillText(me.born,cx-80,cy+40);c.fillStyle="#5E6A7A";c.fillText("×",cx,cy+40);c.fillStyle=cn;c.fillText(me.now,cx+80,cy+40);
+  c.font="500 22px "+SANS;c.fillStyle=cb;c.fillText("● "+TR("生まれつき"),cx-90,cy+95);c.fillStyle=cn;c.fillText("● "+TR("いま"),cx+90,cy+95);}
+ c.textAlign="left";
+ const hit=r=>placed.some(p=>r[0]<p[0]+p[2]&&r[0]+r[2]>p[0]&&r[1]<p[1]+p[3]&&r[1]+r[3]>p[1]);
+ const all=[];(one?[["now",me.now]]:[["born",me.born],["now",me.now]]).forEach(([sd,t])=>words(t).forEach(([w,wt])=>all.push([w,wt,sd])));all.sort((a,b)=>b[1]-a[1]);
+ all.forEach(([w,wt,sd],i)=>{let fs={3:56,2:42,1:30}[wt];c.font="700 "+fs+"px "+SANS;let tw=c.measureText(w).width;while(tw>W/2-60&&fs>20){fs-=2;c.font="700 "+fs+"px "+SANS;tw=c.measureText(w).width;}
+  const th=fs*1.25,sg=one?0:(sd==="born"?-1:1);
+  for(let t=0;t<15000;t++){const a=t*0.11+i,r=20+t*0.16,dx=sg?sg*Math.abs(Math.cos(a))*r*1.05-(sg<0?tw:0)-sg*14:Math.cos(a)*r-tw/2,x=cx+dx,y=cy+Math.sin(a)*r*1.4-th/2;
+   const rect=[x-6,y-2,tw+12,th+4];if(x<36||y<40||x+tw>W-36||y+th>H-90)continue;if(hit(rect))continue;
+   placed.push(rect);c.fillStyle=sd==="born"?cb:cn;c.textBaseline="top";c.fillText(w,x,y);c.textBaseline="alphabetic";break;}});
+ c.font="600 28px "+MONO;c.fillStyle="#1F2733";c.textAlign="center";c.fillText(SHARE_URL.replace("https://",""),W/2,H-40);c.textAlign="left";
+ return cv;}
 $("shareBtn").onclick=shareResult;
 
 /* ---- 最初に開いたとき：前回の結果があれば、すぐ見せる ---- */
@@ -355,8 +382,8 @@ $("reset").onclick=()=>{if(!confirm(TR("保存している結果を消して、�
 function tagHTML(t){return esc(t).replace(/\[\[今:(.*?)\]\]/g,'<span class="tn">$1</span>').replace(/\[\[本:(.*?)\]\]/g,'<span class="tb">$1</span>');}
 function drawCombo(C){let el=$("cmb");
  if(!el){el=document.createElement("div");el.id="cmb";el.className="cmb pend";document.querySelector(".hero .karai").before(el);}
- if(!C.name){el.hidden=true;return;}el.hidden=false;
- el.innerHTML='<span class="kl">'+TR("あなたの組み合わせの名前")+'</span><p class="cnm">'+esc(C.name)+'</p>'+(C.atari&&C.atari[0]?'<ul class="cat">'+C.atari.map(a=>'<li>'+tagHTML(a)+'</li>').join("")+'</ul>'+(C.atari.some(x=>/\[\[本:/.test(x))?'<p class="clg">'+TR('<span class="tn">今のあなた</span>と<span class="tb">生まれつきのあなた</span>が、同時に出ている場面です。')+'</p>':''):'');
+ if(!(C.atari&&C.atari[0])){el.hidden=true;return;}el.hidden=false;
+ el.innerHTML='<span class="kl">'+TR("2匹のあるある")+'</span>'+(C.atari&&C.atari[0]?'<ul class="cat">'+C.atari.map(a=>'<li>'+tagHTML(a)+'</li>').join("")+'</ul>'+(C.atari.some(x=>/\[\[本:/.test(x))?'<p class="clg">'+TR('<span class="tn">今のあなた</span>と<span class="tb">生まれつきのあなた</span>が、同時に出ている場面です。')+'</p>':''):'');
  if(document.querySelector(".hero .karai.wait"))el.classList.add("wait");}
 
 /* ---- 生まれつきの力のバランス（生年月日ごとにちがう） ---- */
