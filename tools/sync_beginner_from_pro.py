@@ -78,7 +78,7 @@ def to_beginner_colors(s):
     return s
 
 def build_app():
-    pro = (PRO / 'app-pro.html').read_text(encoding='utf-8')
+    pro = (PRO / 'app-pro.html').read_text(encoding='utf-8').replace('四柱推命占い自動鑑定 PRO','四柱推命占い自動鑑定').replace('<span class="pk-pro" style="display:inline-block;margin-left:.3em;padding:0 .35em;border-radius:6px;background:#B23A2E;color:#fff;font-size:.62em;font-weight:900;vertical-align:.25em;letter-spacing:.04em">PRO</span>','')
     pro = to_beginner_colors(pro)
     cur = (BEG / 'app-beginner.html').read_text(encoding='utf-8')
     link_icon, icon_script = beginner_icons(cur)
@@ -162,7 +162,7 @@ def build_app():
 
 
 def build_auth():
-    s = (PRO / 'auth.html').read_text(encoding='utf-8')
+    s = (PRO / 'auth.html').read_text(encoding='utf-8').replace('四柱推命占い自動鑑定 PRO','四柱推命占い自動鑑定').replace('<span class="pk-pro" style="display:inline-block;margin-left:.3em;padding:0 .35em;border-radius:6px;background:#B23A2E;color:#fff;font-size:.62em;font-weight:900;vertical-align:.25em;letter-spacing:.04em">PRO</span>','')
     s = to_beginner_colors(s)
     s = rep(s, '｜四柱推命占い 自動鑑定</title>', f'｜{B_NAME}</title>', 1)
     s = rep(s, 'mypage-pro.html', 'mypage.html')
@@ -183,7 +183,7 @@ def common_links(s):
 
 
 def build_pricing():
-    s = (PRO / 'pricing-pro.html').read_text(encoding='utf-8')
+    s = (PRO / 'pricing-pro.html').read_text(encoding='utf-8').replace('四柱推命占い自動鑑定 PRO','四柱推命占い自動鑑定').replace('<span class="pk-pro" style="display:inline-block;margin-left:.3em;padding:0 .35em;border-radius:6px;background:#B23A2E;color:#fff;font-size:.62em;font-weight:900;vertical-align:.25em;letter-spacing:.04em">PRO</span>','')
     s = to_beginner_colors(s)
     # 頭（タイトル・説明・OGP・PWA）はビギナー用に差し替え
     i = s.index('<meta name="theme-color"'); j = s.index('<style>')
@@ -205,7 +205,7 @@ def build_pricing():
 
 
 def build_mypage():
-    s = (PRO / 'mypage-pro.html').read_text(encoding='utf-8')
+    s = (PRO / 'mypage-pro.html').read_text(encoding='utf-8').replace('四柱推命占い自動鑑定 PRO','四柱推命占い自動鑑定').replace('<span class="pk-pro" style="display:inline-block;margin-left:.3em;padding:0 .35em;border-radius:6px;background:#B23A2E;color:#fff;font-size:.62em;font-weight:900;vertical-align:.25em;letter-spacing:.04em">PRO</span>','')
     s = to_beginner_colors(s)
     i = s.index('<meta name="theme-color"'); j = s.index('<style>')
     s = s[:i] + '<title>マイページ｜今日から占い師</title>\n<meta name="robots" content="noindex">\n' + s[j:]
