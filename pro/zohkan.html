@@ -179,7 +179,8 @@ p,li,dd,h1,h2,h3,h4,figcaption{line-break:strict}
     var op=opac(e); if(op<0.6) return;                 // 透明・半透明で隠している途中のもの（通知・ふわっと出る表示など）は触らない
     var a=(fg[3]==null?1:fg[3])*op;
     var light=((bg.lo+bg.hi)/2)>0.4, to=light?[0,0,0]:[255,255,255], c2=null;
-    if(light) need=big?4.5:7;   // 明るい背景の上の文字は一段きびしく（ふつうの文字7以上・大きい文字4.5以上）。濃い色の上の白い文字は4.5のまま（発注者指示 2026-10-21）
+    if(light) need=big?4.5:7;
+    if(printing&&!light) return;   // 印刷中は、濃い背景の上の文字を白っぽくしない（紙では背景の色が出ないことがあるため）   // 明るい背景の上の文字は一段きびしく（ふつうの文字7以上・大きい文字4.5以上）。濃い色の上の白い文字は4.5のまま（発注者指示 2026-10-21）
     var base=bg.rgb, seen=over([fg[0],fg[1],fg[2],a],base);
     if(CR(seen,base)>=need){ undo(); return; }
     for(var t=0.1;t<=1.0001;t+=0.1){ var cand=mix([fg[0],fg[1],fg[2]],to,t); if(CR(over([cand[0],cand[1],cand[2],a],base),base)>=need){ c2=cand; break; } }
@@ -192,12 +193,12 @@ p,li,dd,h1,h2,h3,h4,figcaption{line-break:strict}
     var nv='rgb('+Math.round(c2[0])+', '+Math.round(c2[1])+', '+Math.round(c2[2])+')'; if(e.style.getPropertyValue('color')!==nv||e.style.getPropertyPriority('color')!=='important') e.style.setProperty('color',nv,'important');   // 同じ色なら触らない（自分の変更で何度も点検が走らないように）
   }
   var SKIP='script,style,noscript,svg,canvas,video,option,select,textarea,input,img,.yomi,.ysr,[aria-hidden="true"]';
-  function pass(root){ if(printing||!root||root.nodeType!==1) return; BG=new Map(); OP=new Map(); var list=[root].concat([].slice.call(root.querySelectorAll('*')));
+  function pass(root){ if(!root||root.nodeType!==1) return;   /* 印刷中も、濃くするほうだけは動く（fix の中で白っぽくするのは止める） */ BG=new Map(); OP=new Map(); var list=[root].concat([].slice.call(root.querySelectorAll('*')));
     for(var i=0;i<list.length;i++){ var e=list[i]; if(e.matches&&e.matches(SKIP)) continue; try{ fix(e); }catch(_e){} } BG=null; OP=null; }
   var tm=null; function full(){ clearTimeout(tm); tm=setTimeout(function(){ pass(document.body); },350); }
-  // 印刷では背景色が出ないことがあるので、画面用に変えた色を元に戻してから印刷し、終わったら画面用に戻す
-  function unfixAll(){ [].forEach.call(document.querySelectorAll('[data-pkcg]'),function(e){ var o=e.getAttribute('data-pkcg'); if(o) e.style.setProperty('color',o); else e.style.removeProperty('color'); e.removeAttribute('data-pkcg'); e.removeAttribute('data-pkco'); }); }
-  window.addEventListener('beforeprint',function(){ printing=true; unfixAll(); });
+  // 印刷：濃くした文字はそのまま印刷する。濃い背景の上で白っぽくした文字だけは、紙では背景の色が出ないことがあるので元に戻してから印刷し、終わったら画面用に戻す
+  function unfixAll(){ [].forEach.call(document.querySelectorAll('[data-pkcg]'),function(e){ if(printing){ var f0=P(e.getAttribute('data-pkco')||''), f1=P(e.style.getPropertyValue('color')||''); if(f0&&f1&&L(f1)<=L(f0)) return; }   /* 印刷：濃くした文字はそのまま（紙でも読みやすく）。白っぽくした文字だけ元に戻す（紙では背景の色が出ないことがあるため）。発注者指示 2026-10-21 */ var o=e.getAttribute('data-pkcg'); if(o) e.style.setProperty('color',o); else e.style.removeProperty('color'); e.removeAttribute('data-pkcg'); e.removeAttribute('data-pkco'); }); }
+  window.addEventListener('beforeprint',function(){ printing=true; unfixAll(); try{ pass(document.body); }catch(_e){} setTimeout(function(){ try{ pass(document.body); }catch(_e){} },0); });   // 印刷の直前に作り直された文字も濃くする
   window.addEventListener('afterprint',function(){ printing=false; pass(document.body); });
   var printing=false;
   function start(){
