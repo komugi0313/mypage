@@ -4,9 +4,10 @@ Site: 16TYPE+ ("16 Type Plus"), a free personality test. It compares the user's 
 
 | Japanese | English | Korean |
 |---|---|---|
-| 生まれつき / 本当の自分 / 本来のあなた | born type / your true self / your original self | 타고난 / 본래의 나 / 본래의 당신 |
-| 今の自分 / 今のあなた / いま | your current self / you now / now | 지금의 나 / 지금의 당신 / 지금 |
-| ギャップ / ギャップ度 | gap / gap score | 갭 / 갭 지수 |
+| 気質（生年月日から・生まれ持った性質） | temperament | 기질 |
+| 性格（16タイプから・経験で育った性質） | character | 성격 |
+| （旧）生まれつき / 本当の自分 / 今の自分 — もう使わない | (old terms — do not use) | (사용하지 않음) |
+| 気質と性格のちがい | temperament vs. character | 기질과 성격의 차이 |
 | 小さなギャップ | small gap | 작은 갭 |
 | 揺れやすい | tends to waver | 흔들리기 쉬움 |
 | 相棒 | buddy | 단짝 |
