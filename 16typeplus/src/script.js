@@ -56,7 +56,7 @@ const an=t=>t+p16(t);
 const CHAR_BASE=(typeof window.CHAR_BASE==="string")?window.CHAR_BASE:"chars/";
 const charSrc=(t,small)=>CHAR_BASE+t+(small?"_s":"")+".webp";
 const T16="INTJ INTP ENTJ ENTP INFJ INFP ENFJ ENFP ISTJ ISFJ ESTJ ESFJ ISTP ISFP ESTP ESFP".split(" ");
-(function(){const el=$("parade");if(!el)return;const one=T16.map(t=>'<figure><img src="'+charSrc(t,1)+'" alt="" loading="lazy" width="84" height="112"><figcaption>'+t+'</figcaption></figure>').join("");el.innerHTML=one+one;})();
+(function(){const el=$("parade");if(!el)return;const one=T16.map(t=>'<figure><img src="'+charSrc(t,1)+'" alt="" loading="lazy" width="100" height="100"><figcaption>'+t+'</figcaption></figure>').join("");el.innerHTML=one+one;})();
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function opts(el,a,b,cur){el.innerHTML="";for(let v=a;v<=b;v++){const o=document.createElement("option");o.value=v;o.textContent=v;if(v===cur)o.selected=true;el.appendChild(o);}}
 function fillDate(){opts($("y"),1930,2020,st.y);opts($("m"),1,12,st.m);const mx=new Date(st.y,st.m,0).getDate();if(st.d>mx)st.d=mx;opts($("d"),1,mx,st.d);}
@@ -280,7 +280,7 @@ async function drawShare(){
  ctx.textBaseline="alphabetic";ctx.textAlign="left";
  ctx.font="600 54px "+MONO;ctx.fillStyle=SC.ink;ctx.fillText("16TYPE",104,150);const lw=ctx.measureText("16TYPE").width;ctx.fillStyle=SC.plus;ctx.fillText("+",104+lw,150);
  ctx.font="500 26px "+SANS;ctx.fillStyle=SC.muted;ctx.textAlign="right";ctx.fillText(TR("生まれつきと、今のわたし"),W-104,146);ctx.textAlign="left";
- const cols=[SC.ei,SC.sn,SC.tf,SC.jp],pw=one?400:360,ph=Math.round(pw*4/3),py=192;
+ const cols=[SC.ei,SC.sn,SC.tf,SC.jp],pw=one?470:430,ph=pw,py=196;
  const xs=one?[(W-pw)/2]:[W/2-pw-36,W/2+36];
  const items=one?[[me.born,ib,TR("生まれつきも今も"),me.bAT||me.nAT]]:[[me.born,ib,TR("生まれつき"),me.bAT],[me.now,inw,TR("いま"),me.nAT]];
  items.forEach(([t,img,lab,at],k)=>{const x=xs[k];

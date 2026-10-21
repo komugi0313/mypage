@@ -5,8 +5,8 @@ C='/home/user/mypage/16typeplus/characters/'
 OUT=C+'web/'; os.makedirs(OUT,exist_ok=True)
 FACE=dict(INTJ=280,INTP=280,ENTJ=275,ENTP=420,INFJ=300,INFP=285,ENFJ=378,ENFP=290,ISTJ=347,ISFJ=280,ESTJ=316,ESFJ=383,ISTP=378,ISFP=270,ESTP=373,ESFP=362)
 m=json.load(open(SP+'chars/meta.json'))
-CW,CH=720,960; F=float(os.environ.get('F','128')); PAPER=np.array([248,243,234],float)
-BASE=CH-40
+CW,CH=800,800; F=float(os.environ.get('F','128')); PAPER=np.array([248,243,234],float)
+BASE=CH-28
 for t,fw in FACE.items():
     a=np.array(Image.open(C+t+('.png' if t=='INTP' else '.webp')).convert('RGB')).astype(float)
     bg=np.median(np.concatenate([a[:40].reshape(-1,3),a[:,:40].reshape(-1,3),a[:,-40:].reshape(-1,3)]),0)
@@ -19,11 +19,11 @@ for t,fw in FACE.items():
     top,bot=m[t]['top'],m[t]['bot']
     xs=np.where((d>70).sum(0)>25)[0]
     x0,x1=xs.min(),xs.max()
-    s=min(8.0/fw**0.5,(BASE-20)/(bot-top),(CW-30)/(x1-x0))
+    s=min((CH-56)/(bot-top),(CW-40)/(x1-x0))
     im=im.resize((round(2000*s),round(2000*s)),Image.LANCZOS)
     cx=(x0+x1)/2*s
     canvas=Image.new('RGB',(CW,CH),tuple(PAPER.astype(int)))
     canvas.paste(im,(round(CW/2-cx),round(BASE-bot*s)))
     canvas.save(OUT+t+'.webp',quality=82,method=6)
-    canvas.resize((CW//3,CH//3),Image.LANCZOS).save(OUT+t+'_s.webp',quality=80,method=6)
+    canvas.resize((240,240),Image.LANCZOS).save(OUT+t+'_s.webp',quality=80,method=6)
     print(t,x0,x1,round(s,3),os.path.getsize(OUT+t+'.webp')//1024,'KB')
