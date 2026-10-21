@@ -16,14 +16,18 @@ for t,fw in FACE.items():
     w=np.clip((d-14)/22,0,1)[...,None]
     a=a*w+PAPER*(1-w)
     im=Image.fromarray(a.astype('uint8'))
-    top,bot=m[t]['top'],m[t]['bot']
-    xs=np.where((d>70).sum(0)>25)[0]
-    x0,x1=xs.min(),xs.max()
-    s=min((CH-56)/(bot-top),(CW-40)/(x1-x0))
+    ptop,bot=m[t]['ptop'],m[t]['bot']
+    xs=np.where((d>70).sum(0)>25)[0]; x0,x1=xs.min(),xs.max()
+    PH=640; HEAD=132
+    s=PH/(bot-ptop)*dict(ENTP=0.9,ENFJ=0.93,ENFP=0.95).get(t,1)
     im=im.resize((round(2000*s),round(2000*s)),Image.LANCZOS)
-    cx=(x0+x1)/2*s
+    # 人物の中心（顔はほぼ x=1000）を真ん中に。はみ出す場合は、収まる範囲で横にずらす
+    ox=CW/2-1000*s; L=x0*s+ox; Rr=x1*s+ox
+    if Rr-L<=CW-24:
+        if L<12: ox+=12-L
+        elif Rr>CW-12: ox-=Rr-(CW-12)
     canvas=Image.new('RGB',(CW,CH),tuple(PAPER.astype(int)))
-    canvas.paste(im,(round(CW/2-cx),round(BASE-bot*s)))
+    canvas.paste(im,(round(ox),round(HEAD+640-bot*s)))
     canvas.save(OUT+t+'.webp',quality=82,method=6)
     canvas.resize((240,240),Image.LANCZOS).save(OUT+t+'_s.webp',quality=80,method=6)
-    print(t,x0,x1,round(s,3),os.path.getsize(OUT+t+'.webp')//1024,'KB')
+    print(t,round(s,3),os.path.getsize(OUT+t+'.webp')//1024,'KB')
