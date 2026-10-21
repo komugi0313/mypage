@@ -22,10 +22,12 @@ def lang_data(lang):
         quiz=opt('quiz.{}.json',quiz); hints=opt('hints.{}.json',hints); today=opt('today.{}.json',today); persona=opt('persona.{}.json',persona)
         k=opt('karai.{}.json',None)
         if k: combos={key:{'karai':v} for key,v in k.items()}
+        cm=opt('combo.{}.json',{})
+        for key in combos: combos[key].update(cm.get(key,{}))
         ui=opt('ui.{}.json',{})
         if os.path.exists(I+'body.{}.html'.format(lang)): body=rd(I+'body.{}.html'.format(lang))
     else:
-        combos={k:{'karai':v['karai']} for k,v in combos.items()}
+        combos={k:{'karai':v['karai'],'name':v.get('name',''),'atari':v.get('atari',[])} for k,v in combos.items()}
     return {'BODY':body,'D':d,'QZ':quiz,'COMBO':combos,'PS':persona,'HN':hints,'TD':today,'I18N':ui}
 def preview():
     langs={l:lang_data(l) for l in ['ja','en','ko']}
