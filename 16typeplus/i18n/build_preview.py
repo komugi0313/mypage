@@ -28,7 +28,15 @@ def lang_data(lang):
         if os.path.exists(I+'body.{}.html'.format(lang)): body=rd(I+'body.{}.html'.format(lang))
     else:
         combos={k:{'karai':v['karai'],'name':v.get('name',''),'atari':v.get('atari',[])} for k,v in combos.items()}
-    return {'BODY':body,'D':d,'QZ':quiz,'COMBO':combos,'PS':persona,'HN':hints,'TD':today,'I18N':ui}
+    lvq=js('/home/user/mypage/16typeplus/love/love.json')['questions']
+    lvt_p='/home/user/mypage/16typeplus/love/love_types.ja.json'
+    lvt=js(lvt_p) if os.path.exists(lvt_p) else {t['t']:t for t in js('/home/user/mypage/16typeplus/love/love.json')['types']}
+    if lang!='ja':
+        p=I+'love.{}.json'.format(lang)
+        if os.path.exists(p):
+            x=js(p); lvq=x.get('questions',lvq); lvt=x.get('types',lvt)
+    LVd={'questions':lvq,'types':lvt}
+    return {'LV':LVd,'BODY':body,'D':d,'QZ':quiz,'COMBO':combos,'PS':persona,'HN':hints,'TD':today,'I18N':ui}
 def preview():
     langs={l:lang_data(l) for l in ['ja','en','ko']}
     head=rd(S+'head.html')
@@ -36,7 +44,7 @@ def preview():
 <script>
 var LD=__LD__;
 var PAGE_LANG=/^#(en|ko)\\b/.test(location.hash)?location.hash.slice(1,3):"ja";
-var _L=LD[PAGE_LANG];var D=_L.D,QZ=_L.QZ,COMBO=_L.COMBO,PS=_L.PS,HN=_L.HN,TD=_L.TD,I18N=_L.I18N;
+var _L=LD[PAGE_LANG];var LV=_L.LV,D=_L.D,QZ=_L.QZ,COMBO=_L.COMBO,PS=_L.PS,HN=_L.HN,TD=_L.TD,I18N=_L.I18N;
 document.getElementById("app").outerHTML=_L.BODY;document.documentElement.lang=PAGE_LANG;
 document.querySelectorAll("nav.lang a").forEach(function(a,i){var l=["ja","en","ko"][i];a.href="#"+l;a.onclick=function(e){e.preventDefault();location.hash=l;location.reload();};});
 </script>
