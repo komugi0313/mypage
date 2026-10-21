@@ -3032,6 +3032,17 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')), c1=ek
     if(lastQ){ log.scrollTop += (lastQ.getBoundingClientRect().top - log.getBoundingClientRect().top) - 4; }
     else { log.scrollTop=log.scrollHeight; }
   }
+  /* 続けての質問に、通信なしで答える（この卦の内蔵データから）。発注者指示 2026-10-21 */
+  function ekiOfflineFollow(q){ try{
+    const L=cur.last, p=buildOfflineReading(L.r, q), when=/いつ|時期|頃|ころ|何月|何年|タイミング/.test(q);
+    const parts=['（いまは通信できないため、この卦の内蔵データでお答えします）'];
+    parts.push(p.hantei||p.ketsuron||'');
+    if(when&&p.nagare) parts.push('時期の目安：'+p.nagare);
+    if(p.jogen) parts.push(p.jogen);
+    if(p.chui) parts.push(p.chui);
+    parts.push('電波の良い所でもう一度送ると、この質問に合わせて、くわしくお答えします。');
+    return parts.filter(Boolean).join('\n');
+  }catch(e){ return '（いまは通信できないため、くわしい答えを作れませんでした）上の鑑定の「お伝え方」と「どうすればよいか」を参考にしてください。電波の良い所でもう一度送ると、この質問に合わせてお答えします。'; } }
   async function sendFollowup(){
     const el=document.getElementById('fuText'); const q=(el.value||'').trim();
     if(!q){ toast('聞きたいことを入力してから「この質問で続けて鑑定する」を押してください。'); try{el.focus();}catch(_){} return; }
@@ -3044,7 +3055,8 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')), c1=ek
       cur.chat=cur.chat||[]; cur.chat.push({role:'user',text:q});
       cur.chat.push({role:'ai',text:sf.block==='self'?'このご相談には、占いでお答えできません。いまのお気持ちを、どうか身近な信頼できる人や相談窓口に話してください。よりそいホットライン 0120-279-338（24時間・無料）／いのちの電話 0570-783-556。いますぐ危険なときは 110・119 へ。':'人を傷つけることや、盗みなどの犯罪につながるご相談には、占いでお答えできません。気持ちが抑えきれないほどつらいときは、信頼できる人や、専門の相談窓口（警察相談専用電話 #9110 など）に相談してください。'});
       renderChat(); el.value=''; return; } }
-    if(!navigator.onLine || !canOnline()){ alert('追加のご相談には、インターネット接続が必要です（オフラインでは使えません）。'); return; }
+    if(!navigator.onLine || !canOnline()){   // 電波がないときも止めない：この卦の内蔵データで答える（発注者指示 2026-10-21）
+      cur.chat=cur.chat||[]; cur.chat.push({role:'user',text:q}); el.value=''; cur.chat.push({role:'ai',text:ekiOfflineFollow(q)}); renderChat(); try{ cur.last.chat=cur.chat; persistReading(cur.last); }catch(_e){} return; }
     // 無料トライアル：深掘り相談も1問=AI生成1回として上限に含める
     if(trialReached()){
       cur.chat=cur.chat||[]; cur.chat.push({role:'user',text:q}); renderChat(); el.value='';
@@ -3072,9 +3084,8 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')), c1=ek
     }catch(e){
       // 失敗のほとんどは通信・混雑。言い回しのせいにせず、入力した文は欄に戻す
       if(!stillMine()){ think.remove(); if(chat[chat.length-1]&&chat[chat.length-1].role==='user'){ chat.pop(); saveChatToRec(mineAt,chat); } return; }
-      el.value=q;
-      const _am=(e&&/ログイン|ご契約|使い切|上限|まかなえる|お休み|利用枠/.test(e.message||''))?e.message+'（ご相談の文は入力欄に戻してあります）':'いま、つながりにくいようです。通信の状態を確かめて、少し時間をおいてから、もう一度「この質問で続けて鑑定する」を押してください。（ご相談の文は入力欄に戻してあります）';
-      cur.chat.push({role:'ai',text:_am}); renderChat();
+      if(e&&/ログイン|ご契約|使い切|上限|まかなえる|お休み|利用枠/.test(e.message||'')){ el.value=q; cur.chat.push({role:'ai',text:e.message+'（ご相談の文は入力欄に戻してあります）'}); renderChat(); }
+      else { cur.chat.push({role:'ai',text:ekiOfflineFollow(q)}); renderChat(); try{ cur.last.chat=cur.chat; persistReading(cur.last); }catch(_e){} }   // つながらないときは、この卦の内蔵データで答える（止めない・二度押しで同じ質問を送り直さない）
     }finally{ btn.disabled=false; if(bdg) bdg.disabled=false; }
   }
   function kpiItem(l,v){ if(v) v=String(v).trim().replace(/([^。！？」）])$/,'$1。');   // 要点の行末の句点をそろえる

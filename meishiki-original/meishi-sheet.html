@@ -4271,9 +4271,11 @@ window.KANSHI60_DETAIL={
     // それでもダメなときだけ定型文（オフライン鑑定書）に切替（打ち直し不要）。
     function attempt(isRetry,noCount){   // noCount＝前の回は届いていた（作り直し）＝サーバーで回数に数えない目印を付ける
       var _h={'Content-Type':'application/json','x-pk-deep':'1'}; if(noCount) _h['x-pk-part']='detail'; try{ var _pp=localStorage.getItem('pk_product'); if(_pp) _h['X-Product']=_pp; }catch(_e){}   // 共通基盤に商品を伝える（同じサイトのアプリが書いた商品ID） try{ var _tk=localStorage.getItem('member_token')||sessionStorage.getItem('member_token'); if(_tk) _h['Authorization']='Bearer '+_tk; }catch(_e){}   // 会員確認（サーバーで検証）
-      fetch('/.netlify/functions/gemini',{ method:'POST', headers:_h, body:body })
+      var _ac=null, _to=null, _timedOut=false; try{ _ac=new AbortController(); _to=setTimeout(function(){ _timedOut=true; try{ _ac.abort(); }catch(_e){} },30000); }catch(_e){}   // 30秒たっても返事がなければ待つのをやめる（いつまでも「読み解いています」で止めない。発注者指示 2026-10-21）
+      fetch('/.netlify/functions/gemini',_ac?{ method:'POST', headers:_h, body:body, signal:_ac.signal }:{ method:'POST', headers:_h, body:body })
         .then(function(res){ return res.text().then(function(t){ return {ok:res.ok, status:res.status, t:t, left:(function(){ try{ return res.headers.get('x-pk-left'); }catch(_e){ return null; } })()}; }); })
         .then(function(o){
+          if(_to) clearTimeout(_to);
           if(stale()){ redo(); return; }
           var data={}; try{ data=JSON.parse(o.t); }catch(e){}
           var txt=''; try{ txt=(data.candidates[0].content.parts||[]).map(function(p){return p.text||'';}).join(''); }catch(e){}
@@ -4304,7 +4306,9 @@ window.KANSHI60_DETAIL={
           _aiBusy=false;
         })
         .catch(function(){
+          if(_to) clearTimeout(_to);
           if(stale()){ redo(); return; }
+          if(_timedOut){ _aiBusy=false; aiFallbackToTemplate(); return; }   // 時間切れ＝作り直さず、すぐ端末の中の鑑定書に
           if(!isRetry){ setTimeout(function(){ attempt(true); }, 2500); return; }
           _aiBusy=false; aiFallbackToTemplate();
         });
