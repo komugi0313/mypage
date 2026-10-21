@@ -59,6 +59,7 @@ await p.waitForTimeout(1500);
 const items2=await p.evaluate(()=>document.querySelectorAll('#reading .rd-item').length);
 const A2=await p.evaluate(()=>{const it=document.querySelectorAll('#reading .rd-item');return it.length?it[it.length-1].querySelector('.rd-body').innerText:'';});
 ok('相談2（続けて質問）：答えが出る', ms2>=0 && A2.length>200, A2.length+'字');
+{ const f2=(A2.split('\n').map(s=>s.trim()).filter(s=>s.length>8&&!/^(コピー|言葉の意味|ご相談|彼から連絡が来る|▲)/.test(s))[0]||''); ok('相談2：「いつ」の質問に、1行目で時期を答えている', /20\d\d年|年内|来年|再来年|\d{1,3}歳|[春夏秋冬]|\d{1,2}月/.test(f2), f2.slice(0,80)); }
 ok('相談2：二度押しでも答えは1つ増えるだけ', items2===2, 'items='+items2);
 if(MODE==='online') ok('相談2：呼び出し2回', calls-c1===2, 'calls='+(calls-c1));
 // チャット用コピー・共有
