@@ -1,0 +1,99 @@
+# 16タイプの民芸人形キャラ：画像生成プロンプト
+
+そのまま画像生成AIに貼れる英語のプロンプトです。最初の1体がうまくできたら、その画像を「スタイル参照」に指定して残りを作ると、16体のタッチがそろいます。
+
+## INTJ（建築家）静かに未来を設計する人
+
+```
+a calm architect figure wearing a tall geometric hat and a long cloak with a star-map pattern, holding rolled blueprints and a brass compass, a small square-and-circle emblem on the chest. Clothing mainly in soft plum purple with small accents of the other palette colors. Mid-century European folk-art picture-book illustration, textured gouache and dry-brush on paper with visible paper grain and slightly faded, printed look, flat stylized shapes with simple geometric construction like a hand-carved wooden toy doll, small decorative patterns (diamonds, tiny stars, leaves, snowflakes, dots), warm muted palette of mustard yellow, vermilion, teal, dusty blue, cream and soft pink, gentle naive face with small dot eyes and rosy cheeks, calm expression, one full-body character standing and facing forward, centered, generous empty space around, plain off-white background, no text, no letters, no logo, no frame. Square image.
+```
+
+## INTP（論理学者）考えるのが止まらない人
+
+```
+a curious thinker in an oversized knitted sweater with a puzzle-piece pattern, peering through a large magnifying glass, a thread of yarn curling into a spiral above the head. Clothing mainly in soft plum purple with small accents of the other palette colors. Mid-century European folk-art picture-book illustration, textured gouache and dry-brush on paper with visible paper grain and slightly faded, printed look, flat stylized shapes with simple geometric construction like a hand-carved wooden toy doll, small decorative patterns (diamonds, tiny stars, leaves, snowflakes, dots), warm muted palette of mustard yellow, vermilion, teal, dusty blue, cream and soft pink, gentle naive face with small dot eyes and rosy cheeks, calm expression, one full-body character standing and facing forward, centered, generous empty space around, plain off-white background, no text, no letters, no logo, no frame. Square image.
+```
+
+## ENTJ（指揮官）みんなを率いる人
+
+```
+a confident conductor-like leader in a short cape with a chevron pattern, raising a baton, a small crown emblem on the chest. Clothing mainly in soft plum purple with small accents of the other palette colors. Mid-century European folk-art picture-book illustration, textured gouache and dry-brush on paper with visible paper grain and slightly faded, printed look, flat stylized shapes with simple geometric construction like a hand-carved wooden toy doll, small decorative patterns (diamonds, tiny stars, leaves, snowflakes, dots), warm muted palette of mustard yellow, vermilion, teal, dusty blue, cream and soft pink, gentle naive face with small dot eyes and rosy cheeks, calm expression, one full-body character standing and facing forward, centered, generous empty space around, plain off-white background, no text, no letters, no logo, no frame. Square image.
+```
+
+## ENTP（討論者）ひらめきで遊ぶ人
+
+```
+a playful inventor in mismatched patchwork clothes and a hat shaped like a glowing light bulb, holding a spinning top, little sparks around. Clothing mainly in soft plum purple with small accents of the other palette colors. Mid-century European folk-art picture-book illustration, textured gouache and dry-brush on paper with visible paper grain and slightly faded, printed look, flat stylized shapes with simple geometric construction like a hand-carved wooden toy doll, small decorative patterns (diamonds, tiny stars, leaves, snowflakes, dots), warm muted palette of mustard yellow, vermilion, teal, dusty blue, cream and soft pink, gentle naive face with small dot eyes and rosy cheeks, calm expression, one full-body character standing and facing forward, centered, generous empty space around, plain off-white background, no text, no letters, no logo, no frame. Square image.
+```
+
+## INFJ（提唱者）静かに道を照らす人
+
+```
+a quiet guide in a long hooded cloak decorated with moons and stars, holding a small glowing lantern. Clothing mainly in sage and leaf green with small accents of the other palette colors. Mid-century European folk-art picture-book illustration, textured gouache and dry-brush on paper with visible paper grain and slightly faded, printed look, flat stylized shapes with simple geometric construction like a hand-carved wooden toy doll, small decorative patterns (diamonds, tiny stars, leaves, snowflakes, dots), warm muted palette of mustard yellow, vermilion, teal, dusty blue, cream and soft pink, gentle naive face with small dot eyes and rosy cheeks, calm expression, one full-body character standing and facing forward, centered, generous empty space around, plain off-white background, no text, no letters, no logo, no frame. Square image.
+```
+
+## INFP（仲介者）やさしい夢を見る人
+
+```
+a dreamy poet wrapped in a long scarf with a leaf pattern, holding a single flower and a small notebook, a tiny paper bird resting on the shoulder. Clothing mainly in sage and leaf green with small accents of the other palette colors. Mid-century European folk-art picture-book illustration, textured gouache and dry-brush on paper with visible paper grain and slightly faded, printed look, flat stylized shapes with simple geometric construction like a hand-carved wooden toy doll, small decorative patterns (diamonds, tiny stars, leaves, snowflakes, dots), warm muted palette of mustard yellow, vermilion, teal, dusty blue, cream and soft pink, gentle naive face with small dot eyes and rosy cheeks, calm expression, one full-body character standing and facing forward, centered, generous empty space around, plain off-white background, no text, no letters, no logo, no frame. Square image.
+```
+
+## ENFJ（主人公）まわりを照らす人
+
+```
+a warm hero figure with a sun emblem on the chest and a simple tunic with ray patterns, holding a small pennant flag high, arms open. Clothing mainly in sage and leaf green with small accents of the other palette colors. Mid-century European folk-art picture-book illustration, textured gouache and dry-brush on paper with visible paper grain and slightly faded, printed look, flat stylized shapes with simple geometric construction like a hand-carved wooden toy doll, small decorative patterns (diamonds, tiny stars, leaves, snowflakes, dots), warm muted palette of mustard yellow, vermilion, teal, dusty blue, cream and soft pink, gentle naive face with small dot eyes and rosy cheeks, calm expression, one full-body character standing and facing forward, centered, generous empty space around, plain off-white background, no text, no letters, no logo, no frame. Square image.
+```
+
+## ENFP（運動家）好奇心で走りだす人
+
+```
+a free-spirited figure in clothes covered with polka dots and confetti shapes, holding a bunch of balloons and a little kite. Clothing mainly in sage and leaf green with small accents of the other palette colors. Mid-century European folk-art picture-book illustration, textured gouache and dry-brush on paper with visible paper grain and slightly faded, printed look, flat stylized shapes with simple geometric construction like a hand-carved wooden toy doll, small decorative patterns (diamonds, tiny stars, leaves, snowflakes, dots), warm muted palette of mustard yellow, vermilion, teal, dusty blue, cream and soft pink, gentle naive face with small dot eyes and rosy cheeks, calm expression, one full-body character standing and facing forward, centered, generous empty space around, plain off-white background, no text, no letters, no logo, no frame. Square image.
+```
+
+## ISTJ（管理者）こつこつ守る人
+
+```
+a tidy archivist in a neat buttoned uniform with a fine grid pattern, holding a thick ledger and a ring of keys. Clothing mainly in dusty blue with small accents of the other palette colors. Mid-century European folk-art picture-book illustration, textured gouache and dry-brush on paper with visible paper grain and slightly faded, printed look, flat stylized shapes with simple geometric construction like a hand-carved wooden toy doll, small decorative patterns (diamonds, tiny stars, leaves, snowflakes, dots), warm muted palette of mustard yellow, vermilion, teal, dusty blue, cream and soft pink, gentle naive face with small dot eyes and rosy cheeks, calm expression, one full-body character standing and facing forward, centered, generous empty space around, plain off-white background, no text, no letters, no logo, no frame. Square image.
+```
+
+## ISFJ（擁護者）そっと寄り添う人
+
+```
+a gentle caretaker wearing a patchwork quilt shawl, holding a round teapot, a small heart emblem on the chest. Clothing mainly in dusty blue with small accents of the other palette colors. Mid-century European folk-art picture-book illustration, textured gouache and dry-brush on paper with visible paper grain and slightly faded, printed look, flat stylized shapes with simple geometric construction like a hand-carved wooden toy doll, small decorative patterns (diamonds, tiny stars, leaves, snowflakes, dots), warm muted palette of mustard yellow, vermilion, teal, dusty blue, cream and soft pink, gentle naive face with small dot eyes and rosy cheeks, calm expression, one full-body character standing and facing forward, centered, generous empty space around, plain off-white background, no text, no letters, no logo, no frame. Square image.
+```
+
+## ESTJ（幹部）しっかりまとめる人
+
+```
+an organized leader in a striped vest and cap, holding a clipboard, a whistle on a cord and a round badge on the chest. Clothing mainly in dusty blue with small accents of the other palette colors. Mid-century European folk-art picture-book illustration, textured gouache and dry-brush on paper with visible paper grain and slightly faded, printed look, flat stylized shapes with simple geometric construction like a hand-carved wooden toy doll, small decorative patterns (diamonds, tiny stars, leaves, snowflakes, dots), warm muted palette of mustard yellow, vermilion, teal, dusty blue, cream and soft pink, gentle naive face with small dot eyes and rosy cheeks, calm expression, one full-body character standing and facing forward, centered, generous empty space around, plain off-white background, no text, no letters, no logo, no frame. Square image.
+```
+
+## ESFJ（領事）みんなをもてなす人
+
+```
+a cheerful host in an apron with a flower pattern, carrying a small layered cake and two teacups. Clothing mainly in dusty blue with small accents of the other palette colors. Mid-century European folk-art picture-book illustration, textured gouache and dry-brush on paper with visible paper grain and slightly faded, printed look, flat stylized shapes with simple geometric construction like a hand-carved wooden toy doll, small decorative patterns (diamonds, tiny stars, leaves, snowflakes, dots), warm muted palette of mustard yellow, vermilion, teal, dusty blue, cream and soft pink, gentle naive face with small dot eyes and rosy cheeks, calm expression, one full-body character standing and facing forward, centered, generous empty space around, plain off-white background, no text, no letters, no logo, no frame. Square image.
+```
+
+## ISTP（巨匠）黙って作り上げる人
+
+```
+a skilled craftsperson in overalls with a tool belt, holding a wrench in one hand and a small wooden toy in the other. Clothing mainly in mustard yellow with small accents of the other palette colors. Mid-century European folk-art picture-book illustration, textured gouache and dry-brush on paper with visible paper grain and slightly faded, printed look, flat stylized shapes with simple geometric construction like a hand-carved wooden toy doll, small decorative patterns (diamonds, tiny stars, leaves, snowflakes, dots), warm muted palette of mustard yellow, vermilion, teal, dusty blue, cream and soft pink, gentle naive face with small dot eyes and rosy cheeks, calm expression, one full-body character standing and facing forward, centered, generous empty space around, plain off-white background, no text, no letters, no logo, no frame. Square image.
+```
+
+## ISFP（冒険家）自分の色で描く人
+
+```
+a gentle artist in a beret and colorful patchwork smock, holding a paintbrush and a round palette. Clothing mainly in mustard yellow with small accents of the other palette colors. Mid-century European folk-art picture-book illustration, textured gouache and dry-brush on paper with visible paper grain and slightly faded, printed look, flat stylized shapes with simple geometric construction like a hand-carved wooden toy doll, small decorative patterns (diamonds, tiny stars, leaves, snowflakes, dots), warm muted palette of mustard yellow, vermilion, teal, dusty blue, cream and soft pink, gentle naive face with small dot eyes and rosy cheeks, calm expression, one full-body character standing and facing forward, centered, generous empty space around, plain off-white background, no text, no letters, no logo, no frame. Square image.
+```
+
+## ESTP（起業家）スリルに飛びこむ人
+
+```
+a daring adventurer on roller skates with goggles on the forehead and a jacket with lightning-bolt patterns, mid-glide. Clothing mainly in mustard yellow with small accents of the other palette colors. Mid-century European folk-art picture-book illustration, textured gouache and dry-brush on paper with visible paper grain and slightly faded, printed look, flat stylized shapes with simple geometric construction like a hand-carved wooden toy doll, small decorative patterns (diamonds, tiny stars, leaves, snowflakes, dots), warm muted palette of mustard yellow, vermilion, teal, dusty blue, cream and soft pink, gentle naive face with small dot eyes and rosy cheeks, calm expression, one full-body character standing and facing forward, centered, generous empty space around, plain off-white background, no text, no letters, no logo, no frame. Square image.
+```
+
+## ESFP（エンターテイナー）場を明るくする人
+
+```
+a lively performer in a harlequin diamond-pattern costume with a ruffled collar, holding a microphone, confetti and tiny stars around. Clothing mainly in mustard yellow with small accents of the other palette colors. Mid-century European folk-art picture-book illustration, textured gouache and dry-brush on paper with visible paper grain and slightly faded, printed look, flat stylized shapes with simple geometric construction like a hand-carved wooden toy doll, small decorative patterns (diamonds, tiny stars, leaves, snowflakes, dots), warm muted palette of mustard yellow, vermilion, teal, dusty blue, cream and soft pink, gentle naive face with small dot eyes and rosy cheeks, calm expression, one full-body character standing and facing forward, centered, generous empty space around, plain off-white background, no text, no letters, no logo, no frame. Square image.
+```
