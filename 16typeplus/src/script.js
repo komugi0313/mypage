@@ -284,7 +284,7 @@ function buddyName(num){return TR("{p}の{a}").replace("{p}",BUDDY_P[(num-1)%10]
 
 /* ---- 結果を画像でシェア ---- */
 const SHARE_URL="https://16typeplus.jp/"+(LANG==="ja"?"":LANG+"/");
-const SC={ei:"#3E7FA6",sn:"#C29A3A",tf:"#3F9A72",jp:"#7A5EA8",plus:"#3355B8",rose:"#C9607A",ink:"#1F2733",muted:"#5E6A7A",rule:"#E2E6EC",bg:"#F6F7F9",soft:"#EEF1F5"};
+const SC={ei:"#3E7FA6",sn:"#C29A3A",tf:"#3F9A72",jp:"#7A5EA8",plus:"#C2553F",rose:"#C9607A",ink:"#1F2733",muted:"#5E6A7A",rule:"#E2E6EC",bg:"#F6F7F9",soft:"#EEF1F5"};
 function wrapLines(ctx,text,maxW,maxLines){
  const units=LANG==="ja"&&typeof BX!=="undefined"?BX.seg(text.replace(/​/g,"")).split("​"):text.split(/(?<=\s)/);
  const lines=[];let cur="";
