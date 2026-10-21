@@ -304,6 +304,14 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(
 .rv p{margin:4px 0 0;font-size:14px;line-height:1.7}
 @keyframes rvin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.flip .tile.show,.rv{animation:none!important}}
+/* 診断のつくり */
+.how h2{font-size:16px;margin:0 0 12px}
+.howl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;counter-reset:h}
+.howl li{display:grid;grid-template-columns:26px 1fr;gap:2px 10px;counter-increment:h}
+.howl li::before{content:counter(h);grid-row:1/3;width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--surface);display:grid;place-items:center;font-size:12px;font-weight:700;font-family:var(--mono)}
+.howl b{font-size:14.5px}
+.howl span{font-size:13.5px;color:var(--muted);line-height:1.7}
+.half.sway{color:var(--plus);border-color:var(--plus)}
 /* gap */
 .gaprow{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:6px}
 .gapnum{font-family:var(--mono);font-weight:600;font-size:40px;color:var(--plus);line-height:1;font-variant-numeric:tabular-nums}
@@ -385,6 +393,17 @@ button.alt{width:100%;border:0;font-family:inherit;line-height:1.7;cursor:pointe
     <div class="eq" aria-hidden="true"><span>今の自分<small>16タイプ</small></span><b>+</b><span>本当の自分<small>生年月日</small></span></div>
   </section>
 
+  <section class="card how">
+    <h2>この診断の質問は、ここがちがいます</h2>
+    <ol class="howl">
+      <li><b>あいまいな質問をしない</b><span>「あなたはどんな人？」ではなく、「最近こうした？」と具体的な場面で聞きます。なりたい自分ではなく、今の自分が出ます。</span></li>
+      <li><b>「どちらでもない」をなくした</b><span>6段階で答えるので、必ずどちらかに少し寄ります。真ん中ばかりで決まらない、がありません。</span></li>
+      <li><b>同じことを、向きを変えて聞く</b><span>「人といると元気になる」と「ひとりの時間で落ち着く」のように、反対向きの質問を半分ずつ混ぜて、なんとなく「はい」と答えるクセを打ち消します。</span></li>
+      <li><b>答えの「揺れ」も測る</b><span>向きを変えた質問どうしで答えが食い違うと、その文字は「揺れやすい」と結果に出します。16タイプが毎回変わる理由が見えます。</span></li>
+      <li><b>生まれつきの5文字とくらべる</b><span>生年月日から出す本来の5文字と並べて、どこが変わったのかを見ます。</span></li>
+    </ol>
+  </section>
+
   <section class="card" id="formCard" aria-labelledby="formh">
     <h2 id="formh">診断をはじめる</h2>
     <div class="field">
@@ -417,7 +436,7 @@ button.alt{width:100%;border:0;font-family:inherit;line-height:1.7;cursor:pointe
   <section class="card quiz" id="quizCard" hidden aria-live="polite">
     <div class="qtop"><span class="qcount" id="qCount">1 / 32</span><button type="button" class="qlink" id="qBack">← 戻る</button></div>
     <div class="qprog"><span id="qProg"></span></div>
-    <p class="qnote" id="qNote">理想の自分ではなく、<b>最近3か月のあなた</b>で答えてください。</p>
+    <p class="qnote" id="qNote">理想の自分ではなく、<b>最近3か月のあなた</b>で答えてください。反対向きの質問も混ざっています。考えすぎず、直感で。</p>
     <p class="qaxis" id="qAxis"></p>
     <h2 class="qtext" id="qText"></h2>
     <details class="qex" id="qExW"><summary>例を見る</summary><p id="qEx"></p></details>
@@ -892,7 +911,7 @@ AX.forEach((A,i)=>{const g=document.createElement("div");g.className="seg";g.sty
  pk.appendChild(g);});
 drawSlots(-1);
 document.querySelectorAll("#atPick button").forEach(bt=>bt.onclick=()=>{selAT=bt.dataset.v||null;document.querySelectorAll("#atPick button").forEach(x=>x.setAttribute("aria-pressed",x===bt));drawSlots(-1);});
-$("go").onclick=()=>{if(sel.includes(null))return;st.t=sel.slice();st.at=selAT;st.pct=null;st.half={};showResult();render();document.querySelector(".hero").scrollIntoView({behavior:"smooth"});};
+$("go").onclick=()=>{if(sel.includes(null))return;st.t=sel.slice();st.at=selAT;st.pct=null;st.half={};st.sway=null;showResult();render();document.querySelector(".hero").scrollIntoView({behavior:"smooth"});};
 /* ---- 32問 ---- */
 const SCALE=[["とても当てはまる",5,22],["当てはまる",4,18],["やや当てはまる",3,14],["やや当てはまらない",2,14],["当てはまらない",1,18],["まったく当てはまらない",0,22]];
 const AXN={EI:0,SN:1,TF:2,JP:3};
@@ -923,7 +942,10 @@ function drawQ(){const total=QZ.Q.length+tbList.length;$("qCount").textContent=M
 function next(){qi++;
  if(qi===QZ.Q.length&&tbList.length===0){const sc=scoreAll();tbList=Object.keys(sc).filter(k=>Math.abs(sc[k][0]-sc[k][1])<=4);}
  if(qi>=QZ.Q.length+tbList.length){finish();return;}drawQ();}
-function finish(){const sc=scoreAll();st.pct={};st.half={};
+function swayOf(){/* 揺れやすさ：同じ指標を、向きを変えた質問どうしで答えが食い違っていないか */
+ const sw={};AX.forEach(A=>{const a=[],b=[];QZ.Q.forEach((q,i)=>{if(q.ax!==A.k||qa[i]==null)return;(q.p===A.a?a:b).push(qa[i]);});
+  const av=x=>x.length?x.reduce((s,v)=>s+v,0)/x.length:2.5;sw[A.k]=Math.abs(av(a)-av(b))<1.5;});return sw;}
+function finish(){const sc=scoreAll();st.pct={};st.half={};st.sway=swayOf();
  AX.forEach((A,i)=>{const[a,b]=sc[A.k],tot=a+b||1;st.t[i]=a>b?A.a:a<b?A.b:natal(st.y,st.m,st.d).t[i];st.pct[A.k]=Math.round(b/tot*100);st.half[A.k]=Math.abs(a-b)<=4||tbAns[A.k]!=null;});
  st.at=null;setPicker();showResult();showQuiz(false);render();document.querySelector(".hero").scrollIntoView({behavior:"smooth"});}
 /* ---- 1列ずつめくって比べる ---- */
@@ -992,7 +1014,7 @@ function render(){
  const axHTML=AX.map((A,i)=>{const n=now[i],b=born[i],c=n!==b;
   if(c){pct+=N.strong[A.k]===false?12:25;ch.push(b+n);}
   const bPos=b===A.a?100-N.str[A.k]:N.str[A.k],nPos=st.pct?st.pct[A.k]:(n===A.a?25:75),shown=n===A.a?100-nPos:nPos;
-  const pc=st.pct?Math.max(50,shown)+'% ':'',hf=st.pct&&st.half[A.k]?'<span class="half">ほぼ半々</span>':'';
+  const pc=st.pct?Math.max(50,shown)+'% ':'',hf=(st.pct&&st.sway&&st.sway[A.k]?'<span class="half sway">揺れやすい</span>':'')+(st.pct&&st.half[A.k]?'<span class="half">ほぼ半々</span>':'');
   return '<div class="axis" style="--c:var('+A.c+')"><div class="axhead"><span>'+A.name+'：<b style="color:var('+A.c+')">'+pc+(n===A.a?A.aw:A.bw)+'</b>'+hf+'</span>'+(c?'<span class="chg">変化</span>':'<span class="same">そのまま</span>')+'</div>'
   +'<div class="track" style="background:var(--tint-'+A.k.toLowerCase()+')"><span class="m born" style="left:'+bPos+'%"></span><span class="m now" style="left:'+nPos+'%;background:var('+A.c+')"></span></div>'
   +'<div class="ends"><span class="'+(n===A.a?"on":"")+'">'+A.aw+' '+A.a+'</span><span class="'+(n===A.b?"on":"")+'">'+A.bw+' '+A.b+'</span></div></div>';}).join("");
