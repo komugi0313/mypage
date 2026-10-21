@@ -435,12 +435,12 @@ function lvShow(t){const me=window.__me,P=LV.types&&LV.types[t];if(!me)return;co
  let h='<table class="who"><tr><th></th><th>'+TR("生まれつき")+'</th><th>'+TR("いま")+'</th><th>'+TR("恋のとき")+'</th><th>'+TR("恋で出る自分")+'</th></tr>'
   +AX.map((A,i)=>'<tr><td>'+names[i]+'</td><td class="l">'+me.born[i]+'</td><td class="l">'+me.now[i]+'</td><td class="l"><span class="lv">'+t[i]+'</span></td><td>'+src(i)+'</td></tr>').join("")+'</table>'
   +'<p class="hook">'+esc(lvHook(me.born,me.now,t))+'</p>';
- if(P){const nm=k=>LV.types[k]?LV.types[k].name:k;
-  h+='<div class="lvp"><p class="lvcode">'+TR("恋愛")+' '+t+'　'+TR("「")+esc(P.tag)+TR("」")+'</p><p class="lvname">'+esc(P.name)+'</p>'
+ if(P){const nm=k=>LV.types[k]?LV.types[k].tag:k;
+  h+='<div class="lvp"><p class="lvcode">'+TR("恋愛")+' '+t+'・'+esc(an(t))+'</p><p class="lvname">'+esc(P.tag)+'</p>'
   +'<p class="one"><small>'+TR("一言で言うと…")+'</small>'+TR("「")+esc(P.one)+TR("」")+'</p><p class="desc">'+esc(P.desc)+'</p>'
   +'<div class="two"><div class="g"><h3>'+TR("恋で光るところ")+'</h3><ul>'+P.good.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div><div class="c"><h3>'+TR("気をつけたいところ")+'</h3><ul>'+P.care.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div></div>'
   +'<p class="key"><b>'+TR("うまくいくコツ")+'</b>'+esc(P.tip)+'</p>'
-  +'<div class="cpl"><div class="o"><em>'+TR("相性◎")+'</em><b>'+esc(nm(P.best[0]))+'</b><small>'+TR("恋愛")+' '+P.best[0]+'</small>'+esc(P.best[1])+'</div><div class="x"><em>'+TR("相性×")+'</em><b>'+esc(nm(P.hard[0]))+'</b><small>'+TR("恋愛")+' '+P.hard[0]+'</small>'+esc(P.hard[1])+'</div></div></div>'
+  +'<div class="cpl"><div class="o"><em>'+TR("相性◎")+'</em><b>'+esc(nm(P.best[0]))+'</b><small>'+TR("恋愛")+' '+P.best[0]+'・'+esc(an(P.best[0]))+'</small>'+esc(P.best[1])+'</div><div class="x"><em>'+TR("相性×")+'</em><b>'+esc(nm(P.hard[0]))+'</b><small>'+TR("恋愛")+' '+P.hard[0]+'・'+esc(an(P.hard[0]))+'</small>'+esc(P.hard[1])+'</div></div></div>'
   +'<button class="btn primary" type="button" id="lvShare">'+TR("恋愛編の結果を画像でシェア")+'</button>';}
  h+='<button class="qlink" type="button" id="lvRedo">'+TR("恋愛編に答え直す")+'</button>';
  el.innerHTML=h;
@@ -449,15 +449,15 @@ function lvShow(t){const me=window.__me,P=LV.types&&LV.types[t];if(!me)return;co
 async function lvShareRun(t){const b=$("lvShare"),lbl=b.textContent;b.disabled=true;b.textContent=TR("画像をつくっています…");
  try{const P=LV.types[t],cvs=[await lvCloud(P),await lvSheet(P)];const blobs=await Promise.all(cvs.map(cv=>new Promise(r=>cv.toBlob(r,"image/png"))));
   const files=blobs.map((bl,i)=>new File([bl],"16typeplus-love-"+(i+1)+".png",{type:"image/png"}));
-  if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,text:P.name+TR("「")+P.tag+TR("」")+TR("｜16TYPE+（16タイププラス）")+" "+SHARE_URL});}catch(e){if(e&&e.name!=="AbortError")showShareBox(cvs);}}
+  if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,text:P.tag+TR("（")+TR("恋愛")+" "+P.t+"・"+an(P.t)+TR("）")+TR("｜16TYPE+（16タイププラス）")+" "+SHARE_URL});}catch(e){if(e&&e.name!=="AbortError")showShareBox(cvs);}}
   else showShareBox(cvs);}catch(e){alert(TR("画像をつくれませんでした。もう一度お試しください。"));}finally{b.disabled=false;b.textContent=lbl;}}
 const LVC={ink:"#1F2733",muted:"#5E6A7A",soft:"#EEF1F5",rule:"#E2E6EC",rose:"#C2553F",roseT:"#F6E3DE",rose2:"#D98572"};
 function lvFonts(){const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
  return Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"あア가A♡"))).catch(()=>{}).then(()=>({SANS,MONO}));}
 async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
- c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);const cx=W/2,cy=H/2-20,placed=[[cx-260,cy-150,520,300]];
- c.textAlign="center";c.font="600 32px "+MONO;c.fillStyle=LVC.rose;c.fillText(TR("恋愛")+" "+P.t,cx,cy-60);c.font="700 56px "+SANS;c.fillStyle=LVC.ink;c.fillText(P.name,cx,cy+10);
- c.font="700 30px "+SANS;c.fillStyle=LVC.rose;c.fillText(TR("「")+P.tag+TR("」"),cx,cy+64);c.textAlign="left";
+ c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);const cx=W/2,cy=H/2-20;let tfs=52;c.font="700 "+tfs+"px "+SANS;while(c.measureText(P.tag).width>W-160&&tfs>30){tfs-=2;c.font="700 "+tfs+"px "+SANS;}
+ const bw=Math.max(520,c.measureText(P.tag).width+60),placed=[[cx-bw/2,cy-110,bw,170]];
+ c.textAlign="center";c.font="600 32px "+MONO;c.fillStyle=LVC.rose;c.fillText(TR("恋愛")+" "+P.t+"・"+an(P.t),cx,cy-50);c.font="700 "+tfs+"px "+SANS;c.fillStyle=LVC.ink;c.fillText(P.tag,cx,cy+20);c.textAlign="left";
  const hit=r=>placed.some(p=>r[0]<p[0]+p[2]&&r[0]+r[2]>p[0]&&r[1]<p[1]+p[3]&&r[1]+r[3]>p[1]);
  P.words.slice().sort((a,b)=>b[1]-a[1]).forEach(([w,wt],i)=>{let fs={3:76,2:54,1:38}[wt];c.font="700 "+fs+"px "+SANS;let tw=c.measureText(w).width;while(tw>W-120&&fs>22){fs-=2;c.font="700 "+fs+"px "+SANS;tw=c.measureText(w).width;}const th=fs*1.25;
   for(let t=0;t<12000;t++){const a=t*0.12+i*1.7,r=30+t*0.18,x=cx+Math.cos(a)*r-tw/2,y=cy+Math.sin(a)*r*1.3-th/2;const rect=[x-6,y-2,tw+12,th+4];
@@ -466,15 +466,15 @@ async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=doc
 async function lvSheet(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1700,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const wrap=(t,w)=>wrapLines(c,t,w,9);
  c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);c.fillStyle=LVC.rose;c.fillRect(0,0,W,14);
- c.font="600 26px "+MONO;c.fillStyle=LVC.muted;c.fillText("16TYPE+  "+TR("恋愛編"),70,95);c.font="600 40px "+MONO;c.fillStyle=LVC.rose;c.fillText(TR("恋愛")+" "+P.t,70,185);
- c.font="700 64px "+SANS;c.fillStyle=LVC.ink;c.fillText(P.name,70,275);c.font="700 30px "+SANS;c.fillStyle=LVC.rose;c.fillText(TR("「")+P.tag+TR("」"),70,335);
+ c.font="600 26px "+MONO;c.fillStyle=LVC.muted;c.fillText("16TYPE+  "+TR("恋愛編"),70,95);c.font="600 40px "+MONO;c.fillStyle=LVC.rose;c.fillText(TR("恋愛")+" "+P.t+"・"+an(P.t),70,185);
+ c.font="700 60px "+SANS;c.fillStyle=LVC.ink;wrapLines(c,P.tag,W-140,2).forEach((l,i)=>c.fillText(l,70,275+i*70));
  let y=390;c.fillStyle=LVC.roseT;rrect(c,60,y,W-120,130,20);c.fill();c.font="500 24px "+SANS;c.fillStyle=LVC.rose;c.fillText(TR("一言で言うと…"),90,y+42);
  c.font="700 34px "+SANS;c.fillStyle=LVC.ink;wrap(TR("「")+P.one+TR("」"),W-180).slice(0,2).forEach((l,i)=>c.fillText(l,90,y+92+i*44));
  y=590;c.font="500 26px "+SANS;c.fillStyle=LVC.ink;wrap(P.desc,W-140).slice(0,5).forEach(l=>{c.fillText(l,70,y);y+=40;});y+=40;
  const col=(title,color,items,x,w)=>{c.font="700 32px "+SANS;c.fillStyle=color;c.fillText(title,x,y);let yy=y+50;items.forEach(t=>{c.font="500 25px "+SANS;const ls=wrap(t,w-44);c.fillStyle=color;c.fillText("♡",x,yy);c.fillStyle=LVC.ink;ls.forEach(l=>{c.fillText(l,x+40,yy);yy+=36;});yy+=10;});return yy;};
  const y1=col(TR("恋で光るところ"),LVC.rose,P.good,70,450),y2=col(TR("気をつけたいところ"),LVC.muted,P.care,560,450);
  y=Math.max(y1,y2)+30;c.strokeStyle=LVC.rule;c.lineWidth=2;c.beginPath();c.moveTo(70,y);c.lineTo(W-70,y);c.stroke();y+=60;
- const nm=k=>LV.types[k]?LV.types[k].name:k;
+ const nm=k=>LV.types[k]?LV.types[k].tag:k;
  const pair=(mark,color,k,text)=>{c.font="700 32px "+SANS;c.fillStyle=color;c.fillText(mark+"  "+nm(k),70,y);y+=46;c.font="500 25px "+SANS;c.fillStyle=LVC.ink;wrap(text,W-140).slice(0,3).forEach(l=>{c.fillText(l,70,y);y+=36;});y+=24;};
  pair(TR("相性◎"),LVC.rose,P.best[0],P.best[1]);pair(TR("相性×"),LVC.muted,P.hard[0],P.hard[1]);
  c.font="600 28px "+MONO;c.fillStyle=LVC.ink;c.textAlign="center";c.fillText(SHARE_URL.replace("https://",""),W/2,H-50);c.textAlign="left";return cv;}
