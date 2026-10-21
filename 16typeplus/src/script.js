@@ -469,7 +469,7 @@ async function drawCV(){
  const me=window.__me,W=1080;let H=2200;const cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
  try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"16TYPE+ あア가A")));}catch(e){}
- const img=await loadImg(charSrc(me.now)),bimg=me.born!==me.now?await loadImg(charSrc(me.born)):null;
+ const img=await loadImg(charSrc(me.now));
  const P=PS[me.now]||{},PB=PS[me.born]||{},AN=D.ARUARU[me.now]||[],AB=D.ARUARU[me.born]||[],Q=(D.QUOTE&&D.QUOTE[me.now])||[];
  const head=x=>String(x||"").split("｜")[0];
  const LINE="#B9C0CA",LBG="#F3F5F8",X0=60,X1=W-60,LW=190;
@@ -490,8 +490,9 @@ async function drawCV(){
  rows.forEach(([l,v,fs,wt],i)=>{lab(X0,y,LW,rh[i],l);box(X0+LW,y,TW-LW,rh[i]);c.fillStyle=i===2?SC.muted:SC.ink;
   const maxL=i===3?3:1;let f=fs,ls;for(;f>=16;f-=2){c.font=wt+" "+f+"px "+SANS;ls=wrapLines(c,v,TW-LW-32,maxL+1);if(ls.length<=maxL)break;}if(ls.length>maxL)ls=wrapLines(c,v,TW-LW-32,maxL);
   const lh=Math.round(f*1.45),top=y+rh[i]/2-(ls.length-1)*lh/2+f*0.36;ls.forEach((t,j)=>c.fillText(t,X0+LW+18,top+j*lh));y+=rh[i];});
- c.fillStyle="#FAF7F1";c.fillRect(PX,PY,PW,PH);if(img){const s=Math.min(PW/img.width,PH/img.height)*1.18,iw=img.width*s,ih=img.height*s;c.save();c.beginPath();c.rect(PX,PY,PW,PH);c.clip();c.drawImage(img,PX+(PW-iw)/2,PY+PH-ih+10,iw,ih);c.restore();}
- box(PX,PY,PW,PH);if(bimg){const bs=96;c.fillStyle="#fff";c.fillRect(PX-12,PY+PH-bs-12,bs,bs);c.drawImage(bimg,PX-12,PY+PH-bs-12,bs,bs);box(PX-12,PY+PH-bs-12,bs,bs);c.font="700 15px "+SANS;const tl=TR("気質"),tw2=c.measureText(tl).width+14;c.fillStyle=SC.ink;c.fillRect(PX-12,PY+PH-bs-12,tw2,24);c.fillStyle="#fff";c.fillText(tl,PX-5,PY+PH-bs+5);}
+ /* 写真欄：性格のキャラを、枠いっぱいに（はみ出す分は左右を切る） */
+ c.fillStyle=SC.paper;c.fillRect(PX,PY,PW,PH);if(img){const s=Math.max(PW/img.width,PH/img.height),iw=img.width*s,ih=img.height*s;c.save();c.beginPath();c.rect(PX,PY,PW,PH);c.clip();c.drawImage(img,PX+(PW-iw)/2,PY+(PH-ih)/2,iw,ih);c.restore();}
+ box(PX,PY,PW,PH);
  y=PY+PH+28;
  /* 歩み（気質は子どものころに、性格は大人になってから出やすい） */
  const sec=(t)=>{y+=10;c.font="700 26px "+SANS;c.fillStyle=SC.plus;c.fillText(t,X0,y+20);y+=36;};
