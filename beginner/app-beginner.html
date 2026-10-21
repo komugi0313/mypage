@@ -6711,6 +6711,15 @@ function rdOffKind(A){ if(!A) return 'net'; if(A.skipped) return 'skip'; const n
 /* 同じ文のくり返しを見つける：文に分けて、くわしい読み解きの文のうち、上の答えにも出てくる文の割合 */
 function pkSents(t){ return String(t||'').replace(/【[^】\n]*】/g,'\n').split(/[。！？\n]+/).map(x=>x.replace(/[\s　・*＊#「」『』（）()、,]/g,'')).filter(x=>x.length>=8); }
 function pkDupRate(a,d){ const A=new Set(pkSents(a)), D=pkSents(d); if(!D.length) return 0; return D.filter(x=>A.has(x)).length/D.length; }
+function pkFixWhen(t,q){ try{   // 「いつ」を聞かれたのに1行目に時期がないときは、答えの中の時期を1行目に添える（質問には必ず答える。発注者指示 2026-10-21）
+  t=String(t||''); q=String(q||''); if(!/いつ|何歳|何年|時期|頃|ころ|タイミング/.test(q)) return t;
+  const L=t.split('\n'); let i=0; while(i<L.length&&!L[i].trim()) i++; if(i>=L.length) return t;
+  const TM=/(20\d\d年|年内|来年|再来年|\d{1,3}歳|[春夏秋冬]|\d{1,2}月|立春)/;
+  if(TM.test(L[i])) return t;
+  const rest=L.slice(i+1).join('\n'); const m=rest.match(/(20\d\d年(?:（\d{1,3}歳）)?(?:の)?(?:[春夏秋冬]|\d{1,2}月|前半|後半|年内)?(?:ごろ|頃)?(?:から20\d\d年(?:（\d{1,3}歳）)?(?:の)?(?:[春夏秋冬]|\d{1,2}月|前半|後半)?(?:ごろ|頃)?(?:にかけて)?)?)/);
+  if(!m) return t;
+  L[i]=L[i].replace(/[。．]\s*$/,'')+'。時期の目安は'+m[1].replace(/にかけて$/,'にかけて')+(/(ごろ|頃|にかけて)$/.test(m[1])?'':'ごろ')+'です。';
+  return L.join('\n'); }catch(e){ return t; } }
 function pkFixAnsHeads(t){ try{   // 冒頭の答えで【お客様へのお伝え方】【どうすればよいか】の見出しが抜けたときに補う（文章作成を呼び直さない。発注者指示 2026-10-21）
   t=String(t||'');
   { const m=t.match(/^\s*([^\n]{1,18})\n+\s*【お客様への(?:お)?伝え方】\s*\n+\s*([^\n]+)/); if(m&&!/[。！？]$/.test(m[1].trim())&&!/\d/.test(m[1])){ const f=(m[2].match(/^[^。！？]+[。！？]/)||[''])[0]; if(f.length>=12) t=t.replace(m[1],f.trim()); } }   // 1行目が「おすすめ（条件つきで良い）」のような札だけのときは、お伝え方の最初の一文を結論にする
@@ -6766,7 +6775,7 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
       if(proUser)appendPro(out,proUser,localText,deep,proLocal);
       return;
     }
-    const ans=pkFixAnsHeads(String(A.text).split(/\n[ 　]*[【\[]?くわしい読み解き[】\]]?/)[0].trim());
+    const ans=pkFixWhen(pkFixAnsHeads(String(A.text).split(/\n[ 　]*[【\[]?くわしい読み解き[】\]]?/)[0].trim()),(out.closest&&out.closest('.rd-item')&&out.closest('.rd-item').dataset.q)||'');
     out.innerHTML=sc+engineBadge(true,'')+formatReading(ans)+'<div class="loading r-more"><span class="spin"></span>くわしい読み解きを作成しています…（答えは上に出ています。読みながらお待ちください）</div>';
     // ② くわしい読み解き：先に出した答えと食い違わないよう、答えを渡して根拠を書かせる
     const D=await generateReading('〔PART:detail〕\n'+user+'\n\n【先に作成した答え（これと食い違わないように、その根拠を書く）】\n'+ans,localText,undefined,deep);
