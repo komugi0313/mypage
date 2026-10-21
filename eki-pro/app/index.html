@@ -743,6 +743,15 @@ summary.tap-sum{ display:list-item; padding-top:12px; padding-bottom:12px; min-h
 .hv-meta{ font-size:14px; color:var(--ink2); line-height:1.7; }
 .hv-chat .fu-msg{ max-width:92%; margin-bottom:8px; }
 .hv-chat{ display:flex; flex-direction:column; }
+.ans-copy{ margin-top:10px; }
+.cust-prev{ margin-top:10px; padding:10px 12px; border:1.5px solid #CDBBE0; border-left:5px solid #6B4C8A; border-radius:12px; background:#FBF8FE; color:#2B2236; font-size:14px; line-height:1.7; }
+.cust-prev .cp-t b{ color:#4A2F66; }
+.cust-prev .cp-q{ display:block; color:#3A3342; word-break:break-word; }
+.cust-prev .cp-acts{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.cust-prev .cp-acts .btn{ flex:1 1 130px; margin:0; white-space:nowrap; padding-left:8px; padding-right:8px; }
+.hist-resume-btn{ margin-left:0; }
+.fu-copy{ display:block; margin:8px 0 0 auto; padding:5px 12px; min-height:34px; font-size:13px; font-weight:700; color:#4A2F66; background:#fff; border:1.5px solid #B9A3CF; border-radius:999px; cursor:pointer; white-space:nowrap; }
+.fu-copy:active{ background:#F1EAF6; }
 .recent-move{ margin-top:8px; }
 /* 4 台本の仕立て（たたんだときは今の設定を表示） */
 .style-card{ padding-top:10px !important; padding-bottom:10px !important; }
@@ -1080,6 +1089,7 @@ h2.sec.res-pill,.ans-detail{display:inline-block !important;background:#2B2236 !
         <select class="field" id="custSelect" aria-label="お客様を選ぶ"><option value="" data-i18n="opt_new_client">未選択</option></select>
         <button type="button" class="btn ghost sm" id="custNewToggle" aria-expanded="false" aria-controls="custNewBox">＋ 新規</button>
       </div>
+      <div class="cust-prev" id="custPrevBox" hidden></div>
       <div id="custNewBox" hidden>
         <input class="field" id="custNewName" maxlength="40" data-i18n-ph="ph_client_name" placeholder="新しいお客様のお名前" style="margin-top:8px;">
         <label class="fl" for="custNewBd" style="margin-top:10px;">生年月日（任意）</label>
@@ -2029,6 +2039,7 @@ const App=(function(){
     if(h.jogen!=null) o.jogen=str(h.jogen,3000);
     if(typeof h.rank==='string'&&/^[A-E]$/.test(h.rank)) o.rank=h.rank;
     if(h.off===true) o.off=true;
+    if(Array.isArray(h.hx)&&h.hx.length===3){ const u=+h.hx[0], l=+h.hx[1], k=+h.hx[2]; if(u>=1&&u<=8&&l>=1&&l<=8&&k>=1&&k<=6) o.hx=[u,l,k]; }   // 上卦・下卦・変爻（「この鑑定の続きを聞く」で同じ卦を開き直すため）
     if(h.rd&&typeof h.rd==='object'&&!Array.isArray(h.rd)){ const rd={}; RD_KEYS.forEach(k=>{ if(h.rd[k]!=null&&String(h.rd[k]).trim()) rd[k]=str(h.rd[k],8000); }); o.rd=rd; }
     if(Array.isArray(h.chat)){ o.chat=h.chat.filter(m=>m&&typeof m==='object'&&(m.role==='user'||m.role==='ai')).slice(-CHAT_KEEP).map(m=>({role:m.role,text:str(m.text,6000)})); }
     return o;
@@ -2133,7 +2144,7 @@ const App=(function(){
      受け取ったあと、この端末の中で本当のお名前に置きかえる */
   const NAME_TOKEN='〔お名前〕';
   function clientName(){ return ((document.getElementById('custNewName')||{}).value||'').trim()||currentCustName()||''; }
-  function fillName(txt){ const n=clientName(); txt=String(txt||''); return n ? txt.split(NAME_TOKEN).join(n) : txt.split(NAME_TOKEN+'さん').join('あなた').split(NAME_TOKEN).join(''); }
+  function fillName(txt,nm){ const n=(typeof nm==='string')?nm:clientName(); txt=String(txt||''); return n ? txt.split(NAME_TOKEN).join(n) : txt.split(NAME_TOKEN+'さん').join('あなた').split(NAME_TOKEN).join(''); }
   /* 返ってきた文章に「私はAIなので」「AIの分析では」のような言い回しが混じっても、画面には出さない（相談内容としてのAIの話題はそのまま） */
 /* 読み仮名の直し（発注者が確認した表 2026-10-19）：ジェミニが付けた読みが表とちがえば、画面・保存・印刷の前に直す。
      表＝六十干支（甲子＝きのえね…）・年柱ねんちゅう・月柱げっちゅう・日柱にっちゅう・時柱じちゅう・大運だいうん。
@@ -2154,7 +2165,8 @@ const App=(function(){
   })();
     window.pkFixYomi=pkFixYomi;
   var pkSoftWord=function(s){ return String(s==null?'':s).replace(/(このご相談には、)?(占いで(?:は)?[^。\n]{0,10}?)お答え(?:すること[はが]?)?できません/g,function(m,p,a){ return p?m:a+'言い切ることはしません'; }).replace(/(占いで(?:は)?[^。\n]{0,10}?)判断(?:すること[はが]?)?できません/g,'$1言い切ることはしません').replace(/(このご相談には、)?(占いで(?:は)?[^。\n]{0,10}?)お伝え(?:すること[はが]?)?できません/g,function(m,p,a){ return p?m:a+'言い切ることはしません'; }).replace(/言い切ること[はが]?できません/g,'言い切ることはしません').replace(/(数字で|ハッキリと?|はっきりと?)お(伝え|答え)すること[はが]?できません/g,'$1お$2することはしません').replace(/必ず(?!しも)(?=[^。\n]{0,24}?(開け|ひらけ|来ま|来る|やって|訪れ|過ぎ|乗り越え|戻|見えて|叶|実を|実り|報われ|理解|力になって|良くな|よくな|うまく|好転|届き|伝わ|道が|チャンス|光))/g,'きっと').replace(/必ず(?!しも)([^。！？\n]*)/g,function(m,mid){ return /ください|ましょう|避け|相談|休|作って|作る|取る|守|気をつけ|確認|しないで|ないように|頼っ|話して|なければ|ね。?$/.test(mid)?m:'きっと'+mid; }); };   // 文の終わり方に関係なく、未来を言い切る「必ず」は「きっと」に   // 未来を言い切る「必ず〜ます」は「きっと」に（「必ず〜ください」「必ず相談を」などのすすめはそのまま）   // 「占いではお答えできません」のような突き放す言い方を、やわらかく（鑑定者本人の指示 2026-10-19。答えない相談の決まった案内はそのまま）
-  function noAIWord(t){ return pkFixAge(_noAIWord1(t),parseInt(((document.getElementById('fuBd')||{}).value||'').slice(0,4),10)||0); }   // 年齢は生年月日（入れたときだけ）から計算し直す
+  function noAIWord(t){ const _x=pkFixAge(_noAIWord1(t),parseInt(((document.getElementById('fuBd')||{}).value||'').slice(0,4),10)||0); return (typeof LANG!=='undefined'&&LANG==='ko')?_x:pkFixHangul(_x); }   // 日本語の文に混じったハングル（「終つい에는吉」など）を直す。韓国語で表示しているときだけは直さない
+  function pkFixHangul(t){ t=String(t==null?'':t); if(!/[ᄀ-ᇿ㄰-㆏가-힯]/.test(t)) return t; const M=[['에는','には'],['에서','で'],['에게','に'],['으로','で'],['하다','する'],['로','で'],['은','は'],['는','は'],['이','が'],['가','が'],['을','を'],['를','を'],['의','の'],['에','に'],['도','も'],['와','と'],['과','と']]; M.forEach(function(p){ t=t.split(p[0]).join(p[1]); }); return t.replace(/[ᄀ-ᇿ㄰-㆏가-힯]/g,''); }   // 年齢は生年月日（入れたときだけ）から計算し直す
   function _noAIWord1(t){ t=String(t||'').replace(/주치(의|医)/g,'主治医').replace(/【見出し[：:]?\s*/g,'【').replace(/【([^】\n]{0,40})\n+\s*([^】\n]{0,60})】/g,'【$1$2】').replace(/【\s*】/g,'');   // 【 】の中で改行した見出しをつなぐ（【見出し⏎…】のくずれ）
     return pkSoftWord(pkFixYomi(_noAIWord0(t))); }   // 記号（**など）を消したあとにも、読み仮名とやわらげをもう一度
   function _noAIWord0(t){t=pkSoftWord(pkFixYomi(t));t=String(t||'').replace(/てんいつきじん/g,'てんおつきじん').replace(/テンイツキジン/g,'テンオツキジン').replace(/ぎょうざい|きょうざい/g,'ごうざい'); return String(t||'')
@@ -2191,7 +2203,7 @@ const App=(function(){
       catch(e){ if(opt&&opt.signal&&opt.signal.aborted){ const er=new Error('待たずに内蔵データで出しました'); er.net=true; er.skip=true; throw er; }
         if(netTry<1&&!(e&&e.name==='AbortError')){ netTry++; a--; await sleep(700); continue; }
         const er=new Error('通信に失敗しました。電波の良い場所で再度お試しください。'); er.net=true; if(e&&e.name==='AbortError') er.timeout=true; throw er; }
-      if(res.ok){ try{ const lf=res.headers.get('x-pk-left'); if(lf!=null&&lf!=='') _ekiLeft=lf; }catch(_){} const d=await res.json(); const t=d.candidates?.[0]?.content?.parts?.[0]?.text; if(!t)throw new Error('応答が空でした'); return fillName(noAIWord(t.replace(/[＊*]/g,''))); }
+      if(res.ok){ try{ const lf=res.headers.get('x-pk-left'); if(lf!=null&&lf!=='') _ekiLeft=lf; }catch(_){} const d=await res.json(); const t=d.candidates?.[0]?.content?.parts?.[0]?.text; if(!t)throw new Error('応答が空でした'); return fillName(noAIWord(t.replace(/[＊*]/g,'')),(opt&&typeof opt.name==='string')?opt.name:undefined); }
       if(res.status===401) throw new Error('ログインの有効期限が切れました。ページを開き直して、もう一度ログインしてください。');
       if(res.status===403) throw new Error('ご契約の状態を確認できませんでした。マイページでご契約状況をご確認ください。');
       if(res.status===429){ let e0=null; try{ e0=await res.clone().json(); }catch(_){}   // 無料お試しの1日3回（サーバーで数えた結果。別の端末で使った分も含む）
@@ -2356,6 +2368,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
     const at0=Date.now();   // この鑑定の目印（自動保存で同じ記録を上書きするため、作り直しても変えない）
     try{ if(typeof pickDest==='function' && _destPre[at0]===undefined) _destPre[at0]=pickDest(); }catch(_){}   // 保存先は「鑑定を押した時点のお客様」で決める（答えを待つ間に次のお客様の名前を入れても、混ざらない）
     const r=buildResult(upper,lower,ko);
+    const nm0=clientName();   // お名前は「鑑定を押した時点のお客様」で入れる（答えを待つ間に別のお客様を選んでも、混ざらない）
     const L=document.getElementById('loading'); const LM=document.getElementById('loadingMsg');
     const hasKey = canOnline();
     const forceOffline = cur.offlineMode || !navigator.onLine || !hasKey;
@@ -2372,7 +2385,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
     const MAIN_WAIT=25000;   // ふだんの鑑定は25秒で打ち切る（それ以上は内蔵データで出す）
     if(!forceOffline && !trialOver && !paidOver){
       base=buildPrompt(r,q);
-      ansP=callGemini(base+ANS_ONLY,undefined,{signal:skipCtl&&skipCtl.signal,timeout:MAIN_WAIT}).then(t=>({t}),e=>({e}));
+      ansP=callGemini(base+ANS_ONLY,undefined,{signal:skipCtl&&skipCtl.signal,timeout:MAIN_WAIT,name:nm0}).then(t=>({t}),e=>({e}));
     }
     if(cur.cast==='coin' && cur.coin && cur.coin.sums){ await playCoinAnim(cur.coin.sums); }
     L.classList.add('show'); LM.textContent=t('load_casting');
@@ -2433,7 +2446,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
       const ansNote=A?`\n\n【先に作成した答え（▼判定・▼伝え方・▼助言は、これと同じ内容にする）】\n▼判定：${A.hantei}\n▼伝え方：${A.tsutae}\n▼助言：${A.jogen}`:'';
       let skipCtl2=null; try{ skipCtl2=new AbortController(); }catch(_){}
       window.__ekiSkip=()=>{ try{ if(skipCtl2) skipCtl2.abort(); }catch(_){} };   // 残り（要点メモ・台本）を待たずに内蔵データのまま使う
-      const text=await callGemini(base+ansNote,A?'detail':undefined,{signal:skipCtl2&&skipCtl2.signal,timeout:MAIN_WAIT});   // 'detail'＝鑑定1件の2回目（サーバーで回数に数えない目印）
+      const text=await callGemini(base+ansNote,A?'detail':undefined,{signal:skipCtl2&&skipCtl2.signal,timeout:MAIN_WAIT,name:nm0});   // 'detail'＝鑑定1件の2回目（サーバーで回数に数えない目印）
       const p=parseReading(text);
       if(!A&&!(p&&(p.hantei||p.tsutae))) throw new Error('形の読み取れない応答');   // 答えも残りも読み取れない → 内蔵データの鑑定に切り替える
       if(A){ if(A.hantei) p.hantei=A.hantei; if(A.tsutae) p.tsutae=A.tsutae; if(A.jogen) p.jogen=A.jogen; }   // 先に見せた答えは変えない
@@ -2740,7 +2753,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
       let todo=String(p.jogen||'').split(/\n|・/).map(x=>x.trim()).filter(Boolean);
       if(todo.length<2){ const grp=(r.rank==='A'||r.rank==='B')?'g':(r.rank==='E')?'b':'m'; todo=((SHO_ADV[cur.topic]||SHO_ADV.other)[grp]||[]).slice(); if(p.chui) todo.push(String(p.chui).trim()); }   // 内蔵データのときは、相談テーマ別の行動アドバイスを使う
       todo=todo.filter((x,i,a)=>a.indexOf(x)===i).slice(0,3);
-      box.innerHTML=(talk?`<div class="ans-sec ans-tk"><span class="ans-h">${t('ans_talk')}</span><p class="ans-talk">${fmtPlain(talk)}</p></div>`:'')
+      box.innerHTML=(talk?`<div class="ans-sec ans-tk"><span class="ans-h">${t('ans_talk')}</span><p class="ans-talk">${fmtPlain(talk)}</p><button type="button" class="btn ghost sm ans-copy" id="copyTalk">📋 この文をコピー</button></div>`:'')
         +(todo.length?`<div class="ans-sec ans-do"><span class="ans-h">${t('ans_do')}</span><ul>${todo.map(x=>`<li>${fmtPlain(x)}</li>`).join('')}</ul></div>`:'');
     })();
     // 結論（要点メモ）
@@ -2774,14 +2787,19 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
       ${kpiItem(t('kpi_chui'),p.chui)}
       ${kpiItem(t('kpi_musubi'),p.musubi)}
     `;
-    // 深掘り相談をリセット
-    cur.chat=[]; const _fl=document.getElementById('fuLog'); if(_fl)_fl.innerHTML='';
+    // 深掘り相談：新しい鑑定なら空に。同じ鑑定（くわしい読み解きが届いた・前回の鑑定を開き直した）なら、やりとりをそのまま残す
+    { const L0=cur.last;
+      if(L0&&_chatFor&&_chatFor.at===L0.at) cur.chat=_chatFor.chat;
+      else cur.chat=(L0&&Array.isArray(L0.chat))?L0.chat:[];
+      _chatFor=L0?{at:L0.at,chat:cur.chat}:null; }
+    const _fl=document.getElementById('fuLog'); if(_fl){ _fl.innerHTML=''; if(cur.chat.length) renderChat(); }
     const _fh=document.getElementById('fuHint'); if(_fh)_fh.textContent=(r.h?`「${r.h.nm}（${r.h.rd}）」＝${mTheme(r.h)}`:'今回の結果')+'を土台に、占いのことも、ふだんの悩みも、続けて何度でもご相談いただけます（オンライン時）。';
     if(cur.last&&cur.last.r===r) cur.last.chat=cur.chat;   // 深掘り相談のやりとりも、この鑑定といっしょに自動保存する
     // 画面を結果へ動かすのは、その鑑定を最初に出したときだけ（くわしい読み解きが届いたときは、読んでいる場所を動かさない）
+    try{ renderCustPrev(); }catch(_){}
     if(_shownR!==r){ _shownR=r; scrollToResult(); }
   }
-  let _shownR=null;
+  let _shownR=null, _chatFor=null;
   /* 画面の中身が書きかわっても、いま読んでいる所が上下に動かないようにする（iPhoneのSafariは自動では合わせないため）。
      見えているいちばん上の欄の位置を覚えておき、書きかえたあと同じ位置に戻す */
   function keepView(fn){
@@ -2921,7 +2939,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
 【命式の使い方（易と混ぜない）】あなたは四柱推命にも通じた占い師ですが、本ツールは易の鑑定が主役です。答えの本文は必ず易だけで完結させること（本文に命式の話を混ぜない）。命式から添える価値がある時だけ、本文のあとに改行して「――生まれ持った性質から：」で始まる一〜二文を添える（例：「――生まれ持った性質から：じっくり育てるのが得意なあなたは、なおさら“待つ”が効きますよ。」。五行・干支・日主などの言葉は使わない）。添えてよい内容は、日主の気質にかぎらず、柱の干支の組み合わせから見える持ち味、五行の偏り（多い五行＝豊かな持ち味・欠けた五行＝補いたい気）、五行と季節の相性まで、命式全体を活かしてよい。時期にかかわる質問では、上の「これから3年の流れ」を根拠に、年の単位で目安を添えてよい（例：「――生まれ持った性質から：2027年は着実に積み上げる年。易の“待つ”とも重なりますよ。」）。書かれていない年・月・日を作らない、年の流れの中身を書きかえない、追い風の年を勝手に変えない。通変星・大運などの専門的な命式鑑定には踏み込まない（それは命式専用ソフトの領分）。不要なら添えなくてよい。`:'';
     return `あなたは熟練の易占い師です。すでに下の卦を立て、相談者に鑑定を伝えました。いまは鑑定後の対話の時間です。相談者の言葉に、経験豊かな占い師として自然に応じてください。
 最初のご相談：「${L.q}」
-お客様のお名前：${clientName()?`「${NAME_TOKEN}」と書く（印は一字も変えずにそのまま書く）`:'（未入力。名前は出さず、「〇〇さん」などの伏せ字も使わない）'}（標準語で。方言は使わない）
+${(L.p&&L.p.hantei)?`最初にお伝えした答え：${String(L.p.hantei).replace(/[【】]/g,'')}\n`:''}お客様のお名前：${clientName()?`「${NAME_TOKEN}」と書く（印は一字も変えずにそのまま書く）`:'（未入力。名前は出さず、「〇〇さん」などの伏せ字も使わない）'}（標準語で。方言は使わない）
 立てた卦：${hexCtxShort(L.r)}
 現代の言葉での意味（原文の意味を伝えるときの土台）：いまの時＝「${mTheme(L.r.h)}」：${mMsg(L.r.h)}／いちばん大切なメッセージ：${mTai(L.r.h,L.r.ko)}${pilLine}
 ${hist?('これまでのやりとり：\n'+hist+'\n'):''}相談者の新しい発言：「${followQ}」
@@ -2937,9 +2955,10 @@ ${hist?('これまでのやりとり：\n'+hist+'\n'):''}相談者の新しい�
 【安全ルール（本当に危険な場合のみ）】他者への危害・殺害・盗みや詐欺などの犯罪を実際に行おうとする明確な意図がある場合、または自殺の具体的な計画・方法・時期をたずねる場合のみ、占いで答えず「占いではお答えできないご相談です」と伝え、信頼できる人や公的な相談窓口に相談するようやさしく促す。死にたい・消えたい・自分を傷つけたいといった深くつらい気持ちの相談は断らず、占い師として寄り添い、希望につながる見方で答える（死や自傷を肯定・後押ししない。最後に一言、信頼できる人や相談窓口（よりそいホットライン等）にも話してほしいとやさしく添える）。比喩・誇張や通常の悩みは通常どおり答える。
 ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')); return (s&&s.health)?EKI_HEALTH_GUIDE.replace(/^\n/,'')+'（この対話では短く：①〜④をそれぞれ一言ずつでよい）\n':''; })()}指示：温かく具体的に、2〜4文で。【読み仮名（必ず守る）】易の言葉や卦の名前を出すときは、その文章の中で初めて出るところに必ず読み仮名を（）で付ける。読みは次のとおり（ほかの読みにしない）：易経（えききょう）・卦辞（かじ）・爻辞（こうじ）・本卦（ほんか）・之卦（しか）・互卦（ごか）・綜卦（そうか）・錯卦（さくか）・変爻（へんこう）・立卦（りっか）・上卦（じょうか）・下卦（かか）・内卦（ないか）・外卦（がいか）・初爻（しょこう）・二爻（にこう）・三爻（さんこう）・四爻（しこう）・五爻（ごこう）・上爻（じょうこう）・乾（けん）・兌（だ）・離（り）・震（しん）・巽（そん）・坎（かん）・艮（ごん）・坤（こん）。卦の名前の読みは、材料に書かれた読みのとおりにする。漢文の原文（卦辞・爻辞）には読み仮名を勝手に付けない。原文を読み下して伝えるときは、材料の「読み下し」を読み仮名も含めて一字一句そのまま使い、自分で読み下さない。易経の言葉（卦の名前・卦辞・爻辞）を出すときは正確に引用し、必ず「現代の言葉にすると〜」と意味を添える。命式・五行・日主・干支などの四柱推命の用語は使わない。断定しすぎず、しかし頼りになる導きを。医療・法律・生死の断定はしない。アスタリスク（「＊」「*」）は一切使わないこと。出力は${LANGNAME}で、答えの本文だけ（見出し・記号は不要）。`;
   }
+  function fuOwner(L){ if(!L) return null; const d=(_dest[L.at]!==undefined)?_dest[L.at]:_destPre[L.at]; return d===undefined?null:d; }
   function renderChat(){
     const log=document.getElementById('fuLog'); if(!log)return;
-    log.innerHTML=(cur.chat||[]).map(m=>`<div class="fu-msg ${m.role==='user'?'user':'ai'}">${esc(m.text)}</div>`).join('');
+    log.innerHTML=(cur.chat||[]).map((m,i)=>`<div class="fu-msg ${m.role==='user'?'user':'ai'}">${esc(m.text)}${(m.role==='ai'&&m.text&&!/^🌙/.test(m.text))?`<button type="button" class="fu-copy" data-ci="${i}" aria-label="この答えをコピー">📋 コピー</button>`:''}</div>`).join('');
     // いま聞いた質問がログの先頭に来るようスクロール（答えを頭から読めるように）
     const us=log.querySelectorAll('.fu-msg.user'); const lastQ=us[us.length-1];
     if(lastQ){ log.scrollTop += (lastQ.getBoundingClientRect().top - log.getBoundingClientRect().top) - 4; }
@@ -2949,6 +2968,10 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')); retur
     const el=document.getElementById('fuText'); const q=(el.value||'').trim();
     if(!q){ toast('聞きたいことを入力してから「この質問で続けて鑑定する」を押してください。'); try{el.focus();}catch(_){} return; }
     if(!cur.last){ alert('先に鑑定を行ってください。'); return; }
+    // この鑑定のお客様と、いま上で選んでいるお客様がちがうときは送らない（別のお客様の卦で答えたり、別の記録に保存したりしない）
+    { const ow=fuOwner(cur.last), cs=document.getElementById('custSelect'), sv=cs?cs.value:'';
+      if(ow && ow!=='recent' && sv && sv!==ow){ const oc=db.customers.find(x=>x.id===ow);
+        alert('いま画面に出ている鑑定は、'+(oc?oc.name+' 様':'別のお客様')+'の鑑定です。\n上の「お客様」で選んだ方とちがうため、続きのご相談は送りませんでした。\n選んだお客様の鑑定をしてから、あらためてご相談ください。'); return; } }
     { const sf=ekiSafety(q); if(sf&&sf.block){   // 答えない相談だけは、サーバーに送らず案内だけ
       cur.chat=cur.chat||[]; cur.chat.push({role:'user',text:q});
       cur.chat.push({role:'ai',text:sf.block==='self'?'このご相談には、占いでお答えできません。いまのお気持ちを、どうか身近な信頼できる人や相談窓口に話してください。よりそいホットライン 0120-279-338（24時間・無料）／いのちの電話 0570-783-556。いますぐ危険なときは 110・119 へ。':'人を傷つけることや、盗みなどの犯罪につながるご相談には、占いでお答えできません。気持ちが抑えきれないほどつらいときは、信頼できる人や、専門の相談窓口（警察相談専用電話 #9110 など）に相談してください。'});
@@ -2969,16 +2992,18 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')); retur
     const btn=document.getElementById('fuSend'); btn.disabled=true; const bdg=document.getElementById('fuBdGo'); if(bdg) bdg.disabled=true;
     const log=document.getElementById('fuLog');
     const think=document.createElement('div'); think.className='fu-msg think'; think.textContent='卦を読み解いています…'; log.appendChild(think);
-    const mine=cur.last, chat=cur.chat;   // 送った時点の鑑定（待っている間に別の鑑定へ移ったら、その欄には出さない）
+    const mine=cur.last, mineAt=cur.last.at, chat=cur.chat;   // 送った時点の鑑定（待っている間に別の鑑定へ移ったら、その欄には出さない）
+    const stillMine=()=>!!(cur.last&&cur.last.at===mineAt&&cur.chat===chat);
     try{
-      const ans=await callGemini(buildFollowupPrompt(q));
+      const ans=await callGemini(buildFollowupPrompt(q),undefined,{name:clientName()});   // お名前は送った時点のお客様で入れる
       trialInc(); // 深掘り相談（AI生成）を1回消費
-      if(cur.last!==mine||cur.chat!==chat){ think.remove(); chat.push({role:'ai',text:(ans||'').trim()}); if(mine&&mine.chat===chat) persistReading(mine); return; }   // 別の鑑定へ移っていても、答えはその鑑定の記録に残す
-      cur.chat.push({role:'ai',text:(ans||'').trim()}); renderChat();
+      chat.push({role:'ai',text:(ans||'').trim()});
+      if(!stillMine()){ think.remove(); if(!saveChatToRec(mineAt,chat)&&mine){ mine.chat=chat; persistReading(mine); } return; }   // 別の鑑定へ移っていても、答えはその鑑定の記録にだけ残す
+      cur.last.chat=chat; renderChat();
       persistReading(cur.last);
     }catch(e){
       // 失敗のほとんどは通信・混雑。言い回しのせいにせず、入力した文は欄に戻す
-      if(cur.last!==mine||cur.chat!==chat){ think.remove(); return; }
+      if(!stillMine()){ think.remove(); if(chat[chat.length-1]&&chat[chat.length-1].role==='user'){ chat.pop(); saveChatToRec(mineAt,chat); } return; }
       el.value=q;
       const _am=(e&&/ログイン|ご契約|使い切|上限|まかなえる|お休み|利用枠/.test(e.message||''))?e.message+'（ご相談の文は入力欄に戻してあります）':'いま、つながりにくいようです。通信の状態を確かめて、少し時間をおいてから、もう一度「この質問で続けて鑑定する」を押してください。（ご相談の文は入力欄に戻してあります）';
       cur.chat.push({role:'ai',text:_am}); renderChat();
@@ -2989,6 +3014,22 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')); retur
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
   // 【…】でくくられた「大事なポイント」をハイライト表示に変換（台本・裏卦・判定のみ）
   function fmtRich(s){ return esc(s).replace(/【([^】]{1,50})】/g,'<span class="hl">$1</span>').replace(/[【】]/g,''); }
+  /* コピーしてLINEなどに貼る文：【】の強調は外して中の言葉だけ残す・鑑定士向けの指示（「〜とお伝えください」など）と記号は消す */
+  const TELLER_ONLY=/(?:お伝えください|お伝えしましょう|伝えてあげ(?:ましょう|てください)|声をかけてあげ(?:ましょう|てください)|声をかけましょう|お声がけ(?:ください|しましょう)|伝えるとよいでしょう|伝えると良いでしょう|話してあげ(?:ましょう|てください))/;
+  function copyClean(s){
+    let t=fillName(String(s==null?'':s)).replace(/\r/g,'');
+    t=t.replace(/【([^】]*)】/g,'$1').replace(/[【】]/g,'');
+    t=t.replace(/^\s{0,3}#{1,6}\s*/gm,'').replace(/^\s*>\s?/gm,'').replace(/^\s*[-*+]\s+/gm,'・').replace(/\*\*|__|~~|`/g,'').replace(/[＊*]/g,'');
+    // 「…」とお伝えください。→ 中の言葉だけを残す
+    t=t.replace(new RegExp('「([^「」\\n]{1,200})」と、?'+TELLER_ONLY.source+'[。！]?','g'),(m,x)=>x.replace(/[。！？]?$/,e=>e||'。'));
+    // 残った鑑定士向けの文は、その文ごと消す
+    t=t.split('\n').map(line=>{ const ss=line.match(/[^。！？]+[。！？]*|[。！？]+/g)||[]; return ss.filter(x=>!TELLER_ONLY.test(x)).join(''); }).join('\n');
+    return t.replace(/[ \t\u3000]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+  }
+  function copyText(txt,msg){ txt=copyClean(txt); if(!txt){ toast('コピーする文がありません'); return; }
+    const ok=()=>toast(msg||'コピーしました。LINEなどに貼り付けて送れます');
+    const fb=()=>{ try{ const ta=document.createElement('textarea'); ta.value=txt; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); const r=document.execCommand('copy'); ta.remove(); if(r) ok(); else alert('コピーできませんでした。文を長押しして選んでコピーしてください。'); }catch(e){ alert('コピーできませんでした。文を長押しして選んでコピーしてください。'); } };
+    try{ if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok,fb); else fb(); }catch(e){ fb(); } }
   // ハイライトを付けない項目用：万一混ざった【】は消すだけ
   function fmtPlain(s){ return esc(s).replace(/[【】]/g,''); }
   // 読み仮名「漢字（かな）」を、かっこではなく漢字のすぐ後ろの「読み方の札」で見せる（表示だけ・文章やコピーする内容・鑑定書は変えない）
@@ -3379,14 +3420,17 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
   function recOf(L){
     const r=L.r, q=L.q, p=L.p||{};
     const chat=Array.isArray(L.chat)?L.chat:[];
-    const rec={at:L.at, hex:r.h?r.h.nm:`${r.uT.k}${r.lT.k}`, no:r.h?r.h.no:0, ko:KO_NAME[r.ko], shika:(r.shika&&r.shika.hex)?r.shika.hex.nm:'', q, script:p.script||'', topic:L.topic||cur.topic||null,
+    const rec={at:L.at, hx:[r.upper,r.lower,r.ko], hex:r.h?r.h.nm:`${r.uT.k}${r.lT.k}`, no:r.h?r.h.no:0, ko:KO_NAME[r.ko], shika:(r.shika&&r.shika.hex)?r.shika.hex.nm:'', q, script:p.script||'', topic:L.topic||cur.topic||null,
       hantei:p.hantei||'', tsutae:p.tsutae||'', jogen:p.jogen||'', rank:r.rank, rd:{},
-      chat:chat.filter(m=>m&&(m.role==='user'||m.role==='ai')&&m.text&&!/^🌙/.test(m.text)).slice(-CHAT_KEEP).map(m=>({role:m.role,text:String(m.text)}))};
+      chat:chatOf(chat)};
     RD_KEYS.forEach(k=>{ if(p[k]) rec.rd[k]=String(p[k]); });
     if(L.offline) rec.off=true;
     if(L.memoTouched) rec.memo=L.memo||'';
     return cleanRec(rec);
   }
+  function chatOf(chat){ return (Array.isArray(chat)?chat:[]).filter(m=>m&&(m.role==='user'||m.role==='ai')&&m.text&&!/^🌙/.test(m.text)).slice(-CHAT_KEEP).map(m=>({role:m.role,text:String(m.text)})); }
+  /* 深掘り相談の答えは、その答えを聞いた鑑定の記録にだけ書き足す（画面が別の鑑定・別のお客様に移っていても混ざらない） */
+  function saveChatToRec(at,chat){ const loc=locateRec(at); if(!loc) return false; loc.list[loc.i].chat=chatOf(chat); return save(true); }
   function locateRec(at){
     for(const c of db.customers){ const i=(c.history||[]).findIndex(x=>x.at===at); if(i>=0) return {c, list:c.history, i}; }
     const i=(db.recent||[]).findIndex(x=>x.at===at); if(i>=0) return {c:null, list:db.recent, i};
@@ -3492,7 +3536,7 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
       <div class="hist-hex">${h.no?'第'+(parseInt(h.no,10)||0)+'卦 ':''}${esc(h.hex||'')}・${esc(h.ko||'')}</div>
       ${h.hantei?`<div class="hist-q"><b>答え：</b>${esc(plainVerdict(h))}</div>`:''}
       <div class="hist-q">相談：${esc(h.q||'')}</div>
-      <div class="hist-acts"><button class="btn sm hist-view-btn" onclick="App.viewHist(${Number(h.at)||0})">📖 この鑑定を見る</button></div>
+      <div class="hist-acts"><button class="btn sm hist-view-btn" onclick="App.viewHist(${Number(h.at)||0})">📖 この鑑定を見る</button><button class="btn ghost sm hist-resume-btn" onclick="App.resumeHist(${Number(h.at)||0})">💬 <span class="ib">この鑑定の</span><span class="ib">続きを聞く</span></button></div>
       <textarea class="hist-memo" id="histMemo${i}" placeholder="この回のメモ（任意）">${esc(h.memo||'')}</textarea>
       <button class="btn ghost sm hist-memo-btn" onclick="App.saveHistMemo(${Number(h.at)||0},${i})">メモを保存</button>
       </div>`).join(''):'<p class="muted">まだ履歴がありません。</p>';
@@ -3551,10 +3595,102 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
       ${sec(t('kpi_musubi'),para(rd.musubi))}
       ${sec('深掘り相談のやりとり',chat)}
       ${sec('メモ',para(h.memo))}
-      ${old?'<p class="muted" style="margin-top:14px;">※この記録は、自動保存を始める前に保存したものです（相談・卦・台本・メモだけが残っています）。</p>':''}`;
+      ${old?'<p class="muted" style="margin-top:14px;">※この記録は、自動保存を始める前に保存したものです（相談・卦・台本・メモだけが残っています）。</p>':''}
+      ${(h.hx||hxFromNo(h.no,h.ko))?`<button type="button" class="btn primary" style="width:100%;margin-top:16px;" onclick="App.resumeHist(${Number(h.at)||0})">💬 この鑑定の続きを聞く<span class="ib">（同じ卦で深掘り相談へ）</span></button>`:''}`;
     const ov=document.getElementById('histOverlay'); ov.classList.add('open'); ov.scrollTop=0;
   }
   function closeHist(){ document.getElementById('histOverlay').classList.remove('open'); }
+  /* 以前の記録（上卦・下卦の数字がない形）でも、卦の番号と爻の名前から同じ卦を探す */
+  function hxFromNo(no,koStr){ no=parseInt(no,10)||0; if(!no) return null; let u=0,l=0;
+    for(const k in HEXDB){ if(HEXDB[k]&&+HEXDB[k].no===no){ const a=k.split('-'); u=+a[0]; l=+a[1]; break; } }
+    const ko=(KO_NAME||[]).findIndex(x=>x&&x===koStr); if(!u||!l||ko<1||ko>6) return null; return [u,l,ko]; }
+  /* 「この鑑定の続きを聞く」：保存した鑑定を「鑑定」タブに開き直す（ご相談・卦・答え・台本・深掘り相談のやりとりも）。
+     続けて質問すると、最初のご相談・同じ卦・これまでのやりとりをふまえて答え、その鑑定の記録に書き足す */
+  function resumeHist(at){
+    const loc=locateRec(at); if(!loc) return;
+    const h=loc.list[loc.i], c=loc.c;
+    const goKantei=()=>{ try{ closeHist(); closeCust(); }catch(_){} const tb=document.querySelector('.tab[data-view="kantei"]'); if(tb&&!tb.classList.contains('active')) tb.click(); };
+    const toFu=()=>setTimeout(()=>{ const f=document.getElementById('fuSec'); if(!f) return; const y=f.getBoundingClientRect().top+window.scrollY-stickyH()-8; try{ window.scrollTo({top:Math.max(0,y),behavior:'smooth'}); }catch(e){ window.scrollTo(0,Math.max(0,y)); } try{ document.getElementById('fuText').focus({preventScroll:true}); }catch(_){} },450);
+    if(cur.last&&cur.last.at===at&&document.getElementById('result').style.display==='block'){ goKantei(); toFu(); return; }
+    const hx=(Array.isArray(h.hx)&&h.hx.length===3)?h.hx:hxFromNo(h.no,h.ko);
+    if(!hx){ alert('この記録は古い形のため、同じ卦を開き直せませんでした。「この鑑定を見る」で内容をご確認ください。'); return; }
+    if(cur.last){ try{ if(window.__ekiFlushMemo) window.__ekiFlushMemo(); }catch(_){}
+      const fu=((document.getElementById('fuText')||{}).value||'').trim();
+      if(fu && !confirm('「深掘り相談」の欄に、まだ送っていない文が残っています。\n消して、この鑑定を開いてもよろしいですか？')) return; }
+    goKantei();
+    doResetForNewReading();
+    const cs=document.getElementById('custSelect'); refreshCustSelect(); cs.value=c?c.id:''; try{ fillBirthFromCust(); }catch(_){}
+    cur.topic=h.topic||null; document.querySelectorAll('#topicChips .chip').forEach(x=>x.classList.toggle('on',!!cur.topic&&x.dataset.id===cur.topic));
+    const q=h.q||''; { const qe=document.getElementById('question'); if(qe) qe.value=q; }
+    const r=buildResult(hx[0],hx[1],hx[2]);
+    const base=buildOfflineReading(r,q);
+    const p=Object.assign({},base);
+    if(h.hantei) p.hantei=h.hantei; if(h.tsutae) p.tsutae=h.tsutae; if(h.jogen) p.jogen=h.jogen; if(h.script) p.script=h.script;
+    RD_KEYS.forEach(k=>{ if(h.rd&&h.rd[k]) p[k]=h.rd[k]; });
+    _dest[h.at]=c?c.id:'recent';
+    cur.coin=null;
+    cur.last={ r, q, p, at:h.at, offline:!!h.off, topic:cur.topic, memo:h.memo||'', resumed:true, chat:(h.chat||[]).map(m=>({role:m.role,text:String(m.text||'')})) };
+    { const rm=document.getElementById('readingMemo'); if(rm) rm.value=h.memo||''; }
+    renderResult(r,q,p); markOffline(h.off?'内蔵データで出した鑑定の記録です（続きのご相談は、インターネットにつながっているときに使えます）':'',!h.off); ekiAnsWait(false); ekiPending(false);
+    try{ rubyize(document.getElementById('result')); }catch(_){}
+    try{ updateSaveUI(); }catch(_){}
+    try{ renderCustPrev(); }catch(_){}
+    toast((c?c.name+' 様の':'')+'前回の鑑定を開きました。続けて質問できます');
+    toFu();
+  }
+  /* お客様を選んだとき、そのお客様の前回の鑑定を小さく案内する（開く／この続きを聞く） */
+  function renderCustPrev(){
+    const box=document.getElementById('custPrevBox'); if(!box) return;
+    const id=(document.getElementById('custSelect')||{}).value||''; const c=id?db.customers.find(x=>x.id===id):null;
+    const h=c&&c.history&&c.history[0];
+    if(!h||(cur.last&&cur.last.at===h.at)){ box.hidden=true; box.innerHTML=''; return; }
+    const qq=String(h.q||'').replace(/\s+/g,' ').trim(); const qs=qq.length>40?qq.slice(0,40)+'…':qq;
+    const at=Number(h.at)||0;
+    box.innerHTML=`<div class="cp-t">📖 <b>${esc(c.name)} 様の前回の鑑定</b>（<span class="ib">${fmt(h.at)}</span>）${qs?`<span class="cp-q">相談：${esc(qs)}</span>`:''}</div>
+      <div class="cp-acts"><button type="button" class="btn ghost sm" onclick="App.viewHist(${at})">開く（見る）</button><button type="button" class="btn primary sm" onclick="App.resumeHist(${at})">💬 この続きを聞く</button></div>`;
+    box.hidden=false;
+  }
+  /* 結果が出ているときに、上の「お客様」で別の方を選んだら：前の方の結果・ご相談・深掘り相談を画面から消す（記録は保存ずみ）。
+     選んだ方はそのまま・生年月日は名簿から入れる。前のお客様の卦で答えたり、前の方の記録に保存したりしない */
+  function onCustChange(){
+    const cs=document.getElementById('custSelect'); if(!cs) return; const v=cs.value;
+    const rs=document.getElementById('result');
+    if(v && cur.last && rs && rs.style.display==='block'){
+      const ow=fuOwner(cur.last);
+      if(ow!==v){
+        const nc=db.customers.find(x=>x.id===v); const nm=nc?nc.name:'';
+        const back=()=>{ cs.value=(ow&&ow!=='recent'&&db.customers.some(x=>x.id===ow))?ow:''; try{ fillBirthFromCust(); }catch(_){} renderCustPrev(); };
+        const clearFor=()=>{ try{ if(window.__ekiFlushMemo) window.__ekiFlushMemo(); }catch(_){}
+          const fu=((document.getElementById('fuText')||{}).value||'').trim();
+          if(fu && !confirm('「深掘り相談」の欄に、まだ送っていない文が残っています。\n消して、'+nm+' 様に切りかえてもよろしいですか？')){ back(); return; }
+          doResetForNewReading(); cs.value=v; try{ const b1=document.getElementById('fuBd'); if(b1) delete b1.dataset.fromCust; fillBirthFromCust(); }catch(_){}
+          renderCustPrev(); toast(nm+' 様に切りかえました（前の結果は保存ずみ）'); };
+        if(ow==='recent' || ow==null){ askAttach(nm, k=>{ if(k==='attach'){ setDest(v); try{ const b1=document.getElementById('fuBd'); if(b1) delete b1.dataset.fromCust; fillBirthFromCust(); }catch(_){} renderCustPrev(); toast(nm+' 様の履歴に入れました'); } else if(k==='new') clearFor(); else back(); }); return; }
+        clearFor(); return;
+      }
+    }
+    renderCustPrev();
+  }
+  /* お客様未選択で出した鑑定が画面にあるときに、お客様を選んだとき：この鑑定をその方の履歴に入れるか、その方で新しく鑑定するか */
+  function askAttach(name, done){
+    const old=document.getElementById('nrModal'); if(old) old.remove();
+    const m=document.createElement('div'); m.className='nr-modal'; m.id='nrModal';
+    m.setAttribute('role','dialog'); m.setAttribute('aria-modal','true'); m.setAttribute('aria-labelledby','nrTitle');
+    const nm=esc(name);
+    m.innerHTML=`<div class="nr-box">
+      <h3 id="nrTitle"><span class="ib">${nm} 様を選びました。</span><span class="ib">いまの結果はどうしますか？</span></h3>
+      <p><span class="ib">いま出ている結果は、</span><span class="ib">お客様を選ばずに出した鑑定です。</span></p>
+      <button type="button" class="btn primary" data-k="attach"><span class="ib">この結果は ${nm} 様の</span><span class="ib">鑑定（履歴に入れる）</span></button>
+      <button type="button" class="btn ghost" data-k="new"><span class="ib">${nm} 様で</span><span class="ib">新しく鑑定する（画面を空に）</span></button>
+      <button type="button" class="nr-x" data-k="cancel">やめる（お客様の選択を戻す）</button>
+    </div>`;
+    const close=k=>{ document.removeEventListener('keydown',onKey,true); m.remove(); done(k); };
+    const onKey=e=>{ if(e.key==='Escape'){ e.preventDefault(); close('cancel'); } };
+    m.addEventListener('click',e=>{ if(e.target===m){ close('cancel'); return; } const b=e.target.closest('[data-k]'); if(b) close(b.dataset.k); });
+    document.addEventListener('keydown',onKey,true);
+    document.body.appendChild(m);
+    try{ m.querySelector('[data-k="attach"]').focus(); }catch(_){}
+  }
   /* 「最近の鑑定（お客様未選択）」 */
   /* 今日の鑑定の件数（この端末の、今日の日付の鑑定。名簿のお客様の履歴＋最近の鑑定） */
   function todayCountN(){ const d=new Date(), k=d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate();
@@ -3574,7 +3710,7 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
       <div class="hist-hex">${h.no?'第'+(parseInt(h.no,10)||0)+'卦 ':''}${esc(h.hex||'')}・${esc(h.ko||'')}</div>
       ${h.hantei?`<div class="hist-q"><b>答え：</b>${esc(plainVerdict(h))}</div>`:''}
       <div class="hist-q">相談：${esc(h.q||'')}</div>
-      <div class="hist-acts"><button class="btn sm hist-view-btn" onclick="App.viewHist(${Number(h.at)||0})">📖 この鑑定を見る</button>
+      <div class="hist-acts"><button class="btn sm hist-view-btn" onclick="App.viewHist(${Number(h.at)||0})">📖 この鑑定を見る</button><button class="btn ghost sm hist-resume-btn" onclick="App.resumeHist(${Number(h.at)||0})">💬 <span class="ib">この鑑定の</span><span class="ib">続きを聞く</span></button>
       <select class="field recent-move" aria-label="お客様に移す" onchange="App.moveRecent(${Number(h.at)||0},this.value)" style="flex:1 1 160px;width:auto;margin:0;">${opts}</select></div>
     </div>`).join('');
   }
@@ -3596,7 +3732,30 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
   function closeSho(fromPop){ const ov=document.getElementById('shoOverlay'); if(!ov.classList.contains('open')) return; ov.classList.remove('open'); document.body.classList.remove('sho-open');
     if(!fromPop && history.state && history.state.ekiSho){ try{ history.back(); }catch(e){} } }
   /* 鑑定書を文章としてLINE・メールで送る（スマホは共有メニュー、PCはコピー） */
-  function shareSho(){ const el=document.getElementById('shoContent'); const txt=(el?el.innerText:'').replace(/\n{3,}/g,'\n\n').trim(); if(!txt) return;
+  /* 送る文：ご相談は1回だけ（長いときは40字ほどで「…」）。段落はふつうの改行（1行ごとに空行を入れない）・見出しの前だけ1行あける */
+  function shoShareText(el){
+    if(!el) return '';
+    const txtOf=e=>{ const c=e.cloneNode(true); c.querySelectorAll('rt,rp,.no-print,.yomi').forEach(x=>x.remove()); c.querySelectorAll('br').forEach(b=>b.replaceWith('\n')); return c.textContent.replace(/[ \t\u3000]+\n/g,'\n').replace(/\n{2,}/g,'\n').trim(); };
+    const row=el.querySelector('.ks-row'); let q='';
+    if(row){ const c=row.cloneNode(true); c.querySelectorAll('.ks-lbl,rt,rp,.yomi').forEach(x=>x.remove()); q=c.textContent.trim(); }
+    if(!q&&cur.last&&cur.last.q) q=String(cur.last.q).trim();
+    const qs=q.replace(/\s+/g,' '); const qShort=qs.length>40?qs.slice(0,40)+'…':qs;
+    const noQ=t=>{ if(!q) return t; t=t.split('「'+q+'」というご相談').join('このご相談'); if(q.length>=6){ t=t.split('「'+q+'」').join('このご相談'); } return t; };
+    const out=[];
+    const push=(t,gap)=>{ if(!t) return; if(gap&&out.length&&out[out.length-1]!=='') out.push(''); out.push(t); };
+    el.querySelectorAll('.ks-brand,.ks-title,.ks-date,.ks-row,.ks-meta,.ks-hex,.ks-ans,.eki-crisis-mini,.ks-sh,.ks-p,.ks-li,.ks-ul li,.ks-foot').forEach(e=>{
+      if(e.closest('.eki-crisis-mini')&&!e.classList.contains('eki-crisis-mini')) return;
+      let t=txtOf(e); if(!t) return;
+      if(e.classList.contains('ks-row')){ push('ご相談：'+qShort,true); return; }
+      if(e.classList.contains('ks-meta')){ push(t,true); return; }
+      if(e.classList.contains('ks-sh')){ push('■ '+t,true); return; }
+      if(e.classList.contains('ks-foot')){ push(t,true); return; }
+      if(e.tagName==='LI') t='・'+t.replace(/^・\s*/,'');
+      push(noQ(t),false);
+    });
+    return out.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+  }
+  function shareSho(){ const el=document.getElementById('shoContent'); let txt=''; try{ txt=shoShareText(el); }catch(e){ txt=''; } if(!txt) txt=(el?el.innerText:'').replace(/\n{2,}/g,'\n').trim(); if(!txt) return;
     const title=(document.querySelector('#shoContent .ks-title')||{}).textContent||'鑑定書';
     if(navigator.share){ navigator.share({title:title,text:txt}).catch(function(){}); return; }
     try{ navigator.clipboard.writeText(txt).then(function(){ toast('鑑定書の文章をコピーしました。LINEやメールに貼り付けて送れます'); },function(){ alert('コピーできませんでした。「印刷 / PDFで保存」でPDFにして送ってください。'); }); }catch(e){ alert('コピーできませんでした。「印刷 / PDFで保存」でPDFにして送ってください。'); } }
@@ -3787,7 +3946,11 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
     }));
     document.getElementById('saveNewCust').onclick=saveNewCustomer;
     document.getElementById('offlineToggle').onchange=e=>{ cur.offlineMode=e.target.checked; };
-    document.getElementById('copyScript').onclick=()=>{ const scr=cur.last?cur.last.p.script:''; navigator.clipboard&&navigator.clipboard.writeText(scr); toast(t('t_copied_script')); };
+    document.getElementById('copyScript').onclick=()=>{ const scr=cur.last?cur.last.p.script:''; copyText(scr,t('t_copied_script')); };
+    // 「① まずこれを読む」と、深掘り相談の答えもコピーできる（【】・鑑定士向けの指示・記号は外す）
+    document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('#copyTalk,.fu-copy'); if(!b) return; e.preventDefault();
+      if(b.id==='copyTalk'){ const p=cur.last&&cur.last.p; copyText(p?String(p.tsutae||'').replace(/\s*\n+\s*/g,''):'','「まずこれを読む」の文をコピーしました'); return; }
+      const m=(cur.chat||[])[+b.dataset.ci]; copyText(m?m.text:'','この答えをコピーしました'); });
     document.getElementById('fuSend').onclick=sendFollowup;
     (function(){ const g=document.getElementById('fuBdGo'); if(!g) return; g.onclick=function(){
       const t=document.getElementById('fuText'); if(t && !(t.value||'').trim()) t.value='生まれ持った性質もふまえて、今回の卦から私へのアドバイスを教えてください。';
@@ -3798,6 +3961,7 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
     // 時刻の選び方は「相談者の生年月日」の欄と同じ（時刻不明／0〜23時台）
     { const src=document.getElementById('fuBt'); ['custNewBt','coEditBt'].forEach(i=>{ const e=document.getElementById(i); if(e&&src) e.innerHTML=src.innerHTML; }); }
     document.getElementById('custSelect').addEventListener('change',()=>{ try{ fillBirthFromCust(); }catch(_){} });
+    document.getElementById('custSelect').addEventListener('change',()=>{ try{ onCustChange(); }catch(_){} });   // 別のお客様を選んだら、前の方の結果を画面から消す／前回の鑑定を案内する
     // 「＋ 新規」で入れた生年月日は、相談者の生年月日の欄にも入れる（鑑定すると、その方の名簿にも残る）
     { const cp=()=>{ const nb=document.getElementById('custNewBd'), nt=document.getElementById('custNewBt'), b1=document.getElementById('fuBd'), b2=document.getElementById('fuBt'); if(!nb||!b1) return;
         if(b1.value && !b1.dataset.fromCust) return;   // 手で入れた生年月日は上書きしない
@@ -3987,12 +4151,13 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
     setv('mLower',''); setv('mUpper',''); setv('mKo',''); { const mp=document.getElementById('mPreview'); if(mp) mp.innerHTML=''; } try{ ekiManualErr(false); }catch(_){}   // 手動で指定した卦も、選ぶ前に戻す
     { const hb=document.getElementById('hexBand'); if(hb) hb.innerHTML=''; }
     cur.topic=null; document.querySelectorAll('#topicChips .chip').forEach(x=>x.classList.remove('on'));
-    cur.last=null; cur.chat=[]; _shownR=null; try{ ekiAnsWait(false); ekiPending(false); }catch(_e){} const fl=document.getElementById('fuLog'); if(fl) fl.innerHTML='';
+    cur.last=null; cur.chat=[]; _shownR=null; _chatFor=null; try{ ekiAnsWait(false); ekiPending(false); }catch(_e){} const fl=document.getElementById('fuLog'); if(fl) fl.innerHTML='';
     { const an=document.getElementById('autoSaveNote'); if(an) an.style.display='none'; }
     ekiPending(false);
     try{ if(typeof fuBirthInfo==='function') fuBirthInfo(); }catch(e){}
     const rb=document.getElementById('pdeckReset'); if(rb && rb.onclick) rb.onclick();
     showTrialLimit(false);
+    try{ renderCustPrev(); }catch(_){}
     try{ const b1=document.getElementById('fuBd'); if(b1) delete b1.dataset.fromCust; fillBirthFromCust(); }catch(_){}   // 同じお客様で続けるときは、名簿の生年月日をもう一度入れる
     window.scrollTo({top:0,behavior:'smooth'});
   }
@@ -4120,7 +4285,7 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
     toast('「鑑定」タブで結果に戻れます');
   }
   window.ekiOpenRefHex=openRefHex;
-  return { exportData, shoImage, init, openCust, saveCust, deleteCust, closeCust, closeSho, shareSho, toggleRef, saveHistMemo, viewHist, closeHist, moveRecent, focusSaveDest, goSettingsBrand, openRefHex };
+  return { exportData, shoImage, init, openCust, saveCust, deleteCust, closeCust, closeSho, shareSho, toggleRef, saveHistMemo, viewHist, resumeHist, closeHist, moveRecent, focusSaveDest, goSettingsBrand, openRefHex };
 })();
 document.addEventListener('DOMContentLoaded', App.init);
 </script>
