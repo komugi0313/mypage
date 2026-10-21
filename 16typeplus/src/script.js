@@ -53,13 +53,17 @@ const sset=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k
 const P16={INTJ:TR("建築家"),INTP:TR("論理学者"),ENTJ:TR("指揮官"),ENTP:TR("討論者"),INFJ:TR("提唱者"),INFP:TR("仲介者"),ENFJ:TR("主人公"),ENFP:TR("運動家"),ISTJ:TR("管理者"),ISFJ:TR("擁護者"),ESTJ:TR("幹部"),ESFJ:TR("領事"),ISTP:TR("巨匠"),ISFP:TR("冒険家"),ESTP:TR("起業家"),ESFP:TR("エンターテイナー")};
 const p16=t=>TR("（")+P16[t]+TR("）");
 const an=t=>t+p16(t);
+const CHAR_BASE=(typeof window.CHAR_BASE==="string")?window.CHAR_BASE:"chars/";
+const charSrc=(t,small)=>CHAR_BASE+t+(small?"_s":"")+".webp";
+const T16="INTJ INTP ENTJ ENTP INFJ INFP ENFJ ENFP ISTJ ISFJ ESTJ ESFJ ISTP ISFP ESTP ESFP".split(" ");
+(function(){const el=$("parade");if(!el)return;const one=T16.map(t=>'<figure><img src="'+charSrc(t,1)+'" alt="" loading="lazy" width="84" height="112"><figcaption>'+t+'</figcaption></figure>').join("");el.innerHTML=one+one;})();
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function opts(el,a,b,cur){el.innerHTML="";for(let v=a;v<=b;v++){const o=document.createElement("option");o.value=v;o.textContent=v;if(v===cur)o.selected=true;el.appendChild(o);}}
 function fillDate(){opts($("y"),1930,2020,st.y);opts($("m"),1,12,st.m);const mx=new Date(st.y,st.m,0).getDate();if(st.d>mx)st.d=mx;opts($("d"),1,mx,st.d);}
 ["y","m","d"].forEach(id=>$(id).addEventListener("change",e=>{st[id]=+e.target.value;fillDate();render();}));
 const pk=$("picker"),sel=[null,null,null,null];
 function drawSlots(popI){$("slots").innerHTML=AX.map((A,i)=>'<span style="--c:var('+A.c+')" class="'+(sel[i]?"fill":"empty")+(i===popI?" pop":"")+'">'+(sel[i]||"?")+'</span>').join("");
- const left=sel.filter(v=>!v).length,go=$("go");const tt=sel.join("");$("slotName").innerHTML=left?"":'<b>'+tt+(selAT?"-"+selAT:"")+'</b>'+p16(tt);go.disabled=left>0;go.textContent=left?TR("あと")+left+TR("つ選んでください"):TR("結果を見る");}
+ const left=sel.filter(v=>!v).length,go=$("go");const tt=sel.join("");$("slotName").innerHTML=left?"":'<b>'+tt+(selAT?"-"+selAT:"")+'</b>'+p16(tt);{const pf=$("pkFig");if(pf){pf.hidden=!!left;if(!left){$("pkImg").src=charSrc(tt);$("pkImg").alt=an(tt);}}}go.disabled=left>0;go.textContent=left?TR("あと")+left+TR("つ選んでください"):TR("結果を見る");}
 AX.forEach((A,i)=>{const g=document.createElement("div");g.className="seg";g.style.setProperty("--c","var("+A.c+")");g.setAttribute("role","group");g.setAttribute("aria-label",A.name);
  [[A.a,A.aw],[A.b,A.bw]].forEach(([l,w])=>{const bt=document.createElement("button");bt.type="button";bt.innerHTML=l+"<small>"+w+"</small>";
   bt.setAttribute("aria-pressed","false");bt.onclick=()=>{sel[i]=l;g.classList.add("done");[...g.children].forEach(c=>c.setAttribute("aria-pressed",c===bt));drawSlots(i);};g.appendChild(bt);});
@@ -156,7 +160,7 @@ function drawPersona(which){const me=window.__me;if(!me||typeof PS==="undefined"
  $("pNow").setAttribute("aria-selected",which==="now");$("pBorn").setAttribute("aria-selected",which!=="now");
  if(!P){$("psCatch").textContent="（"+t+TR("の人物像は準備中です）");["psOv","psRel","psLove","psWork","psGrow","psAT"].forEach(id=>$(id).textContent="");$("psStr").innerHTML=$("psPit").innerHTML=$("psJobs").innerHTML="";return;}
  const li=a=>a.map(x=>{const [h,d]=x.split("｜");return "<li><b>"+h+"</b><span>"+(d||"")+"</span></li>";}).join("");
- $("psCode").textContent=t+(at?"-"+at:"")+p16(t);$("psCatch").textContent=P.catch;$("psOv").textContent=P.overview;
+ {const im=$("psImg");if(im){im.src=charSrc(t);im.alt=an(t);}}$("psCode").textContent=t+(at?"-"+at:"")+p16(t);$("psCatch").textContent=P.catch;$("psOv").textContent=P.overview;
  $("psStr").innerHTML=li(P.strengths);$("psPit").innerHTML=li(P.pitfalls);
  $("psAT").innerHTML=at?'<b>'+(at==="A"?TR("自己主張型（A）"):TR("慎重型（T）"))+TR('のあなたは</b>')+P[at]:"";$("psAT").hidden=!at;
  $("aruH").textContent=t+TR(" のあるある");$("aru").innerHTML=(D.ARUARU[t]||[]).map(x=>"<li>"+x+"</li>").join("");
@@ -202,7 +206,7 @@ function render(instant){
  $("ccKarai").textContent=strip(C.karai);
  window.__me={born,now,N,bAT,nAT};drawPersona("now");
  $("p16Born").textContent=bornF+p16(born);$("p16Now").textContent=nowF+p16(now);
- $("nkBorn").textContent=D.NICK[born];$("nkNow").textContent=D.NICK[now];
+ $("nkBorn").textContent=D.NICK[born];[["imBorn",born],["imNow",now]].forEach(([id,t])=>{const im=$(id);if(im){im.src=charSrc(t);im.alt=an(t);}});$("nkNow").textContent=D.NICK[now];
  const pct=Math.round(dn/tot*100),lv=dn===0?0:Math.min(4,Math.ceil(dn/tot*4));window.__me.pct=pct;
  $("gNum").textContent=pct;$("gBar").style.width=pct+"%";$("gMeter").setAttribute("aria-label",TR("ギャップ度 ")+pct+"%");
  $("gLbl").textContent=[TR("生まれつきのまま"),TR("ちょっとだけ変化"),TR("ほどよく変化"),TR("かなり変化"),TR("ほぼ別人レベルの変化")][lv];
@@ -256,7 +260,7 @@ fillP();
 
 /* ---- 結果を画像でシェア ---- */
 const SHARE_URL="https://16typeplus.jp/"+(LANG==="ja"?"":LANG+"/");
-const SC={ei:"#3E7FA6",sn:"#C29A3A",tf:"#3F9A72",jp:"#7A5EA8",plus:"#C2553F",rose:"#C9607A",ink:"#1F2733",muted:"#5E6A7A",rule:"#E2E6EC",bg:"#F6F7F9",soft:"#EEF1F5"};
+const SC={ei:"#3F7E8C",sn:"#C0912F",tf:"#5E8D5A",jp:"#8A5A8C",plus:"#C2553F",rose:"#C9607A",ink:"#2F2A25",muted:"#7A6F63",rule:"#E7DDCC",bg:"#F6F1E7",soft:"#F1EADB",paper:"#F8F3EA",card:"#FFFCF5"};
 function wrapLines(ctx,text,maxW,maxLines){
  const units=LANG==="ja"&&typeof BX!=="undefined"?BX.seg(text.replace(/​/g,"")).split("​"):text.split(/(?<=\s)/);
  const lines=[];let cur="";
@@ -265,35 +269,38 @@ function wrapLines(ctx,text,maxW,maxLines){
  if(lines.length>maxLines){lines.length=maxLines;let l=lines[maxLines-1];while(l&&ctx.measureText(l+"…").width>maxW)l=l.slice(0,-1);lines[maxLines-1]=l+"…";}
  return lines;}
 function rrect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function loadImg(src){return new Promise(r=>{const i=new Image();i.crossOrigin="anonymous";i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src;});}
 async function drawShare(){
  const me=window.__me,W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const ctx=cv.getContext("2d");
- const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
- try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"16TYPE+ あア가A")));}catch(e){}
+ const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",sans-serif',ROUND=(LANG==="ko"?'"Noto Sans KR",':'')+'"Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif',MONO='"Fraunces",Georgia,serif';
+ try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"700 40px "+ROUND,"600 40px "+MONO].map(f=>document.fonts.load(f,"16TYPE+ あア가A")));}catch(e){}
+ const one=me.born===me.now,[ib,inw]=await Promise.all([loadImg(charSrc(me.born)),one?Promise.resolve(null):loadImg(charSrc(me.now))]);
  ctx.fillStyle=SC.bg;ctx.fillRect(0,0,W,H);
- ctx.fillStyle="#fff";rrect(ctx,48,48,W-96,H-96,36);ctx.fill();ctx.strokeStyle=SC.rule;ctx.lineWidth=2;ctx.stroke();
+ ctx.fillStyle=SC.card;rrect(ctx,48,48,W-96,H-96,36);ctx.fill();ctx.strokeStyle=SC.rule;ctx.lineWidth=2;ctx.stroke();
  ctx.textBaseline="alphabetic";ctx.textAlign="left";
- ctx.font="600 54px "+MONO;ctx.fillStyle=SC.ink;ctx.fillText("16TYPE",110,160);const lw=ctx.measureText("16TYPE").width;ctx.fillStyle=SC.plus;ctx.fillText("+",110+lw,160);
- ctx.font="500 26px "+SANS;ctx.fillStyle=SC.muted;ctx.textAlign="right";ctx.fillText(TR("生まれつきと、今のわたし"),W-110,156);ctx.textAlign="left";
- const NC=me.nAT?5:4,cols=[SC.ei,SC.sn,SC.tf,SC.jp,SC.rose],bl=me.born.split("").concat(me.nAT?[me.bAT||"–"]:[]),nl=me.now.split("").concat(me.nAT?[me.nAT]:[]);
- const tw=148,gap=22,x0=(W-(tw*5+gap*4))/2,xs=(W-(tw*NC+gap*(NC-1)))/2,y1=270,y2=y1+tw+120;
- ctx.font="700 28px "+SANS;ctx.fillStyle=SC.ink;ctx.fillText(TR("生まれつき"),xs,y1-22);ctx.fillText(TR("いま"),xs,y2-16);
- for(let i=0;i<NC;i++){const x=xs+i*(tw+gap),c=cols[i],ch=bl[i]!==nl[i]&&nl[i]!=="?"&&bl[i]!=="–";
-  ctx.setLineDash([12,9]);ctx.lineWidth=5;ctx.strokeStyle=c;rrect(ctx,x+3,y1+3,tw-6,tw-6,22);ctx.stroke();ctx.setLineDash([]);
-  ctx.font="600 84px "+MONO;ctx.textAlign="center";ctx.fillStyle=SC.ink;ctx.fillText(bl[i],x+tw/2,y1+tw/2+30);
-  ctx.fillStyle=ch?c:SC.rule;ctx.font="700 44px "+SANS;ctx.fillText(ch?"↓":"｜",x+tw/2,y1+tw+64);
-  if(nl[i]==="?"){ctx.strokeStyle=SC.rule;ctx.lineWidth=4;rrect(ctx,x+2,y2+2,tw-4,tw-4,22);ctx.stroke();ctx.fillStyle=SC.muted;}else{ctx.fillStyle=c;rrect(ctx,x,y2,tw,tw,22);ctx.fill();ctx.fillStyle="#fff";}
-  ctx.font="600 84px "+MONO;ctx.fillText(nl[i],x+tw/2,y2+tw/2+30);ctx.textAlign="left";}
- let y=y2+tw+90;
- ctx.font="700 34px "+SANS;ctx.fillStyle=SC.ink;const g=TR("ギャップ度 ")+me.pct+"%";ctx.fillText(g,x0,y);
- const gx=x0+ctx.measureText(g).width+28,gw=W-110-gx;ctx.fillStyle=SC.soft;rrect(ctx,gx,y-24,gw,20,10);ctx.fill();if(me.pct>0){ctx.fillStyle=SC.plus;rrect(ctx,gx,y-24,Math.max(20,gw*me.pct/100),20,10);ctx.fill();}
- y+=62;ctx.font="500 30px "+SANS;ctx.fillStyle=SC.muted;
- wrapLines(ctx,an(me.born)+"  ×  "+an(me.now),W-220,2).forEach(l=>{ctx.fillText(l,x0,y);y+=44;});
- y+=26;const kx=x0,kw=W-2*x0,room=H-200-y;let fs=38,kl,lh,kh;
- for(;fs>=26;fs-=2){ctx.font="700 "+fs+"px "+SANS;lh=Math.round(fs*1.5);kl=wrapLines(ctx,me.karai||"",kw-72,6);kh=kl.length*lh+80+lh*0.5;if(kh<=room)break;}
- ctx.fillStyle=SC.soft;rrect(ctx,kx,y,kw,kh,24);ctx.fill();ctx.fillStyle=SC.plus;ctx.font="700 24px "+SANS;ctx.fillText(TR("辛口のひと言"),kx+36,y+50);
- ctx.fillStyle=SC.ink;ctx.font="700 "+fs+"px "+SANS;kl.forEach((l,i)=>ctx.fillText(l,kx+36,y+64+lh*0.9+i*lh));
- ctx.textAlign="center";ctx.font="500 28px "+SANS;ctx.fillStyle=SC.muted;ctx.fillText(TR("あなたのギャップも見てみる →"),W/2,H-138);
- ctx.font="600 34px "+MONO;ctx.fillStyle=SC.ink;ctx.fillText(SHARE_URL.replace("https://",""),W/2,H-90);
+ ctx.font="600 54px "+MONO;ctx.fillStyle=SC.ink;ctx.fillText("16TYPE",104,150);const lw=ctx.measureText("16TYPE").width;ctx.fillStyle=SC.plus;ctx.fillText("+",104+lw,150);
+ ctx.font="500 26px "+SANS;ctx.fillStyle=SC.muted;ctx.textAlign="right";ctx.fillText(TR("生まれつきと、今のわたし"),W-104,146);ctx.textAlign="left";
+ const cols=[SC.ei,SC.sn,SC.tf,SC.jp],pw=one?400:360,ph=Math.round(pw*4/3),py=192;
+ const xs=one?[(W-pw)/2]:[W/2-pw-36,W/2+36];
+ const items=one?[[me.born,ib,TR("生まれつきも今も"),me.bAT||me.nAT]]:[[me.born,ib,TR("生まれつき"),me.bAT],[me.now,inw,TR("いま"),me.nAT]];
+ items.forEach(([t,img,lab,at],k)=>{const x=xs[k];
+  ctx.save();rrect(ctx,x,py,pw,ph,28);ctx.clip();ctx.fillStyle=SC.paper;ctx.fillRect(x,py,pw,ph);if(img)ctx.drawImage(img,x,py,pw,ph);ctx.restore();
+  ctx.strokeStyle=SC.rule;ctx.lineWidth=2;rrect(ctx,x,py,pw,ph,28);ctx.stroke();
+  ctx.font="700 24px "+ROUND;const lbw=ctx.measureText(lab).width+36;ctx.fillStyle=k===1||one?SC.plus:SC.ink;rrect(ctx,x+16,py+16,lbw,44,22);ctx.fill();ctx.fillStyle="#fff";ctx.fillText(lab,x+34,py+47);
+  ctx.textAlign="center";ctx.font="600 76px "+MONO;const code=t.split("");let tw=ctx.measureText(t).width,cx=x+pw/2-tw/2;
+  code.forEach((ch,i)=>{const changed=!one&&k===1&&me.born[i]!==ch;ctx.fillStyle=changed?cols[i]:SC.ink;ctx.textAlign="left";ctx.fillText(ch,cx,py+ph+84);cx+=ctx.measureText(ch).width;});
+  if(at){ctx.font="600 40px "+MONO;ctx.fillStyle=SC.muted;ctx.fillText("-"+at,cx+4,py+ph+84);}
+  ctx.textAlign="center";ctx.font="500 26px "+SANS;ctx.fillStyle=SC.muted;ctx.fillText(p16(t),x+pw/2,py+ph+126);ctx.textAlign="left";});
+ if(!one){ctx.font="700 56px "+SANS;ctx.fillStyle=SC.plus;ctx.textAlign="center";ctx.fillText("→",W/2,py+ph/2+18);ctx.textAlign="left";}
+ const x0=104;let y=py+ph+200;
+ ctx.font="700 32px "+ROUND;ctx.fillStyle=SC.ink;const g=TR("ギャップ度 ")+me.pct+"%";ctx.fillText(g,x0,y);
+ const gx=x0+ctx.measureText(g).width+28,gw=W-104-gx;ctx.fillStyle=SC.soft;rrect(ctx,gx,y-22,gw,18,9);ctx.fill();if(me.pct>0){ctx.fillStyle=SC.plus;rrect(ctx,gx,y-22,Math.max(18,gw*me.pct/100),18,9);ctx.fill();}
+ y+=36;const kx=x0,kw=W-2*x0,room=H-196-y;let fs=36,kl,lh,kh;
+ for(;fs>=24;fs-=2){ctx.font="700 "+fs+"px "+SANS;lh=Math.round(fs*1.5);kl=wrapLines(ctx,me.karai||"",kw-72,6);kh=kl.length*lh+78+lh*0.4;if(kh<=room)break;}
+ ctx.fillStyle=SC.soft;rrect(ctx,kx,y,kw,kh,24);ctx.fill();ctx.fillStyle=SC.plus;ctx.font="700 24px "+ROUND;ctx.fillText(TR("辛口のひと言"),kx+36,y+48);
+ ctx.fillStyle=SC.ink;ctx.font="700 "+fs+"px "+SANS;kl.forEach((l,i)=>ctx.fillText(l,kx+36,y+60+lh*0.9+i*lh));
+ ctx.textAlign="center";ctx.font="500 28px "+SANS;ctx.fillStyle=SC.muted;ctx.fillText(TR("あなたのギャップも見てみる →"),W/2,H-134);
+ ctx.font="600 34px "+MONO;ctx.fillStyle=SC.ink;ctx.fillText(SHARE_URL.replace("https://",""),W/2,H-88);
  return cv;}
 function shareText(){const me=window.__me;return TR("わたしの中には ")+an(me.born)+TR(" と ")+an(me.now)+TR(" がいる。ギャップ度 ")+me.pct+"%"+TR("｜16TYPE+（16タイププラス）");}
 async function shareResult(){const b=$("shareBtn"),lbl=b.textContent;b.disabled=true;b.textContent=TR("画像をつくっています…");
@@ -314,15 +321,15 @@ function showShareBox(cvs){let box=$("shareBox");
  if(window.claude&&claude.use)claude.use("downloads").then(dl=>{if(!dl)return;svs.forEach((a,i)=>a.onclick=e=>{e.preventDefault();cvs[i].toBlob(bl=>{dl.save({filename:"16typeplus-"+(i+1)+".png",data:bl}).catch(()=>{});},"image/png");});}).catch(()=>{});}
 /* 2人のキーワード画像：生まれつき（左）と今（右）の言葉を、それぞれの色で並べる */
 async function drawCloud(){const me=window.__me,W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
- const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
+ const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"Fraunces",Georgia,serif';
  try{await Promise.all(["700 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"あア가A")));}catch(e){}
- const GC={NT:"#7A5EA8",NF:"#3F9A72",SJ:"#3E7FA6",SP:"#C29A3A"},grp=t=>t[1]==="N"?"N"+t[2]:"S"+t[3];
- const one=me.born===me.now,cb=GC[grp(me.born)],cn=one?cb:(grp(me.born)===grp(me.now)?"#1F2733":GC[grp(me.now)]);
+ const GC={NT:SC.jp,NF:SC.tf,SJ:SC.ei,SP:SC.sn},grp=t=>t[1]==="N"?"N"+t[2]:"S"+t[3];
+ const one=me.born===me.now,cb=GC[grp(me.born)],cn=one?cb:(grp(me.born)===grp(me.now)?SC.ink:GC[grp(me.now)]);
  const words=t=>{const P=PS[t]||{},out=[];(P.strengths||[]).forEach((x,i)=>out.push([x.split("｜")[0],i<2?3:2]));(D.ARUARU[t]||[]).forEach(x=>out.push([x,1]));(P.pitfalls||[]).forEach(x=>out.push([x.split("｜")[0],1]));return out;};
- c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);const cx=W/2,cy=H/2-10,placed=[[cx-220,cy-150,440,300]];
- c.textAlign="center";c.font="500 26px "+SANS;c.fillStyle="#5E6A7A";c.fillText(one?TR("生まれつきも今も"):TR("わたしの中の2人"),cx,cy-90);
- c.font="700 52px "+SANS;c.fillStyle="#1F2733";c.fillText(one?me.now:me.born+" × "+me.now,cx,cy-22);
- c.font="700 26px "+SANS;if(one){c.fillStyle=cb;c.fillText(p16(me.now),cx,cy+40);}else{c.textAlign="right";c.fillStyle=cb;c.fillText(p16(me.born),cx-22,cy+40);c.textAlign="center";c.fillStyle="#5E6A7A";c.fillText("×",cx,cy+40);c.textAlign="left";c.fillStyle=cn;c.fillText(p16(me.now),cx+22,cy+40);c.textAlign="center";
+ c.fillStyle=SC.paper;c.fillRect(0,0,W,H);const cx=W/2,cy=H/2-10,placed=[[cx-220,cy-150,440,300]];
+ c.textAlign="center";c.font="500 26px "+SANS;c.fillStyle=SC.muted;c.fillText(one?TR("生まれつきも今も"):TR("わたしの中の2人"),cx,cy-90);
+ c.font="700 52px "+SANS;c.fillStyle=SC.ink;c.fillText(one?me.now:me.born+" × "+me.now,cx,cy-22);
+ c.font="700 26px "+SANS;if(one){c.fillStyle=cb;c.fillText(p16(me.now),cx,cy+40);}else{c.textAlign="right";c.fillStyle=cb;c.fillText(p16(me.born),cx-22,cy+40);c.textAlign="center";c.fillStyle=SC.muted;c.fillText("×",cx,cy+40);c.textAlign="left";c.fillStyle=cn;c.fillText(p16(me.now),cx+22,cy+40);c.textAlign="center";
   c.font="500 22px "+SANS;c.fillStyle=cb;c.fillText("● "+TR("生まれつき"),cx-90,cy+95);c.fillStyle=cn;c.fillText("● "+TR("いま"),cx+90,cy+95);}
  c.textAlign="left";
  const hit=r=>placed.some(p=>r[0]<p[0]+p[2]&&r[0]+r[2]>p[0]&&r[1]<p[1]+p[3]&&r[1]+r[3]>p[1]);
@@ -332,7 +339,7 @@ async function drawCloud(){const me=window.__me,W=1080,H=1350,cv=document.create
   for(let t=0;t<15000;t++){const a=t*0.11+i,r=20+t*0.16,dx=sg?sg*Math.abs(Math.cos(a))*r*1.05-(sg<0?tw:0)-sg*14:Math.cos(a)*r-tw/2,x=cx+dx,y=cy+Math.sin(a)*r*1.4-th/2;
    const rect=[x-6,y-2,tw+12,th+4];if(x<36||y<40||x+tw>W-36||y+th>H-90)continue;if(hit(rect))continue;
    placed.push(rect);c.fillStyle=sd==="born"?cb:cn;c.textBaseline="top";c.fillText(w,x,y);c.textBaseline="alphabetic";break;}});
- c.font="600 28px "+MONO;c.fillStyle="#1F2733";c.textAlign="center";c.fillText(SHARE_URL.replace("https://",""),W/2,H-40);c.textAlign="left";
+ c.font="600 28px "+MONO;c.fillStyle=SC.ink;c.textAlign="center";c.fillText(SHARE_URL.replace("https://",""),W/2,H-40);c.textAlign="left";
  return cv;}
 $("shareBtn").onclick=shareResult;
 
@@ -422,11 +429,11 @@ async function lvShareRun(t){const b=$("lvShare"),lbl=b.textContent;b.disabled=t
   const files=blobs.map((bl,i)=>new File([bl],"16typeplus-love-"+(i+1)+".png",{type:"image/png"}));
   if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,text:P.tag+TR("（")+TR("恋愛")+" "+an(P.t)+TR("）")+TR("｜16TYPE+（16タイププラス）")+" "+SHARE_URL});}catch(e){if(e&&e.name!=="AbortError")showShareBox(cvs);}}
   else showShareBox(cvs);}catch(e){alert(TR("画像をつくれませんでした。もう一度お試しください。"));}finally{b.disabled=false;b.textContent=lbl;}}
-const LVC={ink:"#1F2733",muted:"#5E6A7A",soft:"#EEF1F5",rule:"#E2E6EC",rose:"#C9607A",roseT:"#F8E4EA",rose2:"#DE8FA3"};
-function lvFonts(){const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
+const LVC={ink:SC.ink,muted:SC.muted,soft:"#EEF1F5",rule:"#E2E6EC",rose:"#C9607A",roseT:"#F8E4EA",rose2:"#DE8FA3"};
+function lvFonts(){const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"Fraunces",Georgia,serif';
  return Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"あア가A♡"))).catch(()=>{}).then(()=>({SANS,MONO}));}
 async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
- c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);const cx=W/2,cy=H/2-20;let tfs=52;c.font="700 "+tfs+"px "+SANS;while(c.measureText(P.tag).width>W-160&&tfs>30){tfs-=2;c.font="700 "+tfs+"px "+SANS;}
+ c.fillStyle=SC.paper;c.fillRect(0,0,W,H);const cx=W/2,cy=H/2-20;let tfs=52;c.font="700 "+tfs+"px "+SANS;while(c.measureText(P.tag).width>W-160&&tfs>30){tfs-=2;c.font="700 "+tfs+"px "+SANS;}
  const bw=Math.max(520,c.measureText(P.tag).width+60),placed=[[cx-bw/2,cy-110,bw,170]];
  c.textAlign="center";c.font="600 32px "+MONO;c.fillStyle=LVC.rose;c.fillText(TR("恋愛")+" "+an(P.t),cx,cy-50);c.font="700 "+tfs+"px "+SANS;c.fillStyle=LVC.ink;c.fillText(P.tag,cx,cy+20);c.textAlign="left";
  const hit=r=>placed.some(p=>r[0]<p[0]+p[2]&&r[0]+r[2]>p[0]&&r[1]<p[1]+p[3]&&r[1]+r[3]>p[1]);
@@ -436,7 +443,7 @@ async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=doc
  c.font="600 28px "+MONO;c.fillStyle=LVC.ink;c.textAlign="center";c.fillText(SHARE_URL.replace("https://",""),W/2,H-50);c.textAlign="left";return cv;}
 async function lvSheet(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1700,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const wrap=(t,w)=>wrapLines(c,t,w,9);
- c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);c.fillStyle=LVC.rose;c.fillRect(0,0,W,14);
+ c.fillStyle=SC.paper;c.fillRect(0,0,W,H);c.fillStyle=LVC.rose;c.fillRect(0,0,W,14);
  c.font="600 26px "+MONO;c.fillStyle=LVC.muted;c.fillText("16TYPE+  "+TR("恋愛編"),70,95);c.font="600 40px "+MONO;c.fillStyle=LVC.rose;c.fillText(TR("恋愛")+" "+an(P.t),70,185);
  c.font="700 60px "+SANS;c.fillStyle=LVC.ink;wrapLines(c,P.tag,W-140,2).forEach((l,i)=>c.fillText(l,70,275+i*70));
  let y=390;c.fillStyle=LVC.roseT;rrect(c,60,y,W-120,130,20);c.fill();c.font="500 24px "+SANS;c.fillStyle=LVC.rose;c.fillText(TR("一言で言うと…"),90,y+42);
