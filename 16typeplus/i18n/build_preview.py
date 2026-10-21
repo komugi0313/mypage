@@ -4,6 +4,7 @@ import json,glob,re,os,sys
 S=os.path.dirname(os.path.abspath(__file__))+'/'
 C='/home/user/mypage/16typeplus/content/'
 I='/home/user/mypage/16typeplus/i18n/'
+IB='/tmp/claude-0/-home-user-mypage/6d7c9e6b-4df5-5bde-9a97-97fb52bff77a/scratchpad/planA/i18n/'
 def rd(p): return open(p,encoding='utf-8').read()
 def js(p): return json.load(open(p,encoding='utf-8'))
 def lang_data(lang):
@@ -25,7 +26,7 @@ def lang_data(lang):
         cm=opt('combo.{}.json',{})
         for key in combos: combos[key].update(cm.get(key,{}))
         ui=opt('ui.{}.json',{})
-        if os.path.exists(I+'body.{}.html'.format(lang)): body=rd(I+'body.{}.html'.format(lang))
+        if os.path.exists(IB+'body.{}.html'.format(lang)): body=rd(IB+'body.{}.html'.format(lang))
     else:
         combos={k:{'karai':v['karai'],'name':v.get('name',''),'atari':v.get('atari',[])} for k,v in combos.items()}
     lvq=js('/home/user/mypage/16typeplus/love/love.json')['questions']
@@ -36,7 +37,10 @@ def lang_data(lang):
         if os.path.exists(p):
             x=js(p); lvq=x.get('questions',lvq); lvt=x.get('types',lvt)
     LVd={'questions':lvq,'types':lvt}
-    return {'LV':LVd,'BODY':body,'D':d,'QZ':quiz,'COMBO':combos,'PS':persona,'HN':hints,'TD':today,'I18N':ui}
+    KT={}
+    kd='/home/user/mypage/16typeplus/content/kantei/' if lang=='ja' else I+'kantei.{}/'.format(lang)
+    for f in sorted(glob.glob(kd+'*.json')): KT.update(js(f))
+    return {'KT':KT,'LV':LVd,'BODY':body,'D':d,'QZ':quiz,'COMBO':combos,'PS':persona,'HN':hints,'TD':today,'I18N':ui}
 def preview():
     langs={l:lang_data(l) for l in ['ja','en','ko']}
     head=rd(S+'head.html')
@@ -44,7 +48,7 @@ def preview():
 <script>
 var LD=__LD__;
 var PAGE_LANG=/^#(en|ko)\\b/.test(location.hash)?location.hash.slice(1,3):"ja";
-var _L=LD[PAGE_LANG];var LV=_L.LV,D=_L.D,QZ=_L.QZ,COMBO=_L.COMBO,PS=_L.PS,HN=_L.HN,TD=_L.TD,I18N=_L.I18N;
+var _L=LD[PAGE_LANG];var KT=_L.KT||{},LV=_L.LV,D=_L.D,QZ=_L.QZ,COMBO=_L.COMBO,PS=_L.PS,HN=_L.HN,TD=_L.TD,I18N=_L.I18N;
 document.getElementById("app").outerHTML=_L.BODY;document.documentElement.lang=PAGE_LANG;
 document.querySelectorAll("nav.lang a").forEach(function(a,i){var l=["ja","en","ko"][i];a.href="#"+l;a.onclick=function(e){e.preventDefault();location.hash=l;location.reload();};});
 </script>
