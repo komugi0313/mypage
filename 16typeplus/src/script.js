@@ -69,7 +69,7 @@ document.querySelectorAll("#atPick button").forEach(bt=>bt.onclick=()=>{selAT=bt
 $("go").onclick=()=>{if(sel.includes(null))return;st.t=sel.slice();st.at=selAT;st.love=null;st.pct=null;st.half={};st.sway=null;showResult();render();document.querySelector(".hero").scrollIntoView({behavior:"smooth"});};
 /* ---- 60問 ---- */
 const SCALE=[[TR("とても当てはまる"),5,22],[TR("当てはまる"),4,18],[TR("やや当てはまる"),3,14],[TR("やや当てはまらない"),2,14],[TR("当てはまらない"),1,18],[TR("まったく当てはまらない"),0,22]];
-const AXN={EI:0,SN:1,TF:2,JP:3,AT:4};const AXQ=AX.concat([{k:"AT",a:"A",b:"T",c:"--plus",name:TR("心の構え"),sh:TR("構え")}]);
+const AXN={EI:0,SN:1,TF:2,JP:3,AT:4};const AXQ=AX.concat([{k:"AT",a:"A",b:"T",c:"--rose",name:TR("心の構え"),sh:TR("構え")}]);
 let qa=[],qi=0,tbList=[],tbAns={},ord=[],ext=false;
 /* 質問の数は人によって変わる：まず各指標6問（計30問）。答えが真ん中に近い指標だけ、残りの6問を追加する */
 const BASE=30,EXT_T=8;
@@ -127,7 +127,7 @@ const AXW={EI:[TR("外向型"),TR("内向型")],SN:[TR("現実型"),TR("直感�
 let RV=null;
 function setupReveal(N,born,now,bAT,nAT,diff,atDiff,why,aligned,instant){
  const fl=$("flip"),bt=[...fl.querySelectorAll(".tile.b")],nt=[...fl.querySelectorAll(".tile.n")],ar=[...fl.querySelectorAll(".arw")];
- const cols=["EI","SN","TF","JP","AT"],colors=["--ei","--sn","--tf","--jp","--plus"],names=[TR("エネルギー"),TR("ものの見方"),TR("判断のしかた"),TR("行動のしかた"),TR("心の構え")];
+ const cols=["EI","SN","TF","JP","AT"],colors=["--ei","--sn","--tf","--jp","--rose"],names=[TR("エネルギー"),TR("ものの見方"),TR("判断のしかた"),TR("行動のしかた"),TR("心の構え")];
  RV={opened:new Set(),story:$("rStory").innerHTML};
  [...bt,...nt].forEach(t=>t.classList.add("hid"));ar.forEach(a=>a.classList.add("hid"));
  document.querySelectorAll(".hero .pend").forEach(e=>e.classList.add("wait"));
@@ -173,7 +173,7 @@ function render(instant){
  const cp=x=>'<span class="sc">'+TR("（")+x+TR("）")+'</span>';
  $("rStory").innerHTML=born===now?TR('<span class="ln">あなたは、生まれつきも今も</span><span class="ln"><span class="n">')+an(now)+'</span>'+cp(nowF)+TR('。</span>')
    :TR('<span class="ln">あなたの中には、</span><span class="ln"><span class="b">')+an(born)+'</span>'+cp(bornF)+TR('と</span><span class="ln"><span class="n">')+an(now)+'</span>'+cp(nowF)+TR('がいる。</span>');
- const ATC="--plus";
+ const ATC="--rose";
  let fh=TR('<span class="rl"><b>生まれつき</b>本当の自分</span>')+AX.map((A,i)=>'<span class="tile b'+(diff[i]?' c':'')+'" style="--c:var('+A.c+')">'+born[i]+'</span>').join("")+'<span class="tile b at'+(atDiff?' c':'')+'" style="--c:var('+ATC+')">'+(bAT||"–")+'</span>';
  fh+='<span class="rl e"></span>'+AX.map((A,i)=>'<span class="arw'+(diff[i]?' c':'')+'" style="--c:var('+A.c+')">'+(diff[i]?'↓':'｜')+'</span>').join("")+'<span class="arw'+(atDiff?' c':'')+'" style="--c:var('+ATC+')">'+(atDiff?'↓':'｜')+'</span>';
  fh+=TR('<span class="rl"><b>いま</b>今の自分</span>')+AX.map((A,i)=>'<span class="tile n'+(diff[i]?' c':'')+'" style="--c:var('+A.c+');--i:'+i+'">'+now[i]+'</span>').join("")+'<span class="tile n at'+(atDiff?' c':'')+(nAT?'':' none')+'" style="--c:var('+ATC+');--i:4">'+(nAT||"?")+'</span>';
@@ -188,10 +188,10 @@ function render(instant){
  const HB=HN.type[born],HW=HN.type[now];
  $("hBornT").textContent=born;$("hNowT").textContent=now;$("hWant").textContent=HB.want;$("hEffort").textContent=HW.effort;
  const gk=AX.map((A,i)=>born[i]!==now[i]?born[i]+now[i]:null).filter(Boolean).concat(atDiff?[bAT+nAT]:[]);
- const colOf={E:"--ei",I:"--ei",S:"--sn",N:"--sn",T:"--tf",F:"--tf",J:"--jp",P:"--jp",A:"--plus"};
+ const colOf={E:"--ei",I:"--ei",S:"--sn",N:"--sn",T:"--tf",F:"--tf",J:"--jp",P:"--jp",A:"--rose"};
  if(gk.length){$("hWorryQ").hidden=false;
   const tintOf={E:"--tint-ei",I:"--tint-ei",S:"--tint-sn",N:"--tint-sn",T:"--tint-tf",F:"--tint-tf",J:"--tint-jp",P:"--tint-jp"};
-  const isAT=k=>k==="AT"||k==="TA",cOf=k=>isAT(k)?"--plus":colOf[k[0]],tOf=k=>isAT(k)?"--tint-at":tintOf[k[0]];
+  const isAT=k=>k==="AT"||k==="TA",cOf=k=>isAT(k)?"--rose":colOf[k[0]],tOf=k=>isAT(k)?"--tint-at":tintOf[k[0]];
   const wi=k=>{const g=HN.gap[k];return '<div class="it" style="--c:var('+cOf(k)+');--t:var('+tOf(k)+')"><div class="gc"><div class="gtiles"><span class="gtl"><span class="gt b">'+k[0]+'</span><b>'+g.from+'</b></span><span class="gar">→</span><span class="gtl"><span class="gt n">'+k[1]+'</span><b>'+g.to+'</b></span></div>'
    +'<div class="gtx"><small>'+g.axis+TR('</small><span class="row"><i>本当は</i>')+(isAT(k)?HN.letter['AT_'+k[0]]:HN.letter[k[0]])+TR('</span><span class="row n"><i>今は</i>')+(isAT(k)?HN.letter['AT_'+k[1]]:HN.letter[k[1]])+'</span></div></div>'
    +'<p>'+g.worry+TR('</p><p class="key"><b>ほどき方</b>')+g.key+'</p></div>';};
@@ -284,7 +284,7 @@ function buddyName(num){return TR("{p}の{a}").replace("{p}",BUDDY_P[(num-1)%10]
 
 /* ---- 結果を画像でシェア ---- */
 const SHARE_URL="https://16typeplus.jp/"+(LANG==="ja"?"":LANG+"/");
-const SC={ei:"#3E7FA6",sn:"#C29A3A",tf:"#3F9A72",jp:"#7A5EA8",plus:"#C2553F",ink:"#1F2733",muted:"#5E6A7A",rule:"#E2E6EC",bg:"#F6F7F9",soft:"#EEF1F5"};
+const SC={ei:"#3E7FA6",sn:"#C29A3A",tf:"#3F9A72",jp:"#7A5EA8",plus:"#3355B8",rose:"#C9607A",ink:"#1F2733",muted:"#5E6A7A",rule:"#E2E6EC",bg:"#F6F7F9",soft:"#EEF1F5"};
 function wrapLines(ctx,text,maxW,maxLines){
  const units=LANG==="ja"&&typeof BX!=="undefined"?BX.seg(text.replace(/​/g,"")).split("​"):text.split(/(?<=\s)/);
  const lines=[];let cur="";
@@ -302,7 +302,7 @@ async function drawShare(){
  ctx.textBaseline="alphabetic";ctx.textAlign="left";
  ctx.font="600 54px "+MONO;ctx.fillStyle=SC.ink;ctx.fillText("16TYPE",110,160);const lw=ctx.measureText("16TYPE").width;ctx.fillStyle=SC.plus;ctx.fillText("+",110+lw,160);
  ctx.font="500 26px "+SANS;ctx.fillStyle=SC.muted;ctx.textAlign="right";ctx.fillText(TR("生まれつきと、今のわたし"),W-110,156);ctx.textAlign="left";
- const NC=me.nAT?5:4,cols=[SC.ei,SC.sn,SC.tf,SC.jp,SC.plus],bl=me.born.split("").concat(me.nAT?[me.bAT||"–"]:[]),nl=me.now.split("").concat(me.nAT?[me.nAT]:[]);
+ const NC=me.nAT?5:4,cols=[SC.ei,SC.sn,SC.tf,SC.jp,SC.rose],bl=me.born.split("").concat(me.nAT?[me.bAT||"–"]:[]),nl=me.now.split("").concat(me.nAT?[me.nAT]:[]);
  const tw=148,gap=22,x0=(W-(tw*5+gap*4))/2,xs=(W-(tw*NC+gap*(NC-1)))/2,y1=270,y2=y1+tw+120;
  ctx.font="700 28px "+SANS;ctx.fillStyle=SC.ink;ctx.fillText(TR("生まれつき"),xs,y1-22);ctx.fillText(TR("いま"),xs,y2-16);
  for(let i=0;i<NC;i++){const x=xs+i*(tw+gap),c=cols[i],ch=bl[i]!==nl[i]&&nl[i]!=="?"&&bl[i]!=="–";
@@ -388,7 +388,7 @@ function drawCombo(C){let el=$("cmb");
 
 /* ---- 生まれつきの力のバランス（生年月日ごとにちがう） ---- */
 const POWN=[TR("伸びる力"),TR("燃える力"),TR("支える力"),TR("決める力"),TR("めぐる力")];
-const POWC=["--tf","--plus","--sn","--muted","--ei"];
+const POWC=["--tf","--rose","--sn","--muted","--ei"];
 const POWTOP=[TR("新しいことを始めたり、伸ばしたりするのが得意。"),TR("気持ちを表に出し、場を明るくするのが得意。"),TR("どっしり構えて、人や物事を支えるのが得意。"),TR("決めたことを、最後までやり切るのが得意。"),TR("状況を読み、しなやかに流れを変えるのが得意。")];
 const POWLOW=[TR("新しいことは、小さく始めるくらいがちょうどいい。"),TR("気持ちは、言葉にして伝えると届きやすい。"),TR("疲れたら、休める場所を先に決めておくと安心。"),TR("迷ったら、期限を決めて選ぶとすっきりする。"),TR("考えすぎる前に、一度まわりに相談してみて。")];
 const STARS={"比肩":[TR("自分の星"),TR("自分の軸とペースを守る力。")],"劫財":[TR("勝負の星"),TR("負けずぎらいで、仲間と競い合って伸びる力。")],"食神":[TR("表現の星"),TR("楽しいこと、好きなことを素直に出す力。")],"傷官":[TR("感性の星"),TR("鋭い感覚とこだわりで、ものごとを磨く力。")],"偏財":[TR("めぐり合わせの星"),TR("人やチャンスを広くつかむ力。")],"正財":[TR("堅実の星"),TR("こつこつ積み上げ、大事なものを守る力。")],"偏官":[TR("挑戦の星"),TR("勢いで壁を越え、人を引っぱる力。")],"正官":[TR("けじめの星"),TR("ルールを守り、信頼を積み重ねる力。")],"偏印":[TR("個性の星"),TR("ひらめきと独自の見方で、人と違う道を見つける力。")],"印綬":[TR("学びの星"),TR("学び、吸収し、深く理解する力。")]};
@@ -418,7 +418,7 @@ function lvInit(){if(typeof LV==="undefined"||!LV||!LV.questions)return;let el=$
  if(st.love&&st.love.t)lvShow(st.love.t);}
 function lvDraw(){const Q=LV.questions,q=Q[lv.i],A=AX[AXN[q.ax]];$("lvCount").textContent=(lv.i+1)+" / "+Q.length;$("lvProg").style.width=(lv.i/Q.length*100)+"%";
  $("lvText").textContent=q.q;const o=$("lvOpts");o.innerHTML="";
- LVSCALE.forEach(([t,v,sz])=>{const bt=document.createElement("button");bt.type="button";bt.style.setProperty("--qc","var(--plus)");bt.innerHTML='<i style="width:'+sz+'px;height:'+sz+'px"></i>'+t;bt.setAttribute("aria-pressed",lv.a[lv.i]===v);
+ LVSCALE.forEach(([t,v,sz])=>{const bt=document.createElement("button");bt.type="button";bt.style.setProperty("--qc","var(--rose)");bt.innerHTML='<i style="width:'+sz+'px;height:'+sz+'px"></i>'+t;bt.setAttribute("aria-pressed",lv.a[lv.i]===v);
   bt.onclick=()=>{lv.a[lv.i]=v;bt.setAttribute("aria-pressed","true");setTimeout(()=>{lv.i++;if(lv.i>=Q.length)lvFinish();else lvDraw();},180);};o.appendChild(bt);});}
 function lvFinish(){const me=window.__me,sc={EI:0,SN:0,TF:0,JP:0};
  LV.questions.forEach((q,i)=>{const A=AX[AXN[q.ax]],v=(lv.a[i]==null?2.5:lv.a[i])-2.5;sc[q.ax]+=q.p===A.a?v:-v;});
@@ -451,7 +451,7 @@ async function lvShareRun(t){const b=$("lvShare"),lbl=b.textContent;b.disabled=t
   const files=blobs.map((bl,i)=>new File([bl],"16typeplus-love-"+(i+1)+".png",{type:"image/png"}));
   if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,text:P.tag+TR("（")+TR("恋愛")+" "+P.t+"・"+an(P.t)+TR("）")+TR("｜16TYPE+（16タイププラス）")+" "+SHARE_URL});}catch(e){if(e&&e.name!=="AbortError")showShareBox(cvs);}}
   else showShareBox(cvs);}catch(e){alert(TR("画像をつくれませんでした。もう一度お試しください。"));}finally{b.disabled=false;b.textContent=lbl;}}
-const LVC={ink:"#1F2733",muted:"#5E6A7A",soft:"#EEF1F5",rule:"#E2E6EC",rose:"#C2553F",roseT:"#F6E3DE",rose2:"#D98572"};
+const LVC={ink:"#1F2733",muted:"#5E6A7A",soft:"#EEF1F5",rule:"#E2E6EC",rose:"#C9607A",roseT:"#F8E4EA",rose2:"#DE8FA3"};
 function lvFonts(){const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
  return Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"あア가A♡"))).catch(()=>{}).then(()=>({SANS,MONO}));}
 async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
