@@ -90,7 +90,9 @@ console.log = (...a) => { const s = a.join(' '); const m = s.match(/≈¥([\d.]+
 async function relay(site, route, counter) {
   const handler = require_(path.join(ROOT, site, 'functions', 'gemini.js')).handler;
   const req = route.request(); counter.n++;
-  const r = await handler({ httpMethod: 'POST', headers: req.headers(), body: req.postData() || '' });
+  const _t0 = Date.now(), _b = req.postData() || '';
+  const r = await handler({ httpMethod: 'POST', headers: req.headers(), body: _b });
+  if (process.env.OC_TIMING) { try { fs.appendFileSync(process.env.OC_TIMING, JSON.stringify({ site, ms: Date.now() - _t0, part: /〔PART:answer〕/.test(_b) ? 'answer' : /〔PART:detail〕/.test(_b) ? 'detail' : 'other', status: r.statusCode }) + '\n'); } catch (e) {} }   // 答えが出るまでの時間を記録（OC_TIMING=ファイル名 のときだけ）
   await route.fulfill({ status: r.statusCode, headers: Object.assign({ 'Content-Type': 'application/json' }, r.headers || {}), body: r.body || '' });
 }
 
