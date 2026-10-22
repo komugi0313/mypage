@@ -20,7 +20,7 @@ def lang_data(lang):
             return js(p) if os.path.exists(p) else cur
         sub=opt('data.{}.json',None)
         if sub: d.update(sub)
-        quiz=opt('quiz.{}.json',quiz); hints=opt('hints.{}.json',hints); today=opt('today.{}.json',today); persona=opt('persona.{}.json',persona)
+        quiz=opt('quiz.{}.json',quiz); hints=opt('hints.{}.json',hints); today=opt('today.{}.json',today); persona=opt('persona2/persona.{}.json',persona)
         k=opt('karai.{}.json',None)
         if k: combos={key:{'karai':v} for key,v in k.items()}
         cm=opt('combo.{}.json',{})
