@@ -7418,36 +7418,52 @@ function compatVerdictHTML(a,b,rt){
   const S=CGRADE[gc.stem]||CGRADE['普通'], B=CGRADE[gc.branch]||CGRADE['普通'];
   const row=(k,g)=>`<div class="cv-row"><span class="cv-k">${k}</span><span class="cv-v" style="background:${g.col}">${g.lab}</span></div>`;
   let tsBlock='';
-  {const tc=detectTensenCompat(a,b); if(tc.any){const PN=tc.PN,DOMA=tc.DOMA,day=tc.day;
-    let head;
-    if(day){
-      const dirLine=day.aCtrl
-        ?'▶ <b>向き：本人 → お相手</b>（本人が剋す側／お相手が剋される側）。本人の言動がお相手を押さえつけ、傷つけやすい形です。'
-        :'▶ <b>向き：お相手 → 本人</b>（お相手が剋す側／本人が剋される側）。お相手からの圧力を本人が受け、ストレスをためやすい形です。';
-      head=`<div style="font-weight:900;color:#9A1F17;margin-bottom:3px">⚡ 天戦地冲（てんせんちちゅう）＝ 日柱どうし ${day.ga}×${day.gb}</div>
-      <div>${TSC_TXT.base}2人の核（日柱どうし）での天戦地冲は、この性質がいちばん強く出ます。</div>
-      <div style="margin-top:5px">${dirLine}</div>`;
-    } else {
-      head=`<div style="font-weight:900;color:#9A1F17;margin-bottom:3px">⚡ 天戦地冲（てんせんちちゅう）のぶつかり</div>
-      <div>${TSC_TXT.base}</div>
-      <div style="margin-top:5px"><b>日柱どうしではありません。</b>2人の核（日柱どうし）のぶつかりではなく、下の柱が表す場面（家族・仕事・暮らし方など）でのぶつかりです。日柱どうしの天戦地冲ほど強くは出ません。</div>`;   // 日柱以外のときは、どの程度の注意かを添える（発注者指示 2026-10-22）
+  {   // 天戦地冲：あるか・ないかを必ず書き、ある時は「どの柱どうし・なぜ・2人の間で何が起きやすいか・強さ・付き合い方」を具体的に（発注者指示 2026-10-22）
+    const NA=(typeof personName!=='undefined'&&personName)?personName+'さん':'本人', NB=(typeof personNameB!=='undefined'&&personNameB)?personNameB+'さん':'お相手';
+    const YIN=s=>('甲丙戊庚壬'.indexOf(s)>=0?'陽':'陰'), EL={木:'木',火:'火',土:'土',金:'金',水:'水'};
+    const gzY=g=>{ try{ return ganzhiYomi(g.charAt(0),g.charAt(1)); }catch(e){ return ''; } };
+    const SC={年柱:'家族・実家・育った環境',月柱:'仕事・お金・暮らし方',日柱:'2人の関係そのもの（好み・価値観・距離感）',時柱:'将来の計画・子ども・本音'};
+    const EX={   // X＝前の柱（年→月→日→時の順）を持つ人、Y＝後ろの柱を持つ人
+      '日柱|日柱':(X,Y)=>['ささいな言い方や態度で衝突しやすい','近づくほど「わかってもらえない」と感じやすい','けんかと仲直りをくり返しやすい'],
+      '年柱|年柱':(X,Y)=>['両家の考え方やしきたりがぶつかりやすい','親どうしが合いにくい','育った家庭の「当たり前」が違って戸惑いやすい'],
+      '月柱|月柱':(X,Y)=>['お金の使い方や働き方で意見が割れやすい','生活リズムが合いにくい','一緒に仕事をすると主導権でもめやすい'],
+      '時柱|時柱':(X,Y)=>['将来の計画（住む場所・子ども）で考えが分かれやすい','本音を出すほどぶつかりやすい'],
+      '年柱|月柱':(X,Y)=>[X+'の家族が、'+Y+'の仕事や暮らし方に口を出しやすい（反対しやすい）',X+'の実家との付き合いと、'+Y+'の働き方の両立でもめやすい','暮らしの拠点を'+X+'の実家の近くにするか、'+Y+'の仕事の都合に合わせるかで意見が割れやすい'],
+      '年柱|日柱':(X,Y)=>[X+'の家族が、'+Y+'との交際や結婚にいい顔をしにくい',Y+'が、'+X+'の家族の前で居心地の悪さを感じやすい'],
+      '年柱|時柱':(X,Y)=>[X+'の家族の事情と、'+Y+'の将来の計画（子ども・住まい）がぶつかりやすい'],
+      '月柱|日柱':(X,Y)=>[X+'の仕事の忙しさや働き方が、2人の時間や関係を圧迫しやすい',X+'がお金や生活のことで'+Y+'に厳しく当たりやすい'],
+      '月柱|時柱':(X,Y)=>[X+'の仕事の都合と、'+Y+'の将来の計画（子ども・住まい）が両立しにくい'],
+      '日柱|時柱':(X,Y)=>['今の2人の関係と、'+Y+'の将来の希望（子ども・老後）が食い違いやすい']};
+    const TIP={年柱:'家族の話題は先に2人だけで話し合い、どちらかの家族の考えを相手に押しつけない',月柱:'お金・仕事・生活リズムのルールを、先に2人で決めておく',日柱:'言い方に気をつけ、けんかのあとは時間を置いてから話す',時柱:'将来の希望（住まい・子ども）は早めに言葉にしてすり合わせる'};
+    const ORD=['年柱','月柱','日柱','時柱'];
+    const exOf=(x,y)=>{ const sw=ORD.indexOf(x)>ORD.indexOf(y), k=(sw?[y,x]:[x,y]).join('|'), f=EX[k]; return f?(sw?f(NB,NA):f(NA,NB)):[]; };   // x＝本人の柱、y＝お相手の柱
+    const natal=(c)=>{ const P=(c&&c.pillars)||[], out=[]; for(let i=0;i<4;i++) for(let j=i+1;j<4;j++){ if((i===3||j===3)&&c.timeUnknown) continue; const g1=P[i]&&((P[i].ganzhi)||((P[i].stem||'')+(P[i].branch||''))), g2=P[j]&&((P[j].ganzhi)||((P[j].stem||'')+(P[j].branch||''))); if(g1&&g2&&g1.length>=2&&g2.length>=2&&isTensenChichu(g1,g2)) out.push(ORD[i]+' '+g1+' × '+ORD[j]+' '+g2); } return out; };
+    const tc=detectTensenCompat(a,b);
+    const B='<div style="margin-top:12px;background:#FDF2F1;border:1px solid #F1C9C5;border-radius:11px;padding:11px 13px;font-size:13px;line-height:1.85">';
+    let h='<div style="font-weight:900;color:#9A1F17;font-size:14.5px">⚡ 天戦地冲（てんせんちちゅう）：2人の間に'+(tc.any?'<span style="background:#9A1F17;color:#fff;border-radius:6px;padding:0 7px;margin:0 3px">あります（'+tc.list.length+'か所）</span>':'<span style="background:#1F6B3A;color:#fff;border-radius:6px;padding:0 7px;margin:0 3px">ありません</span>')+'</div>';
+    h+='<div style="margin-top:3px">天戦地冲とは、天干どうしが同じ陰陽で剋し合い、同時に地支どうしも真向かいでぶつかる（冲）組み合わせです。干と支が両方ぶつかるので、ぶつかりの中でもいちばん強い形です。</div>';
+    if(tc.any){
+      tc.list.forEach((e,ix)=>{
+        const aL=TSC_PN[e.i], bL=TSC_PN[e.j];
+        const sa=e.ga.charAt(0), sb=e.gb.charAt(0), ba=e.ga.charAt(1), bb=e.gb.charAt(1);
+        const ctrlName=e.aCtrl?NA:NB, recvName=e.aCtrl?NB:NA, cs=e.aCtrl?sa:sb, rs=e.aCtrl?sb:sa;
+        const lv=e.isDay?'<b style="color:#9A1F17">強い</b>（日柱どうし＝2人の関係そのものに出ます）':((e.i===2||e.j===2)?'<b style="color:#9A1F17">やや強い</b>（片方の日柱が入るので、2人の関係にも響きます）':'<b>中くらい</b>（日柱どうしではないので、2人の関係そのものではなく、下の場面にかぎって出ます）');
+        const ex=exOf(aL,bL);
+        h+='<div style="margin-top:9px;background:#fff;border:1px solid #F1C9C5;border-radius:9px;padding:9px 11px">'+
+          '<div style="font-weight:900">'+(tc.list.length>1?'【'+(ix+1)+'】':'')+NA+'の'+aL+'「'+e.ga+'（'+gzY(e.ga)+'）」 × '+NB+'の'+bL+'「'+e.gb+'（'+gzY(e.gb)+'）」</div>'+
+          '<div style="margin-top:4px"><b>なぜ天戦地冲になるの？</b><br>・天干：'+ctrlName+'の「'+cs+'」（'+YIN(cs)+'の'+(STEM_EL[cs]||'')+'）が、'+recvName+'の「'+rs+'」（'+YIN(rs)+'の'+(STEM_EL[rs]||'')+'）を剋す（'+(STEM_EL[cs]||'')+'は'+(STEM_EL[rs]||'')+'を弱める）。同じ'+YIN(cs)+'どうしなので、ぶつかりが強く出ます。<br>・地支：「'+ba+'」（'+(BR_EL[ba]||'')+'）と「'+bb+'」（'+(BR_EL[bb]||'')+'）は真向かいでぶつかる関係（冲）です。</div>'+
+          '<div style="margin-top:4px"><b>どちらが押す側？</b><br>'+ctrlName+'が押す側、'+recvName+'が押される側です。'+recvName+'のほうがストレスをためやすい形です。</div>'+
+          '<div style="margin-top:4px"><b>ぶつかる場面</b><br>'+NA+'の「'+SC[aL]+'」と、'+NB+'の「'+SC[bL]+'」がぶつかります。</div>'+
+          (ex.length?'<div style="margin-top:4px"><b>2人の間で起きやすいこと（例）</b><br>'+ex.map(x=>'・'+x).join('<br>')+'</div>':'')+
+          '<div style="margin-top:4px"><b>強さ</b>：'+lv+'</div>'+
+          '<div style="margin-top:4px"><b>付き合い方</b><br>・'+TIP[aL]+(aL!==bL?'<br>・'+TIP[bL]:'')+'</div>'+
+        '</div>';
+      });
     }
-    const others=tc.list.filter(e=>!e.isDay);
-    let oth='';
-    if(others.length){
-      oth='<div style="margin-top:7px"><b style="color:#9A1F17">ぶつかり合う領域（本人の柱 × お相手の柱）</b><div style="margin-top:3px">'+
-        others.map(e=>{const aL=PN[e.i],bL=PN[e.j];
-          const d=e.aCtrl?('本人の'+aL+'（'+DOMA[aL]+'）が剋す側 → お相手の'+bL+'（'+DOMA[bL]+'）が剋される側'):('お相手の'+bL+'（'+DOMA[bL]+'）が剋す側 → 本人の'+aL+'（'+DOMA[aL]+'）が剋される側');
-          return '<div style="margin:3px 0">▶ '+(tscImportant(e)?'<b style="color:#9A1F17">【重要】</b>':'')+'<b>'+e.ga+'×'+e.gb+'</b>：'+d+'</div>';}).join('')+
-        '</div></div>';
-    }
-    tsBlock=`<div style="margin-top:12px;background:#FDF2F1;border:1px solid #F1C9C5;border-radius:11px;padding:11px 13px;font-size:12.5px;line-height:1.85">
-      ${head}${oth}
-      <div style="margin-top:6px"><b>恋愛・夫婦</b>：${TSC_TXT.love}</div>
-      <div style="margin-top:4px"><b>仕事</b>：${TSC_TXT.work}</div>
-      <div style="margin-top:4px"><b>向き合い方</b>：${TSC_TXT.how}</div>
-    </div>`;
-  }}
+    const na=natal(a), nb=natal(b);
+    h+='<div style="margin-top:9px"><b>それぞれの命式の中の天戦地冲</b>（2人の間とは別のもの。その人自身の中で、2つの場面がぶつかりやすい性質）<br>・'+NA+'：'+(na.length?'<b style="color:#9A1F17">あります</b>（'+na.join('、')+'）':'ありません')+'<br>・'+NB+'：'+(nb.length?'<b style="color:#9A1F17">あります</b>（'+nb.join('、')+'）':'ありません')+((a&&a.timeUnknown)||(b&&b.timeUnknown)?'<br><span style="font-size:12px">※生まれた時刻がわからない方は、時柱を入れずに見ています。</span>':'')+'</div>';
+    tsBlock=B+h+'</div>';
+  }
   return `<section class="card sec" style="border:2px solid #E85D9E;box-shadow:0 8px 24px rgba(240,150,90,.16)">
     <span class="eyebrow"><b>2人の日柱</b>${a.dayMaster.stem}${a.pillars[2].branch}×${b.dayMaster.stem}${b.pillars[2].branch}</span>
     <h2 style="margin-bottom:2px">2人の相性は？</h2>
