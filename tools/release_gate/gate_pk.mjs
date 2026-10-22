@@ -46,11 +46,18 @@ const items=await p.evaluate(()=>document.querySelectorAll('#reading .rd-item').
 const A=await p.evaluate(()=>{const it=document.querySelector('#reading .rd-item:last-child');return it?it.querySelector('.rd-body').innerText:'';});
 ok('相談1：答えが出る（60秒以内）'+(MODE!=='online'?'（端末の中の答え・30秒以内）':''), ms>=0&&(MODE==='online'||ms<30000) && A.length>200, `${(Date.now()-t1)/1000}秒・${A.length}字`);
 ok('相談1：三度押しでも答えは1つ', items===1, 'items='+items);
-const cQ1=calls-c0; ok('相談1：文章作成の呼び出し回数', MODE!=='online'? true : cQ1===2, 'calls='+cQ1);
+const cQ1=calls-c0; ok('相談1：文章作成の呼び出し回数'+(site==='beginner'?'（ビギナーは専門用語の書き直しで最大4回）':''), MODE!=='online'? true : (site==='beginner'?(cQ1>=2&&cQ1<=4):cQ1===2), 'calls='+cQ1);
 const first=(A.split('\n').map(s=>s.trim()).filter(s=>s.length>8&&!/^(コピー|言葉の意味)/.test(s))[0]||'');
 ok('相談1：答えの最初に結論がある', first.length>=10, first.slice(0,80));
 if(MODE==='online'){ ok('相談1：年を比べる質問に、年で答えている', /今年|来年|2026|2027|年内/.test(first), first.slice(0,80));
   ok('相談1：くわしい読み解きの見出しだけが残っていない', !/くわしい読み解き\s*$/.test(A.trim()), ''); }
+const calCheck=(t,by)=>{ const G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', gz=y=>{const i=((y-4)%60+60)%60; return G[i%10]+Z[i%12];}, NY=new Date().getFullYear(), bad=[];
+  for(const m of t.matchAll(/((?:19|20)\d\d)年[（(]?(?:[^）)\n]{0,8}[・：:、])?(\d{1,3})歳/g)){ const e=+m[1]-by; if(+m[2]!==e) bad.push(m[0]+'（正しくは'+e+'歳）'); }
+  for(const m of t.matchAll(/((?:19|20)\d\d)年[（(のは：:]([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])(?![^\n]{0,3}(?:大運|月|日|時))/g)){ if(m[2]!==gz(+m[1])) bad.push(m[0]+'（正しくは'+gz(+m[1])+'）'); }
+  const REL={今年:0,来年:1,再来年:2,昨年:-1,去年:-1}; for(const m of t.matchAll(/(再来年|今年|来年|昨年|去年)[（(の]((?:19|20)\d\d)/g)){ if(+m[2]!==NY+REL[m[1]]) bad.push(m[0]); }
+  for(const m of t.matchAll(/(^|[^0-9])([0-9]{2})年[（(]\d{1,3}歳/g)) bad.push(m[0].trim()+'（西暦が2けた）');
+  return bad; };
+{ const cb=calCheck(A,1985); ok('暦：年齢・年の干支・今年/来年が正しい（相談1）', cb.length===0, cb.slice(0,3).join(' / ')); }
 ok('相談1：画面に＊が出ない', cleanStar(A)===0, cleanStar(A));
 // 追加の質問
 const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃ですか'); await p.click('#consultBtn'); await p.click('#consultBtn').catch(()=>{});
@@ -59,13 +66,14 @@ await p.waitForTimeout(1500);
 const items2=await p.evaluate(()=>document.querySelectorAll('#reading .rd-item').length);
 const A2=await p.evaluate(()=>{const it=document.querySelectorAll('#reading .rd-item');return it.length?it[it.length-1].querySelector('.rd-body').innerText:'';});
 ok('相談2（続けて質問）：答えが出る', ms2>=0 && A2.length>200, A2.length+'字');
-{ const f2=(A2.split('\n').map(s=>s.trim()).filter(s=>s.length>8&&!/^(コピー|言葉の意味|ご相談|彼から連絡が来る|▲)/.test(s))[0]||''); ok('相談2：「いつ」の質問に、1行目で時期を答えている', /20\d\d年|年内|来年|再来年|\d{1,3}歳|[春夏秋冬]|\d{1,2}月/.test(f2), f2.slice(0,80)); }
+{ const f2=(A2.split('\n').map(s=>s.trim()).filter(s=>s.length>8&&!/^(コピー|言葉の意味|ご相談|彼から連絡が来る|▲|オンライン鑑定|オフライン鑑定|📵|⏩|🔄|端末の中で作った)/.test(s))[0]||''); ok('相談2：「いつ」の質問に、1行目で時期を答えている', /20\d\d年|年内|来年|再来年|\d{1,3}歳|[春夏秋冬]|\d{1,2}月/.test(f2), f2.slice(0,80)); }
+{ const cb=calCheck(A2,1985); ok('暦：年齢・年の干支・今年/来年が正しい（相談2）', cb.length===0, cb.slice(0,3).join(' / ')); }
 ok('相談2：二度押しでも答えは1つ増えるだけ', items2===2, 'items='+items2);
-if(MODE==='online') ok('相談2：呼び出し2回', calls-c1===2, 'calls='+(calls-c1));
+if(MODE==='online') ok('相談2：呼び出し回数'+(site==='beginner'?'（ビギナーは専門用語の書き直しで最大4回）':'（2回）'), site==='beginner'?(calls-c1>=2&&calls-c1<=4):calls-c1===2, 'calls='+(calls-c1));
 // チャット用コピー・共有
 await p.evaluate(()=>{window.__clip='';window.__shared=null;});
 await p.click('#reading .rd-item:last-child .rd-chat').catch(()=>{}); await p.waitForTimeout(600);
-const chat=await p.evaluate(()=>window.__clip||''); ok('チャット用コピーが空でない・＊なし', chat.length>80&&cleanStar(chat)===0, chat.length+'字');
+const chat=await p.evaluate(()=>window.__clip||''); { const cb=calCheck(chat,1985); ok('暦：チャット用コピーの年齢・干支・今年/来年が正しい', cb.length===0, cb.slice(0,3).join(' / ')); } ok('チャット用コピーが空でない・＊なし', chat.length>80&&cleanStar(chat)===0, chat.length+'字');
 await p.click('#reading .rd-item:last-child .rd-share').catch(()=>{}); await p.waitForTimeout(600);
 const sh=await p.evaluate(()=>((window.__shared||{}).text||'')); ok('共有（LINE）の文が空でない・＊なし', sh.length>80&&cleanStar(sh)===0, sh.length+'字');
 // カルテ

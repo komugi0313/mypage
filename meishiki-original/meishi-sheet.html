@@ -4165,13 +4165,29 @@ window.KANSHI60_DETAIL={
     var pkSoftWord=function(s){ return String(s==null?'':s).replace(/[（(][^（）()\n]{0,80}(?:…|・・・|\.\.\.)ではなく[^（）()\n]{0,60}[）)]/g,'')   /* 文章作成の言い直し（「…ではなく」のカッコ）は出さない。発注者指示 2026-10-22 */.replace(/(このご相談には、)?(占いで(?:は)?[^。\n]{0,10}?)お答え(?:すること[はが]?)?できません/g,function(m,p,a){ return p?m:a+'言い切ることはしません'; }).replace(/(占いで(?:は)?[^。\n]{0,10}?)判断(?:すること[はが]?)?できません/g,'$1言い切ることはしません').replace(/(このご相談には、)?(占いで(?:は)?[^。\n]{0,10}?)お伝え(?:すること[はが]?)?できません/g,function(m,p,a){ return p?m:a+'言い切ることはしません'; }).replace(/言い切ること[はが]?できません/g,'言い切ることはしません').replace(/(数字で|ハッキリと?|はっきりと?)お(伝え|答え)すること[はが]?できません/g,'$1お$2することはしません').replace(/必ず(?!しも)(?=[^。\n]{0,24}?(開け|ひらけ|来ま|来る|やって|訪れ|過ぎ|乗り越え|戻|見えて|叶|実を|実り|報われ|理解|力になって|良くな|よくな|うまく|好転|届き|伝わ|道が|チャンス|光))/g,'きっと').replace(/必ず(?!しも)([^。！？\n]*)/g,function(m,mid){ return /ください|ましょう|避け|相談|休|作って|作る|取る|守|気をつけ|確認|しないで|ないように|頼っ|話して|なければ|ね。?$/.test(mid)?m:'きっと'+mid; }).replace(/DV相談ナビ[（(]\s*＃?#?\s*8008\s*[)）]/g,'DV相談ナビ（#8008）').replace(/十分に可能です/g,'目指していける流れです').replace(/十分に可能/g,'目指せる').replace(/(?:占いで)?お答えできません(?:とは|、とは)申し上げませんが[、，]?/g,''); };   // 文の終わり方に関係なく、未来を言い切る「必ず」は「きっと」に   // 未来を言い切る「必ず〜ます」は「きっと」に（「必ず〜ください」「必ず相談を」などのすすめはそのまま）   // 「占いではお答えできません」のような突き放す言い方を、やわらかく（鑑定者本人の指示 2026-10-19。答えない相談の決まった案内はそのまま）
     function pkFixAge(s,by,other){ try{ s=String(s==null?'':s).replace(/(\d{1,3})(?:歳|才)\s*(?:改め|ではなく)\s*(\d{1,3})(?:歳|才)/g,'$2歳');   // 「41歳改め42歳」のような言い直しは1つに（そのあと生年月日で計算し直す。発注者指示 2026-10-21）
    // 西暦と年齢が並んだところ（2029年（31歳）・2029年の31歳・31歳（2029年））を、生年月日から計算し直す。ジェミニの年齢の計算ちがいを画面に出さない（発注者指示 2026-10-20）
-      s=String(s==null?'':s); by=+by||0; other=+other||0; if(!by) return s;
+      s=String(s==null?'':s); by=+by||0; other=+other||0;
+  { var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', gzOf=function(y){ var i=((y-4)%60+60)%60; return G.charAt(i%10)+Z.charAt(i%12); }, NY=new Date().getFullYear();
+    // 暦のずれを直す（発注者指示 2026-10-22：暦をまちがえると全部の鑑定が狂う）
+    // ① 年の干支：「2029年（庚戌）」「2029年の庚戌」「2029年・庚戌年」のように西暦と干支が合わないときは、正しい干支に（読み仮名は後で表どおりに直す）
+    s=s.replace(/((?:19|20)\d\d)年([（(]|の|は|：|:)?([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])/g,function(m,y,sp,g,off,str){ var ok=gzOf(+y); if(g===ok) return m; var after=String(str).slice(off+m.length,off+m.length+6); if(/^(年?[（(][^）)]*[）)])?(の|・)?(大運|月|日|時)/.test(after)||/^[^\n。]{0,3}(大運|月柱|日柱|時柱)/.test(after)) return m; return y+'年'+(sp||'')+ok; });   // 大運・月・日の干支のことがあるので、あとに「大運」「月」などが続くときは触らない
+    s=s.replace(/([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])年?([（(])((?:19|20)\d\d)年?([）)])/g,function(m,g,p1,y,p2){ var ok=gzOf(+y); return g===ok?m:m.replace(g,ok); });
+    // ② 今年・来年・再来年・昨年と西暦が合わないときは、今日の日付に合わせる
+    var REL={'今年':0,'本年':0,'来年':1,'翌年':null,'再来年':2,'昨年':-1,'去年':-1,'一昨年':-2};
+    s=s.replace(/(再来年|一昨年|今年|本年|来年|昨年|去年)([（(]|の)((?:19|20)\d\d)(年?)/g,function(m,w,sp,y,nen){ var d=REL[w]; if(d==null) return m; var ok=NY+d; return (+y===ok)?m:w+sp+ok+nen; });
+    s=s.replace(/((?:19|20)\d\d)年([（(])(再来年|一昨年|今年|本年|来年|昨年|去年)([）)])/g,function(m,y,p1,w,p2){ var d=REL[w]; if(d==null) return m; var ok=NY+d; return (+y===ok)?m:ok+'年'+p1+w+p2; });
+    try{ if(typeof window!=='undefined'&&window.pkFixYomi) s=window.pkFixYomi(s); }catch(_e){}
+  }
+  if(!by) return s;
+  // ③ 年齢の書き方を増やす：「21歳になる2029年」「2029年に21歳」「2029年には21歳」
+  s=s.replace(/(\d{1,3})(歳|才)(になる|を迎える|となる)((?:19|20)\d\d)年/g,function(m,a,u,v,y){ if(other&&(+a===+y-other||+a===+y-other-1)) return m; var e=+y-by; if(e<0||e>130||+a===e) return m; return e+u+v+y+'年'; });
+  s=s.replace(/((?:19|20)\d\d)年(に|には|で)(\d{1,3})(歳|才)(?=[になをでのとへ、。）)]|$)/g,function(m,y,p,a,u){ if(other&&(+a===+y-other||+a===+y-other-1)) return m; var e=+y-by; if(e<0||e>130||+a===e) return m; return y+'年'+p+e+u; });
   s=s.replace(/([：:・、（(])歳(?=[・、）)])/g,'$1').replace(/：・/g,'：').replace(/（・/g,'（');   // 数字の抜けた「歳」（己酉：歳・21歳）は外す（発注者指示 2026-10-22）
   s=s.replace(/(^|[^0-9０-９])([0-9]{2})年([（(]\s*)(\d{1,3})(歳)/g,function(m,p0,yy,op,a,u){ var y=2000+(+yy); return (y-by===+a||(other&&y-other===+a))?p0+y+'年'+op+a+u:m; });   // 「29年（21歳）」のように2けたの西暦は、年齢が合えば2029年に（発注者指示 2026-10-22）
       var fix=function(y,a,keep){ y=+y; a=+a; var e=y-by; if(e<0||e>130) return keep; if(a===e) return keep; if(other) return keep; return null; };   // その年の誕生日の前後で1つちがうのはそのまま。2人分の文（相性）で、どちらにも合わないときは決めつけない
-      s=s.replace(/((?:19|20)\d\d)年([（(][甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥年・、\s]{0,8}|の|は|、|・|頃の|ごろの|[ 　])?(\d{1,3})(歳|才)/g,function(m,y,mid,a,u,off,str){ if(/^[）)]?(の|になる|を迎える)?(お子|子ども|子供|娘|息子|お孫|孫|お母|お父|母|父|ご主人|奥様|夫|妻|彼|相手|兄|姉|弟|妹|ご両親|親)/.test(String(str).slice(off+m.length,off+m.length+10))) return m; if(other&&(+a===+y-other||+a===+y-other-1)) return m; var k=fix(y,a,m); return k!==null?k:(y+'年'+(mid||'')+(+y-by)+u); });
+      s=s.replace(/((?:19|20)\d\d)年([（(][甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥年・、：:\s]{0,8}|の|は|、|・|頃の|ごろの|[ 　])?(\d{1,3})(歳|才)/g,function(m,y,mid,a,u,off,str){ if(/^[）)]?(の|になる|を迎える)?(お子|子ども|子供|娘|息子|お孫|孫|お母|お父|母|父|ご主人|奥様|夫|妻|彼|相手|兄|姉|弟|妹|ご両親|親)/.test(String(str).slice(off+m.length,off+m.length+10))) return m; if(other&&(+a===+y-other||+a===+y-other-1)) return m; var k=fix(y,a,m); return k!==null?k:(y+'年'+(mid||'')+(+y-by)+u); });
       s=s.replace(/(\d{1,3})(歳|才)([（(])((?:19|20)\d\d)年([）)])/g,function(m,a,u,p1,y,p2){ if(other&&(+a===+y-other||+a===+y-other-1)) return m; var k=fix(y,a,m); return k!==null?k:((+y-by)+u+p1+y+'年'+p2); });
-      return s; }catch(e){ return s; } }
+      s=s.replace(/(\d{1,3}(?:歳|才))[・、]\1/g,'$1');   // 直したあとに同じ年齢が2つ並んだら1つに
+  return s; }catch(e){ return s; } }
     function _stripTalk(t){ var L=String(t||'').split('\n'), out=[], skip=false; for(var i=0;i<L.length;i++){ var ln=L[i], tl=ln.trim();   // 鑑定書はお客様に渡す紙なので、台本「お客様へのお伝え方」は入れない（発注者指示 2026-10-20）
       if(/^[#＊*\s]*[【\[]?お客様への(お)?伝え方[】\]]?/.test(tl)){ skip=true; var rest=tl.replace(/^[#＊*\s]*[【\[]?お客様への(お)?伝え方[】\]]?[：:\s]*/,''); continue; }
       if(skip && (/^[#＊*\s]*[【\[]/.test(tl) || /^[#＊*\s]*(くわしい|詳しい)読み解き/.test(tl) || /^[#＊*\s]*どうすれば(よい|良い)か/.test(tl) || /^#/.test(tl))) skip=false;
@@ -4276,7 +4292,7 @@ window.KANSHI60_DETAIL={
       var _h={'Content-Type':'application/json','x-pk-deep':'1'}; if(noCount) _h['x-pk-part']='detail'; try{ var _pp=localStorage.getItem('pk_product'); if(_pp) _h['X-Product']=_pp; }catch(_e){}   // 共通基盤に商品を伝える（同じサイトのアプリが書いた商品ID） try{ var _tk=localStorage.getItem('member_token')||sessionStorage.getItem('member_token'); if(_tk) _h['Authorization']='Bearer '+_tk; }catch(_e){}   // 会員確認（サーバーで検証）
       var _ac=null, _to=null, _timedOut=false; try{ _ac=new AbortController(); _to=setTimeout(function(){ _timedOut=true; try{ _ac.abort(); }catch(_e){} },30000); }catch(_e){}   // 30秒たっても返事がなければ待つのをやめる（いつまでも「読み解いています」で止めない。発注者指示 2026-10-21）
       fetch('/.netlify/functions/gemini',_ac?{ method:'POST', headers:_h, body:body, signal:_ac.signal }:{ method:'POST', headers:_h, body:body })
-        .then(function(res){ return res.text().then(function(t){ return {ok:res.ok, status:res.status, t:t, left:(function(){ try{ return res.headers.get('x-pk-left'); }catch(_e){ return null; } })()}; }); })
+        .then(function(res){ try{ if(window.opener&&window.opener.pkClockCheck) window.opener.pkClockCheck(res); else if(window.pkClockCheck) window.pkClockCheck(res); }catch(_e){} return res.text().then(function(t){ return {ok:res.ok, status:res.status, t:t, left:(function(){ try{ return res.headers.get('x-pk-left'); }catch(_e){ return null; } })()}; }); })
         .then(function(o){
           if(_to) clearTimeout(_to);
           if(stale()){ redo(); return; }
