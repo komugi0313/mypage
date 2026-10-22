@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # 16TYPE+ 見本の組み立て（日本語・英語・韓国語）
 import json,glob,re,os,sys
-S=os.path.dirname(os.path.abspath(__file__))+'/'
+S=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))+'/src/'
 C='/home/user/mypage/16typeplus/content/'
 I='/home/user/mypage/16typeplus/i18n/'
-IB='/tmp/claude-0/-home-user-mypage/6d7c9e6b-4df5-5bde-9a97-97fb52bff77a/scratchpad/planA/i18n/'
+IB=os.path.dirname(os.path.abspath(__file__))+'/'
 def rd(p): return open(p,encoding='utf-8').read()
 def js(p): return json.load(open(p,encoding='utf-8'))
 def lang_data(lang):
@@ -12,7 +12,7 @@ def lang_data(lang):
     for f in sorted(glob.glob(C+'combos_*.json')): combos.update(js(f))
     d=js(S+'data.json'); quiz=js(S+'quiz.json'); hints=js(C+'hints.json'); today=js(C+'today.json')
     persona={}
-    for f in sorted(glob.glob(C+'persona_*.json')): persona.update(js(f))
+    for f in sorted(glob.glob(C+'persona2/*.json')): persona.update(js(f))
     body=rd(S+'body.html'); ui={}
     if lang!='ja':
         def opt(name,cur):
