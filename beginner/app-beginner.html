@@ -6583,7 +6583,7 @@ var pkFixYomi=(function(){ var G='甲乙丙丁戊己庚辛壬癸', GY=['きの�
     s=s.replace(/([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])([・：:])([ぁ-ゖー]+)(?=[）)、，,／/・：:＝=])/g,function(m,k,sp,y){ var ok=t[k]; return (ok&&ok!==y)?k+sp+ok:m; });
     s=s.replace(/([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])年([・：:（(])([ぁ-ゖー]+)(?=[）)、，,／/・：:＝=])/g,function(m,k,sp,y){ var ok=t[k], y2=y.replace(/どし$|とし$|ねん$/,''); return (ok&&ok!==y2)?k+'年'+sp+ok+(y!==y2?y.slice(y2.length):''):m; });   // 「辛亥年：かのといぬ」のように干支のあとに「年」が付く形も直す（発注者指示 2026-10-22）   // （丁未・ひとのとひつじ）→（丁未・ひのとひつじ）
     return s.replace(/([㐀-鿿豈-﫿々]+)([\*＊]{0,3}\s*[（(])([ぁ-ゖー・]+)(?=[）)：:＝=、，,／/・ 　])/g,function(m,k,a,y){   // 読みのあとに「：比肩」などが続く形（壬子（じんし：比肩））も直す
-    var ok=t[k]; if(!ok && k.length===1 && one[k] && kana[y]) ok=one[k]; if(!ok && /^[子丑寅卯辰巳午未申酉戌亥]{3}$/.test(k)){ var bp=k.split('').map(function(ch){ return one[ch]; }); ok=(y===bp.join('')||y===bp.join('・'))?y:bp.join('・'); }   // 三つの十二支（亥卯未＝い・う・ひつじ）
+    var ok=t[k]; if(!ok && k.length===1 && one[k] && (kana[y]||(/^[甲乙丙丁戊己庚辛壬癸]$/.test(k)&&/^(きの|ひの|つちの|かの|みずの)[ぁ-ゖ]{1,2}$/.test(y)))) ok=one[k];   /* 「丁（ひのえと）」のような干一字の読みちがいも直す（発注者指示 2026-10-22） */ if(!ok && /^[子丑寅卯辰巳午未申酉戌亥]{3}$/.test(k)){ var bp=k.split('').map(function(ch){ return one[ch]; }); ok=(y===bp.join('')||y===bp.join('・'))?y:bp.join('・'); }   // 三つの十二支（亥卯未＝い・う・ひつじ）
     if(!ok && k.length>=4 && k.length%2===0){ var p=[],j; for(j=0;j<k.length;j+=2){ if(!t[k.substr(j,2)]){ p=null; break; } p.push(t[k.substr(j,2)]); } if(p){ var sp=y.indexOf('・')>=0?'・':'', q; for(q=0;q<p.length;q++){ if(y===p.slice(q).join('')||y===p.slice(q).join('・')){ ok=y; break; } } if(ok!==y) ok=(y.indexOf(p[0])===0)?p.join(sp):p[p.length-1]; } }   // 「大運癸未（だいうん・きび）」のように、つながった言葉もそれぞれ表の読みに（「時柱乙亥（きのとい）」のように後ろの干支だけの読みはそのまま）
     if(!ok){ for(var c=1;c<k.length-1&&!ok;c++){ var r2=k.slice(c), q2=t[r2]; if(!q2 && r2.length>=4 && r2.length%2===0){ var p2=[],j2; for(j2=0;j2<r2.length;j2+=2){ if(!t[r2.substr(j2,2)]){ p2=null; break; } p2.push(t[r2.substr(j2,2)]); } if(p2) q2=p2; } else if(q2) q2=[q2]; if(q2){ var hit=false,q3; for(q3=0;q3<q2.length;q3++){ if(y===q2.slice(q3).join('')||y===q2.slice(q3).join('・')) hit=true; } ok=hit?y:((q2.length>1&&y.indexOf(q2[0])===0)?q2.join(y.indexOf('・')>=0?'・':''):q2[q2.length-1]); } } }   // 「2028年戊申（ぼしん）」のように、前に漢字が付いた形も後ろの干支で直す
     return (ok && ok!==y) ? k+a+ok : m; }); };
@@ -6606,6 +6606,8 @@ const NO_AI_RULE='\n【言葉の決まり】「AI」「人工知能」という�
 function pkFixAge(s,by,other){ try{ s=String(s==null?'':s).replace(/(\d{1,3})(?:歳|才)\s*(?:改め|ではなく)\s*(\d{1,3})(?:歳|才)/g,'$2歳');   // 「41歳改め42歳」のような言い直しは1つに（そのあと生年月日で計算し直す。発注者指示 2026-10-21）
    // 西暦と年齢が並んだところ（2029年（31歳）・2029年の31歳・31歳（2029年））を、生年月日から計算し直す。ジェミニの年齢の計算ちがいを画面に出さない（発注者指示 2026-10-20）
   s=String(s==null?'':s); by=+by||0; other=+other||0; if(!by) return s;
+  s=s.replace(/([：:・、（(])歳(?=[・、）)])/g,'$1').replace(/：・/g,'：').replace(/（・/g,'（');   // 数字の抜けた「歳」（己酉：歳・21歳）は外す（発注者指示 2026-10-22）
+  s=s.replace(/(^|[^0-9０-９])([0-9]{2})年([（(]\s*)(\d{1,3})(歳)/g,function(m,p0,yy,op,a,u){ var y=2000+(+yy); return (y-by===+a||(other&&y-other===+a))?p0+y+'年'+op+a+u:m; });   // 「29年（21歳）」のように2けたの西暦は、年齢が合えば2029年に（発注者指示 2026-10-22）
   var fix=function(y,a,keep){ y=+y; a=+a; var e=y-by; if(e<0||e>130) return keep; if(a===e) return keep; if(other) return keep; return null; };   // その年の誕生日の前後で1つちがうのはそのまま。2人分の文（相性）で、どちらにも合わないときは決めつけない
   s=s.replace(/((?:19|20)\d\d)年([（(][甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥年・、\s]{0,8}|の|は|、|・|頃の|ごろの|[ 　])?(\d{1,3})(歳|才)/g,function(m,y,mid,a,u,off,str){ if(/^[）)]?(の|になる|を迎える)?(お子|子ども|子供|娘|息子|お孫|孫|お母|お父|母|父|ご主人|奥様|夫|妻|彼|相手|兄|姉|弟|妹|ご両親|親)/.test(String(str).slice(off+m.length,off+m.length+10))) return m; if(other&&(+a===+y-other||+a===+y-other-1)) return m; var k=fix(y,a,m); return k!==null?k:(y+'年'+(mid||'')+(+y-by)+u); });
   s=s.replace(/(\d{1,3})(歳|才)([（(])((?:19|20)\d\d)年([）)])/g,function(m,a,u,p1,y,p2){ if(other&&(+a===+y-other||+a===+y-other-1)) return m; var k=fix(y,a,m); return k!==null?k:((+y-by)+u+p1+y+'年'+p2); });
@@ -7121,6 +7123,59 @@ function detectTensenCompat(a,b){
     ga:lead.ga, gb:lead.gb, aCtrl:lead.aCtrl,
     who:(lead.aCtrl?'本人が相手を剋す側（本人＝主導・発散／相手＝受けとめる側）':'相手が本人を剋す側（相手＝主導・発散／本人＝受けとめる側）')};
 }
+/* 2人の間に成立しているものを全部数え、良い点と注意点を差し引きして、相性全体の結論をツールが出す（発注者指示 2026-10-22）
+   重み：日柱どうし＝3（2人の関係そのもの）／片方が日柱＝2／それ以外＝1（日柱でないものは強く扱わない）。 */
+function compatBalance(a,b){
+  const PN=['年柱','月柱','日柱','時柱'], items=[];
+  const PA=(a&&a.pillars)||[], PB=(b&&b.pillars)||[];
+  const okA=i=>!(i===3&&a&&a.timeUnknown), okB=j=>!(j===3&&b&&b.timeUnknown);
+  const gz=p=>p?(p.ganzhi||((p.stem||'')+(p.branch||''))):'';
+  const W=(i,j)=>(i===2&&j===2)?3:((i===2||j===2)?2:1);
+  const WL=w=>w>=3?'強（日柱どうし）':(w>=2?'中（片方が日柱）':'弱（日柱どうしではない）');
+  const add=(kind,good,where,w,desc,wl)=>items.push({kind,good,where,w,wl:wl||(good===null?'―（数えていません）':WL(w)),desc});
+  for(let i=0;i<4;i++){ if(!okA(i)||!PA[i]) continue; for(let j=0;j<4;j++){ if(!okB(j)||!PB[j]) continue;
+    const ga=gz(PA[i]), gb=gz(PB[j]); if(ga.length<2||gb.length<2) continue;
+    const sa=ga[0], sb=gb[0], ba=ga[1], bb=gb[1], w=W(i,j), wl0=WL(w), where='本人の'+PN[i]+'「'+ga+'」×お相手の'+PN[j]+'「'+gb+'」';
+    const kan=KANGO[sa]===sb, shi=RIKUGO[ba]===bb, chong=isChong(ba,bb), ts=(typeof isTensenChichu==='function')&&isTensenChichu(ga,gb);
+    if(kan&&shi){ add('天地徳合',true,where,w*1.5,'天干が干合し、地支も支合する。強く結びつく良い縁',wl0); continue; }
+    if(ts){ add('天戦地冲',false,where,w*1.5,'天干どうしが同じ陰陽で剋し合い、地支も冲。いちばん強いぶつかり',wl0); continue; }
+    if(kan) add('干合',true,where,w,'天干どうしが引き合う（心が引かれ合う）',wl0);
+    if(shi) add('支合',true,where,w,'地支どうしが結びつく（一緒にいて落ち着く）',wl0);
+    if(chong) add('冲',false,where,w,'地支どうしが真向かいでぶつかる（すれ違い・急な変化）',wl0);
+    if(!chong&&(isKei2(ba,bb)||isKei3(ba,bb)||(ba===bb&&JIKEI.has(ba)))) add('刑',false,where,w,'地支どうしがこじれやすい（摩擦）',wl0);
+    if(GAI[ba]===bb) add('害',false,where,w*0.5,'見えないすれ違い（軽め）',wl0);
+    if(HA[ba]===bb) add('破',false,where,w*0.5,'小さなほころび（軽め）',wl0);
+    if(ba!==bb&&SANGO.some(g=>g.slice(0,3).includes(ba)&&g.slice(0,3).includes(bb))&&(['子','午','卯','酉'].includes(ba)||['子','午','卯','酉'].includes(bb))) add('半合',true,where,w*0.5,'三合の半分がそろう（協力し合える）',wl0);
+  } }
+  // 2人の地支を合わせてそろう三合・方合（どちらか1人だけではそろわないもの）
+  const brA=PA.map((p,i)=>okA(i)&&p?p.branch:null), brB=PB.map((p,j)=>okB(j)&&p?p.branch:null);
+  [['三合',SANGO],['方合',HOUGOU]].forEach(([kind,tbl])=>tbl.forEach(g=>{ const t=g.slice(0,3);
+    const ai=[], bj=[]; t.forEach(x=>{ brA.forEach((y,i)=>{ if(y===x) ai.push(i); }); brB.forEach((y,j)=>{ if(y===x) bj.push(j); }); });
+    const have=t.every(x=>brA.includes(x)||brB.includes(x)), aOnly=t.every(x=>brA.includes(x)), bOnly=t.every(x=>brB.includes(x));
+    if(!have||aOnly||bOnly||!ai.length||!bj.length) return;
+    const day=ai.includes(2)||bj.includes(2), both=ai.includes(2)&&bj.includes(2), w=both?3:(day?2:1), gwl=both?'強（2人の日柱がどちらも入る）':(day?'中（片方の日柱が入る）':'弱（日柱が入らない）');
+    add(kind,true,'本人の'+[...new Set(ai)].map(i=>PN[i]).join('・')+'＋お相手の'+[...new Set(bj)].map(j=>PN[j]).join('・')+'（'+t.join('')+'）',w+1,'2人の地支を合わせると'+t.join('')+'がそろい、'+g[3]+'の力がまとまる（2人で協力し合える強い縁）',gwl);
+  }));
+  // 五行の補い合い（喜神）
+  try{ const fa=SHENG.filter(el=>_kkAssess(a).assess(el).fav==='喜'), fb=SHENG.filter(el=>_kkAssess(b).assess(el).fav==='喜');
+    const x=fa.filter(el=>(b.fiveElements[el]||0)>=1).length>0, y=fb.filter(el=>(a.fiveElements[el]||0)>=1).length>0;
+    if(x&&y) add('五行の補い合い',true,'お互いに',2,'お互いが、相手を助ける五行（喜神）を持っている','中（命式全体で見る）');
+    else if(x||y) add('五行の補い合い',true,x?'お相手→本人':'本人→お相手',1,'片方が、相手を助ける五行（喜神）を持っている','弱（片方だけ）');
+  }catch(e){}
+  // 日干どうしの五行の関係（干合は上で数える）
+  { const aS=a.dayMaster.stem, bS=b.dayMaster.stem; if(KANGO[aS]!==bS){ const ea=STEM_EL[aS], eb=STEM_EL[bS], ai=SHENG.indexOf(ea), bi=SHENG.indexOf(eb), d=((bi-ai)%5+5)%5;
+    if(ea===eb) add('日干が同じ五行',null,'日干「'+aS+'」×「'+bS+'」',0,'価値観が似ている（良くも悪くもない）');
+    else if(d===1||d===4) add('日干が相生',true,'日干「'+aS+'」×「'+bS+'」',1,'自然に助け合える','弱（日干だけの関係）');
+    else add('日干が相剋',false,'日干「'+aS+'」×「'+bS+'」',1,'考え方の違いで刺激し合う','弱（日干だけの関係）'); } }
+  const good=items.filter(x=>x.good===true).reduce((s,x)=>s+x.w,0), bad=items.filter(x=>x.good===false).reduce((s,x)=>s+x.w,0), net=good-bad;
+  let verdict, cls;
+  if(good===0&&bad===0){ verdict='目立った良い点も注意点もない、ふつうの組み合わせ'; cls='mid'; }
+  else if(net>=3&&good>=bad*1.5){ verdict='良い点が注意点を上回る組み合わせ'; cls='good'; }
+  else if(net<=-3&&bad>=good*1.5){ verdict='注意点が良い点を上回る組み合わせ'; cls='bad'; }
+  else { verdict='良い点と注意点が同じくらいで、打ち消し合う組み合わせ'; cls='mid'; }
+  const dayItems=items.filter(x=>x.w>=3||/日柱どうし/.test(x.wl));
+  return {items,good:+good.toFixed(1),bad:+bad.toFixed(1),net:+net.toFixed(1),verdict,cls,dayItems};
+}
 function compatAnalysis(a,b,rt){
   rt=rt||RELTYPES.love;
   const aS=a.dayMaster.stem,bS=b.dayMaster.stem,aB=a.pillars[2].branch,bB=b.pillars[2].branch;
@@ -7151,7 +7206,7 @@ function compatAnalysis(a,b,rt){
   // 用神・喜神の補い合い（身旺・身弱から出す「助ける五行」を相手が持つか＝相性の王道。参考として最少五行の補完も併記）
   try{const _fa=SHENG.filter(el=>_kkAssess(a).assess(el).fav==='喜'),_fb=SHENG.filter(el=>_kkAssess(b).assess(el).fav==='喜');
     const _bfa=_fa.filter(el=>(b.fiveElements[el]||0)>=1),_afb=_fb.filter(el=>(a.fiveElements[el]||0)>=1);
-    L.push(`用神・喜神の補い合い（相性の芯）:本人の喜神(${_fa.join('・')||'—'})を相手が持つ=${_bfa.join('・')||'なし'}／相手の喜神(${_fb.join('・')||'—'})を本人が持つ=${_afb.join('・')||'なし'}${(_bfa.length&&_afb.length)?'＝互いに“助ける五行”を補い合う最良クラス':''}`);
+    L.push(`用神・喜神の補い合い（相性の芯）:本人の喜神(${_fa.join('・')||'—'})を相手が持つ=${_bfa.join('・')||'なし'}／相手の喜神(${_fb.join('・')||'—'})を本人が持つ=${_afb.join('・')||'なし'}${(_bfa.length&&_afb.length)?'＝互いに“助ける五行”を補い合う（五行の補い合いという1項目では最良。※相性全体の評価ではない）':''}`);
   }catch(_e){}
   const needA=Object.entries(a.fiveElements).sort((x,y)=>x[1]-y[1])[0][0],bHas=b.fiveElements[needA]||0;
   const needB=Object.entries(b.fiveElements).sort((x,y)=>x[1]-y[1])[0][0],aHas=a.fiveElements[needB]||0;
@@ -7175,6 +7230,7 @@ function compatAnalysis(a,b,rt){
       const dir=e.aCtrl?('本人側（'+DOMA[aL]+'）が剋す側→お相手側（'+DOMA[bL]+'）が剋される側'):('お相手側（'+DOMA[bL]+'）が剋す側→本人側（'+DOMA[aL]+'）が剋される側');
       return '本人の'+aL+'×お相手の'+bL+'（'+e.ga+'×'+e.gb+'）'+(e.isDay?'【日柱どうし＝最重要・2人の核】':(tscImportant(e)?'【日柱×月柱＝重要】':''))+'：'+dir;});
     L.push('天戦地冲（相性・2人の命式クロス）＝天干が同陰陽で相剋＋地支が冲。相性としては刺激が強く衝突の多い組み合わせ（基本は注意）。最初は相手の自分と違う部分に強く引きつけられやすいが、距離が縮まるにつれ判断基準・進め方・何を正しいと思うかの違いがはっきりし、言い争いやすれ違いが増え、一緒にいるだけで互いの調子が崩れやすい。とくに日柱どうし（最重要）と日柱×月柱（重要）は強く出る:\n'+lines.map(s=>'・'+s).join('\n')+'\n恋愛・夫婦＝惹かれる気持ちと傷つく経験が繰り返されやすく、離れたりくっついたりを続けがち。話し合いや歩み寄りに多くの労力がかかる／仕事＝方向ややり方で意見が割れやすいが、攻める役と守る役のように担当を分ければ片方だけでは出ない成果につながることも。向きを区別：剋す側＝相手を押さえつけ傷つけやすい側、剋される側＝圧力を受け気疲れしやすい側。向き合い方＝相手を自分に合わせさせよう・思いどおりに動かそうとするほど関係は決定的に壊れやすい／踏み込みすぎない距離と、違いを相手の持ち味として認めること。すぐに離れるべき相性と決めつけないが、手間のかかる関係であることは正直に伝える。');}}
+  try{ const cb=compatBalance(a,b); L.push('【相性全体の結論＝ツールが出した答え・厳守】'+cb.verdict+'（良い点の合計'+cb.good+'／注意点の合計'+cb.bad+'。日柱どうしは強く、片方が日柱は中、それ以外は弱く数えている）。成立しているもの：'+cb.items.map(x=>x.kind+'（'+x.where+'・'+(x.good===true?'良い':x.good===false?'注意':'参考')+'・'+x.wl+'）').join('／')+'。鑑定文の1行目と全体の結論は、この結論に合わせる。「最良」「最高の相性」は、この結論が「良い点が注意点を上回る」で、しかも注意点がほとんどないときだけ使える。日柱どうしではない注意点は、強く書きすぎない（その柱の場面にかぎって出る、と書く）。'); }catch(e){}
   {const tc2=detectTensenCompat(a,b); if(tc2.any){ const pn=tc2.PN; L.push('【鑑定文で必ず触れる＝最優先】この2人には天戦地冲がある（'+tc2.list.map(e=>'本人の'+pn[e.i]+'×お相手の'+pn[e.j]+'（'+e.ga+'×'+e.gb+'）').join('・')+'）。画面にも「注意」として出ているので、くわしい読み解きで必ず一度、どの柱どうしで・どんな場面でぶつかりやすいかと付き合い方を書く。1行目と本文で「最良の相性」「完璧」「申し分ない」のように言い切らず、良い面と注意点の両方がある組み合わせとして書く。'+(tc2.list.some(e=>e.isDay)?'日柱どうしの天戦地冲なので、2人の核に関わる大事な注意点として扱う。':'日柱どうしではないので、2人の核ではなく、その柱が表す場面（家族・仕事・暮らし方など）でのぶつかりとして書く。')); } }   // 画面の判定（注意）と鑑定文が食い違わないように（発注者指示 2026-10-22）
   return L.join('\n');
 }
@@ -7430,6 +7486,25 @@ function compatVerdictHTML(a,b,rt){
   const gc=ganzhiCompat(a.pillars[2].ganzhi,b.pillars[2].ganzhi);
   const S=CGRADE[gc.stem]||CGRADE['普通'], B=CGRADE[gc.branch]||CGRADE['普通'];
   const row=(k,g)=>`<div class="cv-row"><span class="cv-k">${k}</span><span class="cv-v" style="background:${g.col}">${g.lab}</span></div>`;
+  let balBlock='';
+  try{ const cb=compatBalance(a,b), NA=(typeof personName!=='undefined'&&personName)?personName+'さん':'本人', NB=(typeof personNameB!=='undefined'&&personNameB)?personNameB+'さん':'お相手';
+    const nm=t=>String(t).replace(/本人の/g,NA+'の').replace(/お相手の/g,NB+'の').replace(/^お相手→本人$/,NB+'→'+NA).replace(/^本人→お相手$/,NA+'→'+NB);
+    const row=x=>'<div style="margin:4px 0;padding:6px 9px;border-radius:8px;background:'+(x.good===true?'#EEF7F0':x.good===false?'#FDF2F1':'#F5F5F5')+'"><b style="color:'+(x.good===true?'#1F6B3A':x.good===false?'#9A1F17':'#444')+'">'+(x.good===true?'○ ':x.good===false?'△ ':'・ ')+x.kind+'</b>　<span style="font-size:12px;font-weight:800">強さ：'+x.wl+'</span><br>'+esc(nm(x.where))+'<br><span style="font-size:12.5px">'+esc(x.desc)+'</span></div>';
+    const G=cb.items.filter(x=>x.good===true).sort((p,q)=>q.w-p.w), Bd=cb.items.filter(x=>x.good===false).sort((p,q)=>q.w-p.w), N=cb.items.filter(x=>x.good===null), U=arr=>[...new Set(arr.map(x=>x.kind))];
+    const col=cb.cls==='good'?'#1F6B3A':cb.cls==='bad'?'#9A1F17':'#6B4E12';
+    let why='';
+    if(G.length&&Bd.length){ why=(cb.good>=cb.bad?'注意点の「'+U(Bd).join('・')+'」はありますが、良い点の「'+U(G).slice(0,4).join('・')+'」'+(cb.good>cb.bad*1.5?'が上回ります':'と打ち消し合います'):'良い点の「'+U(G).join('・')+'」はありますが、注意点の「'+U(Bd).slice(0,4).join('・')+'」'+(cb.bad>cb.good*1.5?'が上回ります':'と打ち消し合います'))+'。'; }
+    else if(G.length) why='注意点は見当たりません。';
+    else if(Bd.length) why='良い点が少なく、注意点が目立ちます。';
+    balBlock='<div style="margin-top:12px;background:#fff;border:2px solid '+col+';border-radius:11px;padding:11px 13px;font-size:13px;line-height:1.8">'+
+      '<div style="font-weight:900;font-size:14.5px;color:'+col+'">2人の間に成立しているもの（全部）と、相性全体の結論</div>'+
+      '<div style="margin-top:6px;padding:8px 10px;border-radius:9px;background:'+(cb.cls==='good'?'#EEF7F0':cb.cls==='bad'?'#FDF2F1':'#FBF4E4')+'"><b style="color:'+col+'">結論：'+cb.verdict+'</b><br>'+why+'<br><span style="font-size:12px">良い点の合計 '+cb.good+'／注意点の合計 '+cb.bad+'（数え方：日柱どうし＝3、片方が日柱＝2、それ以外＝1。日柱どうしではないものは、2人の関係そのものではなく、その柱の場面にかぎって出るので、弱く数えています）</span></div>'+
+      '<div style="margin-top:8px;font-weight:900;color:#1F6B3A">良い点（'+G.length+'）</div>'+(G.length?G.map(row).join(''):'<div style="margin:3px 0">なし</div>')+
+      '<div style="margin-top:8px;font-weight:900;color:#9A1F17">注意点（'+Bd.length+'）</div>'+(Bd.length?Bd.map(row).join(''):'<div style="margin:3px 0">なし</div>')+
+      (N.length?'<div style="margin-top:8px;font-weight:900;color:#444">参考</div>'+N.map(row).join(''):'')+
+      '<div style="margin-top:6px;font-size:12px">調べたもの：天地徳合・干合・支合・三合・半合・方合・五行の補い合い・日干の相生／相剋／天戦地冲・冲・刑・害・破（2人の4本の柱どうし。時刻のわからない方は時柱を入れていません）</div>'+
+    '</div>';
+  }catch(e){ balBlock=''; }
   let tsBlock='';
   {   // 天戦地冲：あるか・ないかを必ず書き、ある時は「どの柱どうし・なぜ・2人の間で何が起きやすいか・強さ・付き合い方」を具体的に（発注者指示 2026-10-22）
     const NA=(typeof personName!=='undefined'&&personName)?personName+'さん':'本人', NB=(typeof personNameB!=='undefined'&&personNameB)?personNameB+'さん':'お相手';
@@ -7489,7 +7564,7 @@ function compatVerdictHTML(a,b,rt){
       <div style="font-weight:900;color:#C2185B;margin-bottom:3px">この2人へのひとことアドバイス</div>
       <div><b style="color:#C2185B">心の縁（性格・価値観）</b>：${CGRADE_STEM_TAKE[gc.stem]||CGRADE_STEM_TAKE['普通']}</div>
       <div style="margin-top:4px"><b style="color:#2A6FD0">縁・つながり（一緒の居心地）</b>：${CGRADE_BRANCH_TAKE[gc.branch]||CGRADE_BRANCH_TAKE['普通']}</div>
-    </div>${tsBlock}
+    </div>${balBlock}${tsBlock}
     <div class="mhint" style="margin-top:9px">※ 直感の目安です。相性は<b>お互いの違いを活かす工夫</b>でよくできます。良い点・注意点の詳しい読み解きは、下の「${rt.label}」相性鑑定をご覧ください。</div>
   </section>`;
 }
