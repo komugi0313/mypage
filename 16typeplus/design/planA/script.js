@@ -177,7 +177,7 @@ function render(instant){
  const bAT=N.at,nAT=st.at,bornF=born+(bAT?"-"+bAT:""),nowF=now+(nAT?"-"+nAT:"");
  const diff=AX.map((A,i)=>now[i]!==born[i]),atDiff=!!(bAT&&nAT&&bAT!==nAT),dn=diff.filter(Boolean).length+(atDiff?1:0);
  const cp=x=>'<span class="sc">'+TR("（")+x+TR("）")+'</span>';
- $("rStory").innerHTML=born===now?TR('<span class="ln">あなたは、気質も性格も</span><span class="ln"><span class="n">')+nowF+'</span>'+cp(P16[now])+TR('。</span>')
+ $("rStory").innerHTML=born===now?TR('<span class="ln">あなたは、気質も性格も</span><span class="ln"><span class="n">')+nowF+'</span>'+cp(P16[now])+TR('。</span>')+'<span class="ln sub">'+TR("裏も表もない、そのままのあなた。")+'</span>'
    :TR('<span class="ln">あなたは、</span><span class="ln"><span class="b">')+bornF+'</span>'+cp(P16[born])+TR('の気質と、</span><span class="ln"><span class="n">')+nowF+'</span>'+cp(P16[now])+TR('の性格をあわせ持つ人。</span>');
  const ATC="--rose";
  let fh=TR('<span class="rl"><b>気質</b>生年月日から</span>')+AX.map((A,i)=>'<span class="tile b'+(diff[i]?' c':'')+'" style="--c:var('+A.c+')">'+born[i]+'</span>').join("")+'<span class="tile b at'+(atDiff?' c':'')+'" style="--c:var('+ATC+')">'+(bAT||"–")+'</span>';
@@ -342,15 +342,15 @@ async function drawCloud(){const me=window.__me,W=1080,H=1350,cv=document.create
  try{await Promise.all(["700 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"あア가A")));}catch(e){}
  const GC={NT:SC.jp,NF:SC.tf,SJ:SC.ei,SP:SC.sn},grp=t=>t[1]==="N"?"N"+t[2]:"S"+t[3];
  const one=me.born===me.now,cb=GC[grp(me.born)],cn=one?cb:(grp(me.born)===grp(me.now)?SC.ink:GC[grp(me.now)]);
- const words=t=>{const K=CW[t];if(K){const o=[];(K.sweet||[]).forEach((x,i)=>o.push([x,i<2?3:2]));(K.love||[]).forEach((x,i)=>o.push([x,i<2?2:1]));(K.mild||[]).forEach(x=>o.push([x,1]));(K.spicy||[]).forEach((x,i)=>o.push([x,i<1?2:1]));return o;}const P=PS[t]||{},out=[];(P.strengths||[]).forEach((x,i)=>out.push([x.split("｜")[0],i<2?3:2]));(D.ARUARU[t]||[]).forEach(x=>out.push([x,1]));(P.pitfalls||[]).forEach(x=>out.push([x.split("｜")[0],1]));return out;};
+ const words=t=>{const K=CW[t];if(K){const o=[];(K.sweet||[]).forEach((x,i)=>o.push([x,i<2?3:2,"s"]));(K.love||[]).forEach((x,i)=>o.push([x,i<2?2:1,"l"]));(K.mild||[]).forEach(x=>o.push([x,1,"m"]));(K.spicy||[]).forEach((x,i)=>o.push([x,i<1?2:1,"k"]));return o;}const P=PS[t]||{},out=[];(P.strengths||[]).forEach((x,i)=>out.push([x.split("｜")[0],i<2?3:2]));(D.ARUARU[t]||[]).forEach(x=>out.push([x,1]));(P.pitfalls||[]).forEach(x=>out.push([x.split("｜")[0],1]));return out;};
  c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);const cx=W/2,cy=H/2-10,placed=[[cx-220,cy-150,440,300]];
- c.textAlign="center";c.font="500 26px "+SANS;c.fillStyle=SC.muted;c.fillText(one?TR("気質も性格も"):TR("わたしの気質と性格"),cx,cy-90);
+ c.textAlign="center";c.font="500 26px "+SANS;c.fillStyle=SC.muted;c.fillText(one?TR("気質も性格も同じ。裏も表もない人"):TR("わたしの気質と性格"),cx,cy-90);
  c.font="700 52px "+SANS;c.fillStyle=SC.ink;c.fillText(one?me.now:me.born+" × "+me.now,cx,cy-22);
  c.font="700 26px "+SANS;if(one){c.fillStyle=cb;c.fillText(p16(me.now),cx,cy+40);}else{c.textAlign="right";c.fillStyle=cb;c.fillText(p16(me.born),cx-22,cy+40);c.textAlign="center";c.fillStyle=SC.muted;c.fillText("×",cx,cy+40);c.textAlign="left";c.fillStyle=cn;c.fillText(p16(me.now),cx+22,cy+40);c.textAlign="center";
   c.font="500 22px "+SANS;{const L=[["● "+TR("気質（生まれ持った）"),cb],["● "+TR("性格（経験で育った）"),cn]],G=36,ws=L.map(l=>c.measureText(l[0]).width),tot=ws.reduce((a,b)=>a+b,0)+G*(L.length-1);let lx=cx-tot/2;c.textAlign="left";L.forEach((l,i)=>{c.fillStyle=l[1];c.fillText(l[0],lx,cy+95);lx+=ws[i]+G;});c.textAlign="center";}}
  c.textAlign="left";
  const hit=r=>placed.some(p=>r[0]<p[0]+p[2]&&r[0]+r[2]>p[0]&&r[1]<p[1]+p[3]&&r[1]+r[3]>p[1]);
- const all=[];if(one)words(me.now).forEach(([w,wt])=>all.push([w,wt,"now"]));else{const wb=words(me.born),wn=words(me.now);for(let i=0;i<Math.max(wb.length,wn.length);i++){if(wb[i])all.push([wb[i][0],wb[i][1],"born"]);if(wn[i])all.push([wn[i][0],wn[i][1],"now"]);}}all.sort((a,b)=>b[1]-a[1]);
+ const all=[];if(one)words(me.now).forEach(([w,wt,ct])=>all.push([w,wt,ct==="s"?"born":ct==="l"?"love":"now"]));else{const wb=words(me.born),wn=words(me.now);for(let i=0;i<Math.max(wb.length,wn.length);i++){if(wb[i])all.push([wb[i][0],wb[i][1],"born"]);if(wn[i])all.push([wn[i][0],wn[i][1],"now"]);}}all.sort((a,b)=>b[1]-a[1]);
  /* 気質と性格の言葉をランダムに混ぜ、画像いっぱいに敷きつめる */
  let seed=[...(me.born+me.now)].reduce((h,ch)=>(h*31+ch.charCodeAt(0))>>>0,7);const rnd=()=>(seed=(seed*1103515245+12345)>>>0)/4294967296;
  const sh=all.slice();for(let i=sh.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[sh[i],sh[j]]=[sh[j],sh[i]];}
@@ -365,7 +365,7 @@ async function drawCloud(){const me=window.__me,W=1080,H=1350,cv=document.create
  const upR=[],dnR=[];let uh=0,dh=0;best.rows.forEach((r,i)=>{const h=best.hs[i];if(uh/(UP_END-TOP)<=dh/(BOT-DN_START)&&uh+h<=UP_END-TOP){upR.push([r,h]);uh+=h;}else if(dh+h<=BOT-DN_START){dnR.push([r,h]);dh+=h;}else if(uh+h<=UP_END-TOP){upR.push([r,h]);uh+=h;}});
  const place=(list,y0,y1,used)=>{const extra=(y1-y0-used)/(list.length+1);let y=y0+extra;list.forEach(([r,h])=>{const tw=r.reduce((p,x)=>p+x.tw,0),free=MAXW-tw;
    let x=r.length>1?40:cx-tw/2;const g=r.length>1?free/(r.length-1):0;const jit=r.length>1?0:(rnd()-.5)*Math.min(free*.6,160);x+=jit;
-   r.forEach(it=>{c.font="700 "+it.fs+"px "+SANS;c.fillStyle=it.sd==="born"?cb:cn;c.fillText(it.w,x,y+h/2+(rnd()-.5)*4);x+=it.tw+g;});y+=h+extra;});};
+   r.forEach(it=>{c.font="700 "+it.fs+"px "+SANS;c.fillStyle=it.sd==="love"?SC.rose:it.sd==="born"?cb:(one?SC.ink:cn);c.fillText(it.w,x,y+h/2+(rnd()-.5)*4);x+=it.tw+g;});y+=h+extra;});};
  c.textBaseline="middle";place(upR,TOP,UP_END,uh);place(dnR,DN_START,BOT,dh);c.textBaseline="alphabetic";
  c.font="600 28px "+MONO;c.fillStyle=SC.ink;c.textAlign="center";c.fillText(SHARE_URL.replace("https://",""),W/2,H-40);c.textAlign="left";
  return cv;}
