@@ -6638,6 +6638,21 @@ function pkFixAge(s,by,other){ try{ s=String(s==null?'':s).replace(/(\d{1,3})(?:
   s=s.replace(/(\d{1,3})(歳|才)([（(])((?:19|20)\d\d)年([）)])/g,function(m,a,u,p1,y,p2){ if(other&&(+a===+y-other||+a===+y-other-1)) return m; var k=fix(y,a,m); return k!==null?k:((+y-by)+u+p1+y+'年'+p2); });
   s=s.replace(/(\d{1,3}(?:歳|才))[・、]\1/g,'$1');   // 直したあとに同じ年齢が2つ並んだら1つに
   return s; }catch(e){ return s; } }
+function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; other=+other||0;   // 西暦のあとに、ツールが計算した干支と年齢を付ける（文章作成には干支・年齢を書かせない。発注者指示 2026-10-22「普通のことをまちがえない」）
+  if(typeof document!=='undefined'&&document.documentElement&&document.documentElement.classList.contains('bg-on')) noGz=true;   // ビギナーのやさしい表示では干支を出さない
+  var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', gzOf=function(y){ var i=((y-4)%60+60)%60; return G.charAt(i%10)+Z.charAt(i%12); };
+  var re=/((?:19|20)\d\d)年/g, done={}, m, marks=[];
+  var ann=/^(?:[（(]|の?[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]|[、・]?\d{1,3}(?:歳|才)|(?:に|には|で)\d{1,3}(?:歳|才))/;
+  var skipAfter=/^(?:\d{1,2}月|[0-9０-９]|生|度|代|版|製|卒|入社|入学|[）)」』])/;
+  while((m=re.exec(s))){ var y=+m[1], a=s.slice(m.index+m[0].length, m.index+m[0].length+8), b=s.slice(Math.max(0,m.index-8), m.index);
+    if(!noGz&&by&&!other&&!done[y]&&new RegExp('^[（(]'+(y-by)+'(?:歳|才)[）)]').test(a)){ marks.push({i:m.index+m[0].length+1,y:y,gzOnly:1}); done[y]=1; continue; }   // 文章作成が年齢だけ付けたときは、干支も足す
+    if(ann.test(a)||/\d{1,3}(?:歳|才)(?:になる|を迎える|となる|[（(])?$/.test(b)||/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]年?[（(]$/.test(b)) { done[y]=1; continue; }
+    if(skipAfter.test(a)||/[（(「『]$/.test(b)||/[0-9０-９]$/.test(b)) continue;
+    marks.push({i:m.index+m[0].length,y:y}); }
+  var out=s, add=0;
+  marks.forEach(function(k){ if(k.gzOnly){ var g=gzOf(k.y)+'・'; out=out.slice(0,k.i+add)+g+out.slice(k.i+add); add+=g.length; return; } if(done[k.y]) return; done[k.y]=1; var p=[]; if(!noGz) p.push(gzOf(k.y)); if(by&&!other&&k.y>=by&&k.y-by<=120) p.push((k.y-by)+'歳'); if(!p.length) return;
+    var ins='（'+p.join('・')+'）'; out=out.slice(0,k.i+add)+ins+out.slice(k.i+add); add+=ins.length; });
+  return out; }catch(e){ return s; } }
 function pkYearPick(q){ try{   // 年を比べる相談（今年と来年のどちら等）は、ツールが年ごとの判定で先に結論を決める（毎回ぶれない。発注者指示 2026-10-21）
   var c=(typeof chart!=='undefined')?chart:null; if(!c||!c.now||!c.dayMaster||!c.annualFortunes) return '';
   var _m=String(q||'').match(/【相談者の悩み】\n([\s\S]*?)(?:\n\n|$)/)||String(q||'').match(/【ご相談】\n?([\s\S]*?)(?:\n\n|$)/); var t=_m?_m[1]:''; if(!t) return '';
@@ -6657,7 +6672,7 @@ function pkYearPick(q){ try{   // 年を比べる相談（今年と来年のど�
 function pkLifeGuide(q){ try{   // 暮らしに寄り添う答え方の決まり（なりきり点検の結果から。発注者指示 2026-10-20）
     var _d=new Date(), Y=_d.getFullYear(), M=_d.getMonth()+1, D=_d.getDate(), left=12-M+(D<15?1:0);
     var s='\n【暮らしの答え方（どの相談でも守る）】\n・今日は'+Y+'年'+M+'月'+D+'日。'+Y+'年は残り約'+left+'か月なので、'+Y+'年のことは「年内」「この先の数か月」として書き、これからの時期の話は'+(Y+1)+'年以降を中心にする。'+Y+'年を「これから来る年」のように書かない。ただし「今年と来年のどちら」のように年を比べて選ぶ相談では、この決まりより資料の年運の「判定」を優先する（今年の判定のほうがよければ「年内〜'+(Y+1)+'年2月の立春まで」をすすめる）。\n';
-    var c=(typeof chart!=='undefined'&&chart&&chart.now)?chart:null; var by=c&&c.birth&&c.birth.clock?parseInt(String(c.birth.clock).slice(0,4),10):0; if(c&&by>1900){ var T=[]; for(var y=Y;y<=Y+12;y++) T.push(y+'年＝'+(y-by)+'歳'); s+='・年齢は次の表だけを使い、ほかの年齢を計算して書かない（その年の誕生日を迎えたときの年齢）：'+T.join('、')+'。\n'; }
+    var c=(typeof chart!=='undefined'&&chart&&chart.now)?chart:null; var by=c&&c.birth&&c.birth.clock?parseInt(String(c.birth.clock).slice(0,4),10):0; if(c&&by>1900){ var T=[]; for(var y=Y;y<=Y+12;y++) T.push(y+'年＝'+(y-by)+'歳'); s+='・年は西暦だけで書く（例：2029年）。年のすぐあとに干支・年齢・読み仮名を書かない（ツールが正しい干支と年齢を自動で付ける）。「21歳のころ」のように年齢だけで時期を言わず、西暦で言う。年齢を書くときは次の表だけを使い、ほかの年齢を計算して書かない（その年の誕生日を迎えたときの年齢）：'+T.join('、')+'。\n'; }
     var _nd=[[/借金|ローン(?:の返済|が払え|地獄)|返済(?:が|に)|債務|多重債務|自己破産|闇金|督促/,'法テラスや市区町村の相談窓口'],[/いじめ|無視され|学校に行(?:く|け)な|不登校/,'家族・担任の先生・スクールカウンセラー・24時間子供SOSダイヤル（0120-0-78310）'],[/介護|要介護|老人ホーム|介護施設|認知症|足腰が(?:弱|悪)/,'ケアマネジャーや地域包括支援センター'],[/不妊|妊活|体外受精|顕微授精/,'主治医'],[/更年期|体調(?:が|を)(?:悪|崩|すぐれ)|持病|病気(?:が|を|で)|不眠|眠れない(?:日|夜)が続|うつ病|鬱病|通院/,'かかりつけ医などの医療機関（ご本人の体調の話のときだけ。ご家族・お相手・ペットなど、ほかの人の話なら書かない）'],[/離婚(?:の条件|調停|裁判)|親権|養育費|慰謝料|認知(?:を|して|させ)|相続|遺産|裁判|訴え/,'弁護士や法テラス'],[/パワハラ|セクハラ|残業代|不当解雇|給料の未払|賃金の未払|(?:職場|会社|上司|同僚|バイト先|勤務先)[^。\n]{0,15}(?:いじめ|嫌がらせ|モラハラ)/,'各地の労働局の総合労働相談コーナー'],[/(?:夫|妻|旦那|嫁|彼氏|彼女|恋人|パートナー|交際相手)[^。\n]{0,12}(?:暴力|殴|蹴|叩か|たたか|暴言|DV|ＤＶ|モラハラ)|DV|ＤＶ|家庭内暴力/,'DV相談ナビ（#8008）、身の危険があるときは警察（110）']];   // 職場の困りごと・家庭の暴力（発注者指示 2026-10-21）
     // 相談先は「相談文」だけを見て選ぶ（命式の文章や前のやりとりを見ない＝関係ない相談先を入れない。発注者指示 2026-10-21）
     var _q=String(q||''); { var _m=_q.match(/【相談者の悩み】\n([\s\S]*?)(?:\n\n|$)/)||_q.match(/【相談者\(本人A\)からの質問】\n?([\s\S]*?)(?:\n\n|$)/)||_q.match(/【ご相談】\n?([\s\S]*?)(?:\n\n|$)/); _q=_m?_m[1]:''; }
@@ -6738,7 +6753,7 @@ async function generateReading(user,localText,system,deep){
   let _authErr=0, _left=null;
   let text=await callOnce();
   if(!text&&!_authErr&&!_timedOut){ await new Promise(r=>setTimeout(r,2500)); text=await callOnce(); }   // すぐ失敗したときだけ1回やり直す（45秒待って返事がないときは、すぐ端末内の鑑定へ）
-  if(text){ if(_part!=='detail') aiCountInc(_left); return {ok:true,text:pkFixAge(noAIWord(_unmaskNames(text,_nm)),(typeof chart!=='undefined'&&chart&&chart.birth&&chart.birth.clock)?parseInt(String(chart.birth.clock).slice(0,4),10):0,(/【お相手B】/.test(user)&&typeof chartB!=='undefined'&&chartB&&chartB.birth&&chartB.birth.clock)?parseInt(String(chartB.birth.clock).slice(0,4),10):0),online:true}; }   // 相談1件＝1回（答え＋くわしい読み解きの2回の生成で1回と数える）
+  if(text){ if(_part!=='detail') aiCountInc(_left); return {ok:true,text:(function(){ var _by=(typeof chart!=='undefined'&&chart&&chart.birth&&chart.birth.clock)?parseInt(String(chart.birth.clock).slice(0,4),10):0, _ot=(/【お相手B】/.test(user)&&typeof chartB!=='undefined'&&chartB&&chartB.birth&&chartB.birth.clock)?parseInt(String(chartB.birth.clock).slice(0,4),10):0; return pkStampYears(pkFixAge(noAIWord(_unmaskNames(text,_nm)),_by,_ot),_by,_ot); })(),online:true}; }   // 相談1件＝1回（答え＋くわしい読み解きの2回の生成で1回と数える）
   aiEngine='オフライン鑑定（端末内）';
   if(_authErr===429){ aiCountFull(); return {ok:true,text:localText,fallback:true,online:false,note:aiLimitNote()}; }
   if(_authErr===401) return {ok:true,text:localText,fallback:true,online:false,note:'ログインの有効期限が切れたため、詳細鑑定を使えませんでした。いまは端末内で作成した鑑定（オフライン鑑定）を表示しています。もう一度ログインすると、詳細鑑定が使えるようになります（ページを開き直すとログイン画面が出ます）。'};
@@ -6756,13 +6771,16 @@ function pkFixWhen(t,q){ try{   // 「いつ」を聞かれたのに1行目に�
   const L=t.split('\n'); let i=0; while(i<L.length&&!L[i].trim()) i++; if(i>=L.length) return t;
   const TM=/(20\d\d年|年内|来年|再来年|\d{1,3}歳|[春夏秋冬]|\d{1,2}月|立春)/;
   if(TM.test(L[i])) return t;
-  const rest=L.slice(i+1).join('\n'); const m=rest.match(/(20\d\d年(?:（\d{1,3}歳）)?(?:の)?(?:[春夏秋冬]|\d{1,2}月|前半|後半|年内)?(?:ごろ|頃)?(?:から20\d\d年(?:（\d{1,3}歳）)?(?:の)?(?:[春夏秋冬]|\d{1,2}月|前半|後半)?(?:ごろ|頃)?(?:にかけて)?)?)/);
+  if(/^[ 　]*【/.test(L[i])){ const m1=L.slice(i+1).join('\n').match(/(20\d\d年(?:（[^）\n]{0,10}）)?(?:の)?(?:[春夏秋冬]|\d{1,2}月|前半|後半|年内)?(?:ごろ|頃)?)/); if(m1){ L.splice(i,0,'時期の目安は'+m1[1]+(/(ごろ|頃)$/.test(m1[1])?'':'ごろ')+'です。',''); return L.join('\n'); } return t; }   // 1行目が見出しのときは、見出しに足さずに前へ1行入れる
+  const rest=L.slice(i+1).join('\n'); const m=rest.match(/(20\d\d年(?:（[^）\n]{0,10}）)?(?:の)?(?:[春夏秋冬]|\d{1,2}月|前半|後半|年内)?(?:ごろ|頃)?(?:から20\d\d年(?:（[^）\n]{0,10}）)?(?:の)?(?:[春夏秋冬]|\d{1,2}月|前半|後半)?(?:ごろ|頃)?(?:にかけて)?)?)/);
   if(!m) return t;
   L[i]=L[i].replace(/[。．]\s*$/,'')+'。時期の目安は'+m[1].replace(/にかけて$/,'にかけて')+(/(ごろ|頃|にかけて)$/.test(m[1])?'':'ごろ')+'です。';
   return L.join('\n'); }catch(e){ return t; } }
 function pkFixAnsHeads(t){ try{   // 冒頭の答えで【お客様へのお伝え方】【どうすればよいか】の見出しが抜けたときに補う（文章作成を呼び直さない。発注者指示 2026-10-21）
   t=String(t||'');
-  { const m0=t.match(/^\s*【お客様への(?:お)?伝え方】\s*\n+\s*([^\n]+)/); if(m0){ const f0=(m0[1].match(/^[^。！？]+[。！？]/)||[''])[0].trim(); if(f0.length>=12) t=f0+'\n\n'+t.replace(/^\s+/,''); } }   // 1行目の結論を飛ばして【お客様へのお伝え方】から始まったときは、最初の一文を結論にする（発注者指示 2026-10-22）
+  t=t.replace(/^[ 　]*[#＃*＊\[［【]*[ 　]*(お客様への(?:お)?伝え方|どうすればよいか)[ 　]*[】\]］*＊]*[ 　]*[：:]?[ 　]*(?=\n|$)/gm,'【$1】').replace(/^[ 　]*【(お客様への(?:お)?伝え方|どうすればよいか)】[ 　]*[：:]?[ 　]*(?=[^\s])/gm,'【$1】\n');   // 見出しの書きくずれ（かっこなし・同じ行に本文）をそろえる（発注者指示 2026-10-22）
+  { const m0=t.match(/^\s*【お客様への(?:お)?伝え方】\s*\n+([\s\S]*?)(?=\n[ 　]*【|$)/); if(m0){ const ss=(m0[1].replace(/\n+/g,'').match(/[^。！？]+[。！？]/g)||[]).map(function(x){ return x.trim(); }); const pre=function(x){ return /ですね。$|ありがとう|ご相談|お気持ち|お察し|不安|心配|待ち遠し|結論から|見ると、?$/.test(x); };
+      const f0=ss.slice(0,5).filter(function(x){ return x.length>=12&&!pre(x); })[0]||ss.filter(function(x){ return x.length>=8; })[0]||''; if(f0) t=f0+'\n\n'+t.replace(/^\s+/,''); } }   // 1行目の結論を飛ばして【お客様へのお伝え方】から始まったときは、最初の一文を結論にする（発注者指示 2026-10-22）
   { const m=t.match(/^\s*([^\n]{1,18})\n+\s*【お客様への(?:お)?伝え方】\s*\n+\s*([^\n]+)/); if(m&&!/[。！？]$/.test(m[1].trim())&&!/\d/.test(m[1])){ const f=(m[2].match(/^[^。！？]+[。！？]/)||[''])[0]; if(f.length>=12) t=t.replace(m[1],f.trim()); } }   // 1行目が「おすすめ（条件つきで良い）」のような札だけのときは、お伝え方の最初の一文を結論にする
   if(/【お客様への(?:お)?伝え方】/.test(t)) return t;
   const L=t.split('\n'); let i=0; while(i<L.length&&!L[i].trim()) i++; if(i>=L.length-1) return t;
@@ -9976,7 +9994,7 @@ html.bg-on .bg-why{display:block}
     var who=WHO(), el=c.dayMaster.element, ds=c.dayMaster.stem, M=MEAN[el]||{n:el,w:''};
     var cy=safe(function(){ return curDuYear(c); },{}), dd=cy.dd||{}, ay=cy.ay;
     var topic=safe(function(){ return q?classifyWorry(q):'general'; },'general');
-    var E=[], T=[];
+    var E=[], T=[], _by=safe(function(){ return parseInt(String(c.birth.clock).slice(0,4),10)||0; },0), YA=function(y){ return y+'年'+(_by&&y>=_by?'（'+(y-_by)+'歳）':''); };   // 年には年齢も添える（ツールの計算）
     E.push(who+'の生まれた日の性質は「'+esc(M.n)+'」。'+esc(M.w));
     T.push('生まれた日の性質＝<b>日主</b>（にっしゅ）：'+sy(ds)+'。<b>五行</b>（ごぎょう）は'+esc(el)+'。<a href="jikkan.html" target="_blank" rel="noopener">十の性質を教科書で見る</a>');
     if(ay&&TS_GROUP[ay.tenStar]){ var s1=sig(c,ay); E.push('今年（'+ay.year+'年）は「'+esc(GP[TS_GROUP[ay.tenStar]])+'」がめぐる年で、運の流れは「'+esc(s1.lab)+'」です。');
@@ -9985,11 +10003,11 @@ html.bg-on .bg-why{display:block}
       T.push('いまの10年＝<b>大運</b>（だいうん）'+gzy(dd.ganzhi)+'の通変星：'+ty(dd.tenStar)+'。<a href="daiun-tsuhen.html" target="_blank" rel="noopener">大運の読み方を教科書で見る</a>'); }
     var _qq=String(q||''), _rel=/不倫|浮気|離婚|別れ|復縁|(?<!丈)夫|妻|旦那|奥さん|元彼|元夫|元妻|亡くな/.test(_qq), _debt=/借金|ローン|返済|債務|自己破産|督促|滞納/.test(_qq);   // 相談に合わない一文は出さない（発注者指示 2026-10-21）
     if(topic==='love'&&!_rel){ var sp=safe(function(){ return spouseStars(c); },[]), ys=[];
-      (c.annualFortunes||[]).forEach(function(a){ if(a.year>=c.now.year&&a.year<=c.now.year+8&&sp.indexOf(a.tenStar)>=0) ys.push(a.year+'年'); });
+      (c.annualFortunes||[]).forEach(function(a){ if(a.year>=c.now.year&&a.year<=c.now.year+8&&sp.indexOf(a.tenStar)>=0) ys.push(YA(a.year)); });
       if(sp.length){ E.push('恋愛・結婚は「パートナーを表す星」がめぐる年に動きやすく、近いところでは'+(ys.length?ys.slice(0,3).join('・')+'です。':'目立つ年はありません。'));
         T.push('パートナーを表す星＝<b>配偶者星</b>（はいぐうしゃせい）：'+sp.map(ty).join('・')+'。年運の通変星がこの星になる年を見ます。'); } }
     else if((topic==='work'||topic==='money')&&!_debt){ var gy=safe(function(){ return goodYearsAhead(c,3); },[]);
-      if(gy.length){ E.push('これからの年で運の流れが良いのは'+gy.map(function(y){return y+'年';}).join('・')+'です。'+(topic==='work'?'動くときの目安になります。':'大きなお金を動かす目安になります。'));
+      if(gy.length){ E.push('これからの年で運の流れが良いのは'+gy.map(YA).join('・')+'です。'+(topic==='work'?'動くときの目安になります。':'大きなお金を動かす目安になります。'));
         T.push('年ごとの運の流れ（◎○）は、その年の通変星が、この方にとって助けになる星かどうかで決めています。'); } }
     else if(topic==='health'){ var gb=safe(function(){ return gogyoBalance(c); },null);
       if(gb&&gb.strong&&gb.weak){ E.push('5つの力のうち「'+esc((MEAN[gb.strong[0]]||{}).n||gb.strong[0])+'」が強く、「'+esc((MEAN[gb.weak[0]]||{}).n||gb.weak[0])+'」が少なめです。少ない力を補う過ごし方がすすめられます。');

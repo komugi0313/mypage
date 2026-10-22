@@ -57,7 +57,9 @@ const calCheck=(t,by)=>{ const G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅�
   const REL={今年:0,来年:1,再来年:2,昨年:-1,去年:-1}; for(const m of t.matchAll(/(再来年|今年|来年|昨年|去年)[（(の]((?:19|20)\d\d)/g)){ if(+m[2]!==NY+REL[m[1]]) bad.push(m[0]); }
   for(const m of t.matchAll(/(^|[^0-9])([0-9]{2})年[（(]\d{1,3}歳/g)) bad.push(m[0].trim()+'（西暦が2けた）');
   return bad; };
+const unStamped=t=>{ const ys={}, ok2={}; for(const m of t.matchAll(/((?:19|20)\d\d)年(?!\d{1,2}月|[0-9]|生|度|代)/g)){ const y=m[1], a=t.slice(m.index+m[0].length,m.index+m[0].length+6), b=t.slice(Math.max(0,m.index-6),m.index); if(/[0-9〜~]$/.test(b)) continue; ys[y]=1; if(/^[（(]|^の?[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]|^(?:に|には|で|、)?\d{1,3}歳/.test(a)||/\d{1,3}歳(?:になる|を迎える)?[（(]?$/.test(b)||/[（(「『]$/.test(b)) ok2[y]=1; } return Object.keys(ys).filter(y=>!ok2[y]); };
 { const cb=calCheck(A,1985); ok('暦：年齢・年の干支・今年/来年が正しい（相談1）', cb.length===0, cb.slice(0,3).join(' / ')); }
+if(MODE==='online'){ const u=unStamped(A); ok('相談1：西暦にツールの干支・年齢が付いている', u.length===0, u.map(y=>{const i=A.indexOf(y+'年');return A.slice(Math.max(0,i-15),i+12).replace(/\n/g,'⏎');}).join(' / ')); }
 ok('相談1：画面に＊が出ない', cleanStar(A)===0, cleanStar(A));
 // 追加の質問
 const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃ですか'); await p.click('#consultBtn'); await p.click('#consultBtn').catch(()=>{});
@@ -65,8 +67,10 @@ const ms2=await waitFor(()=>{const it=document.querySelectorAll('#reading .rd-it
 await p.waitForTimeout(1500);
 const items2=await p.evaluate(()=>document.querySelectorAll('#reading .rd-item').length);
 const A2=await p.evaluate(()=>{const it=document.querySelectorAll('#reading .rd-item');return it.length?it[it.length-1].querySelector('.rd-body').innerText:'';});
+if(process.env.GATE_DUMP){ (await import('fs')).writeFileSync(process.env.GATE_DUMP,A+'\n=====\n'+A2); }
 ok('相談2（続けて質問）：答えが出る', ms2>=0 && A2.length>200, A2.length+'字');
 { const f2=(A2.split('\n').map(s=>s.trim()).filter(s=>s.length>8&&!/^(コピー|言葉の意味|ご相談|彼から連絡が来る|▲|オンライン鑑定|オフライン鑑定|📵|⏩|🔄|端末の中で作った)/.test(s))[0]||''); ok('相談2：「いつ」の質問に、1行目で時期を答えている', /20\d\d年|年内|来年|再来年|\d{1,3}歳|[春夏秋冬]|\d{1,2}月/.test(f2), f2.slice(0,80)); }
+if(MODE==='online'){ const u=unStamped(A2); ok('相談2：西暦にツールの干支・年齢が付いている', u.length===0, u.map(y=>{const i=A2.indexOf(y+'年');return A2.slice(Math.max(0,i-15),i+12).replace(/\n/g,'⏎');}).join(' / ')); }
 { const cb=calCheck(A2,1985); ok('暦：年齢・年の干支・今年/来年が正しい（相談2）', cb.length===0, cb.slice(0,3).join(' / ')); }
 ok('相談2：二度押しでも答えは1つ増えるだけ', items2===2, 'items='+items2);
 if(MODE==='online') ok('相談2：呼び出し回数'+(site==='beginner'?'（ビギナーは専門用語の書き直しで最大4回）':'（2回）'), site==='beginner'?(calls-c1>=2&&calls-c1<=4):calls-c1===2, 'calls='+(calls-c1));

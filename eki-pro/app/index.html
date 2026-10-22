@@ -2192,7 +2192,22 @@ const App=(function(){
   function pkFixTel(t){ t=String(t==null?'':t); const D={'〇':'0','零':'0','一':'1','二':'2','三':'3','四':'4','五':'5','六':'6','七':'7','八':'8','九':'9'};
     t=t.replace(/(?:ゼロ|〇|零)(?:ゼロ|[〇零一二三四五六七八九]|[のー−‐](?=ゼロ|[〇零一二三四五六七八九])){5,}/g,function(m){ const x=m.replace(/ゼロ/g,'0').replace(/[〇零一二三四五六七八九]/g,function(c){ return D[c]; }).replace(/[のー−‐]/g,'-'); return x.replace(/-/g,'').length>=6?x:m; });
     return t.replace(/二十四時間(子供|子ども|こども)?(エスオーエス|ＳＯＳ)/g,function(m,a){ return '24時間'+(a||'')+'SOS'; }).replace(/エスオーエス(ダイヤル|ダイアル)/g,'SOS$1'); }
-  function noAIWord(t){ const _x=pkFixAge(pkFixTel(_noAIWord1(t)),parseInt(((document.getElementById('fuBd')||{}).value||'').slice(0,4),10)||0); return (typeof LANG!=='undefined'&&LANG==='ko')?_x:pkFixHangul(_x); }   // 日本語の文に混じったハングル（「終つい에는吉」など）を直す。韓国語で表示しているときだけは直さない
+  function noAIWord(t){ const _by=parseInt(((document.getElementById('fuBd')||{}).value||'').slice(0,4),10)||0; const _x=pkStampYears(pkFixAge(pkFixTel(_noAIWord1(t)),_by),_by,0,true); return (typeof LANG!=='undefined'&&LANG==='ko')?_x:pkFixHangul(_x); }   // 日本語の文に混じったハングル（「終つい에는吉」など）を直す。韓国語で表示しているときだけは直さない
+  function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; other=+other||0;   // 西暦のあとに、ツールが計算した干支と年齢を付ける（文章作成には干支・年齢を書かせない。発注者指示 2026-10-22「普通のことをまちがえない」）
+  if(typeof document!=='undefined'&&document.documentElement&&document.documentElement.classList.contains('bg-on')) noGz=true;   // ビギナーのやさしい表示では干支を出さない
+  var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', gzOf=function(y){ var i=((y-4)%60+60)%60; return G.charAt(i%10)+Z.charAt(i%12); };
+  var re=/((?:19|20)\d\d)年/g, done={}, m, marks=[];
+  var ann=/^(?:[（(]|の?[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]|[、・]?\d{1,3}(?:歳|才)|(?:に|には|で)\d{1,3}(?:歳|才))/;
+  var skipAfter=/^(?:\d{1,2}月|[0-9０-９]|生|度|代|版|製|卒|入社|入学|[）)」』])/;
+  while((m=re.exec(s))){ var y=+m[1], a=s.slice(m.index+m[0].length, m.index+m[0].length+8), b=s.slice(Math.max(0,m.index-8), m.index);
+    if(!noGz&&by&&!other&&!done[y]&&new RegExp('^[（(]'+(y-by)+'(?:歳|才)[）)]').test(a)){ marks.push({i:m.index+m[0].length+1,y:y,gzOnly:1}); done[y]=1; continue; }   // 文章作成が年齢だけ付けたときは、干支も足す
+    if(ann.test(a)||/\d{1,3}(?:歳|才)(?:になる|を迎える|となる|[（(])?$/.test(b)||/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]年?[（(]$/.test(b)) { done[y]=1; continue; }
+    if(skipAfter.test(a)||/[（(「『]$/.test(b)||/[0-9０-９]$/.test(b)) continue;
+    marks.push({i:m.index+m[0].length,y:y}); }
+  var out=s, add=0;
+  marks.forEach(function(k){ if(k.gzOnly){ var g=gzOf(k.y)+'・'; out=out.slice(0,k.i+add)+g+out.slice(k.i+add); add+=g.length; return; } if(done[k.y]) return; done[k.y]=1; var p=[]; if(!noGz) p.push(gzOf(k.y)); if(by&&!other&&k.y>=by&&k.y-by<=120) p.push((k.y-by)+'歳'); if(!p.length) return;
+    var ins='（'+p.join('・')+'）'; out=out.slice(0,k.i+add)+ins+out.slice(k.i+add); add+=ins.length; });
+  return out; }catch(e){ return s; } }
   function pkFixHangul(t){ t=String(t==null?'':t); if(!/[ᄀ-ᇿ㄰-㆏가-힯]/.test(t)) return t; const M=[['에는','には'],['에서','で'],['에게','に'],['으로','で'],['하다','する'],['로','で'],['은','は'],['는','は'],['이','が'],['가','が'],['을','を'],['를','を'],['의','の'],['에','に'],['도','も'],['와','と'],['과','と']]; M.forEach(function(p){ t=t.split(p[0]).join(p[1]); }); return t.replace(/[ᄀ-ᇿ㄰-㆏가-힯]/g,''); }   // 年齢は生年月日（入れたときだけ）から計算し直す
   function _noAIWord1(t){ t=String(t||'').replace(/주치(의|医)/g,'主治医').replace(/【?見出し(?:なし|無し)(?:の|で)?(?:結論)?】?[：:]?[ 　]*/g,'').replace(/【([^】\n]{1,40})\n+[ 　]*】/g,'【$1】\n').replace(/^[ 　]*】[ 　]*$/gm,'').replace(/^[ 　]*】[ 　]*/gm,'').replace(/^([ 　]*【[^】\n]{1,30}?)[ 　]*$/gm,'$1】')   /* 【見出し の閉じ忘れ・「】」だけの行を直す（PROと同じ 2026-10-21） */.replace(/【見出し[：:]?\s*/g,'【').replace(/【([^】\n]{0,40})\n+\s*([^】\n]{0,60})】/g,'【$1$2】').replace(/【\s*】/g,'');   // 【 】の中で改行した見出しをつなぐ（【見出し⏎…】のくずれ）
     return pkSoftWord(pkFixYomi(_noAIWord0(t))); }   // 記号（**など）を消したあとにも、読み仮名とやわらげをもう一度
@@ -2256,7 +2271,7 @@ const App=(function(){
   function ekiLifeGuide(q){ try{   // 暮らしに寄り添う答え方の決まり（なりきり点検の結果から。PROと同じ考え方。発注者指示 2026-10-20）
     var _d=new Date(), Y=_d.getFullYear(), M=_d.getMonth()+1, D=_d.getDate(), left=12-M+(D<15?1:0);
     var s='\n【暮らしの答え方（どの相談でも守る）】\n・今日は'+Y+'年'+M+'月'+D+'日。'+Y+'年は残り約'+left+'か月なので、'+Y+'年のことは「年内」「この先の数か月」として書き、これからの時期の話は'+(Y+1)+'年以降を中心にする。'+Y+'年を「これから来る年」のように書かない。\n';
-    var bd=((document.getElementById('fuBd')||{}).value||'').split('-'), by=+bd[0], bm=+bd[1], bdd=+bd[2]; if(by>1900&&by<=Y){ var age=Y-by-((M<bm||(M===bm&&D<bdd))?1:0), T=[]; for(var y=Y;y<=Y+12;y++) T.push(y+'年＝'+(y-by)+'歳'); s+='・相談者はいま'+age+'歳。年齢を書くときは次の表だけを使う（その年の誕生日を迎えたときの年齢）：'+T.join('、')+'。\n'; }
+    var bd=((document.getElementById('fuBd')||{}).value||'').split('-'), by=+bd[0], bm=+bd[1], bdd=+bd[2]; if(by>1900&&by<=Y){ var age=Y-by-((M<bm||(M===bm&&D<bdd))?1:0), T=[]; for(var y=Y;y<=Y+12;y++) T.push(y+'年＝'+(y-by)+'歳'); s+='・年は西暦だけで書く（例：2029年）。年のすぐあとに干支・年齢を書かない（ツールが正しい年齢を自動で付ける）。「21歳のころ」のように年齢だけで時期を言わず、西暦で言う。\n・相談者はいま'+age+'歳。年齢を書くときは次の表だけを使う（その年の誕生日を迎えたときの年齢）：'+T.join('、')+'。\n'; }
     var _q=String(q||''), _hit=ekiConsultDest(_q);
     if(_hit.length) s+='・このご相談では、最後に「'+_hit.join('」「')+'」への相談を一言、必ず添える（ここに書いた相談先だけ。ほかの相談先は書かない）。\n';
     else s+='・このご相談には、医療機関・ケアマネジャー・地域包括支援センター・法テラスなどの相談先を書かない。\n';
