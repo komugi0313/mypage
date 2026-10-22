@@ -6681,6 +6681,7 @@ function pkFactFix(t,aS,bS){ try{ t=String(t==null?'':t);   // 命式の事実�
 function pkCompatGuard(t){ try{ t=String(t==null?'':t);   // 相性の文：ツールの判定にない細かい命式の話（蔵干・十二運・元命・通変星の名前）を書いた文は外す（まちがいが出やすいところ。判定カードに正しい一覧がある。発注者指示 2026-10-22）
   var BAD=/蔵干|十二運|元命|通変星/, STAR=/比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬/, OKS=/配偶者星|官殺混雑/;
   t=t.replace(/(?:お互い|互い|2人|二人|お二人)(?:の|が|に)?(?:足りない|不足している|不足する|欠けている)(五行)/g,'お互いを助ける$1');
+  t=t.replace(/(?:お互いに|互いに)?(?:足りない|不足している|不足する|欠けている)(五行)/g,'助け合う$1');
   var L=t.split('\n').map(function(ln){ if(/^\s*【[^】]*】\s*$/.test(ln)||!ln.trim()) return ln;
     var ps=ln.split(/(?<=[。！？])/), kept=ps.filter(function(sn){ return !(BAD.test(sn)||(STAR.test(sn)&&!OKS.test(sn))); });
     if(kept.length===ps.length) return ln; if(!kept.length) return null;
@@ -7229,6 +7230,10 @@ function compatBalance(a,b){
     const ga=gz(PA[i]), gb=gz(PB[j]); if(ga.length<2||gb.length<2) continue;
     const sa=ga[0], sb=gb[0], ba=ga[1], bb=gb[1], w=W(i,j), wl0=WL(w), where='本人の'+PN[i]+'「'+ga+'」×お相手の'+PN[j]+'「'+gb+'」';
     const kan=KANGO[sa]===sb, shi=RIKUGO[ba]===bb, chong=isChong(ba,bb), ts=(typeof isTensenChichu==='function')&&isTensenChichu(ga,gb);
+    if(ga===gb&&((i===2&&j===2)||(i===1&&j===2)||(i===2&&j===1))){   // 律音（りっちん）＝2人の柱の干支がまったく同じ。縁が深い（流派の決まり・発注者指示 2026-10-22。元の版 meishiki-original/pro-adapter.js と同じく良い点として必ず入れる）
+      if(i===2&&j===2) add('律音（日柱どうし）',true,where,w*1.5,'日柱の干支がまったく同じ＝合わせ鏡の縁。相手の中にもう一人の自分を見るように強くわかり合え、心強い理解者になる（ただし別の人間だと忘れず、相手をコントロールしない・「わかってくれるはず」と甘えない）',WL(w));
+      else if(i===1) add('律音（あなたの月柱×お相手の日柱）',true,where,w,'あなたの社会運・仕事運がアップする縁。あなたのビジョンや目標を、お相手が心から応援し支えてくれる',WL(w));
+      else add('律音（あなたの日柱×お相手の月柱）',true,where,w,'お相手の社会運・仕事運がアップする縁。あなたが自分らしいやり方で、お相手の縁の下の力持ちになれる',WL(w)); }
     if(kan&&shi){ add('天地徳合',true,where,w*1.5,'天干が干合し、地支も支合する。強く結びつく良い縁',wl0); continue; }
     if(ts){ add('天戦地冲',false,where,w*1.5,'天干どうしが同じ陰陽で剋し合い、地支も冲。いちばん強いぶつかり',wl0); continue; }
     if(kan) add('干合',true,where,w,'天干どうしが引き合う（心が引かれ合う）',wl0);
@@ -7272,6 +7277,11 @@ function compatAnalysis(a,b,rt){
   rt=rt||RELTYPES.love;
   const aS=a.dayMaster.stem,bS=b.dayMaster.stem,aB=a.pillars[2].branch,bB=b.pillars[2].branch;
   const L=[];
+  { const gzA=a.pillars.map(p=>p&&p.ganzhi||''), gzB=b.pillars.map(p=>p&&p.ganzhi||''); const R=[];
+    if(gzA[2]&&gzA[2]===gzB[2]) R.push(`日柱どうしが同じ干支（${gzA[2]}）＝律音（りっちん）。合わせ鏡の縁＝相手の中にもう一人の自分を見るように強くわかり合える、心強い理解者。縁がとても深い良い相性のしるし。ただし別の人間だと忘れず、相手をコントロールしない・「わかってくれるはず」と甘えないことが大切`);
+    if(gzA[1]&&gzA[1]===gzB[2]) R.push(`本人の月柱とお相手の日柱が同じ干支（${gzA[1]}）＝律音。本人の社会運・仕事運がアップする縁（お相手が本人のビジョンを心から応援し支えてくれる）`);
+    if(gzA[2]&&gzA[2]===gzB[1]) R.push(`本人の日柱とお相手の月柱が同じ干支（${gzA[2]}）＝律音。お相手の社会運・仕事運がアップする縁（本人が自分らしいやり方でお相手の縁の下の力持ちになる）`);
+    if(R.length) L.push('【律音（りっちん）＝縁が深い良い点・鑑定文の「惹かれ合うところ」で必ず最初に触れる】'+R.join('／')); }
   L.push(`【2人の基本の事実＝この通りに書く】本人の日干=${aS}（${STEM_EL[aS]}）・日支（配偶宮）=${aB}／お相手の日干=${bS}（${STEM_EL[bS]}）・日支（配偶宮）=${bB}。十二支（子・丑・寅…）と十二運（長生・病など）を取りちがえない。`);
   // 日干の関係
   let dk;
@@ -7595,7 +7605,7 @@ function compatVerdictHTML(a,b,rt){
       '<div style="margin-top:8px;font-weight:900;color:#1F6B3A">良い点（'+G.length+'）</div>'+(G.length?G.map(row).join(''):'<div style="margin:3px 0">なし</div>')+
       '<div style="margin-top:8px;font-weight:900;color:#9A1F17">注意点（'+Bd.length+'）</div>'+(Bd.length?Bd.map(row).join(''):'<div style="margin:3px 0">なし</div>')+
       (N.length?'<div style="margin-top:8px;font-weight:900;color:#444">参考</div>'+N.map(row).join(''):'')+
-      '<div style="margin-top:6px;font-size:12px">調べたもの：天地徳合・干合・支合・三合・半合・方合・五行の補い合い・日干の相生／相剋／天戦地冲・冲・刑・害・破（2人の4本の柱どうし。時刻のわからない方は時柱を入れていません）</div>'+
+      '<div style="margin-top:6px;font-size:12px">調べたもの：律音・天地徳合・干合・支合・三合・半合・方合・五行の補い合い・日干の相生／相剋／天戦地冲・冲・刑・害・破（2人の4本の柱どうし。時刻のわからない方は時柱を入れていません）</div>'+
     '</div>';
   }catch(e){ balBlock=''; }
   let tsBlock='';
