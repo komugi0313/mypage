@@ -500,14 +500,31 @@ const LVC={ink:SC.ink,muted:SC.muted,soft:"#EEF1F5",rule:"#E2E6EC",rose:"#C9607A
 function lvFonts(){const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
  return Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"あア가A♡"))).catch(()=>{}).then(()=>({SANS,MONO}));}
 async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
- c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);const cx=W/2,cy=H/2-20;let tfs=52;c.font="700 "+tfs+"px "+SANS;while(c.measureText(P.tag).width>W-160&&tfs>30){tfs-=2;c.font="700 "+tfs+"px "+SANS;}
- const bw=Math.max(520,c.measureText(P.tag).width+60),placed=[[cx-bw/2,cy-110,bw,170]];
- c.textAlign="center";c.font="600 32px "+MONO;c.fillStyle=LVC.rose;c.fillText(TR("恋愛")+" "+an(P.t),cx,cy-50);c.font="700 "+tfs+"px "+SANS;c.fillStyle=LVC.ink;c.fillText(P.tag,cx,cy+20);c.textAlign="left";
- const hit=r=>placed.some(p=>r[0]<p[0]+p[2]&&r[0]+r[2]>p[0]&&r[1]<p[1]+p[3]&&r[1]+r[3]>p[1]);
- P.words.slice().sort((a,b)=>b[1]-a[1]).forEach(([w,wt],i)=>{let fs={3:76,2:54,1:38}[wt];c.font="700 "+fs+"px "+SANS;let tw=c.measureText(w).width;while(tw>W-120&&fs>22){fs-=2;c.font="700 "+fs+"px "+SANS;tw=c.measureText(w).width;}const th=fs*1.25;
-  for(let t=0;t<12000;t++){const a=t*0.12+i*1.7,r=30+t*0.18,x=cx+Math.cos(a)*r-tw/2,y=cy+Math.sin(a)*r*1.3-th/2;const rect=[x-6,y-2,tw+12,th+4];
-   if(x<40||y<40||x+tw>W-40||y+th>H-100)continue;if(hit(rect))continue;placed.push(rect);c.fillStyle=wt===3?LVC.rose:i%2?LVC.ink:LVC.rose2;c.textBaseline="top";c.fillText(w,x,y);c.textBaseline="alphabetic";break;}});
- c.font="600 28px "+MONO;c.fillStyle=LVC.ink;c.textAlign="center";c.fillText(SHARE_URL.replace("https://",""),W/2,H-50);c.textAlign="left";return cv;}
+ const me=window.__me,t=P.t,X0=70,X1=W-70;
+ c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);c.fillStyle=LVC.rose;c.fillRect(0,0,W,12);c.textBaseline="alphabetic";
+ const fitF=(txt,w,fs,wt)=>{c.font=(wt||700)+" "+fs+"px "+SANS;while(c.measureText(txt).width>w&&fs>16){fs--;c.font=(wt||700)+" "+fs+"px "+SANS;}return fs;};
+ c.font="600 26px "+MONO;c.fillStyle=LVC.muted;c.fillText("16TYPE+  "+TR("恋愛編"),X0,82);
+ c.textAlign="center";c.font="600 30px "+MONO;c.fillStyle=LVC.rose;c.fillText(TR("恋をしたときのあなた"),W/2,150);
+ fitF(P.tag,X1-X0,64);c.fillStyle=LVC.ink;c.fillText(P.tag,W/2,228);
+ /* 恋の4文字と、それぞれが気質・性格のどちらから来たか */
+ const tw=170,gap=26,x0=(W-(tw*4+gap*3))/2,ty=270;
+ for(let i=0;i<4;i++){const x=x0+i*(tw+gap),l=t[i],b=me?me.born[i]:l,n=me?me.now[i]:l;
+  const src=b===n?(l===b?TR("どちらも"):TR("恋だけ")):(l===b?TR("気質"):TR("性格"));
+  c.fillStyle=l===b&&b!==n?LVC.roseT:"#F3F5F8";rrect(c,x,ty,tw,tw,22);c.fill();
+  c.font="600 96px "+MONO;c.fillStyle=LVC.ink;c.fillText(l,x+tw/2,ty+tw/2+34);
+  c.font="700 24px "+SANS;c.fillStyle=src===TR("性格")?LVC.ink:LVC.rose;c.fillText(src,x+tw/2,ty+tw+38);}
+ const hook=me?lvHook(me.born,me.now,t):P.one;c.font="500 28px "+SANS;c.fillStyle=LVC.muted;
+ wrapLines(c,hook,X1-X0,2).forEach((l,i)=>c.fillText(l,W/2,ty+tw+96+i*40));
+ /* 言葉：甘い→辛い の順に2列でしきつめる */
+ const ws=(P.words||[]).slice().sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+ const top=ty+tw+250,bot=H-110,half=Math.ceil(ws.length/2),cols=[ws.slice(0,half),ws.slice(half)];
+ c.strokeStyle="#EEE2E6";c.lineWidth=2;c.beginPath();c.moveTo(X0,top-30);c.lineTo(X1,top-30);c.stroke();
+ c.font="700 22px "+SANS;c.textAlign="left";c.fillStyle=LVC.rose;c.fillText(TR("甘め"),X0,top-44);c.textAlign="right";c.fillStyle=LVC.muted;c.fillText(TR("ちょっと辛口 ↓"),X1,top-44);
+ const colW=(X1-X0-40)/2,step=(bot-top)/half;
+ cols.forEach((arr,k)=>arr.forEach((w,i)=>{const x=X0+k*(colW+40),y=top+step*i+step*.62,pos=(k*half+i)/ws.length;
+  c.fillStyle=pos<.35?LVC.rose:pos<.7?LVC.rose2:LVC.ink;c.textAlign="left";c.beginPath();c.arc(x+8,y-11,6,0,Math.PI*2);c.fill();
+  fitF(w,colW-34,pos<.2?34:30);c.fillText(w,x+28,y);}));
+ c.textAlign="center";c.font="600 28px "+MONO;c.fillStyle=LVC.ink;c.fillText(SHARE_URL.replace("https://",""),W/2,H-46);c.textAlign="left";return cv;}
 async function lvSheet(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1700,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const wrap=(t,w)=>wrapLines(c,t,w,9);
  c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);c.fillStyle=LVC.rose;c.fillRect(0,0,W,14);
