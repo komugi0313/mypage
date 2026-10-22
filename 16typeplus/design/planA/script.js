@@ -538,4 +538,9 @@ async function makeCV(){const b=$("cvBtn"),lbl=b.textContent;b.disabled=true;b.t
  try{const cv=await drawCV();showShareBox([cv]);}catch(e){alert(TR("画像をつくれませんでした。もう一度お試しください。"));}finally{b.disabled=false;b.textContent=lbl;}}
 if($("cvBtn"))$("cvBtn").onclick=makeCV;
 
+
+/* トップへ戻る：ロゴ・ボタン・下のリンク・右下の丸ボタン */
+function goHome(e){if(e)e.preventDefault();if(!$("quizCard").hidden)showQuiz(false);window.scrollTo({top:0,behavior:"smooth"});}
+["logoHome","homeBtn","toTop","fabTop"].forEach(id=>{const el=$(id);if(el)el.addEventListener("click",goHome);});
+{const fab=$("fabTop");if(fab){const f=()=>{fab.hidden=window.scrollY<700;};window.addEventListener("scroll",f,{passive:true});f();}}
 boot();
