@@ -23,6 +23,7 @@ node tools/release_gate/gate_pk.mjs pro nonet       # PRO（端末が圏外と�
 node tools/release_gate/gate_pk.mjs beginner online # ビギナー（offline / nonet も同じ）
 node tools/release_gate/gate_eki.mjs online         # 易（offline / nonet も同じ）
 node tools/release_gate/gate_compat.mjs pro           # 相性の詳細鑑定（beginner も）：年の干支・2人の年齢・年なしの年齢・配偶宮の持ち主・判定にない星の話・答えの形
+node tools/release_gate/gate_compat_rules.mjs pro      # 相性の流派の決まり（律音・三合・方合・半会・支合）が元の版と1つもちがわないか（beginner も・文章作成は使わない）
 ```
 
 最後の行が「→ 合格」なら合格です。1回の点検で文章作成を7回ほど使います（PRO・ビギナー）。ビギナーは、返ってきた文に専門用語が混じったときだけ1回書き直してもらうので、1つの相談で最大4回まで合格にしています。
