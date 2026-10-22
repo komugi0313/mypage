@@ -598,6 +598,18 @@ function goHome(e){if(e)e.preventDefault();if(!$("quizCard").hidden)showQuiz(fal
 {const fab=$("fabTop");if(fab){const f=()=>{fab.hidden=window.scrollY<700;};window.addEventListener("scroll",f,{passive:true});f();}}
 
 /* 結果の並び：最初に「鑑定文・円の画像・シェア」、くわしい内容はたたんでおく */
+
+/* 開運予報への案内（日本語版のみ）。URLが空のあいだは表示しない。
+   {Y}{M}{D}=年月日（M・Dは2桁）、{YMD}=YYYYMMDD に置きかわる */
+const KAIUN_URL="";
+function kaiunCard(at){let c=$("kaiun");if(LANG!=="ja"||!KAIUN_URL||!st.y){if(c)c.hidden=true;return at;}
+ if(!c){c=document.createElement("section");c.id="kaiun";c.className="card kaiun";}
+ const p2=n=>String(n).padStart(2,"0"),Y=String(st.y),M=p2(st.m),D=p2(st.d);
+ let u=KAIUN_URL.replace(/\{YMD\}/g,Y+M+D).replace(/\{Y\}/g,Y).replace(/\{M\}/g,M).replace(/\{D\}/g,D);
+ u+=(u.includes("?")?"&":"?")+"utm_source=16typeplus&utm_medium=result&utm_campaign=kaiun";
+ c.innerHTML='<p class="kaiun-eb">無料メール</p><h2>毎朝届く、あなただけの開運予報</h2><p>この診断の「気質」は、あなたの生年月日から出しています。同じ生年月日から、その日のラッキーカラーや開運小物を毎朝メールでお届けします。</p><a class="btn kaiun-btn" href="'+u+'" target="_blank" rel="noopener">無料で受け取る</a><p class="kaiun-note">生年月日（'+st.y+'年'+st.m+'月'+st.d+'日）は入力済み。メールアドレスだけで登録できます。</p>';
+ c.hidden=false;c.querySelector("a").onclick=()=>{try{gtag("event","kaiun_click",{place:"result"});}catch(e){}};
+ at.after(c);return c;}
 function layoutResult(){const hero=document.querySelector(".hero");if(!hero)return;
  const mk=(id,title)=>{let d=$(id);if(!d){d=document.createElement("details");d.id=id;d.className="card more";d.innerHTML='<summary><h2>'+title+'</h2></summary><div class="mbody"></div>';}return d;};
  const dK=mk("dKarte",TR("性格カルテ")),dH=mk("dHints",TR("悩みと仕事のヒント")),dP=mk("dPersona",TR("タイプごとのくわしい説明")),dB=mk("dBal",TR("気質の力のバランス"));
@@ -607,6 +619,6 @@ function layoutResult(){const hero=document.querySelector(".hero");if(!hero)retu
  if($("hints")&&$("hints").parentNode!==body(dH))body(dH).appendChild($("hints"));
  if($("persona")&&$("persona").parentNode!==body(dP))body(dP).appendChild($("persona"));
  if($("bal")&&$("bal").parentNode!==body(dB))body(dB).appendChild($("bal"));
- let at=hero;[dK,dH,dP,dB,$("love"),$("partner")].forEach(el=>{if(el){at.after(el);at=el;}});
+ let at=kaiunCard(hero);[dK,dH,dP,dB,$("love"),$("partner")].forEach(el=>{if(el){at.after(el);at=el;}});
  dB.hidden=!$("bal")||$("bal").hidden;}
 boot();
