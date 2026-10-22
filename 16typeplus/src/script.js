@@ -342,12 +342,21 @@ async function drawCloud(){const me=window.__me,W=1080,H=1350,cv=document.create
   c.font="500 22px "+SANS;c.fillStyle=cb;c.fillText("● "+TR("気質"),cx-90,cy+95);c.fillStyle=cn;c.fillText("● "+TR("性格"),cx+90,cy+95);}
  c.textAlign="left";
  const hit=r=>placed.some(p=>r[0]<p[0]+p[2]&&r[0]+r[2]>p[0]&&r[1]<p[1]+p[3]&&r[1]+r[3]>p[1]);
- const all=[];(one?[["now",me.now]]:[["born",me.born],["now",me.now]]).forEach(([sd,t])=>words(t).forEach(([w,wt])=>all.push([w,wt,sd])));all.sort((a,b)=>b[1]-a[1]);
- all.forEach(([w,wt,sd],i)=>{let fs={3:56,2:42,1:30}[wt];c.font="700 "+fs+"px "+SANS;let tw=c.measureText(w).width;while(tw>W/2-60&&fs>20){fs-=2;c.font="700 "+fs+"px "+SANS;tw=c.measureText(w).width;}
-  const th=fs*1.25,sg=one?0:(sd==="born"?-1:1);
-  for(let t=0;t<15000;t++){const a=t*0.11+i,r=20+t*0.16,dx=sg?sg*Math.abs(Math.cos(a))*r*1.05-(sg<0?tw:0)-sg*14:Math.cos(a)*r-tw/2,x=cx+dx,y=cy+Math.sin(a)*r*1.4-th/2;
-   const rect=[x-6,y-2,tw+12,th+4];if(x<36||y<40||x+tw>W-36||y+th>H-90)continue;if(hit(rect))continue;
-   placed.push(rect);c.fillStyle=sd==="born"?cb:cn;c.textBaseline="top";c.fillText(w,x,y);c.textBaseline="alphabetic";break;}});
+ const all=[];if(one)words(me.now).forEach(([w,wt])=>all.push([w,wt,"now"]));else{const wb=words(me.born),wn=words(me.now);for(let i=0;i<Math.max(wb.length,wn.length);i++){if(wb[i])all.push([wb[i][0],wb[i][1],"born"]);if(wn[i])all.push([wn[i][0],wn[i][1],"now"]);}}all.sort((a,b)=>b[1]-a[1]);
+ /* 気質と性格の言葉を、行ごとに交互に混ぜて並べる（大きい言葉ほど中央の近く） */
+ const items=all.map(([w,wt,sd])=>{let fs={3:50,2:38,1:28}[wt];c.font="700 "+fs+"px "+SANS;let tw=c.measureText(w).width;while(tw>W-140&&fs>20){fs-=2;c.font="700 "+fs+"px "+SANS;tw=c.measureText(w).width;}return {w,fs,tw,sd};});
+ const GAP=34,MAXW=W-90,rows=[];let cur=[],cw=0,lastSd=null;
+ const pool=items.slice();
+ while(pool.length){let k=pool.findIndex(it=>it.sd!==lastSd&&cw+(cur.length?GAP:0)+it.tw<=MAXW);if(k<0)k=pool.findIndex(it=>cw+(cur.length?GAP:0)+it.tw<=MAXW);
+  if(k<0||cur.length>=3){rows.push(cur);cur=[];cw=0;lastSd=rows[rows.length-1].length?rows[rows.length-1][0].sd:null;continue;}
+  const it=pool.splice(k,1)[0];cw+=(cur.length?GAP:0)+it.tw;cur.push(it);lastSd=it.sd;}
+ if(cur.length)rows.push(cur);
+ const rh=r=>Math.max(...r.map(x=>x.fs))*1.5;
+ let up=cy-130,down=cy+135;c.textBaseline="middle";
+ rows.forEach((r,i)=>{const h=rh(r),w=r.reduce((s,x)=>s+x.tw,0)+GAP*(r.length-1);let y;
+  if(i%2===0&&up-h>40){y=up-h/2;up-=h;}else if(down+h<H-80){y=down+h/2;down+=h;}else if(up-h>40){y=up-h/2;up-=h;}else return;
+  let x=cx-w/2;r.forEach(it=>{c.font="700 "+it.fs+"px "+SANS;c.fillStyle=it.sd==="born"?cb:cn;c.fillText(it.w,x,y);x+=it.tw+GAP;});});
+ c.textBaseline="alphabetic";
  c.font="600 28px "+MONO;c.fillStyle=SC.ink;c.textAlign="center";c.fillText(SHARE_URL.replace("https://",""),W/2,H-40);c.textAlign="left";
  return cv;}
 $("shareBtn").onclick=shareResult;
