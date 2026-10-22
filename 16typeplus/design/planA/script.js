@@ -372,9 +372,9 @@ function boot(){drawResume();const R=sget(KR);
   document.querySelectorAll(".intro,.how").forEach(e=>e.hidden=true);
   const res=$("result");res.after($("quizCard"));res.after($("formCard"));$("formh").textContent=TR("もう一度診断する");
   const wb=document.createElement("section");wb.className="card welcome";
-  wb.innerHTML='<p class="eyebrow">'+TR("おかえりなさい")+'</p><p class="wbt">'+TR("前回の結果を表示しています。")+'</p><div class="wbacts"><button type="button" class="btn primary" id="wbRedo">'+TR("診断をやり直す")+'</button></div>';
+  wb.innerHTML='<p class="eyebrow">'+TR("おかえりなさい")+'</p><p class="wbt">'+TR("前回の結果を表示しています。")+'</p><div class="wbacts"><button type="button" class="btn primary" id="wbRedo">'+TR("診断をやり直す")+'</button><button type="button" class="btn" id="wbHome">'+TR("トップページに戻る")+'</button></div>';
   const hero=document.querySelector(".hero");hero.before(wb);
-  $("wbRedo").onclick=()=>$("formCard").scrollIntoView({behavior:"smooth",block:"start"});
+  $("wbRedo").onclick=()=>$("formCard").scrollIntoView({behavior:"smooth",block:"start"});$("wbHome").onclick=e=>goHome(e);
  }else{fillDate();render();}}
 $("reset").onclick=()=>{if(!confirm(TR("保存している結果を消して、はじめからやり直しますか？")))return;sset(KR,null);sset(KQ,null);location.reload();};
 
@@ -540,7 +540,10 @@ if($("cvBtn"))$("cvBtn").onclick=makeCV;
 
 
 /* トップへ戻る：ロゴ・ボタン・下のリンク・右下の丸ボタン */
-function goHome(e){if(e)e.preventDefault();if(!$("quizCard").hidden)showQuiz(false);window.scrollTo({top:0,behavior:"smooth"});}
+function goHome(e){if(e)e.preventDefault();if(!$("quizCard").hidden)showQuiz(false);
+ /* 2回目以降の「おかえりなさい」表示のときは、トップの説明と入力欄を元の位置に戻す */
+ const intro=document.querySelector(".intro");if(intro&&intro.hidden){document.querySelectorAll(".intro,.how").forEach(x=>x.hidden=false);const how=document.querySelector(".how");how.after($("formCard"));$("formCard").after($("quizCard"));$("formh").textContent=TR("診断をはじめる");const wb=document.querySelector(".welcome");if(wb)wb.remove();}
+ window.scrollTo({top:0,behavior:"smooth"});}
 ["logoHome","homeBtn","toTop","fabTop"].forEach(id=>{const el=$(id);if(el)el.addEventListener("click",goHome);});
 {const fab=$("fabTop");if(fab){const f=()=>{fab.hidden=window.scrollY<700;};window.addEventListener("scroll",f,{passive:true});f();}}
 boot();
