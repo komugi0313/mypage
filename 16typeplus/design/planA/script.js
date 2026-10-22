@@ -220,7 +220,7 @@ function render(instant){
  window.__me.karai=window.__worry||"";{const rc=$("recheck");if(rc)rc.hidden=!!st.pct;}
  {const fig=$("cloudFig");if(fig){const tk=(window.__cloudTok=(window.__cloudTok||0)+1);setTimeout(()=>drawCloud().then(cv=>{if(tk!==window.__cloudTok)return;const x=cv.getContext("2d"),W=cv.width,H=cv.height,d=x.getImageData(0,0,W,H-90).data;let t=0,b=H-91;const blank=y=>{for(let i=y*W*4;i<(y+1)*W*4;i+=16)if(d[i]<235)return false;return true;};while(t<b&&blank(t))t++;while(b>t&&blank(b))b--;t=Math.max(0,t-50);b=Math.min(H-91,b+50);const o2=document.createElement("canvas");o2.width=W;o2.height=b-t;o2.getContext("2d").drawImage(cv,0,t,W,b-t,0,0,W,b-t);$("cloudImg").src=o2.toDataURL("image/png");$("cloudImg").alt=TR("わたしの気質と性格");fig.hidden=false;}).catch(()=>{}),0);}}
  {const kf=$("karteFig");if(kf){const tk=(window.__karteTok=(window.__karteTok||0)+1);setTimeout(()=>drawKarte().then(cv=>{if(tk!==window.__karteTok)return;$("karteImg").src=cv.toDataURL("image/png");$("karteImg").alt=TR("性格カルテ");kf.hidden=false;}).catch(()=>{}),0);}}
- {const K=KT[born+">"+now],el=$("kt");window.__me.kt=K||null;if(el){el.hidden=!K;if(K)el.innerHTML='<h3 class="kth">'+esc(K.title)+'</h3><p class="ktb">'+esc(K.body)+'</p><dl class="ktl"><dt>'+TR("言いそうなこと")+'</dt><dd class="say">'+esc(K.say)+'</dd><dt>'+TR("やりそうなこと")+'</dt><dd>'+esc(K.do)+'</dd><dt>'+TR("悩みやすいこと")+'</dt><dd>'+esc(K.worry)+'</dd></dl><div class="ktk"><span>'+TR("辛口のひと言")+'</span>'+esc(K.karai)+'</div>';}}window.__me.karaiC=strip(C.karai||"");drawBalance(N);lvInit();saveResult();
+ {const K=KT[born+">"+now],el=$("kt");window.__me.kt=K||null;if(el){el.hidden=!K;if(K)el.innerHTML='<h3 class="kth">'+esc(K.title)+'</h3><p class="ktb">'+esc(K.body)+'</p><dl class="ktl"><dt>'+TR("言いそうなこと")+'</dt><dd class="say">'+esc(K.say)+'</dd><dt>'+TR("やりそうなこと")+'</dt><dd>'+esc(K.do)+'</dd><dt>'+TR("悩みやすいこと")+'</dt><dd>'+esc(K.worry)+'</dd></dl><div class="ktk"><span>'+TR("辛口のひと言")+'</span>'+esc(K.karai)+'</div>';}}window.__me.karaiC=strip(C.karai||"");drawBalance(N);lvInit();saveResult();layoutResult();
 }
 /* ---- 相性 ---- */
 const ps={y:1995,m:4,d:20};
@@ -419,15 +419,7 @@ function boot(){drawResume();const R=sget(KR);
  }else{fillDate();render();}}
 $("reset").onclick=()=>{if(!confirm(TR("保存している結果を消して、はじめからやり直しますか？")))return;sset(KR,null);sset(KQ,null);location.reload();};
 
-/* ---- この組み合わせの名前とあるある（256通り） ---- */
-function tagHTML(t){return esc(t).replace(/\[\[今:(.*?)\]\]/g,'<span class="tn">$1</span>').replace(/\[\[本:(.*?)\]\]/g,'<span class="tb">$1</span>');}
-function drawCombo(C){let el=$("cmb");
- if(!el){el=document.createElement("div");el.id="cmb";el.className="cmb pend";document.querySelector(".hero .karai").before(el);}
- if(!(C.atari&&C.atari[0])){el.hidden=true;return;}el.hidden=false;
- el.innerHTML='<span class="kl">'+TR("2人のあるある")+'</span>'+(C.atari&&C.atari[0]?'<ul class="cat">'+C.atari.map(a=>'<li>'+tagHTML(a)+'</li>').join("")+'</ul>'+(C.atari.some(x=>/\[\[本:/.test(x))?'<p class="clg">'+TR('<span class="tn">今のあなた</span>と<span class="tb">生まれつきのあなた</span>が、同時に出ている場面です。')+'</p>':''):'');
- if(document.querySelector(".hero .karai.wait"))el.classList.add("wait");}
-
-/* ---- 生まれつきの力のバランス（生年月日ごとにちがう） ---- */
+/* ---- 気質の力のバランス（生年月日ごとにちがう） ---- */
 const POWN=[TR("伸びる力"),TR("燃える力"),TR("支える力"),TR("決める力"),TR("めぐる力")];
 const POWC=["--tf","--rose","--sn","--muted","--ei"];
 const POWTOP=[TR("新しいことを始めたり、伸ばしたりするのが得意。"),TR("気持ちを表に出し、場を明るくするのが得意。"),TR("どっしり構えて、人や物事を支えるのが得意。"),TR("決めたことを、最後までやり切るのが得意。"),TR("状況を読み、しなやかに流れを変えるのが得意。")];
@@ -587,4 +579,17 @@ function goHome(e){if(e)e.preventDefault();if(!$("quizCard").hidden)showQuiz(fal
  window.scrollTo({top:0,behavior:"smooth"});}
 ["logoHome","homeBtn","toTop","fabTop"].forEach(id=>{const el=$(id);if(el)el.addEventListener("click",goHome);});
 {const fab=$("fabTop");if(fab){const f=()=>{fab.hidden=window.scrollY<700;};window.addEventListener("scroll",f,{passive:true});f();}}
+
+/* 結果の並び：最初に「鑑定文・円の画像・シェア」、くわしい内容はたたんでおく */
+function layoutResult(){const hero=document.querySelector(".hero");if(!hero)return;
+ const mk=(id,title)=>{let d=$(id);if(!d){d=document.createElement("details");d.id=id;d.className="card more";d.innerHTML='<summary><h2>'+title+'</h2></summary><div class="mbody"></div>';}return d;};
+ const dK=mk("dKarte",TR("性格カルテ")),dH=mk("dHints",TR("悩みと仕事のヒント")),dP=mk("dPersona",TR("タイプごとのくわしい説明")),dB=mk("dBal",TR("気質の力のバランス"));
+ const body=d=>d.querySelector(".mbody");
+ if($("karteFig")&&$("karteFig").parentNode!==body(dK))body(dK).appendChild($("karteFig"));
+ if($("gapX")&&$("gapX").parentNode!==body(dH))body(dH).prepend($("gapX"));
+ if($("hints")&&$("hints").parentNode!==body(dH))body(dH).appendChild($("hints"));
+ if($("persona")&&$("persona").parentNode!==body(dP))body(dP).appendChild($("persona"));
+ if($("bal")&&$("bal").parentNode!==body(dB))body(dB).appendChild($("bal"));
+ let at=hero;[dK,dH,dP,dB,$("love"),$("partner")].forEach(el=>{if(el){at.after(el);at=el;}});
+ dB.hidden=!$("bal")||$("bal").hidden;}
 boot();
