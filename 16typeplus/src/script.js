@@ -335,7 +335,7 @@ async function drawCloud(){const me=window.__me,W=1080,H=1350,cv=document.create
  try{await Promise.all(["700 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"あア가A")));}catch(e){}
  const GC={NT:SC.jp,NF:SC.tf,SJ:SC.ei,SP:SC.sn},grp=t=>t[1]==="N"?"N"+t[2]:"S"+t[3];
  const one=me.born===me.now,cb=GC[grp(me.born)],cn=one?cb:(grp(me.born)===grp(me.now)?SC.ink:GC[grp(me.now)]);
- const words=t=>{const K=CW[t];if(K){const o=[];(K.sweet||[]).forEach((x,i)=>o.push([x,i<2?3:2]));(K.love||[]).forEach((x,i)=>o.push([x,i<1?2:1]));(K.mild||[]).forEach(x=>o.push([x,1]));(K.spicy||[]).forEach((x,i)=>o.push([x,i<1?2:1]));return o;}const P=PS[t]||{},out=[];(P.strengths||[]).forEach((x,i)=>out.push([x.split("｜")[0],i<2?3:2]));(D.ARUARU[t]||[]).forEach(x=>out.push([x,1]));(P.pitfalls||[]).forEach(x=>out.push([x.split("｜")[0],1]));return out;};
+ const words=t=>{const K=CW[t];if(K){const o=[];(K.sweet||[]).forEach((x,i)=>o.push([x,i<2?3:2]));(K.love||[]).forEach((x,i)=>o.push([x,i<2?2:1]));(K.mild||[]).forEach(x=>o.push([x,1]));(K.spicy||[]).forEach((x,i)=>o.push([x,i<1?2:1]));return o;}const P=PS[t]||{},out=[];(P.strengths||[]).forEach((x,i)=>out.push([x.split("｜")[0],i<2?3:2]));(D.ARUARU[t]||[]).forEach(x=>out.push([x,1]));(P.pitfalls||[]).forEach(x=>out.push([x.split("｜")[0],1]));return out;};
  c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);const cx=W/2,cy=H/2-10,placed=[[cx-220,cy-150,440,300]];
  c.textAlign="center";c.font="500 26px "+SANS;c.fillStyle=SC.muted;c.fillText(one?TR("気質も性格も"):TR("わたしの気質と性格"),cx,cy-90);
  c.font="700 52px "+SANS;c.fillStyle=SC.ink;c.fillText(one?me.now:me.born+" × "+me.now,cx,cy-22);
@@ -344,20 +344,22 @@ async function drawCloud(){const me=window.__me,W=1080,H=1350,cv=document.create
  c.textAlign="left";
  const hit=r=>placed.some(p=>r[0]<p[0]+p[2]&&r[0]+r[2]>p[0]&&r[1]<p[1]+p[3]&&r[1]+r[3]>p[1]);
  const all=[];if(one)words(me.now).forEach(([w,wt])=>all.push([w,wt,"now"]));else{const wb=words(me.born),wn=words(me.now);for(let i=0;i<Math.max(wb.length,wn.length);i++){if(wb[i])all.push([wb[i][0],wb[i][1],"born"]);if(wn[i])all.push([wn[i][0],wn[i][1],"now"]);}}all.sort((a,b)=>b[1]-a[1]);
- /* 気質と性格の言葉を、行ごとに交互に混ぜて並べる（大きい言葉ほど中央の近く） */
- const items=all.map(([w,wt,sd])=>{let fs={3:50,2:38,1:28}[wt];c.font="700 "+fs+"px "+SANS;let tw=c.measureText(w).width;while(tw>W-140&&fs>20){fs-=2;c.font="700 "+fs+"px "+SANS;tw=c.measureText(w).width;}return {w,fs,tw,sd};});
- const GAP=34,MAXW=W-90,rows=[];let cur=[],cw=0,lastSd=null;
- const pool=items.slice();
- while(pool.length){let k=pool.findIndex(it=>it.sd!==lastSd&&cw+(cur.length?GAP:0)+it.tw<=MAXW);if(k<0)k=pool.findIndex(it=>cw+(cur.length?GAP:0)+it.tw<=MAXW);
-  if(k<0||cur.length>=3){rows.push(cur);cur=[];cw=0;lastSd=rows[rows.length-1].length?rows[rows.length-1][0].sd:null;continue;}
-  const it=pool.splice(k,1)[0];cw+=(cur.length?GAP:0)+it.tw;cur.push(it);lastSd=it.sd;}
- if(cur.length)rows.push(cur);
- const rh=r=>Math.max(...r.map(x=>x.fs))*1.5;
- let up=cy-130,down=cy+135;c.textBaseline="middle";
- rows.forEach((r,i)=>{const h=rh(r),w=r.reduce((s,x)=>s+x.tw,0)+GAP*(r.length-1);let y;
-  if(i%2===0&&up-h>40){y=up-h/2;up-=h;}else if(down+h<H-80){y=down+h/2;down+=h;}else if(up-h>40){y=up-h/2;up-=h;}else return;
-  let x=cx-w/2;r.forEach(it=>{c.font="700 "+it.fs+"px "+SANS;let t=it.w,xx=x;if(t.startsWith("♡ ")){c.fillStyle=SC.rose;c.fillText("♡ ",xx,y);xx+=c.measureText("♡ ").width;t=t.slice(2);}c.fillStyle=it.sd==="born"?cb:cn;c.fillText(t,xx,y);x+=it.tw+GAP;});});
- c.textBaseline="alphabetic";
+ /* 気質と性格の言葉をランダムに混ぜ、画像いっぱいに敷きつめる */
+ let seed=[...(me.born+me.now)].reduce((h,ch)=>(h*31+ch.charCodeAt(0))>>>0,7);const rnd=()=>(seed=(seed*1103515245+12345)>>>0)/4294967296;
+ const sh=all.slice();for(let i=sh.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[sh[i],sh[j]]=[sh[j],sh[i]];}
+ const base={3:50,2:38,1:28},MAXW=W-80,TOP=40,UP_END=cy-125,DN_START=cy+120,BOT=H-80,AVAIL=(UP_END-TOP)+(BOT-DN_START);
+ const pack=sc=>{const its=sh.map(([w,wt,sd])=>{let fs=Math.round(base[wt]*sc);c.font="700 "+fs+"px "+SANS;let tw=c.measureText(w).width;while(tw>MAXW&&fs>16){fs-=2;c.font="700 "+fs+"px "+SANS;tw=c.measureText(w).width;}return {w,fs,tw,sd};});
+  const rows=[];let cur=[],cw=0,last=null;const pool=its.slice(),MG=24;
+  while(pool.length){let k=pool.findIndex(it=>it.sd!==last&&cw+(cur.length?MG:0)+it.tw<=MAXW);if(k<0)k=pool.findIndex(it=>cw+(cur.length?MG:0)+it.tw<=MAXW);
+   if(k<0){rows.push(cur);cur=[];cw=0;continue;}const it=pool.splice(k,1)[0];cw+=(cur.length?MG:0)+it.tw;cur.push(it);last=it.sd;}
+  if(cur.length)rows.push(cur);const hs=rows.map(r=>Math.max(...r.map(x=>x.fs))*1.32);return {rows,hs,tot:hs.reduce((p,q)=>p+q,0)};};
+ let lo=0.5,hi=2.2,best=pack(lo);for(let n=0;n<14;n++){const m=(lo+hi)/2,p=pack(m);if(p.tot<=AVAIL){best=p;lo=m;}else hi=m;}
+ /* 行を上下に振り分け、それぞれの範囲いっぱいに等間隔で置く */
+ const upR=[],dnR=[];let uh=0,dh=0;best.rows.forEach((r,i)=>{const h=best.hs[i];if(uh/(UP_END-TOP)<=dh/(BOT-DN_START)&&uh+h<=UP_END-TOP){upR.push([r,h]);uh+=h;}else if(dh+h<=BOT-DN_START){dnR.push([r,h]);dh+=h;}else if(uh+h<=UP_END-TOP){upR.push([r,h]);uh+=h;}});
+ const place=(list,y0,y1,used)=>{const extra=(y1-y0-used)/(list.length+1);let y=y0+extra;list.forEach(([r,h])=>{const tw=r.reduce((p,x)=>p+x.tw,0),free=MAXW-tw;
+   let x=r.length>1?40:cx-tw/2;const g=r.length>1?free/(r.length-1):0;const jit=r.length>1?0:(rnd()-.5)*Math.min(free*.6,160);x+=jit;
+   r.forEach(it=>{c.font="700 "+it.fs+"px "+SANS;c.fillStyle=it.sd==="born"?cb:cn;c.fillText(it.w,x,y+h/2+(rnd()-.5)*4);x+=it.tw+g;});y+=h+extra;});};
+ c.textBaseline="middle";place(upR,TOP,UP_END,uh);place(dnR,DN_START,BOT,dh);c.textBaseline="alphabetic";
  c.font="600 28px "+MONO;c.fillStyle=SC.ink;c.textAlign="center";c.fillText(SHARE_URL.replace("https://",""),W/2,H-40);c.textAlign="left";
  return cv;}
 $("shareBtn").onclick=shareResult;
