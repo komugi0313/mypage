@@ -453,7 +453,7 @@ const LVSCALE=SCALE;
 let lv={a:null,i:0};
 function lvInit(){if(typeof LV==="undefined"||!LV||!LV.questions)return;let el=$("love");
  if(!el){el=document.createElement("section");el.id="love";el.className="card love";$("persona").after(el);}
- el.innerHTML='<p class="eyebrow">'+TR("恋愛編")+'</p><h2 class="lvh">'+TR("恋になると、どっちのあなたが出てくる？")+'</h2>'
+ el.innerHTML='<p class="eyebrow">'+TR("恋愛編")+'</p><h2 class="lvh">'+TR("恋をすると、気質と性格のどちらが強く出る？")+'</h2>'
   +'<p class="hint lvlead">'+TR("恋愛の場面だけを聞く12問・約2分。気質と性格のうち、恋ではどちらが強く出るかがわかります。")+'</p>'
   +'<button class="btn primary" type="button" id="lvStart">'+TR("恋愛編を診断する")+'</button>'
   +'<div id="lvQ" class="lvq" hidden><div class="qtop"><span class="qcount" id="lvCount"></span><button type="button" class="qlink" id="lvBack">'+TR("← 戻る")+'</button></div><div class="qprog"><span id="lvProg"></span></div><h3 class="qtext" id="lvText"></h3><div class="qopts" id="lvOpts"></div></div>'
@@ -475,9 +475,9 @@ function lvHook(born,now,love){let nb=0,nn=0,lo=0;for(let i=0;i<4;i++){if(born[i
  if(lo&&born!==now)s+=TR("恋のときだけ出てくる顔もある。");
  return s.replace(/\{B\}/g,an(born)).replace(/\{N\}/g,an(now));}
 function lvShow(t){const me=window.__me,P=LV.types&&LV.types[t];if(!me)return;const el=$("lvRes");el.hidden=false;$("lvStart").hidden=true;
- const src=i=>{const b=me.born[i],n=me.now[i],l=t[i];return b===n?(l===b?'<span class="src same">'+TR("どちらも同じ")+'</span>':'<span class="src">'+TR("恋のときだけの顔")+'</span>'):(l===b?'<span class="src">'+TR("気質の自分")+'</span>':'<span class="src now">'+TR("性格の自分")+'</span>');};
+ const src=i=>{const b=me.born[i],n=me.now[i],l=t[i];return b===n?(l===b?'<span class="src same">'+TR("どちらも同じ")+'</span>':'<span class="src">'+TR("恋のときだけ")+'</span>'):(l===b?'<span class="src">'+TR("気質")+'</span>':'<span class="src now">'+TR("性格")+'</span>');};
  const names=[TR("エネルギー"),TR("ものの見方"),TR("判断のしかた"),TR("行動のしかた")];
- let h='<table class="who"><tr><th></th><th>'+TR("気質")+'</th><th>'+TR("性格")+'</th><th>'+TR("恋のとき")+'</th><th>'+TR("恋で出る自分")+'</th></tr>'
+ let h='<table class="who"><tr><th></th><th>'+TR("気質")+'</th><th>'+TR("性格")+'</th><th>'+TR("恋のとき")+'</th><th>'+TR("恋で強く出る方")+'</th></tr>'
   +AX.map((A,i)=>'<tr><td>'+names[i]+'</td><td class="l">'+me.born[i]+'</td><td class="l">'+me.now[i]+'</td><td class="l"><span class="lv">'+t[i]+'</span></td><td>'+src(i)+'</td></tr>').join("")+'</table>'
   +'<p class="hook">'+esc(lvHook(me.born,me.now,t))+'</p>';
  if(P){const nm=k=>LV.types[k]?LV.types[k].tag:k;
