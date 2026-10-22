@@ -22,6 +22,7 @@ node tools/release_gate/gate_pk.mjs pro offline     # PRO（電波が悪くて�
 node tools/release_gate/gate_pk.mjs pro nonet       # PRO（端末が圏外と判断している）
 node tools/release_gate/gate_pk.mjs beginner online # ビギナー（offline / nonet も同じ）
 node tools/release_gate/gate_eki.mjs online         # 易（offline / nonet も同じ）
+node tools/release_gate/gate_compat.mjs pro           # 相性の詳細鑑定（beginner も）：年の干支・2人の年齢・年なしの年齢・配偶宮の持ち主・判定にない星の話・答えの形
 ```
 
 最後の行が「→ 合格」なら合格です。1回の点検で文章作成を7回ほど使います（PRO・ビギナー）。ビギナーは、返ってきた文に専門用語が混じったときだけ1回書き直してもらうので、1つの相談で最大4回まで合格にしています。
