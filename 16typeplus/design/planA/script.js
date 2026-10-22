@@ -334,12 +334,12 @@ async function drawCloud(){const me=window.__me,W=1080,H=1350,cv=document.create
  try{await Promise.all(["700 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"あア가A")));}catch(e){}
  const GC={NT:SC.jp,NF:SC.tf,SJ:SC.ei,SP:SC.sn},grp=t=>t[1]==="N"?"N"+t[2]:"S"+t[3];
  const one=me.born===me.now,cb=GC[grp(me.born)],cn=one?cb:(grp(me.born)===grp(me.now)?SC.ink:GC[grp(me.now)]);
- const words=t=>{const P=PS[t]||{},out=[];(P.strengths||[]).forEach((x,i)=>out.push([x.split("｜")[0],i<2?3:2]));(D.ARUARU[t]||[]).forEach(x=>out.push([x,1]));(P.pitfalls||[]).forEach(x=>out.push([x.split("｜")[0],1]));return out;};
+ const words=t=>{const K=CW[t];if(K){const o=[];(K.sweet||[]).forEach((x,i)=>o.push([x,i<2?3:2]));(K.love||[]).forEach((x,i)=>o.push(["♡ "+x,i<1?2:1]));(K.mild||[]).forEach(x=>o.push([x,1]));(K.spicy||[]).forEach((x,i)=>o.push([x,i<1?2:1]));return o;}const P=PS[t]||{},out=[];(P.strengths||[]).forEach((x,i)=>out.push([x.split("｜")[0],i<2?3:2]));(D.ARUARU[t]||[]).forEach(x=>out.push([x,1]));(P.pitfalls||[]).forEach(x=>out.push([x.split("｜")[0],1]));return out;};
  c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);const cx=W/2,cy=H/2-10,placed=[[cx-220,cy-150,440,300]];
  c.textAlign="center";c.font="500 26px "+SANS;c.fillStyle=SC.muted;c.fillText(one?TR("気質も性格も"):TR("わたしの気質と性格"),cx,cy-90);
  c.font="700 52px "+SANS;c.fillStyle=SC.ink;c.fillText(one?me.now:me.born+" × "+me.now,cx,cy-22);
  c.font="700 26px "+SANS;if(one){c.fillStyle=cb;c.fillText(p16(me.now),cx,cy+40);}else{c.textAlign="right";c.fillStyle=cb;c.fillText(p16(me.born),cx-22,cy+40);c.textAlign="center";c.fillStyle=SC.muted;c.fillText("×",cx,cy+40);c.textAlign="left";c.fillStyle=cn;c.fillText(p16(me.now),cx+22,cy+40);c.textAlign="center";
-  c.font="500 22px "+SANS;c.fillStyle=cb;c.fillText("● "+TR("気質"),cx-90,cy+95);c.fillStyle=cn;c.fillText("● "+TR("性格"),cx+90,cy+95);}
+  c.font="500 22px "+SANS;c.fillStyle=cb;c.fillText("● "+TR("気質"),cx-140,cy+95);c.fillStyle=cn;c.fillText("● "+TR("性格"),cx,cy+95);c.fillStyle=SC.rose;c.fillText("♡ "+TR("恋愛"),cx+140,cy+95);}
  c.textAlign="left";
  const hit=r=>placed.some(p=>r[0]<p[0]+p[2]&&r[0]+r[2]>p[0]&&r[1]<p[1]+p[3]&&r[1]+r[3]>p[1]);
  const all=[];if(one)words(me.now).forEach(([w,wt])=>all.push([w,wt,"now"]));else{const wb=words(me.born),wn=words(me.now);for(let i=0;i<Math.max(wb.length,wn.length);i++){if(wb[i])all.push([wb[i][0],wb[i][1],"born"]);if(wn[i])all.push([wn[i][0],wn[i][1],"now"]);}}all.sort((a,b)=>b[1]-a[1]);
@@ -355,7 +355,7 @@ async function drawCloud(){const me=window.__me,W=1080,H=1350,cv=document.create
  let up=cy-130,down=cy+135;c.textBaseline="middle";
  rows.forEach((r,i)=>{const h=rh(r),w=r.reduce((s,x)=>s+x.tw,0)+GAP*(r.length-1);let y;
   if(i%2===0&&up-h>40){y=up-h/2;up-=h;}else if(down+h<H-80){y=down+h/2;down+=h;}else if(up-h>40){y=up-h/2;up-=h;}else return;
-  let x=cx-w/2;r.forEach(it=>{c.font="700 "+it.fs+"px "+SANS;c.fillStyle=it.sd==="born"?cb:cn;c.fillText(it.w,x,y);x+=it.tw+GAP;});});
+  let x=cx-w/2;r.forEach(it=>{c.font="700 "+it.fs+"px "+SANS;let t=it.w,xx=x;if(t.startsWith("♡ ")){c.fillStyle=SC.rose;c.fillText("♡ ",xx,y);xx+=c.measureText("♡ ").width;t=t.slice(2);}c.fillStyle=it.sd==="born"?cb:cn;c.fillText(t,xx,y);x+=it.tw+GAP;});});
  c.textBaseline="alphabetic";
  c.font="600 28px "+MONO;c.fillStyle=SC.ink;c.textAlign="center";c.fillText(SHARE_URL.replace("https://",""),W/2,H-40);c.textAlign="left";
  return cv;}
