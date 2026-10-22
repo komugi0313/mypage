@@ -325,7 +325,7 @@ function showShareBox(cvs){let box=$("shareBox");
  if(!box){box=document.createElement("div");box.id="shareBox";box.className="sharebox";box.setAttribute("role","dialog");box.setAttribute("aria-modal","true");document.body.appendChild(box);
   box.addEventListener("click",e=>{if(e.target===box)box.hidden=true;});}
  const msg=shareText()+"\n"+SHARE_URL,tw="https://twitter.com/intent/tweet?text="+encodeURIComponent(shareText())+"&url="+encodeURIComponent(SHARE_URL),ln="https://line.me/R/msg/text/?"+encodeURIComponent(msg);
- box.innerHTML='<div class="sbin"><div class="sbline"><button type="button" class="btn sbl" id="sbLine"><span class="lg">LINE</span>'+TR("LINEで送る")+'</button><p class="fine">'+TR("画像を保存してから、LINEのトークで写真として送ると、結果がそのまま届きます。")+'</p></div>'
+ box.innerHTML='<div class="sbin"><div class="sbline"><button type="button" class="btn primary sbl" id="sbLine">'+TR("画像を共有する")+'</button><p class="fine">'+TR("LINEやインスタなど、ふだん使っているアプリで送れます。画像を保存してから送ることもできます。")+'</p></div>'
   +cvs.map((_,i)=>'<figure class="sbf"><img alt="'+esc(TR("シェア用の画像"))+'"><a class="btn sv" download="16typeplus-'+(i+1)+'.png">'+TR("この画像を保存")+'</a></figure>').join("")
   +'<p class="fine">'+TR("画像を長押し（パソコンは右クリック）でも保存できます。")+'</p><div class="sbacts"><a class="btn tw" target="_blank" rel="noopener">'+TR("Xでシェア")+'</a></div><button type="button" class="qlink">'+TR("閉じる")+'</button></div>';
  const imgs=box.querySelectorAll("img"),svs=box.querySelectorAll(".sv");cvs.forEach((cv,i)=>{const u=cv.toDataURL("image/png");imgs[i].src=u;svs[i].href=u;});
@@ -333,7 +333,7 @@ function showShareBox(cvs){let box=$("shareBox");
  /* LINE：画像ごと送れる端末は共有メニュー（LINEを選ぶ）、できなければLINEのトーク画面を開く */
  $("sbLine").onclick=async()=>{try{const blobs=await Promise.all(cvs.map(cv=>new Promise(r=>cv.toBlob(r,"image/png"))));const files=blobs.map((bl,i)=>new File([bl],"16typeplus-"+(i+1)+".png",{type:"image/png"}));
    if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files,text:msg});return;}}catch(e){if(e&&e.name==="AbortError")return;}
-  window.open(ln,"_blank","noopener");};
+  if(LANG==="ja")window.open(ln,"_blank","noopener");else{const f=box.querySelector(".sbf");if(f)f.scrollIntoView({behavior:"smooth"});}};
  /* プレビュー（claude.ai）では、保存は見る人の確認を通して行う */
  if(window.claude&&claude.use)claude.use("downloads").then(dl=>{if(!dl)return;svs.forEach((a,i)=>a.onclick=e=>{e.preventDefault();cvs[i].toBlob(bl=>{dl.save({filename:"16typeplus-"+(i+1)+".png",data:bl}).catch(()=>{});},"image/png");});}).catch(()=>{});}
 /* 2人のキーワード画像：生まれつき（左）と今（右）の言葉を、それぞれの色で並べる */
