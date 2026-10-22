@@ -441,44 +441,44 @@ const LVSCALE=SCALE;
 let lv={a:null,i:0};
 function lvInit(){if(typeof LV==="undefined"||!LV||!LV.questions)return;let el=$("love");
  if(!el){el=document.createElement("section");el.id="love";el.className="card love";$("persona").after(el);}
- el.innerHTML='<p class="eyebrow">'+TR("恋愛編")+'</p><h2 class="lvh">'+TR("恋をすると、気質と性格のどちらが強く出る？")+'</h2>'
-  +'<p class="hint lvlead">'+TR("恋愛の場面だけを聞く12問・約2分。気質と性格のうち、恋ではどちらが強く出るかがわかります。")+'</p>'
+ el.innerHTML='<p class="eyebrow">'+TR("恋愛編")+'</p><h2 class="lvh">'+TR("恋をすると、あなたの中のどちらが強く出る？")+'</h2>'
+  +'<p class="hint lvlead">'+TR("恋愛の場面だけを聞く12問・約2分。気質と性格がちがう文字について、恋ではどちらが強く出るかがわかります。")+'</p>'
   +'<button class="btn primary" type="button" id="lvStart">'+TR("恋愛編を診断する")+'</button>'
   +'<div id="lvQ" class="lvq" hidden><div class="qtop"><span class="qcount" id="lvCount"></span><button type="button" class="qlink" id="lvBack">'+TR("← 戻る")+'</button></div><div class="qprog"><span id="lvProg"></span></div><h3 class="qtext" id="lvText"></h3><div class="qopts" id="lvOpts"></div></div>'
   +'<div id="lvRes" hidden></div>';
  $("lvStart").onclick=()=>{lv={a:new Array(LV.questions.length).fill(null),i:0};$("lvStart").hidden=true;$("lvRes").hidden=true;$("lvQ").hidden=false;lvDraw();$("love").scrollIntoView({behavior:"smooth",block:"start"});};
  $("lvBack").onclick=()=>{if(lv.i>0){lv.i--;lvDraw();}else{$("lvQ").hidden=true;$("lvStart").hidden=false;}};
- if(st.love&&st.love.t)lvShow(st.love.t);}
+ const me=window.__me;if(me&&me.born===me.now){$("lvStart").hidden=true;el.querySelector(".lvlead").textContent=TR("気質と性格が同じなので、質問なしで恋のときのあなたがわかります。");lvShow(me.now);}
+ else if(st.love&&st.love.t&&[...st.love.t].every((l,i)=>l===me.born[i]||l===me.now[i]))lvShow(st.love.t);}
 function lvDraw(){const Q=LV.questions,q=Q[lv.i],A=AX[AXN[q.ax]];$("lvCount").textContent=(lv.i+1)+" / "+Q.length;$("lvProg").style.width=(lv.i/Q.length*100)+"%";
  $("lvText").textContent=q.q;const o=$("lvOpts");o.innerHTML="";
  LVSCALE.forEach(([t,v,sz])=>{const bt=document.createElement("button");bt.type="button";bt.style.setProperty("--qc","var(--rose)");bt.innerHTML='<i style="width:'+sz+'px;height:'+sz+'px"></i>'+t;bt.setAttribute("aria-pressed",lv.a[lv.i]===v);
   bt.onclick=()=>{lv.a[lv.i]=v;bt.setAttribute("aria-pressed","true");setTimeout(()=>{lv.i++;if(lv.i>=Q.length)lvFinish();else lvDraw();},180);};o.appendChild(bt);});}
 function lvFinish(){const me=window.__me,sc={EI:0,SN:0,TF:0,JP:0};
  LV.questions.forEach((q,i)=>{const A=AX[AXN[q.ax]],v=(lv.a[i]==null?2.5:lv.a[i])-2.5;sc[q.ax]+=q.p===A.a?v:-v;});
- const t=AX.map((A,i)=>sc[A.k]>0?A.a:sc[A.k]<0?A.b:me.now[i]).join("");
+ /* 気質と性格が同じ文字はそのまま。ちがう文字だけ、答えが寄った方を選ぶ（3つ目のタイプは作らない） */
+ const t=AX.map((A,i)=>me.born[i]===me.now[i]?me.now[i]:(sc[A.k]>0?A.a:sc[A.k]<0?A.b:me.now[i])).join("");
  st.love={t,a:lv.a};saveResult();$("lvQ").hidden=true;lvShow(t);$("love").scrollIntoView({behavior:"smooth",block:"start"});}
-function lvHook(born,now,love){let nb=0,nn=0,lo=0;for(let i=0;i<4;i++){if(born[i]!==now[i]){if(love[i]===born[i])nb++;else nn++;}else if(love[i]!==born[i])lo++;}
- let s=born===now?(lo?TR("恋になると、いつもの{N}とは少しちがう顔になる。"):TR("恋のときも、いつもの{N}のまま。"))
-  :nb&&!nn?TR("ふだんは性格の{N}が前に出る。でも恋になると、気質の{B}が顔を出す。"):nn&&!nb?TR("恋のときも、性格の{N}が前に出る。気質の{B}は、心の奥で支えている。"):TR("恋になると、{B}と{N}の両方が顔を出す。");
- if(lo&&born!==now)s+=TR("恋のときだけ出てくる顔もある。");
+function lvHook(born,now,love){let nb=0,nn=0;for(let i=0;i<4;i++){if(born[i]!==now[i]){if(love[i]===born[i])nb++;else nn++;}}
+ const s=born===now?TR("気質も性格も同じ。恋をしても、ぶれずにそのままのあなたが出る。")
+  :nb&&!nn?TR("ふだんは性格の{N}が前に出る。でも恋をすると、気質の{B}が強く出る。")
+  :nn&&!nb?TR("恋をしても、性格の{N}がそのまま前に出る。気質の{B}は、心の奥で支えている。")
+  :TR("恋をすると、気質の{B}と性格の{N}が混ざって出てくる。");
  return s.replace(/\{B\}/g,an(born)).replace(/\{N\}/g,an(now));}
-function lvShow(t){const me=window.__me,P=LV.types&&LV.types[t];if(!me)return;const el=$("lvRes");el.hidden=false;$("lvStart").hidden=true;
- const src=i=>{const b=me.born[i],n=me.now[i],l=t[i];return b===n?(l===b?'<span class="src same">'+TR("どちらも同じ")+'</span>':'<span class="src">'+TR("恋のときだけ")+'</span>'):(l===b?'<span class="src">'+TR("気質")+'</span>':'<span class="src now">'+TR("性格")+'</span>');};
- const names=[TR("エネルギー"),TR("ものの見方"),TR("判断のしかた"),TR("行動のしかた")];
- let h='<table class="who"><tr><th></th><th>'+TR("気質")+'</th><th>'+TR("性格")+'</th><th>'+TR("恋のとき")+'</th><th>'+TR("恋で強く出る方")+'</th></tr>'
-  +AX.map((A,i)=>'<tr><td>'+names[i]+'</td><td class="l">'+me.born[i]+'</td><td class="l">'+me.now[i]+'</td><td class="l"><span class="lv">'+t[i]+'</span></td><td>'+src(i)+'</td></tr>').join("")+'</table>'
+function lvShow(t){const me=window.__me,P=LV.types&&LV.types[t];if(!me)return;const el=$("lvRes");el.hidden=false;$("lvStart").hidden=true;$("lvQ").hidden=true;
+ const one=me.born===me.now;
+ const lab=i=>me.born[i]===me.now[i]?'<em class="core">'+TR("芯")+'</em>':(t[i]===me.born[i]?'<em class="b">'+TR("気質")+'</em>':'<em class="n">'+TR("性格")+'</em>');
+ let h='<p class="lvlab">'+TR("恋をしたときのあなた")+'</p><div class="lvtiles">'+t.split("").map((l,i)=>'<div class="lt'+(me.born[i]!==me.now[i]&&l===me.born[i]?' isb':'')+'"><b>'+l+'</b>'+lab(i)+'</div>').join("")+'</div>'
   +'<p class="hook">'+esc(lvHook(me.born,me.now,t))+'</p>';
  if(P){const nm=k=>LV.types[k]?LV.types[k].tag:k;
-  h+='<div class="lvp"><p class="lvcode">'+TR("恋愛")+' '+esc(an(t))+'</p><p class="lvname">'+esc(P.tag)+'</p>'
-  +'<p class="one"><small>'+TR("一言で言うと…")+'</small>'+TR("「")+esc(P.one)+TR("」")+'</p><p class="desc">'+esc(P.desc)+'</p>'
-  +'<div class="two"><div class="g"><h3>'+TR("恋で光るところ")+'</h3><ul>'+P.good.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div><div class="c"><h3>'+TR("気をつけたいところ")+'</h3><ul>'+P.care.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div></div>'
-  +'<p class="key"><b>'+TR("うまくいくコツ")+'</b>'+esc(P.tip)+'</p>'
-  +'<div class="cpl"><div class="o"><em>'+TR("相性◎")+'</em><b>'+esc(nm(P.best[0]))+'</b><small>'+TR("恋愛")+' '+esc(an(P.best[0]))+'</small>'+esc(P.best[1])+'</div><div class="x"><em>'+TR("相性×")+'</em><b>'+esc(nm(P.hard[0]))+'</b><small>'+TR("恋愛")+' '+esc(an(P.hard[0]))+'</small>'+esc(P.hard[1])+'</div></div></div>'
+  h+='<div class="lvp"><p class="lvname">'+esc(P.tag)+'</p><p class="one">'+TR("「")+esc(P.one)+TR("」")+'</p><p class="desc">'+esc(P.desc)+'</p>'
+  +'<details class="pmore"><summary>'+TR("恋で光るところ・気をつけたいところ")+'</summary><div class="two"><div class="g"><h3>'+TR("恋で光るところ")+'</h3><ul>'+P.good.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div><div class="c"><h3>'+TR("気をつけたいところ")+'</h3><ul>'+P.care.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div></div><p class="key"><b>'+TR("うまくいくコツ")+'</b>'+esc(P.tip)+'</p></details>'
+  +'<details class="pmore"><summary>'+TR("恋の相性")+'</summary><div class="cpl"><div class="o"><em>'+TR("相性◎")+'</em><b>'+esc(nm(P.best[0]))+'</b>'+esc(P.best[1])+'</div><div class="x"><em>'+TR("相性×")+'</em><b>'+esc(nm(P.hard[0]))+'</b>'+esc(P.hard[1])+'</div></div></details></div>'
   +'<button class="btn primary" type="button" id="lvShare">'+TR("恋愛編の結果を画像でシェア")+'</button>';}
- h+='<button class="qlink" type="button" id="lvRedo">'+TR("恋愛編に答え直す")+'</button>';
+ if(!one)h+='<button class="qlink" type="button" id="lvRedo">'+TR("恋愛編に答え直す")+'</button>';
  el.innerHTML=h;
  if($("lvShare"))$("lvShare").onclick=()=>lvShareRun(t);
- $("lvRedo").onclick=()=>{el.hidden=true;$("lvStart").hidden=false;$("lvStart").click();};}
+ if($("lvRedo"))$("lvRedo").onclick=()=>{el.hidden=true;$("lvStart").hidden=false;$("lvStart").click();};}
 async function lvShareRun(t){const b=$("lvShare"),lbl=b.textContent;b.disabled=true;b.textContent=TR("画像をつくっています…");
  try{const P=LV.types[t],cvs=[await lvCloud(P),await lvSheet(P)];const blobs=await Promise.all(cvs.map(cv=>new Promise(r=>cv.toBlob(r,"image/png"))));
   const files=blobs.map((bl,i)=>new File([bl],"16typeplus-love-"+(i+1)+".png",{type:"image/png"}));
@@ -497,7 +497,7 @@ async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=doc
  /* 恋の4文字と、それぞれが気質・性格のどちらから来たか */
  const tw=170,gap=26,x0=(W-(tw*4+gap*3))/2,ty=270;
  for(let i=0;i<4;i++){const x=x0+i*(tw+gap),l=t[i],b=me?me.born[i]:l,n=me?me.now[i]:l;
-  const src=b===n?(l===b?TR("どちらも"):TR("恋だけ")):(l===b?TR("気質"):TR("性格"));
+  const src=b===n?TR("芯"):(l===b?TR("気質"):TR("性格"));
   c.fillStyle=l===b&&b!==n?LVC.roseT:"#F3F5F8";rrect(c,x,ty,tw,tw,22);c.fill();
   c.font="600 96px "+MONO;c.fillStyle=LVC.ink;c.fillText(l,x+tw/2,ty+tw/2+34);
   c.font="700 24px "+SANS;c.fillStyle=src===TR("性格")?LVC.ink:LVC.rose;c.fillText(src,x+tw/2,ty+tw+38);}
