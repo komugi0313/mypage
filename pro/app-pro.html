@@ -6489,6 +6489,16 @@ function localAnswer(c,worry){
     L.push(`- 足りない**${weakEl}**を補う：${ELEMENT_TIP[weakEl]}。`);
     L.push('もっと詳しく全体を知りたいときは、上の「命式全体の鑑定文を作る」もお試しください。');
   }
+  // 「いつ」を聞かれたら、1行目で時期の目安をツールが計算して答える（前置きから始めない。発注者指示 2026-10-22）
+  if(wantsWhen&&c.now){ try{
+    const _w=String(worry), loveQ=topic==='love'||/彼|彼女|恋|結婚|連絡|復縁|片思い|告白|出会い|交際|付き合/.test(_w);
+    let ys=[];
+    if(loveQ){ const sp=spouseStars(c); (c.annualFortunes||[]).filter(a=>a.year>=c.now.year&&a.year<=c.now.year+8).forEach(a=>{ const st=[...matchKichi1(c,a.branch),...matchKichi4(c,a.branch),...matchKichi(kichiTargets(c),a.stem,a.branch,ZOUKAN[a.branch]||[])]; if(sp.includes(a.tenStar)||['咸池','紅艶','天乙貴人'].some(x=>st.includes(x))) ys.push(a.year); }); }
+    if(!ys.length) ys=goodYearsAhead(c,3);
+    ys=ys.slice(0,3);
+    if(ys.length){ const by=(c.birth&&c.birth.clock)?parseInt(String(c.birth.clock).slice(0,4),10)||0:0, yl=ys.map(y=>y+'年'+(by?'（'+(y-by)+'歳）':'')).join('・');
+      L[0]='時期の目安は'+yl+'ごろです。'+(loveQ?'縁や出会いの星が巡って、気持ちや関係が動きやすい年です。':'運の流れが良く、動きやすい年です。');
+    } }catch(e){} }
   return L.join('\n');
 }
 /* 鑑定の上に「オンライン／オフライン（端末内）」をピンク文字で表示 */
@@ -6592,12 +6602,28 @@ const DETAIL_ONLY_RULE='\n【今回書くのは、くわしい読み解きだけ
 const NO_AI_RULE='\n【言葉の決まり】「AI」「人工知能」という言葉は使わない。自分が何者か（AIである等）の説明や断り書きも書かない。鑑定者として自然に書く。';
 function pkFixAge(s,by,other){ try{ s=String(s==null?'':s).replace(/(\d{1,3})(?:歳|才)\s*(?:改め|ではなく)\s*(\d{1,3})(?:歳|才)/g,'$2歳');   // 「41歳改め42歳」のような言い直しは1つに（そのあと生年月日で計算し直す。発注者指示 2026-10-21）
    // 西暦と年齢が並んだところ（2029年（31歳）・2029年の31歳・31歳（2029年））を、生年月日から計算し直す。ジェミニの年齢の計算ちがいを画面に出さない（発注者指示 2026-10-20）
-  s=String(s==null?'':s); by=+by||0; other=+other||0; if(!by) return s;
+  s=String(s==null?'':s); by=+by||0; other=+other||0;
+  { var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', gzOf=function(y){ var i=((y-4)%60+60)%60; return G.charAt(i%10)+Z.charAt(i%12); }, NY=new Date().getFullYear();
+    // 暦のずれを直す（発注者指示 2026-10-22：暦をまちがえると全部の鑑定が狂う）
+    // ① 年の干支：「2029年（庚戌）」「2029年の庚戌」「2029年・庚戌年」のように西暦と干支が合わないときは、正しい干支に（読み仮名は後で表どおりに直す）
+    s=s.replace(/((?:19|20)\d\d)年([（(]|の|は|：|:)?([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])/g,function(m,y,sp,g,off,str){ var ok=gzOf(+y); if(g===ok) return m; var after=String(str).slice(off+m.length,off+m.length+6); if(/^(年?[（(][^）)]*[）)])?(の|・)?(大運|月|日|時)/.test(after)||/^[^\n。]{0,3}(大運|月柱|日柱|時柱)/.test(after)) return m; return y+'年'+(sp||'')+ok; });   // 大運・月・日の干支のことがあるので、あとに「大運」「月」などが続くときは触らない
+    s=s.replace(/([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])年?([（(])((?:19|20)\d\d)年?([）)])/g,function(m,g,p1,y,p2){ var ok=gzOf(+y); return g===ok?m:m.replace(g,ok); });
+    // ② 今年・来年・再来年・昨年と西暦が合わないときは、今日の日付に合わせる
+    var REL={'今年':0,'本年':0,'来年':1,'翌年':null,'再来年':2,'昨年':-1,'去年':-1,'一昨年':-2};
+    s=s.replace(/(再来年|一昨年|今年|本年|来年|昨年|去年)([（(]|の)((?:19|20)\d\d)(年?)/g,function(m,w,sp,y,nen){ var d=REL[w]; if(d==null) return m; var ok=NY+d; return (+y===ok)?m:w+sp+ok+nen; });
+    s=s.replace(/((?:19|20)\d\d)年([（(])(再来年|一昨年|今年|本年|来年|昨年|去年)([）)])/g,function(m,y,p1,w,p2){ var d=REL[w]; if(d==null) return m; var ok=NY+d; return (+y===ok)?m:ok+'年'+p1+w+p2; });
+    try{ if(typeof window!=='undefined'&&window.pkFixYomi) s=window.pkFixYomi(s); }catch(_e){}
+  }
+  if(!by) return s;
+  // ③ 年齢の書き方を増やす：「21歳になる2029年」「2029年に21歳」「2029年には21歳」
+  s=s.replace(/(\d{1,3})(歳|才)(になる|を迎える|となる)((?:19|20)\d\d)年/g,function(m,a,u,v,y){ if(other&&(+a===+y-other||+a===+y-other-1)) return m; var e=+y-by; if(e<0||e>130||+a===e) return m; return e+u+v+y+'年'; });
+  s=s.replace(/((?:19|20)\d\d)年(に|には|で)(\d{1,3})(歳|才)(?=[になをでのとへ、。）)]|$)/g,function(m,y,p,a,u){ if(other&&(+a===+y-other||+a===+y-other-1)) return m; var e=+y-by; if(e<0||e>130||+a===e) return m; return y+'年'+p+e+u; });
   s=s.replace(/([：:・、（(])歳(?=[・、）)])/g,'$1').replace(/：・/g,'：').replace(/（・/g,'（');   // 数字の抜けた「歳」（己酉：歳・21歳）は外す（発注者指示 2026-10-22）
   s=s.replace(/(^|[^0-9０-９])([0-9]{2})年([（(]\s*)(\d{1,3})(歳)/g,function(m,p0,yy,op,a,u){ var y=2000+(+yy); return (y-by===+a||(other&&y-other===+a))?p0+y+'年'+op+a+u:m; });   // 「29年（21歳）」のように2けたの西暦は、年齢が合えば2029年に（発注者指示 2026-10-22）
   var fix=function(y,a,keep){ y=+y; a=+a; var e=y-by; if(e<0||e>130) return keep; if(a===e) return keep; if(other) return keep; return null; };   // その年の誕生日の前後で1つちがうのはそのまま。2人分の文（相性）で、どちらにも合わないときは決めつけない
-  s=s.replace(/((?:19|20)\d\d)年([（(][甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥年・、\s]{0,8}|の|は|、|・|頃の|ごろの|[ 　])?(\d{1,3})(歳|才)/g,function(m,y,mid,a,u,off,str){ if(/^[）)]?(の|になる|を迎える)?(お子|子ども|子供|娘|息子|お孫|孫|お母|お父|母|父|ご主人|奥様|夫|妻|彼|相手|兄|姉|弟|妹|ご両親|親)/.test(String(str).slice(off+m.length,off+m.length+10))) return m; if(other&&(+a===+y-other||+a===+y-other-1)) return m; var k=fix(y,a,m); return k!==null?k:(y+'年'+(mid||'')+(+y-by)+u); });
+  s=s.replace(/((?:19|20)\d\d)年([（(][甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥年・、：:\s]{0,8}|の|は|、|・|頃の|ごろの|[ 　])?(\d{1,3})(歳|才)/g,function(m,y,mid,a,u,off,str){ if(/^[）)]?(の|になる|を迎える)?(お子|子ども|子供|娘|息子|お孫|孫|お母|お父|母|父|ご主人|奥様|夫|妻|彼|相手|兄|姉|弟|妹|ご両親|親)/.test(String(str).slice(off+m.length,off+m.length+10))) return m; if(other&&(+a===+y-other||+a===+y-other-1)) return m; var k=fix(y,a,m); return k!==null?k:(y+'年'+(mid||'')+(+y-by)+u); });
   s=s.replace(/(\d{1,3})(歳|才)([（(])((?:19|20)\d\d)年([）)])/g,function(m,a,u,p1,y,p2){ if(other&&(+a===+y-other||+a===+y-other-1)) return m; var k=fix(y,a,m); return k!==null?k:((+y-by)+u+p1+y+'年'+p2); });
+  s=s.replace(/(\d{1,3}(?:歳|才))[・、]\1/g,'$1');   // 直したあとに同じ年齢が2つ並んだら1つに
   return s; }catch(e){ return s; } }
 function pkYearPick(q){ try{   // 年を比べる相談（今年と来年のどちら等）は、ツールが年ごとの判定で先に結論を決める（毎回ぶれない。発注者指示 2026-10-21）
   var c=(typeof chart!=='undefined')?chart:null; if(!c||!c.now||!c.dayMaster||!c.annualFortunes) return '';
@@ -6628,6 +6654,17 @@ function pkLifeGuide(q){ try{   // 暮らしに寄り添う答え方の決まり
     _q=_q, _hit=_nd.filter(function(x){ if(!x[0].test(_q)) return false; if(/医療機関/.test(x[1])&&(_pet||_other)) return false; if(/ケアマネ/.test(x[1])&&_work) return false; if(/SOSダイヤル/.test(x[1])&&/職場|会社|上司|同僚|部下|バイト|パート先|ママ友|ご近所|近所/.test(_q)&&!/学校|クラス|担任|子ども|子供|息子|娘|生徒/.test(_q)) return false; return true; }).map(function(x){ return x[1]; });   // ペット・ほかの人の体調・介護の仕事の話には、本人向けの相談先を入れない
     if(_pet) _hit.push('かかりつけの動物病院'); if(_hit.length) s+='・このご相談では、最後に「'+_hit.join('」「')+'」への相談を一言、必ず添える（ほかの相談先は書かない）。\n'; else s+='・このご相談には、医療機関・ケアマネジャー・地域包括支援センター・法テラスなどの相談先を書かない（相談の中身と関係のない相談先は入れない）。\n';
         return s+'・言い切らない：「必ず」「確実に」「絶対に」「間違いなく」「十分に可能」「〜できます（と断定する言い方）」は使わない。「〜しやすい流れ」「〜の目安」のように書く。\n・相談先（医療機関・窓口・専門家）は、上で指定されたものだけを書く。指定がないのに相談先を足さない。\n・お金・収入・「稼げるか」の相談では、金額や「稼げます」「収入が上がります」と約束しない。努力の向け方と流れの目安として書く。\n・法律が関わること（認知・離婚の条件・親権・養育費・相続・裁判）は、法律の結論や「〜するのが賢明」と決めない。気持ちの整理と時期の目安を書き、手続きは弁護士に相談するよう添える。\n・家族の宗教・信仰の相談では、信仰そのものも相談者も責めない。相談者の気持ちに寄り添い、話し方と距離のとり方を書く。\n・不倫・浮気している相手との関係（不倫相手との結婚など）は、その関係を後押ししない。相談者自身が幸せになれる選び方を書く。\n・同性のパートナーの相談では「妻・夫・配偶者星（妻を表す星）」などと性別を決めつけず「パートナー」と書く。\n・亡くなった方の気持ちを事実のように言い切らない。相談者が書いていない事情（突然だった等）を足さない。\n・お腹の赤ちゃんの性別・病気が治るか・寿命・宝くじや株の当たりは、当てたり予想したりしない。\n・人生の大きな決断（仕事を辞める・独立・治療を続けるか・住まいを変える・離婚など）は、どちらか一方に押さない。選ぶときの目安と、いまから1年ほどの動き方を中心に書く。5年以上先まで決めるのを待たせない。健康・安全・高齢の暮らしに関わることは先送りをすすめない。治療の進め方（続ける・やめる・ペースを落とす）は指示せず、主治医と相談しながら決めるよう添える。\n・年代に合わせる：未成年には大人向けの話（投資・お酒・恋愛のかけひきなど）をせず、本人を責める言い方（調子に乗る・反省する・わがまま等）をしない。高齢の方には仕事の話ではなく、暮らし・健康・家族・楽しみ・生きがいの言葉で書く。\n・お客様のご家族は敬って呼ぶ（奥様・ご主人・お母さま・息子さんなど）。\n・死別や一人暮らしの相談では、お悔やみをていねいに述べ、ひとりでこもることはすすめない（無理のない範囲での人とのつながりをすすめる）。\n・同じ時期について「挑戦を」と「控えて」を同時に書かない。説明のカッコを二重にしない。見出しは1行で書き切り、途中で改行しない。'; }catch(e){ return ''; } }
+/* 端末の時計の確かめ：文章作成のサーバーの返事に付く正しい日時と、端末の日付を比べる。1日半以上ずれていたら知らせる
+   （今日の日付は端末の時計から取るので、ずれていると年齢・今年・来年が全部ずれる。発注者指示 2026-10-22） */
+function pkClockCheck(res){ try{
+  if(window.__pkClockWarned) return; var h=res&&res.headers&&res.headers.get&&res.headers.get('date'); if(!h) return;
+  var sv=Date.parse(h); if(!sv) return; var diff=Date.now()-sv; if(Math.abs(diff)<36*3600*1000) return;
+  window.__pkClockWarned=true; var f=function(d){ return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'; };
+  var b=document.createElement('div'); b.id='pk-clock-warn'; b.setAttribute('role','alert');
+  b.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:99999;background:#9A1F17;color:#fff;border-radius:12px;padding:12px 14px;font-weight:800;font-size:14px;line-height:1.7;box-shadow:0 8px 24px rgba(0,0,0,.25)';
+  b.innerHTML='⚠ この端末の日付がずれています（端末：'+f(new Date())+'／正しい日付：'+f(new Date(sv))+'）。<br>年齢や「今年・来年」がずれてしまうので、端末の日付と時刻を正しく直してから、もう一度鑑定してください。<button type="button" style="display:block;margin-top:8px;background:#fff;color:#9A1F17;border:0;border-radius:8px;padding:6px 14px;font-weight:900;font-family:inherit">閉じる</button>';
+  b.querySelector('button').onclick=function(){ b.remove(); }; document.body.appendChild(b);
+}catch(e){} }
 async function generateReading(user,localText,system,deep){
   // 〔PART:answer〕＝冒頭の答えだけ（短いので数秒で届く）／〔PART:detail〕＝くわしい読み解きだけ。印がなければ従来どおり全部
   let _part=''; user=String(user).replace(/〔PART:(answer|detail)〕\n?/,function(_m,k){ _part=k; return ''; });
@@ -6662,7 +6699,7 @@ async function generateReading(user,localText,system,deep){
   const _limit=_part==='answer'?20000:35000;
   const _fetchT=(u,o)=>{ try{ const ac=new AbortController(); const tid=setTimeout(()=>{ _timedOut=true; ac.abort(); },_limit);
       const h={abort:()=>{ _timedOut=true; _skipped=true; ac.abort(); }}; (window.__pkLive=window.__pkLive||new Set()).add(h);
-      _cur={tid:tid,h:h}; return fetch(u,Object.assign({},o,{signal:ac.signal}));   /* 本文の受信中に止まった場合も打ち切る */ }catch(e){ return fetch(u,o); } };
+      _cur={tid:tid,h:h}; return fetch(u,Object.assign({},o,{signal:ac.signal})).then(function(r){ pkClockCheck(r); return r; });   /* 本文の受信中に止まった場合も打ち切る */ }catch(e){ return fetch(u,o); } };
   let _cur=null;
   async function callOnce(){ try{ return await callOnce0(); } finally{ if(_cur){ clearTimeout(_cur.tid); try{ window.__pkLive.delete(_cur.h); }catch(_e){} _cur=null; } } }
   async function callOnce0(){
@@ -6712,6 +6749,7 @@ function pkFixWhen(t,q){ try{   // 「いつ」を聞かれたのに1行目に�
   return L.join('\n'); }catch(e){ return t; } }
 function pkFixAnsHeads(t){ try{   // 冒頭の答えで【お客様へのお伝え方】【どうすればよいか】の見出しが抜けたときに補う（文章作成を呼び直さない。発注者指示 2026-10-21）
   t=String(t||'');
+  { const m0=t.match(/^\s*【お客様への(?:お)?伝え方】\s*\n+\s*([^\n]+)/); if(m0){ const f0=(m0[1].match(/^[^。！？]+[。！？]/)||[''])[0].trim(); if(f0.length>=12) t=f0+'\n\n'+t.replace(/^\s+/,''); } }   // 1行目の結論を飛ばして【お客様へのお伝え方】から始まったときは、最初の一文を結論にする（発注者指示 2026-10-22）
   { const m=t.match(/^\s*([^\n]{1,18})\n+\s*【お客様への(?:お)?伝え方】\s*\n+\s*([^\n]+)/); if(m&&!/[。！？]$/.test(m[1].trim())&&!/\d/.test(m[1])){ const f=(m[2].match(/^[^。！？]+[。！？]/)||[''])[0]; if(f.length>=12) t=t.replace(m[1],f.trim()); } }   // 1行目が「おすすめ（条件つきで良い）」のような札だけのときは、お伝え方の最初の一文を結論にする
   if(/【お客様への(?:お)?伝え方】/.test(t)) return t;
   const L=t.split('\n'); let i=0; while(i<L.length&&!L[i].trim()) i++; if(i>=L.length-1) return t;
