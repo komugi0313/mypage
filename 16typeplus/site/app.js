@@ -363,6 +363,12 @@ function cwFonts(){const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans
 function fitText(c,SANS,t,x,y,w,fs,min,col,wt){wt=wt||700;c.font=wt+" "+fs+"px "+SANS;while(c.measureText(t).width>w&&fs>min){fs--;c.font=wt+" "+fs+"px "+SANS;}
  c.fillStyle=col;if(c.measureText(t).width<=w){c.fillText(t,x,y);return;}const ls=wrapLines(c,t,w,2);ls.forEach((l,i)=>c.fillText(l,x,y-(ls.length-1)*fs*0.55+i*fs*1.1));}
 const rgba=(hex,a)=>{const n=parseInt(hex.slice(1),16);return "rgba("+(n>>16)+","+((n>>8)&255)+","+(n&255)+","+a+")";};
+/* 円の真ん中「ゆるがない芯」：短い言葉を、白い丸枠に赤い太字で */
+const CORE={E:"人といて元気になる",I:"ひとりの時間で充電",S:"事実と経験を頼りに",N:"ひらめきと可能性",T:"筋道で決める",F:"気持ちで決める",J:"計画どおり進める",P:"その場に合わせて動く"};
+function corePill(c,SANS,t,x,y,w){let fs=25;c.font="700 "+fs+"px "+SANS;while(c.measureText(t).width>w-36&&fs>19){fs--;c.font="700 "+fs+"px "+SANS;}
+ const tw=Math.min(w,c.measureText(t).width+36),h=fs+20;rrect(c,x-tw/2,y-h/2,tw,h,h/2);c.fillStyle="#FFFFFF";c.fill();c.lineWidth=2;c.strokeStyle=SC.plus;c.stroke();
+ c.fillStyle=SC.plus;c.textBaseline="middle";c.fillText(t,x,y+1);c.textBaseline="alphabetic";}
+function coreHead(c,SANS,x,y){c.font="700 26px "+SANS;const t=TR("ゆるがない芯"),tw=c.measureText(t).width+40;rrect(c,x-tw/2,y-22,tw,44,22);c.fillStyle=SC.plus;c.fill();c.fillStyle="#FFFFFF";c.textBaseline="middle";c.fillText(t,x,y+1);c.textBaseline="alphabetic";}
 /* 案1：2つの円の重なり（重なったところが、ゆるがない芯） */
 async function drawCloud(){const me=window.__me,{SANS,MONO}=await cwFonts(),W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const b=me.born,n=me.now,one=b===n,[cb,cn]=cwColors(b,n);
@@ -375,8 +381,8 @@ async function drawCloud(){const me=window.__me,{SANS,MONO}=await cwFonts(),W=10
   c.font="700 28px "+SANS;c.fillStyle=cb;c.fillText(TR("気質 ＝ 性格"),W/2,cy-ry+70);
   /* 真ん中：4つの文字すべてが、ゆるがない芯 */
   const irx=300,iry=150;c.beginPath();c.ellipse(W/2,cy,irx,iry,0,0,Math.PI*2);c.fillStyle=rgba(cb,.16);c.fill();c.lineWidth=3;c.strokeStyle=rgba(cb,.8);c.stroke();
-  c.font="700 26px "+SANS;c.fillStyle=SC.plus;c.fillText(TR("ゆるがない芯"),W/2,cy-iry+44);
-  b.split("").forEach((L,i)=>{const t=HN.letter[L];fitText(c,SANS,t,W/2,cy-iry+92+i*42,2*irx-80,24,21,SC.ink);});
+  coreHead(c,SANS,W/2,cy-iry+40);
+  b.split("").forEach((L,i)=>{const yy=cy-iry+96+i*50,dy=(yy-cy)/iry,sx=Math.sqrt(Math.max(0,1-dy*dy));corePill(c,SANS,TR(CORE[L]),W/2,yy,Math.min(2*irx-60,2*irx*sx-30));});
   const ws=cwList(b),top=ws.slice(0,7),bot=ws.slice(7);
   const col=(arr,y0,y1,big)=>{const st=(y1-y0)/arr.length;arr.forEach((t,i)=>{const dy=y0+st*(i+.5)-cy,sx=Math.sqrt(Math.max(0,1-(dy/ry)**2));fitText(c,SANS,t,W/2,y0+st*(i+.5)+10,2*R*sx-90,big&&i<2?34:28,22,cb);});};
   col(top,cy-ry+100,cy-iry-14,true);col(bot,cy+iry+14,cy+ry-40,false);}
@@ -390,9 +396,8 @@ async function drawCloud(){const me=window.__me,{SANS,MONO}=await cwFonts(),W=10
     fitText(c,SANS,t,cx,cy+dy,w,i<2?30:25,21,col);});};
   sideX(cwList(b),cb,-1);sideX(cwList(n),cn,1);
   /* 重なり：同じ文字の特徴 */
-  const shared=["EI","SN","TF","JP"].map((k,i)=>b[i]===n[i]?HN.letter[b[i]]:null).filter(Boolean);
-  const lw=(x1+rx)-(x2-rx);c.font="700 24px "+SANS;c.fillStyle=SC.plus;c.fillText(TR("ゆるがない芯"),W/2,cy-40-shared.length*26);
-  (shared.length?shared:[TR("4つとも違う。"),TR("幅の広さが芯")]).forEach((t,i)=>{fitText(c,SANS,t,W/2,cy-shared.length*26+16+i*62,lw-50,24,21,SC.ink);});}
+    const lw=(x1+rx)-(x2-rx),core=["EI","SN","TF","JP"].map((k,i)=>b[i]===n[i]?TR(CORE[b[i]]):null).filter(Boolean),items=core.length?core:[TR("4つとも違う"),TR("幅の広さが芯")],gap=64,y0=cy-(items.length-1)*gap/2+30;
+  coreHead(c,SANS,W/2,y0-74);items.forEach((t,i)=>corePill(c,SANS,t,W/2,y0+i*gap,lw-36));}
  c.font="600 28px "+MONO;c.fillStyle=SC.ink;c.fillText(SHARE_URL.replace("https://",""),W/2,H-36);c.textAlign="left";return cv;}
 /* 案2：性格カルテ */
 async function drawKarte(){const me=window.__me,{SANS,MONO}=await cwFonts(),W=1080,b=me.born,n=me.now,one=b===n,[cb,cn]=cwColors(b,n);
