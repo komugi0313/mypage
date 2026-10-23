@@ -98,6 +98,10 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   if(!/出会いの場：|出会いやすい場所は/.test(lv.g||'')) e.push('「出会い」の言葉だけで出会いの場ありと判定している');
   console.log('  '+(e.length?'NG':'OK')+' 恋愛相談の4項目（1981-06-10 女性で確認）'+(e.length?'  … '+e.join('・'):''));
   if(e.length) res.fails.push('恋愛相談の4項目: '+e.join('・')); }
+// 文章を書く側の事実まちがいの直し（十干の陰陽・月支元命の数）
+{ const ff=await p.evaluate(()=>typeof pkFactFix==='function'?[pkFactFix('日干は丁（火の陽＝温かさ）'),pkFactFix('月支元命（性格の中心）に「偏印」が3つある')]:['','']);
+  const e=[]; if(!/丁（火の陰/.test(ff[0])) e.push('丁＝火の陰'); if(!/月支元命（性格の中心）が「偏印」で、命式全体ではこの星が3つ/.test(ff[1])) e.push('月支元命の数');
+  console.log('  '+(e.length?'NG':'OK')+' 十干の陰陽・月支元命の数の直し'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('事実の直し: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
