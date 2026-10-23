@@ -3750,6 +3750,30 @@ function tokugoNatalReading(c){const p=c.pillars,o=[];
       const k=p[i].label[0]+p[j].label[0],d=TOKUGO_POS[k];
       o.push(d||{name:p[i].label[0]+'柱×'+p[j].label[0]+'柱',text:'人生の分野どうしが強く結びつく縁の濃い形。良縁だが依存・沼りやすさに注意。'});}
   return o;}
+/* 命式内の天地徳合・干合を「必ず伝える」ための一覧（どの柱どうし・何を意味するか）。発注者指示 2026-10-23：見つけたら必ず伝え、意味も答える */
+function natalBondLines(c,plain){ try{ if(!c||!c.pillars) return []; const p=c.pillars, o=[], ds=c.dayMaster&&c.dayMaster.stem;
+  const DOM={年:'家族・ルーツ・目上',月:'仕事・社会',日:'自分自身・パートナー',時:'将来・子ども・本心'}, PDOM={年:'家族や目上',月:'仕事や社会',日:'自分自身やパートナー',時:'将来や子ども'};
+  const sp=(typeof spouseStars==='function')?spouseStars(c):[], KE={'甲己':'土','乙庚':'金','丙辛':'水','丁壬':'木','戊癸':'火'};
+  for(let i=0;i<p.length;i++)for(let j=i+1;j<p.length;j++){ const a=p[i], b=p[j]; if(!a||!b||KANGO[a.stem]!==b.stem) continue;
+    const la=a.label[0], lb=b.label[0], toku=RIKUGO[a.branch]===b.branch, ke=KE[a.stem+b.stem]||KE[b.stem+a.stem]||'';
+    if(toku){ const d=TOKUGO_POS[la+lb]||TOKUGO_POS[lb+la];
+      o.push({kind:'天地徳合',pro:'命式内の天地徳合（'+la+'柱「'+a.ganzhi+'」×'+lb+'柱「'+b.ganzhi+'」＝天干が干合〈'+a.stem+b.stem+'〉し、地支も支合〈'+a.branch+b.branch+'〉する、いちばん強い結びつき）：'+(d?d.text:'人生の2つの分野が強く結びつく、縁の濃い形。'),
+        plain:'生まれつき、'+PDOM[la]+'と'+PDOM[lb]+'がとても強く結びつく形を持っています。'+((la+lb==='月日'||la+lb==='日月')?'社会で求められることと、自分のやりたいことが重なりやすく、天職に出会いやすい人です。ただ、頼まれると無理をしがちなので、自分が楽しめているかを大切にしてください。':'その分野で力を発揮しやすい人です。縁が濃いぶん、無理をしすぎないことが大切です。')}); }
+    const di=(i===2)?i:(j===2?j:-1);
+    let mean;
+    if(di>=0){ const other=di===i?b:a, ol=other.label[0], st=tenStarOf(ds,other.stem);
+      if(sp.indexOf(st)>=0) mean='パートナーを表す星（'+st+'）が、自分自身（日干）と干合しています。パートナーと強く結びつきたい気持ちが強く、遊びより、一人の相手と本気で向き合う人です。';
+      else mean=ol+'柱の'+st+'が自分自身（日干）と干合しています。'+DOM[ol]+'のことに強く引きつけられ、離れにくい（深く関わり続ける）人です。';
+      o.push({kind:'干合',pro:'命式内の干合（'+la+'柱の「'+a.stem+'」×'+lb+'柱の「'+b.stem+'」'+(ke?'＝'+ke+'に化す':'')+(toku?'。上の天地徳合の天干部分':'')+'）：'+mean, plain:mean.replace(/（[^）]*）/g,'').replace(/干合しています/g,'強く結びついています')});
+    } else o.push({kind:'干合',pro:'命式内の干合（'+la+'柱の「'+a.stem+'」×'+lb+'柱の「'+b.stem+'」'+(ke?'＝'+ke+'に化す':'')+'）：'+DOM[la]+'と'+DOM[lb]+'が強く結びつき、両方がつながって動きやすい人です。', plain:PDOM[la]+'と'+PDOM[lb]+'が強く結びついて、つながって動きやすい人です。'});
+  }
+  return o; }catch(e){ return []; } }
+function pkEnsureBonds(t,c){ try{ t=String(t||''); const L=natalBondLines(c,false); if(!L.length) return t;
+  const plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'));
+  const miss=L.filter(function(x){ return plain?false:!new RegExp(x.kind).test(t); });
+  if(plain){ if(/強く結びつ/.test(t)) return t; return t+'\n\n【生まれ持った強い結びつき】\n'+L.map(function(x){ return '・'+x.plain; }).join('\n'); }
+  if(!miss.length) return t;
+  return t+'\n\n【命式内の結びつき】\n'+miss.map(function(x){ return '・'+x.pro; }).join('\n'); }catch(e){ return t; } }
 /* ===== 命式の特徴ハイライト（日柱干支・格局・太過・天地徳合・通変組み合わせ・会局） =====
    plain=true（初心者版）＝やさしい言葉／false（PRO）＝専門語 */
 function chartHighlights(c,plain){
@@ -6587,8 +6611,8 @@ var pkFixYomi=(function(){ var G='甲乙丙丁戊己庚辛壬癸', GY=['きの�
   var t={}, one={}, kana={}, i; for(i=0;i<60;i++) t[G.charAt(i%10)+Z.charAt(i%12)]=GY[i%10]+ZY[i%12];
   for(i=0;i<10;i++){ one[G.charAt(i)]=GY[i]; kana[GY[i]]=1; } for(i=0;i<12;i++){ one[Z.charAt(i)]=ZY[i]; kana[ZY[i]]=1; }
   t['年柱']='ねんちゅう'; t['月柱']='げっちゅう'; t['日柱']='にっちゅう'; t['時柱']='じちゅう'; t['大運']='だいうん';
-  var J={'配偶宮':'はいぐうきゅう','官殺混雑':'かんさつこんざつ','日支':'にっし','月支':'げっし','年支':'ねんし','時支':'じし','月干':'げっかん','年干':'ねんかん','身弱':'みじゃく','印星':'いんせい','財星':'ざいせい','官星':'かんせい','偏印倒食':'へんいんとうしょく','流年':'りゅうねん','劫財':'ごうざい','劫財奪財':'ごうざいだつざい','比肩':'ひけん','食神':'しょくじん','傷官':'しょうかん','偏財':'へんざい','正財':'せいざい','偏官':'へんかん','正官':'せいかん','偏印':'へんいん','印綬':'いんじゅ','通変星':'つうへんせい','十二運':'じゅうにうん','蔵干':'ぞうかん','日干':'にっかん','日主':'にっしゅ','空亡':'くうぼう','天中殺':'てんちゅうさつ','喜神':'きしん','忌神':'きじん','用神':'ようじん','天戦地冲':'てんせんちちゅう','財星混雑':'ざいせいこんざつ','三合':'さんごう','方合':'ほうごう','支合':'しごう','干合':'かんごう','会局':'かいきょく','長生':'ちょうせい','沐浴':'もくよく','冠帯':'かんたい','建禄':'けんろく','帝旺':'ていおう','天乙貴人':'てんおつきじん','天徳貴人':'てんとくきじん','月徳貴人':'げっとくきじん','文昌貴人':'ぶんしょうきじん','比劫':'ひごう','食傷':'しょくしょう','官殺':'かんさつ','半合':'はんごう','月支元命':'げっしげんめい','駅馬':'えきば','咸池':'かんち','紅艶':'こうえん','魁罡':'かいごう','華蓋':'かがい','配偶者星':'はいぐうしゃせい','大運':'だいうん','年運':'ねんうん'}; for(var jk in J) t[jk]=J[jk];   // 専門用語の読み（鑑定者本人の承認済み 2026-10-20）
-  return function(s){ s=String(s==null?'':s).replace(/([㐀-鿿]{2,8})([（(])([ぁ-ゖー]*[㐀-鿿][ぁ-ゖー㐀-鿿]*)(?=[）)：:＝=、，,])/g,function(m,k,a,y){ if(!/[ぁ-ゖ]/.test(y)) return m; for(var c=0;c<k.length-1;c++){ var w=k.slice(c), ok=J[w]||t[w]; if(ok) return k+a+ok; } return m; });   // 「正財（せい財）」のように、読みに漢字がまじったものも表の読みに（発注者指示 2026-10-21）
+  var J={'五行':'ごぎょう','陰陽':'いんよう','配偶宮':'はいぐうきゅう','官殺混雑':'かんさつこんざつ','日支':'にっし','月支':'げっし','年支':'ねんし','時支':'じし','月干':'げっかん','年干':'ねんかん','身弱':'みじゃく','印星':'いんせい','財星':'ざいせい','官星':'かんせい','偏印倒食':'へんいんとうしょく','流年':'りゅうねん','劫財':'ごうざい','劫財奪財':'ごうざいだつざい','比肩':'ひけん','食神':'しょくじん','傷官':'しょうかん','偏財':'へんざい','正財':'せいざい','偏官':'へんかん','正官':'せいかん','偏印':'へんいん','印綬':'いんじゅ','通変星':'つうへんせい','十二運':'じゅうにうん','蔵干':'ぞうかん','日干':'にっかん','日主':'にっしゅ','空亡':'くうぼう','天中殺':'てんちゅうさつ','喜神':'きしん','忌神':'きじん','用神':'ようじん','天戦地冲':'てんせんちちゅう','財星混雑':'ざいせいこんざつ','三合':'さんごう','方合':'ほうごう','支合':'しごう','干合':'かんごう','会局':'かいきょく','長生':'ちょうせい','沐浴':'もくよく','冠帯':'かんたい','建禄':'けんろく','帝旺':'ていおう','天乙貴人':'てんおつきじん','天徳貴人':'てんとくきじん','月徳貴人':'げっとくきじん','文昌貴人':'ぶんしょうきじん','比劫':'ひごう','食傷':'しょくしょう','官殺':'かんさつ','半合':'はんごう','月支元命':'げっしげんめい','駅馬':'えきば','咸池':'かんち','紅艶':'こうえん','魁罡':'かいごう','華蓋':'かがい','配偶者星':'はいぐうしゃせい','大運':'だいうん','年運':'ねんうん'}; for(var jk in J) t[jk]=J[jk];   // 専門用語の読み（鑑定者本人の承認済み 2026-10-20）
+  return function(s){ s=String(s==null?'':s).replace(/([㐀-鿿]{2,8})([（(])([ぁ-ゖー]*[㐀-鿿][ぁ-ゖー㐀-鿿]*)(?=[）)：:＝=、，,・])/g,function(m,k,a,y){ if(!/[ぁ-ゖ]/.test(y)) return m; for(var c=0;c<k.length-1;c++){ var w=k.slice(c), ok=J[w]||t[w]; if(ok) return k+a+ok; } return m; });   // 「正財（せい財）」のように、読みに漢字がまじったものも表の読みに（発注者指示 2026-10-21）
     s=s.replace(/([（(])([ぁ-ゖー・\*＊]*[\*＊][ぁ-ゖー・\*＊]*)(?=[）)：:＝=、，,／/])/g,function(m,a,y){ return a+y.replace(/[\*＊]/g,''); });   // 読みの中に入った太字の記号（ひのえ**たうま**）を先に取る
     s=s.replace(/([子丑寅卯辰巳午未申酉戌亥](?:・[子丑寅卯辰巳午未申酉戌亥]){1,3})(\s*[（(])([ぁ-ゖー・]+)(?=[）)：:＝=、，,／/ 　])/g,function(m,k,a,y){ var bp=k.split('・').map(function(ch){ return one[ch]; }); return (y===bp.join('')||y===bp.join('・'))?m:k+a+bp.join('・'); });   // 寅・午・戌（いぬまうま）→（とら・うま・いぬ）
     s=s.replace(/([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])([・：:＝=])([ぁ-ゖー]+)(?=[）)、，,／/・：:＝=。\s]|$)/g,function(m,k,sp,y){ var ok=t[k]; return (ok&&ok!==y)?k+sp+ok:m; });
@@ -6648,10 +6672,10 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
     var r=c.replace(new RegExp(GZ+'(?:の年|年)?','g'),'\u0001').replace(/\d{1,3}(?:歳|才)/g,'\u0002'); if(!/[\u0001\u0002]/.test(r)) return false;   // 干支・読み・年齢だけのかっこか
     if(/(?:母|父|お子|子ども|子供|娘|息子|孫|祖|兄|姉|弟|妹|親|ご主人|奥様|夫|妻|義|家族)/.test(c)) return false;   // 家族の年齢のかっこは残す
     r=r.replace(/\u0001[＝=：:・\s]*[（(]?[ぁ-ん]{2,10}[）)]?/g,'\u0001');   // 干支のあとの読み（まちがっていても）は外す
-    r=r.replace(/[一-龥ァ-ヶーぁ-ん]{1,8}?(?:さん|様|さま)(?:が|は)?/g,'').replace(/(?:きの|ひの|つちの|かの|みずの)[えと][ぁ-ん]{0,5}/g,'').replace(/ごろ|頃|前後|くらい|あなた(?:が|は|の)?|お相手(?:が|は|の)?|本人(?:が|は|の)?|お二人|ともに|それぞれ|およそ|約|と|で|に|[、,]?ともに|[\u0001\u0002・、，,／/：:＝=\s　]/g,''); return r===''; };
+    r=r.replace(/[一-龥ァ-ヶーぁ-ん]{1,8}?(?:さん|様|さま)(?:が|は)?/g,'').replace(/(?:きの|ひの|つちの|かの|みずの)[えと][ぁ-ん]{0,5}/g,'').replace(/ごろ|頃|前後|くらい|あなた(?:が|は|の)?|お相手(?:が|は|の)?|本人(?:が|は|の)?|お二人|ともに|それぞれ|およそ|約|と|で|に|[、,]?ともに|[\u0001\u0002・、，,／/：:＝=※\s　]/g,''); return r===''; };
   var lab=function(y){ var p=[]; if(!noGz) p.push(gzOf(y)); if(other){ if(by&&y>=by&&y>=other&&y-by<=120) p.push('あなた'+(y-by)+'歳／お相手'+(y-other)+'歳'); } else if(by&&y>=by&&y-by<=120) p.push((y-by)+'歳'); return p.length?'（'+p.join('・')+'）':''; };
   // ⓪ 「2028年（戊申・つちのえさる：劫財が巡る年）」の干支と読みは外し、説明だけ残す（干支と年齢はツールが付ける）
-  s=s.replace(new RegExp('((?:19|20)\\d\\d)年([*＊]{0,2}[ 　]?)[（(]'+GZ+'(?:[・、：:＝=\\s]*[（(]?[ぁ-ん]{2,10}[）)]?)?[・、：:＝=\\s]+((?:[^（）()\\n]|[（(][^（）()\\n]{0,24}[）)]){1,60})[）)]','g'),function(m,y,sp,rest){ return /\d{1,3}(?:歳|才)/.test(rest)?m:y+'年'+sp+'（'+rest+'）'; });
+  s=s.replace(new RegExp('((?:19|20)\\d\\d)年([*＊]{0,2}[ 　]?)[（(]'+GZ+'(?:[・、：:＝=※\\s]*[（(]?[ぁ-ん]{2,10}[）)]?)?[・、：:＝=※\\s]+((?:[^（）()\\n]|[（(][^（）()\\n]{0,24}[）)]){1,60})[）)]','g'),function(m,y,sp,rest){ return /\d{1,3}(?:歳|才)/.test(rest)?m:y+'年'+sp+'（'+rest+'）'; });
   // ① 西暦のすぐあとの「干支・読み・年齢だけのかっこ」（1〜2個。**や空白をはさむもの・中に読みのかっこが入るものも）は外す
   s=s.replace(/((?:19|20)\d\d)年/g,function(m,y,off,str){ var k=off+m.length, sp=(str.slice(k).match(/^[*＊]{0,2}[ 　]?/)||[''])[0], p=k+sp.length, cut=p, n=0;
     while(n<2&&/[（(]/.test(str.charAt(p))){ var d=0, q=p; for(;q<str.length&&q-p<48;q++){ var ch=str.charAt(q); if(ch==='（'||ch==='(') d++; else if(ch==='）'||ch===')'){ d--; if(!d) break; } else if(ch==='\n') break; }
@@ -6674,7 +6698,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
     done[y]=1; marks.push({i:m.index+m[0].length,y:y}); }
   var out=s, add=0;
   marks.forEach(function(k){ var ins=lab(k.y); if(!ins) return; out=out.slice(0,k.i+add)+ins+out.slice(k.i+add); add+=ins.length; });
-  out=out.replace(/たまやすい/g,'たまりやすい');
+  out=out.replace(/たまやすい/g,'たまりやすい').replace(/前展/g,'進展').replace(/(^|\n)([ 　]*)(?:結論から(?:お伝え|申し上げ|言う|お話し)(?:すると|しますと|ますと|ると)|結論としては)[、，]\s*/g,'$1$2');   // よくある書きまちがい・1行目の前置き
   out=out.replace(/【{2,}/g,'【').replace(/】{2,}/g,'】').replace(/^([ 　]*【[^】\n]{1,40})[ 　]*$/gm,'$1】').replace(/^[ 　]*】[ 　]*/gm,'');   // 見出しのかっこのくずれ（【【…】】・閉じ忘れ・行頭の】）をそろえる
   out=out.replace(/（([ぁ-ん]{1,6})財(?=[・：:）)])/g,'（$1ざい').replace(/（([ぁ-ん]{1,6})官(?=[・：:）)])/g,'（$1かん');   // 読みに漢字がまじる（せい財）を直す
   out=out.replace(/(^|\n)([ 　]*)【([^】\n]{1,30})】(?=[はがをにでのも、])/g,'$1$2$3');   // 文の途中に【】を使ったもの（【来年の運気】は、…）は、見出しにせずに文として出す
@@ -6783,7 +6807,7 @@ async function generateReading(user,localText,system,deep){
   if(_topics) system=consultSystemSlim(system||CONSULT_SYSTEM,_topics);   // ビギナー（やさしい言葉の指示に差し替えた後）でも同じように外す
   if(_part==='answer') user=String(user).replace(/構成（必ず守る）：[\s\S]*?(?=\n【|$)/,'').replace(/(^|\n)構成：[\s\S]*?(?=\n【|$)/,'$1');   // 相性の「構成：」も同じく外す（発注者指示 2026-10-22）   // 冒頭の答えには、くわしい読み解き用の見出しの構成を渡さない（形がくずれる・送る量も減る。発注者指示 2026-10-21）
   if(_part==='answer'){ system=String(system||CONSULT_SYSTEM).replace(/【出力フォーマット＝厳守[\s\S]*?(?=\n【|$)/,''); }   // 見出しで区切る・【まとめ】で締めるの指示は、くわしい読み解きだけに使う
-  system=(system||CONSULT_SYSTEM)+YOMI_RULE+NO_REPEAT_RULE+NO_AI_RULE+pkLifeGuide(user)+pkYearPick(user)+(function(){ try{ var c=(typeof chart!=='undefined')?chart:null; if(!c||typeof _kkAssess!=='function') return ''; var as=_kkAssess(c).assess, F=['木','火','土','金','水'].filter(function(e){ return as(e).fav==='喜'; }), N=['木','火','土','金','水'].filter(function(e){ return F.indexOf(e)<0; }); return F.length?'\n【星の書き分け＝厳守】その年の星（年運）と、いまの10年の星（大運）を同じかっこに並べない。「来年は偏印、いまの10年（大運）は劫財」のように分けて書く。\n【五行のすすめ＝厳守】色・食べ物・身につけるもの・取り入れる五行をすすめるときは、この人の喜神（'+F.join('・')+'）だけをすすめる。'+N.join('・')+'は、少なくても「足りないので補う」とすすめない（身旺・身弱で決めた喜神が正しい）。\n':''; }catch(e){ return ''; } })()+(_part==='detail'?DETAIL_ONLY_RULE:ANSWER_RULE+(_part==='answer'?ANSWER_ONLY_RULE:''));
+  system=(system||CONSULT_SYSTEM)+YOMI_RULE+NO_REPEAT_RULE+NO_AI_RULE+pkLifeGuide(user)+pkYearPick(user)+(function(){ try{ var c=(typeof chart!=='undefined')?chart:null; if(!c||typeof _kkAssess!=='function') return ''; var as=_kkAssess(c).assess, F=['木','火','土','金','水'].filter(function(e){ return as(e).fav==='喜'; }), N=['木','火','土','金','水'].filter(function(e){ return F.indexOf(e)<0; }); return F.length?(function(){ try{ if(/【お相手B】/.test(user)) return ''; var c=(typeof chart!=='undefined')?chart:null; var L=natalBondLines(c,false); return L.length?'\n【鑑定文で必ず触れる＝命式内の天地徳合・干合（見つけたら必ず書き、何を意味するかも書く）】\n'+L.map(function(x){ return '・'+x.pro; }).join('\n')+'\n・恋愛・結婚・浮気・遊び人かなどの相談では、配偶者星の干合をいちばんの根拠として使う。\n':''; }catch(e){ return ''; } })()+'\n【星の書き分け＝厳守】その年の星（年運）と、いまの10年の星（大運）を同じかっこに並べない。「来年は偏印、いまの10年（大運）は劫財」のように分けて書く。\n【五行のすすめ＝厳守】色・食べ物・身につけるもの・取り入れる五行をすすめるときは、この人の喜神（'+F.join('・')+'）だけをすすめる。'+N.join('・')+'は、少なくても「足りないので補う」とすすめない（身旺・身弱で決めた喜神が正しい）。\n':''; }catch(e){ return ''; } })()+(_part==='detail'?DETAIL_ONLY_RULE:ANSWER_RULE+(_part==='answer'?ANSWER_ONLY_RULE:''));
   const _nm=_nameMasks();
   if(_nm.length){ user=_maskNames(user,_nm); system=_maskNames(system,_nm)+'\n【お名前の印】文章の中の「〔本人〕」「〔お相手〕」は、実際のお名前の代わりの印です。お名前で呼ぶときは、この印を一字も変えずにそのまま書いてください（例：〔本人〕さん）。'; }
   // 電波がない（オフライン）ときはAIを呼ばず、端末内鑑定を出す
@@ -6931,7 +6955,8 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
     const det=D.online?String(D.text).replace(/^[\s　]*[【\[]?くわしい読み解き[】\]]?[\s　]*/,''):(D.text||localText);   // 端末内の文に切りかえたときも、generateReading が用意した文（ビギナーならやさしい文）を使う
     const _dup=pkDupRate(ans,det);   // くわしい読み解きが、上の答えのくり返しになっていないか
     const det2=pkDropRepeat(ans,det);
-    const full=((D.online&&_dup>0.6)||String(det2).replace(/【[^】]*】|\s/g,'').length<40)?ans:(ans+'\n\n【くわしい読み解き】\n'+det2);   // 中身のないくわしい読み解きは見出しも出さない   // ほとんど同じ文なら、くわしい読み解きは出さない（同じ文を2回見せない。発注者指示 2026-10-21）
+    let full=((D.online&&_dup>0.6)||String(det2).replace(/【[^】]*】|\s/g,'').length<40)?ans:(ans+'\n\n【くわしい読み解き】\n'+det2);   // 中身のないくわしい読み解きは見出しも出さない   // ほとんど同じ文なら、くわしい読み解きは出さない（同じ文を2回見せない。発注者指示 2026-10-21）
+    if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart) full=pkEnsureBonds(full,chart);   // 命式内の天地徳合・干合は、鑑定文になければツールが書き足す（発注者指示 2026-10-23）
     out.innerHTML=sc+engineBadge(true,D.online?'':'くわしい読み解きは通信できなかったため、端末内で作成した内容を表示しています。')+formatReading(full);
     attachReadingTools(out,full);
     if(proUser)appendPro(out,proUser,localText,deep,proLocal);
