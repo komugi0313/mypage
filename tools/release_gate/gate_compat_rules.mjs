@@ -124,6 +124,10 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
 { const src=fs.readFileSync(path.join(ROOT,'eki-pro/app/index.html'),'utf8'); const a=src.indexOf('function ekiStarGuard('); let r='';
   if(a>=0){ const body=src.slice(a,src.indexOf('}catch(e){ return t; } }',a)+'}catch(e){ return t; } }'.length); r=Function(body+'; return ekiStarGuard;')()('来年は良い年です。月柱に華蓋があります。11月は正官が巡ります。2027年は変化の年です。'); }
   const ok5=r==='来年は良い年です。2027年は変化の年です。'; console.log('  '+(ok5?'OK':'NG')+' 易：根拠のない星の話を外す（PROの星の事実あわせと同時に）'); if(!ok5) res.fails.push('易の星の直し'); }
+{ const r=await p.evaluate(()=>{ if(typeof pkFactFix!=='function'||typeof pkYearKichiFix!=='function') return ['','']; const c=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},0,'none'));
+    return [pkFactFix('日干が丁（火の陰・ひのえ）で、日支に卯'), pkYearKichiFix('2027年は紅艶（魅力の星）が巡り、2028年は駅馬（移動の星）が重なります。',c)]; });
+  const e=[]; if(!/丁（火の陰・ひのと）/.test(r[0])) e.push('丁の読み'); if(/が巡るのは/.test(r[1])) e.push('正しく書けた年の星に書き添えている');
+  console.log('  '+(e.length?'NG':'OK')+' 十干の読みの取りちがえ・年の星の書き添え'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('読み・年の星: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
