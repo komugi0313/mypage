@@ -4196,7 +4196,33 @@ window.KANSHI60_DETAIL={
       if(/^[#＊*\s]*[【\[]?お客様への(お)?伝え方[】\]]?/.test(tl)){ skip=true; var rest=tl.replace(/^[#＊*\s]*[【\[]?お客様への(お)?伝え方[】\]]?[：:\s]*/,''); continue; }
       if(skip && (/^[#＊*\s]*[【\[]/.test(tl) || /^[#＊*\s]*(くわしい|詳しい)読み解き/.test(tl) || /^[#＊*\s]*どうすれば(よい|良い)か/.test(tl) || /^#/.test(tl))) skip=false;
       if(!skip) out.push(ln); } return out.join('\n').replace(/\n{3,}/g,'\n\n').trim(); }
-    function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; other=+other||0;   // 西暦のあとに、ツールが計算した干支と年齢を付ける（文章作成の書いた干支・年齢のかっこは外して付け直す。発注者指示 2026-10-22「普通のことをまちがえない」）
+    /* PROと同じ直し（pro/app-pro.html の pkFactFix をそのまま写す。直すときは3か所そろえる） */
+function pkFactFix(t,aS,bS){ try{ t=String(t==null?'':t);   // 命式の事実（日干の五行・十干の五行・十二支と十二運の取りちがえ）を、計算どおりに直す（発注者指示 2026-10-22「普通のことをまちがえない」）
+  var EL={甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'金',辛:'金',壬:'水',癸:'水'};
+  // ① 十干のすぐあとの説明の五行：「丁（ひのと・柔らかな火の性質）」「庚（＝金の性質）」「丁（火の性質）」
+  t=t.replace(/([甲乙丙丁戊己庚辛壬癸])(?![子丑寅卯辰巳午未申酉戌亥])([（(][^）)\n]{0,24}?)([木火土金水])(の性質|の五行|の気|の人|属性|性)/g,function(m,g,mid,e,tail){ return (EL[g]===e)?m:g+mid+EL[g]+tail; });
+  t=t.replace(/([甲乙丙丁戊己庚辛壬癸])(?![子丑寅卯辰巳午未申酉戌亥])[（(]([木火土金水])[）)]/g,function(m,g,e){ return EL[g]===e?m:m.replace(e,EL[g]); });
+  // ② 2人の日干の五行：「日干が木（本人）と金（お相手）」「あなたの日干は木」「お相手の日干…金の性質」
+  if(aS&&EL[aS]){ t=t.replace(/((?:あなた|本人|ご本人)(?:さん)?の日干(?:である|は|が|の)?)([甲乙丙丁戊己庚辛壬癸ぁ-ゖ（）(・：:＝\s]{0,14}?)([木火土金水])(?=の性質|の五行|の気|[（(・、）)]|$)/g,function(m,p,mid,e){ var core=mid.replace(/[（(][^）)]*[）)]?/g,''); if(/[をにへとがもで]|から|より/.test(core.replace(/^(?:は|が)/,''))) return m; return p+mid+EL[aS]; });
+    t=t.replace(/日干が([木火土金水])[（(](本人|あなた)[）)]/g,function(m,e,w){ return '日干が'+EL[aS]+'（'+w+'）'; }); }
+  if(bS&&EL[bS]){ t=t.replace(/((?:お相手|相手)(?:さん|の方)?の日干(?:である|は|が|の)?)([甲乙丙丁戊己庚辛壬癸ぁ-ゖ（）(・：:＝\s]{0,14}?)([木火土金水])(?=の性質|の五行|の気|[（(・、）)]|$)/g,function(m,p,mid,e){ var core=mid.replace(/[（(][^）)]*[）)]?/g,''); if(/[をにへとがもで]|から|より/.test(core.replace(/^(?:は|が)/,''))) return m; return p+mid+EL[bS]; });
+    t=t.replace(/([木火土金水])[（(](お相手|相手)[）)]/g,function(m,e,w){ return EL[bS]+'（'+w+'）'; }); }
+  // ③ 十二支を「十二運」と呼んだまちがい：「この年の十二運（…）の酉」→「十二支の酉」
+  t=t.replace(/十二運((?:[（(][^）)\n]{0,24}[）)])?)の[ 　]*([子丑寅卯辰巳午未申酉戌亥])(?![子丑寅卯辰巳午未申酉戌亥])/g,'十二支の$2');
+  // ④ 言葉の説明が2つ続いたとき（「正官（＝…）（せいかん・…）」）は、読みのほうを先にした1つに
+  t=t.replace(/([一-龥]{2,6})（＝([^（）\n]{1,30})）（([ぁ-ん]{2,12})[・：:＝]([^（）\n]{1,40})）/g,'$1（$3：$4）');
+  // ⑦ 通変星の説明の取りちがえ（正官↔偏官・正財↔偏財。発注者指示 2026-10-23「正官（行動力と決断力の星）」のまちがいから）
+  t=t.replace(/(正官)((?:[（(][ぁ-ん]{2,8}[）)])?)[（(]([^（）()\n]{0,30})[）)]/g,function(m,n,y,g){ return /行動力|度胸|決断|挑戦|プレッシャー/.test(g)&&!/規律|責任|誠実/.test(g)?n+y+'（規律・責任・誠実の星）':m; });
+  t=t.replace(/(偏官)((?:[（(][ぁ-ん]{2,8}[）)])?)[（(]([^（）()\n]{0,30})[）)]/g,function(m,n,y,g){ return /規律|責任|誠実|まじめ/.test(g)&&!/行動|度胸|決断|挑戦/.test(g)?n+y+'（行動力・度胸・決断の星）':m; });
+  t=t.replace(/(正財)((?:[（(][ぁ-ん]{2,8}[）)])?)[（(]([^（）()\n]{0,30})[）)]/g,function(m,n,y,g){ return /人脈|チャンス|社交|流動|大きなお金/.test(g)&&!/堅実|コツコツ|着実|まじめ/.test(g)?n+y+'（堅実・まじめにコツコツ積み上げる星）':m; });
+  t=t.replace(/(偏財)((?:[（(][ぁ-ん]{2,8}[）)])?)[（(]([^（）()\n]{0,30})[）)]/g,function(m,n,y,g){ return /堅実|コツコツ|着実/.test(g)&&!/人脈|チャンス|社交/.test(g)?n+y+'（人脈・チャンス・社交の星）':m; });
+  // ⑤ 十干の陰陽：「丁（火の陽）」→ 丁は陰（乙丁己辛癸＝陰／甲丙戊庚壬＝陽。発注者指示 2026-10-23）
+  var YIN='乙丁己辛癸';
+  t=t.replace(/([甲乙丙丁戊己庚辛壬癸])(?![子丑寅卯辰巳午未申酉戌亥])([（(][^）)\n]{0,20}?)(?:([木火土金水])の(陽|陰)|(陽|陰)の([木火土金水]))/g,function(m,g,mid,e1,y1,y2,e2){ var y=YIN.indexOf(g)>=0?'陰':'陽'; return e1?g+mid+EL[g]+'の'+y:g+mid+y+'の'+EL[g]; });
+  // ⑥ 「月支元命に「偏印」が3つ」→ 月支元命は1つ。数は命式全体の数として書き分ける
+  t=t.replace(/月支元命((?:[（(][^）)\n]{0,30}[）)])?)に([「『]?[^」』\n]{1,40}?[」』]?)が([0-9０-９一二三四五]+)つ/g,'月支元命$1が$2で、命式全体ではこの星が$3つ');
+  return t; }catch(e){ return t; } }
+function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; other=+other||0;   // 西暦のあとに、ツールが計算した干支と年齢を付ける（文章作成の書いた干支・年齢のかっこは外して付け直す。発注者指示 2026-10-22「普通のことをまちがえない」）
   if(typeof document!=='undefined'&&document.documentElement&&document.documentElement.classList.contains('bg-on')) noGz=true;   // ビギナーのやさしい表示では干支を出さない
   var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', GZ='[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]', gzOf=function(y){ var i=((y-4)%60+60)%60; return G.charAt(i%10)+Z.charAt(i%12); };
   var FAM=/(?:母|父|お子|子ども|子供|娘|息子|孫|祖母|祖父|兄|姉|弟|妹|親|ご主人|奥様|夫|妻|義|家族|ペット|犬|猫)[^。\n]{0,14}$/;
@@ -4242,7 +4268,7 @@ window.KANSHI60_DETAIL={
   out=out.replace(/([一-龥]{1,8})[（(]\1[（(]([^（）()\n]{1,80})[）)][）)]/g,'$1（$2）');   // 「害（害（がい：…））」のような言葉の二重がっこは1つに
   return out.replace(/\u0003/g,''); }catch(e){ return String(s).replace(/\u0003/g,''); } }
     function pkFixHangul(t){ t=String(t==null?'':t); if(!/[ᄀ-ᇿ㄰-㆏가-힯]/.test(t)) return t; const M=[['에는','には'],['에서','で'],['에게','に'],['으로','で'],['하다','する'],['로','で'],['은','は'],['는','は'],['이','が'],['가','が'],['을','を'],['를','を'],['의','の'],['에','に'],['도','も'],['와','と'],['과','と']]; M.forEach(function(p){ t=t.split(p[0]).join(p[1]); }); return t.replace(/[ᄀ-ᇿ㄰-㆏가-힯]/g,''); }   /* 文章に韓国語の文字がまざったときは、日本語に直してから出す（発注者指示 2026-10-21） */
-    function noAIWord(t){ var _by=(_lastResult&&_lastResult.birthYear)||0; return pkStampYears(pkFixAge(_stripTalk(_noAIWord1(pkFixHangul(t))),_by),_by,0,!!window.__bgPlain); }   // 年齢は生年月日から計算し直す
+    function noAIWord(t){ var _by=(_lastResult&&_lastResult.birthYear)||0; return pkFactFix(pkStampYears(pkFixAge(_stripTalk(_noAIWord1(pkFixHangul(t))),_by),_by,0,!!window.__bgPlain)); }   // 十干の陰陽・五行／星の説明の取りちがえ（PROと同じ直し）   // 年齢は生年月日から計算し直す
     function _noAIWord1(t){ t=String(t||'').replace(/주치(의|医)/g,'主治医').replace(/【見出し[：:]?\s*/g,'【').replace(/【([^】\n]{0,40})\n+\s*([^】\n]{0,60})】/g,'【$1$2】').replace(/【\s*】/g,'');   // 【 】の中で改行した見出しをつなぐ（【見出し⏎…】のくずれ）
     return pkSoftWord(pkFixYomi(_noAIWord0(t))); }   // 記号（**など）を消したあとにも、読み仮名とやわらげをもう一度
   function _noAIWord0(t){ t=pkSoftWord(pkFixYomi(t)); return String(t||'')
