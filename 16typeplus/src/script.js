@@ -142,8 +142,7 @@ function setupReveal(N,born,now,bAT,nAT,diff,atDiff,why,aligned,instant){
  const cols=["EI","SN","TF","JP","AT"],colors=["--ei","--sn","--tf","--jp","--rose"],names=[TR("エネルギー"),TR("ものの見方"),TR("判断のしかた"),TR("行動のしかた"),TR("心の構え")];
  RV={opened:new Set(),story:$("rStory").innerHTML};
  [...bt,...nt].forEach(t=>t.classList.add("hid"));ar.forEach(a=>a.classList.add("hid"));
- document.querySelectorAll(".hero .pend").forEach(e=>e.classList.add("wait"));
- $("rStory").innerHTML=TR('<span class="ln">タップすると、</span><span class="ln">1列ずつめくれます</span>');
+ /* めくる前でも、ほかの内容は止めない（タイルは結果の一番下） */
  $("revs").innerHTML="";$("flipAll").hidden=false;$("flipHint").textContent=TR("上が気質、下が性格");
  const open=i=>{if(RV.opened.has(i))return;RV.opened.add(i);const k=cols[i];
   const spin=(t,after)=>{if(instant){t.classList.remove("hid");after&&after();return;}t.classList.add("spin");setTimeout(()=>{t.classList.remove("spin","hid");t.classList.add("show");after&&after();},620);};
@@ -161,7 +160,7 @@ function setupReveal(N,born,now,bAT,nAT,diff,atDiff,why,aligned,instant){
  /* 1回タップすると、左から順にくるくる回ってめくれる */
  const runAll=()=>{if(RV.running)return;RV.running=true;$("flipAll").hidden=true;let j=0;cols.forEach((_,i)=>{if(!RV.opened.has(i)){setTimeout(()=>open(i),j*380);j++;}});};
  [...bt,...nt].forEach(t=>t.addEventListener("click",runAll));$("flipAll").onclick=runAll;
- if(instant)cols.forEach((_,i)=>open(i));}
+ if(instant){$("flipAll").hidden=true;cols.forEach((_,i)=>open(i));};}
 /* ---- 人物像 ---- */
 function drawPersona(which){const me=window.__me;if(!me||typeof PS==="undefined")return;
  const t=which==="now"?me.now:me.born,at=which==="now"?me.nAT:me.bAT,P=PS[t];
@@ -192,7 +191,7 @@ function render(instant){
  fh+=TR('<span class="rl"><b>性格</b>16タイプから</span>')+AX.map((A,i)=>'<span class="tile n'+(diff[i]?' c':'')+'" style="--c:var('+A.c+');--i:'+i+'">'+now[i]+'</span>').join("")+'<span class="tile n at'+(atDiff?' c':'')+(nAT?'':' none')+'" style="--c:var('+ATC+');--i:4">'+(nAT||"?")+'</span>';
  fh+='<span class="rl e"></span>'+AX.map(A=>'<span class="axl">'+A.sh+'</span>').join("")+TR('<span class="axl">構え</span>');
  $("flip").innerHTML=fh;
- setupReveal(N,born,now,bAT,nAT,diff,atDiff,why,aligned,true);
+ setupReveal(N,born,now,bAT,nAT,diff,atDiff,why,aligned,instant);
  const ch1=AX.filter((A,i)=>diff[i]).map(A=>'<span class="nw">'+A.name+'</span>').concat(atDiff?[TR('<span class="nw">心の構え</span>')]:[]);
  const tot=nAT?5:4;
  $("rSum").innerHTML=(dn===0?tot+TR('文字すべて、<b>気質と性格が同じ</b>です。'):TR('気質と性格がちがうのは <b>')+dn+TR('文字</b>')+(dn<tot?'<br>'+ch1.join(TR("・")):TR('（すべて）')))+(nAT?'':TR('<br><small class="atnote">最後の1文字（A/T）は、選んだ人だけ比べます</small>'));
@@ -690,7 +689,7 @@ function coreCard(b,n){const co=coreOf(b,n);if(!co)return "";
 function layoutResult(){const hero=document.querySelector(".hero");if(!hero)return;
  {let dh=$("dataH");if(!dh){dh=document.createElement("h3");dh.id="dataH";dh.className="datah";dh.textContent=TR("気質と性格の文字くらべ");}
   const q=x=>typeof x==="string"?hero.querySelector(x):x;
-  ["#rSrc","#rStory",".nicks","#coreBox","#funBox","#cloudFig",".shr","#kt","#recheck",dh,"#flip","#flipHint",".hgap","#rSum",".revw"].map(q).filter(Boolean).forEach(e=>hero.appendChild(e));}
+  ["#rSrc","#rStory",".nicks","#coreBox","#funBox","#cloudFig",".shr","#kt","#recheck",dh,"#flipHint","#flip","#flipAll",".hgap","#rSum",".revw"].map(q).filter(Boolean).forEach(e=>hero.appendChild(e));}
  const mk=(id,title)=>{let d=$(id);if(!d){d=document.createElement("details");d.id=id;d.className="card more";d.innerHTML='<summary><h2>'+title+'</h2></summary><div class="mbody"></div>';}return d;};
  const dK=mk("dKarte",TR("性格カルテ")),dH=mk("dHints",TR("悩みと仕事のヒント")),dP=mk("dPersona",TR("タイプごとのくわしい説明")),dB=mk("dBal",TR("気質の力のバランス"));
  const body=d=>d.querySelector(".mbody");
