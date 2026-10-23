@@ -6068,6 +6068,7 @@ const GOGYO_LEGEND_BODY='<span style="display:inline-block"><b>木</b>＝成長�
 function gogyoLegend(){ return '<details class="r-legend"'+(window.__legendOpen?' open':'')+'><summary>言葉の意味（木火土金水）</summary><div style="font-size:13px;color:var(--ink2);font-weight:700;background:#FBF7F0;border:1px solid var(--line);border-radius:9px;padding:7px 10px;line-height:1.75">'+GOGYO_LEGEND_BODY+'</div></details>'; }
 function formatReading(text){
   text=plainGloss(text);
+  text=text.replace(/([一-龥]{2,6})（＝[^（）\n]{1,30}）（([ぁ-ん]{2,12})(?:[・：:＝]([^（）\n]{1,40}))?）/g,function(m,w,y,d){ return w+'（'+y+(d?'：'+d:'')+'）'; }).replace(/([一-龥]{2,6})（＝([^（）\n]{1,30})）（＝[^（）\n]{1,40}）/g,'$1（＝$2）');   // 言い換えが2つ続いたら1つに（ツールの言い換え＋文章作成の読み・説明）
   const lines=esc(text).split('\n').map(l=>l.trim());
   let html='',pbuf=[],lbuf=[],ltype='',summarySet=false,sawHead=false,inAns=false,talk=false;
   const ANS_HEAD=/お客様への(お)?伝え方|どうすればよいか|どうすれば良いか|鑑定の答え/, DETAIL_HEAD=/^くわしい読み解き|^詳しい読み解き/;
@@ -6848,6 +6849,9 @@ function rdOffKind(A){ if(!A) return 'net'; if(A.skipped) return 'skip'; const n
 /* 同じ文のくり返しを見つける：文に分けて、くわしい読み解きの文のうち、上の答えにも出てくる文の割合 */
 function pkSents(t){ return String(t||'').replace(/【[^】\n]*】/g,'\n').split(/[。！？\n]+/).map(x=>x.replace(/[\s　・*＊#「」『』（）()、,]/g,'')).filter(x=>x.length>=8); }
 function pkDupRate(a,d){ const A=new Set(pkSents(a)), D=pkSents(d); if(!D.length) return 0; return D.filter(x=>A.has(x)).length/D.length; }
+function pkFixLabel(t,q){ try{ t=String(t||''); q=String(q||''); if(!q) return t;   // 「どんな人？」のように、するかしないかを聞いていない相談では、1行目の「おすすめです／おすすめできません」等の札を外す（発注者指示 2026-10-23）
+  if(/べき|どちら|どっち|いい[？?か]|良い[？?か]|よい[？?か]|いいですか|良いですか|大丈夫|やめ|続け|始め|買|売|転職|結婚する|付き合|別れ|引っ越|受け|申し込|挑戦|進め|選|決め|しても|した方|したほう/.test(q)) return t;
+  return t.replace(/^(\s*)(?:おすすめです|おすすめできません|条件つきで良い|今は慎重に)[。、．]\s*/,'$1'); }catch(e){ return t; } }
 function pkFixWhen(t,q){ try{   // 「いつ」を聞かれたのに1行目に時期がないときは、答えの中の時期を1行目に添える（質問には必ず答える。発注者指示 2026-10-21）
   t=String(t||''); q=String(q||''); if(!/いつ|何歳|何年|時期|頃|ころ|タイミング/.test(q)) return t;
   const L=t.split('\n'); let i=0; while(i<L.length&&!L[i].trim()) i++; if(i>=L.length) return t;
@@ -6918,7 +6922,8 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
       if(proUser)appendPro(out,proUser,localText,deep,proLocal);
       return;
     }
-    const ans=pkFixWhen(pkFixAnsHeads(String(A.text).split(/\n[ 　]*[【\[]?くわしい読み解き[】\]]?/)[0].trim()),(out.closest&&out.closest('.rd-item')&&out.closest('.rd-item').dataset.q)||((out.id==='compat'||(out.closest&&out.closest('#compat')))?((document.getElementById('compat-worry')||{}).value||''):''));
+    const _q0=(out.closest&&out.closest('.rd-item')&&out.closest('.rd-item').dataset.q)||'';
+    const ans=pkFixLabel(pkFixWhen(pkFixAnsHeads(String(A.text).split(/\n[ 　]*[【\[]?くわしい読み解き[】\]]?/)[0].trim()),(out.closest&&out.closest('.rd-item')&&out.closest('.rd-item').dataset.q)||((out.id==='compat'||(out.closest&&out.closest('#compat')))?((document.getElementById('compat-worry')||{}).value||''):'')),_q0);
     out.innerHTML=sc+engineBadge(true,'')+formatReading(ans)+'<div class="loading r-more"><span class="spin"></span>くわしい読み解きを作成しています…（答えは上に出ています。読みながらお待ちください）</div>';
     // ② くわしい読み解き：先に出した答えと食い違わないよう、答えを渡して根拠を書かせる
     const D=await generateReading('〔PART:detail〕\n'+user+'\n\n【先に作成した答え（これと食い違わないように、その根拠を書く）】\n'+ans,localText,undefined,deep);
