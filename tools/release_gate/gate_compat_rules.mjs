@@ -102,6 +102,15 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
 { const ff=await p.evaluate(()=>typeof pkFactFix==='function'?[pkFactFix('日干は丁（火の陽＝温かさ）'),pkFactFix('月支元命（性格の中心）に「偏印」が3つある')]:['','']);
   const e=[]; if(!/丁（火の陰/.test(ff[0])) e.push('丁＝火の陰'); if(!/月支元命（性格の中心）が「偏印」で、命式全体ではこの星が3つ/.test(ff[1])) e.push('月支元命の数');
   console.log('  '+(e.length?'NG':'OK')+' 十干の陰陽・月支元命の数の直し'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('事実の直し: '+e.join('・')); }
+// 縁が動く月の三合・刑（2008-03-28 14時 女性：11月己亥＝亥卯未の三合〈時支の未〉、12月庚子＝配偶宮卯と刑）
+{ const m=await p.evaluate(()=>{ if(typeof loveFourLines!=='function') return ''; const c=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'); const L=loveFourLines(c); return (L&&L.pro[3]||'')+'|'+pkIsLoveQ('今年の冬に出会う可能性がある男性は？'); });
+  const e=[]; if(/己亥の月/.test(m)&&!/己亥の月）＝[^／]*三合（亥卯未/.test(m)) e.push('三合（亥卯未）'); if(/庚子の月/.test(m)&&!/庚子の月）＝配偶宮「卯」と刑/.test(m)) e.push('子卯の刑'); if(!/\|true$/.test(m)) e.push('「出会う」を恋愛相談と見分ける');
+  console.log('  '+(e.length?'NG':'OK')+' 縁が動く月の三合・刑'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('縁が動く月: '+e.join('・')); }
+{ const mf=await p.evaluate(()=>{ if(typeof pkMonthFactFix!=='function') return ['','']; const c=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'); return [pkMonthFactFix('12月の星回りには、配偶宮に咸池や正官の気配が重なる。',c),pkMonthFactFix('2027年7月ごろは卯と未で三合になります。',c)]; });
+  const e=[]; if(!/12月の星回りには、この月に咸池や偏官/.test(mf[0])) e.push('12月の星（偏官）・配偶宮の取りちがえ'); if(!/卯と未で半合/.test(mf[1])) e.push('三合→半合');
+  console.log('  '+(e.length?'NG':'OK')+' 月の話の事実あわせ'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('月の話: '+e.join('・')); }
+{ const r=await p.evaluate(()=>{ if(typeof pkEnsureLove!=='function') return ''; const c=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'); return pkEnsureLove('配偶宮の蔵干は甲と乙。パートナーの星（官星）は忌神です。出会いは地元の紹介から。11月と12月に縁が動きます。',c,'冬に出会う男性は？'); });
+  const ok2=/庚子の月）＝配偶宮「卯」と刑|2026年12月ごろ（気持ちがすれ違いやすい月）/.test(r); console.log('  '+(ok2?'OK':'NG')+' 注意の月（刑・冲）が文になければ書き足す'); if(!ok2) res.fails.push('注意の月の書き足し'); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
