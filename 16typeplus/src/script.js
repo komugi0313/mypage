@@ -63,17 +63,17 @@ function opts(el,a,b,cur,ph){el.innerHTML="";if(ph){const o=document.createEleme
 const dset={y:false,m:false,d:false};const dateAll=v=>{dset.y=dset.m=dset.d=v;};
 function dateOK(){const ok=dset.y&&dset.m&&dset.d,er=$("dateErr");if(er)er.hidden=ok;if(!ok){$("y").closest(".field").scrollIntoView({behavior:"smooth",block:"center"});}return ok;}
 function fillDate(){opts($("y"),1930,2020,dset.y?st.y:null,TR("年"));opts($("m"),1,12,dset.m?st.m:null,TR("月"));const mx=dset.y&&dset.m?new Date(st.y,st.m,0).getDate():31;if(st.d>mx)st.d=mx;opts($("d"),1,mx,dset.d?st.d:null,TR("日"));}
-["y","m","d"].forEach(id=>$(id).addEventListener("change",e=>{const v=e.target.value;if(v===""){dset[id]=false;}else{st[id]=+v;dset[id]=true;}fillDate();if(dset.y&&dset.m&&dset.d){const er=$("dateErr");if(er)er.hidden=true;render();}}));
+["y","m","d"].forEach(id=>$(id).addEventListener("change",e=>{const v=e.target.value;if(v===""){dset[id]=false;}else{st[id]=+v;dset[id]=true;}fillDate();hideOld();if(dset.y&&dset.m&&dset.d){const er=$("dateErr");if(er)er.hidden=true;}}));
 const pk=$("picker"),sel=[null,null,null,null];
 function drawSlots(popI){$("slots").innerHTML=AX.map((A,i)=>'<span style="--c:var('+A.c+')" class="'+(sel[i]?"fill":"empty")+(i===popI?" pop":"")+'">'+(sel[i]||"?")+'</span>').join("");
  const left=sel.filter(v=>!v).length,go=$("go");const tt=sel.join("");$("slotName").innerHTML=left?"":'<b>'+tt+(selAT?"-"+selAT:"")+'</b>'+p16(tt);{const pf=$("pkFig");if(pf){pf.hidden=!!left;if(!left){$("pkImg").src=charSrc(tt);$("pkImg").alt=an(tt);}}}go.disabled=left>0;go.textContent=left?TR("あと")+left+TR("つ選んでください"):TR("結果を見る");}
 AX.forEach((A,i)=>{const g=document.createElement("div");g.className="seg";g.style.setProperty("--c","var("+A.c+")");g.setAttribute("role","group");g.setAttribute("aria-label",A.name);
  [[A.a,A.aw],[A.b,A.bw]].forEach(([l,w])=>{const bt=document.createElement("button");bt.type="button";bt.innerHTML=l+"<small>"+w+"</small>";
-  bt.setAttribute("aria-pressed","false");bt.onclick=()=>{sel[i]=l;g.classList.add("done");[...g.children].forEach(c=>c.setAttribute("aria-pressed",c===bt));drawSlots(i);};g.appendChild(bt);});
+  bt.setAttribute("aria-pressed","false");bt.onclick=()=>{hideOld();sel[i]=l;g.classList.add("done");[...g.children].forEach(c=>c.setAttribute("aria-pressed",c===bt));drawSlots(i);};g.appendChild(bt);});
  pk.appendChild(g);});
 drawSlots(-1);
-document.querySelectorAll("#atPick button").forEach(bt=>bt.onclick=()=>{selAT=bt.dataset.v||null;document.querySelectorAll("#atPick button").forEach(x=>x.setAttribute("aria-pressed",x===bt));drawSlots(-1);});
-$("go").onclick=()=>{if(sel.includes(null))return;st.t=sel.slice();st.at=selAT;st.love=null;st.pct=null;st.half={};st.sway=null;showResult();logType("select");render();document.querySelector(".hero").scrollIntoView({behavior:"smooth"});};
+document.querySelectorAll("#atPick button").forEach(bt=>bt.onclick=()=>{hideOld();selAT=bt.dataset.v||null;document.querySelectorAll("#atPick button").forEach(x=>x.setAttribute("aria-pressed",x===bt));drawSlots(-1);});
+$("go").onclick=()=>{if(sel.includes(null)||!dateOK())return;st.t=sel.slice();st.at=selAT;st.love=null;st.pct=null;st.half={};st.sway=null;showResult();logType("select");render();document.querySelector(".hero").scrollIntoView({behavior:"smooth"});};
 /* ---- 60問 ---- */
 const SCALE=[[TR("とても当てはまる"),5,22],[TR("当てはまる"),4,18],[TR("やや当てはまる"),3,14],[TR("やや当てはまらない"),2,14],[TR("当てはまらない"),1,18],[TR("まったく当てはまらない"),0,22]];
 const AXN={EI:0,SN:1,TF:2,JP:3,AT:4};const AXQ=AX.concat([{k:"AT",a:"A",b:"T",c:"--rose",name:TR("心の構え"),sh:TR("構え")}]);
@@ -84,9 +84,11 @@ const baseOrd=()=>QZ.Q.map((_,i)=>i).slice(0,BASE);
 function setPicker(){st.t.forEach((v,i)=>sel[i]=v);[...pk.children].forEach((g,i)=>{g.classList.add("done");[...g.children].forEach(c=>c.setAttribute("aria-pressed",c.firstChild.textContent===st.t[i]));});drawSlots(-1);}
 let shown=false;
 function saveResult(){if(!shown)return;sset(KR,{y:st.y,m:st.m,d:st.d,t:st.t,at:st.at,pct:st.pct,half:st.half,sway:st.sway,love:st.love||null});}
+/* 入力をやり直し始めたら、前の結果はいったん隠す（「結果を見る」で新しく出す） */
+function hideOld(){if(!shown)return;shown=false;$("result").style.display="none";const w=document.querySelector(".welcome");if(w)w.hidden=true;const f=$("formCard");if(f)requestAnimationFrame(()=>f.scrollIntoView({block:"start"}));}
 function showResult(){shown=true;$("result").style.display="contents";setTimeout(showInvitePair,0);}
 function showQuiz(on){$("quizCard").hidden=!on;$("formCard").hidden=on;$("result").style.display=(!on&&shown)?"contents":"none";}
-$("hasType").onclick=()=>{if(!dateOK())return;$("hasType").setAttribute("aria-pressed","true");$("pickField").hidden=false;$("pickField").scrollIntoView({behavior:"smooth",block:"nearest"});};
+$("hasType").onclick=()=>{if(!dateOK())return;hideOld();$("hasType").setAttribute("aria-pressed","true");$("pickField").hidden=false;$("pickField").scrollIntoView({behavior:"smooth",block:"nearest"});};
 function startQuiz(saved){if(saved){qa=saved.qa;qi=saved.qi;tbList=saved.tbList||[];tbAns=saved.tbAns||{};ord=saved.ord;ext=!!saved.ext;}else{qa=new Array(QZ.Q.length).fill(null);qi=0;tbList=[];tbAns={};ord=baseOrd();ext=false;sset(KQ,null);}
  showQuiz(true);drawQ();$("quizCard").scrollIntoView({behavior:"smooth",block:"start"});}
 function saveQuiz(){sset(KQ,{v:2,n:QZ.Q.length,qa,qi,tbList,tbAns,ord,ext,y:st.y,m:st.m,d:st.d});}
@@ -98,7 +100,7 @@ function drawResume(){let r=$("qResume");const q=savedQuiz();
  r.hidden=false;r.innerHTML=TR("前回の続きから再開する")+"<small>"+TR("{n}問目から").replace("{n}",q.qi+1)+"</small>";}
 /* 入力をリセット：生年月日・選んだ4文字・A/T・途中の質問を消す（保存した結果は消さない） */
 $("formReset").onclick=()=>{if(!confirm(TR("生年月日と選んだタイプ、途中の質問をリセットしますか？")))return;
- dateAll(false);fillDate();const er=$("dateErr");if(er)er.hidden=true;
+ hideOld();dateAll(false);fillDate();const er=$("dateErr");if(er)er.hidden=true;
  for(let i=0;i<4;i++)sel[i]=null;[...pk.children].forEach(g=>{g.classList.remove("done");[...g.children].forEach(c=>c.setAttribute("aria-pressed","false"));});
  selAT=null;document.querySelectorAll("#atPick button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v?"false":"true"));
  drawSlots(-1);$("pickField").hidden=true;$("hasType").setAttribute("aria-pressed","false");
