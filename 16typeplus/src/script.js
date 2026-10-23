@@ -224,7 +224,7 @@ function render(instant){
  window.__me.karai=window.__worry||"";{const rc=$("recheck");if(rc)rc.hidden=!!st.pct;}
  {const fig=$("cloudFig");if(fig){const tk=(window.__cloudTok=(window.__cloudTok||0)+1);setTimeout(()=>drawCloud().then(cv=>{if(tk!==window.__cloudTok)return;const x=cv.getContext("2d"),W=cv.width,H=cv.height,d=x.getImageData(0,0,W,H-90).data;let t=0,b=H-91;const blank=y=>{for(let i=y*W*4;i<(y+1)*W*4;i+=16)if(d[i]<235)return false;return true;};while(t<b&&blank(t))t++;while(b>t&&blank(b))b--;t=Math.max(0,t-50);b=Math.min(H-91,b+50);const o2=document.createElement("canvas");o2.width=W;o2.height=b-t;o2.getContext("2d").drawImage(cv,0,t,W,b-t,0,0,W,b-t);$("cloudImg").src=o2.toDataURL("image/png");$("cloudImg").alt=TR("わたしの気質と性格");fig.hidden=false;}).catch(()=>{}),0);}}
  {const kf=$("karteFig");if(kf){const tk=(window.__karteTok=(window.__karteTok||0)+1);setTimeout(()=>drawKarte().then(cv=>{if(tk!==window.__karteTok)return;$("karteImg").src=cv.toDataURL("image/png");$("karteImg").alt=TR("性格カルテ");kf.hidden=false;}).catch(()=>{}),0);}}
- {const K=KT[born+">"+now],el=$("kt");window.__me.kt=K||null;["hWorryH","hWorryQ","hWorry"].forEach(i=>{const x=$(i);if(x)x.style.display=(K&&K.aru)?"none":"";});if(el){el.hidden=!K;if(K)el.innerHTML='<h3 class="kth">'+esc(K.title)+'</h3>'+(K.aru?[["aru","こんなこと、ありませんか？"],["why","どうしてそうなるの？"],["yure","16タイプの結果が変わるわけ"],["plus","悩みを、こう見てみる"],["tip","生かすヒント"]].map(([f,h])=>'<div class="kts kt-'+f+'"><h4>'+TR(h)+'</h4><p>'+esc(K[f])+'</p></div>').join(""):'<p class="ktb">'+esc(K.body)+'</p>')+'<dl class="ktl"><dt>'+TR("言いそうなこと")+'</dt><dd class="say">'+esc(K.say)+'</dd><dt>'+TR("やりそうなこと")+'</dt><dd>'+esc(K.do)+'</dd>'+(K.aru?'':'<dt>'+TR("悩みやすいこと")+'</dt><dd>'+esc(K.worry)+'</dd>')+'</dl><div class="ktk"><span>'+TR("辛口のひと言")+'</span>'+esc(K.karai)+'</div>';}}window.__me.karaiC=strip(C.karai||"");drawBalance(N);lvInit();saveResult();layoutResult();
+ {const K=KT[born+">"+now],el=$("kt");window.__me.kt=K||null;["hWorryH","hWorryQ","hWorry"].forEach(i=>{const x=$(i);if(x)x.style.display=(K&&K.aru)?"none":"";});if(el){el.hidden=!K;if(K)el.innerHTML='<h3 class="kth">'+esc(K.title)+'</h3>'+(K.aru?[["aru","こんなこと、ありませんか？"],["why","どうしてそうなるの？"],["yure","16タイプの結果が変わるわけ"],["plus","悩みを、こう見てみる"],["hidden","まだ気づいていないかもしれない、あなたの力"],["tip","生かすヒント"]].filter(([f])=>K[f]).map(([f,h])=>'<div class="kts kt-'+f+'"><h4>'+TR(h)+'</h4><p>'+esc(K[f])+'</p>'+(f==="yure"?swayNote(born,now):'')+'</div>').join(""):'<p class="ktb">'+esc(K.body)+'</p>')+'<dl class="ktl"><dt>'+TR("言いそうなこと")+'</dt><dd class="say">'+esc(K.say)+'</dd><dt>'+TR("やりそうなこと")+'</dt><dd>'+esc(K.do)+'</dd>'+(K.aru?'':'<dt>'+TR("悩みやすいこと")+'</dt><dd>'+esc(K.worry)+'</dd>')+'</dl><div class="ktk"><span>'+TR("辛口のひと言")+'</span>'+esc(K.karai)+'</div>';}}window.__me.karaiC=strip(C.karai||"");drawBalance(N);lvInit();saveResult();layoutResult();
 }
 /* ---- 相性 ---- */
 const ps={y:1995,m:4,d:20};
@@ -614,6 +614,17 @@ function kaiunCard(at){let c=$("kaiun");if(LANG!=="ja"||!KAIUN_URL||!st.y){if(c)
  c.innerHTML='<p class="kaiun-eb">無料メール</p><h2>毎朝届く、あなただけの開運予報</h2><p>この診断の「気質」は、あなたの生年月日から出しています。同じ生年月日から、その日のラッキーカラーや開運小物を毎朝メールでお届けします。</p><a class="btn kaiun-btn" href="'+u+'" target="_blank" rel="noopener">無料で受け取る</a><p class="kaiun-note">生年月日（'+st.y+'年'+st.m+'月'+st.d+'日）は入力済み。メールアドレスだけで登録できます。</p>';
  c.hidden=false;c.querySelector("a").onclick=()=>{try{gtag("event","kaiun_click",{place:"result"});}catch(e){}};
  at.after(c);return c;}
+/* その人の回答で揺れた向きを、気質と性格の組み合わせから説明する */
+const SWN={EI:"「元気の出し方（人といるか、ひとりか）」",SN:"「ものの見方（事実か、可能性か）」",TF:"「決め方（理屈か、気持ちか）」",JP:"「進め方（計画どおりか、その場に合わせるか）」"},SWS={EI:"「元気の出し方」",SN:"「ものの見方」",TF:"「決め方」",JP:"「進め方」"};
+function swayNote(born,now){const ks=["EI","SN","TF","JP"];
+ if(!st.pct)return '<p class="mine">'+TR("質問に答えると、あなたの答えがどこで揺れているかがわかります。")+'</p>';
+ const w=ks.filter(k=>(st.sway&&st.sway[k])||(st.half&&st.half[k]));
+ if(!w.length)return '<p class="mine">'+TR("今回のあなたの回答は、4つの向きすべてがはっきりしていました。結果が受けるたびに変わるなら、答えた時の気分や、思い浮かべた場面が違ったのかもしれません。")+'</p>';
+ const jn=x=>x.length>1?x.slice(0,-1).join(TR("、"))+TR("と")+x[x.length-1]:x[0],nm=a=>jn(a.map(k=>TR(SWN[k]))),ns=a=>jn(a.map(k=>TR(SWS[k])));const d=w.filter(k=>born[ks.indexOf(k)]!==now[ks.indexOf(k)]),sm=w.filter(k=>born[ks.indexOf(k)]===now[ks.indexOf(k)]);
+ let t='<b>'+TR("今回のあなたの回答では、{a}が揺れていました。").replace("{a}",nm(w))+'</b>';
+ if(d.length)t+=TR("{a}は、生まれ持った気質と育ってきた性格の向きが違うところ。両方の力を持っているので、場面によって答えが変わるのは自然なことです。").replace("{a}",ns(d));
+ if(sm.length)t+=TR("{a}は、気質も性格も同じ向きの、ふだんはゆるがない部分です。ここが揺れたのは、今の職場や人間関係で、いつもと違う力を使っている時期だからかもしれません。").replace("{a}",ns(sm));
+ return '<p class="mine">'+t+TR("どちらかが正しいタイプ、ということはありません。")+'</p>';}
 function layoutResult(){const hero=document.querySelector(".hero");if(!hero)return;
  const mk=(id,title)=>{let d=$(id);if(!d){d=document.createElement("details");d.id=id;d.className="card more";d.innerHTML='<summary><h2>'+title+'</h2></summary><div class="mbody"></div>';}return d;};
  const dK=mk("dKarte",TR("性格カルテ")),dH=mk("dHints",TR("悩みと仕事のヒント")),dP=mk("dPersona",TR("タイプごとのくわしい説明")),dB=mk("dBal",TR("気質の力のバランス"));
