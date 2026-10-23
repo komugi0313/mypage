@@ -6068,6 +6068,7 @@ const GOGYO_LEGEND_BODY='<span style="display:inline-block"><b>木</b>＝成長�
 function gogyoLegend(){ return '<details class="r-legend"'+(window.__legendOpen?' open':'')+'><summary>言葉の意味（木火土金水）</summary><div style="font-size:13px;color:var(--ink2);font-weight:700;background:#FBF7F0;border:1px solid var(--line);border-radius:9px;padding:7px 10px;line-height:1.75">'+GOGYO_LEGEND_BODY+'</div></details>'; }
 function formatReading(text){
   text=plainGloss(text);
+  text=text.replace(/([一-龥]{2,6})（＝[^（）\n]{1,30}）（([ぁ-ん]{2,12})(?:[・：:＝]([^（）\n]{1,40}))?）/g,function(m,w,y,d){ return w+'（'+y+(d?'：'+d:'')+'）'; }).replace(/([一-龥]{2,6})（＝([^（）\n]{1,30})）（＝[^（）\n]{1,40}）/g,'$1（＝$2）');   // 言い換えが2つ続いたら1つに（ツールの言い換え＋文章作成の読み・説明）
   const lines=esc(text).split('\n').map(l=>l.trim());
   let html='',pbuf=[],lbuf=[],ltype='',summarySet=false,sawHead=false,inAns=false,talk=false;
   const ANS_HEAD=/お客様への(お)?伝え方|どうすればよいか|どうすれば良いか|鑑定の答え/, DETAIL_HEAD=/^くわしい読み解き|^詳しい読み解き/;
@@ -6590,7 +6591,7 @@ var pkFixYomi=(function(){ var G='甲乙丙丁戊己庚辛壬癸', GY=['きの�
   return function(s){ s=String(s==null?'':s).replace(/([㐀-鿿]{2,8})([（(])([ぁ-ゖー]*[㐀-鿿][ぁ-ゖー㐀-鿿]*)(?=[）)：:＝=、，,])/g,function(m,k,a,y){ if(!/[ぁ-ゖ]/.test(y)) return m; for(var c=0;c<k.length-1;c++){ var w=k.slice(c), ok=J[w]||t[w]; if(ok) return k+a+ok; } return m; });   // 「正財（せい財）」のように、読みに漢字がまじったものも表の読みに（発注者指示 2026-10-21）
     s=s.replace(/([（(])([ぁ-ゖー・\*＊]*[\*＊][ぁ-ゖー・\*＊]*)(?=[）)：:＝=、，,／/])/g,function(m,a,y){ return a+y.replace(/[\*＊]/g,''); });   // 読みの中に入った太字の記号（ひのえ**たうま**）を先に取る
     s=s.replace(/([子丑寅卯辰巳午未申酉戌亥](?:・[子丑寅卯辰巳午未申酉戌亥]){1,3})(\s*[（(])([ぁ-ゖー・]+)(?=[）)：:＝=、，,／/ 　])/g,function(m,k,a,y){ var bp=k.split('・').map(function(ch){ return one[ch]; }); return (y===bp.join('')||y===bp.join('・'))?m:k+a+bp.join('・'); });   // 寅・午・戌（いぬまうま）→（とら・うま・いぬ）
-    s=s.replace(/([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])([・：:])([ぁ-ゖー]+)(?=[）)、，,／/・：:＝=])/g,function(m,k,sp,y){ var ok=t[k]; return (ok&&ok!==y)?k+sp+ok:m; });
+    s=s.replace(/([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])([・：:＝=])([ぁ-ゖー]+)(?=[）)、，,／/・：:＝=。\s]|$)/g,function(m,k,sp,y){ var ok=t[k]; return (ok&&ok!==y)?k+sp+ok:m; });
     s=s.replace(/([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])年([・：:（(])([ぁ-ゖー]+)(?=[）)、，,／/・：:＝=])/g,function(m,k,sp,y){ var ok=t[k], y2=y.replace(/どし$|とし$|ねん$/,''); return (ok&&ok!==y2)?k+'年'+sp+ok+(y!==y2?y.slice(y2.length):''):m; });   // 「辛亥年：かのといぬ」のように干支のあとに「年」が付く形も直す（発注者指示 2026-10-22）   // （丁未・ひとのとひつじ）→（丁未・ひのとひつじ）
     return s.replace(/([㐀-鿿豈-﫿々]+)([\*＊]{0,3}\s*[（(])([ぁ-ゖー・]+)(?=[）)：:＝=、，,／/・ 　])/g,function(m,k,a,y){   // 読みのあとに「：比肩」などが続く形（壬子（じんし：比肩））も直す
     var ok=t[k]; if(!ok && k.length===1 && one[k] && (kana[y]||(/^[甲乙丙丁戊己庚辛壬癸]$/.test(k)&&/^(きの|ひの|つちの|かの|みずの)[ぁ-ゖ]{1,2}$/.test(y)))) ok=one[k];   /* 「丁（ひのえと）」のような干一字の読みちがいも直す（発注者指示 2026-10-22） */ if(!ok && /^[子丑寅卯辰巳午未申酉戌亥]{3}$/.test(k)){ var bp=k.split('').map(function(ch){ return one[ch]; }); ok=(y===bp.join('')||y===bp.join('・'))?y:bp.join('・'); }   // 三つの十二支（亥卯未＝い・う・ひつじ）
@@ -6848,6 +6849,9 @@ function rdOffKind(A){ if(!A) return 'net'; if(A.skipped) return 'skip'; const n
 /* 同じ文のくり返しを見つける：文に分けて、くわしい読み解きの文のうち、上の答えにも出てくる文の割合 */
 function pkSents(t){ return String(t||'').replace(/【[^】\n]*】/g,'\n').split(/[。！？\n]+/).map(x=>x.replace(/[\s　・*＊#「」『』（）()、,]/g,'')).filter(x=>x.length>=8); }
 function pkDupRate(a,d){ const A=new Set(pkSents(a)), D=pkSents(d); if(!D.length) return 0; return D.filter(x=>A.has(x)).length/D.length; }
+function pkFixLabel(t,q){ try{ t=String(t||''); q=String(q||''); if(!q) return t;   // 「どんな人？」のように、するかしないかを聞いていない相談では、1行目の「おすすめです／おすすめできません」等の札を外す（発注者指示 2026-10-23）
+  if(/べき|どちら|どっち|いい[？?か]|良い[？?か]|よい[？?か]|いいですか|良いですか|大丈夫|やめ|続け|始め|買|売|転職|結婚する|付き合|別れ|引っ越|受け|申し込|挑戦|進め|選|決め|しても|した方|したほう/.test(q)) return t;
+  return t.replace(/^(\s*)(?:おすすめです|おすすめできません|条件つきで良い|今は慎重に)[。、．]\s*/,'$1'); }catch(e){ return t; } }
 function pkFixWhen(t,q){ try{   // 「いつ」を聞かれたのに1行目に時期がないときは、答えの中の時期を1行目に添える（質問には必ず答える。発注者指示 2026-10-21）
   t=String(t||''); q=String(q||''); if(!/いつ|何歳|何年|時期|頃|ころ|タイミング/.test(q)) return t;
   const L=t.split('\n'); let i=0; while(i<L.length&&!L[i].trim()) i++; if(i>=L.length) return t;
@@ -6918,7 +6922,8 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
       if(proUser)appendPro(out,proUser,localText,deep,proLocal);
       return;
     }
-    const ans=pkFixWhen(pkFixAnsHeads(String(A.text).split(/\n[ 　]*[【\[]?くわしい読み解き[】\]]?/)[0].trim()),(out.closest&&out.closest('.rd-item')&&out.closest('.rd-item').dataset.q)||((out.id==='compat'||(out.closest&&out.closest('#compat')))?((document.getElementById('compat-worry')||{}).value||''):''));
+    const _q0=(out.closest&&out.closest('.rd-item')&&out.closest('.rd-item').dataset.q)||'';
+    const ans=pkFixLabel(pkFixWhen(pkFixAnsHeads(String(A.text).split(/\n[ 　]*[【\[]?くわしい読み解き[】\]]?/)[0].trim()),(out.closest&&out.closest('.rd-item')&&out.closest('.rd-item').dataset.q)||((out.id==='compat'||(out.closest&&out.closest('#compat')))?((document.getElementById('compat-worry')||{}).value||''):'')),_q0);
     out.innerHTML=sc+engineBadge(true,'')+formatReading(ans)+'<div class="loading r-more"><span class="spin"></span>くわしい読み解きを作成しています…（答えは上に出ています。読みながらお待ちください）</div>';
     // ② くわしい読み解き：先に出した答えと食い違わないよう、答えを渡して根拠を書かせる
     const D=await generateReading('〔PART:detail〕\n'+user+'\n\n【先に作成した答え（これと食い違わないように、その根拠を書く）】\n'+ans,localText,undefined,deep);
