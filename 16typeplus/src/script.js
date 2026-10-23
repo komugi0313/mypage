@@ -96,6 +96,13 @@ function drawResume(){let r=$("qResume");const q=savedQuiz();
  if(!r){r=document.createElement("button");r.type="button";r.id="qResume";r.className="btn resume";document.querySelector("#formCard .fork").after(r);
   r.onclick=()=>{const q2=savedQuiz();if(!q2)return;st.y=q2.y||st.y;st.m=q2.m||st.m;st.d=q2.d||st.d;dateAll(true);fillDate();startQuiz(q2);};}
  r.hidden=false;r.innerHTML=TR("前回の続きから再開する")+"<small>"+TR("{n}問目から").replace("{n}",q.qi+1)+"</small>";}
+/* 入力をリセット：生年月日・選んだ4文字・A/T・途中の質問を消す（保存した結果は消さない） */
+$("formReset").onclick=()=>{if(!confirm(TR("生年月日と選んだタイプ、途中の質問をリセットしますか？")))return;
+ dateAll(false);fillDate();const er=$("dateErr");if(er)er.hidden=true;
+ for(let i=0;i<4;i++)sel[i]=null;[...pk.children].forEach(g=>{g.classList.remove("done");[...g.children].forEach(c=>c.setAttribute("aria-pressed","false"));});
+ selAT=null;document.querySelectorAll("#atPick button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v?"false":"true"));
+ drawSlots(-1);$("pickField").hidden=true;$("hasType").setAttribute("aria-pressed","false");
+ sset(KQ,null);drawResume();$("formCard").scrollIntoView({behavior:"smooth",block:"start"});};
 $("quiz").onclick=()=>{if(!dateOK())return;startQuiz(null);};if($("startBtn"))$("startBtn").onclick=e=>{e.preventDefault();$("formCard").scrollIntoView({behavior:"smooth",block:"start"});};
 if($("recheckBtn"))$("recheckBtn").onclick=()=>{startQuiz(null);$("quizCard").scrollIntoView({behavior:"smooth"});};
 $("qQuit").onclick=()=>{showQuiz(false);drawResume();};
