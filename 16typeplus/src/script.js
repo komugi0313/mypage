@@ -361,9 +361,10 @@ function coreHead(c,SANS,x,y){c.font="700 26px "+SANS;const t=TR("ゆるがな�
 function coreKey(b,n){return b.split("").map((L,i)=>L===n[i]?L:"-").join("");}
 function coreOf(b,n){return (typeof CR!=="undefined"&&CR[coreKey(b,n)])||null;}
 /* 真ん中のブロックを描く。wAt(y)はその高さで使える幅。dryなら高さだけ返す */
-function coreBlock(c,SANS,x,y0,wAt,co,dry){let y=y0;const lines=(t,w,fs,wt,max)=>{max=max||2;c.font=(wt||700)+" "+fs+"px "+SANS;let ls=wrapLines(c,t,w,9);while(ls.length>max&&fs>17){fs--;c.font=(wt||700)+" "+fs+"px "+SANS;ls=wrapLines(c,t,w,9);}return [ls,fs];};
+function coreBlock(c,SANS,x,y0,wAt,co,dry){let y=y0;const lines=(t,w,fs,wt,max)=>{max=max||2;c.font=(wt||700)+" "+fs+"px "+SANS;let ls=wrapLines(c,t,w,9);while(ls.length>max&&fs>17){fs--;c.font=(wt||700)+" "+fs+"px "+SANS;ls=wrapLines(c,t,w,9);}
+  if(ls.length===2&&ls[1].replace(/[、。」）]/g,"").length<=3){for(let k=0.92;k>0.5;k-=0.04){const t2=wrapLines(c,t,w*k,9);if(t2.length===2&&t2[1].length>3){ls=t2;break;}}}return [ls,fs];};
  if(!dry)coreHead(c,SANS,x,y+22);y+=58;
- let w=wAt(y+30)-40,[nl,nf]=lines(co.name,w,36,800,2);
+ let w=wAt(y+30)-40,[nl,nf]=lines(co.name,w,36,800,2);if(nl.length>1){c.font="800 30px "+SANS;if(c.measureText(co.name).width<=w){nl=[co.name];nf=30;}}
  if(!dry){c.fillStyle=SC.plus;c.font="800 "+nf+"px "+SANS;nl.forEach((l,i)=>c.fillText(l,x,y+nf+i*nf*1.25));}y+=nl.length*nf*1.25+16;
  co.aru.forEach(t=>{const bw=Math.min(wAt(y+30),wAt(y))-24,[ls,fs]=lines(t,bw-28,23,700,2),h=ls.length*fs*1.4+18;
   if(!dry){rrect(c,x-bw/2,y,bw,h,14);c.fillStyle="#FFFFFF";c.fill();c.lineWidth=2;c.strokeStyle=rgba(SC.plus,.55);c.stroke();c.fillStyle=SC.plus;c.font="700 "+fs+"px "+SANS;ls.forEach((l,i)=>c.fillText(l,x,y+9+fs*1.05+i*fs*1.4));}
