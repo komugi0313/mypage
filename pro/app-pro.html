@@ -3880,6 +3880,7 @@ function pkEnsureCross(t,a,b){ try{ t=String(t||''); const love=pkRelLove();
   const plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on')); const L=[];
   [[a,b,NA,NB],[b,a,NB,NA]].forEach(function(q){ crossStars(q[0],q[1],love).forEach(function(c){ if(!plain&&t.indexOf(c.star)>=0) return;
     L.push(plain?q[2]+'にとって、'+q[3]+'は'+c.plain+'です。':q[2]+'から見て、'+q[3]+'の'+c.at.map(function(z){ return z.label+'「'+z.gz+'」'; }).join('・')+'が'+q[2]+'の'+c.star+'に当たります＝'+q[2]+'にとって'+q[3]+'は'+c.mean+'。'); }); });
+  const ad=attractionDir(a,b,NA,NB); if(ad&&!(plain?t.indexOf(ad.plain)>=0:/惹かれ方の向き/.test(t))) L.unshift(plain?ad.plain:ad.pro);
   if(!L.length) return t; if(plain&&/惹かれ|助けて|守って|支えに/.test(t)&&L.every(function(x){ return t.indexOf(x)>=0; })) return t;
   return t+'\n\n'+(plain?'【2人が惹かれ合うところ】':'【惹かれ合う星（相手の命式に自分の星がある）】')+'\n'+L.map(function(x){ return '・'+x; }).join('\n'); }catch(e){ return t; } }
 function pkEnsureLove(t,c,q){ try{ t=String(t||''); if(!pkIsLoveQ(q)) return t; const L=loveFourLines(c); if(!L) return t;
@@ -7445,6 +7446,19 @@ function crossStars(x,y,love){ const PN=['年柱','月柱','日柱','時柱'], b
     const st=new Set([...matchKichi4(x,p.branch),...matchKichi1(x,p.branch),...matchKichi(kichiTargets(x),p.stem,p.branch,(p.hiddenStems||[]).map(function(h){ return h.stem; }))]);
     Object.keys(CROSS_STARS).forEach(function(k){ if(!st.has(k)) return; if(!love&&(k==='咸池'||k==='紅艶')) return; (by[k]=by[k]||[]).push({j:j,label:PN[j],gz:p.ganzhi}); }); });
   }catch(e){} return Object.keys(by).map(function(k){ return {star:k,at:by[k],day:by[k].some(function(q){ return q.j===2; }),mean:CROSS_STARS[k][0],plain:CROSS_STARS[k][1]}; }); }
+/* 惹かれ方の向き（鑑定者本人の指示 2026-10-23）：恋愛の星（咸池・紅艶）がどちら向きに当たるかを比べて1行で必ず出す */
+function attractionDir(a,b,NA,NB){ try{ if(!pkRelLove()) return null; NA=NA||'本人'; NB=NB||'お相手';
+  const LOVE=['咸池','紅艶'], ab=crossStars(a,b,true), ba=crossStars(b,a,true);
+  const sp=function(L){ return {love:L.filter(function(c){ return LOVE.indexOf(c.star)>=0; }).map(function(c){ return c.star; }), help:L.filter(function(c){ return LOVE.indexOf(c.star)<0; }).map(function(c){ return c.star; })}; };
+  const x=sp(ab), y=sp(ba);
+  const side=function(o){ return o.love.length?'恋愛の星'+o.love.length+'つ（'+o.love.join('・')+'）'+(o.help.length?'＋助けの星'+o.help.length+'つ（'+o.help.join('・')+'）':''):'恋愛の星なし'+(o.help.length?'（助けの星'+o.help.length+'つ：'+o.help.join('・')+'）':''); };
+  let v, vp;
+  if(x.love.length&&y.love.length){ v='2人とも、相手に異性として惹かれやすい'; vp='2人とも、お互いに異性として惹かれやすい組み合わせです。'; }
+  else if(x.love.length){ v=NA+'のほうが異性として惹かれやすい'; vp=NA+'のほうが、'+NB+'に異性として惹かれやすい組み合わせです。'+(y.help.length?NB+'は'+NA+'に、ときめきより安心・支えを感じやすいでしょう。':''); }
+  else if(y.love.length){ v=NB+'のほうが異性として惹かれやすい'; vp=NB+'のほうが、'+NA+'に異性として惹かれやすい組み合わせです。'+(x.help.length?NA+'は'+NB+'に、ときめきより安心・支えを感じやすいでしょう。':''); }
+  else { v='恋愛の星はどちら向きにも当たらない（惹かれ方は合・律音などで見る）'; vp='星の上では、どちらか一方が強く惹かれるという形はありません。'; }
+  return {pro:'惹かれ方の向き：'+NA+'→'+NB+'＝'+side(x)+'／'+NB+'→'+NA+'＝'+side(y)+'＝'+v, plain:vp, x:x, y:y};
+}catch(e){ return null; } }
 function compatBalance(a,b){
   const PN=['年柱','月柱','日柱','時柱'], items=[];
   const PA=(a&&a.pillars)||[], PB=(b&&b.pillars)||[];
@@ -7513,7 +7527,8 @@ function compatAnalysis(a,b,rt){
     if(gzA[2]&&gzA[2]===gzB[1]) R.push(`本人の日柱とお相手の月柱が同じ干支（${gzA[2]}）＝律音。お相手の社会運・仕事運がアップする縁（本人が自分らしいやり方でお相手の縁の下の力持ちになる）`);
     if(R.length) L.push('【律音（りっちん）＝縁が深い良い点・鑑定文の「惹かれ合うところ」で必ず最初に触れる】'+R.join('／')); }
   { const love=!!(rt&&rt.useSpouse!==false), X=[]; [[a,b,'本人','お相手'],[b,a,'お相手','本人']].forEach(function(q){ crossStars(q[0],q[1],love).forEach(function(c){ X.push(q[2]+'から見て、'+q[3]+'の'+c.at.map(function(z){ return z.label+'「'+z.gz+'」'; }).join('・')+'が'+q[2]+'の'+c.star+'に当たる＝'+q[2]+'にとって'+q[3]+'は'+c.mean); }); });
-    if(X.length) L.push('【惹かれ合う星＝相手の命式に自分の吉凶星がある（鑑定文の「惹かれ合うところ」で必ず書く。どちらから見た星かを取りちがえない）】'+X.join('／')); }
+    if(X.length) L.push('【惹かれ合う星＝相手の命式に自分の吉凶星がある（鑑定文の「惹かれ合うところ」で必ず書く。どちらから見た星かを取りちがえない）】'+X.join('／'));
+    if(love){ const ad=attractionDir(a,b,'本人','お相手'); if(ad) L.push('【惹かれ方の向き＝ツールの判定・厳守（鑑定文の「惹かれ合うところ」で必ず書く。「お互いに惹かれ合う」と書くのは、2人とも恋愛の星があるときだけ）】'+ad.pro); } }
   L.push(`【2人の基本の事実＝この通りに書く】本人の日干=${aS}（${STEM_EL[aS]}）・日支（配偶宮）=${aB}／お相手の日干=${bS}（${STEM_EL[bS]}）・日支（配偶宮）=${bB}。十二支（子・丑・寅…）と十二運（長生・病など）を取りちがえない。`);
   // 日干の関係
   let dk;
@@ -7890,6 +7905,7 @@ function compatVerdictHTML(a,b,rt){
     balBlock='<div style="margin-top:12px;background:#fff;border:2px solid '+col+';border-radius:11px;padding:11px 13px;font-size:13px;line-height:1.8">'+
       '<div style="font-weight:900;font-size:14.5px;color:'+col+'">2人の間に成立しているもの（全部）と、相性全体の結論</div>'+
       '<div style="margin-top:6px;padding:8px 10px;border-radius:9px;background:'+(cb.cls==='good'?'#EEF7F0':cb.cls==='bad'?'#FDF2F1':'#FBF4E4')+'"><b style="color:'+col+'">結論：'+cb.verdict+'</b><br>'+why+'<br><span style="font-size:12px">良い点の合計 '+cb.good+'／注意点の合計 '+cb.bad+'（数え方：日柱どうし＝3、片方が日柱＝2、それ以外＝1。日柱どうしではないものは、2人の関係そのものではなく、その柱の場面にかぎって出るので、弱く数えています）</span></div>'+
+      (function(){ try{ const ad=attractionDir(a,b,(typeof personName!=='undefined'&&personName)?personName+'さん':'本人',(typeof personNameB!=='undefined'&&personNameB)?personNameB+'さん':'お相手'); return ad?'<div style="margin-top:8px;padding:8px 10px;border-radius:9px;background:#FCEFF5;color:#5A1F3C;font-weight:800">💘 '+_kdE(ad.pro)+'</div>':''; }catch(e){ return ''; } })()+
       '<div style="margin-top:8px;font-weight:900;color:#1F6B3A">良い点（'+G.length+'）</div>'+(G.length?G.map(row).join(''):'<div style="margin:3px 0">なし</div>')+
       '<div style="margin-top:8px;font-weight:900;color:#9A1F17">注意点（'+Bd.length+'）</div>'+(Bd.length?Bd.map(row).join(''):'<div style="margin:3px 0">なし</div>')+
       (N.length?'<div style="margin-top:8px;font-weight:900;color:#444">参考</div>'+N.map(row).join(''):'')+
