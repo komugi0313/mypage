@@ -113,6 +113,11 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   const ok2=/庚子の月）＝配偶宮「卯」と刑|2026年12月ごろ（気持ちがすれ違いやすい月）/.test(r); console.log('  '+(ok2?'OK':'NG')+' 注意の月（刑・冲）が文になければ書き足す'); if(!ok2) res.fails.push('注意の月の書き足し'); }
 { const y=await p.evaluate(()=>{ if(typeof pkYearKichiFix!=='function') return ''; const c=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'); return pkYearKichiFix('2027年や2028年に天徳貴人（強い守りの星）が巡ります。',c); });
   const ok3=/天徳貴人（強い守りの星）（天徳貴人が巡るのは2028年）/.test(y); console.log('  '+(ok3?'OK':'NG')+' 年の吉凶星の事実あわせ（天徳貴人は2028年だけ）'); if(!ok3) res.fails.push('年の吉凶星'); }
+// 3つのツールに同じ直しが入っているか（PRO＝元、易・鑑定書は同じ中身。ビギナーはPROから生成）
+{ const grab=(f,name,end)=>{ try{ const t=fs.readFileSync(path.join(ROOT,f),'utf8'); const a=t.indexOf('function '+name+'('); if(a<0) return null; return t.slice(a,t.indexOf(end,a)+end.length); }catch(e){ return null; } };
+  const e=[]; [['pkFactFix',"  return t; }catch(e){ return t; } }"],['pkStampYears',"}catch(e){ return String(s).replace(/\\u0003/g,''); } }"]].forEach(([n,end])=>{ const base=grab('pro/app-pro.html',n,end);
+    ['eki-pro/app/index.html','pro/meishi-sheet.html','beginner/app-beginner.html'].forEach(f=>{ const g=grab(f,n,end); if(!g||g!==base) e.push(f+' の '+n); }); });
+  console.log('  '+(e.length?'NG':'OK')+' 3つのツール（PRO・ビギナー・易）と鑑定書に同じ直しが入っている'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('3つのツールの直し: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
