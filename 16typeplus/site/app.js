@@ -236,7 +236,7 @@ function render(instant){
  window.__me.karai=window.__worry||"";{const rc=$("recheck");if(rc)rc.hidden=!!st.pct;}
  {const fig=$("cloudFig");if(fig){const tk=(window.__cloudTok=(window.__cloudTok||0)+1);setTimeout(()=>drawCloud().then(cv=>{if(tk!==window.__cloudTok)return;const x=cv.getContext("2d"),W=cv.width,H=cv.height,d=x.getImageData(0,0,W,H-90).data;let t=0,b=H-91;const blank=y=>{for(let i=y*W*4;i<(y+1)*W*4;i+=16)if(d[i]<235)return false;return true;};while(t<b&&blank(t))t++;while(b>t&&blank(b))b--;t=Math.max(0,t-50);b=Math.min(H-91,b+50);const o2=document.createElement("canvas");o2.width=W;o2.height=b-t;o2.getContext("2d").drawImage(cv,0,t,W,b-t,0,0,W,b-t);$("cloudImg").src=o2.toDataURL("image/png");$("cloudImg").alt=TR("わたしの気質と性格");fig.hidden=false;}).catch(()=>{}),0);}}
  {const kf=$("karteFig");if(kf){const tk=(window.__karteTok=(window.__karteTok||0)+1);setTimeout(()=>drawKarte().then(cv=>{if(tk!==window.__karteTok)return;$("karteImg").src=cv.toDataURL("image/png");$("karteImg").alt=TR("性格カルテ");kf.hidden=false;}).catch(()=>{}),0);}}
- {const K=KT[born+">"+now],el=$("kt");window.__me.kt=K||null;["hWorryH","hWorryQ","hWorry"].forEach(i=>{const x=$(i);if(x)x.style.display=(K&&K.aru)?"none":"";});if(el){el.hidden=!K;if(K)el.innerHTML='<h3 class="kth">'+esc(K.title)+'</h3>'+(K.aru?[["aru","こんなこと、ありませんか？"],["why","どうしてそうなるの？"],["yure","16タイプの結果が変わるわけ"],["plus","悩みを、こう見てみる"],["tip","生かすヒント"]].map(([f,h])=>'<div class="kts kt-'+f+'"><h4>'+TR(h)+'</h4><p>'+esc(K[f])+'</p></div>').join(""):'<p class="ktb">'+esc(K.body)+'</p>')+'<dl class="ktl"><dt>'+TR("言いそうなこと")+'</dt><dd class="say">'+esc(K.say)+'</dd><dt>'+TR("やりそうなこと")+'</dt><dd>'+esc(K.do)+'</dd>'+(K.aru?'':'<dt>'+TR("悩みやすいこと")+'</dt><dd>'+esc(K.worry)+'</dd>')+'</dl><div class="ktk"><span>'+TR("辛口のひと言")+'</span>'+esc(K.karai)+'</div>';}}window.__me.karaiC=strip(C.karai||"");drawBalance(N);lvInit();saveResult();layoutResult();
+ {const K=KT[born+">"+now],el=$("kt");window.__me.kt=K||null;["hWorryH","hWorryQ","hWorry"].forEach(i=>{const x=$(i);if(x)x.style.display=(K&&K.aru)?"none":"";});if(el){el.hidden=!K;if(K)el.innerHTML='<h3 class="kth">'+esc(K.title)+'</h3>'+(K.aru?[["aru","こんなこと、ありませんか？"],["why","どうしてそうなるの？"],["yure","16タイプの結果が変わるわけ"],["plus","悩みを、こう見てみる"],["hidden","あなたの、もう一つの力"],["tip","生かすヒント"]].filter(([f])=>K[f]).map(([f,h])=>'<div class="kts kt-'+f+'"><h4><i aria-hidden="true">'+({aru:"?",why:"!",yure:"⇄",plus:"+",hidden:"✦",tip:"✓"})[f]+'</i>'+TR(h)+'</h4>'+kfmt(K[f],f)+(f==="yure"?swayNote(born,now):'')+'</div>').join(""):'<p class="ktb">'+esc(K.body)+'</p>')+'<dl class="ktl"><dt>'+TR("言いそうなこと")+'</dt><dd class="say">'+esc(K.say)+'</dd><dt>'+TR("やりそうなこと")+'</dt><dd>'+esc(K.do)+'</dd>'+(K.aru?'':'<dt>'+TR("悩みやすいこと")+'</dt><dd>'+esc(K.worry)+'</dd>')+'</dl><div class="ktk"><span>'+TR("辛口のひと言")+'</span>'+esc(K.karai)+'</div>';}}window.__me.karaiC=strip(C.karai||"");drawBalance(N);lvInit();saveResult();layoutResult();
 }
 /* ---- 相性 ---- */
 const ps={y:1995,m:4,d:20};
@@ -626,6 +626,35 @@ function kaiunCard(at){let c=$("kaiun");if(LANG!=="ja"||!KAIUN_URL||!st.y){if(c)
  c.innerHTML='<p class="kaiun-eb">無料メール</p><h2>毎朝届く、あなただけの開運予報</h2><p>この診断の「気質」は、あなたの生年月日から出しています。同じ生年月日から、その日のラッキーカラーや開運小物を毎朝メールでお届けします。</p><a class="btn kaiun-btn" href="'+u+'" target="_blank" rel="noopener">無料で受け取る</a><p class="kaiun-note">生年月日（'+st.y+'年'+st.m+'月'+st.d+'日）は入力済み。メールアドレスだけで登録できます。</p>';
  c.hidden=false;c.querySelector("a").onclick=()=>{try{gtag("event","kaiun_click",{place:"result"});}catch(e){}};
  at.after(c);return c;}
+/* その人の回答で揺れた向きを、気質と性格の組み合わせから説明する */
+const SWN={EI:["元気の出し方","人といるか、ひとりか","--ei"],SN:["ものの見方","事実か、可能性か","--sn"],TF:["決め方","理屈か、気持ちか","--tf"],JP:["進め方","計画どおりか、その場に合わせるか","--jp"]};
+function swayNote(born,now){const ks=["EI","SN","TF","JP"];
+ if(!st.pct)return '<p class="mine">'+TR("質問に答えると、あなたの答えがどこで揺れているかがわかります。")+'</p>';
+ const w=ks.filter(k=>(st.sway&&st.sway[k])||(st.half&&st.half[k]));
+ if(!w.length)return '<div class="mine"><p>'+TR("今回のあなたの回答は、4つの向きすべてがはっきりしていました。結果が受けるたびに変わるなら、答えた時の気分や、思い浮かべた場面が違ったのかもしれません。")+'</p></div>';
+ const df=k=>born[ks.indexOf(k)]!==now[ks.indexOf(k)];
+ let t='<p class="mh">'+TR("今回のあなたの回答で、揺れていたのは")+'</p><ul class="swl">'+w.map(k=>'<li style="--c:var('+SWN[k][2]+')"><b>'+TR(SWN[k][0])+'</b><small>'+TR(SWN[k][1])+'</small><em class="'+(df(k)?'both':'core')+'">'+(df(k)?TR("両方の力"):TR("ゆるがない部分"))+'</em></li>').join("")+'</ul>';
+ if(w.some(df))t+='<p><em class="both">'+TR("両方の力")+'</em>'+TR("生まれ持った気質と育ってきた性格の向きが違うところです。両方の力を持っているので、場面によって答えが変わるのは自然なことです。")+'</p>';
+ if(w.some(k=>!df(k)))t+='<p><em class="core">'+TR("ゆるがない部分")+'</em>'+TR("気質も性格も同じ向きで、ふだんは揺れにくいところです。ここが揺れたのは、今の職場や人間関係で、いつもと違う力を使っている時期だからかもしれません。")+'</p>';
+ return '<div class="mine">'+t+'<p class="mk"><b>'+TR("どちらかが正しいタイプ、ということはありません。")+'</b></p></div>';}
+/* 鑑定文を読みやすく：気質・性格の言葉に色、かぎかっこを太字、結論の文を太字、ヒントは箇条書き */
+const KW={ja:[/(生まれ持った気質|生まれ持った性質|生まれ持った|生まれつき|気質)|(経験の中で育った性格|経験の中で育った|経験の中で|育ってきた性格|育ってきた|性格)|(両方の力|ゆるがない部分)/g],
+ en:[/\b(inborn temperament|temperament|born with|inborn)\b|\b(character you grew|character|grew through experience|through experience)\b|\b(both strengths|steady part|steady core)\b/gi],
+ ko:[/(타고난 기질|타고난|기질)|(경험 속에서 자란|경험으로 자란|자라 온 성격|성격)|(두 가지 힘|흔들리지 않는 부분)/g]};
+function sents(t){/* かぎかっこ・引用符の中では文を区切らない */
+ const out=[];let cur="",dq=0,inQ=false;const ends=LANG==="ja"?"。！？":".!?";
+ for(let i=0;i<t.length;i++){const c=t[i];cur+=c;
+  if(c==="「"||c==="“"||c==="‘")dq++;else if((c==="」"||c==="”"||c==="’")&&dq>0)dq--;else if(c==='"')inQ=!inQ;
+  if(!dq&&!inQ&&ends.includes(c)){while(i+1<t.length&&(ends.includes(t[i+1])||t[i+1]==='"'&&false))cur+=t[++i];
+   if(LANG==="ja"||i+1>=t.length||/\s/.test(t[i+1])){out.push(cur.trim());cur="";}}}
+ if(cur.trim())out.push(cur.trim());return out.length?out:[t];}
+function kfmt1(t){t=esc(t).replace(/「([^」]{1,40})」/g,'<b class="q">「$1」</b>').replace(/&quot;([^&]{1,60})&quot;/g,'<b class="q">"$1"</b>').replace(/[“]([^”]{1,60})[”]/g,'<b class="q">“$1”</b>').replace(/‘([^’]{1,40})’/g,'<b class="q">‘$1’</b>');
+ return t.replace(KW[LANG]?KW[LANG][0]:KW.ja[0],(m,b,n,c)=>b?'<span class="hb">'+m+'</span>':n?'<span class="hn">'+m+'</span>':'<b>'+m+'</b>');}
+function kfmt(t,f){const ss=sents(t).map(kfmt1),J=LANG==="ja"?"":" ";
+ if(f==="tip")return '<ul class="tipl">'+ss.map(x=>'<li>'+x+'</li>').join("")+'</ul>';
+ if(f==="aru")return '<p>'+ss.join(J)+'</p>';
+ if(f==="why"||f==="plus"||f==="hidden"){const last=ss.length>1?ss.pop():null;const ps=[];for(let i=0;i<ss.length;i+=2)ps.push('<p>'+ss.slice(i,i+2).join(J)+'</p>');return ps.join("")+(last?'<p class="key">'+last+'</p>':'');}
+ return '<p>'+ss.join(J)+'</p>';}
 function layoutResult(){const hero=document.querySelector(".hero");if(!hero)return;
  const mk=(id,title)=>{let d=$(id);if(!d){d=document.createElement("details");d.id=id;d.className="card more";d.innerHTML='<summary><h2>'+title+'</h2></summary><div class="mbody"></div>';}return d;};
  const dK=mk("dKarte",TR("性格カルテ")),dH=mk("dHints",TR("悩みと仕事のヒント")),dP=mk("dPersona",TR("タイプごとのくわしい説明")),dB=mk("dBal",TR("気質の力のバランス"));
