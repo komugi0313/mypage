@@ -3888,6 +3888,13 @@ function pkPillarStarFix(t,c){ try{ t=String(t||''); if(!c||!c.pillars||typeof p
     const wrong=named.filter(function(k){ return at[L].indexOf(k)<0; }); if(!wrong.length||wrong.length!==named.length) return m0;
     const homes=Object.keys(at).filter(function(x){ return wrong.every(function(k){ return at[x].indexOf(k)>=0; }); });
     return homes.length===1?homes[0]+'柱'+gl+pa+rest:m0; }); }catch(e){ return t; } }
+function pkEnsureCross(t,a,b){ try{ t=String(t||''); const love=pkRelLove();
+  const NA=(typeof personName!=='undefined'&&personName)?personName+'さん':'本人', NB=(typeof personNameB!=='undefined'&&personNameB)?personNameB+'さん':'お相手';
+  const plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on')); const L=[];
+  [[a,b,NA,NB],[b,a,NB,NA]].forEach(function(q){ crossStars(q[0],q[1],love).forEach(function(c){ if(!plain&&t.indexOf(c.star)>=0) return;
+    L.push(plain?q[2]+'にとって、'+q[3]+'は'+c.plain+'です。':q[2]+'から見て、'+q[3]+'の'+c.at.map(function(z){ return z.label+'「'+z.gz+'」'; }).join('・')+'が'+q[2]+'の'+c.star+'に当たります＝'+q[2]+'にとって'+q[3]+'は'+c.mean+'。'); }); });
+  if(!L.length) return t; if(plain&&/惹かれ|助けて|守って|支えに/.test(t)&&L.every(function(x){ return t.indexOf(x)>=0; })) return t;
+  return t+'\n\n'+(plain?'【2人が惹かれ合うところ】':'【惹かれ合う星（相手の命式に自分の星がある）】')+'\n'+L.map(function(x){ return '・'+x; }).join('\n'); }catch(e){ return t; } }
 function pkEnsureLove(t,c,q){ try{ t=String(t||''); if(!pkIsLoveQ(q)) return t; const L=loveFourLines(c); if(!L) return t;
   const plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'));
   // 月の干支：文章を書く側が「2027年3月ごろ（きみずうの月）」のように読みだけ・まちがった干支に変えたら、計算どおりの干支に戻す
@@ -7101,6 +7108,7 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
     const _dup=pkDupRate(ans,det);   // くわしい読み解きが、上の答えのくり返しになっていないか
     const det2=pkDropRepeat(ans,det);
     let full=((D.online&&_dup>0.6)||String(det2).replace(/【[^】]*】|\s/g,'').length<40)?ans:(ans+'\n\n【くわしい読み解き】\n'+det2);   // 中身のないくわしい読み解きは見出しも出さない   // ほとんど同じ文なら、くわしい読み解きは出さない（同じ文を2回見せない。発注者指示 2026-10-21）
+    if((out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart&&typeof chartB!=='undefined'&&chartB) full=pkEnsureCross(full,chart,chartB);   // 惹かれ合う星（相手の命式に自分の咸池・紅艶・貴人）がなければ書き足す
     { let _seen=false; full=full.replace(/\n*[ 　]*【くわしい読み解き】[ 　]*(?:\n[ 　]*【くわしい読み解き】[ 　]*)*/g,function(m0){ if(_seen) return '\n'; _seen=true; return '\n\n【くわしい読み解き】\n'; }); }   // 見出しが2回続かないように
     if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart) { full=pkEnsureBonds(full,chart); full=pkMonthFactFix(full,chart); full=pkYearKichiFix(full,chart); full=pkPillarStarFix(full,chart); full=pkEnsureLove(full,chart,_q0); }   // 命式内の天地徳合・干合は、鑑定文になければツールが書き足す（発注者指示 2026-10-23）
     out.innerHTML=sc+engineBadge(true,D.online?'':'くわしい読み解きは通信できなかったため、端末内で作成した内容を表示しています。')+formatReading(full);
@@ -7441,6 +7449,15 @@ function detectTensenCompat(a,b){
 }
 /* 2人の間に成立しているものを全部数え、良い点と注意点を差し引きして、相性全体の結論をツールが出す（発注者指示 2026-10-22）
    重み：日柱どうし＝3（2人の関係そのもの）／片方が日柱＝2／それ以外＝1（日柱でないものは強く扱わない）。 */
+/* 相手の命式に「自分の吉凶星」がある＝惹かれる・助けになる（鑑定者本人の指示 2026-10-23「必ず加えてください」）。
+   x から見て、y の各柱（時刻不明の時柱は除く）に x の咸池・紅艶・貴人が当たるか。表は写真の表（matchKichi4＝年支・日支、matchKichi1＝日干、matchKichi＝月支）。 */
+const CROSS_STARS={咸池:['異性として強く惹かれる相手（桃花）','異性として強く惹かれやすい相手'],紅艶:['色気・華やかさに惹かれる相手','つい目で追ってしまう魅力を感じる相手'],天乙貴人:['困ったときに助けてくれる存在','助けてくれる存在'],天徳貴人:['守ってくれる存在','守ってくれる存在'],月徳貴人:['守ってくれる存在','守ってくれる存在'],大極貴人:['支えになる・ありがたい存在','支えになるありがたい存在'],福星貴人:['幸せを運んでくれる存在','幸せを運んでくれる存在']};
+function pkRelLove(){ try{ const v=(typeof document!=='undefined'&&document.getElementById('rel-type')&&document.getElementById('rel-type').value)||'love'; const r=(typeof RELTYPES!=='undefined'&&RELTYPES[v])||null; return !(r&&r.useSpouse===false); }catch(e){ return true; } }   // 恋人・夫婦・婚活＝恋愛の星も見る／友人・仕事など＝貴人だけ
+function crossStars(x,y,love){ const PN=['年柱','月柱','日柱','時柱'], by={}; try{
+  (y.pillars||[]).forEach(function(p,j){ if(!p||(j===3&&y.timeUnknown)) return;
+    const st=new Set([...matchKichi4(x,p.branch),...matchKichi1(x,p.branch),...matchKichi(kichiTargets(x),p.stem,p.branch,(p.hiddenStems||[]).map(function(h){ return h.stem; }))]);
+    Object.keys(CROSS_STARS).forEach(function(k){ if(!st.has(k)) return; if(!love&&(k==='咸池'||k==='紅艶')) return; (by[k]=by[k]||[]).push({j:j,label:PN[j],gz:p.ganzhi}); }); });
+  }catch(e){} return Object.keys(by).map(function(k){ return {star:k,at:by[k],day:by[k].some(function(q){ return q.j===2; }),mean:CROSS_STARS[k][0],plain:CROSS_STARS[k][1]}; }); }
 function compatBalance(a,b){
   const PN=['年柱','月柱','日柱','時柱'], items=[];
   const PA=(a&&a.pillars)||[], PB=(b&&b.pillars)||[];
@@ -7476,6 +7493,9 @@ function compatBalance(a,b){
     const day=ai.includes(2)||bj.includes(2), both=ai.includes(2)&&bj.includes(2), w=both?3:(day?2:1), gwl=both?'強（2人の日柱がどちらも入る）':(day?'中（片方の日柱が入る）':'弱（日柱が入らない）');
     add(kind,true,'本人の'+[...new Set(ai)].map(i=>PN[i]).join('・')+'＋お相手の'+[...new Set(bj)].map(j=>PN[j]).join('・')+'（'+t.join('')+'）',w+1,'2人の地支を合わせると'+t.join('')+'がそろい、'+g[3]+'の力がまとまる（2人で協力し合える強い縁）',gwl);
   }));
+  // 相手の命式に自分の吉凶星（咸池・紅艶・貴人）がある＝惹かれる・助けになる（1つの星につき1回・軽めに数える）
+  try{ [[a,b,'本人','お相手'],[b,a,'お相手','本人']].forEach(function(q){ crossStars(q[0],q[1],pkRelLove()).forEach(function(c){
+    add(q[2]+'の'+c.star+'が'+q[3]+'に',true,q[3]+'の'+c.at.map(function(z){ return z.label+'「'+z.gz+'」'; }).join('・'),(c.day?2:1)*0.5,q[2]+'から見て、'+q[3]+'は'+c.mean+'（'+q[3]+'の十二支・干が、'+q[2]+'の'+c.star+'に当たる）',c.day?'中（相手の日柱に当たる）':'弱（相手の日柱以外に当たる）'); }); }); }catch(e){}
   // 五行の補い合い（喜神）
   try{ const fa=SHENG.filter(el=>_kkAssess(a).assess(el).fav==='喜'), fb=SHENG.filter(el=>_kkAssess(b).assess(el).fav==='喜');
     const x=fa.filter(el=>(b.fiveElements[el]||0)>=1).length>0, y=fb.filter(el=>(a.fiveElements[el]||0)>=1).length>0;
@@ -7505,6 +7525,8 @@ function compatAnalysis(a,b,rt){
     if(gzA[1]&&gzA[1]===gzB[2]) R.push(`本人の月柱とお相手の日柱が同じ干支（${gzA[1]}）＝律音。本人の社会運・仕事運がアップする縁（お相手が本人のビジョンを心から応援し支えてくれる）`);
     if(gzA[2]&&gzA[2]===gzB[1]) R.push(`本人の日柱とお相手の月柱が同じ干支（${gzA[2]}）＝律音。お相手の社会運・仕事運がアップする縁（本人が自分らしいやり方でお相手の縁の下の力持ちになる）`);
     if(R.length) L.push('【律音（りっちん）＝縁が深い良い点・鑑定文の「惹かれ合うところ」で必ず最初に触れる】'+R.join('／')); }
+  { const love=!!(rt&&rt.useSpouse!==false), X=[]; [[a,b,'本人','お相手'],[b,a,'お相手','本人']].forEach(function(q){ crossStars(q[0],q[1],love).forEach(function(c){ X.push(q[2]+'から見て、'+q[3]+'の'+c.at.map(function(z){ return z.label+'「'+z.gz+'」'; }).join('・')+'が'+q[2]+'の'+c.star+'に当たる＝'+q[2]+'にとって'+q[3]+'は'+c.mean); }); });
+    if(X.length) L.push('【惹かれ合う星＝相手の命式に自分の吉凶星がある（鑑定文の「惹かれ合うところ」で必ず書く。どちらから見た星かを取りちがえない）】'+X.join('／')); }
   L.push(`【2人の基本の事実＝この通りに書く】本人の日干=${aS}（${STEM_EL[aS]}）・日支（配偶宮）=${aB}／お相手の日干=${bS}（${STEM_EL[bS]}）・日支（配偶宮）=${bB}。十二支（子・丑・寅…）と十二運（長生・病など）を取りちがえない。`);
   // 日干の関係
   let dk;

@@ -132,6 +132,12 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
 { const r=await p.evaluate(()=>typeof pkFactFix==='function'?pkFactFix('木はあなたの喜神です。水は忌神（きじん）（過剰になりやすい五行）です。'):'');
   const ok6=/喜神（きしん：あると調子が上がる五行）/.test(r)&&/忌神（きじん：多いと疲れやすい五行）です/.test(r)&&!/過剰になりやすい/.test(r);
   console.log('  '+(ok6?'OK':'NG')+' 喜神・忌神に読みと意味を添える（3つのツール共通）'); if(!ok6) res.fails.push('喜神・忌神の説明'); }
+// 惹かれ合う星（相手の命式に自分の咸池・紅艶・貴人）：彼2006-06-07（時刻不明）×彼女2008-03-28 14時
+{ const r=await p.evaluate(()=>{ if(typeof compatBalance!=='function'||typeof crossStars!=='function') return ''; const him=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},0,'none')), her=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none');
+    return compatBalance(him,her).items.map(x=>x.kind+'|'+x.where).join('\n')+'\n#'+pkEnsureCross('テスト',him,her); });
+  const e=[]; if(!/本人の咸池がお相手に\|お相手の年柱「戊子」・月柱「乙卯」・日柱「丁卯」/.test(r)) e.push('咸池（子・卯）'); if(!/本人の紅艶がお相手に\|お相手の時柱「丁未」/.test(r)) e.push('紅艶（未）'); if(!/お相手の月徳貴人が本人に/.test(r)) e.push('月徳貴人');
+  if(!/【惹かれ合う星|【2人が惹かれ合うところ】/.test(r)) e.push('鑑定文への書き足し');
+  console.log('  '+(e.length?'NG':'OK')+' 相性：惹かれ合う星（相手の命式に自分の咸池・紅艶・貴人）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('惹かれ合う星: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
