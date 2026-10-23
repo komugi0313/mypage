@@ -43,7 +43,9 @@ def lang_data(lang):
     CW={}
     cd='/home/user/mypage/16typeplus/content/cloud/' if lang=='ja' else I+'cloud.{}/'.format(lang)
     for f in sorted(glob.glob(cd+'*.json')): CW.update(js(f))
-    return {'CW':CW,'KT':KT,'LV':LVd,'BODY':body,'D':d,'QZ':quiz,'COMBO':combos,'PS':persona,'HN':hints,'TD':today,'I18N':ui}
+    CR={}
+    for f in sorted(glob.glob('/home/user/mypage/16typeplus/content/core/part_*.%s.json'%lang)): CR.update(js(f))
+    return {'CR':CR,'CW':CW,'KT':KT,'LV':LVd,'BODY':body,'D':d,'QZ':quiz,'COMBO':combos,'PS':persona,'HN':hints,'TD':today,'I18N':ui}
 def preview():
     langs={l:lang_data(l) for l in ['ja','en','ko']}
     head=rd(S+'head.html')
@@ -51,7 +53,7 @@ def preview():
 <script>
 var LD=__LD__;
 var PAGE_LANG=/^#(en|ko)\\b/.test(location.hash)?location.hash.slice(1,3):"ja";
-var _L=LD[PAGE_LANG];var CW=_L.CW||{},KT=_L.KT||{},LV=_L.LV,D=_L.D,QZ=_L.QZ,COMBO=_L.COMBO,PS=_L.PS,HN=_L.HN,TD=_L.TD,I18N=_L.I18N;
+var _L=LD[PAGE_LANG];var CR=_L.CR||{},CW=_L.CW||{},KT=_L.KT||{},LV=_L.LV,D=_L.D,QZ=_L.QZ,COMBO=_L.COMBO,PS=_L.PS,HN=_L.HN,TD=_L.TD,I18N=_L.I18N;
 document.getElementById("app").outerHTML=_L.BODY;document.documentElement.lang=PAGE_LANG;
 document.querySelectorAll("nav.lang a").forEach(function(a,i){var l=["ja","en","ko"][i];a.href="#"+l;a.onclick=function(e){e.preventDefault();location.hash=l;location.reload();};});
 </script>
