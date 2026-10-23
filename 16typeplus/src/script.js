@@ -235,16 +235,16 @@ function same(a,b){let n=0;for(let i=0;i<4;i++)if(a[i]===b[i])n++;return n;}
 const TIER=[[TR("正反対の刺激コンビ"),TR("お互いにないものを持っている2人。組めば最強、ぶつかれば大波乱。")],[TR("別ルートの発見コンビ"),TR("考え方は別ルート。だからこそ話すたびに発見がある。")],[TR("ほどよいバランス型"),TR("半分同じで、半分ちがう。ほどよい距離で長く続く。")],[TR("似た者同士の安心ペア"),TR("感覚がよく似ていて、無理せず自然体でいられる。")],[TR("鏡みたいな2人"),TR("長所も弱点もそっくり。いちばんの理解者になれる。")]];
 /* P = {born, num, now(任意), who} */
 function pairHTML(P){const me=window.__me,sb=same(me.born,P.born),tb=TIER[sb];
- let html='<div class="phead"><div><small>'+esc(P.who)+TR('の生まれつき</small><span class="t">')+P.born+'</span><small>'+D.NICK[P.born]+(P.now?TR('（性格は ')+P.now+TR('）'):'')+'</small></div></div>';
- html+=TR('<div class="mx"><div><span class="l">本当の相性</span><div class="v">')+tb[0]+'</div></div>';
- if(P.now){const sn=same(me.now,P.now),tn=TIER[sn];html+=TR('<div><span class="l">今の相性</span><div class="v">')+tn[0]+'</div></div></div>';
+ let html='<div class="phead"><div><small>'+esc(P.who)+TR('の気質</small><span class="t">')+P.born+'</span><small>'+D.NICK[P.born]+(P.now?TR('（性格は ')+P.now+TR('）'):'')+'</small></div></div>';
+ html+=TR('<div class="mx"><div><span class="l">気質の相性</span><div class="v">')+tb[0]+'</div></div>';
+ if(P.now){const sn=same(me.now,P.now),tn=TIER[sn];html+=TR('<div><span class="l">性格の相性</span><div class="v">')+tn[0]+'</div></div></div>';
   const hiB=sb>=2,hiN=sn>=2;
   const V=hiB&&hiN?[TR("どこから見ても相性のいい2人"),TR("性格も気質も、自然と波長が合う。一緒にいて疲れない相手。")]
    :hiB&&!hiN?[TR("性格はすれ違って見えても、気質は似た者同士"),TR("性格どうしは噛み合わない場面があっても、気質ではわかり合える。時間をかけるほど仲良くなる。")]
    :!hiB&&hiN?[TR("性格は気が合う。でも気質は別ルート"),TR("性格どうしは話が合うけれど、気質は考え方が違う。大事な決断のときに差が出やすいので、本音を話す時間を。")]
    :[TR("正反対だからこそ、組めば最強"),TR("性格も気質も違うからこそ、お互いの足りないところを埋め合える。ぶつかったら、違いを面白がって。")];
   html+='<p class="verdict"><b>'+V[0]+'</b>'+V[1]+'</p>';}
- else html+=TR('<div><span class="l">今の相性</span><div class="v" style="color:var(--muted);font-weight:500">16タイプを入れると出ます</div></div></div><p class="verdict">')+tb[1]+'</p>';
+ else html+=TR('<div><span class="l">性格の相性</span><div class="v" style="color:var(--muted);font-weight:500">16タイプを入れると出ます</div></div></div><p class="verdict">')+tb[1]+'</p>';
  return html;}
 $("pGo").onclick=()=>{const N=natal(ps.y,ps.m,ps.d);$("pRes").innerHTML=pairHTML({born:N.t,num:N.num,now:$("pt").value||null,who:TR("あの人")});$("pRes").hidden=false;};
 
