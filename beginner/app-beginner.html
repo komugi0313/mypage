@@ -3780,7 +3780,7 @@ function pkEnsureBonds(t,c){ try{ t=String(t||''); const L=natalBondLines(c,fals
   return t+'\n\n【命式内の結びつき】\n'+miss.map(function(x){ return '・'+x.pro; }).join('\n'); }catch(e){ return t; } }
 /* 恋愛相談で必ず入れる4つ（鑑定者本人の指示 2026-10-23）：①配偶宮（日支）の蔵干 ②パートナーの星が喜神かどうか（はっきり書く） ③出会いの場 ④縁が動く月。
    すべてツールの計算（命式・月運）から作る。文章に入っていなければ、ツールが書き足す（pkEnsureLove）。 */
-const PK_LOVE_Q=/出会|恋愛|恋人|彼氏|彼女|片思い|片想い|好きな人|気になる人|結婚|婚活|再婚|離婚|復縁|出会い|パートナー|(?<!大丈)夫|妻|旦那|配偶|浮気|不倫|遊び人|モテ|交際|付き合|(?:合う|相性のいい|相性の良い)(?:男性|女性|人|相手)|男性のタイプ|女性のタイプ/;
+const PK_LOVE_Q=/出会|デート|好きにな|好きです|告白|両思い|両想い|脈あり|脈が|元彼|元カレ|元カノ|恋愛|恋人|彼氏|彼女|片思い|片想い|好きな人|気になる人|結婚|婚活|再婚|離婚|復縁|出会い|パートナー|(?<!大丈)夫|妻|旦那|配偶|浮気|不倫|遊び人|モテ|交際|付き合|(?:合う|相性のいい|相性の良い)(?:男性|女性|人|相手)|男性のタイプ|女性のタイプ/;
 function pkIsLoveQ(q){ return PK_LOVE_Q.test(String(q||'')); }
 function loveFourLines(c){ try{ if(!c||!c.pillars||!c.dayMaster) return null;
   const ds=c.dayMaster.stem, sp=(typeof spouseStars==='function')?spouseStars(c):[], dp=c.pillars[2]; if(!dp) return null;
@@ -3860,6 +3860,20 @@ function pkMonthFactFix(t,c){ try{ t=String(t||''); if(!c||!c.pillars||typeof mo
     sn=sn.replace(/配偶宮(?:[（(][^）)]*[）)])?に(?=[^。]{0,6}?(?:咸池|紅艶|天乙貴人|天徳貴人|月徳貴人|駅馬|華蓋|文昌貴人))/g,'この月に');   // 月に巡る星を「配偶宮に」と書いた取りちがえ
     if(/三合/.test(sn)&&!san(ev)) sn=sn.replace(/三合(?![（(][^）)]*3)/g,'半合');
     return sn; }).join(''); }catch(e){ return t; } }
+/* 年の吉凶星の事実あわせ（発注者指示 2026-10-23）：「2027年や2028年に天徳貴人が巡る」のように、書いた年の一部にしか巡らない星は、
+   巡る年をかっこで書き添える。どの年にも巡らない星を書いた文は外す。命式（生まれ持ち）の話の文はさわらない。 */
+function pkYearKichiFix(t,c){ try{ t=String(t||''); if(!c||!c.annualFortunes||typeof meguriKichi!=='function') return t;
+  const KS=['天乙貴人','天徳貴人','月徳貴人','天徳合','月徳合','咸池','紅艶','駅馬','華蓋','文昌貴人','福星貴人','大極貴人','羊刃','飛刃','劫殺','亡神','血刃','囚獄','暗禄','金与禄'];
+  const has=function(y,k){ const a=c.annualFortunes.find(function(x){ return x.year===y; }); if(!a||!a.ganzhi) return null; return meguriKichi(c,a.ganzhi[0],a.ganzhi[1]).indexOf(k)>=0; };
+  return t.split(/(?<=[。！？\n])/).map(function(sn){
+    if(/命式|生まれ|もともと|持って生まれ|月の|月運|大運/.test(sn)) return sn;
+    const ys=[]; sn.replace(/((?:19|20)\d\d)年/g,function(m0,y){ y=+y; if(ys.indexOf(y)<0) ys.push(y); return m0; }); if(!ys.length) return sn;
+    let drop=false;
+    KS.forEach(function(k){ if(sn.indexOf(k)<0||drop) return; const r=ys.map(function(y){ return {y:y,h:has(y,k)}; }).filter(function(x){ return x.h!==null; }); if(!r.length) return;
+      const on=r.filter(function(x){ return x.h; }).map(function(x){ return x.y; });
+      if(!on.length){ drop=true; return; }
+      if(on.length<r.length){ const re=new RegExp(k+'((?:[（(][^（）()\\n]{0,40}[）)])?)'); sn=sn.replace(re,function(m0,gl){ return k+gl+'（'+k+'が巡るのは'+on.join('年・')+'年）'; }); } });
+    return drop?'':sn; }).join(''); }catch(e){ return t; } }
 function pkEnsureLove(t,c,q){ try{ t=String(t||''); if(!pkIsLoveQ(q)) return t; const L=loveFourLines(c); if(!L) return t;
   const plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'));
   // 月の干支：文章を書く側が「2027年3月ごろ（きみずうの月）」のように読みだけ・まちがった干支に変えたら、計算どおりの干支に戻す
@@ -6821,6 +6835,11 @@ function pkFactFix(t,aS,bS){ try{ t=String(t==null?'':t);   // 命式の事実�
   t=t.replace(/十二運((?:[（(][^）)\n]{0,24}[）)])?)の[ 　]*([子丑寅卯辰巳午未申酉戌亥])(?![子丑寅卯辰巳午未申酉戌亥])/g,'十二支の$2');
   // ④ 言葉の説明が2つ続いたとき（「正官（＝…）（せいかん・…）」）は、読みのほうを先にした1つに
   t=t.replace(/([一-龥]{2,6})（＝([^（）\n]{1,30})）（([ぁ-ん]{2,12})[・：:＝]([^（）\n]{1,40})）/g,'$1（$3：$4）');
+  // ⑦ 通変星の説明の取りちがえ（正官↔偏官・正財↔偏財。発注者指示 2026-10-23「正官（行動力と決断力の星）」のまちがいから）
+  t=t.replace(/(正官)((?:[（(][ぁ-ん]{2,8}[）)])?)[（(]([^（）()\n]{0,30})[）)]/g,function(m,n,y,g){ return /行動力|度胸|決断|挑戦|プレッシャー/.test(g)&&!/規律|責任|誠実/.test(g)?n+y+'（規律・責任・誠実の星）':m; });
+  t=t.replace(/(偏官)((?:[（(][ぁ-ん]{2,8}[）)])?)[（(]([^（）()\n]{0,30})[）)]/g,function(m,n,y,g){ return /規律|責任|誠実|まじめ/.test(g)&&!/行動|度胸|決断|挑戦/.test(g)?n+y+'（行動力・度胸・決断の星）':m; });
+  t=t.replace(/(正財)((?:[（(][ぁ-ん]{2,8}[）)])?)[（(]([^（）()\n]{0,30})[）)]/g,function(m,n,y,g){ return /人脈|チャンス|社交|流動|大きなお金/.test(g)&&!/堅実|コツコツ|着実|まじめ/.test(g)?n+y+'（堅実・まじめにコツコツ積み上げる星）':m; });
+  t=t.replace(/(偏財)((?:[（(][ぁ-ん]{2,8}[）)])?)[（(]([^（）()\n]{0,30})[）)]/g,function(m,n,y,g){ return /堅実|コツコツ|着実/.test(g)&&!/人脈|チャンス|社交/.test(g)?n+y+'（人脈・チャンス・社交の星）':m; });
   // ⑤ 十干の陰陽：「丁（火の陽）」→ 丁は陰（乙丁己辛癸＝陰／甲丙戊庚壬＝陽。発注者指示 2026-10-23）
   var YIN='乙丁己辛癸';
   t=t.replace(/([甲乙丙丁戊己庚辛壬癸])(?![子丑寅卯辰巳午未申酉戌亥])([（(][^）)\n]{0,20}?)(?:([木火土金水])の(陽|陰)|(陽|陰)の([木火土金水]))/g,function(m,g,mid,e1,y1,y2,e2){ var y=YIN.indexOf(g)>=0?'陰':'陽'; return e1?g+mid+EL[g]+'の'+y:g+mid+y+'の'+EL[g]; });
@@ -7061,7 +7080,8 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
     const _dup=pkDupRate(ans,det);   // くわしい読み解きが、上の答えのくり返しになっていないか
     const det2=pkDropRepeat(ans,det);
     let full=((D.online&&_dup>0.6)||String(det2).replace(/【[^】]*】|\s/g,'').length<40)?ans:(ans+'\n\n【くわしい読み解き】\n'+det2);   // 中身のないくわしい読み解きは見出しも出さない   // ほとんど同じ文なら、くわしい読み解きは出さない（同じ文を2回見せない。発注者指示 2026-10-21）
-    if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart) { full=pkEnsureBonds(full,chart); full=pkMonthFactFix(full,chart); full=pkEnsureLove(full,chart,_q0); }   // 命式内の天地徳合・干合は、鑑定文になければツールが書き足す（発注者指示 2026-10-23）
+    { let _seen=false; full=full.replace(/\n*[ 　]*【くわしい読み解き】[ 　]*(?:\n[ 　]*【くわしい読み解き】[ 　]*)*/g,function(m0){ if(_seen) return '\n'; _seen=true; return '\n\n【くわしい読み解き】\n'; }); }   // 見出しが2回続かないように
+    if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart) { full=pkEnsureBonds(full,chart); full=pkMonthFactFix(full,chart); full=pkYearKichiFix(full,chart); full=pkEnsureLove(full,chart,_q0); }   // 命式内の天地徳合・干合は、鑑定文になければツールが書き足す（発注者指示 2026-10-23）
     out.innerHTML=sc+engineBadge(true,D.online?'':'くわしい読み解きは通信できなかったため、端末内で作成した内容を表示しています。')+formatReading(full);
     attachReadingTools(out,full);
     if(proUser)appendPro(out,proUser,localText,deep,proLocal);
