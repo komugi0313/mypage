@@ -89,7 +89,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     return { L:L&&L.pro, t, n, g }; });
   const e=[]; const L=lv.L||[];
   if(!/日支「未」/.test(L[0]||'')||!/丁（偏印）・乙（偏官）・己（比肩）/.test(L[0]||'')) e.push('配偶宮の蔵干');
-  if(!/パートナーの星（官星＝五行の「木」）は、あなたの喜神です/.test(L[1]||'')) e.push('パートナーの星が喜神か');
+  if(!/パートナーの星（官星＝五行の「木」）は、あなたの喜神（きしん：あると調子が上がる五行）です/.test(L[1]||'')) e.push('パートナーの星が喜神か');
   if(!/月柱/.test(L[2]||'')||!/仕事/.test(L[2]||'')) e.push('出会いの場');
   if(!/2027年3月ごろ（癸卯の月）/.test(L[3]||'')||/亥の月）＝[^／]*半合/.test(L[3]||'')) e.push('縁が動く月');
   if(!/【恋愛で(必ず見る4つ|大事な4つのこと)】/.test(lv.t)||(lv.t.match(/\n・/g)||[]).length!==4) e.push('書き足し');
@@ -128,6 +128,9 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     return [pkFactFix('日干が丁（火の陰・ひのえ）で、日支に卯'), pkYearKichiFix('2027年は紅艶（魅力の星）が巡り、2028年は駅馬（移動の星）が重なります。',c)]; });
   const e=[]; if(!/丁（火の陰・ひのと）/.test(r[0])) e.push('丁の読み'); if(/が巡るのは/.test(r[1])) e.push('正しく書けた年の星に書き添えている');
   console.log('  '+(e.length?'NG':'OK')+' 十干の読みの取りちがえ・年の星の書き添え'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('読み・年の星: '+e.join('・')); }
+{ const r=await p.evaluate(()=>typeof pkFactFix==='function'?pkFactFix('木はあなたの喜神です。水は忌神（きじん）（過剰になりやすい五行）です。'):'');
+  const ok6=/喜神（きしん：あると調子が上がる五行）/.test(r)&&/忌神（きじん：多いと疲れやすい五行）です/.test(r)&&!/過剰になりやすい/.test(r);
+  console.log('  '+(ok6?'OK':'NG')+' 喜神・忌神に読みと意味を添える（3つのツール共通）'); if(!ok6) res.fails.push('喜神・忌神の説明'); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
