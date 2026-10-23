@@ -236,7 +236,7 @@ function render(instant){
  window.__me.karai=window.__worry||"";{const rc=$("recheck");if(rc)rc.hidden=!!st.pct;}
  {const fig=$("cloudFig");if(fig){const tk=(window.__cloudTok=(window.__cloudTok||0)+1);setTimeout(()=>drawCloud().then(cv=>{if(tk!==window.__cloudTok)return;const x=cv.getContext("2d"),W=cv.width,H=cv.height,d=x.getImageData(0,0,W,H-90).data;let t=0,b=H-91;const blank=y=>{for(let i=y*W*4;i<(y+1)*W*4;i+=16)if(d[i]<235)return false;return true;};while(t<b&&blank(t))t++;while(b>t&&blank(b))b--;t=Math.max(0,t-50);b=Math.min(H-91,b+50);const o2=document.createElement("canvas");o2.width=W;o2.height=b-t;o2.getContext("2d").drawImage(cv,0,t,W,b-t,0,0,W,b-t);$("cloudImg").src=o2.toDataURL("image/png");$("cloudImg").alt=TR("わたしの気質と性格");fig.hidden=false;}).catch(()=>{}),0);}}
  {const kf=$("karteFig");if(kf){const tk=(window.__karteTok=(window.__karteTok||0)+1);setTimeout(()=>drawKarte().then(cv=>{if(tk!==window.__karteTok)return;$("karteImg").src=cv.toDataURL("image/png");$("karteImg").alt=TR("性格カルテ");kf.hidden=false;}).catch(()=>{}),0);}}
- {const K=KT[born+">"+now],el=$("kt");window.__me.kt=K||null;["hWorryH","hWorryQ","hWorry"].forEach(i=>{const x=$(i);if(x)x.style.display=(K&&K.aru)?"none":"";});if(el){el.hidden=!K;if(K)el.innerHTML='<h3 class="kth">'+esc(K.title)+'</h3>'+(K.aru?[["aru","こんなこと、ありませんか？"],["why","どうしてそうなるの？"],["yure","16タイプの結果が変わるわけ"],["plus","悩みを、こう見てみる"],["hidden","あなたの、もう一つの力"],["tip","生かすヒント"]].filter(([f])=>K[f]).map(([f,h])=>'<div class="kts kt-'+f+'"><h4><i aria-hidden="true">'+({aru:"?",why:"!",yure:"⇄",plus:"+",hidden:"✦",tip:"✓"})[f]+'</i>'+TR(h)+'</h4>'+kfmt(K[f],f)+(f==="yure"?swayNote(born,now):'')+'</div>').join(""):'<p class="ktb">'+esc(K.body)+'</p>')+'<dl class="ktl"><dt>'+TR("言いそうなこと")+'</dt><dd class="say">'+esc(K.say)+'</dd><dt>'+TR("やりそうなこと")+'</dt><dd>'+esc(K.do)+'</dd>'+(K.aru?'':'<dt>'+TR("悩みやすいこと")+'</dt><dd>'+esc(K.worry)+'</dd>')+'</dl><div class="ktk"><span>'+TR("辛口のひと言")+'</span>'+esc(K.karai)+'</div>';}}window.__me.karaiC=strip(C.karai||"");drawBalance(N);lvInit();saveResult();layoutResult();
+ {const K=KT[born+">"+now],el=$("kt");window.__me.kt=K||null;["hWorryH","hWorryQ","hWorry"].forEach(i=>{const x=$(i);if(x)x.style.display=(K&&K.aru)?"none":"";});if(el){el.hidden=!K;if(K)el.innerHTML=coreCard(born,now)+'<h3 class="kth">'+esc(K.title)+'</h3>'+(K.aru?[["aru","こんなこと、ありませんか？"],["why","どうしてそうなるの？"],["yure","16タイプの結果が変わるわけ"],["plus","悩みを、こう見てみる"],["hidden","あなたの、もう一つの力"],["tip","生かすヒント"]].filter(([f])=>K[f]).map(([f,h])=>'<div class="kts kt-'+f+'"><h4><i aria-hidden="true">'+({aru:"?",why:"!",yure:"⇄",plus:"+",hidden:"✦",tip:"✓"})[f]+'</i>'+TR(h)+'</h4>'+kfmt(K[f],f)+(f==="yure"?swayNote(born,now):'')+'</div>').join(""):'<p class="ktb">'+esc(K.body)+'</p>')+'<dl class="ktl"><dt>'+TR("言いそうなこと")+'</dt><dd class="say">'+esc(K.say)+'</dd><dt>'+TR("やりそうなこと")+'</dt><dd>'+esc(K.do)+'</dd>'+(K.aru?'':'<dt>'+TR("悩みやすいこと")+'</dt><dd>'+esc(K.worry)+'</dd>')+'</dl><div class="ktk"><span>'+TR("辛口のひと言")+'</span>'+esc(K.karai)+'</div>';}}window.__me.karaiC=strip(C.karai||"");drawBalance(N);lvInit();saveResult();layoutResult();
 }
 /* ---- 相性 ---- */
 const ps={y:1995,m:4,d:20};
@@ -369,6 +369,19 @@ function corePill(c,SANS,t,x,y,w){let fs=25;c.font="700 "+fs+"px "+SANS;while(c.
  const tw=Math.min(w,c.measureText(t).width+36),h=fs+20;rrect(c,x-tw/2,y-h/2,tw,h,h/2);c.fillStyle="#FFFFFF";c.fill();c.lineWidth=2;c.strokeStyle=SC.plus;c.stroke();
  c.fillStyle=SC.plus;c.textBaseline="middle";c.fillText(t,x,y+1);c.textBaseline="alphabetic";}
 function coreHead(c,SANS,x,y){c.font="700 26px "+SANS;const t=TR("ゆるがない芯"),tw=c.measureText(t).width+40;rrect(c,x-tw/2,y-22,tw,44,22);c.fillStyle=SC.plus;c.fill();c.fillStyle="#FFFFFF";c.textBaseline="middle";c.fillText(t,x,y+1);c.textBaseline="alphabetic";}
+/* ゆるがない芯：名前＋あるある3つ（81通り）。キーは同じ文字ならその文字、違えば「-」 */
+function coreKey(b,n){return b.split("").map((L,i)=>L===n[i]?L:"-").join("");}
+function coreOf(b,n){return (typeof CR!=="undefined"&&CR[coreKey(b,n)])||null;}
+/* 真ん中のブロックを描く。wAt(y)はその高さで使える幅。dryなら高さだけ返す */
+function coreBlock(c,SANS,x,y0,wAt,co,dry){let y=y0;const lines=(t,w,fs,wt,max)=>{max=max||2;c.font=(wt||700)+" "+fs+"px "+SANS;let ls=wrapLines(c,t,w,9);while(ls.length>max&&fs>17){fs--;c.font=(wt||700)+" "+fs+"px "+SANS;ls=wrapLines(c,t,w,9);}
+  if(ls.length===2&&ls[1].replace(/[、。」）]/g,"").length<=3){for(let k=0.92;k>0.5;k-=0.04){const t2=wrapLines(c,t,w*k,9);if(t2.length===2&&t2[1].length>3){ls=t2;break;}}}return [ls,fs];};
+ if(!dry)coreHead(c,SANS,x,y+22);y+=58;
+ let w=wAt(y+30)-40,[nl,nf]=lines(co.name,w,36,800,2);if(nl.length>1){c.font="800 30px "+SANS;if(c.measureText(co.name).width<=w){nl=[co.name];nf=30;}}
+ if(!dry){c.fillStyle=SC.plus;c.font="800 "+nf+"px "+SANS;nl.forEach((l,i)=>c.fillText(l,x,y+nf+i*nf*1.25));}y+=nl.length*nf*1.25+16;
+ co.aru.forEach(t=>{const bw=Math.min(wAt(y+30),wAt(y))-24,[ls,fs]=lines(t,bw-28,23,700,2),h=ls.length*fs*1.4+18;
+  if(!dry){rrect(c,x-bw/2,y,bw,h,14);c.fillStyle="#FFFFFF";c.fill();c.lineWidth=2;c.strokeStyle=rgba(SC.plus,.55);c.stroke();c.fillStyle=SC.plus;c.font="700 "+fs+"px "+SANS;ls.forEach((l,i)=>c.fillText(l,x,y+9+fs*1.05+i*fs*1.4));}
+  y+=h+10;});
+ return y-y0;}
 /* 案1：2つの円の重なり（重なったところが、ゆるがない芯） */
 async function drawCloud(){const me=window.__me,{SANS,MONO}=await cwFonts(),W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const b=me.born,n=me.now,one=b===n,[cb,cn]=cwColors(b,n);
@@ -380,24 +393,29 @@ async function drawCloud(){const me=window.__me,{SANS,MONO}=await cwFonts(),W=10
  if(one){const R=470;c.beginPath();c.ellipse(W/2,cy,R,ry,0,0,Math.PI*2);c.fillStyle=rgba(cb,.09);c.fill();c.lineWidth=4;c.strokeStyle=rgba(cb,.65);c.stroke();
   c.font="700 28px "+SANS;c.fillStyle=cb;c.fillText(TR("気質 ＝ 性格"),W/2,cy-ry+70);
   /* 真ん中：4つの文字すべてが、ゆるがない芯 */
-  const irx=300,iry=150;c.beginPath();c.ellipse(W/2,cy,irx,iry,0,0,Math.PI*2);c.fillStyle=rgba(cb,.16);c.fill();c.lineWidth=3;c.strokeStyle=rgba(cb,.8);c.stroke();
+  const co=coreOf(b,n);let iry=150;
+  if(co){const bw=600,hh=coreBlock(c,SANS,W/2,0,()=>bw,co,true)+36;iry=hh/2;const top0=cy-iry;rrect(c,W/2-bw/2-20,top0,bw+40,hh,28);c.fillStyle=rgba(cb,.16);c.fill();c.lineWidth=3;c.strokeStyle=rgba(cb,.8);c.stroke();coreBlock(c,SANS,W/2,top0+18,()=>bw,co,false);}
+  else{const irx=300;c.beginPath();c.ellipse(W/2,cy,irx,iry,0,0,Math.PI*2);c.fillStyle=rgba(cb,.16);c.fill();c.lineWidth=3;c.strokeStyle=rgba(cb,.8);c.stroke();
   coreHead(c,SANS,W/2,cy-iry+40);
-  b.split("").forEach((L,i)=>{const yy=cy-iry+96+i*50,dy=(yy-cy)/iry,sx=Math.sqrt(Math.max(0,1-dy*dy));corePill(c,SANS,TR(CORE[L]),W/2,yy,Math.min(2*irx-60,2*irx*sx-30));});
-  const ws=cwList(b),top=ws.slice(0,7),bot=ws.slice(7);
+  b.split("").forEach((L,i)=>{const yy=cy-iry+96+i*50,dy=(yy-cy)/iry,sx=Math.sqrt(Math.max(0,1-dy*dy));corePill(c,SANS,TR(CORE[L]),W/2,yy,Math.min(2*irx-60,2*irx*sx-30));});}
+  const ws=cwList(b),room=(ry*2-iry*2-150),nTop=Math.max(3,Math.min(7,Math.floor((cy-iry-14-(cy-ry+100))/40))),nBot=Math.max(3,Math.min(ws.length-nTop,Math.floor((cy+ry-40-(cy+iry+14))/40))),top=ws.slice(0,nTop),bot=ws.slice(nTop,nTop+nBot);
   const col=(arr,y0,y1,big)=>{const st=(y1-y0)/arr.length;arr.forEach((t,i)=>{const dy=y0+st*(i+.5)-cy,sx=Math.sqrt(Math.max(0,1-(dy/ry)**2));fitText(c,SANS,t,W/2,y0+st*(i+.5)+10,2*R*sx-90,big&&i<2?34:28,22,cb);});};
   col(top,cy-ry+100,cy-iry-14,true);col(bot,cy+iry+14,cy+ry-40,false);}
- else{const rx=330,x1=370,x2=710;
+ else{const rx=330,x1=380,x2=700;
   [[x1,cb],[x2,cn]].forEach(([x,col])=>{c.beginPath();c.ellipse(x,cy,rx,ry,0,0,Math.PI*2);c.fillStyle=rgba(col===SC.ink?"#1F2733":col,.07);c.fill();c.lineWidth=4;c.strokeStyle=rgba(col===SC.ink?"#1F2733":col,.6);c.stroke();});
   c.font="700 26px "+SANS;c.fillStyle=cb;c.fillText(TR("気質（生まれ持った）"),x1-60,cy-ry-14);c.fillStyle=cn;c.fillText(TR("性格（経験で育った）"),x2+60,cy-ry-14);
   const side=(ws,col,sg)=>{const N=ws.length,step=Math.min(64,(2*ry-200)/N);ws.forEach((t,i)=>{const dy=-ry+150+i*step+step/2-40,s=Math.sqrt(Math.max(0,1-(dy/ry)**2)),x=W/2+sg*(rx*s);
     const w=(x2-x1)-24;fitF(t,w,i<2?30:24);c.fillStyle=col;c.fillText(t,x-sg*(x2-x1)/2*0+(sg<0?-(x2-x1)/2:(x2-x1)/2)+sg*0,cy+dy);});};
   const sideX=(ws,col,sg)=>{const N=ws.length,step=Math.min(64,(2*ry-220)/N);ws.forEach((t,i)=>{const dy=-ry+170+i*step,s=Math.sqrt(Math.max(0,1-(dy/ry)**2));
     const xl=sg<0?x1-rx*s:x2-rx*s,xr=sg<0?x2-rx*s:x2+rx*s,inner=sg<0?xr:x1+rx*s,from=sg<0?xl:inner,to=sg<0?xr:xr,cx=(from+to)/2,w=Math.max(120,to-from-30);
-    fitText(c,SANS,t,cx,cy+dy,w,i<2?30:25,21,col);});};
+    fitText(c,SANS,t,cx,cy+dy,w,i<2?30:25,19,col);});};
   sideX(cwList(b),cb,-1);sideX(cwList(n),cn,1);
   /* 重なり：同じ文字の特徴 */
-    const lw=(x1+rx)-(x2-rx),core=["EI","SN","TF","JP"].map((k,i)=>b[i]===n[i]?TR(CORE[b[i]]):null).filter(Boolean),items=core.length?core:[TR("4つとも違う"),TR("幅の広さが芯")],gap=64,y0=cy-(items.length-1)*gap/2+30;
-  coreHead(c,SANS,W/2,y0-74);items.forEach((t,i)=>corePill(c,SANS,t,W/2,y0+i*gap,lw-36));}
+    const lw=(x1+rx)-(x2-rx),co=coreOf(b,n);
+  if(co){const lens=y=>{const dy=(y-cy)/ry;return Math.max(160,2*rx*Math.sqrt(Math.max(0,1-dy*dy))-(x2-x1));};let w=lens(cy+200),hh=0;for(let k=0;k<3;k++){hh=coreBlock(c,SANS,W/2,0,()=>w,co,true);w=lens(cy+hh/2+10);}
+   coreBlock(c,SANS,W/2,cy-hh/2+10,()=>w,co,false);}
+  else{const core=["EI","SN","TF","JP"].map((k,i)=>b[i]===n[i]?TR(CORE[b[i]]):null).filter(Boolean),items=core.length?core:[TR("4つとも違う"),TR("幅の広さが芯")],gap=64,y0=cy-(items.length-1)*gap/2+30;
+  coreHead(c,SANS,W/2,y0-74);items.forEach((t,i)=>corePill(c,SANS,t,W/2,y0+i*gap,lw-36));}}
  c.font="600 28px "+MONO;c.fillStyle=SC.ink;c.fillText(SHARE_URL.replace("https://",""),W/2,H-36);c.textAlign="left";return cv;}
 /* 案2：性格カルテ */
 async function drawKarte(){const me=window.__me,{SANS,MONO}=await cwFonts(),W=1080,b=me.born,n=me.now,one=b===n,[cb,cn]=cwColors(b,n);
@@ -660,6 +678,8 @@ function kfmt(t,f){const ss=sents(t).map(kfmt1),J=LANG==="ja"?"":" ";
  if(f==="aru")return '<p>'+ss.join(J)+'</p>';
  if(f==="why"||f==="plus"||f==="hidden"){const last=ss.length>1?ss.pop():null;const ps=[];for(let i=0;i<ss.length;i+=2)ps.push('<p>'+ss.slice(i,i+2).join(J)+'</p>');return ps.join("")+(last?'<p class="key">'+last+'</p>':'');}
  return '<p>'+ss.join(J)+'</p>';}
+function coreCard(b,n){const co=coreOf(b,n);if(!co)return "";
+ return '<div class="ktcore"><p class="kch">'+TR("あなたのゆるがない芯")+'</p><p class="kcn">'+esc(co.name)+'</p><ul class="kcl">'+co.aru.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul><p class="kcs">'+(b===n?TR("気質も性格も同じ向きなので、4つすべてがあなたの芯です。"):TR("気質と性格で同じ向きのところが、どんな時も変わらないあなたの芯です。"))+'</p></div>';}
 function layoutResult(){const hero=document.querySelector(".hero");if(!hero)return;
  const mk=(id,title)=>{let d=$(id);if(!d){d=document.createElement("details");d.id=id;d.className="card more";d.innerHTML='<summary><h2>'+title+'</h2></summary><div class="mbody"></div>';}return d;};
  const dK=mk("dKarte",TR("性格カルテ")),dH=mk("dHints",TR("悩みと仕事のヒント")),dP=mk("dPersona",TR("タイプごとのくわしい説明")),dB=mk("dBal",TR("気質の力のバランス"));
