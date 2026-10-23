@@ -2199,11 +2199,13 @@ const App=(function(){
   var FAM=/(?:母|父|お子|子ども|子供|娘|息子|孫|祖母|祖父|兄|姉|弟|妹|親|ご主人|奥様|夫|妻|義|家族|ペット|犬|猫)[^。\n]{0,14}$/;
   var isAnn=function(c,y,before){ var ag=c.match(/\d{1,3}(?=歳|才)/g)||[]; if(ag.length&&!by) return false; if(ag.length&&FAM.test(before||'')){ var okA=[y-by,y-by-1]; if(other) okA.push(y-other,y-other-1); for(var q=0;q<ag.length;q++){ if(okA.indexOf(+ag[q])<0) return false; } }   // 家族などの年齢（前に家族の言葉があって、本人の年齢と合わない）はそのまま残す。それ以外の年齢はツールの値に付け直す   // 本人（相性は2人）の年齢でない数字（家族の年齢など）があるかっこは、そのまま残す
     if(/^[ 　]*[ぁ-ん・]{2,10}[ 　]*$/.test(c)) return true;   // 読みだけのかっこ（読みのまちがいが出やすいので外す）
-    var r=c.replace(new RegExp(GZ+'年?','g'),'\u0001').replace(/\d{1,3}(?:歳|才)/g,'\u0002'); if(!/[\u0001\u0002]/.test(r)) return false;   // 干支・読み・年齢だけのかっこか
+    var r=c.replace(new RegExp(GZ+'(?:の年|年)?','g'),'\u0001').replace(/\d{1,3}(?:歳|才)/g,'\u0002'); if(!/[\u0001\u0002]/.test(r)) return false;   // 干支・読み・年齢だけのかっこか
     if(/(?:母|父|お子|子ども|子供|娘|息子|孫|祖|兄|姉|弟|妹|親|ご主人|奥様|夫|妻|義|家族)/.test(c)) return false;   // 家族の年齢のかっこは残す
     r=r.replace(/\u0001[＝=：:・\s]*[（(]?[ぁ-ん]{2,10}[）)]?/g,'\u0001');   // 干支のあとの読み（まちがっていても）は外す
     r=r.replace(/[一-龥ァ-ヶーぁ-ん]{1,8}?(?:さん|様|さま)(?:が|は)?/g,'').replace(/(?:きの|ひの|つちの|かの|みずの)[えと][ぁ-ん]{0,5}/g,'').replace(/ごろ|頃|前後|くらい|あなた(?:が|は|の)?|お相手(?:が|は|の)?|本人(?:が|は|の)?|お二人|ともに|それぞれ|およそ|約|と|で|に|[、,]?ともに|[\u0001\u0002・、，,／/：:＝=\s　]/g,''); return r===''; };
   var lab=function(y){ var p=[]; if(!noGz) p.push(gzOf(y)); if(other){ if(by&&y>=by&&y>=other&&y-by<=120) p.push('あなた'+(y-by)+'歳／お相手'+(y-other)+'歳'); } else if(by&&y>=by&&y-by<=120) p.push((y-by)+'歳'); return p.length?'（'+p.join('・')+'）':''; };
+  // ⓪ 「2028年（戊申・つちのえさる：劫財が巡る年）」の干支と読みは外し、説明だけ残す（干支と年齢はツールが付ける）
+  s=s.replace(new RegExp('((?:19|20)\\d\\d)年([*＊]{0,2}[ 　]?)[（(]'+GZ+'(?:[・、：:＝=\\s]*[（(]?[ぁ-ん]{2,10}[）)]?)?[・、：:＝=\\s]+((?:[^（）()\\n]|[（(][^（）()\\n]{0,24}[）)]){1,60})[）)]','g'),function(m,y,sp,rest){ return /\d{1,3}(?:歳|才)/.test(rest)?m:y+'年'+sp+'（'+rest+'）'; });
   // ① 西暦のすぐあとの「干支・読み・年齢だけのかっこ」（1〜2個。**や空白をはさむもの・中に読みのかっこが入るものも）は外す
   s=s.replace(/((?:19|20)\d\d)年/g,function(m,y,off,str){ var k=off+m.length, sp=(str.slice(k).match(/^[*＊]{0,2}[ 　]?/)||[''])[0], p=k+sp.length, cut=p, n=0;
     while(n<2&&/[（(]/.test(str.charAt(p))){ var d=0, q=p; for(;q<str.length&&q-p<48;q++){ var ch=str.charAt(q); if(ch==='（'||ch==='(') d++; else if(ch==='）'||ch===')'){ d--; if(!d) break; } else if(ch==='\n') break; }
@@ -2226,7 +2228,11 @@ const App=(function(){
     done[y]=1; marks.push({i:m.index+m[0].length,y:y}); }
   var out=s, add=0;
   marks.forEach(function(k){ var ins=lab(k.y); if(!ins) return; out=out.slice(0,k.i+add)+ins+out.slice(k.i+add); add+=ins.length; });
-  out=out.replace(/たまやすい/g,'たまりやすい');   // よくある書きまちがい
+  out=out.replace(/たまやすい/g,'たまりやすい');
+  out=out.replace(/【{2,}/g,'【').replace(/】{2,}/g,'】').replace(/^([ 　]*【[^】\n]{1,40})[ 　]*$/gm,'$1】').replace(/^[ 　]*】[ 　]*/gm,'');   // 見出しのかっこのくずれ（【【…】】・閉じ忘れ・行頭の】）をそろえる
+  out=out.replace(/（([ぁ-ん]{1,6})財(?=[・：:）)])/g,'（$1ざい').replace(/（([ぁ-ん]{1,6})官(?=[・：:）)])/g,'（$1かん');   // 読みに漢字がまじる（せい財）を直す
+  out=out.replace(/(^|\n)([ 　]*)【([^】\n]{1,30})】(?=[はがをにでのも、])/g,'$1$2$3');   // 文の途中に【】を使ったもの（【来年の運気】は、…）は、見出しにせずに文として出す
+  out=out.replace(/【([^】【]{1,80}?)】/g,function(m,x){ if(x.indexOf('\n')<0) return m; var y=x.replace(/\s+/g,''); return (y.length&&y.length<=40)?'【'+y+'】\n':m; }).replace(/】\n\n+/g,'】\n');   // 見出しの中で改行したくずれ（【…⏎】）をつなぐ
   if(other) out=out.replace(/(?:二人|2人|ふたり|お二人|おふたり|お互い|両方|互い)の配偶宮(?![^。\n]{0,12}(?:同士|どうし|の間|の組み合わせ|を比べ|どちらも|が害|には害|は害|が支合|が冲|には冲|が刑|が破))/g,'あなたの配偶宮');   // 相性の「揺れやすい年」は本人の配偶宮だけで出しているので「お互いの配偶宮」とは書かせない（2人の日支どうしの関係を言うときは残す）
   out=out.replace(/(（[^（）\n]{1,40}）)([*＊]{0,2})\1/g,'$1$2');   // 同じかっこが2つ続いたら1つに
   out=out.replace(/([一-龥]{1,8})[（(]\1[（(]([^（）()\n]{1,80})[）)][）)]/g,'$1（$2）');   // 「害（害（がい：…））」のような言葉の二重がっこは1つに

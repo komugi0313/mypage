@@ -6644,11 +6644,13 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
   var FAM=/(?:母|父|お子|子ども|子供|娘|息子|孫|祖母|祖父|兄|姉|弟|妹|親|ご主人|奥様|夫|妻|義|家族|ペット|犬|猫)[^。\n]{0,14}$/;
   var isAnn=function(c,y,before){ var ag=c.match(/\d{1,3}(?=歳|才)/g)||[]; if(ag.length&&!by) return false; if(ag.length&&FAM.test(before||'')){ var okA=[y-by,y-by-1]; if(other) okA.push(y-other,y-other-1); for(var q=0;q<ag.length;q++){ if(okA.indexOf(+ag[q])<0) return false; } }   // 家族などの年齢（前に家族の言葉があって、本人の年齢と合わない）はそのまま残す。それ以外の年齢はツールの値に付け直す   // 本人（相性は2人）の年齢でない数字（家族の年齢など）があるかっこは、そのまま残す
     if(/^[ 　]*[ぁ-ん・]{2,10}[ 　]*$/.test(c)) return true;   // 読みだけのかっこ（読みのまちがいが出やすいので外す）
-    var r=c.replace(new RegExp(GZ+'年?','g'),'\u0001').replace(/\d{1,3}(?:歳|才)/g,'\u0002'); if(!/[\u0001\u0002]/.test(r)) return false;   // 干支・読み・年齢だけのかっこか
+    var r=c.replace(new RegExp(GZ+'(?:の年|年)?','g'),'\u0001').replace(/\d{1,3}(?:歳|才)/g,'\u0002'); if(!/[\u0001\u0002]/.test(r)) return false;   // 干支・読み・年齢だけのかっこか
     if(/(?:母|父|お子|子ども|子供|娘|息子|孫|祖|兄|姉|弟|妹|親|ご主人|奥様|夫|妻|義|家族)/.test(c)) return false;   // 家族の年齢のかっこは残す
     r=r.replace(/\u0001[＝=：:・\s]*[（(]?[ぁ-ん]{2,10}[）)]?/g,'\u0001');   // 干支のあとの読み（まちがっていても）は外す
     r=r.replace(/[一-龥ァ-ヶーぁ-ん]{1,8}?(?:さん|様|さま)(?:が|は)?/g,'').replace(/(?:きの|ひの|つちの|かの|みずの)[えと][ぁ-ん]{0,5}/g,'').replace(/ごろ|頃|前後|くらい|あなた(?:が|は|の)?|お相手(?:が|は|の)?|本人(?:が|は|の)?|お二人|ともに|それぞれ|およそ|約|と|で|に|[、,]?ともに|[\u0001\u0002・、，,／/：:＝=\s　]/g,''); return r===''; };
   var lab=function(y){ var p=[]; if(!noGz) p.push(gzOf(y)); if(other){ if(by&&y>=by&&y>=other&&y-by<=120) p.push('あなた'+(y-by)+'歳／お相手'+(y-other)+'歳'); } else if(by&&y>=by&&y-by<=120) p.push((y-by)+'歳'); return p.length?'（'+p.join('・')+'）':''; };
+  // ⓪ 「2028年（戊申・つちのえさる：劫財が巡る年）」の干支と読みは外し、説明だけ残す（干支と年齢はツールが付ける）
+  s=s.replace(new RegExp('((?:19|20)\\d\\d)年([*＊]{0,2}[ 　]?)[（(]'+GZ+'(?:[・、：:＝=\\s]*[（(]?[ぁ-ん]{2,10}[）)]?)?[・、：:＝=\\s]+((?:[^（）()\\n]|[（(][^（）()\\n]{0,24}[）)]){1,60})[）)]','g'),function(m,y,sp,rest){ return /\d{1,3}(?:歳|才)/.test(rest)?m:y+'年'+sp+'（'+rest+'）'; });
   // ① 西暦のすぐあとの「干支・読み・年齢だけのかっこ」（1〜2個。**や空白をはさむもの・中に読みのかっこが入るものも）は外す
   s=s.replace(/((?:19|20)\d\d)年/g,function(m,y,off,str){ var k=off+m.length, sp=(str.slice(k).match(/^[*＊]{0,2}[ 　]?/)||[''])[0], p=k+sp.length, cut=p, n=0;
     while(n<2&&/[（(]/.test(str.charAt(p))){ var d=0, q=p; for(;q<str.length&&q-p<48;q++){ var ch=str.charAt(q); if(ch==='（'||ch==='(') d++; else if(ch==='）'||ch===')'){ d--; if(!d) break; } else if(ch==='\n') break; }
@@ -6671,7 +6673,11 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
     done[y]=1; marks.push({i:m.index+m[0].length,y:y}); }
   var out=s, add=0;
   marks.forEach(function(k){ var ins=lab(k.y); if(!ins) return; out=out.slice(0,k.i+add)+ins+out.slice(k.i+add); add+=ins.length; });
-  out=out.replace(/たまやすい/g,'たまりやすい');   // よくある書きまちがい
+  out=out.replace(/たまやすい/g,'たまりやすい');
+  out=out.replace(/【{2,}/g,'【').replace(/】{2,}/g,'】').replace(/^([ 　]*【[^】\n]{1,40})[ 　]*$/gm,'$1】').replace(/^[ 　]*】[ 　]*/gm,'');   // 見出しのかっこのくずれ（【【…】】・閉じ忘れ・行頭の】）をそろえる
+  out=out.replace(/（([ぁ-ん]{1,6})財(?=[・：:）)])/g,'（$1ざい').replace(/（([ぁ-ん]{1,6})官(?=[・：:）)])/g,'（$1かん');   // 読みに漢字がまじる（せい財）を直す
+  out=out.replace(/(^|\n)([ 　]*)【([^】\n]{1,30})】(?=[はがをにでのも、])/g,'$1$2$3');   // 文の途中に【】を使ったもの（【来年の運気】は、…）は、見出しにせずに文として出す
+  out=out.replace(/【([^】【]{1,80}?)】/g,function(m,x){ if(x.indexOf('\n')<0) return m; var y=x.replace(/\s+/g,''); return (y.length&&y.length<=40)?'【'+y+'】\n':m; }).replace(/】\n\n+/g,'】\n');   // 見出しの中で改行したくずれ（【…⏎】）をつなぐ
   if(other) out=out.replace(/(?:二人|2人|ふたり|お二人|おふたり|お互い|両方|互い)の配偶宮(?![^。\n]{0,12}(?:同士|どうし|の間|の組み合わせ|を比べ|どちらも|が害|には害|は害|が支合|が冲|には冲|が刑|が破))/g,'あなたの配偶宮');   // 相性の「揺れやすい年」は本人の配偶宮だけで出しているので「お互いの配偶宮」とは書かせない（2人の日支どうしの関係を言うときは残す）
   out=out.replace(/(（[^（）\n]{1,40}）)([*＊]{0,2})\1/g,'$1$2');   // 同じかっこが2つ続いたら1つに
   out=out.replace(/([一-龥]{1,8})[（(]\1[（(]([^（）()\n]{1,80})[）)][）)]/g,'$1（$2）');   // 「害（害（がい：…））」のような言葉の二重がっこは1つに
@@ -6689,8 +6695,31 @@ function pkFactFix(t,aS,bS){ try{ t=String(t==null?'':t);   // 命式の事実�
   // ③ 十二支を「十二運」と呼んだまちがい：「この年の十二運（…）の酉」→「十二支の酉」
   t=t.replace(/十二運((?:[（(][^）)\n]{0,24}[）)])?)の[ 　]*([子丑寅卯辰巳午未申酉戌亥])(?![子丑寅卯辰巳午未申酉戌亥])/g,'十二支の$2');
   // ④ 言葉の説明が2つ続いたとき（「正官（＝…）（せいかん・…）」）は、読みのほうを先にした1つに
-  t=t.replace(/([一-龥]{2,6})（＝([^（）\n]{1,30})）（([ぁ-ん]{2,12})[・：:]([^（）\n]{1,40})）/g,'$1（$3：$4）');
+  t=t.replace(/([一-龥]{2,6})（＝([^（）\n]{1,30})）（([ぁ-ん]{2,12})[・：:＝]([^（）\n]{1,40})）/g,'$1（$3：$4）');
   return t; }catch(e){ return t; } }
+function pkSameGzFix(t,c){ try{ t=String(t==null?'':t); if(!c||!c.pillars) return t;   // 「日柱と同じ干支である丁未」のように、柱の干支とちがうのに「同じ干支」と書いた文を直す（地支だけ同じなら「同じ十二支」に。発注者指示 2026-10-23）
+  var PN={年柱:0,月柱:1,日柱:2,時柱:3};
+  return t.replace(/(年柱|月柱|日柱|時柱)(?:[（(][^）)\n]{0,20}[）)])?と同じ干支(?:である|の|、)?[「『]?([甲乙丙丁戊己庚辛壬癸])([子丑寅卯辰巳午未申酉戌亥])/g,function(m,pn,st,br){ var P=c.pillars[PN[pn]]; if(!P) return m; if(P.stem===st&&P.branch===br) return m; if(P.branch===br) return m.replace(/同じ干支(である|の|、)?/,'同じ十二支「'+br+'」をもつ'); if(P.stem===st) return m.replace(/同じ干支(である|の|、)?/,'同じ天干「'+st+'」をもつ'); return m.replace(/と同じ干支(である|の|、)?/,'とは別の干支、'); }); }catch(e){ return t; } }
+function pkYearStarFix(t,c){ try{ t=String(t==null?'':t); if(!c||!c.now||!c.annualFortunes) return t;   // 「今年は偏印が巡る」のように、今年と来年の星を取りちがえた文は、星に合わせて「今年／来年」を直す（発注者指示 2026-10-23）
+  var Y=c.now.year, a0=c.annualFortunes.find(function(a){ return a.year===Y; }), a1=c.annualFortunes.find(function(a){ return a.year===Y+1; }); if(!a0||!a1||a0.tenStar===a1.tenStar) return t;
+  var ST='比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬';
+  return t.split(/(?<=[。！？\n])/).map(function(sn){ var hasT=/今年|本年/.test(sn), hasN=/来年/.test(sn); if(hasT===hasN) return sn; var m=sn.match(new RegExp('('+ST+')(?:[（(][^）)\n]{0,40}[）)])*(?:の(?:エネルギー|星|年|気|力)|が(?:巡|重な|強ま|働))')); if(!m) return sn;
+    if(hasT&&m[1]===a1.tenStar&&m[1]!==a0.tenStar) return sn.replace(/今年|本年/g,'来年'); if(hasN&&m[1]===a0.tenStar&&m[1]!==a1.tenStar) return sn.replace(/来年/g,'今年'); return sn; }).join(''); }catch(e){ return t; } }
+function pkYearElGuard(t){ try{ t=String(t==null?'':t);   // 「2027年は水の気配が巡る」のように、その年の干支（蔵干も）にない五行が巡ると書いた文は出さない（発注者指示 2026-10-23）
+  var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', BEL={子:'水',丑:'土',寅:'木',卯:'木',辰:'土',巳:'火',午:'火',未:'土',申:'金',酉:'金',戌:'土',亥:'水'};
+  var els=function(y){ var i=((y-4)%60+60)%60, st=G.charAt(i%10), br=Z.charAt(i%12), E={}; E[STEM_EL[st]]=1; E[BEL[br]]=1; (ZOUKAN[br]||[]).forEach(function(h){ E[STEM_EL[h]]=1; }); return E; };
+  var re=/([木火土金水])(?:[（(][^）)\n]{0,30}[）)])?の(?:気配|気|エネルギー|力|五行)(?:が|も)(?:[^。\n]{0,6})?(?:巡|強ま|高ま|増え|入|流れ込)/;
+  var L=t.split('\n').map(function(ln){ var ps=ln.split(/(?<=[。！？])/); var kept=ps.filter(function(sn){ var m=sn.match(re); if(!m) return true; var ys=(sn.match(/(?:19|20)\d\d(?=年)/g)||[]).map(Number); if(ys.length!==1) return true; return !!els(ys[0])[m[1]]; });
+    if(kept.length===ps.length) return ln; if(!kept.length) return null; return kept.join(''); });
+  return L.filter(function(x){ return x!==null; }).join('\n'); }catch(e){ return t; } }
+function pkFavGuard(t,c){ try{ t=String(t==null?'':t); if(!c||typeof _kkAssess!=='function') return t;   // 五行のすすめ（色・食材・取り入れる）は喜神だけ。忌神の五行を「足す・補う」文は出さない（発注者指示 2026-10-23：身旺の人に火をすすめたまちがいから）
+  var as=_kkAssess(c).assess, FAV=['木','火','土','金','水'].filter(function(e){ return as(e).fav==='喜'; }); if(!FAV.length) return t;
+  var COL={木:'緑|青|グリーン|ブルー',火:'赤|オレンジ|レッド|ピンク',土:'黄|茶|ベージュ|イエロー|ブラウン',金:'白|金色|ゴールド|シルバー|ホワイト',水:'黒|紺|ネイビー|ブラック'};
+  var bad=['木','火','土','金','水'].filter(function(e){ return FAV.indexOf(e)<0; });
+  var reEl=new RegExp('「?('+bad.join('|')+')」?(?:の(?:五行|エネルギー|気|性質|力)|のもの)?(?:を|も)(?:取り入れ|補|足し|増や|意識して取り|高め)');
+  var reCol=new RegExp('(?:'+bad.map(function(e){ return COL[e]; }).join('|')+')(?:い|色|系)?の?(?:食材|食べ物|服|小物|色|アイテム|インテリア|もの)(?:を|で|も)');
+  var L=t.split('\n').map(function(ln){ if(/^\s*【[^】]*】\s*$/.test(ln)) return ln; var ps=ln.split(/(?<=[。！？])/); var kept=ps.filter(function(sn){ return !(reEl.test(sn)||reCol.test(sn)); }); if(kept.length===ps.length) return ln; if(!kept.length) return null; return kept.join(''); });
+  return L.filter(function(x){ return x!==null; }).join('\n'); }catch(e){ return t; } }
 function pkCompatGuard(t){ try{ t=String(t==null?'':t);   // 相性の文：ツールの判定にない細かい命式の話（蔵干・十二運・元命・通変星の名前）を書いた文は外す（まちがいが出やすいところ。判定カードに正しい一覧がある。発注者指示 2026-10-22）
   var BAD=/蔵干|十二運|元命|通変星/, STAR=/比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬/, OKS=/配偶者星|官殺混雑/;
   t=t.replace(/(?:お互い|互い|2人|二人|お二人)(?:の|が|に)?[*＊]*(?:足りない|不足している|不足する|欠けている)[*＊\s]*(五行)/g,'お互いを助ける$1');
@@ -6748,7 +6777,7 @@ async function generateReading(user,localText,system,deep){
   if(_topics) system=consultSystemSlim(system||CONSULT_SYSTEM,_topics);   // ビギナー（やさしい言葉の指示に差し替えた後）でも同じように外す
   if(_part==='answer') user=String(user).replace(/構成（必ず守る）：[\s\S]*?(?=\n【|$)/,'').replace(/(^|\n)構成：[\s\S]*?(?=\n【|$)/,'$1');   // 相性の「構成：」も同じく外す（発注者指示 2026-10-22）   // 冒頭の答えには、くわしい読み解き用の見出しの構成を渡さない（形がくずれる・送る量も減る。発注者指示 2026-10-21）
   if(_part==='answer'){ system=String(system||CONSULT_SYSTEM).replace(/【出力フォーマット＝厳守[\s\S]*?(?=\n【|$)/,''); }   // 見出しで区切る・【まとめ】で締めるの指示は、くわしい読み解きだけに使う
-  system=(system||CONSULT_SYSTEM)+YOMI_RULE+NO_REPEAT_RULE+NO_AI_RULE+pkLifeGuide(user)+pkYearPick(user)+(_part==='detail'?DETAIL_ONLY_RULE:ANSWER_RULE+(_part==='answer'?ANSWER_ONLY_RULE:''));
+  system=(system||CONSULT_SYSTEM)+YOMI_RULE+NO_REPEAT_RULE+NO_AI_RULE+pkLifeGuide(user)+pkYearPick(user)+(function(){ try{ var c=(typeof chart!=='undefined')?chart:null; if(!c||typeof _kkAssess!=='function') return ''; var as=_kkAssess(c).assess, F=['木','火','土','金','水'].filter(function(e){ return as(e).fav==='喜'; }), N=['木','火','土','金','水'].filter(function(e){ return F.indexOf(e)<0; }); return F.length?'\n【五行のすすめ＝厳守】色・食べ物・身につけるもの・取り入れる五行をすすめるときは、この人の喜神（'+F.join('・')+'）だけをすすめる。'+N.join('・')+'は、少なくても「足りないので補う」とすすめない（身旺・身弱で決めた喜神が正しい）。\n':''; }catch(e){ return ''; } })()+(_part==='detail'?DETAIL_ONLY_RULE:ANSWER_RULE+(_part==='answer'?ANSWER_ONLY_RULE:''));
   const _nm=_nameMasks();
   if(_nm.length){ user=_maskNames(user,_nm); system=_maskNames(system,_nm)+'\n【お名前の印】文章の中の「〔本人〕」「〔お相手〕」は、実際のお名前の代わりの印です。お名前で呼ぶときは、この印を一字も変えずにそのまま書いてください（例：〔本人〕さん）。'; }
   // 電波がない（オフライン）ときはAIを呼ばず、端末内鑑定を出す
@@ -6801,7 +6830,7 @@ async function generateReading(user,localText,system,deep){
   let _authErr=0, _left=null;
   let text=await callOnce();
   if(!text&&!_authErr&&!_timedOut){ await new Promise(r=>setTimeout(r,2500)); text=await callOnce(); }   // すぐ失敗したときだけ1回やり直す（45秒待って返事がないときは、すぐ端末内の鑑定へ）
-  if(text){ if(_part!=='detail') aiCountInc(_left); return {ok:true,text:(function(){ var _by=(typeof chart!=='undefined'&&chart&&chart.birth&&chart.birth.clock)?parseInt(String(chart.birth.clock).slice(0,4),10):0, _ot=(/【お相手B】/.test(user)&&typeof chartB!=='undefined'&&chartB&&chartB.birth&&chartB.birth.clock)?parseInt(String(chartB.birth.clock).slice(0,4),10):0; var _aS=(typeof chart!=='undefined'&&chart&&chart.dayMaster)?chart.dayMaster.stem:'', _bS=(_ot&&typeof chartB!=='undefined'&&chartB&&chartB.dayMaster)?chartB.dayMaster.stem:''; var _t=pkFactFix(pkStampYears(pkFixAge(noAIWord(_unmaskNames(text,_nm)),_by,_ot),_by,_ot),_aS,_bS); return _bS?pkCompatGuard(_t):_t; })(),online:true}; }   // 相談1件＝1回（答え＋くわしい読み解きの2回の生成で1回と数える）
+  if(text){ if(_part!=='detail') aiCountInc(_left); return {ok:true,text:(function(){ var _by=(typeof chart!=='undefined'&&chart&&chart.birth&&chart.birth.clock)?parseInt(String(chart.birth.clock).slice(0,4),10):0, _ot=(/【お相手B】/.test(user)&&typeof chartB!=='undefined'&&chartB&&chartB.birth&&chartB.birth.clock)?parseInt(String(chartB.birth.clock).slice(0,4),10):0; var _aS=(typeof chart!=='undefined'&&chart&&chart.dayMaster)?chart.dayMaster.stem:'', _bS=(_ot&&typeof chartB!=='undefined'&&chartB&&chartB.dayMaster)?chartB.dayMaster.stem:''; var _t=pkFactFix(pkStampYears(pkFixAge(noAIWord(_unmaskNames(text,_nm)),_by,_ot),_by,_ot),_aS,_bS); _t=pkFavGuard(_t,(typeof chart!=='undefined')?chart:null); _t=pkYearElGuard(_t); _t=pkYearStarFix(_t,(typeof chart!=='undefined')?chart:null); _t=pkSameGzFix(_t,(typeof chart!=='undefined')?chart:null); return _bS?pkCompatGuard(_t):_t; })(),online:true}; }   // 相談1件＝1回（答え＋くわしい読み解きの2回の生成で1回と数える）
   aiEngine='オフライン鑑定（端末内）';
   if(_authErr===429){ aiCountFull(); return {ok:true,text:localText,fallback:true,online:false,note:aiLimitNote()}; }
   if(_authErr===401) return {ok:true,text:localText,fallback:true,online:false,note:'ログインの有効期限が切れたため、詳細鑑定を使えませんでした。いまは端末内で作成した鑑定（オフライン鑑定）を表示しています。もう一度ログインすると、詳細鑑定が使えるようになります（ページを開き直すとログイン画面が出ます）。'};
