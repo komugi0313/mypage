@@ -111,7 +111,19 @@ function drawResume(){let r=$("qResume");const q=savedQuiz();
   r.onclick=()=>{const q2=savedQuiz();if(!q2)return;st.y=q2.y||st.y;st.m=q2.m||st.m;st.d=q2.d||st.d;dateAll(true);fillDate();startQuiz(q2);};}
  r.hidden=false;r.innerHTML=TR("前回の続きから再開する")+"<small>"+TR("{n}問目から").replace("{n}",q.qi+1)+"</small>";}
 /* 入力をリセット：保存した結果・途中の質問も消して、はじめて開いた状態に戻す */
-$("formReset").onclick=()=>{if(!confirm(TR("診断結果も含めて、すべてリセットしますか？")))return;sset(KR,null);sset(KQ,null);try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}window.scrollTo(0,0);location.reload();};
+/* 画面の中で確認する（ポップアップが出ない環境でも動くように） */
+function askInline(btn,msg,yes,onYes){let bx=btn.nextElementSibling;if(bx&&bx.classList.contains("askbox")){bx.remove();return;}
+ bx=document.createElement("div");bx.className="askbox";bx.innerHTML='<p>'+msg+'</p><div><button type="button" class="btn primary ask-y">'+yes+'</button><button type="button" class="btn ask-n">'+TR("やめる")+'</button></div>';
+ btn.after(bx);bx.querySelector(".ask-n").onclick=()=>bx.remove();bx.querySelector(".ask-y").onclick=()=>{bx.remove();onYes();};bx.scrollIntoView({behavior:"smooth",block:"nearest"});}
+function resetAll(){sset(KR,null);sset(KQ,null);try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}
+ /* 再読み込みできない環境でも、画面の上で最初の状態に戻す */
+ hideOld();const w=document.querySelector(".welcome");if(w)w.remove();document.querySelectorAll(".intro,.how").forEach(e=>e.hidden=false);
+ const fc=$("formCard"),qc=$("quizCard"),how=document.querySelector(".how");if(how&&fc){how.after(fc);fc.after(qc);}$("formh").textContent=TR("診断をはじめる");
+ dateAll(false);fillDate();for(let i=0;i<4;i++)sel[i]=null;[...pk.children].forEach(g=>{g.classList.remove("done");[...g.children].forEach(c=>c.setAttribute("aria-pressed","false"));});
+ selAT=null;document.querySelectorAll("#atPick button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v?"false":"true"));drawSlots(-1);$("pickField").hidden=true;$("hasType").setAttribute("aria-pressed","false");
+ qc.hidden=true;fc.hidden=false;drawResume();window.scrollTo(0,0);
+ try{location.reload();}catch(e){}}
+$("formReset").onclick=()=>askInline($("formReset"),TR("診断結果も含めて、すべてリセットしますか？"),TR("リセットする"),resetAll);
 $("quiz").onclick=()=>{if(!dateOK())return;startQuiz(null);};if($("startBtn"))$("startBtn").onclick=e=>{e.preventDefault();$("formCard").scrollIntoView({behavior:"smooth",block:"start"});};
 if($("recheckBtn"))$("recheckBtn").onclick=()=>{startQuiz(null);$("quizCard").scrollIntoView({behavior:"smooth"});};
 $("qQuit").onclick=()=>{showQuiz(false);drawResume();};
@@ -473,7 +485,7 @@ function boot(){drawResume();const R=sget(KR);
   const hero=document.querySelector(".hero");hero.before(wb);
   $("wbRedo").onclick=()=>$("formCard").scrollIntoView({behavior:"smooth",block:"start"});$("wbHome").onclick=e=>goHome(e);
  }else{fillDate();render();}}
-$("reset").onclick=()=>{if(!confirm(TR("保存している結果を消して、はじめからやり直しますか？")))return;sset(KR,null);sset(KQ,null);location.reload();};
+$("reset").onclick=()=>askInline($("reset"),TR("保存している結果を消して、はじめからやり直しますか？"),TR("消してやり直す"),resetAll);
 
 /* ---- 気質の力のバランス（生年月日ごとにちがう） ---- */
 const POWN=[TR("伸びる力"),TR("燃える力"),TR("支える力"),TR("決める力"),TR("めぐる力")];
