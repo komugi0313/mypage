@@ -3859,7 +3859,9 @@ function pkYearKichiFix(t,c){ try{ t=String(t||''); if(!c||!c.annualFortunes||ty
     KS.forEach(function(k){ if(sn.indexOf(k)<0||drop) return; const r=ys.map(function(y){ return {y:y,h:has(y,k)}; }).filter(function(x){ return x.h!==null; }); if(!r.length) return;
       const on=r.filter(function(x){ return x.h; }).map(function(x){ return x.y; });
       if(!on.length){ drop=true; return; }
-      if(on.length<r.length){ const re=new RegExp(k+'((?:[（(][^（）()\\n]{0,40}[）)])?)'); sn=sn.replace(re,function(m0,gl){ return k+gl+'（'+k+'が巡るのは'+on.join('年・')+'年）'; }); } });
+      if(on.length<r.length){ const ix=sn.indexOf(k), before=sn.slice(0,ix), seg=before.split(/[、。]/).pop(); const sy=[]; seg.replace(/((?:19|20)\d\d)年/g,function(m1,y){ sy.push(+y); return m1; });
+        if(sy.length&&sy.every(function(y){ return on.indexOf(y)>=0; })) return;   // すぐ前の区切りに書いた年（「2028年は駅馬」）に全部巡る星なら正しい（書き添えない）
+        const re=new RegExp(k+'((?:[（(][^（）()\\n]{0,40}[）)])?)'); sn=sn.replace(re,function(m0,gl){ return k+gl+'（'+k+'が巡るのは'+on.join('年・')+'年）'; }); } });
     return drop?'':sn; }).join(''); }catch(e){ return t; } }
 /* 柱の星の事実あわせ（発注者指示 2026-10-23「月柱には華蓋」＝本当は年柱、のまちがいから）：
    「○柱に（は）〜星」と書いた星が、その柱になく、ほかの1つの柱にだけあるときは、柱の名前を正しい柱に直す。どの柱にもない星はそのまま（年運・大運の話のこともあるため）。 */
@@ -6838,6 +6840,9 @@ function pkFactFix(t,aS,bS){ try{ t=String(t==null?'':t);   // 命式の事実�
   t=t.replace(/(偏官)((?:[（(][ぁ-ん]{2,8}[）)])?)[（(]([^（）()\n]{0,30})[）)]/g,function(m,n,y,g){ return /規律|責任|誠実|まじめ/.test(g)&&!/行動|度胸|決断|挑戦/.test(g)?n+y+'（行動力・度胸・決断の星）':m; });
   t=t.replace(/(正財)((?:[（(][ぁ-ん]{2,8}[）)])?)[（(]([^（）()\n]{0,30})[）)]/g,function(m,n,y,g){ return /人脈|チャンス|社交|流動|大きなお金/.test(g)&&!/堅実|コツコツ|着実|まじめ/.test(g)?n+y+'（堅実・まじめにコツコツ積み上げる星）':m; });
   t=t.replace(/(偏財)((?:[（(][ぁ-ん]{2,8}[）)])?)[（(]([^（）()\n]{0,30})[）)]/g,function(m,n,y,g){ return /堅実|コツコツ|着実/.test(g)&&!/人脈|チャンス|社交/.test(g)?n+y+'（人脈・チャンス・社交の星）':m; });
+  // ⑧ 十干のかっこの中の読みの取りちがえ：「丁（火の陰・ひのえ）」→ ひのと（発注者指示 2026-10-23）
+  var SY={甲:'きのえ',乙:'きのと',丙:'ひのえ',丁:'ひのと',戊:'つちのえ',己:'つちのと',庚:'かのえ',辛:'かのと',壬:'みずのえ',癸:'みずのと'};
+  t=t.replace(/([甲乙丙丁戊己庚辛壬癸])(?![子丑寅卯辰巳午未申酉戌亥])([（(][^（）()\n]{0,24}?)(きのえ|きのと|ひのえ|ひのと|つちのえ|つちのと|かのえ|かのと|みずのえ|みずのと)(?![ぁ-ん])/g,function(m,g,mid,y){ return y===SY[g]?m:g+mid+SY[g]; });
   // ⑤ 十干の陰陽：「丁（火の陽）」→ 丁は陰（乙丁己辛癸＝陰／甲丙戊庚壬＝陽。発注者指示 2026-10-23）
   var YIN='乙丁己辛癸';
   t=t.replace(/([甲乙丙丁戊己庚辛壬癸])(?![子丑寅卯辰巳午未申酉戌亥])([（(][^）)\n]{0,20}?)(?:([木火土金水])の(陽|陰)|(陽|陰)の([木火土金水]))/g,function(m,g,mid,e1,y1,y2,e2){ var y=YIN.indexOf(g)>=0?'陰':'陽'; return e1?g+mid+EL[g]+'の'+y:g+mid+y+'の'+EL[g]; });
