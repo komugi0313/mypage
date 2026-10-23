@@ -118,6 +118,8 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   const e=[]; [['pkFactFix',"  return t; }catch(e){ return t; } }"],['pkStampYears',"}catch(e){ return String(s).replace(/\\u0003/g,''); } }"]].forEach(([n,end])=>{ const base=grab('pro/app-pro.html',n,end);
     ['eki-pro/app/index.html','pro/meishi-sheet.html','beginner/app-beginner.html'].forEach(f=>{ const g=grab(f,n,end); if(!g||g!==base) e.push(f+' の '+n); }); });
   console.log('  '+(e.length?'NG':'OK')+' 3つのツール（PRO・ビギナー・易）と鑑定書に同じ直しが入っている'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('3つのツールの直し: '+e.join('・')); }
+{ const r=await p.evaluate(()=>{ if(typeof pkPillarStarFix!=='function') return ''; const c=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},0,'none')); return pkPillarStarFix('日柱に咸池があり、月柱には華蓋（芸術の星）が巡っています。',c); });
+  const ok4=/日柱に咸池があり、年柱には華蓋/.test(r); console.log('  '+(ok4?'OK':'NG')+' 柱の星の事実あわせ（華蓋は年柱）'); if(!ok4) res.fails.push('柱の星'); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
