@@ -474,8 +474,31 @@ async function drawKarte(){const me=window.__me,{SANS,MONO}=await cwFonts(),W=10
  const out=document.createElement("canvas");out.width=W;out.height=H;out.getContext("2d").drawImage(big,0,0);return out;}
 $("shareBtn").onclick=shareResult;
 
+/* ---- 保存した結果（何人分でも。このスマホの中だけ） ---- */
+const KS="16tp.saved.v1";
+function savedList(){const v=sget(KS);return Array.isArray(v)?v:[];}
+function saveCurrent(name){const L=savedList(),e={id:Date.now(),name:name||TR("名前なし"),born:(window.__me||{}).born,y:st.y,m:st.m,d:st.d,t:st.t.slice(),at:st.at,pct:st.pct,half:st.half,sway:st.sway,love:st.love||null};
+ const i=L.findIndex(x=>x.name===e.name&&x.y===e.y&&x.m===e.m&&x.d===e.d&&x.t.join("")===e.t.join(""));if(i>=0)L.splice(i,1);L.unshift(e);sset(KS,L.slice(0,30));drawSaved();}
+function openSaved(id){const e=savedList().find(x=>x.id===id);if(!e)return;
+ st.y=e.y;st.m=e.m;st.d=e.d;dateAll(true);st.t=e.t.slice();st.at=e.at||null;st.pct=e.pct||null;st.half=e.half||{};st.sway=e.sway||null;st.love=e.love||null;
+ fillDate();setPicker();selAT=st.at;showResult();render(true);saveResult();document.querySelector(".hero").scrollIntoView({behavior:"smooth"});}
+function delSaved(id){sset(KS,savedList().filter(x=>x.id!==id));drawSaved();}
+function drawSaved(){const L=savedList();let c=$("savedCard");
+ if(!L.length){if(c)c.hidden=true;return;}
+ if(!c){c=document.createElement("section");c.id="savedCard";c.className="card savedcard";}
+ const fc=$("formCard");if(fc&&c.nextElementSibling!==fc)fc.before(c);
+ c.hidden=false;c.innerHTML='<h2>'+TR("保存した結果")+'<small>'+L.length+TR("件")+'</small></h2><ul class="svl">'+L.map(e=>{const born=e.born||natal(e.y,e.m,e.d).t,now=e.t.join(""),co=coreOf(born,now);
+  return '<li><button type="button" class="svopen" data-id="'+e.id+'"><b>'+esc(e.name)+'</b><span class="svt">'+TR("気質")+' '+born+' / '+TR("性格")+' '+now+'</span>'+(co?'<span class="svc">'+esc(co.name)+'</span>':'')+'<small>'+e.y+'.'+e.m+'.'+e.d+'</small></button><button type="button" class="svdel" data-id="'+e.id+'" aria-label="'+TR("削除")+'">✕</button></li>';}).join("")+'</ul><p class="svnote">'+TR("このスマホの中だけに保存されます。")+'</p>';
+ c.querySelectorAll(".svopen").forEach(b=>b.onclick=()=>openSaved(+b.dataset.id));
+ c.querySelectorAll(".svdel").forEach(b=>b.onclick=()=>askInline(b.closest("li"),TR("この結果を一覧から消しますか？"),TR("消す"),()=>delSaved(+b.dataset.id)));}
+$("saveBtn").onclick=()=>{const btn=$("saveBtn");let bx=btn.nextElementSibling;if(bx&&bx.classList.contains("askbox")){const had=!!bx.querySelector("input");bx.remove();if(had)return;}
+ bx=document.createElement("div");bx.className="askbox savebox";const def=($("myName")&&$("myName").value.trim())||"";
+ bx.innerHTML='<p>'+TR("だれの結果か、名前をつけて保存")+'</p><input class="txt" maxlength="12" placeholder="'+TR("例：自分、ママ、ゆうと")+'" value="'+esc(def)+'"><div><button type="button" class="btn primary ask-y">'+TR("保存する")+'</button><button type="button" class="btn ask-n">'+TR("やめる")+'</button></div>';
+ btn.after(bx);const inp=bx.querySelector("input");bx.querySelector(".ask-n").onclick=()=>bx.remove();
+ bx.querySelector(".ask-y").onclick=()=>{saveCurrent(inp.value.trim());bx.innerHTML='<p>'+TR("保存しました。「保存した結果」から、いつでも開けます。")+'</p>';setTimeout(()=>bx.remove(),3500);try{track("save_click");}catch(e){}};
+ inp.focus();};
 /* ---- 最初に開いたとき：前回の結果があれば、すぐ見せる ---- */
-function boot(){drawResume();const R=sget(KR);
+function boot(){drawResume();drawSaved();const R=sget(KR);
  if(R&&Array.isArray(R.t)&&R.t.length===4&&R.y){st.y=R.y;st.m=R.m;st.d=R.d;dateAll(true);st.t=R.t.slice();st.at=R.at||null;st.pct=R.pct||null;st.half=R.half||{};st.sway=R.sway||null;st.love=R.love||null;
   fillDate();setPicker();selAT=st.at;showResult();render(true);
   document.querySelectorAll(".intro,.how").forEach(e=>e.hidden=true);
