@@ -120,6 +120,10 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   console.log('  '+(e.length?'NG':'OK')+' 3つのツール（PRO・ビギナー・易）と鑑定書に同じ直しが入っている'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('3つのツールの直し: '+e.join('・')); }
 { const r=await p.evaluate(()=>{ if(typeof pkPillarStarFix!=='function') return ''; const c=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},0,'none')); return pkPillarStarFix('日柱に咸池があり、月柱には華蓋（芸術の星）が巡っています。',c); });
   const ok4=/日柱に咸池があり、年柱には華蓋/.test(r); console.log('  '+(ok4?'OK':'NG')+' 柱の星の事実あわせ（華蓋は年柱）'); if(!ok4) res.fails.push('柱の星'); }
+// 易：根拠のない星の話（吉凶星・月の星）を外す直し＝PROの柱・月・年の星の事実あわせと同じ目的
+{ const src=fs.readFileSync(path.join(ROOT,'eki-pro/app/index.html'),'utf8'); const a=src.indexOf('function ekiStarGuard('); let r='';
+  if(a>=0){ const body=src.slice(a,src.indexOf('}catch(e){ return t; } }',a)+'}catch(e){ return t; } }'.length); r=Function(body+'; return ekiStarGuard;')()('来年は良い年です。月柱に華蓋があります。11月は正官が巡ります。2027年は変化の年です。'); }
+  const ok5=r==='来年は良い年です。2027年は変化の年です。'; console.log('  '+(ok5?'OK':'NG')+' 易：根拠のない星の話を外す（PROの星の事実あわせと同時に）'); if(!ok5) res.fails.push('易の星の直し'); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
