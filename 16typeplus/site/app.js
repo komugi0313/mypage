@@ -640,14 +640,15 @@ function goHome(e){if(e)e.preventDefault();if(!$("quizCard").hidden)showQuiz(fal
 /* 結果の並び：最初に「鑑定文・円の画像・シェア」、くわしい内容はたたんでおく */
 
 /* 開運予報への案内（日本語版のみ）。URLが空のあいだは表示しない。
-   {Y}{M}{D}=年月日（M・Dは2桁）、{YMD}=YYYYMMDD に置きかわる */
-const KAIUN_URL="";
+   {Y}{M}{D}=年月日（M・Dは2桁）、{YMD}=YYYYMMDD に置きかわる。登録ページは「#y=&m=&d=」で生年月日を受け取る */
+const KAIUN_URL="https://unkiyoho.jp/register.html#y={Y}&m={M}&d={D}&from=16tp";
 function kaiunCard(at){let c=$("kaiun");if(LANG!=="ja"||!KAIUN_URL||!st.y){if(c)c.hidden=true;return at;}
  if(!c){c=document.createElement("section");c.id="kaiun";c.className="card kaiun";}
  const p2=n=>String(n).padStart(2,"0"),Y=String(st.y),M=p2(st.m),D=p2(st.d);
  let u=KAIUN_URL.replace(/\{YMD\}/g,Y+M+D).replace(/\{Y\}/g,Y).replace(/\{M\}/g,M).replace(/\{D\}/g,D);
- u+=(u.includes("?")?"&":"?")+"utm_source=16typeplus&utm_medium=result&utm_campaign=kaiun";
- c.innerHTML='<p class="kaiun-eb">無料メール</p><h2>毎朝届く、あなただけの開運予報</h2><p>この診断の「気質」は、あなたの生年月日から出しています。同じ生年月日から、その日のラッキーカラーや開運小物を毎朝メールでお届けします。</p><a class="btn kaiun-btn" href="'+u+'" target="_blank" rel="noopener">無料で受け取る</a><p class="kaiun-note">生年月日（'+st.y+'年'+st.m+'月'+st.d+'日）は入力済み。メールアドレスだけで登録できます。</p>';
+ const hi=u.indexOf("#"),base=hi<0?u:u.slice(0,hi),hash=hi<0?"":u.slice(hi),utm="utm_source=16typeplus&utm_medium=result&utm_campaign=kaiun";
+ u=base+(base.includes("?")?"&":"?")+utm+hash;
+ c.innerHTML='<p class="kaiun-eb">MY DAILY FORECAST</p><h2 class="kaiun-t">私だけの開運予報</h2><p class="kaiun-catch"><span class="nw">今日のあなたが、</span><span class="nw">一通の手紙になって届く。</span></p><p class="kaiun-p">この診断の「気質」は、あなたの生年月日から出しています。同じ生年月日から、毎朝あなただけの占いをメールでお届けします。</p><p class="kaiun-checks"><span>✓ 料金はかかりません</span><span>✓ 毎朝メールで届きます</span><span>✓ いつでも停止できます</span></p><a class="btn kaiun-btn" href="'+u+'" target="_blank" rel="noopener">無料で受け取る</a><p class="kaiun-note">生年月日（'+st.y+'年'+st.m+'月'+st.d+'日）を入れた状態で、登録ページが開きます。</p>';
  c.hidden=false;c.querySelector("a").onclick=()=>{try{gtag("event","kaiun_click",{place:"result"});}catch(e){}};
  at.after(c);return c;}
 /* その人の回答で揺れた向きを、気質と性格の組み合わせから説明する */
