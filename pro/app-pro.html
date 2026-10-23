@@ -3861,6 +3861,17 @@ function pkYearKichiFix(t,c){ try{ t=String(t||''); if(!c||!c.annualFortunes||ty
       if(!on.length){ drop=true; return; }
       if(on.length<r.length){ const re=new RegExp(k+'((?:[（(][^（）()\\n]{0,40}[）)])?)'); sn=sn.replace(re,function(m0,gl){ return k+gl+'（'+k+'が巡るのは'+on.join('年・')+'年）'; }); } });
     return drop?'':sn; }).join(''); }catch(e){ return t; } }
+/* 柱の星の事実あわせ（発注者指示 2026-10-23「月柱には華蓋」＝本当は年柱、のまちがいから）：
+   「○柱に（は）〜星」と書いた星が、その柱になく、ほかの1つの柱にだけあるときは、柱の名前を正しい柱に直す。どの柱にもない星はそのまま（年運・大運の話のこともあるため）。 */
+function pkPillarStarFix(t,c){ try{ t=String(t||''); if(!c||!c.pillars||typeof pillarKichi!=='function') return t;
+  const KS=['天乙貴人','天徳貴人','月徳貴人','天徳合','月徳合','咸池','紅艶','駅馬','華蓋','文昌貴人','福星貴人','大極貴人','羊刃','飛刃','日刃','劫殺','亡神','血刃','囚獄','暗禄','金与禄','天厨貴人','天官貴人','魁罡','禄馬貴人','隔角','空亡'];
+  const at={}; c.pillars.forEach(function(p){ if(p&&p.label) at[p.label[0]]=pillarKichi(c,p); });
+  return t.replace(/([年月日時])柱((?:[（(][^（）()\n]{0,30}[）)])?)(には|にも|に|の)((?:(?![年月日時]柱)[^。\n]){0,40})/g,function(m0,L,gl,pa,rest){
+    if(!at[L]) return m0; const cut=rest.split(/[年月日時]柱|。/)[0];
+    const named=KS.filter(function(k){ return cut.indexOf(k)>=0; }); if(!named.length) return m0;
+    const wrong=named.filter(function(k){ return at[L].indexOf(k)<0; }); if(!wrong.length||wrong.length!==named.length) return m0;
+    const homes=Object.keys(at).filter(function(x){ return wrong.every(function(k){ return at[x].indexOf(k)>=0; }); });
+    return homes.length===1?homes[0]+'柱'+gl+pa+rest:m0; }); }catch(e){ return t; } }
 function pkEnsureLove(t,c,q){ try{ t=String(t||''); if(!pkIsLoveQ(q)) return t; const L=loveFourLines(c); if(!L) return t;
   const plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'));
   // 月の干支：文章を書く側が「2027年3月ごろ（きみずうの月）」のように読みだけ・まちがった干支に変えたら、計算どおりの干支に戻す
@@ -7068,7 +7079,7 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
     const det2=pkDropRepeat(ans,det);
     let full=((D.online&&_dup>0.6)||String(det2).replace(/【[^】]*】|\s/g,'').length<40)?ans:(ans+'\n\n【くわしい読み解き】\n'+det2);   // 中身のないくわしい読み解きは見出しも出さない   // ほとんど同じ文なら、くわしい読み解きは出さない（同じ文を2回見せない。発注者指示 2026-10-21）
     { let _seen=false; full=full.replace(/\n*[ 　]*【くわしい読み解き】[ 　]*(?:\n[ 　]*【くわしい読み解き】[ 　]*)*/g,function(m0){ if(_seen) return '\n'; _seen=true; return '\n\n【くわしい読み解き】\n'; }); }   // 見出しが2回続かないように
-    if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart) { full=pkEnsureBonds(full,chart); full=pkMonthFactFix(full,chart); full=pkYearKichiFix(full,chart); full=pkEnsureLove(full,chart,_q0); }   // 命式内の天地徳合・干合は、鑑定文になければツールが書き足す（発注者指示 2026-10-23）
+    if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart) { full=pkEnsureBonds(full,chart); full=pkMonthFactFix(full,chart); full=pkYearKichiFix(full,chart); full=pkPillarStarFix(full,chart); full=pkEnsureLove(full,chart,_q0); }   // 命式内の天地徳合・干合は、鑑定文になければツールが書き足す（発注者指示 2026-10-23）
     out.innerHTML=sc+engineBadge(true,D.online?'':'くわしい読み解きは通信できなかったため、端末内で作成した内容を表示しています。')+formatReading(full);
     attachReadingTools(out,full);
     if(proUser)appendPro(out,proUser,localText,deep,proLocal);
