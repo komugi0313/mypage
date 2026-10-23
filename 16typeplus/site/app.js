@@ -434,17 +434,26 @@ async function drawKarte(){const me=window.__me,{SANS,MONO}=await cwFonts(),W=10
  let y=176;c.strokeStyle=LINE;c.lineWidth=2;c.strokeRect(X0,y,X1-X0,112);const mid=(X0+X1)/2;c.beginPath();c.moveTo(mid,y);c.lineTo(mid,y+112);c.stroke();
  c.font="500 22px "+SANS;c.fillStyle=SC.muted;c.fillText(TR("気質（生まれ持った）"),X0+24,y+40);c.fillText(TR("性格（経験で育った）"),mid+24,y+40);
  c.font="700 36px "+SANS;c.fillStyle=cb;c.fillText(b+p16(b),X0+24,y+90);c.fillStyle=cn;c.fillText(one?TR("気質と同じ"):n+p16(n),mid+24,y+90);y+=150;
- const LB=cwList(b),LN=cwList(n);
- const sec=(title,ai,bi)=>{c.font="700 26px "+SANS;c.fillStyle=SC.plus;c.fillText("■ "+title,X0,y);y+=18;const rows=Math.max(bi-ai,1),h=rows*46+20;c.strokeStyle=LINE;c.strokeRect(X0,y,X1-X0,h);if(!one){c.beginPath();c.moveTo(mid,y);c.lineTo(mid,y+h);c.stroke();}
-  const colw=one?X1-X0-80:mid-X0-80;
-  const put=(arr,x,col)=>arr.slice(ai,bi).forEach((t,i)=>{const yy=y+44+i*46;c.strokeStyle=col;c.lineWidth=2.5;c.strokeRect(x,yy-22,22,22);c.beginPath();c.moveTo(x+4,yy-11);c.lineTo(x+10,yy-4);c.lineTo(x+19,yy-19);c.stroke();c.lineWidth=2;fitF(t,colw,24);c.fillStyle=SC.ink;c.fillText(t,x+34,yy);});
-  put(LB,X0+20,cb);if(!one)put(LN,mid+20,cn);y+=h+44;};
- sec(TR("所見（いいところ）"),0,4);sec(TR("恋愛の傾向"),4,8);sec(TR("よく見られる様子"),8,11);sec(TR("気になる点"),11,15);
- const para=(title,text,bg,bd)=>{c.font="700 26px "+SANS;c.fillStyle=SC.plus;c.fillText("■ "+title,X0,y);y+=18;c.font="500 25px "+SANS;const ls=wrapLines(c,text||"",X1-X0-48,4),h=ls.length*40+30;
-  if(bg){c.fillStyle=bg;c.fillRect(X0,y,X1-X0,h);}c.strokeStyle=bd||LINE;c.strokeRect(X0,y,X1-X0,h);c.fillStyle=SC.ink;c.font=(bg?"700 ":"500 ")+"25px "+SANS;ls.forEach((l,i)=>c.fillText(l,X0+24,y+46+i*40));y+=h+44;};
- para(TR("本人の訴え（悩みやすいこと）"),K.worry||[].concat(G.worry)[0]);
- para(TR("処方（楽になるヒント）"),G.key);
- para(TR("医師のひと言"),K.karai||"","#FBEDEA",SC.plus);
+ const LB=cwList(b),LN=cwList(n),co=coreOf(b,n)||{};
+ /* 診断名（ゆるがない芯の名前） */
+ if(co.name){y+=28;c.font="700 24px "+SANS;c.fillStyle=SC.muted;c.fillText(TR("診断名"),X0,y);c.font="800 46px "+SANS;c.fillStyle=SC.plus;fitF(co.name,X1-X0-140,46,800);c.fillStyle=SC.plus;c.fillText(co.name,X0+120,y+4);y+=66;}
+ const head=t=>{c.font="700 26px "+SANS;c.fillStyle=SC.plus;c.fillText("■ "+t,X0,y);y+=18;};
+ /* 所見：気質・性格・芯から1つずつ */
+ const obs=[LB[0],one?LB[1]:LN[0],(co.aru||[])[0]].filter(Boolean),oc=[cb,one?cb:cn,SC.plus];
+ head(TR("所見"));{const h=obs.length*48+20;c.strokeStyle=LINE;c.lineWidth=2;c.strokeRect(X0,y,X1-X0,h);
+  obs.forEach((t,i)=>{const yy=y+46+i*48,x=X0+22;c.strokeStyle=oc[i];c.lineWidth=2.5;c.strokeRect(x,yy-22,22,22);c.beginPath();c.moveTo(x+4,yy-11);c.lineTo(x+10,yy-4);c.lineTo(x+19,yy-19);c.stroke();c.lineWidth=2;fitF(t,X1-X0-100,25);c.fillStyle=SC.ink;c.fillText(t,x+36,yy);});y+=h+44;}
+ const para=(title,text,bg,bd,bold)=>{head(title);c.font="500 25px "+SANS;const ls=wrapLines(c,text||"",X1-X0-48,4),h=ls.length*40+30;
+  if(bg){c.fillStyle=bg;c.fillRect(X0,y,X1-X0,h);}c.strokeStyle=bd||LINE;c.lineWidth=2;c.strokeRect(X0,y,X1-X0,h);c.fillStyle=SC.ink;c.font=(bold?"700 ":"500 ")+"25px "+SANS;ls.forEach((l,i)=>c.fillText(l,X0+24,y+46+i*40));y+=h+44;};
+ para(TR("本人の訴え"),K.worry||[].concat(G.worry)[0]);
+ if(co.rx&&co.rx.length){head(TR("処方"));
+  co.rx.forEach((r,i)=>{const bx=X0,bw=X1-X0,pad=26;c.font="500 24px "+SANS;const how=wrapLines(c,TR("飲み方：")+r.how,bw-pad*2-70,2),eff=wrapLines(c,TR("効きめ：")+r.eff,bw-pad*2-70,2),h=70+(how.length+eff.length)*38+16;
+   rrect(c,bx,y,bw,h,18);c.fillStyle="#FFF7F4";c.fill();c.lineWidth=2;c.strokeStyle=rgba(SC.plus,.45);c.stroke();
+   /* カプセルの絵 */const px=bx+pad,py=y+30;rrect(c,px,py-14,48,26,13);c.fillStyle="#FFFFFF";c.fill();c.strokeStyle=SC.plus;c.stroke();c.save();c.beginPath();rrect(c,px,py-14,48,26,13);c.clip();c.fillStyle=i?cn===SC.ink?SC.plus:cn:cb;c.fillRect(px,py-14,24,26);c.restore();c.strokeStyle=SC.plus;rrect(c,px,py-14,48,26,13);c.stroke();
+   c.font="800 30px "+SANS;c.fillStyle=SC.plus;fitF(r.name,bw-pad*2-70,30,800);c.fillStyle=SC.plus;c.fillText(r.name,px+66,py+10);
+   c.font="500 24px "+SANS;c.fillStyle=SC.ink;let yy=y+70+22;how.concat(eff).forEach(l=>{c.fillText(l,px+66,yy);yy+=38;});y+=h+16;});y+=28;
+  if(co.side)para(TR("副作用"),"※ "+co.side);
+  if(co.doc)para(TR("先生からひと言"),co.doc,"#FBEDEA",SC.plus,true);
+ }else{para(TR("処方（楽になるヒント）"),G.key);}
  const H=y+80;c.textAlign="center";c.font="600 28px "+MONO;c.fillStyle=SC.ink;c.fillText(SHARE_URL.replace("https://",""),W/2,H-36);c.textAlign="left";
  const out=document.createElement("canvas");out.width=W;out.height=H;out.getContext("2d").drawImage(big,0,0);return out;}
 $("shareBtn").onclick=shareResult;
