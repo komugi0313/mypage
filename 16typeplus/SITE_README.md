@@ -17,3 +17,6 @@
   - 16TYPE+ の案内ボタンは `register.html#y=YYYY&m=MM&d=DD&from=16tp` を開く（utm_source=16typeplus も付く）。
   - 開運予報の register.html にある `if(p.from==="166"){...localStorage.setItem("unkiyoho_from166","1")...}` の横に、`from==="16tp"` 用の行（例：`unkiyoho_from16tp`）を足す。
   - 登録時にその印を送る・数える部分も、1.66 と同じように足す。
+- 16TYPE+ の案内ボタンの行き先は、開運予報のLP（`https://unkiyoho.jp/#y=YYYY&m=MM&d=DD&from=16tp`）。
+  - 今のLPは「#」のうしろを読まないので、生年月日は引き継がれない。
+  - 引き継ぐなら、LP（index.html）にも register.html と同じ「#y=&m=&d= を読んで localStorage の enbiyori_self_birth に入れる」処理を足す。そうすれば、LP→登録ページで生年月日が自動で入る。
