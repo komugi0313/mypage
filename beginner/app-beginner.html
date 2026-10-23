@@ -7829,6 +7829,62 @@ const CGRADE_BRANCH_TAKE={
   '普通':'ほどよい距離感の縁。無理に密着せず、2人が心地よいペースを見つけると長続きします。',
   '悪い':'生活リズムや距離感に違いが出やすい縁。予定・お金・家事などの“すり合わせ”を早めにすると摩擦が減ります。',
   '合わない':'一緒にいるペースが大きく違う縁。適度な「一人の時間」を尊重し合うと、かえって長く続きます。'};
+/* ===== 2人の日運を並べて見る（鑑定者本人の指示 2026-10-23）＝デートなどの日選び。計算は日運（dayFortuneAt）と同じ。
+   PROは専門用語つき（.kd-pro）、ビギナーのやさしい画面は専門用語なし（.kd-plain）を同時に作り、表示だけ切りかえる ===== */
+function _kdE(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _kdDay(c,d){ try{ const ev=dayFortuneAt(c,d); if(!ev) return null; const db=c.pillars[2].branch;
+  ev.kei=(ev.branch!==db&&(isKei2(ev.branch,db)||isKei3(ev.branch,db)))||(ev.branch===db&&JIKEI.has(db));
+  ev.chongDay=_chongOf(ev.branch)===db; ev.goHome=RIKUGO[ev.branch]===db; return ev; }catch(e){ return null; } }
+function _kdScore(ev){ if(!ev) return -99; let s=ev.pct; if(ev.chongDay) s-=25; if(ev.kei) s-=15; if(ev.goHome) s+=10;
+  ['咸池','紅艶','天乙貴人','天徳貴人','月徳貴人','天徳合','月徳合','駅馬'].forEach(function(k){ if((ev.stars||[]).indexOf(k)>=0) s+=4; }); return s; }
+function _kdPlainWhy(ev){ const r=[]; const st=ev.stars||[];
+  if(st.indexOf('駅馬')>=0) r.push('お出かけ・遠出に向く');
+  if(st.indexOf('咸池')>=0||st.indexOf('紅艶')>=0) r.push('魅力が高まる');
+  if(['天乙貴人','天徳貴人','月徳貴人','天徳合','月徳合'].some(function(k){ return st.indexOf(k)>=0; })) r.push('守られる・助けがある');
+  if(ev.goHome) r.push('2人の距離が縮まりやすい');
+  if(ev.chongDay) r.push('気持ちが揺れやすい');
+  if(ev.kei) r.push('すれ違いやすい');
+  return r; }
+function _kdJud(ev,plain){ if(ev.chongDay||ev.kei) return plain?'気をつけたい日':'動き・注意'; return ev.jud==='good'?(plain?'追い風の日':'追い風'):(ev.jud==='warn'?(plain?'気をつけたい日':'動き・注意'):(plain?'ふつうの日':'ふつう')); }
+function _kdCell(ev,plain){ if(!ev) return '<td>—</td>';
+  if(plain){ const w=_kdPlainWhy(ev); return '<td><b>'+_kdJud(ev,true)+'</b>'+(w.length?'<br><small>'+_kdE(w.join('・'))+'</small>':'')+'</td>'; }
+  const rel=[]; if(ev.goHome) rel.push('配偶宮と支合'); if(ev.chongDay) rel.push('配偶宮と冲'); if(ev.kei) rel.push('配偶宮と刑');
+  return '<td><b>'+_kdJud(ev,false)+'</b>（'+ev.pct+'）<br><small>日の星：'+_kdE(ev.star)+(ev.stars&&ev.stars.length?'／吉凶星：'+_kdE(ev.stars.join('・')):'')+(rel.length?'／'+rel.join('・'):'')+'</small></td>'; }
+function _kdBoth(a,b,plain){ if(!a||!b) return '';
+  const warn=a.chongDay||a.kei||b.chongDay||b.kei||a.jud==='warn'||b.jud==='warn';
+  const go=a.goHome||b.goHome, trip=(a.stars||[]).indexOf('駅馬')>=0&&(b.stars||[]).indexOf('駅馬')>=0;
+  let t; if(warn) t=plain?'どちらかの気持ちが揺れやすい日。大事な話や決断は別の日に。':'どちらかに冲・刑や「動き・注意」がある日。大事な話・決断は避け、短めに楽しむ。';
+  else if(a.jud==='good'&&b.jud==='good') t=plain?'2人とも追い風の日。デートにとても向いています。':'2人とも追い風。デート・大事な話に向く日。';
+  else t=plain?'2人とも落ち着いて過ごせる日。':'大きな注意はない日。';
+  if(go) t+=plain?'（2人の距離が縮まりやすい）':'（配偶宮と支合＝距離が縮まりやすい）';
+  if(trip) t+=plain?'（お出かけ・遠出に向く）':'（2人とも駅馬＝遠出に向く）';
+  return t; }
+function compatDaysBody(A,B,dateStr,na,nb){ try{
+  const base=dateStr?new Date(dateStr+'T12:00:00'):_jstToday(); if(isNaN(base)) return '';
+  const ea=_kdDay(A,base), eb=_kdDay(B,base); if(!ea||!eb) return '';
+  const mk=function(plain){ const lab=function(d){ return (d.getMonth()+1)+'月'+d.getDate()+'日'; };
+    let h='<div class="'+(plain?'kd-plain':'kd-pro')+'">';
+    h+='<div style="font-weight:900;margin:8px 0 4px">'+lab(base)+(plain?'':'（'+_kdE(ea.ganzhi)+'の日）')+'</div>';
+    h+='<table class="kd-t"><tr><th>'+_kdE(na)+'</th><th>'+_kdE(nb)+'</th></tr><tr>'+_kdCell(ea,plain)+_kdCell(eb,plain)+'</tr></table>';
+    h+='<div class="kd-both">'+_kdE(_kdBoth(ea,eb,plain))+'</div>';
+    // これから30日で2人に向いた日・避けたい日
+    const L=[]; for(let i=0;i<30;i++){ const d=new Date(_jstToday().getTime()+i*86400000); const x=_kdDay(A,d), y=_kdDay(B,d); if(x&&y) L.push({d:d,x:x,y:y,s:Math.min(_kdScore(x),_kdScore(y))+(_kdScore(x)+_kdScore(y))/4}); }
+    const good=L.filter(function(o){ return !(o.x.chongDay||o.x.kei||o.y.chongDay||o.y.kei)&&o.x.jud!=='warn'&&o.y.jud!=='warn'; }).sort(function(p,q){ return q.s-p.s; }).slice(0,5).sort(function(p,q){ return p.d-q.d; });
+    const bad=L.filter(function(o){ return o.x.chongDay||o.y.chongDay||o.x.kei||o.y.kei; }).slice(0,5);
+    h+='<div style="margin-top:10px;font-weight:900">'+(plain?'これから30日で、2人に向いた日':'これから30日で2人に向いた日（2人の日運の低いほうを重く見て選ぶ）')+'</div><ul class="kd-l">'+good.map(function(o){ return '<li><b>'+lab(o.d)+'</b>'+(plain?'':'（'+_kdE(o.x.ganzhi)+'）')+'　'+_kdE(plain?(_kdPlainWhy(o.x).concat(_kdPlainWhy(o.y)).filter(function(v,i,a){ return a.indexOf(v)===i; }).join('・')||'落ち着いて過ごせる'):(_kdJud(o.x,false)+'／'+_kdJud(o.y,false)))+'</li>'; }).join('')+'</ul>';
+    if(bad.length) h+='<div style="margin-top:6px;font-weight:900">'+(plain?'大事な話は避けたい日':'大事な話・決断は避けたい日（どちらかの配偶宮が冲・刑）')+'</div><ul class="kd-l">'+bad.map(function(o){ const who=[]; if(o.x.chongDay||o.x.kei) who.push(na); if(o.y.chongDay||o.y.kei) who.push(nb); return '<li><b>'+lab(o.d)+'</b>　'+_kdE(who.join('・'))+(plain?'の気持ちが揺れやすい':'（'+[o.x.chongDay?na+'：冲':'',o.x.kei?na+'：刑':'',o.y.chongDay?nb+'：冲':'',o.y.kei?nb+'：刑':''].filter(Boolean).join('・')+'）')+'</li>'; }).join('')+'</ul>';
+    h+='<div style="font-size:12px;color:var(--muted);margin-top:6px">'+(plain?'※目安です。体調や予定に合わせて選んでください。':'※日運と同じ計算（日の星・巡る吉凶星・配偶宮との合冲刑）。日の区切りは日本時間の正午で判定。目安であり断定ではありません。')+'</div></div>';
+    return h; };
+  return mk(false)+mk(true);
+}catch(e){ return ''; } }
+function compatDaysHTML(a,b,na,nb){ try{ if(!a||!b) return ''; window.__kdA=a; window.__kdB=b; window.__kdN=[na,nb];
+  const J=jstNow(), today=J.y+'-'+String(J.m).padStart(2,'0')+'-'+String(J.d).padStart(2,'0');
+  return `<section class="card sec" id="kd-sec" style="border:1.5px solid #B9C9E6">
+  <style>.kd-plain{display:none}html.bg-on .kd-plain{display:block}html.bg-on .kd-pro{display:none}.kd-t{width:100%;border-collapse:collapse;font-size:13.5px}.kd-t th,.kd-t td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;text-align:left;width:50%}.kd-t th{background:#EEF2F8;color:#26324A}.kd-both{margin-top:8px;font-weight:800;line-height:1.7}.kd-l{margin:4px 0 0;padding-left:1.2em;font-size:13.5px;line-height:1.8}</style>
+  <div style="font-weight:900;font-size:15px">📅 <span class="kd-pro">2人の日運を並べて見る（デートなどの日選び）</span><span class="kd-plain">2人のその日の運を並べて見る（お出かけの日選び）</span></div>
+  <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap"><input type="date" id="kd-date" value="${today}" style="height:42px;border:2px solid var(--line2);border-radius:10px;padding:0 10px;font-family:inherit;font-size:15px"><button type="button" id="kd-go" style="height:42px;border:0;border-radius:10px;padding:0 16px;background:#3C5A8A;color:#fff;font-weight:800;font-family:inherit;font-size:14px;cursor:pointer">この日を見る</button></div>
+  <div id="kd-body">${compatDaysBody(a,b,today,na,nb)}</div></section>`; }catch(e){ return ''; } }
+document.addEventListener('click',function(e){ const t=e.target&&e.target.closest&&e.target.closest('#kd-go'); if(!t||!window.__kdA) return; const v=(document.getElementById('kd-date')||{}).value; const bd=document.getElementById('kd-body'); if(bd){ let h=compatDaysBody(window.__kdA,window.__kdB,v,window.__kdN[0],window.__kdN[1]); if(typeof pkRelLove==='function'&&!pkRelLove()) h=h.replace(/配偶者宮|配偶宮/g,'関係の土台'); bd.innerHTML=h; } });
 function compatVerdictHTML(a,b,rt){
   if(typeof ganzhiCompat!=='function')return '';
   const gc=ganzhiCompat(a.pillars[2].ganzhi,b.pillars[2].ganzhi);
@@ -7994,7 +8050,7 @@ function buildCompatBase(out){
   if(document.getElementById('b-notime')&&document.getElementById('b-notime').checked)markTimeUnknown(chartB);
   const na=personName||'本人', nb=personNameB||'お相手';
   const rt=RELTYPES[document.getElementById('rel-type')?.value||'love']||RELTYPES.love;
-  try{var _cv=document.getElementById('compat-verdict'); if(_cv){ let _h=compatVerdictHTML(chart,chartB,rt)+compatTimingHTML(chart,chartB,rt); if(!rt.useSpouse)_h=_h.replace(/配偶者宮|配偶宮/g,'関係の土台').replace(/配偶者星/g,'縁の星'); _cv.innerHTML=_h; try{ pkReadable(_cv); }catch(_e2){} }}catch(_e){}   // 家族・友人・仕事の相性では「配偶宮」などの夫婦向けの言葉を使わない
+  try{var _cv=document.getElementById('compat-verdict'); if(_cv){ let _h=compatVerdictHTML(chart,chartB,rt)+compatTimingHTML(chart,chartB,rt)+compatDaysHTML(chart,chartB,(typeof personName!=='undefined'&&personName)||'本人',(typeof personNameB!=='undefined'&&personNameB)||'お相手');   /* 2人の日運を並べて見る（発注者指示 2026-10-23） */ if(!rt.useSpouse)_h=_h.replace(/配偶者宮|配偶宮/g,'関係の土台').replace(/配偶者星/g,'縁の星'); _cv.innerHTML=_h; try{ pkReadable(_cv); }catch(_e2){} }}catch(_e){}   // 家族・友人・仕事の相性では「配偶宮」などの夫婦向けの言葉を使わない
   try{var _cm=document.getElementById('compat-meishi'); if(_cm)_cm.innerHTML=compatMeishiHTML(chart,chartB,na,nb);}catch(_e){}
   const head=`【本人A】${na}（${chart.birth.sex==='male'?'男性':'女性'}）: ${compatBrief(chart)}\n【お相手B】${nb}（${sexB==='male'?'男性':'女性'}）: ${compatBrief(chartB)}\n\n【2人の関係】${rt.label}\n\n【2人の関係の自動分析（計算済み）】\n${compatAnalysis(chart,chartB,rt)}`;
   return {na,nb,rt,head};
@@ -9904,7 +9960,7 @@ html.bg-on .bg-why{display:block}
         var cm=document.getElementById('compat-meishi');
         var det=document.createElement('details'); det.className='beginner-pro-collapse'; det.id='bg-compat-fold';
         det.innerHTML='<summary><span class="bar-main"><span>🔍 2人のくわしい内容を見る</span><span class="bar-arrow"></span></span><span class="bar-sub">上級者向け：占いの専門的な表や言葉が出てきます。読まなくても大丈夫です。</span></summary>';
-        if(cv) [].slice.call(cv.children).forEach(function(n){ if(n.id!=='bg-easy-compat') det.appendChild(n); });
+        if(cv) [].slice.call(cv.children).forEach(function(n){ if(n.id!=='bg-easy-compat'&&n.id!=='kd-sec') det.appendChild(n); });   // 2人の日運（日選び）はやさしい言い方を持つので、たたまずに見せる
         if(cm&&cm.innerHTML){ var w=document.createElement('div'); w.className='bg-meishi-wrap'; w.innerHTML=cm.innerHTML; cm.innerHTML=''; det.appendChild(w); }
         if(cv) cv.appendChild(det);
     });

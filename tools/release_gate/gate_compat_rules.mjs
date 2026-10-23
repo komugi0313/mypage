@@ -138,6 +138,12 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   const e=[]; if(!/本人の咸池がお相手に\|お相手の年柱「戊子」・月柱「乙卯」・日柱「丁卯」/.test(r)) e.push('咸池（子・卯）'); if(!/本人の紅艶がお相手に\|お相手の時柱「丁未」/.test(r)) e.push('紅艶（未）'); if(!/お相手の月徳貴人が本人に/.test(r)) e.push('月徳貴人');
   if(!/【惹かれ合う星|【2人が惹かれ合うところ】/.test(r)) e.push('鑑定文への書き足し');
   console.log('  '+(e.length?'NG':'OK')+' 相性：惹かれ合う星（相手の命式に自分の咸池・紅艶・貴人）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('惹かれ合う星: '+e.join('・')); }
+// 2人の日運を並べて見る（2026-11-03：2人とも駅馬・偏財、彼女=天徳合／彼=月徳貴人、冲・刑なし）
+{ const r=await p.evaluate(()=>{ if(typeof compatDaysBody!=='function') return ''; const him=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},0,'none')), her=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none');
+    return compatDaysBody(her,him,'2026-11-03','さくら','彼'); });
+  const e=[]; if(!/11月3日（辛巳の日）/.test(r)) e.push('日の干支'); if(!/日の星：偏財／吉凶星：天徳合・劫殺・駅馬/.test(r)) e.push('彼女の日の星'); if(!/月徳貴人・月徳合・亡神・駅馬/.test(r)) e.push('彼の日の星'); if(!/2人とも駅馬/.test(r)) e.push('2人とも駅馬');
+  if(!/class="kd-plain"/.test(r)||/kd-plain[\s\S]*?(偏財|駅馬|天徳|冲|刑)[\s\S]*?<\/div><\/div>$/.test(r.slice(r.indexOf('class="kd-plain"')))) e.push('やさしい言い方に専門用語');
+  console.log('  '+(e.length?'NG':'OK')+' 2人の日運を並べて見る'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('2人の日運: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
