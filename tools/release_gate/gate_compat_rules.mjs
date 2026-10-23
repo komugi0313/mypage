@@ -44,6 +44,9 @@ const res=await p.evaluate((N)=>{
     checked++; });
   return {checked,rit,ritMD,han,fails};
 },N);
+const kou=await p.evaluate(()=>{ const T={甲:'午',乙:'申',丙:'寅',丁:'未',戊:'辰',己:'辰',庚:'戌',辛:'酉',壬:'子',癸:'申'}; const bad=[]; try{ for(const k in T){ const v=(KICHI_NIKKAN[k]||{}).紅艶||[]; if(v.length!==1||v[0]!==T[k]) bad.push(k+'='+v.join('')); } }catch(e){ bad.push('表が読めない'); } return bad; });
+console.log('  '+(kou.length?'NG':'OK')+' 紅艶の表（鑑定者本人の確認どおり）'+(kou.length?'  … '+kou.join(' '):''));
+if(kou.length) res.fails.push('紅艶の表: '+kou.join(' '));
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
