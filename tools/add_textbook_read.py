@@ -6,7 +6,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
 SNIP=(ROOT/'tools'/'textbook_read.html').read_text(encoding='utf-8')
 PAGES=['aisho-pattern','boko-kaichu','daiun-tenkanki','daiun-tsuhen','ijokanshi','inyoku','jikkan','juniun','kaigou','kaikyoku',
-       'kanshi-aisho','kodoku','kubo','nayin-aisho','nichiza','nichiza-tenchusatsu','ritsuun','setsuboku','tensen-chichu','tsuhensei','zohkan']
+       'kanshi-aisho','kodoku','kubo','nayin-aisho','nichiza','nichiza-tenchusatsu','ritsuun','setsuboku','tensen-chichu','hikiai','tsuhensei','zohkan']
 HUBS={'pro':'textbook-pro','beginner':'textbook','meishiki-original':None}
 n=0
 for d in ('pro','beginner','meishiki-original'):
