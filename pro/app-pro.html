@@ -3767,7 +3767,7 @@ function pkEnsureBonds(t,c){ try{ t=String(t||''); const L=natalBondLines(c,fals
   return t+'\n\n【命式内の結びつき】\n'+miss.map(function(x){ return '・'+x.pro; }).join('\n'); }catch(e){ return t; } }
 /* 恋愛相談で必ず入れる4つ（鑑定者本人の指示 2026-10-23）：①配偶宮（日支）の蔵干 ②パートナーの星が喜神かどうか（はっきり書く） ③出会いの場 ④縁が動く月。
    すべてツールの計算（命式・月運）から作る。文章に入っていなければ、ツールが書き足す（pkEnsureLove）。 */
-const PK_LOVE_Q=/恋愛|恋人|彼氏|彼女|片思い|片想い|好きな人|気になる人|結婚|婚活|再婚|離婚|復縁|出会い|パートナー|(?<!大丈)夫|妻|旦那|配偶|浮気|不倫|遊び人|モテ|交際|付き合|(?:合う|相性のいい|相性の良い)(?:男性|女性|人|相手)|男性のタイプ|女性のタイプ/;
+const PK_LOVE_Q=/出会|恋愛|恋人|彼氏|彼女|片思い|片想い|好きな人|気になる人|結婚|婚活|再婚|離婚|復縁|出会い|パートナー|(?<!大丈)夫|妻|旦那|配偶|浮気|不倫|遊び人|モテ|交際|付き合|(?:合う|相性のいい|相性の良い)(?:男性|女性|人|相手)|男性のタイプ|女性のタイプ/;
 function pkIsLoveQ(q){ return PK_LOVE_Q.test(String(q||'')); }
 function loveFourLines(c){ try{ if(!c||!c.pillars||!c.dayMaster) return null;
   const ds=c.dayMaster.stem, sp=(typeof spouseStars==='function')?spouseStars(c):[], dp=c.pillars[2]; if(!dp) return null;
@@ -3812,18 +3812,41 @@ function loveFourLines(c){ try{ if(!c||!c.pillars||!c.dayMaster) return null;
     if(sp.indexOf(ev.star)>=0){ r.push('パートナーの星（'+ev.star+'）が巡る'); rp.push('パートナーの星が巡る'); }
     else if(sp.indexOf(ev.bStar)>=0){ r.push('月の十二支にパートナーの星（'+ev.bStar+'）が巡る'); rp.push('パートナーの星が巡る'); }
     (ev.stars||[]).forEach(function(s){ if(['咸池','紅艶','天乙貴人'].indexOf(s)>=0){ r.push(s+'が巡る'); rp.push(s==='天乙貴人'?'助けてくれる人に出会いやすい':'魅力が高まる'); } });
+    const nb=c.pillars.map(function(p){ return p&&p.branch; }), PLB=['年支','月支','日支','時支'];
+    const sg=SANGO.find(function(g){ const s=g.slice(0,3); return ev.branch!==db&&s.indexOf(ev.branch)>=0&&s.indexOf(db)>=0; });
+    const third=sg?sg.slice(0,3).find(function(x){ return x!==ev.branch&&x!==db; }):null, ti=third?nb.indexOf(third):-1;
     if(RIKUGO[ev.branch]===db){ r.push('配偶宮「'+db+'」と支合'); rp.push('パートナーとの距離が縮まりやすい'); }
-    else if(ev.branch!==db&&(CENx[ev.branch]||CENx[db])&&SANGO.some(function(g){ const s=g.slice(0,3); return s.indexOf(ev.branch)>=0&&s.indexOf(db)>=0; })){ r.push('配偶宮「'+db+'」と半合'); rp.push('パートナーとの縁が結びつきやすい'); }
+    else if(sg&&ti>=0){ r.push('配偶宮「'+db+'」と'+PLB[ti]+'「'+third+'」と合わせて三合（'+sg.slice(0,3).join('')+'＝3つそろう）'); rp.push('パートナーとの縁が強く結びつきやすい'); }
+    else if(sg&&(CENx[ev.branch]||CENx[db])){ r.push('配偶宮「'+db+'」と半合（2つだけ。三合ではない）'); rp.push('パートナーとの縁が結びつきやすい'); }
     const lab=ev.calYear+'年'+ev.calMonth+'月ごろ（'+ev.ganzhi+'の月）';
     if(r.length) pick.push({lab:lab,n:r.length,pro:lab+'＝'+r.join('・'),plain:ev.calYear+'年'+ev.calMonth+'月ごろ（'+rp.filter(function(x,i,a){ return a.indexOf(x)===i; }).join('・')+'）',m:ev.calMonth});
+    if(_chongOf(ev.branch)!==db&&(isKei2(ev.branch,db)||isKei3(ev.branch,db)||(ev.branch===db&&JIKEI.has(db)))) move.push({pro:lab+'＝配偶宮「'+db+'」と刑（こじれやすい・振り回されやすい月。急いで決めない）',plain:ev.calYear+'年'+ev.calMonth+'月ごろ（気持ちがすれ違いやすい月）',m:ev.calMonth});
     if(_chongOf(ev.branch)===db) move.push({pro:lab+'＝配偶宮「'+db+'」と冲（関係が動きやすい・見直しの月）',plain:ev.calYear+'年'+ev.calMonth+'月ごろ（関係が動きやすい月）',m:ev.calMonth}); });
   pick.sort(function(a,b){ return b.n-a.n; }); const top=pick.slice(0,4).sort(function(a,b){ return ml.findIndex(function(e){ return a.lab.indexOf(e.calYear+'年'+e.calMonth+'月')===0; })-ml.findIndex(function(e){ return b.lab.indexOf(e.calYear+'年'+e.calMonth+'月')===0; }); });
-  const l4pro='縁が動く月（今後12ヶ月の月運）：'+(top.length?top.map(function(x){ return x.pro; }).join('／'):'この12ヶ月は、パートナーの星・桃花・配偶宮の合が巡る月がありません（自分を整える時期）')+(move.length?'。関係が動きやすい月：'+move.map(function(x){ return x.pro; }).join('／'):'')+'。';
+  const l4pro='縁が動く月（今後12ヶ月の月運）：'+(top.length?top.map(function(x){ return x.pro; }).join('／'):'この12ヶ月は、パートナーの星・桃花・配偶宮の合が巡る月がありません（自分を整える時期）')+(move.length?'。関係が動きやすい・注意の月：'+move.map(function(x){ return x.pro; }).join('／'):'')+'。';
   const l4plain='縁が動く月：'+(top.length?top.map(function(x){ return x.plain; }).join('、'):'この1年は、自分を整えるのに向いた時期です')+(move.length?'。関係が動きやすい月：'+move.map(function(x){ return x.plain; }).join('、'):'')+'。';
   const gzOf={}; ml.forEach(function(ev){ if(ev&&ev.calYear) gzOf[ev.calYear+'-'+ev.calMonth]=ev.ganzhi; });
   const PKEY={年:'家族|親戚|地元|目上|紹介',月:'仕事|職場|学校',日:'生活|友人|身近',時:'趣味|習いごと|習い事|年下'};
-  return {pro:[l1pro,l2pro,l3pro,l4pro],plain:[l1plain,l2plain,l3plain,l4plain],months:top.map(function(x){ return x.m; }),fav:fv,gzOf:gzOf,placeRe:use.length?new RegExp(use.map(function(l){ return PKEY[l]; }).join('|')):/時期/};
+  return {pro:[l1pro,l2pro,l3pro,l4pro],plain:[l1plain,l2plain,l3plain,l4plain],months:top.map(function(x){ return x.m; }),moveMonths:move.map(function(x){ return x.m; }),fav:fv,gzOf:gzOf,placeRe:use.length?new RegExp(use.map(function(l){ return PKEY[l]; }).join('|')):/時期/};
 }catch(e){ return null; } }
+/* 月の話の事実あわせ（発注者指示 2026-10-23「命式の読み解きは絶対にまちがえない」）：
+   1つの月だけを話している文で、①その月に巡らない通変星（正官↔偏官・正財↔偏財の取りちがえ）を、その月に本当に巡る星に直す
+   ②その月の支で3つそろわないのに「三合」と書いた文を「半合」に直す。命式（生まれ持ち）の話をしている文はさわらない。 */
+function pkMonthFactFix(t,c){ try{ t=String(t||''); if(!c||!c.pillars||typeof monthFortuneList!=='function') return t;
+  const ds=c.dayMaster.stem, ml=monthFortuneList(c,12), nb=c.pillars.map(function(p){ return p&&p.branch; });
+  const allow=function(ev){ return [ev.star,ev.bStar]; };   // 月の天干の星と、月の十二支の本気の星（ツールが鑑定文に渡している月の星）
+  const san=function(ev){ return SANGO.some(function(g){ const s3=g.slice(0,3); if(s3.indexOf(ev.branch)<0) return false; return s3.every(function(x){ return x===ev.branch||nb.indexOf(x)>=0; }); }); };
+  const SIB={正官:'偏官',偏官:'正官',正財:'偏財',偏財:'正財'};
+  return t.split(/(?<=[。！？\n])/).map(function(sn){
+    const ms=[]; sn.replace(/(?:(20\d\d)年)?(1[0-2]|[1-9])月/g,function(m0,y,mo){ const k=(y?y+'-':'')+mo; if(ms.indexOf(k)<0) ms.push(k); return m0; });
+    if(ms.length!==1||/命式|生まれ|もともと|持って生まれ|元命|大運|今年は|年運/.test(sn)) return sn;
+    const k=ms[0].split('-'), mo=+(k.length===2?k[1]:k[0]), yy=k.length===2?+k[0]:0;
+    const ev=ml.find(function(e){ return e&&e.calMonth===mo&&(!yy||e.calYear===yy); }); if(!ev) return sn;
+    const al=allow(ev);
+    sn=sn.replace(/正官|偏官|正財|偏財/g,function(x){ return (al.indexOf(x)<0&&al.indexOf(SIB[x])>=0)?SIB[x]:x; });
+    sn=sn.replace(/配偶宮(?:[（(][^）)]*[）)])?に(?=[^。]{0,6}?(?:咸池|紅艶|天乙貴人|天徳貴人|月徳貴人|駅馬|華蓋|文昌貴人))/g,'この月に');   // 月に巡る星を「配偶宮に」と書いた取りちがえ
+    if(/三合/.test(sn)&&!san(ev)) sn=sn.replace(/三合(?![（(][^）)]*3)/g,'半合');
+    return sn; }).join(''); }catch(e){ return t; } }
 function pkEnsureLove(t,c,q){ try{ t=String(t||''); if(!pkIsLoveQ(q)) return t; const L=loveFourLines(c); if(!L) return t;
   const plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'));
   // 月の干支：文章を書く側が「2027年3月ごろ（きみずうの月）」のように読みだけ・まちがった干支に変えたら、計算どおりの干支に戻す
@@ -3832,7 +3855,7 @@ function pkEnsureLove(t,c,q){ try{ t=String(t||''); if(!pkIsLoveQ(q)) return t; 
   const has=[ plain?/パートナーの座/.test(t):one(/配偶宮/,/蔵干/),
     plain?/運を良くしてくれる|良い影響|振り回され|相手しだい/.test(t):one(/喜神|忌神|中立/,/パートナーの星|配偶者星|官星|財星|正官|偏官|正財|偏財/),
     one(/出会/,L.placeRe),
-    L.months.length?L.months.some(function(m){ return new RegExp('(^|[^0-9０-９])'+m+'月').test(t); }):/整える/.test(t) ];
+    (L.months.length?L.months.some(function(m){ return new RegExp('(^|[^0-9０-９])'+m+'月').test(t); }):/整える/.test(t))&&(L.moveMonths||[]).every(function(m){ return one(new RegExp('(^|[^0-9０-９])'+m+'月'),/刑|冲|すれ違|こじれ|揺れ|振り回|見直し|注意/); }) ];   // 関係が動きやすい・注意の月（冲・刑）も書いてあるか
   const miss=[]; has.forEach(function(h,i){ if(!h) miss.push((plain?L.plain:L.pro)[i]); });
   if(!miss.length) return t;
   return t+'\n\n'+(plain?'【恋愛で大事な4つのこと】':'【恋愛で必ず見る4つ】')+'\n'+miss.map(function(x){ return '・'+x; }).join('\n'); }catch(e){ return t; } }
@@ -5908,7 +5931,7 @@ function buildChartText(c){
   const L=[c.timeUnknown?'※生まれた時刻が不明：時柱は使わず、年月日の3柱だけで鑑定する。五行・通変・合冲・吉凶星も3柱で集計済み。将来・本心（時柱）や時刻由来の星・子供運には触れないこと。':'',
     `生年月日時:${c.birth.clock}（${c.birth.sex==='male'?'男性':'女性'}）`,
     c.birth.correction?`真太陽時:${c.birth.correction.solar}`:'真太陽時補正なし',
-    `日干（あなたの本体）:${c.dayMaster.stem}（${c.dayMaster.element}）`,
+    `日干（あなたの本体）:${c.dayMaster.stem}（${c.dayMaster.element}の${'乙丁己辛癸'.indexOf(c.dayMaster.stem)>=0?'陰':'陽'}。この陰陽・五行を変えて書かない）`,
     `日柱（60干支の${ganzhi60(dp.stem,dp.branch)}番）:${dp.ganzhi}（訓読み：${ganzhiYomi(dp.stem,dp.branch)}） — 日干${dp.stem}が日支${dp.branch}に座す姿（十二運${dp.terrain}・蔵干本気${(dp.hiddenStems.find(h=>h.role==='本気')||dp.hiddenStems[dp.hiddenStems.length-1]||{}).stem||''}）。${KANSHI60[dp.ganzhi]?'この日柱（60干支）の型＝'+KANSHI60[dp.ganzhi]:''} ここから日柱の性格を読む`,
     (()=>{const dd=KANSHI60_DETAIL[dp.ganzhi];if(!dd)return '';const gx=c.birth.sex==='male'?dd.男:dd.女;const uso=USO_TYPE[dp.ganzhi]?`／【嘘が通用しにくい日柱】${USO_TYPE[dp.ganzhi]}＝細かな違和感やつじつまの合わなさに気づきやすい鋭い洞察力（人を疑う意味ではなく、本質を見抜く力・観察眼として前向きに描く）`:'';return `日柱「${dp.ganzhi}」の詳しい人物像（性格の核・最重要。通変や十二運より、この人物像を土台に厚く描く）:一言=${dd.一言}／基本性格=${dd.基本}／恋愛傾向=${dd.恋愛}／仕事運=${dd.仕事}／${c.birth.sex==='male'?'男性':'女性'}の特徴=${gx}${uso}`;})(),
     (()=>{const bs=KANGO[dp.stem],bb=RIKUGO[dp.branch];if(!bs||!bb)return '';return `最も相性が良い日柱（天地徳合＝十干も十二支も最高の相性）:あなた(日柱${dp.ganzhi})は「${bs}${bb}」の日柱を持つ人と相性が最高。日干が干合(${dp.stem}と${bs})し、日支が支合(${dp.branch}と${bb})する、運命的に深く結ばれやすい組み合わせ（大吉）。基本は最高の相性。強いて言えば縁が濃いぶん少し依存に傾きやすい面（晦気＝かいき）だけ、ほどよい距離感を保てば安心`;})(),
@@ -6764,7 +6787,8 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
   out=out.replace(/たまやすい/g,'たまりやすい').replace(/前展/g,'進展').replace(/(^|\n)([ 　]*)(?:結論から(?:お伝え|申し上げ|言う|お話し)(?:すると|しますと|ますと|ると)|結論としては)[、，]\s*/g,'$1$2');   // よくある書きまちがい・1行目の前置き
   out=out.replace(/【{2,}/g,'【').replace(/】{2,}/g,'】').replace(/^([ 　]*【[^】\n]{1,40})[ 　]*$/gm,'$1】').replace(/^[ 　]*】[ 　]*/gm,'');   // 見出しのかっこのくずれ（【【…】】・閉じ忘れ・行頭の】）をそろえる
   out=out.replace(/（([ぁ-ん]{1,6})財(?=[・：:）)])/g,'（$1ざい').replace(/（([ぁ-ん]{1,6})官(?=[・：:）)])/g,'（$1かん');   // 読みに漢字がまじる（せい財）を直す
-  out=out.replace(/(^|\n)([ 　]*)【([^】\n]{1,30})】(?=[はがをにでのも、])/g,'$1$2$3');   // 文の途中に【】を使ったもの（【来年の運気】は、…）は、見出しにせずに文として出す
+  out=out.replace(/(^|\n)([ 　]*)【([^】\n]{1,30})】(?=[はがをにでのも、と])/g,'$1$2$3');
+  out=out.replace(/([^\n\s　】])【([^】\n]{1,30})】/g,'$1「$2」');   // 文の途中の【】（「AとB【C】について」）は見出しにしない＝かぎかっこにする   // 文の途中に【】を使ったもの（【来年の運気】は、…）は、見出しにせずに文として出す
   out=out.replace(/【([^】【]{1,80}?)】/g,function(m,x){ if(x.indexOf('\n')<0) return m; var y=x.replace(/\s+/g,''); return (y.length&&y.length<=40)?'【'+y+'】\n':m; }).replace(/】\n\n+/g,'】\n');   // 見出しの中で改行したくずれ（【…⏎】）をつなぐ
   if(other) out=out.replace(/(?:二人|2人|ふたり|お二人|おふたり|お互い|両方|互い)の配偶宮(?![^。\n]{0,12}(?:同士|どうし|の間|の組み合わせ|を比べ|どちらも|が害|には害|は害|が支合|が冲|には冲|が刑|が破))/g,'あなたの配偶宮');   // 相性の「揺れやすい年」は本人の配偶宮だけで出しているので「お互いの配偶宮」とは書かせない（2人の日支どうしの関係を言うときは残す）
   out=out.replace(/(（[^（）\n]{1,40}）)([*＊]{0,2})\1/g,'$1$2');   // 同じかっこが2つ続いたら1つに
@@ -6875,7 +6899,7 @@ async function generateReading(user,localText,system,deep){
   if(_topics) system=consultSystemSlim(system||CONSULT_SYSTEM,_topics);   // ビギナー（やさしい言葉の指示に差し替えた後）でも同じように外す
   if(_part==='answer') user=String(user).replace(/構成（必ず守る）：[\s\S]*?(?=\n【|$)/,'').replace(/(^|\n)構成：[\s\S]*?(?=\n【|$)/,'$1');   // 相性の「構成：」も同じく外す（発注者指示 2026-10-22）   // 冒頭の答えには、くわしい読み解き用の見出しの構成を渡さない（形がくずれる・送る量も減る。発注者指示 2026-10-21）
   if(_part==='answer'){ system=String(system||CONSULT_SYSTEM).replace(/【出力フォーマット＝厳守[\s\S]*?(?=\n【|$)/,''); }   // 見出しで区切る・【まとめ】で締めるの指示は、くわしい読み解きだけに使う
-  system=(system||CONSULT_SYSTEM)+YOMI_RULE+NO_REPEAT_RULE+NO_AI_RULE+pkLifeGuide(user)+pkYearPick(user)+(function(){ try{ var c=(typeof chart!=='undefined')?chart:null; if(!c||typeof _kkAssess!=='function') return ''; var as=_kkAssess(c).assess, F=['木','火','土','金','水'].filter(function(e){ return as(e).fav==='喜'; }), N=['木','火','土','金','水'].filter(function(e){ return F.indexOf(e)<0; }); return F.length?(function(){ try{ if(/【お相手B】/.test(user)) return ''; var c=(typeof chart!=='undefined')?chart:null; var L=natalBondLines(c,false); return L.length?'\n【鑑定文で必ず触れる＝命式内の天地徳合・干合（見つけたら必ず書き、何を意味するかも書く）】\n'+L.map(function(x){ return '・'+x.pro; }).join('\n')+'\n・恋愛・結婚・浮気・遊び人かなどの相談では、配偶者星の干合をいちばんの根拠として使う。\n':''; }catch(e){ return ''; } })()+(function(){ try{ if(/【お相手B】/.test(user)) return ''; var m=/【相談者の悩み】\n([\s\S]*?)(?:\n\n|$)/.exec(user); if(!m||!pkIsLoveQ(m[1])) return ''; var L=loveFourLines(chart); if(!L) return ''; var bg=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on')); return '\n【恋愛相談で必ず入れる4つ（ツールの計算どおりに書く。数字・干支・月を変えない）】\n'+(bg?L.plain:L.pro).map(function(x){ return '・'+x; }).join('\n')+'\n・パートナーの星が喜神かどうかは、「パートナーの星は、あなたの喜神です（＝良い影響を受けやすい）」のように、はっきり1文で書く。\n・月の干支（例：癸卯の月）は漢字のまま書く。読みがなに置きかえない。\n・出会いの場は、上の場所（仕事・職場など）を具体的に書く。\n'; }catch(e){ return ''; } })()+'\n【星の書き分け＝厳守】その年の星（年運）と、いまの10年の星（大運）を同じかっこに並べない。「来年は偏印、いまの10年（大運）は劫財」のように分けて書く。\n【五行のすすめ＝厳守】色・食べ物・身につけるもの・取り入れる五行をすすめるときは、この人の喜神（'+F.join('・')+'）だけをすすめる。'+N.join('・')+'は、少なくても「足りないので補う」とすすめない（身旺・身弱で決めた喜神が正しい）。\n':''; }catch(e){ return ''; } })()+(_part==='detail'?DETAIL_ONLY_RULE:ANSWER_RULE+(_part==='answer'?ANSWER_ONLY_RULE:''));
+  system=(system||CONSULT_SYSTEM)+YOMI_RULE+NO_REPEAT_RULE+NO_AI_RULE+pkLifeGuide(user)+pkYearPick(user)+(function(){ try{ var c=(typeof chart!=='undefined')?chart:null; if(!c||typeof _kkAssess!=='function') return ''; var as=_kkAssess(c).assess, F=['木','火','土','金','水'].filter(function(e){ return as(e).fav==='喜'; }), N=['木','火','土','金','水'].filter(function(e){ return F.indexOf(e)<0; }); return F.length?(function(){ try{ if(/【お相手B】/.test(user)) return ''; var c=(typeof chart!=='undefined')?chart:null; var L=natalBondLines(c,false); return L.length?'\n【鑑定文で必ず触れる＝命式内の天地徳合・干合（見つけたら必ず書き、何を意味するかも書く）】\n'+L.map(function(x){ return '・'+x.pro; }).join('\n')+'\n・恋愛・結婚・浮気・遊び人かなどの相談では、配偶者星の干合をいちばんの根拠として使う。\n':''; }catch(e){ return ''; } })()+(function(){ try{ if(/【お相手B】/.test(user)) return ''; var m=/【相談者の悩み】\n([\s\S]*?)(?:\n\n|$)/.exec(user); if(!m||!pkIsLoveQ(m[1])) return ''; var L=loveFourLines(chart); if(!L) return ''; var bg=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on')); return '\n【恋愛相談で必ず入れる4つ（ツールの計算どおりに書く。数字・干支・月を変えない）】\n'+(bg?L.plain:L.pro).map(function(x){ return '・'+x; }).join('\n')+'\n・パートナーの星が喜神かどうかは、「パートナーの星は、あなたの喜神です（＝良い影響を受けやすい）」のように、はっきり1文で書く。\n・月の干支（例：癸卯の月）は漢字のまま書く。読みがなに置きかえない。\n・出会いの場は、上の場所（仕事・職場など）を具体的に書く。\n'; }catch(e){ return ''; } })()+'\n【合の書き分け＝厳守】三合と書くのは、3つの十二支がそろうときだけ（例：亥・卯・未）。2つだけなら半合と書く。命式の事実（日干の陰陽・五行、月支元命、星の数、十二運）は、上のデータのとおりに書き、変えない。'+'\n【星の書き分け＝厳守】その年の星（年運）と、いまの10年の星（大運）を同じかっこに並べない。「来年は偏印、いまの10年（大運）は劫財」のように分けて書く。\n【五行のすすめ＝厳守】色・食べ物・身につけるもの・取り入れる五行をすすめるときは、この人の喜神（'+F.join('・')+'）だけをすすめる。'+N.join('・')+'は、少なくても「足りないので補う」とすすめない（身旺・身弱で決めた喜神が正しい）。\n':''; }catch(e){ return ''; } })()+(_part==='detail'?DETAIL_ONLY_RULE:ANSWER_RULE+(_part==='answer'?ANSWER_ONLY_RULE:''));
   const _nm=_nameMasks();
   if(_nm.length){ user=_maskNames(user,_nm); system=_maskNames(system,_nm)+'\n【お名前の印】文章の中の「〔本人〕」「〔お相手〕」は、実際のお名前の代わりの印です。お名前で呼ぶときは、この印を一字も変えずにそのまま書いてください（例：〔本人〕さん）。'; }
   // 電波がない（オフライン）ときはAIを呼ばず、端末内鑑定を出す
@@ -7024,7 +7048,7 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
     const _dup=pkDupRate(ans,det);   // くわしい読み解きが、上の答えのくり返しになっていないか
     const det2=pkDropRepeat(ans,det);
     let full=((D.online&&_dup>0.6)||String(det2).replace(/【[^】]*】|\s/g,'').length<40)?ans:(ans+'\n\n【くわしい読み解き】\n'+det2);   // 中身のないくわしい読み解きは見出しも出さない   // ほとんど同じ文なら、くわしい読み解きは出さない（同じ文を2回見せない。発注者指示 2026-10-21）
-    if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart) { full=pkEnsureBonds(full,chart); full=pkEnsureLove(full,chart,_q0); }   // 命式内の天地徳合・干合は、鑑定文になければツールが書き足す（発注者指示 2026-10-23）
+    if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart) { full=pkEnsureBonds(full,chart); full=pkMonthFactFix(full,chart); full=pkEnsureLove(full,chart,_q0); }   // 命式内の天地徳合・干合は、鑑定文になければツールが書き足す（発注者指示 2026-10-23）
     out.innerHTML=sc+engineBadge(true,D.online?'':'くわしい読み解きは通信できなかったため、端末内で作成した内容を表示しています。')+formatReading(full);
     attachReadingTools(out,full);
     if(proUser)appendPro(out,proUser,localText,deep,proLocal);
