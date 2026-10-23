@@ -1,4 +1,4 @@
-// 発売前の点検（相性の流派の決まり）：元の版（meishiki-original/pro-adapter.js の compatData）と同じ決まりで、
+// 発売前の点検（相性の流派の決まり）：鑑定者本人が伝えた決まり（CLAUDE.md「相性の決まり」・写真の表）どおりに、
 // PRO／ビギナーの相性の判定（compatBalance）が「律音・三合・方合・半会・支合」を1つも落としていないかを、たくさんの組み合わせで確かめる。
 // あわせて、神殺・合冲の表が鑑定者本人の表（写真 2026-10-23）と1マスずつ同じか（アプリと鑑定書の両方）、恋愛相談の4項目が必ず入るかも確かめる。
 // 文章作成は使わない（呼び出し0回）。使い方：node tools/release_gate/gate_compat_rules.mjs <pro|beginner> [組み合わせの数=400]
@@ -14,7 +14,7 @@ const ctx=await b.newContext({serviceWorkers:'block'}); let calls=0;
 await ctx.route('**/.netlify/functions/**',r=>{ if(/gemini/.test(r.request().url())) calls++; r.fulfill({status:200,contentType:'application/json',body:'{"ok":true}'}); });
 const p=await ctx.newPage(); await p.goto(`http://127.0.0.1:${port}/${page0}`); await p.waitForTimeout(2500);
 const res=await p.evaluate((N)=>{
-  // 元の版（pro-adapter.js）の表と決まり
+  // 鑑定者本人の決まり（CLAUDE.md「相性の決まり」・写真の表）
   const CP_SANGO=[['申','子','辰'],['亥','卯','未'],['寅','午','戌'],['巳','酉','丑']], FP_HOUGO=[['寅','卯','辰'],['巳','午','未'],['申','酉','戌'],['亥','子','丑']];
   const CP_RIKUGO={子:'丑',丑:'子',寅:'亥',亥:'寅',卯:'戌',戌:'卯',辰:'酉',酉:'辰',巳:'申',申:'巳',午:'未',未:'午'};
   let seed=20261022; const rnd=()=>{ seed=(seed*1103515245+12345)%2147483648; return seed/2147483648; };
