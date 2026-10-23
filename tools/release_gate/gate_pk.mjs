@@ -60,6 +60,7 @@ const calCheck=(t,by)=>{ const G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅�
 const unStamped=t=>{ const ys={}, ok2={}; for(const m of t.matchAll(/((?:19|20)\d\d)年(?!\d{1,2}月|[0-9]|生|度|代)/g)){ const y=m[1], a=t.slice(m.index+m[0].length,m.index+m[0].length+6), b=t.slice(Math.max(0,m.index-6),m.index); if(/[0-9〜~]$/.test(b)) continue; ys[y]=1; if(/^[（(]|^の?[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]|^(?:に|には|で|、)?\d{1,3}歳/.test(a)||/\d{1,3}歳(?:になる|を迎える)?[（(]?$/.test(b)||/[（(「『]$/.test(b)) ok2[y]=1; } return Object.keys(ys).filter(y=>!ok2[y]); };
 { const cb=calCheck(A,1985); ok('暦：年齢・年の干支・今年/来年が正しい（相談1）', cb.length===0, cb.slice(0,3).join(' / ')); }
 if(MODE==='online'){ const u=unStamped(A); ok('相談1：西暦にツールの干支・年齢が付いている', u.length===0, u.map(y=>{const i=A.indexOf(y+'年');return A.slice(Math.max(0,i-15),i+12).replace(/\n/g,'⏎');}).join(' / ')); }
+if(MODE==='online'){ const kinds=await p.evaluate(()=>{ try{ return natalBondLines(chart,false).map(x=>x.kind); }catch(e){ return []; } }); const plainMode=await p.evaluate(()=>document.documentElement.classList.contains('bg-on')); const miss=plainMode?(kinds.length&&!/強く結びつ/.test(A)?['結びつき']:[]):kinds.filter(k=>!A.includes(k)); ok('相談1：命式内の天地徳合・干合を必ず伝える（'+(kinds.join('・')||'なし')+'）', miss.length===0, miss.join('・')); }
 ok('相談1：見出しが途中で改行していない', !/【[^】\n]{0,40}\n[^】]{0,40}】/.test(A), (A.match(/【[^】\n]{0,40}\n[^】]{0,40}】/)||[''])[0].replace(/\n/g,'⏎'));
 ok('相談1：画面に＊が出ない', cleanStar(A)===0, cleanStar(A));
 // 追加の質問
