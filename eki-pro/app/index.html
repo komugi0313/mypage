@@ -2192,7 +2192,7 @@ const App=(function(){
   function pkFixTel(t){ t=String(t==null?'':t); const D={'〇':'0','零':'0','一':'1','二':'2','三':'3','四':'4','五':'5','六':'6','七':'7','八':'8','九':'9'};
     t=t.replace(/(?:ゼロ|〇|零)(?:ゼロ|[〇零一二三四五六七八九]|[のー−‐](?=ゼロ|[〇零一二三四五六七八九])){5,}/g,function(m){ const x=m.replace(/ゼロ/g,'0').replace(/[〇零一二三四五六七八九]/g,function(c){ return D[c]; }).replace(/[のー−‐]/g,'-'); return x.replace(/-/g,'').length>=6?x:m; });
     return t.replace(/二十四時間(子供|子ども|こども)?(エスオーエス|ＳＯＳ)/g,function(m,a){ return '24時間'+(a||'')+'SOS'; }).replace(/エスオーエス(ダイヤル|ダイアル)/g,'SOS$1'); }
-  function noAIWord(t){ const _by=parseInt(((document.getElementById('fuBd')||{}).value||'').slice(0,4),10)||0; const _x=pkFactFix(pkStampYears(pkFixAge(pkFixTel(_noAIWord1(t)),_by),_by,0,true)); /* 十干の陰陽・五行／星の説明の取りちがえ（PROと同じ直し） */ return (typeof LANG!=='undefined'&&LANG==='ko')?_x:pkFixHangul(_x); }   // 日本語の文に混じったハングル（「終つい에는吉」など）を直す。韓国語で表示しているときだけは直さない
+  function noAIWord(t){ const _by=parseInt(((document.getElementById('fuBd')||{}).value||'').slice(0,4),10)||0; const _x=ekiStarGuard(pkFactFix(pkStampYears(pkFixAge(pkFixTel(_noAIWord1(t)),_by),_by,0,true))); /* 十干の陰陽・五行／星の説明の取りちがえ（PROと同じ直し） */ return (typeof LANG!=='undefined'&&LANG==='ko')?_x:pkFixHangul(_x); }   // 日本語の文に混じったハングル（「終つい에는吉」など）を直す。韓国語で表示しているときだけは直さない
   /* PROと同じ直し（pro/app-pro.html の pkFactFix をそのまま写す。直すときは3か所そろえる） */
 function pkFactFix(t,aS,bS){ try{ t=String(t==null?'':t);   // 命式の事実（日干の五行・十干の五行・十二支と十二運の取りちがえ）を、計算どおりに直す（発注者指示 2026-10-22「普通のことをまちがえない」）
   var EL={甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'金',辛:'金',壬:'水',癸:'水'};
@@ -2219,6 +2219,14 @@ function pkFactFix(t,aS,bS){ try{ t=String(t==null?'':t);   // 命式の事実�
   // ⑥ 「月支元命に「偏印」が3つ」→ 月支元命は1つ。数は命式全体の数として書き分ける
   t=t.replace(/月支元命((?:[（(][^）)\n]{0,30}[）)])?)に([「『]?[^」』\n]{1,40}?[」』]?)が([0-9０-９一二三四五]+)つ/g,'月支元命$1が$2で、命式全体ではこの星が$3つ');
   return t; }catch(e){ return t; } }
+/* PRO の「柱・月・年の星の事実あわせ」（pkPillarStarFix・pkMonthFactFix・pkYearKichiFix）と同じ目的の直し（発注者指示 2026-10-23「ツールは3つ必ず同時に直す」）。
+   易は命式の吉凶星・月ごとの星を文章作成に渡していないので、それらを書いた文は根拠がない＝外す（空亡・天中殺は画面に出しているので残す）。 */
+function ekiStarGuard(t){ try{ t=String(t==null?'':t);
+  var KS=/天乙貴人|天徳貴人|月徳貴人|天徳合|月徳合|咸池|紅艶|駅馬|華蓋|文昌貴人|福星貴人|大極貴人|羊刃|飛刃|日刃|劫殺|亡神|血刃|囚獄|暗禄|金与禄|天厨貴人|天官貴人|魁罡|禄馬貴人|隔角|桃花/;
+  var TS=/比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬/;
+  return t.split('\n').map(function(ln){ if(/^\s*【[^】]*】\s*$/.test(ln)) return ln; var ps=ln.split(/(?<=[。！？])/);
+    var kept=ps.filter(function(sn){ if(KS.test(sn)) return false; if(TS.test(sn)&&/(?:^|[^0-9０-９])(?:1[0-2]|[1-9])月/.test(sn)&&!/年/.test(sn)) return false; return true; });
+    if(kept.length===ps.length) return ln; if(!kept.length) return null; return kept.join(''); }).filter(function(x){ return x!==null; }).join('\n'); }catch(e){ return t; } }
 function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; other=+other||0;   // 西暦のあとに、ツールが計算した干支と年齢を付ける（文章作成の書いた干支・年齢のかっこは外して付け直す。発注者指示 2026-10-22「普通のことをまちがえない」）
   if(typeof document!=='undefined'&&document.documentElement&&document.documentElement.classList.contains('bg-on')) noGz=true;   // ビギナーのやさしい表示では干支を出さない
   var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', GZ='[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]', gzOf=function(y){ var i=((y-4)%60+60)%60; return G.charAt(i%10)+Z.charAt(i%12); };
