@@ -147,8 +147,10 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
 // 惹かれ方の向き（彼2006-06-07×彼女2008-03-28：彼→彼女＝咸池・紅艶／彼女→彼＝恋愛の星なし）
 { const r=await p.evaluate(()=>{ if(typeof attractionDir!=='function') return ''; const him=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},0,'none')), her=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none');
     const ad=attractionDir(her,him,'彼女','彼'); return ad?ad.pro+'|'+pkEnsureCross('テスト',her,him):''; });
-  const ok7=/彼女→彼＝恋愛の星なし（助けの星2つ：月徳貴人・大極貴人）／彼→彼女＝恋愛の星2つ（咸池・紅艶）/.test(r)&&/＝彼のほうが異性として惹かれやすい/.test(r)&&/惹かれ方の向き|異性として惹かれやすい組み合わせ/.test(r.split('|')[1]||'');
-  console.log('  '+(ok7?'OK':'NG')+' 相性：惹かれ方の向き'); if(!ok7) res.fails.push('惹かれ方の向き'); }
+  const ok7=/彼女→彼＝恋愛の星なし（助けの星2つ：月徳貴人・大極貴人）／彼→彼女＝恋愛の星2つ（咸池・紅艶）/.test(r)&&/＝彼のほうが異性として惹かれやすい/.test(r)&&/惹かれ方の向き|異性として(?:とても|少し)?惹かれやすい組み合わせ/.test(r.split('|')[1]||'');
+  const s7=await p.evaluate(()=>{ const her=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'); const f=(y,m,d)=>attractionDir(her,markTimeUnknown(baziCompute({year:y,month:m,day:d,hour:12,minute:0,sex:'male',tu:true},0,'none')),'本人','お相手'); return [f(2006,6,7).pro,f(2007,1,17).pro].join('|'); });
+  const okS=/お相手のほうが異性として惹かれやすい（強い：咸池と紅艶の両方・日柱にも当たる/.test(s7.split('|')[0])&&/お相手のほうが異性として惹かれやすい（中くらい：咸池だけ・日柱にも当たる/.test(s7.split('|')[1]);
+  console.log('  '+(ok7&&okS?'OK':'NG')+' 相性：惹かれ方の向き（強さ：強い／中くらい／弱め）'); if(!(ok7&&okS)) res.fails.push('惹かれ方の向き'); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
