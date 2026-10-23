@@ -151,6 +151,11 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   const s7=await p.evaluate(()=>{ const her=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'); const f=(y,m,d)=>attractionDir(her,markTimeUnknown(baziCompute({year:y,month:m,day:d,hour:12,minute:0,sex:'male',tu:true},0,'none')),'本人','お相手'); return [f(2006,6,7).pro,f(2007,1,17).pro].join('|'); });
   const okS=/お相手のほうが異性として惹かれやすい（強い：咸池と紅艶の両方・日柱にも当たる/.test(s7.split('|')[0])&&/お相手のほうが異性として惹かれやすい（中くらい：咸池だけ・日柱にも当たる/.test(s7.split('|')[1]);
   console.log('  '+(ok7&&okS?'OK':'NG')+' 相性：惹かれ方の向き（強さ：強い／中くらい／弱め）'); if(!(ok7&&okS)) res.fails.push('惹かれ方の向き'); }
+// お相手を知るためのチェックポイント（お相手＝2006-06-07 時刻不明：劫財が巡りで多い・配偶宮に咸池・官星なし）
+{ const r=await p.evaluate(()=>{ if(typeof checkPoints!=='function') return ''; const him=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},0,'none')); const o=checkPoints(him,true); return o.check.map(x=>x.pro).join('\n')+'\n#'+o.check.map(x=>x.plain).join('\n'); });
+  const e=[]; if(!/^劫財（/m.test(r)) e.push('劫財'); if(!/配偶宮（日支）に咸池/.test(r)) e.push('配偶宮の咸池'); if(!/官星（正官・偏官）がない/.test(r)) e.push('官星なし');
+  if(/(比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬|咸池|配偶宮|官星)/.test(r.split('#')[1]||'')) e.push('やさしい言い方に専門用語');
+  console.log('  '+(e.length?'NG':'OK')+' 相性：お相手を知るためのチェックポイント'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('チェックポイント: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
