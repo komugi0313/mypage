@@ -11,3 +11,9 @@
 - OGP画像：`site_assets/ogp-ja.png` など
 
 前のサイト（隠れギャップ診断）は `kakure-shindan/` にそのまま残っています。
+
+## あとでやること（メモ）
+- 開運予報（unkiyoho.jp）側で、16TYPE+ から来た人を別に記録する。
+  - 16TYPE+ の案内ボタンは `register.html#y=YYYY&m=MM&d=DD&from=16tp` を開く（utm_source=16typeplus も付く）。
+  - 開運予報の register.html にある `if(p.from==="166"){...localStorage.setItem("unkiyoho_from166","1")...}` の横に、`from==="16tp"` 用の行（例：`unkiyoho_from16tp`）を足す。
+  - 登録時にその印を送る・数える部分も、1.66 と同じように足す。
