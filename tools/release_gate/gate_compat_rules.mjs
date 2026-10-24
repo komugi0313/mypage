@@ -127,7 +127,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   const ok5=r==='来年は良い年です。2027年は変化の年です。';
   { const g=Function(src.slice(a,src.indexOf('}catch(e){ return t; } }',a)+'}catch(e){ return t; } }'.length)+'; return ekiStarGuard;')(); const r2=g('2人は良い縁です。お相手はあなたから見て傷官です。お相手の土はあなたの忌神です。話し合いを大切に。');
     const b2=src.indexOf('function ekiSameSexWord('), ss=Function(src.slice(b2,src.indexOf('}catch(e){ return t; } }',b2)+'}catch(e){ return t; } }'.length)+'; return ekiSameSexWord;')();
-    const ok6=r2==='2人は良い縁です。話し合いを大切に。'&&ss('異性として惹かれます','女性同士のカップルです')==='恋愛の相手として惹かれます'&&ss('異性として惹かれます','彼と私')==='異性として惹かれます';
+    const ok6=r2==='2人は良い縁です。話し合いを大切に。'&&ss('異性として惹かれます','女性同士のカップルです')==='恋愛の相手として惹かれます'&&ss('異性として惹かれます','彼と私')==='異性として惹かれます'&&ss('異性の縁が動きます','男性同士で付き合っています')==='恋愛の縁が動きます';
     console.log('  '+(ok6?'OK':'NG')+' 易：お相手の星・喜神忌神の根拠のない話を外す／同性の相談で男女前提の言い方をしない'); if(!ok6) res.fails.push('易の同性・お相手の星'); } console.log('  '+(ok5?'OK':'NG')+' 易：根拠のない星の話を外す（PROの星の事実あわせと同時に）'); if(!ok5) res.fails.push('易の星の直し'); }
 { const r=await p.evaluate(()=>{ if(typeof pkFactFix!=='function'||typeof pkYearKichiFix!=='function') return ['','']; const c=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},0,'none'));
     return [pkFactFix('日干が丁（火の陰・ひのえ）で、日支に卯'), pkYearKichiFix('2027年は紅艶（魅力の星）が巡り、2028年は駅馬（移動の星）が重なります。',c)]; });
@@ -193,14 +193,16 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     const A=mk(1990,3,3,'female'), B=mk(1990,2,2,'female'), M=mk(1990,3,3,'male'), F=mk(1981,6,10,'female'), G=mk(1983,5,5,'male'); window.chart=A; window.chartB=B;
     const cm=compatMonths(A,B), an=compatAnalysis(A,B,RELTYPES.love), en=pkSameSexWord(pkEnsureCross('x',A,B),A,B);
     window.chart=F; window.chartB=G; const fg=compatMonths(F,G).map(x=>x.A.g.join('・')).join('|'), hk=pkSameSexWord(attractionDir(F,G,'本人','お相手')?.pro||'異性',F,G);
-    return {dec:cm.map(x=>x.y+'-'+x.m+'|'+x.A.g.join('・')+'|'+x.B.g.join('・')).join('\n'),an:an,en:en,fg:fg,hk:hk,mm:compatMonths(M,B).map(x=>x.A.g.join('・')).join('|')}; });
+    return {dec:cm.map(x=>x.y+'-'+x.m+'|'+x.A.g.join('・')+'|'+x.B.g.join('・')).join('\n'),an:an,en:en,fg:fg,hk:hk,mm:compatMonths(M,B).map(x=>x.A.g.join('・')).join('|'),mm2:(()=>{ const X=mk(1985,7,12,'male'), Y=mk(1988,11,5,'male'); window.chart=X; window.chartB=Y; const g=compatMonths(X,Y).map(x=>x.A.g.concat(x.B.g).join('・')).join('|'), an2=compatAnalysis(X,Y,RELTYPES.love), en2=pkSameSexWord(pkEnsureCross('x',X,Y)+(attractionDir(X,Y,'本人','お相手')||{}).pro,X,Y);
+      if(/正財|偏財/.test(g)) return 'パートナーの星が財星になった'; if(!/正官|偏官/.test(g)) return 'パートナーの星（官星）が出ない'; if(!/【同性のカップル（男性同士）＝厳守】/.test(an2)) return '鑑定文への決まり'; if(/異性/.test(an2+en2)) return '「異性」と書いている'; return 'ok'; })()}; });
   const e=[]; if(!r) e.push('pkSameSexWord がない'); else {
     if(!/^2026-12\|パートナーの星（正財）・咸池\|月の十二支にパートナーの星（正財）$/m.test(r.dec)) e.push('女性同士のパートナーの星（財星）');
     if(/異性/.test(r.an)||/異性/.test(r.en)) e.push('同性で「異性」と書いている');
     if(!/【同性のカップル（女性同士）＝厳守】/.test(r.an)) e.push('鑑定文への同性の決まり');
     if(/正財|偏財/.test(r.fg)) e.push('男女：女性の本人のパートナーの星が財星になった');
     if(!/正財|偏財/.test(r.mm)) e.push('男性×女性：パートナーの星（財星）');
-    if(/異性/.test(r.hk)===false&&/恋愛の相手として/.test(r.hk)) e.push('男女で言い方を変えてしまった'); }
+    if(/異性/.test(r.hk)===false&&/恋愛の相手として/.test(r.hk)) e.push('男女で言い方を変えてしまった');
+    if(!/^ok/.test(r.mm2||'')) e.push('男性同士：'+(r.mm2||'')); }
   console.log('  '+(e.length?'NG':'OK')+' 相性：同性カップル（パートナーの星＝お相手の性別・男女前提の言い方をしない）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('同性カップル: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);

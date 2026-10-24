@@ -19,9 +19,11 @@ const p=await ctx.newPage(); p.on('dialog',d=>d.accept());
 await p.goto(`http://127.0.0.1:${port}/${page0}`); await p.waitForTimeout(2500);
 await p.evaluate(()=>{const x=document.getElementById('pro-intro-x'); if(x) x.click();});
 await p.click('button[data-mode=compat]'); await p.waitForTimeout(800);
-const SAME=process.argv[3]==='samesex';   // 同性カップル（女性同士 1990-03-03×1990-02-02）で確かめる：node gate_compat.mjs pro samesex
-const A=SAME?1990:2008, B=SAME?1990:2006;
-if(SAME){ await p.fill('#f-name','花子'); await p.click('#f-quick'); await p.keyboard.type('19900303'); await p.click('#f-sex button[data-v=female]'); await p.check('#f-notime').catch(()=>{});
+const SAME=/^samesex/.test(process.argv[3]||''), SAMEM=process.argv[3]==='samesex-m';   // samesex-m＝男性同士（1985-07-12×1988-11-05）   // 同性カップル（女性同士 1990-03-03×1990-02-02）で確かめる：node gate_compat.mjs pro samesex
+const A=SAMEM?1985:(SAME?1990:2008), B=SAMEM?1988:(SAME?1990:2006);
+if(SAMEM){ await p.fill('#f-name','健太'); await p.click('#f-quick'); await p.keyboard.type('19850712'); await p.click('#f-sex button[data-v=male]'); await p.check('#f-notime').catch(()=>{});
+  await p.fill('#b-name','翔'); await p.click('#b-quick'); await p.keyboard.type('19881105'); await p.click('#b-sex button[data-v=male]'); await p.check('#b-notime').catch(()=>{}); }
+else if(SAME){ await p.fill('#f-name','花子'); await p.click('#f-quick'); await p.keyboard.type('19900303'); await p.click('#f-sex button[data-v=female]'); await p.check('#f-notime').catch(()=>{});
   await p.fill('#b-name','優子'); await p.click('#b-quick'); await p.keyboard.type('19900202'); await p.click('#b-sex button[data-v=female]'); await p.check('#b-notime').catch(()=>{}); }
 else { await p.fill('#f-name','花子'); await p.click('#f-quick'); await p.keyboard.type('20080328 1400'); await p.click('#f-sex button[data-v=female]');
 await p.fill('#b-name','太郎'); await p.click('#b-quick'); await p.keyboard.type('20060819'); await p.click('#b-sex button[data-v=male]'); await p.check('#b-notime').catch(()=>{}); }
@@ -32,7 +34,7 @@ await p.waitForTimeout(1500);
 const t=(await p.evaluate(()=>(document.getElementById('compat')||{}).innerText||'')).split('🖨')[0];
 if(process.env.GATE_DUMP) fs.writeFileSync(process.env.GATE_DUMP,t);
 ok('相性の鑑定文が出る', t.length>600, t.length+'字');
-if(SAME){ const all=await p.evaluate(()=>(document.getElementById('compat')||{}).innerText||''); const w=[...all.matchAll(/[^。\n]{0,20}(異性|夫の星|妻の星|夫星|彼氏|男役|女役)[^。\n]{0,20}/g)].map(m=>m[0]); ok('同性カップル：男女を前提にした言い方がない（画面全体）', w.length===0, w.slice(0,3).join(' / ')); }
+if(SAME){ const all=await p.evaluate(()=>(document.getElementById('compat')||{}).innerText||''); const w=[...all.matchAll(/[^。\n]{0,20}(異性|夫の星|妻の星|夫星|彼氏|彼女|男役|女役)[^。\n]{0,20}/g)].map(m=>m[0]); ok('同性カップル：男女を前提にした言い方がない（画面全体）', w.length===0, w.slice(0,3).join(' / ')); }
 const G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', gz=y=>G[(y-4)%10]+Z[(y-4)%12];
 const bad=[];
 for(const m of t.matchAll(/(20\d\d)年（([^）]*)）/g)){ const y=+m[1], c=m[2]; const g=c.match(new RegExp('['+G+']['+Z+']')); if(g&&g[0]!==gz(y)) bad.push(m[0]); for(const a of c.matchAll(/(\d+)歳/g)) if(![y-A,y-B].includes(+a[1])) bad.push(m[0]); }
