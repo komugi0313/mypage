@@ -546,8 +546,9 @@ function lvHook(born,now,love){let nb=0,nn=0;for(let i=0;i<4;i++){if(born[i]!==n
  return s.replace(/\{B\}/g,an(born)).replace(/\{N\}/g,an(now));}
 function lvShow(t){const me=window.__me,P=LV.types&&LV.types[t];if(!me)return;const el=$("lvRes");el.hidden=false;$("lvStart").hidden=true;$("lvQ").hidden=true;
  const one=me.born===me.now;
- const lab=i=>me.born[i]===me.now[i]?'<em class="core">'+TR("芯")+'</em>':(t[i]===me.born[i]?'<em class="b">'+TR("気質")+'</em>':'<em class="n">'+TR("性格")+'</em>');
+ const lab=i=>me.born[i]===me.now[i]?'':(t[i]===me.born[i]?'<em class="b">'+TR("気質")+'</em>':'<em class="n">'+TR("性格")+'</em>');
  let h='<p class="lvlab">'+TR("恋をしたときのあなた")+'</p><div class="lvtiles">'+t.split("").map((l,i)=>'<div class="lt'+(me.born[i]!==me.now[i]&&l===me.born[i]?' isb':'')+'"><b>'+l+'</b>'+lab(i)+'</div>').join("")+'</div>'
+  +(me.born!==me.now?'<p class="lvleg">'+TR("文字の下の「気質」「性格」は、恋をしたときにどちらの文字が出たかを表しています。")+'</p>':'')
   +'<p class="hook">'+esc(lvHook(me.born,me.now,t))+'</p>';
  if(P){const nm=k=>k+p16(k);
   h+='<div class="lvp"><p class="lvsub">'+TR("恋のときのあなたは")+'</p><p class="lvname">'+esc(P.t+p16(P.t))+'</p><p class="one">'+TR("「")+esc(P.one)+TR("」")+'</p><p class="desc">'+esc(P.desc)+'</p>'
