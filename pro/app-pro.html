@@ -7580,6 +7580,7 @@ function compatAnalysis(a,b,rt){
       L.push('【2人の縁が動く月（これから12ヶ月・ツールの判定。時期を答えるときはこの月を使う）】2人とも縁が動く月：'+(bothM.length?bothM.map(function(x){ return x.y+'年'+x.m+'月ごろ（'+x.gz+'の月）＝本人：'+x.A.g.join('・')+'／お相手：'+x.B.g.join('・'); }).join('／'):'なし')+'。注意の月：'+(warnM.length?warnM.map(function(x){ return x.y+'年'+x.m+'月ごろ（'+x.gz+'の月）'+(x.A.w.length?'＝本人の配偶宮と'+x.A.w.join('・'):'')+(x.B.w.length?'＝お相手の配偶宮と'+x.B.w.join('・'):''); }).join('／'):'なし')); }catch(e){}
     try{ const cb=checkPoints(b,love), ca=checkPoints(a,love); L.push('【お相手を知るためのチェックポイント（ツールの判定。「どうすればよいか」に活かす。悪い人と決めつけない）】お相手で確かめること：'+cb.check.map(function(x){ return x.pro; }).join('／')+'。本人がお相手から見られやすいところ：'+ca.check.map(function(x){ return x.pro; }).join('／')); }catch(e){}
     try{ const RL=compatRoles(a,b); L.push('【2人の役割と場面＝ツールの判定（鑑定文で必ず使う：①お互いの役割は「'+(rt&&rt.kizuna||'')+'」か「どうすればよいか」に、②一緒にいて調子が上がる／疲れやすいは「どうすればよいか」に、③文昌貴人・駅馬は参考として一言、④どの場面で起きる話かは、合・冲を書くときに場面として書く）】①役割：'+RL.role.map(function(x){ return x.pro; }).join('／')+'。②調子：'+RL.energy.map(function(x){ return x.pro; }).join('／')+(RL.stars.length?'。③参考の星：'+RL.stars.map(function(x){ return x.pro; }).join('／'):'')+(RL.scene.length?'。④場面：'+RL.scene.map(function(x){ return x.pro; }).join('／'):'')); }catch(e){}
+    if(love){ try{ const AD=attractionDetailLines(a,b,'本人','お相手'); if(AD) L.push('【惹かれ方のしくみ＝ツールの判定・厳守（恋愛の星は咸池・紅艶だけ。どちら向きか・どの柱か・パートナーの星とのちがいを取りちがえない）】'+AD.map(function(x){ return x.pro; }).join('／')); }catch(e){} }
     if(love){ const ad=attractionDir(a,b,'本人','お相手'); if(ad) L.push('【惹かれ方の向き＝ツールの判定・厳守（鑑定文の「惹かれ合うところ」で必ず書く。「お互いに惹かれ合う」と書くのは、2人とも恋愛の星があるときだけ）】'+ad.pro); } }
   if(pkSameSex(a,b)) L.push('【同性のカップル（'+(a.birth.sex==='female'?'女性同士':'男性同士')+'）＝厳守】男女を前提にした言葉（異性・夫・妻・彼氏・彼女・男らしさ・女らしさ・男役・女役）を使わない。「恋愛の相手」「パートナー」と書く。パートナーの星は、お相手の性別で決めている（お相手が女性＝財星／男性＝官星）。同性であることを、問題・注意点・特別なこととして書かない（ほかのカップルと同じように鑑定する）。');
   L.push(`【2人の基本の事実＝この通りに書く】本人の日干=${aS}（${STEM_EL[aS]}）・日支（配偶宮）=${aB}／お相手の日干=${bS}（${STEM_EL[bS]}）・日支（配偶宮）=${bB}。十二支（子・丑・寅…）と十二運（長生・病など）を取りちがえない。`);
@@ -8088,6 +8089,32 @@ function pkEnsureRoles(t,a,b){ try{ t=String(t||''); const R=compatRoles(a,b); c
   R.stars.forEach(function(x){ if(plain?t.indexOf(x.plain)<0:t.indexOf(x.star)<0) L.push(plain?x.plain:x.pro+'。'); });
   if(R.scene.length&&!/場面/.test(t)) R.scene.forEach(function(x){ L.push(plain?x.plain:x.pro+'。'); });
   if(!L.length) return t; return t+'\n\n'+(plain?'【2人の役割と、一緒にいるとき】':'【2人の役割と場面（相手の日干の星・喜神と忌神・柱どうし）】')+'\n'+L.map(function(x){ return '・'+x; }).join('\n'); }catch(e){ return t; } }
+/* ===== 惹かれ方のしくみ（鑑定者本人の指示 2026-10-25「きちんとこういう結果が出るようにツールに追加してください」） =====
+   恋愛の星＝咸池（年支・日支から）・紅艶（日干から）だけ。両方向それぞれ「どの十二支が恋愛の星か・相手の命式にあるか」を出し、
+   パートナーの星（相手の日干が自分から見て、相手の性別で決まるパートナーの星か）とのちがい、時刻不明なら時柱しだいで変わる十二支も出す。 */
+function attractionDetail(a,b){ try{ if(!pkRelLove()) return null; const PL=['年柱','月柱','日柱','時柱'];
+  const side=function(x,y){ const t4a=kichi4Targets(x.pillars[0].branch)||{}, t4d=kichi4Targets(x.pillars[2].branch)||{}, ko=((KICHI_NIKKAN[x.dayMaster.stem]||{})['紅艶']||[]);
+    const kan=[]; [[t4a['咸池'],'年支「'+x.pillars[0].branch+'」'],[t4d['咸池'],'日支「'+x.pillars[2].branch+'」']].forEach(function(q){ if(q[0]&&!kan.some(function(k){ return k.br===q[0]; })) kan.push({br:q[0],from:q[1]}); else if(q[0]){ const k=kan.find(function(k){ return k.br===q[0]; }); k.from+='・'+q[1]; } });
+    const yb=[]; (y.pillars||[]).forEach(function(p,j){ if(!p||(j===3&&y.timeUnknown)) return; yb.push({br:p.branch,pl:PL[j]}); });
+    const hit=function(br){ return yb.filter(function(q){ return q.br===br; }).map(function(q){ return q.pl; }); };
+    const rows=kan.map(function(k){ return {star:'咸池',br:k.br,from:k.from,at:hit(k.br)}; }).concat(ko.map(function(br){ return {star:'紅艶',br:br,from:'日干「'+x.dayMaster.stem+'」',at:hit(br)}; }));
+    const ts=tenStarOf(x.dayMaster.stem,y.dayMaster.stem), sp=pkPartnerStarsOf(y), isSp=sp.indexOf(ts)>=0;
+    const miss=y.timeUnknown?rows.filter(function(r){ return !r.at.length; }).map(function(r){ return r.br; }).filter(function(v,i,s){ return s.indexOf(v)===i; }):[];
+    return {rows:rows, love:rows.some(function(r){ return r.at.length; }), ts:ts, isSp:isSp, spName:(sp[0]==='正官'?'官星':'財星'), role:((ROLE_TS[TS_GROUP[ts]]||{}).love||''), miss:miss}; };
+  return {ab:side(a,b), ba:side(b,a)}; }catch(e){ return null; } }
+function attractionDetailLines(a,b,NA,NB){ const D=attractionDetail(a,b); if(!D) return null; NA=NA||'本人'; NB=NB||'お相手';
+  const one=function(o,X,Y){ const r=o.rows.map(function(r){ return r.star+'＝「'+r.br+'」（'+r.from+'から）→'+(r.at.length?Y+'の'+r.at.join('・')+'にある':Y+'の命式にない'); }).join('／');
+    return {pro:X+'→'+Y+'の恋愛の星：'+r+'＝'+(o.love?'恋愛の星が当たる':'恋愛の星は当たらない')+'。パートナーの星：'+Y+'の日干は'+X+'から見て'+o.ts+'＝'+(o.isSp?'パートナーの星（'+o.spName+'）に当たる':'パートナーの星（'+o.spName+'）ではない')+(o.role?'（'+o.role+'）':'')+(o.miss.length?'。'+Y+'は生まれた時刻が分からないので時柱を見ていない：時柱が「'+o.miss.join('・')+'」なら'+X+'→'+Y+'にも恋愛の星が当たる':''),
+      plain:(o.love?X+'から'+Y+'へ：ときめきやすい相手のしるしがあります。':X+'から'+Y+'へ：ときめきやすい相手のしるしはありません。')+(o.isSp?Y+'は'+X+'にとって、パートナーとして縁のある相手です。':(o.role?Y+'は'+X+'にとって、'+o.role.replace(/（[^）]*）/g,'')+'。':''))+(o.miss.length?Y+'の生まれた時刻が分かると、結果が変わることがあります。':'')}; };
+  return [one(D.ab,NA,NB), one(D.ba,NB,NA)]; }
+function compatAttractHTML(a,b){ try{ const L=attractionDetailLines(a,b,'本人','お相手'), P=attractionDetailLines(a,b,'あなた','お相手'); if(!L) return '';
+  return `<section class="card sec" id="at-sec" style="border:1.5px solid #E3C4CF">
+  <style>.kd-plain{display:none}html.bg-on .kd-plain{display:block}html.bg-on .kd-pro{display:none}.kd-l{margin:4px 0 0;padding-left:1.2em;font-size:13.5px;line-height:1.8}</style>
+  <div style="font-weight:900;font-size:15px">💗 惹かれ方のしくみ</div>
+  <div class="kd-pro" style="font-size:12.5px;color:var(--muted);margin-top:4px">恋愛の星＝咸池（年支・日支から）と紅艶（日干から）。自分の恋愛の星の十二支が相手の命式にあると、自分が相手に恋愛の相手として惹かれやすい。パートナーの星（女性＝官星・男性＝財星。お相手の性別で決める）とは別の見方。</div>
+  <ul class="kd-l kd-pro">${L.map(function(x){ return '<li>'+_kdE(x.pro)+'</li>'; }).join('')}</ul>
+  <ul class="kd-l kd-plain">${P.map(function(x){ return '<li>'+_kdE(x.plain)+'</li>'; }).join('')}</ul>
+  </section>`; }catch(e){ return ''; } }
 function compatVerdictHTML(a,b,rt){
   if(typeof ganzhiCompat!=='function')return '';
   const gc=ganzhiCompat(a.pillars[2].ganzhi,b.pillars[2].ganzhi);
@@ -8259,7 +8286,7 @@ function buildCompatBase(out){
   const na=personName||'本人', nb=personNameB||'お相手';
   const rt=RELTYPES[document.getElementById('rel-type')?.value||'love']||RELTYPES.love;
   { const g=pkMinorLoveBlock(chart,chartB,rt); if(g){ out.innerHTML=g; ['compat-verdict','compat-meishi'].forEach(function(id){ const e=document.getElementById(id); if(e) e.innerHTML=''; }); try{ out.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} return null; } }   // 大人×未成年の恋愛の相性は出さない
-  try{var _cv=document.getElementById('compat-verdict'); if(_cv){ let _h=compatVerdictHTML(chart,chartB,rt)+compatTimingHTML(chart,chartB,rt)+compatDaysHTML(chart,chartB,(typeof personName!=='undefined'&&personName)||'本人',(typeof personNameB!=='undefined'&&personNameB)||'お相手')+compatMonthsHTML(chart,chartB)+compatRolesHTML(chart,chartB)+compatCheckHTML(chart,chartB);   /* 2人の日運を並べて見る（発注者指示 2026-10-23） */ if(!rt.useSpouse)_h=_h.replace(/配偶者宮|配偶宮/g,'関係の土台').replace(/配偶者星/g,'縁の星'); _h=pkSameSexWord(_h,chart,chartB); _cv.innerHTML=_h; try{ pkReadable(_cv); }catch(_e2){} }}catch(_e){}   // 家族・友人・仕事の相性では「配偶宮」などの夫婦向けの言葉を使わない
+  try{var _cv=document.getElementById('compat-verdict'); if(_cv){ let _h=compatVerdictHTML(chart,chartB,rt)+compatTimingHTML(chart,chartB,rt)+compatDaysHTML(chart,chartB,(typeof personName!=='undefined'&&personName)||'本人',(typeof personNameB!=='undefined'&&personNameB)||'お相手')+compatMonthsHTML(chart,chartB)+compatAttractHTML(chart,chartB)+compatRolesHTML(chart,chartB)+compatCheckHTML(chart,chartB);   /* 2人の日運を並べて見る（発注者指示 2026-10-23） */ if(!rt.useSpouse)_h=_h.replace(/配偶者宮|配偶宮/g,'関係の土台').replace(/配偶者星/g,'縁の星'); _h=pkSameSexWord(_h,chart,chartB); _cv.innerHTML=_h; try{ pkReadable(_cv); }catch(_e2){} }}catch(_e){}   // 家族・友人・仕事の相性では「配偶宮」などの夫婦向けの言葉を使わない
   try{var _cm=document.getElementById('compat-meishi'); if(_cm)_cm.innerHTML=compatMeishiHTML(chart,chartB,na,nb);}catch(_e){}
   const head=`【本人A】${na}（${chart.birth.sex==='male'?'男性':'女性'}）: ${compatBrief(chart)}\n【お相手B】${nb}（${sexB==='male'?'男性':'女性'}）: ${compatBrief(chartB)}\n\n【2人の関係】${rt.label}\n\n【2人の関係の自動分析（計算済み）】\n${compatAnalysis(chart,chartB,rt)}`;
   return {na,nb,rt,head};
