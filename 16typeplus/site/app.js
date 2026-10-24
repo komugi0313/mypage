@@ -551,10 +551,10 @@ function lvFinish(){const me=window.__me,sc={EI:0,SN:0,TF:0,JP:0};
  const t=AX.map((A,i)=>me.born[i]===me.now[i]?me.now[i]:(sc[A.k]>0?A.a:sc[A.k]<0?A.b:me.now[i])).join("");
  st.love={t,a:lv.a};saveResult();$("lvQ").hidden=true;lvShow(t);$("love").scrollIntoView({behavior:"smooth",block:"start"});}
 function lvHook(born,now,love){let nb=0,nn=0;for(let i=0;i<4;i++){if(born[i]!==now[i]){if(love[i]===born[i])nb++;else nn++;}}
- const s=born===now?TR("気質も性格も同じ。恋をしても、ぶれずにそのままのあなたが出る。")
+ const s=born===now?TR("気質も性格も同じ。恋をしても、いつものあなたのまま。")
   :nb&&!nn?TR("ふだんは性格の{N}が前に出る。でも恋をすると、気質の{B}が強く出る。")
-  :nn&&!nb?TR("恋をしても、性格の{N}がそのまま前に出る。気質の{B}は、心の奥で支えている。")
-  :TR("恋をすると、気質の{B}と性格の{N}が混ざって出てくる。");
+  :nn&&!nb?TR("恋をしても、性格の{N}がそのまま出る。気質の{B}は、あまり表に出てこない。")
+  :TR("恋をすると、気質の{B}と性格の{N}が、まざって出てくる。");
  return s.replace(/\{B\}/g,an(born)).replace(/\{N\}/g,an(now));}
 function lvShow(t){const me=window.__me,P=LV.types&&LV.types[t];if(!me)return;const el=$("lvRes");el.hidden=false;$("lvStart").hidden=true;$("lvQ").hidden=true;
  const one=me.born===me.now;
