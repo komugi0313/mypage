@@ -204,6 +204,11 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(/異性/.test(r.hk)===false&&/恋愛の相手として/.test(r.hk)) e.push('男女で言い方を変えてしまった');
     if(!/^ok/.test(r.mm2||'')) e.push('男性同士：'+(r.mm2||'')); }
   console.log('  '+(e.length?'NG':'OK')+' 相性：同性カップル（パートナーの星＝お相手の性別・男女前提の言い方をしない）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('同性カップル: '+e.join('・')); }
+// 読みの言い直し・「お互いに惹かれ合う」の直し（2026-10-24 同性カップルの鑑定文で見つかったもの）
+{ const r=await p.evaluate(()=>{ if(typeof pkFixMutual!=='function') return null; const mk=(y,m,d,sex)=>markTimeUnknown(baziCompute({year:y,month:m,day:d,hour:12,minute:0,sex,tu:true},0,'none'));
+    const A=mk(1990,3,3,'female'), B=mk(1990,2,2,'female'); return [window.pkFixYomi('本人が壬（みずのと、ではなく、みずのえ）で'), pkFixMutual('お互いに心から惹かれ合い、支え合える。',A,B)]; });
+  const e=[]; if(!r) e.push('pkFixMutual がない'); else { if(r[0]!=='本人が壬（みずのえ）で') e.push('読みの言い直し：'+r[0]); if(r[1]!=='心から引き合い、支え合える。') e.push('お互いに惹かれ合う：'+r[1]); }
+  console.log('  '+(e.length?'NG':'OK')+' 読みの言い直し／片方だけ恋愛の星のとき「お互いに惹かれ合う」と書かない'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('読み・お互いに: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
