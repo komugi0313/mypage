@@ -3905,6 +3905,9 @@ function pkPillarStarFix(t,c){ try{ t=String(t||''); if(!c||!c.pillars||typeof p
     const wrong=named.filter(function(k){ return at[L].indexOf(k)<0; }); if(!wrong.length||wrong.length!==named.length) return m0;
     const homes=Object.keys(at).filter(function(x){ return wrong.every(function(k){ return at[x].indexOf(k)>=0; }); });
     return homes.length===1?homes[0]+'柱'+gl+pa+rest:m0; }); }catch(e){ return t; } }
+/* 「お互いに惹かれ合う」と書けるのは、2人とも恋愛の星（咸池・紅艶）があるときだけ（CLAUDE.md 惹かれ方の向き）。そうでないのに書いたら「引き合う」に直す（2026-10-24） */
+function pkFixMutual(t,a,b){ try{ t=String(t||''); const ad=attractionDir(a,b,'本人','お相手'); if(ad&&ad.x.love.length&&ad.y.love.length) return t;
+  return t.replace(/(?:お互いに|お互い|互いに|2人とも|二人とも|ふたりとも)([^。、\n]{0,8}?)惹かれ合/g,'$1引き合'); }catch(e){ return t; } }
 function pkEnsureCross(t,a,b){ try{ t=String(t||''); const love=pkRelLove();
   const NA=(typeof personName!=='undefined'&&personName)?personName+'さん':'本人', NB=(typeof personNameB!=='undefined'&&personNameB)?personNameB+'さん':'お相手';
   const plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on')); const L=[];
@@ -6769,6 +6772,7 @@ var pkFixYomi=(function(){ var G='甲乙丙丁戊己庚辛壬癸', GY=['きの�
     s=s.replace(/([子丑寅卯辰巳午未申酉戌亥](?:・[子丑寅卯辰巳午未申酉戌亥]){1,3})(\s*[（(])([ぁ-ゖー・]+)(?=[）)：:＝=、，,／/ 　])/g,function(m,k,a,y){ var bp=k.split('・').map(function(ch){ return one[ch]; }); return (y===bp.join('')||y===bp.join('・'))?m:k+a+bp.join('・'); });   // 寅・午・戌（いぬまうま）→（とら・うま・いぬ）
     s=s.replace(/([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])([・：:＝=])([ぁ-ゖー]+)(?=[）)、，,／/・：:＝=。\s]|$)/g,function(m,k,sp,y){ var ok=t[k]; return (ok&&ok!==y)?k+sp+ok:m; });
     s=s.replace(/([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])年([・：:（(])([ぁ-ゖー]+)(?=[）)、，,／/・：:＝=])/g,function(m,k,sp,y){ var ok=t[k], y2=y.replace(/どし$|とし$|ねん$/,''); return (ok&&ok!==y2)?k+'年'+sp+ok+(y!==y2?y.slice(y2.length):''):m; });   // 「辛亥年：かのといぬ」のように干支のあとに「年」が付く形も直す（発注者指示 2026-10-22）   // （丁未・ひとのとひつじ）→（丁未・ひのとひつじ）
+    s=s.replace(/([（(])[ぁ-ゖー・]+[、，,]?\s*ではなく[、，,]?\s*([ぁ-ゖー・]+)(?=[）)])/g,'$1$2');   // 「壬（みずのと、ではなく、みずのえ）」のような読みの言い直しは、あとの読みだけにする（2026-10-24）
     return s.replace(/([㐀-鿿豈-﫿々]+)([\*＊]{0,3}\s*[（(])([ぁ-ゖー・]+)(?=[）)：:＝=、，,／/・ 　])/g,function(m,k,a,y){   // 読みのあとに「：比肩」などが続く形（壬子（じんし：比肩））も直す
     var ok=t[k]; if(!ok && k.length===1 && one[k] && (kana[y]||(/^[甲乙丙丁戊己庚辛壬癸]$/.test(k)&&/^(きの|ひの|つちの|かの|みずの)[ぁ-ゖ]{1,2}$/.test(y)))) ok=one[k];   /* 「丁（ひのえと）」のような干一字の読みちがいも直す（発注者指示 2026-10-22） */ if(!ok && /^[子丑寅卯辰巳午未申酉戌亥]{3}$/.test(k)){ var bp=k.split('').map(function(ch){ return one[ch]; }); ok=(y===bp.join('')||y===bp.join('・'))?y:bp.join('・'); }   // 三つの十二支（亥卯未＝い・う・ひつじ）
     if(!ok && k.length>=4 && k.length%2===0){ var p=[],j; for(j=0;j<k.length;j+=2){ if(!t[k.substr(j,2)]){ p=null; break; } p.push(t[k.substr(j,2)]); } if(p){ var sp=y.indexOf('・')>=0?'・':'', q; for(q=0;q<p.length;q++){ if(y===p.slice(q).join('')||y===p.slice(q).join('・')){ ok=y; break; } } if(ok!==y) ok=(y.indexOf(p[0])===0)?p.join(sp):p[p.length-1]; } }   // 「大運癸未（だいうん・きび）」のように、つながった言葉もそれぞれ表の読みに（「時柱乙亥（きのとい）」のように後ろの干支だけの読みはそのまま）
@@ -7126,7 +7130,7 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
     const _dup=pkDupRate(ans,det);   // くわしい読み解きが、上の答えのくり返しになっていないか
     const det2=pkDropRepeat(ans,det);
     let full=((D.online&&_dup>0.6)||String(det2).replace(/【[^】]*】|\s/g,'').length<40)?ans:(ans+'\n\n【くわしい読み解き】\n'+det2);   // 中身のないくわしい読み解きは見出しも出さない   // ほとんど同じ文なら、くわしい読み解きは出さない（同じ文を2回見せない。発注者指示 2026-10-21）
-    if((out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart&&typeof chartB!=='undefined'&&chartB) full=pkEnsureCross(full,chart,chartB); full=pkEnsureRoles(full,chart,chartB); full=pkSameSexWord(full,chart,chartB);   // 惹かれ合う星（相手の命式に自分の咸池・紅艶・貴人）がなければ書き足す
+    if((out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart&&typeof chartB!=='undefined'&&chartB) full=pkFixMutual(full,chart,chartB); full=pkEnsureCross(full,chart,chartB); full=pkEnsureRoles(full,chart,chartB); full=pkSameSexWord(full,chart,chartB);   // 惹かれ合う星（相手の命式に自分の咸池・紅艶・貴人）がなければ書き足す
     { let _seen=false; full=full.replace(/\n*[ 　]*【くわしい読み解き】[ 　]*(?:\n[ 　]*【くわしい読み解き】[ 　]*)*/g,function(m0){ if(_seen) return '\n'; _seen=true; return '\n\n【くわしい読み解き】\n'; }); }   // 見出しが2回続かないように
     if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart) { full=pkEnsureBonds(full,chart); full=pkMonthFactFix(full,chart); full=pkYearKichiFix(full,chart); full=pkPillarStarFix(full,chart); full=pkEnsureLove(full,chart,_q0); }   // 命式内の天地徳合・干合は、鑑定文になければツールが書き足す（発注者指示 2026-10-23）
     out.innerHTML=sc+engineBadge(true,D.online?'':'くわしい読み解きは通信できなかったため、端末内で作成した内容を表示しています。')+formatReading(full);
