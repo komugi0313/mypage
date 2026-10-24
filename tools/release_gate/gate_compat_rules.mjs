@@ -160,6 +160,8 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
 { const r=await p.evaluate(()=>{ if(typeof loveFourLines!=='function') return ''; const c=markTimeUnknown(baziCompute({year:1998,month:7,day:10,hour:12,minute:0,sex:'female',tu:true},0,'none')); window.chart=c; const L=loveFourLines(c); return L?L.pro[3]:''; });
   const okY=/縁が動く年（これから3年）：2027年（丁未）＝天乙貴人が巡る・配偶宮「午」と支合/.test(r)&&/2026年（丙午）＝配偶宮「午」と刑/.test(r);
   console.log('  '+(okY?'OK':'NG')+' 恋愛相談：縁が動く年（これから3年）'); if(!okY) res.fails.push('縁が動く年'); }
+{ const r=await p.evaluate(()=>typeof plainGloss==='function'?plainGloss('惹かれ方は合・律音などで見る'):''); const ok8=/律音（＝干支がまったく同じ組み合わせ）/.test(r)&&!/変化の分岐点/.test(r);
+  console.log('  '+(ok8?'OK':'NG')+' 律音の言葉の説明（相性で「変化の分岐点」と出さない）'); if(!ok8) res.fails.push('律音の説明'); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
