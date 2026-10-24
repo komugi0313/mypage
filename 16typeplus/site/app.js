@@ -384,7 +384,7 @@ function fitText(c,SANS,t,x,y,w,fs,min,col,wt){wt=wt||700;c.font=wt+" "+fs+"px "
  c.fillStyle=col;if(c.measureText(t).width<=w){c.fillText(t,x,y);return;}const ls=wrapLines(c,t,w,2);ls.forEach((l,i)=>c.fillText(l,x,y-(ls.length-1)*fs*0.55+i*fs*1.1));}
 const rgba=(hex,a)=>{const n=parseInt(hex.slice(1),16);return "rgba("+(n>>16)+","+((n>>8)&255)+","+(n&255)+","+a+")";};
 /* 円の真ん中「ゆるがない芯」：短い言葉を、白い丸枠に赤い太字で */
-const CORE={E:"人といて元気になる",I:"ひとりの時間で充電",S:"事実と経験を頼りに",N:"ひらめきと可能性",T:"筋道で決める",F:"気持ちで決める",J:"計画どおり進める",P:"その場に合わせて動く"};
+const CORE={E:"人といて元気になる",I:"ひとりの時間で充電",S:"事実と経験を頼りに",N:"ひらめきと可能性",T:"理屈で決める",F:"気持ちで決める",J:"計画どおり進める",P:"その場に合わせて動く"};
 function corePill(c,SANS,t,x,y,w){let fs=25;c.font="700 "+fs+"px "+SANS;while(c.measureText(t).width>w-36&&fs>19){fs--;c.font="700 "+fs+"px "+SANS;}
  const tw=Math.min(w,c.measureText(t).width+36),h=fs+20;rrect(c,x-tw/2,y-h/2,tw,h,h/2);c.fillStyle="#FFFFFF";c.fill();c.lineWidth=2;c.strokeStyle=SC.plus;c.stroke();
  c.fillStyle=SC.plus;c.textBaseline="middle";c.fillText(t,x,y+1);c.textBaseline="alphabetic";}
