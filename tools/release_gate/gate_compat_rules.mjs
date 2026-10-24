@@ -169,6 +169,21 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   if(!/\|\|冲刑$/.test(f('2027-7'))&&!/\|冲刑$/.test(f('2027-7'))) e.push('2027年7月の注意');
   if(!/咸池・配偶宮「辰」と支合\|咸池・紅艶・配偶宮「丑」と半合/.test(f('2027-9'))) e.push('2027年9月');
   console.log('  '+(e.length?'NG':'OK')+' 相性：2人の縁が動く月'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('2人の縁が動く月: '+e.join('・')); }
+// 2人の役割と場面（1〜5・鑑定者本人の指示 2026-10-24）：彼女2008-03-28 14時×彼2006-06-07 時刻不明
+{ const r=await p.evaluate(()=>{ if(typeof compatRoles!=='function') return null; const her=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'); const him=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},0,'none'));
+    const o=compatRoles(her,him); document.getElementById('rel-type').value='work'; const w=compatRoles(her,him); document.getElementById('rel-type').value='love';
+    const b70=markTimeUnknown(baziCompute({year:1970,month:5,day:15,hour:12,minute:0,sex:'male',tu:true},0,'none'));
+    return {role:o.role.map(x=>x.pro).join('\n'),plain:[...o.role,...o.energy,...o.stars,...o.scene].map(x=>x.plain).join('\n'),energy:o.energy.map(x=>x.pro).join('\n'),scene:o.scene.map(x=>x.pro).join('\n'),work:w.role.map(x=>x.pro).join('\n'),st:compatRoles(her,b70).stars.map(x=>x.pro).join('\n'),an:compatAnalysis(her,him,RELTYPES.love),ens:pkEnsureRoles('x',her,him)}; });
+  const e=[]; if(!r) e.push('compatRoles がない'); else {
+    if(!/本人から見て、お相手の日干「丁」は比肩＝友だちのように対等な相手/.test(r.role)) e.push('役割（恋人）');
+    if(!/比肩＝仲間であり、ライバルでもある相手/.test(r.work)) e.push('役割（仕事）');
+    if(!/本人の喜神（きしん：あると調子が上がる五行）をお相手は5つ（木2・火3）、忌神（きじん：多いと疲れやすい五行）を1つ（土1）持つ＝本人はお相手と一緒にいると調子が上がりやすい/.test(r.energy)) e.push('調子（喜神・忌神）');
+    if(!/お相手の月柱「辛巳」が本人の駅馬に当たる/.test(r.st)) e.push('駅馬');
+    if(!/^日柱どうし＝ふだんの2人の関係：良い（律音）/m.test(r.scene)) e.push('場面（日柱どうしを先に）');
+    if(/(比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬|喜神|忌神|駅馬|文昌|律音|支合|冲|日柱|月柱|年柱)/.test(r.plain)) e.push('やさしい言い方に専門用語');
+    if(!/【2人の役割と場面＝ツールの判定/.test(r.an)) e.push('鑑定文への渡し');
+    if(!/【2人の役割と(場面|、一緒にいるとき)/.test(r.ens)) e.push('書き足し');   /* ビギナーのやさしい画面は【2人の役割と、一緒にいるとき】 */ }
+  console.log('  '+(e.length?'NG':'OK')+' 相性：2人の役割と場面（役割・親子・調子・文昌貴人と駅馬・柱どうしの場面）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('2人の役割と場面: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));

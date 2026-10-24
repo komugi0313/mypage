@@ -7113,7 +7113,7 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
     const _dup=pkDupRate(ans,det);   // くわしい読み解きが、上の答えのくり返しになっていないか
     const det2=pkDropRepeat(ans,det);
     let full=((D.online&&_dup>0.6)||String(det2).replace(/【[^】]*】|\s/g,'').length<40)?ans:(ans+'\n\n【くわしい読み解き】\n'+det2);   // 中身のないくわしい読み解きは見出しも出さない   // ほとんど同じ文なら、くわしい読み解きは出さない（同じ文を2回見せない。発注者指示 2026-10-21）
-    if((out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart&&typeof chartB!=='undefined'&&chartB) full=pkEnsureCross(full,chart,chartB);   // 惹かれ合う星（相手の命式に自分の咸池・紅艶・貴人）がなければ書き足す
+    if((out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart&&typeof chartB!=='undefined'&&chartB) full=pkEnsureCross(full,chart,chartB); full=pkEnsureRoles(full,chart,chartB);   // 惹かれ合う星（相手の命式に自分の咸池・紅艶・貴人）がなければ書き足す
     { let _seen=false; full=full.replace(/\n*[ 　]*【くわしい読み解き】[ 　]*(?:\n[ 　]*【くわしい読み解き】[ 　]*)*/g,function(m0){ if(_seen) return '\n'; _seen=true; return '\n\n【くわしい読み解き】\n'; }); }   // 見出しが2回続かないように
     if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart) { full=pkEnsureBonds(full,chart); full=pkMonthFactFix(full,chart); full=pkYearKichiFix(full,chart); full=pkPillarStarFix(full,chart); full=pkEnsureLove(full,chart,_q0); }   // 命式内の天地徳合・干合は、鑑定文になければツールが書き足す（発注者指示 2026-10-23）
     out.innerHTML=sc+engineBadge(true,D.online?'':'くわしい読み解きは通信できなかったため、端末内で作成した内容を表示しています。')+formatReading(full);
@@ -7554,6 +7554,7 @@ function compatAnalysis(a,b,rt){
     try{ const CM=compatMonths(a,b), bothM=CM.filter(function(x){ return x.A.g.length&&x.B.g.length; }), warnM=CM.filter(function(x){ return x.A.w.length||x.B.w.length; });
       L.push('【2人の縁が動く月（これから12ヶ月・ツールの判定。時期を答えるときはこの月を使う）】2人とも縁が動く月：'+(bothM.length?bothM.map(function(x){ return x.y+'年'+x.m+'月ごろ（'+x.gz+'の月）＝本人：'+x.A.g.join('・')+'／お相手：'+x.B.g.join('・'); }).join('／'):'なし')+'。注意の月：'+(warnM.length?warnM.map(function(x){ return x.y+'年'+x.m+'月ごろ（'+x.gz+'の月）'+(x.A.w.length?'＝本人の配偶宮と'+x.A.w.join('・'):'')+(x.B.w.length?'＝お相手の配偶宮と'+x.B.w.join('・'):''); }).join('／'):'なし')); }catch(e){}
     try{ const cb=checkPoints(b,love), ca=checkPoints(a,love); L.push('【お相手を知るためのチェックポイント（ツールの判定。「どうすればよいか」に活かす。悪い人と決めつけない）】お相手で確かめること：'+cb.check.map(function(x){ return x.pro; }).join('／')+'。本人がお相手から見られやすいところ：'+ca.check.map(function(x){ return x.pro; }).join('／')); }catch(e){}
+    try{ const RL=compatRoles(a,b); L.push('【2人の役割と場面＝ツールの判定（鑑定文で必ず使う：①お互いの役割は「'+(rt&&rt.kizuna||'')+'」か「どうすればよいか」に、②一緒にいて調子が上がる／疲れやすいは「どうすればよいか」に、③文昌貴人・駅馬は参考として一言、④どの場面で起きる話かは、合・冲を書くときに場面として書く）】①役割：'+RL.role.map(function(x){ return x.pro; }).join('／')+'。②調子：'+RL.energy.map(function(x){ return x.pro; }).join('／')+(RL.stars.length?'。③参考の星：'+RL.stars.map(function(x){ return x.pro; }).join('／'):'')+(RL.scene.length?'。④場面：'+RL.scene.map(function(x){ return x.pro; }).join('／'):'')); }catch(e){}
     if(love){ const ad=attractionDir(a,b,'本人','お相手'); if(ad) L.push('【惹かれ方の向き＝ツールの判定・厳守（鑑定文の「惹かれ合うところ」で必ず書く。「お互いに惹かれ合う」と書くのは、2人とも恋愛の星があるときだけ）】'+ad.pro); } }
   L.push(`【2人の基本の事実＝この通りに書く】本人の日干=${aS}（${STEM_EL[aS]}）・日支（配偶宮）=${aB}／お相手の日干=${bS}（${STEM_EL[bS]}）・日支（配偶宮）=${bB}。十二支（子・丑・寅…）と十二運（長生・病など）を取りちがえない。`);
   // 日干の関係
@@ -7997,6 +7998,70 @@ function compatMonthsHTML(a,b){ try{ const L=compatMonths(a,b); if(!L.length) re
   return `<section class="card sec" id="cm-sec" style="border:1.5px solid #C9D9C2">
   <style>.kd-plain{display:none}html.bg-on .kd-plain{display:block}html.bg-on .kd-pro{display:none}.kd-l{margin:4px 0 0;padding-left:1.2em;font-size:13.5px;line-height:1.8}</style>
   <div style="font-weight:900;font-size:15px">🗓 2人の縁が動く月（これから12ヶ月）</div>${mk(false)}${mk(true)}</section>`; }catch(e){ return ''; } }
+/* ===== 2人の役割・場面の見方（1〜5）＝鑑定者本人の指示 2026-10-24「1から5までフルで使って鑑定してほしい」 =====
+   ①相手の日干が自分から見て何の通変星か＝相手の役割（関係の種類で言い方を変える）　②家族・親子の見方（①の中で家族のとき）
+   ③相手の命式の五行が自分の喜神・忌神のどちらに多いか＝一緒にいて調子が上がる／疲れやすい
+   ④相手の命式に自分の文昌貴人・駅馬があるか（惹かれ合う星とは別の参考。点数には入れない）
+   ⑤合・冲などが、どの柱どうしか＝どの場面で起きる話か（年柱＝家・親族／月柱＝仕事・暮らしの環境／日柱＝本人同士／時柱＝子ども・将来・趣味） */
+function pkRelKind(){ try{ const v=(typeof document!=='undefined'&&document.getElementById('rel-type')&&document.getElementById('rel-type').value)||'love'; return (v==='friend'||v==='work'||v==='family')?v:'love'; }catch(e){ return 'love'; } }
+const ROLE_TS={
+  比劫:{love:'友だちのように対等な相手。気が合うぶん、張り合いやすい',work:'仲間であり、ライバルでもある相手。役割と取り分を先に決めておくとうまくいく',friend:'対等な仲間。張り合わずに認め合うと長く続く',family:'きょうだいや友だちのように対等な関係。張り合いやすい'},
+  食傷:{love:'一緒にいると気持ちを表に出せて楽しい相手。自分が世話をしたり楽しませたりする側になりやすい',work:'自分が力を出してあげる相手（部下・生徒・お客様）。教える・任せると伸びる',friend:'一緒にいると楽しく、自分が話を引き出す側になりやすい',family:'自分が世話を焼き、育てる側になりやすい関係（親から子を見たときの典型）'},
+  財:{love:'自分が大切にしたい、手に入れたいと思いやすい相手（男性から見ると妻の星）',work:'お金やチャンスを運んでくれやすい相手（お客様・取引先）',friend:'一緒に動くと実りがある相手',family:'自分が面倒を見て、管理したくなる関係（口を出しすぎに注意）'},
+  官殺:{love:'自分をきちんとさせ、引き上げてくれる相手（女性から見ると夫の星）',work:'自分を引き上げ、責任をくれる相手（上司・責任者）',friend:'自分を引きしめてくれる、少し背すじが伸びる相手',family:'相手に引きしめられ、導かれる関係（子から親を見たときに多い形。親から子を見てこの形なら、子に意見されやすい）'},
+  印:{love:'自分を守り、受けとめてくれる相手',work:'教えてくれる・守ってくれる相手（先生・師匠・後ろ盾）',friend:'相談にのってくれる、安心できる相手',family:'相手に守られ、受けとめてもらう関係（子から母を見たときの典型。親から子を見てこの形なら、子に支えられる）'}};
+const ROLE_SUB={劫財:'劫財なので、お金の貸し借りや共同出資は慎重に',傷官:'傷官なので、言い方がきつくならないように',偏財:'偏財なので、楽しく動けるが、お金の使い方は決めておく',偏官:'偏官なので、厳しく鍛える形になりやすい',正官:'正官なので、筋を通す・約束を守ることが大事',偏印:'偏印なので、考え方は個性的。干渉しすぎない',印綬:'印綬なので、頼りすぎないことが大事'};
+const SCENE={年柱:'家・親族・地元',月柱:'仕事・職場・暮らしの環境',日柱:'ふだんの2人の関係',時柱:'子ども・将来・趣味'};
+function _rlPlain(s){ return String(s).replace(/（[^）]*(星|正官|偏官|劫財|傷官|偏財|偏印|印綬)[^）]*）/g,'').replace(/^(劫財|傷官|偏財|偏官|正官|偏印|印綬)なので、/,''); }
+function compatRoles(a,b){ const R={role:[],energy:[],stars:[],scene:[]}; try{
+  const kind=pkRelKind(), PN=['年柱','月柱','日柱','時柱'];
+  // ①②役割（日干どうしの通変星・両方向）
+  [[a,b,'本人','お相手','あなた'],[b,a,'お相手','本人','お相手']].forEach(function(q,k){ const st=tenStarOf(q[0].dayMaster.stem,q[1].dayMaster.stem), g=TS_GROUP[st], t=(ROLE_TS[g]||{})[kind]; if(!t) return;
+    const sub=ROLE_SUB[st]||'';
+    R.role.push({star:st,pro:q[2]+'から見て、'+q[3]+'の日干「'+q[1].dayMaster.stem+'」は'+st+'＝'+t+(sub?'（'+sub+'）':''),plain:(k===0?'あなたから見たお相手：':'お相手から見たあなた：')+_rlPlain(t)+(sub?'。'+_rlPlain(sub):'')+'。'}); });
+  // ③一緒にいて調子が上がる／疲れやすい（相手の命式の五行が、自分の喜神・忌神のどちらに多いか）
+  [[a,b,'本人','お相手'],[b,a,'お相手','本人']].forEach(function(q,k){ const as=_kkAssess(q[0]).assess, fe=q[1].fiveElements||{}; let ki=0, im=0; const kL=[], iL=[];
+    SHENG.forEach(function(el){ const n=fe[el]||0, f=as(el).fav; if(!n) return; if(f==='喜'){ ki+=n; kL.push(el+n); } else if(f==='忌'){ im+=n; iL.push(el+n); } });
+    const v=ki>im?'up':(im>ki?'down':'even');
+    const pro=q[2]+'の喜神（きしん：あると調子が上がる五行）を'+q[3]+'は'+ki+'つ'+(kL.length?'（'+kL.join('・')+'）':'')+'、忌神（きじん：多いと疲れやすい五行）を'+im+'つ'+(iL.length?'（'+iL.join('・')+'）':'')+'持つ＝'+(v==='up'?q[2]+'は'+q[3]+'と一緒にいると調子が上がりやすい':(v==='down'?q[2]+'は'+q[3]+'と長く一緒にいると疲れやすいことがある（'+q[3]+'が悪いのではない。ひとりの時間をとるとよい）':'調子が上がる面と疲れる面が同じくらい'));
+    const who=k===0?['あなたは','お相手と']:['お相手は','あなたと'];
+    R.energy.push({v:v,pro:pro,plain:who[0]+who[1]+(v==='up'?'一緒にいると元気が出やすいです。':(v==='down'?'長く一緒にいると、少し疲れやすいことがあります（お相手が悪いわけではありません。ひとりの時間もとりましょう）。':'一緒にいて、元気が出る面と疲れる面が同じくらいです。'))}); });
+  // ④相手の命式に自分の文昌貴人・駅馬（参考）
+  const SX={文昌貴人:['一緒に学ぶと身につきやすい相手（勉強仲間・先生に向く）','一緒に学ぶと身につきやすい相手'],駅馬:['一緒にいると動きが出る相手（旅行・引っ越し・新しいことを一緒に始める）','一緒にいると動きが出る相手（旅行や新しいことに向いています）']};
+  [[a,b,'本人','お相手'],[b,a,'お相手','本人']].forEach(function(q,k){ const hit={};
+    (q[1].pillars||[]).forEach(function(p,j){ if(!p||(j===3&&q[1].timeUnknown)) return; const s=[...matchKichi1(q[0],p.branch),...matchKichi4(q[0],p.branch)];
+      Object.keys(SX).forEach(function(n){ if(s.indexOf(n)>=0) (hit[n]=hit[n]||[]).push(PN[j]+'「'+p.ganzhi+'」'); }); });
+    Object.keys(hit).forEach(function(n){ R.stars.push({star:n,pro:q[2]+'から見て、'+q[3]+'の'+hit[n].join('・')+'が'+q[2]+'の'+n+'に当たる＝'+q[3]+'は'+SX[n][0],plain:(k===0?'あなたにとって、お相手は':'お相手にとって、あなたは')+SX[n][1]+'です。'}); }); });
+  // ⑤柱ごとの場面
+  const cb=compatBalance(a,b), grp={};
+  cb.items.forEach(function(x){ const m=String(x.where).match(/本人の(年柱|月柱|日柱|時柱).*お相手の(年柱|月柱|日柱|時柱)/); if(!m||x.good===null) return;
+    const key=m[1]===m[2]?m[1]:m[1]+'×'+m[2]; (grp[key]=grp[key]||{i:PN.indexOf(m[1])*4+PN.indexOf(m[2]),a:m[1],b:m[2],g:[],w:[]})[x.good?'g':'w'].push(x.kind.replace(/（.*$/,'')); });
+  const side=function(who,pl){ return pl==='日柱'?who+'自身':who+'の'+SCENE[pl]; };
+  const rank=function(o){ return (o.a==='日柱'?4:0)+(o.b==='日柱'?4:0)+(o.a===o.b?2:0)+(o.a==='月柱'||o.b==='月柱'?1:0); };
+  Object.keys(grp).map(function(k){ return grp[k]; }).sort(function(x,y){ return rank(y)-rank(x)||x.i-y.i; }).slice(0,6).forEach(function(o){
+    const u=function(L){ return L.filter(function(x,i){ return L.indexOf(x)===i; }); };
+    const sc=function(A,B){ return o.a===o.b?(o.a==='日柱'?'ふだんの2人の関係':SCENE[o.a]+'が関わる場面'):side(A,o.a)+'と、'+side(B,o.b)+'が関わる場面'; };
+    R.scene.push({pro:(o.a===o.b?o.a+'どうし':'本人の'+o.a+'×お相手の'+o.b)+'＝'+sc('本人','お相手')+'：'+[o.g.length?'良い（'+u(o.g).join('・')+'）':'',o.w.length?'注意（'+u(o.w).join('・')+'）':''].filter(Boolean).join('／'),
+      plain:sc('あなた','お相手')+'では、'+(o.g.length&&o.w.length?'うまくいく面と、ぶつかりやすい面の両方があります。':(o.g.length?'うまくいきやすいです。':'ぶつかりやすいので、言い方に気をつけましょう。'))}); });
+}catch(e){} return R; }
+function compatRolesHTML(a,b){ try{ const R=compatRoles(a,b); if(!R.role.length) return '';
+  const blk=function(t1,t2,L){ if(!L.length) return ''; const li=function(plain){ return '<ul class="kd-l '+(plain?'kd-plain':'kd-pro')+'">'+L.map(function(x){ return '<li>'+_kdE(plain?x.plain:x.pro)+'</li>'; }).join('')+'</ul>'; };
+    return '<div style="margin-top:10px;font-weight:900"><span class="kd-pro">'+t1+'</span><span class="kd-plain">'+t2+'</span></div>'+li(false)+li(true); };
+  return `<section class="card sec" id="rl-sec" style="border:1.5px solid #CFC6E0">
+  <style>.kd-plain{display:none}html.bg-on .kd-plain{display:block}html.bg-on .kd-pro{display:none}.kd-l{margin:4px 0 0;padding-left:1.2em;font-size:13.5px;line-height:1.8}</style>
+  <div style="font-weight:900;font-size:15px">🧭 2人の役割と、一緒にいるときの調子</div>
+  ${blk('① お互いの役割（相手の日干が自分から見て何の星か）','① お互いにとって、どんな相手か',R.role)}
+  ${blk('② 一緒にいて調子が上がる／疲れやすい（喜神・忌神）','② 一緒にいると元気が出るか',R.energy)}
+  ${blk('③ 相手の命式にある自分の文昌貴人・駅馬（参考・点数には入れない）','③ ほかに、お互いにとってどんな相手か',R.stars)}
+  ${blk('④ どの場面で起きる話か（柱どうしの合・冲など）','④ どんな場面でうまくいく／ぶつかりやすいか',R.scene)}
+  </section>`; }catch(e){ return ''; } }
+/* 鑑定文に①〜④が書かれていなければ、ツールが書き足す */
+function pkEnsureRoles(t,a,b){ try{ t=String(t||''); const R=compatRoles(a,b); const plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on')); const L=[];
+  R.role.forEach(function(x){ if(plain?t.indexOf(x.plain)<0:t.indexOf(x.star)<0) L.push(plain?x.plain:x.pro+'。'); });
+  if(plain?!/元気が出|疲れやすい/.test(t):!/調子が上が|疲れやすい/.test(t)) R.energy.forEach(function(x){ L.push(plain?x.plain:x.pro+'。'); });
+  R.stars.forEach(function(x){ if(plain?t.indexOf(x.plain)<0:t.indexOf(x.star)<0) L.push(plain?x.plain:x.pro+'。'); });
+  if(R.scene.length&&!/場面/.test(t)) R.scene.forEach(function(x){ L.push(plain?x.plain:x.pro+'。'); });
+  if(!L.length) return t; return t+'\n\n'+(plain?'【2人の役割と、一緒にいるとき】':'【2人の役割と場面（相手の日干の星・喜神と忌神・柱どうし）】')+'\n'+L.map(function(x){ return '・'+x; }).join('\n'); }catch(e){ return t; } }
 function compatVerdictHTML(a,b,rt){
   if(typeof ganzhiCompat!=='function')return '';
   const gc=ganzhiCompat(a.pillars[2].ganzhi,b.pillars[2].ganzhi);
@@ -8163,7 +8228,7 @@ function buildCompatBase(out){
   if(document.getElementById('b-notime')&&document.getElementById('b-notime').checked)markTimeUnknown(chartB);
   const na=personName||'本人', nb=personNameB||'お相手';
   const rt=RELTYPES[document.getElementById('rel-type')?.value||'love']||RELTYPES.love;
-  try{var _cv=document.getElementById('compat-verdict'); if(_cv){ let _h=compatVerdictHTML(chart,chartB,rt)+compatTimingHTML(chart,chartB,rt)+compatDaysHTML(chart,chartB,(typeof personName!=='undefined'&&personName)||'本人',(typeof personNameB!=='undefined'&&personNameB)||'お相手')+compatMonthsHTML(chart,chartB)+compatCheckHTML(chart,chartB);   /* 2人の日運を並べて見る（発注者指示 2026-10-23） */ if(!rt.useSpouse)_h=_h.replace(/配偶者宮|配偶宮/g,'関係の土台').replace(/配偶者星/g,'縁の星'); _cv.innerHTML=_h; try{ pkReadable(_cv); }catch(_e2){} }}catch(_e){}   // 家族・友人・仕事の相性では「配偶宮」などの夫婦向けの言葉を使わない
+  try{var _cv=document.getElementById('compat-verdict'); if(_cv){ let _h=compatVerdictHTML(chart,chartB,rt)+compatTimingHTML(chart,chartB,rt)+compatDaysHTML(chart,chartB,(typeof personName!=='undefined'&&personName)||'本人',(typeof personNameB!=='undefined'&&personNameB)||'お相手')+compatMonthsHTML(chart,chartB)+compatRolesHTML(chart,chartB)+compatCheckHTML(chart,chartB);   /* 2人の日運を並べて見る（発注者指示 2026-10-23） */ if(!rt.useSpouse)_h=_h.replace(/配偶者宮|配偶宮/g,'関係の土台').replace(/配偶者星/g,'縁の星'); _cv.innerHTML=_h; try{ pkReadable(_cv); }catch(_e2){} }}catch(_e){}   // 家族・友人・仕事の相性では「配偶宮」などの夫婦向けの言葉を使わない
   try{var _cm=document.getElementById('compat-meishi'); if(_cm)_cm.innerHTML=compatMeishiHTML(chart,chartB,na,nb);}catch(_e){}
   const head=`【本人A】${na}（${chart.birth.sex==='male'?'男性':'女性'}）: ${compatBrief(chart)}\n【お相手B】${nb}（${sexB==='male'?'男性':'女性'}）: ${compatBrief(chartB)}\n\n【2人の関係】${rt.label}\n\n【2人の関係の自動分析（計算済み）】\n${compatAnalysis(chart,chartB,rt)}`;
   return {na,nb,rt,head};
