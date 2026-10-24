@@ -209,6 +209,12 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     const A=mk(1990,3,3,'female'), B=mk(1990,2,2,'female'); return [window.pkFixYomi('本人が壬（みずのと、ではなく、みずのえ）で'), pkFixMutual('お互いに心から惹かれ合い、支え合える。',A,B)]; });
   const e=[]; if(!r) e.push('pkFixMutual がない'); else { if(r[0]!=='本人が壬（みずのえ）で') e.push('読みの言い直し：'+r[0]); if(r[1]!=='心から引き合い、支え合える。') e.push('お互いに惹かれ合う：'+r[1]); }
   console.log('  '+(e.length?'NG':'OK')+' 読みの言い直し／片方だけ恋愛の星のとき「お互いに惹かれ合う」と書かない'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('読み・お互いに: '+e.join('・')); }
+// 惹かれ合う星の点数は1方向の合計1点まで（鑑定者本人の指示 2026-10-24）
+{ const r=await p.evaluate(()=>{ let seed=11, over=[], n=0; const rnd=()=>{ seed=(seed*1103515245+12345)%2147483648; return seed/2147483648; };
+    for(let i=0;i<300;i++){ const mk=()=>baziCompute({year:1960+Math.floor(rnd()*45),month:1+Math.floor(rnd()*12),day:1+Math.floor(rnd()*28),hour:Math.floor(rnd()*24),minute:0,sex:rnd()<0.5?'male':'female',tu:false},0,'none'); const A=mk(), B=mk();
+      const it=compatBalance(A,B).items; ['本人の','お相手の'].forEach(pre=>{ const sm=it.filter(x=>x.kind.indexOf(pre)===0&&/が(?:お相手|本人)に$/.test(x.kind)).reduce((t,x)=>t+x.w,0); if(sm>0) n++; if(sm>1.001) over.push(A.birth.clock+'×'+B.birth.clock+' '+pre+sm); }); }
+    return {n,over}; });
+  const ok9=r.n>50&&r.over.length===0; console.log('  '+(ok9?'OK':'NG')+' 惹かれ合う星の点数は1方向1点まで（'+r.n+'方向を確認）'+(ok9?'':'  … '+r.over.slice(0,3).join(' / '))); if(!ok9) res.fails.push('惹かれ合う星の上限'); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
