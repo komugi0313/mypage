@@ -245,6 +245,10 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
 { const r=await p.evaluate(()=>{ const A=baziCompute({year:2007,month:9,day:18,hour:13,minute:30,sex:'female',tu:false},'126.98','full'), B=baziCompute({year:1981,month:6,day:10,hour:22,minute:28,sex:'female',tu:false},0,'none');
     const _c0=chart; chart=A; const a0=repHidden(A.pillars[2]).stem, b0=repHidden(B.pillars[2]).stem; zouOverride['日柱']=0; const a1=repHidden(A.pillars[2]).stem, b1=repHidden(B.pillars[2]).stem; zouOverride={}; chart=_c0; return [a0,a1,b0,b1].join(','); });
   const okO=r==='乙,甲,丁,丁'; console.log('  '+(okO?'OK':'NG')+' 先生が選んだ蔵干は本人だけ・お相手は司令（'+r+'）'); if(!okO) res.fails.push('蔵干の選択'); }
+// 先生が選んだ蔵干を鑑定書にも引き継ぐ（2026-10-24）：アプリが zo を渡し、鑑定書（3か所同じ）が読む
+{ const app=fs.readFileSync(path.join(ROOT,dir,page0),'utf8'), sh=['pro','beginner','meishiki-original'].map(d=>fs.readFileSync(path.join(ROOT,d,'meishi-sheet.html'),'utf8'));
+  const okZ=/q\.set\('zo',_zo\)/.test(app)&&sh.every(t=>/var ZO=\{\}/.test(t)&&/ZO\[p\.label\]/.test(t))&&sh[0]===sh[1]&&sh[0]===sh[2];
+  console.log('  '+(okZ?'OK':'NG')+' 先生が選んだ蔵干を鑑定書にも引き継ぐ（鑑定書は3か所同じ）'); if(!okZ) res.fails.push('鑑定書の蔵干'); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
