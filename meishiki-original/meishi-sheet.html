@@ -4261,10 +4261,10 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
     if(done[y]) continue;
     if(/^\u0003[（(][^）)]*\d(?:歳|才)/.test(a)||/^\u0003?[（(][^）)]*\d(?:歳|才)/.test(s.slice(m.index+m[0].length,m.index+m[0].length+26))){ done[y]=1; continue; }   // 家族などの年齢のかっこが付いている年には足さない
     if(/^[、・]?\d{1,3}(?:歳|才)|^(?:に|には|で)\d{1,3}(?:歳|才)/.test(a)||/\d{1,3}(?:歳|才)(?:になる|を迎える|となる|[（(])?$/.test(b)){ done[y]=1; continue; }   // 「2029年に21歳」のように文の中で年齢を言っているときは足さない（年齢は前の段で計算し直し済み）
-    if(skipAfter.test(a)||/[（(「『]$/.test(b)||/[0-9０-９]$/.test(b)) continue;
-    done[y]=1; marks.push({i:m.index+m[0].length,y:y}); }
+    var cl=/^[）)」』]/.test(a)||/[（(「『]$/.test(b); if((skipAfter.test(a)&&!/^[）)」』]/.test(a))||/[0-9０-９]$/.test(b)) continue;   // 「（2026年内・2027年）」のように、かっこを閉じる直前の年にも付ける（〔〕で）
+    done[y]=1; marks.push({i:m.index+m[0].length,y:y,cl:cl}); }
   var out=s, add=0;
-  marks.forEach(function(k){ var ins=lab(k.y); if(!ins) return; out=out.slice(0,k.i+add)+ins+out.slice(k.i+add); add+=ins.length; });
+  marks.forEach(function(k){ var ins=lab(k.y); if(!ins) return; if(k.cl) ins=ins.replace(/^[（(]/,'〔').replace(/[）)]$/,'〕'); out=out.slice(0,k.i+add)+ins+out.slice(k.i+add); add+=ins.length; });
   out=out.replace(/たまやすい/g,'たまりやすい').replace(/前展/g,'進展').replace(/(^|\n)([ 　]*)(?:結論から(?:お伝え|申し上げ|言う|お話し)(?:すると|しますと|ますと|ると)|結論としては)[、，]\s*/g,'$1$2');   // よくある書きまちがい・1行目の前置き
   out=out.replace(/【{2,}/g,'【').replace(/】{2,}/g,'】').replace(/^([ 　]*【[^】\n]{1,40})[ 　]*$/gm,'$1】').replace(/^[ 　]*】[ 　]*/gm,'');   // 見出しのかっこのくずれ（【【…】】・閉じ忘れ・行頭の】）をそろえる
   out=out.replace(/（([ぁ-ん]{1,6})財(?=[・：:）)])/g,'（$1ざい').replace(/（([ぁ-ん]{1,6})官(?=[・：:）)])/g,'（$1かん');   // 読みに漢字がまじる（せい財）を直す
@@ -4352,6 +4352,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
     function redo(){ _aiBusy=false; if(_readEngine==='ai' && _lastResult) generateAIReading(); }
     var sys='あなたは四柱推命のプロ鑑定士です。与えられた【命式データ】だけを根拠に、鑑定書の本文を日本語で書きます。\n'+
       '厳守事項：\n'+
+      '・蔵干は、命式表に出ている司令（代表蔵干）1つだけを書く。余気・中気・本気を並べない（鑑定者本人の指示 2026-10-24）。\n'+
       '・命式データ（四柱・天干通変・蔵干・十二運・五行・守護神・空亡・大運）に忠実に。命式に無い事実や生年月日を作らない。\n'+
       '・アスタリスク（*）や記号の装飾は一切使わない。\n'+
       '・章立てで書く。各章は行頭に「# 見出し」を置き、続けて本文の段落。箇条書きは行頭「・」。\n'+

@@ -88,7 +88,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
 { const lv=await p.evaluate(()=>{ if(typeof loveFourLines!=='function'||typeof pkEnsureLove!=='function') return {L:null,t:'',n:''}; const c=baziCompute({year:1981,month:6,day:10,hour:22,minute:28,sex:'female',tu:false},0,'none'); const L=loveFourLines(c); const t=pkEnsureLove('テスト。',c,'この人は遊び人ですか？'), n=pkEnsureLove('テスト。',c,'仕事運は？'), g=pkEnsureLove('2027年3月ごろ（きみずうの月）に出会いが動きます。',c,'彼氏はできますか');
     return { L:L&&L.pro, t, n, g }; });
   const e=[]; const L=lv.L||[];
-  if(!/日支「未」/.test(L[0]||'')||!/丁（偏印）・乙（偏官）・己（比肩）/.test(L[0]||'')) e.push('配偶宮の蔵干');
+  if(!/日支「未」/.test(L[0]||'')||!/蔵干（司令）は 丁（偏印）。/.test(L[0]||'')||/乙（偏官）|己（比肩）/.test(L[0]||'')) e.push('配偶宮の蔵干（司令だけ）');   /* 蔵干は司令だけ（鑑定者本人の指示 2026-10-24） */
   if(!/パートナーの星（官星＝五行の「木」）は、あなたの喜神（きしん：あると調子が上がる五行）です/.test(L[1]||'')) e.push('パートナーの星が喜神か');
   if(!/2人の相性とは別の見方/.test(L[1]||'')) e.push('相性とは別の見方の一言');
   if(!/月柱/.test(L[2]||'')||!/仕事/.test(L[2]||'')) e.push('出会いの場');
@@ -231,6 +231,20 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   const src=fs.readFileSync(path.join(ROOT,'eki-pro/app/index.html'),'utf8'), mine=fs.readFileSync(path.join(ROOT,dir,page0),'utf8'), cut=t=>{ const a=t.indexOf('var PK_CONFESS_MSG='), b=t.indexOf('}catch(e){ return false; } }',a); return a<0||b<0?null:t.slice(a,b); };
   if(!cut(src)||cut(src)!==cut(mine)) e.push('易と同じ中身になっていない'); if(!/pkConfessQ\(q\)\) return \{block:'confess'\}/.test(src)) e.push('易で止めていない');
   console.log('  '+(e.length?'NG':'OK')+' してしまったことの相談は運勢で判断しない（PRO・ビギナー・易）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('してしまった相談: '+e.join('・')); }
+// 蔵干は司令だけ（鑑定者本人の指示 2026-10-24）：恋愛の配偶宮の蔵干・チェックポイントが司令の1つだけを使う
+{ const r=await p.evaluate(()=>{ let seed=5, bad=[]; const rnd=()=>{ seed=(seed*1103515245+12345)%2147483648; return seed/2147483648; };
+    for(let i=0;i<60;i++){ const c=baziCompute({year:1960+Math.floor(rnd()*45),month:1+Math.floor(rnd()*12),day:1+Math.floor(rnd()*28),hour:Math.floor(rnd()*24),minute:0,sex:rnd()<0.5?'male':'female',tu:false},0,'none'); window.chart=c;
+      const L=loveFourLines(c), m=(L&&L.pro[0]||'').match(/蔵干（司令）は ([^。]*)。/), rep=repHidden(c.pillars[2]);
+      if(!m||m[1]!==rep.stem+'（'+(rep.tenStar||tenStarOf(c.dayMaster.stem,rep.stem))+'）') bad.push(c.birth.clock+' '+(m?m[1]:'なし')); }
+    return bad; });
+  const okZ=r.length===0; console.log('  '+(okZ?'OK':'NG')+' 蔵干は司令だけ（恋愛の配偶宮の蔵干・60人）'+(okZ?'':'  … '+r.slice(0,3).join(' / '))); if(!okZ) res.fails.push('蔵干は司令だけ'); }
+// かっこの中の年にも干支・年齢を付ける（2026-10-24「（2026年内・2027年）」で見つかったもの）。PRO・易・鑑定書で同じ中身
+{ const r=await p.evaluate(()=>typeof pkStampYears!=='function'?'':pkStampYears('関係を育てる時期です（2026年内・2027年）。',1985,0,false));
+  const okB=r==='関係を育てる時期です（2026年〔丙午・41歳〕内・2027年〔丁未・42歳〕）。'||r==='関係を育てる時期です（2026年〔41歳〕内・2027年〔42歳〕）。';   /* ビギナーのやさしい表示は干支なし */ console.log('  '+(okB?'OK':'NG')+' かっこの中の年にも干支・年齢を付ける'+(okB?'':'  … '+r)); if(!okB) res.fails.push('かっこの中の年'); }
+// 先生が選んだ蔵干は本人だけに使い、お相手は司令のまま（2026-10-24）
+{ const r=await p.evaluate(()=>{ const A=baziCompute({year:2007,month:9,day:18,hour:13,minute:30,sex:'female',tu:false},'126.98','full'), B=baziCompute({year:1981,month:6,day:10,hour:22,minute:28,sex:'female',tu:false},0,'none');
+    const _c0=chart; chart=A; const a0=repHidden(A.pillars[2]).stem, b0=repHidden(B.pillars[2]).stem; zouOverride['日柱']=0; const a1=repHidden(A.pillars[2]).stem, b1=repHidden(B.pillars[2]).stem; zouOverride={}; chart=_c0; return [a0,a1,b0,b1].join(','); });
+  const okO=r==='乙,甲,丁,丁'; console.log('  '+(okO?'OK':'NG')+' 先生が選んだ蔵干は本人だけ・お相手は司令（'+r+'）'); if(!okO) res.fails.push('蔵干の選択'); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));

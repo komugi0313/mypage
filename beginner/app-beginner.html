@@ -3218,7 +3218,7 @@ const KANCHI_UN='運気で巡る咸池（影響の大きさは 大運＞年運�
 // 蔵干列(zouCell)の primary と同じ基準に統一する（月支元命を司令で取るため）。
 // 既定（基本ロジック）＝月柱は司令(.ling)優先→本気→末尾。手動選択(zouOverride)があればそれを最優先。
 function repOf(hs,label){const ov=zouOverride[label];if(ov!=null&&hs[ov])return hs[ov];return hs.find(h=>h.ling)||hs.find(h=>h.role==='本気')||hs[hs.length-1];}
-function repHidden(p){return repOf(p.hiddenStems,p.label);}
+function repHidden(p){ const own=!!(p&&typeof chart!=='undefined'&&chart&&chart.pillars&&chart.pillars.indexOf(p)>=0); return repOf(p.hiddenStems,own?p.label:null); }   // 先生が命式表で選んだ蔵干は本人の命式だけに使う。お相手（相性）は司令のまま（2026-10-24）
 function meishiHTML(c, topOnly){
   const ku=kubo(c);
   // 各柱の下に「誕生日」を表示（年柱＝年／月柱＝月／日柱＝日／時柱＝時刻。時刻不明は「不明」）
@@ -3787,10 +3787,10 @@ function loveFourLines(c){ try{ if(!c||!c.pillars||!c.dayMaster) return null;
   const MEAN={比肩:'自分らしさ・自立',劫財:'仲間・負けん気',食神:'楽しむ・おおらかさ',傷官:'感性・こだわり',偏財:'人づきあい・行動力',正財:'まじめ・堅実',偏官:'行動力・度胸',正官:'誠実・責任感',偏印:'ひらめき・自由',印綬:'学び・やさしさ'};
   const ROLE={本気:'主',中気:'中',余気:'余'};
   // ① 配偶宮（日支）の蔵干
-  const hs=(dp.hiddenStems||[]).map(function(h){ const st=h.tenStar||tenStarOf(ds,h.stem); return {stem:h.stem,star:st,role:h.role,sp:sp.indexOf(st)>=0}; });
+  const hs=[repHidden(dp)].filter(function(h){ return h&&h.stem; }).map(function(h){ const st=h.tenStar||tenStarOf(ds,h.stem); return {stem:h.stem,star:st,role:h.role,sp:sp.indexOf(st)>=0}; });   // 蔵干は司令だけ（鑑定者本人の指示 2026-10-24）
   const hsTxt=hs.map(function(h){ return h.stem+'（'+h.star+'）'; }).join('・');
   const hsSp=hs.filter(function(h){ return h.sp; });
-  const l1pro='配偶宮（日支「'+dp.branch+'」＝パートナーとの関係・家庭を表す場所）の蔵干は '+hsTxt+'。'+(hsSp.length?'このうち '+hsSp.map(function(h){ return h.stem+'（'+h.star+'）'; }).join('・')+' がパートナーの星＝配偶宮の中にパートナーの星を持っています（パートナーとの縁が、暮らしの中心に入ってきやすい形）。':'配偶宮の中にはパートナーの星（'+sp.join('・')+'）は入っていません（パートナーには、'+hs.map(function(h){ return MEAN[h.star]||h.star; }).filter(function(x,i,a){ return a.indexOf(x)===i; }).join('・')+'を求めやすい形）。');
+  const l1pro='配偶宮（日支「'+dp.branch+'」＝パートナーとの関係・家庭を表す場所）の蔵干（'+((typeof chart!=='undefined'&&c===chart&&zouOverride['日柱']!=null)?'選んだ蔵干':'司令')+'）は '+hsTxt+'。'+(hsSp.length?''+hsSp.map(function(h){ return h.stem+'（'+h.star+'）'; }).join('・')+' がパートナーの星＝配偶宮の中にパートナーの星を持っています（パートナーとの縁が、暮らしの中心に入ってきやすい形）。':'配偶宮の中にはパートナーの星（'+sp.join('・')+'）は入っていません（パートナーには、'+hs.map(function(h){ return MEAN[h.star]||h.star; }).filter(function(x,i,a){ return a.indexOf(x)===i; }).join('・')+'を求めやすい形）。');
   const l1plain='生まれ持った「パートナーの座」には、'+hs.map(function(h){ return MEAN[h.star]||''; }).filter(function(x,i,a){ return x&&a.indexOf(x)===i; }).join('・')+'の性質が入っています。'+(hsSp.length?'そこにパートナーを表す星もあるので、パートナーとの縁が暮らしの中心に入ってきやすい人です。':'パートナーには、この性質を求めやすい人です。');
   // ② パートナーの星が喜神かどうか
   const els=[]; ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'].forEach(function(s){ if(sp.indexOf(tenStarOf(ds,s))>=0&&els.indexOf(STEM_EL[s])<0) els.push(STEM_EL[s]); });
@@ -3814,7 +3814,7 @@ function loveFourLines(c){ try{ if(!c||!c.pillars||!c.dayMaster) return null;
   c.pillars.forEach(function(p){ if(!p||!p.label) return; const lb=p.label[0];
     const ts=(p.label==='日柱')?'':(p.tenStar||tenStarOf(ds,p.stem));
     if(sp.indexOf(ts)>=0&&at.indexOf(lb)<0) at.push(lb);
-    (p.hiddenStems||[]).forEach(function(h){ const st=h.tenStar||tenStarOf(ds,h.stem); if(sp.indexOf(st)<0) return; if(h.role==='本気'){ if(at.indexOf(lb)<0) at.push(lb); } else if(at.indexOf(lb)<0&&at2.indexOf(lb)<0) at2.push(lb); }); });
+    { const h=repHidden(p); if(h&&h.stem){ const st=h.tenStar||tenStarOf(ds,h.stem); if(sp.indexOf(st)>=0&&at.indexOf(lb)<0) at.push(lb); } } });   // 蔵干は司令だけで見る（2026-10-24）
   const use=at.length?at:at2;
   const l3pro=use.length?'出会いの場：パートナーの星が'+use.map(function(l){ return l+'柱'; }).join('・')+'にある＝'+use.map(function(l){ return PLACE[l]; }).join('／')+'で縁ができやすい'+(at.length?'':'（蔵干の中にある星なので、ゆっくり育つ縁）')+'。':'出会いの場：命式の中にパートナーの星が出ていない＝場所よりも時期が大事。パートナーの星が巡る年・月に、ふだんの行動範囲を少し広げると縁が動きます。';
   const l3plain=use.length?'出会いやすい場所は、'+use.map(function(l){ return PLACE[l]; }).join('／')+'です。':'出会いは場所よりも時期が大事な人です。下の「縁が動く月」に、ふだんの行動範囲を少し広げてみてください。';
@@ -4755,7 +4755,7 @@ function jyuZone(c){
   const ds=c.dayMaster.stem, spouse=spouseStars(c);
   const nowAge=(c.now&&c.now.age)||0, nowY=(c.now&&c.now.year)||new Date().getFullYear();
   const PLAB=['年柱','月柱','日柱','時柱'];
-  const pos=[]; c.pillars.forEach((p,i)=>{const s=p.label==='日柱'?'比肩':p.tenStar; const h=(p.hiddenStems||[]).find(x=>x.role==='本気'); if(spouse.includes(s)||(h&&spouse.includes(h.tenStar)))pos.push(PLAB[i]);});
+  const pos=[]; c.pillars.forEach((p,i)=>{const s=p.label==='日柱'?'比肩':p.tenStar; const h=repHidden(p); if(spouse.includes(s)||(h&&spouse.includes(h.tenStar)))pos.push(PLAB[i]);});
   const spDus=(c.decadeFortunes||[]).filter(d=>spouse.includes(d.tenStar)||spouse.includes(tenStarOf(ds,HONKI[d.branch])));
   let zoneDu=spDus.find(d=>d.endAge>=nowAge)||spDus[spDus.length-1]||null, phases=null, clipped=false, far=false, past=false, farAge=null, farYear=null;
   if(zoneDu){
@@ -5630,7 +5630,7 @@ function buildRomance(c){
   const dayBranch=c.pillars[2].branch;
   const natal=[];
   c.pillars.forEach(p=>{const s=p.label==='日柱'?'比肩':p.tenStar;if(spouse.includes(s))natal.push(p.label[0]+'天干'+s);
-    const h=p.hiddenStems.find(x=>x.role==='本気');if(h&&spouse.includes(h.tenStar))natal.push(p.label[0]+'蔵干'+h.tenStar);});
+    const h=repHidden(p);if(h&&spouse.includes(h.tenStar))natal.push(p.label[0]+'蔵干'+h.tenStar);});
   const duS=c.decadeFortunes.filter(d=>spouse.includes(d.tenStar)||spouse.includes(tenStarOf(ds,HONKI[d.branch]))).map(d=>`${duAgeRange(d)}(${d.ganzhi})`);
   const yrs=[];
   if(c.now){c.annualFortunes.filter(a=>a.year>=c.now.year&&a.year<=c.now.year+8).forEach(a=>{
@@ -6001,7 +6001,7 @@ function buildChartText(c){
     `生年月日時:${c.birth.clock}（${c.birth.sex==='male'?'男性':'女性'}）`,
     c.birth.correction?`真太陽時:${c.birth.correction.solar}`:'真太陽時補正なし',
     `日干（あなたの本体）:${c.dayMaster.stem}（${c.dayMaster.element}の${'乙丁己辛癸'.indexOf(c.dayMaster.stem)>=0?'陰':'陽'}。この陰陽・五行を変えて書かない）`,
-    `日柱（60干支の${ganzhi60(dp.stem,dp.branch)}番）:${dp.ganzhi}（訓読み：${ganzhiYomi(dp.stem,dp.branch)}） — 日干${dp.stem}が日支${dp.branch}に座す姿（十二運${dp.terrain}・蔵干本気${(dp.hiddenStems.find(h=>h.role==='本気')||dp.hiddenStems[dp.hiddenStems.length-1]||{}).stem||''}）。${KANSHI60[dp.ganzhi]?'この日柱（60干支）の型＝'+KANSHI60[dp.ganzhi]:''} ここから日柱の性格を読む`,
+    `日柱（60干支の${ganzhi60(dp.stem,dp.branch)}番）:${dp.ganzhi}（訓読み：${ganzhiYomi(dp.stem,dp.branch)}） — 日干${dp.stem}が日支${dp.branch}に座す姿（十二運${dp.terrain}・蔵干（司令）${(repHidden(dp)||{}).stem||''}）。${KANSHI60[dp.ganzhi]?'この日柱（60干支）の型＝'+KANSHI60[dp.ganzhi]:''} ここから日柱の性格を読む`,
     (()=>{const dd=KANSHI60_DETAIL[dp.ganzhi];if(!dd)return '';const gx=c.birth.sex==='male'?dd.男:dd.女;const uso=USO_TYPE[dp.ganzhi]?`／【嘘が通用しにくい日柱】${USO_TYPE[dp.ganzhi]}＝細かな違和感やつじつまの合わなさに気づきやすい鋭い洞察力（人を疑う意味ではなく、本質を見抜く力・観察眼として前向きに描く）`:'';return `日柱「${dp.ganzhi}」の詳しい人物像（性格の核・最重要。通変や十二運より、この人物像を土台に厚く描く）:一言=${dd.一言}／基本性格=${dd.基本}／恋愛傾向=${dd.恋愛}／仕事運=${dd.仕事}／${c.birth.sex==='male'?'男性':'女性'}の特徴=${gx}${uso}`;})(),
     (()=>{const bs=KANGO[dp.stem],bb=RIKUGO[dp.branch];if(!bs||!bb)return '';return `最も相性が良い日柱（天地徳合＝十干も十二支も最高の相性）:あなた(日柱${dp.ganzhi})は「${bs}${bb}」の日柱を持つ人と相性が最高。日干が干合(${dp.stem}と${bs})し、日支が支合(${dp.branch}と${bb})する、運命的に深く結ばれやすい組み合わせ（大吉）。基本は最高の相性。強いて言えば縁が濃いぶん少し依存に傾きやすい面（晦気＝かいき）だけ、ほどよい距離感を保てば安心`;})(),
     (()=>{const tg=tokugoNatalReading(c);if(!tg.length)return '';return '命式内の天地徳合（自分の二柱が干合かつ支合で強く結びつく＝大吉で基本は良い縁。縁が濃すぎるときだけ依存・負担に傾く面を「晦気＝かいき」と呼ぶが、軽い注意でよい）:'+tg.map(x=>`【${x.name}】${x.text}`).join(' ');})(),
@@ -6531,7 +6531,7 @@ function localAnswer(c,worry){
     const _wq=String(worry), isAff=/浮気|不倫/.test(_wq), isBreak=/離婚|別れ|復縁/.test(_wq), isCouple=/夫婦|夫|妻|旦那|奥さん|パートナー/.test(_wq)&&!/婚活|出会い|恋人ができ/.test(_wq), inRel=isAff||isBreak||isCouple;
     const spouse=spouseStars(c), role=spouseRole(c);
     let natalSp=0;
-    c.pillars.forEach(p=>{const s=p.label==='日柱'?'比肩':p.tenStar;if(spouse.includes(s))natalSp++;const h=(p.hiddenStems||[]).find(x=>x.role==='本気');if(h&&spouse.includes(h.tenStar))natalSp++;});
+    c.pillars.forEach(p=>{const s=p.label==='日柱'?'比肩':p.tenStar;if(spouse.includes(s))natalSp++;const h=repHidden(p);if(h&&spouse.includes(h.tenStar))natalSp++;});
     const nowAge=(c.now&&c.now.age)||0;
     const dus=(c.decadeFortunes||[]).filter(d=>(spouse.includes(d.tenStar)||spouse.includes(tenStarOf(ds,HONKI[d.branch])))&&(!nowAge||d.endAge>=nowAge)).map(d=>`${duAgeRange(d)}（${d.ganzhi}）`);
     const years=[];
@@ -6647,7 +6647,7 @@ function localAnswer(c,worry){
   else if(topic==='children'){
     const kids=c.birth.sex==='female'?['食神','傷官']:['正官','偏官'];   // 子どもを表す星（女性＝食傷／男性＝官星）
     let natalKids=0;
-    c.pillars.forEach(p=>{const sn=p.label==='日柱'?'比肩':p.tenStar;if(kids.includes(sn))natalKids++;const h=(p.hiddenStems||[]).find(x=>x.role==='本気');if(h&&kids.includes(h.tenStar))natalKids++;});
+    c.pillars.forEach(p=>{const sn=p.label==='日柱'?'比肩':p.tenStar;if(kids.includes(sn))natalKids++;const h=repHidden(p);if(h&&kids.includes(h.tenStar))natalKids++;});
     L.push('【お子さん・子宝のご縁】');
     L.push(`お子さんを表す星は**${kids.join('・')}**（あなたの性別から）。命式に${natalKids>0?`**${natalKids}か所**あり、お子さんとの縁は備わっています`:'表には出ていませんが、「無い＝授からない」ではなく、下の巡ってくる時期に縁が動きます'}。`);
     if(!c.timeUnknown){const tpx=c.pillars[3];L.push(`お子さん・晩年を表す**時柱は${tpx.ganzhi}（十二運：${tpx.terrain}）**。${TERR_DESC[tpx.terrain]?'（'+TERR_DESC[tpx.terrain]+'）':''}この星が育ちの勢いを表します。`);}
@@ -6850,10 +6850,10 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
     if(done[y]) continue;
     if(/^\u0003[（(][^）)]*\d(?:歳|才)/.test(a)||/^\u0003?[（(][^）)]*\d(?:歳|才)/.test(s.slice(m.index+m[0].length,m.index+m[0].length+26))){ done[y]=1; continue; }   // 家族などの年齢のかっこが付いている年には足さない
     if(/^[、・]?\d{1,3}(?:歳|才)|^(?:に|には|で)\d{1,3}(?:歳|才)/.test(a)||/\d{1,3}(?:歳|才)(?:になる|を迎える|となる|[（(])?$/.test(b)){ done[y]=1; continue; }   // 「2029年に21歳」のように文の中で年齢を言っているときは足さない（年齢は前の段で計算し直し済み）
-    if(skipAfter.test(a)||/[（(「『]$/.test(b)||/[0-9０-９]$/.test(b)) continue;
-    done[y]=1; marks.push({i:m.index+m[0].length,y:y}); }
+    var cl=/^[）)」』]/.test(a)||/[（(「『]$/.test(b); if((skipAfter.test(a)&&!/^[）)」』]/.test(a))||/[0-9０-９]$/.test(b)) continue;   // 「（2026年内・2027年）」のように、かっこを閉じる直前の年にも付ける（〔〕で）
+    done[y]=1; marks.push({i:m.index+m[0].length,y:y,cl:cl}); }
   var out=s, add=0;
-  marks.forEach(function(k){ var ins=lab(k.y); if(!ins) return; out=out.slice(0,k.i+add)+ins+out.slice(k.i+add); add+=ins.length; });
+  marks.forEach(function(k){ var ins=lab(k.y); if(!ins) return; if(k.cl) ins=ins.replace(/^[（(]/,'〔').replace(/[）)]$/,'〕'); out=out.slice(0,k.i+add)+ins+out.slice(k.i+add); add+=ins.length; });
   out=out.replace(/たまやすい/g,'たまりやすい').replace(/前展/g,'進展').replace(/(^|\n)([ 　]*)(?:結論から(?:お伝え|申し上げ|言う|お話し)(?:すると|しますと|ますと|ると)|結論としては)[、，]\s*/g,'$1$2');   // よくある書きまちがい・1行目の前置き
   out=out.replace(/【{2,}/g,'【').replace(/】{2,}/g,'】').replace(/^([ 　]*【[^】\n]{1,40})[ 　]*$/gm,'$1】').replace(/^[ 　]*】[ 　]*/gm,'');   // 見出しのかっこのくずれ（【【…】】・閉じ忘れ・行頭の】）をそろえる
   out=out.replace(/（([ぁ-ん]{1,6})財(?=[・：:）)])/g,'（$1ざい').replace(/（([ぁ-ん]{1,6})官(?=[・：:）)])/g,'（$1かん');   // 読みに漢字がまじる（せい財）を直す
@@ -6962,7 +6962,7 @@ function pkLifeGuide(q){ try{   // 暮らしに寄り添う答え方の決まり
     var _work=/(介護施設|老人ホーム|介護の仕事|介護職|ヘルパー|福祉施設)(?:で働|に勤め|に勤務|の仕事)|介護職/.test(_q)&&!/(親|母|父|祖母|祖父|家族|夫|妻)[^。\n]{0,8}介護/.test(_q);
     _q=_q, _hit=_nd.filter(function(x){ if(!x[0].test(_q)) return false; if(/医療機関/.test(x[1])&&(_pet||_other)) return false; if(/ケアマネ/.test(x[1])&&_work) return false; if(/SOSダイヤル/.test(x[1])&&/職場|会社|上司|同僚|部下|バイト|パート先|ママ友|ご近所|近所/.test(_q)&&!/学校|クラス|担任|子ども|子供|息子|娘|生徒/.test(_q)) return false; return true; }).map(function(x){ return x[1]; });   // ペット・ほかの人の体調・介護の仕事の話には、本人向けの相談先を入れない
     if(_pet) _hit.push('かかりつけの動物病院'); if(_hit.length) s+='・このご相談では、最後に「'+_hit.join('」「')+'」への相談を一言、必ず添える（ほかの相談先は書かない）。\n'; else s+='・このご相談には、医療機関・ケアマネジャー・地域包括支援センター・法テラスなどの相談先を書かない（相談の中身と関係のない相談先は入れない）。\n';
-        return s+'・言い切らない：「必ず」「確実に」「絶対に」「間違いなく」「十分に可能」「〜できます（と断定する言い方）」は使わない。「〜しやすい流れ」「〜の目安」のように書く。\n・相談先（医療機関・窓口・専門家）は、上で指定されたものだけを書く。指定がないのに相談先を足さない。\n・お金・収入・「稼げるか」の相談では、金額や「稼げます」「収入が上がります」と約束しない。努力の向け方と流れの目安として書く。\n・法律が関わること（認知・離婚の条件・親権・養育費・相続・裁判）は、法律の結論や「〜するのが賢明」と決めない。気持ちの整理と時期の目安を書き、手続きは弁護士に相談するよう添える。\n・家族の宗教・信仰の相談では、信仰そのものも相談者も責めない。相談者の気持ちに寄り添い、話し方と距離のとり方を書く。\n・不倫・浮気している相手との関係（不倫相手との結婚など）は、その関係を後押ししない。相談者自身が幸せになれる選び方を書く。\n・同性のパートナーの相談では「妻・夫・配偶者星（妻を表す星）」などと性別を決めつけず「パートナー」と書く。\n・亡くなった方の気持ちを事実のように言い切らない。相談者が書いていない事情（突然だった等）を足さない。\n・お腹の赤ちゃんの性別・病気が治るか・寿命・宝くじや株の当たりは、当てたり予想したりしない。\n・人生の大きな決断（仕事を辞める・独立・治療を続けるか・住まいを変える・離婚など）は、どちらか一方に押さない。選ぶときの目安と、いまから1年ほどの動き方を中心に書く。5年以上先まで決めるのを待たせない。健康・安全・高齢の暮らしに関わることは先送りをすすめない。治療の進め方（続ける・やめる・ペースを落とす）は指示せず、主治医と相談しながら決めるよう添える。\n・盗み・万引き・横領など、してしまったことの相談には、運勢（いつが良いか・バレるか・いつ言えば有利か）で答えず、隠さない・正直に話す・返す・法律の専門家（法テラスなど）に相談することを先に伝える。\n・大人が未成年（18歳未満）に恋愛として近づく相談（好きな子・告白・付き合う・相性・デートなど。相談文の生年月日や年齢から分かるときも）には、恋愛の進め方・告白の時期・相性・脈ありかを答えない。お相手を守るため、未成年のうちは恋愛として近づかない・気持ちを伝えない・2人きりで会わないことを、責めずにやさしく伝え、相談者ご自身の気持ちの整理や運気の話にとどめる（鑑定者本人の指示 2026-10-24）。\n・年代に合わせる：未成年には大人向けの話（投資・お酒・恋愛のかけひきなど）をせず、本人を責める言い方（調子に乗る・反省する・わがまま等）をしない。高齢の方には仕事の話ではなく、暮らし・健康・家族・楽しみ・生きがいの言葉で書く。\n・お客様のご家族は敬って呼ぶ（奥様・ご主人・お母さま・息子さんなど）。\n・死別や一人暮らしの相談では、お悔やみをていねいに述べ、ひとりでこもることはすすめない（無理のない範囲での人とのつながりをすすめる）。\n・同じ時期について「挑戦を」と「控えて」を同時に書かない。説明のカッコを二重にしない。見出しは1行で書き切り、途中で改行しない。'; }catch(e){ return ''; } }
+        return s+'・言い切らない：「必ず」「確実に」「絶対に」「間違いなく」「十分に可能」「〜できます（と断定する言い方）」は使わない。「〜しやすい流れ」「〜の目安」のように書く。\n・相談先（医療機関・窓口・専門家）は、上で指定されたものだけを書く。指定がないのに相談先を足さない。\n・お金・収入・「稼げるか」の相談では、金額や「稼げます」「収入が上がります」と約束しない。努力の向け方と流れの目安として書く。\n・法律が関わること（認知・離婚の条件・親権・養育費・相続・裁判）は、法律の結論や「〜するのが賢明」と決めない。気持ちの整理と時期の目安を書き、手続きは弁護士に相談するよう添える。\n・家族の宗教・信仰の相談では、信仰そのものも相談者も責めない。相談者の気持ちに寄り添い、話し方と距離のとり方を書く。\n・不倫・浮気している相手との関係（不倫相手との結婚など）は、その関係を後押ししない。相談者自身が幸せになれる選び方を書く。\n・同性のパートナーの相談では「妻・夫・配偶者星（妻を表す星）」などと性別を決めつけず「パートナー」と書く。\n・亡くなった方の気持ちを事実のように言い切らない。相談者が書いていない事情（突然だった等）を足さない。\n・お腹の赤ちゃんの性別・病気が治るか・寿命・宝くじや株の当たりは、当てたり予想したりしない。\n・人生の大きな決断（仕事を辞める・独立・治療を続けるか・住まいを変える・離婚など）は、どちらか一方に押さない。選ぶときの目安と、いまから1年ほどの動き方を中心に書く。5年以上先まで決めるのを待たせない。健康・安全・高齢の暮らしに関わることは先送りをすすめない。治療の進め方（続ける・やめる・ペースを落とす）は指示せず、主治医と相談しながら決めるよう添える。\n・蔵干は、ツールが示した司令（代表蔵干・命式表に出ている1つ）だけを書く。余気・中気・本気を並べたり、司令以外の蔵干の星を挙げたりしない（鑑定者本人の指示 2026-10-24）。\n・盗み・万引き・横領など、してしまったことの相談には、運勢（いつが良いか・バレるか・いつ言えば有利か）で答えず、隠さない・正直に話す・返す・法律の専門家（法テラスなど）に相談することを先に伝える。\n・大人が未成年（18歳未満）に恋愛として近づく相談（好きな子・告白・付き合う・相性・デートなど。相談文の生年月日や年齢から分かるときも）には、恋愛の進め方・告白の時期・相性・脈ありかを答えない。お相手を守るため、未成年のうちは恋愛として近づかない・気持ちを伝えない・2人きりで会わないことを、責めずにやさしく伝え、相談者ご自身の気持ちの整理や運気の話にとどめる（鑑定者本人の指示 2026-10-24）。\n・年代に合わせる：未成年には大人向けの話（投資・お酒・恋愛のかけひきなど）をせず、本人を責める言い方（調子に乗る・反省する・わがまま等）をしない。高齢の方には仕事の話ではなく、暮らし・健康・家族・楽しみ・生きがいの言葉で書く。\n・お客様のご家族は敬って呼ぶ（奥様・ご主人・お母さま・息子さんなど）。\n・死別や一人暮らしの相談では、お悔やみをていねいに述べ、ひとりでこもることはすすめない（無理のない範囲での人とのつながりをすすめる）。\n・同じ時期について「挑戦を」と「控えて」を同時に書かない。説明のカッコを二重にしない。見出しは1行で書き切り、途中で改行しない。'; }catch(e){ return ''; } }
 /* 端末の時計の確かめ：文章作成のサーバーの返事に付く正しい日時と、端末の日付を比べる。1日半以上ずれていたら知らせる
    （今日の日付は端末の時計から取るので、ずれていると年齢・今年・来年が全部ずれる。発注者指示 2026-10-22） */
 function pkClockCheck(res){ try{
@@ -7971,7 +7971,7 @@ function checkPoints(c,love){ const C=[], G=[]; try{
   const now={}; (tl.nowDom||[]).forEach(function(x){ now[x.star]=x.n; });
   const as=(typeof _kkAssess==='function')?_kkAssess(c).assess:null;
   const elOf=function(st){ const S='甲乙丙丁戊己庚辛壬癸'; for(let i=0;i<10;i++){ if(tenStarOf(ds,S[i])===st) return STEM_EL[S[i]]; } return ''; };
-  const dp=c.pillars[2], dayStars=[]; (dp.hiddenStems||[]).forEach(function(h){ dayStars.push(h.tenStar||tenStarOf(ds,h.stem)); });
+  const dp=c.pillars[2], dayStars=[]; { const h=repHidden(dp); if(h&&h.stem) dayStars.push(h.tenStar||tenStarOf(ds,h.stem)); }   // 蔵干は司令だけ（2026-10-24）
   let gen=''; try{ const r=repHidden(c.pillars[1]); gen=r&&r.tenStar||''; }catch(e){}
   Object.keys(CHECK_TS).forEach(function(st){ const n=nat[st]||0; if(!n) return;
     const many=n>=3||!!now[st], ki=as?as(elOf(st)).fav==='忌':false, pri=(dayStars.indexOf(st)>=0?2:0)+(gen===st?2:0)+(many?2:0)+(ki?1:0);
