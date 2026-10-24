@@ -37,12 +37,12 @@ ok('相性の鑑定文が出る', t.length>600, t.length+'字');
 if(SAME){ const all=await p.evaluate(()=>(document.getElementById('compat')||{}).innerText||''); const w=[...all.matchAll(/[^。\n]{0,20}(異性|夫の星|妻の星|夫星|彼氏|彼女|男役|女役)[^。\n]{0,20}/g)].map(m=>m[0]); ok('同性カップル：男女を前提にした言い方がない（画面全体）', w.length===0, w.slice(0,3).join(' / ')); }
 const G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', gz=y=>G[(y-4)%10]+Z[(y-4)%12];
 const bad=[];
-for(const m of t.matchAll(/(20\d\d)年（([^）]*)）/g)){ const y=+m[1], c=m[2]; const g=c.match(new RegExp('['+G+']['+Z+']')); if(g&&g[0]!==gz(y)) bad.push(m[0]); for(const a of c.matchAll(/(\d+)歳/g)) if(![y-A,y-B].includes(+a[1])) bad.push(m[0]); }
+for(const m of t.matchAll(/(20\d\d)年[（〔]([^）〕]*)[）〕]/g)){ const y=+m[1], c=m[2]; const g=c.match(new RegExp('['+G+']['+Z+']')); if(g&&g[0]!==gz(y)) bad.push(m[0]); for(const a of c.matchAll(/(\d+)歳/g)) if(![y-A,y-B].includes(+a[1])) bad.push(m[0]); }
 ok('年の干支と2人の年齢が正しい', bad.length===0, bad.slice(0,3).join(' / '));
-const lone=[]; for(const m of t.matchAll(/(\d{1,3})歳/g)){ const ctx2=t.slice(Math.max(0,m.index-40),m.index); if(!/20\d\d年（[^）]*$/.test(ctx2)) lone.push(t.slice(Math.max(0,m.index-12),m.index+6)); }
+const lone=[]; for(const m of t.matchAll(/(\d{1,3})歳/g)){ const ctx2=t.slice(Math.max(0,m.index-40),m.index); if(!/20\d\d年[（〔][^）〕]*$/.test(ctx2)) lone.push(t.slice(Math.max(0,m.index-12),m.index+6)); }
 ok('年のついていない年齢がない', lone.length===0, lone.slice(0,3).join(' / '));
-const ys=[...new Set([...t.matchAll(/(20\d\d)年(?![0-9]|\d{1,2}月|度|代|生|[）)」』])/g)].filter(m=>!/[（(「『0-9〜~]$/.test(t.slice(Math.max(0,m.index-1),m.index))).map(m=>m[1]))], un=ys.filter(y=>!new RegExp(y+'年[*＊]*（').test(t));
-ok('どの西暦にもツールの干支・年齢が付いている', un.length===0, un.join('・'));
+const ys=[...new Set([...t.matchAll(/(20\d\d)年(?![0-9]|\d{1,2}月|度|代|生|[）)」』])/g)].filter(m=>!/[（(「『0-9〜~]$/.test(t.slice(Math.max(0,m.index-1),m.index))).map(m=>m[1]))], un=ys.filter(y=>!new RegExp(y+'年[*＊]*[（〔]').test(t));
+ok('どの西暦にもツールの干支・年齢が付いている', un.length===0, un.map(y=>{ const i=t.indexOf(y+'年'); return y+'＝'+t.slice(Math.max(0,i-20),i+14).replace(/\n/g,'⏎'); }).join(' / '));
 const dup=[...t.matchAll(/([一-龥]{1,8})（\1（/g)].map(m=>m[0]); ok('言葉の二重がっこがない', dup.length===0, dup.join(' '));
 { const re=/(二人|2人|お二人|お互い)の配偶宮(?![^。\n]{0,12}(同士|どうし|の間|の組み合わせ|を比べ|どちらも|が害|には害|は害|が支合|が冲|には冲|が刑|が破))/; ok('配偶宮の持ち主をまちがえない（揺れやすい年は本人の配偶宮）', !re.test(t), (t.match(/.{0,10}(二人|2人|お二人|お互い)の配偶宮.{0,15}/)||[''])[0]); }
 ok('相手から見た星（傷官）が本人の星を生むと書かない', !/傷官[^。]{0,40}(育て|生か|生み|生じ)/.test(t), (t.match(/傷官[^。]{0,40}(育て|生か|生み|生じ)/)||[''])[0]);
