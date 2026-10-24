@@ -7551,6 +7551,8 @@ function compatAnalysis(a,b,rt){
     if(R.length) L.push('【律音（りっちん）＝縁が深い良い点・鑑定文の「惹かれ合うところ」で必ず最初に触れる】'+R.join('／')); }
   { const love=!!(rt&&rt.useSpouse!==false), X=[]; [[a,b,'本人','お相手'],[b,a,'お相手','本人']].forEach(function(q){ crossStars(q[0],q[1],love).forEach(function(c){ X.push(q[2]+'から見て、'+q[3]+'の'+c.at.map(function(z){ return z.label+'「'+z.gz+'」'; }).join('・')+'が'+q[2]+'の'+c.star+'に当たる＝'+q[2]+'にとって'+q[3]+'は'+c.mean); }); });
     if(X.length) L.push('【惹かれ合う星＝相手の命式に自分の吉凶星がある（鑑定文の「惹かれ合うところ」で必ず書く。どちらから見た星かを取りちがえない）】'+X.join('／'));
+    try{ const CM=compatMonths(a,b), bothM=CM.filter(function(x){ return x.A.g.length&&x.B.g.length; }), warnM=CM.filter(function(x){ return x.A.w.length||x.B.w.length; });
+      L.push('【2人の縁が動く月（これから12ヶ月・ツールの判定。時期を答えるときはこの月を使う）】2人とも縁が動く月：'+(bothM.length?bothM.map(function(x){ return x.y+'年'+x.m+'月ごろ（'+x.gz+'の月）＝本人：'+x.A.g.join('・')+'／お相手：'+x.B.g.join('・'); }).join('／'):'なし')+'。注意の月：'+(warnM.length?warnM.map(function(x){ return x.y+'年'+x.m+'月ごろ（'+x.gz+'の月）'+(x.A.w.length?'＝本人の配偶宮と'+x.A.w.join('・'):'')+(x.B.w.length?'＝お相手の配偶宮と'+x.B.w.join('・'):''); }).join('／'):'なし')); }catch(e){}
     try{ const cb=checkPoints(b,love), ca=checkPoints(a,love); L.push('【お相手を知るためのチェックポイント（ツールの判定。「どうすればよいか」に活かす。悪い人と決めつけない）】お相手で確かめること：'+cb.check.map(function(x){ return x.pro; }).join('／')+'。本人がお相手から見られやすいところ：'+ca.check.map(function(x){ return x.pro; }).join('／')); }catch(e){}
     if(love){ const ad=attractionDir(a,b,'本人','お相手'); if(ad) L.push('【惹かれ方の向き＝ツールの判定・厳守（鑑定文の「惹かれ合うところ」で必ず書く。「お互いに惹かれ合う」と書くのは、2人とも恋愛の星があるときだけ）】'+ad.pro); } }
   L.push(`【2人の基本の事実＝この通りに書く】本人の日干=${aS}（${STEM_EL[aS]}）・日支（配偶宮）=${aB}／お相手の日干=${bS}（${STEM_EL[bS]}）・日支（配偶宮）=${bB}。十二支（子・丑・寅…）と十二運（長生・病など）を取りちがえない。`);
@@ -7965,6 +7967,36 @@ function compatCheckHTML(a,b){ try{ const love=pkRelLove(); const B=checkPoints(
   ${blk(B,'お相手のこと（本人が確かめる）','お相手のこと（あなたが見ておくとよいこと）')}
   ${blk(A,'本人のこと（お相手から見えやすいところ）','あなたのこと（お相手から見えやすいところ）')}
   </section>`; }catch(e){ return ''; } }
+/* ===== 2人の縁が動く月（これから12ヶ月）＝鑑定者本人の指示 2026-10-24。1人の「縁が動く月」（loveFourLines）と同じ決まりを2人分重ねる =====
+   パートナーの星・咸池・紅艶（恋人・夫婦・婚活のときだけ）・天乙貴人が巡る／配偶宮と支合・三合（命式の支と3つそろう）・半合（子午卯酉を含む2支）＝縁が動く。
+   配偶宮と冲・刑＝注意。お相手のパートナーの星は性別で決める（恋愛で見るお相手の設定は本人だけに使う） */
+function _cmCues(c,ev,sp,love){ const g=[], gp=[], w=[]; const db=c.pillars[2].branch, CENx={子:1,午:1,卯:1,酉:1}, nb=c.pillars.map(function(p){ return p&&p.branch; }), PLB=['年支','月支','日支','時支'];
+  if(love&&sp.indexOf(ev.star)>=0){ g.push('パートナーの星（'+ev.star+'）'); gp.push('パートナーの星が巡る'); }
+  else if(love&&sp.indexOf(ev.bStar)>=0){ g.push('月の十二支にパートナーの星（'+ev.bStar+'）'); gp.push('パートナーの星が巡る'); }
+  (ev.stars||[]).forEach(function(k){ if((love&&(k==='咸池'||k==='紅艶'))||k==='天乙貴人'){ g.push(k); gp.push(k==='天乙貴人'?'助けが入る':'魅力が高まる'); } });
+  const sg=SANGO.find(function(t){ const t3=t.slice(0,3); return ev.branch!==db&&t3.indexOf(ev.branch)>=0&&t3.indexOf(db)>=0; }), th=sg?sg.slice(0,3).find(function(x){ return x!==ev.branch&&x!==db; }):null, ti=th?nb.indexOf(th):-1;
+  if(RIKUGO[ev.branch]===db){ g.push('配偶宮「'+db+'」と支合'); gp.push('距離が縮まりやすい'); }
+  else if(sg&&ti>=0){ g.push('配偶宮「'+db+'」と'+PLB[ti]+'「'+th+'」で三合'); gp.push('縁が強く結びつきやすい'); }
+  else if(sg&&(CENx[ev.branch]||CENx[db])){ g.push('配偶宮「'+db+'」と半合'); gp.push('縁が結びつきやすい'); }
+  if(isChong(ev.branch,db)) w.push('冲'); if((ev.branch!==db&&(isKei2(ev.branch,db)||isKei3(ev.branch,db)))||(ev.branch===db&&JIKEI.has(db))) w.push('刑');
+  return {g:g,gp:gp.filter(function(x,i,a){ return a.indexOf(x)===i; }),w:w}; }
+function compatMonths(a,b){ try{ const love=pkRelLove(); const ml=monthFortuneList(a,12), spA=spouseStars(a), spB=(b.birth&&b.birth.sex==='female')?['正官','偏官']:['正財','偏財'];
+  return ml.map(function(evA){ if(!evA||!evA.calYear) return null; const evB=kingunEval(b,{ganzhi:evA.ganzhi,stem:evA.stem,branch:evA.branch});
+    return {y:evA.calYear,m:evA.calMonth,gz:evA.ganzhi,A:_cmCues(a,evA,spA,love),B:_cmCues(b,evB,spB,love)}; }).filter(Boolean); }catch(e){ return []; } }
+function compatMonthsHTML(a,b){ try{ const L=compatMonths(a,b); if(!L.length) return '';
+  const both=L.filter(function(x){ return x.A.g.length&&x.B.g.length; }), one=L.filter(function(x){ return (x.A.g.length?1:0)+(x.B.g.length?1:0)===1; }), warn=L.filter(function(x){ return x.A.w.length||x.B.w.length; });
+  const lab=function(x,plain){ return x.y+'年'+x.m+'月ごろ'+(plain?'':'（'+_kdE(x.gz)+'の月）'); };
+  const why=function(x,plain){ const o=[]; if(x.A.g.length) o.push((plain?'あなた：'+x.A.gp.join('・'):'本人：'+x.A.g.join('・'))); if(x.B.g.length) o.push((plain?'お相手：'+x.B.gp.join('・'):'お相手：'+x.B.g.join('・'))); return o.join('／'); };
+  const ww=function(x,plain){ const o=[]; if(x.A.w.length) o.push(plain?'あなたの気持ちが揺れやすい':'本人の配偶宮と'+x.A.w.join('・')); if(x.B.w.length) o.push(plain?'お相手の気持ちが揺れやすい':'お相手の配偶宮と'+x.B.w.join('・')); return o.join('／'); };
+  const mk=function(plain){ const li=function(arr,f){ return arr.length?'<ul class="kd-l">'+arr.map(function(x){ return '<li><b>'+lab(x,plain)+'</b>　'+_kdE(f(x,plain))+((f===why&&(x.A.w.length||x.B.w.length))?'<span style="color:#9A1F17">（'+(plain?'気持ちが揺れやすい月でもある':'注意も重なる')+'）</span>':'')+'</li>'; }).join('')+'</ul>':'<div style="font-size:13.5px;margin:2px 0 0 4px">なし</div>'; };
+    return '<div class="'+(plain?'kd-plain':'kd-pro')+'">'+
+      '<div style="margin-top:8px;font-weight:900;color:#1F6B3A">'+(plain?'2人とも縁が動く月':'2人とも縁が動く月')+'</div>'+li(both,why)+
+      '<div style="margin-top:8px;font-weight:900;color:#3C5A8A">'+(plain?'どちらか1人の縁が動く月':'片方だけ縁が動く月')+'</div>'+li(one,why)+
+      '<div style="margin-top:8px;font-weight:900;color:#9A1F17">'+(plain?'気持ちが揺れやすく、大事な話は避けたい月':'注意の月（どちらかの配偶宮が冲・刑）')+'</div>'+li(warn,ww)+
+      '<div style="font-size:12px;color:var(--muted);margin-top:6px">'+(plain?'※目安です。連絡や話し合いのタイミングの参考にしてください。':'※月運（節入りで区切る月）で判定。パートナーの星・咸池・紅艶・天乙貴人、配偶宮との支合・三合・半合＝縁が動く／冲・刑＝注意。目安であり断定ではありません。')+'</div></div>'; };
+  return `<section class="card sec" id="cm-sec" style="border:1.5px solid #C9D9C2">
+  <style>.kd-plain{display:none}html.bg-on .kd-plain{display:block}html.bg-on .kd-pro{display:none}.kd-l{margin:4px 0 0;padding-left:1.2em;font-size:13.5px;line-height:1.8}</style>
+  <div style="font-weight:900;font-size:15px">🗓 2人の縁が動く月（これから12ヶ月）</div>${mk(false)}${mk(true)}</section>`; }catch(e){ return ''; } }
 function compatVerdictHTML(a,b,rt){
   if(typeof ganzhiCompat!=='function')return '';
   const gc=ganzhiCompat(a.pillars[2].ganzhi,b.pillars[2].ganzhi);
@@ -8131,7 +8163,7 @@ function buildCompatBase(out){
   if(document.getElementById('b-notime')&&document.getElementById('b-notime').checked)markTimeUnknown(chartB);
   const na=personName||'本人', nb=personNameB||'お相手';
   const rt=RELTYPES[document.getElementById('rel-type')?.value||'love']||RELTYPES.love;
-  try{var _cv=document.getElementById('compat-verdict'); if(_cv){ let _h=compatVerdictHTML(chart,chartB,rt)+compatTimingHTML(chart,chartB,rt)+compatDaysHTML(chart,chartB,(typeof personName!=='undefined'&&personName)||'本人',(typeof personNameB!=='undefined'&&personNameB)||'お相手')+compatCheckHTML(chart,chartB);   /* 2人の日運を並べて見る（発注者指示 2026-10-23） */ if(!rt.useSpouse)_h=_h.replace(/配偶者宮|配偶宮/g,'関係の土台').replace(/配偶者星/g,'縁の星'); _cv.innerHTML=_h; try{ pkReadable(_cv); }catch(_e2){} }}catch(_e){}   // 家族・友人・仕事の相性では「配偶宮」などの夫婦向けの言葉を使わない
+  try{var _cv=document.getElementById('compat-verdict'); if(_cv){ let _h=compatVerdictHTML(chart,chartB,rt)+compatTimingHTML(chart,chartB,rt)+compatDaysHTML(chart,chartB,(typeof personName!=='undefined'&&personName)||'本人',(typeof personNameB!=='undefined'&&personNameB)||'お相手')+compatMonthsHTML(chart,chartB)+compatCheckHTML(chart,chartB);   /* 2人の日運を並べて見る（発注者指示 2026-10-23） */ if(!rt.useSpouse)_h=_h.replace(/配偶者宮|配偶宮/g,'関係の土台').replace(/配偶者星/g,'縁の星'); _cv.innerHTML=_h; try{ pkReadable(_cv); }catch(_e2){} }}catch(_e){}   // 家族・友人・仕事の相性では「配偶宮」などの夫婦向けの言葉を使わない
   try{var _cm=document.getElementById('compat-meishi'); if(_cm)_cm.innerHTML=compatMeishiHTML(chart,chartB,na,nb);}catch(_e){}
   const head=`【本人A】${na}（${chart.birth.sex==='male'?'男性':'女性'}）: ${compatBrief(chart)}\n【お相手B】${nb}（${sexB==='male'?'男性':'女性'}）: ${compatBrief(chartB)}\n\n【2人の関係】${rt.label}\n\n【2人の関係の自動分析（計算済み）】\n${compatAnalysis(chart,chartB,rt)}`;
   return {na,nb,rt,head};

@@ -162,6 +162,13 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   console.log('  '+(okY?'OK':'NG')+' 恋愛相談：縁が動く年（これから3年）'); if(!okY) res.fails.push('縁が動く年'); }
 { const r=await p.evaluate(()=>typeof plainGloss==='function'?plainGloss('惹かれ方は合・律音などで見る'):''); const ok8=/律音（＝干支がまったく同じ組み合わせ）/.test(r)&&!/変化の分岐点/.test(r);
   console.log('  '+(ok8?'OK':'NG')+' 律音の言葉の説明（相性で「変化の分岐点」と出さない）'); if(!ok8) res.fails.push('律音の説明'); }
+// 2人の縁が動く月（彼女2008-02-10 10時×彼2008-03-02 時刻不明）：2026年12月＝彼女 半合・彼 支合／2027年7月＝彼の配偶宮 冲・刑
+{ const r=await p.evaluate(()=>{ if(typeof compatMonths!=='function') return []; const her=baziCompute({year:2008,month:2,day:10,hour:10,minute:0,sex:'female',tu:false},0,'none'); const him=markTimeUnknown(baziCompute({year:2008,month:3,day:2,hour:12,minute:0,sex:'male',tu:true},0,'none')); return compatMonths(her,him).map(x=>x.y+'-'+x.m+'|'+x.A.g.join('・')+'|'+x.B.g.join('・')+'|'+x.A.w.join('')+'|'+x.B.w.join('')); });
+  const f=k=>r.find(x=>x.startsWith(k+'|'))||''; const e=[];
+  if(!/配偶宮「辰」と半合\|配偶宮「丑」と支合/.test(f('2026-12'))) e.push('2026年12月');
+  if(!/\|\|冲刑$/.test(f('2027-7'))&&!/\|冲刑$/.test(f('2027-7'))) e.push('2027年7月の注意');
+  if(!/咸池・配偶宮「辰」と支合\|咸池・紅艶・配偶宮「丑」と半合/.test(f('2027-9'))) e.push('2027年9月');
+  console.log('  '+(e.length?'NG':'OK')+' 相性：2人の縁が動く月'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('2人の縁が動く月: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
