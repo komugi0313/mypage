@@ -225,6 +225,12 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   if(!cut(src)||cut(src)!==cut(mine)) e.push('易と同じ中身になっていない');
   if(!/if\(k==='minor'\)/.test(src)||!/pkMinorLoveQ\(q,ekiSelfAge\(\)\)/.test(src)) e.push('易で止めていない');
   console.log('  '+(e.length?'NG':'OK')+' 大人×未成年の恋愛は鑑定しない（相性・相談文・易）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('未成年: '+e.join('・')); }
+// 「盗んでしまった」など、してしまったことの相談は運勢で判断しない（鑑定者本人の指示 2026-10-24）。PROと易で同じ中身
+{ const r=await p.evaluate(()=>typeof pkConfessQ!=='function'?null:[dangerKind('アルバイト先で窃盗してしまった　どうしたらいいか'),dangerKind('万引きしてしまいました'),dangerKind('財布を盗まれました。犯人は見つかりますか'),dangerKind('会社でお金を横領された')]);
+  const e=[]; if(!r) e.push('仕組みがない'); else { if(r[0]!=='confess'||r[1]!=='confess') e.push('してしまった相談を止めていない'); if(r[2]||r[3]) e.push('被害の相談を止めた'); }
+  const src=fs.readFileSync(path.join(ROOT,'eki-pro/app/index.html'),'utf8'), mine=fs.readFileSync(path.join(ROOT,dir,page0),'utf8'), cut=t=>{ const a=t.indexOf('var PK_CONFESS_MSG='), b=t.indexOf('}catch(e){ return false; } }',a); return a<0||b<0?null:t.slice(a,b); };
+  if(!cut(src)||cut(src)!==cut(mine)) e.push('易と同じ中身になっていない'); if(!/pkConfessQ\(q\)\) return \{block:'confess'\}/.test(src)) e.push('易で止めていない');
+  console.log('  '+(e.length?'NG':'OK')+' してしまったことの相談は運勢で判断しない（PRO・ビギナー・易）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('してしまった相談: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
