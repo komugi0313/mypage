@@ -2192,7 +2192,7 @@ const App=(function(){
   function pkFixTel(t){ t=String(t==null?'':t); const D={'〇':'0','零':'0','一':'1','二':'2','三':'3','四':'4','五':'5','六':'6','七':'7','八':'8','九':'9'};
     t=t.replace(/(?:ゼロ|〇|零)(?:ゼロ|[〇零一二三四五六七八九]|[のー−‐](?=ゼロ|[〇零一二三四五六七八九])){5,}/g,function(m){ const x=m.replace(/ゼロ/g,'0').replace(/[〇零一二三四五六七八九]/g,function(c){ return D[c]; }).replace(/[のー−‐]/g,'-'); return x.replace(/-/g,'').length>=6?x:m; });
     return t.replace(/二十四時間(子供|子ども|こども)?(エスオーエス|ＳＯＳ)/g,function(m,a){ return '24時間'+(a||'')+'SOS'; }).replace(/エスオーエス(ダイヤル|ダイアル)/g,'SOS$1'); }
-  function noAIWord(t){ const _by=parseInt(((document.getElementById('fuBd')||{}).value||'').slice(0,4),10)||0; const _x=ekiStarGuard(pkFactFix(pkStampYears(pkFixAge(pkFixTel(_noAIWord1(t)),_by),_by,0,true))); /* 十干の陰陽・五行／星の説明の取りちがえ（PROと同じ直し） */ return (typeof LANG!=='undefined'&&LANG==='ko')?_x:pkFixHangul(_x); }   // 日本語の文に混じったハングル（「終つい에는吉」など）を直す。韓国語で表示しているときだけは直さない
+  function noAIWord(t){ const _by=parseInt(((document.getElementById('fuBd')||{}).value||'').slice(0,4),10)||0; const _x=ekiSameSexWord(ekiStarGuard(pkFactFix(pkStampYears(pkFixAge(pkFixTel(_noAIWord1(t)),_by),_by,0,true)))); /* 十干の陰陽・五行／星の説明の取りちがえ（PROと同じ直し） */ return (typeof LANG!=='undefined'&&LANG==='ko')?_x:pkFixHangul(_x); }   // 日本語の文に混じったハングル（「終つい에는吉」など）を直す。韓国語で表示しているときだけは直さない
   /* PROと同じ直し（pro/app-pro.html の pkFactFix をそのまま写す。直すときは3か所そろえる） */
 function pkFactFix(t,aS,bS){ try{ t=String(t==null?'':t);   // 命式の事実（日干の五行・十干の五行・十二支と十二運の取りちがえ）を、計算どおりに直す（発注者指示 2026-10-22「普通のことをまちがえない」）
   var EL={甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'金',辛:'金',壬:'水',癸:'水'};
@@ -2232,8 +2232,12 @@ function ekiStarGuard(t){ try{ t=String(t==null?'':t);
   var KS=/天乙貴人|天徳貴人|月徳貴人|天徳合|月徳合|咸池|紅艶|駅馬|華蓋|文昌貴人|福星貴人|大極貴人|羊刃|飛刃|日刃|劫殺|亡神|血刃|囚獄|暗禄|金与禄|天厨貴人|天官貴人|魁罡|禄馬貴人|隔角|桃花/;
   var TS=/比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬/;
   return t.split('\n').map(function(ln){ if(/^\s*【[^】]*】\s*$/.test(ln)) return ln; var ps=ln.split(/(?<=[。！？])/);
-    var kept=ps.filter(function(sn){ if(KS.test(sn)) return false; if(/パートナーの星|配偶者星/.test(sn)&&/喜神|忌神/.test(sn)) return false; /* 易は命式のパートナーの星・喜神を計算していない＝根拠のない話 */ if(TS.test(sn)&&/(?:^|[^0-9０-９])(?:1[0-2]|[1-9])月/.test(sn)&&!/年/.test(sn)) return false; return true; });
+    var kept=ps.filter(function(sn){ if(KS.test(sn)) return false; if(/パートナーの星|配偶者星/.test(sn)&&/喜神|忌神/.test(sn)) return false; /* 易は命式のパートナーの星・喜神を計算していない＝根拠のない話 */ if(TS.test(sn)&&/(?:^|[^0-9０-９])(?:1[0-2]|[1-9])月/.test(sn)&&!/年/.test(sn)) return false; if(/お相手|相手の|相手は|相手が|2人の|二人の|ふたりの/.test(sn)&&(TS.test(sn)||/喜神|忌神|年柱|月柱|日柱|時柱/.test(sn))) return false; /* 易はお相手の命式を計算していない＝お相手の星の役割・喜神忌神・柱どうしの話は根拠がない（PROの「2人の役割と場面」と同じ目的の直し 2026-10-24） */ return true; });
     if(kept.length===ps.length) return ln; if(!kept.length) return null; return kept.join(''); }).filter(function(x){ return x!==null; }).join('\n'); }catch(e){ return t; } }
+/* 同性カップル（鑑定者本人の指示 2026-10-24）：易は性別を入力しないので、相談文から同性とわかるときだけ、男女を前提にした言い方を直す（PROの pkSameSexWord と同じ直し） */
+function ekiSameSexWord(t,q){ try{ if(q==null){ q=''; try{ ['question','fuText'].forEach(function(id){ var el=document.getElementById(id); if(el&&el.value) q+=el.value; }); }catch(e){} }
+  if(!/同性|女性同士|男性同士|女同士|男同士|彼女同士|彼氏同士|ゲイ|レズビアン|LGBT/i.test(String(q))) return t;
+  return String(t).replace(/[（(](?:男性|女性)から見ると[^）)]*[）)]/g,'').replace(/ほかの異性/g,'ほかの人').replace(/年上の異性/g,'年上の人').replace(/異性として/g,'恋愛の相手として').replace(/異性(?:の)?縁/g,'恋愛の縁').replace(/異性との/g,'恋愛での人との').replace(/異性から/g,'人から').replace(/異性を/g,'人を').replace(/異性/g,'恋愛の相手').replace(/夫星/g,'パートナーの星').replace(/(?:夫|妻)の星/g,'パートナーの星').replace(/配偶者星/g,'パートナーの星'); }catch(e){ return t; } }
 function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; other=+other||0;   // 西暦のあとに、ツールが計算した干支と年齢を付ける（文章作成の書いた干支・年齢のかっこは外して付け直す。発注者指示 2026-10-22「普通のことをまちがえない」）
   if(typeof document!=='undefined'&&document.documentElement&&document.documentElement.classList.contains('bg-on')) noGz=true;   // ビギナーのやさしい表示では干支を出さない
   var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', GZ='[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]', gzOf=function(y){ var i=((y-4)%60+60)%60; return G.charAt(i%10)+Z.charAt(i%12); };
@@ -3498,7 +3502,7 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
 ・「具体的なアドバイス」は行頭「・」の箇条書きで3〜5個。そのほかの章は2〜4文の段落を1〜2つ。
 ・全体で1200〜1800字。語り口：${tone}。お客様に語りかける、あたたかく具体的な文章。
 ・答えの記号（${rankToVerdict(r.rank).sym}など）と、上に書いた材料に忠実に。材料にない年月日や出来事を作らない。本文には記号（◎・〇・△・✖）を書かず、「とても良い流れ」「前向きに進めてよい流れ」「慎重に進めたい流れ」「今は控えたほうがよい流れ」のような言葉で書く。
-・相談者の性別や続柄、相談に書かれていない家族の関係（お母さま・お父さま・奥様など）を決めつけない。相談者は「ご相談者さま」と呼ぶ（お名前があればお名前で）。相談文に書かれた続柄だけを使う。亡くなり方・病名・出来事など、相談に書かれていない事情を作らない。
+・相談者の性別や続柄、相談に書かれていない家族の関係（お母さま・お父さま・奥様など）を決めつけない。同性のカップル（女性同士・男性同士）の相談もある。相談文から同性とわかるときは、男女を前提にした言葉（異性・夫・妻・彼氏・彼女・男役・女役）を使わず「お相手」「パートナー」と書き、同性であることを問題や注意点として書かない。お相手の性別が書かれていないときは、性別を決めつけない。相談者は「ご相談者さま」と呼ぶ（お名前があればお名前で）。相談文に書かれた続柄だけを使う。亡くなり方・病名・出来事など、相談に書かれていない事情を作らない。
 ・各段落は2〜3文ごとに改行して分ける。電話番号は半角数字で書く。
 ・鑑定士向けの情報（要点・裏卦・判定の根拠の説明）は書かない。
 ・【最重要】専門用語は一切使わない：卦の名前・読み・「第◯卦」・爻・卦辞・爻辞・上卦／下卦・互卦・綜卦・錯卦・之卦・陰陽・漢文の引用、四柱推命の言葉（命式・五行・干支・日主・通変星・十二運など）も書かない。言いかえをカッコで添えることもしない。今の暮らしの言葉・身近なたとえで書く。

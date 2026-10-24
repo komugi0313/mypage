@@ -124,7 +124,11 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
 // 易：根拠のない星の話（吉凶星・月の星）を外す直し＝PROの柱・月・年の星の事実あわせと同じ目的
 { const src=fs.readFileSync(path.join(ROOT,'eki-pro/app/index.html'),'utf8'); const a=src.indexOf('function ekiStarGuard('); let r='';
   if(a>=0){ const body=src.slice(a,src.indexOf('}catch(e){ return t; } }',a)+'}catch(e){ return t; } }'.length); r=Function(body+'; return ekiStarGuard;')()('来年は良い年です。月柱に華蓋があります。11月は正官が巡ります。パートナーの星はあなたの喜神です。2027年は変化の年です。'); }
-  const ok5=r==='来年は良い年です。2027年は変化の年です。'; console.log('  '+(ok5?'OK':'NG')+' 易：根拠のない星の話を外す（PROの星の事実あわせと同時に）'); if(!ok5) res.fails.push('易の星の直し'); }
+  const ok5=r==='来年は良い年です。2027年は変化の年です。';
+  { const g=Function(src.slice(a,src.indexOf('}catch(e){ return t; } }',a)+'}catch(e){ return t; } }'.length)+'; return ekiStarGuard;')(); const r2=g('2人は良い縁です。お相手はあなたから見て傷官です。お相手の土はあなたの忌神です。話し合いを大切に。');
+    const b2=src.indexOf('function ekiSameSexWord('), ss=Function(src.slice(b2,src.indexOf('}catch(e){ return t; } }',b2)+'}catch(e){ return t; } }'.length)+'; return ekiSameSexWord;')();
+    const ok6=r2==='2人は良い縁です。話し合いを大切に。'&&ss('異性として惹かれます','女性同士のカップルです')==='恋愛の相手として惹かれます'&&ss('異性として惹かれます','彼と私')==='異性として惹かれます';
+    console.log('  '+(ok6?'OK':'NG')+' 易：お相手の星・喜神忌神の根拠のない話を外す／同性の相談で男女前提の言い方をしない'); if(!ok6) res.fails.push('易の同性・お相手の星'); } console.log('  '+(ok5?'OK':'NG')+' 易：根拠のない星の話を外す（PROの星の事実あわせと同時に）'); if(!ok5) res.fails.push('易の星の直し'); }
 { const r=await p.evaluate(()=>{ if(typeof pkFactFix!=='function'||typeof pkYearKichiFix!=='function') return ['','']; const c=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},0,'none'));
     return [pkFactFix('日干が丁（火の陰・ひのえ）で、日支に卯'), pkYearKichiFix('2027年は紅艶（魅力の星）が巡り、2028年は駅馬（移動の星）が重なります。',c)]; });
   const e=[]; if(!/丁（火の陰・ひのと）/.test(r[0])) e.push('丁の読み'); if(/が巡るのは/.test(r[1])) e.push('正しく書けた年の星に書き添えている');
@@ -184,6 +188,20 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(!/【2人の役割と場面＝ツールの判定/.test(r.an)) e.push('鑑定文への渡し');
     if(!/【2人の役割と(場面|、一緒にいるとき)/.test(r.ens)) e.push('書き足し');   /* ビギナーのやさしい画面は【2人の役割と、一緒にいるとき】 */ }
   console.log('  '+(e.length?'NG':'OK')+' 相性：2人の役割と場面（役割・親子・調子・文昌貴人と駅馬・柱どうしの場面）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('2人の役割と場面: '+e.join('・')); }
+// 同性カップル（鑑定者本人の指示 2026-10-24）：女性同士 1990-03-03×1990-02-02＝パートナーの星はお相手の性別（女性＝財星）・「異性」と書かない／男女は今までどおり
+{ const r=await p.evaluate(()=>{ if(typeof pkSameSexWord!=='function') return null; const mk=(y,m,d,sex)=>markTimeUnknown(baziCompute({year:y,month:m,day:d,hour:12,minute:0,sex,tu:true},0,'none'));
+    const A=mk(1990,3,3,'female'), B=mk(1990,2,2,'female'), M=mk(1990,3,3,'male'), F=mk(1981,6,10,'female'), G=mk(1983,5,5,'male'); window.chart=A; window.chartB=B;
+    const cm=compatMonths(A,B), an=compatAnalysis(A,B,RELTYPES.love), en=pkSameSexWord(pkEnsureCross('x',A,B),A,B);
+    window.chart=F; window.chartB=G; const fg=compatMonths(F,G).map(x=>x.A.g.join('・')).join('|'), hk=pkSameSexWord(attractionDir(F,G,'本人','お相手')?.pro||'異性',F,G);
+    return {dec:cm.map(x=>x.y+'-'+x.m+'|'+x.A.g.join('・')+'|'+x.B.g.join('・')).join('\n'),an:an,en:en,fg:fg,hk:hk,mm:compatMonths(M,B).map(x=>x.A.g.join('・')).join('|')}; });
+  const e=[]; if(!r) e.push('pkSameSexWord がない'); else {
+    if(!/^2026-12\|パートナーの星（正財）・咸池\|月の十二支にパートナーの星（正財）$/m.test(r.dec)) e.push('女性同士のパートナーの星（財星）');
+    if(/異性/.test(r.an)||/異性/.test(r.en)) e.push('同性で「異性」と書いている');
+    if(!/【同性のカップル（女性同士）＝厳守】/.test(r.an)) e.push('鑑定文への同性の決まり');
+    if(/正財|偏財/.test(r.fg)) e.push('男女：女性の本人のパートナーの星が財星になった');
+    if(!/正財|偏財/.test(r.mm)) e.push('男性×女性：パートナーの星（財星）');
+    if(/異性/.test(r.hk)===false&&/恋愛の相手として/.test(r.hk)) e.push('男女で言い方を変えてしまった'); }
+  console.log('  '+(e.length?'NG':'OK')+' 相性：同性カップル（パートナーの星＝お相手の性別・男女前提の言い方をしない）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('同性カップル: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
