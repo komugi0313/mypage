@@ -252,6 +252,16 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
 // 天徳・月徳など十干で見る星は天干だけ（2026-10-25）：寅月生まれの天徳貴人＝丁。丁が蔵干にだけある柱には付けない
 { const r=await p.evaluate(()=>{ const kt={天徳貴人:'丁'}; return [matchKichi(kt,'丁','卯',['乙']).join(''),matchKichi(kt,'甲','午',['丙','己','丁']).join('')].join('|'); });
   const okT=r==='天徳貴人|'; console.log('  '+(okT?'OK':'NG')+' 天徳・月徳は天干だけで見る（蔵干は数えない）'); if(!okT) res.fails.push('天徳・月徳は天干だけ'); }
+// 惹かれ方のしくみ（2026-10-25）：彼女2008-03-28 14:30×彼2006-06-07 時刻不明
+{ const r=await p.evaluate(()=>{ if(typeof attractionDetailLines!=='function') return null; document.getElementById('rel-type').value='love'; const A=baziCompute({year:2008,month:3,day:28,hour:14,minute:30,sex:'female',tu:false},'','none'), B=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},'','none'));
+    const L=attractionDetailLines(A,B,'本人','お相手'), P=attractionDetailLines(A,B,'あなた','お相手'); return {pro:L.map(x=>x.pro).join('\n'), plain:P.map(x=>x.plain).join('\n'), html:compatAttractHTML(A,B).length, an:/【惹かれ方のしくみ/.test(compatAnalysis(A,B,RELTYPES.love))}; });
+  const e=[]; if(!r) e.push('仕組みがない'); else {
+    if(!/本人→お相手の恋愛の星：咸池＝「酉」（年支「子」から）→お相手の命式にない／咸池＝「子」（日支「卯」から）→お相手の命式にない／紅艶＝「未」（日干「丁」から）→お相手の命式にない＝恋愛の星は当たらない/.test(r.pro)) e.push('本人→お相手');
+    if(!/お相手→本人の恋愛の星：咸池＝「卯」（年支「戌」から）→本人の月柱・日柱にある／咸池＝「子」（日支「卯」から）→本人の年柱にある／紅艶＝「未」（日干「丁」から）→本人の時柱にある＝恋愛の星が当たる/.test(r.pro)) e.push('お相手→本人');
+    if(!/比肩＝パートナーの星（官星）ではない/.test(r.pro)||!/時柱が「酉・子・未」なら本人→お相手にも恋愛の星が当たる/.test(r.pro)) e.push('パートナーの星・時刻不明');
+    if(/(咸池|紅艶|比肩|官星|財星|日干|年支|日支|命式)/.test(r.plain)) e.push('やさしい言い方に専門用語');
+    if(!r.html||!r.an) e.push('画面・鑑定文への渡し'); }
+  console.log('  '+(e.length?'NG':'OK')+' 惹かれ方のしくみ（恋愛の星の十二支・相手にあるか・パートナーの星とのちがい・時刻不明）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('惹かれ方のしくみ: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
