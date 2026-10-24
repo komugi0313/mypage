@@ -738,7 +738,7 @@ function kfmt(t,f){const ss=sents(t).map(kfmt1),J=LANG==="ja"?"":" ";
  if(f==="why"||f==="plus"||f==="hidden"){const last=ss.length>1?ss.pop():null;const ps=[];for(let i=0;i<ss.length;i+=2)ps.push('<p>'+ss.slice(i,i+2).join(J)+'</p>');return ps.join("")+(last?'<p class="key">'+last+'</p>':'');}
  return '<p>'+ss.join(J)+'</p>';}
 function coreCard(b,n){const co=coreOf(b,n);if(!co)return "";
- return '<div class="ktcore"><p class="kch">'+TR("あなたのゆるがない芯")+'</p><p class="kcn">'+esc(co.name)+'</p><ul class="kcl">'+co.aru.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul><p class="kcs">'+(b===n?TR("気質も性格も同じ向きなので、4つすべてがあなたの芯です。"):coreKey(b,n)==="----"?TR("気質と性格で同じ文字はありません。どちらの自分にもなれることが、あなたの変わらないところです。"):TR("気質と性格で同じ向きのところが、どんな時も変わらないあなたの芯です。"))+'</p></div>';}
+ return '<div class="ktcore"><p class="kch">'+TR("あなたのゆるがない芯")+'</p><p class="kcn">'+esc(co.name)+'</p><p class="kcs">'+(b===n?TR("気質も性格も同じ向きなので、4つすべてがあなたの芯です。"):coreKey(b,n)==="----"?TR("気質と性格で同じ文字はありません。どちらの自分にもなれることが、あなたの変わらないところです。"):TR("気質と性格で同じ向きのところが、どんな時も変わらないあなたの芯です。"))+'</p></div>';}
 /* 結果の一番最初：キャラクターのカードをタップしてめくる */
 function setupCards(instant,one){const cards=[...document.querySelectorAll(".nicks .nk")].filter(n=>!n.hidden),story=$("rStory");window.__story=story.innerHTML;
  cards.forEach(n=>{let bk=n.querySelector(".nkback");if(!bk){bk=document.createElement("div");bk.className="nkback";n.appendChild(bk);}
