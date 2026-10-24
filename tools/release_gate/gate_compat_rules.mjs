@@ -145,7 +145,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
 // 2人の日運を並べて見る（2026-11-03：2人とも駅馬・偏財、彼女=天徳合／彼=月徳貴人、冲・刑なし）
 { const r=await p.evaluate(()=>{ if(typeof compatDaysBody!=='function') return ''; const him=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},0,'none')), her=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none');
     return compatDaysBody(her,him,'2026-11-03','さくら','彼'); });
-  const e=[]; if(!/11月3日（辛巳の日）/.test(r)) e.push('日の干支'); if(!/日の星：偏財／吉凶星：天徳合・劫殺・駅馬/.test(r)) e.push('彼女の日の星'); if(!/月徳貴人・月徳合・亡神・駅馬/.test(r)) e.push('彼の日の星'); if(!/2人とも駅馬/.test(r)) e.push('2人とも駅馬');
+  const e=[]; if(!/11月3日（辛巳の日）/.test(r)) e.push('日の干支'); if(!/日の星：偏財／吉凶星：天徳合・劫殺・駅馬/.test(r)) e.push('彼女の日の星'); if(!/月徳合・亡神・駅馬/.test(r)||/月徳貴人・月徳合・亡神/.test(r)) e.push('彼の日の星')   /* 月徳貴人（丙）は巳の蔵干にあるだけ＝天干だけで見る決まり（2026-10-25）では付かない */; if(!/2人とも駅馬/.test(r)) e.push('2人とも駅馬');
   if(!/class="kd-plain"/.test(r)||/kd-plain[\s\S]*?(偏財|駅馬|天徳|冲|刑)[\s\S]*?<\/div><\/div>$/.test(r.slice(r.indexOf('class="kd-plain"')))) e.push('やさしい言い方に専門用語');
   console.log('  '+(e.length?'NG':'OK')+' 2人の日運を並べて見る'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('2人の日運: '+e.join('・')); }
 // 惹かれ方の向き（彼2006-06-07×彼女2008-03-28：彼→彼女＝咸池・紅艶／彼女→彼＝恋愛の星なし）
@@ -249,6 +249,9 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
 { const app=fs.readFileSync(path.join(ROOT,dir,page0),'utf8'), sh=['pro','beginner','meishiki-original'].map(d=>fs.readFileSync(path.join(ROOT,d,'meishi-sheet.html'),'utf8'));
   const okZ=/q\.set\('zo',_zo\)/.test(app)&&sh.every(t=>/var ZO=\{\}/.test(t)&&/ZO\[p\.label\]/.test(t))&&sh[0]===sh[1]&&sh[0]===sh[2];
   console.log('  '+(okZ?'OK':'NG')+' 先生が選んだ蔵干を鑑定書にも引き継ぐ（鑑定書は3か所同じ）'); if(!okZ) res.fails.push('鑑定書の蔵干'); }
+// 天徳・月徳など十干で見る星は天干だけ（2026-10-25）：寅月生まれの天徳貴人＝丁。丁が蔵干にだけある柱には付けない
+{ const r=await p.evaluate(()=>{ const kt={天徳貴人:'丁'}; return [matchKichi(kt,'丁','卯',['乙']).join(''),matchKichi(kt,'甲','午',['丙','己','丁']).join('')].join('|'); });
+  const okT=r==='天徳貴人|'; console.log('  '+(okT?'OK':'NG')+' 天徳・月徳は天干だけで見る（蔵干は数えない）'); if(!okT) res.fails.push('天徳・月徳は天干だけ'); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
