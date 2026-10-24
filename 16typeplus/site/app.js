@@ -402,6 +402,9 @@ function coreBlock(c,SANS,x,y0,wAt,co,dry){let y=y0;const lines=(t,w,fs,wt,max)=
   if(!dry){rrect(c,x-bw/2,y,bw,h,14);c.fillStyle="#FFFFFF";c.fill();c.lineWidth=2;c.strokeStyle=rgba(SC.plus,.55);c.stroke();c.fillStyle=SC.plus;c.font="700 "+fs+"px "+SANS;ls.forEach((l,i)=>c.fillText(l,x,y+9+fs*1.05+i*fs*1.4));}
   y+=h+10;});
  return y-y0;}
+/* 円の真ん中：芯の名前と、同じ文字の意味（上の文字の囲みのあるあると重ならないように） */
+function coreV(b,n){const co=coreOf(b,n);if(!co)return null;const it=["EI","SN","TF","JP"].map((k,i)=>b[i]===n[i]?TR(CORE[b[i]]):null).filter(Boolean);
+ return {name:co.name,aru:it.length?it:[TR("4つとも違う"),TR("どちらの自分にもなれる")]};}
 /* 案1：2つの円の重なり（重なったところが、ゆるがない芯） */
 async function drawCloud(){const me=window.__me,{SANS,MONO}=await cwFonts(),W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const b=me.born,n=me.now,one=b===n,[cb,cn]=cwColors(b,n);
@@ -413,7 +416,7 @@ async function drawCloud(){const me=window.__me,{SANS,MONO}=await cwFonts(),W=10
  if(one){const R=470;c.beginPath();c.ellipse(W/2,cy,R,ry,0,0,Math.PI*2);c.fillStyle=rgba(cb,.09);c.fill();c.lineWidth=4;c.strokeStyle=rgba(cb,.65);c.stroke();
   c.font="700 28px "+SANS;c.fillStyle=cb;c.fillText(TR("気質 ＝ 性格"),W/2,cy-ry+70);
   /* 真ん中：4つの文字すべてが、ゆるがない芯 */
-  const co=coreOf(b,n);let iry=150;
+  const co=coreV(b,n);let iry=150;
   if(co){const bw=600,hh=coreBlock(c,SANS,W/2,0,()=>bw,co,true)+36;iry=hh/2;const top0=cy-iry;rrect(c,W/2-bw/2-20,top0,bw+40,hh,28);c.fillStyle=rgba(cb,.16);c.fill();c.lineWidth=3;c.strokeStyle=rgba(cb,.8);c.stroke();coreBlock(c,SANS,W/2,top0+18,()=>bw,co,false);}
   else{const irx=300;c.beginPath();c.ellipse(W/2,cy,irx,iry,0,0,Math.PI*2);c.fillStyle=rgba(cb,.16);c.fill();c.lineWidth=3;c.strokeStyle=rgba(cb,.8);c.stroke();
   coreHead(c,SANS,W/2,cy-iry+40);
@@ -431,7 +434,7 @@ async function drawCloud(){const me=window.__me,{SANS,MONO}=await cwFonts(),W=10
     fitText(c,SANS,t,cx,cy+dy,w,i<2?30:25,19,col);});};
   sideX(cwList(b),cb,-1);sideX(cwList(n),cn,1);
   /* 重なり：同じ文字の特徴 */
-    const lw=(x1+rx)-(x2-rx),co=coreOf(b,n);
+    const lw=(x1+rx)-(x2-rx),co=coreV(b,n);
   if(co){const lens=y=>{const dy=(y-cy)/ry;return Math.max(160,2*rx*Math.sqrt(Math.max(0,1-dy*dy))-(x2-x1));};let w=lens(cy+200),hh=0;for(let k=0;k<3;k++){hh=coreBlock(c,SANS,W/2,0,()=>w,co,true);w=lens(cy+hh/2+10);}
    coreBlock(c,SANS,W/2,cy-hh/2+10,()=>w,co,false);}
   else{const core=["EI","SN","TF","JP"].map((k,i)=>b[i]===n[i]?TR(CORE[b[i]]):null).filter(Boolean),items=core.length?core:[TR("4つとも違う"),TR("幅の広さが芯")],gap=64,y0=cy-(items.length-1)*gap/2+30;
