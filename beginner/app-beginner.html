@@ -3839,9 +3839,26 @@ function loveFourLines(c){ try{ if(!c||!c.pillars||!c.dayMaster) return null;
   pick.sort(function(a,b){ return b.n-a.n; }); const top=pick.slice(0,4).sort(function(a,b){ return ml.findIndex(function(e){ return a.lab.indexOf(e.calYear+'年'+e.calMonth+'月')===0; })-ml.findIndex(function(e){ return b.lab.indexOf(e.calYear+'年'+e.calMonth+'月')===0; }); });
   const l4pro='縁が動く月（今後12ヶ月の月運）：'+(top.length?top.map(function(x){ return x.pro; }).join('／'):'この12ヶ月は、パートナーの星・桃花・配偶宮の合が巡る月がありません（自分を整える時期）')+(move.length?'。関係が動きやすい・注意の月：'+move.map(function(x){ return x.pro; }).join('／'):'')+'。';
   const l4plain='縁が動く月：'+(top.length?top.map(function(x){ return x.plain; }).join('、'):'この1年は、自分を整えるのに向いた時期です')+(move.length?'。関係が動きやすい月：'+move.map(function(x){ return x.plain; }).join('、'):'')+'。';
+  // 縁が動く年（これから3年＝今年・来年・再来年。月と同じ決まりで年運を見る。発注者指示 2026-10-24「来年とかどうですか」）
+  const ny=(c.now&&c.now.year)||(new Date()).getFullYear(), yG=[], yC=[];
+  for(let y=ny;y<=ny+2;y++){ const a=(c.annualFortunes||[]).find(function(x){ return x.year===y; }); if(!a||!a.ganzhi) continue;
+    const st=a.ganzhi[0], br=a.ganzhi[1], s1=tenStarOf(ds,st), s2=tenStarOf(ds,HONKI[br]), ks=(typeof meguriKichi==='function')?meguriKichi(c,st,br):[], r=[], rp=[];
+    if(sp.indexOf(s1)>=0){ r.push('パートナーの星（'+s1+'）が巡る'); rp.push('パートナーの星が巡る'); } else if(sp.indexOf(s2)>=0){ r.push('年の十二支にパートナーの星（'+s2+'）が巡る'); rp.push('パートナーの星が巡る'); }
+    ks.forEach(function(k){ if(['咸池','紅艶','天乙貴人'].indexOf(k)>=0){ r.push(k+'が巡る'); rp.push(k==='天乙貴人'?'助けてくれる人に出会いやすい':'魅力が高まる'); } });
+    const nb2=c.pillars.map(function(p){ return p&&p.branch; }), PLB2=['年支','月支','日支','時支'];
+    const sg2=SANGO.find(function(g){ const t3=g.slice(0,3); return br!==db&&t3.indexOf(br)>=0&&t3.indexOf(db)>=0; }); const th2=sg2?sg2.slice(0,3).find(function(x){ return x!==br&&x!==db; }):null, ti2=th2?nb2.indexOf(th2):-1;
+    if(RIKUGO[br]===db){ r.push('配偶宮「'+db+'」と支合'); rp.push('パートナーとの縁が結びつきやすい'); }
+    else if(sg2&&ti2>=0){ r.push('配偶宮「'+db+'」と'+PLB2[ti2]+'「'+th2+'」と合わせて三合（'+sg2.slice(0,3).join('')+'）'); rp.push('パートナーとの縁が強く結びつきやすい'); }
+    else if(sg2&&(CENx[br]||CENx[db])){ r.push('配偶宮「'+db+'」と半合'); rp.push('パートナーとの縁が結びつきやすい'); }
+    const lab=y+'年（'+a.ganzhi+'）';
+    if(r.length) yG.push({y:y,pro:lab+'＝'+r.join('・'),plain:y+'年（'+rp.filter(function(x,i,a2){ return a2.indexOf(x)===i; }).join('・')+'）'});
+    const w=[]; if(isChong(br,db)) w.push('冲'); if((br!==db&&(isKei2(br,db)||isKei3(br,db)))||(br===db&&JIKEI.has(db))) w.push('刑'); if(GAI[br]===db) w.push('害');
+    if(w.length) yC.push({y:y,pro:lab+'＝配偶宮「'+db+'」と'+w.join('・')+'（関係が動きやすい・見直しの年。急いで決めない）',plain:y+'年（関係が動きやすい年）'}); }
+  const l5pro='縁が動く年（これから3年）：'+(yG.length?yG.map(function(x){ return x.pro; }).join('／'):'パートナーの星・桃花・配偶宮の合が巡る年はありません')+(yC.length?'。関係が動きやすい・注意の年：'+yC.map(function(x){ return x.pro; }).join('／'):'')+'。';
+  const l5plain='縁が動く年：'+(yG.length?yG.map(function(x){ return x.plain; }).join('、'):'この3年は、自分を整えるのに向いた時期です')+(yC.length?'。関係が動きやすい年：'+yC.map(function(x){ return x.plain; }).join('、'):'')+'。';
   const gzOf={}; ml.forEach(function(ev){ if(ev&&ev.calYear) gzOf[ev.calYear+'-'+ev.calMonth]=ev.ganzhi; });
   const PKEY={年:'家族|親戚|地元|目上|紹介',月:'仕事|職場|学校',日:'生活|友人|身近',時:'趣味|習いごと|習い事|年下'};
-  return {pro:[l1pro,l2pro,l3pro,l4pro],plain:[l1plain,l2plain,l3plain,l4plain],months:top.map(function(x){ return x.m; }),moveMonths:move.map(function(x){ return x.m; }),fav:fv,gzOf:gzOf,placeRe:use.length?new RegExp(use.map(function(l){ return PKEY[l]; }).join('|')):/時期/};
+  return {pro:[l1pro,l2pro,l3pro,l4pro+l5pro],plain:[l1plain,l2plain,l3plain,l4plain+l5plain],goodYears:yG.map(function(x){ return x.y; }),cautionYears:yC.map(function(x){ return x.y; }),months:top.map(function(x){ return x.m; }),moveMonths:move.map(function(x){ return x.m; }),fav:fv,gzOf:gzOf,placeRe:use.length?new RegExp(use.map(function(l){ return PKEY[l]; }).join('|')):/時期/};
 }catch(e){ return null; } }
 /* 月の話の事実あわせ（発注者指示 2026-10-23「命式の読み解きは絶対にまちがえない」）：
    1つの月だけを話している文で、①その月に巡らない通変星（正官↔偏官・正財↔偏財の取りちがえ）を、その月に本当に巡る星に直す
@@ -3904,7 +3921,7 @@ function pkEnsureLove(t,c,q){ try{ t=String(t||''); if(!pkIsLoveQ(q)) return t; 
   const has=[ plain?/パートナーの座/.test(t):one(/配偶宮/,/蔵干/),
     (plain?/運を良くしてくれる|良い影響|振り回され|相手しだい/.test(t):one(/喜神|忌神|中立/,/パートナーの星|配偶者星|官星|財星|正官|偏官|正財|偏財/))&&/相性とは(?:別|ちが|違)/.test(t),   // 「相性とは別の見方」も書いてあるか
     one(/出会/,L.placeRe),
-    (L.months.length?L.months.some(function(m){ return new RegExp('(^|[^0-9０-９])'+m+'月').test(t); }):/整える/.test(t))&&(L.moveMonths||[]).every(function(m){ return one(new RegExp('(^|[^0-9０-９])'+m+'月'),/刑|冲|すれ違|こじれ|揺れ|振り回|見直し|注意/); }) ];   // 関係が動きやすい・注意の月（冲・刑）も書いてあるか
+    (L.months.length?L.months.some(function(m){ return new RegExp('(^|[^0-9０-９])'+m+'月').test(t); }):/整える/.test(t))&&(L.moveMonths||[]).every(function(m){ return one(new RegExp('(^|[^0-9０-９])'+m+'月'),/刑|冲|すれ違|こじれ|揺れ|振り回|見直し|注意/); })&&(L.goodYears||[]).every(function(y){ return t.indexOf(y+'年')>=0; })&&(L.cautionYears||[]).every(function(y){ return one(new RegExp(y+'年'),/刑|冲|害|すれ違|こじれ|揺れ|見直し|注意|動きやすい/); }) ];   // 縁が動く年・注意の年も書いてあるか   // 関係が動きやすい・注意の月（冲・刑）も書いてあるか
   const miss=[]; has.forEach(function(h,i){ if(!h) miss.push((plain?L.plain:L.pro)[i]); });
   if(!miss.length) return t;
   return t+'\n\n'+(plain?'【恋愛で大事な4つのこと】':'【恋愛で必ず見る4つ】')+'\n'+miss.map(function(x){ return '・'+x; }).join('\n'); }catch(e){ return t; } }

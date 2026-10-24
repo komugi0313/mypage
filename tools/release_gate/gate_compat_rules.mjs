@@ -156,6 +156,10 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   const e=[]; if(!/^劫財（/m.test(r)) e.push('劫財'); if(!/配偶宮（日支）に咸池/.test(r)) e.push('配偶宮の咸池'); if(!/官星（正官・偏官）がない/.test(r)) e.push('官星なし');
   if(/(比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬|咸池|配偶宮|官星)/.test(r.split('#')[1]||'')) e.push('やさしい言い方に専門用語');
   console.log('  '+(e.length?'NG':'OK')+' 相性：お相手を知るためのチェックポイント'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('チェックポイント: '+e.join('・')); }
+// 縁が動く年（これから3年）：1998-07-10 女性（時刻不明）＝2027年 天乙貴人・配偶宮「午」と支合／2026年 配偶宮と刑
+{ const r=await p.evaluate(()=>{ if(typeof loveFourLines!=='function') return ''; const c=markTimeUnknown(baziCompute({year:1998,month:7,day:10,hour:12,minute:0,sex:'female',tu:true},0,'none')); window.chart=c; const L=loveFourLines(c); return L?L.pro[3]:''; });
+  const okY=/縁が動く年（これから3年）：2027年（丁未）＝天乙貴人が巡る・配偶宮「午」と支合/.test(r)&&/2026年（丙午）＝配偶宮「午」と刑/.test(r);
+  console.log('  '+(okY?'OK':'NG')+' 恋愛相談：縁が動く年（これから3年）'); if(!okY) res.fails.push('縁が動く年'); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
