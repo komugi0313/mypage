@@ -205,6 +205,35 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   const ok=/干合（かんごう：干どうしが結びつく）/.test(r)&&!/（＝干どうし/.test(r)&&/ふたりの関係が動き、鍋のふたの色/.test(r); console.log('  '+(ok?'OK':'NG')+' 太字の用語に読みを2つ付けない・「ふたの関係」を「ふたりの関係」に'); if(!ok) res.fails.push('読みの重なり・ふたり: '+r); }
 { const r=await p.evaluate(()=>{ if(typeof pkFixAge!=='function') return ''; window.personNameB='翔'; const o=pkFixAge('2027年1月ごろ（健太さん40歳／翔さん30歳ごろ）。2028年（翔さん40歳・健太さん43歳）。2030年に母が70歳（2030年）。',1985,1988); window.personNameB=''; return o; });
   const ok=/2027年1月ごろ（健太さん42歳／翔さん39歳ごろ）/.test(r)&&/翔さん40歳・健太さん43歳/.test(r)&&/母が70歳/.test(r); console.log('  '+(ok?'OK':'NG')+' 月のあと・名前つきの2人の年齢も計算し直す（家族の年齢は変えない）'); if(!ok) res.fails.push('名前つきの2人の年齢: '+r); }
+// 2人の支合・半合に年運・大運が加わって三合・方合がそろう時期（鑑定者本人の指示 2026-10-25「必ず出現させてください」）：彼女2008-03-28 14時×彼2006-06-07 時刻不明
+{ const r=await p.evaluate(()=>{ if(typeof compatTrioLines!=='function') return null; const her=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'), him=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},0,'none'));
+    const L=compatTrioLines(her,him), d=document.createElement('div'); d.innerHTML=compatSummaryHTML(her,him,RELTYPES.love);
+    return {pro:L.pro.join('\n'),plain:L.plain.join('\n'),ens:pkEnsureTrio('結論。\n\n【惹かれ合うところ】\nx\n\n【縁が深まる時期】\n2027年。\n\n【長続きのコツ】\ny',her,him,''),ok2:pkEnsureTrio('結論。\n\n【惹かれ合うところ】\nx\n\n【縁が深まる時期】\n2031年と2043年は三合、2045〜の大運も三合（2031年・2045年）、2037年と2049年は方合（2037年）。\n\n【長続きのコツ】\ny',her,him,''),sum:d.innerHTML,sec:compatTrioHTML(her,him)}; });
+  const e=[]; if(!r) e.push('関数がない'); else {
+    if(!/本人の時柱「未」×お相手の日柱「卯」の半合に「亥」が巡ると、亥卯未の三合（木）がそろう[^\n]*年運＝2031年（辛亥・本人23歳／お相手25歳）/.test(r.pro)) e.push('半合＋年運で三合');
+    if(!/お相手の大運「己亥」/.test(r.pro)||!/本人の大運「辛亥」/.test(r.pro)) e.push('大運で三合');
+    if(!/本人の時柱「未」×お相手の月柱「午」の支合に「巳」が巡ると、巳午未の方合（火）がそろう[^\n]*2037年（丁巳/.test(r.pro)) e.push('支合＋年運で方合');
+    if(/(三合|方合|半合|支合|大運|柱|亥|巳)/.test(r.plain)) e.push('やさしい言い方に専門用語');
+    if(!/【縁が深まる時期】\n2027年。\n\n【(?:2人の合が三合・方合になる時期|2人の結びつきが強まる時期)】\n[^・\n]/.test(r.ens)) e.push('書き足し（時期の見出しの中へ）');
+    if(/【(?:2人の合が三合・方合になる時期|2人の結びつきが強まる時期)】/.test(r.ok2)) e.push('書いてあるのに書き足している');
+    if(!/三合・方合になる時期<\/b>：2031年/.test(r.sum)||!/id="tr-sec"/.test(r.sec)) e.push('まとめ・欄'); }
+  console.log('  '+(e.length?'NG':'OK')+' 相性：2人の支合・半合が年運・大運で三合・方合になる時期'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('三合・方合になる時期: '+e.join('・')); }
+// ③ 根拠のチェック表（鑑定者本人の指示 2026-10-25）：事実なら残す・作り話（どこにも成り立たない）だけ外す・同じ文に事実があれば外さない
+{ const r=await p.evaluate(()=>{ if(typeof pkEvidence!=='function') return null; const her=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'), him=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},0,'none'));
+    const full=['2人の日柱は律音です。','本人の時柱「未」とお相手の日柱「卯」が半合です。','2031年（辛亥）には亥卯未の三合がそろいます。','2028年には亥卯未の三合がそろいます。','2029年（己酉）は配偶宮に酉が巡り、お相手の日支である卯と冲になります。','未来に向けて、子どもの話もしましょう。','冲はありません。'].join('\n');
+    const ev=pkEvidence('2029年（35歳）に動きます。',full,her,him);
+    const k=baziCompute({year:2000,month:1,day:11,hour:12,minute:0,sex:'male',tu:false},0,'none');   /* 日柱 戊辰 */
+    const e2=pkEvidence('','日柱は'+k.pillars[2].ganzhi+'で魁罡を持ちます。\n日柱は'+k.pillars[2].ganzhi+'で魁罡と禄馬貴人を持ちます。',k,null);
+    return {rows:ev.rows.map(x=>x.st+'|'+x.what).join('\n'),text:ev.text,gz:k.pillars[2].ganzhi,r2:e2.rows.map(x=>x.st+'|'+x.what).join('\n'),t2:e2.text,html:pkEvidenceHTML(ev)}; });
+  const e=[]; if(!r) e.push('関数がない'); else {
+    if(!/^fix\|2029年（35歳）/m.test(r.rows)) e.push('年齢の直しを記録');
+    if(!/^ok\|律音/m.test(r.rows)||!/^ok\|半合「未卯」/m.test(r.rows)||!/^ok\|三合（2031年）/m.test(r.rows)||!/^ok\|冲（2029年）/m.test(r.rows)) e.push('事実を計算どおりと判定');
+    if(!/^warn\|三合（2028年）/m.test(r.rows)) e.push('年ちがいは確かめてほしい');
+    if(/未来|子ども/.test(r.rows)||/冲はありません/.test(r.rows)) e.push('ふつうの言葉・打ち消しを数えている');
+    if(r.text.split('\n').length!==7) e.push('事実の文を外している');
+    if(r.gz!=='戊辰'||!/^drop\|魁罡/m.test(r.r2)||/魁罡を持ちます。\n/.test(r.t2)) e.push('戊辰の魁罡（作り話）を外す');
+    if(!/no-print/.test(r.html)||!/先生の画面だけ/.test(r.html)) e.push('表（先生の画面だけ・印刷しない）'); }
+  console.log('  '+(e.length?'NG':'OK')+' ③ 根拠のチェック表（事実は残す・作り話だけ外す）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('根拠のチェック表: '+e.join('・')); }
 // 同性カップル（鑑定者本人の指示 2026-10-24）：女性同士 1990-03-03×1990-02-02＝パートナーの星はお相手の性別（女性＝財星）・「異性」と書かない／男女は今までどおり
 { const r=await p.evaluate(()=>{ if(typeof pkSameSexWord!=='function') return null; const mk=(y,m,d,sex)=>markTimeUnknown(baziCompute({year:y,month:m,day:d,hour:12,minute:0,sex,tu:true},0,'none'));
     const A=mk(1990,3,3,'female'), B=mk(1990,2,2,'female'), M=mk(1990,3,3,'male'), F=mk(1981,6,10,'female'), G=mk(1983,5,5,'male'); window.chart=A; window.chartB=B;

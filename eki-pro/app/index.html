@@ -2391,7 +2391,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
       catch(e){ if(opt&&opt.signal&&opt.signal.aborted){ const er=new Error('待たずに内蔵データで出しました'); er.net=true; er.skip=true; throw er; }
         if(netTry<1&&!(e&&e.name==='AbortError')){ netTry++; a--; await sleep(700); continue; }
         const er=new Error('通信に失敗しました。電波の良い場所で再度お試しください。'); er.net=true; if(e&&e.name==='AbortError') er.timeout=true; throw er; }
-      if(res.ok){ try{ const lf=res.headers.get('x-pk-left'); if(lf!=null&&lf!=='') _ekiLeft=lf; }catch(_){} const d=await res.json(); const t=d.candidates?.[0]?.content?.parts?.[0]?.text; if(!t)throw new Error('応答が空でした'); return fillName(noAIWord(t.replace(/[＊*]/g,'')),(opt&&typeof opt.name==='string')?opt.name:undefined); }
+      if(res.ok){ try{ const lf=res.headers.get('x-pk-left'); if(lf!=null&&lf!=='') _ekiLeft=lf; }catch(_){} const d=await res.json(); const t=d.candidates?.[0]?.content?.parts?.[0]?.text; if(!t)throw new Error('応答が空でした'); try{ const _k=String((opt&&opt.q)||''); const R=window.__ekiRaw=window.__ekiRaw||{}; if(kind!=='sho') R[_k]=((kind==='detail'&&R[_k])?R[_k]+'\n':'')+t; }catch(_){} return fillName(noAIWord(t.replace(/[＊*]/g,'')),(opt&&typeof opt.name==='string')?opt.name:undefined); }
       if(res.status===401) throw new Error('ログインの有効期限が切れました。ページを開き直して、もう一度ログインしてください。');
       if(res.status===403) throw new Error('ご契約の状態を確認できませんでした。マイページでご契約状況をご確認ください。');
       if(res.status===429){ let e0=null; try{ e0=await res.clone().json(); }catch(_){}   // 無料お試しの1日3回（サーバーで数えた結果。別の端末で使った分も含む）
@@ -2908,6 +2908,44 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
       <div class="coin-how">${how}<span class="ib">${YAO[c.ko-1]}爻が今回の変爻です。</span></div>`;
     box.style.display='block';
   }
+  /* ===== ③ 根拠のチェック表（鑑定者本人の指示 2026-10-25「表を出すのは私の画面だけで大丈夫」） =====
+     易は卦で答える道具なので、命式の話は照らし合わせない（入れない）。卦の名前・卦辞と爻辞の原文・動いた爻・年齢を、出た卦のデータと照らし合わせる。
+     先生の画面だけに出す（鑑定書・コピー・LINEには入れない）。 */
+  function ekiEvidence(r,p,raw){ const R=[]; try{ if(!r||!r.h) return R;
+    const txt=Object.keys(p||{}).map(function(k){ const v=p[k]; return typeof v==='string'?v:(Array.isArray(v)?v.map(function(x){ return typeof x==='string'?x:JSON.stringify(x); }).join('\n'):''); }).join('\n');
+    const hexes=[['本卦',r.h]].concat(r.shika&&r.shika.hex?[['之卦',r.shika.hex]]:[]).concat(r.goka&&r.goka.hex?[['互卦',r.goka.hex]]:[]).concat(r.soka&&r.soka.hex?[['綜卦',r.soka.hex]]:[]).concat(r.sakka&&r.sakka.hex?[['錯卦',r.sakka.hex]]:[]);
+    const nrm=function(x){ return String(x||'').replace(/（[^）]*）/g,'').replace(/[。、，．・\s「」『』]/g,''); };
+    // ① 卦の名前・第◯卦
+    const seenH={}; Object.keys(HEXDB).forEach(function(k){ const h=HEXDB[k]; if(!h||!h.nm||h.nm.length<3||txt.indexOf(h.nm)<0||seenH[h.nm]) return; seenH[h.nm]=1;
+      const role=hexes.filter(function(x){ return x[1].nm===h.nm; }).map(function(x){ return x[0]; });
+      R.push(role.length?{st:'ok',what:h.nm,calc:'今回出た'+role.join('・')+'（第'+h.no+'卦）',note:'出た卦どおり'}:{st:'warn',what:h.nm,calc:'今回出た卦：'+hexes.map(function(x){ return x[0]+'＝'+x[1].nm; }).join('・'),note:'今回の鑑定で出ていない卦の名前です。たとえ話か、確かめてください'}); });
+    { let m; const re=/第\s*(\d{1,2})\s*卦/g, seen={}; while((m=re.exec(txt))){ const n=+m[1]; if(seen[n]) continue; seen[n]=1; const hx=hexes.filter(function(x){ return x[1].no===n; });
+      R.push(hx.length?{st:'ok',what:'第'+n+'卦',calc:hx.map(function(x){ return x[0]+'＝'+x[1].nm; }).join('・'),note:'出た卦どおり'}:{st:'warn',what:'第'+n+'卦',calc:'今回出た卦：'+hexes.map(function(x){ return x[0]+'＝第'+x[1].no+'卦'; }).join('・'),note:'今回の鑑定で出ていない卦の番号です。確かめてください'}); } }
+    // ② 原文の引用（漢字だけのかっこ）：出た卦の卦辞・爻辞と同じか
+    { let m; const re=/「([^「」\n]{3,40})」/g, seen={}; while((m=re.exec(txt))){ const q0=m[1]; if(/[ぁ-んァ-ン]/.test(q0)||!/[一-龥]{3,}/.test(q0)) continue; const qn=nrm(q0); if(qn.length<3||seen[qn]) continue; seen[qn]=1;
+      let hit=null; hexes.forEach(function(x){ if(hit) return; const h=x[1]; if(nrm(h.qt).indexOf(qn)>=0) hit=x[0]+'の卦辞'; else Object.keys(h.ko||{}).forEach(function(i){ if(!hit&&nrm(h.ko[i].jd).indexOf(qn)>=0) hit=x[0]+'の'+(KO_NAME[i]||i+'爻').replace(/（.*$/,'')+(x[0]==='本卦'&&+i===+r.ko?'（今回の動いた爻）':''); }); });
+      if(hit){ R.push({st:'ok',what:'「'+q0+'」',calc:hit,note:'易経の原文どおり'}); continue; }
+      let other=''; Object.keys(HEXDB).some(function(k){ const h=HEXDB[k]; if(nrm(h.qt).indexOf(qn)>=0){ other=h.nm+'の卦辞'; return true; } return Object.keys(h.ko||{}).some(function(i){ if(nrm(h.ko[i].jd).indexOf(qn)>=0){ other=h.nm+'の'+(KO_NAME[i]||i).replace(/（.*$/,''); return true; } return false; }); });
+      R.push({st:'warn',what:'「'+q0+'」',calc:other?'これは '+other+' の言葉':'易経の原文に見当たらない',note:other?'今回出た卦の言葉ではありません。確かめてください':'原文と一致しません。確かめてください'}); } }
+    // ③ 動いた爻
+    { const P={'初':1,'二':2,'三':3,'四':4,'五':5,'上':6}, re=/(?:動いた爻|変爻)[はがの]?[「（]?(初|二|三|四|五|上)爻|(初|二|三|四|五|上)爻(?:（[^）]*）)?が動/g; let m, seen={}; while((m=re.exec(txt))){ const n=P[m[1]||m[2]]; if(seen[n]) continue; seen[n]=1;
+      R.push(n===+r.ko?{st:'ok',what:'動いた爻＝'+(m[1]||m[2])+'爻',calc:'今回の動いた爻＝'+String(KO_NAME[r.ko]).replace(/（.*$/,''),note:'出た卦どおり'}:{st:'warn',what:'動いた爻＝'+(m[1]||m[2])+'爻',calc:'今回の動いた爻＝'+String(KO_NAME[r.ko]).replace(/（.*$/,''),note:'今回の動いた爻とちがいます。確かめてください'}); } }
+    // ④ 文章作成が書いた命式・星の話（易は命式を計算していないので、ツールが外した）
+    { const RX=/命式|蔵干|通変星|喜神|忌神|咸池|紅艶|天乙貴人|配偶宮|配偶者星|日柱|月柱|年柱|時柱|日干|大運/; const out=String(raw||'').split(/(?<=[。！？\n])/).filter(function(x){ return RX.test(x)&&txt.indexOf(x.replace(/\s+$/,'').slice(0,20))<0; });
+      if(out.length) R.push({st:'drop',what:'命式・星の話（'+out.length+'か所）',calc:'易は命式を計算していない',note:'根拠のない話なので外しました：「'+out[0].trim().slice(0,50)+'」'+(out.length>1?'ほか':'')}); }
+    // ⑤ 年齢（生年月日があるとき）
+    { const by=parseInt(((document.getElementById('fuBd')||{}).value||'').slice(0,4),10)||0; if(by){ let m, n=0, bad=0; const re=/((?:19|20)\d\d)年[^。\n（(〔]{0,10}[（(〔]([^。\n]{0,30}?)[）)〕]/g;
+      while((m=re.exec(String(raw||'')))){ const y=+m[1]; (m[2].match(/\d{1,3}(?=歳|才)/g)||[]).forEach(function(a){ n++; if([y-by,y-by-1].indexOf(+a)<0) bad++; }); }
+      if(bad) R.push({st:'fix',what:'年齢（'+bad+'か所）',calc:'生年月日からの計算',note:'文章作成のまちがいを、ツールが計算どおりに直しました'}); else if(n) R.push({st:'ok',what:'年齢（'+n+'か所）',calc:'生年月日からの計算',note:'すべて計算どおり'}); } }
+  }catch(e){} return R; }
+  function ekiEvidenceHTML(R){ try{ if(!R||!R.length) return ''; const I={ok:'✅',fix:'✏️',warn:'⚠',drop:'🗑'}, L={ok:'易経・出た卦どおり',fix:'ツールが直した',warn:'確かめてほしい',drop:'外した'};
+    const e=function(x){ return String(x).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }, cnt=function(k){ return R.filter(function(x){ return k.indexOf(x.st)>=0; }).length; };
+    const order={drop:0,warn:1,fix:2,ok:3}, rows=R.slice().sort(function(a,b){ return order[a.st]-order[b.st]; });
+    return '<details class="ev-box no-print" style="margin:14px 0 4px;border:1.5px solid #B9C7D8;border-radius:12px;background:#F7FAFD;padding:8px 12px"><summary style="font-weight:900;font-size:15px;cursor:pointer;color:#1F2A37">🔍 この鑑定文の根拠チェック（先生の画面だけ）<span style="font-size:12.5px;font-weight:800;color:#3A4A5C"> 原文どおり'+cnt(['ok','fix'])+'件'+(cnt(['warn'])?'・確かめてほしい'+cnt(['warn'])+'件':'')+(cnt(['drop'])?'・外した'+cnt(['drop'])+'件':'')+'</span></summary>'
+     +'<div style="overflow-x:auto;margin-top:6px"><table style="width:100%;border-collapse:collapse;font-size:13px;line-height:1.6;color:#1F2A37"><thead><tr style="background:#E7EEF6"><th style="text-align:left;padding:5px 6px">鑑定文の言葉</th><th style="text-align:left;padding:5px 6px">卦のデータ</th><th style="text-align:left;padding:5px 6px">結果</th></tr></thead><tbody>'
+     +rows.map(function(x){ return '<tr style="border-top:1px solid #D5DEE8"><td style="padding:5px 6px;vertical-align:top">'+e(x.what)+'</td><td style="padding:5px 6px;vertical-align:top">'+e(x.calc)+'</td><td style="padding:5px 6px;vertical-align:top"><b>'+I[x.st]+' '+L[x.st]+'</b><br><span style="font-size:12px">'+e(x.note)+'</span></td></tr>'; }).join('')
+     +'</tbody></table><div style="font-size:12px;color:#3A4A5C;margin-top:6px">この表はお客様にお渡しする鑑定書・コピー・LINEには入りません。易は卦で答えるので、命式の照らし合わせはしていません。</div></div></details>'; }catch(e){ return ''; } }
+  window.ekiEvidence=ekiEvidence; window.ekiEvidenceHTML=ekiEvidenceHTML;   // 点検用
   function renderResult(r,q,p){
     window.__ekiQ=q;
     document.getElementById('result').style.display='block';
@@ -3005,6 +3043,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
     if(cur.last&&cur.last.r===r) cur.last.chat=cur.chat;   // 深掘り相談のやりとりも、この鑑定といっしょに自動保存する
     // 画面を結果へ動かすのは、その鑑定を最初に出したときだけ（くわしい読み解きが届いたときは、読んでいる場所を動かさない）
     try{ renderCustPrev(); }catch(_){}
+    try{ const kc=document.getElementById('kpiCard'); let ev=document.getElementById('ekiEv'); if(!ev&&kc){ ev=document.createElement('div'); ev.id='ekiEv'; kc.insertAdjacentElement('afterend',ev); } if(ev) ev.innerHTML=(LANG==='ja'&&p&&!cur.last?.offline)?ekiEvidenceHTML(ekiEvidence(r,p,(window.__ekiRaw||{})[String(q||'')]||'')):''; }catch(_){}   // ③ 根拠のチェック表（先生の画面だけ）
     if(_shownR!==r){ _shownR=r; scrollToResult(); }
   }
   let _shownR=null, _chatFor=null;

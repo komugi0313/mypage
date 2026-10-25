@@ -23,6 +23,9 @@ const waitFor=async(fn,ms,arg)=>{const t=Date.now();while(Date.now()-t<ms){ if(a
 const star=t=>(String(t).match(/[\*＊]/g)||[]).length;
 console.log(`■ eki / ${MODE}`);
 ok('開いただけでは文章作成を呼ばない', calls===0, 'calls='+calls);
+{ const r=await p.evaluate(()=>{ if(typeof window.ekiEvidence!=='function') return ''; const h=HEXDB['1-1'], rr={h:h,ko:2,koData:h.ko[2]};   /* ③ 根拠のチェック表：卦の名前・原文・動いた爻・命式の話 */
+    return window.ekiEvidence(rr,{hantei:'乾為天が出ました。卦辞は「乾。元亨利貞。」。動いた爻は三爻です。',script:'「見龍在田」。「天下太平無事」。坤為地のように。'},'あなたの命式では日柱に咸池があります。').map(x=>x.st+'|'+x.what).join('\n'); });
+  ok('根拠のチェック表：卦・原文・動いた爻・命式の話を照らし合わせる', /^ok\|乾為天/m.test(r)&&/^warn\|坤為地/m.test(r)&&/^ok\|「乾。元亨利貞。」/m.test(r)&&/^ok\|「見龍在田」/m.test(r)&&/^warn\|「天下太平無事」/m.test(r)&&/^warn\|動いた爻＝三爻/m.test(r)&&/^drop\|命式・星の話/m.test(r), r.replace(/\n/g,' / ').slice(0,200)); }
 async function consult(q,nums){ await p.evaluate(()=>scrollTo(0,0)); await p.click('.ct-number'); await p.waitForTimeout(300);
   for(const [i,v] of [['#num1',nums[0]],['#num2',nums[1]],['#num3',nums[2]]]) await p.fill(i,String(v));
   await p.fill('#question',q); const c0=calls; const t0=Date.now();
@@ -40,6 +43,9 @@ if(MODE==='online') ok('相談1：三度押しでも呼び出しは1件分（2�
 const first=(A.v.split('\n').map(s=>s.trim()).filter(s=>s.length>6&&!/^(この相談への答え|[◎〇○△✖×])$/.test(s))[0]||'');
 ok('相談1：答えの欄に結論がある', first.length>=8, first.slice(0,80));
 ok('相談1：画面に＊が出ない', star(A.res)===0, star(A.res));
+if(MODE==='online'){ await p.waitForTimeout(1500); const ev=await p.evaluate(()=>{ const d=document.querySelector('#ekiEv .ev-box'); if(!d) return null; d.open=true; const t=d.innerText; d.open=false; return {t,np:d.classList.contains('no-print')}; });   /* ③ 根拠のチェック表（先生の画面だけ） */
+  if(process.env.GATE_DUMP&&ev) fs.writeFileSync(process.env.GATE_DUMP+'.ev',ev.t);
+  ok('相談1：根拠のチェック表が出る（先生の画面・印刷しない）', !!ev&&ev.np&&/根拠チェック/.test(ev.t), ev?ev.t.slice(0,80):'表がない'); }
 // 続けての質問
 const fb=await p.evaluate(()=>document.querySelectorAll('#fuLog .fu-msg.ai').length); const c1=calls;
 await p.fill('#fuText','来年のいつ頃がいいですか'); await p.click('#fuSend'); await p.click('#fuSend').catch(()=>{});
