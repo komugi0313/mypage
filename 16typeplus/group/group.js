@@ -33,7 +33,7 @@ function groupResult(members){
  const good=pairs[0],bad=pairs[pairs.length-1];
  const roles=gRoles(M.map(m=>m.now)),broles=gRoles(M.map(m=>m.born));
  return {n,members:M.map((m,i)=>({...m,role:roles[i],brole:broles[i]!==roles[i]?broles[i]:null})),now,born,feats,tips,flip,
-  good:{a:M[good.i].name,b:M[good.j].name,why:why(good,true)},bad:n>2&&bad.s<good.s?{a:M[bad.i].name,b:M[bad.j].name,why:why(bad,false)}:null};}
+  good:{a:M[good.i].name,b:M[good.j].name,why:why(good,true)},bad:n>2&&bad.s<good.s&&gSame(M[bad.i].now,M[bad.j].now)<4?{a:M[bad.i].name,b:M[bad.j].name,why:why(bad,false)}:null};}
 function groupHTML(G,title){const e=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
  let h='<div class="gr"><p class="gr-eb">'+GTR("グループの相性")+'</p><h2 class="gr-t">'+e(title)+'</h2><p class="gr-n">'+GTR("{n}人").replace("{n}",G.n)+'</p>';
  h+='<h3>'+GTR("このグループは、こんな集まり")+'</h3>'+(G.feats.length?'<ul class="gr-f">'+G.feats.map(f=>'<li>'+e(f.text)+'</li>').join("")+'</ul>':'<p>'+GTR("どの文字も人数が半々くらいです。いろいろなやり方の人がそろっています。")+'</p>');
