@@ -188,6 +188,19 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(!/【2人の役割と場面＝ツールの判定/.test(r.an)) e.push('鑑定文への渡し');
     if(!/【2人の役割と(場面|、一緒にいるとき)/.test(r.ens)) e.push('書き足し');   /* ビギナーのやさしい画面は【2人の役割と、一緒にいるとき】 */ }
   console.log('  '+(e.length?'NG':'OK')+' 相性：2人の役割と場面（役割・親子・調子・文昌貴人と駅馬・柱どうしの場面）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('2人の役割と場面: '+e.join('・')); }
+// 鑑定文に深みを出す（鑑定者本人の承認 2026-10-25「②」）：この2人だけの材料を渡す・読みが無ければ足す・書き足しは箇条書きにせず関係する見出しの中へ
+{ const r=await p.evaluate(()=>{ if(typeof compatWeave!=='function'||typeof pkEnsureWeave!=='function') return null; const her=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'); const him=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},0,'none'));
+    const t='2人は良い縁です。\n\n【惹かれ合うところ】\nよく似ています。\n\n【ぶつかりやすいところ】\n言い方に注意。\n\n【長続きのコツ】\n話しましょう。';
+    return {ln:compatWeaveLines(her,him),w:pkEnsureWeave(t,her,him),w2:pkEnsureWeave('【この2人だけの読み】\nもう書いてある。\n\n【惹かれ合うところ】\nx',her,him),ask:pkEnsureWeave('質問への答えです。',her,him),c:pkEnsureCross(t,her,him),r:pkEnsureRoles(t,her,him)}; });
+  const e=[]; if(!r) e.push('関数がない'); else {
+    if(!/【この2人だけの材料/.test(r.ln)||!/良い点「律音（日柱どうし）」/.test(r.ln)||!/役割：/.test(r.ln)||!/調子：/.test(r.ln)) e.push('材料');
+    if(!/^2人は良い縁です。\n\n【この2人だけの読み】\nまず、/.test(r.w)) e.push('読みの書き足し（1行目のあと）');
+    if((r.w2.match(/【この2人だけの読み】/g)||[]).length!==1||r.ask!=='質問への答えです。') e.push('二重・質問への答えに足さない');
+    if(!/【惹かれ合うところ】\nよく似ています。\n\n【(?:惹かれ合う星|2人が惹かれ合うところ)[^\n]*\n[^・\n][^\n]*\n\n【ぶつかりやすいところ】/.test(r.c)) e.push('惹かれ合う星を見出しの中へ文章で');
+    if(!/【ぶつかりやすいところ】\n言い方に注意。\n\n【2人の役割と(?:場面|、一緒にいるとき)[^\n]*\n[^・\n][^\n]*\n\n【長続きのコツ】/.test(r.r)) e.push('役割と場面を見出しの中へ文章で'); }
+  console.log('  '+(e.length?'NG':'OK')+' 相性：鑑定文に深み（この2人だけの材料・読み・書き足しを文章で）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('鑑定文に深み: '+e.join('・')); }
+{ const r=await p.evaluate(()=>typeof pkFixAge==='function'&&typeof pkStampYears==='function'?pkStampYears(pkFixAge('2029年（己酉（つちのととり）の年（35歳ごろ））は動きます。',1990,1990),1990,1990):'');
+  const ok=/39歳/.test(r)&&!/35歳/.test(r); console.log('  '+(ok?'OK':'NG')+' 重なったかっこの年齢（2029年（己酉（よみ）の年（35歳ごろ））も計算し直す）'); if(!ok) res.fails.push('重なったかっこの年齢: '+r); }
 // 同性カップル（鑑定者本人の指示 2026-10-24）：女性同士 1990-03-03×1990-02-02＝パートナーの星はお相手の性別（女性＝財星）・「異性」と書かない／男女は今までどおり
 { const r=await p.evaluate(()=>{ if(typeof pkSameSexWord!=='function') return null; const mk=(y,m,d,sex)=>markTimeUnknown(baziCompute({year:y,month:m,day:d,hour:12,minute:0,sex,tu:true},0,'none'));
     const A=mk(1990,3,3,'female'), B=mk(1990,2,2,'female'), M=mk(1990,3,3,'male'), F=mk(1981,6,10,'female'), G=mk(1983,5,5,'male'); window.chart=A; window.chartB=B;
