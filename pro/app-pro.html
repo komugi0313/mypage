@@ -6231,10 +6231,11 @@ function plainGloss(t){
   if(!t)return t;
   for(var n=0;n<READ_GLOSS.length;n++){var term=READ_GLOSS[n][0],mean=READ_GLOSS[n][1];
     var i=t.indexOf(term); if(i<0)continue;
-    var after=t.charAt(i+term.length);
+    var j=i+term.length, st=t.slice(j).match(/^\*{1,2}/); if(st) j+=st[0].length;   // 「**干合**（かんごう…）」のように太字の記号のあとに読み・説明があるときも、もう1つ足さない（発注者指示 2026-10-25）
+    var after=t.charAt(j);
     if(/[（(）)]/.test(after))continue;                     // 既に言い換えがある／カッコ内で説明語として使われている
     if(after&&/[一-鿿]/.test(after))continue;       // 直後が漢字＝別の熟語の一部→触らない
-    t=t.slice(0,i+term.length)+'（＝'+mean+'）'+t.slice(i+term.length);
+    t=t.slice(0,j)+'（＝'+mean+'）'+t.slice(j);
   }
   return t;
 }
@@ -6819,6 +6820,11 @@ function pkFixAge(s,by,other){ try{ s=String(s==null?'':s).replace(/([甲乙丙�
   var fix=function(y,a,keep){ y=+y; a=+a; var e=y-by; if(e<0||e>130) return keep; if(a===e) return keep; if(other) return keep; return null; };   // その年の誕生日の前後で1つちがうのはそのまま。2人分の文（相性）で、どちらにも合わないときは決めつけない
   s=s.replace(/((?:19|20)\d\d)年([（(][甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥年・、：:\s]{0,8}|の|は|、|・|頃の|ごろの|[ 　])?(\d{1,3})(歳|才)/g,function(m,y,mid,a,u,off,str){ if(/^[）)]?(の|になる|を迎える)?(お子|子ども|子供|娘|息子|お孫|孫|お母|お父|母|父|ご主人|奥様|夫|妻|彼|相手|兄|姉|弟|妹|ご両親|親)/.test(String(str).slice(off+m.length,off+m.length+10))) return m; if(other&&(+a===+y-other||+a===+y-other-1)) return m; var k=fix(y,a,m); return k!==null?k:(y+'年'+(mid||'')+(+y-by)+u); });
   s=s.replace(/(\d{1,3})(歳|才)([（(])((?:19|20)\d\d)年([）)])/g,function(m,a,u,p1,y,p2){ if(other&&(+a===+y-other||+a===+y-other-1)) return m; var k=fix(y,a,m); return k!==null?k:((+y-by)+u+p1+y+'年'+p2); });
+  if(other){   /* 2人分の年齢が名前つきで並ぶかっこ（2027年1月ごろ（健太さん42歳／翔さん39歳ごろ）・2026年（丙午）の終わりごろ（41歳／38歳））も、近くの西暦から計算し直す（発注者指示 2026-10-25「必ず直して」） */
+    var nmB=''; try{ nmB=(typeof window!=='undefined'&&window.personNameB)||((typeof personNameB!=='undefined')?personNameB:'')||''; }catch(_e){}
+    s=s.replace(/((?:19|20)\d\d)年((?:[^。\n（(）)]|[（(][^（）()\n]{0,10}[）)]){0,16}?)([（(])([^（）()\n\d]{0,12}?)(\d{1,3})(歳|才)((?:ごろ|頃)?\s*[／/・、]\s*)([^（）()\n\d]{0,12}?)(\d{1,3})(歳|才)([^（）()\n\d]{0,4})([）)])/g,function(m,y,mid,p1,n1,a1,u1,sep,n2,a2,u2,tail,p2){ y=+y; a1=+a1; a2=+a2; var eA=y-by, eB=y-other, ok=function(a,e){ return a===e||a===e-1; };
+      if(eA<0||eB<0||eA>130||eB>130) return m; var bFirst=/お相手|相手|^彼/.test(n1)||(nmB&&n1.indexOf(nmB)>=0)||/あなた|本人/.test(n2);
+      var e1=bFirst?eB:eA, e2=bFirst?eA:eB; if(ok(a1,e1)&&ok(a2,e2)) return m; return y+'年'+mid+p1+n1+e1+u1+sep+n2+e2+u2+tail+p2; }); }
   s=s.replace(/(\d{1,3}(?:歳|才))[・、]\1/g,'$1');   // 直したあとに同じ年齢が2つ並んだら1つに
   return s; }catch(e){ return s; } }
 function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; other=+other||0;   // 西暦のあとに、ツールが計算した干支と年齢を付ける（文章作成の書いた干支・年齢のかっこは外して付け直す。発注者指示 2026-10-22「普通のことをまちがえない」）
@@ -6866,7 +6872,8 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
   out=out.replace(/(（[^（）\n]{1,40}）)([*＊]{0,2})\1/g,'$1$2');   // 同じかっこが2つ続いたら1つに
   out=out.replace(/([一-龥]{1,8})[（(]\1[（(]([^（）()\n]{1,80})[）)][）)]/g,'$1（$2）');   // 「害（害（がい：…））」のような言葉の二重がっこは1つに
   return out.replace(/\u0003/g,''); }catch(e){ return String(s).replace(/\u0003/g,''); } }
-function pkFactFix(t,aS,bS){ try{ t=String(t==null?'':t);   // 命式の事実（日干の五行・十干の五行・十二支と十二運の取りちがえ）を、計算どおりに直す（発注者指示 2026-10-22「普通のことをまちがえない」）
+function pkFactFix(t,aS,bS){ try{ t=String(t==null?'':t);  t=t.replace(/ふたの(関係|仲|絆|間|未来|将来|時間|気持ち|距離|ペース|縁|心|暮らし|生活|話し合い)/g,'ふたりの$1');   /* 「ふたりの」の「り」が抜けた打ちまちがい（発注者指示 2026-10-25「必ず直して」） */
+   // 命式の事実（日干の五行・十干の五行・十二支と十二運の取りちがえ）を、計算どおりに直す（発注者指示 2026-10-22「普通のことをまちがえない」）
   var EL={甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'金',辛:'金',壬:'水',癸:'水'};
   // ① 十干のすぐあとの説明の五行：「丁（ひのと・柔らかな火の性質）」「庚（＝金の性質）」「丁（火の性質）」
   t=t.replace(/([甲乙丙丁戊己庚辛壬癸])(?![子丑寅卯辰巳午未申酉戌亥])([（(][^）)\n]{0,24}?)([木火土金水])(の性質|の五行|の気|の人|属性|性)/g,function(m,g,mid,e,tail){ return (EL[g]===e)?m:g+mid+EL[g]+tail; });

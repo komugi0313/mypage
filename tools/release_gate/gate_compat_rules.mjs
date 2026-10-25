@@ -201,6 +201,10 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   console.log('  '+(e.length?'NG':'OK')+' 相性：鑑定文に深み（この2人だけの材料・読み・書き足しを文章で）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('鑑定文に深み: '+e.join('・')); }
 { const r=await p.evaluate(()=>typeof pkFixAge==='function'&&typeof pkStampYears==='function'?pkStampYears(pkFixAge('2029年（己酉（つちのととり）の年（35歳ごろ））は動きます。',1990,1990),1990,1990):'');
   const ok=/39歳/.test(r)&&!/35歳/.test(r); console.log('  '+(ok?'OK':'NG')+' 重なったかっこの年齢（2029年（己酉（よみ）の年（35歳ごろ））も計算し直す）'); if(!ok) res.fails.push('重なったかっこの年齢: '+r); }
+{ const r=await p.evaluate(()=>{ if(typeof formatReading!=='function'||typeof pkFactFix!=='function') return ''; const d=document.createElement('div'); d.innerHTML=formatReading('天干どうしが引き合う**干合**（かんごう：干どうしが結びつく）が成り立ちます。'); return d.textContent+'|'+pkFactFix('ふたの関係が動き、鍋のふたの色。','',''); });
+  const ok=/干合（かんごう：干どうしが結びつく）/.test(r)&&!/（＝干どうし/.test(r)&&/ふたりの関係が動き、鍋のふたの色/.test(r); console.log('  '+(ok?'OK':'NG')+' 太字の用語に読みを2つ付けない・「ふたの関係」を「ふたりの関係」に'); if(!ok) res.fails.push('読みの重なり・ふたり: '+r); }
+{ const r=await p.evaluate(()=>{ if(typeof pkFixAge!=='function') return ''; window.personNameB='翔'; const o=pkFixAge('2027年1月ごろ（健太さん40歳／翔さん30歳ごろ）。2028年（翔さん40歳・健太さん43歳）。2030年に母が70歳（2030年）。',1985,1988); window.personNameB=''; return o; });
+  const ok=/2027年1月ごろ（健太さん42歳／翔さん39歳ごろ）/.test(r)&&/翔さん40歳・健太さん43歳/.test(r)&&/母が70歳/.test(r); console.log('  '+(ok?'OK':'NG')+' 月のあと・名前つきの2人の年齢も計算し直す（家族の年齢は変えない）'); if(!ok) res.fails.push('名前つきの2人の年齢: '+r); }
 // 同性カップル（鑑定者本人の指示 2026-10-24）：女性同士 1990-03-03×1990-02-02＝パートナーの星はお相手の性別（女性＝財星）・「異性」と書かない／男女は今までどおり
 { const r=await p.evaluate(()=>{ if(typeof pkSameSexWord!=='function') return null; const mk=(y,m,d,sex)=>markTimeUnknown(baziCompute({year:y,month:m,day:d,hour:12,minute:0,sex,tu:true},0,'none'));
     const A=mk(1990,3,3,'female'), B=mk(1990,2,2,'female'), M=mk(1990,3,3,'male'), F=mk(1981,6,10,'female'), G=mk(1983,5,5,'male'); window.chart=A; window.chartB=B;
