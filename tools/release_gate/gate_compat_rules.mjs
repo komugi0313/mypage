@@ -262,6 +262,15 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(/(咸池|紅艶|比肩|官星|財星|日干|年支|日支|命式)/.test(r.plain)) e.push('やさしい言い方に専門用語');
     if(!r.html||!r.an) e.push('画面・鑑定文への渡し'); }
   console.log('  '+(e.length?'NG':'OK')+' 惹かれ方のしくみ（恋愛の星の十二支・相手にあるか・パートナーの星とのちがい・時刻不明）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('惹かれ方のしくみ: '+e.join('・')); }
+// 相性の結果のまとめ・目次・たためる欄（2026-10-25）
+{ const r=await p.evaluate(()=>{ if(typeof compatSummaryHTML!=='function'||typeof pkCvFold!=='function') return null; document.getElementById('rel-type').value='love'; const A=baziCompute({year:2008,month:3,day:28,hour:14,minute:30,sex:'female',tu:false},'','none'), B=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},'','none'));
+    const h=compatSummaryHTML(A,B,RELTYPES.love), f=pkCvFold('<section>中身</section>','cm-w','見出し',1); return {h, f}; });
+  const e=[]; if(!r) e.push('仕組みがない'); else { if(!/相性の判定<\/b>：良い点が注意点を上回る組み合わせ（良い点13\.5／注意点6\.5）/.test(r.h)) e.push('判定'); if(!/お相手のほうが強く惹かれている（強い）/.test(r.h)) e.push('惹かれ方'); if(!/2人とも縁が動く月<\/b>：/.test(r.h)||!/注意の月<\/b>：/.test(r.h)) e.push('月'); if(!/pkCvJump\(&#39;ck-w&#39;\)/.test(r.h)) e.push('目次');
+    if(!/class="cv-fold closed" id="cm-w" data-keep="1"/.test(r.f)||!/cv-head/.test(r.f)) e.push('たためる欄'); }
+  console.log('  '+(e.length?'NG':'OK')+' 相性の結果のまとめ・目次・たためる欄'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('まとめ・目次: '+e.join('・')); }
+// お名前の印が残らない（1文字のお名前・2026-10-25）
+{ const r=await p.evaluate(()=>{ const pa=personName, pb=personNameB; personName='健太'; personNameB='翔'; const out=_unmaskNames('〔本人〕さんと〔翔〕さん、〔お相手〕さん。2027年〔丁未・42歳〕',[['健太','〔本人〕']]); personName=pa; personNameB=pb; return out; });
+  const okN=r==='健太さんと翔さん、翔さん。2027年〔丁未・42歳〕'; console.log('  '+(okN?'OK':'NG')+' お名前の印が残らない（1文字のお名前）'+(okN?'':'  … '+r)); if(!okN) res.fails.push('お名前の印'); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
