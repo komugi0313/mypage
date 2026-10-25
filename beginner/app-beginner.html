@@ -7308,7 +7308,7 @@ function pkConsultPeople(c,q){ const out=[]; try{ if(!c||!c.pillars) return out;
     if(lab==='彼') lab=/彼氏が(いる|います)|付き合っている|交際中/.test(q)?'今の彼':'彼'; if(lab==='彼女') lab=/彼女が(いる|います)/.test(q)?'今の彼女':'彼女';   // 「彼氏がいるけど…彼は2000年…」＝今の彼
     try{ let b=baziCompute({year:y,month:mo,day:d,hour:hh,minute:mm,sex:sex,tu:!tm},0,'none'); if(!tm) b=markTimeUnknown(b); out.push({lab:lab.replace(/^今の$/,'今の相手'),ymd:y+'年'+mo+'月'+d+'日'+(tm?' '+hh+'時'+(mm?mm+'分':''):'（時刻不明）'),sex:sex,c:b}); }catch(e){} }
 }catch(e){} return out; }
-function pkConsultPeopleLines(c,q){ const P=pkConsultPeople(c,q), pro=[], plain=[], S=[]; try{ if(!P.length) return {P:P,pro:pro,plain:plain,S:S};
+function pkConsultPeopleLines(c,q){ const P=pkConsultPeople(c,q), pro=[], plain=[], S=[], V={}; try{ if(!P.length) return {P:P,pro:pro,plain:plain,S:S,V:V};
   P.forEach(function(o){ const b=o.c, cb=compatBalance(c,b), ad=attractionDir(c,b,'本人','お相手'), ap=attractionDir(c,b,'あなた','お相手'), R=compatRoles(c,b), TL=compatTrioLines(c,b), CM=compatMonths(c,b);
     const top=function(g,n){ return cb.items.filter(function(x){ return x.good===g; }).sort(function(p,q){ return q.w-p.w; }).slice(0,n).map(function(x){ return x.kind.replace(/（.*$/,'')+'（'+x.where+'）'; }); };
     const both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }).slice(0,3).map(function(x){ return x.y+'年'+x.m+'月'; });
@@ -7327,7 +7327,7 @@ function pkConsultPeopleLines(c,q){ const P=pkConsultPeople(c,q), pro=[], plain=
     const bL=mx('base'), lL=mx('love'), up=S.filter(function(x){ return x.en==='up'; }).map(function(x){ return x.lab; });
     const warn=compatMonths(c,P[0].c).filter(function(x){ return x.A.w.length; }).map(function(x){ return x.y+'年'+x.m+'月'; });   // 本人の注意の月（配偶宮が刑・冲）を年つきで
     // 命式の相性のくらべ（数字と、それぞれのよいところ・気をつけたいところ）。すすめるときは必ずこの理由で（鑑定者本人の指示 2026-10-25「今の彼を進める納得できる理由をツールでも出す」）
-    const A0=S[0], B0=S[1], dn=Math.round((A0.net-B0.net)*10)/10, lean=Math.abs(dn)<2?null:(dn>0?A0:B0), oth=lean?(lean===A0?B0:A0):null;
+    const A0=S[0], B0=S[1], dn=Math.round((A0.net-B0.net)*10)/10, lean=Math.abs(dn)<2?null:(dn>0?A0:B0), oth=lean?(lean===A0?B0:A0):null; V.two=1; V.lean=lean?lean.lab:''; V.dn=Math.abs(dn);
     const why=function(x,y){ const g=[], w=[];
       if(x.net>y.net) g.push(['命式の相性の点数が高い（良い点'+x.good+'／注意点'+x.bad+'）','生まれ持った相性の点数が高い']);
       if(x.love>y.love) g.push([x.both?'恋愛の星が両方向に当たる（2人とも惹かれやすい）':'恋愛の星が当たる','お互いに惹かれやすい']);
@@ -7347,12 +7347,17 @@ function pkConsultPeopleLines(c,q){ const P=pkConsultPeople(c,q), pro=[], plain=
     pro.push('くらべた結果（ツールの判定）：'+(bL?'暮らしの土台（方合・三合・支合など）が強いのは '+bL:'土台の強さは同じくらい')+'／'+(lL?'惹かれ合い（恋愛の星）が強いのは '+lL:'惹かれ合いの強さは同じくらい')+'／'+(up.length?'本人が一緒にいて調子が上がりやすいのは '+up.join('・'):'本人の調子の上がり方に大きな差はない')+'。決める時期：'+(warn.length?warn.join('・')+'は注意の月（刑・冲）なので大事な答えを出さない。':'')+'縁が動く月・三合がそろう年を目安に、今の相手に正直に向き合ってから決める。二股のまま進めない。決めるのは本人。');
     plain.push('生まれ持った相性だけで見ると、'+(lean?lean.lab+'のほうが合う組み合わせです。':'2人は同じくらいです。')+[[A0,WA],[B0,WB]].map(function(q){ return q[0].lab+'のよいところ：'+(q[1].g.map(function(z){ return z[1]; }).join('、')||'とくになし')+'。気をつけたいところ：'+(q[1].w.map(function(z){ return z[1]; }).join('、')||'とくになし')+'。'; }).join(''));
     plain.push('くらべると：'+(bL?'安心できる土台が強いのは'+bL:'')+(bL&&lL?'、':'')+(lL?'ときめき・惹かれ合いが強いのは'+lL:'')+'です。'+(warn.length?warn.join('・')+'は気持ちが揺れやすいので、大事な答えを出さないでください。':'')+'今の相手にきちんと向き合ってから決めましょう。'); }
-}catch(e){} return {P:P,pro:pro,plain:plain,S:S}; }
+}catch(e){} return {P:P,pro:pro,plain:plain,S:S,V:V}; }
 function pkConsultPeopleText(c,q){ const L=pkConsultPeopleLines(c,q);
   if(L.plain.length&&typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on')) return '\n\n【相談に出てくるお相手との相性（ツールが計算済み・必ず使う。専門用語は使わずに書く）】\n'+L.plain.map(function(x){ return '・'+x; }).join('\n')+'\n※お相手が2人いるときは、1行目で「生まれ持った相性だけで見ると○○のほうが合う（または同じくらい）」と、上のとおりに正直に書く。どちらかをすすめるときは、その人のよいところと、もう一人の気をつけたいところを3つ以上あげて理由にする（理由のない一般論で一方をすすめない）。二股を勧めない。今の相手に正直に向き合うこと、大事な答えを出さない月を書く。';   // ビギナーのやさしい画面では、専門用語のない言い方で渡す（専門用語が文章に移らないように）
   return L.pro.length?'\n\n【相談に出てくるお相手との相性（ツールが計算済み・必ず使う）】\n'+L.pro.map(function(x){ return '・'+x; }).join('\n')+'\n※お相手が2人いるときは、1行目で「命式の相性だけで見ると○○のほうが良い（または同じくらい）」と、上の【命式の相性のくらべ】の判定どおりに正直に書く。どちらかをすすめるときは、その人の「よいところ」と、もう一人の「気をつけたいところ」を命式の言葉で3つ以上あげて理由にする（命式にない理由で一方をすすめない。判定と違う人をすすめるときは、なぜ数字と違うのかを必ず書く）。それぞれの相性の違い（安定・土台／惹かれ合い／一緒にいるときの調子）を命式の言葉で比べて書く。どちらか一方の悪口にしない。二股を勧めない。今の相手に正直に向き合うこと、決める時期（注意の月を避ける）を西暦・月で書く。':''; }
 // 答えに、お相手ごとの相性が書かれていなければ書き足す
 function pkEnsurePeople(t,c,q){ try{ t=String(t||''); const L=pkConsultPeopleLines(c,q); if(!L.P.length) return t; const plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'));
+  // 1行目：ツールの判定（命式の相性だけで見ると○○のほうが良い／同じくらい）と合っていなければ、判定の1文をいちばん上に入れる＝毎回同じ答えにする（鑑定者本人の指示 2026-10-25「お願いします」）
+  if(L.V&&L.V.two){ const lines=t.split('\n'), fi=lines.findIndex(function(x){ return x.trim(); }), first=fi>=0?lines[fi]:'', V=L.V, other=L.S.filter(function(x){ return x.lab!==V.lean; }).map(function(x){ return x.lab; })[0]||'';
+    const okFirst=V.lean?(first.indexOf(V.lean)>=0&&/良い|合う|上回|まさ/.test(first)&&!(other&&new RegExp(other+'(のほう|の方)が(良い|合う)').test(first))):/同じくらい|同程度|差はほとんど/.test(first);
+    if(!okFirst){ const head=plain?(V.lean?'生まれ持った相性だけで見ると、'+V.lean+'のほうが合う組み合わせです。':'生まれ持った相性だけで見ると、2人は同じくらいです。'):(V.lean?'命式の相性だけで見ると、'+V.lean+'のほうが良い組み合わせです（差'+V.dn+'点・ツールの判定）。':'命式の相性だけで見ると、2人は同じくらいです（差'+V.dn+'点・ツールの判定）。');
+      t=head+'\n'+t; } }
   const miss=L.P.map(function(o,i){ const cb=compatBalance(c,o.c), kinds=cb.items.filter(function(x){ return x.good!==null; }).map(function(x){ return x.kind.replace(/（.*$/,''); }); return (plain?t.indexOf(o.lab)>=0:(t.indexOf(o.lab)>=0&&kinds.some(function(k){ return t.indexOf(k)>=0; })))?-1:i; }).filter(function(i){ return i>=0; });
   const needCmp=L.P.length>=2&&!(plain?/相性だけで見ると/.test(t):/命式の相性だけで見ると/.test(t)&&/よいところ|良いところ/.test(t));   // 数字のくらべと、それぞれの理由が書かれていなければ必ず足す
   if(!miss.length&&!needCmp) return t; const src=plain?L.plain:L.S.map(function(x){ return x.brief; }).concat(L.pro.slice(L.P.length)); const lines=src.filter(function(x,i){ return miss.indexOf(i)>=0||(needCmp&&i>=L.P.length); });
