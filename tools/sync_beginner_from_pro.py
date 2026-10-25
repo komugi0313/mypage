@@ -78,7 +78,7 @@ def to_beginner_colors(s):
     return s
 
 def build_app():
-    pro = (PRO / 'app-pro.html').read_text(encoding='utf-8').replace('四柱推命占い自動鑑定 PRO','四柱推命占い自動鑑定').replace('<span class="pk-pro" style="display:inline-block;margin-left:.3em;padding:0 .35em;border-radius:6px;background:#B23A2E;color:#fff;font-size:.62em;font-weight:900;vertical-align:.25em;letter-spacing:.04em">PRO</span>','')
+    pro = (PRO / 'app-pro.html').read_text(encoding='utf-8').replace('四柱推命占い自動鑑定 PRO','四柱推命占い自動鑑定').replace('<meta name="apple-mobile-web-app-title" content="自動鑑定PRO">','<meta name="apple-mobile-web-app-title" content="'+B_NAME+'">').replace('<span class="pk-pro" style="display:inline-block;margin-left:.3em;padding:0 .35em;border-radius:6px;background:#B23A2E;color:#fff;font-size:.62em;font-weight:900;vertical-align:.25em;letter-spacing:.04em">PRO</span>','')
     pro = to_beginner_colors(pro)
     cur = (BEG / 'app-beginner.html').read_text(encoding='utf-8')
     link_icon, icon_script = beginner_icons(cur)
@@ -96,8 +96,8 @@ def build_app():
     s = rep(s, 'https://72k.ai/app-pro.html', B_URL, 1)
     s = rep(s, 'https://72k.ai/ogp.png', B_OGP, 2)
     s = re.sub(r'<script>window\.__ICON__=[\s\S]*?</script>', lambda m: icon_script, s, count=1)
-    s = rep(s, '<meta name="apple-mobile-web-app-title" content="四柱推命占い自動鑑定">',
-            f'<meta name="apple-mobile-web-app-title" content="{B_NAME}">', 1)
+    s = rep(s, f'<meta name="apple-mobile-web-app-title" content="{B_NAME}">',
+            f'<meta name="apple-mobile-web-app-title" content="{B_NAME}">', 1)   # PROのホーム画面の名前「自動鑑定PRO」（PROの文字は先に外れる＝鑑定者本人の指示 2026-10-25「自動鑑定PROに短く」）
     s = rep(s, 'manifest-pro.webmanifest', 'manifest-beginner.webmanifest', 1)
 
     # ---- 画面の名前（会員ゲート・ヘッダー） ----
@@ -162,7 +162,7 @@ def build_app():
 
 
 def build_auth():
-    s = (PRO / 'auth.html').read_text(encoding='utf-8').replace('四柱推命占い自動鑑定 PRO','四柱推命占い自動鑑定').replace('<span class="pk-pro" style="display:inline-block;margin-left:.3em;padding:0 .35em;border-radius:6px;background:#B23A2E;color:#fff;font-size:.62em;font-weight:900;vertical-align:.25em;letter-spacing:.04em">PRO</span>','')
+    s = (PRO / 'auth.html').read_text(encoding='utf-8').replace('四柱推命占い自動鑑定 PRO','四柱推命占い自動鑑定').replace('<meta name="apple-mobile-web-app-title" content="自動鑑定PRO">','<meta name="apple-mobile-web-app-title" content="'+B_NAME+'">').replace('<span class="pk-pro" style="display:inline-block;margin-left:.3em;padding:0 .35em;border-radius:6px;background:#B23A2E;color:#fff;font-size:.62em;font-weight:900;vertical-align:.25em;letter-spacing:.04em">PRO</span>','')
     s = to_beginner_colors(s)
     s = rep(s, '｜四柱推命占い 自動鑑定</title>', f'｜{B_NAME}</title>', 1)
     s = rep(s, 'mypage-pro.html', 'mypage.html')
@@ -183,7 +183,7 @@ def common_links(s):
 
 
 def build_pricing():
-    s = (PRO / 'pricing-pro.html').read_text(encoding='utf-8').replace('四柱推命占い自動鑑定 PRO','四柱推命占い自動鑑定').replace('<span class="pk-pro" style="display:inline-block;margin-left:.3em;padding:0 .35em;border-radius:6px;background:#B23A2E;color:#fff;font-size:.62em;font-weight:900;vertical-align:.25em;letter-spacing:.04em">PRO</span>','')
+    s = (PRO / 'pricing-pro.html').read_text(encoding='utf-8').replace('四柱推命占い自動鑑定 PRO','四柱推命占い自動鑑定').replace('<meta name="apple-mobile-web-app-title" content="自動鑑定PRO">','<meta name="apple-mobile-web-app-title" content="'+B_NAME+'">').replace('<span class="pk-pro" style="display:inline-block;margin-left:.3em;padding:0 .35em;border-radius:6px;background:#B23A2E;color:#fff;font-size:.62em;font-weight:900;vertical-align:.25em;letter-spacing:.04em">PRO</span>','')
     s = to_beginner_colors(s)
     # 頭（タイトル・説明・OGP・PWA）はビギナー用に差し替え
     i = s.index('<meta name="theme-color"'); j = s.index('<style>')
@@ -205,7 +205,7 @@ def build_pricing():
 
 
 def build_mypage():
-    s = (PRO / 'mypage-pro.html').read_text(encoding='utf-8').replace('四柱推命占い自動鑑定 PRO','四柱推命占い自動鑑定').replace('<span class="pk-pro" style="display:inline-block;margin-left:.3em;padding:0 .35em;border-radius:6px;background:#B23A2E;color:#fff;font-size:.62em;font-weight:900;vertical-align:.25em;letter-spacing:.04em">PRO</span>','')
+    s = (PRO / 'mypage-pro.html').read_text(encoding='utf-8').replace('四柱推命占い自動鑑定 PRO','四柱推命占い自動鑑定').replace('<meta name="apple-mobile-web-app-title" content="自動鑑定PRO">','<meta name="apple-mobile-web-app-title" content="'+B_NAME+'">').replace('<span class="pk-pro" style="display:inline-block;margin-left:.3em;padding:0 .35em;border-radius:6px;background:#B23A2E;color:#fff;font-size:.62em;font-weight:900;vertical-align:.25em;letter-spacing:.04em">PRO</span>','')
     s = to_beginner_colors(s)
     i = s.index('<meta name="theme-color"'); j = s.index('<style>')
     s = s[:i] + '<title>マイページ｜今日から占い師</title>\n<meta name="robots" content="noindex">\n' + s[j:]
