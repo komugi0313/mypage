@@ -249,6 +249,8 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(!/命式からの答えの方向：出る|遠くへ出るほうが合って/.test(r.e)||!/2027年は空亡の年|2027年は、新しく大きく始めることが形になりにくい/.test(r.e)) e.push('書き足し（判定と逆の答え・空亡）');   /* ビギナーのやさしい画面は専門用語なしの言い方 */
     if(/【この相談で大事なこと】/.test(r.e)&&/(空亡|駅馬|印星|大運)/.test(r.e.split('【この相談で大事なこと】')[1])) e.push('やさしい言い方に専門用語');
     if(/【この相談でツールが確かめたこと】/.test(r.ok)) e.push('書いてあるのに書き足している'); }
+  { const t=await p.evaluate(()=>{ const c=baziCompute({year:2001,month:2,day:9,hour:16,minute:0,sex:'female',tu:false},0,'none'); return pkConsultFocusText(c,'彼氏がいるけど他に好きな人ができた'); });   /* 中和（喜神・忌神なし）でも空にしない */
+    if(/喜神（[^）]*）＝／|忌神（[^）]*）＝$/m.test(t)||!/はっきりした喜神/.test(t)) e.push('中和の喜神・忌神が空'); }
   console.log('  '+(e.length?'NG':'OK')+' 相談の要点（大運・4年の年運・空亡・駅馬・六親・適職・答えの方向）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('相談の要点: '+e.join('・')); }
 // 同性カップル（鑑定者本人の指示 2026-10-24）：女性同士 1990-03-03×1990-02-02＝パートナーの星はお相手の性別（女性＝財星）・「異性」と書かない／男女は今までどおり
 { const r=await p.evaluate(()=>{ if(typeof pkSameSexWord!=='function') return null; const mk=(y,m,d,sex)=>markTimeUnknown(baziCompute({year:y,month:m,day:d,hour:12,minute:0,sex,tu:true},0,'none'));
