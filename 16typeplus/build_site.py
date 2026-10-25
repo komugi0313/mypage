@@ -20,8 +20,8 @@ def build():
     for f in os.listdir(R+'characters/web'):
         if f.endswith('.webp'): shutil.copy(R+'characters/web/'+f,OUT+'chars/'+f)
     shutil.copy(R+'kakure-shindan/bazi.js',OUT+'bazi.js')
-    for f in ['favicon.ico']: shutil.copy(R+'kakure-shindan/'+f,OUT+f)
-    for f in ['favicon-32.png','favicon-180.png']: shutil.copy(R+'kakure-shindan/img/'+f,OUT+'img/'+f)
+    shutil.copy(R+'icons/favicon.ico',OUT+'favicon.ico')
+    for f in ['favicon-32.png','favicon-48.png','apple-touch-icon.png','icon-192.png','icon-512.png','icon-maskable-192.png','icon-maskable-512.png']: shutil.copy(R+'icons/'+f,OUT+'img/'+f)
     for l in ['ja','en','ko']: shutil.copy(R+'site_assets/ogp-%s.png'%l,OUT+'img/ogp-%s.png'%l)
     if os.path.exists(R+'kakure-shindan/privacy.html'): shutil.copy(R+'kakure-shindan/privacy.html',OUT+'privacy.html')
     head=rd(R+'src/head.html');js=rd(R+'src/budoux-inline.js')+rd(R+'src/script.js')
@@ -46,7 +46,10 @@ def build():
 <link rel="canonical" href="{u}">
 {alt}<link rel="icon" href="{base}favicon.ico" sizes="48x48">
 <link rel="icon" href="{base}img/favicon-32.png" type="image/png" sizes="32x32">
-<link rel="apple-touch-icon" href="{base}img/favicon-180.png">
+<link rel="apple-touch-icon" href="{base}img/apple-touch-icon.png">
+<link rel="manifest" href="{base}{'' if lang=='ja' else lang+'/'}manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="16TYPE+">
+<meta name="application-name" content="16TYPE+">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="16TYPE+">
 <meta property="og:title" content="{t}">
@@ -66,6 +69,11 @@ def build():
         open(OUT+('' if lang=='ja' else lang+'/')+'data.js','w',encoding='utf-8').write(data)
         page=top+head+'</head>\n<body>\n'+body+'\n<script src="data.js"></script>\n<script src="%sbazi.js"></script>\n<script src="%sapp.js"></script>\n'%(base,base)+('<script>BX.start(document.querySelector(".page"));</script>\n' if lang=='ja' else '')+'</body>\n</html>\n'
         open(OUT+('' if lang=='ja' else lang+'/')+'index.html','w',encoding='utf-8').write(page)
+        man={'name':'16TYPE+','short_name':'16TYPE+','description':desc,'lang':lang,'id':'/' if lang=='ja' else '/'+lang+'/',
+             'start_url':'/' if lang=='ja' else '/'+lang+'/','scope':'/','display':'standalone','background_color':'#F6F7F9','theme_color':'#F6F7F9',
+             'icons':[{'src':'/img/icon-192.png','sizes':'192x192','type':'image/png','purpose':'any'},{'src':'/img/icon-512.png','sizes':'512x512','type':'image/png','purpose':'any'},
+                      {'src':'/img/icon-maskable-192.png','sizes':'192x192','type':'image/png','purpose':'maskable'},{'src':'/img/icon-maskable-512.png','sizes':'512x512','type':'image/png','purpose':'maskable'}]}
+        open(OUT+('' if lang=='ja' else lang+'/')+'manifest.webmanifest','w',encoding='utf-8').write(json.dumps(man,ensure_ascii=False,indent=1))
     open(OUT+'app.js','w',encoding='utf-8').write(js)
     print('built',OUT)
 if __name__=='__main__': build()
