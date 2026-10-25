@@ -146,7 +146,7 @@ function drawQ(){/* 数は「最大」から見せて、減ることはあって
  $("qProg").style.width=(qi/total*100)+"%";$("qNote").hidden=qi>0;
  let ch=$("qCheer");if(!ch){ch=document.createElement("p");ch.id="qCheer";ch.className="qcheer";$("qAxis").before(ch);}
  const add=ord.length-BASE;
- const CH=qi>=7&&qi<9?TR("いい調子です。直感で答えてくださいね。"):qi>=15&&qi<18?TR("半分まで来ました。途中で閉じても、続きから再開できます。"):qi>=24&&qi<27&&!ext?TR("もう少しで30問です。答えがはっきりしていれば、30問で終わります。"):qi>=BASE&&qi<BASE+3&&add>0?(add<MAXQ-BASE?TR("30問が終わりました。答えがはっきりしていたところは、ここで終わりです。全部で最大{n}問になりました。"):TR("30問が終わりました。もう少しだけ、くわしく確かめます。全部で最大{n}問です。")).replace("{n}",total):qi===ord.length&&tbList.length?TR("最後に、2択の質問が{n}問だけあります。").replace("{n}",tbList.length):qi>=BASE+3&&left>0&&left<=5?(fin?TR("ラストスパート！あと{n}問です。").replace("{n}",left):TR("もう少しで終わります。")):"";
+ const CH=qi>=7&&qi<9?TR("いい調子です。直感で答えてくださいね。"):qi>=15&&qi<18?TR("半分まで来ました。途中で閉じても、続きから再開できます。"):qi>=24&&qi<27&&!ext?TR("もう少しで30問です。ここで、答えがはっきりしたところとそうでないところを見分けます。"):qi>=BASE&&qi<BASE+3&&add>0?(add<MAXQ-BASE?TR("30問が終わりました。答えがはっきりしていたところは、ここで終わりです。全部で最大{n}問になりました。"):TR("30問が終わりました。もう少しだけ、くわしく確かめます。全部で最大{n}問です。")).replace("{n}",total):qi===ord.length&&tbList.length?TR("最後に、2択の質問が{n}問だけあります。").replace("{n}",tbList.length):qi>=BASE+3&&left>0&&left<=5?(fin?TR("ラストスパート！あと{n}問です。").replace("{n}",left):TR("もう少しで終わります。")):"";
  ch.hidden=!CH;ch.textContent=CH;
  const o=$("qOpts");o.innerHTML="";
  if(qi<ord.length){const qn=ord[qi],q=QZ.Q[qn],A=AXQ[AXN[q.ax]];
@@ -804,7 +804,7 @@ function addHist(src,t,d,tags){try{const k=ymdOf(),dd=d||today();let L=histAll()
 function delHist(id){sset(KH,histAll().filter(r=>r.id!==id));drawRec();}
 function tagHist(id,tg){const L=histAll(),r=L.find(x=>x.id===id);if(!r)return;r.tags=r.tags||[];const i=r.tags.indexOf(tg);i<0?r.tags.push(tg):r.tags.splice(i,1);sset(KH,L);drawRec();}
 const RECAX=[["EI","元気の出し方"],["SN","ものの見方"],["TF","決め方"],["JP","進め方"]];
-let recPick=null;
+let recPick=null,recSrc="other",recTags=[],recDateV="";
 function drawRec(){const box=$("recBody");if(!box)return;const born=natal(st.y,st.m,st.d).t,R=histMine(),n=R.length;
  if(!recPick)recPick=st.t.slice();
  const md=d=>{const a=d.split("-");return (+a[1])+"/"+(+a[2]);};
@@ -821,12 +821,15 @@ function drawRec(){const box=$("recBody");if(!box)return;const born=natal(st.y,s
    return '<div class="tr" style="--c:var('+r.A.c+')"><span class="nm">'+TR(r.name)+'</span><div class="lane">'+side(r.A.a)+side(r.A.b)+'</div></div>';}).join("")+'<div class="dl">'+R.map(x=>'<span>'+md(x.d)+'</span>').join("")+'</div><p class="rc-leg">'+TR("赤いふちの段が、生まれつきの気質の文字です。")+'</p></div>';}
  if(n)h+='<h3 class="rc-h">'+TR("記録の一覧")+'</h3><ul class="rc-list">'+R.slice().reverse().map((r,j)=>'<li><span class="d">'+r.d.replace(/-/g,"/")+'</span><span class="t">'+r.t.split("").map((L,i)=>L!==born[i]?'<span class="diff">'+L+'</span>':L).join("")+'<span class="m">'+(r.src==="site"?"16TYPE+":TR("ほかの診断"))+((r.tags||[]).length?TR("・")+r.tags.map(TR).join(TR("、")):"")+'</span></span><button class="del" type="button" data-id="'+r.id+'">'+TR("消す")+'</button>'
   +(j===0?'<div class="rc-tags"><small>'+TR("このころのようすを選ぶと、変わる理由がわかりやすくなります")+'</small>'+HTAGS.map(tg=>'<button type="button" data-id="'+r.id+'" data-tg="'+tg+'" aria-pressed="'+((r.tags||[]).includes(tg))+'">'+TR(tg)+'</button>').join("")+'</div>':'')+'</li>').join("")+'</ul>';
- h+='<details class="pmore rc-add"><summary>'+TR("ほかのサイトの結果を足す")+'</summary><div class="rc-form"><label class="lbl" for="recDate">'+TR("受けた日")+'</label><input type="date" id="recDate" class="txt" value="'+today()+'"><span class="lbl">'+TR("出た16タイプ")+'</span><div class="rc-seg">'+AX.map((A,i)=>'<div style="--c:var('+A.c+')">'+[A.a,A.b].map(L=>'<button type="button" data-i="'+i+'" data-l="'+L+'" aria-pressed="'+(recPick[i]===L)+'">'+L+'</button>').join("")+'</div>').join("")+'</div><button class="btn" type="button" id="recAdd">'+TR("この結果を記録する")+'</button></div></details>';
+ h+='<details class="pmore rc-add"><summary>'+TR("記録を手で足す")+'</summary><div class="rc-form"><label class="lbl" for="recDate">'+TR("受けた日")+'</label><input type="date" id="recDate" class="txt" value="'+(recDateV||today())+'"><span class="lbl">'+TR("出た16タイプ")+'</span><div class="rc-seg">'+AX.map((A,i)=>'<div style="--c:var('+A.c+')">'+[A.a,A.b].map(L=>'<button type="button" data-i="'+i+'" data-l="'+L+'" aria-pressed="'+(recPick[i]===L)+'">'+L+'</button>').join("")+'</div>').join("")+'</div><span class="lbl">'+TR("どこで受けた？")+'</span><div class="rc-tags rc-src">'+[["other","ほかの診断"],["site","16TYPE+"]].map(([v,l])=>'<button type="button" data-src="'+v+'" aria-pressed="'+(recSrc===v)+'">'+TR(l)+'</button>').join("")+'</div><span class="lbl">'+TR("このころのようす（あれば）")+'</span><div class="rc-tags rc-ftag">'+HTAGS.map(tg=>'<button type="button" data-tg="'+tg+'" aria-pressed="'+recTags.includes(tg)+'">'+TR(tg)+'</button>').join("")+'</div><button class="btn primary" type="button" id="recAdd">'+TR("この結果を記録する")+'</button></div></details>';
  const wasOpen=box.querySelector(".rc-add")&&box.querySelector(".rc-add").open;box.innerHTML=h;if(wasOpen)box.querySelector(".rc-add").open=true;
- box.querySelectorAll(".rc-list .del").forEach(b=>b.onclick=()=>delHist(b.dataset.id));
- box.querySelectorAll(".rc-tags button").forEach(b=>b.onclick=()=>tagHist(b.dataset.id,b.dataset.tg));
+ box.querySelectorAll(".rc-list .del").forEach(b=>b.onclick=()=>askInline(b,TR("この記録を消しますか？"),TR("消す"),()=>delHist(b.dataset.id)));
+ box.querySelectorAll(".rc-list .rc-tags button").forEach(b=>b.onclick=()=>tagHist(b.dataset.id,b.dataset.tg));
+ {const rd=$("recDate");if(rd)rd.onchange=()=>{recDateV=rd.value;};}
+ box.querySelectorAll(".rc-src button").forEach(b=>b.onclick=()=>{recSrc=b.dataset.src;drawRec();});
+ box.querySelectorAll(".rc-ftag button").forEach(b=>b.onclick=()=>{const t=b.dataset.tg,i=recTags.indexOf(t);i<0?recTags.push(t):recTags.splice(i,1);drawRec();});
  box.querySelectorAll(".rc-seg button").forEach(b=>b.onclick=()=>{recPick[+b.dataset.i]=b.dataset.l;drawRec();});
- const ad=$("recAdd");if(ad)ad.onclick=()=>{addHist("other",recPick.join(""),$("recDate").value||today());drawRec();};}
+ const ad=$("recAdd");if(ad)ad.onclick=()=>{addHist(recSrc,recPick.join(""),$("recDate").value||today(),recTags.slice());recTags=[];recDateV="";drawRec();};}
 boot();
 
 /* 図をタップすると大きく表示（スマホでは字が小さいので） */
