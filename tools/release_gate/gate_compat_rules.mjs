@@ -252,6 +252,19 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   { const t=await p.evaluate(()=>{ const c=baziCompute({year:2001,month:2,day:9,hour:16,minute:0,sex:'female',tu:false},0,'none'); return pkConsultFocusText(c,'彼氏がいるけど他に好きな人ができた'); });   /* 中和（喜神・忌神なし）でも空にしない */
     if(/喜神（[^）]*）＝／|忌神（[^）]*）＝$/m.test(t)||!/はっきりした喜神/.test(t)) e.push('中和の喜神・忌神が空'); }
   console.log('  '+(e.length?'NG':'OK')+' 相談の要点（大運・4年の年運・空亡・駅馬・六親・適職・答えの方向）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('相談の要点: '+e.join('・')); }
+// 相談文に出てくるお相手の相性（鑑定者本人の指示 2026-10-25「これをツールで出るようにしてください」）：2001-02-09 16時 女性・今の彼 2000-03-20・好きな人 1995-04-04 16時
+{ const r=await p.evaluate(()=>{ if(typeof pkConsultPeopleText!=='function') return null; const c=baziCompute({year:2001,month:2,day:9,hour:16,minute:0,sex:'female',tu:false},0,'none'); window.chart=c;
+    const q='彼氏がいるけど他に好きな人が出来てしまって悩んでる。彼は２０００年３月２０日、好きな人は１９９５年４月４日16時生まれ男性';
+    return {t:pkConsultPeopleText(c,q), e:pkEnsurePeople('どちらも良い人です。',c,q), ok:pkEnsurePeople('くらべると、今の彼とは方合で土台が安定、好きな人とは天地徳合で惹かれ合う。',c,q), n:pkConsultPeopleText(c,'彼氏のことで悩んでいます')}; });
+  const e=[]; if(!r) e.push('関数がない'); else {
+    if(!/【お相手：今の彼（2000年3月20日（時刻不明）・男性）】判定＝良い点が注意点を上回る組み合わせ（良い点6／注意点2）/.test(r.t)) e.push('今の彼（時刻不明）');
+    if(!/【お相手：好きな人（1995年4月4日 16時・男性）】判定＝良い点が注意点を上回る組み合わせ（良い点12.5／注意点5）/.test(r.t)||!/天地徳合（本人の月柱「庚寅」×お相手の年柱「乙亥」）/.test(r.t)) e.push('好きな人（16時）');
+    if(!/暮らしの土台（方合・三合・支合など）が強いのは 今の彼／惹かれ合い（恋愛の星）が強いのは 好きな人/.test(r.t)||!/2026年12月・2027年9月は注意の月/.test(r.t)) e.push('くらべた結果・決める時期');
+    if(!/【お相手ごとの相性/.test(r.e)||/【お相手ごとの相性/.test(r.ok)) e.push('書き足し');
+    if(r.n) e.push('生年月日のない相談に出している');
+    const ev=await p.evaluate(()=>{ const c=baziCompute({year:2001,month:2,day:9,hour:16,minute:0,sex:'female',tu:false},0,'none'); const ex=pkConsultPeople(c,'彼氏がいる。彼は2000年3月20日、好きな人は1995年4月4日16時生まれ男性').map(x=>x.c); return pkEvidence('','2027年（丁未）は好きな人との三合の巡りで縁が動きます。',c,null,ex).rows.map(r=>r.st).join(','); });
+    if(ev!=='ok') e.push('根拠のチェック表に相談のお相手が入っていない（'+ev+'）'); }
+  console.log('  '+(e.length?'NG':'OK')+' 相談文に出てくるお相手の相性（2人をくらべる）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('相談のお相手: '+e.join('・')); }
 // 同性カップル（鑑定者本人の指示 2026-10-24）：女性同士 1990-03-03×1990-02-02＝パートナーの星はお相手の性別（女性＝財星）・「異性」と書かない／男女は今までどおり
 { const r=await p.evaluate(()=>{ if(typeof pkSameSexWord!=='function') return null; const mk=(y,m,d,sex)=>markTimeUnknown(baziCompute({year:y,month:m,day:d,hour:12,minute:0,sex,tu:true},0,'none'));
     const A=mk(1990,3,3,'female'), B=mk(1990,2,2,'female'), M=mk(1990,3,3,'male'), F=mk(1981,6,10,'female'), G=mk(1983,5,5,'male'); window.chart=A; window.chartB=B;
