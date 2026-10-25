@@ -353,8 +353,8 @@ async function drawShare(){
   ctx.textAlign="center";ctx.font="500 26px "+SANS;ctx.fillStyle=SC.muted;ctx.fillText(p16(t),x+pw/2,py+ph+126);ctx.textAlign="left";});
  if(!one){ctx.font="700 56px "+SANS;ctx.fillStyle=SC.plus;ctx.textAlign="center";ctx.fillText("→",W/2,py+ph/2+18);ctx.textAlign="left";}
  const x0=104;let y=py+ph+200;
- ctx.font="700 32px "+ROUND;ctx.fillStyle=SC.ink;const g=TR("気質と性格のちがい ")+me.pct+"%";ctx.fillText(g,x0,y);
- const gx=x0+ctx.measureText(g).width+28,gw=W-104-gx;ctx.fillStyle=SC.soft;rrect(ctx,gx,y-22,gw,18,9);ctx.fill();if(me.pct>0){ctx.fillStyle=SC.plus;rrect(ctx,gx,y-22,Math.max(18,gw*me.pct/100),18,9);ctx.fill();}
+ {const co=coreOf(me.born,me.now);if(co){ctx.font="700 24px "+ROUND;const lb=TR("わたしのゆるがない芯"),lw2=ctx.measureText(lb).width+40;ctx.fillStyle=SC.plus;rrect(ctx,x0,y-34,lw2,46,23);ctx.fill();ctx.fillStyle="#fff";ctx.fillText(lb,x0+20,y-3);
+  let fs=40;const room2=W-104-(x0+lw2+20);ctx.font="700 "+fs+"px "+SANS;while(ctx.measureText(co.name).width>room2&&fs>24){fs-=2;ctx.font="700 "+fs+"px "+SANS;}ctx.fillStyle=SC.plus;ctx.fillText(co.name,x0+lw2+20,y+2);}}
  y+=36;const kx=x0,kw=W-2*x0,room=H-196-y;let fs=36,kl,lh,kh;
  for(;fs>=24;fs-=2){ctx.font="700 "+fs+"px "+SANS;lh=Math.round(fs*1.5);kl=wrapLines(ctx,me.ktKarai||me.karai||"",kw-72,6);kh=kl.length*lh+78+lh*0.4;if(kh<=room)break;}
  ctx.fillStyle=SC.soft;rrect(ctx,kx,y,kw,kh,24);ctx.fill();ctx.fillStyle=SC.plus;ctx.font="700 24px "+ROUND;ctx.fillText(me.ktKarai?TR("辛口のひと言"):TR("こんなことで悩んでいませんか？"),kx+36,y+48);
@@ -374,7 +374,7 @@ async function shareResult(){track("share_click");const b=$("shareBtn"),lbl=b.te
 function showShareBox(cvs){let box=$("shareBox");
  if(!box){box=document.createElement("div");box.id="shareBox";box.className="sharebox";box.setAttribute("role","dialog");box.setAttribute("aria-modal","true");document.body.appendChild(box);
   box.addEventListener("click",e=>{if(e.target===box)box.hidden=true;});}
- const msg=shareText()+"\n"+SHARE_URL,tw="https://twitter.com/intent/tweet?text="+encodeURIComponent(shareText())+"&url="+encodeURIComponent(SHARE_URL),ln="https://line.me/R/msg/text/?"+encodeURIComponent(msg);
+ const msg=shareText()+"\n"+SHARE_URL,tw="https://twitter.com/intent/tweet?text="+encodeURIComponent(shareText())+"&url="+encodeURIComponent(SHARE_URL)+"&hashtags="+encodeURIComponent(TR("16TYPEプラス")+","+TR("性格診断")),ln="https://line.me/R/msg/text/?"+encodeURIComponent(msg);
  box.innerHTML='<div class="sbin"><button type="button" class="sbx" aria-label="'+TR("閉じる")+'">×</button><div class="sbline"><button type="button" class="btn primary sbl" id="sbLine">'+TR("画像を共有する")+'</button><p class="fine">'+TR("LINEやインスタなど、ふだん使っているアプリで送れます。画像を保存してから送ることもできます。")+'</p></div>'
   +cvs.map((_,i)=>'<figure class="sbf"><img alt="'+esc(TR("シェア用の画像"))+'"><a class="btn sv" download="16typeplus-'+(i+1)+'.png">'+TR("この画像を保存")+'</a></figure>').join("")
   +'<p class="fine">'+TR("画像を長押し（パソコンは右クリック）でも保存できます。")+'</p><div class="sbacts"><a class="btn tw" target="_blank" rel="noopener">'+TR("Xでシェア")+'</a></div><button type="button" class="qlink">'+TR("閉じる")+'</button></div>';
