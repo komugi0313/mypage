@@ -608,8 +608,8 @@ async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=doc
  /* 恋の4文字と、それぞれが気質・性格のどちらから来たか */
  const tw=170,gap=26,x0=(W-(tw*4+gap*3))/2,ty=270;
  for(let i=0;i<4;i++){const x=x0+i*(tw+gap),l=t[i],b=me?me.born[i]:l,n=me?me.now[i]:l;
-  const src=b===n?TR("芯"):(l===b?TR("気質"):TR("性格"));
-  c.fillStyle=l===b&&b!==n?LVC.roseT:"#F3F5F8";rrect(c,x,ty,tw,tw,22);c.fill();
+  const src=l===b&&l===n?"":l===b?TR("気質"):l===n?TR("性格"):TR("恋だけ");
+  c.fillStyle=src&&src!==TR("性格")?LVC.roseT:"#F3F5F8";rrect(c,x,ty,tw,tw,22);c.fill();
   c.font="600 96px "+MONO;c.fillStyle=LVC.ink;c.fillText(l,x+tw/2,ty+tw/2+34);
   c.font="700 24px "+SANS;c.fillStyle=src===TR("性格")?LVC.ink:LVC.rose;c.fillText(src,x+tw/2,ty+tw+38);}
  const hook=me?lvHook(me.born,me.now,t):P.one;c.font="500 28px "+SANS;c.fillStyle=LVC.muted;
