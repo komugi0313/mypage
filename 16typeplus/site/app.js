@@ -277,7 +277,8 @@ function pairHTML(P){const me=window.__me,sb=same(me.born,P.born),tb=TIER[sb];
    :hiB&&!hiN?[TR("性格はすれ違って見えても、気質は似た者同士"),TR("性格どうしは噛み合わない場面があっても、気質ではわかり合える。時間をかけるほど仲良くなる。")]
    :!hiB&&hiN?[TR("性格は気が合う。でも気質は考え方がちがう"),TR("性格どうしは話が合うけれど、気質は考え方が違う。大事な決断のときに差が出やすいので、本音を話す時間を。")]
    :[TR("正反対だから、助け合える2人"),TR("性格も気質も違うので、苦手なところを助け合える。ぶつかったら、違いを面白がって。")];
-  html+='<p class="verdict"><b>'+V[0]+'</b>'+V[1]+'</p>';}
+  const TP=hiB&&hiN?TR("似ているぶん、苦手なことも同じになりがち。2人とも苦手なことは、早めにだれかに頼りましょう。"):hiB&&!hiN?TR("ふだんの話がかみ合わない日は、休みの日にゆっくり話すと、わかり合えます。"):!hiB&&hiN?TR("大事なことを決める前に、「どうしてそう思うの？」と1回聞いてみてください。"):TR("ぶつかったら、相手のやり方を1回だけ試してみてください。");
+  html+='<p class="verdict"><b>'+V[0]+'</b>'+V[1]+'</p><p class="ptip"><b>'+TR("うまくいくコツ")+'</b>'+TP+'</p>';}
  else html+=TR('<div><span class="l">性格の相性</span><div class="v" style="color:var(--muted);font-weight:500">16タイプを入れると出ます</div></div></div><p class="verdict">')+tb[1]+'</p>';
  return html;}
 $("pGo").onclick=()=>{const N=natal(ps.y,ps.m,ps.d);$("pRes").innerHTML=pairHTML({born:N.t,num:N.num,now:$("pt").value||null,who:TR("あの人")});$("pRes").hidden=false;};
@@ -287,13 +288,13 @@ $("pGo").onclick=()=>{const N=natal(ps.y,ps.m,ps.d);$("pRes").innerHTML=pairHTML
 const SITE=/16typeplus\.jp$/.test(location.hostname)?location.origin+"/":"https://claude.ai/artifact/GxvDBQNx6fvapiXBHVgYXH";
 const b64e=t=>btoa(String.fromCharCode(...new TextEncoder().encode(t))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
 const b64d=t=>new TextDecoder().decode(Uint8Array.from(atob(t.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0)));
-function inviteURL(){const me=window.__me,nm=$("myName").value.trim().slice(0,12);
- const tok="from."+me.born+(me.bAT?"-"+me.bAT:"")+"."+me.now+(me.nAT?"-"+me.nAT:"")+"."+me.N.num+(nm?"."+b64e(nm):"");
+function inviteURL(back){const me=window.__me,nm=$("myName").value.trim().slice(0,12);
+ const tok="from."+me.born+(me.bAT?"-"+me.bAT:"")+"."+me.now+(me.nAT?"-"+me.nAT:"")+"."+me.N.num+(nm?"."+b64e(nm):(back?".-":""))+(back?".r":"");
  return /16typeplus\.jp$/.test(location.hostname)?SITE+"?"+tok.replace(/^from\./,"from="):SITE+"#"+tok;}
 function parseInvite(){try{let t=location.hash.replace(/^#/,"");const q=new URLSearchParams(location.search).get("from");
   if(q)t="from."+q;if(!/^from\./.test(t))return null;const a=t.split(".");
   const ok=x=>/^[EI][SN][TF][JP](-[AT])?$/.test(x);if(!ok(a[1])||!ok(a[2]))return null;const num=+a[3];if(!(num>=1&&num<=60))return null;
-  return {born:a[1].slice(0,4),now:a[2].slice(0,4),bornF:a[1],nowF:a[2],num,who:a[4]?b64d(a[4])+TR("さん"):TR("送ってくれた人")};}catch(e){return null;}}
+  return {born:a[1].slice(0,4),now:a[2].slice(0,4),bornF:a[1],nowF:a[2],num,who:a[4]&&a[4]!=="-"?b64d(a[4])+TR("さん"):TR("送ってくれた人"),back:a[5]==="r"};}catch(e){return null;}}
 const INV=parseInvite();
 $("mkLink").onclick=()=>{const u=inviteURL(),nm=$("myName").value.trim();
  const msg=(nm?nm+TR("から"):"")+TR("相性診断が届いたよ。気質と性格の両方から、2人の相性がわかる👇")+"\n"+u;
@@ -304,8 +305,16 @@ $("cpLink").onclick=()=>{const t=$("lnk");const done=()=>{$("cpLink").textConten
  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(window.__msg||t.value).then(done).catch(()=>{t.select();});}else t.select();};
 if(INV){$("invBar").hidden=false;$("invWho").textContent=INV.who;$("invPair").textContent=INV.bornF+" → "+INV.nowF;
 
- $("partnerH").textContent=INV.who+TR("との相性");}
-function showInvitePair(){if(!INV)return;$("pRes").innerHTML=pairHTML(INV);$("pRes").hidden=false;$("pForm").hidden=true;}
+ $("partnerH").textContent=INV.who+TR("との相性");
+ if(INV.back){const eb=$("invBar").querySelector(".eyebrow");if(eb)eb.textContent=TR("相性の結果が届きました");const p=$("invBar").querySelector(".invt");if(p)p.textContent=TR("{who}から、2人の相性の結果が届きました。結果を出すと、下の「{who}との相性」で見られます。").replace(/\{who\}/g,INV.who);}}
+function showInvitePair(){if(!INV)return;$("pRes").innerHTML=pairHTML(INV)
+  +(INV.back?'':'<div class="sendback"><p class="sbh">'+TR("この相性を、{who}にも見せる").replace("{who}",esc(INV.who))+'</p><p class="hint">'+TR("送り返すと、{who}の画面でも同じ相性が見られます。届くのは、あなたのタイプとニックネームだけです。").replace("{who}",esc(INV.who))+'</p>'
+  +'<input id="sbName" class="txt" maxlength="12" placeholder="'+TR("あなたのニックネーム")+'" autocomplete="nickname"><button class="btn primary" type="button" id="sbBack">'+TR("{who}に送り返す").replace("{who}",esc(INV.who))+'</button><p class="fine" id="sbDone" hidden></p></div>');
+ $("pRes").hidden=false;$("pForm").hidden=true;
+ if($("sbBack"))$("sbBack").onclick=()=>{const nm=$("sbName").value.trim().slice(0,12);if($("myName")&&nm)$("myName").value=nm;const u=inviteURL(true);
+  const msg=(nm?nm+TR("から"):"")+TR("相性の結果を送るね。開くと、あなたの画面でも2人の相性が見られるよ👇")+"\n"+u;window.__msg=msg;try{track("sendback_click");}catch(e){}
+  const fb=()=>{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(msg).then(()=>{$("sbDone").textContent=TR("送る文をコピーしました。LINEなどに貼りつけて送ってください。");$("sbDone").hidden=false;}).catch(()=>{});}else{$("sbDone").textContent=u;$("sbDone").hidden=false;}};
+  if(navigator.share)navigator.share({text:msg}).catch(e=>{if(e&&e.name!=="AbortError")fb();});else fb();};}
 fillP();
 
 /* ---- 結果を画像でシェア ---- */
@@ -574,7 +583,7 @@ function lvShow(t){const me=window.__me,P=LV.types&&LV.types[t];if(!me)return;co
   h+='<div class="lvp"><p class="lvsub">'+TR("恋のときのあなたは")+'</p><p class="lvname">'+esc(P.t+p16(P.t))+'</p><p class="one">'+TR("「")+esc(P.one)+TR("」")+'</p><p class="desc">'+esc(P.desc)+'</p>'
   +[["fall","好きになると"],["date","付き合うと"],["fight","けんかしたとき"],["last","長く続けるコツ"]].filter(([k])=>P[k]).map(([k,h])=>'<div class="lvs lvs-'+k+'"><h3>'+TR(h)+'</h3><p>'+esc(P[k])+'</p></div>').join("")
   +'<details class="pmore"><summary>'+TR("恋でいいところ・気をつけたいところ")+'</summary><div class="two"><div class="g"><h3>'+TR("恋でいいところ")+'</h3><ul>'+P.good.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div><div class="c"><h3>'+TR("気をつけたいところ")+'</h3><ul>'+P.care.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div></div><p class="key"><b>'+TR("うまくいくコツ")+'</b>'+esc(P.tip)+'</p></details>'
-  +'<details class="pmore"><summary>'+TR("恋の相性")+'</summary><div class="cpl"><div class="o"><em>'+TR("相性◎")+'</em><b>'+esc(nm(P.best[0]))+'</b>'+esc(P.best[1])+'</div><div class="x"><em>'+TR("相性×")+'</em><b>'+esc(nm(P.hard[0]))+'</b>'+esc(P.hard[1])+'</div></div></details></div>'
+  +'<details class="pmore"><summary>'+TR("恋の相性")+'</summary><div class="cpl"><div class="o"><em>'+TR("気が合う相手")+'</em><b>'+esc(nm(P.best[0]))+'</b>'+esc(P.best[1])+'</div><div class="x"><em>'+TR("すれ違いやすい相手")+'</em><b>'+esc(nm(P.hard[0]))+'</b>'+esc(P.hard[1])+'</div></div></details></div>'
   +'<button class="btn primary" type="button" id="lvShare">'+TR("恋愛編の結果を画像でシェア")+'</button>';}
  h+='<button class="qlink" type="button" id="lvRedo">'+TR("恋愛編に答え直す")+'</button>';
  el.innerHTML=h;
@@ -627,7 +636,7 @@ async function lvSheet(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1700,cv=doc
  y=Math.max(y1,y2)+30;c.strokeStyle=LVC.rule;c.lineWidth=2;c.beginPath();c.moveTo(70,y);c.lineTo(W-70,y);c.stroke();y+=60;
  const nm=k=>k+p16(k);
  const pair=(mark,color,k,text)=>{c.font="700 32px "+SANS;c.fillStyle=color;c.fillText(mark+"  "+nm(k),70,y);y+=46;c.font="500 25px "+SANS;c.fillStyle=LVC.ink;wrap(text,W-140).slice(0,3).forEach(l=>{c.fillText(l,70,y);y+=36;});y+=24;};
- pair(TR("相性◎"),LVC.rose,P.best[0],P.best[1]);pair(TR("相性×"),LVC.muted,P.hard[0],P.hard[1]);
+ pair(TR("気が合う相手"),LVC.rose,P.best[0],P.best[1]);pair(TR("すれ違いやすい相手"),LVC.muted,P.hard[0],P.hard[1]);
  c.font="600 28px "+MONO;c.fillStyle=LVC.ink;c.textAlign="center";c.fillText(SHARE_URL.replace("https://",""),W/2,H-50);c.textAlign="left";return cv;}
 /* ---- 性格の履歴書（1枚の画像） ---- */
 async function drawCV(){
