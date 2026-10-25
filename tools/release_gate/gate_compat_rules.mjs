@@ -236,6 +236,20 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(r.gz!=='戊辰'||!/^drop\|魁罡/m.test(r.r2)||/魁罡を持ちます。\n/.test(r.t2)) e.push('戊辰の魁罡（作り話）を外す');
     if(!/no-print/.test(r.html)||!/先生の画面だけ/.test(r.html)) e.push('表（先生の画面だけ・印刷しない）'); }
   console.log('  '+(e.length?'NG':'OK')+' ③ 根拠のチェック表（事実は残す・作り話だけ外す）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('根拠のチェック表: '+e.join('・')); }
+// 相談の要点（鑑定者本人の指示 2026-10-25「これをきちんとツールで出るようにしてください」）：2008-02-15 15時 女性・留学と母の反対と適職
+{ const r=await p.evaluate(()=>{ if(typeof pkConsultFocusText!=='function') return null; const c=baziCompute({year:2008,month:2,day:15,hour:15,minute:0,sex:'female',tu:false},0,'none'); window.chart=c; const w='来年アメリカに留学しようか悩んでいます。母が反対しています。どちらがいいですか。適職も教えて。';
+    return {f:pkConsultFocusText(c,w), e:pkEnsureConsult('日本に留まるほうがおすすめです。',c,w), ok:pkEnsureConsult('留学するほうが命式に合っています。2027年は空亡なので準備、2028年から。駅馬があります。印星が母。適職は食神・傷官を生かす仕事。',c,w)}; });
+  const e=[]; if(!r) e.push('関数がない'); else {
+    if(!/今の大運＝壬子（印綬＝印・水＝忌神）/.test(r.f)) e.push('今の大運と喜忌');
+    if(!/2027年（丁未・19歳）＝[^\n]*空亡の年/.test(r.f)) e.push('来年が空亡');
+    if(!/命式の駅馬＝月柱「寅」/.test(r.f)||!/2028年（戊申）＝命式の駅馬が冲される/.test(r.f)) e.push('駅馬と冲の年');
+    if(!/答えの方向（ツールの判定・1行目はこれに合わせる）：出る（留学・移動する）ほうが命式に合う。2027年は空亡の年なので準備・短期で試す年にし、本格的に動くのは2028年（戊申・20歳）から/.test(r.f)) e.push('答えの方向');
+    if(!/母＝印星（印綬・偏印）＝水＝忌神/.test(r.f)||!/今の大運が印星/.test(r.f)) e.push('六親（母＝印星）');
+    if(!/適職の手がかり：喜神の星＝食傷（火）/.test(r.f)||!/月柱（仕事・職場・暮らしの環境）と冲・刑/.test(r.f)) e.push('適職・柱の場面');
+    if(!/命式からの答えの方向：出る|遠くへ出るほうが合って/.test(r.e)||!/2027年は空亡の年|2027年は、新しく大きく始めることが形になりにくい/.test(r.e)) e.push('書き足し（判定と逆の答え・空亡）');   /* ビギナーのやさしい画面は専門用語なしの言い方 */
+    if(/【この相談で大事なこと】/.test(r.e)&&/(空亡|駅馬|印星|大運)/.test(r.e.split('【この相談で大事なこと】')[1])) e.push('やさしい言い方に専門用語');
+    if(/【この相談でツールが確かめたこと】/.test(r.ok)) e.push('書いてあるのに書き足している'); }
+  console.log('  '+(e.length?'NG':'OK')+' 相談の要点（大運・4年の年運・空亡・駅馬・六親・適職・答えの方向）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('相談の要点: '+e.join('・')); }
 // 同性カップル（鑑定者本人の指示 2026-10-24）：女性同士 1990-03-03×1990-02-02＝パートナーの星はお相手の性別（女性＝財星）・「異性」と書かない／男女は今までどおり
 { const r=await p.evaluate(()=>{ if(typeof pkSameSexWord!=='function') return null; const mk=(y,m,d,sex)=>markTimeUnknown(baziCompute({year:y,month:m,day:d,hour:12,minute:0,sex,tu:true},0,'none'));
     const A=mk(1990,3,3,'female'), B=mk(1990,2,2,'female'), M=mk(1990,3,3,'male'), F=mk(1981,6,10,'female'), G=mk(1983,5,5,'male'); window.chart=A; window.chartB=B;
