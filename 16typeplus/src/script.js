@@ -125,7 +125,7 @@ function drawQ(){/* 数は「最大」から見せて、減ることはあって
  $("qProg").style.width=(qi/total*100)+"%";$("qNote").hidden=qi>0;
  let ch=$("qCheer");if(!ch){ch=document.createElement("p");ch.id="qCheer";ch.className="qcheer";$("qAxis").before(ch);}
  const add=ord.length-BASE;
- const CH=qi>=7&&qi<9?TR("いい調子です。直感で答えてくださいね。"):qi>=15&&qi<18?TR("半分まで来ました。途中で閉じても、続きから再開できます。"):qi>=24&&qi<27&&!ext?TR("もう少しで30問です。答えがはっきりしていれば、30問で終わります。"):qi>=BASE&&qi<BASE+3&&add>0?(add<MAXQ-BASE?TR("30問が終わりました。答えがはっきりしていたところは、ここで終わりです。残りは最大{n}問です。"):TR("30問が終わりました。もう少しだけ、くわしく確かめます。残りは最大{n}問です。")).replace("{n}",total-BASE):qi===ord.length&&tbList.length?TR("最後に、2択の質問が{n}問だけあります。").replace("{n}",tbList.length):qi>=BASE+3&&left>0&&left<=5?TR("ラストスパート！あと{n}問です。").replace("{n}",left):"";
+ const CH=qi>=7&&qi<9?TR("いい調子です。直感で答えてくださいね。"):qi>=15&&qi<18?TR("半分まで来ました。途中で閉じても、続きから再開できます。"):qi>=24&&qi<27&&!ext?TR("もう少しで30問です。答えがはっきりしていれば、30問で終わります。"):qi>=BASE&&qi<BASE+3&&add>0?(add<MAXQ-BASE?TR("30問が終わりました。答えがはっきりしていたところは、ここで終わりです。全部で最大{n}問になりました。"):TR("30問が終わりました。もう少しだけ、くわしく確かめます。全部で最大{n}問です。")).replace("{n}",total):qi===ord.length&&tbList.length?TR("最後に、2択の質問が{n}問だけあります。").replace("{n}",tbList.length):qi>=BASE+3&&left>0&&left<=5?(fin?TR("ラストスパート！あと{n}問です。").replace("{n}",left):TR("もう少しで終わります。")):"";
  ch.hidden=!CH;ch.textContent=CH;
  const o=$("qOpts");o.innerHTML="";
  if(qi<ord.length){const qn=ord[qi],q=QZ.Q[qn],A=AXQ[AXN[q.ax]];
