@@ -6756,7 +6756,13 @@ function _nameMasks(){
   return m.sort((x,y)=>y[0].length-x[0].length);
 }
 function _maskNames(t,m){ t=String(t||''); m.forEach(([n,k])=>{ t=t.split(n).join(k); }); return t; }
-function _unmaskNames(t,m){ t=String(t||''); m.forEach(([n,k])=>{ t=t.split(k).join(n); }); return t; }
+function _unmaskNames(t,m){ t=String(t||''); m.forEach(([n,k])=>{ t=t.split(k).join(n); });
+  // 印が残ったときの直し（2026-10-25）：1文字のお名前は印にしないので、文章作成が印の形をまねて「〔翔〕さん」「〔お相手〕さん」と書くことがある
+  try{ const a=(typeof personName!=='undefined'?(personName||'').trim():''), b=(typeof personNameB!=='undefined'?(personNameB||'').trim():'');
+    t=t.replace(/〔本人〕/g,a||'ご本人').replace(/〔お相手〕/g,b||'お相手');
+    [a,b].forEach(function(n){ if(n) t=t.split('〔'+n+'〕').join(n); });
+    t=t.replace(/〔([一-龥々ぁ-んァ-ヶー]{1,8})〕(?=さん|様|さま|くん|ちゃん|氏)/g,'$1'); }catch(e){}
+  return t; }
 /* 返ってきた文章に「私はAIなので」「AIの分析では」のような言い回しが混じっても、画面には出さない（相談内容としてのAIの話題はそのまま） */
 // 生成文で読みを間違えやすい用語は、正しい読みに直してから表示する
 /* 読み仮名の直し（発注者が確認した表 2026-10-19）：ジェミニが付けた読みが表とちがえば、画面・保存・印刷の前に直す。
@@ -8125,6 +8131,33 @@ function compatAttractHTML(a,b){ try{ const L=attractionDetailLines(a,b,'本人'
   <div class="kd-pro">${(function(){ const D=attractionDetail(a,b); if(!D) return ''; const tb=function(o,X,Y){ return '<div style="margin-top:10px;font-weight:900">'+X+'→'+Y+'：'+(o.love?'<span style="color:#9A1F17">恋愛の星が当たる</span>':'恋愛の星は当たらない')+'</div><table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:4px"><tr style="background:#F6EEF1"><th style="text-align:left;padding:3px 4px">星</th><th style="text-align:left;padding:3px 4px">十二支</th><th style="text-align:left;padding:3px 4px">どこから</th><th style="text-align:left;padding:3px 4px">'+Y+'の命式</th></tr>'+o.rows.map(function(r){ return '<tr style="border-top:1px solid #EADDE2"><td style="padding:3px 4px">'+r.star+'</td><td style="padding:3px 4px;font-weight:900">'+r.br+'</td><td style="padding:3px 4px">'+_kdE(r.from)+'</td><td style="padding:3px 4px">'+(r.at.length?'<b>'+r.at.join('・')+'にある</b>':'ない')+'</td></tr>'; }).join('')+'</table><div style="font-size:13px;margin-top:4px;line-height:1.7">パートナーの星：'+Y+'の日干は'+X+'から見て<b>'+o.ts+'</b>＝'+(o.isSp?'パートナーの星（'+o.spName+'）に当たる':'パートナーの星（'+o.spName+'）ではない')+(o.role?'（'+_kdE(o.role)+'）':'')+'</div>'+(o.miss.length?'<div style="font-size:12.5px;color:var(--muted);margin-top:2px">'+Y+'は生まれた時刻が分からないので時柱を見ていません。時柱が「'+o.miss.join('・')+'」なら、'+X+'→'+Y+'にも恋愛の星が当たります。</div>':''); }; return tb(D.ab,'本人','お相手')+tb(D.ba,'お相手','本人'); })()}</div>
   <ul class="kd-l kd-plain">${P.map(function(x){ return '<li>'+_kdE(x.plain)+'</li>'; }).join('')}</ul>
   </section>`; }catch(e){ return ''; } }
+/* ===== 相性の結果を見やすく（鑑定者本人の指示 2026-10-25「①からお願いします」） =====
+   いちばん上に「この2人のまとめ」と目次を出し、各欄は見出しだけ見せてタップで開く（PRO・ビギナー上級者）。
+   ビギナーのやさしい画面では今までどおり、たたまずに見せる（見出しの帯は出さない）。判定・計算は変えない。 */
+function pkCvFold(html,id,title,keep){ if(!html) return ''; return '<div class="cv-fold closed" id="'+id+'"'+(keep?' data-keep="1"':'')+'><button type="button" class="cv-head" onclick="pkCvToggle(this)" aria-expanded="false"><span class="cv-ttl">'+title+'</span><span class="cv-arr">▼ 開く</span></button><div class="cv-body">'+html+'</div></div>'; }
+function pkCvToggle(btn){ try{ const w=btn.closest('.cv-fold'); const op=w.classList.toggle('closed')===false; btn.setAttribute('aria-expanded',op?'true':'false'); const ar=btn.querySelector('.cv-arr'); if(ar) ar.textContent=op?'▲ 閉じる':'▼ 開く'; }catch(e){} }
+function pkCvJump(id){ try{ const w=document.getElementById(id); if(!w) return; if(w.classList.contains('closed')){ const b=w.querySelector('.cv-head'); if(b) pkCvToggle(b); } w.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }
+const PK_CV_CSS='<style>.cv-fold{margin-top:10px;border:1.5px solid var(--line,#E2D9CC);border-radius:12px;background:var(--card,#fff)}.cv-head{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 14px;min-height:48px;font-size:15px;font-weight:900;background:none;border:0;text-align:left;color:var(--ink,#2B2622);cursor:pointer}.cv-arr{font-size:12.5px;font-weight:800;color:#7A4B1E;white-space:nowrap}.cv-fold.closed .cv-body{display:none}.cv-body{padding:0 4px 6px}html.bg-on .cv-head{display:none}html.bg-on .cv-fold .cv-body{display:block}html.bg-on .cv-fold{border:0;background:none;margin-top:0}.cv-toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.cv-toc button{font-size:13px;font-weight:800;padding:7px 10px;border-radius:999px;border:1px solid var(--line,#E2D9CC);background:#FFFDF8;color:var(--ink,#2B2622);min-height:36px;cursor:pointer}html.bg-on .cv-toc{display:none}html:not(.bg-on) .cv-fold[data-keep] .cv-body>section>style+div{display:none}</style>';
+function compatSummaryHTML(a,b,rt){ try{ const cb=compatBalance(a,b), love=pkRelLove();
+  const pro=[], plain=[];
+  pro.push('<b>相性の判定</b>：'+_kdE(cb.verdict)+'（良い点'+cb.good+'／注意点'+cb.bad+'）');
+  plain.push(cb.cls==='good'?'良いところが多い組み合わせです。':(cb.cls==='bad'?'気をつけたいところが多めの組み合わせです。':'良いところと気をつけたいところが、同じくらいの組み合わせです。'));
+  if(love){ const ad=attractionDir(a,b,'本人','お相手'); if(ad){ const x=ad.x.love.length, y=ad.y.love.length;
+    pro.push('<b>惹かれ方の向き</b>：'+(x&&y?'2人とも惹かれやすい（本人：'+ad.px.lab+'／お相手：'+ad.py.lab+'）':(y?'お相手のほうが強く惹かれている（'+ad.py.lab+'）':(x?'本人のほうが強く惹かれている（'+ad.px.lab+'）':'恋愛の星はどちら向きにもない'))));
+    const ap=attractionDir(a,b,'あなた','お相手'); if(ap) plain.push(_kdE(ap.plain)); } }
+  const CM=compatMonths(a,b), lab=function(x){ return x.y+'年'+x.m+'月'; }, both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length; }), warn=CM.filter(function(x){ return x.A.w.length||x.B.w.length; });
+  pro.push('<b>2人とも縁が動く月</b>：'+(both.length?both.slice(0,3).map(lab).join('・'):'これから12ヶ月はなし（片方だけの月は「縁が動く月」の欄）'));
+  pro.push('<b>注意の月</b>：'+(warn.length?warn.slice(0,3).map(lab).join('・'):'これから12ヶ月はなし'));
+  plain.push('2人とも縁が動く月：'+(both.length?both.slice(0,3).map(lab).join('・'):'これから12ヶ月はありません')+'。');
+  if(warn.length) plain.push('気持ちが揺れやすく、大事な話は避けたい月：'+warn.slice(0,3).map(lab).join('・')+'。');
+  const toc=[['cv-verdict','⚖️ 判定のくわしい中身'],['cv-timing','📆 年の流れ'],['kd-w','📅 2人の日運'],['cm-w','🗓 縁が動く月'],['at-w','💗 惹かれ方'],['rl-w','🧭 役割と調子'],['ck-w','🔎 チェックポイント']].filter(function(t){ return love||t[0]!=='at-w'; });
+  return PK_CV_CSS+`<section class="card sec" id="sum-sec" style="border:2px solid #C9A96E;background:#FFFCF5">
+  <div style="font-weight:900;font-size:16px">📝 この2人のまとめ</div>
+  <ul class="kd-l kd-pro" style="margin-top:6px">${pro.map(function(x){ return '<li>'+x+'</li>'; }).join('')}</ul>
+  <ul class="kd-l kd-plain" style="margin-top:6px">${plain.map(function(x){ return '<li>'+x+'</li>'; }).join('')}</ul>
+  <div class="cv-toc kd-pro">${toc.map(function(t){ return '<button type="button" onclick="pkCvJump(&#39;'+t[0]+'&#39;)">'+t[1]+'</button>'; }).join('')}</div>
+  <div class="kd-pro" style="font-size:12px;color:var(--muted);margin-top:6px">下の見出しをタップすると、くわしい内容が開きます。</div>
+  </section>`; }catch(e){ return ''; } }
 function compatVerdictHTML(a,b,rt){
   if(typeof ganzhiCompat!=='function')return '';
   const gc=ganzhiCompat(a.pillars[2].ganzhi,b.pillars[2].ganzhi);
@@ -8296,7 +8329,7 @@ function buildCompatBase(out){
   const na=personName||'本人', nb=personNameB||'お相手';
   const rt=RELTYPES[document.getElementById('rel-type')?.value||'love']||RELTYPES.love;
   { const g=pkMinorLoveBlock(chart,chartB,rt); if(g){ out.innerHTML=g; ['compat-verdict','compat-meishi'].forEach(function(id){ const e=document.getElementById(id); if(e) e.innerHTML=''; }); try{ out.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} return null; } }   // 大人×未成年の恋愛の相性は出さない
-  try{var _cv=document.getElementById('compat-verdict'); if(_cv){ let _h=compatVerdictHTML(chart,chartB,rt)+compatTimingHTML(chart,chartB,rt)+compatDaysHTML(chart,chartB,(typeof personName!=='undefined'&&personName)||'本人',(typeof personNameB!=='undefined'&&personNameB)||'お相手')+compatMonthsHTML(chart,chartB)+compatAttractHTML(chart,chartB)+compatRolesHTML(chart,chartB)+compatCheckHTML(chart,chartB);   /* 2人の日運を並べて見る（発注者指示 2026-10-23） */ if(!rt.useSpouse)_h=_h.replace(/配偶者宮|配偶宮/g,'関係の土台').replace(/配偶者星/g,'縁の星'); _h=pkSameSexWord(_h,chart,chartB); _cv.innerHTML=_h; try{ pkReadable(_cv); }catch(_e2){} }}catch(_e){}   // 家族・友人・仕事の相性では「配偶宮」などの夫婦向けの言葉を使わない
+  try{var _cv=document.getElementById('compat-verdict'); if(_cv){ let _h=compatSummaryHTML(chart,chartB,rt)+pkCvFold(compatVerdictHTML(chart,chartB,rt),'cv-verdict','⚖️ 相性の判定（良い点・注意点のくわしい中身）')+pkCvFold(compatTimingHTML(chart,chartB,rt),'cv-timing',rt.useSpouse?'📆 結婚・縁が深まる年／揺れやすい年（今後25年）':'📆 関係が深まる年／すれ違いやすい年（今後25年）')+pkCvFold(compatDaysHTML(chart,chartB,(typeof personName!=='undefined'&&personName)||'本人',(typeof personNameB!=='undefined'&&personNameB)||'お相手'),'kd-w','📅 2人の日運を並べて見る（日選び）',1)+pkCvFold(compatMonthsHTML(chart,chartB),'cm-w','🗓 2人の縁が動く月（これから12ヶ月）',1)+pkCvFold(compatAttractHTML(chart,chartB),'at-w','💗 惹かれ方のしくみ',1)+pkCvFold(compatRolesHTML(chart,chartB),'rl-w','🧭 2人の役割と、一緒にいるときの調子',1)+pkCvFold(compatCheckHTML(chart,chartB),'ck-w','🔎 お相手を知るためのチェックポイント',1);   /* まとめ＋目次＋たためる欄（2026-10-25） */   /* 2人の日運を並べて見る（発注者指示 2026-10-23） */ if(!rt.useSpouse)_h=_h.replace(/配偶者宮|配偶宮/g,'関係の土台').replace(/配偶者星/g,'縁の星'); _h=pkSameSexWord(_h,chart,chartB); _cv.innerHTML=_h; try{ pkReadable(_cv); }catch(_e2){} }}catch(_e){}   // 家族・友人・仕事の相性では「配偶宮」などの夫婦向けの言葉を使わない
   try{var _cm=document.getElementById('compat-meishi'); if(_cm)_cm.innerHTML=compatMeishiHTML(chart,chartB,na,nb);}catch(_e){}
   const head=`【本人A】${na}（${chart.birth.sex==='male'?'男性':'女性'}）: ${compatBrief(chart)}\n【お相手B】${nb}（${sexB==='male'?'男性':'女性'}）: ${compatBrief(chartB)}\n\n【2人の関係】${rt.label}\n\n【2人の関係の自動分析（計算済み）】\n${compatAnalysis(chart,chartB,rt)}`;
   return {na,nb,rt,head};
@@ -10208,7 +10241,7 @@ html.bg-on .bg-why{display:block}
         var cm=document.getElementById('compat-meishi');
         var det=document.createElement('details'); det.className='beginner-pro-collapse'; det.id='bg-compat-fold';
         det.innerHTML='<summary><span class="bar-main"><span>🔍 2人のくわしい内容を見る</span><span class="bar-arrow"></span></span><span class="bar-sub">上級者向け：占いの専門的な表や言葉が出てきます。読まなくても大丈夫です。</span></summary>';
-        if(cv) [].slice.call(cv.children).forEach(function(n){ if(n.id!=='bg-easy-compat'&&n.id!=='kd-sec'&&n.id!=='ck-sec'&&n.id!=='cm-sec'&&n.id!=='rl-sec'&&n.id!=='at-sec') det.appendChild(n); });   // 2人の日運（日選び）はやさしい言い方を持つので、たたまずに見せる
+        if(cv) [].slice.call(cv.children).forEach(function(n){ if(n.id!=='bg-easy-compat'&&n.id!=='sum-sec'&&n.getAttribute('data-keep')!=='1'&&n.id!=='kd-sec'&&n.id!=='ck-sec'&&n.id!=='cm-sec'&&n.id!=='rl-sec'&&n.id!=='at-sec') det.appendChild(n); });   // 2人の日運（日選び）はやさしい言い方を持つので、たたまずに見せる
         if(cm&&cm.innerHTML){ var w=document.createElement('div'); w.className='bg-meishi-wrap'; w.innerHTML=cm.innerHTML; cm.innerHTML=''; det.appendChild(w); }
         if(cv) cv.appendChild(det);
     });
