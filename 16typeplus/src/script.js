@@ -291,7 +291,7 @@ const b64e=t=>btoa(String.fromCharCode(...new TextEncoder().encode(t))).replace(
 const b64d=t=>new TextDecoder().decode(Uint8Array.from(atob(t.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0)));
 function inviteURL(back){const me=window.__me,nm=$("myName").value.trim().slice(0,12);
  const tok="from."+me.born+(me.bAT?"-"+me.bAT:"")+"."+me.now+(me.nAT?"-"+me.nAT:"")+"."+me.N.num+(nm?"."+b64e(nm):(back?".-":""))+(back?".r":"");
- return /16typeplus\.jp$/.test(location.hostname)?SITE+"?"+tok.replace(/^from\./,"from="):SITE+"#"+tok;}
+ return /16typeplus\.jp$/.test(location.hostname)?SITE+(LANG==="ja"?"":LANG+"/")+"?"+tok.replace(/^from\./,"from="):SITE+"#"+tok;}
 function parseInvite(){try{let t=location.hash.replace(/^#/,"");const q=new URLSearchParams(location.search).get("from");
   if(q)t="from."+q;if(!/^from\./.test(t))return null;const a=t.split(".");
   const ok=x=>/^[EI][SN][TF][JP](-[AT])?$/.test(x);if(!ok(a[1])||!ok(a[2]))return null;const num=+a[3];if(!(num>=1&&num<=60))return null;
