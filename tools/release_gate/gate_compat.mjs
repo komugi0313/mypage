@@ -34,6 +34,9 @@ await p.waitForTimeout(1500);
 const t=(await p.evaluate(()=>(document.getElementById('compat')||{}).innerText||'')).split('🖨')[0];
 if(process.env.GATE_DUMP) fs.writeFileSync(process.env.GATE_DUMP,t);
 ok('相性の鑑定文が出る', t.length>600, t.length+'字');
+{ const ev=await p.evaluate(()=>{ const d=document.querySelector('#compat .ev-box'); if(!d) return null; d.open=true; const r={txt:d.innerText,drop:d.querySelectorAll('tr').length}; d.open=false; return r; });   /* ③ 根拠のチェック表（先生の画面だけ） */
+  if(process.env.GATE_DUMP&&ev) fs.writeFileSync(process.env.GATE_DUMP+'.ev',ev.txt);
+  ok('根拠のチェック表が出る（先生の画面・印刷しない）', !!ev&&/根拠チェック/.test(ev.txt)&&await p.evaluate(()=>document.querySelector('#compat .ev-box').classList.contains('no-print')), ev?'':'表がない'); }
 if(SAME){ const all=await p.evaluate(()=>(document.getElementById('compat')||{}).innerText||''); const w=[...all.matchAll(/[^。\n]{0,20}(異性|夫の星|妻の星|夫星|彼氏|彼女|男役|女役)[^。\n]{0,20}/g)].map(m=>m[0]); ok('同性カップル：男女を前提にした言い方がない（画面全体）', w.length===0, w.slice(0,3).join(' / ')); }
 const G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', gz=y=>G[(y-4)%10]+Z[(y-4)%12];
 const bad=[];
