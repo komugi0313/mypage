@@ -568,7 +568,7 @@ function lvShow(t){const me=window.__me,P=LV.types&&LV.types[t];if(!me)return;co
  const lab=i=>t[i]===me.born[i]&&t[i]===me.now[i]?'':t[i]===me.born[i]?'<em class="b">'+TR("気質")+'</em>':t[i]===me.now[i]?'<em class="n">'+TR("性格")+'</em>':'<em class="x">'+TR("恋だけ")+'</em>';
  const anyLab=[0,1,2,3].some(i=>!(t[i]===me.born[i]&&t[i]===me.now[i]));
  let h='<p class="lvlab">'+TR("恋をしたときのあなた")+'</p><div class="lvtiles">'+t.split("").map((l,i)=>'<div class="lt'+(me.born[i]!==me.now[i]&&l===me.born[i]?' isb':'')+'"><b>'+l+'</b>'+lab(i)+'</div>').join("")+'</div>'
-  +(anyLab?'<p class="lvleg">'+TR("文字の下の小さな言葉は、恋をしたときにその文字がどこから出たかです。「恋だけ」は、ふだんは出ない面です。")+'</p>':'')
+  +(anyLab?'<p class="lvleg">'+TR("文字の下の小さな言葉は、恋をしたときにその文字がどこから出たかです。")+([0,1,2,3].some(i=>t[i]!==me.born[i]&&t[i]!==me.now[i])?TR("「恋だけ」は、ふだんは出ない面です。"):"")+'</p>':'')
   +'<p class="hook">'+esc(lvHook(me.born,me.now,t))+'</p>';
  if(P){const nm=k=>k+p16(k);
   h+='<div class="lvp"><p class="lvsub">'+TR("恋のときのあなたは")+'</p><p class="lvname">'+esc(P.t+p16(P.t))+'</p><p class="one">'+TR("「")+esc(P.one)+TR("」")+'</p><p class="desc">'+esc(P.desc)+'</p>'
