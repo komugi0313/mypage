@@ -77,9 +77,13 @@ $("go").onclick=()=>{if(sel.includes(null)||!dateOK())return;st.t=sel.slice();st
 /* ---- 60問 ---- */
 const SCALE=[[TR("とても当てはまる"),5,22],[TR("当てはまる"),4,18],[TR("やや当てはまる"),3,14],[TR("やや当てはまらない"),2,14],[TR("当てはまらない"),1,18],[TR("まったく当てはまらない"),0,22]];
 const AXN={EI:0,SN:1,TF:2,JP:3,AT:4};const AXQ=AX.concat([{k:"AT",a:"A",b:"T",c:"--rose",name:TR("心の構え"),sh:TR("構え")}]);
-let qa=[],qi=0,tbList=[],tbAns={},ord=[],ext=false;
+let qa=[],qi=0,tbList=[],tbAns={},ord=[],ext=false,adDone=false;
 /* 質問の数は人によって変わる：まず各指標6問（計30問）。答えが真ん中に近い指標だけ、残りの6問を追加する */
-const BASE=30,EXT_T=12,MAXQ=60;
+const BASE=30,EXT_T=12,MAXQ=60,STOP=6,AXCAP=24;
+/* 30問のあとは、まだ迷っている指標にだけ2問ずつ（両側から1問ずつ）聞く。はっきりした指標はそこで打ち切る */
+function nextPair(){if(ord.length+2>MAXQ)return false;const sc=scoreAll(),cnt=k=>ord.filter(i=>QZ.Q[i].ax===k).length;
+ const cand=["EI","SN","TF","JP","AT"].filter(k=>{const c=cnt(k),d=Math.abs(sc[k][0]-sc[k][1]);return c<AXCAP&&d<=STOP*Math.sqrt(c/6);}).sort((a,b)=>Math.abs(sc[a][0]-sc[a][1])/Math.sqrt(cnt(a))-Math.abs(sc[b][0]-sc[b][1])/Math.sqrt(cnt(b)));
+ for(const k of cand){const p=pickQ([k],1,ord);if(p.length===2){p.forEach(i=>ord.push(i));return true;}}return false;}
 /* 質問は毎回、たくさんの中から選ぶ（同じ質問ばかりにならないように）。各指標の両側から同じ数ずつ選び、前回使った質問は後回しにする */
 const KU="16tp.used.v1";
 function pickQ(axes,per,skip){const used=sget(KU)||[],rec=new Set(used),sk=new Set(skip||[]);
@@ -98,9 +102,9 @@ function hideOld(){if(!shown)return;shown=false;$("result").style.display="none"
 function showResult(){shown=true;$("result").style.display="contents";setTimeout(showInvitePair,0);}
 function showQuiz(on){$("quizCard").hidden=!on;{const fb=$("fabTop");if(fb&&on)fb.hidden=true;}$("formCard").hidden=on;$("result").style.display=(!on&&shown)?"contents":"none";}
 $("hasType").onclick=()=>{if(!dateOK())return;hideOld();$("hasType").setAttribute("aria-pressed","true");$("pickField").hidden=false;$("pickField").scrollIntoView({behavior:"smooth",block:"nearest"});};
-function startQuiz(saved){if(saved){qa=saved.qa;qi=saved.qi;tbList=saved.tbList||[];tbAns=saved.tbAns||{};ord=saved.ord;ext=!!saved.ext;}else{qa=new Array(QZ.Q.length).fill(null);qi=0;tbList=[];tbAns={};ord=baseOrd();ext=false;sset(KQ,null);}
+function startQuiz(saved){if(saved){qa=saved.qa;qi=saved.qi;tbList=saved.tbList||[];tbAns=saved.tbAns||{};ord=saved.ord;ext=!!saved.ext;adDone=!!saved.adDone;}else{qa=new Array(QZ.Q.length).fill(null);qi=0;tbList=[];tbAns={};ord=baseOrd();ext=false;adDone=false;sset(KQ,null);}
  showQuiz(true);drawQ();$("quizCard").scrollIntoView({behavior:"smooth",block:"start"});}
-function saveQuiz(){sset(KQ,{v:2,n:QZ.Q.length,qa,qi,tbList,tbAns,ord,ext,y:st.y,m:st.m,d:st.d});}
+function saveQuiz(){sset(KQ,{v:2,n:QZ.Q.length,qa,qi,tbList,tbAns,ord,ext,adDone,y:st.y,m:st.m,d:st.d});}
 function savedQuiz(){const q=sget(KQ);return q&&q.v===2&&q.n===QZ.Q.length&&Array.isArray(q.qa)&&Array.isArray(q.ord)&&q.qi>0&&q.qi<q.ord.length+(q.tbList||[]).length?q:null;}
 function drawResume(){let r=$("qResume");const q=savedQuiz();
  if(!q){if(r)r.hidden=true;return;}
@@ -129,12 +133,12 @@ function scoreAll(){const sc={EI:[0,0],SN:[0,0],TF:[0,0],JP:[0,0],AT:[0,0]};
  QZ.Q.forEach((q,i)=>{const v=qa[i];if(v==null)return;const A=AXQ[AXN[q.ax]];if(q.p===A.a){sc[q.ax][0]+=v;sc[q.ax][1]+=5-v;}else{sc[q.ax][1]+=v;sc[q.ax][0]+=5-v;}});
  Object.keys(tbAns).forEach(k=>{const A=AXQ[AXN[k]];if(tbAns[k]===A.a)sc[k][0]+=3;else sc[k][1]+=3;});return sc;}
 function drawQ(){/* 数は「最大」から見せて、減ることはあっても増えないようにする */
- const fin=qi>=ord.length,total=fin?ord.length+tbList.length:ext?Math.min(MAXQ,ord.length+Object.keys(QZ.TB||{}).length):MAXQ;const left=Math.max(0,total-qi-1);
- $("qCount").innerHTML=Math.min(qi+1,total)+" / "+total+'<span class="qleft">'+(fin?(left?TR("あと{n}問").replace("{n}",left):TR("最後の質問です")):TR("あと最大{n}問").replace("{n}",left))+'</span>';
+ const fin=adDone&&qi>=ord.length,total=fin?ord.length+tbList.length:MAXQ;const left=Math.max(0,total-qi-1);
+ $("qCount").innerHTML=Math.min(qi+1,total)+" / "+total+'<span class="qleft">'+(!left?TR("最後の質問です"):fin?TR("あと{n}問").replace("{n}",left):TR("あと最大{n}問").replace("{n}",left))+'</span>';
  $("qProg").style.width=(qi/total*100)+"%";$("qNote").hidden=qi>0;
  let ch=$("qCheer");if(!ch){ch=document.createElement("p");ch.id="qCheer";ch.className="qcheer";$("qAxis").before(ch);}
  const add=ord.length-BASE;
- const CH=qi>=7&&qi<9?TR("いい調子です。直感で答えてくださいね。"):qi>=15&&qi<18?TR("半分まで来ました。途中で閉じても、続きから再開できます。"):qi>=24&&qi<27&&!ext?TR("もう少しで30問です。ここで、答えがはっきりしたところとそうでないところを見分けます。"):qi>=BASE&&qi<BASE+3&&add>0?(add<MAXQ-BASE?TR("30問が終わりました。答えがはっきりしていたところは、ここで終わりです。全部で最大{n}問になりました。"):TR("30問が終わりました。もう少しだけ、くわしく確かめます。全部で最大{n}問です。")).replace("{n}",total):qi===ord.length&&tbList.length?TR("最後に、2択の質問が{n}問だけあります。").replace("{n}",tbList.length):qi>=BASE+3&&left>0&&left<=5?(fin?TR("ラストスパート！あと{n}問です。").replace("{n}",left):TR("もう少しで終わります。")):"";
+ const CH=qi>=7&&qi<9?TR("いい調子です。直感で答えてくださいね。"):qi>=15&&qi<18?TR("半分まで来ました。途中で閉じても、続きから再開できます。"):qi>=24&&qi<27&&!ext?TR("もう少しで30問です。ここで、答えがはっきりしたところとそうでないところを見分けます。"):qi>=BASE&&qi<BASE+3&&!fin?TR("30問が終わりました。ここからは、答えがはっきりしなかったところだけを聞きます。はっきりしたら、そこで終わります。"):qi===ord.length&&tbList.length?TR("最後に、2択の質問が{n}問だけあります。").replace("{n}",tbList.length):qi>=BASE+3&&left>0&&left<=5?(fin?TR("ラストスパート！あと{n}問です。").replace("{n}",left):TR("もう少しで終わります。")):"";
  ch.hidden=!CH;ch.textContent=CH;
  const o=$("qOpts");o.innerHTML="";
  if(qi<ord.length){const qn=ord[qi],q=QZ.Q[qn],A=AXQ[AXN[q.ax]];
@@ -147,9 +151,9 @@ function drawQ(){/* 数は「最大」から見せて、減ることはあって
   [T.a,T.b].forEach(([t,p])=>{const bt=document.createElement("button");bt.type="button";bt.className="ab";bt.textContent=t;bt.setAttribute("aria-pressed",tbAns[k]===p);
    bt.onclick=()=>{tbAns[k]=p;setTimeout(next,180);};o.appendChild(bt);});}}
 function next(){qi++;
- if(qi===BASE&&!ext){ext=true;const sc=scoreAll(),close=Object.keys(sc).filter(k=>Math.abs(sc[k][0]-sc[k][1])<=EXT_T);
-  pickQ(["EI","SN","TF","JP","AT"].filter(k=>close.includes(k)),BASE/10,ord).forEach(i=>ord.push(i));}
- if(qi===ord.length&&tbList.length===0){const sc=scoreAll();tbList=Object.keys(sc).filter(k=>Math.abs(sc[k][0]-sc[k][1])<=6&&QZ.TB[k]).slice(0,Math.max(0,MAXQ-ord.length));}
+ if(qi>=BASE)ext=true;
+ if(qi===ord.length&&!adDone){if(!nextPair())adDone=true;}
+ if(qi===ord.length&&adDone&&tbList.length===0){const sc=scoreAll();tbList=Object.keys(sc).filter(k=>Math.abs(sc[k][0]-sc[k][1])<=6&&QZ.TB[k]).slice(0,Math.max(0,MAXQ-ord.length));}
  if(qi>=ord.length+tbList.length){finish();return;}saveQuiz();drawQ();}
 function swayOf(){/* 揺れやすさ：同じ指標を、向きを変えた質問どうしで答えが食い違っていないか */
  const sw={};AXQ.forEach(A=>{const a=[],b=[];QZ.Q.forEach((q,i)=>{if(q.ax!==A.k||qa[i]==null)return;(q.p===A.a?a:b).push(qa[i]);});
