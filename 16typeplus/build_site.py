@@ -8,9 +8,9 @@ R=os.path.dirname(os.path.abspath(__file__))+'/'
 sys.path.insert(0,R+'i18n');from build_preview import lang_data
 OUT=R+'site/'
 META={
- 'ja':('16TYPE+｜生まれ持った気質と、育ってきた性格がわかる無料診断','あなたの中には2つの性質がある。生年月日からわかる「気質」と、16タイプからわかる「性格」。2つを並べて、あなたらしいところと悩みやすいところがわかる無料の性格診断。','日本語','ja_JP'),
- 'en':('16TYPE+ | Your temperament and character, side by side','There are two natures inside you: the temperament you were born with, and the character shaped by experience. A free personality test that shows both, and where you tend to struggle.','English','en_US'),
- 'ko':('16TYPE+ | 타고난 기질과 자라 온 성격을 알 수 있는 무료 검사','당신 안에는 두 가지 성질이 있어요. 생년월일로 보는 기질과 16타입으로 보는 성격. 둘을 나란히 놓고 나다움과 고민하기 쉬운 지점을 알려 주는 무료 성격 검사.','한국어','ko_KR')}
+ 'ja':('16TYPE+｜生まれ持った気質と、育ってきた性格がわかる無料診断','生年月日からわかる「気質」と、16タイプからわかる「性格」。2つを並べて、あなたらしいところと悩みやすいところがわかる無料の性格診断。','日本語','ja_JP'),
+ 'en':('16TYPE+ | Your temperament and character, side by side','The temperament you were born with, from your birth date, and the character shaped by experience, from the 16 types. A free personality test that puts the two side by side and shows where you tend to struggle.','English','en_US'),
+ 'ko':('16TYPE+ | 타고난 기질과 자라 온 성격을 알 수 있는 무료 검사','생년월일로 보는 기질과 16타입으로 보는 성격. 둘을 나란히 놓고 나다움과 고민하기 쉬운 지점을 알려 주는 무료 성격 검사.','한국어','ko_KR')}
 URL={'ja':'https://16typeplus.jp/','en':'https://16typeplus.jp/en/','ko':'https://16typeplus.jp/ko/'}
 GA='G-XLMXSC0LY0'
 def rd(p): return open(p,encoding='utf-8').read()
