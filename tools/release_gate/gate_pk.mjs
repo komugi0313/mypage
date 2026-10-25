@@ -98,6 +98,7 @@ if(!pop){ ok('鑑定書が開く', false); } else {
   ok('鑑定書：＊なし', cleanStar(txt)===0, cleanStar(txt));
   if(MODE==='online') ok('鑑定書：呼び出し回数（目安1〜3回）', calls-c2>=1&&calls-c2<=3, 'calls='+(calls-c2));
   await pop.close(); }
+{ const rt=await p.evaluate(()=>(document.getElementById('reading')||{}).innerText||''); ok('1人の相談に相性の書き足しが付かない', !/惹かれ合う星|2人の役割と|この2人だけの読み|2人の合が三合|2人が惹かれ合う|2人の結びつきが強まる/.test(rt), (rt.match(/.{0,20}(惹かれ合う星|2人の役割と|この2人だけの読み|2人の合が三合).{0,20}/)||[''])[0]); }
 const _e=errs.filter(x=>!/reqfail: .*gemini/.test(x)&&!(MODE!=='online'&&/ERR_INTERNET_DISCONNECTED/.test(x))); ok('画面のエラー0件', _e.length===0, _e.slice(0,3).join(' | '));
 
 console.log(JSON.stringify(CL)); console.log(`  → ${R.filter(x=>!x.pass).length===0?'合格':'不合格'}（${R.filter(x=>x.pass).length}/${R.length}）  呼び出し合計 ${calls}`);
