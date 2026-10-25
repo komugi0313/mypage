@@ -213,8 +213,8 @@ function render(instant){
  const bAT=N.at,nAT=st.at,bornF=born+(bAT?"-"+bAT:""),nowF=now+(nAT?"-"+nAT:"");
  const diff=AX.map((A,i)=>now[i]!==born[i]),atDiff=!!(bAT&&nAT&&bAT!==nAT),dn=diff.filter(Boolean).length+(atDiff?1:0);
  const cp=x=>'<span class="sc">'+TR("（")+x+TR("）")+'</span>';
- $("rStory").innerHTML=born===now?TR('<span class="ln">あなたは、気質も性格も</span><span class="ln"><span class="n">')+nowF+'</span>'+cp(P16[now])+TR('。</span>')+'<span class="ln sub">'+TR("気質も性格も同じ、わかりやすい人。")+'</span>'
-   :TR('<span class="ln">あなたは、</span><span class="ln"><span class="b">')+bornF+'</span>'+cp(P16[born])+TR('の気質と、</span><span class="ln"><span class="n">')+nowF+'</span>'+cp(P16[now])+TR('の性格をあわせ持つ人。</span>');
+ {const KTt=(typeof KT!=="undefined"&&KT&&KT[born+">"+now]&&KT[born+">"+now].title)||"";
+ $("rStory").innerHTML=(KTt?'<span class="rs-eb">'+TR("あなたは")+'</span><span class="rs-t">'+esc(KTt)+'</span>':'')+'<span class="rs-chips">'+(born===now?'<span class="rs-c n"><small>'+TR("気質も性格も")+'</small><b>'+nowF+'</b>'+cp(P16[now])+'</span>':'<span class="rs-c b"><small>'+TR("気質")+'</small><b>'+bornF+'</b>'+cp(P16[born])+'</span><span class="rs-c n"><small>'+TR("性格")+'</small><b>'+nowF+'</b>'+cp(P16[now])+'</span>')+'</span>';}
  const ATC="--rose";
  let fh=TR('<span class="rl"><b>気質</b>生年月日から</span>')+AX.map((A,i)=>'<span class="tile b'+(diff[i]?' c':'')+'" style="--c:var('+A.c+')">'+born[i]+'</span>').join("")+'<span class="tile b at'+(atDiff?' c':'')+'" style="--c:var('+ATC+')">'+(bAT||"–")+'</span>';
  fh+='<span class="rl e"></span>'+AX.map((A,i)=>'<span class="arw'+(diff[i]?' c':'')+'" style="--c:var('+A.c+')">'+(diff[i]?'↓':'｜')+'</span>').join("")+'<span class="arw'+(atDiff?' c':'')+'" style="--c:var('+ATC+')">'+(atDiff?'↓':'｜')+'</span>';
@@ -224,7 +224,8 @@ function render(instant){
  setupReveal(N,born,now,bAT,nAT,diff,atDiff,why,aligned,true);
  const ch1=AX.filter((A,i)=>diff[i]).map(A=>'<span class="nw">'+A.name+'</span>').concat(atDiff?[TR('<span class="nw">心の構え</span>')]:[]);
  const tot=4,dn4=diff.filter(Boolean).length,ch4=AX.filter((A,i)=>diff[i]).map(A=>'<span class="nw">'+A.name+'</span>');
- $("rSum").innerHTML=(dn4===0?TR('4文字すべて、<b>気質と性格が同じ</b>です。'):TR('4文字のうち、気質と性格がちがうのは <b>')+dn4+TR('文字</b>')+(dn4<4?'<br>'+ch4.join(TR("・")):TR('（すべて）')))+'<br><small class="atnote">'+(!(nAT&&bAT)?TR('おまけの5文字目「心の構え（A/T）」は、選んだ人だけ比べます'):atDiff?TR('おまけの5文字目「心の構え（A/T）」は、ちがいます'):TR('おまけの5文字目「心の構え（A/T）」は、同じです'))+'</small>';
+ $("rSum").innerHTML=(dn4===0?'<b class="gs-h">'+TR("生まれつきの性質が、そのまま育っています。")+'</b><span class="gs-s">'+TR("場面が変わっても、あなたらしさがぶれにくい人です。")+'</span>'
+  :'<b class="gs-h">'+TR("生まれつきと、経験で身につけたところ")+'</b><ul class="gs-l">'+AX.map((A,i)=>diff[i]?'<li style="--c:var('+A.c+')"><span class="gs-ax">'+A.name+'</span>'+TR("生まれつきは「")+'<b>'+TR(CORE[born[i]])+'</b>'+TR("」。経験の中で「")+'<b>'+TR(CORE[now[i]])+'</b>'+TR("」も身につきました。")+'</li>':'').join("")+'</ul><span class="gs-s">'+TR("どちらも、あなたです。場面によって、前に出るほうが変わります。")+'</span>')+'<br><small class="atnote">'+(!(nAT&&bAT)?TR('おまけの5文字目「心の構え（A/T）」は、選んだ人だけ比べます'):atDiff?TR('おまけの5文字目「心の構え（A/T）」は、ちがいます'):TR('おまけの5文字目「心の構え（A/T）」は、同じです'))+'</small>';
  const C=(typeof COMBO!=="undefined"&&COMBO[born+">"+now])||{name:TR("（文章を準備中）"),atari:["",""],karai:""};
  const strip=t=>t.replace(/\[\[(今|本):(.*?)\]\]/g,"$2");
  const HB=HN.type[born],HW=HN.type[now];
@@ -364,11 +365,11 @@ function showShareBox(cvs){let box=$("shareBox");
  if(!box){box=document.createElement("div");box.id="shareBox";box.className="sharebox";box.setAttribute("role","dialog");box.setAttribute("aria-modal","true");document.body.appendChild(box);
   box.addEventListener("click",e=>{if(e.target===box)box.hidden=true;});}
  const msg=shareText()+"\n"+SHARE_URL,tw="https://twitter.com/intent/tweet?text="+encodeURIComponent(shareText())+"&url="+encodeURIComponent(SHARE_URL),ln="https://line.me/R/msg/text/?"+encodeURIComponent(msg);
- box.innerHTML='<div class="sbin"><div class="sbline"><button type="button" class="btn primary sbl" id="sbLine">'+TR("画像を共有する")+'</button><p class="fine">'+TR("LINEやインスタなど、ふだん使っているアプリで送れます。画像を保存してから送ることもできます。")+'</p></div>'
+ box.innerHTML='<div class="sbin"><button type="button" class="sbx" aria-label="'+TR("閉じる")+'">×</button><div class="sbline"><button type="button" class="btn primary sbl" id="sbLine">'+TR("画像を共有する")+'</button><p class="fine">'+TR("LINEやインスタなど、ふだん使っているアプリで送れます。画像を保存してから送ることもできます。")+'</p></div>'
   +cvs.map((_,i)=>'<figure class="sbf"><img alt="'+esc(TR("シェア用の画像"))+'"><a class="btn sv" download="16typeplus-'+(i+1)+'.png">'+TR("この画像を保存")+'</a></figure>').join("")
   +'<p class="fine">'+TR("画像を長押し（パソコンは右クリック）でも保存できます。")+'</p><div class="sbacts"><a class="btn tw" target="_blank" rel="noopener">'+TR("Xでシェア")+'</a></div><button type="button" class="qlink">'+TR("閉じる")+'</button></div>';
  const imgs=box.querySelectorAll("img"),svs=box.querySelectorAll(".sv");cvs.forEach((cv,i)=>{const u=cv.toDataURL("image/png");imgs[i].src=u;svs[i].href=u;});
- box.querySelector(".tw").href=tw;box.querySelector(".qlink").onclick=()=>{box.hidden=true;};box.hidden=false;box.querySelector(".sbin").scrollTop=0;
+ box.querySelector(".tw").href=tw;box.querySelectorAll(".qlink,.sbx").forEach(b=>b.onclick=()=>{box.hidden=true;});box.hidden=false;box.querySelector(".sbin").scrollTop=0;
  /* LINE：画像ごと送れる端末は共有メニュー（LINEを選ぶ）、できなければLINEのトーク画面を開く */
  $("sbLine").onclick=async()=>{try{const blobs=await Promise.all(cvs.map(cv=>new Promise(r=>cv.toBlob(r,"image/png"))));const files=blobs.map((bl,i)=>new File([bl],"16typeplus-"+(i+1)+".png",{type:"image/png"}));
    if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files,text:msg});return;}}catch(e){if(e&&e.name==="AbortError")return;}
@@ -538,14 +539,13 @@ let lv={a:null,i:0};
 function lvInit(){if(typeof LV==="undefined"||!LV||!LV.questions)return;let el=$("love");
  if(!el){el=document.createElement("section");el.id="love";el.className="card love";$("persona").after(el);}
  el.innerHTML='<p class="eyebrow">'+TR("恋愛編")+'</p><h2 class="lvh">'+TR("恋をすると、あなたの中のどちらが強く出る？")+'</h2>'
-  +'<p class="hint lvlead">'+TR("恋愛の場面だけを聞く16問・約3分。気質と性格がちがう文字について、恋ではどちらが強く出るかがわかります。")+'</p>'
+  +'<p class="hint lvlead">'+TR("恋愛の場面だけを聞く16問・約3分。恋をしたときのあなたが、気質と性格のどちらに近いのか、ふだんは出ない面があるのかがわかります。")+'</p>'
   +'<button class="btn primary" type="button" id="lvStart">'+TR("恋愛編を診断する")+'</button>'
-  +'<div id="lvQ" class="lvq" hidden><div class="qtop"><span class="qcount" id="lvCount"></span><button type="button" class="qlink" id="lvBack">'+TR("← 戻る")+'</button></div><div class="qprog"><span id="lvProg"></span></div><h3 class="qtext" id="lvText"></h3><div class="qex" id="lvExW"><span class="qexl">'+TR("たとえば")+'</span><p id="lvEx"></p></div><div class="qopts" id="lvOpts"></div></div>'
+  +'<div id="lvQ" class="lvq" hidden><div class="qtop"><span class="qcount" id="lvCount"></span><button type="button" class="qlink" id="lvBack">'+TR("← 1つ前の質問へ")+'</button></div><div class="qprog"><span id="lvProg"></span></div><h3 class="qtext" id="lvText"></h3><div class="qex" id="lvExW"><span class="qexl">'+TR("たとえば")+'</span><p id="lvEx"></p></div><div class="qopts" id="lvOpts"></div></div>'
   +'<div id="lvRes" hidden></div>';
  $("lvStart").onclick=()=>{lv={a:new Array(LV.questions.length).fill(null),i:0};$("lvStart").hidden=true;$("lvRes").hidden=true;$("lvQ").hidden=false;lvDraw();$("love").scrollIntoView({behavior:"smooth",block:"start"});};
  $("lvBack").onclick=()=>{if(lv.i>0){lv.i--;lvDraw();}else{$("lvQ").hidden=true;$("lvStart").hidden=false;}};
- const me=window.__me;if(me&&me.born===me.now){$("lvStart").hidden=true;el.querySelector(".lvlead").textContent=TR("気質と性格が同じなので、質問なしで恋のときのあなたがわかります。");lvShow(me.now);}
- else if(st.love&&st.love.t&&[...st.love.t].every((l,i)=>l===me.born[i]||l===me.now[i]))lvShow(st.love.t);}
+ const me=window.__me;if(me&&st.love&&st.love.t&&/^[EI][SN][TF][JP]$/.test(st.love.t))lvShow(st.love.t);}
 function lvDraw(){const Q=LV.questions,q=Q[lv.i],A=AX[AXN[q.ax]];$("lvCount").textContent=(lv.i+1)+" / "+Q.length;$("lvProg").style.width=(lv.i/Q.length*100)+"%";
  $("lvText").textContent=q.q;$("lvEx").textContent=q.ex||"";$("lvExW").hidden=!q.ex;const o=$("lvOpts");o.innerHTML="";
  LVSCALE.forEach(([t,v,sz])=>{const bt=document.createElement("button");bt.type="button";bt.style.setProperty("--qc","var(--rose)");bt.innerHTML='<i style="width:'+sz+'px;height:'+sz+'px"></i>'+t;bt.setAttribute("aria-pressed",lv.a[lv.i]===v);
@@ -553,26 +553,30 @@ function lvDraw(){const Q=LV.questions,q=Q[lv.i],A=AX[AXN[q.ax]];$("lvCount").te
 function lvFinish(){const me=window.__me,sc={EI:0,SN:0,TF:0,JP:0};
  LV.questions.forEach((q,i)=>{const A=AX[AXN[q.ax]],v=(lv.a[i]==null?2.5:lv.a[i])-2.5;sc[q.ax]+=q.p===A.a?v:-v;});
  /* 気質と性格が同じ文字はそのまま。ちがう文字だけ、答えが寄った方を選ぶ（3つ目のタイプは作らない） */
- const t=AX.map((A,i)=>me.born[i]===me.now[i]?me.now[i]:(sc[A.k]>0?A.a:sc[A.k]<0?A.b:me.now[i])).join("");
+ const t=AX.map((A,i)=>me.born[i]===me.now[i]?(sc[A.k]>=4?A.a:sc[A.k]<=-4?A.b:me.now[i]):(sc[A.k]>0?A.a:sc[A.k]<0?A.b:me.now[i])).join("");
  st.love={t,a:lv.a};saveResult();$("lvQ").hidden=true;lvShow(t);$("love").scrollIntoView({behavior:"smooth",block:"start"});}
-function lvHook(born,now,love){let nb=0,nn=0;for(let i=0;i<4;i++){if(born[i]!==now[i]){if(love[i]===born[i])nb++;else nn++;}}
- const s=born===now?TR("気質も性格も同じ。恋をしても、いつものあなたのまま。")
-  :nb&&!nn?TR("ふだんは性格の{N}が前に出る。でも恋をすると、気質の{B}が強く出る。")
+function lvHook(born,now,love){let nb=0,nn=0;const nx=[];for(let i=0;i<4;i++){if(born[i]!==now[i]){if(love[i]===born[i])nb++;else nn++;}else if(love[i]!==now[i])nx.push(TR(CORE[love[i]]));}
+ const X=nx.join(TR("・"));
+ if(born===now)return nx.length?TR("気質も性格も同じ。でも恋をすると、ふだんは出ない「{X}」の面が出てきます。").replace("{X}",X):TR("気質も性格も同じ。恋をしても、いつものあなたのまま。");
+ let s=nb&&!nn?TR("ふだんは性格の{N}が前に出る。でも恋をすると、気質の{B}が強く出る。")
   :nn&&!nb?TR("恋をしても、性格の{N}がそのまま出る。気質の{B}は、あまり表に出てこない。")
   :TR("恋をすると、気質の{B}と性格の{N}が、まざって出てくる。");
+ if(nx.length)s+=TR("さらに、ふだんは出ない「{X}」の面も出てきます。").replace("{X}",X);
  return s.replace(/\{B\}/g,an(born)).replace(/\{N\}/g,an(now));}
 function lvShow(t){const me=window.__me,P=LV.types&&LV.types[t];if(!me)return;const el=$("lvRes");el.hidden=false;$("lvStart").hidden=true;$("lvQ").hidden=true;
  const one=me.born===me.now;
- const lab=i=>me.born[i]===me.now[i]?'':(t[i]===me.born[i]?'<em class="b">'+TR("気質")+'</em>':'<em class="n">'+TR("性格")+'</em>');
+ const lab=i=>t[i]===me.born[i]&&t[i]===me.now[i]?'':t[i]===me.born[i]?'<em class="b">'+TR("気質")+'</em>':t[i]===me.now[i]?'<em class="n">'+TR("性格")+'</em>':'<em class="x">'+TR("恋だけ")+'</em>';
+ const anyLab=[0,1,2,3].some(i=>!(t[i]===me.born[i]&&t[i]===me.now[i]));
  let h='<p class="lvlab">'+TR("恋をしたときのあなた")+'</p><div class="lvtiles">'+t.split("").map((l,i)=>'<div class="lt'+(me.born[i]!==me.now[i]&&l===me.born[i]?' isb':'')+'"><b>'+l+'</b>'+lab(i)+'</div>').join("")+'</div>'
-  +(me.born!==me.now?'<p class="lvleg">'+TR("文字の下の「気質」「性格」は、恋をしたときにどちらの文字が出たかを表しています。")+'</p>':'')
+  +(anyLab?'<p class="lvleg">'+TR("文字の下の小さな言葉は、恋をしたときにその文字がどこから出たかです。「恋だけ」は、ふだんは出ない面です。")+'</p>':'')
   +'<p class="hook">'+esc(lvHook(me.born,me.now,t))+'</p>';
  if(P){const nm=k=>k+p16(k);
   h+='<div class="lvp"><p class="lvsub">'+TR("恋のときのあなたは")+'</p><p class="lvname">'+esc(P.t+p16(P.t))+'</p><p class="one">'+TR("「")+esc(P.one)+TR("」")+'</p><p class="desc">'+esc(P.desc)+'</p>'
+  +[["fall","好きになると"],["date","付き合うと"],["fight","けんかしたとき"],["last","長く続けるコツ"]].filter(([k])=>P[k]).map(([k,h])=>'<div class="lvs lvs-'+k+'"><h3>'+TR(h)+'</h3><p>'+esc(P[k])+'</p></div>').join("")
   +'<details class="pmore"><summary>'+TR("恋でいいところ・気をつけたいところ")+'</summary><div class="two"><div class="g"><h3>'+TR("恋でいいところ")+'</h3><ul>'+P.good.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div><div class="c"><h3>'+TR("気をつけたいところ")+'</h3><ul>'+P.care.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div></div><p class="key"><b>'+TR("うまくいくコツ")+'</b>'+esc(P.tip)+'</p></details>'
   +'<details class="pmore"><summary>'+TR("恋の相性")+'</summary><div class="cpl"><div class="o"><em>'+TR("相性◎")+'</em><b>'+esc(nm(P.best[0]))+'</b>'+esc(P.best[1])+'</div><div class="x"><em>'+TR("相性×")+'</em><b>'+esc(nm(P.hard[0]))+'</b>'+esc(P.hard[1])+'</div></div></details></div>'
   +'<button class="btn primary" type="button" id="lvShare">'+TR("恋愛編の結果を画像でシェア")+'</button>';}
- if(!one)h+='<button class="qlink" type="button" id="lvRedo">'+TR("恋愛編に答え直す")+'</button>';
+ h+='<button class="qlink" type="button" id="lvRedo">'+TR("恋愛編に答え直す")+'</button>';
  el.innerHTML=h;
  if($("lvShare"))$("lvShare").onclick=()=>lvShareRun(t);
  if($("lvRedo"))$("lvRedo").onclick=()=>{el.hidden=true;$("lvStart").hidden=false;$("lvStart").click();};}
