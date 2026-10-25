@@ -301,7 +301,7 @@ $("mkLink").onclick=()=>{const u=inviteURL(),nm=$("myName").value.trim();
  const msg=(nm?nm+TR("から"):"")+TR("相性診断が届いたよ。気質と性格の両方から、2人の相性がわかる👇")+"\n"+u;
  $("lnk").value=u;$("lnkLine").href="https://line.me/R/msg/text/?"+encodeURIComponent(msg);$("lnkBox").hidden=false;window.__msg=msg;};
 /* スマホでは、長いURLを見せずに共有メニュー（LINEなど）を開く */
-$("lnkLine").onclick=e=>{if(navigator.share&&window.__msg){e.preventDefault();navigator.share({text:window.__msg}).catch(()=>{});}};
+$("lnkLine").onclick=e=>{if(navigator.share&&window.__msg){e.preventDefault();navigator.share({text:window.__msg}).catch(()=>{});}else if(LANG!=="ja"){e.preventDefault();$("cpLink").click();}};
 $("cpLink").onclick=()=>{const t=$("lnk");const done=()=>{$("cpLink").textContent=TR("コピーしました");setTimeout(()=>$("cpLink").textContent=TR("リンクをコピー"),1600);};
  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(window.__msg||t.value).then(done).catch(()=>{t.select();});}else t.select();};
 if(INV){$("invBar").hidden=false;$("invWho").textContent=INV.who;$("invPair").textContent=INV.bornF+" → "+INV.nowF;
@@ -893,3 +893,14 @@ function gSetup(){if(!$("group"))return;gDraw();
   const rows=gst.rows.filter(r=>r.t),M=[{name:TR("あなた"),born:me.born,now:me.now}].concat(rows.map((r,i)=>({name:r.name.trim()||TR("{n}人目").replace("{n}",i+2),born:r.t,now:r.t,only:true})));
   const out=$("gRes");if(M.length<2){out.innerHTML='<p class="hint">'+TR("1人以上、16タイプを選んでください。")+'</p>';out.hidden=false;return;}
   out.innerHTML=groupHTML(groupResult(M),gst.title.trim());out.hidden=false;track("group_view",{size:M.length});out.scrollIntoView({behavior:"smooth",block:"start"});};}
+/* スマホの言語がほかの言語なら、その言語のページもあることを小さく知らせる（自動では移動しない） */
+(()=>{try{const K="16tp.langbar.v1";if(localStorage.getItem(K))return;
+ const want=(navigator.languages||[navigator.language||""]).map(x=>String(x).slice(0,2).toLowerCase()).find(x=>x==="ja"||x==="en"||x==="ko");
+ if(!want||want===LANG)return;
+ const txt={ja:"日本語でも見られます",en:"This site is also in English",ko:"한국어로도 볼 수 있어요"}[want],go={ja:"日本語へ",en:"English",ko:"한국어로"}[want];
+ const prod=/16typeplus\.jp$/.test(location.hostname),href=prod?"/"+(want==="ja"?"":want+"/")+location.search:"#"+want;
+ const bar=document.createElement("div");bar.className="langbar";bar.setAttribute("lang",want);
+ bar.innerHTML='<span>'+txt+'</span><a href="'+href+'">'+go+' →</a><button type="button" aria-label="close">×</button>';
+ bar.querySelector("button").onclick=()=>{bar.remove();try{localStorage.setItem(K,"1");}catch(e){}};
+ bar.querySelector("a").onclick=()=>{try{track("langbar_click",{to:want});}catch(e){}};
+ const hd=document.querySelector("header.bar");if(hd)hd.after(bar);else document.body.prepend(bar);}catch(e){}})();
