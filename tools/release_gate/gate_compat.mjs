@@ -42,7 +42,7 @@ const G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌�
 const bad=[];
 for(const m of t.matchAll(/(20\d\d)年[（〔]([^）〕]*)[）〕]/g)){ const y=+m[1], c=m[2]; const g=c.match(new RegExp('['+G+']['+Z+']')); if(g&&g[0]!==gz(y)) bad.push(m[0]); for(const a of c.matchAll(/(\d+)歳/g)) if(![y-A,y-B].includes(+a[1])) bad.push(m[0]); }
 ok('年の干支と2人の年齢が正しい', bad.length===0, bad.slice(0,3).join(' / '));
-const lone=[]; for(const m of t.matchAll(/(\d{1,3})歳/g)){ const ctx2=t.slice(Math.max(0,m.index-40),m.index); if(!/20\d\d年[（〔][^）〕]*$/.test(ctx2)) lone.push(t.slice(Math.max(0,m.index-12),m.index+6)); }
+const lone=[]; for(const m of t.matchAll(/(\d{1,3})歳/g)){ const ctx2=t.slice(Math.max(0,m.index-40),m.index); if(!/20\d\d年(?:\d{1,2}月(?:ごろ|頃)?)?(?:[（〔][^（）〔〕\n]{0,26}[）〕][^。\n（〔]{0,8})?[（〔][^）〕]*$/.test(ctx2))   /* 「2026年10月（戊戌の月・あなた18歳）」も年つき（pkFixAge が計算し直す形） */ lone.push(t.slice(Math.max(0,m.index-12),m.index+6)); }
 ok('年のついていない年齢がない', lone.length===0, lone.slice(0,3).join(' / '));
 const ys=[...new Set([...t.matchAll(/(20\d\d)年(?![0-9]|\d{1,2}月|度|代|生|[）)」』])/g)].filter(m=>!/[（(「『0-9〜~]$/.test(t.slice(Math.max(0,m.index-1),m.index))).map(m=>m[1]))], un=ys.filter(y=>!new RegExp(y+'年[*＊]*[（〔]').test(t));
 ok('どの西暦にもツールの干支・年齢が付いている', un.length===0, un.map(y=>{ const i=t.indexOf(y+'年'); return y+'＝'+t.slice(Math.max(0,i-20),i+14).replace(/\n/g,'⏎'); }).join(' / '));

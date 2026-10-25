@@ -203,15 +203,17 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   const ok=/39歳/.test(r)&&!/35歳/.test(r); console.log('  '+(ok?'OK':'NG')+' 重なったかっこの年齢（2029年（己酉（よみ）の年（35歳ごろ））も計算し直す）'); if(!ok) res.fails.push('重なったかっこの年齢: '+r); }
 { const r=await p.evaluate(()=>{ if(typeof formatReading!=='function'||typeof pkFactFix!=='function') return ''; const d=document.createElement('div'); d.innerHTML=formatReading('天干どうしが引き合う**干合**（かんごう：干どうしが結びつく）が成り立ちます。'); return d.textContent+'|'+pkFactFix('ふたの関係が動き、鍋のふたの色。','',''); });
   const ok=/干合（かんごう：干どうしが結びつく）/.test(r)&&!/（＝干どうし/.test(r)&&/ふたりの関係が動き、鍋のふたの色/.test(r); console.log('  '+(ok?'OK':'NG')+' 太字の用語に読みを2つ付けない・「ふたの関係」を「ふたりの関係」に'); if(!ok) res.fails.push('読みの重なり・ふたり: '+r); }
-{ const r=await p.evaluate(()=>{ if(typeof pkFixAge!=='function') return ''; window.personNameB='翔'; const o=pkFixAge('2027年1月ごろ（健太さん40歳／翔さん30歳ごろ）。2028年（翔さん40歳・健太さん43歳）。2030年に母が70歳（2030年）。',1985,1988); window.personNameB=''; return o; });
-  const ok=/2027年1月ごろ（健太さん42歳／翔さん39歳ごろ）/.test(r)&&/翔さん40歳・健太さん43歳/.test(r)&&/母が70歳/.test(r); console.log('  '+(ok?'OK':'NG')+' 月のあと・名前つきの2人の年齢も計算し直す（家族の年齢は変えない）'); if(!ok) res.fails.push('名前つきの2人の年齢: '+r); }
+{ const r=await p.evaluate(()=>{ if(typeof pkFixAge!=='function') return ''; window.personNameB='翔'; const o=pkFixAge('2031年（辛亥・本人23歳／お相手26歳）辛亥（かのとい・健太さん20歳／翔さん21歳）の年。2027年1月ごろ（健太さん40歳／翔さん30歳ごろ）。2028年（翔さん40歳・健太さん43歳）。2030年に母が70歳（2030年）。',1985,1988); window.personNameB=''; return o; });
+  const ok=/2027年1月ごろ（健太さん42歳／翔さん39歳ごろ）/.test(r)&&/辛亥（かのとい・健太さん46歳／翔さん43歳）/.test(r)&&/翔さん40歳・健太さん43歳/.test(r)&&/母が70歳/.test(r); console.log('  '+(ok?'OK':'NG')+' 月のあと・名前つきの2人の年齢も計算し直す（家族の年齢は変えない）'); if(!ok) res.fails.push('名前つきの2人の年齢: '+r); }
 // 2人の支合・半合に年運・大運が加わって三合・方合がそろう時期（鑑定者本人の指示 2026-10-25「必ず出現させてください」）：彼女2008-03-28 14時×彼2006-06-07 時刻不明
 { const r=await p.evaluate(()=>{ if(typeof compatTrioLines!=='function') return null; const her=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'), him=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},0,'none'));
     const L=compatTrioLines(her,him), d=document.createElement('div'); d.innerHTML=compatSummaryHTML(her,him,RELTYPES.love);
-    return {pro:L.pro.join('\n'),plain:L.plain.join('\n'),ens:pkEnsureTrio('結論。\n\n【惹かれ合うところ】\nx\n\n【縁が深まる時期】\n2027年。\n\n【長続きのコツ】\ny',her,him,''),ok2:pkEnsureTrio('結論。\n\n【惹かれ合うところ】\nx\n\n【縁が深まる時期】\n2031年と2043年は三合、2045〜の大運も三合（2031年・2045年）、2037年と2049年は方合（2037年）。\n\n【長続きのコツ】\ny',her,him,''),sum:d.innerHTML,sec:compatTrioHTML(her,him)}; });
+    return {pro:L.pro.join('\n'),plain:L.plain.join('\n'),ens:pkEnsureTrio('結論。\n\n【惹かれ合うところ】\nx\n\n【縁が深まる時期】\n2027年。\n\n【長続きのコツ】\ny',her,him,''),ok2:pkEnsureTrio('結論。\n\n【惹かれ合うところ】\nx\n\n【縁が深まる時期】\n2031年と2043年は三合、2045〜の大運も三合（2031年・2045年）、2037年と2049年は方合（2037年）、2034年は寅午戌の三合。\n\n【長続きのコツ】\ny',her,him,''),sum:d.innerHTML,sec:compatTrioHTML(her,him)}; });
   const e=[]; if(!r) e.push('関数がない'); else {
-    if(!/本人の時柱「未」×お相手の日柱「卯」の半合に「亥」が巡ると、亥卯未の三合（木）がそろう[^\n]*年運＝2031年（辛亥・本人23歳／お相手25歳）/.test(r.pro)) e.push('半合＋年運で三合');
-    if(!/お相手の大運「己亥」/.test(r.pro)||!/本人の大運「辛亥」/.test(r.pro)) e.push('大運で三合');
+    if(!/本人の時柱「未」×お相手の日柱「卯」の半合[^\n]*?に「亥」が巡ると、亥卯未の三合（木）がそろう[^\n]*年運＝2031年（辛亥・本人23歳／お相手25歳）/.test(r.pro)) e.push('半合＋年運で三合');
+    if(!/本人の命式の中の日柱「卯」×時柱「未」の半合/.test(r.pro)||(r.pro.match(/亥卯未の三合/g)||[]).length!==1) e.push('1人の命式の中の半合（同じ三合は1つにまとめる）');
+    if(!/お相手の命式の中の年柱「戌」×月柱「午」の半合に「寅」が巡ると、寅午戌の三合（火）[^\n]*2034年（甲寅/.test(r.pro)) e.push('お相手の命式の中の半合＋年運で三合');
+    if(!/お相手の大運「己亥」＝2056年（お相手50歳）から10年間/.test(r.pro)||!/本人の大運「辛亥」/.test(r.pro)) e.push('大運で三合');
     if(!/本人の時柱「未」×お相手の月柱「午」の支合に「巳」が巡ると、巳午未の方合（火）がそろう[^\n]*2037年（丁巳/.test(r.pro)) e.push('支合＋年運で方合');
     if(/(三合|方合|半合|支合|大運|柱|亥|巳)/.test(r.plain)) e.push('やさしい言い方に専門用語');
     if(!/【縁が深まる時期】\n2027年。\n\n【(?:2人の合が三合・方合になる時期|2人の結びつきが強まる時期)】\n[^・\n]/.test(r.ens)) e.push('書き足し（時期の見出しの中へ）');
