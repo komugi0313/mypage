@@ -263,8 +263,12 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(!/命式の相性だけで見ると、好きな人のほうが良い組み合わせ（差3.5点）/.test(r.t)||!/今の彼（良い点6／注意点2・差＋4）：よいところ＝強いぶつかり（天戦地冲）がない/.test(r.t)||!/気をつけたいところ＝天戦地冲（年柱どうし/.test(r.t)) e.push('命式の相性のくらべ（数字・理由）');
     if(!/【お相手ごとの相性/.test(r.e)||/【お相手ごとの相性/.test(r.ok)) e.push('書き足し');
     if(r.n) e.push('生年月日のない相談に出している');
+    const tb=await p.evaluate(()=>{ const c=baziCompute({year:2001,month:2,day:9,hour:16,minute:0,sex:'female',tu:false},0,'none'); const q='彼氏がいる。彼は2000年3月20日、好きな人は1995年4月4日16時生まれ男性'; const full=pkEnsurePeople('本文。',c,q), sp=pkCmpSplit(full,c,q); return {full,disp:sp.text,html:sp.html}; });   /* B＝画面は表・コピーは文章（鑑定者本人の指示 2026-10-25） */
+    if(!/【(命式の相性のくらべ（ツールの判定）|生まれ持った相性のくらべ)】\n今の彼：/.test(tb.full)||/【(命式の相性のくらべ|生まれ持った相性のくらべ)/.test(tb.disp)||!/class="cmp-t"/.test(tb.html)||!/cmp-sec/.test(tb.html)) e.push('くらべの表（画面は表・コピーは文章）');
     const fl=await p.evaluate(()=>{ const c=baziCompute({year:2001,month:2,day:9,hour:16,minute:0,sex:'female',tu:false},0,'none'); const q='彼氏がいる。彼は2000年3月20日、好きな人は1995年4月4日16時生まれ男性'; const plain=document.documentElement.classList.contains('bg-on'); return [pkEnsurePeople('今の彼を選ぶのがおすすめです。\n本文',c,q).split('\n')[0], pkEnsurePeople((plain?'生まれ持った相性だけで見ると、好きな人のほうが合う組み合わせです。':'命式の相性だけで見ると、好きな人のほうが良い組み合わせです。')+'\n本文',c,q).split('\n').length]; });
     if(!/相性だけで見ると、好きな人のほうが(良い|合う)組み合わせです/.test(fl[0])) e.push('1行目の判定（逆のときに上に入れる）'); if(fl[1]<2) e.push('1行目の判定（二重）');
+    const fc=await p.evaluate(()=>{ const c=baziCompute({year:2001,month:2,day:9,hour:16,minute:0,sex:'female',tu:false},0,'none'); return pkEnsurePeople('相性から見ると、今の彼とお付き合いを続けるほうが合っています。\n本文',c,'彼氏がいる。彼は2000年3月20日、好きな人は1995年4月4日16時生まれ男性').split('\n').slice(0,2).join('|'); });
+    if(/今の彼とお付き合いを続けるほうが合っています/.test(fc)||!/好きな人のほうが(良い|合う)/.test(fc)) e.push('1行目が逆のときは置きかえる（'+fc.slice(0,60)+'）');
     if(!/生まれ持った相性だけで見ると、好きな人のほうが合う組み合わせです/.test(r.pl)||/(天戦地冲|方合|干合|紅艶|比肩|劫財|食神|命式)/.test(r.pl)) e.push('やさしい言い方（専門用語なし）');
     const ev=await p.evaluate(()=>{ const c=baziCompute({year:2001,month:2,day:9,hour:16,minute:0,sex:'female',tu:false},0,'none'); const ex=pkConsultPeople(c,'彼氏がいる。彼は2000年3月20日、好きな人は1995年4月4日16時生まれ男性').map(x=>x.c); return pkEvidence('','2027年（丁未）は好きな人との三合の巡りで縁が動きます。',c,null,ex).rows.map(r=>r.st).join(','); });
     if(ev!=='ok') e.push('根拠のチェック表に相談のお相手が入っていない（'+ev+'）'); }
