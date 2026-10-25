@@ -7122,8 +7122,10 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
     const _u='〔PART:answer〕\n'+user, _pf=window.__pf;
     const A=await ((_pf&&_pf.k===_u&&Date.now()-_pf.t<120000)?(window.__pf=null,_pf.p):generateReading(_u,localText,undefined,deep));
     if(stale())return;
+    const _q0off=(out.closest&&out.closest('.rd-item')&&out.closest('.rd-item').dataset.q)||'';
     if(!A.online){   // 通信できないときは、これまでどおり端末内の鑑定を表示（もう一度オンラインで試せるボタンつき）
       const _k=rdOffKind(A);   // 理由ごとの案内は下の一言（rd-offnote）にまとめる（同じことを2回書かない）
+      try{ if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart&&_q0off) A.text=pkEnsurePeople(A.text,chart,_q0off); }catch(_e){}   // 通信できないときも、相談文に出てくるお相手のくらべ（ツールの計算）は出す
       out.innerHTML=sc+engineBadge(false,'')+rdRetryHTML(_k,A.note)+formatReading(A.text);
       rdWireRetry(out,btn,user,localText,proUser,deep,safety,proLocal);
       attachReadingTools(out,A.text);
@@ -7301,21 +7303,45 @@ function pkConsultPeopleLines(c,q){ const P=pkConsultPeople(c,q), pro=[], plain=
     const love=ad?{x:ad.x.love.length,y:ad.y.love.length}:{x:0,y:0}, base=cb.items.filter(function(x){ return x.good&&/方合|三合|支合|天地徳合|律音/.test(x.kind); }).reduce(function(t,x){ return t+x.w; },0);
     const en=(R.energy[0]||{}).v||'even';
     const adS=ad?(ad.x.love.length&&ad.y.love.length?'恋愛の星が両方向に当たる（2人とも惹かれやすい）':(ad.y.love.length?'お相手のほうが惹かれやすい（恋愛の星はお相手→本人だけ）':(ad.x.love.length?'本人のほうが惹かれやすい（恋愛の星は本人→お相手だけ）':'恋愛の星はどちら向きにも当たらない（ときめきより安心でつながる形）'))):'';
-    S.push({brief:o.lab+'：'+cb.verdict+'（良い点'+cb.good+'／注意点'+cb.bad+'）。良い点＝'+(top(true,2).join('・')||'なし')+'。注意点＝'+(top(false,1).join('・')||'なし')+(adS?'。惹かれ方＝'+adS:'')+((R.energy[1]||{}).v==='up'?'。お相手は本人と一緒にいると調子が上がりやすい':((R.energy[1]||{}).v==='down'?'。お相手は本人と長く一緒にいると疲れやすいことがある（本人が悪いのではない）':''))+(TL.T.length&&TL.T[0].years.length?'。'+TL.T[0].trio+'の'+TL.T[0].kind+'がそろう年＝'+TL.T[0].years[0].year+'年':'')+'。',lab:o.lab,net:cb.net,good:cb.good,bad:cb.bad,love:love.x+love.y,both:love.x&&love.y,base:base,en:en,cls:cb.cls});
+    const strong=cb.items.filter(function(x){ return x.good===false&&/天戦地冲/.test(x.kind); }).map(function(x){ const m=String(x.where).match(/本人の(年柱|月柱|日柱|時柱).*お相手の(年柱|月柱|日柱|時柱)/); return x.kind+'（'+(m?(m[1]===m[2]?m[1]+'どうし＝'+(m[1]==='日柱'?'ふだんの2人':SCENE[m[1]]):'本人の'+m[1]+'×お相手の'+m[2]):x.where)+'）'; });
+    const dayG=cb.items.filter(function(x){ return x.good===true&&/本人の[^×＋]*日柱/.test(x.where)&&/方合|三合|支合|天地徳合|律音|干合|半合/.test(x.kind); }).map(function(x){ return x.kind.replace(/（.*$/,''); });
+    let ck2=[]; try{ ck2=checkPoints(b,true).check.slice(0,2).map(function(x){ return [x.pro.split('：')[0],x.plain]; }); }catch(e){}
+    S.push({strong:strong,dayG:dayG,pen:(R.energy[1]||{}).v||'even',ck2:ck2,cur:/今の|彼氏|夫|妻|旦那|婚約者/.test(o.lab),brief:o.lab+'：'+cb.verdict+'（良い点'+cb.good+'／注意点'+cb.bad+'）。良い点＝'+(top(true,2).join('・')||'なし')+'。注意点＝'+(top(false,1).join('・')||'なし')+(adS?'。惹かれ方＝'+adS:'')+((R.energy[1]||{}).v==='up'?'。お相手は本人と一緒にいると調子が上がりやすい':((R.energy[1]||{}).v==='down'?'。お相手は本人と長く一緒にいると疲れやすいことがある（本人が悪いのではない）':''))+(TL.T.length&&TL.T[0].years.length?'。'+TL.T[0].trio+'の'+TL.T[0].kind+'がそろう年＝'+TL.T[0].years[0].year+'年':'')+'。',lab:o.lab,net:cb.net,good:cb.good,bad:cb.bad,love:love.x+love.y,both:love.x&&love.y,base:base,en:en,cls:cb.cls});
     const ss=function(x){ try{ return pkSameSexWord(x,c,b); }catch(e){ return x; } };   // 同性のときは男女前提の言い方にしない
     pro.push(ss('【お相手：'+o.lab+'（'+o.ymd+'・'+(o.sex==='male'?'男性':'女性')+'）】判定＝'+cb.verdict+'（良い点'+cb.good+'／注意点'+cb.bad+'）／良い点：'+(top(true,3).join('・')||'目立つものなし')+'／注意点：'+(top(false,2).join('・')||'目立つものなし')+(ad?'／'+ad.pro:'')+(R.role.length?'／役割：'+R.role.map(function(x){ return x.pro; }).join('。'):'')+(R.energy.length?'／調子：'+R.energy.map(function(x){ return x.pro; }).join('。'):'')+(TL.pro.length?'／2人の合が三合・方合になる時期：'+TL.pro[0]:'')+(both.length?'／2人とも縁が動く月：'+both.join('・'):'')+(ck.length?'／お相手の確かめたいこと：'+ck.join('・'):'')));
     plain.push(o.lab+'：'+(cb.cls==='good'?'良いところが多い組み合わせ':(cb.cls==='bad'?'気をつけたいところが多めの組み合わせ':'良いところと気をつけたいところが同じくらいの組み合わせ'))+'。'+(ap?ap.plain:'')+((R.energy[0]||{}).plain||'')); });
   if(P.length>=2){ const mx=function(k){ const v=S.slice().sort(function(a,b){ return b[k]-a[k]; }); return v[0][k]>v[1][k]?v[0].lab:''; };
     const bL=mx('base'), lL=mx('love'), up=S.filter(function(x){ return x.en==='up'; }).map(function(x){ return x.lab; });
     const warn=compatMonths(c,P[0].c).filter(function(x){ return x.A.w.length; }).map(function(x){ return x.y+'年'+x.m+'月'; });   // 本人の注意の月（配偶宮が刑・冲）を年つきで
+    // 命式の相性のくらべ（数字と、それぞれのよいところ・気をつけたいところ）。すすめるときは必ずこの理由で（鑑定者本人の指示 2026-10-25「今の彼を進める納得できる理由をツールでも出す」）
+    const A0=S[0], B0=S[1], dn=Math.round((A0.net-B0.net)*10)/10, lean=Math.abs(dn)<2?null:(dn>0?A0:B0), oth=lean?(lean===A0?B0:A0):null;
+    const why=function(x,y){ const g=[], w=[];
+      if(x.net>y.net) g.push(['命式の相性の点数が高い（良い点'+x.good+'／注意点'+x.bad+'）','生まれ持った相性の点数が高い']);
+      if(x.love>y.love) g.push([x.both?'恋愛の星が両方向に当たる（2人とも惹かれやすい）':'恋愛の星が当たる','お互いに惹かれやすい']);
+      if(x.pen==='up') g.push(['お相手が本人と一緒にいると調子が上がりやすい','お相手が、あなたと一緒にいると元気が出やすい']);
+      if(x.en==='up') g.push(['本人がお相手と一緒にいると調子が上がりやすい','あなたが、お相手と一緒にいると元気が出やすい']);
+      if(!x.strong.length&&y.strong.length) g.push(['強いぶつかり（天戦地冲）がない','大きくぶつかる組み合わせがない']);
+      if(x.base>y.base) g.push(['暮らしの土台（方合・三合・支合など）が強い','いっしょに暮らす土台が強い']);
+      if(x.dayG.length) g.push(['本人の日柱（配偶宮）が入る良い縁がある（'+x.dayG.join('・')+'）','あなたの「パートナーの座」に結びつく良い縁がある']);
+      if(x.strong.length) w.push([x.strong.join('・'),'大きくぶつかりやすいところがある（家族や暮らしが関わる場面）']);
+      if(x.pen==='down') w.push(['お相手が本人と長く一緒にいると疲れやすい（本人が悪いのではない）','お相手が、長く一緒にいると疲れやすいことがある（あなたが悪いのではありません）']);
+      if(!x.love&&y.love) w.push(['恋愛の星が当たらない（ときめきより安心でつながる形）','ときめきより安心でつながる関係']);
+      x.ck2.forEach(function(k){ w.push(['お相手の確かめたいこと：'+k[0],k[1]]); });
+      return {g:g,w:w}; };
+    const WA=why(A0,B0), WB=why(B0,A0), fmt=function(x,W,k){ return x.lab+'（良い点'+x.good+'／注意点'+x.bad+'・差'+(x.net>=0?'＋':'')+x.net+'）'+(k?'':'：よいところ＝'+(W.g.map(function(z){ return z[0]; }).join('・')||'目立つものなし')+'／気をつけたいところ＝'+(W.w.map(function(z){ return z[0]; }).join('・')||'目立つものなし')); };
+    const cur=S.filter(function(x){ return x.cur; })[0];
+    pro.push('命式の相性のくらべ（ツールの判定）：'+fmt(A0,WA)+'。'+fmt(B0,WB)+'。→ '+(lean?'命式の相性だけで見ると、'+lean.lab+'のほうが良い組み合わせ（差'+Math.abs(dn)+'点）':'命式の相性だけで見ると、2人は同じくらい（差'+Math.abs(dn)+'点）')+'。'+(cur&&lean&&cur!==lean?cur.lab+'をすすめるなら、理由は「'+cur.lab+'のよいところ」と「'+lean.lab+'の気をつけたいところ」だけにする。':''));
     pro.push('くらべた結果（ツールの判定）：'+(bL?'暮らしの土台（方合・三合・支合など）が強いのは '+bL:'土台の強さは同じくらい')+'／'+(lL?'惹かれ合い（恋愛の星）が強いのは '+lL:'惹かれ合いの強さは同じくらい')+'／'+(up.length?'本人が一緒にいて調子が上がりやすいのは '+up.join('・'):'本人の調子の上がり方に大きな差はない')+'。決める時期：'+(warn.length?warn.join('・')+'は注意の月（刑・冲）なので大事な答えを出さない。':'')+'縁が動く月・三合がそろう年を目安に、今の相手に正直に向き合ってから決める。二股のまま進めない。決めるのは本人。');
+    plain.push('生まれ持った相性だけで見ると、'+(lean?lean.lab+'のほうが合う組み合わせです。':'2人は同じくらいです。')+[[A0,WA],[B0,WB]].map(function(q){ return q[0].lab+'のよいところ：'+(q[1].g.map(function(z){ return z[1]; }).join('、')||'とくになし')+'。気をつけたいところ：'+(q[1].w.map(function(z){ return z[1]; }).join('、')||'とくになし')+'。'; }).join(''));
     plain.push('くらべると：'+(bL?'安心できる土台が強いのは'+bL:'')+(bL&&lL?'、':'')+(lL?'ときめき・惹かれ合いが強いのは'+lL:'')+'です。'+(warn.length?warn.join('・')+'は気持ちが揺れやすいので、大事な答えを出さないでください。':'')+'今の相手にきちんと向き合ってから決めましょう。'); }
 }catch(e){} return {P:P,pro:pro,plain:plain,S:S}; }
-function pkConsultPeopleText(c,q){ const L=pkConsultPeopleLines(c,q); return L.pro.length?'\n\n【相談に出てくるお相手との相性（ツールが計算済み・必ず使う）】\n'+L.pro.map(function(x){ return '・'+x; }).join('\n')+'\n※お相手が2人いるときは、それぞれの相性の違い（安定・土台／惹かれ合い／一緒にいるときの調子）を命式の言葉で比べて書く。どちらか一方の悪口にしない。二股を勧めない。今の相手に正直に向き合うこと、決める時期（注意の月を避ける）を西暦・月で書く。':''; }
+function pkConsultPeopleText(c,q){ const L=pkConsultPeopleLines(c,q);
+  if(L.plain.length&&typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on')) return '\n\n【相談に出てくるお相手との相性（ツールが計算済み・必ず使う。専門用語は使わずに書く）】\n'+L.plain.map(function(x){ return '・'+x; }).join('\n')+'\n※お相手が2人いるときは、1行目で「生まれ持った相性だけで見ると○○のほうが合う（または同じくらい）」と、上のとおりに正直に書く。どちらかをすすめるときは、その人のよいところと、もう一人の気をつけたいところを3つ以上あげて理由にする（理由のない一般論で一方をすすめない）。二股を勧めない。今の相手に正直に向き合うこと、大事な答えを出さない月を書く。';   // ビギナーのやさしい画面では、専門用語のない言い方で渡す（専門用語が文章に移らないように）
+  return L.pro.length?'\n\n【相談に出てくるお相手との相性（ツールが計算済み・必ず使う）】\n'+L.pro.map(function(x){ return '・'+x; }).join('\n')+'\n※お相手が2人いるときは、1行目で「命式の相性だけで見ると○○のほうが良い（または同じくらい）」と、上の【命式の相性のくらべ】の判定どおりに正直に書く。どちらかをすすめるときは、その人の「よいところ」と、もう一人の「気をつけたいところ」を命式の言葉で3つ以上あげて理由にする（命式にない理由で一方をすすめない。判定と違う人をすすめるときは、なぜ数字と違うのかを必ず書く）。それぞれの相性の違い（安定・土台／惹かれ合い／一緒にいるときの調子）を命式の言葉で比べて書く。どちらか一方の悪口にしない。二股を勧めない。今の相手に正直に向き合うこと、決める時期（注意の月を避ける）を西暦・月で書く。':''; }
 // 答えに、お相手ごとの相性が書かれていなければ書き足す
 function pkEnsurePeople(t,c,q){ try{ t=String(t||''); const L=pkConsultPeopleLines(c,q); if(!L.P.length) return t; const plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'));
   const miss=L.P.map(function(o,i){ const cb=compatBalance(c,o.c), kinds=cb.items.filter(function(x){ return x.good!==null; }).map(function(x){ return x.kind.replace(/（.*$/,''); }); return (plain?t.indexOf(o.lab)>=0:(t.indexOf(o.lab)>=0&&kinds.some(function(k){ return t.indexOf(k)>=0; })))?-1:i; }).filter(function(i){ return i>=0; });
-  const needCmp=L.P.length>=2&&!(plain?/くらべ|比べ/.test(t):/土台|安定/.test(t)&&/惹かれ/.test(t));
+  const needCmp=L.P.length>=2&&!(plain?/相性だけで見ると/.test(t):/命式の相性だけで見ると/.test(t)&&/よいところ|良いところ/.test(t));   // 数字のくらべと、それぞれの理由が書かれていなければ必ず足す
   if(!miss.length&&!needCmp) return t; const src=plain?L.plain:L.S.map(function(x){ return x.brief; }).concat(L.pro.slice(L.P.length)); const lines=src.filter(function(x,i){ return miss.indexOf(i)>=0||(needCmp&&i>=L.P.length); });
   return t.replace(/\s+$/,'')+'\n\n'+(plain?'【お相手ごとの相性】':'【お相手ごとの相性（ツールの判定）】')+'\n'+lines.map(function(x){ return '・'+x.replace(/^【([^】]+)】/,'$1：'); }).join('\n'); }catch(e){ return t; } }
 function consultParts(worry){
