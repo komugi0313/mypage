@@ -2670,6 +2670,14 @@ const RIKUGO_EL={子:'土',寅:'木',卯:'火',辰:'金',巳:'水'};   // 午未
 const KANGO={甲:'己',己:'甲',乙:'庚',庚:'乙',丙:'辛',辛:'丙',丁:'壬',壬:'丁',戊:'癸',癸:'戊'};
 const KANGO_EL={甲:'土',乙:'金',丙:'水',丁:'木',戊:'火'};
 const CEN=new Set(['子','卯','午','酉']);
+// 干合の名前と意味（鑑定者本人の教科書 第11回）。PROの命式の札は教科書どおり、お客様に渡す文・ビギナーはやわらかい言い方（鑑定者本人の指示 2026-10-26）
+const KANGO_NAME={甲:'中正の合',己:'中正の合',乙:'仁義の合',庚:'仁義の合',丙:'威勢の合',辛:'威勢の合',丁:'淫泆（いんいつ）の合',壬:'淫泆（いんいつ）の合',戊:'無情の合',癸:'無情の合'};
+const KANGO_MEAN={甲:'心が広く人に愛される',乙:'頑張り屋で仁義に厚い',丙:'偏屈で好色',丁:'情に流されやすく好色',戊:'薄情で孤独'};
+const KANGO_SOFT={甲:'心が広く、人に愛される',乙:'頑張り屋で、義理がたく人情に厚い',丙:'自分の考えをしっかり持ち、恋愛にも情熱的',丁:'情が深く、恋愛に情熱的',戊:'さっぱりしていて、一人の時間も大切にできる'};
+const _KGBASE={甲:'甲',己:'甲',乙:'乙',庚:'乙',丙:'丙',辛:'丙',丁:'丁',壬:'丁',戊:'戊',癸:'戊'};
+function kangoInfo(st,soft){ const k=_KGBASE[st]; if(!k) return ''; return soft?KANGO_SOFT[k]:(KANGO_NAME[k]+'：'+KANGO_MEAN[k]); }
+function kangoSexLine(sex,soft){ return '命式に干合があると、人との共同事業がよい。'+(sex==='male'?'男性は外交的で交際上手、経営の才にすぐれる。':(soft?'女性は人づきあいが上手で、人を惹きつける魅力がある。':'女性は交際的でセクシー。')); }
+function _pkIsBg(){ try{ return !!document.getElementById('beginner-skin'); }catch(e){ return false; } }
 const REL_DESC={三合:'本来異なる3支が補い合い、バランスよくその五行が大きく強まる。安心感を得て大きく変化しながら発展する強い結びつき',方合:'同じ方角で固まる（その五行が強まる）',半合:'三合のうち2支がそろうゆるい結びつき',冲:'ぶつかり合い（変化・刺激）',破:'こわす・ほころび',害:'見えない妨げ',支合:'引き合う（縁）',干合:'結びつく（心の縁）','妬合/争合':'干合の相手を複数で取り合う競合。結びつきが不安定になりやすい（気が散る・縁の取り合い）'};
 /* 支合の意味（共通＋柱位置別） */
 const SHIGOU_COMMON='支合は引き合う縁。命式にあると思いと行動が一致しやすい。柱の位置で表れが変わる（年柱=親/目上0-29歳・月柱=仕事30-59歳・日柱=私生活/恋愛60-80歳）。月柱-年柱の支合=親や目上との関係が良い、月柱-日柱の支合=パートナーとの関係が良い。';
@@ -2727,6 +2735,11 @@ function natalRels(p){const o=[];const br=p.map(x=>({label:x.label[0],branch:x.b
     else if(pr.length===2&&pr.some(b=>CEN.has(b)))o.push({kind:'半合',el:g[3],text:pr.join(''),pos:labs});});
   HOUGOU.forEach(g=>{const s=g.slice(0,3);const parts=br.filter(b=>s.includes(b.branch));const pr=[...new Set(parts.map(b=>b.branch))];const labs=[...new Set(parts.map(b=>b.label))];
     if(pr.length>=3)o.push({kind:'方合',el:g[3],text:s.join(''),pos:labs});});
+  // 蔵干の干合は司令だけで見る（鑑定者本人の指示 2026-10-26）：司令どうし（蔵干同士＝働きが強い）と、ほかの柱の天干×月支の司令（影響を受けやすい）。同じ柱の天干と司令は確認中のため数えない
+  try{ const hz=p.map(x=>{ const h=(x&&x.hiddenStems&&x.hiddenStems.length)?repHidden(x):null; return h&&h.stem?h.stem:''; });
+    for(let i=0;i<hz.length;i++)for(let j=i+1;j<hz.length;j++){ if(hz[i]&&hz[j]&&KANGO[hz[i]]===hz[j]) o.push({kind:'蔵干の干合',el:null,text:`${hz[i]}${hz[j]}（${st[i].label}支・${st[j].label}支の司令）`,pos:[st[i].label,st[j].label],near:(j-i===1),zk:'zz'}); }
+    if(hz[1]) st.forEach((x,i)=>{ if(i===1) return; if(KANGO[x.stem]===hz[1]) o.push({kind:'蔵干の干合',el:null,text:`${x.stem}${hz[1]}（${x.label}干・月支の司令）`,pos:i<1?[x.label,'月']:['月',x.label],near:(Math.abs(i-1)===1),zk:'tm'}); });
+  }catch(e){}
   // 妬合／争合：ある干の干合相手が複数あって競合すると、干合が弱まる／定まりにくい
   {const sa=st.map(x=>x.stem);const seen={};sa.forEach(sm=>{const pt=KANGO[sm];if(!pt)return;const key=[sm,pt].sort().join('');if(seen[key])return;const cS=sa.filter(x=>x===sm).length,cP=sa.filter(x=>x===pt).length;if(cS&&cP&&(cS>=2||cP>=2)&&cS+cP>=3){seen[key]=1;o.push({kind:'妬合/争合',el:null,text:`${sm}${cS}・${pt}${cP}＝干合が競合し弱まる`});}});}
   return o;}
@@ -2777,7 +2790,7 @@ function bxFeatureList(pillars){
   var seen={},res=[];out.forEach(function(t){if(!seen[t]){seen[t]=1;res.push(t);}});
   return res;
 }
-const _KK_RELKINDS=['三合','方合','半合','干合','支合','六合','冲','害','刑','破'];
+const _KK_RELKINDS=['三合','方合','半合','干合','蔵干の干合','支合','六合','冲','害','刑','破'];
 function badge(r){const dot=r.el?`<i style="background:${ec(r.el)}"></i>`:'<i style="background:var(--ink2)"></i>';
   const kcol=r.el?ec(r.el):'#39414F';
   const isRel=_KK_RELKINDS.includes(r.kind);
@@ -2804,8 +2817,8 @@ const _KKPONE={年:'家庭・親・目上（とくに若い頃）',月:'仕事�
 const _KKPTWO={年月:'若い頃の家庭環境と、社会に出るころ（仕事・進路）',年日:'親・家系と、あなた自身・配偶者',年時:'人生の前半（家庭・ルーツ）と後半（晩年・将来）',月日:'仕事・社会と、あなた自身・家庭・配偶者',月時:'仕事・社会的立場と、晩年・子・将来',日時:'あなた自身・配偶者と、晩年・子・将来'};
 function _kkPairTheme(a,b){ if(!a||!b) return ''; const k=[a,b].sort((x,y)=>(_KKORD[x]||0)-(_KKORD[y]||0)).join(''); return _KKPTWO[k]||''; }
 // この命式に即した「鑑定寄りの一言」。pos=関わる柱ラベル配列、scope='natal'（生まれ持った配置）/'run'（巡り＝今の時期）
-function kkReadText(kind,el,fav,pos,scope,near){
-  pos=pos||[]; scope=scope||'natal';
+function kkReadText(kind,el,fav,pos,scope,near,txt0){
+  pos=pos||[]; scope=scope||'natal'; txt0=String(txt0||'');
   const nearTx=(near==='1'||near===1||near===true)?'<br><b>隣り合う柱どうし</b>なので、働きが<b>強い</b>配置です。':((near==='0'||near===0||near===false)?'<br><b>離れた柱どうし</b>なので、働きは<b>弱め</b>です（隣り合うときだけ強く働きます）。':'');
   const two=(pos.length>=2)?_kkPairTheme(pos[0],pos[1]):'';
   const one=(pos.length>=1)?(_KKPONE[pos[0]]||''):'';
@@ -2814,8 +2827,14 @@ function kkReadText(kind,el,fav,pos,scope,near){
     if(scope==='natal') return '<b>冲（ちゅう）＝ぶつかり合い・強い刺激。</b>'+(two?'あなたは<b>'+two+'</b>の間に、変化・刺激・葛藤が起きやすい配置です。':'')+'悪い意味ではなく、早めの自立・環境の切り替え・“脱皮”の力として活かせます。';
     return '<b>冲（ちゅう）＝ぶつかり合い・刺激。</b>この時期は<b>'+(one||'その分野')+'</b>まわりに変化・動きが起きやすいサイン。転職・引越・決断など、動きたい人には追い風です。';
   }
+  const _bg=_pkIsBg(), _sx=(typeof chart!=='undefined'&&chart&&chart.birth)?chart.birth.sex:'';
+  const kgTx=(st)=>{ const m=kangoInfo(st,_bg); return m?'<br>'+(_bg?'この結びつきの持ち味：':'<b>')+m+(_bg?'。':'</b>（教科書の言葉。お客様に渡す文ではやわらかい言い方になります）')+'<br>'+kangoSexLine(_sx,_bg):''; };
+  if(kind==='蔵干の干合'){
+    const zz=/司令）$/.test(txt0)&&/支・.支の司令/.test(txt0);
+    return '<b>蔵干の干合（司令どうしで見る）＝内側の結びつき。</b>'+(zz?'蔵干どうしの干合は働きが強い配置です。':'月支の蔵干（司令）と干合しているので、その影響を受けやすい配置です。')+(two?'<b>'+two+'</b>に関わります。':'')+kgTx(txt0.charAt(0))+nearTx;
+  }
   if(kind==='干合'){
-    if(scope==='natal') return '<b>干合（かんごう）＝強く結びつくご縁。</b>'+(two?'<b>'+two+'</b>に、深い縁・協力・情のつながりがある配置です。':'')+(el?'（'+em+'の性質が表に出やすい）':'')+'結びつきを信頼・建設的な関係に活かすと追い風に。反面、依存・執着には注意。'+nearTx;
+    if(scope==='natal') return '<b>干合（かんごう）＝強く結びつくご縁。</b>'+kgTx(txt0.charAt(0))+'<br>'+(two?'<b>'+two+'</b>に、深い縁・協力・情のつながりがある配置です。':'')+(el?'（'+em+'の性質が表に出やすい）':'')+'結びつきを信頼・建設的な関係に活かすと追い風に。反面、依存・執着には注意。'+nearTx;
     return '<b>干合（かんごう）＝結びつくご縁。</b>この時期は<b>'+(one||'人間関係')+'</b>で、良縁・協力・出会いが動きやすい時です。';
   }
   if(kind==='支合'||kind==='六合'){
@@ -2845,7 +2864,7 @@ function _kkToggle(el){
   box.querySelectorAll('.kkclick.kkon').forEach(x=>x.classList.remove('kkon'));
   if(panel&&wasFor===sig){ panel.remove(); return; }
   if(!panel){ panel=document.createElement('div'); panel.className='kk-read'; box.appendChild(panel); }
-  panel.innerHTML=kkReadText(kind,kel,fav,pos,scope,el.getAttribute('data-kkn')); panel.setAttribute('data-for',sig); el.classList.add('kkon');
+  panel.innerHTML=kkReadText(kind,kel,fav,pos,scope,el.getAttribute('data-kkn'),txt); panel.setAttribute('data-for',sig); el.classList.add('kkon');
 }
 if(!window.__kkBound){ window.__kkBound=1;
   document.addEventListener('click',function(e){ const el=e.target.closest&&e.target.closest('.kkclick'); if(el){e.preventDefault();_kkToggle(el);} });
@@ -6186,7 +6205,8 @@ function buildChartText(c){
     if(yrsNear)L.push(`今後5年の年運の流れ:${yrsNear}`);
     if(yrsNear)L.push('※年運の「判定」は、このツールが命式から出した年ごとの運の良し悪し（好調＞順調＞ふつう＞静かに整える時期）。「今年と来年のどちら」「いつが良い」のように年を比べる・選ぶ相談では、この判定がよい年を答えにする（判定が同じなら、そう書いたうえで他の手がかりで選ぶ）。判定と反対の年をすすめない。'+(function(){ var d=new Date(), m=d.getMonth()+1; if(m<2||(m===2&&d.getDate()<5)||d.getFullYear()!==c.now.year) return ''; return '年運は立春（2月4日ごろ）で切りかわるので、今年の年運は'+(c.now.year+1)+'年2月3日ごろまで続く。今年の判定のほうがよいときは「年内〜'+(c.now.year+1)+'年2月の立春まで」に動くことをすすめ、「今年は残り少ない」ことを理由に判定の低い年をすすめない。'; })());
     const nr=uq(natalRels(c.pillars).map(rel)); if(nr.length)L.push(`命式内の合冲（三合・冲など）:${nr.join(' ')}`);
-    L.push('※合の決まり（当流派）：命式の中の干合・支合は、隣り合う柱どうし（年柱と月柱・月柱と日柱・日柱と時柱）のときだけ働きが強く、離れた柱どうしは弱め。午未の支合は合化しない（五行は強まらない）。大運・年運が命式と三合・半合・支合・干合になる時期は、基本的に運勢が吉に働く（強まる五行が忌神・すでに多いときだけ、頑張りすぎの注意を一言添える）。');
+    L.push('※合の決まり（当流派）：命式の中の干合・支合は、隣り合う柱どうし（年柱と月柱・月柱と日柱・日柱と時柱）のときだけ働きが強く、離れた柱どうしは弱め。午未の支合は合化しない（五行は強まらない）。大運・年運が命式と三合・半合・支合・干合になる時期は、基本的に運勢が吉に働く（強まる五行が忌神・すでに多いときだけ、頑張りすぎの注意を一言添える）。蔵干の干合は司令だけで見る（司令どうし＝働きが強い／ほかの柱の天干と月支の司令＝影響を受けやすい）。');
+    {const _kg=natalRels(c.pillars).filter(r=>r.kind==='干合'||r.kind==='蔵干の干合'); if(_kg.length) L.push('命式の干合の持ち味（お客様に渡す文なので、このやわらかい言い方で書く。「好色」「薄情」「淫泆」「無情の合」「セクシー」という言葉は使わない）:'+[...new Set(_kg.map(r=>r.text.slice(0,2)+'＝'+kangoInfo(r.text.charAt(0),true)))].join(' / ')+'。'+kangoSexLine(c.birth.sex,true));}
     const dr=uq([...runBranchRels({branch:dd.branch},br),...runStemRels(dd.stem,st)].map(rel)); if(dr.length)L.push(`今の大運と命式の関わり:${dr.join(' ')}`);
     const yr=ay?uq([...runBranchRels({branch:ay.branch},[...br,{label:'大運',branch:dd.branch}]),...runStemRels(ay.stem,[...st,{label:'大運',stem:dd.stem}])].map(rel)):[]; if(yr.length)L.push(`今年の年運と命式・大運の関わり:${yr.join(' ')}`);
     {const kk=kaikyokuScan(c); const _tn=p=>p.kiNote?('吉（巡りの会局は基本的に吉。ただしこの五行は'+(p.excess?'すでに多め':'忌神')+'なので、良い訪れを伝えたあとに頑張りすぎ・消耗の注意を一言だけ添える）'):p.tone==='good'?(p.fav==='喜'?'吉・追い風（喜神）':'吉'):(p.tone==='caution'?(p.excess?'注意・強まりすぎ（既に太過）':'注意・不利に働きやすい（忌神）'):'中庸'); if(kk.natal.length)L.push(`命式内の会局（生まれつき成立・常時作用。日主は${kk.sType}）【重要：三合・方合が命式に成立している人は、何も巡らなくても"生まれつき運が強く、良い暗示を持つ強運の型"＝その五行がバランスよく強い土台の強みなので、鑑定文でその点をはっきり前向きに伝える（強さは三合＞方合。半合はそのゆるい版。ただし該当の五行が既に太過なら偏りに一言添える）】:${kk.natal.map(r=>r.kind+r.text+'('+r.el+'が強まる/'+_tn(r)+')').join(' / ')}`); if(kk.periods.length)L.push(`会局（三合・方合）が巡って成立する時期【鑑定文で必ず具体的に言語化する】。★大前提：会局が巡るのは基本的に「吉」。強さの目安＝三合（最も強い吉）＞方合(吉だが三合よりやや穏やか＝中程度の強さ)＞半合(三合のゆるい版でさらに穏やか)。巡ってきたら、まず〈やる気が上がる・運が開ける（開運）・チャンス到来・エネルギーが増す〉良い訪れとして、その強さに応じて（三合は力強く、方合はやや穏やかに）分かりやすい前向きな言葉ではっきり伝えることを最優先にする。各会局ごとに①いつ（西暦・年齢）②何の会局か（例:寅午戌の火局）③それで強まる五行と、あなたの何の星（通変）④その“良い変化”を"日常の場面がイメージできる具体語"で必ず書く（「転機」「変化の時」等の抽象語は禁止）。強まる通変別の良い変化=食傷:才能や発信が実を結び仕事の成果が出やすい。財:収入・人脈・チャンスが増える。官殺:地位・責任・評価が上がる。印:学び・後ろ盾・心の安定を得やすい。比劫:仲間・独立・行動力が高まる。⑤注意点は【"過剰（太過）な場合に限って"、良い訪れを伝えた“あと”に一言だけ添える】——強まる五行が既に多い（忌神・太過）ときに限り、勢いは増すが強くなりすぎて心身を剋しやすい（頑張りすぎ・消耗・体調やメンタルの負担）ので、意識して休む・発散する・手放す、近くに冲（その五行の支を揺らす対冲）が巡ればそれが調整弁になる、と具体的に添える。強まる五行が足りない・弱い（用神・喜神）を補う巡りは＝素直に「開運」（不足が満ちて運気が上向く好機）として前向きに伝え、注意は付けない。喜神・中庸の会局にも過度な注意は付けず、基本は吉として伝える。断定しない）:${kk.periods.slice(0,12).map(p=>(p.when==='大運'?`${p.year0}〜${p.year1}年(${p.age0}〜${p.age1}歳)大運${p.ganzhi}`:`${p.year0}年(${p.age0}歳)年運${p.ganzhi}`)+`＝${p.kind}${p.text}(${p.el}が強まる/${_tn(p)})`).join(' / ')}`);}
@@ -6862,7 +6882,7 @@ var pkFixYomi=(function(){ var G='甲乙丙丁戊己庚辛壬癸', GY=['きの�
 })();
 window.pkFixYomi=pkFixYomi;
 const YOMI_FIX=[[/てんいつきじん/g,'てんおつきじん'],[/テンイツキジン/g,'テンオツキジン'],[/天乙貴人（てんいつ/g,'天乙貴人（てんおつ'],[/ぎょうざい|きょうざい/g,'ごうざい']];
-var pkSoftWord=function(s){ return String(s==null?'':s).replace(/[（(][^（）()\n]{0,80}(?:…|・・・|\.\.\.)ではなく[^（）()\n]{0,60}[）)]/g,'')   /* 文章作成の言い直し（「…ではなく」のカッコ）は出さない。発注者指示 2026-10-22 */.replace(/(このご相談には、)?(占いで(?:は)?[^。\n]{0,10}?)お答え(?:すること[はが]?)?できません/g,function(m,p,a){ return p?m:a+'言い切ることはしません'; }).replace(/(占いで(?:は)?[^。\n]{0,10}?)判断(?:すること[はが]?)?できません/g,'$1言い切ることはしません').replace(/(このご相談には、)?(占いで(?:は)?[^。\n]{0,10}?)お伝え(?:すること[はが]?)?できません/g,function(m,p,a){ return p?m:a+'言い切ることはしません'; }).replace(/言い切ること[はが]?できません/g,'言い切ることはしません').replace(/(数字で|ハッキリと?|はっきりと?)お(伝え|答え)すること[はが]?できません/g,'$1お$2することはしません').replace(/必ず(?!しも)(?=[^。\n]{0,24}?(開け|ひらけ|来ま|来る|やって|訪れ|過ぎ|乗り越え|戻|見えて|叶|実を|実り|報われ|理解|力になって|良くな|よくな|うまく|好転|届き|伝わ|道が|チャンス|光))/g,'きっと').replace(/必ず(?!しも)([^。！？\n]*)/g,function(m,mid){ return /ください|ましょう|避け|相談|休|作って|作る|取る|守|気をつけ|確認|しないで|ないように|頼っ|話して|なければ|ね。?$/.test(mid)?m:'きっと'+mid; }).replace(/DV相談ナビ[（(]\s*＃?#?\s*8008\s*[)）]/g,'DV相談ナビ（#8008）').replace(/十分に可能です/g,'目指していける流れです').replace(/十分に可能/g,'目指せる').replace(/(?:占いで)?お答えできません(?:とは|、とは)申し上げませんが[、，]?/g,''); };   // 文の終わり方に関係なく、未来を言い切る「必ず」は「きっと」に   // 未来を言い切る「必ず〜ます」は「きっと」に（「必ず〜ください」「必ず相談を」などのすすめはそのまま）   // 「占いではお答えできません」のような突き放す言い方を、やわらかく（鑑定者本人の指示 2026-10-19。答えない相談の決まった案内はそのまま）
+var pkSoftWord=function(s){ return String(s==null?'':s).replace(/[（(][^（）()\n]{0,80}(?:…|・・・|\.\.\.)ではなく[^（）()\n]{0,60}[）)]/g,'')   /* 文章作成の言い直し（「…ではなく」のカッコ）は出さない。発注者指示 2026-10-22 */.replace(/(このご相談には、)?(占いで(?:は)?[^。\n]{0,10}?)お答え(?:すること[はが]?)?できません/g,function(m,p,a){ return p?m:a+'言い切ることはしません'; }).replace(/(占いで(?:は)?[^。\n]{0,10}?)判断(?:すること[はが]?)?できません/g,'$1言い切ることはしません').replace(/(このご相談には、)?(占いで(?:は)?[^。\n]{0,10}?)お伝え(?:すること[はが]?)?できません/g,function(m,p,a){ return p?m:a+'言い切ることはしません'; }).replace(/言い切ること[はが]?できません/g,'言い切ることはしません').replace(/(数字で|ハッキリと?|はっきりと?)お(伝え|答え)すること[はが]?できません/g,'$1お$2することはしません').replace(/必ず(?!しも)(?=[^。\n]{0,24}?(開け|ひらけ|来ま|来る|やって|訪れ|過ぎ|乗り越え|戻|見えて|叶|実を|実り|報われ|理解|力になって|良くな|よくな|うまく|好転|届き|伝わ|道が|チャンス|光))/g,'きっと').replace(/必ず(?!しも)([^。！？\n]*)/g,function(m,mid){ return /ください|ましょう|避け|相談|休|作って|作る|取る|守|気をつけ|確認|しないで|ないように|頼っ|話して|なければ|ね。?$/.test(mid)?m:'きっと'+mid; }).replace(/DV相談ナビ[（(]\s*＃?#?\s*8008\s*[)）]/g,'DV相談ナビ（#8008）').replace(/十分に可能です/g,'目指していける流れです').replace(/十分に可能/g,'目指せる').replace(/(?:占いで)?お答えできません(?:とは|、とは)申し上げませんが[、，]?/g,'')/* 干合の教科書の言葉は、お客様に渡す文ではやわらかく（鑑定者本人の指示 2026-10-26。PROの命式の札は教科書どおり） */.replace(/(丁壬|壬丁)?(?:の|＝|:|：)?淫泆(?:[（(]いんいつ[）)])?の合/g,function(m,g){ return g?g+'の干合':'丁と壬の干合'; }).replace(/(戊癸|癸戊)?(?:の|＝|:|：)?無情(?:[（(]むじょう[）)])?の合/g,function(m,g){ return g?g+'の干合':'戊と癸の干合'; }).replace(/淫泆/g,'情の深さ').replace(/偏屈で好色/g,'自分の考えをしっかり持ち、恋愛にも情熱的').replace(/情に流されやすく好色/g,'情が深く、恋愛に情熱的').replace(/好色(?=[なで])/g,'恋愛に情熱的').replace(/好色/g,'恋愛への情熱').replace(/薄情で孤独/g,'さっぱりしていて、一人の時間も大切にできる').replace(/薄情な/g,'さっぱりした').replace(/薄情で/g,'さっぱりしていて').replace(/薄情/g,'さっぱりした性格').replace(/セクシーな/g,'人を惹きつける魅力のある').replace(/セクシーで/g,'人を惹きつける魅力があり').replace(/セクシー/g,'人を惹きつける魅力'); };   // 文の終わり方に関係なく、未来を言い切る「必ず」は「きっと」に   // 未来を言い切る「必ず〜ます」は「きっと」に（「必ず〜ください」「必ず相談を」などのすすめはそのまま）   // 「占いではお答えできません」のような突き放す言い方を、やわらかく（鑑定者本人の指示 2026-10-19。答えない相談の決まった案内はそのまま）
 function pkFixHangul(t){ t=String(t==null?'':t); if(!/[ᄀ-ᇿ㄰-㆏가-힯]/.test(t)) return t; const M=[['에는','には'],['에서','で'],['에게','に'],['으로','で'],['하다','する'],['로','で'],['은','は'],['는','は'],['이','が'],['가','が'],['을','を'],['를','を'],['의','の'],['에','に'],['도','も'],['와','と'],['과','と']]; M.forEach(function(p){ t=t.split(p[0]).join(p[1]); }); return t.replace(/[ᄀ-ᇿ㄰-㆏가-힯]/g,''); }   /* 文章に韓国語の文字がまざったときは、日本語に直してから出す（発注者指示 2026-10-21） */
 function noAIWord(t){ t=pkFixHangul(String(t||'').replace(/주치(의|医)/g,'主治医')).replace(/【?見出し(?:なし|無し)(?:の|で)?(?:結論)?】?[：:]?[ 　]*/g,'').replace(/【([^】\n]{1,40})\n+[ 　]*】/g,'【$1】\n').replace(/^[ 　]*】[ 　]*$/gm,'').replace(/^[ 　]*】[ 　]*/gm,'').replace(/^([ 　]*【[^】\n]{1,30}?)[ 　]*$/gm,'$1】')   /* 【見出し の閉じ忘れ・「】」だけの行を直す（発注者指示 2026-10-21） */.replace(/【見出し[：:]?\s*/g,'【').replace(/【([^】\n]{0,40})\n+\s*([^】\n]{0,60})】/g,'【$1$2】').replace(/【\s*】/g,'');   // 【 】の中で改行した見出しをつなぐ（【見出し⏎…】のくずれ）
     return pkSoftWord(pkFixYomi(_noAIWord0(t))); }   // 記号（**など）を消したあとにも、読み仮名とやわらげをもう一度
