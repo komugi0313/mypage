@@ -3886,6 +3886,23 @@ function natalBondLines(c,plain){ try{ if(!c||!c.pillars) return []; const p=c.p
     } else o.push({kind:'干合',pro:'命式内の干合（'+la+'柱の「'+a.stem+'」×'+lb+'柱の「'+b.stem+'」'+(ke?'＝'+ke+'に化す':'')+'）：'+DOM[la]+'と'+DOM[lb]+'が強く結びつき、両方がつながって動きやすい人です。', plain:PDOM[la]+'と'+PDOM[lb]+'が強く結びついて、つながって動きやすい人です。'});
   }
   return o; }catch(e){ return []; } }
+/* 格局（内格・外格）が鑑定文になければ、ツールが一言足す（鑑定者本人の指示 2026-10-26「安全装置をつけてください」）。
+   ビギナーのやさしい画面は、専門用語なしの「生まれ持った型」（beginner_ui の pkBTypeOf）で足す */
+function pkEnsureKaku(t,c){ try{ t=String(t||''); const g=kakukyoku(c); if(!g||!g.name) return t;
+  const plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'));
+  const ex=(g.extra||[]).map(function(e){ return e.name; });
+  if(plain){ const bt=(typeof window!=='undefined'&&typeof window.pkBTypeOf==='function')?window.pkBTypeOf(g,c):null; if(!bt) return t;
+    const nm=bt[0].replace(/\s/g,''); if(t.replace(/\s/g,'').indexOf(nm)>=0||/【生まれ持った型】/.test(t)) return t;
+    return t+'\n\n【生まれ持った型】\n'+nm+'＝'+bt[1]+(ex.indexOf('帰禄格')>=0?'生まれた時間にも、支える力があります。':''); }
+  const names=[g.name].concat(String(g.name).match(/（([^）]+)）/)?[String(g.name).match(/（([^）]+)）/)[1]]:[]).map(function(x){ return x.replace(/（.*$/,''); });
+  if(names.some(function(x){ return x&&t.indexOf(x)>=0; })||/【命式の型（格局）】/.test(t)) return t;
+  const female=c.birth&&c.birth.sex==='female';
+  let mean=g.kind==='外格'?String(g.mean||''):String(g.base||'');
+  if(g.kyo&&female) mean='四柱すべてが比劫星・印星のみの命式。自分の力がとても強いので、強さが出すぎないよう、まわりと力を合わせると大きく活きる。';
+  const sub=(g.subs&&g.subs.length)?'（この中でもとくに良い形：'+g.subs.map(function(x){ return x.name+'＝'+x.mean; }).join('・')+'）':'';
+  const exs=(g.extra&&g.extra.length)?'。あわせて'+g.extra.map(function(x){ return x.name+'（'+x.mean.replace(/。$/,'')+'）'; }).join('・')+'も成り立つ':'';
+  mean=mean.replace(/（資料18[^）]*）/g,'').replace(/（資料18）/g,'');   // お客様に渡す文に資料の番号は出さない
+  return t+'\n\n【命式の型（格局）】\n'+g.name+'＝'+mean.replace(/。$/,'')+sub+exs+'。'; }catch(e){ return t; } }
 function pkEnsureBonds(t,c){ try{ t=String(t||''); const L=natalBondLines(c,false); if(!L.length) return t;
   const plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'));
   const miss=L.filter(function(x){ return plain?false:!new RegExp(x.kind).test(t); });
@@ -7285,7 +7302,7 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
     let full=((D.online&&_dup>0.6)||String(det2).replace(/【[^】]*】|\s/g,'').length<40)?ans:(ans+'\n\n【くわしい読み解き】\n'+det2);   // 中身のないくわしい読み解きは見出しも出さない   // ほとんど同じ文なら、くわしい読み解きは出さない（同じ文を2回見せない。発注者指示 2026-10-21）
     if((out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart&&typeof chartB!=='undefined'&&chartB){ full=pkFixMutual(full,chart,chartB); full=pkEnsureWeave(full,chart,chartB); full=pkEnsureTrio(full,chart,chartB,(document.getElementById('compat-worry')||{}).value||''); full=pkEnsureCross(full,chart,chartB); full=pkEnsureRoles(full,chart,chartB); full=pkSameSexWord(full,chart,chartB); }   // 相性の書き足しは相性の答えだけ（1人の相談に「惹かれ合う星」などを付けない）   // 惹かれ合う星（相手の命式に自分の咸池・紅艶・貴人）がなければ書き足す
     { let _seen=false; full=full.replace(/\n*[ 　]*【くわしい読み解き】[ 　]*(?:\n[ 　]*【くわしい読み解き】[ 　]*)*/g,function(m0){ if(_seen) return '\n'; _seen=true; return '\n\n【くわしい読み解き】\n'; }); }   // 見出しが2回続かないように
-    if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart) { full=pkEnsureBonds(full,chart); full=pkMonthFactFix(full,chart); full=pkYearKichiFix(full,chart); full=pkPillarStarFix(full,chart); full=pkEnsureLove(full,chart,_q0); full=pkEnsureConsult(full,chart,_q0); full=pkEnsurePeople(full,chart,_q0); full=pkInLawWord(full,_q0); full=pkSoftDeceased(full,_q0); full=pkNoGambleTiming(full,_q0); }   // 命式内の天地徳合・干合は、鑑定文になければツールが書き足す（発注者指示 2026-10-23）
+    if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart) { full=pkEnsureBonds(full,chart); full=pkEnsureKaku(full,chart); full=pkMonthFactFix(full,chart); full=pkYearKichiFix(full,chart); full=pkPillarStarFix(full,chart); full=pkEnsureLove(full,chart,_q0); full=pkEnsureConsult(full,chart,_q0); full=pkEnsurePeople(full,chart,_q0); full=pkInLawWord(full,_q0); full=pkSoftDeceased(full,_q0); full=pkNoGambleTiming(full,_q0); }   // 命式内の天地徳合・干合は、鑑定文になければツールが書き足す（発注者指示 2026-10-23）
     let _evH=''; try{ if(typeof chart!=='undefined'&&chart){ const _isC=(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chartB!=='undefined'&&chartB; const _ev=pkEvidence((A.raw||'')+'\n'+(D.raw||''),full,chart,_isC?chartB:null,_isC?null:pkConsultPeople(chart,_q0).map(function(x){ return x.c; })); full=_ev.text; _evH=pkEvidenceHTML(_ev); } }catch(_e){}   // ③ 根拠のチェック表（先生の画面だけ。相談文に出てくるお相手の命式も照らし合わせる）
     let _disp=full, _cmpH=''; try{ if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart){ const _sp=pkCmpSplit(full,chart,_q0); _disp=_sp.text; _cmpH=_sp.html; } }catch(_e){}   // 2人のくらべは画面では表に（コピー・LINEは文章のまま）
     out.innerHTML=sc+engineBadge(true,D.online?'':'くわしい読み解きは通信できなかったため、端末内で作成した内容を表示しています。')+formatReading(_disp)+_cmpH+_evH;

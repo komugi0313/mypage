@@ -363,6 +363,9 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(row(B)!=='庚申庚 印綬 印綬 死|戊子癸 正官 比肩 建禄|癸酉辛 - 偏印 病|壬子癸 劫財 比肩 建禄') e.push('1980の命式：'+row(B));
     window.chart=A; const ka=kakukyoku(A); if(ka.name!=='従革格') e.push('1942の格局：'+ka.name);
     window.chart=B; const kb=kakukyoku(B); if(kb.name!=='建禄月劫格'||!(kb.extra||[]).some(x=>x.name==='帰禄格')) e.push('1980の格局：'+kb.name+'／'+(kb.extra||[]).map(x=>x.name).join(''));
+    { const plain=document.documentElement.classList.contains('bg-on'); const t0=pkEnsureKaku('本文です。',B);
+      if(plain){ if(typeof window.pkBTypeOf==='function'&&!/【生まれ持った型】\n自分の足で立つ自立型/.test(t0)) e.push('鑑定文の安全装置（生まれ持った型）がない：'+t0.slice(0,60)); }
+      else { if(!/【命式の型（格局）】\n建禄月劫格＝/.test(t0)||/資料18/.test(t0)) e.push('鑑定文の安全装置（格局）がない：'+t0.slice(0,60)); if(pkEnsureKaku('建禄月劫格の人です。',B)!=='建禄月劫格の人です。') e.push('書いてあるのに格局を足した'); } }
     const T=JSON.stringify(KAKU_NAIKAKU); ['殺印生化格','時上偏財格','専食禄格','傷官破れ尽す格','官殺混雑格','財官双美'].forEach(n=>{ if(T.indexOf(n)<0) e.push('内格の表に'+n+'がない'); }); if(/殺印化生格/.test(T)) e.push('殺印化生格のまま');
     return e; });
   const okK=r.length===0; console.log('  '+(okK?'OK':'NG')+' 格局（教科書の実例2つ・資料18の名前）'+(okK?'':'  … '+r.join(' / '))); if(!okK) res.fails.push('格局: '+r.join(' / ')); }
