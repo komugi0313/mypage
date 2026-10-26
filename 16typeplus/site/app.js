@@ -390,7 +390,7 @@ async function shareResult(){track("share_click");const b=$("shareBtn"),lbl=b.te
 function showShareBox(cvs){let box=$("shareBox");
  if(!box){box=document.createElement("div");box.id="shareBox";box.className="sharebox";box.setAttribute("role","dialog");box.setAttribute("aria-modal","true");document.body.appendChild(box);
   box.addEventListener("click",e=>{if(e.target===box)box.hidden=true;});}
- const msg=shareText()+"\n"+SHARE_URL,tw="https://twitter.com/intent/tweet?text="+encodeURIComponent(shareText())+"&url="+encodeURIComponent(SHARE_URL)+"&hashtags="+encodeURIComponent([TR("16タイププラス"),TR("16タイプ診断"),TR("性格診断"),(window.__me||{}).now].filter(Boolean).join(",")),ln="https://line.me/R/msg/text/?"+encodeURIComponent(msg);
+ const msg=shareText()+"\n"+SHARE_URL,tw="https://twitter.com/intent/tweet?text="+encodeURIComponent(shareText())+"&url="+encodeURIComponent(SHARE_URL)+"&hashtags="+encodeURIComponent([TR("16タイププラス"),TR("16タイプ"),TR("性格診断"),(window.__me||{}).now].filter(Boolean).join(",")),ln="https://line.me/R/msg/text/?"+encodeURIComponent(msg);
  box.innerHTML='<div class="sbin"><button type="button" class="sbx" aria-label="'+TR("閉じる")+'">×</button><div class="sbline"><button type="button" class="btn primary sbl" id="sbLine">'+TR("画像を共有する")+'</button><p class="fine">'+TR("LINEやインスタなど、ふだん使っているアプリで送れます。画像を保存してから送ることもできます。")+'</p></div>'
   +cvs.map((_,i)=>'<figure class="sbf"><img alt="'+esc(TR("シェア用の画像"))+'"><a class="btn sv" download="16typeplus-'+(i+1)+'.png">'+TR("この画像を保存")+'</a></figure>').join("")
   +'<p class="fine">'+TR("画像を長押し（パソコンは右クリック）でも保存できます。")+'</p><div class="sbacts"><a class="btn tw" target="_blank" rel="noopener">'+TR("Xでシェア")+'</a></div><button type="button" class="qlink">'+TR("閉じる")+'</button></div>';
