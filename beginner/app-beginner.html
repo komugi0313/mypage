@@ -2666,7 +2666,7 @@ const HOUGOU=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','
 const RIKUGO={子:'丑',丑:'子',寅:'亥',亥:'寅',卯:'戌',戌:'卯',辰:'酉',酉:'辰',巳:'申',申:'巳',午:'未',未:'午'};
 const HA={子:'酉',酉:'子',丑:'辰',辰:'丑',寅:'亥',亥:'寅',卯:'午',午:'卯',巳:'申',申:'巳',未:'戌',戌:'未'}; // 六破
 const GAI={子:'未',未:'子',丑:'午',午:'丑',寅:'巳',巳:'寅',卯:'辰',辰:'卯',申:'亥',亥:'申',酉:'戌',戌:'酉'}; // 六害
-const RIKUGO_EL={子:'土',寅:'木',卯:'火',辰:'金',巳:'水',午:'土'};
+const RIKUGO_EL={子:'土',寅:'木',卯:'火',辰:'金',巳:'水'};   // 午未は合化なし（鑑定者本人の教科書・指示 2026-10-26）
 const KANGO={甲:'己',己:'甲',乙:'庚',庚:'乙',丙:'辛',辛:'丙',丁:'壬',壬:'丁',戊:'癸',癸:'戊'};
 const KANGO_EL={甲:'土',乙:'金',丙:'水',丁:'木',戊:'火'};
 const CEN=new Set(['子','卯','午','酉']);
@@ -2693,7 +2693,7 @@ function buildShigou(c){
   for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){
     if(RIKUGO[P[i].branch]!==P[j].branch)continue;
     const lbl=P[i].label[0]+'柱-'+P[j].label[0]+'柱', d=SHIGOU_DESC[shigouKey(P[i].branch,P[j].branch)];
-    let s=`${lbl}が支合(${P[i].branch}${P[j].branch})`;
+    let s=`${lbl}が支合(${P[i].branch}${P[j].branch}・${j-i===1?'隣り合う柱＝強い':'離れた柱＝弱め'}${RIKUGO_EL[P[i].branch]||RIKUGO_EL[P[j].branch]?'':'・合化なし'})`;
     if(d){s+='＝'+d.一言;if(d.位置&&d.位置[lbl])s+=' ／'+lbl+':'+d.位置[lbl];}
     out.push(s);
   }
@@ -2720,8 +2720,8 @@ function natalRels(p){const o=[];const br=p.map(x=>({label:x.label[0],branch:x.b
     if(isChong(br[i].branch,br[j].branch))o.push({kind:'冲',el:null,text:`${br[i].branch}${br[j].branch}`,pos:[br[i].label,br[j].label]});
     if(HA[br[i].branch]===br[j].branch)o.push({kind:'破',el:null,text:`${br[i].branch}${br[j].branch}`,pos:[br[i].label,br[j].label]});
     if(GAI[br[i].branch]===br[j].branch)o.push({kind:'害',el:null,text:`${br[i].branch}${br[j].branch}`,pos:[br[i].label,br[j].label]});
-    if(RIKUGO[br[i].branch]===br[j].branch)o.push({kind:'支合',el:RIKUGO_EL[br[i].branch]||RIKUGO_EL[br[j].branch]||null,text:`${br[i].branch}${br[j].branch}`,pos:[br[i].label,br[j].label]});
-    if(KANGO[st[i].stem]===st[j].stem)o.push({kind:'干合',el:KANGO_EL[st[i].stem]||KANGO_EL[st[j].stem]||null,text:`${st[i].stem}${st[j].stem}`,pos:[st[i].label,st[j].label]});}
+    if(RIKUGO[br[i].branch]===br[j].branch)o.push({kind:'支合',el:RIKUGO_EL[br[i].branch]||RIKUGO_EL[br[j].branch]||null,text:`${br[i].branch}${br[j].branch}`,pos:[br[i].label,br[j].label],near:(j-i===1)});
+    if(KANGO[st[i].stem]===st[j].stem)o.push({kind:'干合',el:KANGO_EL[st[i].stem]||KANGO_EL[st[j].stem]||null,text:`${st[i].stem}${st[j].stem}`,pos:[st[i].label,st[j].label],near:(j-i===1)});}
   SANGO.forEach(g=>{const s=g.slice(0,3);const parts=br.filter(b=>s.includes(b.branch));const pr=[...new Set(parts.map(b=>b.branch))];const labs=[...new Set(parts.map(b=>b.label))];
     if(pr.length>=3)o.push({kind:'三合',el:g[3],text:s.join(''),pos:labs});
     else if(pr.length===2&&pr.some(b=>CEN.has(b)))o.push({kind:'半合',el:g[3],text:pr.join(''),pos:labs});});
@@ -2782,12 +2782,14 @@ function badge(r){const dot=r.el?`<i style="background:${ec(r.el)}"></i>`:'<i st
   const kcol=r.el?ec(r.el):'#39414F';
   const isRel=_KK_RELKINDS.includes(r.kind);
   const cls='badge'+(isRel?' kkclick':'');
-  const attrs=isRel?` data-kkk="${r.kind}" data-kke="${r.el||''}" data-kkf="${r.fav||''}" data-kkt="${String(r.text||'').replace(/"/g,'')}" data-kkp="${(r.pos||[]).join(',')}" data-kks="${r.scope||'natal'}" role="button" tabindex="0"`:'';
-  return `<span class="${cls}"${attrs}>${dot}<span class="k" style="background:${kcol};color:${r.el?onEl(r.el):'#fff'}">${r.kind}</span>${r.text}${r.el?`<small>（${r.el}が強まる）</small>`:''}${isRel?'<span class="kkarw">▾</span>':''}</span>`;}
+  const attrs=isRel?` data-kkk="${r.kind}" data-kke="${r.el||''}" data-kkf="${r.fav||''}" data-kkt="${String(r.text||'').replace(/"/g,'')}" data-kkp="${(r.pos||[]).join(',')}" data-kks="${r.scope||'natal'}" data-kkn="${r.near===true?1:(r.near===false?0:'')}" role="button" tabindex="0"`:'';
+  return `<span class="${cls}"${attrs}>${dot}<span class="k" style="background:${kcol};color:${r.el?onEl(r.el):'#fff'}">${r.kind}</span>${r.text}${r.el?`<small>（${r.el}が強まる）</small>`:''}${(r.near===true)?'<small>（隣り合う柱＝強い）</small>':(r.near===false?'<small>（離れた柱＝弱め）</small>':'')}${isRel?'<span class="kkarw">▾</span>':''}</span>`;}
 // 会局・干合・冲などピルの「かんたん読み解き」定型文（表示層のみ・エンジン非改変・オフライン可・毎回同じ結果）
 const _KKEL={木:'成長・やさしさ',火:'情熱・表現',土:'安定・信頼',金:'規律・決断',水:'知恵・柔軟'};   /* 五行の言葉は3か所（EL_DESC・凡例・ここ）でそろえる（発注者指示 2026-10-20） */
-function kkFavLine(el,fav,kind){ if(!el) return '';
+function kkFavLine(el,fav,kind,scope){ if(!el) return '';
   const strong=(kind==='三合'), mid=(kind==='方合'), weak=(kind==='半合');
+  // 大運・年運が命式と合になる巡りは、基本「吉」（鑑定者本人の教科書・指示 2026-10-26「B」）。忌神・太過の五行のときだけ、ひとこと添える
+  if(scope==='run'&&(fav==='忌'||fav==='太過')) return '<b>運勢が吉に働く巡り</b><span class="kkbadge" style="background:#E7F4EA;color:#1E7A45">吉</span>——'+el+'（'+(_KKEL[el]||'')+'）の力が強まります。'+(fav==='太過'?'ただ、この五行はすでに多めなので':'ただ、この五行はあなたの忌神（きじん：多いと疲れやすい五行）なので')+'、頑張りすぎ・消耗には少し気をつけて'+(weak?'（半合はゆるめなので、影響は控えめです）。':'。');
   if(fav==='喜') return '<b>あなたには追い風</b><span class="kkbadge" style="background:#E7F4EA;color:#1E7A45">喜</span>——'+el+'（'+(_KKEL[el]||'')+'）の力が伸びやすい良い巡り'+(weak?'です（半合はゆるめなので、じんわり効きます）。':(mid?'です（方合なので力強く）。':'です（三合なのでとくに強く働きます）。'));
   if(fav==='忌') return '<b>あなたはこの向きが強め</b><span class="kkbadge" style="background:#F6E4C4;color:#8A5A12">忌</span>——勢いは増しますが、頑張りすぎ・消耗に少し注意。'+(weak?'半合はゆるめなので影響は控えめです。':'休む・手放すも意識すると整います。');
   if(fav==='太過') return '<b>この五行はすでに多め</b><span class="kkbadge" style="background:#F6E4C4;color:#8A5A12">強まりすぎ注意</span>——'+(weak?'半合はゆるめなので過度な心配は不要ですが、':'')+'増える分は意識して発散・休養を。';
@@ -2802,21 +2804,22 @@ const _KKPONE={年:'家庭・親・目上（とくに若い頃）',月:'仕事�
 const _KKPTWO={年月:'若い頃の家庭環境と、社会に出るころ（仕事・進路）',年日:'親・家系と、あなた自身・配偶者',年時:'人生の前半（家庭・ルーツ）と後半（晩年・将来）',月日:'仕事・社会と、あなた自身・家庭・配偶者',月時:'仕事・社会的立場と、晩年・子・将来',日時:'あなた自身・配偶者と、晩年・子・将来'};
 function _kkPairTheme(a,b){ if(!a||!b) return ''; const k=[a,b].sort((x,y)=>(_KKORD[x]||0)-(_KKORD[y]||0)).join(''); return _KKPTWO[k]||''; }
 // この命式に即した「鑑定寄りの一言」。pos=関わる柱ラベル配列、scope='natal'（生まれ持った配置）/'run'（巡り＝今の時期）
-function kkReadText(kind,el,fav,pos,scope){
+function kkReadText(kind,el,fav,pos,scope,near){
   pos=pos||[]; scope=scope||'natal';
+  const nearTx=(near==='1'||near===1||near===true)?'<br><b>隣り合う柱どうし</b>なので、働きが<b>強い</b>配置です。':((near==='0'||near===0||near===false)?'<br><b>離れた柱どうし</b>なので、働きは<b>弱め</b>です（隣り合うときだけ強く働きます）。':'');
   const two=(pos.length>=2)?_kkPairTheme(pos[0],pos[1]):'';
   const one=(pos.length>=1)?(_KKPONE[pos[0]]||''):'';
-  const em=el?el+'（'+(_KKEL[el]||'')+'）':'', fl=el?kkFavLine(el,fav,kind):'';
+  const em=el?el+'（'+(_KKEL[el]||'')+'）':'', fl=el?kkFavLine(el,fav,kind,scope):'';
   if(kind==='冲'){
     if(scope==='natal') return '<b>冲（ちゅう）＝ぶつかり合い・強い刺激。</b>'+(two?'あなたは<b>'+two+'</b>の間に、変化・刺激・葛藤が起きやすい配置です。':'')+'悪い意味ではなく、早めの自立・環境の切り替え・“脱皮”の力として活かせます。';
     return '<b>冲（ちゅう）＝ぶつかり合い・刺激。</b>この時期は<b>'+(one||'その分野')+'</b>まわりに変化・動きが起きやすいサイン。転職・引越・決断など、動きたい人には追い風です。';
   }
   if(kind==='干合'){
-    if(scope==='natal') return '<b>干合（かんごう）＝強く結びつくご縁。</b>'+(two?'<b>'+two+'</b>に、深い縁・協力・情のつながりがある配置です。':'')+(el?'（'+em+'の性質が表に出やすい）':'')+'結びつきを信頼・建設的な関係に活かすと追い風に。反面、依存・執着には注意。';
+    if(scope==='natal') return '<b>干合（かんごう）＝強く結びつくご縁。</b>'+(two?'<b>'+two+'</b>に、深い縁・協力・情のつながりがある配置です。':'')+(el?'（'+em+'の性質が表に出やすい）':'')+'結びつきを信頼・建設的な関係に活かすと追い風に。反面、依存・執着には注意。'+nearTx;
     return '<b>干合（かんごう）＝結びつくご縁。</b>この時期は<b>'+(one||'人間関係')+'</b>で、良縁・協力・出会いが動きやすい時です。';
   }
   if(kind==='支合'||kind==='六合'){
-    if(scope==='natal') return '<b>支合（しごう／六合）＝やわらかな結びつき・味方。</b>'+(two?'<b>'+two+'</b>が支え合い、安定しやすい配置です。':'')+'協力者・味方を得やすい、穏やかな縁です。';
+    if(scope==='natal') return '<b>支合（しごう／六合）＝やわらかな結びつき・味方。</b>'+(el?'':'（午未の支合は合化しません）')+''+(two?'<b>'+two+'</b>が支え合い、安定しやすい配置です。':'')+'協力者・味方を得やすい、穏やかな縁です。'+nearTx;
     return '<b>支合（しごう）＝やわらかな結びつき。</b>この時期は<b>'+(one||'まわり')+'</b>で、協力・安定・味方を得やすい穏やかな縁が動きます。';
   }
   if(kind==='三合'||kind==='方合'||kind==='半合'){
@@ -2842,7 +2845,7 @@ function _kkToggle(el){
   box.querySelectorAll('.kkclick.kkon').forEach(x=>x.classList.remove('kkon'));
   if(panel&&wasFor===sig){ panel.remove(); return; }
   if(!panel){ panel=document.createElement('div'); panel.className='kk-read'; box.appendChild(panel); }
-  panel.innerHTML=kkReadText(kind,kel,fav,pos,scope); panel.setAttribute('data-for',sig); el.classList.add('kkon');
+  panel.innerHTML=kkReadText(kind,kel,fav,pos,scope,el.getAttribute('data-kkn')); panel.setAttribute('data-for',sig); el.classList.add('kkon');
 }
 if(!window.__kkBound){ window.__kkBound=1;
   document.addEventListener('click',function(e){ const el=e.target.closest&&e.target.closest('.kkclick'); if(el){e.preventDefault();_kkToggle(el);} });
@@ -4321,7 +4324,8 @@ function kaikyokuScan(c){
   res.periods.sort((x,y)=>x.year0-y.year0||(_KKW[x.kind]-_KKW[y.kind])||(x.when==='大運'?-1:1));
   const _A=_kkAssess(c); res.sType=_A.sType;
   res.natal.forEach(r=>Object.assign(r,_A.assess(r.el)));
-  res.periods.forEach(r=>Object.assign(r,_A.assess(r.el)));
+  // 大運・年運の巡りで成立する会局は基本「吉」（鑑定者本人の教科書・指示 2026-10-26「B」）。忌神・太過の五行のときは kiNote で注意をひとこと添える
+  res.periods.forEach(r=>{Object.assign(r,_A.assess(r.el)); r.kiNote=(r.tone==='caution'); r.tone='good';});
   return res;
 }
 function kaikyokuHTML(c){
@@ -4329,7 +4333,7 @@ function kaikyokuHTML(c){
   const cur=k.periods.filter(p=>p.current), up=k.periods.filter(p=>!p.current);
   if(!k.natal.length&&!cur.length&&!up.length)return '';
   const GOLD='#b8860b';
-  const tag=r=>r.tone==='good'?'<span class="kk-tag" style="background:#D9EFDF;color:#15603A;border:1px solid #9FD0AE">喜・追い風</span>':r.tone==='caution'?'<span class="kk-tag" style="background:#F5DFB8;color:#6E4709;border:1px solid #DDB774">'+(r.excess?'太過・注意':'忌・注意')+'</span>':'<span class="kk-tag" style="background:#E6E9EE;color:#3B4452;border:1px solid #C5CBD4">中庸</span>';
+  const tag=r=>r.kiNote?'<span class="kk-tag" style="background:#D9EFDF;color:#15603A;border:1px solid #9FD0AE">吉</span><span class="kk-tag" style="background:#F5DFB8;color:#6E4709;border:1px solid #DDB774;margin-left:3px">'+(r.excess?'多め・頑張りすぎ注意':'忌神・頑張りすぎ注意')+'</span>':r.tone==='good'?'<span class="kk-tag" style="background:#D9EFDF;color:#15603A;border:1px solid #9FD0AE">'+(r.fav==='喜'?'喜・追い風':'吉・追い風')+'</span>':r.tone==='caution'?'<span class="kk-tag" style="background:#F5DFB8;color:#6E4709;border:1px solid #DDB774">'+(r.excess?'太過・注意':'忌・注意')+'</span>':'<span class="kk-tag" style="background:#E6E9EE;color:#3B4452;border:1px solid #C5CBD4">中庸</span>';
   const chip=(r)=>{const col=ec(r.el),tx=onEl(r.el);const fav=r.excess?'太過':(r.fav||'');return `<span class="kkclick" data-kkk="${r.kind}" data-kke="${r.el||''}" data-kkf="${fav}" data-kkt="${String(r.text||'').replace(/"/g,'')}" data-kks="natal" role="button" tabindex="0" style="display:inline-flex;align-items:center;gap:4px;background:${col};color:${tx};border-radius:999px;padding:3px 11px;font-weight:900;font-size:12.5px;margin:4px 5px 0 0"><b>${r.kind}</b>${r.text}<span style="font-weight:800;opacity:.9;font-size:11px">${r.el}</span><span class="kkarw" style="color:${tx};opacity:.9">▾</span></span>${tag(r)}`;};
   const line=(p)=>{const big=p.when==='大運';
     const whenY=big?`${p.year0}〜${p.year1}年<span class="kk-goro">ごろ</span>`:`${p.year0}年`;
@@ -4347,7 +4351,7 @@ function kaikyokuHTML(c){
   const intro=`<div style="margin-top:9px;background:#F1F4F8;border:1px solid #D3DAE3;border-radius:11px;padding:9px 12px;font-size:12.5px;line-height:1.75;color:var(--ink2)">
     <span style="display:inline-block;background:#6B7480;color:#fff;border-radius:6px;padding:1px 10px;font-size:11px;font-weight:900;letter-spacing:.04em;margin-bottom:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" style="vertical-align:-1.5px;margin-right:3px"><circle cx="12" cy="12" r="9"/><path d="M12 11.5v4.5" stroke-linecap="round"/><circle cx="12" cy="7.8" r="1.15" fill="#fff" stroke="none"/></svg>解説（用語）</span>
     <div><b style="color:${GOLD}">会局（かいきょく）とは？</b> 同じ仲間の十二支（じゅうにし）がそろって、ある五行の力が<b>まとまって強まる</b>こと。強さは <b>三合（さんごう）＝最強</b> ＞ <b>方合（ほうごう）＝強</b> ＞ <b>半合（はんごう）＝ゆるめ</b>。</div>
-    <div style="margin-top:3px">強まる五行が、この方にとって〈<b style="color:#1E7A45">喜＝追い風</b>〉か〈<b style="color:#8A5A12">忌＝強すぎ注意</b>〉かで、良い節目か注意の節目かが変わります。</div>
+    <div style="margin-top:3px"><b>生まれ持った会局</b>は、強まる五行が、この方にとって〈<b style="color:#1E7A45">喜＝追い風</b>〉か〈<b style="color:#8A5A12">忌＝強すぎ注意</b>〉かで見ます。<b>大運・年運で巡ってくる会局（三合・半合・支合）</b>は、基本的に<b style="color:#1E7A45">吉</b>（運勢が良い方へ働く）。強まる五行が忌神・すでに多いときだけ、頑張りすぎに少し注意します。</div>
     <div style="margin-top:5px;padding-top:5px;border-top:1px dashed #C9D0DA;font-weight:900">あなた（日主${c.dayMaster.stem}・${k.sType}）→ 追い風：${favEls.length?favEls.map(elc).join('・'):'—'}／強すぎ注意：${kiEls.length?kiEls.map(elc).join('・'):'—'}</div></div>`;
   let body=intro;
   if(!k.natal.length&&(cur.length||up.length))body+=`<div style="margin-top:8px;color:var(--ink2);font-weight:700;font-size:12.5px">生まれ持った会局はありませんが、大運・年運の巡りで下の時期に成立します。</div>`;
@@ -4359,7 +4363,7 @@ function kaikyokuHTML(c){
     <div style="display:flex;align-items:center;gap:9px;margin-bottom:2px">
       <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(160deg,#F2C14E,${GOLD});display:flex;align-items:center;justify-content:center;flex:0 0 auto"><svg width="19" height="19" viewBox="0 0 16 16" fill="#fff" aria-hidden="true"><path d="M8 1.8l1.9 4.05 4.45.55-3.3 3.02.87 4.38L8 11.62 4.08 13.78l.87-4.38-3.3-3.02 4.45-.55z"/></svg></div>
       <div><div style="font-weight:900;font-size:15px">三合・方合・半合（会局）— 運が大きく動く巡り</div>
-      <div style="font-size:11.5px;color:var(--muted);font-weight:700">同じ五行が強まる節目。色ラベルで<b>喜＝追い風／忌・太過＝強すぎ注意</b>を判定します。</div></div>
+      <div style="font-size:11.5px;color:var(--muted);font-weight:700">同じ五行が強まる節目。巡ってくる会局は<b>基本的に吉</b>。忌神・すでに多い五行のときだけ注意をひとこと添えます。</div></div>
     </div>
     ${body}
     <div style="margin-top:12px;font-size:12.5px;color:var(--ink2);font-weight:700;line-height:1.75">※ここでの「〇年」は、その年の2月4日ごろ（立春）から、次の年の2月3日ごろまでです。1月〜2月初めは、前の年の運として見てください。</div>
@@ -6161,7 +6165,7 @@ function buildChartText(c){
     (typeof Setsuboku!=='undefined'&&sbA)?Setsuboku.promptBlock(sbA):''];
   if(c.now){const di=c.now.daeunIndex,dd=curDu(c);
     const ay=c.annualFortunes.find(a=>a.year===c.now.year);
-    const rel=r=>`${r.kind}${r.text}${r.el?'('+r.el+')':''}`;
+    const rel=r=>`${r.kind}${r.text}${r.el?'('+r.el+')':''}${r.near===true?'〔隣り合う柱＝強い〕':(r.near===false?'〔離れた柱＝弱め〕':'')}`;
     const br=c.pillars.map(p=>({label:p.label[0],branch:p.branch})),st=c.pillars.map(p=>({label:p.label[0],stem:p.stem}));
     const uq=a=>[...new Set(a)];
     L.push(`現在の大運（${c.now.age}歳）:${dd.ganzhi}（干${dd.tenStar}/十二運${dd.terrain}）${dd.isMonth?'※立運前＝第一運（月柱・'+duAgeRange(dd)+'）':''}`);
@@ -6182,9 +6186,10 @@ function buildChartText(c){
     if(yrsNear)L.push(`今後5年の年運の流れ:${yrsNear}`);
     if(yrsNear)L.push('※年運の「判定」は、このツールが命式から出した年ごとの運の良し悪し（好調＞順調＞ふつう＞静かに整える時期）。「今年と来年のどちら」「いつが良い」のように年を比べる・選ぶ相談では、この判定がよい年を答えにする（判定が同じなら、そう書いたうえで他の手がかりで選ぶ）。判定と反対の年をすすめない。'+(function(){ var d=new Date(), m=d.getMonth()+1; if(m<2||(m===2&&d.getDate()<5)||d.getFullYear()!==c.now.year) return ''; return '年運は立春（2月4日ごろ）で切りかわるので、今年の年運は'+(c.now.year+1)+'年2月3日ごろまで続く。今年の判定のほうがよいときは「年内〜'+(c.now.year+1)+'年2月の立春まで」に動くことをすすめ、「今年は残り少ない」ことを理由に判定の低い年をすすめない。'; })());
     const nr=uq(natalRels(c.pillars).map(rel)); if(nr.length)L.push(`命式内の合冲（三合・冲など）:${nr.join(' ')}`);
+    L.push('※合の決まり（当流派）：命式の中の干合・支合は、隣り合う柱どうし（年柱と月柱・月柱と日柱・日柱と時柱）のときだけ働きが強く、離れた柱どうしは弱め。午未の支合は合化しない（五行は強まらない）。大運・年運が命式と三合・半合・支合・干合になる時期は、基本的に運勢が吉に働く（強まる五行が忌神・すでに多いときだけ、頑張りすぎの注意を一言添える）。');
     const dr=uq([...runBranchRels({branch:dd.branch},br),...runStemRels(dd.stem,st)].map(rel)); if(dr.length)L.push(`今の大運と命式の関わり:${dr.join(' ')}`);
     const yr=ay?uq([...runBranchRels({branch:ay.branch},[...br,{label:'大運',branch:dd.branch}]),...runStemRels(ay.stem,[...st,{label:'大運',stem:dd.stem}])].map(rel)):[]; if(yr.length)L.push(`今年の年運と命式・大運の関わり:${yr.join(' ')}`);
-    {const kk=kaikyokuScan(c); const _tn=p=>p.tone==='good'?'吉・追い風（喜神）':(p.tone==='caution'?(p.excess?'注意・強まりすぎ（既に太過）':'注意・不利に働きやすい（忌神）'):'中庸'); if(kk.natal.length)L.push(`命式内の会局（生まれつき成立・常時作用。日主は${kk.sType}）【重要：三合・方合が命式に成立している人は、何も巡らなくても"生まれつき運が強く、良い暗示を持つ強運の型"＝その五行がバランスよく強い土台の強みなので、鑑定文でその点をはっきり前向きに伝える（強さは三合＞方合。半合はそのゆるい版。ただし該当の五行が既に太過なら偏りに一言添える）】:${kk.natal.map(r=>r.kind+r.text+'('+r.el+'が強まる/'+_tn(r)+')').join(' / ')}`); if(kk.periods.length)L.push(`会局（三合・方合）が巡って成立する時期【鑑定文で必ず具体的に言語化する】。★大前提：会局が巡るのは基本的に「吉」。強さの目安＝三合（最も強い吉）＞方合(吉だが三合よりやや穏やか＝中程度の強さ)＞半合(三合のゆるい版でさらに穏やか)。巡ってきたら、まず〈やる気が上がる・運が開ける（開運）・チャンス到来・エネルギーが増す〉良い訪れとして、その強さに応じて（三合は力強く、方合はやや穏やかに）分かりやすい前向きな言葉ではっきり伝えることを最優先にする。各会局ごとに①いつ（西暦・年齢）②何の会局か（例:寅午戌の火局）③それで強まる五行と、あなたの何の星（通変）④その“良い変化”を"日常の場面がイメージできる具体語"で必ず書く（「転機」「変化の時」等の抽象語は禁止）。強まる通変別の良い変化=食傷:才能や発信が実を結び仕事の成果が出やすい。財:収入・人脈・チャンスが増える。官殺:地位・責任・評価が上がる。印:学び・後ろ盾・心の安定を得やすい。比劫:仲間・独立・行動力が高まる。⑤注意点は【"過剰（太過）な場合に限って"、良い訪れを伝えた“あと”に一言だけ添える】——強まる五行が既に多い（忌神・太過）ときに限り、勢いは増すが強くなりすぎて心身を剋しやすい（頑張りすぎ・消耗・体調やメンタルの負担）ので、意識して休む・発散する・手放す、近くに冲（その五行の支を揺らす対冲）が巡ればそれが調整弁になる、と具体的に添える。強まる五行が足りない・弱い（用神・喜神）を補う巡りは＝素直に「開運」（不足が満ちて運気が上向く好機）として前向きに伝え、注意は付けない。喜神・中庸の会局にも過度な注意は付けず、基本は吉として伝える。断定しない）:${kk.periods.slice(0,12).map(p=>(p.when==='大運'?`${p.year0}〜${p.year1}年(${p.age0}〜${p.age1}歳)大運${p.ganzhi}`:`${p.year0}年(${p.age0}歳)年運${p.ganzhi}`)+`＝${p.kind}${p.text}(${p.el}が強まる/${_tn(p)})`).join(' / ')}`);}
+    {const kk=kaikyokuScan(c); const _tn=p=>p.kiNote?('吉（巡りの会局は基本的に吉。ただしこの五行は'+(p.excess?'すでに多め':'忌神')+'なので、良い訪れを伝えたあとに頑張りすぎ・消耗の注意を一言だけ添える）'):p.tone==='good'?(p.fav==='喜'?'吉・追い風（喜神）':'吉'):(p.tone==='caution'?(p.excess?'注意・強まりすぎ（既に太過）':'注意・不利に働きやすい（忌神）'):'中庸'); if(kk.natal.length)L.push(`命式内の会局（生まれつき成立・常時作用。日主は${kk.sType}）【重要：三合・方合が命式に成立している人は、何も巡らなくても"生まれつき運が強く、良い暗示を持つ強運の型"＝その五行がバランスよく強い土台の強みなので、鑑定文でその点をはっきり前向きに伝える（強さは三合＞方合。半合はそのゆるい版。ただし該当の五行が既に太過なら偏りに一言添える）】:${kk.natal.map(r=>r.kind+r.text+'('+r.el+'が強まる/'+_tn(r)+')').join(' / ')}`); if(kk.periods.length)L.push(`会局（三合・方合）が巡って成立する時期【鑑定文で必ず具体的に言語化する】。★大前提：会局が巡るのは基本的に「吉」。強さの目安＝三合（最も強い吉）＞方合(吉だが三合よりやや穏やか＝中程度の強さ)＞半合(三合のゆるい版でさらに穏やか)。巡ってきたら、まず〈やる気が上がる・運が開ける（開運）・チャンス到来・エネルギーが増す〉良い訪れとして、その強さに応じて（三合は力強く、方合はやや穏やかに）分かりやすい前向きな言葉ではっきり伝えることを最優先にする。各会局ごとに①いつ（西暦・年齢）②何の会局か（例:寅午戌の火局）③それで強まる五行と、あなたの何の星（通変）④その“良い変化”を"日常の場面がイメージできる具体語"で必ず書く（「転機」「変化の時」等の抽象語は禁止）。強まる通変別の良い変化=食傷:才能や発信が実を結び仕事の成果が出やすい。財:収入・人脈・チャンスが増える。官殺:地位・責任・評価が上がる。印:学び・後ろ盾・心の安定を得やすい。比劫:仲間・独立・行動力が高まる。⑤注意点は【"過剰（太過）な場合に限って"、良い訪れを伝えた“あと”に一言だけ添える】——強まる五行が既に多い（忌神・太過）ときに限り、勢いは増すが強くなりすぎて心身を剋しやすい（頑張りすぎ・消耗・体調やメンタルの負担）ので、意識して休む・発散する・手放す、近くに冲（その五行の支を揺らす対冲）が巡ればそれが調整弁になる、と具体的に添える。強まる五行が足りない・弱い（用神・喜神）を補う巡りは＝素直に「開運」（不足が満ちて運気が上向く好機）として前向きに伝え、注意は付けない。喜神・中庸の会局にも過度な注意は付けず、基本は吉として伝える。断定しない）:${kk.periods.slice(0,12).map(p=>(p.when==='大運'?`${p.year0}〜${p.year1}年(${p.age0}〜${p.age1}歳)大運${p.ganzhi}`:`${p.year0}年(${p.age0}歳)年運${p.ganzhi}`)+`＝${p.kind}${p.text}(${p.el}が強まる/${_tn(p)})`).join(' / ')}`);}
     // 解空：空亡が大運・年運の支に合／冲で解ける（どちらも解空）。合解＝穏やかに満たして整う／冲解＝叩き起こす目覚めで解けるが波乱を伴う（空逢冲則不空）。
     const diss=[], shake=[];
     [['大運',dd.branch],['年運',ay&&ay.branch]].forEach(([lbl,bb])=>{if(!bb)return;voids.forEach(v=>{
