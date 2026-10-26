@@ -306,22 +306,28 @@ function parseInvite(){try{let t=location.hash.replace(/^#/,"");const q=new URLS
   return {born:a[1].slice(0,4),now:a[2].slice(0,4),bornF:a[1],nowF:a[2],num,who:a[4]&&a[4]!=="-"?b64d(a[4])+TR("さん"):TR("送ってくれた人"),back:a[5]==="r"};}catch(e){return null;}}
 const INV=parseInvite();
 $("mkLink").onclick=()=>{const u=inviteURL(),nm=$("myName").value.trim();
- const msg=(nm?nm+TR("から"):"")+TR("相性診断が届いたよ。16タイプから、2人の相性がわかる👇")+"\n"+u;
+ const msg=(nm?TR("{n}から相性診断が届いたよ。16タイプから、2人の相性がわかる👇").replace("{n}",nm):TR("相性診断が届いたよ。16タイプから、2人の相性がわかる👇"))+"\n"+u;
  $("lnk").value=u;$("lnkLine").href="https://line.me/R/msg/text/?"+encodeURIComponent(msg);$("lnkBox").hidden=false;window.__msg=msg;};
 /* スマホでは、長いURLを見せずに共有メニュー（LINEなど）を開く */
 $("lnkLine").onclick=e=>{if(navigator.share&&window.__msg){e.preventDefault();navigator.share({text:window.__msg}).catch(()=>{});}else if(LANG!=="ja"){e.preventDefault();$("cpLink").click();}};
 $("cpLink").onclick=()=>{const t=$("lnk");const done=()=>{$("cpLink").textContent=TR("コピーしました");setTimeout(()=>$("cpLink").textContent=TR("リンクをコピー"),1600);};
  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(window.__msg||t.value).then(done).catch(()=>{t.select();});}else t.select();};
-if(INV){$("invBar").hidden=false;$("invWho").textContent=INV.who;$("invPair").textContent=INV.bornF+" → "+INV.nowF;
+if(INV){$("invBar").hidden=false;$("invWho").textContent=INV.who;$("invPair").textContent=TR("気質")+" "+INV.bornF+" / "+TR("性格")+" "+INV.nowF;
 
  $("partnerH").textContent=INV.who+TR("との相性");
  if(INV.back){const eb=$("invBar").querySelector(".eyebrow");if(eb)eb.textContent=TR("相性の結果が届きました");const p=$("invBar").querySelector(".invt");if(p)p.textContent=TR("{who}から、2人の相性の結果が届きました。結果を出すと、下の「{who}との相性」で見られます。").replace(/\{who\}/g,INV.who);}}
-function showInvitePair(){if(!INV)return;$("pRes").innerHTML=pairHTML(INV)
+/* 結果が出たら、上の案内を「相性を見る」ボタンに変える（招待で来た人が下まで探さなくていいように） */
+function invDone(){const bar=$("invBar");if(!bar||!INV)return;const p=bar.querySelector(".invt");
+ if(p)p.textContent=(INV.back?TR("{who}から届いた2人の相性が出ました。"):TR("あなたの結果が出ました。{who}との相性も見られます。")).replace(/\{who\}/g,INV.who);
+ let b=$("invGo");if(!b){b=document.createElement("button");b.id="invGo";b.type="button";b.className="btn primary";bar.appendChild(b);}
+ b.textContent=TR("{who}との相性を見る ↓").replace("{who}",INV.who);
+ b.onclick=()=>{const t=$("partner");if(t){if(t.tagName==="DETAILS")t.open=true;t.scrollIntoView({behavior:"smooth",block:"start"});}try{track("invite_jump");}catch(e){}};}
+function showInvitePair(){if(!INV)return;invDone();$("pRes").innerHTML=pairHTML(INV)
   +(INV.back?'':'<div class="sendback"><p class="sbh">'+TR("この相性を、{who}にも見せる").replace("{who}",esc(INV.who))+'</p><p class="hint">'+TR("送り返すと、{who}の画面でも同じ相性が見られます。届くのは、あなたのタイプとニックネームだけです。").replace("{who}",esc(INV.who))+'</p>'
   +'<input id="sbName" class="txt" maxlength="12" placeholder="'+TR("あなたのニックネーム")+'" autocomplete="nickname"><button class="btn primary" type="button" id="sbBack">'+TR("{who}に送り返す").replace("{who}",esc(INV.who))+'</button><p class="fine" id="sbDone" hidden></p></div>');
  $("pRes").hidden=false;$("pForm").hidden=true;
  if($("sbBack"))$("sbBack").onclick=()=>{const nm=$("sbName").value.trim().slice(0,12);if($("myName")&&nm)$("myName").value=nm;const u=inviteURL(true);
-  const msg=(nm?nm+TR("から"):"")+TR("相性の結果を送るね。開くと、あなたの画面でも2人の相性が見られるよ👇")+"\n"+u;window.__msg=msg;try{track("sendback_click");}catch(e){}
+  const msg=(nm?TR("{n}から相性の結果を送るね。開くと、あなたの画面でも2人の相性が見られるよ👇").replace("{n}",nm):TR("相性の結果を送るね。開くと、あなたの画面でも2人の相性が見られるよ👇"))+"\n"+u;window.__msg=msg;try{track("sendback_click");}catch(e){}
   const fb=()=>{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(msg).then(()=>{$("sbDone").textContent=TR("送る文をコピーしました。LINEなどに貼りつけて送ってください。");$("sbDone").hidden=false;}).catch(()=>{});}else{$("sbDone").textContent=u;$("sbDone").hidden=false;}};
   if(navigator.share)navigator.share({text:msg}).catch(e=>{if(e&&e.name!=="AbortError")fb();});else fb();};}
 
@@ -500,7 +506,7 @@ $("shareBtn").onclick=shareResult;
 
 /* ---- 保存した結果（何人分でも。このスマホの中だけ） ---- */
 const KS="16tp.saved.v1";
-function savedList(){const v=sget(KS);return Array.isArray(v)?v:[];}
+function savedList(){const v=sget(KS);return Array.isArray(v)?v.filter(e=>e&&typeof e==="object"&&Array.isArray(e.t)&&e.t.length===4&&e.t.every(c=>typeof c==="string")&&+e.y>0&&+e.m>0&&+e.d>0):[];}
 function saveCurrent(name){const L=savedList(),e={id:Date.now(),name:name||TR("名前なし"),born:(window.__me||{}).born,y:st.y,m:st.m,d:st.d,t:st.t.slice(),at:st.at,pct:st.pct,half:st.half,sway:st.sway,love:st.love||null};
  const i=L.findIndex(x=>x.name===e.name&&x.y===e.y&&x.m===e.m&&x.d===e.d&&x.t.join("")===e.t.join(""));if(i>=0)L.splice(i,1);L.unshift(e);sset(KS,L.slice(0,30));drawSaved();}
 function openSaved(id){const e=savedList().find(x=>x.id===id);if(!e)return;
@@ -797,7 +803,7 @@ function layoutResult(){const hero=document.querySelector(".hero");if(!hero)retu
 const KH="16tp.hist.v1",HTAGS=["仕事が忙しい","人と会うことが多い","ひとりの時間が多い","休みが多い","落ちこんでいた"];
 const ymdOf=()=>st.y+"-"+st.m+"-"+st.d;
 const today=()=>{const t=new Date(Date.now()-new Date().getTimezoneOffset()*6e4);return t.toISOString().slice(0,10);};
-function histAll(){return sget(KH)||[];}
+function histAll(){const h=sget(KH);return Array.isArray(h)?h.filter(r=>r&&typeof r==="object"&&typeof r.b==="string"&&typeof r.d==="string"&&/^[EI][SN][TF][JP]$/.test(r.t)):[];}
 function histMine(){const k=ymdOf();return histAll().filter(r=>r.b===k).sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);}
 function addHist(src,t,d,tags){try{const k=ymdOf(),dd=d||today();let L=histAll().filter(r=>!(r.b===k&&r.d===dd&&r.t===t));
  L.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),b:k,d:dd,t,src,tags:tags||[]});sset(KH,L.slice(-300));}catch(e){}}
@@ -830,7 +836,8 @@ function drawRec(){const box=$("recBody");if(!box)return;const born=natal(st.y,s
  box.querySelectorAll(".rc-ftag button").forEach(b=>b.onclick=()=>{const t=b.dataset.tg,i=recTags.indexOf(t);i<0?recTags.push(t):recTags.splice(i,1);drawRec();});
  box.querySelectorAll(".rc-seg button").forEach(b=>b.onclick=()=>{recPick[+b.dataset.i]=b.dataset.l;drawRec();});
  const ad=$("recAdd");if(ad)ad.onclick=()=>{addHist(recSrc,recPick.join(""),$("recDate").value||today(),recTags.slice());recTags=[];recDateV="";drawRec();};}
-boot();
+/* 端末に保存した値が想定外の形でも止まらないように。だめなら保存を消してやり直す */
+try{boot();}catch(e){try{["16tp.result.v1","16tp.saved.v1","16tp.quiz.v1","16tp.hist.v1","16tp.group.v1"].forEach(k=>localStorage.removeItem(k));}catch(_){}try{boot();}catch(_){}}
 
 /* 図をタップすると大きく表示（スマホでは字が小さいので） */
 document.addEventListener("click",e=>{const im=e.target.closest&&e.target.closest(".cloudfig img");if(!im||!im.src)return;
@@ -886,7 +893,7 @@ function groupHTML(G,title){const e=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&am
  h+='<h3>'+GTR("うまくいくコツ")+'</h3><ul class="gr-tips">'+G.tips.map(t=>'<li>'+e(t.text)+'</li>').join("")+'</ul></div>';return h;}
 
 /* ---- グループの相性（その場で入力。サーバーは使わない） ---- */
-const KG="16tp.group.v1";let gst=sget(KG)||{title:"",rows:[{name:"",t:""},{name:"",t:""}]};
+const KG="16tp.group.v1";let gst=sget(KG);if(!gst||typeof gst!=="object"||!Array.isArray(gst.rows))gst={title:"",rows:[{name:"",t:""},{name:"",t:""}]};gst.title=typeof gst.title==="string"?gst.title:"";gst.rows=gst.rows.filter(r=>r&&typeof r==="object").slice(0,9).map(r=>({name:typeof r.name==="string"?r.name.slice(0,12):"",t:/^[EI][SN][TF][JP]$/.test(r.t)?r.t:""}));if(!gst.rows.length)gst.rows=[{name:"",t:""}];
 function gDraw(){const box=$("gRows");if(!box)return;const me=window.__me;const nm=($("myName")&&$("myName").value.trim())||"";
  const opt=v=>'<option value="">'+TR("16タイプを選ぶ")+'</option>'+Object.keys(D.NICK).map(t=>'<option value="'+t+'"'+(t===v?' selected':'')+'>'+t+p16(t)+'</option>').join("");
  box.innerHTML='<li class="gme"><b>'+TR("あなた")+'</b><span>'+(me?me.now:"")+'</span></li>'

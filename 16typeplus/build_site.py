@@ -13,6 +13,8 @@ META={
  'ko':('16TYPE+ | 타고난 기질과 자라 온 성격을 알 수 있는 무료 검사','생년월일로 보는 기질과 16타입으로 보는 성격. 둘을 나란히 놓고 나다움과 고민하기 쉬운 지점을 알려 주는 무료 성격 검사.','한국어','ko_KR')}
 URL={'ja':'https://16typeplus.jp/','en':'https://16typeplus.jp/en/','ko':'https://16typeplus.jp/ko/'}
 GA='G-XLMXSC0LY0'
+# プライバシーポリシーのお問い合わせ先（決まったら入れる。空なら行ごと出さない）
+CONTACT={}
 def rd(p): return open(p,encoding='utf-8').read()
 def build():
     if os.path.exists(OUT): shutil.rmtree(OUT)
@@ -23,7 +25,6 @@ def build():
     shutil.copy(R+'icons/favicon.ico',OUT+'favicon.ico')
     for f in ['favicon-32.png','favicon-48.png','apple-touch-icon.png','icon-192.png','icon-512.png','icon-maskable-192.png','icon-maskable-512.png']: shutil.copy(R+'icons/'+f,OUT+'img/'+f)
     for l in ['ja','en','ko']: shutil.copy(R+'site_assets/ogp-%s.png'%l,OUT+'img/ogp-%s.png'%l)
-    if os.path.exists(R+'kakure-shindan/privacy.html'): shutil.copy(R+'kakure-shindan/privacy.html',OUT+'privacy.html')
     head=rd(R+'src/head.html');js=rd(R+'src/budoux-inline.js')+rd(R+'src/script.js')
     head=re.sub(r'<title>.*?</title>\n?','',head);head=re.sub(r'<meta name="claude:viewport-fit-sides"[^>]*>\n?','',head)
     head=re.sub(r'<meta charset="utf-8">\n?|<meta name="viewport"[^>]*>\n?','',head)
@@ -69,6 +70,10 @@ def build():
         open(OUT+('' if lang=='ja' else lang+'/')+'data.js','w',encoding='utf-8').write(data)
         page=top+head+'</head>\n<body>\n'+body+'\n<script src="data.js"></script>\n<script src="%sbazi.js"></script>\n<script src="%sapp.js"></script>\n'%(base,base)+('<script>BX.start(document.querySelector(".page"));</script>\n' if lang=='ja' else '')+'</body>\n</html>\n'
         open(OUT+('' if lang=='ja' else lang+'/')+'index.html','w',encoding='utf-8').write(page)
+        pv=rd(R+'legal/privacy.%s.html'%lang)
+        for k,v in CONTACT.items(): pv=pv.replace('__CONTACT_%s__'%k.upper(),v)
+        pv=re.sub(r'<p>[^<]*__CONTACT_[A-Z]+__</p>','',pv)
+        open(OUT+('' if lang=='ja' else lang+'/')+'privacy.html','w',encoding='utf-8').write(pv)
         man={'name':'16TYPE+','short_name':'16TYPE+','description':desc,'lang':lang,'id':'/' if lang=='ja' else '/'+lang+'/',
              'start_url':'/' if lang=='ja' else '/'+lang+'/','scope':'/','display':'standalone','background_color':'#F6F7F9','theme_color':'#F6F7F9',
              'icons':[{'src':'/img/icon-192.png','sizes':'192x192','type':'image/png','purpose':'any'},{'src':'/img/icon-512.png','sizes':'512x512','type':'image/png','purpose':'any'},
