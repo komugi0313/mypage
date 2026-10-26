@@ -353,8 +353,19 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     return [...new Set(e)]; });
   const one=t=>{ const m=t.match(/var pkSoftWord=function[^\n]*/); return m?m[0]:''; }, mine=one(fs.readFileSync(path.join(ROOT,dir,page0),'utf8'));
   ['eki-pro/app/index.html','pro/meishi-sheet.html'].forEach(f=>{ if(!mine||one(fs.readFileSync(path.join(ROOT,f),'utf8'))!==mine) r.push(f+' のやわらげが同じ中身でない'); });
-  { const bsrc=fs.readFileSync(path.join(ROOT,'beginner/app-beginner.html'),'utf8'); if(!/function secBond\(c\)/.test(bsrc)||!/secFlow,secBond,secShake/.test(bsrc)) r.push('ビギナーのやさしい画面に「結びつき」の欄がない'); if(!/凶星の干合：/.test(fs.readFileSync(path.join(ROOT,'pro/app-pro.html'),'utf8'))) r.push('PROの札に凶星の干合がない'); }
+  { const bsrc=fs.readFileSync(path.join(ROOT,'beginner/app-beginner.html'),'utf8'); if(!/function secBond\(c\)/.test(bsrc)||!/secFlow,secBond,secShake/.test(bsrc)) r.push('ビギナーのやさしい画面に「結びつき」の欄がない'); if(!/function secType\(c\)/.test(bsrc)||!/secMe,secType,secPower/.test(bsrc)) r.push('ビギナーのやさしい画面に「生まれ持った型」（格局）の欄がない'); if(!/凶星の干合：/.test(fs.readFileSync(path.join(ROOT,'pro/app-pro.html'),'utf8'))) r.push('PROの札に凶星の干合がない'); }
   const okG=r.length===0; console.log('  '+(okG?'OK':'NG')+' 合の決まり（午未・隣り合う柱・巡りは吉・蔵干は司令・干合の言葉）'+(okG?'':'  … '+r.slice(0,4).join(' / '))); if(!okG) res.fails.push('合の決まり: '+r.slice(0,3).join(' / ')); }
+// 格局（教科書 第16回・資料18・鑑定者本人の判断 2026-10-26）：教科書の実例2つが必ず教科書と同じ答えになる。命式・蔵干・通変星・十二運も実例どおり
+{ const r=await p.evaluate(()=>{ const e=[]; const mk=(y,m,d,h,mi)=>{ const c=baziCompute({year:y,month:m,day:d,hour:h,minute:mi,sex:'male'},0,'none'); window.chart=c; return c; };
+    const row=c=>c.pillars.map((x,i)=>x.stem+x.branch+repHidden(x).stem+' '+(i===2?'-':tenStarOf(c.dayMaster.stem,x.stem))+' '+tenStarOf(c.dayMaster.stem,repHidden(x).stem)+' '+x.terrain).join('|');
+    const A=mk(1942,1,8,19,30), B=mk(1980,12,26,0,0);
+    if(row(A)!=='辛巳戊 比肩 印綬 死|辛丑癸 比肩 食神 養|辛酉庚 - 劫財 建禄|戊戌辛 印綬 比肩 冠帯') e.push('1942の命式：'+row(A));
+    if(row(B)!=='庚申庚 印綬 印綬 死|戊子癸 正官 比肩 建禄|癸酉辛 - 偏印 病|壬子癸 劫財 比肩 建禄') e.push('1980の命式：'+row(B));
+    window.chart=A; const ka=kakukyoku(A); if(ka.name!=='従革格') e.push('1942の格局：'+ka.name);
+    window.chart=B; const kb=kakukyoku(B); if(kb.name!=='建禄月劫格'||!(kb.extra||[]).some(x=>x.name==='帰禄格')) e.push('1980の格局：'+kb.name+'／'+(kb.extra||[]).map(x=>x.name).join(''));
+    const T=JSON.stringify(KAKU_NAIKAKU); ['殺印生化格','時上偏財格','専食禄格','傷官破れ尽す格','官殺混雑格','財官双美'].forEach(n=>{ if(T.indexOf(n)<0) e.push('内格の表に'+n+'がない'); }); if(/殺印化生格/.test(T)) e.push('殺印化生格のまま');
+    return e; });
+  const okK=r.length===0; console.log('  '+(okK?'OK':'NG')+' 格局（教科書の実例2つ・資料18の名前）'+(okK?'':'  … '+r.join(' / '))); if(!okK) res.fails.push('格局: '+r.join(' / ')); }
 // かっこの中の年にも干支・年齢を付ける（2026-10-24「（2026年内・2027年）」で見つかったもの）。PRO・易・鑑定書で同じ中身
 { const r=await p.evaluate(()=>typeof pkStampYears!=='function'?'':pkStampYears('関係を育てる時期です（2026年内・2027年）。',1985,0,false));
   const okB=r==='関係を育てる時期です（2026年〔丙午・41歳〕内・2027年〔丁未・42歳〕）。'||r==='関係を育てる時期です（2026年〔41歳〕内・2027年〔42歳〕）。';   /* ビギナーのやさしい表示は干支なし */ console.log('  '+(okB?'OK':'NG')+' かっこの中の年にも干支・年齢を付ける'+(okB?'':'  … '+r)); if(!okB) res.fails.push('かっこの中の年'); }
