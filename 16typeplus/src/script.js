@@ -270,27 +270,15 @@ function render(instant){
  if(K)el.innerHTML='<h3 class="kth">'+TR("くわしい鑑定")+'</h3>'+(K.aru?[["aru","こんなこと、ありませんか？"],["why","どうしてそうなるの？"],["yure","16タイプの結果が変わるわけ"],["plus","悩みを、こう見てみる"],["hidden","あなたの、もう一つの力"],["tip","生かすヒント"]].filter(([f])=>K[f]).map(([f,h])=>'<div class="kts kt-'+f+'"><h4><i aria-hidden="true">'+({aru:"?",why:"!",yure:"⇄",plus:"+",hidden:"✦",tip:"✓"})[f]+'</i>'+TR(h)+'</h4>'+kfmt(K[f],f)+(f==="yure"?swayNote(born,now):'')+'</div>').join(""):'<p class="ktb">'+esc(K.body)+'</p>')+(K.aru?'':'<dl class="ktl"><dt>'+TR("悩みやすいこと")+'</dt><dd>'+esc(K.worry)+'</dd></dl>');}}window.__me.karaiC=strip(C.karai||"");drawBalance(N);lvInit();saveResult();layoutResult();recPick=null;drawRec();
 }
 /* ---- 相性 ---- */
-const ps={y:1995,m:4,d:20};
-function fillP(){opts($("py"),1930,2020,ps.y);opts($("pm"),1,12,ps.m);const mx=new Date(ps.y,ps.m,0).getDate();if(ps.d>mx)ps.d=mx;opts($("pd"),1,mx,ps.d);}
-["py","pm","pd"].forEach(id=>$(id).addEventListener("change",e=>{ps[id.slice(1)]=+e.target.value;fillP();}));
 Object.keys(D.NICK).forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t+p16(t);$("pt").appendChild(o);});
 function same(a,b){let n=0;for(let i=0;i<4;i++)if(a[i]===b[i])n++;return n;}
 const TIER=[[TR("正反対の刺激コンビ"),TR("お互いにないものを持っている2人。助け合えるけど、ぶつかることもある。")],[TR("考え方がちがう発見コンビ"),TR("考え方がちがうので、話すたびに「なるほど」がある。")],[TR("ほどよいバランス型"),TR("半分同じで、半分ちがう。ほどよい距離で長く続く。")],[TR("似た者同士の安心ペア"),TR("感覚がよく似ていて、無理せず自然体でいられる。")],[TR("鏡みたいな2人"),TR("いいところも苦手なところもそっくり。気持ちがよくわかる2人。")]];
-/* P = {born, num, now(任意), who} */
-function pairHTML(P){const me=window.__me,sb=same(me.born,P.born),tb=TIER[sb];
- let html='<div class="phead"><div><small>'+esc(P.who)+TR('の気質</small><span class="t">')+P.born+'</span><small>'+(NM[P.born]?NM[P.born]+TR("（")+P16[P.born]+TR("）"):"")+(P.now?TR('（性格は ')+P.now+TR('）'):'')+'</small></div></div>';
- html+=TR('<div class="mx"><div><span class="l">気質の相性</span><div class="v">')+tb[0]+'</div></div>';
- if(P.now){const sn=same(me.now,P.now),tn=TIER[sn];html+=TR('<div><span class="l">性格の相性</span><div class="v">')+tn[0]+'</div></div></div>';
-  const hiB=sb>=2,hiN=sn>=2;
-  const V=hiB&&hiN?[TR("どこから見ても相性のいい2人"),TR("性格も気質も、自然と気が合う。一緒にいて疲れない相手。")]
-   :hiB&&!hiN?[TR("性格はすれ違って見えても、気質は似た者同士"),TR("性格どうしは噛み合わない場面があっても、気質ではわかり合える。時間をかけるほど仲良くなる。")]
-   :!hiB&&hiN?[TR("性格は気が合う。でも気質は考え方がちがう"),TR("性格どうしは話が合うけれど、気質は考え方が違う。大事な決断のときに差が出やすいので、本音を話す時間を。")]
-   :[TR("正反対だから、助け合える2人"),TR("性格も気質も違うので、苦手なところを助け合える。ぶつかったら、違いを面白がって。")];
-  const TP=hiB&&hiN?TR("似ているぶん、苦手なことも同じになりがち。2人とも苦手なことは、早めにだれかに頼りましょう。"):hiB&&!hiN?TR("ふだんの話がかみ合わない日は、休みの日にゆっくり話すと、わかり合えます。"):!hiB&&hiN?TR("大事なことを決める前に、「どうしてそう思うの？」と1回聞いてみてください。"):TR("ぶつかったら、相手のやり方を1回だけ試してみてください。");
-  html+='<p class="verdict"><b>'+V[0]+'</b>'+V[1]+'</p><p class="ptip"><b>'+TR("うまくいくコツ")+'</b>'+TP+'</p>';}
- else html+=TR('<div><span class="l">性格の相性</span><div class="v" style="color:var(--muted);font-weight:500">16タイプを入れると出ます</div></div></div><p class="verdict">')+tb[1]+'</p>';
- return html;}
-$("pGo").onclick=()=>{const N=natal(ps.y,ps.m,ps.d);$("pRes").innerHTML=pairHTML({born:N.t,num:N.num,now:$("pt").value||null,who:TR("あの人")});$("pRes").hidden=false;};
+/* P = {now, who}。相性は16タイプ（性格）だけで出す */
+function pairHTML(P){const me=window.__me,sn=same(me.now,P.now),tn=TIER[sn];
+ const TP=sn>=3?TR("似ているぶん、苦手なことも同じになりがち。2人とも苦手なことは、早めにだれかに頼りましょう。"):sn===2?TR("大事なことを決める前に、「どうしてそう思うの？」と1回聞いてみてください。"):TR("ぶつかったら、相手のやり方を1回だけ試してみてください。");
+ return '<div class="phead"><div><small>'+esc(P.who)+TR("の16タイプ")+'</small><span class="t">'+P.now+'</span><small>'+(NM[P.now]?NM[P.now]+TR("（")+P16[P.now]+TR("）"):"")+'</small></div></div>'
+  +'<div class="mx one"><div><span class="l">'+TR("16タイプの相性")+'</span><div class="v">'+tn[0]+'</div></div></div><p class="verdict">'+tn[1]+'</p><p class="ptip"><b>'+TR("うまくいくコツ")+'</b>'+TP+'</p>';}
+$("pGo").onclick=()=>{const t=$("pt").value;$("pRes").innerHTML=t?pairHTML({now:t,who:TR("あの人")}):'<p class="hint">'+TR("相手の16タイプを選んでください。")+'</p>';$("pRes").hidden=false;};
 
 /* ---- あの人に送る（招待リンク） ---- */
 /* 生年月日は送らず、タイプとキャラ番号と名前だけを載せる */
@@ -306,7 +294,7 @@ function parseInvite(){try{let t=location.hash.replace(/^#/,"");const q=new URLS
   return {born:a[1].slice(0,4),now:a[2].slice(0,4),bornF:a[1],nowF:a[2],num,who:a[4]&&a[4]!=="-"?b64d(a[4])+TR("さん"):TR("送ってくれた人"),back:a[5]==="r"};}catch(e){return null;}}
 const INV=parseInvite();
 $("mkLink").onclick=()=>{const u=inviteURL(),nm=$("myName").value.trim();
- const msg=(nm?nm+TR("から"):"")+TR("相性診断が届いたよ。気質と性格の両方から、2人の相性がわかる👇")+"\n"+u;
+ const msg=(nm?nm+TR("から"):"")+TR("相性診断が届いたよ。16タイプから、2人の相性がわかる👇")+"\n"+u;
  $("lnk").value=u;$("lnkLine").href="https://line.me/R/msg/text/?"+encodeURIComponent(msg);$("lnkBox").hidden=false;window.__msg=msg;};
 /* スマホでは、長いURLを見せずに共有メニュー（LINEなど）を開く */
 $("lnkLine").onclick=e=>{if(navigator.share&&window.__msg){e.preventDefault();navigator.share({text:window.__msg}).catch(()=>{});}else if(LANG!=="ja"){e.preventDefault();$("cpLink").click();}};
@@ -324,7 +312,7 @@ function showInvitePair(){if(!INV)return;$("pRes").innerHTML=pairHTML(INV)
   const msg=(nm?nm+TR("から"):"")+TR("相性の結果を送るね。開くと、あなたの画面でも2人の相性が見られるよ👇")+"\n"+u;window.__msg=msg;try{track("sendback_click");}catch(e){}
   const fb=()=>{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(msg).then(()=>{$("sbDone").textContent=TR("送る文をコピーしました。LINEなどに貼りつけて送ってください。");$("sbDone").hidden=false;}).catch(()=>{});}else{$("sbDone").textContent=u;$("sbDone").hidden=false;}};
   if(navigator.share)navigator.share({text:msg}).catch(e=>{if(e&&e.name!=="AbortError")fb();});else fb();};}
-fillP();
+
 
 /* ---- 結果を画像でシェア ---- */
 const SHARE_URL="https://16typeplus.jp/"+(LANG==="ja"?"":LANG+"/");
@@ -865,15 +853,15 @@ function groupResult(members){
   tips.push({L:few,text:GTR("「{l}」は{c}人だけです。その人の意見は少数派になりがちなので、決める前に聞いてみましょう。").replace("{l}",GTR(GL[few])).replace("{c}",c)});}
  tips=tips.slice(0,3);
  /* 気質で見ると：性格と気質で多い方が入れかわる軸 */
- const flip=GAX.map((ax,i)=>{const a=now[i],b=born[i];const clear=x=>Math.abs(x.ca-x.cb)/n>=1/3,nm=a.ca>a.cb?a.a:a.b,bm=b.ca>b.cb?b.a:b.b;return clear(a)&&clear(b)&&nm!==bm?{now:nm,born:bm}:null;}).filter(Boolean).slice(0,2)
+ const flip=[]||GAX.map((ax,i)=>{const a=now[i],b=born[i];const clear=x=>Math.abs(x.ca-x.cb)/n>=1/3,nm=a.ca>a.cb?a.a:a.b,bm=b.ca>b.cb?b.a:b.b;return clear(a)&&clear(b)&&nm!==bm?{now:nm,born:bm}:null;}).filter(Boolean).slice(0,2)
   .map(f=>GTR("性格では「{a}」が多いけれど、気質（生まれつき）では「{b}」が多いグループです。").replace("{a}",GTR(GL[f.now])).replace("{b}",GTR(GL[f.born])));
  /* 2人ずつ：性格と気質の両方で、同じ文字の数 */
- const pairs=[];for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)pairs.push({i,j,s:gSame(M[i].now,M[j].now)*2+gSame(M[i].born,M[j].born)});
+ const pairs=[];for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)pairs.push({i,j,s:gSame(M[i].now,M[j].now)});
  pairs.sort((p,q)=>q.s-p.s);
  const why=(p,match)=>{const A=M[p.i].now,B=M[p.j].now,out=[];for(let k=0;k<4;k++){if(match&&A[k]===B[k])out.push(GTR("どちらも「{l}」").replace("{l}",GTR(GL[A[k]])));if(!match&&A[k]!==B[k])out.push(GTR("{x}は「{a}」、{y}は「{b}」").replace("{x}",san(M[p.i].name)).replace("{a}",GTR(GL[A[k]])).replace("{y}",san(M[p.j].name)).replace("{b}",GTR(GL[B[k]])));}return out.slice(0,2);};
  const good=pairs[0],bad=pairs[pairs.length-1];
  const roles=gRoles(M.map(m=>m.now)),broles=gRoles(M.map(m=>m.born));
- return {n,members:M.map((m,i)=>({...m,role:roles[i],brole:!m.only&&broles[i]!==roles[i]?broles[i]:null})),now,born,feats,tips,flip,
+ return {n,members:M.map((m,i)=>({...m,role:roles[i],brole:null})),now,born,feats,tips,flip,
   good:{a:M[good.i].name,b:M[good.j].name,why:why(good,true)},bad:n>2&&bad.s<good.s&&gSame(M[bad.i].now,M[bad.j].now)<4?{a:M[bad.i].name,b:M[bad.j].name,why:why(bad,false)}:null};}
 function groupHTML(G,title){const e=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
  let h='<div class="gr"><p class="gr-eb">'+GTR("グループの相性")+'</p>'+(title?'<p class="gr-t">'+e(title)+'</p>':'')+'<p class="gr-n">'+GTR("{n}人").replace("{n}",G.n)+'</p>';
@@ -889,7 +877,7 @@ function groupHTML(G,title){const e=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&am
 const KG="16tp.group.v1";let gst=sget(KG)||{title:"",rows:[{name:"",t:""},{name:"",t:""}]};
 function gDraw(){const box=$("gRows");if(!box)return;const me=window.__me;const nm=($("myName")&&$("myName").value.trim())||"";
  const opt=v=>'<option value="">'+TR("16タイプを選ぶ")+'</option>'+Object.keys(D.NICK).map(t=>'<option value="'+t+'"'+(t===v?' selected':'')+'>'+t+p16(t)+'</option>').join("");
- box.innerHTML='<li class="gme"><b>'+TR("あなた")+'</b><span>'+(me?(me.born===me.now?me.now:TR("気質")+" "+me.born+" / "+TR("性格")+" "+me.now):"")+'</span></li>'
+ box.innerHTML='<li class="gme"><b>'+TR("あなた")+'</b><span>'+(me?me.now:"")+'</span></li>'
   +gst.rows.map((r,i)=>'<li><input class="txt" maxlength="12" data-i="'+i+'" data-k="name" value="'+esc(r.name)+'" placeholder="'+TR("名前")+'" aria-label="'+TR("名前（ニックネーム）")+'"><select data-i="'+i+'" data-k="t" aria-label="'+TR("16タイプ")+'">'+opt(r.t)+'</select><button type="button" class="gdel" data-i="'+i+'" aria-label="'+TR("この人を消す")+'">×</button></li>').join("");
  box.querySelectorAll("input,select").forEach(x=>x.oninput=x.onchange=()=>{gst.rows[+x.dataset.i][x.dataset.k]=x.value;sset(KG,gst);});
  box.querySelectorAll(".gdel").forEach(b=>b.onclick=()=>{gst.rows.splice(+b.dataset.i,1);if(!gst.rows.length)gst.rows.push({name:"",t:""});sset(KG,gst);gDraw();});
@@ -898,7 +886,7 @@ function gSetup(){if(!$("group"))return;gDraw();
  $("gTitle").oninput=()=>{gst.title=$("gTitle").value;sset(KG,gst);};
  $("gAdd").onclick=()=>{if(gst.rows.length<9){gst.rows.push({name:"",t:""});sset(KG,gst);gDraw();const l=$("gRows").querySelectorAll("li input");if(l.length)l[l.length-1].focus();}};
  $("gGo").onclick=()=>{const me=window.__me;if(!me)return;gDraw();
-  const rows=gst.rows.filter(r=>r.t),M=[{name:TR("あなた"),born:me.born,now:me.now}].concat(rows.map((r,i)=>({name:r.name.trim()||TR("{n}人目").replace("{n}",i+2),born:r.t,now:r.t,only:true})));
+  const rows=gst.rows.filter(r=>r.t),M=[{name:TR("あなた"),born:me.now,now:me.now,only:true}].concat(rows.map((r,i)=>({name:r.name.trim()||TR("{n}人目").replace("{n}",i+2),born:r.t,now:r.t,only:true})));
   const out=$("gRes");if(M.length<2){out.innerHTML='<p class="hint">'+TR("1人以上、16タイプを選んでください。")+'</p>';out.hidden=false;return;}
   out.innerHTML=groupHTML(groupResult(M),gst.title.trim());out.hidden=false;track("group_view",{size:M.length});out.scrollIntoView({behavior:"smooth",block:"start"});};}
 /* スマホの言語がほかの言語なら、その言語のページもあることを小さく知らせる（自動では移動しない） */
