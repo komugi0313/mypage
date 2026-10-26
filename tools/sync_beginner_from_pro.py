@@ -25,7 +25,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PRO, BEG = ROOT / 'pro', ROOT / 'beginner'
 
-B_TITLE = '今日から占い師｜毎日使える、自分だけの鑑定ツール'
+B_TITLE = '今日から占い師｜知識ゼロから、今日から鑑定できる'
 B_NAME = '今日から占い師'
 B_DESC = '生年月日を入れるだけで、生まれ持った性質・運の流れ・相性まで、ふつうの言葉で読み解く鑑定ツール。知識ゼロでも、今日から鑑定ができます。'
 B_URL = 'https://www.suimei.jp/app-beginner.html'
@@ -104,11 +104,11 @@ def build_app():
     s = rep(s, 'alt="四柱推命占い自動鑑定"', f'alt="{B_NAME}"', 2)
     s = rep(s, '<h2 class="mg-title">四柱推命占い<span style="color:var(--do)">自動鑑定</span></h2>',
             '<h2 class="mg-title">今日から<span style="color:var(--do)">占い師</span></h2>\n'
-            '    <div style="font-size:11.5px;font-weight:800;letter-spacing:.08em;color:var(--muted);margin:-2px 0 4px">毎日使える、自分だけの鑑定ツール</div>', 1)
+            '    <div style="font-size:11.5px;font-weight:800;letter-spacing:.08em;color:var(--muted);margin:-2px 0 4px">知識ゼロから、今日から鑑定できる</div>', 1)
     s = rep(s, '<h1>四柱推命占い<span style="color:var(--do)">自動鑑定</span></h1>',
             '<h1>今日から<span style="color:var(--do)">占い師</span></h1>', 1)
     s = rep(s, '<div class="sub"><span class="nb">命式・運勢・相性・鑑定書、</span> <span class="nb">全てこれ一つで。</span></div>',
-            '<div class="sub"><span class="nb">毎日使える、</span> <span class="nb">自分だけの鑑定ツール</span></div>', 1)
+            '<div class="sub"><span class="nb">知識ゼロから、</span> <span class="nb">今日から鑑定できる</span></div>', 1)
 
     # ---- 共有カードの表示名（社名は共通） ----
     s = rep(s, "SHARE_SITE={ label:'四柱推命占い自動鑑定',", f"SHARE_SITE={{ label:'{B_NAME}',", 1)
