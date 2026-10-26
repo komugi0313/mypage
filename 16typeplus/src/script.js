@@ -557,18 +557,26 @@ function lvInit(){if(typeof LV==="undefined"||!LV||!LV.questions)return;let el=$
   +'<button class="btn primary" type="button" id="lvStart">'+TR("恋愛編を診断する")+'</button>'
   +'<div id="lvQ" class="lvq" hidden><div class="qtop"><span class="qcount" id="lvCount"></span><button type="button" class="qlink" id="lvBack">'+TR("← 1つ前の質問へ")+'</button></div><div class="qprog"><span id="lvProg"></span></div><h3 class="qtext" id="lvText"></h3><div class="qex" id="lvExW"><span class="qexl">'+TR("たとえば")+'</span><p id="lvEx"></p></div><div class="qopts" id="lvOpts"></div></div>'
   +'<div id="lvRes" hidden></div>';
- $("lvStart").onclick=()=>{lv={a:new Array(LV.questions.length).fill(null),i:0};$("lvStart").hidden=true;$("lvRes").hidden=true;$("lvQ").hidden=false;lvDraw();$("love").scrollIntoView({behavior:"smooth",block:"start"});};
+ $("lvStart").onclick=()=>{const qs=lvPick();lv={qs,a:new Array(qs.length).fill(null),i:0};$("lvStart").hidden=true;$("lvRes").hidden=true;$("lvQ").hidden=false;lvDraw();$("love").scrollIntoView({behavior:"smooth",block:"start"});};
  $("lvBack").onclick=()=>{if(lv.i>0){lv.i--;lvDraw();}else{$("lvQ").hidden=true;$("lvStart").hidden=false;}};
  const me=window.__me;if(me&&st.love&&st.love.t&&/^[EI][SN][TF][JP]$/.test(st.love.t))lvShow(st.love.t);}
-function lvDraw(){const Q=LV.questions,q=Q[lv.i],A=AX[AXN[q.ax]];$("lvCount").textContent=(lv.i+1)+" / "+Q.length;$("lvProg").style.width=(lv.i/Q.length*100)+"%";
+/* 恋愛編：48問から16問（4つの軸×左右2問ずつ）を選ぶ。前回までに出た質問はあと回し */
+const LVK="16tp.lvused.v1";
+function lvPick(){const Q=LV.questions,rec=new Set(sget(LVK)||[]),R=[["E","N","T","J"],["I","S","F","P"]],out=[];
+ const pole=(ax,p)=>{const c=Q.map((q,i)=>i).filter(i=>Q[i].ax===ax&&Q[i].p===p);for(let j=0;j<c.length;j++){const r=j+Math.floor(Math.random()*(c.length-j));[c[j],c[r]]=[c[r],c[j]];}
+  return c.filter(i=>!rec.has(i)).concat(c.filter(i=>rec.has(i))).slice(0,2);};
+ const L={};["EI","SN","TF","JP"].forEach((ax,k)=>{L[R[0][k]]=pole(ax,R[0][k]);L[R[1][k]]=pole(ax,R[1][k]);});
+ for(let j=0;j<4;j++)R[j%2].forEach(p=>{const i=L[p][j>>1];if(i!=null)out.push(i);});return out;}
+function lvMark(qs){const u=(sget(LVK)||[]).filter(i=>!qs.includes(i)).concat(qs);sset(LVK,u.slice(-32));}
+function lvDraw(){const Q=lv.qs.map(i=>LV.questions[i]),q=Q[lv.i],A=AX[AXN[q.ax]];$("lvCount").textContent=(lv.i+1)+" / "+Q.length;$("lvProg").style.width=(lv.i/Q.length*100)+"%";
  $("lvText").textContent=q.q;$("lvEx").textContent=q.ex||"";$("lvExW").hidden=!q.ex;const o=$("lvOpts");o.innerHTML="";
  LVSCALE.forEach(([t,v,sz])=>{const bt=document.createElement("button");bt.type="button";bt.style.setProperty("--qc","var(--rose)");bt.innerHTML='<i style="width:'+sz+'px;height:'+sz+'px"></i>'+t;bt.setAttribute("aria-pressed",lv.a[lv.i]===v);
   bt.onclick=()=>{if(window.__lvLock)return;window.__lvLock=1;lv.a[lv.i]=v;bt.setAttribute("aria-pressed","true");setTimeout(()=>{window.__lvLock=0;lv.i++;if(lv.i>=Q.length)lvFinish();else lvDraw();},180);};o.appendChild(bt);});}
 function lvFinish(){const me=window.__me,sc={EI:0,SN:0,TF:0,JP:0};
- LV.questions.forEach((q,i)=>{const A=AX[AXN[q.ax]],v=(lv.a[i]==null?2.5:lv.a[i])-2.5;sc[q.ax]+=q.p===A.a?v:-v;});
+ lv.qs.forEach((qi,i)=>{const q=LV.questions[qi],A=AX[AXN[q.ax]],v=(lv.a[i]==null?2.5:lv.a[i])-2.5;sc[q.ax]+=q.p===A.a?v:-v;});lvMark(lv.qs);
  /* 気質と性格が同じ文字はそのまま。ちがう文字だけ、答えが寄った方を選ぶ（3つ目のタイプは作らない） */
  const t=AX.map((A,i)=>me.born[i]===me.now[i]?(sc[A.k]>=4?A.a:sc[A.k]<=-4?A.b:me.now[i]):(sc[A.k]>0?A.a:sc[A.k]<0?A.b:me.now[i])).join("");
- st.love={t,a:lv.a};saveResult();$("lvQ").hidden=true;lvShow(t);$("love").scrollIntoView({behavior:"smooth",block:"start"});}
+ st.love={t,a:lv.a,qs:lv.qs};saveResult();$("lvQ").hidden=true;lvShow(t);$("love").scrollIntoView({behavior:"smooth",block:"start"});}
 function lvHook(born,now,love){let nb=0,nn=0;const nx=[];for(let i=0;i<4;i++){if(born[i]!==now[i]){if(love[i]===born[i])nb++;else nn++;}else if(love[i]!==now[i])nx.push(TR(CORE[love[i]]));}
  const X=nx.join(TR("・"));
  if(born===now)return nx.length?TR("気質も性格も同じ。でも恋をすると、ふだんは出ない「{X}」の面が出てきます。").replace("{X}",X):TR("気質も性格も同じ。恋をしても、いつものあなたのまま。");
