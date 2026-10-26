@@ -2457,7 +2457,7 @@ window.KANSHI60_DETAIL={
   }
 
   // この命式の特徴を「○○（年柱・月柱）があります。」形式で列挙（app-proと同一ロジック・自己完結）。
-  //   当流派どおり：冲・破・害・干合・支合・三合・方合・宿命半会（半合）・宿命中殺・異常干支・魁罡（自然の刑は不採用）。表示層のみ・計算エンジン非改変。
+  //   当流派どおり（害・破は使わない＝鑑定者本人の指示 2026-10-26）：冲・干合・支合・三合・方合・宿命半会（半合）・宿命中殺・異常干支・魁罡（自然の刑は不採用）。表示層のみ・計算エンジン非改変。
   function bxFeatureList(pillars){
     var BRs='子丑寅卯辰巳午未申酉戌亥', STE='甲乙丙丁戊己庚辛壬癸';
     var RG={子:'丑',丑:'子',寅:'亥',亥:'寅',卯:'戌',戌:'卯',辰:'酉',酉:'辰',巳:'申',申:'巳',午:'未',未:'午'};
@@ -2480,8 +2480,6 @@ window.KANSHI60_DETAIL={
     // 2柱関係は、同じ干支ペア（例：庚乙）が複数柱にまたがる場合は最初の1件に集約（正典natalRelsと同じ挙動＝二重計上しない）。
     for(var i=0;i<P.length;i++)for(var j=i+1;j<P.length;j++){var a=P[i],b=P[j];
       if(isCh(a.branch,b.branch)){var kc='冲|'+a.branch+b.branch;if(!_s2[kc]){_s2[kc]=1;out.push('冲（'+Lb(a)+'・'+Lb(b)+'）');}}
-      if(HAx[a.branch]===b.branch){var kh='破|'+a.branch+b.branch;if(!_s2[kh]){_s2[kh]=1;out.push('破（'+Lb(a)+'・'+Lb(b)+'）');}}
-      if(GAIx[a.branch]===b.branch){var kg='害|'+a.branch+b.branch;if(!_s2[kg]){_s2[kg]=1;out.push('害（'+Lb(a)+'・'+Lb(b)+'）');}}
       if(isCh(a.branch,b.branch)&&(TSM[a.stem]||[]).indexOf(b.stem)>=0){
         var aC=(TSM[a.stem][0]===b.stem), ci=aC?i:j, ri=aC?j:i, pc=P[ci], pr=P[ri], tlab;
         if(ri===2) tlab=L(pc)+'→日柱 '+pc.ganzhi+'×'+pr.ganzhi+'・周りの変化から影響を受けやすい形';
@@ -3724,7 +3722,7 @@ window.KANSHI60_DETAIL={
     });
   }
 
-  // 干支関係（干合・支合・三合・方合・半合・冲・刑・破・害）を命式の天干/地支から算出。合化は「→元素」で併記
+  // 干支関係（干合・支合・三合・方合・半合・冲・刑。害・破は当流派では使わない）を命式の天干/地支から算出。合化は「→元素」で併記
   function computeKankei(rp){
     rp=rp||{};
     var order=['year','month','day','hour'], lab=['年','月','日','時'], S=[], B=[];
@@ -3757,8 +3755,6 @@ window.KANSHI60_DETAIL={
       if(CHONG[key]) out.push({t:'冲',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:6});
       if(KEI[key]){ var inSan=false; sankeiHit.forEach(function(s){ if(s.indexOf(B[i])>=0&&s.indexOf(B[j])>=0) inSan=true; }); if(!inSan) out.push({t:'刑',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:7}); }
       if(B[i]===B[j]&&SELFKEI[B[i]]) out.push({t:'刑',d:lab[i]+lab[j]+'（自刑）',o:7});
-      if(HA[key]) out.push({t:'破',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:8});
-      if(GAI[key]) out.push({t:'害',d:lab[i]+lab[j]+'（'+B[i]+B[j]+'）',o:9});
     }
     out.sort(function(a,b){return a.o-b.o;});
     return out;
@@ -3811,7 +3807,7 @@ window.KANSHI60_DETAIL={
     natB.forEach(function(b){ var key=pk(aBranch,b);
       if(HANGO[key]&&!seen.han&&!ev.some(function(x){return x.t==='三合';})){ ev.push({t:'半合',s:HANGO[key],good:1,o:4}); seen.han=1; }
       if(GOGO[key]!=null&&!seen.go){ ev.push({t:'支合',s:'',good:1,o:5}); seen.go=1; }
-      // 注意の巡りは「冲（大きな変化・ぶつかり）」だけを表示。刑・破・害は軽微で数も多く、過度な不安につながるため年運表には出さない。
+      // 注意の巡りは「冲（大きな変化・ぶつかり）」だけを表示。刑は軽微で数も多く（害・破は当流派では使わない）、過度な不安につながるため年運表には出さない。
       if(CHONG[key]&&!seen.cho){ ev.push({t:'冲',s:'',good:0,o:6}); seen.cho=1; }
     });
     ev.sort(function(a,b){return a.o-b.o;});
@@ -3910,7 +3906,7 @@ window.KANSHI60_DETAIL={
     });
     updateGogyoDiagram(dayEl);   // 五行図：数は表（実数）を鏡写し。ノード位置は日干から見た通変（印/食/官/財）
     updateTsuhen(dayEl);         // 五行バランス表の通変列
-    // 干支関係（干合・三合・方合・半合・冲・刑・破・害）
+    // 干支関係（干合・三合・方合・半合・冲・刑。害・破は使わない）
     renderKankei(computeKankei(r.pillars||{}));
     // 年運（12年）— 全年データ(annualByYear)を保持し、指定年から12年を描ける形に（大運↔年運の連動用）
     _nenunState={ byYear:(r.annualByYear||{}), kuboPair:(r.kuboPair||r.tenchusatsu||''), nowYear:(r.nowYear!=null?r.nowYear:(r.birthYear+ (r.nowAge||0))), pillars:(r.pillars||{}) };
