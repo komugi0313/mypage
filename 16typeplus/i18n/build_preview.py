@@ -45,7 +45,8 @@ def lang_data(lang):
     for f in sorted(glob.glob(cd+'*.json')): CW.update(js(f))
     CR={}
     for f in sorted(glob.glob('/home/user/mypage/16typeplus/content/core/part_*.%s.json'%lang)): CR.update(js(f))
-    return {'CR':CR,'CW':CW,'KT':KT,'LV':LVd,'BODY':body,'D':d,'QZ':quiz,'COMBO':combos,'PS':persona,'HN':hints,'I18N':ui}
+    return {'CR':CR,'CW':CW,'KT':KT,'LV':LVd,'BODY':body,'D':d,'QZ':quiz,'COMBO':{},  # 前の診断（隠れギャップ診断）の組み合わせ名は画面で使わないので入れない
+           'PS':persona,'HN':hints,'I18N':ui}
 def preview():
     langs={l:lang_data(l) for l in ['ja','en','ko']}
     head=rd(S+'head.html')
