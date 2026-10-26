@@ -44,6 +44,8 @@ const ms=await waitFor(()=>{const it=document.querySelector('#reading .rd-item:l
 await p.waitForTimeout(1500);
 const items=await p.evaluate(()=>document.querySelectorAll('#reading .rd-item').length);
 const A=await p.evaluate(()=>{const it=document.querySelector('#reading .rd-item:last-child');return it?it.querySelector('.rd-body').innerText:'';});
+{ const need=await p.evaluate(()=>{ try{ const g=kakukyoku(chart); const plain=document.documentElement.classList.contains('bg-on'); if(plain&&typeof window.pkBTypeOf==='function'){ const t=window.pkBTypeOf(g,chart); return t?[t[0].replace(/\s/g,'')]:[]; } const m=String(g.name).match(/（([^）]+)）/); return [g.name].concat(m?[m[1]]:[]).map(x=>x.replace(/（.*$/,'')); }catch(e){ return ['(計算エラー)']; } });
+  ok('相談1：鑑定文に格局（ビギナーは生まれ持った型）が入っている（安全装置）', need.length>0&&need.some(n=>A.replace(/\s/g,'').includes(n)), need.join('/')); }
 ok('相談1：答えが出る（60秒以内）'+(MODE!=='online'?'（端末の中の答え・30秒以内）':''), ms>=0&&(MODE==='online'||ms<30000) && A.length>200, `${(Date.now()-t1)/1000}秒・${A.length}字`);
 ok('相談1：三度押しでも答えは1つ', items===1, 'items='+items);
 const cQ1=calls-c0; ok('相談1：文章作成の呼び出し回数'+(site==='beginner'?'（ビギナーは専門用語の書き直しで最大4回）':''), MODE!=='online'? true : (site==='beginner'?(cQ1>=2&&cQ1<=4):cQ1===2), 'calls='+cQ1);
