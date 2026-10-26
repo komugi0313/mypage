@@ -63,7 +63,15 @@ const sset=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k
 /* 16Personalities での呼び名（参考表示用） */
 /* 16Personalities での呼び名（参考としてカッコで表示） */
 const P16={INTJ:TR("建築家"),INTP:TR("論理学者"),ENTJ:TR("指揮官"),ENTP:TR("討論者"),INFJ:TR("提唱者"),INFP:TR("仲介者"),ENFJ:TR("主人公"),ENFP:TR("運動家"),ISTJ:TR("管理者"),ISFJ:TR("擁護者"),ESTJ:TR("幹部"),ESFJ:TR("領事"),ISTP:TR("巨匠"),ISFP:TR("冒険家"),ESTP:TR("起業家"),ESFP:TR("エンターテイナー")};
-const p16=t=>TR("（")+P16[t]+TR("）");
+const NM={INTJ:TR("計画派"),INTP:TR("探究派"),ENTJ:TR("リーダー"),ENTP:TR("アイデア派"),INFJ:TR("共感派"),INFP:TR("想像派"),ENFJ:TR("応援派"),ENFP:TR("好奇心派"),ISTJ:TR("コツコツ派"),ISFJ:TR("見守り派"),ESTJ:TR("まとめ役"),ESFJ:TR("世話役"),ISTP:TR("器用派"),ISFP:TR("マイペース派"),ESTP:TR("行動派"),ESFP:TR("ムードメーカー")};
+const p16=t=>NM[t]?" "+NM[t]+TR("（")+P16[t]+TR("）"):"";
+/* 画面用：自分たちの名前を主に、もとの16タイプ名はカッコで薄く */
+const p16h=t=>NM[t]?'<span class="tnm">'+NM[t]+'</span><span class="t16">'+TR("（")+P16[t]+TR("）")+'</span>':"";
+/* 画像用：名前は濃く、カッコの中は薄く。入りきらなければ字を小さくする */
+function fillNm(c,pre,t,x,y,al,col,faint,maxW){const a=pre+(NM[t]?(pre?" ":"")+NM[t]:""),b=NM[t]?TR("（")+P16[t]+TR("）"):"";const f0=c.font,m=f0.match(/(\d+)px/);let sz=m?+m[1]:30;
+ if(maxW){while(c.measureText(a+b).width>maxW&&sz>14){sz-=2;c.font=f0.replace(/\d+px/,sz+"px");}}
+ const w1=c.measureText(a).width,w2=c.measureText(b).width,al0=c.textAlign,st=al==="center"?x-(w1+w2)/2:al==="right"?x-w1-w2:x;
+ c.textAlign="left";c.fillStyle=col;c.fillText(a,st,y);c.fillStyle=faint;c.fillText(b,st+w1,y);c.textAlign=al0;c.font=f0;return sz;}
 const an=t=>t+p16(t);
 const CHAR_BASE=(typeof window.CHAR_BASE==="string")?window.CHAR_BASE:"chars/";
 const charSrc=(t,small)=>CHAR_BASE+t+(small?"_s":"")+".webp";
@@ -78,7 +86,7 @@ function fillDate(){opts($("y"),1930,2020,dset.y?st.y:null,TR("年"));opts($("m"
 ["y","m","d"].forEach(id=>$(id).addEventListener("change",e=>{const v=e.target.value;if(v===""){dset[id]=false;}else{st[id]=+v;dset[id]=true;}fillDate();hideOld();if(dset.y&&dset.m&&dset.d){const er=$("dateErr");if(er)er.hidden=true;}}));
 const pk=$("picker"),sel=[null,null,null,null];
 function drawSlots(popI){$("slots").innerHTML=AX.map((A,i)=>'<span style="--c:var('+A.c+')" class="'+(sel[i]?"fill":"empty")+(i===popI?" pop":"")+'">'+(sel[i]||"?")+'</span>').join("");
- const left=sel.filter(v=>!v).length,go=$("go");const tt=sel.join("");$("slotName").innerHTML=left?"":'<b>'+tt+(selAT?"-"+selAT:"")+'</b>'+p16(tt);{const pf=$("pkFig");if(pf){pf.hidden=!!left;if(!left){$("pkImg").src=charSrc(tt);$("pkImg").alt=an(tt);}}}go.disabled=left>0;go.textContent=left?TR("あと")+left+TR("つ選んでください"):TR("結果を見る");}
+ const left=sel.filter(v=>!v).length,go=$("go");const tt=sel.join("");$("slotName").innerHTML=left?"":'<b>'+tt+(selAT?"-"+selAT:"")+'</b>'+p16h(tt);{const pf=$("pkFig");if(pf){pf.hidden=!!left;if(!left){$("pkImg").src=charSrc(tt);$("pkImg").alt=an(tt);}}}go.disabled=left>0;go.textContent=left?TR("あと")+left+TR("つ選んでください"):TR("結果を見る");}
 AX.forEach((A,i)=>{const g=document.createElement("div");g.className="seg";g.style.setProperty("--c","var("+A.c+")");g.setAttribute("role","group");g.setAttribute("aria-label",A.name);
  [[A.a,A.aw],[A.b,A.bw]].forEach(([l,w])=>{const bt=document.createElement("button");bt.type="button";bt.innerHTML=l+"<small>"+w+"</small>";
   bt.setAttribute("aria-pressed","false");bt.onclick=()=>{hideOld();sel[i]=l;g.classList.add("done");[...g.children].forEach(c=>c.setAttribute("aria-pressed",c===bt));drawSlots(i);};g.appendChild(bt);});
@@ -211,7 +219,7 @@ function drawPersona(which){const me=window.__me;if(!me||typeof PS==="undefined"
  $("pNow").setAttribute("aria-selected",which==="now");$("pBorn").setAttribute("aria-selected",which!=="now");
  if(!P){$("psCatch").textContent="（"+t+TR("の人物像は準備中です）");["psOv","psRel","psLove","psWork","psGrow","psAT"].forEach(id=>$(id).textContent="");$("psStr").innerHTML=$("psPit").innerHTML=$("psJobs").innerHTML="";return;}
  const li=a=>a.map(x=>{const [h,d]=x.split("｜");return "<li><b>"+h+"</b><span>"+(d||"")+"</span></li>";}).join("");
- {const im=$("psImg");if(im){im.src=charSrc(t);im.alt=an(t);}}$("psCode").innerHTML='<span class="nw">'+t+(at?"-"+at:"")+'</span><span class="nw">'+p16(t)+'</span>';$("psCatch").textContent=P.catch;$("psOv").textContent=P.overview;
+ {const im=$("psImg");if(im){im.src=charSrc(t);im.alt=an(t);}}$("psCode").innerHTML='<span class="nw">'+t+(at?"-"+at:"")+'</span><span class="nw">'+p16h(t)+'</span>';$("psCatch").textContent=P.catch;$("psOv").textContent=P.overview;
  $("psStr").innerHTML=li(P.strengths);$("psPit").innerHTML=li(P.pitfalls);
  $("psAT").innerHTML=at?'<b>'+(at==="A"?TR("自己主張型（A）"):TR("慎重型（T）"))+TR('のあなたは</b>')+P[at]:"";$("psAT").hidden=!at;
  $("aruH").textContent=t+TR(" のあるある");$("aru").innerHTML=(D.ARUARU[t]||[]).map(x=>"<li>"+x+"</li>").join("");
@@ -227,7 +235,7 @@ function render(instant){
  const diff=AX.map((A,i)=>now[i]!==born[i]),atDiff=!!(bAT&&nAT&&bAT!==nAT),dn=diff.filter(Boolean).length+(atDiff?1:0);
  const cp=x=>'<span class="sc">'+TR("（")+x+TR("）")+'</span>';
  {const KTt=(typeof KT!=="undefined"&&KT&&KT[born+">"+now]&&KT[born+">"+now].title)||"";
- $("rStory").innerHTML=(KTt?'<span class="rs-eb">'+TR("あなたは")+'</span><span class="rs-t">'+esc(KTt)+'</span>':'')+'<span class="rs-chips">'+(born===now?'<span class="rs-c n"><small>'+TR("気質も性格も")+'</small><b>'+nowF+'</b>'+cp(P16[now])+'</span>':'<span class="rs-c b"><small>'+TR("気質")+'</small><b>'+bornF+'</b>'+cp(P16[born])+'</span><span class="rs-c n"><small>'+TR("性格")+'</small><b>'+nowF+'</b>'+cp(P16[now])+'</span>')+'</span>';}
+ $("rStory").innerHTML=(KTt?'<span class="rs-eb">'+TR("あなたは")+'</span><span class="rs-t">'+esc(KTt)+'</span>':'')+'<span class="rs-chips">'+(born===now?'<span class="rs-c n"><small>'+TR("気質も性格も")+'</small><b>'+nowF+'</b>'+p16h(now)+'</span>':'<span class="rs-c b"><small>'+TR("気質")+'</small><b>'+bornF+'</b>'+p16h(born)+'</span><span class="rs-c n"><small>'+TR("性格")+'</small><b>'+nowF+'</b>'+p16h(now)+'</span>')+'</span>';}
  const ATC="--rose";
  let fh=TR('<span class="rl"><b>気質</b>生年月日から</span>')+AX.map((A,i)=>'<span class="tile b'+(diff[i]?' c':'')+'" style="--c:var('+A.c+')">'+born[i]+'</span>').join("")+'<span class="tile b at'+(atDiff?' c':'')+'" style="--c:var('+ATC+')">'+(bAT||"–")+'</span>';
  fh+='<span class="rl e"></span>'+AX.map((A,i)=>'<span class="arw'+(diff[i]?' c':'')+'" style="--c:var('+A.c+')">'+(diff[i]?'↓':'｜')+'</span>').join("")+'<span class="arw'+(atDiff?' c':'')+'" style="--c:var('+ATC+')">'+(atDiff?'↓':'｜')+'</span>';
@@ -259,7 +267,7 @@ function render(instant){
  {const gx=$("gapX");if(gx){const oneG=!gk.length;gx.innerHTML=oneG?'<div class="gx"><p>'+HN.same.both+'</p></div>':gk.map(k=>{const g=HN.gap[k];return '<div class="gx" style="--c:var('+cOfG(k)+')"><p class="gxh"><span class="ax">'+g.axis+'</span><span class="nw"><b>'+k[0]+'</b>'+g.from+TR(" ＋ ")+'<b>'+k[1]+'</b>'+g.to+'</span></p><p>'+g.both+'</p></div>';}).join("");}
   window.__worry=gk.length?[].concat(HN.gap[gk[0]].worry)[0]:[].concat(HN.same.worry)[0];}
  window.__me={born,now,N,bAT,nAT};drawPersona("now");
- const nw=(a,b)=>'<span class="nw">'+a+'</span><span class="nw">'+b+'</span>';$("p16Born").innerHTML=nw(bornF,p16(born));$("p16Now").innerHTML=nw(nowF,p16(now));
+ const nw=(a,b)=>'<span class="nw">'+a+'</span><span class="nw">'+b+'</span>';$("p16Born").innerHTML=nw(bornF,p16h(born));$("p16Now").innerHTML=nw(nowF,p16h(now));
  $("nkBorn").textContent=D.NICK[born];[["imBorn",born],["imNow",now]].forEach(([id,t])=>{const im=$(id);if(im){im.src=charSrc(t);im.alt=an(t);}});
  {const one=born===now,nb=$("imBorn").closest(".nk"),nn=$("imNow").closest(".nk"),nr=document.querySelector(".nicks .nar");nb.hidden=one;if(nr)nr.hidden=one;document.querySelector(".nicks").classList.toggle("one",one);
   const lb=nn.querySelector(".nl");if(!lb.dataset.def)lb.dataset.def=lb.textContent;lb.textContent=one?TR("気質も性格も"):lb.dataset.def;
@@ -282,7 +290,7 @@ function same(a,b){let n=0;for(let i=0;i<4;i++)if(a[i]===b[i])n++;return n;}
 const TIER=[[TR("正反対の刺激コンビ"),TR("お互いにないものを持っている2人。助け合えるけど、ぶつかることもある。")],[TR("考え方がちがう発見コンビ"),TR("考え方がちがうので、話すたびに「なるほど」がある。")],[TR("ほどよいバランス型"),TR("半分同じで、半分ちがう。ほどよい距離で長く続く。")],[TR("似た者同士の安心ペア"),TR("感覚がよく似ていて、無理せず自然体でいられる。")],[TR("鏡みたいな2人"),TR("いいところも苦手なところもそっくり。気持ちがよくわかる2人。")]];
 /* P = {born, num, now(任意), who} */
 function pairHTML(P){const me=window.__me,sb=same(me.born,P.born),tb=TIER[sb];
- let html='<div class="phead"><div><small>'+esc(P.who)+TR('の気質</small><span class="t">')+P.born+'</span><small>'+(P16[P.born]||"")+(P.now?TR('（性格は ')+P.now+TR('）'):'')+'</small></div></div>';
+ let html='<div class="phead"><div><small>'+esc(P.who)+TR('の気質</small><span class="t">')+P.born+'</span><small>'+(NM[P.born]?NM[P.born]+TR("（")+P16[P.born]+TR("）"):"")+(P.now?TR('（性格は ')+P.now+TR('）'):'')+'</small></div></div>';
  html+=TR('<div class="mx"><div><span class="l">気質の相性</span><div class="v">')+tb[0]+'</div></div>';
  if(P.now){const sn=same(me.now,P.now),tn=TIER[sn];html+=TR('<div><span class="l">性格の相性</span><div class="v">')+tn[0]+'</div></div></div>';
   const hiB=sb>=2,hiN=sn>=2;
@@ -362,7 +370,7 @@ async function drawShare(){
   ctx.textAlign="center";ctx.font="600 76px "+MONO;const code=t.split("");let tw=ctx.measureText(t).width,cx=x+pw/2-tw/2;
   code.forEach((ch,i)=>{const changed=!one&&k===1&&me.born[i]!==ch;ctx.fillStyle=changed?cols[i]:SC.ink;ctx.textAlign="left";ctx.fillText(ch,cx,py+ph+84);cx+=ctx.measureText(ch).width;});
   if(at){ctx.font="600 40px "+MONO;ctx.fillStyle=SC.muted;ctx.fillText("-"+at,cx+4,py+ph+84);}
-  ctx.textAlign="center";ctx.font="500 26px "+SANS;ctx.fillStyle=SC.muted;ctx.fillText(p16(t),x+pw/2,py+ph+126);ctx.textAlign="left";});
+  ctx.font="700 26px "+SANS;fillNm(ctx,"",t,x+pw/2,py+ph+126,"center",SC.ink,"#9AA3AF",pw+20);ctx.textAlign="left";});
  if(!one){ctx.font="700 56px "+SANS;ctx.fillStyle=SC.plus;ctx.textAlign="center";ctx.fillText("→",W/2,py+ph/2+18);ctx.textAlign="left";}
  const x0=104;let y=py+ph+200;
  {const co=coreOf(me.born,me.now);if(co){ctx.font="700 24px "+ROUND;const lb=TR("わたしのゆるがない芯"),lw2=ctx.measureText(lb).width+40;ctx.fillStyle=SC.plus;rrect(ctx,x0,y-34,lw2,46,23);ctx.fill();ctx.fillStyle="#fff";ctx.fillText(lb,x0+20,y-3);
@@ -436,7 +444,7 @@ async function drawCloud(){const me=window.__me,{SANS,MONO}=await cwFonts(),W=10
  c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);c.textAlign="center";c.textBaseline="alphabetic";
  const fitF=(t,w,fs,wt)=>{c.font=(wt||700)+" "+fs+"px "+SANS;while(c.measureText(t).width>w&&fs>14){fs--;c.font=(wt||700)+" "+fs+"px "+SANS;}return fs;};
  c.font="500 26px "+SANS;c.fillStyle=SC.muted;c.fillText(one?TR("気質も性格も同じ。2つの円がひとつに重なる人"):coreKey(b,n)==="----"?TR("4つとも違う2つの性質。どちらにもなれるのが、あなたの芯"):TR("2つの性質が重なったところが、あなたのゆるがない芯"),W/2,78);
- c.font="700 46px "+SANS;c.fillStyle=SC.ink;c.fillText(one?b+p16(b):b+"  ＋  "+n,W/2,140);
+ c.font="700 46px "+SANS;if(one)fillNm(c,b,b,W/2,140,"center",SC.ink,"#9AA3AF",W-120);else{c.fillStyle=SC.ink;c.fillText(b+"  ＋  "+n,W/2,140);}
  const cy=730,ry=520;
  if(one){const R=470;c.beginPath();c.ellipse(W/2,cy,R,ry,0,0,Math.PI*2);c.fillStyle=rgba(cb,.09);c.fill();c.lineWidth=4;c.strokeStyle=rgba(cb,.65);c.stroke();
   c.font="700 28px "+SANS;c.fillStyle=cb;c.fillText(TR("気質 ＝ 性格"),W/2,cy-ry+70);
@@ -477,7 +485,7 @@ async function drawKarte(){const me=window.__me,{SANS,MONO}=await cwFonts(),W=10
  const d=new Date();c.textAlign="right";c.font="500 22px "+SANS;c.fillText(LANG==="ja"?d.getFullYear()+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日":d.toISOString().slice(0,10),X1,100);c.textAlign="left";
  let y=176;c.strokeStyle=LINE;c.lineWidth=2;c.strokeRect(X0,y,X1-X0,112);const mid=(X0+X1)/2;c.beginPath();c.moveTo(mid,y);c.lineTo(mid,y+112);c.stroke();
  c.font="500 22px "+SANS;c.fillStyle=SC.muted;c.fillText(TR("気質（生まれ持った）"),X0+24,y+40);c.fillText(TR("性格（経験で育った）"),mid+24,y+40);
- c.font="700 36px "+SANS;c.fillStyle=cb;c.fillText(b+p16(b),X0+24,y+90);c.fillStyle=cn;c.fillText(one?TR("気質と同じ"):n+p16(n),mid+24,y+90);y+=150;
+ c.font="700 36px "+SANS;fillNm(c,b,b,X0+24,y+90,"left",cb,"#9AA3AF",mid-X0-40);c.font="700 36px "+SANS;if(one){c.fillStyle=cn;c.fillText(TR("気質と同じ"),mid+24,y+90);}else fillNm(c,n,n,mid+24,y+90,"left",cn,"#9AA3AF",X1-mid-40);y+=150;
  const LB=cwList(b),LN=cwList(n),co=coreOf(b,n)||{};
  /* 診断名（ゆるがない芯の名前） */
  if(co.name){y+=28;c.font="700 24px "+SANS;c.fillStyle=SC.muted;c.fillText(TR("診断名"),X0,y);c.font="800 46px "+SANS;c.fillStyle=SC.plus;fitF(co.name,X1-X0-140,46,800);c.fillStyle=SC.plus;c.fillText(co.name,X0+120,y+4);y+=66;}
@@ -593,7 +601,7 @@ function lvShow(t){const me=window.__me,P=LV.types&&LV.types[t];if(!me)return;co
   +(anyLab?'<p class="lvleg">'+TR("文字の下の小さな言葉は、恋をしたときにその文字がどこから出たかです。")+([0,1,2,3].some(i=>t[i]!==me.born[i]&&t[i]!==me.now[i])?TR("「恋だけ」は、ふだんは出ない面です。"):"")+'</p>':'')
   +'<p class="hook">'+esc(lvHook(me.born,me.now,t))+'</p>';
  if(P){const nm=k=>k+p16(k);
-  h+='<div class="lvp"><p class="lvsub">'+TR("恋のときのあなたは")+'</p><p class="lvname">'+esc(P.t+p16(P.t))+'</p><p class="one">'+TR("「")+esc(P.one)+TR("」")+'</p><p class="desc">'+esc(P.desc)+'</p>'
+  h+='<div class="lvp"><p class="lvsub">'+TR("恋のときのあなたは")+'</p><p class="lvname">'+esc(P.t)+p16h(P.t)+'</p><p class="one">'+TR("「")+esc(P.one)+TR("」")+'</p><p class="desc">'+esc(P.desc)+'</p>'
   +[["fall","好きになると"],["date","付き合うと"],["fight","けんかしたとき"],["last","長く続けるコツ"]].filter(([k])=>P[k]).map(([k,h])=>'<div class="lvs lvs-'+k+'"><h3>'+TR(h)+'</h3><p>'+esc(P[k])+'</p></div>').join("")
   +'<details class="pmore"><summary>'+TR("恋でいいところ・気をつけたいところ")+'</summary><div class="two"><div class="g"><h3>'+TR("恋でいいところ")+'</h3><ul>'+P.good.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div><div class="c"><h3>'+TR("気をつけたいところ")+'</h3><ul>'+P.care.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div></div><p class="key"><b>'+TR("うまくいくコツ")+'</b>'+esc(P.tip)+'</p></details>'
   +'<details class="pmore"><summary>'+TR("恋の相性")+'</summary><div class="cpl"><div class="o"><em>'+TR("気が合う相手")+'</em><b>'+esc(nm(P.best[0]))+'</b>'+esc(P.best[1])+'</div><div class="x"><em>'+TR("すれ違いやすい相手")+'</em><b>'+esc(nm(P.hard[0]))+'</b>'+esc(P.hard[1])+'</div></div></details></div>'
@@ -616,7 +624,7 @@ async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=doc
  const fitF=(txt,w,fs,wt)=>{c.font=(wt||700)+" "+fs+"px "+SANS;while(c.measureText(txt).width>w&&fs>16){fs--;c.font=(wt||700)+" "+fs+"px "+SANS;}return fs;};
  c.font="600 26px "+MONO;c.fillStyle=LVC.muted;c.fillText("16TYPE+  "+TR("恋愛編"),X0,82);
  c.textAlign="center";c.font="600 30px "+MONO;c.fillStyle=LVC.rose;c.fillText(TR("恋をしたときのあなた"),W/2,150);
- fitF(P.t+p16(P.t),X1-X0,64);c.fillStyle=LVC.ink;c.fillText(P.t+p16(P.t),W/2,228);
+ c.font="700 64px "+SANS;fillNm(c,P.t,P.t,W/2,228,"center",LVC.ink,"#B7A9AE",X1-X0);
  /* 恋の4文字と、それぞれが気質・性格のどちらから来たか */
  const tw=170,gap=26,x0=(W-(tw*4+gap*3))/2,ty=270;
  for(let i=0;i<4;i++){const x=x0+i*(tw+gap),l=t[i],b=me?me.born[i]:l,n=me?me.now[i]:l;
@@ -640,7 +648,7 @@ async function lvSheet(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1700,cv=doc
  const wrap=(t,w)=>wrapLines(c,t,w,9);
  c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);c.fillStyle=LVC.rose;c.fillRect(0,0,W,14);
  c.font="600 26px "+MONO;c.fillStyle=LVC.muted;c.fillText("16TYPE+  "+TR("恋愛編"),70,95);c.font="600 40px "+MONO;c.fillStyle=LVC.rose;c.fillText(TR("恋愛")+" "+an(P.t),70,185);
- c.font="700 60px "+SANS;c.fillStyle=LVC.ink;wrapLines(c,P.t+p16(P.t),W-140,2).forEach((l,i)=>c.fillText(l,70,275+i*70));
+ c.font="700 60px "+SANS;fillNm(c,P.t,P.t,70,275,"left",LVC.ink,"#B7A9AE",W-140);
  let y=390;c.fillStyle=LVC.roseT;rrect(c,60,y,W-120,130,20);c.fill();c.font="500 24px "+SANS;c.fillStyle=LVC.rose;c.fillText(TR("一言で言うと…"),90,y+42);
  c.font="700 34px "+SANS;c.fillStyle=LVC.ink;wrap(TR("「")+P.one+TR("」"),W-180).slice(0,2).forEach((l,i)=>c.fillText(l,90,y+92+i*44));
  y=590;c.font="500 26px "+SANS;c.fillStyle=LVC.ink;wrap(P.desc,W-140).slice(0,5).forEach(l=>{c.fillText(l,70,y);y+=40;});y+=40;
