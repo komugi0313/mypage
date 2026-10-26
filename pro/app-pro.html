@@ -2124,11 +2124,11 @@ const KAKU_SUB_ADVICE={
   '時上偏財':'富裕の暗示。財を動かす才があり、晩年・副収入・目下の縁で豊かになりやすい。'};
 const KAKU_GAIKAKU_NAME={土:'化土格',金:'化金格',水:'化水格',木:'化木格',火:'化火格'};
 const ICHIGYO_NAME={木:'曲直格',火:'炎上格',金:'従革格',水:'潤下格',土:'稼穡格'};
-/* 従格判定用の「効く」通変グループ集計：日干(=自分)を除く天干＋各支の本気・中気の蔵干から数える。
+/* 従格判定用の「効く」通変グループ集計：日干(=自分)を除く天干＋各支の司令の蔵干（先生のロジック。2026-10-26 から。前は本気・中気）から数える。
    余気は根とみなさない（標準的な有根/無根の判定基準）。従旺・従児・従財・従殺の純度判定に使う。 */
 function tsGroupNoSelf(c){const ds=c.dayMaster.stem,g={比劫:0,食傷:0,財:0,官殺:0,印:0};
   c.pillars.forEach((p,i)=>{if(i!==2){const gr=TS_GROUP[tenStarOf(ds,p.stem)];if(g[gr]!=null)g[gr]++;}
-    (p.hiddenStems||[]).forEach(h=>{if(h.role==='本気'||h.role==='中気'){const gr=TS_GROUP[tenStarOf(ds,h.stem)];if(g[gr]!=null)g[gr]++;}});});
+    {const h=repHidden(p);if(h){const gr=TS_GROUP[tenStarOf(ds,h.stem)];if(g[gr]!=null)g[gr]++;}}   /* 蔵干は先生のロジックの司令から必ず出す（鑑定者本人の指示 2026-10-26。前は本気・中気） */});
   return g;}
 function kakukyoku(c){
   const ds=c.dayMaster.stem,dEl=c.dayMaster.element,mb=c.pillars[1].branch,ms=c.pillars[1].stem,hs=c.pillars[3]?c.pillars[3].stem:'';
@@ -5022,7 +5022,7 @@ function flowHTML(c){
   const bioBlock=(()=>{const df=c.decadeFortunes;if(!df||!df.length)return '';const d0=df[0],birthY=birthYearOf(c);
       const ds=c.dayMaster.stem,sType=strengthType(c);
       const rows=[];
-      {const mp=c.pillars[1],bs=tenStarOf(ds,HONKI[mp.branch]);rows.push({ym:duStartYM(c,{isMonth:true}),y0:birthY,y1:d0.startYear,a0:0,a1:d0.startAge,al:duAgeRange({isMonth:true,endAge:d0.startAge,endMonths:d0.months||0}),e:unkiPct(mp.tenStar,bs,sType),col:ec(mp.stemElement),now:duMonthNow(c),pre:true,tip:'立運前(月柱'+mp.ganzhi+')'});}
+      {const mp=c.pillars[1],_rh=repHidden(mp),bs=(_rh&&_rh.tenStar)||tenStarOf(ds,HONKI[mp.branch]);   /* 第一運＝月柱：命式表と同じ司令の星（2026-10-26） */rows.push({ym:duStartYM(c,{isMonth:true}),y0:birthY,y1:d0.startYear,a0:0,a1:d0.startAge,al:duAgeRange({isMonth:true,endAge:d0.startAge,endMonths:d0.months||0}),e:unkiPct(mp.tenStar,bs,sType),col:ec(mp.stemElement),now:duMonthNow(c),pre:true,tip:'立運前(月柱'+mp.ganzhi+')'});}
       df.forEach(d=>{const bs=tenStarOf(ds,HONKI[d.branch]);rows.push({ym:duStartYM(c,d),y0:d.startYear,y1:d.startYear+9,a0:d.startAge,a1:d.endAge,al:duAgeRange(d),e:unkiPct(d.tenStar,bs,sType),col:ec(d.stemElement),now:duIsNow(c,d),tip:d.ganzhi+' 干'+d.tenStar+'/支'+bs});});
       // 西暦は次の大運の開始年と重ならないように（例：1990–1991／1992–2001）
       rows.forEach((r,i)=>{ if(rows[i+1]&&r.y1>=rows[i+1].y0) r.y1=rows[i+1].y0-1; if(r.y1<r.y0) r.y1=r.y0; });
@@ -7133,16 +7133,17 @@ function pkFixWhen(t,q){ try{   // 「いつ」を聞かれたのに1行目に�
   return L.join('\n'); }catch(e){ return t; } }
 function pkFixAnsHeads(t){ try{   // 冒頭の答えで【お客様へのお伝え方】【どうすればよいか】の見出しが抜けたときに補う（文章作成を呼び直さない。発注者指示 2026-10-21）
   t=String(t||'');
-  t=t.replace(/^([ 　]*[#＃*＊\[［【]*[ 　]*)(?:お相手|お二人|おふたり|ふたり|2人|あなた|相談者|ご相談者|お客さま|お客様)(?:への|へ|の|に)(?:お)?伝え方/gm,'$1お客様へのお伝え方');   // 見出しの名前がずれたとき（お相手へのお伝え方・お相手のお伝え方 など）は正しい名前に（2026-10-26：「の」も）
+  t=t.replace(/^([ 　]*[#＃*＊\[［【]*[ 　]*)(?:お相手|お二人|おふたり|ふたり|2人|あなた|相談者|ご相談者|お客さま|お客様)(?:への|へ|の|に)(?:お)?伝え方/gm,'$1お客様へのお伝え方').replace(/^([ 　]*[#＃*＊\[［【]+[ 　]*)(?:お)?伝え方(?=[ 　]*[】\]］*＊]*[ 　]*[：:]?[ 　]*$)/gm,'$1お客様へのお伝え方');   // 見出しの名前がずれたとき（お相手へのお伝え方・お相手のお伝え方 など）は正しい名前に（2026-10-26：「の」も）
   t=t.replace(/^[ 　]*[#＃*＊\[［【]*[ 　]*(お客様への(?:お)?伝え方|どうすればよいか)[ 　]*[】\]］*＊]*[ 　]*[：:]?[ 　]*(?=\n|$)/gm,'【$1】').replace(/^[ 　]*【(お客様への(?:お)?伝え方|どうすればよいか)】[ 　]*[：:]?[ 　]*(?=[^\s])/gm,'【$1】\n');   // 見出しの書きくずれ（かっこなし・同じ行に本文）をそろえる（発注者指示 2026-10-22）
   { const m0=t.match(/^\s*【お客様への(?:お)?伝え方】\s*\n+([\s\S]*?)(?=\n[ 　]*【|$)/); if(m0){ const ss=(m0[1].replace(/\n+/g,'').match(/[^。！？]+[。！？]/g)||[]).map(function(x){ return x.trim(); }); const pre=function(x){ return /ですね。$|ありがとう|ご相談|お気持ち|お察し|不安|心配|待ち遠し|結論から|見ると、?$/.test(x); };
       const f0=ss.slice(0,5).filter(function(x){ return x.length>=12&&!pre(x); })[0]||ss.filter(function(x){ return x.length>=8; })[0]||''; if(f0) t=f0+'\n\n'+t.replace(/^\s+/,''); } }   // 1行目の結論を飛ばして【お客様へのお伝え方】から始まったときは、最初の一文を結論にする（発注者指示 2026-10-22）
   { const m=t.match(/^\s*([^\n]{1,18})\n+\s*【お客様への(?:お)?伝え方】\s*\n+\s*([^\n]+)/); if(m&&!/[。！？]$/.test(m[1].trim())&&!/\d/.test(m[1])){ const f=(m[2].match(/^[^。！？]+[。！？]/)||[''])[0]; if(f.length>=12) t=t.replace(m[1],f.trim()); } }   // 1行目が「おすすめ（条件つきで良い）」のような札だけのときは、お伝え方の最初の一文を結論にする
   if(/【お客様への(?:お)?伝え方】/.test(t)) return t;
   const L=t.split('\n'); let i=0; while(i<L.length&&!L[i].trim()) i++; if(i>=L.length-1) return t;
-  let b=-1; for(let j=i+1;j<L.length;j++){ if(/^[ 　]*[・･]/.test(L[j])){ b=j; break; } if(/^[ 　]*【/.test(L[j])) return t; }
-  const body=L.slice(i+1,b<0?L.length:b).join('').trim(); if(body.length<40) return t;
-  const out=L.slice(0,i+1).concat(['','【お客様へのお伝え方】'],L.slice(i+1,b<0?L.length:b));
+  let b=-1, h=-1; for(let j=i+1;j<L.length;j++){ if(/^[ 　]*[・･]/.test(L[j])){ b=j; break; } if(/^[ 　]*【/.test(L[j])){ h=j; break; } }   // ほかの見出し（【この2人だけの読み】など）が先に来ても、その手前までをお伝え方にする（2026-10-26）
+  const e=b>=0?b:(h>=0?h:L.length); const body=L.slice(i+1,e).join('').trim(); if(body.length<40) return t;
+  const out=L.slice(0,i+1).concat(['','【お客様へのお伝え方】'],L.slice(i+1,e));
+  if(h>=0){ out.push.apply(out,L.slice(h)); return out.join('\n').replace(/\n{3,}/g,'\n\n').replace(/(【お客様へのお伝え方】|【どうすればよいか】)\n\n/g,'$1\n'); }
   if(b>=0){ if(!/【どうすればよいか】/.test(t)) out.push('','【どうすればよいか】'); out.push.apply(out,L.slice(b)); }
   return out.join('\n').replace(/\n{3,}/g,'\n\n').replace(/(【お客様へのお伝え方】|【どうすればよいか】)\n\n/g,'$1\n'); }catch(e){ return t; } }
 function pkDropRepeat(a,d){   // 上の答えのくり返しになっている文を、くわしい読み解きから外す（文の6割以上が上の答えと同じ言い回しなら外す。中身のなくなった見出しも外す。発注者指示 2026-10-21）
