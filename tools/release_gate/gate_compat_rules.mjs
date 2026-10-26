@@ -328,15 +328,19 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   const okZ=r.length===0; console.log('  '+(okZ?'OK':'NG')+' 蔵干は司令だけ（恋愛の配偶宮の蔵干・60人）'+(okZ?'':'  … '+r.slice(0,3).join(' / '))); if(!okZ) res.fails.push('蔵干は司令だけ'); }
 // 合の決まり（鑑定者本人の教科書 第11回・指示 2026-10-26）：午未は合化なし／命式の干合・支合は隣り合う柱だけ強い／巡りの会局は基本吉／蔵干の干合は司令だけ／干合の教科書の言葉はお客様に渡す文でやわらかく（PRO・易・鑑定書で同じ中身）
 { const r=await p.evaluate(()=>{ const e=[]; if(RIKUGO_EL['午']||RIKUGO_EL['未']) e.push('午未が合化している');
-    let seed=13; const rnd=()=>{ seed=(seed*1103515245+12345)%2147483648; return seed/2147483648; }; let nz=0;
+    let seed=13; const rnd=()=>{ seed=(seed*1103515245+12345)%2147483648; return seed/2147483648; }; let nz=0, ns=0;
     for(let i=0;i<300;i++){ const c=baziCompute({year:1950+Math.floor(rnd()*60),month:1+Math.floor(rnd()*12),day:1+Math.floor(rnd()*28),hour:Math.floor(rnd()*24),minute:0,sex:rnd()<0.5?'male':'female'},0,'none');
       natalRels(c.pillars).forEach(x=>{ if((x.kind==='支合'||x.kind==='干合'||x.kind==='蔵干の干合')&&typeof x.near!=='boolean') e.push('強さがない '+x.kind+x.text);
         if(x.kind==='支合'&&/午/.test(x.text)&&/未/.test(x.text)&&x.el) e.push('午未に五行');
         if(x.kind==='蔵干の干合'){ nz++; const L={年:0,月:1,日:2,時:3}, P=c.pillars, s2=x.text.slice(0,2);
           if(x.zk==='zz'&&!(repHidden(P[L[x.pos[0]]]).stem+repHidden(P[L[x.pos[1]]]).stem===s2)) e.push('司令でない '+x.text);
-          if(x.zk==='tm'&&repHidden(P[1]).stem!==s2[1]) e.push('月支の司令でない '+x.text); } });
+          if(x.zk==='tm'&&repHidden(P[1]).stem!==s2[1]) e.push('月支の司令でない '+x.text);
+          if(x.zk==='same'&&!(P[L[x.pos[0]]].stem===s2[0]&&repHidden(P[L[x.pos[0]]]).stem===s2[1])) e.push('同じ柱の司令でない '+x.text);
+          if(x.zk==='same') ns++; } });
       kaikyokuScan(c).periods.forEach(q=>{ if(q.tone!=='good') e.push('巡りの会局が吉でない '+q.kind+q.text); }); }
     if(nz<50) e.push('蔵干の干合が少なすぎる('+nz+')');
+    if(ns<5) e.push('同じ柱の干合が少なすぎる('+ns+')');
+    if(/三合＞方合|三合よりやや穏やか/.test(document.documentElement.innerHTML+kkReadText('方合','火','喜',[],'natal'))) e.push('方合が三合より弱い言い方のまま');
     const t=pkSoftWord('丁壬の淫泆の合は情に流されやすく好色、戊癸の無情の合は薄情で孤独。女性は交際的でセクシー。');
     if(/好色|薄情|セクシー|淫泆|無情/.test(t)) e.push('やわらかくなっていない：'+t);
     return [...new Set(e)]; });
