@@ -465,7 +465,7 @@
   .rel .grp h4{font-size:12.5px;font-weight:900;margin:0 0 7px}
   .rel .grp h4 small{font-weight:700;color:var(--muted)}
   .badge{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:900;background:#fff;
-    border:2px solid var(--line);border-radius:11px;padding:5px 11px;margin:0 6px 6px 0}
+    border:2px solid var(--line);border-radius:11px;padding:5px 11px;margin:0 6px 6px 0;flex-wrap:wrap;max-width:100%;box-sizing:border-box}
   .badge i{width:12px;height:12px;border-radius:4px}
   .badge .k{color:#fff;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:900}
   .badge small{font-weight:700;color:var(--muted)}
@@ -2966,16 +2966,17 @@ function heroHTML(c,plain){
   const ay=(c.annualFortunes||[]).find(function(a){ return a.year===ny; });
   let yTile='';
   if(ay){ const yel=ay.stemElement||STEM_EL[String(ay.ganzhi||'').charAt(0)]||el, ycol=ec(yel), ydeep=_hxMix(ycol,'#000000',.3), ytint=_hxMix(ycol,'#ffffff',.86);
-    const grp=(typeof TS_GROUP!=='undefined'&&TS_GROUP[ay.tenStar])||'', PLAINW={比劫:'自分の力・仲間',食傷:'表現する力・楽しむ力',財:'お金・人を動かす力',官殺:'仕事・責任',印:'学び・支え'};
-    const theme=plain?(PLAINW[grp]||''):((typeof GROUP_DESC!=='undefined'&&GROUP_DESC[grp])||'');   // 星のグループの短い言葉（ビギナーの「いまの10年」と同じ言い方）
+    const grp=(typeof TS_GROUP!=='undefined'&&TS_GROUP[ay.tenStar])||'';
+    // 今年めぐる星の短い言葉（鑑定者本人の選択 2026-10-26「A」：喜神・忌神で言い方を変えず、だれにでも同じ前向きな言葉）
+    const theme=({比劫:'自分らしさ・仲間との力',食傷:'才能・表現が花ひらく',財:'お金と人のご縁が動く',官殺:'仕事の評価・立場が動く',印:'学び・まわりの支え'})[grp]||'';
     const yl='<span class="nw">'+ay.year+'年</span>'+(by?'<span class="nw">・'+(ay.year-by)+'歳</span>':'');
     yTile=plain
-      ?`<div class="hx-tile" style="background:${ytint}"><div class="hx-tl">今年のめぐり</div><div class="hx-tv hx-tv-s" style="color:${ydeep}">${esc(theme)||'—'}</div><div class="hx-tn">${theme?'がめぐる年<br>':''}${yl}</div></div>`
+      ?`<div class="hx-tile" style="background:${ytint}"><div class="hx-tl">今年のめぐり</div><div class="hx-tv hx-tv-s" style="color:${ydeep}">${esc(theme)||'—'}</div><div class="hx-tn">${yl}</div></div>`
       :`<div class="hx-tile" style="background:${ytint}"><div class="hx-tl">今年のめぐり</div><div class="hx-tv" style="color:${ydeep}">${ay.ganzhi}</div><div class="hx-tn">${yl}<br><span class="nw">${ay.tenStar}の年</span>${theme?'<br><span class="nw">'+esc(theme)+'</span>':''}</div></div>`; }
   // 生まれ持った星（日柱）／ビギナーは性質の言葉
   let tags=[]; try{ const d=(typeof KANSHI60_DETAIL!=='undefined')?KANSHI60_DETAIL[_gz]:null; tags=String((d&&d.一言)||'').split('・').filter(Boolean).slice(0,3); }catch(e){}
   const nTile=plain
-    ?`<div class="hx-tile" style="background:${tint}"><div class="hx-tl">生まれ持った性質</div><div class="hx-chips">${tags.map(function(t){ return '<span style="background:#fff;color:'+deep+'">'+esc(t)+'</span>'; }).join('')}</div></div>`
+    ?`<div class="hx-tile" style="background:${tint}"><div class="hx-tl">生まれ持った性質</div><div class="hx-chips">${tags.map(function(t){ return '<span style="background:#fff;color:'+deep+'">'+esc(t)+'</span>'; }).join('')}</div>${_isKaigou?'<div class="hx-kaigou">★ リーダー星</div>':''}</div>`
     :`<div class="hx-tile" style="background:${tint}"><div class="hx-tl">生まれ持った星</div><div class="hx-tv" style="color:${deep}">${_gz}</div><div class="hx-yomi">${_gzYomi}</div><div class="hx-tn"><span class="nw">日柱${_no?'・'+_no+'番':''}</span>${_nyd?'<br><span class="nw">納音 '+_nyd.name+'</span>':''}<br><span class="nw">空亡 ${_kubo}</span></div>${_isKaigou?'<div class="hx-kaigou">★ 魁罡日</div>':''}</div>`;
   // 五行の数の棒グラフ
   const fe=c.fiveElements||{}, ORD=['木','火','土','金','水'], mx=Math.max.apply(null,ORD.map(function(e){ return fe[e]||0; }).concat([1]));
@@ -10424,7 +10425,13 @@ html.bg-on .bg-why{display:block}
     var dp=c.pillars[2], det=(typeof KANSHI60_DETAIL!=='undefined')?KANSHI60_DETAIL[dp.ganzhi]:null;
     var phrase=safe(function(){ var d=document.createElement('div'); d.innerHTML=heroHTML(c); var p=d.querySelector('.phrase'); return p?p.textContent.trim():''; },'');
     var top=safe(function(){ return heroHTML(c,true); },'');   // 表紙カード（PROと同じ見た目・専門用語なし。鑑定者本人の指示 2026-10-26）
-    var h=top+'<div class="bgc" id="bg-me"><div class="bgh"><span class="ic">🌟</span>'+WHO()+'はこんな人</div>';
+    // 特別な日柱（魁罡）：やさしい言葉で必ず伝える（鑑定者本人の指示 2026-10-26「かいごうは絶対に拾って」。専門用語は使わない）
+    var kg=safe(function(){ if(!(typeof kaigouOn==='function'&&kaigouOn(c))||typeof KAIGOU_DETAIL==='undefined') return '';
+      var ichi=String(KAIGOU_DETAIL.ichi||'').replace(/日柱に宿る/,'生まれた日に宿る'), yo=String(KAIGOU_DETAIL.yoten||'').split('。').filter(function(x){ return x&&!/印綬|偏印|官殺|財星|比劫|食傷|通変|日柱|日干|魁罡/.test(x); }).join('。');
+      return '<div class="bgc" id="bg-kaigou" style="border:2px solid #E2A12B;background:linear-gradient(180deg,#FFFBEF,#fff)"><div class="bgh"><span class="ic">⭐</span>'+WHO()+'は「リーダー星」の生まれ</div>'+
+        '<p style="font-weight:800;color:#6E4A0E">'+esc(ichi)+'</p>'+(yo?'<p>'+esc(yo+'。')+'</p>':'')+
+        '<p style="font-size:13px;color:#5A4630">生まれた日が、四柱推命の中でも特別な星にあたる人です（60通りの生まれ日のうち、5つだけ）。</p></div>'; },'');
+    var h=top+kg+'<div class="bgc" id="bg-me"><div class="bgh"><span class="ic">🌟</span>'+WHO()+'はこんな人</div>';
     if(phrase&&!top) h+='<div class="phrase">'+esc(phrase)+'</div>';
     if(det){
       var tags=String(det.一言||'').split('・').filter(Boolean);
