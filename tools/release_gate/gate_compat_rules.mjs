@@ -346,6 +346,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     return [...new Set(e)]; });
   const one=t=>{ const m=t.match(/var pkSoftWord=function[^\n]*/); return m?m[0]:''; }, mine=one(fs.readFileSync(path.join(ROOT,dir,page0),'utf8'));
   ['eki-pro/app/index.html','pro/meishi-sheet.html'].forEach(f=>{ if(!mine||one(fs.readFileSync(path.join(ROOT,f),'utf8'))!==mine) r.push(f+' のやわらげが同じ中身でない'); });
+  { const bsrc=fs.readFileSync(path.join(ROOT,'beginner/app-beginner.html'),'utf8'); if(!/function secBond\(c\)/.test(bsrc)||!/secFlow,secBond,secShake/.test(bsrc)) r.push('ビギナーのやさしい画面に「結びつき」の欄がない'); if(!/凶星の干合：/.test(fs.readFileSync(path.join(ROOT,'pro/app-pro.html'),'utf8'))) r.push('PROの札に凶星の干合がない'); }
   const okG=r.length===0; console.log('  '+(okG?'OK':'NG')+' 合の決まり（午未・隣り合う柱・巡りは吉・蔵干は司令・干合の言葉）'+(okG?'':'  … '+r.slice(0,4).join(' / '))); if(!okG) res.fails.push('合の決まり: '+r.slice(0,3).join(' / ')); }
 // かっこの中の年にも干支・年齢を付ける（2026-10-24「（2026年内・2027年）」で見つかったもの）。PRO・易・鑑定書で同じ中身
 { const r=await p.evaluate(()=>typeof pkStampYears!=='function'?'':pkStampYears('関係を育てる時期です（2026年内・2027年）。',1985,0,false));

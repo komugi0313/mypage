@@ -313,6 +313,43 @@ html.bg-on .bg-why{display:block}
       (drows?'<div class="sub" style="margin-top:14px">10年ごとの大きな流れ</div><div class="yl">'+drows+'</div>':'')+'</div>';
   }
 
+  /* ---------- ④' 生まれ持った結びつきと、運が結びつく年（PROの「合」「会局」と同じ判定。専門用語なし。鑑定者本人の指示 2026-10-26） ---------- */
+  var BSCENE={年:'家族・ルーツ',月:'仕事・社会',日:WHOt()+'自身・パートナー',時:'将来・子ども'};
+  function bScene(lab){ return lab==='日'?WHO()+'自身・パートナー':(BSCENE[lab]||''); }
+  function secBond(c){
+    var BAD={劫財:1,傷官:1,偏官:1,偏印:1}, dm=c.dayMaster&&c.dayMaster.stem;
+    var rel=safe(function(){ return natalRels(c.pillars).filter(function(r){ return r.kind==='干合'||r.kind==='支合'||r.kind==='蔵干の干合'; }); },[])||[];
+    var seen={}, items=[], hasKan=false;
+    rel.forEach(function(r){ var pos=(r.pos||[]).filter(Boolean); var key=r.kind+'|'+pos.join(''); if(seen[key]) return; seen[key]=1;
+      var pk=pos.slice().sort().join('')+(r.same?'s':''), it=seen['P'+pk];
+      var where=pos.length>=2?('「'+bScene(pos[0])+'」と「'+bScene(pos[1])+'」'):('「'+bScene(pos[0])+'」の表と内側');
+      var strong=r.same||r.near===true;
+      if(!it){ it=seen['P'+pk]={s:strong?0:1,t:where+'が'+(strong?'<b>しっかり</b>':'<b>ゆるやかに</b>')+'結びついています。',n:0,ms:{}}; items.push(it); }
+      else if(it.n===1){ it.t=it.t.replace('結びついています。','、表と内側の両方で結びついています。'); }
+      it.n++; var t='';
+      if(r.kind!=='支合'){ hasKan=true; var st=String(r.text||'').charAt(0), m=(typeof kangoInfo==='function')?kangoInfo(st,true):''; if(m) t+='持ち味は「'+esc(m)+'」。';
+        var pr=String(r.text||'').slice(0,2), bad=[0,1].some(function(k){ var sm=pr.charAt(k); if(r.kind==='干合'&&sm===dm&&pos[k]==='日') return false; return BAD[tenStarOf(dm,sm)]; });
+        if(bad) t+='このつながりのおかげで、ふだんは扱いにくい面も、良い方向に働きやすくなります。'; }
+      else if(r.el) t+=MEAN[r.el].n.split('（')[0]+'の力（'+MEAN[r.el].n.split('（')[1].replace('）','')+'）がそっと育ちます。';
+      t.split(/(?<=。)/).forEach(function(x){ if(x&&!it.ms[x]){ it.ms[x]=1; it.t+=x; } }); });
+    items.sort(function(a,b){return a.s-b.s;});
+    var kk=safe(function(){ return kaikyokuScan(c); },{natal:[],periods:[]})||{natal:[],periods:[]};
+    var nat=(kk.natal||[]).map(function(r){ var e=MEAN[r.el]; if(!e) return ''; var big=r.kind!=='半合';
+      return '生まれつき、<b style="color:'+col(r.el)+'">'+e.n.split('（')[0]+'の力（'+e.n.split('（')[1].replace('）','')+'）</b>が'+(big?'<b>力強く</b>まとまっています。'+WHO()+'の大きな強みです。':'ゆるやかにまとまっています。')+(r.tone==='caution'?'強くなりすぎないよう、ときどき休むと整います。':''); }).filter(Boolean);
+    var by=birthYearOf(c)||(c.now?c.now.year-c.now.age:0), y0=c.now?c.now.year:0, seenY={};
+    var per=(kk.periods||[]).filter(function(p){ return p.when!=='大運'&&p.year0>=y0&&p.year0<y0+10; }).filter(function(p){ var k=p.year0+'|'+p.el; if(seenY[k]) return false; seenY[k]=1; return true; })
+      .sort(function(a,b){ return (a.kind==='半合')-(b.kind==='半合')||a.year0-b.year0; }).slice(0,5).sort(function(a,b){return a.year0-b.year0;});
+    var rows=per.map(function(p){ var e=MEAN[p.el]; if(!e) return ''; var big=p.kind!=='半合';
+      return '<li><b class="nobr">'+p.year0+'年（'+(p.year0-by)+'歳）</b>：<span style="color:'+col(p.el)+';font-weight:900">'+e.n.split('（')[0]+'の力</span>が'+(big?'<b>大きくまとまり、運が良い方へ動く年</b>':'ゆるやかに後押しされる、良い年')+'。'+(p.kiNote?'がんばりすぎには少し気をつけて。':'')+'</li>'; }).filter(Boolean);
+    if(!items.length&&!nat.length&&!rows.length) return '';
+    var h='<div class="bgc" id="bg-bond"><div class="bgh"><span class="ic">🤝</span>生まれ持った結びつきと、運が結びつく年</div>'+
+      '<div class="bgl">人生の場面どうしが引き合う「結びつき」を見ています。となり合う場面どうしは<b>しっかり</b>、はなれた場面どうしは<b>ゆるやか</b>に働きます。</div>';
+    if(items.length) h+='<div class="sub">生まれ持った結びつき</div><ul class="care">'+items.slice(0,6).map(function(x){return '<li>'+x.t+'</li>';}).join('')+'</ul>'+(hasKan?'<p style="font-size:13.5px">'+esc((typeof kangoSexLine==='function')?kangoSexLine(c.birth&&c.birth.sex,true).replace('人との共同事業がよい','人といっしょに事業をするのに向いています').replace('命式に干合があると、','この結びつきがある人は、'):'')+'</p>':'');
+    if(nat.length) h+='<div class="sub">生まれつきまとまっている力</div><p>'+nat.join('<br>')+'</p>';
+    if(rows.length) h+='<div class="sub">これから10年で、運が結びつく年</div><div class="bgl">めぐってくる運が生まれ持った力と結びつく年は、基本的に<b>良い方へ動く年</b>です。</div><ul class="care">'+rows.join('')+'</ul>';
+    return h+'</div>';
+  }
+
   /* ---------- ⑤ とくに大きく揺れやすい時期（判定はPROと同じ） ---------- */
   function clean(lab){ return String(lab).replace(/^[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]（(.+)）$/,'$1').replace(/（[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]）$/,''); }
   // 10年の区切りは、上の「10年ごとの大きな流れ」と同じ表記（○歳○ヶ月〜）にそろえる
@@ -648,7 +685,7 @@ html.bg-on .bg-why{display:block}
       var res=document.getElementById('result'), body=document.getElementById('result-body'); if(!res) return;
       if(!document.getElementById('bg-easy')){
         var easy=document.createElement('div'); easy.id='bg-easy';
-        easy.innerHTML=[secChildNote,secTimeNote,secMe,secPower,secNow,secFlow,secShake,secLoveWork,secCare].map(function(f){return safe(function(){return f(c);},'');}).join('');
+        easy.innerHTML=[secChildNote,secTimeNote,secMe,secPower,secNow,secFlow,secBond,secShake,secLoveWork,secCare].map(function(f){return safe(function(){return f(c);},'');}).join('');
         res.insertBefore(easy,res.firstChild);
         if(window.__isSample) easy.querySelectorAll('.bgc > .bgh').forEach(function(h){ h.insertAdjacentHTML('beforeend','<span class="bg-mihon">見本</span>'); });
         if(window.__isSample) easy.insertAdjacentHTML('beforeend','<button type="button" class="sample-more" onclick="document.body.classList.remove(\'sample-fold\')">見本の続きを見る（運気の流れ・恋愛・心と体など）</button>');
