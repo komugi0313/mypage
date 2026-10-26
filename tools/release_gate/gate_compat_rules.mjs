@@ -257,10 +257,10 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     const q='彼氏がいるけど他に好きな人が出来てしまって悩んでる。彼は２０００年３月２０日、好きな人は１９９５年４月４日16時生まれ男性';
     return {t:pkConsultPeopleLines(c,q).pro.join('\n'), pl:pkConsultPeopleLines(c,q).plain.join('\n'), e:pkEnsurePeople('どちらも良い人です。',c,q), ok:pkEnsurePeople('命式の相性だけで見ると、好きな人のほうが良い。くらべると、今の彼のよいところは方合で土台が安定、好きな人のよいところは天地徳合で惹かれ合う。生まれ持った相性だけで見ると同じ。',c,q), n:pkConsultPeopleText(c,'彼氏のことで悩んでいます')}; });
   const e=[]; if(!r) e.push('関数がない'); else {
-    if(!/【お相手：今の彼（2000年3月20日（時刻不明）・男性・恋人・パートナーとして見た相性）】判定＝良い点が注意点を上回る組み合わせ（良い点6／注意点2）/.test(r.t)) e.push('今の彼（時刻不明）');
-    if(!/【お相手：好きな人（1995年4月4日 16時・男性・恋人・パートナーとして見た相性）】判定＝良い点が注意点を上回る組み合わせ（良い点12.5／注意点5）/.test(r.t)||!/天地徳合（本人の月柱「庚寅」×お相手の年柱「乙亥」）/.test(r.t)) e.push('好きな人（16時）');
+    if(!/【お相手：今の彼（2000年3月20日（時刻不明）・男性・恋人・パートナーとして見た相性）】判定＝良い点が注意点を上回る組み合わせ（良い点6／注意点1）/.test(r.t)) e.push('今の彼（時刻不明）');
+    if(!/【お相手：好きな人（1995年4月4日 16時・男性・恋人・パートナーとして見た相性）】判定＝良い点が注意点を上回る組み合わせ（良い点12.5／注意点4）/.test(r.t)||!/天地徳合（本人の月柱「庚寅」×お相手の年柱「乙亥」）/.test(r.t)) e.push('好きな人（16時）');
     if(!/暮らしの土台（方合・三合・支合など）が強いのは 今の彼／惹かれ合い（恋愛の星）が強いのは 好きな人/.test(r.t)||!/2026年12月・2027年9月は注意の月/.test(r.t)) e.push('くらべた結果・決める時期');
-    if(!/命式の相性だけで見ると、好きな人のほうが良い組み合わせ（差3.5点）/.test(r.t)||!/今の彼（良い点6／注意点2・差＋4）：よいところ＝強いぶつかり（天戦地冲）がない/.test(r.t)||!/気をつけたいところ＝天戦地冲（年柱どうし/.test(r.t)) e.push('命式の相性のくらべ（数字・理由）');
+    if(!/命式の相性だけで見ると、好きな人のほうが良い組み合わせ（差3.5点）/.test(r.t)||!/今の彼（良い点6／注意点1・差＋5）：よいところ＝強いぶつかり（天戦地冲）がない/.test(r.t)||!/気をつけたいところ＝天戦地冲（年柱どうし/.test(r.t)) e.push('命式の相性のくらべ（数字・理由）');
     if(!/【お相手ごとの相性/.test(r.e)||/【お相手ごとの相性/.test(r.ok)) e.push('書き足し');
     if(r.n) e.push('生年月日のない相談に出している');
     const fm=await p.evaluate(()=>{ const c=baziCompute({year:1982,month:6,day:1,hour:12,minute:0,sex:'female',tu:false},0,'none'); const q='夫は1980年5月5日、義母は1955年3月3日、息子は2010年8月8日です。家族がうまくいくにはどうしたらいいですか？'; const L=pkConsultPeopleLines(c,q); return {who:L.P.map(o=>o.lab+'/'+o.rel+'/'+o.sex).join(','), two:!!L.V.two, love:pkIsLoveQ(q), love2:pkIsLoveQ('夫と離婚すべきか、息子のことも心配'), txt:pkConsultPeopleText(c,q)+pkEnsurePeople('本文。',c,q), ov:window.__pkRelOv}; });   /* 家族の相談を恋愛のくらべにしない（2026-10-25） */
@@ -339,8 +339,15 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
           if(x.zk==='same') ns++; } });
       kaikyokuScan(c).periods.forEach(q=>{ if(q.tone!=='good') e.push('巡りの会局が吉でない '+q.kind+q.text); }); }
     if(nz<50) e.push('蔵干の干合が少なすぎる('+nz+')');
+    // 害・破は当流派では使わない（鑑定者本人の指示 2026-10-26）：命式・巡り・相性・命式の特徴のどこにも出さない
+    { let s2=29; const r2=()=>{ s2=(s2*1103515245+12345)%2147483648; return s2/2147483648; }; for(let i=0;i<200;i++){ const mk=()=>baziCompute({year:1950+Math.floor(r2()*60),month:1+Math.floor(r2()*12),day:1+Math.floor(r2()*28),hour:Math.floor(r2()*24),minute:0,sex:r2()<0.5?'male':'female'},0,'none'); const A=mk(), B=mk();
+      if(natalRels(A.pillars).some(x=>x.kind==='害'||x.kind==='破')) e.push('命式に害・破');
+      if(BR.some(t=>runBranchRels({branch:t},A.pillars.map(p=>({label:p.label[0],branch:p.branch}))).some(x=>x.kind==='害'||x.kind==='破'))) e.push('巡りに害・破');
+      if(bxFeatureList(A.pillars).some(t=>/^(害|破)（/.test(t))) e.push('命式の特徴に害・破');
+      if(compatBalance(A,B).items.some(x=>/^(害|破)/.test(x.kind))) e.push('相性に害・破'); } }
     if(ns<5) e.push('同じ柱の干合が少なすぎる('+ns+')');
     if(/三合＞方合|三合よりやや穏やか/.test(document.documentElement.innerHTML+kkReadText('方合','火','喜',[],'natal'))) e.push('方合が三合より弱い言い方のまま');
+    { const src=document.documentElement.outerHTML; if(/<b>冲・害・刑<\/b>|刑・害（けい・がい）/.test(src)) e.push('画面に害の説明が残っている'); }
     const t=pkSoftWord('丁壬の淫泆の合は情に流されやすく好色、戊癸の無情の合は薄情で孤独。女性は交際的でセクシー。');
     if(/好色|薄情|セクシー|淫泆|無情/.test(t)) e.push('やわらかくなっていない：'+t);
     return [...new Set(e)]; });
@@ -375,7 +382,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
 // 相性の結果のまとめ・目次・たためる欄（2026-10-25）
 { const r=await p.evaluate(()=>{ if(typeof compatSummaryHTML!=='function'||typeof pkCvFold!=='function') return null; document.getElementById('rel-type').value='love'; const A=baziCompute({year:2008,month:3,day:28,hour:14,minute:30,sex:'female',tu:false},'','none'), B=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},'','none'));
     const h=compatSummaryHTML(A,B,RELTYPES.love), f=pkCvFold('<section>中身</section>','cm-w','見出し',1); return {h, f}; });
-  const e=[]; if(!r) e.push('仕組みがない'); else { if(!/相性の判定<\/b>：良い点が注意点を上回る組み合わせ（良い点13\.5／注意点6\.5）/.test(r.h)) e.push('判定'); if(!/お相手のほうが強く惹かれている（強い）/.test(r.h)) e.push('惹かれ方'); if(!/2人とも縁が動く月<\/b>：/.test(r.h)||!/注意の月<\/b>：/.test(r.h)) e.push('月'); if(!/pkCvJump\(&#39;ck-w&#39;\)/.test(r.h)) e.push('目次');
+  const e=[]; if(!r) e.push('仕組みがない'); else { if(!/相性の判定<\/b>：良い点が注意点を上回る組み合わせ（良い点13\.5／注意点4\.5）/.test(r.h)) e.push('判定'); if(!/お相手のほうが強く惹かれている（強い）/.test(r.h)) e.push('惹かれ方'); if(!/2人とも縁が動く月<\/b>：/.test(r.h)||!/注意の月<\/b>：/.test(r.h)) e.push('月'); if(!/pkCvJump\(&#39;ck-w&#39;\)/.test(r.h)) e.push('目次');
     if(!/class="cv-fold closed" id="cm-w" data-keep="1"/.test(r.f)||!/cv-head/.test(r.f)) e.push('たためる欄'); }
   console.log('  '+(e.length?'NG':'OK')+' 相性の結果のまとめ・目次・たためる欄'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('まとめ・目次: '+e.join('・')); }
 // お名前の印が残らない（1文字のお名前・2026-10-25）
