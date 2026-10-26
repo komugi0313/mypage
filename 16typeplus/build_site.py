@@ -14,7 +14,7 @@ META={
 URL={'ja':'https://16typeplus.jp/','en':'https://16typeplus.jp/en/','ko':'https://16typeplus.jp/ko/'}
 GA='G-XLMXSC0LY0'
 # プライバシーポリシーのお問い合わせ先（決まったら入れる。空なら行ごと出さない）
-CONTACT={}
+CONTACT={'ja':'<a href="mailto:info@72k.ai">info@72k.ai</a>','en':'<a href="mailto:info@72k.ai">info@72k.ai</a>','ko':'<a href="mailto:info@72k.ai">info@72k.ai</a>'}
 def rd(p): return open(p,encoding='utf-8').read()
 def build():
     if os.path.exists(OUT): shutil.rmtree(OUT)
