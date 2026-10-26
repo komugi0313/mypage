@@ -63,7 +63,7 @@ def build():
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#F6F7F9">
 <script async src="https://www.googletagmanager.com/gtag/js?id={GA}"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments);}}gtag('js',new Date());gtag('config','{GA}');</script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments);}}gtag('js',new Date());gtag('config','{GA}',{{page_location:(function(){{try{{var u=new URL(location.href);u.searchParams.delete('from');u.hash='';return u.toString();}}catch(e){{return location.origin+location.pathname;}}}})()}});</script>
 '''
         data='var PAGE_LANG="%s";window.CHAR_BASE="%schars/";\n'%(lang,base)+''.join('var %s=%s;\n'%(k,json.dumps(v,ensure_ascii=False)) for k,v in d.items())
         os.makedirs(OUT+('' if lang=='ja' else lang+'/'),exist_ok=True)

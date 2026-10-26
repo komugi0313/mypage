@@ -70,8 +70,8 @@ function opts(el,a,b,cur,ph){el.innerHTML="";if(ph){const o=document.createEleme
 /* 生年月日は最初は空。選ぶまで診断に進めない */
 const dset={y:false,m:false,d:false};const dateAll=v=>{dset.y=dset.m=dset.d=v;};
 function dateOK(){const ok=dset.y&&dset.m&&dset.d,er=$("dateErr");if(er)er.hidden=ok;if(!ok){$("y").closest(".field").scrollIntoView({behavior:"smooth",block:"center"});}return ok;}
-function fillDate(){opts($("y"),1930,2020,dset.y?st.y:null,TR("年"));opts($("m"),1,12,dset.m?st.m:null,TR("月"));const mx=dset.y&&dset.m?new Date(st.y,st.m,0).getDate():31;if(st.d>mx)st.d=mx;opts($("d"),1,mx,dset.d?st.d:null,TR("日"));}
-["y","m","d"].forEach(id=>$(id).addEventListener("change",e=>{const v=e.target.value;if(v===""){dset[id]=false;}else{st[id]=+v;dset[id]=true;}fillDate();hideOld();if(dset.y&&dset.m&&dset.d){const er=$("dateErr");if(er)er.hidden=true;}}));
+function fillDate(){opts($("y"),1930,2020,dset.y?st.y:null,TR("年"));opts($("m"),1,12,dset.m?st.m:null,TR("月"));const mx=dset.y&&dset.m?new Date(Date.UTC(st.y,st.m,0)).getUTCDate():31;/* 月を変えて日が入らないときは一時的に縮め、入る月に戻したら元の日に戻す */if(st.dWant&&st.d===st.dClamped){st.d=Math.min(st.dWant,mx);if(st.d===st.dWant){st.dWant=0;st.dClamped=0;}else st.dClamped=st.d;}else if(st.d>mx){st.dWant=st.d;st.d=mx;st.dClamped=mx;}opts($("d"),1,mx,dset.d?st.d:null,TR("日"));}
+["y","m","d"].forEach(id=>$(id).addEventListener("change",e=>{const v=e.target.value;if(id==="d"){st.dWant=0;st.dClamped=0;}if(v===""){dset[id]=false;}else{st[id]=+v;dset[id]=true;}fillDate();hideOld();if(dset.y&&dset.m&&dset.d){const er=$("dateErr");if(er)er.hidden=true;}}));
 const pk=$("picker"),sel=[null,null,null,null];
 function drawSlots(popI){$("slots").innerHTML=AX.map((A,i)=>'<span style="--c:var('+A.c+')" class="'+(sel[i]?"fill":"empty")+(i===popI?" pop":"")+'">'+(sel[i]||"?")+'</span>').join("");
  const left=sel.filter(v=>!v).length,go=$("go");const tt=sel.join("");$("slotName").innerHTML=left?"":'<b>'+tt+(selAT?"-"+selAT:"")+'</b>'+p16h(tt);{const pf=$("pkFig");if(pf){pf.hidden=!!left;if(!left){$("pkImg").src=charSrc(tt);$("pkImg").alt=an(tt);}}}go.disabled=left>0;go.textContent=left?TR("あと")+left+TR("つ選んでください"):TR("結果を見る");}
@@ -81,7 +81,7 @@ AX.forEach((A,i)=>{const g=document.createElement("div");g.className="seg";g.sty
  pk.appendChild(g);});
 drawSlots(-1);
 document.querySelectorAll("#atPick button").forEach(bt=>bt.onclick=()=>{hideOld();selAT=bt.dataset.v||null;document.querySelectorAll("#atPick button").forEach(x=>x.setAttribute("aria-pressed",x===bt));drawSlots(-1);});
-$("go").onclick=()=>{if(sel.includes(null)||!dateOK())return;st.t=sel.slice();st.at=selAT;st.love=null;st.pct=null;st.half={};st.sway=null;showResult();logType("select");addHist("other",st.t.join(""));render();document.querySelector(".hero").scrollIntoView({behavior:"smooth"});};
+$("go").onclick=()=>{if(sel.includes(null)||!dateOK())return;st.t=sel.slice();st.at=selAT;st.love=null;st.pct=null;st.half={};st.sway=null;showResult();addHist("other",st.t.join(""));render();logType("select");document.querySelector(".hero").scrollIntoView({behavior:"smooth"});};
 /* ---- 60問 ---- */
 const SCALE=[[TR("とても当てはまる"),5,22],[TR("当てはまる"),4,18],[TR("やや当てはまる"),3,14],[TR("やや当てはまらない"),2,14],[TR("当てはまらない"),1,18],[TR("まったく当てはまらない"),0,22]];
 const AXN={EI:0,SN:1,TF:2,JP:3,AT:4};const AXQ=AX.concat([{k:"AT",a:"A",b:"T",c:"--rose",name:TR("心の構え"),sh:TR("構え")}]);
@@ -153,11 +153,11 @@ function drawQ(){/* 数は「最大」から見せて、減ることはあって
   $("qAxis").textContent=A.name;$("qAxis").style.color="var("+A.c+")";$("qText").textContent=q.q;$("qEx").textContent=q.ex;$("qExW").hidden=false;$("qExW").open=true;
   SCALE.forEach(([t,v,sz])=>{const bt=document.createElement("button");bt.type="button";bt.style.setProperty("--qc","var("+A.c+")");
    bt.innerHTML='<i style="width:'+sz+'px;height:'+sz+'px"></i>'+t;bt.setAttribute("aria-pressed",qa[qn]===v);
-   bt.onclick=()=>{qa[qn]=v;bt.setAttribute("aria-pressed","true");setTimeout(next,180);};o.appendChild(bt);});
+   bt.onclick=()=>{if(window.__qLock)return;window.__qLock=1;qa[qn]=v;bt.setAttribute("aria-pressed","true");setTimeout(()=>{window.__qLock=0;next();},180);};o.appendChild(bt);});
  }else{const k=tbList[qi-ord.length],T=QZ.TB[k],A=AXQ[AXN[k]];
   $("qAxis").textContent=A.name+TR("：あと少しで決まります");$("qAxis").style.color="var("+A.c+")";$("qText").textContent=T.q;$("qExW").hidden=true;
   [T.a,T.b].forEach(([t,p])=>{const bt=document.createElement("button");bt.type="button";bt.className="ab";bt.textContent=t;bt.setAttribute("aria-pressed",tbAns[k]===p);
-   bt.onclick=()=>{tbAns[k]=p;setTimeout(next,180);};o.appendChild(bt);});}}
+   bt.onclick=()=>{if(window.__qLock)return;window.__qLock=1;tbAns[k]=p;setTimeout(()=>{window.__qLock=0;next();},180);};o.appendChild(bt);});}}
 function next(){qi++;
  if(qi>=BASE)ext=true;
  if(qi===ord.length&&!adDone){if(!nextPair())adDone=true;}
@@ -172,7 +172,7 @@ function logType(src){try{const m=window.__me||{};if(!m.born||!m.now||typeof gta
  gtag("event","type_result",p);}catch(e){}}
 function finish(){try{markUsed(ord.slice());}catch(e){}sset(KQ,null);st.love=null;drawResume();const sc=scoreAll();st.pct={};st.half={};st.sway=swayOf();
  AX.forEach((A,i)=>{const[a,b]=sc[A.k],tot=a+b||1;st.t[i]=a>b?A.a:a<b?A.b:natal(st.y,st.m,st.d).t[i];st.pct[A.k]=Math.round(b/tot*100);st.half[A.k]=Math.abs(a-b)<=4||tbAns[A.k]!=null;});
- {const [a,b]=sc.AT;st.at=a>b?"A":a<b?"T":null;}setPicker();showResult();logType("quiz");addHist("site",st.t.join(""));showQuiz(false);render();document.querySelector(".hero").scrollIntoView({behavior:"smooth"});}
+ {const [a,b]=sc.AT;st.at=a>b?"A":a<b?"T":null;}setPicker();showResult();addHist("site",st.t.join(""));showQuiz(false);render();logType("quiz");document.querySelector(".hero").scrollIntoView({behavior:"smooth"});}
 /* ---- 1列ずつめくって比べる ---- */
 const AXW={EI:[TR("外向型"),TR("内向型")],SN:[TR("現実型"),TR("直感型")],TF:[TR("思考型"),TR("感情型")],JP:[TR("計画型"),TR("柔軟型")],AT:[TR("自己主張型"),TR("慎重型")]};
 let RV=null;
@@ -220,10 +220,12 @@ function render(instant){
  const born=AX.map((A,i)=>{if(N.strong[A.k]===false){aligned[A.k]=true;const w=AXW[A.k][N.t[i]===A.a?0:1];why[A.k]=TR("この文字は、生年月日の星の傾きが弱めです。わずかに「")+w+TR("」のほうに寄っているので、気質は「")+w+TR("」としています。");}return N.t[i];}).join("");
  $("rSrc").textContent=st.pct?TR("質問への回答から出した結果"):TR("あなたの診断結果");
  const bAT=N.at,nAT=st.at,bornF=born+(bAT?"-"+bAT:""),nowF=now+(nAT?"-"+nAT:"");
+ /* 4文字が同じでも A/T がちがう人は、表示では2つに分けて出す */
+ const sameAll=born===now&&(!bAT||!nAT||bAT===nAT);
  const diff=AX.map((A,i)=>now[i]!==born[i]),atDiff=!!(bAT&&nAT&&bAT!==nAT),dn=diff.filter(Boolean).length+(atDiff?1:0);
  const cp=x=>'<span class="sc">'+TR("（")+x+TR("）")+'</span>';
  {const KTt=(typeof KT!=="undefined"&&KT&&KT[born+">"+now]&&KT[born+">"+now].title)||"";
- $("rStory").innerHTML=(KTt?'<span class="rs-eb">'+TR("あなたは")+'</span><span class="rs-t">'+esc(KTt)+'</span>':'')+'<span class="rs-chips">'+(born===now?'<span class="rs-c n"><small>'+TR("気質も性格も")+'</small><b>'+nowF+'</b>'+p16h(now)+'</span>':'<span class="rs-c b"><small>'+TR("気質")+'</small><b>'+bornF+'</b>'+p16h(born)+'</span><span class="rs-c n"><small>'+TR("性格")+'</small><b>'+nowF+'</b>'+p16h(now)+'</span>')+'</span>';}
+ $("rStory").innerHTML=(KTt?'<span class="rs-eb">'+TR("あなたは")+'</span><span class="rs-t">'+esc(KTt)+'</span>':'')+'<span class="rs-chips">'+(sameAll?'<span class="rs-c n"><small>'+TR("気質も性格も")+'</small><b>'+nowF+'</b>'+p16h(now)+'</span>':'<span class="rs-c b"><small>'+TR("気質")+'</small><b>'+bornF+'</b>'+p16h(born)+'</span><span class="rs-c n"><small>'+TR("性格")+'</small><b>'+nowF+'</b>'+p16h(now)+'</span>')+'</span>';}
  const ATC="--rose";
  let fh=TR('<span class="rl"><b>気質</b>生年月日から</span>')+AX.map((A,i)=>'<span class="tile b'+(diff[i]?' c':'')+'" style="--c:var('+A.c+')">'+born[i]+'</span>').join("")+'<span class="tile b at'+(atDiff?' c':'')+'" style="--c:var('+ATC+')">'+(bAT||"–")+'</span>';
  fh+='<span class="rl e"></span>'+AX.map((A,i)=>'<span class="arw'+(diff[i]?' c':'')+'" style="--c:var('+A.c+')">'+(diff[i]?'↓':'｜')+'</span>').join("")+'<span class="arw'+(atDiff?' c':'')+'" style="--c:var('+ATC+')">'+(atDiff?'↓':'｜')+'</span>';
@@ -257,9 +259,9 @@ function render(instant){
  window.__me={born,now,N,bAT,nAT};drawPersona("now");
  const nw=(a,b)=>'<span class="nw">'+a+'</span><span class="nw">'+b+'</span>';$("p16Born").innerHTML=nw(bornF,p16h(born));$("p16Now").innerHTML=nw(nowF,p16h(now));
  $("nkBorn").textContent=D.NICK[born];[["imBorn",born],["imNow",now]].forEach(([id,t])=>{const im=$(id);if(im){im.src=charSrc(t);im.alt=an(t);}});
- {const one=born===now,nb=$("imBorn").closest(".nk"),nn=$("imNow").closest(".nk"),nr=document.querySelector(".nicks .nar");nb.hidden=one;if(nr)nr.hidden=one;document.querySelector(".nicks").classList.toggle("one",one);
+ {const one=sameAll,nb=$("imBorn").closest(".nk"),nn=$("imNow").closest(".nk"),nr=document.querySelector(".nicks .nar");nb.hidden=one;if(nr)nr.hidden=one;document.querySelector(".nicks").classList.toggle("one",one);
   const lb=nn.querySelector(".nl");if(!lb.dataset.def)lb.dataset.def=lb.textContent;lb.textContent=one?TR("気質も性格も"):lb.dataset.def;
-  if(one)$("p16Now").innerHTML=$("p16Born").innerHTML;}$("nkNow").textContent=D.NICK[now];setupCards(instant,born===now);
+  if(one)$("p16Now").innerHTML=$("p16Born").innerHTML;}$("nkNow").textContent=D.NICK[now];setupCards(instant,sameAll);
  const pct=Math.round(dn4/4*100),lv=dn4;window.__me.pct=pct;
  $("gNum").textContent=pct;$("gBar").style.width=pct+"%";$("gMeter").setAttribute("aria-label",TR("気質と性格のちがい ")+pct+"%");
  $("gLbl").textContent=[TR("気質と性格が同じ"),TR("少しちがう"),TR("ほどよくちがう"),TR("かなりちがう"),TR("ほとんどちがう")][lv];if(pct>=100)$("gLbl").textContent=TR("すべてちがう");
@@ -336,7 +338,7 @@ async function drawShare(){
  const me=window.__me,W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const ctx=cv.getContext("2d");
  const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',ROUND=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
  try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"700 40px "+ROUND,"600 40px "+MONO].map(f=>document.fonts.load(f,"16TYPE+ あア가A")));}catch(e){}
- const one=me.born===me.now,[ib,inw]=await Promise.all([loadImg(charSrc(me.born)),one?Promise.resolve(null):loadImg(charSrc(me.now))]);
+ const one=me.born===me.now&&(!me.bAT||!me.nAT||me.bAT===me.nAT),[ib,inw]=await Promise.all([loadImg(charSrc(me.born)),one?Promise.resolve(null):loadImg(charSrc(me.now))]);
  ctx.fillStyle=SC.bg;ctx.fillRect(0,0,W,H);
  ctx.fillStyle=SC.card;rrect(ctx,48,48,W-96,H-96,36);ctx.fill();ctx.strokeStyle=SC.rule;ctx.lineWidth=2;ctx.stroke();
  ctx.textBaseline="alphabetic";ctx.textAlign="left";
@@ -561,7 +563,7 @@ function lvInit(){if(typeof LV==="undefined"||!LV||!LV.questions)return;let el=$
 function lvDraw(){const Q=LV.questions,q=Q[lv.i],A=AX[AXN[q.ax]];$("lvCount").textContent=(lv.i+1)+" / "+Q.length;$("lvProg").style.width=(lv.i/Q.length*100)+"%";
  $("lvText").textContent=q.q;$("lvEx").textContent=q.ex||"";$("lvExW").hidden=!q.ex;const o=$("lvOpts");o.innerHTML="";
  LVSCALE.forEach(([t,v,sz])=>{const bt=document.createElement("button");bt.type="button";bt.style.setProperty("--qc","var(--rose)");bt.innerHTML='<i style="width:'+sz+'px;height:'+sz+'px"></i>'+t;bt.setAttribute("aria-pressed",lv.a[lv.i]===v);
-  bt.onclick=()=>{lv.a[lv.i]=v;bt.setAttribute("aria-pressed","true");setTimeout(()=>{lv.i++;if(lv.i>=Q.length)lvFinish();else lvDraw();},180);};o.appendChild(bt);});}
+  bt.onclick=()=>{if(window.__lvLock)return;window.__lvLock=1;lv.a[lv.i]=v;bt.setAttribute("aria-pressed","true");setTimeout(()=>{window.__lvLock=0;lv.i++;if(lv.i>=Q.length)lvFinish();else lvDraw();},180);};o.appendChild(bt);});}
 function lvFinish(){const me=window.__me,sc={EI:0,SN:0,TF:0,JP:0};
  LV.questions.forEach((q,i)=>{const A=AX[AXN[q.ax]],v=(lv.a[i]==null?2.5:lv.a[i])-2.5;sc[q.ax]+=q.p===A.a?v:-v;});
  /* 気質と性格が同じ文字はそのまま。ちがう文字だけ、答えが寄った方を選ぶ（3つ目のタイプは作らない） */
@@ -662,7 +664,7 @@ async function drawCV(){
  /* 上の欄：名前・気質・性格 ＋ 写真 */
  const PW=270,PH=360,PX=X1-PW,PY=176,TW=PX-24-X0;let y=PY;
  const nm=($("myName")&&$("myName").value.trim())||TR("あなた");
- const rows=[[TR("氏名"),nm,40,700],[TR("性格"),me.now+(me.nAT?"-"+me.nAT:"")+p16(me.now),30,700],[TR("気質"),me.born===me.now?TR("性格と同じ"):me.born+(me.bAT?"-"+me.bAT:"")+p16(me.born),30,600],[TR("ひとことで"),((coreOf(me.born,me.now)||{}).name)||P.catch||"",24,700]];
+ const rows=[[TR("氏名"),nm,40,700],[TR("性格"),me.now+(me.nAT?"-"+me.nAT:"")+p16(me.now),30,700],[TR("気質"),me.born===me.now&&(!me.bAT||!me.nAT||me.bAT===me.nAT)?TR("性格と同じ"):me.born+(me.bAT?"-"+me.bAT:"")+p16(me.born),30,600],[TR("ひとことで"),((coreOf(me.born,me.now)||{}).name)||P.catch||"",24,700]];
  const rh=[86,74,74,PH-86-74-74];
  rows.forEach(([l,v,fs,wt],i)=>{lab(X0,y,LW,rh[i],l);box(X0+LW,y,TW-LW,rh[i]);c.fillStyle=i===2?SC.muted:SC.ink;
   const maxL=i===3?3:1;let f=fs,ls;for(;f>=16;f-=2){c.font=wt+" "+f+"px "+SANS;ls=wrapLines(c,v,TW-LW-32,maxL+1);if(ls.length<=maxL)break;}if(ls.length>maxL)ls=wrapLines(c,v,TW-LW-32,maxL);
@@ -680,7 +682,8 @@ async function drawCV(){
  /* 長所・短所 */
  const half=(X1-X0-20)/2;
  const two=(t1,a1,t2,a2)=>{const h=Math.max(a1.length,a2.length)*44+60;[[t1,a1,X0],[t2,a2,X0+half+20]].forEach(([t,a,x])=>{box(x,y,half,h);c.fillStyle=LBG;c.fillRect(x+1,y+1,half-2,42);c.font="700 22px "+SANS;c.fillStyle=SC.muted;c.fillText(t,x+14,y+30);a.forEach((s,i)=>txt("・"+s,x+14,y+82+i*44,half-28,23,1));});y+=h+30;};
- two(TR("長所"),[head((P.strengths||[])[0]),head((P.strengths||[])[1]),head((PB.strengths||[])[0])].filter(Boolean),TR("短所（自己申告）"),[head((P.pitfalls||[])[0]),head((P.pitfalls||[])[1]),head((PB.pitfalls||[])[0])].filter(Boolean));
+ {/* 同じ文は1回だけ。足りなければ次の文で埋める */const pick3=(x,y)=>{x=x||[];y=y||[];const o=[];[x[0],x[1],y[0],x[2],y[1],x[3],y[2]].map(head).forEach(v=>{if(v&&!o.includes(v)&&o.length<3)o.push(v);});return o;};
+ two(TR("長所"),pick3(P.strengths,PB.strengths),TR("短所（自己申告）"),pick3(P.pitfalls,PB.pitfalls));}
  /* 口ぐせ */
  sec(TR("言いそうなこと"));
  {c.font="700 25px "+SANS;const parts=Q.map(q=>TR("「")+q+TR("」")),lines=[];let cur="";parts.forEach(p=>{const t=cur?cur+"   "+p:p;if(c.measureText(t).width>X1-X0-40&&cur){lines.push(cur);cur=p;}else cur=t;});if(cur)lines.push(cur);
@@ -765,11 +768,11 @@ function setupCards(instant,one){const cards=[...document.querySelectorAll(".nic
  cards.forEach(n=>{let bk=n.querySelector(".nkback");if(!bk){bk=document.createElement("div");bk.className="nkback";n.appendChild(bk);}
   const born=n.classList.contains("born");bk.innerHTML='<span class="q">?</span><b>'+(one?TR("気質も性格も"):born?TR("気質のあなた"):TR("性格のあなた"))+'</b><small>'+TR("タップしてめくる")+'</small>';
   n.classList.remove("turn","turn2");n.classList.toggle("open",!!instant);n.onclick=()=>flipCard(n);});
- const cb=$("coreBox");if(cb)cb.classList.toggle("wait2",!instant);const fb=$("funBox");if(fb)fb.classList.toggle("wait2",!instant);
+ const cb=$("coreBox");if(cb)cb.classList.toggle("wait2",!instant);const fb=$("funBox");if(fb)fb.classList.toggle("wait2",!instant);const cf=$("cloudFig");if(cf)cf.classList.toggle("wait2",!instant);
  if(!instant)story.innerHTML=one?TR('<span class="ln">カードをタップして、</span><span class="ln">あなたの性質を見てみよう</span>'):TR('<span class="ln">カードをタップして、</span><span class="ln">あなたの2つの性質を見てみよう</span>');}
 function flipCard(n){if(n.classList.contains("open")||n.classList.contains("turn"))return;n.classList.add("turn");
  setTimeout(()=>{n.classList.add("open");n.classList.remove("turn");n.classList.add("turn2");setTimeout(()=>n.classList.remove("turn2"),300);
-  const left=[...document.querySelectorAll(".nicks .nk")].filter(x=>!x.hidden&&!x.classList.contains("open")).length;if(!left){if(window.__story)$("rStory").innerHTML=window.__story;["coreBox","funBox"].forEach(id=>{const cb=$(id);if(cb&&cb.classList.contains("wait2")){cb.classList.remove("wait2");cb.classList.add("reveal");}});}},240);}
+  const left=[...document.querySelectorAll(".nicks .nk")].filter(x=>!x.hidden&&!x.classList.contains("open")).length;if(!left){if(window.__story)$("rStory").innerHTML=window.__story;["coreBox","funBox","cloudFig"].forEach(id=>{const cb=$(id);if(cb&&cb.classList.contains("wait2")){cb.classList.remove("wait2");cb.classList.add("reveal");}});}},240);}
 function layoutResult(){const hero=document.querySelector(".hero");if(!hero)return;
  {let dh=$("dataH");if(!dh){dh=document.createElement("h3");dh.id="dataH";dh.className="datah";dh.textContent=TR("気質と性格の文字くらべ");}
   const q=x=>typeof x==="string"?hero.querySelector(x):x;
@@ -856,8 +859,9 @@ function groupResult(members){
  const feats=now.map(x=>({x,r:Math.abs(x.ca-x.cb)/n})).filter(o=>o.r>=1/3).sort((p,q)=>q.r-p.r).slice(0,3).map(({x})=>{const L=x.ca>x.cb?x.a:x.b;return {L,text:GTR(GMANY[L])};});
  /* コツ：だれもいない文字（性格で見る） */
  let tips=[];now.forEach(x=>{if(x.ca===0)tips.push({L:x.a,text:GTR(GNONE[x.a])});if(x.cb===0)tips.push({L:x.b,text:GTR(GNONE[x.b])});});
+ /* はっきり少ないとき（全体の3分の1以下）だけ「少数派」と言う。半々なら出さない */
  if(!tips.length){const x=now.slice().sort((p,q)=>Math.abs(q.ca-q.cb)-Math.abs(p.ca-p.cb))[0];const few=x.ca<x.cb?x.a:x.b,c=Math.min(x.ca,x.cb);
-  tips.push({L:few,text:GTR("「{l}」は{c}人だけです。その人の意見は少数派になりがちなので、決める前に聞いてみましょう。").replace("{l}",GTR(GL[few])).replace("{c}",c)});}
+  if(c>0&&c*3<=n)tips.push({L:few,text:GTR("「{l}」は{c}人だけです。その人の意見は少数派になりがちなので、決める前に聞いてみましょう。").replace("{l}",GTR(GL[few])).replace("{c}",c)});}
  tips=tips.slice(0,3);
  /* 気質で見ると：性格と気質で多い方が入れかわる軸 */
  const flip=[]||GAX.map((ax,i)=>{const a=now[i],b=born[i];const clear=x=>Math.abs(x.ca-x.cb)/n>=1/3,nm=a.ca>a.cb?a.a:a.b,bm=b.ca>b.cb?b.a:b.b;return clear(a)&&clear(b)&&nm!==bm?{now:nm,born:bm}:null;}).filter(Boolean).slice(0,2)
@@ -878,7 +882,7 @@ function groupHTML(G,title){const e=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&am
  h+='<h3>'+GTR("それぞれの役まわり")+'</h3><ul class="gr-m">'+G.members.map(m=>'<li><div class="gr-mn"><b>'+e(m.name)+'</b><span>'+(m.only?GTR("タイプ")+' '+m.now:GTR("気質")+' '+m.born+' / '+GTR("性格")+' '+m.now)+'</span></div><p class="gr-r">'+e(m.role)+'</p>'+(m.brole?'<p class="gr-br">'+GTR("生まれつきは「{r}」にも向いています").replace("{r}",e(m.brole))+'</p>':'')+'</li>').join("")+'</ul>';
  h+='<h3>'+GTR("気が合う2人")+'</h3><div class="gr-p good"><b>'+e(G.good.a)+'</b> × <b>'+e(G.good.b)+'</b>'+G.good.why.map(w=>'<p>'+e(w)+'</p>').join("")+'</div>';
  if(G.bad)h+='<h3>'+GTR("すれ違いやすい2人")+'</h3><div class="gr-p bad"><b>'+e(G.bad.a)+'</b> × <b>'+e(G.bad.b)+'</b>'+G.bad.why.map(w=>'<p>'+e(w)+'</p>').join("")+'<p class="gr-pt">'+GTR("やり方がちがうだけです。ぶつかったら、相手のやり方を1回だけ試してみてください。")+'</p></div>';
- h+='<h3>'+GTR("うまくいくコツ")+'</h3><ul class="gr-tips">'+G.tips.map(t=>'<li>'+e(t.text)+'</li>').join("")+'</ul></div>';return h;}
+ if(G.tips.length)h+='<h3>'+GTR("うまくいくコツ")+'</h3><ul class="gr-tips">'+G.tips.map(t=>'<li>'+e(t.text)+'</li>').join("")+'</ul>';h+='</div>';return h;}
 
 /* ---- グループの相性（その場で入力。サーバーは使わない） ---- */
 const KG="16tp.group.v1";let gst=sget(KG);if(!gst||typeof gst!=="object"||!Array.isArray(gst.rows))gst={title:"",rows:[{name:"",t:""},{name:"",t:""}]};gst.title=typeof gst.title==="string"?gst.title:"";gst.rows=gst.rows.filter(r=>r&&typeof r==="object").slice(0,9).map(r=>({name:typeof r.name==="string"?r.name.slice(0,12):"",t:/^[EI][SN][TF][JP]$/.test(r.t)?r.t:""}));if(!gst.rows.length)gst.rows=[{name:"",t:""}];

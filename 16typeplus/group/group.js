@@ -20,8 +20,9 @@ function groupResult(members){
  const feats=now.map(x=>({x,r:Math.abs(x.ca-x.cb)/n})).filter(o=>o.r>=1/3).sort((p,q)=>q.r-p.r).slice(0,3).map(({x})=>{const L=x.ca>x.cb?x.a:x.b;return {L,text:GTR(GMANY[L])};});
  /* コツ：だれもいない文字（性格で見る） */
  let tips=[];now.forEach(x=>{if(x.ca===0)tips.push({L:x.a,text:GTR(GNONE[x.a])});if(x.cb===0)tips.push({L:x.b,text:GTR(GNONE[x.b])});});
+ /* はっきり少ないとき（全体の3分の1以下）だけ「少数派」と言う。半々なら出さない */
  if(!tips.length){const x=now.slice().sort((p,q)=>Math.abs(q.ca-q.cb)-Math.abs(p.ca-p.cb))[0];const few=x.ca<x.cb?x.a:x.b,c=Math.min(x.ca,x.cb);
-  tips.push({L:few,text:GTR("「{l}」は{c}人だけです。その人の意見は少数派になりがちなので、決める前に聞いてみましょう。").replace("{l}",GTR(GL[few])).replace("{c}",c)});}
+  if(c>0&&c*3<=n)tips.push({L:few,text:GTR("「{l}」は{c}人だけです。その人の意見は少数派になりがちなので、決める前に聞いてみましょう。").replace("{l}",GTR(GL[few])).replace("{c}",c)});}
  tips=tips.slice(0,3);
  /* 気質で見ると：性格と気質で多い方が入れかわる軸 */
  const flip=GAX.map((ax,i)=>{const a=now[i],b=born[i];const clear=x=>Math.abs(x.ca-x.cb)/n>=1/3,nm=a.ca>a.cb?a.a:a.b,bm=b.ca>b.cb?b.a:b.b;return clear(a)&&clear(b)&&nm!==bm?{now:nm,born:bm}:null;}).filter(Boolean).slice(0,2)
@@ -42,5 +43,5 @@ function groupHTML(G,title){const e=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&am
  h+='<h3>'+GTR("それぞれの役まわり")+'</h3><ul class="gr-m">'+G.members.map(m=>'<li><div class="gr-mn"><b>'+e(m.name)+'</b><span>'+GTR("気質")+' '+m.born+' / '+GTR("性格")+' '+m.now+'</span></div><p class="gr-r">'+e(m.role)+'</p>'+(m.brole?'<p class="gr-br">'+GTR("生まれつきは「{r}」にも向いています").replace("{r}",e(m.brole))+'</p>':'')+'</li>').join("")+'</ul>';
  h+='<h3>'+GTR("気が合う2人")+'</h3><div class="gr-p good"><b>'+e(G.good.a)+'</b> × <b>'+e(G.good.b)+'</b>'+G.good.why.map(w=>'<p>'+e(w)+'</p>').join("")+'</div>';
  if(G.bad)h+='<h3>'+GTR("すれ違いやすい2人")+'</h3><div class="gr-p bad"><b>'+e(G.bad.a)+'</b> × <b>'+e(G.bad.b)+'</b>'+G.bad.why.map(w=>'<p>'+e(w)+'</p>').join("")+'<p class="gr-pt">'+GTR("やり方がちがうだけです。ぶつかったら、相手のやり方を1回だけ試してみてください。")+'</p></div>';
- h+='<h3>'+GTR("うまくいくコツ")+'</h3><ul class="gr-tips">'+G.tips.map(t=>'<li>'+e(t.text)+'</li>').join("")+'</ul></div>';return h;}
+ if(G.tips.length)h+='<h3>'+GTR("うまくいくコツ")+'</h3><ul class="gr-tips">'+G.tips.map(t=>'<li>'+e(t.text)+'</li>').join("")+'</ul>';h+='</div>';return h;}
 if(typeof module!=="undefined")module.exports={groupResult,groupHTML};
