@@ -11,7 +11,7 @@
 //       それ以外の会員 … おためし PK_VOICE_TRIAL 回（既定10）まで（会員ごと・商品ごと・期限なし）。使い切ったら 402 VOICE_OPTION。
 //     声で入力すること自体は、オプションがなくても無料のまま（画面はブラウザの聞き取り＋聞き間違い直し表だけで続ける）。
 //   ・{mode:'status'} は Gemini を呼ばずに、オプションの有無とおためしの残りだけを返す。
-//   ・直した文が元の文と大きく違う（長さが半分以下・1.6倍以上、または助詞・です・ますが半分より少なくなった・文の数が減った・数字が変わった）ときは、言いかえ・答えを書いたとみなして元の文を返す。
+//   ・直した文に用語にない漢字が新しく増えた（言いかえ）とき、または元の文と大きく違う（長さが半分以下・1.6倍以上、または助詞・です・ますが半分より少なくなった・文の数が減った・数字が変わった）ときは、言いかえ・答えを書いたとみなして元の文を返す。
 //
 // 環境変数（gemini.js と同じものを使う）：GEMINI_API_KEY・URL・MEMBER_CHECK_URL・ALLOWED_ORIGINS・PK_ALLOW_NO_MEMBER_CHECK・PK_OWNER_TOKEN
 //   任意 GEMINI_MODEL_VOICE … 既定 gemini-3.5-flash-lite
@@ -24,6 +24,10 @@ const MONTH = parseInt(process.env.PK_VOICE_MONTH || '3000', 10) || 3000;
 const OWNER_TOKEN = process.env.PK_OWNER_TOKEN || '';
 const MAX_TEXT = 2000;
 const SYSTEM = __SYSTEM__;
+// 1語だけのとき（「にっちゅう」など）は、用語一覧の読み・化けやすい形と完全に同じなら、その漢字にそのまま変える（Gemini を呼ばない）
+const DICT = __DICT__;
+// 用語一覧に出てくる漢字。直した文に、これ以外の漢字が新しく増えていたら（月誌→月報 のような言いかえ）元の文に戻す
+const TERM_CHARS = new Set(Array.from(new Set(Object.values(DICT).join('') + __TERMCHARS__)));
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: { code: 'METHOD' } });
@@ -75,6 +79,13 @@ exports.handler = async (event) => {
 
   const text = String(body.text || '').slice(0, MAX_TEXT);
   if (!text.trim()) return json(200, Object.assign({ text: text, changed: false }, info));
+  const one = text.trim().replace(/[。、．，.,！？!?\s]+$/g, '');
+  if (DICT[one]) {
+    const out = text.replace(one, DICT[one]);
+    let n1 = used;
+    if (store && !isOwner) { try { n1 = await bump(store, option ? monthKey : trialKey); } catch (e) {} }
+    return json(200, { text: out, changed: out !== text, option: option, left: option ? Math.max(0, MONTH - n1) : Math.max(0, TRIAL - n1), trial: TRIAL });
+  }
   const key = process.env.GEMINI_API_KEY;
   if (!key) return json(500, { error: { code: 'NO_KEY' } });
 
@@ -116,6 +127,10 @@ function guard(src, out) {
   if (ends(t) < ends(src)) return src;
   const nums = (x) => (x.match(/[0-9０-９]+/g) || []).map((n) => n.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))).join(',');
   if (nums(t) !== nums(src)) return src;
+  // 用語にない漢字が新しく増えた＝ふつうの言葉を言いかえた、とみなして元の文に戻す
+  const cnt = (x) => { const m = {}; for (const ch of x) if (/[\u4E00-\u9FFF]/.test(ch)) m[ch] = (m[ch] || 0) + 1; return m; };
+  const ca = cnt(src), cb = cnt(t);
+  for (const ch in cb) if (cb[ch] > (ca[ch] || 0) && !TERM_CHARS.has(ch)) return src;
   return lead + t + tail;
 }
 function sha(s) { return require('crypto').createHash('sha256').update(String(s)).digest('hex').slice(0, 24); }
@@ -128,4 +143,4 @@ function lower(o) { const r = {}; for (const k in o) r[k.toLowerCase()] = o[k]; 
 function clean(s) { return (s == null ? '' : String(s)).replace(/[\r\n]/g, '').slice(0, 200); }
 function json(statusCode, obj) { return { statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) }; }
 
-module.exports.__test = { guard, SYSTEM, PRODUCT };
+module.exports.__test = { guard, SYSTEM, PRODUCT, DICT };
