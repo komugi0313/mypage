@@ -270,7 +270,10 @@ function render(instant){
  {const fig=$("cloudFig");if(fig){const tk=(window.__cloudTok=(window.__cloudTok||0)+1);setTimeout(()=>drawCloud().then(cv=>{if(tk!==window.__cloudTok)return;const x=cv.getContext("2d"),W=cv.width,H=cv.height,d=x.getImageData(0,0,W,H-90).data;let t=0,b=H-91;const blank=y=>{for(let i=y*W*4;i<(y+1)*W*4;i+=16)if(d[i]<235)return false;return true;};while(t<b&&blank(t))t++;while(b>t&&blank(b))b--;t=Math.max(0,t-50);b=Math.min(H-91,b+50);const o2=document.createElement("canvas");o2.width=W;o2.height=b-t;o2.getContext("2d").drawImage(cv,0,t,W,b-t,0,0,W,b-t);$("cloudImg").src=o2.toDataURL("image/png");$("cloudImg").alt=TR("わたしの気質と性格");fig.hidden=false;}).catch(()=>{}),0);}}
  {const kf=$("karteFig");if(kf){const tk=(window.__karteTok=(window.__karteTok||0)+1);setTimeout(()=>drawKarte().then(cv=>{if(tk!==window.__karteTok)return;$("karteImg").src=cv.toDataURL("image/png");$("karteImg").alt=TR("性格カルテ");kf.hidden=false;}).catch(()=>{}),0);}}
  {const K=KT[born+">"+now],el=$("kt");window.__me.kt=K||null;["hWorryH","hWorryQ","hWorry"].forEach(i=>{const x=$(i);if(x)x.style.display=(K&&K.aru)?"none":"";});if(el){el.hidden=!K;const box=(id,cls)=>{let x=$(id);if(!x){x=document.createElement("div");x.id=id;x.className=cls;document.querySelector(".hero").appendChild(x);}return x;};box("coreBox","corebox").innerHTML=K?coreCard(born,now):"";(window.__me&&(window.__me.ktKarai=K?K.karai:"")),(fx=>{fx.classList.toggle("wait2",$("coreBox").classList.contains("wait2"));return fx;})(box("funBox","funbox")).innerHTML=K?'<p class="kfh">'+(born===now?TR("あなたは、こんな人"):TR("気質と性格をあわせると、あなたはこんな人"))+'</p><dl class="ktl"><dt>'+TR("言いそうなこと")+'</dt><dd class="say">'+esc(K.say)+'</dd><dt>'+TR("やりそうなこと")+'</dt><dd>'+esc(K.do)+'</dd></dl><div class="ktk"><span>'+TR("辛口のひと言")+'</span>'+esc(K.karai)+'</div>':"";
- if(K)el.innerHTML='<h3 class="kth">'+TR("くわしい鑑定")+'</h3>'+(K.aru?[["aru","こんなこと、ありませんか？"],["why","どうしてそうなるの？"],["yure","16タイプの結果が変わるわけ"],["plus","悩みを、こう見てみる"],["hidden","あなたの、もう一つの力"],["tip","生かすヒント"]].filter(([f])=>K[f]).map(([f,h])=>'<div class="kts kt-'+f+'"><h4><i aria-hidden="true">'+({aru:"?",why:"!",yure:"⇄",plus:"+",hidden:"✦",tip:"✓"})[f]+'</i>'+TR(h)+'</h4>'+kfmt(K[f],f)+(f==="yure"?swayNote(born,now):'')+'</div>').join(""):'<p class="ktb">'+esc(K.body)+'</p>')+(K.aru?'':'<dl class="ktl"><dt>'+TR("悩みやすいこと")+'</dt><dd>'+esc(K.worry)+'</dd></dl>');}}window.__me.karaiC=strip(C.karai||"");drawBalance(N);lvInit();saveResult();layoutResult();recPick=null;drawRec();
+ if(K)el.innerHTML='<h3 class="kth">'+TR("くわしい鑑定")+'</h3>'+(K.aru?(()=>{const sec=([f,h],n)=>'<div class="kts kt-'+f+'"><h4>'+(n?'<span class="ktn">'+n+'</span>':'')+'<i aria-hidden="true">'+({aru:"?",why:"!",yure:"⇄",plus:"+",hidden:"✦",tip:"✓"})[f]+'</i>'+TR(h)+'</h4>'+kfmt(K[f],f)+(f==="yure"?swayNote(born,now):'')+'</div>';
+   /* 大事な3つ（こんなこと→どうして→生かすヒント）だけ先に見せ、残りは「もっと読む」にたたむ */
+   const main=[["aru","こんなこと、ありませんか？"],["why","どうしてそうなるの？"],["tip","生かすヒント"]].filter(([f])=>K[f]),more=[["yure","16タイプの結果が変わるわけ"],["plus","悩みを、こう見てみる"],["hidden","あなたの、もう一つの力"]].filter(([f])=>K[f]);
+   return main.map((x,i)=>sec(x,i+1)).join("")+(more.length?'<details class="mdet ktmore"><summary><span>'+TR("もっと読む")+'<small>'+more.map(([f,h])=>TR(h)).join(TR("・"))+'</small></span></summary>'+more.map(x=>sec(x,0)).join("")+'</details>':'');})():'<p class="ktb">'+esc(K.body)+'</p>')+(K.aru?'':'<dl class="ktl"><dt>'+TR("悩みやすいこと")+'</dt><dd>'+esc(K.worry)+'</dd></dl>');}}window.__me.karaiC=strip(C.karai||"");drawBalance(N);lvInit();saveResult();layoutResult();recPick=null;drawRec();
 }
 /* ---- 結果を画像でシェア ---- */
 const SHARE_URL="https://16typeplus.jp/"+(LANG==="ja"?"":LANG+"/");
@@ -734,7 +737,14 @@ function flipCard(n){if(n.classList.contains("open")||n.classList.contains("turn
 function layoutResult(){const hero=document.querySelector(".hero");if(!hero)return;
  {let dh=$("dataH");if(!dh){dh=document.createElement("h3");dh.id="dataH";dh.className="datah";dh.textContent=TR("気質と性格の文字くらべ");}
   const q=x=>typeof x==="string"?hero.querySelector(x):x;
-  ["#rSrc","#rStory",".nicks","#coreBox","#funBox","#cloudFig",".shr","#kt","#recheck",dh,"#flipHint","#flip","#flipAll",".hgap","#rSum",".revw"].map(q).filter(Boolean).forEach(e=>hero.appendChild(e));}
+  /* 上：結論（見出し・カード・変わらないところ・図）→シェア→鑑定。下：「もっと知りたい人へ」としてたたむ */
+  const fold=(id,title,sub)=>{let d=$(id);if(!d){d=document.createElement("details");d.id=id;d.className="mdet";d.innerHTML='<summary><span>'+title+'<small>'+sub+'</small></span></summary>';}return d;};
+  let mh=$("moreH");if(!mh){mh=document.createElement("p");mh.id="moreH";mh.className="moreh";mh.textContent=TR("もっと知りたい人へ");}
+  const dF=fold("dFun",TR("あなたが言いそうなこと・やりそうなこと"),TR("辛口のひと言も")),dL=fold("dLetters",TR("4つの文字を、くわしく見る"),TR("文字くらべ・生年月日から出た理由"));
+  ["#rSrc","#rStory",".nicks","#coreBox","#cloudFig",".shr","#kt",mh,dF,dL,"#recheck"].map(q).filter(Boolean).forEach(e=>hero.appendChild(e));
+  if($("funBox"))dF.appendChild($("funBox"));
+  [dh,"#flipHint","#flip","#flipAll",".hgap","#rSum",".revw"].map(x=>typeof x==="string"?document.querySelector(".hero "+x):x).filter(Boolean).forEach(e=>dL.appendChild(e));
+  dF.hidden=!$("funBox")||!$("funBox").innerHTML;}
  const mk=(id,title)=>{let d=$(id);if(!d){d=document.createElement("details");d.id=id;d.className="card more";d.innerHTML='<summary><h2>'+title+'</h2></summary><div class="mbody"></div>';}return d;};
  const dK=mk("dKarte",TR("性格カルテ")),dH=mk("dHints",TR("悩みと仕事のヒント")),dR=mk("dRec",TR("性格の記録")),dP=mk("dPersona",TR("タイプごとのくわしい説明")),dB=mk("dBal",TR("気質の力のバランス"));
  const body=d=>d.querySelector(".mbody");
@@ -743,7 +753,7 @@ function layoutResult(){const hero=document.querySelector(".hero");if(!hero)retu
  if($("hints")&&$("hints").parentNode!==body(dH))body(dH).appendChild($("hints"));
  if($("persona")&&$("persona").parentNode!==body(dP))body(dP).appendChild($("persona"));
  if($("bal")&&$("bal").parentNode!==body(dB))body(dB).appendChild($("bal"));
- if(!dH.dataset.init){dH.dataset.init="1";dH.open=true;}
+ 
  if(!$("recBody")){const rb=document.createElement("div");rb.id="recBody";body(dR).appendChild(rb);}
  let at=hero;[dH,dR,dK,dP,dB,$("love")].forEach(el=>{if(el){at.after(el);at=el;}});at=kaiunCard(at);[$("partner"),$("group")].forEach(el=>{if(el){at.after(el);at=el;}});
  dB.hidden=!$("bal")||$("bal").hidden;}
