@@ -10386,18 +10386,29 @@ body.mode-compat #fb-card{display:none}
   .vmic-btn.on{background:#A8401F;border-color:#A8401F;color:#FFFFFF}
   .vmic-clr{display:inline-flex;align-items:center;min-height:44px;padding:6px 16px;border-radius:999px;border:1.5px solid #B8B0A6;background:#FFFFFF;color:#3A3530;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer}
   .vmic-clr.undo{border-color:#A8401F;color:#A8401F}
+  .vfx-ov{position:fixed;inset:0;z-index:2147483000;background:rgba(20,16,12,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+  .vfx-box{background:#FFFFFF;color:#3C2A1C;width:100%;max-width:420px;max-height:88vh;overflow:auto;border-radius:16px;padding:20px 18px 16px;box-shadow:0 12px 40px rgba(0,0,0,.28);font-size:15px;line-height:1.75;word-break:keep-all;overflow-wrap:anywhere}
+  .vfx-box h3{margin:0 0 10px;font-size:18px;font-weight:900;color:#3C2A1C}
+  .vfx-box p{margin:0 0 10px}
+  .vfx-box .vfx-s{font-size:13px;color:#5A4636}
+  .vfx-btns{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;margin-top:6px}
+  .vfx-b{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 18px;border-radius:999px;border:1.5px solid #B8B0A6;background:#FFFFFF;color:#3A3530;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;text-decoration:none}
+  .vfx-b.main{background:#A8401F;border-color:#A8401F;color:#FFFFFF}
   .vmic-msg{flex:1 1 100%;font-size:12.5px;font-weight:700;color:#5A4636;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}
 </style>
-<script>window.__VMIC_CFG={sel:'#cs-q, textarea.worry'};</script>
+<script>window.__VMIC_CFG={sel:'#cs-q, textarea.worry',opt:'mypage-pro.html'};</script>
 <script>
 /* 声で入力（🎤）と「✕ 全部消す」＝3サイト共通（PRO・ビギナー・易 EKI Pro）。発注者決定 2026-10-18（2026-10-17 に PRO で試験導入→3サイト共通に）。
-   ・ブラウザに入っている音声認識（Web Speech API）を使う＝費用0円・サーバー不要・Gemini の利用料も増えない。
+   ・ブラウザに入っている音声認識（Web Speech API）を使う＝声の聞き取りは費用0円（声はサーバーに送らない）。
+   ・そのあと「占いの言葉の自動直し」（下の smartFix。音声入力オプション月1,000円・おためし10回）で、文字だけをサーバーに送り、
+     占いの言葉を正しい字に直す（1回 約0.1円。サーバーは functions/voice-fix.js＝元は tools/voice_fix_server.js）。
    ・話した言葉は欄に文字で入るだけ（自動では送らない）。送る前に欄の中で直せる。
    ・聞き間違い直し表（下の FIX）：占いの言葉の聞き間違いを、文字になったあとで自動で直す。
      ふだんの言葉（変更・本家・空母・帝王・署名式 など）まで変えてしまわないよう、「占いでしか使わない言葉」だけを入れる。
      3つ目に字を書くと、その字が直前にあるときは直さない（例 ['体運','大運','全身肉']＝全体運・身体運…は直さない）。
      言葉を足すときは FIX に ['聞き間違い','正しい言葉'] を1行足し、python3 tools/add_voice_input.py → 生成スクリプトの順に回す。
      ひらがなで書いた行は、カタカナの書き方も自動で直す。直したことは画面に出さない（黙って直す。うまく入ったときは一言も出さない。発注者指示 2026-10-18）。
+     おためし中だけ、自動直しのあとに「おためし 残り○回」を出す（オプションの方には何も出さない）。
    ・このファイルは tools/add_voice_input.py が PRO と易の画面に埋め込む（ビギナーは PRO から生成）。
      直すときはこのファイルを直して再実行する（埋め込まれた側を直接直さない）。 */
 (function(){
@@ -10446,6 +10457,78 @@ body.mode-compat #fb-card{display:none}
   }
   window.__pkVoiceFix=fixText;   // 点検用
 
+  /* ===== 占いの言葉の自動直し（音声入力オプション・鑑定者本人の決定 2026-10-27）=====
+     ・声で入力した文字（オプションの方はキーボードで打った文字も）を、サーバー（functions/voice-fix.js）で
+       占いの言葉だけ正しい字に直す。声はサーバーに送らない（ブラウザの聞き取りで文字になったものだけを送る）。
+     ・オプション（月1,000円）でない方は、おためし10回まで（回数はサーバーが会員ごとに数える）。使い切ったら案内を1回出し、
+       そのあとも声の入力は無料のまま（聞き間違い直し表だけで直す）。案内は「あとで」のあと7日は出さない。
+     ・はじめて🎤を押したときに、たくさん話してほしいこと・おためしのことを1回だけ案内する。
+     ・サーバーにつながらないとき（通信なし・確認環境）は、何も出さずに今までどおり。 */
+  var FN=CFG.fn||'/.netlify/functions/voice-fix', OPT=CFG.opt||'';
+  var VS={option:null,left:null,off:false};
+  try{ var _v=JSON.parse(sessionStorage.getItem('pk_vfx')||'null'); if(_v) VS=Object.assign(VS,_v); }catch(_){}
+  function vsSave(){ try{ sessionStorage.setItem('pk_vfx',JSON.stringify({option:VS.option,left:VS.left})); }catch(_){} }
+  function lsGet(k){ try{ return localStorage.getItem(k); }catch(_){ return null; } }
+  function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(_){} }
+  function devId(){ var d=lsGet('pk_vdev'); if(!d){ d='v'+Math.random().toString(36).slice(2)+Date.now().toString(36); lsSet('pk_vdev',d); } return d; }
+  function vfxCall(body,done){
+    if(VS.off||!window.fetch||location.protocol==='file:'){ done(null); return; }
+    var h={'Content-Type':'application/json','x-pk-device':devId()};
+    try{ var tk=localStorage.getItem('member_token')||sessionStorage.getItem('member_token'); if(tk) h['Authorization']='Bearer '+tk; }catch(_){}
+    var ctl=window.AbortController?new AbortController():null, tm=setTimeout(function(){ try{ ctl&&ctl.abort(); }catch(_){} },9000);
+    fetch(FN,{method:'POST',headers:h,body:JSON.stringify(body),signal:ctl?ctl.signal:undefined}).then(function(r){
+      clearTimeout(tm);
+      if(r.status===404||r.status===405){ VS.off=true; done(null); return; }
+      return r.json().catch(function(){ return null; }).then(function(j){
+        if(j&&typeof j.option==='boolean'){ VS.option=j.option; VS.left=(typeof j.left==='number')?j.left:VS.left; vsSave(); }
+        if(r.status===402){ VS.option=false; VS.left=0; vsSave(); done(null,'end'); return; }
+        done(r.ok&&j?j:null);
+      });
+    }).catch(function(){ clearTimeout(tm); done(null); });
+  }
+  window.__pkVfx={st:VS,intro:introPop,end:endPop};   // 点検用
+  var canFix=function(){ return !VS.off&&(VS.option===true||VS.left===null||VS.left>0); };
+  function pop(html,btns){
+    var old=document.querySelector('.vfx-ov'); if(old) old.remove();
+    var ov=document.createElement('div'); ov.className='vfx-ov'; ov.setAttribute('role','dialog'); ov.setAttribute('aria-modal','true');
+    var box=document.createElement('div'); box.className='vfx-box'; box.innerHTML=html;
+    var row=document.createElement('div'); row.className='vfx-btns';
+    btns.forEach(function(x){ var e=document.createElement(x.href?'a':'button'); e.className='vfx-b'+(x.main?' main':''); e.textContent=x.t;
+      if(x.href){ e.href=x.href; } else { e.type='button'; }
+      e.addEventListener('click',function(){ ov.remove(); if(x.fn) x.fn(); }); row.appendChild(e); });
+    box.appendChild(row); ov.appendChild(box);
+    ov.addEventListener('click',function(ev){ if(ev.target===ov) ov.remove(); });
+    document.body.appendChild(ov); try{ row.querySelector('.vfx-b').focus(); }catch(_){}
+  }
+  function introPop(go){
+    lsSet('pk_vfx_intro','1');
+    var trial=VS.option===true?'':'<p>この直しは、<b>10回まで無料でおためし</b>いただけます。</p>';
+    pop('<h3>🎤 声で入力してみましょう</h3>'+
+        '<p>お客様のことや相談の内容を、思いつくまま、<b>たっぷり話してください</b>。たくさん話していただくほど、鑑定がくわしくなります。</p>'+
+        '<p>話した言葉の中の占いの言葉（星の名前など）は、<b>正しい字に自動で直ります</b>。</p>'+trial+
+        '<p class="vfx-s">声はお使いの端末で文字になります。直すときに送るのは文字だけで、声は送りません。</p>',
+        [{t:'🎤 話してみる',main:true,fn:go},{t:'閉じる'}]);
+  }
+  function endPop(){
+    var t=+(lsGet('pk_vfx_end')||0); if(Date.now()-t<7*864e5) return; lsSet('pk_vfx_end',String(Date.now()));
+    var b=[{t:'あとで'}]; if(OPT) b.unshift({t:'オプションを見る',main:true,href:OPT});
+    pop('<h3>🎤 おためしの10回が終わりました</h3>'+
+        '<p>占いの言葉を正しい字に直す機能は、<b>月1,000円のオプション</b>で続けてお使いいただけます。話したことがそのまま鑑定に使える字で入るので、たくさん話すほど便利です。</p>'+
+        '<p>声で入力すること自体は、このまま<b>無料</b>でお使いいただけます（言葉の直しは簡単なものになります）。</p>',b);
+  }
+  // 声で入れた文字（または打った文字）を直す。欄の文字がそのあいだに変わっていなければ入れかえる
+  function smartFix(ta,m,base,part,quiet){
+    if(!canFix()||!String(part||'').trim()) return;
+    var snap=ta.value; if(!quiet) say(m,'✨ 占いの言葉を整えています…');
+    vfxCall({text:part},function(j,why){
+      if(why==='end'){ say(m,''); endPop(); return; }
+      if(!j||typeof j.text!=='string'){ if(!quiet) say(m,''); return; }
+      if(ta.value===snap&&j.changed){ ta.value=base===null?j.text:joinText(base,j.text); fire(ta); ta.__vfxLast=ta.value; }
+      say(m,(!j.option&&typeof j.left==='number')?('✨ 占いの言葉を直しました（おためし 残り'+j.left+'回）'):'');
+      if(!j.option&&j.left===0) setTimeout(endPop,1200);
+    });
+  }
+
   var cur=null;
   var IDLE='🎤 声で入力', ON='■ 止める';
   var NOSR='この画面では声の入力が使えません。キーボードのマイクボタンからお話しください。';
@@ -10467,9 +10550,9 @@ body.mode-compat #fb-card{display:none}
     r.onerror=function(e){ err=(e&&e.error)||''; };
     r.onend=function(){
       cur=null; b.classList.remove('on'); b.textContent=IDLE;
-      if(got){ ta.value=joinText(base,fixText(fin||shown)); fire(ta);
+      if(got){ var part=fixText(fin||shown); ta.value=joinText(base,part); fire(ta);
         try{ ta.focus(); var n=ta.value.length; ta.setSelectionRange(n,n); }catch(_){}
-        say(m,''); return; }   // うまく入ったときは何も出さない（毎回の一言は不要。発注者指示 2026-10-18）
+        say(m,''); smartFix(ta,m,base,part,false); return; }   // うまく入ったときは何も出さない（毎回の一言は不要。発注者指示 2026-10-18）
       if(err==='not-allowed'||err==='service-not-allowed') say(m,'マイクが許可されていません。端末の設定でマイクを許可するか、キーボードのマイクボタンからお話しください。');
       else if(err==='network') say(m,'通信できないため、声の入力が使えませんでした。キーボードのマイクボタンからお話しください。');
       else if(err==='audio-capture') say(m,'マイクが見つかりませんでした。');
@@ -10487,7 +10570,10 @@ body.mode-compat #fb-card{display:none}
     var c=document.createElement('button'); c.type='button'; c.className='vmic-clr'; c.textContent=CLR; c.setAttribute('aria-label','入力した文字を全部消す');
     var m=document.createElement('span'); m.className='vmic-msg'; m.setAttribute('aria-live','polite');
     row.appendChild(b); row.appendChild(c); row.appendChild(m); ta.insertAdjacentElement('afterend',row);
-    b.addEventListener('click',function(){ start(ta,b,m); });
+    b.addEventListener('click',function(){ if(!cur&&!lsGet('pk_vfx_intro')){ introPop(function(){ start(ta,b,m); }); return; } start(ta,b,m); });
+    // オプションの方は、キーボードで打った文字も、欄から離れたときに占いの言葉を直す（おためし中は声の入力だけ）
+    ta.addEventListener('focus',function(){ if(VS.option===null&&!VS.off&&!VS.asked){ VS.asked=true; vfxCall({mode:'status'},function(){}); } });
+    ta.addEventListener('blur',function(){ var v=String(ta.value||''); if(cur||VS.option!==true||v.trim().length<4||v===ta.__vfxLast) return; ta.__vfxLast=v; smartFix(ta,m,null,v,true); });
     var saved=null, timer=0;
     function sync(){ c.style.display=(saved!==null||String(ta.value||'').length)?'':'none'; }
     function endUndo(){ saved=null; clearTimeout(timer); c.textContent=CLR; c.classList.remove('undo'); sync(); }
