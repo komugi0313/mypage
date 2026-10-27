@@ -402,6 +402,20 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
 // お名前の印が残らない（1文字のお名前・2026-10-25）
 { const r=await p.evaluate(()=>{ const pa=personName, pb=personNameB; personName='健太'; personNameB='翔'; const out=_unmaskNames('〔本人〕さんと〔翔〕さん、〔お相手〕さん。2027年〔丁未・42歳〕',[['健太','〔本人〕']]); personName=pa; personNameB=pb; return out; });
   const okN=r==='健太さんと翔さん、翔さん。2027年〔丁未・42歳〕'; console.log('  '+(okN?'OK':'NG')+' お名前の印が残らない（1文字のお名前）'+(okN?'':'  … '+r)); if(!okN) res.fails.push('お名前の印'); }
+// 占いの言葉の自動直し（音声入力オプション・2026-10-27）：3サイトの voice-fix.js が同じ中身・安全装置が働く・画面に仕組みがある
+{ const e=[]; const { createRequire } = await import('module'); const req=createRequire(import.meta.url);
+  const srcOf=f=>fs.readFileSync(path.join(ROOT,f),'utf8').replace(/const PRODUCT = "[a-z-]+";/,'');
+  const fx=['pro','beginner','eki-pro'].map(d=>d+'/functions/voice-fix.js');
+  try{ const a=srcOf(fx[0]); fx.slice(1).forEach(f=>{ if(srcOf(f)!==a) e.push(f+' が同じ中身でない'); });
+    const m=req(path.join(ROOT,fx[0])).__test;
+    if(!/甲午/.test(m.SYSTEM)||!/律音/.test(m.SYSTEM)||!/月刃格/.test(m.SYSTEM)||!/魁罡/.test(m.SYSTEM)) e.push('用語一覧が入っていない');
+    if(/：子$|^ね：/m.test(m.SYSTEM)) e.push('1〜2文字の読みが入っている');
+    const g=m.guard; const t1=g('きのえとへんかんが交わってげっしがんになります。','甲と偏官が交わって月支元命になります。'), t2=g('出た卦は地点体、動いたのは三校で、之卦は地沢臨です。','地天泰、三爻、地沢臨'), t3=g('1981年6月10日生まれです。月柱は木の絵馬です。','月柱は甲午です。'), t4=g('生まれは1981年です。','生まれは1980年です。');
+    if(t1!=='甲と偏官が交わって月支元命になります。') e.push('正しい直しを戻した'); if(t2.indexOf('地点体')<0) e.push('言葉だけの並びを通した'); if(t3.indexOf('1981')<0) e.push('消えた文を通した'); if(t4.indexOf('1981')<0) e.push('数字の変化を通した');
+  }catch(err){ e.push('読めない：'+err.message); }
+  const pg=await p.evaluate(()=>!!(window.__pkVfx&&window.__pkVfx.intro&&window.__pkVfx.end)); if(!pg) e.push('画面に自動直しの仕組みがない');
+  ['pro/privacy-pro.html','beginner/privacy.html','eki-pro/privacy.html'].forEach(f=>{ if(!/占いの言葉の自動直し/.test(fs.readFileSync(path.join(ROOT,f),'utf8'))) e.push(f+' にプライバシーの説明がない'); });
+  console.log('  '+(e.length?'NG':'OK')+' 占いの言葉の自動直し（3サイト同じ・安全装置・画面・プライバシー）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('自動直し: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
