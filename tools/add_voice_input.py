@@ -32,13 +32,14 @@ def block(sel, border, accent, ink, msg, opt):
             '  .vfx-box .nw{display:inline-block}\n'
             '  .vfx-l{margin:0 0 10px;padding-left:1.2em}\n'
             '  .vfx-l li{margin:2px 0}\n'
+            f'  .vfx-ex{{display:block;margin-top:2px;font-size:13.5px;color:{msg}}}\n'
             f'  .vfx-box .vfx-s{{font-size:13px;color:{msg}}}\n'
             '  .vfx-btns{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;margin-top:6px}\n'
             f'  .vfx-b{{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 18px;border-radius:999px;border:1.5px solid #B8B0A6;background:#FFFFFF;color:#3A3530;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;text-decoration:none}}\n'
             f'  .vfx-b.main{{background:{accent};border-color:{accent};color:#FFFFFF}}\n'
             f'  .vmic-msg{{flex:1 1 100%;font-size:12.5px;font-weight:700;color:{msg};line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}}\n'
             '</style>\n'
-            f'<script>window.__VMIC_CFG={{sel:{sel!r},opt:{opt!r}' + (",w:'易の言葉（卦の名前など）',ws:'易の言葉'" if 'eki' in opt or opt.startswith('../') else '') + '};</script>\n'
+            f'<script>window.__VMIC_CFG={{sel:{sel!r},opt:{opt!r}' + (",w:'易の言葉（卦の名前など）',ws:'易の言葉',ex:'例：ちてんたい → 地天泰／かんいすい → 坎為水'" if 'eki' in opt or opt.startswith('../') else ",ex:'例：げっしげんめい → 月支元命／かいごう → 魁罡'") + '};</script>\n'
             '<script>\n' + JS.rstrip() + '\n</script>\n'
             '<!--VOICE-INPUT:end-->')
 
