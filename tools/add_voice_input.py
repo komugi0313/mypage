@@ -79,6 +79,7 @@ def build_system():
          '例：<text>今年は木の絵馬の年で、印字と変換が強いです</text> → 今年は甲午の年で、印綬と偏官が強いです',
          '例：<text>日中は定王、月中は県六、時中は簿です。お二人の日看子が同じ立ちんで、月中同士が天戦地中です</text> → 日柱は帝旺、月柱は建禄、時柱は墓です。お二人の日干支が同じ律音で、月柱同士が天戦地冲です',
          '例：<text>日柱が水の兄犬なので会合です。外角の従角格です</text> → 日柱が壬戌なので魁罡です。外格の従革格です',
+         '例：<text>にっしは午で、じしは子、にっちゅうは甲午、じちゅうは壬申です</text> → 日支は午で、時支は子、日柱は甲午、時柱は壬申です',
          '例：<text>日中に会社で会合があって、月中は忙しかった</text> → 日中に会社で会合があって、月中は忙しかった（ふつうの言葉。命式の話ではないのでそのまま）',
          '・文や言葉を1つも消さない（生年月日・名前・ふつうの文もすべて残す）。直せないときは、そのまま残す。',
          '例：<text>彼と結婚していいか迷っています。転勤が多い仕事です</text> → 彼と結婚していいか迷っています。転勤が多い仕事です',
@@ -99,9 +100,20 @@ def build_system():
             if k not in seen: seen.add(k); L.append(k)
     return '\n'.join(L)
 SYSTEM = build_system()
+def build_dict():
+    # 読み（3文字以上）→書き方。同じ読みで書き方が2つ以上あるもの（あいまい）は入れない
+    m = {}
+    for t in TERMS['terms']:
+        ys = t['yomi'][:1] if t['cat'] in ('十干', '十二支') else t['yomi']
+        for y in ys:
+            if len(y) >= 3: m.setdefault(y, set()).add(t['w'])
+    for a, b in TERMS.get('mishear', []):
+        m.setdefault(a, set()).add(b)
+    return {k: list(v)[0] for k, v in m.items() if len(v) == 1}
+DICT = build_dict()
 SRV = open(os.path.join(ROOT, 'tools', 'voice_fix_server.js'), encoding='utf-8').read()
 for folder, pid in (('pro', 'pro'), ('beginner', 'beginner'), ('eki-pro', 'eki')):
-    out = SRV.replace("'__PRODUCT__'", json.dumps(pid)).replace('__SYSTEM__', json.dumps(SYSTEM, ensure_ascii=False))
+    out = SRV.replace("'__PRODUCT__'", json.dumps(pid)).replace('__SYSTEM__', json.dumps(SYSTEM, ensure_ascii=False)).replace('__DICT__', json.dumps(DICT, ensure_ascii=False, sort_keys=True)).replace('__TERMCHARS__', json.dumps(''.join(sorted(set(''.join(t['w'] for t in TERMS['terms']) + ''.join(b for a, b in TERMS.get('mishear', [])) + ''.join(b for a, b in re.findall(r"\['([^']+)','([^']+)'", JS))))), ensure_ascii=False))
     out = out.replace('//   元のファイルは tools/voice_fix_server.js。', '//   ※このファイルは tools/add_voice_input.py が作ったもの（直接直さない）。元のファイルは tools/voice_fix_server.js。', 1)
     fp = os.path.join(ROOT, folder, 'functions', 'voice-fix.js')
     old = open(fp, encoding='utf-8').read() if os.path.exists(fp) else ''
