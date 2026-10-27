@@ -10160,9 +10160,9 @@ renderResult();
      ・はじめて🎤を押したときに、たくさん話してほしいこと・おためしのことを1回だけ案内する。
      ・サーバーにつながらないとき（通信なし・確認環境）は、何も出さずに今までどおり。 */
   var FN=CFG.fn||'/.netlify/functions/voice-fix', OPT=CFG.opt||'';
-  var VS={option:null,left:null,off:false};
+  var VS={option:null,left:null,trial:10,off:false};
   try{ var _v=JSON.parse(sessionStorage.getItem('pk_vfx')||'null'); if(_v) VS=Object.assign(VS,_v); }catch(_){}
-  function vsSave(){ try{ sessionStorage.setItem('pk_vfx',JSON.stringify({option:VS.option,left:VS.left})); }catch(_){} }
+  function vsSave(){ try{ sessionStorage.setItem('pk_vfx',JSON.stringify({option:VS.option,left:VS.left,trial:VS.trial})); }catch(_){} }
   function lsGet(k){ try{ return localStorage.getItem(k); }catch(_){ return null; } }
   function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(_){} }
   function devId(){ var d=lsGet('pk_vdev'); if(!d){ d='v'+Math.random().toString(36).slice(2)+Date.now().toString(36); lsSet('pk_vdev',d); } return d; }
@@ -10175,13 +10175,15 @@ renderResult();
       clearTimeout(tm);
       if(r.status===404||r.status===405){ VS.off=true; done(null); return; }
       return r.json().catch(function(){ return null; }).then(function(j){
-        if(j&&typeof j.option==='boolean'){ VS.option=j.option; VS.left=(typeof j.left==='number')?j.left:VS.left; vsSave(); }
+        if(j&&typeof j.option==='boolean'){ VS.option=j.option; VS.left=(typeof j.left==='number')?j.left:null; if(typeof j.trial==='number') VS.trial=j.trial; vsSave(); }
         if(r.status===402){ VS.option=false; VS.left=0; vsSave(); done(null,'end'); return; }
         done(r.ok&&j?j:null);
       });
     }).catch(function(){ clearTimeout(tm); done(null); });
   }
   window.__pkVfx={st:VS,intro:introPop,end:endPop,free:function(){ freeUse(); }};   // 点検用
+  // ページを開いたら1回、サーバーに今の状態（オプションの有無・残り）を聞く（同じタブでオプションを申し込んだ直後も正しく使えるように）
+  try{ setTimeout(function(){ if(!VS.asked&&VS.option!==true){ VS.asked=true; vfxCall({mode:'status'},function(){}); } },1500); }catch(_){}
   var canFix=function(){ return !VS.off&&(VS.option===true||VS.left===null||VS.left>0); };
   function pop(html,btns){
     var old=document.querySelector('.vfx-ov'); if(old) old.remove();
@@ -10197,7 +10199,7 @@ renderResult();
   }
   function introPop(go){
     lsSet('pk_vfx_intro','1');
-    var trial=VS.option===true?'':'<p>この整え・直しは、<b>10回まで無料でおためし</b>いただけます。</p>';
+    var trial=VS.option===true?'':'<p>この整え・直しは、<b>'+VS.trial+'回まで無料でおためし</b>いただけます。</p>';
     pop('<h3>🎤 声で入力してみましょう</h3>'+
         '<p>お客様のことや相談の内容を、思いつくまま、<b>たっぷり話してください</b>。たくさん話していただくほど、鑑定がくわしくなります。</p>'+
         '<p>話した言葉は、<b>句読点・改行が入って読みやすく整い</b>、占いの言葉（星の名前など）も<b>正しい字に自動で直ります</b>。「えー」「あのー」も消えます。</p>'+trial+
@@ -10207,7 +10209,7 @@ renderResult();
   function endPop(){
     if(lsGet('pk_vfx_end')) return; lsSet('pk_vfx_end',String(Date.now()));   // おためし終了の案内は1回だけ
     var b=[{t:'あとで'}]; if(OPT) b.unshift({t:'オプションを見る',main:true,href:OPT});
-    pop('<h3>🎤 おためしの10回が終わりました</h3>'+
+    pop('<h3>🎤 おためしの'+VS.trial+'回が終わりました</h3>'+
         '<p>話した言葉を読みやすく整えて、占いの言葉を正しい字に直す機能は、<b>月1,000円のオプション</b>で続けてお使いいただけます。話したことがそのまま鑑定やカルテに使える文になるので、たくさん話すほど便利です。</p>'+
         '<p>声で入力すること自体は、このまま<b>無料</b>でお使いいただけます（句読点・改行の整えはなく、言葉の直しは簡単なものになります）。</p>',b);
   }
@@ -10215,6 +10217,7 @@ renderResult();
   var FOLLOW_N=20;
   function freeUse(){
     if(VS.option!==false||VS.left!==0||lsGet('pk_vfx_follow')) return;
+    if(!lsGet('pk_vfx_end')){ setTimeout(endPop,600); return; }   // おためし終了の案内をこの端末でまだ見ていなければ、先にそれを1回
     var n=(+(lsGet('pk_vfx_free')||0))+1; lsSet('pk_vfx_free',String(n));
     if(n<FOLLOW_N) return; lsSet('pk_vfx_follow','1');
     var b=[{t:'閉じる'}]; if(OPT) b.unshift({t:'オプションを見る',main:true,href:OPT});
@@ -10231,7 +10234,7 @@ renderResult();
       if(why==='end'){ say(m,''); endPop(); return; }
       if(!j||typeof j.text!=='string'){ if(!quiet) say(m,''); return; }
       if(ta.value===snap&&j.changed){ ta.value=base===null?j.text:joinText(base,j.text); fire(ta); ta.__vfxLast=ta.value; }
-      say(m,(!j.option&&typeof j.left==='number')?('✨ 読みやすく整えました（おためし 残り'+j.left+'回）'):'');
+      say(m,!j.changed?'':(!j.option&&typeof j.left==='number')?('✨ 読みやすく整えました（おためし 残り'+j.left+'回）'):(!j.option?'✨ 読みやすく整えました':''));
       if(!j.option&&j.left===0) setTimeout(endPop,1200);
     });
   }
@@ -10279,7 +10282,7 @@ renderResult();
     row.appendChild(b); row.appendChild(c); row.appendChild(m); ta.insertAdjacentElement('afterend',row);
     b.addEventListener('click',function(){ if(!cur&&!lsGet('pk_vfx_intro')){ introPop(function(){ start(ta,b,m); }); return; } start(ta,b,m); });
     // オプションの方は、キーボードで打った文字も、欄から離れたときに占いの言葉を直す（おためし中は声の入力だけ）
-    ta.addEventListener('focus',function(){ if(VS.option===null&&!VS.off&&!VS.asked){ VS.asked=true; vfxCall({mode:'status'},function(){}); } });
+    ta.addEventListener('focus',function(){ if(VS.option!==true&&!VS.off&&!VS.asked){ VS.asked=true; vfxCall({mode:'status'},function(){}); } });
     ta.addEventListener('blur',function(){ var v=String(ta.value||''); if(cur||VS.option!==true||v.trim().length<4||v===ta.__vfxLast) return; ta.__vfxLast=v; smartFix(ta,m,null,v,true); });
     var saved=null, timer=0;
     function sync(){ c.style.display=(saved!==null||String(ta.value||'').length)?'':'none'; }

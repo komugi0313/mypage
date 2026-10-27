@@ -414,8 +414,9 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(t1!=='甲と偏官が交わって月支元命になります。') e.push('正しい直しを戻した'); if(g('月始めに会社の月誌が届きました','月始めに会社の月報が届きました').indexOf('月誌')<0) e.push('ふつうの言葉の言いかえを通した'); if(m.DICT['にっちゅう']!=='日柱'||m.DICT['じちゅう']!=='時柱'||m.DICT['げっし']!=='月支'||m.DICT['はっけ']!=='八卦'||m.DICT['りっちん']!=='律音'||m.DICT['こう']) e.push('1語だけの読みの表'); if(t2.indexOf('地点体')<0) e.push('言葉だけの並びを通した'); if(t3.indexOf('1981')<0) e.push('消えた文を通した'); if(t4.indexOf('1981')<0) e.push('数字の変化を通した');
   }catch(err){ e.push('読めない：'+err.message); }
   const pg=await p.evaluate(()=>!!(window.__pkVfx&&window.__pkVfx.intro&&window.__pkVfx.end)); if(!pg) e.push('画面に自動直しの仕組みがない');
+  try{ const { execFileSync } = await import('child_process'); const o=execFileSync('node',[path.join(ROOT,'tools/release_gate/gate_voice_count.cjs')],{encoding:'utf8'}).trim(); if(o!=='OK') e.push('おためしの回数：'+o); }catch(err){ e.push('おためしの回数：'+String((err.stdout||err.message)).trim()); }
   ['pro/privacy-pro.html','beginner/privacy.html','eki-pro/privacy.html'].forEach(f=>{ if(!/占いの言葉の自動直し/.test(fs.readFileSync(path.join(ROOT,f),'utf8'))) e.push(f+' にプライバシーの説明がない'); });
-  console.log('  '+(e.length?'NG':'OK')+' 占いの言葉の自動直し（3サイト同じ・安全装置・画面・プライバシー）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('自動直し: '+e.join('・')); }
+  console.log('  '+(e.length?'NG':'OK')+' 占いの言葉の自動直し（3サイト同じ・安全装置・おためしの回数・画面・プライバシー）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('自動直し: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
