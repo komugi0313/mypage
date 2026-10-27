@@ -80,7 +80,7 @@ ok('相談2：二度押しでも答えは1つ増えるだけ', items2===2, 'item
 if(MODE==='online') ok('相談2：呼び出し回数'+(site==='beginner'?'（ビギナーは専門用語の書き直しで最大4回）':'（2回）'), site==='beginner'?(calls-c1>=2&&calls-c1<=4):calls-c1===2, 'calls='+(calls-c1));
 // チャット用コピー・共有
 await p.evaluate(()=>{window.__clip='';window.__shared=null;});
-await p.click('#reading .rd-item:last-child .rd-chat').catch(()=>{}); await p.waitForTimeout(600);
+await p.evaluate(()=>{ document.querySelectorAll('#reading .rd-item:last-child .rd-more').forEach(d=>d.open=true); }); await p.click('#reading .rd-item:last-child .rd-chat').catch(()=>{}); await p.waitForTimeout(600);
 const chat=await p.evaluate(()=>window.__clip||''); { const cb=calCheck(chat,1985); ok('暦：チャット用コピーの年齢・干支・今年/来年が正しい', cb.length===0, cb.slice(0,3).join(' / ')); } ok('チャット用コピーが空でない・＊なし', chat.length>80&&cleanStar(chat)===0, chat.length+'字');
 await p.click('#reading .rd-item:last-child .rd-share').catch(()=>{}); await p.waitForTimeout(600);
 const sh=await p.evaluate(()=>((window.__shared||{}).text||'')); ok('共有（LINE）の文が空でない・＊なし', sh.length>80&&cleanStar(sh)===0, sh.length+'字');
