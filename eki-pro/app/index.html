@@ -4869,13 +4869,16 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   // ページを開いたら1回、サーバーに今の状態（オプションの有無・残り）を聞く（同じタブでオプションを申し込んだ直後も正しく使えるように）
   try{ setTimeout(function(){ if(!VS.asked&&VS.option!==true){ VS.asked=true; vfxCall({mode:'status'},function(){}); } },1500); }catch(_){}
   var canFix=function(){ return !VS.off&&(VS.option===true||VS.left===null||VS.left>0); };
+  // 「オプションを見る」でマイページへ移る前に、相談の欄の文を取っておき、戻ったら元に戻す（話した文が消えないように）
+  function saveDraft(){ try{ var d={}; document.querySelectorAll(SEL).forEach(function(t){ if(t.id&&String(t.value||'').trim()) d[t.id]=t.value; }); sessionStorage.setItem('pk_vfx_draft',JSON.stringify({u:location.pathname,d:d,t:Date.now()})); }catch(_){} }
+  function restoreDraft(ta){ try{ var x=JSON.parse(sessionStorage.getItem('pk_vfx_draft')||'null'); if(!x||x.u!==location.pathname||Date.now()-x.t>3*36e5||!ta.id||!x.d[ta.id]) return; if(!String(ta.value||'').trim()){ ta.value=x.d[ta.id]; fire(ta); } delete x.d[ta.id]; if(Object.keys(x.d).length) sessionStorage.setItem('pk_vfx_draft',JSON.stringify(x)); else sessionStorage.removeItem('pk_vfx_draft'); }catch(_){} }
   function pop(html,btns){
     var old=document.querySelector('.vfx-ov'); if(old) old.remove();
     var ov=document.createElement('div'); ov.className='vfx-ov'; ov.setAttribute('role','dialog'); ov.setAttribute('aria-modal','true');
     var box=document.createElement('div'); box.className='vfx-box'; box.innerHTML=html;
     var row=document.createElement('div'); row.className='vfx-btns';
     btns.forEach(function(x){ var e=document.createElement(x.href?'a':'button'); e.className='vfx-b'+(x.main?' main':''); e.textContent=x.t;
-      if(x.href){ e.href=x.href; } else { e.type='button'; }
+      if(x.href){ e.href=x.href; e.addEventListener('click',saveDraft); } else { e.type='button'; }
       e.addEventListener('click',function(){ ov.remove(); if(x.fn) x.fn(); }); row.appendChild(e); });
     box.appendChild(row); ov.appendChild(box);
     ov.addEventListener('click',function(ev){ if(ev.target===ov) ov.remove(); });
@@ -4960,6 +4963,7 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   var CLR='✕ 全部消す', UNDO='↩ 元に戻す';
   function attach(ta){
     if(!ta||ta.dataset.vmic) return; ta.dataset.vmic='1';
+    setTimeout(function(){ restoreDraft(ta); },300);
     var row=document.createElement('div'); row.className='vmic-row';
     var b=document.createElement('button'); b.type='button'; b.className='vmic-btn'; b.textContent=IDLE; b.setAttribute('aria-label','声で入力する');
     var c=document.createElement('button'); c.type='button'; c.className='vmic-clr'; c.textContent=CLR; c.setAttribute('aria-label','入力した文字を全部消す');
