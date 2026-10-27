@@ -10461,7 +10461,8 @@ body.mode-compat #fb-card{display:none}
      ・声で入力した文字（オプションの方はキーボードで打った文字も）を、サーバー（functions/voice-fix.js）で
        占いの言葉だけ正しい字に直す。声はサーバーに送らない（ブラウザの聞き取りで文字になったものだけを送る）。
      ・オプション（月1,000円）でない方は、おためし10回まで（回数はサーバーが会員ごとに数える）。使い切ったら案内を1回出し、
-       そのあとも声の入力は無料のまま（聞き間違い直し表だけで直す）。案内は「あとで」のあと7日は出さない。
+       そのあとも声の入力は無料のまま（聞き間違い直し表だけで直す）。おためし終了の案内は1回だけ。
+       そのあと無料の声の入力を20回使った方にだけ、もう1回だけ案内する（全部で2回まで。鑑定者本人の指示 2026-10-27「何回も出すとうるさい」）。
      ・はじめて🎤を押したときに、たくさん話してほしいこと・おためしのことを1回だけ案内する。
      ・サーバーにつながらないとき（通信なし・確認環境）は、何も出さずに今までどおり。 */
   var FN=CFG.fn||'/.netlify/functions/voice-fix', OPT=CFG.opt||'';
@@ -10486,7 +10487,7 @@ body.mode-compat #fb-card{display:none}
       });
     }).catch(function(){ clearTimeout(tm); done(null); });
   }
-  window.__pkVfx={st:VS,intro:introPop,end:endPop};   // 点検用
+  window.__pkVfx={st:VS,intro:introPop,end:endPop,free:function(){ freeUse(); }};   // 点検用
   var canFix=function(){ return !VS.off&&(VS.option===true||VS.left===null||VS.left>0); };
   function pop(html,btns){
     var old=document.querySelector('.vfx-ov'); if(old) old.remove();
@@ -10510,11 +10511,23 @@ body.mode-compat #fb-card{display:none}
         [{t:'🎤 話してみる',main:true,fn:go},{t:'閉じる'}]);
   }
   function endPop(){
-    var t=+(lsGet('pk_vfx_end')||0); if(Date.now()-t<7*864e5) return; lsSet('pk_vfx_end',String(Date.now()));
+    if(lsGet('pk_vfx_end')) return; lsSet('pk_vfx_end',String(Date.now()));   // おためし終了の案内は1回だけ
     var b=[{t:'あとで'}]; if(OPT) b.unshift({t:'オプションを見る',main:true,href:OPT});
     pop('<h3>🎤 おためしの10回が終わりました</h3>'+
         '<p>話した言葉を読みやすく整えて、占いの言葉を正しい字に直す機能は、<b>月1,000円のオプション</b>で続けてお使いいただけます。話したことがそのまま鑑定やカルテに使える文になるので、たくさん話すほど便利です。</p>'+
         '<p>声で入力すること自体は、このまま<b>無料</b>でお使いいただけます（句読点・改行の整えはなく、言葉の直しは簡単なものになります）。</p>',b);
+  }
+  // おためしが終わったあと、無料の声の入力を20回使った方にだけ、もう1回だけ案内する（これで最後。何度も出さない）
+  var FOLLOW_N=20;
+  function freeUse(){
+    if(VS.option!==false||VS.left!==0||lsGet('pk_vfx_follow')) return;
+    var n=(+(lsGet('pk_vfx_free')||0))+1; lsSet('pk_vfx_free',String(n));
+    if(n<FOLLOW_N) return; lsSet('pk_vfx_follow','1');
+    var b=[{t:'閉じる'}]; if(OPT) b.unshift({t:'オプションを見る',main:true,href:OPT});
+    setTimeout(function(){ pop('<h3>🎤 声の入力、よく使っていただいています</h3>'+
+        '<p>話した言葉に句読点・改行を入れて読みやすく整え、占いの言葉も正しい字に直す機能を、<b>月1,000円のオプション</b>でお使いいただけます。</p>'+
+        '<p>おためしで便利だと感じていただけたら、ぜひどうぞ。</p>'+
+        '<p class="vfx-s">このご案内は、これで最後です。</p>',b); },800);
   }
   // 声で入れた文字（または打った文字）を直す。欄の文字がそのあいだに変わっていなければ入れかえる
   function smartFix(ta,m,base,part,quiet){
@@ -10552,7 +10565,7 @@ body.mode-compat #fb-card{display:none}
       cur=null; b.classList.remove('on'); b.textContent=IDLE;
       if(got){ var part=fixText(fin||shown); ta.value=joinText(base,part); fire(ta);
         try{ ta.focus(); var n=ta.value.length; ta.setSelectionRange(n,n); }catch(_){}
-        say(m,''); smartFix(ta,m,base,part,false); return; }   // うまく入ったときは何も出さない（毎回の一言は不要。発注者指示 2026-10-18）
+        say(m,''); if(canFix()) smartFix(ta,m,base,part,false); else freeUse(); return; }   // うまく入ったときは何も出さない（毎回の一言は不要。発注者指示 2026-10-18）
       if(err==='not-allowed'||err==='service-not-allowed') say(m,'マイクが許可されていません。端末の設定でマイクを許可するか、キーボードのマイクボタンからお話しください。');
       else if(err==='network') say(m,'通信できないため、声の入力が使えませんでした。キーボードのマイクボタンからお話しください。');
       else if(err==='audio-capture') say(m,'マイクが見つかりませんでした。');
