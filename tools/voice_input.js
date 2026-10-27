@@ -118,10 +118,9 @@
     if(lsGet('pk_vfx_end')) return; lsSet('pk_vfx_end',String(Date.now()));   // おためし終了の案内は1回だけ
     var b=[{t:'あとで'}]; if(OPT) b.unshift({t:'オプションを見る',main:true,href:OPT});
     pop('<h3>🎤 <span class="nw">無料のおためしが</span><span class="nw">終わりました</span></h3>'+
-        '<p>読みやすく整えて、<span class="nw">'+WS+'を正しい字に直す機能は、</span><b class="nw">月1,000円のオプション</b>で<span class="nw">続けてお使いいただけます。</span></p>'+
-        '<p>話したことが、そのまま<span class="nw">鑑定やカルテに使える文に</span><span class="nw">なります。</span></p>'+
-        '<p>オプションなら、<span class="nw">キーボードで打った文字も</span><span class="nw">自動で直ります。</span></p>'+
-        '<p class="vfx-s">オプションに入らなくても、<span class="nw">🎤で話して文字を入れることは</span><span class="nw">これまでどおりできます。</span><span class="nw">（読みやすい整えと、</span><span class="nw">言葉の直しがなくなります）</span></p>',b);
+        '<p>🎤 声で入力は、<span class="nw">これからも<b>無料</b>で</span><span class="nw">そのままお使いいただけます。</span></p>'+
+        '<p><b class="nw">月1,000円のオプション</b>をつけると、<span class="nw">話した言葉を読みやすく整えて、</span><span class="nw">'+WS+'も正しい字に直します。</span><span class="nw">キーボードで打った文字も直ります。</span></p>'+
+        '<p class="vfx-s">話した言葉は相談の欄に入り、<span class="nw">鑑定するとそのままカルテに残ります。</span></p>',b);
   }
   // おためしが終わったあと、無料の声の入力を20回使った方にだけ、もう1回だけ案内する（これで最後。何度も出さない）
   var FOLLOW_N=20;
@@ -132,8 +131,7 @@
     if(n<FOLLOW_N) return; lsSet('pk_vfx_follow','1');
     var b=[{t:'閉じる'}]; if(OPT) b.unshift({t:'オプションを見る',main:true,href:OPT});
     setTimeout(function(){ pop('<h3>🎤 <span class="nw">声の入力、</span><span class="nw">よく使っていただいています</span></h3>'+
-        '<p>読みやすく整えて、<span class="nw">'+WS+'を正しい字に直す機能を、</span><b class="nw">月1,000円のオプション</b>で<span class="nw">お使いいただけます。</span></p>'+
-        '<p>オプションなら、<span class="nw">キーボードで打った文字も</span><span class="nw">自動で直ります。</span></p>'+
+        '<p><b class="nw">月1,000円のオプション</b>をつけると、<span class="nw">話した言葉を読みやすく整えて、</span><span class="nw">'+WS+'も正しい字に直します。</span><span class="nw">キーボードで打った文字も直ります。</span></p>'+
         '<p>おためしで便利だと感じていただけたら、<span class="nw">ぜひどうぞ。</span></p>'+
         '<p class="vfx-s">このご案内は、これで最後です。</p>',b); },800);
   }
