@@ -66,7 +66,8 @@
      ・はじめて🎤を押したときに、たくさん話してほしいこと・おためしのことを1回だけ案内する。
      ・サーバーにつながらないとき（通信なし・確認環境）は、何も出さずに今までどおり。 */
   var FN=CFG.fn||'/.netlify/functions/voice-fix', OPT=CFG.opt||'';
-  var W=CFG.w||'占いの言葉（星の名前など）', WS=CFG.ws||'占いの言葉';   // 易は「易の言葉（卦の名前など）」（鑑定者本人の指示 2026-10-27）
+  var W=CFG.w||'占いの言葉（星の名前など）', WS=CFG.ws||'占いの言葉';
+  var EX=CFG.ex||'';   // はじめの案内に出す例（PRO＝月支元命・魁罡／ビギナー＝専門用語を出さない決まりなので甲子（甲子園）／易＝卦の名前。鑑定者本人の指示 2026-10-27）   // 易は「易の言葉（卦の名前など）」（鑑定者本人の指示 2026-10-27）
   var VS={option:null,left:null,trial:10,off:false};
   try{ var _v=JSON.parse(sessionStorage.getItem('pk_vfx')||'null'); if(_v) VS=Object.assign(VS,_v); }catch(_){}
   function vsSave(){ try{ sessionStorage.setItem('pk_vfx',JSON.stringify({option:VS.option,left:VS.left,trial:VS.trial})); }catch(_){} }
@@ -109,7 +110,7 @@
     var trial=VS.option===true?'':'<p><b>まずは無料で</b><span class="nw">おためしいただけます。</span></p>';
     pop('<h3>🎤 <span class="nw">声で入力して</span><span class="nw">みましょう</span></h3>'+
         '<p>お客様のことや相談の内容を、<span class="nw">思いつくまま、</span><b class="nw">たっぷり話してください。</b><span class="nw">たくさん話すほど、</span><span class="nw">鑑定がくわしくなります。</span></p>'+
-        '<ul class="vfx-l"><li>句読点と改行が入って、<span class="nw">読みやすく整います</span></li><li>「えー」「あのー」が消えます</li><li>'+W+'が<span class="nw">正しい字に直ります</span></li></ul>'+trial+
+        '<ul class="vfx-l"><li>句読点と改行が入って、<span class="nw">読みやすく整います</span></li><li>「えー」「あのー」が消えます</li><li>'+(EX?'<span class="nw">'+WS+'が</span>':W+'が')+'<span class="nw">正しい字に直ります</span>'+(EX?'<br><span class="vfx-ex">例：'+EX.replace(/^例：/,'').split('／').map(function(x){ return '<span class="nw">'+x+'</span>'; }).join('　')+'</span>':'')+'</li></ul>'+trial+
         '<p class="vfx-s">声は端末の中で文字になります。<span class="nw">送るのは文字だけです。</span></p>',
         [{t:'🎤 話してみる',main:true,fn:go},{t:'閉じる'}]);
   }

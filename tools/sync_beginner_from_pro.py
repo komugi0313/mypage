@@ -117,6 +117,8 @@ def build_app():
 
     # ---- リンク先（ビギナーのページへ） ----
     s = rep(s, 'pricing-pro.html', 'pricing.html')
+    # 声の入力の案内の例：ビギナーは専門用語を出さない（月支元命・魁罡→甲子園でなじみのある甲子。丙午は無料の聞き取りでも正しく出るので例にしない＝鑑定者本人 2026-10-27）
+    s = rep(s, "ex:'例：げっしげんめい → 月支元命／かいごう → 魁罡'", "ex:'例：きのえね → 甲子'", 1)
     s = rep(s, 'mypage-pro.html', 'mypage.html')
     s = rep(s, 'textbook-pro.html', 'textbook.html')
 
