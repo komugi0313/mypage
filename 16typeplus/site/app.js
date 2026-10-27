@@ -75,6 +75,7 @@ function fillNm(c,pre,t,x,y,al,col,faint,maxW){const a=pre+(NM[t]?(pre?" ":"")+N
 const an=t=>t+p16(t);
 const CHAR_BASE=(typeof window.CHAR_BASE==="string")?window.CHAR_BASE:"chars/";
 const charSrc=(t,small)=>CHAR_BASE+t+(small?"_s":"")+".webp";
+document.querySelectorAll("img[data-ch]").forEach(i=>{i.src=charSrc(i.dataset.ch,true);});
 const T16="INTJ INTP ENTJ ENTP INFJ INFP ENFJ ENFP ISTJ ISFJ ESTJ ESFJ ISTP ISFP ESTP ESFP".split(" ");
 (function(){const el=$("parade");if(!el)return;const one=T16.map(t=>'<figure><img src="'+charSrc(t,1)+'" alt="" loading="lazy" width="100" height="100"><figcaption>'+t+'</figcaption></figure>').join("");el.innerHTML=one+one;})();
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
