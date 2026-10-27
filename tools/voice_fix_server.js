@@ -9,6 +9,7 @@
 //   ・使える人：
 //       音声入力オプション（月1,000円）の会員 … 会員確認の答えに voiceOption:true がある人。月 PK_VOICE_MONTH 回（既定3000）まで。
 //       それ以外の会員 … おためし PK_VOICE_TRIAL 回（既定10）まで（会員ごと・商品ごと・期限なし）。使い切ったら 402 VOICE_OPTION。
+//       1回に数えるのは、文が実際に直った・整ったときだけ。回数が数えられないとき（保存場所が使えない）は left:null（画面に残りを出さない）。
 //     声で入力すること自体は、オプションがなくても無料のまま（画面はブラウザの聞き取り＋聞き間違い直し表だけで続ける）。
 //   ・{mode:'status'} は Gemini を呼ばずに、オプションの有無とおためしの残りだけを返す。
 //   ・直した文に用語にない漢字が新しく増えた（言いかえ）とき、または元の文と大きく違う（長さが半分以下・1.6倍以上、または助詞・です・ますが半分より少なくなった・文の数が減った・数字が変わった）ときは、言いかえ・答えを書いたとみなして元の文を返す。
@@ -69,22 +70,28 @@ exports.handler = async (event) => {
   const store = await getStore();
   const trialKey = `vt:${PRODUCT}:${who}`;
   const monthKey = `vm:${PRODUCT}:${periodId(periodEnd)}:${who}`;
-  let used = 0;
-  try { if (store) used = await readCount(store, option ? monthKey : trialKey); } catch (e) {}
-  const left = option ? Math.max(0, MONTH - used) : Math.max(0, TRIAL - used);
+  // 回数が数えられないとき（保存場所が使えない）は、残りを「わからない」（null）として返す＝画面に残りの回数を出さない（まちがった数を見せない）
+  let used = 0, counted = false;
+  try { if (store) { used = await readCount(store, option ? monthKey : trialKey); counted = true; } } catch (e) {}
+  const leftOf = (n) => counted ? (option ? Math.max(0, MONTH - n) : Math.max(0, TRIAL - n)) : null;
+  const left = leftOf(used);
   const info = { option: option, left: left, trial: TRIAL };
 
   if (body.mode === 'status') return json(200, info);
-  if (!left && !isOwner) return json(option ? 429 : 402, { error: { code: option ? 'VOICE_MONTH' : 'VOICE_OPTION' }, option: option, left: 0, trial: TRIAL });
+  if (left === 0 && !isOwner) return json(option ? 429 : 402, { error: { code: option ? 'VOICE_MONTH' : 'VOICE_OPTION' }, option: option, left: 0, trial: TRIAL });
 
+  // 1回に数えるのは、文が実際に直った・整ったときだけ（直すところがなかった・安全装置で元に戻したときは数えない）
+  async function countUse(changed) {
+    if (!changed || !counted || !store || isOwner) return used;
+    try { return await bump(store, option ? monthKey : trialKey); } catch (e) { return used; }
+  }
   const text = String(body.text || '').slice(0, MAX_TEXT);
   if (!text.trim()) return json(200, Object.assign({ text: text, changed: false }, info));
   const one = text.trim().replace(/[。、．，.,！？!?\s]+$/g, '');
   if (DICT[one]) {
     const out = text.replace(one, DICT[one]);
-    let n1 = used;
-    if (store && !isOwner) { try { n1 = await bump(store, option ? monthKey : trialKey); } catch (e) {} }
-    return json(200, { text: out, changed: out !== text, option: option, left: option ? Math.max(0, MONTH - n1) : Math.max(0, TRIAL - n1), trial: TRIAL });
+    const n1 = await countUse(out !== text);
+    return json(200, { text: out, changed: out !== text, option: option, left: leftOf(n1), trial: TRIAL });
   }
   const key = process.env.GEMINI_API_KEY;
   if (!key) return json(500, { error: { code: 'NO_KEY' } });
@@ -105,9 +112,8 @@ exports.handler = async (event) => {
     fixed = guard(text, parts ? parts.map((p) => (p && p.text) || '').join('') : '');
   } catch (e) { return json(502, Object.assign({ error: { code: 'UPSTREAM' } }, info)); }
 
-  let n = used;
-  if (store && !isOwner) { try { n = await bump(store, option ? monthKey : trialKey); } catch (e) {} }
-  return json(200, { text: fixed, changed: fixed !== text, option: option, left: option ? Math.max(0, MONTH - n) : Math.max(0, TRIAL - n), trial: TRIAL });
+  const n = await countUse(fixed !== text);
+  return json(200, { text: fixed, changed: fixed !== text, option: option, left: leftOf(n), trial: TRIAL });
 };
 
 // 直した文を確かめる：タグ・前後の空白を取り、長さが大きく変わったら元の文に戻す
