@@ -105,19 +105,20 @@
   }
   function introPop(go){
     lsSet('pk_vfx_intro','1');
-    var trial=VS.option===true?'':'<p>この整え・直しは、<b>まずは無料でおためし</b>いただけます。</p>';
-    pop('<h3>🎤 声で入力してみましょう</h3>'+
-        '<p>お客様のことや相談の内容を、思いつくまま、<b>たっぷり話してください</b>。たくさん話していただくほど、鑑定がくわしくなります。</p>'+
-        '<p>話した言葉は、<b>句読点・改行が入って読みやすく整い</b>、占いの言葉（星の名前など）も<b>正しい字に自動で直ります</b>。「えー」「あのー」も消えます。</p>'+trial+
-        '<p class="vfx-s">声はお使いの端末で文字になります。直すときに送るのは文字だけで、声は送りません。</p>',
+    var trial=VS.option===true?'':'<p><b>まずは無料で</b><span class="nw">おためしいただけます。</span></p>';
+    pop('<h3>🎤 <span class="nw">声で入力して</span><span class="nw">みましょう</span></h3>'+
+        '<p>お客様のことや相談の内容を、<span class="nw">思いつくまま、</span><b class="nw">たっぷり話してください。</b><span class="nw">たくさん話すほど、</span><span class="nw">鑑定がくわしくなります。</span></p>'+
+        '<ul class="vfx-l"><li>句読点と改行が入って、<span class="nw">読みやすく整います</span></li><li>「えー」「あのー」が消えます</li><li>占いの言葉（星の名前など）が<span class="nw">正しい字に直ります</span></li></ul>'+trial+
+        '<p class="vfx-s">声は端末の中で文字になります。<span class="nw">送るのは文字だけです。</span></p>',
         [{t:'🎤 話してみる',main:true,fn:go},{t:'閉じる'}]);
   }
   function endPop(){
     if(lsGet('pk_vfx_end')) return; lsSet('pk_vfx_end',String(Date.now()));   // おためし終了の案内は1回だけ
     var b=[{t:'あとで'}]; if(OPT) b.unshift({t:'オプションを見る',main:true,href:OPT});
-    pop('<h3>🎤 無料のおためしが終わりました</h3>'+
-        '<p>話した言葉を読みやすく整えて、占いの言葉を正しい字に直す機能は、<b>月1,000円のオプション</b>で続けてお使いいただけます。話したことがそのまま鑑定やカルテに使える文になるので、たくさん話すほど便利です。</p>'+
-        '<p>声で入力すること自体は、このまま<b>無料</b>でお使いいただけます（句読点・改行の整えはなく、言葉の直しは簡単なものになります）。</p>',b);
+    pop('<h3>🎤 <span class="nw">無料のおためしが</span><span class="nw">終わりました</span></h3>'+
+        '<p>読みやすく整えて、<span class="nw">占いの言葉を正しい字に直す機能は、</span><b class="nw">月1,000円のオプション</b>で<span class="nw">続けてお使いいただけます。</span></p>'+
+        '<p>話したことが、そのまま<span class="nw">鑑定やカルテに使える文に</span><span class="nw">なります。</span></p>'+
+        '<p class="vfx-s">声で入力すること自体は、<span class="nw">このまま無料です。</span></p>',b);
   }
   // おためしが終わったあと、無料の声の入力を20回使った方にだけ、もう1回だけ案内する（これで最後。何度も出さない）
   var FOLLOW_N=20;
@@ -127,9 +128,9 @@
     var n=(+(lsGet('pk_vfx_free')||0))+1; lsSet('pk_vfx_free',String(n));
     if(n<FOLLOW_N) return; lsSet('pk_vfx_follow','1');
     var b=[{t:'閉じる'}]; if(OPT) b.unshift({t:'オプションを見る',main:true,href:OPT});
-    setTimeout(function(){ pop('<h3>🎤 声の入力、よく使っていただいています</h3>'+
-        '<p>話した言葉に句読点・改行を入れて読みやすく整え、占いの言葉も正しい字に直す機能を、<b>月1,000円のオプション</b>でお使いいただけます。</p>'+
-        '<p>おためしで便利だと感じていただけたら、ぜひどうぞ。</p>'+
+    setTimeout(function(){ pop('<h3>🎤 <span class="nw">声の入力、</span><span class="nw">よく使っていただいています</span></h3>'+
+        '<p>読みやすく整えて、<span class="nw">占いの言葉を正しい字に直す機能を、</span><b class="nw">月1,000円のオプション</b>で<span class="nw">お使いいただけます。</span></p>'+
+        '<p>おためしで便利だと感じていただけたら、<span class="nw">ぜひどうぞ。</span></p>'+
         '<p class="vfx-s">このご案内は、これで最後です。</p>',b); },800);
   }
   // 声で入れた文字（または打った文字）を直す。欄の文字がそのあいだに変わっていなければ入れかえる
