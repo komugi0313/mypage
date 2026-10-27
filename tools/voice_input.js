@@ -120,6 +120,7 @@
     pop('<h3>🎤 <span class="nw">無料のおためしが</span><span class="nw">終わりました</span></h3>'+
         '<p>読みやすく整えて、<span class="nw">'+WS+'を正しい字に直す機能は、</span><b class="nw">月1,000円のオプション</b>で<span class="nw">続けてお使いいただけます。</span></p>'+
         '<p>話したことが、そのまま<span class="nw">鑑定やカルテに使える文に</span><span class="nw">なります。</span></p>'+
+        '<p>オプションなら、<span class="nw">キーボードで打った文字も</span><span class="nw">自動で直ります。</span></p>'+
         '<p class="vfx-s">オプションに入らなくても、<span class="nw">🎤で話して文字を入れることは</span><span class="nw">これまでどおりできます。</span><span class="nw">（読みやすい整えと、</span><span class="nw">言葉の直しがなくなります）</span></p>',b);
   }
   // おためしが終わったあと、無料の声の入力を20回使った方にだけ、もう1回だけ案内する（これで最後。何度も出さない）
@@ -132,6 +133,7 @@
     var b=[{t:'閉じる'}]; if(OPT) b.unshift({t:'オプションを見る',main:true,href:OPT});
     setTimeout(function(){ pop('<h3>🎤 <span class="nw">声の入力、</span><span class="nw">よく使っていただいています</span></h3>'+
         '<p>読みやすく整えて、<span class="nw">'+WS+'を正しい字に直す機能を、</span><b class="nw">月1,000円のオプション</b>で<span class="nw">お使いいただけます。</span></p>'+
+        '<p>オプションなら、<span class="nw">キーボードで打った文字も</span><span class="nw">自動で直ります。</span></p>'+
         '<p>おためしで便利だと感じていただけたら、<span class="nw">ぜひどうぞ。</span></p>'+
         '<p class="vfx-s">このご案内は、これで最後です。</p>',b); },800);
   }
