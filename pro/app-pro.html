@@ -702,7 +702,7 @@
     .brand{flex-wrap:wrap}
     .brand>div:nth-child(2){flex:1 1 auto;min-width:0}
     .brand>div:nth-child(3){flex-wrap:wrap;justify-content:flex-end;max-width:100%}
-    #theme-tg{order:3;flex-basis:100%;margin-left:56px!important;margin-top:6px;justify-content:flex-start}
+    #theme-tg{order:3;flex:0 0 auto;margin-left:auto!important;margin-top:6px}   /* 白・和の切りかえは中身の幅だけ（横に伸びて空白が大きくならないように。2026-10-28） */
     /* 命式表をスマホで詰める（4柱が収まるよう列幅を圧縮） */
     .mwrap{overflow-x:visible}
     .mtable{min-width:0;table-layout:fixed}
@@ -1097,7 +1097,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]
       </div>
     </div>
     <div class="frow" style="margin-top:12px">
-      <div class="field f-wide qd-field" style="flex:1 1 100%"><label for="f-quick">数字でまとめて入力（すぐ下の欄に入ります）</label><input type="text" id="f-quick" class="qd-in" data-p="f" inputmode="numeric" autocomplete="off" placeholder="例 19810610 2228（時刻はなくてもOK）" style="font-size:16px"><div class="qd-msg" id="f-quick-msg" aria-live="polite" style="font-size:13.5px;font-weight:700;margin-top:4px;color:var(--ink2)"></div></div>
+      <div class="field f-wide qd-field" style="flex:1 1 100%"><label for="f-quick">生年月日を数字だけで入力（年4けた・月2けた・日2けた＋時刻4けた。すぐ下の欄に入ります）</label><input type="text" id="f-quick" class="qd-in" data-p="f" inputmode="numeric" autocomplete="off" placeholder="例 19900315 1430（時刻はなくてもOK）" style="font-size:16px"><div class="qd-msg" id="f-quick-msg" aria-live="polite" style="font-size:13.5px;font-weight:700;margin-top:4px;color:var(--ink2)"></div></div>
       <div class="field f-wide" style="flex:1 1 100%"><label>生年月日</label><div style="display:flex;gap:6px"><select id="f-y" style="flex:1.6 1 0;min-width:0;padding:0 6px"></select><select id="f-m" style="flex:1 1 0;min-width:0;padding:0 6px"></select><select id="f-d" style="flex:1 1 0;min-width:0;padding:0 6px"></select></div><input type="hidden" id="f-date" value=""></div><div class="req-msg" id="f-date-msg">生年月日（年・月・日）を選んでください。</div>
     </div>
     <div class="frow" style="margin-top:12px">
@@ -1235,7 +1235,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]
       </div>
     </div>
     <div class="frow" style="margin-top:12px">
-      <div class="field f-wide qd-field" style="flex:1 1 100%"><label for="b-quick">数字でまとめて入力（すぐ下の欄に入ります）</label><input type="text" id="b-quick" class="qd-in" data-p="b" inputmode="numeric" autocomplete="off" placeholder="例 19810610 2228（時刻はなくてもOK）" style="font-size:16px"><div class="qd-msg" id="b-quick-msg" aria-live="polite" style="font-size:13.5px;font-weight:700;margin-top:4px;color:var(--ink2)"></div></div>
+      <div class="field f-wide qd-field" style="flex:1 1 100%"><label for="b-quick">生年月日を数字だけで入力（年4けた・月2けた・日2けた＋時刻4けた。すぐ下の欄に入ります）</label><input type="text" id="b-quick" class="qd-in" data-p="b" inputmode="numeric" autocomplete="off" placeholder="例 19900315 1430（時刻はなくてもOK）" style="font-size:16px"><div class="qd-msg" id="b-quick-msg" aria-live="polite" style="font-size:13.5px;font-weight:700;margin-top:4px;color:var(--ink2)"></div></div>
       <div class="field" style="flex:1 1 100%"><label>生年月日</label><div style="display:flex;gap:6px"><select id="b-y" style="flex:1.6 1 0;min-width:0;padding:0 6px"></select><select id="b-m" style="flex:1 1 0;min-width:0;padding:0 6px"></select><select id="b-d" style="flex:1 1 0;min-width:0;padding:0 6px"></select></div><input type="hidden" id="b-date" value=""></div>
     </div>
     <div class="frow" style="margin-top:12px">
@@ -8989,15 +8989,15 @@ function _normHM(s){
 function attachTimeSel(p){
   const hh=document.getElementById(p+'-hh'), mm=document.getElementById(p+'-mm'), hid=document.getElementById(p+'-time');
   if(!hh||!mm||!hid)return;
-  // 「時」は最初は空欄（選び忘れたまま昼12時で鑑定されないように）。分は00分のままでよい。
+  // 「時」「分」は最初は空欄（選び忘れたまま昼12時で鑑定されないように）。分だけ空欄のときは00分として扱う（鑑定者本人の指示 2026-10-28「分だけが数字になっている」）。
   hh.innerHTML=''; hh.appendChild(new Option('時','')); for(let v=0;v<=23;v++)hh.appendChild(new Option(v+'時',v));
-  mm.innerHTML=''; for(let v=0;v<=59;v++)mm.appendChild(new Option(String(v).padStart(2,'0')+'分',v));
-  function sync(){ hid.value=(hh.value==='')?'':(String(hh.value).padStart(2,'0')+':'+String(mm.value).padStart(2,'0')); hh.classList.toggle('unset',hh.value===''); if(hh.value!==''){hh.classList.remove('invalid');const mg=document.getElementById(p+'-time-msg');if(mg)mg.classList.remove('on');} }
+  mm.innerHTML=''; mm.appendChild(new Option('分','')); for(let v=0;v<=59;v++)mm.appendChild(new Option(String(v).padStart(2,'0')+'分',v));
+  function sync(){ hid.value=(hh.value==='')?'':(String(hh.value).padStart(2,'0')+':'+String(mm.value===''?0:mm.value).padStart(2,'0')); hh.classList.toggle('unset',hh.value===''); mm.classList.toggle('unset',mm.value===''); if(hh.value!==''){hh.classList.remove('invalid');const mg=document.getElementById(p+'-time-msg');if(mg)mg.classList.remove('on');} }
   hh.addEventListener('change',sync); mm.addEventListener('change',sync);
   const init=(hid.value||'').split(':');
-  if(init[0]!==''&&init[0]!=null&&Number.isFinite(+init[0])){ hh.value=String(+init[0]); mm.value=String(Number.isFinite(+init[1])?+init[1]:0); } else { hh.value=''; mm.value='0'; }
+  if(init[0]!==''&&init[0]!=null&&Number.isFinite(+init[0])){ hh.value=String(+init[0]); mm.value=String(Number.isFinite(+init[1])?+init[1]:0); } else { hh.value=''; mm.value=''; }
   sync();
-  hid.syncFromValue=function(){ const q=(hid.value||'').split(':'); if(q[0]!==''&&q[0]!=null&&Number.isFinite(+q[0])){ hh.value=String(+q[0]); mm.value=String(Number.isFinite(+q[1])?+q[1]:0); } else { hh.value=''; mm.value='0'; } sync(); };
+  hid.syncFromValue=function(){ const q=(hid.value||'').split(':'); if(q[0]!==''&&q[0]!=null&&Number.isFinite(+q[0])){ hh.value=String(+q[0]); mm.value=String(Number.isFinite(+q[1])?+q[1]:0); } else { hh.value=''; mm.value=''; } sync(); };
 }
 
 /* ===== マイページ：鑑定者の保存・メモ・鑑定保存（クラウド同期対応） =====
@@ -9961,7 +9961,7 @@ window.__bTouched=false;
 /* 生年月日を数字でまとめて打てる欄（例 19810610 2228 → 1981年6月10日 22時28分）。年の一覧を長くスクロールしなくてよい（発注者指示 2026-10-20） */
 (function(){
   function apply(inp){ var p=inp.getAttribute('data-p'), msg=document.getElementById(p+'-quick-msg'), dg=(inp.value||'').replace(/[０-９]/g,function(c){ return String.fromCharCode(c.charCodeAt(0)-0xFEE0); }).replace(/\D/g,'');
-    if(!msg) return; if(dg.length<8){ msg.textContent=dg.length?'年月日の8けた（例 19810610）まで入れてください':''; msg.style.color='var(--ink2)'; return; }
+    if(!msg) return; if(dg.length<8){ msg.textContent=dg.length?'年月日の8けた（例 19900315）まで入れてください':''; msg.style.color='var(--ink2)'; return; }
     var y=+dg.slice(0,4), mo=+dg.slice(4,6), d=+dg.slice(6,8), nowY=new Date().getFullYear();
     var ok=y>=1900&&y<=nowY&&mo>=1&&mo<=12&&d>=1&&d<=new Date(y,mo,0).getDate();
     if(!ok){ msg.textContent='この日付はありません。もう一度たしかめてください'; msg.style.color='#B42318'; return; }
@@ -10441,7 +10441,7 @@ body.mode-compat #fb-card{display:none}
   .vfx-btns{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;margin-top:6px}
   .vfx-b{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 18px;border-radius:999px;border:1.5px solid #B8B0A6;background:#FFFFFF;color:#3A3530;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;text-decoration:none}
   .vfx-b.main{background:#A8401F;border-color:#A8401F;color:#FFFFFF}
-  .vmic-msg{flex:1 1 100%;font-size:13.5px;font-weight:700;color:#5A4636;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}
+  .vmic-msg{flex:1 1 100%;font-size:12.5px;font-weight:700;color:#5A4636;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}
 </style>
 <script>window.__VMIC_CFG={sel:'#cs-q, textarea.worry',opt:'mypage-pro.html',ex:'例：げっしげんめい → 月支元命／かいごう → 魁罡'};</script>
 <script>
