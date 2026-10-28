@@ -94,7 +94,51 @@ AX.forEach((A,i)=>{const g=document.createElement("div");g.className="seg";g.sty
  pk.appendChild(g);});
 drawSlots(-1);
 document.querySelectorAll("#atPick button").forEach(bt=>bt.onclick=()=>{hideOld();selAT=bt.dataset.v||null;document.querySelectorAll("#atPick button").forEach(x=>x.setAttribute("aria-pressed",x===bt));drawSlots(-1);});
-$("go").onclick=()=>{if(sel.includes(null)||!dateOK())return;st.t=sel.slice();st.at=selAT;st.love=null;st.pct=null;st.half={};st.sway=null;showResult();addHist("other",st.t.join(""));render();logType("select");document.querySelector(".hero").scrollIntoView({behavior:"smooth"});};
+$("go").onclick=()=>{if(sel.includes(null)||!dateOK())return;st.t=sel.slice();st.at=selAT;st.love=null;st.pct=null;st.half={};st.sway=null;st.prev=pvT.filter(t=>t!==st.t.join(""));showResult();st.prev.forEach(t=>addHist("other",t,"-"));addHist("other",st.t.join(""));render();logType("select");document.querySelector(".hero").scrollIntoView({behavior:"smooth"});};
+/* ---- 前に出たタイプ（2つまで）：入れると、結果の上で「変わる文字・変わらない文字」を見せる ---- */
+let pvT=[];
+function drawPv(){const L=$("pvList"),S=$("pvSel");if(!L||!S)return;
+ L.innerHTML=pvT.map(t=>'<button type="button" class="pvc" data-t="'+t+'" aria-label="'+t+TR("を外す")+'">'+t+'<span class="pvn">'+esc(NM[t]||"")+'</span><i aria-hidden="true">×</i></button>').join("");
+ L.querySelectorAll(".pvc").forEach(b=>b.onclick=()=>{pvT=pvT.filter(x=>x!==b.dataset.t);drawPv();});
+ S.disabled=pvT.length>=2;S.hidden=pvT.length>=2;}
+(()=>{const S=$("pvSel");if(!S)return;Object.keys(D.NICK).forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t+p16(t);S.appendChild(o);});
+ S.onchange=()=>{const v=S.value;if(v&&!pvT.includes(v)&&pvT.length<2)pvT.push(v);S.value="";drawPv();};drawPv();})();
+const CHG={E:"ひとりで集中する時期が続くと、I が出ることがあります。",I:"人といる時間が多いと、E が出ることがあります。",S:"新しいことを考える時期には、N が出ることがあります。",N:"目の前のことをこなす時期には、S が出ることがあります。",T:"人の気持ちを考える場面が多いと、F が出ることがあります。",F:"理屈で決める場面が多いと、T が出ることがあります。",J:"楽しいときやいそがしいときは、その場で動くので P が出ることがあります。",P:"決まりの多い場所にいると、J が出ることがあります。"};
+function chgData(born,now,prev){const L=prev.concat([now]);
+ return AX.map((A,i)=>{const set=[...new Set(L.map(t=>t[i]))];return {A,i,same:set.length===1,lt:set.length===1?now[i]:(prev.length===1?prev[0][i]+"→"+now[i]:set.join("/")),b:born[i]};});}
+function chgSameText(rows){const sm=rows.filter(r=>r.same);
+ if(!sm.length)return TR("4文字とも、結果によって変わっています。場面に合わせて、動き方を変えられる人です。");
+ const J=LANG==="ja"?"":", ";
+ return TR("変わらないのは {L}。").replace("{L}",sm.map(r=>r.lt).join(TR("・")))+TR("{P}ところは、どの結果でも同じです。").replace("{P}",sm.map(r=>TR("「")+TR(CORE[r.lt])+TR("」")).join(J));}
+function chgWhy(r){return TR("{a}と{b}が変わるのは、生まれつきが {L}（{p}）だから。").replace("{a}",r.A.a).replace("{b}",r.A.b).replace("{L}",r.b).replace("{p}",TR(CORE[r.b]))+TR(CHG[r.b]);}
+function drawChg(born,now,prev){let x=$("chgBox");if(!x){x=document.createElement("div");x.id="chgBox";x.className="chgbox";document.querySelector(".hero").appendChild(x);}
+ if(!prev||!prev.length){x.hidden=true;x.innerHTML="";return;}x.hidden=false;
+ const rows=chgData(born,now,prev);
+ x.innerHTML='<p class="cgh">'+TR("あなたの16タイプの変化")+'</p><p class="cgt">'+prev.join(" / ")+' → '+now+'</p>'
+  +'<div class="cgl">'+rows.map(r=>'<span class="'+(r.same?"same":"chg")+'"><b>'+r.lt+'</b><small>'+(r.same?TR("変わらない"):TR("変わる"))+'</small></span>').join("")+'</div>'
+  +'<p class="cgs">'+esc(chgSameText(rows))+'</p>'
+  +rows.filter(r=>!r.same).map(r=>'<p class="cgw">'+esc(chgWhy(r))+'</p>').join("")
+  +'<button type="button" class="btn primary cgbtn" id="cgShare">'+TR("この変化を画像でシェア")+'</button>';
+ $("cgShare").onclick=shareChange;}
+async function shareChange(){track("share_change");const b=$("cgShare"),lbl=b.textContent;b.disabled=true;b.textContent=TR("画像をつくっています…");
+ try{const cv=await drawChange();const bl=await new Promise(r=>cv.toBlob(r,"image/png"));const files=[new File([bl],"16typeplus-change.png",{type:"image/png"})];
+  if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,text:shareText()+" "+SHARE_URL});}catch(e){if(e&&e.name!=="AbortError")showShareBox([cv]);}}else showShareBox([cv]);}
+ catch(e){alert(TR("画像をつくれませんでした。もう一度お試しください。"));}finally{b.disabled=false;b.textContent=lbl;}}
+async function drawChange(){const me=window.__me,W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
+ const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
+ try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"16TYPE+ あア가A")));}catch(e){}
+ const prev=me.prev||[],rows=chgData(me.born,me.now,prev),im=await loadImg(charSrc(me.now));
+ c.fillStyle=SC.bg;c.fillRect(0,0,W,H);c.fillStyle=SC.card;rrect(c,48,48,W-96,H-96,36);c.fill();c.strokeStyle=SC.rule;c.lineWidth=2;c.stroke();
+ c.textAlign="center";c.fillStyle=SC.muted;c.font="500 30px "+SANS;c.fillText(TR("わたしの16タイプの変化"),W/2,138);
+ let fs=104;c.font="600 "+fs+"px "+MONO;const tt=prev.join(" / ")+" → "+me.now;while(c.measureText(tt).width>W-200&&fs>48){fs-=4;c.font="600 "+fs+"px "+MONO;}c.fillStyle=SC.ink;c.fillText(tt,W/2,260);
+ const tw=196,gap=24,x0=(W-(tw*4+gap*3))/2;
+ rows.forEach((r,i)=>{const x=x0+i*(tw+gap),y=320;rrect(c,x,y,tw,170,24);c.fillStyle=r.same?"#FBEDE8":SC.soft;c.fill();
+  c.fillStyle=r.same?SC.plus:SC.ink;let f2=r.lt.length>2?56:84;c.font="600 "+f2+"px "+MONO;c.fillText(r.lt,x+tw/2,y+(r.lt.length>2?100:108));
+  c.font="700 26px "+SANS;c.fillStyle=r.same?SC.plus:SC.muted;c.fillText(r.same?TR("変わらない"):TR("変わる"),x+tw/2,y+148);});
+ c.font="700 36px "+SANS;c.fillStyle=SC.ink;let y=580;const lines=wrapLines(c,chgSameText(rows),W-220,3);lines.forEach(l=>{c.fillText(l,W/2,y);y+=56;});
+ if(im){const ih=Math.min(480,H-y-170),iw=ih*im.width/im.height;c.drawImage(im,W/2-iw/2,y+20,iw,ih);}
+ c.font="500 30px "+SANS;c.fillStyle=SC.muted;c.fillText(TR("気質（生年月日）と16タイプで見る　16TYPE+"),W/2,H-120);
+ c.font="600 30px "+MONO;c.fillStyle=SC.plus;c.fillText("16typeplus.jp",W/2,H-78);c.textAlign="left";return cv;}
 /* ---- 60問 ---- */
 const SCALE=[[TR("とても当てはまる"),5,22],[TR("当てはまる"),4,18],[TR("やや当てはまる"),3,14],[TR("やや当てはまらない"),2,14],[TR("当てはまらない"),1,18],[TR("まったく当てはまらない"),0,22]];
 const AXN={EI:0,SN:1,TF:2,JP:3,AT:4};const AXQ=AX.concat([{k:"AT",a:"A",b:"T",c:"--rose",name:TR("自信のもち方"),sh:TR("自信")}]);
@@ -117,7 +161,7 @@ function markUsed(ids){const used=(sget(KU)||[]).filter(i=>!ids.includes(i)).con
 const baseOrd=()=>pickQ(["EI","SN","TF","JP","AT"],BASE/10);
 function setPicker(){st.t.forEach((v,i)=>sel[i]=v);[...pk.children].forEach((g,i)=>{g.classList.add("done");[...g.children].forEach(c=>c.setAttribute("aria-pressed",c.firstChild.textContent===st.t[i]));});drawSlots(-1);}
 let shown=false;
-function saveResult(){if(!shown)return;sset(KR,{y:st.y,m:st.m,d:st.d,t:st.t,at:st.at,pct:st.pct,half:st.half,sway:st.sway,love:st.love||null});}
+function saveResult(){if(!shown)return;sset(KR,{y:st.y,m:st.m,d:st.d,t:st.t,at:st.at,pct:st.pct,half:st.half,sway:st.sway,love:st.love||null,prev:st.prev||[]});}
 /* 入力をやり直し始めたら、前の結果はいったん隠す（「結果を見る」で新しく出す） */
 function hideOld(){if(!shown)return;shown=false;$("result").style.display="none";const w=document.querySelector(".welcome");if(w)w.hidden=true;const f=$("formCard");if(f)requestAnimationFrame(()=>f.scrollIntoView({block:"start"}));}
 function showResult(){shown=true;$("result").style.display="contents";setTimeout(gSetup,0);}
@@ -183,7 +227,7 @@ function logType(src){try{const m=window.__me||{};if(!m.born||!m.now||typeof gta
  const p={source:src,born_type:m.born,now_type:m.now,same:m.born===m.now?"yes":"no",lang:LANG};
  if(st.pct)["EI","SN","TF","JP"].forEach(k=>{if(st.pct[k]!=null)p["pct_"+k]=st.pct[k];});
  gtag("event","type_result",p);}catch(e){}}
-function finish(){try{markUsed(ord.slice());}catch(e){}sset(KQ,null);st.love=null;drawResume();const sc=scoreAll();st.pct={};st.half={};st.sway=swayOf();
+function finish(){try{markUsed(ord.slice());}catch(e){}sset(KQ,null);st.love=null;st.prev=[];drawResume();const sc=scoreAll();st.pct={};st.half={};st.sway=swayOf();
  AX.forEach((A,i)=>{const[a,b]=sc[A.k],tot=a+b||1;st.t[i]=a>b?A.a:a<b?A.b:natal(st.y,st.m,st.d).t[i];st.pct[A.k]=Math.round(b/tot*100);st.half[A.k]=Math.abs(a-b)<=4||tbAns[A.k]!=null;});
  {const [a,b]=sc.AT;st.at=a>b?"A":a<b?"T":null;}setPicker();showResult();addHist("site",st.t.join(""));showQuiz(false);render();logType("quiz");document.querySelector(".hero").scrollIntoView({behavior:"smooth"});}
 /* ---- 1列ずつめくって比べる ---- */
@@ -269,7 +313,7 @@ function render(instant){
  $("hJobW").textContent=HB.work;$("hJobs").innerHTML=HB.jobs.map(t=>"<li>"+t+"</li>").join("");
  {const gx=$("gapX");if(gx){const oneG=!gk.length;gx.innerHTML=oneG?'<div class="gx"><p>'+HN.same.both+'</p></div>':gk.map(k=>{const g=HN.gap[k];return '<div class="gx" style="--c:var('+cOfG(k)+')"><p class="gxh"><span class="ax">'+g.axis+'</span><span class="nw"><b>'+k[0]+'</b>'+g.from+TR(" ＋ ")+'<b>'+k[1]+'</b>'+g.to+'</span></p><p>'+g.both+'</p></div>';}).join("");}
   window.__worry=gk.length?[].concat(HN.gap[gk[0]].worry)[0]:[].concat(HN.same.worry)[0];}
- window.__me={born,now,N,bAT,nAT};drawPersona("now");
+ window.__me={born,now,N,bAT,nAT,prev:(st.prev||[]).filter(t=>t!==now)};drawChg(born,now,window.__me.prev);drawPersona("now");
  const nw=(a,b)=>'<span class="nw">'+a+'</span><span class="nw">'+b+'</span>';$("p16Born").innerHTML=nw(bornF,p16h(born));$("p16Now").innerHTML=nw(nowF,p16h(now));
  $("nkBorn").textContent=D.NICK[born];[["imBorn",born],["imNow",now]].forEach(([id,t])=>{const im=$(id);if(im){im.src=charSrc(t);im.alt=an(t);}});
  {const one=sameAll,nb=$("imBorn").closest(".nk"),nn=$("imNow").closest(".nk"),nr=document.querySelector(".nicks .nar");nb.hidden=one;if(nr)nr.hidden=one;document.querySelector(".nicks").classList.toggle("one",one);
@@ -334,7 +378,7 @@ async function drawShare(){
 function shareText(){const me=window.__me,co=coreOf(me.born,me.now);return (co?TR("わたしは「{n}」タイプでした。").replace("{n}",co.name):"")+(me.born===me.now?TR("気質も性格も ")+an(me.now)+TR("。"):TR("気質は ")+an(me.born)+TR("、性格は ")+an(me.now)+TR("。"))+TR("｜16TYPE+（16タイププラス）");}
 function track(ev,extra){try{const m=window.__me||{};if(typeof gtag!=="function")return;gtag("event",ev,Object.assign({born_type:m.born||"",now_type:m.now||"",lang:LANG},extra||{}));}catch(e){}}
 async function shareResult(){track("share_click");const b=$("shareBtn"),lbl=b.textContent;b.disabled=true;b.textContent=TR("画像をつくっています…");
- try{const cvs=[await drawShare(),await drawCloud(),await drawKarte()];const blobs=await Promise.all(cvs.map(cv=>new Promise(r=>cv.toBlob(r,"image/png"))));
+ try{const me0=window.__me||{},cvs=[await drawShare()].concat(me0.prev&&me0.prev.length?[await drawChange()]:[]).concat([await drawCloud(),await drawKarte()]);const blobs=await Promise.all(cvs.map(cv=>new Promise(r=>cv.toBlob(r,"image/png"))));
   const files=blobs.map((bl,i)=>new File([bl],"16typeplus-"+(i+1)+".png",{type:"image/png"}));
   if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,text:shareText()+" "+SHARE_URL});}catch(e){if(e&&e.name!=="AbortError")showShareBox(cvs);}}
   else showShareBox(cvs);}
@@ -484,7 +528,7 @@ $("saveBtn").onclick=()=>{const btn=$("saveBtn");let bx=btn.nextElementSibling;i
  inp.focus();};
 /* ---- 最初に開いたとき：前回の結果があれば、すぐ見せる ---- */
 function boot(){drawResume();drawSaved();const R=sget(KR);
- if(R&&Array.isArray(R.t)&&R.t.length===4&&R.y){st.y=R.y;st.m=R.m;st.d=R.d;dateAll(true);st.t=R.t.slice();st.at=R.at||null;st.pct=R.pct||null;st.half=R.half||{};st.sway=R.sway||null;st.love=R.love||null;
+ if(R&&Array.isArray(R.t)&&R.t.length===4&&R.y){st.y=R.y;st.m=R.m;st.d=R.d;dateAll(true);st.t=R.t.slice();st.at=R.at||null;st.pct=R.pct||null;st.half=R.half||{};st.sway=R.sway||null;st.love=R.love||null;st.prev=Array.isArray(R.prev)?R.prev.filter(t=>/^[EI][SN][TF][JP]$/.test(t)).slice(0,2):[];pvT=st.prev.slice();drawPv();
   fillDate();setPicker();selAT=st.at;showResult();render(true);
   document.querySelectorAll(".intro,.how").forEach(e=>e.hidden=true);
   const res=$("result");res.after($("quizCard"));res.after($("formCard"));$("formh").textContent=TR("もう一度診断する");
@@ -741,11 +785,11 @@ function setupCards(instant,one){const cards=[...document.querySelectorAll(".nic
  cards.forEach(n=>{let bk=n.querySelector(".nkback");if(!bk){bk=document.createElement("div");bk.className="nkback";n.appendChild(bk);}
   const born=n.classList.contains("born");bk.innerHTML='<span class="q">?</span><b>'+(one?TR("気質も性格も"):born?TR("気質のあなた"):TR("性格のあなた"))+'</b><small>'+TR("タップしてめくる")+'</small>';
   n.classList.remove("turn","turn2");n.classList.toggle("open",!!instant);n.onclick=()=>flipCard(n);});
- const cb=$("coreBox");if(cb)cb.classList.toggle("wait2",!instant);const fb=$("funBox");if(fb)fb.classList.toggle("wait2",!instant);const cf=$("cloudFig");if(cf)cf.classList.toggle("wait2",!instant);
+ const cb=$("coreBox");if(cb)cb.classList.toggle("wait2",!instant);const fb=$("funBox");if(fb)fb.classList.toggle("wait2",!instant);const cf=$("cloudFig");if(cf)cf.classList.toggle("wait2",!instant);const cg=$("chgBox");if(cg)cg.classList.toggle("wait2",!instant);
  if(!instant)story.innerHTML=one?TR('<span class="ln">カードをタップして、</span><span class="ln">あなたの性質を見てみよう</span>'):TR('<span class="ln">カードをタップして、</span><span class="ln">あなたの2つの性質を見てみよう</span>');}
 function flipCard(n){if(n.classList.contains("open")||n.classList.contains("turn"))return;n.classList.add("turn");
  setTimeout(()=>{n.classList.add("open");n.classList.remove("turn");n.classList.add("turn2");setTimeout(()=>n.classList.remove("turn2"),300);
-  const left=[...document.querySelectorAll(".nicks .nk")].filter(x=>!x.hidden&&!x.classList.contains("open")).length;if(!left){if(window.__story)$("rStory").innerHTML=window.__story;["coreBox","funBox","cloudFig"].forEach(id=>{const cb=$(id);if(cb&&cb.classList.contains("wait2")){cb.classList.remove("wait2");cb.classList.add("reveal");}});}},240);}
+  const left=[...document.querySelectorAll(".nicks .nk")].filter(x=>!x.hidden&&!x.classList.contains("open")).length;if(!left){if(window.__story)$("rStory").innerHTML=window.__story;["chgBox","coreBox","funBox","cloudFig"].forEach(id=>{const cb=$(id);if(cb&&cb.classList.contains("wait2")){cb.classList.remove("wait2");cb.classList.add("reveal");}});}},240);}
 function layoutResult(){const hero=document.querySelector(".hero");if(!hero)return;
  {let dh=$("dataH");if(!dh){dh=document.createElement("h3");dh.id="dataH";dh.className="datah";dh.textContent=TR("気質と性格の文字くらべ");}
   const q=x=>typeof x==="string"?hero.querySelector(x):x;
@@ -753,7 +797,7 @@ function layoutResult(){const hero=document.querySelector(".hero");if(!hero)retu
   const fold=(id,title,sub)=>{let d=$(id);if(!d){d=document.createElement("details");d.id=id;d.className="mdet";d.innerHTML='<summary><span>'+title+'<small>'+sub+'</small></span></summary>';}return d;};
   let mh=$("moreH");if(!mh){mh=document.createElement("p");mh.id="moreH";mh.className="moreh";mh.textContent=TR("もっと知りたい人へ");}
   const dF=fold("dFun",TR("あなたが言いそうなこと・やりそうなこと"),TR("辛口のひと言も")),dL=fold("dLetters",TR("4つの文字を、くわしく見る"),TR("文字くらべ・生年月日から出た理由"));
-  ["#rSrc","#rStory",".nicks","#coreBox","#cloudFig",".shr","#kt",mh,dF,dL,"#recheck"].map(q).filter(Boolean).forEach(e=>hero.appendChild(e));
+  ["#rSrc","#rStory",".nicks","#chgBox","#coreBox","#cloudFig",".shr","#kt",mh,dF,dL,"#recheck"].map(q).filter(Boolean).forEach(e=>hero.appendChild(e));
   if($("funBox"))dF.appendChild($("funBox"));
   [dh,"#flipHint","#flip","#flipAll",".hgap","#rSum",".revw"].map(x=>typeof x==="string"?document.querySelector(".hero "+x):x).filter(Boolean).forEach(e=>dL.appendChild(e));
   dF.hidden=!$("funBox")||!$("funBox").innerHTML;}
@@ -784,7 +828,7 @@ const RECAX=[["EI","元気の出し方"],["SN","ものの見方"],["TF","決め�
 let recPick=null,recSrc="other",recTags=[],recDateV="";
 function drawRec(){const box=$("recBody");if(!box)return;const born=natal(st.y,st.m,st.d).t,R=histMine(),n=R.length;
  if(!recPick)recPick=st.t.slice();
- const DS=LANG==="ko"?".":"/",md=d=>{const a=d.split("-");return (+a[1])+DS+(+a[2]);};
+ const DS=LANG==="ko"?".":"/",md=d=>{if(d==="-")return TR("前に");const a=d.split("-");return (+a[1])+DS+(+a[2]);};
  let h='<p class="hint">'+TR("このサイトで診断するたびに、ここに記録されます。ほかのサイトで受けた結果も足せます。ならべると、変わりやすい文字と、ずっと変わらない文字がわかります。")+'</p>';
  if(n<2)h+='<p class="rec-empty">'+TR("記録が2回以上たまると、変わりやすい文字がわかります。ほかのサイトで前に受けた結果があれば、下から足してみてください。")+'</p>';
  else{const rows=RECAX.map(([k,name],i)=>{const A=AX[i],cA=R.filter(r=>r.t[i]===A.a).length,cB=n-cA,main=cA>=cB?A.a:A.b,steady=cA===n||cB===n;
