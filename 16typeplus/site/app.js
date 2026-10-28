@@ -361,10 +361,11 @@ function render(instant){
  {const fig=$("cloudFig");if(fig){const tk=(window.__cloudTok=(window.__cloudTok||0)+1);setTimeout(()=>drawCloud().then(cv=>{if(tk!==window.__cloudTok)return;const x=cv.getContext("2d"),W=cv.width,H=cv.height,d=x.getImageData(0,0,W,H-90).data;let t=0,b=H-91;const blank=y=>{for(let i=y*W*4;i<(y+1)*W*4;i+=16)if(d[i]<235)return false;return true;};while(t<b&&blank(t))t++;while(b>t&&blank(b))b--;t=Math.max(0,t-50);b=Math.min(H-91,b+50);const o2=document.createElement("canvas");o2.width=W;o2.height=b-t;o2.getContext("2d").drawImage(cv,0,t,W,b-t,0,0,W,b-t);$("cloudImg").src=o2.toDataURL("image/png");$("cloudImg").alt=TR("わたしの気質と性格");fig.hidden=false;}).catch(()=>{}),0);}}
  {const kf=$("karteFig");if(kf){const tk=(window.__karteTok=(window.__karteTok||0)+1);setTimeout(()=>drawKarte().then(cv=>{if(tk!==window.__karteTok)return;$("karteImg").src=cv.toDataURL("image/png");$("karteImg").alt=TR("性格カルテ");kf.hidden=false;}).catch(()=>{}),0);}}
  {const K=KT[born+">"+now],el=$("kt");window.__me.kt=K||null;["hWorryH","hWorryQ","hWorry"].forEach(i=>{const x=$(i);if(x)x.style.display=(K&&K.aru)?"none":"";});if(el){el.hidden=!K;const box=(id,cls)=>{let x=$(id);if(!x){x=document.createElement("div");x.id=id;x.className=cls;document.querySelector(".hero").appendChild(x);}return x;};box("coreBox","corebox").innerHTML=K?coreCard(born,now):"";(window.__me&&(window.__me.ktKarai=K?K.karai:"")),(fx=>{fx.classList.toggle("wait2",$("coreBox").classList.contains("wait2"));return fx;})(box("funBox","funbox")).innerHTML=K?'<p class="kfh">'+(born===now?TR("あなたは、こんな人"):TR("気質と性格をあわせると、あなたはこんな人"))+'</p><dl class="ktl"><dt>'+TR("言いそうなこと")+'</dt><dd class="say">'+esc(K.say)+'</dd><dt>'+TR("やりそうなこと")+'</dt><dd>'+esc(K.do)+'</dd></dl><div class="ktk"><span>'+TR("辛口のひと言")+'</span>'+esc(K.karai)+'</div>':"";
- if(K)el.innerHTML='<h3 class="kth">'+TR("くわしい鑑定")+'</h3>'+(K.aru?(()=>{const sec=([f,h],n)=>'<div class="kts kt-'+f+'"><h4>'+(n?'<span class="ktn">'+n+'</span>':'')+'<i aria-hidden="true">'+({aru:"?",why:"!",yure:"⇄",plus:"+",hidden:"✦",tip:"✓"})[f]+'</i>'+TR(h)+'</h4>'+kfmt(K[f],f)+(f==="yure"?swayNote(born,now):'')+'</div>';
+ if(K)el.innerHTML='<h3 class="kth">'+TR("くわしい鑑定")+'</h3>'+(K.aru?(()=>{const yureH=born!==now?TR("{a} と {b} を行き来しやすいわけ").replace("{a}",born).replace("{b}",now):TR("結果が変わりにくいわけ"),hT=(f,h)=>f==="yure"?yureH:TR(h);
+   const sec=([f,h],n)=>'<div class="kts kt-'+f+'"><h4>'+(n?'<span class="ktn">'+n+'</span>':'')+'<i aria-hidden="true">'+({aru:"?",why:"!",yure:"⇄",plus:"+",hidden:"✦",tip:"✓"})[f]+'</i>'+hT(f,h)+'</h4>'+kfmt(K[f],f)+(f==="yure"?swayNote(born,now)+yureSee(born,now):'')+'</div>';
    /* 大事な3つ（こんなこと→どうして→生かすヒント）だけ先に見せ、残りは「もっと読む」にたたむ */
    const main=[["aru","こんなこと、ありませんか？"],["why","どうしてそうなるの？"],["tip","生かすヒント"]].filter(([f])=>K[f]),more=[["yure","16タイプの結果が変わるわけ"],["plus","悩みを、こう見てみる"],["hidden","あなたの、もう一つの力"]].filter(([f])=>K[f]);
-   return main.map((x,i)=>sec(x,i+1)).join("")+(more.length?'<details class="mdet ktmore"><summary><span>'+TR("もっと読む")+'<small>'+more.map(([f,h])=>TR(h)).join(TR("・"))+'</small></span></summary>'+more.map(x=>sec(x,0)).join("")+'</details>':'');})():'<p class="ktb">'+esc(K.body)+'</p>')+(K.aru?'':'<dl class="ktl"><dt>'+TR("悩みやすいこと")+'</dt><dd>'+esc(K.worry)+'</dd></dl>');}}window.__me.karaiC=strip(C.karai||"");drawBalance(N);lvInit();saveResult();layoutResult();recPick=null;drawRec();
+   return main.map((x,i)=>sec(x,i+1)).join("")+(more.length?'<details class="mdet ktmore"><summary><span>'+TR("もっと読む")+'<small>'+more.map(([f,h])=>hT(f,h)).join(TR("・"))+'</small></span></summary>'+more.map(x=>sec(x,0)).join("")+'</details>':'');})():'<p class="ktb">'+esc(K.body)+'</p>')+(K.aru?'':'<dl class="ktl"><dt>'+TR("悩みやすいこと")+'</dt><dd>'+esc(K.worry)+'</dd></dl>');}}window.__me.karaiC=strip(C.karai||"");drawBalance(N);lvInit();saveResult();layoutResult();recPick=null;drawRec();
 }
 /* ---- 結果を画像でシェア ---- */
 const SHARE_URL="https://16typeplus.jp/"+(LANG==="ja"?"":LANG+"/");
@@ -808,6 +809,10 @@ function kaiunCard(at){let c=$("kaiun");if(LANG!=="ja"||!KAIUN_URL||!st.y){if(c)
  at.after(c);return c;}
 /* その人の回答で揺れた向きを、気質と性格の組み合わせから説明する */
 const SWN={EI:["元気の出し方","人といるか、ひとりか","--ei"],SN:["ものの見方","これまでの経験で考えるか、先のことを想像して考えるか","--sn"],TF:["決め方","理屈か、気持ちか","--tf"],JP:["進め方","計画どおりか、その場に合わせるか","--jp"]};
+function yureSee(born,now){const pv=((window.__me&&window.__me.prev)||[]).filter(t=>t&&t!==now);if(!pv.length)return "";
+ const ax=[0,1,2,3].filter(i=>pv.some(t=>t[i]!==now[i]));if(!ax.some(i=>born[i]===now[i]))return "";
+ const ch=ax.map(i=>(born[i]!==now[i]&&pv.every(t=>t[i]===now[i])?"":pv.find(t=>t[i]!==now[i])[i]+"→"+now[i])).filter(Boolean).join(TR("・"));
+ return '<p class="ktsee">'+TR("前に出た {p} から今の {n} への変化（{c}）のわけは、上の「あなたの16タイプの変化」に書いてあります。").replace("{p}",'<b>'+esc(pv.join(" / "))+'</b>').replace("{n}",'<b>'+esc(now)+'</b>').replace("{c}",esc(ch))+'</p>';}
 function swayNote(born,now){const ks=["EI","SN","TF","JP"];
  if(!st.pct)return '<p class="mine">'+TR("質問に答えると、どの文字で答えが変わりやすいかがわかります。")+'</p>';
  const w=ks.filter(k=>(st.sway&&st.sway[k])||(st.half&&st.half[k]));
@@ -849,7 +854,7 @@ function waitShow(){const cards=[...document.querySelectorAll(".nicks .nk")].fil
  cards.forEach(x=>x.classList.toggle("pz",rest.length>0&&rest.includes(x)));
  if(!rest.length||rest.length===cards.length)return;
  $("rStory").innerHTML=TR('<span class="ln">あと1枚。</span>')+'<span class="ln">'+(rest[0].classList.contains("born")?TR("左のカードも"):TR("右のカードも"))+'</span>'+TR('<span class="ln">めくってみよう</span>');
- const me=window.__me||{},items=[];const cg=$("chgBox");if(cg&&!cg.hidden&&cg.innerHTML.trim()&&me.prev&&me.prev.length)items.push(TR("あなたの16タイプの変化")+(LANG==="ja"?"（":" (")+me.prev[me.prev.length-1]+" → "+me.now+(LANG==="ja"?"）":")"));
+ const me=window.__me||{},items=[];const cg=$("chgBox");if(cg&&!cg.hidden&&cg.innerHTML.trim()&&me.prev&&me.prev.length)items.push(TR("あなたの16タイプの変化")+(LANG==="ja"?"（":" (")+me.prev.join(" / ")+" → "+me.now+(LANG==="ja"?"）":")"));
  if($("coreBox"))items.push(TR("気質と性格の「変わらないところ」"));if($("cloudFig"))items.push(TR("2つを重ねた図"));
  if(!$("waitBox")&&items.length){const w=document.createElement("div");w.id="waitBox";w.className="waitbox";w.innerHTML='<b>'+TR("2枚ともめくると、ここに出てきます")+'</b><ul>'+items.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul>';const at=$("wkNote")||document.querySelector(".nicks");if(at)at.after(w);}
  const fb=$("funBox");if(fb&&fb.classList.contains("wait2")&&!$("waitFun")){const w=document.createElement("p");w.id="waitFun";w.className="waitbox";w.innerHTML=TR("上の<b>カードを2枚ともめくる</b>と、ここに出てきます。");fb.before(w);}}
