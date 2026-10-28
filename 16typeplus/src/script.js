@@ -84,7 +84,7 @@ drawSlots(-1);
 document.querySelectorAll("#atPick button").forEach(bt=>bt.onclick=()=>{hideOld();selAT=bt.dataset.v||null;document.querySelectorAll("#atPick button").forEach(x=>x.setAttribute("aria-pressed",x===bt));drawSlots(-1);});
 $("go").onclick=()=>{if(sel.includes(null)||!dateOK())return;st.t=sel.slice();st.at=selAT;st.love=null;st.pct=null;st.half={};st.sway=null;st.prev=pvT.filter(t=>t!==st.t.join(""));showResult();st.prev.forEach(t=>addHist("other",t,"-"));addHist("other",st.t.join(""));render();logType("select");document.querySelector(".hero").scrollIntoView({behavior:"smooth"});};
 /* ---- 仕事・進路のヒント：年れいで高校生・大学生（就活）・社会人（転職）のタブを最初に開く ---- */
-const CARTAB=[["hs","高校生"],["uni","大学・専門学校・就活"],["work","働いている人"]],KCT="16tp.cartab.v1";
+const CARTAB=[["hs","高校生"],["uni","大学・専門・就活"],["work","働いている人"]],KCT="16tp.cartab.v1";
 function carStage(){const a=ageNow();return a==null?"uni":a<=18?"hs":a<=22?"uni":"work";}
 function drawCareer(){const box=$("carBody"),me=window.__me;if(!box||!me||typeof CAR==="undefined"||!CAR||!CAR.t)return;
  const saved=sget(KCT),tab=window.__carTab||(CARTAB.some(x=>x[0]===saved)?saved:carStage()),C=CAR.t[me.now];if(!C){box.innerHTML="";return;}
