@@ -785,7 +785,7 @@ function kaiunCard(at){let c=$("kaiun");if(LANG!=="ja"||!KAIUN_URL||!st.y){if(c)
  let u=KAIUN_URL.replace(/\{YMD\}/g,Y+M+D).replace(/\{Y\}/g,Y).replace(/\{M\}/g,M).replace(/\{D\}/g,D);
  const hi=u.indexOf("#"),base=hi<0?u:u.slice(0,hi),hash=hi<0?"":u.slice(hi),utm="utm_source=16typeplus&utm_medium=result&utm_campaign=kaiun";
  u=base+(base.includes("?")?"&":"?")+utm+hash;
- c.innerHTML='<p class="kaiun-eb">MY DAILY FORECAST</p><h2 class="kaiun-t">私だけの開運予報</h2><p class="kaiun-catch"><span class="nw">毎朝、あなたの占いがメールで届く。</span></p>'+kaiunPics()+'<p class="kaiun-p">この診断の「気質」は、あなたの生年月日から出しています。同じ生年月日から、毎朝あなただけの占いをメールでお届けします。</p><p class="kaiun-checks"><span>✓ 料金はかかりません</span><span>✓ 毎朝メールで届きます</span><span>✓ いつでも停止できます</span></p><a class="btn kaiun-btn" href="'+u+'" target="_blank" rel="noopener">どんなメールか見てみる</a><p class="kaiun-note">開運予報の説明ページが開きます。</p>';
+ c.innerHTML='<p class="kaiun-eb">MY DAILY FORECAST</p><h2 class="kaiun-t">私だけの開運予報</h2><p class="kaiun-catch"><span class="nw">毎朝、あなただけの</span><span class="nw">運気とラッキー情報が届く。</span></p>'+kaiunPics()+'<p class="kaiun-p">この診断の「気質」は、あなたの生年月日から出しています。開運予報は、同じ生年月日をもとに、あなた一人ひとりに合わせた鑑定です。その日の運気、おすすめの行動、ラッキーカラーなどを、毎朝メールでお届けします。</p><p class="kaiun-checks"><span>✓ 料金はかかりません</span><span>✓ 毎朝メールで届きます</span><span>✓ いつでも停止できます</span></p><a class="btn kaiun-btn" href="'+u+'" target="_blank" rel="noopener">どんなメールか見てみる</a><p class="kaiun-note">開運予報の説明ページが開きます。</p>';
  c.querySelectorAll(".kaiun-pics img").forEach(im=>{im.onerror=()=>{if(im.src!==im.dataset.fb)im.src=im.dataset.fb;};});c.hidden=false;c.querySelector("a").onclick=()=>{try{track("kaiun_click",{place:"result"});}catch(e){}};
  at.after(c);return c;}
 /* その人の回答で揺れた向きを、気質と性格の組み合わせから説明する */
