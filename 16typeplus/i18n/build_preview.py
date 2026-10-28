@@ -36,7 +36,12 @@ def lang_data(lang):
         p=I+'love.{}.json'.format(lang)
         if os.path.exists(p):
             x=js(p); lvq=x.get('questions',lvq); lvt=x.get('types',lvt)
-    LVd={'questions':lvq,'types':lvt}
+    lvx=js('/home/user/mypage/16typeplus/love/love.json');lvp=lvx.get('partner',{});lva=lvx.get('axis',{})
+    if lang!='ja':
+        p2=I+'love.{}.json'.format(lang)
+        if os.path.exists(p2):
+            x2=js(p2);lvp=x2.get('partner',lvp);lva=x2.get('axis',lva)
+    LVd={'questions':lvq,'types':lvt,'partner':lvp,'axis':lva}
     KT={}
     kd='/home/user/mypage/16typeplus/content/kantei/' if lang=='ja' else I+'kantei.{}/'.format(lang)
     for f in sorted(glob.glob(kd+'*.json')): KT.update(js(f))

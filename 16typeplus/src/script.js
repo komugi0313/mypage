@@ -552,15 +552,19 @@ function lvInit(){if(typeof LV==="undefined"||!LV||!LV.questions)return;let el=$
  el.innerHTML='<p class="eyebrow">'+TR("恋愛編")+'</p><h2 class="lvh">'+TR("恋をすると、あなたの中のどちらが強く出る？")+'</h2>'
   +'<p class="hint lvlead">'+TR("恋愛の場面だけを聞く16問・約3分。恋をしたときのあなたが、気質と性格のどちらに近いのか、ふだんは出ない面があるのかがわかります。")+'</p>'
   +'<button class="btn primary" type="button" id="lvStart">'+TR("恋愛編を診断する")+'</button>'
+  +'<div id="lvSit" class="lvsit" hidden><p class="lvsq">'+TR("今の恋は、どれに近い？")+'</p><div class="lvsb">'+LVSIT.map(([k,l])=>'<button type="button" data-s="'+k+'">'+TR(l)+'</button>').join("")+'</div><p class="hint">'+TR("今の状況に合わせて、質問と結果が変わります。")+'</p></div>'
   +'<div id="lvQ" class="lvq" hidden><div class="qtop"><span class="qcount" id="lvCount"></span><button type="button" class="qlink" id="lvBack">'+TR("← 1つ前の質問へ")+'</button></div><div class="qprog"><span id="lvProg"></span></div><h3 class="qtext" id="lvText"></h3><div class="qex" id="lvExW"><span class="qexl">'+TR("たとえば")+'</span><p id="lvEx"></p></div><div class="qopts" id="lvOpts"></div></div>'
   +'<div id="lvRes" hidden></div>';
- $("lvStart").onclick=()=>{const qs=lvPick();lv={qs,a:new Array(qs.length).fill(null),i:0};$("lvStart").hidden=true;$("lvRes").hidden=true;$("lvQ").hidden=false;lvDraw();$("love").scrollIntoView({behavior:"smooth",block:"start"});};
- $("lvBack").onclick=()=>{if(lv.i>0){lv.i--;lvDraw();}else{$("lvQ").hidden=true;$("lvStart").hidden=false;}};
+ $("lvStart").onclick=()=>{$("lvStart").hidden=true;$("lvRes").hidden=true;$("lvQ").hidden=true;$("lvSit").hidden=false;$("love").scrollIntoView({behavior:"smooth",block:"start"});};
+ $("lvSit").querySelectorAll("button").forEach(b=>b.onclick=()=>{const sit=b.dataset.s,qs=lvPick(sit);lv={qs,sit,a:new Array(qs.length).fill(null),i:0};$("lvSit").hidden=true;$("lvQ").hidden=false;lvDraw();try{track("love_sit",{sit});}catch(e){}});
+ $("lvBack").onclick=()=>{if(lv.i>0){lv.i--;lvDraw();}else{$("lvQ").hidden=true;$("lvSit").hidden=false;}};
  const me=window.__me;if(me&&st.love&&st.love.t&&/^[EI][SN][TF][JP]$/.test(st.love.t))lvShow(st.love.t);}
 /* 恋愛編：48問から16問（4つの軸×左右2問ずつ）を選ぶ。前回までに出た質問はあと回し */
 const LVK="16tp.lvused.v1";
-function lvPick(){const Q=LV.questions,rec=new Set(sget(LVK)||[]),R=[["E","N","T","J"],["I","S","F","P"]],out=[];
- const pole=(ax,p)=>{const c=Q.map((q,i)=>i).filter(i=>Q[i].ax===ax&&Q[i].p===p);for(let j=0;j<c.length;j++){const r=j+Math.floor(Math.random()*(c.length-j));[c[j],c[r]]=[c[r],c[j]];}
+/* 恋の状況：片思い中・付き合っている（結婚も）・今はいない。質問と結果をこれに合わせる */
+const LVSIT=[["kata","片思い中"],["koi","付き合っている・結婚している"],["none","今はいない"]];
+function lvPick(sit){const Q=LV.questions,ok=i=>!sit||!Q[i].s||Q[i].s.includes(sit),rec=new Set(sget(LVK)||[]),R=[["E","N","T","J"],["I","S","F","P"]],out=[];
+ const pole=(ax,p)=>{const c=Q.map((q,i)=>i).filter(i=>Q[i].ax===ax&&Q[i].p===p&&ok(i));for(let j=0;j<c.length;j++){const r=j+Math.floor(Math.random()*(c.length-j));[c[j],c[r]]=[c[r],c[j]];}
   return c.filter(i=>!rec.has(i)).concat(c.filter(i=>rec.has(i))).slice(0,2);};
  const L={};["EI","SN","TF","JP"].forEach((ax,k)=>{L[R[0][k]]=pole(ax,R[0][k]);L[R[1][k]]=pole(ax,R[1][k]);});
  for(let j=0;j<4;j++)R[j%2].forEach(p=>{const i=L[p][j>>1];if(i!=null)out.push(i);});return out;}
@@ -573,7 +577,7 @@ function lvFinish(){const me=window.__me,sc={EI:0,SN:0,TF:0,JP:0};
  lv.qs.forEach((qi,i)=>{const q=LV.questions[qi],A=AX[AXN[q.ax]],v=(lv.a[i]==null?2.5:lv.a[i])-2.5;sc[q.ax]+=q.p===A.a?v:-v;});lvMark(lv.qs);
  /* 気質と性格が同じ文字はそのまま。ちがう文字だけ、答えが寄った方を選ぶ（3つ目のタイプは作らない） */
  const t=AX.map((A,i)=>me.born[i]===me.now[i]?(sc[A.k]>=4?A.a:sc[A.k]<=-4?A.b:me.now[i]):(sc[A.k]>0?A.a:sc[A.k]<0?A.b:me.now[i])).join("");
- st.love={t,a:lv.a,qs:lv.qs};saveResult();$("lvQ").hidden=true;lvShow(t);$("love").scrollIntoView({behavior:"smooth",block:"start"});}
+ st.love={t,a:lv.a,qs:lv.qs,sit:lv.sit||"koi",pt:(st.love&&st.love.pt)||null};saveResult();$("lvQ").hidden=true;lvShow(t);$("love").scrollIntoView({behavior:"smooth",block:"start"});}
 function lvHook(born,now,love){let nb=0,nn=0;const nx=[];for(let i=0;i<4;i++){if(born[i]!==now[i]){if(love[i]===born[i])nb++;else nn++;}else if(love[i]!==now[i])nx.push(TR(CORE[love[i]]));}
  const X=nx.join(TR("・"));
  if(born===now)return nx.length?TR("気質も性格も同じ。でも恋をすると、ふだんは出ない「{X}」の面が出てきます。").replace("{X}",X):TR("気質も性格も同じ。恋をしても、いつものあなたのまま。");
@@ -582,23 +586,35 @@ function lvHook(born,now,love){let nb=0,nn=0;const nx=[];for(let i=0;i<4;i++){if
   :TR("恋をすると、気質の{B}と性格の{N}が、まざって出てくる。");
  if(nx.length)s+=TR("さらに、ふだんは出ない「{X}」の面も出てきます。").replace("{X}",X);
  return s.replace(/\{B\}/g,an(born)).replace(/\{N\}/g,an(now));}
-function lvShow(t){const me=window.__me,P=LV.types&&LV.types[t];if(!me)return;const el=$("lvRes");el.hidden=false;$("lvStart").hidden=true;$("lvQ").hidden=true;
- const one=me.born===me.now;
- const lab=i=>t[i]===me.born[i]&&t[i]===me.now[i]?'':t[i]===me.born[i]?'<em class="b">'+TR("気質")+'</em>':t[i]===me.now[i]?'<em class="n">'+TR("性格")+'</em>':'<em class="x">'+TR("恋だけ")+'</em>';
- const anyLab=[0,1,2,3].some(i=>!(t[i]===me.born[i]&&t[i]===me.now[i]));
+const LVBLK={kata:["片思い中のあなたへ",[["kata_try","今週やってみること"],["kata_habit","片思いでやりがちなこと"],["kata_word","相手に伝わるひと言"]]],
+ koi:["付き合っているあなたへ",[["fight","けんかしたとき"],["last","長く続けるコツ"],["koi_word","伝え方"]]],
+ none:["今のあなたへ",[["none_start","好きな人ができやすいとき"],["fall","好きになると"],["none_try","今やってみること"]]]};
+function lvPair(me,pt,sit){const P2=LV.partner&&LV.partner[pt],AXT=LV.axis||{};if(!P2)return "";
+ const d=[0,1,2,3].filter(i=>me[i]!==pt[i]).map(i=>AXT[me[i]+">"+pt[i]]).filter(Boolean);
+ return '<p class="lvptn"><b>'+pt+'</b>'+p16h(pt)+'</p><p>'+esc(P2[sit==="kata"?"pt_kata":"pt_koi"]||"")+'</p>'
+  +'<p class="lvpth">'+TR("2人のあいだで、起きやすいこと")+'</p>'+(d.length?'<ul class="lvptl">'+d.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul>':'<p>'+esc(AXT.same||"")+'</p>');}
+function lvShow(t){const me=window.__me,P=LV.types&&LV.types[t];if(!me)return;const el=$("lvRes");el.hidden=false;$("lvStart").hidden=true;$("lvQ").hidden=true;if($("lvSit"))$("lvSit").hidden=true;
+ const sit=(st.love&&st.love.sit)||"koi";
+ const lab=i=>t[i]===me.born[i]&&t[i]===me.now[i]?'<em class="s">'+TR("どちらも")+'</em>':t[i]===me.born[i]?'<em class="b">'+TR("気質")+'</em>':t[i]===me.now[i]?'<em class="n">'+TR("性格")+'</em>':'<em class="x">'+TR("恋だけ")+'</em>';
  let h='<p class="lvlab">'+TR("恋をしたときのあなた")+'</p><div class="lvtiles">'+t.split("").map((l,i)=>'<div class="lt'+(me.born[i]!==me.now[i]&&l===me.born[i]?' isb':'')+'"><b>'+l+'</b>'+lab(i)+'</div>').join("")+'</div>'
-  +(anyLab?'<p class="lvleg">'+TR("文字の下の小さな言葉は、恋をしたときにその文字がどこから出たかです。")+([0,1,2,3].some(i=>t[i]!==me.born[i]&&t[i]!==me.now[i])?TR("「恋だけ」は、ふだんは出ない面です。"):"")+'</p>':'')
+  +'<p class="lvleg">'+TR("文字の下の小さな言葉は、恋をしたときにその文字がどこから出たかです。")+([0,1,2,3].some(i=>t[i]!==me.born[i]&&t[i]!==me.now[i])?TR("「恋だけ」は、ふだんは出ない面です。"):"")+'</p>'
   +'<p class="hook">'+esc(lvHook(me.born,me.now,t))+'</p>';
- if(P){const nm=k=>k+p16(k);
-  h+='<div class="lvp"><p class="lvsub">'+TR("恋のときのあなたは")+'</p><p class="lvname">'+esc(P.t)+p16h(P.t)+'</p><p class="one">'+TR("「")+esc(P.one)+TR("」")+'</p><p class="desc">'+esc(P.desc)+'</p>'
-  +[["fall","好きになると"],["date","付き合うと"],["fight","けんかしたとき"],["last","長く続けるコツ"]].filter(([k])=>P[k]).map(([k,h])=>'<div class="lvs lvs-'+k+'"><h3>'+TR(h)+'</h3><p>'+esc(P[k])+'</p></div>').join("")
-  +'<details class="pmore"><summary>'+TR("恋でいいところ・気をつけたいところ")+'</summary><div class="two"><div class="g"><h3>'+TR("恋でいいところ")+'</h3><ul>'+P.good.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div><div class="c"><h3>'+TR("気をつけたいところ")+'</h3><ul>'+P.care.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div></div><p class="key"><b>'+TR("うまくいくコツ")+'</b>'+esc(P.tip)+'</p></details>'
-  +'<details class="pmore"><summary>'+TR("恋の相性")+'</summary><div class="cpl"><div class="o"><em>'+TR("気が合う相手")+'</em><b>'+esc(nm(P.best[0]))+'</b>'+esc(P.best[1])+'</div><div class="x"><em>'+TR("すれ違いやすい相手")+'</em><b>'+esc(nm(P.hard[0]))+'</b>'+esc(P.hard[1])+'</div></div></details></div>'
-  +'<button class="btn primary" type="button" id="lvShare">'+TR("恋愛編の結果を画像でシェア")+'</button>';}
+ if(P){const nm=k=>k+p16(k),B=LVBLK[sit]||LVBLK.koi,used=B[1].map(x=>x[0]);
+  h+='<div class="lvp"><p class="lvsub">'+TR("恋のときのあなたは")+'</p><p class="lvname">'+esc(P.t)+p16h(P.t)+'</p><p class="one">'+TR("「")+esc(P.one)+TR("」")+'</p>'
+  +'<div class="lvsit-r"><p class="lvsith">'+TR(B[0])+'</p>'+B[1].filter(([k])=>P[k]).map(([k,hh])=>'<div class="lvs lvs-'+k+'"><h3>'+TR(hh)+'</h3><p>'+esc(P[k])+'</p></div>').join("")+'</div>'
+  +(sit!=="none"?'<div class="lvpt"><label class="lvptq" for="lvPt">'+TR(sit==="kata"?"好きな人の16タイプ（わかれば）":"恋人の16タイプ（わかれば）")+'</label><select id="lvPt"><option value="">'+TR("16タイプを選ぶ")+'</option>'+Object.keys(D.NICK).map(k=>'<option value="'+k+'"'+(st.love&&st.love.pt===k?' selected':'')+'>'+esc(nm(k))+'</option>').join("")+'</select><p class="hint">'+TR("16タイプだけで出す、2人のヒントです。")+'</p><div id="lvPtR" class="lvptr"></div></div>':'')
+  +'<button class="btn primary" type="button" id="lvShare">'+TR("恋愛編の結果を画像でシェア")+'</button>'
+  +'<details class="mdet lvmore"><summary><span>'+TR("恋のタイプを、もっとくわしく")+'<small>'+TR("恋の傾向・いいところ・気をつけたいところ・恋の相性")+'</small></span></summary>'
+  +'<p class="desc">'+esc(P.desc)+'</p>'
+  +[["fall","好きになると"],["date","付き合うと"],["fight","けんかしたとき"],["last","長く続けるコツ"]].filter(([k])=>P[k]&&!used.includes(k)).map(([k,hh])=>'<div class="lvs lvs-'+k+'"><h3>'+TR(hh)+'</h3><p>'+esc(P[k])+'</p></div>').join("")
+  +'<div class="two"><div class="g"><h3>'+TR("恋でいいところ")+'</h3><ul>'+P.good.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div><div class="c"><h3>'+TR("気をつけたいところ")+'</h3><ul>'+P.care.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div></div><p class="key"><b>'+TR("うまくいくコツ")+'</b>'+esc(P.tip)+'</p>'
+  +'<div class="cpl"><div class="o"><em>'+TR("気が合う相手")+'</em><b>'+esc(nm(P.best[0]))+'</b>'+esc(P.best[1])+'</div><div class="x"><em>'+TR("すれ違いやすい相手")+'</em><b>'+esc(nm(P.hard[0]))+'</b>'+esc(P.hard[1])+'</div></div></details></div>';}
  h+='<p class="lvnote">'+TR("恋をしたときの気持ちは、その時によって少し変わります。答え直すと、ちがう質問が出て、結果が変わることもあります。")+'</p><button class="qlink" type="button" id="lvRedo">'+TR("恋愛編に答え直す")+'</button>';
  el.innerHTML=h;
+ const ptS=$("lvPt"),ptR=$("lvPtR"),drawPt=()=>{if(!ptS||!ptR)return;const v=ptS.value;ptR.innerHTML=v?lvPair(t,v,sit):"";ptR.hidden=!v;};
+ if(ptS){ptS.onchange=()=>{if(st.love){st.love.pt=ptS.value||null;saveResult();}drawPt();try{track("love_partner");}catch(e){}};drawPt();}
  if($("lvShare"))$("lvShare").onclick=()=>lvShareRun(t);
- if($("lvRedo"))$("lvRedo").onclick=()=>{el.hidden=true;$("lvStart").hidden=false;$("lvStart").click();};}
+ if($("lvRedo"))$("lvRedo").onclick=()=>{el.hidden=true;$("lvSit").hidden=false;$("love").scrollIntoView({behavior:"smooth",block:"start"});};}
 async function lvShareRun(t){track("love_share_click");const b=$("lvShare"),lbl=b.textContent;b.disabled=true;b.textContent=TR("画像をつくっています…");
  try{const P=LV.types[t],cvs=[await lvCloud(P),await lvSheet(P)];const blobs=await Promise.all(cvs.map(cv=>new Promise(r=>cv.toBlob(r,"image/png"))));
   const files=blobs.map((bl,i)=>new File([bl],"16typeplus-love-"+(i+1)+".png",{type:"image/png"}));
