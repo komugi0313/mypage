@@ -83,6 +83,26 @@ AX.forEach((A,i)=>{const g=document.createElement("div");g.className="seg";g.sty
 drawSlots(-1);
 document.querySelectorAll("#atPick button").forEach(bt=>bt.onclick=()=>{hideOld();selAT=bt.dataset.v||null;document.querySelectorAll("#atPick button").forEach(x=>x.setAttribute("aria-pressed",x===bt));drawSlots(-1);});
 $("go").onclick=()=>{if(sel.includes(null)||!dateOK())return;st.t=sel.slice();st.at=selAT;st.love=null;st.pct=null;st.half={};st.sway=null;st.prev=pvT.filter(t=>t!==st.t.join(""));showResult();st.prev.forEach(t=>addHist("other",t,"-"));addHist("other",st.t.join(""));render();logType("select");document.querySelector(".hero").scrollIntoView({behavior:"smooth"});};
+/* ---- 仕事・進路のヒント：年れいで高校生・大学生（就活）・社会人（転職）のタブを最初に開く ---- */
+const CARTAB=[["hs","高校生"],["uni","大学生・就活"],["work","社会人"]];
+function carStage(){const a=ageNow();return a==null?"uni":a<=18?"hs":a<=22?"uni":"work";}
+function drawCareer(){const box=$("carBody"),me=window.__me;if(!box||!me||typeof CAR==="undefined"||!CAR||!CAR.t)return;
+ const tab=window.__carTab||carStage(),C=CAR.t[me.now];if(!C){box.innerHTML="";return;}
+ const kv=(h,body)=>'<div class="ckv"><h4>'+TR(h)+'</h4>'+body+'</div>',chips=a=>'<div class="cchips">'+a.map(x=>'<span>'+esc(x)+'</span>').join("")+'</div>';
+ const bl=me.born!==me.now&&CAR.born&&CAR.born[me.born]?'<p class="cborn">'+esc(CAR.born[me.born])+'</p>':'';
+ let h='<div class="ctabs" role="tablist">'+CARTAB.map(([k,l])=>'<button type="button" role="tab" data-k="'+k+'" aria-selected="'+(k===tab)+'">'+TR(l)+'</button>').join("")+'</div>'
+  +'<p class="cfor">'+TR("今の16タイプ")+' <b>'+me.now+'</b>'+p16h(me.now)+TR("の人へ")+'</p>';
+ if(tab==="hs"){const X=C.hs;h+=kv("文系・理系のヒント",'<p>'+esc(X.bunri)+'</p>')+kv("興味が出やすい学部",chips(X.majors))+kv("向いている勉強のしかた",'<p>'+esc(X.study)+'</p>')+kv("部活や委員会で合う役",'<p>'+esc(X.club)+'</p>')+bl;}
+ else if(tab==="uni"){const X=C.uni;
+  h+=kv("ESに使える強み",X.strengths.map((t,i)=>'<div class="cstr"><p class="csn">'+(i+1)+'. '+esc(t.name)+'</p><p class="ces"><b>'+TR("ESでは：")+'</b>'+esc(t.es)+'</p><p class="cq">'+TR("思い出してみよう：")+esc(t.q)+'</p></div>').join(""))
+   +kv("短所の言いかえ",'<p><b>'+esc(X.weak.name)+'</b></p><p class="ces"><b>'+TR("ESでは：")+'</b>'+esc(X.weak.es)+'</p>')
+   +kv("合う職場",'<p>'+X.env.map(esc).join(TR("／"))+'</p>')+kv("向いている職種",chips(X.jobs))+bl;}
+ else{const X=C.work,g=[0,1,2,3].filter(i=>me.born[i]!==me.now[i]).map(i=>CAR.gap&&CAR.gap[me.born[i]+">"+me.now[i]]).filter(Boolean).slice(0,2);
+  h+=kv("今の仕事で疲れやすい理由",'<p>'+esc(X.tired)+'</p>'+g.map(x=>'<p>'+esc(x)+'</p>').join(""))+kv("転職の前に、今の職場で試せること",'<p>'+esc(X.try)+'</p>')
+   +kv("合う職場の条件",'<p>'+X.env.map(esc).join(TR("／"))+'</p>')+kv("向いている職種",chips(X.jobs))+bl;}
+ h+='<p class="hint cnote">'+TR("タブは、生年月日から年れいに合うものを先に開いています。ほかのタブも見られます。")+'</p>';
+ box.innerHTML=h;box.querySelectorAll(".ctabs button").forEach(b=>b.onclick=()=>{window.__carTab=b.dataset.k;drawCareer();try{track("career_tab",{tab:b.dataset.k});}catch(e){}});}
+
 /* ---- 前に出たタイプ（2つまで）：入れると、結果の上で「変わる文字・変わらない文字」を見せる ---- */
 let pvT=[];
 function drawPv(){const L=$("pvList"),S=$("pvSel");if(!L||!S)return;
@@ -808,7 +828,7 @@ function layoutResult(){const hero=document.querySelector(".hero");if(!hero)retu
   [dh,"#flipHint","#flip","#flipAll",".hgap","#rSum",".revw"].map(x=>typeof x==="string"?document.querySelector(".hero "+x):x).filter(Boolean).forEach(e=>dL.appendChild(e));
   dF.hidden=!$("funBox")||!$("funBox").innerHTML;}
  const mk=(id,title)=>{let d=$(id);if(!d){d=document.createElement("details");d.id=id;d.className="card more";d.innerHTML='<summary><h2>'+title+'</h2></summary><div class="mbody"></div>';}return d;};
- const dK=mk("dKarte",TR("性格カルテ")),dH=mk("dHints",TR("悩みと仕事のヒント")),dR=mk("dRec",TR("性格の記録")),dP=mk("dPersona",TR("タイプごとのくわしい説明")),dB=mk("dBal",TR("気質の力のバランス"));
+ const dC=mk("dCareer",TR("仕事・進路のヒント")),dK=mk("dKarte",TR("性格カルテ")),dH=mk("dHints",TR("悩みのヒント")),dR=mk("dRec",TR("性格の記録")),dP=mk("dPersona",TR("タイプごとのくわしい説明")),dB=mk("dBal",TR("気質の力のバランス"));
  const body=d=>d.querySelector(".mbody");
  if($("karteFig")&&$("karteFig").parentNode!==body(dK))body(dK).appendChild($("karteFig"));
  if($("gapX")&&$("gapX").parentNode!==body(dH))body(dH).prepend($("gapX"));
@@ -817,7 +837,8 @@ function layoutResult(){const hero=document.querySelector(".hero");if(!hero)retu
  if($("bal")&&$("bal").parentNode!==body(dB))body(dB).appendChild($("bal"));
  
  if(!$("recBody")){const rb=document.createElement("div");rb.id="recBody";body(dR).appendChild(rb);}
- let at=hero;[dH,dR,dK,dP,dB,$("love")].forEach(el=>{if(el){at.after(el);at=el;}});at=kaiunCard(at);[$("partner"),$("group")].forEach(el=>{if(el){at.after(el);at=el;}});
+ if(!$("carBody")){const cb=document.createElement("div");cb.id="carBody";body(dC).appendChild(cb);}drawCareer();
+ let at=hero;[dC,dH,dR,dK,dP,dB,$("love")].forEach(el=>{if(el){at.after(el);at=el;}});at=kaiunCard(at);[$("partner"),$("group")].forEach(el=>{if(el){at.after(el);at=el;}});
  dB.hidden=!$("bal")||$("bal").hidden;}
 
 /* ---- 性格の記録：受けるたびの16タイプをならべて、変わる文字・変わらない文字を見せる ---- */

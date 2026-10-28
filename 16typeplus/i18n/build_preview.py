@@ -42,6 +42,10 @@ def lang_data(lang):
         if os.path.exists(p2):
             x2=js(p2);lvp=x2.get('partner',lvp);lva=x2.get('axis',lva)
     LVd={'questions':lvq,'types':lvt,'partner':lvp,'axis':lva}
+    carp='/home/user/mypage/16typeplus/content/career.json'
+    CARd={}
+    if os.path.exists(carp):
+        cj=js(carp);CARd={'t':{k:v.get(lang,v.get('ja')) for k,v in cj.get('t',{}).items()},'gap':{k:v.get(lang,v.get('ja')) for k,v in cj.get('gap',{}).items()},'born':{k:v.get(lang,v.get('ja')) for k,v in cj.get('born',{}).items()}}
     KT={}
     kd='/home/user/mypage/16typeplus/content/kantei/' if lang=='ja' else I+'kantei.{}/'.format(lang)
     for f in sorted(glob.glob(kd+'*.json')): KT.update(js(f))
@@ -51,7 +55,7 @@ def lang_data(lang):
     CR={}
     for f in sorted(glob.glob('/home/user/mypage/16typeplus/content/core/part_*.%s.json'%lang)): CR.update(js(f))
     return {'CR':CR,'CW':CW,'KT':KT,'LV':LVd,'BODY':body,'D':d,'QZ':quiz,'COMBO':{},  # 前の診断（隠れギャップ診断）の組み合わせ名は画面で使わないので入れない
-           'PS':persona,'HN':hints,'I18N':ui}
+           'PS':persona,'CAR':CARd,'HN':hints,'I18N':ui}
 def preview():
     langs={l:lang_data(l) for l in ['ja','en','ko']}
     head=rd(S+'head.html')
@@ -59,7 +63,7 @@ def preview():
 <script>
 var LD=__LD__;
 var PAGE_LANG=/^#(en|ko)\\b/.test(location.hash)?location.hash.slice(1,3):"ja";
-var _L=LD[PAGE_LANG];var CR=_L.CR||{},CW=_L.CW||{},KT=_L.KT||{},LV=_L.LV,D=_L.D,QZ=_L.QZ,COMBO=_L.COMBO,PS=_L.PS,HN=_L.HN,I18N=_L.I18N;
+var _L=LD[PAGE_LANG];var CR=_L.CR||{},CW=_L.CW||{},KT=_L.KT||{},LV=_L.LV,D=_L.D,QZ=_L.QZ,COMBO=_L.COMBO,PS=_L.PS,CAR=_L.CAR,HN=_L.HN,I18N=_L.I18N;
 document.getElementById("app").outerHTML=_L.BODY;document.documentElement.lang=PAGE_LANG;
 document.querySelectorAll("nav.lang a").forEach(function(a,i){var l=["ja","en","ko"][i];a.href="#"+l;a.onclick=function(e){e.preventDefault();location.hash=l;location.reload();};});
 </script>
