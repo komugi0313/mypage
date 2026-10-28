@@ -575,7 +575,9 @@ function lvInit(){if(typeof LV==="undefined"||!LV||!LV.questions)return;let el=$
 const LVK="16tp.lvused.v1";
 /* 恋の状況：片思い中・付き合っている（結婚も）・今はいない。質問と結果をこれに合わせる */
 const LVSIT=[["kata","片思い中"],["koi","付き合っている・結婚している"],["none","今はいない"]];
-function lvPick(sit){const Q=LV.questions,ok=i=>!sit||!Q[i].s||Q[i].s.includes(sit),rec=new Set(sget(LVK)||[]),R=[["E","N","T","J"],["I","S","F","P"]],out=[];
+/* 年れいで合わない質問（例：「25歳までには結婚したい」）は、その年れいの人にだけ出す */
+function ageNow(){const t=new Date(),y=+st.y,m=+st.m,d=+st.d;if(!y)return null;let a=t.getFullYear()-y;if(t.getMonth()+1<m||(t.getMonth()+1===m&&t.getDate()<d))a--;return a;}
+function lvPick(sit){const Q=LV.questions,AG=ageNow(),ok=i=>(!sit||!Q[i].s||Q[i].s.includes(sit))&&!(Q[i].maxAge&&AG!=null&&AG>Q[i].maxAge),rec=new Set(sget(LVK)||[]),R=[["E","N","T","J"],["I","S","F","P"]],out=[];
  const pole=(ax,p)=>{const c=Q.map((q,i)=>i).filter(i=>Q[i].ax===ax&&Q[i].p===p&&ok(i));for(let j=0;j<c.length;j++){const r=j+Math.floor(Math.random()*(c.length-j));[c[j],c[r]]=[c[r],c[j]];}
   return c.filter(i=>!rec.has(i)).concat(c.filter(i=>rec.has(i))).slice(0,2);};
  const L={};["EI","SN","TF","JP"].forEach((ax,k)=>{L[R[0][k]]=pole(ax,R[0][k]);L[R[1][k]]=pole(ax,R[1][k]);});
