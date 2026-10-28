@@ -468,6 +468,9 @@ html.lock,html.lock body{overflow:hidden;height:100%}
 .pill{display:flex;flex-direction:column;align-items:center}.pill .pl-m{flex:1 1 auto;display:flex;align-items:flex-start;justify-content:center}   /* 説明が3行の柱があっても、干支の高さをそろえる（2026-10-27 実機：日柱だけ下にずれていた） */   /* 「・」のあとで折り返す（言葉の途中では、入りきらない時だけ） */
 .sheet{overflow-x:hidden}
 .sugg button{border:1.5px solid #CFC5AA;font-weight:700;color:var(--accent-d)}
+/* 案3（運営決定 2026-10-28）：いまの話を深める＝緑・ほかのテーマ＝白・「なぜそう言えるの？」＝うすい黄 */
+.sugg button.dp{background:#E5EFE7;border-color:#7FA88B}
+.logic-row button{background:#FBF5E3;border-color:#D9C78F}
 @media (max-width:360px){ .lc-row{flex-wrap:wrap} .lc-yrs{width:auto} .lc-now{margin-left:0} }   /* 小さい画面（幅320）で「今ここ」が右にはみ出さないように */
 
 /* 同意の文（運営決定 2026-10-26 案3）：うすい枠・同意の部分を太字・AIの説明は小さめ */
@@ -2521,6 +2524,9 @@ var RE_CHIP_OK=/どんな相手|出会いを増やす|who they will be|meet more
 var RE_CHIP_NG=/Nico|ニコ|니코|あなた(は|の)|妳|你平常|你喜歡|お茶|コーヒー|カフェ|お酒|drink|alcohol|coffee|tea\b|café|cafe|술|커피|카페|喝酒|咖啡|聞いて|listen|들어|聽我|^我也/i;
 function _isReadingChip(c){ c=String(c||''); return RE_CHIP_OK.test(c)&&!RE_CHIP_NG.test(c); }
 var LOVE_FOLLOW_CHIPS={ja:['どんな相手か、くわしく教えて','出会いを増やすコツは？'],en:['Tell me who they will be in detail','How can I meet more people?'],ko:['어떤 상대인지 자세히 알려 주세요','만남을 늘리는 방법은요?'],zt:['請詳細說說會是什麼樣的對象','怎樣增加相遇的機會？'],zh:['请详细说说会是什么样的对象','怎样增加相遇的机会？']};
+/* ほぼ同じ意味のボタンを並べない（「向いている仕事は？」と「私に向いてる仕事は？」など） */
+function _chipSim(a,b){ var n=function(t){ return String(t).toLowerCase().replace(/[\s？?！!。、,.「」]|私の?|わたしの?|my |me |나의?|제 |我的?|は$|って|を|の|に|い(?=る)/g,''); }; a=n(a); b=n(b); if(!a||!b) return false; if(a===b||a.indexOf(b)>=0||b.indexOf(a)>=0) return true;
+  var g=function(t){ var o={}; for(var i=0;i<t.length-1;i++) o[t.slice(i,i+2)]=1; return o; }, A=g(a), B=g(b), ka=Object.keys(A), hit=ka.filter(function(k){ return B[k]; }).length; return hit/Math.max(1,Math.min(ka.length,Object.keys(B).length))>=0.6; }
 function maybeTopicChips(q){
   try{
     if(RE_HEAVY.test(q)||RE_SELFHARM.test(q)) return; /* 重い相談ではチップを出さない（不謹慎防止） */
@@ -2549,19 +2555,22 @@ function maybeTopicChips(q){
     if(!window._chipShown) window._chipShown=[];
     if(!_invF) chips=chips.filter(function(c){ return window._chipShown.slice(-12).indexOf(c)<0; });
     /* 6個になるまで、ほかのテーマの決まったボタンで足す（同じテーマ → ほかのテーマの順に、直前に出したものは避ける） */
-    try{ var _want=6, _rec=window._chipShown.slice(-12), _order=[topic,'general','love','money','work','timing','self','human','health'].filter(function(x,i,a){ return a.indexOf(x)===i; });
+    var _dp=chips.slice();   /* いまの話を深めるボタン（AI が作ったもの・同じテーマ）＝緑（運営決定 2026-10-28 案3） */
+    try{ var _want=6, _rec=window._chipShown.slice(-12), _oth=['love','money','work','health','timing','self','human','general'].filter(function(x){ return x!==topic; });
+      window._chipRot=((window._chipRot||0)+1)%_oth.length; _oth=_oth.slice(window._chipRot).concat(_oth.slice(0,window._chipRot));   /* ほかのテーマは毎回順番に回す（恋愛・お金・仕事・健康…を広く見せ、聞きたいことを引き出す） */
+      var _order=[topic].concat(_oth);
       if(!window._chipPtr) window._chipPtr={};
       var _aff=/不倫|既婚|奥さん|奥様|affair|married (man|woman)|불륜|유부남|유부녀|外遇|小三|出軌|已婚/i.test((state.msgs||[]).filter(function(m){ return m.role==='me'; }).slice(-6).map(function(m){ return m.text||''; }).join(' ')); if(_aff) _order=_order.filter(function(x){ return x!=='love'; });
       var _banks=(state.mode==='aisho'&&state.chartB)?[['aisho',(T().chipsAisho||I18N.en.chipsAisho)]]:_order.map(function(tk){ var st=TOPIC_CHIPS[tk]; return [tk,(st&&(st[state.lang]||st.en))||[]]; });
-      for(var _bi=0;_bi<_banks.length&&chips.length<_want;_bi++){ var _tk=_banks[_bi][0], _ls=_banks[_bi][1]; if(!_ls.length) continue; var _p=window._chipPtr[_tk]||0, _take=(_bi===0?3:1);
-        for(var _k=0;_k<_ls.length&&_take>0&&chips.length<_want;_k++){ var _c=_ls[(_p+_k)%_ls.length]; if(chips.indexOf(_c)<0&&_rec.indexOf(_c)<0){ chips.push(_c); _take--; window._chipPtr[_tk]=(_p+_k+1)%_ls.length; } } }
+      for(var _bi=0;_bi<_banks.length&&chips.length<_want;_bi++){ var _tk=_banks[_bi][0], _ls=_banks[_bi][1]; if(!_ls.length) continue; var _p=window._chipPtr[_tk]||0, _take=(_bi===0?Math.max(0,3-_dp.length):1);   /* 同じテーマは、深めるボタンが3個になるまで。残り3個はほかのテーマから */
+        for(var _k=0;_k<_ls.length&&_take>0&&chips.length<_want;_k++){ var _c=_ls[(_p+_k)%_ls.length]; if(chips.indexOf(_c)<0&&_rec.indexOf(_c)<0&&!chips.some(function(x){ return _chipSim(x,_c); })){ chips.push(_c); if(_bi===0) _dp.push(_c); _take--; window._chipPtr[_tk]=(_p+_k+1)%_ls.length; } } }
     }catch(e){}
     if(chips.length<2) return;
     chips.forEach(function(c){ window._chipShown.push(c); });
     if(window._chipShown.length>60) window._chipShown=window._chipShown.slice(-60);
     var box=$('scroll'); if(!box||document.getElementById('topicChips')) return;
     var d=document.createElement('div'); d.id='topicChips'; d.className='sugg';
-    d.innerHTML=chips.map(function(c){return '<button>'+esc(c)+'</button>';}).join('');
+    d.innerHTML=chips.map(function(c){return '<button'+(((typeof _dp!=='undefined')&&_dp.indexOf(c)>=0)?' class="dp"':'')+'>'+esc(c)+'</button>';}).join('');
     d.addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; d.remove(); ask(b.textContent); });
     box.appendChild(d);
     if(box.scrollHeight-box.scrollTop-box.clientHeight<160) box.scrollTop=box.scrollHeight;
