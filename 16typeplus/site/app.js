@@ -116,6 +116,16 @@ function drawCareer(){const box=$("carBody"),me=window.__me;if(!box||!me||typeof
  h+='<p class="hint cnote">'+TR("最初のタブは、生年月日から選んでいます。今の自分に近いタブを選ぶと、次からはそのタブで開きます。")+'</p>';
  box.innerHTML=h;box.querySelectorAll(".ctabs button").forEach(b=>b.onclick=()=>{window.__carTab=b.dataset.k;sset(KCT,b.dataset.k);drawCareer();try{track("career_tab",{tab:b.dataset.k});}catch(e){}});}
 
+/* 長い説明は最初の3行だけ見せて「続きを読む」で開く（文章は削らない） */
+function clampFix(el){if(!el||!el.offsetParent)return;let bt=el.nextElementSibling;if(!(bt&&bt.classList.contains("more3"))){bt=null;}
+ if(el.dataset.open==="1"){el.classList.remove("clamp3");return;}
+ el.classList.add("clamp3");const over=el.scrollHeight>el.clientHeight+4;
+ if(!over){el.classList.remove("clamp3");if(bt)bt.remove();return;}
+ if(!bt){bt=document.createElement("button");bt.type="button";bt.className="more3";el.after(bt);}
+ bt.textContent=TR("続きを読む ▼");bt.onclick=()=>{const o=el.dataset.open!=="1";el.dataset.open=o?"1":"";el.classList.toggle("clamp3",!o);bt.textContent=o?TR("閉じる ▲"):TR("続きを読む ▼");};}
+function clampAll(){document.querySelectorAll(".clamp3w").forEach(clampFix);}
+document.addEventListener("toggle",()=>requestAnimationFrame(clampAll),true);window.addEventListener("resize",()=>requestAnimationFrame(clampAll));
+
 /* ---- 前に出たタイプ（2つまで）：入れると、結果の上で「変わる文字・変わらない文字」を見せる ---- */
 let pvT=[];
 function drawPv(){const L=$("pvList"),S=$("pvSel");if(!L||!S)return;
@@ -292,7 +302,7 @@ function drawPersona(which){const me=window.__me;if(!me||typeof PS==="undefined"
  $("psAT").innerHTML=at?'<b>'+(at==="A"?TR("自己主張型（A）"):TR("慎重型（T）"))+TR('のあなたは</b>')+P[at]:"";$("psAT").hidden=!at;
  $("aruH").textContent=t+TR(" のあるある");$("aru").innerHTML=(D.ARUARU[t]||[]).map(x=>"<li>"+x+"</li>").join("");
  $("cT").textContent=D.TCOMPAT[t].m;$("cW").textContent=D.TCOMPAT[t].why;
- $("psRel").textContent=P.relationships;$("psLove").textContent=P.love;$("psWork").textContent=P.work;$("psJobs").innerHTML=P.jobs.map(j=>"<li>"+j+"</li>").join("");$("psGrow").textContent=P.growth;}
+ $("psRel").textContent=P.relationships;$("psLove").textContent=P.love;$("psWork").textContent=P.work;$("psJobs").innerHTML=P.jobs.map(j=>"<li>"+j+"</li>").join("");$("psGrow").textContent=P.growth;{const o=$("psOv");if(o){o.dataset.open="";}}setTimeout(clampAll,0);}
 $("pNow").onclick=()=>drawPersona("now");$("pBorn").onclick=()=>drawPersona("born");
 function render(instant){
  const N=natal(st.y,st.m,st.d),now=st.t.join(""),aligned={},why=Object.assign({},N.why);
@@ -336,6 +346,7 @@ function render(instant){
  $("hJobW").textContent=HB.work;$("hJobs").innerHTML=HB.jobs.map(t=>"<li>"+t+"</li>").join("");
  {const gx=$("gapX");if(gx){const oneG=!gk.length;gx.innerHTML=oneG?'<div class="gx"><p>'+HN.same.both+'</p></div>':gk.map(k=>{const g=HN.gap[k];return '<div class="gx" style="--c:var('+cOfG(k)+')"><p class="gxh"><span class="ax">'+g.axis+'</span><span class="nw"><b>'+k[0]+'</b>'+g.from+TR(" ＋ ")+'<b>'+k[1]+'</b>'+g.to+'</span></p><p>'+g.both+'</p></div>';}).join("");}
   window.__worry=gk.length?[].concat(HN.gap[gk[0]].worry)[0]:[].concat(HN.same.worry)[0];}
+ {const r0=document.querySelector("#recheck p"),ov=$("psOv");[r0,ov].forEach(x=>{if(x){x.classList.add("clamp3w");x.dataset.open="";}});setTimeout(clampAll,0);}
  window.__me={born,now,N,bAT,nAT,prev:(st.prev||[]).filter(t=>t!==now)};drawChg(born,now,window.__me.prev);drawPersona("now");
  const nw=(a,b)=>'<span class="nw">'+a+'</span><span class="nw">'+b+'</span>';$("p16Born").innerHTML=nw(bornF.split("").map((ch,i)=>i<4&&aligned[AX[i].k]?'<span class="wk">'+ch+'</span>':ch).join(""),p16h(born));
  {let wn=$("wkNote");if(!wn){wn=document.createElement("p");wn.id="wkNote";wn.className="wknote";const nk=document.querySelector(".nicks");if(nk)nk.after(wn);}const anyW=AX.some(A=>aligned[A.k]);wn.innerHTML=(anyW?TR("気質の薄い文字は、生年月日からはどちらとも言えない文字です。"):"")+(bAT&&!sameAll?(anyW?"<br>":"")+TR("気質の最後の A/T も、生年月日から出しています。"):"");wn.hidden=!wn.innerHTML;}$("p16Now").innerHTML=nw(nowF,p16h(now));
