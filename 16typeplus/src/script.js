@@ -84,13 +84,14 @@ drawSlots(-1);
 document.querySelectorAll("#atPick button").forEach(bt=>bt.onclick=()=>{hideOld();selAT=bt.dataset.v||null;document.querySelectorAll("#atPick button").forEach(x=>x.setAttribute("aria-pressed",x===bt));drawSlots(-1);});
 $("go").onclick=()=>{if(sel.includes(null)||!dateOK())return;st.t=sel.slice();st.at=selAT;st.love=null;st.pct=null;st.half={};st.sway=null;st.prev=pvT.filter(t=>t!==st.t.join(""));showResult();st.prev.forEach(t=>addHist("other",t,"-"));addHist("other",st.t.join(""));render();logType("select");document.querySelector(".hero").scrollIntoView({behavior:"smooth"});};
 /* ---- 仕事・進路のヒント：年れいで高校生・大学生（就活）・社会人（転職）のタブを最初に開く ---- */
-const CARTAB=[["hs","高校生"],["uni","大学生・就活"],["work","社会人"]];
+const CARTAB=[["hs","高校生"],["uni","大学・専門学校・就活"],["work","働いている人"]],KCT="16tp.cartab.v1";
 function carStage(){const a=ageNow();return a==null?"uni":a<=18?"hs":a<=22?"uni":"work";}
 function drawCareer(){const box=$("carBody"),me=window.__me;if(!box||!me||typeof CAR==="undefined"||!CAR||!CAR.t)return;
- const tab=window.__carTab||carStage(),C=CAR.t[me.now];if(!C){box.innerHTML="";return;}
+ const saved=sget(KCT),tab=window.__carTab||(CARTAB.some(x=>x[0]===saved)?saved:carStage()),C=CAR.t[me.now];if(!C){box.innerHTML="";return;}
  const kv=(h,body)=>'<div class="ckv"><h4>'+TR(h)+'</h4>'+body+'</div>',chips=a=>'<div class="cchips">'+a.map(x=>'<span>'+esc(x)+'</span>').join("")+'</div>';
  const bl=me.born!==me.now&&CAR.born&&CAR.born[me.born]?'<p class="cborn">'+esc(CAR.born[me.born])+'</p>':'';
  let h='<div class="ctabs" role="tablist">'+CARTAB.map(([k,l])=>'<button type="button" role="tab" data-k="'+k+'" aria-selected="'+(k===tab)+'">'+TR(l)+'</button>').join("")+'</div>'
+  +(!window.__carTab&&!saved&&tab==="uni"?'<p class="hint cpick">'+TR("働いている人は「働いている人」のタブへ。")+'</p>':'')
   +'<p class="cfor">'+TR("今の16タイプ")+' <b>'+me.now+'</b>'+p16h(me.now)+TR("の人へ")+'</p>';
  if(tab==="hs"){const X=C.hs;h+=kv("文系・理系のヒント",'<p>'+esc(X.bunri)+'</p>')+kv("興味が出やすい学部",chips(X.majors))+kv("向いている勉強のしかた",'<p>'+esc(X.study)+'</p>')+kv("部活や委員会で合う役",'<p>'+esc(X.club)+'</p>')+bl;}
  else if(tab==="uni"){const X=C.uni;
@@ -100,8 +101,8 @@ function drawCareer(){const box=$("carBody"),me=window.__me;if(!box||!me||typeof
  else{const X=C.work,g=[0,1,2,3].filter(i=>me.born[i]!==me.now[i]).map(i=>CAR.gap&&CAR.gap[me.born[i]+">"+me.now[i]]).filter(Boolean).slice(0,2);
   h+=kv("今の仕事で疲れやすい理由",'<p>'+esc(X.tired)+'</p>'+g.map(x=>'<p>'+esc(x)+'</p>').join(""))+kv("転職の前に、今の職場で試せること",'<p>'+esc(X.try)+'</p>')
    +kv("合う職場の条件",'<p>'+X.env.map(esc).join(TR("／"))+'</p>')+kv("向いている職種",chips(X.jobs))+bl;}
- h+='<p class="hint cnote">'+TR("タブは、生年月日から年れいに合うものを先に開いています。ほかのタブも見られます。")+'</p>';
- box.innerHTML=h;box.querySelectorAll(".ctabs button").forEach(b=>b.onclick=()=>{window.__carTab=b.dataset.k;drawCareer();try{track("career_tab",{tab:b.dataset.k});}catch(e){}});}
+ h+='<p class="hint cnote">'+TR("最初のタブは、生年月日から選んでいます。今の自分に近いタブを選ぶと、次からはそのタブで開きます。")+'</p>';
+ box.innerHTML=h;box.querySelectorAll(".ctabs button").forEach(b=>b.onclick=()=>{window.__carTab=b.dataset.k;sset(KCT,b.dataset.k);drawCareer();try{track("career_tab",{tab:b.dataset.k});}catch(e){}});}
 
 /* ---- 前に出たタイプ（2つまで）：入れると、結果の上で「変わる文字・変わらない文字」を見せる ---- */
 let pvT=[];
