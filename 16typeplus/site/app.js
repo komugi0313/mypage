@@ -228,7 +228,7 @@ function drawQ(){/* 数は「最大」から見せて、減ることはあって
  ch.hidden=!CH;ch.textContent=CH;
  const o=$("qOpts");o.innerHTML="";
  if(qi<ord.length){const qn=ord[qi],q=QZ.Q[qn],A=AXQ[AXN[q.ax]];
-  $("qAxis").textContent=A.name;$("qAxis").style.color="var("+A.c+")";$("qText").textContent=q.q;$("qEx").textContent=q.ex;$("qExW").hidden=false;$("qExW").open=true;
+  $("qAxis").textContent=A.name;$("qAxis").style.color="var("+A.c+")";$("qText").textContent=q.q;$("qEx").textContent=(q.ex_s&&(()=>{const g=ageNow();return g!=null&&g<=22;})())?q.ex_s:q.ex;$("qExW").hidden=false;$("qExW").open=true;
   SCALE.forEach(([t,v,sz])=>{const bt=document.createElement("button");bt.type="button";bt.style.setProperty("--qc","var("+A.c+")");
    bt.innerHTML='<i style="width:'+sz+'px;height:'+sz+'px"></i>'+t;bt.setAttribute("aria-pressed",qa[qn]===v);
    bt.onclick=()=>{if(window.__qLock)return;window.__qLock=1;qa[qn]=v;bt.setAttribute("aria-pressed","true");setTimeout(()=>{window.__qLock=0;next();},180);};o.appendChild(bt);});
@@ -431,7 +431,7 @@ function fitText(c,SANS,t,x,y,w,fs,min,col,wt){wt=wt||700;c.font=wt+" "+fs+"px "
  c.fillStyle=col;if(c.measureText(t).width<=w){c.fillText(t,x,y);return;}const ls=wrapLines(c,t,w,2);ls.forEach((l,i)=>c.fillText(l,x,y-(ls.length-1)*fs*0.55+i*fs*1.1));}
 const rgba=(hex,a)=>{const n=parseInt(hex.slice(1),16);return "rgba("+(n>>16)+","+((n>>8)&255)+","+(n&255)+","+a+")";};
 /* 円の真ん中「ゆるがない芯」：短い言葉を、白い丸枠に赤い太字で */
-const CORE={E:"人といて元気になる",I:"ひとりで休むと元気になる",S:"目の前のことや、今までのことで考える",N:"思いつきで考える",T:"理屈で決める",F:"気持ちで決める",J:"計画どおり進める",P:"その場に合わせて動く"};
+const CORE={E:"人といて元気になる",I:"ひとりで休むと元気になる",S:"これまでの経験で考える",N:"先のことを想像して考える",T:"理屈で決める",F:"気持ちで決める",J:"計画どおり進める",P:"その場に合わせて動く"};
 function corePill(c,SANS,t,x,y,w){let fs=25;c.font="700 "+fs+"px "+SANS;while(c.measureText(t).width>w-36&&fs>19){fs--;c.font="700 "+fs+"px "+SANS;}
  const tw=Math.min(w,c.measureText(t).width+36),h=fs+20;rrect(c,x-tw/2,y-h/2,tw,h,h/2);c.fillStyle="#FFFFFF";c.fill();c.lineWidth=2;c.strokeStyle=SC.plus;c.stroke();
  c.fillStyle=SC.plus;c.textBaseline="middle";c.fillText(t,x,y+1);c.textBaseline="alphabetic";}
@@ -789,7 +789,7 @@ function kaiunCard(at){let c=$("kaiun");if(LANG!=="ja"||!KAIUN_URL||!st.y){if(c)
  c.querySelectorAll(".kaiun-pics img").forEach(im=>{im.onerror=()=>{if(im.src!==im.dataset.fb)im.src=im.dataset.fb;};});c.hidden=false;c.querySelector("a").onclick=()=>{try{track("kaiun_click",{place:"result"});}catch(e){}};
  at.after(c);return c;}
 /* その人の回答で揺れた向きを、気質と性格の組み合わせから説明する */
-const SWN={EI:["元気の出し方","人といるか、ひとりか","--ei"],SN:["ものの見方","目の前のことや、今までのことで考えるか、思いつきで考えるか","--sn"],TF:["決め方","理屈か、気持ちか","--tf"],JP:["進め方","計画どおりか、その場に合わせるか","--jp"]};
+const SWN={EI:["元気の出し方","人といるか、ひとりか","--ei"],SN:["ものの見方","これまでの経験で考えるか、先のことを想像して考えるか","--sn"],TF:["決め方","理屈か、気持ちか","--tf"],JP:["進め方","計画どおりか、その場に合わせるか","--jp"]};
 function swayNote(born,now){const ks=["EI","SN","TF","JP"];
  if(!st.pct)return '<p class="mine">'+TR("質問に答えると、どの文字で答えが変わりやすいかがわかります。")+'</p>';
  const w=ks.filter(k=>(st.sway&&st.sway[k])||(st.half&&st.half[k]));
@@ -903,7 +903,7 @@ document.addEventListener("click",e=>{const im=e.target.closest&&e.target.closes
 /* ---- グループの相性（サーバーから受け取ったメンバー一覧だけで計算する） ----
    members: [{name, born:"INTJ", now:"INFJ"}]  2〜10人。生年月日は使わない */
 const GTR=TR;
-const GL={E:"人といると元気が出る人",I:"ひとりの時間で元気が戻る人",S:"目の前のことや、今までのことで考える人",N:"思いつきで考える人",T:"理屈で決める人",F:"気持ちで決める人",J:"計画どおり進めたい人",P:"その場に合わせて動く人"};
+const GL={E:"人といると元気が出る人",I:"ひとりの時間で元気が戻る人",S:"これまでの経験で考える人",N:"先のことを想像して考える人",T:"理屈で決める人",F:"気持ちで決める人",J:"計画どおり進めたい人",P:"その場に合わせて動く人"};
 const GAX=[["E","I"],["S","N"],["T","F"],["J","P"]];
 /* 多い方の文字ごとの、グループでよくある場面 */
 const GMANY={E:"集まると話が止まらず、気づいたら予定の時間を過ぎている。",I:"集まっても静かな時間がある。でも、それで気まずくならない。",S:"お店や日にちは、すぐ決まる。",N:"「今度あれやろう」という話で盛り上がる。そのまま話だけで終わることも多い。",T:"意見がちがっても、言い合ったあとはすっきりしている。",F:"だれかが元気がないと、すぐ気づいて声をかける。",J:"待ち合わせの時間と場所が、早めに決まる。",P:"当日の気分で、行き先が変わることがある。"};
