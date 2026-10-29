@@ -2510,6 +2510,44 @@ window.KANSHI60_DETAIL={
     return res;
   }
   if(typeof window!=='undefined') window.bxFeatureList=bxFeatureList;
+  /* この方の大きな特徴（鑑定者本人の指示 2026-10-29「鑑定書にも大きな特徴を入れて」。アプリの pkBigFeatures と同じ決まり）：
+     今年・来年の空亡と解空（その年の支が命式＋今の大運の支と三合・方合・支合でそろう＝合解で空亡が弱まる／冲＝冲解）、今の大運の空亡、
+     命式内の天地徳合・天戦地冲、魁罡、生まれ持った三合・方合、これから3年の天戦地冲（日柱・月柱）。計算は表と同じデータから。 */
+  function sheetBigFeatures(r){ var o=[]; try{
+    var P=r.pillars||{}, ks=['year','month','day','hour'], LB={year:'年柱',month:'月柱',day:'日柱',hour:'時柱'};
+    var BRs='子丑寅卯辰巳午未申酉戌亥', STE='甲乙丙丁戊己庚辛壬癸';
+    var RG={子:'丑',丑:'子',寅:'亥',亥:'寅',卯:'戌',戌:'卯',辰:'酉',酉:'辰',巳:'申',申:'巳',午:'未',未:'午'};
+    var SG=[['申','子','辰','水','三合'],['亥','卯','未','木','三合'],['寅','午','戌','火','三合'],['巳','酉','丑','金','三合'],['寅','卯','辰','木','方合'],['巳','午','未','火','方合'],['申','酉','戌','金','方合'],['亥','子','丑','水','方合']];
+    var TSM={甲:['戊','庚'],乙:['己','辛'],丙:['庚','壬'],丁:['辛','癸'],戊:['壬','甲'],己:['癸','乙'],庚:['甲','丙'],辛:['乙','丁'],壬:['丙','戊'],癸:['丁','己']};
+    var isCh=function(a,b){ return BRs.indexOf(a)>=0&&BRs.indexOf(b)>=0&&(BRs.indexOf(a)+6)%12===BRs.indexOf(b); };
+    var day=P.day||{}; if(!day.gan||!day.shi) return o;
+    var sd=STE.indexOf(day.gan), bd=BRs.indexOf(day.shi), dd=((bd-sd)%12+12)%12, voids=[BRs.charAt((dd+10)%12),BRs.charAt((dd+11)%12)];
+    var curDu=(r.daiun||[]).filter(function(d){ return _inDu(r,d); })[0], duB=curDu&&curDu.kanshi?curDu.kanshi.charAt(1):'';
+    var nat=[]; ks.forEach(function(k){ var p=P[k]; if(p&&p.shi&&!(k==='hour'&&r.timeUnknown)) nat.push({l:LB[k],b:p.shi}); });
+    var all=nat.concat(duB?[{l:'大運',b:duB}]:[]), has=function(b){ return all.filter(function(x){ return x.b===b; }); };
+    var byYear=r.annualByYear||{}, nowYear=(r.nowYear!=null?r.nowYear:(r.birthYear!=null?r.birthYear+(r.nowAge||0):null));
+    if(nowYear!=null) [nowYear,nowYear+1].forEach(function(y,ix){ var a=byYear[y]; if(!a||!a.branch||voids.indexOf(a.branch)<0) return; var w=ix===0?'今年':'来年', gz=a.ganzhi||'';
+      var gou=null, chong=null;
+      SG.forEach(function(g){ if(gou) return; var t=g.slice(0,3); if(t.indexOf(a.branch)<0) return; var ot=t.filter(function(x){ return x!==a.branch; }); if(ot.every(function(x){ return has(x).length; })) gou={k:g[4],t:t.join(''),el:g[3],w:ot.map(function(x){ return has(x)[0].l+x; }).join('・')}; });
+      if(!gou) all.forEach(function(x){ if(!gou&&RG[a.branch]===x.b) gou={k:'支合',t:a.branch+x.b,el:'',w:x.l+x.b}; });
+      all.forEach(function(x){ if(!chong&&isCh(a.branch,x.b)) chong={w:x.l+x.b}; });
+      var pro=w+'（'+y+'年 '+gz+'）は空亡（'+voids.join('')+'）の年。', plain=w+'（'+y+'年）は、生まれ持った「ひと休みの年」にあたります。', tag=w+'：空亡';
+      var who=function(s){ return /大運/.test(s)?'命式・大運の':'命式の'; };
+      if(gou){ pro+='ただし'+who(gou.w)+gou.w+'と'+gou.k+'「'+gou.t+'」'+(gou.el?'（'+gou.el+'）':'')+'がそろうので解空（合解）＝空亡の影響が弱まり、穏やかに整う年。大きな決断は足もとを固めてから。'; plain+='ただ、生まれ持った力としっかり結びつくので、その影響は弱まります。大きな決断は足もとを固めてからにしましょう。'; tag=w+'：空亡＋解空（'+gou.k+'）'; }
+      else if(chong){ pro+=who(chong.w)+chong.w+'と冲するので解空（冲解）＝空亡は解けるが、変化・波乱を伴いやすい年。'; plain+='ぶつかって目が覚めるように動き出す年なので、変化が起きやすい年です。'; tag=w+'：空亡＋解空（冲）'; }
+      else { pro+='空亡を解く合・冲がないので、空亡の影響が出やすい年。大きな決断より、準備・見直し・学びに向く。'; plain+='大きく環境を変えるより、準備や見直し、学びに向いた年です。'; }
+      o.push({tag:tag,ptag:w+'はひと休みの年',pro:pro,plain:plain}); });
+    if(duB&&voids.indexOf(duB)>=0) o.push({tag:'今の大運が空亡',ptag:'いまの10年は力をたくわえる時期',pro:'今の大運（'+curDu.kanshi+'）は空亡の10年。外に広げるより内面・準備を整える10年。',plain:'いまの10年は、外に広げるより、力をたくわえて整える10年です。'});
+    var arr=ks.filter(function(k){ return P[k]&&P[k].gan&&!(k==='hour'&&r.timeUnknown); }).map(function(k){ return {label:LB[k].charAt(0),stem:P[k].gan,branch:P[k].shi,ganzhi:P[k].gan+P[k].shi}; });
+    var F=bxFeatureList(arr);
+    F.filter(function(t){ return /^天地徳合/.test(t); }).forEach(function(t){ o.push({tag:'天地徳合（生まれ持った強い結びつき）',ptag:'生まれ持った強い結びつき',pro:'命式内の'+t+'＝天干が干合し地支も支合する、いちばん強い結びつき。その二つの柱が表す分野（年柱＝家・目上／月柱＝仕事・社会／日柱＝自分・パートナー／時柱＝将来・子ども）が強く結びつく。',plain:'生まれつき、人生の二つの場面がとても強く結びつく形を持っています。'}); });
+    F.filter(function(t){ return /^天戦地冲/.test(t); }).slice(0,1).forEach(function(t){ o.push({tag:'生まれ持った天戦地冲',ptag:'振れ幅の大きい生まれ',pro:'命式内に'+t+'＝相反する気持ちを同時に抱えやすい・振れ幅の大きい生き方。',plain:'心の中に、正反対の気持ちを同時に持ちやすい、振れ幅の大きい生まれです。'}); });
+    F.filter(function(t){ return /^魁罡/.test(t); }).forEach(function(t){ o.push({tag:'魁罡日',ptag:'リーダー星',pro:t+'＝強いリーダー性・決断力。',plain:'生まれつきの「リーダー星」を持っています。'}); });
+    F.filter(function(t){ return /^(三合|方合)/.test(t); }).slice(0,1).forEach(function(t){ o.push({tag:'生まれ持った'+t.slice(0,2),ptag:'まとまった強い力',pro:'命式の中で'+t+'がそろう＝その五行の力がとても強い。',plain:'生まれつき、ひとつの力がまとまって、とても強く働きます。'}); });
+    if(nowYear!=null){ var ys=[]; for(var y=nowYear;y<=nowYear+3;y++){ var a=byYear[y]; if(!a||!a.stem||!a.branch) continue; [['day','日柱＝本人'],['month','月柱＝仕事・環境']].forEach(function(t){ var p=P[t[0]]; if(p&&p.gan&&isCh(a.branch,p.shi)&&(TSM[a.stem]||[]).indexOf(p.gan)>=0) ys.push(y+'年（'+t[1]+'）'); }); }
+      if(ys.length) o.push({tag:'天戦地冲の年が近い',ptag:'大きく揺れやすい年が近い',pro:'これから3年の天戦地冲：'+ys.slice(0,3).join('・')+'＝大きく揺れやすい年。',plain:'これから3年のうち、'+ys.slice(0,2).map(function(x){ return x.replace(/（.*$/,''); }).join('・')+'は大きく揺れやすい年です。'}); }
+  }catch(e){} return o; }
+  if(typeof window!=='undefined') window.sheetBigFeatures=sheetBigFeatures;
   // 過去のふり返り：いちばん直近（一つ前）の「空亡の年」と「冲の年」を求める（西暦→干支は暦式で算出＝エンジン非依存）
   function pastKuboChong(r){
     var P=r.pillars||{};
@@ -2615,6 +2653,8 @@ window.KANSHI60_DETAIL={
       if(scope==='solo'){ H+='<div class="rd-lead">この鑑定書は<b>'+LEADF[theme][0]+'だけ</b>をまとめた専用版です（他の項目は含みません）。基本の持ち味も冒頭に添えています。</div>'; }
       else { H+='<div class="rd-lead">この鑑定書は<b>'+LEADF[theme][0]+'を中心</b>に読み解いています。'+LEADF[theme][1]+'まとめています。</div>'; }
     }
+    // ★ この方の大きな特徴（いちばん最初に。2026-10-29）
+    (function(){ var BF=sheetBigFeatures(r); if(!BF.length) return; H+=sec('★ この方の大きな特徴（まずここから）', BF.map(function(x){ return para('<b>【'+esc(x.tag)+'】</b>'+esc(x.pro)); }).join('')); })();
     // ◎ 総合鑑定（ひと目でわかるまとめ）＝命式の確定データ（日主・喜忌・大運の季節・節木運・会局の巡り）を統合した要約。詳細は下の各章に続く。
     if(scope==='full' && inOnly(0)){ (function(){
       var GINV={'火':'木','土':'火','金':'土','水':'金','木':'水'};   // 印（自分を生む）
@@ -2653,9 +2693,10 @@ window.KANSHI60_DETAIL={
         var SAN=[['申','子','辰','水'],['亥','卯','未','木'],['寅','午','戌','火'],['巳','酉','丑','金']];
         var HOU=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','戌','金'],['亥','子','丑','水']];
         for(var y=nowYear; y<nowYear+12 && favYears.length<3; y++){ var a=r.annualByYear[y]; if(!a||!a.branch)continue; var ab=a.branch, hit=null;
-          SAN.forEach(function(g){ if(g.indexOf(ab)>=0&&fav(g[3])>0){ var c=[g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}).length; if(c>=2)hit={k:'三合',el:g[3]}; else if(c>=1&&!hit)hit={k:'半会',el:g[3]}; } });
+          SAN.forEach(function(g){ if(g.indexOf(ab)>=0&&fav(g[3])>0){ var pt=[g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}); var c=pt.length; if(c>=2)hit={k:'三合',el:g[3]}; else if(c>=1&&!hit&&(ab===g[1]||pt.indexOf(g[1])>=0))hit={k:'半会',el:g[3]}; } });   // 半会は、まん中の支（子・午・卯・酉）を含む2支だけ（鑑定者本人の表どおり）
           HOU.forEach(function(g){ if(g.indexOf(ab)>=0&&fav(g[3])>0){ var c=[g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}).length; if(c>=2)hit={k:'方合',el:g[3]}; } });
-          if(hit) favYears.push(y+'年（'+hit.k+'・'+hit.el+'）');
+          var _kp=r.kuboPair||''; if(hit&&_kp&&_kp.indexOf(ab)>=0&&hit.k==='半会') hit=null;   // 空亡の年は、三合・方合で解けるときだけ狙い目に入れる（2026-10-29）
+          if(hit) favYears.push(y+'年（'+hit.k+'・'+hit.el+(_kp&&_kp.indexOf(ab)>=0?'・空亡だが解空':'')+'）');
         }
       }
       b+=para('<b>【開運の狙い】</b><b>喜神＝'+(shugoEls.join('・')||'—')+'</b>を意識して使うと流れが整います。'+(favYears.length?'狙い目の年は<b>'+favYears.join('・')+'</b>——動く・仕上げる・受け取る年です。':'巡りの良い年は1枚目「年運」表を目安にしてください。'));
@@ -3050,6 +3091,8 @@ window.KANSHI60_DETAIL={
     var genmei=mon.zokanTsuhen||'';
     var out=[];
     function box(head, inner){ return '<li><p class="ez-yhead"><b>'+head+'</b></p><ul class="ez-ul2">'+inner+'</ul></li>'; }
+    // ★ まず知っておきたい大きな特徴（専門用語なし。2026-10-29）
+    (function(){ var BF=sheetBigFeatures(r); if(!BF.length) return; out.push(box('★ まず知っておきたい大きな特徴', BF.map(function(x){ return '<li><b>'+esc(x.ptag)+'</b>：'+esc(x.plain)+'</li>'; }).join(''))); })();
 
     // 1) 芯＝日主
     out.push(box('あなたの芯＝日主「'+dm+'（'+(STEM_YOMI[dm]||'')+'／'+dmEl+'の'+(yy==='陽'?'陽':'陰')+'）」',
@@ -3248,8 +3291,10 @@ window.KANSHI60_DETAIL={
         var K3=[['寅','巳','申'],['丑','戌','未']];
         var caution=function(ab){ if(CHG[ab]&&(CHG[ab]===dayB||CHG[ab]===monB)) return true; if(kp&&kp.indexOf(ab)>=0) return true;
           return K3.some(function(g){ if(g.indexOf(ab)<0) return false; var pool=natB.concat([ab]); return g.every(function(x){return pool.indexOf(x)>=0;}) && !g.every(function(x){return natB.indexOf(x)>=0;}); }); };
-        for(var y=nowYear; y<nowYear+12 && favYears.length<3; y++){ var a=r.annualByYear[y]; if(!a||!a.branch)continue; var ab=a.branch, ok=false; if(caution(ab)) continue;
-          SAN.forEach(function(g){ if(g.indexOf(ab)>=0&&fav(g[3])>0){ if([g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}).length>=1)ok=true; } });
+        for(var y=nowYear; y<nowYear+12 && favYears.length<3; y++){ var a=r.annualByYear[y]; if(!a||!a.branch)continue; var ab=a.branch, ok=false;
+          var _full=SAN.concat(HOU).some(function(g){ return g.indexOf(ab)>=0&&fav(g[3])>0&&[g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}).length>=2; });
+          if(caution(ab)&&!(kp&&kp.indexOf(ab)>=0&&_full)) continue;   // 空亡の年でも、三合・方合で解けるときは入れる（2026-10-29）
+          SAN.forEach(function(g){ if(g.indexOf(ab)>=0&&fav(g[3])>0){ var pt=[g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}); if(pt.length>=2||(pt.length>=1&&(ab===g[1]||pt.indexOf(g[1])>=0)))ok=true; } });   // 半会は、まん中の支を含む2支だけ
           HOU.forEach(function(g){ if(g.indexOf(ab)>=0&&fav(g[3])>0){ if([g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}).length>=2)ok=true; } });
           if(ok) favYears.push(y);
         }
@@ -4377,7 +4422,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
     var NMTK='〔ご本人〕';
     sys+='\n・年は西暦だけで書く（例：2029年）。年のすぐあとに干支・年齢・読み仮名を書かない（ツールが正しい干支と年齢を自動で付ける）。「21歳のころ」のように年齢だけで時期を言わず、西暦で言う。';
     sys+='\n【言葉の決まり】「AI」「人工知能」という言葉は使わない。自分が何者か（AIである等）の説明や断り書きも書かない。鑑定者として自然に書く。';
-    var usr='【鑑定対象】'+NMTK+'さん（お名前の代わりの印。呼びかけるときは、この印を一字も変えずに書く）\n【命式データ】\n'+chartSummaryText(r)+'\n\n上記の命式から、指定の章立てで鑑定書の本文を書いてください。';
+    var usr='【鑑定対象】'+NMTK+'さん（お名前の代わりの印。呼びかけるときは、この印を一字も変えずに書く）\n【命式データ】\n'+chartSummaryText(r)+(function(){ try{ var BF=sheetBigFeatures(r); if(!BF.length) return ''; return '\n【この方の大きな特徴（最優先。鑑定書の最初の章で必ず触れる。空亡が弱まるかは年ごとに書いたとおりに）】\n'+BF.map(function(x){ return '・'+(window.__bgPlain?x.plain:x.pro); }).join('\n')+'\n'; }catch(e){ return ''; } })()+'\n\n上記の命式から、指定の章立てで鑑定書の本文を書いてください。';
     var body=JSON.stringify({ system_instruction:{parts:[{text:sys}]}, contents:[{role:'user',parts:[{text:usr}]}], generationConfig:{maxOutputTokens:3200} });
     // まず1回オンライン生成。失敗（レート制限・一時エラー・空応答）なら数秒待って自動で1回だけ再試行。
     // それでもダメなときだけ定型文（オフライン鑑定書）に切替（打ち直し不要）。
@@ -4412,6 +4457,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
             return;
           }
           if(!html){ if(!isRetry){ setTimeout(function(){ attempt(true,true); }, 2500); return; } aiCardMsg('返答を整形できませんでした。','もう一度お試しください。'); _aiBusy=false; return; }
+          try{ var _BF=sheetBigFeatures(r); if(_BF.length){ var _pl=!!window.__bgPlain, esc=function(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }; html='<section class="rd-sec"><h3 class="rd-h">'+(_pl?'★ まず知っておきたい大きな特徴':'★ この方の大きな特徴（まずここから）')+'</h3>'+_BF.map(function(x){ return '<p class="rd-p"><b>【'+esc(_pl?x.ptag:x.tag)+'】</b>'+esc(_pl?x.plain:x.pro)+'</p>'; }).join('')+'</section>'+html; } }catch(_e){}   // 詳細鑑定の文でも、大きな特徴をいちばん上に（2026-10-29）
           window._aiReadingHTML=html;
           aiCountInc(o.left);   // 鑑定書1通＝1回（作り直しの回もここに来るのは1回だけ。サーバーの残り回数があればそれに合わせる）
           var mount=document.getElementById('readMount'); if(mount) mount.innerHTML=html;
