@@ -87,7 +87,7 @@ function fillDate(){opts($("y"),1930,2020,dset.y?st.y:null,TR("年"));opts($("m"
 ["y","m","d"].forEach(id=>$(id).addEventListener("change",e=>{const v=e.target.value;if(id==="d"){st.dWant=0;st.dClamped=0;}if(v===""){dset[id]=false;}else{st[id]=+v;dset[id]=true;}fillDate();hideOld();if(dset.y&&dset.m&&dset.d){const er=$("dateErr");if(er)er.hidden=true;}}));
 const pk=$("picker"),sel=[null,null,null,null];
 function drawSlots(popI){$("slots").innerHTML=AX.map((A,i)=>'<span style="--c:var('+A.c+')" class="'+(sel[i]?"fill":"empty")+(i===popI?" pop":"")+'">'+(sel[i]||"?")+'</span>').join("");
- const left=sel.filter(v=>!v).length,go=$("go");const tt=sel.join("");$("slotName").innerHTML=left?"":'<b>'+tt+(selAT?"-"+selAT:"")+'</b>'+p16h(tt);{const pf=$("pkFig");if(pf){pf.hidden=!!left;if(!left){$("pkImg").src=charSrc(tt);$("pkImg").alt=an(tt);}}}go.disabled=left>0;go.textContent=left?TR("あと")+left+TR("つ選んでください"):TR("結果を見る");}
+ const left=sel.filter(v=>!v).length,go=$("go");if(typeof drawPv==="function")try{drawPv();}catch(e){}const tt=sel.join("");$("slotName").innerHTML=left?"":'<b>'+tt+(selAT?"-"+selAT:"")+'</b>'+p16h(tt);{const pf=$("pkFig");if(pf){pf.hidden=!!left;if(!left){$("pkImg").src=charSrc(tt);$("pkImg").alt=an(tt);}}}go.disabled=left>0;go.textContent=left?TR("あと")+left+TR("つ選んでください"):TR("結果を見る");}
 AX.forEach((A,i)=>{const g=document.createElement("div");g.className="seg";g.style.setProperty("--c","var("+A.c+")");g.setAttribute("role","group");g.setAttribute("aria-label",A.name);
  [[A.a,A.aw],[A.b,A.bw]].forEach(([l,w])=>{const bt=document.createElement("button");bt.type="button";bt.innerHTML=l+"<small>"+w+"</small>";
   bt.setAttribute("aria-pressed","false");bt.onclick=()=>{hideOld();sel[i]=l;g.classList.add("done");[...g.children].forEach(c=>c.setAttribute("aria-pressed",c===bt));drawSlots(i);};g.appendChild(bt);});
@@ -132,6 +132,7 @@ let pvT=[];
 function drawPv(){const L=$("pvList"),S=$("pvSel");if(!L||!S)return;
  L.innerHTML=pvT.map(t=>'<button type="button" class="pvc" data-t="'+t+'" aria-label="'+t+TR("を外す")+'">'+t+'<span class="pvn">'+esc(NM[t]||"")+'</span><i aria-hidden="true">×</i></button>').join("");
  L.querySelectorAll(".pvc").forEach(b=>b.onclick=()=>{pvT=pvT.filter(x=>x!==b.dataset.t);drawPv();});
+ const cur=(typeof sel!=="undefined"&&Array.isArray(sel)&&!sel.includes(null))?sel.join(""):"";[...S.options].forEach(o=>{if(o.value){const off=o.value===cur||pvT.includes(o.value);o.hidden=off;o.disabled=off;}});
  S.disabled=pvT.length>=2;S.hidden=pvT.length>=2;}
 (()=>{const S=$("pvSel");if(!S)return;Object.keys(D.NICK).forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t+p16(t);S.appendChild(o);});
  S.onchange=()=>{const v=S.value;if(v&&!pvT.includes(v)&&pvT.length<2)pvT.push(v);S.value="";drawPv();};drawPv();})();
@@ -206,6 +207,7 @@ function saveQuiz(){sset(KQ,{v:2,n:QZ.Q.length,qa,qi,tbList,tbAns,ord,ext,adDone
 function savedQuiz(){const q=sget(KQ);return q&&q.v===2&&q.n===QZ.Q.length&&Array.isArray(q.qa)&&Array.isArray(q.ord)&&q.qi>0&&q.qi<q.ord.length+(q.tbList||[]).length?q:null;}
 function drawResume(){let r=$("qResume");const q=savedQuiz();
  if(!q){if(r)r.hidden=true;return;}
+ if(q.y&&!dset.y){st.y=q.y;st.m=q.m;st.d=q.d;try{dateAll(true);fillDate();}catch(e){}}
  if(!r){r=document.createElement("button");r.type="button";r.id="qResume";r.className="btn resume";document.querySelector("#formCard .fork").after(r);
   r.onclick=()=>{const q2=savedQuiz();if(!q2)return;st.y=q2.y||st.y;st.m=q2.m||st.m;st.d=q2.d||st.d;dateAll(true);fillDate();startQuiz(q2);};}
  r.hidden=false;r.innerHTML=TR("前回の続きから始める")+"<small>"+TR("{n}問目から").replace("{n}",q.qi+1)+"</small>";}
@@ -543,12 +545,13 @@ $("shareBtn").onclick=shareResult;
 /* ---- 保存した結果（何人分でも。このスマホの中だけ） ---- */
 const KS="16tp.saved.v1";
 function savedList(){const v=sget(KS);return Array.isArray(v)?v.filter(e=>e&&typeof e==="object"&&Array.isArray(e.t)&&e.t.length===4&&e.t.every(c=>typeof c==="string")&&+e.y>0&&+e.m>0&&+e.d>0):[];}
+function savedMark(){const b=$("saveBtn");if(!b)return;if(!b.dataset.l0)b.dataset.l0=b.textContent;const has=savedList().some(e=>e.y===st.y&&e.m===st.m&&e.d===st.d&&(e.t||[]).join("")===(st.t||[]).join(""));b.textContent=has?"★ "+TR("保存しました"):b.dataset.l0;}
 function saveCurrent(name){const L=savedList(),e={id:Date.now(),name:name||TR("名前なし"),born:(window.__me||{}).born,y:st.y,m:st.m,d:st.d,t:st.t.slice(),at:st.at,pct:st.pct,half:st.half,sway:st.sway,love:st.love||null};
  const i=L.findIndex(x=>x.name===e.name&&x.y===e.y&&x.m===e.m&&x.d===e.d&&x.t.join("")===e.t.join(""));if(i>=0)L.splice(i,1);L.unshift(e);sset(KS,L.slice(0,30));drawSaved();}
 function openSaved(id){const e=savedList().find(x=>x.id===id);if(!e)return;
  st.y=e.y;st.m=e.m;st.d=e.d;dateAll(true);st.t=e.t.slice();st.at=e.at||null;st.pct=e.pct||null;st.half=e.half||{};st.sway=e.sway||null;st.love=e.love||null;
  fillDate();setPicker();selAT=st.at;showResult();render(true);saveResult();document.querySelector(".hero").scrollIntoView({behavior:"smooth"});}
-function delSaved(id){sset(KS,savedList().filter(x=>x.id!==id));drawSaved();}
+function delSaved(id){sset(KS,savedList().filter(x=>x.id!==id));drawSaved();savedMark();}
 function drawSaved(){const L=savedList();let c=$("savedCard");
  if(!L.length){if(c)c.hidden=true;return;}
  if(!c){c=document.createElement("section");c.id="savedCard";c.className="card savedcard";}
@@ -561,7 +564,7 @@ $("saveBtn").onclick=()=>{const btn=$("saveBtn");let bx=btn.nextElementSibling;i
  bx=document.createElement("div");bx.className="askbox savebox";const def=($("myName")&&$("myName").value.trim())||window.__nick||sget("16tp.nick.v1")||"";
  bx.innerHTML='<p>'+TR("だれの結果か、名前をつけて保存")+'</p><input class="txt" maxlength="12" placeholder="'+TR("例：自分、ママ、ゆうと")+'" value="'+esc(def)+'"><div><button type="button" class="btn primary ask-y">'+TR("保存する")+'</button><button type="button" class="btn ask-n">'+TR("やめる")+'</button></div>';
  btn.after(bx);const inp=bx.querySelector("input");bx.querySelector(".ask-n").onclick=()=>bx.remove();
- bx.querySelector(".ask-y").onclick=()=>{saveCurrent(inp.value.trim());bx.innerHTML='<p>'+TR("保存しました。「保存した結果」から、いつでも開けます。")+'</p>';setTimeout(()=>bx.remove(),3500);try{track("save_click");}catch(e){}};
+ bx.querySelector(".ask-y").onclick=()=>{saveCurrent(inp.value.trim());savedMark();bx.innerHTML='<p>'+TR("保存しました。「保存した結果」から、いつでも開けます。")+'</p>';setTimeout(()=>bx.remove(),3500);try{track("save_click");}catch(e){}};
  inp.focus();};
 /* ---- 最初に開いたとき：前回の結果があれば、すぐ見せる ---- */
 function boot(){drawResume();drawSaved();const R=sget(KR);
@@ -690,10 +693,10 @@ async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=doc
  /* 恋の4文字と、それぞれが気質・性格のどちらから来たか */
  const tw=170,gap=26,x0=(W-(tw*4+gap*3))/2,ty=270;
  for(let i=0;i<4;i++){const x=x0+i*(tw+gap),l=t[i],b=me?me.born[i]:l,n=me?me.now[i]:l;
-  const src=l===b&&l===n?"":l===b?TR("気質"):l===n?TR("性格"):TR("恋だけ");
-  c.fillStyle=src&&src!==TR("性格")?LVC.roseT:"#F3F5F8";rrect(c,x,ty,tw,tw,22);c.fill();
+  const both=l===b&&l===n,src=both?TR("どちらも"):l===b?TR("気質"):l===n?TR("性格"):TR("恋だけ");
+  c.fillStyle=!both&&src!==TR("性格")?LVC.roseT:"#F3F5F8";rrect(c,x,ty,tw,tw,22);c.fill();
   c.font="600 96px "+MONO;c.fillStyle=LVC.ink;c.fillText(l,x+tw/2,ty+tw/2+34);
-  c.font="700 24px "+SANS;c.fillStyle=src===TR("性格")?LVC.ink:LVC.rose;c.fillText(src,x+tw/2,ty+tw+38);}
+  c.font="700 24px "+SANS;c.fillStyle=both?LVC.muted:src===TR("性格")?LVC.ink:LVC.rose;c.fillText(src,x+tw/2,ty+tw+38);}
  const hook=me?lvHook(me.born,me.now,t):P.one;c.font="500 26px "+SANS;c.fillStyle=LVC.muted;
  wrapLines(c,hook,X1-X0,3).forEach((l,i)=>c.fillText(l,W/2,ty+tw+90+i*38));
  /* 言葉：甘い→辛い の順に2列でしきつめる */
@@ -759,7 +762,8 @@ async function drawCV(){
  /* 歩み（気質は子どものころに、性格は大人になってから出やすい） */
  const sec=(t)=>{y+=10;c.font="700 26px "+SANS;c.fillStyle=SC.plus;c.fillText(t,X0,y+20);y+=36;};
  sec(TR("これまでの歩み（予測）"));
- const ag=ageNow(),hist=(ag!=null&&ag<=22?[[TR("子どものころ"),AB[0]],[TR("学生時代"),AB[1]],[TR("これから"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]:[[TR("子どものころ"),AB[0]],[TR("学生時代"),AB[1]],[TR("社会に出て"),AN[2]||AN[0]],[TR("現在"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]).filter(r=>r[1]);
+ const kr0=String((me.kt&&me.kt.karai)||me.karaiC||""),dup=x=>{x=String(x||"");for(let i=0;i+6<=x.length;i++)if(kr0.includes(x.slice(i,i+6)))return true;return false;},pick=(arr,i)=>{const v=arr[i];if(!dup(v))return v;const alt=arr.find((x,j)=>j!==i&&x&&!dup(x));return alt||v;};
+ const ag=ageNow(),hist=(ag!=null&&ag<=22?[[TR("子どものころ"),pick(AB,0)],[TR("学生時代"),pick(AB,1)],[TR("これから"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]:[[TR("子どものころ"),pick(AB,0)],[TR("学生時代"),pick(AB,1)],[TR("社会に出て"),AN[2]||AN[0]],[TR("現在"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]).filter(r=>r[1]);
  hist.forEach(([l,v])=>{const h=64;lab(X0,y,LW,h,l);box(X0+LW,y,X1-X0-LW,h);txt(v,X0+LW+18,y+h/2+9,X1-X0-LW-36,25,1);y+=h;});
  y+=30;
  /* 長所・短所 */
@@ -772,7 +776,7 @@ async function drawCV(){
  {c.font="700 25px "+SANS;const parts=Q.map(q=>TR("「")+String(q).replace(/^[「『"'“‘\s]+|[」』"'”’\s]+$/g,"")+TR("」")),lines=[];let cur="";parts.forEach(p=>{const t=cur?cur+"   "+p:p;if(c.measureText(t).width>X1-X0-40&&cur){lines.push(cur);cur=p;}else cur=t;});if(cur)lines.push(cur);
   const qh=lines.length*40+30;box(X0,y,X1-X0,qh);c.fillStyle=SC.ink;lines.forEach((l,i)=>c.fillText(l,X0+20,y+45+i*40));y+=qh+30;}
  /* 本人希望欄・向いている仕事 */
- const want=(HN.type[me.born]||{}).want||"",jobs=((P.jobs||[]).slice(0,3)).join(TR("・"));
+ const want=(HN.type[me.born]||{}).want||"",jobs=((P.jobs||[]).slice(0,3)).join(TR("／"));
  [[TR("本人希望記入欄"),want]].concat(me.kt?[[TR("やりそうなこと"),me.kt.do]]:[]).concat([[TR("向いている仕事"),jobs]]).forEach(([l,v])=>{c.font="500 24px "+SANS;const n=Math.min(2,wrapLines(c,v,X1-X0-LW-36,2).length),h=n>1?96:64;lab(X0,y,LW,h,l);box(X0+LW,y,X1-X0-LW,h);txt(v,X0+LW+18,y+(n>1?40:h/2+9),X1-X0-LW-36,24,2);y+=h;});
  y+=30;
  /* 採用担当からのひと言（辛口） */
@@ -863,7 +867,7 @@ function setupCards(instant,one){waitHide();if(!instant)setTimeout(()=>{const fb
  cards.forEach(n=>{let bk=n.querySelector(".nkback");if(!bk){bk=document.createElement("div");bk.className="nkback";n.appendChild(bk);}
   const born=n.classList.contains("born");bk.innerHTML='<span class="q">?</span><b>'+(one?TR("気質も性格も"):born?TR("気質のあなた"):TR("性格のあなた"))+'</b><small>'+TR("タップしてめくる")+'</small>';
   n.classList.remove("turn","turn2");n.classList.toggle("open",!!instant);n.onclick=()=>flipCard(n);});
- const cb=$("coreBox");if(cb)cb.classList.toggle("wait2",!instant);const fb=$("funBox");if(fb)fb.classList.toggle("wait2",!instant);const cf=$("cloudFig");if(cf)cf.classList.toggle("wait2",!instant);const cg=$("chgBox");if(cg)cg.classList.toggle("wait2",!instant);
+ const cb=$("coreBox");if(cb)cb.classList.toggle("wait2",!instant);const fb=$("funBox");if(fb)fb.classList.toggle("wait2",!instant);const cf=$("cloudFig");if(cf)cf.classList.toggle("wait2",!instant);const cg=$("chgBox");if(cg)cg.classList.toggle("wait2",!instant);const wn=$("wkNote");if(wn)wn.classList.toggle("wait2",!instant);
  if(!instant)story.innerHTML=one?TR('<span class="ln">カードをタップして、</span><span class="ln">あなたの性質を見てみよう</span>'):TR('<span class="ln">カードをタップして、</span><span class="ln">あなたの2つの性質を見てみよう</span>');}
 /* 1枚だけめくったとき：見出しで次のカードを案内し、隠れている欄の場所に「2枚めくると出る」枠を出す */
 function waitShow(){const cards=[...document.querySelectorAll(".nicks .nk")].filter(x=>!x.hidden),rest=cards.filter(x=>!x.classList.contains("open"));
@@ -877,7 +881,7 @@ function waitShow(){const cards=[...document.querySelectorAll(".nicks .nk")].fil
 function waitHide(){["waitBox","waitFun"].forEach(id=>{const x=$(id);if(x)x.remove();});document.querySelectorAll(".nicks .nk.pz").forEach(x=>x.classList.remove("pz"));}
 function flipCard(n){if(n.classList.contains("open")||n.classList.contains("turn"))return;n.classList.add("turn");
  setTimeout(()=>{n.classList.add("open");n.classList.remove("turn");n.classList.add("turn2");setTimeout(()=>n.classList.remove("turn2"),300);
-  const left=[...document.querySelectorAll(".nicks .nk")].filter(x=>!x.hidden&&!x.classList.contains("open")).length;if(left)waitShow();if(!left){waitHide();if(window.__story)$("rStory").innerHTML=window.__story;["chgBox","coreBox","funBox","cloudFig"].forEach(id=>{const cb=$(id);if(cb&&cb.classList.contains("wait2")){cb.classList.remove("wait2");cb.classList.add("reveal");}});}},240);}
+  const left=[...document.querySelectorAll(".nicks .nk")].filter(x=>!x.hidden&&!x.classList.contains("open")).length;if(left)waitShow();if(!left){waitHide();if(window.__story)$("rStory").innerHTML=window.__story;["chgBox","coreBox","funBox","cloudFig","wkNote"].forEach(id=>{const cb=$(id);if(cb&&cb.classList.contains("wait2")){cb.classList.remove("wait2");cb.classList.add("reveal");}});}},240);}
 function layoutResult(){const hero=document.querySelector(".hero");if(!hero)return;
  {let dh=$("dataH");if(!dh){dh=document.createElement("h3");dh.id="dataH";dh.className="datah";dh.textContent=TR("気質と性格の文字くらべ");}
   const q=x=>typeof x==="string"?hero.querySelector(x):x;
@@ -900,7 +904,7 @@ function layoutResult(){const hero=document.querySelector(".hero");if(!hero)retu
  
  if(!$("recBody")){const rb=document.createElement("div");rb.id="recBody";body(dR).appendChild(rb);}
  if(!$("carBody")){const cb=document.createElement("div");cb.id="carBody";body(dC).appendChild(cb);}
- let at=hero;[dC,dH,dR,dK,dP,dB,$("love")].forEach(el=>{if(el){at.after(el);at=el;}});[$("partner"),$("group")].forEach(el=>{if(el){at.after(el);at=el;}});at=kaiunCard(at);drawCareer();
+ let at=hero;[dC,dH,dR,dK,dP,dB,$("love")].forEach(el=>{if(el){at.after(el);at=el;}});[$("partner"),$("group")].forEach(el=>{if(el){at.after(el);at=el;}});at=kaiunCard(at);drawCareer();savedMark();
  dB.hidden=!$("bal")||$("bal").hidden;}
 
 /* ---- 性格の記録：受けるたびの16タイプをならべて、変わる文字・変わらない文字を見せる ---- */
