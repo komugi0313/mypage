@@ -128,13 +128,13 @@ function chgData(born,now,prev){const L=prev.concat([now]);
 function chgSameText(rows){const sm=rows.filter(r=>r.same);
  if(!sm.length)return TR("4文字とも、結果によって変わっています。場面に合わせて、動き方を変えられる人です。");
  const J=LANG==="ja"?"":", ";
- return TR("変わらないのは {L}。").replace("{L}",sm.map(r=>r.lt).join(TR("・")))+TR("{P}ところは、どの結果でも同じです。").replace("{P}",sm.map(r=>TR("「")+TR(CORE[r.lt])+TR("」")).join(J));}
+ return TR("前と同じなのは {L}。").replace("{L}",sm.map(r=>r.lt).join(TR("・")))+TR("{P}ところは、前の結果でも今の結果でも同じです。").replace("{P}",sm.map(r=>TR("「")+TR(CORE[r.lt])+TR("」")).join(J));}
 function chgWhy(r){return TR("{a}と{b}が変わるのは、生まれつきが {L}（{p}）だから。").replace("{a}",r.A.a).replace("{b}",r.A.b).replace("{L}",r.b).replace("{p}",TR(CORE[r.b]))+TR(CHG[r.b]);}
 function drawChg(born,now,prev){let x=$("chgBox");if(!x){x=document.createElement("div");x.id="chgBox";x.className="chgbox";document.querySelector(".hero").appendChild(x);}
  if(!prev||!prev.length){x.hidden=true;x.innerHTML="";return;}x.hidden=false;
  const rows=chgData(born,now,prev);
- x.innerHTML='<p class="cgh">'+TR("あなたの16タイプの変化")+'</p><p class="cgt">'+prev.join(" / ")+' → '+now+'</p>'
-  +'<div class="cgl">'+rows.map(r=>'<span class="'+(r.same?"same":"chg")+'"><b>'+r.lt+'</b><small>'+(r.same?TR("変わらない"):TR("変わる"))+'</small></span>').join("")+'</div>'
+ x.innerHTML='<p class="cgh">'+TR("前の結果とくらべると")+'</p><p class="cgt">'+prev.join(" / ")+' → '+now+'</p>'
+  +'<div class="cgl">'+rows.map(r=>'<span class="'+(r.same?"same":"chg")+'"><b>'+r.lt+'</b><small>'+(r.same?TR("前と同じ"):TR("前とちがう"))+'</small></span>').join("")+'</div>'
   +'<p class="cgs">'+esc(chgSameText(rows))+'</p>'
   +rows.filter(r=>!r.same).map(r=>'<p class="cgw">'+esc(chgWhy(r))+'</p>').join("")
   +'<button type="button" class="btn primary cgbtn" id="cgShare">'+TR("この変化を画像でシェア")+'</button>';
@@ -153,7 +153,7 @@ async function drawChange(){const me=window.__me,W=1080,H=1350,cv=document.creat
  const tw=196,gap=24,x0=(W-(tw*4+gap*3))/2;
  rows.forEach((r,i)=>{const x=x0+i*(tw+gap),y=320;rrect(c,x,y,tw,170,24);c.fillStyle=r.same?"#FBEDE8":SC.soft;c.fill();
   c.fillStyle=r.same?SC.plus:SC.ink;let f2=r.lt.length>2?56:84;c.font="600 "+f2+"px "+MONO;c.fillText(r.lt,x+tw/2,y+(r.lt.length>2?100:108));
-  c.font="700 26px "+SANS;c.fillStyle=r.same?SC.plus:SC.muted;c.fillText(r.same?TR("変わらない"):TR("変わる"),x+tw/2,y+148);});
+  c.font="700 26px "+SANS;c.fillStyle=r.same?SC.plus:SC.muted;c.fillText(r.same?TR("前と同じ"):TR("前とちがう"),x+tw/2,y+148);});
  c.font="700 36px "+SANS;c.fillStyle=SC.ink;let y=580;const lines=wrapLines(c,chgSameText(rows),W-220,3);lines.forEach(l=>{c.fillText(l,W/2,y);y+=56;});
  if(im){const ih=Math.min(480,H-y-170),iw=ih*im.width/im.height;c.drawImage(im,W/2-iw/2,y+20,iw,ih);}
  c.font="500 30px "+SANS;c.fillStyle=SC.muted;c.fillText(TR("気質（生年月日）と16タイプで見る　16TYPE+"),W/2,H-120);
@@ -808,7 +808,7 @@ function ktStu(o){if(!o)return o;const g=typeof ageNow==="function"?ageNow():nul
 function yureSee(born,now){const pv=((window.__me&&window.__me.prev)||[]).filter(t=>t&&t!==now);if(!pv.length)return "";
  const ax=[0,1,2,3].filter(i=>pv.some(t=>t[i]!==now[i]));if(!ax.some(i=>born[i]===now[i]))return "";
  const ch=ax.map(i=>(born[i]!==now[i]&&pv.every(t=>t[i]===now[i])?"":pv.find(t=>t[i]!==now[i])[i]+"→"+now[i])).filter(Boolean).join(TR("・"));
- return '<p class="ktsee">'+TR("前に出た {p} から今の {n} への変化（{c}）のわけは、上の「あなたの16タイプの変化」に書いてあります。").replace("{p}",'<b>'+esc(pv.join(" / "))+'</b>').replace("{n}",'<b>'+esc(now)+'</b>').replace("{c}",esc(ch))+'</p>';}
+ return '<p class="ktsee">'+TR("前に出た {p} から今の {n} への変化（{c}）のわけは、上の「前の結果とくらべると」に書いてあります。").replace("{p}",'<b>'+esc(pv.join(" / "))+'</b>').replace("{n}",'<b>'+esc(now)+'</b>').replace("{c}",esc(ch))+'</p>';}
 function swayNote(born,now){const ks=["EI","SN","TF","JP"];
  if(!st.pct)return '<p class="mine">'+TR("質問に答えると、どの文字で答えが変わりやすいかがわかります。")+'</p>';
  const w=ks.filter(k=>(st.sway&&st.sway[k])||(st.half&&st.half[k]));
@@ -850,7 +850,7 @@ function waitShow(){const cards=[...document.querySelectorAll(".nicks .nk")].fil
  cards.forEach(x=>x.classList.toggle("pz",rest.length>0&&rest.includes(x)));
  if(!rest.length||rest.length===cards.length)return;
  $("rStory").innerHTML=TR('<span class="ln">あと1枚。</span>')+'<span class="ln">'+(rest[0].classList.contains("born")?TR("左のカードも"):TR("右のカードも"))+'</span>'+TR('<span class="ln">めくってみよう</span>');
- const me=window.__me||{},items=[];const cg=$("chgBox");if(cg&&!cg.hidden&&cg.innerHTML.trim()&&me.prev&&me.prev.length)items.push(TR("あなたの16タイプの変化")+(LANG==="ja"?"（":" (")+me.prev.join(" / ")+" → "+me.now+(LANG==="ja"?"）":")"));
+ const me=window.__me||{},items=[];const cg=$("chgBox");if(cg&&!cg.hidden&&cg.innerHTML.trim()&&me.prev&&me.prev.length)items.push(TR("前の結果とのくらべ")+(LANG==="ja"?"（":" (")+me.prev.join(" / ")+" → "+me.now+(LANG==="ja"?"）":")"));
  if($("coreBox"))items.push(TR("気質と性格の「変わらないところ」"));if($("cloudFig"))items.push(TR("2つを重ねた図"));
  if(!$("waitBox")&&items.length){const w=document.createElement("div");w.id="waitBox";w.className="waitbox";w.innerHTML='<b>'+TR("2枚ともめくると、ここに出てきます")+'</b><ul>'+items.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul>';const at=$("wkNote")||document.querySelector(".nicks");if(at)at.after(w);}
  const fb=$("funBox");if(fb&&fb.classList.contains("wait2")&&!$("waitFun")){const w=document.createElement("p");w.id="waitFun";w.className="waitbox";w.innerHTML=TR("上の<b>カードを2枚ともめくる</b>と、ここに出てきます。");fb.before(w);}}
