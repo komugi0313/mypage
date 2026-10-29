@@ -28,7 +28,7 @@
    - 非公開：zh（簡体）・vi・es・pt・id・th。訳文はコードに残してありますが、選べません（6.8）。直す時は、できればこの6言語もそろえてください（いつか戻す時のため）。
 9. **つらい気持ち・危機の相談への返事は、どの上限でも止めない。** AIが使えない時も、アプリが相談窓口つきの返事を出します（`safeReply`・`HELPLINE`）。
 10. **サイトのファイルを更新したら、`site/sw.js` のキャッシュ名を1つ上げる。**
-   - 今は `pocket-kantei-v241` です。次の更新では `v242` にします。
+   - 今は `pocket-kantei-v242` です。次の更新では `v243` にします。
    - 上げないと、利用者の端末に古い画面が残ります。
 11. **Gemini の本番プロジェクトは、前払いの残高と月の支出上限で運用する。** 通知も必ず受け取れるようにしてください（2.3）。残高が切れるか上限に達すると、全員のチャットが止まります。
 
@@ -208,8 +208,10 @@ firebase functions:secrets:set AUTH_SECRET
 firebase functions:secrets:set RESEND_API_KEY
 firebase functions:secrets:set REVENUECAT_WEBHOOK_AUTH
 firebase functions:secrets:set TELECOM_CHECKOUT_URLS
+firebase functions:secrets:set TELECOM_WEBHOOK_SECRET
+firebase functions:secrets:set PK_ADMIN_KEY
 ```
-- **5つとも必ず入れてください。** 入っていないものがあると、`firebase deploy` が止まります。
+- **7つとも必ず入れてください。** 入っていないものがあると、`firebase deploy` が止まります。
 - まだ使わないもの（アプリ課金・ウェブ決済を始める前）は、`none` と入れておきます。`none` の時は、その機能だけが「準備中」として動きます。
 - 値を変えた時は、`firebase deploy --only functions` で反映します。
 
@@ -220,6 +222,8 @@ firebase functions:secrets:set TELECOM_CHECKOUT_URLS
 | `RESEND_API_KEY` | **必須** | Resend の API キー（2.4） | パスワード再設定メールが送れない（`MAIL_FAIL`） |
 | `REVENUECAT_WEBHOOK_AUTH` | アプリ課金の開始時 | 長いランダム文字列。RevenueCat の Webhook の「Authorization header」と同じ値 | 購入してもプランが反映されない（`NO_WEBHOOK_AUTH`） |
 | `TELECOM_CHECKOUT_URLS` | ウェブ決済の開始時 | 決済画面のURLのひな形（JSON）。キーは `std_m` `std_y` `pro_m` `pro_y` `vip_m` `vip_y` の6つ。`{uid}` `{email}` `{lang}` は置き換えられます（2.8） | ウェブ版の購入ボタンが「準備中」になる（`NOT_READY`） |
+| `TELECOM_WEBHOOK_SECRET` | ウェブ決済の開始時 | 16文字以上のランダム文字列。決済結果の通知URLに `?k=<値>` で付ける | ウェブ決済の結果を受け取れない |
+| `PK_ADMIN_KEY` | 任意（月のまとめを見る時） | 16文字以上のランダム文字列（例：`openssl rand -hex 24`）。運営だけが知る合言葉 | `none` の時は月のまとめが見られない（ほかは動く） |
 
 **(2) 設定値（`server/.env`）** — `server/.env.example` を `server/.env` という名前でコピーして、値を入れます。
 | 設定 | 必須 | 値 | 書かない時 |
@@ -2067,3 +2071,17 @@ AI の文章は毎回変わるため、言葉を1つずつ消すやり方はや�
 - 繁体字：ニコが話す言葉（3つの画面の説明・未来/過去の案内・日の色の説明）を「你」から「您」に直した（最初の20通は「您」の決まりに合わせる）。
 - 確認：`tests/portlang.js`（47項目。日本語の混ざり・はみ出し・言葉づかい）。
 - **不具合の修正（v240 で入ったもの）**：ピンポイント占いの画面（`shDay`）の閉じタグが抜けていて、後ろの画面（料金プラン・マイページなど）がその中に入り込み、暗い幕の下に隠れて押せなかった。閉じタグを戻した。`tests/portlang.js` に「画面が別の画面の中に入り込んでいない」の確認を足した。`tests/verifyui.js`（マイページ）も通る。
+
+## v242：運営だけが見る「月のまとめ」（上のプランが要るかを判断するため）
+
+- 目的：VIPの上のプラン（例：15,000円）を作るかを、実際に本格鑑定を使い切る人の数で判断する（運営指示 2026-10-29）。
+- 数えるもの（日本時間の暦月ごと・人数だけ。名前・メールアドレス・会話は入れない）：
+  - プランごとに、本格鑑定を「1回以上使った人」「8割以上使った人」「使い切った人」（支払いの区切りごとに1人1回）。
+  - 新しい申し込み（無料お試しで始めた人を含む。アプリ・ウェブの両方）。テスト購入（SANDBOX）は数えない。
+  - 上のプランへの変更（Standard→Pro／Standard→VIP／Pro→VIP）と、そのうち直前（40日以内）に本格鑑定を使い切っていた人。下のプランへの変更・更新は数えない。
+- 仕組み：`server/stats.js`。数えた結果は Firestore の `pk-stats`（`st:<YYYY-MM>:<項目>`、自動では消さない）。使い切った印 `qf:<uid>` は `pk-usage`（40日で自動で消える）。
+  - `gemini.js`：本格鑑定を1回数えた直後に `deepCounted`。`billing.js`（RevenueCat）・`telecom.js`（ウェブ）：プランが始まった・変わった時に `planChanged`。数える処理が失敗しても、本来の処理は止めない。
+- 見る方法：`/admin-stats.html` を開き、合言葉（シークレット `PK_ADMIN_KEY`）を入れる → `/api/stats`（ヘッダ `x-pk-admin`）。月を空にすると今月から3か月分。合言葉が違うと 401、サーバーに合言葉が無いと 404。
+  - `server/index.js` に `stats` 関数、`firebase.json` に `/api/stats` を追加。シークレットの一覧（2.2）に `PK_ADMIN_KEY`（と、書き漏れていた `TELECOM_WEBHOOK_SECRET`）を足した。
+- 加入している人数そのものは、RevenueCat・テレコムクレジットの管理画面で見る。
+- 確認：`tests/statstest.js`（13項目）。

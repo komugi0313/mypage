@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>月のまとめ（運営用）</title>
+<style>
+  :root{--bg:#f6f7f4;--card:#fff;--ink:#1d2430;--sub:#667085;--line:#e3e6ea;--ac:#4F7F5E;--warn:#b54708}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.6}
+  main{max-width:720px;margin:0 auto;padding:20px 16px 48px}
+  h1{font-size:20px;margin:4px 0 4px} .sub{color:var(--sub);font-size:13px;margin:0 0 16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+  label{font-size:13px;font-weight:700;display:block;margin-bottom:6px}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  input{flex:1;min-width:0;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px}
+  button{font:inherit;font-weight:800;padding:10px 16px;border:0;border-radius:10px;background:var(--ac);color:#fff;cursor:pointer}
+  h2{font-size:16px;margin:0 0 10px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:8px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  th{font-size:12px;color:var(--sub);font-weight:700}
+  .hi{color:var(--warn);font-weight:800}
+  .note{font-size:12.5px;color:var(--sub);margin:10px 0 0}
+  .err{color:#b42318;font-size:14px;margin-top:8px}
+  .scroll{overflow-x:auto}
+</style>
+</head>
+<body>
+<main>
+  <h1>月のまとめ（運営用）</h1>
+  <p class="sub">本格鑑定をどれだけ使ったかと、プランの申し込み・変更の人数です。名前やメールアドレスは入っていません。</p>
+  <div class="card">
+    <label for="k">運営の合言葉</label>
+    <input id="k" type="password" autocomplete="off" style="width:100%;box-sizing:border-box;margin-bottom:8px"><div class="row"><input id="m" type="month"><button id="go" type="button">表示</button></div>
+    <p class="note">月を空にすると、今月から3か月分を出します。合言葉はこの画面を閉じると消えます。</p>
+    <div class="err" id="err"></div>
+  </div>
+  <div id="out"></div>
+</main>
+<script>
+var PL={std:'Standard',pro:'Pro',vip:'VIP'}, Q={std:50,pro:100,vip:175};
+function $(i){return document.getElementById(i);}
+try{ var s=sessionStorage.getItem('pk_admin_k'); if(s) $('k').value=s; }catch(e){}
+function pct(a,b){ return b?Math.round(a*100/b)+'%':'—'; }
+function render(ms){
+  var h='';
+  ms.forEach(function(r){
+    h+='<div class="card"><h2>'+r.month.replace('-','年')+'月</h2><div class="scroll"><table><tr><th>プラン</th><th>使った</th><th>8割以上</th><th>使い切り</th><th>割合</th></tr>';
+    ['std','pro','vip'].forEach(function(p){ var x=r.plans[p]; h+='<tr><td>'+PL[p]+'（'+Q[p]+'回）</td><td>'+x.used+'人</td><td>'+x.p80+'人</td><td'+(x.full?' class="hi"':'')+'>'+x.full+'人</td><td>'+pct(x.full,x.used)+'</td></tr>'; });
+    h+='</table></div><div class="scroll" style="margin-top:14px"><table><tr><th>プランの変更</th><th>変えた人</th><th>うち、使い切った直後</th></tr>';
+    [['std>pro','Standard → Pro'],['std>vip','Standard → VIP'],['pro>vip','Pro → VIP']].forEach(function(u){ var x=r.up[u[0]]; h+='<tr><td>'+u[1]+'</td><td>'+x.n+'人</td><td>'+x.afterFull+'人</td></tr>'; });
+    h+='</table></div><div class="scroll" style="margin-top:14px"><table><tr><th>新しい申し込み（お試しを含む）</th><th>人数</th></tr>';
+    ['std','pro','vip'].forEach(function(p){ h+='<tr><td>'+PL[p]+'</td><td>'+r.new[p]+'人</td></tr>'; });
+    h+='</table></div></div>';
+  });
+  h+='<p class="note">・「使った」は、その月に本格鑑定を1回以上使った人です（雑談だけの人は入りません）。「割合」は、使った人のうち使い切った人の割合です。加入している人数は、課金の管理画面（RevenueCat・テレコムクレジット）で見てください。<br>・VIPの「使い切り」が多い月が続くなら、上のプランを考える目安になります。</p>';
+  $('out').innerHTML=h;
+}
+$('go').onclick=function(){
+  var k=$('k').value.trim(), m=$('m').value; $('err').textContent='';
+  if(!k){ $('err').textContent='合言葉を入れてください。'; return; }
+  try{ sessionStorage.setItem('pk_admin_k',k); }catch(e){}
+  fetch('/api/stats'+(m?('?m='+encodeURIComponent(m)):''),{headers:{'x-pk-admin':k},cache:'no-store'})
+    .then(function(r){ return r.json().then(function(b){ return {s:r.status,b:b}; }); })
+    .then(function(x){
+      if(x.s===401){ $('err').textContent='合言葉が違います。'; return; }
+      if(x.s===404){ $('err').textContent='サーバーに合言葉（PK_ADMIN_KEY）がまだ設定されていません。'; return; }
+      if(!x.b||!x.b.ok){ $('err').textContent='読み込めませんでした（'+x.s+'）。'; return; }
+      render(x.b.months);
+    }).catch(function(){ $('err').textContent='サーバーにつながりませんでした。'; });
+};
+</script>
+</body>
+</html>
