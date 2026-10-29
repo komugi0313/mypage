@@ -637,6 +637,8 @@ function lvHook(born,now,love){const D=[0,1,2,3].filter(i=>born[i]!==now[i]),bs=
    :bs.length?TR("恋をすると気質のほう（{L}）が出ます。").replace("{L}",J(bs)):TR("恋をしても性格のほう（{L}）が出ます。").replace("{L}",J(ns)));
  if(S.length)s+=(LANG==="ja"?"":" ")+fx(TR("さらに、ふだんの {F} ではなく {T} が出て、「{X}」の面も出てきます。"));
  return s;}
+/* 恋愛タイプの文：22歳以下は〇〇_s、23歳以上は〇〇_w があればそちらを出す */
+function lvTy(t){const o=LV.types&&LV.types[t];if(!o)return o;const g=typeof ageNow==="function"?ageNow():null;if(g==null)return o;const sf=g<=22?"_s":"_w",r={};for(const k in o){if(!/_[sw]$/.test(k))r[k]=o[k+sf]||o[k];}return r;}
 function lvQ(x){x=String(x||"");return /^[「“"]/.test(x)?x:TR("「")+x+TR("」");}
 const LVBLK={kata:["片思い中のあなたへ",[["kata_try","今週やってみること"],["kata_habit","片思いでやりがちなこと"],["kata_word","相手に伝わるひと言"]]],
  koi:["付き合っているあなたへ",[["fight","けんかしたとき"],["last","長く続けるコツ"],["koi_word","伝え方"]]],
@@ -645,7 +647,7 @@ function lvPair(me,pt,sit){const P2=LV.partner&&LV.partner[pt],AXT=(sit==="kata"
  const d=[0,1,2,3].filter(i=>me[i]!==pt[i]).map(i=>AXT[me[i]+">"+pt[i]]).filter(Boolean).slice(0,2);
  return '<p class="lvptn"><b>'+pt+'</b>'+p16h(pt)+'</p><p>'+esc(P2[sit==="kata"?"pt_kata":"pt_koi"]||"")+'</p>'
   +'<p class="lvpth">'+TR("2人のあいだで、起きやすいこと")+'</p>'+(d.length?'<ul class="lvptl">'+d.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul>':'<p>'+esc(AXT.same||"")+'</p>');}
-function lvShow(t){const me=window.__me,P=LV.types&&LV.types[t];if(!me)return;const el=$("lvRes");el.hidden=false;$("lvStart").hidden=true;$("lvQ").hidden=true;if($("lvSit"))$("lvSit").hidden=true;
+function lvShow(t){const me=window.__me,P=lvTy(t);if(!me)return;const el=$("lvRes");el.hidden=false;$("lvStart").hidden=true;$("lvQ").hidden=true;if($("lvSit"))$("lvSit").hidden=true;
  const sit=(st.love&&st.love.sit)||"koi";
  const lab=i=>t[i]===me.born[i]&&t[i]===me.now[i]?'<em class="s">'+TR("どちらも")+'</em>':t[i]===me.born[i]?'<em class="b">'+TR("気質")+'</em>':t[i]===me.now[i]?'<em class="n">'+TR("性格")+'</em>':'<em class="x">'+TR("恋だけ")+'</em>';
  let h='<p class="lvlab">'+TR("恋をしたときのあなた")+'</p><div class="lvtiles">'+t.split("").map((l,i)=>'<div class="lt'+(me.born[i]!==me.now[i]&&l===me.born[i]?' isb':'')+'"><b>'+l+'</b>'+lab(i)+'</div>').join("")+'</div>'
@@ -668,7 +670,7 @@ function lvShow(t){const me=window.__me,P=LV.types&&LV.types[t];if(!me)return;co
  if($("lvShare"))$("lvShare").onclick=()=>lvShareRun(t);
  if($("lvRedo"))$("lvRedo").onclick=()=>{el.hidden=true;$("lvSit").hidden=false;$("love").scrollIntoView({behavior:"smooth",block:"start"});};}
 async function lvShareRun(t){track("love_share_click");const b=$("lvShare"),lbl=b.textContent;b.disabled=true;b.textContent=TR("画像をつくっています…");
- try{const P=LV.types[t],cvs=[await lvCloud(P),await lvSheet(P)];const blobs=await Promise.all(cvs.map(cv=>new Promise(r=>cv.toBlob(r,"image/png"))));
+ try{const P=lvTy(t),cvs=[await lvCloud(P),await lvSheet(P)];const blobs=await Promise.all(cvs.map(cv=>new Promise(r=>cv.toBlob(r,"image/png"))));
   const files=blobs.map((bl,i)=>new File([bl],"16typeplus-love-"+(i+1)+".png",{type:"image/png"}));
   if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,text:TR("恋のときのあなたは")+" "+P.t+p16(P.t)+TR("｜16TYPE+（16タイププラス）")+" "+SHARE_URL});}catch(e){if(e&&e.name!=="AbortError")showShareBox(cvs);}}
   else showShareBox(cvs);}catch(e){alert(TR("画像をつくれませんでした。もう一度お試しください。"));}finally{b.disabled=false;b.textContent=lbl;}}
