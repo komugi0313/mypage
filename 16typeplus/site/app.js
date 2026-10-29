@@ -166,8 +166,8 @@ async function drawChange(){const me=window.__me,W=1080,H=1350,cv=document.creat
  rows.forEach((r,i)=>{const x=x0+i*(tw+gap),y=320;rrect(c,x,y,tw,170,24);c.fillStyle=r.same?"#FBEDE8":SC.soft;c.fill();
   c.fillStyle=r.same?SC.plus:SC.ink;let f2=r.lt.length>2?56:84;c.font="600 "+f2+"px "+MONO;c.fillText(r.lt,x+tw/2,y+(r.lt.length>2?100:108));
   c.font="700 26px "+SANS;c.fillStyle=r.same?SC.plus:SC.muted;c.fillText(r.same?TR("前と同じ"):TR("前とちがう"),x+tw/2,y+148);});
- c.font="700 36px "+SANS;c.fillStyle=SC.ink;let y=580;const lines=wrapLines(c,chgSameText(rows),W-220,3);lines.forEach(l=>{c.fillText(l,W/2,y);y+=56;});
- if(im){const ih=Math.min(480,H-y-170),iw=ih*im.width/im.height;c.drawImage(im,W/2-iw/2,y+20,iw,ih);}
+ let y=580,lfs=36;c.font="700 "+lfs+"px "+SANS;let lines=wrapLines(c,chgSameText(rows),W-220,9);while(lines.length>4&&lfs>26){lfs-=2;c.font="700 "+lfs+"px "+SANS;lines=wrapLines(c,chgSameText(rows),W-220,9);}c.fillStyle=SC.ink;lines.slice(0,6).forEach(l=>{c.fillText(l,W/2,y);y+=Math.round(lfs*1.55);});
+ if(im){const ih=Math.min(480,H-y-210),iw=ih*im.width/im.height;c.drawImage(im,W/2-iw/2,y+20,iw,ih);}
  c.font="500 30px "+SANS;c.fillStyle=SC.muted;c.fillText(TR("気質（生年月日）と16タイプで見る　16TYPE+"),W/2,H-120);
  c.font="600 30px "+MONO;c.fillStyle=SC.plus;c.fillText("16typeplus.jp",W/2,H-78);c.textAlign="left";return cv;}
 /* ---- 60問 ---- */
@@ -424,7 +424,7 @@ function showShareBox(cvs){let box=$("shareBox");
  if(!box){box=document.createElement("div");box.id="shareBox";box.className="sharebox";box.setAttribute("role","dialog");box.setAttribute("aria-modal","true");document.body.appendChild(box);
   box.addEventListener("click",e=>{if(e.target===box)box.hidden=true;});}
  const msg=shareText()+"\n"+SHARE_URL,tw="https://twitter.com/intent/tweet?text="+encodeURIComponent(shareText())+"&url="+encodeURIComponent(SHARE_URL)+"&hashtags="+encodeURIComponent([TR("16タイププラス"),TR("16タイプ"),TR("性格診断"),(window.__me||{}).now].filter(Boolean).join(",")),ln="https://line.me/R/msg/text/?"+encodeURIComponent(msg);
- box.innerHTML='<div class="sbin"><button type="button" class="sbx" aria-label="'+TR("閉じる")+'">×</button><div class="sbline"><button type="button" class="btn primary sbl" id="sbLine">'+TR("画像を共有する")+'</button><p class="fine">'+TR("LINEやインスタなど、ふだん使っているアプリで送れます。画像を保存してから送ることもできます。")+'</p></div>'
+ box.innerHTML='<div class="sbin"><div class="sbtop"><button type="button" class="sbx" aria-label="'+TR("閉じる")+'">×</button></div><div class="sbline"><button type="button" class="btn primary sbl" id="sbLine">'+TR("画像を共有する")+'</button><p class="fine">'+TR("LINEやインスタなど、ふだん使っているアプリで送れます。画像を保存してから送ることもできます。")+'</p></div>'
   +cvs.map((_,i)=>'<figure class="sbf"><img alt="'+esc(TR("シェア用の画像"))+'"><a class="btn sv" download="16typeplus-'+(i+1)+'.png">'+TR("この画像を保存")+'</a></figure>').join("")
   +'<p class="fine">'+TR("画像を長押し（パソコンは右クリック）でも保存できます。")+'</p><div class="sbacts"><a class="btn tw" target="_blank" rel="noopener">'+TR("Xでシェア")+'</a></div><button type="button" class="qlink">'+TR("閉じる")+'</button></div>';
  const imgs=box.querySelectorAll("img"),svs=box.querySelectorAll(".sv");cvs.forEach((cv,i)=>{const u=cv.toDataURL("image/png");imgs[i].src=u;svs[i].href=u;});
@@ -851,7 +851,7 @@ function kfmt(t,f){const ss=sents(t).map(kfmt1),J=LANG==="ja"?"":" ";
 function coreCard(b,n){const co=coreOf(b,n);if(!co)return "";
  return '<div class="ktcore"><p class="kch">'+TR("あなたの変わらないところ")+'</p><p class="kcn">'+esc(co.name)+'</p><ul class="kcl">'+co.aru.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul><p class="kcs">'+(b===n?TR("気質も性格も同じ文字なので、4つすべてがあなたの変わらないところです。"):coreKey(b,n)==="----"?TR("気質と性格で同じ文字はありません。どちらの自分にもなれることが、あなたの変わらないところです。"):TR("気質と性格で同じ文字のところは、どんな時も変わらないあなたです。"))+'</p></div>';}
 /* 結果の一番最初：キャラクターのカードをタップしてめくる */
-function setupCards(instant,one){waitHide();const cards=[...document.querySelectorAll(".nicks .nk")].filter(n=>!n.hidden),story=$("rStory");window.__story=story.innerHTML;
+function setupCards(instant,one){waitHide();if(!instant)setTimeout(()=>{const fb=$("funBox");if(fb&&fb.classList.contains("wait2")&&!$("waitFun")){const w=document.createElement("p");w.id="waitFun";w.className="waitbox";w.innerHTML=one?TR("上の<b>カードをめくる</b>と、ここに出てきます。"):TR("上の<b>カードを2枚ともめくる</b>と、ここに出てきます。");fb.before(w);}},0);const cards=[...document.querySelectorAll(".nicks .nk")].filter(n=>!n.hidden),story=$("rStory");window.__story=story.innerHTML;
  cards.forEach(n=>{let bk=n.querySelector(".nkback");if(!bk){bk=document.createElement("div");bk.className="nkback";n.appendChild(bk);}
   const born=n.classList.contains("born");bk.innerHTML='<span class="q">?</span><b>'+(one?TR("気質も性格も"):born?TR("気質のあなた"):TR("性格のあなた"))+'</b><small>'+TR("タップしてめくる")+'</small>';
   n.classList.remove("turn","turn2");n.classList.toggle("open",!!instant);n.onclick=()=>flipCard(n);});
@@ -961,7 +961,8 @@ const gWk=()=>typeof gst!=="undefined"&&gst&&gst.kind==="wk";
 const GROLE=[["日にちと場所を決める人","EJ"],["予約や持ち物を確認する人","SJ"],["新しい案を出す人","NP"],["その場を盛り上げる人","EP"],["じっくり話を聞く人","IF"],["元気がない人に気づく人","SF"],["意見をまとめる人","TJ"],["損か得かを冷静に見る人","IT"],["予定が変わってもあわてない人","SP"],["先のことを考えておく人","NJ"],["本音で話せる相手になる人","NF"],["ちがう意見をはっきり言う人","ET"]];
 function gRoles(types){const used=new Set();return types.map(t=>{let best=null,bs=-1;
   (gWk()?GROLE_W:GROLE).forEach(([r,k],i)=>{const s=[...k].filter(c=>t.includes(c)).length*2-(used.has(i)?3:0);if(s>bs){bs=s;best=i;}});used.add(best);return GTR((gWk()?GROLE_W:GROLE)[best][0]);});}
-const GDEF=new Set();function san(n){const t=GTR("さん");return n===GTR("あなた")||GDEF.has(n)||(t&&n.endsWith(t))||/(ちゃん|くん|君|様|さま|氏|님|씨)$/.test(n)?n:n+t;}
+function gNone(L,n){if(L==="T"&&n<=2)return GTR("言いにくいことを、2人とも言わずにためてしまいます。決めるときは、理由をひとつずつ言い合ってから決めましょう。");return GTR((gWk()?GNONE_W:GNONE)[L]);}
+const GDEF=new Set();function san(n){const t=GTR("さん");return n===GTR("あなた")||GDEF.has(n)||(t&&n.endsWith(t))||/(さん|ちゃん|くん|君|様|さま|氏|님|씨)$/.test(n)?n:n+t;}
 function gSame(a,b){let n=0;for(let i=0;i<4;i++)if(a[i]===b[i])n++;return n;}
 function groupResult(members){
  const M=members.filter(m=>/^[EI][SN][TF][JP]$/.test(m.born)&&/^[EI][SN][TF][JP]$/.test(m.now)),n=M.length;if(n<2)return null;
@@ -970,7 +971,7 @@ function groupResult(members){
  /* 特徴：偏りが大きい軸から最大3つ */
  const feats=now.map(x=>({x,r:Math.abs(x.ca-x.cb)/n})).filter(o=>o.r>=1/3).sort((p,q)=>q.r-p.r).slice(0,3).map(({x})=>{const L=x.ca>x.cb?x.a:x.b;return {L,text:GTR((gWk()?GMANY_W:GMANY)[L])};});
  /* コツ：だれもいない文字（性格で見る） */
- let tips=[];now.forEach(x=>{if(x.ca===0)tips.push({L:x.a,text:GTR((gWk()?GNONE_W:GNONE)[x.a])});if(x.cb===0)tips.push({L:x.b,text:GTR((gWk()?GNONE_W:GNONE)[x.b])});});
+ let tips=[];now.forEach(x=>{if(x.ca===0)tips.push({L:x.a,text:gNone(x.a,n)});if(x.cb===0)tips.push({L:x.b,text:gNone(x.b,n)});});
  /* はっきり少ないとき（全体の3分の1以下）だけ「少数派」と言う。半々なら出さない */
  if(!tips.length){const x=now.slice().sort((p,q)=>Math.abs(q.ca-q.cb)-Math.abs(p.ca-p.cb))[0];const few=x.ca<x.cb?x.a:x.b,c=Math.min(x.ca,x.cb);
   if(c>0&&c*3<=n)tips.push({L:few,text:GTR("「{l}」は{c}人だけです。その人の意見は通りにくいので、決める前に聞いてみましょう。").replace("{l}",GTR(GL[few])).replace("{c}",c)});}
@@ -997,10 +998,9 @@ function groupHTML(G,title){const e=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&am
  if(G.tips.length)h+='<h3>'+GTR("うまくいくコツ")+'</h3><ul class="gr-tips">'+G.tips.map(t=>'<li>'+e(t.text)+'</li>').join("")+'</ul>';h+='</div>';return h;}
 
 /* グループの結果を1枚の画像にしてシェア */
-async function drawGroup(G,title){const W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
+async function drawGroup(G,title){const W=1080,H=2200,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
  try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"16TYPE+ あア가A")));}catch(e){}
- c.fillStyle=SC.bg;c.fillRect(0,0,W,H);c.fillStyle=SC.card;rrect(c,48,48,W-96,H-96,36);c.fill();c.strokeStyle=SC.rule;c.lineWidth=2;c.stroke();
  c.textAlign="center";c.fillStyle=SC.muted;c.font="500 30px "+SANS;c.fillText(GTR("グループの相性"),W/2,128);
  c.fillStyle=SC.ink;c.font="700 52px "+SANS;c.fillText((title||GTR("{n}人").replace("{n}",G.n)).slice(0,18),W/2,200);
  c.textAlign="left";let y=270;const X=110,RW=W-220;
@@ -1014,7 +1014,10 @@ async function drawGroup(G,title){const W=1080,H=1350,cv=document.createElement(
  const sec=(h,lines)=>{if(!lines.length||y>H-260)return;c.font="700 30px "+SANS;c.fillStyle=SC.plus;c.fillText(h,X,y);y+=50;c.font="500 27px "+SANS;c.fillStyle=SC.ink;lines.forEach(t=>{wrapLines(c,"・"+t,RW,2).forEach(l=>{if(y<H-180){c.fillText(l,X,y);y+=42;}});});y+=26;};
  if(G.bad)sec(GTR("すれ違いやすい2人"),[String(G.bad.a)+" × "+String(G.bad.b)]);
  sec(GTR("このグループは、こんな集まり"),G.feats.length?G.feats.map(f=>f.text):[GTR("どの文字も人数が半々くらいです。いろいろなやり方の人がそろっています。")]);
- c.textAlign="center";c.font="600 30px "+MONO;c.fillStyle=SC.plus;c.fillText("16typeplus.jp",W/2,H-86);c.textAlign="left";return cv;}
+ if(G.tips&&G.tips.length)sec(GTR("うまくいくコツ"),G.tips.slice(0,2).map(t=>t.text));
+ const H2=Math.max(1080,Math.ceil(y+150)),out=document.createElement("canvas");out.width=W;out.height=H2;const o=out.getContext("2d");
+ o.fillStyle=SC.bg;o.fillRect(0,0,W,H2);o.fillStyle=SC.card;rrect(o,48,48,W-96,H2-96,36);o.fill();o.strokeStyle=SC.rule;o.lineWidth=2;o.stroke();o.drawImage(cv,0,0);
+ o.textAlign="center";o.font="600 30px "+MONO;o.fillStyle=SC.plus;o.fillText("16typeplus.jp",W/2,H2-86);o.textAlign="left";return out;}
 async function shareGroup(G,title){track("group_share");const b=$("gShare"),lbl=b.textContent;b.disabled=true;b.textContent=TR("画像をつくっています…");
  try{const cv=await drawGroup(G,title);const bl=await new Promise(r=>cv.toBlob(r,"image/png"));const files=[new File([bl],"16typeplus-group.png",{type:"image/png"})];
   if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,text:TR("グループの相性")+TR("｜16TYPE+（16タイププラス）")+" "+SHARE_URL});}catch(e){if(e&&e.name!=="AbortError")showShareBox([cv]);}}else showShareBox([cv]);}
