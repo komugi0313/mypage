@@ -677,8 +677,8 @@ async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=doc
   c.fillStyle=src&&src!==TR("性格")?LVC.roseT:"#F3F5F8";rrect(c,x,ty,tw,tw,22);c.fill();
   c.font="600 96px "+MONO;c.fillStyle=LVC.ink;c.fillText(l,x+tw/2,ty+tw/2+34);
   c.font="700 24px "+SANS;c.fillStyle=src===TR("性格")?LVC.ink:LVC.rose;c.fillText(src,x+tw/2,ty+tw+38);}
- const hook=me?lvHook(me.born,me.now,t):P.one;c.font="500 28px "+SANS;c.fillStyle=LVC.muted;
- wrapLines(c,hook,X1-X0,2).forEach((l,i)=>c.fillText(l,W/2,ty+tw+96+i*40));
+ const hook=me?lvHook(me.born,me.now,t):P.one;c.font="500 26px "+SANS;c.fillStyle=LVC.muted;
+ wrapLines(c,hook,X1-X0,3).forEach((l,i)=>c.fillText(l,W/2,ty+tw+90+i*38));
  /* 言葉：甘い→辛い の順に2列でしきつめる */
  const ws=(P.words||[]).slice().sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
  const top=ty+tw+250,bot=H-110,half=Math.ceil(ws.length/2),cols=[ws.slice(0,half),ws.slice(half)];
@@ -689,10 +689,10 @@ async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=doc
   c.fillStyle=pos<.35?LVC.rose:pos<.7?LVC.rose2:LVC.ink;c.textAlign="left";c.beginPath();c.arc(x+8,y-11,6,0,Math.PI*2);c.fill();
   fitF(w,colW-34,pos<.2?34:30);c.fillText(w,x+28,y);}));
  c.textAlign="center";c.font="600 28px "+MONO;c.fillStyle=LVC.ink;c.fillText(SHARE_URL.replace("https://",""),W/2,H-46);c.textAlign="left";return cv;}
-async function lvSheet(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1700,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
+async function lvSheet(P){const {SANS,MONO}=await lvFonts(),LP=(st.love&&st.love.sit!=="none"&&st.love.pt&&LV.partner&&LV.partner[st.love.pt])?st.love:null,W=1080,H=LP?2600:1700,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const wrap=(t,w)=>wrapLines(c,t,w,9);
  c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);c.fillStyle=LVC.rose;c.fillRect(0,0,W,14);
- c.font="600 26px "+MONO;c.fillStyle=LVC.muted;c.fillText("16TYPE+  "+TR("恋愛編"),70,95);c.font="600 40px "+MONO;c.fillStyle=LVC.rose;c.fillText(TR("恋愛")+" "+an(P.t),70,185);
+ c.font="600 26px "+MONO;c.fillStyle=LVC.muted;c.fillText("16TYPE+  "+TR("恋愛編"),70,95);c.font="600 34px "+SANS;c.fillStyle=LVC.rose;c.fillText(TR("恋のときのあなたは"),70,185);
  c.font="700 60px "+SANS;fillNm(c,P.t,P.t,70,275,"left",LVC.ink,"#B7A9AE",W-140);
  let y=390;c.fillStyle=LVC.roseT;rrect(c,60,y,W-120,130,20);c.fill();c.font="500 24px "+SANS;c.fillStyle=LVC.rose;c.fillText(TR("一言で言うと…"),90,y+42);
  c.font="700 34px "+SANS;c.fillStyle=LVC.ink;wrap(lvQ(P.one),W-180).slice(0,2).forEach((l,i)=>c.fillText(l,90,y+92+i*44));
@@ -703,7 +703,12 @@ async function lvSheet(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1700,cv=doc
  const nm=k=>k+p16(k);
  const pair=(mark,color,k,text)=>{c.font="700 32px "+SANS;c.fillStyle=color;c.fillText(mark+"  "+nm(k),70,y);y+=46;c.font="500 25px "+SANS;c.fillStyle=LVC.ink;wrap(text,W-140).slice(0,3).forEach(l=>{c.fillText(l,70,y);y+=36;});y+=24;};
  pair(TR("気が合う相手"),LVC.rose,P.best[0],P.best[1]);pair(TR("すれ違いやすい相手"),LVC.muted,P.hard[0],P.hard[1]);
- c.font="600 28px "+MONO;c.fillStyle=LVC.ink;c.textAlign="center";c.fillText(SHARE_URL.replace("https://",""),W/2,H-50);c.textAlign="left";return cv;}
+ if(LP){const me=window.__me,pt=LP.pt,kata=LP.sit==="kata",P2=LV.partner[pt],AXT=(kata&&LV.axis_kata)||LV.axis||{},i0=[0,1,2,3].find(i=>P.t[i]!==pt[i]),tip=i0==null?AXT.same:AXT[P.t[i0]+">"+pt[i0]];
+  c.strokeStyle=LVC.rule;c.lineWidth=2;c.beginPath();c.moveTo(70,y);c.lineTo(W-70,y);c.stroke();y+=60;
+  c.font="700 32px "+SANS;c.fillStyle=LVC.rose;c.fillText("♡  "+(kata?TR("好きな人"):TR("恋人"))+"  "+nm(pt),70,y);y+=46;
+  c.font="500 25px "+SANS;c.fillStyle=LVC.ink;[P2[kata?"pt_kata":"pt_koi"],tip].filter(Boolean).forEach(tx=>{wrap(tx,W-140).slice(0,3).forEach(l=>{c.fillText(l,70,y);y+=36;});y+=14;});}
+ let out=cv,c2=c,H2=H;if(LP){H2=Math.max(1700,Math.ceil(y+130));out=document.createElement("canvas");out.width=W;out.height=H2;c2=out.getContext("2d");c2.drawImage(cv,0,0);}
+ c2.font="600 28px "+MONO;c2.fillStyle=LVC.ink;c2.textAlign="center";c2.fillText(SHARE_URL.replace("https://",""),W/2,H2-50);c2.textAlign="left";return out;}
 /* ---- 性格の履歴書（1枚の画像） ---- */
 async function drawCV(){
  const me=window.__me,W=1080;let H=2200;const cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
