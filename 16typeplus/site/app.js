@@ -240,7 +240,7 @@ function drawQ(){/* 数は「最大」から見せて、減ることはあって
  ch.hidden=!CH2;ch.textContent=CH2;
  const o=$("qOpts");o.innerHTML="";
  if(qi<ord.length){const qn=ord[qi],q=QZ.Q[qn],A=AXQ[AXN[q.ax]];
-  $("qAxis").textContent=A.name;$("qAxis").style.color="var("+A.c+")";{const stu=(()=>{const g=ageNow();return g!=null&&g<=22;})();$("qText").textContent=(stu&&q.q_s)?q.q_s:q.q;$("qEx").textContent=(stu&&q.ex_s)?q.ex_s:q.ex;}$("qExW").hidden=false;$("qExW").open=true;
+  $("qAxis").textContent=A.name;$("qAxis").style.color="var("+A.c+")";{const stu=(()=>{const g=ageNow();return g!=null&&g<=22;})();$("qText").textContent=(stu&&q.q_s)?uniW(q.q_s):q.q;$("qEx").textContent=(stu&&q.ex_s)?uniW(q.ex_s):q.ex;}$("qExW").hidden=false;$("qExW").open=true;
   SCALE.forEach(([t,v,sz])=>{const bt=document.createElement("button");bt.type="button";bt.style.setProperty("--qc","var("+A.c+")");
    bt.innerHTML='<i style="width:'+sz+'px;height:'+sz+'px"></i>'+t;bt.setAttribute("aria-pressed",qa[qn]===v);
    bt.onclick=()=>{if(window.__qLock)return;window.__qLock=1;qa[qn]=v;bt.setAttribute("aria-pressed","true");setTimeout(()=>{window.__qLock=0;next();},180);};o.appendChild(bt);});
@@ -620,7 +620,7 @@ function lvPick(sit){const Q=LV.questions,AG=ageNow(),ok=i=>(!sit||!Q[i].s||Q[i]
  for(let j=0;j<4;j++)R[j%2].forEach(p=>{const i=L[p][j>>1];if(i!=null)out.push(i);});return out;}
 function lvMark(qs){const u=(sget(LVK)||[]).filter(i=>!qs.includes(i)).concat(qs);sset(LVK,u.slice(-32));}
 function lvDraw(){const Q=lv.qs.map(i=>LV.questions[i]),q=Q[lv.i],A=AX[AXN[q.ax]];$("lvCount").textContent=(lv.i+1)+" / "+Q.length;$("lvProg").style.width=(lv.i/Q.length*100)+"%";
- {const g=ageNow(),k=g==null?"":g<=22?"_s":"_w",qq=q["q"+k]||q.q,ee=q["ex"+k]||q.ex;$("lvText").textContent=qq;$("lvEx").textContent=ee||"";$("lvExW").hidden=!ee;}const o=$("lvOpts");o.innerHTML="";
+ {const g=ageNow(),k=g==null?"":g<=22?"_s":"_w",qq=uniW(q["q"+k]||q.q),ee=uniW(q["ex"+k]||q.ex);$("lvText").textContent=qq;$("lvEx").textContent=ee||"";$("lvExW").hidden=!ee;}const o=$("lvOpts");o.innerHTML="";
  LVSCALE.forEach(([t,v,sz])=>{const bt=document.createElement("button");bt.type="button";bt.style.setProperty("--qc","var(--rose)");bt.innerHTML='<i style="width:'+sz+'px;height:'+sz+'px"></i>'+t;bt.setAttribute("aria-pressed",lv.a[lv.i]===v);
   bt.onclick=()=>{if(window.__lvLock)return;window.__lvLock=1;lv.a[lv.i]=v;bt.setAttribute("aria-pressed","true");setTimeout(()=>{window.__lvLock=0;lv.i++;if(lv.i>=Q.length)lvFinish();else lvDraw();},180);};o.appendChild(bt);});}
 function lvFinish(){const me=window.__me,sc={EI:0,SN:0,TF:0,JP:0};
@@ -638,7 +638,7 @@ function lvHook(born,now,love){const D=[0,1,2,3].filter(i=>born[i]!==now[i]),bs=
  if(S.length)s+=(LANG==="ja"?"":" ")+fx(TR("さらに、ふだんの {F} ではなく {T} が出て、「{X}」の面も出てきます。"));
  return s;}
 /* 恋愛タイプの文：22歳以下は〇〇_s、23歳以上は〇〇_w があればそちらを出す */
-function lvTy(t){const o=LV.types&&LV.types[t];if(!o)return o;const g=typeof ageNow==="function"?ageNow():null;if(g==null)return o;const sf=g<=22?"_s":"_w",r={};for(const k in o){if(!/_[sw]$/.test(k))r[k]=o[k+sf]||o[k];}return r;}
+function lvTy(t){const o=LV.types&&LV.types[t];if(!o)return o;const g=typeof ageNow==="function"?ageNow():null;if(g==null)return o;const sf=g<=22?"_s":"_w",r={};for(const k in o){if(!/_[sw]$/.test(k))r[k]=o[k+sf]?uniW(o[k+sf]):o[k];}return r;}
 function lvQ(x){x=String(x||"");return /^[「“"]/.test(x)?x:TR("「")+x+TR("」");}
 const LVBLK={kata:["片思い中のあなたへ",[["kata_try","今週やってみること"],["kata_habit","片思いでやりがちなこと"],["kata_word","相手に伝わるひと言"]]],
  koi:["付き合っているあなたへ",[["fight","けんかしたとき"],["last","長く続けるコツ"],["koi_word","伝え方"]]],
@@ -756,7 +756,7 @@ async function drawCV(){
  /* 歩み（気質は子どものころに、性格は大人になってから出やすい） */
  const sec=(t)=>{y+=10;c.font="700 26px "+SANS;c.fillStyle=SC.plus;c.fillText(t,X0,y+20);y+=36;};
  sec(TR("これまでの歩み（予測）"));
- const hist=[[TR("子どものころ"),AB[0]],[TR("学生時代"),AB[1]],[TR("社会に出て"),AN[2]||AN[0]],[TR("現在"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]].filter(r=>r[1]);
+ const ag=ageNow(),hist=(ag!=null&&ag<=22?[[TR("子どものころ"),AB[0]],[TR("学生時代"),AB[1]],[TR("これから"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]:[[TR("子どものころ"),AB[0]],[TR("学生時代"),AB[1]],[TR("社会に出て"),AN[2]||AN[0]],[TR("現在"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]).filter(r=>r[1]);
  hist.forEach(([l,v])=>{const h=64;lab(X0,y,LW,h,l);box(X0+LW,y,X1-X0-LW,h);txt(v,X0+LW+18,y+h/2+9,X1-X0-LW-36,25,1);y+=h;});
  y+=30;
  /* 長所・短所 */
@@ -775,7 +775,7 @@ async function drawCV(){
  /* 採用担当からのひと言（辛口） */
  const kr=(me.kt&&me.kt.karai)||me.karaiC||"";if(kr){c.font="700 28px "+SANS;let fs=28,ls;for(;fs>=22;fs-=2){c.font="700 "+fs+"px "+SANS;ls=wrapLines(c,kr,X1-X0-56,3);if(ls.length<=2||fs===22)break;}
   const kh=ls.length*Math.round(fs*1.5)+78;c.fillStyle="#FBEDEA";c.fillRect(X0,y,X1-X0,kh);c.strokeStyle=SC.plus;c.lineWidth=2;c.strokeRect(X0,y,X1-X0,kh);
-  c.font="700 22px "+SANS;c.fillStyle=SC.plus;c.fillText(TR("採用担当からのひと言（辛口）"),X0+24,y+40);
+  c.font="700 22px "+SANS;c.fillStyle=SC.plus;c.fillText(TR("採用担当が見ぬいたクセ（辛口）"),X0+24,y+40);
   c.fillStyle=SC.ink;c.font="700 "+fs+"px "+SANS;ls.forEach((l,i)=>c.fillText(l,X0+24,y+84+i*Math.round(fs*1.5)));y+=kh;}
  H=y+150;c.textAlign="center";c.font="500 22px "+SANS;c.fillStyle=SC.muted;c.fillText(TR("※ 気質と性格の診断結果から予測した、遊びの履歴書です"),W/2,H-82);
  c.font="600 28px "+MONO;c.fillStyle=SC.ink;c.fillText(SHARE_URL.replace("https://",""),W/2,H-40);c.textAlign="left";
@@ -817,8 +817,11 @@ function kaiunCard(at){let c=$("kaiun");if(LANG!=="ja"||!KAIUN_URL||!st.y){if(c)
  at.after(c);return c;}
 /* その人の回答で揺れた向きを、気質と性格の組み合わせから説明する */
 const SWN={EI:["元気の出し方","人といるか、ひとりか","--ei"],SN:["ものの見方","これまでの経験で考えるか、先のことを想像して考えるか","--sn"],TF:["決め方","理屈か、気持ちか","--tf"],JP:["進め方","計画どおりか、その場に合わせるか","--jp"]};
+/* 19〜22歳（日本語）：学生向けの文の「部活・クラス・文化祭」を大学向けの言葉にする */
+const UNIW=[["クラス替えの日に","新しい授業の初日に"],["クラス替えから","新学期から"],["部活やサークル","サークル"],["部活やクラス","サークルやゼミ"],["クラスや部活","ゼミやサークル"],["部活","サークル"],["文化祭","学園祭"],["クラスのみんな","サークルのみんな"],["同じクラス","同じ授業"],["クラス替え","新学期"],["クラス","ゼミ"]];
+function uniW(t){if(typeof t!=="string"||LANG!=="ja")return t;const g=typeof ageNow==="function"?ageNow():null;if(g==null||g<19||g>22)return t;UNIW.forEach(([a,b])=>{t=t.split(a).join(b);});return t;}
 /* 22歳以下には、くわしい鑑定などの文で学生向け（〇〇_s）があればそちらを出す */
-function ktStu(o){if(!o)return o;const g=typeof ageNow==="function"?ageNow():null;if(g==null||g>22)return o;const r={};for(const k in o){if(!k.endsWith("_s"))r[k]=o[k+"_s"]||o[k];}return r;}
+function ktStu(o){if(!o)return o;const g=typeof ageNow==="function"?ageNow():null;if(g==null||g>22)return o;const r={};for(const k in o){if(!k.endsWith("_s"))r[k]=o[k+"_s"]?uniW(o[k+"_s"]):o[k];}return r;}
 function yureSee(born,now){const pv=((window.__me&&window.__me.prev)||[]).filter(t=>t&&t!==now);if(!pv.length)return "";
  const ax=[0,1,2,3].filter(i=>pv.some(t=>t[i]!==now[i]));if(!ax.some(i=>born[i]===now[i]))return "";
  const ch=ax.map(i=>(born[i]!==now[i]&&pv.every(t=>t[i]===now[i])?"":pv.find(t=>t[i]!==now[i])[i]+"→"+now[i])).filter(Boolean).join(TR("・"));
