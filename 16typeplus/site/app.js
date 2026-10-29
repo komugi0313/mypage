@@ -628,14 +628,15 @@ function lvFinish(){const me=window.__me,sc={EI:0,SN:0,TF:0,JP:0};
  /* 気質と性格が同じ文字はそのまま。ちがう文字だけ、答えが寄った方を選ぶ（3つ目のタイプは作らない） */
  const t=AX.map((A,i)=>me.born[i]===me.now[i]?(sc[A.k]>=4?A.a:sc[A.k]<=-4?A.b:me.now[i]):(sc[A.k]>0?A.a:sc[A.k]<0?A.b:me.now[i])).join("");
  st.love={t,a:lv.a,qs:lv.qs,sit:lv.sit||"koi",pt:(st.love&&st.love.pt)||null};saveResult();$("lvQ").hidden=true;lvShow(t);$("love").scrollIntoView({behavior:"smooth",block:"start"});}
-function lvHook(born,now,love){let nb=0,nn=0;const nx=[];for(let i=0;i<4;i++){if(born[i]!==now[i]){if(love[i]===born[i])nb++;else nn++;}else if(love[i]!==now[i])nx.push(TR(CORE[love[i]]));}
- const X=nx.join(TR("・"));
- if(born===now)return nx.length?TR("気質も性格も同じ。でも恋をすると、ふだんは出ない「{X}」の面が出てきます。").replace("{X}",X):TR("気質も性格も同じ。恋をしても、いつものあなたのまま。");
- let s=nb&&!nn?TR("ふだんは性格の{N}が前に出る。でも恋をすると、気質の{B}が強く出る。")
-  :nn&&!nb?TR("恋をしても、性格の{N}がそのまま出る。気質の{B}は、あまり表に出てこない。")
-  :TR("恋をすると、気質の{B}と性格の{N}が、まざって出てくる。");
- if(nx.length)s+=TR("さらに、ふだんは出ない「{X}」の面も出てきます。").replace("{X}",X);
- return s.replace(/\{B\}/g,an(born)).replace(/\{N\}/g,an(now));}
+function lvHook(born,now,love){const D=[0,1,2,3].filter(i=>born[i]!==now[i]),bs=D.filter(i=>love[i]===born[i]).map(i=>born[i]),ns=D.filter(i=>love[i]!==born[i]).map(i=>now[i]),
+ S=[0,1,2,3].filter(i=>born[i]===now[i]&&love[i]!==now[i]),J=a=>a.join(TR("・")),F=J(S.map(i=>now[i])),T=J(S.map(i=>love[i])),X=J(S.map(i=>TR(CORE[love[i]])));
+ const fx=t=>t.replace("{F}",F).replace("{T}",T).replace("{X}",X);
+ if(!D.length)return S.length?fx(TR("気質も性格も同じ。でも恋をすると、ふだんの {F} ではなく {T} が出て、「{X}」の面が出てきます。")):TR("気質も性格も同じ。恋をしても、いつものあなたのまま。");
+ let s=TR("気質（{B}）と性格（{N}）でちがう{n}つの文字は、").replace("{B}",born).replace("{N}",now).replace("{n}",D.length)
+  +(bs.length&&ns.length?TR("恋をすると、気質のほう（{L1}）と性格のほう（{L2}）がまざって出ます。").replace("{L1}",J(bs)).replace("{L2}",J(ns))
+   :bs.length?TR("恋をすると気質のほう（{L}）が出ます。").replace("{L}",J(bs)):TR("恋をしても性格のほう（{L}）が出ます。").replace("{L}",J(ns)));
+ if(S.length)s+=(LANG==="ja"?"":" ")+fx(TR("さらに、ふだんの {F} ではなく {T} が出て、「{X}」の面も出てきます。"));
+ return s;}
 function lvQ(x){x=String(x||"");return /^[「“"]/.test(x)?x:TR("「")+x+TR("」");}
 const LVBLK={kata:["片思い中のあなたへ",[["kata_try","今週やってみること"],["kata_habit","片思いでやりがちなこと"],["kata_word","相手に伝わるひと言"]]],
  koi:["付き合っているあなたへ",[["fight","けんかしたとき"],["last","長く続けるコツ"],["koi_word","伝え方"]]],
