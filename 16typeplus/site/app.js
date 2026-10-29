@@ -475,7 +475,7 @@ async function drawCloud(){const me=window.__me,{SANS,MONO}=await cwFonts(),W=10
  const b=me.born,n=me.now,one=b===n,[cb,cn]=cwColors(b,n);
  c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);c.textAlign="center";c.textBaseline="alphabetic";
  const fitF=(t,w,fs,wt)=>{c.font=(wt||700)+" "+fs+"px "+SANS;while(c.measureText(t).width>w&&fs>14){fs--;c.font=(wt||700)+" "+fs+"px "+SANS;}return fs;};
- c.font="500 26px "+SANS;c.fillStyle=SC.muted;c.fillText(one?TR("気質も性格も同じ。2つの円がひとつに重なる人"):coreKey(b,n)==="----"?TR("4つの文字がすべてちがう。どちらにもなれる人"):TR("2つの円が重なったところが、いつも変わらないあなた"),W/2,78);
+ c.font="500 26px "+SANS;c.fillStyle=SC.muted;c.fillText(one?TR("気質も性格も同じ。2つの円がひとつに重なる人"):coreKey(b,n)==="----"?TR("4つの文字がすべてちがう。どちらにもなれる人"):TR("2つの円が重なったところが、生まれつきも今も同じ、あなたの土台"),W/2,78);
  c.font="700 46px "+SANS;if(one)fillNm(c,b,b,W/2,140,"center",SC.ink,"#9AA3AF",W-120);else{c.fillStyle=SC.ink;c.fillText(b+"  ＋  "+n,W/2,140);}
  const cy=730,ry=520;
  if(one){const R=470;c.beginPath();c.ellipse(W/2,cy,R,ry,0,0,Math.PI*2);c.fillStyle=rgba(cb,.09);c.fill();c.lineWidth=4;c.strokeStyle=rgba(cb,.65);c.stroke();
@@ -866,8 +866,13 @@ function kfmt(t,f){const ss=sents(t).map(kfmt1),J=LANG==="ja"?"":" ";
  if(f==="aru")return '<p>'+ss.join(J)+'</p>';
  if(f==="why"||f==="plus"||f==="hidden"){const last=ss.length>1?ss.pop():null;const ps=[];for(let i=0;i<ss.length;i+=2)ps.push('<p>'+ss.slice(i,i+2).join(J)+'</p>');return ps.join("")+(last?'<p class="key">'+last+'</p>':'');}
  return '<p>'+ss.join(J)+'</p>';}
+/* 「変わらないところ」の文字が、前の結果や記録では変わっていたことがあれば、1行足す */
+function coreMoved(b,n){const L=[].concat(st.prev||[]);try{histAll().forEach(r=>{if(r&&r.t)L.push(r.t);});}catch(e){}
+ const idx=[0,1,2,3].filter(i=>b[i]===n[i]&&L.some(t=>t&&t[i]&&t[i]!==n[i]));if(!idx.length)return "";
+ const J=a=>a.join(TR("・")),o=J(idx.map(i=>n[i]==="E"?"I":n[i]==="I"?"E":n[i]==="S"?"N":n[i]==="N"?"S":n[i]==="T"?"F":n[i]==="F"?"T":n[i]==="J"?"P":"J")),k=J(idx.map(i=>n[i]));
+ return (LANG==="ja"?"":" ")+TR("前の結果では {o} も出ていました。土台は {k} で、場面によって {o} も出せる人です。").replace(/\{o\}/g,o).replace("{k}",k);}
 function coreCard(b,n){const co=coreOf(b,n);if(!co)return "";
- return '<div class="ktcore"><p class="kch">'+TR("あなたの変わらないところ")+'</p><p class="kcn">'+esc(co.name)+'</p><ul class="kcl">'+co.aru.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul><p class="kcs">'+(b===n?TR("気質も性格も同じ文字なので、4つすべてがあなたの変わらないところです。"):coreKey(b,n)==="----"?TR("気質と性格で同じ文字はありません。どちらの自分にもなれることが、あなたの変わらないところです。"):TR("気質と性格で同じ文字のところは、どんな時も変わらないあなたです。"))+'</p></div>';}
+ return '<div class="ktcore"><p class="kch">'+TR("あなたの変わらないところ")+'</p><p class="kcn">'+esc(co.name)+'</p><ul class="kcl">'+co.aru.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul><p class="kcs">'+(b===n?TR("気質も性格も同じ文字なので、4つすべてがあなたの変わらないところです。"):coreKey(b,n)==="----"?TR("気質と性格で同じ文字はありません。どちらの自分にもなれることが、あなたの変わらないところです。"):TR("気質と性格で同じ文字のところです。生まれつきも今も同じなので、あなたの土台になっています。")+coreMoved(b,n))+'</p></div>';}
 /* 結果の一番最初：キャラクターのカードをタップしてめくる */
 function setupCards(instant,one){waitHide();if(!instant)setTimeout(()=>{const fb=$("funBox");if(fb&&fb.classList.contains("wait2")&&!$("waitFun")){const w=document.createElement("p");w.id="waitFun";w.className="waitbox";w.innerHTML=one?TR("上の<b>カードをめくる</b>と、ここに出てきます。"):TR("上の<b>カードを2枚ともめくる</b>と、ここに出てきます。");fb.before(w);}},0);const cards=[...document.querySelectorAll(".nicks .nk")].filter(n=>!n.hidden),story=$("rStory");window.__story=story.innerHTML;
  cards.forEach(n=>{let bk=n.querySelector(".nkback");if(!bk){bk=document.createElement("div");bk.className="nkback";n.appendChild(bk);}
@@ -930,13 +935,13 @@ let recPick=null,recSrc="other",recTags=[],recDateV="";
 function drawRec(){const box=$("recBody");if(!box)return;const born=natal(st.y,st.m,st.d).t,R=histMine(),n=R.length;
  if(!recPick)recPick=st.t.slice();
  const DS=LANG==="ko"?".":"/",md=d=>{if(d==="-")return TR("前に");const a=d.split("-");return (+a[1])+DS+(+a[2]);};
- let h='<p class="hint">'+TR("このサイトで診断するたびに、ここに記録されます。ほかのサイトで受けた結果も足せます。ならべると、変わりやすい文字と、ずっと変わらない文字がわかります。")+'</p>';
+ let h='<p class="hint">'+TR("このサイトで診断するたびに、ここに記録されます。ほかのサイトで受けた結果も足せます。ならべると、変わりやすい文字と、毎回同じ文字がわかります。")+'</p>';
  if(n<2)h+='<p class="rec-empty">'+TR("記録が2回以上たまると、変わりやすい文字がわかります。ほかのサイトで前に受けた結果があれば、下から足してみてください。")+'</p>';
  else{const rows=RECAX.map(([k,name],i)=>{const A=AX[i],cA=R.filter(r=>r.t[i]===A.a).length,cB=n-cA,main=cA>=cB?A.a:A.b,steady=cA===n||cB===n;
    let link=null;htags().forEach(tg=>{const w=R.filter(r=>(r.tags||[]).includes(tg));if(w.length<2)return;const x=w.filter(r=>r.t[i]!==main).length;if(x===w.length&&(!link||x>link.x))link={tg,x};});
    return {k,name,A,i,cA,cB,main,steady,link};});
   const st0=rows.filter(r=>r.steady),sw=rows.filter(r=>!r.steady);let s='';
-  if(st0.length)s+='<div class="rc-row" style="--c:var(--plus)"><span class="k">'+TR("ずっと変わらない文字")+'</span><span class="v">'+st0.map(r=>r.main+TR("（")+TR(CORE[r.main])+TR("）")).join(TR("・"))+'</span><span class="s">'+TR("{n}回とも同じでした。").replace("{n}",n)+(st0.every(r=>r.main===born[r.i])?TR("生まれつきの気質とも同じ文字です。ここは、ずっと変わらないあなたです。"):"")+'</span></div>';
+  if(st0.length)s+='<div class="rc-row" style="--c:var(--plus)"><span class="k">'+TR("記録の中で、毎回同じだった文字")+'</span><span class="v">'+st0.map(r=>r.main+TR("（")+TR(CORE[r.main])+TR("）")).join(TR("・"))+'</span><span class="s">'+TR("{n}回とも同じでした。").replace("{n}",n)+(st0.every(r=>r.main===born[r.i])?TR("生まれつきの気質とも同じ文字です。ここは、あなたの土台です。"):"")+'</span></div>';
   sw.forEach(r=>{const other=r.main===r.A.a?r.A.b:r.A.a;s+='<div class="rc-row" style="--c:var('+r.A.c+')"><span class="k">'+TR(r.name)+TR("：答えが変わりやすい")+'</span><span class="v">'+TR("{a}が{x}回、{b}が{y}回").replace("{a}",r.A.a).replace("{x}",r.cA).replace("{b}",r.A.b).replace("{y}",r.cB)+'</span><span class="s">'+TR("生まれつきは「{w}」のほう。").replace("{w}",TR(CORE[born[r.i]]))+(r.link?TR("「{t}」の時期は、{x}回とも「{w}」が出ていました。").replace("{t}",TR(r.link.tg)).replace("{x}",r.link.x).replace("{w}",TR(CORE[other])):"")+'</span></div>';});
   h+='<div class="rc-sum">'+s+'</div><p class="rc-big">'+(sw.length?TR("変わるのは、場面に合わせて使い分けているから。どちらも、あなたです。"):TR("いつ受けても同じ。生まれつきのまま、変わらずに育っています。"))+'</p>';
   h+='<div class="rc-track">'+rows.map(r=>{const side=L=>'<div class="side'+(born[r.i]===L?' born':'')+'"><span class="L">'+L+'</span><div class="dots">'+R.map(x=>'<span class="dot'+(x.t[r.i]===L?' on':'')+'"></span>').join("")+'</div></div>';
