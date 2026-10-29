@@ -9503,22 +9503,34 @@ function splitSentences(p){
   if(p.length<=42)return p;
   return p.replace(/。(?![」』）\)】\s])/g,'。\n');
 }
+/* LINE・メールで読みやすく（鑑定者本人の指摘 2026-10-29「LINEで共有すると文章だけで読みにくい」）：
+   ①最初の答えを「今回の鑑定のポイント」の枠に入れていちばん上に ②読みがなのかっこ（ざいせい：…）は意味だけにして短く
+   ③中身のない【くわしい読み解き】は区切り線に ④段落と段落のあいだは1行あける。中身（文）は変えない。 */
+function pkShareTidy(x){ x=String(x||'');
+  x=x.replace(/([一-龥々〆]{1,8})[（(][ぁ-んー・ ]{1,16}[：:]([^）)\n]{1,40})[）)]/g,'$1（$2）');   // 用語（よみ：意味）→ 用語（意味）
+  x=x.replace(/([一-龥々〆]{1,8})[（(][ぁ-んー・ ]{1,16}[）)](?=[（(])/g,'$1');                     // 用語（よみ）（意味）→ 用語（意味）
+  x=x.replace(/([一-龥々〆]{1,8})[（(][ぁ-んー・ ]{1,16}[）)]/g,'$1');                               // 用語（よみ）→ 用語
+  return x; }
 function formatForShare(rawText){
-  var s=cleanMarkdown(rawText||'').replace(/\r\n?/g,'\n');
-  var lines=s.split('\n'),out=[];
+  var s=pkShareTidy(cleanMarkdown(rawText||'')).replace(/\r\n?/g,'\n');
+  var lines=s.split('\n'),out=[], lead=false, prevPara=false;
   for(var i=0;i<lines.length;i++){
     var ln=lines[i].replace(/\s+$/,'').replace(/^\s+/,'');
     if(!ln)continue;                                   // 既存の空行は捨てて入れ直す
     if(/^ご相談：/.test(ln)){ out.push(ln); out.push(''); continue; }   // 相談の文は先頭に置き、本文と1行あける
+    if(!lead&&!/^【/.test(ln)&&!/^[・･\-‐–—◎△]/.test(ln)){ lead=true; out.push('━━━━━━━━━━'); out.push('🌟 今回の鑑定のポイント'); out.push(splitSentences(ln)); out.push('━━━━━━━━━━'); prevPara=false; continue; }
+    lead=true;
+    if(/^【(くわしい|詳しい)読み解き】\s*$/.test(ln)){ out.push(''); out.push('―― くわしい読み解き ――'); prevPara=false; continue; }
     var mh=ln.match(/^【(.+?)】\s*(.*)$/);
-    if(mh){ if(out.length)out.push('');                // 見出しの前に空行
+    if(mh){ prevPara=false; if(out.length)out.push('');                // 見出しの前に空行
       out.push(shareEmojiForHeading(mh[1])+' 【'+mh[1]+'】');
       if(mh[2])out.push(splitSentences(mh[2])); continue; }
     var mg=ln.match(/^◎\s*(.*)$/);  if(mg){ if(out.length)out.push(''); out.push('✅ '+splitSentences(mg[1])); continue; }
     var mb=ln.match(/^△\s*(.*)$/);  if(mb){ if(out.length)out.push(''); out.push('⚠️ '+splitSentences(mb[1])); continue; }
     var ms=ln.match(/^(?:[・･\-‐–—]\s*)+(.*)$/);   // 「・・」と二重にならない
-    if(ms){ out.push('・'+splitSentences(ms[1])); continue; }
-    out.push(splitSentences(ln));                      // 通常の段落
+    if(ms){ out.push('・'+splitSentences(ms[1])); prevPara=true; continue; }
+    if(prevPara) out.push('');                         // 段落と段落のあいだは1行あける
+    out.push(splitSentences(ln)); prevPara=true;       // 通常の段落
   }
   return out.join('\n').replace(/\n{3,}/g,'\n\n').trim();
 }
@@ -10850,6 +10862,30 @@ window.__isSample=false; chart=null; pkShowEmpty();
   try{ new MutationObserver(sch).observe(document.body,{childList:true,subtree:true}); }catch(e){}
   document.addEventListener('toggle',sch,true); document.addEventListener('click',sch,true);
   sch();
+})();
+/* 印刷が開かないときの案内（鑑定者本人の指摘 2026-10-29「印刷ボタンを押しても何の動きもない」）：
+   Gmail・LINE・Instagram などアプリの中の画面では、ブラウザの印刷（window.print）が止められていて、押しても何も起きない。
+   印刷を頼んで1.5秒たっても印刷の画面が開かなければ、「Safari・Chromeで開いてから」の案内を出す。3サイトの全ページ（鑑定書・アプリの鑑定書の画面も）で同じ。 */
+(function(){
+  if(window.__pkPrintHelp) return; window.__pkPrintHelp=true;
+  var orig=window.print; if(typeof orig!=='function') return;
+  var opened=false; function mark(){ opened=true; }
+  try{ window.addEventListener('beforeprint',mark); window.addEventListener('afterprint',mark); var mq=window.matchMedia&&window.matchMedia('print'); if(mq){ if(mq.addEventListener) mq.addEventListener('change',function(e){ if(e.matches) mark(); }); else if(mq.addListener) mq.addListener(function(e){ if(e.matches) mark(); }); } }catch(e){}
+  function link(){ try{ var u=(window.top&&window.top.location&&window.top.location.href)||location.href; return /^https?:/.test(u)?u:''; }catch(e){ return /^https?:/.test(location.href)?location.href:''; } }
+  function show(){ try{ var old=document.getElementById('pk-print-help'); if(old) old.remove();
+    var karte=false; try{ karte=!!((window.top&&window.top.document||document).getElementById('mypageToggle')); }catch(_e){ karte=!!document.getElementById('mypageToggle'); }
+    var ua=navigator.userAgent||'', ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&'ontouchend' in document), u=link();
+    var d=document.createElement('div'); d.id='pk-print-help'; d.className='no-print'; d.setAttribute('role','dialog'); d.setAttribute('aria-label','印刷の画面が開かないとき');
+    d.style.cssText='position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:2147483647;max-width:560px;margin:0 auto;background:#fff;color:#1b1b1b;border:2px solid #4F46E5;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.22);padding:14px 14px 12px;font:700 14.5px/1.7 system-ui,-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif';
+    d.innerHTML='<div style="font-size:16px;font-weight:900;color:#3730A3;margin-bottom:4px">🖨 印刷の画面が開かないときは</div>'+
+      '<div>Gmail・LINE などのアプリの中で開いていると、印刷・PDF保存が使えません。ブラウザで開き直してから、もう一度押してください。</div>'+
+      '<div style="margin-top:6px;background:#F4F5FF;border-radius:10px;padding:8px 10px">'+(ios?'<b>iPhone</b>：画面の右下か右上の <b>共有ボタン</b>（□に↑）や <b>「…」</b> →「<b>Safariで開く</b>」<br><span style="font-weight:700;color:#4A4458">共有ボタンの中の「プリント」からも印刷・PDF保存できます</span>':'<b>Android</b>：右上の <b>「︙」</b> →「<b>ブラウザで開く</b>」（Chromeで開く）')+'</div>'+
+      (karte?'<div style="margin-top:6px;font-size:13px;color:#4A4458">鑑定は顧客カルテに保存されています。ブラウザで開いたあと、顧客カルテから開けます。</div>':'')+
+      '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'+(u?'<button type="button" data-a="copy" style="flex:1 1 160px;min-height:44px;border:0;border-radius:12px;background:#4F46E5;color:#fff;font:inherit;font-weight:900;cursor:pointer">このページのリンクをコピー</button>':'')+'<button type="button" data-a="close" style="flex:0 0 auto;min-height:44px;padding:0 16px;border:1.5px solid #C9CDF5;border-radius:12px;background:#fff;color:#3730A3;font:inherit;font-weight:900;cursor:pointer">閉じる</button></div>';
+    d.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('button'); if(!b) return; if(b.dataset.a==='close'){ d.remove(); return; }
+      if(b.dataset.a==='copy'){ var ok=function(){ b.textContent='コピーしました。Safari・Chromeに貼りつけて開いてください'; }; try{ navigator.clipboard.writeText(u).then(ok,function(){ window.prompt('このリンクをコピーしてください',u); }); }catch(_e){ try{ window.prompt('このリンクをコピーしてください',u); }catch(__e){} } } });
+    (document.body||document.documentElement).appendChild(d); }catch(e){} }
+  window.print=function(){ opened=false; var r; try{ r=orig.apply(window,arguments); }catch(e){} setTimeout(function(){ if(!opened&&!document.hidden) show(); },1500); return r; };
 })();
 </script>
 <style id="beginner-ui-css">
