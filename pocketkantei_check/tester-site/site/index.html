@@ -1959,7 +1959,7 @@ $('regBtn').onclick=function(){
 };
 
 /* ---- チャット ---- */
-function enterChat(){ setTimeout(updateKeyBar,0); if(!state.chart) state.chart=computeChart(state.profile); state.mode='self'; state.chartB=null; updateModeBar(); trialStart(); updateTrialPill(); state.msgs=loadJSON(LS_MSGS)||[]; show('scChat'); if(!state.msgs.length){ greet(); } else { renderChat(); } nicoDailyHi(); }
+function enterChat(){ setTimeout(updateKeyBar,0); setTimeout(checkUnanswered,1600); if(!state.chart) state.chart=computeChart(state.profile); state.mode='self'; state.chartB=null; updateModeBar(); trialStart(); updateTrialPill(); state.msgs=loadJSON(LS_MSGS)||[]; show('scChat'); if(!state.msgs.length){ greet(); } else { renderChat(); } nicoDailyHi(); }
 var NAME_SUFFIX={ja:'さん、',en:', ',zh:'，',zt:'，',ko:'님, ',vi:' ơi, ',es:', ',pt:', ',id:', ',th:'คะ '};
 var CHIP_TOMORROW={ja:'明日はどんな日？',en:'How’s tomorrow?',zh:'明天是怎样的一天？',zt:'明天是怎樣的一天？',ko:'내일은 어떤 날?',vi:'Ngày mai thế nào?',es:'¿Cómo será mañana?',pt:'Como será amanhã?',id:'Besok hari seperti apa?',th:'พรุ่งนี้เป็นวันแบบไหน?'};
 var GREET={
@@ -2585,6 +2585,14 @@ function appendLogicBtn(){
   d.querySelector('button').onclick=function(){ d.remove(); ask(pick(LOGIC_Q)); };
   box.appendChild(d);
 }
+/* いま答えている自分のメッセージの番号（時刻）。送り直しでも同じ番号なので、サーバーは2回数えない（2026-10-29） */
+function _lastMeId(){ try{ for(var i=state.msgs.length-1;i>=0;i--){ if(state.msgs[i].role==='me') return String(state.msgs[i].t||''); } }catch(e){} return ''; }
+/* 返事を待っている間にアプリを閉じた・電波が切れた：開き直した時、最後が自分のメッセージのままなら、届かなかったことを伝えて送り直しのボタンを出す（2026-10-29） */
+var LOST_NOTE={ja:'さっきのメッセージへの返事が、届かなかったみたい。もう一度送りますか？（回数は増えません）',en:'My reply to your last message did not reach you. Send it again? (It will not use another message.)',ko:'방금 메시지에 대한 답이 전달되지 않은 것 같아요. 다시 보낼까요? (횟수는 늘지 않아요)',zt:'剛才那則訊息的回覆，好像沒有送到。要再傳一次嗎？（不會多算次數）',zh:'刚才那条消息的回复，好像没有送到。要再发一次吗？（不会多算次数）'};
+function checkUnanswered(){ try{ if(_askBusy||_seqRunning) return; var m=state.msgs, last=m[m.length-1]; if(!last||last.role!=='me') return; if(Date.now()-(+last.t||0)<4000) return;
+  var box=$('scroll'); if(!box||document.getElementById('lostRow')) return; var q=last.text;
+  var d=document.createElement('div'); d.id='lostRow'; d.className='logic-row'; d.innerHTML='<p class="lost-note" style="font-size:12.5px;color:var(--muted);margin:0 0 6px">'+esc(pick(LOST_NOTE))+'</p><button>'+esc(pick(RESEND))+'</button>';
+  d.querySelector('button').onclick=function(){ d.remove(); askRetry(q); }; box.appendChild(d); box.scrollTop=box.scrollHeight; }catch(e){} }
 function appendResendBtn(q){
   var box=$('scroll'); if(!box) return;
   var old=document.getElementById('resendRow'); if(old) old.remove();
@@ -5895,7 +5903,7 @@ function _answerCore(q,risk){
     ? 'https://generativelanguage.googleapis.com/v1beta/models/'+_mdl+':generateContent?key='+encodeURIComponent(dk)
     : '/api/gemini';
   var errInfo='', loginHit=false;
-  return fetch(ep,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free','x-pk-auth':((authGet()||{}).token||''),'x-pk-deep':((smart||_koUp)?'1':'0'),'x-pk-nocount':(((smart&&!counted)||_koUp)?'1':'0'),'x-pk-crisis':((RE_SELFHARM.test(q)||_afterCrisis||_crisisCd()>0)?'1':'0'),'x-pk-main':'1'},body:JSON.stringify(payload)})
+  return fetch(ep,{method:'POST',headers:dk?{'Content-Type':'application/json'}:{'Content-Type':'application/json','x-pk-device':deviceId(),'x-pk-mid':_lastMeId(),'x-pk-plan':(state.profile&&state.profile.plan)||'free','x-pk-auth':((authGet()||{}).token||''),'x-pk-deep':((smart||_koUp)?'1':'0'),'x-pk-nocount':(((smart&&!counted)||_koUp)?'1':'0'),'x-pk-crisis':((RE_SELFHARM.test(q)||_afterCrisis||_crisisCd()>0)?'1':'0'),'x-pk-main':'1'},body:JSON.stringify(payload)})
     .then(function(r){ if(r.status===429){ return r.json().catch(function(){ return {}; }).then(function(b){ if(b&&b.error&&b.error.code==='DEEP_QUOTA'){ quotaHit=true; try{ localStorage.setItem('pk_deep_'+_ym(),String(DEEP_QUOTA[curPlan()]||999)); localStorage.setItem('pk_deep_used',String(DEEP_QUOTA[curPlan()]||999)); localStorage.setItem('pk_deep_at',String(Date.now())); if(!localStorage.getItem('pk_deep_win')) localStorage.setItem('pk_deep_win','q'); }catch(e){} } if(b&&b.error&&b.error.code==='DAILY_BUDGET') budgetHit=true; if(b&&b.error&&b.error.code==='TRIAL_OVER'){ trialHit=true; _trialFromServer(r); try{ localStorage.setItem('pk_tru_srv',String(TRIAL_TOTAL)); }catch(e){} } if(b&&b.error&&b.error.code==='TRIAL_CAP'){ trialCapHit=true; } if(b&&b.error&&b.error.code==='LIMIT'&&(b.error.scope==='why'||b.error.scope==='fair')&&curPlan()!=='free') fairHit=true; if(b&&b.error&&b.error.code==='LIMIT'&&(state.planInfo||{}).trial&&curPlan()!=='free'){ trialDayHit=true; } if(b&&b.error&&b.error.code==='LIMIT'&&curPlan()==='free'){ dailyHit=true; try{ localStorage.setItem(useKey(),String(FREE_LIMIT)); }catch(e){} } limitHit=true; throw 0; }); } if(r.ok){ _deepFromServer(r); _trialFromServer(r); } if(r.status===402){ needPlanHit=true; } if(r.status===401&&authGet()){ loginHit=true; } if(!r.ok){ return r.text().then(function(b){ var c=''; try{ var j=JSON.parse(b); c=(j&&j.error&&(j.error.code||j.error.status))||''; }catch(e){} errInfo='HTTP '+r.status+(c?(' '+c):''); throw 0; },function(){ errInfo='HTTP '+r.status; throw 0; }); } return r.json(); })
     .then(function(j){ var t=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0].text; if(!t){ if(!errInfo) errInfo='EMPTY_REPLY'; throw 0; }
       var _leak=_looksLikeThinkLeak(t); t=_stripThinkLeak(t);   /* 思考モデルの自己レビュー独り言が本文に漏れた場合：救済（引用回収/メタ切り落とし） */
