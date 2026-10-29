@@ -663,6 +663,7 @@ function lvShow(t){const me=window.__me,P=lvTy(t);if(!me)return;const el=$("lvRe
   h+='<div class="lvp"><p class="lvsub">'+TR("恋のときのあなたは")+'</p><p class="lvname">'+esc(P.t)+p16h(P.t)+'</p><p class="one">'+lvQ(esc(P.one))+'</p>'
   +'<div class="lvsit-r"><p class="lvsith">'+TR(B[0])+'</p>'+B[1].filter(([k])=>P[k]).map(([k,hh])=>'<div class="lvs lvs-'+k+'"><h3>'+TR(hh)+'</h3><p>'+esc(P[k])+'</p></div>').join("")+'</div>'
   +(sit!=="none"?'<div class="lvpt"><label class="lvptq" for="lvPt">'+TR(sit==="kata"?"好きな人の16タイプ（わかれば）":sit==="kini"?"気になる人の16タイプ（わかれば）":"恋人の16タイプ（わかれば）")+'</label><select id="lvPt"><option value="">'+TR("16タイプを選ぶ")+'</option>'+Object.keys(D.NICK).map(k=>'<option value="'+k+'"'+(st.love&&st.love.pt===k?' selected':'')+'>'+esc(nm(k))+'</option>').join("")+'</select><p class="hint">'+TR("16タイプだけで出す、2人のヒントです。")+'</p><div id="lvPtR" class="lvptr"></div></div>':'')
+  +(sit!=="none"?'<label class="lvptimg" id="lvPtImgW"><input type="checkbox" id="lvPtImg"'+(window.__lvPtImg?' checked':'')+'> '+TR(sit==="kata"?"好きな人のタイプも画像に入れる":sit==="kini"?"気になる人のタイプも画像に入れる":"恋人のタイプも画像に入れる")+'</label>':'')
   +'<button class="btn primary" type="button" id="lvShare">'+TR("恋愛編の結果を画像でシェア")+'</button>'
   +'<details class="mdet lvmore"><summary><span>'+TR("恋のタイプを、もっとくわしく")+'<small>'+TR("恋の傾向・いいところ・気をつけたいところ・恋の相性")+'</small></span></summary>'
   +'<p class="desc">'+esc(P.desc)+'</p>'
@@ -671,8 +672,9 @@ function lvShow(t){const me=window.__me,P=lvTy(t);if(!me)return;const el=$("lvRe
   +'<div class="cpl"><div class="o"><em>'+TR("気が合う相手")+'</em><b>'+esc(nm(P.best[0]))+'</b>'+esc(P.best[1])+'</div><div class="x"><em>'+TR("すれ違いやすい相手")+'</em><b>'+esc(nm(P.hard[0]))+'</b>'+esc(P.hard[1])+'</div></div></details></div>';}
  h+='<p class="lvnote">'+TR("恋をしたときの気持ちは、その時によって少し変わります。答え直すと、ちがう質問が出て、結果が変わることもあります。")+'</p><button class="qlink" type="button" id="lvRedo">'+TR("恋愛編に答え直す")+'</button>';
  el.innerHTML=h;
- const ptS=$("lvPt"),ptR=$("lvPtR"),drawPt=()=>{if(!ptS||!ptR)return;const v=ptS.value;ptR.innerHTML=v?lvPair(t,v,sit):"";ptR.hidden=!v;};
+ const ptS=$("lvPt"),ptR=$("lvPtR"),drawPt=()=>{if(!ptS||!ptR)return;const v=ptS.value;ptR.innerHTML=v?lvPair(t,v,sit):"";ptR.hidden=!v;const w=$("lvPtImgW");if(w)w.hidden=!v;};
  if(ptS){ptS.onchange=()=>{if(st.love){st.love.pt=ptS.value||null;saveResult();}drawPt();try{track("love_partner");}catch(e){}};drawPt();}
+ if($("lvPtImg"))$("lvPtImg").onchange=e=>{window.__lvPtImg=e.target.checked;};if($("lvPtImgW")&&!(ptS&&ptS.value))$("lvPtImgW").hidden=true;
  if($("lvShare"))$("lvShare").onclick=()=>lvShareRun(t);
  if($("lvRedo"))$("lvRedo").onclick=()=>{el.hidden=true;$("lvSit").hidden=false;$("love").scrollIntoView({behavior:"smooth",block:"start"});};}
 async function lvShareRun(t){track("love_share_click");const b=$("lvShare"),lbl=b.textContent;b.disabled=true;b.textContent=TR("画像をつくっています…");
@@ -709,7 +711,7 @@ async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=doc
   c.fillStyle=pos<.35?LVC.rose:pos<.7?LVC.rose2:LVC.ink;c.textAlign="left";c.beginPath();c.arc(x+8,y-11,6,0,Math.PI*2);c.fill();
   fitF(w,colW-34,pos<.2?34:30);c.fillText(w,x+28,y);}));
  c.textAlign="center";c.font="600 28px "+MONO;c.fillStyle=LVC.ink;c.fillText(SHARE_URL.replace("https://",""),W/2,H-46);c.textAlign="left";return cv;}
-async function lvSheet(P){const {SANS,MONO}=await lvFonts(),LP=(st.love&&st.love.sit!=="none"&&st.love.pt&&LV.partner&&LV.partner[st.love.pt])?st.love:null,W=1080,H=LP?2600:1700,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
+async function lvSheet(P){const {SANS,MONO}=await lvFonts(),LP=(window.__lvPtImg&&st.love&&st.love.sit!=="none"&&st.love.pt&&LV.partner&&LV.partner[st.love.pt])?st.love:null,W=1080,H=LP?2600:1700,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const wrap=(t,w)=>wrapLines(c,t,w,9);
  c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);c.fillStyle=LVC.rose;c.fillRect(0,0,W,14);
  c.font="600 26px "+MONO;c.fillStyle=LVC.muted;c.fillText("16TYPE+  "+TR("恋愛編"),70,95);c.font="600 34px "+SANS;c.fillStyle=LVC.rose;c.fillText(TR("恋のときのあなたは"),70,185);
