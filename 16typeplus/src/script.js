@@ -353,7 +353,7 @@ function render(instant){
  {const kf=$("karteFig");if(kf){const tk=(window.__karteTok=(window.__karteTok||0)+1);setTimeout(()=>drawKarte().then(cv=>{if(tk!==window.__karteTok)return;$("karteImg").src=cv.toDataURL("image/png");$("karteImg").alt=TR("性格カルテ");kf.hidden=false;}).catch(()=>{}),0);}}
  {const K=ktStu(KT[born+">"+now]),el=$("kt");window.__me.kt=K||null;["hWorryH","hWorryQ","hWorry"].forEach(i=>{const x=$(i);if(x)x.style.display=(K&&K.aru)?"none":"";});if(el){el.hidden=!K;const box=(id,cls)=>{let x=$(id);if(!x){x=document.createElement("div");x.id=id;x.className=cls;document.querySelector(".hero").appendChild(x);}return x;};box("coreBox","corebox").innerHTML=K?coreCard(born,now):"";(window.__me&&(window.__me.ktKarai=K?K.karai:"")),(fx=>{fx.classList.toggle("wait2",$("coreBox").classList.contains("wait2"));return fx;})(box("funBox","funbox")).innerHTML=K?'<p class="kfh">'+(born===now?TR("あなたは、こんな人"):TR("気質と性格をあわせると、あなたはこんな人"))+'</p><dl class="ktl"><dt>'+TR("言いそうなこと")+'</dt><dd class="say">'+esc(K.say)+'</dd><dt>'+TR("やりそうなこと")+'</dt><dd>'+esc(K.do)+'</dd></dl><div class="ktk"><span>'+TR("辛口のひと言")+'</span>'+esc(K.karai)+'</div>':"";
  if(K)el.innerHTML='<h3 class="kth">'+TR("くわしい鑑定")+'</h3>'+(K.aru?(()=>{const yureH=born!==now?TR("{a} と {b} を行き来しやすいわけ").replace("{a}",born).replace("{b}",now):TR("結果が変わりにくいわけ"),hT=(f,h)=>f==="yure"?yureH:TR(h);
-   const sec=([f,h],n)=>'<div class="kts kt-'+f+'"><h4>'+(n?'<span class="ktn">'+n+'</span>':'')+'<i aria-hidden="true">'+({aru:"?",why:"!",yure:"⇄",plus:"+",hidden:"✦",tip:"✓"})[f]+'</i>'+hT(f,h)+'</h4>'+kfmt(K[f],f)+(f==="yure"?swayNote(born,now)+yureSee(born,now):'')+'</div>';
+   const sec=([f,h],n)=>'<div class="kts kt-'+f+'"><h4>'+(n?'<span class="ktn">'+n+'</span>':'')+hT(f,h)+'</h4>'+kfmt(K[f],f)+(f==="yure"?swayNote(born,now)+yureSee(born,now):'')+'</div>';
    /* 大事な3つ（こんなこと→どうして→生かすヒント）だけ先に見せ、残りは「もっと読む」にたたむ */
    const main=[["aru","こんなこと、ありませんか？"],["why","どうしてそうなるの？"],["tip","生かすヒント"]].filter(([f])=>K[f]),more=[["yure","16タイプの結果が変わるわけ"],["plus","悩みを、こう見てみる"],["hidden","あなたの、もう一つの力"]].filter(([f])=>K[f]);
    return main.map((x,i)=>sec(x,i+1)).join("")+(more.length?'<details class="mdet ktmore"><summary><span>'+TR("もっと読む")+'<small>'+more.map(([f,h])=>hT(f,h)).join(TR("・"))+'</small></span></summary>'+more.map(x=>sec(x,0)).join("")+'</details>':'');})():'<p class="ktb">'+esc(K.body)+'</p>')+(K.aru?'':'<dl class="ktl"><dt>'+TR("悩みやすいこと")+'</dt><dd>'+esc(K.worry)+'</dd></dl>');}}window.__me.karaiC=strip(C.karai||"");drawBalance(N);lvInit();saveResult();layoutResult();recPick=null;drawRec();
@@ -600,10 +600,10 @@ function lvInit(){if(typeof LV==="undefined"||!LV||!LV.questions)return;let el=$
 /* 恋愛編：48問から16問（4つの軸×左右2問ずつ）を選ぶ。前回までに出た質問はあと回し */
 const LVK="16tp.lvused.v1";
 /* 恋の状況：片思い中・付き合っている（結婚も）・今はいない。質問と結果をこれに合わせる */
-const LVSIT=[["kata","片思い中"],["koi","付き合っている・結婚している"],["none","今はいない"]];
+const LVSIT=[["kata","片思い中"],["kini","気になる人がいる"],["koi","付き合っている・結婚している"],["none","今はいない"]];
 /* 年れいで合わない質問（例：「25歳までには結婚したい」）は、その年れいの人にだけ出す */
 function ageNow(){const t=new Date(),y=+st.y,m=+st.m,d=+st.d;if(!y)return null;let a=t.getFullYear()-y;if(t.getMonth()+1<m||(t.getMonth()+1===m&&t.getDate()<d))a--;return a;}
-function lvPick(sit){const Q=LV.questions,AG=ageNow(),ok=i=>(!sit||!Q[i].s||Q[i].s.includes(sit))&&!(Q[i].maxAge&&AG!=null&&AG>Q[i].maxAge),rec=new Set(sget(LVK)||[]),R=[["E","N","T","J"],["I","S","F","P"]],out=[];
+function lvPick(sit){if(sit==="kini")sit="kata";const Q=LV.questions,AG=ageNow(),ok=i=>(!sit||!Q[i].s||Q[i].s.includes(sit))&&!(Q[i].maxAge&&AG!=null&&AG>Q[i].maxAge),rec=new Set(sget(LVK)||[]),R=[["E","N","T","J"],["I","S","F","P"]],out=[];
  const pole=(ax,p)=>{const c=Q.map((q,i)=>i).filter(i=>Q[i].ax===ax&&Q[i].p===p&&ok(i));for(let j=0;j<c.length;j++){const r=j+Math.floor(Math.random()*(c.length-j));[c[j],c[r]]=[c[r],c[j]];}
   return c.filter(i=>!rec.has(i)).concat(c.filter(i=>rec.has(i))).slice(0,2);};
  const L={};["EI","SN","TF","JP"].forEach((ax,k)=>{L[R[0][k]]=pole(ax,R[0][k]);L[R[1][k]]=pole(ax,R[1][k]);});
@@ -628,18 +628,24 @@ function lvHook(born,now,love){const D=[0,1,2,3].filter(i=>born[i]!==now[i]),bs=
  if(S.length)s+=(LANG==="ja"?"":" ")+fx(TR("さらに、ふだんの {F} ではなく {T} が出て、「{X}」の面も出てきます。"));
  return s;}
 /* 恋愛タイプの文：22歳以下は〇〇_s、23歳以上は〇〇_w があればそちらを出す */
+/* 片思い中は「恋人」→「好きな人」、気になる人がいる時は「恋人・好きな人」→「気になる人」 */
+function lvRp(x,sit){if(typeof x!=="string"||(sit!=="kata"&&sit!=="kini"))return x;const ki=sit==="kini";
+ if(LANG==="en")return x.replace(/\byour partner\b/g,"your crush").replace(/\bYour partner\b/g,"Your crush").replace(/\bpartner\b/g,"crush");
+ if(LANG==="ko"){x=x.split("연인").join("좋아하는 사람");return ki?x.split("좋아하는 사람").join("신경 쓰이는 사람"):x;}
+ x=x.split("恋人").join("好きな人");return ki?x.split("好きな人").join("気になる人"):x;}
 function lvTy(t){const o=LV.types&&LV.types[t];if(!o)return o;const g=typeof ageNow==="function"?ageNow():null;const sf=g==null?"":g<=22?"_s":"_w",r={};for(const k in o){if(!/_[sw]$/.test(k))r[k]=sf&&o[k+sf]?uniW(o[k+sf]):o[k];}
  /* 片思い中は「恋人」を「好きな人」にする */
- if(st.love&&st.love.sit==="kata"){const rp=x=>typeof x!=="string"?x:LANG==="en"?x.replace(/\byour partner\b/g,"your crush").replace(/\bYour partner\b/g,"Your crush").replace(/\bpartner\b/g,"crush"):LANG==="ko"?x.split("연인").join("좋아하는 사람"):x.split("恋人").join("好きな人");
-  ["one","desc","good","care","tip","words","tag"].forEach(k=>{const v=r[k];if(typeof v==="string")r[k]=rp(v);else if(Array.isArray(v))r[k]=v.map(x=>Array.isArray(x)?[rp(x[0])].concat(x.slice(1)):rp(x));});}
+ if(st.love&&(st.love.sit==="kata"||st.love.sit==="kini")){const rp=x=>lvRp(x,st.love.sit);
+  ["one","desc","good","care","tip","words","tag","kata_try","kata_habit","kata_word"].forEach(k=>{const v=r[k];if(typeof v==="string")r[k]=rp(v);else if(Array.isArray(v))r[k]=v.map(x=>Array.isArray(x)?[rp(x[0])].concat(x.slice(1)):rp(x));});}
  return r;}
 function lvQ(x){x=String(x||"");return /^[「“"]/.test(x)?x:TR("「")+x+TR("」");}
 const LVBLK={kata:["片思い中のあなたへ",[["kata_try","今週やってみること"],["kata_habit","片思いでやりがちなこと"],["kata_word","相手に伝わるひと言"]]],
+ kini:["気になる人がいるあなたへ",[["kata_try","今週やってみること"],["kata_habit","気になる人がいる時にやりがちなこと"],["kata_word","相手に伝わるひと言"]]],
  koi:["付き合っているあなたへ",[["fight","けんかしたとき"],["last","長く続けるコツ"],["koi_word","伝え方"]]],
  none:["今のあなたへ",[["none_start","好きな人ができやすいとき"],["fall","好きになると"],["none_try","今やってみること"]]]};
-function lvPair(me,pt,sit){const P2=LV.partner&&LV.partner[pt],AXT=(sit==="kata"&&LV.axis_kata)||LV.axis||{};if(!P2)return "";
+function lvPair(me,pt,sit){const P2=LV.partner&&LV.partner[pt],AXT=((sit==="kata"||sit==="kini")&&LV.axis_kata)||LV.axis||{};if(!P2)return "";
  const d=[0,1,2,3].filter(i=>me[i]!==pt[i]).map(i=>AXT[me[i]+">"+pt[i]]).filter(Boolean).slice(0,2);
- return '<p class="lvptn"><b>'+pt+'</b>'+p16h(pt)+'</p><p>'+esc(P2[sit==="kata"?"pt_kata":"pt_koi"]||"")+'</p>'
+ return '<p class="lvptn"><b>'+pt+'</b>'+p16h(pt)+'</p><p>'+esc(lvRp(P2[(sit==="kata"||sit==="kini")?"pt_kata":"pt_koi"]||"",sit))+'</p>'
   +'<p class="lvpth">'+TR("2人のあいだで、起きやすいこと")+'</p>'+(d.length?'<ul class="lvptl">'+d.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul>':'<p>'+esc(AXT.same||"")+'</p>');}
 function lvShow(t){const me=window.__me,P=lvTy(t);if(!me)return;const el=$("lvRes");el.hidden=false;$("lvStart").hidden=true;$("lvQ").hidden=true;if($("lvSit"))$("lvSit").hidden=true;
  const sit=(st.love&&st.love.sit)||"koi";
@@ -650,7 +656,7 @@ function lvShow(t){const me=window.__me,P=lvTy(t);if(!me)return;const el=$("lvRe
  if(P){const nm=k=>k+p16(k),B=LVBLK[sit]||LVBLK.koi,used=B[1].map(x=>x[0]);
   h+='<div class="lvp"><p class="lvsub">'+TR("恋のときのあなたは")+'</p><p class="lvname">'+esc(P.t)+p16h(P.t)+'</p><p class="one">'+lvQ(esc(P.one))+'</p>'
   +'<div class="lvsit-r"><p class="lvsith">'+TR(B[0])+'</p>'+B[1].filter(([k])=>P[k]).map(([k,hh])=>'<div class="lvs lvs-'+k+'"><h3>'+TR(hh)+'</h3><p>'+esc(P[k])+'</p></div>').join("")+'</div>'
-  +(sit!=="none"?'<div class="lvpt"><label class="lvptq" for="lvPt">'+TR(sit==="kata"?"好きな人の16タイプ（わかれば）":"恋人の16タイプ（わかれば）")+'</label><select id="lvPt"><option value="">'+TR("16タイプを選ぶ")+'</option>'+Object.keys(D.NICK).map(k=>'<option value="'+k+'"'+(st.love&&st.love.pt===k?' selected':'')+'>'+esc(nm(k))+'</option>').join("")+'</select><p class="hint">'+TR("16タイプだけで出す、2人のヒントです。")+'</p><div id="lvPtR" class="lvptr"></div></div>':'')
+  +(sit!=="none"?'<div class="lvpt"><label class="lvptq" for="lvPt">'+TR(sit==="kata"?"好きな人の16タイプ（わかれば）":sit==="kini"?"気になる人の16タイプ（わかれば）":"恋人の16タイプ（わかれば）")+'</label><select id="lvPt"><option value="">'+TR("16タイプを選ぶ")+'</option>'+Object.keys(D.NICK).map(k=>'<option value="'+k+'"'+(st.love&&st.love.pt===k?' selected':'')+'>'+esc(nm(k))+'</option>').join("")+'</select><p class="hint">'+TR("16タイプだけで出す、2人のヒントです。")+'</p><div id="lvPtR" class="lvptr"></div></div>':'')
   +'<button class="btn primary" type="button" id="lvShare">'+TR("恋愛編の結果を画像でシェア")+'</button>'
   +'<details class="mdet lvmore"><summary><span>'+TR("恋のタイプを、もっとくわしく")+'<small>'+TR("恋の傾向・いいところ・気をつけたいところ・恋の相性")+'</small></span></summary>'
   +'<p class="desc">'+esc(P.desc)+'</p>'
@@ -711,10 +717,10 @@ async function lvSheet(P){const {SANS,MONO}=await lvFonts(),LP=(st.love&&st.love
  const nm=k=>k+p16(k);
  const pair=(mark,color,k,text)=>{c.font="700 32px "+SANS;c.fillStyle=color;c.fillText(mark+"  "+nm(k),70,y);y+=46;c.font="500 25px "+SANS;c.fillStyle=LVC.ink;wrap(text,W-140).slice(0,3).forEach(l=>{c.fillText(l,70,y);y+=36;});y+=24;};
  pair(TR("気が合う相手"),LVC.rose,P.best[0],P.best[1]);pair(TR("すれ違いやすい相手"),LVC.muted,P.hard[0],P.hard[1]);
- if(LP){const me=window.__me,pt=LP.pt,kata=LP.sit==="kata",P2=LV.partner[pt],AXT=(kata&&LV.axis_kata)||LV.axis||{},i0=[0,1,2,3].find(i=>P.t[i]!==pt[i]),tip=i0==null?AXT.same:AXT[P.t[i0]+">"+pt[i0]];
+ if(LP){const me=window.__me,pt=LP.pt,kata=LP.sit==="kata"||LP.sit==="kini",P2=LV.partner[pt],AXT=(kata&&LV.axis_kata)||LV.axis||{},i0=[0,1,2,3].find(i=>P.t[i]!==pt[i]),tip=i0==null?AXT.same:AXT[P.t[i0]+">"+pt[i0]];
   c.strokeStyle=LVC.rule;c.lineWidth=2;c.beginPath();c.moveTo(70,y);c.lineTo(W-70,y);c.stroke();y+=60;
-  c.font="700 32px "+SANS;c.fillStyle=LVC.rose;c.fillText("♡  "+(kata?TR("好きな人"):TR("恋人"))+"  "+nm(pt),70,y);y+=46;
-  c.font="500 25px "+SANS;c.fillStyle=LVC.ink;[P2[kata?"pt_kata":"pt_koi"],tip].filter(Boolean).forEach(tx=>{wrap(tx,W-140).slice(0,3).forEach(l=>{c.fillText(l,70,y);y+=36;});y+=14;});}
+  c.font="700 32px "+SANS;c.fillStyle=LVC.rose;c.fillText("♡  "+(LP.sit==="kini"?TR("気になる人"):kata?TR("好きな人"):TR("恋人"))+"  "+nm(pt),70,y);y+=46;
+  c.font="500 25px "+SANS;c.fillStyle=LVC.ink;[lvRp(P2[kata?"pt_kata":"pt_koi"],LP.sit),tip].filter(Boolean).forEach(tx=>{wrap(tx,W-140).slice(0,3).forEach(l=>{c.fillText(l,70,y);y+=36;});y+=14;});}
  let out=cv,c2=c,H2=H;if(LP){H2=Math.max(1700,Math.ceil(y+130));out=document.createElement("canvas");out.width=W;out.height=H2;c2=out.getContext("2d");c2.drawImage(cv,0,0);}
  c2.font="600 28px "+MONO;c2.fillStyle=LVC.ink;c2.textAlign="center";c2.fillText(SHARE_URL.replace("https://",""),W/2,H2-50);c2.textAlign="left";return out;}
 /* ---- 性格の履歴書（1枚の画像） ---- */
