@@ -45,7 +45,7 @@ function reasonC(k,L,c){
   return {"偏官":TR("生まれた日に、勢いで動く力が強く出ています。予定外の場面ほど、力を出せる人。"),"偏財":TR("生まれた日に、チャンスをつかむ力が強く出ています。その場の流れに乗るほど、力を出せる人。"),"偏印":TR("生まれた日に、ひらめきを大事にする力が強く出ています。決まった型より、自分なりのやり方で力を出す人。"),"傷官":TR("生まれた日に、気分や感覚で動く力が強く出ています。気分が乗ったときに、一気に力を出す人。"),"劫財":TR("生まれた日に、仲間と一緒に力を出すところが強く出ています。まわりと一緒に動くほど、力を出せる人。")}[top(["偏官","偏財","偏印","傷官","劫財"])];}
  if(L==="A")return c.in_>c.self?TR("生まれた日に、まわりから支えてもらう力が強く出ています。安心できる場所があるので、自分で決めて進める人。"):TR("生まれた日に、自分を支える力が強く出ています。人にどう思われるかを気にしすぎず、自分で決めて進める人。");
  const off=(c.g["偏官"]||0)+(c.g["正官"]||0),mx=Math.max(c.ex,c.en,off);
- return mx===c.ex?TR("生まれた日に、思ったことを外に出す星が多く出ています。そのぶん気持ちが動きやすく、小さなことにも気づける人。"):mx===c.en?TR("生まれた日に、人やモノと関わる星が多く出ています。そのぶんまわりの変化に敏感で、慎重に動ける人。"):TR("生まれた日に、まわりの期待を受け取る星が多く出ています。そのぶん空気をよく読み、慎重に動ける人。");}
+ return mx===c.ex?TR("生まれた日に、思ったことを外に出すところが強く出ています。そのぶん気持ちが動きやすく、小さなことにも気づける人。"):mx===c.en?TR("生まれた日に、人やモノと関わるところが強く出ています。そのぶんまわりの変化に敏感で、慎重に動ける人。"):TR("生まれた日に、まわりの期待を受け取るところが強く出ています。そのぶん空気をよく読み、慎重に動ける人。");}
 function natal(y,m,d){const days=Math.floor(Date.UTC(y,m-1,d)/864e5);const num=(((days+17)%60)+60)%60+1;const s=(num-1)%10,b=(num-1)%12;
  const L=CH[s],i=s%2===0?((b-L)%12+12)%12:((L-b)%12+12)%12,u=ST[i];
  let t=(s%2===0?"E":"I")+(s>=4?"S":"N")+([0,1,4,8,9,11].includes(b)?"T":"F")+G[u];
@@ -240,7 +240,7 @@ function drawQ(){/* 数は「最大」から見せて、減ることはあって
  ch.hidden=!CH2;ch.textContent=CH2;
  const o=$("qOpts");o.innerHTML="";
  if(qi<ord.length){const qn=ord[qi],q=QZ.Q[qn],A=AXQ[AXN[q.ax]];
-  $("qAxis").textContent=A.name;$("qAxis").style.color="var("+A.c+")";$("qText").textContent=q.q;$("qEx").textContent=(q.ex_s&&(()=>{const g=ageNow();return g!=null&&g<=22;})())?q.ex_s:q.ex;$("qExW").hidden=false;$("qExW").open=true;
+  $("qAxis").textContent=A.name;$("qAxis").style.color="var("+A.c+")";{const stu=(()=>{const g=ageNow();return g!=null&&g<=22;})();$("qText").textContent=(stu&&q.q_s)?q.q_s:q.q;$("qEx").textContent=(stu&&q.ex_s)?q.ex_s:q.ex;}$("qExW").hidden=false;$("qExW").open=true;
   SCALE.forEach(([t,v,sz])=>{const bt=document.createElement("button");bt.type="button";bt.style.setProperty("--qc","var("+A.c+")");
    bt.innerHTML='<i style="width:'+sz+'px;height:'+sz+'px"></i>'+t;bt.setAttribute("aria-pressed",qa[qn]===v);
    bt.onclick=()=>{if(window.__qLock)return;window.__qLock=1;qa[qn]=v;bt.setAttribute("aria-pressed","true");setTimeout(()=>{window.__qLock=0;next();},180);};o.appendChild(bt);});
@@ -620,7 +620,7 @@ function lvPick(sit){const Q=LV.questions,AG=ageNow(),ok=i=>(!sit||!Q[i].s||Q[i]
  for(let j=0;j<4;j++)R[j%2].forEach(p=>{const i=L[p][j>>1];if(i!=null)out.push(i);});return out;}
 function lvMark(qs){const u=(sget(LVK)||[]).filter(i=>!qs.includes(i)).concat(qs);sset(LVK,u.slice(-32));}
 function lvDraw(){const Q=lv.qs.map(i=>LV.questions[i]),q=Q[lv.i],A=AX[AXN[q.ax]];$("lvCount").textContent=(lv.i+1)+" / "+Q.length;$("lvProg").style.width=(lv.i/Q.length*100)+"%";
- $("lvText").textContent=q.q;$("lvEx").textContent=q.ex||"";$("lvExW").hidden=!q.ex;const o=$("lvOpts");o.innerHTML="";
+ {const g=ageNow(),k=g==null?"":g<=22?"_s":"_w",qq=q["q"+k]||q.q,ee=q["ex"+k]||q.ex;$("lvText").textContent=qq;$("lvEx").textContent=ee||"";$("lvExW").hidden=!ee;}const o=$("lvOpts");o.innerHTML="";
  LVSCALE.forEach(([t,v,sz])=>{const bt=document.createElement("button");bt.type="button";bt.style.setProperty("--qc","var(--rose)");bt.innerHTML='<i style="width:'+sz+'px;height:'+sz+'px"></i>'+t;bt.setAttribute("aria-pressed",lv.a[lv.i]===v);
   bt.onclick=()=>{if(window.__lvLock)return;window.__lvLock=1;lv.a[lv.i]=v;bt.setAttribute("aria-pressed","true");setTimeout(()=>{window.__lvLock=0;lv.i++;if(lv.i>=Q.length)lvFinish();else lvDraw();},180);};o.appendChild(bt);});}
 function lvFinish(){const me=window.__me,sc={EI:0,SN:0,TF:0,JP:0};
@@ -889,7 +889,8 @@ function layoutResult(){const hero=document.querySelector(".hero");if(!hero)retu
 
 /* ---- 性格の記録：受けるたびの16タイプをならべて、変わる文字・変わらない文字を見せる ---- */
 const KH="16tp.hist.v1",HTAGS_W=["仕事が忙しい","人と会うことが多い","ひとりの時間が多い","休みが多い","落ちこんでいた"],HTAGS_S=["テスト期間","部活や行事がいそがしい","人と会うことが多い","ひとりの時間が多い","長い休み","落ちこんでいた"];
-function htags(){const g=typeof ageNow==="function"?ageNow():null;return g!=null&&g<=22?HTAGS_S:HTAGS_W;}
+const HTAGS_U=["テスト期間","就活中","実習・研修","人と会うことが多い","ひとりの時間が多い","長い休み","落ちこんでいた"];
+function htags(){const g=typeof ageNow==="function"?ageNow():null;return g==null||g>22?HTAGS_W:g>=19?HTAGS_U:HTAGS_S;}
 const ymdOf=()=>st.y+"-"+st.m+"-"+st.d;
 const today=()=>{const t=new Date(Date.now()-new Date().getTimezoneOffset()*6e4);return t.toISOString().slice(0,10);};
 function histAll(){const h=sget(KH);return Array.isArray(h)?h.filter(r=>r&&typeof r==="object"&&typeof r.b==="string"&&typeof r.d==="string"&&/^[EI][SN][TF][JP]$/.test(r.t)):[];}
