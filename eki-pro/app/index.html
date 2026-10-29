@@ -4857,7 +4857,7 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
     if(VS.off||!window.fetch||location.protocol==='file:'){ done(null); return; }
     var h={'Content-Type':'application/json','x-pk-device':devId()};
     try{ var tk=localStorage.getItem('member_token')||sessionStorage.getItem('member_token'); if(tk) h['Authorization']='Bearer '+tk; }catch(_){}
-    var ctl=window.AbortController?new AbortController():null, tm=setTimeout(function(){ try{ ctl&&ctl.abort(); }catch(_){} },9000);
+    var ctl=window.AbortController?new AbortController():null, tm=setTimeout(function(){ try{ ctl&&ctl.abort(); }catch(_){} },20000);   // 長く話したときも直しが間に合うように（9秒→20秒）
     fetch(FN,{method:'POST',headers:h,body:JSON.stringify(body),signal:ctl?ctl.signal:undefined}).then(function(r){
       clearTimeout(tm);
       if(r.status===404||r.status===405){ VS.off=true; done(null); return; }
@@ -4924,7 +4924,10 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
     vfxCall({text:part},function(j,why){
       if(why==='end'){ say(m,''); endPop(); return; }
       if(!j||typeof j.text!=='string'){ if(!quiet) say(m,''); return; }
-      if(ta.value===snap&&j.changed){ ta.value=base===null?j.text:joinText(base,j.text); fire(ta); ta.__vfxLast=ta.value; }
+      if(j.changed){
+        if(ta.value===snap){ ta.value=base===null?j.text:joinText(base,j.text); fire(ta); ta.__vfxLast=ta.value; }
+        else { var at=ta.value.lastIndexOf(part); if(at>=0){ ta.value=ta.value.slice(0,at)+j.text+ta.value.slice(at+part.length); fire(ta); ta.__vfxLast=ta.value; } }   // 直しが届くまでに続きを話した・打ったときも、その部分だけ入れかえる（直しを捨てない。2026-10-29）
+      }
       say(m,(j.changed&&!j.option)?'✨ 読みやすく整えました':'');   // 回数は画面に出さない（鑑定者本人の指示 2026-10-27）
       if(!j.option&&j.left===0) setTimeout(endPop,1200);
     });
@@ -4937,29 +4940,45 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   function say(m,t){ m.textContent=t||''; }
   function fire(ta){ try{ ta.dispatchEvent(new Event('input',{bubbles:true})); }catch(_){} }
   function start(ta,b,m){
-    if(cur){ try{ cur.stop(); }catch(e){} return; }
+    if(cur){ cur.__user=true; try{ cur.stop(); }catch(e){} return; }
     if(!SR){ say(m,NOSR); return; }
-    var r; try{ r=new SR(); }catch(e){ say(m,NOSR); return; }
-    r.lang='ja-JP'; r.interimResults=true; r.continuous=false; r.maxAlternatives=1;
-    var base=ta.value, fin='', shown='', got=false, err='';
-    r.onstart=function(){ b.classList.add('on'); b.textContent=ON; say(m,'お話しください…（話し終わると自動で止まります）'); };
-    r.onresult=function(e){
-      var interim=''; for(var i=e.resultIndex;i<e.results.length;i++){ var t=e.results[i][0].transcript; if(e.results[i].isFinal) fin+=t; else interim+=t; }
-      shown=fin+interim; got=got||!!shown.trim();
-      ta.value=joinText(base,fixText(shown)); fire(ta);
-    };
-    r.onerror=function(e){ err=(e&&e.error)||''; };
-    r.onend=function(){
+    /* iPhone などは、少し間があくと聞き取りが自動で終わる。■ 止める を押すまで（または しばらく黙るまで）、自動でつなげて聞き続ける。
+       話し終わってから、話した全部をまとめて1回で直す（前後の言葉があるほど占いの言葉が正しく直る）。鑑定者本人の指摘 2026-10-29 */
+    var base=ta.value, done='', shown='', got=false, err='', t0=Date.now(), lastHeard=Date.now(), tries=0, SILENT=7000;
+    function mk(){
+      var r; try{ r=new SR(); }catch(e){ return null; }
+      r.lang='ja-JP'; r.interimResults=true; r.continuous=true; r.maxAlternatives=1;
+      var fin='', now='';
+      r.onresult=function(e){
+        var interim=''; for(var i=e.resultIndex;i<e.results.length;i++){ var t=e.results[i][0].transcript; if(e.results[i].isFinal) fin+=t; else interim+=t; }
+        now=fin+interim; shown=done+now; got=got||!!shown.trim(); lastHeard=Date.now();
+        ta.value=joinText(base,fixText(shown)); fire(ta);
+      };
+      r.onerror=function(e){ err=(e&&e.error)||''; };
+      r.onend=function(){
+        if(r.__ended) return; r.__ended=true;   // 終わりの知らせが2回来ても1回だけ
+        if(cur!==r&&cur) return;
+        done=done+now; now=''; fin='';
+        var hard=/not-allowed|service-not-allowed|audio-capture|network/.test(err);
+        if(!r.__user&&!hard&&Date.now()-lastHeard<SILENT&&Date.now()-t0<180000&&tries<60){ tries++; err=''; var n=mk(); if(n){ cur=n; try{ n.start(); return; }catch(e){} } }
+        finish();
+      };
+      return r;
+    }
+    function finish(){
       cur=null; b.classList.remove('on'); b.textContent=IDLE;
-      if(got){ var part=fixText(fin||shown); ta.value=joinText(base,part); fire(ta);
+      if(got){ var part=fixText(done||shown); ta.value=joinText(base,part); fire(ta);
         try{ ta.focus(); var n=ta.value.length; ta.setSelectionRange(n,n); }catch(_){}
-        say(m,''); if(canFix()) smartFix(ta,m,base,part,false); else freeUse(); return; }   // うまく入ったときは何も出さない（毎回の一言は不要。発注者指示 2026-10-18）
+        say(m,''); ta.__vfxLast=ta.value;   // 欄から離れたときの直し（キーボードの文字）と二重に直さない
+        if(canFix()) smartFix(ta,m,base,part,false); else freeUse(); return; }   // うまく入ったときは何も出さない（毎回の一言は不要。発注者指示 2026-10-18）
       if(err==='not-allowed'||err==='service-not-allowed') say(m,'マイクが許可されていません。端末の設定でマイクを許可するか、キーボードのマイクボタンからお話しください。');
       else if(err==='network') say(m,'通信できないため、声の入力が使えませんでした。キーボードのマイクボタンからお話しください。');
       else if(err==='audio-capture') say(m,'マイクが見つかりませんでした。');
       else say(m,'声が聞き取れませんでした。もう一度、🎤を押してお話しください。');
-    };
-    cur=r; try{ r.start(); }catch(e){ cur=null; say(m,'声の入力を始められませんでした。もう一度お試しください。'); }
+    }
+    var r=mk(); if(!r){ say(m,NOSR); return; }
+    b.classList.add('on'); b.textContent=ON; say(m,'お話しください…（話し終わったら「■ 止める」を押してください。しばらく黙っても止まります）');
+    cur=r; try{ r.start(); }catch(e){ cur=null; b.classList.remove('on'); b.textContent=IDLE; say(m,'声の入力を始められませんでした。もう一度お試しください。'); }
   }
   // 「✕ 全部消す」：欄の文字を1回で全部消す（1文字ずつ消すのは大変なため。発注者指示 2026-10-18）。
   //   押しまちがえても戻せるように、消したあと8秒間は「↩ 元に戻す」に変わる。欄が空のときは出さない。
@@ -4980,7 +4999,7 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
     function sync(){ c.style.display=(saved!==null||String(ta.value||'').length)?'':'none'; }
     function endUndo(){ saved=null; clearTimeout(timer); c.textContent=CLR; c.classList.remove('undo'); sync(); }
     c.addEventListener('click',function(){
-      if(cur){ try{ cur.stop(); }catch(e){} }
+      if(cur){ cur.__user=true; try{ cur.stop(); }catch(e){} }
       if(saved!==null){ ta.value=saved; fire(ta); endUndo(); try{ ta.focus(); }catch(_){} return; }
       if(!String(ta.value||'').length) return;
       saved=ta.value; ta.value=''; fire(ta); say(m,'');
