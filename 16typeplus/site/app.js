@@ -232,10 +232,16 @@ $("qBack").onclick=()=>{if(qi>0){qi--;saveQuiz();drawQ();}else{showQuiz(false);d
 function scoreAll(){const sc={EI:[0,0],SN:[0,0],TF:[0,0],JP:[0,0],AT:[0,0]};
  QZ.Q.forEach((q,i)=>{const v=qa[i];if(v==null)return;const A=AXQ[AXN[q.ax]];if(q.p===A.a){sc[q.ax][0]+=v;sc[q.ax][1]+=5-v;}else{sc[q.ax][1]+=v;sc[q.ax][0]+=5-v;}});
  Object.keys(tbAns).forEach(k=>{const A=AXQ[AXN[k]];if(tbAns[k]===A.a)sc[k][0]+=3;else sc[k][1]+=3;});return sc;}
+/* 31問目から：迷っている文字の名前と、本当の残りの最大数を出す */
+function qLeftMsg(left){try{const sc=scoreAll(),cnt=k=>ord.filter(i=>QZ.Q[i].ax===k).length,und=["EI","SN","TF","JP","AT"].filter(k=>{const c=cnt(k),d=Math.abs(sc[k][0]-sc[k][1]);return c<AXCAP&&d<=STOP*Math.sqrt(c/6);});
+ const cur=QZ.Q[ord[qi]]&&QZ.Q[ord[qi]].ax;if(cur&&!und.includes(cur))und.unshift(cur);if(!und.length)throw 0;
+ const rem=Math.min(left,(ord.length-qi-1)+und.reduce((t,k)=>t+Math.max(0,AXCAP-cnt(k)),0)+und.length);
+ return TR("「{a}」だけ、あと少し聞きます。多くてもあと{n}問です").replace("{a}",und.map(k=>AXQ[AXN[k]].name).join(TR("」と「"))).replace("{n}",rem);}
+ catch(e){return TR("迷っている文字だけ、あと少し聞きます（最大{n}問）").replace("{n}",left);}}
 function drawQ(){/* 数は「最大」から見せて、減ることはあっても増えないようにする */
  const fin=adDone&&qi>=ord.length,total=fin?ord.length+tbList.length:MAXQ;const left=Math.max(0,total-qi-1);
  if(qi<BASE){const l2=BASE-qi-1;$("qCount").innerHTML=(qi+1)+" / "+BASE+'<span class="qleft">'+(l2?TR("あと{n}問").replace("{n}",l2):(fin&&!left)?TR("最後の質問です"):TR("30問目です"))+'</span>';$("qProg").style.width=(qi/BASE*100)+"%";}
- else{$("qCount").innerHTML=TR("{n}問目").replace("{n}",qi+1)+'<span class="qleft">'+(!left?TR("最後の質問です"):fin?TR("あと{n}問").replace("{n}",left):TR("迷っている文字だけ、あと少し聞きます（最大{n}問）").replace("{n}",left))+'</span>';$("qProg").style.width="100%";}$("qNote").hidden=qi>0;
+ else{$("qCount").innerHTML=TR("{n}問目").replace("{n}",qi+1)+'<span class="qleft">'+(!left?TR("最後の質問です"):fin?TR("あと{n}問").replace("{n}",left):qLeftMsg(left))+'</span>';$("qProg").style.width="100%";}$("qNote").hidden=qi>0;
  let ch=$("qCheer");if(!ch){ch=document.createElement("p");ch.id="qCheer";ch.className="qcheer";$("qAxis").before(ch);}
  const add=ord.length-BASE;
  const CH=qi>=7&&qi<9?TR("いい調子です。直感で答えてくださいね。"):qi>=15&&qi<18?TR("最初の30問の半分まで来ました。途中で閉じても、続きから始められます。"):qi>=24&&qi<27&&!ext?TR("もう少しで30問です。ここで、答えがはっきりしたところとそうでないところを見分けます。"):qi>=BASE&&qi<BASE+3&&!fin?TR("30問が終わりました。ここからは、答えがはっきりしなかったところだけを聞きます。はっきりしたら、そこで終わります。"):qi===ord.length&&tbList.length?TR("最後に、2択の質問が{n}問だけあります。").replace("{n}",tbList.length):qi>=BASE+3&&left>0&&left<=5?(fin?TR("あと少し。残り{n}問です。").replace("{n}",left):TR("もう少しで終わります。")):"";
