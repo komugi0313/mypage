@@ -129,7 +129,7 @@ function chgSameText(rows){const sm=rows.filter(r=>r.same);
  if(!sm.length)return TR("4文字とも、結果によって変わっています。場面に合わせて、動き方を変えられる人です。");
  const J=LANG==="ja"?"":", ";
  return TR("前と同じなのは {L}。").replace("{L}",sm.map(r=>r.lt).join(TR("・")))+TR("{P}ところは、前の結果でも今の結果でも同じです。").replace("{P}",sm.map(r=>TR("「")+TR(CORE[r.lt])+TR("」")).join(J));}
-function chgWhy(r){return TR("{a}と{b}が変わるのは、生まれつきが {L}（{p}）だから。").replace("{a}",r.A.a).replace("{b}",r.A.b).replace("{L}",r.b).replace("{p}",TR(CORE[r.b]))+TR(CHG[r.b]);}
+function chgWhy(r){const wk=window.__me&&window.__me.weak;if(wk&&wk.includes(r.A.k))return TR("{a}と{b}が変わるのは、生年月日から見ても、どちらとも言いにくい文字だから。その時の毎日の過ごし方で、出るほうが変わりやすいです。").replace("{a}",r.A.a).replace("{b}",r.A.b);return TR("{a}と{b}が変わるのは、生まれつきが {L}（{p}）だから。").replace("{a}",r.A.a).replace("{b}",r.A.b).replace("{L}",r.b).replace("{p}",TR(CORE[r.b]))+TR(CHG[r.b]);}
 function drawChg(born,now,prev){let x=$("chgBox");if(!x){x=document.createElement("div");x.id="chgBox";x.className="chgbox";document.querySelector(".hero").appendChild(x);}
  if(!prev||!prev.length){x.hidden=true;x.innerHTML="";return;}x.hidden=false;
  const rows=chgData(born,now,prev);
@@ -335,7 +335,7 @@ function render(instant){
  {const gx=$("gapX");if(gx){const oneG=!gk.length;gx.innerHTML=oneG?'<div class="gx"><p>'+HN.same.both+'</p></div>':gk.map(k=>{const g=HN.gap[k];return '<div class="gx" style="--c:var('+cOfG(k)+')"><p class="gxh"><span class="ax">'+g.axis+'</span><span class="nw"><b>'+k[0]+'</b>'+g.from+TR(" ＋ ")+'<b>'+k[1]+'</b>'+g.to+'</span></p><p>'+g.both+'</p></div>';}).join("");}
   window.__worry=gk.length?[].concat(HN.gap[gk[0]].worry)[0]:[].concat(HN.same.worry)[0];}
  {const r0=document.querySelector("#recheck p"),ov=$("psOv");[r0,ov].forEach(x=>{if(x){x.classList.add("clamp3w");x.dataset.open="";}});setTimeout(clampAll,0);}
- window.__me={born,now,N,bAT,nAT,prev:(st.prev||[]).filter(t=>t!==now)};drawChg(born,now,window.__me.prev);drawPersona("now");
+ window.__me={born,now,N,bAT,nAT,weak:AX.filter(A=>aligned[A.k]).map(A=>A.k),prev:(st.prev||[]).filter(t=>t!==now)};drawChg(born,now,window.__me.prev);drawPersona("now");
  const nw=(a,b)=>'<span class="nw">'+a+'</span><span class="nw">'+b+'</span>';$("p16Born").innerHTML=nw(bornF.split("").map((ch,i)=>i<4&&aligned[AX[i].k]?'<span class="wk">'+ch+'</span>':ch).join(""),p16h(born));
  {let wn=$("wkNote");if(!wn){wn=document.createElement("p");wn.id="wkNote";wn.className="wknote";const nk=document.querySelector(".nicks");if(nk)nk.after(wn);}const anyW=AX.some(A=>aligned[A.k]);wn.innerHTML=(anyW?TR("気質の薄い文字は、生年月日からはどちらとも言えない文字です。"):"")+(bAT&&!sameAll?(anyW?"<br>":"")+TR("気質の最後の A/T も、生年月日から出しています。"):"");wn.hidden=!wn.innerHTML;}$("p16Now").innerHTML=nw(nowF,p16h(now));
  $("nkBorn").textContent=D.NICK[born];[["imBorn",born],["imNow",now]].forEach(([id,t])=>{const im=$(id);if(im){im.src=charSrc(t);im.alt=an(t);}});
