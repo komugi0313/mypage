@@ -628,7 +628,7 @@ function lvQ(x){x=String(x||"");return /^[「“"]/.test(x)?x:TR("「")+x+TR("�
 const LVBLK={kata:["片思い中のあなたへ",[["kata_try","今週やってみること"],["kata_habit","片思いでやりがちなこと"],["kata_word","相手に伝わるひと言"]]],
  koi:["付き合っているあなたへ",[["fight","けんかしたとき"],["last","長く続けるコツ"],["koi_word","伝え方"]]],
  none:["今のあなたへ",[["none_start","好きな人ができやすいとき"],["fall","好きになると"],["none_try","今やってみること"]]]};
-function lvPair(me,pt,sit){const P2=LV.partner&&LV.partner[pt],AXT=LV.axis||{};if(!P2)return "";
+function lvPair(me,pt,sit){const P2=LV.partner&&LV.partner[pt],AXT=(sit==="kata"&&LV.axis_kata)||LV.axis||{};if(!P2)return "";
  const d=[0,1,2,3].filter(i=>me[i]!==pt[i]).map(i=>AXT[me[i]+">"+pt[i]]).filter(Boolean).slice(0,2);
  return '<p class="lvptn"><b>'+pt+'</b>'+p16h(pt)+'</p><p>'+esc(P2[sit==="kata"?"pt_kata":"pt_koi"]||"")+'</p>'
   +'<p class="lvpth">'+TR("2人のあいだで、起きやすいこと")+'</p>'+(d.length?'<ul class="lvptl">'+d.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul>':'<p>'+esc(AXT.same||"")+'</p>');}

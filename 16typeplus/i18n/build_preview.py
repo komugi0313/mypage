@@ -36,12 +36,12 @@ def lang_data(lang):
         p=I+'love.{}.json'.format(lang)
         if os.path.exists(p):
             x=js(p); lvq=x.get('questions',lvq); lvt=x.get('types',lvt)
-    lvx=js('/home/user/mypage/16typeplus/love/love.json');lvp=lvx.get('partner',{});lva=lvx.get('axis',{})
+    lvx=js('/home/user/mypage/16typeplus/love/love.json');lvp=lvx.get('partner',{});lva=lvx.get('axis',{});lvk=lvx.get('axis_kata',{})
     if lang!='ja':
         p2=I+'love.{}.json'.format(lang)
         if os.path.exists(p2):
-            x2=js(p2);lvp=x2.get('partner',lvp);lva=x2.get('axis',lva)
-    LVd={'questions':lvq,'types':lvt,'partner':lvp,'axis':lva}
+            x2=js(p2);lvp=x2.get('partner',lvp);lva=x2.get('axis',lva);lvk=x2.get('axis_kata',lvk)
+    LVd={'questions':lvq,'types':lvt,'partner':lvp,'axis':lva,'axis_kata':lvk}
     carp='/home/user/mypage/16typeplus/content/career.json'
     CARd={}
     if os.path.exists(carp):
