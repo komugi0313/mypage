@@ -638,7 +638,11 @@ function lvHook(born,now,love){const D=[0,1,2,3].filter(i=>born[i]!==now[i]),bs=
  if(S.length)s+=(LANG==="ja"?"":" ")+fx(TR("さらに、ふだんの {F} ではなく {T} が出て、「{X}」の面も出てきます。"));
  return s;}
 /* 恋愛タイプの文：22歳以下は〇〇_s、23歳以上は〇〇_w があればそちらを出す */
-function lvTy(t){const o=LV.types&&LV.types[t];if(!o)return o;const g=typeof ageNow==="function"?ageNow():null;if(g==null)return o;const sf=g<=22?"_s":"_w",r={};for(const k in o){if(!/_[sw]$/.test(k))r[k]=o[k+sf]?uniW(o[k+sf]):o[k];}return r;}
+function lvTy(t){const o=LV.types&&LV.types[t];if(!o)return o;const g=typeof ageNow==="function"?ageNow():null;const sf=g==null?"":g<=22?"_s":"_w",r={};for(const k in o){if(!/_[sw]$/.test(k))r[k]=sf&&o[k+sf]?uniW(o[k+sf]):o[k];}
+ /* 片思い中は「恋人」を「好きな人」にする */
+ if(st.love&&st.love.sit==="kata"){const rp=x=>typeof x!=="string"?x:LANG==="en"?x.replace(/\byour partner\b/g,"your crush").replace(/\bYour partner\b/g,"Your crush").replace(/\bpartner\b/g,"crush"):LANG==="ko"?x.split("연인").join("좋아하는 사람"):x.split("恋人").join("好きな人");
+  ["one","desc","good","care","tip","words","tag"].forEach(k=>{const v=r[k];if(typeof v==="string")r[k]=rp(v);else if(Array.isArray(v))r[k]=v.map(x=>Array.isArray(x)?[rp(x[0])].concat(x.slice(1)):rp(x));});}
+ return r;}
 function lvQ(x){x=String(x||"");return /^[「“"]/.test(x)?x:TR("「")+x+TR("」");}
 const LVBLK={kata:["片思い中のあなたへ",[["kata_try","今週やってみること"],["kata_habit","片思いでやりがちなこと"],["kata_word","相手に伝わるひと言"]]],
  koi:["付き合っているあなたへ",[["fight","けんかしたとき"],["last","長く続けるコツ"],["koi_word","伝え方"]]],
