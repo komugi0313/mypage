@@ -940,10 +940,15 @@ const GAX=[["E","I"],["S","N"],["T","F"],["J","P"]];
 const GMANY={E:"集まると話が止まらず、気づいたら予定の時間を過ぎている。",I:"集まっても静かな時間がある。でも、それで気まずくならない。",S:"お店や日にちは、すぐ決まる。",N:"「今度あれやろう」という話で盛り上がる。そのまま話だけで終わることも多い。",T:"意見がちがっても、言い合ったあとはすっきりしている。",F:"だれかが元気がないと、すぐ気づいて声をかける。",J:"待ち合わせの時間と場所が、早めに決まる。",P:"当日の気分で、行き先が変わることがある。"};
 /* だれもいない文字ごとのコツ */
 const GNONE={E:"みんな、自分からは誘いにくい人です。帰る前に、次に会う日を決めておきましょう。",I:"みんな話すのが好きなので、話す人がかたよりやすいです。決める前に1人ずつ意見を聞いてみましょう。",S:"案はたくさん出るのに、細かいところがよく抜けます。お金と時間だけは、だれか1人が確認しましょう。",N:"いつものお店、いつもの流れになりやすいです。たまに、だれも行ったことのない場所を選んでみましょう。",T:"言いにくいことを、みんな言わずにためてしまいます。決めるときは多数決で、さっぱり決めましょう。",F:"話が早いぶん、言い方がきつくなることがあります。決まったあとに「ありがとう」をひと言。",J:"計画を立てる人がいません。日にちと集合場所だけは、その場で決めてしまいましょう。",P:"予定が変わると、みんな少し困ります。雨の日の案を1つ決めておきましょう。"};
+/* 職場・クラス・部活のグループ用 */
+const GMANY_W={"E": "話し合いで意見がどんどん出て、時間をこえることがある。", "I": "話し合いは静かだけど、あとからメッセージで、しっかりした意見が出てくる。", "S": "やることと担当は、すぐ決まる。", "N": "「こうしたらもっとよくなる」という話で盛り上がる。でも、決めるところまで進まないことがある。", "T": "意見がちがっても、言い合ったあとはすっきりしている。", "F": "疲れていそうな人がいると、すぐ気づいて声をかける。", "J": "締め切りと順番が、早めに決まる。", "P": "急な変更にも、みんなあわてずに動ける。"};
+const GNONE_W={"E": "みんな、自分からは話しかけにくい人です。困ったときに声をかける相手を、先に決めておきましょう。", "I": "みんな話すのが好きなので、話す人がかたよりやすいです。決める前に1人ずつ意見を聞いてみましょう。", "S": "案はたくさん出るのに、細かいところがよく抜けます。締め切りと数字だけは、だれか1人が確認しましょう。", "N": "いつものやり方になりやすいです。たまに、新しいやり方を1つ試してみましょう。", "T": "言いにくいことを、みんな言わずにためてしまいます。決めるときは理由を書き出して、さっぱり決めましょう。", "F": "話が早いぶん、言い方がきつくなることがあります。決まったあとに「ありがとう」をひと言。", "J": "段取りを組む人がいません。締め切りと担当だけは、その場で決めてしまいましょう。", "P": "予定が変わると、みんな少し困ります。うまくいかなかったときの案を1つ決めておきましょう。"};
+const GROLE_W=[["締め切りと担当を決める人", "EJ"], ["抜けやもれを確認する人", "SJ"], ["新しい案を出す人", "NP"], ["場の空気を明るくする人", "EP"], ["じっくり話を聞く人", "IF"], ["疲れている人に気づく人", "SF"], ["意見をまとめる人", "TJ"], ["損か得かを冷静に見る人", "IT"], ["急なトラブルにもあわてない人", "SP"], ["先のことを考えておく人", "NJ"], ["本音で相談できる相手になる人", "NF"], ["ちがう意見をはっきり言う人", "ET"]];
+const gWk=()=>typeof gst!=="undefined"&&gst&&gst.kind==="wk";
 /* 役まわり：性格の文字で決める。同じ役はなるべく重ならないようにする */
 const GROLE=[["日にちと場所を決める人","EJ"],["予約や持ち物を確認する人","SJ"],["新しい案を出す人","NP"],["その場を盛り上げる人","EP"],["じっくり話を聞く人","IF"],["元気がない人に気づく人","SF"],["意見をまとめる人","TJ"],["損か得かを冷静に見る人","IT"],["予定が変わってもあわてない人","SP"],["先のことを考えておく人","NJ"],["本音で話せる相手になる人","NF"],["ちがう意見をはっきり言う人","ET"]];
 function gRoles(types){const used=new Set();return types.map(t=>{let best=null,bs=-1;
-  GROLE.forEach(([r,k],i)=>{const s=[...k].filter(c=>t.includes(c)).length*2-(used.has(i)?3:0);if(s>bs){bs=s;best=i;}});used.add(best);return GTR(GROLE[best][0]);});}
+  (gWk()?GROLE_W:GROLE).forEach(([r,k],i)=>{const s=[...k].filter(c=>t.includes(c)).length*2-(used.has(i)?3:0);if(s>bs){bs=s;best=i;}});used.add(best);return GTR((gWk()?GROLE_W:GROLE)[best][0]);});}
 const GDEF=new Set();function san(n){const t=GTR("さん");return n===GTR("あなた")||GDEF.has(n)||(t&&n.endsWith(t))||/(ちゃん|くん|君|様|さま|氏|님|씨)$/.test(n)?n:n+t;}
 function gSame(a,b){let n=0;for(let i=0;i<4;i++)if(a[i]===b[i])n++;return n;}
 function groupResult(members){
@@ -951,9 +956,9 @@ function groupResult(members){
  const cnt=k=>GAX.map(([a,b],i)=>{const ca=M.filter(m=>m[k][i]===a).length;return {a,b,ca,cb:n-ca};});
  const now=cnt("now"),born=cnt("born");
  /* 特徴：偏りが大きい軸から最大3つ */
- const feats=now.map(x=>({x,r:Math.abs(x.ca-x.cb)/n})).filter(o=>o.r>=1/3).sort((p,q)=>q.r-p.r).slice(0,3).map(({x})=>{const L=x.ca>x.cb?x.a:x.b;return {L,text:GTR(GMANY[L])};});
+ const feats=now.map(x=>({x,r:Math.abs(x.ca-x.cb)/n})).filter(o=>o.r>=1/3).sort((p,q)=>q.r-p.r).slice(0,3).map(({x})=>{const L=x.ca>x.cb?x.a:x.b;return {L,text:GTR((gWk()?GMANY_W:GMANY)[L])};});
  /* コツ：だれもいない文字（性格で見る） */
- let tips=[];now.forEach(x=>{if(x.ca===0)tips.push({L:x.a,text:GTR(GNONE[x.a])});if(x.cb===0)tips.push({L:x.b,text:GTR(GNONE[x.b])});});
+ let tips=[];now.forEach(x=>{if(x.ca===0)tips.push({L:x.a,text:GTR((gWk()?GNONE_W:GNONE)[x.a])});if(x.cb===0)tips.push({L:x.b,text:GTR((gWk()?GNONE_W:GNONE)[x.b])});});
  /* はっきり少ないとき（全体の3分の1以下）だけ「少数派」と言う。半々なら出さない */
  if(!tips.length){const x=now.slice().sort((p,q)=>Math.abs(q.ca-q.cb)-Math.abs(p.ca-p.cb))[0];const few=x.ca<x.cb?x.a:x.b,c=Math.min(x.ca,x.cb);
   if(c>0&&c*3<=n)tips.push({L:few,text:GTR("「{l}」は{c}人だけです。その人の意見は通りにくいので、決める前に聞いてみましょう。").replace("{l}",GTR(GL[few])).replace("{c}",c)});}
@@ -1004,7 +1009,7 @@ async function shareGroup(G,title){track("group_share");const b=$("gShare"),lbl=
  catch(e){alert(TR("画像をつくれませんでした。もう一度お試しください。"));}finally{b.disabled=false;b.textContent=lbl;}}
 
 /* ---- グループの相性（その場で入力。サーバーは使わない） ---- */
-const KG="16tp.group.v1";let gst=sget(KG);if(!gst||typeof gst!=="object"||!Array.isArray(gst.rows))gst={title:"",rows:[{name:"",t:""},{name:"",t:""}]};gst.title=typeof gst.title==="string"?gst.title:"";gst.rows=gst.rows.filter(r=>r&&typeof r==="object").slice(0,9).map(r=>({name:typeof r.name==="string"?r.name.slice(0,12):"",t:/^[EI][SN][TF][JP]$/.test(r.t)?r.t:""}));if(!gst.rows.length)gst.rows=[{name:"",t:""}];
+const KG="16tp.group.v1";let gst=sget(KG);if(!gst||typeof gst!=="object"||!Array.isArray(gst.rows))gst={title:"",rows:[{name:"",t:""},{name:"",t:""}]};gst.title=typeof gst.title==="string"?gst.title:"";gst.kind=gst.kind==="wk"?"wk":"fr";gst.rows=gst.rows.filter(r=>r&&typeof r==="object").slice(0,9).map(r=>({name:typeof r.name==="string"?r.name.slice(0,12):"",t:/^[EI][SN][TF][JP]$/.test(r.t)?r.t:""}));if(!gst.rows.length)gst.rows=[{name:"",t:""}];
 function gDraw(){const box=$("gRows");if(!box)return;const me=window.__me;const nm=($("myName")&&$("myName").value.trim())||"";
  const opt=v=>'<option value="">'+TR("16タイプを選ぶ")+'</option>'+Object.keys(D.NICK).map(t=>'<option value="'+t+'"'+(t===v?' selected':'')+'>'+t+p16(t)+'</option>').join("");
  box.innerHTML='<li class="gme"><b>'+TR("あなた")+'</b><span>'+(me?me.now:"")+'</span></li>'
@@ -1013,6 +1018,9 @@ function gDraw(){const box=$("gRows");if(!box)return;const me=window.__me;const 
  box.querySelectorAll(".gdel").forEach(b=>b.onclick=()=>{gst.rows.splice(+b.dataset.i,1);if(!gst.rows.length)gst.rows.push({name:"",t:""});sset(KG,gst);gDraw();});
  $("gAdd").hidden=gst.rows.length>=9;$("gTitle").value=gst.title||"";}
 function gSetup(){if(!$("group"))return;gDraw();
+ {let kb=$("gKind");if(!kb){kb=document.createElement("div");kb.id="gKind";kb.className="ctabs gkind";kb.setAttribute("role","tablist");const lb=document.querySelector('label[for="gTitle"]');if(lb)lb.before(kb);}
+  const kd=()=>{kb.innerHTML='<p class="gkq">'+TR("どんな集まり？")+'</p>'+[["fr","友だち・家族"],["wk","職場・クラス・部活"]].map(([k,l])=>'<button type="button" role="tab" data-k="'+k+'" aria-selected="'+((gst.kind||"fr")===k)+'">'+TR(l)+'</button>').join("");
+   kb.querySelectorAll("button").forEach(b=>b.onclick=()=>{gst.kind=b.dataset.k;sset(KG,gst);kd();if(!$("gRes").hidden)$("gGo").click();});};kd();}
  $("gTitle").oninput=()=>{gst.title=$("gTitle").value;sset(KG,gst);};
  $("gAdd").onclick=()=>{if(gst.rows.length<9){gst.rows.push({name:"",t:""});sset(KG,gst);gDraw();const l=$("gRows").querySelectorAll("li input");if(l.length)l[l.length-1].focus();}};
  $("gGo").onclick=()=>{const me=window.__me;if(!me)return;gDraw();
