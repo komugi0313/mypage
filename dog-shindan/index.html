@@ -425,7 +425,10 @@ var BR=[
   d:"うれしいことは全力で！体じゅうで気持ちを表現する、元気いっぱいのよろこび屋さんです。",p:"いっしょにはしゃいで、全力でほめる",k:"家族と思いきり遊ぶ時間",w:"運動が足りない日と、暑さ"}
 ];
 var GROUPS={s:"小さめの犬",m:"中くらいの犬",l:"大きめの犬"};
-var BY={};BR.forEach(function(b){b.s=b.s||b.n;BY[b.id]=b});
+// 出やすさの調整：どの犬種も同じくらいの割合で出るように、犬種ごとに少しだけ近さを足し引きする
+// （答えの出方を2万人分ためして決めた値。性格の数字を変えたら作り直す）
+var ADJ=[-7.4,6,12,-4.4,-5.1,-1.5,-6,2.6,0.8,-10.2,-6.6,-6.3,1.4,6.1,-12,8.6,12,-5.8,10.6,-4.3,2.8,3.9,-12,1.9,-0.3,-1,12,3.2,9.2,2.9,7.2,-12,7.5,-12,-12,1.4,1,-3.5,-12,6.6,-2,12,-5.2,-12];
+var BY={};BR.forEach(function(b,i){b.s=b.s||b.n;b.adj=ADJ[i]||0;BY[b.id]=b});
 
 // 日付の星（十干）。日付の干支は 1900-01-01＝甲戌（60干支の10番目）から数える。3つ目＝隠れ犬種で反対にする性格（-1＝いちばん差の小さい性格）
 var STARS=[
@@ -537,11 +540,12 @@ function score(ans){
   return sum.map(function(s,i){return Math.round(s/cnt[i]*100)});
 }
 function dist(a,b){var s=0;for(var i=0;i<a.length;i++)s+=(a[i]-b[i])*(a[i]-b[i]);return Math.sqrt(s)}
-function near(q,b){return Math.max(1,Math.min(99,Math.round(100-dist(q,b.v)*.45)))}
+function adist(q,b){return Math.max(0,dist(q,b.v)+b.adj)}
+function near(q,b){return Math.max(1,Math.min(99,Math.round(100-adist(q,b)*.45)))}
 // 答えはまん中に寄りやすいので、少し広げてから犬種とくらべる
 var SPREAD=1.3;
 function spread(p){return p.map(function(v){return Math.max(0,Math.min(100,50+(v-50)*SPREAD))})}
-function ranking(p){var q=spread(p);return BR.map(function(b){return {b:b,m:near(q,b),d:dist(q,b.v)}}).sort(function(x,y){return x.d-y.d})}
+function ranking(p){var q=spread(p);return BR.map(function(b){return {b:b,m:near(q,b),d:adist(q,b)}}).sort(function(x,y){return x.d-y.d})}
 function closestAxis(p){var m=0;p.forEach(function(v,i){if(Math.abs(v-50)<Math.abs(p[m]-50))m=i});return m}
 function hiddenOf(p,mainId,date){
   var s=date?stemOf(date):-1,ax=s>=0&&STARS[s][2]>=0?STARS[s][2]:closestAxis(p);
