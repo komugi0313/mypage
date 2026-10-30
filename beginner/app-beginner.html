@@ -907,6 +907,29 @@ details>summary{min-height:44px;box-sizing:border-box;padding-top:max(var(--sum-
 input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]),select{min-height:44px;box-sizing:border-box}   /* 入力欄・選ぶ欄も44px以上 */   /* 顧客カルテの部品 */
 .app-legal a{display:inline-block;padding:12px 4px;line-height:1.2}   /* いちばん下のリンク（利用規約など） */
 </style>
+<style id="pk-qm-css">
+/* 入力欄の並べかえ＋すぐ答えモード（鑑定者本人の指示 2026-10-30「1番お願いします。2番お願いします。オフにして消えたり切り替えることもできるように」） */
+#pk-more-in{margin:10px 0 12px;border:1.5px solid var(--line2);border-radius:12px;background:var(--card)}
+#pk-more-in>summary{min-height:48px;display:flex;align-items:center;padding:8px 12px;font-weight:900;font-size:14.5px;line-height:1.5;color:var(--ink2);cursor:pointer;list-style:none}
+#pk-more-in>summary::-webkit-details-marker{display:none}
+#pk-more-in[open]>summary{border-bottom:1px dashed var(--line2)}
+.pk-more-body{padding:0 12px 12px}
+.pk-qm-tg{min-height:44px;border:1.5px solid #C9CDF5;background:#fff;color:#3730A3;border-radius:999px;padding:6px 14px;font-family:inherit;font-weight:900;font-size:13.5px;cursor:pointer;white-space:nowrap}
+.pk-qm-tg[aria-pressed="true"]{background:#4F46E5;border-color:#4F46E5;color:#fff}
+#pk-qm-more{display:none;margin:12px 0}
+html.pk-qm #pk-qm-more{display:block}
+.pk-qm-all{width:100%;min-height:50px;border:2px solid #C9CDF5;background:#EEF0FF;color:#3730A3;border-radius:13px;font-family:inherit;font-weight:900;font-size:15px;cursor:pointer}
+.pk-qm-note{font-size:13px;color:var(--ink2);font-weight:700;text-align:center;margin-top:6px;line-height:1.6}
+html.pk-qm #result>:not(.hero):not(#pk-digest):not(#bg-easy),
+html.pk-qm #bg-easy>:not(.hero):not(#pk-digest),
+html.pk-qm #compat-banner,html.pk-qm #ai-slot,html.pk-qm #result-body,html.pk-qm #legend5{display:none!important}
+html.pk-qm body:has(#cs-slot .pk-talk) #result{display:none!important}
+html.pk-qm #cs-slot .r-fold{display:none!important}
+html.pk-qm #cs-slot .ev-box,html.pk-qm #cs-slot .rd-body>.no-yomi,html.pk-qm #cs-slot .prowrap,html.pk-qm #cs-slot .qbox .chips,html.pk-qm #cs-slot .ca-next{display:none!important}
+html.pk-qm body:not(.mode-compat) #compat-card{display:none!important}
+html.pk-qm #jumpnav button:not(#jn-ans):not(#jn-next):not(.pk-qm-tg){display:none!important}
+@media print{ .pk-qm-tg,#pk-qm-more{display:none!important} }
+</style>
 <style id="beginner-skin">
 /* ===== ビギナーの見た目（tools/sync_beginner_from_pro.py が付与）。色・縁取りのみ。計算・判定・鑑定文には影響しない ===== */
 .card.ai-box{background:var(--wm-bg);border-color:var(--wm-bd);}
@@ -9820,12 +9843,14 @@ function renderClients(){
   {const ql=document.getElementById('f-quickload');
     if(ql){
       if(all.length){
+        { const qr=document.getElementById('quickload-row'); if(qr) qr.style.display=''; }
         ql.disabled=false; ql.style.color='#A8335A'; ql.style.borderColor='#E8A9BD'; ql.style.background='#FFF7F9';
         ql.innerHTML='<option value="">保存したお客様を選ぶとここに読み込めます（'+all.length+'人）</option>'+
           all.map(c=>`<option value="${c.id}">${esc(c.name)}（${c.date}・${c.sex==='female'?'女性':'男性'}）</option>`).join('');
       }else{
         ql.disabled=true; ql.style.color='var(--muted)'; ql.style.borderColor='var(--line2)'; ql.style.background='#F6F6F8';
         ql.innerHTML='<option value="">まだ保存したお客様はいません</option>';
+        { const qr=document.getElementById('quickload-row'); if(qr) qr.style.display='none'; }   // 保存したお客様がいないときは欄を出さない（相談の欄を上に。2026-10-30）
       }
     }}
   {const bq=document.getElementById('b-quickload'),row=document.getElementById('b-quickload-row');
@@ -10536,7 +10561,7 @@ function pkDigestHTML(c,plain){ try{ const R=pkDigest(c,plain); if(plain){ const
       return '<button type="button" class="pkd-r" data-to="'+r.to+'"><span class="pkd-i" aria-hidden="true">'+r.ic+'</span><span class="pkd-b"><span class="pkd-t">'+esc(r.t)+ch+'</span><span class="pkd-v">'+mk(r.v)+'</span>'+(r.s?'<span class="pkd-s">'+mk(r.s)+'</span>':'')+'</span><span class="pkd-g" aria-hidden="true">›</span></button>'; }).join('')+
     '</section>'; }catch(e){ return ''; } }
 /* くわしい欄へ飛ぶ（たたんであれば開いてから） */
-function pkGoSec(id){ try{ let el=document.getElementById(id); if(!el) return; const d=el.closest('details.pk-sf'); if(d&&!d.open) d.open=true;
+function pkGoSec(id){ try{ if(document.documentElement.classList.contains('pk-qm')&&typeof window.pkQuickMode==='function') window.pkQuickMode(false); let el=document.getElementById(id); if(!el) return; const d=el.closest('details.pk-sf'); if(d&&!d.open) d.open=true;
   const jn=document.getElementById('jumpnav'), off=((jn&&jn.classList.contains('on'))?(jn.offsetHeight||44):0)+10;
   setTimeout(function(){ const y=el.getBoundingClientRect().top+window.scrollY-off; window.scrollTo({top:y<0?0:y,behavior:'smooth'}); },30); }catch(e){} }
 document.addEventListener('click',function(e){ const b=e.target.closest&&e.target.closest('.pkd-r[data-to]'); if(b){ e.preventDefault(); pkGoSec(b.dataset.to); } });
@@ -10995,6 +11020,37 @@ window.__isSample=false; chart=null; pkShowEmpty();
       if(b.dataset.a==='copy'){ var ok=function(){ b.textContent='コピーしました。Safari・Chromeに貼りつけて開いてください'; }; try{ navigator.clipboard.writeText(u).then(ok,function(){ window.prompt('このリンクをコピーしてください',u); }); }catch(_e){ try{ window.prompt('このリンクをコピーしてください',u); }catch(__e){} } } });
     (document.body||document.documentElement).appendChild(d); }catch(e){} }
   window.print=function(){ opened=false; var r; try{ r=orig.apply(window,arguments); }catch(e){} setTimeout(function(){ if(!opened&&!document.hidden) show(); },1500); return r; };
+})();
+</script>
+<script>/* 入力欄の並べかえ（相談の欄を上に・細かい欄はたたむ）＋すぐ答えモード（答え・話す順番・まとめだけ。オン／オフで切りかえ）2026-10-30 */
+(function(){
+  var KEY='pk_qm';
+  function isOn(){ try{ return localStorage.getItem(KEY)==='1'; }catch(e){ return false; } }
+  function apply(v){ document.documentElement.classList.toggle('pk-qm',!!v); try{ localStorage.setItem(KEY,v?'1':'0'); }catch(e){}
+    document.querySelectorAll('.pk-qm-tg').forEach(function(b){ b.setAttribute('aria-pressed',String(!!v)); b.textContent=v?'⚡ すぐ答え：オン':'⚡ すぐ答え：オフ'; }); }
+  window.pkQuickMode=apply;
+  function addMore(){ var cs=document.getElementById('cs-slot'); if(cs&&!document.getElementById('pk-qm-more')){ var m=document.createElement('div'); m.id='pk-qm-more'; m.className='no-print'; m.innerHTML='<button type="button" class="pk-qm-all">▸ 全部見る（命式表・くわしい欄・鑑定文）</button><div class="pk-qm-note">いまは「すぐ答え」モードです。答え・話す順番・まとめだけを出しています（上の「⚡ すぐ答え」でオフにできます）。</div>'; cs.parentNode.insertBefore(m,cs.nextSibling); } }
+  function addNavBtn(){ var jn=document.getElementById('jumpnav'); if(jn&&!jn.querySelector('.pk-qm-tg')){ var b=document.createElement('button'); b.type='button'; b.className='pk-qm-tg'; b.setAttribute('data-nocg',''); var nx=document.getElementById('jn-next'); if(nx&&nx.nextSibling) jn.insertBefore(b,nx.nextSibling); else jn.appendChild(b); apply(document.documentElement.classList.contains('pk-qm')); } }
+  function build(){
+    var th=document.getElementById('theme-tg');
+    if(th&&!document.getElementById('pk-qm-top')){ var b=document.createElement('button'); b.type='button'; b.id='pk-qm-top'; b.className='pk-qm-tg'; b.setAttribute('data-nocg',''); b.title='答え・話す順番・まとめだけを見せる（フェスなど、すぐ答えたいとき）。もう一度押すと元に戻ります'; th.parentNode.insertBefore(b,th); }
+    addMore();
+    // 相談の欄を上に：年・月・日の欄・時刻・生まれた場所・詳細設定は「くわしく入力する」にたたむ（数字の欄に入れれば自動で入る）
+    var fy=document.getElementById('f-y'), df=fy&&fy.closest('.field'), tp=document.getElementById('f-timepick'), tr=tp&&tp.closest('.frow'), pf=document.getElementById('f-pref'), pr=pf&&pf.closest('.frow'), adv=document.querySelector('details.adv.personal-only'), box=document.getElementById('cs-box');
+    if(df&&tr&&pr&&box&&!document.getElementById('pk-more-in')){
+      var d=document.createElement('details'); d.id='pk-more-in';
+      d.innerHTML='<summary>▸ くわしく入力する（ふりがな・年月日の欄・時刻・生まれた場所・詳細設定）</summary><div class="pk-more-body"></div>';
+      var body=d.querySelector('.pk-more-body'), r1=document.createElement('div'); r1.className='frow'; r1.style.marginTop='10px'; r1.appendChild(df); body.appendChild(r1); body.appendChild(tr); body.appendChild(pr); if(adv) body.appendChild(adv);
+      var kn=document.getElementById('f-kana'); if(kn){ var r0=document.createElement('div'); r0.className='field'; r0.style.cssText='margin-top:10px'; r0.innerHTML='<label>ふりがな（任意）</label>'; kn.style.marginTop='0'; r0.appendChild(kn); body.insertBefore(r0,body.firstChild); }
+      box.parentNode.insertBefore(d,box);
+      try{ new MutationObserver(function(){ if(!d.open&&d.querySelector('.req-msg.on,.invalid')){ d.open=true; try{ d.scrollIntoView({block:'center'}); }catch(_e){} } }).observe(d,{subtree:true,attributes:true,attributeFilter:['class']}); }catch(e){}   // 入れ忘れがあれば、自動で開いて見せる
+    }
+    apply(isOn()); addNavBtn();
+  }
+  document.addEventListener('click',function(e){ var t=e.target.closest&&e.target.closest('.pk-qm-tg'); if(t){ apply(!document.documentElement.classList.contains('pk-qm')); return; }
+    var a=e.target.closest&&e.target.closest('.pk-qm-all'); if(a){ apply(false); var r=document.getElementById('result'); if(r) setTimeout(function(){ try{ r.scrollIntoView({behavior:'smooth',block:'start'}); }catch(_e){} },30); return; }
+    setTimeout(function(){ addNavBtn(); addMore(); },400); });
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',build); else build();
 })();
 </script>
 <style id="beginner-ui-css">
