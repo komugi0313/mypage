@@ -79,6 +79,13 @@ input[type=range]{width:100%;accent-color:var(--accent);min-height:44px}
 .axis .bar i{position:absolute;top:50%;width:22px;height:22px;border-radius:50%;background:var(--accent);border:3px solid var(--surface);transform:translate(-50%,-50%);box-shadow:0 1px 3px rgba(0,0,0,.25)}
 .axis .pct{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
 .note{font-size:.85rem;color:var(--muted)}
+.rank{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;counter-reset:r}
+.rank li{display:grid;grid-template-columns:2em 1fr auto;gap:10px;align-items:center;counter-increment:r;min-height:44px;border-bottom:1px solid var(--line);padding-bottom:8px}
+.rank li::before{content:counter(r);font-family:var(--display);font-weight:900;color:var(--leaf);font-size:1.2rem;text-align:center}
+.rank li span{min-width:0}
+.rank li small{display:block;color:var(--muted)}
+.rank li b{font-variant-numeric:tabular-nums;font-family:var(--display)}
+.rank li.me{background:var(--soft);border-radius:12px;padding:6px 8px 6px 0;border-bottom:0}
 .btns{display:flex;flex-direction:column;gap:10px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
@@ -88,7 +95,7 @@ input[type=range]{width:100%;accent-color:var(--accent);min-height:44px}
   <section id="s-start" class="wrap" style="gap:20px">
     <div class="brand"><i></i>わんこころ診断</div>
     <h1>うちの子の「心の犬種」は？</h1>
-    <p class="lead">飼い主さんが24の質問に答えると、その子の性格に近い犬種がわかります。パグなのに心はシェパード、なんてことも。誕生日がわからない子も大丈夫です。</p>
+    <p class="lead">飼い主さんが24の質問に答えると、44犬種の中から性格がいちばん近い「心の犬種」がわかります。パグなのに心はシェパード、なんてことも。自分の犬種との近さ（パグ度○%など）も出ます。誕生日がわからない子も大丈夫です。</p>
 
     <div class="panel sample">
       <img id="sample-img" alt="結果カードの例">
@@ -166,6 +173,12 @@ input[type=range]{width:100%;accent-color:var(--accent);min-height:44px}
     </div>
 
     <div class="panel">
+      <h2>心が近い犬種ランキング</h2>
+      <ol class="rank" id="r-rank"></ol>
+      <p id="r-own"></p>
+    </div>
+
+    <div class="panel">
       <h2 id="r-manual-title">取扱説明書</h2>
       <div class="manual" id="r-manual"></div>
     </div>
@@ -194,66 +207,111 @@ input[type=range]{width:100%;accent-color:var(--accent);min-height:44px}
 <script>
 (function(){
 "use strict";
-// 4つの軸：0 仲よくなり方 S/J・1 好奇心 A/H・2 気持ちの出し方 Z/Y・3 家族との距離 B/I
+// 4つの軸（数字＝左の性質の強さ 0〜100）：仲よくなり方・好奇心・気持ちの出し方・家族との距離
 var AXES=[
   {name:"仲よくなり方",a:"すぐ仲よし",b:"じっくり",ta:"だれとでもすぐ仲よくなれる",tb:"相手をよく見てから心をひらく"},
   {name:"好奇心",a:"探検家",b:"安心派",ta:"新しいことにわくわくする",tb:"いつもの安心を大切にする"},
   {name:"気持ちの出し方",a:"全身で",b:"そっと",ta:"うれしい気持ちを全身で伝える",tb:"気持ちを静かに伝える"},
   {name:"家族との距離",a:"べったり",b:"マイペース",ta:"大好きな人のそばにいたい",tb:"ひとりの時間も楽しめる"}
 ];
-var LET=[["S","J"],["A","H"],["Z","Y"],["B","I"]];
 
-var BREEDS={
- SAZB:{n:"ゴールデン・レトリバー",s:"ゴールデン",c:"みんなのお日さま",e:"drop",col:"#E2A23A",
-  d:"だれにでもしっぽを振り、新しいことにもわくわく。うれしい気持ちを全身で伝えて、家族のそばがいちばん好き。いるだけで場が明るくなるタイプです。",
-  p:"名前を呼んで、目を見て、大げさなくらい「すごいね！」",k:"家族みんながそろう時間と、いっしょの散歩",w:"長いひとりの時間。帰ったらたっぷりなでてあげて"},
- SAZI:{n:"ジャック・ラッセル・テリア",s:"ジャック・ラッセル",c:"止まらない冒険家",e:"semi",col:"#D9853B",
-  d:"好奇心と元気のかたまり。気になるものには一直線で、自分で考えて動ける頼もしさがあります。",
-  p:"おもちゃを持ってきたら、すぐにもう一回投げる。遊びで返すのがいちばんのごほうび",k:"思いきり動いたあとの、ゆったりタイム",w:"たいくつな時間。頭と体を使う遊びを毎日少しずつ"},
- SAYB:{n:"ラブラドール・レトリバー",s:"ラブラドール",c:"頼れる相棒",e:"drop",col:"#C99A3C",
-  d:"人も新しい場所も大好きで、落ち着いて寄り添える相棒タイプ。家族の役に立つのがうれしい子です。",
-  p:"「ありがとう」「助かったよ」と、やさしい声でゆっくりなでる",k:"家族のそばで、同じことをしているとき",w:"家族とはなれる時間。見えるところにいるだけで安心します"},
- SAYI:{n:"ビーグル",s:"ビーグル",c:"においの探偵",e:"drop",col:"#B5763E",
-  d:"人なつっこく、においで世界を知る探検家。ひとりでも楽しみを見つけられる、のんびり屋さんです。",
-  p:"においかぎをたっぷりさせてあげること。おやつ探しゲームも大好き",k:"自分のペースで、においをかぎながら歩く散歩",w:"急がされること。寄り道の時間を少し多めに"},
- SHZB:{n:"トイ・プードル",s:"トイ・プードル",c:"甘え上手なアイドル",e:"drop",col:"#C9798F",
-  d:"人が大好きで、うれしい気持ちを全身で表現。いつもの家と家族のそばで、いちばん輝くタイプです。",
-  p:"抱っこや声かけで「かわいいね」をたくさん",k:"いつもの場所・いつもの順番で過ごす毎日",w:"急な変化や長いお留守番。お気に入りの毛布があると安心"},
- SHZI:{n:"コーギー",s:"コーギー",c:"陽気なしっかり者",e:"prick",col:"#D6943A",
-  d:"だれとでも仲よしで、感情ゆたか。でも自分のことは自分でできる、しっかり者。家のルールをよく覚えています。",
-  p:"できたことを、その場で「よくできたね」",k:"決まった時間の散歩とごはん",w:"予定がころころ変わること"},
- SHYB:{n:"キャバリア",s:"キャバリア",c:"おだやかな癒やし係",e:"drop",col:"#B0614A",
-  d:"人が好きで、おだやか。そっと寄り添って、家族の気持ちを感じとるやさしい子です。",
-  p:"ひざの上で、ゆっくりなでながら静かな声で",k:"家族のひざやそばで、のんびり",w:"大きな音や、にぎやかすぎる場所"},
- SHYI:{n:"パグ",s:"パグ",c:"マイペースな人気者",e:"semi",col:"#8C7656",
-  d:"だれにでも愛想よく、でもあくせくしない。いつもの場所で自分らしく過ごす、ゆるやかな人気者です。",
-  p:"おやつと「えらいね」。ほめられると得意げな顔に",k:"お気に入りの寝床で、ゆっくり昼寝",w:"暑さと、急かされること"},
- JAZB:{n:"ボーダー・コリー",s:"ボーダー・コリー",c:"かしこい名参謀",e:"semi",col:"#3D69A8",
-  d:"知らない人には慎重。でも頭の回転が速く、新しいことを覚えるのが大好き。家族の合図をよく見ている気配り上手です。",
-  p:"新しい合図を覚えたら、すぐに「正解！」と伝える",k:"家族といっしょに何かに取り組む時間",w:"することがない時間。知育おもちゃで頭を使わせて"},
- JAZI:{n:"シベリアン・ハスキー",s:"ハスキー",c:"自由な旅人",e:"prick",col:"#5B7A9C",
-  d:"はじめての人には様子見から。好奇心おうせいでおしゃべり、自分の世界を持つ自由人です。",
-  p:"たっぷり走ったあとに「楽しかったね」",k:"広い場所で、思いきり体を動かしたあと",w:"せまい場所でじっとしていること"},
- JAYB:{n:"ジャーマン・シェパード",s:"シェパード",c:"誠実な守り人",e:"prick",col:"#6E5A3A",
-  d:"知らない人には慎重で、家族をそっと見守る守り人。新しいことにも落ち着いて向き合い、信頼した人にはとことん誠実です。",
-  p:"落ち着いた声で、まっすぐ目を見て「ありがとう」",k:"家族の気配が感じられる場所",w:"家族がばらばらで、落ち着かないとき"},
- JAYI:{n:"柴犬",s:"柴犬",c:"凛とした自由人",e:"prick",col:"#C97D38",
-  d:"心をひらくまで時間をかける、凛としたタイプ。好奇心はあるけれど、気持ちは静かに。自分のペースを大切にする誇り高い子です。",
-  p:"しつこくせず、さらっと「いい子」。ほどよい距離がうれしい",k:"ひとりでくつろげる、自分だけの場所",w:"無理に抱っこされたり、かまわれすぎたりすること"},
- JHZB:{n:"チワワ",s:"チワワ",c:"小さな勇者",e:"prick",col:"#C08651",
-  d:"知らない人には慎重だけれど、家族への愛は全身でまっすぐ。安心できる場所で、大好きな人を守ろうとする勇気ある子です。",
-  p:"抱きしめて「守ってくれてありがとう」",k:"飼い主さんのひざの上、いつもの部屋",w:"知らない人や犬が急に近づくこと。少しはなれて見守らせて"},
- JHZI:{n:"ダックスフンド",s:"ダックス",c:"こだわりの職人",e:"drop",col:"#975833",
-  d:"慎重派で、好きと苦手がはっきり。気持ちは表に出しつつ、自分のやり方を大切にするこだわり派です。",
-  p:"本人が「やりたい」と思えた瞬間をのがさずほめる",k:"お気に入りの毛布の中、いつもの寝床",w:"段差や、やり方を急に変えられること"},
- JHYB:{n:"イタリアン・グレーハウンド",s:"イタグレ",c:"繊細な寄り添い屋",e:"semi",col:"#7F82AE",
-  d:"繊細で、はじめてのことには少し時間がかかる子。静かに、でもぴったり家族に寄り添う、愛情深いタイプです。",
-  p:"小さな声で、やさしくゆっくり",k:"あたたかい毛布と、飼い主さんのとなり",w:"寒さ、大きな音、知らない場所"},
- JHYI:{n:"秋田犬",s:"秋田犬",c:"静かな守護者",e:"prick",col:"#C46E3A",
-  d:"だれにでもしっぽは振らないけれど、それは信頼を大切にしている証。落ち着いて、静かに家族を見守っています。",
-  p:"そっとそばに座って、同じ時間を過ごすこと",k:"静かな家、いつもの散歩道",w:"にぎやかすぎる場所や、知らない人に囲まれること"}
-};
-var EXTRA=["ポメラニアン","シーズー","マルチーズ","ヨークシャー・テリア","ミニチュア・シュナウザー","フレンチ・ブルドッグ","ミニチュア・ダックスフンド","ミックス","その他"];
+// 犬種ごとの性格のかたち（オリジナル）。v＝[仲よくなり方, 好奇心, 気持ちの出し方, 家族との距離]
+// e＝耳の形（prick 立ち耳／semi 先が折れた耳／drop たれ耳）
+var BR=[
+ // 小さめの犬
+ {id:"toypoodle",g:"s",n:"トイ・プードル",c:"甘え上手なかしこいアイドル",e:"drop",col:"#B9707F",v:[70,55,75,80],
+  d:"人が大好きで、うれしい気持ちを全身で表現。かしこくて、家族の気持ちをよく見ています。",p:"抱っこや声かけで「かわいいね」「天才！」をたくさん",k:"家族のそばで、いつもの順番で過ごす毎日",w:"長いお留守番。お気に入りの毛布があると安心"},
+ {id:"chihuahua",g:"s",n:"チワワ",c:"小さな勇者",e:"prick",col:"#C08651",v:[25,35,75,85],
+  d:"知らない人には慎重だけれど、家族への愛は全身でまっすぐ。大好きな人を守ろうとする勇気ある子です。",p:"抱きしめて「守ってくれてありがとう」",k:"飼い主さんのひざの上、いつもの部屋",w:"知らない人や犬が急に近づくこと。少しはなれて見守らせて"},
+ {id:"mdachs",g:"s",n:"ミニチュア・ダックスフンド",s:"ダックス",c:"こだわりの職人",e:"drop",col:"#975833",v:[30,40,80,30],
+  d:"好きと苦手がはっきり。気持ちは表に出しつつ、自分のやり方を大切にするこだわり派です。",p:"本人が「やりたい」と思えた瞬間をのがさずほめる",k:"お気に入りの毛布の中、いつもの寝床",w:"段差や、やり方を急に変えられること"},
+ {id:"pome",g:"s",n:"ポメラニアン",c:"にぎやかなムードメーカー",e:"prick",col:"#D98A35",v:[60,60,92,65],
+  d:"いつも元気で、気持ちが全部顔としっぽに出る子。家の中を明るくしてくれるムードメーカーです。",p:"目を合わせて、明るい声で「すごいね！」",k:"家族がにぎやかに過ごしているとき",w:"ひとりで静かに待つ時間。短い遊びをこまめに"},
+ {id:"yorkie",g:"s",n:"ヨークシャー・テリア",s:"ヨーキー",c:"小さな勇気のおしゃれさん",e:"prick",col:"#8F7A4A",v:[45,68,70,75],
+  d:"体は小さくても好奇心と勇気はたっぷり。家族にはとびきり甘える、おしゃれな冒険家です。",p:"ブラッシングしながら「きれいだね」",k:"家族のそばで、ちょっとした探検ができる時間",w:"大きな犬に囲まれること"},
+ {id:"schnauzer",g:"s",n:"ミニチュア・シュナウザー",s:"シュナウザー",c:"おしゃべりな見張り番",e:"semi",col:"#76808C",v:[45,72,68,55],
+  d:"まわりの変化にすぐ気づく、しっかり者の見張り番。気持ちを声で伝えるおしゃべりさんです。",p:"気づいて教えてくれたら「ありがとう、わかったよ」",k:"家の様子が見わたせるお気に入りの場所",w:"たいくつな時間。においかぎ遊びで頭を使わせて"},
+ {id:"frenchie",g:"s",n:"フレンチ・ブルドッグ",s:"フレブル",c:"のんびり甘えん坊",e:"prick",col:"#6F6A62",v:[82,45,55,78],
+  d:"人が大好きで、おおらか。家族にくっついて、のんびり過ごすのがしあわせな甘えん坊です。",p:"なでながら、やさしい声で「いい子だね」",k:"家族のとなりで、ごろんとお昼寝",w:"暑さと、はげしい運動"},
+ {id:"shihtzu",g:"s",n:"シーズー",c:"おっとりした王子さま・お姫さま",e:"drop",col:"#B08A62",v:[75,30,40,60],
+  d:"だれにでもやさしく、あわてない。おっとりと自分のペースで、まわりをなごませる子です。",p:"ゆっくりなでて「今日もかわいいね」",k:"お気に入りのクッションで、のんびり",w:"急がされることと、暑さ"},
+ {id:"maltese",g:"s",n:"マルチーズ",c:"愛情たっぷりの天使",e:"drop",col:"#B9A58F",v:[55,35,62,92],
+  d:"家族のことが大好きで、いつもそばにいたい愛情たっぷりの子。やさしく甘えてきます。",p:"ひざの上で、たっぷりなでる",k:"飼い主さんのとなり、いつもの部屋",w:"ひとりの時間が長いこと"},
+ {id:"papillon",g:"s",n:"パピヨン",c:"軽やかな好奇心の蝶",e:"prick",col:"#A7714A",v:[70,82,75,58],
+  d:"かしこくて、新しいことが大好き。軽やかに動き回って、なんでも覚えてしまう子です。",p:"新しい芸を覚えたら、すぐに大よろこび",k:"家族と遊びながら、新しいことに挑戦するとき",w:"毎日が同じでたいくつなこと"},
+ {id:"jrt",g:"s",n:"ジャック・ラッセル・テリア",s:"ジャック・ラッセル",c:"止まらない冒険家",e:"semi",col:"#C27A3A",v:[70,95,85,30],
+  d:"好奇心と元気のかたまり。気になるものには一直線で、自分で考えて動ける頼もしさがあります。",p:"おもちゃを持ってきたら、すぐにもう一回投げる",k:"思いきり動いたあとの、ゆったりタイム",w:"たいくつな時間。頭と体を使う遊びを毎日少しずつ"},
+ {id:"cavalier",g:"s",n:"キャバリア",c:"おだやかな癒やし係",e:"drop",col:"#B0614A",v:[92,45,45,80],
+  d:"人が好きで、おだやか。そっと寄り添って、家族の気持ちを感じとるやさしい子です。",p:"ひざの上で、ゆっくりなでながら静かな声で",k:"家族のひざやそばで、のんびり",w:"大きな音や、にぎやかすぎる場所"},
+ {id:"minpin",g:"s",n:"ミニチュア・ピンシャー",s:"ミニピン",c:"元気な小さな番長",e:"prick",col:"#6B3F2F",v:[38,85,80,45],
+  d:"小さな体にエネルギーがいっぱい。こわいもの知らずで、自分の考えをしっかり持った番長です。",p:"走り回ったあとに「かっこよかったよ」",k:"家の中を自由に探検できる時間",w:"じっと待たされること"},
+ {id:"pug",g:"s",n:"パグ",c:"マイペースな人気者",e:"semi",col:"#8C7656",v:[80,30,35,50],
+  d:"だれにでも愛想よく、でもあくせくしない。いつもの場所で自分らしく過ごす、ゆるやかな人気者です。",p:"おやつと「えらいね」。ほめられると得意げな顔に",k:"お気に入りの寝床で、ゆっくり昼寝",w:"暑さと、急かされること"},
+ {id:"bichon",g:"s",n:"ビション・フリーゼ",s:"ビション",c:"ふわふわの陽気者",e:"drop",col:"#B8A88F",v:[92,62,85,70],
+  d:"いつも楽しそうで、だれとでもすぐ友だち。ふわふわの見た目どおり、まわりを笑顔にする子です。",p:"いっしょにはしゃいで「楽しいね！」",k:"家族や友だちが集まるにぎやかな時間",w:"ひとりぼっちの時間"},
+ {id:"iggy",g:"s",n:"イタリアン・グレーハウンド",s:"イタグレ",c:"繊細な寄り添い屋",e:"semi",col:"#7F82AE",v:[25,30,30,90],
+  d:"繊細で、はじめてのことには少し時間がかかる子。静かに、でもぴったり家族に寄り添う愛情深いタイプです。",p:"小さな声で、やさしくゆっくり",k:"あたたかい毛布と、飼い主さんのとなり",w:"寒さ、大きな音、知らない場所"},
+ {id:"peke",g:"s",n:"ペキニーズ",c:"堂々とした小さな王さま",e:"drop",col:"#B07E40",v:[35,20,25,30],
+  d:"あわてず、さわがず、いつも堂々。自分の世界を大切にする、気品のある子です。",p:"本人が来たときに、さらっとなでる",k:"静かな部屋の、お気に入りの場所",w:"しつこくかまわれること"},
+ {id:"boston",g:"s",n:"ボストン・テリア",s:"ボストン",c:"紳士な遊び好き",e:"prick",col:"#4A4A55",v:[80,65,75,65],
+  d:"人なつっこくて、遊びが大好き。でもどこか礼儀正しい、紳士・淑女な子です。",p:"遊びのあとに「楽しかったね、ありがとう」",k:"家族といっしょに遊ぶ時間",w:"暑さと、遊び相手がいないこと"},
+ {id:"chin",g:"s",n:"狆",c:"上品なおくゆかしさ",e:"drop",col:"#5A4A45",v:[40,25,30,70],
+  d:"おとなしく上品で、家族にはそっと甘える子。静かな時間をいっしょに楽しめます。",p:"やさしく名前を呼んで、そっとなでる",k:"家族のそばの、静かな場所",w:"にぎやかすぎる場所"},
+ {id:"spitz",g:"s",n:"日本スピッツ",s:"スピッツ",c:"まっ白な明るい相棒",e:"prick",col:"#ADA493",v:[60,50,72,72],
+  d:"明るく元気で、家族思い。気持ちを素直に表に出す、まっすぐな相棒です。",p:"目を見て「大好きだよ」",k:"家族といっしょのお散歩",w:"ひとりで長く待つこと"},
+ {id:"westie",g:"s",n:"ウエスト・ハイランド・ホワイト・テリア",s:"ウエスティ",c:"自信いっぱいの白い冒険家",e:"prick",col:"#A9A393",v:[70,82,70,35],
+  d:"明るく自信たっぷり。好奇心おうせいで、自分のペースで世界を楽しむ冒険家です。",p:"自分でできたことを「さすがだね」",k:"においをかぎながらの探検散歩",w:"自由がきかない時間"},
+ {id:"sheltie",g:"s",n:"シェットランド・シープドッグ",s:"シェルティ",c:"気くばり上手の見守り役",e:"semi",col:"#B57A3E",v:[35,50,65,85],
+  d:"知らない人にはひかえめ。でも家族のことはいつもよく見ていて、気持ちを感じとる気くばり上手です。",p:"「わかってくれてありがとう」と声をかける",k:"家族がみんな見える場所",w:"大きな音や、家族のけんか"},
+ {id:"cocker",g:"s",n:"アメリカン・コッカー・スパニエル",s:"コッカー",c:"人なつっこい陽だまり",e:"drop",col:"#B88A55",v:[85,60,70,82],
+  d:"だれにでも人なつっこく、家族が大好き。いるだけでまわりがあたたかくなる陽だまりのような子です。",p:"なでながら「いい子、いい子」",k:"家族のそばでのんびり",w:"ひとりの時間が長いこと"},
+ // 中くらいの犬
+ {id:"corgi",g:"m",n:"ウェルシュ・コーギー",s:"コーギー",c:"陽気なしっかり者",e:"prick",col:"#D6943A",v:[80,55,70,40],
+  d:"だれとでも仲よしで、感情ゆたか。でも自分のことは自分でできる、しっかり者。家のルールをよく覚えています。",p:"できたことを、その場で「よくできたね」",k:"決まった時間の散歩とごはん",w:"予定がころころ変わること"},
+ {id:"beagle",g:"m",n:"ビーグル",c:"においの探偵",e:"drop",col:"#B5763E",v:[85,90,55,30],
+  d:"人なつっこく、においで世界を知る探検家。ひとりでも楽しみを見つけられる、のんびり屋さんです。",p:"においかぎをたっぷり。おやつ探しゲームも大好き",k:"自分のペースで、においをかぎながら歩く散歩",w:"急がされること。寄り道の時間を少し多めに"},
+ {id:"border",g:"m",n:"ボーダー・コリー",c:"かしこい名参謀",e:"semi",col:"#3D69A8",v:[35,85,70,75],
+  d:"知らない人には慎重。でも頭の回転が速く、新しいことを覚えるのが大好き。家族の合図をよく見ている気配り上手です。",p:"新しい合図を覚えたら、すぐに「正解！」",k:"家族といっしょに何かに取り組む時間",w:"することがない時間。知育おもちゃで頭を使わせて"},
+ {id:"shiba",g:"m",n:"柴犬",c:"凛とした自由人",e:"prick",col:"#C97D38",v:[20,60,20,20],
+  d:"心をひらくまで時間をかける、凛としたタイプ。気持ちは静かに、自分のペースを大切にする誇り高い子です。",p:"しつこくせず、さらっと「いい子」。ほどよい距離がうれしい",k:"ひとりでくつろげる、自分だけの場所",w:"無理に抱っこされたり、かまわれすぎたりすること"},
+ {id:"kai",g:"m",n:"甲斐犬",c:"たったひとりに一途な子",e:"prick",col:"#3C3530",v:[10,55,25,62],
+  d:"知らない人にはとても慎重。でも心に決めた家族には、どこまでも一途。静かな情熱を持った子です。",p:"ふたりきりの時間に、そっと「信じてるよ」",k:"大好きな人と過ごす、静かな時間",w:"知らない人にさわられること"},
+ {id:"hokkaido",g:"m",n:"北海道犬",c:"勇敢な大地の子",e:"prick",col:"#B8A47E",v:[25,80,35,38],
+  d:"かしこくて勇敢。新しい場所にも落ち着いて向き合い、家族を守る頼もしい子です。",p:"落ち着いた声で「たのもしいね」",k:"自然の中を、家族とゆっくり歩く時間",w:"せまい場所でじっとしていること"},
+ {id:"kishu",g:"m",n:"紀州犬",c:"静かでまっすぐな忠犬",e:"prick",col:"#A69E8C",v:[20,45,20,55],
+  d:"静かで落ち着いていて、とてもまっすぐ。家族への気持ちは、言葉にしなくても伝わってくる子です。",p:"そばに座って、ゆっくりなでる",k:"いつもの道を、家族と歩くこと",w:"知らない人に囲まれること"},
+ {id:"whippet",g:"m",n:"ウィペット",c:"静かな甘えん坊ランナー",e:"semi",col:"#A88C70",v:[62,40,30,82],
+  d:"外では風のように走り、家ではソファでぴったりくっつく。静かでやさしい甘えん坊です。",p:"走りきったあとに、毛布にくるんで「えらかったね」",k:"あたたかいソファで、家族のとなり",w:"寒さと、大きな音"},
+ {id:"dalmatian",g:"m",n:"ダルメシアン",s:"ダルメシアン",c:"エネルギッシュな人気者",e:"drop",col:"#3A3A3A",v:[65,90,80,55],
+  d:"体力も好奇心もたっぷり。家族といっしょに思いきり動くのがいちばんの楽しみです。",p:"たくさん走ったあとに「最高だったね！」",k:"家族といっしょの長いお散歩",w:"運動が足りない日"},
+ {id:"chow",g:"m",n:"チャウ・チャウ",c:"マイペースな哲学者",e:"prick",col:"#C46F35",v:[10,20,15,25],
+  d:"静かで、とても落ち着いている子。ひとりで考えごとをしているような、深みのある哲学者です。",p:"本人のタイミングで、さらっと「いい子」",k:"静かな部屋で、のんびりひとり時間",w:"かまわれすぎること、暑さ"},
+ // 大きめの犬
+ {id:"golden",g:"l",n:"ゴールデン・レトリバー",s:"ゴールデン",c:"みんなのお日さま",e:"drop",col:"#D49A35",v:[95,75,85,85],
+  d:"だれにでもしっぽを振り、新しいことにもわくわく。うれしい気持ちを全身で伝えて、家族のそばがいちばん好き。",p:"名前を呼んで、目を見て、大げさなくらい「すごいね！」",k:"家族みんながそろう時間と、いっしょの散歩",w:"長いひとりの時間。帰ったらたっぷりなでてあげて"},
+ {id:"lab",g:"l",n:"ラブラドール・レトリバー",s:"ラブラドール",c:"頼れる相棒",e:"drop",col:"#C2953A",v:[90,80,55,72],
+  d:"人も新しい場所も大好きで、落ち着いて寄り添える相棒タイプ。家族の役に立つのがうれしい子です。",p:"「ありがとう」「助かったよ」と、やさしい声でゆっくりなでる",k:"家族のそばで、同じことをしているとき",w:"家族とはなれる時間"},
+ {id:"gsd",g:"l",n:"ジャーマン・シェパード",s:"シェパード",c:"誠実な守り人",e:"prick",col:"#6E5A3A",v:[25,65,35,80],
+  d:"知らない人には慎重で、家族をそっと見守る守り人。信頼した人にはとことん誠実です。",p:"落ち着いた声で、まっすぐ目を見て「ありがとう」",k:"家族の気配が感じられる場所",w:"家族がばらばらで落ち着かないとき"},
+ {id:"husky",g:"l",n:"シベリアン・ハスキー",s:"ハスキー",c:"自由な旅人",e:"prick",col:"#5B7A9C",v:[55,90,85,20],
+  d:"好奇心おうせいでおしゃべり。人は好きだけれど、自分の世界を大切にする自由人です。",p:"たっぷり走ったあとに「楽しかったね」",k:"広い場所で、思いきり体を動かしたあと",w:"せまい場所でじっとしていること"},
+ {id:"bernese",g:"l",n:"バーニーズ・マウンテン・ドッグ",s:"バーニーズ",c:"やさしい力持ち",e:"drop",col:"#3B2E2A",v:[85,40,40,88],
+  d:"大きな体に、やさしい心。おおらかで、家族のそばにいるのがいちばん好きな子です。",p:"全身をなでながら「大好きだよ」",k:"家族のとなりで、ゆったり",w:"暑さと、ひとりの時間"},
+ {id:"samoyed",g:"l",n:"サモエド",c:"笑顔のふわふわ天使",e:"prick",col:"#A9A08E",v:[90,72,80,62],
+  d:"いつも笑っているような顔で、だれとでも仲よし。明るさで場をなごませる子です。",p:"いっしょに笑って「楽しいね」",k:"家族や友だちと遊ぶ時間",w:"暑さと、たいくつな時間"},
+ {id:"akita",g:"l",n:"秋田犬",c:"静かな守護者",e:"prick",col:"#C46E3A",v:[15,30,15,45],
+  d:"だれにでもしっぽは振らないけれど、それは信頼を大切にしている証。落ち着いて、静かに家族を見守っています。",p:"そっとそばに座って、同じ時間を過ごすこと",k:"静かな家、いつもの散歩道",w:"にぎやかすぎる場所や、知らない人に囲まれること"},
+ {id:"doberman",g:"l",n:"ドーベルマン",c:"家族思いのボディガード",e:"prick",col:"#3B2A25",v:[30,60,45,92],
+  d:"知らない人にはきりっと。でも家族の前ではとびきりの甘えん坊。家族を守る気持ちがとても強い子です。",p:"ふたりきりのときに、たっぷり甘えさせる",k:"家族のすぐそば",w:"家族と長くはなれること"},
+ {id:"pyrenees",g:"l",n:"グレート・ピレニーズ",s:"ピレニーズ",c:"おおらかな見守り役",e:"drop",col:"#A39C8A",v:[48,32,20,30],
+  d:"大きくておおらか、あわてない。少しはなれたところから、家族みんなを見守っている子です。",p:"そばに行って、ゆっくり大きくなでる",k:"家族が見わたせる、少しはなれた場所",w:"暑さと、せまい場所"},
+ {id:"stdpoodle",g:"l",n:"スタンダード・プードル",s:"スタンダード・プードル",c:"優雅でかしこい紳士淑女",e:"drop",col:"#5D5148",v:[65,70,55,70],
+  d:"かしこくて、落ち着いていて、気品がある子。家族とのやりとりを楽しめる、優雅なパートナーです。",p:"できたことを、言葉でていねいにほめる",k:"家族といっしょに、新しいことを覚える時間",w:"たいくつな毎日"},
+ {id:"boxer",g:"l",n:"ボクサー",c:"全力のよろこび屋",e:"semi",col:"#B5733F",v:[85,75,95,70],
+  d:"うれしいことは全力で！体じゅうで気持ちを表現する、元気いっぱいのよろこび屋さんです。",p:"いっしょにはしゃいで、全力でほめる",k:"家族と思いきり遊ぶ時間",w:"運動が足りない日と、暑さ"}
+];
+var GROUPS={s:"小さめの犬",m:"中くらいの犬",l:"大きめの犬"};
+var BY={};BR.forEach(function(b){b.s=b.s||b.n;BY[b.id]=b});
 
 // 質問（+1＝左の性質、-1＝右の性質）
 var Q=[
@@ -266,6 +324,7 @@ var ORDER=[];for(var i=0;i<6;i++)for(var k=0;k<4;k++)ORDER.push([k,i]);
 var CHOICES=[[5,"まさにそう"],[4,"どちらかといえばそう"],[3,"どちらともいえない"],[2,"あまりそうではない"],[1,"ぜんぜんちがう"]];
 
 // 日付の星（十干）。日付の干支は 1900-01-01＝甲戌（60干支の10番目）から数える
+// 3つ目＝隠れ犬種で反対側にする軸（-1＝いちばん差の小さい軸）
 var STARS=[
  ["大きな木の星","まっすぐ伸びる、すなおな子",1],["草花の星","しなやかで、まわりと仲よくできる子",1],
  ["お日さまの星","明るさでみんなを照らす子",2],["ともしびの星","あたたかく、心をこめて寄り添う子",2],
@@ -283,11 +342,15 @@ function stemOf(ymd){
 var st={name:"",breed:"",age:"adult",dkind:"none",date:"",img:null,zoom:1,dx:0,dy:0,ans:new Array(24).fill(null),qi:0,ears:true};
 var $=function(id){return document.getElementById(id)};
 
-// 犬種の選択肢
+// 犬種の選択肢（大きさごと・五十音順）
 (function(){
   var sel=$("in-breed"),h='<option value="">えらんでください</option>';
-  Object.keys(BREEDS).forEach(function(c){h+='<option value="'+c+'">'+BREEDS[c].n+'</option>'});
-  EXTRA.forEach(function(n){h+='<option value="x:'+n+'">'+n+'</option>'});
+  ["s","m","l"].forEach(function(g){
+    h+='<optgroup label="'+GROUPS[g]+'">';
+    BR.filter(function(b){return b.g===g}).sort(function(a,b){return a.n.localeCompare(b.n,"ja")}).forEach(function(b){h+='<option value="'+b.id+'">'+b.n+'</option>'});
+    h+='</optgroup>';
+  });
+  h+='<optgroup label="そのほか"><option value="x:ミックス">ミックス</option><option value="x:その他">リストにない犬種</option></optgroup>';
   sel.innerHTML=h;
   sel.addEventListener("change",function(){$("other-wrap").hidden=sel.value!=="x:その他"});
 })();
@@ -325,7 +388,7 @@ $("in-photo").addEventListener("change",function(e){
     st.img=c;st.zoom=1;st.dx=0;st.dy=0;$("in-zoom").value=1;
     $("crop-hint").hidden=true;$("zoom-wrap").hidden=false;drawCrop();URL.revokeObjectURL(url);
   };
-  im.onerror=function(){alertBox("この写真は読みこめませんでした。別の写真を選んでください。")};
+  im.onerror=function(){msgBox("この写真は読みこめませんでした。別の写真を選んでください。")};
   im.src=url;
 });
 $("in-zoom").addEventListener("input",function(e){st.zoom=+e.target.value;clampPan();drawCrop()});
@@ -338,15 +401,15 @@ $("in-zoom").addEventListener("input",function(e){st.zoom=+e.target.value;clampP
   });
   ["pointerup","pointercancel"].forEach(function(t){el.addEventListener(t,function(){drag=null})});
 })();
-function alertBox(msg){var p=document.createElement("p");p.className="note";p.style.color="var(--fg)";p.textContent=msg;$("go-quiz").before(p);setTimeout(function(){p.remove()},6000)}
+function msgBox(msg){var p=document.createElement("p");p.className="note";p.style.color="var(--fg)";p.textContent=msg;$("go-quiz").before(p);setTimeout(function(){p.remove()},6000)}
 
 // ---------- 質問 ----------
 function show(id){["s-start","s-quiz","s-result"].forEach(function(s){$(s).hidden=s!==id});window.scrollTo(0,0)}
 $("go-quiz").addEventListener("click",function(){
   st.name=$("in-name").value.trim()||"うちの子";
   var b=$("in-breed").value;
-  st.breed=b==="x:その他"?($("in-breed-other").value.trim()||"その他の犬種"):b;
-  if(!st.breed){alertBox("犬種をえらんでください（わからなければ「ミックス」）。");return}
+  st.breed=b==="x:その他"?("x:"+($("in-breed-other").value.trim()||"リストにない犬種")):b;
+  if(!st.breed){msgBox("犬種をえらんでください（わからなければ「ミックス」）。");return}
   st.date=st.dkind==="none"?"":$("in-date").value;
   st.qi=0;st.ans=new Array(24).fill(null);renderQ();show("s-quiz");
 });
@@ -354,7 +417,7 @@ function renderQ(){
   var o=ORDER[st.qi],q=Q[o[0]][o[1]];
   $("q-count").textContent=(st.qi+1)+" / 24";
   $("q-prog").style.width=(st.qi/24*100)+"%";
-  $("q-text").textContent=q[0].replace(/^/,st.name+"は… ");
+  $("q-text").textContent=st.name+"は… "+q[0];
   var h="";CHOICES.forEach(function(c){h+='<button type="button" data-v="'+c[0]+'"'+(st.ans[st.qi]===c[0]?' class="on"':'')+'>'+c[1]+'</button>'});
   $("q-ans").innerHTML=h;
   $("q-back").textContent=st.qi===0?"← 入力にもどる":"← もどる";
@@ -371,39 +434,48 @@ function score(ans){
   ORDER.forEach(function(o,idx){var v=ans[idx]==null?3:ans[idx];sum[o[0]]+=(v-3)*Q[o[0]][o[1]][1]});
   return sum.map(function(s){return Math.round((s+12)/24*100)}); // 左の性質の％
 }
-function codeOf(p){return p.map(function(v,i){return LET[i][v>=50?0:1]}).join("")}
-function flip(code,i){var c=code.split("");c[i]=c[i]===LET[i][0]?LET[i][1]:LET[i][0];return c.join("")}
+function dist(a,b){var s=0;for(var i=0;i<4;i++)s+=(a[i]-b[i])*(a[i]-b[i]);return Math.sqrt(s)}
+// 近さ（％）：性格のかたちがどれくらい重なるか
+function near(p,b){return Math.max(1,Math.min(99,Math.round(100-dist(p,b.v)*.55)))}
+// 回答はまん中に寄りやすいので、少し広げてから犬種とくらべる（どの犬種も出やすくするため）
+function spread(p){return p.map(function(v){return Math.max(0,Math.min(100,50+(v-50)*1.3))})}
+function ranking(p){var q=spread(p);return BR.map(function(b){return {b:b,m:near(q,b),d:dist(q,b.v)}}).sort(function(x,y){return x.d-y.d})}
 function closestAxis(p){var m=0;p.forEach(function(v,i){if(Math.abs(v-50)<Math.abs(p[m]-50))m=i});return m}
-function hiddenOf(p,code,date){
+function hiddenOf(p,mainId,date){
   var s=date?stemOf(date):-1,ax=s>=0&&STARS[s][2]>=0?STARS[s][2]:closestAxis(p);
-  return {code:flip(code,ax),axis:ax,star:s};
+  var q=p.slice();q[ax]=100-q[ax];
+  var r=ranking(q).filter(function(x){return x.b.id!==mainId});
+  return {b:r[0].b,axis:ax,star:s};
 }
-function bodyName(b){return BREEDS[b]?BREEDS[b].n:String(b).replace(/^x:/,"")}
+function bodyName(b){return BY[b]?BY[b].n:String(b).replace(/^x:/,"")}
+function bodyShort(b){return BY[b]?BY[b].s:String(b).replace(/^x:/,"")}
 
 // ---------- カード（1080×1350） ----------
 function mix(hex,to,t){var a=parseInt(hex.slice(1),16),b=parseInt(to.slice(1),16);
   var r=Math.round(((a>>16)&255)*(1-t)+((b>>16)&255)*t),g=Math.round(((a>>8)&255)*(1-t)+((b>>8)&255)*t),bl=Math.round((a&255)*(1-t)+(b&255)*t);
   return "#"+((1<<24)+(r<<16)+(g<<8)+bl).toString(16).slice(1)}
 function lum(hex){var n=parseInt(hex.slice(1),16),c=[(n>>16)&255,(n>>8)&255,n&255].map(function(v){v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*c[0]+.7152*c[1]+.0722*c[2]}
-function ink(bg){var L=lum(bg);return (1.05/(L+.05))>=4.5?"#FFFFFF":"#1E2823"}
+function contrast(a,b){var x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}
+function ink(bg){return contrast(bg,"#FFFFFF")>=4.5?"#FFFFFF":"#1E2823"}
+function deep(col){var t=.3,c=mix(col,"#000000",t);while(contrast(c,"#FFFFFF")<7&&t<.9){t+=.05;c=mix(col,"#000000",t)}return c}
 function drawEars(ctx,cx,cy,r,type,col,front){
   var dark=mix(col,"#000000",.25),inner=mix(col,"#F4B6B6",.55);
   [-1,1].forEach(function(sd){
     ctx.save();
     if(type==="drop"){
-      if(!front){ctx.restore();return}
-      ctx.translate(cx+sd*r*.9,cy-r*.12);ctx.rotate(sd*-.32);
-      ctx.beginPath();ctx.ellipse(0,0,r*.28,r*.55,0,0,Math.PI*2);ctx.fillStyle=dark;ctx.fill();
-      ctx.lineWidth=r*.04;ctx.strokeStyle="#FFFFFF";ctx.stroke();
-    }else{
-      if(front){ctx.restore();return}
+      if(front){
+        ctx.translate(cx+sd*r*.9,cy-r*.12);ctx.rotate(sd*-.32);
+        ctx.beginPath();ctx.ellipse(0,0,r*.28,r*.55,0,0,Math.PI*2);ctx.fillStyle=dark;ctx.fill();
+        ctx.lineWidth=r*.04;ctx.strokeStyle="#FFFFFF";ctx.stroke();
+      }
+    }else if(!front){
       var tipY=type==="semi"?cy-r*1.12:cy-r*1.32,tipX=cx+sd*r*.8;
       ctx.beginPath();ctx.moveTo(cx+sd*r*.98,cy-r*.15);ctx.lineTo(tipX,tipY);ctx.lineTo(cx+sd*r*.12,cy-r*.9);ctx.closePath();
       ctx.fillStyle=col;ctx.fill();
       ctx.beginPath();ctx.moveTo(cx+sd*r*.86,cy-r*.35);ctx.lineTo(cx+sd*r*.79,tipY+r*.22);ctx.lineTo(cx+sd*r*.34,cy-r*.85);ctx.closePath();
       ctx.fillStyle=inner;ctx.fill();
       if(type==="semi"){ // 先が折れた耳
-        ctx.beginPath();ctx.moveTo(tipX+sd*-r*.02,tipY);ctx.lineTo(cx+sd*r*.95,cy-r*.78);ctx.lineTo(cx+sd*r*.55,cy-r*.98);ctx.closePath();
+        ctx.beginPath();ctx.moveTo(tipX,tipY);ctx.lineTo(cx+sd*r*.95,cy-r*.78);ctx.lineTo(cx+sd*r*.55,cy-r*.98);ctx.closePath();
         ctx.fillStyle=dark;ctx.fill();
       }
     }
@@ -414,6 +486,7 @@ function drawFace(ctx,cx,cy,r,col){
   ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();
   ctx.fillStyle=mix(col,"#FFFFFF",.82);ctx.fillRect(cx-r,cy-r,r*2,r*2);
   ctx.fillStyle=col;ctx.beginPath();ctx.arc(cx,cy+r*.12,r*.72,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle=mix(col,"#000000",.2);ctx.lineWidth=r*.025;ctx.stroke();
   ctx.fillStyle=mix(col,"#FFFFFF",.7);ctx.beginPath();ctx.ellipse(cx,cy+r*.38,r*.36,r*.27,0,0,Math.PI*2);ctx.fill();
   ctx.fillStyle="#1E2823";
   [-1,1].forEach(function(sd){ctx.beginPath();ctx.arc(cx+sd*r*.27,cy+r*.02,r*.075,0,Math.PI*2);ctx.fill()});
@@ -425,9 +498,10 @@ function drawFace(ctx,cx,cy,r,col){
 function fitText(ctx,text,maxW,size,weight,family){
   do{ctx.font=weight+" "+size+"px "+family;size-=2}while(ctx.measureText(text).width>maxW&&size>20);
 }
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
 function renderCard(o){
   var W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;var ctx=cv.getContext("2d");
-  var B=BREEDS[o.code],col=B.col,F='"Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif',dark="#1E2823",mute="#55625B";
+  var B=o.main,col=B.col,F='"Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif',dark="#1E2823",mute="#55625B";
   ctx.fillStyle=mix(col,"#FFFFFF",.86);ctx.fillRect(0,0,W,H);
   ctx.fillStyle="#FFFFFF";roundRect(ctx,48,48,W-96,H-96,48);ctx.fill();
   ctx.textAlign="center";ctx.textBaseline="alphabetic";
@@ -438,26 +512,29 @@ function renderCard(o){
   ctx.strokeStyle=col;ctx.lineWidth=8;ctx.beginPath();ctx.arc(cx,cy,r+14,0,Math.PI*2);ctx.stroke();
   if(o.img)drawPhoto(ctx,o.img,cx,cy,r,o.pos);else drawFace(ctx,cx,cy,r,col);
   if(o.ears)drawEars(ctx,cx,cy,r,B.e,col,true);
+  if(o.pure){ // 生粋のバッジ
+    var bx=cx+r*.82,by=cy+r*.78;ctx.fillStyle="#F3C63F";ctx.beginPath();ctx.arc(bx,by,74,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="#FFFFFF";ctx.lineWidth=8;ctx.stroke();
+    ctx.fillStyle=dark;ctx.font="900 40px "+F;ctx.fillText("生粋！",bx,by+14);
+  }
   ctx.fillStyle=dark;fitText(ctx,o.name,860,68,"900",F);ctx.fillText(o.name,W/2,720);
-  ctx.fillStyle=mute;var bodyTxt="体は "+o.body+"　／　心は";fitText(ctx,bodyTxt,900,38,"700",F);ctx.fillText(bodyTxt,W/2,784);
-  ctx.fillStyle=mix(col,"#000000",.35);fitText(ctx,B.s,900,104,"900",F);ctx.fillText(B.s,W/2,900);
-  ctx.font="700 40px "+F;var cw=ctx.measureText(B.c).width+80;
+  ctx.fillStyle=mute;fitText(ctx,o.bodyLine,900,36,"700",F);ctx.fillText(o.bodyLine,W/2,784);
+  ctx.fillStyle=deep(col);fitText(ctx,B.s,900,104,"900",F);ctx.fillText(B.s,W/2,900);
+  ctx.font="700 40px "+F;var cw=Math.min(ctx.measureText(B.c).width+80,940);
   ctx.fillStyle=col;roundRect(ctx,W/2-cw/2,934,cw,70,35);ctx.fill();
-  ctx.fillStyle=ink(col);ctx.fillText(B.c,W/2,983);
-  // 4つの軸
+  ctx.fillStyle=ink(col);fitText(ctx,B.c,cw-60,40,"700",F);ctx.fillText(B.c,W/2,983);
   var y0=1064;o.pct.forEach(function(v,i){
     var y=y0+i*50,bx=330,bw=420;
-    ctx.font="700 28px "+F;ctx.fillStyle=v>=50?dark:"#8A958F";ctx.textAlign="right";ctx.fillText(AXES[i].a,bx-24,y+10);
-    ctx.fillStyle=v<50?dark:"#8A958F";ctx.textAlign="left";ctx.fillText(AXES[i].b,bx+bw+24,y+10);
+    ctx.font="700 28px "+F;ctx.fillStyle=v>=50?dark:"#7A857F";ctx.textAlign="right";ctx.fillText(AXES[i].a,bx-24,y+10);
+    ctx.fillStyle=v<50?dark:"#7A857F";ctx.textAlign="left";ctx.fillText(AXES[i].b,bx+bw+24,y+10);
     ctx.fillStyle="#E6EAE4";roundRect(ctx,bx,y-6,bw,14,7);ctx.fill();
     var x=bx+bw*(1-v/100);ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y+1,15,0,Math.PI*2);ctx.fill();
     ctx.strokeStyle="#FFFFFF";ctx.lineWidth=5;ctx.stroke();
   });
   ctx.textAlign="center";
-  if(o.hidden){var hb=BREEDS[o.hidden];ctx.fillStyle=dark;var ht="隠れ犬種："+hb.s+"（"+hb.c+"）";fitText(ctx,ht,880,34,"700",F);ctx.fillText(ht,W/2,1272)}
+  if(o.hidden){ctx.fillStyle=dark;var ht="隠れ犬種："+o.hidden.s+"（"+o.hidden.c+"）";fitText(ctx,ht,880,34,"700",F);ctx.fillText(ht,W/2,1272)}
   return cv.toDataURL("image/jpeg",.9);
 }
-function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
 function fontsReady(){
   var p=document.fonts&&document.fonts.load?Promise.all([document.fonts.load('900 40px "Zen Maru Gothic"'),document.fonts.load('700 40px "Zen Maru Gothic"')]):Promise.resolve();
   return Promise.race([p.catch(function(){}),new Promise(function(r){setTimeout(r,2500)})]);
@@ -466,28 +543,40 @@ function fontsReady(){
 // ---------- 結果 ----------
 var last=null;
 function finish(){
-  var pct=score(st.ans),code=codeOf(pct),hid=hiddenOf(pct,code,st.date);
-  last={pct:pct,code:code,hid:hid};renderResult();show("s-result");
+  var pct=score(st.ans),rank=ranking(pct),main=rank[0].b;
+  last={pct:pct,rank:rank,main:main,hid:hiddenOf(pct,main.id,st.date)};renderResult();show("s-result");
 }
 function renderResult(){
-  var B=BREEDS[last.code],name=st.name,body=bodyName(st.breed),HB=BREEDS[last.hid.code];
+  var B=last.main,name=st.name,body=bodyName(st.breed),short=bodyShort(st.breed),HB=last.hid.b;
+  var own=BY[st.breed]?last.rank.findIndex(function(x){return x.b.id===st.breed}):-1;
+  var ownM=own>=0?last.rank[own].m:0,pure=own===0;
+  var bodyLine=pure?"生粋の"+short+"（"+short+"度 "+ownM+"%）":own>=0?"体は "+short+"（"+short+"度 "+ownM+"%）／ 心は":"体は "+short+" ／ 心は";
   $("ears-wrap").hidden=!st.img;
   fontsReady().then(function(){
-    $("card-img").src=renderCard({code:last.code,name:name,body:body,img:st.img,pos:st,ears:st.img?st.ears:true,pct:last.pct,hidden:last.hid.code});
+    $("card-img").src=renderCard({main:B,name:name,bodyLine:bodyLine,img:st.img,pos:st,ears:st.img?st.ears:true,pct:last.pct,hidden:HB,pure:pure});
   });
-  var same=st.breed===last.code;
-  $("r-head").innerHTML=same?esc(name)+"は、<em>生粋の"+esc(B.n)+"</em>！":"体は"+esc(body)+"、心は<em>"+esc(B.n)+"</em>";
+  $("r-head").innerHTML=pure?esc(name)+"は、<em>生粋の"+esc(B.n)+"</em>！":"体は"+esc(body)+"、心は<em>"+esc(B.n)+"</em>";
   $("r-catch").textContent=B.c;
   var traits=last.pct.map(function(v,i){return v>=50?AXES[i].ta:AXES[i].tb}),gap;
-  if(same){gap="見た目も中身も、"+B.n+"らしさがいっぱい。「"+traits[0]+"」ところも「"+traits[2]+"」ところも、この犬種の魅力そのものです。"}
-  else if(BREEDS[st.breed]){
-    var bc=st.breed,diff=[];for(var i=0;i<4;i++)if(bc[i]!==last.code[i])diff.push(traits[i]);
-    gap=name+"は"+body+"の子ですが、心は"+B.s+"。とくに「"+diff.slice(0,2).join("」「")+"」ところが"+B.s+"ゆずりです。";
+  var strong=[0,1,2,3].sort(function(a,b){return Math.abs(last.pct[b]-50)-Math.abs(last.pct[a]-50)});
+  if(pure){gap=BR.length+"犬種の中で、いちばん近いのは自分の犬種でした。「"+traits[strong[0]]+"」ところも「"+traits[strong[1]]+"」ところも、"+B.s+"の魅力そのものです。"}
+  else if(own>=0){
+    var ob=BY[st.breed],diff=[];for(var i=0;i<4;i++)if(Math.abs(ob.v[i]-last.pct[i])>=25)diff.push(i);
+    diff.sort(function(a,b){return Math.abs(ob.v[b]-last.pct[b])-Math.abs(ob.v[a]-last.pct[a])});
+    var t=(diff.length?diff:strong).slice(0,2).map(function(i){return traits[i]});
+    gap=name+"は"+short+"の子ですが、心は"+B.s+"。とくに「"+t.join("」「")+"」ところが"+B.s+"ゆずりです。"+(own<3?"もちろん"+short+"らしさもしっかり持っています。":"");
+  }else if(st.breed==="x:ミックス"){
+    gap="ミックスの"+name+"は、いろいろな犬種のいいとこ取り。いちばん近いのは"+B.s+"、次に"+last.rank[1].b.s+"、"+last.rank[2].b.s+"です。";
   }else{
-    var ord=[0,1,2,3].sort(function(a,b){return Math.abs(last.pct[b]-50)-Math.abs(last.pct[a]-50)});
-    gap=name+"の心は"+B.s+"。いちばん強いのは「"+traits[ord[0]]+"」ところ、次に「"+traits[ord[1]]+"」ところです。";
+    gap=name+"の心は"+B.s+"。いちばん強いのは「"+traits[strong[0]]+"」ところ、次に「"+traits[strong[1]]+"」ところです。";
   }
   $("r-gap").textContent=gap;$("r-desc").textContent=B.d;
+  // ランキング（上位5つ＋自分の犬種）
+  var rows=last.rank.slice(0,5).map(function(x,i){return [i,x]});
+  if(own>=5)rows.push([own,last.rank[own]]);
+  $("r-rank").innerHTML=rows.map(function(r){var x=r[1];
+    return '<li'+(x.b.id===st.breed?' class="me"':'')+(r[0]>=5?' style="counter-set:r '+r[0]+'"':'')+'><span>'+esc(x.b.n)+'<small>'+esc(x.b.c)+'</small></span><b>'+x.m+'%</b></li>'}).join("");
+  $("r-own").textContent=own>=0?(short+"度は "+ownM+"%（"+BR.length+"犬種中 "+(own+1)+"位）。"+(pure?"まさに生粋の"+short+"です。":own<5?short+"らしさもしっかりあります。":"見た目は"+short+"、中身はオリジナル。それがこの子の個性です。")):"％は、性格のかたちがどれくらい近いかを表します。";
   $("r-manual-title").textContent=name+"の取扱説明書";
   $("r-manual").innerHTML=[["うれしいほめ方",B.p],["安心する時間",B.k],["ちょっと苦手",B.w]].map(function(m){return '<div><b>'+m[0]+'</b><span>'+esc(m[1])+'</span></div>'}).join("");
   $("r-axes").innerHTML=last.pct.map(function(v,i){var a=AXES[i];
@@ -506,7 +595,7 @@ $("edit").addEventListener("click",function(){show("s-start")});
 
 // はじめの画面の見本カード
 fontsReady().then(function(){
-  $("sample-img").src=renderCard({code:"JAYB",name:"こむぎ",body:"パグ",img:null,pos:st,ears:true,pct:[30,68,35,72],hidden:"JHZB"});
+  $("sample-img").src=renderCard({main:BY.gsd,name:"こむぎ",bodyLine:"体は パグ（パグ度 58%）／ 心は",img:null,pos:st,ears:true,pct:[30,68,35,72],hidden:BY.chihuahua,pure:false});
 });
 })();
 </script>
