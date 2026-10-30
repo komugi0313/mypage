@@ -1185,13 +1185,18 @@ html.pk-qm #concBox,html.pk-qm #hexSec,html.pk-qm #hexSec+.card,html.pk-qm #scri
             昔ながらの「コインを投げて卦を立てる」方法を、アプリが自動で行います。<br><br>
             <b>① 6本の線をつくる</b><br>3枚のコインを1回投げるごとに、線（爻＝こう）が1本決まります。これを6回くり返し、<b>下から上へ</b>6本の線を積み上げます。<br><br>
             <b>② 陽か陰かが決まる</b><br>昔からの決まりで、<b>表を3、裏（☯）を2</b>と数えて3枚を足します。合計が<b>奇数（7か9）なら「陽」</b>（——）、<b>偶数（6か8）なら「陰」</b>（- -）の線に。つまり<b>表が1枚か3枚なら陽、表が0枚か2枚なら陰</b>です（少ない方の面が線を決める、と覚えると簡単です）。6本そろうと、64種類の中の<b>ひとつの卦</b>になります。<br><br>
-            <b>③ 変爻（へんこう）＝「動く1本」を選ぶ</b><br>変爻とは、6本の線のうち<b>「いま、変わろうとしている1本」</b>のこと。この1本が“これからの流れ”のカギになります。<br>
-            えらび方はかんたんです：<br>
-            ・<b>3枚のコインがそろって同じ面</b>（全部“表”か、全部“☯”）で出た線は、<b>とくに強く動く線</b>。それがあれば、そこから1本を変爻にします。<br>
-            ・そろった線が1本も無いときは、6本の中から1本を変爻にします。<br>
-            ・このアプリは、読み解きやすいように<b>変爻を必ず1本に絞ります</b>（昔ながらの読み方では、動く線が何本もあるとき、まとめて読むこともあります）。<br><br>
-            <b>④ この先まで読む</b><br>変爻が動くと、卦は次の姿（<b>之卦＝しか</b>）へ変わります。だから「今」だけでなく「<b>この先どうなるか</b>」まで読み解けます。<br><br>
-            <span style="color:var(--ink3,#8a8390);">※ 線の出し方は、昔から伝わるコイン法と同じです。変爻を必ず1本にする（動く線が出なかったときも1本選ぶ）点が、このアプリの方式です。サイコロ・数字・カードで立てても、読み方は同じです。</span>
+            <b>③ 変爻（へんこう）＝「動く線」を見る</b><br><b>3枚のコインがそろって同じ面</b>（全部“表”＝9か、全部“☯”＝6）で出た線が、<b>いま変わろうとしている線（変爻）</b>です。0本のことも、何本か出ることもあります。<br><br>
+            <b>④ 何本動いたかで、読む言葉が決まる</b>（易の本来の決まり＝朱子の考変占）<br>
+            ・0本：本卦の<b>卦辞</b>で読みます（之卦はありません）<br>
+            ・1本：その<b>爻の言葉</b>で読みます<br>
+            ・2本：<b>上の爻</b>を中心に、下の爻もあわせて読みます<br>
+            ・3本：本卦の<b>卦辞</b>を中心に、之卦の卦辞もあわせて読みます<br>
+            ・4本：之卦の、動かなかった2本のうち<b>下の爻</b>で読みます<br>
+            ・5本：之卦の、<b>動かなかった1本</b>の爻で読みます<br>
+            ・6本：乾為天は<b>用九</b>、坤為地は<b>用六</b>、ほかは之卦の卦辞で読みます<br>
+            どの決まりで読んだかは、結果の画面に出ます。<br><br>
+            <b>⑤ この先まで読む</b><br>動いた線がすべて変わると、卦は次の姿（<b>之卦＝しか</b>）へ変わります。だから「今」だけでなく「<b>この先どうなるか</b>」まで読み解けます。<br><br>
+            <span style="color:var(--ink3,#8a8390);">※ 線の出し方も読み方も、昔から伝わるコイン法（擲銭法）と朱子の決まりのとおりです。数字・カード・手動で立てたときは、動く線が必ず1本なので、その爻の言葉で読みます。</span>
           </div>
         </details>
       </div>
@@ -2163,9 +2168,11 @@ const App=(function(){
       lines.push(yang);
       if(s===9||s===6) moving.push(i+1);
     }
-    const ko = moving.length?moving[Math.floor(Math.random()*moving.length)]:(Math.floor(Math.random()*6)+1);
+    // 本来の読み方（朱子『易学啓蒙』の考変占）：動いた線は全部そのまま使い、何本動いたかで読む言葉を決める（鑑定者本人の判断 2026-10-30「本来の読み方に変えてください」）
+    const ko = moving.length?Math.max.apply(null,moving):1;
     const res = finalizeLines(lines, ko);
-    res.coin = { sums, ko }; // 下から1〜6爻の出目(6/7/8/9)と、採用した変爻
+    res.moving = moving.slice();
+    res.coin = { sums, ko, moving:moving.slice() }; // 下から1〜6爻の出目(6/7/8/9)と、動いた線
     return res;
   }
   function ekiNumBad(){ return ['num1','num2','num3'].map(i=>document.getElementById(i)).filter(e=>{ if(!e) return false; const v=String(e.value||'').trim(); if(e.validity&&e.validity.badInput) return true; if(v==='') return false; return !/^\d+$/.test(v)||+v<1||+v>9999; }); }
@@ -2197,19 +2204,69 @@ const App=(function(){
     const key=`${newUp.n}-${newLow.n}`;
     return { upperTG:newUp, lowerTG:newLow, key, hex:HEXDB[key]||null, rank:HEXKK[key]||'C' };
   }
-  function buildResult(upper, lower, ko){
+  /* 動いた線をすべて反転した之卦 */
+  function ekiShikaMulti(upperN, lowerN, moving){
+    const lT=TG[lowerN-1].l, uT=TG[upperN-1].l;
+    const lines={1:lT[2],2:lT[1],3:lT[0],4:uT[2],5:uT[1],6:uT[0]};
+    moving.forEach(k=>{ if(lines[k]!==undefined) lines[k]=1-lines[k]; });
+    const findTG=(top,mid,bot)=>TG.find(t=>t.l[0]===top&&t.l[1]===mid&&t.l[2]===bot);
+    const newLow=findTG(lines[3],lines[2],lines[1]), newUp=findTG(lines[6],lines[5],lines[4]);
+    if(!newLow||!newUp) return null;
+    const key=`${newUp.n}-${newLow.n}`;
+    return { upperTG:newUp, lowerTG:newLow, key, hex:HEXDB[key]||null, rank:HEXKK[key]||'C' };
+  }
+  const EKI_YONG={ '1-1':{jd:'見群龍无首。吉。',kd:'群龍（ぐんりゅう）首（かしら）无（な）きを見（み）る。吉（きち）。',tai:'みんなが力を出し合い、だれも先頭に立とうとしない姿です。出しゃばらず、力を合わせて進めばうまくいきます。',nm:'用九（ようきゅう）',rank:'B'},
+                   '8-8':{jd:'利永貞。',kd:'永（なが）く貞（ただ）しきに利（よろ）し。',tai:'柔らかさを保ちながら、正しい道を長く守り続けるとよい時です。',nm:'用六（ようりく）',rank:'B'} };
+  /* 爻1本の答えの記号（KO_RANK_FIX → なければ卦全体の目安に爻の言葉を重ねる） */
+  function ekiKoRank(hx,key,k){ if(!hx||!hx.ko||!hx.ko[k]) return HEXKK[key]||'C'; return KO_RANK_FIX[hx.no+'-'+k]||koAdjustRank(HEXKK[key]||'C',hx.ko[k].jd,hx.ko[k].tai,mTai(hx,k)); }
+  /* 何本動いたかで、読む言葉と答えの記号を決める（朱子『易学啓蒙』考変占）
+     0本＝本卦の卦辞／1本＝その爻／2本＝上の爻が主・下の爻もあわせて／3本＝本卦の卦辞が主・之卦の卦辞もあわせて
+     4本＝之卦の動かなかった2本のうち下の爻が主／5本＝之卦の動かなかった1本／6本＝乾は用九・坤は用六・ほかは之卦の卦辞 */
+  function ekiBasis(upper,lower,h,moving,shika){
+    const key=`${upper}-${lower}`, n=moving.length, ja=(typeof LANG==='undefined'||LANG==='ja');
+    const KN=k=>KO_NAME[k]||(k+'爻'), sh=shika&&shika.hex, shk=shika&&shika.key;
+    const lineOf=(hx,k)=>(hx&&hx.ko&&hx.ko[k])?hx.ko[k]:null;
+    const gua=(hx)=>hx?{jd:hx.qt,kd:hx.kd,tai:mMsg(hx)}:null;
+    const still=[1,2,3,4,5,6].filter(k=>moving.indexOf(k)<0);
+    const mvTxt=moving.map(k=>String(KN(k)).replace(/（.*$/,'')).join('・');
+    let b;
+    if(n===0) b={src:'gua',ko:0,koData:gua(h),koTai:mMsg(h),label:ja?'卦辞（かじ）':'Judgment',rank:HEXKK[key]||'C',
+      note:'動く線が出なかった（静卦）ので、本卦の卦辞で読みます。'};
+    else if(n===1) b={src:'hon',ko:moving[0],koData:lineOf(h,moving[0]),koTai:mTai(h,moving[0]),label:KN(moving[0]),rank:ekiKoRank(h,key,moving[0]),
+      note:'動く線が1本（'+mvTxt+'）なので、その爻の言葉で読みます。'};
+    else if(n===2){ const hi=Math.max.apply(null,moving), lo=Math.min.apply(null,moving);
+      b={src:'hon',ko:hi,koData:lineOf(h,hi),koTai:mTai(h,hi),label:KN(hi),rank:ekiKoRank(h,key,hi),
+      ko2:lo,koData2:lineOf(h,lo),koTai2:mTai(h,lo),label2:KN(lo),
+      note:'動く線が2本（'+mvTxt+'）なので、上の'+String(KN(hi)).replace(/（.*$/,'')+'を中心に、'+String(KN(lo)).replace(/（.*$/,'')+'もあわせて読みます。'}; }
+    else if(n===3) b={src:'gua',ko:0,koData:gua(h),koTai:mMsg(h),label:ja?'卦辞（かじ）':'Judgment',rank:HEXKK[key]||'C',
+      koData2:gua(sh),koTai2:sh?mMsg(sh):'',label2:sh?('之卦「'+sh.nm+'」の卦辞'):'',
+      note:'動く線が3本（'+mvTxt+'）なので、本卦の卦辞を中心に、之卦'+(sh?'「'+sh.nm+'」':'')+'の卦辞もあわせて読みます。'};
+    else if(n===4||n===5){ const lo=Math.min.apply(null,still), hi=Math.max.apply(null,still);
+      b={src:'shi',ko:lo,koData:lineOf(sh,lo),koTai:sh?mTai(sh,lo):'',label:(sh?'之卦「'+sh.nm+'」の':'')+KN(lo),rank:sh?ekiKoRank(sh,shk,lo):(HEXKK[key]||'C'),
+      note:n===4?('動く線が4本（'+mvTxt+'）なので、之卦'+(sh?'「'+sh.nm+'」':'')+'の、動かなかった2本のうち下の'+String(KN(lo)).replace(/（.*$/,'')+'を中心に読みます。'):('動く線が5本（'+mvTxt+'）なので、之卦'+(sh?'「'+sh.nm+'」':'')+'の、動かなかった'+String(KN(lo)).replace(/（.*$/,'')+'で読みます。')};
+      if(n===4){ b.ko2=hi; b.koData2=lineOf(sh,hi); b.koTai2=sh?mTai(sh,hi):''; b.label2=(sh?'之卦「'+sh.nm+'」の':'')+KN(hi); } }
+    else { const y=EKI_YONG[key];
+      if(y) b={src:'yong',ko:0,koData:{jd:y.jd,kd:y.kd,tai:y.tai},koTai:y.tai,label:y.nm,rank:y.rank,note:'6本すべてが動いたので、'+y.nm.replace(/（.*$/,'')+'の言葉で読みます。'};
+      else b={src:'shigua',ko:0,koData:gua(sh),koTai:sh?mMsg(sh):'',label:sh?('之卦「'+sh.nm+'」の卦辞'):'之卦の卦辞',rank:sh?(HEXKK[shk]||'C'):(HEXKK[key]||'C'),note:'6本すべてが動いたので、之卦'+(sh?'「'+sh.nm+'」':'')+'の卦辞で読みます。'}; }
+    b.n=n; return b;
+  }
+  function buildResult(upper, lower, ko, moving){
     const key=`${upper}-${lower}`;
     const h=HEXDB[key]||null;
     const rank=HEXKK[key]||'C';
+    ko=+ko||1;
+    // 数字・カード・手動（と前の記録）は動く線が1本。コイン式は動いた線をすべて渡す
+    let mv=Array.isArray(moving)?moving.map(Number).filter(k=>k>=1&&k<=6):[ko];
+    mv=mv.filter((k,i)=>mv.indexOf(k)===i).sort((a,b)=>a-b);
     const goka=(typeof calcGoka==='function')?calcGoka(upper,lower):null;
-    const shika=calcShika(upper,lower,ko);
+    const shika=mv.length?ekiShikaMulti(upper,lower,mv):null;
     const soka=(typeof calcSoka==='function')?calcSoka(upper,lower):null;
     const sakka=(typeof calcSakka==='function')?calcSakka(upper,lower):null;
-    const koData=h&&h.ko?(h.ko[ko]||h.ko[1]):null;
-    // 今回の答えは、卦全体の運気（hexRank）に、動いた爻の言葉の吉凶を重ねて決める
-    // （爻辞が「凶」なのに「進んで大丈夫」と出る、といった食い違いを防ぐ）
-    return {upper,lower,ko,key,h,hexRank:rank,rank:((h&&koData===(h.ko&&h.ko[ko])&&KO_RANK_FIX[h.no+'-'+ko])||koAdjustRank(rank,koData?koData.jd:'',koData?koData.tai:'',mTai(h,koData===(h&&h.ko&&h.ko[ko])?ko:1))),goka,shika,soka,sakka,koData,uT:TG[upper-1],lT:TG[lower-1]};
+    const B=ekiBasis(upper,lower,h,mv,shika);
+    // 今回の答えは、読む言葉（卦辞・爻辞）の吉凶で決める（卦全体の運気は hexRank）
+    return {upper,lower,ko:B.ko,ko0:ko,moving:mv,basis:B,key,h,hexRank:rank,rank:B.rank,koData:B.koData,koTai:B.koTai,koLabel:B.label,goka,shika,soka,sakka,uT:TG[upper-1],lT:TG[lower-1]};
   }
+
 
   /* ---- Gemini ---- */
   /* お客様のお名前は外部のサービスに送らない：文章の中では仮の印「〔お名前〕」で書かせ、
@@ -2476,9 +2533,9 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
     const sokaTxt=(r.soka&&r.soka.hex)?(r.soka.same?`／綜卦（相手の立場から見た卦）：本卦と同じ＝相手も同じ景色を見ている`:`／綜卦（相手・相手の立場から見た卦）：${r.soka.hex.nm}（${r.soka.hex.rd}）＝${r.soka.hex.theme}`):'';
     const sakkaTxt=(r.sakka&&r.sakka.hex)?`／錯卦（本卦の陰陽をすべて反転した卦。表裏一体の裏側・見えていない側面・正反対の可能性）：${r.sakka.hex.nm}（${r.sakka.hex.rd}）＝${r.sakka.hex.theme}`:'';
     const ctx=h?
-      `【現代の言葉での意味（原文の意味を伝えるときの土台）】いまの時＝「${mTheme(h)}」：${mMsg(h)}／いちばん大切なメッセージ：${mTai(h,r.ko)}${r.shika&&r.shika.hex?`／この先の流れ＝「${mTheme(r.shika.hex)}」：${mMsg(r.shika.hex)}`:''}／運気：${(r.koData&&KO_KYO.test(r.koData.jd)&&(r.hexRank==='A'||r.hexRank==='B'))?`卦全体は「${UNKI_LABEL[r.hexRank]}」の目安だが、今回動いた爻は「凶」で注意を促している（運気の良さを前面に出さず、慎重さを軸に書くこと）`:UNKI_LABEL[r.rank]}
-【易経の原文（正確に引用する材料）】卦：第${h.no}卦 ${h.nm}（${h.rd}）／テーマ：${h.theme}／卦辞：「${h.qt}」（${h.src}）${h.kd?`／卦辞の読み下し：「${h.kd}」`:''}／運勢解説：${h.unsei_txt}／${KO_NAME[r.ko]}の爻辞：「${r.koData?r.koData.jd:''}」${(r.koData&&r.koData.kd)?`／爻辞の読み下し：「${r.koData.kd}」`:''}／${KO_NAME[r.ko]}の示すこと：${r.koData?r.koData.tai:''}${gokaTxt}${shikaTxt}${sokaTxt}${sakkaTxt}`
-      :`上卦：${r.uT.k} 下卦：${r.lT.k} ${KO_NAME[r.ko]}`;
+      `【現代の言葉での意味（原文の意味を伝えるときの土台）】いまの時＝「${mTheme(h)}」：${mMsg(h)}／いちばん大切なメッセージ：${r.koTai}${(r.basis&&r.basis.koTai2)?`／あわせて読む言葉（${r.basis.label2}）：${r.basis.koTai2}`:''}${r.shika&&r.shika.hex?`／この先の流れ＝「${mTheme(r.shika.hex)}」：${mMsg(r.shika.hex)}`:''}／運気：${(r.koData&&KO_KYO.test(r.koData.jd)&&(r.hexRank==='A'||r.hexRank==='B'))?`卦全体は「${UNKI_LABEL[r.hexRank]}」の目安だが、今回読む言葉は「凶」で注意を促している（運気の良さを前面に出さず、慎重さを軸に書くこと）`:UNKI_LABEL[r.rank]}
+【易経の原文（正確に引用する材料）】卦：第${h.no}卦 ${h.nm}（${h.rd}）／テーマ：${h.theme}／卦辞：「${h.qt}」（${h.src}）${h.kd?`／卦辞の読み下し：「${h.kd}」`:''}／運勢解説：${h.unsei_txt}／【今回の読み方】${r.basis.note}／${r.koLabel}：「${r.koData?r.koData.jd:''}」${(r.koData&&r.koData.kd)?`／読み下し：「${r.koData.kd}」`:''}／${r.koLabel}の示すこと：${r.koTai||''}${r.basis.koData2?`／あわせて読む ${r.basis.label2}：「${r.basis.koData2.jd}」（${r.basis.koTai2||''}）`:''}${gokaTxt}${shikaTxt}${sokaTxt}${sakkaTxt}`
+      :`上卦：${r.uT.k} 下卦：${r.lT.k} ${r.koLabel}`;
     return `あなたは熟練の易占い師です。占い師であるあなた自身が、目の前のお客様に何を伝えるべきかを考え、鑑定の材料を作ります。
 【安全ルール（本当に危険な場合のみ）】相談内容に、他者への危害・殺害・暴力・犯罪（盗み・詐欺など）を実際に行おうとする明確な意図がある場合、または自殺の具体的な計画・方法・時期をたずねる場合に限り、占いによる判定・後押し・具体的な方法の提示を一切行わないこと。その場合、▼判定 には◎〇△✖を付けず「占いではお答えできないご相談です」とだけ記し、他のすべての項目では、その行為を肯定も否定も評価もせず、お気持ちを静かに受けとめたうえで、ひとりで抱え込まず信頼できる人や公的な相談窓口（いのちの電話等）に相談するよう、やさしく促す言葉だけを書くこと。なお、死にたい・消えたい・自分を傷つけたいといった深くつらい気持ちの相談は断らず、▼判定 には◎〇△✖を付けずに寄り添う一言を記し、ほかの項目は希望につながる見方でふだんどおり丁寧に書く（死や自傷を肯定・後押ししない。最後に一言、信頼できる人や相談窓口にも話してほしいとやさしく添える）。ただし「死ぬほど疲れた」「殺したいほど腹が立つ」「この恋に死ぬ気で挑む」等の比喩・誇張や、別れ・退職・対人トラブルといった通常の悩みは危険ではないので、通常どおり丁寧に鑑定すること。判断に迷う場合は、正しい鑑定を優先すること。
 相談内容（占的：${topicLabel(cur.topic)}）：「${question}」${ekiSafetyPrompt(question)}
@@ -2585,9 +2642,9 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
       return; } }
     // 相談テーマを選んでいないときは、相談文から推定する（鑑定書のアドバイスが別のテーマにならないように）
     if(!cur.topic){ cur.topic=inferTopic(q); const tc=document.querySelector('#topicChips .chip[data-id="'+cur.topic+'"]'); if(tc){ document.querySelectorAll('#topicChips .chip').forEach(x=>x.classList.remove('on')); tc.classList.add('on'); } }
-    let upper,lower,ko;
+    let upper,lower,ko,mv=null;
     cur.coin=null;
-    if(cur.cast==='coin'){ const c=castCoin(); upper=c.upper;lower=c.lower;ko=c.ko; cur.coin=c.coin; }
+    if(cur.cast==='coin'){ const c=castCoin(); upper=c.upper;lower=c.lower;ko=c.ko;mv=c.moving; cur.coin=c.coin; }
     else if(cur.cast==='manual'){
       upper=+document.getElementById('mUpper').value; lower=+document.getElementById('mLower').value; ko=+document.getElementById('mKo').value;
       ekiManualErr(false);
@@ -2615,7 +2672,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
     window.__ekiUserScroll=false; window.__ekiFollowAns=true;   // ここから先、お客様が自分で画面を動かすまでは、答えが届いたら答えの欄を見せる
     const at0=Date.now();   // この鑑定の目印（自動保存で同じ記録を上書きするため、作り直しても変えない）
     try{ if(typeof pickDest==='function' && _destPre[at0]===undefined) _destPre[at0]=pickDest(); }catch(_){}   // 保存先は「鑑定を押した時点のお客様」で決める（答えを待つ間に次のお客様の名前を入れても、混ざらない）
-    const r=buildResult(upper,lower,ko);
+    const r=buildResult(upper,lower,ko,mv);
     const nm0=clientName();   // お名前は「鑑定を押した時点のお客様」で入れる（答えを待つ間に別のお客様を選んでも、混ざらない）
     const L=document.getElementById('loading'); const LM=document.getElementById('loadingMsg');
     const hasKey = canOnline();
@@ -2743,7 +2800,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
     const unki=UNKI_LABEL[r.rank];
     const theme=mTheme(h);
     const unsei=mMsg(h);
-    const koTai=mTai(h,r.ko);
+    const koTai=r.koTai||'';
     const goka=r.goka&&r.goka.hex?mTheme(r.goka.hex):'';
     const soka=r.soka&&r.soka.hex?(r.soka.same?'':mTheme(r.soka.hex)):'';
     const shika=r.shika&&r.shika.hex?r.shika.hex:null;
@@ -2764,7 +2821,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
     // 読み上げ台本（易経の原文 → 現代語にすると、の順で）
     const script=[
       `この易の卦は「${name}${rd}」と申します。${h?`易経（えききょう）には「${h.qt}」とあります。${h.kd?`読み下すと「${h.kd.replace(/。$/,'')}」となります。`:''}`:''}現代の言葉にすると、「${theme}」ということです。${blendLead}${unsei}`,
-      koJd?`今回は${KO_NAME[r.ko]}「${koJd}」が動いています。${(r.koData&&r.koData.kd)?`読み下すと「${r.koData.kd.replace(/。$/,'')}」となります。`:''}現代の言葉にすると、${koTai}`:(koTai?`今回いちばん大切なのは、${koTai}`:''),
+      koJd?`今回は${r.basis.src==='hon'&&r.basis.n===1?KO_NAME[r.ko]+'「'+koJd+'」が動いています':r.koLabel+'「'+koJd+'」で読みます'}。${(r.koData&&r.koData.kd)?`読み下すと「${r.koData.kd.replace(/。$/,'')}」となります。`:''}現代の言葉にすると、${koTai}`:(koTai?`今回いちばん大切なのは、${koTai}`:''),
       shika?`そしてこの先は、之卦（しか）の「${shika.nm}（${shika.rd}）」へと移っていきます。現代の言葉にすると「${mTheme(shika)}」。${mMsg(shika)}`:'',
       `${lead}今回の運気は「${unki}」。${(KO_KYO.test(koJd)&&(r.hexRank==='A'||r.hexRank==='B'))?'ただし今回動いた爻は「凶」と注意を促しているので、勢いに任せず、慎重に進めることが大切です。':''}${close}`
     ].filter(Boolean).join('\n');
@@ -2774,7 +2831,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
       `今回の卦は「${name}${rd}」。現代の言葉でいうと「${theme}」${/時$/.test(theme)?'に':'という時期に'}入っていますよ`,
       unsei,
       `運気は今「${unki}」と出ています。${_sf?(_sf.crisis?'焦らず、いまはご自分の心と体をいちばんに大切にしてくださいね。':'結果を急がず、落ち着いて向き合っていきましょうね。'):goodRank?'よい流れですから、安心して進んで大丈夫ですよ。':'焦らず、慎重に進んでいきましょうね。'}`,
-      koTai?`今回いちばん動いている線（${KO_NAME[r.ko]}＝下から${r.ko}本目）の言葉は、現代の言葉でいうと「${koTai.replace(/。$/,'').replace(/(時)です$/,'$1')}」ということですよ`:'',
+      koTai?`${r.basis.src==='hon'?'今回いちばん動いている線（'+KO_NAME[r.ko]+'＝下から'+r.ko+'本目）の言葉':'今回読む言葉（'+r.koLabel+'）'}は、現代の言葉でいうと「${koTai.replace(/。$/,'').replace(/(時)です$/,'$1')}」ということですよ`:'',
       goka?`表には見えない背景として、互卦（ごか）の「${r.goka.hex.nm}（${r.goka.hex.rd}）」が示す「${goka}」という面も隠れていますよ`:'',
       soka?`${/彼|彼女|夫|妻|相手|上司|部下|同僚|友|親|子|家族|お客|取引|恋|結婚|離婚|人/.test(q||'')?'相手の立場から':'立場を変えて'}見る綜卦（そうか）の「${r.soka.hex.nm}（${r.soka.hex.rd}）」では、「${soka}」という景色になっています`:'',   // 株・体調など「相手」がいない相談では「相手の立場」と言わない
       _sf?(_sf.crisis?'まずは、ご自分の心と体を休めることを、いちばんに考えてくださいね。ひとりで抱えず、身近な人にも気持ちを話してみてくださいね':'できることから一つずつ、落ち着いて向き合っていきましょうね'):goodRank?'今のよい流れを活かして、思いきって一歩を踏み出していきましょうね':'今は無理に動かず、じっくり力を蓄える時だと考えてくださいね',
@@ -2806,7 +2863,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
     let html='';
     top2bottom.forEach((v,idx)=>{
       const koNum=6-idx;
-      const moving=(koNum===r.ko)?' moving':'';
+      const moving=((r.moving||[r.ko]).indexOf(koNum)>=0)?' moving':'';
       if(v===1) html+=`<div class="hline yang${moving}"><span class="seg-l"></span></div>`;
       else html+=`<div class="hline yin${moving}"><span class="seg-l"></span><span class="seg-l"></span></div>`;
     });
@@ -3008,7 +3065,7 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
         ? '<span style="display:block;width:26px;height:5px;border-radius:2px;background:#3a3a3a;margin:2px auto;"></span>'
         : '<span style="display:flex;gap:4px;justify-content:center;margin:2px auto;"><span style="width:11px;height:5px;border-radius:2px;background:#3a3a3a;"></span><span style="width:11px;height:5px;border-radius:2px;background:#3a3a3a;"></span></span>';
       const num=d.mv?`<span style="color:var(--shu);font-weight:800;">${s}</span>`:`${s}`;
-      const hi=(i+1===c.ko)?'background:rgba(192,57,43,.07);border-color:var(--shu);':'';
+      const hi=((c.moving||[c.ko]).indexOf(i+1)>=0)?'background:rgba(192,57,43,.07);border-color:var(--shu);':'';
       return `<div class="coin-cell" style="flex:1;min-width:0;text-align:center;border:1px solid var(--line);border-radius:8px;padding:6px 1px;${hi}">
         <div class="c-yao">${YAO[i]}</div>
         <div>${bar}</div>
@@ -3017,9 +3074,8 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
       </div>`;
     }).join('');
     const mvN=c.sums.filter(x=>x===6||x===9).length;
-    const how = mvN===0 ? '動きの強い線（6・9）が出なかったため、6本の中から1本を変爻にしました。'
-              : mvN===1 ? '動きの強い線（6・9）の1本を、変爻にしました。'
-              : `動きの強い線（6・9）が${mvN}本出たため、その中から1本を変爻にしました。`;
+    const how = (cur.last&&cur.last.r&&cur.last.r.basis&&cur.last.r.basis.note) ? ('動きの強い線（6・9）が'+(mvN?mvN+'本':'出ませんでした')+'。'+cur.last.r.basis.note+'（易の本来の決まり＝朱子の考変占）')
+              : (mvN===0 ? '動きの強い線（6・9）が出ませんでした。本卦の卦辞で読みます。' : `動きの強い線（6・9）が${mvN}本出ました。`);
     box.innerHTML=`<div class="coin-ttl">${t('coin_result')}</div>
       <div style="display:flex;gap:4px;">${chips}</div>
       <div class="coin-how">${how}<span class="ib">${YAO[c.ko-1]}爻が今回の変爻です。</span></div>`;
@@ -3046,7 +3102,7 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
       R.push({st:'warn',what:'「'+q0+'」',calc:other?'これは '+other+' の言葉':'易経の原文に見当たらない',note:other?'今回出た卦の言葉ではありません。確かめてください':'原文と一致しません。確かめてください'}); } }
     // ③ 動いた爻
     { const P={'初':1,'二':2,'三':3,'四':4,'五':5,'上':6}, re=/(?:動いた爻|変爻)[はがの]?[「（]?(初|二|三|四|五|上)爻|(初|二|三|四|五|上)爻(?:（[^）]*）)?が動/g; let m, seen={}; while((m=re.exec(txt))){ const n=P[m[1]||m[2]]; if(seen[n]) continue; seen[n]=1;
-      R.push(n===+r.ko?{st:'ok',what:'動いた爻＝'+(m[1]||m[2])+'爻',calc:'今回の動いた爻＝'+String(KO_NAME[r.ko]).replace(/（.*$/,''),note:'出た卦どおり'}:{st:'warn',what:'動いた爻＝'+(m[1]||m[2])+'爻',calc:'今回の動いた爻＝'+String(KO_NAME[r.ko]).replace(/（.*$/,''),note:'今回の動いた爻とちがいます。確かめてください'}); } }
+      R.push(((r.moving||[]).indexOf(n)>=0||n===+r.ko)?{st:'ok',what:'動いた爻＝'+(m[1]||m[2])+'爻',calc:'今回の動いた爻＝'+(r.moving||[r.ko]).map(k=>String(KO_NAME[k]).replace(/（.*$/,'')).join('・'),note:'出た卦どおり'}:{st:'warn',what:'動いた爻＝'+(m[1]||m[2])+'爻',calc:'今回の動いた爻＝'+(r.moving||[r.ko]).map(k=>String(KO_NAME[k]).replace(/（.*$/,'')).join('・'),note:'今回の動いた爻とちがいます。確かめてください'}); } }
     // ④ 文章作成が書いた命式・星の話（易は命式を計算していないので、ツールが外した）
     { const RX=/命式|蔵干|通変星|喜神|忌神|咸池|紅艶|天乙貴人|配偶宮|配偶者星|日柱|月柱|年柱|時柱|日干|大運/; const out=String(raw||'').split(/(?<=[。！？\n])/).filter(function(x){ return RX.test(x)&&txt.indexOf(x.replace(/\s+$/,'').slice(0,20))<0; });
       if(out.length) R.push({st:'drop',what:'命式・星の話（'+out.length+'か所）',calc:'易は命式を計算していない',note:'根拠のない話なので外しました：「'+out[0].trim().slice(0,50)+'」'+(out.length>1?'ほか':'')}); }
@@ -3067,23 +3123,23 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
     window.__ekiQ=q;
     document.getElementById('result').style.display='block';
     document.getElementById('hexLines').innerHTML=hexLinesHtml(r);
-    document.getElementById('hexNo').textContent=r.h?`第 ${r.h.no} 卦 ・ ${KO_NAME[r.ko]}`:`${KO_NAME[r.ko]}`;
+    document.getElementById('hexNo').textContent=r.h?`第 ${r.h.no} 卦 ・ ${r.koLabel}`:`${r.koLabel}`;
     document.getElementById('hexModern').innerHTML=r.h?`
       <div class="hm-pair"><div class="hm-orig">${t('ref_kaji')}「${esc(r.h.qt)}」</div>
         ${LANG==='ja'?`<div class="hm-what no-ruby"><b>卦辞（かじ）とは</b>この卦（け）全体の言葉です。いまの状況が、全体としてどんな流れにあるかを表します。まずここで「大きな流れ」をつかみます。</div>`:''}
         ${r.h.kd?`<div class="hm-kd"><b>読み下し</b>${esc(r.h.kd)}</div>`:''}
         <div class="hm-mod"><b>現代語にすると</b>「${esc(mTheme(r.h))}」。${esc(mMsg(r.h))}</div></div>
-      <div class="hm-pair"><div class="hm-orig">${KO_NAME[r.ko]}「${esc(r.koData?r.koData.jd:'')}」</div>
-        ${LANG==='ja'?`<div class="hm-what no-ruby"><b>${esc(KO_NAME[r.ko].replace(/（.*$/,''))}（${esc((KO_NAME[r.ko].match(/（(.*)）/)||['',''])[1])}）とは</b>卦の6本の線のうち、下から${r.ko}本目の線です。今回いちばん動いている線（変爻＝へんこう）で、この相談の「カギ」になる言葉です。卦辞の大きな流れの中で、いま何に気をつければよいかを表します。</div>`:''}
+      <div class="hm-pair"><div class="hm-orig">${esc(r.koLabel)}「${esc(r.koData?r.koData.jd:'')}」</div>
+        ${LANG==='ja'?(r.basis.src==='hon'&&r.basis.n===1?`<div class="hm-what no-ruby"><b>${esc(KO_NAME[r.ko].replace(/（.*$/,''))}（${esc((KO_NAME[r.ko].match(/（(.*)）/)||['',''])[1])}）とは</b>卦の6本の線のうち、下から${r.ko}本目の線です。今回いちばん動いている線（変爻＝へんこう）で、この相談の「カギ」になる言葉です。卦辞の大きな流れの中で、いま何に気をつければよいかを表します。</div>`:`<div class="hm-what no-ruby"><b>今回の読み方</b>${esc(r.basis.note)}（易の本来の決まり＝朱子の考変占）</div>`):''}
         ${(r.koData&&r.koData.kd)?`<div class="hm-kd"><b>読み下し</b>${esc(r.koData.kd)}</div>`:''}
-        <div class="hm-mod"><b>現代語にすると</b>${esc(mTai(r.h,r.ko))}</div></div>`:'';
+        <div class="hm-mod"><b>現代語にすると</b>${esc(r.koTai||'')}</div>${r.basis.koData2?`<div class="hm-orig" style="margin-top:8px">あわせて読む：${esc(r.basis.label2)}「${esc(r.basis.koData2.jd)}」</div><div class="hm-mod"><b>現代語にすると</b>${esc(r.basis.koTai2||'')}</div>`:''}</div>`:'';
     document.getElementById('hexName').textContent=r.h?r.h.nm:`${r.uT.k}＋${r.lT.k}`;
     document.getElementById('hexRd').textContent=r.h?r.h.rd:'';
     // 答えのすぐ下に「出た卦」を1行で（押すと、卦の図と易経の言葉へ）
     { const hb=document.getElementById('hexBand'); if(hb){
       const LB={ja:['出た卦','卦の図へ ↓'],en:['Hexagram','See the figure ↓'],ko:['나온 괘','괘 그림으로 ↓']}[LANG]||['出た卦','卦の図へ ↓'];
       const nm=r.h?`${esc(r.h.nm)}${r.h.rd?`（${esc(r.h.rd)}）`:''}`:esc(`${r.uT.k}＋${r.lT.k}`);
-      hb.innerHTML=`<span class="hb-sym" aria-hidden="true">${SYM[r.upper-1]}${SYM[r.lower-1]}</span><span class="hb-txt"><span class="hb-lb">${LB[0]}</span>${r.h?`<button type="button" class="hb-ref" data-no="${r.h.no}" aria-label="${esc(r.h.nm)}を「用語・64卦」の一覧で見る"><span class="ib">${nm}</span></button>`:`<span class="ib">${nm}</span>`}・<span class="ib">${esc(KO_NAME[r.ko]||'')}</span>${r.h?`<span style="display:block"><button type="button" class="hb-mean" data-no="${r.h.no}" aria-label="${esc(r.h.nm)}の意味を「用語・64卦」で見る">📖 意味を見る</button></span>`:''}</span><button type="button" class="hb-go">${LB[1]}</button>`;
+      hb.innerHTML=`<span class="hb-sym" aria-hidden="true">${SYM[r.upper-1]}${SYM[r.lower-1]}</span><span class="hb-txt"><span class="hb-lb">${LB[0]}</span>${r.h?`<button type="button" class="hb-ref" data-no="${r.h.no}" aria-label="${esc(r.h.nm)}を「用語・64卦」の一覧で見る"><span class="ib">${nm}</span></button>`:`<span class="ib">${nm}</span>`}・<span class="ib">${esc(r.koLabel||KO_NAME[r.ko]||'')}</span>${r.h?`<span style="display:block"><button type="button" class="hb-mean" data-no="${r.h.no}" aria-label="${esc(r.h.nm)}の意味を「用語・64卦」で見る">📖 意味を見る</button></span>`:''}</span><button type="button" class="hb-go">${LB[1]}</button>`;
       hb.dataset.no=r.h?r.h.no:'';
     }
     { const rl=document.getElementById('hexRefLink'); if(rl){ rl.style.display=r.h?'':'none'; rl.dataset.no=r.h?r.h.no:''; } const hn=document.getElementById('hexName'); if(hn){ hn.dataset.no=r.h?r.h.no:''; hn.classList.toggle('hex-name-link',!!r.h); hn.setAttribute('role',r.h?'link':''); hn.tabIndex=r.h?0:-1; hn.title=r.h?'「用語・64卦」の一覧で見る':''; } 
@@ -3199,8 +3255,8 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
   /* ---- 深掘り相談（同じ卦のまま追加質問に対話で答える） ---- */
   function hexCtxShort(r){
     const h=r.h;
-    return h?`第${h.no}卦 ${h.nm}（${h.rd}）／テーマ：${h.theme}／卦辞：「${h.qt}」${h.kd?`（読み下し：${h.kd}）`:''}／${KO_NAME[r.ko]}の爻辞：「${r.koData?r.koData.jd:''}」${(r.koData&&r.koData.kd)?`（読み下し：${r.koData.kd}）`:''}／吉凶：${UNKI_LABEL[r.rank]}${(r.goka&&r.goka.hex)?`／互卦（内に隠れた背景・本音）：${r.goka.hex.nm}`:''}${(r.shika&&r.shika.hex)?`／之卦：${r.shika.hex.nm}`:''}${(r.soka&&r.soka.hex)?(r.soka.same?`／綜卦（相手視点）：本卦と同じ`:`／綜卦（相手の立場）：${r.soka.hex.nm}`):''}${(r.sakka&&r.sakka.hex)?`／錯卦（表裏・真逆の側面）：${r.sakka.hex.nm}`:''}`
-      :`上卦：${r.uT.k} 下卦：${r.lT.k} ${KO_NAME[r.ko]}`;
+    return h?`第${h.no}卦 ${h.nm}（${h.rd}）／テーマ：${h.theme}／卦辞：「${h.qt}」${h.kd?`（読み下し：${h.kd}）`:''}／${r.koLabel}：「${r.koData?r.koData.jd:''}」${(r.koData&&r.koData.kd)?`（読み下し：${r.koData.kd}）`:''}${r.basis.koData2?`／あわせて ${r.basis.label2}：「${r.basis.koData2.jd}」`:''}／読み方：${r.basis.note}／吉凶：${UNKI_LABEL[r.rank]}${(r.goka&&r.goka.hex)?`／互卦（内に隠れた背景・本音）：${r.goka.hex.nm}`:''}${(r.shika&&r.shika.hex)?`／之卦：${r.shika.hex.nm}`:''}${(r.soka&&r.soka.hex)?(r.soka.same?`／綜卦（相手視点）：本卦と同じ`:`／綜卦（相手の立場）：${r.soka.hex.nm}`):''}${(r.sakka&&r.sakka.hex)?`／錯卦（表裏・真逆の側面）：${r.sakka.hex.nm}`:''}`
+      :`上卦：${r.uT.k} 下卦：${r.lT.k} ${r.koLabel}`;
   }
   /* ---- 四柱推命（命式計算）：年柱/月柱/日柱＋任意で時柱 ----
      日柱は JDN 基準（(JDN+49)%60、検証済アンカー：1900-01-01=甲戌／2000-01-01=戊午）。
@@ -3313,7 +3369,7 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
 最初のご相談：「${L.q}」
 ${(L.p&&L.p.hantei)?`最初にお伝えした答え：${String(L.p.hantei).replace(/[【】]/g,'')}\n`:''}お客様のお名前：${clientName()?`「${NAME_TOKEN}」と書く（印は一字も変えずにそのまま書く）`:'（未入力。名前は出さず、「〇〇さん」などの伏せ字も使わない）'}（標準語で。方言は使わない）
 立てた卦：${hexCtxShort(L.r)}
-現代の言葉での意味（原文の意味を伝えるときの土台）：いまの時＝「${mTheme(L.r.h)}」：${mMsg(L.r.h)}／いちばん大切なメッセージ：${mTai(L.r.h,L.r.ko)}${pilLine}
+現代の言葉での意味（原文の意味を伝えるときの土台）：いまの時＝「${mTheme(L.r.h)}」：${mMsg(L.r.h)}／いちばん大切なメッセージ：${L.r.koTai||mTai(L.r.h,L.r.ko)}${pilLine}
 ${hist?('これまでのやりとり：\n'+hist+'\n'):''}相談者の新しい発言：「${followQ}」
 
 【あなたにしか出せない答えにする（最重要）】
@@ -3590,7 +3646,7 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')), c1=ek
     const phrase=v.phrase||({'◎':'進んで大丈夫。よい結果に向かいます','〇':'前向きに進んで大丈夫です','△':'今は慎重に。急がないのが吉','✖':'今は控えるのが賢明です'})[sym]||'';
     const grp=(r.rank==='A'||r.rank==='B')?'g':(r.rank==='E')?'b':'m';
     const unki=UNKI_LABEL[r.rank];
-    const koTai=mTai(h,r.ko);
+    const koTai=r.koTai||'';
     const sh=r.shika&&r.shika.hex;
     const S=[];
     // 深い悩み（命にかかわる言葉）も、答えの記号を出さず、決めつけない形でふだんどおり書く
@@ -3672,10 +3728,10 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')), c1=ek
     const prompt=`あなたは熟練の易占い師です。お客様にお渡しする「鑑定書」の本文を書きます。鑑定書はお客様本人が読むものです。
 ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_cn}さん」。伏せ字は使わない）\n`:'【お客様のお名前】未入力（名前は出さない。「〇〇さん」などの伏せ字も使わない）\n'}【ご相談】${q||'（相談内容の記入なし）'}${topic?`／テーマ：${topic}`:''}
 【今回の結果（現代の言葉での意味。これを土台に書く）】いまの時＝「${mTheme(h)}」：${mMsg(h)}
-／いちばん大切なメッセージ：${mTai(h,r.ko)}
+／いちばん大切なメッセージ：${r.koTai||''}
 ／この先の流れ：${sh?`「${mTheme(sh)}」：${mMsg(sh)}`:'なし'}
-／運気：${(r.koData&&KO_KYO.test(r.koData.jd)&&(r.hexRank==='A'||r.hexRank==='B'))?`卦全体は「${UNKI_LABEL[r.hexRank]}」の目安だが、今回動いた爻は「凶」で注意を促している（運気の良さを前面に出さず、慎重さを軸に書くこと）`:UNKI_LABEL[r.rank]}／答え：${plainEki(p.hantei||'')}
-【鑑定の根拠（占い師だけが読む材料。名前や漢文は本文に書かない）】第${h?h.no:'-'}卦 ${h?h.nm:''}／卦辞：「${h?h.qt:''}」／${KO_NAME[r.ko]}「${r.koData?r.koData.jd:''}」${sh?`／この先：${sh.nm}`:''}${chLine}
+／運気：${(r.koData&&KO_KYO.test(r.koData.jd)&&(r.hexRank==='A'||r.hexRank==='B'))?`卦全体は「${UNKI_LABEL[r.hexRank]}」の目安だが、今回読む言葉は「凶」で注意を促している（運気の良さを前面に出さず、慎重さを軸に書くこと）`:UNKI_LABEL[r.rank]}／答え：${plainEki(p.hantei||'')}
+【鑑定の根拠（占い師だけが読む材料。名前や漢文は本文に書かない）】第${h?h.no:'-'}卦 ${h?h.nm:''}／卦辞：「${h?h.qt:''}」／${r.koLabel}「${r.koData?r.koData.jd:''}」${sh?`／この先：${sh.nm}`:''}${chLine}
 【書き方（厳守）】
 ・見出しは次の順番で、行頭に「# 見出し」と書き、続けて本文：${heads.map(x=>'「'+x+'」').join('、')}。ほかの見出しは作らない。
 ・「具体的なアドバイス」は行頭「・」の箇条書きで3〜5個。そのほかの章は2〜4文の段落を1〜2つ。
@@ -3817,7 +3873,7 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
   function recOf(L){
     const r=L.r, q=L.q, p=L.p||{};
     const chat=Array.isArray(L.chat)?L.chat:[];
-    const rec={at:L.at, hx:[r.upper,r.lower,r.ko], hex:r.h?r.h.nm:`${r.uT.k}${r.lT.k}`, no:r.h?r.h.no:0, ko:KO_NAME[r.ko], shika:(r.shika&&r.shika.hex)?r.shika.hex.nm:'', q, script:p.script||'', topic:L.topic||cur.topic||null,
+    const rec={at:L.at, hx:[r.upper,r.lower,r.ko0,r.moving], hex:r.h?r.h.nm:`${r.uT.k}${r.lT.k}`, no:r.h?r.h.no:0, ko:r.koLabel, shika:(r.shika&&r.shika.hex)?r.shika.hex.nm:'', q, script:p.script||'', topic:L.topic||cur.topic||null,
       hantei:p.hantei||'', tsutae:p.tsutae||'', jogen:p.jogen||'', rank:r.rank, rd:{},
       chat:chatOf(chat)};
     RD_KEYS.forEach(k=>{ if(p[k]) rec.rd[k]=String(p[k]); });
@@ -4021,7 +4077,7 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
     const cs=document.getElementById('custSelect'); refreshCustSelect(); cs.value=c?c.id:''; try{ fillBirthFromCust(); }catch(_){}
     cur.topic=h.topic||null; document.querySelectorAll('#topicChips .chip').forEach(x=>x.classList.toggle('on',!!cur.topic&&x.dataset.id===cur.topic));
     const q=h.q||''; { const qe=document.getElementById('question'); if(qe) qe.value=q; }
-    const r=buildResult(hx[0],hx[1],hx[2]);
+    const r=buildResult(hx[0],hx[1],hx[2],hx[3]);
     const base=buildOfflineReading(r,q);
     const p=Object.assign({},base);
     if(h.hantei) p.hantei=h.hantei; if(h.tsutae) p.tsutae=h.tsutae; if(h.jogen) p.jogen=h.jogen; if(h.script) p.script=h.script;
