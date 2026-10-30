@@ -6847,6 +6847,25 @@ const WORRY_CAVEATS=[
 ];
 function worryCaveat(worry){ const w=String(worry||''); for(const c of WORRY_CAVEATS){ if(c.re.test(w))return c; } return null; }
 /* 端末内の答えでも「いつ？」に年で答える：これからの年のうち、運気の信号が◎○で、大きく揺れやすい年を除いた年（画面の判定と同じ物差し）。発注者指示 2026-10-20 */
+/* 通信できないときの答えの1行目（鑑定者本人の指示 2026-10-30「オンライン・オフラインでどういう動きをするか」で見つけた：前置きだけで答えていなかった）。
+   命式の計算だけで、問いにまず答える。PRO・ビギナー共通（ビギナーは専門用語なし）。空亡で解けない年は「動きやすい年」に入れない。 */
+function pkKuuTag(c,y,plain){ try{ const k=pkKuuYear(c,(c.annualFortunes||[]).find(function(a){ return a.year===y; })); if(!k) return ''; const ok=k.gou.length||k.chong.length; return plain?(ok?'（ひと休みの年・影響は弱まる）':'（ひと休みの年）'):(k.gou.length?'（空亡・'+k.gou[0].k+'で解空）':k.chong.length?'（空亡・冲で解空）':'（空亡）'); }catch(e){ return ''; } }
+function pkKuuBad(c,y){ try{ const k=pkKuuYear(c,(c.annualFortunes||[]).find(function(a){ return a.year===y; })); return !!(k&&!k.gou.length&&!k.chong.length); }catch(e){ return false; } }
+function pkOfflineLead(c,q,plain){ try{ q=String(q||''); if(!c||!c.now) return ''; const by=birthYearOf(c), age=function(y){ return by?'（'+(y-by)+'歳）':''; };
+  if(/(転職|独立|起業|就職|辞め|仕事|職場|会社|副業|キャリア)/.test(q)){
+    const W=pkWorkDir(c,q), isK=function(y){ return !!pkKuuTag(c,y,false); }, gy=goodYearsAhead(c,8);
+    const ny=[]; for(let yy=c.now.year; yy<=c.now.year+8; yy++){ const sg=pkYearSig(c,yy); if(sg&&!isK(yy)) ny.push(sg); }
+    const g1=ny.filter(function(x){ return x.mk==='◎'||x.mk==='○'; })[0], g2=ny.filter(function(x){ return x.mk!=='△'; })[0];
+    const y=(g1&&g1.y<=c.now.year+4)?g1.y:(g2?g2.y:(gy.filter(function(y){ return !isK(y); })[0]||gy.filter(function(y){ return !pkKuuBad(c,y); })[0]));   // 本格的に動くのは空亡でない年から（当流派の決まり）。良い年が4年以内になければ、整える時期でない一番近い年
+    let t=W?(plain?W.plain:W.pro):'';
+    const kNow=[c.now.year,c.now.year+1].filter(isK);
+    if(y&&kNow.length&&y>kNow[kNow.length-1]) t+=(plain?kNow.map(function(x){ return x+'年'; }).join('・')+'は準備の年にして、':kNow.map(function(x){ return x+'年'+pkKuuTag(c,x,false); }).join('・')+'は準備・試す年にして、');
+    const _good=!!(g1&&g1.y===y);
+    if(y) t+=_good?((plain?'仕事で本格的に動き出しやすいのは、':'本格的に動きやすいのは')+y+'年'+age(y)+'ごろです。'):((plain?'仕事で本格的に動くのは、':'本格的に動くのは')+y+'年'+age(y)+'以降がおすすめです（準備の年が明けるため）。');
+    return t; }
+  if(typeof pkIsLoveQ==='function'&&pkIsLoveQ(q)){ const L=loveFourLines(c); const m=L&&(L.monthLabs||[])[0]; if(m) return (pkCanQ(q)?'可能性はあります。':'')+'縁が動きやすいのは'+m+'です。'; return ''; }
+  const a=pkYearSig(c,c.now.year); if(a) return (plain?'今年（'+a.y+'年）は「'+a.lab+'」の年です。':'今年（'+a.y+'年 '+a.gz+'）は「'+a.lab+'」の年です'+pkKuuTag(c,a.y,false)+'。');
+  return ''; }catch(e){ return ''; } }
 function goodYearsAhead(c,n){ try{ if(!c||!c.now||!c.dayMaster) return []; const ds=c.dayMaster.stem, st=strengthType(c), y0=c.now.year;
   const sk={}; try{ const ts=detectTensen(c); if(ts&&ts.any)[ts,ts.work||{}].forEach(x=>['yU','yA'].forEach(k=>(x[k]||[]).forEach(l=>{const m=String(l).match(/(\d{4})年/); if(m)sk[+m[1]]=1;}))); }catch(e){}
   return (c.annualFortunes||[]).filter(a=>a.year>=y0&&a.year<y0+10&&!sk[a.year]&&'◎○'.indexOf(unkiSignal(unkiPct(a.tenStar,tenStarOf(ds,HONKI[a.branch]),st)).mk)>=0).map(a=>a.year).slice(0,n||3); }catch(e){ return []; } }
@@ -6865,7 +6884,7 @@ function localAnswer(c,worry){
   const dp=c.pillars[2], terr=dp.terrain;
   const L=[];
   const LEAD={love:'恋愛・結婚のご縁の“かたち”と“動きやすい時期”を、命式から具体的に見ていきます。',children:'お子さん・子宝のご縁の“かたち”と“動きやすい時期”を、命式から見ていきます。',study:'学び・試験のちからと、実りやすい時期を命式から見ていきます。',work:'向いている働き方と、動き・転機の時期を命式から見ていきます。',money:'あなたの“稼ぎ方の軸”と、お金が動きやすい時期を見ていきます。',relation:'あなたの対人のクセと、関係が動きやすい時期を見ていきます。',health:'体質のかたよりと、今の時期の整え方を五行から見ていきます。',move:'動くと運が開くタイプかと、動きやすい時期を見ていきます。',timing:'今めぐっている運と、これからの数年の流れを見ていきます。',general:'あなたの本質と今の時期を、命式からコンパクトにまとめます。'};
-  L.push(LEAD[topic]||LEAD.general);   // 占いで決めつけない質問のことわりは、答えの上の欄（caveatNoteHTML）に出す
+  { const _ol=pkOfflineLead(c,worry,false); L.push(_ol||LEAD[topic]||LEAD.general); }   // 1行目は問いへの答え（2026-10-30）。占いで決めつけない質問のことわりは、答えの上の欄（caveatNoteHTML）に出す
 
   if(topic==='love'){
     // 同じ「恋愛・結婚」でも、浮気・別れ・夫婦の相談と「いつ出会えるか」の相談では、答える中心を変える
@@ -6919,7 +6938,7 @@ function localAnswer(c,worry){
     L.push(`身の強さは**${strength}**。${strength==='身弱'?'一人で抱え込むより、仲間やチームで動くほうが力を発揮できます。':strength==='身旺'?'自分で決めて引っ張る働き方が向き、任される立場ほど伸びます。':'状況に合わせて動ける柔軟さが強みです。'}`);
     L.push('【動き・転機の時期】');
     L.push(`今の大運は**${dd.ganzhi}（${dd.tenStar}）**${ay?`、今年の年運は**${ay.year}年 ${ay.ganzhi}（${ay.tenStar}）**`:''}。${WORK_T[yrGrp||duGrp]}`);
-    { const gy=goodYearsAhead(c,3); if(gy.length) L.push(`これからの年では**${gy.map(y=>y+'年').join('・')}**が、運気の流れが良く、動きやすい年です${wantsWhen?'（転職・独立などを考えるときの目安）':''}。`); }
+    { const gy=goodYearsAhead(c,4).sort((p,q)=>(pkKuuBad(c,p)?1:0)-(pkKuuBad(c,q)?1:0)).slice(0,3); if(gy.length) L.push(`これからの年では**${gy.map(y=>y+'年'+pkKuuTag(c,y,false)).join('・')}**が、運気の流れが良く、動きやすい年です${wantsWhen?'（転職・独立などを考えるときの目安）':''}。${gy.some(y=>pkKuuBad(c,y))?'〔空亡〕の年は、大きな決断より準備・見直しに向きます。':''}`); }
     L.push('環境を大きく変える転職・独立は、勢いのある時期に。空亡（天中殺）の年は、大きな決断は控えめにすると無難です。');
     L.push('【今できること】');
     L.push(`- 強みの**${topGrp}**を活かす：${GROUP_ACTION[topGrp]}。`);
@@ -6938,7 +6957,7 @@ function localAnswer(c,worry){
     L.push(`稼ぎ方の軸：${EARN[topGrp]}`);
     L.push('【お金が動きやすい時期】');
     L.push(`今の大運は**${dd.ganzhi}（${dd.tenStar}）**${ay?`、今年は**${ay.year}年（${ay.tenStar}）**`:''}。${zai>0?'財星がある人は、食神・傷官（財を生む星）が巡る大運・年に収入が伸びやすくなります。':'あなたの強い星が活きる動きをした年ほど、豊かさにつながります。'}`);
-    { const gy=goodYearsAhead(c,3); if(gy.length) L.push(`これからの年では**${gy.map(y=>y+'年').join('・')}**が、運気の流れが良い年です。`); }
+    { const gy=goodYearsAhead(c,4).sort((p,q)=>(pkKuuBad(c,p)?1:0)-(pkKuuBad(c,q)?1:0)).slice(0,3); if(gy.length) L.push(`これからの年では**${gy.map(y=>y+'年'+pkKuuTag(c,y,false)).join('・')}**が、運気の流れが良い年です。`); }
     L.push('【今できること】');
     L.push(`- 強みの**${topGrp}**を活かす：${GROUP_ACTION[topGrp]}。`);
     L.push('- 大きな支出や投資は、勢いのある時期を選ぶと無理がありません。');
@@ -11696,6 +11715,7 @@ html.bg-on .bg-why{display:block}
       var cav=safe(function(){return worryCaveat(q);},null), topic=cav?cav.to:safe(function(){return classifyWorry(q);},'general');
       var lead=[];
       if(/いつ|時期|何歳|何年|来年|今年|タイミング|頃|ころ/.test(q)){ var fl0=safe(function(){ return String(localAnswer(c,q)).split('\n')[0]; },''); if(/^時期の目安は/.test(fl0)) lead.push(fl0); }   // 「いつ」を聞かれたら、1行目で時期を答える（通信できないときも。発注者指示 2026-10-22）
+      if(!lead.length){ var ol=safe(function(){ return (typeof pkOfflineLead==='function')?pkOfflineLead(c,q,true):''; },''); if(ol) lead.push(ol); }   // 通信できないときも、1行目で問いに答える（PROと同じ計算。2026-10-30）
       // 「ご相談：…」は答えの見出しと、送る文（clientText）に付くので、本文には入れない（2回になるのを防ぐ。発注者指示 2026-10-21）
       // 「通信できないため…」のことわりは答えの上の📵の案内に出るので、お客様に送る本文には入れない（占いで決めつけない質問のことわりも、答えの上の欄に出る）
       var body;
