@@ -174,15 +174,6 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
           <button type="button" data-v="senior">7歳以上</button>
         </div>
       </div>
-      <div class="f">日付（わかれば）
-        <div class="seg" id="in-dkind">
-          <button type="button" data-v="birth">誕生日</button>
-          <button type="button" data-v="home">お迎えした日</button>
-          <button type="button" data-v="none" class="on">わからない</button>
-        </div>
-        <input type="date" id="in-date" hidden>
-        <small>日付があると、その日の星から「隠れ犬種」を出します。誕生日がわからない子は、お迎えした日でも大丈夫です。</small>
-      </div>
     </div>
 
     <div class="panel">
@@ -531,22 +522,9 @@ var ALIAS=[["豆柴","shiba","s"],["カニンヘン・ダックスフンド","md
 var ADJ=[-13.4,7.7,-1.9,-6.5,-3.8,-7.9,-8.8,-4,-3.2,-9.4,-3.9,-7.1,-2.9,-6.3,-12.1,0.4,7,-2.4,0.1,-15.9,-7.9,1,-12,-2.6,-8.1,-5.7,2.8,-9.7,16,-12.6,15.9,-1,-15.9,-14.8,-4.4,3.2,-10.9,-7.3,-13.9,13.1,-8.5,-13.4,-10.7,1.5];
 var BY={};BR.forEach(function(b,i){b.s=b.s||b.n;b.adj=ADJ[i]||0;BY[b.id]=b});
 
-// 日付の星（十干）。日付の干支は 1900-01-01＝甲戌（60干支の10番目）から数える。3つ目＝隠れ犬種で反対にする性格（-1＝いちばん差の小さい性格）
-var STARS=[
- ["大きな木の星","まっすぐ伸びる、すなおな子",2],["草花の星","しなやかで、まわりと仲よくできる子",1],
- ["お日さまの星","明るさでみんなを照らす子",3],["ともしびの星","あたたかく、心をこめて寄り添う子",4],
- ["山の星","どっしりとした、家族の安心のよりどころ",5],["畑の土の星","やさしく、まわりを育てる子",4],
- ["はがねの星","まっすぐで、芯のつよい子",0],["宝石の星","繊細で、きらりと光るセンスの子",5],
- ["大河の星","おおらかで、自由な心の子",-1],["雨つぶの星","しっとりやさしく、気持ちを感じとる子",-1]
-];
-function stemOf(ymd){
-  var p=ymd.split("-").map(Number);if(p.length!==3||!p[0])return -1;
-  var d=Math.round((Date.UTC(p[0],p[1]-1,p[2])-Date.UTC(1900,0,1))/864e5);
-  return (((d+10)%60)+60)%60%10;
-}
 
 // ---------- 状態 ----------
-var st={name:"",breed:"",age:"adult",dkind:"none",date:"",img:null,zoom:1,dx:0,dy:0,ans:new Array(N).fill(null),qi:0,ears:true,busy:false};
+var st={name:"",breed:"",age:"adult",img:null,zoom:1,dx:0,dy:0,ans:new Array(N).fill(null),qi:0,ears:true,busy:false};
 var $=function(id){return document.getElementById(id)};
 
 $("hero-dogs").innerHTML=["toypoodle","shiba","pug","border","chihuahua","husky"].map(dog).join("");
@@ -572,7 +550,6 @@ function segInit(id,key,cb){
   });
 }
 segInit("in-age","age");
-segInit("in-dkind","dkind",function(){$("in-date").hidden=st.dkind==="none"});
 
 // ---------- 写真の切りぬき ----------
 function drawPhoto(ctx,img,cx,cy,r,s){
@@ -616,7 +593,6 @@ $("go-quiz").addEventListener("click",function(){
   var b=$("in-breed").value;
   st.breed=b==="x:その他"?("x:"+($("in-breed-other").value.trim()||"リストにない犬種")):b;
   if(!st.breed){msg("犬種をえらんでください（わからなければ「ミックス」）。");return}
-  st.date=st.dkind==="none"?"":$("in-date").value;
   st.qi=0;st.ans=new Array(N).fill(null);renderQ();show("s-quiz");
 });
 function renderQ(){
@@ -657,10 +633,10 @@ function ranking(p){
   return r;
 }
 function closestAxis(p){var m=0;p.forEach(function(v,i){if(Math.abs(v-50)<Math.abs(p[m]-50))m=i});return m}
-function hiddenOf(p,mainId,date){
-  var s=date?stemOf(date):-1,ax=s>=0&&STARS[s][2]>=0?STARS[s][2]:closestAxis(p);
+function hiddenOf(p,mainId){
+  var ax=closestAxis(p);
   var q=p.slice();q[ax]=100-q[ax];
-  return {b:ranking(q).filter(function(x){return x.b.id!==mainId})[0].b,axis:ax,star:s};
+  return {b:ranking(q).filter(function(x){return x.b.id!==mainId})[0].b,axis:ax};
 }
 // いちばん近い理由：その子の特徴がはっきりしていて、犬種ともそっくりな性格を2つ
 function reasons(p,b){
@@ -752,7 +728,7 @@ function fontsReady(){
 var last=null;
 function finish(){
   var pct=score(st.ans),rank=ranking(pct),main=rank[0].b;
-  last={pct:pct,rank:rank,main:main,hid:hiddenOf(pct,main.id,st.date)};markSeen(main.id);renderResult();show("s-result");
+  last={pct:pct,rank:rank,main:main,hid:hiddenOf(pct,main.id)};markSeen(main.id);renderResult();show("s-result");
 }
 function trait(i){return last.pct[i]>=50?AXES[i].ta:AXES[i].tb}
 function renderResult(){
@@ -787,8 +763,7 @@ function renderResult(){
     return '<div class="axis"><div class="ends"><span>'+a.a+'</span><span class="mid">'+a.name+'</span><span>'+a.b+'</span></div><div class="bar"><i style="left:'+(100-v)+'%"></i></div><div class="ends pct"><span>'+v+'%</span><span>'+(100-v)+'%</span></div></div>'}).join("");
   var ht=last.hid,hTrait=last.pct[ht.axis]>=50?AXES[ht.axis].tb:AXES[ht.axis].ta;
   $("r-hidden").textContent="内に秘めた顔は「"+HB.n+"（"+HB.c+"）」。ふだんは見せないけれど、「"+hTrait+"」一面もそっと持っています。";
-  if(ht.star>=0){var S=STARS[ht.star];$("r-star").textContent=(st.dkind==="home"?"お迎えした日":"誕生日")+"の星は「"+S[0]+"」＝"+S[1]+"。この星から隠れ犬種を出しました。"}
-  else $("r-star").textContent="日付がないので、答えの中でいちばん差が小さかった性格から隠れ犬種を出しました。誕生日かお迎えした日を入れると、その日の星から出せます。";
+  $("r-star").textContent="答えの中でいちばん「どちらとも言えない」だった性格から、そっと持っているもう1つの顔を出しました。";
   $("r-age").textContent=st.age==="puppy"?"子犬のうちは、性格が育っている途中です。半年後にもう一度やってみると、変化が楽しめます。":st.age==="senior"?"年齢とともにおだやかになるのも、自然な変化です。今の"+name+"らしさを楽しんでください。":"";
   $("r-age").hidden=st.age==="adult";
 }
