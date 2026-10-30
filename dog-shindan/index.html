@@ -32,6 +32,8 @@ p{margin:0}
 .bubble h1 em{font-style:normal;color:var(--teal)}
 .bubble h1{letter-spacing:.01em}
 .dogs{display:flex;justify-content:center;align-items:flex-end;margin-top:12px}
+.dogs .dog-img{width:17%;max-width:96px;height:auto;display:block;margin:0 -4px}
+.qscene .dog-img{width:120px;height:120px;object-fit:contain}
 .dogs svg{width:17%;max-width:96px;height:auto;margin:0 -4px;filter:drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff)}
 .facts{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
 .facts span{background:var(--card);border:2px solid var(--mint);border-radius:999px;padding:2px 12px;font-weight:800;font-size:.85rem;color:var(--teal)}
@@ -273,7 +275,10 @@ function frontEars(o){
   if(o.ear==="fold")return '<path d="M20 34 Q16 22 34 26 Q30 38 22 44 Z" fill="'+c+'"/><path d="M80 34 Q84 22 66 26 Q70 38 78 44 Z" fill="'+c+'"/>';
   return "";
 }
+// 描いてもらったイラスト（背景透過）。ある犬種は、こちらを優先して使う
+var IMG={pug:"img/pug.webp"};
 function dog(k){
+  if(IMG[k])return '<img class="dog-img" src="'+IMG[k]+'" alt="">';
   var o=D[k]||D.shiba,c=o.c,line=o.line?' stroke="'+o.line+'" stroke-width="1.5"':"",s='<svg class="dog" viewBox="0 0 100 100" role="img" aria-label="犬のイラスト">';
   s+=ears(o);
   s+='<ellipse cx="50" cy="58" rx="33" ry="30" fill="'+c+'"'+line+'/>';
@@ -461,7 +466,7 @@ function stemOf(ymd){
 var st={name:"",breed:"",age:"adult",dkind:"none",date:"",img:null,zoom:1,dx:0,dy:0,ans:new Array(N).fill(null),qi:0,ears:true,busy:false};
 var $=function(id){return document.getElementById(id)};
 
-$("hero-dogs").innerHTML=["schnauzer","chihuahua","golden","poodle","husky","dachs"].map(dog).join("");
+$("hero-dogs").innerHTML=["schnauzer","chihuahua","golden","pug","husky","dachs"].map(dog).join("");
 
 (function(){
   var sel=$("in-breed"),h='<option value="">えらんでください</option>';
@@ -608,6 +613,7 @@ function fitText(ctx,text,maxW,size,weight,family){do{ctx.font=weight+" "+size+"
 function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
 // 写真がないときは、心の犬種のイラストを描く
 function artImage(b){
+  if(IMG[b.id])return new Promise(function(res){var im=new Image();im.onload=function(){im.full=true;res(im)};im.onerror=function(){res(null)};im.src=IMG[b.id]});
   var k=b.art||b.id;if(!D[k])k="shiba";
   return new Promise(function(res){var im=new Image();im.onload=function(){res(im)};im.onerror=function(){res(null)};
     im.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(dog(k).replace("<svg ",'<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" '))});
@@ -625,7 +631,8 @@ function renderCard(o){
   if(o.ears)drawEars(ctx,cx,cy,r,B.e,col,false);
   ctx.fillStyle="#FFFFFF";ctx.beginPath();ctx.arc(cx,cy,r+14,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle="#8AC3CF";ctx.lineWidth=10;ctx.beginPath();ctx.arc(cx,cy,r+14,0,Math.PI*2);ctx.stroke();
-  if(o.img)drawPhoto(ctx,o.img,cx,cy,r,o.pos);
+  if(!o.img&&o.art&&o.art.full){ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fillStyle="#E9F1F4";ctx.fill();ctx.restore();ctx.drawImage(o.art,cx-r*1.22,cy-r*1.2,r*2.44,r*2.44)}
+  else if(o.img)drawPhoto(ctx,o.img,cx,cy,r,o.pos);
   else{ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();ctx.fillStyle="#E9F1F4";ctx.fillRect(cx-r,cy-r,r*2,r*2);if(o.art)ctx.drawImage(o.art,cx-r*.92,cy-r*.85,r*1.84,r*1.84);ctx.restore()}
   if(o.ears)drawEars(ctx,cx,cy,r,B.e,col,true);
   if(o.pure){var bx=cx+r*.84,by=cy+r*.78;ctx.fillStyle="#F3C63F";ctx.beginPath();ctx.arc(bx,by,74,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#FFFFFF";ctx.lineWidth=8;ctx.stroke();ctx.fillStyle=dark;ctx.font="400 38px "+F;ctx.fillText("生粋！",bx,by+13)}
