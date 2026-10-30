@@ -43,7 +43,7 @@ const t1=Date.now(); await p.click('#f-go'); await p.click('#f-go').catch(()=>{}
 const ms=await waitFor(()=>{const it=document.querySelector('#reading .rd-item:last-child');return it&&it.querySelector('.rd-bar')&&!it.querySelector('.loading');},60000);
 await p.waitForTimeout(1500);
 const items=await p.evaluate(()=>document.querySelectorAll('#reading .rd-item').length);
-const A=await p.evaluate(()=>{const it=document.querySelector('#reading .rd-item:last-child');return it?it.querySelector('.rd-body').innerText:'';});
+const A=await p.evaluate(()=>{const it=document.querySelector('#reading .rd-item:last-child');if(!it) return ''; const op=[...it.querySelectorAll('details.r-fold:not([open])')]; op.forEach(d=>d.open=true); const t=it.querySelector('.rd-body').innerText; op.forEach(d=>d.open=false); return t;});   /* たたんだ「くわしい読み解き」の中も読む（タップで開く欄）*/
 { const need=await p.evaluate(()=>{ try{ const g=kakukyoku(chart); const plain=document.documentElement.classList.contains('bg-on'); if(plain&&typeof window.pkBTypeOf==='function'){ const t=window.pkBTypeOf(g,chart); return t?[t[0].replace(/\s/g,'')]:[]; } const m=String(g.name).match(/（([^）]+)）/); return [g.name].concat(m?[m[1]]:[]).map(x=>x.replace(/（.*$/,'')); }catch(e){ return ['(計算エラー)']; } });
   ok('相談1：鑑定文に格局（ビギナーは生まれ持った型）が入っている（安全装置）', need.length>0&&need.some(n=>A.replace(/\s/g,'').includes(n)), need.join('/')); }
 ok('相談1：答えが出る（60秒以内）'+(MODE!=='online'?'（端末の中の答え・30秒以内）':''), ms>=0&&(MODE==='online'||ms<30000) && A.length>200, `${(Date.now()-t1)/1000}秒・${A.length}字`);
@@ -70,7 +70,7 @@ const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃�
 const ms2=await waitFor(()=>{const it=document.querySelectorAll('#reading .rd-item');const l=it[it.length-1];return it.length>=2&&l.querySelector('.rd-bar')&&!l.querySelector('.loading');},60000);
 await p.waitForTimeout(1500);
 const items2=await p.evaluate(()=>document.querySelectorAll('#reading .rd-item').length);
-const A2=await p.evaluate(()=>{const it=document.querySelectorAll('#reading .rd-item');return it.length?it[it.length-1].querySelector('.rd-body').innerText:'';});
+const A2=await p.evaluate(()=>{const L=document.querySelectorAll('#reading .rd-item');if(!L.length) return ''; const it=L[L.length-1]; const op=[...it.querySelectorAll('details.r-fold:not([open])')]; op.forEach(d=>d.open=true); const t=it.querySelector('.rd-body').innerText; op.forEach(d=>d.open=false); return t;});
 if(process.env.GATE_DUMP){ (await import('fs')).writeFileSync(process.env.GATE_DUMP,A+'\n=====\n'+A2); }
 ok('相談2（続けて質問）：答えが出る', ms2>=0 && A2.length>200, A2.length+'字');
 { const f2=(A2.split('\n').map(s=>s.trim()).filter(s=>s.length>8&&!/^(コピー|言葉の意味|ご相談|彼から連絡が来るのはいつ頃ですか|▲|オンライン鑑定|オフライン鑑定|📵|⏩|🔄|端末の中で作った)/.test(s))[0]||''); ok('相談2：「いつ」の質問に、1行目で時期を答えている', /20\d\d年|年内|来年|再来年|\d{1,3}歳|[春夏秋冬]|\d{1,2}月/.test(f2), f2.slice(0,80)); }
