@@ -163,13 +163,16 @@ var st={style:load("ig_style","A"),done:load("ig_done",{}),g:"all"};
 var $=function(id){return document.getElementById(id)};
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function styleOf(){return STYLES.filter(function(s){return s.k===st.style})[0]||STYLES[0]}
-function prompt(d){return "背景を透明にしたPNG画像で出力してください（背景は描かない・影も入れない）。\n\n"+styleOf().t+"\n\n犬種："+d[1]+"\n特徴："+d[3]+"\n小物："+d[4]+"（小物はこれ1つだけ。ほかの場所にはつけない）\n\n"+COMMON}
+// 白い犬種は、白い背景と見分けがつかないので、濃い緑の背景で作ってもらう（こちらで緑を消す）
+var WHITE={maltese:1,bichon:1,spitz:1,westie:1,samoyed:1};
+function bgLine(d){return WHITE[d[0]]?"背景は濃い緑色（#1F7A3A）一色でぬりつぶしたPNG画像で出力してください（もようや影は入れない。犬の体には緑を使わない）。":"背景を透明にしたPNG画像で出力してください（背景は描かない・影も入れない）。"}
+function prompt(d){return bgLine(d)+"\n\n"+styleOf().t+"\n\n犬種："+d[1]+"\n特徴："+d[3]+"\n小物："+d[4]+"（小物はこれ1つだけ。ほかの場所にはつけない）\n\n"+(WHITE[d[0]]?COMMON.replace("背景は透明。犬のふちに白い残りがないように。","背景は濃い緑一色。"):COMMON)}
 function renderStyles(){
   $("style").innerHTML=STYLES.map(function(s){return '<button type="button" data-k="'+s.k+'"'+(s.k===st.style?' class="on"':'')+'><b>'+s.k+'　'+s.n+'</b><small>'+s.d+'</small></button>'}).join("");
 }
 function renderList(){
   var n=0,shown=DOGS.filter(function(d){return st.g==="all"||(st.g==="todo"?!st.done[d[0]]:d[2]===st.g)});
-  $("list").innerHTML=shown.map(function(d){var ok=!!st.done[d[0]];return '<article class="dog"><div class="dog-h"><h3>'+esc(d[1])+'</h3><span class="file">'+d[0]+'.png</span></div>'+
+  $("list").innerHTML=shown.map(function(d){var ok=!!st.done[d[0]];return '<article class="dog"><div class="dog-h"><h3>'+esc(d[1])+'</h3><span class="file">'+d[0]+'.png</span></div>'+(WHITE[d[0]]?'<p class="note"><b>白い犬種なので、背景は緑で作ります（透明にしない）</b></p>':'')+
     '<p class="feat">'+esc(d[3])+'</p><div class="row"><span class="acc">小物：'+esc(d[4])+'</span></div>'+
     '<div class="row"><button type="button" class="copy" data-id="'+d[0]+'">指示文をコピー</button><button type="button" class="done-mark'+(ok?' on':'')+'" data-done="'+d[0]+'">'+(ok?'✓ できた':'できたら押す')+'</button></div>'+
     '<details><summary>指示文を見る</summary><pre id="p-'+d[0]+'">'+esc(prompt(d))+'</pre></details></article>'}).join("");
