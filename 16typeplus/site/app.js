@@ -1014,7 +1014,8 @@ function groupResult(members){
  const pairs=[];for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)pairs.push({i,j,s:gSame(M[i].now,M[j].now)});
  pairs.sort((p,q)=>q.s-p.s);
  const why=(p,match)=>{const A=M[p.i].now,B=M[p.j].now,out=[];for(let k=0;k<4;k++){if(match&&A[k]===B[k])out.push(GTR("どちらも「{l}」").replace("{l}",GTR(GL[A[k]])));if(!match&&A[k]!==B[k])out.push(GTR("{x}は「{a}」、{y}は「{b}」").replace("{x}",san(M[p.i].name)).replace("{a}",GTR(GL[A[k]])).replace("{y}",san(M[p.j].name)).replace("{b}",GTR(GL[B[k]])));}return out.slice(0,2);};
- const good=pairs[0],bad=pairs[pairs.length-1];
+ /* 同じ点の組み合わせが複数ある時は、自分（1人目）が入っている組を出す */
+ const hi=pairs[0].s,lo=pairs[pairs.length-1].s,good=pairs.find(p=>p.s===hi&&p.i===0)||pairs[0],bad=pairs.slice().reverse().find(p=>p.s===lo&&p.i===0&&p!==good)||pairs[pairs.length-1];
  const roles=gRoles(M.map(m=>m.now)),broles=gRoles(M.map(m=>m.born));
  return {n,members:M.map((m,i)=>({...m,role:roles[i],brole:null})),now,born,feats,tips,flip,
   good:{a:M[good.i].name,b:M[good.j].name,why:why(good,true)},bad:n>2&&bad.s<good.s&&gSame(M[bad.i].now,M[bad.j].now)<4?{a:M[bad.i].name,b:M[bad.j].name,why:why(bad,false)}:null};}
@@ -1055,12 +1056,13 @@ async function shareGroup(G,title){track("group_share");const b=$("gShare"),lbl=
  catch(e){alert(TR("画像をつくれませんでした。もう一度お試しください。"));}finally{b.disabled=false;b.textContent=lbl;}}
 
 /* ---- グループの相性（その場で入力。サーバーは使わない） ---- */
-const KG="16tp.group.v1";let gst=sget(KG);if(!gst||typeof gst!=="object"||!Array.isArray(gst.rows))gst={title:"",rows:[{name:"",t:""},{name:"",t:""}]};gst.title=typeof gst.title==="string"?gst.title:"";gst.kind=gst.kind==="wk"?"wk":"fr";gst.rows=gst.rows.filter(r=>r&&typeof r==="object").slice(0,9).map(r=>({name:typeof r.name==="string"?r.name.slice(0,12):"",t:/^[EI][SN][TF][JP]$/.test(r.t)?r.t:""}));if(!gst.rows.length)gst.rows=[{name:"",t:""}];
+const KG="16tp.group.v1";let gst=sget(KG);if(!gst||typeof gst!=="object"||!Array.isArray(gst.rows))gst={title:"",rows:[{name:"",t:""},{name:"",t:""}]};gst.title=typeof gst.title==="string"?gst.title:"";gst.me=typeof gst.me==="string"?gst.me.slice(0,12):null;gst.kind=gst.kind==="wk"?"wk":"fr";gst.rows=gst.rows.filter(r=>r&&typeof r==="object").slice(0,9).map(r=>({name:typeof r.name==="string"?r.name.slice(0,12):"",t:/^[EI][SN][TF][JP]$/.test(r.t)?r.t:""}));if(!gst.rows.length)gst.rows=[{name:"",t:""}];
 function gDraw(){const box=$("gRows");if(!box)return;const me=window.__me;const nm=($("myName")&&$("myName").value.trim())||"";
  const opt=v=>'<option value="">'+TR("16タイプを選ぶ")+'</option>'+Object.keys(D.NICK).map(t=>'<option value="'+t+'"'+(t===v?' selected':'')+'>'+t+p16(t)+'</option>').join("");
- box.innerHTML='<li class="gme"><b>'+TR("あなた")+'</b><span>'+(me?me.now:"")+'</span></li>'
+ if(gst.me==null)gst.me=sget("16tp.nick.v1")||"";box.innerHTML='<li class="gme"><b>'+TR("あなた")+'</b><input class="txt gmyname" maxlength="12" value="'+esc(gst.me||"")+'" placeholder="'+TR("名前（なくてもOK）")+'" aria-label="'+TR("あなたの名前")+'"><span>'+(me?me.now:"")+'</span></li>'
   +gst.rows.map((r,i)=>'<li><input class="txt" maxlength="12" data-i="'+i+'" data-k="name" value="'+esc(r.name)+'" placeholder="'+TR("名前")+'" aria-label="'+TR("名前（ニックネーム）")+'"><select data-i="'+i+'" data-k="t" aria-label="'+TR("16タイプ")+'">'+opt(r.t)+'</select><button type="button" class="gdel" data-i="'+i+'" aria-label="'+TR("この人を消す")+'">×</button></li>').join("");
- box.querySelectorAll("input,select").forEach(x=>x.oninput=x.onchange=()=>{gst.rows[+x.dataset.i][x.dataset.k]=x.value;sset(KG,gst);});
+ {const mn=box.querySelector(".gmyname");if(mn)mn.oninput=()=>{gst.me=mn.value;sset(KG,gst);};}
+ box.querySelectorAll("li:not(.gme) input,select").forEach(x=>x.oninput=x.onchange=()=>{gst.rows[+x.dataset.i][x.dataset.k]=x.value;sset(KG,gst);});
  box.querySelectorAll(".gdel").forEach(b=>b.onclick=()=>{gst.rows.splice(+b.dataset.i,1);if(!gst.rows.length)gst.rows.push({name:"",t:""});sset(KG,gst);gDraw();});
  $("gAdd").hidden=gst.rows.length>=9;$("gTitle").value=gst.title||"";}
 function gSetup(){if(!$("group"))return;gDraw();
@@ -1070,7 +1072,7 @@ function gSetup(){if(!$("group"))return;gDraw();
  $("gTitle").oninput=()=>{gst.title=$("gTitle").value;sset(KG,gst);};
  $("gAdd").onclick=()=>{if(gst.rows.length<9){gst.rows.push({name:"",t:""});sset(KG,gst);gDraw();const l=$("gRows").querySelectorAll("li input");if(l.length)l[l.length-1].focus();}};
  $("gGo").onclick=()=>{const me=window.__me;if(!me)return;gDraw();
-  const rows=gst.rows.filter(r=>r.t),seen={},M=[{name:TR("あなた"),born:me.now,now:me.now,only:true}].concat(rows.map((r,i)=>({name:r.name.trim()||(x=>(GDEF.add(x),x))((()=>{seen[r.t]=(seen[r.t]||0)+1;return TR("{t}の人").replace("{t}",r.t)+(seen[r.t]>1?"（"+seen[r.t]+"）":"");})()),born:r.t,now:r.t,only:true})));
+  const rows=gst.rows.filter(r=>r.t),seen={},M=[{name:(x=>x?(GDEF.add(x),x):TR("あなた"))(String(gst.me||"").trim().slice(0,12)),born:me.now,now:me.now,only:true}].concat(rows.map((r,i)=>({name:r.name.trim()||(x=>(GDEF.add(x),x))((()=>{seen[r.t]=(seen[r.t]||0)+1;return TR("{t}の人").replace("{t}",r.t)+(seen[r.t]>1?"（"+seen[r.t]+"）":"");})()),born:r.t,now:r.t,only:true})));
   const out=$("gRes");if(M.length<2){out.innerHTML='<p class="hint">'+TR("1人以上、16タイプを選んでください。")+'</p>';out.hidden=false;return;}
   const G=groupResult(M);out.innerHTML=groupHTML(G,gst.title.trim())+'<button class="btn primary gshare" type="button" id="gShare">'+TR("グループの結果を画像でシェア")+'</button>';out.hidden=false;$("gShare").onclick=()=>shareGroup(G,gst.title.trim());track("group_view",{size:M.length});out.scrollIntoView({behavior:"smooth",block:"start"});};}
 /* スマホの言語がほかの言語なら、その言語のページもあることを小さく知らせる（自動では移動しない） */
