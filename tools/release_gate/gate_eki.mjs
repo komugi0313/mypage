@@ -46,6 +46,7 @@ async function consult(q,nums){ await p.evaluate(()=>scrollTo(0,0)); await p.cli
 }
 // 1人目
 const A=await consult('転職するなら今年と来年のどちらがいいですか',[3,8,15]);
+{ const sy=await p.evaluate(()=>({tool:window.__ekiToolSym||'',shown:((document.getElementById('verdictCard')||{}).innerText||'').trim().charAt(0)})); ok('答えの記号がツールの決めた記号と同じ（文章作成が別の記号を書いても）', !!sy.tool&&sy.tool===sy.shown, JSON.stringify(sy)); }
 ok('相談1：答えが出る'+(MODE!=='online'?'（端末の中の答え・40秒以内）':''), A.ms>=0&&A.res.length>200&&(MODE==='online'||A.ms<40000), `${A.secs}秒・卦=${A.hex}`);
 if(MODE==='online') ok('相談1：三度押しでも呼び出しは1件分（2回以下）', A.calls<=2, 'calls='+A.calls);
 const first=(A.v.split('\n').map(s=>s.trim()).filter(s=>s.length>6&&!/^(この相談への答え|[◎〇○△✖×])$/.test(s))[0]||'');
