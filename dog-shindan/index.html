@@ -234,15 +234,6 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .echo-q b{font-weight:800}
 .echo-a{display:flex;gap:10px;align-items:flex-start;font-weight:800;line-height:1.8}
 .echo-a i{font-style:normal;flex:0 0 auto;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#FFFFFF;font-size:.9rem;margin-top:2px}
-.memo-hint{text-align:center;font-weight:800;font-size:.85rem;color:#6A5AAE}
-body.memo{--bg:#F1EEF8;--mint:#B9AEDF;--mint-l:#E1DBF2;--teal:#5E4FA2;--teal-m:#8C80C4}
-.letter{display:flex;gap:10px;align-items:center;background:#F6E3EA;border-radius:16px;padding:12px 14px}
-.letter img{width:56px;height:56px;object-fit:contain;flex:0 0 auto}
-.letter p{font-weight:800;line-height:1.8;color:#2F3A45}
-.letter small{display:block;color:#B5527A;font-size:.78rem}
-.wish{background:#F6E3EA;border-radius:22px;padding:18px 16px;text-align:center;display:flex;flex-direction:column;gap:4px}
-.wish small{color:#B5527A;font-weight:800;font-size:.85rem}
-.wish p{font-family:var(--pop);font-size:1.15rem;line-height:1.6;color:#2F3A45}
 .calm{background:var(--bg);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
 .calm b{color:var(--teal);font-size:.85rem}
 .calm span{font-weight:800}
@@ -301,13 +292,6 @@ body.memo{--bg:#F1EEF8;--mint:#B9AEDF;--mint-l:#E1DBF2;--teal:#5E4FA2;--teal-m:#
       <label class="f" id="other-wrap" hidden>犬種の名前
         <input type="text" id="in-breed-other" maxlength="16" placeholder="例：ボストン・テリア">
       </label>
-      <div class="f">今の様子
-        <div class="seg" id="in-memo">
-          <button type="button" data-v="0" class="on">いっしょに暮らしている</button>
-          <button type="button" data-v="1">虹の橋をわたった</button>
-        </div>
-        <small id="memo-note" hidden>あの子と過ごした毎日を思い出しながら、ゆっくり答えてください。</small>
-      </div>
       <div class="f">年齢
         <div class="seg" id="in-age">
           <button type="button" data-v="puppy">1歳未満</button>
@@ -344,7 +328,6 @@ body.memo{--bg:#F1EEF8;--mint:#B9AEDF;--mint-l:#E1DBF2;--teal:#5E4FA2;--teal-m:#
     <div class="progwrap"><div class="prog"><b id="q-prog"></b></div><img class="pball" id="q-ball" src="icon/ball.png" alt=""></div>
     <div class="qscene" id="q-dog"></div>
     <p class="qtext" id="q-text"></p>
-    <p class="memo-hint" id="q-memo" hidden>思い出しながら、ゆっくり答えてね</p>
     <div class="answers" id="q-ans"></div>
     <button class="back" type="button" id="q-back">← もどる</button>
   </div>
@@ -390,7 +373,6 @@ body.memo{--bg:#F1EEF8;--mint:#B9AEDF;--mint-l:#E1DBF2;--teal:#5E4FA2;--teal-m:#
     <div class="panel echo" id="r-echo-panel" hidden>
       <h2 id="r-echo-title">あなたが答えてくれたこと</h2>
       <div class="echo-list" id="r-echo"></div>
-      <div class="letter" id="r-letter"></div>
     </div>
 
     <div class="panel">
@@ -497,8 +479,6 @@ body.memo{--bg:#F1EEF8;--mint:#B9AEDF;--mint-l:#E1DBF2;--teal:#5E4FA2;--teal-m:#
     </div>
       </div>
     </details>
-
-    <div class="wish" id="r-wish"></div>
 
     <p class="note" id="r-age"></p>
 
@@ -957,7 +937,6 @@ function segInit(id,key,cb){
   });
 }
 segInit("in-age","age");
-segInit("in-memo","memoV",function(){st.memo=st.memoV==="1";$("memo-note").hidden=!st.memo;document.body.classList.toggle("memo",st.memo)});
 
 // ---------- 写真の切りぬき ----------
 function drawPhoto(ctx,img,cx,cy,r,s){
@@ -1008,7 +987,7 @@ function renderQ(){
   $("q-count").textContent="Q."+(st.qi+1)+" ／ "+N;
   $("q-prog").style.width=(st.qi/N*100)+"%";$("q-ball").style.left=(st.qi/N*100)+"%";$("q-ball").style.transform="translate(-50%,-50%) rotate("+(st.qi*60)+"deg)";
   $("q-dog").innerHTML=dog(q[3]);
-  $("q-text").textContent=q[1];$("q-memo").hidden=!st.memo;
+  $("q-text").textContent=q[1];
   $("q-ans").innerHTML=orderOf(st.qi).map(function(k){return '<button type="button" data-k="'+k+'"'+(st.ans[st.qi]===k?' class="on"':'')+'>'+q[2][k]+'</button>'}).join("")+'<button type="button" class="skip'+(st.ans[st.qi]==="s"?' on':'')+'" data-k="s">この場面を見たことがない</button>';
   $("q-back").textContent=st.qi===0?"← 入力にもどる":"← ひとつもどる";
 }
@@ -1202,21 +1181,15 @@ $("g-list").addEventListener("click",function(e){var b=e.target.closest("button[
   if(act==="reset"){GEDIT[i]="";guideChanged()}
   renderGuide()});
 
-// ---------- 愛しさ：今日のおねがい・うちの子からのひとこと・安心のコツ ----------
-var WISH=[["今日は、会う人みんなにあいさつさせてあげてね", "今日は、静かにとなりに座る時間をつくってね"], ["今日は、ワン友と会えるおさんぽに行こうね", "今日は、ふたりきりでゆっくり過ごそうね"], ["今日は、いつもとちがう道をおさんぽしようね", "今日は、いつものおさんぽ道を、いつものペースで歩こうね"], ["今日は、いっしょに思いきり遊んであげてね", "今日は、となりでのんびりお昼寝しようね"], ["今日は、いつもより少しだけ長くなでてあげてね", "今日は、この子のペースを大切に、そっと見守ってあげてね"], ["今日は、新しい場所にいっしょにお出かけしようね", "今日は、静かでおだやかな時間をつくってあげてね"]];
-var LET=[["いろんな人に会えるのも楽しいけど、いちばん好きなのはあなただよ。", "いつもそばで守ってくれて、ありがとう。あなたのとなりが、いちばん安心するよ。"], ["お友だちと遊ぶのも好きだけど、帰る場所はあなたのところだよ。", "あなたといっしょの時間が、いちばんの宝物だよ。"], ["いろんな場所に連れて行ってくれて、ありがとう。またいっしょに探検しようね。", "いつもの毎日をくれて、ありがとう。あなたがいれば、それだけでしあわせ。"], ["いっぱい遊んでくれて、ありがとう。はやく帰ってきてね。", "いつもそばでのんびりさせてくれて、ありがとう。はやく帰ってきてね。"], ["はやく帰ってきてね。ずっと待ってるよ。だいすきだよ。", "ちゃんと見てるよ。帰ってきたら、となりに行くね。"], ["あなたがいるから、こわいものなんてないよ。いつもありがとう。", "こわいときも、あなたがいるから大丈夫。いつもありがとう。"]];
+// ---------- 保護犬の呼び名・安心のコツ ----------
 function isUnknown(){return st.breed==="x:保護犬"}
 function headName(B,short,disp){return isUnknown()?(disp?"世界にひとりだけの、":"")+B.s+"ハートの子":B.s+"ハートの"+short}
 function renderLove(sp,name,B){var o=axOrder(sp),ax=o[0],sd=sp[ax]>=50?0:1,oid=ownId(st.breed),src=oid&&IMG[oid]?IMG[oid]+"?v=4":(IMG[B.id]?IMG[B.id]+"?v=4":"");
-  // 今日のおねがい・ひとことは、毎回同じ言葉になってしまうので、思い出モードのときだけ出す
-  $("r-letter").hidden=!st.memo;$("r-wish").hidden=!st.memo;
-  if(st.memo){$("r-letter").innerHTML=(src?'<img src="'+src+'" alt="">':'')+'<p>たくさんなでてくれて、ありがとう。ずっと、だいすきだよ。<small>'+esc(name)+'より</small></p>';
-    $("r-wish").innerHTML='<small>'+esc(name)+'へ</small><p>たくさんの思い出を、ありがとう。</p>'}
-  if(!$("r-echo").innerHTML)$("r-echo-panel").hidden=!st.memo;else $("r-echo-panel").hidden=false;
+
   var tips=[];if(sp[0]<45)tips.push("お客さんが来たら、"+name+"の好きな場所をあけておいてあげてね。自分から近づくまで、待ってあげるのがいちばんです。");
   if(sp[5]<45)tips.push("大きな音やはじめての場所では、あなたがそばにいてあげてね。少しずつ慣れていけば大丈夫です。");
   if(sp[1]<40)tips.push("ワンちゃんが多い場所では、少しはなれたところから。無理に仲よくさせなくて大丈夫です。");
-  $("r-calm").hidden=!tips.length||st.memo;$("r-calm").innerHTML='<b>'+esc(name)+'が安心して過ごせるコツ</b>'+tips.slice(0,2).map(function(t){return '<span>'+esc(t)+'</span>'}).join("")}
+  $("r-calm").hidden=!tips.length;$("r-calm").innerHTML='<b>'+esc(name)+'が安心して過ごせるコツ</b>'+tips.slice(0,2).map(function(t){return '<span>'+esc(t)+'</span>'}).join("")}
 // ---------- もしものときカード（入力はスマホの中だけに保存） ----------
 var EC_IDS=["ec-w","ec-h","ec-ht","ec-d","ec-m","ec-a","ec-c"],EC_LB=["体重","かかりつけ","病院の電話","持病","飲んでいる薬","アレルギー","緊急連絡先"];
 function ecKey(){return "w44_ec_"+st.name}
@@ -1411,7 +1384,7 @@ function renderResult(){
   $("r-visit").innerHTML='<span>診断 '+V.n+'回目</span>'+(V.n>1?'<span>くわしさ <span class="st" role="img" aria-label="くわしさ 5つ中'+stn+'">'+vs+'</span></span>':'')+'<span class="chg">'+esc(chg)+'</span>';
   var BL=blendOf();$("r-blend").innerHTML='<small>'+esc(name)+'の性格ブレンド</small><div class="bar2">'+BL.map(function(b){return '<span style="flex:'+b.pct+';background:'+b.col+'"></span>'}).join("")+'</div><div class="lg">'+BL.map(function(b){return '<span><i style="background:'+b.col+'"></i>'+esc(b.name)+' '+b.pct+'%</span>'}).join("")+'</div><small>'+(ownId(st.breed)?esc(short)+'の割合は「'+esc(short)+'度」、残りを性格の近い犬種で分けています。':'')+'※血統ではなく、性格の近さから出した割合です</small>';
   var spH=spread(last.pct);
-  $("r-head").innerHTML=pure?'<img class="crown-i" src="icon/crown.png" alt="">'+esc(name)+"は、<em>生粋の"+esc(subOf(spH))+"タイプの"+esc(body)+"</em>！":(st.memo?"いまも"+esc(name)+"の心に住んでいるのは、":esc(name)+"は、")+"<em>"+esc(headName(B,short,true))+"</em>"+'<span class="hsub">'+esc(subOf(spH))+"タイプ。"+(isUnknown()?"心の中に、"+esc(B.s)+"の心が住んでいます":esc(short)+"の中に、"+esc(B.s)+"の心が住んでいます")+'</span>';
+  $("r-head").innerHTML=pure?'<img class="crown-i" src="icon/crown.png" alt="">'+esc(name)+"は、<em>生粋の"+esc(subOf(spH))+"タイプの"+esc(body)+"</em>！":esc(name)+"は、"+"<em>"+esc(headName(B,short,true))+"</em>"+'<span class="hsub">'+esc(subOf(spH))+"タイプ。"+(isUnknown()?"心の中に、"+esc(B.s)+"の心が住んでいます":esc(short)+"の中に、"+esc(B.s)+"の心が住んでいます")+'</span>';
   $("r-catch").textContent=B.c;
   var rows=last.rank.slice(0,5).map(function(x,i){return [i,x]});if(own>=5)rows.push([own,last.rank[own]]);
   $("r-rank").innerHTML=rows.map(function(r){var x=r[1];
@@ -1527,8 +1500,7 @@ var WHY=[[["{n}にとって、人はみんな「これから仲よくなる友�
 function renderEcho(sp,name){var out=[],used={};
   axOrder(sp).forEach(function(ax){if(out.length>=3||Math.abs(sp[ax]-50)<8)return;var side=sp[ax]>=50?0:1,want=side?2:0;
     for(var i=0;i<Q.length;i++){if(Q[i][0]===ax&&st.ans[i]===want&&!used[i]){used[i]=1;out.push({q:Q[i],a:Q[i][2][want],ax:ax,side:side,v:i%2});break}}});
-  if(!out.length){$("r-echo").innerHTML="";$("r-echo-title").textContent=name+"からのひとこと";return}
-  $("r-echo-title").dataset.ok=1;
+  $("r-echo-panel").hidden=!out.length;if(!out.length)return;
   $("r-echo-title").innerHTML=esc(name)+"の気持ちを通訳すると"+'<small class="echo-sub">あなたが答えてくれたことから</small>';
   $("r-echo").innerHTML=out.map(function(o){var c=AXC[o.ax];
     return '<div class="echo-item"><div class="echo-q"><small>'+esc(o.q[1])+'</small><b>「'+esc(o.a)+'」</b></div><p class="echo-a"><i style="background:'+c[0]+'">→</i><span>'+esc(WHY[o.ax][o.side][o.v].replace(/\{n\}/g,name))+'</span></p></div>'}).join("")}
