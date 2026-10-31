@@ -188,6 +188,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .stars{display:inline-flex;gap:2px;align-items:center;justify-content:center}
 .stars img{width:24px;height:24px}
 .stars img.off{opacity:.22;filter:grayscale(1)}
+.crown-i{width:1.3em;height:1.3em;vertical-align:-.25em;margin-right:.2em}
 /* 図鑑 */
 .zcount{font-family:var(--pop);color:var(--teal);text-align:center}
 .zcount b{font-weight:400;font-size:1.4rem}
@@ -866,6 +867,7 @@ function artImage(b){
   return new Promise(function(res){var im=new Image();im.onload=function(){res(im)};im.onerror=function(){res(null)};
     im.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(dog(k).replace("<svg ",'<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" '))});
 }
+var CROWN=null;function crownImage(){if(CROWN)return Promise.resolve(CROWN);return new Promise(function(res){var im=new Image();im.onload=function(){CROWN=im;res(im)};im.onerror=function(){res(null)};im.src="icon/crown.png"})}
 var STAR=null;function starImage(){if(STAR)return Promise.resolve(STAR);return new Promise(function(res){var im=new Image();im.onload=function(){STAR=im;res(im)};im.onerror=function(){res(null)};im.src="icon/star.png"})}
 var PAW=null;function pawImage(){if(PAW)return Promise.resolve(PAW);return new Promise(function(res){var im=new Image();im.onload=function(){PAW=im;res(im)};im.onerror=function(){res(null)};im.src="icon/paw.png"})}
 function renderCard(o){
@@ -886,7 +888,7 @@ function renderCard(o){
   else if(o.img)drawPhoto(ctx,o.img,cx,cy,r,o.pos);
   else{ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();ctx.fillStyle="#E9F1F4";ctx.fillRect(cx-r,cy-r,r*2,r*2);if(o.art)ctx.drawImage(o.art,cx-r*.92,cy-r*.85,r*1.84,r*1.84);ctx.restore()}
   if(o.ears)drawEars(ctx,cx,cy,r,B.e,col,true);
-  if(o.pure){var bx=cx+r*.84,by=cy+r*.78;ctx.fillStyle="#F3C63F";ctx.beginPath();ctx.arc(bx,by,74,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#FFFFFF";ctx.lineWidth=8;ctx.stroke();ctx.fillStyle=dark;ctx.font="400 38px "+F;ctx.fillText("生粋！",bx,by+13);if(o.paw)ctx.drawImage(o.paw,bx+40,by-92,52,52)}
+  if(o.pure){var bx=cx+r*.84,by=cy+r*.78;ctx.fillStyle="#F3C63F";ctx.beginPath();ctx.arc(bx,by,74,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#FFFFFF";ctx.lineWidth=8;ctx.stroke();ctx.fillStyle=dark;ctx.font="400 38px "+F;ctx.fillText("生粋！",bx,by+13);if(o.crown)ctx.drawImage(o.crown,bx-46,by-150,92,92)}
   ctx.fillStyle=dark;fitText(ctx,o.name,860,62,"400",F);ctx.fillText(o.name,W/2,680);
   ctx.fillStyle=mute;fitText(ctx,o.bodyLine,900,34,"800",R);ctx.fillText(o.bodyLine,W/2,722);
   if(o.sub){ctx.fillStyle=AXC[0]?dark:dark;fitText(ctx,o.sub+"タイプの",700,38,"800",R);ctx.fillText(o.sub+"タイプの",W/2,776)}
@@ -930,13 +932,13 @@ function renderResult(){
   var ownM=own>=0?last.rank[own].m:0,pure=own===0;
   var bodyLine=pure?"生粋の"+short+"（"+short+"度 "+ownM+"%）":own>=0?"体は "+short+"（"+short+"度 "+ownM+"%）／ 心は":"体は "+short+" ／ 心は";
   $("ears-wrap").hidden=!st.img;$("card-img").hidden=true;$("card-load").hidden=false;
-  Promise.all([fontsReady(),st.img?null:artImage(B),pawImage(),starImage()]).then(function(r){
+  Promise.all([fontsReady(),st.img?null:artImage(B),pawImage(),starImage(),crownImage()]).then(function(r){
     $("card-img").onload=function(){$("card-img").hidden=false;$("card-load").hidden=true};
-    $("card-img").src=renderCard({sub:subOf(spread(last.pct)),main:B,name:name,bodyLine:bodyLine,img:st.img,art:r[1],pos:st,ears:st.img?st.ears:false,pct:spread(last.pct).map(Math.round),hidden:HB,pure:pure,paw:r[2],star:r[3],gap:gapOf(),rare:rarityOf(last.pct)});
+    $("card-img").src=renderCard({sub:subOf(spread(last.pct)),main:B,name:name,bodyLine:bodyLine,img:st.img,art:r[1],pos:st,ears:st.img?st.ears:false,pct:spread(last.pct).map(Math.round),hidden:HB,pure:pure,paw:r[2],star:r[3],crown:r[4],gap:gapOf(),rare:rarityOf(last.pct)});
   });
   renderMeters();renderPairPanel();
   var spH=spread(last.pct);
-  $("r-head").innerHTML=pure?esc(name)+"は、<em>生粋の"+esc(subOf(spH))+"タイプの"+esc(body)+"</em>！":"体は"+esc(body)+"、心は<em>"+esc(subName(spH,B))+"</em>";
+  $("r-head").innerHTML=pure?'<img class="crown-i" src="icon/crown.png" alt="">'+esc(name)+"は、<em>生粋の"+esc(subOf(spH))+"タイプの"+esc(body)+"</em>！":"体は"+esc(body)+"、心は<em>"+esc(subName(spH,B))+"</em>";
   $("r-catch").textContent=B.c;
   var rs=reasons(last.pct,B);
   $("r-why").innerHTML="<b>"+esc(B.s)+"に近い理由</b><br>「"+AXES[rs[0]].name+"」と「"+AXES[rs[1]].name+"」がそっくり。"+esc(name)+"の「"+trait(rs[0])+"」ところと「"+trait(rs[1])+"」ところが、"+esc(B.s)+"と重なりました。";
