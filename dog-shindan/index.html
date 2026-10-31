@@ -182,6 +182,12 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .zsort button{flex:0 0 auto;min-height:40px;border-radius:999px;border:2px solid var(--mint);background:var(--card);font-weight:800;padding:0 14px;color:var(--teal)}
 .zsort button.on{background:var(--teal);color:#FFFFFF;border-color:var(--teal)}
 .zgrid button i{position:absolute;top:4px;left:6px;font-style:normal;font-family:var(--pop);color:var(--teal);font-size:.8rem}
+.progwrap{position:relative;margin:0 14px}
+.pball{position:absolute;top:50%;left:0;width:30px;height:30px;transform:translate(-50%,-50%);transition:left .3s,transform .3s;pointer-events:none}
+@media (prefers-reduced-motion:reduce){.pball{transition:none}}
+.stars{display:inline-flex;gap:2px;align-items:center;justify-content:center}
+.stars img{width:24px;height:24px}
+.stars img.off{opacity:.22;filter:grayscale(1)}
 /* 図鑑 */
 .zcount{font-family:var(--pop);color:var(--teal);text-align:center}
 .zcount b{font-weight:400;font-size:1.4rem}
@@ -261,7 +267,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 <section id="s-quiz" hidden>
   <div class="wrap">
     <div class="qhead"><span class="logo"><img class="paw-s" src="icon/paw.png" alt="">44Wansonalities</span><span class="qcount" id="q-count">Q.1 ／ 24</span></div>
-    <div class="prog"><b id="q-prog"></b></div>
+    <div class="progwrap"><div class="prog"><b id="q-prog"></b></div><img class="pball" id="q-ball" src="icon/ball.png" alt=""></div>
     <div class="qscene" id="q-dog"></div>
     <p class="qtext" id="q-text"></p>
     <div class="answers" id="q-ans"></div>
@@ -781,7 +787,7 @@ $("go-quiz").addEventListener("click",function(){
 function renderQ(){
   var q=Q[st.qi];st.busy=false;
   $("q-count").textContent="Q."+(st.qi+1)+" ／ "+N;
-  $("q-prog").style.width=(st.qi/N*100)+"%";
+  $("q-prog").style.width=(st.qi/N*100)+"%";$("q-ball").style.left=(st.qi/N*100)+"%";$("q-ball").style.transform="translate(-50%,-50%) rotate("+(st.qi*60)+"deg)";
   $("q-dog").innerHTML=dog(q[3]);
   $("q-text").textContent=q[1];
   $("q-ans").innerHTML=orderOf(st.qi).map(function(k){return '<button type="button" data-k="'+k+'"'+(st.ans[st.qi]===k?' class="on"':'')+'>'+q[2][k]+'</button>'}).join("");
@@ -860,6 +866,7 @@ function artImage(b){
   return new Promise(function(res){var im=new Image();im.onload=function(){res(im)};im.onerror=function(){res(null)};
     im.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(dog(k).replace("<svg ",'<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" '))});
 }
+var STAR=null;function starImage(){if(STAR)return Promise.resolve(STAR);return new Promise(function(res){var im=new Image();im.onload=function(){STAR=im;res(im)};im.onerror=function(){res(null)};im.src="icon/star.png"})}
 var PAW=null;function pawImage(){if(PAW)return Promise.resolve(PAW);return new Promise(function(res){var im=new Image();im.onload=function(){PAW=im;res(im)};im.onerror=function(){res(null)};im.src="icon/paw.png"})}
 function renderCard(o){
   var W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;var ctx=cv.getContext("2d");
@@ -895,9 +902,12 @@ function renderCard(o){
     var x=bx+bw*(1-v/100);ctx.fillStyle=AXC[i][0];ctx.beginPath();ctx.arc(x,y+1,13,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#FFFFFF";ctx.lineWidth=4;ctx.stroke();
   });
   ctx.textAlign="center";
-  var chips=[];if(o.gap!==null&&o.gap!==undefined)chips.push("ギャップ度 "+o.gap+"%");if(o.rare)chips.push("レア度 "+starStr(o.rare.stars));
-  ctx.font="800 30px "+R;var cws=chips.map(function(c){return ctx.measureText(c).width+56}),tot=cws.reduce(function(a,b){return a+b},0)+(chips.length-1)*20,cx0=W/2-tot/2;
-  chips.forEach(function(c,i){ctx.fillStyle="#FFF3C4";roundRect(ctx,cx0,1186,cws[i],54,27);ctx.fill();ctx.fillStyle=dark;ctx.textAlign="center";ctx.fillText(c,cx0+cws[i]/2,1224);cx0+=cws[i]+20});
+  var chips=[];if(o.gap!==null&&o.gap!==undefined)chips.push("ギャップ度 "+o.gap+"%");if(o.rare)chips.push(o.star?"レア度":"レア度 "+starStr(o.rare.stars));
+  ctx.font="800 30px "+R;var SW=o.star&&o.rare?5*32+8:0,cws=chips.map(function(c){return ctx.measureText(c).width+56+(c==="レア度"?SW:0)}),tot=cws.reduce(function(a,b){return a+b},0)+(chips.length-1)*20,cx0=W/2-tot/2;
+  chips.forEach(function(c,i){ctx.fillStyle="#FFF3C4";roundRect(ctx,cx0,1186,cws[i],54,27);ctx.fill();ctx.fillStyle=dark;
+    if(c==="レア度"&&SW){ctx.textAlign="left";ctx.fillText(c,cx0+28,1224);var sx=cx0+28+ctx.measureText(c).width+8;
+      for(var k=0;k<5;k++){ctx.globalAlpha=k<o.rare.stars?1:.25;ctx.drawImage(o.star,sx+k*32,1197,30,30)}ctx.globalAlpha=1}
+    else{ctx.textAlign="center";ctx.fillText(c,cx0+cws[i]/2,1224)}cx0+=cws[i]+20});
   ctx.textAlign="center";
   if(o.hidden){ctx.fillStyle=dark;var ht="隠れ犬種："+o.hidden.s+"（"+o.hidden.c+"）";fitText(ctx,ht,740,30,"800",R);ctx.fillText(ht,W/2,1278)}
   return cv.toDataURL("image/jpeg",.9);
@@ -920,9 +930,9 @@ function renderResult(){
   var ownM=own>=0?last.rank[own].m:0,pure=own===0;
   var bodyLine=pure?"生粋の"+short+"（"+short+"度 "+ownM+"%）":own>=0?"体は "+short+"（"+short+"度 "+ownM+"%）／ 心は":"体は "+short+" ／ 心は";
   $("ears-wrap").hidden=!st.img;$("card-img").hidden=true;$("card-load").hidden=false;
-  Promise.all([fontsReady(),st.img?null:artImage(B),pawImage()]).then(function(r){
+  Promise.all([fontsReady(),st.img?null:artImage(B),pawImage(),starImage()]).then(function(r){
     $("card-img").onload=function(){$("card-img").hidden=false;$("card-load").hidden=true};
-    $("card-img").src=renderCard({sub:subOf(spread(last.pct)),main:B,name:name,bodyLine:bodyLine,img:st.img,art:r[1],pos:st,ears:st.img?st.ears:false,pct:spread(last.pct).map(Math.round),hidden:HB,pure:pure,paw:r[2],gap:gapOf(),rare:rarityOf(last.pct)});
+    $("card-img").src=renderCard({sub:subOf(spread(last.pct)),main:B,name:name,bodyLine:bodyLine,img:st.img,art:r[1],pos:st,ears:st.img?st.ears:false,pct:spread(last.pct).map(Math.round),hidden:HB,pure:pure,paw:r[2],star:r[3],gap:gapOf(),rare:rarityOf(last.pct)});
   });
   renderMeters();renderPairPanel();
   var spH=spread(last.pct);
@@ -980,6 +990,7 @@ function rarityOf(pct){var d=Math.hypot.apply(null,pct.map(function(v){return v-
   var text=share<5?"100頭に約"+per+"頭の、とてもめずらしいバランス":share<35?"100頭に約"+per+"頭の、めずらしいバランス":share<60?"100頭に約"+per+"頭の、ときどき見かけるバランス":"多くの子と同じ、王道のバランス";
   return {share:share,stars:stars,per:per,text:text}}
 function gapOf(){var oid=ownId(st.breed);if(!oid)return null;var i=last.rank.findIndex(function(x){return x.b.id===oid});if(i<0)return null;return Math.round(i/(BR.length-1)*100)}
+function starHTML(n){var h="";for(var i=0;i<5;i++)h+='<img src="icon/star.png" alt=""'+(i<n?"":' class="off"')+">";return '<span class="stars" role="img" aria-label="星5つ中'+n+'つ">'+h+"</span>"}
 function starStr(n){return "★★★★★".slice(0,n)+"☆☆☆☆☆".slice(0,5-n)}
 
 // ---------- 結果つきリンク ----------
@@ -1036,7 +1047,7 @@ function renderPairPanel(){
 function renderMeters(){
   var g=gapOf(),R2=rarityOf(last.pct),short=bodyShort(st.breed),h="";
   if(g!==null)h+='<div class="meter"><span>ギャップ度</span><b>'+g+'%</b><small>'+(g===0?"見た目も中身も"+esc(short)+"！":g<35?"見た目どおりの中身":g<70?"見た目と中身にちょっと意外さ":"見た目からは想像できない中身")+'</small></div>';
-  h+='<div class="meter"'+(g===null?' style="grid-column:1/-1"':'')+'><span>レア度</span><b>'+starStr(R2.stars)+'</b><small>'+R2.text+'</small></div>';
+  h+='<div class="meter"'+(g===null?' style="grid-column:1/-1"':'')+'><span>レア度</span><b>'+starHTML(R2.stars)+'</b><small>'+R2.text+'</small></div>';
   $("r-meters").innerHTML=h;
 }
 
