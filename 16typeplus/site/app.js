@@ -219,7 +219,7 @@ function askInline(btn,msg,yes,onYes){let bx=btn.nextElementSibling;if(bx&&bx.cl
 function resetAll(){sset(KR,null);sset(KQ,null);try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}
  /* 再読み込みできない環境でも、画面の上で最初の状態に戻す */
  hideOld();const w=document.querySelector(".welcome");if(w)w.remove();document.querySelectorAll(".intro,.how").forEach(e=>e.hidden=false);
- const fc=$("formCard"),qc=$("quizCard"),how=document.querySelector(".how");if(how&&fc){how.after(fc);fc.after(qc);}$("formh").textContent=TR("診断をはじめる");
+ const fc=$("formCard"),qc=$("quizCard"),how=document.querySelector(".how"),itr=document.querySelector(".intro");if(itr&&fc){itr.after(fc);fc.after(qc);if(how)qc.after(how);}$("formh").textContent=TR("診断をはじめる");
  dateAll(false);fillDate();for(let i=0;i<4;i++)sel[i]=null;[...pk.children].forEach(g=>{g.classList.remove("done");[...g.children].forEach(c=>c.setAttribute("aria-pressed","false"));});
  selAT=null;document.querySelectorAll("#atPick button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v?"false":"true"));drawSlots(-1);$("pickField").hidden=true;$("hasType").setAttribute("aria-pressed","false");
  qc.hidden=true;fc.hidden=false;drawResume();window.scrollTo(0,0);
@@ -816,7 +816,7 @@ if($("cvBtn"))$("cvBtn").onclick=()=>{track("karte_click");const btn=$("cvBtn");
 /* トップへ戻る：ロゴ・ボタン・下のリンク・右下の丸ボタン */
 function goHome(e){if(e)e.preventDefault();if(!$("quizCard").hidden)showQuiz(false);
  /* 2回目以降の「おかえりなさい」表示のときは、トップの説明と入力欄を元の位置に戻す */
- const intro=document.querySelector(".intro");if(intro&&intro.hidden){document.querySelectorAll(".intro,.how").forEach(x=>x.hidden=false);const how=document.querySelector(".how");how.after($("formCard"));$("formCard").after($("quizCard"));$("formh").textContent=TR("診断をはじめる");const wb=document.querySelector(".welcome");if(wb)wb.remove();}
+ const intro=document.querySelector(".intro");if(intro&&intro.hidden){document.querySelectorAll(".intro,.how").forEach(x=>x.hidden=false);const how=document.querySelector(".how");intro.after($("formCard"));$("formCard").after($("quizCard"));if(how)$("quizCard").after(how);$("formh").textContent=TR("診断をはじめる");const wb=document.querySelector(".welcome");if(wb)wb.remove();}
  window.scrollTo({top:0,behavior:"smooth"});}
 ["logoHome","homeBtn","toTop","fabTop"].forEach(id=>{const el=$(id);if(el)el.addEventListener("click",goHome);});
 {const fab=$("fabTop");if(fab){const f=()=>{const fc=$("formCard"),r=fc&&!fc.hidden?fc.getBoundingClientRect():null;fab.hidden=window.scrollY<700||!$("quizCard").hidden||!!(r&&r.top<innerHeight&&r.bottom>0);};window.addEventListener("scroll",f,{passive:true});f();}}
