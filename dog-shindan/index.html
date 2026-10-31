@@ -248,6 +248,11 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .ec-memo{grid-column:1/-1}
 .ec-memo textarea{font:inherit;font-weight:500;border-radius:14px;border:2px solid var(--mint-l);background:var(--bg);color:var(--ink);padding:10px 14px;resize:vertical;min-height:72px}
 @media (max-width:420px){.ec-form{grid-template-columns:1fr}}
+.eb-list{display:flex;flex-direction:column;gap:18px}
+.eb-item{background:var(--card);border:3px solid #E7B7B7;border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.eb-item img{width:100%;border-radius:10px}
+.eb-row{display:flex;gap:8px;flex-wrap:wrap}
+.eb-row button{flex:1 1 auto;min-height:44px;border-radius:999px;border:2px solid var(--mint);background:var(--card);font-weight:800;color:var(--teal);padding:0 14px}
 /* 図鑑 */
 .zcount{font-family:var(--pop);color:var(--teal);text-align:center}
 .zcount b{font-weight:400;font-size:1.4rem}
@@ -320,6 +325,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
     <p class="msg" id="msg" hidden></p>
     <button class="start" id="go-quiz" type="button">スタート ▶</button>
     <button class="sub" type="button" id="open-zukan">44犬種の図鑑を見る</button>
+    <button class="sub" type="button" id="open-ecbook" hidden>もしものとき帳を見る</button>
   </div>
 </section>
 
@@ -446,6 +452,8 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
         </div>
         <img class="meishi-img" id="ec-img" alt="もしものときカード">
         <button class="share-all" type="button" id="sh-ec">もしものときカードをシェア・保存する</button>
+        <button class="sub" type="button" id="sh-ec-line" style="background:#06C755;border-color:#06C755;color:#FFFFFF">LINEで家族やワン友に送る</button>
+        <p class="note">LINEで送ったリンクを開くと、相手のスマホの「もしものとき帳」にこのカードが入ります。リンクには電話番号なども入るので、家族や信頼できる人にだけ送ってください。内容を書きかえたときは、もう一度送ってください。</p>
         <p class="note">画像を長押しで保存できます。名刺サイズ（91×55mm）で印刷すると、首輪のポーチやお財布に入れておけます。</p>
       </div>
     </details>
@@ -547,6 +555,17 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
       <p>強いこわがりや、かんでしまうなどで困っているときは、獣医さんやドッグトレーナーさんに相談してください。</p>
       <p>写真や答えは、このスマホの中だけで使い、どこにも送りません。</p>
     </div>
+  </div>
+</section>
+
+<!-- もしものとき帳 -->
+<section id="s-ecbook" hidden>
+  <div class="wrap">
+    <div class="qhead"><span class="logo"><img class="paw-s" src="icon/paw.png" alt="">44Wansonalities</span><button class="back" type="button" id="eb-back">← もどる</button></div>
+    <h2 style="text-align:center">もしものとき帳</h2>
+    <p class="msg" id="eb-msg" hidden></p>
+    <p class="note">家族やワン友から届いた「もしものときカード」です。このスマホの中だけに保存しています。</p>
+    <div class="eb-list" id="eb-list"></div>
   </div>
 </section>
 
@@ -974,7 +993,7 @@ $("in-zoom").addEventListener("input",function(e){st.zoom=+e.target.value;clampP
 function msg(t){var m=$("msg");m.textContent=t;m.hidden=false;clearTimeout(msg.t);msg.t=setTimeout(function(){m.hidden=true},6000)}
 
 // ---------- 質問（答えを押すと、すぐ次へ） ----------
-function show(id){["s-start","s-quiz","s-result","s-zukan","s-about"].forEach(function(s){$(s).hidden=s!==id});window.scrollTo(0,0)}
+function show(id){["s-start","s-quiz","s-result","s-zukan","s-about","s-ecbook"].forEach(function(s){$(s).hidden=s!==id});window.scrollTo(0,0)}
 // 答えの並びは質問ごとに入れかえる（いつも同じ位置を押すクセで結果がかたよらないように）
 var PERMS=[[0,1,2],[1,0,2],[2,1,0],[0,2,1],[1,2,0],[2,0,1]];
 function orderOf(i){return ((i*5+3)%4<2)?[0,1,2]:[2,1,0]}
@@ -1201,23 +1220,47 @@ var EC_IDS=["ec-w","ec-h","ec-ht","ec-d","ec-m","ec-a","ec-c","ec-n"],EC_LB=["�
 function ecKey(){return "w44_ec_"+st.name}
 function ecLoad(){var d={};try{d=JSON.parse(localStorage.getItem(ecKey())||"{}")}catch(e){}EC_IDS.forEach(function(id){$(id).value=d[id]||""})}
 function ecSave(){var d={};EC_IDS.forEach(function(id){d[id]=$(id).value.trim()});try{localStorage.setItem(ecKey(),JSON.stringify(d))}catch(e){}}
-function renderEC(art){var W=1075,H=650,cv=document.createElement("canvas");cv.width=W;cv.height=H;var ctx=cv.getContext("2d");
+function ecData(){var d={n:st.name||"うちの子",b:bodyName(st.breed)+(st.age==="senior"?"・7歳以上":st.age==="puppy"?"・1歳未満":""),i:ownId(st.breed)||"",v:EC_IDS.map(function(id){return $(id).value.trim()})};return d}
+function renderEC(art){return renderECData(ecData(),art)}
+function renderECData(d,art){var W=1075,H=650,cv=document.createElement("canvas");cv.width=W;cv.height=H;var ctx=cv.getContext("2d");
   var F='"Mochiy Pop One","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',R='"M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',dark="#2F3A45";
   ctx.fillStyle="#FFFFFF";ctx.fillRect(0,0,W,H);ctx.fillStyle="#D85C5C";ctx.fillRect(0,0,W,96);
   ctx.fillStyle="#FFFFFF";ctx.textAlign="left";ctx.font="400 40px "+F;ctx.fillText("もしものときカード",44,64);
-  ctx.textAlign="right";fitText(ctx,st.name||"",360,44,"400",F);ctx.fillText(st.name||"",W-44,64);
-  if(art)drawDogFree(ctx,art,ownId(st.breed),190,580,330);
+  ctx.textAlign="right";fitText(ctx,d.n||"",360,44,"400",F);ctx.fillText(d.n||"",W-44,64);
+  if(art)drawDogFree(ctx,art,d.i,190,580,330);
   ctx.textAlign="left";var X=380,y=150,VX=X+190;
   function row(l,v){ctx.font="800 22px "+R;ctx.fillStyle="#7A8790";ctx.fillText(l,X,y);ctx.fillStyle=dark;
     if(l==="メモ"){ctx.font="800 24px "+R;wrapJa(ctx,v.replace(/\n/g," "),W-VX-40).slice(0,2).forEach(function(t,k){ctx.fillText(t,VX,y+k*34)});y+=84;return}
     fitText(ctx,v,W-VX-40,26,"800",R);ctx.fillText(v,VX,y);y+=50}
-  row("犬種",bodyName(st.breed)+(st.age==="senior"?"・7歳以上":st.age==="puppy"?"・1歳未満":""));
-  EC_IDS.forEach(function(id,i){var v=$(id).value.trim();if(v)row(EC_LB[i],v)});
+  if(d.b)row("犬種",d.b);
+  (d.v||[]).forEach(function(v,k){if(v&&EC_LB[k])row(EC_LB[k],String(v).slice(0,40))});
   ctx.strokeStyle="#E7B7B7";ctx.lineWidth=6;ctx.strokeRect(3,3,W-6,H-6);return cv.toDataURL("image/png")}
 var EC_ART=null;function ecRefresh(){ecSave();$("ec-img").src=renderEC(EC_ART)}
 EC_IDS.forEach(function(id){$(id).addEventListener("input",ecRefresh)});
 $("sh-ec").addEventListener("click",function(){shareCard("保存されないときは、カードの画像を長押しして保存してください。","ec-img",st.name+"のもしものときカード")});
 $("in-tag").addEventListener("click",function(e){var b=e.target.closest("button[data-v]");if(!b)return;st.tag=b.dataset.v;[].forEach.call(this.children,function(x){x.classList.toggle("on",x===b)})});
+
+
+// ---------- もしものとき帳：LINEで届いたカードを、このスマホにためる ----------
+function b64e(o){return btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+function b64d(t){return JSON.parse(decodeURIComponent(escape(atob(t.replace(/-/g,"+").replace(/_/g,"/")))))}
+function ebGet(){try{return JSON.parse(localStorage.getItem("w44_ecbook")||"[]")}catch(e){return []}}
+function ebSet(a){try{localStorage.setItem("w44_ecbook",JSON.stringify(a))}catch(e){}$("open-ecbook").hidden=!a.length}
+function ebClean(d){if(!d||typeof d.n!=="string")return null;return {n:d.n.slice(0,12),b:String(d.b||"").slice(0,30),i:BY[d.i]?d.i:"",v:(Array.isArray(d.v)?d.v:[]).slice(0,8).map(function(x){return String(x||"").slice(0,40)}),t:Date.now()}}
+function ebRender(){var a=ebGet();
+  $("eb-list").innerHTML=a.length?a.map(function(d,k){return '<div class="eb-item" data-k="'+k+'"><img id="eb-img'+k+'" alt="'+esc(d.n)+'のもしものときカード"><div class="eb-row"><button type="button" data-act="share">シェア・保存</button><button type="button" data-act="del">この帳から消す</button></div></div>'}).join(""):'<p class="note" style="text-align:center">まだカードはありません。</p>';
+  fontsReady().then(function(){a.forEach(function(d,k){var draw=function(im){var el=$("eb-img"+k);if(el)el.src=renderECData(d,im)};draw(null);if(d.i&&IMG[d.i])artImage(BY[d.i]).then(draw)})})}
+var ebFrom="s-start";
+$("open-ecbook").addEventListener("click",function(){ebFrom="s-start";$("eb-msg").hidden=true;ebRender();show("s-ecbook")});
+$("eb-back").addEventListener("click",function(){show(ebFrom)});
+$("eb-list").addEventListener("click",function(e){var b=e.target.closest("button[data-act]");if(!b)return;var k=+b.closest(".eb-item").dataset.k,a=ebGet();
+  if(b.dataset.act==="share"){shareCard("保存されないときは、カードの画像を長押しして保存してください。","eb-img"+k,a[k].n+"のもしものときカード")}
+  if(b.dataset.act==="del"){if(b.dataset.sure){a.splice(k,1);ebSet(a);ebRender()}else{b.dataset.sure=1;b.textContent="もう一度押すと消えます"}}});
+$("sh-ec-line").addEventListener("click",function(){ecSave();var d=ecData(),url=location.href.split("#")[0]+"#ec="+b64e(d);
+  window.open("https://line.me/R/share?text="+encodeURIComponent(d.n+"のもしものときカードです。開くと、あなたのスマホの「もしものとき帳」に入ります。\n"+url),"_blank","noopener")});
+(function(){ebSet(ebGet());var m=location.hash.match(/ec=([A-Za-z0-9_-]+)/);if(!m)return;var d=null;try{d=ebClean(b64d(m[1]))}catch(e){}if(!d)return;
+  var a=ebGet().filter(function(x){return !(x.n===d.n&&x.b===d.b)});a.unshift(d);ebSet(a);
+  $("eb-msg").textContent=d.n+"の「もしものときカード」が届きました。もしものとき帳に入れました。";$("eb-msg").hidden=false;ebFrom="s-start";ebRender();show("s-ecbook")})();
 
 // ---------- 性格ブレンド：うちの子の犬種をベースに、性格の近い犬種がどれくらい混ざっているか ----------
 // 血統ではなく「性格の近さ」から出す割合。自分の犬種（わかれば）＋近い犬種2つ
