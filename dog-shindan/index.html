@@ -211,6 +211,8 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .g-btn{min-height:44px;min-width:44px;border-radius:999px;border:2px solid var(--mint);background:var(--card);font-weight:800;color:var(--teal);padding:0 14px}
 .g-item textarea{font:inherit;font-weight:800;width:100%;min-height:76px;border-radius:12px;border:2px solid var(--mint);padding:8px 10px;background:var(--card);color:var(--ink);resize:vertical}
 .g-row{display:flex;gap:8px;flex-wrap:wrap}
+.pick{display:flex;flex-direction:column;gap:6px;align-items:center;font-weight:800;font-size:.9rem}
+.pick .seg{width:100%;max-width:420px}
 /* 図鑑 */
 .zcount{font-family:var(--pop);color:var(--teal);text-align:center}
 .zcount b{font-weight:400;font-size:1.4rem}
@@ -339,6 +341,10 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
       <div id="g-list" class="g-list"></div>
     </div>
 
+    <div class="pick" id="pick-wrap" hidden>
+      <span>カードに出すのは</span>
+      <div class="seg" id="in-pick"><button type="button" data-v="photo" class="on">うちの子の写真</button><button type="button" data-v="art">イラスト</button></div>
+    </div>
     <label class="toggle" id="ears-wrap"><input type="checkbox" id="in-ears" checked>写真に「心の犬種」の耳をつける</label>
 
     <div class="panel">
@@ -809,7 +815,7 @@ $("in-photo").addEventListener("change",function(e){
   im.onload=function(){
     var m=1200,sc=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement("canvas");
     c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);c.getContext("2d").drawImage(im,0,0,c.width,c.height);
-    st.img=c;st.zoom=1;st.dx=0;st.dy=0;$("in-zoom").value=1;
+    st.img=c;st.zoom=1;st.dx=0;st.dy=0;$("in-zoom").value=1;st.useArt=false;[].forEach.call($("in-pick").children,function(x){x.classList.toggle("on",x.dataset.v==="photo")});
     $("crop-hint").hidden=true;$("zoom-wrap").hidden=false;drawCrop();URL.revokeObjectURL(url);
   };
   im.onerror=function(){msg("この写真は読みこめませんでした。別の写真を選んでください。")};
@@ -1173,11 +1179,11 @@ function renderResult(){
   var oid=ownId(st.breed),own=oid?last.rank.findIndex(function(x){return x.b.id===oid}):-1;
   var ownM=own>=0?last.rank[own].m:0,pure=own===0;
   var bodyLine=pure?"生粋の"+short+"（"+short+"度 "+ownM+"%）":own>=0?"体は "+short+"（"+short+"度 "+ownM+"%）／ 心は":"体は "+short+" ／ 心は";
-  $("ears-wrap").hidden=!st.img;$("card-img").hidden=true;$("card-load").hidden=false;
-  var oidC=ownId(st.breed);
-  Promise.all([fontsReady(),artImage(B),pawImage(),starImage(),crownImage(),(oidC&&!st.img&&IMG[oidC])?artImage(BY[oidC]):null]).then(function(r){
+  var oidC=ownId(st.breed),canArt=!!(st.img&&oidC&&IMG[oidC]),PH=(st.img&&!(canArt&&st.useArt))?st.img:null;
+  $("pick-wrap").hidden=!canArt;$("ears-wrap").hidden=!PH;$("card-img").hidden=true;$("card-load").hidden=false;
+  Promise.all([fontsReady(),artImage(B),pawImage(),starImage(),crownImage(),(oidC&&!PH&&IMG[oidC])?artImage(BY[oidC]):null]).then(function(r){
     $("card-img").onload=function(){$("card-img").hidden=false;$("card-load").hidden=true};
-    var CO={sub:subOf(spread(last.pct)),main:B,name:name,bodyLine:bodyLine,img:st.img,art:r[1],pos:st,ears:st.img?st.ears:false,pct:spread(last.pct).map(Math.round),hidden:HB,pure:pure,paw:r[2],star:r[3],crown:r[4],bodyArt:r[5],bodyId:oidC,bodyName:short,layout:window.CARD_LAYOUT||"C",blend:blendOf(),head:pure?"生粋の"+short:B.s+"ハートの"+short,gap:gapOf(),rare:rarityOf(last.pct)};
+    var CO={sub:subOf(spread(last.pct)),main:B,name:name,bodyLine:bodyLine,img:PH,art:r[1],pos:st,ears:PH?st.ears:false,pct:spread(last.pct).map(Math.round),hidden:HB,pure:pure,paw:r[2],star:r[3],crown:r[4],bodyArt:r[5],bodyId:oidC,bodyName:short,layout:window.CARD_LAYOUT||"C",blend:blendOf(),head:pure?"生粋の"+short:B.s+"ハートの"+short,gap:gapOf(),rare:rarityOf(last.pct)};
     $("card-img").src=renderCard(CO);$("meishi-img").src=renderMeishi(CO);GKEY="w44_guide_"+st.name+"_"+last.main.id;GEDIT=gGet();CO.guide=guideOf();renderGuide();CO.msg=($("in-msg").value||"").trim();$("meishi-back").src=renderMeishiBack(CO);FEST={o:CO};$("fest-out").hidden=true;
   });
   renderMeters();renderPairPanel();
@@ -1222,6 +1228,7 @@ function renderResult(){
 }
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 $("in-ears").addEventListener("change",function(e){st.ears=e.target.checked;renderResult()});
+$("in-pick").addEventListener("click",function(e){var b=e.target.closest("button[data-v]");if(!b)return;st.useArt=b.dataset.v==="art";[].forEach.call(this.children,function(x){x.classList.toggle("on",x===b)});renderResult()});
 
 
 // ---------- ギャップ度・レア度 ----------
