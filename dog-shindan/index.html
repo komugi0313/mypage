@@ -730,7 +730,7 @@ var QB=[
 // 毎回、各性格から4問ずつ（合計24問）を選ぶ。前回出た問題はなるべく出さない。
 // どの問題も同じ「3択・2点／1点／0点」なので、何問目に何が出ても点数の出し方は同じ
 var PER=4,N=PER*6,Q=[];
-function newQuiz(){
+function newQuiz(){st.repl=[0,0,0,0,0,0];st.seenQ=[];
   // 直近4回ぶんに出た問題はなるべく出さない（各性格20問なので、5回続けて遊んでも同じ問題にほぼ当たらない）
   var hist=[];try{hist=JSON.parse(localStorage.getItem("w44_lastq2")||"[]")}catch(e){}
   var last=[].concat.apply([],hist);
@@ -926,11 +926,19 @@ function renderQ(){
   $("q-prog").style.width=(st.qi/N*100)+"%";$("q-ball").style.left=(st.qi/N*100)+"%";$("q-ball").style.transform="translate(-50%,-50%) rotate("+(st.qi*60)+"deg)";
   $("q-dog").innerHTML=dog(q[3]);
   $("q-text").textContent=q[1];
-  $("q-ans").innerHTML=orderOf(st.qi).map(function(k){return '<button type="button" data-k="'+k+'"'+(st.ans[st.qi]===k?' class="on"':'')+'>'+q[2][k]+'</button>'}).join("")+'<button type="button" class="skip'+(st.ans[st.qi]==="s"?' on':'')+'" data-k="s">どれも当てはまらない・わからない</button>';
+  $("q-ans").innerHTML=orderOf(st.qi).map(function(k){return '<button type="button" data-k="'+k+'"'+(st.ans[st.qi]===k?' class="on"':'')+'>'+q[2][k]+'</button>'}).join("")+'<button type="button" class="skip'+(st.ans[st.qi]==="s"?' on':'')+'" data-k="s">この場面を見たことがない</button>';
   $("q-back").textContent=st.qi===0?"← 入力にもどる":"← ひとつもどる";
 }
 $("q-ans").addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b||st.busy)return;st.busy=true;
+  // 「見たことがない」は、同じ性格の別の質問に入れかえる（1つの性格につき2回まで。それ以上は点数に入れずに次へ）
+  if(b.dataset.k==="s"){var ax=Q[st.qi][0];st.repl=st.repl||[0,0,0,0,0,0];
+    if(st.repl[ax]<2){var recent=[];try{recent=[].concat.apply([],JSON.parse(localStorage.getItem("w44_lastq2")||"[]"))}catch(_){}
+      var pool=QB.filter(function(q){return q[0]===ax&&Q.indexOf(q)<0&&(st.seenQ||[]).indexOf(q)<0});
+      var fresh=pool.filter(function(q){return recent.indexOf(QB.indexOf(q))<0}),pick=(fresh.length?fresh:pool);
+      if(pick.length){st.seenQ=(st.seenQ||[]).concat([Q[st.qi]]);Q[st.qi]=pick[Math.floor(Math.random()*pick.length)];st.repl[ax]++;st.ans[st.qi]=null;
+        b.classList.add("on");setTimeout(function(){renderQ();toast("同じ性格の、別の質問にかえました")},180);return}}
+  }
   st.ans[st.qi]=b.dataset.k==="s"?"s":+b.dataset.k;b.classList.add("on");
   setTimeout(function(){if(st.qi<N-1){st.qi++;renderQ()}else finish()},180);
 });
