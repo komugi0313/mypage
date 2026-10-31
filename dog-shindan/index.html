@@ -166,6 +166,8 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .aru{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .aru li{background:var(--bg);border-radius:14px;padding:10px 14px;font-weight:800;font-size:.95rem}
 .aru li::before{content:"あるある ";color:var(--teal);font-size:.75rem;margin-right:4px}
+.q-hint{margin:0;text-align:center;font-size:.8rem;font-weight:800;color:var(--muted)}
+.aru-no{display:inline-flex;align-items:center;min-height:36px;margin-left:8px;padding:0 12px;border-radius:999px;border:1.5px solid var(--mint);background:var(--card);color:var(--muted);font-weight:800;font-size:.74rem;vertical-align:middle}
 .badges{display:flex;flex-wrap:wrap;gap:8px}
 .badges span{border-radius:999px;padding:4px 12px;font-weight:800;font-size:.85rem;background:#FFF3C4;color:var(--ink)}
 .badges span b{font-family:var(--pop);font-weight:400}
@@ -186,7 +188,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .peak{align-items:flex-start;gap:4px}
 .peak small,.column small{font-weight:800;color:var(--muted);font-size:.8rem}
 .peak .stat{font-family:var(--pop);font-size:2rem;line-height:1.3}
-.peak p{font-weight:800}
+.peak p{font-weight:800;word-break:keep-all;overflow-wrap:anywhere;text-wrap:pretty}
 .vs{font-family:var(--pop);font-size:1.1rem;color:var(--teal)}
 .column{background:var(--soft,#FFF8E1);border-color:var(--ball)}
 .column h2{color:var(--ink)}
@@ -472,6 +474,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
     <div class="qscene" id="q-dog"></div>
     <p class="qtext" id="q-text"></p>
     <div class="answers" id="q-ans"></div>
+    <p class="q-hint">いくつもあてはまるときは、いちばん多いものを選んでね</p>
     <button class="back" type="button" id="q-back">← もどる</button>
   </div>
 </section>
@@ -3375,7 +3378,7 @@ var QB=[
  [4, "前足やあごを、あなたにのせてくることは…", ["よくある", "ときどきある", "ほとんどない"], "toypoodle"],
  [4, "あなたと目が合うと…", ["しっぽをふって近づいてくる", "しっぽだけ少しふる", "そのまま知らんぷり"], "shihtzu"],
  [4, "ひとりでお留守番するときは…", ["さみしそうに鳴いたり、ドアの前で待ったりする", "しばらくすると寝ている", "へっちゃらでくつろぐ"], "bichon"],
- [4, "家の中での、いつもの居場所は…", ["あなたの足もとやひざの上", "家族が見える場所", "自分だけのお気に入りの場所"], "sheltie"],
+ [4, "家の中で、いちばん多くいる場所は…", ["あなたの足もとやひざの上", "家族が見える場所", "自分だけのお気に入りの場所"], "sheltie"],
  [4, "家族がほかのワンちゃんや子どもをかまっていると…", ["割りこんでアピール", "ちらっと見る", "気にしない"], "shiba"],
  [4, "お散歩中、リードがゆるんでいても…", ["あなたのすぐ横を歩く", "ときどきふり返る", "好きな方へずんずん進む"], "husky"],
  [5, "風で物がバタンと倒れると…", ["ちらっと見て、すぐ平気", "びくっとするけれど、すぐ戻る", "しばらくおびえている"], "boxer"],
@@ -4187,13 +4190,15 @@ function renderResult(){
   $("r-comment").innerHTML=commentOf(sp);renderEcho(sp,name);renderLove(sp,name,B);
   ecLoad();var oe=ownId(st.breed);EC_ART=null;$("ec-img").src=renderEC(null);if(oe&&IMG[oe])artImage(BY[oe]).then(function(im){EC_ART=im;$("ec-img").src=renderEC(im)});
   var o=axOrder(sp),pk=o[0],pv=Math.round(sp[pk]),pside=sideOf(pv),pc=AXC[pk];
-  $("r-peak").innerHTML='<small>'+esc(name)+'のいちばんの個性</small><p class="stat" style="font-size:1.5rem;color:'+pc[1]+'">'+(pside?AXES[pk].b:AXES[pk].a)+' 上位'+topShare(pv)+'%</p><p>100頭中'+topShare(pv)+'頭ほどの、'+esc((pside?AXES[pk].tb:AXES[pk].ta).replace(/好き$/,"好きな"))+'子</p>';
+  var psh=topShare(pv),pword=pside?AXES[pk].b:AXES[pk].a,ptier=psh<=5?"とびきりの":psh<=15?"かなりの":psh<=35?"けっこうな":"ちょっぴり",pmore=Math.max(0,psh-1),pdesc=(pside?AXES[pk].tb:AXES[pk].ta).replace(/好き$/,"好きな");
+  $("r-peak").innerHTML='<small>'+esc(name)+'のいちばんの個性</small><p class="stat" style="font-size:1.45rem;color:'+pc[1]+'">'+ptier+'「'+esc(pword)+'」</p><p>'+esc(pdesc)+'子。'+(pmore===0?'100頭いるドッグランでも、'+esc(name)+'がいちばん！':'100頭いるドッグランなら、'+esc(name)+'より「'+esc(pword)+'」な子は'+(psh<=15?'たった約'+pmore+'頭！':'約'+pmore+'頭'))+'</p>';
   if(oidA){var ov=BY[oidA].v,dd=[0,1,2,3,4,5].map(function(i){return sp[i]-ov[i]}),mi=0;dd.forEach(function(d,i){if(Math.abs(d)>Math.abs(dd[mi]))mi=i});
     var amt=Math.abs(dd[mi]),word=NOUN[mi][dd[mi]>0?0:1];
     $("r-vs").textContent=amt>=25?BY[oidA].s+"にしては、かなりの"+word+"！":amt>=12?BY[oidA].s+"にしては、ちょっと"+word+"寄り":"性格のバランスも"+BY[oidA].s+"らしい子";
     $("r-vs").hidden=false}else $("r-vs").hidden=true;
   $("r-type-aru-title").textContent=name+"に当てはまりそうな あるある";
-  $("r-type-aru").innerHTML=o.slice(0,3).map(function(i,k){var sd=sideOf(sp[i]);return '<li><small style="color:'+AXC[i][1]+'">'+esc(NOUN[i][sd])+'あるある</small><br>'+esc(TARU[i][sd][k%2])+'</li>'}).join("");
+  ARU_POOL=[];o.forEach(function(i){var sd=sideOf(sp[i]);[0,1].forEach(function(j){ARU_POOL.push({i:i,sd:sd,t:TARU[i][sd][j]})})});
+  ARU_SHOW=[0,2,4];ARU_USED={0:1,2:1,4:1};renderAru();
   if(oidA&&OWNER[oidA]){$("r-owner-title").textContent=BY[oidA].s+"の飼い主さんあるある";$("r-owner").innerHTML=OWNER[oidA].map(function(t){return '<li>'+esc(t)+'</li>'}).join("");$("r-owner-panel").hidden=false}else $("r-owner-panel").hidden=true;
   var ht=last.hid,hTrait=last.pct[ht.axis]>=50?AXES[ht.axis].tb:AXES[ht.axis].ta;
   $("r-hidden").textContent="内に秘めた顔は「"+HB.n+"（"+HB.c+"）」。ふだんは見せないけれど、「"+hTrait+"」一面もそっと持っています。";
@@ -4314,6 +4319,13 @@ var TARU=[[["お客さんが来ると、だれよりも先に玄関へ","お散�
  [["雷が鳴っても、ぐっすり寝ている","はじめての場所でも、すぐにくつろぐ"],["小さな物音で、すぐに顔を上げる","掃除機が出てくると、別の部屋へ避難"]]];
 var OWNER={"toypoodle": ["トリミングの予約が、自分の美容院より先に決まる", "カットのスタイル名にくわしくなる", "「テディベアカットで」が通じるようになった", "家族のだれより、犬の写真の枚数が多い"], "chihuahua": ["毛布の山の中から、そっと探し出す", "冬は洋服が自分より多い", "ふるえているのが、寒いのか緊張なのか見きわめられる", "バッグに入れてお出かけしがち"], "mdachs": ["ソファにスロープを置いている", "だっこは「胴を支えて」が口ぐせ", "お散歩で「長いね〜」と言われ慣れている", "ソファの下にもぐったおもちゃを取るのは飼い主の役目"], "pome": ["ドライヤーの時間がとにかく長い", "抜け毛で、もう1匹作れそう", "「ぬいぐるみみたい」と毎回言われる", "夏のサマーカットで、急にほっそり"], "yorkie": ["リボンやヘアゴムのコレクションがふえる", "小さいのに頼もしい番犬の声に、お客さんがびっくり", "シャンプーのあとの毛の手入れに、こだわりがある", "小さな体で、家の中の主役"], "schnauzer": ["ごはんのあと、おひげをふくのが日課", "まゆげカットにこだわりがある", "「おじいちゃんみたい」と言われて、ちょっとうれしい", "インターホンの音にいちばん反応する"], "frenchie": ["夏のエアコンの温度は、犬に合わせて決まる", "いびきをつい録音してしまう", "保冷剤を、夏は常に持ち歩いている", "寝顔の写真がスマホにたまる"], "shihtzu": ["前髪をむすぶゴムが家中にある", "トリミング直後は別の犬みたいで笑う", "顔まわりのカットで、印象ががらっと変わる", "マイペースなお散歩に、合わせて歩くのに慣れた"], "maltese": ["涙やけケアにくわしくなる", "白い服に毛がついても気づかない", "白いお洋服より、カラフルなお洋服を選びがち", "気づくと、ずっとうしろにいる"], "papillon": ["耳の飾り毛をとかす時間が至福", "頭のよさに、たまに負ける", "耳のふわふわを見ると、つい写真をとる", "ジャンプ力に毎回おどろく"], "jrt": ["ボールが家具のすき間にいくつも消えている", "体力で、飼い主のほうが先に負ける", "お散歩とボール遊びで、1日があっという間", "「元気ですね〜」が、あいさつがわり"], "cavalier": ["ソファの定位置をゆずっている", "見つめられると、なんでも許してしまう", "初対面の人にも、すぐ甘えてしまう", "ブラッシングの時間が、いやしの時間"], "minpin": ["脱走防止の柵が家のあちこちに", "小さいのに足音がしっかりしている", "小さいのに歩き方がかっこいいと言われる", "寒い日は、セーターが欠かせない"], "pug": ["いびきの録音がスマホにたまっている", "しわの間のおそうじが日課", "暑い日は、お散歩の時間を早朝にずらす", "ブヒブヒの鳴き声で、気持ちがだいたいわかる"], "bichon": ["まんまるカットのために、トリマーさんを選びぬいた", "雨の日のお散歩は、白さとの戦い", "「ぬいぐるみが歩いてる！」と言われる", "トリミング後の写真は、つい何枚もとる"], "iggy": ["犬の服のサイズに、毎回なやむ", "寒い日は、毛布の中から出てこない", "くるんと丸まって寝る姿に、毎回いやされる", "服の数が季節ごとにふえていく"], "peke": ["ブラッシングが、ほぼ毎日の日課", "夏の暑さ対策に全力", "「ライオンみたい」とよく言われる", "呼んでも来ないのは、もう慣れた"], "boston": ["タキシード柄の写真が、つい増える", "ほかのボストンに会うと、写真をとらせてもらう", "「フレブルですか？」とよく聞かれる", "いつも笑っているような顔に、元気をもらう"], "chin": ["「静かでいい子ですね」とよく言われる", "ネコみたいなしぐさに、毎回きゅんとする", "「日本の犬なんですね」と言うと、おどろかれる", "ぴょんぴょんはねる「狆ダンス」がたまらない"], "spitz": ["白い毛が、黒い服にだけたくさんつく", "「サモエドですか？」とよく聞かれる", "お散歩のあとは、足をふくのがひと苦労", "よく通る声で、お客さんを知らせてくれる"], "westie": ["白い毛をキープするのに、ちょっとした努力がいる", "庭に穴ほりのあとがある", "にんじんみたいなしっぽの写真が多い", "「ウエスティ」という呼び名を、毎回説明する"], "sheltie": ["「コリーですか？」とよく聞かれる", "インターホンが鳴ると、大合唱", "しっぽの先の白いところが好き", "ブラッシングのあと、ふわふわ度がすごい"], "cocker": ["ごはんのときは、耳をまとめるスヌードが必須", "耳のおそうじが日課", "耳の毛のカットに、こだわりがある", "しっぽをふるとき、おしりまでふる"], "griffon": ["表情が人間みたいで、つい話しかける", "「何犬ですか？」とよく聞かれる", "ひげについた水を、毎回ふいている", "映画に出てくる犬に似ていると言われる"], "kingcharles": ["「キャバリアですか？」とよく聞かれる", "ひざの上が定位置で、立ち上がれない", "くりくりの目で見つめられると、何も言えない", "お散歩より、おうちでまったりが好き"], "corgi": ["おしりの写真が、なぜか多い", "換毛期は、掃除機が大活躍", "短い足で階段をのぼる姿を、つい応援してしまう", "後ろ姿の「食パンおしり」を写真にとる"], "beagle": ["ごみ箱には、ふたが必須", "お散歩は、鼻が向くほうへ連れていかれる", "お散歩中、地面のにおいから鼻がはなれない", "名前を呼んでも、においに夢中で聞こえていない"], "border": ["1日に何回ボールを投げたか、わからない", "頭のよさに、ついていくのが大変", "ボールを足もとに置いて、じっと待たれる", "「白黒のおりこうさん」とよく言われる"], "shiba": ["動かなくなった柴をなだめるのが上手になる", "換毛期の抜け毛に、毎年おどろく", "「しばけん」と言われて、心の中で「しばいぬ」と直す", "ほかの人にはそっけないのに、家族には甘えん坊"], "dalmatian": ["水玉もようの中に、ハートの形をさがしてしまう", "お散歩の距離が、とにかく長い", "「101匹いますか？」と聞かれたことがある", "黒い服に白い毛、白い服に黒い毛がつく"], "chow": ["青い舌を見せると、みんなにおどろかれる", "夏の暑さ対策に気をつかう", "「くまみたい」とよく言われる", "家族以外にはクールで、ちょっと誇らしい"], "bulldog": ["よだれふきタオルを、いつも持っている", "いびきで、ぐっすり寝ているのがわかる", "しわの間をふくのが日課", "寝顔がおじさんみたいで、つい笑う"], "golden": ["なんでもくわえて持っていくので、くつしたが行方不明", "抜け毛が床をころころ転がる", "お散歩で、知らない人に何度も話しかけられる", "いつもしっぽで何かを倒している"], "lab": ["食べ物はすべて、高い場所にしまう", "水たまりを見つけると、まっすぐ入っていく", "おやつの袋の音に、どこにいても気づく", "泳ぐのが上手で、海や川に行きたがる"], "gsd": ["「警察犬みたい！」とよく言われる", "抜け毛で、毎日掃除機をかける", "耳がピンと立った写真がかっこいい", "いつも家族を見守ってくれて、心強い"], "husky": ["遠ぼえで、ご近所に気をつかう", "雪の日は、飼い主より犬が元気", "青い目に、何度見ても見とれる", "エアコンの前が、いちばんのお気に入り"], "bernese": ["抜け毛を集めると、もう1匹できそう", "大きいのに、ひざに乗ろうとする", "「大きいね！」と、お散歩で必ず言われる", "ソファの半分以上が、犬のスペース"], "stbernard": ["よだれふきタオルが家中にある", "車選びは、犬が乗れるかで決まる", "「アルプスの犬ですね」とよく言われる", "体重を聞かれて、答えるとおどろかれる"], "samoyed": ["白い毛が家中にふわふわ舞う", "笑顔の写真ばかり、スマホにたまる", "「白いもふもふ」で、子どもに大人気", "暑い夏は、毛の手入れが大変"], "akita": ["「ハチ公みたい！」とよく言われる", "換毛期の抜け毛に、毎年おどろく", "くるんとしたしっぽに、毎回いやされる", "「大きくなったね」と、近所の人に言われ続けている"], "doberman": ["「こわそう」と言われるけど、本当は甘えんぼ", "家の中でも、ずっとあとをついてくる", "耳がピンとしているだけで、かっこいいと言われる", "寒がりなので、冬は服を着せている"], "stdpoodle": ["「大きいプードル、はじめて見た！」とよく言われる", "トリミングにかかる時間が長い", "トリミングのスタイルを選ぶのが楽しい", "かしこさに、毎日おどろかされる"], "boxer": ["よだれとジャンプに、服がいつも負ける", "いつまでも子犬みたいで、毎日にぎやか", "顔を見ると、なぜか笑ってしまう", "ジャンプのお出むかえに、毎日たえている"], "bordeaux": ["よだれふきタオルが手放せない", "大きな体なのに、ソファで寝たがる", "「大きい！こわい？」と聞かれて「やさしいですよ」と答える", "ソファで寝ると、飼い主の場所がなくなる"]};
 function sideOf(v){return v>=50?0:1}
+// あるある：ちがっていたら、同じ子の答えから出た別のあるあるに入れかえる
+var ARU_POOL=[],ARU_SHOW=[],ARU_USED={};
+function renderAru(){$("r-type-aru").innerHTML=ARU_SHOW.map(function(n,k){var a=ARU_POOL[n];if(!a)return "";return '<li><small style="color:'+AXC[a.i][1]+'">'+esc(NOUN[a.i][a.sd])+'あるある</small><br>'+esc(a.t)+'<button type="button" class="aru-no" data-k="'+k+'">うちはちがう</button></li>'}).join("")}
+document.addEventListener("click",function(e){var b=e.target.closest(".aru-no");if(!b)return;var k=+b.dataset.k;
+  var cur=ARU_SHOW[k],nx=-1;if(!ARU_USED[cur^1]&&ARU_POOL[cur^1])nx=cur^1;else for(var n=0;n<ARU_POOL.length;n++)if(!ARU_USED[n]){nx=n;break}
+  if(nx<0){b.closest("li").innerHTML='<small>ほかのあるあるは、また次の診断で</small>';return}
+  ARU_USED[nx]=1;ARU_SHOW[k]=nx;renderAru()});
 function axOrder(sp){return [0,1,2,3,4,5].sort(function(a,b){return Math.abs(sp[b]-50)-Math.abs(sp[a]-50)})}
 function subOf(sp){var o=axOrder(sp),a=o[0];if(Math.abs(sp[a]-50)<10)return "バランス";return SUB[a][sideOf(sp[a])]}
 function subName(sp,B){return subOf(sp)+"タイプの"+B.s}
