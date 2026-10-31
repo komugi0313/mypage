@@ -226,6 +226,14 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .more-in{display:flex;flex-direction:column;gap:22px;padding:0 20px 20px}
 .sub-panel{display:flex;flex-direction:column;gap:12px;border-top:2px dotted var(--mint-l);padding-top:16px}
 .peak{display:flex;flex-direction:column;gap:2px;background:var(--bg);border-radius:16px;padding:12px 14px}
+.echo-sub{display:block;font-family:var(--body);font-weight:800;font-size:.8rem;color:var(--muted);margin-top:2px}
+.echo-list{display:flex;flex-direction:column;gap:14px}
+.echo-item{display:flex;flex-direction:column;gap:8px}
+.echo-q{background:var(--bg);border-radius:14px;padding:10px 14px;font-size:.88rem;display:flex;flex-direction:column;gap:2px}
+.echo-q small{color:var(--muted);font-weight:800}
+.echo-q b{font-weight:800}
+.echo-a{display:flex;gap:10px;align-items:flex-start;font-weight:800;line-height:1.8}
+.echo-a i{font-style:normal;flex:0 0 auto;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#FFFFFF;font-size:.9rem;margin-top:2px}
 /* 図鑑 */
 .zcount{font-family:var(--pop);color:var(--teal);text-align:center}
 .zcount b{font-weight:400;font-size:1.4rem}
@@ -338,6 +346,11 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
       <span class="tag" id="r-catch"></span>
       <div class="blend" id="r-blend"></div>
       <p class="comment" id="r-comment"></p>
+    </div>
+
+    <div class="panel echo" id="r-echo-panel" hidden>
+      <h2 id="r-echo-title">あなたが答えてくれたこと</h2>
+      <div class="echo-list" id="r-echo"></div>
     </div>
 
     <div class="panel">
@@ -1303,7 +1316,7 @@ function renderResult(){
   $("r-axes-note").textContent=oidA?"細い線は、"+BY[oidA].s+"の平均です。線から遠いところほど、"+name+"の個性です。":"";
   $("r-axes-note").hidden=!oidA;
   $("r-prof").innerHTML=profHTML(B.id,B.s+"という犬種は",true,"ここからは、"+name+"の心に住んでいる"+B.s+"という犬種の、一般的な特徴です。");themeProf($("r-prof"),B.id);
-  $("r-comment").innerHTML=commentOf(sp);
+  $("r-comment").innerHTML=commentOf(sp);renderEcho(sp,name);
   var o=axOrder(sp),pk=o[0],pv=Math.round(sp[pk]),pside=sideOf(pv),pc=AXC[pk];
   $("r-peak").innerHTML='<small>'+esc(name)+'のいちばんの個性</small><p class="stat" style="font-size:1.5rem;color:'+pc[1]+'">'+(pside?AXES[pk].b:AXES[pk].a)+' 上位'+topShare(pv)+'%</p><p>100頭中'+topShare(pv)+'頭ほどの、'+esc((pside?AXES[pk].tb:AXES[pk].ta).replace(/好き$/,"好きな"))+'子</p>';
   if(oidA){var ov=BY[oidA].v,dd=[0,1,2,3,4,5].map(function(i){return sp[i]-ov[i]}),mi=0;dd.forEach(function(d,i){if(Math.abs(d)>Math.abs(dd[mi]))mi=i});
@@ -1399,6 +1412,18 @@ function renderMeters(){
 }
 
 
+
+
+// ---------- あなたが答えてくれたこと → うちの子の気持ち ----------
+// その子の答えの中から、はっきり出た答えを性格ごとに1つずつ（強い性格から最大3つ）選び、答えの言葉をそのまま引用して気持ちに言いかえる
+var WHY=[[["{n}にとって、人はみんな「これから仲よくなる友だち」。だれかに会えることが、うれしくてたまらないんです。", "{n}は、まわりの人を笑顔にする天才。会えた人みんなに、うれしい気持ちを分けてあげたい子です。"], ["{n}は人見知りなのではなく、相手をよく見て「この人は大丈夫」と確かめてから仲よくなりたい子。一度心を許した人には、とことん甘えます。", "{n}は、だれとでも同じように接するより、信頼できる人を大切にするタイプ。あなたは、その特別なひとりです。"]], [["{n}にとって、ワンちゃんは大切な遊び仲間。犬同士のことばで、たくさんおしゃべりしたい子です。", "{n}は、ワンちゃんの輪に自然と入っていける社交家。犬同士のつきあい方を、ちゃんとわかっています。"], ["{n}はワンちゃんがきらいなのではなく、人と過ごす時間がいちばん好きな子。あなたといる時間が、何よりの楽しみなんです。", "{n}にとっての一番のお友だちは、ワンちゃんより家族。無理に犬友を作らなくても、あなたがいれば満足です。"]], [["{n}にとって、世界は発見でいっぱい。「これは何だろう？」と確かめずにはいられない、小さな探検家です。", "{n}は、新しいことを楽しめる心の持ち主。いつもとちがう毎日に、わくわくしています。"], ["{n}はこわがりなのではなく、いつもの安心を大切にできる子。慣れた場所や物が、心のよりどころなんです。", "{n}は、決まった毎日の中に幸せを見つけるのが上手。変わらない日々が、いちばんのごちそうです。"]], [["{n}は、体いっぱいで気持ちを表す子。うれしい・楽しいがあふれて、じっとしていられないんです。", "{n}にとって、遊びは大切なおしゃべり。あなたと体を動かす時間が、何よりのごほうびです。"], ["{n}は元気がないのではなく、落ち着いて過ごすのが心地いい子。そばにいる人まで、ほっとさせてくれます。", "{n}は、のんびりの達人。あわてず騒がず、自分のペースで毎日を楽しんでいます。"]], [["{n}はさみしがりやなのではなく、あなたのそばがいちばん安心できる場所なんです。", "{n}にとって、あなたは世界の中心。いっしょにいられるだけで、しあわせな子です。"], ["{n}はそっけないのではなく、あなたを信頼しているからこそ、ひとりでも安心して過ごせる子。ちゃんとあなたのことを見ていますよ。", "{n}は、ほどよい距離を大切にする大人な子。甘えたいときは、自分からちゃんと来てくれます。"]], [["{n}は、どっしりかまえた心の強い子。あなたがそばにいれば、たいていのことは「まあ大丈夫」と思えるんです。", "{n}は、いろんなことを受け止められるおおらかさの持ち主。いっしょにお出かけするのが楽しい子です。"], ["{n}は弱虫なのではなく、小さな変化にも気づける、感受性の豊かな子。だからこそ、あなたの気持ちにもすぐ気づいてくれます。", "{n}が音や変化にびっくりするのは、まわりをよく感じとっているしるし。あなたがそばにいると、ぐんと勇気が出ます。"]]];
+function renderEcho(sp,name){var out=[],used={};
+  axOrder(sp).forEach(function(ax){if(out.length>=3||Math.abs(sp[ax]-50)<8)return;var side=sp[ax]>=50?0:1,want=side?2:0;
+    for(var i=0;i<Q.length;i++){if(Q[i][0]===ax&&st.ans[i]===want&&!used[i]){used[i]=1;out.push({q:Q[i],a:Q[i][2][want],ax:ax,side:side,v:i%2});break}}});
+  $("r-echo-panel").hidden=!out.length;if(!out.length)return;
+  $("r-echo-title").innerHTML=esc(name)+"の気持ちを通訳すると"+'<small class="echo-sub">あなたが答えてくれたことから</small>';
+  $("r-echo").innerHTML=out.map(function(o){var c=AXC[o.ax];
+    return '<div class="echo-item"><div class="echo-q"><small>'+esc(o.q[1])+'</small><b>「'+esc(o.a)+'」</b></div><p class="echo-a"><i style="background:'+c[0]+'">→</i><span>'+esc(WHY[o.ax][o.side][o.v].replace(/\{n\}/g,name))+'</span></p></div>'}).join("")}
 
 // ---------- サブタイプ・コメント・あるある（答えの性格から作る） ----------
 var SUB=[["社交家","慎重派"],["ワン友いっぱい","家族ひとすじ"],["冒険家","いつもの安心"],["元気いっぱい","のんびり"],["甘えんぼ","自由人"],["どっしり","感受性ゆたか"]];
