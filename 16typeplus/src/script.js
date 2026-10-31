@@ -890,6 +890,19 @@ function waitHide(){["waitBox","waitFun"].forEach(id=>{const x=$(id);if(x)x.remo
 function flipCard(n){if(n.classList.contains("open")||n.classList.contains("turn"))return;n.classList.add("turn");
  setTimeout(()=>{n.classList.add("open");n.classList.remove("turn");n.classList.add("turn2");setTimeout(()=>n.classList.remove("turn2"),300);
   const left=[...document.querySelectorAll(".nicks .nk")].filter(x=>!x.hidden&&!x.classList.contains("open")).length;if(left)waitShow();if(!left){waitHide();if(window.__story)$("rStory").innerHTML=window.__story;["chgBox","coreBox","funBox","cloudFig","wkNote"].forEach(id=>{const cb=$(id);if(cb&&cb.classList.contains("wait2")){cb.classList.remove("wait2");cb.classList.add("reveal");}});}},240);}
+/* ---- 結果ページの「もっと知りたい人へ」：たたんだ中身をカードの一覧にまとめ、読んだ数を見せる ---- */
+const KREAD="16tp.read.v1";
+function moreMenu(list){let m=$("moreMenu");if(!m){m=document.createElement("section");m.id="moreMenu";m.className="card moremenu";m.innerHTML='<h2>'+TR("もっと知りたい人へ")+'</h2><p class="mmsub" id="mmSub"></p><div class="mmbar"><i id="mmBar"></i></div><p class="mmcount" id="mmCount"></p><div class="mmgrid" id="mmGrid"></div>';}
+ const g=m.querySelector("#mmGrid");
+ list.forEach(([d,t,sub,wide])=>{if(!d)return;d.classList.add("mmt");d.classList.toggle("wide",!!wide);let sm=d.querySelector(":scope>summary");if(!sm){sm=document.createElement("summary");d.prepend(sm);}
+  sm.innerHTML='<span class="mmh"><b>'+TR(t)+'</b><small>'+TR(sub)+'</small></span>';if(d.parentNode!==g)g.appendChild(d);
+  if(!d.dataset.mm){d.dataset.mm="1";d.addEventListener("toggle",()=>{if(d.open){const r=sget(KREAD)||[];if(!r.includes(d.id)){r.push(d.id);sset(KREAD,r);}mmCount();}});}});
+ return m;}
+function mmCount(){const g=$("mmGrid");if(!g)return;const r=sget(KREAD)||[],ts=[...g.children].filter(d=>!d.hidden),k=ts.filter(d=>r.includes(d.id)).length;
+ ts.forEach(d=>d.classList.toggle("read",r.includes(d.id)));
+ $("mmSub").textContent=TR("気になるものから開いてみてください。全部で{n}つあります。").replace("{n}",ts.length);
+ $("mmBar").style.width=(ts.length?k/ts.length*100:0)+"%";
+ $("mmCount").textContent=k>=ts.length&&ts.length?TR("全部読みました。最後まで読んでくれて、ありがとうございます。"):TR("{n}つのうち {k}つ読みました").replace("{n}",ts.length).replace("{k}",k);}
 function layoutResult(){const hero=document.querySelector(".hero");if(!hero)return;
  {let dh=$("dataH");if(!dh){dh=document.createElement("h3");dh.id="dataH";dh.className="datah";dh.textContent=TR("気質と性格の文字くらべ");}
   const q=x=>typeof x==="string"?hero.querySelector(x):x;
@@ -897,10 +910,10 @@ function layoutResult(){const hero=document.querySelector(".hero");if(!hero)retu
   const fold=(id,title,sub)=>{let d=$(id);if(!d){d=document.createElement("details");d.id=id;d.className="mdet";d.innerHTML='<summary><span>'+title+'<small>'+sub+'</small></span></summary>';}return d;};
   let mh=$("moreH");if(!mh){mh=document.createElement("p");mh.id="moreH";mh.className="moreh";mh.textContent=TR("もっと知りたい人へ");}
   const dF=fold("dFun",TR("あなたが言いそうなこと・やりそうなこと"),TR("辛口のひと言も")),dL=fold("dLetters",TR("4つの文字を、くわしく見る"),TR("文字くらべ・生年月日から出た理由"));
-  ["#rSrc","#rStory",".nicks","#wkNote","#chgBox","#coreBox","#cloudFig",".shr","#kt",mh,dF,dL,"#recheck"].map(q).filter(Boolean).forEach(e=>hero.appendChild(e));
+  ["#rSrc","#rStory",".nicks","#wkNote","#chgBox","#coreBox","#cloudFig",".shr","#kt","#recheck"].map(q).filter(Boolean).forEach(e=>hero.appendChild(e));
   if($("funBox"))dF.appendChild($("funBox"));
   [dh,"#flipHint","#flip","#flipAll",".hgap","#rSum",".revw"].map(x=>typeof x==="string"?document.querySelector(".hero "+x):x).filter(Boolean).forEach(e=>dL.appendChild(e));
-  dF.hidden=!$("funBox")||!$("funBox").innerHTML;}
+  dF.hidden=!$("funBox")||!$("funBox").innerHTML;window.__dF=dF;window.__dL=dL;}
  const mk=(id,title)=>{let d=$(id);if(!d){d=document.createElement("details");d.id=id;d.className="card more";d.innerHTML='<summary><h2>'+title+'</h2></summary><div class="mbody"></div>';}return d;};
  const dC=mk("dCareer",TR("仕事・進路のヒント")),dK=mk("dKarte",TR("性格カルテ")),dH=mk("dHints",TR("悩みのヒント")),dR=mk("dRec",TR("性格の記録")),dP=mk("dPersona",TR("タイプごとのくわしい説明")),dB=mk("dBal",TR("気質の力のバランス"));
  const body=d=>d.querySelector(".mbody");
@@ -912,8 +925,9 @@ function layoutResult(){const hero=document.querySelector(".hero");if(!hero)retu
  
  if(!$("recBody")){const rb=document.createElement("div");rb.id="recBody";body(dR).appendChild(rb);}
  if(!$("carBody")){const cb=document.createElement("div");cb.id="carBody";body(dC).appendChild(cb);}
- let at=hero;[dC,dH,dR,dK,dP,dB,$("love")].forEach(el=>{if(el){at.after(el);at=el;}});[$("partner"),$("group")].forEach(el=>{if(el){at.after(el);at=el;}});at=kaiunCard(at);drawCareer();savedMark();
- dB.hidden=!$("bal")||$("bal").hidden;}
+ dB.hidden=!$("bal")||$("bal").hidden;
+ const mm=moreMenu([[dC,"仕事・進路のヒント","就活・転職・進路に使える強みと職種",1],[window.__dF,"あなたが言いそうなこと・やりそうなこと","辛口のひと言も"],[window.__dL,"4つの文字を、くわしく見る","文字くらべ・生年月日から出た理由"],[dP,"タイプごとのくわしい説明","気質と性格、それぞれの説明"],[dB,"気質の力のバランス","5つの力の多い・少ない"],[dH,"悩みのヒント","悩みやすいことと、その見方"],[dK,"性格カルテ","気質と性格の処方せん"],[dR,"性格の記録","結果をためて、変わりやすい文字を見る"],[$("group"),"グループの相性","友だちや職場の人とくらべる"]]);
+ let at=hero;[$("love"),mm].forEach(el=>{if(el){at.after(el);at=el;}});if($("partner")){at.after($("partner"));at=$("partner");}at=kaiunCard(at);dB.hidden=!$("bal")||$("bal").hidden;if(window.__dF)window.__dF.hidden=!$("funBox")||!$("funBox").innerHTML;drawCareer();savedMark();mmCount();}
 
 /* ---- 性格の記録：受けるたびの16タイプをならべて、変わる文字・変わらない文字を見せる ---- */
 const KH="16tp.hist.v1",HTAGS_W=["仕事が忙しい","人と会うことが多い","ひとりの時間が多い","休みが多い","落ちこんでいた"],HTAGS_S=["テスト期間","部活や行事がいそがしい","人と会うことが多い","ひとりの時間が多い","長い休み","落ちこんでいた"];
