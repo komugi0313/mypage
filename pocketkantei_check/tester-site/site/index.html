@@ -2394,8 +2394,11 @@ function chatPartnerScan(q){
     /* 誕生日の文脈がある時だけ相手として扱う（「2020年4月1日に入社」等の誤検出を防ぐ） */
     var _bw=/生まれ|誕生|生日|出生|生年月日|born|birth|생일|태어|\d\s*(일|년)생|sinh nhật|sinh ngày|ngày sinh|nació|nacimiento|cumplea|nasceu|aniversário|nascimento|lahir|ulang tahun|เกิด/i.test(t);
     /* 「1991年8月4日です。付き合って2年の彼です」のように、誕生日の言葉がなくても：直前に Nico が生年月日を聞いていた時、または相手を指す言葉がある時は相手の誕生日として扱う */
-    var _lastAi=''; try{ for(var _k=state.msgs.length-1;_k>=0;_k--){ if(state.msgs[_k].role!=='me'){ _lastAi=state.msgs[_k].text||''; break; } } }catch(e){}
-    var _asked=/生年月日|誕生日|birth ?date|birthday|date of birth|생년월일|생일|出生年月日|生日/i.test(_lastAi);
+    /* 直前の Nico の吹き出しだけでなく、最後に自分が話してからの Nico の吹き出し（最大4つ）を見る（運営指摘 2026-10-31：「お相手の生年月日を教えて」のあとに相性のカードが出ていて、聞いたことが見えていなかった） */
+    var _lastAi=''; try{ var _na=0; for(var _k=state.msgs.length-1;_k>=0&&_na<4;_k--){ if(state.msgs[_k].role==='me'){ if(_na) break; continue; } _lastAi+=' '+(state.msgs[_k].text||''); _na++; } }catch(e){}
+    var _asked=/生年月日|誕生日|birth ?date|birthday|date of birth|생년월일|생일|出生年月日|生日/i.test(_lastAi)||(state.mode==='aisho'&&!!state.chartB);
+    /* 日付と一緒に性別（「男性です」「女性です」）を言った時は、本人ではなくお相手の話（本人の性別は登録済み） */
+    try{ if(!_asked&&typeof _sexWordOf==='function'&&_sexWordOf(t)) _asked=true; }catch(e){}
     var _who=/彼氏|彼女|彼の|彼です|彼は|相手|夫|妻|旦那|主人|嫁|好きな人|片思い|元彼|元カレ|元カノ|上司|同僚|友達|友人|母|父|息子|娘|boyfriend|girlfriend|husband|wife|partner|crush|\bex\b|boss|coworker|friend|mother|father|son|daughter|남친|여친|남자친구|여자친구|남편|아내|상대|썸|전남친|전여친|상사|동료|친구|엄마|아빠|男友|女友|男朋友|女朋友|老公|老婆|對方|對象|曖昧|前任|主管|同事|朋友|媽媽|爸爸/i.test(t);
     if(!_bw&&!_asked&&!_who) return false;
     /* 誕生日の言葉がない時は、記念日・入社などの日付を誤って相手の誕生日にしない */
@@ -2833,6 +2836,8 @@ var RE_FUTURE_WANT=/未来を(占|みて|見て)|これからの(こと|自分|�
 var RE_FUTURE_PICK=/未来を占(いたい|って|う)|将来を占(いたい|って|う)|これからを占(いたい|って|う)|[0-9]+年後|数年後|再来年|(特定|指定)の(日|日付)|(この|その)日を(占|みて|見て)|pick a (future )?date|specific (future )?date|(占いたい|見たい).{0,6}(未来|将来)の(日|日付)/i;
 var FUTURE_PICK={ja:'いいね、未来をのぞいてみよう。下のボタンから、占いたい未来の日付を選んでね。その頃へ向かうあなたの運の流れを読むよ。',en:'Love it — let’s look ahead. Use the button below to pick the future date you’re curious about, and I’ll read your fortune’s flow heading into it.',zh:'好呀，来看看未来。用下面的按钮选择你在意的未来日期，我来读你走向那时的运势。',zt:'好的，來看看未來。請用下面的按鈕選擇您在意的未來日期，我來為您解讀走向那時的運勢。',ko:'좋아요, 미래를 들여다봐요. 아래 버튼으로 궁금한 미래 날짜를 골라 주세요. 그 무렵으로 향하는 운의 흐름을 읽어 드릴게요.',vi:'Tuyệt, cùng nhìn về phía trước nhé. Dùng nút bên dưới để chọn ngày tương lai bạn tò mò, mình sẽ đọc dòng vận của bạn hướng tới khi ấy.',es:'¡Genial, miremos adelante! Usa el botón de abajo para elegir la fecha futura que te intriga y leeré el flujo de tu suerte de cara a ella.',pt:'Ótimo, vamos olhar adiante. Use o botão abaixo para escolher a data futura que te intriga e vou ler o fluxo da sua sorte rumo a ela.',id:'Asyik, mari menatap ke depan. Pakai tombol di bawah untuk memilih tanggal masa depan yang kamu penasaran, aku baca alur keberuntunganmu menuju saat itu.',th:'ดีเลย มามองไปข้างหน้ากัน ใช้ปุ่มด้านล่างเลือกวันในอนาคตที่คุณสนใจ แล้วฉันจะอ่านกระแสดวงของคุณที่มุ่งสู่ตอนนั้นให้'};
 var PAST_PICK={ja:'いいね、過去をのぞいてみよう。下のボタンから、占いたい過去の日付を選んでね。その頃のあなたの運の流れを読むよ。',en:'Love it — let’s look back. Use the button below to pick the past date you’re curious about, and I’ll read your fortune’s flow back then.',zh:'好呀，来回望过去。用下面的按钮选择你在意的过去日期，我来读那时你的运势走向。',zt:'好的，來回顧過去。請用下面的按鈕選擇您在意的過去日期，我來為您解讀那時的運勢走向。',ko:'좋아요, 과거를 들여다봐요. 아래 버튼으로 궁금한 과거 날짜를 골라 주세요. 그 무렵의 운의 흐름을 읽어 드릴게요.',vi:'Tuyệt, cùng nhìn lại nhé. Dùng nút bên dưới để chọn ngày trong quá khứ bạn tò mò, mình sẽ đọc dòng vận của bạn khi ấy.',es:'¡Genial, miremos atrás! Usa el botón de abajo para elegir la fecha pasada que te intriga y leeré el flujo de tu suerte entonces.',pt:'Ótimo, vamos olhar para trás. Use o botão abaixo para escolher a data passada que te intriga e vou ler o fluxo da sua sorte naquela época.',id:'Asyik, mari menengok ke belakang. Pakai tombol di bawah untuk memilih tanggal masa lalu yang kamu penasaran, aku baca alur keberuntunganmu saat itu.',th:'ดีเลย มาย้อนดูอดีตกัน ใช้ปุ่มด้านล่างเลือกวันในอดีตที่คุณสนใจ แล้วฉันจะอ่านกระแสดวงของคุณตอนนั้นให้'};
+var RE_COMPAT_CHIP=/相性を(命式で)?見て|相性を見てほしい|相性をみて|our compatibility|compatibility (with|from)|궁합 (봐|보)|궁합을 봐|合盤|合盘/i;
+var COMPAT_OPEN={ja:'お相手との相性を見ますね。下の画面で、お相手の生年月日と性別を選んでください。',en:'Let\u2019s look at your compatibility. Choose their birth date and sex on the panel below.',ko:'상대와의 궁합을 볼게요. 아래 화면에서 상대의 생년월일과 성별을 골라 주세요.',zt:'來看看您和對方的合盤。請在下面的畫面選擇對方的出生日期和性別。',zh:'来看看你们的合盘。请在下面的画面选择对方的出生日期和性别。'};
 var COMPAT_PICK={ja:'いいね、相性をみよう！下のボタンから、お相手の生年月日と性別を選んでね。',en:'Love it — let’s check your compatibility! Pick their birth date and sex on the panel below.',zh:'好呀，来看看你们的合盘！在下面的面板选择对方的出生日期和性别就好。',zt:'好呀，來看看你們的合盤！在下面的面板選擇對方的出生日期和性別就好。',ko:'좋아요, 궁합을 봐요! 아래 화면에서 상대의 생년월일과 성별을 골라줘요.',vi:'Tuyệt, cùng xem hợp đôi nhé! Hãy chọn ngày sinh và giới tính của người ấy ở bảng bên dưới.',es:'¡Genial, veamos vuestra compatibilidad! Elige su fecha de nacimiento y sexo en el panel de abajo.',pt:'Ótimo, vamos ver a compatibilidade! Escolha a data de nascimento e o sexo dele(a) no painel abaixo.',id:'Asyik, kita lihat kecocokannya! Pilih tanggal lahir dan jenis kelamin dia di panel bawah.',th:'ดีเลย มาดูดวงคู่กัน! เลือกวันเกิดและเพศของอีกฝ่ายจากแผงด้านล่างนะ'};
 /* 🦉 ニコのつぶやき：話題提供ピル。100超の「テーマの種(seed)」を固定で持ち、ニコがその場でユーザーの言語＆口調で語る（翻訳品質・多言語を担保）。
    h=英語の短いテーマ指示（表示されない。ニコが解釈して各言語で話す）。c=カテゴリ。 */
@@ -3328,7 +3333,10 @@ function maybeTopicChips(q){
     var box=$('scroll'); if(!box||document.getElementById('topicChips')) return;
     var d=document.createElement('div'); d.id='topicChips'; d.className='sugg';
     d.innerHTML=chips.map(function(c){return '<button'+(((typeof _dp!=='undefined')&&_dp.indexOf(c)>=0)?' class="dp"':'')+'>'+esc(c)+'</button>';}).join('');
-    d.addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; d.remove(); var ap0=document.getElementById('actionPills'); if(ap0) ap0.remove(); ask(b.textContent); });
+    d.addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; d.remove(); var ap0=document.getElementById('actionPills'); if(ap0) ap0.remove();
+      /* 相性のボタン：お相手をまだ入れていない時は、AI に聞かずに、お相手の生年月日を入れる画面をそのまま開く（運営指摘 2026-10-31：AI のモデルによっては生年月日を聞かずに話を続けていた） */
+      if(!state.chartB&&RE_COMPAT_CHIP.test(b.textContent)){ state.msgs.push({role:'me',text:b.textContent,t:Date.now()}); saveMsgs(); renderChat(); pushSeq([pick(COMPAT_OPEN)],function(){ setTimeout(function(){ openSheet('shAisho'); },400); }); return; }
+      ask(b.textContent); });
     box.appendChild(d);
     /* 🍀🎯🕰🔮🦉🔄 押すだけで占いに入れるボタンの行（古い版から移した。運営指示 2026-10-29「全部移して」）。相性モードでは自分向けの4つを出さない */
     try{ var _ap0=document.getElementById('actionPills'); if(_ap0) _ap0.remove();
