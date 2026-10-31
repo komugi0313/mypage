@@ -202,6 +202,15 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .fest-out figure{margin:0;display:flex;flex-direction:column;gap:6px}
 .fest-out figcaption{font-weight:800;font-size:.85rem}
 .fest-out img{width:100%;border:1px solid var(--mint-l);border-radius:8px;background:#FFFFFF}
+.g-list{display:flex;flex-direction:column;gap:10px}
+.g-item{background:var(--bg);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.g-item .gh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.g-item b{color:var(--teal);font-size:.85rem}
+.g-item p{font-weight:800}
+.g-item small{color:var(--muted);font-weight:800;font-size:.72rem}
+.g-btn{min-height:44px;min-width:44px;border-radius:999px;border:2px solid var(--mint);background:var(--card);font-weight:800;color:var(--teal);padding:0 14px}
+.g-item textarea{font:inherit;font-weight:800;width:100%;min-height:76px;border-radius:12px;border:2px solid var(--mint);padding:8px 10px;background:var(--card);color:var(--ink);resize:vertical}
+.g-row{display:flex;gap:8px;flex-wrap:wrap}
 /* 図鑑 */
 .zcount{font-family:var(--pop);color:var(--teal);text-align:center}
 .zcount b{font-weight:400;font-size:1.4rem}
@@ -324,6 +333,12 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
       </details>
       <p class="note">画像を長押しで保存できます。印刷するときは、一般的な名刺サイズ（91×55mm）で印刷してください。</p>
     </div>
+    <div class="panel guide">
+      <h2 id="g-title">はじめましてガイド</h2>
+      <p class="note">はじめて会うワンちゃんや飼い主さんに伝えたいこと。名刺のうらにも入ります。うちの子に合わないところは「編集」で書きかえてください。</p>
+      <div id="g-list" class="g-list"></div>
+    </div>
+
     <label class="toggle" id="ears-wrap"><input type="checkbox" id="in-ears" checked>写真に「心の犬種」の耳をつける</label>
 
     <div class="panel">
@@ -955,8 +970,8 @@ function renderMeishiBack(o,raw){
   ctx.fillStyle="#FFFFFF";ctx.fillRect(0,0,W,H);
   ctx.fillStyle="#E4F1F4";ctx.fillRect(560,0,W-560,H);ctx.fillStyle="#D3E8EE";for(var y=14;y<H;y+=32)for(var x=574;x<W;x+=32){ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill()}
   // 左：トリセツ
-  ctx.textAlign="left";ctx.fillStyle=teal;fitText(ctx,o.name+"のトリセツ",460,40,"400",F);ctx.fillText(o.name+"のトリセツ",60,112);
-  var yy=170;[["うれしいほめ方",B.p],["安心する時間",B.k],["ちょっと苦手",B.w]].forEach(function(m){
+  ctx.textAlign="left";ctx.fillStyle=teal;fitText(ctx,o.name+"に会うときは",460,40,"400",F);ctx.fillText(o.name+"に会うときは",60,112);
+  var yy=170;(o.guide||guideOf()).forEach(function(m){
     ctx.fillStyle=teal;ctx.font="800 22px "+R;ctx.fillText(m[0],60,yy);yy+=34;
     ctx.fillStyle=dark;ctx.font="800 24px "+R;wrapJa(ctx,m[1],450).slice(0,2).forEach(function(l){ctx.fillText(l,60,yy);yy+=34});yy+=18});
   // 右：性格のバランス
@@ -990,6 +1005,27 @@ function buildFest(){if(!FEST)return;var o=FEST.o,front=renderMeishi(o,null,true
     var list=[["a4f","A4に10枚（おもて）",a4Sheet(front)],["a4b","A4に10枚（うら）",a4Sheet(back)],["pf","印刷屋さん用・塗り足しつき（おもて）",withBleed(front)],["pb","印刷屋さん用・塗り足しつき（うら）",withBleed(back)]];
     $("fest-out").innerHTML=list.map(function(x){return '<figure><figcaption>'+x[1]+'</figcaption><img id="fest-'+x[0]+'" src="'+x[2]+'" alt="'+x[1]+'"><button class="sub" type="button" data-share="fest-'+x[0]+'">この画像をシェア・保存</button></figure>'}).join("");
     $("fest-out").hidden=false;})}
+
+
+// ---------- はじめましてガイド（性格から文を選び、飼い主さんが書きかえられる） ----------
+var G_LBL=["ごあいさつ","ワンちゃん同士","ちょっと苦手"];
+function guideDefault(){var sp=spread(last.pct),B=last.main,soc=sp[0]>=50,bold=sp[5]>=50,dogs=sp[1]>=50,act=sp[3]>=50;
+  var g1=soc&&bold?"人が大好き。気軽に声をかけて、なでてあげてね":soc?"人は大好き。大きな声は苦手なので、やさしくごあいさつしてね":bold?"相手をよく見てから仲よくなるタイプ。しゃがんで、手のにおいをかいでもらってね":"とても慎重派。急に手を出さず、そばで静かにしていると近づいてくれます";
+  var g2=dogs&&act?"ワンちゃんと遊ぶのが大好き。追いかけっこに誘ってね":dogs?"ワンちゃんは好き。においのごあいさつから、のんびり仲よくなります":act?"ワンちゃんより人が好き。まずは並んでおさんぽがおすすめ":"ワンちゃん同士はマイペース。少しはなれて、ゆっくり慣れさせてね";
+  return [g1,g2,B.w]}
+var GKEY="";function gGet(){try{return JSON.parse(localStorage.getItem(GKEY)||"null")||[]}catch(e){return []}}
+function gSet(a){try{localStorage.setItem(GKEY,JSON.stringify(a))}catch(e){}}
+var GEDIT=[];
+function guideOf(){var d=guideDefault();return G_LBL.map(function(l,i){return [l,GEDIT[i]||d[i]]})}
+function renderGuide(){var d=guideDefault(),name=st.name;$("g-title").textContent=name+"に会うときは";
+  $("g-list").innerHTML=G_LBL.map(function(l,i){var t=GEDIT[i]||d[i];
+    return '<div class="g-item" data-i="'+i+'"><div class="gh"><b>'+l+'</b><button type="button" class="g-btn" data-act="edit">編集</button></div><p>'+esc(t)+'</p>'+(GEDIT[i]?'<small>自分で書いた文</small>':'')+'</div>'}).join("")}
+function guideChanged(){gSet(GEDIT);if(FEST){FEST.o.guide=guideOf();$("meishi-back").src=renderMeishiBack(FEST.o);$("fest-out").hidden=true}}
+$("g-list").addEventListener("click",function(e){var b=e.target.closest("button[data-act]");if(!b)return;var it=b.closest(".g-item"),i=+it.dataset.i,d=guideDefault(),act=b.dataset.act;
+  if(act==="edit"){it.innerHTML='<div class="gh"><b>'+G_LBL[i]+'</b></div><label for="g-ta'+i+'" class="note">36文字まで</label><textarea id="g-ta'+i+'" maxlength="36">'+esc(GEDIT[i]||d[i])+'</textarea><div class="g-row"><button type="button" class="g-btn" data-act="save">保存</button><button type="button" class="g-btn" data-act="reset">元の文にもどす</button><button type="button" class="g-btn" data-act="cancel">やめる</button></div>';it.querySelector("textarea").focus();return}
+  if(act==="save"){var v=it.querySelector("textarea").value.trim();GEDIT[i]=v&&v!==d[i]?v:"";guideChanged()}
+  if(act==="reset"){GEDIT[i]="";guideChanged()}
+  renderGuide()});
 
 // ---------- 性格ブレンド：うちの子の犬種をベースに、性格の近い犬種がどれくらい混ざっているか ----------
 // 血統ではなく「性格の近さ」から出す割合。自分の犬種（わかれば）＋近い犬種2つ
@@ -1142,7 +1178,7 @@ function renderResult(){
   Promise.all([fontsReady(),artImage(B),pawImage(),starImage(),crownImage(),(oidC&&!st.img&&IMG[oidC])?artImage(BY[oidC]):null]).then(function(r){
     $("card-img").onload=function(){$("card-img").hidden=false;$("card-load").hidden=true};
     var CO={sub:subOf(spread(last.pct)),main:B,name:name,bodyLine:bodyLine,img:st.img,art:r[1],pos:st,ears:st.img?st.ears:false,pct:spread(last.pct).map(Math.round),hidden:HB,pure:pure,paw:r[2],star:r[3],crown:r[4],bodyArt:r[5],bodyId:oidC,bodyName:short,layout:window.CARD_LAYOUT||"C",blend:blendOf(),head:pure?"生粋の"+short:B.s+"ハートの"+short,gap:gapOf(),rare:rarityOf(last.pct)};
-    $("card-img").src=renderCard(CO);$("meishi-img").src=renderMeishi(CO);CO.msg=($("in-msg").value||"").trim();$("meishi-back").src=renderMeishiBack(CO);FEST={o:CO};$("fest-out").hidden=true;
+    $("card-img").src=renderCard(CO);$("meishi-img").src=renderMeishi(CO);GKEY="w44_guide_"+st.name+"_"+last.main.id;GEDIT=gGet();CO.guide=guideOf();renderGuide();CO.msg=($("in-msg").value||"").trim();$("meishi-back").src=renderMeishiBack(CO);FEST={o:CO};$("fest-out").hidden=true;
   });
   renderMeters();renderPairPanel();
   var BL=blendOf();$("r-blend").innerHTML='<small>'+esc(name)+'の性格ブレンド</small><div class="bar2">'+BL.map(function(b){return '<span style="flex:'+b.pct+';background:'+b.col+'"></span>'}).join("")+'</div><div class="lg">'+BL.map(function(b){return '<span><i style="background:'+b.col+'"></i>'+esc(b.name)+' '+b.pct+'%</span>'}).join("")+'</div><small>※血統ではなく、性格の近さから出した割合です</small>';
