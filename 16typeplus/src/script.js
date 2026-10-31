@@ -689,30 +689,33 @@ async function lvShareRun(t){track("love_share_click");const b=$("lvShare"),lbl=
 const LVC={ink:SC.ink,muted:SC.muted,soft:"#EEF1F5",rule:"#E2E6EC",rose:"#C9607A",roseT:"#F8E4EA",rose2:"#DE8FA3"};
 function lvFonts(){const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
  return Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"あア가A♡"))).catch(()=>{}).then(()=>({SANS,MONO}));}
+/* 恋愛のシェア画像1枚目：キャラ・恋のタイプ・ひと言・4文字・恋のことば */
 async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
- const me=window.__me,t=P.t,X0=70,X1=W-70;
+ const me=window.__me,t=P.t,X0=70,X1=W-70,im=await loadImg(charSrc(t));
  c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);c.fillStyle=LVC.rose;c.fillRect(0,0,W,12);c.textBaseline="alphabetic";
- const fitF=(txt,w,fs,wt)=>{c.font=(wt||700)+" "+fs+"px "+SANS;while(c.measureText(txt).width>w&&fs>16){fs--;c.font=(wt||700)+" "+fs+"px "+SANS;}return fs;};
- c.font="600 26px "+MONO;c.fillStyle=LVC.muted;c.fillText("16TYPE+  "+TR("恋愛編"),X0,82);
- c.textAlign="center";c.font="600 30px "+MONO;c.fillStyle=LVC.rose;c.fillText(TR("恋をしたときのあなた"),W/2,150);
- c.font="700 64px "+SANS;fillNm(c,P.t,P.t,W/2,228,"center",LVC.ink,"#B7A9AE",X1-X0);
- /* 恋の4文字と、それぞれが気質・性格のどちらから来たか */
- const tw=170,gap=26,x0=(W-(tw*4+gap*3))/2,ty=270;
- for(let i=0;i<4;i++){const x=x0+i*(tw+gap),l=t[i],b=me?me.born[i]:l,n=me?me.now[i]:l;
-  const both=l===b&&l===n,src=both?TR("どちらも"):l===b?TR("気質"):l===n?TR("性格"):TR("恋だけ");
-  c.fillStyle=!both&&src!==TR("性格")?LVC.roseT:"#F3F5F8";rrect(c,x,ty,tw,tw,22);c.fill();
-  c.font="600 96px "+MONO;c.fillStyle=LVC.ink;c.fillText(l,x+tw/2,ty+tw/2+34);
-  c.font="700 24px "+SANS;c.fillStyle=both?LVC.muted:src===TR("性格")?LVC.ink:LVC.rose;c.fillText(src,x+tw/2,ty+tw+38);}
- const hook=me?lvHook(me.born,me.now,t):P.one;c.fillStyle=LVC.muted;{let fs=26,ls;for(;fs>=22;fs-=2){c.font="500 "+fs+"px "+SANS;ls=wrapLines(c,hook,X1-X0,9);if(ls.length<=3)break;}ls=ls.slice(0,4);const lh=fs>=26?38:33;ls.forEach((l,i)=>c.fillText(l,W/2,ty+tw+86+i*lh));}
- /* 言葉：甘い→辛い の順に2列でしきつめる */
- const ws=(P.words||[]).slice().sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
- const top=ty+tw+250,bot=H-110,half=Math.ceil(ws.length/2),cols=[ws.slice(0,half),ws.slice(half)];
- c.strokeStyle="#EEE2E6";c.lineWidth=2;c.beginPath();c.moveTo(X0,top-30);c.lineTo(X1,top-30);c.stroke();
- c.font="700 22px "+SANS;c.textAlign="left";c.fillStyle=LVC.rose;c.fillText(TR("甘め"),X0,top-44);c.textAlign="right";c.fillStyle=LVC.muted;c.fillText(TR("ちょっと辛口 ↓"),X1,top-44);
- const colW=(X1-X0-40)/2,step=(bot-top)/half;
- cols.forEach((arr,k)=>arr.forEach((w,i)=>{const x=X0+k*(colW+40),y=top+step*i+step*.62,pos=(k*half+i)/ws.length;
-  c.fillStyle=pos<.35?LVC.rose:pos<.7?LVC.rose2:LVC.ink;c.textAlign="left";c.beginPath();c.arc(x+8,y-11,6,0,Math.PI*2);c.fill();
-  fitF(w,colW-34,pos<.2?34:30);c.fillText(w,x+28,y);}));
+ c.font="600 26px "+MONO;c.fillStyle=LVC.muted;c.textAlign="left";c.fillText("16TYPE+  "+TR("恋愛編"),X0,82);
+ c.textAlign="center";c.font="600 30px "+SANS;c.fillStyle=LVC.rose;c.fillText(TR("恋をしたときのあなた"),W/2,150);
+ /* キャラ */
+ const fw=410,fx=(W-fw)/2,fy=180;c.fillStyle=LVC.roseT;rrect(c,fx,fy,fw,fw,40);c.fill();
+ if(im){const s=fw-36;c.save();rrect(c,fx+18,fy+18,s,s,28);c.clip();c.fillStyle="#F7F1E8";c.fillRect(fx+18,fy+18,s,s);c.drawImage(im,fx+18,fy+18,s,s);c.restore();}
+ /* タイプ名 */
+ c.font="700 60px "+SANS;fillNm(c,t,t,W/2,fy+fw+86,"center",LVC.ink,"#B7A9AE",X1-X0);
+ /* ひと言 */
+ c.font="700 34px "+SANS;const one=lvQ(P.one);let ls=wrapLines(c,one,X1-X0-80,2);const ph=ls.length*46+34,py=fy+fw+120;
+ c.fillStyle="#FFFFFF";c.strokeStyle="#F0C2CE";c.lineWidth=3;rrect(c,X0+20,py,X1-X0-40,ph,ph/2>40?36:ph/2);c.fill();c.stroke();
+ c.fillStyle=LVC.ink;ls.forEach((l,i)=>c.fillText(l,W/2,py+50+i*46));
+ /* 恋の4文字と、どこから来たか（小さく） */
+ const tw=120,gap=22,x0=(W-(tw*4+gap*3))/2,ty=py+ph+40;
+ for(let i=0;i<4;i++){const x=x0+i*(tw+gap),l=t[i],b=me?me.born[i]:l,n=me?me.now[i]:l,both=l===b&&l===n,src=both?TR("どちらも"):l===b?TR("気質"):l===n?TR("性格"):TR("恋だけ");
+  c.fillStyle=!both&&src!==TR("性格")?LVC.roseT:"#F3F5F8";rrect(c,x,ty,tw,96,18);c.fill();
+  c.font="600 56px "+MONO;c.fillStyle=LVC.ink;c.fillText(l,x+tw/2,ty+68);
+  c.font="700 22px "+SANS;c.fillStyle=both?LVC.muted:src===TR("性格")?LVC.ink:LVC.rose;c.fillText(src,x+tw/2,ty+128);}
+ /* 恋のあなたを表すことば */
+ const ws=(P.words||[]).slice().sort((a,b)=>b[1]-a[1]).slice(0,6),wy=ty+205;
+ c.font="700 24px "+SANS;c.fillStyle=LVC.muted;c.fillText(TR("恋のあなたを表すことば"),W/2,wy);
+ let rowY=wy+28,rowX=0,rows=[[]],cw=[];c.font="700 28px "+SANS;
+ ws.forEach(([w,n])=>{const bw=c.measureText(w).width+44,r=rows[rows.length-1],rw=r.reduce((s,x)=>s+x.bw+14,0);if(rw+bw>X1-X0&&r.length){rows.push([]);}rows[rows.length-1].push({w,n,bw});});
+ rows.forEach((r,ri)=>{const tot=r.reduce((s,x)=>s+x.bw,0)+14*(r.length-1);let x=(W-tot)/2;const y=rowY+ri*66;r.forEach(o=>{c.fillStyle=o.n>=3?"#D9647F":"#FFFFFF";c.strokeStyle="#F0C2CE";c.lineWidth=2;rrect(c,x,y,o.bw,52,26);c.fill();if(o.n<3)c.stroke();c.fillStyle=o.n>=3?"#FFFFFF":"#B04A63";c.fillText(o.w,x+o.bw/2,y+36);x+=o.bw+14;});});
  c.textAlign="center";c.font="600 28px "+MONO;c.fillStyle=LVC.ink;c.fillText(SHARE_URL.replace("https://",""),W/2,H-46);c.textAlign="left";return cv;}
 async function lvSheet(P){const {SANS,MONO}=await lvFonts(),LP=(window.__lvPtImg&&st.love&&st.love.sit!=="none"&&st.love.pt&&LV.partner&&LV.partner[st.love.pt])?st.love:null,W=1080,H=LP?2600:1700,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const wrap=(t,w)=>wrapLines(c,t,w,9);
