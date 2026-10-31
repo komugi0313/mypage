@@ -245,6 +245,8 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .tags-row button{min-height:40px;border-radius:999px;border:2px solid var(--mint);background:var(--card);font-weight:800;font-size:.85rem;padding:0 12px;color:var(--teal)}
 .tags-row button.on{background:var(--mint-l);border-color:var(--teal)}
 .ec-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ec-memo{grid-column:1/-1}
+.ec-memo textarea{font:inherit;font-weight:500;border-radius:14px;border:2px solid var(--mint-l);background:var(--bg);color:var(--ink);padding:10px 14px;resize:vertical;min-height:72px}
 @media (max-width:420px){.ec-form{grid-template-columns:1fr}}
 /* 図鑑 */
 .zcount{font-family:var(--pop);color:var(--teal);text-align:center}
@@ -440,6 +442,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
           <label class="f">飲んでいる薬<input type="text" id="ec-m" maxlength="24" placeholder="例：なし"></label>
           <label class="f">アレルギー<input type="text" id="ec-a" maxlength="24" placeholder="例：鶏肉"></label>
           <label class="f">緊急連絡先<input type="text" id="ec-c" maxlength="16" inputmode="tel" placeholder="例：090-0000-0000"></label>
+          <label class="f ec-memo">メモ（自由に書けます・40文字まで）<textarea id="ec-n" maxlength="40" rows="2" placeholder="例：飼い主 山田 090-0000-0000／こわがりなので抱っこで移動してください"></textarea></label>
         </div>
         <img class="meishi-img" id="ec-img" alt="もしものときカード">
         <button class="share-all" type="button" id="sh-ec">もしものときカードをシェア・保存する</button>
@@ -1194,7 +1197,7 @@ function renderLove(sp,name,B){var o=axOrder(sp),ax=o[0],sd=sp[ax]>=50?0:1,oid=o
   if(sp[1]<40)tips.push("ワンちゃんが多い場所では、少しはなれたところから。無理に仲よくさせなくて大丈夫です。");
   $("r-calm").hidden=!tips.length;$("r-calm").innerHTML='<b>'+esc(name)+'が安心して過ごせるコツ</b>'+tips.slice(0,2).map(function(t){return '<span>'+esc(t)+'</span>'}).join("")}
 // ---------- もしものときカード（入力はスマホの中だけに保存） ----------
-var EC_IDS=["ec-w","ec-h","ec-ht","ec-d","ec-m","ec-a","ec-c"],EC_LB=["体重","かかりつけ","病院の電話","持病","飲んでいる薬","アレルギー","緊急連絡先"];
+var EC_IDS=["ec-w","ec-h","ec-ht","ec-d","ec-m","ec-a","ec-c","ec-n"],EC_LB=["体重","かかりつけ","病院の電話","持病","飲んでいる薬","アレルギー","緊急連絡先","メモ"];
 function ecKey(){return "w44_ec_"+st.name}
 function ecLoad(){var d={};try{d=JSON.parse(localStorage.getItem(ecKey())||"{}")}catch(e){}EC_IDS.forEach(function(id){$(id).value=d[id]||""})}
 function ecSave(){var d={};EC_IDS.forEach(function(id){d[id]=$(id).value.trim()});try{localStorage.setItem(ecKey(),JSON.stringify(d))}catch(e){}}
@@ -1204,8 +1207,10 @@ function renderEC(art){var W=1075,H=650,cv=document.createElement("canvas");cv.w
   ctx.fillStyle="#FFFFFF";ctx.textAlign="left";ctx.font="400 40px "+F;ctx.fillText("もしものときカード",44,64);
   ctx.textAlign="right";fitText(ctx,st.name||"",360,44,"400",F);ctx.fillText(st.name||"",W-44,64);
   if(art)drawDogFree(ctx,art,ownId(st.breed),190,580,330);
-  ctx.textAlign="left";var X=380,y=160,VX=X+200;
-  function row(l,v){ctx.font="800 24px "+R;ctx.fillStyle="#7A8790";ctx.fillText(l,X,y);ctx.fillStyle=dark;fitText(ctx,v,W-VX-40,28,"800",R);ctx.fillText(v,VX,y);y+=56}
+  ctx.textAlign="left";var X=380,y=150,VX=X+190;
+  function row(l,v){ctx.font="800 22px "+R;ctx.fillStyle="#7A8790";ctx.fillText(l,X,y);ctx.fillStyle=dark;
+    if(l==="メモ"){ctx.font="800 24px "+R;wrapJa(ctx,v.replace(/\n/g," "),W-VX-40).slice(0,2).forEach(function(t,k){ctx.fillText(t,VX,y+k*34)});y+=84;return}
+    fitText(ctx,v,W-VX-40,26,"800",R);ctx.fillText(v,VX,y);y+=50}
   row("犬種",bodyName(st.breed)+(st.age==="senior"?"・7歳以上":st.age==="puppy"?"・1歳未満":""));
   EC_IDS.forEach(function(id,i){var v=$(id).value.trim();if(v)row(EC_LB[i],v)});
   ctx.strokeStyle="#E7B7B7";ctx.lineWidth=6;ctx.strokeRect(3,3,W-6,H-6);return cv.toDataURL("image/png")}
