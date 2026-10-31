@@ -327,6 +327,13 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .frow{display:flex;flex-direction:column;gap:4px;font-weight:800;font-size:.82rem;color:var(--muted)}
 .frow input{font:inherit;font-weight:500;min-height:44px;border-radius:12px;border:2px solid var(--mint-l);background:var(--bg);padding:0 12px;color:var(--ink);min-width:0;width:100%}
 .fdel{align-self:center;background:transparent;border:0;color:var(--muted);font-weight:800;text-decoration:underline;min-height:44px;font-size:.85rem}
+.rib{width:1.2em;height:1.2em;fill:#F2C21B;flex:0 0 auto}
+.rq-sum{display:inline-flex;gap:8px;align-items:center}
+.ck{display:flex;gap:10px;align-items:center;min-height:44px;font-weight:800;font-size:.92rem}
+.ck input{width:22px;height:22px;accent-color:var(--teal)}
+.rq-prev,.f-req{background:#FFF6CC;border:2px solid #F2C21B;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;text-align:left}
+.rq-prev b,.f-req b{display:flex;gap:6px;align-items:center;color:#7A5A00;font-size:.9rem}
+.rq-prev span,.f-req span{font-weight:800;font-size:.92rem;color:#2F3A45}
 /* 図鑑 */
 .zcount{font-family:var(--pop);color:var(--teal);text-align:center}
 .zcount b{font-weight:400;font-size:1.4rem}
@@ -478,6 +485,31 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
       <p id="pair-text"></p>
       <button class="share-all" type="button" id="sh-pair">相性カードをシェアする</button>
     </div>
+
+    <details class="more panel" id="rq-more">
+      <summary><span class="rq-sum"><svg class="rib" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C9.6 2 8 4 8 6.4c0 1.9 1 3.6 2.3 5.4L5.2 20.6l3 1.4L12 15.6l3.8 6.4 3-1.4-5.1-8.8C15 10 16 8.3 16 6.4 16 4 14.4 2 12 2zm0 2.2c1.1 0 1.8.9 1.8 2.2 0 1.2-.7 2.5-1.8 4-1.1-1.5-1.8-2.8-1.8-4 0-1.3.7-2.2 1.8-2.2z"/></svg>おねがい（黄色いリボン）を設定する</span></summary>
+      <div class="more-in">
+        <p class="note">黄色いリボンは「そっとしておいてね」の目印です。言いにくい注意を、カードやQRで伝えられます。</p>
+        <div class="f">伝えたいこと（いくつでも）
+          <div class="chips" id="rq-items">
+            <button type="button" data-v="おやつはあげないでください">おやつはあげないで</button>
+            <button type="button" data-v="急にさわらないでください">急にさわらないで</button>
+            <button type="button" data-v="かむことがあります。手を出さずに見守ってください">かむことがあります</button>
+            <button type="button" data-v="ほかのワンちゃんが苦手です。少しはなれてください">ほかの犬が苦手</button>
+            <button type="button" data-v="抱っこは苦手です">抱っこが苦手</button>
+            <button type="button" data-v="ほえることがあります。びっくりさせたらごめんなさい">ほえることがあります</button>
+          </div>
+        </div>
+        <label class="f">アレルギー（あれば）<input type="text" id="rq-allergy" maxlength="16" placeholder="例：鶏肉"></label>
+        <label class="f">自分で書く（なくてもOK）<input type="text" id="rq-free" maxlength="30" placeholder="例：シニアなので、そっと見守ってね"></label>
+        <div class="f">のせる場所
+          <label class="ck"><input type="checkbox" id="rq-qr" checked>ワン友交換用QR</label>
+          <label class="ck"><input type="checkbox" id="rq-card" checked>名刺カード</label>
+          <label class="ck"><input type="checkbox" id="rq-ec" checked>もしものときカード</label>
+        </div>
+        <div class="rq-prev" id="rq-prev" hidden></div>
+      </div>
+    </details>
 
     <details class="more panel" id="wf-more">
       <summary>ワン友交換用QRを出す</summary>
@@ -694,6 +726,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
   <button class="close" type="button" id="wf-close">とじる ✕</button>
   <div class="friend">
     <div class="fhd"><img id="wf-img" alt=""><div><b id="wf-name"></b><small id="wf-head"></small></div></div>
+    <div class="f-req" id="wf-req" hidden></div>
     <section class="fsec">
       <h3 id="wf-gtitle">会うときのポイント</h3>
       <div class="fpts" id="wf-guide"></div>
@@ -3540,6 +3573,7 @@ function drawEars(ctx,cx,cy,r,type,col,front){
   });
 }
 function fitText(ctx,text,maxW,size,weight,family){do{ctx.font=weight+" "+size+"px "+family;size-=2}while(ctx.measureText(text).width>maxW&&size>20)}
+function clipText(ctx,t,max){if(ctx.measureText(t).width<=max)return t;while(t.length>1&&ctx.measureText(t+"…").width>max)t=t.slice(0,-1);return t+"…"}
 function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
 // 写真がないときは、心の犬種のイラストを描く
 function artImage(b){
@@ -3585,6 +3619,7 @@ function renderMeishi(o,url,raw){
   ctx.font="800 24px "+R;bl.forEach(function(b,i){var y=436+i*38;ctx.fillStyle=b.col;ctx.beginPath();ctx.arc(X+10,y-8,9,0,Math.PI*2);ctx.fill();ctx.fillStyle=dark;ctx.fillText(b.name+" "+b.pct+"%",X+28,y)});
   ctx.fillStyle="#7A8790";ctx.font="800 20px "+R;ctx.fillText("※血統ではなく、性格の近さから出した割合",X,390);
   ctx.fillStyle="#8A96A0";ctx.font="800 22px "+R;ctx.textAlign="right";ctx.fillText("#44Wansonalities",W-48,H-48);ctx.textAlign="left";
+  if((o.req||[]).length)drawRibbon(ctx,W-86,26,54);
   if(raw)return cv;
   ctx.strokeStyle="#CFE7EC";ctx.lineWidth=4;ctx.strokeRect(2,2,W-4,H-4);
   return cv.toDataURL("image/png");
@@ -3599,6 +3634,9 @@ function renderMeishiBack(o,raw){
   var B=o.main,F='"Mochiy Pop One","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',R='"M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',dark="#2F3A45",mute="#5A6672",teal="#357385";
   ctx.fillStyle="#FFFFFF";ctx.fillRect(0,0,W,H);
   ctx.fillStyle="#E4F1F4";ctx.fillRect(560,0,W-560,H);ctx.fillStyle="#D3E8EE";for(var y=14;y<H;y+=32)for(var x=574;x<W;x+=32){ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill()}
+  var rq=o.req||[];ctx.save();
+  if(rq.length){ctx.fillStyle="#FFF6CC";ctx.fillRect(0,0,W,78);ctx.fillStyle="#F2C21B";ctx.fillRect(0,74,W,4);drawRibbon(ctx,34,14,50);
+    ctx.textAlign="left";ctx.fillStyle="#2F3A45";var rt=rq.slice(0,3).join("／");fitText(ctx,rt,W-150,28,"800",R);rt=clipText(ctx,rt,W-130);ctx.fillText(rt,96,50);ctx.translate(0,44)}
   // 左：トリセツ
   ctx.textAlign="left";ctx.fillStyle=teal;fitText(ctx,o.name+"に会うときは",460,40,"400",F);ctx.fillText(o.name+"に会うときは",60,112);
   var yy=170;(o.guide||guideOf()).forEach(function(m){
@@ -3609,6 +3647,7 @@ function renderMeishiBack(o,raw){
   (o.pct||[]).forEach(function(v,i){var y=172+i*62,x0=600,bw=W-x0-60;
     ctx.font="800 19px "+R;ctx.fillStyle=v>=50?dark:"#8A96A0";ctx.textAlign="left";ctx.fillText(AXES[i].a,x0,y);ctx.fillStyle=v<50?dark:"#8A96A0";ctx.textAlign="right";ctx.fillText(AXES[i].b,x0+bw,y);
     ctx.fillStyle="#FFFFFF";roundRect(ctx,x0,y+12,bw,12,6);ctx.fill();var px=x0+bw*(1-v/100);ctx.fillStyle=AXC[i][0];ctx.beginPath();ctx.arc(px,y+18,11,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#FFFFFF";ctx.lineWidth=4;ctx.stroke()});
+  ctx.restore();
   // 下：ひとこと（任意）とハッシュタグ
   ctx.textAlign="left";if(o.msg){ctx.fillStyle=dark;fitText(ctx,o.msg,460,26,"800",R);ctx.fillText(o.msg,60,H-52)}
   ctx.textAlign="right";ctx.fillStyle="#8A96A0";ctx.font="800 20px "+R;ctx.fillText("#44Wansonalities",W-48,H-48);
@@ -3671,18 +3710,20 @@ var EC_IDS=["ec-w","ec-h","ec-ht","ec-d","ec-m","ec-a","ec-c","ec-n"],EC_LB=["�
 function ecKey(){return "w44_ec_"+st.name}
 function ecLoad(){var d={};try{d=JSON.parse(localStorage.getItem(ecKey())||"{}")}catch(e){}EC_IDS.forEach(function(id){$(id).value=d[id]||""})}
 function ecSave(){var d={};EC_IDS.forEach(function(id){d[id]=$(id).value.trim()});try{localStorage.setItem(ecKey(),JSON.stringify(d))}catch(e){}}
-function ecData(){var d={n:st.name||"うちの子",b:bodyName(st.breed)+(st.age==="senior"?"・7歳以上":st.age==="puppy"?"・1歳未満":""),i:ownId(st.breed)||"",v:EC_IDS.map(function(id){return $(id).value.trim()})};return d}
+function ecData(){var d={r:rqTexts("ec",1),n:st.name||"うちの子",b:bodyName(st.breed)+(st.age==="senior"?"・7歳以上":st.age==="puppy"?"・1歳未満":""),i:ownId(st.breed)||"",v:EC_IDS.map(function(id){return $(id).value.trim()})};return d}
 function renderEC(art){return renderECData(ecData(),art)}
 function renderECData(d,art){var W=1075,H=650,cv=document.createElement("canvas");cv.width=W;cv.height=H;var ctx=cv.getContext("2d");
   var F='"Mochiy Pop One","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',R='"M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',dark="#2F3A45";
   ctx.fillStyle="#FFFFFF";ctx.fillRect(0,0,W,H);ctx.fillStyle="#D85C5C";ctx.fillRect(0,0,W,96);
   ctx.fillStyle="#FFFFFF";ctx.textAlign="left";ctx.font="400 40px "+F;ctx.fillText("もしものときカード",44,64);
-  ctx.textAlign="right";fitText(ctx,d.n||"",360,44,"400",F);ctx.fillText(d.n||"",W-44,64);
+  ctx.textAlign="right";fitText(ctx,d.n||"",360,44,"400",F);ctx.fillText(d.n||"",W-(d.r&&d.r.length?130:44),64);
   if(art)drawDogFree(ctx,art,d.i,190,580,330);
-  ctx.textAlign="left";var X=380,y=150,VX=X+190;
+  ctx.textAlign="left";var X=380,y=150,VX=X+190,STEP=d.r&&d.r.length?44:50;
   function row(l,v){ctx.font="800 22px "+R;ctx.fillStyle="#7A8790";ctx.fillText(l,X,y);ctx.fillStyle=dark;
     if(l==="メモ"){ctx.font="800 24px "+R;wrapJa(ctx,v.replace(/\n/g," "),W-VX-40).slice(0,2).forEach(function(t,k){ctx.fillText(t,VX,y+k*34)});y+=84;return}
-    fitText(ctx,v,W-VX-40,26,"800",R);ctx.fillText(v,VX,y);y+=50}
+    fitText(ctx,v,W-VX-40,26,"800",R);ctx.fillText(v,VX,y);y+=STEP}
+  if(d.r&&d.r.length){drawRibbon(ctx,W-110,22,52);ctx.fillStyle="#FFF6CC";var rh=50+(function(){ctx.font="800 22px "+R;return Math.min(1,wrapJa(ctx,d.r.join("／"),W-VX-50).length-1)})()*30;roundRect(ctx,X-14,y-32,W-X-30,rh,12);ctx.fill();ctx.fillStyle="#F2C21B";ctx.fillRect(X-14,y-32,8,rh);
+    ctx.font="800 22px "+R;ctx.fillStyle="#7A5A00";ctx.fillText("おねがい",X,y);ctx.fillStyle=dark;ctx.font="800 22px "+R;var rl=wrapJa(ctx,d.r.join("／"),W-VX-50);if(rl.length>2){rl=rl.slice(0,2);rl[1]=clipText(ctx,rl[1],W-VX-50)}rl.forEach(function(t,k){ctx.fillText(t,VX,y+k*30)});y+=STEP+4+(rl.length-1)*30}
   if(d.b)row("犬種",d.b);
   (d.v||[]).forEach(function(v,k){if(v&&EC_LB[k])row(EC_LB[k],String(v).slice(0,40))});
   ctx.strokeStyle="#E7B7B7";ctx.lineWidth=6;ctx.strokeRect(3,3,W-6,H-6);return cv.toDataURL("image/png")}
@@ -3697,7 +3738,7 @@ function b64e(o){return btoa(unescape(encodeURIComponent(JSON.stringify(o)))).re
 function b64d(t){return JSON.parse(decodeURIComponent(escape(atob(t.replace(/-/g,"+").replace(/_/g,"/")))))}
 function ebGet(){try{return JSON.parse(localStorage.getItem("w44_ecbook")||"[]")}catch(e){return []}}
 function ebSet(a){try{localStorage.setItem("w44_ecbook",JSON.stringify(a))}catch(e){}$("open-ecbook").hidden=!a.length}
-function ebClean(d){if(!d||typeof d.n!=="string")return null;return {n:d.n.slice(0,12),b:String(d.b||"").slice(0,30),i:BY[d.i]?d.i:"",v:(Array.isArray(d.v)?d.v:[]).slice(0,8).map(function(x){return String(x||"").slice(0,40)}),t:Date.now()}}
+function ebClean(d){if(!d||typeof d.n!=="string")return null;return {r:(Array.isArray(d.r)?d.r:[]).slice(0,5).map(function(x){return String(x).slice(0,40)}),n:d.n.slice(0,12),b:String(d.b||"").slice(0,30),i:BY[d.i]?d.i:"",v:(Array.isArray(d.v)?d.v:[]).slice(0,8).map(function(x){return String(x||"").slice(0,40)}),t:Date.now()}}
 function ebRender(){var a=ebGet();
   $("eb-list").innerHTML=a.length?a.map(function(d,k){return '<div class="eb-item" data-k="'+k+'"><img id="eb-img'+k+'" alt="'+esc(d.n)+'のもしものときカード"><div class="eb-row"><button type="button" data-act="share">シェア・保存</button><button type="button" data-act="del">この帳から消す</button></div></div>'}).join(""):'<p class="note" style="text-align:center">まだカードはありません。</p>';
   fontsReady().then(function(){a.forEach(function(d,k){var draw=function(im){var el=$("eb-img"+k);if(el)el.src=renderECData(d,im)};draw(null);if(d.i&&IMG[d.i])artImage(BY[d.i]).then(draw)})})}
@@ -3766,7 +3807,7 @@ $("rm-save").addEventListener("click",function(){var k=$("rm-kind").querySelecto
   var a=lsGet("w44_rem",[]);a.push({dog:$("rm-dog").value,title:title,date:date,rep:$("rm-rep").querySelector(".on").dataset.v});lsSet("w44_rem",a);$("rm-title").value="";$("rm-add").open=false;renderRem()});
 $("rm-list").addEventListener("click",function(e){var b=e.target.closest("button[data-del]");if(!b)return;if(!b.dataset.sure){b.dataset.sure=1;b.textContent="もう一度押すと消えます";return}var a=lsGet("w44_rem",[]);a.splice(+b.dataset.del,1);lsSet("w44_rem",a);renderRem()});
 // ワン友帳：QRを読むと、その子のプロフィールが入る
-function wfData(){return {n:st.name||"うちの子",h:headName(last.main,bodyShort(st.breed),false),m:last.main.id,o:ownId(st.breed)||"",g:guideOf().map(function(x){return x[1]})}}
+function wfData(){return {r:rqTexts("qr"),n:st.name||"うちの子",h:headName(last.main,bodyShort(st.breed),false),m:last.main.id,o:ownId(st.breed)||"",g:guideOf().map(function(x){return x[1]})}}
 function wfUrl(){return location.href.split("#")[0]+"#wf="+b64e(wfData())}
 function drawQR(cv,text){try{var q=qrcode(0,"M");q.addData(text);q.make();var n=q.getModuleCount(),S=400,cell=S/(n+4),ctx=cv.getContext("2d");cv.width=cv.height=S;ctx.fillStyle="#FFFFFF";ctx.fillRect(0,0,S,S);ctx.fillStyle="#2F3A45";
   for(var r=0;r<n;r++)for(var c=0;c<n;c++)if(q.isDark(r,c))ctx.fillRect(Math.floor((c+2)*cell),Math.floor((r+2)*cell),Math.ceil(cell),Math.ceil(cell))}catch(e){}}
@@ -3776,6 +3817,7 @@ function wbRender(){var a=lsGet("w44_wbook",[]),q=($("wb-q").value||"").trim();
 var wfI=-1;
 function wfOpen(i){var d=lsGet("w44_wbook",[])[i];if(!d)return;wfI=i;var im=d.o&&IMG[d.o]?d.o:d.m;$("wf-img").src=IMG[im]?IMG[im]+"?v=4":"";$("wf-name").textContent=d.n;$("wf-head").textContent=d.h;
   $("wf-gtitle").textContent=d.n+"に会うときのポイント";
+  $("wf-req").hidden=!(d.r&&d.r.length);$("wf-req").innerHTML=(d.r||[]).length?'<b><svg class="rib" viewBox="0 0 24 24" aria-hidden="true"><path d="'+RIB_PATH+'"/></svg>'+esc(d.n)+'からのおねがい</b>'+d.r.map(function(t){return '<span>・'+esc(t)+'</span>'}).join(""):"";
   $("wf-guide").innerHTML=(d.g||[]).map(function(t,k){return '<div class="fpt"><b>'+esc(G_LBL[k]||"")+'</b><span>'+esc(t)+'</span></div>'}).join("");
   $("wf-met").value=d.met||"";$("wf-memo").value=d.memo||"";$("wf-tags").value=d.tags||"";$("wf-del").textContent="ワン友帳から消す";delete $("wf-del").dataset.sure;$("wf-sheet").hidden=false}
 ["wf-met","wf-memo","wf-tags"].forEach(function(id){$(id).addEventListener("input",function(){var a=lsGet("w44_wbook",[]);if(!a[wfI])return;a[wfI][id.slice(3)]=this.value.trim();lsSet("w44_wbook",a)})});
@@ -3797,9 +3839,28 @@ $("open-my").addEventListener("click",function(){openMy("grow","s-start")});
 $("r-my").addEventListener("click",function(){openMy("grow","s-result")});
 // 届いたワン友のリンク
 (function(){var m=location.hash.match(/wf=([A-Za-z0-9_-]+)/);if(!m)return;var d=null;try{d=b64d(m[1])}catch(e){}if(!d||typeof d.n!=="string"||!BY[d.m])return;
-  var x={n:d.n.slice(0,12),h:String(d.h||"").slice(0,40),m:d.m,o:BY[d.o]?d.o:"",g:(Array.isArray(d.g)?d.g:[]).slice(0,3).map(function(t){return String(t).slice(0,40)}),t:Date.now(),met:"",memo:"",tags:""};
+  var x={r:(Array.isArray(d.r)?d.r:[]).slice(0,5).map(function(t){return String(t).slice(0,40)}),n:d.n.slice(0,12),h:String(d.h||"").slice(0,40),m:d.m,o:BY[d.o]?d.o:"",g:(Array.isArray(d.g)?d.g:[]).slice(0,3).map(function(t){return String(t).slice(0,40)}),t:Date.now(),met:"",memo:"",tags:""};
   var a=lsGet("w44_wbook",[]),i=a.findIndex(function(y){return y.n===x.n&&y.h===x.h});if(i>=0){x.met=a[i].met;x.memo=a[i].memo;x.tags=a[i].tags;a.splice(i,1)}a.unshift(x);lsSet("w44_wbook",a);
   openMy("wb","s-start");$("my-msg").textContent=x.n+"がワン友帳に入りました。会った場所やメモも残せます。";$("my-msg").hidden=false;setTimeout(function(){wfOpen(0)},50)})();
+
+
+// ---------- おねがい（黄色いリボン） ----------
+var RIB_PATH="M12 2C9.6 2 8 4 8 6.4c0 1.9 1 3.6 2.3 5.4L5.2 20.6l3 1.4L12 15.6l3.8 6.4 3-1.4-5.1-8.8C15 10 16 8.3 16 6.4 16 4 14.4 2 12 2zm0 2.2c1.1 0 1.8.9 1.8 2.2 0 1.2-.7 2.5-1.8 4-1.1-1.5-1.8-2.8-1.8-4 0-1.3.7-2.2 1.8-2.2z";
+function rqKey(){return "w44_req_"+st.name+"_"+st.breed}
+function rqGet(){var d=lsGet(rqKey(),null);return d||{items:[],allergy:"",free:"",show:{qr:1,card:1,ec:1}}}
+var RQ_SHORT={"おやつはあげないでください":"おやつはあげないで","急にさわらないでください":"急にさわらないで","かむことがあります。手を出さずに見守ってください":"かむことがあります","ほかのワンちゃんが苦手です。少しはなれてください":"ほかの犬が苦手","抱っこは苦手です":"抱っこが苦手","ほえることがあります。びっくりさせたらごめんなさい":"ほえることがあります"};
+function rqTexts(where,short){var d=rqGet();if(where&&!d.show[where])return [];var out=d.items.map(function(t){var x=short&&RQ_SHORT[t]?RQ_SHORT[t]:t;return t==="おやつはあげないでください"&&d.allergy?x+"（"+d.allergy+"アレルギー）":x});
+  if(d.allergy&&d.items.indexOf("おやつはあげないでください")<0)out.unshift(d.allergy+"アレルギーがあります");if(d.free)out.push(d.free);return out.slice(0,5)}
+function rqLoad(){var d=rqGet();[].forEach.call($("rq-items").children,function(b){b.classList.toggle("on",d.items.indexOf(b.dataset.v)>=0)});$("rq-allergy").value=d.allergy;$("rq-free").value=d.free;
+  $("rq-qr").checked=!!d.show.qr;$("rq-card").checked=!!d.show.card;$("rq-ec").checked=!!d.show.ec;rqPrev()}
+function rqPrev(){var t=rqTexts();$("rq-prev").hidden=!t.length;$("rq-prev").innerHTML='<b><svg class="rib" viewBox="0 0 24 24" aria-hidden="true"><path d="'+RIB_PATH+'"/></svg>'+esc(st.name||"うちの子")+'からのおねがい</b>'+t.map(function(x){return '<span>・'+esc(x)+'</span>'}).join("")}
+function rqSave(){var d={items:[].filter.call($("rq-items").children,function(b){return b.classList.contains("on")}).map(function(b){return b.dataset.v}),allergy:$("rq-allergy").value.trim(),free:$("rq-free").value.trim(),show:{qr:$("rq-qr").checked?1:0,card:$("rq-card").checked?1:0,ec:$("rq-ec").checked?1:0}};
+  lsSet(rqKey(),d);rqPrev();if(FEST){FEST.o.req=rqTexts("card",1);$("meishi-img").src=renderMeishi(FEST.o);$("meishi-back").src=renderMeishiBack(FEST.o);$("fest-out").hidden=true}
+  if(typeof ecRefresh==="function")ecRefresh();if($("wf-more").open&&last)drawQR($("wf-qr"),wfUrl())}
+$("rq-items").addEventListener("click",function(e){var b=e.target.closest("button[data-v]");if(!b)return;b.classList.toggle("on");rqSave()});
+["rq-allergy","rq-free"].forEach(function(id){$(id).addEventListener("input",rqSave)});
+["rq-qr","rq-card","rq-ec"].forEach(function(id){$(id).addEventListener("change",rqSave)});
+function drawRibbon(ctx,x,y,s){ctx.save();ctx.translate(x,y);ctx.scale(s/24,s/24);ctx.fillStyle="#F2C21B";ctx.fill(new Path2D(RIB_PATH));ctx.restore()}
 
 // ---------- 性格ブレンド：うちの子の犬種をベースに、性格の近い犬種がどれくらい混ざっているか ----------
 // 血統ではなく「性格の近さ」から出す割合。自分の犬種（わかれば）＋近い犬種2つ
@@ -3966,7 +4027,7 @@ function renderResult(){
   Promise.all([fontsReady(),artImage(B),pawImage(),starImage(),crownImage(),(oidC&&!PH&&IMG[oidC])?artImage(BY[oidC]):null]).then(function(r){
     $("card-img").onload=function(){$("card-img").hidden=false;$("card-load").hidden=true};
     var CO={sub:subOf(spread(last.pct)),main:B,name:name,bodyLine:bodyLine,img:PH,art:r[1],pos:st,ears:PH?st.ears:false,pct:spread(last.pct).map(Math.round),hidden:HB,pure:pure,paw:r[2],star:r[3],crown:r[4],bodyArt:r[5],bodyId:oidC,bodyName:short,layout:window.CARD_LAYOUT||"C",blend:blendOf(),head:pure?"生粋の"+short:headName(B,short,false),gap:gapOf(),rare:rarityOf(last.pct)};
-    $("card-img").src=renderCard(CO);$("meishi-img").src=renderMeishi(CO);GKEY="w44_guide_"+st.name+"_"+last.main.id;GEDIT=gGet();CO.guide=guideOf();renderGuide();CO.msg=($("in-msg").value||"").trim();$("meishi-back").src=renderMeishiBack(CO);FEST={o:CO};$("fest-out").hidden=true;
+    $("card-img").src=renderCard(CO);$("meishi-img").src=renderMeishi(CO);GKEY="w44_guide_"+st.name+"_"+last.main.id;GEDIT=gGet();CO.guide=guideOf();rqLoad();CO.req=rqTexts("card",1);$("meishi-img").src=renderMeishi(CO);renderGuide();CO.msg=($("in-msg").value||"").trim();$("meishi-back").src=renderMeishiBack(CO);FEST={o:CO};$("fest-out").hidden=true;
   });
   renderMeters();renderPairPanel();
   var V=st.visit||{n:1},stn=Math.min(5,V.n),vs="";for(var si=0;si<5;si++)vs+='<img src="icon/star.png" alt=""'+(si<stn?"":' class="off"')+'>';
