@@ -870,6 +870,11 @@ function artImage(b){
 var CROWN=null;function crownImage(){if(CROWN)return Promise.resolve(CROWN);return new Promise(function(res){var im=new Image();im.onload=function(){CROWN=im;res(im)};im.onerror=function(){res(null)};im.src="icon/crown.png"})}
 var STAR=null;function starImage(){if(STAR)return Promise.resolve(STAR);return new Promise(function(res){var im=new Image();im.onload=function(){STAR=im;res(im)};im.onerror=function(){res(null)};im.src="icon/star.png"})}
 var PAW=null;function pawImage(){if(PAW)return Promise.resolve(PAW);return new Promise(function(res){var im=new Image();im.onload=function(){PAW=im;res(im)};im.onerror=function(){res(null)};im.src="icon/paw.png"})}
+// 写真がないときは丸なしで描く。足もとの真ん中をカードの中心にそろえ、影もそこに置く
+var FEET={"akita": 0.628, "beagle": 0.592, "bernese": 0.605, "bichon": 0.527, "bordeaux": 0.5, "border": 0.63, "boston": 0.548, "boxer": 0.604, "bulldog": 0.525, "cavalier": 0.578, "chihuahua": 0.525, "chin": 0.523, "chow": 0.582, "cocker": 0.542, "corgi": 0.555, "dalmatian": 0.561, "doberman": 0.584, "frenchie": 0.538, "golden": 0.587, "griffon": 0.571, "gsd": 0.588, "husky": 0.579, "iggy": 0.491, "jrt": 0.571, "kingcharles": 0.572, "lab": 0.615, "maltese": 0.569, "mdachs": 0.36, "minpin": 0.51, "papillon": 0.555, "peke": 0.584, "pome": 0.581, "pug": 0.581, "samoyed": 0.594, "schnauzer": 0.601, "sheltie": 0.666, "shiba": 0.596, "shihtzu": 0.542, "spitz": 0.569, "stbernard": 0.638, "stdpoodle": 0.502, "toypoodle": 0.512, "westie": 0.579, "yorkie": 0.529};
+function drawDogFree(ctx,img,id,cx,feetY,size){var f=FEET[id]||.5;
+  ctx.save();ctx.fillStyle="rgba(138,195,207,.45)";ctx.beginPath();ctx.ellipse(cx,feetY,size*.24,size*.03,0,0,Math.PI*2);ctx.fill();ctx.restore();
+  ctx.drawImage(img,cx-size*f,feetY-size*.97,size,size)}
 function renderCard(o){
   var W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;var ctx=cv.getContext("2d");
   var B=o.main,col=B.col,F='"Mochiy Pop One","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',R='"M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',dark="#2F3A45",mute="#5A6672",teal="#357385";
@@ -882,13 +887,13 @@ function renderCard(o){
   if(o.paw){ctx.font="400 34px "+F;var tw=ctx.measureText("44Wansonalities").width,ps=46;ctx.drawImage(o.paw,W/2-tw/2-ps-14,122-ps+8,ps,ps);ctx.drawImage(o.paw,W/2+tw/2+14,122-ps+8,ps,ps);}
   var cx=W/2,cy=388,r=200;
   if(o.ears)drawEars(ctx,cx,cy,r,B.e,col,false);
-  ctx.fillStyle="#FFFFFF";ctx.beginPath();ctx.arc(cx,cy,r+14,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle="#8AC3CF";ctx.lineWidth=10;ctx.beginPath();ctx.arc(cx,cy,r+14,0,Math.PI*2);ctx.stroke();
-  if(!o.img&&o.art&&o.art.full){ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fillStyle="#E9F1F4";ctx.fill();ctx.restore();ctx.drawImage(o.art,cx-r*1.22,cy-r*1.2,r*2.44,r*2.44)}
+  if(o.img){ctx.fillStyle="#FFFFFF";ctx.beginPath();ctx.arc(cx,cy,r+14,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#8AC3CF";ctx.lineWidth=10;ctx.beginPath();ctx.arc(cx,cy,r+14,0,Math.PI*2);ctx.stroke();}
+  if(!o.img&&o.art&&o.art.full){drawDogFree(ctx,o.art,B.id,cx,cy+r*1.0,r*2.2)}
   else if(o.img)drawPhoto(ctx,o.img,cx,cy,r,o.pos);
   else{ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();ctx.fillStyle="#E9F1F4";ctx.fillRect(cx-r,cy-r,r*2,r*2);if(o.art)ctx.drawImage(o.art,cx-r*.92,cy-r*.85,r*1.84,r*1.84);ctx.restore()}
   if(o.ears)drawEars(ctx,cx,cy,r,B.e,col,true);
-  if(o.pure){var bx=cx+r*.84,by=cy+r*.78;ctx.fillStyle="#F3C63F";ctx.beginPath();ctx.arc(bx,by,74,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#FFFFFF";ctx.lineWidth=8;ctx.stroke();ctx.fillStyle=dark;ctx.font="400 38px "+F;ctx.fillText("生粋！",bx,by+13);if(o.crown)ctx.drawImage(o.crown,bx-46,by-150,92,92)}
+  if(o.pure){var bx=cx+r*1.0,by=cy+r*.6;ctx.fillStyle="#F3C63F";ctx.beginPath();ctx.arc(bx,by,74,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#FFFFFF";ctx.lineWidth=8;ctx.stroke();ctx.fillStyle=dark;ctx.font="400 38px "+F;ctx.fillText("生粋！",bx,by+13);if(o.crown)ctx.drawImage(o.crown,bx-46,by-150,92,92)}
   ctx.fillStyle=dark;fitText(ctx,o.name,860,62,"400",F);ctx.fillText(o.name,W/2,680);
   ctx.fillStyle=mute;fitText(ctx,o.bodyLine,900,34,"800",R);ctx.fillText(o.bodyLine,W/2,722);
   if(o.sub){ctx.fillStyle=AXC[0]?dark:dark;fitText(ctx,o.sub+"タイプの",700,38,"800",R);ctx.fillText(o.sub+"タイプの",W/2,776)}
@@ -1023,9 +1028,8 @@ function renderPair(o){
   ctx.textAlign="center";ctx.fillStyle=teal;ctx.font="400 34px "+F;ctx.fillText("44Wansonalities",W/2,122);
   if(o.paw){var tw=ctx.measureText("44Wansonalities").width,ps=46;ctx.drawImage(o.paw,W/2-tw/2-ps-14,122-ps+8,ps,ps);ctx.drawImage(o.paw,W/2+tw/2+14,122-ps+8,ps,ps)}
   [[o.a,300],[o.b,780]].forEach(function(d){var cx=d[1],cy=360,r=170,it=d[0];
-    ctx.fillStyle="#FFFFFF";ctx.beginPath();ctx.arc(cx,cy,r+12,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#8AC3CF";ctx.lineWidth=9;ctx.stroke();
-    if(it.img)drawPhoto(ctx,it.img,cx,cy,r,it.pos);
-    else{ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fillStyle="#E9F1F4";ctx.fill();ctx.restore();if(it.art)ctx.drawImage(it.art,cx-r*1.22,cy-r*1.2,r*2.44,r*2.44)}
+    if(it.img){ctx.fillStyle="#FFFFFF";ctx.beginPath();ctx.arc(cx,cy,r+12,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#8AC3CF";ctx.lineWidth=9;ctx.stroke();drawPhoto(ctx,it.img,cx,cy,r,it.pos)}
+    else if(it.art)drawDogFree(ctx,it.art,it.id,cx,cy+r*1.05,r*2.3);
     ctx.fillStyle=dark;fitText(ctx,it.name,380,52,"400",F);ctx.fillText(it.name,cx,615);
     ctx.fillStyle=teal;fitText(ctx,"心は"+it.heart,400,34,"800",R);ctx.fillText("心は"+it.heart,cx,665);});
   ctx.fillStyle="#F3C63F";ctx.beginPath();ctx.arc(W/2,360,62,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#FFFFFF";ctx.lineWidth=8;ctx.stroke();
@@ -1043,7 +1047,7 @@ function renderPairPanel(){
   $("pair-text").innerHTML="<b>相性 "+P.score+"%｜"+P.type+"</b><br>"+esc(P.line);
   $("pair-panel").hidden=false;
   Promise.all([fontsReady(),st.img?null:artImage(last.main),artImage(fb),pawImage()]).then(function(r){
-    $("pair-img").src=renderPair({p:P,paw:r[3],a:{name:st.name,heart:last.main.s,img:st.img,pos:st,art:r[1]},b:{name:f.n,heart:fb.s,art:r[2]}});
+    $("pair-img").src=renderPair({p:P,paw:r[3],a:{id:last.main.id,name:st.name,heart:last.main.s,img:st.img,pos:st,art:r[1]},b:{id:fb.id,name:f.n,heart:fb.s,art:r[2]}});
   });
 }
 function renderMeters(){
