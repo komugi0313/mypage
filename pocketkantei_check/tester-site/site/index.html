@@ -610,7 +610,7 @@ try{ if(!localStorage.getItem('pk_profile')&&!window.PK_DIRECT_KEY&&!/^#(login|r
         <label class="chk"><input type="checkbox" id="timeUnknown"> <span data-i18n="fUnknown"></span></label>
         <p class="note" id="tuNote" style="display:none"></p></div>
       <div class="field"><label id="plLbl"></label><div class="dates"><div class="sel"><select id="iplc"></select></div><div class="sel"><select id="ipl"></select></div></div><p class="note" id="plNote"></p></div>
-      <div class="field"><label data-i18n="fSex"></label><div class="seg" id="sexSeg"><button data-sex="female" class="on" data-i18n="sexF"></button><button data-sex="male" data-i18n="sexM"></button></div>
+      <div class="field"><label data-i18n="fSex"></label><div class="seg" id="sexSeg"><button data-sex="female" data-i18n="sexF"></button><button data-sex="male" data-i18n="sexM"></button></div>
         <p class="note" data-i18n="sexNote"></p></div>
     </div>
     <!-- アカウント（メール＋パスワード。確認リンクなしで即登録） -->
@@ -799,7 +799,7 @@ try{ if(!localStorage.getItem('pk_profile')&&!window.PK_DIRECT_KEY&&!/^#(login|r
   <h3 data-i18n="aiTitle"></h3><p class="sh-sub" data-i18n="aiSub"></p>
   <div class="field" style="margin-top:4px"><label data-i18n="aiLabel"></label>
     <div class="dates"><div class="sel"><select id="by"></select></div><div class="sel"><select id="bm"></select></div><div class="sel"><select id="bd"></select></div></div>
-    <label class="chk"><input type="checkbox" id="btu" checked> <span data-i18n="fUnknown"></span></label><div class="seg" id="bsexSeg" style="display:flex;gap:8px;margin-top:10px"><button type="button" class="segb on" data-sex="female" data-i18n="aiSexF"></button><button type="button" class="segb" data-sex="male" data-i18n="aiSexM"></button></div></div>
+    <label class="chk"><input type="checkbox" id="btu" checked> <span data-i18n="fUnknown"></span></label><div class="seg" id="bsexSeg" style="display:flex;gap:8px;margin-top:10px"><button type="button" class="segb" data-sex="female" data-i18n="aiSexF"></button><button type="button" class="segb" data-sex="male" data-i18n="aiSexM"></button></div></div>
   <button class="btn mini" id="aishoRun" style="margin-top:16px" data-i18n="aiBtn"></button>
 </div>
 
@@ -1519,7 +1519,7 @@ var ALL_LANGS=['ja','en','zh','zt','ko','vi','es','pt','id','th'];
 var LANGS=['ja','en','ko','zt'],
     LANG_LABEL={ja:'日本語',en:'English',zh:'简体中文',zt:'繁體中文',ko:'한국어',vi:'Tiếng Việt',es:'Español',pt:'Português',id:'Indonesia',th:'ไทย'};
 var LS_PROF='pk_profile', LS_MSGS='pk_msgs', LS_LANG='pk_lang', LS_THEME='pk_theme';
-var state={ lang:'ja', theme:'indigo', profile:null, sex:'female', esex:'female', chart:null, chartB:null, mode:'self', useCount:0, msgs:[] };
+var state={ lang:'ja', theme:'indigo', profile:null, sex:'', esex:'female', chart:null, chartB:null, mode:'self', useCount:0, msgs:[] };
 var FREE_LIMIT=5;
 /* ---- 有料プラン（料金設計 2026-09-03 決定）：Standard / Pro / VIP ----
    数えるのは「本格鑑定」（恋愛・結婚・決断・重い相談・人生の方向。上位モデル）だけ。1か月（暦月）あたりの回数。
@@ -1774,6 +1774,8 @@ function rebuildSelects(){
   fillYMD('iy','im','idd','ih','imin'); fillYMD('by','bm','bd'); fillYMD('ey','em','ed','eh','emin');
   Object.keys(s).forEach(function(id){ if(s[id]!=null && $(id)) $(id).value=s[id]; });
   if(!s.iy){ $('iy').value=1995; $('im').value=1; $('idd').value=1; $('ih').value=12; $('imin').value=0; $('by').value=1993; }
+  /* 相性のお相手の月・日が空のままだと「計算に失敗」になっていた（最初の一回は選ぶ前の空の値を引き継いでいた）。空なら1月1日にする */
+  ['bm','bd'].forEach(function(id){ if($(id)&&!$(id).value) $(id).value=1; });
 }
 
 /* ---- 出生地（経度・標準子午線 → 真太陽時補正） ---- */
@@ -1992,8 +1994,13 @@ wireSeg('sexSeg','sex'); wireSeg('esexSeg','esex');
 
 var AGE_BLOCK={ja:'申し訳ありません。本サービスは18歳以上の方のみご利用いただけます。',en:'Sorry — this service is only available to people aged 18 or over.',zh:'抱歉，本服务仅限18岁及以上人士使用。',zt:'抱歉，本服務僅限18歲以上人士使用。',ko:'죄송합니다. 본 서비스는 만 18세 이상만 이용하실 수 있습니다.',vi:'Xin lỗi — dịch vụ này chỉ dành cho người từ 18 tuổi trở lên.',es:'Lo sentimos: este servicio solo está disponible para mayores de 18 años.',pt:'Desculpe — este serviço é apenas para maiores de 18 anos.',id:'Maaf — layanan ini hanya untuk usia 18 tahun ke atas.',th:'ขออภัย บริการนี้สำหรับผู้ที่มีอายุ 18 ปีขึ้นไปเท่านั้น'};
 function _ageFromBirth(y,m,d){ try{ var n=new Date(); var a=n.getFullYear()-y; var mo=n.getMonth()+1, da=n.getDate(); if(mo<m||(mo===m&&da<d)) a--; return a; }catch(e){ return null; } }
+var SEX_NEED={ja:'性別を選んでください。四柱推命では、運の巡り方の計算に使います。',en:'Please choose your sex. Four Pillars uses it to calculate how your luck cycles move.',zh:'请选择性别。四柱推命用它来推算运势的走向。',zt:'請選擇性別。四柱推命用它來推算運勢的走向。',ko:'성별을 선택해 주세요. 사주에서는 운의 흐름을 계산하는 데 써요.'};
+var SEX_NEED_B={ja:'お相手の性別を選んでください。運の巡り方の計算に使います。',en:'Please choose the other person’s sex. It is used to calculate how their luck cycles move.',zh:'请选择对方的性别。用来推算运势的走向。',zt:'請選擇對方的性別。用來推算運勢的走向。',ko:'상대의 성별을 선택해 주세요. 운의 흐름을 계산하는 데 써요.'};
+function _needSex(id){ try{ var s=$(id); if(!s) return; s.scrollIntoView({block:'center'}); s.style.outline='2px solid #d9534f'; s.style.borderRadius='12px'; setTimeout(function(){ s.style.outline=''; },2500); }catch(e){} }
 $('regBtn').onclick=function(){
   var tu=$('timeUnknown').checked;
+  /* 性別は最初から選んでおかない（運営指示 2026-10-31：「女性」が選ばれたままだと、男性が気づかずに進み、運の巡り方（大運）の向きが逆になる）。選ぶまで進めない */
+  if(state.sex!=='female'&&state.sex!=='male'){ _needSex('sexSeg'); alert(pick(SEX_NEED)); return; }
   var p={ name:($('iname').value||'').trim(), y:+$('iy').value, m:+$('im').value, d:+$('idd').value, tu:tu, hh:+$('ih').value, mi:+$('imin').value, sex:state.sex, place:$('ipl')?$('ipl').value:'' };
   /* 年齢ゲート：18歳未満は登録できない（Gemini API の規約で、18歳未満が使うアプリには使えないため） */
   var _age=_ageFromBirth(p.y,p.m,p.d);
@@ -7388,7 +7395,8 @@ function renderMeishiki(){
 
 $('aishoRun').onclick=function(){
   var y=+$('by').value,m=+$('bm').value,dd=+$('bd').value,tu=$('btu').checked;
-  var _bs=document.querySelector('#bsexSeg .segb.on'); var psx=_bs?_bs.dataset.sex:'female';
+  var _bs=document.querySelector('#bsexSeg .segb.on'); if(!_bs){ _needSex('bsexSeg'); alert(pick(SEX_NEED_B)); return; }   /* お相手の性別も、選ぶまで進めない（大運の向きが変わるため） */
+  var psx=_bs.dataset.sex;
   var cb=(window.PersonBazi)?PersonBazi(y,m,dd,tu?null:12,tu?null:0,tu,psx):null;
   if(!cb||!cb.ok){ alert('計算に失敗 / failed'); return; }
   cb._bkey=y+'-'+m+'-'+dd; cb._sex=psx; state.chartB=cb; state.mode='aisho'; updateModeBar();
