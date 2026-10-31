@@ -670,11 +670,13 @@ function lvPair(me,pt,sit){const P2=LV.partner&&LV.partner[pt],AXT=((sit==="kata
 function lvShow(t){const me=window.__me,P=lvTy(t);if(!me)return;const el=$("lvRes");el.hidden=false;$("lvStart").hidden=true;$("lvQ").hidden=true;if($("lvSit"))$("lvSit").hidden=true;
  const sit=(st.love&&st.love.sit)||"koi";
  const lab=i=>t[i]===me.born[i]&&t[i]===me.now[i]?'<em class="s">'+TR("どちらも")+'</em>':t[i]===me.born[i]?'<em class="b">'+TR("気質")+'</em>':t[i]===me.now[i]?'<em class="n">'+TR("性格")+'</em>':'<em class="x">'+TR("恋だけ")+'</em>';
- let h='<p class="lvlab">'+TR("恋をしたときのあなた")+'</p><div class="lvtiles">'+t.split("").map((l,i)=>'<div class="lt'+(me.born[i]!==me.now[i]&&l===me.born[i]?' isb':'')+'"><b>'+l+'</b>'+lab(i)+'</div>').join("")+'</div>'
+ let h=(P?'<div class="lvhero"><p class="lab">'+TR("恋をしたときのあなたは")+'</p><div class="fr"><img src="'+charSrc(t)+'" alt="'+esc(an(t))+'"></div><p class="tp">'+esc(t)+'</p><p class="nm">'+p16h(t)+'</p><p class="one">'+lvQ(esc(P.one))+'</p></div>'
+  +((P.words||[]).length?'<div class="lvwords"><p class="lab">'+TR("恋のあなたを表すことば")+'</p><div class="ch">'+P.words.slice().sort((a,b)=>b[1]-a[1]).slice(0,8).map(([w,n])=>'<span class="'+(n>=3?'b':'')+'">'+esc(w)+'</span>').join("")+'</div></div>':''):'')
+  +'<div class="lvdiff"><h3>'+TR("ふだんのあなたとのちがい")+'</h3><div class="lvtiles">'+t.split("").map((l,i)=>'<div class="lt'+(me.born[i]!==me.now[i]&&l===me.born[i]?' isb':'')+'"><b>'+l+'</b>'+lab(i)+'</div>').join("")+'</div>'
   +'<p class="lvleg">'+TR("文字の下の小さな言葉は、恋をしたときにその文字がどこから出たかです。")+([0,1,2,3].some(i=>t[i]!==me.born[i]&&t[i]!==me.now[i])?TR("「恋だけ」は、ふだんは出ない面です。"):"")+'</p>'
-  +'<p class="hook">'+esc(lvHook(me.born,me.now,t))+'</p>';
+  +'<p class="hook">'+esc(lvHook(me.born,me.now,t))+'</p></div>';
  if(P){const nm=k=>k+p16(k),B=LVBLK[sit]||LVBLK.koi,used=B[1].map(x=>x[0]);
-  h+='<div class="lvp"><p class="lvsub">'+TR("恋のときのあなたは")+'</p><p class="lvname">'+esc(P.t)+p16h(P.t)+'</p><p class="one">'+lvQ(esc(P.one))+'</p>'
+  h+='<div class="lvp">'
   +'<div class="lvsit-r"><p class="lvsith">'+TR(B[0])+'</p>'+B[1].filter(([k])=>P[k]).map(([k,hh])=>'<div class="lvs lvs-'+k+'"><h3>'+TR(hh)+'</h3><p>'+esc(P[k])+'</p></div>').join("")+'</div>'
   +(sit!=="none"?'<div class="lvpt"><label class="lvptq" for="lvPt">'+TR(sit==="kata"?"好きな人の16タイプ（わかれば）":sit==="kini"?"気になる人の16タイプ（わかれば）":"恋人の16タイプ（わかれば）")+'</label><select id="lvPt"><option value="">'+TR("16タイプを選ぶ")+'</option>'+Object.keys(D.NICK).map(k=>'<option value="'+k+'"'+(st.love&&st.love.pt===k?' selected':'')+'>'+esc(nm(k))+'</option>').join("")+'</select><p class="hint">'+TR("16タイプだけで出す、2人のヒントです。")+'</p><div id="lvPtR" class="lvptr"></div></div>':'')
   +(sit!=="none"?'<label class="lvptimg" id="lvPtImgW"><input type="checkbox" id="lvPtImg"'+(window.__lvPtImg?' checked':'')+'> '+TR(sit==="kata"?"好きな人のタイプも画像に入れる":sit==="kini"?"気になる人のタイプも画像に入れる":"恋人のタイプも画像に入れる")+'</label>':'')
