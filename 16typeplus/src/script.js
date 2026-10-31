@@ -579,14 +579,18 @@ const POWC=["--tf","--rose","--sn","--muted","--ei"];
 const POWTOP=[TR("新しいことを始めたり、伸ばしたりするのが得意。"),TR("気持ちを表に出し、場を明るくするのが得意。"),TR("どっしり構えて、人や物事を支えるのが得意。"),TR("決めたことを、最後までやり切るのが得意。"),TR("まわりを見て、その場に合わせて動くのが得意。")];
 const POWLOW=[TR("新しいことは、小さく始めるくらいがちょうどいい。"),TR("気持ちは、言葉にして伝えると届きやすい。"),TR("疲れたら、休める場所を先に決めておくと安心。"),TR("迷ったら、期限を決めて選ぶとすっきりする。"),TR("考えすぎる前に、一度まわりに相談してみて。")];
 const STARS={"比肩":[TR("自分の星"),TR("自分のやり方とペースを守る力。")],"劫財":[TR("仲間の星"),TR("仲間と一緒だと、力が出やすい人。")],"食神":[TR("表現の星"),TR("楽しいこと、好きなことを素直に出す力。")],"傷官":[TR("感性の星"),TR("細かいところまでこだわって、いい物にする力。")],"偏財":[TR("めぐり合わせの星"),TR("人やチャンスを広くつかむ力。")],"正財":[TR("こつこつの星"),TR("少しずつ積み上げて、大事なものを守る力。")],"偏官":[TR("挑戦の星"),TR("勢いで動いて、人を引っぱる力。")],"正官":[TR("けじめの星"),TR("ルールを守り、信頼を積み重ねる力。")],"偏印":[TR("個性の星"),TR("ひらめきで、人と違うやり方を見つける力。")],"印綬":[TR("学びの星"),TR("じっくり学んで、よくわかるまで考える力。")]};
+/* 生まれつき少なめの力でも、今の16タイプで身につけているなら1行足す */
+const POWL=["EN","EF","S","J","PF"],POWS=[TR("新しいことを始める力"),TR("場を明るくする力"),TR("人や物事を支える力"),TR("決めたことを最後までやる力"),TR("まわりに合わせる力")];
+function balGain(pc){const now=(st.t||[]).join("");if(now.length!==4)return "";const ls=[0,1,2,3,4].filter(i=>pc[i]<15&&[...POWL[i]].some(c=>now.includes(c)));
+ return ls.map(i=>'<p class="bnote bgain">'+TR("「{p}」は生まれつき少なめですが、今の16タイプ（{t}）では、{s}をしっかり身につけています。").replace("{p}",POWN[i]).replace("{t}",now).replace("{s}",POWS[i])+'</p>').join("");}
 function drawBalance(N){let el=$("bal");const c=N.chart;
  if(!el){el=document.createElement("section");el.id="bal";el.className="card bal";document.querySelector(".hero").after(el);}
  if(!c){el.hidden=true;return;}el.hidden=false;
  const tot=c.el.reduce((a,b)=>a+b,0)||1,pc=c.el.map(v=>Math.round(v/tot*100)),mx=Math.max(...pc);
  const order=[0,1,2,3,4],hi=order.reduce((a,b)=>pc[b]>pc[a]?b:a,0),lo=order.reduce((a,b)=>pc[b]<pc[a]?b:a,0);
- el.innerHTML='<h2>'+TR("気質の力のバランス")+'</h2><p class="hint">'+TR("生まれた日から見た、あなたの力の多い・少ないです。同じタイプでも、人によって違います。")+'</p>'
+ el.innerHTML='<h2>'+TR("気質の力のバランス")+'</h2><p class="hint">'+TR("生まれた日から見た、生まれつきの力の多い・少ないです。今の16タイプで身につけた力は、ここには入っていません。")+'</p>'
   +'<div class="bars">'+pc.map((v,i)=>'<div class="br" style="--c:var('+POWC[i]+')"><span class="bn">'+POWN[i]+'</span><span class="bt"><i style="width:'+Math.max(8,mx?v/mx*100:0)+'%"></i></span><span class="bv">'+(v>=30?TR("多い"):v>=15?TR("ふつう"):TR("少なめ"))+'</span></div>').join("")+'</div>'
-  +'<p class="bnote"><b>'+TR("いちばん多いのは「")+POWN[hi]+TR("」。")+'</b>'+POWTOP[hi]+'<br>'+TR("少なめなのは「")+(()=>{const ls=order.filter(i=>pc[i]<15);return (ls.length?ls:[lo]).map(i=>POWN[i]).join(TR("」「"));})()+TR("」。")+POWLOW[lo]+'</p>';}
+  +'<p class="bnote"><b>'+TR("いちばん多いのは「")+POWN[hi]+TR("」。")+'</b>'+POWTOP[hi]+'<br>'+TR("少なめなのは「")+(()=>{const ls=order.filter(i=>pc[i]<15);return (ls.length?ls:[lo]).map(i=>POWN[i]).join(TR("」「"));})()+TR("」。")+POWLOW[lo]+'</p>'+balGain(pc);}
 
 /* ---- 恋愛編（16問）：恋のときのあなたと、2人のどちらが顔を出すか ---- */
 const LVSCALE=SCALE;
