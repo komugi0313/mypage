@@ -77,6 +77,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .qscene svg{width:100px;height:100px;filter:drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff)}
 .qtext{font-family:var(--pop);font-size:1.3rem;line-height:1.6;text-align:center;min-height:4.2em;display:grid;place-items:center}
 .answers{display:flex;flex-direction:column;gap:14px}
+.answers button.skip{min-height:48px;border-width:2px;border-style:dashed;box-shadow:none;font-size:.9rem;color:var(--muted);background:transparent}
 .answers button{min-height:60px;border-radius:999px;border:3px solid var(--mint);background:var(--card);box-shadow:0 4px 0 var(--mint);font-weight:800;font-size:1.02rem;padding:8px 20px;transition:transform .1s}
 .answers button:active,.answers button.on{transform:translateY(3px);box-shadow:0 1px 0 var(--mint);background:var(--mint-l)}
 .back{align-self:flex-start;background:transparent;border:0;min-height:48px;font-weight:800;color:var(--teal);padding:0 4px}
@@ -911,7 +912,7 @@ function msg(t){var m=$("msg");m.textContent=t;m.hidden=false;clearTimeout(msg.t
 function show(id){["s-start","s-quiz","s-result","s-zukan","s-about"].forEach(function(s){$(s).hidden=s!==id});window.scrollTo(0,0)}
 // 答えの並びは質問ごとに入れかえる（いつも同じ位置を押すクセで結果がかたよらないように）
 var PERMS=[[0,1,2],[1,0,2],[2,1,0],[0,2,1],[1,2,0],[2,0,1]];
-function orderOf(i){return PERMS[(i*5+2)%6]}
+function orderOf(i){return ((i*5+3)%4<2)?[0,1,2]:[2,1,0]}
 $("go-quiz").addEventListener("click",function(){
   st.name=$("in-name").value.trim()||"うちの子";
   var b=$("in-breed").value;
@@ -925,12 +926,12 @@ function renderQ(){
   $("q-prog").style.width=(st.qi/N*100)+"%";$("q-ball").style.left=(st.qi/N*100)+"%";$("q-ball").style.transform="translate(-50%,-50%) rotate("+(st.qi*60)+"deg)";
   $("q-dog").innerHTML=dog(q[3]);
   $("q-text").textContent=q[1];
-  $("q-ans").innerHTML=orderOf(st.qi).map(function(k){return '<button type="button" data-k="'+k+'"'+(st.ans[st.qi]===k?' class="on"':'')+'>'+q[2][k]+'</button>'}).join("");
+  $("q-ans").innerHTML=orderOf(st.qi).map(function(k){return '<button type="button" data-k="'+k+'"'+(st.ans[st.qi]===k?' class="on"':'')+'>'+q[2][k]+'</button>'}).join("")+'<button type="button" class="skip'+(st.ans[st.qi]==="s"?' on':'')+'" data-k="s">どれも当てはまらない・わからない</button>';
   $("q-back").textContent=st.qi===0?"← 入力にもどる":"← ひとつもどる";
 }
 $("q-ans").addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b||st.busy)return;st.busy=true;
-  st.ans[st.qi]=+b.dataset.k;b.classList.add("on");
+  st.ans[st.qi]=b.dataset.k==="s"?"s":+b.dataset.k;b.classList.add("on");
   setTimeout(function(){if(st.qi<N-1){st.qi++;renderQ()}else finish()},180);
 });
 $("q-back").addEventListener("click",function(){if(st.qi===0){show("s-start");return}st.qi--;renderQ()});
@@ -939,8 +940,8 @@ $("q-back").addEventListener("click",function(){if(st.qi===0){show("s-start");re
 // 各性格は4問×2点＝8点満点 → 0〜100
 function score(ans){
   var sum=[0,0,0,0,0,0],cnt=[0,0,0,0,0,0];
-  Q.forEach(function(q,i){var k=ans[i]==null?1:ans[i];sum[q[0]]+=2-k;cnt[q[0]]+=2});
-  return sum.map(function(s,i){return Math.round(s/cnt[i]*100)});
+  Q.forEach(function(q,i){var k=ans[i];if(k==="s")return;if(k==null)k=1;sum[q[0]]+=2-k;cnt[q[0]]+=2});
+  return sum.map(function(s,i){return cnt[i]?Math.round(s/cnt[i]*100):50});
 }
 function dist(a,b){var s=0;for(var i=0;i<a.length;i++)s+=(a[i]-b[i])*(a[i]-b[i]);return Math.sqrt(s)}
 function adist(q,b){return Math.max(0,dist(q,b.v)+b.adj)}
@@ -1247,7 +1248,7 @@ function fontsReady(){
 // ---------- 結果 ----------
 var last=null;
 // ---------- 答えをためる：同じ子の前回までの答えと合わせて判定する ----------
-function scoreRaw(ans){var sum=[0,0,0,0,0,0],cnt=[0,0,0,0,0,0];Q.forEach(function(q,i){var k=ans[i]==null?1:ans[i];sum[q[0]]+=2-k;cnt[q[0]]+=2});return {sum:sum,cnt:cnt}}
+function scoreRaw(ans){var sum=[0,0,0,0,0,0],cnt=[0,0,0,0,0,0];Q.forEach(function(q,i){var k=ans[i];if(k==="s")return;if(k==null)k=1;sum[q[0]]+=2-k;cnt[q[0]]+=2});return {sum:sum,cnt:cnt}}
 function histKey(){return "w44_hist_"+st.name+"_"+st.breed}
 function histGet(){try{return JSON.parse(localStorage.getItem(histKey())||"null")}catch(e){return null}}
 function histSet(h){try{localStorage.setItem(histKey(),JSON.stringify(h))}catch(e){}}
@@ -1255,7 +1256,7 @@ var HYS=3; // 前回の心の犬種との差がこれより小さいときは、
 function finish(){
   var raw=scoreRaw(st.ans),h=histGet()||{sum:[0,0,0,0,0,0],cnt:[0,0,0,0,0,0],n:0,last:null,first:null};
   var sum=raw.sum.map(function(v,i){return v+h.sum[i]}),cnt=raw.cnt.map(function(v,i){return v+h.cnt[i]});
-  var pct=sum.map(function(v,i){return Math.round(v/cnt[i]*100)}),rank=ranking(pct),prev=h.last;
+  var pct=sum.map(function(v,i){return cnt[i]?Math.round(v/cnt[i]*100):50}),rank=ranking(pct),prev=h.last;
   if(prev&&rank[0].b.id!==prev){var pi=rank.findIndex(function(x){return x.b.id===prev});
     if(pi>0&&rank[pi].d-rank[0].d<HYS){var t=rank[pi];rank.splice(pi,1);rank.unshift(t);var m0=rank[1].m;rank[1].m=t.m;t.m=m0}}
   var main=rank[0].b;st.visit={n:h.n+1,prev:prev,first:h.first||main.id};
