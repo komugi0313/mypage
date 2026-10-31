@@ -86,6 +86,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .toggle input{width:24px;height:24px;accent-color:var(--teal)}
 .headline{font-family:var(--pop);font-size:1.45rem;line-height:1.5}
 .headline,.rank li span{word-break:keep-all;overflow-wrap:anywhere}
+.headline .hsub{display:block;font-family:var(--body);font-weight:800;font-size:.9rem;color:var(--muted);margin-top:4px}
 .headline em{font-style:normal;color:var(--teal)}
 .tag{align-self:flex-start;font-weight:800;background:var(--mint-l);color:var(--teal);border-radius:999px;padding:2px 14px;font-size:.95rem}
 .why{background:var(--bg);border-radius:16px;padding:12px 14px;font-size:.95rem}
@@ -875,7 +876,70 @@ var FEET={"akita": 0.628, "beagle": 0.592, "bernese": 0.605, "bichon": 0.527, "b
 function drawDogFree(ctx,img,id,cx,feetY,size){var f=FEET[id]||.5;
   ctx.save();ctx.fillStyle="rgba(138,195,207,.45)";ctx.beginPath();ctx.ellipse(cx,feetY,size*.24,size*.03,0,0,Math.PI*2);ctx.fill();ctx.restore();
   ctx.drawImage(img,cx-size*f,feetY-size*.97,size,size)}
+
+// ---------- 性格ブレンド：うちの子の犬種をベースに、性格の近い犬種がどれくらい混ざっているか ----------
+// 血統ではなく「性格の近さ」から出す割合。自分の犬種（わかれば）＋近い犬種2つ
+function blendOf(){var oid=ownId(st.breed),r=last.rank,pick=[];
+  if(oid){var me=r.find(function(x){return x.b.id===oid});if(me)pick.push(me)}
+  r.forEach(function(x){if(pick.length<3&&pick.indexOf(x)<0)pick.push(x)});
+  var PAL=["#F2B84B","#6BB5C9","#D88DB3"],dmin=Math.min.apply(null,pick.map(function(x){return x.d})),w=pick.map(function(x){return Math.exp(-(x.d-dmin)/14)});
+  // 自分の犬種があるときは「○○度」をそのままベースの割合にして、残りを近い犬種で分ける
+  var base=oid&&pick[0].b.id===oid?pick[0].m:0,pc;
+  if(base){var rest=w.slice(1),sr=rest.reduce(function(a,b){return a+b},0);pc=[base].concat(rest.map(function(v){return (100-base)*v/sr}))}
+  else{var sw=w.reduce(function(a,b){return a+b},0);pc=w.map(function(v){return v/sw*100})}
+  var out=pick.map(function(x,i){return {id:x.b.id,name:x.b.s,col:PAL[i],pct:Math.round(pc[i]),own:x.b.id===oid}});
+  var diff=100-out.reduce(function(a,b){return a+b.pct},0);out[0].pct+=diff;return out}
+function lum(hex){var n=parseInt(hex.slice(1),16);return (0.299*(n>>16)+0.587*((n>>8)&255)+0.114*(n&255))/255}
+function renderCardC(o){
+  var W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;var ctx=cv.getContext("2d");
+  var B=o.main,F='"Mochiy Pop One","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',R='"M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',dark="#2F3A45",mute="#5A6672",teal="#357385";
+  ctx.fillStyle="#A9D3DC";ctx.fillRect(0,0,W,H);ctx.fillStyle="#C2E1E8";
+  for(var y=10;y<H;y+=40)for(var x=10;x<W;x+=40){ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill()}
+  ctx.fillStyle="#5E8FA6";roundRect(ctx,48,58,W-96,H-96,56);ctx.fill();ctx.fillStyle="#FFFFFF";roundRect(ctx,48,48,W-96,H-96,56);ctx.fill();
+  ctx.textAlign="center";ctx.fillStyle=teal;ctx.font="400 34px "+F;ctx.fillText("44Wansonalities",W/2,122);
+  if(o.paw){var tw=ctx.measureText("44Wansonalities").width,ps=46;ctx.drawImage(o.paw,W/2-tw/2-ps-14,122-ps+8,ps,ps);ctx.drawImage(o.paw,W/2+tw/2+14,122-ps+8,ps,ps)}
+  // うちの子（主役）：写真 か 体の犬種の絵
+  var mx=400,fy=575;
+  if(o.img){var pr=175,pcy=fy-pr-10;if(o.ears)drawEars(ctx,mx,pcy,pr,B.e,B.col,false);ctx.fillStyle="#FFFFFF";ctx.beginPath();ctx.arc(mx,pcy,pr+12,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#8AC3CF";ctx.lineWidth=9;ctx.stroke();drawPhoto(ctx,o.img,mx,pcy,pr,o.pos);if(o.ears)drawEars(ctx,mx,pcy,pr,B.e,B.col,true)}
+  else if(o.bodyArt)drawDogFree(ctx,o.bodyArt,o.bodyId,mx,fy,440);
+  else {mx=W/2;if(o.art)drawDogFree(ctx,o.art,B.id,mx,fy,440)}
+  // 心のふきだし：中にいる犬種
+  if(!o.pure&&(o.img||o.bodyArt)){var bx=800,by=275,br=128,lc=lighten(B.col||"#8AC3CF",.72);
+    [[628,420,12],[662,384,17],[700,345,23]].forEach(function(d){ctx.fillStyle="#FFFFFF";ctx.beginPath();ctx.arc(d[0],d[1],d[2]+5,0,Math.PI*2);ctx.fill();ctx.fillStyle=lc;ctx.beginPath();ctx.arc(d[0],d[1],d[2],0,Math.PI*2);ctx.fill()});
+    ctx.fillStyle=lc;ctx.beginPath();ctx.arc(bx,by,br+10,0,Math.PI*2);ctx.fill();ctx.fillStyle="#FFFFFF";ctx.beginPath();ctx.arc(bx,by,br,0,Math.PI*2);ctx.fill();
+    if(o.art){ctx.save();ctx.beginPath();ctx.arc(bx,by,br,0,Math.PI*2);ctx.clip();var f=FEET[B.id]||.5,sz=br*1.95;ctx.drawImage(o.art,bx-sz*f,by+br*.92-sz*.97,sz,sz);ctx.restore()}
+    ctx.font="800 28px "+R;var t="心に住んでいるのは",tw2=ctx.measureText(t).width+40;ctx.fillStyle=lc;roundRect(ctx,bx-tw2/2,by+br+18,tw2,42,21);ctx.fill();ctx.fillStyle=dark;ctx.fillText(t,bx,by+br+48);
+    ctx.fillStyle=teal;fitText(ctx,B.s,300,40,"400",F);ctx.fillText(B.s,bx,by+br+102);}
+  if(o.pure){var sx=mx+190,sy=fy-170;ctx.fillStyle="#F3C63F";ctx.beginPath();ctx.arc(sx,sy,74,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#FFFFFF";ctx.lineWidth=8;ctx.stroke();ctx.fillStyle=dark;ctx.font="400 38px "+F;ctx.fillText("生粋！",sx,sy+13);if(o.crown)ctx.drawImage(o.crown,sx-46,sy-150,92,92)}
+  // 名前と型名
+  ctx.textAlign="center";ctx.fillStyle=dark;fitText(ctx,o.name,860,60,"400",F);ctx.fillText(o.name,W/2,665);
+  ctx.fillStyle=mute;fitText(ctx,o.sub+"タイプの",700,34,"800",R);ctx.fillText(o.sub+"タイプの",W/2,718);
+  ctx.fillStyle=teal;fitText(ctx,o.head,930,80,"400",F);ctx.fillText(o.head,W/2,805);
+  // 性格ブレンド
+  var bl=o.blend||[],x0=150,bw=W-300,yb=880,cx2=x0;
+  ctx.fillStyle=mute;ctx.font="800 26px "+R;ctx.fillText(o.name+"の性格ブレンド",W/2,858);
+  ctx.save();roundRect(ctx,x0,yb,bw,34,17);ctx.clip();
+  bl.forEach(function(b){var w=bw*b.pct/100;ctx.fillStyle=b.col;ctx.fillRect(cx2,yb,w,34);ctx.fillStyle="#FFFFFF";ctx.fillRect(cx2+w-2,yb,4,34);cx2+=w});ctx.restore();
+  ctx.font="800 26px "+R;var items=bl.map(function(b){return (b.own?"":"")+b.name+" "+b.pct+"%"}),iw=items.map(function(t){return ctx.measureText(t).width+44}),tot=iw.reduce(function(a,b){return a+b},0),lx=W/2-tot/2;
+  bl.forEach(function(b,i){ctx.fillStyle=b.col;ctx.beginPath();ctx.arc(lx+12,944,10,0,Math.PI*2);ctx.fill();ctx.fillStyle=dark;ctx.textAlign="left";ctx.fillText(items[i],lx+28,953);lx+=iw[i]});
+  // 性格のバー
+  ctx.textAlign="center";
+  o.pct.forEach(function(v,i){var y=1000+i*32,bx2=350,bw2=380;
+    ctx.font="800 24px "+R;ctx.fillStyle=v>=50?dark:"#8A96A0";ctx.textAlign="right";ctx.fillText(AXES[i].a,bx2-22,y+8);
+    ctx.fillStyle=v<50?dark:"#8A96A0";ctx.textAlign="left";ctx.fillText(AXES[i].b,bx2+bw2+22,y+8);
+    ctx.fillStyle="#E3F0F3";roundRect(ctx,bx2,y-5,bw2,10,5);ctx.fill();
+    var x=bx2+bw2*(1-v/100);ctx.fillStyle=AXC[i][0];ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#FFFFFF";ctx.lineWidth=4;ctx.stroke()});
+  // ギャップ度・レア度
+  var chips=[];if(o.gap!==null&&o.gap!==undefined&&!o.pure)chips.push("ギャップ度 "+o.gap+"%");if(o.rare)chips.push("レア度");
+  ctx.font="800 28px "+R;var SW=o.star?5*30+8:0,cws=chips.map(function(c){return ctx.measureText(c).width+50+(c==="レア度"?SW:0)}),tt=cws.reduce(function(a,b){return a+b},0)+(chips.length-1)*20,c0=W/2-tt/2;
+  chips.forEach(function(c,i){ctx.fillStyle="#FFF3C4";roundRect(ctx,c0,1200,cws[i],50,25);ctx.fill();ctx.fillStyle=dark;ctx.textAlign="left";ctx.fillText(c,c0+25,1235);
+    if(c==="レア度"){var sx2=c0+25+ctx.measureText(c).width+8;for(var k=0;k<5;k++){if(o.star){ctx.globalAlpha=k<o.rare.stars?1:.25;ctx.drawImage(o.star,sx2+k*30,1211,28,28)}}ctx.globalAlpha=1}c0+=cws[i]+20});
+  ctx.textAlign="center";ctx.fillStyle=mute;ctx.font="800 22px "+R;ctx.fillText("44wan.com",W/2,1285);
+  return cv.toDataURL("image/jpeg",.9);
+}
+
 function renderCard(o){
+  if(o.layout==="C")return renderCardC(o);
   var W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;var ctx=cv.getContext("2d");
   var B=o.main,col=B.col,F='"Mochiy Pop One","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',R='"M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',dark="#2F3A45",mute="#5A6672",teal="#357385";
   ctx.fillStyle="#A9D3DC";ctx.fillRect(0,0,W,H);ctx.fillStyle="#C2E1E8";
@@ -962,11 +1026,11 @@ function renderResult(){
   var oidC=ownId(st.breed);
   Promise.all([fontsReady(),artImage(B),pawImage(),starImage(),crownImage(),(oidC&&!st.img&&IMG[oidC])?artImage(BY[oidC]):null]).then(function(r){
     $("card-img").onload=function(){$("card-img").hidden=false;$("card-load").hidden=true};
-    $("card-img").src=renderCard({sub:subOf(spread(last.pct)),main:B,name:name,bodyLine:bodyLine,img:st.img,art:r[1],pos:st,ears:st.img?st.ears:false,pct:spread(last.pct).map(Math.round),hidden:HB,pure:pure,paw:r[2],star:r[3],crown:r[4],bodyArt:r[5],bodyId:oidC,bodyName:short,layout:window.CARD_LAYOUT||"A",gap:gapOf(),rare:rarityOf(last.pct)});
+    $("card-img").src=renderCard({sub:subOf(spread(last.pct)),main:B,name:name,bodyLine:bodyLine,img:st.img,art:r[1],pos:st,ears:st.img?st.ears:false,pct:spread(last.pct).map(Math.round),hidden:HB,pure:pure,paw:r[2],star:r[3],crown:r[4],bodyArt:r[5],bodyId:oidC,bodyName:short,layout:window.CARD_LAYOUT||"C",blend:blendOf(),head:pure?"生粋の"+short:B.s+"ハートの"+short,gap:gapOf(),rare:rarityOf(last.pct)});
   });
   renderMeters();renderPairPanel();
   var spH=spread(last.pct);
-  $("r-head").innerHTML=pure?'<img class="crown-i" src="icon/crown.png" alt="">'+esc(name)+"は、<em>生粋の"+esc(subOf(spH))+"タイプの"+esc(body)+"</em>！":"体は"+esc(body)+"、心は<em>"+esc(subName(spH,B))+"</em>";
+  $("r-head").innerHTML=pure?'<img class="crown-i" src="icon/crown.png" alt="">'+esc(name)+"は、<em>生粋の"+esc(subOf(spH))+"タイプの"+esc(body)+"</em>！":esc(name)+"は、<em>"+esc(B.s)+"ハートの"+esc(short)+"</em>"+'<span class="hsub">'+esc(subOf(spH))+"タイプ。"+esc(short)+"の中に、"+esc(B.s)+"の心が住んでいます</span>";
   $("r-catch").textContent=B.c;
   var rs=reasons(last.pct,B);
   $("r-why").innerHTML="<b>"+esc(B.s)+"に近い理由</b><br>「"+AXES[rs[0]].name+"」と「"+AXES[rs[1]].name+"」がそっくり。"+esc(name)+"の「"+trait(rs[0])+"」ところと「"+trait(rs[1])+"」ところが、"+esc(B.s)+"と重なりました。";
@@ -1196,7 +1260,7 @@ document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!$("z-sheet
 function toast(t){var el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(function(){el.hidden=true},3500)}
 function shareText(){if(!last)return "";var B=last.main,short=bodyShort(st.breed),oid=ownId(st.breed),pure=last.rank[0].b.id===oid;
   var g=gapOf(),R2=rarityOf(last.pct);
-  return (pure?st.name+"は生粋の"+short+"でした！":st.name+"は「体は"+short+"、心は"+subName(spread(last.pct),B)+"」でした！")+(g!==null&&!pure?"ギャップ度"+g+"%":"")+"（レア度"+starStr(R2.stars)+"）\nあなたの子は何犬？\n#44Wansonalities #うちの子診断";}
+  return (pure?st.name+"は生粋の"+short+"でした！":st.name+"は「"+B.s+"ハートの"+short+"」でした！")+(g!==null&&!pure?"ギャップ度"+g+"%":"")+"（レア度"+starStr(R2.stars)+"）\nあなたの子は何犬？\n#44Wansonalities #うちの子診断";}
 function shareUrl(){var t=last?encodeRes():"";return location.href.split("#")[0]+(t?"#r="+t:"")}
 function cardFile(id){return fetch($(id||"card-img").src).then(function(r){return r.blob()}).then(function(b){return new File([b],"44wansonalities.jpg",{type:"image/jpeg"})})}
 function saveCard(){var a=document.createElement("a");a.href=$("card-img").src;a.download="44wansonalities.jpg";document.body.appendChild(a);a.click();a.remove()}
