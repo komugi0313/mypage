@@ -196,6 +196,12 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .blend .lg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
 .blend small{color:var(--muted);font-size:.75rem}
 .meishi-img{width:100%;border-radius:12px;box-shadow:0 6px 18px rgba(53,115,133,.18)}
+.fest summary{cursor:pointer;min-height:48px;display:flex;align-items:center;font-weight:800;color:var(--teal)}
+.fest-in{display:flex;flex-direction:column;gap:12px;font-size:.9rem}
+.fest-out{display:flex;flex-direction:column;gap:16px}
+.fest-out figure{margin:0;display:flex;flex-direction:column;gap:6px}
+.fest-out figcaption{font-weight:800;font-size:.85rem}
+.fest-out img{width:100%;border:1px solid var(--mint-l);border-radius:8px;background:#FFFFFF}
 /* 図鑑 */
 .zcount{font-family:var(--pop);color:var(--teal);text-align:center}
 .zcount b{font-weight:400;font-size:1.4rem}
@@ -302,6 +308,17 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
       <p class="note">イベントで配ったり、デジタル名刺として送ったりできるサイズです。QRコードを読むと、この結果ページが開きます。</p>
       <img class="meishi-img" id="meishi-img" alt="名刺サイズの診断カード">
       <button class="share-all" type="button" id="sh-meishi">名刺カードをシェアする</button>
+      <details class="fest">
+        <summary>フェスで配る用に印刷する</summary>
+        <div class="fest-in">
+          <p><b>家で印刷するとき</b><br>市販の「A4・10面の名刺用紙」（左右14mm・上下11mmの余白のもの）に、そのまま印刷できます。うら面も作るときは、同じ用紙のうらに「うら」の画像を印刷してください。</p>
+          <p><b>印刷屋さんに出すとき</b><br>ふちまできれいに切れるよう、まわりに3mmの「塗り足し」をつけた画像（97×61mm）を作ります。ネット印刷の名刺（91×55mm）の入稿に使えます。</p>
+          <p>うら面は全員共通で、サイト名と5匹のイラスト、44wan.com が入ります。おもてのQRコードを読むと、その子の結果ページが開きます。</p>
+          <button class="start" type="button" id="fest-go">印刷用の画像を作る</button>
+          <div id="fest-out" class="fest-out" hidden></div>
+          <p class="note">画像を長押しで保存できます。印刷するときは「拡大・縮小しない（実際のサイズ・100%）」を選んでください。</p>
+        </div>
+      </details>
       <p class="note">画像を長押しで保存できます。印刷するときは、一般的な名刺サイズ（91×55mm）で印刷してください。</p>
     </div>
     <label class="toggle" id="ears-wrap"><input type="checkbox" id="in-ears" checked>写真に「心の犬種」の耳をつける</label>
@@ -3194,13 +3211,13 @@ function drawDogFree(ctx,img,id,cx,feetY,size){var f=FEET[id]||.5;
 
 
 // ---------- 名刺カード（91×55mm・300dpi相当） ----------
-function renderMeishi(o,url){
+function renderMeishi(o,url,raw){
   var W=1075,H=650,cv=document.createElement("canvas");cv.width=W;cv.height=H;var ctx=cv.getContext("2d");
   var B=o.main,F='"Mochiy Pop One","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',R='"M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',dark="#2F3A45",mute="#5A6672",teal="#357385";
   ctx.fillStyle="#FFFFFF";ctx.fillRect(0,0,W,H);
   // 左側：空色のドット帯
   ctx.fillStyle="#E4F1F4";ctx.fillRect(0,0,480,H);ctx.fillStyle="#D3E8EE";for(var y=14;y<H;y+=32)for(var x=14;x<480;x+=32){ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill()}
-  ctx.textAlign="left";ctx.fillStyle=teal;ctx.font="400 26px "+F;if(o.paw)ctx.drawImage(o.paw,34,30,34,34);ctx.fillText("44Wansonalities",76,58);
+  ctx.textAlign="left";ctx.fillStyle=teal;ctx.font="400 26px "+F;if(o.paw)ctx.drawImage(o.paw,52,50,34,34);ctx.fillText("44Wansonalities",94,78);
   var hasBody=o.img||o.bodyArt,mx=(o.pure||!hasBody)?240:215,fy=600;
   if(o.img){var pr=150,pcy=fy-pr-30;ctx.fillStyle="#FFFFFF";ctx.beginPath();ctx.arc(mx,pcy,pr+10,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#8AC3CF";ctx.lineWidth=7;ctx.stroke();drawPhoto(ctx,o.img,mx,pcy,pr,o.pos)}
   else if(o.bodyArt)drawDogFree(ctx,o.bodyArt,o.bodyId,mx,fy,420);
@@ -3224,9 +3241,49 @@ function renderMeishi(o,url){
   if(window.qrcode&&url){try{var q=qrcode(0,"M");q.addData(url);q.make();var n=q.getModuleCount(),qs=190,cell=qs/(n+2),qx=W-40-qs,qy=H-40-qs;
     ctx.fillStyle="#FFFFFF";ctx.fillRect(qx,qy,qs,qs);ctx.fillStyle=dark;
     for(var rr=0;rr<n;rr++)for(var cc=0;cc<n;cc++)if(q.isDark(rr,cc))ctx.fillRect(qx+(cc+1)*cell,qy+(rr+1)*cell,Math.ceil(cell),Math.ceil(cell))}catch(e){}}
+  if(raw)return cv;
   ctx.strokeStyle="#CFE7EC";ctx.lineWidth=4;ctx.strokeRect(2,2,W-4,H-4);
   return cv.toDataURL("image/png");
 }
+
+
+// ---------- フェス用：名刺のうら面・印刷用データ ----------
+// 名刺 91×55mm＝1075×650px（300dpi）。塗り足し3mm＝36px
+function renderMeishiBack(heroImgs,paw,raw){
+  var W=1075,H=650,cv=document.createElement("canvas");cv.width=W;cv.height=H;var ctx=cv.getContext("2d");
+  var F='"Mochiy Pop One","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',R='"M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',teal="#357385";
+  ctx.fillStyle="#A9D3DC";ctx.fillRect(0,0,W,H);ctx.fillStyle="#C2E1E8";for(var y=12;y<H;y+=30)for(var x=12;x<W;x+=30){ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill()}
+  ctx.fillStyle="#5E8FA6";roundRect(ctx,150,62,W-300,190,95);ctx.fill();ctx.fillStyle="#FFFFFF";roundRect(ctx,150,52,W-300,190,95);ctx.fill();
+  ctx.textAlign="center";ctx.fillStyle="#5E8FA6";ctx.font="800 24px "+R;ctx.fillText("よ ん よ ん  ワ ン ソ ナ リ テ ィ ー ズ",W/2,100);
+  ctx.fillStyle=teal;fitText(ctx,"44Wansonalities",700,78,"400",F);ctx.fillText("44Wansonalities",W/2,172);
+  ctx.fillStyle="#555A6B";ctx.font="800 30px "+R;ctx.fillText("うちの子、中身は何犬？",W/2,218);
+  var n=heroImgs.length,sz=195,gap=(W-80)/n;
+  heroImgs.forEach(function(im,i){if(im)ctx.drawImage(im,40+gap*i+gap/2-sz/2,H-108-sz,sz,sz)});
+  ctx.fillStyle="#FFFFFF";roundRect(ctx,W/2-170,H-100,340,46,23);ctx.fill();ctx.fillStyle=teal;ctx.font="400 30px "+F;ctx.fillText("44wan.com",W/2,H-66);
+  if(paw){ctx.drawImage(paw,60,60,52,52)}
+  return raw?cv:cv.toDataURL("image/png");
+}
+function withBleed(card){var B=36,w=card.width,h=card.height,cv=document.createElement("canvas");cv.width=w+B*2;cv.height=h+B*2;var ctx=cv.getContext("2d");
+  // 端を鏡のように折り返して塗り足しを作る（ドットのもようがつながる）
+  function m(sx,sy,sw,sh,dx,dy,fx,fy){ctx.save();ctx.translate(dx+(fx?sw:0),dy+(fy?sh:0));ctx.scale(fx?-1:1,fy?-1:1);ctx.drawImage(card,sx,sy,sw,sh,0,0,sw,sh);ctx.restore()}
+  m(0,0,B,h,0,B,1,0);m(w-B,0,B,h,w+B,B,1,0);m(0,0,w,B,B,0,0,1);m(0,h-B,w,B,B,h+B,0,1);
+  m(0,0,B,B,0,0,1,1);m(w-B,0,B,B,w+B,0,1,1);m(0,h-B,B,B,0,h+B,1,1);m(w-B,h-B,B,B,w+B,h+B,1,1);
+  ctx.drawImage(card,B,B);return cv.toDataURL("image/png")}
+// A4（210×297mm）に10枚：市販の名刺用紙（10面・左右14mm／上下11mm）と同じならび
+function a4Sheet(card){var W=2480,H=3508,cv=document.createElement("canvas");cv.width=W;cv.height=H;var ctx=cv.getContext("2d");
+  ctx.fillStyle="#FFFFFF";ctx.fillRect(0,0,W,H);var L=165,T=130,cw=1075,ch=650;
+  for(var r=0;r<5;r++)for(var c=0;c<2;c++)ctx.drawImage(card,L+c*cw,T+r*ch,cw,ch);
+  ctx.strokeStyle="#B8C4CA";ctx.lineWidth=2;
+  [L,L+cw,L+cw*2].forEach(function(x){ctx.beginPath();ctx.moveTo(x,T-80);ctx.lineTo(x,T-20);ctx.moveTo(x,T+ch*5+20);ctx.lineTo(x,T+ch*5+80);ctx.stroke()});
+  for(var r2=0;r2<=5;r2++){var y=T+r2*ch;ctx.beginPath();ctx.moveTo(L-100,y);ctx.lineTo(L-30,y);ctx.moveTo(L+cw*2+30,y);ctx.lineTo(L+cw*2+100,y);ctx.stroke()}
+  return cv.toDataURL("image/png")}
+var FEST=null;
+function buildFest(){if(!FEST)return;var o=FEST.o,url=FEST.url,front=renderMeishi(o,url,true);
+  Promise.all(["kingcharles","pome","pug","bichon","bernese"].map(function(k){return artImage(BY[k])}).concat([pawImage()])).then(function(r){
+    var back=renderMeishiBack(r.slice(0,5),r[5],true);
+    var list=[["a4f","A4に10枚（おもて）",a4Sheet(front)],["a4b","A4に10枚（うら）",a4Sheet(back)],["pf","印刷屋さん用・塗り足しつき（おもて）",withBleed(front)],["pb","印刷屋さん用・塗り足しつき（うら）",withBleed(back)]];
+    $("fest-out").innerHTML=list.map(function(x){return '<figure><figcaption>'+x[1]+'</figcaption><img id="fest-'+x[0]+'" src="'+x[2]+'" alt="'+x[1]+'"><button class="sub" type="button" data-share="fest-'+x[0]+'">この画像をシェア・保存</button></figure>'}).join("");
+    $("fest-out").hidden=false;})}
 
 // ---------- 性格ブレンド：うちの子の犬種をベースに、性格の近い犬種がどれくらい混ざっているか ----------
 // 血統ではなく「性格の近さ」から出す割合。自分の犬種（わかれば）＋近い犬種2つ
@@ -3379,7 +3436,7 @@ function renderResult(){
   Promise.all([fontsReady(),artImage(B),pawImage(),starImage(),crownImage(),(oidC&&!st.img&&IMG[oidC])?artImage(BY[oidC]):null]).then(function(r){
     $("card-img").onload=function(){$("card-img").hidden=false;$("card-load").hidden=true};
     var CO={sub:subOf(spread(last.pct)),main:B,name:name,bodyLine:bodyLine,img:st.img,art:r[1],pos:st,ears:st.img?st.ears:false,pct:spread(last.pct).map(Math.round),hidden:HB,pure:pure,paw:r[2],star:r[3],crown:r[4],bodyArt:r[5],bodyId:oidC,bodyName:short,layout:window.CARD_LAYOUT||"C",blend:blendOf(),head:pure?"生粋の"+short:B.s+"ハートの"+short,gap:gapOf(),rare:rarityOf(last.pct)};
-    $("card-img").src=renderCard(CO);$("meishi-img").src=renderMeishi(CO,shareUrl());
+    $("card-img").src=renderCard(CO);$("meishi-img").src=renderMeishi(CO,shareUrl());FEST={o:CO,url:shareUrl()};$("fest-out").hidden=true;
   });
   renderMeters();renderPairPanel();
   var BL=blendOf();$("r-blend").innerHTML='<small>'+esc(name)+'の性格ブレンド</small><div class="bar2">'+BL.map(function(b){return '<span style="flex:'+b.pct+';background:'+b.col+'"></span>'}).join("")+'</div><div class="lg">'+BL.map(function(b){return '<span><i style="background:'+b.col+'"></i>'+esc(b.name)+' '+b.pct+'%</span>'}).join("")+'</div><small>※血統ではなく、性格の近さから出した割合です</small>';
@@ -3626,6 +3683,8 @@ function shareCard(after,id,text){
 }
 $("sh-all").addEventListener("click",function(){shareCard()});
 $("sh-meishi").addEventListener("click",function(){shareCard(null,"meishi-img")});
+$("fest-go").addEventListener("click",function(){this.textContent="作っています…";var b=this;setTimeout(function(){buildFest();b.textContent="もう一度作る"},30)});
+$("fest-out").addEventListener("click",function(e){var t=e.target.closest("button[data-share]");if(t)shareCard(null,t.dataset.share)});
 $("sh-pair").addEventListener("click",function(){var f=st.friend,P=pairOf(last.pct,f.p);shareCard(null,"pair-img",st.name+"と"+f.n+"の相性は"+P.score+"%（"+P.type+"）でした！\nあなたの子とも診断してみて\n#44Wansonalities #うちの子診断")});
 $("sh-ig").addEventListener("click",function(){shareCard("カードを保存して、インスタで投稿してください（保存されないときは、カードの画像を長押し）。")});
 $("sh-line").addEventListener("click",function(){window.open("https://line.me/R/share?text="+encodeURIComponent(shareText()+"\n"+shareUrl()),"_blank","noopener")});
