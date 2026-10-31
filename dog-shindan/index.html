@@ -139,6 +139,16 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .tbar .fill{position:absolute;top:0;bottom:0;border-radius:999px}
 .tbar .dot{position:absolute;top:50%;width:22px;height:22px;border-radius:50%;border:4px solid #FFFFFF;transform:translate(-50%,-50%);box-shadow:0 1px 3px rgba(0,0,0,.25)}
 .tbar .avg{position:absolute;top:-6px;bottom:-6px;width:4px;border-radius:2px;background:var(--ink);opacity:.55;transform:translateX(-50%)}
+.tbar .me{position:absolute;top:50%;transform:translate(-50%,-78%);z-index:2;display:flex;flex-direction:column;align-items:center}
+.tbar .me img{width:40px;height:40px;object-fit:contain;filter:drop-shadow(0 1px 1px rgba(0,0,0,.2))}
+.tbar .me.ph img{width:34px;height:34px;border-radius:50%;object-fit:cover;border:3px solid var(--dc);background:#FFFFFF}
+.tbar .me i{width:12px;height:12px;border-radius:50%;border:3px solid #FFFFFF;box-shadow:0 1px 2px rgba(0,0,0,.25);margin-top:-4px}
+#r-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.82rem;font-weight:800;background:var(--bg);border-radius:12px;padding:8px 12px;align-items:center}
+#r-legend span{display:inline-flex;gap:6px;align-items:center}
+#r-legend i{width:14px;height:14px;border-radius:50%;display:inline-block;background:#E07A5F;border:2px solid #FFFFFF}
+#r-legend b{width:4px;height:16px;border-radius:2px;background:var(--ink);opacity:.5;display:inline-block}
+#r-legend img{width:24px;height:24px;object-fit:contain}
+#r-legend img.ph{border-radius:50%;object-fit:cover;border:2px solid var(--mint)}
 .tbar .ends{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);margin-top:4px}
 .tbar .ends b{font-weight:800}
 /* プロフィール */
@@ -387,8 +397,8 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
       <h2>性格のバランス</h2>
       <div class="peak" id="r-peak"></div>
       <p class="vs" id="r-vs" hidden></p>
+      <div class="legend" id="r-legend"></div>
       <div class="tbars" id="r-axes"></div>
-      <p class="note" id="r-axes-note"></p>
       <div class="calm" id="r-calm" hidden></div>
     </div>
 
@@ -1262,6 +1272,10 @@ $("sh-ec-line").addEventListener("click",function(){ecSave();var d=ecData(),url=
   var a=ebGet().filter(function(x){return !(x.n===d.n&&x.b===d.b)});a.unshift(d);ebSet(a);
   $("eb-msg").textContent=d.n+"の「もしものときカード」が届きました。もしものとき帳に入れました。";$("eb-msg").hidden=false;ebFrom="s-start";ebRender();show("s-ecbook")})();
 
+// 性格バーのうちの子の印：写真があれば丸く切った写真、なければ犬種のイラスト
+function meMark(){var oid=ownId(st.breed);
+  if(st.img&&!st.useArt){try{var c=document.createElement("canvas");c.width=c.height=120;drawPhoto(c.getContext("2d"),st.img,60,60,60,st);return {src:c.toDataURL("image/jpeg",.85),photo:1}}catch(e){}}
+  var id=oid&&IMG[oid]?oid:(IMG[last.main.id]?last.main.id:null);return id?{src:IMG[id]+"?v=4"}:null}
 // ---------- 性格ブレンド：うちの子の犬種をベースに、性格の近い犬種がどれくらい混ざっているか ----------
 // 血統ではなく「性格の近さ」から出す割合。自分の犬種（わかれば）＋近い犬種2つ
 function blendOf(){var oid=ownId(st.breed),r=last.rank,pick=[];
@@ -1442,9 +1456,9 @@ function renderResult(){
     return '<li'+(x.b.id===oid?' class="me"':'')+'><i>'+(r[0]+1)+'</i><span>'+esc(x.b.n)+'<small>'+esc(x.b.c)+'</small></span><b>'+x.m+'%</b></li>'}).join("");
   $("r-own").textContent=own>=0?(short+"度は "+ownM+"%（"+BR.length+"犬種中 "+(own+1)+"位）。"+(pure?"まさに生粋の"+short+"です。":gapWord(gapOf(),short)+"。")+"いちばん上の性格ブレンドの「"+short+" "+ownM+"%」は、この"+short+"度です。"):"％は、性格のかたちがどれくらい近いかを表します。";
   var sp=spread(last.pct),oidA=ownId(st.breed);
-  $("r-axes").innerHTML=tbarsHTML(sp,oidA?BY[oidA].v:null,oidA?BY[oidA].s:"");
-  $("r-axes-note").textContent=oidA?"細い線は、"+BY[oidA].s+"の平均です。線から遠いところほど、"+name+"の個性です。":"";
-  $("r-axes-note").hidden=!oidA;
+  var ME=meMark();
+  $("r-axes").innerHTML=tbarsHTML(sp,oidA?BY[oidA].v:null,oidA?BY[oidA].s:"",ME);
+  $("r-legend").innerHTML='<span>'+(ME?'<img class="'+(ME.photo?'ph':'')+'" src="'+ME.src+'" alt="">':'<i></i>')+esc(name)+'</span>'+(oidA?'<span><b></b>ふつうの'+esc(BY[oidA].s)+'（平均）</span>':'');
   $("r-prof").innerHTML=profHTML(B.id,B.s+"という犬種は",true,"ここからは、"+name+"の心に住んでいる"+B.s+"という犬種の、一般的な特徴です。");themeProf($("r-prof"),B.id);
   $("r-comment").innerHTML=commentOf(sp);renderEcho(sp,name);renderLove(sp,name,B);
   ecLoad();var oe=ownId(st.breed);EC_ART=null;$("ec-img").src=renderEC(null);if(oe&&IMG[oe])artImage(BY[oe]).then(function(im){EC_ART=im;$("ec-img").src=renderEC(im)});
@@ -1621,13 +1635,13 @@ function profHTML(id,title,noPals,lead){var b=BY[id],pl=palsOf(id),src=function(
    '<button type="button" data-id="'+pl.near.id+'"><img src="'+src(pl.near.id)+'" alt=""><small>いちばん近い</small><span>'+esc(pl.near.s)+'</span></button>'+
    '<button type="button" data-id="'+pl.far.id+'"><img src="'+src(pl.far.id)+'" alt=""><small>正反対</small><span>'+esc(pl.far.s)+'</span></button></div>');}
 // 性格バー：強いほうの性格と％を色つきで。avgがあれば、その犬種の平均に印
-function tbarsHTML(vals,avg,avgName){return vals.map(function(v,i){v=Math.round(v);var a=AXES[i],c=AXC[i],left=v>=50,pc=left?v:100-v,pos=100-v;
+function tbarsHTML(vals,avg,avgName,me){return vals.map(function(v,i){v=Math.round(v);var a=AXES[i],c=AXC[i],left=v>=50,pc=left?v:100-v,pos=100-v;
   var fill=left?'left:'+pos+'%;right:50%':'left:50%;right:'+(100-pos)+'%';
   if(left&&pos>50)fill='left:50%;right:'+(100-pos)+'%';
   return '<div class="tbar"><div class="top"><span class="lead2" style="color:'+c[1]+'">'+pc+'% '+esc(left?a.a:a.b)+'</span><span class="nm">'+a.name+'</span></div>'+
-   '<div class="track"><span class="fill" style="background:'+c[0]+'55;'+(left?'left:'+pos+'%;right:50%':'left:50%;right:'+(100-pos)+'%')+'"></span>'+
+   '<div class="track"'+(me?' style="margin-top:40px"':'')+'><span class="fill" style="background:'+c[0]+'55;'+(left?'left:'+pos+'%;right:50%':'left:50%;right:'+(100-pos)+'%')+'"></span>'+
    (avg?'<span class="avg" style="left:'+(100-avg[i])+'%" title="'+esc(avgName||"")+'"></span>':'')+
-   '<span class="dot" style="left:'+pos+'%;background:'+c[0]+'"></span></div>'+
+   (me?'<span class="me'+(me.photo?' ph':'')+'" style="left:'+Math.max(5,Math.min(95,pos))+'%;--dc:'+c[0]+'"><img src="'+me.src+'" alt=""><i style="background:'+c[0]+'"></i></span>':'<span class="dot" style="left:'+pos+'%;background:'+c[0]+'"></span>')+'</div>'+
    '<div class="ends"><b style="color:'+(left?c[1]:'')+'">'+esc(a.a)+'</b><b style="color:'+(left?'':c[1])+'">'+esc(a.b)+'</b></div></div>'}).join("")}
 document.addEventListener("click",function(e){var t=e.target.closest(".pals button[data-id]");if(t)openBreed(t.dataset.id)});
 
