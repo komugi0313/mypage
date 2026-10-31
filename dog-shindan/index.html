@@ -213,6 +213,9 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .g-row{display:flex;gap:8px;flex-wrap:wrap}
 .pick{display:flex;flex-direction:column;gap:6px;align-items:center;font-weight:800;font-size:.9rem}
 .pick .seg{width:100%;max-width:420px}
+.visit{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-weight:800;font-size:.85rem;color:var(--muted)}
+.visit .st{display:inline-flex;gap:1px}.visit .st img{width:18px;height:18px}.visit .st img.off{opacity:.22;filter:grayscale(1)}
+.visit .chg{flex-basis:100%;color:var(--teal)}
 /* 図鑑 */
 .zcount{font-family:var(--pop);color:var(--teal);text-align:center}
 .zcount b{font-weight:400;font-size:1.4rem}
@@ -246,7 +249,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
       <p class="note">うちの子も診断すると、2匹の相性もわかります。</p>
     </div>
     <div class="facts"><span>全44タイプ</span><span>24問・約3分</span><span>写真でカードに</span></div>
-    <p class="lead">飼い主さんが、ふだんの様子から24の質問に答えると、うちの子の性格にいちばん近い「心の犬種」がわかります。質問は60問の中から毎回ちがう組み合わせで出ます。</p>
+    <p class="lead">飼い主さんが、ふだんの様子から24の質問に答えると、うちの子の性格にいちばん近い「心の犬種」がわかります。質問は120問の中から毎回ちがう組み合わせで出て、答えるほど診断がくわしくなります。</p>
 
     <div class="panel">
       <h2>うちの子のこと</h2>
@@ -348,6 +351,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
     <label class="toggle" id="ears-wrap"><input type="checkbox" id="in-ears" checked>写真に「心の犬種」の耳をつける</label>
 
     <div class="panel">
+      <p class="visit" id="r-visit"></p>
       <p class="headline" id="r-head"></p>
       <span class="tag" id="r-catch"></span>
       <div class="blend" id="r-blend"></div>
@@ -417,6 +421,8 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
     <div class="btns">
       <button class="start" type="button" id="again">もう一度診断する</button>
       <button class="sub" type="button" id="edit">写真や名前を変える</button>
+      <button class="sub" type="button" id="reset-hist">この子の診断記録を消して、最初からやり直す</button>
+      <p class="note" id="reset-msg" hidden>記録を消しました。次の診断は1回目からになります。</p>
       <button class="sub" type="button" id="r-zukan">44犬種の図鑑を見る</button>
     </div>
     <div class="src">
@@ -448,7 +454,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
         <li>甘え（べったり ↔ マイペース）</li>
         <li>物おじしなさ（のびのび ↔ 繊細）</li>
       </ul>
-      <p>質問は60問あり、毎回それぞれの性格から4問ずつ、合わせて24問が出ます。どの問題も3択で、点数のつけ方は同じなので、どの問題が出ても結果の出し方は変わりません。</p>
+      <p>質問は120問あり、毎回それぞれの性格から4問ずつ、合わせて24問が出ます。前回出た問題はなるべく出ないので、くり返し遊ぶと新しい質問に出会えます。同じ子の答えはスマホの中にためていき、回数を重ねるほど診断がくわしくなります（ほんの少しの差では前回の結果を残すので、結果がころころ変わりません）。どの問題も3択で、点数のつけ方は同じなので、どの問題が出ても結果の出し方は変わりません。</p>
       <p>44犬種それぞれの性格は、次の2つの研究・資料をもとに数字にしています。うちの子の答えと、いちばん近い犬種が「心の犬種」です。</p>
       <ul class="about-list">
         <li>約1万8千頭の飼い主アンケートの研究（Morrill ほか, 2022, Science／Darwin's Ark）</li>
@@ -649,20 +655,83 @@ var QB=[
  [5,"はじめてのお洋服やハーネスをつけると…",["すぐに慣れて平気","少しぎこちない","かたまって動けない"],"iggy"],
  [5,"夜、知らない物音がすると…",["気にせず寝ている","顔を上げて耳をすます","ほえたり、おびえたりする"],"gsd"],
  [5,"知らない家にお泊まりすると…",["すぐにくつろぐ","はじめは落ち着かない","ずっとそわそわしている"],"samoyed"],
- [5,"はじめての階段やつるつるの床では…",["気にせずスタスタ","おそるおそる進む","足がすくんで進めない"],"maltese"]
+ [5,"はじめての階段やつるつるの床では…",["気にせずスタスタ","おそるおそる進む","足がすくんで進めない"],"maltese"],
+ // ---- 追加の60問（2回目以降も新しい質問に出会えるように。各性格10問ずつ。研究の質問項目に対応する場面を選んだ。配点は同じ2点・1点・0点）----
+ [0, "ドッグカフェで、となりの席の人と目が合うと…", ["自分から近づいてアピール", "ちらっと見て、またくつろぐ", "目をそらして身をかくす"], "toypoodle"],
+ [0, "はじめての人が家に泊まりに来ると…", ["すぐにその人のそばでくつろぐ", "少しずつ距離をつめていく", "帰るまで近づかない"], "shihtzu"],
+ [0, "お散歩で、すれちがう人がしゃがんで手を出すと…", ["自分からにおいをかぎに行く", "飼い主さんを見てまよう", "遠回りしてよける"], "bichon"],
+ [0, "知らない人に名前を呼ばれると…", ["うれしそうにかけ寄る", "首をかしげて様子を見る", "飼い主さんのそばからはなれない"], "sheltie"],
+ [0, "家に遊びに来た人が帰るとき…", ["玄関まで見送って名残おしそう", "ちらっと見送る", "帰ってほっとした様子"], "shiba"],
+ [0, "お客さんがソファに座ると…", ["となりに座ったり、ひざに乗ったりする", "少しはなれた所から見ている", "別の部屋で過ごす"], "husky"],
+ [0, "はじめて会う人にしっぽをふるのは…", ["だれにでもすぐふる", "少し慣れてからふる", "家族にしかふらない"], "boxer"],
+ [0, "家族以外の人からおやつをもらうとき…", ["自分からもらいに行く", "飼い主さんがそばにいれば受けとる", "受けとらずにはなれる"], "schnauzer"],
+ [0, "家族の友だちなど、新しい人と仲よくなるまで…", ["その日のうちに仲よし", "何回か会うと仲よし", "かなり時間がかかる"], "minpin"],
+ [0, "お散歩中に会う近所の人には…", ["会うたびに大よろこび", "顔見知りの人にだけしっぽをふる", "だれにでもそっけない"], "spitz"],
+ [1, "お散歩で、仲よしのワンちゃんに会えると…", ["体じゅうでよろこんで遊びだす", "においをかいでごあいさつ程度", "あまり気にしない"], "beagle"],
+ [1, "ほかのワンちゃんがいるお家に遊びに行くと、そこの子とは…", ["すぐにじゃれあう", "となりにいられる", "近づかない"], "lab"],
+ [1, "ワンちゃん同士で遊ぶとき…", ["自分から前足をのばして遊びにさそう", "さそわれたら遊ぶ", "さそわれても乗らない"], "doberman"],
+ [1, "自分とちがう大きさのワンちゃんとも…", ["大きさに関係なく遊べる", "同じくらいの大きさの子なら遊べる", "どの子ともあまり遊ばない"], "pome"],
+ [1, "おやつの時間に、ほかのワンちゃんが近くにいると…", ["並んでいっしょに待てる", "少し気にしながら食べる", "取られないように背を向ける"], "jrt"],
+ [1, "ドッグランで、ほかのワンちゃんが走り出すと…", ["いっしょに走り出す", "目で追う", "飼い主さんのほうへ戻る"], "boston"],
+ [1, "ワンちゃん同士のじゃれあい（プロレスごっこ）は…", ["大好きで夢中になる", "少しだけ参加する", "見ているか、その場をはなれる"], "kingcharles"],
+ [1, "はじめて会うワンちゃんと仲よくなるまで…", ["すぐにうちとける", "何回か会えば仲よし", "なかなか仲よくならない"], "bulldog"],
+ [1, "ワンちゃんのお友だちは…", ["たくさんいる", "決まった数匹がいる", "ほとんどいない"], "samoyed"],
+ [1, "ほかのワンちゃんにほえられると…", ["気にせず遊びにさそう", "いったん距離をとる", "ほえ返すか、にげる"], "chihuahua"],
+ [2, "お出かけ先で、いつもとちがうにおいがすると…", ["夢中でにおいを追いかける", "少しかいでみる", "気にしない"], "maltese"],
+ [2, "はじめてのおやつを出すと…", ["興味しんしんで、すぐにかぐ", "様子を見てから食べる", "知っている物しか食べない"], "iggy"],
+ [2, "引き出しやかばんを開けると…", ["中をのぞきこみに来る", "ちらっと見る", "気にしない"], "cocker"],
+ [2, "鏡や窓に自分が映ると…", ["ふしぎそうにのぞきこむ", "ちらっと見る", "気にしない"], "dalmatian"],
+ [2, "新しい芸（お手・おかわりなど）を教えると…", ["興味しんしんで覚えようとする", "ごほうびがあればやる", "あまり乗り気でない"], "bernese"],
+ [2, "家族が物を落とすと…", ["すぐにかけよってチェック", "気づけば見に来る", "気づかないことが多い"], "bordeaux"],
+ [2, "いつもと同じお散歩道でも…", ["毎日新しい発見があるように歩く", "ときどき寄り道をする", "同じペースで淡々と歩く"], "frenchie"],
+ [2, "葉っぱや虫が動いているのを見つけると…", ["追いかけて調べる", "じっと見つめる", "気にしない"], "pug"],
+ [2, "家の中に、まだ入ったことのない部屋や場所があると…", ["入りたがって中をのぞく", "家族といっしょなら入る", "入ろうとしない"], "westie"],
+ [2, "公園で、はじめての遊具やトンネルを見つけると…", ["自分から入ってみる", "さそわれればやってみる", "近づかない"], "border"],
+ [3, "家族がくつをはくと…", ["お出かけだと大はしゃぎ", "じっと見ている", "気にせず寝ている"], "gsd"],
+ [3, "1日のお散歩は…", ["たっぷり歩いてもまだ足りない", "ほどほどで満足", "短めがちょうどいい"], "stdpoodle"],
+ [3, "お散歩の帰り道は…", ["まだ帰りたくないと足をふんばる", "ふつうに歩いて帰る", "早く帰りたがる"], "yorkie"],
+ [3, "はしゃいでいるときに「おすわり」と言うと…", ["なかなか止まれない", "少しして止まる", "すぐに落ち着ける"], "cavalier"],
+ [3, "家の中を走り回る「ハイテンションタイム」は…", ["毎日のようにある", "ときどきある", "ほとんどない"], "chin"],
+ [3, "引っぱりっこ遊びは…", ["何度でも全力", "少し遊ぶ", "あまりしない"], "corgi"],
+ [3, "1日のうち、起きて動いている時間は…", ["長くて、よく動いている", "ふつうくらい", "短くて、ほとんど寝ている"], "golden"],
+ [3, "公園の広い芝生に着くと…", ["全力で走り回りたがる", "においをかぎながら歩く", "座ってのんびり"], "akita"],
+ [3, "新しいおもちゃで遊ぶ時間は…", ["長い時間あきずに遊ぶ", "しばらく遊ぶ", "すぐにやめる"], "mdachs"],
+ [3, "夕方や夜になっても…", ["まだまだ元気いっぱい", "少し遊んでから寝る", "早めにおやすみ"], "papillon"],
+ [4, "飼い主さんがテレビを見ていると…", ["体をくっつけてくる", "同じ部屋でくつろぐ", "別の場所で過ごす"], "peke"],
+ [4, "飼い主さんが出かける準備をしていると…", ["そわそわ後をついて回る", "ちらっと見る", "気にせずくつろぐ"], "griffon"],
+ [4, "朝、飼い主さんが起きると…", ["顔をなめに来る", "近くに来てあいさつ", "自分のペースで起きてくる"], "chow"],
+ [4, "家族が別々の部屋にいると…", ["行ったり来たりして、みんなを確認", "いちばん好きな人のそばにいる", "自分の好きな場所にいる"], "stbernard"],
+ [4, "前足やあごを、飼い主さんにのせてくることは…", ["よくある", "ときどきある", "ほとんどない"], "toypoodle"],
+ [4, "飼い主さんと目が合うと…", ["しっぽをふって近づいてくる", "しっぽだけ少しふる", "そのまま知らんぷり"], "shihtzu"],
+ [4, "ひとりでお留守番するときは…", ["さみしそうに鳴いたり、ドアの前で待ったりする", "しばらくすると寝ている", "へっちゃらでくつろぐ"], "bichon"],
+ [4, "家の中での、いつもの居場所は…", ["飼い主さんの足もとやひざの上", "家族が見える場所", "自分だけのお気に入りの場所"], "sheltie"],
+ [4, "家族がほかのワンちゃんや子どもをかまっていると…", ["割りこんでアピール", "ちらっと見る", "気にしない"], "shiba"],
+ [4, "お散歩中、リードがゆるんでいても…", ["飼い主さんのすぐ横を歩く", "ときどきふり返る", "好きな方へずんずん進む"], "husky"],
+ [5, "風で物がバタンと倒れると…", ["ちらっと見て、すぐ平気", "びくっとするけれど、すぐ戻る", "しばらくおびえている"], "boxer"],
+ [5, "帽子やサングラスをかけた人を見ると…", ["気にしない", "少しじっと見る", "ほえたり、こわがったりする"], "schnauzer"],
+ [5, "足やつめをさわられると…", ["平気", "少しいやがる", "とてもいやがる"], "minpin"],
+ [5, "人ごみや、にぎやかな商店街では…", ["楽しそうに歩く", "少し緊張して歩く", "抱っこをせがむ"], "spitz"],
+ [5, "雨や風の強い日のお散歩は…", ["気にせず歩く", "少しいやそう", "外に出たがらない"], "beagle"],
+ [5, "エレベーターや自動ドアでは…", ["平気でスタスタ", "少し身がまえる", "こわがって進めない"], "lab"],
+ [5, "シャンプーやブラッシングの時間は…", ["平気でじっとしている", "少しいやがる", "とてもこわがる"], "doberman"],
+ [5, "遠くで工事の音や、ほかの犬の鳴き声がすると…", ["気にしない", "耳を動かして気にする", "落ち着かなくなる"], "pome"],
+ [5, "家族がいつもとちがう服（コートや帽子）を着ると…", ["いつもどおり", "少しにおいを確かめる", "びっくりしてほえる"], "jrt"],
+ [5, "風船やビニール袋がカサカサ動くと…", ["気にしない", "少しはなれて見る", "こわがってにげる"], "boston"]
 ];
 // 毎回、各性格から4問ずつ（合計24問）を選ぶ。前回出た問題はなるべく出さない。
 // どの問題も同じ「3択・2点／1点／0点」なので、何問目に何が出ても点数の出し方は同じ
 var PER=4,N=PER*6,Q=[];
 function newQuiz(){
-  var last=[];try{last=JSON.parse(localStorage.getItem("w44_lastq")||"[]")}catch(e){}
+  // 直近4回ぶんに出た問題はなるべく出さない（各性格20問なので、5回続けて遊んでも同じ問題にほぼ当たらない）
+  var hist=[];try{hist=JSON.parse(localStorage.getItem("w44_lastq2")||"[]")}catch(e){}
+  var last=[].concat.apply([],hist);
   var sh=function(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a};
   var byAx=[0,1,2,3,4,5].map(function(ax){
     var ids=QB.map(function(q,i){return i}).filter(function(i){return QB[i][0]===ax});
     var fresh=sh(ids.filter(function(i){return last.indexOf(i)<0})),used=sh(ids.filter(function(i){return last.indexOf(i)>=0}));
     return fresh.concat(used).slice(0,PER)});
   var pick=[];for(var r=0;r<PER;r++)sh([0,1,2,3,4,5]).forEach(function(ax){pick.push(byAx[ax][r])});
-  try{localStorage.setItem("w44_lastq",JSON.stringify(pick))}catch(e){}
+  hist.push(pick);hist=hist.slice(-4);try{localStorage.setItem("w44_lastq2",JSON.stringify(hist))}catch(e){}
   Q=pick.map(function(i){return QB[i]});
 }
 
@@ -1169,8 +1238,20 @@ function fontsReady(){
 
 // ---------- 結果 ----------
 var last=null;
+// ---------- 答えをためる：同じ子の前回までの答えと合わせて判定する ----------
+function scoreRaw(ans){var sum=[0,0,0,0,0,0],cnt=[0,0,0,0,0,0];Q.forEach(function(q,i){var k=ans[i]==null?1:ans[i];sum[q[0]]+=2-k;cnt[q[0]]+=2});return {sum:sum,cnt:cnt}}
+function histKey(){return "w44_hist_"+st.name+"_"+st.breed}
+function histGet(){try{return JSON.parse(localStorage.getItem(histKey())||"null")}catch(e){return null}}
+function histSet(h){try{localStorage.setItem(histKey(),JSON.stringify(h))}catch(e){}}
+var HYS=3; // 前回の心の犬種との差がこれより小さいときは、前回の結果をそのまま残す
 function finish(){
-  var pct=score(st.ans),rank=ranking(pct),main=rank[0].b;
+  var raw=scoreRaw(st.ans),h=histGet()||{sum:[0,0,0,0,0,0],cnt:[0,0,0,0,0,0],n:0,last:null,first:null};
+  var sum=raw.sum.map(function(v,i){return v+h.sum[i]}),cnt=raw.cnt.map(function(v,i){return v+h.cnt[i]});
+  var pct=sum.map(function(v,i){return Math.round(v/cnt[i]*100)}),rank=ranking(pct),prev=h.last;
+  if(prev&&rank[0].b.id!==prev){var pi=rank.findIndex(function(x){return x.b.id===prev});
+    if(pi>0&&rank[pi].d-rank[0].d<HYS){var t=rank[pi];rank.splice(pi,1);rank.unshift(t);var m0=rank[1].m;rank[1].m=t.m;t.m=m0}}
+  var main=rank[0].b;st.visit={n:h.n+1,prev:prev,first:h.first||main.id};
+  histSet({sum:sum,cnt:cnt,n:h.n+1,last:main.id,first:h.first||main.id});
   last={pct:pct,rank:rank,main:main,hid:hiddenOf(pct,main.id)};markSeen(main.id);renderResult();show("s-result");
 }
 function trait(i){return last.pct[i]>=50?AXES[i].ta:AXES[i].tb}
@@ -1187,6 +1268,9 @@ function renderResult(){
     $("card-img").src=renderCard(CO);$("meishi-img").src=renderMeishi(CO);GKEY="w44_guide_"+st.name+"_"+last.main.id;GEDIT=gGet();CO.guide=guideOf();renderGuide();CO.msg=($("in-msg").value||"").trim();$("meishi-back").src=renderMeishiBack(CO);FEST={o:CO};$("fest-out").hidden=true;
   });
   renderMeters();renderPairPanel();
+  var V=st.visit||{n:1},stn=Math.min(5,V.n),vs="";for(var si=0;si<5;si++)vs+='<img src="icon/star.png" alt=""'+(si<stn?"":' class="off"')+'>';
+  var chg=!V.prev?"答えるたびに新しい質問が出て、診断がくわしくなります":V.prev===B.id?"前回と同じ "+B.s+"ハート。結果が安定してきました":"前回は "+(BY[V.prev]?BY[V.prev].s:"")+"ハート → 今回は "+B.s+"ハートに。答えがふえて、くわしくなりました";
+  $("r-visit").innerHTML='<span>診断 '+V.n+'回目</span><span>精度 <span class="st" role="img" aria-label="精度 5つ中'+stn+'">'+vs+'</span></span><span class="chg">'+esc(chg)+'</span>';
   var BL=blendOf();$("r-blend").innerHTML='<small>'+esc(name)+'の性格ブレンド</small><div class="bar2">'+BL.map(function(b){return '<span style="flex:'+b.pct+';background:'+b.col+'"></span>'}).join("")+'</div><div class="lg">'+BL.map(function(b){return '<span><i style="background:'+b.col+'"></i>'+esc(b.name)+' '+b.pct+'%</span>'}).join("")+'</div><small>※血統ではなく、性格の近さから出した割合です</small>';
   var spH=spread(last.pct);
   $("r-head").innerHTML=pure?'<img class="crown-i" src="icon/crown.png" alt="">'+esc(name)+"は、<em>生粋の"+esc(subOf(spH))+"タイプの"+esc(body)+"</em>！":esc(name)+"は、<em>"+esc(B.s)+"ハートの"+esc(short)+"</em>"+'<span class="hsub">'+esc(subOf(spH))+"タイプ。"+esc(short)+"の中に、"+esc(B.s)+"の心が住んでいます</span>";
@@ -1440,7 +1524,8 @@ $("sh-ig").addEventListener("click",function(){shareCard("カードを保存し�
 $("sh-line").addEventListener("click",function(){window.open("https://line.me/R/share?text="+encodeURIComponent(shareText()+"\n"+shareUrl()),"_blank","noopener")});
 $("sh-x").addEventListener("click",function(){window.open("https://twitter.com/intent/tweet?text="+encodeURIComponent(shareText())+"&url="+encodeURIComponent(shareUrl()),"_blank","noopener")});
 
-$("again").addEventListener("click",function(){newQuiz();st.qi=0;st.ans=new Array(N).fill(null);renderQ();show("s-quiz")});
+$("reset-hist").addEventListener("click",function(){try{localStorage.removeItem(histKey())}catch(e){}$("reset-msg").hidden=false});
+$("again").addEventListener("click",function(){$("reset-msg").hidden=true;newQuiz();st.qi=0;st.ans=new Array(N).fill(null);renderQ();show("s-quiz")});
 $("edit").addEventListener("click",function(){show("s-start")});
 })();
 </script>
