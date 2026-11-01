@@ -305,6 +305,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .mp-pill .mp-av{width:28px;height:28px}
 .myhub{display:flex;flex-direction:column;gap:12px}
 .mp-dogs{display:flex;gap:6px;flex-wrap:wrap}
+.dogs-l{flex-basis:100%;font-size:.8rem;font-weight:800;color:var(--muted)}
 .mp-dogs button{min-height:40px;padding:0 14px;border-radius:999px;border:2px solid var(--mint);background:var(--card);font-weight:800;color:var(--teal);font-size:.85rem}
 .mp-dogs button.on{background:var(--teal);color:#FFFFFF;border-color:var(--teal)}
 .mp-prof{display:flex;align-items:center;gap:14px;background:var(--card);border-radius:20px;padding:14px}
@@ -787,6 +788,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
         <button type="button" id="edit">写真や名前を変える</button>
         <button type="button" id="mp-ribbon">おねがい（黄色いリボン）</button>
         <button type="button" id="reset-hist" class="danger">診断記録を消して、やり直す</button>
+        <button type="button" id="del-dog" class="danger">この子をマイページから消す</button>
         <div class="mp-confirm" id="mp-confirm" hidden><p id="mp-confirm-t">記録を消すと、次の診断は1回目からになります。消しますか？</p><div><button type="button" id="mp-yes" class="danger">消す</button><button type="button" id="mp-no">やめる</button></div></div>
         <p class="note" id="reset-msg" hidden>記録を消しました。次の診断は1回目からになります。</p>
       </div>
@@ -3663,7 +3665,10 @@ function show(id){["s-start","s-quiz","s-result","s-zukan","s-about","s-ecbook",
 var PERMS=[[0,1,2],[1,0,2],[2,1,0],[0,2,1],[1,2,0],[2,0,1]];
 function orderOf(i){return ((i*5+3)%4<2)?[0,1,2,3,4]:[4,3,2,1,0]}
 $("go-quiz").addEventListener("click",function(){
-  st.name=$("in-name").value.trim()||"うちの子";
+  var nm=$("in-name").value.trim();
+  // 名前は必ず入れてもらう（記録・カードをその子ごとに分けるため）
+  if(!nm){msg("お名前を入れてください。記録やカードに使います。");$("in-name").focus();return}
+  st.name=nm;
   var b=$("in-breed").value;
   st.breed=b==="x:その他"?("x:"+($("in-breed-other").value.trim()||"うちの子")):b;
   if(b==="x:その他"){var tw=$("in-breed-other").value.trim().replace(/[\s・･]/g,"");
@@ -3950,7 +3955,14 @@ function meMark(){var oid=ownId(st.breed);
 // ---------- うちの子手帳：成長の記録・予定・ワン友帳（このスマホの中だけに保存） ----------
 function lsGet(k,d){try{var v=JSON.parse(localStorage.getItem(k)||"null");return v==null?d:v}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
-function dogKey(){return st.name+"_"+st.breed}
+(function(){try{if(localStorage.getItem("w44_mig_name"))return;
+  var g=JSON.parse(localStorage.getItem("w44_grow")||"{}")||{},n={},hb={},lastT={};
+  Object.keys(g).forEach(function(k){var d=g[k]||{},nk=d.n||"うちの子",L=d.list||[],t=L.length?L[L.length-1].t:0;
+    if(!n[nk])n[nk]={n:nk,b:d.b,list:[]};n[nk].list=n[nk].list.concat(L);if(t>=(lastT[nk]||0)){lastT[nk]=t;n[nk].b=d.b}
+    var hk="w44_hist_"+k,h=JSON.parse(localStorage.getItem(hk)||"null");if(h&&(!hb[nk]||(h.n||0)>(hb[nk].n||0)))hb[nk]=h;if(hk!=="w44_hist_"+nk)localStorage.removeItem(hk)});
+  Object.keys(n).forEach(function(k){n[k].list.sort(function(a,b){return a.t-b.t});n[k].list=n[k].list.slice(-30);if(hb[k]){hb[k].n=Math.max(hb[k].n||0,n[k].list.length);localStorage.setItem("w44_hist_"+k,JSON.stringify(hb[k]))}});
+  localStorage.setItem("w44_grow",JSON.stringify(n));localStorage.setItem("w44_mig_name","1")}catch(e){}})();
+function dogKey(){return st.name} // 子は名前で分ける（犬種を選び直しても同じ子）
 function ageLabel(a){return a==="puppy"?"1歳未満":a==="senior"?"7歳以上":"1〜6歳"}
 function ymd(t){var d=new Date(t);return d.getFullYear()+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日"}
 // 成長の記録：診断のたびに、その回の答えから出た性格と、心の犬種を残す
@@ -3961,7 +3973,7 @@ var gDog=null;
 function renderGrow(){var g=lsGet("w44_grow",{}),keys=Object.keys(g);
   $("g-empty").hidden=!!keys.length;$("g-tl-panel").hidden=!keys.length;$("g-chart-panel").hidden=!keys.length;$("g-dogs").hidden=keys.length<2;
   if(!keys.length)return;if(!g[gDog])gDog=g[dogKey()]?dogKey():keys[0];
-  $("g-dogs").innerHTML=keys.map(function(k){var d=g[k],o=ownId(d.b);return '<button type="button" data-k="'+esc(k)+'"'+(k===gDog?' class="on"':'')+'>'+(o&&IMG[o]?'<img src="'+IMG[o]+'?v=5" alt="">':'')+esc(d.n)+'</button>'}).join("");
+  $("g-dogs").innerHTML='<span class="dogs-l">どの子の記録を見る？</span>'+keys.map(function(k){var d=g[k],o=ownId(d.b);return '<button type="button" data-k="'+esc(k)+'"'+(k===gDog?' class="on"':'')+'>'+(o&&IMG[o]?'<img src="'+IMG[o]+'?v=5" alt="">':'')+esc(d.n)+'</button>'}).join("");
   var d=g[gDog],A=d.list.filter(function(r){return BY[r.m]}),L=d.list.filter(function(r){return r.p&&r.p.length===AXES.length});$("g-title").textContent=d.n+"の気質の犬種のうつりかわり";
   $("g-tl").innerHTML=A.slice().reverse().map(function(r,i){var b=BY[r.m];return '<div class="it">'+(IMG[r.m]?'<img src="'+IMG[r.m]+'?v=5" alt="">':'')+'<div><small>'+ymd(r.t)+'・'+ageLabel(r.a)+(i===0?'（いちばん新しい）':'')+'</small><em>'+esc(b?b.s:"")+'気質</em></div></div>'}).join("");
   if(L.length<2){$("g-chart").innerHTML='<p class="note">'+(L.length?'次に診断すると':'新しい診断（10の性格）を2回すると')+'、性格の変化がグラフで見られます。</p>';$("g-note").textContent="";return}
@@ -4026,7 +4038,7 @@ function curAvId(){var g=lsGet("w44_grow",{}),k=gDog&&g[gDog]?gDog:(st.breed&&g[
   if(d){var o=ownId(d.b);if(o&&IMG[o])return o;var L=d.list||[];return L.length?L[L.length-1].m:null}var o2=st.breed&&ownId(st.breed);return o2||(last&&last.main.id)||null}
 function setAvatars(){var h=avHTML(curAvId());[].forEach.call($$("[data-av]"),function(e){e.innerHTML=h});if($("r-my-t"))$("r-my-t").textContent=(st.name&&st.name.length<=6?st.name+"の":"")+"マイページ"}
 function renderHub(){var g=lsGet("w44_grow",{}),keys=Object.keys(g);if(!g[gDog])gDog=st.breed&&g[dogKey()]?dogKey():keys[0]||null;
-  $("mp-dogs").hidden=keys.length<2;$("mp-dogs").innerHTML=keys.map(function(k){return '<button type="button" data-k="'+esc(k)+'"'+(k===gDog?' class="on"':'')+'>'+esc(g[k].n)+'</button>'}).join("");
+  $("mp-dogs").hidden=keys.length<2;$("mp-dogs").innerHTML='<span class="dogs-l">どの子のページを見る？</span>'+keys.map(function(k){return '<button type="button" data-k="'+esc(k)+'"'+(k===gDog?' class="on"':'')+'>'+esc(g[k].n)+'</button>'}).join("");
   var d=gDog?g[gDog]:null;
   if(d){var L=d.list||[],lm=L.length?BY[L[L.length-1].m]:null,o=ownId(d.b),body=bodyShort(d.b);
     $("mp-prof").innerHTML='<span class="mp-av">'+avHTML(curAvId())+'</span><div><b>'+esc(d.n)+'</b><small>'+(lm?esc(lm.s+"気質の"+(o?body:"子")):"")+'・診断'+L.length+'回</small></div>'}
@@ -4238,7 +4250,7 @@ var last=null;
 // ---------- 答えをためる：同じ子の前回までの答えと合わせて判定する ----------
 // 5択：1つ目（左の性格がいちばん強い）＝4点 … 5つ目＝0点
 function scoreRaw(ans){var sum=AXZ(),cnt=AXZ();Q.forEach(function(q,i){var k=ans[i];if(k==="s")return;if(k==null)k=2;sum[q[0]]+=4-k;cnt[q[0]]+=4});return {sum:sum,cnt:cnt}}
-function histKey(){return "w44_hist_"+st.name+"_"+st.breed}
+function histKey(){return "w44_hist_"+st.name}
 function histGet(){try{return JSON.parse(localStorage.getItem(histKey())||"null")}catch(e){return null}}
 function histSet(h){try{localStorage.setItem(histKey(),JSON.stringify(h))}catch(e){}}
 var HYS=1; // 前回の気質の犬種との差がこれより小さいときだけ、前回の結果を残す
@@ -4598,9 +4610,16 @@ $("sh-ig").addEventListener("click",function(){shareCard("カードを保存し�
 $("sh-line").addEventListener("click",function(){window.open("https://line.me/R/share?text="+encodeURIComponent(shareText()+"\n"+shareUrl()),"_blank","noopener")});
 $("sh-x").addEventListener("click",function(){window.open("https://twitter.com/intent/tweet?text="+encodeURIComponent(shareText())+"&url="+encodeURIComponent(shareUrl()),"_blank","noopener")});
 
-$("reset-hist").addEventListener("click",function(){var g=lsGet("w44_grow",{}),d=gDog&&g[gDog];$("mp-confirm-t").textContent=((d&&d.n)||st.name||"うちの子")+"の診断記録を消すと、次の診断は1回目からになります。消しますか？";$("mp-confirm").hidden=false;$("reset-msg").hidden=true});
+var mpMode="reset";
+$("del-dog").addEventListener("click",function(){var g=lsGet("w44_grow",{}),d=gDog&&g[gDog];if(!d){$("my-msg").textContent="消せる子がいません。";$("my-msg").hidden=false;return}
+  mpMode="del";$("mp-confirm-t").textContent=d.n+"をマイページから消すと、"+d.n+"の診断の記録と成長の記録がなくなります。消しますか？";$("mp-confirm").hidden=false;$("reset-msg").hidden=true});
+$("reset-hist").addEventListener("click",function(){mpMode="reset";var g=lsGet("w44_grow",{}),d=gDog&&g[gDog];$("mp-confirm-t").textContent=((d&&d.n)||st.name||"うちの子")+"の診断記録を消すと、次の診断は1回目からになります。消しますか？";$("mp-confirm").hidden=false;$("reset-msg").hidden=true});
 $("mp-no").addEventListener("click",function(){$("mp-confirm").hidden=true});
-$("mp-yes").addEventListener("click",function(){var g=lsGet("w44_grow",{}),k=gDog&&g[gDog]?"w44_hist_"+gDog:histKey();try{localStorage.removeItem(k)}catch(e){}$("mp-confirm").hidden=true;$("reset-msg").hidden=false});
+$("mp-yes").addEventListener("click",function(){
+  if(mpMode==="del"){var g2=lsGet("w44_grow",{}),nm=g2[gDog]?g2[gDog].n:"";delete g2[gDog];lsSet("w44_grow",g2);try{localStorage.removeItem("w44_hist_"+gDog)}catch(e){}
+    gDog=null;$("mp-confirm").hidden=true;renderHub();$("reset-msg").textContent=nm+"をマイページから消しました。";$("reset-msg").hidden=false;return}
+  $("reset-msg").textContent="記録を消しました。次の診断は1回目からになります。";
+  var g=lsGet("w44_grow",{}),k=gDog&&g[gDog]?"w44_hist_"+gDog:histKey();try{localStorage.removeItem(k)}catch(e){}$("mp-confirm").hidden=true;$("reset-msg").hidden=false});
 $("again").addEventListener("click",function(){$("reset-msg").hidden=true;newQuiz();st.qi=0;st.ans=new Array(N).fill(null);renderQ();show("s-quiz")});
 $("edit").addEventListener("click",function(){show("s-start")});
 })();
