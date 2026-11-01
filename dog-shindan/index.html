@@ -56,6 +56,10 @@ button{font:inherit;cursor:pointer;color:var(--ink)}
 .seg button{flex:1 1 auto;min-height:48px;border-radius:999px;border:2px solid var(--mint);background:var(--card);font-weight:800;padding:6px 14px}
 .seg button.on{background:var(--teal);border-color:var(--teal);color:#FFFFFF}
 .apply-edit{display:block;margin:12px auto 0;min-height:48px;padding:0 22px;border-radius:999px;border:2px solid var(--mint);background:var(--card);color:var(--teal);font-weight:800;font-size:.95rem}
+.resume{background:var(--soft);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px;text-align:center;margin-bottom:14px}
+.resume p{margin:0;font-weight:800;text-wrap:balance}
+.resume>div{display:flex;flex-direction:column;gap:8px;align-items:center}
+#resume-no{min-height:44px;border:0;background:transparent;color:var(--muted);font-weight:800;text-decoration:underline}
 .start{display:block;margin:0 auto;background:var(--card);border:4px solid var(--teal);color:var(--teal);border-radius:999px;font-family:var(--pop);font-size:1.3rem;padding:6px 44px;min-height:58px;box-shadow:0 4px 0 var(--teal)}
 .start:active{transform:translateY(3px);box-shadow:0 1px 0 var(--teal)}
 .photo-row{display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:center}
@@ -280,10 +284,11 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .tags-plus{font-weight:800;color:var(--muted)}
 .tags-row button{min-height:40px;border-radius:999px;border:2px solid var(--mint);background:var(--card);font-weight:800;font-size:.85rem;padding:0 12px;color:var(--teal)}
 .tags-row button.on{background:var(--mint-l);border-color:var(--teal)}
-.ec-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ec-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.ec-form>*{min-width:0}.ec-form input{width:100%;min-width:0}
 .ec-memo{grid-column:1/-1}
 .ec-memo textarea{font:inherit;font-weight:500;border-radius:14px;border:2px solid var(--mint-l);background:var(--bg);color:var(--ink);padding:10px 14px;resize:vertical;min-height:72px}
-@media (max-width:420px){.ec-form{grid-template-columns:1fr}}
+@media (max-width:420px){.ec-form{grid-template-columns:minmax(0,1fr)}}
 .eb-list{display:flex;flex-direction:column;gap:18px}
 .eb-item{background:var(--card);border:3px solid #E7B7B7;border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:10px}
 .eb-item img{width:100%;border-radius:10px}
@@ -440,6 +445,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
       <p class="ft" id="f-text"></p>
       <p class="note">うちの子も診断すると、2匹の相性もわかります。</p>
     </div>
+    <div class="resume" id="resume" hidden><p id="resume-t"></p><div><button type="button" id="resume-go" class="start">続きから ▶</button><button type="button" id="resume-no">最初からやり直す</button></div></div>
     <div class="facts"><span>全44タイプ</span><span>30問・約4分</span><span>写真でカードに</span></div>
     <p class="lead">飼い主さんが、ふだんの様子から30の質問に答えると、うちの子の性格にいちばん近い「気質の犬種」がわかります。質問は毎回ちがう組み合わせで出て、答えるほど診断がくわしくなります。</p>
 
@@ -3680,9 +3686,15 @@ function readIn(){
   return true}
 $("go-quiz").addEventListener("click",function(){
   if(!readIn())return;
-  $("apply-edit").hidden=true;newQuiz();st.qi=0;st.ans=new Array(N).fill(null);renderQ();show("s-quiz");
+  $("apply-edit").hidden=true;$("resume").hidden=true;newQuiz();st.qi=0;st.ans=new Array(N).fill(null);renderQ();show("s-quiz");
 });
 // 「写真や名前を変える」から来たときは、質問をやり直さずに結果とカードへ反映できる
+(function(){var p=progGet();if(!p)return;var done=p.ans.filter(function(x){return x!=null}).length;
+  $("resume-t").textContent=p.n+"の診断のとちゅうです（"+N+"問中 "+done+"問）";$("resume").hidden=false;
+  $("resume-go").addEventListener("click",function(){st.name=p.n;st.breed=p.b;if(p.a)st.age=p.a;$("in-name").value=p.n;
+    Q=p.q.map(function(i){return QB[i]});st.ans=p.ans;st.qi=Math.min(p.qi,N-1);st.repl=p.repl||AXZ();st.seenQ=(p.seen||[]).map(function(i){return QB[i]}).filter(Boolean);
+    $("resume").hidden=true;renderQ();show("s-quiz")});
+  $("resume-no").addEventListener("click",function(){progClear();$("resume").hidden=true})})();
 $("apply-edit").addEventListener("click",function(){
   var old=st.name,ob=st.breed;if(!readIn()){st.name=old;st.breed=ob;return}
   if(st.name!==old){var g=lsGet("w44_grow",{});
@@ -3694,8 +3706,12 @@ $("apply-edit").addEventListener("click",function(){
   var g2=lsGet("w44_grow",{});if(g2[st.name]){g2[st.name].n=st.name;g2[st.name].b=st.breed;lsSet("w44_grow",g2)}
   renderResult();setAvatars();show("s-result");toast("変更をカードに反映しました");
 });
+// とちゅうで閉じても、続きから答えられるように（このスマホの中だけに保存）
+function progSave(){try{localStorage.setItem("w44_prog",JSON.stringify({t:Date.now(),n:st.name,b:st.breed,a:st.age,q:Q.map(function(x){return QB.indexOf(x)}),ans:st.ans,qi:st.qi,repl:st.repl,seen:(st.seenQ||[]).map(function(x){return QB.indexOf(x)})}))}catch(e){}}
+function progGet(){try{var p=JSON.parse(localStorage.getItem("w44_prog")||"null");if(!p||Date.now()-p.t>3*864e5||!p.q||p.q.length!==N||p.q.some(function(i){return i<0||!QB[i]})||!p.n)return null;return p}catch(e){return null}}
+function progClear(){try{localStorage.removeItem("w44_prog")}catch(e){}}
 function renderQ(){
-  var q=Q[st.qi];st.busy=false;
+  var q=Q[st.qi];st.busy=false;progSave();
   $("q-count").textContent="Q."+(st.qi+1)+" ／ "+N;
   $("q-prog").style.width=(st.qi/N*100)+"%";$("q-ball").style.left=(st.qi/N*100)+"%";$("q-ball").style.transform="translate(-50%,-50%) rotate("+(st.qi*60)+"deg)";
   $("q-dog").innerHTML=dog(q[3]);
@@ -4272,7 +4288,7 @@ function histGet(){try{return JSON.parse(localStorage.getItem(histKey())||"null"
 function histSet(h){try{localStorage.setItem(histKey(),JSON.stringify(h))}catch(e){}}
 var HYS=1; // 前回の気質の犬種との差がこれより小さいときだけ、前回の結果を残す
 var HIST_W=0.4; // 前回までの答えの重み（今回の答えを中心にする）
-function finish(){
+function finish(){progClear();
   var raw=scoreRaw(st.ans),h=histGet();if(!h||!h.sum||h.sum.length!==AXI.length)h={sum:AXZ(),cnt:AXZ(),n:0,last:null,first:null};
   var sum=raw.sum.map(function(v,i){return v+h.sum[i]*HIST_W}),cnt=raw.cnt.map(function(v,i){return v+h.cnt[i]*HIST_W});
   var pct=sum.map(function(v,i){return cnt[i]?Math.round(v/cnt[i]*100):50}),rank=ranking(pct),prev=h.last;
