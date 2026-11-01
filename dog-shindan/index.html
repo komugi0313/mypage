@@ -98,7 +98,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .headline .h-l1{font-family:var(--pop);font-size:1.25rem;color:var(--teal);line-height:1.35}
 .headline .h-l2{font-family:var(--pop);font-size:2rem;line-height:1.2;color:var(--ink)}
 .headline .h-l2.long{font-size:1.45rem}
-.headline .nw{display:inline-block}
+.headline .nw{display:inline-block;white-space:nowrap}
 .tag.r-catch{align-self:center}
 .hsub{margin:0;text-align:center;font-weight:800;font-size:.88rem;color:var(--muted);text-wrap:balance;word-break:keep-all;overflow-wrap:anywhere}
 .headline,.rank li span{word-break:keep-all;overflow-wrap:anywhere}
@@ -4322,6 +4322,11 @@ function finish(){progClear();
   last={pct:pct,rank:rank,main:main,hid:hiddenOf(pct,main.id)};markSeen(main.id);renderResult();setAvatars();show("s-result");
 }
 function trait(i){return last.pct[i]>=50?AXES[i].ta:AXES[i].tb}
+// 結果のタイトル：1つの言葉が入りきらないときは、文字を少しずつ小さくして1行に収める（泣き別れを作らない）
+function fitHead(){var h=$("r-head");if(!h||!h.clientWidth)return;[].forEach.call(h.querySelectorAll(".h-l1,.h-l2"),function(el){el.style.fontSize="";
+  var sp=[].slice.call(el.querySelectorAll(".nw")),fs=parseFloat(getComputedStyle(el).fontSize),lim=h.clientWidth-16;
+  while(fs>13&&sp.some(function(x){return x.getBoundingClientRect().width>lim})){fs-=1;el.style.fontSize=fs+"px"}})}
+if(window.ResizeObserver)new ResizeObserver(function(){fitHead()}).observe($("r-head"));
 function renderResult(){
   var B=last.main,name=st.name,body=bodyName(st.breed),short=bodyShort(st.breed),HB=last.hid.b;
   var oid=ownId(st.breed),own=oid?last.rank.findIndex(function(x){return x.b.id===oid}):-1;
@@ -4349,6 +4354,7 @@ function renderResult(){
   $("r-head").innerHTML='<span class="h-who">'+hwho+'</span><span class="h-l1">'+hl1+'</span><span class="h-l2'+(String(hl2).length>8?' long':'')+'">'+nwS(hl2+(pure?"！":""))+'</span>';
   $("r-hsub").textContent=subOf(spH)+"タイプ。"+(isUnknown()||!ownId(st.breed)?name+"の性格は、"+B.s+"にいちばん近いタイプです":short+"らしさの中に、"+B.s+"らしい気質もあわせ持っています");
   $("r-hsub").hidden=!!pure;
+  fitHead();
   $("r-catch").textContent=B.c;
   var rows=last.rank.slice(0,5).map(function(x,i){return [i,x]});if(own>=5)rows.push([own,last.rank[own]]);
   $("r-rank").innerHTML=rows.map(function(r){var x=r[1];
