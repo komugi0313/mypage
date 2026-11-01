@@ -93,7 +93,14 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .save-tip{font-size:.85rem;color:var(--muted);text-align:center}
 .toggle{display:flex;align-items:center;gap:10px;min-height:48px;font-weight:800;justify-content:center}
 .toggle input{width:24px;height:24px;accent-color:var(--teal)}
-.headline{font-family:var(--pop);font-size:1.45rem;line-height:1.5}
+.headline{margin:0;display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;padding:14px 8px 16px;border-radius:18px;background:var(--tint,#E4F1F4)}
+.headline .h-who{font-family:var(--body);font-weight:800;font-size:.95rem;color:var(--muted)}
+.headline .h-l1{font-family:var(--pop);font-size:1.25rem;color:var(--teal);line-height:1.35}
+.headline .h-l2{font-family:var(--pop);font-size:2rem;line-height:1.2;color:var(--ink)}
+.headline .h-l2.long{font-size:1.45rem}
+.headline .nw{display:inline-block}
+.tag.r-catch{align-self:center}
+.hsub{margin:0;text-align:center;font-weight:800;font-size:.88rem;color:var(--muted);text-wrap:balance;word-break:keep-all;overflow-wrap:anywhere}
 .headline,.rank li span{word-break:keep-all;overflow-wrap:anywhere}
 .headline .hsub{display:block;font-family:var(--body);font-weight:800;font-size:.9rem;color:var(--muted);margin-top:4px}
 .headline em{font-style:normal;color:var(--teal)}
@@ -541,7 +548,8 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
       <p class="visit" id="r-visit"></p>
       <p class="note" id="r-skip" hidden style="background:#FFF8D6;border-radius:12px;padding:8px 12px;color:#2F3A45;font-weight:800;text-align:left"></p>
       <p class="headline" id="r-head"></p>
-      <span class="tag" id="r-catch"></span>
+      <span class="tag r-catch" id="r-catch"></span>
+      <p class="hsub" id="r-hsub"></p>
       <div class="blend" id="r-blend"></div>
       <p class="comment" id="r-comment"></p>
     </div>
@@ -4332,7 +4340,15 @@ function renderResult(){
   $("r-visit").innerHTML='<span>診断 '+V.n+'回目</span>'+(V.n>1?'<span>くわしさ <span class="st" role="img" aria-label="くわしさ 5つ中'+stn+'">'+vs+'</span></span>':'')+'<span class="chg">'+esc(chg)+'</span>';
   var BL=blendOf();$("r-blend").innerHTML='<small>'+esc(name)+'の性格ブレンド</small><div class="bar2">'+BL.map(function(b){return '<span style="flex:'+b.pct+';background:'+b.col+'"></span>'}).join("")+'</div><div class="lg">'+BL.map(function(b){return '<span><i style="background:'+b.col+'"></i>'+esc(b.name)+' '+b.pct+'%</span>'}).join("")+'</div><small>'+(ownId(st.breed)?esc(short)+'の割合は「'+esc(short)+'度」、残りを性格の近い犬種で分けています。':'')+'※血統ではなく、性格の近さから出した割合です</small>';
   var spH=spread(last.pct);
-  $("r-head").innerHTML=pure?'<img class="crown-i" src="icon/crown.png" alt="">'+esc(name)+"は、<em>生粋の"+esc(subOf(spH))+"タイプの"+esc(body)+"</em>！":esc(name)+"は、"+"<em>"+esc(headName(B,short,true))+"</em>"+'<span class="hsub">'+esc(subOf(spH))+"タイプ。"+(isUnknown()||!ownId(st.breed)?esc(name)+"の性格は、"+esc(B.s)+"にいちばん近いタイプです":esc(short)+"らしさの中に、"+esc(B.s)+"らしい気質もあわせ持っています")+'</span>';
+  // 結果のタイトル：カードと同じく「○○は／□□気質の／△△」の3段（長い犬種名は「・」でだけ折り返す）
+  var nwS=function(t){return String(t).split(/(?<=・)/).map(function(x){return '<span class="nw">'+esc(x)+'</span>'}).join("")};
+  var hl1,hl2,hwho=esc(name)+"は";
+  if(pure){hl1='<img class="crown-i" src="icon/crown.png" alt="">生粋の'+esc(subOf(spH))+"タイプの";hl2=body}
+  else{if(isUnknown())hwho+="、世界にひとりだけの";hl1=nwS(B.s+"気質の");hl2=(isUnknown()||!short)?"子":short}
+  $("r-head").style.setProperty("--tint",lighten(B.col||"#8AC3CF",.85));
+  $("r-head").innerHTML='<span class="h-who">'+hwho+'</span><span class="h-l1">'+hl1+'</span><span class="h-l2'+(String(hl2).length>8?' long':'')+'">'+nwS(hl2+(pure?"！":""))+'</span>';
+  $("r-hsub").textContent=subOf(spH)+"タイプ。"+(isUnknown()||!ownId(st.breed)?name+"の性格は、"+B.s+"にいちばん近いタイプです":short+"らしさの中に、"+B.s+"らしい気質もあわせ持っています");
+  $("r-hsub").hidden=!!pure;
   $("r-catch").textContent=B.c;
   var rows=last.rank.slice(0,5).map(function(x,i){return [i,x]});if(own>=5)rows.push([own,last.rank[own]]);
   $("r-rank").innerHTML=rows.map(function(r){var x=r[1];
