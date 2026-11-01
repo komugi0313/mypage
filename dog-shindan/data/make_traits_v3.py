@@ -42,15 +42,27 @@ wc=lstsq([[1]+[A[i]['traits'][k] for k in AK] for i in hc],[cres[i] for i in hc]
 for i in IDS:
     if i in cres:raw[i]['calm']=cres[i];how[i]['calm']='研究（こわがり・自信の質問8つ）'
     else:raw[i]['calm']=sum(a*b for a,b in zip(wc,[1]+[A[i]['traits'][k] for k in AK]));how[i]['calm']='研究にないためAKCから推定'
+# おしゃべり：AKCの「よくほえるか」と、研究の声の質問3つ（遠吠え・ウォーウォー鳴く・クンクン鳴いて甘える）を半分ずつ
+BARK_Q=['17','18','20']
+bst={}
+for k in BARK_Q:
+    xs=[QB[b][k]['yes'] for b in QB if k in QB[b] and QB[b][k]['n']>=15];m=sum(xs)/len(xs);bst[k]=(m,math.sqrt(sum((x-m)**2 for x in xs)/len(xs)))
+vres={}
+for b in IDS:
+    ks=[k for k in BARK_Q if b in QB and k in QB[b] and QB[b][k]['n']>=15]
+    if len(ks)==3:vres[b]=sum((QB[b][k]['yes']-bst[k][0])/bst[k][1] for k in ks)/3
+hv=[i for i in IDS if i in vres]
+wv=lstsq([[1]+[A[i]['traits'][k] for k in AK] for i in hv],[vres[i] for i in hv])
+voice={i:(vres[i] if i in vres else sum(a*b for a,b in zip(wv,[1]+[A[i]['traits'][k] for k in AK]))) for i in IDS}
 def zs(d):
     xs=list(d.values());m=sum(xs)/len(xs);sd=math.sqrt(sum((x-m)**2 for x in xs)/len(xs)) or 1
     return {k:(v-m)/sd for k,v in d.items()}
 zE=zs({i:raw[i]['energy'] for i in IDS});zS=zs({i:raw[i]['social'] for i in IDS})
-zP=zs({i:A[i]['traits']['protective'] for i in IDS});zB=zs({i:A[i]['traits']['barking'] for i in IDS})
+zP=zs({i:A[i]['traits']['protective'] for i in IDS});zB=zs({i:A[i]['traits']['barking'] for i in IDS});zV=zs(voice)
 for i in IDS:
     # AKCは1〜5の5段階で同点が多いので、研究の数字で差をつける
     raw[i]['protect']=zP[i]-0.35*zS[i];how[i]['protect']='AKC（同点は研究の「人へのなつき方」で調整）'
-    raw[i]['bark']=zB[i]+0.35*zE[i];how[i]['bark']='AKC（同点は研究の「興奮しやすさ」で調整）'
+    raw[i]['bark']=0.5*zB[i]+0.5*zV[i];how[i]['bark']='AKCの「よくほえるか」と研究の声の質問（遠吠え・ウォーウォー・甘え鳴き）を半分ずつ'+('' if i in vres else '（研究の部分はAKCから推定）')
 KEYS=['social','dogs','curious','energy','clingy','toys','learn','protect','bark','calm']
 V={i:{} for i in IDS}
 for k in KEYS:
