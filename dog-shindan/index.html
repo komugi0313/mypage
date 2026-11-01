@@ -318,6 +318,9 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .mp-confirm div{display:flex;gap:8px}
 .mp-confirm button{flex:1;min-height:44px;border-radius:999px;border:2px solid #E3B5B1;background:#FFFFFF;font-weight:800;color:#2F3A45}
 .mp-confirm button.danger{background:#B23A3A;border-color:#B23A3A;color:#FFFFFF}
+.bdg{display:inline-flex;align-items:center;gap:6px}
+.bdg img{width:22px;height:22px}
+.bdg small{font-size:.7rem;color:var(--muted);font-weight:800}
 .mytabs{display:flex;gap:6px}
 .mytabs button{flex:1;min-height:44px;border-radius:999px;border:2px solid var(--mint);background:var(--card);font-weight:800;color:var(--teal)}
 .mytabs button.on{background:var(--teal);color:#FFFFFF;border-color:var(--teal)}
@@ -4161,10 +4164,11 @@ function scoreRaw(ans){var sum=[0,0,0,0,0,0],cnt=[0,0,0,0,0,0];Q.forEach(functio
 function histKey(){return "w44_hist_"+st.name+"_"+st.breed}
 function histGet(){try{return JSON.parse(localStorage.getItem(histKey())||"null")}catch(e){return null}}
 function histSet(h){try{localStorage.setItem(histKey(),JSON.stringify(h))}catch(e){}}
-var HYS=3; // 前回の気質の犬種との差がこれより小さいときは、前回の結果をそのまま残す
+var HYS=1; // 前回の気質の犬種との差がこれより小さいときだけ、前回の結果を残す
+var HIST_W=0.4; // 前回までの答えの重み（今回の答えを中心にする）
 function finish(){
   var raw=scoreRaw(st.ans),h=histGet()||{sum:[0,0,0,0,0,0],cnt:[0,0,0,0,0,0],n:0,last:null,first:null};
-  var sum=raw.sum.map(function(v,i){return v+h.sum[i]}),cnt=raw.cnt.map(function(v,i){return v+h.cnt[i]});
+  var sum=raw.sum.map(function(v,i){return v+h.sum[i]*HIST_W}),cnt=raw.cnt.map(function(v,i){return v+h.cnt[i]*HIST_W});
   var pct=sum.map(function(v,i){return cnt[i]?Math.round(v/cnt[i]*100):50}),rank=ranking(pct),prev=h.last;
   if(prev&&rank[0].b.id!==prev){var pi=rank.findIndex(function(x){return x.b.id===prev});
     if(pi>0&&rank[pi].d-rank[0].d<HYS){var t=rank[pi];rank.splice(pi,1);rank.unshift(t);var m0=rank[1].m;rank[1].m=t.m;t.m=m0}}
@@ -4381,17 +4385,17 @@ var ARU={"toypoodle": ["トリミングのあとは、自分でもかわいい�
 var AXC=[["#E07A5F","#B5513A"],["#3D9970","#2A7353"],["#4A7FC1","#2F5F9E"],["#E0A100","#8F6600"],["#D16BA5","#A8447F"],["#7B6CC4","#5A4BA6"]];
 // 44犬種の中での順位（研究とAKCの評価から出した数字で並べる）
 function rankIn(id,ax){var v=BY[id].v[ax],hi=1,lo=1;BR.forEach(function(b){if(b.v[ax]>v)hi++;if(b.v[ax]<v)lo++});return {hi:hi,lo:lo}}
-function badgesOf(id){var out=[];AXES.forEach(function(a,i){var r=rankIn(id,i);
-  if(r.hi<=5)out.push([r.hi,a.a,i]);else if(r.lo<=5)out.push([r.lo,a.b,i])});
-  out.sort(function(x,y){return x[0]-y[0]});
-  return out.slice(0,3).map(function(x){return '<span style="background:'+AXC[x[2]][0]+'22">'+esc(x[1])+'度 <b>'+x[0]+'位</b>／'+BR.length+'犬種</span>'}).join("")}
+var BADGE=[["だれとでも仲よし","家族に一途"],["ワン友づくり上手","人が大好き"],["好奇心いっぱい","おうち大好き"],["元気いっぱい","おっとり癒やし系"],["甘えんぼ","自立したマイペース"],["どっしり大物","気づき名人"]];
+function badgesOf(id){var out=[];AXES.forEach(function(a,i){var r=rankIn(id,i);out.push([r.hi,BADGE[i][0],i]);out.push([r.lo,BADGE[i][1],i])});
+  out.sort(function(x,y){return x[0]-y[0]});out=out.filter(function(x,k){return k===0||x[0]<=5}).slice(0,2);
+  return out.map(function(x){return '<span class="bdg" style="background:'+AXC[x[2]][0]+'22">'+(x[0]===1?'<img src="icon/crown.png" alt="">':'')+esc(x[1])+'ランキング <b>'+(x[0]===1?'No.1':x[0]+'位')+'</b><small>44犬種中</small></span>'}).join("")}
 function palsOf(id){var b=BY[id],d=BR.filter(function(x){return x.id!==id}).map(function(x){return {x:x,d:dist(b.v,x.v)}}).sort(function(p,q){return p.d-q.d});return {near:d[0].x,far:d[d.length-1].x}}
 function themeProf(el,id){var c=BY[id].col||"#8AC3CF";el.style.setProperty("--tc",c);el.style.setProperty("--tcl",lighten(c,.78))}
 function profHTML(id,title,noPals,lead){var b=BY[id],pl=palsOf(id),src=function(x){return IMG[x]?IMG[x]+"?v=5":""};
   return '<div class="phead"><img src="'+src(id)+'" alt=""><h2>'+esc(title)+'<small>'+esc(b.c)+'</small></h2></div>'+(lead?'<p class="note">'+esc(lead)+'</p>':'')+
    '<p>'+esc(b.d)+'</p>'+secsHTML(b)+
    '<h3>'+esc(b.s)+'あるある</h3><ul class="aru">'+(ARU[id]||[]).map(function(t){return '<li>'+esc(t)+'</li>'}).join("")+'</ul>'+
-   '<h3>データでわかる特徴</h3><div class="badges">'+(badgesOf(id)||'<span>どの性格もバランスがいい、まん中タイプ</span>')+'</div>'+
+   '<h3>44犬種ランキング</h3><div class="badges">'+(badgesOf(id)||'<span>どの性格もバランスがいい、まん中タイプ</span>')+'</div>'+
    (noPals?'':'<h3>性格の近い犬種・正反対の犬種</h3><div class="pals">'+
    '<button type="button" data-id="'+pl.near.id+'"><img src="'+src(pl.near.id)+'" alt=""><small>いちばん近い</small><span>'+esc(pl.near.s)+'</span></button>'+
    '<button type="button" data-id="'+pl.far.id+'"><img src="'+src(pl.far.id)+'" alt=""><small>正反対</small><span>'+esc(pl.far.s)+'</span></button></div>');}
