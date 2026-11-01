@@ -55,6 +55,7 @@ button{font:inherit;cursor:pointer;color:var(--ink)}
 .seg{display:flex;flex-wrap:wrap;gap:8px}
 .seg button{flex:1 1 auto;min-height:48px;border-radius:999px;border:2px solid var(--mint);background:var(--card);font-weight:800;padding:6px 14px}
 .seg button.on{background:var(--teal);border-color:var(--teal);color:#FFFFFF}
+.apply-edit{display:block;margin:12px auto 0;min-height:48px;padding:0 22px;border-radius:999px;border:2px solid var(--mint);background:var(--card);color:var(--teal);font-weight:800;font-size:.95rem}
 .start{display:block;margin:0 auto;background:var(--card);border:4px solid var(--teal);color:var(--teal);border-radius:999px;font-family:var(--pop);font-size:1.3rem;padding:6px 44px;min-height:58px;box-shadow:0 4px 0 var(--teal)}
 .start:active{transform:translateY(3px);box-shadow:0 1px 0 var(--teal)}
 .photo-row{display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:center}
@@ -478,6 +479,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 
     <p class="msg" id="msg" hidden></p>
     <button class="start" id="go-quiz" type="button">スタート ▶</button>
+    <button class="apply-edit" id="apply-edit" type="button" hidden>質問はそのままで、カードに反映する</button>
     <button class="sub" type="button" id="open-zukan">44犬種の図鑑を見る</button>
     <button class="sub gone" type="button" id="open-ecbook" hidden>もしものとき帳を見る</button>
     <button class="mp-btn" type="button" id="open-my"><span class="mp-av" data-av></span><span class="mp-t">マイページ</span></button>
@@ -3664,18 +3666,33 @@ function show(id){["s-start","s-quiz","s-result","s-zukan","s-about","s-ecbook",
 // 答えの並びは質問ごとに入れかえる（いつも同じ位置を押すクセで結果がかたよらないように）
 var PERMS=[[0,1,2],[1,0,2],[2,1,0],[0,2,1],[1,2,0],[2,0,1]];
 function orderOf(i){return ((i*5+3)%4<2)?[0,1,2,3,4]:[4,3,2,1,0]}
-$("go-quiz").addEventListener("click",function(){
+function readIn(){
   var nm=$("in-name").value.trim();
   // 名前は必ず入れてもらう（記録・カードをその子ごとに分けるため）
-  if(!nm){msg("お名前を入れてください。記録やカードに使います。");$("in-name").focus();return}
+  if(!nm){msg("お名前を入れてください。記録やカードに使います。");$("in-name").focus();return false}
   st.name=nm;
   var b=$("in-breed").value;
   st.breed=b==="x:その他"?("x:"+($("in-breed-other").value.trim()||"うちの子")):b;
   if(b==="x:その他"){var tw=$("in-breed-other").value.trim().replace(/[\s・･]/g,"");
     if(tw){var hit=BR.find(function(x){return x.n.replace(/[\s・]/g,"")===tw||x.s.replace(/[\s・]/g,"")===tw});
       if(hit)st.breed=hit.id;else{var ai=ALIAS.findIndex(function(a){return a[0].replace(/[\s・]/g,"")===tw});if(ai>=0)st.breed="a:"+ai}}}
-  if(!st.breed){msg("犬種をえらんでください（わからなければ「ミックス」）。");return}
-  newQuiz();st.qi=0;st.ans=new Array(N).fill(null);renderQ();show("s-quiz");
+  if(!st.breed){msg("犬種をえらんでください（わからなければ「ミックス」）。");return false}
+  return true}
+$("go-quiz").addEventListener("click",function(){
+  if(!readIn())return;
+  $("apply-edit").hidden=true;newQuiz();st.qi=0;st.ans=new Array(N).fill(null);renderQ();show("s-quiz");
+});
+// 「写真や名前を変える」から来たときは、質問をやり直さずに結果とカードへ反映できる
+$("apply-edit").addEventListener("click",function(){
+  var old=st.name,ob=st.breed;if(!readIn()){st.name=old;st.breed=ob;return}
+  if(st.name!==old){var g=lsGet("w44_grow",{});
+    if(g[st.name]){var nn=st.name;st.name=old;st.breed=ob;msg("「"+nn+"」という名前の子が、もうマイページにいます。別の名前にしてください。");return}
+    // 名前を変えたら、記録や設定も新しい名前に引きつぐ
+    if(g[old]){g[st.name]=g[old];delete g[old]}
+    [["w44_hist_",""],["w44_req_",""],["w44_nst_",""],["w44_ec_",""],["w44_guide_","_"+last.main.id]].forEach(function(x){try{var v=localStorage.getItem(x[0]+old+x[1]);if(v!=null){localStorage.setItem(x[0]+st.name+x[1],v);localStorage.removeItem(x[0]+old+x[1])}}catch(e){}});
+    lsSet("w44_grow",g);gDog=st.name}
+  var g2=lsGet("w44_grow",{});if(g2[st.name]){g2[st.name].n=st.name;g2[st.name].b=st.breed;lsSet("w44_grow",g2)}
+  renderResult();setAvatars();show("s-result");toast("変更をカードに反映しました");
 });
 function renderQ(){
   var q=Q[st.qi];st.busy=false;
@@ -4064,7 +4081,7 @@ $("open-my").addEventListener("click",function(){openMy(null,"s-start")});
 $("r-my").addEventListener("click",function(){openMy(null,"s-result")});
 $("r-my-top").addEventListener("click",function(){openMy(null,"s-result")});
 setTimeout(setAvatars,0);
-document.addEventListener("click",function(e){if(e.target.closest("[data-home]"))show("s-start")});
+document.addEventListener("click",function(e){if(e.target.closest("[data-home]")){$("apply-edit").hidden=true;show("s-start")}});
 // 届いたワン友のリンク
 (function(){var m=location.hash.match(/wf=([A-Za-z0-9_-]+)/);if(!m)return;var d=null;try{d=b64d(m[1])}catch(e){}if(!d||typeof d.n!=="string"||!BY[d.m])return;
   var x={r:(Array.isArray(d.r)?d.r:[]).slice(0,5).map(function(t){return String(t).slice(0,40)}),n:d.n.slice(0,12),h:String(d.h||"").slice(0,40),m:d.m,o:BY[d.o]?d.o:"",g:(Array.isArray(d.g)?d.g:[]).slice(0,3).map(function(t){return String(t).slice(0,40)}),t:Date.now(),met:"",memo:"",tags:""};
@@ -4621,6 +4638,6 @@ $("mp-yes").addEventListener("click",function(){
   $("reset-msg").textContent="記録を消しました。次の診断は1回目からになります。";
   var g=lsGet("w44_grow",{}),k=gDog&&g[gDog]?"w44_hist_"+gDog:histKey();try{localStorage.removeItem(k)}catch(e){}$("mp-confirm").hidden=true;$("reset-msg").hidden=false});
 $("again").addEventListener("click",function(){$("reset-msg").hidden=true;newQuiz();st.qi=0;st.ans=new Array(N).fill(null);renderQ();show("s-quiz")});
-$("edit").addEventListener("click",function(){show("s-start")});
+$("edit").addEventListener("click",function(){$("in-name").value=st.name||$("in-name").value;$("apply-edit").hidden=!last;show("s-start")});
 })();
 </script>
