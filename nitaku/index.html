@@ -138,11 +138,9 @@ h2{font-size:20px;margin:22px 0 10px;font-weight:900}
 .axis .ends{display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--sub)}
 .axis .bar{position:relative;height:14px;border-radius:999px;background:linear-gradient(90deg,#D6D9EE,#F2DCE4);margin-top:4px}
 .axis .dot{position:absolute;top:50%;width:24px;height:24px;margin-left:-12px;margin-top:-12px;border-radius:50%;background:var(--ink);border:3px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
-.axis .dot.born{background:#fff;border:3px dashed var(--ink);width:22px;height:22px;margin-left:-11px;margin-top:-11px;box-shadow:none}
 .axis .val{font-size:13px;margin-top:4px;text-align:center;font-weight:700}
 .legend{font-size:13px;color:var(--sub);display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:6px}
 .legend i{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;margin-right:4px;background:var(--ink)}
-.legend i.born{background:#fff;border:2px dashed var(--ink)}
 .tsukkomi{background:var(--soft);border-radius:14px;padding:12px 14px;font-weight:700;font-size:15px}
 .stat{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .stat div{background:var(--soft);border-radius:14px;padding:10px;text-align:center}
@@ -157,10 +155,6 @@ h2{font-size:20px;margin:22px 0 10px;font-weight:900}
 .ppl .nm{font-weight:900;font-size:17px}
 .ppl .ty{color:var(--accent);font-weight:900}
 .ppl .ds{font-size:14px;color:var(--sub)}
-.promo{background:#2A1F2D;color:#fff;border-radius:20px;padding:18px;margin-top:18px}
-.promo h3{margin:0 0 6px;font-size:17px}
-.promo p{margin:0 0 12px;font-size:14px;color:#F1E9F3}
-.promo a{display:block;text-align:center;background:#fff;color:#2A1F2D;border-radius:14px;padding:12px;font-weight:900;text-decoration:none;min-height:44px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9}
 .toast.on{opacity:1}
 @media (max-width:360px){h1{font-size:34px}.choice{font-size:17px}}
@@ -223,7 +217,6 @@ body{background-color:var(--bg);background-image:radial-gradient(#D9C8FA 1.5px,t
 .axis .dot{background:#E0457B;border-color:var(--ink)}
 .legend i{background:#E0457B}
 .tsukkomi,.stat div{background:var(--soft);border:2px solid var(--ink)}
-.promo{background:var(--ink)}
 .add{border-color:var(--ink);color:var(--ink)}
 .del{border:2px solid var(--ink)}
 .gauge{width:82px;height:82px;right:8px;top:152px}
@@ -306,16 +299,7 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
     <button data-v="hard" aria-pressed="false"><b>ハード</b><small>地獄の二択</small></button>
   </div>
 
-  <div id="solo-born">
-    <div class="label">生年月日（なくてもOK）</div>
-    <div class="field">
-      <input type="date" id="born" min="1920-01-01" max="2025-12-31">
-      <p class="hint">入れると、生まれた日の星（四柱推命）から「生まれ持ったあなた」を出して、今日えらんだあなたとくらべます。</p>
-    </div>
-  </div>
-
   <button class="big" id="go">診断をはじめる</button>
-  <p class="note" id="pool-note"></p>
 </section>
 
 <!-- 飲み会の準備 -->
@@ -458,48 +442,6 @@ function remaining(mode){
   return POOL[mode].filter(function(q){ return !s[q.id]; }).length;
 }
 
-/* ───── 生まれた日の星（日干） ─────
-   日柱は日付だけで決まる（2000-01-01＝戊午）。正午で計算するので日付の変わり目の影響はない。 */
-var STEMS = '甲乙丙丁戊己庚辛壬癸';
-var BRANCHES = '子丑寅卯辰巳午未申酉戌亥';
-function dayPillar(y,m,d){
-  var a = Math.floor((14-m)/12), yy = y+4800-a, mm = m+12*a-3;
-  var jdn = d + Math.floor((153*mm+2)/5) + 365*yy + Math.floor(yy/4) - Math.floor(yy/100) + Math.floor(yy/400) - 32045;
-  var i = ((jdn + 49) % 60 + 60) % 60;
-  return { stem: STEMS[i%10], branch: BRANCHES[i%12], gz: STEMS[i%10]+BRANCHES[i%12] };
-}
-var BORN = {
-  '甲':{yomi:'きのえ', img:'まっすぐ伸びる大きな木', love:{K:-.6,R:.4,S:.1,A:-.4}, normal:{B:.5,Y:.2,M:.6,N:.1},
-        txt:'決めたら一直線。曲がったことがきらいで、好きになったら守りたくなる人。'},
-  '乙':{yomi:'きのと', img:'しなやかな草花', love:{K:.5,R:.3,S:-.3,A:.6}, normal:{B:-.3,Y:.1,M:.1,N:.3},
-        txt:'やわらかく見えて、じつはしぶとい。まわりにうまく寄りそいながら、気づけば愛されている人。'},
-  '丙':{yomi:'ひのえ', img:'空に輝く太陽', love:{K:.2,R:.6,S:.7,A:-.2}, normal:{B:.7,Y:.3,M:.3,N:.9},
-        txt:'いるだけで場が明るくなる。好きな気持ちは顔に全部出る、裏表のない人。'},
-  '丁':{yomi:'ひのと', img:'夜をてらす灯火', love:{K:.3,R:.8,S:.1,A:.3}, normal:{B:-.1,Y:-.1,M:-.2,N:-.1},
-        txt:'静かな情熱家。表には出さないけれど、心の中でずっと思いを燃やしつづける人。'},
-  '戊':{yomi:'つちのえ', img:'どっしりした山', love:{K:-.8,R:-.3,S:-.6,A:-.6}, normal:{B:-.4,Y:.2,M:.3,N:-.2},
-        txt:'動じない安心感のかたまり。一度信じた人のことは、ずっと受けとめつづける人。'},
-  '己':{yomi:'つちのと', img:'作物を育てる畑', love:{K:-.3,R:-.4,S:-.5,A:-.8}, normal:{B:-.6,Y:-.2,M:-.4,N:.2},
-        txt:'面倒見のよさは天下一品。相手を育てて、いつのまにか手放せない存在になる人。'},
-  '庚':{yomi:'かのえ', img:'きたえられた鋼', love:{K:-.2,R:-.2,S:.8,A:-.1}, normal:{B:.9,Y:.4,M:.4,N:.2},
-        txt:'白黒はっきり、行動が早い。恋も勝負。ダラダラした関係はがまんできない人。'},
-  '辛':{yomi:'かのと', img:'みがかれた宝石', love:{K:.8,R:.2,S:.2,A:.7}, normal:{B:-.2,Y:.5,M:.9,N:-.3},
-        txt:'繊細で美意識が高い。大切にされてこそ輝く、天性のお姫さま（王子さま）気質。'},
-  '壬':{yomi:'みずのえ', img:'ひろい大海', love:{K:.6,R:.1,S:.9,A:.1}, normal:{B:.8,Y:.6,M:-.3,N:.7},
-        txt:'自由で器が大きい。ひとつの場所におさまらない、つかまえたくなる人。'},
-  '癸':{yomi:'みずのと', img:'しとしと降る雨', love:{K:.4,R:.7,S:-.2,A:.5}, normal:{B:-.5,Y:-.4,M:-.5,N:-.4},
-        txt:'やさしくて感受性ゆたか。相手の気持ちにしみこむように寄りそう、いやし系の人。'}
-};
-function bornInfo(dateStr){
-  if(!dateStr) return null;
-  var p = dateStr.split('-').map(Number);
-  if(p.length!==3 || !p[0] || !p[1] || !p[2]) return null;
-  var dp = dayPillar(p[0],p[1],p[2]);
-  var b = BORN[dp.stem];
-  return { stem:dp.stem, gz:dp.gz, yomi:b.yomi, img:b.img, txt:b.txt, love:b.love, normal:b.normal };
-}
-
-/* ───── タイプ ───── */
 /* ％ごとのひとこと（35%未満／35〜64%／65%以上） */
 var AXC = {
   K:['一途さは本物。駆け引きなしで、まっすぐ愛せる人。','ほどよく小悪魔。ここぞという時だけ、相手をドキッとさせる。','相手の心を転がす天才。本人は気づいていないことも。'],
@@ -534,10 +476,6 @@ function score(mode, qs, answers){
   });
   return out;
 }
-function bornScore(mode, born){
-  var o={}; AXES[mode].forEach(function(ax){ o[ax.k]=Math.round(50+40*(born[mode][ax.k]||0)); }); return o;
-}
-
 /* ───── 状態 ───── */
 var S = { mode:'love', who:'solo', num:15, lv:'normal', style:'secret', players:[], qs:[], qi:0, pi:0, ans:[], times:[], t0:0 };
 
@@ -558,8 +496,7 @@ function setMode(m){
   updatePoolNote();
 }
 function updatePoolNote(){
-  var r = remaining(S.mode), t = POOL[S.mode].length;
-  $('pool-note').textContent = MODE_NAME[S.mode]+'の問題は全部で'+t+'問。まだ出ていない問題があと'+r+'問あります（出しきるまで同じ問題は出ません）。';
+
 }
 document.querySelectorAll('.mode').forEach(function(b){ b.onclick=function(){ setMode(b.dataset.m); }; });
 function seg(id, cb){
@@ -568,7 +505,7 @@ function seg(id, cb){
     b.onclick=function(){ el.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-pressed', x===b?'true':'false'); }); cb(b.dataset.v); };
   });
 }
-seg('seg-who', function(v){ S.who=v; $('solo-born').hidden = (v!=='solo'); $('go').textContent = v==='solo'?'診断をはじめる':'参加する人を決める'; });
+seg('seg-who', function(v){ S.who=v; $('go').textContent = v==='solo'?'診断をはじめる':'参加する人を決める'; });
 seg('seg-lv', function(v){ S.lv=v; });
 seg('seg-style', function(v){ S.style=v; styleHint(); });
 function styleHint(){
@@ -576,15 +513,13 @@ function styleHint(){
     ? '1問ずつ、スマホを回してひとりずつこっそり答えます。全員答えたら「結果発表」。'
     : '1台の画面に全員の名前が並びます。「せーの！」で答えを言って、みんなでタップ。';
 }
-try{ var sb=store('nitaku_born'); if(sb) $('born').value=sb; }catch(e){}
 
 function show(id){ document.querySelectorAll('.scr').forEach(function(s){ s.classList.toggle('on', s.id===id); }); window.scrollTo(0,0);
   if(id!=='s-home' && !pushed){ try{ history.pushState({nitaku:1},''); pushed=true; }catch(e){} } }
 
 $('go').onclick=function(){
   if(S.who==='group'){ renderSetup(); show('s-setup'); return; }
-  var b=$('born').value; store('nitaku_born', b||'');
-  S.players=[{name:'あなた', born:b}];
+  S.players=[{name:'あなた'}];
   start();
 };
 
@@ -592,14 +527,13 @@ $('go').onclick=function(){
 function renderSetup(){
   if(!S.players.length || S.players[0].name==='あなた'){
     var saved = store('nitaku_players');
-    S.players = (saved && saved.length>=2) ? saved : [{name:'',born:''},{name:'',born:''},{name:'',born:''}];
+    S.players = (saved && saved.length>=2) ? saved : [{name:''},{name:''},{name:''}];
   }
   styleHint();
   var h='';
   S.players.forEach(function(p,i){
     h+='<div class="prow"><div class="pf">'+
        '<input type="text" maxlength="10" placeholder="名前（'+(i+1)+'人目）" data-i="'+i+'" data-f="name" value="'+esc(p.name)+'">'+
-       '<label>生年月日（なくてもOK）</label><input type="date" min="1920-01-01" max="2025-12-31" data-i="'+i+'" data-f="born" value="'+esc(p.born||'')+'">'+
        '</div><button class="del" data-del="'+i+'" aria-label="この人を消す"'+(S.players.length<=2?' disabled':'')+'>✕</button></div>';
   });
   $('plist').innerHTML=h;
@@ -611,7 +545,7 @@ function renderSetup(){
     b.onclick=function(){ S.players.splice(+b.dataset.del,1); renderSetup(); };
   });
 }
-$('padd').onclick=function(){ if(S.players.length<8){ S.players.push({name:'',born:''}); renderSetup(); } };
+$('padd').onclick=function(){ if(S.players.length<8){ S.players.push({name:''}); renderSetup(); } };
 
 $('go2').onclick=function(){
   S.players.forEach(function(p,i){ p.name = (p.name||'').trim() || (i+1)+'人目'; });
@@ -879,23 +813,9 @@ function axisHTML(mode, sc, bsc, noComment){
   return AXES[mode].map(function(ax){
     var v=sc[ax.k];
     return '<div class="ax2"><div class="ax2h"><b>'+ax.name+'</b><em>'+v+'<small>%</small></em></div>'+
-      '<div class="ax2bar"><i style="width:'+v+'%"></i>'+(bsc?'<s style="left:'+bsc[ax.k]+'%" title="生まれ持ったあなた"></s>':'')+'</div>'+
+      '<div class="ax2bar"><i style="width:'+v+'%"></i></div>'+
       (noComment?'':'<p>'+axComment(ax.k,v)+'</p>')+'</div>';
   }).join('');
-}
-function bigGap(mode, sc, bsc){
-  var best=null;
-  AXES[mode].forEach(function(ax){ var g=sc[ax.k]-bsc[ax.k]; if(!best || Math.abs(g)>Math.abs(best.g)) best={ax:ax,g:g}; });
-  return best;
-}
-function gapText(mode, sc, bsc){
-  var b=bigGap(mode, sc, bsc), g=Math.abs(b.g);
-  if(g<15) return '生まれ持ったあなたと、今日のあなたはほぼ同じ。自分らしく生きている証拠です。';
-  var now = sc[b.ax.k], was = bsc[b.ax.k];
-  var tail = mode==='love'
-    ? (g>=35 ? 'いまの恋や環境が、あなたを大きく変えているのかも。' : '最近ちょっと、いつもとちがう気分なのかも。')
-    : (g>=35 ? 'いまのまわりの環境に、かなり合わせているのかも。' : '最近ちょっと、背のびしているのかも。');
-  return '生まれつきの'+b.ax.name+'は'+was+'%なのに、今日は'+now+'%（'+(b.g>0?'＋':'−')+g+'）。'+tail;
 }
 function speedStats(qs, times){
   var arr = times.map(function(t,i){ return {t:t||0, q:qs[i]}; }).filter(function(x){ return x.t>0; });
@@ -918,11 +838,6 @@ function doShare(text){
 }
 function toast(t){ var el=$('toast'); el.textContent=t; el.classList.add('on'); setTimeout(function(){ el.classList.remove('on'); }, 2200); }
 
-function promoHTML(){
-  return '<div class="promo"><h3>生まれた日の星を、もっとくわしく</h3>'+
-    '<p>今日の診断で使った「生まれた日の星」は、四柱推命のほんの入口。性格・恋愛・これからの運の流れまで、生年月日から読みとけます。</p>'+
-    '<a href="https://www.suimei.jp/" target="_blank" rel="noopener">四柱推命の自動鑑定を見てみる</a></div>';
-}
 function endButtons(){
   var other = S.mode==='love'?'normal':'love';
   return '<button class="big" id="again">もう1回（ちがう問題で）</button>'+
@@ -937,20 +852,13 @@ function bindEnd(){
 
 function showResult(){
   var mode=S.mode, sc=score(mode,S.qs,S.ans[0]), hd=headline(mode), val=sc[hd.k];
-  var born=bornInfo(S.players[0].born), bsc=born?bornScore(mode,born):null;
   var sp=speedStats(S.qs,S.times[0]);
   var others = AXES[mode].filter(function(ax){ return ax.k!==hd.k; });
   var h='<div class="res-hero"><div class="pre">'+playName(mode)+'　あなたの結果</div>'+
     '<div class="meter"><div class="cap">'+hd.cap+'</div><div class="num">'+val+'<small>%</small></div></div>'+
     '<div class="catch">'+axComment(hd.k,val)+'</div>'+
     '<div class="minis">'+others.map(function(ax){ return '<div><b>'+sc[ax.k]+'<small>%</small></b><span>'+ax.name+'</span></div>'; }).join('')+'</div></div>';
-  h+='<div class="card"><h3>あなたの数字</h3>'+axisHTML(mode,sc,bsc)+
-     (bsc?'<div class="legend"><span><i></i>今日のあなた</span><span><i class="born"></i>生まれ持ったあなた</span></div>':'')+'</div>';
-  if(born){
-    h+='<div class="card"><h3>生まれ持ったあなた（生まれた日の星）</h3>'+
-       '<p><b>'+born.stem+'（'+born.yomi+'）＝'+esc(born.img)+'</b></p><p>'+esc(born.txt)+'</p>'+
-       '<div class="tsukkomi">'+esc(gapText(mode,sc,bsc))+'</div></div>';
-  }
+  h+='<div class="card"><h3>あなたの数字</h3>'+axisHTML(mode,sc)+'</div>';
   var maj=majorityStats(S.qs, S.ans[0]);
   if(maj) h+=maj;
   if(sp){
@@ -960,7 +868,7 @@ function showResult(){
        '<p style="margin-top:10px;font-size:14px">いちばん悩んだのは<br><b>「'+esc(sp.slow.q.a)+'」<br>vs「'+esc(sp.slow.q.b)+'」</b></p>'+
        '<p style="font-size:14px;color:var(--sub)">'+(sp.rate>=70?'迷いのなさがすごい。自分の気持ちがはっきりしている人。':(sp.rate<=30?'どっちも本気で考えてしまう、やさしい人。':'ここぞという問題で、ちゃんと悩める人。'))+'</p></div>';
   }
-  h+='<button class="big" id="share">結果をシェアする</button>'+endButtons()+promoHTML();
+  h+='<button class="big" id="share">結果をシェアする</button>'+endButtons();
   $('gres-body').innerHTML='';
   $('res-body').innerHTML=h;
   $('share').onclick=function(){ doShare(shareText(mode,sc)); };
@@ -973,8 +881,7 @@ function showGroupResult(){
   var mode=S.mode, hd=headline(mode), n=S.players.length;
   var R = S.players.map(function(p,i){
     var sc=score(mode,S.qs,S.ans[i]);
-    var born=bornInfo(p.born);
-    return { p:p, sc:sc, born:born, bsc:born?bornScore(mode,born):null, i:i };
+    return { p:p, sc:sc, i:i };
   });
   var h='<div class="res-hero"><div class="pre">'+playName(mode)+'　'+n+'人の結果</div><div class="type">みんなの本音、発表</div>'+
         '<div class="catch">いちばん'+hd.cap.replace('度','')+'なのは…</div>';
@@ -1005,13 +912,6 @@ function showGroupResult(){
     h+='<div class="rank"><span class="k">即決王</span><span class="v">'+esc(R[fi].p.name)+'（平均'+(Math.round(avg[fi]/100)/10)+'秒）</span></div>';
     h+='<div class="rank"><span class="k">いちばん悩んだ人</span><span class="v">'+esc(R[si].p.name)+'（平均'+(Math.round(avg[si]/100)/10)+'秒）</span></div>';
   }
-  // 生まれ持ったものとのギャップ
-  var gaps=R.filter(function(r){ return r.bsc; }).map(function(r){ var g=bigGap(mode,r.sc,r.bsc); return {r:r,g:g}; });
-  if(gaps.length){
-    gaps.sort(function(a,b){ return Math.abs(b.g.g)-Math.abs(a.g.g); });
-    var gg=gaps[0];
-    h+='<div class="rank"><span class="k">生まれつきとのギャップ王</span><span class="v">'+esc(gg.r.p.name)+'（'+(gg.g.g>0?gg.g.ax.hi:gg.g.ax.lo)+'寄りに '+Math.abs(gg.g.g)+'）</span></div>';
-  }
   h+='</div>';
 
   // 2人ずつの一致率
@@ -1033,13 +933,11 @@ function showGroupResult(){
     h+='<div class="ppl"><div class="nm">'+esc(r.p.name)+'　<span class="ty">'+hd.cap+' '+r.sc[hd.k]+'%</span></div>'+
        '<div class="ds">'+pctLine(mode, r.sc)+'</div>'+
        '<div class="ds">'+axComment(hd.k, r.sc[hd.k])+'</div>'+
-       (r.born?'<div class="ds">生まれた日の星：'+r.born.stem+'（'+r.born.yomi+'）＝'+esc(r.born.img)+'</div>':'')+
-       '<details style="margin-top:6px"><summary style="font-size:14px;font-weight:700;min-height:44px;display:flex;align-items:center;cursor:pointer">心の中を見る</summary>'+axisHTML(mode,r.sc,r.bsc)+
-       (r.bsc?'<p class="hint">'+esc(gapText(mode,r.sc,r.bsc))+'</p>':'')+'</details></div>';
+       '<details style="margin-top:6px"><summary style="font-size:14px;font-weight:700;min-height:44px;display:flex;align-items:center;cursor:pointer">心の中を見る</summary>'+axisHTML(mode,r.sc)+'</details></div>';
   });
   h+='</div>';
 
-  h+='<button class="big" id="gshare">結果をシェアする</button>'+endButtons()+promoHTML();
+  h+='<button class="big" id="gshare">結果をシェアする</button>'+endButtons();
   $('res-body').innerHTML='';
   $('gres-body').innerHTML=h;
   $('gshare').onclick=function(){
