@@ -227,6 +227,9 @@ body{background-color:var(--bg);background-image:radial-gradient(#D9C8FA 1.5px,t
 .vsmark b{color:var(--ink)}
 body{word-break:auto-phrase}
 @media (max-width:360px){.ht{font-size:58px;transform:none}.gauge{width:72px;height:72px;top:130px}.gauge b{font-size:19px}}
+.nav{display:flex;justify-content:space-between;align-items:center;margin:0 0 10px}
+.navb{background:#fff;border:2px solid var(--ink);border-radius:999px;padding:4px 16px;font-weight:900;font-size:15px;color:var(--ink);box-shadow:3px 3px 0 var(--shadow)}
+.navb:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
 </style>
 </head>
 <body data-mode="love">
@@ -281,6 +284,7 @@ body{word-break:auto-phrase}
 
 <!-- 飲み会の準備 -->
 <section class="scr" id="s-setup">
+  <div class="nav"><button class="navb" data-nav="back">← もどる</button><button class="navb" data-nav="top">TOP</button></div>
   <h2>だれが参加する？</h2>
   <div id="plist"></div>
   <button class="add" id="padd">＋ 人を足す（8人まで）</button>
@@ -293,11 +297,12 @@ body{word-break:auto-phrase}
   <p class="hint" id="style-hint"></p>
 
   <button class="big" id="go2">スタート</button>
-  <button class="link" id="setup-back">← もどる</button>
+  
 </section>
 
 <!-- 渡す画面 -->
 <section class="scr" id="s-pass">
+  <div class="nav"><button class="navb" data-nav="back">← もどる</button><button class="navb" data-nav="top">TOP</button></div>
   <div class="pass">
     <div class="eye">🙈</div>
     <p>スマホを渡してね。ほかの人は見ちゃダメ！</p>
@@ -308,8 +313,8 @@ body{word-break:auto-phrase}
 
 <!-- 問題 -->
 <section class="scr" id="s-q">
+  <div class="nav"><button class="navb" data-nav="back">← もどる</button><button class="navb" data-nav="top">TOP</button></div>
   <div class="top">
-    <button class="back" id="q-back" aria-label="1問もどる">← もどる</button>
     <div class="prog"><i id="q-prog"></i></div>
     <div class="count" id="q-count"></div>
   </div>
@@ -320,6 +325,7 @@ body{word-break:auto-phrase}
 
 <!-- 発表（飲み会） -->
 <section class="scr" id="s-rev">
+  <div class="nav"><button class="navb" data-nav="back">← もどる</button><button class="navb" data-nav="top">TOP</button></div>
   <div class="top"><div class="prog"><i id="r-prog"></i></div><div class="count" id="r-count"></div></div>
   <div class="qhead">結果発表！</div>
   <div class="rev" id="rev-body"></div>
@@ -328,10 +334,14 @@ body{word-break:auto-phrase}
 </section>
 
 <!-- 結果（ひとり） -->
-<section class="scr" id="s-res"><div id="res-body"></div></section>
+<section class="scr" id="s-res">
+  <div class="nav"><button class="navb" data-nav="back">← もどる</button><button class="navb" data-nav="top">TOP</button></div>
+<div id="res-body"></div></section>
 
 <!-- 結果（みんな） -->
-<section class="scr" id="s-gres"><div id="gres-body"></div></section>
+<section class="scr" id="s-gres">
+  <div class="nav"><button class="navb" data-nav="back">← もどる</button><button class="navb" data-nav="top">TOP</button></div>
+<div id="gres-body"></div></section>
 
 </div>
 <div class="toast" id="toast"></div>
@@ -546,7 +556,8 @@ function styleHint(){
 }
 try{ var sb=store('nitaku_born'); if(sb) $('born').value=sb; }catch(e){}
 
-function show(id){ document.querySelectorAll('.scr').forEach(function(s){ s.classList.toggle('on', s.id===id); }); window.scrollTo(0,0); }
+function show(id){ document.querySelectorAll('.scr').forEach(function(s){ s.classList.toggle('on', s.id===id); }); window.scrollTo(0,0);
+  if(id!=='s-home' && !pushed){ try{ history.pushState({nitaku:1},''); pushed=true; }catch(e){} } }
 
 $('go').onclick=function(){
   if(S.who==='group'){ renderSetup(); show('s-setup'); return; }
@@ -579,7 +590,7 @@ function renderSetup(){
   });
 }
 $('padd').onclick=function(){ if(S.players.length<8){ S.players.push({name:'',born:''}); renderSetup(); } };
-$('setup-back').onclick=function(){ show('s-home'); };
+
 $('go2').onclick=function(){
   S.players.forEach(function(p,i){ p.name = (p.name||'').trim() || (i+1)+'人目'; });
   // 同じ名前があれば番号をつける
@@ -611,7 +622,6 @@ function showQ(){
   var q = S.qs[S.qi];
   setProg('q-prog','q-count');
   var group = S.who==='group';
-  $('q-back').style.visibility = (!group && S.qi>0) ? 'visible' : 'hidden';
   var turn=$('q-turn');
   if(group && S.style==='secret'){ turn.hidden=false; turn.firstChild.textContent=S.players[S.pi].name+' さん'; } else turn.hidden=true;
   var h='';
@@ -660,7 +670,41 @@ function answer(c, el){
     }
   }, 260);
 }
-$('q-back').onclick=function(){ if(S.who==='solo' && S.qi>0){ S.qi--; showQ(); } };
+/* もどる・TOP（どの画面からでも） */
+function curScr(){ var e=document.querySelector('.scr.on'); return e ? e.id : 's-home'; }
+function goTop(ask){
+  var mid = ['s-pass','s-q','s-rev'].indexOf(curScr())>=0;
+  if(ask && mid && !confirm('途中の答えは消えます。TOPにもどりますか？')) return;
+  updatePoolNote(); show('s-home');
+}
+function goBack(){
+  var c=curScr(), n=S.players.length;
+  if(c==='s-setup' || c==='s-res' || c==='s-gres'){ goTop(false); return; }
+  if(S.who==='solo'){
+    if(S.qi>0){ S.qi--; showQ(); } else goTop(true);
+    return;
+  }
+  if(S.style==='open'){
+    if(c==='s-rev'){ showQ(); return; }
+    if(S.qi>0){ S.qi--; showQ(); } else goTop(true);
+    return;
+  }
+  // こっそり回す
+  if(c==='s-rev'){ S.pi=n-1; showPass(); return; }
+  if(c==='s-q'){ showPass(); return; }
+  if(S.pi>0){ S.pi--; showPass(); return; }
+  if(S.qi>0){ S.qi--; S.pi=n-1; showReveal(); return; }
+  goTop(true);
+}
+document.querySelectorAll('[data-nav]').forEach(function(b){
+  b.onclick=function(){ if(b.dataset.nav==='top') goTop(true); else goBack(); };
+});
+/* スマホの「戻る」（スワイプ）でもサイトから出ずに1つもどる */
+var pushed=false;
+window.addEventListener('popstate', function(){
+  pushed=false;
+  if(curScr()!=='s-home'){ goBack(); }
+});
 
 /* 発表（1問ごと） */
 function showReveal(){
