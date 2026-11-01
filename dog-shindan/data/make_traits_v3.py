@@ -26,16 +26,31 @@ for key,(f,sgn) in RES.items():
     for i in IDS:
         if i in R['breeds']:raw[i][key]=R['breeds'][i]['factors'][f]['mean']*sgn;how[i][key]='研究'
         else:raw[i][key]=sum(a*b for a,b in zip(w,[1]+[A[i]['traits'][k] for k in AK]));how[i][key]='研究にないためAKCから推定'
+# 物おじしなさ：研究のアンケートの「こわがり・自信」の質問8つ（犬種ごとの「はい」の割合）から出す
+# （前はAKCの「環境への適応力」を使っていたが、これは暑さ・暮らしの変化への強さで、こわがりかどうかとは別のもの）
+QB=json.load(open(os.path.join(H,'darwinsark','breed_questions.json')))['breeds']
+CALM_Q={'102':1,'81':1,'86':-1,'90':-1,'104':-1,'84':-1,'83':-1,'88':-1}  # 自信がある・新しい場所にすぐなじむ／音に敏感・雷がこわい・不安がり・新しい場面が苦手・お手入れでこわがる・病院でこわがる
+cst={}
+for k in CALM_Q:
+    xs=[QB[b][k]['yes'] for b in QB if k in QB[b] and QB[b][k]['n']>=15];m=sum(xs)/len(xs);cst[k]=(m,math.sqrt(sum((x-m)**2 for x in xs)/len(xs)))
+cres={}
+for b in IDS:
+    ks=[k for k in CALM_Q if b in QB and k in QB[b] and QB[b][k]['n']>=15]
+    if len(ks)>=4:cres[b]=sum(CALM_Q[k]*(QB[b][k]['yes']-cst[k][0])/cst[k][1] for k in ks)/len(ks)
+hc=[i for i in IDS if i in cres]
+wc=lstsq([[1]+[A[i]['traits'][k] for k in AK] for i in hc],[cres[i] for i in hc])
+for i in IDS:
+    if i in cres:raw[i]['calm']=cres[i];how[i]['calm']='研究（こわがり・自信の質問8つ）'
+    else:raw[i]['calm']=sum(a*b for a,b in zip(wc,[1]+[A[i]['traits'][k] for k in AK]));how[i]['calm']='研究にないためAKCから推定'
 def zs(d):
     xs=list(d.values());m=sum(xs)/len(xs);sd=math.sqrt(sum((x-m)**2 for x in xs)/len(xs)) or 1
     return {k:(v-m)/sd for k,v in d.items()}
 zE=zs({i:raw[i]['energy'] for i in IDS});zS=zs({i:raw[i]['social'] for i in IDS})
-zP=zs({i:A[i]['traits']['protective'] for i in IDS});zB=zs({i:A[i]['traits']['barking'] for i in IDS});zA=zs({i:A[i]['traits']['adaptability'] for i in IDS})
+zP=zs({i:A[i]['traits']['protective'] for i in IDS});zB=zs({i:A[i]['traits']['barking'] for i in IDS})
 for i in IDS:
     # AKCは1〜5の5段階で同点が多いので、研究の数字で差をつける
     raw[i]['protect']=zP[i]-0.35*zS[i];how[i]['protect']='AKC（同点は研究の「人へのなつき方」で調整）'
     raw[i]['bark']=zB[i]+0.35*zE[i];how[i]['bark']='AKC（同点は研究の「興奮しやすさ」で調整）'
-    raw[i]['calm']=zA[i]-0.35*zE[i];how[i]['calm']='AKC（同点は研究の「落ち着き」で調整）'
 KEYS=['social','dogs','curious','energy','clingy','toys','learn','protect','bark','calm']
 V={i:{} for i in IDS}
 for k in KEYS:
