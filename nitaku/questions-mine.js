@@ -14,6 +14,9 @@
  *   ふつう：B＝冒険（+）／慎重（-）　Y＝欲ばり（+）／無欲（-）
  *           M＝見栄（+）／本音（-）　N＝ノリ（+）／冷静（-）
  *
+ * 5つ目に難しさを入れられます（入れなければノーマル）：1＝イージー　2＝ノーマル　3＝ハード
+ *   恋愛('…', '…', 'K+', 'K-', 3);   ← ハードの問題になります
+ *
  * 例）
  *   恋愛('年下の超イケメン', '年上の超お金持ち', 'S+ A-', 'R- A+');
  *   ふつう('一生ずっと夏休み', '一生ずっと給料日', 'B+', 'Y+');
@@ -22,8 +25,8 @@
  */
 (function () {
   var mine = { love: [], normal: [] };
-  function 恋愛(a, b, ta, tb) { mine.love.push([a, b, ta || '', tb || '']); }
-  function ふつう(a, b, ta, tb) { mine.normal.push([a, b, ta || '', tb || '']); }
+  function 恋愛(a, b, ta, tb, lv) { mine.love.push([a, b, ta || '', tb || '', lv || 2]); }
+  function ふつう(a, b, ta, tb, lv) { mine.normal.push([a, b, ta || '', tb || '', lv || 2]); }
 
   /* ↓ここから下に足してください */
 

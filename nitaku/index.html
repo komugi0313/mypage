@@ -173,11 +173,11 @@ h2{font-size:20px;margin:22px 0 10px;font-weight:900}
     <button data-v="group" aria-pressed="false">みんなで</button>
   </div>
 
-  <div class="label">どこまで本音をさらす？</div>
-  <div class="seg seg2" id="seg-num">
-    <button data-v="10" aria-pressed="false"><b>ちょっとだけ</b><small>チラ見せ</small></button>
-    <button data-v="15" aria-pressed="true"><b>けっこう</b><small>まる見え</small></button>
-    <button data-v="20" aria-pressed="false"><b>ぜんぶ</b><small>丸はだか</small></button>
+  <div class="label">難しさ</div>
+  <div class="seg seg2" id="seg-lv">
+    <button data-v="easy" aria-pressed="false"><b>イージー</b><small id="lv-easy">キュン多め</small></button>
+    <button data-v="normal" aria-pressed="true"><b>ノーマル</b><small>本気で悩む</small></button>
+    <button data-v="hard" aria-pressed="false"><b>ハード</b><small>地獄の二択</small></button>
   </div>
 
   <div id="solo-born">
@@ -264,6 +264,8 @@ var AXES = {
   normal: [ {k:'B',lo:'慎重',hi:'冒険'}, {k:'Y',lo:'無欲',hi:'欲ばり'}, {k:'M',lo:'本音',hi:'見栄'}, {k:'N',lo:'冷静',hi:'ノリ'} ]
 };
 var MODE_NAME = { love:'恋愛編', normal:'ふつう編' };
+var LV_NAME = { easy:'イージー', normal:'ノーマル', hard:'ハード' };
+function playName(mode){ return MODE_NAME[mode]+'・'+LV_NAME[S.lv]; }
 
 /* ───── 問題をまとめる（こちらの問題＋あなたの問題） ───── */
 function hashStr(s){ var h=5381; for(var i=0;i<s.length;i++){ h=((h<<5)+h+s.charCodeAt(i))|0; } return (h>>>0).toString(36); }
@@ -275,7 +277,7 @@ var POOL = { love:[], normal:[] };
     if(!q || !q[0] || !q[1]) return;
     var id = hashStr(q[0]+'｜'+q[1]);
     if(seen[id]) return; seen[id]=1;
-    POOL[m].push({ id:id, a:String(q[0]), b:String(q[1]), ta:parseTags(q[2]), tb:parseTags(q[3]) });
+    POOL[m].push({ id:id, a:String(q[0]), b:String(q[1]), ta:parseTags(q[2]), tb:parseTags(q[3]), lv:(+q[4]||2) });
   });
 });
 function parseTags(t){
@@ -288,21 +290,29 @@ function parseTags(t){
 }
 function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 
+/* 難しさごとに出す問題（足りないときは「次に近い難しさ」から足す） */
+var LEVELS = { easy:[[1],[2]], normal:[[1,2,3]], hard:[[3],[2]] };
 /* 一度出た問題はこの端末が覚えておき、出しきるまで同じ問題は出さない */
-function pickQuestions(mode, n){
+function pickQuestions(mode, n, level){
   var key = 'nitaku_seen_'+mode;
   var seen = store(key) || [];
   var seenSet = {}; seen.forEach(function(id){ seenSet[id]=1; });
-  var fresh = shuffle(POOL[mode].filter(function(q){ return !seenSet[q.id]; }));
-  var pick = fresh.slice(0, n);
-  if(pick.length < n){
-    // 出しきったので最初からまぜ直し（今回のぶんは除く）
-    var used = {}; pick.forEach(function(q){ used[q.id]=1; });
-    var rest = shuffle(POOL[mode].filter(function(q){ return !used[q.id]; }));
-    pick = pick.concat(rest.slice(0, n-pick.length));
-    seen = [];
+  var groups = (LEVELS[level]||LEVELS.normal).map(function(lvs){
+    return POOL[mode].filter(function(q){ return lvs.indexOf(q.lv)>=0; });
+  });
+  var pick = [], used = {};
+  function take(list){
+    shuffle(list.slice()).forEach(function(q){ if(pick.length<n && !used[q.id]){ used[q.id]=1; pick.push(q); } });
   }
-  pick.forEach(function(q){ seen.push(q.id); });
+  groups.forEach(function(g){ take(g.filter(function(q){ return !seenSet[q.id]; })); });
+  if(pick.length < n){
+    // この難しさの問題を出しきったので、まぜ直してもう一度
+    var again = {};
+    groups.forEach(function(g){ g.forEach(function(q){ again[q.id]=1; }); });
+    seen = seen.filter(function(id){ return !again[id]; });
+    groups.forEach(function(g){ take(g); });
+  }
+  pick.forEach(function(q){ if(seen.indexOf(q.id)<0) seen.push(q.id); });
   store(key, seen);
   // A/B の左右もランダムに入れかえる
   return pick.map(function(q){
@@ -410,11 +420,12 @@ function bornScore(mode, born){
 }
 
 /* ───── 状態 ───── */
-var S = { mode:'love', who:'solo', num:15, style:'secret', players:[], qs:[], qi:0, pi:0, ans:[], times:[], t0:0 };
+var S = { mode:'love', who:'solo', num:15, lv:'normal', style:'secret', players:[], qs:[], qi:0, pi:0, ans:[], times:[], t0:0 };
 
 /* ホーム */
 function setMode(m){
   S.mode=m; document.body.setAttribute('data-mode',m);
+  $('lv-easy').textContent = m==='love' ? 'キュン多め' : 'ゆるく笑える';
   document.querySelectorAll('.mode').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.m===m?'true':'false'); });
   updatePoolNote();
 }
@@ -430,7 +441,7 @@ function seg(id, cb){
   });
 }
 seg('seg-who', function(v){ S.who=v; $('solo-born').hidden = (v!=='solo'); $('go').textContent = v==='solo'?'はじめる':'参加する人を決める'; });
-seg('seg-num', function(v){ S.num=+v; });
+seg('seg-lv', function(v){ S.lv=v; });
 seg('seg-style', function(v){ S.style=v; styleHint(); });
 function styleHint(){
   $('style-hint').textContent = S.style==='secret'
@@ -484,7 +495,7 @@ $('go2').onclick=function(){
 
 /* 開始 */
 function start(){
-  S.qs = pickQuestions(S.mode, S.num);
+  S.qs = pickQuestions(S.mode, S.num, S.lv);
   S.qi=0; S.pi=0;
   S.ans = S.players.map(function(){ return []; });
   S.times = S.players.map(function(){ return []; });
@@ -614,7 +625,7 @@ function speedStats(qs, times){
   return { rate: Math.round(100*fast/arr.length), slow: slow };
 }
 function shareText(mode, ty, hd, val){
-  return '究極の二択【'+MODE_NAME[mode]+'】\nわたしは「'+ty.n+'」でした！ '+hd.cap+' '+val+'%\n#究極の二択';
+  return '究極の二択【'+playName(mode)+'】\nわたしは「'+ty.n+'」でした！ '+hd.cap+' '+val+'%\n#究極の二択';
 }
 function doShare(text){
   var url = location.href.split('#')[0].split('?')[0];
@@ -647,7 +658,7 @@ function showResult(){
   var mode=S.mode, sc=score(mode,S.qs,S.ans[0]), ty=typeOf(mode,sc), hd=headline(mode), val=sc[hd.k];
   var born=bornInfo(S.players[0].born), bsc=born?bornScore(mode,born):null;
   var sp=speedStats(S.qs,S.times[0]);
-  var h='<div class="res-hero"><div class="pre">'+MODE_NAME[mode]+'　あなたは…</div>'+
+  var h='<div class="res-hero"><div class="pre">'+playName(mode)+'　あなたは…</div>'+
     '<div class="type">'+esc(ty.n)+'</div><div class="catch">'+esc(ty.c)+'</div>'+
     '<div class="subt">'+subtitle(mode,sc)+'</div>'+
     '<div class="meter"><div class="num">'+val+'<small>%</small></div><div class="cap">'+hd.cap+'</div></div></div>';
@@ -682,7 +693,7 @@ function showGroupResult(){
     var born=bornInfo(p.born);
     return { p:p, sc:sc, ty:typeOf(mode,sc), born:born, bsc:born?bornScore(mode,born):null, i:i };
   });
-  var h='<div class="res-hero"><div class="pre">'+MODE_NAME[mode]+'　'+n+'人の結果</div><div class="type">みんなの本音、発表</div>'+
+  var h='<div class="res-hero"><div class="pre">'+playName(mode)+'　'+n+'人の結果</div><div class="type">みんなの本音、発表</div>'+
         '<div class="catch">いちばん'+hd.cap.replace('度','')+'なのは…</div>';
   var top = R.slice().sort(function(a,b){ return b.sc[hd.k]-a.sc[hd.k]; })[0];
   h+='<div class="meter"><div class="num" style="font-size:40px">'+esc(top.p.name)+'</div><div class="cap">'+hd.cap+' '+top.sc[hd.k]+'%</div></div></div>';
@@ -749,7 +760,7 @@ function showGroupResult(){
   $('res-body').innerHTML='';
   $('gres-body').innerHTML=h;
   $('gshare').onclick=function(){
-    var t='究極の二択【'+MODE_NAME[mode]+'】'+n+'人で遊んだ結果\n'+
+    var t='究極の二択【'+playName(mode)+'】'+n+'人で遊んだ結果\n'+
       R.map(function(r){ return r.p.name+'＝'+r.ty.n+'（'+hd.cap+r.sc[hd.k]+'%）'; }).join('\n')+
       '\nいちばん気が合う2人：'+S.players[pb.x].name+'×'+S.players[pb.y].name+'\n#究極の二択';
     doShare(t);
