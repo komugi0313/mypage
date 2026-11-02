@@ -353,6 +353,16 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .mp-set>button::after{content:"›";color:var(--muted);font-size:1.2rem}
 .mp-set>h3+button{border-top:0}
 .mp-set .danger{color:var(--muted)}
+.g-save{display:flex;flex-direction:column;gap:10px;align-items:center}
+.g-img{width:100%;max-width:360px;height:auto;border-radius:16px;box-shadow:0 4px 0 var(--mint-l)}
+.mv{border-top:1px solid var(--line,#D9E6EA)}
+.mv summary{min-height:48px;display:flex;align-items:center;font-weight:800;font-size:.92rem;cursor:pointer;list-style:none}
+.mv summary::-webkit-details-marker{display:none}
+.mv-in{display:flex;flex-direction:column;gap:10px;padding-bottom:10px}
+.mv-steps{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:6px;font-size:.84rem;color:var(--muted);font-weight:800}
+.mv-steps b{display:block;color:var(--ink)}
+.mv textarea{font:inherit;font-size:.78rem;width:100%;border-radius:12px;border:2px solid var(--mint-l);background:var(--bg);padding:8px 10px;color:var(--ink);resize:vertical;word-break:break-all}
+.mv-row{display:flex;gap:8px;flex-wrap:wrap}.mv-row .sub{flex:1 1 auto;margin:0;min-height:46px;padding:4px 14px}
 .mp-confirm{background:var(--soft);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .mp-confirm .mp-del{display:block;margin:6px 0}.mp-confirm .nw{display:inline-block}.mp-confirm .mp-li{display:block;padding-left:1em;text-indent:-1em}.mp-confirm .mp-li::before{content:"・"}.mp-confirm b{font-weight:800}
 .mp-confirm p{margin:0;font-weight:800;font-size:.86rem;color:var(--ink)}
@@ -825,6 +835,18 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
         <button type="button" id="mp-ribbon">おねがい（黄色いリボン）</button>
         <button type="button" id="reset-hist" class="danger">診断記録を消して、やり直す</button>
         <button type="button" id="del-dog" class="danger">この子をマイページから消す</button>
+        <details class="mv" id="mv"><summary>記録の引っ越し（機種変更のとき）</summary>
+          <div class="mv-in">
+            <ol class="mv-steps"><li><b>今の端末で「コードを作る」</b>記録をまとめた、長い文字のコードができます。</li><li><b>自分に送る</b>LINEの自分あてやメモに、コードを送っておきます。</li><li><b>新しい端末で「はりつけて読みこむ」</b>記録がそのまま入ります。</li></ol>
+            <button class="mp-btn" type="button" id="mv-make">コードを作る</button>
+            <div id="mv-out" hidden><textarea id="mv-code" rows="3" readonly></textarea>
+              <div class="mv-row"><button class="sub" type="button" id="mv-copy">コピーする</button><button class="sub" type="button" id="mv-line">LINEで自分に送る</button></div>
+              <p class="note">写真はコードに入りません。新しい端末で選び直してください。コードには病院の電話番号なども入るので、自分だけに送ってくださいね。</p></div>
+            <label class="f" for="mv-in">新しい端末で、コードをはりつけてください</label>
+            <textarea id="mv-in" rows="3" placeholder="W44-…"></textarea>
+            <button class="sub" type="button" id="mv-read">はりつけて読みこむ</button>
+            <p class="note" id="mv-msg" hidden></p>
+          </div></details>
         <div class="mp-confirm" id="mp-confirm" hidden><p id="mp-confirm-t">記録を消すと、次の診断は1回目からになります。消しますか？</p><div><button type="button" id="mp-yes" class="danger">消す</button><button type="button" id="mp-no">やめる</button></div></div>
         <p class="note" id="reset-msg" hidden>記録を消しました。次の診断は1回目からになります。</p>
       </div>
@@ -841,6 +863,8 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
       <div class="dogrow" id="g-dogs"></div>
       <div class="panel" id="g-tl-panel"><h2 id="g-tl-title">気質の犬種のうつりかわり</h2><div class="tl" id="g-tl"></div></div>
       <div class="panel" id="g-chart-panel"><h2>性格の変化</h2><div class="chart" id="g-chart"></div><p class="gnote" id="g-note"></p></div>
+      <div class="g-save" id="g-save-wrap"><button class="mp-btn" type="button" id="g-save">画像で保存・シェア</button>
+        <img class="g-img" id="g-img" alt="成長の記録の画像" hidden><p class="note" id="g-img-tip" hidden>画像は長押しでも保存できます。</p></div>
       <p class="note" id="g-empty" hidden>まだ記録がありません。診断すると、ここに結果がたまっていきます。</p>
     </div>
 
@@ -4056,7 +4080,7 @@ function growAdd(raw,main){var g=lsGet("w44_grow",{}),k=dogKey();
   g[k]=g[k]||{n:st.name||"うちの子",b:st.breed,list:[]};g[k].n=st.name||"うちの子";g[k].list.push({t:Date.now(),m:main.id,p:p,a:st.age});g[k].list=g[k].list.slice(-30);lsSet("w44_grow",g)}
 var gDog=null;
 function renderGrow(){var g=lsGet("w44_grow",{}),keys=Object.keys(g);
-  $("g-empty").hidden=!!keys.length;$("g-tl-panel").hidden=!keys.length;$("g-chart-panel").hidden=!keys.length;$("g-dogs").hidden=keys.length<2;
+  $("g-empty").hidden=!!keys.length;$("g-tl-panel").hidden=!keys.length;$("g-chart-panel").hidden=!keys.length;$("g-save-wrap").hidden=!keys.length;$("g-img").hidden=true;$("g-img-tip").hidden=true;$("g-dogs").hidden=keys.length<2;
   if(!keys.length)return;if(!g[gDog])gDog=g[dogKey()]?dogKey():keys[0];
   $("g-dogs").innerHTML='<span class="dogs-l">どの子の記録を見る？</span>'+keys.map(function(k){var d=g[k],o=ownId(d.b);return '<button type="button" data-k="'+esc(k)+'"'+(k===gDog?' class="on"':'')+'>'+(o&&IMG[o]?'<img src="'+IMG[o]+'?v=5" alt="">':'')+esc(d.n)+'</button>'}).join("");
   var d=g[gDog],A=d.list.filter(function(r){return BY[r.m]}),L=d.list.filter(function(r){return r.p&&r.p.length===AXES.length});$("g-tl-title").textContent=d.n+"の気質の犬種のうつりかわり";
@@ -4069,6 +4093,73 @@ function renderGrow(){var g=lsGet("w44_grow",{}),keys=Object.keys(g);
   svg+='<text x="22" y="124" font-size="10" fill="#5A6672">'+ymd(L[0].t).replace(/\d+日$/,"")+'</text><text x="'+(W-8)+'" y="124" font-size="10" text-anchor="end" fill="#5A6672">'+ymd(L[L.length-1].t).replace(/\d+日$/,"")+'</text></svg>';
   $("g-chart").innerHTML=svg+'<div class="lg">'+ch.map(function(ax){return '<span><i style="background:'+AXC[ax][0]+'"></i>'+AXES[ax].a+'（上）↔ '+AXES[ax].b+'</span>'}).join("")+'</div>';
   var big=ch[0],dv=l[big]-f[big];$("g-note").textContent=Math.abs(dv)<10?"最初のころから、性格のバランスはあまり変わっていません。":"最初のころより、だんだん「"+(dv>0?AXES[big].a:AXES[big].b)+"」になってきました。"}
+// ---------- 成長の記録を1枚の画像にする（保存・シェア用） ----------
+function growData(){var g=lsGet("w44_grow",{}),d=gDog&&g[gDog];if(!d)return null;
+  var A=(d.list||[]).filter(function(r){return BY[r.m]}),L=(d.list||[]).filter(function(r){return r.p&&r.p.length===AXES.length});if(!A.length)return null;
+  var seq=A.length<=4?A:[A[0]].concat(A.slice(-3)),ch=[],note="";
+  if(L.length>=2){var f=L[0].p,l=L[L.length-1].p;ch=AXI.slice().sort(function(a,b){return Math.abs(l[b]-f[b])-Math.abs(l[a]-f[a])}).slice(0,3);
+    var big=ch[0],dv=l[big]-f[big];note=Math.abs(dv)<10?"最初のころから、性格のバランスはあまり変わっていません。":"最初のころより、だんだん「"+(dv>0?AXES[big].a:AXES[big].b)+"」になってきました。"}
+  return {d:d,A:A,L:L,seq:seq,ch:ch,note:note}}
+function ym(t){var x=new Date(t);return x.getFullYear()+"年"+(x.getMonth()+1)+"月"}
+function renderGrowImg(G,arts,paw){var W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;var ctx=cv.getContext("2d");
+  var F='"Mochiy Pop One","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',R='"M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',dark="#2F3A45",mute="#5A6672",teal="#357385";
+  ctx.fillStyle="#A9D3DC";ctx.fillRect(0,0,W,H);ctx.fillStyle="#C2E1E8";for(var y=10;y<H;y+=40)for(var x=10;x<W;x+=40){ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill()}
+  ctx.fillStyle="#5E8FA6";roundRect(ctx,48,58,W-96,H-96,56);ctx.fill();ctx.fillStyle="#FFFFFF";roundRect(ctx,48,48,W-96,H-96,56);ctx.fill();
+  ctx.textAlign="center";ctx.fillStyle=teal;ctx.font="400 34px "+F;ctx.fillText("44Wansonalities",W/2,122);
+  if(paw){var tw=ctx.measureText("44Wansonalities").width;ctx.drawImage(paw,W/2-tw/2-60,82,46,46);ctx.drawImage(paw,W/2+tw/2+14,82,46,46)}
+  var d=G.d,A=G.A;ctx.fillStyle=dark;fitText(ctx,d.n+"の成長の記録",900,70,"400",F);ctx.fillText(d.n+"の成長の記録",W/2,220);
+  ctx.fillStyle=mute;ctx.font="800 32px "+R;var y1=ym(A[0].t),y2=ym(A[A.length-1].t);ctx.fillText((y1===y2?y1:y1+" → "+y2)+"・診断"+d.list.length+"回",W/2,272);
+  // 犬種のうつりかわり
+  var n=G.seq.length,cw=(W-160)/n,top=310,sz=Math.min(200,cw-30);
+  G.seq.forEach(function(r,i){var cx=80+cw*i+cw/2,im=arts[i];
+    if(im)ctx.drawImage(im,cx-sz/2,top,sz,sz);
+    var mo=new Date(r.t);ctx.fillStyle=mute;ctx.font="800 28px "+R;ctx.fillText((mo.getMonth()+1)+"月",cx,top+sz+40);
+    ctx.fillStyle=teal;fitText(ctx,BY[r.m].s+"気質",cw-16,34,"800",R);ctx.fillText(BY[r.m].s+"気質",cx,top+sz+84);
+    if(i<n-1){ctx.fillStyle="#8AC3CF";ctx.font="800 44px "+R;ctx.fillText("→",80+cw*(i+1),top+sz/2+14)}});
+  // グラフ
+  var gy=top+sz+130,gh=290,gx=110,gw=W-220;ctx.fillStyle="#E9F1F4";roundRect(ctx,gx-30,gy-20,gw+60,gh+(G.ch.length?150:40),28);ctx.fill();
+  if(G.ch.length){var L=G.L,px=function(i){return gx+20+(gw-40)*(L.length===1?0:i/(L.length-1))},py=function(v){return gy+10+(100-v)/100*(gh-40)};
+    ctx.strokeStyle="#CFE7EC";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(gx,gy);ctx.lineTo(gx,gy+gh-20);ctx.lineTo(gx+gw,gy+gh-20);ctx.stroke();
+    ctx.setLineDash([10,10]);ctx.beginPath();ctx.moveTo(gx,py(50));ctx.lineTo(gx+gw,py(50));ctx.stroke();ctx.setLineDash([]);
+    G.ch.forEach(function(ax){var c=AXC[ax][0];ctx.strokeStyle=c;ctx.lineWidth=8;ctx.lineJoin="round";ctx.beginPath();L.forEach(function(r,i){var X=px(i),Y=py(r.p[ax]);if(i)ctx.lineTo(X,Y);else ctx.moveTo(X,Y)});ctx.stroke();
+      ctx.fillStyle=c;L.forEach(function(r,i){ctx.beginPath();ctx.arc(px(i),py(r.p[ax]),11,0,Math.PI*2);ctx.fill()})});
+    ctx.font="800 26px "+R;var lx=gx,ly=gy+gh+26,parts=G.ch.map(function(ax){return {c:AXC[ax][0],t:AXES[ax].a+"（上）↔ "+AXES[ax].b}});
+    ctx.textAlign="left";parts.forEach(function(o,k){var yy=ly+k*36;ctx.fillStyle=o.c;ctx.beginPath();ctx.arc(lx+10,yy-9,9,0,Math.PI*2);ctx.fill();ctx.fillStyle=dark;ctx.fillText(o.t,lx+30,yy)});ctx.textAlign="center"}
+  else{ctx.fillStyle=mute;ctx.font="800 32px "+R;ctx.fillText("診断を重ねると、ここに性格の変化のグラフが入ります",W/2,gy+gh/2)}
+  if(G.note){ctx.fillStyle="#FFF8E1";roundRect(ctx,110,H-250,W-220,90,24);ctx.fill();ctx.fillStyle=dark;fitText(ctx,G.note,W-280,34,"800",R);ctx.fillText(G.note,W/2,H-193)}
+  ctx.fillStyle=mute;ctx.font="800 26px "+R;ctx.fillText("#44Wansonalities #ワンソナ ・ 44wansona.com",W/2,H-100);
+  return cv.toDataURL("image/jpeg",0.9)}
+$("g-save").addEventListener("click",function(){var G=growData();if(!G){toast("まだ記録がありません");return}var btn=this;btn.disabled=true;
+  Promise.all([fontsReady(),pawImage()].concat(G.seq.map(function(r){return artImage(BY[r.m])}))).then(function(r){
+    var src=renderGrowImg(G,r.slice(2),r[1]);$("g-img").src=src;$("g-img").hidden=false;$("g-img-tip").hidden=false;btn.disabled=false;
+    return cardFile("g-img").then(function(f){if(navigator.canShare&&navigator.canShare({files:[f]}))return navigator.share({files:[f],text:G.d.n+"の成長の記録\n#44Wansonalities #ワンソナ"});throw new Error("nofile")})
+  }).catch(function(e){btn.disabled=false;if(e&&e.name==="AbortError")return;toast("画像を長押しして保存してください")})});
+
+// ---------- 記録の引っ越し：記録をコードにまとめて、新しい端末で読みこむ ----------
+var MV_SKIP={w44_lastq2:1,w44_prog:1,w44_mig_name:1};
+// コードは短くするために圧縮する（W44Z-）。圧縮できない古いブラウザでは、そのまま（W44-）
+function u8b64(u){var s="";for(var i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+function b64u8(t){var s=atob(t.replace(/-/g,"+").replace(/_/g,"/")),u=new Uint8Array(s.length);for(var i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u}
+function zipRun(Stream,u){var cs=new Stream("deflate-raw"),w=cs.writable.getWriter();w.write(u);w.close();return new Response(cs.readable).arrayBuffer().then(function(b){return new Uint8Array(b)})}
+function mvMake(){var d={};try{Object.keys(localStorage).forEach(function(k){if(k.indexOf("w44_")===0&&!MV_SKIP[k])d[k]=localStorage.getItem(k)})}catch(e){}
+  var j=JSON.stringify({v:1,t:Date.now(),d:d});
+  if(window.CompressionStream)return zipRun(CompressionStream,new TextEncoder().encode(j)).then(function(u){return "W44Z-"+u8b64(u)}).catch(function(){return "W44-"+b64e({v:1,d:d})});
+  return Promise.resolve("W44-"+b64e({v:1,d:d}))}
+function mvParse(raw){var m=/W44(Z?)-([A-Za-z0-9_-]+)/.exec(raw);if(!m)return Promise.resolve(null);
+  if(!m[1])return Promise.resolve(b64d(m[2]));
+  if(!window.DecompressionStream)return Promise.reject(new Error("old"));
+  return zipRun(DecompressionStream,b64u8(m[2])).then(function(u){return JSON.parse(new TextDecoder().decode(u))})}
+$("mv-make").addEventListener("click",function(){mvMake().then(function(c){$("mv-code").value=c;$("mv-out").hidden=false;$("mv-msg").hidden=true})});
+$("mv-copy").addEventListener("click",function(){var t=$("mv-code"),b=this;try{navigator.clipboard.writeText(t.value).then(function(){b.textContent="コピーしました";setTimeout(function(){b.textContent="コピーする"},2000)},function(){t.select()})}catch(e){t.select()}});
+$("mv-line").addEventListener("click",function(){window.open("https://line.me/R/share?text="+encodeURIComponent("44Wansonalities 記録の引っ越しコード\n"+$("mv-code").value),"_blank","noopener")});
+$("mv-read").addEventListener("click",function(){var raw=($("mv-in").value||"").replace(/\s/g,""),bad=function(t){$("mv-msg").textContent=t;$("mv-msg").hidden=false};
+  mvParse(raw).then(function(o){
+    if(!o||!o.d||typeof o.d!=="object"){bad("コードが読みこめませんでした。コードを最後まで、そのままはりつけてください。");return}
+    try{Object.keys(o.d).forEach(function(k){if(k.indexOf("w44_")===0&&!MV_SKIP[k]&&typeof o.d[k]==="string")localStorage.setItem(k,o.d[k])});localStorage.setItem("w44_mig_name","1")}catch(e){}
+    var cnt=Object.keys(lsGet("w44_grow",{})).length;$("mv-in").value="";
+    bad("記録を読みこみました（"+cnt+"匹）。ページを開き直すと、すべての画面に反映されます。");
+    gDog=null;renderHub();$("open-last").hidden=!(lsGet("w44_last",null)||lastFromGrow())
+  }).catch(function(){bad("コードが読みこめませんでした。コードを最後まで、そのままはりつけてください。")})});
 $("g-dogs").addEventListener("click",function(e){var b=e.target.closest("button[data-k]");if(!b)return;gDog=b.dataset.k;renderGrow()});
 // 予定：あなたが入れた予定を並べ、カレンダーに登録できる
 var REP={none:"くり返しなし",m:"毎月","2m":"2か月ごと",y:"毎年"};
