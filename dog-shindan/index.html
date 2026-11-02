@@ -3721,7 +3721,7 @@ $("open-last").addEventListener("click",openLast);
   try{H.snapshot(function(){return {scr:$("s-result").hidden?"":"s-result"}})}catch(e){}
   var go=function(d){if(d&&d.scr==="s-result")openLast()};
   try{if(H.ready)H.ready(go);else go(H.data||{})}catch(e){}})();
-(function(){try{var d=lsGet("w44_last",null);$("open-last").hidden=!(d&&d.n&&BY[d.m])}catch(e){}})();
+(function(){try{var d=lsGet("w44_last",null)||lastFromGrow();$("open-last").hidden=!(d&&d.n&&BY[d.m])}catch(e){}})();
 $("apply-edit").addEventListener("click",function(){
   var old=st.name,ob=st.breed;if(!readIn()){st.name=old;st.breed=ob;return}
   if(st.name!==old){var g=lsGet("w44_grow",{});
@@ -4340,7 +4340,10 @@ function finish(){progClear();
 }
 // いちばん新しい結果を、お使いの端末に残しておく（ページを開き直しても、もう一度見られるように）
 function saveLast(){if(!last)return;lsSet("w44_last",{n:st.name,b:st.breed,a:st.age,pct:last.pct,m:last.main.id,v:st.visit||null,t:Date.now()});var b=$("open-last");if(b)b.hidden=false}
-function loadLast(){var d=lsGet("w44_last",null);if(!d||!d.n||!BY[d.m]||!Array.isArray(d.pct)||d.pct.length!==AXES.length)return false;
+// 前の版で保存していなかった結果は、成長の記録（いちばん新しい診断）から作り直す
+function lastFromGrow(){var g=lsGet("w44_grow",{}),best=null;Object.keys(g).forEach(function(k){var L=(g[k]&&g[k].list)||[],r=L[L.length-1];if(r&&r.p&&r.p.length===AXES.length&&BY[r.m]&&(!best||r.t>best.r.t))best={e:g[k],r:r,L:L}});
+  if(!best)return null;var L=best.L;return {n:best.e.n,b:best.e.b,a:best.r.a,pct:best.r.p.map(function(v){return Math.max(0,Math.min(100,50+(v-50)/SPREAD))}),m:best.r.m,v:{n:L.length,prev:L.length>1?L[L.length-2].m:null,first:L[0].m}}}
+function loadLast(){var d=lsGet("w44_last",null)||lastFromGrow();if(!d||!d.n||!BY[d.m]||!Array.isArray(d.pct)||d.pct.length!==AXES.length)return false;
   st.name=d.n;st.breed=d.b;if(d.a)st.age=d.a;st.visit=d.v||null;$("in-name").value=d.n;
   var rank=ranking(d.pct),i=rank.findIndex(function(x){return x.b.id===d.m});if(i>0){var t=rank[i];rank.splice(i,1);rank.unshift(t);var m0=rank[1].m;rank[1].m=t.m;t.m=m0}
   last={pct:d.pct,rank:rank,main:rank[0].b,hid:hiddenOf(d.pct,d.m)};return true}
