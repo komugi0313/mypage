@@ -25,6 +25,7 @@ def build():
     shutil.copy(R+'icons/favicon.ico',OUT+'favicon.ico')
     for f in ['favicon-32.png','favicon-48.png','apple-touch-icon.png','icon-192.png','icon-512.png','icon-maskable-192.png','icon-maskable-512.png']: shutil.copy(R+'icons/'+f,OUT+'img/'+f)
     for l in ['ja','en','ko']: shutil.copy(R+'site_assets/ogp-%s.png'%l,OUT+'img/ogp-%s.png'%l)
+    for f in os.listdir(R+'site_assets/banner'): shutil.copy(R+'site_assets/banner/'+f,OUT+'img/'+f)
     head=rd(R+'src/head.html');js=rd(R+'src/budoux-inline.js')+rd(R+'src/script.js')
     head=re.sub(r'<title>.*?</title>\n?','',head);head=re.sub(r'<meta name="claude:viewport-fit-sides"[^>]*>\n?','',head)
     head=re.sub(r'<meta charset="utf-8">\n?|<meta name="viewport"[^>]*>\n?','',head)
