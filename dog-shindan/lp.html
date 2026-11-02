@@ -214,3 +214,25 @@ document.getElementById("copy").addEventListener("click",function(){var b=this,t
   var done=function(){b.textContent="コピーしました";setTimeout(function(){b.textContent="ハッシュタグをコピー"},2000)};
   try{navigator.clipboard.writeText(t).then(done,function(){b.textContent=t})}catch(e){b.textContent=t}});
 </script>
+<script>
+/* 泣き別れ防止：文の最後の1〜2文字だけが次の行に残るときは、前の数文字とまとめて折り返す（画面に出た文を見て自動で直す） */
+(function(){
+  var SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,INPUT:1,SELECT:1,OPTION:1,CANVAS:1,SVG:1};
+  function fixNode(n){var t=n.textContent,el=n.parentElement;if(!el||SKIP[el.tagName]||el.classList.contains("nob")||t.replace(/\s/g,"").length<6)return false;
+    if(!el.offsetParent&&getComputedStyle(el).position!=="fixed")return false;
+    var cs=getComputedStyle(el);if(cs.whiteSpace==="nowrap"||cs.whiteSpace==="pre")return false;
+    var r=document.createRange(),tops=[],last=-1,cnt=0;
+    for(var i=t.length-1;i>=0;i--){if(/\s/.test(t[i]))continue;r.setStart(n,i);r.setEnd(n,i+1);var b=r.getClientRects()[0];if(!b||!b.width)return false;
+      var top=Math.round(b.top);if(last<0)last=top;if(Math.abs(top-last)>3){break}cnt++;if(cnt>3)return false}
+    if(i<0)return false; // 1行だけ
+    var tail=t.slice(i+1).replace(/[。、！？」』）)ー]/g,"");if(tail.replace(/\s/g,"").length>2)return false;
+    var k=Math.max(0,t.length-(t.length-i-1)-3);var sp=document.createElement("span");sp.className="nob";sp.style.whiteSpace="nowrap";sp.textContent=t.slice(k);
+    n.textContent=t.slice(0,k);n.parentNode.insertBefore(sp,n.nextSibling);return true}
+  var busy=false;
+  function run(){busy=true;try{var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),list=[],n;while(n=w.nextNode())list.push(n);
+    list.forEach(function(x){try{fixNode(x)}catch(e){}})}finally{setTimeout(function(){busy=false},0)}}
+  var tm=null;function later(){if(busy)return;clearTimeout(tm);tm=setTimeout(run,120)}
+  if(window.MutationObserver)new MutationObserver(later).observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:["hidden","open","class","style"]});
+  window.addEventListener("resize",later);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(later);later();
+})();
+</script>
