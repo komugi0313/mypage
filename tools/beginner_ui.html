@@ -624,7 +624,7 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
     var y=c.now&&c.now.year, ay=(c.annualFortunes||[]).filter(function(a){return a.year===y;})[0], dd=safe(function(){return curDu(c);},null), nw=[];
     var dot=function(t){ t=String(t||'').trim(); return (!t||/[。！？]$/.test(t))?t:t+'。'; };   // 「…大切に）」で終わっても句点を付けて、次の文とつながらないようにする
     if(ay){ var s=sig(c,ay), ma=meanFor(c,ay); nw.push('今年は「'+s.lab+'」。'+dot(ma.意)+(ma.助?'\n\n過ごし方のコツ：'+dot(ma.助):'')); }
-    if(dd){ var s2=sig(c,dd), m2=dot(meanFor(c,dd).意); var m2a=m2.split(/(?<=。)/), m2b=m2a.filter(function(x){ return !(x.trim()&&nw.some(function(n){ return n.indexOf(x.trim())>=0; })); }); m2=m2b.join('').trim()+(m2b.length<m2a.length?'こちらも大きな追い風というほどではないので、日々の積み重ねが力になります。':''); nw.push('いまの10年は「'+s2.lab+'」。'+m2); }   // 今年の段と同じ文（「とはいえ…」）はくり返さない（2026-11-02）
+    if(dd){ var s2=sig(c,dd), m2=dot(meanFor(c,dd).意); var m2a=m2.split(/(?<=。)/), m2b=m2a.filter(function(x){ return !(x.trim()&&nw.some(function(n){ return n.indexOf(x.trim())>=0; })); }); m2=m2b.join('').trim()+((m2b.length<m2a.length&&!(s2.mk==='◎'||s2.mk==='○'))?'こちらも大きな追い風というほどではないので、日々の積み重ねが力になります。':''); nw.push('いまの10年は「'+s2.lab+'」。'+m2); }   // 今年の段と同じ文（「とはいえ…」）はくり返さない（2026-11-02）
     if(nw.length) P.now='【いまの運気】\n'+nw.join('\n\n');   // 段ごとに空行を入れる（1行の改行だと文がくっつく。2026-11-02）
     var gd=[];
     if(c.now){ var ys=(c.annualFortunes||[]).filter(function(a){return a.year>y&&a.year<y+10;});
@@ -822,6 +822,8 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
   }
   // 返ってきた文章に専門用語が残っていないかの確認（残っていれば1回だけ作り直し、それでも残れば端末内のやさしい鑑定にする）。作り直しは同じ鑑定の続き＝〔CONT〕を付けて、回数に数えない目印と続きの印を送る（2026-11-02）
   var JARGON=/命式|通変星|十二運|大運|年運|五行|干支|日主|日干|蔵干|空亡|天中殺|比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬|身旺|身弱|喜神|忌神|用神|日柱|月柱|年柱|時柱|天戦地冲|三合|方合|干合|支合|会局|納音|天乙貴人|駅馬|立運|陰陽|十二支|十干|格局|神殺|冲|三刑|自刑|冠帯|建禄|帝旺|半合|律音|月支元命|宿命中殺|節木運|咸池|紅艶|魁罡|羊刃|華蓋|天干|地支/;
+  var SOFTJ=[[/命式表/g,'生まれ持った表'],[/命式/g,'生まれ持った性質'],[/大運/g,'10年ごとの運の流れ'],[/年運/g,'その年の運'],[/月運/g,'その月の運'],[/日運/g,'その日の運'],[/通変星/g,'星'],[/十二運/g,'運の勢い'],[/五行/g,'5つの自然の力'],[/喜神/g,'調子が上がる力'],[/忌神/g,'疲れやすい力'],[/用神/g,'助けになる力'],[/天中殺|空亡/g,'ひと休みの時期'],[/身旺/g,'自分の力が強め'],[/身弱/g,'自分の力が控えめ']];
+  function softJ(t){ t=String(t||''); SOFTJ.forEach(function(r){ t=t.replace(r[0],r[1]); }); return t; }
   if(typeof window.generateReading==='function' && !window.generateReading._bgplain){
     var g0=window.generateReading;
     window.generateReading=async function(user,localText,system,deep){
@@ -832,6 +834,7 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
       if(res&&res.online&&JARGON.test(res.text||'')){
         var res2=await g0.call(this,'〔CONT〕\n'+u+'\n【やり直し】前の文章には占いの専門用語が入っていました。専門用語を一つも使わずに、最初から書き直してください。',localText,sy,deep);
         if(res2&&res2.online&&!JARGON.test(res2.text||'')) res=res2;
+        else if(!(res2&&res2.online)&&!JARGON.test(softJ(res.text))){ res.text=softJ(res.text); }   // 作り直しが通信で届かなかったときは、届いた答えを捨てずに、よく出る言葉だけふつうの言葉に直して出す（PROと同じく答えを出す。2026-11-02）
         else { var t0=safe(function(){ return plainOffline(user); },''); if(t0){ res={ok:true,text:t0,fallback:true,online:false,note:'わかりやすい言葉の鑑定を表示しています。'}; } }
       }
       // 通信できないときの端末内の鑑定（オフライン）も、専門用語を使わない文章に差し替える
@@ -853,7 +856,7 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
     window.openMeishiSheet=function(){
       if(!on()) return oms.apply(this,arguments);
       var wo=window.open;
-      window.open=function(u,a,b){ if(/meishi-sheet\.html/.test(String(u))) u=String(u)+(String(u).indexOf('?')<0?'?':'&')+'bg=1'; return wo.call(window,u,a,b); };
+      window.open=function(u,a,b){ if(/meishi-sheet\.html/.test(String(u))) u=String(u)+(String(u).indexOf('#')>=0?'&':(String(u).indexOf('?')<0?'?':'&'))+'bg=1'; return wo.call(window,u,a,b); };
       try{ return oms.apply(this,arguments); } finally{ window.open=wo; }
     };
     window.openMeishiSheet._bgplain=1;
@@ -968,7 +971,7 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
       (c.annualFortunes||[]).forEach(function(a){ if(a.year>=c.now.year&&a.year<=c.now.year+8&&sp.indexOf(a.tenStar)>=0) ys.push(YA(a.year)); });
       var _lm=safe(function(){ var L4=loveFourLines(c); return (L4&&L4.monthLabs&&L4.monthLabs[0])||''; },'');   // 恋愛の時期は、いちばん近い「縁が動く月」から（1行目と同じ。2026-11-02）
       if(_lm) E.push('いちばん近い「縁が動く月」は'+esc(_lm)+'です。');
-      if(sp.length){ E.push('恋愛・結婚は「パートナーを表す星」がめぐる年にも動きやすく、近いところでは'+(ys.length?ys.slice(0,3).join('・')+'です。':'目立つ年はありません。'));
+      if(sp.length){ E.push(ys.length?'恋愛・結婚は「パートナーを表す星」がめぐる年にも動きやすく、近いところでは'+ys.slice(0,3).join('・')+'です。':'「パートナーを表す星」がめぐる年は、近いところでは目立ちません。');
         T.push('パートナーを表す星＝<b>配偶者星</b>（はいぐうしゃせい）：'+sp.map(ty).join('・')+'。年運の通変星がこの星になる年を見ます。'); } }
     else if((topic==='work'||topic==='money')&&!_debt){ var _kb=kuboYears(c), gy=safe(function(){ return goodYearsAhead(c,8); },[]).filter(function(y){ return !_kb[y]; }).slice(0,3);   // 解けない空亡の年（ひと休みの年）は「動くときの目安」に入れない（上の「これからの流れ」と同じ。2026-11-02）
       if(gy.length){ E.push('これからの年で運の流れが良いのは'+gy.map(YA).join('・')+'です。'+(topic==='work'?'動くときの目安になります。':'大きなお金を動かす目安になります。'));
