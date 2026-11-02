@@ -29,11 +29,11 @@ function reasonC(k,L,c){
   :(c.el[0]>=c.el[4]?TR("生まれた日に、新しいことを伸ばしていく力が強く出ています。これからうまくいきそうなことに、早めに気づく人。"):TR("生まれた日に、考えがあちこちに広がる力が強く出ています。「これとこれ、つながってるかも」とピンとくる人。"));
  if(k==="TF")return L==="T"?(c.temp<0?TR("生まれた日に、ものごとを落ち着いて見る力が強く出ています。熱くなる場面でも、一歩引いて考えられる人。"):TR("生まれた日に、理屈で考える力が強く出ています。気持ちより先に、筋が通っているかを見る人。"))
   :(c.temp>0?TR("生まれた日に、人の気持ちを考える力が強く出ています。相手の気持ちを大事にして決める人。"):TR("生まれた日に、思いを表に出す力が強く出ています。理屈より、気持ちを大事にして決める人。"));
- if(k==="JP"){if(L==="J")return {"正官":TR("生まれた日に、ルールや約束を大事にする力が強く出ています。決まった形を守るほど力を出せる人。"),"正財":TR("生まれた日に、少しずつ積み上げる力が強く出ています。ゴールが見えると、一歩ずつ進める人。"),"印綬":TR("生まれた日に、じっくり学ぶ力が強く出ています。準備を整えてから動くほど、力を出せる人。"),"比肩":TR("生まれた日に、自分のペースを守る力が強く出ています。自分で決めた手順を守るほど、力を出せる人。")}[top(["正官","正財","印綬","比肩"])];
+ if(k==="JP"){if(L==="J")return {"正官":TR("生まれた日に、ルールや約束を大事にする力が強く出ています。決まった形を守るほど力を出せる人。"),"正財":TR("生まれた日に、少しずつ積み上げる力が強く出ています。ゴールが見えると、一歩ずつ進める人。"),"印綬":TR("生まれた日に、準備を整える力が強く出ています。下調べをしてから動くほど、力を出せる人。"),"比肩":TR("生まれた日に、自分で決めた手順を守る力が強く出ています。一度決めたやり方を、最後まで通せる人。")}[top(["正官","正財","印綬","比肩"])];
   return {"偏官":TR("生まれた日に、勢いで動く力が強く出ています。予定外の場面ほど、力を出せる人。"),"偏財":TR("生まれた日に、チャンスをつかむ力が強く出ています。その場の流れに乗るほど、力を出せる人。"),"偏印":TR("生まれた日に、ひらめきを大事にする力が強く出ています。決まった型より、自分なりのやり方で力を出す人。"),"傷官":TR("生まれた日に、気分や感覚で動く力が強く出ています。気分が乗ったときに、一気に力を出す人。"),"劫財":TR("生まれた日に、仲間と一緒に力を出すところが強く出ています。まわりと一緒に動くほど、力を出せる人。")}[top(["偏官","偏財","偏印","傷官","劫財"])];}
  if(L==="A")return c.in_>c.self?TR("生まれた日に、まわりに助けてもらえる力が強く出ています。安心できる場所があるので、自分で決めて進める人。"):TR("生まれた日に、自分を信じる力が強く出ています。人にどう思われるかを気にしすぎず、自分で決めて進める人。");
  const off=(c.g["偏官"]||0)+(c.g["正官"]||0),mx=Math.max(c.ex,c.en,off);
- return mx===c.ex?TR("生まれた日に、思ったことを外に出すところが強く出ています。そのぶん気持ちが動きやすく、小さなことにも気づける人。"):mx===c.en?TR("生まれた日に、人やモノと関わるところが強く出ています。そのぶんまわりの変化に敏感で、慎重に動ける人。"):TR("生まれた日に、まわりの期待を受け取るところが強く出ています。そのぶん空気をよく読み、慎重に動ける人。");}
+ return mx===c.ex?TR("生まれた日に、気持ちが表に出やすいところが強く出ています。そのぶん小さなことにも気づけて、慎重に動ける人。"):mx===c.en?TR("生まれた日に、人やモノと関わるところが強く出ています。そのぶんまわりの変化に敏感で、慎重に動ける人。"):TR("生まれた日に、まわりの期待を受け取るところが強く出ています。そのぶん空気をよく読み、慎重に動ける人。");}
 function natal(y,m,d){const days=Math.floor(Date.UTC(y,m-1,d)/864e5);const num=(((days+17)%60)+60)%60+1;const s=(num-1)%10,b=(num-1)%12;
  const L=CH[s],i=s%2===0?((b-L)%12+12)%12:((L-b)%12+12)%12,u=ST[i];
  let t=(s%2===0?"E":"I")+(s>=4?"S":"N")+([0,1,4,8,9,11].includes(b)?"T":"F")+G[u];
@@ -358,10 +358,10 @@ function render(instant){
  {const fig=$("cloudFig");if(fig){const tk=(window.__cloudTok=(window.__cloudTok||0)+1);setTimeout(()=>drawCloud().then(cv=>{if(tk!==window.__cloudTok)return;const x=cv.getContext("2d"),W=cv.width,H=cv.height,d=x.getImageData(0,0,W,H-90).data;let t=0,b=H-91;const blank=y=>{for(let i=y*W*4;i<(y+1)*W*4;i+=16)if(d[i]<235)return false;return true;};while(t<b&&blank(t))t++;while(b>t&&blank(b))b--;t=Math.max(0,t-50);b=Math.min(H-91,b+50);const o2=document.createElement("canvas");o2.width=W;o2.height=b-t;o2.getContext("2d").drawImage(cv,0,t,W,b-t,0,0,W,b-t);$("cloudImg").src=o2.toDataURL("image/png");$("cloudImg").alt=TR("わたしの気質と性格");fig.hidden=false;}).catch(()=>{}),0);}}
  {const kf=$("karteFig");if(kf){const tk=(window.__karteTok=(window.__karteTok||0)+1);setTimeout(()=>drawKarte().then(cv=>{if(tk!==window.__karteTok)return;$("karteImg").src=cv.toDataURL("image/png");$("karteImg").alt=TR("性格カルテ");kf.hidden=false;}).catch(()=>{}),0);}}
  {const K=ktStu(KT[born+">"+now]),el=$("kt");window.__me.kt=K||null;["hWorryH","hWorryQ","hWorry"].forEach(i=>{const x=$(i);if(x)x.style.display=(K&&K.aru)?"none":"";});if(el){el.hidden=!K;const box=(id,cls)=>{let x=$(id);if(!x){x=document.createElement("div");x.id=id;x.className=cls;document.querySelector(".hero").appendChild(x);}return x;};box("coreBox","corebox").innerHTML=K?coreCard(born,now):"";(window.__me&&(window.__me.ktKarai=K?K.karai:"")),(fx=>{fx.classList.toggle("wait2",$("coreBox").classList.contains("wait2"));return fx;})(box("funBox","funbox")).innerHTML=K?'<p class="kfh">'+(born===now?TR("あなたは、こんな人"):TR("気質と性格をあわせると、あなたはこんな人"))+'</p><dl class="ktl"><dt>'+TR("言いそうなこと")+'</dt><dd class="say">'+esc(K.say)+'</dd><dt>'+TR("やりそうなこと")+'</dt><dd>'+esc(K.do)+'</dd></dl><div class="ktk"><span>'+TR("辛口のひと言")+'</span>'+esc(K.karai)+'</div>':"";
- if(K){const wk=AX.filter(A=>aligned[A.k]).map(A=>born[AX.indexOf(A)]),wkL=LANG==="en"?wk.join(" and "):LANG==="ja"?wk.join(" と "):wk.join(TR("・")),wkIn=!!(K.aru&&K.why&&sents(K.why).length>1);
+ if(K){const wk=AX.filter(A=>aligned[A.k]).map(A=>born[AX.indexOf(A)]),wkL=LANG==="en"?(wk.length<3?wk.join(" and "):wk.slice(0,-1).join(", ")+", and "+wk[wk.length-1]):LANG==="ja"?(wk.length<3?wk.join(" と "):wk.join("・")):wk.join(TR("・")),wkIn=!!(K.aru&&K.why&&sents(K.why).length>1);
  const wkH=wk.length?'<p class="ktwk in">'+TR("※ {L} は生年月日からははっきりしない文字なので、「生まれつき」は「どちらかといえば」の意味で読んでください。").replace("{L}",wkL)+'</p>':'';
  el.innerHTML='<h3 class="kth">'+TR("くわしい鑑定")+'</h3>'+wkH+(K.aru?(()=>{const yureH=born!==now?TR("{a} と {b} を行き来しやすいわけ").replace("{a}",born).replace("{b}",now):TR("結果が変わりにくいわけ"),hT=(f,h)=>f==="yure"?yureH:TR(h);
-   const sec=([f,h],n)=>'<div class="kts kt-'+f+'"><h4>'+(n?'<span class="ktn">'+n+'</span>':'')+hT(f,h)+'</h4>'+(f==="why"&&n&&wkIn?whyFold(K.why,""):kfmt(K[f],f))+(f==="yure"?swayNote(born,now)+yureSee(born,now):'')+'</div>';
+   const sec=([f,h],n)=>'<div class="kts kt-'+f+'"><h4>'+(n?'<span class="ktn">'+n+'</span>':'')+hT(f,h)+'</h4>'+(f==="plus"&&K.worry?'<p class="ktworry">'+esc(sents(K.worry)[0])+'</p>':'')+(f==="why"&&n&&wkIn?whyFold(K.why,""):kfmt(K[f],f))+(f==="yure"?(born===now&&wk.length?'<p>'+TR("ただ、{L} は生年月日からははっきりしない文字なので、ここは答えが変わることもあります。").replace("{L}",wkL)+'</p>':'')+swayNote(born,now)+yureSee(born,now):'')+'</div>';
    /* 大事な3つ（こんなこと→どうして→生かすヒント）だけ先に見せ、残りは「もっと読む」にたたむ */
    const main=[["aru","こんなこと、ありませんか？"],["why","どうしてそうなるの？"],["tip","生かすヒント"]].filter(([f])=>K[f]),more=[["yure","16タイプの結果が変わるわけ"],["plus","悩みを、こう見てみる"],["hidden","あなたの、もう一つの力"]].filter(([f])=>K[f]);
    return main.map((x,i)=>sec(x,i+1)).join("")+(more.length?'<details class="mdet ktmore"><summary><span>'+TR("もっと読む")+'<small>'+more.map(([f,h])=>hT(f,h)).join(TR("・"))+'</small></span></summary>'+more.map(x=>sec(x,0)).join("")+'</details>':'');})():'<p class="ktb">'+esc(K.body)+'</p>')+(K.aru?'':'<dl class="ktl"><dt>'+TR("悩みやすいこと")+'</dt><dd>'+esc(K.worry)+'</dd></dl>');}}}window.__me.karaiC=strip(C.karai||"");drawBalance(N);lvInit();saveResult();layoutResult();recPick=null;drawRec();
@@ -583,7 +583,7 @@ const POWLOW=[TR("新しいことは、小さく始めるくらいがちょう�
 const STARS={"比肩":[TR("自分の星"),TR("自分のやり方とペースを守る力。")],"劫財":[TR("仲間の星"),TR("仲間と一緒だと、力が出やすい人。")],"食神":[TR("表現の星"),TR("楽しいこと、好きなことを素直に出す力。")],"傷官":[TR("感性の星"),TR("細かいところまでこだわって、いい物にする力。")],"偏財":[TR("めぐり合わせの星"),TR("人やチャンスを広くつかむ力。")],"正財":[TR("こつこつの星"),TR("少しずつ積み上げて、大事なものを守る力。")],"偏官":[TR("挑戦の星"),TR("勢いで動いて、人を引っぱる力。")],"正官":[TR("けじめの星"),TR("ルールを守り、信頼を積み重ねる力。")],"偏印":[TR("個性の星"),TR("ひらめきで、人と違うやり方を見つける力。")],"印綬":[TR("学びの星"),TR("じっくり学んで、よくわかるまで考える力。")]};
 /* 生まれつき少なめの力でも、今の16タイプで身につけているなら1行足す */
 const POWL=["EN","EF","S","J","PF"],POWS=[TR("新しいことをどんどん始められる"),TR("場を明るくできる"),TR("人や物事を支えられる"),TR("決めたことを最後までやれる"),TR("まわりに合わせられる")];
-function balGain(pc){const now=(st.t||[]).join("");if(now.length!==4)return "";const ls=[0,1,2,3,4].filter(i=>pc[i]<15&&[...POWL[i]].some(c=>now.includes(c)));
+function balGain(pc){const now=(st.t||[]).join("");if(now.length!==4)return "";const born=(window.__me&&window.__me.born)||"",ls=[0,1,2,3,4].filter(i=>pc[i]<15&&[...POWL[i]].every(c=>now.includes(c))&&![...POWL[i]].every(c=>born.includes(c)));
  return ls.map(i=>'<p class="bnote bgain">'+TR("「{p}」は生まれつき少なめです。でも今のあなたは、{s}人。経験の中で身につけた力です。").replace("{p}",POWN[i]).replace("{s}",POWS[i])+'</p>').join("");}
 function drawBalance(N){let el=$("bal");const c=N.chart;
  if(!el){el=document.createElement("section");el.id="bal";el.className="card bal";document.querySelector(".hero").after(el);}
@@ -662,7 +662,7 @@ function lvShow(t){const me=window.__me,P=lvTy(t);if(!me)return;const el=$("lvRe
  const lab=i=>t[i]===me.born[i]&&t[i]===me.now[i]?'<em class="s">'+TR("どちらも")+'</em>':t[i]===me.born[i]?'<em class="b">'+TR("気質")+'</em>':t[i]===me.now[i]?'<em class="n">'+TR("性格")+'</em>':'<em class="x">'+TR("恋だけ")+'</em>';
  let h=(P?'<div class="lvhero"><p class="lab">'+TR("恋をしたときのあなたは")+'</p><div class="fr"><img src="'+charSrc(t)+'" alt="'+esc(an(t))+'"></div><p class="tp">'+esc(t)+'</p><p class="nm">'+p16h(t)+'</p><p class="one">'+lvQ(esc(P.one))+'</p></div>'
   +((P.words||[]).length?'<div class="lvwords"><p class="lab">'+TR("恋のあなたを表すことば")+'</p><div class="ch">'+P.words.slice().sort((a,b)=>b[1]-a[1]).slice(0,8).map(([w,n])=>'<span class="'+(n>=3?'b':'')+'">'+esc(w)+'</span>').join("")+'</div></div>':''):'')
-  +'<div class="lvdiff"><h3>'+TR("ふだんのあなたとのちがい")+'</h3><div class="lvtiles">'+t.split("").map((l,i)=>'<div class="lt'+(me.born[i]!==me.now[i]&&l===me.born[i]?' isb':'')+'"><b>'+l+'</b>'+lab(i)+'</div>').join("")+'</div>'
+  +'<div class="lvdiff"><h3>'+TR("ふだんのあなたとくらべると")+'</h3><div class="lvtiles">'+t.split("").map((l,i)=>'<div class="lt'+(me.born[i]!==me.now[i]&&l===me.born[i]?' isb':'')+'"><b>'+l+'</b>'+lab(i)+'</div>').join("")+'</div>'
   +'<p class="lvleg">'+TR("文字の下の小さな言葉は、恋をしたときにその文字がどこから出たかです。")+([0,1,2,3].some(i=>t[i]!==me.born[i]&&t[i]!==me.now[i])?TR("「恋だけ」は、ふだんは出ない面です。"):"")+'</p>'
   +'<p class="hook">'+esc(lvHook(me.born,me.now,t))+'</p></div>';
  if(P){const nm=k=>k+p16(k),B=LVBLK[sit]||LVBLK.koi,used=B[1].map(x=>x[0]);
@@ -848,9 +848,9 @@ function swayNote(born,now){const ks=["EI","SN","TF","JP"];
  const w=ks.filter(k=>(st.sway&&st.sway[k])||(st.half&&st.half[k]));
  if(!w.length)return '<div class="mine"><p>'+TR("今回のあなたの回答は、4つの文字すべてがはっきりしていました。受けるたびに結果が変わるなら、答えた時の気分や、思い浮かべた場面が違ったのかもしれません。")+'</p></div>';
  const df=k=>born[ks.indexOf(k)]!==now[ks.indexOf(k)];
- let t='<p class="mh">'+TR("今回のあなたの回答で、答えが変わりやすかったのは")+'</p><ul class="swl">'+w.map(k=>'<li style="--c:var('+SWN[k][2]+')"><b>'+TR(SWN[k][0])+'</b><small>'+TR(SWN[k][1])+'</small><em class="'+(df(k)?'both':'core')+'">'+(df(k)?TR("両方の力"):TR("ゆるがない部分"))+'</em></li>').join("")+'</ul>';
+ let t='<p class="mh">'+TR("今回のあなたの回答で、答えが変わりやすかったのは")+'</p><ul class="swl">'+w.map(k=>'<li style="--c:var('+SWN[k][2]+')"><b>'+TR(SWN[k][0])+'</b><small>'+TR(SWN[k][1])+'</small><em class="'+(df(k)?'both':'core')+'">'+(df(k)?TR("両方の力"):TR("いつもは同じ文字"))+'</em></li>').join("")+'</ul>';
  if(w.some(df))t+='<p><em class="both">'+TR("両方の力")+'</em>'+TR("生まれつきの気質と、育ってきた性格で、文字が違うところです。両方の力を持っているので、場面によって答えが変わるのは自然なことです。")+'</p>';
- if(w.some(k=>!df(k)))t+='<p><em class="core">'+TR("ゆるがない部分")+'</em>'+TR("気質も性格も同じ文字で、ふだんは答えが変わりにくいところです。ここで答えが変わったのは、今の職場や人間関係で、いつもと違う力を使っている時期だからかもしれません。")+'</p>';
+ if(w.some(k=>!df(k))){const g=ageNow();t+='<p><em class="core">'+TR("いつもは同じ文字")+'</em>'+TR(g!=null&&g<=18?"気質も性格も同じ文字で、ふだんは答えが変わりにくいところです。ここで答えが変わったのは、学校や部活、友だち関係で、いつもと違う力を使っている時期だからかもしれません。":g!=null&&g<=22?"気質も性格も同じ文字で、ふだんは答えが変わりにくいところです。ここで答えが変わったのは、授業やバイト、人間関係で、いつもと違う力を使っている時期だからかもしれません。":"気質も性格も同じ文字で、ふだんは答えが変わりにくいところです。ここで答えが変わったのは、今の職場や人間関係で、いつもと違う力を使っている時期だからかもしれません。")+'</p>';}
  return '<div class="mine">'+t+'<p class="mk"><b>'+TR("どちらかが正しいタイプ、ということはありません。")+'</b></p></div>';}
 /* 鑑定文を読みやすく：気質・性格の言葉に色、かぎかっこを太字、結論の文を太字、ヒントは箇条書き */
 const KW={ja:[/(生まれ持った気質|生まれ持った性質|生まれ持った|生まれつき|気質)|(経験の中で育った性格|経験の中で育った|経験の中で|育ってきた性格|育ってきた|性格)|(両方の力|ゆるがない部分)/g],
@@ -882,13 +882,13 @@ function coreMoved(b,n){const L=[].concat(st.prev||[]);try{histAll().forEach(r=>
  const op={E:"I",I:"E",S:"N",N:"S",T:"F",F:"T",J:"P",P:"J"},sp=LANG==="ja"?"":" ";
  return idx.map(i=>{const o=op[n[i]];return sp+TR("前は {o}（{oc}）が出たこともありますね。もともとは{kc}人ですが、{oc}時もあります。").replace(/\{o\}/g,o).replace(/\{oc\}/g,TR(CORE[o])).replace("{kc}",TR(CORE[n[i]]));}).join("");}
 function coreCard(b,n){const co=coreOf(b,n);if(!co)return "";
- return '<div class="ktcore"><p class="kch">'+TR("あなたの変わらないところ")+'</p><p class="kcn">'+esc(co.name)+'</p><ul class="kcl">'+co.aru.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul><p class="kcs">'+(b===n?TR("気質も性格も同じ文字なので、4つすべてがあなたの変わらないところです。"):coreKey(b,n)==="----"?TR("気質と性格で同じ文字はありません。どちらの自分にもなれることが、あなたの変わらないところです。"):TR("気質と性格で同じ文字のところです。生まれつきも今も同じなので、あなたの土台になっています。")+coreMoved(b,n))+'</p></div>';}
+ return '<div class="ktcore"><p class="kch">'+TR("あなたの変わらないところ")+'</p><p class="kcn">'+esc(co.name)+'</p><ul class="kcl">'+co.aru.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul><p class="kcs">'+(b===n?TR("気質も性格も同じ文字なので、4つすべてがあなたの変わらないところです。"):coreKey(b,n)==="----"?TR("4つの文字は、気質と性格ですべて違います。どちらの自分にもなれることが、あなたの変わらないところです。"):TR("気質と性格で同じ文字のところです。生まれつきも今も同じなので、あなたの土台になっています。")+coreMoved(b,n))+'</p></div>';}
 /* 結果の一番最初：キャラクターのカードをタップしてめくる */
 function setupCards(instant,one){waitHide();if(!instant)setTimeout(()=>{const fb=$("funBox");if(fb&&fb.classList.contains("wait2")&&!$("waitFun")){const w=document.createElement("p");w.id="waitFun";w.className="waitbox";w.innerHTML=one?TR("上の<b>カードをめくる</b>と、ここに出てきます。"):TR("上の<b>カードを2枚ともめくる</b>と、ここに出てきます。");fb.before(w);}},0);const cards=[...document.querySelectorAll(".nicks .nk")].filter(n=>!n.hidden),story=$("rStory");window.__story=story.innerHTML;
  cards.forEach(n=>{let bk=n.querySelector(".nkback");if(!bk){bk=document.createElement("div");bk.className="nkback";n.appendChild(bk);}
   const born=n.classList.contains("born");bk.innerHTML='<span class="q">?</span><b>'+(one?TR("気質も性格も"):born?TR("気質のあなた"):TR("性格のあなた"))+'</b><small>'+TR("タップしてめくる")+'</small>';
   n.classList.remove("turn","turn2");n.classList.toggle("open",!!instant);n.onclick=()=>flipCard(n);});
- const cb=$("coreBox");if(cb)cb.classList.toggle("wait2",!instant);const fb=$("funBox");if(fb)fb.classList.toggle("wait2",!instant);const cf=$("cloudFig");if(cf)cf.classList.toggle("wait2",!instant);const cg=$("chgBox");if(cg)cg.classList.toggle("wait2",!instant);const wn=$("wkNote");if(wn)wn.classList.toggle("wait2",!instant);
+ const cb=$("coreBox");if(cb)cb.classList.toggle("wait2",!instant);const fb=$("funBox");if(fb)fb.classList.toggle("wait2",!instant);const cf=$("cloudFig");if(cf)cf.classList.toggle("wait2",!instant);const cg=$("chgBox");if(cg)cg.classList.toggle("wait2",!instant);const wn=$("wkNote");if(wn)wn.classList.toggle("wait2",!instant);const kt0=$("kt");if(kt0)kt0.classList.toggle("wait2",!instant);
  if(!instant)story.innerHTML=one?TR('<span class="ln">カードをタップして、</span><span class="ln">あなたの性質を見てみよう</span>'):TR('<span class="ln">カードをタップして、</span><span class="ln">あなたの2つの性質を見てみよう</span>');}
 /* 1枚だけめくったとき：見出しで次のカードを案内し、隠れている欄の場所に「2枚めくると出る」枠を出す */
 function waitShow(){const cards=[...document.querySelectorAll(".nicks .nk")].filter(x=>!x.hidden),rest=cards.filter(x=>!x.classList.contains("open"));
@@ -902,7 +902,7 @@ function waitShow(){const cards=[...document.querySelectorAll(".nicks .nk")].fil
 function waitHide(){["waitBox","waitFun"].forEach(id=>{const x=$(id);if(x)x.remove();});document.querySelectorAll(".nicks .nk.pz").forEach(x=>x.classList.remove("pz"));}
 function flipCard(n){if(n.classList.contains("open")||n.classList.contains("turn"))return;n.classList.add("turn");
  setTimeout(()=>{n.classList.add("open");n.classList.remove("turn");n.classList.add("turn2");setTimeout(()=>n.classList.remove("turn2"),300);
-  const left=[...document.querySelectorAll(".nicks .nk")].filter(x=>!x.hidden&&!x.classList.contains("open")).length;if(left)waitShow();if(!left){waitHide();if(window.__story)$("rStory").innerHTML=window.__story;["chgBox","coreBox","funBox","cloudFig","wkNote"].forEach(id=>{const cb=$(id);if(cb&&cb.classList.contains("wait2")){cb.classList.remove("wait2");cb.classList.add("reveal");}});}},240);}
+  const left=[...document.querySelectorAll(".nicks .nk")].filter(x=>!x.hidden&&!x.classList.contains("open")).length;if(left)waitShow();if(!left){waitHide();if(window.__story)$("rStory").innerHTML=window.__story;["chgBox","coreBox","funBox","cloudFig","wkNote","kt"].forEach(id=>{const cb=$(id);if(cb&&cb.classList.contains("wait2")){cb.classList.remove("wait2");cb.classList.add("reveal");}});}},240);}
 /* ---- 結果ページの「もっと知りたい人へ」：たたんだ中身をカードの一覧にまとめ、読んだ数を見せる ---- */
 const KREAD="16tp.read.v1";
 function moreMenu(list){let m=$("moreMenu");if(!m){m=document.createElement("section");m.id="moreMenu";m.className="card moremenu";m.innerHTML='<h2>'+TR("もっと知りたい人へ")+'</h2><p class="mmsub" id="mmSub"></p><div class="mmbar"><i id="mmBar"></i></div><p class="mmcount" id="mmCount"></p><div class="mmgrid" id="mmGrid"></div>';}
