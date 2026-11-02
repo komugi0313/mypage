@@ -308,7 +308,8 @@ html.bg-on .bg-why{display:block}
     [ts,ts.work||{}].forEach(function(x){ ['yU','yA','mU','mA'].forEach(function(k){ (x[k]||[]).forEach(function(l){ l=String(l); if(!futureLab(c,l,k.charAt(0))) return; var m=l.match(/(\d{4})年(?:(\d+)月)?/); if(!m) return; var y=+m[1]; if(m[2]){ if(ys[y]!==true){ ys[y]=ys[y]||[]; if(ys[y].indexOf(+m[2])<0) ys[y].push(+m[2]); } } else ys[y]=true; }); }); });
     return ys; }
   // 空亡の年（環境を大きく変えないほうがよい年）
-  function kuboYears(c){ var o={}; safe(function(){ var v=(kuuboNow(c).voids)||[]; (c.annualFortunes||[]).forEach(function(a){ if(v.indexOf(a.branch)>=0) o[a.year]=1; }); }); return o; }
+  // 合・冲で解ける空亡の年は引かない（PROの pkKuuBad と同じ決まり。2026-11-02）
+  function kuboYears(c){ var o={}; safe(function(){ var v=(kuuboNow(c).voids)||[]; (c.annualFortunes||[]).forEach(function(a){ if(v.indexOf(a.branch)>=0&&(typeof pkKuuBad!=='function'||pkKuuBad(c,a.year))) o[a.year]=1; }); }); return o; }
   // 過ぎてしまった時期は「これから備えましょう」の一覧に出さない
   function futureLab(c,l,kind){ l=String(l); var now=c.now||{}, m;
     if(kind==='d'){ m=l.match(/〜(\d+)歳(?:(\d+)ヶ月)?/); if(m) return (+m[1]+(+(m[2]||0))/12) > (now.age||0); return true; }
@@ -579,7 +580,8 @@ html.bg-on .bg-why{display:block}
       while(i<kids.length&&isS(kids[i])){ run.push(kids[i]); i++; }
       var st=0;
       if(prev&&prev.classList.contains('r-head')&&run.length>1){ var pt=document.createElement('div'); pt.className='bg-pt'; pt.innerHTML='💡 '+run[0].innerHTML; card.insertBefore(pt,run[0]); st=1; }
-      for(var k=st;k<run.length;k+=2){ var p=document.createElement('p'); p.className='bg-rp'; p.innerHTML=run[k].innerHTML+(run[k+1]?run[k+1].innerHTML:''); card.insertBefore(p,run[k]); }
+      for(var k=st;k<run.length;){ var two=run[k+1]&&!run[k+1].classList.contains('r-p0');   // 段落（空行）をまたいで2文をくっつけない（2026-11-02）
+        var p=document.createElement('p'); p.className='bg-rp'; p.innerHTML=run[k].innerHTML+(two?run[k+1].innerHTML:''); card.insertBefore(p,run[k]); k+=two?2:1; }
       run.forEach(function(n){ n.remove(); });
     }
     var lg=card.querySelector('details.r-legend');
@@ -614,17 +616,17 @@ html.bg-on .bg-why{display:block}
         :(nmT(hiE)+'の力が強めで、'+wsT(hiE)+'が持ち味です。'+((fe[so[4]]||0)===0?('いっぽう、'+nmT(loE)+'の力は、生まれ持った中にはありません。'+wsT(loE)+'を意識すると、バランスが整います。'):('少なめなのは'+nmT(loE)+'の力。'+wsT(loE)+'を少し意識すると、バランスが整います。')))); }
     var y=c.now&&c.now.year, ay=(c.annualFortunes||[]).filter(function(a){return a.year===y;})[0], dd=safe(function(){return curDu(c);},null), nw=[];
     var dot=function(t){ t=String(t||'').trim(); return (!t||/[。！？]$/.test(t))?t:t+'。'; };   // 「…大切に）」で終わっても句点を付けて、次の文とつながらないようにする
-    if(ay){ var s=sig(c,ay), ma=meanFor(c,ay); nw.push('今年は「'+s.lab+'」。'+dot(ma.意)+(ma.助?'\n過ごし方のコツ：'+dot(ma.助):'')); }
-    if(dd){ var s2=sig(c,dd); nw.push('いまの10年は「'+s2.lab+'」。'+dot(meanFor(c,dd).意)); }
-    if(nw.length) P.now='【いまの運気】\n'+nw.join('\n');
+    if(ay){ var s=sig(c,ay), ma=meanFor(c,ay); nw.push('今年は「'+s.lab+'」。'+dot(ma.意)+(ma.助?'\n\n過ごし方のコツ：'+dot(ma.助):'')); }
+    if(dd){ var s2=sig(c,dd), m2=dot(meanFor(c,dd).意); var m2a=m2.split(/(?<=。)/), m2b=m2a.filter(function(x){ return !(x.trim()&&nw.some(function(n){ return n.indexOf(x.trim())>=0; })); }); m2=m2b.join('').trim()+(m2b.length<m2a.length?'こちらも大きな追い風というほどではないので、日々の積み重ねが力になります。':''); nw.push('いまの10年は「'+s2.lab+'」。'+m2); }   // 今年の段と同じ文（「とはいえ…」）はくり返さない（2026-11-02）
+    if(nw.length) P.now='【いまの運気】\n'+nw.join('\n\n');   // 段ごとに空行を入れる（1行の改行だと文がくっつく。2026-11-02）
     var gd=[];
     if(c.now){ var ys=(c.annualFortunes||[]).filter(function(a){return a.year>y&&a.year<y+10;});
       var skY=shakyYears(c);
       var kbY=kuboYears(c);
-      gd=ys.filter(function(a){var m=sig(c,a).mk;return (m==='◎'||m==='○')&&!skY[a.year]&&!kbY[a.year];}).map(function(a){return a.year+'年';});
+      gd=ys.filter(function(a){var m=sig(c,a).mk;return (m==='◎'||m==='○')&&!skY[a.year]&&!kbY[a.year];}).map(function(a){return a.year+'年'+safe(function(){ return (typeof pkKuuTag==='function')?pkKuuTag(c,a.year,true):''; },'');});
       var lw=ys.filter(function(a){return sig(c,a).mk==='△';}).map(function(a){return a.year+'年';});
       var fl=[]; if(gd.length) fl.push('動き出すのに向いている年：'+gd.join('・')); if(lw.length) fl.push('静かに整えたい年：'+lw.join('・'));
-      if(fl.length) P.flow='【これからの流れ】\n'+fl.join('\n'); }
+      if(fl.length) P.flow='【これからの流れ】\n'+fl.map(function(x){ return x+'。'; }).join('\n\n'); }
     var ts=safe(function(){return detectTensen(c);},null);
     if(ts&&ts.any){ var wl=[]; ['U','A'].forEach(function(sd){ [ts,ts.work||{}].forEach(function(x){ if(!x['d'+sd]) return; x['d'+sd].filter(function(l){return futureLab(c,l,'d');}).map(function(l){return duOfLab(c,l);}).concat(x['y'+sd].filter(function(l){return futureLab(c,l,'y');}).map(clean)).forEach(function(l){ if(wl.indexOf(l)<0) wl.push(l); }); }); });
       wl.sort(function(p,q){ var a=String(p).match(/(\d{4})年(?:(\d+)月)?/), b=String(q).match(/(\d{4})年(?:(\d+)月)?/); return (a?(+a[1])*12+(+(a[2]||0)):-1)-(b?(+b[1])*12+(+(b[2]||0)):-1); });
@@ -957,9 +959,11 @@ html.bg-on .bg-why{display:block}
     var _qq=String(q||''), _rel=/不倫|浮気|離婚|別れ|復縁|(?<!丈)夫|妻|旦那|奥さん|元彼|元夫|元妻|亡くな/.test(_qq), _debt=/借金|ローン|返済|債務|自己破産|督促|滞納/.test(_qq);   // 相談に合わない一文は出さない（発注者指示 2026-10-21）
     if(topic==='love'&&!_rel){ var sp=safe(function(){ return spouseStars(c); },[]), ys=[];
       (c.annualFortunes||[]).forEach(function(a){ if(a.year>=c.now.year&&a.year<=c.now.year+8&&sp.indexOf(a.tenStar)>=0) ys.push(YA(a.year)); });
-      if(sp.length){ E.push('恋愛・結婚は「パートナーを表す星」がめぐる年に動きやすく、近いところでは'+(ys.length?ys.slice(0,3).join('・')+'です。':'目立つ年はありません。'));
+      var _lm=safe(function(){ var L4=loveFourLines(c); return (L4&&L4.monthLabs&&L4.monthLabs[0])||''; },'');   // 恋愛の時期は、いちばん近い「縁が動く月」から（1行目と同じ。2026-11-02）
+      if(_lm) E.push('いちばん近い「縁が動く月」は'+esc(_lm)+'です。');
+      if(sp.length){ E.push('恋愛・結婚は「パートナーを表す星」がめぐる年にも動きやすく、近いところでは'+(ys.length?ys.slice(0,3).join('・')+'です。':'目立つ年はありません。'));
         T.push('パートナーを表す星＝<b>配偶者星</b>（はいぐうしゃせい）：'+sp.map(ty).join('・')+'。年運の通変星がこの星になる年を見ます。'); } }
-    else if((topic==='work'||topic==='money')&&!_debt){ var gy=safe(function(){ return goodYearsAhead(c,3); },[]);
+    else if((topic==='work'||topic==='money')&&!_debt){ var _kb=kuboYears(c), gy=safe(function(){ return goodYearsAhead(c,8); },[]).filter(function(y){ return !_kb[y]; }).slice(0,3);   // 解けない空亡の年（ひと休みの年）は「動くときの目安」に入れない（上の「これからの流れ」と同じ。2026-11-02）
       if(gy.length){ E.push('これからの年で運の流れが良いのは'+gy.map(YA).join('・')+'です。'+(topic==='work'?'動くときの目安になります。':'大きなお金を動かす目安になります。'));
         T.push('年ごとの運の流れ（◎○）は、その年の通変星が、この方にとって助けになる星かどうかで決めています。'); } }
     else if(topic==='health'){ var gb=safe(function(){ return gogyoBalance(c); },null);
