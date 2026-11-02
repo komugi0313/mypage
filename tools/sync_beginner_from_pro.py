@@ -166,7 +166,7 @@ def build_app():
 def build_auth():
     s = (PRO / 'auth.html').read_text(encoding='utf-8').replace('四柱推命占い自動鑑定 PRO','四柱推命占い自動鑑定').replace('<meta name="apple-mobile-web-app-title" content="自動鑑定PRO">','<meta name="apple-mobile-web-app-title" content="'+B_NAME+'">').replace('<span class="pk-pro" style="display:inline-block;margin-left:.3em;padding:0 .35em;border-radius:6px;background:#B23A2E;color:#fff;font-size:.62em;font-weight:900;vertical-align:.25em;letter-spacing:.04em">PRO</span>','')
     s = to_beginner_colors(s)
-    s = rep(s, '｜四柱推命占い 自動鑑定</title>', f'｜{B_NAME}</title>', 1)
+    s = rep(s, '｜四柱推命占い自動鑑定</title>', f'｜{B_NAME}</title>', 1)
     s = rep(s, 'mypage-pro.html', 'mypage.html')
     s = rep(s, 'pricing-pro.html', 'pricing.html')
     s = rep(s, "AFTER_LOGIN: 'app-pro.html'", "AFTER_LOGIN: 'app-beginner.html'", 1)
