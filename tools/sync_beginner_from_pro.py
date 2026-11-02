@@ -46,6 +46,7 @@ html.bg-intro-done #bg-intro{display:none}
 #bg-intro .steps{display:flex;gap:8px;flex-wrap:wrap}
 #bg-intro .s{flex:1 1 150px;background:#fff;border:1px solid #F0DFBE;border-radius:12px;padding:10px 12px;font-size:13.5px;font-weight:800;color:#4A4030}
 #bg-intro .s b{color:#E8392B}
+#bg-intro-manabi{display:inline-flex;align-items:center;min-height:44px;margin-top:10px;padding:6px 14px;border-radius:999px;background:#E4F3F1;color:#1F625A;border:1px solid #A9D6CF;font-weight:900;font-size:14px;text-decoration:none}
 </style>
 """
 
@@ -130,8 +131,9 @@ def build_app():
     s = rep(s, '  <section class="card panel">',
             '  <div id="bg-intro"><div class="t"><span><span class="nobr">むずかしい知識は、</span><span class="nobr">いりません。</span></span>'
             '<button type="button" id="bg-intro-x" aria-label="この案内を閉じる" title="閉じる">✕</button></div><div class="steps">'
-            '<div class="s"><b>①</b> 生年月日を入れる</div><div class="s"><b>②</b> 相談を書いて「この相談を鑑定する」を押す</div>'
-            '<div class="s"><b>③</b> 出てきた文章を読むだけ</div></div></div>\n  <section class="card panel">', 1)
+            '<div class="s"><b>①</b> お名前と生年月日を入れる</div><div class="s personal-only"><b>②</b> 相談を書いて「この相談を鑑定する」を押す</div><div class="s compat-only"><b>②</b> お相手の生年月日を入れて「この2人の相性を見る」を押す</div>'
+            '<div class="s"><b>③</b> 出てきた文章を読むだけ</div></div>'
+            '<a id="bg-intro-manabi" href="manabi.html" target="_blank" rel="noopener">📖 はじめての学び方（20分ほど）を開く</a></div>\n  <section class="card panel">', 1)
     # 相談の入口（何を占いますか？）と「この相談を鑑定する」ボタンはPROと同じ（ことばも専門用語なし）。あることだけ確かめる
     rep(s, '<span>この相談を鑑定する</span></button>', '', 1, label='相談ボタン（この相談を鑑定する）')
 
