@@ -4065,11 +4065,14 @@ function renderGrow(){var g=lsGet("w44_grow",{}),keys=Object.keys(g);
 $("g-dogs").addEventListener("click",function(e){var b=e.target.closest("button[data-k]");if(!b)return;gDog=b.dataset.k;renderGrow()});
 // 予定：あなたが入れた予定を並べ、カレンダーに登録できる
 var REP={none:"くり返しなし",m:"毎月","2m":"2か月ごと",y:"毎年"};
-function nextDate(r){var d=new Date(r.date+"T00:00:00"),now=new Date();now.setHours(0,0,0,0);var step=r.rep==="m"?1:r.rep==="2m"?2:r.rep==="y"?12:0;
-  if(step)while(d<now)d.setMonth(d.getMonth()+step);return d}
+// 月をたすとき、その月にない日（2月30日など）は月末にする（31日の予定が、次の月の3日などにずれないように）
+function addMonths(b,n){var d=new Date(b.getFullYear(),b.getMonth()+n,1),last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();d.setDate(Math.min(b.getDate(),last));return d}
+function nextDate(r){var b=new Date(r.date+"T00:00:00"),d=b,k=0,now=new Date();now.setHours(0,0,0,0);var step=r.rep==="m"?1:r.rep==="2m"?2:r.rep==="y"?12:0;
+  if(step)while(d<now&&k<1200){k+=step;d=addMonths(b,k)}return d}
 function pad(n){return (n<10?"0":"")+n}
 function calLink(r,d){var s=d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate()),e2=new Date(d);e2.setDate(e2.getDate()+1);var e=e2.getFullYear()+pad(e2.getMonth()+1)+pad(e2.getDate());
-  var rr=r.rep==="m"?"RRULE:FREQ=MONTHLY":r.rep==="2m"?"RRULE:FREQ=MONTHLY;INTERVAL=2":r.rep==="y"?"RRULE:FREQ=YEARLY":"";
+  var eom=new Date(r.date+"T00:00:00").getDate()===31?";BYMONTHDAY=-1":""; // 31日の予定は「毎月の月末」としてカレンダーに入れる
+  var rr=r.rep==="m"?"RRULE:FREQ=MONTHLY"+eom:r.rep==="2m"?"RRULE:FREQ=MONTHLY;INTERVAL=2"+eom:r.rep==="y"?"RRULE:FREQ=YEARLY":"";
   return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(r.dog+"："+r.title)+"&dates="+s+"/"+e+(rr?"&recur="+encodeURIComponent(rr):"")+"&details="+encodeURIComponent("44Wansonalities うちの子手帳から")}
 function renderRem(){var a=lsGet("w44_rem",[]),now=new Date();now.setHours(0,0,0,0);
   var rows=a.map(function(r,i){return {r:r,i:i,d:nextDate(r)}}).sort(function(x,y){return x.d-y.d});
