@@ -354,6 +354,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .mp-set>h3+button{border-top:0}
 .mp-set .danger{color:#B23A3A}
 .mp-confirm{background:#FCEDEC;border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.mp-confirm .mp-del{display:block;margin:6px 0}.mp-confirm .mp-li{display:block;padding-left:1em;text-indent:-1em}.mp-confirm .mp-li::before{content:"・"}.mp-confirm b{font-weight:800}
 .mp-confirm p{margin:0;font-weight:800;font-size:.86rem;color:#7A2323}
 .mp-confirm div{display:flex;gap:8px}
 .mp-confirm button{flex:1;min-height:44px;border-radius:999px;border:2px solid #E3B5B1;background:#FFFFFF;font-weight:800;color:#2F3A45}
@@ -4128,7 +4129,7 @@ function renderHub(){var g=lsGet("w44_grow",{}),keys=Object.keys(g);if(!g[gDog])
   $("mp-dogs").hidden=keys.length<2;$("mp-dogs").innerHTML='<span class="dogs-l">どの子のページを見る？</span>'+keys.map(function(k){return '<button type="button" data-k="'+esc(k)+'"'+(k===gDog?' class="on"':'')+'>'+esc(g[k].n)+'</button>'}).join("");
   var d=gDog?g[gDog]:null;
   if(d){var L=d.list||[],lm=L.length?BY[L[L.length-1].m]:null,o=ownId(d.b),body=bodyShort(d.b);
-    $("mp-prof").innerHTML='<span class="mp-av">'+avHTML(curAvId())+'</span><div><b>'+esc(d.n)+'</b><small>'+(lm?esc(lm.s+"気質の"+(o?body:"子")):"")+'・診断'+L.length+'回</small></div>'}
+    $("mp-prof").innerHTML='<span class="mp-av">'+avHTML(curAvId())+'</span><div><b>'+esc(d.n)+'</b><small>'+(lm?esc(lm.s+"気質の"+(o?body:"子"))+'・診断'+L.length+'回':'まだ診断の記録がありません')+'</small></div>'}
   else $("mp-prof").innerHTML='<span class="mp-av">'+avHTML(null)+'</span><div><b>まだ診断していません</b><small>診断すると、ここにうちの子が入ります</small></div>';
   var rm=lsGet("w44_rem",[]),wb=lsGet("w44_wbook",[]),eb=ebGet();
   $("mp-s-rem").textContent=rm.length?"予定 "+rm.length+"件":"お薬・注射のメモ";
@@ -4734,19 +4735,33 @@ $("sh-ig").addEventListener("click",function(){shareCard("カードを保存し�
 $("sh-line").addEventListener("click",function(){window.open("https://line.me/R/share?text="+encodeURIComponent(shareText()+"\n"+shareUrl()),"_blank","noopener")});
 $("sh-x").addEventListener("click",function(){window.open("https://twitter.com/intent/tweet?text="+encodeURIComponent(shareText())+"&url="+encodeURIComponent(shareUrl()),"_blank","noopener")});
 
-var mpMode="reset";
-$("del-dog").addEventListener("click",function(){var g=lsGet("w44_grow",{}),d=gDog&&g[gDog];if(!d){$("my-msg").textContent="消せる子がいません。";$("my-msg").hidden=false;return}
-  mpMode="del";$("mp-confirm-t").textContent=d.n+"をマイページから消すと、"+d.n+"の診断の記録と成長の記録がなくなります。消しますか？";$("mp-confirm").hidden=false;$("reset-msg").hidden=true});
-$("reset-hist").addEventListener("click",function(){mpMode="reset";var g=lsGet("w44_grow",{}),d=gDog&&g[gDog];$("mp-confirm-t").textContent=((d&&d.n)||st.name||"うちの子")+"の診断記録を消すと、次の診断は1回目からになります。消しますか？";$("mp-confirm").hidden=false;$("reset-msg").hidden=true});
-$("mp-no").addEventListener("click",function(){$("mp-confirm").hidden=true});
+// 消すときは2回たしかめる：1回目＝何が消えるか、2回目＝もとに戻せないこと
+var mpMode="reset",mpStep=1,mpName="";
+function mpAsk(mode){var g=lsGet("w44_grow",{}),d=gDog&&g[gDog];if(!d){$("my-msg").textContent="消せる子がいません。";$("my-msg").hidden=false;return}
+  mpMode=mode;mpStep=1;mpName=d.n;var n=esc(d.n);
+  $("mp-confirm-t").innerHTML=mode==="del"
+    ?'<b>'+n+'をマイページから消します。</b><br>次のものが、すべて消えます。<span class="mp-del"><span class="mp-li">診断の結果と、成長の記録（グラフ）</span><span class="mp-li">もしものときカード</span><span class="mp-li">おねがい（黄色いリボン）</span><span class="mp-li">はじめましてガイド</span><span class="mp-li">'+n+'の予定</span></span>消したくないときは「やめる」を押してください。'
+    :'<b>'+n+'の診断記録を消して、やり直します。</b><br>次のものが消えます。<span class="mp-del"><span class="mp-li">これまでの診断の結果</span><span class="mp-li">成長の記録（グラフ）</span></span>次の診断は1回目からになります。もしものときカードやおねがいは残ります。<br>消したくないときは「やめる」を押してください。';
+  $("mp-yes").textContent="消す";$("mp-confirm").hidden=false;$("reset-msg").hidden=true}
+$("del-dog").addEventListener("click",function(){mpAsk("del")});
+$("reset-hist").addEventListener("click",function(){mpAsk("reset")});
+$("mp-no").addEventListener("click",function(){$("mp-confirm").hidden=true;mpStep=1});
+function forgetResult(nm){var ld=lsGet("w44_lastd",{});if(ld[nm]){delete ld[nm];lsSet("w44_lastd",ld)}
+  var ls=lsGet("w44_last",null);if(ls&&ls.n===nm){try{localStorage.removeItem("w44_last")}catch(e){}}$("open-last").hidden=!lastFromGrow();
+  if(last&&st.name===nm){last=null}}
 $("mp-yes").addEventListener("click",function(){
-  if(mpMode==="del"){var g2=lsGet("w44_grow",{}),nm=g2[gDog]?g2[gDog].n:"";delete g2[gDog];lsSet("w44_grow",g2);try{localStorage.removeItem("w44_hist_"+gDog)}catch(e){}
-    var ld2=lsGet("w44_lastd",{});if(ld2[nm]){delete ld2[nm];lsSet("w44_lastd",ld2)}
-    var ls=lsGet("w44_last",null);if(ls&&ls.n===nm){try{localStorage.removeItem("w44_last")}catch(e){}$("open-last").hidden=!lastFromGrow()}
-    if(last&&st.name===nm){last=null;st.name=""}
-    gDog=null;$("mp-confirm").hidden=true;renderHub();$("reset-msg").textContent=nm+"をマイページから消しました。";$("reset-msg").hidden=false;return}
-  $("reset-msg").textContent="記録を消しました。次の診断は1回目からになります。";
-  var g=lsGet("w44_grow",{}),k=gDog&&g[gDog]?"w44_hist_"+gDog:histKey();try{localStorage.removeItem(k)}catch(e){}$("mp-confirm").hidden=true;$("reset-msg").hidden=false});
+  if(mpStep===1){mpStep=2;$("mp-confirm-t").innerHTML='<b>本当に消しますか？</b><br>消したものは、<b>もとに戻せません</b>。';$("mp-yes").textContent="本当に消す";return}
+  mpStep=1;var nm=mpName,g=lsGet("w44_grow",{});$("mp-confirm").hidden=true;
+  try{localStorage.removeItem("w44_hist_"+nm)}catch(e){}
+  forgetResult(nm);
+  if(mpMode==="del"){delete g[nm];lsSet("w44_grow",g);
+    try{Object.keys(localStorage).forEach(function(k){var m;
+      if(k==="w44_req_"+nm||k==="w44_nst_"+nm||k==="w44_ec_"+nm||k.indexOf("w44_guide_"+nm+"_")===0)localStorage.removeItem(k);
+      else if((m=/^(w44_req_|w44_nst_|w44_hist_)(.*)_[^_]+$/.exec(k))&&m[2]===nm)localStorage.removeItem(k)})}catch(e){}
+    lsSet("w44_rem",lsGet("w44_rem",[]).filter(function(r){return r.dog!==nm}));
+    if(st.name===nm)st.name="";gDog=null;renderHub();$("reset-msg").textContent=nm+"をマイページから消しました。";$("reset-msg").hidden=false;return}
+  if(g[nm]){g[nm].list=[];lsSet("w44_grow",g)}
+  renderHub();$("reset-msg").textContent=nm+"の診断記録を消しました。次の診断は1回目からになります。";$("reset-msg").hidden=false});
 $("again").addEventListener("click",function(){$("reset-msg").hidden=true;newQuiz();st.qi=0;st.ans=new Array(N).fill(null);renderQ();show("s-quiz")});
 $("edit").addEventListener("click",function(){if(last)fillInputs();else $("in-name").value=st.name||$("in-name").value;$("apply-edit").hidden=!last;show("s-start")});
 })();
