@@ -465,6 +465,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
       <p class="note">うちの子も診断すると、2匹の相性もわかります。</p>
     </div>
     <div class="resume" id="resume" hidden><p id="resume-t"></p><div><button type="button" id="resume-go" class="start">続きから ▶</button><button type="button" id="resume-no">最初からやり直す</button></div></div>
+    <button class="sub" type="button" id="open-last" hidden>前回の結果を見る</button>
     <div class="facts"><span>全44タイプ</span><span>30問・約4分</span><span>写真でカードに</span></div>
     <p class="lead">飼い主さんが、ふだんの様子から30の質問に答えると、うちの子の性格にいちばん近い「気質の犬種」がわかります。質問は毎回ちがう組み合わせで出て、答えるほど診断がくわしくなります。</p>
 
@@ -3715,6 +3716,12 @@ $("go-quiz").addEventListener("click",function(){
     Q=p.q.map(function(i){return QB[i]});st.ans=p.ans;st.qi=Math.min(p.qi,N-1);st.repl=p.repl||AXZ();st.seenQ=(p.seen||[]).map(function(i){return QB[i]}).filter(Boolean);
     $("resume").hidden=true;renderQ();show("s-quiz")});
   $("resume-no").addEventListener("click",function(){progClear();$("resume").hidden=true})})();
+$("open-last").addEventListener("click",openLast);
+(function(){var H=window.claude&&window.claude.hot;if(!H)return;
+  try{H.snapshot(function(){return {scr:$("s-result").hidden?"":"s-result"}})}catch(e){}
+  var go=function(d){if(d&&d.scr==="s-result")openLast()};
+  try{if(H.ready)H.ready(go);else go(H.data||{})}catch(e){}})();
+(function(){try{var d=lsGet("w44_last",null);$("open-last").hidden=!(d&&d.n&&BY[d.m])}catch(e){}})();
 $("apply-edit").addEventListener("click",function(){
   var old=st.name,ob=st.breed;if(!readIn()){st.name=old;st.breed=ob;return}
   if(st.name!==old){var g=lsGet("w44_grow",{});
@@ -3724,7 +3731,7 @@ $("apply-edit").addEventListener("click",function(){
     [["w44_hist_",""],["w44_req_",""],["w44_nst_",""],["w44_ec_",""],["w44_guide_","_"+last.main.id]].forEach(function(x){try{var v=localStorage.getItem(x[0]+old+x[1]);if(v!=null){localStorage.setItem(x[0]+st.name+x[1],v);localStorage.removeItem(x[0]+old+x[1])}}catch(e){}});
     lsSet("w44_grow",g);gDog=st.name}
   var g2=lsGet("w44_grow",{});if(g2[st.name]){g2[st.name].n=st.name;g2[st.name].b=st.breed;lsSet("w44_grow",g2)}
-  renderResult();setAvatars();show("s-result");toast("変更をカードに反映しました");
+  saveLast();renderResult();setAvatars();show("s-result");toast("変更をカードに反映しました");
 });
 // とちゅうで閉じても、続きから答えられるように（このスマホの中だけに保存）
 function progSave(){try{localStorage.setItem("w44_prog",JSON.stringify({t:Date.now(),n:st.name,b:st.breed,a:st.age,q:Q.map(function(x){return QB.indexOf(x)}),ans:st.ans,qi:st.qi,repl:st.repl,seen:(st.seenQ||[]).map(function(x){return QB.indexOf(x)})}))}catch(e){}}
@@ -4119,8 +4126,8 @@ document.querySelector(".mp-grid").addEventListener("click",function(e){var b=e.
   if(t==="grow"||t==="rem"||t==="wb"){openMy(t)}
   else if(t==="ec"){ebFrom="s-my";$("eb-msg").hidden=true;ebRender();show("s-ecbook")}
   else if(t==="zukan"){openZukan("s-my")}
-  else if(t==="cards"){if(last){show("s-result");var m=$("meishi-more");if(m){m.open=true;setTimeout(function(){m.scrollIntoView({behavior:"smooth",block:"start"})},60)}}else{$("my-msg").textContent="カードは、診断が終わると作れます。";$("my-msg").hidden=false}}});
-$("mp-ribbon").addEventListener("click",function(){if(last){show("s-result");var m=$("rq-more");if(m){m.open=true;setTimeout(function(){m.scrollIntoView({behavior:"smooth",block:"start"})},60)}}else{$("my-msg").textContent="おねがいは、診断が終わると設定できます。";$("my-msg").hidden=false}});
+  else if(t==="cards"){if(last||loadLast()){renderResult();show("s-result");var m=$("meishi-more");if(m){m.open=true;setTimeout(function(){m.scrollIntoView({behavior:"smooth",block:"start"})},60)}}else{$("my-msg").textContent="カードは、診断が終わると作れます。";$("my-msg").hidden=false}}});
+$("mp-ribbon").addEventListener("click",function(){if(last||loadLast()){renderResult();show("s-result");var m=$("rq-more");if(m){m.open=true;setTimeout(function(){m.scrollIntoView({behavior:"smooth",block:"start"})},60)}}else{$("my-msg").textContent="おねがいは、診断が終わると設定できます。";$("my-msg").hidden=false}});
 function myTab(t){[].forEach.call($$(".mytabs button"),function(b){b.classList.toggle("on",b.dataset.t===t)});["grow","rem","wb"].forEach(function(k){$("tab-"+k).hidden=k!==t});
   if(t==="grow")renderGrow();if(t==="rem")renderRem();if(t==="wb")wbRender()}
 function $$(s){return document.querySelectorAll(s)}
@@ -4329,8 +4336,15 @@ function finish(){progClear();
     if(pi>0&&rank[pi].d-rank[0].d<HYS){var t=rank[pi];rank.splice(pi,1);rank.unshift(t);var m0=rank[1].m;rank[1].m=t.m;t.m=m0}}
   var main=rank[0].b;st.visit={n:h.n+1,prev:prev,first:h.first||main.id};
   histSet({sum:sum,cnt:cnt,n:h.n+1,last:main.id,first:h.first||main.id});growAdd(raw,main);
-  last={pct:pct,rank:rank,main:main,hid:hiddenOf(pct,main.id)};markSeen(main.id);renderResult();setAvatars();show("s-result");
+  last={pct:pct,rank:rank,main:main,hid:hiddenOf(pct,main.id)};saveLast();markSeen(main.id);renderResult();setAvatars();show("s-result");
 }
+// いちばん新しい結果を、お使いの端末に残しておく（ページを開き直しても、もう一度見られるように）
+function saveLast(){if(!last)return;lsSet("w44_last",{n:st.name,b:st.breed,a:st.age,pct:last.pct,m:last.main.id,v:st.visit||null,t:Date.now()});var b=$("open-last");if(b)b.hidden=false}
+function loadLast(){var d=lsGet("w44_last",null);if(!d||!d.n||!BY[d.m]||!Array.isArray(d.pct)||d.pct.length!==AXES.length)return false;
+  st.name=d.n;st.breed=d.b;if(d.a)st.age=d.a;st.visit=d.v||null;$("in-name").value=d.n;
+  var rank=ranking(d.pct),i=rank.findIndex(function(x){return x.b.id===d.m});if(i>0){var t=rank[i];rank.splice(i,1);rank.unshift(t);var m0=rank[1].m;rank[1].m=t.m;t.m=m0}
+  last={pct:d.pct,rank:rank,main:rank[0].b,hid:hiddenOf(d.pct,d.m)};return true}
+function openLast(){if(!last&&!loadLast())return;renderResult();setAvatars();show("s-result")}
 function trait(i){return last.pct[i]>=50?AXES[i].ta:AXES[i].tb}
 // 結果のタイトル：1つの言葉が入りきらないときは、文字を少しずつ小さくして1行に収める（泣き別れを作らない）
 function fitHead(){var h=$("r-head");if(!h||!h.clientWidth)return;[].forEach.call(h.querySelectorAll(".h-l1,.h-l2"),function(el){el.style.fontSize="";
@@ -4698,6 +4712,7 @@ $("reset-hist").addEventListener("click",function(){mpMode="reset";var g=lsGet("
 $("mp-no").addEventListener("click",function(){$("mp-confirm").hidden=true});
 $("mp-yes").addEventListener("click",function(){
   if(mpMode==="del"){var g2=lsGet("w44_grow",{}),nm=g2[gDog]?g2[gDog].n:"";delete g2[gDog];lsSet("w44_grow",g2);try{localStorage.removeItem("w44_hist_"+gDog)}catch(e){}
+    var ls=lsGet("w44_last",null);if(ls&&ls.n===nm){try{localStorage.removeItem("w44_last")}catch(e){}$("open-last").hidden=true}
     gDog=null;$("mp-confirm").hidden=true;renderHub();$("reset-msg").textContent=nm+"をマイページから消しました。";$("reset-msg").hidden=false;return}
   $("reset-msg").textContent="記録を消しました。次の診断は1回目からになります。";
   var g=lsGet("w44_grow",{}),k=gDog&&g[gDog]?"w44_hist_"+gDog:histKey();try{localStorage.removeItem(k)}catch(e){}$("mp-confirm").hidden=true;$("reset-msg").hidden=false});
