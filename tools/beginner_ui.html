@@ -144,6 +144,8 @@ html.bg-on .bg-why{display:block}
 .bg-why .bw-h{font-weight:900;font-size:15.5px;color:#1B5E3B;margin:0 0 6px}
 .bg-why ul{margin:0;padding-left:1.2em}.bg-why li{margin:2px 0}
 .bg-why details{margin-top:8px;border-top:1px dashed #A9CDB9;padding-top:8px}
+.bg-why details>summary{min-height:44px!important;display:flex!important;align-items:center;box-sizing:border-box}   /* 押せる見出しは44px以上（2026-11-02） */
+html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!important;align-items:center;box-sizing:border-box}
 .bg-why summary{cursor:pointer;font-weight:800;color:#1B5E3B;min-height:36px;display:flex;align-items:center}
 .bg-why .bw-t{font-size:13.5px;color:#2B3A31}
 .bg-why .bw-t a{color:#0E5A8A;font-weight:800}
@@ -489,12 +491,12 @@ html.bg-on .bg-why{display:block}
       ['⚡','近づくと：','考え方や進め方の違いがはっきりして、言い争いやすれ違いが増えやすい。'],
       ['😣','一緒にいると：','お互いの調子が崩れて、気疲れしやすい。'],
       ['▶','2人の形：',x.aCtrl?WHO()+'の言動が、お相手を押さえつけたり傷つけたりしやすい。':'お相手からの圧力を、'+WHO()+'が受けとめてストレスをためやすい。'],
-      ['💗','恋愛・夫婦：','惹かれては傷つくことをくり返し、離れたりくっついたりしやすい。'],
+      ((typeof pkRelLove!=='function'||pkRelLove())?['💗','恋愛・夫婦：','惹かれては傷つくことをくり返し、離れたりくっついたりしやすい。']:['🤝','つき合い方：','近づいては離れることをくり返しやすい。ほどよい距離を保つと長続きします。']),   // 家族・友人・仕事の相性に恋愛の行を出さない
       ['💼','仕事：','意見が割れやすい。攻める役と守る役に分けると、成果につながることも。'],
       ['🌱','うまくいくコツ：','相手を思いどおりに動かそうとしない。踏み込みすぎない距離を保ち、違いを持ち味として認める。']
     ];
   }
-  function yrs(o,nowY){ return o.map(function(x){var n=x.year-nowY;return x.year+'年（'+(n<=0?'今年':n+'年後')+'）';}); }
+  function yrs(o,nowY){ var by=safe(function(){ return (typeof chart!=='undefined'&&chart&&typeof birthYearOf==='function')?birthYearOf(chart):0; },0); return o.map(function(x){var n=x.year-nowY;return x.year+'年（'+(n<=0?'今年':n+'年後')+(by?'・'+WHOt()+(x.year-by)+'歳':'')+'）';}); }   // 西暦には年齢も付ける
   function plainCompatHTML(a,b,rt){
     var d=compatData(a,b,rt), S=CGRADE[d.gc.stem]||CGRADE['普通'], B=CGRADE[d.gc.branch]||CGRADE['普通'];
     var row=function(k,g,take){ return '<div class="nowi" style="--sc:'+g.col+'"><div class="k">'+k+'</div><div class="v">'+(SUB[g.lab]||g.lab)+'</div><div class="d">'+esc(take)+'</div></div>'; };
@@ -521,14 +523,18 @@ html.bg-on .bg-why{display:block}
         '<div class="note">※「揺れやすい年」は、別れの年という意味ではありません。関係を見直したり話し合ったりする節目の目安です。「整えたい年」は相性とは別に、'+WHO()+'自身の運の流れから見た目安です（上の「'+WHO()+'」の画面の判定と同じ物差しです）。</div></div>'; }
     return h+'</div>';
   }
-  function plainCompatText(a,b,rt){
+  function plainCompatText(a,b,rt,q){
     var d=compatData(a,b,rt), S=CGRADE[d.gc.stem]||CGRADE['普通'], B=CGRADE[d.gc.branch]||CGRADE['普通'], t=[];
-    t.push('2人の相性は、心の相性が「'+(SUB[S.lab]||S.lab)+'」、一緒にいるときの居心地が「'+(SUB[B.lab]||B.lab)+'」です。');
+    var ld=safe(function(){ return (typeof pkCompatOffLead==='function')?pkCompatOffLead(a,b,q||'',true):''; },'');   // 1行目は判定（PROと同じ向き）で問いに答える（2026-11-02）
+    if(ld) t.push(ld);
+    t.push((ld?'生まれた日どうしの一部だけを見ると、':'2人の相性は、')+'心の相性が「'+(SUB[S.lab]||S.lab)+'」、一緒にいるときの居心地が「'+(SUB[B.lab]||B.lab)+'」です。');
     t.push('【心の相性（性格・価値観）】\n'+(CGRADE_STEM_TAKE[d.gc.stem]||CGRADE_STEM_TAKE['普通']));
     t.push('【一緒にいるときの居心地】\n'+(CGRADE_BRANCH_TAKE[d.gc.branch]||CGRADE_BRANCH_TAKE['普通']));
     if(d.tc.any) t.push('【正面からぶつかりやすいところ】\n2人には、正面からぶつかりやすい組み合わせがあります。刺激が強く、注意したい相性です。\n'+tsPoints(d.tc).map(function(x){ return '・**'+x[1]+'**'+x[2]; }).join('\n'));
     if(a.now){ var ny=a.now.year;
       var wj=function(L){ return L.join('・'); };  // 見えない文字は入れない（コピー・共有したときに文字化け・検索できない原因になるため）
+      var tm=safe(function(){ return (typeof pkCompatOffTiming==='function')?pkCompatOffTiming(a,b,true,null):''; },'');   // 2人の縁が動く月（PROと同じ計算）
+      if(tm) t.push('【2人の縁が動く月】\n'+tm);
       if(d.good.length) t.push('【縁が深まりやすい年】\n'+wj(yrs(d.good,ny)));
       if(d.strain.length) t.push('【関係が揺れやすい年】\n'+wj(yrs(d.strain,ny))+'。関係を見直したり、話し合ったりする節目の目安です。');
       var gy2={}, both2=[]; d.good.forEach(function(x){ gy2[x.year]=1; }); d.strain.forEach(function(x){ if(gy2[x.year]&&both2.indexOf(x.year)<0) both2.push(x.year); }); both2.sort(function(p,q){return p-q;});
@@ -605,7 +611,7 @@ html.bg-on .bg-why{display:block}
     if(/【読む対象＝/.test(user)) return '';                       // 日運・月運は上級者向けの欄なので、PROと同じ文のまま
     var c=(typeof chart!=='undefined')?chart:null; if(!c) return '';
     var cb=(typeof chartB!=='undefined')?chartB:null;
-    if(cb && /2人/.test(user)){ var pc=plainCompatText(c,cb,curRt()); return pc; }   // 「通信できないため…」は本文に入れない（お客様に送る文になるため。案内は答えの上に出る）
+    if(cb && /2人/.test(user)){ var pc=plainCompatText(c,cb,curRt(),/【相談者\(本人A\)からの質問】/.test(user)?((document.getElementById('compat-worry')||{}).value||''):''); return pc; }   // 「通信できないため…」は本文に入れない（お客様に送る文になるため。案内は答えの上に出る）
     var det=(typeof KANSHI60_DETAIL!=='undefined')?KANSHI60_DETAIL[c.pillars[2].ganzhi]:null, P={};
     var phrase=safe(function(){ var d=document.createElement('div'); d.innerHTML=heroHTML(c); var p=d.querySelector('.phrase'); return p?p.textContent.trim():''; },'');
     if(det){ var base=String(det.基本||'').replace(/^[^。]*?が合わさ(り|った)、/,''); if(base) P.me='【'+WHOt()+'の性格】\n'+base; }

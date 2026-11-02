@@ -92,10 +92,10 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   if(!/パートナーの星（官星＝五行の「木」）は、あなたの喜神（きしん：あると調子が上がる五行）です/.test(L[1]||'')) e.push('パートナーの星が喜神か');
   if(!/2人の相性とは別の見方/.test(L[1]||'')) e.push('相性とは別の見方の一言');
   if(!/月柱/.test(L[2]||'')||!/仕事/.test(L[2]||'')) e.push('出会いの場');
-  if(!/2027年3月ごろ（癸卯の月）/.test(L[3]||'')||/亥の月）＝[^／]*半合/.test(L[3]||'')) e.push('縁が動く月');
+  if(!/2027年3月(?:ごろ|〜4月上旬)（癸卯の月）/.test(L[3]||'')||/亥の月）＝[^／]*半合/.test(L[3]||'')) e.push('縁が動く月');
   if(!/【恋愛で(必ず見る4つ|大事な4つのこと)】/.test(lv.t)||(lv.t.match(/\n・/g)||[]).length!==4) e.push('書き足し');
   if(lv.n!=='テスト。') e.push('恋愛でない相談に書き足している');
-  if(!/2027年3月ごろ（癸卯の月）/.test(lv.g||'')) e.push('月の干支の直し（きみずう→癸卯）');
+  if(!/2027年3月(?:ごろ|〜4月上旬)（癸卯の月）/.test(lv.g||'')) e.push('月の干支の直し（きみずう→癸卯）');
   if(!/出会いの場：|出会いやすい場所は/.test(lv.g||'')) e.push('「出会い」の言葉だけで出会いの場ありと判定している');
   console.log('  '+(e.length?'NG':'OK')+' 恋愛相談の4項目（1981-06-10 女性で確認）'+(e.length?'  … '+e.join('・'):''));
   if(e.length) res.fails.push('恋愛相談の4項目: '+e.join('・')); }
@@ -111,7 +111,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   const e=[]; if(!/12月の星回りには、この月に咸池や偏官/.test(mf[0])) e.push('12月の星（偏官）・配偶宮の取りちがえ'); if(!/卯と未で半合/.test(mf[1])) e.push('三合→半合');
   console.log('  '+(e.length?'NG':'OK')+' 月の話の事実あわせ'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('月の話: '+e.join('・')); }
 { const r=await p.evaluate(()=>{ if(typeof pkEnsureLove!=='function') return ''; const c=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'); return pkEnsureLove('配偶宮の蔵干は甲と乙。パートナーの星（官星）は忌神です。出会いは地元の紹介から。11月と12月に縁が動きます。',c,'冬に出会う男性は？'); });
-  const ok2=/庚子の月）＝配偶宮「卯」と刑|2026年12月ごろ（気持ちがすれ違いやすい月）/.test(r); console.log('  '+(ok2?'OK':'NG')+' 注意の月（刑・冲）が文になければ書き足す'); if(!ok2) res.fails.push('注意の月の書き足し'); }
+  const ok2=/庚子の月）＝配偶宮「卯」と刑|2026年12月(?:ごろ|〜翌1月上旬)（気持ちがすれ違いやすい月）/.test(r); console.log('  '+(ok2?'OK':'NG')+' 注意の月（刑・冲）が文になければ書き足す'); if(!ok2) res.fails.push('注意の月の書き足し'); }
 { const y=await p.evaluate(()=>{ if(typeof pkYearKichiFix!=='function') return ''; const c=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'); return pkYearKichiFix('2027年や2028年に天徳貴人（強い守りの星）が巡ります。',c); });
   const ok3=/天徳貴人（強い守りの星）（天徳貴人が巡るのは2028年）/.test(y); console.log('  '+(ok3?'OK':'NG')+' 年の吉凶星の事実あわせ（天徳貴人は2028年だけ）'); if(!ok3) res.fails.push('年の吉凶星'); }
 // 3つのツールに同じ直しが入っているか（PRO＝元、易・鑑定書は同じ中身。ビギナーはPROから生成）
@@ -248,7 +248,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(!/適職の手がかり：喜神の星＝食傷（火）/.test(r.f)||!/月柱（仕事・職場・暮らしの環境）と冲・刑/.test(r.f)) e.push('適職・柱の場面');
     if(!/命式からの答えの方向：出る|遠くへ出るほうが合って/.test(r.e)||!/2027年は空亡の年|2027年は、新しく大きく始めることが形になりにくい/.test(r.e)) e.push('書き足し（判定と逆の答え・空亡）');   /* ビギナーのやさしい画面は専門用語なしの言い方 */
     if(/【この相談で大事なこと】/.test(r.e)&&/(空亡|駅馬|印星|大運)/.test(r.e.split('【この相談で大事なこと】')[1])) e.push('やさしい言い方に専門用語');
-    if(/【この相談でツールが確かめたこと】/.test(r.ok)) e.push('書いてあるのに書き足している'); }
+    if(/【この相談で(?:ツールが|命式から)確かめたこと】/.test(r.ok)) e.push('書いてあるのに書き足している'); }
   { const t=await p.evaluate(()=>{ const c=baziCompute({year:2001,month:2,day:9,hour:16,minute:0,sex:'female',tu:false},0,'none'); return pkConsultFocusText(c,'彼氏がいるけど他に好きな人ができた'); });   /* 中和（喜神・忌神なし）でも空にしない */
     if(/喜神（[^）]*）＝／|忌神（[^）]*）＝$/m.test(t)||!/はっきりした喜神/.test(t)) e.push('中和の喜神・忌神が空'); }
   console.log('  '+(e.length?'NG':'OK')+' 相談の要点（大運・4年の年運・空亡・駅馬・六親・適職・答えの方向）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('相談の要点: '+e.join('・')); }
@@ -259,14 +259,14 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   const e=[]; if(!r) e.push('関数がない'); else {
     if(!/【お相手：今の彼（2000年3月20日（時刻不明）・男性・恋人・パートナーとして見た相性）】判定＝良い点が注意点を上回る組み合わせ（良い点6／注意点1）/.test(r.t)) e.push('今の彼（時刻不明）');
     if(!/【お相手：好きな人（1995年4月4日 16時・男性・恋人・パートナーとして見た相性）】判定＝良い点が注意点を上回る組み合わせ（良い点12.5／注意点4）/.test(r.t)||!/天地徳合（本人の月柱「庚寅」×お相手の年柱「乙亥」）/.test(r.t)) e.push('好きな人（16時）');
-    if(!/暮らしの土台（方合・三合・支合など）が強いのは 今の彼／惹かれ合い（恋愛の星）が強いのは 好きな人/.test(r.t)||!/2026年12月・2027年9月は注意の月/.test(r.t)) e.push('くらべた結果・決める時期');
+    if(!/暮らしの土台（方合・三合・支合など）が強いのは 今の彼／惹かれ合い（恋愛の星）が強いのは 好きな人/.test(r.t)||!/2026年12月(?:〜翌1月上旬)?・2027年9月(?:〜10月上旬)?は注意の月/.test(r.t)) e.push('くらべた結果・決める時期');
     if(!/命式の相性だけで見ると、好きな人のほうが良い組み合わせ（差3.5点）/.test(r.t)||!/今の彼（良い点6／注意点1・差＋5）：よいところ＝強いぶつかり（天戦地冲）がない/.test(r.t)||!/気をつけたいところ＝天戦地冲（年柱どうし/.test(r.t)) e.push('命式の相性のくらべ（数字・理由）');
     if(!/【お相手ごとの相性/.test(r.e)||/【お相手ごとの相性/.test(r.ok)) e.push('書き足し');
     if(r.n) e.push('生年月日のない相談に出している');
     const fm=await p.evaluate(()=>{ const c=baziCompute({year:1982,month:6,day:1,hour:12,minute:0,sex:'female',tu:false},0,'none'); const q='夫は1980年5月5日、義母は1955年3月3日、息子は2010年8月8日です。家族がうまくいくにはどうしたらいいですか？'; const L=pkConsultPeopleLines(c,q); return {who:L.P.map(o=>o.lab+'/'+o.rel+'/'+o.sex).join(','), two:!!L.V.two, love:pkIsLoveQ(q), love2:pkIsLoveQ('夫と離婚すべきか、息子のことも心配'), txt:pkConsultPeopleText(c,q)+pkEnsurePeople('本文。',c,q), ov:window.__pkRelOv}; });   /* 家族の相談を恋愛のくらべにしない（2026-10-25） */
     if(fm.who!=='夫/married/male,義母/family/female,息子/family/male'||fm.two||fm.love||!fm.love2||/二股のまま|二股を勧めない|命式の相性のくらべ|(義母|息子)[^\n]*惹かれ方/.test(fm.txt)||!/家族・親子として見た相性/.test(fm.txt)||fm.ov) e.push('家族の相談（夫・義母・息子）を恋愛のくらべにした：'+fm.who);
     const tb=await p.evaluate(()=>{ const c=baziCompute({year:2001,month:2,day:9,hour:16,minute:0,sex:'female',tu:false},0,'none'); const q='彼氏がいる。彼は2000年3月20日、好きな人は1995年4月4日16時生まれ男性'; const full=pkEnsurePeople('本文。',c,q), sp=pkCmpSplit(full,c,q); return {full,disp:sp.text,html:sp.html}; });   /* B＝画面は表・コピーは文章（鑑定者本人の指示 2026-10-25） */
-    if(!/【(命式の相性のくらべ（ツールの判定）|生まれ持った相性のくらべ)】\n今の彼：/.test(tb.full)||/【(命式の相性のくらべ|生まれ持った相性のくらべ)/.test(tb.disp)||!/class="cmp-t"/.test(tb.html)||!/cmp-sec/.test(tb.html)) e.push('くらべの表（画面は表・コピーは文章）');
+    if(!/【(命式の相性のくらべ(?:（ツールの判定）)?|生まれ持った相性のくらべ)】\n今の彼：/.test(tb.full)||/【(命式の相性のくらべ|生まれ持った相性のくらべ)/.test(tb.disp)||!/class="cmp-t"/.test(tb.html)||!/cmp-sec/.test(tb.html)) e.push('くらべの表（画面は表・コピーは文章）');
     const fl=await p.evaluate(()=>{ const c=baziCompute({year:2001,month:2,day:9,hour:16,minute:0,sex:'female',tu:false},0,'none'); const q='彼氏がいる。彼は2000年3月20日、好きな人は1995年4月4日16時生まれ男性'; const plain=document.documentElement.classList.contains('bg-on'); return [pkEnsurePeople('今の彼を選ぶのがおすすめです。\n本文',c,q).split('\n')[0], pkEnsurePeople((plain?'生まれ持った相性だけで見ると、好きな人のほうが合う組み合わせです。':'命式の相性だけで見ると、好きな人のほうが良い組み合わせです。')+'\n本文',c,q).split('\n').length]; });
     if(!/相性だけで見ると、好きな人のほうが(良い|合う)組み合わせです/.test(fl[0])) e.push('1行目の判定（逆のときに上に入れる）'); if(fl[1]<2) e.push('1行目の判定（二重）');
     const fc=await p.evaluate(()=>{ const c=baziCompute({year:2001,month:2,day:9,hour:16,minute:0,sex:'female',tu:false},0,'none'); return pkEnsurePeople('相性から見ると、今の彼とお付き合いを続けるほうが合っています。\n本文',c,'彼氏がいる。彼は2000年3月20日、好きな人は1995年4月4日16時生まれ男性').split('\n').slice(0,2).join('|'); });
