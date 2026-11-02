@@ -1,4 +1,8 @@
 // Netlify Function：鑑定エンジン（Gemini）のサーバー中継＋サーバー側レート制限。
+// ★注意（2026-11-02）：この個人版の中継には会員確認がない（端末ID＋IPの日次の回数だけ）。そのまま公開すると、だれでもこのサイトの
+//   APIキーで文章を作れる入口になる。そのため、環境変数 MEISHIKI_RELAY_ENABLE=1 を設定したときだけ動く（未設定なら 503 DISABLED）。
+//   公開して使うときは、pro/functions/gemini.js と同じ会員確認（MEMBER_CHECK_URL）を足してから有効にすること。
+//   MEMBER_CHECK_URL を設定すると、Authorization: Bearer <トークン> を確かめてから中継する（使える会員だけ）。
 // ・APIキーは環境変数 GEMINI_API_KEY に保管し、ブラウザには一切出さない。
 // ・回数制限は「サーバー側」で強制（localStorage は改ざん可能なので信用しない）。
 //   端末ID(x-pk-device)＋IP を Netlify Blobs に日次カウントし、超過なら 429 を返し
@@ -36,7 +40,7 @@ const OWNER_TOKEN = process.env.PK_OWNER_TOKEN || '';
 // ── 原価計測（プロンプトキャッシュの効果を“見える化”して、上限を安全に上げる判断材料にする）─────────────
 // ★Gemini はモデルが返す usageMetadata に、入力/出力/キャッシュ済みトークン数を含める。
 //   暗黙キャッシュ（gemini-2.5+/3.x は既定でON・保管料ゼロ）が効くと cachedContentTokenCount が入り、その分の入力が最大75〜90%引きになる。
-//   → 実測 ¥/通 をサーバーログに出し、ヘッダ x-pk-tok でも返す。数日運用してこの数字を見れば、利益率60%を守れる正確な月間上限を決められる。
+//   → 実測 ¥/通 をサーバーログにだけ出す（お客様の端末には返さない）。数日運用してこの数字を見れば、利益率60%を守れる正確な月間上限を決められる。
 //   単価は環境変数で上書き可（USD / 1Mトークン）。既定は gemini-3.6-flash の公表単価。キャッシュ入力は保守的に「入力の25%」（＝75%引き）で見積もる（原価を過小評価しない）。
 const PX_IN   = parseFloat(process.env.PK_PRICE_IN   || '0.75');  // 入力 $/1M
 const PX_OUT  = parseFloat(process.env.PK_PRICE_OUT  || '3.75');  // 出力 $/1M
@@ -68,10 +72,28 @@ const MAX_BODY = 12000; // ユーザーの1発言あたりの最大文字数（�
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: { code: 'METHOD', message: 'Method Not Allowed' } });
 
-  // 簡易オリジンチェック
+  // 明示的に許したときだけ動く（会員確認のない中継を、うっかり公開しないため）
+  if (process.env.MEISHIKI_RELAY_ENABLE !== '1') return json(503, { error: { code: 'DISABLED', message: 'この中継は無効です' } });
+  // オリジンの確認（完全一致。本番では Origin/Referer の無い呼び出しも断る。前方一致だと https://自サイト.evil.example も通ってしまう）
   const site = process.env.URL || '';
-  const origin = event.headers.origin || event.headers.referer || '';
-  if (site && origin && !origin.startsWith(site)) return json(403, { error: { code: 'ORIGIN', message: 'Forbidden' } });
+  const origin = (event.headers || {}).origin || (event.headers || {}).referer || '';
+  if (site) {
+    const oOf = (u) => { try { return new URL(u).origin; } catch (e) { return ''; } };
+    const allowed = [site, process.env.DEPLOY_PRIME_URL || '', ...(process.env.ALLOWED_ORIGINS || '').split(',')].map((x) => oOf(String(x).trim())).filter(Boolean);
+    if (!origin || !allowed.includes(oOf(origin))) return json(403, { error: { code: 'ORIGIN', message: 'Forbidden' } });
+  }
+  // 会員確認（MEMBER_CHECK_URL を設定したときだけ）。使える会員のトークンでなければ断る
+  if (process.env.MEMBER_CHECK_URL) {
+    const hh = lower(event.headers || {});
+    const tk = String(hh.authorization || '').replace(/^Bearer\s+/i, '').replace(/[\r\n]/g, '').slice(0, 4096);
+    if (!tk) return json(401, { error: { code: 'LOGIN', message: 'ログインが必要です' } });
+    try {
+      const ac = new AbortController(); const tid = setTimeout(() => ac.abort(), 5000);
+      const mr = await fetch(process.env.MEMBER_CHECK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: tk }), signal: ac.signal }).finally(() => clearTimeout(tid));
+      const mm = mr.ok ? await mr.json() : null;
+      if (!mm || !mm.ok || !(mm.status === 'active' || mm.status === 'trialing')) return json(403, { error: { code: 'MEMBER', message: 'ご利用いただけない状態です' } });
+    } catch (e) { return json(503, { error: { code: 'MEMBER_CHECK', message: '会員確認ができませんでした' } }); }
+  }
 
   // 極端に長い「ユーザー入力」だけを弾く（システムプロンプトは正規に大きいので、本文全体ではなく“ユーザーの最後の発言”の長さで判定する）
   try {
@@ -94,14 +116,14 @@ exports.handler = async (event) => {
   const h = lower(event.headers || {});
 
   // ★オーナー判定：合言葉が一致したら「自分」＝回数上限なし（下のカウント/上限チェックをスキップ）。
-  const isOwner = !!OWNER_TOKEN && clean(h['x-pk-owner']) === OWNER_TOKEN;
+  const isOwner = !!OWNER_TOKEN && safeEq(clean(h['x-pk-owner']), OWNER_TOKEN);
 
   // ── 運営用：手動返金（サポート窓口対応）──────────────────────────────
   // ★安全設計：環境変数 PK_ADMIN_TOKEN と一致するリクエストだけ実行できる。
   //   トークンは運営だけが保持し、ブラウザには一切出さないため、クライアント（利用者）からは実行不可＝悪用でタダ乗りできない。
   //   例）二重課金の申告があったとき、運営が該当端末の本格鑑定カウントを N 戻す。
   const adminTok = process.env.PK_ADMIN_TOKEN;
-  if (adminTok && clean(h['x-pk-admin']) === adminTok) {
+  if (adminTok && safeEq(clean(h['x-pk-admin']), adminTok)) {
     const st = await getStore();
     if (!st) return json(503, { error: { code: 'NO_STORE', message: 'Blobs unavailable' } });
     const dev = clean(h['x-pk-refund-device']);
@@ -171,7 +193,7 @@ exports.handler = async (event) => {
 
   // Gemini 呼び出し（本格鑑定＝DEEP／雑談・理屈＝LITE）
   const MODEL = usedDeep ? MODEL_DEEP : MODEL_LITE;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(key)}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;   // キーは URL に入れず、ヘッダ x-goog-api-key で送る
   // Gemini 3.x 互換：thinkingBudget:0 は 3.x で 400 になるため除去し、思考ぶんの出力トークンを確保する（クライアントが古い形で送ってきても安全に整える）
   let sendBody = event.body;
   if (/gemini-3/.test(MODEL)) {
@@ -187,24 +209,24 @@ exports.handler = async (event) => {
   let resp;
   const sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
   try {
-    let r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: sendBody });
+    let r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: sendBody });
     let text = await r.text();
     // 一時的なレート超過(429=無料枠の毎分/秒制限)は、少し待って1回だけ自動リトライ＝ユーザーに「混雑中」を見せない。
     //   ※DEEP(3.x=思考モデルで遅い)は二度打ちの遅延を避け、下のLITEフォールバックに任せる。速いLITE単体呼び出しのみ即リトライ。
     if (r.status === 429 && !usedDeep) {
       await sleep(900);
-      const rr = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: sendBody });
+      const rr = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: sendBody });
       const tt = await rr.text();
       r = rr; text = tt;
     }
     // DEEP(上位/3.x)が失敗（課金枯渇429・一時的な5xx等）したら、LITEに一度だけフォールバックして必ず返答を返す（ユーザーにエラーを見せない）
     if (usedDeep && !r.ok && MODEL_DEEP !== MODEL_LITE) {
       try {
-        const url2 = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_LITE}:generateContent?key=${encodeURIComponent(key)}`;
-        let r2 = await fetch(url2, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: event.body });
+        const url2 = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_LITE}:generateContent`;
+        let r2 = await fetch(url2, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: event.body });
         let text2 = await r2.text();
         // LITEフォールバックも混雑(429)なら、少し待って1回だけ再試行（毎分制限の谷を越える）
-        if (r2.status === 429) { await sleep(900); r2 = await fetch(url2, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: event.body }); text2 = await r2.text(); }
+        if (r2.status === 429) { await sleep(900); r2 = await fetch(url2, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: event.body }); text2 = await r2.text(); }
         if (r2.ok) { r = r2; text = text2; }
       } catch (e2) {}
     }
@@ -219,7 +241,7 @@ exports.handler = async (event) => {
     // ★「中身のある返答」が返ったときだけカウント（HTTP200でも空・セーフティブロック・MAX_TOKENSで本文ゼロの回は数えない
     //   ＝海外や特定話題で“生成が空振り”しても、ユーザーの本格鑑定の回数は減らない）。失敗・分類用の軽量呼び出しも数えない。
     const answered = r.ok && hasAnswerText(text);
-    if (!answered && r.ok) { try { console.error('[pk] 200-but-empty (not counted):', device, MODEL, text.slice(0, 300)); } catch (e) {} await noteError(store, 'empty'); }
+    if (!answered && r.ok) { try { console.error('[pk] 200-but-empty (not counted):', MODEL); } catch (e) {} await noteError(store, 'empty'); }
     // ★原価計測：モデルの usageMetadata から入力/出力/キャッシュ済みトークンと概算¥を算出し、ログ＋ヘッダに出す。
     //   暗黙キャッシュが効いていれば cached>0 になり、その分だけ ¥/通 が下がる（この数字を見て月間上限を安全に上げ直せる）。
     if (r.ok) {
@@ -227,7 +249,6 @@ exports.handler = async (event) => {
         const u = readUsage(text);
         if (u) {
           const yen = usageYen(u);
-          resp.headers['x-pk-tok'] = 'p=' + u.p + ',cache=' + u.c + ',out=' + u.o + ',yen=' + yen.toFixed(2);
           // DEEP だけ集計ログ（LITE/分類はノイズになるので出さない）
           if (usedDeep) console.log('[pk-cost] deep model=' + MODEL + ' prompt=' + u.p + ' cached=' + u.c + ' out=' + u.o + ' ≈¥' + yen.toFixed(2) + '/通 (cacheHit=' + (u.p > 0 ? Math.round(u.c / u.p * 100) : 0) + '%)');
         }
@@ -345,3 +366,4 @@ function json(statusCode, obj) { return { statusCode, headers: { 'Content-Type':
 
 // ---- テスト用エクスポート（本番動作には影響しない） ----
 module.exports.__test = { readCount, bump, LIMITS, jstDay, jstMonth };
+function safeEq(a, b) { const c = require('crypto'); const x = c.createHash('sha256').update(String(a)).digest(), y = c.createHash('sha256').update(String(b)).digest(); return c.timingSafeEqual(x, y) && String(a).length === String(b).length; }
