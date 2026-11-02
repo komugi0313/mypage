@@ -5,7 +5,10 @@ let base=0;M.forEach(g=>g.forEach(v=>base+=v));base*=-0.5;
 const F=[['UW1',-3,-2],['UW2',-2,-1],['UW3',-1,0],['UW4',0,1],['UW5',1,2],['UW6',2,3],['BW1',-2,0],['BW2',-1,1],['BW3',0,2],['TW1',-3,0],['TW2',-2,1],['TW3',-1,2],['TW4',0,3]];
 const JA=/[\u3040-\u30ff\u3400-\u9fff]/;
 function seg(t){if(!JA.test(t)||t.indexOf('\u200b')>=0)return t;let out=t[0];
- for(let i=1;i<t.length;i++){let s=base;for(const [k,a,b] of F){const g=M.get(k);if(g)s+=g.get(t.substring(i+a,i+b))||0;}if(s>0)out+='\u200b';out+=t[i];}return out;}
+ for(let i=1;i<t.length;i++){let s=base;for(const [k,a,b] of F){const g=M.get(k);if(g)s+=g.get(t.substring(i+a,i+b))||0;}if(s>0)out+='\u200b';out+=t[i];}return out.split('\u200b').map(fine).join('\u200b').replace(/日に\u200bち/g,'日にち').replace(/\u200b(?=[。、，．・）」』】…！？])/g,'');}
+/* 区切りのない長い文節は、助詞のあとでも折り返せるようにする（句読点の前では折らない） */
+const PT=/[がをにはでとへも]/,NB=/[。、，．！？）」』】・…ーぁぃぅぇぉっゃゅょゎァィゥェォッャュョ\u200b]/;
+function fine(x){if(x.length<10)return x;let o='';for(let i=0;i<x.length;i++){o+=x[i];if(i>=2&&i<x.length-2&&PT.test(x[i])&&!NB.test(x[i+1])&&!(/[にでとへ]/.test(x[i])&&/[はも]/.test(x[i+1]))&&!(/[はも]/.test(x[i])&&PT.test(x[i-1])))o+='\u200b';}return o;}
 function walk(root){const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>{const p=n.parentNode&&n.parentNode.nodeName;return (p==='SCRIPT'||p==='STYLE'||p==='OPTION'||p==='TEXTAREA')?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT;}});
  const ns=[];while(w.nextNode())ns.push(w.currentNode);ns.forEach(n=>{const v=seg(n.data);if(v!==n.data)n.data=v;});}
 function start(root){walk(root);new MutationObserver(ms=>{for(const m of ms){if(m.type==='characterData'){const v=seg(m.target.data);if(v!==m.target.data)m.target.data=v;}else m.addedNodes.forEach(n=>{if(n.nodeType===3){const v=seg(n.data);if(v!==n.data)n.data=v;}else if(n.nodeType===1)walk(n);});}}).observe(root,{subtree:true,childList:true,characterData:true});}
@@ -236,6 +239,7 @@ function scoreAll(){const sc={EI:[0,0],SN:[0,0],TF:[0,0],JP:[0,0],AT:[0,0]};
 function qLeftMsg(left){try{const sc=scoreAll(),cnt=k=>ord.filter(i=>QZ.Q[i].ax===k).length,und=["EI","SN","TF","JP","AT"].filter(k=>{const c=cnt(k),d=Math.abs(sc[k][0]-sc[k][1]);return c<AXCAP&&d<=STOP*Math.sqrt(c/6);});
  const cur=QZ.Q[ord[qi]]&&QZ.Q[ord[qi]].ax;if(cur&&!und.includes(cur))und.unshift(cur);if(!und.length)throw 0;
  const rem=Math.min(left,(ord.length-qi-1)+und.reduce((t,k)=>t+Math.max(0,AXCAP-cnt(k)),0)+und.length);
+ if(und.length>=3)return TR("答えがまだはっきりしない文字を、あと少し聞きます。多くてもあと{n}問です").replace("{n}",rem);
  return TR("「{a}」だけ、あと少し聞きます。多くてもあと{n}問です").replace("{a}",und.map(k=>AXQ[AXN[k]].name).join(TR("」と「"))).replace("{n}",rem);}
  catch(e){return TR("迷っている文字だけ、あと少し聞きます（最大{n}問）").replace("{n}",left);}}
 function drawQ(){/* 数は「最大」から見せて、減ることはあっても増えないようにする */
@@ -324,7 +328,7 @@ function render(instant){
  const diff=AX.map((A,i)=>now[i]!==born[i]),atDiff=!!(bAT&&nAT&&bAT!==nAT),dn=diff.filter(Boolean).length+(atDiff?1:0);
  const cp=x=>'<span class="sc">'+TR("（")+x+TR("）")+'</span>';
  {const KTt=(typeof KT!=="undefined"&&KT&&KT[born+">"+now]&&ktStu(KT[born+">"+now]).title)||"";
- $("rStory").innerHTML=(KTt?'<span class="rs-eb">'+TR("あなたは")+'</span><span class="rs-t">'+esc(KTt)+'</span>':'')+(KTt?'':'<span class="rs-chips">'+(sameAll?'<span class="rs-c n"><small>'+TR("気質も性格も")+'</small><b>'+nowF+'</b>'+p16h(now)+'</span>':'<span class="rs-c b"><small>'+TR("気質")+'</small><b>'+bornF+'</b>'+p16h(born)+'</span><span class="rs-c n"><small>'+TR("性格")+'</small><b>'+nowF+'</b>'+p16h(now)+'</span>')+'</span>');}
+ $("rStory").innerHTML=(KTt?(LANG==="ja"?'<span class="rs-eb">'+TR("あなたは")+'</span>':'')+'<span class="rs-t">'+esc(KTt)+'</span>':'')+(KTt?'':'<span class="rs-chips">'+(sameAll?'<span class="rs-c n"><small>'+TR("気質も性格も")+'</small><b>'+nowF+'</b>'+p16h(now)+'</span>':'<span class="rs-c b"><small>'+TR("気質")+'</small><b>'+bornF+'</b>'+p16h(born)+'</span><span class="rs-c n"><small>'+TR("性格")+'</small><b>'+nowF+'</b>'+p16h(now)+'</span>')+'</span>');}
  const ATC="--rose";
  let fh=TR('<span class="rl"><b>気質</b>生年月日から</span>')+AX.map((A,i)=>'<span class="tile b'+(diff[i]?' c':'')+'" style="--c:var('+A.c+')">'+born[i]+'</span>').join("")+'<span class="tile b at'+(atDiff?' c':'')+'" style="--c:var('+ATC+')">'+(bAT||"–")+'</span>';
  fh+='<span class="rl e"></span>'+AX.map((A,i)=>'<span class="arw'+(diff[i]?' c':'')+'" style="--c:var('+A.c+')">'+(diff[i]?'↓':'｜')+'</span>').join("")+'<span class="arw'+(atDiff?' c':'')+'" style="--c:var('+ATC+')">'+(atDiff?'↓':'｜')+'</span>';
@@ -736,9 +740,9 @@ async function lvSheet(P){const {SANS,MONO}=await lvFonts(),LP=(window.__lvPtImg
  c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);c.fillStyle=LVC.rose;c.fillRect(0,0,W,14);
  c.font="600 26px "+MONO;c.fillStyle=LVC.muted;c.fillText("16TYPE+  "+TR("恋愛編"),70,95);c.font="600 34px "+SANS;c.fillStyle=LVC.rose;c.fillText(TR("恋のときのあなたは"),70,185);
  c.font="700 60px "+SANS;fillNm(c,P.t,P.t,70,275,"left",LVC.ink,"#B7A9AE",W-140);
- let y=390;c.fillStyle=LVC.roseT;rrect(c,60,y,W-120,130,20);c.fill();c.font="500 24px "+SANS;c.fillStyle=LVC.rose;c.fillText(TR("一言で言うと…"),90,y+42);
- c.font="700 34px "+SANS;c.fillStyle=LVC.ink;wrap(lvQ(P.one),W-180).slice(0,2).forEach((l,i)=>c.fillText(l,90,y+92+i*44));
- y=590;c.font="500 26px "+SANS;c.fillStyle=LVC.ink;wrap(P.desc,W-140).slice(0,5).forEach(l=>{c.fillText(l,70,y);y+=40;});y+=40;
+ let y=390;c.font="700 34px "+SANS;const L1=wrap(lvQ(P.one),W-180).slice(0,2),bh=L1.length>1?176:130;c.fillStyle=LVC.roseT;rrect(c,60,y,W-120,bh,20);c.fill();c.font="500 24px "+SANS;c.fillStyle=LVC.rose;c.fillText(TR("一言で言うと…"),90,y+42);
+ c.font="700 34px "+SANS;c.fillStyle=LVC.ink;L1.forEach((l,i)=>c.fillText(l,90,y+92+i*44));
+ y=390+bh+70;c.font="500 26px "+SANS;c.fillStyle=LVC.ink;wrap(P.desc,W-140).slice(0,5).forEach(l=>{c.fillText(l,70,y);y+=40;});y+=40;
  const col=(title,color,items,x,w)=>{c.font="700 32px "+SANS;c.fillStyle=color;c.fillText(title,x,y);let yy=y+50;items.forEach(t=>{c.font="500 25px "+SANS;const ls=wrap(t,w-44);c.fillStyle=color;c.fillText("♡",x,yy);c.fillStyle=LVC.ink;ls.forEach(l=>{c.fillText(l,x+40,yy);yy+=36;});yy+=10;});return yy;};
  const y1=col(TR("恋でいいところ"),LVC.rose,P.good,70,450),y2=col(TR("気をつけたいところ"),LVC.muted,P.care,560,450);
  y=Math.max(y1,y2)+30;c.strokeStyle=LVC.rule;c.lineWidth=2;c.beginPath();c.moveTo(70,y);c.lineTo(W-70,y);c.stroke();y+=60;
