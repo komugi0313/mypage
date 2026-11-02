@@ -22,6 +22,8 @@
 html{background:var(--bg)}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.75;margin:0}
 p,li,small{text-wrap:pretty}
+body{word-break:keep-all;overflow-wrap:anywhere}
+input,textarea{word-break:normal}
 h1,h2,h3{font-family:var(--pop);font-weight:400;text-wrap:balance;margin:0;line-height:1.4}
 p{margin:0}
 img{max-width:100%}
@@ -222,17 +224,24 @@ document.getElementById("copy").addEventListener("click",function(){var b=this,t
   var SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,INPUT:1,SELECT:1,OPTION:1,CANVAS:1,SVG:1};
   function fixNode(n){var t=n.textContent,el=n.parentElement;if(!el||SKIP[el.tagName]||el.classList.contains("nob")||t.replace(/\s/g,"").length<6)return false;
     if(!el.offsetParent&&getComputedStyle(el).position!=="fixed")return false;
-    var cs=getComputedStyle(el);if(cs.whiteSpace==="nowrap"||cs.whiteSpace==="pre")return false;
+    var cs=getComputedStyle(el);if(cs.whiteSpace==="nowrap"||cs.whiteSpace==="pre"||/flex|grid/.test(cs.display))return false; // 横並びの入れ物の中で文字を分けると、ばらばらに並んでしまうので手を出さない
     var r=document.createRange(),tops=[],last=-1,cnt=0;
-    for(var i=t.length-1;i>=0;i--){if(/\s/.test(t[i]))continue;r.setStart(n,i);r.setEnd(n,i+1);var b=r.getClientRects()[0];if(!b||!b.width)return false;
+    for(var i=t.length-1;i>=0;i--){if(/[\s\u200B]/.test(t[i]))continue;r.setStart(n,i);r.setEnd(n,i+1);var b=r.getClientRects()[0];if(!b||!b.width)return false;
       var top=Math.round(b.top);if(last<0)last=top;if(Math.abs(top-last)>3){break}cnt++;if(cnt>3)return false}
     if(i<0)return false; // 1行だけ
-    var tail=t.slice(i+1).replace(/[。、！？」』）)ー]/g,"");if(tail.replace(/\s/g,"").length>2)return false;
+    var tail=t.slice(i+1).replace(/[。、！？」』）)ー]/g,"");if(tail.replace(/[\s\u200B]/g,"").length>2)return false;
     var k=Math.max(0,t.length-(t.length-i-1)-3);var sp=document.createElement("span");sp.className="nob";sp.style.whiteSpace="nowrap";sp.textContent=t.slice(k);
     n.textContent=t.slice(0,k);n.parentNode.insertBefore(sp,n.nextSibling);return true}
+  // 日本語を言葉のまとまりで折り返す：ひらがなのあとに漢字・カタカナが来るところと、「、。」のあとに、目に見えない区切りを入れる
+  var HIRA=/[ぁ-ゖ]/,HEAD=/[一-龯々ァ-ヺ]/;
+  function phrase(n){var t=n.textContent,el=n.parentElement;if(!el||SKIP[el.tagName]||t.indexOf("\u200B")>=0||!/[ぁ-ゖ]/.test(t)||t.length<8)return;
+    var out="",i,c,p,pp;for(i=0;i<t.length;i++){c=t[i];p=t[i-1];pp=t[i-2];
+      if(i>0&&HIRA.test(p)&&HEAD.test(c)&&!(/[おご]/.test(p)&&(!pp||!HIRA.test(pp))))out+="\u200B";
+      out+=c;if(/[、。！？]/.test(c)&&i<t.length-1)out+="\u200B"}
+    if(out!==t)n.textContent=out}
   var busy=false;
-  function run(){busy=true;try{var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),list=[],n;while(n=w.nextNode())list.push(n);
-    list.forEach(function(x){try{fixNode(x)}catch(e){}})}finally{setTimeout(function(){busy=false},0)}}
+  function run(){busy=true;try{[].slice.call(document.querySelectorAll("span.nob")).forEach(function(sp){var par=sp.parentNode;if(!par)return;par.replaceChild(document.createTextNode(sp.textContent),sp);par.normalize()});var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),list=[],n;while(n=w.nextNode())list.push(n);
+    list.forEach(function(x){try{phrase(x)}catch(e){}});list.forEach(function(x){try{fixNode(x)}catch(e){}})}finally{setTimeout(function(){busy=false},0)}}
   var tm=null;function later(){if(busy)return;clearTimeout(tm);tm=setTimeout(run,120)}
   if(window.MutationObserver)new MutationObserver(later).observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:["hidden","open","class","style"]});
   window.addEventListener("resize",later);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(later);later();

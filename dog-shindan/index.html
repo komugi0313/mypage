@@ -24,6 +24,8 @@
 html{background:var(--bg)}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.75;margin:0}
 p,li,small{text-wrap:pretty}
+body{word-break:keep-all;overflow-wrap:anywhere}
+input,textarea{word-break:normal}
 .wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:20px;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
 h1,h2,h3{font-family:var(--pop);font-weight:400;text-wrap:balance;margin:0;line-height:1.4}
@@ -608,7 +610,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
     </div>
 
     <details class="more panel" id="rq-more">
-      <summary><span class="rq-sum"><img class="rib" src="icon/ribbon.png" alt="">おねがい（黄色いリボン）</span></summary>
+      <summary><span class="rq-sum"><img class="rib" src="icon/ribbon.png" alt=""><span>おねがい（黄色いリボン）</span></span></summary>
       <div class="more-in">
         <p class="note">黄色いリボンは「そっとしておいてね」の目印です。言いにくい注意を、カードやQRで伝えられます。</p>
         <div class="f">伝えたいこと（いくつでも）
@@ -633,7 +635,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
     </details>
 
     <details class="more panel" id="wf-more">
-      <summary><span class="rq-sum"><img class="rib" src="icon/friends.png" alt="">ワン友交換用QRを出す</span></summary>
+      <summary><span class="rq-sum"><img class="rib" src="icon/friends.png" alt=""><span>ワン友交換用QRを出す</span></span></summary>
       <div class="more-in" style="align-items:center;text-align:center">
 <div class="f nst-f">名前の書き方
           <div class="chips nst"><button type="button" data-v="fun"></button><button type="button" data-v="plain"></button></div>
@@ -645,7 +647,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
     </details>
 
     <details class="more panel" id="meishi-more">
-      <summary><span class="rq-sum"><img class="rib" src="icon/card.png" alt="">名刺カードを作る</span></summary>
+      <summary><span class="rq-sum"><img class="rib" src="icon/card.png" alt=""><span>名刺カードを作る</span></span></summary>
       <div class="more-in">
     <div class="meishi sub-panel">
       <h2>名刺カード</h2>
@@ -681,7 +683,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
     </details>
 
     <details class="more panel" id="ec-more">
-      <summary><span class="rq-sum"><img class="rib" src="icon/ec.png" alt="">もしものときカードを作る</span></summary>
+      <summary><span class="rq-sum"><img class="rib" src="icon/ec.png" alt=""><span>もしものときカードを作る</span></span></summary>
       <div class="more-in">
         <p class="note">急なときに、病院で伝えたいことをまとめておけます。入力した内容は、お使いの端末の中だけに保存し、どこにも送りません。病気の判断や治療のアドバイスはしません。</p>
         <div class="ec-form">
@@ -4865,17 +4867,24 @@ $("edit").addEventListener("click",function(){if(last)fillInputs();else $("in-na
   var SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,INPUT:1,SELECT:1,OPTION:1,CANVAS:1,SVG:1};
   function fixNode(n){var t=n.textContent,el=n.parentElement;if(!el||SKIP[el.tagName]||el.classList.contains("nob")||t.replace(/\s/g,"").length<6)return false;
     if(!el.offsetParent&&getComputedStyle(el).position!=="fixed")return false;
-    var cs=getComputedStyle(el);if(cs.whiteSpace==="nowrap"||cs.whiteSpace==="pre")return false;
+    var cs=getComputedStyle(el);if(cs.whiteSpace==="nowrap"||cs.whiteSpace==="pre"||/flex|grid/.test(cs.display))return false; // 横並びの入れ物の中で文字を分けると、ばらばらに並んでしまうので手を出さない
     var r=document.createRange(),tops=[],last=-1,cnt=0;
-    for(var i=t.length-1;i>=0;i--){if(/\s/.test(t[i]))continue;r.setStart(n,i);r.setEnd(n,i+1);var b=r.getClientRects()[0];if(!b||!b.width)return false;
+    for(var i=t.length-1;i>=0;i--){if(/[\s\u200B]/.test(t[i]))continue;r.setStart(n,i);r.setEnd(n,i+1);var b=r.getClientRects()[0];if(!b||!b.width)return false;
       var top=Math.round(b.top);if(last<0)last=top;if(Math.abs(top-last)>3){break}cnt++;if(cnt>3)return false}
     if(i<0)return false; // 1行だけ
-    var tail=t.slice(i+1).replace(/[。、！？」』）)ー]/g,"");if(tail.replace(/\s/g,"").length>2)return false;
+    var tail=t.slice(i+1).replace(/[。、！？」』）)ー]/g,"");if(tail.replace(/[\s\u200B]/g,"").length>2)return false;
     var k=Math.max(0,t.length-(t.length-i-1)-3);var sp=document.createElement("span");sp.className="nob";sp.style.whiteSpace="nowrap";sp.textContent=t.slice(k);
     n.textContent=t.slice(0,k);n.parentNode.insertBefore(sp,n.nextSibling);return true}
+  // 日本語を言葉のまとまりで折り返す：ひらがなのあとに漢字・カタカナが来るところと、「、。」のあとに、目に見えない区切りを入れる
+  var HIRA=/[ぁ-ゖ]/,HEAD=/[一-龯々ァ-ヺ]/;
+  function phrase(n){var t=n.textContent,el=n.parentElement;if(!el||SKIP[el.tagName]||t.indexOf("\u200B")>=0||!/[ぁ-ゖ]/.test(t)||t.length<8)return;
+    var out="",i,c,p,pp;for(i=0;i<t.length;i++){c=t[i];p=t[i-1];pp=t[i-2];
+      if(i>0&&HIRA.test(p)&&HEAD.test(c)&&!(/[おご]/.test(p)&&(!pp||!HIRA.test(pp))))out+="\u200B";
+      out+=c;if(/[、。！？]/.test(c)&&i<t.length-1)out+="\u200B"}
+    if(out!==t)n.textContent=out}
   var busy=false;
-  function run(){busy=true;try{var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),list=[],n;while(n=w.nextNode())list.push(n);
-    list.forEach(function(x){try{fixNode(x)}catch(e){}})}finally{setTimeout(function(){busy=false},0)}}
+  function run(){busy=true;try{[].slice.call(document.querySelectorAll("span.nob")).forEach(function(sp){var par=sp.parentNode;if(!par)return;par.replaceChild(document.createTextNode(sp.textContent),sp);par.normalize()});var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),list=[],n;while(n=w.nextNode())list.push(n);
+    list.forEach(function(x){try{phrase(x)}catch(e){}});list.forEach(function(x){try{fixNode(x)}catch(e){}})}finally{setTimeout(function(){busy=false},0)}}
   var tm=null;function later(){if(busy)return;clearTimeout(tm);tm=setTimeout(run,120)}
   if(window.MutationObserver)new MutationObserver(later).observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:["hidden","open","class","style"]});
   window.addEventListener("resize",later);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(later);later();
