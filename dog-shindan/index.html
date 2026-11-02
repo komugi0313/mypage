@@ -838,7 +838,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 
     <div id="tab-grow" class="mytab">
       <div class="dogrow" id="g-dogs"></div>
-      <div class="panel" id="g-tl-panel"><h2 id="g-title">気質の犬種のうつりかわり</h2><div class="tl" id="g-tl"></div></div>
+      <div class="panel" id="g-tl-panel"><h2 id="g-tl-title">気質の犬種のうつりかわり</h2><div class="tl" id="g-tl"></div></div>
       <div class="panel" id="g-chart-panel"><h2>性格の変化</h2><div class="chart" id="g-chart"></div><p class="gnote" id="g-note"></p></div>
       <p class="note" id="g-empty" hidden>まだ記録がありません。診断すると、ここに結果がたまっていきます。</p>
     </div>
@@ -3736,6 +3736,10 @@ $("apply-edit").addEventListener("click",function(){
     if(g[old]){g[st.name]=g[old];delete g[old]}
     [["w44_hist_",""],["w44_req_",""],["w44_nst_",""],["w44_ec_",""],["w44_guide_","_"+last.main.id]].forEach(function(x){try{var v=localStorage.getItem(x[0]+old+x[1]);if(v!=null){localStorage.setItem(x[0]+st.name+x[1],v);localStorage.removeItem(x[0]+old+x[1])}}catch(e){}});
     var ld=lsGet("w44_lastd",{});if(ld[old]){ld[st.name]=ld[old];delete ld[old];lsSet("w44_lastd",ld)}
+    var rm=lsGet("w44_rem",[]);rm.forEach(function(r){if(r.dog===old)r.dog=st.name});lsSet("w44_rem",rm);
+    try{Object.keys(localStorage).forEach(function(k){var m;
+      if(k.indexOf("w44_guide_"+old+"_")===0){localStorage.setItem("w44_guide_"+st.name+k.slice(("w44_guide_"+old).length),localStorage.getItem(k));localStorage.removeItem(k)}
+      else if((m=/^(w44_req_|w44_nst_)(.*)_[^_]+$/.exec(k))&&m[2]===old&&localStorage.getItem(m[1]+st.name)==null){localStorage.setItem(m[1]+st.name,localStorage.getItem(k));localStorage.removeItem(k)}})}catch(e){}
     lsSet("w44_grow",g);gDog=st.name}
   var g2=lsGet("w44_grow",{});if(g2[st.name]){g2[st.name].n=st.name;g2[st.name].b=st.breed;lsSet("w44_grow",g2)}
   saveLast();renderResult();setAvatars();show("s-result");toast("変更をカードに反映しました");
@@ -4054,7 +4058,7 @@ function renderGrow(){var g=lsGet("w44_grow",{}),keys=Object.keys(g);
   $("g-empty").hidden=!!keys.length;$("g-tl-panel").hidden=!keys.length;$("g-chart-panel").hidden=!keys.length;$("g-dogs").hidden=keys.length<2;
   if(!keys.length)return;if(!g[gDog])gDog=g[dogKey()]?dogKey():keys[0];
   $("g-dogs").innerHTML='<span class="dogs-l">どの子の記録を見る？</span>'+keys.map(function(k){var d=g[k],o=ownId(d.b);return '<button type="button" data-k="'+esc(k)+'"'+(k===gDog?' class="on"':'')+'>'+(o&&IMG[o]?'<img src="'+IMG[o]+'?v=5" alt="">':'')+esc(d.n)+'</button>'}).join("");
-  var d=g[gDog],A=d.list.filter(function(r){return BY[r.m]}),L=d.list.filter(function(r){return r.p&&r.p.length===AXES.length});$("g-title").textContent=d.n+"の気質の犬種のうつりかわり";
+  var d=g[gDog],A=d.list.filter(function(r){return BY[r.m]}),L=d.list.filter(function(r){return r.p&&r.p.length===AXES.length});$("g-tl-title").textContent=d.n+"の気質の犬種のうつりかわり";
   $("g-tl").innerHTML=A.slice().reverse().map(function(r,i){var b=BY[r.m];return '<div class="it">'+(IMG[r.m]?'<img src="'+IMG[r.m]+'?v=5" alt="">':'')+'<div><small>'+ymd(r.t)+'・'+ageLabel(r.a)+(i===0?'（いちばん新しい）':'')+'</small><em>'+esc(b?b.s:"")+'気質</em></div></div>'}).join("");
   if(L.length<2){$("g-chart").innerHTML='<p class="note">'+(L.length?'次に診断すると':'新しい診断（10の性格）を2回すると')+'、性格の変化がグラフで見られます。</p>';$("g-note").textContent="";return}
   var f=L[0].p,l=L[L.length-1].p,ch=AXI.slice().sort(function(a,b){return Math.abs(l[b]-f[b])-Math.abs(l[a]-f[a])}).slice(0,3);
@@ -4144,7 +4148,7 @@ function myTab(t){[].forEach.call($$(".mytabs button"),function(b){b.classList.t
   if(t==="grow")renderGrow();if(t==="rem")renderRem();if(t==="wb")wbRender()}
 function $$(s){return document.querySelectorAll(s)}
 document.querySelector(".mytabs").addEventListener("click",function(e){var b=e.target.closest("button[data-t]");if(b)myTab(b.dataset.t)});
-$("my-back").addEventListener("click",function(){if(!$("my-detail").hidden){openMy()}else show(myFrom)});
+$("my-back").addEventListener("click",function(){if(!$("my-detail").hidden){openMy()}else show(myFrom==="s-result"&&!last?"s-start":myFrom)}); // 結果の子を消したときは、結果の画面にもどらない
 $("open-my").addEventListener("click",function(){openMy(null,"s-start")});
 $("r-my").addEventListener("click",function(){openMy(null,"s-result")});
 $("r-my-top").addEventListener("click",function(){openMy(null,"s-result")});
@@ -4356,12 +4360,20 @@ function saveLast(){if(!last)return;var o={n:st.name,b:st.breed,a:st.age,pct:las
 function lastFromGrow(name){var g=lsGet("w44_grow",{}),best=null;Object.keys(g).filter(function(k){return !name||k===name}).forEach(function(k){var L=(g[k]&&g[k].list)||[],r=L[L.length-1];if(r&&r.p&&r.p.length===AXES.length&&BY[r.m]&&(!best||r.t>best.r.t))best={e:g[k],r:r,L:L}});
   if(!best)return null;var L=best.L;return {n:best.e.n,b:best.e.b,a:best.r.a,pct:best.r.p.map(function(v){return Math.max(0,Math.min(100,50+(v-50)/SPREAD))}),m:best.r.m,v:{n:L.length,prev:L.length>1?L[L.length-2].m:null,first:L[0].m}}}
 function loadLast(name){var d=name?(lsGet("w44_lastd",{})[name]||lastFromGrow(name)):(lsGet("w44_last",null)||lastFromGrow());if(!d||!d.n||!BY[d.m]||!Array.isArray(d.pct)||d.pct.length!==AXES.length)return false;
-  st.name=d.n;st.breed=d.b;if(d.a)st.age=d.a;st.visit=d.v||null;$("in-name").value=d.n;
+  if(d.n!==st.name){st.img=null;st.zoom=1;st.dx=0;st.dy=0;st.useArt=false;$("in-zoom").value=1;$("crop-hint").hidden=false;$("zoom-wrap").hidden=true;drawCrop();
+    st.ans=new Array(N).fill(null);$("in-msg").value=""}
+  st.name=d.n;st.breed=d.b;st.age=d.a||"adult";st.visit=d.v||null;fillInputs();
   var rank=ranking(d.pct),i=rank.findIndex(function(x){return x.b.id===d.m});if(i>0){var t=rank[i];rank.splice(i,1);rank.unshift(t);var m0=rank[1].m;rank[1].m=t.m;t.m=m0}
   last={pct:d.pct,rank:rank,main:rank[0].b,hid:hiddenOf(d.pct,d.m)};return true}
 function openLast(name){if(typeof name!=="string")name="";if(name?(!last||st.name!==name)&&!loadLast(name):(!last&&!loadLast()))return;renderResult();setAvatars();show("s-result")}
 // マイページで選んでいる子の結果を用意する（ちがう子の結果が出ないように）
 function lastFor(name){if(!name)return !!(last||loadLast());if(last&&st.name===name)return true;return loadLast(name)}
+// 入力欄（名前・犬種・年齢）を、いま表示している子の内容にそろえる
+function fillInputs(){$("in-name").value=st.name||"";var sel=$("in-breed"),b=st.breed||"";
+  if([].some.call(sel.options,function(o){return o.value===b}))sel.value=b;
+  else if(/^x:/.test(b)){sel.value="x:その他";$("in-breed-other").value=b.slice(2)}
+  $("other-wrap").hidden=sel.value!=="x:その他";
+  [].forEach.call($("in-age").children,function(x){x.classList.toggle("on",x.dataset.v===(st.age||"adult"))})}
 function trait(i){return last.pct[i]>=50?AXES[i].ta:AXES[i].tb}
 // 結果のタイトル：1つの言葉が入りきらないときは、文字を少しずつ小さくして1行に収める（泣き別れを作らない）
 function fitHead(){var h=$("r-head");if(!h||!h.clientWidth)return;[].forEach.call(h.querySelectorAll(".h-l1,.h-l2"),function(el){el.style.fontSize="";
@@ -4730,12 +4742,13 @@ $("mp-no").addEventListener("click",function(){$("mp-confirm").hidden=true});
 $("mp-yes").addEventListener("click",function(){
   if(mpMode==="del"){var g2=lsGet("w44_grow",{}),nm=g2[gDog]?g2[gDog].n:"";delete g2[gDog];lsSet("w44_grow",g2);try{localStorage.removeItem("w44_hist_"+gDog)}catch(e){}
     var ld2=lsGet("w44_lastd",{});if(ld2[nm]){delete ld2[nm];lsSet("w44_lastd",ld2)}
-    var ls=lsGet("w44_last",null);if(ls&&ls.n===nm){try{localStorage.removeItem("w44_last")}catch(e){}$("open-last").hidden=!lastFromGrow();if(last&&st.name===nm)last=null}
+    var ls=lsGet("w44_last",null);if(ls&&ls.n===nm){try{localStorage.removeItem("w44_last")}catch(e){}$("open-last").hidden=!lastFromGrow()}
+    if(last&&st.name===nm){last=null;st.name=""}
     gDog=null;$("mp-confirm").hidden=true;renderHub();$("reset-msg").textContent=nm+"をマイページから消しました。";$("reset-msg").hidden=false;return}
   $("reset-msg").textContent="記録を消しました。次の診断は1回目からになります。";
   var g=lsGet("w44_grow",{}),k=gDog&&g[gDog]?"w44_hist_"+gDog:histKey();try{localStorage.removeItem(k)}catch(e){}$("mp-confirm").hidden=true;$("reset-msg").hidden=false});
 $("again").addEventListener("click",function(){$("reset-msg").hidden=true;newQuiz();st.qi=0;st.ans=new Array(N).fill(null);renderQ();show("s-quiz")});
-$("edit").addEventListener("click",function(){$("in-name").value=st.name||$("in-name").value;$("apply-edit").hidden=!last;show("s-start")});
+$("edit").addEventListener("click",function(){if(last)fillInputs();else $("in-name").value=st.name||$("in-name").value;$("apply-edit").hidden=!last;show("s-start")});
 })();
 </script>
 <script>
