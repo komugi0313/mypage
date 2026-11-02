@@ -18,7 +18,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<!-- 字体は Noto Serif JP・Noto Sans JP だけ（前の Shippori Mincho・Zen Kaku Gothic New・Cormorant Garamond は下の上書きで使われていなかったので読みこまない）。太さは実際に使う 400・500・700 にしぼる（600 は 700、800・900 は 700 で表示）。2026-11-02 -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --paper:#f4efe4; --paper2:#efe8d8; --card:#fbf8f0; --ink:#22201c; --ink2:#4a463d;
@@ -588,7 +589,7 @@ select.cast-miss{border-color:#C0392B!important;box-shadow:0 0 0 3px rgba(192,57
    ※ index.html のインライン<style>より後に読み込むことで上書きが効きます。
    ===================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+/* 字体（Noto Serif JP・Noto Sans JP）は <head> の <link> で読む（@import だと見つかるのが遅れるため。2026-11-02） */
 
 /* 横はみ出しガード（スマホで右が切れない／PC縮小表示にならない） */
 html,body{ overflow-x:hidden !important; max-width:100% !important; }
@@ -709,7 +710,7 @@ label.fl{ font-size:13.5px; }
 @media (max-height:520px){ .topbar,.tabs{position:static!important} }
 @media (max-width:330px){ #hexSym span{white-space:normal!important} }
 .tab{white-space:nowrap}
-@media (max-width:330px){ .tabs .tab{font-size:clamp(10px,3.2vw,13px);letter-spacing:0;padding-left:1px;padding-right:1px} }
+@media (max-width:330px){ .tabs .tab{font-size:.75rem;letter-spacing:0;padding-left:1px;padding-right:1px;white-space:normal;line-height:1.25;word-break:keep-all;overflow-wrap:anywhere} }   /* 下のタブ：px ではなく rem にして、端末の文字を大きくする設定で一緒に大きくなるように（前は10px。せまいときは2行に折り返す。2026-11-02） */
 :focus-visible{outline:3px solid #6B4C8A;outline-offset:2px}
 .field:focus-visible,select.field:focus-visible,textarea.field:focus-visible{outline:3px solid #6B4C8A;outline-offset:1px}
 
@@ -734,7 +735,7 @@ label.fl{ font-size:13.5px; }
 @media(max-width:430px){
   .seg button{ font-size:13px; }
   .chip,.chip.sm{ font-size:13px; }
-  .tab{ font-size:13px; }
+  .tab{ font-size:.8125rem; }
 }
 /* 互卦・綜卦・錯卦の行（以前は12px）。読み方の札は言葉の途中で折り返さない */
 .ura-line{ font-size:14px; line-height:1.8; color:var(--ink2); margin-top:4px; }
@@ -907,6 +908,15 @@ html.pk-qm #concBox,html.pk-qm #hexSec,html.pk-qm #hexSec+.card,html.pk-qm #scri
     if(document.body) go(); else addEventListener('DOMContentLoaded',go); }
   navigator.serviceWorker.addEventListener('controllerchange',function(){ if(had) show(); had=true; });
   navigator.serviceWorker.addEventListener('message',function(e){ var t=e&&e.data&&e.data.type; if(t==='sw-updated'||t==='pk-sw-updated') show(); });
+})();</script>
+<script>/* 書きかけのご相談の下書き：同じタブで読み直しても残す（sessionStorage・24時間まで）。PRO の pk_cs_draft と同じ作り。「次のお客様へ」・別のお客様の鑑定を開くと消す（doResetForNewReading）。2026-11-02 */
+(function(){ var K='eki_q_draft', T=null;
+  function save(v){ try{ if(String(v||'').trim()) sessionStorage.setItem(K,JSON.stringify({v:String(v).slice(0,4000),ts:Date.now()})); else sessionStorage.removeItem(K); }catch(e){} }
+  window.__ekiDraftClear=function(){ clearTimeout(T); T=null; try{ sessionStorage.removeItem(K); }catch(e){} };
+  document.addEventListener('input',function(e){ var t=e.target; if(!t||t.id!=='question') return; clearTimeout(T); T=setTimeout(function(){ T=null; save(t.value); },400); });
+  window.addEventListener('pagehide',function(){ var q=document.getElementById('question'); if(q&&T){ clearTimeout(T); T=null; save(q.value); } });
+  function restore(){ try{ var q=document.getElementById('question'); if(!q||q.value.trim()) return; var d=JSON.parse(sessionStorage.getItem(K)||'null'); if(!d||!d.v) return; if(Date.now()-(+d.ts||0)>86400000){ sessionStorage.removeItem(K); return; } q.value=d.v; q.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){} }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){ setTimeout(restore,300); }); else setTimeout(restore,300);
 })();</script>
 <style>#pk-upd{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 24px);box-sizing:border-box;padding:8px 10px 8px 16px;border-radius:16px;background:#1F3A5F;color:#fff;font-weight:800;font-size:.875rem;line-height:1.5;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 #pk-upd button{min-height:44px;min-width:44px;border-radius:999px;border:0;font:inherit;font-weight:900;cursor:pointer}
@@ -2630,7 +2640,8 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
       if(code==='CONT_LIMIT') throw stop('本日の無料お試し（1日3回）の分を使い切りました。明日（日本時間の0時から）またご利用いただけます。','CONT_LIMIT');
       if(code==='TOO_LONG'||res.status===413) throw stop('ご相談の文が長すぎるため、オンライン鑑定（本格鑑定）を作れませんでした。文を短くしてお試しください。','TOO_LONG');
       if(code==='BUSY') throw stop('短い時間に続けてご利用があったため、オンライン鑑定（本格鑑定）を少しお休みしています。1〜2分おいてお試しください。','BUSY');
-      if(code==='STORE'||code==='MEMBER_ID'||code==='MEMBER_CHECK') throw stop('ただいまサーバーでご契約の確認ができないため、オンライン鑑定（本格鑑定）を作れませんでした。少し時間をおいてお試しください。',code);
+      if(code==='MEMBER_ID') throw stop('🔑 会員の確認ができなかったため、オンライン鑑定（本格鑑定）を作れませんでした。一度ログアウトして、もう一度ログインしてください。',code);   // PRO・ビギナーと同じ案内（会員IDが取れない＝ログインし直す。2026-11-02）
+      if(code==='STORE'||code==='MEMBER_CHECK') throw stop('ただいまサーバーでご契約の確認ができないため、オンライン鑑定（本格鑑定）を作れませんでした。少し時間をおいてお試しください。',code);
       if(/^(SETUP|NO_KEY|ORIGIN|PRODUCT|METHOD|BAD_REQUEST)$/.test(code)) throw stop('オンライン鑑定（本格鑑定）の設定を確認できませんでした。時間をおいてもつながらないときは、お問い合わせください。',code);
       let msg=`HTTP ${res.status}`; try{ msg=(e0&&e0.error&&e0.error.message)||msg; }catch(_){}
       const busy=code==='UPSTREAM_BUSY'||code==='UPSTREAM'||res.status===429||res.status>=500||/overload|unavailable|rate|demand/i.test(msg);
@@ -4911,7 +4922,7 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
     { const fb=document.getElementById('fuBirthBox'); if(fb) fb.open=false; }
     ['cErr','nErr'].forEach(i=>{ const e=document.getElementById(i); if(e){ e.hidden=true; e.textContent=''; } });
     const setv=(id,v)=>{ const e=document.getElementById(id); if(e) e.value=v; };
-    setv('question',''); setv('custNewName',''); setv('fuBd',''); setv('fuBt',''); setv('preBd',''); setv('preBt',''); setv('fuText',''); setv('readingMemo','');
+    setv('question',''); try{ if(window.__ekiDraftClear) window.__ekiDraftClear(); }catch(_){} setv('custNewName',''); setv('fuBd',''); setv('fuBt',''); setv('preBd',''); setv('preBt',''); setv('fuText',''); setv('readingMemo','');
     setv('num1',''); setv('num2',''); setv('num3',''); { const np=document.getElementById('nPreview'); if(np) np.innerHTML=''; }
     setv('mLower',''); setv('mUpper',''); setv('mKo',''); { const mp=document.getElementById('mPreview'); if(mp) mp.innerHTML=''; } try{ ekiManualErr(false); }catch(_){}   // 手動で指定した卦も、選ぶ前に戻す
     { const hb=document.getElementById('hexBand'); if(hb) hb.innerHTML=''; }
@@ -5217,7 +5228,7 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   .vfx-b.main{background:#6E5689;border-color:#6E5689;color:#FFFFFF}
   .vmic-msg{flex:1 1 100%;font-size:12.5px;font-weight:700;color:#4A463D;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}
 </style>
-<script>window.__VMIC_CFG={sel:'#question, #fuText',opt:'../mypage.html',w:'易の言葉（卦の名前など）',ws:'易の言葉',ex:'例：ちてんたい → 地天泰／かんいすい → 坎為水'};</script>
+<script>window.__VMIC_CFG={sel:'#question, #fuText',opt:'../mypage.html',w:'易の言葉（卦の名前など）',ws:'易の言葉',ex:'例：ちてんたい → 地天泰／かんいすい → 坎為水',kr:'鑑定の記録（顧客名簿・最近の鑑定）'};</script>
 <script>
 /* 声で入力（🎤）と「✕ 全部消す」＝3サイト共通（PRO・ビギナー・易 EKI Pro）。発注者決定 2026-10-18（2026-10-17 に PRO で試験導入→3サイト共通に）。
    ・ブラウザに入っている音声認識（Web Speech API）を使う＝声の聞き取りは費用0円（声はサーバーに送らない）。
@@ -5289,6 +5300,7 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   var FN=CFG.fn||'/.netlify/functions/voice-fix', OPT=CFG.opt||'';
   var OPT_ON=CFG.optOn===true;   // 音声入力オプション（月1,000円）の販売を始めたら true にする（鑑定者本人 2026-11-02「オプションは後から始めます」）。false のあいだは料金の案内を出さない
   var W=CFG.w||'占いの言葉（星の名前など）', WS=CFG.ws||'占いの言葉';
+  var KR=CFG.kr||'カルテ';   // 鑑定が残る場所の呼び名（易は「鑑定の記録（顧客名簿・最近の鑑定）」。2026-11-02）
   var EX=CFG.ex||'';   // はじめの案内に出す例（PRO＝月支元命・魁罡／ビギナー＝専門用語を出さない決まりなので甲子（甲子園）／易＝卦の名前。鑑定者本人の指示 2026-10-27）   // 易は「易の言葉（卦の名前など）」（鑑定者本人の指示 2026-10-27）
   var VS={option:null,left:null,trial:10,off:false};
   try{ var _v=JSON.parse(sessionStorage.getItem('pk_vfx')||'null'); if(_v) VS=Object.assign(VS,_v); }catch(_){}
@@ -5343,12 +5355,12 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
     if(lsGet('pk_vfx_end')) return; lsSet('pk_vfx_end',String(Date.now()));   // おためし終了の案内は1回だけ
     if(!OPT_ON){ pop('<h3>🎤 <span class="nw">無料のおためしが</span><span class="nw">終わりました</span></h3>'+
         '<p>🎤 声で入力は、<span class="nw">これからも<b>無料</b>で</span><span class="nw">そのままお使いいただけます。</span></p>'+
-        '<p class="vfx-s">話した言葉は相談の欄に入り、<span class="nw">鑑定するとそのままカルテに残ります。</span></p>',[{t:'閉じる'}]); return; }
+        '<p class="vfx-s">話した言葉は相談の欄に入り、<span class="nw">鑑定するとそのまま'+KR+'に残ります。</span></p>',[{t:'閉じる'}]); return; }
     var b=[{t:'あとで'}]; if(OPT) b.unshift({t:'オプションを見る',main:true,href:OPT});
     pop('<h3>🎤 <span class="nw">無料のおためしが</span><span class="nw">終わりました</span></h3>'+
         '<p>🎤 声で入力は、<span class="nw">これからも<b>無料</b>で</span><span class="nw">そのままお使いいただけます。</span></p>'+
         '<p><b class="nw">月1,000円のオプション</b>をつけると、<span class="nw">話した言葉を読みやすく整えて、</span><span class="nw">'+WS+'も正しい字に直します。</span><span class="nw">キーボードで打った文字も直ります。</span></p>'+
-        '<p class="vfx-s">話した言葉は相談の欄に入り、<span class="nw">鑑定するとそのままカルテに残ります。</span></p>',b);
+        '<p class="vfx-s">話した言葉は相談の欄に入り、<span class="nw">鑑定するとそのまま'+KR+'に残ります。</span></p>',b);
   }
   // おためしが終わったあと、無料の声の入力を20回使った方にだけ、もう1回だけ案内する（これで最後。何度も出さない）
   var FOLLOW_N=20;
@@ -5535,9 +5547,9 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
     if(BG) BG.set(n,r); return r;
   }
   function opac(n){ if(!n||n.nodeType!==1) return 1; if(OP&&OP.has(n)) return OP.get(n); var o=(+getComputedStyle(n).opacity)*opac(n.parentElement); if(OP) OP.set(n,o); return o; }
-  function fix(e){
+  function fix(e,cs){
     var own=''; for(var c=e.firstChild;c;c=c.nextSibling) if(c.nodeType===3) own+=c.nodeValue; if(!own.trim()) return;
-    var cs=getComputedStyle(e); if(cs.display==='none'||cs.visibility==='hidden') return;
+    cs=cs||getComputedStyle(e); if(cs.display==='none'||cs.visibility==='hidden') return;
     var fill=cs.webkitTextFillColor; if(fill&&/rgba\(0, 0, 0, 0\)|transparent/.test(fill)) return;   // 文字そのものがグラデーションのもの
     var fixed=e.hasAttribute('data-pkcg'), fg=P(fixed?(e.getAttribute('data-pkco')||cs.color):cs.color); if(!fg) return;   // 前に直した文字は、元の色で測り直す（背景が変わったら戻す・直し直す）
     var undo=function(){ if(!fixed) return; var o=e.getAttribute('data-pkcg'); if(o) e.style.setProperty('color',o); else e.style.removeProperty('color'); e.removeAttribute('data-pkcg'); e.removeAttribute('data-pkco'); };
@@ -5562,9 +5574,36 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
     var nv='rgb('+Math.round(c2[0])+', '+Math.round(c2[1])+', '+Math.round(c2[2])+')'; if(e.style.getPropertyValue('color')!==nv||e.style.getPropertyPriority('color')!=='important') e.style.setProperty('color',nv,'important');   // 同じ色なら触らない（自分の変更で何度も点検が走らないように）
   }
   var SKIP='script,style,noscript,svg,canvas,video,option,select,textarea,input,img,.yomi,.ysr,[aria-hidden="true"],[data-nocg]';   // data-nocg＝色を自分で決めている切りかえボタン（選ぶと背景が変わるので、前の色を残さない）
-  function pass(root){ if(!root||root.nodeType!==1) return;   /* 印刷中も、濃くするほうだけは動く（fix の中で白っぽくするのは止める） */ BG=new Map(); OP=new Map(); var list=[root].concat([].slice.call(root.querySelectorAll('*')));
-    for(var i=0;i<list.length;i++){ var e=list[i]; if(e.matches&&e.matches(SKIP)) continue; try{ fix(e); }catch(_e){} } BG=null; OP=null; }
+  // 点検のしかた（2026-11-02 速さの点検 chk_perf：押すたびにページ全体〈鑑定後は約5,000の要素〉を測り直して、折りたたみを1つ開くだけで数秒固まっていた）：
+  //  ・見えていないところ（display:none の中・閉じている <details> の中）は測らない。開いたとき・見えるようになったとき（下の見張りが気づく）に、その部分だけ測る。
+  //  ・押したとき（click）は、押したところのまわりの欄だけ測り直す（:checked などで色だけ変わるものも拾う）。
+  //  ・ページ全体を測り直すのは、開いたとき・1.5秒後・画面の幅が変わったとき・<html>/<body> の印（画面の色の切りかえなど）が変わったとき・印刷のときだけ。
+  //  読みにくい組み合わせを見つけて直す働き（fix）はそのまま。
+  function pass(root){ if(!root||root.nodeType!==1||!root.isConnected) return;   /* 印刷中も、濃くするほうだけは動く（fix の中で白っぽくするのは止める） */
+    try{ var cd=root.closest('details:not([open])'); if(cd&&cd!==root){ var sm=root.closest('summary'); if(!sm||sm.parentElement!==cd) return; } }catch(_e){}   // 閉じている欄の中は、開いたときに見る
+    BG=new Map(); OP=new Map(); var st=[root];
+    while(st.length){ var e=st.pop(), cs=null;
+      if(!(e.matches&&e.matches(SKIP))){ try{ cs=getComputedStyle(e); }catch(_e){} if(cs&&cs.display==='none') continue; try{ fix(e,cs); }catch(_e){} }
+      var ch=e.children; if(!ch||!ch.length) continue;
+      if(e.tagName==='DETAILS'&&!e.open){ for(var k=ch.length-1;k>=0;k--) if(ch[k].tagName==='SUMMARY') st.push(ch[k]); continue; }
+      for(var j=ch.length-1;j>=0;j--) st.push(ch[j]); }
+    BG=null; OP=null; }
+  function passAll(list){ var set=new Set(list.filter(function(n){ return n&&n.nodeType===1&&n.isConnected; }));   // 重なっている部分は、いちばん外側だけ測る
+    set.forEach(function(n){ for(var p=n.parentElement;p;p=p.parentElement){ if(set.has(p)){ set.delete(n); return; } } });
+    set.forEach(function(n){ pass(n); }); }
   var tm=null; function full(){ clearTimeout(tm); tm=setTimeout(function(){ pass(document.body); },350); }
+  // 押したところのまわり：押したボタン・札の入っている小さなまとまり（となりの札も選んだ色が変わるので一緒に）。大きな欄ごとは測らない（開いた欄・足された部分は下の見張りが測る）
+  var REG='[role="tablist"],[role="radiogroup"],[role="group"],[role="dialog"],dialog,fieldset,label,li,tr';
+  var ck=[], ckt=null; function near(ev){ var t=ev&&ev.target; if(t&&t.nodeType!==1) t=t.parentElement; if(!t||!t.closest) return;
+    if(t.closest('summary')) return;   // 欄の開け閉め：open の変化で、その欄だけ測る
+    var r=t.closest(REG)||t.parentElement||t; if(r===document.body||r===document.documentElement) r=t;
+    if(r.parentElement&&r.parentElement!==document.body&&r.parentElement.getElementsByTagName('*').length<=400) r=r.parentElement;
+    if(r.getElementsByTagName('*').length>1500) r=t;
+    ck.push(r); clearTimeout(ckt); ckt=setTimeout(function(){ var w=ck; ck=[]; passAll(w); },350); }
+  // <body> の印のうち、スクロールで付け外しするだけのもの（下の丸いボタンを薄くする・固定ボタンを出す）は、文字の色に関係しないので測り直さない
+  var MOTION={'fl-moving':1,'fl-idle':1,'sticky-on':1};
+  function onlyMotion(a,b){ var x={},k; String(a||'').split(/\s+/).forEach(function(t){ if(t) x[t]=(x[t]||0)+1; }); String(b||'').split(/\s+/).forEach(function(t){ if(t) x[t]=(x[t]||0)-1; }); for(k in x){ if(x[k]!==0&&!MOTION[k]) return false; } return true; }
+  var lastW=window.innerWidth; function rs(){ if(window.innerWidth===lastW) return; lastW=window.innerWidth; full(); }   // 高さだけの変化（スマホのアドレスバーの出し入れ）では測り直さない
   // 印刷：濃くした文字はそのまま印刷する。濃い背景の上で白っぽくした文字だけは、紙では背景の色が出ないことがあるので元に戻してから印刷し、終わったら画面用に戻す
   function unfixAll(){ [].forEach.call(document.querySelectorAll('[data-pkcg]'),function(e){ if(printing){ var f0=P(e.getAttribute('data-pkco')||''), f1=P(e.style.getPropertyValue('color')||''); if(f0&&f1&&L(f1)<=L(f0)) return; }   /* 印刷：濃くした文字はそのまま（紙でも読みやすく）。白っぽくした文字だけ元に戻す（紙では背景の色が出ないことがあるため）。発注者指示 2026-10-21 */ var o=e.getAttribute('data-pkcg'); if(o) e.style.setProperty('color',o); else e.style.removeProperty('color'); e.removeAttribute('data-pkcg'); e.removeAttribute('data-pkco'); }); }
   window.addEventListener('beforeprint',function(){ printing=true; unfixAll(); try{ pass(document.body); }catch(_e){} setTimeout(function(){ try{ pass(document.body); }catch(_e){} },0); });   // 印刷の直前に作り直された文字も濃くする
@@ -5572,10 +5611,11 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   var printing=false;
   function start(){
     pass(document.body); setTimeout(function(){ pass(document.body); },1500);
-    document.addEventListener('click',full,true); document.addEventListener('toggle',full,true); window.addEventListener('resize',full);
-    if(window.MutationObserver){ var q=[],qt=null; new MutationObserver(function(rs){ rs.forEach(function(r){ if(r.type==='childList'){ [].forEach.call(r.addedNodes,function(n){ if(n.nodeType===1) q.push(n); else if(n.parentElement) q.push(n.parentElement); }); } else if(r.target&&r.target.nodeType===1){ q.push(r.target); } });
-      if(!qt) qt=setTimeout(function(){ var w=q; q=[]; qt=null; w.forEach(function(n){ if(n.isConnected) pass(n); }); },200); })
-      .observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','hidden','open']}); }
+    document.addEventListener('click',near,true); window.addEventListener('resize',rs);   // 開いた欄（toggle）は、下の見張りが open の変化で気づいて、その欄だけ測る
+    if(window.MutationObserver){ var q=[],qt=null; new MutationObserver(function(rs){ rs.forEach(function(r){ if(r.type==='childList'){ [].forEach.call(r.addedNodes,function(n){ if(n.nodeType===1) q.push(n); else if(n.parentElement) q.push(n.parentElement); }); } else if(r.target&&r.target.nodeType===1){ if(r.target===document.body&&r.attributeName==='class'&&onlyMotion(r.oldValue,r.target.className)) return; q.push(r.target); } });
+      if(!qt) qt=setTimeout(function(){ var w=q; q=[]; qt=null; passAll(w); },200); })
+      .observe(document.body,{childList:true,subtree:true,attributes:true,attributeOldValue:true,attributeFilter:['class','style','hidden','open','data-theme','data-mode']});
+      new MutationObserver(function(){ full(); }).observe(document.documentElement,{attributes:true,attributeFilter:['class','style','data-theme','data-mode']}); }   // 画面の色の切りかえ（<html> の印）は全体が変わるので、全体を測り直す
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
 })();
