@@ -602,7 +602,7 @@ function lvInit(){if(typeof LV==="undefined"||!LV||!LV.questions)return;let el=$
  el.innerHTML='<p class="eyebrow">'+TR("恋愛編")+'</p><h2 class="lvh">'+TR("恋をすると、あなたの中のどちらが強く出る？")+'</h2>'
   +'<p class="hint lvlead">'+TR("恋愛の場面だけを聞く16問・約3分。恋をしたときのあなたが、気質と性格のどちらに近いのか、ふだんは出ない面があるのかがわかります。")+'</p>'
   +'<button class="btn primary" type="button" id="lvStart">'+TR("恋愛編を診断する")+'</button>'
-  +'<div id="lvSit" class="lvsit" hidden><p class="lvsq">'+TR("今の恋は、どれに近い？")+'</p><div class="lvsb">'+LVSIT.map(([k,l])=>'<button type="button" data-s="'+k+'">'+TR(l)+'</button>').join("")+'</div><p class="hint">'+TR("今の状況に合わせて、質問と結果が変わります。")+'</p></div>'
+  +'<div id="lvSit" class="lvsit" hidden><p class="lvsq">'+TR("今の恋は、どれに近い？")+'</p><div class="lvsb">'+LVSIT.map(([k,l])=>'<button type="button" data-s="'+k+'">'+TR(k==="koi"&&(ageNow()??99)<=18?"付き合っている":l)+'</button>').join("")+'</div><p class="hint">'+TR("今の状況に合わせて、質問と結果が変わります。")+'</p></div>'
   +'<div id="lvQ" class="lvq" hidden><div class="qtop"><span class="qcount" id="lvCount"></span><button type="button" class="qlink" id="lvBack">'+TR("← 1つ前の質問へ")+'</button></div><div class="qprog"><span id="lvProg"></span></div><h3 class="qtext" id="lvText"></h3><div class="qex" id="lvExW"><span class="qexl">'+TR("たとえば")+'</span><p id="lvEx"></p></div><div class="qopts" id="lvOpts"></div></div>'
   +'<div id="lvRes" hidden></div>';
  $("lvStart").onclick=()=>{$("lvStart").hidden=true;$("lvRes").hidden=true;$("lvQ").hidden=true;$("lvSit").hidden=false;$("love").scrollIntoView({behavior:"smooth",block:"start"});};
@@ -836,7 +836,8 @@ function kaiunCard(at){let c=$("kaiun");if(LANG!=="ja"||!KAIUN_URL||!st.y){if(c)
 const SWN={EI:["元気の出し方","人といるか、ひとりか","--ei"],SN:["ものの見方","これまでの経験で考えるか、先のことを想像して考えるか","--sn"],TF:["決め方","理屈か、気持ちか","--tf"],JP:["進め方","計画どおりか、その場に合わせるか","--jp"]};
 /* 19〜22歳（日本語）：学生向けの文の「部活・クラス・文化祭」を大学向けの言葉にする */
 const UNIW=[["クラス替えの日に","新しい授業の初日に"],["クラス替えから","新学期から"],["部活やサークル","サークル"],["部活やクラス","サークルやゼミ"],["クラスや部活","ゼミやサークル"],["部活","サークル"],["文化祭","学園祭"],["クラスのみんな","サークルのみんな"],["同じクラス","同じ授業"],["クラス替え","新学期"],["クラス","ゼミ"]];
-function uniW(t){if(typeof t!=="string"||LANG!=="ja")return t;const g=typeof ageNow==="function"?ageNow():null;if(g==null||g<19||g>22)return t;UNIW.forEach(([a,b])=>{t=t.split(a).join(b);});return t;}
+const UNIW_X={en:[["my teacher","my professor"],["My teacher","My professor"],["a teacher","a professor"],["the teacher","the professor"],["teachers","professors"],["teacher","professor"],["classmates","people in my classes"],["homeroom","class"]],ko:[["선생님","교수님"],["담임","교수님"],["반 친구들","같은 수업 사람들"],["반 친구","같은 수업 친구"]]};
+function uniW(t){if(typeof t!=="string")return t;const g=typeof ageNow==="function"?ageNow():null;if(g==null||g<19||g>22)return t;(LANG==="ja"?UNIW:(UNIW_X[LANG]||[])).forEach(([a,b])=>{t=t.split(a).join(b);});return t;}
 /* 22歳以下には、くわしい鑑定などの文で学生向け（〇〇_s）があればそちらを出す */
 function ktStu(o){if(!o)return o;const g=typeof ageNow==="function"?ageNow():null;if(g==null||g>22)return o;const r={};for(const k in o){if(!k.endsWith("_s"))r[k]=o[k+"_s"]?uniW(o[k+"_s"]):o[k];}return r;}
 function yureSee(born,now){const pv=((window.__me&&window.__me.prev)||[]).filter(t=>t&&t!==now);if(!pv.length)return "";
