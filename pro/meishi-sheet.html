@@ -1,12 +1,30 @@
 <!doctype html>
 <html lang="ja">
 <meta charset="utf-8">
+<script>
+/* 鑑定書のリンクの情報（お名前・生年月日など）は「#」のあとに入れる（chk_legal 2026-11-02）：「#」のあとはサーバーに届かず、アクセスログにも残らない。
+   開くときは「#」のあとと「?」のあとの両方を読む（前に配った「?」のリンク・アプリからの「?」も開ける）。どちらにもある項目は「#」を優先。
+   ページの中では location.search のかわりに window.__SQ（「?」から始まる、まとめた形）を使う。
+   「?」で開いたときは、読みこんだあとアドレス欄を「#」の形に置きかえる（再読みこみ・コピーしたリンクでサーバーに送らないように。ページは読み直さない）。 */
+(function(){ try{
+  var p=new URLSearchParams(location.search), h=String(location.hash||'').replace(/^#/,'');
+  if(/=/.test(h)) new URLSearchParams(h).forEach(function(v,k){ p.set(k,v); });
+  var qs=p.toString(); window.__SQ=qs?('?'+qs):'';
+  if(location.search && qs && /^https?:/.test(location.protocol) && history.replaceState) history.replaceState(history.state,'',location.pathname+'#'+qs);
+  /* 開いている鑑定書の「#」のあとだけが変わったとき（同じタブで別の方のリンクを開いた等）は、読み直して新しい内容で出す */
+  window.addEventListener('hashchange',function(){ var nh=String(location.hash||'').replace(/^#/,''); if(/=/.test(nh) && nh!==qs) location.reload(); });
+}catch(e){ window.__SQ=location.search||''; } })();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- 命式表・鑑定書は白ベースの明色専用。iOS Safari等の自動暗転で本文が読めなくなるのを防ぐ。 -->
 <meta name="color-scheme" content="light">
 <link rel="icon" href="favicon.png" type="image/png">
 <title>四柱推命 命式表</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<!-- フォントは実際に使う太さだけ（明朝 400・700／ゴシック 400・700）。前は 5＋3 の太さで字形ファイル約270本・約4.3MBあり、遅い回線で鑑定書が出るまで1分以上かかっていた（chk_perf 2026-11-02）。
+     500・600 の指定は 400／700 に、800・900 は 700 に寄せて表示される（字形は同じ書体のまま）。 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
 <style>
   :root{
     /* 白ベース・モノクロ（印刷しやすい） */
@@ -279,6 +297,8 @@
   .bio .cv{ font-family:var(--mincho); text-align:center; white-space:nowrap; width:32px; font-size:13px; }
   .bio tr.tc .yr, .bio tr.tc .nm{ color:var(--now); }
   .bio td.ds{ font-size:11px; }
+  .nwb{ display:inline-block; }   /* 見出しのまとまり（「吉凶星」「・記入」・終わりのかっこ）を行の途中で割らない */
+  @media screen{ .bio td.ds{ word-break:keep-all; overflow-wrap:anywhere; } }   /* 吉凶星の名前（羊刃など）を字の途中で割らず「・」で折り返す（画面だけ。印刷は前のまま） */
   /* 空欄の記入セルは真の空白に（「（自由記入）」の文言は出さない＝手書き・入力の妨げにしない） */
   /* 時期（自動）の関係チップ：良い＝緑系／注意＝赤系／空亡 */
   .bio .nm .ev{ display:inline-block; font-size:9.5px; font-weight:800; line-height:1.5; border-radius:4px; padding:0 4px; margin:1px 2px 1px 0; white-space:nowrap; }
@@ -912,7 +932,7 @@ function _inDu(r,d){ var x=_nowX(r); if(x==null||!d) return false; var m=(d.ageM
 /* ===== ビギナー（初心者モード）から開いたとき（?bg=1）：専門用語を出さない「やさしい鑑定書」にする =====
    ・計算・判定はそのまま（表示の言葉だけを言いかえる）。PRO・個人版・ビギナー上級者モードでは何もしない。 */
 (function(){
-  if(!/[?&]bg=1(&|$)/.test(location.search)) return;
+  if(!/[?&]bg=1(&|$)/.test(window.__SQ)) return;
   document.body.classList.add('bg-mode','bg-nomei');
   var R=[
     [/（(?:比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬)）/g,''],
@@ -944,9 +964,14 @@ function _inDu(r,d){ var x=_nowX(r); if(x==null||!d) return false; var m=(d.ageM
   window.__bgPlain=function(html){
     try{
       var tp=document.createElement('template'); tp.innerHTML=String(html||'');
+      // 見出しの終わりのかっこを割らない印（span.nwb）は、いったん外して文字をつなげてから言いかえる（印で文字が分かれると言いかえが当たらないため）
+      var nw=[].slice.call(tp.content.querySelectorAll('span.nwb')); nw.forEach(function(x){ x.parentNode.replaceChild(document.createTextNode(x.textContent),x); }); if(nw.length) tp.content.normalize();
       var w=document.createTreeWalker(tp.content, NodeFilter.SHOW_TEXT), n, list=[];
       while((n=w.nextNode())) list.push(n);
       list.forEach(function(x){ x.nodeValue=plainText(x.nodeValue); });
+      // 言いかえたあとで、見出しの終わりのかっこにもう一度印を付ける
+      [].forEach.call(tp.content.querySelectorAll('.ez-h, .ez-yhead b'),function(h){ var t=h.lastChild; if(!t||t.nodeType!==3) return; var m=/(「[^「」<>]{1,16}」|（[^（）<>]{1,16}）)$/.exec(t.nodeValue); if(!m) return;
+        var sp=document.createElement('span'); sp.className='nwb'; sp.textContent=m[1]; t.nodeValue=t.nodeValue.slice(0,m.index); h.appendChild(sp); });
       // カッコだけ残った見出し・つなぎ目を整える
       return tp.innerHTML.replace(/（\s*）/g,'');
     }catch(e){ return html; }
@@ -982,7 +1007,7 @@ function _inDu(r,d){ var x=_nowX(r); if(x==null||!d) return false; var m=(d.ageM
       </div>
     </div>
     <div class="bar-row" id="calcRow2">
-      <script>/* アプリから開いたとき（from=app）は、お客様の記録はアプリの顧客カルテに自動で保存されるので、この端末だけの簡易保存は出さない（保存の場所を1つにする） */try{if(/[?&]from=app(&|$)/.test(location.search))document.getElementById('calcRow2').style.display='none';}catch(e){}</script>
+      <script>/* アプリから開いたとき（from=app）は、お客様の記録はアプリの顧客カルテに自動で保存されるので、この端末だけの簡易保存は出さない（保存の場所を1つにする） */try{if(/[?&]from=app(&|$)/.test(window.__SQ))document.getElementById('calcRow2').style.display='none';}catch(e){}</script>
       <div class="savebox">
         <button type="button" id="saveBtn" title="この生年月日を、この端末だけに簡易保存">💾 この端末に保存</button>
         <label for="savedList" class="glabel">この端末の保存</label>
@@ -1199,7 +1224,7 @@ function _inDu(r,d){ var x=_nowX(r); if(x==null||!d) return false; var m=(d.ageM
             <h2 class="block-title">年運（12年）<small>1年ごとの運気<span id="nenunNote" class="scr-hint"></span></small></h2>
             <div class="scroll">
               <table class="bio">
-                <thead><tr><th class="yr">西暦</th><th class="nm">時期（自動）</th><th class="cv">通変</th><th class="cv">十二運</th><th>吉凶星・記入</th></tr></thead>
+                <thead><tr><th class="yr">西暦</th><th class="nm">時期（自動）</th><th class="cv">通変</th><th class="cv">十二運</th><th><span class="nwb">吉凶星</span><span class="nwb">・記入</span></th></tr></thead>
                 <tbody id="bioBody">
                   <tr><td class="yr ed" contenteditable="true"></td><td class="nm"></td><td class="cv ed" contenteditable="true"></td><td class="cv ed" contenteditable="true"></td><td class="ds free ed" contenteditable="true"></td></tr>
                   <tr><td class="yr ed" contenteditable="true"></td><td class="nm"></td><td class="cv ed" contenteditable="true"></td><td class="cv ed" contenteditable="true"></td><td class="ds free ed" contenteditable="true"></td></tr>
@@ -1617,7 +1642,7 @@ function _inDu(r,d){ var x=_nowX(r); if(x==null||!d) return false; var m=(d.ageM
   function branchYin(b){ var i=BRANCHES.indexOf(b); return i>=0 && (i%2===1) ? '陰':'陽'; }
   function kubo(ganzhi){ if(!ganzhi) return ''; var st=STEMS.indexOf(ganzhi[0]), br=BRANCHES.indexOf(ganzhi[1]); if(st<0||br<0) return ''; var f=((10+br-st)%12+12)%12; return BRANCHES[f]+BRANCHES[(f+1)%12]; }
   function repHidden(hs){ if(!hs||!hs.length) return {}; for(var i=0;i<hs.length;i++){ if(hs[i].ling) return hs[i]; } return hs[hs.length-1]; }
-  var ZO={}; try{ String(new URLSearchParams(location.search).get('zo')||'').split(',').forEach(function(x){ var m=x.match(/^(年柱|月柱|日柱|時柱):(\d)$/); if(m) ZO[m[1]]=+m[2]; }); }catch(e){}   // アプリで先生が選んだ蔵干（なければ司令）
+  var ZO={}; try{ String(new URLSearchParams(window.__SQ).get('zo')||'').split(',').forEach(function(x){ var m=x.match(/^(年柱|月柱|日柱|時柱):(\d)$/); if(m) ZO[m[1]]=+m[2]; }); }catch(e){}   // アプリで先生が選んだ蔵干（なければ司令）
   function mapP(p){ if(!p) return null; var rp=(ZO[p.label]!=null&&p.hiddenStems&&p.hiddenStems[ZO[p.label]])?p.hiddenStems[ZO[p.label]]:repHidden(p.hiddenStems);
     return { gan:p.stem, shi:p.branch, kanshi:p.ganzhi,
       ganElement:p.stemElement, shiElement:p.branchElement,
@@ -1933,14 +1958,14 @@ window.KANSHI60_DETAIL={
     仕事:'どんな仕事でも手際よくこなせる。商売の勘があり、時代の流れやお客様の求めるものを正確につかむ。独自の感性は、その道の専門家としても通じる水準。ただ、粘りや体力が必要な仕事では消耗しやすい。芸能の分野・店の経営・仕入れ担当で感性が生きる。営業・不動産・飲食や娯楽の接客では商売の才が輝く。',
     女:'一人でも動けるからりとした性格。人とのやりとりも上手で親切。話の引き出しが多く、場を楽しく盛り上げる。突然、周りが驚くような行動に出るのも独自の個性。',
     男:'勘が鋭く、頭の回転も速い。工夫するのが得意。やわらかく謙虚にふるまうのが上手だが、見下すような態度は許せず、そんなときははっきり強く自分の意見を通す。'},
-  甲戌:{一言:'大らか・地道に積み上げる・筋を通す',
-    基本:'甲のまっすぐ伸びる力と戌の粘り強さを併せ持ち、時間をかけて実力を育てていく人。ふだんは柔らかな笑顔で場をなごませ、うそのない人柄と懐の深さが周りを安心させる。その一方で胸の内には大きな目標があり、誰にも見られていない場面でも手を抜かずに準備を続ける。急がず危ない橋も渡らないので、年を追うごとに足場が固まっていく。正しいと信じることには責任を持ち、相手が目上や力のある人でも、必要なことははっきり伝える勇気がある。',
-    恋愛:'勢いや一か八かの恋には向かわない。昔からの知り合いや友人を通じた縁など、人柄をよく知る相手と少しずつ近づいていく。付き合い始めてからも真心をもって接し、信頼を一歩ずつ重ねるので、結果として関係が長く続く。演出で盛り上げるのは得意ではないが、相手のほうが楽しい空気を作ってくれやすい。',
-    仕事:'上を目指す気持ち、礼節、正しさを重んじる心がそのまま強みになる。伝統ある分野で、受け継いだものを守り次の世代へ手渡す役目が合う。一つの道を生涯続けたり、家業を継いだりする縁もある。茶道や華道の指導者、楽器の講師、寺社に仕える仕事が適職。農業や漁業など暮らしを支える仕事にも向く。',
+  甲戌:{一言:'はっきり物を言う・動き回って輝く・筋を通す',
+    基本:'甲のまっすぐ伸びる力と戌の粘り強さを併せ持ち、動きながら実力を育てていく人。思ったことは遠慮なく口にするが、うそのない人柄と懐の深さがあるので、周りに安心感を与える。机に向かってじっとしているより、外を動き回り、毎回ちがう場面に出会うほど持ち味が光る。住む場所や仕事を変えながら経験を広げていくことも多い。胸の内には大きな目標があり、誰にも見られていない場面でも手を抜かずに準備を続ける。正しいと信じることには責任を持ち、相手が目上や力のある人でも、必要なことははっきり伝える勇気がある。',
+    恋愛:'勢いや一か八かの恋には向かわない。昔からの知り合いや友人を通じた縁など、人柄をよく知る相手と少しずつ近づいていく。付き合い始めてからも真心をもって接し、信頼を一歩ずつ重ねるので、結果として関係が長く続く。おたがいの仕事や暮らしを大事にして、離れて過ごす時間がある形のほうが、かえって心地よく続くことも。',
+    仕事:'上を目指す気持ち、礼節、正しさを重んじる心がそのまま強みになる。同じことのくり返しや机に向かう仕事より、外を動き回る仕事・毎回内容が変わる仕事でこそ輝く。仕事や働く場所を変えながら舞台を広げていくことも多い。営業や取材、旅や運送にかかわる仕事、各地をまわって教える仕事が向く。農業や漁業など、現場で体を動かす仕事にも向く。',
     女:'若いころから「年齢以上にしっかりしている」と見られやすい。とはいえ堅い印象ではなく、ふとした色っぽさも漂う。お願いされると引き受けてしまう人の良さもある。',
     男:'道徳を大切にする誠実な人。怒りを感じても、自分の気持ちより場の和を先に考えられる。ただ抑え込みすぎると、近しい相手につい当たりがち。気持ちを少しずつ言葉にすると、まっすぐさがより伝わる。'},
-  乙亥:{一言:'こつこつ学ぶ・趣味が豊か・恋には前向き',
-    基本:'乙の続ける力と亥の知りたがりな心がひとつになり、まじめに積み重ねていける人。気になることができると、毎日わずかな時間でも工夫して学び、身についていく実感そのものを楽しめる。好奇心があちこちに向くので、気づけば趣味がたくさん増えている。ただ人に見せるためではなく、邪魔されずに没頭できる時間こそが満足のもと。先を読む目はあるのに決めるまでに迷いが長く、好機を逃すこともあるので、期限を決めて動くと良い。ずるいことをせず、ゆったり構えた誠実な態度が周囲の信頼を集める。',
+  乙亥:{一言:'こつこつ学ぶ・先を読む・内に強い意志',
+    基本:'乙の続ける力と亥の知りたがりな心がひとつになり、まじめに積み重ねていける人。気になることができると、毎日わずかな時間でも工夫して学び、身についていく実感そのものを楽しめる。好奇心があちこちに向くので、気づけば趣味がたくさん増えている。時代の流れを読む目が鋭く、先の見通しが驚くほど当たることもある。ふだんは口数が少なく穏やかだが、内には強い意志があり、納得しないことには簡単に考えを曲げない。ずるいことをせず、ゆったり構えた誠実な態度が周囲の信頼を集める。',
     恋愛:'恋になると意外なほど行動的。気になる人がいれば自分から近づいていく。とはいえ劇的な展開を望むのではなく、職場の仲間や友人など、そばにいる人に心が向きやすい。押しは強くても無理じいはせず、落ち着いた関係を少しずつ固めていく。ほかの人に目が向くことがあっても、冷静さと地に足のついた判断は手放さない。',
     仕事:'与えられた役割を計画どおりに、手を抜かず一歩ずつ進めるのが得意。反対に、予定が急に変わる仕事や、かけ引きばかりの場面では疲れがたまりやすいので、落ち着ける環境を選ぶと良い。研究の仕事、薬を扱う仕事、公的機関が適職。先生や保育など、人を育てる仕事でも力が出る。',
     女:'模範生のような存在で、どこでも頼られる。押しが強くなっても、納得しないまま妥協はしたくないのが本心。ほめられると照れるが、うれしさを素直に表すと魅力が増す。',
@@ -1975,14 +2000,14 @@ window.KANSHI60_DETAIL={
     仕事:'時間をかけて磨かれ、伝統が守られてきた分野で力を発揮できる。勤勉さと一つの道を貫く一途さが光る。決めた目標には粘り強く向かい、大事な局面では迷わず決断して周りを引っぱれる。知識や技を次の世代に手渡す仕事でも輝く。手仕事や建築の職人、料理の研究、美容の仕事が向く。医療や福祉、情報技術の分野でも活躍できる。',
     女:'人からの評判を気にせず、自分の歩調で自分の道を進む。ただ構われないと少しもやもやする面も。ささいなことでは動じない、どっしりした面もある。',
     男:'自分なりのやり方と美学をまっすぐ通す人で、ゆずれない線はかたく守る。一方で場の空気や礼儀を重んじるので、目上の人はきちんと立て、根はとても誠実。'},
-  辛巳:{一言:'つつましく上品・賢い・温かな人柄',
-    基本:'辛の洗練された美意識と巳のきめ細かさがひとつになり、ふるまいが正しく洗練された人。動作にも言葉にもいつも品がある。ささいな反応一つにも、賢さと温かな人柄がにじみ出る。劇的な出来事は望まず、穏やかな毎日を心から大切にする。暮らしの流れも住まいもきちんと整えられていて、外づらだけ整えているわけではない。思い切った賭けや目立つ役は得意ではなく、敷かれた道を進むことが多い。それこそが本人にとって一番落ち着ける、望んだ生き方でもある。',
+  辛巳:{一言:'物静かで上品・芯が強い・勘が鋭い',
+    基本:'辛の洗練された美意識と巳のきめ細かさがひとつになり、ふるまいが正しく洗練された人。動作にも言葉にもいつも品がある。ささいな反応一つにも、賢さと温かな人柄がにじみ出る。物静かだが、自分の考えは決して曲げない芯の強さがあり、その気がなくても先を言い当ててしまうほど勘が鋭い。劇的な出来事は望まず、穏やかな毎日を心から大切にする。暮らしの流れも住まいもきちんと整えられていて、外づらだけ整えているわけではない。思い切った賭けは好まないが、自分で選んだ道は静かに貫いていく。',
     恋愛:'共通点が多い人や、まとう空気が似ている人に心ひかれる。かけ引きや恋の遊びはせず、自然に近づいて恋人になっていく。好きな人に相手がいるとわかれば、すっと身を引く。はなやかさはないが、穏やかで安らかな愛を育てる。落ち着いた雰囲気のため、付き合うと早いうちに将来を一緒に考える流れになりやすい。',
-    仕事:'細部まで丁寧に、手を抜かずに取り組む力が大きく生きる。ほかの人が投げ出したり雑になったりする作業でも、始めから終わりまで質を落とさずに仕上げる。組織の一員として働くほうが落ち着ける。金融や銀行、事務などお金や数字にかかわる仕事が向く。公的機関や税の仕事にも向く。技術の仕事でも活躍できる。',
+    仕事:'細部まで丁寧に、手を抜かずに取り組む力が大きく生きる。ほかの人が投げ出したり雑になったりする作業でも、始めから終わりまで質を落とさずに仕上げる。音楽や芸能など、感性を生かす分野で才能が出やすい。金融や銀行、事務などお金や数字にかかわる仕事も向く。公的機関や税の仕事、技術の仕事でも活躍できる。',
     女:'優雅な雰囲気が魅力。自分を押し出さず受け身になりがちだが、置かれた場所で果たすべきことに全力を尽くす。引き受けた役目は人に頼りすぎず、自分の力で最後までやりきる誠実さがある。',
     男:'あわてず確実に物事を進める。ゆっくりに見えることもあるが、品の良さがあるので遅れている印象を与えない。装いのセンスも光る。'},
-  壬午:{一言:'クールに見える・面倒見が良い・お金に堅実',
-    基本:'壬の海のような広い器と午の明るい人なつこさがひとつになり、笑いのセンスを持つ義理と人情の人。自分の意見をしっかり持ち、ゆずれないところでは自分の歩調を守る。そのため冷静で近寄りがたく見られることもあるが、本当は情が深く、明るくやさしく人の気持ちに寄りそえる。とくに打ち解けた相手には楽しい顔も見せ、いっそう世話を焼く。お金の扱いがきちんとしていて財の運が強く、豊かになりやすいが、懐が温かくなっても暮らしぶりを変えずにいられる。',
+  壬午:{一言:'まっすぐ天真爛漫・独自のセンス・鋭い勘',
+    基本:'壬の海のような広い器と午の明るい人なつこさがひとつになり、まっすぐ突き進む勢いと天真爛漫な素直さを併せ持つ人。笑いのセンスがあり、一緒にいる人を楽しくさせる。独自のセンスと鋭い直感で、人が思いつかないものを生み出す力があり、一目置かれやすい。自分の意見をしっかり持ち、ゆずれないところでは自分の歩調を守るが、情が深く、明るくやさしく人の気持ちに寄りそえる。とくに打ち解けた相手には、いっそう世話を焼く。お金の扱いがきちんとしていて財の運が強く、豊かになりやすいが、懐が温かくなっても暮らしぶりを変えずにいられる。',
     恋愛:'人気があり、恋のきっかけが次々とやって来る。ただその場の空気に流されてだまされることはなく、慎重に相手の本当の姿を見きわめ、するどい勘で幸せにしてくれる人を選び取る。周りがうらやむような恋も多い。一方で焼きもちが強く、恋人の居場所や行動が気になって落ち着かなくなることも。それでもきつい言葉で責めることはしない。',
     仕事:'環境になじむ力と人づき合いのうまさが自然に生きる。実績や長い歴史のある会社の中で、気持ちよく働きながら地位を固めていける。目新しいものを好む面も役に立つ。会社の受付や広報、企画や開発の仕事が向く。金融や出版、不動産でも力を出せる。旅行や運輸の仕事も良い。親の仕事を引き継ぐ運もある。',
     女:'お世辞やうわべの相づちをしない誠実な人。耳にしたうわさをそのまま信じこまない。見栄のために背伸びすることもない。',
@@ -2012,16 +2037,16 @@ window.KANSHI60_DETAIL={
     女:'どことなく守ってあげたくなる雰囲気の人。ゆったりした空気もただよわせ、その場をなごやかにする。親しい相手には、ときに小さなわがままも見せつつ、じょうずに頼る。',
     男:'やわらかな空気をまといながら、先を読む目が鋭い。自分のためになることや伸びるきっかけになることを、すばやく見分ける。関心のないことには淡白だが、好きなことにはとことん打ちこむ。'},
   丁亥:{一言:'争いを好まない・筋を通す・上品な雰囲気',
-    基本:'丁の静かさと亥の昔からのしきたりを重んじる面が合わさった、正しさを大事にする争いを好まない人。へりくだる心とまっすぐさを持ち、心根がとても澄んでいる。決まりや道理をきちんと守って暮らす。そのぶん小さなごまかしも見過ごせず、だらしない人が多い場所では気疲れしやすい。それでも人を責め立てることはなく、言葉選びがうまいので波風の立たない付き合いを続けられる。もとから品のよさがにじみ、年を重ねるほど深みが増して、洗練された印象になっていく。',
-    恋愛:'まじめで一直線の恋をする。恋の運に恵まれ、すっきりした印象もあって、満たされた恋が多い。好きな相手には回りくどい手や駆け引きを使わず、まっすぐ思いを伝える。告白されたときも待たせず、受けるか断るかをはっきり返す。ただ言い争いや別れの話し合いでは、率直すぎる言葉で相手を傷つけないよう気をつけると良い。',
+    基本:'丁の静かさと亥の昔からのしきたりを重んじる面が合わさった、正しさを大事にする争いを好まない人。へりくだる心とまっすぐさを持ち、心根がとても澄んでいる。感受性が強く、目に見えないものを感じ取る鋭い感覚もあり、美しいものや本当のことを大切にしたい気持ちが強い。決まりや道理をきちんと守って暮らす。そのぶん小さなごまかしも見過ごせず、だらしない人が多い場所では気疲れしやすい。それでも人を責め立てることはなく、言葉選びがうまいので波風の立たない付き合いを続けられる。もとから品のよさがにじみ、年を重ねるほど深みが増して、洗練された印象になっていく。',
+    恋愛:'まじめで一直線の恋をする。好きな相手には回りくどい手や駆け引きを使わず、まっすぐ思いを伝える。告白されたときも待たせず、受けるか断るかをはっきり返す。感受性が鋭く理想も高いぶん、相手と気持ちを通わせにくく感じる時期もあるので、思っていることを言葉にして伝え合うと関係が深まる。言い争いや別れの話し合いでは、率直すぎる言葉で相手を傷つけないよう気をつけると良い。',
     仕事:'きちょうめんさが生きる。ほかの人が投げ出すような細かい作業もていねいにやりとげ、どこにでも気を配れる。反対に、一か八かの勝負をする仕事は苦手。外国とつながる仕事に縁がある。お金の管理や商社の仕事が向く。役所・物流・貿易・通訳や翻訳でも力を出せる。',
     女:'心がとても澄んでいる人。まっすぐ相手と向き合い、人を疑ってかかることもない。決断に時間をかけるときもあるものの、心が決まれば力強く動き出す。',
     男:'私生活より仕事を先にすることが多い、まじめな人。頭がよく物知りで、仕事でも私生活でも多くの人に頼られる。むだなお金は使わないが、値打ちがあると見きわめたものには思い切ってお金をかける面もある。'},
-  戊子:{一言:'地道で正直・抜かりなし・争いを避ける',
-    基本:'戊のまじめさと子の慎重さが合わさった、地に足のついた人。責任感が強く、やるべきことはきちんとやりとげる。道理に外れたことを嫌い、ずるい手を使ったりなまけたりしない。何かを始めるときは多方面から情報を集め、準備をすっかり整えたうえで、むだのない一番良いやり方で動く。その反面、もめごとを避けたい思いがとくに強いので、本音をのみこむ場面もある。言い合うより口を閉じているほうが気が楽。お金の感覚もよく、大きく増やさなくても少しずつ確実に財産を育てていく。',
+  戊子:{一言:'自由でユニーク・感性で身を立てる・争いを避ける',
+    基本:'戊の大らかさと子の鋭い感性が合わさった、自分の思うままに生きる自由な人。言動がユニークで、本人にその気がなくても自然と目立つ。決まった型にはまるより、豊かな感性や特技を生かして自分の道を切り開いていく。道理に外れたことは嫌い、ずるい手を使ったりはしない。その反面、もめごとを避けたい思いがとくに強いので、本音をのみこむ場面もある。言い合うより口を閉じているほうが気が楽。きちんとしたルールのある場に身を置くと、持ち味の自由さが人との付き合いの中でうまく生きる。',
     恋愛:'その場かぎりの恋はしない。思い描く人生や結婚の形があり、それを一緒にかなえられそうな相手を選ぶ。はじめから結婚を考えて付き合うことも。ただ好かれることも多く、何人もから声がかかると新しいもの好きな面が出て、目新しい相手に気持ちが動くこともある。それでも付き合っている間は秘密を作らず、言い争いもほとんどないおだやかな関係を保つ。',
-    仕事:'まじめで手落ちがなく、どの仕事もそつなくこなして確かな立場を築く。学ぶことやお金にかかわる仕事に縁がある。社会の流れを読む力も大いに生きる。反対に、自分を前に押し出したり、裏で根回しをしたりする仕事は苦手。銀行・不動産・お金を運用する仕事が向く。研究の仕事や本づくり、記者でも力を出せる。',
-    女:'素直で心のあたたかい人。自分を強く押し出さないひかえめさがあるが、親しみやすく好かれる。もめごとの気配を感じると、どう動けばよいか迷ってしまう面もある。',
+    仕事:'決まった手順をくり返す仕事より、感性や特技を生かせる仕事で力を出す。社会の流れを読む力も大いに生きる。反対に、裏で根回しをする仕事は苦手。本づくりや記者、研究、ものを作り出す表現の仕事が向く。お金にかかわる仕事でも、自分の工夫を生かせる場なら力を出せる。',
+    女:'素直で心のあたたかい人。自分を強く押し出すつもりがなくても、ユニークな感性で自然と目を引き、親しみやすく好かれる。もめごとの気配を感じると、どう動けばよいか迷ってしまう面もある。',
     男:'うそのない人で、だれに対しても親切に接することができる。ときに決めるまでに迷いすぎる場面もある。そうしたときは周囲の手助けや助言に救われる。'},
   己丑:{一言:'粘り強い・冗談で和ませる・恋は売り込み上手',
     基本:'己の学ぶ意欲と丑の確かさが合わさった、先をしっかり見ながらゆっくり進む人。周りの話にていねいに耳を傾けるので、自然と情報が集まる。集めた話を自分の頭でかみくだき「こう進もう」と決めた道をこつこつ歩む。かたくななほどやり方を変えないこともあるが、そのぶん粘り強さで決めたことを最後までやりぬく。おしゃべりの場では冗談をたくさん言って周りを笑わせる面も。お金の使い方が手堅く、物の面で満たされる運もあるが、ぜいたくはしない。',
@@ -2047,11 +2072,11 @@ window.KANSHI60_DETAIL={
     仕事:'美しさを見る目と知恵が光り、作戦を立てる力も生きる。大きな予算や何年もかかる仕事で真価を出す。決めたらやり抜く粘りと勝負どころの決断力で、人をまとめる役もこなせる。組む相手や補佐役がいると最良。美容師・化粧品の仕事・料理の研究家が向く。医療・法律・役所の仕事にも合う。',
     女:'賢く頭の回転が速く、やわらかなふるまいの奥にゆるがない芯がある。失敗を気にしたり、先の取りこし苦労をしたりもするが、根は前向き。',
     男:'人の気持ちをこまやかに感じとり、髪型のわずかな変化にも気づける。けれど感じたことを口に出して伝えるのは不得手。そうした面をわかってもらえると、厚い信頼を集める。'},
-  癸巳:{一言:'うそがない・気取らない・恋は独自の好み',
-    基本:'癸の学ぶ熱心さと巳の粘り強さが合わさった、とても誠実でまじめな人。お世辞や形だけのあいさつを言わず、考えが顔に出にくいが、うそのないまっすぐな心を持つ。はじめは誤解されても、付き合ううちに気取らずだれにでも同じように接する人柄が伝わっていく。何かを決める・動かす場面では、あわてず時間をかけ、胸の内で考えを固める。未知のことに挑む意欲もあり、趣味が多い。外国との縁が深く、お金にも恵まれやすいのが特徴。',
+  癸巳:{一言:'発想で人を楽しませる・勘が鋭い・気取らない',
+    基本:'癸の豊かな発想と巳の粘り強さが合わさった、思いがけないアイデアで人を楽しませる人。イベントや集まりが大好きで、自分から企画して人を呼び集める発起人になることも。お世辞や形だけのあいさつは言わず、うそのないまっすぐな心を持つので、付き合ううちに気取らずだれにでも同じように接する人柄が伝わっていく。勘が鋭く、人の気持ちの動きにも敏感。未知のことに挑む意欲もあり、趣味が多い。外国との縁が深く、お金にも恵まれやすいのが特徴。',
     恋愛:'相手に求めるものが人と違い、見た目や肩書きにとらわれず、ひかれる理由が独特。付き合うと相手をじょうずに支え、相手の運が上向くことも多い。一緒にいる時間が長いほど相手の良さや力が引き出され、「離れたくない」と思われる存在として長く大切にされる。',
-    仕事:'世の中で受け入れられ、人気が出るものを見分ける力が出てくる。外国とのつながりが活躍の場を広げることも。暮らしに身近なサービスを扱う会社でも気持ちよく働ける。こつこつ働くことで着実に昇進する。企画・商品づくり・貿易が力を出せる場。電気や通信にかかわる仕事も向く。',
-    女:'とてもまじめで、正義と責任を重んじる。任されたことはしっかり果たし、うそやごまかしをしない。周りにもきびしくなりがちだが、仕事が正確で信頼される。',
+    仕事:'世の中で受け入れられ、人気が出るものを見分ける力が出てくる。外国とのつながりが活躍の場を広げることも。暮らしに身近なサービスを扱う会社でも気持ちよく働ける。組織の中で着実に力を伸ばすことも、自分で事業を起こすこともできる。企画・催しづくり・商品づくり・貿易が力を出せる場。電気や通信にかかわる仕事も向く。',
+    女:'うそやごまかしをしない、まっすぐな人。任されたことはしっかり果たし、人の気持ちの変化にもよく気づく。周りにもきびしくなりがちだが、仕事が正確で信頼される。',
     男:'物にも人の縁にも恵まれる傾向。自分のこだわりを通す強さを持ち、まじめにやるべきことを重ねて自分を磨いていくが、その一方で体をいたわることを忘れがちな面も。'},
   甲午:{一言:'芯が強い・挑み続ける・まっすぐな恋',
     基本:'甲のまっすぐ伸びる力と午のすばやさを併せ持ち、高い目標に向かって勢いよく進んでいく。自分の考えをしっかり持ち、身につけた力を頼りに道を開いていけるたくましさがある。壁に当たっても投げ出さず、機転と明るさで正面から立ち向かい、不利な場面を好機に変えていく粘り強い人。うそや心にもない褒め言葉は口にしない誠実さがある一方、言葉が率直すぎてきつく響くことがあるので、伝え方をやわらげると良い。',
@@ -2084,7 +2109,7 @@ window.KANSHI60_DETAIL={
     女:'世話を焼くのが好きで、頼まれるとことわれずに精一杯手を貸す。仕上げにぬかりが出る時もあるが、都合の悪いことやしくじりも隠さず話す。',
     男:'意志が固く、「これをやりとげる」と心に決めれば、人に頼らず自分の手で形にしようとする。動き出すまでに時間がかかることもあるが、ここぞという時が来ると大きな力を出す。'},
   己亥:{一言:'自分らしい道・堅実に守る・安定を望む恋',
-    基本:'己の器用さと亥の学ぶことを好む面を併せ持ち、楽しみながらいろいろなことを身につけていく。国の違う人や年の離れた人、別の業界の人など、自分と違う人とも進んで関わり、思いこみを持たずに向き合って多くを学ぶ。ネットでの発信にも積極的で、話題の食べ物や品物など流行も素直に楽しむ。決まりきった考えにとらわれず、自分ならではの生き方や価値観を作っていく。ただ、のるかそるかの勝負は苦手で、思い切った挑戦には慎重になる。危うさをきちんと見きわめたうえで、のびのび生きられる人。',
+    基本:'己の器用さと亥の学ぶことを好む面を併せ持ち、楽しみながらいろいろなことを身につけていく。国の違う人や年の離れた人、別の業界の人など、自分と違う人とも進んで関わり、思いこみを持たずに向き合って多くを学ぶ。ネットでの発信にも積極的で、話題の食べ物や品物など流行も素直に楽しむ。決まりきった考えにとらわれず、独特の見方で自分ならではの生き方や価値観を作っていく。物静かに見えて、一度言い出したら引かない芯の強さもある。のるかそるかの勝負は苦手だが、危うさを察する勘に優れ、起きた問題を解決する力も高い。危うさをきちんと見きわめたうえで、のびのび生きられる人。',
     恋愛:'まじめで上品な人、きちんと育った雰囲気のある人にひかれやすい。反対に、とても目立つ服装や髪型の人は、知らず知らず恋の相手から外していることも。付き合ってからは相手をしばらない。一緒のときは会話を楽しみ、それぞれの時間もほどよく持つ釣り合いを大切にする。',
     仕事:'新しいものに敏感で、流行を先に読む力が大いに役立つ。発想が豊かで、ひらめいたことを形のある企画にまとめる力もある。自分で事業を営むような変化の大きい立場より、しっかりした組織の中でこそ持ち味が生きる。会社の企画の仕事や、新しい技術を使いこなす仕事が向く。暮らしの安定を重んじるなら、役所の仕事や先生も合う。',
     女:'黙っているときちんとした印象だが、話してみると明るい冗談や親しみやすさがすぐ出てくる。話の内容や話し方を相手に合わせるのが上手で、いろいろな場所に友人がいる。',
@@ -2092,7 +2117,7 @@ window.KANSHI60_DETAIL={
   庚子:{一言:'よく動く・先を見通す・よくモテる',
     基本:'庚の変化を生む力と子のぬかりのなさを併せ持ち、先の先まで見通しながら勢いよく進む。胸の内には「こうありたい」という理想と、負けん気をしっかり抱いている。ただ、気持ちが高ぶっても勢い任せには動かない。見抜く目が鋭く慎重さもあり、いろいろな展開を考えたうえで段取りよく進める。その結果、力のある相手に挑んで勝つことも。ときに自分を過信しやすいが、自分の長所をよく知り、上手に見せ方を工夫できる。',
     恋愛:'ぱっと見た雰囲気だけで人の心をとらえ、恋人がいても好意を寄せられやすい。好きな人に相手がいても自分の気持ちに正直で、振り向かせる手を考えて近づく思い切りがある。付き合ってからはいつもくっついているわけではない。離れて暮らすことになっても気持ちはぶれず、結びつきと信頼を深めていける。',
-    仕事:'器用な手先と、色を見分ける感覚の鋭さが大きな強み。工夫を重ねるのも得意で、どの分野でも経験を積んで専門家として腕をふるえる。思い描いた夢をかなえる力が強いので、目標があるならその道を貫くと良い。髪や化粧、服を整える仕事や、服の型紙を作る仕事が向く。色の専門家や建物のデザインでも力を発揮できる。',
+    仕事:'頭の回転の速さと数字への強さ、器用な手先、色を見分ける感覚の鋭さが大きな強み。工夫を重ねるのも得意で、どの分野でも経験を積んで専門家として腕をふるえる。思い描いた夢をかなえる力が強いので、目標があるならその道を貫くと良い。数字やデータを扱う仕事、髪や化粧、服を整える仕事や、服の型紙を作る仕事が向く。色の専門家や建物のデザインでも力を発揮できる。',
     女:'頭の回転が速く、さっぱりした気質なので、率直に要点をついた物言いになる。自分に甘くすることも、人に寄りかかることもめったにないが、頼みごとは気持ちよく引き受け、お金の面で手を貸すこともある。',
     男:'頭が切れて、たいていのことはそつなくこなす。その出来に甘んじることなく、さらに高みを目指す。競う相手があると一段と燃えるが、負けん気を表に出すことはしない。'},
   辛丑:{一言:'自分の美意識・和を保つ・地道な努力',
@@ -3094,7 +3119,9 @@ window.KANSHI60_DETAIL={
     if(/🔧/.test(t))return 't-howto'; if(/🤝/.test(t))return 't-aisho'; if(/❤/.test(t))return 't-love';
     if(/💼/.test(t))return 't-work'; if(/💰|🌿/.test(t))return 't-money'; if(/📅/.test(t))return 't-cal';
     if(/📝/.test(t))return 't-past'; if(/✨/.test(t))return 't-luck'; if(/🔔|⏰/.test(t))return 't-news'; return 't-ana'; }
-  function ezCard(title, body, cls){ return '<section class="ez-card '+ezTone(title)+(cls?' '+cls:'')+'"><h2 class="ez-h">'+title+'</h2>'+body+'</section>'; }
+  /* 見出しの終わりのかっこ（「…」・（…））は行の途中で割らない（スマホの1段表示で「陰）」」「ギー）」だけが次の行に残る泣き別れを防ぐ。chk_regress 2026-11-02） */
+  function ezNwTail(t){ return String(t).replace(/(「[^「」<>]{1,16}」|（[^（）<>]{1,16}）)$/,'<span class="nwb">$1</span>'); }
+  function ezCard(title, body, cls){ return '<section class="ez-card '+ezTone(title)+(cls?' '+cls:'')+'"><h2 class="ez-h">'+ezNwTail(title)+'</h2>'+body+'</section>'; }
   // 五行バランス（色付きマーク＋バー）。命式8字の実数。少ない五行は“補うと整う”と前向きに。
   var EZEL={木:{k:'moku',n:'成長・のびのび'},火:{k:'ka',n:'情熱・明るさ'},土:{k:'do',n:'安定・信頼'},金:{k:'kin',n:'意志・けじめ'},水:{k:'sui',n:'知恵・柔軟'}};
   var EZELCOL={木:'#2E7D52',火:'#C0392B',土:'#B07E1E',金:'#5F6B77',水:'#2A6FD0'};
@@ -3174,7 +3201,7 @@ window.KANSHI60_DETAIL={
     var SEASON={寅:'春',卯:'春',辰:'春',巳:'夏',午:'夏',未:'夏',申:'秋',酉:'秋',戌:'秋',亥:'冬',子:'冬',丑:'冬'};
     var genmei=mon.zokanTsuhen||'';
     var out=[];
-    function box(head, inner){ return '<li><p class="ez-yhead"><b>'+head+'</b></p><ul class="ez-ul2">'+inner+'</ul></li>'; }
+    function box(head, inner){ return '<li><p class="ez-yhead"><b>'+ezNwTail(head)+'</b></p><ul class="ez-ul2">'+inner+'</ul></li>'; }
     // ★ まず知っておきたい大きな特徴（専門用語なし。2026-10-29）
     (function(){ var BF=sheetBigFeatures(r); if(!BF.length) return; out.push(box('★ まず知っておきたい大きな特徴', BF.map(function(x){ return '<li><b>'+esc(x.ptag)+'</b>：'+esc(x.plain)+'</li>'; }).join(''))); })();
 
@@ -3697,19 +3724,19 @@ window.KANSHI60_DETAIL={
     return true;
   }
   /* 共有リンクで開いた鑑定書は、リンクで指定された内容のまま印刷する */
-  function _bpPrep(){ if(window.__prepByBtn || !_lastResult || /[?&]share=1(&|$)/.test(location.search)) return; try{ prepareOutput(true); }catch(e){} }
+  function _bpPrep(){ if(window.__prepByBtn || !_lastResult || /[?&]share=1(&|$)/.test(window.__SQ)) return; try{ prepareOutput(true); }catch(e){} }
   document.getElementById('printBtn').addEventListener('click', runOutput);
   // 現在の入力から、鑑定を再現できる共有リンクを作る
   function buildShareURL(){
     try{
       var g=function(id){var e=document.getElementById(id);return e?(e.value||''):'';};
       var d=g('iDate'), t=g('iTime'), sx=g('iSex')||'female', nm=g('iName');
-      var base=(location.protocol==='file:')? location.href.split('?')[0] : (location.origin+location.pathname);
-      if(!d) return location.href.split('#')[0];
-      var q='?d='+encodeURIComponent(d)+'&t='+encodeURIComponent(t)+'&sex='+encodeURIComponent(sx)+(nm?'&name='+encodeURIComponent(nm):'');
+      var base=(location.protocol==='file:')? location.href.split(/[?#]/)[0] : (location.origin+location.pathname);
+      if(!d) return base;
+      var q='#d='+encodeURIComponent(d)+'&t='+encodeURIComponent(t)+'&sex='+encodeURIComponent(sx)+(nm?'&name='+encodeURIComponent(nm):'');
       // 計算の設定（出身地・補正方法・日付の変わり目・クロック時刻優先・時刻不明）も引き継ぎ、受け取った側でも同じ命式にする
       try{ var _sc=window.__sheetCorr||{}; if(_sc.lon) q+='&lon='+encodeURIComponent(_sc.lon); q+='&corr='+encodeURIComponent(_sc.corr||'none');
-        q+='&z='+(window.__sheetZ==='next'?'next':'today')+'&clk='+(window.__sheetClk?'1':'0'); if(window.__timeUnknown) q+='&tu=1'; if(/[?&]dst=0(&|$)/.test(location.search)) q+='&dst=0';
+        q+='&z='+(window.__sheetZ==='next'?'next':'today')+'&clk='+(window.__sheetClk?'1':'0'); if(window.__timeUnknown) q+='&tu=1'; if(/[?&]dst=0(&|$)/.test(window.__SQ)) q+='&dst=0';
         if(document.body.classList.contains('bg-mode')) q+='&bg=1';   // 初心者向け（専門用語なし）の鑑定書は、受け取った側でも専門用語なしで開く
       }catch(_e){}
       // 「⚙出力内容」の選択を共有リンクにも反映（開いた側は操作バーなしで、選んだものだけ表示）
@@ -3717,13 +3744,13 @@ window.KANSHI60_DETAIL={
       var show=(wantMei&&wantRead)?'both':(wantRead?'reading':(wantMei?'meishi':'both'));
       q+='&share=1&show='+show;
       // 鑑定者の画面と同じ判定（チャンスの年・今の10年）と屋号を、受け取った側にもそのまま渡す（開く端末・開く時期で中身が変わらないように）
-      try{ var _pq=new URLSearchParams(location.search); if(_pq.get('fy')) q+='&fy='+encodeURIComponent(_pq.get('fy')); if(_pq.get('dk')) q+='&dk='+encodeURIComponent(_pq.get('dk'));
+      try{ var _pq=new URLSearchParams(window.__SQ); if(_pq.get('fy')) q+='&fy='+encodeURIComponent(_pq.get('fy')); if(_pq.get('dk')) q+='&dk='+encodeURIComponent(_pq.get('dk'));
         var _bn=_pq.get('bn')||localStorage.getItem('bazi_brand_name')||'', _bc=_pq.get('bc')||localStorage.getItem('bazi_brand_color')||'';
         if(_bn) q+='&bn='+encodeURIComponent(_bn.slice(0,60)); if(/^#[0-9a-fA-F]{6}$/.test(_bc)) q+='&bc='+encodeURIComponent(_bc);
         q+='&at='+encodeURIComponent((function(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);})(new Date()));
       }catch(_e){}
       // 先生が命式表で選んだ蔵干（zo=日柱:1 など）も引き継ぐ（お客様の開くリンクで司令に戻らないように）
-      try{ var _zo=new URLSearchParams(location.search).get('zo')||''; if(/^(年柱|月柱|日柱|時柱):\d(,(年柱|月柱|日柱|時柱):\d)*$/.test(_zo)) q+='&zo='+encodeURIComponent(_zo); }catch(_e){}
+      try{ var _zo=new URLSearchParams(window.__SQ).get('zo')||''; if(/^(年柱|月柱|日柱|時柱):\d(,(年柱|月柱|日柱|時柱):\d)*$/.test(_zo)) q+='&zo='+encodeURIComponent(_zo); }catch(_e){}
       if(wantRead){
         q+='&lv='+((_printVer==='easy')?'easy':'pro');
         if(_readTheme && _readTheme!=='general') q+='&th='+_readTheme;
@@ -4601,9 +4628,10 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
     if(status===401) return {retry:false,msg:'ログインの有効期限が切れたため、詳細鑑定を使えませんでした。'+T+'アプリでもう一度ログインすると、詳細鑑定が使えるようになります。'};
     if(status===403) return {retry:false,msg:'ご契約の状態を確認できなかったため、詳細鑑定を使えませんでした。'+T+'マイページでご契約状況をご確認ください。'};
     if(status===413||status===400) return {retry:false,msg:'この鑑定書は内容が多いため、詳細鑑定を作れませんでした。'+T};
-    if(status===429&&code==='CONT_LIMIT') return {retry:false,msg:'無料お試しで今日作れる詳細鑑定の上限に達しました。'+T+'明日0時から、また使えます。'};
-    if(status===451) return {retry:false,msg:'いまの場所からは詳細鑑定を使えませんでした。'+T};
-    if(/^(SETUP|NO_KEY|MEMBER_ID)$/.test(code)||status===500) return {retry:false,msg:'ただいま詳細鑑定を準備中のため、使えませんでした。'+T+'しばらくしてから「詳細鑑定」をもう一度お試しください。'};
+    if(status===429&&code==='CONT_LIMIT') return {retry:false,msg:'無料お試しで今日作れる詳細鑑定の上限に達しました。'+T+'明日（日本時間の0時から）また使えます。'};
+    if(status===451) return {retry:false,msg:'いまいる地域からは詳細鑑定を使えませんでした。'+T};
+    if(code==='MEMBER_ID') return {retry:false,msg:'会員の確認ができなかったため、詳細鑑定を使えませんでした。'+T+'アプリで一度ログアウトして、もう一度ログインしてください。'};
+    if(/^(SETUP|NO_KEY)$/.test(code)||status===500) return {retry:false,msg:'ただいま詳細鑑定を準備中のため、使えませんでした。'+T+'しばらくしてから「詳細鑑定」をもう一度お試しください。'};
     if(ok) return {retry:true,msg:'詳細鑑定の文章がうまく届きませんでした。'+T+'「詳細鑑定」をもう一度押すと作り直せます。'};
     if(status===429||status===502||status===503||status===504) return {retry:true,msg:'ただいま混み合っているため、詳細鑑定を使えませんでした。'+T+'少し時間をおいて「詳細鑑定」をもう一度押してください。'};
     return {retry:true,msg:''};   // そのほか（通信の失敗など）は今までどおりの案内
@@ -4969,7 +4997,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
       // アプリ（app-pro の baziCompute）と同じ日柱・時柱にするための入力の調整（表示・アダプタ層。エンジンは無改変）
       // サマータイム期間の生まれ（時刻が分かる人だけ）：時計の時刻を標準時に直して計算（アプリと同じ。dst=0 で補正しない）
       var _cy=y,_cm=m,_cd=d,_ch=h,_cmn=mn;
-      if(!window.__timeUnknown && !/[?&]dst=0(&|$)/.test(location.search)){ var _ds=_jpDstToStd(y,m,d,h,mn);
+      if(!window.__timeUnknown && !/[?&]dst=0(&|$)/.test(window.__SQ)){ var _ds=_jpDstToStd(y,m,d,h,mn);
         if(_ds){ _cy=_ds.y;_cm=_ds.m;_cd=_ds.d;_ch=_ds.h;_cmn=_ds.mi; msg.textContent='サマータイム期間の生まれのため、時計の'+h+'時'+('0'+mn).slice(-2)+'分（夏時間）を標準時'+_ch+'時'+('0'+_cmn).slice(-2)+'分に直して計算しています。'; } }
       var _e=_sheetEffInput(_cy,_cm,_cd,_ch,_cmn,sex,_sc);
       var r=window.computeMeishiki({year:_e.y,month:_e.m,day:_e.d,hour:_e.h,minute:_e.mn,sex:sex, longitude:_sc.lon, correctionMode:_e.corr});
@@ -5065,7 +5093,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
 
   // アプリの鑑定から現在の人物を引き継ぐ（URLパラメータ連携）。同じ入力・同じ補正で結果を完全一致させる。
   (function(){ try{
-    var q=new URLSearchParams(location.search);
+    var q=new URLSearchParams(window.__SQ);
     window.__sheetCorr={lon:q.get('lon')||'', corr:q.get('corr')||'none'};
     window.__sheetZ=(q.get('z')==='next'?'next':'today');   // 日付の変わり目（早子時）…アプリと同じ扱いにする
     window.__sheetClk=(q.get('clk')==='1');                 // クロック時刻優先（真太陽時で日付をまたがない）
@@ -5088,7 +5116,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
   // アプリ側で生成した「この命式の詳しい特徴（教科書ベース）」を localStorage 経由で受け取り、
   // 命式表の外に独立セクションとして流し込む（同一入力＝同一シグネチャの時だけ表示＝食い違い防止）。
   (function(){ try{
-    var q=new URLSearchParams(location.search);
+    var q=new URLSearchParams(window.__SQ);
     var sig=[q.get('d')||'',q.get('t')||'',(q.get('sex')==='male'?'male':'female'),q.get('corr')||'none',q.get('lon')||'',(q.get('tu')==='1'?'1':'0')].join('|');
     if(window.__bgPlain) return;   // ビギナー（初心者モード）の鑑定書には、専門用語中心の「詳しい特徴（教科書）」章は付けない
     var raw=localStorage.getItem('bazi_sheet_featbook'); if(!raw) return;
@@ -5100,7 +5128,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
   }catch(e){} })();
 
   // 共有リンクで開いたとき：いつ作った鑑定書かを上に小さく出す（後から見返したときに「今年」などの基準が分かるように）
-  (function(){ try{ var q=new URLSearchParams(location.search); var at=q.get('at')||'';
+  (function(){ try{ var q=new URLSearchParams(window.__SQ); var at=q.get('at')||'';
     if(q.get('share')!=='1'||!/^\d{4}-\d{2}-\d{2}$/.test(at)) return;
     var p=at.split('-'); var n=document.createElement('div'); n.className='share-at';
     n.style.cssText='max-width:1100px;margin:8px auto 0;padding:0 12px;font-size:12px;color:#7a7066;font-weight:700;text-align:right';
@@ -5117,7 +5145,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
     var name='',color='',logo='';
     try{ name=localStorage.getItem('bazi_brand_name')||''; color=localStorage.getItem('bazi_brand_color')||''; logo=localStorage.getItem('bazi_brand_logo')||''; }catch(e){}
     // 共有リンクで開いたときは、送った鑑定者の屋号（リンクに入っている）を使う（受け取った人の端末の設定ではなく）
-    try{ var _q=new URLSearchParams(location.search); if(_q.get('share')==='1'){ name=(_q.get('bn')||'').slice(0,60); color=/^#[0-9a-fA-F]{6}$/.test(_q.get('bc')||'')?_q.get('bc'):''; logo=''; } }catch(e){}
+    try{ var _q=new URLSearchParams(window.__SQ); if(_q.get('share')==='1'){ name=(_q.get('bn')||'').slice(0,60); color=/^#[0-9a-fA-F]{6}$/.test(_q.get('bc')||'')?_q.get('bc'):''; logo=''; } }catch(e){}
     if(!name && !logo) return;
     if(color){ try{ document.documentElement.style.setProperty('--brand', color); }catch(e){} }
     var esc=function(s){ return String(s).replace(/[<>&"]/g,function(c){return ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'})[c];}); };
@@ -5142,14 +5170,14 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
   // 鑑定文の既定＝オンライン（詳細鑑定）。ネットに繋がっていない時だけ定型文（オフライン鑑定書）で出す。
   // ※共有リンクの受け手側では自動でAIを呼ばない（固定表示・都度課金を避ける）。
   (function(){ try{
-    var q=new URLSearchParams(location.search);
+    var q=new URLSearchParams(window.__SQ);
     if(q.get('share')==='1' || q.get('show')) return;
     if(navigator.onLine){ setTimeout(function(){ try{ setEngine('ai'); }catch(e){} }, 520); }
   }catch(e){} })();
 
   // 共有リンクで開いた側の表示（?share=1&show=…&lv=…&th=…&sc=…）：操作バーを隠し、選んだものだけ表示
   (function(){ try{
-    var q=new URLSearchParams(location.search);
+    var q=new URLSearchParams(window.__SQ);
     if(q.get('share')!=='1' && !q.get('show')) return;
     var show=q.get('show')||'both', lv=q.get('lv')||'', th=q.get('th')||'', sc=q.get('sc')||'';
     var B=document.body;
@@ -5197,7 +5225,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
     if(bSave) bSave.addEventListener('click', function(){ try{ localStorage.setItem(DEFKEY, JSON.stringify(snapshot())); if(sMsg) sMsg.textContent='★ この設定を既定にしました。次に開いたときも同じ鑑定書で表示します。'; }catch(e){ if(sMsg) sMsg.textContent='この環境では保存できません（プライベートモード等）。'; } });
     if(bClear) bClear.addEventListener('click', function(){ try{ localStorage.removeItem(DEFKEY); }catch(e){} if(sMsg) sMsg.textContent='既定を消しました。次回は初期設定で開きます。'; });
     (function(){ try{
-      var q=new URLSearchParams(location.search);
+      var q=new URLSearchParams(window.__SQ);
       if(q.get('share')==='1' || q.get('show')) return;   // 共有リンクは各自の指定を優先
       var d=load(); if(!d) return;
       setTimeout(function(){ apply(d); if(sMsg) sMsg.textContent='あなたの既定を適用しています（「既定を消す」で初期設定に戻せます）。'; }, 280);
@@ -5377,13 +5405,57 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
 })();
 </script>
 <script>
-/* キーボードでも押せるように（chk_a11y 2026-11-02）：大運の行（#daiunBody tr.clk＝その大運の年運を見る）と、五行のマス（.gogyo td.g＝ラッキーカラーを選ぶ）に
-   Tab で行けるようにし、Enter／スペースでクリックと同じ動きにする。見た目・印刷は変えない。 */
+/* キーボードでも押せるように（chk_a11y 2026-11-02）：大運の行（#daiunBody tr.clk＝その大運の年運を見る）と、五行のマス（.gogyo td.g＝ラッキーカラーを選ぶ）は、
+   行の高さ（26〜35px）を変えずに指でも押しやすくするため、表のすぐ下に 44px の押すところを別に置く（chk_regress 2026-11-02）：
+   ・大運＝「年運を見る10年」のえらぶ欄（えらぶと、その行を押したのと同じ動き）
+   ・五行＝「ラッキーカラー」の 木・火・土・金・水 のボタン（押すと、その五行名を押したのと同じ動き。押してある色は aria-pressed）
+   表の行・マスはこれまでどおりマウス・指でも押せる（近道）。画面だけ（no-print）で、印刷・見た目の高さは変えない。 */
 (function(){
-  var SEL='#daiunBody tr.clk, .gogyo td.g';
-  function mark(){ try{ document.querySelectorAll(SEL).forEach(function(el){ if(el.hasAttribute('tabindex')) return; el.tabIndex=0; el.setAttribute('role','button'); }); }catch(e){} }
-  document.addEventListener('keydown',function(e){ if(e.key!=='Enter'&&e.key!==' ') return; var t=e.target; if(!t||!t.matches||!t.matches(SEL)) return; e.preventDefault(); t.click(); });
-  function start(){ mark(); try{ var tm=0; new MutationObserver(function(){ if(!tm) tm=setTimeout(function(){ tm=0; mark(); },60); }).observe(document.body,{childList:true,subtree:true}); }catch(e){} }
+  var css=document.createElement('style'); css.textContent=
+    '.tap-pick{ display:flex; flex-wrap:wrap; align-items:center; gap:calc(6px*var(--tapk,1)) calc(8px*var(--tapk,1)); margin:8px 0 2px; font-family:var(--gothic); font-size:calc(12.5px*var(--tapk,1)); font-weight:700; color:var(--ink2); }'+
+    '.tap-pick select, .tap-pick button{ min-height:calc(44px*var(--tapk,1)); font:inherit; font-size:calc(14px*var(--tapk,1)); color:var(--ink); background:#fff; border:1px solid var(--rule); border-radius:10px; cursor:pointer; }'+
+    '.tap-pick select{ padding:0 8px; max-width:100%; flex:1 1 200px; }'+
+    '.tap-pick button{ flex:1 1 0; min-width:calc(40px*var(--tapk,1)); max-width:calc(64px*var(--tapk,1)); padding:0 4px; font-family:var(--mincho); font-size:calc(17px*var(--tapk,1)); }'+
+    '.tap-pick button[aria-pressed="true"]{ background:#F7E3DF; border-color:#B4483C; color:#7A2318; }'+
+    '.tap-pick .tp-lbl{ white-space:nowrap; }'+
+    '.tap-pick select:focus-visible, .tap-pick button:focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }';
+  document.head.appendChild(css);
+  function txt(td){ var c=td.cloneNode(true); [].forEach.call(c.querySelectorAll('.setsu-tag'),function(x){ x.remove(); }); return (c.textContent||'').replace(/\s+/g,' ').trim(); }
+  // 大運：年運を見る10年
+  function duSync(){ try{
+    var tb=document.getElementById('daiunBody'), tbl=tb&&tb.closest('table'); if(!tbl) return;
+    var box=document.getElementById('duPickBox');
+    if(!box){ box=document.createElement('div'); box.id='duPickBox'; box.className='tap-pick no-print';
+      box.innerHTML='<label class="tp-lbl" for="duPick">年運を見る10年</label><select id="duPick"></select>';
+      tbl.parentNode.insertBefore(box,tbl.nextSibling);
+      box.querySelector('select').addEventListener('change',function(){ var r=document.querySelector('#daiunBody tr.clk[data-sy="'+this.value+'"]'); if(r) r.click(); }); }
+    var sel=box.querySelector('select'), rows=[].slice.call(tb.querySelectorAll('tr.clk'));
+    box.hidden=!rows.length;
+    var sig=rows.map(function(r){ return r.dataset.sy+':'+txt(r.cells[0])+':'+(r.cells[2]?txt(r.cells[2]):''); }).join('|');
+    if(sel.dataset.sig!==sig){ sel.dataset.sig=sig; sel.innerHTML='';
+      rows.forEach(function(r){ var o=document.createElement('option'); o.value=r.dataset.sy; o.textContent=txt(r.cells[0]).replace(/\s*立運前$/,'')+'　'+(r.cells[2]?txt(r.cells[2]):''); sel.appendChild(o); }); }
+    var cur=tb.querySelector('tr.clk.sel')||tb.querySelector('tr.clk.now'); if(cur && sel.value!==cur.dataset.sy) sel.value=cur.dataset.sy;
+  }catch(e){} }
+  // 五行：ラッキーカラー
+  var EL=[['g-moku','木'],['g-ka','火'],['g-do','土'],['g-kin','金'],['g-sui','水']];
+  function gySync(){ try{
+    var wrap=document.querySelector('.gogyo-wrap'); if(!wrap) return;
+    var box=document.getElementById('gyPickBox');
+    if(!box){ box=document.createElement('div'); box.id='gyPickBox'; box.className='tap-pick no-print'; box.setAttribute('role','group'); box.setAttribute('aria-label','ラッキーカラーにする五行');
+      box.innerHTML='<span class="tp-lbl">ラッキーカラー</span>'+EL.map(function(e){ return '<button type="button" data-g="'+e[0]+'" aria-pressed="false">'+e[1]+'</button>'; }).join('');
+      wrap.parentNode.insertBefore(box,wrap.nextSibling);
+      box.addEventListener('click',function(ev){ var b=ev.target.closest&&ev.target.closest('button[data-g]'); if(!b) return; var g=document.querySelector('.gogyo td.'+b.dataset.g); if(g) g.click(); gySync(); }); }
+    [].forEach.call(box.querySelectorAll('button[data-g]'),function(b){ var g=document.querySelector('.gogyo td.'+b.dataset.g); var on=!!(g&&g.parentNode&&g.parentNode.classList.contains('lucky')); b.setAttribute('aria-pressed',on?'true':'false'); });
+  }catch(e){} }
+  /* A4の見本（縮めて表示）のときは、縮めた分だけ大きくして、画面で 44px 以上にする */
+  function fitTap(){ try{ var ch=false; ['duPickBox','gyPickBox'].forEach(function(id){ var b=document.getElementById(id); if(!b||!b.offsetHeight) return; var old=b.style.getPropertyValue('--tapk'); b.style.removeProperty('--tapk');
+      var k=b.getBoundingClientRect().height/b.offsetHeight, nv=(k>0&&k<0.99)?(1/k).toFixed(3):''; if(nv) b.style.setProperty('--tapk',nv); if(nv!==old) ch=true; });
+    if(ch && typeof window.fitSheet==='function') window.fitSheet(); }catch(e){} }   // 高さが変わったら A4 の見本の高さを測り直す
+  function start(){ duSync(); gySync(); fitTap(); setTimeout(fitTap,200);
+    try{ window.addEventListener('resize',function(){ setTimeout(fitTap,120); }); var pp=document.getElementById('paper'); if(pp&&window.ResizeObserver) new ResizeObserver(function(){ setTimeout(fitTap,120); }).observe(pp); }catch(e){}
+    try{ var tm=0, f=function(){ if(!tm) tm=setTimeout(function(){ tm=0; duSync(); gySync(); },60); };
+      var tb=document.getElementById('daiunBody'); if(tb) new MutationObserver(f).observe(tb,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+      var gb=document.querySelector('.gogyo tbody'); if(gb) new MutationObserver(f).observe(gb,{subtree:true,attributes:true,attributeFilter:['class']}); }catch(e){} }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
 })();
 </script>
