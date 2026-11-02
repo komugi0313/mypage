@@ -18,7 +18,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<!-- 字体は Noto Serif JP・Noto Sans JP だけ（前の Shippori Mincho・Zen Kaku Gothic New・Cormorant Garamond は下の上書きで使われていなかったので読みこまない）。太さは実際に使う 400・500・700 にしぼる（600 は 700、800・900 は 700 で表示）。2026-11-02 -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --paper:#f4efe4; --paper2:#efe8d8; --card:#fbf8f0; --ink:#22201c; --ink2:#4a463d;
@@ -588,7 +589,7 @@ select.cast-miss{border-color:#C0392B!important;box-shadow:0 0 0 3px rgba(192,57
    ※ index.html のインライン<style>より後に読み込むことで上書きが効きます。
    ===================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+/* 字体（Noto Serif JP・Noto Sans JP）は <head> の <link> で読む（@import だと見つかるのが遅れるため。2026-11-02） */
 
 /* 横はみ出しガード（スマホで右が切れない／PC縮小表示にならない） */
 html,body{ overflow-x:hidden !important; max-width:100% !important; }
@@ -709,7 +710,7 @@ label.fl{ font-size:13.5px; }
 @media (max-height:520px){ .topbar,.tabs{position:static!important} }
 @media (max-width:330px){ #hexSym span{white-space:normal!important} }
 .tab{white-space:nowrap}
-@media (max-width:330px){ .tabs .tab{font-size:clamp(10px,3.2vw,13px);letter-spacing:0;padding-left:1px;padding-right:1px} }
+@media (max-width:330px){ .tabs .tab{font-size:.75rem;letter-spacing:0;padding-left:1px;padding-right:1px;white-space:normal;line-height:1.25;word-break:keep-all;overflow-wrap:anywhere} }   /* 下のタブ：px ではなく rem にして、端末の文字を大きくする設定で一緒に大きくなるように（前は10px。せまいときは2行に折り返す。2026-11-02） */
 :focus-visible{outline:3px solid #6B4C8A;outline-offset:2px}
 .field:focus-visible,select.field:focus-visible,textarea.field:focus-visible{outline:3px solid #6B4C8A;outline-offset:1px}
 
@@ -734,7 +735,7 @@ label.fl{ font-size:13.5px; }
 @media(max-width:430px){
   .seg button{ font-size:13px; }
   .chip,.chip.sm{ font-size:13px; }
-  .tab{ font-size:13px; }
+  .tab{ font-size:.8125rem; }
 }
 /* 互卦・綜卦・錯卦の行（以前は12px）。読み方の札は言葉の途中で折り返さない */
 .ura-line{ font-size:14px; line-height:1.8; color:var(--ink2); margin-top:4px; }
@@ -907,6 +908,15 @@ html.pk-qm #concBox,html.pk-qm #hexSec,html.pk-qm #hexSec+.card,html.pk-qm #scri
     if(document.body) go(); else addEventListener('DOMContentLoaded',go); }
   navigator.serviceWorker.addEventListener('controllerchange',function(){ if(had) show(); had=true; });
   navigator.serviceWorker.addEventListener('message',function(e){ var t=e&&e.data&&e.data.type; if(t==='sw-updated'||t==='pk-sw-updated') show(); });
+})();</script>
+<script>/* 書きかけのご相談の下書き：同じタブで読み直しても残す（sessionStorage・24時間まで）。PRO の pk_cs_draft と同じ作り。「次のお客様へ」・別のお客様の鑑定を開くと消す（doResetForNewReading）。2026-11-02 */
+(function(){ var K='eki_q_draft', T=null;
+  function save(v){ try{ if(String(v||'').trim()) sessionStorage.setItem(K,JSON.stringify({v:String(v).slice(0,4000),ts:Date.now()})); else sessionStorage.removeItem(K); }catch(e){} }
+  window.__ekiDraftClear=function(){ clearTimeout(T); T=null; try{ sessionStorage.removeItem(K); }catch(e){} };
+  document.addEventListener('input',function(e){ var t=e.target; if(!t||t.id!=='question') return; clearTimeout(T); T=setTimeout(function(){ T=null; save(t.value); },400); });
+  window.addEventListener('pagehide',function(){ var q=document.getElementById('question'); if(q&&T){ clearTimeout(T); T=null; save(q.value); } });
+  function restore(){ try{ var q=document.getElementById('question'); if(!q||q.value.trim()) return; var d=JSON.parse(sessionStorage.getItem(K)||'null'); if(!d||!d.v) return; if(Date.now()-(+d.ts||0)>86400000){ sessionStorage.removeItem(K); return; } q.value=d.v; q.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){} }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){ setTimeout(restore,300); }); else setTimeout(restore,300);
 })();</script>
 <style>#pk-upd{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 24px);box-sizing:border-box;padding:8px 10px 8px 16px;border-radius:16px;background:#1F3A5F;color:#fff;font-weight:800;font-size:.875rem;line-height:1.5;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 #pk-upd button{min-height:44px;min-width:44px;border-radius:999px;border:0;font:inherit;font-weight:900;cursor:pointer}
@@ -2630,7 +2640,8 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
       if(code==='CONT_LIMIT') throw stop('本日の無料お試し（1日3回）の分を使い切りました。明日（日本時間の0時から）またご利用いただけます。','CONT_LIMIT');
       if(code==='TOO_LONG'||res.status===413) throw stop('ご相談の文が長すぎるため、オンライン鑑定（本格鑑定）を作れませんでした。文を短くしてお試しください。','TOO_LONG');
       if(code==='BUSY') throw stop('短い時間に続けてご利用があったため、オンライン鑑定（本格鑑定）を少しお休みしています。1〜2分おいてお試しください。','BUSY');
-      if(code==='STORE'||code==='MEMBER_ID'||code==='MEMBER_CHECK') throw stop('ただいまサーバーでご契約の確認ができないため、オンライン鑑定（本格鑑定）を作れませんでした。少し時間をおいてお試しください。',code);
+      if(code==='MEMBER_ID') throw stop('🔑 会員の確認ができなかったため、オンライン鑑定（本格鑑定）を作れませんでした。一度ログアウトして、もう一度ログインしてください。',code);   // PRO・ビギナーと同じ案内（会員IDが取れない＝ログインし直す。2026-11-02）
+      if(code==='STORE'||code==='MEMBER_CHECK') throw stop('ただいまサーバーでご契約の確認ができないため、オンライン鑑定（本格鑑定）を作れませんでした。少し時間をおいてお試しください。',code);
       if(/^(SETUP|NO_KEY|ORIGIN|PRODUCT|METHOD|BAD_REQUEST)$/.test(code)) throw stop('オンライン鑑定（本格鑑定）の設定を確認できませんでした。時間をおいてもつながらないときは、お問い合わせください。',code);
       let msg=`HTTP ${res.status}`; try{ msg=(e0&&e0.error&&e0.error.message)||msg; }catch(_){}
       const busy=code==='UPSTREAM_BUSY'||code==='UPSTREAM'||res.status===429||res.status>=500||/overload|unavailable|rate|demand/i.test(msg);
@@ -2928,6 +2939,10 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
   /* ===== 通信なしの答えを、相談の形に合わせる（2026-11-02） =====
      亡くなった方のご相談／吉凶を問わない相談／「今年か来年か」「いつ」「AかBか」／お金の相談（金運の流れ）。卦の記号と、動いた爻の位置・之卦から、条件つきで答える（PRO の pkOfflineLead と同じ考え方。易は卦から） */
   function ekiDeceasedQ(q){ q=String(q||''); return PK_DECEASED_Q.test(q)&&!/寿命|余命|いつ死|いつ亡く|亡くなりますか/.test(q); }
+  /* 亡くなった方のご相談の一言：可否の言葉（進んで大丈夫・控える・慎重に など）が入っていたら、受けとめる言い方の決まった一言にする（2026-11-02。答えの欄・話す順番・鑑定書で同じ） */
+  const EKI_DEC_LEAD='これまでのご縁を大切に、これからの日々を穏やかに過ごしていきましょう。';
+  const EKI_DEC_JUDGE=/大丈夫|進ん|進め|控え|見送|慎重|良い流れ|よい流れ|吉|凶|賢明|べき|やめ|避け|急が|待[ちつ]/;
+  function ekiDecPhrase(ph,q){ ph=String(ph||'').replace(/[◎〇○◯△▲✖✕×✗]/g,'').trim(); return (ph&&!EKI_DEC_JUDGE.test(ph))?pkSoftDeceased(ph,q):EKI_DEC_LEAD; }
   // 吉凶（進む・控える）を問わない相談（「5歳の子どもが好きな食べ物は何ですか」など）
   function ekiNoJudgeQ(q){ q=String(q||''); if(!/(何|なに|なん|どんな|どういう|どの|どれ|誰|だれ|どこ)/.test(q)) return false;
     if(/(いい|良い|よい|大丈夫|べき|でき(ます|る|そう)|うまく|成功|叶|かな[いう]|どうな|どうす|どうした|いつ|どちら|どっち|それとも|運|吉|凶|気持ち|思って|考えて|本音|向いて|合って|相性|注意|気をつけ|コツ|方法|ため|には|悩|不安|心配)/.test(q)) return false;
@@ -3192,7 +3207,7 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
   const EKI_TYPO=[[/なくなやすい/g,'なくなりやすい'],[/しやすやすい/g,'しやすい']];   // 文章作成のよくある書きまちがい（意味の変わらないものだけ）
   function ekiTypo(t){ t=String(t==null?'':t); EKI_TYPO.forEach(x=>{ t=t.replace(x[0],x[1]); }); return t; }
   function ekiCleanReading(p,q){ if(!p) return p; ['tsutae','jogen','ketsuron','script','jokyo','nagare','chui','musubi','hitokoto','hantei'].forEach(function(k){ if(p[k]!=null) p[k]=ekiTypo(p[k]); }); ['tsutae','jogen','ketsuron','script','jokyo','nagare','chui','musubi','hitokoto','hantei'].forEach(function(k){ if(p[k]!=null) p[k]=pkNoGambleTiming(pkSoftDeceased(pkInLawWord(p[k],q),q),q); }); const sf=ekiSafety(q); if(!sf||sf.block) return p; ['tsutae','jogen','ketsuron','script','jokyo','nagare','chui','musubi','hitokoto'].forEach(function(k){ if(p[k]==null) return; let v=String(p[k]); if(sf.crisis) v=ekiSoftCrisis(v); else v=ekiDropJudge(v); p[k]=v; }); return p; }
-  function ekiSafetyPrompt(q){ const sf0=ekiSafety(q); if(sf0&&sf0.block) return ''; return ekiSafetyPrompt0(q)+((!(sf0&&sf0.crisis)&&PK_DECEASED_Q.test(String(q||''))&&!/寿命|余命|いつ死|いつ亡く|亡くなりますか/.test(String(q||'')))?PK_DECEASED_GUIDE+'▼判定 には◎〇△✖を付けず、寄り添う一言だけを書く。\n':'')+((!sf0&&!PK_DECEASED_Q.test(String(q||''))&&ekiNoJudgeQ(q))?'\n【このご相談の扱い】吉凶（進む・控える）を問う相談ではない。▼判定 には◎〇△✖を付けず、問いに答える一言（易で言い当てられないことは、確かめ方と卦から見たヒント）を書く。「控える」「距離を取る」「進んで大丈夫」のような可否の言い方はしない。\n':'')+(PK_GAMBLE_Q.test(String(q||''))?'\n宝くじ・ギャンブルを「買う時期」「当たる時期」としては書かない。そのかわり、卦から見た金運の流れ（お金の縁が上向く時期・気をつけたい時期を、季節・月・西暦の目安で）と、その時期の過ごし方をくわしく書く。▼伝え方には「金運（お金の流れ）が上向くのは〜ごろ（西暦か「来年の春以降」のような目安）」と、上向く時期をはっきり1文で必ず書く（本卦＝今、之卦＝この先の流れから決める。「生活のリズムが整った頃」のような、時期の分からない言い方だけで終わらせない）。\n':''); }
+  function ekiSafetyPrompt(q){ const sf0=ekiSafety(q); if(sf0&&sf0.block) return ''; return ekiSafetyPrompt0(q)+((!(sf0&&sf0.crisis)&&PK_DECEASED_Q.test(String(q||''))&&!/寿命|余命|いつ死|いつ亡く|亡くなりますか/.test(String(q||'')))?PK_DECEASED_GUIDE+'▼判定 には◎〇△✖を付けず、寄り添う一言だけを書く（「進んで大丈夫」「控えて」「慎重に」のような可否の言葉は入れない）。恋愛・出会い・結婚・婚活・お相手の気持ちについての助言は、どの見出しにも書かない（相談文そのものが再婚や新しい出会いをたずねているときだけ、その問いに、急がせず気持ちの整理を大切にする形で答える）。\n':'')+((!sf0&&!PK_DECEASED_Q.test(String(q||''))&&ekiNoJudgeQ(q))?'\n【このご相談の扱い】吉凶（進む・控える）を問う相談ではない。▼判定 には◎〇△✖を付けず、問いに答える一言（易で言い当てられないことは、確かめ方と卦から見たヒント）を書く。「控える」「距離を取る」「進んで大丈夫」のような可否の言い方はしない。\n':'')+(PK_GAMBLE_Q.test(String(q||''))?'\n宝くじ・ギャンブルを「買う時期」「当たる時期」としては書かない。そのかわり、卦から見た金運の流れ（お金の縁が上向く時期・気をつけたい時期を、季節・月・西暦の目安で）と、その時期の過ごし方をくわしく書く。▼伝え方には「金運（お金の流れ）が上向くのは〜ごろ（西暦か「来年の春以降」のような目安）」と、上向く時期をはっきり1文で必ず書く（本卦＝今、之卦＝この先の流れから決める。「生活のリズムが整った頃」のような、時期の分からない言い方だけで終わらせない）。\n':''); }
   function ekiSafetyPrompt0(q){ const sf=ekiSafety(q); if(!sf||sf.block) return '';
     if(sf.crisis) return '\n【このご相談の扱い（最優先・厳守）】'+EKI_CRISIS_GUIDE.replace(/^\n/,'')+'▼判定 には◎〇△✖を付けず、寄り添う一言だけを書く。\n';
     const pro=sf.kind==='money'?'金融機関やファイナンシャルプランナーなどの専門家':sf.kind==='legal'?'弁護士や法テラス（0570-078374）':sf.kind==='fetal'?'健診のお医者さま':'お医者さま';
@@ -3203,7 +3218,7 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
   const EKI_NEXTQ={nojudge:['ほかにヒントはありますか？','どう確かめればいいですか？','気をつけることは？'],deceased:['思い出をどう大切にすればいいですか？','気持ちが落ち着かないとき、どう過ごせばいいですか？','これからの自分の過ごし方は？'],love:['自分から連絡してもいいですか？','相手は今どう思っていますか？','次に動きがあるのはいつごろですか？'],work:['動くならいつがいいですか？','今の職場に残るなら、どうすればいいですか？','どんな仕事が向いていますか？'],money:['お金の流れが上向くのはいつですか？','気をつけたいお金の使い方は？'],family:['どう話しかければいいですか？','いつごろ落ち着きそうですか？','自分の心を守るには、どうすればいいですか？'],other:['いつごろ動きがありますか？','今いちばん気をつけることは？','うまくいかせるコツは？']};
   function ekiTalkTopic(q){ q=String(q||''); if(ekiDeceasedQ(q)) return 'deceased'; if(!ekiSafety(q)&&ekiNoJudgeQ(q)) return 'nojudge'; if(/義母|義父|姑|舅|義実家|離婚|息子|娘|子ども|子供|家族|親|(?<!元)(?:妻|夫|旦那|奥さん|夫婦)/.test(q)&&!/彼氏|彼女|好きな人|片思い|元彼|元カレ/.test(q)) return 'family'; if(/恋|彼|好き|片思い|復縁|結婚|婚活|付き合|パートナー|出会い|元カレ|元カノ|脈あり|(?:彼|あの人|あの方|元彼|元カレ|元カノ)(?:さん)?(?:から|に|と|が|は)?の?[^。、]{0,6}(?:連絡|LINE|ライン|メール|返事|返信|電話|既読)/.test(q)) return 'love';   /* 「彼から連絡」は恋愛・「上司から連絡」は恋愛にしない（2026-11-02） */ if(/仕事|転職|就職|職場|会社|起業|独立|適職/.test(q)) return 'work'; if(/お金|金運|収入|副業|貯金|借金/.test(q)) return 'money'; return 'other'; }
   function ekiTalkHTML(p,r,talkP,todo){ const v=parseVerdict(p.hantei||''); const sf=ekiSafety(window.__ekiQ);   // 答えの欄（renderVerdict）と同じ一言を①に（宝くじ・病気などの決まった一文／深い悩み）
-    const lead=String((sf&&sf.crisis)?EKI_CRISIS_SAY:(sf&&sf.say)?sf.say:(v.phrase||'')).replace(/[*＊]/g,'').trim(); if(!lead) return '';
+    const lead=String((sf&&sf.crisis)?EKI_CRISIS_SAY:(sf&&sf.say)?sf.say:ekiDeceasedQ(window.__ekiQ)?ekiDecPhrase(v.phrase,window.__ekiQ):(v.phrase||'')).replace(/[*＊]/g,'').trim(); if(!lead) return '';
     const whyS=(String((talkP||[]).join('')).split(/(?<=[。！？])/).map(x=>x.trim()).filter(Boolean).slice(1).filter(x=>lead.indexOf(x.replace(/。$/,''))<0&&String(v.phrase||'').indexOf(x.replace(/。$/,''))<0))[0]||'';   // ①の結論と同じ文はくり返さない
     const theme=(r&&r.h)?(ekiFromShi(r)?('出た卦は「'+r.h.nm+'」で、この先の姿（之卦）「'+r.shika.hex.nm+'」＝「'+mTheme(r.shika.hex)+'」の言葉で答えを決めています。'):('出た卦は「'+r.h.nm+'」＝「'+mTheme(r.h)+'」の流れです。')):'';
     /* ③ 時期：言葉だけを拾って「来年・今年がポイントです」「春がポイントです」にしない（2026-11-02）。
@@ -3232,7 +3247,7 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
     const sf=ekiSafety(window.__ekiQ);
     if(sf&&sf.crisis){ el.innerHTML=ekiCrisisHTML()+`<div class="verdict"><div class="v-body"><div class="v-lbl">${t('verdict_lbl')}</div><div class="v-txt">${esc(EKI_CRISIS_SAY)}</div></div></div>`; return; }   // 深い悩みには〇△を出さず、寄り添う一言と小さな案内
     if(sf){ el.innerHTML=`<div class="verdict"><div class="v-body"><div class="v-lbl">${t('verdict_lbl')}</div><div class="v-txt">${esc(sf.say)}</div></div></div>`; return; }
-    { const q0=String(window.__ekiQ||''); if(PK_DECEASED_Q.test(q0)&&!/寿命|余命|いつ死|いつ亡く|亡くなりますか/.test(q0)){ const v0=parseVerdict(p.hantei||''); el.innerHTML=`<div class="verdict"><div class="v-body"><div class="v-lbl">${t('verdict_lbl')}</div><div class="v-txt">${fmtRich(v0.phrase||'これまでのご縁を大切に、これからの日々を穏やかに過ごしていきましょう')}</div></div></div>`; return; } }   // 亡くなった方のご相談には◎〇△✖を付けない（2026-10-25）
+    { const q0=String(window.__ekiQ||''); if(PK_DECEASED_Q.test(q0)&&!/寿命|余命|いつ死|いつ亡く|亡くなりますか/.test(q0)){ const v0=parseVerdict(p.hantei||''); el.innerHTML=`<div class="verdict"><div class="v-body"><div class="v-lbl">${t('verdict_lbl')}</div><div class="v-txt">${fmtRich(ekiDecPhrase(v0.phrase,q0))}</div></div></div>`; return; } }   // 亡くなった方のご相談には◎〇△✖を付けない（2026-10-25）
     if(ekiNoJudgeQ(window.__ekiQ)){ const v0=parseVerdict(p.hantei||''); try{ window.__ekiToolSym=''; }catch(_){} el.innerHTML=`<div class="verdict"><div class="v-body"><div class="v-lbl">${t('verdict_lbl')}</div><div class="v-txt">${fmtRich(v0.phrase||ekiNoJudgeLead(r,window.__ekiQ))}</div></div></div>`; return; }   // 吉凶を問わない相談には◎〇△✖を付けない（2026-11-02）
     let v=parseVerdict(p.hantei||'');
     let phrase=v.phrase;
@@ -3874,6 +3889,35 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')), c1=ek
   const EKI_SYM_WORD={'◎':'とても良い流れ','〇':'前向きに進めてよい流れ','△':'慎重に進めたい流れ','✖':'今は控えたほうがよい流れ'};
   /* 鑑定書には記号（◎〇△✖）を出さず、やさしい言葉にする（アプリの答えの欄は記号のまま） */
   function ekiSymWords(t){ return String(t==null?'':t).replace(/「([◎〇○◯△▲✖✕×])」/g,function(m,c){ return '「'+(EKI_SYM_WORD[c==='○'||c==='◯'?'〇':c==='✕'||c==='×'?'✖':c==='▲'?'△':c]||c)+'」'; }).replace(/(答え[はがの]?[：:「]?\s*)([◎〇○◯△▲✖✕×])/g,function(m,a,c){ return a+(EKI_SYM_WORD[c==='○'||c==='◯'?'〇':c==='✕'||c==='×'?'✖':c==='▲'?'△':c]||c); }).replace(/[◎△✖✕]/g,function(c){ return EKI_SYM_WORD[c==='✕'?'✖':c]; }); }
+  /* 鑑定書の文を画面に出す前に、答えの欄（ekiCleanReading・ekiFixSym）と同じ直しをかける（2026-11-02）：
+     読み・続柄の直し／亡くなった方の気持ちを言い切らない（pkSoftDeceased）／宝くじの買う・当たる時期を外す（pkNoGambleTiming）／
+     亡くなった方・吉凶を問わない相談・断定しない相談は答えの記号と答えの言葉を外す／ふつうの相談は答えの言葉をツールの記号にそろえる／
+     亡くなった方のご相談で恋愛の助言を外す／宝くじは金運の上向く時期を1文必ず */
+  const EKI_SHO_WORDS='とても良い流れ|前向きに進めてよい流れ|慎重に進めたい流れ|今は控えたほうがよい流れ';
+  function ekiShoNoJudge(t){ t=String(t==null?'':t);
+    return t.split('\n').map(function(line){ const ss=line.match(/[^。！？]+[。！？]*|[。！？]+/g)||[]; return ss.filter(function(x){ return !new RegExp('答え[はがの]?[：:「『]?\\s*(?:'+EKI_SHO_WORDS+')').test(x)&&!/(?:答え|判定)[はがの]?[：:「『]?\s*[◎〇○◯△▲✖✕×]/.test(x); }).join(''); }).join('\n')
+      .replace(/[「『][◎〇○◯△▲✖✕×][」』]/g,'').replace(/[◎△▲✖✕]/g,'').replace(/[ 　]+\n/g,'\n'); }
+  const EKI_SHO_LOVE=/恋愛|恋人|出会い|婚活|異性|片思い|片想い|復縁|デート|告白|お相手の気持ち|新しいご縁|良いご縁|素敵なご縁|彼氏|彼女/;
+  function ekiShoNoLove(t,q){ if(EKI_SHO_LOVE.test(String(q||''))||/再婚|結婚/.test(String(q||''))) return String(t==null?'':t);
+    return String(t==null?'':t).split('\n').map(function(line){ const ss=line.match(/[^。！？]+[。！？]*|[。！？]+/g)||[]; return ss.filter(function(x){ return !EKI_SHO_LOVE.test(x); }).join(''); }).join('\n'); }
+  /* 体の不調のご相談：運動・体を動かすこと・食事制限・サプリ・薬や治療の変更をすすめる文を外す（「無理に体を動かさず」のような控える文は残す） */
+  function ekiShoNoExercise(t){ return String(t==null?'':t).split('\n').map(function(line){ const ss=line.match(/[^。！？]+[。！？]*|[。！？]+/g)||[]; return ss.filter(function(x){ if(/(せず|しない|控え|やめ(?:ず|ない)|無理に|無理をせず|避け)/.test(x)) return true; return !/運動|ジョギング|ウォーキング|ランニング|散歩|ストレッチ|筋トレ|ヨガ|体を動か|からだを動か|汗を流|サプリ|食事制限|断食|お薬を(?:変え|減ら|やめ)|薬を(?:変え|減ら|やめ)|治療を(?:変え|やめ)|病院を変え/.test(x); }).join(''); }).join('\n'); }
+  function ekiShoClean(S,r,q,p){ q=String(q||''); const sf=ekiSafety(q); const dec=!(sf&&sf.crisis)&&ekiDeceasedQ(q), nj=!sf&&!dec&&ekiNoJudgeQ(q), noSym=!!(sf||dec||nj);
+    let want=''; if(!noSym){ const v=parseVerdict((p&&p.hantei)||''); want=EKI_SYM_WORD[ekiToolSym(r,q)]||EKI_SYM_WORD[v.sym]||''; }
+    S=(S||[]).map(function(x){ let t=String(x.t==null?'':x.t);
+      t=pkNoGambleTiming(pkSoftDeceased(pkInLawWord(ekiTypo(t),q),q),q);
+      if(noSym) t=ekiShoNoJudge(t); else { t=ekiSymWords(t); if(want) t=t.replace(new RegExp('(答え[^。\n]{0,6}?)('+EKI_SHO_WORDS+')','g'),function(m,a){ return a+want; }); }
+      if(dec) t=ekiShoNoLove(t,q);
+      if(sf&&sf.health) t=ekiShoNoExercise(t);
+      if(sf&&sf.crisis) t=ekiSoftCrisis(t); else if(sf||dec||nj) t=ekiDropJudge(t);
+      return {h:x.h, t:t.replace(/\n{2,}/g,'\n').trim()}; }).filter(function(x){ return x.t; });
+    if(sf&&sf.health&&!/お医者さま|医師|主治医|病院|医療機関/.test(S.map(function(x){ return x.t; }).join('\n'))){   // 体のご相談：お医者さまへの相談を必ず
+      const i=S.findIndex(function(x){ return /アドバイス/.test(x.h); }); const ln='・'+EKI_HEALTH_TODO[0];
+      if(i>=0) S[i].t=ln+'\n'+S[i].t; else S.push({h:'具体的なアドバイス',t:ln}); }
+    if(PK_GAMBLE_Q.test(q)&&!/金運[^。]{0,40}(上向|高ま|上が|伸び)/.test(S.map(function(x){ return x.t; }).join('\n'))){
+      const fl=ekiMoneyFlow(r); const i=S.findIndex(function(x){ return /これからの流れ/.test(x.h); });
+      if(i>=0) S[i].t+='\n'+fl; else S.splice(Math.min(2,S.length),0,{h:'これからの流れ',t:fl}); }
+    return S; }
   function shoOffline(r,q,p,ch){
     const h=r.h, name=h?h.nm:`${r.uT.k}＋${r.lT.k}`, rd=h?`（${h.rd}）`:'';
     const v=parseVerdict(p.hantei||''); const vs=rankToVerdict(r.rank);
@@ -3954,9 +3998,11 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')), c1=ek
   }
   // オンライン鑑定で、お客様に渡す鑑定書の本文を書く（同じ構成・鑑定士用の情報は書かない）
   async function shoOnline(r,q,p,ch){
-    const sf=ekiSafety(q);
+    const sf=ekiSafety(q); if(sf&&sf.block) return null;   // 答えない相談は文章作成に送らない
+    /* 答えの欄の頼み方（ekiSafetyPrompt）と同じ決まりを鑑定書にも（2026-11-02）：亡くなった方／吉凶を問わない相談／宝くじ・ギャンブル／体の不調 */
+    const dec=!(sf&&sf.crisis)&&ekiDeceasedQ(q), nj=!sf&&!dec&&ekiNoJudgeQ(q), gam=PK_GAMBLE_Q.test(String(q||'')), noSym=!!(sf||dec||nj);
     const h=r.h; const sh=r.shika&&r.shika.hex;
-    const topic=(TOPICS.find(x=>x.id===cur.topic)||{}).label||'';
+    const topic=dec?'':((TOPICS.find(x=>x.id===cur.topic)||{}).label||'');   // 亡くなった方のご相談は恋愛などのテーマを渡さない
     const tone=(TONES.find(x=>x.id===cur.tone)||{}).label||'やさしく寄り添う';
     const heads=['ご相談への答え','いまの状況','これからの流れ'].concat(ch?['生まれ持った性質','時期の目安']:[]).concat(['具体的なアドバイス','結びのことば']);
     const chLine=ch?`
@@ -3975,18 +4021,24 @@ ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_c
 ・見出しは次の順番で、行頭に「# 見出し」と書き、続けて本文：${heads.map(x=>'「'+x+'」').join('、')}。ほかの見出しは作らない。
 ・「具体的なアドバイス」は行頭「・」の箇条書きで3〜5個。そのほかの章は2〜4文の段落を1〜2つ。
 ・全体で1200〜1800字。語り口：${tone}。お客様に語りかける、あたたかく具体的な文章。
-・答えの記号（${rankToVerdict(r.rank).sym}など）と、上に書いた材料に忠実に。材料にない年月日や出来事を作らない。本文には記号（◎・〇・△・✖）を書かず、「とても良い流れ」「前向きに進めてよい流れ」「慎重に進めたい流れ」「今は控えたほうがよい流れ」のような言葉で書く。
+${noSym?'・上に書いた材料に忠実に。材料にない年月日や出来事を作らない。本文には答えの記号（◎・〇・△・✖）も、「とても良い流れ」「前向きに進めてよい流れ」「慎重に進めたい流れ」「今は控えたほうがよい流れ」のような答えの言葉も書かない。':`・答えの記号（${rankToVerdict(r.rank).sym}など）と、上に書いた材料に忠実に。材料にない年月日や出来事を作らない。本文には記号（◎・〇・△・✖）を書かず、「${EKI_SYM_WORD[rankToVerdict(r.rank).sym]}」のような言葉で書く（答えの言葉は「${EKI_SYM_WORD[rankToVerdict(r.rank).sym]}」に決まっている。ほかの答えの言葉にしない）。`}
 ・相談者の性別や続柄、相談に書かれていない家族の関係（お母さま・お父さま・奥様など）を決めつけない。同性のカップル（女性同士・男性同士）の相談もある。相談文から同性とわかるときは、男女を前提にした言葉（異性・夫・妻・彼氏・彼女・男役・女役）を使わず「お相手」「パートナー」と書き、同性であることを問題や注意点として書かない。お相手の性別が書かれていないときは、性別を決めつけない。相談者は「ご相談者さま」と呼ぶ（お名前があればお名前で）。相談文に書かれた続柄だけを使う。亡くなり方・病名・出来事など、相談に書かれていない事情を作らない。
 ・各段落は2〜3文ごとに改行して分ける。電話番号は半角数字で書く。
 ・鑑定士向けの情報（要点・裏卦・判定の根拠の説明）は書かない。
 ・【最重要】専門用語は一切使わない：卦の名前・読み・「第◯卦」・爻・卦辞・爻辞・上卦／下卦・互卦・綜卦・錯卦・之卦・陰陽・漢文の引用、四柱推命の言葉（命式・五行・干支・日主・通変星・十二運など）も書かない。言いかえをカッコで添えることもしない。今の暮らしの言葉・身近なたとえで書く。
 ・標準語の、ていねいで温かい文章で（方言は使わない）。
-・運気（${UNKI_LABEL[r.rank]}）は全体の目安。いちばん大切なメッセージに注意の内容があるときや、答え（${rankToVerdict(r.rank).sym}）と食い違うときは、答えとメッセージを重く見て、矛盾のないように書く（運気の言葉だけで、答えと逆のことを勧めない）。
+${noSym?`・運気（${UNKI_LABEL[r.rank]}）は暮らし全体の目安として使い、このご相談の可否や結果を決める言い方にしない。`:`・運気（${UNKI_LABEL[r.rank]}）は全体の目安。いちばん大切なメッセージに注意の内容があるときや、答え（${rankToVerdict(r.rank).sym}）と食い違うときは、答えとメッセージを重く見て、矛盾のないように書く（運気の言葉だけで、答えと逆のことを勧めない）。`}
 ・アスタリスク（*）や記号の装飾は使わない。「AI」という言葉は使わない。${sf?`
-【このご相談の扱い（最優先・厳守）】${sf.crisis?EKI_CRISIS_SAY+EKI_CRISIS_GUIDE:sf.say+(sf.health?EKI_HEALTH_GUIDE+'\n（上の一文は鑑定書のいちばん上にすでに載っています。本文の「ご相談への答え」では②を同じ言葉でくり返さず、①の寄り添う言葉から③の鑑定へつなげる。）':'')}
+【このご相談の扱い（最優先・厳守）】${sf.crisis?EKI_CRISIS_SAY+EKI_CRISIS_GUIDE:sf.say+(sf.health?EKI_HEALTH_GUIDE.replace(/易から見えること/g,'いまの流れから見えること').replace(/この卦が示す/g,'いまの流れが示す')+'\n（上の一文は鑑定書のいちばん上にすでに載っています。本文の「ご相談への答え」では②を同じ言葉でくり返さず、①の寄り添う言葉から③の鑑定へつなげる。）\n・お体のことは、まずお医者さまに相談するよう、やさしく必ず添える。運動・体を動かすこと・食事制限・サプリ・お薬や治療の変更・通院をやめることなどを、すすめたり指示したりしない（休み方・気持ちの整え方・お医者さまに伝えることのまとめ方を中心に）。':'')+(sf.kind==='fetal'?'\n・男の子・女の子のどちらかを推測したり、ほのめかしたりしない（陰と陽・男女の話も書かない）。':'')+(!sf.crisis&&!sf.health?`\n・必要なときは、${sf.kind==='money'?'金融機関やファイナンシャルプランナーなどの専門家':sf.kind==='legal'?'弁護士や法テラス（0570-078374）':sf.kind==='fetal'?'健診のお医者さま':'専門の方'}への相談をやさしく添える。`:'')}
 ・答えの記号（◎・〇・△・✖）や「進んで大丈夫」「控えて」などの可否は、本文のどこにも書かない（上の「答え」の材料は使わない）。
 ・治る・治らない、儲かる・損する、当たる・外れる、勝つ・負ける、別れるべき・別れないべき、浮気している・していない、寿命や亡くなる時期などを、断定も示唆もしない。
-${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配な気持ちに寄り添う言葉から始め、そのうえで易から見えるいまの流れを、ふだんどおり心をこめて伝える。「お答えできません」「判断できません」「占いでは答えられません」のような、断る・突き放す言い方は一文も書かない（命や体のことに触れるときも、言い切らずにやさしく）。\n':''}・「ご相談への答え」の章では、まず上の一文の趣旨（占いで決めつけないこと・必要なら専門家への相談）をやさしく伝え、そのうえで、この時期の過ごし方と気持ちの整え方を書く。「時期の目安」は暮らし全体の目安として書き、このご相談の結果と結びつけない。`:''}`;
+${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配な気持ちに寄り添う言葉から始め、そのうえで易から見えるいまの流れを、ふだんどおり心をこめて伝える。「お答えできません」「判断できません」「占いでは答えられません」のような、断る・突き放す言い方は一文も書かない（命や体のことに触れるときも、言い切らずにやさしく）。\n':''}・「ご相談への答え」の章では、まず上の一文の趣旨（占いで決めつけないこと・必要なら専門家への相談）をやさしく伝え、そのうえで、この時期の過ごし方と気持ちの整え方を書く。「時期の目安」は暮らし全体の目安として書き、このご相談の結果と結びつけない。`:''}${dec?`
+【亡くなった方についてのご相談（最優先・厳守）】${PK_DECEASED_GUIDE.replace(/^\n【[^】]*】/,'').replace(/命式（または卦）から見ると/g,'いまの流れから見ると')}
+・答えの記号（◎・〇・△・✖）も、「とても良い流れ」「進んで大丈夫」「控えて」のような可否の言葉も、本文のどこにも書かない。
+・恋愛・出会い・結婚・婚活・お相手の気持ちについての助言は書かない（相談文そのものが再婚や新しい出会いをたずねているときだけ、その問いに、急がせず気持ちの整理を大切にする形で答える）。
+・「ご相談への答え」の章は、まず気持ちに寄り添う言葉から始め、思い出の大切にし方・供養の気持ちの持ち方・ご自分の毎日の過ごし方を中心に書く。`:''}${nj?`
+【このご相談の扱い（厳守）】吉凶（進む・控える）を問う相談ではない。答えの記号（◎・〇・△・✖）も、「とても良い流れ」「慎重に進めたい流れ」のような答えの言葉も書かない。「ご相談への答え」では問いにまっすぐ答える（易で言い当てられないことは、確かめ方と、いまの流れから見たヒントを書く）。「控える」「距離を取る」「進んで大丈夫」のような可否の言い方はしない。`:''}${gam?`
+【宝くじ・ギャンブルのご相談（厳守）】「買う時期」「当たる時期」「運試しによい時期」は書かない。そのかわり「これからの流れ」の章に、「金運（お金の流れ）が上向くのは〜ごろ」と、いまの流れとこの先の流れから、上向く時期をはっきり1文で必ず書く（西暦か「来年の春以降」のような目安。時期の分からない言い方だけで終わらせない）。`:''}`;
     for(let attempt=0;attempt<2;attempt++){
     const txt=await callGemini(prompt,'sho',{q:String(q||'')});
     const S=[]; let curS=null;
@@ -3999,7 +4051,7 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
     const ok=S.filter(s=>s.t);
     if(ok.length<3) return null;
     if(SHO_JARGON.test(ok.map(s=>s.h+'\n'+s.t).join('\n'))) continue;   // 専門用語・漢文が残ったら1回だけ作り直す
-    if(sf&&/[◎〇○△✖×]/.test(ok.map(s=>s.t).join('\n'))) continue;   // 断定しない相談で答えの記号が出たら作り直す（2回目も出たら定型文に）
+    if(noSym&&/[◎〇○△✖×]/.test(ok.map(s=>s.t).join('\n'))) continue;   // 断定しない相談・亡くなった方・吉凶を問わない相談で答えの記号が出たら作り直す（2回目も出たら定型文に）
     return ok;
     }
     return null;   // 2回とも残ったときは、専門用語なしの定型文（内蔵データ）の鑑定書にする
@@ -4036,7 +4088,7 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
       box.innerHTML='<div style="text-align:center;padding:60px 10px;color:#5C5650;font-family:var(--sans);">📜 鑑定書を作成しています…<br><span style="font-size:13px"><span style="display:inline-block">（オンライン鑑定のときは</span><span style="display:inline-block">十数秒かかることがあります）</span></span></div>';
       try{ if(!cur.last.offline && canOnline() && navigator.onLine){ S=await shoOnline(r,q,p,ch); } }catch(e){ S=null; }
       if(!S) S=shoOffline(r,q,p,ch);
-      { const sf=ekiSafety(q); S=S.map(x=>({h:x.h, t:(function(t){ t=ekiSymWords(t); if(sf&&sf.crisis) t=ekiSoftCrisis(t); else if(sf&&!sf.block) t=ekiDropJudge(t); return t; })(x.t)})); }
+      S=ekiShoClean(S,r,q,p);
       cur.last.sho={key,S};
       shoBusy=false;
     }
@@ -4054,7 +4106,11 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
       <div class="ks-hexbox">
         <div class="ks-meta">易で占った結果</div>
         <div class="ks-hex">「${esc(mTheme(r.h))}」</div>
-        ${(function(){ const sf=ekiSafety(q); if(sf&&sf.crisis) return '<div class="ks-ans">'+esc(EKI_CRISIS_SAY)+'</div>'+ekiCrisisHTML(); if(sf) return '<div class="ks-ans">'+esc(sf.say)+'</div>'; return `<div class="ks-ans"><span style="display:inline-block">答え：${esc(EKI_SYM_WORD[sym]||sym)}</span>　${String(plainEki(ph)).replace(/[【】]/g,'').split(/(?<=。)/).map(function(x){ return '<span style="display:inline-block">'+esc(x)+'</span>'; }).join('')}</div>`   /* 文の途中（「急が／ないのが吉」）で折り返さない */; })()}
+        ${(function(){ const sf=ekiSafety(q); if(sf&&sf.crisis) return '<div class="ks-ans">'+esc(EKI_CRISIS_SAY)+'</div>'+ekiCrisisHTML(); if(sf) return '<div class="ks-ans">'+esc(sf.say)+'</div>';
+          /* 亡くなった方のご相談・吉凶を問わない相談は「答え：〜な流れ」を出さない（2026-11-02） */
+          const JUDGE=/大丈夫|進ん|進め|控え|見送|慎重|良い流れ|よい流れ|吉|凶|賢明/;   // 可否の言葉が入った一言は使わない
+          if(ekiDeceasedQ(q)) return '<div class="ks-ans">'+esc(ekiDecPhrase(String(plainEki(v.phrase||'')).replace(/[【】]/g,''),q))+'</div>';
+          if(ekiNoJudgeQ(q)){ const nph=String(plainEki(v.phrase||'')).replace(/[【】]/g,'').trim(); return nph&&!JUDGE.test(nph)?'<div class="ks-ans">'+esc(nph)+'</div>':''; } return `<div class="ks-ans"><span style="display:inline-block">答え：${esc(EKI_SYM_WORD[sym]||sym)}</span>　${String(plainEki(ph)).replace(/[【】]/g,'').split(/(?<=。)/).map(function(x){ return '<span style="display:inline-block">'+esc(x)+'</span>'; }).join('')}</div>`   /* 文の途中（「急が／ないのが吉」）で折り返さない */; })()}
       </div>
       ${shoSectionsHTML(S)}
       <div class="ks-foot">${esc(s.brand||'')}${s.name?'　'+esc(s.name):''}${s.role?'（'+esc(s.role)+'）':''}${s.contact?'<br>'+esc(s.contact):''}</div>
@@ -4866,7 +4922,7 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
     { const fb=document.getElementById('fuBirthBox'); if(fb) fb.open=false; }
     ['cErr','nErr'].forEach(i=>{ const e=document.getElementById(i); if(e){ e.hidden=true; e.textContent=''; } });
     const setv=(id,v)=>{ const e=document.getElementById(id); if(e) e.value=v; };
-    setv('question',''); setv('custNewName',''); setv('fuBd',''); setv('fuBt',''); setv('preBd',''); setv('preBt',''); setv('fuText',''); setv('readingMemo','');
+    setv('question',''); try{ if(window.__ekiDraftClear) window.__ekiDraftClear(); }catch(_){} setv('custNewName',''); setv('fuBd',''); setv('fuBt',''); setv('preBd',''); setv('preBt',''); setv('fuText',''); setv('readingMemo','');
     setv('num1',''); setv('num2',''); setv('num3',''); { const np=document.getElementById('nPreview'); if(np) np.innerHTML=''; }
     setv('mLower',''); setv('mUpper',''); setv('mKo',''); { const mp=document.getElementById('mPreview'); if(mp) mp.innerHTML=''; } try{ ekiManualErr(false); }catch(_){}   // 手動で指定した卦も、選ぶ前に戻す
     { const hb=document.getElementById('hexBand'); if(hb) hb.innerHTML=''; }
@@ -5172,7 +5228,7 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   .vfx-b.main{background:#6E5689;border-color:#6E5689;color:#FFFFFF}
   .vmic-msg{flex:1 1 100%;font-size:12.5px;font-weight:700;color:#4A463D;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}
 </style>
-<script>window.__VMIC_CFG={sel:'#question, #fuText',opt:'../mypage.html',w:'易の言葉（卦の名前など）',ws:'易の言葉',ex:'例：ちてんたい → 地天泰／かんいすい → 坎為水'};</script>
+<script>window.__VMIC_CFG={sel:'#question, #fuText',opt:'../mypage.html',w:'易の言葉（卦の名前など）',ws:'易の言葉',ex:'例：ちてんたい → 地天泰／かんいすい → 坎為水',kr:'鑑定の記録（顧客名簿・最近の鑑定）'};</script>
 <script>
 /* 声で入力（🎤）と「✕ 全部消す」＝3サイト共通（PRO・ビギナー・易 EKI Pro）。発注者決定 2026-10-18（2026-10-17 に PRO で試験導入→3サイト共通に）。
    ・ブラウザに入っている音声認識（Web Speech API）を使う＝声の聞き取りは費用0円（声はサーバーに送らない）。
@@ -5244,6 +5300,7 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   var FN=CFG.fn||'/.netlify/functions/voice-fix', OPT=CFG.opt||'';
   var OPT_ON=CFG.optOn===true;   // 音声入力オプション（月1,000円）の販売を始めたら true にする（鑑定者本人 2026-11-02「オプションは後から始めます」）。false のあいだは料金の案内を出さない
   var W=CFG.w||'占いの言葉（星の名前など）', WS=CFG.ws||'占いの言葉';
+  var KR=CFG.kr||'カルテ';   // 鑑定が残る場所の呼び名（易は「鑑定の記録（顧客名簿・最近の鑑定）」。2026-11-02）
   var EX=CFG.ex||'';   // はじめの案内に出す例（PRO＝月支元命・魁罡／ビギナー＝専門用語を出さない決まりなので甲子（甲子園）／易＝卦の名前。鑑定者本人の指示 2026-10-27）   // 易は「易の言葉（卦の名前など）」（鑑定者本人の指示 2026-10-27）
   var VS={option:null,left:null,trial:10,off:false};
   try{ var _v=JSON.parse(sessionStorage.getItem('pk_vfx')||'null'); if(_v) VS=Object.assign(VS,_v); }catch(_){}
@@ -5298,12 +5355,12 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
     if(lsGet('pk_vfx_end')) return; lsSet('pk_vfx_end',String(Date.now()));   // おためし終了の案内は1回だけ
     if(!OPT_ON){ pop('<h3>🎤 <span class="nw">無料のおためしが</span><span class="nw">終わりました</span></h3>'+
         '<p>🎤 声で入力は、<span class="nw">これからも<b>無料</b>で</span><span class="nw">そのままお使いいただけます。</span></p>'+
-        '<p class="vfx-s">話した言葉は相談の欄に入り、<span class="nw">鑑定するとそのままカルテに残ります。</span></p>',[{t:'閉じる'}]); return; }
+        '<p class="vfx-s">話した言葉は相談の欄に入り、<span class="nw">鑑定するとそのまま'+KR+'に残ります。</span></p>',[{t:'閉じる'}]); return; }
     var b=[{t:'あとで'}]; if(OPT) b.unshift({t:'オプションを見る',main:true,href:OPT});
     pop('<h3>🎤 <span class="nw">無料のおためしが</span><span class="nw">終わりました</span></h3>'+
         '<p>🎤 声で入力は、<span class="nw">これからも<b>無料</b>で</span><span class="nw">そのままお使いいただけます。</span></p>'+
         '<p><b class="nw">月1,000円のオプション</b>をつけると、<span class="nw">話した言葉を読みやすく整えて、</span><span class="nw">'+WS+'も正しい字に直します。</span><span class="nw">キーボードで打った文字も直ります。</span></p>'+
-        '<p class="vfx-s">話した言葉は相談の欄に入り、<span class="nw">鑑定するとそのままカルテに残ります。</span></p>',b);
+        '<p class="vfx-s">話した言葉は相談の欄に入り、<span class="nw">鑑定するとそのまま'+KR+'に残ります。</span></p>',b);
   }
   // おためしが終わったあと、無料の声の入力を20回使った方にだけ、もう1回だけ案内する（これで最後。何度も出さない）
   var FOLLOW_N=20;
@@ -5490,9 +5547,9 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
     if(BG) BG.set(n,r); return r;
   }
   function opac(n){ if(!n||n.nodeType!==1) return 1; if(OP&&OP.has(n)) return OP.get(n); var o=(+getComputedStyle(n).opacity)*opac(n.parentElement); if(OP) OP.set(n,o); return o; }
-  function fix(e){
+  function fix(e,cs){
     var own=''; for(var c=e.firstChild;c;c=c.nextSibling) if(c.nodeType===3) own+=c.nodeValue; if(!own.trim()) return;
-    var cs=getComputedStyle(e); if(cs.display==='none'||cs.visibility==='hidden') return;
+    cs=cs||getComputedStyle(e); if(cs.display==='none'||cs.visibility==='hidden') return;
     var fill=cs.webkitTextFillColor; if(fill&&/rgba\(0, 0, 0, 0\)|transparent/.test(fill)) return;   // 文字そのものがグラデーションのもの
     var fixed=e.hasAttribute('data-pkcg'), fg=P(fixed?(e.getAttribute('data-pkco')||cs.color):cs.color); if(!fg) return;   // 前に直した文字は、元の色で測り直す（背景が変わったら戻す・直し直す）
     var undo=function(){ if(!fixed) return; var o=e.getAttribute('data-pkcg'); if(o) e.style.setProperty('color',o); else e.style.removeProperty('color'); e.removeAttribute('data-pkcg'); e.removeAttribute('data-pkco'); };
@@ -5517,9 +5574,36 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
     var nv='rgb('+Math.round(c2[0])+', '+Math.round(c2[1])+', '+Math.round(c2[2])+')'; if(e.style.getPropertyValue('color')!==nv||e.style.getPropertyPriority('color')!=='important') e.style.setProperty('color',nv,'important');   // 同じ色なら触らない（自分の変更で何度も点検が走らないように）
   }
   var SKIP='script,style,noscript,svg,canvas,video,option,select,textarea,input,img,.yomi,.ysr,[aria-hidden="true"],[data-nocg]';   // data-nocg＝色を自分で決めている切りかえボタン（選ぶと背景が変わるので、前の色を残さない）
-  function pass(root){ if(!root||root.nodeType!==1) return;   /* 印刷中も、濃くするほうだけは動く（fix の中で白っぽくするのは止める） */ BG=new Map(); OP=new Map(); var list=[root].concat([].slice.call(root.querySelectorAll('*')));
-    for(var i=0;i<list.length;i++){ var e=list[i]; if(e.matches&&e.matches(SKIP)) continue; try{ fix(e); }catch(_e){} } BG=null; OP=null; }
+  // 点検のしかた（2026-11-02 速さの点検 chk_perf：押すたびにページ全体〈鑑定後は約5,000の要素〉を測り直して、折りたたみを1つ開くだけで数秒固まっていた）：
+  //  ・見えていないところ（display:none の中・閉じている <details> の中）は測らない。開いたとき・見えるようになったとき（下の見張りが気づく）に、その部分だけ測る。
+  //  ・押したとき（click）は、押したところのまわりの欄だけ測り直す（:checked などで色だけ変わるものも拾う）。
+  //  ・ページ全体を測り直すのは、開いたとき・1.5秒後・画面の幅が変わったとき・<html>/<body> の印（画面の色の切りかえなど）が変わったとき・印刷のときだけ。
+  //  読みにくい組み合わせを見つけて直す働き（fix）はそのまま。
+  function pass(root){ if(!root||root.nodeType!==1||!root.isConnected) return;   /* 印刷中も、濃くするほうだけは動く（fix の中で白っぽくするのは止める） */
+    try{ var cd=root.closest('details:not([open])'); if(cd&&cd!==root){ var sm=root.closest('summary'); if(!sm||sm.parentElement!==cd) return; } }catch(_e){}   // 閉じている欄の中は、開いたときに見る
+    BG=new Map(); OP=new Map(); var st=[root];
+    while(st.length){ var e=st.pop(), cs=null;
+      if(!(e.matches&&e.matches(SKIP))){ try{ cs=getComputedStyle(e); }catch(_e){} if(cs&&cs.display==='none') continue; try{ fix(e,cs); }catch(_e){} }
+      var ch=e.children; if(!ch||!ch.length) continue;
+      if(e.tagName==='DETAILS'&&!e.open){ for(var k=ch.length-1;k>=0;k--) if(ch[k].tagName==='SUMMARY') st.push(ch[k]); continue; }
+      for(var j=ch.length-1;j>=0;j--) st.push(ch[j]); }
+    BG=null; OP=null; }
+  function passAll(list){ var set=new Set(list.filter(function(n){ return n&&n.nodeType===1&&n.isConnected; }));   // 重なっている部分は、いちばん外側だけ測る
+    set.forEach(function(n){ for(var p=n.parentElement;p;p=p.parentElement){ if(set.has(p)){ set.delete(n); return; } } });
+    set.forEach(function(n){ pass(n); }); }
   var tm=null; function full(){ clearTimeout(tm); tm=setTimeout(function(){ pass(document.body); },350); }
+  // 押したところのまわり：押したボタン・札の入っている小さなまとまり（となりの札も選んだ色が変わるので一緒に）。大きな欄ごとは測らない（開いた欄・足された部分は下の見張りが測る）
+  var REG='[role="tablist"],[role="radiogroup"],[role="group"],[role="dialog"],dialog,fieldset,label,li,tr';
+  var ck=[], ckt=null; function near(ev){ var t=ev&&ev.target; if(t&&t.nodeType!==1) t=t.parentElement; if(!t||!t.closest) return;
+    if(t.closest('summary')) return;   // 欄の開け閉め：open の変化で、その欄だけ測る
+    var r=t.closest(REG)||t.parentElement||t; if(r===document.body||r===document.documentElement) r=t;
+    if(r.parentElement&&r.parentElement!==document.body&&r.parentElement.getElementsByTagName('*').length<=400) r=r.parentElement;
+    if(r.getElementsByTagName('*').length>1500) r=t;
+    ck.push(r); clearTimeout(ckt); ckt=setTimeout(function(){ var w=ck; ck=[]; passAll(w); },350); }
+  // <body> の印のうち、スクロールで付け外しするだけのもの（下の丸いボタンを薄くする・固定ボタンを出す）は、文字の色に関係しないので測り直さない
+  var MOTION={'fl-moving':1,'fl-idle':1,'sticky-on':1};
+  function onlyMotion(a,b){ var x={},k; String(a||'').split(/\s+/).forEach(function(t){ if(t) x[t]=(x[t]||0)+1; }); String(b||'').split(/\s+/).forEach(function(t){ if(t) x[t]=(x[t]||0)-1; }); for(k in x){ if(x[k]!==0&&!MOTION[k]) return false; } return true; }
+  var lastW=window.innerWidth; function rs(){ if(window.innerWidth===lastW) return; lastW=window.innerWidth; full(); }   // 高さだけの変化（スマホのアドレスバーの出し入れ）では測り直さない
   // 印刷：濃くした文字はそのまま印刷する。濃い背景の上で白っぽくした文字だけは、紙では背景の色が出ないことがあるので元に戻してから印刷し、終わったら画面用に戻す
   function unfixAll(){ [].forEach.call(document.querySelectorAll('[data-pkcg]'),function(e){ if(printing){ var f0=P(e.getAttribute('data-pkco')||''), f1=P(e.style.getPropertyValue('color')||''); if(f0&&f1&&L(f1)<=L(f0)) return; }   /* 印刷：濃くした文字はそのまま（紙でも読みやすく）。白っぽくした文字だけ元に戻す（紙では背景の色が出ないことがあるため）。発注者指示 2026-10-21 */ var o=e.getAttribute('data-pkcg'); if(o) e.style.setProperty('color',o); else e.style.removeProperty('color'); e.removeAttribute('data-pkcg'); e.removeAttribute('data-pkco'); }); }
   window.addEventListener('beforeprint',function(){ printing=true; unfixAll(); try{ pass(document.body); }catch(_e){} setTimeout(function(){ try{ pass(document.body); }catch(_e){} },0); });   // 印刷の直前に作り直された文字も濃くする
@@ -5527,10 +5611,11 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   var printing=false;
   function start(){
     pass(document.body); setTimeout(function(){ pass(document.body); },1500);
-    document.addEventListener('click',full,true); document.addEventListener('toggle',full,true); window.addEventListener('resize',full);
-    if(window.MutationObserver){ var q=[],qt=null; new MutationObserver(function(rs){ rs.forEach(function(r){ if(r.type==='childList'){ [].forEach.call(r.addedNodes,function(n){ if(n.nodeType===1) q.push(n); else if(n.parentElement) q.push(n.parentElement); }); } else if(r.target&&r.target.nodeType===1){ q.push(r.target); } });
-      if(!qt) qt=setTimeout(function(){ var w=q; q=[]; qt=null; w.forEach(function(n){ if(n.isConnected) pass(n); }); },200); })
-      .observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','hidden','open']}); }
+    document.addEventListener('click',near,true); window.addEventListener('resize',rs);   // 開いた欄（toggle）は、下の見張りが open の変化で気づいて、その欄だけ測る
+    if(window.MutationObserver){ var q=[],qt=null; new MutationObserver(function(rs){ rs.forEach(function(r){ if(r.type==='childList'){ [].forEach.call(r.addedNodes,function(n){ if(n.nodeType===1) q.push(n); else if(n.parentElement) q.push(n.parentElement); }); } else if(r.target&&r.target.nodeType===1){ if(r.target===document.body&&r.attributeName==='class'&&onlyMotion(r.oldValue,r.target.className)) return; q.push(r.target); } });
+      if(!qt) qt=setTimeout(function(){ var w=q; q=[]; qt=null; passAll(w); },200); })
+      .observe(document.body,{childList:true,subtree:true,attributes:true,attributeOldValue:true,attributeFilter:['class','style','hidden','open','data-theme','data-mode']});
+      new MutationObserver(function(){ full(); }).observe(document.documentElement,{attributes:true,attributeFilter:['class','style','data-theme','data-mode']}); }   // 画面の色の切りかえ（<html> の印）は全体が変わるので、全体を測り直す
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
 })();

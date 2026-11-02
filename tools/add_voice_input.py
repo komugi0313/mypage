@@ -39,7 +39,7 @@ def block(sel, border, accent, ink, msg, opt):
             f'  .vfx-b.main{{background:{accent};border-color:{accent};color:#FFFFFF}}\n'
             f'  .vmic-msg{{flex:1 1 100%;font-size:12.5px;font-weight:700;color:{msg};line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}}\n'
             '</style>\n'
-            f'<script>window.__VMIC_CFG={{sel:{sel!r},opt:{opt!r}' + (",w:'易の言葉（卦の名前など）',ws:'易の言葉',ex:'例：ちてんたい → 地天泰／かんいすい → 坎為水'" if 'eki' in opt or opt.startswith('../') else ",ex:'例：げっしげんめい → 月支元命／かいごう → 魁罡'") + '};</script>\n'
+            f'<script>window.__VMIC_CFG={{sel:{sel!r},opt:{opt!r}' + (",w:'易の言葉（卦の名前など）',ws:'易の言葉',ex:'例：ちてんたい → 地天泰／かんいすい → 坎為水',kr:'鑑定の記録（顧客名簿・最近の鑑定）'" if 'eki' in opt or opt.startswith('../') else ",ex:'例：げっしげんめい → 月支元命／かいごう → 魁罡'") + '};</script>\n'
             '<script>\n' + JS.rstrip() + '\n</script>\n'
             '<!--VOICE-INPUT:end-->')
 
