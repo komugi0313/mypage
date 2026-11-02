@@ -8,21 +8,48 @@ const ASSETS = [
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  './apple-touch-icon-180.png'
+  './apple-touch-icon-180.png',
+  '../favicon-16.png',
+  '../favicon-32.png'
 ];
 
+// 更新のとき（install）：一式を全部取れたときだけ新しい版に切りかえる。
+// 1つでも取れなければ install を失敗させる＝古い版（とその保存分）がそのまま残り、圏外でも今までどおり開ける。
+// 電波が弱いときのために、1つのファイルにつき3回まで取り直す。途中まで取れた新しい版の保存分は消しておく。
+const FONT_CACHE = 'eki-fonts';   // Google Fonts の CSS・フォント（版をまたいで残す）
+function fetchAsset(u, n) {
+  return fetch(new Request(u, { cache: 'reload' })).then(r => {
+    if (!r || !r.ok) throw new Error('asset ' + u + ' ' + (r && r.status));
+    // 「.html なし」のURLへ転送された答えは、そのままだとページを開くときに使えないので、中身だけで作り直す
+    return r.redirected ? r.blob().then(b => new Response(b, { status: 200, headers: r.headers })) : r;
+  }).catch(err => (n > 1 ? new Promise(res => setTimeout(res, 800)).then(() => fetchAsset(u, n - 1)) : Promise.reject(err)));
+}
 self.addEventListener('install', e => {
-  self.skipWaiting();
-  // 1件失敗しても他は残るよう個別に取得（本体index.htmlの取りこぼし防止）
-  e.waitUntil(caches.open(CACHE).then(c => Promise.all(ASSETS.map(a => c.add(a).catch(() => {})))));
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(c => Promise.all(ASSETS.map(a => fetchAsset(a, 3).then(r => c.put(a, r)))))
+      .then(() => self.skipWaiting())
+      .catch(err => caches.delete(CACHE).then(() => { throw err; }))
+  );
 });
 
+// 新しい版がそろってから（＝install が成功したあとだけ）古い版の保存分を消す。
+// 前の版があった（＝更新だった）ときは、開いている画面に { type:'sw-updated', version: CACHE } を送る。
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys()
-      .then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
+    caches.keys().then(ks => {
+      const old = ks.filter(k => k !== CACHE && k !== FONT_CACHE);
+      return caches.has(CACHE).then(ok => (ok ? Promise.all(old.map(k => caches.delete(k))) : null))
+        .then(() => self.clients.claim())
+        .then(() => (old.length ? self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+          .then(cs => cs.forEach(cl => cl.postMessage({ type: 'sw-updated', version: CACHE }))) : null));
+    })
   );
+});
+
+// 画面から「今の版は？」と聞かれたら答える（postMessage({type:'sw-version'})）
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'sw-version' && e.source) e.source.postMessage({ type: 'sw-version', version: CACHE });
 });
 
 self.addEventListener('fetch', e => {
@@ -34,6 +61,18 @@ self.addEventListener('fetch', e => {
 
   // Gemini等の外部API・他オリジンは触らない（常にネットワーク）
   if (!sameOrigin && !isFont) return;
+
+  // Google Fonts：CSS（no-cors で読むので中身の見えない答え）も取っておき、圏外でも同じ字体で開く。
+  // CSS は保存分をすぐ返し裏で取り直す。フォントは保存分があればそれを使う。
+  if (isFont) {
+    e.respondWith(caches.open(FONT_CACHE).then(fc => fc.match(req).then(hit => {
+      if (hit && /fonts\.gstatic/.test(url.host)) return hit;
+      const net = fetch(req).then(r => { if (r && (r.ok || r.type === 'opaque')) fc.put(req, r.clone()); return r; });
+      if (hit) { net.catch(() => null); return hit; }
+      return net.catch(() => caches.match(req).then(m => m || Response.error()));
+    })));
+    return;
+  }
 
   // ページ遷移：ネット優先。ただし電波が弱く3秒待っても返ってこないときは、保存してある本体ですぐ起動する
   // （裏で取得できたら次回のために保存しておく）

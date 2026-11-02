@@ -19,27 +19,63 @@ const ASSETS = [
   'kanshi-aisho.html', 'aisho-pattern.html', 'daiun-tsuhen.html', 'setsuboku.html', 'tensen-chichu.html', 'hikiai.html', 'nayin-aisho.html', 'boko-kaichu.html', 'kaikyoku.html', 'inyoku.html', 'nichiza.html', 'kodoku.html', 'kaigou.html'
 ];
 
+// 更新のとき（install）：一式を全部取れたときだけ新しい版に切りかえる。
+// 1つでも取れなければ install を失敗させる＝古い版（とその保存分）がそのまま残り、圏外でも今までどおり開ける。
+// 電波が弱いときのために、1つのファイルにつき3回まで取り直す。途中まで取れた新しい版の保存分は消しておく。
+const FONT_CACHE = 'pk-fonts';   // Google Fonts の CSS・フォント（版をまたいで残す）
+function fetchAsset(u, n) {
+  return fetch(new Request(u, { cache: 'reload' })).then((res) => {
+    if (!res || !res.ok) throw new Error('asset ' + u + ' ' + (res && res.status));
+    // 「.html なし」のURLへ転送された答えは、そのままだとページを開くときに使えないので、中身だけで作り直す
+    return res.redirected ? res.blob().then((b) => new Response(b, { status: 200, headers: res.headers })) : res;
+  }).catch((err) => (n > 1 ? new Promise((r) => setTimeout(r, 800)).then(() => fetchAsset(u, n - 1)) : Promise.reject(err)));
+}
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE)
-      .then((c) => Promise.all(ASSETS.map((u) => c.add(u).catch(() => null))))
+      .then((c) => Promise.all(ASSETS.map((u) => fetchAsset(u, 3).then((res) => c.put(u, res)))))
       .then(() => self.skipWaiting())
+      .catch((err) => caches.delete(CACHE).then(() => { throw err; }))
   );
 });
 
+// 新しい版がそろってから（＝install が成功したあとだけ）古い版の保存分を消す。
+// 前の版があった（＝更新だった）ときは、開いている画面に { type:'sw-updated', version: CACHE } を送る
+// （画面側で「新しい版があります（読み込み直す）」を出すため）。
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim())
+    caches.keys().then((keys) => {
+      const old = keys.filter((k) => k !== CACHE && k !== FONT_CACHE);
+      return caches.has(CACHE).then((ok) => (ok ? Promise.all(old.map((k) => caches.delete(k))) : null))
+        .then(() => self.clients.claim())
+        .then(() => (old.length ? self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+          .then((cs) => cs.forEach((cl) => cl.postMessage({ type: 'sw-updated', version: CACHE }))) : null));
+    })
   );
+});
+
+// 画面から「今の版は？」と聞かれたら答える（postMessage({type:'sw-version'})）
+self.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'sw-version' && e.source) e.source.postMessage({ type: 'sw-version', version: CACHE });
 });
 
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;                       // 送信系はそのまま
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;        // 生成AI等の外部通信は素通し
+  if (url.origin !== self.location.origin) {
+    // Google Fonts：CSS（fonts.googleapis.com）とフォント（fonts.gstatic.com）は取っておき、圏外でも同じ字体で開く。
+    // CSS は保存分をすぐ返し、裏で取り直す。フォントは保存分があればそれを使う。そのほかの外部通信（生成AI等）は素通し。
+    if (/^fonts\.(googleapis|gstatic)\.com$/.test(url.host)) {
+      e.respondWith(caches.open(FONT_CACHE).then((fc) => fc.match(req).then((hit) => {
+        if (hit && url.host === 'fonts.gstatic.com') return hit;
+        const net = fetch(req).then((res) => { if (res && (res.ok || res.type === 'opaque')) fc.put(req, res.clone()); return res; });
+        if (hit) { net.catch(() => null); return hit; }
+        return net;
+      })));
+    }
+    return;
+  }
 
   // stale-while-revalidate：まずキャッシュを即返し、裏で最新を取り直して次回に備える。
   // ・鑑定書（meishi-sheet.html?d=…&name=…）などの「?」以降が付いたURLも、ページ本体のキャッシュで開く（圏外でも鑑定書が出る）。
