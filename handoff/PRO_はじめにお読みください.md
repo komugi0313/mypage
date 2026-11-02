@@ -38,7 +38,7 @@
 - `index.html`（LP。会員の端末はアプリへ移動。`?lp=1` で LP を表示）・`app-pro.html`（鑑定ツール本体）・`meishi-sheet.html`（鑑定書）
 - `pricing-pro.html`（申込・最終確認・決済からの戻り）・`auth.html`（ログイン等）・`mypage-pro.html`（マイページ）
 - `terms-pro.html`・`privacy-pro.html`・`tokushoho-pro.html`（規約・プライバシー・特商法）
-- `functions/gemini.js`（中継の雛形）・`netlify.toml`・`sw.js`・`manifest-pro.webmanifest`
+- `functions/gemini.js`（中継の雛形）・`netlify.toml`・`_headers`（CSP などの応答の見出し。依頼書 §3-6）・`sw.js`・`manifest-pro.webmanifest`
 - `IMPLEMENTATION_SPEC_for_engineer.md`（会員・決済・API の仕様＝共通基盤）
 
 ## 4. 触ってはいけないもの

@@ -10,11 +10,16 @@
 //       音声入力オプション（月1,000円）の会員 … 会員確認の答えに voiceOption:true がある人。月 PK_VOICE_MONTH 回（既定3000）まで。
 //       それ以外の会員 … おためし PK_VOICE_TRIAL 回（既定10）まで（会員ごと・商品ごと・期限なし）。使い切ったら 402 VOICE_OPTION。
 //       1回に数えるのは、文が実際に直った・整ったときだけ。回数が数えられないとき（保存場所が使えない）は left:null（画面に残りを出さない）。
+//       本番（URL か MEMBER_CHECK_URL がある環境）で保存場所が使えないときは、Gemini を呼ばずに 503 STORE（数えずに通さない。画面は無料の聞き取りで続く）。
+//       数える値は、呼ぶ前に1回分を取り置き（Netlify Blobs の条件付き書き込み＝etag）、直らなかった・失敗したときは戻す＝同時にたくさん送っても上限をこえない。
+//   ・会員確認には {token, product} を送る。memberId が無い答えは 503 MEMBER_ID、product（products）がこの商品とちがえば 403 PRODUCT。ヘッダ X-Product がちがう商品でも 403。
+//   ・Google へはキーをヘッダ x-goog-api-key で送る（URL に入れない）。会員確認 PK_MEMBER_TIMEOUT_MS（既定5000）・Google PK_UPSTREAM_TIMEOUT_MS（既定20000）で打ち切る。
+//   ・送るのは入力した文字だけ。お名前を伏せるのは画面の仕事（画面が保存したお客様のお名前を印に置きかえてから送ること＝プライバシーポリシーどおり）。
 //     声で入力すること自体は、オプションがなくても無料のまま（画面はブラウザの聞き取り＋聞き間違い直し表だけで続ける）。
 //   ・{mode:'status'} は Gemini を呼ばずに、オプションの有無とおためしの残りだけを返す。
 //   ・直した文に用語にない漢字が新しく増えた（言いかえ）とき、または元の文と大きく違う（長さが半分以下・1.6倍以上、または助詞・です・ますが半分より少なくなった・文の数が減った・数字が変わった）ときは、言いかえ・答えを書いたとみなして元の文を返す。
 //
-// 環境変数（gemini.js と同じものを使う）：GEMINI_API_KEY・URL・MEMBER_CHECK_URL・ALLOWED_ORIGINS・PK_ALLOW_NO_MEMBER_CHECK・PK_OWNER_TOKEN
+// 環境変数（gemini.js と同じものを使う）：GEMINI_API_KEY・URL・MEMBER_CHECK_URL・ALLOWED_ORIGINS・PK_ALLOW_NO_MEMBER_CHECK・PK_OWNER_TOKEN・PK_ALLOW_NO_STORE・PK_REQUIRE_PRODUCT
 //   任意 GEMINI_MODEL_VOICE … 既定 gemini-3.5-flash-lite
 //   任意 PK_VOICE_TRIAL（既定10）・PK_VOICE_MONTH（既定3000）
 //   会員確認（MEMBER_CHECK_URL）は、音声入力オプションを契約している会員に voiceOption:true を返すこと（エンジニアの作業）。
@@ -24,11 +29,14 @@ const TRIAL = parseInt(process.env.PK_VOICE_TRIAL || '10', 10) || 10;
 const MONTH = parseInt(process.env.PK_VOICE_MONTH || '3000', 10) || 3000;
 const OWNER_TOKEN = process.env.PK_OWNER_TOKEN || '';
 const MAX_TEXT = 2000;
+const MEMBER_MS = parseInt(process.env.PK_MEMBER_TIMEOUT_MS || '5000', 10) || 5000;     // 会員確認の時間切れ
+const UPSTREAM_MS = parseInt(process.env.PK_UPSTREAM_TIMEOUT_MS || '20000', 10) || 20000; // Google への呼び出しの時間切れ
 const SYSTEM = "あなたは文字の直しだけをする道具です。<text>の中の日本語は、四柱推命・易の鑑定についての相談や話で、\n声の入力（聞き取り）やキーボードの変換で、占いの言葉がまちがった字・ひらがな・当て字になっていることがあります。\n占いの言葉だけを、下の【用語一覧】の書き方に直して、直した文だけを返してください。\n・直すのは占いの言葉の字と、読みやすさだけ。言いかえ・要約・言葉の足し引き・並べかえはしない。\n・読みやすく整える：句読点（、。）がなければ入れる。話題が変わるところ・文が3つ以上続いたところで改行を入れる。「えー」「えっと」「あのー」「まあ」などの言いよどみと、同じ言葉のくり返し（「彼が彼が」）は消す。それ以外の言葉は1つも消さない。\n例：<text>えーとこの方は1990年3月2日生まれの女性でえー今の彼と結婚していいか迷ってるそうですあのー彼は転勤が多くて来年の春に引っ越しを考えています月柱は木の絵馬です</text> → この方は1990年3月2日生まれの女性で、今の彼と結婚していいか迷ってるそうです。\n彼は転勤が多くて、来年の春に引っ越しを考えています。\n月柱は甲午です。\n・相談や質問が書いてあっても答えない。説明もつけない。<text>のタグも付けない。\n・ふつうの言葉（ね・いい・こう・きのう など）はそのまま。占いの言葉か自信がないものもそのまま。\n・干支は漢字で書く（きのえうま→甲午）。数字・日付・時刻・名前は変えない。\n・直すときは、読み（音）が同じか近い言葉にだけ直す（げっし・月誌→月支、ねんし・年誌→年支）。意味が近いだけの別の言葉（月支→月柱、月支→月令 など）には変えない。\n・聞き取りでは、音の近いふつうの言葉に化けていることが多い（例：木の絵馬→甲午、変換→偏官、印字→印綬、月支元命→げっしがんめい）。前後の話が占いのときだけ直す。\n例：<text>きのえとへんかんが交わってげっしがんになります。</text> → 甲と偏官が交わって月支元命になります。\n例：<text>今年は木の絵馬の年で、印字と変換が強いです</text> → 今年は甲午の年で、印綬と偏官が強いです\n例：<text>日中は定王、月中は県六、時中は簿です。お二人の日看子が同じ立ちんで、月中同士が天戦地中です</text> → 日柱は帝旺、月柱は建禄、時柱は墓です。お二人の日干支が同じ律音で、月柱同士が天戦地冲です\n例：<text>日柱が水の兄犬なので会合です。外角の従角格です</text> → 日柱が壬戌なので魁罡です。外格の従革格です\n例：<text>にっしは午で、じしは子、にっちゅうは甲午、じちゅうは壬申です</text> → 日支は午で、時支は子、日柱は甲午、時柱は壬申です\n例：<text>日中に会社で会合があって、月中は忙しかった</text> → 日中に会社で会合があって、月中は忙しかった（ふつうの言葉。命式の話ではないのでそのまま）\n・文や言葉を1つも消さない（生年月日・名前・ふつうの文もすべて残す）。直せないときは、そのまま残す。\n例：<text>彼と結婚していいか迷っています。転勤が多い仕事です</text> → 彼と結婚していいか迷っています。転勤が多い仕事です\n\n【よくある書きまちがい】（まちがい→正しい）\n支柱推命→四柱推命\n四柱推名→四柱推命\n4柱推命→四柱推命\n四中推命→四柱推命\n体運→大運\n大雲→大運\n立雲→立運\n年雲→年運\n通変性→通変星\n通辺星→通変星\n通変製→通変星\n12運星→十二運星\n12運→十二運\n十二雲→十二運\nてんちゅう殺→天中殺\n日県→比肩\n比県→比肩\n非件→比肩\n秘剣→比肩\n駅経→易経\n益経→易経\n立ちん→律音\n立沈→律音\n日看子→日干支\n日刊誌→日干支\n規律格→帰禄格\n気力格→帰禄格\n天戦地中→天戦地冲\n会合日→魁罡日\n配偶及→配偶宮\n配偶球→配偶宮\n豪在→劫財\n変印→偏印\n印字→印綬\n変在→偏財\n正在→正財\n商館→傷官\n食人→食神\n変換→偏官\n定王→帝旺\n県六→建禄\n木浴→沐浴\n見往→身旺\n気神→喜神\n天乙気人→天乙貴人\n勘知→咸池\n紅炎→紅艶\n駅場→駅馬\n洋人→羊刃\n支号→支合\n完工→干合\n三号→三合\n空房→空亡\n増間→蔵干\n従角格→従革格\n強欧格→強旺格\n地点体→地天泰\n三校→三爻\n作家→錯卦\n木の絵馬→甲午\n火の兄馬→丙午\n八家→八卦\n八景→八卦\n月中→月柱\n時中→時柱\n年誌→年支\n月誌→月支\n日誌→日支\n時誌→時支\n日刊→日干\n月刊→月干\nじし→時支\nにっし→日支\nねんし→年支\nにっちゅう→日柱\nげっちゅう→月柱\nじちゅう→時柱\nねんちゅう→年柱\n召喚→傷官\n危険→忌神\n機神→忌神\n日見→比肩\n\n【用語一覧】（読み：書き方）\nきのえ：甲\nきのと：乙\nひのえ：丙\nひのと：丁\nつちのえ：戊\nつちのと：己\nかのえ：庚\nかのと：辛\nみずのえ：壬\nみずのと：癸\nひつじ：未\nきのえね：甲子\nきのとうし：乙丑\nひのえとら：丙寅\nひのとう：丁卯\nつちのえたつ：戊辰\nつちのとみ：己巳\nかのえうま：庚午\nかのとひつじ：辛未\nみずのえさる：壬申\nみずのととり：癸酉\nきのえいぬ：甲戌\nきのとい：乙亥\nひのえね：丙子\nひのとうし：丁丑\nつちのえとら：戊寅\nつちのとう：己卯\nかのえたつ：庚辰\nかのとみ：辛巳\nみずのえうま：壬午\nみずのとひつじ：癸未\nきのえさる：甲申\nきのととり：乙酉\nひのえいぬ：丙戌\nひのとい：丁亥\nつちのえね：戊子\nつちのとうし：己丑\nかのえとら：庚寅\nかのとう：辛卯\nみずのえたつ：壬辰\nみずのとみ：癸巳\nきのえうま：甲午\nきのとひつじ：乙未\nひのえさる：丙申\nひのととり：丁酉\nつちのえいぬ：戊戌\nつちのとい：己亥\nかのえね：庚子\nかのとうし：辛丑\nみずのえとら：壬寅\nみずのとう：癸卯\nきのえたつ：甲辰\nきのとみ：乙巳\nひのえうま：丙午\nひのとひつじ：丁未\nつちのえさる：戊申\nつちのととり：己酉\nかのえいぬ：庚戌\nかのとい：辛亥\nみずのえね：壬子\nみずのとうし：癸丑\nきのえとら：甲寅\nきのとう：乙卯\nひのえたつ：丙辰\nひのとみ：丁巳\nつちのえうま：戊午\nつちのとひつじ：己未\nかのえさる：庚申\nかのととり：辛酉\nみずのえいぬ：壬戌\nみずのとい：癸亥\nしちゅうすいめい：四柱推命\nめいしき：命式\nりゅうは：流派\nねんちゅう：年柱\nげっちゅう：月柱\nにっちゅう：日柱\nじちゅう：時柱\nてんかん：天干\nぞうかん：蔵干\nしれい：司令\nちゅうき：中気\nほんき：本気\nせいき：正気\nにっかん：日干\nにっしゅ：日主\nげっしげんめい：月支元命\nはいぐうきゅう：配偶宮\nだいうん：大運\nりつうん：立運\nじゅんこう：順行\nぎゃっこう：逆行\nねんうん：年運\nげつうん：月運\nにちうん：日運\nせついり：節入り\nじさほせい：時差補正\nごぎょう：五行\nもっかどごんすい：木火土金水\nそうじょう：相生\nそうこく：相剋\nなっちん：納音\nくうぼう：空亡\nてんちゅうさつ：天中殺\nきしん：喜神\nきじん：忌神\nようじん：用神\nみおう：身旺\nみきょう：身強\nみじゃく：身弱\nちゅうわ：中和\nげつれい：月令\nとうしゅつ：透出\nたいか：太過\nろくしん：六親\nひごう：比劫\nしょくしょう：食傷\nざいせい：財星\nかんさつ：官殺\nかんせい：官星\nいんせい：印星\nざいせいこんざつ：財星混雑\nかんさつこんざつ：官殺混雑\nつうへんせい：通変星\nひけん：比肩\nごうざい：劫財\nしょくじん：食神\nしょうかん：傷官\nへんざい：偏財\nせいざい：正財\nへんかん：偏官\nせいかん：正官\nへんいん：偏印\nいんじゅ：印綬\nしちさつ：七殺\nとうしょく：倒食\nじゅうにうん：十二運\nじゅうにうんせい：十二運星\nちょうせい：長生\nもくよく：沐浴\nかんたい：冠帯\nけんろく：建禄\nていおう：帝旺\nびょう：病\nてんおつきじん：天乙貴人\nたいきょくきじん：大極貴人\nふくせいきじん：福星貴人\nぶんしょうきじん：文昌貴人\nてんとくきじん：天徳貴人\nげっとくきじん：月徳貴人\nてんとくごう：天徳合\nげっとくごう：月徳合\nろくばきじん：禄馬貴人\nあんろく：暗禄\nきんよろく：金与禄\nようじん：羊刃\nひじん：飛刃\nにちじん：日刃\nけつじん：血刃\nかいごう：魁罡\nこうえん：紅艶\nかんち：咸池\nかがい：華蓋\nえきば：駅馬\nごうさつ：劫殺\nぼうじん：亡神\nしゅうごく：囚獄\nかくかく：隔角\nいんよくさつ：淫欲殺\nかんごう：干合\nしごう：支合\nさんごう：三合\nほうごう：方合\nはんかい：半会\nはんごう：半合\nかいきょく：会局\nごうか：合化\nちゅう：冲\nじけい：自刑\nりっちん：律音\nてんせんちちゅう：天戦地冲\nちゅうせいのごう：中正の合\nじんぎのごう：仁義の合\nいせいのごう：威勢の合\nいんいつのごう：淫泆の合\nむじょうのごう：無情の合\nいうひつじ：亥卯未\nさるねたつ：申子辰\nとらうまいぬ：寅午戌\nみとりうし：巳酉丑\nかくきょく：格局\nないかく：内格\nがいかく：外格\nかきかく：化気格\nいっこうきとくかく：一行気得格\nきょくちょくかく：曲直格\nえんじょうかく：炎上格\nじゅうかくかく：従革格\nじゅんかかく：潤下格\nかしょくかく：稼穡格\nきょうおうかく：強旺格\nじゅうおうかく：従旺格\nじゅうじかく：従児格\nじゅうざいかく：従財格\nじゅうさつかく：従殺格\nけんろくかく：建禄格\nようじんかく：羊刃格\nげつじんかく：月刃格\nりょうしんせいしょうかく：両神成象格\nけんろくげつごうかく：建禄月劫格\nきろくかく：帰禄格\nせいかんかく：正官格\nへんかんかく：偏官格\nせいざいかく：正財格\nへんざいかく：偏財格\nしょくじんかく：食神格\nしょうかんかく：傷官格\nいんじゅかく：印綬格\nへんいんかく：偏印格\nかんさつこんざつかく：官殺混雑格\nかんいんかく：官印格\nざいかんそうび：財官双美\nざいかんかく：財官格\nさついんせいかかく：殺印生化格\nさついんかく：殺印格\nざいさつかく：財殺格\nせいさつかく：制殺格\nじじょういちいきかく：時上一位貴格\nじじょうへんざいかく：時上偏財格\nしょくじんせいざいかく：食神生財格\nせんしょくろくかく：専食禄格\nしょうかんはいいんかく：傷官佩印格\nしょうかんせいざいかく：傷官生財格\nしょうかんやぶれつくすかく：傷官破れ尽す格\nえききょう：易経\nほんか：本卦\nそうか：綜卦\nさくか：錯卦\nこうじ：爻辞\nしょこう：初爻\nじょうこう：上爻\nようこう：陽爻\nいんこう：陰爻\nはっか：八卦\nはっけ：八卦\nけんいてん：乾為天\nこんいち：坤為地\nすいらいちゅん：水雷屯\nさんすいもう：山水蒙\nすいてんじゅ：水天需\nてんすいしょう：天水訟\nちすいし：地水師\nすいちひ：水地比\nふうてんしょうちく：風天小畜\nてんたくり：天沢履\nちてんたい：地天泰\nてんちひ：天地否\nてんかどうじん：天火同人\nかてんたいゆう：火天大有\nちざんけん：地山謙\nらいちよ：雷地豫\nたくらいずい：沢雷随\nさんぷうこ：山風蠱\nちたくりん：地沢臨\nふうちかん：風地観\nからいぜいこう：火雷噬嗑\nさんかひ：山火賁\nさんちはく：山地剥\nちらいふく：地雷復\nてんらいむぼう：天雷无妄\nさんてんたいちく：山天大畜\nさんらいい：山雷頤\nたくふうたいか：沢風大過\nかんいすい：坎為水\nたくざんかん：沢山咸\nらいふうこう：雷風恒\nてんざんとん：天山遯\nらいてんたいそう：雷天大壮\nかちしん：火地晋\nちかめいい：地火明夷\nふうかかじん：風火家人\nかたくけい：火沢睽\nすいざんけん：水山蹇\nらいすいかい：雷水解\nさんたくそん：山沢損\nふうらいえき：風雷益\nたくてんかい：沢天夬\nてんぷうこう：天風姤\nたくちすい：沢地萃\nちふうしょう：地風升\nたくすいこん：沢水困\nすいふうせい：水風井\nたくかかく：沢火革\nかふうてい：火風鼎\nしんいらい：震為雷\nごんいざん：艮為山\nふうざんぜん：風山漸\nらいたくきまい：雷沢帰妹\nらいかほう：雷火豊\nかざんりょ：火山旅\nそんいふう：巽為風\nだいたく：兌為沢\nふうすいかん：風水渙\nすいたくせつ：水沢節\nふうたくちゅうふ：風沢中孚\nらいざんしょうか：雷山小過\nすいかきせい：水火既済\nかすいびせい：火水未済\nりいか：離為火\nにっかんし：日干支\nげっかんし：月干支\nねんし：年支\nげっし：月支\nにっし：日支\nねんかん：年干\nげっかん：月干\nじかん：時干";
 // 1語だけのとき（「にっちゅう」など）は、用語一覧の読み・化けやすい形と完全に同じなら、その漢字にそのまま変える（Gemini を呼ばない）
 const DICT = {"あんろく": "暗禄", "いうひつじ": "亥卯未", "いせいのごう": "威勢の合", "いっこうきとくかく": "一行気得格", "いんいつのごう": "淫泆の合", "いんこう": "陰爻", "いんじゅ": "印綬", "いんじゅかく": "印綬格", "いんせい": "印星", "いんよくさつ": "淫欲殺", "えききょう": "易経", "えきば": "駅馬", "えんじょうかく": "炎上格", "かいきょく": "会局", "かいごう": "魁罡", "かがい": "華蓋", "かきかく": "化気格", "かくかく": "隔角", "かくきょく": "格局", "かざんりょ": "火山旅", "かしょくかく": "稼穡格", "かすいびせい": "火水未済", "かたくけい": "火沢睽", "かちしん": "火地晋", "かてんたいゆう": "火天大有", "かのえ": "庚", "かのえいぬ": "庚戌", "かのえうま": "庚午", "かのえさる": "庚申", "かのえたつ": "庚辰", "かのえとら": "庚寅", "かのえね": "庚子", "かのと": "辛", "かのとい": "辛亥", "かのとう": "辛卯", "かのとうし": "辛丑", "かのととり": "辛酉", "かのとひつじ": "辛未", "かのとみ": "辛巳", "かふうてい": "火風鼎", "からいぜいこう": "火雷噬嗑", "かんいすい": "坎為水", "かんいんかく": "官印格", "かんごう": "干合", "かんさつ": "官殺", "かんさつこんざつ": "官殺混雑", "かんさつこんざつかく": "官殺混雑格", "かんせい": "官星", "かんたい": "冠帯", "かんち": "咸池", "がいかく": "外格", "きしん": "喜神", "きじん": "忌神", "きのえ": "甲", "きのえいぬ": "甲戌", "きのえうま": "甲午", "きのえさる": "甲申", "きのえたつ": "甲辰", "きのえとら": "甲寅", "きのえね": "甲子", "きのと": "乙", "きのとい": "乙亥", "きのとう": "乙卯", "きのとうし": "乙丑", "きのととり": "乙酉", "きのとひつじ": "乙未", "きのとみ": "乙巳", "きょうおうかく": "強旺格", "きょくちょくかく": "曲直格", "きろくかく": "帰禄格", "きんよろく": "金与禄", "ぎゃっこう": "逆行", "くうぼう": "空亡", "けつじん": "血刃", "けんいてん": "乾為天", "けんろく": "建禄", "けんろくかく": "建禄格", "けんろくげつごうかく": "建禄月劫格", "げっかん": "月干", "げっかんし": "月干支", "げっし": "月支", "げっしげんめい": "月支元命", "げっちゅう": "月柱", "げっとくきじん": "月徳貴人", "げっとくごう": "月徳合", "げつうん": "月運", "げつじんかく": "月刃格", "げつれい": "月令", "こうえん": "紅艶", "こうじ": "爻辞", "こんいち": "坤為地", "ごうか": "合化", "ごうさつ": "劫殺", "ごうざい": "劫財", "ごぎょう": "五行", "ごんいざん": "艮為山", "さくか": "錯卦", "さついんかく": "殺印格", "さついんせいかかく": "殺印生化格", "さるねたつ": "申子辰", "さんかひ": "山火賁", "さんごう": "三合", "さんすいもう": "山水蒙", "さんたくそん": "山沢損", "さんちはく": "山地剥", "さんてんたいちく": "山天大畜", "さんぷうこ": "山風蠱", "さんらいい": "山雷頤", "ざいかんかく": "財官格", "ざいかんそうび": "財官双美", "ざいさつかく": "財殺格", "ざいせい": "財星", "ざいせいこんざつ": "財星混雑", "しごう": "支合", "しちさつ": "七殺", "しちゅうすいめい": "四柱推命", "しゅうごく": "囚獄", "しょうかん": "傷官", "しょうかんかく": "傷官格", "しょうかんせいざいかく": "傷官生財格", "しょうかんはいいんかく": "傷官佩印格", "しょうかんやぶれつくすかく": "傷官破れ尽す格", "しょくしょう": "食傷", "しょくじん": "食神", "しょくじんかく": "食神格", "しょくじんせいざいかく": "食神生財格", "しょこう": "初爻", "しれい": "司令", "しんいらい": "震為雷", "じかん": "時干", "じけい": "自刑", "じさほせい": "時差補正", "じし": "時支", "じじょういちいきかく": "時上一位貴格", "じじょうへんざいかく": "時上偏財格", "じちゅう": "時柱", "じゅうおうかく": "従旺格", "じゅうかくかく": "従革格", "じゅうさつかく": "従殺格", "じゅうざいかく": "従財格", "じゅうじかく": "従児格", "じゅうにうん": "十二運", "じゅうにうんせい": "十二運星", "じゅんかかく": "潤下格", "じゅんこう": "順行", "じょうこう": "上爻", "じんぎのごう": "仁義の合", "すいかきせい": "水火既済", "すいざんけん": "水山蹇", "すいたくせつ": "水沢節", "すいちひ": "水地比", "すいてんじゅ": "水天需", "すいふうせい": "水風井", "すいらいちゅん": "水雷屯", "せいかん": "正官", "せいかんかく": "正官格", "せいき": "正気", "せいさつかく": "制殺格", "せいざい": "正財", "せいざいかく": "正財格", "せついり": "節入り", "せんしょくろくかく": "専食禄格", "そうか": "綜卦", "そうこく": "相剋", "そうじょう": "相生", "そんいふう": "巽為風", "ぞうかん": "蔵干", "たいか": "太過", "たいきょくきじん": "大極貴人", "たくかかく": "沢火革", "たくざんかん": "沢山咸", "たくすいこん": "沢水困", "たくちすい": "沢地萃", "たくてんかい": "沢天夬", "たくふうたいか": "沢風大過", "たくらいずい": "沢雷随", "だいうん": "大運", "だいたく": "兌為沢", "ちかめいい": "地火明夷", "ちざんけん": "地山謙", "ちすいし": "地水師", "ちたくりん": "地沢臨", "ちてんたい": "地天泰", "ちふうしょう": "地風升", "ちゅう": "冲", "ちゅうき": "中気", "ちゅうせいのごう": "中正の合", "ちゅうわ": "中和", "ちょうせい": "長生", "ちらいふく": "地雷復", "つうへんせい": "通変星", "つちのえ": "戊", "つちのえいぬ": "戊戌", "つちのえうま": "戊午", "つちのえさる": "戊申", "つちのえたつ": "戊辰", "つちのえとら": "戊寅", "つちのえね": "戊子", "つちのと": "己", "つちのとい": "己亥", "つちのとう": "己卯", "つちのとうし": "己丑", "つちのととり": "己酉", "つちのとひつじ": "己未", "つちのとみ": "己巳", "ていおう": "帝旺", "てんおつきじん": "天乙貴人", "てんかどうじん": "天火同人", "てんかん": "天干", "てんざんとん": "天山遯", "てんすいしょう": "天水訟", "てんせんちちゅう": "天戦地冲", "てんたくり": "天沢履", "てんちひ": "天地否", "てんちゅうさつ": "天中殺", "てんとくきじん": "天徳貴人", "てんとくごう": "天徳合", "てんぷうこう": "天風姤", "てんらいむぼう": "天雷无妄", "とうしゅつ": "透出", "とうしょく": "倒食", "とらうまいぬ": "寅午戌", "ないかく": "内格", "なっちん": "納音", "にちうん": "日運", "にちじん": "日刃", "にっかん": "日干", "にっかんし": "日干支", "にっし": "日支", "にっしゅ": "日主", "にっちゅう": "日柱", "ねんうん": "年運", "ねんかん": "年干", "ねんし": "年支", "ねんちゅう": "年柱", "はいぐうきゅう": "配偶宮", "はっか": "八卦", "はっけ": "八卦", "はんかい": "半会", "はんごう": "半合", "ひけん": "比肩", "ひごう": "比劫", "ひじん": "飛刃", "ひつじ": "未", "ひのえ": "丙", "ひのえいぬ": "丙戌", "ひのえうま": "丙午", "ひのえさる": "丙申", "ひのえたつ": "丙辰", "ひのえとら": "丙寅", "ひのえね": "丙子", "ひのと": "丁", "ひのとい": "丁亥", "ひのとう": "丁卯", "ひのとうし": "丁丑", "ひのととり": "丁酉", "ひのとひつじ": "丁未", "ひのとみ": "丁巳", "びょう": "病", "ふうかかじん": "風火家人", "ふうざんぜん": "風山漸", "ふうすいかん": "風水渙", "ふうたくちゅうふ": "風沢中孚", "ふうちかん": "風地観", "ふうてんしょうちく": "風天小畜", "ふうらいえき": "風雷益", "ふくせいきじん": "福星貴人", "ぶんしょうきじん": "文昌貴人", "へんいん": "偏印", "へんいんかく": "偏印格", "へんかん": "偏官", "へんかんかく": "偏官格", "へんざい": "偏財", "へんざいかく": "偏財格", "ほうごう": "方合", "ほんか": "本卦", "ほんき": "本気", "ぼうじん": "亡神", "みおう": "身旺", "みきょう": "身強", "みじゃく": "身弱", "みずのえ": "壬", "みずのえいぬ": "壬戌", "みずのえうま": "壬午", "みずのえさる": "壬申", "みずのえたつ": "壬辰", "みずのえとら": "壬寅", "みずのえね": "壬子", "みずのと": "癸", "みずのとい": "癸亥", "みずのとう": "癸卯", "みずのとうし": "癸丑", "みずのととり": "癸酉", "みずのとひつじ": "癸未", "みずのとみ": "癸巳", "みとりうし": "巳酉丑", "むじょうのごう": "無情の合", "めいしき": "命式", "もくよく": "沐浴", "もっかどごんすい": "木火土金水", "ようこう": "陽爻", "ようじんかく": "羊刃格", "らいかほう": "雷火豊", "らいざんしょうか": "雷山小過", "らいすいかい": "雷水解", "らいたくきまい": "雷沢帰妹", "らいちよ": "雷地豫", "らいてんたいそう": "雷天大壮", "らいふうこう": "雷風恒", "りいか": "離為火", "りっちん": "律音", "りつうん": "立運", "りゅうは": "流派", "りょうしんせいしょうかく": "両神成象格", "ろくしん": "六親", "ろくばきじん": "禄馬貴人", "三号": "三合", "三校": "三爻", "会合日": "魁罡日", "作家": "錯卦", "八家": "八卦", "八景": "八卦", "勘知": "咸池", "印字": "印綬", "危険": "忌神", "召喚": "傷官", "商館": "傷官", "地点体": "地天泰", "増間": "蔵干", "変印": "偏印", "変在": "偏財", "変換": "偏官", "天乙気人": "天乙貴人", "天戦地中": "天戦地冲", "完工": "干合", "定王": "帝旺", "年誌": "年支", "強欧格": "強旺格", "従角格": "従革格", "支号": "支合", "日刊": "日干", "日刊誌": "日干支", "日看子": "日干支", "日県": "比肩", "日見": "比肩", "日誌": "日支", "時中": "時柱", "時誌": "時支", "月中": "月柱", "月刊": "月干", "月誌": "月支", "木の絵馬": "甲午", "木浴": "沐浴", "機神": "忌神", "正在": "正財", "比県": "比肩", "気力格": "帰禄格", "気神": "喜神", "洋人": "羊刃", "火の兄馬": "丙午", "県六": "建禄", "秘剣": "比肩", "空房": "空亡", "立ちん": "律音", "立沈": "律音", "紅炎": "紅艶", "見往": "身旺", "規律格": "帰禄格", "豪在": "劫財", "配偶及": "配偶宮", "配偶球": "配偶宮", "非件": "比肩", "食人": "食神", "駅場": "駅馬"};
 // 用語一覧に出てくる漢字。直した文に、これ以外の漢字が新しく増えていたら（月誌→月報 のような言いかえ）元の文に戻す
 const TERM_CHARS = new Set(Array.from(new Set(Object.values(DICT).join('') + "いしすのりれ一丁七三上下与丑丙両中主之乙乾二互五井亡亥人仁令会位余佩倒偏偶傷元兌児入八六内冠冲出刃刑初制剋剥劫勢化十升午半卦卯印双司合同否命和咸喜嗑噬囚四困土地坎坤墓壬壮変外大天太夬夷妄妹姤威子孚官宮害家寅専小尽局履屯山差己巳巽帝師帯帰干年庚建式弱強律従得復徳忌恒情戊戌成戦推損支文方旅无既日旺昌明易星時晋暗曲月有木未本柱格極欲正死殺比気水池沐沢泆泰派流浴淫混済渙漸潤火炎為無爻獄生用甲申畜病癸益直相睽破神禄福稼穡空立節紅納経絶綜綬罡羊美義肩胎臨自艮艶華萃葉蒙蓋蔵蠱血行衰補親観角解言訟謙豊象豫財貴賁蹇身辛辞辰逆透通運過遯酉配金錯長陰陽随隔雑離雷需震革音順頤風飛食養馬駅魁鼎")));
+
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: { code: 'METHOD' } });
@@ -40,79 +48,102 @@ exports.handler = async (event) => {
     const allowed = [site, process.env.DEPLOY_PRIME_URL || '', ...(process.env.ALLOWED_ORIGINS || '').split(',')].map((x) => oOf(String(x).trim())).filter(Boolean);
     if (!origin || !allowed.includes(oOf(origin))) return json(403, { error: { code: 'ORIGIN' } });
   }
+  // 商品の目印（X-Product）がちがう商品なら断る（本人・商品の確認はトークンで行う）
+  const xp = clean(h['x-product']).toLowerCase();
+  if (xp && xp !== PRODUCT) return json(403, { error: { code: 'PRODUCT' } });
   const memberCheck = process.env.MEMBER_CHECK_URL || '';
   if (site && !memberCheck && process.env.PK_ALLOW_NO_MEMBER_CHECK !== '1') return json(503, { error: { code: 'SETUP' } });
+  if (String(event.body || '').length > MAX_TEXT * 4 + 2000) return json(413, { error: { code: 'TOO_LONG' } });
 
   let who = '', option = false, periodEnd = '';
   if (memberCheck) {
-    const tk = clean(String(h.authorization || '').replace(/^Bearer\s+/i, ''));
+    const tk = clean(String(h.authorization || '').replace(/^Bearer\s+/i, ''), 4096);
     if (!tk) return json(401, { error: { code: 'LOGIN' } });
-    who = 'm' + sha(tk);
+    let m;
     try {
-      const r = await fetch(memberCheck, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: tk }) });
+      const r = await fetchT(memberCheck, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Product': PRODUCT }, body: JSON.stringify({ token: tk, product: PRODUCT }) }, MEMBER_MS);
+      if (r.status >= 500) return json(503, { error: { code: 'MEMBER_CHECK' } });
       if (!r.ok) return json(401, { error: { code: 'LOGIN' } });
-      const m = await r.json();
-      const st = m && m.status, pe = m && m.periodEnd;
-      periodEnd = /^\d{4}-\d{2}-\d{2}$/.test(String(pe || '')) ? String(pe) : '';
-      if (m && m.memberId) who = 'u' + sha(String(m.memberId));
-      const usable = st === 'active' || st === 'trialing' || ((st === 'canceled' || st === 'canceling') && pe ? Date.parse(pe + 'T23:59:59+09:00') > Date.now() : st === 'canceling');
-      if (!m || !m.ok || !usable) return json(403, { error: { code: 'MEMBER' } });
-      option = m.voiceOption === true;
+      m = await r.json();
     } catch (e) { return json(503, { error: { code: 'MEMBER_CHECK' } }); }
+    const st = m && m.status, pe = m && m.periodEnd;
+    periodEnd = /^\d{4}-\d{2}-\d{2}$/.test(String(pe || '')) ? String(pe) : '';
+    const usable = st === 'active' || st === 'trialing' || ((st === 'canceled' || st === 'canceling') && pe ? Date.parse(pe + 'T23:59:59+09:00') > Date.now() : st === 'canceling');
+    if (!m || !m.ok || !usable) return json(403, { error: { code: 'MEMBER' } });
+    if (!productOk(m)) return json(403, { error: { code: 'PRODUCT' } });
+    // 会員ごとに変わらないID（memberId）で数える。無いときはログインし直すと回数が戻ってしまうので止める
+    if (!m.memberId) return json(503, { error: { code: 'MEMBER_ID' } });
+    who = 'u' + sha(PRODUCT + ':' + String(m.memberId));
+    option = m.voiceOption === true;
   } else {
     who = 'd' + sha(clean(h['x-pk-device']) || clean(h['x-nf-client-connection-ip'] || h['x-forwarded-for'] || 'nodev'));
   }
-  const isOwner = !!OWNER_TOKEN && clean(h['x-pk-owner']) === OWNER_TOKEN;
+  const isOwner = !!OWNER_TOKEN && safeEq(clean(h['x-pk-owner']), OWNER_TOKEN);
   if (isOwner) option = true;
+  const enforce = !!memberCheck || !!site;   // 本番では、保存場所が使えないときは数えずに通さない
+  const allowNoStore = process.env.PK_ALLOW_NO_STORE === '1';
 
   let body = {};
   try { body = JSON.parse(event.body || '{}'); } catch (e) {}
-  const store = await getStore();
+  const store = await getStore(event);
   const trialKey = `vt:${PRODUCT}:${who}`;
   const monthKey = `vm:${PRODUCT}:${periodId(periodEnd)}:${who}`;
+  const useKey = option ? monthKey : trialKey, cap = option ? MONTH : TRIAL;
   // 回数が数えられないとき（保存場所が使えない）は、残りを「わからない」（null）として返す＝画面に残りの回数を出さない（まちがった数を見せない）
   let used = 0, counted = false;
-  try { if (store) { used = await readCount(store, option ? monthKey : trialKey); counted = true; } } catch (e) {}
-  const leftOf = (n) => counted ? (option ? Math.max(0, MONTH - n) : Math.max(0, TRIAL - n)) : null;
+  try { if (store) { used = await readCount(store, useKey); counted = true; } } catch (e) {}
+  const leftOf = (n) => counted ? Math.max(0, cap - n) : null;
   const left = leftOf(used);
   const info = { option: option, left: left, trial: TRIAL };
 
   if (body.mode === 'status') return json(200, info);
+  // 本番で数えられないときは、Gemini を呼ばずに止める（画面は無料の聞き取りと聞き間違い直し表だけで続く）
+  if (!counted && enforce && !isOwner && !allowNoStore) return json(503, Object.assign({ error: { code: 'STORE' } }, info));
   if (left === 0 && !isOwner) return json(option ? 429 : 402, { error: { code: option ? 'VOICE_MONTH' : 'VOICE_OPTION' }, option: option, left: 0, trial: TRIAL });
 
-  // 1回に数えるのは、文が実際に直った・整ったときだけ（直すところがなかった・安全装置で元に戻したときは数えない）
-  async function countUse(changed) {
-    if (!changed || !counted || !store || isOwner) return used;
-    try { return await bump(store, option ? monthKey : trialKey); } catch (e) { return used; }
-  }
   const text = String(body.text || '').slice(0, MAX_TEXT);
   if (!text.trim()) return json(200, Object.assign({ text: text, changed: false }, info));
   const one = text.trim().replace(/[。、．，.,！？!?\s]+$/g, '');
   if (DICT[one]) {
     const out = text.replace(one, DICT[one]);
-    const n1 = await countUse(out !== text);
+    let n1 = used;
+    if (out !== text && counted && store && !isOwner) {   // 1回に数えるのは、文が実際に直ったときだけ（上限は条件付き書き込みで守る）
+      try { const a = await atomicAdd(store, useKey, 1, cap); if (!a.ok) return json(option ? 429 : 402, { error: { code: option ? 'VOICE_MONTH' : 'VOICE_OPTION' }, option: option, left: 0, trial: TRIAL }); n1 = a.n; }
+      catch (e) { if (enforce && !allowNoStore) return json(503, Object.assign({ error: { code: 'STORE' } }, info)); }
+    }
     return json(200, { text: out, changed: out !== text, option: option, left: leftOf(n1), trial: TRIAL });
   }
   const key = process.env.GEMINI_API_KEY;
   if (!key) return json(500, { error: { code: 'NO_KEY' } });
 
+  // 呼ぶ前に1回分を取り置く（同時にたくさん送っても上限をこえない）。直らなかった・失敗したときは戻す
+  let held = false, n = used;
+  if (counted && store && !isOwner) {
+    try { const a = await atomicAdd(store, useKey, 1, cap); if (!a.ok) return json(option ? 429 : 402, { error: { code: option ? 'VOICE_MONTH' : 'VOICE_OPTION' }, option: option, left: 0, trial: TRIAL }); held = true; n = a.n; }
+    catch (e) { if (enforce && !allowNoStore) return json(503, Object.assign({ error: { code: 'STORE' } }, info)); }
+  }
+  const release = async () => { if (!held) return; held = false; try { n = (await atomicAdd(store, useKey, -1, null)).n; } catch (e) { n = Math.max(0, n - 1); } };
+
   let fixed = text;
   try {
     const req = {
       system_instruction: { parts: [{ text: SYSTEM }] },
-      contents: [{ role: 'user', parts: [{ text: '<text>' + text + '</text>' }] }],
-      generationConfig: { temperature: 0, maxOutputTokens: Math.min(4096, text.length * 3 + 200), thinkingConfig: /gemini-3/.test(MODEL) ? { thinkingLevel: 'minimal' } : { thinkingBudget: 0 } },
+      // 文の中の <text>・</text> は区切りを抜けないよう全角に置きかえて送る（返ってきた文では元に戻す）
+      contents: [{ role: 'user', parts: [{ text: '<text>' + text.replace(/<(\/?)text>/gi, '＜$1text＞') + '</text>' }] }],
+      generationConfig: { temperature: 0, candidateCount: 1, maxOutputTokens: Math.min(4096, text.length * 3 + 200), thinkingConfig: /gemini-3/.test(MODEL) ? { thinkingLevel: 'minimal' } : { thinkingBudget: 0 } },
     };
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(key)}`;
-    let r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(req) });
-    if (r.status === 429) { await new Promise((ok) => setTimeout(ok, 800)); r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(req) }); }
-    if (!r.ok) return json(502, Object.assign({ error: { code: 'UPSTREAM' } }, info));
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODEL)}:generateContent`;   // キーは URL に入れず、ヘッダで送る
+    const send = () => fetchT(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify(req) }, UPSTREAM_MS);
+    let r = await send();
+    if (r.status === 429) { await new Promise((ok) => setTimeout(ok, 800)); r = await send(); }
+    if (!r.ok) { await release(); return json(502, Object.assign({ error: { code: 'UPSTREAM' } }, info)); }
     const j = await r.json();
     const parts = j && j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts;
-    fixed = guard(text, parts ? parts.map((p) => (p && p.text) || '').join('') : '');
-  } catch (e) { return json(502, Object.assign({ error: { code: 'UPSTREAM' } }, info)); }
+    const got = parts ? parts.filter((p) => p && !p.thought).map((p) => (p && p.text) || '').join('') : '';
+    fixed = guard(text, got.replace(/＜(\/?)text＞/g, (m0, s) => (text.indexOf('<' + s + 'text>') >= 0 ? '<' + s + 'text>' : m0)));
+  } catch (e) { await release(); return json(502, Object.assign({ error: { code: 'UPSTREAM' } }, info)); }
 
-  const n = await countUse(fixed !== text);
+  if (fixed === text) await release();   // 直すところがなかった・安全装置で元に戻した：数えない
   return json(200, { text: fixed, changed: fixed !== text, option: option, left: leftOf(n), trial: TRIAL });
 };
 
@@ -140,13 +171,52 @@ function guard(src, out) {
   return lead + t + tail;
 }
 function sha(s) { return require('crypto').createHash('sha256').update(String(s)).digest('hex').slice(0, 24); }
-async function readCount(store, k) { const v = await store.get(k, { type: 'json' }).catch(() => null); return (v && typeof v.n === 'number') ? v.n : 0; }
-async function bump(store, k) { const cur = await readCount(store, k); await store.setJSON(k, { n: cur + 1, t: Date.now() }); return cur + 1; }
-async function getStore() { try { const { getStore } = require('@netlify/blobs'); return getStore('voice-fix'); } catch (e) { return null; } }
+function safeEq(a, b) { const c = require('crypto'); const x = c.createHash('sha256').update(String(a)).digest(), y = c.createHash('sha256').update(String(b)).digest(); return c.timingSafeEqual(x, y) && String(a).length === String(b).length; }
+function productOk(m) {
+  const list = Array.isArray(m.products) ? m.products.map(String) : (m.product ? [String(m.product)] : []);
+  if (!list.length) return process.env.PK_REQUIRE_PRODUCT !== '1';
+  return list.includes(PRODUCT);
+}
+async function fetchT(url, opt, ms) {
+  const ac = typeof AbortController === 'function' ? new AbortController() : null;
+  const tid = ac ? setTimeout(() => ac.abort(), ms) : null;
+  try { return await fetch(url, ac ? Object.assign({}, opt, { signal: ac.signal }) : opt); }
+  finally { if (tid) clearTimeout(tid); }
+}
+async function readCount(store, k) { const v = await store.get(k, { type: 'json' }); return (v && typeof v.n === 'number') ? v.n : 0; }
+async function getMeta(store, k) {
+  try { return await store.getWithMetadata(k, { type: 'json', consistency: 'strong' }); }
+  catch (e) { if (/consisten/i.test(String(e && e.message))) return await store.getWithMetadata(k, { type: 'json' }); throw e; }
+}
+// k の値に delta を足す（Netlify Blobs の条件付き書き込み＝etag で、同時に送られても数えもれ・上限ごえがない）。足すと cap をこえるときは足さずに {ok:false}
+async function atomicAdd(store, k, delta, cap) {
+  const meta = typeof store.getWithMetadata === 'function';
+  for (let i = 0; i < 8; i++) {
+    let cur = null, etag;
+    if (meta) { const g = await getMeta(store, k); if (g) { cur = g.data; etag = g.etag; } }
+    else cur = await store.get(k, { type: 'json' });
+    const n0 = (cur && typeof cur.n === 'number') ? cur.n : 0;
+    if (cap != null && delta > 0 && n0 + delta > cap) return { ok: false, n: n0 };
+    const n = Math.max(0, n0 + delta);
+    const opt = meta ? (cur ? (etag ? { onlyIfMatch: etag } : undefined) : { onlyIfNew: true }) : undefined;
+    const w = await store.setJSON(k, { n: n, t: Date.now() }, opt);
+    if (!w || w.modified !== false) return { ok: true, n: n };
+    await new Promise((ok) => setTimeout(ok, 15 + Math.floor(Math.random() * 40 * (i + 1))));
+  }
+  throw new Error('BLOB_CONTENTION');
+}
+async function bump(store, k) { return (await atomicAdd(store, k, 1, null)).n; }
+async function getStore(event) {
+  try {
+    const blobs = require('@netlify/blobs');
+    if (event && event.blobs && typeof blobs.connectLambda === 'function') blobs.connectLambda(event);   // exports.handler（Lambda 形式）では必要
+    return blobs.getStore('voice-fix');
+  } catch (e) { return null; }
+}
 function periodId(pe) { const today = jstDay(); return (pe && pe >= today) ? pe : 'm' + today.slice(0, 7); }
 function jstDay() { const d = new Date(Date.now() + 9 * 3600 * 1000); return d.toISOString().slice(0, 10); }
 function lower(o) { const r = {}; for (const k in o) r[k.toLowerCase()] = o[k]; return r; }
-function clean(s) { return (s == null ? '' : String(s)).replace(/[\r\n]/g, '').slice(0, 200); }
-function json(statusCode, obj) { return { statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) }; }
+function clean(s, max) { return (s == null ? '' : String(s)).replace(/[\r\n]/g, '').slice(0, max || 200); }
+function json(statusCode, obj) { return { statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(obj) }; }
 
-module.exports.__test = { guard, SYSTEM, PRODUCT, DICT };
+module.exports.__test = { guard, SYSTEM, PRODUCT, DICT, atomicAdd };

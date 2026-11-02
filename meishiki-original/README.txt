@@ -26,6 +26,11 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 【手順2】GeminiのAPIキーをNetlifyに1回だけ登録（★これで“内蔵”完了）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+★注意（2026-11-02）：functions/gemini.js は、環境変数 MEISHIKI_RELAY_ENABLE=1 を登録したときだけ動きます
+  （未登録なら止まり、詳細鑑定は端末内の鑑定になります）。この中継には会員確認がないため、公開サイトで有効にすると
+  だれでもあなたのキーで文章を作れてしまいます。自分だけで使う・限られた人だけに見せるときに限って有効にし、
+  販売・公開するときは MEMBER_CHECK_URL（会員確認）を設定してから有効にしてください（3サイトの functions/gemini.js と同じ考え方）。
+
 1. Google AI Studio（aistudio.google.com）でGemini APIキーを取得
    （「Get API key」→ 表示された AIza… で始まる文字列をコピー）
 2. Netlify → 対象サイト → Site configuration →
