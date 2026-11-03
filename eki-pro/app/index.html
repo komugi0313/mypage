@@ -3206,11 +3206,24 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
   /* 答えの記号は、ツールが卦と動いた爻から決めたもの（KO_RANK_FIX・koAdjustRank）にそろえる（2026-10-30。文章作成が別の記号を書いたり、頼み方の例文を写したりしても、易の答えがずれないように）。
      亡くなった方のご相談・つらさが極まったご相談は記号を付けないので、そのまま。 */
   function ekiToolSym(r,q){ try{ return rankToVerdict(r&&r.rank).sym; }catch(e){ return '△'; } }
+  /* 卦の名前と番号の組（今回出た卦だけ）：番号がずれていたら名前に合わせて直す。名前が今回出た卦でないときは今のまま（根拠のチェック表で⚠） */
+  function ekiHexNoRe(r){ const hs=[r&&r.h,r&&r.shika&&r.shika.hex,r&&r.goka&&r.goka.hex,r&&r.soka&&r.soka.hex,r&&r.sakka&&r.sakka.hex].filter(function(h){ return h&&h.nm&&h.no; });
+    const by={}; hs.forEach(function(h){ by[h.nm]=h.no; }); const nms=Object.keys(by); if(!nms.length) return null;
+    const N='('+nms.map(function(x){ return x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }).join('|')+')';
+    return {by:by, a:new RegExp('第(\\s*)(\\d{1,2})(\\s*)卦((?:\\s|[：:・＝=]|である|の|は)*[（(「『【]?)'+N,'g'), b:new RegExp(N+'((?:（[^）]{0,14}）|\\([^)]{0,14}\\))?\\s*[（(]?)第(\\s*)(\\d{1,2})(\\s*)卦','g')}; }
+  function ekiHexNoFix(t,X){ let n=0; t=String(t).replace(X.a,function(m,s1,no,s2,mid,nm){ if(+no===X.by[nm]) return m; n++; return '第'+s1+X.by[nm]+s2+'卦'+mid+nm; }).replace(X.b,function(m,nm,mid,s1,no,s2){ if(+no===X.by[nm]) return m; n++; return nm+mid+'第'+s1+X.by[nm]+s2+'卦'; }); return {t:t,n:n}; }
+  function ekiFixHexNo(p,r){ try{ const X=ekiHexNoRe(r); if(!X||!p) return p; Object.keys(p).forEach(function(k){ if(typeof p[k]==='string'&&/第\s*\d{1,2}\s*卦/.test(p[k])) p[k]=ekiHexNoFix(p[k],X).t; else if(Array.isArray(p[k])) p[k]=p[k].map(function(x){ return typeof x==='string'&&/第\s*\d{1,2}\s*卦/.test(x)?ekiHexNoFix(x,X).t:x; }); }); }catch(e){} return p; }
   function ekiFixSym(p,r,q){ try{ if(!p||!p.hantei||!r||!r.rank) return p; q=String(q||'');
     if(PK_DECEASED_Q.test(q)||ekiNoJudgeQ(q)) return p; const sf=ekiSafety(q); if(sf&&(sf.crisis||sf.block)) return p;
+    ekiFixHexNo(p,r);   // 「第63卦 火水未済」のような卦の名前と番号のずれは、出た卦の名前に合わせて番号を直す（2026-11-03）
     const want=ekiToolSym(r,q); const v=parseVerdict(p.hantei); let ph=String(v.phrase||'').trim();
-    const POS=/進んで大丈夫|進めて大丈夫|うまくいき|道が開け|良い流れ|よい流れ|追い風|叶い(?:ます|やすい)|可能性は高い|おすすめ|大吉/, NEG=/控え|見送|避け|急がない|慎重|待つ|待ち|難しい|低め|やめ|止め|無理/;
-    const bad=(want==='◎'||want==='〇')?(NEG.test(ph)&&!POS.test(ph)):(want==='✖')?(POS.test(ph)&&!NEG.test(ph)):(/進んで大丈夫|進めて大丈夫|道が開け|大吉/.test(ph)&&!NEG.test(ph));
+    /* 一言が記号と本当に逆のときだけ決まった一言に置きかえる（2026-11-03）。
+       「無理に合わせず」「無理せず」「控えずに」のような打ち消しは逆向きに数えない。「距離を保つ」のような控えめな助言は、問いに答えていれば残す。
+       ◎〇なのに「慎重に」「待つ」が1つだけ…のような弱い言葉は、2つ以上そろったときだけ逆向きに数える */
+    const phN=ph.replace(/無理(?:を|は|に)?(?:せず|しない|しなく|なさらず|しすぎ|禁物)|無理に[^、。！？]{0,10}?(?:ず|ない|なくて)(?=[、。！？で]|$)|(?:控え|避け|やめ|止め|見送ら|待た)(?:ず|ないで|なくて|なくても)/g,'');
+    const POS=/進んで大丈夫|進めて大丈夫|うまくいき|道が開け|良い流れ|よい流れ|追い風|叶い(?:ます|やすい)|可能性は高い|おすすめ|大吉/, NEG=/控え|見送|避け|急がない|慎重|待つ|待ち|難しい|低め|やめ|止め|無理(?:です|があ|でしょう)/;
+    const NEG_S=/控え|見送|避け|難しい|低め|やめ|止め|無理(?:です|があ|でしょう)|今は動かない|動かずに|時期ではない|見込みは薄|厳しい/, NEG_W=/急がない|慎重|待つ|待ち/g;
+    const bad=(want==='◎'||want==='〇')?(!POS.test(phN)&&(NEG_S.test(phN)||(phN.match(NEG_W)||[]).length>=2)):(want==='✖')?(POS.test(phN)&&!NEG.test(phN)):(/進んで大丈夫|進めて大丈夫|道が開け|大吉/.test(phN)&&!NEG.test(phN));
     if(!ph||bad) ph=({'◎':'よい流れです。進んで大丈夫','〇':'前向きに進んで大丈夫です','△':'今は慎重に。急がないのが吉','✖':'今は控えるのが賢明です'})[want];
     if(v.sym!==want||bad) p.hantei=ph+' '+want;
     p._dirBad=ekiBodyAgainst(p.tsutae,want);
@@ -3238,9 +3251,23 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
   function ekiToneRule(){ return ekiTone()==='soft'?'\n【話し方＝親しみやすく（常連さん・親しい方向け）】▼伝え方と▼助言は、常連のお客様や親しい方に話しかけるような、親しみのある話し言葉で書く。文は短く、「〜ですよ」「〜ですからね」「〜してみてくださいね」「大丈夫ですよ」のような語りかけを入れる。かたい言い方〈〜でございます・〜なさってください・〜と存じます・〜いただけます〉は使わない。「〜だよ」「〜だね」のようなため口にはしない。中身・判定・時期・根拠は変えない。':''; }
   const EKI_NEXTQ={nojudge:['ほかにヒントはありますか？','どう確かめればいいですか？','気をつけることは？'],deceased:['思い出をどう大切にすればいいですか？','気持ちが落ち着かないとき、どう過ごせばいいですか？','これからの自分の過ごし方は？'],love:['自分から連絡してもいいですか？','相手は今どう思っていますか？','次に動きがあるのはいつごろですか？'],work:['動くならいつがいいですか？','今の職場に残るなら、どうすればいいですか？','どんな仕事が向いていますか？'],money:['お金の流れが上向くのはいつですか？','気をつけたいお金の使い方は？'],family:['どう話しかければいいですか？','いつごろ落ち着きそうですか？','自分の心を守るには、どうすればいいですか？'],other:['いつごろ動きがありますか？','今いちばん気をつけることは？','うまくいかせるコツは？']};
   function ekiTalkTopic(q){ q=String(q||''); if(ekiDeceasedQ(q)) return 'deceased'; if(!ekiSafety(q)&&ekiNoJudgeQ(q)) return 'nojudge'; if(/義母|義父|姑|舅|義実家|離婚|息子|娘|子ども|子供|家族|親|(?<!元)(?:妻|夫|旦那|奥さん|夫婦)/.test(q)&&!/彼氏|彼女|好きな人|片思い|元彼|元カレ/.test(q)) return 'family'; if(/恋|彼|好き|片思い|復縁|結婚|婚活|付き合|パートナー|出会い|元カレ|元カノ|脈あり|(?:彼|あの人|あの方|元彼|元カレ|元カノ)(?:さん)?(?:から|に|と|が|は)?の?[^。、]{0,6}(?:連絡|LINE|ライン|メール|返事|返信|電話|既読)/.test(q)) return 'love';   /* 「彼から連絡」は恋愛・「上司から連絡」は恋愛にしない（2026-11-02） */ if(/仕事|転職|就職|職場|会社|起業|独立|適職/.test(q)) return 'work'; if(/お金|金運|収入|副業|貯金|借金/.test(q)) return 'money'; return 'other'; }
+  /* 健康・お金・宝くじなど断り書きを出す相談で、文章作成の答え（▼伝え方）から「過ごし方・流れ」の一文を1つ選ぶ（2026-11-03）。
+     断り書きのくり返し・お医者さま等への案内・結果を決める言い方・宝くじの買う時期は選ばない。お金は「上向く時期」の文を先に */
+  function ekiSafeFlow(p,q,sf){ try{ if(!p||!sf||sf.block||sf.crisis) return ''; q=String(q||''); const say=String(sf.say||'');
+    const ss=String(p.tsutae||'').replace(/【[^】]*】/g,'').split(/(?<=[。！？\n])/).map(x=>x.replace(/^[・\s]+/,'').trim()).filter(Boolean);
+    const NG=/お医者|医師|医療機関|病院|受診|専門家|ファイナンシャル|金融機関|弁護士|法テラス|占いでは|当てられ|当たり外れ|お伝えします|ご心配ですね|お悩みですね|のですね。?$|治る|治ら|当た(?:る|り)|外れ|買う|買い|購入|宝くじ|くじ|ギャンブル|賭|勝て|負け|すべき|見送るのが|判定/;
+    const ok=ss.filter(x=>x.length>=12&&x.length<=110&&say.indexOf(x.replace(/。$/,''))<0&&!NG.test(x));
+    const pick=(ekiMoneyQ(q)&&ok.find(x=>/上向/.test(x)))||ok.find(x=>/流れ|この先|これから|時期|過ごし|数か月|数ヶ月|季節|春|夏|秋|冬|\d{1,2}月|20\d\d年/.test(x))||'';
+    return pick; }catch(e){ return ''; } }
+  /* 前置き・あいづちだけの文（「迷われているのですね。」「〜についてお答えします。」）と、文頭の「結論からお伝えしますと、」を外す（PRO の pkLeadFix と同じ決まり。2026-11-03） */
+  function ekiAizuchiS(x){ x=String(x||'').trim(); return x.length<70&&(/(お答えします|お伝えします|見ていきます|読み解きます|ご説明します|拝見します)[。！]?$/.test(x)||/(のですね|んですね|ですね|ますね)[。！]?$/.test(x)||/^(?:お悩みですね|ご心配ですね)/.test(x)); }
+  function ekiNoLeadIn(x){ return String(x||'').replace(/^(?:結論から(?:お伝えしますと|お伝えすると|申し上げますと|申し上げると|言うと|いうと)|結論として|結論は)[、，]?/,''); }
   function ekiTalkHTML(p,r,talkP,todo){ const v=parseVerdict(p.hantei||''); const sf=ekiSafety(window.__ekiQ);   // 答えの欄（renderVerdict）と同じ一言を①に（宝くじ・病気などの決まった一文／深い悩み）
-    const lead=String((sf&&sf.crisis)?EKI_CRISIS_SAY:(sf&&sf.say)?sf.say:ekiDeceasedQ(window.__ekiQ)?ekiDecPhrase(v.phrase,window.__ekiQ):(v.phrase||'')).replace(/[*＊]/g,'').trim(); if(!lead) return '';
-    const whyS=(String((talkP||[]).join('')).split(/(?<=[。！？])/).map(x=>x.trim()).filter(Boolean).slice(1).filter(x=>lead.indexOf(x.replace(/。$/,''))<0&&String(v.phrase||'').indexOf(x.replace(/。$/,''))<0))[0]||'';   // ①の結論と同じ文はくり返さない
+    let lead=String((sf&&sf.crisis)?EKI_CRISIS_SAY:(sf&&sf.say)?sf.say:ekiDeceasedQ(window.__ekiQ)?ekiDecPhrase(v.phrase,window.__ekiQ):(v.phrase||'')).replace(/[*＊]/g,'').trim();
+    if(!(sf&&(sf.crisis||sf.say))){ const ls=lead.split(/(?<=[。！？])/).map(x=>x.trim()).filter(Boolean); while(ls.length>1&&ekiAizuchiS(ls[0])) ls.shift(); lead=ekiNoLeadIn(ls.join('')); }
+    else if(sf&&sf.say&&!sf.crisis){ const fl=ekiSafeFlow(p,window.__ekiQ,sf); if(fl) lead+=fl; }   // 答えの欄と同じ（断り書きのあとに卦から読める過ごし方・流れの一言）
+    if(!lead) return '';
+    const whyS=(String((talkP||[]).join('')).split(/(?<=[。！？])/).map(x=>x.trim()).filter(Boolean).slice(1).filter(x=>!ekiAizuchiS(x)).map(ekiNoLeadIn).filter(x=>x&&lead.indexOf(x.replace(/。$/,''))<0&&String(v.phrase||'').indexOf(x.replace(/。$/,''))<0))[0]||'';   // ①の結論と同じ文はくり返さない
     const theme=(r&&r.h)?(ekiFromShi(r)?('出た卦は「'+r.h.nm+'」で、この先の姿（之卦）「'+r.shika.hex.nm+'」＝「'+mTheme(r.shika.hex)+'」の言葉で答えを決めています。'):('出た卦は「'+r.h.nm+'」＝「'+mTheme(r.h)+'」の流れです。')):'';
     /* ③ 時期：言葉だけを拾って「来年・今年がポイントです」「春がポイントです」にしない（2026-11-02）。
        時期が書かれた文をそのまま使い、卦のたとえ（「春が来て氷が解けるように」など）の中の季節は時期に使わない。
@@ -3250,7 +3277,7 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
       if(qf==='year'&&/^\s*来年のほう/.test(lead)) tmS='今年（'+Y+'年'+_uL+'）のうちに準備と下調べを進め、来年（'+(Y+1)+'年）に入ってから本格的に動きましょう。';
       else if(qf==='year'&&/^\s*今年のほう/.test(lead)) tmS='準備が整っていれば今年（'+Y+'年'+_uL+'）のうちに動き出し、来年（'+(Y+1)+'年）にかけて形にしていきましょう。';
       else { const ss=String((talkP||[]).join('')+'\n'+(p.jogen||'')).split(/(?<=[。！？\n])/).map(x=>x.replace(/^[・\s]+/,'').trim()).filter(Boolean);
-        tmS=ss.find(x=>TMRE.test(x)&&!SIM.test(x)&&lead.indexOf(x.replace(/。$/,''))<0&&x.length<=90)||''; } }
+        tmS=ss.filter(x=>!ekiAizuchiS(x)).map(ekiNoLeadIn).find(x=>TMRE.test(x)&&!SIM.test(x)&&lead.indexOf(x.replace(/。$/,''))<0&&x!==whyS&&x.length<=90)||''; } }
     const nq=EKI_NEXTQ[ekiTalkTopic(window.__ekiQ)]||EKI_NEXTQ.other;
     const NUM='①②③④⑤⑥'; let ix=0; const li=(n,t,b)=>'<li><span class="pkt-n">'+NUM[ix++]+'</span><div><div class="pkt-t">'+t+'</div><div class="pkt-b">'+b+'</div></div></li>';
     let h='<div class="pk-talk"><div class="pkt-h">🗣 お客様に話す順番<small>（上から読めば、そのまま鑑定になります）</small></div><ol class="pkt-l">';
@@ -3267,7 +3294,7 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
     const el=document.getElementById('verdictCard');
     const sf=ekiSafety(window.__ekiQ);
     if(sf&&sf.crisis){ el.innerHTML=ekiCrisisHTML()+`<div class="verdict"><div class="v-body"><div class="v-lbl">${t('verdict_lbl')}</div><div class="v-txt">${esc(EKI_CRISIS_SAY)}</div></div></div>`; return; }   // 深い悩みには〇△を出さず、寄り添う一言と小さな案内
-    if(sf){ el.innerHTML=`<div class="verdict"><div class="v-body"><div class="v-lbl">${t('verdict_lbl')}</div><div class="v-txt">${esc(sf.say)}</div></div></div>`; return; }
+    if(sf){ const fl=sf.block?'':ekiSafeFlow(p,window.__ekiQ,sf); el.innerHTML=`<div class="verdict"><div class="v-body"><div class="v-lbl">${t('verdict_lbl')}</div><div class="v-txt">${esc(sf.say)}${fl?`<span class="v-flow" style="display:block;margin-top:8px">${esc(fl)}</span>`:''}</div></div></div>`; return; }   // 断り書きだけで終わらせず、卦から読める過ごし方・流れの一言があれば続ける（記号は付けない。2026-11-03）
     { const q0=String(window.__ekiQ||''); if(PK_DECEASED_Q.test(q0)&&!/寿命|余命|いつ死|いつ亡く|亡くなりますか/.test(q0)){ const v0=parseVerdict(p.hantei||''); el.innerHTML=`<div class="verdict"><div class="v-body"><div class="v-lbl">${t('verdict_lbl')}</div><div class="v-txt">${fmtRich(ekiDecPhrase(v0.phrase,q0))}</div></div></div>`; return; } }   // 亡くなった方のご相談には◎〇△✖を付けない（2026-10-25）
     if(ekiNoJudgeQ(window.__ekiQ)){ const v0=parseVerdict(p.hantei||''); try{ window.__ekiToolSym=''; }catch(_){} el.innerHTML=`<div class="verdict"><div class="v-body"><div class="v-lbl">${t('verdict_lbl')}</div><div class="v-txt">${fmtRich(v0.phrase||ekiNoJudgeLead(r,window.__ekiQ))}</div></div></div>`; return; }   // 吉凶を問わない相談には◎〇△✖を付けない（2026-11-02）
     let v=parseVerdict(p.hantei||'');
@@ -3361,6 +3388,7 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
       R.push(role.length?{st:'ok',what:h.nm,calc:'今回出た'+role.join('・')+'（第'+h.no+'卦）',note:'出た卦どおり'}:{st:'warn',what:h.nm,calc:'今回出た卦：'+hexes.map(function(x){ return x[0]+'＝'+x[1].nm; }).join('・'),note:'今回の鑑定で出ていない卦の名前です。たとえ話か、確かめてください'}); });
     { let m; const re=/第\s*(\d{1,2})\s*卦/g, seen={}; while((m=re.exec(txt))){ const n=+m[1]; if(seen[n]) continue; seen[n]=1; const hx=hexes.filter(function(x){ return x[1].no===n; });
       R.push(hx.length?{st:'ok',what:'第'+n+'卦',calc:hx.map(function(x){ return x[0]+'＝'+x[1].nm; }).join('・'),note:'出た卦どおり'}:{st:'warn',what:'第'+n+'卦',calc:'今回出た卦：'+hexes.map(function(x){ return x[0]+'＝第'+x[1].no+'卦'; }).join('・'),note:'今回の鑑定で出ていない卦の番号です。確かめてください'}); } }
+    try{ const X=ekiHexNoRe(r), fx=X&&raw?ekiHexNoFix(raw,X):null; if(fx&&fx.n) R.push({st:'fix',what:'卦の番号（'+fx.n+'か所）',calc:hexes.map(function(x){ return x[0]+'＝第'+x[1].no+'卦 '+x[1].nm; }).join('・'),note:'卦の名前と番号の組がずれていたので、出た卦の名前に合わせて番号を直しました'}); }catch(_){ }
     // ② 原文の引用（漢字だけのかっこ）：出た卦の卦辞・爻辞と同じか
     { let m; const re=/「([^「」\n]{3,40})」/g, seen={}; while((m=re.exec(txt))){ const q0=m[1]; if(/[ぁ-んァ-ン]/.test(q0)||!/[一-龥]{3,}/.test(q0)) continue; const qn=nrm(q0); if(qn.length<3||seen[qn]) continue; seen[qn]=1;
       let hit=null; hexes.forEach(function(x){ if(hit) return; const h=x[1]; if(nrm(h.qt).indexOf(qn)>=0) hit=x[0]+'の卦辞'; else Object.keys(h.ko||{}).forEach(function(i){ if(!hit&&nrm(h.ko[i].jd).indexOf(qn)>=0) hit=x[0]+'の'+(KO_NAME[i]||i+'爻').replace(/（.*$/,'')+(x[0]==='本卦'&&+i===+r.ko?'（今回の動いた爻）':''); }); });
