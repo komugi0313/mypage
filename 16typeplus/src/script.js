@@ -86,7 +86,7 @@ $("go").onclick=()=>{if(sel.includes(null)||!dateOK())return;st.t=sel.slice();st
 /* ---- 仕事・進路のヒント：年れいで高校生・大学生（就活）・社会人（転職）のタブを最初に開く ---- */
 const CARTAB=[["hs","高校生"],["uni","大学・専門・就活"],["work","働いている人"]],KCT="16tp.cartab.v1";
 function tadashi(x,i){const lo=x.charAt(0).toLowerCase()+x.slice(1);return LANG==="en"?(i?"Also, ":"That said, ")+lo:LANG==="ko"?(i?"또, ":"다만, ")+x:(i?"また、":"ただし、")+x;}
-function carStage(){const a=ageNow();return a==null?"uni":a<=18?"hs":a<=22?"uni":"work";}
+function carStage(){const a=stageAge();return a==null?"uni":a<=18?"hs":a<=22?"uni":"work";}
 function drawCareer(){const box=$("carBody"),me=window.__me;if(!box||!me||typeof CAR==="undefined"||!CAR||!CAR.t)return;
  const saved=sget(KCT),tab=window.__carTab||(CARTAB.some(x=>x[0]===saved)?saved:carStage()),C=CAR.t[me.now];if(!C){box.innerHTML="";return;}
  const kv=(h,body)=>'<div class="ckv"><h4>'+TR(h)+'</h4>'+body+'</div>',chips=a=>'<div class="cchips">'+a.map(x=>'<span>'+esc(x)+'</span>').join("")+'</div>';
@@ -238,7 +238,7 @@ function drawQ(){/* 数は「最大」から見せて、減ることはあって
  ch.hidden=!CH2;ch.textContent=CH2;
  const o=$("qOpts");o.innerHTML="";
  if(qi<ord.length){const qn=ord[qi],q=QZ.Q[qn],A=AXQ[AXN[q.ax]];
-  $("qAxis").textContent=A.name;$("qAxis").style.color="var("+A.c+")";{const stu=(()=>{const g=ageNow();return g!=null&&g<=22;})();$("qText").textContent=(stu&&q.q_s)?uniW(q.q_s):q.q;$("qEx").textContent=(stu&&q.ex_s)?uniW(q.ex_s):q.ex;}$("qExW").hidden=false;$("qExW").open=true;
+  $("qAxis").textContent=A.name;$("qAxis").style.color="var("+A.c+")";{const stu=(()=>{const g=stageAge();return g!=null&&g<=22;})();$("qText").textContent=(stu&&q.q_s)?uniW(q.q_s):q.q;$("qEx").textContent=(stu&&q.ex_s)?uniW(q.ex_s):q.ex;}$("qExW").hidden=false;$("qExW").open=true;
   SCALE.forEach(([t,v,sz])=>{const bt=document.createElement("button");bt.type="button";bt.style.setProperty("--qc","var("+A.c+")");
    bt.innerHTML='<i style="width:'+sz+'px;height:'+sz+'px"></i>'+t;bt.setAttribute("aria-pressed",qa[qn]===v);
    bt.onclick=()=>{if(window.__qLock)return;window.__qLock=1;qa[qn]=v;bt.setAttribute("aria-pressed","true");setTimeout(()=>{window.__qLock=0;next();},180);};o.appendChild(bt);});
@@ -603,7 +603,7 @@ function lvInit(){if(typeof LV==="undefined"||!LV||!LV.questions)return;let el=$
  el.innerHTML='<p class="eyebrow">'+TR("恋愛編")+'</p><h2 class="lvh">'+TR("恋をすると、あなたの中のどちらが強く出る？")+'</h2>'
   +'<p class="hint lvlead">'+TR("恋愛の場面だけを聞く16問・約3分。恋をしたときのあなたが、気質と性格のどちらに近いのか、ふだんは出ない面があるのかがわかります。")+'</p>'
   +'<button class="btn primary" type="button" id="lvStart">'+TR("恋愛編を診断する")+'</button>'
-  +'<div id="lvSit" class="lvsit" hidden><p class="lvsq">'+TR("今の恋は、どれに近い？")+'</p><div class="lvsb">'+LVSIT.map(([k,l])=>'<button type="button" data-s="'+k+'">'+TR(k==="koi"&&(ageNow()??99)<=18?"付き合っている":l)+'</button>').join("")+'</div><p class="hint">'+TR("今の状況に合わせて、質問と結果が変わります。")+'</p></div>'
+  +'<div id="lvSit" class="lvsit" hidden><p class="lvsq">'+TR("今の恋は、どれに近い？")+'</p><div class="lvsb">'+LVSIT.map(([k,l])=>'<button type="button" data-s="'+k+'">'+TR(k==="koi"&&(stageAge()??99)<=18?"付き合っている":l)+'</button>').join("")+'</div><p class="hint">'+TR("今の状況に合わせて、質問と結果が変わります。")+'</p></div>'
   +'<div id="lvQ" class="lvq" hidden><div class="qtop"><span class="qcount" id="lvCount"></span><button type="button" class="qlink" id="lvBack">'+TR("← 1つ前の質問へ")+'</button></div><div class="qprog"><span id="lvProg"></span></div><h3 class="qtext" id="lvText"></h3><div class="qex" id="lvExW"><span class="qexl">'+TR("たとえば")+'</span><p id="lvEx"></p></div><div class="qopts" id="lvOpts"></div></div>'
   +'<div id="lvRes" hidden></div>';
  $("lvStart").onclick=()=>{$("lvStart").hidden=true;$("lvRes").hidden=true;$("lvQ").hidden=true;$("lvSit").hidden=false;$("love").scrollIntoView({behavior:"smooth",block:"start"});};
@@ -616,6 +616,10 @@ const LVK="16tp.lvused.v1";
 const LVSIT=[["kata","片思い中"],["kini","気になる人がいる"],["koi","付き合っている・結婚している"],["none","今はいない"]];
 /* 年れいで合わない質問（例：「25歳までには結婚したい」）は、その年れいの人にだけ出す */
 function ageNow(){const t=new Date(),y=+st.y,m=+st.m,d=+st.d;if(!y)return null;let a=t.getFullYear()-y;if(t.getMonth()+1<m||(t.getMonth()+1===m&&t.getDate()<d))a--;return a;}
+/* 学年で分けるための年れい：今の学年が始まった日（日本は4月1日、韓国は3月1日）の年れい＋1。
+   高校生まで＝18以下、大学生＝19〜22、それより上＝大人、というこれまでの区切りをそのまま使える。早生まれも学年どおりに分かれる */
+function stageAge(){const t=new Date(),y=+st.y,m=+st.m,d=+st.d;if(!y)return null;const sm=LANG==="ko"?3:4,sd=1,ty=t.getFullYear(),tm=t.getMonth()+1;
+ const sy=(tm>=sm)?ty:ty-1;let a=sy-y;if(LANG==="ko"?(m>sm||(m===sm&&d>=sd)):(m>sm||(m===sm&&d>sd)))a--;return a+1;}
 function lvPick(sit){if(sit==="kini")sit="kata";const Q=LV.questions,AG=ageNow(),ok=i=>(!sit||!Q[i].s||Q[i].s.includes(sit))&&!(Q[i].maxAge&&AG!=null&&AG>Q[i].maxAge),rec=new Set(sget(LVK)||[]),R=[["E","N","T","J"],["I","S","F","P"]],out=[];
  const pole=(ax,p)=>{const c=Q.map((q,i)=>i).filter(i=>Q[i].ax===ax&&Q[i].p===p&&ok(i));for(let j=0;j<c.length;j++){const r=j+Math.floor(Math.random()*(c.length-j));[c[j],c[r]]=[c[r],c[j]];}
   return c.filter(i=>!rec.has(i)).concat(c.filter(i=>rec.has(i))).slice(0,2);};
@@ -623,7 +627,7 @@ function lvPick(sit){if(sit==="kini")sit="kata";const Q=LV.questions,AG=ageNow()
  for(let j=0;j<4;j++)R[j%2].forEach(p=>{const i=L[p][j>>1];if(i!=null)out.push(i);});return out;}
 function lvMark(qs){const u=(sget(LVK)||[]).filter(i=>!qs.includes(i)).concat(qs);sset(LVK,u.slice(-32));}
 function lvDraw(){const Q=lv.qs.map(i=>LV.questions[i]),q=Q[lv.i],A=AX[AXN[q.ax]];$("lvCount").textContent=(lv.i+1)+" / "+Q.length;$("lvProg").style.width=(lv.i/Q.length*100)+"%";
- {const g=ageNow(),k=g==null?"":g<=22?"_s":"_w",qq=uniW(q["q"+k]||q.q),ee=uniW(((lv.sit==="kata"||lv.sit==="kini")&&q.ex_k)||q["ex"+k]||q.ex);$("lvText").textContent=qq;$("lvEx").textContent=ee||"";$("lvExW").hidden=!ee;}const o=$("lvOpts");o.innerHTML="";
+ {const g=stageAge(),k=g==null?"":g<=22?"_s":"_w",qq=uniW(q["q"+k]||q.q),ee=uniW(((lv.sit==="kata"||lv.sit==="kini")&&q.ex_k)||q["ex"+k]||q.ex);$("lvText").textContent=qq;$("lvEx").textContent=ee||"";$("lvExW").hidden=!ee;}const o=$("lvOpts");o.innerHTML="";
  LVSCALE.forEach(([t,v,sz])=>{const bt=document.createElement("button");bt.type="button";bt.style.setProperty("--qc","var(--rose)");bt.innerHTML='<i style="width:'+sz+'px;height:'+sz+'px"></i>'+t;bt.setAttribute("aria-pressed",lv.a[lv.i]===v);
   bt.onclick=()=>{if(window.__lvLock)return;window.__lvLock=1;lv.a[lv.i]=v;bt.setAttribute("aria-pressed","true");setTimeout(()=>{window.__lvLock=0;lv.i++;if(lv.i>=Q.length)lvFinish();else lvDraw();},180);};o.appendChild(bt);});}
 function lvFinish(){const me=window.__me,sc={EI:0,SN:0,TF:0,JP:0};
@@ -644,7 +648,7 @@ function lvRp(x,sit){if(typeof x!=="string"||(sit!=="kata"&&sit!=="kini"))return
  if(LANG==="en")return x.replace(/\byour partner\b/g,"your crush").replace(/\bYour partner\b/g,"Your crush").replace(/\bpartner\b/g,"crush");
  if(LANG==="ko"){x=x.split("연인").join("좋아하는 사람");return ki?x.split("좋아하는 사람").join("신경 쓰이는 사람"):x;}
  x=x.split("恋人").join("好きな人");return ki?x.split("好きな人").join("気になる人"):x;}
-function lvTy(t){const o=LV.types&&LV.types[t];if(!o)return o;const g=typeof ageNow==="function"?ageNow():null;const sf=g==null?"":g<=22?"_s":"_w",r={};for(const k in o){if(!/_[sw]$/.test(k))r[k]=sf&&o[k+sf]?uniW(o[k+sf]):o[k];}
+function lvTy(t){const o=LV.types&&LV.types[t];if(!o)return o;const g=stageAge();const sf=g==null?"":g<=22?"_s":"_w",r={};for(const k in o){if(!/_[sw]$/.test(k))r[k]=sf&&o[k+sf]?uniW(o[k+sf]):o[k];}
  /* 片思い中は「恋人」を「好きな人」にする */
  if(st.love&&(st.love.sit==="kata"||st.love.sit==="kini")){const rp=x=>lvRp(x,st.love.sit);
   ["one","desc","good","care","tip","words","tag","kata_try","kata_habit","kata_word"].forEach(k=>{const v=r[k];if(typeof v==="string")r[k]=rp(v);else if(Array.isArray(v))r[k]=v.map(x=>Array.isArray(x)?[rp(x[0])].concat(x.slice(1)):rp(x));});}
@@ -774,7 +778,7 @@ async function drawCV(){
  const sec=(t)=>{y+=10;c.font="700 26px "+SANS;c.fillStyle=SC.plus;c.fillText(t,X0,y+20);y+=36;};
  sec(TR("これまでの歩み（予測）"));
  const kr0=String((me.kt&&me.kt.karai)||me.karaiC||""),dup=x=>{x=String(x||"");for(let i=0;i+6<=x.length;i++)if(kr0.includes(x.slice(i,i+6)))return true;return false;},pick=(arr,i)=>{const v=arr[i];if(!dup(v))return v;const alt=arr.find((x,j)=>j!==i&&x&&!dup(x));return alt||v;};
- const ag=ageNow(),hist=(ag!=null&&ag<=22?[[TR("子どものころ"),pick(AB,0)],[TR("学生時代"),pick(AB,1)],[TR("これから"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]:[[TR("子どものころ"),pick(AB,0)],[TR("学生時代"),pick(AB,1)],[TR("社会に出て"),AN[2]||AN[0]],[TR("現在"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]).filter(r=>r[1]);
+ const ag=stageAge(),hist=(ag!=null&&ag<=22?[[TR("子どものころ"),pick(AB,0)],[TR("学生時代"),pick(AB,1)],[TR("これから"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]:[[TR("子どものころ"),pick(AB,0)],[TR("学生時代"),pick(AB,1)],[TR("社会に出て"),AN[2]||AN[0]],[TR("現在"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]).filter(r=>r[1]);
  hist.forEach(([l,v])=>{const h=64;lab(X0,y,LW,h,l);box(X0+LW,y,X1-X0-LW,h);txt(v,X0+LW+18,y+h/2+9,X1-X0-LW-36,25,1);y+=h;});
  y+=30;
  /* 長所・短所 */
@@ -838,9 +842,9 @@ const SWN={EI:["元気の出し方","人といるか、ひとりか","--ei"],SN:
 /* 19〜22歳（日本語）：学生向けの文の「部活・クラス・文化祭」を大学向けの言葉にする */
 const UNIW=[["クラス替えの日に","新しい授業の初日に"],["クラス替えから","新学期から"],["部活やサークル","サークル"],["部活やクラス","サークルやゼミ"],["クラスや部活","ゼミやサークル"],["部活","サークル"],["文化祭","学園祭"],["クラスのみんな","サークルのみんな"],["同じクラス","同じ授業"],["クラス替え","新学期"],["クラス","ゼミ"]];
 const UNIW_X={en:[["my teacher","my professor"],["My teacher","My professor"],["a teacher","a professor"],["the teacher","the professor"],["teachers","professors"],["teacher","professor"],["classmates","people in my classes"],["homeroom","class"]],ko:[["선생님","교수님"],["담임","교수님"],["반 친구들","같은 수업 사람들"],["반 친구","같은 수업 친구"]]};
-function uniW(t){if(typeof t!=="string")return t;const g=typeof ageNow==="function"?ageNow():null;if(g==null||g<19||g>22)return t;(LANG==="ja"?UNIW:(UNIW_X[LANG]||[])).forEach(([a,b])=>{t=t.split(a).join(b);});return t;}
+function uniW(t){if(typeof t!=="string")return t;const g=stageAge();if(g==null||g<19||g>22)return t;(LANG==="ja"?UNIW:(UNIW_X[LANG]||[])).forEach(([a,b])=>{t=t.split(a).join(b);});return t;}
 /* 22歳以下には、くわしい鑑定などの文で学生向け（〇〇_s）があればそちらを出す */
-function ktStu(o){if(!o)return o;const g=typeof ageNow==="function"?ageNow():null;if(g==null||g>22)return o;const r={};for(const k in o){if(!k.endsWith("_s"))r[k]=o[k+"_s"]?uniW(o[k+"_s"]):o[k];}return r;}
+function ktStu(o){if(!o)return o;const g=stageAge();if(g==null||g>22)return o;const r={};for(const k in o){if(!k.endsWith("_s"))r[k]=o[k+"_s"]?uniW(o[k+"_s"]):o[k];}return r;}
 function yureSee(born,now){const pv=((window.__me&&window.__me.prev)||[]).filter(t=>t&&t!==now);if(!pv.length)return "";
  const ax=[0,1,2,3].filter(i=>pv.some(t=>t[i]!==now[i]));if(!ax.some(i=>born[i]===now[i]))return "";
  const ch=ax.map(i=>(born[i]!==now[i]&&pv.every(t=>t[i]===now[i])?"":pv.find(t=>t[i]!==now[i])[i]+"→"+now[i])).filter(Boolean).join(TR("・"));
@@ -852,7 +856,7 @@ function swayNote(born,now){const ks=["EI","SN","TF","JP"];
  const df=k=>born[ks.indexOf(k)]!==now[ks.indexOf(k)];
  let t='<p class="mh">'+TR("今回のあなたの回答で、答えが変わりやすかったのは")+'</p><ul class="swl">'+w.map(k=>'<li style="--c:var('+SWN[k][2]+')"><b>'+TR(SWN[k][0])+'</b><small>'+TR(SWN[k][1])+'</small><em class="'+(df(k)?'both':'core')+'">'+(df(k)?TR("両方の力"):TR("いつもは同じ文字"))+'</em></li>').join("")+'</ul>';
  if(w.some(df))t+='<p><em class="both">'+TR("両方の力")+'</em>'+TR("生まれつきの気質と、育ってきた性格で、文字が違うところです。両方の力を持っているので、場面によって答えが変わるのは自然なことです。")+'</p>';
- if(w.some(k=>!df(k))){const g=ageNow();t+='<p><em class="core">'+TR("いつもは同じ文字")+'</em>'+TR(g!=null&&g<=18?"気質も性格も同じ文字で、ふだんは答えが変わりにくいところです。ここで答えが変わったのは、学校や部活、友だち関係で、いつもと違う力を使っている時期だからかもしれません。":g!=null&&g<=22?"気質も性格も同じ文字で、ふだんは答えが変わりにくいところです。ここで答えが変わったのは、授業やバイト、人間関係で、いつもと違う力を使っている時期だからかもしれません。":"気質も性格も同じ文字で、ふだんは答えが変わりにくいところです。ここで答えが変わったのは、今の職場や人間関係で、いつもと違う力を使っている時期だからかもしれません。")+'</p>';}
+ if(w.some(k=>!df(k))){const g=stageAge();t+='<p><em class="core">'+TR("いつもは同じ文字")+'</em>'+TR(g!=null&&g<=18?"気質も性格も同じ文字で、ふだんは答えが変わりにくいところです。ここで答えが変わったのは、学校や部活、友だち関係で、いつもと違う力を使っている時期だからかもしれません。":g!=null&&g<=22?"気質も性格も同じ文字で、ふだんは答えが変わりにくいところです。ここで答えが変わったのは、授業やバイト、人間関係で、いつもと違う力を使っている時期だからかもしれません。":"気質も性格も同じ文字で、ふだんは答えが変わりにくいところです。ここで答えが変わったのは、今の職場や人間関係で、いつもと違う力を使っている時期だからかもしれません。")+'</p>';}
  return '<div class="mine">'+t+'<p class="mk"><b>'+TR("どちらかが正しいタイプ、ということはありません。")+'</b></p></div>';}
 /* 鑑定文を読みやすく：気質・性格の言葉に色、かぎかっこを太字、結論の文を太字、ヒントは箇条書き */
 const KW={ja:[/(生まれ持った気質|生まれ持った性質|生まれ持った|生まれつき|気質)|(経験の中で育った性格|経験の中で育った|経験の中で|育ってきた性格|育ってきた|性格)|(両方の力|ゆるがない部分)/g],
@@ -947,7 +951,7 @@ function layoutResult(){const hero=document.querySelector(".hero");if(!hero)retu
 /* ---- 性格の記録：受けるたびの16タイプをならべて、変わる文字・変わらない文字を見せる ---- */
 const KH="16tp.hist.v1",HTAGS_W=["仕事が忙しい","人と会うことが多い","ひとりの時間が多い","休みが多い","落ちこんでいた"],HTAGS_S=["テスト期間","部活や行事がいそがしい","人と会うことが多い","ひとりの時間が多い","長い休み","落ちこんでいた"];
 const HTAGS_U=["テスト期間","就活中","実習・研修","人と会うことが多い","ひとりの時間が多い","長い休み","落ちこんでいた"];
-function htags(){const g=typeof ageNow==="function"?ageNow():null;return g==null||g>22?HTAGS_W:g>=19?HTAGS_U:HTAGS_S;}
+function htags(){const g=stageAge();return g==null||g>22?HTAGS_W:g>=19?HTAGS_U:HTAGS_S;}
 const ymdOf=()=>st.y+"-"+st.m+"-"+st.d;
 const today=()=>{const t=new Date(Date.now()-new Date().getTimezoneOffset()*6e4);return t.toISOString().slice(0,10);};
 function histAll(){const h=sget(KH);return Array.isArray(h)?h.filter(r=>r&&typeof r==="object"&&typeof r.b==="string"&&typeof r.d==="string"&&/^[EI][SN][TF][JP]$/.test(r.t)):[];}
