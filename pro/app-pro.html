@@ -5720,7 +5720,7 @@ function renderResult(){
     (window.__isSample?'':'')+sampleNote+heroHTML(c)+pkDigestHTML(c)+timingAlertHTML(c)+summaryHTML(c)+featBookHTML(c)+kaigouCardHTML(c)+verdictHTML(c)+tensenCardHTML(c)+meishiHTML(c)+(window.__isSample?'<button type="button" class="sample-more" onclick="document.body.classList.remove(\'sample-fold\')"><span style="display:inline-block">見本の続きを見る</span><span style="display:inline-block">（命式・運勢の流れ・</span><span style="display:inline-block">詳細鑑定など）</span></button>':'');
   (function(){var _rb=document.getElementById('result-body');
     if(!_rb){_rb=document.createElement('div');_rb.id='result-body';var _r=document.getElementById('result');if(_r&&_r.parentNode)_r.parentNode.insertBefore(_rb,_r.nextSibling);}
-    _rb.innerHTML = kaikyokuHTML(c)+genmeiHTML(c)+junitenHTML(c)+gogyoHTML(c)+/* 「相性も見る」は上の「相性も診断できます →」の帯と同じ働きなので出さない（2026-10-27） */midQuickNavHTML()+flowHTML(c)+kingunHTML(c)+(typeof pkLoveCard==='function'?(((c.now&&c.now.age)||0)<18?'<section class="card sec" id="love-card"><span class="eyebrow"><b>恋愛</b></span><h2>恋愛・結婚の目安</h2><p class="mhint" style="margin:4px 0 0">恋愛・結婚・パートナーの目安は、18歳以上の方に表示します。いまは学びや成長、人との出会いを大切にする時期です。</p></section>':pkLoveCard(c)):'')+yojoHTML(c);
+    _rb.innerHTML = kaikyokuHTML(c)+genmeiHTML(c)+junitenHTML(c)+gogyoHTML(c)+/* 「相性も見る」は上の「相性も診断できます →」の帯と同じ働きなので出さない（2026-10-27） */midQuickNavHTML()+flowHTML(c)+kingunHTML(c)+(typeof pkLoveCard==='function'?(((c.now&&c.now.age)||0)<18?'<section class="card sec" id="love-card"><span class="eyebrow"><b>恋愛</b></span><h2>恋愛・結婚の目安</h2><p class="mhint" style="margin:4px 0 0">恋愛・結婚・パートナーの目安は、18歳以上の方に表示します。いまは学びや成長、人との出会いを大切にする時期です。</p></section>':pkSelfLoveWord(pkLoveCard(c),c)):'')+yojoHTML(c);
   })();
   // 末尾が「→ ›」等で終わるリンク（例：干支相性 早見表→）で、スマホ幅のとき矢印が一文字だけ次行に泣き別れしないよう、末尾3文字をひとまとまり(nowrap)にする。表示層のみ・pklove.jsは非改変。
   (function(){document.querySelectorAll('#result a, #result-body a').forEach(function(a){
@@ -5810,7 +5810,20 @@ if(!window.__gogyoPinBound){ window.__gogyoPinBound=1;
   if(_gpin){ var _gx=_gpin.querySelector('.gp-x'); if(_gx)_gx.onclick=function(){ _gpin.dataset.closed='1'; _gpin.classList.remove('show'); }; }
 }
 // 蔵干の代表（通変星）を手動で選ぶ：idx<0 で司令（元）に戻す。表もAI鑑定も連動して切り替わる。
-function selectZou(label,idx){ if(idx<0) delete zouOverride[label]; else zouOverride[label]=idx; reRenderKeep(); }
+function selectZou(label,idx){ if(idx<0) delete zouOverride[label]; else zouOverride[label]=idx; reRenderKeep(); try{ pkZouNote(); }catch(e){} }
+/* 答えが出たあとに蔵干を選びかえたら、出ている答えの上に案内を出す（自動では作り直さない。CB-5。2026-11-03） */
+function pkZouNote(){
+  const mk=function(target,run){ if(!target||!target.parentNode) return; const pv=target.previousElementSibling; if(pv&&pv.classList.contains('pk-zou-note')) return;
+    const n=document.createElement('div'); n.className='pk-zou-note no-print'; n.setAttribute('role','status');
+    n.style.cssText='margin:8px 0;padding:10px 12px;border:1.5px solid #B7791F;border-radius:10px;background:#FFF8E8;color:#5C3D00;font-size:13.5px;font-weight:800;line-height:1.75';
+    const _bg=document.documentElement.classList.contains('bg-on');   // ビギナーのやさしい画面では専門用語を出さない
+    n.innerHTML=(_bg?'くわしい内容で読み方を選びかえました。この答えは前の読み方で作ったものです。答えを作り直すと新しい読み方で読みます（🔄）。':'蔵干を選びかえました。この答えは前の選び方で作ったものです。答えを作り直すと新しい選び方で読みます（🔄）。')+'<br><button type="button" class="rd-retry pk-zou-redo" style="margin-top:6px">🔄 新しい選び方で答えを作り直す</button>';
+    n.querySelector('button').onclick=function(){ n.remove(); run(); };
+    target.parentNode.insertBefore(n,target); };
+  document.querySelectorAll('#reading .rd-item:not(.rd-past) > .rd-body').forEach(function(b){ const it=b.parentNode, q=it.dataset.q||''; if(!q||!b.textContent.trim()||(typeof dangerKind==='function'&&dangerKind(q))) return;
+    mk(b,function(){ const P=consultParts(q); runReading(document.getElementById('consultBtn'),b,P.easy,P.local,P.pro,undefined,P.safety); }); });
+  const ar=document.getElementById('autoReading'); if(ar&&ar.textContent.trim()) mk(ar,function(){ doAutoRead(); });
+}
 /* 再描画してもスクロール位置を保つ（縦/横・大運・年運・蔵干の切替でページ先頭へ飛ばさない）。
    再描画の前に現在位置を控え、直後に復元する。以前は_sk=0固定で常に最上部へ飛んでいた不具合を修正。 */
 function reRenderKeep(){ const y=window.scrollY||window.pageYOffset||0; window.__keepAiSlot=true; try{ renderResult(); }finally{ window.__keepAiSlot=false; } window.scrollTo(0,y); }
@@ -6992,7 +7005,10 @@ function goodYearsAhead(c,n){ try{ if(!c||!c.now||!c.dayMaster) return []; const
 /* まだ幼い子ども（13歳未満）の相談に、大人向けの恋愛・仕事・お金・子宝の答えを出さない（2026-11-02） */
 function pkKidAge(c){ const a=c&&c.now&&c.now.age; return (typeof a==='number'&&a>=0&&a<13)?a:-1; }
 const PK_KID_NOTE=function(a){ return 'まだ'+a+'歳のお子さんなので、恋愛・結婚・仕事・お金の時期としてではなく、生まれ持った性質と、育っていく中で伸ばしたい持ち味としてお伝えします。\n\n'; };
-function localAnswer(c,worry){ const _ka=pkKidAge(c); if(_ka>=0&&worry){ const _t=worryCaveat(worry)?null:classifyWorry(worry); if(/^(love|work|money|children)$/.test(_t||'')) return PK_KID_NOTE(_ka)+localAnswer0(c,'性格の本質'); }
+/* 個人の鑑定で「恋愛で見るお相手」が本人と同じ性別（またはどちらも）のときは、男女を前提にした言い方をしない（CB-8。2026-11-03） */
+function pkSelfLoveWord(t,c){ try{ const lt=getLoveTarget(), sx=c&&c.birth&&c.birth.sex; if(!sx||!(lt==='both'||lt===sx)) return t; return pkSameSexWord(t,c,{birth:{sex:sx}}); }catch(e){ return t; } }
+function localAnswer(c,worry){ return pkSelfLoveWord(localAnswer1(c,worry),c); }
+function localAnswer1(c,worry){ const _ka=pkKidAge(c); if(_ka>=0&&worry){ const _t=worryCaveat(worry)?null:classifyWorry(worry); if(/^(love|work|money|children)$/.test(_t||'')) return PK_KID_NOTE(_ka)+localAnswer0(c,'性格の本質'); }
   return localAnswer0(c,worry); }
 function localAnswer0(c,worry){
   if(!worry)return localReading(c,'');   // 質問なし＝従来どおり命式全体の整理
@@ -7654,6 +7670,7 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
   const sc=safety||'';  // 自傷・希死念慮を検知したら、AIを待たずに最上部へ相談窓口を必ず表示（オンライン/オフライン/ブロック時も出す）
   const gen=(out.__rg=(out.__rg||0)+1);   // 生成中に人・表示が変わったら、後から届いた古い結果は捨てる（別の人の欄に出さない）
   const stale=()=>out.__rg!==gen||!out.isConnected;
+  try{ const _zn=out.previousElementSibling; if(_zn&&_zn.classList.contains('pk-zou-note')) _zn.remove(); }catch(e){}   // 作り直したら「蔵干を選びかえました」の案内は消す
   btn.disabled=true;rdBusyNote(btn,true);out.innerHTML=sc+'<div class="loading"><span class="spin"></span>まず答えを作成しています…（ふつうは10秒ほどで出ます）</div>';
   setTimeout(function(){ try{ if(stale()) return; const ld=out.querySelector('.loading:not(.r-more)'); if(!ld||ld.querySelector('.pk-skip')) return;   // 8秒たっても届かないとき（電波が弱いときなど）は、待たずに出せるボタンを出す
     const b=document.createElement('button'); b.type='button'; b.className='pk-skip no-print'; b.textContent='⏩ 待たずに端末の中で答えを出す';
@@ -8179,7 +8196,7 @@ async function doAutoRead(){
   { const st=pkStale(); if(st){ const out=document.getElementById('autoReading'); if(out) out.innerHTML='<div class="err">'+esc(st)+'</div>'; return; } }
   const out=document.getElementById('autoReading');
   // 自動鑑定レポートは最重要＝DEEP（x-pk-deep:1）。相談・相性は既定(LITE)。
-  runReading(document.getElementById('autoReadBtn'),out,easyReadUser(chart),localReading(chart,''),proReadUser(chart),true,undefined,localReading(chart,'',true));
+  runReading(document.getElementById('autoReadBtn'),out,easyReadUser(chart),pkSelfLoveWord(localReading(chart,''),chart),proReadUser(chart),true,undefined,pkSelfLoveWord(localReading(chart,'',true),chart));
 }
 
 /* ===== 相性診断（2人の命式を比較・計算ロジックは同じ） ===== */
@@ -9443,7 +9460,9 @@ function buildCompatBase(out){
     if(isNaN(_bd)||_bd.getMonth()!==mo-1||_bd>_td||y<1900){ out.innerHTML='<div class="err">お相手の生年月日をご確認ください（今日より先の日付や、実在しない日付は選べません）。</div>'; return null; } }
   const lon=document.getElementById('b-pref').value;
   personNameB=document.getElementById('b-name').value.trim();
-  try{chartB=baziCompute({year:y,month:mo,day:d,hour:h,minute:mi,sex:sexB,tu:!!_bNoTime}, lon, lon?((document.getElementById('f-corr')||{}).value||'full'):'none');}catch(e){out.innerHTML='<div class="err">お相手の命式の計算に失敗しました。日付・時刻をご確認ください。</div>';return null;}
+  const _bo=(window.__bOpts&&window.__bOpts.sig===[dv,_bNoTime?'tu':tv,lon||''].join('|'))?window.__bOpts.o:null;   // 保存した人をお相手にしたときは、その人の設定で（入力を打ちかえたら画面の設定）
+  const _bc=function(){ return baziCompute({year:y,month:mo,day:d,hour:h,minute:mi,sex:sexB,tu:!!_bNoTime}, lon, lon?((document.getElementById('f-corr')||{}).value||'full'):'none'); };
+  try{chartB=_bo?pkWithOpts(_bo,_bc):_bc();}catch(e){out.innerHTML='<div class="err">お相手の命式の計算に失敗しました。日付・時刻をご確認ください。</div>';return null;}
   if(document.getElementById('b-notime')&&document.getElementById('b-notime').checked)markTimeUnknown(chartB);
   const na=personName||'本人', nb=personNameB||'お相手';
   const rt=RELTYPES[document.getElementById('rel-type')?.value||'love']||RELTYPES.love;
@@ -9471,8 +9490,15 @@ function ensureChartAFromForm(){
   const lon=document.getElementById('f-pref').value, corr=document.getElementById('f-corr').value;
   const timeUnknown=document.getElementById('f-notime')&&document.getElementById('f-notime').checked;
   personName=document.getElementById('f-name').value.trim();
+  // 上の入力が、いま画面に出ている命式の人（設定）とちがう＝別の人。前の人の蔵干の選択・表紙・命式表・答えを残さず、新しい人で作り直す（CB-1。2026-11-03）
+  const _sig=pkFormSig(), _stale=!chart||!!window.__isSample||window.__chartSig!==_sig;
+  if(_stale){ zouOverride={}; selDu=-1; selYear=null; flowOpen=true; window.__isSample=false; window.__pf=null;
+    try{ (window.__pkLive||new Set()).forEach(function(h){ h.abort(); }); }catch(e){}   // 前の人の作成中の文が後から出ないように
+    try{ const _cl=currentClientId?mpLoad().clients.find(x=>x.id===currentClientId&&!x.deleted):null;
+      if(!_cl||_cl.name!==personName||_cl.date!==dv||(!!_cl.notime)!==!!timeUnknown||(!timeUnknown&&(_cl.time||'12:00')!==tv)||_cl.sex!==sex) currentClientId=null; }catch(e){ currentClientId=null; } }
   chart=baziCompute({year:y,month:mo,day:d,hour:h,minute:mi,sex,tu:!!timeUnknown}, lon, corr);
   if(timeUnknown) markTimeUnknown(chart);
+  if(_stale){ window.__chartSig=_sig; window.__chartOpts=pkOptsGet(); try{ renderResult(); }catch(e){} }   // 個人鑑定の画面（表紙・命式表・答えの欄）も新しい人に
   return true;
 }
 // 家族・友人・仕事の相性では、夫婦・恋人向けの言葉（配偶宮・配偶者星・結婚・離婚）を使わない
@@ -9601,7 +9627,7 @@ function mpSanitize(doc){
       id:idOk(r.id)?r.id:mpNewId('r_'), kind:/^[A-Za-z0-9_-]{0,32}$/.test(str(r.kind,32))?str(r.kind,32):'', title:str(r.title,200), text:pkNoStar(str(r.text,200000)), q:str(r.q,2000), ts:Number(r.ts)||0 }));
     clients.push({ id, name:str(c.name,100).trim()||'（名前なし）', kana:str(c.kana,100), date, time,
       sex:c.sex==='male'?'male':'female', pref:/^-?[0-9.]{0,12}$/.test(str(c.pref,12))?str(c.pref,12):'',
-      corr:['none','full','longitude'].includes(c.corr)?c.corr:'full', zishi:c.zishi==='next'?'next':'today', notime:!!c.notime,
+      corr:['none','full','longitude'].includes(c.corr)?c.corr:'full', zishi:c.zishi==='next'?'next':'today', clk:c.clk!==false, dst:c.dst!==false, notime:!!c.notime,   // クロック時刻優先・サマータイムも残す（前に保存した人は既定＝オン。CB-6。2026-11-03）
       memo:str(c.memo,20000), next:str(c.next,4000), tags, readings, ts:Number(c.ts)||0, deleted:!!c.deleted,
       fts:(function(f){ const o={}; if(f&&typeof f==='object') ['memo','next','tags','kana'].forEach(k=>{ const v=Number(f[k]); if(v>0) o[k]=v; }); return o; })(c.fts),   // 項目ごとの更新時刻（2台の同期で片方の書きかえが消えないように）
       delR:(Array.isArray(c.delR)?c.delR:[]).filter(idOk).slice(-1000) });   // 消した鑑定の印（同期で生き返らないように）
@@ -9694,6 +9720,7 @@ function addClient(){
   const base={name:nm,kana:(document.getElementById('f-kana')||{}).value?document.getElementById('f-kana').value.trim():'',date:dv,time:(_normHM(document.getElementById('f-time').value)||'12:00'),sex,
     pref:document.getElementById('f-pref').value,corr:document.getElementById('f-corr').value,
     zishi:(function(){try{return zishiMode();}catch(e){return 'today';}})(),
+    clk:clockPriority(),dst:dstOn(),   // クロック時刻優先・サマータイムも、お客様の生まれの事実として保存（CB-6。2026-11-03）
     notime:!!(document.getElementById('f-notime')&&document.getElementById('f-notime').checked)};
   let i=doc.clients.findIndex(c=>!c.deleted&&c.name===nm&&c.date===dv&&c.time===base.time);
   // 呼び出した人の生年月日・時刻などを直して保存したとき：別人として増やさず、その人の記録を直す（確認あり）
@@ -9740,6 +9767,7 @@ function loadPartner(id){const c=mpLoad().clients.find(x=>x.id===id&&!x.deleted)
   {const nt=document.getElementById('b-notime');if(nt){nt.checked=!!c.notime;if(nt.onchange)nt.onchange();}}
   {const bp=document.getElementById('b-pref');if(bp)bp.value=c.pref||'';}
   setSexB(c.sex==='male'?'male':'female'); clearCompatResult(); window.__bTouched=true;
+  window.__bOpts={o:pkOptsOf(c),sig:[c.date,c.notime?'tu':(c.time||'12:00'),c.pref||''].join('|')};   // お相手として呼んでも、保存した設定（早子時など）で計算する（CB-3。2026-11-03）
 }
 function loadClient(id){const c=mpLoad().clients.find(x=>x.id===id&&!x.deleted);if(!c)return;try{if(window.mpSheetClose)window.mpSheetClose();}catch(_e){}
   // 別のお客様を呼び出したら、前のお客様の「お相手」の入力は消す（次のお客様の前に前の人の情報を出さない）
@@ -9754,7 +9782,7 @@ function loadClient(id){const c=mpLoad().clients.find(x=>x.id===id&&!x.deleted);
   {const fk=document.getElementById('f-kana');if(fk)fk.value=c.kana||'';}
   {const fd=document.getElementById('f-date');fd.value=c.date;if(fd.syncFromValue)fd.syncFromValue();}{const ft=document.getElementById('f-time');ft.value=c.time||'12:00';if(ft.syncFromValue)ft.syncFromValue();}
   setSex(c.sex);document.getElementById('f-pref').value=c.pref||'';document.getElementById('f-corr').value=c.corr||'full';
-  {const fz=document.getElementById('f-zishi');if(fz)fz.value=c.zishi==='next'?'next':'today';}   // 保存したときの日付の変わり目（早子時）で呼び出す（LU-1。2026-11-03）
+  pkOptsSet(pkOptsOf(c));   // 保存したときの日付の変わり目（早子時）・クロック時刻優先・サマータイムで呼び出す（LU-1・CB-6。2026-11-03）
   const nt=document.getElementById('f-notime');if(nt)nt.checked=!!c.notime;
   window.__noAutoOnce=true; compute();
   setTimeout(function(){ try{ pkShowPrev(c); }catch(e){} },300);}
@@ -10020,7 +10048,7 @@ function autoSaveReading(kind,title,text,q){
     if(!c) c=doc.clients.find(x=>!x.deleted&&x.name===name&&x.date===dv&&(x.time===tm||(notime&&x.notime)));
     if(!c){ c={id:mpNewId('c_'),name,kana:((document.getElementById('f-kana')||{}).value||'').trim(),date:dv,time:tm,sex,
       pref:(document.getElementById('f-pref')||{}).value||'',corr:(document.getElementById('f-corr')||{}).value||'full',
-      zishi:(function(){try{return zishiMode();}catch(e){return 'today';}})(),notime,memo:'',readings:[],ts:Date.now(),deleted:false};
+      zishi:(window.__chartOpts||pkOptsGet()).zishi,clk:(window.__chartOpts||pkOptsGet()).clk,dst:(window.__chartOpts||pkOptsGet()).dst,notime,memo:'',readings:[],ts:Date.now(),deleted:false};
       doc.clients.unshift(c); }
     currentClientId=c.id; c.readings=c.readings||[];
     if(c.readings[0]&&c.readings[0].text===text) return {rid:c.readings[0].id,name:c.name};
@@ -10265,6 +10293,16 @@ function jpDstToStd(y,m,d,h,mi){
   const u=new Date(t-3600000); return {y:u.getUTCFullYear(),m:u.getUTCMonth()+1,d:u.getUTCDate(),h:u.getUTCHours(),mi:u.getUTCMinutes()};
 }
 function dstOn(){ const e=document.getElementById('f-dst'); return e?e.checked:true; }
+/* お客様ごとの計算の設定（早子時・クロック時刻優先・サマータイム）。保存・呼び出し・お相手として呼ぶ・次のお客様へ で使う（CB-2・3・6。2026-11-03） */
+const PK_OPT_DEF={zishi:'today',clk:true,dst:true};
+function pkOptsGet(){ return {zishi:zishiMode()==='next'?'next':'today',clk:clockPriority(),dst:dstOn()}; }
+function pkOptsSet(o){ o=Object.assign({},PK_OPT_DEF,o||{}); const fz=document.getElementById('f-zishi'); if(fz)fz.value=o.zishi==='next'?'next':'today';
+  const fc=document.getElementById('f-clockday'); if(fc)fc.checked=o.clk!==false; const fd=document.getElementById('f-dst'); if(fd)fd.checked=o.dst!==false; }
+function pkOptsOf(cl){ return {zishi:cl&&cl.zishi==='next'?'next':'today',clk:!(cl&&cl.clk===false),dst:!(cl&&cl.dst===false)}; }   // 前に保存した人（clk・dst がない）は既定（オン）
+function pkWithOpts(o,fn){ const o0=pkOptsGet(); try{ pkOptsSet(o); return fn(); }finally{ pkOptsSet(o0); } }
+/* いまの入力欄（本人）の中身。命式（chart）を作ったときと同じかを見る（CB-1・4） */
+function pkFormSig(){ const g=id=>{const e=document.getElementById(id);return e?e.value:'';}; const nt=!!(document.getElementById('f-notime')||{}).checked; const o=pkOptsGet();
+  return [g('f-name').trim(),g('f-date'),nt?'tu':(_normHM(g('f-time'))||''),sex,g('f-pref'),g('f-corr'),nt?'1':'0',o.zishi,o.clk?1:0,o.dst?1:0].join('|'); }
 function baziCompute(base, lon, corr){
   // サマータイム期間の生まれ（時刻が分かる人だけ）：時計の時刻を標準時に直してから計算する（表示・アダプタ層。エンジンは無改変）
   let _dst=null;
@@ -10362,6 +10400,7 @@ function markTimeUnknown(c){
 function openMeishiSheet(){
   const dv=document.getElementById('f-date').value;
   if(!dv){alert('先に生年月日を入れて「この相談を鑑定する」を押してください');return;}
+  if(typeof chart!=='undefined'&&chart&&!window.__isSample&&window.__chartSig&&pkFormSig()!==window.__chartSig){ alert('上の入力か設定（日付の変わり目・クロック時刻優先・サマータイムなど）が、画面の鑑定と変わっています。\n画面と同じ命式の鑑定書にするため、もう一度「この相談を鑑定する」を押してから開いてください。'); return; }   // 画面と鑑定書で日柱がずれないように（CB-4。2026-11-03）
   const _tu0=((document.getElementById('f-notime')||{}).checked)||(typeof chart!=='undefined'&&chart&&chart.timeUnknown);
   const tv=_tu0?'12:00':(_normHM(document.getElementById('f-time').value)||'12:00');
   const lon=(document.getElementById('f-pref')||{}).value||'';
@@ -10433,7 +10472,7 @@ function compute(){
   personName=document.getElementById('f-name').value.trim();
   selDu=-1;selYear=null;zouOverride={};flowOpen=true;
   window.__isSample=false;
-  chart=baziCompute({year:y,month:mo,day:d,hour:h,minute:mi,sex,tu:!!timeUnknown}, lon, corr);
+  chart=baziCompute({year:y,month:mo,day:d,hour:h,minute:mi,sex,tu:!!timeUnknown}, lon, corr); window.__chartSig=pkFormSig(); window.__chartOpts=pkOptsGet();
   clearCompatResult();   // 本人が変わったら、前の本人で出した相性結果は無効なので消す（お相手の入力欄は残す）
   if(timeUnknown){
     markTimeUnknown(chart);
@@ -10475,7 +10514,7 @@ document.querySelectorAll('#theme-tg button').forEach(b=>b.onclick=()=>{ pkSetTh
 try{ const _th=localStorage.getItem('pk_theme'); if(_th) pkSetTheme(_th); }catch(e){}   // 見えやすさの安全装置が前の色で付けた文字色を外す（選んだボタンの文字が灰色のまま残らないように）
 document.getElementById('f-go').onclick=function(){
   // 同じ入力でのダブルクリック・連打は1回として扱う（詳細鑑定が二重に作られ、1日の回数を余分に使うのを防ぐ）
-  const k=['f-name','f-date','f-time','f-pref','f-corr','cs-q'].map(id=>{const e=document.getElementById(id);return e?e.value:'';}).join('|')+'|'+sex+'|'+(document.getElementById('f-notime')||{}).checked;
+  const k=['f-name','f-date','f-time','f-pref','f-corr','cs-q','f-zishi','love-target'].map(id=>{const e=document.getElementById(id);return e?e.value:'';}).join('|')+'|'+sex+'|'+(document.getElementById('f-notime')||{}).checked+'|'+clockPriority()+'|'+dstOn();   // 設定（早子時・恋愛で見るお相手・クロック時刻優先・サマータイム）を変えたら必ず計算し直す（CB-4。2026-11-03）
   const t=Date.now(); if(window.__lastGo&&window.__lastGo.k===k&&t-window.__lastGo.t<2000)return;
   // 同じお客様・同じ相談をすぐにもう一度押した（反応がないと思って押し直した等）＝作り直さず、出ている答えへ移るだけ（文章作成のむだな呼び出しを防ぐ。発注者指示 2026-10-21）
   if(window.__lastGo&&window.__lastGo.k===k&&t-window.__lastGo.t<60000&&((document.getElementById('cs-q')||{}).value||'').trim()){ const _it=document.querySelector('#reading .rd-item:last-child'); if(_it){ try{ _it.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} return; } }
@@ -10603,8 +10642,9 @@ function resetMain(){
   const pf=document.getElementById('f-pref');if(pf)pf.value='';
   const cr=document.getElementById('f-corr');if(cr)cr.value='full';
   const lt=document.getElementById('love-target');if(lt)lt.value='';
+  pkOptsSet(PK_OPT_DEF);   // 早子時・クロック時刻優先・サマータイムも既定に戻す（前のお客様の設定が次の人にうつらないように。CB-2。2026-11-03）
   setSex('female');
-  chart=null;zouOverride={};selDu=-1;selYear=null;currentClientId=null;
+  chart=null;window.__chartSig=null;window.__chartOpts=null;zouOverride={};selDu=-1;selYear=null;currentClientId=null;
   pkShowEmpty();
   document.getElementById('ai-slot').innerHTML='';
   {const _cs=document.getElementById('cs-slot');if(_cs)_cs.innerHTML='';}
@@ -10642,7 +10682,7 @@ function resetCompat(){
   const bnt=document.getElementById('b-notime');if(bnt)bnt.checked=false;
   const bp=document.getElementById('b-pref');if(bp)bp.value='';
   const rt=document.getElementById('rel-type');if(rt)rt.value='love';
-  setSexB('male'); window.__bTouched=false;
+  setSexB('male'); window.__bTouched=false; window.__bOpts=null;
   const cw=document.getElementById('compat-worry');if(cw)cw.value='';
   chartB=null;
   document.getElementById('compat').innerHTML='';
@@ -11089,10 +11129,7 @@ window.__isSample=false; chart=null; pkShowEmpty();
     catch(e){var t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0');}}
   // お客様1人ぶんの命式（呼び出したときと同じ条件で計算）
   function chartOf(cl){var p=cl.date.split('-').map(Number),tm=(cl.notime?'12:00':(cl.time||'12:00')).split(':').map(Number);
-    var fz=document.getElementById('f-zishi'),z0=fz?fz.value:null,c;   // そのお客様を保存したときの日付の変わり目（早子時）で計算する（LU-1。2026-11-03）
-    try{if(fz)fz.value=cl.zishi==='next'?'next':'today';
-      c=baziCompute({year:p[0],month:p[1],day:p[2],hour:tm[0],minute:tm[1],sex:cl.sex==='male'?'male':'female',tu:!!cl.notime},cl.pref||'',cl.corr||'full');}
-    finally{if(fz&&z0!=null)fz.value=z0;}
+    var c=pkWithOpts(pkOptsOf(cl),function(){ return baziCompute({year:p[0],month:p[1],day:p[2],hour:tm[0],minute:tm[1],sex:cl.sex==='male'?'male':'female',tu:!!cl.notime},cl.pref||'',cl.corr||'full'); });   // そのお客様を保存したときの早子時・クロック時刻優先・サマータイムで計算する（LU-1・CB-6。2026-11-03）
     if(cl.notime&&typeof markTimeUnknown==='function')markTimeUnknown(c);return c;}
   function messageFor(cl,ev,y,m){var T=BM_TXT[ev.star];if(!T)return '';
     var nm=String(cl.name||'').replace(/^（名前なし）$/,'');
