@@ -197,7 +197,7 @@
   var PRICE='9,800円・税込';
   /* ご利用の上限の表示。有料＝回数は数えない・見せない（1日の上限もない。サーバーが費用で見て、ふつうは止まらない）。無料お試し＝1日3回。
      check-subscription の usage（無料お試し＝{used,limit}／有料＝{paused}）があればそれを使う */
-  var USAGE={trialCap:3, name:'詳細鑑定', per:'月700〜1,000回ほど使えます', off:'オフラインの詳細鑑定', rule:'相談1件・鑑定書1通＝1回（同じ相談の「くわしい読み解き」と、鑑定書の作り直しは数えません）'};
+  var USAGE={trialCap:3, name:'詳細鑑定', per:'月700〜1,000回ほど使えます', off:'端末の中で作る鑑定（オフライン鑑定）', rule:'相談1件・鑑定書1通＝1回（同じ相談の「くわしい読み解き」と、鑑定書の作り直しは数えません）'};
   var PLAN={month:'月額プラン<span class="nb">（9,800円／月・税込）</span>'};
   var STATUS_JA={active:'ご利用中',trialing:'無料お試し中',canceling:'解約手続き済み',past_due:'お支払いが確認できません',unpaid:'お支払いが確認できません',canceled:'解約済み',none:'ご契約がありません'};
   /* 使える状態か（アプリの会員ゲートと同じ判定）：解約しても、今の期間（無料期間・お支払い済みの期間）の最終日までは使える */
@@ -264,7 +264,7 @@
     if(!ok){ row.hidden=true; return; }
     var jst=new Date(Date.now()+9*3600000), today=jst.toISOString().slice(0,10), pe=String(cur.periodEnd||g('member_period_end')||'');
     var pid=(/^\d{4}-\d{2}-\d{2}$/.test(pe)&&pe>=today)?pe:'m'+today.slice(0,4)+today.slice(5,7);
-    var u=cur.usage||{}, IB='<span style="display:inline-block">', E='</span>';
+    var u=cur.usage||{}, IB='<span style="display:inline-block">', E='</span>'; var OFF=USAGE.off.replace('（',E+IB+'（');   /* 「（」の前で折り返せるように（1文字だけ次の行に残さない） */
     var reset=''; if(!/^cancel/.test(st)){ var d=(pid.charAt(0)!=='m')?new Date(Date.parse(pid+'T00:00:00Z')+86400000):new Date(Date.UTC(+pid.slice(1,5),+pid.slice(5,7),1)); reset=(d.getUTCMonth()+1)+'月'+d.getUTCDate()+'日'; }
     if(trial){
       var cap=(typeof u.limit==='number')?u.limit:USAGE.trialCap, has=typeof u.used==='number', left=has?Math.max(0,cap-u.used):0;
@@ -273,12 +273,12 @@
         +'<div class="use-sub">'+IB+'明日0時に'+cap+'回に戻ります。'+E+'<br>'+IB+'数え方：'+E+IB+USAGE.rule+E+'</div>';
     }else if(u.paused===true){
       $('k-use').textContent='今月の'+USAGE.name;
-      $('v-use').innerHTML='<div class="use-n">'+IB+USAGE.off+'で継続中'+E+'</div>'
+      $('v-use').innerHTML='<div class="use-n">'+IB+OFF+'で継続中'+E+'</div>'
         +'<div class="use-sub">'+IB+'今月の利用枠を使い切りました。'+E+(reset?IB+reset+'の更新日に元に戻ります。'+E:'')+'</div>';
     }else{
       $('k-use').textContent=USAGE.name;
       $('v-use').innerHTML='<div class="use-n">'+IB+'1日の上限なし'+E+' <span style="display:inline-block;font-size:12px;font-weight:700">（'+USAGE.per+'）</span></div>'
-        +'<div class="use-sub">'+IB+'月の利用枠を使い切っても、'+E+IB+USAGE.off+'で'+E+IB+'そのまま続けられます。'+E+'</div>';
+        +'<div class="use-sub">'+IB+'月の利用枠を使い切っても、'+E+IB+OFF+'で'+E+IB+'そのまま続けられます。'+E+'</div>';
     }
     row.hidden=false;
   }
