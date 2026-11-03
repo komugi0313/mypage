@@ -923,6 +923,20 @@ var _JP_DST={1948:[[5,2],[9,12]],1949:[[4,3],[9,11]],1950:[[5,7],[9,10]],1951:[[
 function _jpDstToStd(y,m,d,h,mi){ var r=_JP_DST[y]; if(!r) return null; var t=Date.UTC(y,m-1,d,h,mi), st=Date.UTC(y,r[0][0]-1,r[0][1],1,0), en=Date.UTC(y,r[1][0]-1,r[1][1],1,0);
   if(t<st||t>=en) return null; var u=new Date(t-3600000); return {y:u.getUTCFullYear(),m:u.getUTCMonth()+1,d:u.getUTCDate(),h:u.getUTCHours(),mi:u.getUTCMinutes()}; }
 function _jstNow(){ var t=new Date(Date.now()+9*3600000); return {y:t.getUTCFullYear(),m:t.getUTCMonth()+1,d:t.getUTCDate(),h:t.getUTCHours(),mi:t.getUTCMinutes()}; }
+/* 年運の年（立春で切りかわる年＝先生の決定 2026-11-03）。日本時間のいまで決める。
+   y＝いまの年運の年／pre＝暦の年はもう次の年だが立春前（1/1〜立春）／end＝次の立春の日時（暦から求める。固定の2月4日にしない） */
+var _risCache={};
+function _risshunOf(Y){ if(_risCache[Y]) return _risCache[Y]; try{ var B=window.Bazi; if(!(B&&B.computeChart)) return null;
+  var yp=function(t){ var d=new Date(t); return B.computeChart({year:d.getUTCFullYear(),month:d.getUTCMonth()+1,day:d.getUTCDate(),hour:d.getUTCHours(),minute:d.getUTCMinutes(),sex:'male',correctionMode:'none'}).pillars[0].ganzhi; };
+  var lo=Date.UTC(Y,1,1,0,0), hi=Date.UTC(Y,1,8,0,0), g0=yp(lo); if(yp(hi)===g0) return null;
+  while(hi-lo>60000){ var mid=lo+Math.floor((hi-lo)/120000)*60000; if(mid<=lo) mid=lo+60000; if(yp(mid)===g0) lo=mid; else hi=mid; }
+  var d=new Date(hi); return (_risCache[Y]={y:d.getUTCFullYear(),m:d.getUTCMonth()+1,d:d.getUTCDate(),h:d.getUTCHours(),mi:d.getUTCMinutes()}); }catch(e){ return null; } }
+function _sheetYear(){ var J=_jstNow(), y=J.y; try{ var r=_risshunOf(J.y); if(r && (J.m*1e6+J.d*1e4+J.h*100+J.mi) < (r.m*1e6+r.d*1e4+r.h*100+r.mi)) y=J.y-1; }catch(e){}
+  var e=_risshunOf(y+1); return {y:y, pre:(y<J.y), end:e, endText:(e?(e.y+'年'+e.m+'月'+e.d+'日の立春まで'):'次の立春まで')}; }
+/* 立春前の「今年」に添える期限（例「・2027年2月4日の立春まで」）。y が今の年運の年で、いまが立春前のときだけ */
+function _sheetLim(y){ try{ var S=_sheetYear(); return (S.pre&&+y===S.y)?('・'+S.endText):''; }catch(e){ return ''; } }
+/* 日本時間の今日（鑑定日・作成日に使う。端末の時間帯で作らない＝先生の決定 2026-11-03） */
+function _jstDateStr(sep){ var J=_jstNow(); return sep? (J.y+'-'+('0'+J.m).slice(-2)+'-'+('0'+J.d).slice(-2)) : (J.y+'年'+J.m+'月'+J.d+'日'); }
 /* いまの年齢（立運の端数〇ヶ月まで含む）と、いまの大運かどうか（流派ルール：0歳〜立運〇年〇ヶ月＝月柱） */
 function _nowX(r){ return (r&&r.nowAgeX!=null)?r.nowAgeX:(r?r.nowAge:null); }
 function _inDu(r,d){ var x=_nowX(r); if(x==null||!d) return false; var m=(d.ageMon||0)/12; return x>=d.ageFrom+m && x<d.ageTo+m; }
@@ -1721,13 +1735,26 @@ function _inDu(r,d){ var x=_nowX(r); if(x==null||!d) return false; var m=(d.ageM
     }
     return c;
   }
+  /* 時刻不明の人は、時柱（昼12時の仮の値）を五行の数・会局・合冲・星の数に入れない（アプリの markTimeUnknown と同じ）。命式表には参考として出す */
+  /* 時刻不明の節入り日の注意（アプリの命式表の注意と同じ中身）。easy=true はやさしい言い方（ビギナー） */
+  window.__sheetSetsuNote=function(easy){ var b=window.__timeUnknown&&window.__sheetSetsuB; if(!b) return '';
+    if(easy) return '<b>⚠️ この日は季節の変わり目の日です。</b>生まれた時刻によって結果が大きく変わることがあります。時刻が分かる方は、時刻を入れて占い直すことをおすすめします。';
+    return '<b>⚠️ 節入り日の可能性があります</b>：この生年月日は二十四節気の変わり目（節入り日）にあたり、<b>生まれた時刻によって'+[b.year?'年柱（'+b.year[0]+'↔'+b.year[1]+'）':'',b.month?'月柱（'+b.month[0]+'↔'+b.month[1]+'）':''].filter(Boolean).join('・')+'が変わります</b>。'+(b.month?'月柱が変わると通変星・十二運・蔵干、そして大運の並びまで変わります。':'')+(b.year?'年柱が変わると干支年・空亡なども変わります。':'')+'正確な鑑定には出生時刻の確認が必要です（不明の場合は昼12時基準の結果を表示しています）。'; };
+  window.__sheetPKeys=function(){ return window.__timeUnknown?['year','month','day']:['year','month','day','hour']; };
   window.computeMeishiki=function(input){
     if(!(window.Bazi&&window.Bazi.computeChart)) throw new Error('engine(window.Bazi) not loaded');
     var _opt={year:input.year,month:input.month,day:input.day,hour:input.hour,minute:input.minute,sex:input.sex,correctionMode:(input.correctionMode||'none')};
     if(input.longitude!=null && input.longitude!=='' && !isNaN(parseFloat(input.longitude))) _opt.longitude=parseFloat(input.longitude);
+    if(input.dayBoundary==='zi'||input.dayBoundary==='midnight') _opt.dayBoundary=input.dayBoundary;   // 早子時（23時から翌日の日柱）：アプリの baziCompute と同じくエンジンのオプションで渡す（生まれた瞬間は動かさない）
     var tc=window.Bazi.computeChart(_opt);
     try{ _extendLongLife(tc); }catch(_e){}
     var P=tc.pillars||[];
+    // 時刻不明：五行の数から時柱の天干と本気の五行を引く（アプリの markTimeUnknown と同じ数え方）
+    var _fe=tc.fiveElements?Object.assign({},tc.fiveElements):null;
+    if(input.timeUnknown && _fe && P[3]){ try{ var _SE={甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'金',辛:'金',壬:'水',癸:'水'};
+      var _hp=P[3], _hk=(_hp.hiddenStems||[]).filter(function(h){return h.role==='本気';})[0]||(_hp.hiddenStems||[])[(_hp.hiddenStems||[]).length-1];
+      var _sEl=_SE[_hp.stem], _bEl=_hk?_SE[_hk.stem]:null;
+      if(_sEl&&_fe[_sEl]>0)_fe[_sEl]--; if(_bEl&&_fe[_bEl]>0)_fe[_bEl]--; }catch(_e){} }
     var kichi=(window.computeKichi?window.computeKichi(tc):{});  // 吉凶星(別モジュール)。エンジンは無改変
     function kichiOf(key){ return (kichi[key]||[]).join('・'); }
     // 大運は「0歳＝月柱」を鉄則とする。表示の仕組みは立運の長さで2通り：
@@ -1766,7 +1793,7 @@ function _inDu(r,d){ var x=_nowX(r); if(x==null||!d) return false; var m=(d.ageM
       annualByYear[a.year]={tsuhen:a.tenStar,junishi:a.terrain,branch:a.branch,stem:aStem,ganzhi:a.ganzhi,kichi:aKichi};
     });
     return { pillars:{ year:withKichi(mapP(P[0]),'year'), month:withKichi(mapP(P[1]),'month'), day:withKichi(mapP(P[2]),'day'), hour:withKichi(mapP(P[3]),'hour') },
-      tenchusatsu:kuboPair, gogyoCount:tc.fiveElements||null,
+      tenchusatsu:kuboPair, gogyoCount:_fe||null,
       direction:(tc.startFortune&&tc.startFortune.forward)?'順行':'逆行',
       ritsuun:(tc.startFortune?{years:tc.startFortune.years, months:tc.startFortune.months}:null),  // 立運（何年何ヶ月で大運入り）
       daiun:daiun, nenun:nenun, annualByYear:annualByYear, kuboPair:kuboPair,
@@ -2424,36 +2451,39 @@ window.KANSHI60_DETAIL={
   }
   // 12か月カレンダー（色分け・◎○△）を生成
   function monthCalHTML(Y, months, cfg, lbl){
-    var cells='', _t=new Date(), curY=_t.getFullYear(), curM=_t.getMonth()+1;
-    for(var i=0;i<12;i++){ var m=months[i]||{mo:i+1,score:0,caution:false,why:[],creas:''};
+    var cells='', _J=_jstNow(), curY=_J.y, curM=_J.m;   // 過ぎた月の印は日本時間の今月で（先生の決定 2026-11-03）
+    for(var i=0;i<12;i++){ var m=months[i]||{mo:i+1,score:0,caution:false,why:[],creas:''}, mY=(m.Y!=null?m.Y:Y);
       var cls='mc', mark='·';
       if(m.score>0){ cls+=' good'; mark=(m.score>=3?'◎':'○'); }
       else if(m.caution){ cls+=' cau'; mark='△'; }
       else { cls+=' neu'; }
       if(m.score>0&&m.caution) cls+=' both';
-      if(Y<curY||(Y===curY&&(i+1)<curM)) cls+=' past';   // 過ぎた月は薄く（これからの月だけ目立たせる）
+      if(mY<curY||(mY===curY&&m.mo<curM)) cls+=' past';   // 過ぎた月は薄く（これからの月だけ目立たせる）
       var tip=(m.why.join('・'))+(m.caution?((m.why.length?'／':'')+'注意：'+m.creas):'');
-      cells+='<span class="'+cls+'" title="'+esc(tip)+'"><b>'+(i+1)+'</b><i>'+mark+'</i></span>';
+      cells+='<span class="'+cls+'" title="'+esc(tip)+'"><b>'+m.mo+'</b><i>'+mark+'</i></span>';
     }
     return '<div class="mcal '+cfg.cls+'"><span class="mcal-y">'+Y+'年'+(lbl||'')+'</span><span class="mcal-row">'+cells+'</span></div>';
   }
   // 月カレンダー＋要点テキスト（今年・来年）をまとめて返す
   function monthlyBlock(nowYear, dm, dayBranch, theme, sex, easy){
     var cfg=themeMonthCfg(theme, sex); if(!cfg||nowYear==null||!window.MonthPillar) return ''; cfg.easy=!!easy;
-    // 月のカレンダーは暦の年で出す（1月〜立春前に「去年（今年）」と出ないように）。日本時間で数える
-    var html='', _J=_jstNow(), curY=_J.y, curM=_J.m;
-    [0,1].forEach(function(off){ var Y=curY+off, lbl=(off===0?'（今年）':'（来年）'), ms=themeMonths(Y,dm,dayBranch,cfg);
-      html+=monthCalHTML(Y, ms, cfg, lbl);
-      function future(m){ return !(Y<curY || (Y===curY && m.mo<curM)); }   // これからの月だけを要約に出す（過ぎた月は載せない）
+    // 年は年運の年（立春で切りかわる年＝先生の決定 2026-11-03）。1年＝2月（立春）〜翌年1月。立春前は「○年○月○日の立春まで」を添える。日本時間で数える
+    var html='', _J=_jstNow(), _SY=_sheetYear(), curY=_J.y, curM=_J.m;
+    [0,1].forEach(function(off){ var Y=_SY.y+off, lbl=(off===0?'（今年'+(_SY.pre?'・'+_SY.endText:'')+'）':'（来年）'),
+        a=themeMonths(Y,dm,dayBranch,cfg), b=themeMonths(Y+1,dm,dayBranch,cfg),
+        ms=a.slice(1).map(function(m){ m.Y=Y; return m; }).concat(b.slice(0,1).map(function(m){ m.Y=Y+1; return m; }));   // 2月〜12月＋翌年1月
+      html+=monthCalHTML(Y, ms, cfg, (off===0?'（今年）':'（来年）'));
+      function future(m){ var mY=(m.Y!=null?m.Y:Y); return !(mY<curY || (mY===curY && m.mo<curM)); }   // これからの月だけを要約に出す（過ぎた月は載せない）
       var pos=ms.filter(function(m){return m.score>0&&future(m);}).sort(function(a,b){return b.score-a.score;}).slice(0,4).sort(function(a,b){return a.mo-b.mo;});
-      var cau=ms.filter(function(m){return m.caution&&m.score<=0&&future(m);}).map(function(m){return m.mo;});
+      var cau=ms.filter(function(m){return m.caution&&m.score<=0&&future(m);});
       var line='';
-      if(pos.length) line='<b>'+pos.map(function(m){return m.mo+'月';}).join('・')+'</b>（'+pos.slice(0,2).map(function(m){return m.why[0];}).filter(Boolean).join('・')+'ほか）';
-      else line=(Y===curY?'これからの月では大きく動く月は控えめ':'大きく動く月は控えめ');
-      if(cau.length) line+='／注意：<b>'+cau.join('・')+'月</b>';
+      var _mn=function(m){ return (m.Y!=null&&m.Y!==Y?m.Y+'年':'')+m.mo+'月'; };   // 翌年1月は「2028年1月」のように年を添える
+      if(pos.length) line='<b>'+pos.map(_mn).join('・')+'</b>（'+pos.slice(0,2).map(function(m){return m.why[0];}).filter(Boolean).join('・')+'ほか）';
+      else line=(off===0?'これからの月では大きく動く月は控えめ':'大きく動く月は控えめ');
+      if(cau.length) line+='／注意：<b>'+cau.map(_mn).join('・')+'</b>';
       html+='<p class="rd-mcap">'+Y+'年'+lbl+'：'+line+'</p>';
     });
-    html+='<p class="rd-mleg">'+cfg.legend+'（月の区切りは節入りの日で、数日前後する目安です）</p>';
+    html+='<p class="rd-mleg">'+cfg.legend+'（年は立春で切りかわり、2月〜翌年1月で1年。月の区切りは節入りの日で、数日前後する目安です）</p>';
     return html;
   }
   // 大運（今の10年）で巡る通変星の傾向
@@ -2471,7 +2501,7 @@ window.KANSHI60_DETAIL={
   };
   // 命式内の会局（三合・方合・半合）
   function natalKaikyoku(P){
-    var B=[]; ['year','month','day','hour'].forEach(function(k){var p=P[k]; if(p&&p.shi)B.push(p.shi);});
+    var B=[]; (window.__sheetPKeys?window.__sheetPKeys():['year','month','day','hour']).forEach(function(k){var p=P[k]; if(p&&p.shi)B.push(p.shi);});
     var SANGO=[['申','子','辰','水'],['亥','卯','未','木'],['寅','午','戌','火'],['巳','酉','丑','金']];
     var HOUGO=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','戌','金'],['亥','子','丑','水']];
     var HANGO=[['申','子','水'],['子','辰','水'],['寅','午','火'],['午','戌','火'],['亥','卯','木'],['卯','未','木'],['巳','酉','金'],['酉','丑','金']];
@@ -2497,18 +2527,19 @@ window.KANSHI60_DETAIL={
     var du=(r.daiun||[]).filter(function(d){return d&&d.kanshi;}); if(!du.length) return null;
     var runs=[], prev=null;
     du.forEach(function(d){ var se=SEAS_BR[(d.kanshi.length>1?d.kanshi.charAt(1):'')]||'';
-      if(prev&&prev.se===se){ prev.to=d.ageTo; } else { prev={se:se,from:d.ageFrom,to:d.ageTo}; runs.push(prev); } });
-    var nowAge=r.nowAge, curIdx=-1;
-    for(var i=0;i<runs.length;i++){ if(nowAge!=null&&nowAge>=runs[i].from&&nowAge<runs[i].to){curIdx=i;break;} }
+      if(prev&&prev.se===se){ prev.to=d.ageTo; } else { prev={se:se,from:d.ageFrom,to:d.ageTo,mon:(d.ageMon||0)}; runs.push(prev); } });
+    var nowAge=r.nowAge, nowX=_nowX(r), curIdx=-1;   // 立運の端数（〇ヶ月）込みで「いま」を決める
+    for(var i=0;i<runs.length;i++){ var _m=(runs[i].mon||0)/12; if(nowX!=null&&nowX>=runs[i].from+_m&&nowX<runs[i].to+_m){curIdx=i;break;} }
     return {runs:runs, curIdx:curIdx, nowAge:nowAge, start:runs[0].from, end:runs[runs.length-1].to};
   }
+  function _lsAge(n,mon){ return n+'歳'+(mon?mon+'ヶ月':''); }   // 立運の端数（〇ヶ月）を年齢に入れる（CLAUDE.md の決まり）
   // 横帯の「人生の時期マップ」（今ここ▲つき）。文章より一目でわかる。
   function lifeTimeline(ls){
     if(!ls) return '';
     var span=(ls.end-ls.start)||1;
     var segs=ls.runs.map(function(rn,i){ var inf=SEASON_INFO[rn.se]||{};
       return '<div class="ls-seg'+(i===ls.curIdx?' ls-cur':'')+'" style="flex:'+(rn.to-rn.from)+' 1 0;background:'+(inf.bg||'#eee')+';">'
-        +'<span class="ls-emoji">'+(inf.emoji||'')+'</span><span class="ls-nm">'+(inf.ch||rn.se)+'</span><span class="ls-age">'+rn.from+'〜'+rn.to+'</span></div>'; }).join('');
+        +'<span class="ls-emoji">'+(inf.emoji||'')+'</span><span class="ls-nm">'+(inf.ch||rn.se)+'</span><span class="ls-age">'+_lsAge(rn.from,rn.mon)+'〜'+_lsAge(rn.to,rn.mon)+'</span></div>'; }).join('');
     var nowPct=(ls.nowAge!=null)?Math.min(100,Math.max(0,(ls.nowAge-ls.start)/span*100)):null;
     var mark=(nowPct!=null)?'<div class="ls-now" style="left:'+nowPct.toFixed(1)+'%">▲今 '+ls.nowAge+'歳</div>':'';
     return '<div class="ls-map"><div class="ls-bar">'+segs+'</div>'+mark+'</div>';
@@ -2521,7 +2552,7 @@ window.KANSHI60_DETAIL={
     var s='人生を大きな四季（🌱準備の春→☀️活動の夏→🍂実りの秋→❄️充電の冬）で見ると、';
     if(ci) s+='あなたは今<b>「'+ci.name+'」</b>——'+ci.mean+'の時期です。';
     else s+='いくつもの季節を巡っていきます。';
-    if(nxt&&ni) s+='つぎの<b>人生の曲がり角は'+nxt.from+'歳ごろ</b>。そこから<b>「'+ni.name+'」</b>（'+ni.mean+'）に入り、生き方のテーマが切り替わります。';
+    if(nxt&&ni) s+='つぎの<b>人生の曲がり角は'+_lsAge(nxt.from,nxt.mon)+'ごろ</b>。そこから<b>「'+ni.name+'」</b>（'+ni.mean+'）に入り、生き方のテーマが切り替わります。';
     else if(cur) s+='この季節がこの先しばらく続きます。';
     if(!easy) s+='<span class="rd-mini">（四柱推命では、10年ごとの運＝大運を、季節のまとまり＝方合で束ねた“人生の節目”を節木運（せつぼくうん）と呼びます。）</span>';
     return s;
@@ -2533,10 +2564,10 @@ window.KANSHI60_DETAIL={
     var ci=cur?SEASON_INFO[cur.se]:null, ni=nxt?SEASON_INFO[nxt.se]:null;
     var top=[];
     if(ci) top.push('<li><b>いまは「'+ci.name+'」</b>＝'+ci.mean+'の時期です。</li>');
-    if(nxt&&ni) top.push('<li>つぎの<b>人生の曲がり角は'+nxt.from+'歳ごろ</b>。そこから<b>「'+ni.name+'」</b>（'+ni.mean+'）に入り、生き方のテーマが切り替わります。</li>');
+    if(nxt&&ni) top.push('<li>つぎの<b>人生の曲がり角は'+_lsAge(nxt.from,nxt.mon)+'ごろ</b>。そこから<b>「'+ni.name+'」</b>（'+ni.mean+'）に入り、生き方のテーマが切り替わります。</li>');
     else if(cur) top.push('<li>この季節がこの先しばらく続きます。</li>');
     var seasons=ls.runs.map(function(rn,i){ var inf=SEASON_INFO[rn.se]||{};
-      return '<li'+(i===ls.curIdx?' class="now"':'')+'>'+(inf.emoji||'')+' <b>'+rn.from+'〜'+rn.to+'歳</b>：'+(inf.name||rn.se)+'（'+(inf.mean||'')+'）'+(i===ls.curIdx?' <b>← いま</b>':'')+'</li>'; }).join('');
+      return '<li'+(i===ls.curIdx?' class="now"':'')+'>'+(inf.emoji||'')+' <b>'+_lsAge(rn.from,rn.mon)+'〜'+_lsAge(rn.to,rn.mon)+'</b>：'+(inf.name||rn.se)+'（'+(inf.mean||'')+'）'+(i===ls.curIdx?' <b>← いま</b>':'')+'</li>'; }).join('');
     var note = easy ? '' : '<span class="rd-mini">（10年ごとの運＝大運、季節の変わり目＝節木運。）</span>';
     return '<ul class="rd-ul">'+top.join('')+'<li>人生の季節の移り変わり（年齢の目安）'+note+'<ul class="rd-ul2">'+seasons+'</ul></li></ul>';
   }
@@ -2599,7 +2630,7 @@ window.KANSHI60_DETAIL={
      今年・来年の空亡と解空（その年の支が命式＋今の大運の支と三合・方合・支合でそろう＝合解で空亡が弱まる／冲＝冲解）、今の大運の空亡、
      命式内の天地徳合・天戦地冲、魁罡、生まれ持った三合・方合、これから3年の天戦地冲（日柱・月柱）。計算は表と同じデータから。 */
   function sheetBigFeatures(r){ var o=[]; try{
-    var P=r.pillars||{}, ks=['year','month','day','hour'], LB={year:'年柱',month:'月柱',day:'日柱',hour:'時柱'};
+    var P=r.pillars||{}, ks=(window.__sheetPKeys?window.__sheetPKeys():['year','month','day','hour']), LB={year:'年柱',month:'月柱',day:'日柱',hour:'時柱'};
     var BRs='子丑寅卯辰巳午未申酉戌亥', STE='甲乙丙丁戊己庚辛壬癸';
     var RG={子:'丑',丑:'子',寅:'亥',亥:'寅',卯:'戌',戌:'卯',辰:'酉',酉:'辰',巳:'申',申:'巳',午:'未',未:'午'};
     var SG=[['申','子','辰','水','三合'],['亥','卯','未','木','三合'],['寅','午','戌','火','三合'],['巳','酉','丑','金','三合'],['寅','卯','辰','木','方合'],['巳','午','未','火','方合'],['申','酉','戌','金','方合'],['亥','子','丑','水','方合']];
@@ -2616,7 +2647,8 @@ window.KANSHI60_DETAIL={
       SG.forEach(function(g){ if(gou) return; var t=g.slice(0,3); if(t.indexOf(a.branch)<0) return; var ot=t.filter(function(x){ return x!==a.branch; }); if(ot.every(function(x){ return has(x).length; })) gou={k:g[4],t:t.join(''),el:g[3],w:ot.map(function(x){ return has(x)[0].l+x; }).join('・')}; });
       if(!gou) all.forEach(function(x){ if(!gou&&RG[a.branch]===x.b) gou={k:'支合',t:a.branch+x.b,el:'',w:x.l+x.b}; });
       all.forEach(function(x){ if(!chong&&isCh(a.branch,x.b)) chong={w:x.l+x.b}; });
-      var pro=w+'（'+y+'年 '+gz+'）は空亡（'+voids.join('')+'）の年。', plain=w+'（'+y+'年）は、生まれ持った「ひと休みの年」にあたります。', tag=w+'：空亡';
+      var _lm=(ix===0?_sheetLim(y):'');   // 立春前は「今年」に期限を添える（先生の決定 2026-11-03）
+      var pro=w+'（'+y+'年 '+gz+_lm+'）は空亡（'+voids.join('')+'）の年。', plain=w+'（'+y+'年'+_lm+'）は、生まれ持った「ひと休みの年」にあたります。', tag=w+'：空亡';
       var who=function(s){ return /大運/.test(s)?'命式・大運の':'命式の'; };
       if(gou){ pro+='ただし'+who(gou.w)+gou.w+'と'+gou.k+'「'+gou.t+'」'+(gou.el?'（'+gou.el+'）':'')+'がそろうので解空（合解）＝空亡の影響が弱まり、穏やかに整う年。大きな決断は足もとを固めてから。'; plain+='ただ、生まれ持った力としっかり結びつくので、その影響は弱まります。大きな決断は足もとを固めてからにしましょう。'; tag=w+'：空亡＋解空（'+gou.k+'）'; }
       else if(chong){ pro+=who(chong.w)+chong.w+'と冲するので解空（冲解）＝空亡は解けるが、変化・波乱を伴いやすい年。'; plain+='ぶつかって目が覚めるように動き出す年なので、変化が起きやすい年です。'; tag=w+'：空亡＋解空（冲）'; }
@@ -2643,7 +2675,7 @@ window.KANSHI60_DETAIL={
     function gz(y){ return _ST[((y-4)%10+10)%10]+_BR[((y-4)%12+12)%12]; }
     function br(y){ return _BR[((y-4)%12+12)%12]; }
     var kubo=String(r.kuboPair||r.tenchusatsu||'').split('').filter(Boolean);
-    var natB=[]; ['year','month','day','hour'].forEach(function(k){var p=P[k]; if(p&&p.shi)natB.push(p.shi);});
+    var natB=[]; (window.__sheetPKeys?window.__sheetPKeys():['year','month','day','hour']).forEach(function(k){var p=P[k]; if(p&&p.shi)natB.push(p.shi);});
     // 過去の振り返り：直近25年をさかのぼり、空亡・冲・会局(三合/方合)が巡った年を新しい順に集める。
     // 空亡：直近3年分（2支のどちらか）
     var kubos=[];
@@ -2683,7 +2715,7 @@ window.KANSHI60_DETAIL={
     var shugoEls=r.shugojin||[], shugoKind=r.shugoStrength||'';
     // 通変集計（天干通変＋代表蔵干通変、日主は除く）
     var tcount={};
-    ['year','month','day','hour'].forEach(function(k){var p=P[k]; if(!p)return;
+    (window.__sheetPKeys?window.__sheetPKeys():['year','month','day','hour']).forEach(function(k){var p=P[k]; if(!p)return;
       [p.tsuhen,p.zokanTsuhen].forEach(function(t){ if(t&&t!=='—'&&t!=='日主'&&TSU[t]) tcount[t]=(tcount[t]||0)+1; }); });
     var domStar=Object.keys(tcount).sort(function(a,b){return tcount[b]-tcount[a];})[0]||genmei||'';
     var taika=Object.keys(tcount).filter(function(t){return tcount[t]>=3;});
@@ -2780,7 +2812,7 @@ window.KANSHI60_DETAIL={
       // 5) 開運の狙い（喜神＋狙い目の年＝喜神の会局が巡る年）
       var favYears=[];
       if(r.annualByYear&&nowYear!=null){
-        var natB=[]; ['year','month','day','hour'].forEach(function(k){var p=P[k]; if(p&&p.shi)natB.push(p.shi);});
+        var natB=[]; (window.__sheetPKeys?window.__sheetPKeys():['year','month','day','hour']).forEach(function(k){var p=P[k]; if(p&&p.shi)natB.push(p.shi);});
         var SAN=[['申','子','辰','水'],['亥','卯','未','木'],['寅','午','戌','火'],['巳','酉','丑','金']];
         var HOU=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','戌','金'],['亥','子','丑','水']];
         // やさしい版と同じ：アプリで「要注意」と出る年（日支・月支との冲、空亡、三刑がそろう年）は狙い目に入れない（空亡でも三合・方合で解けるときは入れる）
@@ -2928,7 +2960,7 @@ window.KANSHI60_DETAIL={
           return parts.join('・');
         }
         var nearArr=[];
-        [0,1].forEach(function(off){ var y2=nowYear+off, a2=byYear[y2]; if(a2) nearArr.push('<b>'+y2+'年'+(off===0?'（今年）':'（来年）')+'</b>…'+loveYearRead(a2)); });
+        [0,1].forEach(function(off){ var y2=nowYear+off, a2=byYear[y2]; if(a2) nearArr.push('<b>'+y2+'年'+(off===0?'（今年'+_sheetLim(y2)+'）':'（来年）')+'</b>…'+loveYearRead(a2)); });
         if(nearArr.length){ b+=para('<b>◆ 直近の恋愛運（今年・来年）</b>：'+nearArr.join(' ／ ')+'。'); }
         // 月ピンポイント（視覚カレンダー）：今年・来年の「恋愛が動く月」
         if(spouse && window.MonthPillar){ b+='<div class="rd-mwrap"><div class="rd-mhead">◆ 恋愛が動く月（今年・来年）</div>'+monthlyBlock(nowYear, dm, spouse, 'love', sex)+'</div>'; }
@@ -3077,7 +3109,7 @@ window.KANSHI60_DETAIL={
         +((typeof curDu!=='undefined'&&curDu)?(curFavO>0?'③いま巡る大運「'+curDu.tsuhen+'」の追い風を活かし、巡りの良い年に一歩を踏み出す。':(curFavO<0?'③いま巡る大運「'+curDu.tsuhen+'」の10年は整えどき。土台を整えて、巡りの良い年に一歩を踏み出す。':'③いま巡る大運「'+curDu.tsuhen+'」の10年は、落ち着いて積み重ね、巡りの良い年に一歩を踏み出す。')):'③巡りの良い年を選んで、大切な一歩を踏み出す。'));
       addSec(9, '総括と開運の指針', b);
     })();
-    var _tuNote=window.__timeUnknown?'<section class="rd-sec" style="break-inside:avoid"><p class="rd-p" style="background:#FCF6E8;border:1px solid #E3B04B;border-radius:8px;padding:8px 11px;margin:0"><b>ご確認：</b>生まれた時刻が不明のため、<b>時柱（晩年・将来・本心・お子さんとの縁）は昼12時の仮の値</b>です。この部分は参考程度にご覧ください。生年月日から読める性格・才能・運の流れは通常どおりです。</p></section>':'';
+    var _tuNote=window.__timeUnknown?'<section class="rd-sec" style="break-inside:avoid"><p class="rd-p" style="background:#FCF6E8;border:1px solid #E3B04B;border-radius:8px;padding:8px 11px;margin:0"><b>ご確認：</b>生まれた時刻が不明のため、<b>時柱（晩年・将来・本心・お子さんとの縁）は昼12時の仮の値</b>です。この部分は参考程度にご覧ください。生年月日から読める性格・才能・運の流れは通常どおりです。'+(window.__sheetSetsuNote&&window.__sheetSetsuNote()?'<br>'+window.__sheetSetsuNote():'')+'</p></section>':'';
     return '<div class="rd-cols">'+_tuNote+H+'</div>'+
       '<div class="rd-note">※この鑑定文は、あなたの命式（生年月日時から算出した四柱・通変・十二運・五行・大運・吉凶星・会局）にもとづいてまとめたものです。一般的な傾向であり、日々の行動で運は育てられます。'+(window.__timeUnknown?'（生まれた時刻が不明のため、時柱＝晩年・将来・本心・お子さんの縁は仮の値です）':'')+'</div>';
   };
@@ -3228,7 +3260,7 @@ window.KANSHI60_DETAIL={
 
     // 3) 同じ十二支の重なり
     (function(){
-      var bs=['year','month','day','hour'].map(function(k){return (P[k]||{}).shi;}).filter(Boolean);
+      var bs=(window.__sheetPKeys?window.__sheetPKeys():['year','month','day','hour']).map(function(k){return (P[k]||{}).shi;}).filter(Boolean);
       var cnt={}; bs.forEach(function(b){cnt[b]=(cnt[b]||0)+1;});
       var dup=Object.keys(cnt).filter(function(b){return cnt[b]>=2;});
       if(!dup.length) return;
@@ -3348,7 +3380,7 @@ window.KANSHI60_DETAIL={
     function ezShow(tag){ if(!ezSolo) return true; if(tag==='base') return true; return (EZSETS[ezTheme]||[]).indexOf(tag)>=0; }
     var CAT={'比肩':'比劫','劫財':'比劫','食神':'食傷','傷官':'食傷','正財':'財','偏財':'財','正官':'官','偏官':'官','印綬':'印','偏印':'印'};
     var cat={比劫:0,食傷:0,財:0,官:0,印:0};
-    ['year','month','day','hour'].forEach(function(k){var p=P[k]; if(!p)return; [p.tsuhen,p.zokanTsuhen].forEach(function(t){ if(CAT[t])cat[CAT[t]]++; }); });
+    (window.__sheetPKeys?window.__sheetPKeys():['year','month','day','hour']).forEach(function(k){var p=P[k]; if(!p)return; [p.tsuhen,p.zokanTsuhen].forEach(function(t){ if(CAT[t])cat[CAT[t]]++; }); });
     var topCat=Object.keys(cat).sort(function(a,b){return cat[b]-cat[a];})[0];
     // 同点が複数あるとき「いちばん」を連発しないよう、最上位の集合とやさしい表現をまとめる（表示のみ・計算は非改変）
     var _catMax=Math.max(cat.比劫,cat.食傷,cat.財,cat.官,cat.印);
@@ -3366,7 +3398,7 @@ window.KANSHI60_DETAIL={
     var dayGZ=dm+(day.shi||''); var kan=(window.KANSHI60_DETAIL&&window.KANSHI60_DETAIL[dayGZ])||null;
     var H='';
     H+='<div class="ez-hero"><div class="ez-badge">'+T.name+'</div><div class="ez-hero-copy">あなたは「<b>'+T.img+'</b>」のような人。'+(kan?kan.一言:T.copy)+'。</div></div>';
-    if(window.__timeUnknown){ H+='<section class="ez-card" style="border-color:#E3B04B;background:#FCF6E8"><p class="ez-p" style="margin:0"><b>ご確認：</b>生まれた時刻が分からないため、<b>時柱（晩年・将来・本心・お子さんとの縁）は昼12時の仮の値</b>です。この部分だけ<b>参考程度</b>にご覧ください。生年月日から読める性格・才能・運の流れは通常どおりです。</p></section>'; }
+    if(window.__timeUnknown){ H+='<section class="ez-card" style="border-color:#E3B04B;background:#FCF6E8"><p class="ez-p" style="margin:0"><b>ご確認：</b>生まれた時刻が分からないため、<b>時柱（晩年・将来・本心・お子さんとの縁）は昼12時の仮の値</b>です。この部分だけ<b>参考程度</b>にご覧ください。生年月日から読める性格・才能・運の流れは通常どおりです。'+(window.__sheetSetsuNote&&window.__sheetSetsuNote(true)?'<br>'+window.__sheetSetsuNote(true):'')+'</p></section>'; }
     // 📌 まるっと総合まとめ（専門用語ゼロ）＝強み・運の流れ・今・チャンスの年をやさしく統合
     (function(){
       var GINV={'火':'木','土':'火','金':'土','水':'金','木':'水'};
@@ -3393,7 +3425,7 @@ window.KANSHI60_DETAIL={
       // チャンスの年
       var favYears=[];
       if(r.annualByYear&&nowYear!=null){
-        var natB=[]; ['year','month','day','hour'].forEach(function(k){var p=P[k]; if(p&&p.shi)natB.push(p.shi);});
+        var natB=[]; (window.__sheetPKeys?window.__sheetPKeys():['year','month','day','hour']).forEach(function(k){var p=P[k]; if(p&&p.shi)natB.push(p.shi);});
         var SAN=[['申','子','辰','水'],['亥','卯','未','木'],['寅','午','戌','火'],['巳','酉','丑','金']];
         var HOU=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','戌','金'],['亥','子','丑','水']];
         // アプリで「要注意」と出る年（日支・月支との冲、空亡、三刑がそろう年）はチャンスの年に入れない（画面と鑑定書の食い違い防止）
@@ -3747,7 +3779,7 @@ window.KANSHI60_DETAIL={
       try{ var _pq=new URLSearchParams(window.__SQ); if(_pq.get('fy')) q+='&fy='+encodeURIComponent(_pq.get('fy')); if(_pq.get('dk')) q+='&dk='+encodeURIComponent(_pq.get('dk'));
         var _bn=_pq.get('bn')||localStorage.getItem('bazi_brand_name')||'', _bc=_pq.get('bc')||localStorage.getItem('bazi_brand_color')||'';
         if(_bn) q+='&bn='+encodeURIComponent(_bn.slice(0,60)); if(/^#[0-9a-fA-F]{6}$/.test(_bc)) q+='&bc='+encodeURIComponent(_bc);
-        q+='&at='+encodeURIComponent((function(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);})(new Date()));
+        q+='&at='+encodeURIComponent(_jstDateStr(true));   // 作成日は日本時間
       }catch(_e){}
       // 先生が命式表で選んだ蔵干（zo=日柱:1 など）も引き継ぐ（お客様の開くリンクで司令に戻らないように）
       try{ var _zo=new URLSearchParams(window.__SQ).get('zo')||''; if(/^(年柱|月柱|日柱|時柱):\d(,(年柱|月柱|日柱|時柱):\d)*$/.test(_zo)) q+='&zo='+encodeURIComponent(_zo); }catch(_e){}
@@ -3896,7 +3928,7 @@ window.KANSHI60_DETAIL={
   function computeKankei(rp){
     rp=rp||{};
     var order=['year','month','day','hour'], lab=['年','月','日','時'], S=[], B=[];
-    order.forEach(function(k){ var p=rp[k]||{}; S.push(p.gan||''); B.push(p.shi||''); });
+    order.forEach(function(k){ var p=(k==='hour'&&window.__timeUnknown)?{}:(rp[k]||{}); S.push(p.gan||''); B.push(p.shi||''); });   // 時刻不明は時柱を関係に数えない
     function pk(a,b){ return [a,b].sort().join(''); }
     function mkset(rows){ var m={}; rows.forEach(function(x){ m[[x[0],x[1]].sort().join('')]=(x[2]!=null?x[2]:true); }); return m; }
     var GANGO=mkset([['甲','己','土'],['乙','庚','金'],['丙','辛','水'],['丁','壬','木'],['戊','癸','火']]);      // 干合（合化）
@@ -3966,7 +3998,7 @@ window.KANSHI60_DETAIL={
     var SANGO=[['申','子','辰','水'],['亥','卯','未','木'],['寅','午','戌','火'],['巳','酉','丑','金']];
     var HOUGO=[['寅','卯','辰','木'],['巳','午','未','火'],['申','酉','戌','金'],['亥','子','丑','水']];
     var natS=[],natB=[],pil=[];
-    ['year','month','day','hour'].forEach(function(k){var p=pillars[k]; if(p){ if(p.gan)natS.push(p.gan); if(p.shi)natB.push(p.shi); if(p.gan&&p.shi)pil.push(p);}});
+    (window.__sheetPKeys?window.__sheetPKeys():['year','month','day','hour']).forEach(function(k){var p=pillars[k]; if(p){ if(p.gan)natS.push(p.gan); if(p.shi)natB.push(p.shi); if(p.gan&&p.shi)pil.push(p);}});
     SANGO.forEach(function(g){var tri=[g[0],g[1],g[2]]; if(tri.indexOf(aBranch)>=0){var have=tri.filter(function(x){return x!==aBranch;}).filter(function(x){return natB.indexOf(x)>=0;}); if(have.length>=2) ev.push({t:'三合',s:g[3],good:1,o:1});}});
     HOUGO.forEach(function(g){var tri=[g[0],g[1],g[2]]; if(tri.indexOf(aBranch)>=0){var have=tri.filter(function(x){return x!==aBranch;}).filter(function(x){return natB.indexOf(x)>=0;}); if(have.length>=2) ev.push({t:'方合',s:g[3],good:1,o:2});}});
     pil.forEach(function(p){ if(GANGO[pk(aStem,p.gan)]!=null && GOGO[pk(aBranch,p.shi)]!=null && !ev.some(function(x){return x.t==='天地徳合';})) ev.push({t:'天地徳合',s:'',good:1,o:0}); });
@@ -4021,7 +4053,7 @@ window.KANSHI60_DETAIL={
   function daiunToNow(){ if(_nenunState) renderNenunFor(_nenunState.nowYear); }
 
   // ---- 鑑定日：既定は「今日」を自動入力。チェックを外すと手入力（命式表・鑑定書とも編集可） ----
-  function _todayJP(){ var d=new Date(); return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'; }
+  function _todayJP(){ return _jstDateStr(false); }   // 鑑定日は日本時間の今日（先生の決定 2026-11-03）
   function applyKanteiDate(){
     var chk=document.getElementById('autoDate'); var on=!chk||chk.checked;
     if(on){ var t=_todayJP(); setEl('kanteiDate', t); setEl('rdDate', t); }
@@ -4050,6 +4082,8 @@ window.KANSHI60_DETAIL={
         var feats=(window.bxFeatureList||function(){return[];})(arr);
         if(feats.length){ fm.innerHTML='<span class="fm-h">この命式の特徴</span>'+feats.map(function(f){return '<span class="fm-row">・'+f+'があります。</span>';}).join(''); }
         else fm.innerHTML='';
+        var _sbn=(window.__sheetSetsuNote&&window.__sheetSetsuNote(document.body.classList.contains('bg-mode')))||'';   // 時刻不明の節入り日の注意（アプリの命式表と同じ）
+        if(_sbn) fm.innerHTML='<span class="fm-row" style="display:block;background:#FDECEC;border:1px solid #E8392B;border-radius:6px;padding:4px 8px;color:#8a1a12">'+_sbn+'</span>'+fm.innerHTML;
       }catch(e){ fm.innerHTML=''; }
     })();
     (function(){ var pm=document.getElementById('pastMemo'); if(!pm) return;
@@ -4321,6 +4355,12 @@ window.KANSHI60_DETAIL={
       if(_pv.length) lines.push('【過去の振り返り（当たりの確認に使う）】\n'+_pv.join('\n')+'\n※鑑定書に「過去の振り返り」という独立した小見出しを立てる。書き方のコツ：命式を根拠に、鑑定士として落ち着いて言い切る。具体的な西暦は最も印象的な1〜2年に絞る（全部は並べない）。ただし言い切るのは“その時期の質”まで＝「◯◯年ごろは変化・区切り・環境が動きやすい配置でした」と時期の傾向を言い切る（何が起きたかの具体的な出来事は断定しない）。「もし」「かもしれません」「心当たりがあれば」などの逃げ言葉を多用しない（章の終わりに一度だけ、事実確認として軽く『この頃、動きや区切りはありませんでしたか』と尋ねる程度に留める）。会局の年は前向きな転機・実りの年として言い切る。全体2〜4文で簡潔に、頼りなくならないように。');
     }
     lines.push('現在の年齢：'+(r.nowAge!=null?r.nowAge+'歳':'不明')+' / 性別：'+((r.sex==='male')?'男性':'女性'));
+    // 今日の日付と「今年」（日本時間・年運の年＝立春で切りかわる年。先生の決定 2026-11-03）
+    try{ var _SY=_sheetYear(), _G='甲乙丙丁戊己庚辛壬癸', _Z='子丑寅卯辰巳午未申酉戌亥', _gz=function(y){ var i=((y-4)%60+60)%60; return _G.charAt(i%10)+_Z.charAt(i%12); };
+      lines.push('今日（日本時間）：'+_jstDateStr(false)+'。「今年」は年運の年（立春で切りかわる）で書く＝今年は'+_SY.y+'年（'+_gz(_SY.y)+'）・来年は'+(_SY.y+1)+'年（'+_gz(_SY.y+1)+'）。'+
+        (_SY.pre?'いまは立春前なので、'+_SY.y+'年（'+_gz(_SY.y)+'）の運が'+_SY.endText+'続いている。今年の運に触れるときは「'+_SY.y+'年の運は'+_SY.endText.replace(/まで$/,'')+'まで」のように期限を必ず添える。':''));
+      if(r.birthYear){ var _ag=[]; for(var _k=0;_k<=3;_k++){ var _yy=_SY.y+_k; _ag.push(_yy+'年＝'+(_yy-r.birthYear)+'歳になる年'); } lines.push('西暦と年齢（その年の誕生日を迎えた年齢）：'+_ag.join('／')); }
+    }catch(_e){}
     return lines.join('\n');
   }
   // AIの返答（見出し#・段落・箇条書き・）をA4カード用のHTML(.rd-cols>.rd-sec)へ変換
@@ -4351,7 +4391,7 @@ window.KANSHI60_DETAIL={
   s=s.replace(/(\d{1,3})(?:歳|才)\s*(?:改め|ではなく)\s*(\d{1,3})(?:歳|才)/g,'$2歳');   // 「41歳改め42歳」のような言い直しは1つに（そのあと生年月日で計算し直す。発注者指示 2026-10-21）
    // 西暦と年齢が並んだところ（2029年（31歳）・2029年の31歳・31歳（2029年））を、生年月日から計算し直す。ジェミニの年齢の計算ちがいを画面に出さない（発注者指示 2026-10-20）
       s=String(s==null?'':s); by=+by||0; other=+other||0;
-  { var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', gzOf=function(y){ var i=((y-4)%60+60)%60; return G.charAt(i%10)+Z.charAt(i%12); }, NY=new Date().getFullYear();
+  { var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', gzOf=function(y){ var i=((y-4)%60+60)%60; return G.charAt(i%10)+Z.charAt(i%12); }, NY=_sheetYear().y;   /* 今年＝年運の年（立春で切りかわる年。日本時間）＝先生の決定 2026-11-03 */
     // 暦のずれを直す（発注者指示 2026-10-22：暦をまちがえると全部の鑑定が狂う）
     // ① 年の干支：「2029年（庚戌）」「2029年の庚戌」「2029年・庚戌年」のように西暦と干支が合わないときは、正しい干支に（読み仮名は後で表どおりに直す）
     s=s.replace(/((?:19|20)\d\d)年([（(]|の|は|：|:)?([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])/g,function(m,y,sp,g,off,str){ var ok=gzOf(+y); if(g===ok) return m; var after=String(str).slice(off+m.length,off+m.length+6); if(/^(年?[（(][^）)]*[）)])?(の|・)?(大運|月|日|時)/.test(after)||/^[^\n。]{0,3}(大運|月柱|日柱|時柱)/.test(after)) return m; return y+'年'+(sp||'')+ok; });   // 大運・月・日の干支のことがあるので、あとに「大運」「月」などが続くときは触らない
@@ -4714,7 +4754,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
       var rlab={ year:(dp[0]?dp[0]+'年':'年柱'), month:(dp[1]?(+dp[1])+'月':'月柱'), day:(dp[2]?(+dp[2])+'日':'日柱'), hour:(window.__timeUnknown?'時刻不明（参考）':(tp[0]!=null&&tp[0]!==''?(+tp[0])+'時'+(tp[1]!=null&&tp[1]!==''?String(+tp[1]).padStart(2,'0')+'分':''):'時柱')) };
       // 命式の地支（会局の検出に使う）
       var P=_lastResult.pillars||{};
-      var natB=['year','month','day','hour'].map(function(k){return (P[k]||{}).shi||'';}).filter(Boolean);
+      var natB=(window.__sheetPKeys?window.__sheetPKeys():['year','month','day','hour']).map(function(k){return (P[k]||{}).shi||'';}).filter(Boolean);
       // 大運の吉凶星：既存の表示用モジュール window.computeKichiFor（年運と同じ）を、大運の干支に当てるだけ。
       //   ※命式計算エンジン(computeChart)は一切呼ばない・変えない。表示のための神殺算出のみ。
       var _ykChart={ dayMaster:{stem:(P.day||{}).gan||''}, pillars:[{branch:(P.year||{}).shi||''},{branch:(P.month||{}).shi||''},{branch:(P.day||{}).shi||''},{branch:(P.hour||{}).shi||''}] };
@@ -4749,7 +4789,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
       var srcMap={};
       function _addSrc(b,lab){ if(!b)return; srcMap[b]=srcMap[b]||[]; if(srcMap[b].indexOf(lab)<0)srcMap[b].push(lab); }
       var _pShort={year:'年',month:'月',day:'日',hour:'時'};
-      ['year','month','day','hour'].forEach(function(pk){ _addSrc((P[pk]||{}).shi, _pShort[pk]+'柱'); });
+      (window.__sheetPKeys?window.__sheetPKeys():['year','month','day','hour']).forEach(function(pk){ _addSrc((P[pk]||{}).shi, _pShort[pk]+'柱'); });
       _addSrc(curDaiunBr,'今の大運');
       _addSrc(curNenunBr,'今の年運'+(curNenunYear?'・'+curNenunYear+'年':''));
       // 生まれ持った（命式内だけで成立している）完全な会局＝枠外にまとめて記載するので、表内からは除外する
@@ -4809,7 +4849,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
       var pnames={year:'年柱',month:'月柱',day:'日柱',hour:'時柱'};
       var sBody=PK.map(function(pk){ var br=(P[pk]||{}).shi||''; return '<tr'+(pk==='day'?' class="yk-day"':'')+'><td class="lbl"><b>'+pnames[pk]+'</b><br><span class="yk-bd">'+esc(rlab[pk])+'</span></td>'+
         '<td class="big">'+c(pk,'tenkan')+'</td><td class="big">'+c(pk,'chishi')+'</td><td>'+c(pk,'zct')+'</td>'+
-        '<td class="yk-kai">'+pKai(br)+'</td>'+
+        '<td class="yk-kai">'+((pk==='hour'&&window.__timeUnknown)?'':pKai(br))+'</td>'+   /* 時刻不明は時柱（仮の値）を会局に数えない */
         '<td>'+c(pk,'tenTsu')+'</td><td'+(pk==='month'?' class="yk-mark-y"':'')+'>'+c(pk,'chiTsu')+'</td><td>'+c(pk,'juni')+'</td><td class="kichi">'+c(pk,'kichi')+'</td></tr>'; }).join('');
       var nm=(T('mName')||T('rdName')||'').replace(/[　\s]*様$/,'').trim();
       var birth=T('mBirth')||'', school=(T('schoolName')||'').replace(/^（スクール名を入力）$/,''), kdate=T('kanteiDate')||T('rdDate')||'';
@@ -4902,10 +4942,10 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
      ・立運の日数：順行＝生まれ→次の節、逆行＝前の節→生まれ（CLAUDE.md準拠）
      戻り値は表示用の情報オブジェクト（無ければ null）。 */
   function _setsuJP(n){ return ({ '惊蛰':'啓蟄','驚蟄':'啓蟄','芒种':'芒種','小满':'小満','雨水':'雨水','谷雨':'穀雨','处暑':'処暑' }[n]) || n || ''; }
-  function _setsuInfo(y,mo,d,h,mn,sex,corr,lon){
+  function _setsuInfo(y,mo,d,h,mn,sex,corr,lon,db){
     try{
       if(!(window.Bazi&&window.Bazi.computeChart)) return null;
-      function opt(Y,M,D,H,Mi){ var o={year:Y,month:M,day:D,hour:H,minute:Mi,sex:sex,correctionMode:corr||'none'}; if(lon!=null&&lon!==''&&!isNaN(parseFloat(lon))) o.longitude=parseFloat(lon); return o; }
+      function opt(Y,M,D,H,Mi){ var o={year:Y,month:M,day:D,hour:H,minute:Mi,sex:sex,correctionMode:corr||'none'}; if(db) o.dayBoundary=db; if(lon!=null&&lon!==''&&!isNaN(parseFloat(lon))) o.longitude=parseFloat(lon); return o; }
       var tc=window.Bazi.computeChart(opt(y,mo,d,h,mn));
       if(!tc||!tc.birth||tc.birth.setsuMin==null) return null;
       var fwd=!!(tc.startFortune&&tc.startFortune.forward);
@@ -4947,7 +4987,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
   // ---- アプリと同じ「日付の変わり目」「クロック時刻優先」「出身地なし＝補正なし」を、計算前の入力に反映する ----
   function _sheetEffInput(y,m,d,h,mn,sex,_sc){
     var corr=(_sc.lon? (_sc.corr||'none') : 'none');
-    var out={y:y,m:m,d:d,h:h,mn:mn,corr:corr};
+    var out={y:y,m:m,d:d,h:h,mn:mn,corr:corr,db:((window.__sheetZ==='next')?'zi':'midnight')};
     try{
       var B=window.Bazi; if(!(B&&B.computeChart)) return out;
       var z=(window.__sheetZ==='next'), db=z?'zi':'midnight';
@@ -4958,16 +4998,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
         var cg=B.computeChart({year:y,month:m,day:d,hour:12,minute:0,sex:sex,correctionMode:'none',dayBoundary:db}).pillars[2].ganzhi;
         if(c.pillars[2].ganzhi!==cg){ corr='none'; out.corr='none'; c=B.computeChart(opt('none')); }
       }
-      if(z){
-        // 早子時：補正後の時刻（真太陽時）が23時台なら翌日の日柱。computeMeishiki は日付の変わり目を受け取れないため、
-        // 時計を「補正後に翌日0時を少し過ぎる」所まで進めて渡す（日柱＝翌日・時柱＝子で、アプリと同じ結果になる）。
-        var sh=h, sm=mn;
-        if(corr!=='none' && c.birth && c.birth.correction && c.birth.correction.solar){ var p=String(c.birth.correction.solar).split(':'); sh=+p[0]; sm=+p[1]; }
-        if(sh===23){
-          var dt=new Date(y,m-1,d,h,mn,0); dt.setMinutes(dt.getMinutes()+(60-sm)+1);
-          out.y=dt.getFullYear(); out.m=dt.getMonth()+1; out.d=dt.getDate(); out.h=dt.getHours(); out.mn=dt.getMinutes();
-        }
-      }
+      // 早子時：時計は進めず、dayBoundary:'zi' を computeMeishiki・節入りの計算に渡す（アプリと同じ。立運・月柱がずれない）
     }catch(e){}
     return out;
   }
@@ -5000,14 +5031,20 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
       if(!window.__timeUnknown && !/[?&]dst=0(&|$)/.test(window.__SQ)){ var _ds=_jpDstToStd(y,m,d,h,mn);
         if(_ds){ _cy=_ds.y;_cm=_ds.m;_cd=_ds.d;_ch=_ds.h;_cmn=_ds.mi; msg.textContent='サマータイム期間の生まれのため、時計の'+h+'時'+('0'+mn).slice(-2)+'分（夏時間）を標準時'+_ch+'時'+('0'+_cmn).slice(-2)+'分に直して計算しています。'; } }
       var _e=_sheetEffInput(_cy,_cm,_cd,_ch,_cmn,sex,_sc);
-      var r=window.computeMeishiki({year:_e.y,month:_e.m,day:_e.d,hour:_e.h,minute:_e.mn,sex:sex, longitude:_sc.lon, correctionMode:_e.corr});
+      var r=window.computeMeishiki({year:_e.y,month:_e.m,day:_e.d,hour:_e.h,minute:_e.mn,sex:sex, longitude:_sc.lon, correctionMode:_e.corr, dayBoundary:_e.db, timeUnknown:!!window.__timeUnknown});
       var _J=_jstNow(); var _age=_J.y-y; if((_J.m*100+_J.d) < (m*100+d)) _age--;  // 満年齢（誕生日前なら-1）。日本時間の今日で数える
       var _am=(_J.y-y)*12+(_J.m-m)-(_J.d<d?1:0); r.nowAgeX=Math.max(0,_am)/12;   // 立運の端数（〇ヶ月）まで含めた「いま」の年齢
       r.nowAge = _age;
       if(r.birthYear==null) r.birthYear = y;   // 大運の西暦計算に使用
       r.birthMonth = m;                         // 大運が切り替わる「月」の表示に使用（生まれ月＋立運の〇ヶ月）
       r.sex = sex;                              // 2枚目の鑑定文（恋愛の星など）で使用
-      try{ r.setsuInfo = _setsuInfo(_cy,_cm,_cd,_ch,_cmn,sex,_e.corr,_sc.lon); }catch(_se){ r.setsuInfo=null; }  // 節入り情報（立運の根拠）※エンジンは読むだけ
+      // 時刻不明の節入り日：その日のうちに（時刻しだいで）年柱・月柱が変わるか（アプリの setsuBoundary と同じ判定）
+      window.__sheetSetsuB=null;
+      if(window.__timeUnknown){ try{ var _sa=window.Bazi.computeChart({year:y,month:m,day:d,hour:0,minute:0,sex:sex,correctionMode:'none',dayBoundary:'midnight'}), _sb=window.Bazi.computeChart({year:y,month:m,day:d,hour:23,minute:59,sex:sex,correctionMode:'none',dayBoundary:'midnight'});
+        var _syr=_sa.pillars[0].ganzhi!==_sb.pillars[0].ganzhi, _smn=_sa.pillars[1].ganzhi!==_sb.pillars[1].ganzhi;
+        if(_syr||_smn) window.__sheetSetsuB={year:_syr?[_sa.pillars[0].ganzhi,_sb.pillars[0].ganzhi]:null, month:_smn?[_sa.pillars[1].ganzhi,_sb.pillars[1].ganzhi]:null}; }catch(_sx){} }
+      r.setsuBoundary=window.__sheetSetsuB;
+      try{ r.setsuInfo = _setsuInfo(_cy,_cm,_cd,_ch,_cmn,sex,_e.corr,_sc.lon,_e.db); }catch(_se){ r.setsuInfo=null; }  // 節入り情報（立運の根拠）※エンジンは読むだけ
       // ★氏名・生年月日は fillFromResult より先に確定する。
       //   横型の命式表（buildYokoSheet）は描画時に #mBirth を読み込むため、
       //   後で設定すると横型ヘッダに前回（初期サンプル）の生年月日が残ってしまう。
