@@ -3,7 +3,7 @@
 - LP の「診断する」のリンクを、見本ページ（claude.ai）から本番の「/」に変える
 - 画像（img・icon・lp）だけをコピーする（見本のファイルは出さない）
 """
-import pathlib, re, shutil
+import hashlib, pathlib, re, shutil
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "public"
@@ -23,5 +23,13 @@ for name in ["index.html", "lp.html"]:
     if name == "lp.html":
         s = s.replace("<title>ワンソナ紹介ページ</title>", "<title>44Wansonalities｜うちの子は、何気質？</title>")
     assert "claude.ai/artifact" not in s, name
+    # 画像の住所に、中身ごとにちがう印（?v=…）を付ける。画像を差しかえたとき、古い画像が残って見えないように
+    def ver(m):
+        f = ROOT / m.group(2)
+        if not f.is_file():
+            return m.group(0)
+        h = hashlib.md5(f.read_bytes()).hexdigest()[:8]
+        return m.group(1) + m.group(2) + "?v=" + h + '"'
+    s = re.sub(r'((?:src|href)=")((?:img|icon|lp)/[^"?]+)"', ver, s)
     (OUT / name).write_text(HEAD + s, encoding="utf-8")
 print("built", OUT)
