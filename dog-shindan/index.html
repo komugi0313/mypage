@@ -3965,7 +3965,17 @@ function renderMeishi(o,url,raw){
 
 // ---------- フェス用：名刺のうら面・印刷用データ ----------
 // 名刺 91×55mm＝1075×650px（300dpi）。塗り足し3mm＝36px
-function wrapJa(ctx,t,w){var lines=[],cur="";for(var k=0;k<t.length;k++){var c=t[k];if(ctx.measureText(cur+c).width>w&&cur){if("、。」）".indexOf(c)>=0){cur+=c;continue}lines.push(cur);cur=c}else cur+=c}if(cur)lines.push(cur);return lines}
+// 画像の中の文を、言葉の切れ目（「、」「。」のあと、ひらがなの後に漢字・カタカナが来るところ）で折り返す。
+// max 行に入らないときは、文字を少しだけ小さくして入れる。それでも入らないときだけ、1文字ずつの折り返しにもどす
+function wrapChars(ctx,t,w){var lines=[],cur="";for(var k=0;k<t.length;k++){var c=t[k];if(ctx.measureText(cur+c).width>w&&cur){if("、。」）！？".indexOf(c)>=0){cur+=c;continue}lines.push(cur);cur=c}else cur+=c}if(cur)lines.push(cur);return lines}
+function wrapSeg(ctx,t,w){var H=/[ぁ-ゖ]/,K=/[一-龯々ァ-ヺ「]/,segs=[],cur="";
+  for(var i=0;i<t.length;i++){var c=t[i],p=t[i-1],pp=t[i-2];if(i>0&&cur&&H.test(p)&&K.test(c)&&((pp&&H.test(pp))||/[はがをにでともへのや]/.test(p))){segs.push(cur);cur=""}cur+=c;if(/[、。！？／]/.test(c)){segs.push(cur);cur=""}}
+  if(cur)segs.push(cur);var lines=[],ln="";
+  segs.forEach(function(g){if(ln&&ctx.measureText(ln+g).width>w){lines.push(ln);ln=""}if(ctx.measureText(g).width>w){var cl=wrapChars(ctx,ln+g,w);ln=cl.pop();lines=lines.concat(cl)}else ln+=g});
+  if(ln)lines.push(ln);return lines}
+function wrapJa(ctx,t,w,max){var lines=wrapSeg(ctx,t,w);if(!max||lines.length<=max)return lines;
+  var f0=ctx.font,m=f0.match(/(\d+)px/);if(m){var s0=+m[1];for(var sz=s0-1;sz>=Math.round(s0*.8);sz--){ctx.font=f0.replace(m[0],sz+"px");var l2=wrapSeg(ctx,t,w);if(l2.length<=max)return l2}ctx.font=f0}
+  return wrapChars(ctx,t,w)}
 function renderMeishiBack(o,raw){
   var W=1075,H=650,cv=document.createElement("canvas");cv.width=W;cv.height=H;var ctx=cv.getContext("2d");
   var B=o.main,F='"Mochiy Pop One","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',R='"M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',dark="#2F3A45",mute="#5A6672",teal="#357385";
@@ -3978,7 +3988,7 @@ function renderMeishiBack(o,raw){
   ctx.textAlign="left";ctx.fillStyle=teal;fitText(ctx,o.name+"に会うときは",460,40,"400",F);ctx.fillText(o.name+"に会うときは",60,112);
   var yy=170;(o.guide||guideOf()).forEach(function(m){
     ctx.fillStyle=teal;ctx.font="800 22px "+R;ctx.fillText(m[0],60,yy);yy+=34;
-    ctx.fillStyle=dark;ctx.font="800 24px "+R;wrapJa(ctx,m[1],450).slice(0,2).forEach(function(l){ctx.fillText(l,60,yy);yy+=34});yy+=18});
+    ctx.fillStyle=dark;ctx.font="800 24px "+R;wrapJa(ctx,m[1],450,2).slice(0,2).forEach(function(l){ctx.fillText(l,60,yy);yy+=34});yy+=18});
   // 右：性格のバランス
   ctx.fillStyle=teal;ctx.font="400 28px "+F;ctx.fillText("性格のバランス",600,112);
   cardAx(o.pct||[]).forEach(function(i,k){var v=o.pct[i],y=172+k*62,x0=600,bw=W-x0-60;
@@ -4059,10 +4069,10 @@ function renderECData(d,art){var W=1075,H=650,cv=document.createElement("canvas"
   if(art)drawDogFree(ctx,art,d.i,190,580,330);
   ctx.textAlign="left";var X=380,y=150,VX=X+190,STEP=d.r&&d.r.length?44:50;
   function row(l,v){ctx.font="800 22px "+R;ctx.fillStyle="#7A8790";ctx.fillText(l,X,y);ctx.fillStyle=dark;
-    if(l==="メモ"){ctx.font="800 24px "+R;wrapJa(ctx,v.replace(/\n/g," "),W-VX-40).slice(0,2).forEach(function(t,k){ctx.fillText(t,VX,y+k*34)});y+=84;return}
+    if(l==="メモ"){ctx.font="800 24px "+R;wrapJa(ctx,v.replace(/\n/g," "),W-VX-40,2).slice(0,2).forEach(function(t,k){ctx.fillText(t,VX,y+k*34)});y+=84;return}
     fitText(ctx,v,W-VX-40,26,"800",R);ctx.fillText(v,VX,y);y+=STEP}
   if(d.r&&d.r.length){drawRibbon(ctx,W-110,22,52);ctx.fillStyle="#FFF6CC";var rh=50+(function(){ctx.font="800 22px "+R;return Math.min(1,wrapJa(ctx,d.r.join("／"),W-VX-50).length-1)})()*30;roundRect(ctx,X-14,y-32,W-X-30,rh,12);ctx.fill();ctx.fillStyle="#F2C21B";ctx.fillRect(X-14,y-32,8,rh);
-    ctx.font="800 22px "+R;ctx.fillStyle="#7A5A00";ctx.fillText("おねがい",X,y);ctx.fillStyle=dark;ctx.font="800 22px "+R;var rl=wrapJa(ctx,d.r.join("／"),W-VX-50);if(rl.length>2){rl=rl.slice(0,2);rl[1]=clipText(ctx,rl[1],W-VX-50)}rl.forEach(function(t,k){ctx.fillText(t,VX,y+k*30)});y+=STEP+4+(rl.length-1)*30}
+    ctx.font="800 22px "+R;ctx.fillStyle="#7A5A00";ctx.fillText("おねがい",X,y);ctx.fillStyle=dark;ctx.font="800 22px "+R;var rl=wrapJa(ctx,d.r.join("／"),W-VX-50,2);if(rl.length>2){rl=rl.slice(0,2);rl[1]=clipText(ctx,rl[1],W-VX-50)}rl.forEach(function(t,k){ctx.fillText(t,VX,y+k*30)});y+=STEP+4+(rl.length-1)*30}
   if(d.b)row("犬種",d.b);
   (d.v||[]).forEach(function(v,k){if(v&&EC_LB[k])row(EC_LB[k],String(v).slice(0,40))});
   ctx.strokeStyle="#E7B7B7";ctx.lineWidth=6;ctx.strokeRect(3,3,W-6,H-6);return cv.toDataURL("image/png")}
