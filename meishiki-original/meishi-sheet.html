@@ -1688,7 +1688,7 @@ function _inDu(r,d){ var x=_nowX(r); if(x==null||!d) return false; var m=(d.ageM
       var kind=sScore>=4?'身旺':sScore<=0?'身弱':'中和', els;
       if(kind==='身旺') els=[_GEN[dayEl],_CON[dayEl],_CONINV[dayEl]];        // 漏らす・抑える
       else if(kind==='身弱') els=[dayEl,_GENINV[dayEl]];                      // 助ける
-      else els=[_GEN[dayEl],_GENINV[dayEl]];                                  // 中和：軽く整える
+      else els=[];                                                            // 中和：喜神・忌神なし（アプリと同じ。CLAUDE.md「中和は喜忌なし」2026-11-03）
       var uniq=[]; els.forEach(function(e){ if(e&&uniq.indexOf(e)<0)uniq.push(e); });
       return {kind:kind, els:uniq, sScore:sScore, dayEl:dayEl};
     }catch(e){ return null; }
@@ -1697,7 +1697,7 @@ function _inDu(r,d){ var x=_nowX(r); if(x==null||!d) return false; var m=(d.ageM
   window._shugoElsFor=function(kind,dayEl){ if(!dayEl) return [];
     var els; if(kind==='身旺') els=[_GEN[dayEl],_CON[dayEl],_CONINV[dayEl]];      // 漏らす・抑える
     else if(kind==='身弱') els=[dayEl,_GENINV[dayEl]];                            // 助ける
-    else els=[_GEN[dayEl],_GENINV[dayEl]];                                        // 中和：軽く整える
+    else els=[];                                                                  // 中和：喜神・忌神なし（アプリと同じ）
     var u=[]; els.forEach(function(e){ if(e&&u.indexOf(e)<0)u.push(e); }); return u; };
   // 命式表フォーマットが呼ぶ関数。中身はエンジン(computeChart)の出力を写すだけ。
   /* ご高齢の方：エンジンの大運・年運が今より先まで届かないとき、同じエンジンの結果から先を補う（アプリと同じ処理。エンジン本体は無改変） */
@@ -2665,6 +2665,27 @@ window.KANSHI60_DETAIL={
       if(ys.length) o.push({tag:'天戦地冲の年が近い',ptag:'大きく揺れやすい年が近い',pro:'これから3年の天戦地冲：'+ys.slice(0,3).join('・')+'＝大きく揺れやすい年。',plain:'これから3年のうち、'+ys.slice(0,2).map(function(x){ return x.replace(/（.*$/,''); }).join('・')+'は大きく揺れやすい年です。'}); }
   }catch(e){} return o; }
   if(typeof window!=='undefined') window.sheetBigFeatures=sheetBigFeatures;
+  /* 解けない空亡の年か（アプリの pkKuuBad と同じ決まり。2026-11-03）：その年の支が空亡で、命式（時刻不明は時柱を除く）＋今の大運の支と
+     三合・方合・支合（合解）も冲（冲解）もしない年＝空亡の影響が出やすい年。「狙い目の年」「チャンスの年」に入れない。 */
+  function _sheetKuuBad(r,y){ try{
+    var P=r.pillars||{}, day=P.day||{}; if(!day.gan||!day.shi) return false;
+    var BRs='子丑寅卯辰巳午未申酉戌亥', STE='甲乙丙丁戊己庚辛壬癸';
+    var a=(r.annualByYear||{})[y]; if(!a||!a.branch) return false;
+    var sd=STE.indexOf(day.gan), bd=BRs.indexOf(day.shi), dd=((bd-sd)%12+12)%12, voids=[BRs.charAt((dd+10)%12),BRs.charAt((dd+11)%12)];
+    if(voids.indexOf(a.branch)<0) return false;
+    var RG={子:'丑',丑:'子',寅:'亥',亥:'寅',卯:'戌',戌:'卯',辰:'酉',酉:'辰',巳:'申',申:'巳',午:'未',未:'午'};
+    var SG=[['申','子','辰'],['亥','卯','未'],['寅','午','戌'],['巳','酉','丑'],['寅','卯','辰'],['巳','午','未'],['申','酉','戌'],['亥','子','丑']];
+    var ks=(window.__sheetPKeys?window.__sheetPKeys():['year','month','day','hour']), all=[];
+    ks.forEach(function(k){ var p=P[k]; if(p&&p.shi) all.push(p.shi); });
+    var curDu=(r.daiun||[]).filter(function(d){ return _inDu(r,d); })[0]; if(curDu&&curDu.kanshi&&curDu.kanshi.length>1) all.push(curDu.kanshi.charAt(1));
+    var ab=a.branch;
+    if(SG.some(function(g){ return g.indexOf(ab)>=0&&g.filter(function(x){ return x!==ab; }).every(function(x){ return all.indexOf(x)>=0; }); })) return false;
+    if(all.some(function(x){ return RG[ab]===x||(BRs.indexOf(x)+6)%12===BRs.indexOf(ab); })) return false;
+    return true; }catch(e){ return false; } }
+  if(typeof window!=='undefined') window._sheetKuuBad=_sheetKuuBad;
+  /* アプリから開いたときの画面の判定（同じ生年月日・時刻・性別のときだけ） */
+  function _sheetAJ(){ try{ var aj=window.__appJudge; if(aj&&aj.key===[document.getElementById('iDate').value,document.getElementById('iTime').value,document.getElementById('iSex').value].join('|')) return aj; }catch(e){} return null; }
+  var _SHEET_DKF={'◎':1,'○':1,'◦':0,'△':-1};   // アプリの「いまの10年」の印 → 鑑定書の言い方（◎○＝追い風／◦＝落ち着いて／△＝整えどき）
   // 過去のふり返り：いちばん直近（一つ前）の「空亡の年」と「冲の年」を求める（西暦→干支は暦式で算出＝エンジン非依存）
   function pastKuboChong(r){
     var P=r.pillars||{};
@@ -2735,6 +2756,7 @@ window.KANSHI60_DETAIL={
     var _kiO=(shugoKind==='身旺')?[dmEl,_GIo[dmEl]]:(shugoKind==='身弱'?[_GEN[dmEl],_CON[dmEl],_CIo[dmEl]]:[]);
     function favO(el){ if(!el) return 0; if(shugoEls.indexOf(el)>=0) return 1; if(_kiO.indexOf(el)>=0) return -1; return 0; }
     var curFavO=(curDu&&curDu.kanshi&&curDu.kanshi.length>1)?favO(_BRo[curDu.kanshi.charAt(1)]):0;
+    var _ajO=_sheetAJ(); if(curDu&&_ajO&&Object.prototype.hasOwnProperty.call(_SHEET_DKF,_ajO.dk)) curFavO=_SHEET_DKF[_ajO.dk];   // アプリから開いたときは、画面の「いまの10年」の判定（dk）にそろえる（やさしい版と同じ。2026-11-03）
     // 恋愛星
     var loveStars=sex==='male'?['偏財','正財']:['偏官','正官'];
     var loveHave=loveStars.filter(function(s){return tcount[s];});
@@ -2805,7 +2827,7 @@ window.KANSHI60_DETAIL={
       //    大運の実際の流れは1枚目の大運表（節木運つき）で確認する。
       // 4) 今このタイミング（今の10年＝大運）
       var curFav=0;
-      if(curDu){ var cel=brEl(curDu.kanshi); curFav=fav(cel);
+      if(curDu){ var cel=brEl(curDu.kanshi); curFav=fav(cel); if(_ajO&&Object.prototype.hasOwnProperty.call(_SHEET_DKF,_ajO.dk)) curFav=_SHEET_DKF[_ajO.dk];   // 画面の判定（dk）にそろえる
         var jud=(curFav>0?'あなたの得意な流れが来て<b>調子が出やすい時期</b>です':(curFav<0?'少し力を蓄える<b>整えどき</b>です':'落ち着いて進める時期です'));
         b+=para('<b>【今の10年'+(nowAge!=null?'（'+nowAge+'歳）':'')+'】</b>今は<b>'+_duRng(curDu)+'の10年</b>のなか。テーマの星は「'+curDu.tsuhen+'」で、'+jud+'。'+(curFav<0?'無理に広げず、土台を整えて次にそなえるのが吉。':(curFav>0?'やりたいことを前に進める・形にするのに向きます。':'ふだんの積み重ねが力になります。'))+'<span class="rd-mini">（10年ごとの運を四柱推命では大運（だいうん）と呼びます。）</span>');
       }
@@ -2818,20 +2840,20 @@ window.KANSHI60_DETAIL={
         // やさしい版と同じ：アプリで「要注意」と出る年（日支・月支との冲、空亡、三刑がそろう年）は狙い目に入れない（空亡でも三合・方合で解けるときは入れる）
         var CHG={子:'午',午:'子',丑:'未',未:'丑',寅:'申',申:'寅',卯:'酉',酉:'卯',辰:'戌',戌:'辰',巳:'亥',亥:'巳'};
         var dayB=(P.day&&P.day.shi)||'', monB=(P.month&&P.month.shi)||'', K3=[['寅','巳','申'],['丑','戌','未']];
-        var caution=function(ab){ var kp=r.kuboPair||''; if(CHG[ab]&&(CHG[ab]===dayB||CHG[ab]===monB)) return true; if(kp&&kp.indexOf(ab)>=0) return true;
+        var caution=function(ab,y){ if(CHG[ab]&&(CHG[ab]===dayB||CHG[ab]===monB)) return true; if(_sheetKuuBad(r,y)) return true;   // 空亡は、解けない年だけ外す（アプリの pkKuuBad と同じ。2026-11-03）
           return K3.some(function(g){ if(g.indexOf(ab)<0) return false; var pool=natB.concat([ab]); return g.every(function(x){return pool.indexOf(x)>=0;}) && !g.every(function(x){return natB.indexOf(x)>=0;}); }); };
         var _fyLab={};
         for(var y=nowYear; y<nowYear+12; y++){ var a=r.annualByYear[y]; if(!a||!a.branch)continue; var ab=a.branch, hit=null;
           SAN.forEach(function(g){ if(g.indexOf(ab)>=0&&fav(g[3])>0){ var pt=[g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}); var c=pt.length; if(c>=2)hit={k:'三合',el:g[3]}; else if(c>=1&&!hit&&(ab===g[1]||pt.indexOf(g[1])>=0))hit={k:'半会',el:g[3]}; } });   // 半会は、まん中の支（子・午・卯・酉）を含む2支だけ（鑑定者本人の表どおり）
           HOU.forEach(function(g){ if(g.indexOf(ab)>=0&&fav(g[3])>0){ var c=[g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}).length; if(c>=2)hit={k:'方合',el:g[3]}; } });
-          var _kp=r.kuboPair||''; if(hit&&_kp&&_kp.indexOf(ab)>=0&&hit.k==='半会') hit=null;   // 空亡の年は、三合・方合で解けるときだけ狙い目に入れる（2026-10-29）
-          if(hit&&caution(ab)&&!(_kp&&_kp.indexOf(ab)>=0&&hit.k!=='半会')) hit=null;
+          var _kp=r.kuboPair||'';
+          if(hit&&caution(ab,y)) hit=null;
           if(hit){ _fyLab[y]=y+'年（'+hit.k+'・'+hit.el+(_kp&&_kp.indexOf(ab)>=0?'・空亡だが解空':'')+'）'; if(favYears.length<3) favYears.push(_fyLab[y]); }
         }
         // アプリから開いたときは、画面の「良い時期」と同じ年にそろえる（やさしい版と同じ）
-        try{ var aj=window.__appJudge; if(aj&&aj.fy&&aj.key===[document.getElementById('iDate').value,document.getElementById('iTime').value,document.getElementById('iSex').value].join('|')) favYears=aj.fy.slice(0,3).map(function(y){ return _fyLab[y]||(y+'年'); }); }catch(e){}
+        try{ var aj=_sheetAJ(); if(aj&&aj.fy) favYears=aj.fy.filter(function(y){ return !_sheetKuuBad(r,y); }).slice(0,3).map(function(y){ return _fyLab[y]||(y+'年'); }); }catch(e){}   // 解けない空亡の年は、アプリの年でも入れない
       }
-      b+=para('<b>【開運の狙い】</b><b>喜神（きしん：あると調子が上がる五行）＝'+(shugoEls.join('・')||'—')+'</b>を意識して使うと流れが整います。'+(favYears.length?'狙い目の年は<b>'+favYears.join('・')+'</b>——動く・仕上げる・受け取る年です。':'巡りの良い年は1枚目「年運」表を目安にしてください。'));
+      b+=para('<b>【開運の狙い】</b>'+(shugoEls.length?'<b>喜神（きしん：あると調子が上がる五行）＝'+shugoEls.join('・')+'</b>を意識して使うと流れが整います。':'五行のバランスがとれた<b>中和（ちゅうわ）</b>の命式で、喜神（きしん：あると調子が上がる五行）・忌神（きじん：多いと疲れやすい五行）はとくにありません。偏らず、持ち味を素直に活かすと流れが整います。')+(favYears.length?'狙い目の年は<b>'+favYears.join('・')+'</b>——動く・仕上げる・受け取る年です。':'巡りの良い年は1枚目「年運」表を目安にしてください。'));
       // 6) 一言でいうと
       var oneStrong=(domStar&&TSU[domStar])?TSU[domStar].t:'あなたらしい持ち味';
       b+=para('<b>【一言でいうと】</b>「'+dmEl+'の芯を持つ、'+oneStrong+'が武器の人。'+(shugoEls.length?'“'+shugoEls.join('・')+'”を使う':'持ち味を素直に活かす')+'ほど開運。'+(curDu?'今は'+(curFav>0?'追い風':(curFav<0?'仕込みどき':'穏やか'))+'。':'')+(favYears.length?'勝負どころは'+favYears.map(function(s){return s.split('（')[0];}).join('・')+'。':'')+'」');
@@ -3415,7 +3437,7 @@ window.KANSHI60_DETAIL={
       b+='<p class="ez-p"><b>あなたは「'+T.img+'」のような'+T.name+'。</b>'+strengthLead+axisAddon+'。'+((genmei&&TSU[genmei]&&TSU[genmei].c)?'気をつけるとよいのは「'+TSU[genmei].c+'」——気づけば長所に変わります。':'')+'</p>';
       //（旧「運の流れ・人生の四季」）長期を「充電期間」等と括ると誤解を招くため載せない。今の時期は下で伝える。
       // 今の時期（今の10年）
-      var AJ=null; try{ var aj=window.__appJudge; if(aj&&aj.key===[document.getElementById('iDate').value,document.getElementById('iTime').value,document.getElementById('iSex').value].join('|')) AJ=aj; }catch(e){}
+      var AJ=_sheetAJ();
       var curDu=du.filter(function(d){return _inDu(r,d);})[0];
       if(curDu){ var cel=BREL[(curDu.kanshi.length>1?curDu.kanshi.charAt(1):'')]||''; var cf=fav(cel);
         var DK={'◎':'いまは<b>攻めどき</b>。やりたいことを前に進めるのに向いています。','○':'いまは<b>追い風の時期</b>。やりたいことを少しずつ前に進めるのに向いています。','◦':'いまは<b>おだやかな時期</b>。ふだんの積み重ねが力になります。','△':'いまは<b>整えどき</b>。土台を整えて、つぎの追い風にそなえる時期です。'};
@@ -3432,17 +3454,16 @@ window.KANSHI60_DETAIL={
         var CHG={子:'午',午:'子',丑:'未',未:'丑',寅:'申',申:'寅',卯:'酉',酉:'卯',辰:'戌',戌:'辰',巳:'亥',亥:'巳'};
         var dayB=(P.day&&P.day.shi)||'', monB=(P.month&&P.month.shi)||'', kp=r.kuboPair||'';
         var K3=[['寅','巳','申'],['丑','戌','未']];
-        var caution=function(ab){ if(CHG[ab]&&(CHG[ab]===dayB||CHG[ab]===monB)) return true; if(kp&&kp.indexOf(ab)>=0) return true;
+        var caution=function(ab,y){ if(CHG[ab]&&(CHG[ab]===dayB||CHG[ab]===monB)) return true; if(_sheetKuuBad(r,y)) return true;   // 空亡は、解けない年だけ外す（アプリの pkKuuBad と同じ。2026-11-03）
           return K3.some(function(g){ if(g.indexOf(ab)<0) return false; var pool=natB.concat([ab]); return g.every(function(x){return pool.indexOf(x)>=0;}) && !g.every(function(x){return natB.indexOf(x)>=0;}); }); };
         for(var y=nowYear; y<nowYear+12 && favYears.length<3; y++){ var a=r.annualByYear[y]; if(!a||!a.branch)continue; var ab=a.branch, ok=false;
-          var _full=SAN.concat(HOU).some(function(g){ return g.indexOf(ab)>=0&&fav(g[3])>0&&[g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}).length>=2; });
-          if(caution(ab)&&!(kp&&kp.indexOf(ab)>=0&&_full)) continue;   // 空亡の年でも、三合・方合で解けるときは入れる（2026-10-29）
+          if(caution(ab,y)) continue;   // 解けない空亡の年・冲の年は入れない（解空の年は入れる）
           SAN.forEach(function(g){ if(g.indexOf(ab)>=0&&fav(g[3])>0){ var pt=[g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}); if(pt.length>=2||(pt.length>=1&&(ab===g[1]||pt.indexOf(g[1])>=0)))ok=true; } });   // 半会は、まん中の支を含む2支だけ
           HOU.forEach(function(g){ if(g.indexOf(ab)>=0&&fav(g[3])>0){ if([g[0],g[1],g[2]].filter(function(x){return x!==ab&&natB.indexOf(x)>=0;}).length>=2)ok=true; } });
           if(ok) favYears.push(y);
         }
       }
-      if(AJ&&AJ.fy) favYears=AJ.fy.slice(0,3);   // アプリから開いたときは、画面の「良い時期」と同じ年にそろえる
+      if(AJ&&AJ.fy) favYears=AJ.fy.filter(function(y){ return !_sheetKuuBad(r,y); }).slice(0,3);   // アプリから開いたときは、画面の「良い時期」と同じ年にそろえる（解けない空亡の年は入れない）
       if(favYears.length) b+='<p class="ez-p">とくに<b>'+favYears.map(function(y){return y+'年';}).join('・')+'</b>は<b>チャンスの年</b>。気になることに一歩ふみ出すと道がひらけます。</p>';
       b+='<p class="ez-note2">むずかしく考えなくて大丈夫。<b>'+(col||'好きな色')+'</b>を身近に置き、追い風の時期に動く——それだけで運は育ちます。</p>';
       H+=ezCard('📌 総合まとめ', b);
@@ -3871,6 +3892,8 @@ window.KANSHI60_DETAIL={
       var els=arr.map(function(v){ return '<span class="ed" contenteditable="true">'+(v==null||v===''?'　':v)+'</span>'; }).join('・');
       var note=strength?'　<span class="shugo-type">（'+strength+'＝'+(SHUGO_TYPE[strength]||'')+'）</span>':'';
       wrap.innerHTML=els+note;
+    } else if(strength==='中和'){
+      wrap.innerHTML='<span class="ed" contenteditable="true">とくになし</span>　<span class="shugo-type">（中和＝'+SHUGO_TYPE['中和']+'）</span>';   // 中和は喜神・忌神なし（アプリと同じ）
     } else {
       // 記入用：編集できる空欄
       wrap.innerHTML='<span class="ed" contenteditable="true">　</span>・<span class="ed" contenteditable="true">　</span>';
@@ -4334,6 +4357,7 @@ window.KANSHI60_DETAIL={
     if(r.shugoStrength) lines.push('身旺・身弱：'+r.shugoStrength);
     var fe=r.gogyoCount||{}; lines.push('五行バランス：'+['木','火','土','金','水'].map(function(e){return e+(fe[e]||0);}).join(' '));
     if(r.shugojin&&r.shugojin.length) lines.push('守護神（喜神＝味方する五行）：'+r.shugojin.join('・'));
+    else if(r.shugoStrength==='中和') lines.push('喜神・忌神：とくになし（中和＝バランス型。喜神・忌神を書かない）');
     if(r.kuboPair||r.tenchusatsu) lines.push('空亡：'+(r.kuboPair||r.tenchusatsu));
     function dom(id){ var e=document.getElementById(id); return e?((e.innerText||e.textContent||'').replace(/[ \t]+/g,' ').replace(/\n{2,}/g,'\n').trim()):''; }
     var ny=dom('nayinWrap'); if(ny) lines.push('納音：'+ny);
