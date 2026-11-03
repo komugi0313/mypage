@@ -290,7 +290,10 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
   /* ---------- 運気の判定（PROと同じ計算） ---------- */
   function pctOf(c,o){ return unkiPct(o.tenStar, tenStarOf(c.dayMaster.stem,HONKI[o.branch]), strengthType(c)); }
   var SIGN={'◎':'とても良い時期','○':'良い時期','◦':'ふつうの時期','△':'静かに整える時期'};
-  function sig(c,o){ var s=unkiSignal(pctOf(c,o)); return {mk:s.mk,lab:SIGN[s.mk]||s.lab,col:s.mk==='◎'?'#B45309':s.col}; }   // とても良い時期＝オレンジ（グラフの追い風と同じ色。2026-10-28）
+  function sig(c,o){ var s=unkiSignal(pctOf(c,o));
+    // 1年ごとの運：解けない空亡の年（ひと休みの年）は◎→○に下げる（PROの pkYearMk・まとめと同じ決まり。2026-11-03）
+    if(s.mk==='◎'&&o&&typeof o.year==='number'&&o.stem&&typeof pkKuuBad==='function'&&safe(function(){ return pkKuuBad(c,o.year); },false)) return {mk:'○',lab:SIGN['○']+'（ひと休みの年）',col:'#4FA96A',kb:true};
+    return {mk:s.mk,lab:SIGN[s.mk]||s.lab,col:s.mk==='◎'?'#B45309':s.col}; }   // とても良い時期＝オレンジ（グラフの追い風と同じ色。2026-10-28）
   function meanOf(o){ var f=(typeof TS_FORTUNE!=='undefined')?TS_FORTUNE[o.tenStar]:null; return f||{意:'',助:''}; }
   // 「△ 静かに整える時期」なのに「飛躍の時期」などと書かないよう、△の時期は控えめな説明にそろえる
   var CALM={意:'今は無理に広げず、足元を整えて力をためる時期です。',助:'体調と生活リズムを整え、次の良い時期に向けて準備しておきましょう。'};
@@ -450,7 +453,9 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
   /* ---------- ⑥ 恋愛 ⑦ 仕事 ---------- */
   function secLoveWork(c){
     var det=(typeof KANSHI60_DETAIL!=='undefined')?KANSHI60_DETAIL[c.pillars[2].ganzhi]:null; if(!det) return '';
-    return (det.恋愛?'<div class="bgc" id="bg-love"><div class="bgh"><span class="ic">💗</span>恋愛・結婚</div>'+paras(det.恋愛)+'</div>':'')+
+    var lv=safe(function(){ var R=pkDigest(c,true); return R&&R.love; },null);   // まとめと同じ「縁が動く年・月」（2026-11-03）
+    var lvH=lv?'<p style="background:#FDF2F6;border:1px solid #F1CFDC;border-radius:10px;padding:9px 12px">'+esc(lv.v)+(lv.s?'<br>'+esc(lv.s):'')+'</p>':'';
+    return (det.恋愛?'<div class="bgc" id="bg-love"><div class="bgh"><span class="ic">💗</span>恋愛・結婚</div>'+lvH+paras(det.恋愛)+'</div>':'')+
            (det.仕事?'<div class="bgc" id="bg-work"><div class="bgh"><span class="ic">💼</span>仕事・向いていること</div>'+paras(det.仕事)+'</div>':'');
   }
 
