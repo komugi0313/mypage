@@ -1974,6 +1974,25 @@ function ekiBirthOpt(Y,M,D,H){
     if(t>=st&&t<en){ const u=new Date(t-3600000); y=u.getUTCFullYear(); m=u.getUTCMonth()+1; d=u.getUTCDate(); h=u.getUTCHours(); } }
   return {year:y,month:m,day:d,hour:h,minute:0,sex:'female',correctionMode:'none'};
 }
+/* 「今日」は日本時間で数える（端末の時間帯で作らない。先生の決定 2026-11-03）。msを省くといま */
+function ekiJst(ms){ const t=new Date((ms==null?Date.now():+ms)+9*3600000); return {y:t.getUTCFullYear(),m:t.getUTCMonth()+1,d:t.getUTCDate(),h:t.getUTCHours(),mi:t.getUTCMinutes(),ms:Date.UTC(t.getUTCFullYear(),t.getUTCMonth(),t.getUTCDate(),t.getUTCHours(),t.getUTCMinutes())}; }
+/* PROと同じ形：日本時間のいま。pkMinorLoveQ（PROと同じ中身）で使う */
+function jstNow(){ const t=new Date(Date.now()+9*3600000); return {y:t.getUTCFullYear(),m:t.getUTCMonth()+1,d:t.getUTCDate(),h:t.getUTCHours(),mi:t.getUTCMinutes()}; }
+/* 満年齢（日本時間の今日で数える） */
+function ekiAgeJst(y,mo,d){ const j=ekiJst(); let a=j.y-(+y); if(j.m<+mo||(j.m===+mo&&j.d<+d)) a--; return a; }
+/* 立春の日時（日本時間）：PROと同じ計算エンジンの年柱が切りかわる分を探す（2月4日などの固定値にしない。先生の決定 2026-11-03） */
+const EKI_RISSHUN={};
+function ekiRisshun(y){ if(EKI_RISSHUN[y]) return EKI_RISSHUN[y]; try{ const B=window.Bazi; if(!B||!B.computeChart) return null;
+  const yp=ms=>{ const t=new Date(ms); return B.computeChart({year:t.getUTCFullYear(),month:t.getUTCMonth()+1,day:t.getUTCDate(),hour:t.getUTCHours(),minute:t.getUTCMinutes(),sex:'male',correctionMode:'none'}).pillars[0].ganzhi; };
+  let lo=Date.UTC(y,0,25,0,0), hi=Date.UTC(y,1,14,0,0); const a=yp(lo); if(yp(hi)===a) return null;
+  while(hi-lo>60000){ const mid=lo+Math.floor((hi-lo)/120000)*60000; if(yp(mid)===a) lo=mid; else hi=mid; }
+  const t=new Date(hi); return (EKI_RISSHUN[y]={y:y,m:t.getUTCMonth()+1,d:t.getUTCDate(),h:t.getUTCHours(),mi:t.getUTCMinutes(),ms:hi}); }catch(e){ return null; } }
+/* いまの年運の年（立春で切りかわる年）：y0＝年運の今年／before＝1月1日〜立春の前／until＝「2027年2月4日の立春まで」／left＝次の立春までの月数の言い方 */
+function ekiYearNow(){ const j=ekiJst(), r=ekiRisshun(j.y); const before=r?(j.ms<r.ms):(j.m<2||(j.m===2&&j.d<4)); const y0=before?j.y-1:j.y; const nx=ekiRisshun(y0+1);
+  const nxMs=nx?nx.ms:Date.UTC(y0+1,1,4,12,0), mo=(nxMs-j.ms)/(30.44*86400000), lm=Math.round(mo);
+  return {y0:y0, before:before, jst:j, next:nx, until:nx?(nx.y+'年'+nx.m+'月'+nx.d+'日の立春まで'):((y0+1)+'年2月の立春まで'), months:mo, left:(mo<1?'1か月足らず':'約'+lm+'か月')}; }
+/* 年の見出し：立春前の年運の今年には期限（○年2月○日の立春まで）を添える */
+function ekiYearLab(y){ try{ const n=ekiYearNow(); return y+'年'+((n.before&&+y===n.y0)?'（'+n.until+'）':''); }catch(e){ return y+'年'; } }
 function mTai(h,k){ if(!h) return ''; const f=TAI_FIX[h.no+'-'+k]; const t=f||((h.ko&&h.ko[k])?h.ko[k].tai:'');
   let x=String(t||'').trim();
   // 「…時です。◎良い時です。」のように同じ締めが二重になるものは、後ろの「良い時です」を落とす
@@ -2157,9 +2176,9 @@ setLangGlobals();
    未来の日付で年齢がマイナスにならないように、範囲の外は「入っていない」として扱う（未成年の恋愛の止め ekiSelfAge も） */
 const EKI_BD_MSG='生年月日は1900年1月1日から今日までの日付を入れてください。';
 function ekiBdOk(v){ const m=String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); if(!m) return false; const y=+m[1], mo=+m[2], d=+m[3]; if(y<1900) return false;
-  const dt=new Date(y,mo-1,d); if(dt.getFullYear()!==y||dt.getMonth()!==mo-1||dt.getDate()!==d) return false; const t=new Date(); t.setHours(23,59,59,999); return dt.getTime()<=t.getTime(); }
+  const dt=new Date(y,mo-1,d); if(dt.getFullYear()!==y||dt.getMonth()!==mo-1||dt.getDate()!==d) return false; const j=ekiJst(); return (y*10000+mo*100+d)<=(j.y*10000+j.m*100+j.d); }   // 今日は日本時間
 function ekiBdVal(){ const e=document.getElementById('fuBd'), v=(e&&e.value)||''; return ekiBdOk(v)?v:''; }
-function ekiBdTodayStr(){ const t=new Date(); return t.getFullYear()+'-'+('0'+(t.getMonth()+1)).slice(-2)+'-'+('0'+t.getDate()).slice(-2); }
+function ekiBdTodayStr(){ const t=ekiJst(); return t.y+'-'+('0'+t.m).slice(-2)+'-'+('0'+t.d).slice(-2); }   // 日本時間の今日
 function ekiBdMark(el){ if(!el) return true; const v=String(el.value||''); const bad=!!v&&!ekiBdOk(v); try{ el.setCustomValidity(bad?EKI_BD_MSG:''); }catch(_){} el.classList.toggle('num-bad',bad); el.setAttribute('aria-invalid',bad?'true':'false');
   let m=el.parentNode&&el.parentNode.parentNode&&el.parentNode.parentNode.querySelector('.bd-err[data-for="'+el.id+'"]');
   if(bad&&!m){ m=document.createElement('p'); m.className='bd-err'; m.setAttribute('data-for',el.id); m.setAttribute('role','alert'); m.textContent=EKI_BD_MSG; (el.parentNode.nextSibling?el.parentNode.parentNode.insertBefore(m,el.parentNode.nextSibling):el.parentNode.parentNode.appendChild(m)); }
@@ -2476,7 +2495,7 @@ function pkAboutToolQ(q){ try{ q=String(q||''); return q.length<=120&&/(?:AI|Ａ
 var PK_MINOR_MSG='お相手が18歳未満（未成年）の方への恋愛のご相談（告白・お付き合い・相性・脈ありかなど）には、未成年の方を守るため、占いでお答えしていません。未成年のうちは、恋愛として近づいたり、気持ちを伝えたり、2人きりで会ったりしないでください。ご自身の気持ちの整理や、これからの運気についてのご相談ならお受けできます。';
 function pkMinorLoveQ(q,selfAge){ try{ q=String(q||'').replace(/[０-９]/g,function(c){ return String.fromCharCode(c.charCodeAt(0)-0xFEE0); }).replace(/[／－．]/g,function(c){ return {'／':'/','－':'-','．':'.'}[c]; });   // 全角の数字もそろえる
   var LV=/告白|付き合|交際|デート|片思い|片想い|脈あり|脈が|脈は|口説|彼女にしたい|彼氏にしたい|両思い|両想い|恋人|恋愛|恋心|好きな(?:人|子|女性|男性|女の子|男の子|相手)|好きにな|好きです|惚れ/; if(!LV.test(q)) return false; if(/娘|息子|子ども|子供|孫|お子さん|お子様|生徒|教え子/.test(q)&&!/告白|付き合|交際|デート|恋人|口説|惚れ|好きな(?:人|女性|男性|相手)/.test(q)) return false;   // 家族・子どもの話は止めない
-  var t=new Date(), ages=[], m, re=/((?:19|20)\d\d)\s*(?:年|[\/\-．.])\s*(\d{1,2})\s*(?:月|[\/\-．.])\s*(\d{1,2})|((?:19|20)\d\d)(\d\d)(\d\d)(?!\d)/g;
+  var _J=jstNow(), t={getFullYear:function(){ return _J.y; },getMonth:function(){ return _J.m-1; },getDate:function(){ return _J.d; }}, ages=[], m, re=/((?:19|20)\d\d)\s*(?:年|[\/\-．.])\s*(\d{1,2})\s*(?:月|[\/\-．.])\s*(\d{1,2})|((?:19|20)\d\d)(\d\d)(\d\d)(?!\d)/g;
   while((m=re.exec(q))){ var y=+(m[1]||m[4]), mo=+(m[2]||m[5]), d=+(m[3]||m[6]); if(mo<1||mo>12||d<1||d>31) continue; var a=t.getFullYear()-y; if(t.getMonth()+1<mo||(t.getMonth()+1===mo&&t.getDate()<d)) a--; if(a>=0&&a<120) ages.push(a); }
   var re2=/(\d{1,2})\s*(?:歳|才)(?!\s*の?\s*(?:とき|時|頃|ころ|子ども|子供|娘|息子|孫))/g; while((m=re2.exec(q))) ages.push(+m[1]);   // 「17歳のとき」「5歳の子ども」は数えない
   if(/(?:高校生|中学生|小学生|女子高生|男子高校生|JK|ＪＫ|JC|ＪＣ)(?!\s*の?\s*(?:とき|時|頃|ころ))/.test(q)) ages.push(16);
@@ -2554,7 +2573,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
   s=s.replace(/(\d{1,3})(?:歳|才)\s*(?:改め|ではなく)\s*(\d{1,3})(?:歳|才)/g,'$2歳');   // 「41歳改め42歳」のような言い直しは1つに（そのあと生年月日で計算し直す。発注者指示 2026-10-21）
    // 西暦と年齢が並んだところ（2029年（31歳）・2029年の31歳・31歳（2029年））を、生年月日から計算し直す。ジェミニの年齢の計算ちがいを画面に出さない（発注者指示 2026-10-20）
     s=String(s==null?'':s); by=+by||0; other=+other||0;
-  { var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', gzOf=function(y){ var i=((y-4)%60+60)%60; return G.charAt(i%10)+Z.charAt(i%12); }, NY=new Date().getFullYear();
+  { var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', gzOf=function(y){ var i=((y-4)%60+60)%60; return G.charAt(i%10)+Z.charAt(i%12); }, NY=(function(){ try{ return ekiYearNow().y0; }catch(_e){ return new Date().getFullYear(); } })();   // 今年＝年運の年（立春で切りかわる。日本時間。先生の決定 2026-11-03）
     // 暦のずれを直す（発注者指示 2026-10-22：暦をまちがえると全部の鑑定が狂う）
     // ① 年の干支：「2029年（庚戌）」「2029年の庚戌」「2029年・庚戌年」のように西暦と干支が合わないときは、正しい干支に（読み仮名は後で表どおりに直す）
     s=s.replace(/((?:19|20)\d\d)年([（(]|の|は|：|:)?([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])/g,function(m,y,sp,g,off,str){ var ok=gzOf(+y); if(g===ok) return m; var after=String(str).slice(off+m.length,off+m.length+6); if(/^(年?[（(][^）)]*[）)])?(の|・)?(大運|月|日|時)/.test(after)||/^[^\n。]{0,3}(大運|月柱|日柱|時柱)/.test(after)) return m; return y+'年'+(sp||'')+ok; });   // 大運・月・日の干支のことがあるので、あとに「大運」「月」などが続くときは触らない
@@ -2599,9 +2618,11 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
     if(/(?:夫|妻|旦那|嫁|彼氏|彼女|恋人|パートナー|交際相手)[^。\n]{0,12}(?:暴力|殴|蹴|叩か|たたか|暴言|DV|ＤＶ|モラハラ)|DV|ＤＶ|家庭内暴力/.test(q)) o.push('DV相談ナビ（#8008）、身の危険があるときは警察（110）');
     return o; }
   function ekiLifeGuide(q){ try{   // 暮らしに寄り添う答え方の決まり（なりきり点検の結果から。PROと同じ考え方。発注者指示 2026-10-20）
-    var _d=new Date(), Y=_d.getFullYear(), M=_d.getMonth()+1, D=_d.getDate(), left=12-M+(D<15?1:0);
-    var s='\n【暮らしの答え方（どの相談でも守る）】\n・今日は'+Y+'年'+M+'月'+D+'日。'+Y+'年は残り約'+left+'か月なので、'+Y+'年のことは「年内」「この先の数か月」として書き、これからの時期の話は'+(Y+1)+'年以降を中心にする。'+Y+'年を「これから来る年」のように書かない。\n';
-    var bd=ekiBdVal().split('-'), by=+bd[0], bm=+bd[1], bdd=+bd[2]; if(by>1900&&by<=Y){ var age=Y-by-((M<bm||(M===bm&&D<bdd))?1:0), T=[]; for(var y=Y;y<=Y+12;y++) T.push(y+'年＝'+(y-by)+'歳'); s+='・年は西暦だけで書く（例：2029年）。年のすぐあとに干支・年齢を書かない（ツールが正しい年齢を自動で付ける）。「21歳のころ」のように年齢だけで時期を言わず、西暦で言う。\n・相談者はいま'+age+'歳。年齢を書くときは次の表だけを使う（その年の誕生日を迎えたときの年齢）：'+T.join('、')+'。\n'; }
+    var _n=ekiYearNow(), _j=_n.jst, Y=_j.y, M=_j.m, D=_j.d, Y0=_n.y0, _gz=function(y){ var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', i=((y-4)%60+60)%60; return G.charAt(i%10)+Z.charAt(i%12); };   // 今日は日本時間。今年＝年運の年（立春で切りかわる。先生の決定 2026-11-03）
+    var s='\n【暮らしの答え方（どの相談でも守る）】\n・今日は'+Y+'年'+M+'月'+D+'日（日本時間）。年の運は1月1日ではなく立春で切りかわる。いまの年運は'+Y0+'年（'+_gz(Y0)+'）で、'+_n.until+'（残り'+_n.left+'）。お客様が「今年」「来年」と書いたら、年運の年として読む（今年＝'+Y0+'年の運、来年＝'+(Y0+1)+'年の運）。\n';
+    if(_n.before) s+='・いまは立春前なので、'+Y0+'年（'+_gz(Y0)+'）の運が続いている（'+(Y0+1)+'年（'+_gz(Y0+1)+'）の運は立春から）。答えで「今年」＝'+Y0+'年の運にふれるときは、必ず「（'+_n.until+'）」と期限を添える。'+Y0+'年を「これから来る年」のように書かない。\n';
+    else if(_n.months<4.5) s+='・'+Y0+'年の運は残り'+_n.left+'なので、'+Y0+'年のことは「'+_n.until+'」「この先の数か月」として書き、これからの時期の話は'+(Y0+1)+'年以降を中心にする。'+Y0+'年を「これから来る年」のように書かない。\n';
+    var bd=ekiBdVal().split('-'), by=+bd[0], bm=+bd[1], bdd=+bd[2]; if(by>=1900&&by<=Y){ var age=Y-by-((M<bm||(M===bm&&D<bdd))?1:0), T=[]; for(var y=Y0;y<=Y0+12;y++) T.push(y+'年＝'+(y-by)+'歳'); s+='・年は西暦だけで書く（例：2029年）。年のすぐあとに干支・年齢を書かない（ツールが正しい年齢を自動で付ける）。「21歳のころ」のように年齢だけで時期を言わず、西暦で言う。\n・相談者はいま'+age+'歳。年齢を書くときは次の表だけを使う（その年の誕生日を迎えたときの年齢）：'+T.join('、')+'。\n'; }
     var _q=String(q||''), _hit=ekiConsultDest(_q);
     if(_hit.length) s+='・このご相談では、最後に「'+_hit.join('」「')+'」への相談を一言、必ず添える（ここに書いた相談先だけ。ほかの相談先は書かない）。\n';
     else s+='・このご相談には、医療機関・ケアマネジャー・地域包括支援センター・法テラスなどの相談先を書かない。\n';
@@ -3149,7 +3170,7 @@ ${jargonLine}プロの鑑定に聞こえるよう、温かく具体的に。誰�
   ];
   /* 答えない相談（自殺の具体的な計画・人を傷つける・犯罪）。ここだけは占いで答えず、サーバーにも送らない（PRO・ビギナーと同じ） */
   const EKI_DANGER_SELF=/自殺(したい|しよう|する(つもり|予定|方法|のに|日|場所)|の方法|を決め|を計画)|死に方|死ぬ方法|楽に死ね|確実に死ね|死ねる方法|(いつ|何日に|どこで)死ねば|死ぬのに(いい|良い|向いて)|今(から|夜|日)死ぬ|明日死ぬ|遺書を書|首を吊(ろう|る(つもり|予定))|飛び降り(よう|る(つもり|予定))|命を絶(とう|つ(つもり|予定))|練炭|致死量|オーバードーズ(しよう|する(つもり|予定))/, EKI_DANGER_HARM=/殺(したい|す方法|してやる|そう(と|か)|す(つもり|計画|予定))(?!ほど|くらい|ぐらい)|殺害(したい|しよう|する)|毒を盛|放火(したい|しよう|する)|盗(みたい|む方法|んでも|みがバレ)|万引き(したい|しよう|する方法|がバレ|しても)|泥棒(したい|しよう|する方法)|詐欺(をしたい|をしよう|で稼|がバレ)|横領(したい|しよう|がバレ)/;
-  function ekiSelfAge(){ try{ var v=ekiBdVal(), m=v.match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return null; var t=new Date(), a=t.getFullYear()-(+m[1]); if(t.getMonth()+1<+m[2]||(t.getMonth()+1===+m[2]&&t.getDate()<+m[3])) a--; return a; }catch(e){ return null; } }
+  function ekiSelfAge(){ try{ var v=ekiBdVal(), m=v.match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return null; return ekiAgeJst(+m[1],+m[2],+m[3]); }catch(e){ return null; } }   // 日本時間の今日で数える
   function ekiDangerHTML(k){ if(k==='empty') return '<div style="line-height:1.85;font-size:14.5px;color:#2E2838"><p style="margin:0">'+PK_EMPTY_MSG+'</p></div>'; if(k==='tool') return '<div style="line-height:1.85;font-size:14.5px;color:#2E2838"><p style="margin:0">'+PK_TOOL_MSG+'</p></div>'; if(k==='confess') return '<div style="line-height:1.85;font-size:14.5px;color:#2E2838"><p style="margin:0">'+PK_CONFESS_MSG+'</p></div>'; if(k==='minor') return '<div style="line-height:1.85;font-size:14.5px;color:#2E2838"><p style="margin:0">'+PK_MINOR_MSG+'</p></div>'; return (k==='self'?ekiCrisisFullHTML():'')+'<div style="line-height:1.85;font-size:14.5px;color:#2E2838"><p style="margin:0">'+(k==='self'?'このご相談には、占いでお答えできません。いまのお気持ちを、どうか上の窓口や身近な信頼できる人に話してください。あなたの話を聞いてくれる人が、必ずいます。':'人を傷つけることや、盗みなどの犯罪につながるご相談には、占いでお答えできません。気持ちが抑えきれないほどつらいときは、信頼できる人や、専門の相談窓口（警察相談専用電話 #9110 など）に相談してください。')+'</p></div>'; }
   function ekiCrisisFullHTML(){ return '<div style="border:2px solid #C0392B;border-radius:14px;background:#FFF6F4;padding:14px 16px;margin:0 0 12px;line-height:1.85;font-size:14.5px;color:#3A2A26"><div style="font-weight:800;font-size:16px;margin-bottom:6px">🕊️ ひとりで抱えないでください</div><p style="margin:0 0 6px">いま、とてもつらいのですね。あなたの安全がいちばん大切です（無料・秘密は守られます）。</p><ul style="margin:0 0 6px;padding-left:1.2em"><li><b>よりそいホットライン</b>：<span class="tel-nw" style="white-space:nowrap">0120-279-338</span>（24時間・通話無料）</li><li><b>いのちの電話</b>：<span class="tel-nw" style="white-space:nowrap">0570-783-556</span>（毎日10〜22時）</li><li><b>こころの健康相談統一ダイヤル</b>：<span class="tel-nw" style="white-space:nowrap">0570-064-556</span></li><li>いますぐ危険を感じるときは <b style="white-space:nowrap">110／119</b> へ</li></ul></div>'; }
   function ekiSafety(q){ q=String(q||''); if(pkEmptyQ(q)) return {block:'empty'}; if(EKI_DANGER_SELF.test(q)) return {block:'self'}; if(pkConfessQ(q)) return {block:'confess'}; if(EKI_DANGER_HARM.test(q)) return {block:'harm'}; if(pkMinorLoveQ(q,ekiSelfAge())) return {block:'minor'}; if(pkAboutToolQ(q)) return {block:'tool'}; if(ekiCrisisTest(q)) return {crisis:true}; for(const c of EKI_CAVEATS){ if(c.re.test(q)) return {say:c.say, health:!!c.health, kind:c.kind||(c.health?'health':'')}; } return null; }
@@ -3225,9 +3246,9 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
        時期が書かれた文をそのまま使い、卦のたとえ（「春が来て氷が解けるように」など）の中の季節は時期に使わない。
        「今年か来年か」の相談は、答えの向きから具体的な文にする */
     let tmS=''; { const TMRE=/20\d\d年|\d{1,2}月|年内|再来年|来年|今年|年明け|春|夏|秋|冬|数週間|数か月|数ヶ月|\d+か月|\d+ヶ月/, SIM=/ように|ような|ようです|たとえ|例え|イメージ|ごとく|景色|象徴|姿/;
-      const Y=new Date().getFullYear(), qf=ekiQForm(window.__ekiQ);
-      if(qf==='year'&&/^\s*来年のほう/.test(lead)) tmS='今年（'+Y+'年）のうちに準備と下調べを進め、来年（'+(Y+1)+'年）に入ってから本格的に動きましょう。';
-      else if(qf==='year'&&/^\s*今年のほう/.test(lead)) tmS='準備が整っていれば今年（'+Y+'年）のうちに動き出し、来年（'+(Y+1)+'年）にかけて形にしていきましょう。';
+      const _yn=ekiYearNow(), Y=_yn.y0, _uL=_yn.before?'。'+_yn.until:'', qf=ekiQForm(window.__ekiQ);   // 今年＝年運の年（立春で切りかわる）。立春前は期限を添える（先生の決定 2026-11-03）
+      if(qf==='year'&&/^\s*来年のほう/.test(lead)) tmS='今年（'+Y+'年'+_uL+'）のうちに準備と下調べを進め、来年（'+(Y+1)+'年）に入ってから本格的に動きましょう。';
+      else if(qf==='year'&&/^\s*今年のほう/.test(lead)) tmS='準備が整っていれば今年（'+Y+'年'+_uL+'）のうちに動き出し、来年（'+(Y+1)+'年）にかけて形にしていきましょう。';
       else { const ss=String((talkP||[]).join('')+'\n'+(p.jogen||'')).split(/(?<=[。！？\n])/).map(x=>x.replace(/^[・\s]+/,'').trim()).filter(Boolean);
         tmS=ss.find(x=>TMRE.test(x)&&!SIM.test(x)&&lead.indexOf(x.replace(/。$/,''))<0&&x.length<=90)||''; } }
     const nq=EKI_NEXTQ[ekiTalkTopic(window.__ekiQ)]||EKI_NEXTQ.other;
@@ -3575,7 +3596,7 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
     const row=(t,d)=>`<div class="mh-row"><div class="mh-t">${t}</div>${d?`<div class="mh-d">${d}</div>`:''}</div>`;
     const go=String(p.gogyo||'').split('・').map(x=>{ const e=x[0]; return `${e}（${GO_YOMI[e]||''}）${x.slice(1)}`; }).join('・');
     const kb=String(p.kubo||'').split('・').map(b=>`${b}（${SHI_YOMI[b]||''}）`).join('・');
-    const yrs=ch?ch.years.map(y=>`<div class="mh-y">${y.year}年　${gzY(y.gz)}<br>星：${y.star}（${STAR_YOMI[y.star]||''}）＝${esc(String(SHO_YEAR[y.star]||'').split('。')[0])}<br>勢い：${y.terrain}（${TERR_YOMI[y.terrain]||''}）＝${esc(SHO_TERRAIN[y.terrain]||'')}</div>`).join(''):'';
+    const yrs=ch?ch.years.map(y=>`<div class="mh-y">${ekiYearLab(y.year)}　${gzY(y.gz)}<br>星：${y.star}（${STAR_YOMI[y.star]||''}）＝${esc(String(SHO_YEAR[y.star]||'').split('。')[0])}<br>勢い：${y.terrain}（${TERR_YOMI[y.terrain]||''}）＝${esc(SHO_TERRAIN[y.terrain]||'')}</div>`).join(''):'';
     return `<details class="mh" style="margin-top:6px;"><summary class="tap-sum" style="cursor:pointer;">鑑定士用の参考：命式の中身と読み方（お客様には読み上げません）</summary><div class="mh-body">
       ${row('命式（めいしき）とは','生まれた年・月・日・時刻を、干支（かんし）という2文字の組み合わせに置きかえたもの。4本の柱なので「四柱（しちゅう）」と呼びます。')}
       ${row(`年柱（ねんちゅう）　${gzY(p.year)}`,'生まれた年の柱。家系や子どものころの環境を表します。')}
@@ -3588,6 +3609,16 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
       ${ch?row('年運（ねんうん）＝これから3年の流れ','その年に巡ってくる運。「星」は通変星（つうへんせい）といい、どんなテーマの年かを表します。「勢い」は十二運（じゅうにうん）といい、エネルギーの強さを表します。')+yrs:''}
     </div></details>`;
   }
+  /* 節入り（季節の変わり目）が、入れた「○時台」の1時間の中にあるときだけ注意を出す（時刻は○時00分で計算するため。
+     分の欄を足すかは先生に決めていただく。2026-11-03）。年柱も変わるとき（立春）は「年柱・月柱」、月だけなら「月柱」 */
+  function ekiSetsuNote(dateStr,hourStr){ try{
+    if(!dateStr||hourStr===''||hourStr==null||!window.Bazi||!window.Bazi.computeChart) return '';
+    const [Y,M,D]=String(dateStr).split('-').map(Number); if(!Y||!M||!D) return ''; const H=Number(hourStr);
+    const o=ekiBirthOpt(Y,M,D,H), a=window.Bazi.computeChart(o).pillars, b=window.Bazi.computeChart(Object.assign({},o,{minute:59})).pillars;
+    if(a[0].ganzhi===b[0].ganzhi&&a[1].ganzhi===b[1].ganzhi) return '';
+    const which=(a[0].ganzhi!==b[0].ganzhi)?'年柱・月柱':'月柱';
+    return '⚠ この日は季節の変わり目（節入り）の日で、'+H+'時台のうちに切りかわります。生まれた時刻（分）によっては'+which+'が変わります（ここでは'+H+'時00分で計算しています）。';
+  }catch(e){ return ''; } }
   function fuBirthInfo(){
     const info=document.getElementById('fuBdInfo'); if(!info)return;
     const p=fuPillars();
@@ -3602,8 +3633,8 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
     const chHtml=ch?`<div class="fu-bd-card"><div class="fu-bd-h">生年月日から見たこと<span class="fu-bd-hs">四柱推命（しちゅうすいめい）から・お客様にそのまま伝えられる言葉</span></div>
       <div class="fu-bd-row"><b>生まれ持った性質</b>${esc(SHO_STEM[ch.dm]||'')}</div>
       <div class="fu-bd-row"><b>持ち味</b>${esc(elWords(ch.strong,SHO_EL_GOOD).join('／'))}<b class="fu-bd-sub">補いたい力</b>${esc(elWords(ch.weak,SHO_EL_LACK).join('／'))}</div>
-      <div class="fu-bd-row"><b>これから3年の流れ</b>${ch.years.map(y=>`<span class="fu-bd-y"><span class="fu-bd-yn">${y.year}年${y.year===best?'<span class="fu-bd-best">追い風</span>':''}</span>${esc(SHO_YEAR[y.star]||'')}（勢いは「${esc(SHO_TERRAIN[y.terrain]||'ふつう')}」）</span>`).join('')}</div>
-      ${ch.hasH?'':'<div class="fu-bd-note2">※生まれた時刻が分からないため、時刻を除いた生年月日から見ています。</div>'}</div>`:'';
+      <div class="fu-bd-row"><b>これから3年の流れ</b>${ch.years.map(y=>`<span class="fu-bd-y"><span class="fu-bd-yn">${ekiYearLab(y.year)}${y.year===best?'<span class="fu-bd-best">追い風</span>':''}</span>${esc(SHO_YEAR[y.star]||'')}（勢いは「${esc(SHO_TERRAIN[y.terrain]||'ふつう')}」）</span>`).join('')}</div>
+      ${ch.hasH?'':'<div class="fu-bd-note2">※生まれた時刻が分からないため、時刻を除いた生年月日から見ています。</div>'}${(()=>{ const bd=document.getElementById('fuBd'), bt=document.getElementById('fuBt'); const n=ekiSetsuNote(bd&&bd.value, bt?bt.value:''); return n?'<div class="fu-bd-note2 fu-bd-setsu" role="note" style="color:#7A3A00;font-weight:700">'+esc(n)+'</div>':''; })()}</div>`:'';
     info.innerHTML=p?`<span class="fu-bd-ok">✓ 生年月日を入れました。<span class="ib">下のボタンを押すと、</span><span class="ib">生まれ持った性質も合わせてお答えします。</span></span><span class="fu-bd-note">このあと上の欄から質問したときも、毎回合わせてお答えします。鑑定書を作ると「生まれ持った性質」「時期の目安」も入ります。</span>${chHtml}${fuMeishikiHelp(p,ch)}`:'';
   }
   function buildFollowupPrompt(followQ){
@@ -3613,7 +3644,7 @@ function pkNoGambleTiming(t,q){ try{ t=String(t||''); if(!PK_GAMBLE_Q.test(Strin
     const pilLine=pil?`
 相談者の命式（四柱推命）：年柱 ${pil.year}／月柱 ${pil.month}／日柱 ${pil.day}${pil.hour?`／時柱 ${pil.hour}`:'（出生時間不明のため三柱）'}。日主は${pil.dayKan}（五行は${pil.dayElem}）。五行の内訳：${pil.gogyo}。${fch?`
 生まれ持った性質（言い換え済み・そのまま使ってよい）：${SHO_STEM[fch.dm]||''}／持ち味＝${elWords(fch.strong,SHO_EL_GOOD).join('、')}／控えめな力＝${elWords(fch.weak,SHO_EL_LACK).join('、')}
-これから3年の流れ（四柱推命の年ごとの運。PRO版と同じ計算・鑑定書の「時期の目安」と同じ材料）：${fch.years.map(y=>`${y.year}年＝${SHO_YEAR[y.star]||''}（勢い：${SHO_TERRAIN[y.terrain]||'ふつう'}）`).join('／')}${fbest?`／とくに追い風の年＝${fbest}年`:'／とくに追い風の年＝なし（この3年はこつこつ積み上げる流れ）'}`:''}
+これから3年の流れ（四柱推命の年ごとの運。PRO版と同じ計算・鑑定書の「時期の目安」と同じ材料）：${fch.years.map(y=>`${ekiYearLab(y.year)}＝${SHO_YEAR[y.star]||''}（勢い：${SHO_TERRAIN[y.terrain]||'ふつう'}）`).join('／')}${fbest?`／とくに追い風の年＝${fbest}年`:'／とくに追い風の年＝なし（この3年はこつこつ積み上げる流れ）'}`:''}
 【命式の使い方（易と混ぜない）】あなたは四柱推命にも通じた占い師ですが、本ツールは易の鑑定が主役です。答えの本文は必ず易だけで完結させること（本文に命式の話を混ぜない）。命式から添える価値がある時だけ、本文のあとに改行して「――生まれ持った性質から：」で始まる一〜二文を添える（例：「――生まれ持った性質から：じっくり育てるのが得意なあなたは、なおさら“待つ”が効きますよ。」。五行・干支・日主などの言葉は使わない）。添えてよい内容は、日主の気質にかぎらず、柱の干支の組み合わせから見える持ち味、五行の偏り（多い五行＝豊かな持ち味・欠けた五行＝補いたい気）、五行と季節の相性まで、命式全体を活かしてよい。時期にかかわる質問では、上の「これから3年の流れ」を根拠に、年の単位で目安を添えてよい（例：「――生まれ持った性質から：2027年は着実に積み上げる年。易の“待つ”とも重なりますよ。」）。書かれていない年・月・日を作らない、年の流れの中身を書きかえない、追い風の年を勝手に変えない。通変星・大運などの専門的な命式鑑定には踏み込まない（それは命式専用ソフトの領分）。不要なら添えなくてよい。`:'';
     return `あなたは熟練の易占い師です。すでに下の卦を立て、相談者に鑑定を伝えました。いまは鑑定後の対話の時間です。相談者の言葉に、経験豊かな占い師として自然に応じてください。
 最初のご相談：「${L.q}」
@@ -3856,9 +3887,7 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')), c1=ek
       const mx=Math.max(...els.map(e=>fe[e]||0)), mn=Math.min(...els.map(e=>fe[e]||0));
       const strong=els.filter(e=>(fe[e]||0)===mx), weak=els.filter(e=>(fe[e]||0)===mn);   // 同じ数のものは全部（ひとつだけ選ばない）
       // 「今年」は立春で切り替える（四柱推命の決まり。1月〜立春前は前の年）。日本時間のいまで判定
-      const _jt=new Date(Date.now()+9*3600000), _jy=_jt.getUTCFullYear();
-      // いまの年柱が、その年の6月（立春後）の年柱と違えば、まだ立春前＝前の年
-      let y0=_jy; try{ const tp=window.Bazi.computeChart({year:_jy,month:_jt.getUTCMonth()+1,day:_jt.getUTCDate(),hour:_jt.getUTCHours(),minute:_jt.getUTCMinutes(),sex:'male',correctionMode:'none'}).pillars[0].ganzhi; const mid=window.Bazi.computeChart({year:_jy,month:6,day:1,hour:12,minute:0,sex:'male',correctionMode:'none'}).pillars[0].ganzhi; if(tp!==mid) y0=_jy-1; }catch(_e){}
+      let y0=ekiYearNow().y0;   // 立春の日時はエンジンの年柱から求める（ekiRisshun）
       // 年ごとの運（年運）は、日主（日柱の干）とその年の干支だけで決まる。エンジンの年運の表は生まれてから約90年分なので、
       // 表にない年（ご高齢の方）は、同じ日主の日に生まれた人のエンジン結果から取る（エンジンの結果だけを使う・自前の計算はしない）
       let alt=null; const altFor=()=>{ if(alt) return alt; try{ const base=Date.UTC(2000,0,1);
@@ -3881,8 +3910,8 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')), c1=ek
   function shoWeakLine(ch){ return `反対に、${elJoin(ch.weak,SHO_EL_LACK)}は控えめ。意識して取り入れると、運のバランスが整います。`; }
   function shoColor(ch){ return elWords(ch.weak,SHO_EL_COLOR).join('」「'); }
   function shoBestYear(ch){
-    let best=null; const now=new Date();
-    (ch.years||[]).forEach(y=>{ if(y.year===now.getFullYear() && now.getMonth()>=9) return; /* 今年が残りわずか（10月以降）なら、来年以降から選ぶ */ const sc=(SHO_SCORE_T[y.star]||0)+(SHO_SCORE_P[y.terrain]||0); if(!best||sc>best.sc) best={year:y.year,sc}; });
+    let best=null; const yn=ekiYearNow();
+    (ch.years||[]).forEach(y=>{ if(y.year===yn.y0 && (yn.before||yn.jst.m>=10)) return; /* 今年＝年運の年（立春で切りかわる）が残りわずか（10月〜次の立春の前）なら、来年以降から選ぶ（先生の決定 2026-11-03） */ const sc=(SHO_SCORE_T[y.star]||0)+(SHO_SCORE_P[y.terrain]||0); if(!best||sc>best.sc) best={year:y.year,sc}; });
     return (best&&best.sc>=3)?best.year:null;
   }
   // 内蔵データ（全64卦・384爻）＋四柱推命の計算結果から、定型文で鑑定書の各章を作る
@@ -3942,7 +3971,7 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')), c1=ek
       S.push({h:'これからの流れ', t:fl.join('\n')});
       if(ch){
         S.push({h:'生まれ持った性質', t:['生年月日から見ると、あなたは'+(SHO_STEM[ch.dm]||''), shoStrongLine(ch), shoWeakLine(ch), ch.hasH?'':'（生まれた時刻が分からないため、時刻を除いた生年月日から見ています）'].filter(Boolean).join('\n')});
-        const yl=['生年月日から見た、これから3年の流れです。'].concat(ch.years.map(y=>`・${y.year}年：${SHO_YEAR[y.star]||''}（勢いは「${SHO_TERRAIN[y.terrain]||'ふつう'}」）`));
+        const yl=['生年月日から見た、これから3年の流れです。'].concat(ch.years.map(y=>`・${ekiYearLab(y.year)}：${SHO_YEAR[y.star]||''}（勢いは「${SHO_TERRAIN[y.terrain]||'ふつう'}」）`));
         yl.push('この3年の流れは、暮らし全体の目安としてお読みください（このご相談の結果を決めるものではありません）。');
         S.push({h:'時期の目安', t:yl.join('\n')});
       }
@@ -3985,7 +4014,7 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')), c1=ek
       ].filter(Boolean);
       S.push({h:'生まれ持った性質', t:lines.join('\n')});
       const best=shoBestYear(ch);
-      const yl=['生年月日から見た、これから3年の流れです。'].concat(ch.years.map(y=>`・${y.year}年：${SHO_YEAR[y.star]||''}（勢いは「${SHO_TERRAIN[y.terrain]||'ふつう'}」）`));
+      const yl=['生年月日から見た、これから3年の流れです。'].concat(ch.years.map(y=>`・${ekiYearLab(y.year)}：${SHO_YEAR[y.star]||''}（勢いは「${SHO_TERRAIN[y.terrain]||'ふつう'}」）`));
       yl.push(best?`動くなら、${best}年がとくに追い風です。易の答え（${EKI_SYM_WORD[sym]||sym}）と合わせて、${grp==='b'?'まずは準備を整え、その年に向けて動き出しましょう。':'この時期を目標に計画を立てると良いでしょう。'}`
                  :'この3年は、大きく賭けるより、こつこつ積み上げるのに向いた流れです。');
       S.push({h:'時期の目安', t:yl.join('\n')});
@@ -4008,7 +4037,7 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')), c1=ek
     const chLine=ch?`
 【相談者の生年月日から見た材料（四柱推命・PRO版と同じ計算エンジン）】生年月日：${ch.birth}${ch.hasH?'':'（時刻不明）'}
 ・生まれ持った性質の材料：${SHO_STEM[ch.dm]}／強い力（持ち味）＝${elWords(ch.strong,SHO_EL_GOOD).join('、')}／控えめな力＝${elWords(ch.weak,SHO_EL_LACK).join('、')}／ラッキーカラー＝${elWords(ch.weak,SHO_EL_COLOR).join('、')}
-・時期の材料：${ch.years.map(y=>`${y.year}年＝${SHO_YEAR[y.star]}（勢い：${SHO_TERRAIN[y.terrain]}）`).join('／')}${shoBestYear(ch)?`／とくに追い風の年＝${shoBestYear(ch)}年`:''}`:'';
+・時期の材料：${ch.years.map(y=>`${ekiYearLab(y.year)}＝${SHO_YEAR[y.star]}（勢い：${SHO_TERRAIN[y.terrain]}）`).join('／')}${shoBestYear(ch)?`／とくに追い風の年＝${shoBestYear(ch)}年`:''}`:'';
     const _cn=clientName()?NAME_TOKEN:'';
     const prompt=`あなたは熟練の易占い師です。お客様にお渡しする「鑑定書」の本文を書きます。鑑定書はお客様本人が読むものです。
 ${_cn?`【お客様のお名前】${_cn}さん（呼びかけるときは「${_cn}さん」。伏せ字は使わない）\n`:'【お客様のお名前】未入力（名前は出さない。「〇〇さん」などの伏せ字も使わない）\n'}【ご相談】${q||'（相談内容の記入なし）'}${topic?`／テーマ：${topic}`:''}
@@ -4072,8 +4101,8 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
     if(!cur.last||shoBusy){return;}
     const {r,q,p}=cur.last; const s=db.settings;
     const cust=document.getElementById('custNewName').value.trim()||currentCustName()||'';
-    const d=new Date(cur.last.at);
-    const ds=`${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
+    const d=ekiJst(cur.last.at);   // 鑑定日は日本時間
+    const ds=`${d.y}年${d.m}月${d.d}日`;
     const ch=shoChart();
     const key=[cur.last.at, ch?ch.birth+(ch.hasH?'h':''):'-', cur.topic, cur.tone].join('|');
     const box=document.getElementById('shoContent');
@@ -4553,7 +4582,7 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
     g.fillStyle='#FFFDF8'; g.fillRect(0,0,W,H);
     g.strokeStyle='#C9A86A'; g.lineWidth=4; g.strokeRect(28,28,W-56,H-56);
     lay.forEach(o=>{ if(o.rule){ g.strokeStyle=o.c||'#BBB'; g.lineWidth=o.c?3:2; g.beginPath(); g.moveTo(PAD,o.y); g.lineTo(W-PAD,o.y); g.stroke(); return; } g.font=o.f; g.fillStyle=o.c; g.textAlign=o.a; g.textBaseline='alphabetic'; g.fillText(o.t,o.x,o.y); });
-    const d=new Date(), fn='鑑定書_'+d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2)+'.png';
+    const d=ekiJst(), fn='鑑定書_'+d.y+('0'+d.m).slice(-2)+('0'+d.d).slice(-2)+'.png';   // 日本時間の今日
     const show=(blob)=>{ const url=URL.createObjectURL(blob);
       const old=document.getElementById('shoImgModal'); if(old) old.remove();
       const m=document.createElement('div'); m.className='nr-modal'; m.id='shoImgModal'; m.setAttribute('role','dialog'); m.setAttribute('aria-modal','true'); m.style.zIndex='400';
