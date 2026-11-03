@@ -341,9 +341,9 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
     if(al&&al.length) h+='<div class="alert">'+al.join('<br>')+'</div>';
     h+='<div class="now">';
     if(ay){ var s=sig(c,ay),m=meanFor(c,ay);
-      h+='<div class="nowi" style="--sc:'+s.col+'"><div class="k">今年（'+ay.year+'年'+(c.now?'・'+(ay.year-(birthYearOf(c)||(c.now.year-c.now.age)))+'歳':'')+'）'+(function(){ try{ var N=(typeof pkNenInfo==='function')?pkNenInfo():null; return (N&&N.pre&&N.Y===ay.year)?'<br><small>（'+N.until+'）</small>':''; }catch(e){ return ''; } })()+'</div><div class="v">'+s.mk+' '+s.lab+'</div><div class="d">'+esc(m.意)+'</div>'+(m.助?'<div class="tip">💡 過ごし方のコツ：'+esc(m.助)+'</div>':'')+'</div>'; }
+      h+='<div class="nowi" style="--sc:'+s.col+'"><div class="k">今年（'+ay.year+'年'+(c.now?'・'+(ay.year-(birthYearOf(c)||(c.now.year-c.now.age)))+'歳':'')+'）'+(function(){ try{ var N=(typeof pkNenInfo==='function')?pkNenInfo():null; return (N&&N.pre&&N.Y===ay.year)?'<br><small>（'+N.until+'）</small>':''; }catch(e){ return ''; } })()+'</div><div class="v">'+s.mk+' '+s.lab+'</div><div class="d">'+esc(String(m.意||'').replace(/([^。！？])$/,'$1。'))+'</div>'+(m.助?'<div class="tip">💡 過ごし方のコツ：'+esc(m.助)+'</div>':'')+'</div>'; }
     if(dd){ var s2=sig(c,dd),m2=meanFor(c,dd);
-      h+='<div class="nowi" style="--sc:'+s2.col+'"><div class="k">いまの10年（'+duLab(dd)+'）</div><div class="v">'+s2.mk+' '+s2.lab+'</div><div class="d">'+esc(m2.意)+'</div>'+(m2.助?'<div class="tip">💡 過ごし方のコツ：'+esc(m2.助)+'</div>':'')+'</div>'; }
+      h+='<div class="nowi" style="--sc:'+s2.col+'"><div class="k">いまの10年（'+duLab(dd)+'）</div><div class="v">'+s2.mk+' '+s2.lab+'</div><div class="d">'+esc(String(m2.意||'').replace(/([^。！？])$/,'$1。'))+'</div>'+(m2.助?'<div class="tip">💡 過ごし方のコツ：'+esc(m2.助)+'</div>':'')+'</div>'; }
     return h+'</div></div>';
   }
 
@@ -655,8 +655,9 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
     var mQ=user.match(/【相談者の悩み】\n([\s\S]*?)\n\n/), q=mQ?mQ[1].trim():'';
     if(q){
       var cav=safe(function(){return worryCaveat(q);},null), topic=cav?cav.to:safe(function(){return classifyWorry(q);},'general');
-      var lead=[];
-      if(/いつ|時期|何歳|何年|来年|今年|タイミング|頃|ころ/.test(q)){ var fl0=safe(function(){ return String(localAnswer(c,q)).split('\n')[0]; },''); if(/^時期の目安は/.test(fl0)) lead.push(fl0); }   // 「いつ」を聞かれたら、1行目で時期を答える（通信できないときも。発注者指示 2026-10-22）
+      if(cav&&cav.sk){ var sl=safe(function(){ return pkSafeLocal(c,q,cav.sk,true); },''); if(sl) return sl; }   // 命・体・暴力・妊娠・法律・投資など占いで決めないご相談：時期や「進んでよい」を出さず、相談先を出す（PROと同じ。2026-11-03）
+      var lead=[]; if(safe(function(){ return isCrisis(q); },false)) lead.push(PK_CRISIS_LEAD);   // つらさのご相談は、時期ではなく寄り添う1行目に（PRO・易と同じ。2026-11-03）
+      if(!lead.length&&/いつ|時期|何歳|何年|来年|今年|タイミング|頃|ころ/.test(q)){ var fl0=safe(function(){ return String(localAnswer(c,q)).split('\n')[0]; },''); if(/^時期の目安は/.test(fl0)) lead.push(fl0); }   // 「いつ」を聞かれたら、1行目で時期を答える（通信できないときも。発注者指示 2026-10-22）
       if(!lead.length){ var ol=safe(function(){ return (typeof pkOfflineLead==='function')?pkOfflineLead(c,q,true):''; },''); if(ol) lead.push(ol); }   // 通信できないときも、1行目で問いに答える（PROと同じ計算。2026-10-30）
       // 「ご相談：…」は答えの見出しと、送る文（clientText）に付くので、本文には入れない（2回になるのを防ぐ。発注者指示 2026-10-21）
       // 「通信できないため…」のことわりは答えの上の📵の案内に出るので、お客様に送る本文には入れない（占いで決めつけない質問のことわりも、答えの上の欄に出る）
@@ -756,6 +757,7 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
         res.insertBefore(easy,res.firstChild);
         if(window.__isSample) easy.querySelectorAll('.bgc > .bgh').forEach(function(h){ h.insertAdjacentHTML('beforeend','<span class="bg-mihon">見本</span>'); });
         if(window.__isSample) easy.insertAdjacentHTML('beforeend','<button type="button" class="sample-more" onclick="document.body.classList.remove(\'sample-fold\')">見本の続きを見る（運気の流れ・恋愛・心と体など）</button>');
+        { var mb=document.createElement('div'); mb.id='bg-easy-mode'; mb.style.cssText='margin:18px 0 6px;text-align:center'; mb.innerHTML='<button type="button" style="min-height:44px;padding:10px 18px;border-radius:12px;border:1.5px solid #3A3226;background:#fff;color:#3A3226;font-weight:800;font-size:15px">⚙ 上級者向けの表示へ</button><div style="margin-top:6px;font-size:13px;color:#5A4E3C;line-height:1.7">専門用語のある、くわしい画面に切りかえます（いつでも戻せます）</div>'; mb.querySelector('button').onclick=function(){ setMode(!on()); try{ window.scrollTo({top:0}); }catch(e){} }; easy.appendChild(mb); }   // 目次の「⚙ 上級者向けの表示へ」はうっかり押さないよう隠しているので、やさしい画面のいちばん下にも置く（教科書の案内と同じ。2026-11-03）
         noOrphan(easy);
         safe(function(){ var sn=res.querySelector('.sample-note'); if(sn) res.insertBefore(sn,res.firstChild); });   // 見本のお知らせは、やさしい画面より上に
       }
