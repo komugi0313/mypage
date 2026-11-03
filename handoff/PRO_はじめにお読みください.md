@@ -1,6 +1,6 @@
 # 四柱推命 自動鑑定 PRO ― 引き渡しメモ（この商品だけ）
 
-最終更新：2026-10-17　／　販売事業者：72k株式会社　／　対応バージョン：`pro/sw.js` の `CACHE = 'shichu-jidou-v527'`
+最終更新：2026-11-03　／　販売事業者：72k株式会社　／　対応バージョン：`pro/sw.js` の `CACHE = 'shichu-jidou-v707'` **以降**（渡された `sw.js` の数字がこれと同じか大きければ最新です）
 
 > **この ZIP は「四柱推命 自動鑑定 PRO」だけ**です。ビギナー（今日から占い師）・易 EKI Pro は**別の商品**で、別の ZIP です。混ぜないでください。
 > サーバー（会員・決済・詳細鑑定の中継）は全商品で共通の基盤です。依頼の全体と基盤の仕様は「【最終完成版】0_共通サーバー基盤」ZIP の `エンジニアへの実装依頼_3サイト.md` を先に読んでください。この ZIP の `pro/IMPLEMENTATION_SPEC_for_engineer.md` は、その基盤の仕様（会員・決済・API）と同じものです。
@@ -24,15 +24,18 @@
 
 | # | 内容 | 場所 |
 |---|---|---|
-| 1 | `var PREVIEW_MODE = true;` → **`false`** | `pro/app-pro.html` 829行 |
-| 2 | `STUB: !/(^\|\.)(72k\.ai\|suimei\.jp\|ekipro\.jp)$/i.test(location.hostname)` → **`STUB: false`** | `pro/auth.html` 230行・`pro/mypage-pro.html` 191行・`pro/pricing-pro.html` 379行（`TRIAL_CHECK`）・491行（`FIX`） |
-| 3 | 決済ページURL `TELECOM_PAYMENT_URL={ month:'' }`・`TELECOM_PARAM`（`ORDER_PREFIX='P'` はそのまま） | `pro/pricing-pro.html` 349〜351行 |
-| 4 | テスト用キー欄 `<details id="gtest-wrap">` をブロックごと削除、`?gtest=1` で表示する1行、テスト用キーを読む1行（`geminiKey='';` に固定でも可） | `pro/app-pro.html` 1089行・8405行・8399行 |
-| 5 | `DEMO_MODE` は `false` のまま | `pro/app-pro.html` 826行 |
+| 1 | `var PREVIEW_MODE = true;` → **`false`** | `pro/app-pro.html`（`var PREVIEW_MODE` で探す） |
+| 2 | `STUB: !/(^\|\.)(72k\.ai\|suimei\.jp\|ekipro\.jp)$/i.test(location.hostname)` → **`STUB: false`** | `pro/auth.html`・`pro/mypage-pro.html`・`pro/pricing-pro.html`（`TRIAL_CHECK` と `FIX` の2か所）。どれも `ekipro\.jp)$/i.test(location.hostname)` で探す |
+| 3 | 決済ページURL `TELECOM_PAYMENT_URL={ month:'' }`・`TELECOM_PARAM`（`ORDER_PREFIX='P'` はそのまま） | `pro/pricing-pro.html`（`var TELECOM_PAYMENT_URL` で探す） |
+| 4 | テスト用キー欄 `<details id="gtest-wrap">` をブロックごと削除、`?gtest=1` で表示する1行、テスト用キーを読む1行（`geminiKey='';` に固定でも可） | `pro/app-pro.html`（欄は `<details class="adv" id="gtest-wrap"`、表示する1行は `getElementById('gtest-wrap')`、読む1行は `geminiKey=(/[?&#]gtest=1` で探す） |
+| 5 | `DEMO_MODE` は `false` のまま | `pro/app-pro.html`（`var DEMO_MODE` で探す） |
 | 6 | サーバー中継 `pro/functions/gemini.js` の環境変数（`GEMINI_API_KEY`・`MEMBER_CHECK_URL` ほか） | 共通仕様 §5 |
-| 7 | 変えたら `pro/sw.js` の `CACHE` を1つ上げる | `pro/sw.js` 6行 |
+| 7 | 変えたら `pro/sw.js` の `CACHE` を1つ上げる | `pro/sw.js`（`const CACHE` で探す） |
 
 - 本番ドメイン（72k.ai）では 1・2 を書き忘れても自動で false になりますが、それ以外のドメイン（確認用URL・アプリの中）では効かないので、必ず書きかえてください。
+- 画面のファイルは毎日のように直しているので、場所は行番号ではなく「探す文字」で書いています。
+- **3つの商品は、確認用も本番も、商品ごとに別のサイト（別のドメイン＝オリジン）に置いてください**。1つのドメインの中にフォルダを並べて置くと、端末に保存する値（ログイン・顧客カルテ・商品の目印など）が商品どうしで混ざり、鑑定書が別の商品の目印 `X-Product` を送って詳細鑑定が 403 `PRODUCT` で断られます（依頼書 §1）。
+- `IMPLEMENTATION_SPEC_for_engineer.md` などの `.md` と `functions/`・`package.json`・`netlify.toml` は、公開するファイルから外してください（だれでも読めてしまうため。依頼書 §4-2）。
 
 ## 3. この商品のファイル（主なもの）
 - `index.html`（LP。会員の端末はアプリへ移動。`?lp=1` で LP を表示）・`app-pro.html`（鑑定ツール本体）・`meishi-sheet.html`（鑑定書）
