@@ -3,7 +3,7 @@
 申込〜決済（テレコムクレジット）〜パスワード設定〜マイページの流れは PRO・ビギナーと同じ。違いは色・名前・リンク先・説明文のみ。
 使い方：python3 tools/eki_pay_from_pro.py <eki-pro フォルダ>
   → <eki-pro>/upgrade.html（お申し込み内容の確認・決済へ）／auth.html（ログイン）／mypage.html（マイページ）を書き出す。"""
-import sys
+import re, sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PRO = ROOT / 'pro'
@@ -48,7 +48,10 @@ def theme(s):
 
 def links(s):
     s = s.replace('四柱推命占い<span>自動鑑定</span>', '易 <span>EKI Pro</span>')
+    s = s.replace('© 四柱推命占い自動鑑定 PRO（72k株式会社）', '© 易 EKI Pro（72k株式会社）')   # PRO の著作権表示に「PRO」が入った（2026-10-21）。易に PRO の名前を持ちこまない
     s = s.replace('© 四柱推命占い自動鑑定（72k株式会社）', '© 易 EKI Pro（72k株式会社）')
+    s = re.sub(r'<span class="pk-pro"[^>]*>PRO</span>', '', s)   # PRO の題名の横の「PRO」の札は易に付けない
+    s = s.replace('一週間', '1週間')   # 易の申込・ログイン・マイページは「1週間」（今の易のページに合わせる。2026-11-03）
     s = s.replace('app-pro.html', 'app/index.html').replace('mypage-pro.html', 'mypage.html').replace('pricing-pro.html', 'register.html')
     s = s.replace('terms-pro.html', 'terms.html').replace('tokushoho-pro.html', 'tokushoho.html').replace('privacy-pro.html', 'privacy.html')
     return s
@@ -61,11 +64,12 @@ def head(s, title):
 # ---- upgrade.html（お申し込み内容の確認・決済へ）----
 s = (PRO / 'pricing-pro.html').read_text(encoding='utf-8')
 s = head(s, 'お申し込み｜易 EKI Pro'); s = theme(links(s))
-s = rep(s, '<span class="badge">経験を、もっと速く・深く。</span>', '<span class="badge">勉強いらずで、易の鑑定を。</span>', 1)
+s = rep(s, '<span class="badge">経験を、もっと速く・深く。</span>', '<span class="badge">授業と鑑定練習の相棒</span>', 1)   # 易の紹介ページ・登録ページと同じ言葉
 s = rep(s, '<br>本格鑑定を、はじめる。</h1>', '<br>易の鑑定を、はじめる。</h1>', 1)
 s = rep(s, '<span class="nm">月額プラン</span></span>', '<span class="nm">月額プラン</span><span class="desc">追加料金なし・いつでも解約OK</span></span>', 1)   # PRO・ビギナーは説明文なし（2026-10-17）。易だけ表示
 s = rep(s, '※ 本サービスは四柱推命にもとづく自己理解・エンターテインメントを目的としたものです。', '※ 本ツールは占いを目的としたものです。', 1)
 # （PRO側のログインのリンクは auth.html になったので、そのまま写る）
+s = rep(s, '.tb-logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#B99AD6,#7A4FA0);', '.tb-logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#8462AA,#5E3A85);', 1)   # 申込ページの「易」の札は濃い紫（白い文字が読めるように）
 s = rep(s, "var ORDER_PREFIX='P';", "var ORDER_PREFIX='E';", 1)
 s = rep(s, "var CAP_TEXT='詳細鑑定は1日の上限なし（月700〜1,000回ほど使えます）。月の利用枠を使い切っても、次の更新日まではオフラインの詳細鑑定で、そのまま鑑定を続けられます';", "var CAP_TEXT='オンライン鑑定は1日の上限なし（月1,400〜1,900回ほど使えます）。月の利用枠を使い切っても、次の更新日まではオフライン鑑定で、そのまま鑑定を続けられます';", 1)
 s = rep(s, "var TRIAL_EXTRA='<br>無料期間中の詳細鑑定は1日3回まで（相談・鑑定書の作成などの合計。日本時間の0時に戻ります）。端末内の鑑定・命式表・顧客カルテは回数制限なし。';", "var TRIAL_EXTRA='<br>無料期間中のオンライン鑑定・追加のご相談は合計1日3回まで（内蔵データでの鑑定は回数制限なし）。';", 1)
@@ -89,6 +93,11 @@ s = (PRO / 'auth.html').read_text(encoding='utf-8')
 s = head(s, 'ログイン｜易 EKI Pro'); s = theme(links(s))
 s = rep(s, 'P-20261010-7K3QX-A9M2Z', 'E-20261010-7K3QX-A9M2Z', 2)
 s = s.replace("'pricing-pro.html'","'register.html'")
+# 押しやすい大きさ（44px以上）：最初の <style> の終わりに足す（易のログイン画面だけ手で足していたもの。2026-11-02）
+if '.switch .link-btn,.foot a,.auth-foot a{' not in s:
+    s = s.replace('</style>', '''/* 押しやすい大きさ（44px以上。ツールの画面と同じ。2026-11-02） */
+.switch .link-btn,.foot a,.auth-foot a{display:inline-flex;align-items:center;min-height:44px;vertical-align:middle}
+</style>''', 1)
 (EKI / 'auth.html').write_text(s, encoding='utf-8')
 
 # ---- mypage.html（マイページ）----
