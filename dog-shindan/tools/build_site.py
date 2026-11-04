@@ -16,7 +16,7 @@ OUT.mkdir()
 for d in ["img", "icon", "lp"]:
     shutil.copytree(ROOT / d, OUT / d)
 
-for name in ["index.html", "lp.html"]:
+for name in ["index.html", "lp.html", "privacy.html"]:
     s = (ROOT / name).read_text(encoding="utf-8")
     s = re.sub(r'<meta name="claude:[^"]+" content="[^"]*">\n?', "", s)
     s = s.replace("https://claude.ai/artifact/1ATMWRJJ6V7o1zeozsvauu", "/")
