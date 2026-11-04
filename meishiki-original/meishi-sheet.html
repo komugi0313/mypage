@@ -565,6 +565,10 @@
   .mcal.t-money .mc.good{ background:rgba(176,126,30,.18); border-color:rgba(176,126,30,.55); } .mcal.t-money .mc.good i{ color:#B07E1E; font-weight:700; }
   .mcal.t-health .mc.good{ background:rgba(46,125,82,.16); border-color:rgba(46,125,82,.5); } .mcal.t-health .mc.good i{ color:#2E7D52; font-weight:700; }
   .mc.both{ box-shadow:inset 0 -3px 0 rgba(200,90,40,.55); }
+  /* 解けない空亡の月のマス（本格版「空」＝〔空亡〕／やさしい版「休」＝〔ひと休みの月〕。凡例はカレンダーの下。画面も印刷も読める濃さ。2026-11-04） */
+  .mcal .mc.ku{ border-style:dashed; border-color:#8A5A1C; }
+  .mc em{ display:block; font-style:normal; font-size:8px; font-weight:800; line-height:1.1; color:#6B3E0B; }
+  @media screen{ .mc em{ font-size:9.5px; } }
   /* 標準モード（<!doctype html>）でも、月のマスの記号の行の高さを前（互換モード）と同じに（印刷の見た目を変えない） */
   .mc i{ display:block; }
   /* ◎○△ の記号を背景の色の上でも読める濃さに（コントラスト比4.5以上。画面も印刷も。前は印刷だけうすい色のままで3.47／3.84だった） */
@@ -758,7 +762,7 @@
     .rd-mwrap{ padding:1.4mm 2mm; margin:0 0 2mm; }
     .rd-mhead{ font-size:9.5px; margin:0 0 1mm; }
     .mcal{ gap:1.5mm; margin:0.6mm 0; } .mcal-y{ font-size:8px; min-width:12mm; } .mcal-row{ gap:0.5mm; }
-    .mc{ padding:0.6mm 0; } .mc b{ font-size:8px; } .mc i{ font-size:9px; }   /* 月の数字：6.5px（約4.9pt）は紙でつぶれるので 8px（6pt）に */
+    .mc{ padding:0.6mm 0; } .mc b{ font-size:8px; } .mc i{ font-size:9px; } .mc em{ font-size:7.5px; color:#5A3308; }   /* 月の数字：6.5px（約4.9pt）は紙でつぶれるので 8px（6pt）に */
     .mc.good:not(.past) b, .mc.cau:not(.past) b{ color:#4D4842; }   /* 印刷の月の数字の色は前と同じ（画面で濃くした分を紙に持ちこまない） */
     .rd-mcap{ font-size:8.4px; margin:0.6mm 0; } .rd-mleg{ font-size:7.6px; }
     .mc, .mc.good, .mc.cau{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
@@ -2488,9 +2492,11 @@ window.KANSHI60_DETAIL={
       else if(m.caution){ cls+=' cau'; mark='△'; }
       else { cls+=' neu'; }
       if(m.score>0&&m.caution) cls+=' both';
+      if(m.ku) cls+=' ku';   // 解けない空亡の月（アプリの pkKuuBadMonth と同じ決まり。2026-11-04）
       if(mY<curY||(mY===curY&&m.mo<curM)) cls+=' past';   // 過ぎた月は薄く（これからの月だけ目立たせる）
-      var tip=(m.why.join('・'))+(m.caution?((m.why.length?'／':'')+'注意：'+m.creas):'');
-      cells+='<span class="'+cls+'" title="'+esc(tip)+'"><b>'+m.mo+'</b><i>'+mark+'</i></span>';
+      var _kl=cfg.easy?'〔ひと休みの月〕':'〔空亡〕';
+      var tip=(m.why.join('・'))+(m.caution?((m.why.length?'／':'')+'注意：'+m.creas):'')+(m.ku?((m.why.length||m.caution?'／':'')+_kl):'');
+      cells+='<span class="'+cls+'" title="'+esc(tip)+'"><b>'+m.mo+'</b><i>'+mark+'</i>'+(m.ku?'<em aria-label="'+_kl+'">'+(cfg.easy?'休':'空')+'</em>':'')+'</span>';
     }
     return '<div class="mcal '+cfg.cls+'"><span class="mcal-y">'+Y+'年'+(lbl||'')+'</span><span class="mcal-row">'+cells+'</span></div>';
   }
@@ -2502,19 +2508,25 @@ window.KANSHI60_DETAIL={
     [0,1].forEach(function(off){ var Y=_SY.y+off, lbl=(off===0?'（今年'+(_SY.pre?'・'+_SY.endText:'')+'）':'（来年）'),
         a=themeMonths(Y,dm,dayBranch,cfg), b=themeMonths(Y+1,dm,dayBranch,cfg),
         ms=a.slice(1).map(function(m){ m.Y=Y; return m; }).concat(b.slice(0,1).map(function(m){ m.Y=Y+1; return m; }));   // 2月〜12月＋翌年1月
+      ms.forEach(function(m){ m.ku=!!(r&&m.shi&&_sheetKuuBadB(r,m.shi)); if(m.ku) _kuN=true; });   // 解けない空亡の月（マスと要約の両方に印。2026-11-04）
       html+=monthCalHTML(Y, ms, cfg, (off===0?'（今年）':'（来年）'));
       function future(m){ var mY=(m.Y!=null?m.Y:Y); return !(mY<curY || (mY===curY && m.mo<curM)); }   // これからの月だけを要約に出す（過ぎた月は載せない）
-      var pos=ms.filter(function(m){return m.score>0&&future(m);}).sort(function(a,b){return b.score-a.score;}).slice(0,4).sort(function(a,b){return a.mo-b.mo;});
+      var pos=ms.filter(function(m){return m.score>0&&future(m);}).sort(function(a,b){return (a.ku-b.ku)||b.score-a.score;}).slice(0,4).sort(function(a,b){return (a.ku-b.ku)||((a.Y||Y)-(b.Y||Y))||a.mo-b.mo;});   // 解けない空亡の月はすすめる月の先頭にしない（月は外さず、印を付けてうしろに。2026-11-04）
       var cau=ms.filter(function(m){return m.caution&&m.score<=0&&future(m);});
       var line='';
-      var _mk=function(m){ var k=!!(r&&m.shi&&_sheetKuuBadB(r,m.shi)); if(k) _kuN=true; return k?(easy?'〔ひと休みの月〕':'〔空亡〕'):''; };   // 解けない空亡の月の印（アプリと同じ決まり。2026-11-04）
+      var _mk=function(m){ var k=!!m.ku; if(k) _kuN=true; return k?(easy?'〔ひと休みの月〕':'〔空亡〕'):''; };   // 解けない空亡の月の印（アプリと同じ決まり。2026-11-04）
       var _mn=function(m){ return (m.Y!=null&&m.Y!==Y?m.Y+'年':'')+m.mo+'月'+_mk(m); };   // 翌年1月は「2028年1月」のように年を添える
       if(pos.length) line='<b>'+pos.map(_mn).join('・')+'</b>（'+pos.slice(0,2).map(function(m){return m.why[0];}).filter(Boolean).join('・')+'ほか）';
       else line=(off===0?'これからの月では大きく動く月は控えめ':'大きく動く月は控えめ');
       if(cau.length) line+='／注意：<b>'+cau.map(_mn).join('・')+'</b>';
       html+='<p class="rd-mcap">'+Y+'年'+lbl+'：'+line+'</p>';
     });
-    if(_kuN) html+='<p class="rd-mleg">'+(easy?'〔ひと休みの月〕は、大きなことを始めるより、準備をしたり、ふだんどおりに過ごしたりするのに向いた月です。':'〔空亡〕の印の月は解けない空亡の月（年と同じ解空の決まり）。結婚・入籍・告白の返事を迫る・大きな始まりはすすめず、準備・待つ・ふだんどおりに過ごす月に。')+'</p>';
+    if(_kuN){ var _KN={   // テーマごとの言い方（恋愛と同じ扱い：月は外さない・大きな始まりはすすめない。体調は休養を多めに・治療の日どりは占いで決めない。2026-11-04）
+        love:['〔空亡〕の印の月は解けない空亡の月（年と同じ解空の決まり）。結婚・入籍・告白の返事を迫る・大きな始まりはすすめず、準備・待つ・ふだんどおりに過ごす月に。','〔ひと休みの月〕は、大きなことを始めるより、準備をしたり、ふだんどおりに過ごしたりするのに向いた月です。'],
+        work:['〔空亡〕の印の月は解けない空亡の月（年と同じ解空の決まり）。転職・独立・大きな契約など大きな始まりはすすめず、準備・下調べ・ふだんどおりに進める月に。','〔ひと休みの月〕は、転職や独立など大きなことを始めるより、準備や下調べをしたり、ふだんどおりに進めたりするのに向いた月です。'],
+        money:['〔空亡〕の印の月は解けない空亡の月（年と同じ解空の決まり）。大きな買い物・投資・大きな契約はすすめず、計画を立てる・ふだんどおりに守る月に。','〔ひと休みの月〕は、大きな買い物や大きなお金を動かすより、計画を立てたり、ふだんどおりに守ったりするのに向いた月です。'],
+        health:['〔空亡〕の印の月は解けない空亡の月（年と同じ解空の決まり）。新しく大きく始めることは控え、無理をせず休養を多めにとる月に。治療・手術の日どりは医師と決める（占いでは決めない）。','〔ひと休みの月〕は、無理をせず、休む時間を多めにとるのに向いた月です。病院や治療の日どりは、お医者さんと決めてください。']}[theme]||['',''];
+      html+='<p class="rd-mleg">'+(easy?'マスの「休」＝〔ひと休みの月〕。':'マスの「空」＝〔空亡〕の月。')+(easy?_KN[1]:_KN[0])+'</p>'; }
     html+='<p class="rd-mleg">'+cfg.legend+'（年は立春で切りかわり、2月〜翌年1月で1年。月の区切りは節入りの日で、数日前後する目安です）</p>';
     return html;
   }
@@ -2938,7 +2950,7 @@ window.KANSHI60_DETAIL={
       }
       // 仕事重視テーマ：飛躍の年・進め方・注意期を年運から
       if(theme==='work' && nowYear!=null){
-        if(window.MonthPillar){ b+='<div class="rd-mwrap"><div class="rd-mhead">◆ 仕事が伸びる月（今年・来年）</div>'+monthlyBlock(nowYear, dm, spouse, 'work', sex)+'</div>'; }
+        if(window.MonthPillar){ b+='<div class="rd-mwrap"><div class="rd-mhead">◆ 仕事が伸びる月（今年・来年）</div>'+monthlyBlock(nowYear, dm, spouse, 'work', sex, false, r)+'</div>'; }
         var WGOOD={'正官':'昇進・信用','偏官':'抜擢・責任','印綬':'学び・引き立て','偏印':'専門・転換','正財':'成果が実る','偏財':'人脈が広がる'};
         var wUp=[], wCau=[];
         for(var wy=nowYear; wy<=nowYear+9; wy++){ var wa=byYear[wy]; if(!wa) continue;
@@ -3076,7 +3088,7 @@ window.KANSHI60_DETAIL={
       }
       // 金運重視テーマ：お金が動く年・増やし方・注意期を年運から
       if(theme==='money' && nowYear!=null){
-        if(window.MonthPillar){ b+='<div class="rd-mwrap"><div class="rd-mhead">◆ お金が動く月（今年・来年）</div>'+monthlyBlock(nowYear, dm, spouse, 'money', sex)+'</div>'; }
+        if(window.MonthPillar){ b+='<div class="rd-mwrap"><div class="rd-mhead">◆ お金が動く月（今年・来年）</div>'+monthlyBlock(nowYear, dm, spouse, 'money', sex, false, r)+'</div>'; }
         var MGOOD={'正財':'堅実な収入・貯え','偏財':'臨時収入・チャンス','食神':'稼ぐ力が実る','傷官':'才能が収入に'};
         var mUp=[], mCau=[];
         for(var my=nowYear; my<=nowYear+9; my++){ var ma=byYear[my]; if(!ma) continue;
@@ -3118,7 +3130,7 @@ window.KANSHI60_DETAIL={
       if(shugoEls.length){ var _mikyo=(shugoKind==='身旺'?'身旺（みおう＝自分の力が強めのタイプ）':shugoKind==='身弱'?'身弱（みじゃく＝自分の力が控えめのタイプ）':shugoKind); b+=para('あなたを助ける<b>守護神（しゅごしん）＝喜神（きしん：あると調子が上がる五行）は「'+shugoEls.join('・')+'」</b>。'+(r.gaikaku?'':'あなたは'+_mikyo+'です。')+'この五行を意識的に取り入れると調子が整います。ラッキーカラーは<b>'+shugoEls.map(function(e){return EL[e]?EL[e].col:'';}).filter(Boolean).join('／')+'</b>、養生は<b>'+shugoEls.map(function(e){return EL[e]?EL[e].care:'';}).filter(Boolean).join('／')+'</b>が向きます。'); }
       // 健康重視テーマ：無理の出やすい年・整えやすい年・養生の指針を年運から
       if(theme==='health' && nowYear!=null){
-        if(window.MonthPillar){ b+='<div class="rd-mwrap"><div class="rd-mhead">◆ 体調の月間カレンダー（今年・来年）</div>'+monthlyBlock(nowYear, dm, spouse, 'health', sex)+'</div>'; }
+        if(window.MonthPillar){ b+='<div class="rd-mwrap"><div class="rd-mhead">◆ 体調の月間カレンダー（今年・来年）</div>'+monthlyBlock(nowYear, dm, spouse, 'health', sex, false, r)+'</div>'; }
         var hCau=[], hRest=[];
         for(var hy=nowYear; hy<=nowYear+9; hy++){ var ha=byYear[hy]; if(!ha) continue;
           if((spouse&&CHONG[spouse]&&ha.branch===CHONG[spouse])||ha.tsuhen==='傷官') hCau.push(hy);   // 冲・傷官＝消耗/不調の出やすい年
@@ -3518,17 +3530,18 @@ window.KANSHI60_DETAIL={
         else if(area==='work'){ var W={'正官':['昇進・評価',3],'偏官':['抜擢・責任',3],'印綬':['学び・引き立て',2],'偏印':['専門・転換',2]}; if(W[tsu]){why=W[tsu][0];s=W[tsu][1];} if(tsu==='傷官')cau='衝突・勇み足'; if(CHONG[bday]===g.shi)cau=cau||'急な変化'; }
         else if(area==='money'){ var M={'正財':['堅実な収入',3],'偏財':['臨時収入・商機',3],'食神':['稼ぐ力',2],'傷官':['才能が収入に',2]}; if(M[tsu]){why=M[tsu][0];s=M[tsu][1];} if(tsu==='劫財')cau='散財・貸し借り'; else if(tsu==='比肩')cau='出費が増えやすい'; }
         else if(area==='health'){ if(tsu==='印綬'||tsu==='偏印'){why='休養・体づくり';s=2;} if(tsu==='傷官')cau='消耗・気の高ぶり'; else if(tsu==='偏官')cau=cau||'重圧・過労'; if(CHONG[bday]===g.shi)cau=cau||'無理が出やすい'; }
-        return {Y:Y,mo:mo,s:s,why:why,cau:cau}; }
+        return {Y:Y,mo:mo,s:s,why:why,cau:cau,ku:!!(r&&g.shi&&_sheetKuuBadB(r,g.shi))}; }   // ku＝解けない空亡の月（ひと休みの月。アプリと同じ決まり。2026-11-04）
       function best(area){ var arr=MS.map(function(m){return sc(area,m.Y,m.mo);});
-        var good=arr.filter(function(m){return m.s>0;}).sort(function(a,b){return b.s-a.s||(a.Y-b.Y)||(a.mo-b.mo);})[0]||null;
+        var good=arr.filter(function(m){return m.s>0;}).sort(function(a,b){return (a.ku-b.ku)||b.s-a.s||(a.Y-b.Y)||(a.mo-b.mo);})[0]||null;   // すすめる月は、ひと休みの月でない月を先に（ひと休みの月しかないときだけ、その月に印を付けて出す）
         var care=arr.filter(function(m){return m.cau&&m.s<=0;}).sort(function(a,b){return (a.Y-b.Y)||(a.mo-b.mo);})[0]||null;
         return {good:good,care:care}; }
-      function ym(m){ return (m.Y===CY?'':(m.Y===CY+1?'来年':(m.Y+'年')))+m.mo+'月'; }
+      var _kuSeen=false;
+      function ym(m){ if(m.ku) _kuSeen=true; return (m.Y===CY?'':(m.Y===CY+1?'来年':(m.Y+'年')))+m.mo+'月'+(m.ku?'〔ひと休みの月〕':''); }
       var GC='#2E9E57', CC='#C77F2A';   // 好調＝緑／セーブ月＝オレンジ（月の文字色だけで淡くメリハリ）
       // 運ごとに“良い月/注意月”の呼び方を変える（健康は「動く」より「整う」が自然）。恋愛は動きやすい月を1行だけ簡潔に示し、詳しい月別は下の「恋愛が動く月」カレンダーに集約（重複回避）。総合の狙い目には恋愛を加えない（恋愛・結婚偏重を避ける）。
       var AREAS=[['💍','結婚','marry','動く月','セーブ月'],['💼','仕事','work','動く月','セーブ月'],['💰','金運','money','動く月','セーブ月'],['🌿','健康','health','整えどき','無理に注意']];
       var rows=[], picks=[];
-      AREAS.forEach(function(A){ var r2=best(A[2]); if(r2.good) picks.push({s:r2.good.s,Y:r2.good.Y,mo:r2.good.mo,area:A[1],why:r2.good.why});
+      AREAS.forEach(function(A){ var r2=best(A[2]); if(r2.good&&!r2.good.ku) picks.push({s:r2.good.s,Y:r2.good.Y,mo:r2.good.mo,area:A[1],why:r2.good.why});
         var line='<b>'+A[0]+' '+A[1]+'</b>　';
         if(r2.good){ line+=A[3]+'：<b style="color:'+GC+'">'+ym(r2.good)+'</b>（'+r2.good.why+'）';
           if(r2.care) line+='　／　'+A[4]+'：<b style="color:'+CC+'">'+ym(r2.care)+'</b>';
@@ -3548,6 +3561,7 @@ window.KANSHI60_DETAIL={
       var head='';
       if(overall){ head='<div style="background:var(--tbg);border:1px solid var(--tc);border-radius:9px;padding:8px 11px;margin:0 0 10px;font-size:12.5px;line-height:1.65"><b style="color:var(--tc);font-size:13px">⭐ 総合の狙い目：'+overall.Y+'年'+overall.mo+'月ごろ</b><br>'
           +(overall.count>=2?('<b>'+overall.areas.join('・')+'</b>がこの月に重なる、とくに動きやすい時期です。'):('<b>'+overall.areas[0]+'</b>（'+overall.whys[0]+'）を中心に、流れがいちばん動きやすい時期です。'))+'</div>'; }
+      if(_kuSeen) rows.push('<li style="list-style:none;color:#6B3E0B">〔ひと休みの月〕は、転職・大きな買い物・入籍など大きなことを始めるより、準備をしたり、ふだんどおりに過ごしたりするのに向いた月です。体の治療の日どりは、お医者さんと決めてください。</li>');
       H+=ezCard('🔔 これからの見どころ（各運のピーク月・セーブ月）', head+'<ul class="ez-ul2">'+rows.join('')+'</ul><p class="ez-note2">月ごとの巡り（月柱）から、<b>各運のいちばん良い月（動く・整う月）</b>と<b>ひかえめにしたい月</b>の目安を出しています。どの運にも<b>山と谷の両方</b>があり、いつも全部が絶好調ということはありません。当たり外れを競うものではなく、「動きやすい時期の先取り」としてお使いください。</p>');
     })();
     })();
@@ -4693,7 +4707,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
     sys+='\n・空亡の年（行運の空亡）は先生の教科書どおり、結婚・入籍・新しい事業・引越しなど大きな始まりは「避けたほうが安心」と書き、勉強・ボランティア・親孝行に向く年、体調に気を配る年として伝える。解けない空亡の年を入籍・結婚の年としてすすめない（「準備・話し合いの年にして、入籍は○年から」）。合・冲で解ける空亡の年は避ける年に数えない（下の「大きな特徴」の一年ずつの書き方どおり）。こわがらせない。';
     sys+=PK_SAFE_RULE.replace(/\n$/,'');   // 安全の決まり（PRO と同じ中身）
     sys+='\n【言葉の決まり】「AI」「人工知能」という言葉は使わない。自分が何者か（AIである等）の説明や断り書きも書かない。鑑定者として自然に書く。';
-    var usr='【鑑定対象】'+NMTK+'さん（お名前の代わりの印。呼びかけるときは、この印を一字も変えずに書く）\n【命式データ】\n'+chartSummaryText(r)+(function(){ try{ var BF=sheetBigFeatures(r); if(!BF.length) return ''; return '\n【この方の大きな特徴（最優先。鑑定書の最初の章で必ず触れる。空亡が弱まるかは年ごとに書いたとおりに）】\n'+BF.map(function(x){ return '・'+(window.__bgPlain?x.plain:x.pro); }).join('\n')+'\n'; }catch(e){ return ''; } })()+'\n\n上記の命式から、指定の章立てで鑑定書の本文を書いてください。';
+    var usr='【鑑定対象】'+NMTK+'さん（お名前の代わりの印。呼びかけるときは、この印を一字も変えずに書く）\n【命式データ】\n'+chartSummaryText(r)+(function(){ try{ var BF=sheetBigFeatures(r); if(!BF.length) return ''; return '\n【この方の大きな特徴（最優先。鑑定書の最初の章で必ず触れる。空亡が弱まるかは年ごとに書いたとおりに）】\n'+BF.map(function(x){ return '・'+(window.__bgPlain?x.plain:x.pro); }).join('\n')+'\n'; }catch(e){ return ''; } })()+(function(){ try{ if(!(window.MonthPillar&&window.MonthPillar.monthGZ)) return ''; var J=_jstNow(), o=[]; for(var k=0;k<12;k++){ var mm=J.m-1+k, Y=J.y+Math.floor(mm/12), mo=mm%12+1, g=window.MonthPillar.monthGZ(Y,mo,15); if(g&&g.shi&&_sheetKuuBadB(r,g.shi)) o.push(Y+'年'+mo+'月'); } if(!o.length) return ''; return '\n【月の空亡の印（これから12ヶ月・ツールの判定）】'+(window.__bgPlain?'ひと休みの月':'解けない空亡の月〔空亡〕')+'＝'+o.join('・')+'。恋愛・仕事・お金・健康のどの月を挙げるときも、この月には'+(window.__bgPlain?'〔ひと休みの月〕':'〔空亡〕')+'の印を付け、すすめる月の先頭にしない。結婚・入籍・転職・独立・大きな契約・大きな買い物・投資など大きな始まりはすすめず、準備・下調べ・ふだんどおりに過ごす月として書く。体調の話では休養を多めにとる月とし、治療・手術の日どりは占いで決めない。印のかっこの中に用語の説明を入れない。\n'; }catch(e){ return ''; } })()+'\n\n上記の命式から、指定の章立てで鑑定書の本文を書いてください。';
     var body=JSON.stringify({ system_instruction:{parts:[{text:sys}]}, contents:[{role:'user',parts:[{text:usr}]}], generationConfig:{maxOutputTokens:3200} });
     // まず1回オンライン生成。失敗（レート制限・一時エラー・空応答）なら数秒待って自動で1回だけ再試行。
     // それでもダメなときだけ定型文（オフライン鑑定書）に切替（打ち直し不要）。
