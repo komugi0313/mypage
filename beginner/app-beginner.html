@@ -3769,6 +3769,14 @@ function _kgDayRow(ev){var wd=['日','月','火','水','木','金','土'][ev.dat
 function pkMonRange(m){ m=+m; return m+'月〜'+(m===12?'翌1':String(m+1))+'月上旬'; }
 function pkMonLab(y,m){ return y+'年'+pkMonRange(m); }
 function pkMonLabN(y,m){ return pkNowLab(pkMonLab(y,m)); }   // 相性の縁が動く月：今日（日本時間）を含む月は「いま〜11月上旬」（1人の縁が動く月の pkNowLab と同じ決まり。2026-11-04）
+/* 続いている月（前の月の終わり＝次の月の始まり）は1つにまとめる：「いま〜11月上旬・2026年11月〜12月上旬」→「いま〜12月上旬」（先生の決定 2026-11-04）。離れている月は今までどおり「・」でならべる。
+   要素は {y,m}・{calYear,calMonth}・「2026年11月〜…」の文字列のどれでもよい。pkMonGroups＝続いている月ごとの組（年月の順）／pkMonRunLab＝組の名前（いまは付けない）／pkMonRuns＝組の名前（いまを含む月は「いま〜」） */
+function _pkMonYM(x){ if(x==null) return null; if(typeof x==='string'){ const m=x.match(/^(\d{4})年(\d{1,2})月/); return m?{y:+m[1],m:+m[2]}:null; } if(x.calYear) return {y:+x.calYear,m:+x.calMonth}; if(x.y) return {y:+x.y,m:+x.m}; return null; }
+function pkMonGroups(L){ const A=[]; (L||[]).forEach(function(x){ const k=_pkMonYM(x); if(k) A.push({k:k.y*12+k.m,y:k.y,m:k.m,x:x}); }); A.sort(function(p,q){ return p.k-q.k; });
+  const G=[]; A.forEach(function(o){ const g=G[G.length-1]; if(g&&o.k===g[g.length-1].k) return; if(g&&o.k===g[g.length-1].k+1) g.push(o); else G.push([o]); }); return G; }
+function pkMonRunLab(g){ const f=g[0], t=g[g.length-1]; if(g.length===1) return pkMonLab(f.y,f.m); const e=t.m===12?1:t.m+1, nx=(t.y>f.y||t.m===12); return f.y+'年'+f.m+'月〜'+(nx?'翌':'')+e+'月上旬'; }
+function pkMonRuns(L){ return pkMonGroups(L).map(function(g){ return pkNowLab(pkMonRunLab(g)); }); }
+function pkMonJoin(L,n,sep){ return pkMonRuns(n?(L||[]).slice(0,n):L).join(sep||'・'); }
 function _kgMonRow(ev){var ym=ev.calYear+'-'+String(ev.calMonth).padStart(2,'0');var mini=(ev.stars&&ev.stars.length?ev.stars.slice(0,3).join('・'):'');
   return `<div class="kg-row ${ev.jud}" data-m="${ym}"><span class="kg-date">${ev.calYear}年${ev.calMonth}月<small style="display:block;font-size:10.5px;font-weight:700;opacity:.85">〜${ev.calMonth===12?'翌1':ev.calMonth+1}月上旬</small></span><span class="kg-gz">${ev.ganzhi}</span><span class="kg-star">${ev.star}</span><span class="kg-badge ${ev.jud}">${_kgBadge(ev.jud)}</span>${mini?`<span class="kg-mini">${mini}</span>`:''}</div>`;}
 function kingunHTML(c){
@@ -4230,12 +4238,17 @@ function loveFourLines(c){ try{ if(!c||!c.pillars||!c.dayMaster) return null;
     else if(sg&&ti>=0){ r.push('配偶宮「'+db+'」と'+PLB[ti]+'「'+third+'」と合わせて三合（'+sg.slice(0,3).join('')+'＝3つそろう）'); rp.push('パートナーとの縁が強く結びつきやすい'); }
     else if(sg&&(CENx[ev.branch]||CENx[db])){ r.push('配偶宮「'+db+'」と半合（2つだけ。三合ではない）'); rp.push('パートナーとの縁が結びつきやすい'); }
     const lab=pkMonLab(ev.calYear,ev.calMonth)+'（'+ev.ganzhi+'の月）';
-    if(r.length) pick.push({lab:lab,n:r.length,pro:lab+'＝'+r.join('・'),plain:pkMonLab(ev.calYear,ev.calMonth)+'（'+rp.filter(function(x,i,a){ return a.indexOf(x)===i; }).join('・')+'）',m:ev.calMonth});
-    if(_chongOf(ev.branch)!==db&&(isKei2(ev.branch,db)||isKei3(ev.branch,db)||(ev.branch===db&&JIKEI.has(db)))) move.push({pro:lab+'＝配偶宮「'+db+'」と刑（こじれやすい・振り回されやすい月。急いで決めない）',plain:pkMonLab(ev.calYear,ev.calMonth)+'（気持ちがすれ違いやすい月）',m:ev.calMonth});
-    if(_chongOf(ev.branch)===db) move.push({pro:lab+'＝配偶宮「'+db+'」と冲（関係が動きやすい・見直しの月）',plain:pkMonLab(ev.calYear,ev.calMonth)+'（関係が動きやすい月）',m:ev.calMonth}); });
+    if(r.length) pick.push({lab:lab,n:r.length,pro:lab+'＝'+r.join('・'),plain:pkMonLab(ev.calYear,ev.calMonth)+'（'+rp.filter(function(x,i,a){ return a.indexOf(x)===i; }).join('・')+'）',m:ev.calMonth,y:ev.calYear,gz:ev.ganzhi,d:r.join('・'),dp:rp});
+    if(_chongOf(ev.branch)!==db&&(isKei2(ev.branch,db)||isKei3(ev.branch,db)||(ev.branch===db&&JIKEI.has(db)))) move.push({pro:lab+'＝配偶宮「'+db+'」と刑（こじれやすい・振り回されやすい月。急いで決めない）',plain:pkMonLab(ev.calYear,ev.calMonth)+'（気持ちがすれ違いやすい月）',m:ev.calMonth,y:ev.calYear,gz:ev.ganzhi,d:'配偶宮「'+db+'」と刑（こじれやすい・振り回されやすい月。急いで決めない）',dp:['気持ちがすれ違いやすい月']});
+    if(_chongOf(ev.branch)===db) move.push({pro:lab+'＝配偶宮「'+db+'」と冲（関係が動きやすい・見直しの月）',plain:pkMonLab(ev.calYear,ev.calMonth)+'（関係が動きやすい月）',m:ev.calMonth,y:ev.calYear,gz:ev.ganzhi,d:'配偶宮「'+db+'」と冲（関係が動きやすい・見直しの月）',dp:['関係が動きやすい月']}); });
   pick.sort(function(a,b){ return b.n-a.n; }); const top=pick.slice(0,4).sort(function(a,b){ return ml.findIndex(function(e){ return a.lab.indexOf(e.calYear+'年'+e.calMonth+'月')===0; })-ml.findIndex(function(e){ return b.lab.indexOf(e.calYear+'年'+e.calMonth+'月')===0; }); });
-  const l4pro='縁が動く月（今後12ヶ月の月運）：'+(top.length?top.map(function(x){ return x.pro; }).join('／'):'この12ヶ月は、パートナーの星・桃花・配偶宮の合が巡る月がありません（自分を整える時期）')+(move.length?'。関係が動きやすい・注意の月：'+move.map(function(x){ return x.pro; }).join('／'):'')+'。';
-  const l4plain='縁が動く月：'+(top.length?top.map(function(x){ return x.plain; }).join('、'):'この1年は、自分を整えるのに向いた時期です')+(move.length?'。関係が動きやすい月：'+move.map(function(x){ return x.plain; }).join('、'):'')+'。';
+  // 続いている月は1つにまとめる（「2026年11月〜翌1月上旬」。月ごとの中身は干支ごとに残す。2026-11-04）
+  //   専門の文（pro）は月ごとの干支・中身を残し、続いている月があるときだけ先に「まとめると …」を添える／やさしい文（plain）は1つにまとめる
+  const gp=function(A,k){ const G=pkMonGroups(A);
+    if(k==='pro'){ const D=A.map(function(x){ return x.pro; }).join('／'); return G.length<A.length?'まとめると '+G.map(pkMonRunLab).join('・')+'。月ごとには '+D:D; }
+    return G.map(function(g){ if(g.length===1) return g[0].x.plain; const u=[]; g.forEach(function(o){ o.x.dp.forEach(function(z){ if(u.indexOf(z)<0) u.push(z); }); }); return pkMonRunLab(g)+'（'+u.join('・')+'）'; }).join('、'); };
+  const l4pro='縁が動く月（今後12ヶ月の月運）：'+(top.length?gp(top,'pro'):'この12ヶ月は、パートナーの星・桃花・配偶宮の合が巡る月がありません（自分を整える時期）')+(move.length?'。関係が動きやすい・注意の月：'+gp(move,'pro'):'')+'。';
+  const l4plain='縁が動く月：'+(top.length?gp(top,'plain'):'この1年は、自分を整えるのに向いた時期です')+(move.length?'。関係が動きやすい月：'+gp(move,'plain'):'')+'。';
   // 縁が動く年（これから3年＝今年・来年・再来年。月と同じ決まりで年運を見る。発注者指示 2026-10-24「来年とかどうですか」）
   const ny=(c.now&&c.now.year)||(new Date()).getFullYear(), yG=[], yC=[];
   for(let y=ny;y<=ny+2;y++){ const a=(c.annualFortunes||[]).find(function(x){ return x.year===y; }); if(!a||!a.ganzhi) continue;
@@ -4256,7 +4269,8 @@ function loveFourLines(c){ try{ if(!c||!c.pillars||!c.dayMaster) return null;
   { const _my=top.map(function(x){ return pkMonAY(+x.lab.slice(0,4),x.m); }).concat(yG.map(function(x){ return x.y; })); const _mp=pkMarryNote([c],_my,false), _mq=pkMarryNote([c],_my,true); if(_mp){ l5pro+=_mp; l5plain+=_mq; } }   // 解けない空亡の年は、入籍・結婚を空亡でない年に（先生の教科書 第14回。2026-11-03）
   const gzOf={}; ml.forEach(function(ev){ if(ev&&ev.calYear) gzOf[ev.calYear+'-'+ev.calMonth]=ev.ganzhi; });
   const PKEY={年:'家族|親戚|地元|目上|紹介',月:'仕事|職場|学校',日:'生活|友人|身近',時:'趣味|習いごと|習い事|年下'};
-  return {monthLabs:top.map(function(x){ return x.lab.replace(/（[^（）]*）$/,''); }),pro:[l1pro,l2pro,l3pro,l4pro+l5pro],plain:[l1plain,l2plain,l3plain,l4plain+l5plain],goodYears:yG.map(function(x){ return x.y; }),cautionYears:yC.map(function(x){ return x.y; }),months:top.map(function(x){ return x.m; }),moveMonths:move.map(function(x){ return x.m; }),fav:fv,gzOf:gzOf,placeRe:use.length?new RegExp(use.map(function(l){ return PKEY[l]; }).join('|')):/時期/};
+  return {monthLabs:pkMonGroups(top).map(pkMonRunLab),   // 続いている月は1つにまとめた名前（2026-11-04）
+    pro:[l1pro,l2pro,l3pro,l4pro+l5pro],plain:[l1plain,l2plain,l3plain,l4plain+l5plain],goodYears:yG.map(function(x){ return x.y; }),cautionYears:yC.map(function(x){ return x.y; }),months:top.map(function(x){ return x.m; }),moveMonths:move.map(function(x){ return x.m; }),fav:fv,gzOf:gzOf,placeRe:use.length?new RegExp(use.map(function(l){ return PKEY[l]; }).join('|')):/時期/};
 }catch(e){ return null; } }
 /* 月の話の事実あわせ（発注者指示 2026-10-23「命式の読み解きは絶対にまちがえない」）：
    1つの月だけを話している文で、①その月に巡らない通変星（正官↔偏官・正財↔偏財の取りちがえ）を、その月に本当に巡る星に直す
@@ -8298,7 +8312,7 @@ function pkConsultPeopleLines(c,q){ const P=pkConsultPeople(c,q), pro=[], plain=
   P.forEach(function(o){ if(typeof window!=='undefined') window.__pkRelOv=o.rel||'love';   // その人との関係（夫婦・家族・仕事など）で相性を見る
     const b=o.c, cb=compatBalance(c,b), ad=attractionDir(c,b,'本人','お相手'), ap=attractionDir(c,b,'あなた','お相手'), R=compatRoles(c,b), TL=compatTrioLines(c,b), CM=compatMonths(c,b);
     const top=function(g,n){ return cb.items.filter(function(x){ return x.good===g; }).sort(function(p,q){ return q.w-p.w; }).slice(0,n).map(function(x){ return x.kind.replace(/（.*$/,'')+'（'+x.where+'）'; }); };
-    const both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }).slice(0,3).map(function(x){ return pkMonLabN(x.y,x.m); });
+    const both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }).slice(0,3); const bothJ=pkMonJoin(both);   // 続いている月は1つにまとめる
     let ck=[]; try{ ck=checkPoints(b,true).check.slice(0,2).map(function(x){ return x.pro.split('：')[0]+'＝'+(x.pro.split('：')[1]||''); }); }catch(e){}
     const love=ad?{x:ad.x.love.length,y:ad.y.love.length}:{x:0,y:0}, base=cb.items.filter(function(x){ return x.good&&/方合|三合|支合|天地徳合|律音/.test(x.kind); }).reduce(function(t,x){ return t+x.w; },0);
     const en=(R.energy[0]||{}).v||'even';
@@ -8308,7 +8322,7 @@ function pkConsultPeopleLines(c,q){ const P=pkConsultPeople(c,q), pro=[], plain=
     let ck2=[]; try{ ck2=checkPoints(b,true).check.slice(0,2).map(function(x){ return [x.pro.split('：')[0],x.plain]; }); }catch(e){}
     S.push({strong:strong,dayG:dayG,pen:(R.energy[1]||{}).v||'even',ck2:ck2,cur:/今の|彼氏|夫|妻|旦那|婚約者/.test(o.lab),brief:o.lab+'：'+cb.verdict+'（良い点'+cb.good+'／注意点'+cb.bad+'）。良い点＝'+(top(true,2).join('・')||'なし')+'。注意点＝'+(top(false,1).join('・')||'なし')+(adS?'。惹かれ方＝'+adS:'')+((R.energy[1]||{}).v==='up'?'。お相手は本人と一緒にいると調子が上がりやすい':((R.energy[1]||{}).v==='down'?'。お相手は本人と長く一緒にいると疲れやすいことがある（本人が悪いのではない）':''))+(TL.T.length&&TL.T[0].years.length?'。'+TL.T[0].trio+'の'+TL.T[0].kind+'がそろう年＝'+TL.T[0].years[0].year+'年':'')+'。',lab:o.lab,net:cb.net,good:cb.good,bad:cb.bad,love:love.x+love.y,both:love.x&&love.y,base:base,en:en,cls:cb.cls,rel:o.rel});
     const ss=function(x){ try{ return pkSameSexWord(x,c,b); }catch(e){ return x; } };   // 同性のときは男女前提の言い方にしない
-    pro.push(ss('【'+(/^(love|married|konkatsu)$/.test(o.rel||'love')?'お相手：':'相談に出てくる人：')+o.lab+'（'+o.ymd+'・'+(o.sex==='male'?'男性':'女性')+'・'+((RELTYPES[o.rel]||RELTYPES.love).label)+'として見た相性）】判定＝'+cb.verdict+'（良い点'+cb.good+'／注意点'+cb.bad+'）／良い点：'+(top(true,3).join('・')||'目立つものなし')+'／注意点：'+(top(false,2).join('・')||'目立つものなし')+(ad?'／'+ad.pro:'')+(R.role.length?'／役割：'+R.role.map(function(x){ return x.pro; }).join('。'):'')+(R.energy.length?'／調子：'+R.energy.map(function(x){ return x.pro; }).join('。'):'')+(TL.pro.length?'／2人の合が三合・方合になる時期：'+TL.pro[0]:'')+(both.length?'／2人とも縁が動く月：'+both.join('・'):'')+(ck.length?'／お相手の確かめたいこと：'+ck.join('・'):'')));
+    pro.push(ss('【'+(/^(love|married|konkatsu)$/.test(o.rel||'love')?'お相手：':'相談に出てくる人：')+o.lab+'（'+o.ymd+'・'+(o.sex==='male'?'男性':'女性')+'・'+((RELTYPES[o.rel]||RELTYPES.love).label)+'として見た相性）】判定＝'+cb.verdict+'（良い点'+cb.good+'／注意点'+cb.bad+'）／良い点：'+(top(true,3).join('・')||'目立つものなし')+'／注意点：'+(top(false,2).join('・')||'目立つものなし')+(ad?'／'+ad.pro:'')+(R.role.length?'／役割：'+R.role.map(function(x){ return x.pro; }).join('。'):'')+(R.energy.length?'／調子：'+R.energy.map(function(x){ return x.pro; }).join('。'):'')+(TL.pro.length?'／2人の合が三合・方合になる時期：'+TL.pro[0]:'')+(both.length?'／2人とも縁が動く月：'+bothJ:'')+(ck.length?'／お相手の確かめたいこと：'+ck.join('・'):'')));
     plain.push(ss(o.lab+(/^(love|married|konkatsu)$/.test(o.rel||'love')?'':'（'+(RELTYPES[o.rel]||RELTYPES.family).label+'として見た相性）')+'：'+(cb.cls==='good'?'良いところが多い組み合わせ':(cb.cls==='bad'?'気をつけたいところが多めの組み合わせ':'良いところと気をつけたいところが同じくらいの組み合わせ'))+'。'+(ap?ap.plain:'')+((R.energy[0]||{}).plain||'')));   // 同性のお相手のときは、やさしい画面の文も男女前提の言い方にしない（2026-11-03）
     try{ compatBigFeatures(c,b).forEach(function(x){ pro.push(ss('　🌟 この2人の大きな特徴（必ず最初に書く）：'+x.pro)); plain.push(ss('　🌟 '+x.plain)); }); }catch(e){}   // 律音（年柱・月柱どうしも）・天地徳合など（2026-10-29）
   });
@@ -8316,7 +8330,7 @@ function pkConsultPeopleLines(c,q){ const P=pkConsultPeople(c,q), pro=[], plain=
   const LVp=S.filter(function(x){ return /^(love|married|konkatsu)$/.test(x.rel||'love'); });   // くらべ（どちらが良いか）は、恋愛の相手が2人のときだけ。家族・仕事の人はくらべない
   if(LVp.length>=2&&LVp.length===S.length){ const mx=function(k){ const v=S.slice().sort(function(a,b){ return b[k]-a[k]; }); return v[0][k]>v[1][k]?v[0].lab:''; };
     const bL=mx('base'), lL=mx('love'), up=S.filter(function(x){ return x.en==='up'; }).map(function(x){ return x.lab; });
-    const warn=compatMonths(c,P[0].c).filter(function(x){ return x.A.w.length; }).map(function(x){ return pkMonLabN(x.y,x.m); });   // 本人の注意の月（配偶宮が刑・冲）を年つきで
+    const warnL=compatMonths(c,P[0].c).filter(function(x){ return x.A.w.length; }); const warn=pkMonRuns(warnL);   // 続いている月は1つにまとめる。本人の注意の月（配偶宮が刑・冲）を年つきで
     // 命式の相性のくらべ（数字と、それぞれのよいところ・気をつけたいところ）。すすめるときは必ずこの理由で（鑑定者本人の指示 2026-10-25「今の彼を進める納得できる理由をツールでも出す」）
     const A0=S[0], B0=S[1], dn=Math.round((A0.net-B0.net)*10)/10, lean=Math.abs(dn)<2?null:(dn>0?A0:B0), oth=lean?(lean===A0?B0:A0):null; V.two=1; V.lean=lean?lean.lab:''; V.dn=Math.abs(dn);
     const why=function(x,y){ const g=[], w=[];
@@ -8764,7 +8778,7 @@ function compatAnalysis(a,b,rt){
   { const love=!!(rt&&rt.useSpouse!==false), X=[]; [[a,b,'本人','お相手'],[b,a,'お相手','本人']].forEach(function(q){ crossStars(q[0],q[1],love).forEach(function(c){ X.push(q[2]+'から見て、'+q[3]+'の'+c.at.map(function(z){ return z.label+'「'+z.gz+'」'; }).join('・')+'が'+q[2]+'の'+c.star+'に当たる＝'+q[2]+'にとって'+q[3]+'は'+c.mean); }); });
     if(X.length) L.push('【惹かれ合う星＝相手の命式に自分の吉凶星がある（鑑定文の「惹かれ合うところ」で必ず書く。どちらから見た星かを取りちがえない）】'+X.join('／'));
     try{ const CM=compatMonths(a,b), bothM=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }), warnM=CM.filter(function(x){ return x.A.w.length||x.B.w.length; });
-      L.push('【2人の縁が動く月（これから12ヶ月・ツールの判定。時期を答えるときはこの月を使う）】2人とも縁が動く月：'+(bothM.length?bothM.map(function(x){ return pkMonLabN(x.y,x.m)+'（'+x.gz+'の月）＝本人：'+x.A.g.join('・')+'／お相手：'+x.B.g.join('・'); }).join('／'):'なし')+'。注意の月：'+(warnM.length?warnM.map(function(x){ return pkMonLabN(x.y,x.m)+'（'+x.gz+'の月）'+(x.A.w.length?'＝本人の配偶宮と'+x.A.w.join('・'):'')+(x.B.w.length?'＝お相手の配偶宮と'+x.B.w.join('・'):'')+(x.A.g.length&&x.B.g.length?'（2人とも縁は動くが、大事な話・決断は慎重に）':''); }).join('／'):'なし')+'。注意の月は「2人とも縁が動く月」として書かない。'+(function(){ if(!pkRelLove()) return ''; const n0=(a.now&&a.now.year)||new Date().getFullYear(), ys=[n0,n0+1,n0+2].concat(bothM.map(function(x){ return pkMonAY(x.y,x.m); })), ba=ys.filter(function(y,i){ return ys.indexOf(y)===i&&pkKuuBad(a,y); }), bb=ys.filter(function(y,i){ return ys.indexOf(y)===i&&pkKuuBad(b,y); }); if(!ba.length&&!bb.length) return ''; const f=pkKuuFree([a,b],Math.min.apply(null,ba.concat(bb))+1);
+      L.push('【2人の縁が動く月（これから12ヶ月・ツールの判定。時期を答えるときはこの月を使う）】2人とも縁が動く月：'+(bothM.length?'（まとめると '+pkMonJoin(bothM)+'。続いている月は「いま〜12月上旬」のように1つにまとめて書く）'+bothM.map(function(x){ return pkMonLabN(x.y,x.m)+'（'+x.gz+'の月）＝本人：'+x.A.g.join('・')+'／お相手：'+x.B.g.join('・'); }).join('／'):'なし')+'。注意の月：'+(warnM.length?'（まとめると '+pkMonJoin(warnM)+'）'+warnM.map(function(x){ return pkMonLabN(x.y,x.m)+'（'+x.gz+'の月）'+(x.A.w.length?'＝本人の配偶宮と'+x.A.w.join('・'):'')+(x.B.w.length?'＝お相手の配偶宮と'+x.B.w.join('・'):'')+(x.A.g.length&&x.B.g.length?'（2人とも縁は動くが、大事な話・決断は慎重に）':''); }).join('／'):'なし')+'。注意の月は「2人とも縁が動く月」として書かない。'+(function(){ if(!pkRelLove()) return ''; const n0=(a.now&&a.now.year)||new Date().getFullYear(), ys=[n0,n0+1,n0+2].concat(bothM.map(function(x){ return pkMonAY(x.y,x.m); })), ba=ys.filter(function(y,i){ return ys.indexOf(y)===i&&pkKuuBad(a,y); }), bb=ys.filter(function(y,i){ return ys.indexOf(y)===i&&pkKuuBad(b,y); }); if(!ba.length&&!bb.length) return ''; const f=pkKuuFree([a,b],Math.min.apply(null,ba.concat(bb))+1);
         return '【結婚・入籍の時期（先生の教科書 第14回：行運の空亡は結婚を避ける）】解けない空亡の年＝'+(ba.length?'本人：'+ba.join('年・')+'年':'')+(ba.length&&bb.length?'／':'')+(bb.length?'お相手：'+bb.join('年・')+'年':'')+'。この年は交際・話し合い・結婚の準備を深める年にして、入籍・結婚をすすめない（「入籍は空亡でない'+(f||'')+'年からが安心」のように書く）。合・冲で解ける空亡の年は避ける年に数えない。'; })()); }catch(e){}
     try{ const cb=checkPoints(b,love), ca=checkPoints(a,love); L.push('【お相手を知るためのチェックポイント（ツールの判定。「どうすればよいか」に活かす。悪い人と決めつけない）】お相手で確かめること：'+cb.check.map(function(x){ return x.pro; }).join('／')+'。本人がお相手から見られやすいところ：'+ca.check.map(function(x){ return x.pro; }).join('／')); }catch(e){}
     try{ const RL=compatRoles(a,b); L.push('【2人の役割と場面＝ツールの判定（鑑定文で必ず使う：①お互いの役割は「'+(rt&&rt.kizuna||'')+'」か「どうすればよいか」に、②一緒にいて調子が上がる／疲れやすいは「どうすればよいか」に、③文昌貴人・駅馬は参考として一言、④どの場面で起きる話かは、合・冲を書くときに場面として書く）】①役割：'+RL.role.map(function(x){ return x.pro; }).join('／')+'。②調子：'+RL.energy.map(function(x){ return x.pro; }).join('／')+(RL.stars.length?'。③参考の星：'+RL.stars.map(function(x){ return x.pro; }).join('／'):'')+(RL.scene.length?'。④場面：'+RL.scene.map(function(x){ return x.pro; }).join('／'):'')); }catch(e){}
@@ -8932,8 +8946,8 @@ function pkCompatOffLead(a,b,q,plain){ try{ { const _st=q?pkCompatSit(a,b,q,plai
   const s1=plain?'2人の生まれ持った相性を全部合わせて見ると、'+(cb.cls==='good'?'良いところが多い組み合わせです。':(cb.cls==='bad'?'気をつけたいところが多めの組み合わせです。':'良いところと気をつけたいところが、同じくらいの組み合わせです。'))
     :'2人の命式の相性を全部合わせて見ると、「'+cb.verdict+'」です（良い点'+cb.good+'／注意点'+cb.bad+'）。';
   let s2=''; const tp=q?classifyCompatQ(q):'';
-  if(tp==='timing'){ if(both.length) s2='2人とも縁が動くのは'+pkMonLabN(both[0].y,both[0].m)+'です。'; else { const gy=compatGoodYears(a,b,pkRelLove()); if(gy.length) s2='2人の縁が動きやすいのは'+gy[0].year+'年です。'; } }
-  else if(tp==='clash'&&warn.length) s2='気持ちが揺れやすく、大事な話を避けたいのは'+pkMonLabN(warn[0].y,warn[0].m)+'です。';
+  if(tp==='timing'){ if(both.length) s2='2人とも縁が動くのは'+pkMonRuns(both)[0]+'です。'; else { const gy=compatGoodYears(a,b,pkRelLove()); if(gy.length) s2='2人の縁が動きやすいのは'+gy[0].year+'年です。'; } }
+  else if(tp==='clash'&&warn.length) s2='気持ちが揺れやすく、大事な話を避けたいのは'+pkMonRuns(warn)[0]+'です。';
   try{ s2=pkStampYears(s2,birthYearOf(a),birthYearOf(b)); }catch(e){}
   return s1+s2; }catch(e){ return ''; } }
 /* 相性の相談の種類（恋人・夫婦・婚活の相性だけ）：告白された／告白したい／復縁／別れるか／脈あり／付き合うか迷う（2026-11-04） */
@@ -8949,8 +8963,8 @@ function pkCompatQKind(q){ q=String(q||''); if(!q) return '';
 function pkCompatSit(a,b,q,plain){ try{ if(!pkRelLove()) return null; const kd=pkCompatQKind(q); if(!kd) return null;
   const cb=compatBalance(a,b), ad=attractionDir(a,b,'あなた','お相手'), CM=compatMonths(a,b);
   const both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }), warn=CM.filter(function(x){ return x.A.w.length||x.B.w.length; }), one=CM.filter(function(x){ return (x.A.g.length||x.B.g.length)&&!x.A.w.length&&!x.B.w.length; });
-  const run=function(L){ if(!L.length) return ''; let k=0; while(k+1<L.length&&(L[k+1].y*12+L[k+1].m)===(L[k].y*12+L[k].m+1)) k++; if(!k) return pkMonLabN(L[0].y,L[0].m); const e=L[k].m===12?1:L[k].m+1, nx=(L[k].y>L[0].y||L[k].m===12); return pkNowLab(L[0].y+'年'+L[0].m+'月〜'+(nx?'翌':'')+e+'月上旬'); };   // 続いている縁の月は1つにまとめる（「いま〜12月上旬」）
-  const bm=both.length?run(both):(one.length?run(one):''), wm=warn.length?pkMonLabN(warn[0].y,warn[0].m):'';
+  const run=function(L){ return L.length?pkMonRuns(L)[0]:''; };   // 続いている縁の月は1つにまとめる（「いま〜12月上旬」。共通の pkMonRuns）
+  const bm=both.length?run(both):(one.length?run(one):''), wm=run(warn);
   const X=ad?ad.x.love.length:0, Y=ad?ad.y.love.length:0;   // X＝あなた→お相手に恋愛の星／Y＝お相手→あなた
   const MS=plain?'生まれ持った相性では':'命式では', VD=plain?(cb.cls==='good'?'良いところが多い組み合わせ':(cb.cls==='bad'?'気をつけたいところが多めの組み合わせ':'良いところと気をつけたいところが同じくらいの組み合わせ')):'「'+cb.verdict+'」';
   const att=Y&&X?'2人ともお互いに惹かれやすい組み合わせ':(Y?'お相手のほうが強く惹かれていて、あなたからはときめきより安心・信頼を感じやすい組み合わせ':(X?'あなたのほうがお相手に惹かれやすい組み合わせ':'どちらか一方が強く惹かれる形はなく、恋愛より信頼で結ばれやすい組み合わせ'));
@@ -8998,7 +9012,7 @@ function pkCompatSit(a,b,q,plain){ try{ if(!pkRelLove()) return null; const kd=p
 function pkCompatSitText(a,b,q){ const S=pkCompatSit(a,b,q,false); if(!S) return ''; return '\n【この相談の答えの方向＝ツールの計算（惹かれ方の向き・大きな特徴・2人とも縁が動く月／注意の月・判定）。1行目はこの向きで問いに答える（2文まで・前置きなし。決めるのは本人なので押し付けない）】'+S.lead+'\n【「どうすればよいか」に入れること】'+S.how.join('／'); }
 /* 通信できないときの相性の時期の段：2人の縁が動く月（compatMonths）と、縁が深まる年（干支・年齢つき） */
 function pkCompatOffTiming(a,b,plain,good){ try{ const CM=compatMonths(a,b), both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }), one=CM.filter(function(x){ return (x.A.g.length||x.B.g.length)&&!x.A.w.length&&!x.B.w.length&&both.indexOf(x)<0; }), warn=CM.filter(function(x){ return x.A.w.length||x.B.w.length; });
-  const L=[]; const ml=function(A){ return A.slice(0,3).map(function(x){ return pkMonLabN(x.y,x.m); }).join('・'); };
+  const L=[]; const ml=function(A){ return pkMonJoin(A,3); };   // 続いている月は1つにまとめる
   L.push((plain?'2人とも縁が動く月（これから1年）：':'2人とも縁が動く月（これから12ヶ月）：')+(both.length?ml(both):(one.length?'ありません（片方だけ縁が動く月は'+ml(one)+'）':'ありません'))+'。');
   if(warn.length) L.push((plain?'気持ちが揺れやすく、大事な話は避けたい月：':'注意の月（どちらかの配偶宮が冲・刑）：')+ml(warn)+'。');
   if(good&&good.length) L.push((plain?'縁が深まりやすい年：':'縁が深まりやすい年：')+good.slice(0,5).map(function(g){ return g.year+'年'; }).join('・')+'。');
@@ -9281,11 +9295,12 @@ function compatMonthsHTML(a,b){ try{ const L=compatMonths(a,b); if(!L.length) re
   const lab=function(x,plain){ return pkMonLabN(x.y,x.m)+(plain?'':'（'+_kdE(x.gz)+'の月）'); };
   const why=function(x,plain){ const o=[]; if(x.A.g.length) o.push((plain?'あなた：'+x.A.gp.join('・'):'本人：'+x.A.g.join('・'))); if(x.B.g.length) o.push((plain?'お相手：'+x.B.gp.join('・'):'お相手：'+x.B.g.join('・'))); return o.join('／'); };
   const ww=function(x,plain){ const o=[]; if(x.A.w.length) o.push(plain?'あなたの気持ちが揺れやすい':'本人の配偶宮と'+x.A.w.join('・')); if(x.B.w.length) o.push(plain?'お相手の気持ちが揺れやすい':'お相手の配偶宮と'+x.B.w.join('・')); return o.join('／'); };
+  const runs=function(arr){ const R=pkMonRuns(arr); return R.length&&R.length<arr.length?'<span style="font-weight:700;font-size:13px">：'+_kdE(R.join('・'))+'</span>':''; };   // 続いている月は見出しで1つにまとめる（月ごとの行はそのまま。2026-11-04）
   const mk=function(plain){ const li=function(arr,f){ return arr.length?'<ul class="kd-l">'+arr.map(function(x){ return '<li><b>'+lab(x,plain)+'</b>　'+_kdE(f(x,plain))+((f===ww&&x.A.g.length&&x.B.g.length)?'<span style="color:#1F6B3A">（'+(plain?'2人とも縁は動く月ですが、大事な話はゆっくり':'2人とも縁は動くが、大事な話・決断は慎重に')+'）</span>':'')+((f===why&&(x.A.w.length||x.B.w.length))?'<span style="color:#9A1F17">（'+(plain?'気持ちが揺れやすい月でもある':'注意も重なる')+'）</span>':'')+'</li>'; }).join('')+'</ul>':'<div style="font-size:13.5px;margin:2px 0 0 4px">なし</div>'; };
     return '<div class="'+(plain?'kd-plain':'kd-pro')+'">'+
-      '<div style="margin-top:8px;font-weight:900;color:#1F6B3A">'+(plain?'2人とも縁が動く月':'2人とも縁が動く月')+'</div>'+li(both,why)+
-      '<div style="margin-top:8px;font-weight:900;color:#3C5A8A">'+(plain?'どちらか1人の縁が動く月':'片方だけ縁が動く月')+'</div>'+li(one,why)+
-      '<div style="margin-top:8px;font-weight:900;color:#9A1F17">'+(plain?'気持ちが揺れやすく、大事な話は避けたい月':'注意の月（どちらかの配偶宮が冲・刑）')+'</div>'+li(warn,ww)+
+      '<div style="margin-top:8px;font-weight:900;color:#1F6B3A">'+(plain?'2人とも縁が動く月':'2人とも縁が動く月')+runs(both)+'</div>'+li(both,why)+
+      '<div style="margin-top:8px;font-weight:900;color:#3C5A8A">'+(plain?'どちらか1人の縁が動く月':'片方だけ縁が動く月')+runs(one)+'</div>'+li(one,why)+
+      '<div style="margin-top:8px;font-weight:900;color:#9A1F17">'+(plain?'気持ちが揺れやすく、大事な話は避けたい月':'注意の月（どちらかの配偶宮が冲・刑）')+runs(warn)+'</div>'+li(warn,ww)+
       '<div style="font-size:12px;color:var(--muted);margin-top:6px">'+(plain?'※目安です。連絡や話し合いのタイミングの参考にしてください。':'※月運（節入りで区切る月）で判定。パートナーの星・咸池・紅艶・天乙貴人、配偶宮との支合・三合・半合＝縁が動く／冲・刑＝注意。目安であり断定ではありません。')+'</div></div>'; };
   return `<section class="card sec" id="cm-sec" style="border:1.5px solid #C9D9C2">
   <style>.kd-plain{display:none}html.bg-on .kd-plain{display:block}html.bg-on .kd-pro{display:none}.kd-l{margin:4px 0 0;padding-left:1.2em;font-size:13.5px;line-height:1.8}</style>
@@ -9602,10 +9617,10 @@ function compatSummaryHTML(a,b,rt){ try{ const cb=compatBalance(a,b), love=pkRel
     pro.push('<b>惹かれ方の向き</b>：'+(x&&y?'2人とも惹かれやすい（本人：'+ad.px.lab+'／お相手：'+ad.py.lab+'）':(y?'お相手のほうが強く惹かれている（'+ad.py.lab+'）':(x?'本人のほうが強く惹かれている（'+ad.px.lab+'）':'恋愛の星はどちら向きにもない'))));
     const ap=attractionDir(a,b,'あなた','お相手'); if(ap) plain.push(_kdE(ap.plain)); } }
   const CM=compatMonths(a,b), lab=function(x){ return pkMonLabN(x.y,x.m); }, both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }), warn=CM.filter(function(x){ return x.A.w.length||x.B.w.length; });
-  pro.push('<b>2人とも縁が動く月</b>：'+(both.length?both.slice(0,3).map(lab).join('・'):'これから12ヶ月はなし（片方だけの月は「縁が動く月」の欄）'));
-  pro.push('<b>注意の月</b>：'+(warn.length?warn.slice(0,3).map(lab).join('・'):'これから12ヶ月はなし'));
-  plain.push('2人とも縁が動く月：'+(both.length?both.slice(0,3).map(lab).join('・'):'これから12ヶ月はありません')+'。');
-  if(warn.length) plain.push('気持ちが揺れやすく、大事な話は避けたい月：'+warn.slice(0,3).map(lab).join('・')+'。');
+  pro.push('<b>2人とも縁が動く月</b>：'+(both.length?pkMonJoin(both,3):'これから12ヶ月はなし（片方だけの月は「縁が動く月」の欄）'));   // 続いている月は1つにまとめる（2026-11-04）
+  pro.push('<b>注意の月</b>：'+(warn.length?pkMonJoin(warn,3):'これから12ヶ月はなし'));
+  plain.push('2人とも縁が動く月：'+(both.length?pkMonJoin(both,3):'これから12ヶ月はありません')+'。');
+  if(warn.length) plain.push('気持ちが揺れやすく、大事な話は避けたい月：'+pkMonJoin(warn,3)+'。');
   try{ const TL=compatTrioLines(a,b); if(TL.T.length){ const f=function(o){ const y=o.years[0], d=o.du[0]; return (y?y.year+'年':'')+(y&&d?'・':'')+(d?d.who+'の大運'+d.from+'年〜':'')+'（'+o.kind+'）'; };
     const _k=function(o){ const y=o.years[0], d=o.du[0]; return Math.min(y?+y.year:9999, d?+d.from:9999); };   /* 年の早い順に並べる（2026-10-27） */
     const _srt=TL.T.filter(function(o){ return o.years.length||o.du.length; }).slice().sort(function(p,q){ return _k(p)-_k(q); }).slice(0,3);
@@ -11289,7 +11304,7 @@ function pkDigest(c,plain){ const R={}; try{ if(!c||!c.pillars||!c.dayMaster) re
   // ④ 恋愛（18歳以上）
   try{ if(((c.now&&c.now.age)||0)>=18){ const L=loveFourLines(c); if(L){
       const _st=function(y){ try{ return pkStampYears(y+'年',by,0,plain); }catch(e){ return y+'年'; } };   // まとめの年にも干支・年齢を付ける（2026-10-30）
-      const gy=(L.goodYears||[]).map(function(y){ return _st(y)+(pkKuuBad(c,y)?(plain?'（ひと休みの年）':'（空亡）'):''); }), cy=(L.cautionYears||[]).map(_st), ml=(L.monthLabs||[]).slice(0,3);
+      const gy=(L.goodYears||[]).map(function(y){ return _st(y)+(pkKuuBad(c,y)?(plain?'（ひと休みの年）':'（空亡）'):''); }), cy=(L.cautionYears||[]).map(_st), ml=(L.monthLabs||[]).slice(0,3).map(pkNowLab);   // 続いている月はまとめた名前（「いま〜12月上旬」）
       R.love={ic:'💗',t:'恋愛',to:'love-card',
         v:gy.length?'縁が動く年：'+gy.join('・'):'この3年は、自分を整える時期',
         s:(ml.length?'縁が動く月：'+ml.join('・'):'この12ヶ月は、縁が大きく動く月はありません')+(cy.length?'。'+(plain?'関係が揺れやすい年':'注意の年')+'：'+cy.join('・'):'')}; } } }catch(e){}
