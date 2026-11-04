@@ -11607,7 +11607,7 @@ window.__isSample=false; chart=null; pkShowEmpty();
 .bm-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
 .bm-name{font-size:16px;font-weight:900}
 .bm-badge{font-size:13.5px;font-weight:900;border-radius:999px;padding:2px 10px;background:#EEE;color:#555}
-.bm-badge.good{background:#E3F4EA;color:#1E7A4C}.bm-badge.warn{background:#FCEBDD;color:#B4531F}
+.bm-badge.good{background:#E3F4EA;color:#1E7A4C}.bm-badge.warn{background:#FCEBDD;color:#B4531F}.bm-badge.ku{background:#FFF4E0;color:#6B3E0B;border:1px dashed #8A5A1C}
 .bm-done{margin-left:auto;font-size:13.5px;font-weight:800;color:#1E7A4C}
 .bm-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .bm-acts button{flex:1 1 120px;min-height:44px;border-radius:11px;font-family:inherit;font-weight:900;font-size:14.5px;cursor:pointer;border:1.5px solid var(--line2);background:#fff;color:var(--ink)}
@@ -11622,7 +11622,7 @@ window.__isSample=false; chart=null; pkShowEmpty();
   <div id="bm-box">
     <button type="button" id="bm-close-x">✕ 閉じる</button>
     <h2 id="bm-title">📅 今月の運勢<span style="white-space:nowrap">（お客様全員分）</span></h2>
-    <p class="bm-lead">顧客カルテのお客様全員分を、そのまま送れる文章にしました。専門用語は使っていません。文章はその場で直せます。<br>スマホでは「LINEで送る」を押すとLINEが開き、送る相手を選べます。パソコンでは「LINE用にコピー」で文章をコピーし、LINEのトークに貼り付けて送ってください（パソコン版のLINEには、ボタンから直接は送れないため）。</p>
+    <p class="bm-lead">顧客カルテのお客様全員分を、そのまま送れる文章にしました。専門用語は使っていません（その方の解けない空亡の月だけ、〔空亡〕の印と、大きなことを始めない過ごし方の文が入ります）。文章はその場で直せます。<br>スマホでは「LINEで送る」を押すとLINEが開き、送る相手を選べます。パソコンでは「LINE用にコピー」で文章をコピーし、LINEのトークに貼り付けて送ってください（パソコン版のLINEには、ボタンから直接は送れないため）。</p>
     <div class="bm-row">
       <label for="bm-month">月</label><input type="month" id="bm-month">
       <label for="bm-tag" style="margin-left:6px">お客様</label><select id="bm-tag"><option value="">全員</option></select>
@@ -11657,6 +11657,12 @@ window.__isSample=false; chart=null; pkShowEmpty();
   };
   var BM_JUD={good:'追い風が吹いています。',flat:'大きな波は少なく、落ち着いた流れです。',warn:'少し慎重に進みたいときです。'};
   var BM_BADGE={good:'追い風',flat:'ふつう',warn:'慎重に'};
+  // 解けない空亡の月（pkKuuBadMonth。年と同じ解空の決まり。先生の指示 2026-11-04「両方とも付けてください」）：
+  //   先生の画面のカードに〔空亡〕の札、お客様に送る文にも〔空亡〕の印を付け、大きな始まり（結婚・入籍・転職・独立・契約・大きな買い物・投資）をすすめない言い方にする（PK_MON_KUU_RULE と同じ扱い）。
+  //   印のかっこの中に用語の説明は入れない（意味はふつうの文で書く）。追い風の月でも「始めどき」の文は使わず、落ち着いた文＋控えめの過ごし方にする。
+  var BM_KUU_TXT='今月は〔空亡〕の月です。結婚・入籍・転職・独立・大きな契約・大きな買い物・投資など、大きなことを新しく始めるのは来月以降にして、準備や下調べをしたり、ふだんどおりに過ごしたりするのに向いた月です。';
+  var BM_KUU_TIP='大事な決めごとや申し込みは急がず、今月は準備と見直しにあててください。体調は無理をせず、休む時間を多めにとってください。';
+  function bmKuu(c,ev){try{return !!(ev&&ev.branch&&typeof pkKuuBadMonth==='function'&&pkKuuBadMonth(c,ev.branch));}catch(e){return false;}}
   // 命式との関係（合・冲）を、お客様向けのやさしい言葉に
   function relPlain(r){var s=r.s||'';
     if(/日支.*支合/.test(s))return '家族やパートナーなど、身近な人との距離が縮まりやすい月でもあります。';
@@ -11680,15 +11686,16 @@ window.__isSample=false; chart=null; pkShowEmpty();
   function chartOf(cl){var p=cl.date.split('-').map(Number),tm=(cl.notime?'12:00':(cl.time||'12:00')).split(':').map(Number);
     var c=pkWithOpts(pkOptsOf(cl),function(){ return baziCompute({year:p[0],month:p[1],day:p[2],hour:tm[0],minute:tm[1],sex:cl.sex==='male'?'male':'female',tu:!!cl.notime},cl.pref||'',cl.corr||'full'); });   // そのお客様を保存したときの早子時・クロック時刻優先・サマータイムで計算する（LU-1・CB-6。2026-11-03）
     if(cl.notime&&typeof markTimeUnknown==='function')markTimeUnknown(c);return c;}
-  function messageFor(cl,ev,y,m){var T=BM_TXT[ev.star];if(!T)return '';
+  function messageFor(cl,ev,y,m,ku){var T=BM_TXT[ev.star];if(!T)return '';
     var nm=String(cl.name||'').replace(/^（名前なし）$/,'');
-    var lines=[(nm?nm+'様':'こんにちは'),'いつもありがとうございます。',y+'年'+m+'月の運勢をお届けします。','',
-      '【今月のテーマ】',T.t,'','【今月の運気】',BM_JUD[ev.jud],(ev.jud==='good'?T.g:ev.jud==='warn'?T.w:T.f)];
+    var lines=[(nm?nm+'様':'こんにちは'),'いつもありがとうございます。',y+'年'+m+'月の運勢をお届けします。'+(ku?'〔空亡〕':''),'',
+      '【今月のテーマ】',T.t,'','【今月の運気】',BM_JUD[ev.jud],(ev.jud==='good'?(ku?T.f:T.g):ev.jud==='warn'?T.w:T.f)];   // 空亡の月は「始めどき」の文（T.g）を使わない
     // 命式との関係は、運気の判定とつながるように「ただ、」「さらに、」でつなぐ（追い風なのに注意だけが浮かないように）
     var rp=(ev.rel||[]).map(function(r){var t=relPlain(r);if(!t)return '';
       var pre=r.t==='warn'?(ev.jud==='warn'?'また、':'ただ、'):(ev.jud==='good'?'さらに、':'また、');return pre+t;}).filter(Boolean);
     if(rp.length)lines.push(rp.join(''));
-    lines.push('','【今月の過ごし方】',ev.jud==='warn'?T.tw:T.tg);
+    if(ku)lines.push((ev.jud==='warn'?'また、':'ただ、')+BM_KUU_TXT);
+    lines.push('','【今月の過ごし方】',ku?(T.tw+BM_KUU_TIP):(ev.jud==='warn'?T.tw:T.tg));   // 空亡の月は控えめの過ごし方（T.tw）＋準備・休養
     var sg=getSign();if(sg&&sg.trim())lines.push('',sg.trim());
     return lines.join('\n');}
   var state={ym:'',items:[],shown:0,edits:{},gen:0,busy:false};
@@ -11701,11 +11708,11 @@ window.__isSample=false; chart=null; pkShowEmpty();
     state.items=clients().map(function(cl){return {cl:cl,y:pa[0],m:pa[1],d:d,ev:null,text:null,err:false};});
     state.shown=0;state.gen++;state.busy=false;document.getElementById('bm-list').innerHTML='';more();}
   function fill(it){if(it.text!=null||it.err)return;
-    try{var c=chartOf(it.cl),ev=monthFortuneAt(c,it.d);if(!ev||!BM_TXT[ev.star])throw 0;it.ev=ev;it.text=messageFor(it.cl,ev,it.y,it.m);}catch(e){it.err=true;}}
+    try{var c=chartOf(it.cl),ev=monthFortuneAt(c,it.d);if(!ev||!BM_TXT[ev.star])throw 0;it.ev=ev;it.ku=bmKuu(c,ev);it.text=messageFor(it.cl,ev,it.y,it.m,it.ku);}catch(e){it.err=true;}}
   function cardHTML(it,i){var sent=!!getSent(state.ym)[it.cl.id];var k=state.ym+'|'+it.cl.id;
     if(it.err)return '<div class="bm-card"><div class="bm-head"><span class="bm-name">'+h(it.cl.name)+'</span></div><div class="mhint">生年月日を確認できなかったため、作れませんでした。顧客カルテで生年月日を確かめてください。</div></div>';
     var txt=state.edits[k]!=null?state.edits[k]:it.text;
-    return '<div class="bm-card'+(sent?' sent':'')+'" data-i="'+i+'"><div class="bm-head"><span class="bm-name">'+h(it.cl.name)+'</span><span class="bm-badge '+it.ev.jud+'">'+BM_BADGE[it.ev.jud]+'</span>'+(sent?'<span class="bm-done">✓ 送りました</span>':'')+'</div>'
+    return '<div class="bm-card'+(sent?' sent':'')+'" data-i="'+i+'"><div class="bm-head"><span class="bm-name">'+h(it.cl.name)+'</span><span class="bm-badge '+it.ev.jud+'">'+BM_BADGE[it.ev.jud]+'</span>'+(it.ku?'<span class="bm-badge ku" title="解けない空亡の月（年と同じ解空の決まり）。大きな始まりはすすめない月">〔空亡〕</span>':'')+(sent?'<span class="bm-done">✓ 送りました</span>':'')+'</div>'
       +'<textarea rows="11" aria-label="'+h(it.cl.name)+'様への文章">'+h(txt)+'</textarea>'
       +'<div class="bm-acts"><button type="button" class="bm-line">'+(isPhone()?'LINEで送る':'LINE用にコピー')+'</button><button type="button" class="bm-copy">コピー</button><button type="button" class="bm-sent">'+(sent?'✓ 送った':'送った印をつける')+'</button></div></div>';}
   // 「さらに表示」：10人ずつ作って画面に足し、そのたびに一息つく（1,000人でも画面が止まらないように）。欄の高さ合わせは新しく足した欄だけ（LU-10。2026-11-03）

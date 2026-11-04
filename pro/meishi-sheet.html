@@ -565,6 +565,12 @@
   .mcal.t-money .mc.good{ background:rgba(176,126,30,.18); border-color:rgba(176,126,30,.55); } .mcal.t-money .mc.good i{ color:#B07E1E; font-weight:700; }
   .mcal.t-health .mc.good{ background:rgba(46,125,82,.16); border-color:rgba(46,125,82,.5); } .mcal.t-health .mc.good i{ color:#2E7D52; font-weight:700; }
   .mc.both{ box-shadow:inset 0 -3px 0 rgba(200,90,40,.55); }
+  /* 月のカレンダーのテーマの切りかえ（恋愛／仕事／お金／健康。カレンダーだけを切りかえる＝鑑定書全体のテーマは廃止のまま。画面だけ・印刷は選んだテーマのカレンダーだけ出す。2026-11-04） */
+  .calth{ display:flex; flex-wrap:wrap; gap:6px; margin:2px 0 8px; }
+  .calth button{ min-height:calc(44px*var(--tapk,1)); min-width:calc(64px*var(--tapk,1)); padding:calc(6px*var(--tapk,1)) calc(14px*var(--tapk,1)); border-radius:calc(22px*var(--tapk,1)); border:1.5px solid #6B5E50; background:#FFFFFF; color:#2B2622; font-size:calc(14px*var(--tapk,1)); font-weight:700; line-height:1.2; cursor:pointer; word-break:keep-all; }
+  .calth button[aria-pressed="true"]{ background:#5A3E2B; border-color:#5A3E2B; color:#FFFFFF; }
+  .calth button:focus-visible{ outline:3px solid #2A6FD0; outline-offset:2px; }
+  @media print{ .calth{ display:none !important; } }
   /* 解けない空亡の月のマス（本格版「空」＝〔空亡〕／やさしい版「休」＝〔ひと休みの月〕。凡例はカレンダーの下。画面も印刷も読める濃さ。2026-11-04） */
   .mcal .mc.ku{ border-style:dashed; border-color:#8A5A1C; }
   .mc em{ display:block; font-style:normal; font-size:8px; font-weight:800; line-height:1.1; color:#6B3E0B; }
@@ -2459,7 +2465,7 @@ window.KANSHI60_DETAIL={
       legend:'◎○＝お金が動く月　△＝散財注意' }; }
     if(theme==='health'){ return { cls:'t-health', chong:true,
       good:{'印綬':{label:'休養・回復',score:2},'偏印':{label:'静養・立て直し',score:2}}, caution:{'傷官':'消耗・気の高ぶり','偏官':'重圧・過労'},
-      legend:'●＝整え月　△＝不調が出やすい月' }; }
+      legend:'○＝整え月　△＝不調が出やすい月' }; }
     return null;
   }
   // 指定年の12か月を月柱（天文計算）から意味づけ
@@ -2531,6 +2537,12 @@ window.KANSHI60_DETAIL={
     return html;
   }
   // 大運（今の10年）で巡る通変星の傾向
+  // 月のカレンダーをテーマで切りかえる（恋愛／仕事／お金／健康）。鑑定書全体のテーマ（総合／恋愛重視…）は廃止のままで、カレンダーだけを切りかえる。
+  // 選んだテーマは window.__sheetCalTh（既定＝恋愛）。印刷・PDFは選んだテーマのカレンダーだけが出る（切りかえボタンは画面だけ）。2026-11-04
+  var CAL_TH=[['love','恋愛','恋愛が動く月','恋愛が動く月'],['work','仕事','仕事が伸びる月','仕事が伸びる月'],['money','お金','お金が動く月','お金が動く月'],['health','健康','体調の月間カレンダー','体調を整える月']];
+  function calThNow(){ var t=window.__sheetCalTh; return (t==='work'||t==='money'||t==='health')?t:'love'; }
+  function calThTitle(th, easy){ for(var i=0;i<CAL_TH.length;i++){ if(CAL_TH[i][0]===th) return easy?CAL_TH[i][3]:CAL_TH[i][2]; } return ''; }
+  function calThSwitchHTML(th){ return '<div class="calth no-print" role="group" aria-label="カレンダーのテーマを選ぶ">'+CAL_TH.map(function(x){ return '<button type="button" data-calth="'+x[0]+'" aria-pressed="'+(x[0]===th)+'">'+x[1]+'</button>'; }).join('')+'</div>'; }
   var DUTSU={
     比肩:'自立・仲間・行動がテーマの10年。自分の足で動くほど道が開けます。人と組む/独立の見極めどきです。',
     劫財:'勝負と拡大の10年。チャンスも出費も増えやすいので、攻めと守りのバランスを。仲間との連携が力に。',
@@ -3169,6 +3181,8 @@ window.KANSHI60_DETAIL={
         if(pkc.chong) lines.push('<li><b>直近の冲（ちゅう＝大きな変化）の年：'+pkc.chong.year+'年（'+ruby(pkc.chong.gz)+'）</b>…引っ越し・転職・出会い・別れなど、環境や生き方が大きく動きやすかった年です。振り返ると転機になっていたことがあるかもしれません。</li>');
         if(lines.length) b+='<p class="rd-p"><b>【過去のふり返りメモ】</b><span class="rd-mini">（過去にさかのぼって、直近の一つ前の巡りを目安として。）</span></p><ul class="rd-ul">'+lines.join('')+'</ul>';
       })();
+      // 月のカレンダー（今年・来年）：恋愛／仕事／お金／健康を切りかえて見る（全体のテーマ指定があるときは、その章にカレンダーがあるので出さない。2026-11-04）
+      if((!theme||theme==='general') && nowYear!=null && spouse && window.MonthPillar){ var _ct=calThNow(); b+='<div class="rd-mwrap"><div class="rd-mhead">◆ '+calThTitle(_ct,false)+'（今年・来年）</div>'+calThSwitchHTML(_ct)+monthlyBlock(nowYear, dm, spouse, _ct, sex, false, r)+'</div>'; }
       addSec(8, '運の流れ（大運・会局・これから）', b);
     })();
     // 9. 総括
@@ -3550,7 +3564,7 @@ window.KANSHI60_DETAIL={
         rows.push('<li>'+line+'</li>'); });
       // 💗 恋愛：動きやすい月を1行で簡潔に。詳しい月別は下のカレンダーへ（重複回避）。picksには入れない＝総合の狙い目を偏らせない。
       (function(){ var rl=best('love'), line='<b>💗 恋愛</b>　';
-        if(rl.good){ line+='動きやすい月：<b style="color:'+GC+'">'+ym(rl.good)+'</b>（'+rl.good.why+'）'; if(rl.care) line+='　／　セーブ月：<b style="color:'+CC+'">'+ym(rl.care)+'</b>'; line+='　<span style="color:#7B8794">くわしくは下の「恋愛が動く月」カレンダーへ</span>'; }
+        if(rl.good){ line+='動きやすい月：<b style="color:'+GC+'">'+ym(rl.good)+'</b>（'+rl.good.why+'）'; if(rl.care) line+='　／　セーブ月：<b style="color:'+CC+'">'+ym(rl.care)+'</b>'; if(calThNow()==='love') line+='　<span style="color:#7B8794">くわしくは下の「恋愛が動く月」カレンダーへ</span>';   /* 下のカレンダーを仕事・お金・健康に切りかえているときは、この案内を出さない */ }
         else if(rl.care){ line+='セーブ月：<b style="color:'+CC+'">'+ym(rl.care)+'</b>（'+rl.care.cau+'）　<span style="color:#7B8794">くわしくは下のカレンダーへ</span>'; }
         else { line+='<span style="color:#7B8794">動きやすい月は、下の「恋愛が動く月」カレンダーで詳しく見られます。</span>'; }
         rows.unshift('<li>'+line+'</li>'); })();
@@ -3588,7 +3602,7 @@ window.KANSHI60_DETAIL={
     var healthOne=(shugoEls.length? '疲れたら「'+care+'」を意識するとすぐ整います。元気が出る色は'+col+'。':'生活リズムを一定に保つのが一番の元気の秘訣です。');
     if(ezShow('money')) H+=ezCard('💰🌿 お金・健康のヒント', '<div class="ez-grid"><div><b>💰 お金</b><br><span class="ez-txt">'+moneyOne+'</span></div><div><b>🌿 健康</b><br><span class="ez-txt">'+healthOne+'</span></div></div>');
     if(ezShow('cal') && spouse && window.MonthPillar){ var _mnE=''; try{ var _kb=[nowYear,nowYear+1].filter(function(y){ return _sheetKuuBad(r,y); }); if(_kb.length){ var _f=0; for(var _y=_kb[0]+1;_y<_kb[0]+6;_y++){ if(!_sheetKuuBad(r,_y)){ _f=_y; break; } } _mnE='<p class="ez-note2">💍 '+_kb.join('年・')+'年はひと休みの年なので、おつきあいや話し合いを深める時期にして、入籍・結婚は'+(_f?_f+'年から':'ひと休みの年が明けてから')+'が安心です。</p>'; } }catch(e){}   // 先生の教科書 第14回（2026-11-03）
-      H+=ezCard('📅 恋愛が動く月（今年・来年）', monthlyBlock(nowYear, dm, spouse, 'love', sex, true, r)+_mnE, 'wide'); }
+      var _ct=calThNow(); H+=ezCard('📅 '+calThTitle(_ct,true)+'（今年・来年）', '<div class="ez-calbox">'+calThSwitchHTML(_ct)+monthlyBlock(nowYear, dm, spouse, _ct, sex, true, r)+'</div>'+(_ct==='love'?_mnE:''), 'wide'); }   // 恋愛／仕事／お金／健康を切りかえて見る（2026-11-04）
     // 過去のふり返りメモ（直近の空亡の年・冲の年）
     if(!ezSolo){ (function(){ var pkc=pastKuboChong(r); if(!pkc) return; var li='';
       var _ks=(pkc.kubos&&pkc.kubos.length)?pkc.kubos:(pkc.kubo?[pkc.kubo]:[]);
@@ -3860,6 +3874,7 @@ window.KANSHI60_DETAIL={
       if(wantRead){
         q+='&lv='+((_printVer==='easy')?'easy':'pro');
         if(_readTheme && _readTheme!=='general') q+='&th='+_readTheme;
+        if(window.__sheetCalTh && window.__sheetCalTh!=='love') q+='&cal='+window.__sheetCalTh;   // 選んだ月のカレンダーのテーマも引き継ぐ
         if(_readScope==='solo') q+='&sc=solo';
       }
       return base+q;
@@ -5093,6 +5108,17 @@ function pkSafeFix(t,q,note){ try{ t=String(t==null?'':t); let cut=0;
     if(s) s.setAttribute('aria-pressed', String(_readScope==='solo'));
     renderReading();
   }
+  // 月のカレンダーのテーマの切りかえ（本格版・やさしい版のカレンダーの上のボタン。カレンダーだけを切りかえる。2026-11-04）
+  document.addEventListener('click', function(ev){ var t=ev.target&&ev.target.closest&&ev.target.closest('[data-calth]'); if(!t) return;
+    var th=t.getAttribute('data-calth'); if(th===window.__sheetCalTh||(!window.__sheetCalTh&&th==='love')) return;
+    var y=t.getBoundingClientRect().top; window.__sheetCalTh=th; renderReading();
+    fitCalTap();
+    try{ var n=[].filter.call(document.querySelectorAll('[data-calth="'+th+'"]'),function(x){ return !!x.offsetParent; })[0]; if(n){ var d=n.getBoundingClientRect().top-y; if(d) window.scrollBy(0,d); n.focus({preventScroll:true}); } }catch(e){} });   // 押したボタンが同じ場所に見えたままに
+  // A4の見本（縮めて表示）のときは、縮めた分だけボタンを大きくして、画面で高さ44px以上にする（命式表の下の押すところと同じやり方）
+  function fitCalTap(){ try{ var ch=false; [].forEach.call(document.querySelectorAll('.calth'),function(b){ if(!b.offsetHeight) return; var old=b.style.getPropertyValue('--tapk'); b.style.removeProperty('--tapk');
+      var k=b.getBoundingClientRect().height/b.offsetHeight, nv=(k>0&&k<0.99)?(Math.ceil(1005/k)/1000).toFixed(3):''; if(nv) b.style.setProperty('--tapk',nv); if(nv!==old) ch=true; });
+    if(ch && typeof window.fitSheet==='function') window.fitSheet(); }catch(e){} }
+  (function(){ var tm=0; try{ new MutationObserver(function(){ if(!tm) tm=setTimeout(function(){ tm=0; fitCalTap(); },150); }).observe(document.body,{childList:true,subtree:true}); window.addEventListener('resize',function(){ setTimeout(fitCalTap,150); }); }catch(e){} })();
   (function(){ [['thGeneral','general'],['thLove','love'],['thWork','work'],['thMoney','money'],['thHealth','health']].forEach(function(pair){
     var el=document.getElementById(pair[0]); if(el) el.addEventListener('click', function(){ setTheme(pair[1]); }); });
     var f=document.getElementById('scFull'), s=document.getElementById('scSolo');
@@ -5383,6 +5409,7 @@ function pkSafeFix(t,q,note){ try{ t=String(t==null?'':t); let cut=0;
     var q=new URLSearchParams(window.__SQ);
     if(q.get('share')!=='1' && !q.get('show')) return;
     var show=q.get('show')||'both', lv=q.get('lv')||'', th=q.get('th')||'', sc=q.get('sc')||'';
+    var _cal=q.get('cal')||''; if(/^(work|money|health)$/.test(_cal)) window.__sheetCalTh=_cal;   // 月のカレンダーのテーマ
     var B=document.body;
     if(q.get('share')==='1') B.classList.add('share-view');
     if(show==='meishi') B.classList.add('sv-only-meishi');
