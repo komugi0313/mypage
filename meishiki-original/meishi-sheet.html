@@ -2475,7 +2475,7 @@ window.KANSHI60_DETAIL={
       var _ezw=(cfg.easy||document.body.classList.contains('bg-mode'));
       if(cfg.chong && CHONG[dayBranch]===mp.shi){ caution=true; creas=creas||(_ezw?'急な変化':'冲（急変）'); }
       else if(cfg.useLove && _keiOK(dayBranch,mp.shi)){ caution=true; creas=creas||(_ezw?'すれちがい':'刑（こじれ）'); }   // 恋愛は配偶宮と冲・刑の月を注意の月に
-      out.push({mo:mo, why:why, score:score, caution:caution, creas:creas});
+      out.push({mo:mo, why:why, score:score, caution:caution, creas:creas, shi:mp.shi});
     }
     return out;
   }
@@ -2495,8 +2495,8 @@ window.KANSHI60_DETAIL={
     return '<div class="mcal '+cfg.cls+'"><span class="mcal-y">'+Y+'年'+(lbl||'')+'</span><span class="mcal-row">'+cells+'</span></div>';
   }
   // 月カレンダー＋要点テキスト（今年・来年）をまとめて返す
-  function monthlyBlock(nowYear, dm, dayBranch, theme, sex, easy){
-    var cfg=themeMonthCfg(theme, sex); if(!cfg||nowYear==null||!window.MonthPillar) return ''; cfg.easy=!!easy;
+  function monthlyBlock(nowYear, dm, dayBranch, theme, sex, easy, r){
+    var cfg=themeMonthCfg(theme, sex), _kuN=false; if(!cfg||nowYear==null||!window.MonthPillar) return ''; cfg.easy=!!easy;
     // 年は年運の年（立春で切りかわる年＝先生の決定 2026-11-03）。1年＝2月（立春）〜翌年1月。立春前は「○年○月○日の立春まで」を添える。日本時間で数える
     var html='', _J=_jstNow(), _SY=_sheetYear(), curY=_J.y, curM=_J.m;
     [0,1].forEach(function(off){ var Y=_SY.y+off, lbl=(off===0?'（今年'+(_SY.pre?'・'+_SY.endText:'')+'）':'（来年）'),
@@ -2507,12 +2507,14 @@ window.KANSHI60_DETAIL={
       var pos=ms.filter(function(m){return m.score>0&&future(m);}).sort(function(a,b){return b.score-a.score;}).slice(0,4).sort(function(a,b){return a.mo-b.mo;});
       var cau=ms.filter(function(m){return m.caution&&m.score<=0&&future(m);});
       var line='';
-      var _mn=function(m){ return (m.Y!=null&&m.Y!==Y?m.Y+'年':'')+m.mo+'月'; };   // 翌年1月は「2028年1月」のように年を添える
+      var _mk=function(m){ var k=!!(r&&m.shi&&_sheetKuuBadB(r,m.shi)); if(k) _kuN=true; return k?(easy?'〔ひと休みの月〕':'〔空亡〕'):''; };   // 解けない空亡の月の印（アプリと同じ決まり。2026-11-04）
+      var _mn=function(m){ return (m.Y!=null&&m.Y!==Y?m.Y+'年':'')+m.mo+'月'+_mk(m); };   // 翌年1月は「2028年1月」のように年を添える
       if(pos.length) line='<b>'+pos.map(_mn).join('・')+'</b>（'+pos.slice(0,2).map(function(m){return m.why[0];}).filter(Boolean).join('・')+'ほか）';
       else line=(off===0?'これからの月では大きく動く月は控えめ':'大きく動く月は控えめ');
       if(cau.length) line+='／注意：<b>'+cau.map(_mn).join('・')+'</b>';
       html+='<p class="rd-mcap">'+Y+'年'+lbl+'：'+line+'</p>';
     });
+    if(_kuN) html+='<p class="rd-mleg">'+(easy?'〔ひと休みの月〕は、大きなことを始めるより、準備をしたり、ふだんどおりに過ごしたりするのに向いた月です。':'〔空亡〕の印の月は解けない空亡の月（年と同じ解空の決まり）。結婚・入籍・告白の返事を迫る・大きな始まりはすすめず、準備・待つ・ふだんどおりに過ごす月に。')+'</p>';
     html+='<p class="rd-mleg">'+cfg.legend+'（年は立春で切りかわり、2月〜翌年1月で1年。月の区切りは節入りの日で、数日前後する目安です）</p>';
     return html;
   }
@@ -2698,10 +2700,12 @@ window.KANSHI60_DETAIL={
   if(typeof window!=='undefined') window.sheetBigFeatures=sheetBigFeatures;
   /* 解けない空亡の年か（アプリの pkKuuBad と同じ決まり。2026-11-03）：その年の支が空亡で、命式（時刻不明は時柱を除く）＋今の大運の支と
      三合・方合・支合（合解）も冲（冲解）もしない年＝空亡の影響が出やすい年。「狙い目の年」「チャンスの年」に入れない。 */
-  function _sheetKuuBad(r,y){ try{
+  function _sheetKuuBad(r,y){ var a=(r&&r.annualByYear||{})[y]; return !!(a&&a.branch&&_sheetKuuBadB(r,a.branch)); }
+  /* 月の空亡（先生の決定 2026-11-04）：月の十二支でも年と同じ決まりで見る（アプリの pkKuuBadMonth と同じ） */
+  function _sheetKuuBadB(r,ab0){ try{
     var P=r.pillars||{}, day=P.day||{}; if(!day.gan||!day.shi) return false;
     var BRs='子丑寅卯辰巳午未申酉戌亥', STE='甲乙丙丁戊己庚辛壬癸';
-    var a=(r.annualByYear||{})[y]; if(!a||!a.branch) return false;
+    var a={branch:ab0}; if(!a.branch) return false;
     var sd=STE.indexOf(day.gan), bd=BRs.indexOf(day.shi), dd=((bd-sd)%12+12)%12, voids=[BRs.charAt((dd+10)%12),BRs.charAt((dd+11)%12)];
     if(voids.indexOf(a.branch)<0) return false;
     var RG={子:'丑',丑:'子',寅:'亥',亥:'寅',卯:'戌',戌:'卯',辰:'酉',酉:'辰',巳:'申',申:'巳',午:'未',未:'午'};
@@ -3016,7 +3020,7 @@ window.KANSHI60_DETAIL={
         [0,1].forEach(function(off){ var y2=nowYear+off, a2=byYear[y2]; if(a2) nearArr.push('<b>'+y2+'年'+(off===0?'（今年'+_sheetLim(y2)+'）':'（来年）')+'</b>…'+loveYearRead(a2)); });
         if(nearArr.length){ b+=para('<b>◆ 直近の恋愛運（今年・来年）</b>：'+nearArr.join(' ／ ')+'。'); }
         // 月ピンポイント（視覚カレンダー）：今年・来年の「恋愛が動く月」
-        if(spouse && window.MonthPillar){ b+='<div class="rd-mwrap"><div class="rd-mhead">◆ 恋愛が動く月（今年・来年）</div>'+monthlyBlock(nowYear, dm, spouse, 'love', sex)+'</div>'; }
+        if(spouse && window.MonthPillar){ b+='<div class="rd-mwrap"><div class="rd-mhead">◆ 恋愛が動く月（今年・来年）</div>'+monthlyBlock(nowYear, dm, spouse, 'love', sex, false, r)+'</div>'; }
         // 次の出会い・結婚のチャンス年（直近から最初の1つを必ず明示）
         var nextMeet=meet[0], nextMarry=marry[0];
         if(nextMeet||nextMarry){ b+=para('<b>◆ 次のチャンス</b>：'+[nextMeet?'出会いは<b>'+nextMeet.y+'年</b>（'+nextMeet.why+'）が直近':'', nextMarry?'ご縁が固まりやすいのは<b>'+nextMarry.y+'年</b>（'+nextMarry.why+'）が直近':''].filter(Boolean).join('、')+'。ここを一つの目標に動くと動きやすくなります。'); }
@@ -3570,7 +3574,7 @@ window.KANSHI60_DETAIL={
     var healthOne=(shugoEls.length? '疲れたら「'+care+'」を意識するとすぐ整います。元気が出る色は'+col+'。':'生活リズムを一定に保つのが一番の元気の秘訣です。');
     if(ezShow('money')) H+=ezCard('💰🌿 お金・健康のヒント', '<div class="ez-grid"><div><b>💰 お金</b><br><span class="ez-txt">'+moneyOne+'</span></div><div><b>🌿 健康</b><br><span class="ez-txt">'+healthOne+'</span></div></div>');
     if(ezShow('cal') && spouse && window.MonthPillar){ var _mnE=''; try{ var _kb=[nowYear,nowYear+1].filter(function(y){ return _sheetKuuBad(r,y); }); if(_kb.length){ var _f=0; for(var _y=_kb[0]+1;_y<_kb[0]+6;_y++){ if(!_sheetKuuBad(r,_y)){ _f=_y; break; } } _mnE='<p class="ez-note2">💍 '+_kb.join('年・')+'年はひと休みの年なので、おつきあいや話し合いを深める時期にして、入籍・結婚は'+(_f?_f+'年から':'ひと休みの年が明けてから')+'が安心です。</p>'; } }catch(e){}   // 先生の教科書 第14回（2026-11-03）
-      H+=ezCard('📅 恋愛が動く月（今年・来年）', monthlyBlock(nowYear, dm, spouse, 'love', sex, true)+_mnE, 'wide'); }
+      H+=ezCard('📅 恋愛が動く月（今年・来年）', monthlyBlock(nowYear, dm, spouse, 'love', sex, true, r)+_mnE, 'wide'); }
     // 過去のふり返りメモ（直近の空亡の年・冲の年）
     if(!ezSolo){ (function(){ var pkc=pastKuboChong(r); if(!pkc) return; var li='';
       var _ks=(pkc.kubos&&pkc.kubos.length)?pkc.kubos:(pkc.kubo?[pkc.kubo]:[]);
