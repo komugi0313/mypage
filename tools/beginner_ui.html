@@ -490,6 +490,9 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
   }
   function tsBase(){ return String(TSC_TXT.base).replace(/^2人の柱の間に天戦地冲がある場合、/,''); }
   function tsDir(tc){ var x=tc.day||tc.list[0]; return x.aCtrl?WHO()+'の言動が、お相手を押さえつけたり傷つけたりしやすい形です。':'お相手からの圧力を、'+WHO()+'が受けとめてストレスをためやすい形です。'; }
+  function tsPart(tc){ var SC=['家・親族・地元','仕事・職場・暮らしの環境','自分自身','子ども・将来・趣味'], o=[];
+    tc.list.forEach(function(x){ var w=WHOt()+'の'+SC[x.i]+'と、お相手の'+SC[x.j]+'が関わる場面'; if(o.indexOf(w)<0) o.push(w); });
+    return 'ふだんの2人の関係ではなく、'+o.slice(0,3).join('・')+'で、考え方や進め方の違いが出やすい組み合わせです。その場面では、相手を思いどおりに動かそうとせず、言い方とペースに気をつけましょう。'; }
   // 天戦地冲の相性を、短い要点に分けて見せる（文章の壁にしない）
   function tsPoints(tc){
     var x=tc.day||tc.list[0];
@@ -511,7 +514,9 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
       '<div class="bgl">最高＞とてもよい＞よい＞ふつう＞かみ合いにくい＞違いが大きめ</div><div class="now">'+
       row('心の相性（性格・価値観）',S,CGRADE_STEM_TAKE[d.gc.stem]||CGRADE_STEM_TAKE['普通'])+
       row('一緒にいるときの居心地',B,CGRADE_BRANCH_TAKE[d.gc.branch]||CGRADE_BRANCH_TAKE['普通'])+'</div>';
-    if(d.tc.any){
+    if(d.tc.any&&!d.tc.day){   // 日柱どうしではない（年柱・月柱・時柱どうし）ぶつかりは、その場面の話として弱めに（PROの「日柱以外は強く扱わない」と同じ。2026-11-04）
+      h+='<div class="warn" style="margin-top:12px"><div class="wt">⚡ 一部の場面で、ぶつかりやすい組み合わせがあります</div><div class="how" style="color:var(--ink)">'+esc(tsPart(d.tc))+'</div></div>';
+    } else if(d.tc.any){
       h+='<div class="warn" style="margin-top:12px"><div class="wt">⚡ 正面からぶつかりやすい組み合わせがあります</div>'+
         '<div class="how" style="color:var(--ink)">刺激が強く、ぶつかりやすい相性です。注意したいポイントをまとめました。</div>'+
         '<ul class="tsp">'+tsPoints(d.tc).map(function(x){ return '<li><span class="ti">'+x[0]+'</span><span><b>'+x[1]+'</b>'+esc(x[2])+'</span></li>'; }).join('')+'</ul>'+
@@ -534,10 +539,13 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
     var d=compatData(a,b,rt), S=CGRADE[d.gc.stem]||CGRADE['普通'], B=CGRADE[d.gc.branch]||CGRADE['普通'], t=[];
     var ld=safe(function(){ return (typeof pkCompatOffLead==='function')?pkCompatOffLead(a,b,q||'',true):''; },'');   // 1行目は判定（PROと同じ向き）で問いに答える（2026-11-02）
     if(ld) t.push(ld);
+    var st=safe(function(){ return (q&&typeof pkCompatSit==='function')?pkCompatSit(a,b,q,true):null; },null);   // 告白された・復縁などの相談：すぐ下に「どうすればよいか」（PROと同じ中身・専門用語なし。2026-11-04）
+    if(st&&st.how&&st.how.length) t.push('【どうすればよいか】\n'+st.how.map(function(x){ return '・'+x; }).join('\n'));
     t.push((ld?'生まれた日どうしの一部だけを見ると、':'2人の相性は、')+'心の相性が「'+(SUB[S.lab]||S.lab)+'」、一緒にいるときの居心地が「'+(SUB[B.lab]||B.lab)+'」です。');
     t.push('【心の相性（性格・価値観）】\n'+(CGRADE_STEM_TAKE[d.gc.stem]||CGRADE_STEM_TAKE['普通']));
     t.push('【一緒にいるときの居心地】\n'+(CGRADE_BRANCH_TAKE[d.gc.branch]||CGRADE_BRANCH_TAKE['普通']));
-    if(d.tc.any) t.push('【正面からぶつかりやすいところ】\n2人には、正面からぶつかりやすい組み合わせがあります。刺激が強く、注意したい相性です。\n'+tsPoints(d.tc).map(function(x){ return '・**'+x[1]+'**'+x[2]; }).join('\n'));
+    if(d.tc.any&&!d.tc.day) t.push('【一部の場面でぶつかりやすいところ】\n'+tsPart(d.tc));
+    else if(d.tc.any) t.push('【正面からぶつかりやすいところ】\n2人には、正面からぶつかりやすい組み合わせがあります。刺激が強く、注意したい相性です。\n'+tsPoints(d.tc).map(function(x){ return '・**'+x[1]+'**'+x[2]; }).join('\n'));
     if(a.now){ var ny=a.now.year;
       var wj=function(L){ return L.join('・'); };  // 見えない文字は入れない（コピー・共有したときに文字化け・検索できない原因になるため）
       var tm=safe(function(){ return (typeof pkCompatOffTiming==='function')?pkCompatOffTiming(a,b,true,null):''; },'');   // 2人の縁が動く月（PROと同じ計算）

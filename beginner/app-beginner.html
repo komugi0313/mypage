@@ -3768,6 +3768,7 @@ function _kgDayRow(ev){var wd=['日','月','火','水','木','金','土'][ev.dat
 /* 節月の区切り（例：戌の月＝10月8日ごろ〜11月6日ごろ）が伝わる言い方（「10月〜11月上旬」）。11月2日に「10月ごろ」と出て過ぎた月に見えないように（2026-11-02） */
 function pkMonRange(m){ m=+m; return m+'月〜'+(m===12?'翌1':String(m+1))+'月上旬'; }
 function pkMonLab(y,m){ return y+'年'+pkMonRange(m); }
+function pkMonLabN(y,m){ return pkNowLab(pkMonLab(y,m)); }   // 相性の縁が動く月：今日（日本時間）を含む月は「いま〜11月上旬」（1人の縁が動く月の pkNowLab と同じ決まり。2026-11-04）
 function _kgMonRow(ev){var ym=ev.calYear+'-'+String(ev.calMonth).padStart(2,'0');var mini=(ev.stars&&ev.stars.length?ev.stars.slice(0,3).join('・'):'');
   return `<div class="kg-row ${ev.jud}" data-m="${ym}"><span class="kg-date">${ev.calYear}年${ev.calMonth}月<small style="display:block;font-size:10.5px;font-weight:700;opacity:.85">〜${ev.calMonth===12?'翌1':ev.calMonth+1}月上旬</small></span><span class="kg-gz">${ev.ganzhi}</span><span class="kg-star">${ev.star}</span><span class="kg-badge ${ev.jud}">${_kgBadge(ev.jud)}</span>${mini?`<span class="kg-mini">${mini}</span>`:''}</div>`;}
 function kingunHTML(c){
@@ -6014,6 +6015,8 @@ const NAYIN_COMBO={
   年月:{label:'年柱・月柱',short:'逆境ほど集中力を発揮して成し遂げる人',text:'逆境になればなるほど、高い集中力で成し遂げていくタイプです。社会で実現したいことと、親や目上から求められる役割にギャップを感じることもあるでしょう。目上に理解されにくかったり、自分のやり方が人と違うことで苦労した経験が糧となり、柔軟な調整力で折り合いをつけられることが強みになります。少し頑固な面もあるかもしれませんが、今までのやり方を変えていく勇気を持ちます。譲れないこだわりは持ち続けながら、多様なアプローチで専門的な分野を突き詰めることもありそう。物事の両端を知っていることが、唯一無二の持ち味になっていきます。人に喜ばれる能力の活かし方を探求すると、眠っている才能が次第に発揮されるでしょう。'}};
 /* 納音の相性（2人の日柱が同じ納音）。④の意味。 */
 const NAYIN_AISHO='相手に不思議と魅力を感じる一方で、自分とは真逆な生き方に見え、仲を深めて相手の良さに気づくには時間が必要かもしれません。まずはお互いの違いを受け入れることが大切。違う意見も理解しようと耳を傾け、視野を広げていきましょう。お互いを尊重する気持ちを持ち合えると、新しいものの見方や違うやり方を吸収していけます。恋愛では第一印象はあまり良くないこともあります。会話を重ねるうちに精神面で分かり合えることに気づき、惹かれていきます。ちょっとしたすれ違いはあれど、なぜか通じ合う不思議なフィット感を得られる相手。仕事では最初にゴールイメージの共有を。仲間意識を持って相手の意見を聞くと、良きアドバイスとして取り入れやすく、今まで以上の成果を得られるでしょう。';
+/* 2人の日柱が干支までまったく同じ（律音）ときの納音の文＝似た者どうし（ツール独自の言葉。2026-11-04） */
+const NAYIN_RITCHIN='似た者どうしで、説明しなくても感覚や考え方が通じやすい間柄です。そのぶん、同じところで迷ったり、同じことでつまずいたりしやすい面もあります。得意なことが重なるので、役割を分けておき、どちらかが立ち止まったときはもう一人が支える形にすると、2人の力が活きます。';
 function nayinAishoFor(rt){ if(!(rt&&rt.useSpouse===false)) return NAYIN_AISHO; return NAYIN_AISHO.replace('恋愛では第一印象はあまり良くないこともあります。会話を重ねるうちに精神面で分かり合えることに気づき、惹かれていきます。','第一印象はあまり良くないこともあります。会話を重ねるうちに精神面で分かり合えることに気づき、距離が縮まっていきます。'); }   /* 家族・友人・仕事の相性に恋愛の文を出さない */
 function nayinCombos(c){
   const Y=nayinOf(c.pillars[0].stem,c.pillars[0].branch),M=nayinOf(c.pillars[1].stem,c.pillars[1].branch),D=nayinOf(c.pillars[2].stem,c.pillars[2].branch);
@@ -8295,7 +8298,7 @@ function pkConsultPeopleLines(c,q){ const P=pkConsultPeople(c,q), pro=[], plain=
   P.forEach(function(o){ if(typeof window!=='undefined') window.__pkRelOv=o.rel||'love';   // その人との関係（夫婦・家族・仕事など）で相性を見る
     const b=o.c, cb=compatBalance(c,b), ad=attractionDir(c,b,'本人','お相手'), ap=attractionDir(c,b,'あなた','お相手'), R=compatRoles(c,b), TL=compatTrioLines(c,b), CM=compatMonths(c,b);
     const top=function(g,n){ return cb.items.filter(function(x){ return x.good===g; }).sort(function(p,q){ return q.w-p.w; }).slice(0,n).map(function(x){ return x.kind.replace(/（.*$/,'')+'（'+x.where+'）'; }); };
-    const both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }).slice(0,3).map(function(x){ return pkMonLab(x.y,x.m); });
+    const both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }).slice(0,3).map(function(x){ return pkMonLabN(x.y,x.m); });
     let ck=[]; try{ ck=checkPoints(b,true).check.slice(0,2).map(function(x){ return x.pro.split('：')[0]+'＝'+(x.pro.split('：')[1]||''); }); }catch(e){}
     const love=ad?{x:ad.x.love.length,y:ad.y.love.length}:{x:0,y:0}, base=cb.items.filter(function(x){ return x.good&&/方合|三合|支合|天地徳合|律音/.test(x.kind); }).reduce(function(t,x){ return t+x.w; },0);
     const en=(R.energy[0]||{}).v||'even';
@@ -8313,7 +8316,7 @@ function pkConsultPeopleLines(c,q){ const P=pkConsultPeople(c,q), pro=[], plain=
   const LVp=S.filter(function(x){ return /^(love|married|konkatsu)$/.test(x.rel||'love'); });   // くらべ（どちらが良いか）は、恋愛の相手が2人のときだけ。家族・仕事の人はくらべない
   if(LVp.length>=2&&LVp.length===S.length){ const mx=function(k){ const v=S.slice().sort(function(a,b){ return b[k]-a[k]; }); return v[0][k]>v[1][k]?v[0].lab:''; };
     const bL=mx('base'), lL=mx('love'), up=S.filter(function(x){ return x.en==='up'; }).map(function(x){ return x.lab; });
-    const warn=compatMonths(c,P[0].c).filter(function(x){ return x.A.w.length; }).map(function(x){ return pkMonLab(x.y,x.m); });   // 本人の注意の月（配偶宮が刑・冲）を年つきで
+    const warn=compatMonths(c,P[0].c).filter(function(x){ return x.A.w.length; }).map(function(x){ return pkMonLabN(x.y,x.m); });   // 本人の注意の月（配偶宮が刑・冲）を年つきで
     // 命式の相性のくらべ（数字と、それぞれのよいところ・気をつけたいところ）。すすめるときは必ずこの理由で（鑑定者本人の指示 2026-10-25「今の彼を進める納得できる理由をツールでも出す」）
     const A0=S[0], B0=S[1], dn=Math.round((A0.net-B0.net)*10)/10, lean=Math.abs(dn)<2?null:(dn>0?A0:B0), oth=lean?(lean===A0?B0:A0):null; V.two=1; V.lean=lean?lean.lab:''; V.dn=Math.abs(dn);
     const why=function(x,y){ const g=[], w=[];
@@ -8564,9 +8567,13 @@ function compatExtras(a,b,rt){
   // ⑥ 納音の相性：2人の日柱が「同じ納音」のときだけ成立する特別な相性（④）
   (()=>{const na=nayinOf(a.pillars[2].stem,a.pillars[2].branch),nb=nayinOf(b.pillars[2].stem,b.pillars[2].branch);if(!na||!nb)return;
     if(na.name!==nb.name)return; // 同じ納音でなければ納音の相性は成立しない
+    const gA=a.pillars[2].stem+a.pillars[2].branch, gB=b.pillars[2].stem+b.pillars[2].branch;
+    if(gA===gB){ R.push({key:'納音の相性',good:'good',   /* 律音（日柱の干支までまったく同じ）は「真逆に見える」納音の文を使わない（2026-11-04） */
+      ai:`2人の日柱は干支までまったく同じ(${gA})＝律音なので、納音(${na.name})も同じ。${NAYIN_RITCHIN}`,
+      local:`2人の日柱は干支までまったく同じ（**${gA}**＝**律音**）なので、納音の**${na.name}**も同じです。${NAYIN_RITCHIN}`}); return; }
     R.push({key:'納音の相性',good:'good',
-      ai:`2人の日柱が同じ納音(${na.name})＝納音の相性。${nayinAishoFor(rt)}`,
-      local:`2人の日柱が同じ**${na.name}**＝**納音の相性**です。${nayinAishoFor(rt)}`});})();
+      ai:`2人の日柱が同じ納音(${na.name})＝納音の相性（${gA}と${gB}は同じ納音の陰と陽の組）。${nayinAishoFor(rt)}`,
+      local:`2人の日柱が同じ**${na.name}**＝**納音の相性**です。同じ納音でも、${gA}と${gB}は陰と陽の組なので、${nayinAishoFor(rt)}`});})();
   // ⑦ お互いの地支の冲・刑＝マイナスの引っかかり（害・破は当流派では使わない＝鑑定者本人の指示 2026-10-26）（配偶宮＝日支を最重要に、他の柱も拾う）
   (()=>{
     const PN={0:'年柱（家系・ルーツ・目上）',1:'月柱（仕事・社会・親）',2:'日柱（自分・パートナー）',3:'時柱（将来・子供・目下）'};
@@ -8757,7 +8764,7 @@ function compatAnalysis(a,b,rt){
   { const love=!!(rt&&rt.useSpouse!==false), X=[]; [[a,b,'本人','お相手'],[b,a,'お相手','本人']].forEach(function(q){ crossStars(q[0],q[1],love).forEach(function(c){ X.push(q[2]+'から見て、'+q[3]+'の'+c.at.map(function(z){ return z.label+'「'+z.gz+'」'; }).join('・')+'が'+q[2]+'の'+c.star+'に当たる＝'+q[2]+'にとって'+q[3]+'は'+c.mean); }); });
     if(X.length) L.push('【惹かれ合う星＝相手の命式に自分の吉凶星がある（鑑定文の「惹かれ合うところ」で必ず書く。どちらから見た星かを取りちがえない）】'+X.join('／'));
     try{ const CM=compatMonths(a,b), bothM=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }), warnM=CM.filter(function(x){ return x.A.w.length||x.B.w.length; });
-      L.push('【2人の縁が動く月（これから12ヶ月・ツールの判定。時期を答えるときはこの月を使う）】2人とも縁が動く月：'+(bothM.length?bothM.map(function(x){ return pkMonLab(x.y,x.m)+'（'+x.gz+'の月）＝本人：'+x.A.g.join('・')+'／お相手：'+x.B.g.join('・'); }).join('／'):'なし')+'。注意の月：'+(warnM.length?warnM.map(function(x){ return pkMonLab(x.y,x.m)+'（'+x.gz+'の月）'+(x.A.w.length?'＝本人の配偶宮と'+x.A.w.join('・'):'')+(x.B.w.length?'＝お相手の配偶宮と'+x.B.w.join('・'):'')+(x.A.g.length&&x.B.g.length?'（2人とも縁は動くが、大事な話・決断は慎重に）':''); }).join('／'):'なし')+'。注意の月は「2人とも縁が動く月」として書かない。'+(function(){ if(!pkRelLove()) return ''; const n0=(a.now&&a.now.year)||new Date().getFullYear(), ys=[n0,n0+1,n0+2].concat(bothM.map(function(x){ return pkMonAY(x.y,x.m); })), ba=ys.filter(function(y,i){ return ys.indexOf(y)===i&&pkKuuBad(a,y); }), bb=ys.filter(function(y,i){ return ys.indexOf(y)===i&&pkKuuBad(b,y); }); if(!ba.length&&!bb.length) return ''; const f=pkKuuFree([a,b],Math.min.apply(null,ba.concat(bb))+1);
+      L.push('【2人の縁が動く月（これから12ヶ月・ツールの判定。時期を答えるときはこの月を使う）】2人とも縁が動く月：'+(bothM.length?bothM.map(function(x){ return pkMonLabN(x.y,x.m)+'（'+x.gz+'の月）＝本人：'+x.A.g.join('・')+'／お相手：'+x.B.g.join('・'); }).join('／'):'なし')+'。注意の月：'+(warnM.length?warnM.map(function(x){ return pkMonLabN(x.y,x.m)+'（'+x.gz+'の月）'+(x.A.w.length?'＝本人の配偶宮と'+x.A.w.join('・'):'')+(x.B.w.length?'＝お相手の配偶宮と'+x.B.w.join('・'):'')+(x.A.g.length&&x.B.g.length?'（2人とも縁は動くが、大事な話・決断は慎重に）':''); }).join('／'):'なし')+'。注意の月は「2人とも縁が動く月」として書かない。'+(function(){ if(!pkRelLove()) return ''; const n0=(a.now&&a.now.year)||new Date().getFullYear(), ys=[n0,n0+1,n0+2].concat(bothM.map(function(x){ return pkMonAY(x.y,x.m); })), ba=ys.filter(function(y,i){ return ys.indexOf(y)===i&&pkKuuBad(a,y); }), bb=ys.filter(function(y,i){ return ys.indexOf(y)===i&&pkKuuBad(b,y); }); if(!ba.length&&!bb.length) return ''; const f=pkKuuFree([a,b],Math.min.apply(null,ba.concat(bb))+1);
         return '【結婚・入籍の時期（先生の教科書 第14回：行運の空亡は結婚を避ける）】解けない空亡の年＝'+(ba.length?'本人：'+ba.join('年・')+'年':'')+(ba.length&&bb.length?'／':'')+(bb.length?'お相手：'+bb.join('年・')+'年':'')+'。この年は交際・話し合い・結婚の準備を深める年にして、入籍・結婚をすすめない（「入籍は空亡でない'+(f||'')+'年からが安心」のように書く）。合・冲で解ける空亡の年は避ける年に数えない。'; })()); }catch(e){}
     try{ const cb=checkPoints(b,love), ca=checkPoints(a,love); L.push('【お相手を知るためのチェックポイント（ツールの判定。「どうすればよいか」に活かす。悪い人と決めつけない）】お相手で確かめること：'+cb.check.map(function(x){ return x.pro; }).join('／')+'。本人がお相手から見られやすいところ：'+ca.check.map(function(x){ return x.pro; }).join('／')); }catch(e){}
     try{ const RL=compatRoles(a,b); L.push('【2人の役割と場面＝ツールの判定（鑑定文で必ず使う：①お互いの役割は「'+(rt&&rt.kizuna||'')+'」か「どうすればよいか」に、②一緒にいて調子が上がる／疲れやすいは「どうすればよいか」に、③文昌貴人・駅馬は参考として一言、④どの場面で起きる話かは、合・冲を書くときに場面として書く）】①役割：'+RL.role.map(function(x){ return x.pro; }).join('／')+'。②調子：'+RL.energy.map(function(x){ return x.pro; }).join('／')+(RL.stars.length?'。③参考の星：'+RL.stars.map(function(x){ return x.pro; }).join('／'):'')+(RL.scene.length?'。④場面：'+RL.scene.map(function(x){ return x.pro; }).join('／'):'')); }catch(e){}
@@ -8920,17 +8927,78 @@ function compatTimingHTML(a,b,rt){
   }catch(e){ return ''; }
 }
 /* 通信できないときの相性の答えの1行目：判定（compatBalance）に合わせて問いに答える（PRO・ビギナー同じ向き。2026-11-02） */
-function pkCompatOffLead(a,b,q,plain){ try{ const cb=compatBalance(a,b), CM=compatMonths(a,b), both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }), warn=CM.filter(function(x){ return x.A.w.length||x.B.w.length; });
+function pkCompatOffLead(a,b,q,plain){ try{ { const _st=q?pkCompatSit(a,b,q,plain):null; if(_st&&_st.lead) return _st.lead; }   // 告白された・復縁などの相談は、その問いに1行目で答える（2026-11-04）
+  const cb=compatBalance(a,b), CM=compatMonths(a,b), both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }), warn=CM.filter(function(x){ return x.A.w.length||x.B.w.length; });
   const s1=plain?'2人の生まれ持った相性を全部合わせて見ると、'+(cb.cls==='good'?'良いところが多い組み合わせです。':(cb.cls==='bad'?'気をつけたいところが多めの組み合わせです。':'良いところと気をつけたいところが、同じくらいの組み合わせです。'))
     :'2人の命式の相性を全部合わせて見ると、「'+cb.verdict+'」です（良い点'+cb.good+'／注意点'+cb.bad+'）。';
   let s2=''; const tp=q?classifyCompatQ(q):'';
-  if(tp==='timing'){ if(both.length) s2='2人とも縁が動くのは'+pkMonLab(both[0].y,both[0].m)+'です。'; else { const gy=compatGoodYears(a,b,pkRelLove()); if(gy.length) s2='2人の縁が動きやすいのは'+gy[0].year+'年です。'; } }
-  else if(tp==='clash'&&warn.length) s2='気持ちが揺れやすく、大事な話を避けたいのは'+pkMonLab(warn[0].y,warn[0].m)+'です。';
+  if(tp==='timing'){ if(both.length) s2='2人とも縁が動くのは'+pkMonLabN(both[0].y,both[0].m)+'です。'; else { const gy=compatGoodYears(a,b,pkRelLove()); if(gy.length) s2='2人の縁が動きやすいのは'+gy[0].year+'年です。'; } }
+  else if(tp==='clash'&&warn.length) s2='気持ちが揺れやすく、大事な話を避けたいのは'+pkMonLabN(warn[0].y,warn[0].m)+'です。';
   try{ s2=pkStampYears(s2,birthYearOf(a),birthYearOf(b)); }catch(e){}
   return s1+s2; }catch(e){ return ''; } }
+/* 相性の相談の種類（恋人・夫婦・婚活の相性だけ）：告白された／告白したい／復縁／別れるか／脈あり／付き合うか迷う（2026-11-04） */
+function pkCompatQKind(q){ q=String(q||''); if(!q) return '';
+  if(/告白され|告られ|コクられ|付き合って(?:ほしい|欲しい|ください)[^。]{0,6}(?:と|って)言われ|好き(?:だ|です)?(?:と|って)言われ|交際を申し込まれ|プロポーズされ|求婚され/.test(q)) return 'confessed';
+  if(/復縁|やり直(?:し|せ|す|した)|よりを戻|ヨリを戻|元彼|元カレ|元カノ|元夫|元妻|元恋人|戻りたい|戻れ(?:る|ます)/.test(q)) return 'reunion';
+  if(/別れ(?:る|た|よう|ようか|るべき|たい|を考え|話)|離婚|距離を置|終わりにし/.test(q)) return 'breakup';
+  if(/告白(?:したい|しよう|する|して(?:も|いい|よい|みた)|のタイミング|すべき)|気持ちを伝え|想いを伝え|思いを伝え|好きと伝え|プロポーズ(?:したい|しよう|する|して)/.test(q)) return 'confess';
+  if(/脈あり|脈は|脈が|脈って|どう思って|好意(?:が|は|を持)|(?:彼|彼女|相手|お相手)[^。]{0,6}(?:気持ち|本心|本音)|本気(?:なの|ですか|か)|好きでいて/.test(q)) return 'myaku';
+  if(/付き合(?:う|っても|うべき|うか|った方|ったほう|っていい)|交際(?:する|して)|結婚(?:する|して)(?:も|いい|べき)|結婚(?:するか|を)迷/.test(q)) return 'decide';
+  return ''; }
+/* 相性の相談の1行目と「どうすればよいか」：惹かれ方の向き（attractionDir）・大きな特徴（律音など）・2人とも縁が動く月／注意の月（compatMonths）・判定（compatBalance）から。決めるのは本人（押し付けない）。PRO・ビギナー・オンラインへの渡しで同じ向き */
+function pkCompatSit(a,b,q,plain){ try{ if(!pkRelLove()) return null; const kd=pkCompatQKind(q); if(!kd) return null;
+  const cb=compatBalance(a,b), ad=attractionDir(a,b,'あなた','お相手'), CM=compatMonths(a,b);
+  const both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }), warn=CM.filter(function(x){ return x.A.w.length||x.B.w.length; }), one=CM.filter(function(x){ return (x.A.g.length||x.B.g.length)&&!x.A.w.length&&!x.B.w.length; });
+  const run=function(L){ if(!L.length) return ''; let k=0; while(k+1<L.length&&(L[k+1].y*12+L[k+1].m)===(L[k].y*12+L[k].m+1)) k++; if(!k) return pkMonLabN(L[0].y,L[0].m); const e=L[k].m===12?1:L[k].m+1, nx=(L[k].y>L[0].y||L[k].m===12); return pkNowLab(L[0].y+'年'+L[0].m+'月〜'+(nx?'翌':'')+e+'月上旬'); };   // 続いている縁の月は1つにまとめる（「いま〜12月上旬」）
+  const bm=both.length?run(both):(one.length?run(one):''), wm=warn.length?pkMonLabN(warn[0].y,warn[0].m):'';
+  const X=ad?ad.x.love.length:0, Y=ad?ad.y.love.length:0;   // X＝あなた→お相手に恋愛の星／Y＝お相手→あなた
+  const MS=plain?'生まれ持った相性では':'命式では', VD=plain?(cb.cls==='good'?'良いところが多い組み合わせ':(cb.cls==='bad'?'気をつけたいところが多めの組み合わせ':'良いところと気をつけたいところが同じくらいの組み合わせ')):'「'+cb.verdict+'」';
+  const att=Y&&X?'2人ともお互いに惹かれやすい組み合わせ':(Y?'お相手のほうが強く惹かれていて、あなたからはときめきより安心・信頼を感じやすい組み合わせ':(X?'あなたのほうがお相手に惹かれやすい組み合わせ':'どちらか一方が強く惹かれる形はなく、恋愛より信頼で結ばれやすい組み合わせ'));
+  let big=''; try{ const BF=compatBigFeatures(a,b); if(BF.some(function(x){ return x.pl==='日柱'; })) big=plain?'2人は生まれた日の星がまったく同じ「合わせ鏡」のご縁で、わかり合いやすい相手です。':'2人は日柱が同じ干支（律音）の合わせ鏡の縁で、わかり合いやすい相手です。'; else if(BF.some(function(x){ return x.k==='tk'; })) big=plain?'2人は生まれ持った星どうしが二重に結びつく、強いご縁です。':'2人は天地徳合のある、強く結びつく縁です。'; }catch(e){}
+  const when=function(v){ return bm?'返事は'+(wm?'気持ちが揺れやすい'+wm+'を避けて、':'')+bm+'のうちに'+v:'返事は'+(wm?'気持ちが揺れやすい'+wm+'を避けて、':'')+'あせらず落ち着いたときに'+v; };
+  let lead='', H=[];
+  if(kd==='confessed'){
+    lead='告白への返事は、無理に合わせず、あなたの今の気持ちで決めてかまいません。'+MS+att+'なので、'+(Y&&!X?'迷っているなら急いで答えを出さず、まず「伝えてくれてありがとう」と感謝を返し、'+when('伝えましょう。'):(X?'少しでも前向きな気持ちがあるなら、'+when('素直に伝えると良い流れに乗りやすいでしょう。'):'気持ちが固まるまで急がず、'+when('伝えましょう。')));
+    H.push('まず「伝えてくれてありがとう」と感謝を返しましょう。答えが決まっていなくても、ここで関係は険悪になりにくくなります。');
+    if(Y&&!X) H.push('お相手の気持ちが大きいぶん、お付き合いしないときは「人として大切に思っている」ことと「恋人としては考えられない」ことを分けて伝えると、お相手も受けとめやすくなります。');
+    if(big) H.push(big+'落ち着いて正直な気持ちを伝えれば、わかってもらいやすいでしょう。');
+    H.push('付き合う・付き合わないのどちらでも、返事をあいまいなまま長くのばさないほうが、まわりとの関係もこじれにくくなります。');
+  } else if(kd==='confess'){
+    lead=(bm?'気持ちを伝えるなら、'+(both.length?'2人とも縁が動く':'縁が動く')+bm+'がいちばん近いタイミングです。':'これから12ヶ月は2人とも縁が動く月がないので、まずは一緒に過ごす時間をふやして関係を深める時期です。')+MS+att+'なので、'+(Y?'思いきって伝えてよいでしょう。':'まず2人で話す時間をふやしてから伝えると、受けとめてもらいやすいでしょう。');
+    if(wm) H.push(wm+'は気持ちが揺れやすい月なので、大事な話は避けましょう。');
+    if(big) H.push(big);
+    H.push('答えを急がせず、お相手が考える時間を残して伝えると、どちらの答えでも関係がこわれにくくなります。');
+  } else if(kd==='reunion'){
+    lead='復縁の可能性は'+(cb.cls==='bad'?'今は低めですが、なくなったわけではありません。':(cb.cls==='good'&&(X||Y)?'あります（相性の土台は良い組み合わせです）。':'あります。'))+(bm?'動くなら'+bm+'が近いタイミングで、':'')+(wm?wm+'は大事な話を避けましょう。':(bm?'あせらず連絡のきっかけを作りましょう。':'あせらず、まずは自分の毎日を整えましょう。'));
+    H.push('別れた理由をふり返り、同じことをくり返さない形を自分の中で決めてから連絡しましょう。');
+    if(big) H.push(big);
+    H.push('お相手の気持ちは、お相手が決めることです。押しすぎず、軽いやりとりから始めましょう。');
+  } else if(kd==='breakup'){
+    lead='別れる・続けるはあなたが決めることですが、'+(plain?'2人の生まれ持った相性は':'命式で見た2人の相性は')+VD+'です。答えを出すなら、'+(wm?'気持ちが揺れやすい'+wm+'を避け、':'')+(bm?bm+'に':'')+'一度落ち着いて話し合ってからにしましょう。';
+    H.push('不満や不安を一度に全部ぶつけず、いちばん大事な1つから話しましょう。');
+    if(big) H.push(big+'気持ちを言葉にすれば通じやすい相手です。');
+    H.push('自分を責めすぎず、決めるのはあなた自身です。');
+  } else if(kd==='myaku'){
+    lead=Y?'脈はあると見てよいでしょう。'+MS+(X?'2人ともお互いに惹かれやすい組み合わせです。':'お相手のほうがあなたに'+((ad.py&&ad.py.plain)||'')+'惹かれやすい組み合わせです。')
+      :MS+(plain?'お相手からあなたへ強く惹かれる形は出ていないので、':'お相手からあなたへの恋愛の星（咸池・紅艶）は出ていないので、')+'今は友だちとしての安心感が先に立ちやすい関係です。'+(bm?bm+'に2人で話す時間をふやすと、気持ちが見えやすくなります。':'2人で話す時間をふやすと、気持ちが見えやすくなります。');
+    if(Y&&bm) H.push('縁が動く'+bm+'に、2人で話す時間をふやしましょう。');
+    if(wm) H.push(wm+'は気持ちが揺れやすい月なので、大事な話は避けましょう。');
+    if(big) H.push(big);
+    H.push('お相手の本当の気持ちは、お相手にしかわかりません。決めつけず、ふだんのやりとりの中で確かめましょう。');
+  } else if(kd==='decide'){
+    lead='付き合うかどうかはあなたが決めてよいことですが、'+MS+att+'です。'+(bm?'前向きに考えるなら'+bm+'のうちに、':'')+(wm?'迷うなら'+wm+'は大事な答えを出さないでおきましょう。':'迷ううちは急がず、気持ちが固まってから答えましょう。');
+    if(big) H.push(big);
+    H.push('「好き」の気持ちと「一緒にいて安心できるか」の両方を、自分に聞いてみましょう。');
+    H.push('決めるのはあなたです。どちらを選んでも、お相手への感謝は言葉にして伝えましょう。');
+  }
+  try{ lead=pkStampYears(lead,birthYearOf(a),birthYearOf(b)); H=H.map(function(x){ return pkStampYears(x,birthYearOf(a),birthYearOf(b)); }); }catch(e){}
+  try{ lead=pkSameSexWord(lead,a,b); H=H.map(function(x){ return pkSameSexWord(x,a,b); }); }catch(e){}
+  return {kind:kd, lead:lead, how:H}; }catch(e){ return null; } }
+/* オンラインの相性の相談に渡す「答えの方向」（通信なしの1行目と同じ向き） */
+function pkCompatSitText(a,b,q){ const S=pkCompatSit(a,b,q,false); if(!S) return ''; return '\n【この相談の答えの方向＝ツールの計算（惹かれ方の向き・大きな特徴・2人とも縁が動く月／注意の月・判定）。1行目はこの向きで問いに答える（2文まで・前置きなし。決めるのは本人なので押し付けない）】'+S.lead+'\n【「どうすればよいか」に入れること】'+S.how.join('／'); }
 /* 通信できないときの相性の時期の段：2人の縁が動く月（compatMonths）と、縁が深まる年（干支・年齢つき） */
 function pkCompatOffTiming(a,b,plain,good){ try{ const CM=compatMonths(a,b), both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }), one=CM.filter(function(x){ return (x.A.g.length||x.B.g.length)&&!x.A.w.length&&!x.B.w.length&&both.indexOf(x)<0; }), warn=CM.filter(function(x){ return x.A.w.length||x.B.w.length; });
-  const L=[]; const ml=function(A){ return A.slice(0,3).map(function(x){ return pkMonLab(x.y,x.m); }).join('・'); };
+  const L=[]; const ml=function(A){ return A.slice(0,3).map(function(x){ return pkMonLabN(x.y,x.m); }).join('・'); };
   L.push((plain?'2人とも縁が動く月（これから1年）：':'2人とも縁が動く月（これから12ヶ月）：')+(both.length?ml(both):(one.length?'ありません（片方だけ縁が動く月は'+ml(one)+'）':'ありません'))+'。');
   if(warn.length) L.push((plain?'気持ちが揺れやすく、大事な話は避けたい月：':'注意の月（どちらかの配偶宮が冲・刑）：')+ml(warn)+'。');
   if(good&&good.length) L.push((plain?'縁が深まりやすい年：':'縁が深まりやすい年：')+good.slice(0,5).map(function(g){ return g.year+'年'; }).join('・')+'。');
@@ -8988,7 +9056,9 @@ function classifyCompatQ(q){
 }
 function localCompatAnswer(A,B,na,nb,rt,ask){
   rt=rt||RELTYPES.love;
-  const topic=classifyCompatQ(ask);
+  const _sit=pkCompatSit(A,B,ask,false);   // 告白された・復縁などの相談：1行目で問いに答え、すぐ下に「どうすればよいか」（2026-11-04）
+  const topic=_sit?({confessed:'bond',confess:'bond',myaku:'bond',decide:'bond',reunion:'timing',breakup:'clash'}[_sit.kind]||classifyCompatQ(ask)):classifyCompatQ(ask);
+  const _sitBlock=_sit?['【どうすればよいか】',..._sit.how.map(function(x){ return '- '+x; }),(pkCompatOffLead(A,B,'',false)||'')].filter(Boolean):[];
   const q=String(ask).slice(0,40)+(String(ask).length>40?'…':'');
   const aS=A.dayMaster.stem,bS=B.dayMaster.stem,aB=A.pillars[2].branch,bB=B.pillars[2].branch;
   const nA=na?na+'さん':'あなた', nB=nb?nb+'さん':'お相手';
@@ -9012,9 +9082,9 @@ function localCompatAnswer(A,B,na,nb,rt,ask){
   const clashBlock=(head)=>{const L=['【'+head+'】'];
     L.push(clashYears.length?`**${clashYears.slice(0,4).join('・')}**あたりは、価値観やペースの違いが出やすい年（日支の冲）。「相性が悪い」ではなく“見直しの時期”ととらえ、無理に押し通さないのがコツです。`:'大きくぶつかりやすい年は目立ちません。ためこまず、その都度言葉にすると安定します。');return L;};
   const good=compatGoodYears(A,B,rt.useSpouse);
-  if(topic==='general')return localCompat(A,B,na,nb,rt);   // 全体像は従来のまとめ（お休み中の文言なし）
+  if(topic==='general')return _sit?[_sit.lead,..._sitBlock].join('\n')+'\n'+localCompat(A,B,na,nb,rt):localCompat(A,B,na,nb,rt);   // 全体像は従来のまとめ（お休み中の文言なし）
   const CLEAD={bond:`${nA}と${nB}の“惹かれ合う点”と相性を、2人の命式から見ていきます。`,timing:'2人の縁が深まりやすい時期と、気をつけたい時期を見ていきます。',clash:'ぶつかりやすい点と、その乗り越え方を2人の命式から見ていきます。',tips:`${rt.tips}を、2人の命式から具体的に見ていきます。`};
-  const L=[pkCompatOffLead(A,B,ask,false)||CLEAD[topic]||CLEAD.bond];   /* 1行目は判定に合わせて問いに答える */
+  const L=[pkCompatOffLead(A,B,ask,false)||CLEAD[topic]||CLEAD.bond,..._sitBlock];   /* 1行目は判定に合わせて問いに答える */
   if(tenju&&(topic==='bond'||topic==='timing'))L.push(`💞 2人は**天地徳合（てんちとくごう）**＝日干が干合し日支も支合する、六十干支でも最良クラスの特別な縁（大吉）。基本はとても良いご縁です。`);
 
   if(topic==='timing'){
@@ -9208,7 +9278,7 @@ function compatMonths(a,b){ try{ const love=pkRelLove(); const ml=monthFortuneLi
     return {y:evA.calYear,m:evA.calMonth,gz:evA.ganzhi,A:_cmCues(a,evA,spA,love),B:_cmCues(b,evB,spB,love)}; }).filter(Boolean); }catch(e){ return []; } }
 function compatMonthsHTML(a,b){ try{ const L=compatMonths(a,b); if(!L.length) return '';
   const both=L.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }), one=L.filter(function(x){ return (x.A.g.length?1:0)+(x.B.g.length?1:0)===1; }), warn=L.filter(function(x){ return x.A.w.length||x.B.w.length; });
-  const lab=function(x,plain){ return pkMonLab(x.y,x.m)+(plain?'':'（'+_kdE(x.gz)+'の月）'); };
+  const lab=function(x,plain){ return pkMonLabN(x.y,x.m)+(plain?'':'（'+_kdE(x.gz)+'の月）'); };
   const why=function(x,plain){ const o=[]; if(x.A.g.length) o.push((plain?'あなた：'+x.A.gp.join('・'):'本人：'+x.A.g.join('・'))); if(x.B.g.length) o.push((plain?'お相手：'+x.B.gp.join('・'):'お相手：'+x.B.g.join('・'))); return o.join('／'); };
   const ww=function(x,plain){ const o=[]; if(x.A.w.length) o.push(plain?'あなたの気持ちが揺れやすい':'本人の配偶宮と'+x.A.w.join('・')); if(x.B.w.length) o.push(plain?'お相手の気持ちが揺れやすい':'お相手の配偶宮と'+x.B.w.join('・')); return o.join('／'); };
   const mk=function(plain){ const li=function(arr,f){ return arr.length?'<ul class="kd-l">'+arr.map(function(x){ return '<li><b>'+lab(x,plain)+'</b>　'+_kdE(f(x,plain))+((f===ww&&x.A.g.length&&x.B.g.length)?'<span style="color:#1F6B3A">（'+(plain?'2人とも縁は動く月ですが、大事な話はゆっくり':'2人とも縁は動くが、大事な話・決断は慎重に')+'）</span>':'')+((f===why&&(x.A.w.length||x.B.w.length))?'<span style="color:#9A1F17">（'+(plain?'気持ちが揺れやすい月でもある':'注意も重なる')+'）</span>':'')+'</li>'; }).join('')+'</ul>':'<div style="font-size:13.5px;margin:2px 0 0 4px">なし</div>'; };
@@ -9531,7 +9601,7 @@ function compatSummaryHTML(a,b,rt){ try{ const cb=compatBalance(a,b), love=pkRel
   if(love){ const ad=attractionDir(a,b,'本人','お相手'); if(ad){ const x=ad.x.love.length, y=ad.y.love.length;
     pro.push('<b>惹かれ方の向き</b>：'+(x&&y?'2人とも惹かれやすい（本人：'+ad.px.lab+'／お相手：'+ad.py.lab+'）':(y?'お相手のほうが強く惹かれている（'+ad.py.lab+'）':(x?'本人のほうが強く惹かれている（'+ad.px.lab+'）':'恋愛の星はどちら向きにもない'))));
     const ap=attractionDir(a,b,'あなた','お相手'); if(ap) plain.push(_kdE(ap.plain)); } }
-  const CM=compatMonths(a,b), lab=function(x){ return pkMonLab(x.y,x.m); }, both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }), warn=CM.filter(function(x){ return x.A.w.length||x.B.w.length; });
+  const CM=compatMonths(a,b), lab=function(x){ return pkMonLabN(x.y,x.m); }, both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }), warn=CM.filter(function(x){ return x.A.w.length||x.B.w.length; });
   pro.push('<b>2人とも縁が動く月</b>：'+(both.length?both.slice(0,3).map(lab).join('・'):'これから12ヶ月はなし（片方だけの月は「縁が動く月」の欄）'));
   pro.push('<b>注意の月</b>：'+(warn.length?warn.slice(0,3).map(lab).join('・'):'これから12ヶ月はなし'));
   plain.push('2人とも縁が動く月：'+(both.length?both.slice(0,3).map(lab).join('・'):'これから12ヶ月はありません')+'。');
@@ -9781,7 +9851,8 @@ async function doCompatAsk(){
   if(!ensureChartAFromForm())return;   // 本人A（上の欄）をその場で計算＝相性だけでも使える
   const base=buildCompatBase(out); if(!base)return;
   const {na,nb,rt,head}=base;
-  const ask=`【相談者(本人A)からの質問】\n${q}\n\nこの質問に、上の「2人の関係の自動分析」を唯一の根拠として答えてください。挨拶や長い前置き、聞かれていない一般的な性格紹介は書かず、質問にだけまっすぐ答える。2人を「${rt.frame}」という前提で扱う。日干の関係・通変星・日支の合冲・五行の補い合い・大運の重なり・${rt.timing}・2人の命式を合わせた相性ポイント（合わせて三合・方合／互いの不足五行を持ち合う／同じ空亡／月支元命の生剋／印の関係・通変星の相生の流れ／日柱の納音の相性（2人の日柱が同じ納音か））など、関係する要素を名指しで挙げ「この要素があるから、こう言える」という理屈を添える。曖昧で誰にでも当てはまる表現は禁止。時期を答えるときは、上の【2人の合が三合・方合になる時期】があれば必ず使う。答えの中で「この2人だけの材料」を3つ以上組み合わせ、理由をつないで書く。【決まり文句の禁止】「お互いを尊重」「コミュニケーションを大切に」「思いやりを忘れずに」「価値観の違いを認め合う」のような、どの2人にも言える言葉だけで終わらせない。使うなら、この2人の材料（どの星・どの柱か）と、具体的な場面・行動（何を・いつ・どう言うか）を必ず添える。材料に出てくる星の名前は、上の書き方の決まりに従う（書かない決まりのときは意味だけを書く）。${rt.useSpouse?'':'\n※この関係では恋愛・結婚・出会い・配偶者の話題は出さないこと。'}\n構成：1行目に結論を一文（前置き・見出しなし）→【見出し】付きの短いブロックを2〜3個（各2〜4文）。時期を聞かれたら大運・今後の年運から具体的な西暦の年を挙げる（断定せず「動きやすい時期」として）。さらに、良い時期だけでなく<b>2人がすれ違い・衝突しやすい“注意な時期”</b>も、互いの日支が冲される年・比劫や官殺が重なる年などを根拠に具体的な西暦・年齢で1つは挙げ、乗り越え方を添える（断定せず「少し気をつけると良い」とやわらかく）。最後に【できること】を2〜3点。大事な語は**太字**。\n注意:繊細な相談でも中立に扱い、特定の事実を断定せず、誰も責めず建設的に。「相性が悪い」「ダメ」などの強い断定や怖がらせる表現は使わず、注意点は「少し気をつけるとより良い」程度のやわらかく前向きな言い方にとどめる。`;
+  let ask=`【相談者(本人A)からの質問】\n${q}\n\nこの質問に、上の「2人の関係の自動分析」を唯一の根拠として答えてください。挨拶や長い前置き、聞かれていない一般的な性格紹介は書かず、質問にだけまっすぐ答える。2人を「${rt.frame}」という前提で扱う。日干の関係・通変星・日支の合冲・五行の補い合い・大運の重なり・${rt.timing}・2人の命式を合わせた相性ポイント（合わせて三合・方合／互いの不足五行を持ち合う／同じ空亡／月支元命の生剋／印の関係・通変星の相生の流れ／日柱の納音の相性（2人の日柱が同じ納音か））など、関係する要素を名指しで挙げ「この要素があるから、こう言える」という理屈を添える。曖昧で誰にでも当てはまる表現は禁止。時期を答えるときは、上の【2人の合が三合・方合になる時期】があれば必ず使う。答えの中で「この2人だけの材料」を3つ以上組み合わせ、理由をつないで書く。【決まり文句の禁止】「お互いを尊重」「コミュニケーションを大切に」「思いやりを忘れずに」「価値観の違いを認め合う」のような、どの2人にも言える言葉だけで終わらせない。使うなら、この2人の材料（どの星・どの柱か）と、具体的な場面・行動（何を・いつ・どう言うか）を必ず添える。材料に出てくる星の名前は、上の書き方の決まりに従う（書かない決まりのときは意味だけを書く）。${rt.useSpouse?'':'\n※この関係では恋愛・結婚・出会い・配偶者の話題は出さないこと。'}\n構成：1行目に結論を一文（前置き・見出しなし）→【見出し】付きの短いブロックを2〜3個（各2〜4文）。時期を聞かれたら大運・今後の年運から具体的な西暦の年を挙げる（断定せず「動きやすい時期」として）。さらに、良い時期だけでなく<b>2人がすれ違い・衝突しやすい“注意な時期”</b>も、互いの日支が冲される年・比劫や官殺が重なる年などを根拠に具体的な西暦・年齢で1つは挙げ、乗り越え方を添える（断定せず「少し気をつけると良い」とやわらかく）。最後に【できること】を2〜3点。大事な語は**太字**。\n注意:繊細な相談でも中立に扱い、特定の事実を断定せず、誰も責めず建設的に。「相性が悪い」「ダメ」などの強い断定や怖がらせる表現は使わず、注意点は「少し気をつけるとより良い」程度のやわらかく前向きな言い方にとどめる。`;
+  try{ ask+=pkCompatSitText(chart,chartB,q); }catch(_e){}   // 告白された・復縁などは、通信なしの1行目と同じ向きを渡す（2026-11-04）
   const easy=`${head}\n\n${ask}\n【書き方＝最重要】「深く、しかし分かりやすく伝わりやすい言葉」で書く。専門用語は使ってよいが、出たらその場でふつうの言葉に短く言いかえる。内容・根拠・深さは削らない。全体750〜950字。`;
   const pro=`${head}\n\n${ask}\n【書き方】四柱推命の専門用語（通変星名・三合・空亡・月支元命・相生相剋など）はそのままの言葉で明示してよい。通変星の相生の流れ（例:「食傷は比劫に生かされる」）は言いかえず通変星の言葉で根拠として書く。プロ向けの本格鑑定として深く。全体750〜950字。`;
   if(dangerKind(q)){ out.innerHTML=dangerHTML(dangerKind(q),q); return; }   // 答えない相談だけは、占いの文章を作らない
@@ -12334,6 +12405,9 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
   }
   function tsBase(){ return String(TSC_TXT.base).replace(/^2人の柱の間に天戦地冲がある場合、/,''); }
   function tsDir(tc){ var x=tc.day||tc.list[0]; return x.aCtrl?WHO()+'の言動が、お相手を押さえつけたり傷つけたりしやすい形です。':'お相手からの圧力を、'+WHO()+'が受けとめてストレスをためやすい形です。'; }
+  function tsPart(tc){ var SC=['家・親族・地元','仕事・職場・暮らしの環境','自分自身','子ども・将来・趣味'], o=[];
+    tc.list.forEach(function(x){ var w=WHOt()+'の'+SC[x.i]+'と、お相手の'+SC[x.j]+'が関わる場面'; if(o.indexOf(w)<0) o.push(w); });
+    return 'ふだんの2人の関係ではなく、'+o.slice(0,3).join('・')+'で、考え方や進め方の違いが出やすい組み合わせです。その場面では、相手を思いどおりに動かそうとせず、言い方とペースに気をつけましょう。'; }
   // 天戦地冲の相性を、短い要点に分けて見せる（文章の壁にしない）
   function tsPoints(tc){
     var x=tc.day||tc.list[0];
@@ -12355,7 +12429,9 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
       '<div class="bgl">最高＞とてもよい＞よい＞ふつう＞かみ合いにくい＞違いが大きめ</div><div class="now">'+
       row('心の相性（性格・価値観）',S,CGRADE_STEM_TAKE[d.gc.stem]||CGRADE_STEM_TAKE['普通'])+
       row('一緒にいるときの居心地',B,CGRADE_BRANCH_TAKE[d.gc.branch]||CGRADE_BRANCH_TAKE['普通'])+'</div>';
-    if(d.tc.any){
+    if(d.tc.any&&!d.tc.day){   // 日柱どうしではない（年柱・月柱・時柱どうし）ぶつかりは、その場面の話として弱めに（PROの「日柱以外は強く扱わない」と同じ。2026-11-04）
+      h+='<div class="warn" style="margin-top:12px"><div class="wt">⚡ 一部の場面で、ぶつかりやすい組み合わせがあります</div><div class="how" style="color:var(--ink)">'+esc(tsPart(d.tc))+'</div></div>';
+    } else if(d.tc.any){
       h+='<div class="warn" style="margin-top:12px"><div class="wt">⚡ 正面からぶつかりやすい組み合わせがあります</div>'+
         '<div class="how" style="color:var(--ink)">刺激が強く、ぶつかりやすい相性です。注意したいポイントをまとめました。</div>'+
         '<ul class="tsp">'+tsPoints(d.tc).map(function(x){ return '<li><span class="ti">'+x[0]+'</span><span><b>'+x[1]+'</b>'+esc(x[2])+'</span></li>'; }).join('')+'</ul>'+
@@ -12378,10 +12454,13 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
     var d=compatData(a,b,rt), S=CGRADE[d.gc.stem]||CGRADE['普通'], B=CGRADE[d.gc.branch]||CGRADE['普通'], t=[];
     var ld=safe(function(){ return (typeof pkCompatOffLead==='function')?pkCompatOffLead(a,b,q||'',true):''; },'');   // 1行目は判定（PROと同じ向き）で問いに答える（2026-11-02）
     if(ld) t.push(ld);
+    var st=safe(function(){ return (q&&typeof pkCompatSit==='function')?pkCompatSit(a,b,q,true):null; },null);   // 告白された・復縁などの相談：すぐ下に「どうすればよいか」（PROと同じ中身・専門用語なし。2026-11-04）
+    if(st&&st.how&&st.how.length) t.push('【どうすればよいか】\n'+st.how.map(function(x){ return '・'+x; }).join('\n'));
     t.push((ld?'生まれた日どうしの一部だけを見ると、':'2人の相性は、')+'心の相性が「'+(SUB[S.lab]||S.lab)+'」、一緒にいるときの居心地が「'+(SUB[B.lab]||B.lab)+'」です。');
     t.push('【心の相性（性格・価値観）】\n'+(CGRADE_STEM_TAKE[d.gc.stem]||CGRADE_STEM_TAKE['普通']));
     t.push('【一緒にいるときの居心地】\n'+(CGRADE_BRANCH_TAKE[d.gc.branch]||CGRADE_BRANCH_TAKE['普通']));
-    if(d.tc.any) t.push('【正面からぶつかりやすいところ】\n2人には、正面からぶつかりやすい組み合わせがあります。刺激が強く、注意したい相性です。\n'+tsPoints(d.tc).map(function(x){ return '・**'+x[1]+'**'+x[2]; }).join('\n'));
+    if(d.tc.any&&!d.tc.day) t.push('【一部の場面でぶつかりやすいところ】\n'+tsPart(d.tc));
+    else if(d.tc.any) t.push('【正面からぶつかりやすいところ】\n2人には、正面からぶつかりやすい組み合わせがあります。刺激が強く、注意したい相性です。\n'+tsPoints(d.tc).map(function(x){ return '・**'+x[1]+'**'+x[2]; }).join('\n'));
     if(a.now){ var ny=a.now.year;
       var wj=function(L){ return L.join('・'); };  // 見えない文字は入れない（コピー・共有したときに文字化け・検索できない原因になるため）
       var tm=safe(function(){ return (typeof pkCompatOffTiming==='function')?pkCompatOffTiming(a,b,true,null):''; },'');   // 2人の縁が動く月（PROと同じ計算）
