@@ -832,7 +832,7 @@ function kaiunPics(){const j=new Date(Date.now()+9*3600e3),p2=n=>String(n).padSt
 const WAN_URL="https://44wansona.com/";
 function wanCard(id,med){let c=$(id);if(LANG!=="ja"){if(c)c.hidden=true;return null;}
  if(!c){c=document.createElement("section");c.id=id;c.className="card wanbn";
-  c.innerHTML='<p class="wl">わんちゃんと暮らしている方へ</p><a href="'+WAN_URL+'?utm_source=16typeplus&utm_medium=banner&utm_campaign='+med+'" target="_blank" rel="noopener"><img src="img/wansona-1280x400.webp" width="1280" height="400" loading="lazy" alt="44Wansonalities　うちの子の心に住んでいるのは、どの犬種？　無料で診断する"></a><p class="wd">愛犬の性格を、犬種でたとえる無料診断です（姉妹サイト）。</p>';
+  c.innerHTML='<p class="wl">わんちゃんと暮らしている方へ</p><a href="'+WAN_URL+'?utm_source=16typeplus&utm_medium=banner&utm_campaign='+med+'" target="_blank" rel="noopener" style="display:block;line-height:0;border-radius:12px;overflow:hidden"><img src="img/wansona-1280x400.webp" width="1280" height="400" loading="lazy" style="width:100%;max-width:100%;height:auto;display:block" alt="44Wansonalities　うちの子の心に住んでいるのは、どの犬種？　無料で診断する"></a><p class="wd">愛犬の性格を、犬種でたとえる無料診断です（姉妹サイト）。</p>';
   c.querySelector("a").onclick=()=>{try{track("wansona_click",{at:med});}catch(e){}};}
  c.hidden=false;return c;}
 function wanTop(){const how=document.querySelector(".how"),c=wanCard("wanTop","top");if(c&&how){how.after(c);c.hidden=!!how.hidden;}}
