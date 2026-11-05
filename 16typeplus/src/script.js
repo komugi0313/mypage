@@ -212,10 +212,10 @@ function resetAll(){sset(KR,null);sset(KQ,null);try{history.replaceState(null,""
  selAT=null;document.querySelectorAll("#atPick button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v?"false":"true"));drawSlots(-1);$("pickField").hidden=true;$("hasType").setAttribute("aria-pressed","false");
  qc.hidden=true;fc.hidden=false;drawResume();window.scrollTo(0,0);
  try{location.reload();}catch(e){}}
-$("formReset").onclick=()=>askInline($("formReset"),TR("診断結果も含めて、すべてリセットしますか？"),TR("リセットする"),resetAll);
+$("formReset").onclick=()=>askInline($("formReset"),TR("入力と、今回の診断結果を消しますか？（保存した結果と性格の記録は残ります）"),TR("リセットする"),resetAll);
 $("quiz").onclick=()=>{if(!dateOK())return;startQuiz(null);};if($("startBtn"))$("startBtn").onclick=e=>{e.preventDefault();$("formCard").scrollIntoView({behavior:"smooth",block:"start"});};
 if($("recheckBtn"))$("recheckBtn").onclick=()=>{startQuiz(null);$("quizCard").scrollIntoView({behavior:"smooth"});};
-$("qQuit").onclick=()=>{showQuiz(false);drawResume();};
+$("qQuit").onclick=()=>{showQuiz(false);drawResume();/* タイプを選ぶ欄を開く */setTimeout(()=>{try{$("hasType").click();}catch(e){}},50);};
 $("qBack").onclick=()=>{if(qi>0){qi--;saveQuiz();drawQ();}else{showQuiz(false);drawResume();}};
 function scoreAll(){const sc={EI:[0,0],SN:[0,0],TF:[0,0],JP:[0,0],AT:[0,0]};
  QZ.Q.forEach((q,i)=>{const v=qa[i];if(v==null)return;const A=AXQ[AXN[q.ax]];if(q.p===A.a){sc[q.ax][0]+=v;sc[q.ax][1]+=5-v;}else{sc[q.ax][1]+=v;sc[q.ax][0]+=5-v;}});
@@ -362,7 +362,7 @@ function render(instant){
  if(K){const wk=AX.filter(A=>aligned[A.k]).map(A=>born[AX.indexOf(A)]),wkL=LANG==="en"?(wk.length<3?wk.join(" and "):wk.slice(0,-1).join(", ")+", and "+wk[wk.length-1]):LANG==="ja"?(wk.length<3?wk.join(" と "):wk.join("・")):wk.join(TR("・")),wkIn=!!(K.aru&&K.why&&sents(K.why).length>1);
  const wkH=wk.length?'<p class="ktwk in">'+TR("※ {L} は生年月日からははっきりしない文字なので、「生まれつき」は「どちらかといえば」の意味で読んでください。").replace("{L}",wkL)+'</p>':'';
  el.innerHTML='<h3 class="kth">'+TR("くわしい鑑定")+'</h3>'+wkH+(K.aru?(()=>{const yureH=born!==now?TR("{a} と {b} を行き来しやすいわけ").replace("{a}",born).replace("{b}",now):TR("結果が変わりにくいわけ"),hT=(f,h)=>f==="yure"?yureH:TR(h);
-   const sec=([f,h],n)=>'<div class="kts kt-'+f+'"><h4>'+(n?'<span class="ktn">'+n+'</span>':'')+hT(f,h)+'</h4>'+(f==="plus"&&K.worry?'<p class="ktworry">'+esc(sents(K.worry)[0])+'</p>':'')+(f==="why"&&n&&wkIn?whyFold(K.why,""):kfmt(K[f],f))+(f==="yure"?(born===now&&wk.length?'<p>'+TR("ただ、{L} は生年月日からははっきりしない文字なので、ここは答えが変わることもあります。").replace("{L}",wkL)+'</p>':'')+swayNote(born,now)+yureSee(born,now):'')+'</div>';
+   const sec=([f,h],n)=>'<div class="kts kt-'+f+'"><h4>'+(n?'<span class="ktn">'+n+'</span>':'')+hT(f,h)+'</h4>'+(f==="plus"&&K.worry?'<p class="ktworry">'+esc(K.worry)+'</p>':'')+(f==="why"&&n&&wkIn?whyFold(K.why,""):kfmt(K[f],f))+(f==="yure"?(born===now&&wk.length?'<p>'+TR("ただ、{L} は生年月日からははっきりしない文字なので、ここは答えが変わることもあります。").replace("{L}",wkL)+'</p>':'')+swayNote(born,now)+yureSee(born,now):'')+'</div>';
    /* 大事な3つ（こんなこと→どうして→生かすヒント）だけ先に見せ、残りは「もっと読む」にたたむ */
    const main=[["aru","こんなこと、ありませんか？"],["why","どうしてそうなるの？"],["tip","生かすヒント"]].filter(([f])=>K[f]),more=[["yure","16タイプの結果が変わるわけ"],["plus","悩みを、こう見てみる"],["hidden","あなたの、もう一つの力"]].filter(([f])=>K[f]);
    return main.map((x,i)=>sec(x,i+1)).join("")+(more.length?'<details class="mdet ktmore"><summary><span>'+TR("もっと読む")+'<small>'+more.map(([f,h])=>hT(f,h)).join(TR("・"))+'</small></span></summary>'+more.map(x=>sec(x,0)).join("")+'</details>':'');})():'<p class="ktb">'+esc(K.body)+'</p>')+(K.aru?'':'<dl class="ktl"><dt>'+TR("悩みやすいこと")+'</dt><dd>'+esc(K.worry)+'</dd></dl>');}}}window.__me.karaiC=strip(C.karai||"");drawBalance(N);lvInit();saveResult();layoutResult();recPick=null;drawRec();
@@ -898,7 +898,10 @@ function coreMoved(b,n){const L=[].concat(st.prev||[]);try{histAll().forEach(r=>
  const op={E:"I",I:"E",S:"N",N:"S",T:"F",F:"T",J:"P",P:"J"},sp=LANG==="ja"?"":" ";
  return idx.map(i=>{const o=op[n[i]];return sp+TR("前は {o}（{oc}）が出たこともありますね。もともとは{kc}人ですが、{oc}時もあります。").replace(/\{o\}/g,o).replace(/\{oc\}/g,TR(CORE[o])).replace("{kc}",TR(CORE[n[i]]));}).join("");}
 function coreCard(b,n){const co=coreOf(b,n);if(!co)return "";
- return '<div class="ktcore"><p class="kch">'+TR("あなたの変わらないところ")+'</p><p class="kcn">'+esc(co.name)+'</p><ul class="kcl">'+co.aru.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul><p class="kcs">'+(b===n?TR("気質も性格も同じ文字なので、4つすべてがあなたの変わらないところです。"):coreKey(b,n)==="----"?TR("4つの文字は、気質と性格ですべて違います。どちらの自分にもなれることが、あなたの変わらないところです。"):TR("気質と性格で同じ文字のところです。生まれつきも今も同じなので、あなたの土台になっています。")+coreMoved(b,n))+'</p></div>';}
+ return '<div class="ktcore"><p class="kch">'+TR("あなたの変わらないところ")+'</p><p class="kcn">'+esc(co.name)+'</p><ul class="kcl">'+co.aru.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul><p class="kcs">'+(b===n?TR("気質も性格も同じ文字なので、4つすべてがあなたの変わらないところです。"):coreKey(b,n)==="----"?TR("4つの文字は、気質と性格ですべて違います。どちらの自分にもなれることが、あなたの変わらないところです。"):TR("気質と性格で同じ文字のところです。生まれつきも今も同じなので、あなたの土台になっています。")+coreMoved(b,n))+coreWeak(b,n)+'</p></div>';}
+/* 変わらないところの中に、生年月日からははっきりしない文字があれば一言そえる */
+function coreWeak(b,n){const wk=((window.__me||{}).weak)||[],L=AX.map((A,i)=>(b[i]===n[i]&&wk.includes(A.k))?n[i]:null).filter(Boolean);if(!L.length)return "";
+ const sp=LANG==="ja"?"":" ";return sp+TR("ただし{L}は生年月日からははっきりしない文字なので、ここは今の性格でしっかり出ている面として読んでください。").replace("{L}",LANG==="en"?L.join(" and "):LANG==="ja"?L.join("・"):L.join("·"));}
 /* 結果の一番最初：キャラクターのカードをタップしてめくる */
 function setupCards(instant,one){waitHide();if(!instant)setTimeout(()=>{const fb=$("funBox");if(fb&&fb.classList.contains("wait2")&&!$("waitFun")){const w=document.createElement("p");w.id="waitFun";w.className="waitbox";w.innerHTML=one?TR("上の<b>カードをめくる</b>と、ここに出てきます。"):TR("上の<b>カードを2枚ともめくる</b>と、ここに出てきます。");fb.before(w);}},0);const cards=[...document.querySelectorAll(".nicks .nk")].filter(n=>!n.hidden),story=$("rStory");window.__story=story.innerHTML;
  cards.forEach(n=>{let bk=n.querySelector(".nkback");if(!bk){bk=document.createElement("div");bk.className="nkback";n.appendChild(bk);}
@@ -1014,11 +1017,11 @@ const GTR=TR;
 const GL={E:"人といると元気が出る人",I:"ひとりの時間で元気が戻る人",S:"これまでの経験で考える人",N:"先のことを想像して考える人",T:"理屈で決める人",F:"気持ちで決める人",J:"計画どおり進めたい人",P:"その場に合わせて動く人"};
 const GAX=[["E","I"],["S","N"],["T","F"],["J","P"]];
 /* 多い方の文字ごとの、グループでよくある場面 */
-const GMANY={E:"集まると話が止まらず、気づいたら予定の時間を過ぎている。",I:"集まっても静かな時間がある。でも、それで気まずくならない。",S:"お店や日にちは、すぐ決まる。",N:"「今度あれやろう」という話で盛り上がる。そのまま話だけで終わることも多い。",T:"意見がちがっても、言い合ったあとはすっきりしている。",F:"だれかが元気がないと、すぐ気づいて声をかける。",J:"待ち合わせの時間と場所が、早めに決まる。",P:"当日の気分で、行き先が変わることがある。"};
+const GMANY={E:"集まると話が止まらず、気づいたら予定の時間を過ぎている。",I:"集まっても静かな時間がある。でも、それで気まずくならない。",S:"行ったことのあるお店や、いつもの流れで話がまとまりやすい。",N:"「今度あれやろう」という話で盛り上がる。そのまま話だけで終わることも多い。",T:"意見がちがっても、言い合ったあとはすっきりしている。",F:"だれかが元気がないと、すぐ気づいて声をかける。",J:"待ち合わせの時間と場所が、早めに決まる。",P:"当日の気分で、行き先が変わることがある。"};
 /* だれもいない文字ごとのコツ */
 const GNONE={E:"みんな、自分からは誘いにくい人です。帰る前に、次に会う日を決めておきましょう。",I:"みんな話すのが好きなので、話す人がかたよりやすいです。決める前に1人ずつ意見を聞いてみましょう。",S:"案はたくさん出るのに、細かいところがよく抜けます。お金と時間だけは、だれか1人が確認しましょう。",N:"いつものお店、いつもの流れになりやすいです。たまに、だれも行ったことのない場所を選んでみましょう。",T:"言いにくいことを、みんな言わずにためてしまいます。決めるときは多数決で、さっぱり決めましょう。",F:"話が早いぶん、言い方がきつくなることがあります。決まったあとに「ありがとう」をひと言。",J:"計画を立てる人がいません。日にちと集合場所だけは、その場で決めてしまいましょう。",P:"予定が変わると、みんな少し困ります。雨の日の案を1つ決めておきましょう。"};
 /* 職場・クラス・部活のグループ用 */
-const GMANY_W={"E": "話し合いで意見がどんどん出て、時間をこえることがある。", "I": "話し合いは静かだけど、あとからメッセージで、しっかりした意見が出てくる。", "S": "やることと担当は、すぐ決まる。", "N": "「こうしたらもっとよくなる」という話で盛り上がる。でも、決めるところまで進まないことがある。", "T": "意見がちがっても、言い合ったあとはすっきりしている。", "F": "疲れていそうな人がいると、すぐ気づいて声をかける。", "J": "締め切りと順番が、早めに決まる。", "P": "急な変更にも、みんなあわてずに動ける。"};
+const GMANY_W={"E": "話し合いで意見がどんどん出て、時間をこえることがある。", "I": "話し合いは静かだけど、あとからメッセージで、しっかりした意見が出てくる。", "S": "前のやり方や数字をもとに、具体的に話が進む。", "N": "「こうしたらもっとよくなる」という話で盛り上がる。でも、決めるところまで進まないことがある。", "T": "意見がちがっても、言い合ったあとはすっきりしている。", "F": "疲れていそうな人がいると、すぐ気づいて声をかける。", "J": "締め切りと順番が、早めに決まる。", "P": "急な変更にも、みんなあわてずに動ける。"};
 const GNONE_W={"E": "みんな、自分からは話しかけにくい人です。困ったときに声をかける相手を、先に決めておきましょう。", "I": "みんな話すのが好きなので、話す人がかたよりやすいです。決める前に1人ずつ意見を聞いてみましょう。", "S": "案はたくさん出るのに、細かいところがよく抜けます。締め切りと数字だけは、だれか1人が確認しましょう。", "N": "いつものやり方になりやすいです。たまに、新しいやり方を1つ試してみましょう。", "T": "言いにくいことを、みんな言わずにためてしまいます。決めるときは理由を書き出して、さっぱり決めましょう。", "F": "話が早いぶん、言い方がきつくなることがあります。決まったあとに「ありがとう」をひと言。", "J": "段取りを組む人がいません。締め切りと担当だけは、その場で決めてしまいましょう。", "P": "予定が変わると、みんな少し困ります。うまくいかなかったときの案を1つ決めておきましょう。"};
 const GROLE_W=[["締め切りと担当を決める人", "EJ"], ["抜けやもれを確認する人", "SJ"], ["新しい案を出す人", "NP"], ["場の空気を明るくする人", "EP"], ["じっくり話を聞く人", "IF"], ["疲れている人に気づく人", "SF"], ["意見をまとめる人", "TJ"], ["損か得かを冷静に見る人", "IT"], ["急なトラブルにもあわてない人", "SP"], ["先のことを考えておく人", "NJ"], ["本音で相談できる相手になる人", "NF"], ["ちがう意見をはっきり言う人", "ET"]];
 const gWk=()=>typeof gst!=="undefined"&&gst&&gst.kind==="wk";
