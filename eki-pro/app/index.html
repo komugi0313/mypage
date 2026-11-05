@@ -3409,7 +3409,7 @@ function pkSafeFix(t,q,note){ try{ t=String(t==null?'':t); let cut=0;
     /* 「AかBか」「今か待つか」「今年か来年か」に答えていない（両方見送り・どちらも選ばない）1行目は、卦の向きから決めた答えにする（2026-11-05） */
     let chFix=false; if(!ekiChoiceAnswered(ph,q)){ const L=ekiOfflineLead(r,q); if(L){ ph=L.replace(/。$/,''); chFix=true;
       if(p.tsutae){ const t0=String(p.tsutae).replace(/^\s+/,''), h2=t0.split(/(?<=[。！？])/).slice(0,2).join(''); if(!ekiChoiceAnswered(h2,q)) p.tsutae=L+'\n\n'+t0; } } }
-    if(v.sym!==want||bad||phCut||chFix) p.hantei=ph+' '+want;
+    if(v.sym!==want||bad||phCut||chFix||!String(v.phrase||'').trim()) p.hantei=ph+' '+want;   // 一言が空（記号の説明を取ったあとなど）のときも決まった一言に
     p._dirBad=ekiBodyAgainst(p.tsutae,want);
     if(ekiMoneyQ(q)&&p.tsutae&&!/上向/.test(String(p.tsutae))){ try{ p.tsutae=String(p.tsutae).replace(/\s*$/,'')+'\n'+ekiMoneyFlow(r); }catch(_){} }   // お金の相談で「上向く時期」が書かれていなければ、卦から決めた金運の流れを足す（宝くじの買う時期ではない）   // 「まずこれを読む」の書き出しが記号と逆向き（〇なのに「慎重に・今の場所で」など）なら、あとでツールの文に置きかえる（2026-11-02）
     return p; }catch(e){ return p; } }
@@ -3456,7 +3456,7 @@ function pkSafeFix(t,q,note){ try{ t=String(t==null?'':t); let cut=0;
     if(!lead) return '';
     /* ②の続きは、卦のイメージ・今の流れから「なぜそう言えるか」の文を選ぶ。あいづち・共感（〜ですよね・〜と思います・自然なことです）や、逆接（ですが・ただ・しかし）で始まる文は使わない（2026-11-05） */
     const _wc=String((talkP||[]).join('')).split(/(?<=[。！？])/).map(x=>x.trim()).filter(Boolean).slice(1).filter(x=>!ekiAizuchiS(x)).map(ekiNoLeadIn).filter(x=>x&&lead.indexOf(x.replace(/。$/,''))<0&&String(v.phrase||'').indexOf(x.replace(/。$/,''))<0)
-      .filter(x=>!/^(?:ですが|でも|ただ|しかし|けれど|けれども|とはいえ|一方で|一方|それでも|ところが|だけど|もっとも)[、，]?/.test(x)&&!/(?:よね|でしょうね|と思います|ことでしょう|自然なことです|お察し(?:いた)?します|(?:わかり|分かり)ます|大変でしたね|つらいですね|お辛いですね)[。！]?$/.test(x)&&!/^(?:お気持ち|ご不安|ご心配)/.test(x));
+      .filter(x=>!/^(?:ですが|でも|ただ|しかし|けれど|けれども|とはいえ|一方で|一方|それでも|ところが|だけど|もっとも)[、，]?/.test(x)&&!/(?:よね|でしょうね|と思います|ことでしょう|自然なことです|お察し(?:いた)?します|(?:わかり|分かり)ます|大変でしたね|つらいですね|お辛いですね)[。！]?$/.test(x)&&!/^(?:お気持ち|ご不安|ご心配)/.test(x)&&!/かもしれませんが[、，]/.test(x));
     const whyS=_wc.find(x=>/ため|からです|からこそ|ので|ように|象|イメージ|卦|流れ|時期|とき|時を|時です/.test(x))||_wc[0]||'';   // ①の結論と同じ文はくり返さない
     const theme=(r&&r.h)?(ekiFromShi(r)?('出た卦は「'+r.h.nm+'」で、この先の姿（之卦）「'+r.shika.hex.nm+'」＝「'+mTheme(r.shika.hex)+'」の言葉で答えを決めています。'):('出た卦は「'+r.h.nm+'」＝「'+mTheme(r.h)+'」の流れです。')):'';
     /* ③ 時期：言葉だけを拾って「来年・今年がポイントです」「春がポイントです」にしない（2026-11-02）。
@@ -4151,9 +4151,9 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')), c1=ek
   /* 体の不調のご相談：運動・体を動かすこと・食事制限・サプリ・薬や治療の変更をすすめる文を外す（「無理に体を動かさず」のような控える文は残す） */
   function ekiShoNoExercise(t){ return String(t==null?'':t).split('\n').map(function(line){ const ss=line.match(/[^。！？]+[。！？]*|[。！？]+/g)||[]; return ss.filter(function(x){ if(/(せず|しない|控え|やめ(?:ず|ない)|無理に|無理をせず|避け)/.test(x)) return true; return !/運動|ジョギング|ウォーキング|ランニング|散歩|ストレッチ|筋トレ|ヨガ|体を動か|からだを動か|汗を流|サプリ|食事制限|断食|お薬を(?:変え|減ら|やめ)|薬を(?:変え|減ら|やめ)|治療を(?:変え|やめ)|病院を変え/.test(x); }).join(''); }).join('\n'); }
   /* 鑑定書の「ご相談への答え」：あいづち・前置きの文（「〜のご相談ですね。」「〜とお察しいたします。」「今回の結果を紐解きますと、」）から始めない（答えの欄の ekiAizuchiS・ekiNoLeadIn と同じ決まり。2026-11-05） */
-  function ekiShoLeadFix(t){ t=String(t==null?'':t); const AZ=x=>{ x=String(x||'').trim(); return x.length<100&&(ekiAizuchiS(x)||/(?:お察し(?:いた)?します|お察しいたします|ご相談ですね|ことと(?:存じ|思い)ます|(?:よく)?(?:わかり|分かり)ます|ことでしょう|大切なご相談です|ありがとうございます)[。！]?$/.test(x)); };
+  function ekiShoLeadFix(t){ t=String(t==null?'':t); const AZ=x=>{ x=String(x||'').trim(); return x.length<100&&(ekiAizuchiS(x)||/(?:お察し(?:いた)?します|お察しいたします|ご相談ですね|ことと(?:存じ|思い)ます|(?:よく)?(?:わかり|分かり)ます|ことでしょう|大切なご相談です|ありがとうございます|おめでとうございます|自然なこと(?:です|かもしれません)|無理もありません)[。！]?$/.test(x)); };
     for(let i=0;i<3;i++){ const m=t.match(/^\s*([^。！？\n]*[。！？])[ 　]*\n*/); if(!m||!AZ(m[1])||t.slice(m[0].length).trim().length<20) break; t=t.slice(m[0].length); }
-    return ekiNoLeadIn(t.replace(/^\s+/,'').replace(/^(?:今回の(?:結果|鑑定結果|卦)を(?:紐解き|ひもとき|読み解き|拝見し)ますと|易で(?:見|占い)ますと)[、，]?/,'')); }
+    return ekiNoLeadIn(t.replace(/^\s+/,'').replace(/^(?:ただ|しかし|ですが|でも|けれども|けれど|とはいえ|それでも)[、，]\s*/,'').replace(/^(?:[^、。\n]{0,12}?(?:結果|鑑定結果|卦)を(?:紐解き|ひもとき|読み解き|拝見し)ますと|易で(?:見|占い)ますと)[、，]?\s*/,'')); }
   function ekiShoClean(S,r,q,p){ q=String(q||''); const sf=ekiSafety(q); const dec=!(sf&&sf.crisis)&&ekiDeceasedQ(q), nj=!sf&&!dec&&ekiNoJudgeQ(q), noSym=!!(sf||dec||nj);
     let want=''; if(!noSym){ const v=parseVerdict((p&&p.hantei)||''); want=EKI_SYM_WORD[ekiToolSym(r,q)]||EKI_SYM_WORD[v.sym]||''; }
     S=(S||[]).map(function(x){ let t=String(x.t==null?'':x.t);
