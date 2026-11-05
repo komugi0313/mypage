@@ -4156,11 +4156,11 @@ function ymd(t){var d=new Date(t);return d.getFullYear()+"年"+(d.getMonth()+1)+
 // 成長の記録：診断のたびに、その回の答えから出た性格と、心の犬種を残す
 function growAdd(raw,main){var g=lsGet("w44_grow",{}),k=dogKey();
   var p=raw.sum.map(function(v,i){return raw.cnt[i]?Math.round(Math.max(0,Math.min(100,50+(v/raw.cnt[i]*100-50)*SPREAD))):50});
-  g[k]=g[k]||{n:st.name||"うちの子",b:st.breed,list:[]};g[k].n=st.name||"うちの子";g[k].list.push({t:Date.now(),m:main.id,p:p,a:st.age});g[k].list=g[k].list.slice(-30);lsSet("w44_grow",g);gDog=k} // 診断した子を、マイページとアイコンの「いまの子」にする
+  g[k]=g[k]||{n:st.name||"うちの子",b:st.breed,list:[]};g[k].n=st.name||"うちの子";if(st.breed)g[k].b=st.breed;g[k].list.push({t:Date.now(),m:main.id,p:p,a:st.age});g[k].list=g[k].list.slice(-30);lsSet("w44_grow",g);gDog=k} // 診断した子を、マイページとアイコンの「いまの子」にする
 var gDog=null;
 function renderGrow(){var g=lsGet("w44_grow",{}),keys=Object.keys(g);
   $("g-empty").hidden=!!keys.length;$("g-tl-panel").hidden=!keys.length;$("g-chart-panel").hidden=!keys.length;$("g-save-wrap").hidden=!keys.length;$("g-img").hidden=true;$("g-img-tip").hidden=true;$("g-dogs").hidden=keys.length<2;
-  if(!keys.length)return;if(!g[gDog])gDog=g[dogKey()]?dogKey():keys[0];
+  if(!keys.length)return;if(!g[gDog])gDog=g[dogKey()]?dogKey():latestDog(g);
   $("g-dogs").innerHTML='<span class="dogs-l">どの子の記録を見る？</span>'+keys.map(function(k){var d=g[k],o=ownId(d.b);return '<button type="button" data-k="'+esc(k)+'"'+(k===gDog?' class="on"':'')+'>'+(o&&IMG[o]?'<img src="'+IMG[o]+'?v=5" alt="">':'')+esc(d.n)+'</button>'}).join("");
   var d=g[gDog],A=d.list.filter(function(r){return BY[r.m]}),L=d.list.filter(function(r){return r.p&&r.p.length===AXES.length});$("g-tl-title").textContent=d.n+"の気質の犬種のうつりかわり";
   $("g-tl").innerHTML=A.slice().reverse().map(function(r,i){var b=BY[r.m];return '<div class="it">'+(IMG[r.m]?'<img src="'+IMG[r.m]+'?v=5" alt="">':'')+'<div><small>'+ymd(r.t)+'・'+ageLabel(r.a)+(i===0?'（いちばん新しい）':'')+'</small><em>'+esc(b?b.s:"")+'気質</em></div></div>'}).join("");
@@ -4300,10 +4300,11 @@ function openMy(tab,from){if(from)myFrom=from;$("my-msg").hidden=true;$("mp-conf
   if(tab){$("my-hub").hidden=true;$("my-detail").hidden=false;myTab(tab)}else{$("my-hub").hidden=false;$("my-detail").hidden=true;renderHub()}show("s-my")}
 // マイページの入口に出す顔（イラストは丸の中に収める）
 function avHTML(id){return id&&IMG[id]?'<img src="'+IMG[id]+'?v=5" alt="">':'<img src="icon/paw.png" alt="">'}
-function curAvId(){var g=lsGet("w44_grow",{}),k=gDog&&g[gDog]?gDog:(st.breed&&g[dogKey()]?dogKey():Object.keys(g)[0]);var d=k?g[k]:null;
+function latestDog(g){var best=null,bt=-1;Object.keys(g).forEach(function(k){var L=g[k].list||[],t=L.length?L[L.length-1].t:0;if(t>bt){bt=t;best=k}});return best} // いちばん最近診断した子
+function curAvId(){var g=lsGet("w44_grow",{}),k=gDog&&g[gDog]?gDog:(st.breed&&g[dogKey()]?dogKey():latestDog(g));var d=k?g[k]:null;
   if(d){var o=ownId(d.b);if(o&&IMG[o])return o;var L=d.list||[];return L.length?L[L.length-1].m:null}var o2=st.breed&&ownId(st.breed);return o2||(last&&last.main.id)||null}
 function setAvatars(){var h=avHTML(curAvId());[].forEach.call($$("[data-av]"),function(e){e.innerHTML=h});if($("r-my-t"))$("r-my-t").textContent=(st.name&&st.name.length<=6?st.name+"の":"")+"マイページ"}
-function renderHub(){var g=lsGet("w44_grow",{}),keys=Object.keys(g);if(!g[gDog])gDog=st.breed&&g[dogKey()]?dogKey():keys[0]||null;
+function renderHub(){var g=lsGet("w44_grow",{}),keys=Object.keys(g);if(!g[gDog])gDog=st.breed&&g[dogKey()]?dogKey():latestDog(g);
   $("mp-dogs").hidden=keys.length<2;$("mp-dogs").innerHTML='<span class="dogs-l">どの子のページを見る？</span>'+keys.map(function(k){return '<button type="button" data-k="'+esc(k)+'"'+(k===gDog?' class="on"':'')+'>'+esc(g[k].n)+'</button>'}).join("");
   var d=gDog?g[gDog]:null;
   if(d){var L=d.list||[],lm=L.length?BY[L[L.length-1].m]:null,o=ownId(d.b),body=bodyShort(d.b);
