@@ -897,6 +897,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
         <button type="button" id="mp-ribbon">おねがい（黄色いリボン）</button>
         <button type="button" id="reset-hist" class="danger">診断記録を消して、やり直す</button>
         <button type="button" id="del-dog" class="danger">この子をマイページから消す</button>
+        <button type="button" id="del-all" class="danger">すべての記録を消して、はじめからにする</button>
         <details class="mv" id="mv"><summary>記録の引っ越し（機種変更のとき）</summary>
           <div class="mv-in">
             <ol class="mv-steps"><li><b>今の端末で「コードを作る」</b>記録をまとめた、長い文字のコードができます。</li><li><b>自分に送る</b>LINEの自分あてやメモに、コードを送っておきます。</li><li><b>新しい端末で「はりつけて読みこむ」</b>記録がそのまま入ります。</li></ol>
@@ -3787,6 +3788,7 @@ $("in-zoom").addEventListener("input",function(e){st.zoom=+e.target.value;clampP
   ["pointerup","pointercancel"].forEach(function(t){el.addEventListener(t,function(){drag=null})});
 })();
 function msg(t){var m=$("msg");m.textContent=t;m.hidden=false;clearTimeout(msg.t);msg.t=setTimeout(function(){m.hidden=true},6000)}
+try{if(sessionStorage.getItem("w44_cleared")){sessionStorage.removeItem("w44_cleared");setTimeout(function(){msg("すべての記録を消しました。はじめから診断できます。")},300)}}catch(e){}
 
 // ---------- 質問（答えを押すと、すぐ次へ） ----------
 function show(id){["s-start","s-quiz","s-result","s-zukan","s-about","s-ecbook","s-my"].forEach(function(s){$(s).hidden=s!==id});window.scrollTo(0,0);if(id==="s-start"&&typeof newDogBtn==="function")newDogBtn()}
@@ -4918,13 +4920,15 @@ $("sh-x").addEventListener("click",function(){window.open("https://twitter.com/i
 
 // 消すときは2回たしかめる：1回目＝何が消えるか、2回目＝もとに戻せないこと
 var mpMode="reset",mpStep=1,mpName="";
-function mpAsk(mode){var g=lsGet("w44_grow",{}),d=gDog&&g[gDog];if(!d){$("my-msg").textContent="消せる子がいません。";$("my-msg").hidden=false;return}
+function mpAsk(mode){if(mode==="all"){mpMode="all";mpStep=1;mpName="";$("mp-confirm-t").innerHTML='すべての記録を消すと、<br>次のものが全部消えます。<span class="mp-del"><span class="mp-li">すべての子の、診断の結果と成長の記録</span><span class="mp-li">もしものときカード・おねがい（黄色いリボン）</span><span class="mp-li">ワン友帳・もしものとき帳・予定</span></span><span class="nw">このサイトを、</span><span class="nw">はじめて開いたときの形にもどします。</span>';$("mp-yes").textContent="消す";$("mp-confirm").hidden=false;$("reset-msg").hidden=true;$("mp-confirm").scrollIntoView({behavior:"smooth",block:"center"});return}
+  var g=lsGet("w44_grow",{}),d=gDog&&g[gDog];if(!d){$("my-msg").textContent="消せる子がいません。";$("my-msg").hidden=false;return}
   mpMode=mode;mpStep=1;mpName=d.n;var n=esc(d.n);
   $("mp-confirm-t").innerHTML=mode==="del"
     ?n+'をマイページから消すと、<br>次のものもいっしょに消えます。<span class="mp-del"><span class="mp-li">診断の結果と、成長の記録（グラフ）</span><span class="mp-li">もしものときカード</span><span class="mp-li">おねがい（黄色いリボン）</span><span class="mp-li">はじめましてガイド</span><span class="mp-li">'+n+'の予定</span></span><span class="nw">残しておきたいときは</span><span class="nw">「やめる」を押してくださいね。</span>'
     :n+'の診断を最初からやり直すと、<br>次のものが消えます。<span class="mp-del"><span class="mp-li">これまでの診断の結果</span><span class="mp-li">成長の記録（グラフ）</span></span>もしものときカードやおねがいは、そのまま残ります。<br><span class="nw">残しておきたいときは</span><span class="nw">「やめる」を押してくださいね。</span>';
   $("mp-yes").textContent="消す";$("mp-confirm").hidden=false;$("reset-msg").hidden=true}
 $("del-dog").addEventListener("click",function(){mpAsk("del")});
+$("del-all").addEventListener("click",function(){mpAsk("all")});
 $("reset-hist").addEventListener("click",function(){mpAsk("reset")});
 $("mp-no").addEventListener("click",function(){$("mp-confirm").hidden=true;mpStep=1});
 function forgetResult(nm){var ld=lsGet("w44_lastd",{});if(ld[nm]){delete ld[nm];lsSet("w44_lastd",ld)}
@@ -4933,6 +4937,8 @@ function forgetResult(nm){var ld=lsGet("w44_lastd",{});if(ld[nm]){delete ld[nm];
 $("mp-yes").addEventListener("click",function(){
   if(mpStep===1){mpStep=2;$("mp-confirm-t").innerHTML='<span class="nw">消したあとは元に戻せないので、</span><span class="nw">もう一度だけ確認させてください。</span><br>このまま消してもいいですか？';$("mp-yes").textContent="消す";return}
   mpStep=1;var nm=mpName,g=lsGet("w44_grow",{});$("mp-confirm").hidden=true;
+  if(mpMode==="all"){try{Object.keys(localStorage).forEach(function(k){if(k.indexOf("w44_")===0)localStorage.removeItem(k)})}catch(e){}
+    try{sessionStorage.setItem("w44_cleared","1")}catch(e){}location.replace(location.pathname);return} // すべて消して、はじめて開いたときの形にもどす
   try{localStorage.removeItem("w44_hist_"+nm)}catch(e){}
   forgetResult(nm);
   if(mpMode==="del"){delete g[nm];lsSet("w44_grow",g);
