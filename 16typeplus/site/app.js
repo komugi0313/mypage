@@ -221,8 +221,8 @@ function askInline(btn,msg,yes,onYes){let bx=btn.nextElementSibling;if(bx&&bx.cl
  btn.after(bx);bx.querySelector(".ask-n").onclick=()=>bx.remove();bx.querySelector(".ask-y").onclick=()=>{bx.remove();onYes();};bx.scrollIntoView({behavior:"smooth",block:"nearest"});}
 function resetAll(){sset(KR,null);sset(KQ,null);try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}
  /* 再読み込みできない環境でも、画面の上で最初の状態に戻す */
- hideOld();const w=document.querySelector(".welcome");if(w)w.remove();document.querySelectorAll(".intro,.how").forEach(e=>e.hidden=false);
- const fc=$("formCard"),qc=$("quizCard"),how=document.querySelector(".how"),itr=document.querySelector(".intro");if(itr&&fc){itr.after(fc);fc.after(qc);if(how)qc.after(how);}$("formh").textContent=TR("診断をはじめる");
+ hideOld();const w=document.querySelector(".welcome");if(w)w.remove();document.querySelectorAll(".intro,.how,#wanTop").forEach(e=>e.hidden=false);
+ const fc=$("formCard"),qc=$("quizCard"),how=document.querySelector(".how"),itr=document.querySelector(".intro");if(itr&&fc){itr.after(fc);fc.after(qc);if(how)qc.after(how);}wanTop();$("formh").textContent=TR("診断をはじめる");
  dateAll(false);fillDate();for(let i=0;i<4;i++)sel[i]=null;[...pk.children].forEach(g=>{g.classList.remove("done");[...g.children].forEach(c=>c.setAttribute("aria-pressed","false"));});
  selAT=null;document.querySelectorAll("#atPick button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v?"false":"true"));drawSlots(-1);$("pickField").hidden=true;$("hasType").setAttribute("aria-pressed","false");
  qc.hidden=true;fc.hidden=false;drawResume();window.scrollTo(0,0);
@@ -582,7 +582,7 @@ $("saveBtn").onclick=()=>{const btn=$("saveBtn");let bx=btn.nextElementSibling;i
 function boot(){drawResume();drawSaved();const R=sget(KR);
  if(R&&Array.isArray(R.t)&&R.t.length===4&&R.y){st.y=R.y;st.m=R.m;st.d=R.d;dateAll(true);st.t=R.t.slice();st.at=R.at||null;st.pct=R.pct||null;st.half=R.half||{};st.sway=R.sway||null;st.love=R.love||null;st.prev=Array.isArray(R.prev)?R.prev.filter(t=>/^[EI][SN][TF][JP]$/.test(t)).slice(0,2):[];pvT=st.prev.slice();drawPv();
   fillDate();setPicker();selAT=st.at;showResult();render(true);
-  document.querySelectorAll(".intro,.how").forEach(e=>e.hidden=true);
+  document.querySelectorAll(".intro,.how,#wanTop").forEach(e=>e.hidden=true);
   const res=$("result");res.after($("quizCard"));res.after($("formCard"));$("formh").textContent=TR("もう一度診断する");
   const wb=document.createElement("section");wb.className="card welcome";
   wb.innerHTML='<p class="eyebrow">'+TR("おかえりなさい")+'</p><p class="wbt">'+TR("前回の結果を表示しています。")+'</p><div class="wbacts"><button type="button" class="btn primary" id="wbRedo">'+TR("診断をやり直す")+'</button><button type="button" class="btn" id="wbHome">'+TR("トップページに戻る")+'</button></div>';
@@ -828,7 +828,7 @@ if($("cvBtn"))$("cvBtn").onclick=()=>{track("karte_click");const btn=$("cvBtn");
 /* トップへ戻る：ロゴ・ボタン・下のリンク・右下の丸ボタン */
 function goHome(e){if(e)e.preventDefault();if(!$("quizCard").hidden)showQuiz(false);
  /* 2回目以降の「おかえりなさい」表示のときは、トップの説明と入力欄を元の位置に戻す */
- const intro=document.querySelector(".intro");if(intro&&intro.hidden){document.querySelectorAll(".intro,.how").forEach(x=>x.hidden=false);const how=document.querySelector(".how");intro.after($("formCard"));$("formCard").after($("quizCard"));if(how)$("quizCard").after(how);$("formh").textContent=TR("診断をはじめる");const wb=document.querySelector(".welcome");if(wb)wb.remove();}
+ const intro=document.querySelector(".intro");if(intro&&intro.hidden){document.querySelectorAll(".intro,.how,#wanTop").forEach(x=>x.hidden=false);const how=document.querySelector(".how");intro.after($("formCard"));$("formCard").after($("quizCard"));if(how)$("quizCard").after(how);wanTop();$("formh").textContent=TR("診断をはじめる");const wb=document.querySelector(".welcome");if(wb)wb.remove();}
  window.scrollTo({top:0,behavior:"smooth"});}
 ["logoHome","homeBtn","toTop","fabTop"].forEach(id=>{const el=$(id);if(el)el.addEventListener("click",goHome);});
 {const fab=$("fabTop");if(fab){const f=()=>{const fc=$("formCard"),r=fc&&!fc.hidden?fc.getBoundingClientRect():null;fab.hidden=window.scrollY<700||!$("quizCard").hidden||!!(r&&r.top<innerHeight&&r.bottom>0);};window.addEventListener("scroll",f,{passive:true});f();}}
@@ -843,6 +843,14 @@ const KAIUN_IMG={mail:"data:image/webp;base64,UklGRoQ6AABXRUJQVlA4IHg6AADQAwGdAS
 function kaiunPics(){const j=new Date(Date.now()+9*3600e3),p2=n=>String(n).padStart(2,"0");let ym=j.getUTCFullYear()+"-"+p2(j.getUTCMonth()+1);if(ym<"2026-10")ym="2026-10";else if(ym>"2031-12")ym="2031-"+p2(j.getUTCMonth()+1);
  const fig=(src,fb,cap)=>'<figure><img src="'+src+'" data-fb="'+fb+'" alt="'+cap+'" loading="lazy"><figcaption>'+cap+'</figcaption></figure>';
  return '<div class="kaiun-pics">'+fig("https://unkiyoho.jp/hero-lucky-"+ym+".webp",KAIUN_IMG.mail,"毎朝届くメール")+fig("https://unkiyoho.jp/lpcal/lp-cal-"+ym+".webp",KAIUN_IMG.cal,"あなたの開運カレンダー")+'</div>';}
+/* 姉妹サイト「44Wansonalities」のバナー（日本語だけ）。トップは「この診断について」の下、結果は開運予報のあと */
+const WAN_URL="https://44wansona.com/";
+function wanCard(id,med){let c=$(id);if(LANG!=="ja"){if(c)c.hidden=true;return null;}
+ if(!c){c=document.createElement("section");c.id=id;c.className="card wanbn";
+  c.innerHTML='<p class="wl">わんちゃんと暮らしている方へ</p><a href="'+WAN_URL+'?utm_source=16typeplus&utm_medium=banner&utm_campaign='+med+'" target="_blank" rel="noopener"><img src="img/wansona-1280x400.webp" width="1280" height="400" loading="lazy" alt="44Wansonalities　うちの子の心に住んでいるのは、どの犬種？　無料で診断する"></a><p class="wd">愛犬の性格を、犬種でたとえる無料診断です（姉妹サイト）。</p>';
+  c.querySelector("a").onclick=()=>{try{track("wansona_click",{at:med});}catch(e){}};}
+ c.hidden=false;return c;}
+function wanTop(){const how=document.querySelector(".how"),c=wanCard("wanTop","top");if(c&&how){how.after(c);c.hidden=!!how.hidden;}}
 function kaiunCard(at){let c=$("kaiun");if(LANG!=="ja"||!KAIUN_URL||!st.y){if(c)c.hidden=true;return at;}
  if(!c){c=document.createElement("section");c.id="kaiun";c.className="card kaiun";}
  const p2=n=>String(n).padStart(2,"0"),Y=String(st.y),M=p2(st.m),D=p2(st.d);
@@ -961,7 +969,7 @@ function layoutResult(){const hero=document.querySelector(".hero");if(!hero)retu
  if(!$("carBody")){const cb=document.createElement("div");cb.id="carBody";body(dC).appendChild(cb);}
  dB.hidden=!$("bal")||$("bal").hidden;
  const mm=moreMenu([[dC,"仕事・進路のヒント","就活・転職・進路に使える強みと職種",1],[window.__dF,"あなたが言いそうなこと・やりそうなこと","辛口のひと言も"],[window.__dL,"4つの文字を、くわしく見る","文字くらべ・生年月日から出た理由"],[dP,"タイプごとのくわしい説明","気質と性格、それぞれの説明"],[dB,"気質の力のバランス","5つの力の多い・少ない"],[dH,"悩みのヒント","悩みやすいことと、その見方"],[dK,"性格カルテ","気質と性格の処方せん"],[dR,"性格の記録","結果をためて、変わりやすい文字を見る"],[$("group"),"グループの相性","友だちや職場の人とくらべる"]]);
- let at=hero;[$("love"),mm].forEach(el=>{if(el){at.after(el);at=el;}});if($("partner")){at.after($("partner"));at=$("partner");}at=kaiunCard(at);dB.hidden=!$("bal")||$("bal").hidden;if(window.__dF)window.__dF.hidden=!$("funBox")||!$("funBox").innerHTML;drawCareer();savedMark();mmCount();}
+ let at=hero;[$("love"),mm].forEach(el=>{if(el){at.after(el);at=el;}});if($("partner")){at.after($("partner"));at=$("partner");}at=kaiunCard(at);{const w=wanCard("wanRes","result");if(w){at.after(w);at=w;}}dB.hidden=!$("bal")||$("bal").hidden;if(window.__dF)window.__dF.hidden=!$("funBox")||!$("funBox").innerHTML;drawCareer();savedMark();mmCount();}
 
 /* ---- 性格の記録：受けるたびの16タイプをならべて、変わる文字・変わらない文字を見せる ---- */
 const KH="16tp.hist.v1",HTAGS_W=["仕事が忙しい","人と会うことが多い","ひとりの時間が多い","休みが多い","落ちこんでいた"],HTAGS_S=["テスト期間","部活や行事がいそがしい","人と会うことが多い","ひとりの時間が多い","長い休み","落ちこんでいた"];
@@ -1125,3 +1133,4 @@ function gSetup(){if(!$("group"))return;gDraw();
  bar.querySelector("button").onclick=()=>{bar.remove();try{localStorage.setItem(K,"1");}catch(e){}};
  bar.querySelector("a").onclick=()=>{try{track("langbar_click",{to:want});}catch(e){}};
  const hd=document.querySelector("header.bar");if(hd)hd.after(bar);else document.body.prepend(bar);}catch(e){}})();
+try{wanTop();}catch(e){}
