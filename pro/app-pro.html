@@ -4136,6 +4136,17 @@ function pkAgeMonAt(c,d){ try{ let b=c&&c.birthYMD; if(!b){ const m=String((c&&(
 function pkDuAtDate(c,d){ try{ const am=pkAgeMonAt(c,d), df=(c&&c.decadeFortunes)||[]; if(am==null||!df.length) return (typeof curDu==='function')?curDu(c):null;
   if(am<df[0].startAge*12+(df[0].months||0)) return monthDuOf(c);
   return df.find(function(x){ return am>=x.startAge*12+(x.months||0)&&am<x.endAge*12+(x.months||0); })||null; }catch(e){ return null; } }
+/* その年の大運（2026-11-05 先生の承認「全部お願い」）：年＝立春〜次の立春のまん中（8月6日）に入っている大運＝年の大半の大運。空亡の解空（pkKuuYear）と同じ決め方。
+   大運の開始年（startYear）だけで見ると、立運の端数〇ヶ月で8月6日より後に切りかわる人は、切りかわる年を1年早く新しい大運にしていた。
+   「この年に大運が切りかわる」ことそのもの（〇年〇歳〇ヶ月に第二運へ）は今までどおり startYear・立運の端数で出す。 */
+function pkDuAtYear(c,y){ return pkDuAtDate(c,new Date(+y,7,6,12,0,0,0)); }
+function pkDuSame(x,d){ return !!(x&&d&&(x===d||(x.isMonth&&d.isMonth)||(x.ganzhi===d.ganzhi&&x.startAge===d.startAge))); }
+/* その大運が「その年の大運」になる年の範囲 {y0,y1}（8月6日の決まり）。ないときは null */
+function pkDuYearSpan(c,d){ try{ if(!c||!d) return null; const by=birthYearOf(c), df=c.decadeFortunes||[];
+  const s=d.isMonth?by:d.startYear, e=d.isMonth?((df[0]&&df[0].startYear)||(by+10)):(d.startYear+10); if(!s) return null; let y0=0, y1=0;
+  for(let y=s-1;y<=e+1;y++){ if(pkDuSame(pkDuAtYear(c,y),d)){ if(!y0) y0=y; y1=y; } } return y0?{y0:y0,y1:y1}:null; }catch(e){ return null; } }
+/* その大運がもう終わったか（立運の端数〇ヶ月まで含めて月単位。暦年だけで見ると、年の途中で終わる大運を早く外していた） */
+function pkDuEnded(c,d){ try{ if(!c||!c.now||!d) return false; const end=d.isMonth?(d.endAge*12+(d.endMonths||0)):(d.endAge*12+(d.months||0)); return _nowMonths(c)>=end; }catch(e){ return false; } }
 /* pkKuuYear(c,a,du)：解空は命式＋「その年・その月に入っている大運」の支で見る（2026-11-05。前は今の大運で固定していた）。
    年（a.year）＝その年（立春〜次の立春）のまん中＝8月6日に入っている大運（＝年の大半の大運）。月は pkKuuMon が月のまん中（20日）の大運を渡す。
    du を渡さず年もない（year:0）ときは今の大運。 */
@@ -4675,11 +4686,12 @@ function kaikyokuScan(c){
   if(!c.decadeFortunes||!c.annualFortunes)return res;
   const nowYear=c.now?c.now.year:c.annualFortunes[0].year, nowAge=c.now?c.now.age:0;
   const _by=(typeof birthYearOf==='function')?birthYearOf(c):0; const y2age=y=>_by?(y-_by):nowAge+(y-nowYear);   // 年齢はほかの欄と同じ「西暦−生まれ年」でそろえる（鑑定まとめで1つずれていた。2026-11-02）
-  c.decadeFortunes.forEach(d=>{const endY=d.startYear+10;if(endY<=nowYear)return;
-    _kaikyokuHits(natalBr,d.branch).forEach(h=>res.periods.push(Object.assign({when:'大運',ganzhi:d.ganzhi,year0:Math.max(d.startYear,nowYear),year1:endY-1,age0:d.startAge,age1:d.endAge,ageLab:duAgeRange(d),current:duIsNow(c,d)},h)));});
+  c.decadeFortunes.forEach(d=>{if(c.now?pkDuEnded(c,d):(d.startYear+10<=nowYear))return;   // 終わったかは立運の端数〇ヶ月まで含めて見る（2026-11-05）
+    const y0=Math.max(d.startYear,nowYear), y1=Math.max(d.startYear+9,y0);   // 大運の期間そのもの（切りかわりの年から。年齢は ageLab に立運の端数つき）。年の途中で終わる今の大運は今年まで出す（2026-11-05）
+    _kaikyokuHits(natalBr,d.branch).forEach(h=>res.periods.push(Object.assign({when:'大運',ganzhi:d.ganzhi,year0:y0,year1:y1,age0:d.startAge,age1:d.endAge,ageLab:duAgeRange(d),current:duIsNow(c,d)},h)));});
   const horizon=nowYear+30;
   c.annualFortunes.forEach(a=>{if(a.year<nowYear||a.year>horizon)return;
-    const dd=c.decadeFortunes.find(d=>a.year>=d.startYear&&a.year<d.startYear+10);
+    const dd=pkDuAtYear(c,a.year);   // その年の大運＝年の大半（8月6日）に入っている大運（立運の端数〇ヶ月まで。2026-11-05。0歳〜立運＝月柱）
     const provider=dd?[...natalBr,dd.branch]:natalBr;
     _kaikyokuHits(provider,a.branch).forEach(h=>res.periods.push(Object.assign({when:'年',ganzhi:a.ganzhi,year0:a.year,year1:a.year,age0:y2age(a.year),age1:y2age(a.year),current:(c.now&&a.year===c.now.year)},h)));});
   res.periods.sort((x,y)=>x.year0-y.year0||(_KKW[x.kind]-_KKW[y.kind])||(x.when==='大運'?-1:1));
@@ -5247,10 +5259,7 @@ function jyuZoneHTML(c){
 // 関係が揺れやすい・気をつけたい時期（浮気・不倫が入りやすいタイミング）＝お守りとして予防的に。
 // ①壬丁の合の年（化木で気持ちが育つ）②妬合／争合の年（一つの縁に割り込みが入る）③乙丁辛の日主（承認欲求が満たされないと外の優しさに動きやすい）
 /* その年に巡っている大運（年ごとに大運が替わるので、将来の年は「今の大運」ではなくその年の大運で判定する） */
-function duAtYear(c,y){
-  const df=c.decadeFortunes||[]; const d=df.find(x=>y>=x.startYear&&y<x.startYear+10);
-  if(d) return d; if(df[0]&&y<df[0].startYear) return monthDuOf(c); return null;
-}
+function duAtYear(c,y){ return pkDuAtYear(c,y); }   // 年の大半（8月6日）に入っている大運（立運の端数〇ヶ月まで。2026-11-05。前は大運の開始年だけで見ていた）
 function relWobble(c){
   const ds=c.dayMaster.stem, natalStems=c.pillars.map(p=>p.stem);
   const nowY=(c.now&&c.now.year)||new Date().getFullYear();
@@ -6234,7 +6243,7 @@ function weakElTiming(c){
   if(!weak.length)return [];
   const nowY=c.now.year||0;
   return weak.map(we=>{
-    const dus=(c.decadeFortunes||[]).filter(f=>(f.startYear+10)>nowY&&(STEM_EL[f.stem]===we||STEM_EL[HONKI[f.branch]]===we)).slice(0,2)
+    const dus=(c.decadeFortunes||[]).filter(f=>!pkDuEnded(c,f)&&(STEM_EL[f.stem]===we||STEM_EL[HONKI[f.branch]]===we)).slice(0,2)
       .map(f=>`大運${f.ganzhi}（${f.startYear}年〜）`);
     const ays=(c.annualFortunes||[]).filter(a=>a.year>=nowY&&a.year<=nowY+12&&(STEM_EL[a.stem]===we||STEM_EL[HONKI[a.branch]]===we)).slice(0,5).map(a=>a.year);
     return {el:we,dus,ays};
@@ -6447,7 +6456,7 @@ function ekibaText(c){
   const yYears=[];
   if(c.annualFortunes&&now!=null)c.annualFortunes.forEach(a=>{if(a.year>=now&&eb.has(a.branch))yYears.push(`${a.year}年(${age+(a.year-now)}歳)${a.ganzhi}${dayClash(a.branch)?'＝日支を冲＝移動/転居/環境の変化が強い年':''}`);});
   const yDu=[];
-  if(c.decadeFortunes)c.decadeFortunes.forEach(d=>{if((now==null||d.startYear+9>=now)&&eb.has(d.branch))yDu.push(`${duAgeRange(d)}(${d.startYear}年-)大運${d.ganzhi}`);});
+  if(c.decadeFortunes)c.decadeFortunes.forEach(d=>{if((now==null||!pkDuEnded(c,d))&&eb.has(d.branch))yDu.push(`${duAgeRange(d)}(${d.startYear}年-)大運${d.ganzhi}`);});
   return `駅馬（えきば＝移動・遠方・海外の星。年支${yb}・日支${db}の三合から算出）:駅馬の支=${ebArr.join('・')}。命式内の駅馬=${natal.length?natal.join('・')+'（生まれつき移動・遠方と縁があり、地元に留まるより動いて発展するタイプ）':'なし（基本は地元・国内が軸で、下の巡りの時期に遠方の縁が開く）'}。駅馬が巡る年=${yYears.slice(0,4).join(' / ')||'当面は目立たない'}${yDu.length?'／駅馬の大運='+yDu.slice(0,3).join(' / '):''}。【鑑定文で必ず言語化する。この人が〈国内に根を張るタイプ／遠方・海外に縁があるタイプ／その両方（地元が軸だが特定の年に遠方の縁が開く）〉のどれかを、駅馬の命式内有無と巡りを根拠にはっきり述べ、起こりえる形（転勤・転職・転居・海外赴任や海外取引・留学・移住など）と、最も動きやすい年（駅馬＋日支を冲する年は特に強い）を西暦で名指しする。用神が金の人は“金＝西・外の世界・外国”の巡り（申酉の年）とも結びつけて海外の縁を補強してよい。断定せず可能性として、根こそぎの移住ではなく“踏み出しの好機”として前向きに述べる】`;
 }
 function buildChartText(c){
@@ -9795,8 +9804,8 @@ function compatTrio(a,b){ const out=[]; try{
   const PN=['年柱','月柱','日柱','時柱'], brs=function(c){ return (c.pillars||[]).map(function(p,i){ return (i===3&&c.timeUnknown)||!p?null:p.branch; }); };
   const BA=brs(a), BB=brs(b), all=BA.concat(BB).filter(Boolean), nowY=(a.now&&a.now.year)||new Date().getFullYear();
   const duList=function(c,who){ const L=[]; try{ const by=birthYearOf(c), df=c.decadeFortunes||[], md=monthDuOf(c);
-    [md].concat(df).forEach(function(d,k){ if(!d) return; const sY=d.isMonth?by:d.startYear, eY=d.isMonth?(df[0]?df[0].startYear:by+10):(df[k]?df[k].startYear:sY+10); if(eY<=nowY) return;
-      L.push({who:who,gz:d.ganzhi,br:d.branch,from:sY,to:eY,age:d.isMonth?'0歳':(d.startAge+'歳'+(d.months?d.months+'ヶ月':'')),now:sY<=nowY}); }); }catch(e){} return L; };
+    [md].concat(df).forEach(function(d,k){ if(!d) return; const sY=d.isMonth?by:d.startYear, eY=d.isMonth?(df[0]?df[0].startYear:by+10):(df[k]?df[k].startYear:sY+10); if(c.now?pkDuEnded(c,d):(eY<=nowY)) return;   // 終わったか・いま巡っているかは立運の端数〇ヶ月まで含めて見る（2026-11-05。前は開始年だけで「いま巡っている」にしていた）
+      L.push({who:who,gz:d.ganzhi,br:d.branch,from:sY,to:eY,age:d.isMonth?'0歳':(d.startAge+'歳'+(d.months?d.months+'ヶ月':'')),now:c.now?duIsNow(c,d):(sY<=nowY)}); }); }catch(e){} return L; };
   const DU=duList(a,'本人').concat(duList(b,'お相手')), seen={};
   // 2人のあいだの支合・半合に加えて、1人の命式の中の支合・半合も見る（鑑定者本人の指示 2026-10-25「もちろんです 出します」）
   const PR=[]; for(let i=0;i<4;i++) for(let j=0;j<4;j++) PR.push([BA[i],BB[j],i,j,'本人','お相手',0]);
@@ -9871,7 +9880,7 @@ function pkEvFacts(a,b,extra){ const F=[]; try{   // extra＝相談文に出て�
     // 星：その年・月・大運に巡る星
     people.forEach(function(c){ try{ [...matchKichi1(c,T.gz[1]),...matchKichi4(c,T.gz[1]),...matchKichi(kichiTargets(c),T.gz[0],T.gz[1],ZOUKAN[T.gz[1]]||[])].forEach(function(n){ F.push({kind:'星',star:n,br:[T.gz[1]],yr:T.yr,mo:T.mo,du:T.du||null,fr:T.fr||0,to:T.to||0,src:'list'}); }); }catch(e){} }); });
   // 大運×年運（その年を含む大運と、その年の干支）・大運と年運と命式で三合・方合
-  tim.filter(function(T){ return T.yr&&!T.mo; }).forEach(function(Y){ tim.filter(function(D){ return D.du&&Y.yr>=D.fr&&Y.yr<D.to; }).forEach(function(D){ const base={yr:Y.yr,mo:null,du:null,src:'list'};
+  tim.filter(function(T){ return T.yr&&!T.mo; }).forEach(function(Y){ tim.filter(function(D){ return D.du&&Y.yr>=D.fr&&Y.yr<=D.to; })/* 大運が切りかわる年は、前後どちらの大運との組み合わせも事実に数える（その年の大運は8月6日で決めるが、切りかわる年は両方が巡る。2026-11-05） */.forEach(function(D){ const base={yr:Y.yr,mo:null,du:null,src:'list'};
     _evGz(Y.gz,D.gz,F,base); _evTrio(allBr.concat([Y.gz[1],D.gz[1]]),F,base,Y.gz[1]); _evTrio(allBr.concat([Y.gz[1],D.gz[1]]),F,base,D.gz[1]); }); });
   // 星：命式にある星・相手の命式に当たる星
   people.forEach(function(c){ P(c).forEach(function(p){ try{ pillarKichi(c,p).forEach(function(n){ F.push({kind:'星',star:n,br:[p.branch],yr:null,src:'list'}); }); }catch(e){} }); });
