@@ -3785,7 +3785,7 @@ function pkMonBest(L,plain){ const G=pkMonGroups(L).filter(function(g){ return !
 function pkMonRunLab(g){ const f=g[0], t=g[g.length-1]; if(g.length===1) return pkMonLab(f.y,f.m); const e=t.m===12?1:t.m+1, nx=(t.y>f.y||t.m===12); return f.y+'年'+f.m+'月〜'+(nx?'翌':'')+e+'月上旬'; }
 function pkMonRuns(L,plain){ return pkMonGroups(L).map(function(g){ return pkNowLab(pkMonRunLabK(g,plain)); }); }
 function pkMonJoin(L,n,sep,plain){ return pkMonRuns(n?(L||[]).slice(0,n):L,plain).join(sep||'・'); }
-function _kgMonRow(ev,c){var ym=ev.calYear+'-'+String(ev.calMonth).padStart(2,'0');var mini=(ev.stars&&ev.stars.length?ev.stars.slice(0,3).join('・'):'');try{if(c&&pkKuuBadMonth(c,ev.branch))mini+=(mini?'／':'')+'〔空亡〕';}catch(e){}   // 解けない空亡の月の印（年と同じ解空の決まり。2026-11-04）
+function _kgMonRow(ev,c){var ym=ev.calYear+'-'+String(ev.calMonth).padStart(2,'0');var mini=(ev.stars&&ev.stars.length?ev.stars.slice(0,3).join('・'):'');try{if(c&&pkKuuBadMonth(c,ev.branch,ev))mini+=(mini?'／':'')+'〔空亡〕';}catch(e){}   // 解けない空亡の月の印（年と同じ解空の決まり。2026-11-04）
   return `<div class="kg-row ${ev.jud}" data-m="${ym}"><span class="kg-date">${ev.calYear}年${ev.calMonth}月<small style="display:block;font-size:10.5px;font-weight:700;opacity:.85">〜${ev.calMonth===12?'翌1':ev.calMonth+1}月上旬</small></span><span class="kg-gz">${ev.ganzhi}</span><span class="kg-star">${ev.star}</span><span class="kg-badge ${ev.jud}">${_kgBadge(ev.jud)}</span>${mini?`<span class="kg-mini">${mini}</span>`:''}</div>`;}
 function kingunHTML(c){
   var today=_jstToday(),todayIso=_isoDate(today);
@@ -4145,8 +4145,18 @@ function pkEnsureBonds(t,c,q){ try{ t=String(t||''); if(pkSafeStop(q)) return t;
 /* ===== この人の大きな特徴（鑑定者本人の指示 2026-10-29「尖った特徴を最初に出さないのは致命傷」）=====
    今年・来年の空亡と解空（合・三合・方合・冲で空亡が弱まるか）、今の大運の空亡、命式内の天地徳合・天戦地冲、魁罡、生まれ持った会局、近い天戦地冲の年。
    計算は今までのもの（kubo・tokugoNatal・detectTensenNatal・detectTensen・kaikyokuScan）をそのまま使い、並べ方だけを決める。画面のまとめの先頭・鑑定文への渡し・書いていなければ足す、の3か所で使う。 */
-function pkKuuYear(c,a){ try{ const v=kubo(c); if(!a||v.indexOf(a.branch)<0) return null;
-  const nb=c.pillars.slice(0,(c.timeUnknown?3:4)).map(function(x){ return {l:x.label[0]+'柱',b:x.branch}; }), du=(typeof curDu==='function')?curDu(c):null;
+/* その日に入っている大運（立運の端数〇ヶ月まで含めて月単位。いまの大運 curDu と同じ数え方。0歳〜立運＝月柱）。先生の承認 2026-11-05 */
+function pkAgeMonAt(c,d){ try{ let b=c&&c.birthYMD; if(!b){ const m=String((c&&(c.dstInClock||(c.birth&&c.birth.clock)))||'').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(m) b={y:+m[1],m:+m[2],d:+m[3]}; }
+  if(!b||!(d instanceof Date)||isNaN(d)) return null; return Math.max(0,(d.getFullYear()-b.y)*12+(d.getMonth()+1-b.m)-(d.getDate()<b.d?1:0)); }catch(e){ return null; } }
+function pkDuAtDate(c,d){ try{ const am=pkAgeMonAt(c,d), df=(c&&c.decadeFortunes)||[]; if(am==null||!df.length) return (typeof curDu==='function')?curDu(c):null;
+  if(am<df[0].startAge*12+(df[0].months||0)) return monthDuOf(c);
+  return df.find(function(x){ return am>=x.startAge*12+(x.months||0)&&am<x.endAge*12+(x.months||0); })||null; }catch(e){ return null; } }
+/* pkKuuYear(c,a,du)：解空は命式＋「その年・その月に入っている大運」の支で見る（2026-11-05。前は今の大運で固定していた）。
+   年（a.year）＝その年（立春〜次の立春）のまん中＝8月6日に入っている大運（＝年の大半の大運）。月は pkKuuMon が月のまん中（20日）の大運を渡す。
+   du を渡さず年もない（year:0）ときは今の大運。 */
+function pkKuuYear(c,a,du){ try{ const v=kubo(c); if(!a||v.indexOf(a.branch)<0) return null;
+  if(du===undefined) du=(a.year>0)?pkDuAtDate(c,new Date(a.year,7,6,12,0,0,0)):((typeof curDu==='function')?curDu(c):null);
+  const nb=c.pillars.slice(0,(c.timeUnknown?3:4)).map(function(x){ return {l:x.label[0]+'柱',b:x.branch}; });
   const all=nb.concat(du?[{l:'大運',b:du.branch}]:[]), has=function(b){ return all.filter(function(x){ return x.b===b; }); };
   const gou=[], chong=[];
   (SANGO||[]).concat(HOUGOU||[]).forEach(function(g){ const t=g.slice(0,3); if(t.indexOf(a.branch)<0) return; const others=t.filter(function(x){ return x!==a.branch; }); if(others.every(function(x){ return has(x).length; })) gou.push({k:(SANGO.indexOf(g)>=0?'三合':'方合'),t:t.join(''),el:g[3],w:others.map(function(x){ return has(x)[0].l+x; }).join('・')}); });
@@ -4245,7 +4255,7 @@ function loveFourLines(c){ try{ if(!c||!c.pillars||!c.dayMaster) return null;
     if(RIKUGO[ev.branch]===db){ r.push('配偶宮「'+db+'」と支合'); rp.push('パートナーとの距離が縮まりやすい'); }
     else if(sg&&ti>=0){ r.push('配偶宮「'+db+'」と'+PLB[ti]+'「'+third+'」と合わせて三合（'+sg.slice(0,3).join('')+'＝3つそろう）'); rp.push('パートナーとの縁が強く結びつきやすい'); }
     else if(sg&&(CENx[ev.branch]||CENx[db])){ r.push('配偶宮「'+db+'」と半合（2つだけ。三合ではない）'); rp.push('パートナーとの縁が結びつきやすい'); }
-    const ku=pkKuuMTag(c,ev.branch,false), kuP=pkKuuMTag(c,ev.branch,true);   // 解けない空亡の月の印（年と同じ解空の決まり。2026-11-04）
+    const ku=pkKuuMTag(c,ev.branch,false,ev), kuP=pkKuuMTag(c,ev.branch,true,ev);   // 解けない空亡の月の印（年と同じ解空の決まり。2026-11-04）
     const lab=pkMonLab(ev.calYear,ev.calMonth)+'（'+ev.ganzhi+'の月）'+ku, labP=pkMonLab(ev.calYear,ev.calMonth)+kuP;
     if(r.length) pick.push({lab:lab,n:r.length,pro:lab+'＝'+r.join('・'),plain:labP+'（'+rp.filter(function(x,i,a){ return a.indexOf(x)===i; }).join('・')+'）',m:ev.calMonth,y:ev.calYear,gz:ev.ganzhi,d:r.join('・'),dp:rp,ku:ku,kuP:kuP});
     if(_chongOf(ev.branch)!==db&&(isKei2(ev.branch,db)||isKei3(ev.branch,db)||(ev.branch===db&&JIKEI.has(db)))) move.push({pro:lab+'＝配偶宮「'+db+'」と刑（こじれやすい・振り回されやすい月。急いで決めない）',plain:labP+'（気持ちがすれ違いやすい月）',m:ev.calMonth,y:ev.calYear,gz:ev.ganzhi,d:'配偶宮「'+db+'」と刑（こじれやすい・振り回されやすい月。急いで決めない）',dp:['気持ちがすれ違いやすい月'],ku:ku,kuP:kuP});
@@ -7008,12 +7018,23 @@ function pkKuuTag(c,y,plain){ try{ const k=pkKuuYear(c,(c.annualFortunes||[]).fi
 function pkKuuBad(c,y){ try{ const k=pkKuuYear(c,(c.annualFortunes||[]).find(function(a){ return a.year===y; })); return !!(k&&!k.gou.length&&!k.chong.length); }catch(e){ return false; } }
 /* 月の空亡（先生の決定 2026-11-04「その形で両方とも直してください」）：月運の十二支が本人の空亡（kubo）に当たる月＝空亡の月。
    解空も年と同じ（pkKuuYear：その月の支が命式＋今の大運の支と三合・方合・支合でそろう＝合解／冲＝冲解）。解けない月だけ印を付ける（縁が動く月から外さない・すすめる月の先頭にしない）。br＝月の十二支、または月運（branch／ganzhi／gz を持つもの） */
-function pkKuuMon(c,br){ try{ if(br&&typeof br==='object') br=br.branch||String(br.ganzhi||br.gz||'').charAt(1); if(!c||!br) return null; return pkKuuYear(c,{branch:br,year:0,ganzhi:''}); }catch(e){ return null; } }
-function pkKuuBadMonth(c,br){ const k=pkKuuMon(c,br); return !!(k&&!k.gou.length&&!k.chong.length); }
-function pkKuuMTag(c,br,plain){ return pkKuuBadMonth(c,br)?(plain?'〔ひと休みの月〕':'〔空亡〕'):''; }
+/* 月の大運（2026-11-05）：その月（節月）のまん中＝20日に入っている大運で解空を見る（これから12ヶ月のあいだに大運が切りかわる人のため）。
+   w＝月の指定：{y,m}（その年 m 月に始まる節月）／{calYear,calMonth}（月運）／Date（その日を含む節月）。ないときは「いまの節月から12ヶ月」の中で、その十二支の月。 */
+function pkKuuMonDate(br,w){ try{ const BRS='子丑寅卯辰巳午未申酉戌亥', bi=BRS.indexOf(br); if(bi<0) return null;
+  if(w&&typeof w==='object'&&!(w instanceof Date)){ const y=+(w.calYear||w.y), m=+(w.calMonth||w.m); if(y&&m) return new Date(y,m-1,20,12,0,0,0); }
+  const M=((bi-2+12)%12)+2, MM=M>12?M-12:M;   // 寅＝2月 … 子＝12月・丑＝1月
+  let ref=(w instanceof Date&&!isNaN(w))?w:null;
+  if(!ref){ const J=jstNow(); const t=new Date(J.y,J.m-1,J.d,12,0,0,0); let nb=''; try{ nb=_pillarForDate(t,'month').branch; }catch(e){} const ni=BRS.indexOf(nb);
+    if(ni<0) ref=t; else { const NM=((ni-2+12)%12)+2, NMM=NM>12?NM-12:NM; let best=null; [J.y-1,J.y,J.y+1].forEach(function(y){ const d=new Date(y,NMM-1,20,12,0,0,0); if(!best||Math.abs(d-t)<Math.abs(best-t)) best=d; });
+      return new Date(best.getFullYear(),best.getMonth()+((bi-ni+12)%12),20,12,0,0,0); } }
+  let best=null; [ref.getFullYear()-1,ref.getFullYear(),ref.getFullYear()+1].forEach(function(y){ const d=new Date(y,MM-1,20,12,0,0,0); if(!best||Math.abs(d-ref)<Math.abs(best-ref)) best=d; }); return best; }catch(e){ return null; } }
+function pkKuuMon(c,br,w){ try{ if(br&&typeof br==='object'){ if(w===undefined&&br.calYear) w=br; br=br.branch||String(br.ganzhi||br.gz||'').charAt(1); } if(!c||!br) return null;
+  const d=pkKuuMonDate(br,w); return pkKuuYear(c,{branch:br,year:0,ganzhi:''},d?pkDuAtDate(c,d):((typeof curDu==='function')?curDu(c):null)); }catch(e){ return null; } }
+function pkKuuBadMonth(c,br,w){ const k=pkKuuMon(c,br,w); return !!(k&&!k.gou.length&&!k.chong.length); }
+function pkKuuMTag(c,br,plain,w){ return pkKuuBadMonth(c,br,w)?(plain?'〔ひと休みの月〕':'〔空亡〕'):''; }
 function pkCpKuuMK(kA,kB,plain){ if(plain===undefined) plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on')); if(!kA&&!kB) return '';
   return plain?(kA&&kB?'〔2人ともひと休みの月〕':(kA?'〔あなたはひと休みの月〕':'〔お相手はひと休みの月〕')):(kA&&kB?'〔2人とも空亡〕':(kA?'〔本人は空亡〕':'〔お相手は空亡〕')); }
-function pkCpKuuM(a,b,br,plain){ return pkCpKuuMK(!!(a&&pkKuuBadMonth(a,br)),!!(b&&pkKuuBadMonth(b,br)),plain); }
+function pkCpKuuM(a,b,br,plain,w){ return pkCpKuuMK(!!(a&&pkKuuBadMonth(a,br,w)),!!(b&&pkKuuBadMonth(b,br,w)),plain); }
 /* 自分から動く時期（告白・プロポーズ・連絡・誘う・復縁の連絡）は空亡を避ける（先生の指示 2026-11-05「いつ告白したらいいか？など、空亡の時は避けるべき」「空亡の日も避けてください」）。
    pkSetsuStart＝節月（y年m月の名前の月）が始まる日（日本時間の正午の Date）。暦（エンジンの月柱が切りかわる日）から求める。固定の日付にしない。節入りの日は新しい月に数える。 */
 var _pkSdC={};
@@ -7080,15 +7101,15 @@ function pkKuuGuard(t,a,b,q,isCompat,plain){ const fix=[]; try{ t=String(t||'');
   const nextLove=function(aw,pl){ const k=aw+(pl?'P':''); if(_AP[k]!==undefined) return _AP[k]; let r='';
     try{ if(two){ const CM=compatMonths(a,b), both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }), one=CM.filter(function(x){ return (x.A.g.length||x.B.g.length)&&!x.A.w.length&&!x.B.w.length; });
         const AP=pkActPlan(pkMonBest(both,pl)?both:one,CM,pl,aw); r=AP?AP.lab:''; }
-      else { const L=loveFourLines(a), all=monthFortuneList(a,12).filter(function(ev){ return ev&&ev.calYear; }).map(function(ev){ return {y:ev.calYear,m:ev.calMonth,ku:pkKuuMTag(a,ev.branch,false),kuP:pkKuuMTag(a,ev.branch,true)}; });
+      else { const L=loveFourLines(a), all=monthFortuneList(a,12).filter(function(ev){ return ev&&ev.calYear; }).map(function(ev){ return {y:ev.calYear,m:ev.calMonth,ku:pkKuuMTag(a,ev.branch,false,ev),kuP:pkKuuMTag(a,ev.branch,true,ev)}; });
         const AP=L?pkActPlan(L.topM||[],all,pl,aw):null; r=AP?AP.lab:''; } }catch(e){}
     return (_AP[k]=r); };
-  const nextFree=function(s){ for(let i=1;i<=12;i++){ const n=_pkKgYM(s.y,s.m+i), br=_pkKgBr(n.m); if(!pkKuuBadMonth(a,br)&&!(two&&pkKuuBadMonth(b,br))) return pkSetsuStart(n.y,n.m); } return null; };
+  const nextFree=function(s){ for(let i=1;i<=12;i++){ const n=_pkKgYM(s.y,s.m+i), br=_pkKgBr(n.m); if(!pkKuuBadMonth(a,br,n)&&!(two&&pkKuuBadMonth(b,br,n))) return pkSetsuStart(n.y,n.m); } return null; };
   // 向いた日（空亡の日・解けない空亡の月の日・冲・刑の日を除く）
   let _GD=null;
   const goodDays=function(){ if(_GD) return _GD; let L=[];
     try{ if(two){ L=compatDaysPick(a,b).good.filter(function(o){ return !(o.kA||o.kB||o.dA||o.dB); }); }
-      else { const mc={}; for(let i=1;i<30;i++){ const d=new Date(T0.getTime()+i*86400000), x=_kdDay(a,d); if(!x) continue; let mb=''; try{ mb=_pillarForDate(d,'month').branch; }catch(e){} if(mb&&mc[mb]===undefined) mc[mb]=pkKuuBadMonth(a,mb);
+      else { const mc={}; for(let i=1;i<30;i++){ const d=new Date(T0.getTime()+i*86400000), x=_kdDay(a,d); if(!x) continue; let mb=''; try{ mb=_pillarForDate(d,'month').branch; }catch(e){} if(mb&&mc[mb]===undefined) mc[mb]=pkKuuBadMonth(a,mb,d);
           if(!(x.chongDay||x.kei)&&x.jud!=='warn'&&!(mb&&mc[mb])&&!pkKuuDay(a,x.branch)) L.push({d:d,s:_kdScore(x)}); }
         L=L.sort(function(p,q){ return q.s-p.s; }).slice(0,3).sort(function(p,q){ return p.d-q.d; }); } }catch(e){}
     return (_GD=L.filter(function(o){ return o.d>T0; }).slice(0,2)); };
@@ -7108,10 +7129,10 @@ function pkKuuGuard(t,a,b,q,isCompat,plain){ const fix=[]; try{ t=String(t||'');
     return H; };
   const judge=function(o){ // 空亡かどうか（印・説明つき）
     if(o.k==='d'){ if(o.d<T0||o.d>T1) return null; let db='',mb=''; try{ db=_pillarForDate(o.d,'day').branch; mb=_pillarForDate(o.d,'month').branch; }catch(e){} if(!db) return null;
-      const dA=pkKuuDay(a,db), dB=two&&pkKuuDay(b,db), mA=!!(mb&&pkKuuBadMonth(a,mb)), mB=!!(two&&mb&&pkKuuBadMonth(b,mb)); if(!(dA||dB||mA||mB)) return null;
+      const dA=pkKuuDay(a,db), dB=two&&pkKuuDay(b,db), mA=!!(mb&&pkKuuBadMonth(a,mb,o.d)), mB=!!(two&&mb&&pkKuuBadMonth(b,mb,o.d)); if(!(dA||dB||mA||mB)) return null;
       return {kind:'日',day:dA||dB,dA:dA,dB:dB,mA:mA,mB:mB,db:db,mb:mb}; }
     if(o.k==='m'){ const S=o.sms.filter(smIn); if(!S.length){ if(o.y) return judge({k:'y',y:o.y}); return null; }
-      const bad=S.map(function(s){ const br=_pkKgBr(s.m); return {s:s,br:br,kA:pkKuuBadMonth(a,br),kB:!!(two&&pkKuuBadMonth(b,br))}; }).filter(function(x){ return x.kA||x.kB; }); if(!bad.length) return null;
+      const bad=S.map(function(s){ const br=_pkKgBr(s.m); return {s:s,br:br,kA:pkKuuBadMonth(a,br,s),kB:!!(two&&pkKuuBadMonth(b,br,s))}; }).filter(function(x){ return x.kA||x.kB; }); if(!bad.length) return null;
       return {kind:'月',bad:bad,kA:bad.some(function(x){ return x.kA; }),kB:bad.some(function(x){ return x.kB; })}; }
     if(o.k==='y'){ const kA=pkKuuBad(a,o.y), kB=!!(two&&pkKuuBad(b,o.y)); if(!(kA||kB)) return null; return {kind:'年',y:o.y,kA:kA,kB:kB}; }
     return null; };
@@ -7219,7 +7240,7 @@ function pkABLead(c,q,plain){ try{ q=String(q||''); if(!/(どちら|どっち)/.
 function pkOfflineLead(c,q,plain){ try{ q=String(q||''); if(!c||!c.now) return ''; if(pkKidAge(c)>=0&&(/(転職|独立|起業|就職|辞め|仕事|職場|会社|副業|キャリア|お金|金運)/.test(q)||pkIsLoveQ(q))) return ''; const by=birthYearOf(c), age=function(y){ return by?'（'+(y-by)+'歳）':''; };
   const _loveLead=function(){ const L=loveFourLines(c); const m=L&&((plain?L.monthLabsP:L.monthLabs)||[])[0]; if(m){ let _mn=''; if(/(結婚|入籍|籍を|婚約|プロポーズ)/.test(q)){ const mm=String(m).match(/^(\d{4})年(\d{1,2})月/); if(mm) _mn=pkMarryNote([c],[pkMonAY(+mm[1],+mm[2])],plain); }   // 結婚の相談で、縁が動く月が解けない空亡の年なら、入籍は空亡でない年に（2026-11-03）
     // いちばん近い時期が7日以内に終わるときは終わる日と、そのあとの空亡の月・次の時期も。自分から動く相談は空亡の月より前に注意を（先生の指示 2026-11-05）
-    let AP=null; try{ const _all=monthFortuneList(c,12).filter(function(ev){ return ev&&ev.calYear; }).map(function(ev){ return {y:ev.calYear,m:ev.calMonth,ku:pkKuuMTag(c,ev.branch,false),kuP:pkKuuMTag(c,ev.branch,true)}; }); AP=pkActPlan(L.topM||[],_all,plain,pkActQ(q)?pkActWord(q):'大事なこと'); }catch(e){}
+    let AP=null; try{ const _all=monthFortuneList(c,12).filter(function(ev){ return ev&&ev.calYear; }).map(function(ev){ return {y:ev.calYear,m:ev.calMonth,ku:pkKuuMTag(c,ev.branch,false,ev),kuP:pkKuuMTag(c,ev.branch,true,ev)}; }); AP=pkActPlan(L.topM||[],_all,plain,pkActQ(q)?pkActWord(q):'大事なこと'); }catch(e){}
     if(AP&&!_pkMonKu(m)) return (pkCanQ(q)?'可能性はあります。':'')+'縁が動きやすいのは'+AP.lab+'です。'+(AP.short?AP.follow:(pkActQ(q)?AP.note:''))+_mn;
     return (pkCanQ(q)?'可能性はあります。':'')+'縁が動きやすいのは'+pkNowLab(m)+'です。'+(_pkMonKu(m)?(plain?PK_MON_KUU_NOTEP:PK_MON_KUU_NOTE):'')+_mn; } return ''; };
   { const _w=pkWaitLead(c,q,plain); if(_w) return _w; }   // 告白して返事を待っている：待ち方に答える（2026-11-04）
@@ -8153,7 +8174,7 @@ function pkConsultFocus(c,q){ const pro=[], plain=[], R={}; if(window.__pkCFBusy
     const yl=function(h){ return h.y.year+'年（'+h.y.ganzhi+'・'+(h.y.year-by)+'歳）'; };
     const upY=hit.filter(function(h){ return good&&h.a.length&&!h.ku; }), skY=hit.filter(function(h){ return h.sk&&!h.a.length&&!h.ku; }), kuY=hit.filter(function(h){ return h.ku&&h.a.length; }), outY=hit.filter(function(h){ return !good&&h.a.length; });
     R.moneyY=upY.concat(skY).map(function(h){ return h.y.year; }).sort();
-    const mm=[], mmP=[]; try{ ((typeof monthFortuneList==='function')?monthFortuneList(c,12):[]).forEach(function(ev){ if(!ev||!ev.calYear) return; if(ZS.indexOf(ev.star)>=0||ZS.indexOf(ev.bStar)>=0){ mm.push(pkMonLab(ev.calYear,ev.calMonth)+'（'+ev.ganzhi+'の月）'+pkKuuMTag(c,ev.branch,false)); mmP.push(pkMonLab(ev.calYear,ev.calMonth)+pkKuuMTag(c,ev.branch,true)); } }); }catch(e){}   // 解けない空亡の月の印（恋愛の月と同じ決まり。2026-11-04）
+    const mm=[], mmP=[]; try{ ((typeof monthFortuneList==='function')?monthFortuneList(c,12):[]).forEach(function(ev){ if(!ev||!ev.calYear) return; if(ZS.indexOf(ev.star)>=0||ZS.indexOf(ev.bStar)>=0){ mm.push(pkMonLab(ev.calYear,ev.calMonth)+'（'+ev.ganzhi+'の月）'+pkKuuMTag(c,ev.branch,false,ev)); mmP.push(pkMonLab(ev.calYear,ev.calMonth)+pkKuuMTag(c,ev.branch,true,ev)); } }); }catch(e){}   // 解けない空亡の月の印（恋愛の月と同じ決まり。2026-11-04）
     R.moneyM=mm; R.moneyMP=mmP; R.moneyGood=good; const mmKu=mm.some(function(x){ return !!_pkMonKu(x); });
     const where=c.pillars.map(function(p,i){ if(!p||(i===3&&c.timeUnknown)) return ''; const a=[]; if(i!==2&&ZS.indexOf(p.tenStar)>=0) a.push(PN[i]+'の天干 '+p.tenStar); const h=repHidden(p); if(h&&ZS.indexOf(h.tenStar)>=0) a.push(PN[i]+'の蔵干（司令） '+h.tenStar); return a.join('・'); }).filter(Boolean);
     pro.push('金運（お金の星＝財星：偏財・正財＝'+gel['財']+'＝'+fz+'）：命式の財星＝'+(where.join('・')||'なし（お金は自分の力・技術を通して入ってくる形）')+'。'+(good?'財星が巡る年・月は金運が上がりやすい':'財星は忌神なので、財星が巡る年・月はお金の出入りが大きくなる（使いすぎ・人のための出費に注意。堅実に守ると残る）')+'。'
@@ -9168,14 +9189,14 @@ function pkWaitMat(c,b,plain,ad,bm){ try{ const T0=_jstToday(), wd=['日','月',
   let good=[], bad=[];
   if(b){ const P=compatDaysPick(c,b); const ok=P.all.filter(function(o){ return (o.d-T0)>=2*86400000&&!(o.x.chongDay||o.x.kei||o.y.chongDay||o.y.kei)&&o.x.jud!=='warn'&&o.y.jud!=='warn'; }).sort(function(p,q){ return q.s-p.s; });
     good=ok.filter(function(o){ return !o.kA&&!o.dA&&!o.dB; }).slice(0,2); if(good.length<2) good=good.concat(ok.filter(function(o){ return o.kA&&!o.dA&&!o.dB; }).slice(0,2-good.length)); bad=P.bad.slice(0,2); }   // 空亡の日（2人それぞれ）は向いた日にしない（2026-11-05）
-  else { const L=[], mc={}; for(let i=0;i<30;i++){ const d=new Date(T0.getTime()+i*86400000), x=_kdDay(c,d); let b2=''; try{ b2=_pillarForDate(d,'month').branch; }catch(e){} if(b2&&mc[b2]===undefined) mc[b2]=pkKuuBadMonth(c,b2); if(x) L.push({d:d,x:x,s:_kdScore(x),kA:!!(b2&&mc[b2]),dA:pkKuuDay(c,x.branch)}); }
+  else { const L=[], mc={}; for(let i=0;i<30;i++){ const d=new Date(T0.getTime()+i*86400000), x=_kdDay(c,d); let b2=''; try{ b2=_pillarForDate(d,'month').branch; }catch(e){} if(b2&&mc[b2]===undefined) mc[b2]=pkKuuBadMonth(c,b2,d); if(x) L.push({d:d,x:x,s:_kdScore(x),kA:!!(b2&&mc[b2]),dA:pkKuuDay(c,x.branch)}); }
     const ok=L.filter(function(o){ return (o.d-T0)>=2*86400000&&!(o.x.chongDay||o.x.kei)&&o.x.jud!=='warn'; }).sort(function(p,q){ return q.s-p.s; });
     good=ok.filter(function(o){ return !o.kA&&!o.dA; }).slice(0,2); if(good.length<2) good=good.concat(ok.filter(function(o){ return o.kA&&!o.dA; }).slice(0,2-good.length)); bad=L.filter(function(o){ return o.x.chongDay||o.x.kei; }).slice(0,2); }
   good.sort(function(p,q){ return p.d-q.d; });
   const kuA=plain?(b?'〔あなたはひと休みの月〕':'〔ひと休みの月〕'):(b?'〔本人は空亡の月〕':'〔空亡の月〕');
   const gd=good.map(function(o){ return dl(o.d)+(o.kA?kuA:''); }).join('・'), gdL=good.filter(function(o){ return !o.kA; }).map(function(o){ return dl(o.d); }).join('・'), bd=bad.map(function(o){ return dl(o.d); }).join('・');
   // これから30日のうちに、本人の解けない空亡の月に入る日（今月がそうでないとき）
-  let kNext=null; if(!kNowA){ for(let i=1;i<31;i++){ const d=new Date(T0.getTime()+i*86400000); let b2=''; try{ b2=_pillarForDate(d,'month').branch; }catch(e){} if(b2&&b2!==mb){ if(pkKuuBadMonth(c,b2)) kNext=d; break; } } }
+  let kNext=null; if(!kNowA){ for(let i=1;i<31;i++){ const d=new Date(T0.getTime()+i*86400000); let b2=''; try{ b2=_pillarForDate(d,'month').branch; }catch(e){} if(b2&&b2!==mb){ if(pkKuuBadMonth(c,b2,d)) kNext=d; break; } } }
   const NA=b?'あなた':'あなた', st=strengthType(c), du=(typeof curDu==='function')?curDu(c):null, dg=du&&du.stem?TS_GROUP[tenStarOf(c.dayMaster.stem,du.stem)]:'';
   const stS=st==='身旺'?(plain?'あなたは気持ちがまっすぐ強く出やすい人なので、返事がないと何度も連絡したくなりがちです。送るのは一度だけにしましょう。':'身旺（気持ちが強く出やすい命式）なので、返事がないと何度も連絡したくなりがち。送るのは一度だけに。')
     :(st==='身弱'?(plain?'あなたは不安を感じやすい人なので、返事がない時間を自分のせいにしすぎないでください。':'身弱（不安を感じやすい命式）なので、返事がない時間を自分のせいにしすぎないこと。')
@@ -9506,7 +9527,7 @@ function _kdBoth(a,b,plain){ if(!a||!b) return '';
 /* これから30日の「2人に向いた日／大事な話は避けたい日」（compatDaysBody と相談の答えで同じ日）。kA/kB＝その日が本人／お相手の解けない空亡の月に入る（2026-11-04） */
 function compatDaysPick(A,B,n){ try{ const L=[], t0=_jstToday().getTime(), mc={};
   for(let i=0;i<(n||30);i++){ const d=new Date(t0+i*86400000); const x=_kdDay(A,d), y=_kdDay(B,d); if(!x||!y) continue;
-    let mb=''; try{ mb=_pillarForDate(d,'month').branch; }catch(e){} if(mb&&!mc[mb]) mc[mb]={a:pkKuuBadMonth(A,mb),b:pkKuuBadMonth(B,mb)};
+    let mb=''; try{ mb=_pillarForDate(d,'month').branch; }catch(e){} if(mb&&!mc[mb]) mc[mb]={a:pkKuuBadMonth(A,mb,d),b:pkKuuBadMonth(B,mb,d)};
     L.push({d:d,x:x,y:y,s:Math.min(_kdScore(x),_kdScore(y))+(_kdScore(x)+_kdScore(y))/4,kA:!!(mb&&mc[mb].a),kB:!!(mb&&mc[mb].b),dA:pkKuuDay(A,x.branch),dB:pkKuuDay(B,y.branch)}); }
   // 解けない空亡の月に入る日・空亡の日（2人それぞれ）は向いた日の先頭にしない：印のない日から選び、足りないときだけ印つきの日を後ろに（先生の指示 2026-11-05）
   const ok=L.filter(function(o){ return !(o.x.chongDay||o.x.kei||o.y.chongDay||o.y.kei)&&o.x.jud!=='warn'&&o.y.jud!=='warn'; }).sort(function(p,q){ return q.s-p.s; }), byD=function(p,q){ return p.d-q.d; };
@@ -9610,7 +9631,7 @@ function _cmCues(c,ev,sp,love){ const g=[], gp=[], w=[]; const db=c.pillars[2].b
   return {g:g,gp:gp.filter(function(x,i,a){ return a.indexOf(x)===i; }),w:w}; }
 function compatMonths(a,b){ try{ const love=pkRelLove(); const ml=monthFortuneList(a,12), spA=pkPartnerStarsOf(b), spB=pkPartnerStarsOf(a);   /* お相手の性別で決める（同性カップルにも対応） */
   return ml.map(function(evA){ if(!evA||!evA.calYear) return null; const evB=kingunEval(b,{ganzhi:evA.ganzhi,stem:evA.stem,branch:evA.branch});
-    return {y:evA.calYear,m:evA.calMonth,gz:evA.ganzhi,A:_cmCues(a,evA,spA,love),B:_cmCues(b,evB,spB,love),kA:pkKuuBadMonth(a,evA.branch),kB:pkKuuBadMonth(b,evA.branch)}; }).filter(Boolean); }catch(e){ return []; } }   // kA/kB＝本人／お相手の解けない空亡の月（年と同じ解空の決まり。2026-11-04）
+    return {y:evA.calYear,m:evA.calMonth,gz:evA.ganzhi,A:_cmCues(a,evA,spA,love),B:_cmCues(b,evB,spB,love),kA:pkKuuBadMonth(a,evA.branch,evA),kB:pkKuuBadMonth(b,evA.branch,evA)}; }).filter(Boolean); }catch(e){ return []; } }   // kA/kB＝本人／お相手の解けない空亡の月（年と同じ解空の決まり。2026-11-04）
 function compatMonthsHTML(a,b){ try{ const L=compatMonths(a,b); if(!L.length) return '';
   const both=L.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }), one=L.filter(function(x){ return (x.A.g.length?1:0)+(x.B.g.length?1:0)===1; }), warn=L.filter(function(x){ return x.A.w.length||x.B.w.length; });
   const lab=function(x,plain){ return pkMonLabN(x.y,x.m)+(plain?'':'（'+_kdE(x.gz)+'の月）')+pkCpKuuMK(x.kA,x.kB,plain); };
@@ -11069,6 +11090,7 @@ function baziCompute(base, lon, corr){
       // 満年齢・月数も日本時間の今日で数え直し、いまの大運を立運の端数（〇ヶ月）込みで決め直す
       const by=+_in0.year,bm=+_in0.month,bd=+_in0.day;   // 満年齢は入れた生年月日で数える（サマータイムの直しで前の日になる人も。2026-11-03）
       if(by&&bm&&bd){ let am=(J.y-by)*12+(J.m-bm)-(J.d<bd?1:0); if(am<0)am=0;
+        c.birthYMD={y:by,m:bm,d:bd};   // 月・年の空亡の解空を「その月・その年に入っている大運」で見るのに使う（2026-11-05）
         c.now.ageMonths=am; c.now.age=Math.floor(am/12); c.now.date=J.y+'-'+('0'+J.m).slice(-2)+'-'+('0'+J.d).slice(-2);
         const df=c.decadeFortunes||[]; const idx=df.findIndex(d=>am>=d.startAge*12+(d.months||0)&&am<d.endAge*12+(d.months||0));
         c.now.daeunIndex=(df[0]&&am<df[0].startAge*12+(df[0].months||0))?-1:idx; }
@@ -11690,7 +11712,7 @@ function pkDigest(c,plain){ const R={}; try{ if(!c||!c.pillars||!c.dayMaster) re
   try{ const ts=detectTensen(c)||{}, w=ts.work||{}; const self=[].concat(ts.dA||[],ts.dU||[],ts.yA||[],ts.yU||[]), job=[].concat(w.dA||[],w.dU||[],w.yA||[],w.yU||[],w.mA||[],w.mU||[]);
     const ku=kubo(c), kuy=(c.annualFortunes||[]).filter(function(a){ return a.year>=nowY&&ku.indexOf(a.branch)>=0&&pkKuuBad(c,a.year); }).slice(0,2).map(function(a){ return a.year+'年'; });   // 解空（合・冲で解ける空亡）の年は入れない＝pkKuuBad（2026-11-03）
     const G='[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]', cl=function(x){ return plain?String(x).replace(new RegExp(G+'（([^（）]+)）','g'),'$1').replace(new RegExp('（'+G+'）','g'),''):x; };
-    const mku=function(x){ x=String(x); const m=x.match(/^\d{4}年\d{1,2}月[^（]*（[甲乙丙丁戊己庚辛壬癸]([子丑寅卯辰巳午未申酉戌亥])）$/); return m?x+pkKuuMTag(c,m[1],plain):x; };   // 仕事・環境の月にも、解けない空亡の月の印（2026-11-04）
+    const mku=function(x){ x=String(x); const m=x.match(/^(\d{4})年(\d{1,2})月[^（]*（[甲乙丙丁戊己庚辛壬癸]([子丑寅卯辰巳午未申酉戌亥])）$/); return m?x+pkKuuMTag(c,m[3],plain,{y:+m[1],m:+m[2]}):x; };   // 仕事・環境の月にも、解けない空亡の月の印（2026-11-04）
     const sv=self.slice(0,3).map(cl).join('・'), jv=job.slice(0,2).map(mku).map(cl).join('・');
     R.care={ic:'⚠️',t:'気をつけたい時期',to:'tensen-sec',tone:self.length?'warn':'',
       v:self.length?(plain?'大きく揺れやすい時期：':'天戦地冲：')+sv:(plain?'大きく揺れる時期は、しばらくありません':'本人（日柱）の天戦地冲は、これから25年ありません'),
