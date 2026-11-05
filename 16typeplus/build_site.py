@@ -21,7 +21,7 @@ def build():
     os.makedirs(OUT+'chars');os.makedirs(OUT+'img')
     for f in os.listdir(R+'characters/web'):
         if f.endswith('.webp'): shutil.copy(R+'characters/web/'+f,OUT+'chars/'+f)
-    shutil.copy(R+'kakure-shindan/bazi.js',OUT+'bazi.js')
+    shutil.copy(R+'src/bazi.js',OUT+'bazi.js')
     shutil.copy(R+'icons/favicon.ico',OUT+'favicon.ico')
     for f in ['favicon-32.png','favicon-48.png','apple-touch-icon.png','icon-192.png','icon-512.png','icon-maskable-192.png','icon-maskable-512.png']: shutil.copy(R+'icons/'+f,OUT+'img/'+f)
     for l in ['ja','en','ko']: shutil.copy(R+'site_assets/ogp-%s.png'%l,OUT+'img/ogp-%s.png'%l)
