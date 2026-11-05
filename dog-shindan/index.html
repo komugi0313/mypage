@@ -574,6 +574,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 
     <p class="msg" id="msg" hidden></p>
     <button class="start" id="go-quiz" type="button">スタート ▶</button>
+    <button class="sub" type="button" id="new-dog" hidden>別の子を診断する（入力を消す）</button>
     <button class="apply-edit" id="apply-edit" type="button" hidden>質問はそのままで、カードに反映する</button>
     <button class="sub" type="button" id="open-zukan">44犬種の図鑑を見る</button>
     <button class="sub gone" type="button" id="open-ecbook" hidden>もしものとき帳を見る</button>
@@ -3759,6 +3760,13 @@ function clampPan(){
   lim=Math.max(0,lim);st.dx=Math.max(-lim,Math.min(lim,st.dx));st.dy=Math.max(-lim,Math.min(lim,st.dy));
 }
 function drawCrop(){var ctx=$("crop-cv").getContext("2d");ctx.clearRect(0,0,300,300);if(st.img)drawPhoto(ctx,st.img,150,150,150,st)}
+// 別の子を診断する：前の子の名前・犬種・写真を消して、まっさらな入力にもどす（記録は消さない）
+function newDogBtn(){var b=$("new-dog");if(b)b.hidden=!Object.keys(lsGet("w44_grow",{})).length}
+newDogBtn();
+$("new-dog").addEventListener("click",function(){st.name="";st.breed="";st.age="adult";st.img=null;st.useArt=false;st.zoom=1;st.dx=0;st.dy=0;
+  try{$("in-photo").value=""}catch(e){}$("in-breed-other").value="";$("zoom-wrap").hidden=true;$("crop-hint").hidden=false;drawCrop();fillInputs();
+  $("open-last").hidden=true;$("apply-edit").hidden=true;gDog=null;
+  window.scrollTo({top:$("in-name").getBoundingClientRect().top+window.scrollY-120,behavior:"smooth"});setTimeout(function(){$("in-name").focus()},300)});
 $("in-photo").addEventListener("change",function(e){
   var f=e.target.files&&e.target.files[0];if(!f)return;
   var url=URL.createObjectURL(f),im=new Image();
@@ -3781,7 +3789,7 @@ $("in-zoom").addEventListener("input",function(e){st.zoom=+e.target.value;clampP
 function msg(t){var m=$("msg");m.textContent=t;m.hidden=false;clearTimeout(msg.t);msg.t=setTimeout(function(){m.hidden=true},6000)}
 
 // ---------- 質問（答えを押すと、すぐ次へ） ----------
-function show(id){["s-start","s-quiz","s-result","s-zukan","s-about","s-ecbook","s-my"].forEach(function(s){$(s).hidden=s!==id});window.scrollTo(0,0)}
+function show(id){["s-start","s-quiz","s-result","s-zukan","s-about","s-ecbook","s-my"].forEach(function(s){$(s).hidden=s!==id});window.scrollTo(0,0);if(id==="s-start"&&typeof newDogBtn==="function")newDogBtn()}
 // 答えの並びは質問ごとに入れかえる（いつも同じ位置を押すクセで結果がかたよらないように）
 var PERMS=[[0,1,2],[1,0,2],[2,1,0],[0,2,1],[1,2,0],[2,0,1]];
 function orderOf(i){return ((i*5+3)%4<2)?[0,1,2,3,4]:[4,3,2,1,0]}
@@ -4148,7 +4156,7 @@ function ymd(t){var d=new Date(t);return d.getFullYear()+"年"+(d.getMonth()+1)+
 // 成長の記録：診断のたびに、その回の答えから出た性格と、心の犬種を残す
 function growAdd(raw,main){var g=lsGet("w44_grow",{}),k=dogKey();
   var p=raw.sum.map(function(v,i){return raw.cnt[i]?Math.round(Math.max(0,Math.min(100,50+(v/raw.cnt[i]*100-50)*SPREAD))):50});
-  g[k]=g[k]||{n:st.name||"うちの子",b:st.breed,list:[]};g[k].n=st.name||"うちの子";g[k].list.push({t:Date.now(),m:main.id,p:p,a:st.age});g[k].list=g[k].list.slice(-30);lsSet("w44_grow",g)}
+  g[k]=g[k]||{n:st.name||"うちの子",b:st.breed,list:[]};g[k].n=st.name||"うちの子";g[k].list.push({t:Date.now(),m:main.id,p:p,a:st.age});g[k].list=g[k].list.slice(-30);lsSet("w44_grow",g);gDog=k} // 診断した子を、マイページとアイコンの「いまの子」にする
 var gDog=null;
 function renderGrow(){var g=lsGet("w44_grow",{}),keys=Object.keys(g);
   $("g-empty").hidden=!!keys.length;$("g-tl-panel").hidden=!keys.length;$("g-chart-panel").hidden=!keys.length;$("g-save-wrap").hidden=!keys.length;$("g-img").hidden=true;$("g-img-tip").hidden=true;$("g-dogs").hidden=keys.length<2;
