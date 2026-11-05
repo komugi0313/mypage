@@ -305,7 +305,7 @@ function setupReveal(N,born,now,bAT,nAT,diff,atDiff,why,aligned,instant){
  if(instant){$("flipAll").hidden=true;cols.forEach((_,i)=>open(i));};}
 /* ---- 人物像 ---- */
 function drawPersona(which){const me=window.__me;if(!me||typeof PS==="undefined")return;
- const t=which==="now"?me.now:me.born,at=which==="now"?me.nAT:me.bAT,P=PS[t];
+ const t=which==="now"?me.now:me.born,at=which==="now"?me.nAT:me.bAT,P=ktStu(PS[t]);
  $("pNow").innerHTML=TR('性格<b>')+me.now+(me.nAT?"-"+me.nAT:"")+'</b>';$("pBorn").innerHTML=TR('気質<b>')+me.born+(me.bAT?"-"+me.bAT:"")+'</b>';
  $("pNow").setAttribute("aria-selected",which==="now");$("pBorn").setAttribute("aria-selected",which!=="now");
  if(!P){$("psCatch").textContent=TR("（{t}の人物像は準備中です）").replace("{t}",t);["psOv","psRel","psLove","psWork","psGrow","psAT"].forEach(id=>$(id).textContent="");$("psStr").innerHTML=$("psPit").innerHTML=$("psJobs").innerHTML="";return;}
@@ -452,7 +452,7 @@ function showShareBox(cvs){let box=$("shareBox");
  if(window.claude&&claude.use)claude.use("downloads").then(dl=>{if(!dl)return;svs.forEach((a,i)=>a.onclick=e=>{e.preventDefault();cvs[i].toBlob(bl=>{dl.save({filename:"16typeplus-"+(i+1)+".png",data:bl}).catch(()=>{});},"image/png");});}).catch(()=>{});}
 /* 気質と性格の言葉（甘い→恋愛→あるある→辛口の順） */
 function cwList(t){const K=CW[t];if(K)return [...(K.sweet||[]).slice(0,4),...(K.love||[]).slice(0,4),...(K.mild||[]).slice(0,3),...(K.spicy||[]).slice(0,4)];
- const P=PS[t]||{};return [...(P.strengths||[]).map(x=>x.split("｜")[0]),...(D.ARUARU[t]||[]),...(P.pitfalls||[]).map(x=>x.split("｜")[0])].slice(0,15);}
+ const P=ktStu(PS[t])||{};return [...(P.strengths||[]).map(x=>x.split("｜")[0]),...(D.ARUARU[t]||[]),...(P.pitfalls||[]).map(x=>x.split("｜")[0])].slice(0,15);}
 function cwColors(b,n){const GC={NT:SC.jp,NF:SC.tf,SJ:SC.ei,SP:SC.sn},grp=t=>t[1]==="N"?"N"+t[2]:"S"+t[3];const cb=GC[grp(b)];return [cb,b===n?cb:(grp(b)===grp(n)?SC.ink:GC[grp(n)])];}
 function cwFonts(){const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
  return Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"あア가A"))).catch(()=>{}).then(()=>({SANS,MONO}));}
@@ -765,7 +765,7 @@ async function drawCV(){
  const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
  try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"16TYPE+ あア가A")));}catch(e){}
  const img=await loadImg(charSrc(me.now));
- const P=PS[me.now]||{},PB=PS[me.born]||{},AN=D.ARUARU[me.now]||[],AB=D.ARUARU[me.born]||[],Q0=(D.QUOTE&&D.QUOTE[me.now])||[],Q=me.kt?[me.kt.say.replace(/^[「"']|[」"']$/g,"")].concat(Q0.slice(0,1)):Q0;
+ const P=ktStu(PS[me.now])||{},PB=ktStu(PS[me.born])||{},AN=D.ARUARU[me.now]||[],AB=D.ARUARU[me.born]||[],Q0=(D.QUOTE&&D.QUOTE[me.now])||[],Q=me.kt?[me.kt.say.replace(/^[「"']|[」"']$/g,"")].concat(Q0.slice(0,1)):Q0;
  const head=x=>String(x||"").split("｜")[0];
  const LINE="#B9C0CA",LBG="#F3F5F8",X0=60,X1=W-60,LW=190;
  c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);c.fillStyle=SC.plus;c.fillRect(0,0,W,12);
@@ -792,8 +792,8 @@ async function drawCV(){
  /* 歩み（気質は子どものころに、性格は大人になってから出やすい） */
  const sec=(t)=>{y+=10;c.font="700 26px "+SANS;c.fillStyle=SC.plus;c.fillText(t,X0,y+20);y+=36;};
  sec(TR("これまでの歩み（予測）"));
- const kr0=String((me.kt&&me.kt.karai)||me.karaiC||""),dup=x=>{x=String(x||"");for(let i=0;i+6<=x.length;i++)if(kr0.includes(x.slice(i,i+6)))return true;return false;},pick=(arr,i)=>{const v=arr[i];if(!dup(v))return v;const alt=arr.find((x,j)=>j!==i&&x&&!dup(x));return alt||v;};
- const ag=stageAge(),hist=(ag!=null&&ag<=22?[[TR("子どものころ"),pick(AB,0)],[TR("学生時代"),pick(AB,1)],[TR("これから"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]:[[TR("子どものころ"),pick(AB,0)],[TR("学生時代"),pick(AB,1)],[TR("社会に出て"),AN[2]||AN[0]],[TR("現在"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]).filter(r=>r[1]);
+ const kr0=String((me.kt&&me.kt.karai)||me.karaiC||""),dup=x=>{x=String(x||"");for(let i=0;i+6<=x.length;i++)if(kr0.includes(x.slice(i,i+6)))return true;return false;},pick=(arr,i,kid)=>{/* 子どものころ・学生時代の行には、大人の場面（会議・職場など）の特徴を使わない */const ng=x=>!x||dup(x)||(kid&&ADULT_SCENE.test(x));const v=arr[i];if(!ng(v))return v;const alt=arr.find((x,j)=>j!==i&&!ng(x));return alt||(kid?"":v);};
+ const ag=stageAge(),hist=(ag!=null&&ag<=22?[[TR("子どものころ"),pick(AB,0,1)],[TR("学生時代"),pick(AB,1,1)],[TR("これから"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]:[[TR("子どものころ"),pick(AB,0,1)],[TR("学生時代"),pick(AB,1,1)],[TR("社会に出て"),AN[2]||AN[0]],[TR("現在"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]).filter(r=>r[1]);
  hist.forEach(([l,v])=>{const h=64;lab(X0,y,LW,h,l);box(X0+LW,y,X1-X0-LW,h);txt(v,X0+LW+18,y+h/2+9,X1-X0-LW-36,25,1);y+=h;});
  y+=30;
  /* 長所・短所 */
@@ -864,7 +864,9 @@ function kaiunCard(at){let c=$("kaiun");if(LANG!=="ja"||!KAIUN_URL||!st.y){if(c)
 const SWN={EI:["元気の出し方","人といるか、ひとりか","--ei"],SN:["ものの見方","これまでの経験で考えるか、先のことを想像して考えるか","--sn"],TF:["決め方","理屈か、気持ちか","--tf"],JP:["進め方","計画どおりか、その場に合わせるか","--jp"]};
 /* 19〜22歳（日本語）：学生向けの文の「部活・クラス・文化祭」を大学向けの言葉にする */
 const UNIW=[["クラス替えの日に","新しい授業の初日に"],["クラス替えから","新学期から"],["部活やサークル","サークル"],["部活やクラス","サークルやゼミ"],["クラスや部活","ゼミやサークル"],["部活","サークル"],["文化祭","学園祭"],["クラスのみんな","サークルのみんな"],["同じクラス","同じ授業"],["クラス替え","新学期"],["クラス","ゼミ"]];
-const UNIW_X={en:[["my teacher","my professor"],["My teacher","My professor"],["a teacher","a professor"],["the teacher","the professor"],["teachers","professors"],["teacher","professor"],["classmates","people in my classes"],["homeroom","class"]],ko:[["선생님","교수님"],["담임","교수님"],["반 친구들","같은 수업 사람들"],["반 친구","같은 수업 친구"]]};
+const UNIW_X={en:[["my teacher","my professor"],["My teacher","My professor"],["a teacher","a professor"],["the teacher","the professor"],["teachers","professors"],["teacher","professor"],["classmates","people in my classes"],["homeroom","class"],["student council meeting","student group meeting"],["Student council","Student group"],["student council","student group"],["school festival","campus festival"],["School festival","Campus festival"],["sports day","campus sports event"],["Sports day","Campus sports event"]],
+ ko:[["선생님","교수님"],["담임","교수님"],["반 친구들","같은 수업 사람들"],["반 친구","같은 수업 친구"],["반에서는","과에서는"],["반에서","과에서"],["하굣길","집에 가는 길"],["등굣길","학교 가는 길"],["교실","강의실"],["학생회","학생 모임"],["학교 축제","대학 축제"],["체육대회","과 체육대회"],["반이 바뀌고","새 학기가 되고"],["새 반이나","새 학기 수업이나"]]};
+const ADULT_SCENE=/職場|会社|上司|同僚|部署|会議|残業|飲み会|取引先|出張|家賃|引っ越し|(?<!丈)夫(?!婦)|\b(meetings?|office|boss|coworkers?|colleagues?|rent|husband|wife|workplace)\b|회의|회사|직장|상사|동료|회식|야근|월세|남편|아내/i;
 function uniW(t){if(typeof t!=="string")return t;const g=stageAge();if(g==null||g<19||g>22)return t;(LANG==="ja"?UNIW:(UNIW_X[LANG]||[])).forEach(([a,b])=>{t=t.split(a).join(b);});return t;}
 /* 22歳以下には、くわしい鑑定などの文で学生向け（〇〇_s）があればそちらを出す */
 function ktStu(o){if(!o)return o;const g=stageAge();if(g==null||g>22)return o;const r={};for(const k in o){if(!k.endsWith("_s"))r[k]=o[k+"_s"]?uniW(o[k+"_s"]):o[k];}return r;}
