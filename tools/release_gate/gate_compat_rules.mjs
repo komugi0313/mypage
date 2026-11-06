@@ -137,6 +137,10 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   if(!EE.length||!S2.length) e.push('易・鑑定書の pkFactFix が呼べない'); if(bad) e.push('節入りの月の干支がちがう '+bad+'件'); if(dif) e.push('3つのツールで節入りの決め方がちがう '+dif+'件');
   await ctx2.close(); srvE.close();
   console.log('  '+(e.length?'NG':'OK')+' 鑑定書（本格版・やさしい版）・易の干支の直し、節入りが3ツールで同じ（'+strs.length+'日）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('鑑定書・易の干支: '+e.join('・')); }
+// 六十干支にない形は名前がなくても外し、前後を自然につなぐ（pkFactFix ⑨。3ツール同じ中身。2026-11-06）
+{ const r=await p.evaluate(()=>{ if(typeof pkFactFix!=='function') return null; window.__pkGzFixLog=[]; const L=[['この流れは（甲丑）で、よい。','この流れは、よい。'],['「乙子」の気配。','その気配。'],['流れは甲丑の年に。','流れはその年に。'],['甲・丑の話。甲と丑。丁子の香り。丙午の年。','甲・丑の話。甲と丑。丁子の香り。丙午の年。'],['この時期は乙子が巡り、動く。','この時期は巡り、動く。']]; const out=L.map(([a,b])=>[pkFactFix(a),b]); return {out, drop:(window.__pkGzFixLog||[]).filter(x=>x.st==='drop').length}; });
+  const e=[]; if(!r) e.push('仕組みがない'); else { r.out.forEach(([x,w])=>{ if(x!==w) e.push(x+'≠'+w); }); if(r.drop<4) e.push('根拠のチェック表に🗑の記録がない'); if(r.out.some(([x])=>/はで|のの|はは|がで|（、|、、/.test(x))) e.push('助詞が続く・読点が続く'); }
+  console.log('  '+(e.length?'NG':'OK')+' 六十干支にない形を外して自然につなぐ'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('ない干支: '+e.join('・')); }
 // 縁が動く月の三合・刑（2008-03-28 14時 女性：11月己亥＝亥卯未の三合〈時支の未〉、12月庚子＝配偶宮卯と刑）
 { const m=await p.evaluate(()=>{ if(typeof loveFourLines!=='function') return ''; const c=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'); const L=loveFourLines(c); return (L&&L.pro[3]||'')+'|'+pkIsLoveQ('今年の冬に出会う可能性がある男性は？'); });
   const e=[]; if(/己亥の月/.test(m)&&!/己亥の月）＝[^／]*三合（亥卯未/.test(m)) e.push('三合（亥卯未）'); if(/庚子の月/.test(m)&&!/庚子の月）＝配偶宮「卯」と刑/.test(m)) e.push('子卯の刑'); if(!/\|true$/.test(m)) e.push('「出会う」を恋愛相談と見分ける');
