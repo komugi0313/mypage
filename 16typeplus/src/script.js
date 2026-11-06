@@ -1,3 +1,5 @@
+/* 共有画像：画面と結果の文字を全部先に読みこむ（日本語・韓国語の字体は文字ごとに小分けで届くため） */
+function fontText(){let t="16TYPE+ あア가A♡0123456789";try{t+=document.body.innerText||"";t+=JSON.stringify(window.__me||{});}catch(e){}return [...new Set(t)].filter(ch=>ch>" ").join("");}
 /* 多言語：TR("日本語") で、その言語の辞書にあれば置き換える */
 const LANG=(typeof PAGE_LANG!=="undefined")?PAGE_LANG:"ja";
 const TR=(t)=>(typeof I18N!=="undefined"&&I18N[t]!=null)?I18N[t]:t;
@@ -147,7 +149,7 @@ async function shareChange(){track("share_change");const b=$("cgShare"),lbl=b.te
  catch(e){alert(TR("画像をつくれませんでした。もう一度お試しください。"));}finally{b.disabled=false;b.textContent=lbl;}}
 async function drawChange(){const me=window.__me,W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
- try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"16TYPE+ あア가A")));}catch(e){}
+ try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,fontText())));}catch(e){}
  const prev=me.prev||[],rows=chgData(me.born,me.now,prev),im=await loadImg(charSrc(me.now));
  c.fillStyle=SC.bg;c.fillRect(0,0,W,H);c.fillStyle=SC.card;rrect(c,48,48,W-96,H-96,36);c.fill();c.strokeStyle=SC.rule;c.lineWidth=2;c.stroke();
  c.textAlign="center";c.fillStyle=SC.muted;c.font="500 30px "+SANS;c.fillText(TR("わたしの16タイプの変化"),W/2,138);
@@ -212,10 +214,10 @@ function resetAll(){sset(KR,null);sset(KQ,null);try{history.replaceState(null,""
  selAT=null;document.querySelectorAll("#atPick button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v?"false":"true"));drawSlots(-1);$("pickField").hidden=true;$("hasType").setAttribute("aria-pressed","false");
  qc.hidden=true;fc.hidden=false;drawResume();window.scrollTo(0,0);
  try{location.reload();}catch(e){}}
-$("formReset").onclick=()=>askInline($("formReset"),TR("診断結果も含めて、すべてリセットしますか？"),TR("リセットする"),resetAll);
+$("formReset").onclick=()=>askInline($("formReset"),TR("入力と、今回の診断結果を消しますか？（保存した結果と性格の記録は残ります）"),TR("リセットする"),resetAll);
 $("quiz").onclick=()=>{if(!dateOK())return;startQuiz(null);};if($("startBtn"))$("startBtn").onclick=e=>{e.preventDefault();$("formCard").scrollIntoView({behavior:"smooth",block:"start"});};
 if($("recheckBtn"))$("recheckBtn").onclick=()=>{startQuiz(null);$("quizCard").scrollIntoView({behavior:"smooth"});};
-$("qQuit").onclick=()=>{showQuiz(false);drawResume();};
+$("qQuit").onclick=()=>{showQuiz(false);drawResume();/* タイプを選ぶ欄を開く */setTimeout(()=>{try{$("hasType").click();}catch(e){}},50);};
 $("qBack").onclick=()=>{if(qi>0){qi--;saveQuiz();drawQ();}else{showQuiz(false);drawResume();}};
 function scoreAll(){const sc={EI:[0,0],SN:[0,0],TF:[0,0],JP:[0,0],AT:[0,0]};
  QZ.Q.forEach((q,i)=>{const v=qa[i];if(v==null)return;const A=AXQ[AXN[q.ax]];if(q.p===A.a){sc[q.ax][0]+=v;sc[q.ax][1]+=5-v;}else{sc[q.ax][1]+=v;sc[q.ax][0]+=5-v;}});
@@ -290,7 +292,7 @@ function setupReveal(N,born,now,bAT,nAT,diff,atDiff,why,aligned,instant){
  if(instant){$("flipAll").hidden=true;cols.forEach((_,i)=>open(i));};}
 /* ---- 人物像 ---- */
 function drawPersona(which){const me=window.__me;if(!me||typeof PS==="undefined")return;
- const t=which==="now"?me.now:me.born,at=which==="now"?me.nAT:me.bAT,P=PS[t];
+ const t=which==="now"?me.now:me.born,at=which==="now"?me.nAT:me.bAT,P=ktStu(PS[t]);
  $("pNow").innerHTML=TR('性格<b>')+me.now+(me.nAT?"-"+me.nAT:"")+'</b>';$("pBorn").innerHTML=TR('気質<b>')+me.born+(me.bAT?"-"+me.bAT:"")+'</b>';
  $("pNow").setAttribute("aria-selected",which==="now");$("pBorn").setAttribute("aria-selected",which!=="now");
  if(!P){$("psCatch").textContent=TR("（{t}の人物像は準備中です）").replace("{t}",t);["psOv","psRel","psLove","psWork","psGrow","psAT"].forEach(id=>$(id).textContent="");$("psStr").innerHTML=$("psPit").innerHTML=$("psJobs").innerHTML="";return;}
@@ -362,7 +364,7 @@ function render(instant){
  if(K){const wk=AX.filter(A=>aligned[A.k]).map(A=>born[AX.indexOf(A)]),wkL=LANG==="en"?(wk.length<3?wk.join(" and "):wk.slice(0,-1).join(", ")+", and "+wk[wk.length-1]):LANG==="ja"?(wk.length<3?wk.join(" と "):wk.join("・")):wk.join(TR("・")),wkIn=!!(K.aru&&K.why&&sents(K.why).length>1);
  const wkH=wk.length?'<p class="ktwk in">'+TR("※ {L} は生年月日からははっきりしない文字なので、「生まれつき」は「どちらかといえば」の意味で読んでください。").replace("{L}",wkL)+'</p>':'';
  el.innerHTML='<h3 class="kth">'+TR("くわしい鑑定")+'</h3>'+wkH+(K.aru?(()=>{const yureH=born!==now?TR("{a} と {b} を行き来しやすいわけ").replace("{a}",born).replace("{b}",now):TR("結果が変わりにくいわけ"),hT=(f,h)=>f==="yure"?yureH:TR(h);
-   const sec=([f,h],n)=>'<div class="kts kt-'+f+'"><h4>'+(n?'<span class="ktn">'+n+'</span>':'')+hT(f,h)+'</h4>'+(f==="plus"&&K.worry?'<p class="ktworry">'+esc(sents(K.worry)[0])+'</p>':'')+(f==="why"&&n&&wkIn?whyFold(K.why,""):kfmt(K[f],f))+(f==="yure"?(born===now&&wk.length?'<p>'+TR("ただ、{L} は生年月日からははっきりしない文字なので、ここは答えが変わることもあります。").replace("{L}",wkL)+'</p>':'')+swayNote(born,now)+yureSee(born,now):'')+'</div>';
+   const sec=([f,h],n)=>'<div class="kts kt-'+f+'"><h4>'+(n?'<span class="ktn">'+n+'</span>':'')+hT(f,h)+'</h4>'+(f==="plus"&&K.worry?'<p class="ktworry">'+esc(K.worry)+'</p>':'')+(f==="why"&&n&&wkIn?whyFold(K.why,""):kfmt(K[f],f))+(f==="yure"?(born===now&&wk.length?'<p>'+TR("ただ、{L} は生年月日からははっきりしない文字なので、ここは答えが変わることもあります。").replace("{L}",wkL)+'</p>':'')+swayNote(born,now)+yureSee(born,now):'')+'</div>';
    /* 大事な3つ（こんなこと→どうして→生かすヒント）だけ先に見せ、残りは「もっと読む」にたたむ */
    const main=[["aru","こんなこと、ありませんか？"],["why","どうしてそうなるの？"],["tip","生かすヒント"]].filter(([f])=>K[f]),more=[["yure","16タイプの結果が変わるわけ"],["plus","悩みを、こう見てみる"],["hidden","あなたの、もう一つの力"]].filter(([f])=>K[f]);
    return main.map((x,i)=>sec(x,i+1)).join("")+(more.length?'<details class="mdet ktmore"><summary><span>'+TR("もっと読む")+'<small>'+more.map(([f,h])=>hT(f,h)).join(TR("・"))+'</small></span></summary>'+more.map(x=>sec(x,0)).join("")+'</details>':'');})():'<p class="ktb">'+esc(K.body)+'</p>')+(K.aru?'':'<dl class="ktl"><dt>'+TR("悩みやすいこと")+'</dt><dd>'+esc(K.worry)+'</dd></dl>');}}}window.__me.karaiC=strip(C.karai||"");drawBalance(N);lvInit();saveResult();layoutResult();recPick=null;drawRec();
@@ -382,7 +384,7 @@ function loadImg(src){return new Promise(r=>{const i=new Image();i.crossOrigin="
 async function drawShare(){
  const me=window.__me,W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const ctx=cv.getContext("2d");
  const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',ROUND=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
- try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"700 40px "+ROUND,"600 40px "+MONO].map(f=>document.fonts.load(f,"16TYPE+ あア가A")));}catch(e){}
+ try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"700 40px "+ROUND,"600 40px "+MONO].map(f=>document.fonts.load(f,fontText())));}catch(e){}
  const one=me.born===me.now&&(!me.bAT||!me.nAT||me.bAT===me.nAT),[ib,inw]=await Promise.all([loadImg(charSrc(me.born)),one?Promise.resolve(null):loadImg(charSrc(me.now))]);
  ctx.fillStyle=SC.bg;ctx.fillRect(0,0,W,H);
  ctx.fillStyle=SC.card;rrect(ctx,48,48,W-96,H-96,36);ctx.fill();ctx.strokeStyle=SC.rule;ctx.lineWidth=2;ctx.stroke();
@@ -437,10 +439,10 @@ function showShareBox(cvs){let box=$("shareBox");
  if(window.claude&&claude.use)claude.use("downloads").then(dl=>{if(!dl)return;svs.forEach((a,i)=>a.onclick=e=>{e.preventDefault();cvs[i].toBlob(bl=>{dl.save({filename:"16typeplus-"+(i+1)+".png",data:bl}).catch(()=>{});},"image/png");});}).catch(()=>{});}
 /* 気質と性格の言葉（甘い→恋愛→あるある→辛口の順） */
 function cwList(t){const K=CW[t];if(K)return [...(K.sweet||[]).slice(0,4),...(K.love||[]).slice(0,4),...(K.mild||[]).slice(0,3),...(K.spicy||[]).slice(0,4)];
- const P=PS[t]||{};return [...(P.strengths||[]).map(x=>x.split("｜")[0]),...(D.ARUARU[t]||[]),...(P.pitfalls||[]).map(x=>x.split("｜")[0])].slice(0,15);}
+ const P=ktStu(PS[t])||{};return [...(P.strengths||[]).map(x=>x.split("｜")[0]),...(D.ARUARU[t]||[]),...(P.pitfalls||[]).map(x=>x.split("｜")[0])].slice(0,15);}
 function cwColors(b,n){const GC={NT:SC.jp,NF:SC.tf,SJ:SC.ei,SP:SC.sn},grp=t=>t[1]==="N"?"N"+t[2]:"S"+t[3];const cb=GC[grp(b)];return [cb,b===n?cb:(grp(b)===grp(n)?SC.ink:GC[grp(n)])];}
 function cwFonts(){const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
- return Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"あア가A"))).catch(()=>{}).then(()=>({SANS,MONO}));}
+ return Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,fontText()))).catch(()=>{}).then(()=>({SANS,MONO}));}
 /* 小さくしすぎず、入らないときは2行に折り返して書く */
 function fitText(c,SANS,t,x,y,w,fs,min,col,wt){wt=wt||700;c.font=wt+" "+fs+"px "+SANS;while(c.measureText(t).width>w&&fs>min){fs--;c.font=wt+" "+fs+"px "+SANS;}
  c.fillStyle=col;if(c.measureText(t).width<=w){c.fillText(t,x,y);return;}const ls=wrapLines(c,t,w,2);ls.forEach((l,i)=>c.fillText(l,x,y-(ls.length-1)*fs*0.55+i*fs*1.1));}
@@ -511,7 +513,7 @@ async function drawKarte(){const me=window.__me,{SANS,MONO}=await cwFonts(),W=10
  const fitF=(t,w,fs,wt)=>{c.font=(wt||500)+" "+fs+"px "+SANS;while(c.measureText(t).width>w&&fs>14){fs--;c.font=(wt||500)+" "+fs+"px "+SANS;}return fs;};
  c.font="700 52px "+SANS;c.fillStyle=SC.ink;c.fillText(TR("性格カルテ"),X0,104);
  c.font="600 22px "+MONO;c.fillStyle=SC.muted;c.fillText("16TYPE+  No."+b+"-"+n,X0,144);
- const d=new Date();c.textAlign="right";c.font="500 22px "+SANS;c.fillText(LANG==="ja"?d.getFullYear()+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日":LANG==="ko"?d.getFullYear()+"."+(d.getMonth()+1)+"."+d.getDate()+".":d.toISOString().slice(0,10),X1,100);c.textAlign="left";
+ const d=new Date();c.textAlign="right";c.font="500 22px "+SANS;c.fillText(LANG==="ja"?d.getFullYear()+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日":LANG==="ko"?d.getFullYear()+"."+(d.getMonth()+1)+"."+d.getDate()+".":d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}),X1,100);c.textAlign="left";
  let y=176;c.strokeStyle=LINE;c.lineWidth=2;c.strokeRect(X0,y,X1-X0,112);const mid=(X0+X1)/2;c.beginPath();c.moveTo(mid,y);c.lineTo(mid,y+112);c.stroke();
  c.font="500 22px "+SANS;c.fillStyle=SC.muted;c.fillText(TR("気質（生まれ持った）"),X0+24,y+40);c.fillText(TR("性格（経験で育った）"),mid+24,y+40);
  c.font="700 36px "+SANS;fillNm(c,b,b,X0+24,y+90,"left",cb,"#9AA3AF",mid-X0-40);c.font="700 36px "+SANS;if(one){c.fillStyle=cn;c.fillText(TR("気質と同じ"),mid+24,y+90);}else fillNm(c,n,n,mid+24,y+90,"left",cn,"#9AA3AF",X1-mid-40);y+=150;
@@ -532,7 +534,7 @@ async function drawKarte(){const me=window.__me,{SANS,MONO}=await cwFonts(),W=10
    /* カプセルの絵 */const px=bx+pad,py=y+30;rrect(c,px,py-14,48,26,13);c.fillStyle="#FFFFFF";c.fill();c.strokeStyle=SC.plus;c.stroke();c.save();c.beginPath();rrect(c,px,py-14,48,26,13);c.clip();c.fillStyle=i?cn===SC.ink?SC.plus:cn:cb;c.fillRect(px,py-14,24,26);c.restore();c.strokeStyle=SC.plus;rrect(c,px,py-14,48,26,13);c.stroke();
    c.font="800 30px "+SANS;c.fillStyle=SC.plus;fitF(r.name,bw-pad*2-70,30,800);c.fillStyle=SC.plus;c.fillText(r.name,px+66,py+10);
    c.font="500 24px "+SANS;c.fillStyle=SC.ink;let yy=y+70+22;how.concat(eff).forEach(l=>{c.fillText(l,px+66,yy);yy+=38;});y+=h+16;});y+=28;
-  if(co.side)para(TR("副作用"),"※ "+co.side);
+  if(co.side)para(TR("副作用"),(LANG==="ja"?"※ ":LANG==="en"?"Note: ":"※ ")+co.side);
   if(co.doc)para(TR("先生からひと言"),co.doc,"#FBEDEA",SC.plus,true);
  }else{para(TR("処方（楽になるヒント）"),G.key);}
  const H=y+80;c.textAlign="center";c.font="600 28px "+MONO;c.fillStyle=SC.ink;c.fillText(SHARE_URL.replace("https://",""),W/2,H-36);c.textAlign="left";
@@ -695,7 +697,7 @@ async function lvShareRun(t){track("love_share_click");const b=$("lvShare"),lbl=
   else showShareBox(cvs);}catch(e){alert(TR("画像をつくれませんでした。もう一度お試しください。"));}finally{b.disabled=false;b.textContent=lbl;}}
 const LVC={ink:SC.ink,muted:SC.muted,soft:"#EEF1F5",rule:"#E2E6EC",rose:"#C9607A",roseT:"#F8E4EA",rose2:"#DE8FA3"};
 function lvFonts(){const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
- return Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"あア가A♡"))).catch(()=>{}).then(()=>({SANS,MONO}));}
+ return Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,fontText()))).catch(()=>{}).then(()=>({SANS,MONO}));}
 /* 恋愛のシェア画像1枚目：キャラ・恋のタイプ・ひと言・4文字・恋のことば */
 async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const me=window.__me,t=P.t,X0=70,X1=W-70,im=await loadImg(charSrc(t));
@@ -748,15 +750,15 @@ async function lvSheet(P){const {SANS,MONO}=await lvFonts(),LP=(window.__lvPtImg
 async function drawCV(){
  const me=window.__me,W=1080;let H=2200;const cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
- try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"16TYPE+ あア가A")));}catch(e){}
+ try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,fontText())));}catch(e){}
  const img=await loadImg(charSrc(me.now));
- const P=PS[me.now]||{},PB=PS[me.born]||{},AN=D.ARUARU[me.now]||[],AB=D.ARUARU[me.born]||[],Q0=(D.QUOTE&&D.QUOTE[me.now])||[],Q=me.kt?[me.kt.say.replace(/^[「"']|[」"']$/g,"")].concat(Q0.slice(0,1)):Q0;
+ const P=ktStu(PS[me.now])||{},PB=ktStu(PS[me.born])||{},AN=D.ARUARU[me.now]||[],AB=D.ARUARU[me.born]||[],Q0=(D.QUOTE&&D.QUOTE[me.now])||[],Q=me.kt?[me.kt.say.replace(/^[「"']|[」"']$/g,"")].concat(Q0.slice(0,1)):Q0;
  const head=x=>String(x||"").split("｜")[0];
  const LINE="#B9C0CA",LBG="#F3F5F8",X0=60,X1=W-60,LW=190;
  c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);c.fillStyle=SC.plus;c.fillRect(0,0,W,12);
  c.textBaseline="alphabetic";c.textAlign="left";
  c.font="700 52px "+SANS;c.fillStyle=SC.ink;c.fillText(TR("性格の履歴書"),X0,108);
- const d=new Date(),ds=LANG==="ja"?d.getFullYear()+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日現在":LANG==="ko"?d.getFullYear()+"년 "+(d.getMonth()+1)+"월 "+d.getDate()+"일 현재":"As of "+d.toISOString().slice(0,10);
+ const d=new Date(),ds=LANG==="ja"?d.getFullYear()+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日現在":LANG==="ko"?d.getFullYear()+"년 "+(d.getMonth()+1)+"월 "+d.getDate()+"일 현재":"As of "+d.toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
  c.font="500 24px "+SANS;c.fillStyle=SC.muted;c.textAlign="right";c.fillText(ds,X1,104);c.textAlign="left";
  c.font="600 24px "+MONO;c.fillStyle=SC.muted;c.fillText("16TYPE",X0,150);c.fillStyle=SC.plus;c.fillText("+",X0+c.measureText("16TYPE").width,150);
  const box=(x,y,w,h)=>{c.strokeStyle=LINE;c.lineWidth=2;c.strokeRect(x,y,w,h);};
@@ -777,13 +779,13 @@ async function drawCV(){
  /* 歩み（気質は子どものころに、性格は大人になってから出やすい） */
  const sec=(t)=>{y+=10;c.font="700 26px "+SANS;c.fillStyle=SC.plus;c.fillText(t,X0,y+20);y+=36;};
  sec(TR("これまでの歩み（予測）"));
- const kr0=String((me.kt&&me.kt.karai)||me.karaiC||""),dup=x=>{x=String(x||"");for(let i=0;i+6<=x.length;i++)if(kr0.includes(x.slice(i,i+6)))return true;return false;},pick=(arr,i)=>{const v=arr[i];if(!dup(v))return v;const alt=arr.find((x,j)=>j!==i&&x&&!dup(x));return alt||v;};
- const ag=stageAge(),hist=(ag!=null&&ag<=22?[[TR("子どものころ"),pick(AB,0)],[TR("学生時代"),pick(AB,1)],[TR("これから"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]:[[TR("子どものころ"),pick(AB,0)],[TR("学生時代"),pick(AB,1)],[TR("社会に出て"),AN[2]||AN[0]],[TR("現在"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]).filter(r=>r[1]);
+ const kr0=String((me.kt&&me.kt.karai)||me.karaiC||""),dup=x=>{x=String(x||"");for(let i=0;i+6<=x.length;i++)if(kr0.includes(x.slice(i,i+6)))return true;return false;},pick=(arr,i,kid)=>{/* 子どものころ・学生時代の行には、大人の場面（会議・職場など）の特徴を使わない */const ng=x=>!x||dup(x)||(kid&&ADULT_SCENE.test(x));const v=arr[i];if(!ng(v))return v;const alt=arr.find((x,j)=>j!==i&&!ng(x));return alt||(kid?"":v);};
+ const ag=stageAge(),hist=(ag!=null&&ag<=22?[[TR("子どものころ"),pick(AB,0,1)],[TR("学生時代"),pick(AB,1,1)],[TR("これから"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]:[[TR("子どものころ"),pick(AB,0,1)],[TR("学生時代"),pick(AB,1,1)],[TR("社会に出て"),AN[2]||AN[0]],[TR("現在"),AN[0]===AB[0]?AN[3]||AN[1]:AN[0]]]).filter(r=>r[1]);
  hist.forEach(([l,v])=>{const h=64;lab(X0,y,LW,h,l);box(X0+LW,y,X1-X0-LW,h);txt(v,X0+LW+18,y+h/2+9,X1-X0-LW-36,25,1);y+=h;});
  y+=30;
  /* 長所・短所 */
  const half=(X1-X0-20)/2;
- const two=(t1,a1,t2,a2)=>{const h=Math.max(a1.length,a2.length)*44+60;[[t1,a1,X0],[t2,a2,X0+half+20]].forEach(([t,a,x])=>{box(x,y,half,h);c.fillStyle=LBG;c.fillRect(x+1,y+1,half-2,42);c.font="700 22px "+SANS;c.fillStyle=SC.muted;c.fillText(t,x+14,y+30);a.forEach((s,i)=>txt("・"+s,x+14,y+82+i*44,half-28,23,1));});y+=h+30;};
+ const two=(t1,a1,t2,a2)=>{const h=Math.max(a1.length,a2.length)*44+60;[[t1,a1,X0],[t2,a2,X0+half+20]].forEach(([t,a,x])=>{box(x,y,half,h);c.fillStyle=LBG;c.fillRect(x+1,y+1,half-2,42);c.font="700 22px "+SANS;c.fillStyle=SC.muted;c.fillText(t,x+14,y+30);a.forEach((s,i)=>txt((LANG==="ja"?"・":"• ")+s,x+14,y+82+i*44,half-28,23,1));});y+=h+30;};
  {/* 同じ文は1回だけ。足りなければ次の文で埋める */const pick3=(x,y)=>{x=x||[];y=y||[];const o=[];[x[0],x[1],y[0],x[2],y[1],x[3],y[2]].map(head).forEach(v=>{if(v&&!o.includes(v)&&o.length<3)o.push(v);});return o;};
  two(TR("長所"),pick3(P.strengths,PB.strengths),TR("短所（自己申告）"),pick3(P.pitfalls,PB.pitfalls));}
  /* 口ぐせ */
@@ -849,7 +851,9 @@ function kaiunCard(at){let c=$("kaiun");if(LANG!=="ja"||!KAIUN_URL||!st.y){if(c)
 const SWN={EI:["元気の出し方","人といるか、ひとりか","--ei"],SN:["ものの見方","これまでの経験で考えるか、先のことを想像して考えるか","--sn"],TF:["決め方","理屈か、気持ちか","--tf"],JP:["進め方","計画どおりか、その場に合わせるか","--jp"]};
 /* 19〜22歳（日本語）：学生向けの文の「部活・クラス・文化祭」を大学向けの言葉にする */
 const UNIW=[["クラス替えの日に","新しい授業の初日に"],["クラス替えから","新学期から"],["部活やサークル","サークル"],["部活やクラス","サークルやゼミ"],["クラスや部活","ゼミやサークル"],["部活","サークル"],["文化祭","学園祭"],["クラスのみんな","サークルのみんな"],["同じクラス","同じ授業"],["クラス替え","新学期"],["クラス","ゼミ"]];
-const UNIW_X={en:[["my teacher","my professor"],["My teacher","My professor"],["a teacher","a professor"],["the teacher","the professor"],["teachers","professors"],["teacher","professor"],["classmates","people in my classes"],["homeroom","class"]],ko:[["선생님","교수님"],["담임","교수님"],["반 친구들","같은 수업 사람들"],["반 친구","같은 수업 친구"]]};
+const UNIW_X={en:[["my teacher","my professor"],["My teacher","My professor"],["a teacher","a professor"],["the teacher","the professor"],["teachers","professors"],["teacher","professor"],["classmates","people in my classes"],["homeroom","class"],["student council meeting","student group meeting"],["Student council","Student group"],["student council","student group"],["school festival","campus festival"],["School festival","Campus festival"],["sports day","campus sports event"],["Sports day","Campus sports event"]],
+ ko:[["선생님","교수님"],["담임","교수님"],["반 친구들","같은 수업 사람들"],["반 친구","같은 수업 친구"],["반에서는","과에서는"],["반에서","과에서"],["하굣길","집에 가는 길"],["등굣길","학교 가는 길"],["교실","강의실"],["학생회","학생 모임"],["학교 축제","대학 축제"],["체육대회","과 체육대회"],["반이 바뀌고","새 학기가 되고"],["새 반이나","새 학기 수업이나"]]};
+const ADULT_SCENE=/職場|会社|上司|同僚|部署|会議|残業|飲み会|取引先|出張|家賃|引っ越し|(?<!丈)夫(?!婦)|\b(meetings?|office|boss|coworkers?|colleagues?|rent|husband|wife|workplace)\b|회의|회사|직장|상사|동료|회식|야근|월세|남편|아내/i;
 function uniW(t){if(typeof t!=="string")return t;const g=stageAge();if(g==null||g<19||g>22)return t;(LANG==="ja"?UNIW:(UNIW_X[LANG]||[])).forEach(([a,b])=>{t=t.split(a).join(b);});return t;}
 /* 22歳以下には、くわしい鑑定などの文で学生向け（〇〇_s）があればそちらを出す */
 function ktStu(o){if(!o)return o;const g=stageAge();if(g==null||g>22)return o;const r={};for(const k in o){if(!k.endsWith("_s"))r[k]=o[k+"_s"]?uniW(o[k+"_s"]):o[k];}return r;}
@@ -869,7 +873,7 @@ function swayNote(born,now){const ks=["EI","SN","TF","JP"];
 /* 鑑定文を読みやすく：気質・性格の言葉に色、かぎかっこを太字、結論の文を太字、ヒントは箇条書き */
 const KW={ja:[/(生まれ持った気質|生まれ持った性質|生まれ持った|生まれつき|気質)|(経験の中で育った性格|経験の中で育った|経験の中で|育ってきた性格|育ってきた|性格)|(両方の力|ゆるがない部分)/g],
  en:[/\b(inborn temperament|temperament|born with|inborn)\b|\b(character you grew|personality|character|grew through experience|through experience)\b|\b(both strengths|steady part|steady core)\b/gi],
- ko:[/(타고난 기질|타고난|기질)|(경험 속에서 자란|경험으로 자란|자라 온 성격|성격)|(두 가지 힘|흔들리지 않는 부분)/g]};
+ ko:[/(타고난 기질|타고난|기질)|(경험으로 자란|자라 온 성격|살아오면서|자라면서|성격)|(두 가지 힘|흔들리지 않는 부분)/g]};
 function sents(t){/* かぎかっこ・引用符の中では文を区切らない */
  const out=[];let cur="",dq=0,inQ=false;const ends=LANG==="ja"?"。！？":".!?";
  for(let i=0;i<t.length;i++){const c=t[i];cur+=c;
@@ -896,7 +900,10 @@ function coreMoved(b,n){const L=[].concat(st.prev||[]);try{histAll().forEach(r=>
  const op={E:"I",I:"E",S:"N",N:"S",T:"F",F:"T",J:"P",P:"J"},sp=LANG==="ja"?"":" ";
  return idx.map(i=>{const o=op[n[i]];return sp+TR("前は {o}（{oc}）が出たこともありますね。もともとは{kc}人ですが、{oc}時もあります。").replace(/\{o\}/g,o).replace(/\{oc\}/g,TR(CORE[o])).replace("{kc}",TR(CORE[n[i]]));}).join("");}
 function coreCard(b,n){const co=coreOf(b,n);if(!co)return "";
- return '<div class="ktcore"><p class="kch">'+TR("あなたの変わらないところ")+'</p><p class="kcn">'+esc(co.name)+'</p><ul class="kcl">'+co.aru.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul><p class="kcs">'+(b===n?TR("気質も性格も同じ文字なので、4つすべてがあなたの変わらないところです。"):coreKey(b,n)==="----"?TR("4つの文字は、気質と性格ですべて違います。どちらの自分にもなれることが、あなたの変わらないところです。"):TR("気質と性格で同じ文字のところです。生まれつきも今も同じなので、あなたの土台になっています。")+coreMoved(b,n))+'</p></div>';}
+ return '<div class="ktcore"><p class="kch">'+TR("あなたの変わらないところ")+'</p><p class="kcn">'+esc(co.name)+'</p><ul class="kcl">'+co.aru.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul><p class="kcs">'+(b===n?TR("気質も性格も同じ文字なので、4つすべてがあなたの変わらないところです。"):coreKey(b,n)==="----"?TR("4つの文字は、気質と性格ですべて違います。どちらの自分にもなれることが、あなたの変わらないところです。"):TR("気質と性格で同じ文字のところです。生まれつきも今も同じなので、あなたの土台になっています。")+coreMoved(b,n))+coreWeak(b,n)+'</p></div>';}
+/* 変わらないところの中に、生年月日からははっきりしない文字があれば一言そえる */
+function coreWeak(b,n){const wk=((window.__me||{}).weak)||[],L=AX.map((A,i)=>(b[i]===n[i]&&wk.includes(A.k))?n[i]:null).filter(Boolean);if(!L.length)return "";
+ const sp=LANG==="ja"?"":" ";return sp+TR("ただし{L}は生年月日からははっきりしない文字なので、ここは今の性格でしっかり出ている面として読んでください。").replace("{L}",LANG==="en"?L.join(" and "):LANG==="ja"?L.join("・"):L.join("·"));}
 /* 結果の一番最初：キャラクターのカードをタップしてめくる */
 function setupCards(instant,one){waitHide();if(!instant)setTimeout(()=>{const fb=$("funBox");if(fb&&fb.classList.contains("wait2")&&!$("waitFun")){const w=document.createElement("p");w.id="waitFun";w.className="waitbox";w.innerHTML=one?TR("上の<b>カードをめくる</b>と、ここに出てきます。"):TR("上の<b>カードを2枚ともめくる</b>と、ここに出てきます。");fb.before(w);}},0);const cards=[...document.querySelectorAll(".nicks .nk")].filter(n=>!n.hidden),story=$("rStory");window.__story=story.innerHTML;
  cards.forEach(n=>{let bk=n.querySelector(".nkback");if(!bk){bk=document.createElement("div");bk.className="nkback";n.appendChild(bk);}
@@ -986,7 +993,7 @@ function drawRec(){const box=$("recBody");if(!box)return;const born=natal(st.y,s
   h+='<div class="rc-sum">'+s+'</div><p class="rc-big">'+(sw.length?TR("変わるのは、場面に合わせて使い分けているから。どちらも、あなたです。"):(rows.every(r=>r.main===born[r.i])?TR("いつ受けても同じ。生まれつきのまま、変わらずに育っています。"):TR("いつ受けても同じです。生まれつきの気質とちがう{L}も、今のあなたにしっかり根づいています。").replace("{L}",rows.filter(r=>r.main!==born[r.i]).map(r=>r.main).join(LANG==="en"?" and ":TR("・")))))+'</p>';
   h+='<div class="rc-track">'+rows.map(r=>{const side=L=>'<div class="side'+(born[r.i]===L?' born':'')+'"><span class="L">'+L+'</span><div class="dots">'+R.map(x=>'<span class="dot'+(x.t[r.i]===L?' on':'')+'"></span>').join("")+'</div></div>';
    return '<div class="tr" style="--c:var('+r.A.c+')"><span class="nm">'+TR(r.name)+'</span><div class="lane">'+side(r.A.a)+side(r.A.b)+'</div></div>';}).join("")+'<div class="dl">'+R.map(x=>'<span>'+md(x.d)+'</span>').join("")+'</div><p class="rc-leg">'+TR("赤いふちの段が、生まれつきの気質の文字です。")+'</p></div>';}
- if(n)h+='<h3 class="rc-h">'+TR("記録の一覧")+'</h3><ul class="rc-list">'+R.slice().reverse().map((r,j)=>'<li><span class="d">'+(r.d==="-"?TR("前に"):r.d.replace(/-/g,DS))+'</span><span class="t">'+r.t.split("").map((L,i)=>L!==born[i]?'<span class="diff">'+L+'</span>':L).join("")+'<span class="m">'+(r.src==="site"?"16TYPE+":TR("ほかの診断"))+((r.tags||[]).length?TR("・")+r.tags.map(TR).join(TR("、")):"")+'</span></span><button class="del" type="button" data-id="'+r.id+'">'+TR("消す")+'</button>'
+ if(n)h+='<h3 class="rc-h">'+TR("記録の一覧")+'</h3><ul class="rc-list">'+R.slice().reverse().map((r,j)=>'<li><span class="d">'+(r.d==="-"?TR("前に"):LANG==="en"?new Date(r.d+"T00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):r.d.replace(/-/g,DS))+'</span><span class="t">'+r.t.split("").map((L,i)=>L!==born[i]?'<span class="diff">'+L+'</span>':L).join("")+'<span class="m">'+(r.src==="site"?"16TYPE+":TR("ほかの診断"))+((r.tags||[]).length?TR("・")+r.tags.map(TR).join(TR("、")):"")+'</span></span><button class="del" type="button" data-id="'+r.id+'">'+TR("消す")+'</button>'
   +(j===0?'<div class="rc-tags"><small>'+TR("このころのようすを選んでおくと、記録がたまった時に、変わる理由が見えてきます")+'</small>'+htags().map(tg=>'<button type="button" data-id="'+r.id+'" data-tg="'+tg+'" aria-pressed="'+((r.tags||[]).includes(tg))+'">'+TR(tg)+'</button>').join("")+'</div>'+tagNeed(r,R):'<details class="rc-more" data-id="'+r.id+'"'+((window.__rcOpen||[]).includes(r.id)?' open':'')+'><summary>'+TR("このころのようすを選ぶ ▼")+'</summary><div class="rc-tags">'+htags().map(tg=>'<button type="button" data-id="'+r.id+'" data-tg="'+tg+'" aria-pressed="'+((r.tags||[]).includes(tg))+'">'+TR(tg)+'</button>').join("")+'</div>'+tagNeed(r,R)+'</details>')+'</li>').join("")+'</ul>';
  h+='<details class="pmore rc-add"><summary>'+TR("記録を手で足す")+'</summary><div class="rc-form"><label class="lbl" for="recDate">'+TR("受けた日")+'</label><input type="date" id="recDate" class="txt" value="'+(recDateV||today())+'"><span class="lbl">'+TR("出た16タイプ")+'</span><div class="rc-seg">'+AX.map((A,i)=>'<div style="--c:var('+A.c+')">'+[A.a,A.b].map(L=>'<button type="button" data-i="'+i+'" data-l="'+L+'" aria-pressed="'+(recPick[i]===L)+'">'+L+'</button>').join("")+'</div>').join("")+'</div><span class="lbl">'+TR("どこで受けた？")+'</span><div class="rc-tags rc-src">'+[["other","ほかの診断"],["site","16TYPE+"]].map(([v,l])=>'<button type="button" data-src="'+v+'" aria-pressed="'+(recSrc===v)+'">'+TR(l)+'</button>').join("")+'</div><span class="lbl">'+TR("このころのようす（あれば）")+'</span><div class="rc-tags rc-ftag">'+htags().map(tg=>'<button type="button" data-tg="'+tg+'" aria-pressed="'+recTags.includes(tg)+'">'+TR(tg)+'</button>').join("")+'</div><button class="btn primary" type="button" id="recAdd">'+TR("この結果を記録する")+'</button></div></details>';
  const wasOpen=box.querySelector(".rc-add")&&box.querySelector(".rc-add").open;box.innerHTML=h;if(wasOpen)box.querySelector(".rc-add").open=true;
@@ -1012,11 +1019,11 @@ const GTR=TR;
 const GL={E:"人といると元気が出る人",I:"ひとりの時間で元気が戻る人",S:"これまでの経験で考える人",N:"先のことを想像して考える人",T:"理屈で決める人",F:"気持ちで決める人",J:"計画どおり進めたい人",P:"その場に合わせて動く人"};
 const GAX=[["E","I"],["S","N"],["T","F"],["J","P"]];
 /* 多い方の文字ごとの、グループでよくある場面 */
-const GMANY={E:"集まると話が止まらず、気づいたら予定の時間を過ぎている。",I:"集まっても静かな時間がある。でも、それで気まずくならない。",S:"お店や日にちは、すぐ決まる。",N:"「今度あれやろう」という話で盛り上がる。そのまま話だけで終わることも多い。",T:"意見がちがっても、言い合ったあとはすっきりしている。",F:"だれかが元気がないと、すぐ気づいて声をかける。",J:"待ち合わせの時間と場所が、早めに決まる。",P:"当日の気分で、行き先が変わることがある。"};
+const GMANY={E:"集まると話が止まらず、気づいたら予定の時間を過ぎている。",I:"集まっても静かな時間がある。でも、それで気まずくならない。",S:"行ったことのあるお店や、いつもの流れで話がまとまりやすい。",N:"「今度あれやろう」という話で盛り上がる。そのまま話だけで終わることも多い。",T:"意見がちがっても、言い合ったあとはすっきりしている。",F:"だれかが元気がないと、すぐ気づいて声をかける。",J:"待ち合わせの時間と場所が、早めに決まる。",P:"当日の気分で、行き先が変わることがある。"};
 /* だれもいない文字ごとのコツ */
 const GNONE={E:"みんな、自分からは誘いにくい人です。帰る前に、次に会う日を決めておきましょう。",I:"みんな話すのが好きなので、話す人がかたよりやすいです。決める前に1人ずつ意見を聞いてみましょう。",S:"案はたくさん出るのに、細かいところがよく抜けます。お金と時間だけは、だれか1人が確認しましょう。",N:"いつものお店、いつもの流れになりやすいです。たまに、だれも行ったことのない場所を選んでみましょう。",T:"言いにくいことを、みんな言わずにためてしまいます。決めるときは多数決で、さっぱり決めましょう。",F:"話が早いぶん、言い方がきつくなることがあります。決まったあとに「ありがとう」をひと言。",J:"計画を立てる人がいません。日にちと集合場所だけは、その場で決めてしまいましょう。",P:"予定が変わると、みんな少し困ります。雨の日の案を1つ決めておきましょう。"};
 /* 職場・クラス・部活のグループ用 */
-const GMANY_W={"E": "話し合いで意見がどんどん出て、時間をこえることがある。", "I": "話し合いは静かだけど、あとからメッセージで、しっかりした意見が出てくる。", "S": "やることと担当は、すぐ決まる。", "N": "「こうしたらもっとよくなる」という話で盛り上がる。でも、決めるところまで進まないことがある。", "T": "意見がちがっても、言い合ったあとはすっきりしている。", "F": "疲れていそうな人がいると、すぐ気づいて声をかける。", "J": "締め切りと順番が、早めに決まる。", "P": "急な変更にも、みんなあわてずに動ける。"};
+const GMANY_W={"E": "話し合いで意見がどんどん出て、時間をこえることがある。", "I": "話し合いは静かだけど、あとからメッセージで、しっかりした意見が出てくる。", "S": "前のやり方や数字をもとに、具体的に話が進む。", "N": "「こうしたらもっとよくなる」という話で盛り上がる。でも、決めるところまで進まないことがある。", "T": "意見がちがっても、言い合ったあとはすっきりしている。", "F": "疲れていそうな人がいると、すぐ気づいて声をかける。", "J": "締め切りと順番が、早めに決まる。", "P": "急な変更にも、みんなあわてずに動ける。"};
 const GNONE_W={"E": "みんな、自分からは話しかけにくい人です。困ったときに声をかける相手を、先に決めておきましょう。", "I": "みんな話すのが好きなので、話す人がかたよりやすいです。決める前に1人ずつ意見を聞いてみましょう。", "S": "案はたくさん出るのに、細かいところがよく抜けます。締め切りと数字だけは、だれか1人が確認しましょう。", "N": "いつものやり方になりやすいです。たまに、新しいやり方を1つ試してみましょう。", "T": "言いにくいことを、みんな言わずにためてしまいます。決めるときは理由を書き出して、さっぱり決めましょう。", "F": "話が早いぶん、言い方がきつくなることがあります。決まったあとに「ありがとう」をひと言。", "J": "段取りを組む人がいません。締め切りと担当だけは、その場で決めてしまいましょう。", "P": "予定が変わると、みんな少し困ります。うまくいかなかったときの案を1つ決めておきましょう。"};
 const GROLE_W=[["締め切りと担当を決める人", "EJ"], ["抜けやもれを確認する人", "SJ"], ["新しい案を出す人", "NP"], ["場の空気を明るくする人", "EP"], ["じっくり話を聞く人", "IF"], ["疲れている人に気づく人", "SF"], ["意見をまとめる人", "TJ"], ["損か得かを冷静に見る人", "IT"], ["急なトラブルにもあわてない人", "SP"], ["先のことを考えておく人", "NJ"], ["本音で相談できる相手になる人", "NF"], ["ちがう意見をはっきり言う人", "ET"]];
 const gWk=()=>typeof gst!=="undefined"&&gst&&gst.kind==="wk";
@@ -1064,7 +1071,7 @@ function groupHTML(G,title){const e=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&am
 /* グループの結果を1枚の画像にしてシェア */
 async function drawGroup(G,title){const W=1080,H=2200,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
- try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"16TYPE+ あア가A")));}catch(e){}
+ try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,fontText())));}catch(e){}
  c.textAlign="center";c.fillStyle=SC.muted;c.font="500 30px "+SANS;c.fillText(GTR("グループの相性"),W/2,128);
  c.fillStyle=SC.ink;c.font="700 52px "+SANS;c.fillText((title||GTR("{n}人").replace("{n}",G.n)).slice(0,18),W/2,200);
  c.textAlign="left";let y=270;const X=110,RW=W-220;
