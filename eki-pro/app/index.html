@@ -2524,6 +2524,9 @@ function pkFactFix(t,aS,bS){ try{ t=String(t==null?'':t);  t=t.replace(/ふた�
       ln=ln.replace(new RegExp('((?<![\\d])(\\d{4})年[（(])'+XY+RD,'g'),function(m0,head,y,bad,rd){ var g=gz(+y-4); return g===bad?m0:put(m0,head,bad,rd,g,y+'年'); });
       return ln; }).join('\n');
     if(LOG.length&&typeof window!=='undefined'){ try{ window.__pkGzFixLog=(window.__pkGzFixLog||[]).concat(LOG).slice(-30); }catch(e){} } })();
+  // ⑨ 六十干支にない形（十干と十二支の陰陽が合わない「甲丑」「乙子」など）は、直せないものを根拠のチェック表に⚠として出す（文は変えない。日付・柱・運の名前つきのものは ⑧・pkPillarGzFix・pkRunGzFix が直す。2026-11-06）
+  (function(){ var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', m, re=/([甲乙丙丁戊己庚辛壬癸])([子丑寅卯辰巳午未申酉戌亥])/g, W=[]; while((m=re.exec(t))){ if(G.indexOf(m[1])%2!==Z.indexOf(m[2])%2&&!/丁子/.test(m[0])) W.push({st:'warn',what:'干支',from:m[0],to:''}); }
+    if(W.length&&typeof window!=='undefined'){ try{ window.__pkGzFixLog=(window.__pkGzFixLog||[]).concat(W).slice(-30); }catch(e){} } })();
   return t; }catch(e){ return t; } }
 /* PRO の「柱・月・年の星の事実あわせ」（pkPillarStarFix・pkMonthFactFix・pkYearKichiFix）と同じ目的の直し（発注者指示 2026-10-23「ツールは3つ必ず同時に直す」）。
    易は命式の吉凶星・月ごとの星を文章作成に渡していないので、それらを書いた文は根拠がない＝外す（空亡・天中殺は画面に出しているので残す）。 */
@@ -3659,7 +3662,7 @@ function pkSafeFix(t,q,note){ try{ t=String(t==null?'':t); let cut=0, tcut=0, so
     { const RX=/命式|蔵干|通変星|喜神|忌神|咸池|紅艶|天乙貴人|配偶宮|配偶者星|日柱|月柱|年柱|時柱|日干|大運/; const out=String(raw||'').split(/(?<=[。！？\n])/).filter(function(x){ return RX.test(x)&&txt.indexOf(x.replace(/\s+$/,'').slice(0,20))<0; });
       if(out.length) R.push({st:'drop',what:'命式・星の話（'+out.length+'か所）',calc:'易は命式を計算していない',note:'根拠のない話なので外しました：「'+out[0].trim().slice(0,50)+'」'+(out.length>1?'ほか':'')}); }
     // ⑥ 日付についた干支の字のまちがい（pkFactFix ⑧ が直したもの。PRO・鑑定書と同じ直し。2026-11-06）
-    try{ if(window.__pkGzFixLog&&window.__pkGzFixLog.length){ const seen={}; window.__pkGzFixLog.forEach(function(x){ const k=x.what+x.from+x.to; if(seen[k]) return; seen[k]=1; R.push({st:'fix',what:x.what+'の干支「'+x.from+'」',calc:'暦では「'+x.to+'」',note:'文章作成の干支のまちがいを、ツールが計算どおりに直しました'}); }); window.__pkGzFixLog=[]; } }catch(e){}
+    try{ if(window.__pkGzFixLog&&window.__pkGzFixLog.length){ const seen={}; window.__pkGzFixLog.forEach(function(x){ const k=x.what+x.from+x.to; if(seen[k]) return; seen[k]=1; if(x.st==='warn'){ if(String(p||'').indexOf(x.from)>=0||String(raw||'').indexOf(x.from)>=0) R.push({st:'warn',what:x.what+'の干支「'+x.from+'」',calc:'六十干支にない形（十干と十二支の陰陽が合わない）',note:'確かめてください'}); return; } R.push({st:'fix',what:x.what+'の干支「'+x.from+'」',calc:'暦では「'+x.to+'」',note:'文章作成の干支のまちがいを、ツールが計算どおりに直しました'}); }); window.__pkGzFixLog=[]; } }catch(e){}
     // ⑤ 年齢（生年月日があるとき）
     { const by=parseInt(ekiBdVal().slice(0,4),10)||0; if(by){ let m, n=0, bad=0; const re=/((?:19|20)\d\d)年[^。\n（(〔]{0,10}[（(〔]([^。\n]{0,30}?)[）)〕]/g;
       while((m=re.exec(String(raw||'')))){ const y=+m[1]; (m[2].match(/\d{1,3}(?=歳|才)/g)||[]).forEach(function(a){ n++; if([y-by,y-by-1].indexOf(+a)<0) bad++; }); }
