@@ -5455,12 +5455,16 @@ function _sameSexWord(t){ try{ if(!(state.mode==='aisho'&&state.chartB&&state.ch
   else if(state.lang==='en') t=t.replace(/(the )?opposite sex/gi,'a romantic partner');
   return t; }catch(e){ return t; } }
 function compatFirstLook(){ return '\n\n[FIRST LOOK — the first compatibility reply for this partner; operator decision 2026-10-26: not the full reading] Give a SHORT first look, not every point: 3-4 short paragraphs in total ('+(/^(ja|zh|zt)$/.test(state.lang)?'about 300-450 characters':(state.lang==='ko'?'about 250-400 characters':'about 100-150 words — English runs long, so NEVER more than 170 words'))+'): (1) the overall match in one sentence; (2) who is drawn to whom / what each is to the other; (3) the ONE strongest good point and the ONE most important caution, each in everyday words; (4) the nearest good year or month for the two of them. Do NOT list every year, month or caution here. End by warmly offering more — they can ask for the details: the years ahead, the cautions and how to get along (e.g. 「もっと詳しく見る？これからの時期や、うまく付き合うコツも読めるよ」).'; }
+/* その年が本人・お相手の空亡か（相性用）。運営決定 2026-11-06：空亡の年が2人の追い風の年でもある時は「空亡だけど2人には追い風」と両方伝える */
+function _compatVoidOf(y){ try{ var BR='子丑寅卯辰巳午未申酉戌亥', b=BR.charAt(((y-4)%12+12)%12), f=function(pro){ return !!pro&&((window.kuboX?kuboX(pro):[])||[]).indexOf(b)>=0; };
+  var u=f(state.chart&&state.chart.pro), p=f(state.chartB&&state.chartB.pro); return u&&p?'both':(u?'user':(p?'partner':'')); }catch(e){ return ''; } }
+function _voidTag(y){ var w=_compatVoidOf(y); return w?(' [also '+(w==='both'?'BOTH people\u2019s':(w==='user'?'the USER\u2019s':'the PARTNER\u2019s'))+' 空亡 year — say both: 空亡 for '+(w==='both'?'both of you':(w==='user'?'you':'the partner'))+', yet a tailwind for the two]'):''; }
 function compatChecklist(){ try{ var ct=coupleTiming(); if(!ct) return '';
-  var yrs=function(a){ return (a||[]).map(function(x){ return x.year; }).join(', ')||'none'; };
+  var yrs=function(a,vt){ return (a||[]).map(function(x){ return x.year+(vt?_voidTag(x.year):''); }).join(', ')||'none'; };
   var me=(ct.cautYears||[]).filter(function(x){ return x.why.some(function(w){ return /あなたの配偶宮/.test(w); }); }), pt=(ct.cautYears||[]).filter(function(x){ return x.why.some(function(w){ return /相手の配偶宮/.test(w); }); });
   var dec=(ct.decades||[]).map(function(d){ var who=/^あなた/.test(d)?'the user':'the partner'; var ps=[]; d.replace(/\((\d{4})-(\d{4})\): ([^/]+)/g,function(_,a,b,l){ ps.push(a+'-'+b+' '+(/落ち着いた/.test(l)?'calm, steady':l.trim())); }); return who+': '+ps.join(' / '); }).join('; ');
   var _y0=new Date().getFullYear(), mo=function(a){ return (a||[]).map(function(x){ var m=String(x).split('(')[0]; return /年/.test(m)?m:(_y0+'年'+m); }).join(', ')||'none'; };
-  return '\n\n[CHECKLIST — this reply MUST name every item below, in plain words, in the reply language (short phrases are fine; translate the month names)] GOOD YEARS for the two: '+yrs(ct.goodYears)+' | the USER\'s unsettled years: '+yrs(me)+' | the PARTNER\'s unsettled years: '+yrs(pt)+' | 10-YEAR FLOW — '+dec+' | GOOD MONTHS: '+mo(ct.goodMonths)+' | CAUTION MONTHS: '+mo(ct.cautMonths)+'.'; }catch(e){ return ''; } }
+  return '\n\n[CHECKLIST — this reply MUST name every item below, in plain words, in the reply language (short phrases are fine; translate the month names)] GOOD YEARS for the two: '+yrs(ct.goodYears,1)+' | the USER\'s unsettled years: '+yrs(me)+' | the PARTNER\'s unsettled years: '+yrs(pt)+' | 10-YEAR FLOW — '+dec+' | GOOD MONTHS: '+mo(ct.goodMonths)+' | CAUTION MONTHS: '+mo(ct.cautMonths)+'.'; }catch(e){ return ''; } }
 function _decBrAt(pro,y){ try{ var d=(pro.decadeFortunes||[]).filter(function(x){ return x&&x.ganzhi&&y>=x.startYear&&y<x.startYear+10; })[0]; return d?d.ganzhi.charAt(1):''; }catch(e){ return ''; } }
 function coupleTiming(){
   var A=state.chart&&state.chart.pro, B=state.chartB&&state.chartB.pro;
@@ -5542,13 +5546,13 @@ function coupleTimingBlock(){
     if(ct.favEl) L.push('Shared favorable element (二人の追い風): '+ct.favEl+' — periods that bring this element, or complete a 三合/方合 across their branches, are the couple\'s good windows.');
     if(ct.decades.length) L.push('DECADES: '+ct.decades.join(' || '));
     if(ct.goodYears.some(function(y){ return y.why.some(function(w){ return /開局/.test(w); }); })||ct.goodMonths.some(function(m){ return /開局/.test(m); })) L.push('OPENING OF A BOND (三合開局・方合開局 — the year or month brings the missing piece so that the TWO of them form a complete three-way bond together; '+'sometimes with help from one of their 10-year periods): ALWAYS name every such year and month, and explain it plainly — e.g. 「この年は、二人の縁がひとつにまとまって大きく動く年」 — never the words 三合/方合/開局.');
-    if(ct.goodYears.length) L.push('GOOD YEARS (strongest shared tailwinds): '+ct.goodYears.map(function(y){return y.year+'('+y.gz+'): '+y.why.join('・');}).join(' | '));
+    if(ct.goodYears.length) L.push('GOOD YEARS (strongest shared tailwinds): '+ct.goodYears.map(function(y){return y.year+'('+y.gz+'): '+y.why.join('・')+_voidTag(y.year);}).join(' | '));
     if(ct.goodYears.length){ var _gy=ct.goodYears[0].year; L.push('⭐ MARRIAGE / BIG-STEP ANSWER FOR THE TWO OF THEM: the best year is '+_gy+' (the nearest GOOD YEAR above) — recommend it FIRST and clearly. If her personal data marks '+_gy+' as a turning-point, environment-change or shaky year, do NOT turn that into a reason to avoid it: explain it as the big change that naturally comes WITH the step (moving in, marriage, a new home), to be handled with care and good communication. Never recommend a SOFTER year that is later than '+_gy+' as the main answer.'); }
-    if(ct.softYears&&ct.softYears.length) L.push('SOFTER GOOD YEARS (compromise — smaller but nearer tailwinds): '+ct.softYears.map(function(y){return y.year+'('+y.gz+'): '+y.why.join('・');}).join(' | '));
+    if(ct.softYears&&ct.softYears.length) L.push('SOFTER GOOD YEARS (compromise — smaller but nearer tailwinds): '+ct.softYears.map(function(y){return y.year+'('+y.gz+'): '+y.why.join('・')+_voidTag(y.year);}).join(' | '));
     /* 二人の空亡の年（実際の計算）。相性の鑑定で「揺れやすい年」を空亡と呼んでいた（運営指摘 2026-11-06：2029・2032・2036・2041年を「共通の空亡」と言った。本人の空亡は2030・2031年） */
     try{ var _vy=function(pro){ var v=(window.kuboX?kuboX(pro):[])||[], BR='子丑寅卯辰巳午未申酉戌亥', y0=new Date().getFullYear(), out=[]; for(var _y=y0;_y<=y0+16;_y++){ if(v.indexOf(BR.charAt(((_y-4)%12+12)%12))>=0) out.push(_y); } return out; };
       var _vu=_vy(state.chart.pro), _vp=(state.chartB&&state.chartB.pro)?_vy(state.chartB.pro):[]; window._compatVoidYears=_vu.concat(_vp);
-      L.push('VOID YEARS (空亡 — computed; the ONLY years that may be called 空亡/void): the user: '+(_vu.join(', ')||'none in this period')+'; the partner: '+(_vp.join(', ')||'none in this period')+'. CAUTION YEARS below are NOT 空亡 — never call them 空亡; call them years to be gentle with each other (揺れやすい年).'); }catch(e){}
+      L.push('VOID YEARS (空亡 — computed; the ONLY years that may be called 空亡/void): the user: '+(_vu.join(', ')||'none in this period')+'; the partner: '+(_vp.join(', ')||'none in this period')+'. CAUTION YEARS below are NOT 空亡 — never call them 空亡; call them years to be gentle with each other (揺れやすい年). When a GOOD YEAR is also someone\u2019s 空亡 year (marked [also … 空亡 year]), say BOTH in one plain sentence — e.g. ja 「2030年はあなたにとって空亡（めぐりのお休み期間）の年ですが、2人には追い風が吹く年です」 — never hide the 空亡, and never drop the tailwind.'); }catch(e){}
     if(ct.cautYears.length) L.push('CAUTION YEARS (揺れやすい年 — a 冲/刑/害 hits someone\u2019s spouse palace = day branch; friction, not doom; years to be gentle and patient with each other. Up to 16 years ahead): '+ct.cautYears.map(function(y){return y.year+'('+y.gz+'): '+y.why.join('・');}).join(' | '));
     if(ct.goodMonths.length) L.push('GOOD MONTHS: '+ct.goodMonths.join(' | '));
     if(ct.softMonths&&ct.softMonths.length) L.push('SOFTER GOOD MONTHS (compromise, calmer supportive months): '+ct.softMonths.join(' | '));
@@ -6354,7 +6358,7 @@ function _dropWrongVoid(t){ try{ if(!/空亡|공망|void/i.test(t)) return t; va
       if(!ys.length&&/^\s*(これは|これらは|この(年|時期)は|それは|いずれも)/.test(s)) ys=(prevS.match(/20\d\d/g)||[]).map(Number);   /* 「これは空亡にあたる」：前の文の年を指している */
       var ag=(!ys.length)?(s.match(/(\d{1,2})\s*(?:歳|살|歲|岁)/)||[])[1]:null;   /* 「27歳以降は空亡の時期」：年ではなく年齢で言った時は、10年ごとの運の空亡と照らす */
       if(ag&&!_voidAgeOk(+ag)&&real-dropped>1){ dropped++; return; }
-      if(ys.length&&ys.some(function(y){ return !ok[y]; })&&real-dropped>1){ dropped++; return; } } out.push(s); prevS=s; });
+      if(ys.length&&!ys.some(function(y){ return ok[y]; })&&real-dropped>1){ dropped++; return; } } out.push(s); prevS=s; });   /* 空亡の年が1つも入っていない時だけ外す（「2027年・2030年は追い風、2030年は空亡ですが」は残す） */
   return dropped?out.join('').replace(/\s+$/,''):t; }catch(e){ return t; } }
 function _dropPastFuture(t){ try{
   var now=new Date(), cy=now.getFullYear(), cm=now.getMonth()+1;
