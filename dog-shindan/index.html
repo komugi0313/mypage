@@ -4249,6 +4249,12 @@ function addMonths(b,n){var d=new Date(b.getFullYear(),b.getMonth()+n,1),last=ne
 function nextDate(r){var b=new Date(r.date+"T00:00:00"),d=b,k=0,now=new Date();now.setHours(0,0,0,0);var step=r.rep==="m"?1:r.rep==="2m"?2:r.rep==="y"?12:0;
   if(step)while(d<now&&k<1200){k+=step;d=addMonths(b,k)}return d}
 function pad(n){return (n<10?"0":"")+n}
+// iPhone（とMac）のカレンダー用：予定を .ics の形にして渡す。開くと「カレンダーに追加」が出る
+function icsText(r,d){var s=d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate()),e2=new Date(d);e2.setDate(e2.getDate()+1);var e=e2.getFullYear()+pad(e2.getMonth()+1)+pad(e2.getDate());
+  var eom=new Date(r.date+"T00:00:00").getDate()===31?";BYMONTHDAY=-1":"",rr=r.rep==="m"?"FREQ=MONTHLY"+eom:r.rep==="2m"?"FREQ=MONTHLY;INTERVAL=2"+eom:r.rep==="y"?"FREQ=YEARLY":"";
+  var esc2=function(t){return String(t).replace(/[\\,;]/g,function(c){return "\\"+c}).replace(/\n/g,"\\n")},now=new Date(),st2=now.getUTCFullYear()+pad(now.getUTCMonth()+1)+pad(now.getUTCDate())+"T"+pad(now.getUTCHours())+pad(now.getUTCMinutes())+"00Z";
+  return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//44Wansonalities//JA","BEGIN:VEVENT","UID:"+s+"-"+Math.random().toString(36).slice(2)+"@44wansona.com","DTSTAMP:"+st2,"DTSTART;VALUE=DATE:"+s,"DTEND;VALUE=DATE:"+e]
+    .concat(rr?["RRULE:"+rr]:[]).concat(["SUMMARY:"+esc2(r.dog+"："+r.title),"DESCRIPTION:"+esc2("44Wansonalities うちの子手帳から"),"BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+esc2(r.dog+"："+r.title),"TRIGGER:-PT15H","END:VALARM","END:VEVENT","END:VCALENDAR"]).join("\r\n")}
 function calLink(r,d){var s=d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate()),e2=new Date(d);e2.setDate(e2.getDate()+1);var e=e2.getFullYear()+pad(e2.getMonth()+1)+pad(e2.getDate());
   var eom=new Date(r.date+"T00:00:00").getDate()===31?";BYMONTHDAY=-1":""; // 31日の予定は「毎月の月末」としてカレンダーに入れる
   var rr=r.rep==="m"?"RRULE:FREQ=MONTHLY"+eom:r.rep==="2m"?"RRULE:FREQ=MONTHLY;INTERVAL=2"+eom:r.rep==="y"?"RRULE:FREQ=YEARLY":"";
@@ -4257,7 +4263,7 @@ function renderRem(){var a=lsGet("w44_rem",[]),now=new Date();now.setHours(0,0,0
   var rows=a.map(function(r,i){return {r:r,i:i,d:nextDate(r)}}).sort(function(x,y){return x.d-y.d});
   $("rm-list").innerHTML=rows.length?rows.map(function(o){var days=Math.round((o.d-now)/864e5),soon=days>=0&&days<=7,past=days<0;
     return '<div class="r'+(soon?' soon':'')+'"><div class="d"><small>'+(o.d.getMonth()+1)+'月</small><b>'+o.d.getDate()+'</b></div><div class="t"><b>'+esc(o.r.dog)+'：'+esc(o.r.title)+'</b><small>'+REP[o.r.rep]+(past?'・終わった予定':days===0?'・今日':soon?'・あと'+days+'日':'')+'</small></div>'+
-    '<div class="acts"><a href="'+calLink(o.r,o.d)+'" target="_blank" rel="noopener">カレンダーに入れる</a><button type="button" data-del="'+o.i+'">消す</button></div></div>'}).join(""):'<p class="note" style="text-align:center">まだ予定はありません。「＋ 予定を追加」から入れてください。</p>';
+    '<div class="acts"><a href="'+calLink(o.r,o.d)+'" target="_blank" rel="noopener">Googleカレンダーに入れる</a><button type="button" data-ics="'+o.i+'">iPhoneのカレンダーに入れる</button><button type="button" data-del="'+o.i+'">消す</button></div></div>'}).join(""):'<p class="note" style="text-align:center">まだ予定はありません。「＋ 予定を追加」から入れてください。</p>';
   var dogs=Object.keys(lsGet("w44_grow",{})).map(function(k){return lsGet("w44_grow",{})[k].n});if(st.name&&dogs.indexOf(st.name)<0)dogs.unshift(st.name);if(!dogs.length)dogs=["うちの子"];
   $("rm-dog").innerHTML=dogs.filter(function(v,i,s){return s.indexOf(v)===i}).map(function(n){return '<option>'+esc(n)+'</option>'}).join("");
   if(!$("rm-date").value){var t=new Date();$("rm-date").value=t.getFullYear()+"-"+pad(t.getMonth()+1)+"-"+pad(t.getDate())}}
@@ -4266,7 +4272,8 @@ chipPick("rm-kind");chipPick("rm-rep");
 $("rm-save").addEventListener("click",function(){var k=$("rm-kind").querySelector(".on").dataset.v,title=k||$("rm-title").value.trim(),date=$("rm-date").value;
   if(!title||!date){$("my-msg").textContent="予定の名前と日にちを入れてください。";$("my-msg").hidden=false;return}$("my-msg").hidden=true;
   var a=lsGet("w44_rem",[]);a.push({dog:$("rm-dog").value,title:title,date:date,rep:$("rm-rep").querySelector(".on").dataset.v});lsSet("w44_rem",a);$("rm-title").value="";$("rm-add").open=false;renderRem()});
-$("rm-list").addEventListener("click",function(e){var b=e.target.closest("button[data-del]");if(!b)return;if(!b.dataset.sure){b.dataset.sure=1;b.textContent="もう一度押すと消えます";return}var a=lsGet("w44_rem",[]);a.splice(+b.dataset.del,1);lsSet("w44_rem",a);renderRem()});
+$("rm-list").addEventListener("click",function(e){var ic=e.target.closest("button[data-ics]");if(ic){var r=lsGet("w44_rem",[])[+ic.dataset.ics];if(!r)return;var f=new File([icsText(r,nextDate(r))],"wansona-yotei.ics",{type:"text/calendar"}),u=URL.createObjectURL(f),x=document.createElement("a");x.href=u;x.download="wansona-yotei.ics";document.body.appendChild(x);x.click();x.remove();setTimeout(function(){URL.revokeObjectURL(u)},4000);return}
+  var b=e.target.closest("button[data-del]");if(!b)return;if(!b.dataset.sure){b.dataset.sure=1;b.textContent="もう一度押すと消えます";return}var a=lsGet("w44_rem",[]);a.splice(+b.dataset.del,1);lsSet("w44_rem",a);renderRem()});
 // ワン友帳：QRを読むと、その子のプロフィールが入る
 function wfData(){return {r:rqTexts("qr"),n:st.name||"うちの子",h:nstGet()==="plain"?bodyShort(st.breed):headName(last.main,bodyShort(st.breed),false),m:last.main.id,o:ownId(st.breed)||"",g:guideOf().map(function(x){return x[1]})}}
 function wfUrl(){return location.href.split("#")[0]+"#wf="+b64e(wfData())}
