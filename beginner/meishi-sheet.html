@@ -4652,6 +4652,28 @@ function pkFactFix(t,aS,bS){ try{ t=String(t==null?'':t);  t=t.replace(/ふた�
       else { var a=new Date(T0.getFullYear(),M-1,D,12,0,0,0); if(a<T0&&(W.charAt(a.getDay())===w||/先月|先週|この前|以前|去年|昨年|前回|でした|ました/.test(ln.slice(Math.max(0,off-10),off)+ln.slice(off,off+30)))) x=a; else x=a<T0?new Date(T0.getFullYear()+1,M-1,D,12,0,0,0):a; }
       if(x.getMonth()!==M-1||x.getDate()!==D) return m0;
       var r=W.charAt(x.getDay()); return r===w?m0:(y||'')+(mo||'')+da+'日'+p1+r+p2; }); }).join('\n');
+  // ⑧ 日付についた干支のまちがい（「11月6日（木申）」→甲申・「2027年（丙未）」→丁未・「12月（庚子の月）」→その月の干支）は、暦から計算して置きかえる（日＝日の干支、月＝節月の月の干支、年＝立春で切りかわる年の干支。直したものは根拠のチェック表に出す。2026-11-06）
+  (function(){ var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', gz=function(i){ i=((i%60)+60)%60; return G.charAt(i%10)+Z.charAt(i%12); };
+    var n=new Date(Date.now()+9*3600000), T0=new Date(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate(),12,0,0,0), LOG=[];
+    var dayGz=function(y,m,d){ return gz(Math.round(Date.UTC(y,m-1,d)/86400000)+2440637); };
+    var monGz=function(y,m){ var yy=m===1?y-1:y, s=((yy-4)%10+10)%10; return G.charAt(((s%5)*2+2+((m+10)%12))%10)+Z.charAt(m%12); };
+    var smOf=function(y,m,d){ var sd=0; try{ if(typeof pkSetsuStart==='function') sd=pkSetsuStart(y,m).getDate(); }catch(e){ sd=0; } if(!sd){ sd=[6,4,6,5,6,6,7,8,8,8,7,7][m-1]; if(Math.abs(d-sd)<=1) return null; } return d>=sd?{y:y,m:m}:(m===1?{y:y-1,m:12}:{y:y,m:m-1}); };
+    var fy=function(m,d){ var y=T0.getFullYear(), x=new Date(y,m-1,d||28,12,0,0,0); return x<T0?y+1:y; };
+    var XY='([甲乙丙丁戊己庚辛壬癸木火土金水日月][子丑寅卯辰巳午未申酉戌亥])(?=[）)・、の（(\\s／]|$)', RD='((?:[（(][ぁ-ん]{2,8}[）)])?)';
+    var put=function(m0,head,bad,rd,good,what){ if(!good||bad===good) return m0; LOG.push({what:what,from:bad,to:good}); return head+good; };
+    t=t.split('\n').map(function(ln){
+      ln=ln.replace(new RegExp('((?:(\\d{4})年)?(\\d{1,2})月(\\d{1,2})日(?:[（(][日月火水木金土](?:曜日?)?[）)])?[（(])'+XY+RD+'(の月)?','g'),function(m0,head,y,mo,da,bad,rd,mon){ var Y=y?+y:0, M=+mo, D=+da; if(M<1||M>12||D<1||D>31) return m0;
+        if(!Y){ var a=new Date(T0.getFullYear(),M-1,D,12,0,0,0); Y=(a<T0&&dayGz(a.getFullYear(),M,D)===bad)?a.getFullYear():(a<T0?a.getFullYear()+1:a.getFullYear()); }
+        var x=new Date(Y,M-1,D,12,0,0,0); if(x.getMonth()!==M-1) return m0;
+        if(mon){ var sm=smOf(Y,M,D); if(!sm) return m0; var g1=monGz(sm.y,sm.m); return g1===bad?m0:put(m0,head,bad,rd,g1,(y||'')+mo+'月'+da+'日の月')+'の月'; }
+        var g=dayGz(Y,M,D); return g===bad?m0:put(m0,head,bad,rd,g,(y||'')+mo+'月'+da+'日')+(mon||''); });
+      ln=ln.replace(new RegExp('((?<![〜～\\d])(?:(\\d{4})年)?(\\d{1,2})月(中旬|下旬|ごろ|頃)?[（(])'+XY+RD,'g'),function(m0,head,y,mo,pt,bad,rd){ var M=+mo; if(M<1||M>12) return m0; var Y=y?+y:fy(M); var g=monGz(Y,M); return g===bad?m0:put(m0,head,bad,rd,g,(y?y+'年':'')+mo+'月'); });
+      ln=ln.replace(new RegExp('((?<![\\d])(\\d{4})年[（(])'+XY+RD,'g'),function(m0,head,y,bad,rd){ var g=gz(+y-4); return g===bad?m0:put(m0,head,bad,rd,g,y+'年'); });
+      return ln; }).join('\n');
+    if(LOG.length&&typeof window!=='undefined'){ try{ window.__pkGzFixLog=(window.__pkGzFixLog||[]).concat(LOG).slice(-30); }catch(e){} } })();
+  // ⑨ 六十干支にない形（十干と十二支の陰陽が合わない「甲丑」「乙子」など）は、直せないものを根拠のチェック表に⚠として出す（文は変えない。日付・柱・運の名前つきのものは ⑧・pkPillarGzFix・pkRunGzFix が直す。2026-11-06）
+  (function(){ var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', m, re=/([甲乙丙丁戊己庚辛壬癸])([子丑寅卯辰巳午未申酉戌亥])/g, W=[]; while((m=re.exec(t))){ if(G.indexOf(m[1])%2!==Z.indexOf(m[2])%2&&!/丁子/.test(m[0])) W.push({st:'warn',what:'干支',from:m[0],to:''}); }
+    if(W.length&&typeof window!=='undefined'){ try{ window.__pkGzFixLog=(window.__pkGzFixLog||[]).concat(W).slice(-30); }catch(e){} } })();
   return t; }catch(e){ return t; } }
 function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; other=+other||0;   // 西暦のあとに、ツールが計算した干支と年齢を付ける（文章作成の書いた干支・年齢のかっこは外して付け直す。発注者指示 2026-10-22「普通のことをまちがえない」）
   if(typeof document!=='undefined'&&document.documentElement&&document.documentElement.classList.contains('bg-on')) noGz=true;   // ビギナーのやさしい表示では干支を出さない
@@ -4893,7 +4915,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
       if(!hon && !/本人|ほんにん|ご|お名前|おなまえ|名前|ひとり|鑑定対象|お客様/.test(k)) return m;
       return nm ? nm+(hon||'') : 'あなた'; }); }
   /* 安全の決まり（PRO の pro/app-pro.html と同じ中身。2026-11-03）：PK_SAFE_RULE＝文章作成への渡し／PK_SAFE_DROP・PK_SAFE_SOFT・pkSafeFix＝画面に出す前の直し */
-var PK_SAFE_RULE='\n【安全の決まり（どの相談でも守る）】病気になる年・病名・寿命・亡くなる時期・事故・災害を言い当てない。薬・治療・手術・妊娠や出産・法律・投資の判断をしない（専門家に相談するよう添える）。暴力・つきまといを我慢するようすすめない。だれかを不幸にする・呪うことに手を貸さない。霊・祟り・お祓いを受けないと悪いことが起きる・物を買えば運が良くなる、とは書かない（信仰そのものは否定しない）。ほかの占い師・お医者さま・専門家の見立てを否定したり悪く言ったりしない（占いは見方の一つとして伝える）。「最悪の年」「何をしてもだめ」のようなこわがらせる言い方をせず、こわいと言われたら、まず安心できる見方から書く。\n';
+var PK_SAFE_RULE='\n【安全の決まり（どの相談でも守る）】病気になる年・病名・寿命・亡くなる時期・事故・災害を言い当てない。薬・治療・手術・妊娠や出産・法律・投資の判断をしない（専門家に相談するよう添える）。暴力・つきまといを我慢するようすすめない。だれかを不幸にする・呪うことに手を貸さない。霊・祟り・お祓いを受けないと悪いことが起きる・物を買えば運が良くなる、とは書かない（信仰そのものは否定しない）。ほかの占い師・お医者さま・専門家の見立てを否定したり悪く言ったりしない（占いは見方の一つとして伝える）。「最悪の年」「何をしてもだめ」のようなこわがらせる言い方をせず、こわいと言われたら、まず安心できる見方から書く。\n【干支の決まり】日・月・年の干支（例：11月6日（甲申）・11月（己亥の月）・2027年（丁未））は、ツールの表・データに書いてあるとおりに写す。自分で計算したり、字を作ったりしない（表にない干支は書かない）。\n';
 /* お客様に渡る前の最後の直し：命にかかわる・健康を損なう言い切りは外し、霊・祟り・お祓い・ほかの占い師の否定は断定を弱める */
 var PK_SAFE_DROP=[
   /(?:(?:19|20)\d\d年|\d{1,3}(?:歳|才)|今年|来年|再来年|年内|この年|その年|[^。]{0,4}の年)[^。]{0,24}(?:大きな病気|大病|病気|がん|癌|重い病)(?:に(?:なり|なる|かかり|かかる)|を(?:患|わずら))/,

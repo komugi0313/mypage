@@ -7102,11 +7102,12 @@ function pkActQ(q){ q=String(q||''); if(pkWaitQ(q)||/告白され|告られ|プ�
 function pkActWord(q){ q=String(q||''); return /プロポーズ/.test(q)?'プロポーズ':(/告白|気持ちを伝え|想いを伝え|思いを伝え|好きと伝え/.test(q)?'告白':(/誘|デート/.test(q)?'お誘い':'連絡')); }
 /* L＝すすめる候補の月（縁が動く月。{y,m} と印 kA/kB または ku/kuP）、all＝これから12ヶ月の月（印つき）。印の月は先頭にしない（pkMonBest と同じ）。
    返す：lab＝すすめる時期（7日以内に終わるときは「いまの時期（11月6日まで）」）・follow＝その次の文（空亡の月を避けて次は○）・note＝すすめる時期より前の空亡の月の注意・kuu＝空亡の月の範囲 */
-function pkActPlan(L,all,plain,aw){ try{ if(plain===undefined) plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'));
-  const G=pkMonGroups(L).filter(function(g){ return !g[0].ku; }); if(!G.length) return null;
+function pkActPlan(L,all,plain,aw,light){ try{ if(plain===undefined) plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'));
+  // light＝連絡・誘うなど軽い動き：解けない空亡の月でも避けない（空亡の月の印はそのまま。重い話は避ける、と添える。2026-11-06）
+  const G=pkMonGroups(L).filter(function(g){ return light||!g[0].ku; }); if(!G.length) return null;
   const T0=_jstToday(), av=aw==='大事なこと'?(plain?'大事な話や大きな始まりは':'大事な話・大きな始まりは'):(aw||'告白')+(plain?'や大事な話は':'・大事な話は');
   const rng=function(g){ return {s:pkSetsuStart(g[0].y,g[0].m), e:pkSetsuEnd(g[g.length-1].y,g[g.length-1].m)}; };
-  const K=pkMonGroups(all).filter(function(g){ return !!g[0].ku; }).map(function(g){ const r=rng(g); r.tag=_pkMonKuLab(g[0].x,plain); r.self=g[0].ku!=='B'; return r; }).filter(function(r){ return r.e>=T0; });
+  const K=light?[]:pkMonGroups(all).filter(function(g){ return !!g[0].ku; }).map(function(g){ const r=rng(g); r.tag=_pkMonKuLab(g[0].x,plain); r.self=g[0].ku!=='B'; return r; }).filter(function(r){ return r.e>=T0; });
   const kLab=function(r){ return pkDRange(r.s,r.e)+'は'+r.tag+(/月〕$/.test(r.tag)?'':'の月')+'なので'; };
   // 本人の空亡の月も、お相手の空亡の月も避ける（先生の指示 2026-11-05「お相手の空亡の月も避けるにしてください」）
   const kSay=function(L,end){ return L.length?L.map(kLab).join('、')+'、'+av+(end?'避けましょう。':'避け、'):''; };
@@ -7115,7 +7116,7 @@ function pkActPlan(L,all,plain,aw){ try{ if(plain===undefined) plain=(typeof doc
     return {short:true, lab:'いまの時期（'+pkDLab(r0.e)+'まで）', end:r0.e, next:g1?pkNowLab(pkMonRunLabK(g1,plain)):'', kuu:kb,
       follow:'それを過ぎたら、'+(kb.length?kSay(kb,false):'')+(g1?'次は'+pkNowLab(pkMonRunLabK(g1,plain))+'です。':'次の縁が動く月を待ちましょう。'), note:''}; }
   const kb=K.filter(function(r){ return r.s<r0.s; });
-  return {short:false, lab:pkNowLab(pkMonRunLabK(G[0],plain)), end:r0.e, next:'', kuu:kb, follow:'', note:kb.length?kSay(kb,true):''}; }catch(e){ return null; } }
+  return {short:false, lab:pkNowLab(pkMonRunLabK(G[0],plain)), end:r0.e, next:'', kuu:kb, follow:'', note:kb.length?kSay(kb,true):((light&&G[0][0].ku)?PK_LIGHT_KUU_NOTE(_pkMonKuLab(G[0][0].x,plain)||G[0][0].ku,plain):'')}; }catch(e){ return null; } }
 /* 空亡の日（日の十二支が本人の空亡）：告白・大事な話・大きな始まりの「向いた日」にしない（先生の承認 2026-11-05「空亡の日も避けてください」）。相性は2人それぞれの空亡で見る */
 function pkKuuDay(c,br){ try{ return !!(c&&br&&kubo(c).indexOf(br)>=0); }catch(e){ return false; } }
 function pkKuuDayTag(dA,dB,plain,two){ if(!dA&&!dB) return ''; if(!two) return plain?'〔ひと休みの日〕':'〔空亡の日〕';
@@ -7139,7 +7140,7 @@ const PK_DAY_GOOD=['天乙貴人','天徳貴人','月徳貴人','天徳合','月
 const PK_DAY_TSP={比肩:'自分らしく動ける',劫財:'仲間と動く力が出る',食神:'楽しむ力が出る',傷官:'感性が冴える',偏財:'人とのご縁が動く',正財:'こつこつ進めやすい',偏官:'思い切って動ける',正官:'きちんと進めやすい',偏印:'ひらめきが冴える',印綬:'学びと支えに恵まれる'};
 const PK_DAY_SCENE={年:'家・親族・目上',月:'仕事・暮らしの環境',日:'身近な人・自分自身',時:'子ども・将来・趣味'};
 const PK_DAY_BIG=/告白|プロポーズ|契約|入籍|籍を入れ|結婚(?!式に(?:出|行|参))|婚約|面接|試験|受験|引越|引っ越|開業|起業|独立|転職|退職|辞表|申し込|申込|購入|買い替え|大事な話|話し合い|決断|入社|初出勤|オープン|開店|復縁|連絡し|誘い|誘う|誘っ/;
-const PK_DAY_ACT=[[/映画/,'映画'],[/結婚式/,'結婚式'],[/デート/,'デート'],[/面接/,'面接'],[/プロポーズ/,'プロポーズ'],[/告白/,'告白'],[/入籍|籍を入れ/,'入籍'],[/引越|引っ越/,'引越し'],[/旅行|旅/,'旅行'],[/契約/,'契約'],[/受験|試験/,'試験'],[/ライブ|コンサート/,'ライブ'],[/飲み会/,'飲み会'],[/買い物/,'買い物'],[/お出かけ|外出|出かけ/,'お出かけ']];
+const PK_DAY_ACT=[[/映画/,'映画'],[/結婚式/,'結婚式'],[/デート/,'デート'],[/面接/,'面接'],[/プロポーズ/,'プロポーズ'],[/告白/,'告白'],[/入籍|籍を入れ/,'入籍'],[/引越|引っ越/,'引越し'],[/旅行|旅/,'旅行'],[/契約/,'契約'],[/受験|試験/,'試験'],[/ライブ|コンサート/,'ライブ'],[/飲み会/,'飲み会'],[/買い物/,'買い物'],[/お出かけ|外出|出かけ/,'お出かけ'],[/誘/,'お誘い'],[/連絡|LINE|ライン|メッセージ|メール|電話/,'連絡'],[/謝/,'謝ること'],[/お礼/,'お礼']];
 function _pkDayTerr(c,br){ try{ const a=(c.annualFortunes||[]).find(function(x){ return x.branch===br&&x.terrain; }); return a?a.terrain:''; }catch(e){ return ''; } }
 function _pkDayWd(d){ return ['日','月','火','水','木','金','土'][d.getDay()]; }
 function _pkDayLab(d,full){ const J=jstNow(); return (d.getFullYear()!==J.y?d.getFullYear()+'年':'')+(d.getMonth()+1)+'月'+d.getDate()+'日'+(full?'（'+_pkDayWd(d)+'）':''); }
@@ -7167,7 +7168,7 @@ function pkDayDates(q){ try{ q=String(q||'').replace(/[０-９]/g,function(x){ r
     const pre=mm[1]||(wk?wk.w:''); T.push({i:mm.index,raw:mm[0],wd:mm[2]?WD.indexOf(mm[2]):-1,end:!!mm[3],pre:pre}); }
   T.sort(function(a,b){ return a.i-b.i; });
   // 日付の相談らしさ：今日・明日・曜日だけのときは、運勢・予定・行動の言葉があるときだけ
-  const INT=/運勢|運気|日運|どちら|どっち|ても(?:いい|良い|よい|大丈夫)|連絡|誘|日が(?:いい|良い|よい)|日は(?:いい|良い|よい|どう)|日に|行く|いく|行き|出かけ|予定|面接|試験|デート|告白|契約|引越|引っ越|旅行|映画|会う|会い|あります|ある|します|したい|しよう|大丈夫|注意|気をつけ|どう(?:です|でしょう|なる)|過ごし/;
+  const INT=/運勢|運気|日運|どちら|どっち|ても(?:いい|良い|よい|大丈夫)|て(?:いい|良い|よい)|連絡|誘|LINE|ライン|メッセージ|メール|電話|謝|お礼|日が(?:いい|良い|よい)|日は(?:いい|良い|よい|どう)|日に|行く|いく|行き|出かけ|予定|面接|試験|デート|告白|契約|引越|引っ越|旅行|映画|会う|会い|あります|ある|します|したい|しよう|大丈夫|注意|気をつけ|どう(?:です|でしょう|なる)|過ごし/;
   let lastM=null, lastY=null;
   T.forEach(function(t){ let d=null;
     if(t.y){ d=ymd(t.y,t.m,t.d); lastM=t.m; lastY=t.y; }
@@ -7180,7 +7181,18 @@ function pkDayDates(q){ try{ q=String(q||'').replace(/[０-９]/g,function(x){ r
         else { x=new Date(T0.getTime()+(((w-dow)+7)%7)*86400000); if(t.pre&&x.getTime()===T0.getTime()) x=new Date(x.getTime()+7*86400000); }
         add(x,t.i,t.raw); }); return; }
     if(d) add(d,t.i,t.raw); });
+  // 「来週デートに誘いたい」「今週連絡してもいい？」のように週だけのとき：その週の日（今日から）を、まとめて見る日として入れる（range。2026-11-06）
+  if(!out.length&&INT.test(q)){ const rm=q.match(/再来週|来週|今週/); if(rm&&!/(?:今週|来週|再来週)の?\s*(?:[月火水木金土日]曜|末)/.test(q)){ const dow=T0.getDay(), ws=new Date(T0.getTime()-((dow+6)%7)*86400000), base=rm[0]==='今週'?0:(rm[0]==='来週'?7:14);
+      for(let k=0;k<7;k++){ const x=new Date(ws.getTime()+(base+k)*86400000); if(x<T0) continue; out.push({d:x,iso:_isoDate(x),pos:rm.index,range:rm[0]}); } } }
   return out.slice(0,7); }catch(e){ return []; } }
+/* 自分から動くことの重さ（先生の指示 2026-11-06「明日の話を何ヶ月先なんてありえない」）：
+   軽い＝連絡・LINE・メッセージ・電話・誘う・会う・デート・食事・お出かけ・相談・謝る・お礼（解けない空亡の月でも避けない。避けるのは空亡の日・日支と冲・刑・天戦地冲の日だけ。かわりの日は近い日）
+   重い＝告白・プロポーズ・復縁・結婚・入籍・契約・転職・独立など（空亡の月も避ける。近い日を聞かれたら、まずその日に答え、本格的な時期は2つ目の文に） */
+const PK_ACT_HEAVY=/告白|プロポーズ|(?:気持ち|想い|思い)を伝え|好きと伝え|復縁|結婚(?!式)|入籍|籍を入れ|婚約|契約|転職|独立|起業|開業|退職|辞表|引越|引っ越|購入|買い替え|大事な話|話し合い|決断|面接|試験|受験|申し込|申込|入社|オープン|開店/;
+const PK_ACT_LIGHT=/連絡|LINE|ライン|メッセージ|メール|電話|誘|会いに|会う|会い|謝|お礼|相談/;
+function pkActWeight(q){ q=String(q||''); return PK_ACT_HEAVY.test(q)?'heavy':(PK_ACT_LIGHT.test(q)?'light':''); }
+function _pkRelDay(d){ try{ const k=Math.round((d-_jstToday())/86400000); return k===0?'今日':(k===1?'明日':(k===2?'明後日':'')); }catch(e){ return ''; } }
+const PK_LIGHT_KUU_NOTE=function(tag,plain){ return plain?tag+(/月〕$/.test(tag)?'':'の月')+'の中なので、告白など大事な話は別の時期にして、軽い連絡にとどめましょう。':tag+(/月〕$/.test(tag)?'':'の月')+'の中なので、告白など重い話は避け、軽い連絡にとどめましょう。'; };
 /* 1つの日の材料（ツールの計算） */
 function pkDayFacts(c,d){ try{ const tp=_pkTransit(d.getFullYear(),d.getMonth()+1,d.getDate(),12,0).pillars, P=tp[2]; const ev=_kgWithText(c,kingunEval(c,P),'日');
   const natal=c.pillars.map(function(p,i){ return {label:String(p.label||'')[0],branch:p.branch,stem:p.stem,ganzhi:p.ganzhi,i:i}; }).filter(function(x){ return !(x.i===3&&c.timeUnknown); });
@@ -7200,7 +7212,7 @@ function _pkDayScore(F,big){ let s=0; const has=function(k,p){ return _pkDayRelP
   if(has('刑','日')) s-=1; if(has('刑','月')) s-=0.75; if(has('刑','年')||has('刑','時')) s-=0.25;
   if(has('天戦地冲','日')) s-=1; if(has('天戦地冲','月')) s-=0.5;
   s+=F.jud==='good'?0.5:(F.jud==='warn'?-0.5:0); s+=Math.min(1,F.good.length*0.25); s-=F.bad.length*0.5;
-  if(F.kuu&&big) s-=3; if(F.kuMBad&&big) s-=1; return s; }
+  if(F.kuu&&big) s-=3; if(F.kuMBad&&big&&big!=='light') s-=1; return s; }
 function _pkDayPosLab(ps,plain){ return ['日','月','年','時'].filter(function(p){ return ps.indexOf(p)>=0; }).map(function(p){ return plain?PK_DAY_SCENE[p]:p+'支'; }).join('・'); }
 /* よい点・注意点の短い言い方（pro／plain） */
 function _pkDayWhy(F,plain){ const g=[], w=[]; const P=function(k){ return _pkDayRelPos(F,k); };
@@ -7220,35 +7232,45 @@ function _pkDayCaut(F,q,plain){ const L=[]; const movie=/映画|ライブ|コン
   return L.map(function(x){ return x.tag; }).join(plain?'で、':'・')+(plain?'でもあるので、':'なので、')+L.map(function(x,i){ return i===L.length-1?x.end:x.mid; }).join('、')+'。'; }
 /* 答えの向き（ツールが決める）：{days:[F], pick:F|null, same:bool, pro, plain, talk, talkP} */
 function pkDayDir(c,q){ try{ q=String(q||''); if(!c||!c.pillars||!q) return null; if(typeof pkSafeStop==='function'&&pkSafeStop(q)) return null;
-  const DS=pkDayDates(q); if(!DS.length) return null; const days=DS.map(function(o){ return pkDayFacts(c,o.d); }).filter(Boolean); if(!days.length) return null;
-  const big=PK_DAY_BIG.test(q); let act=''; PK_DAY_ACT.some(function(a){ if(a[0].test(q)){ act=a[1]; return true; } return false; });
-  days.forEach(function(F){ F.sc=_pkDayScore(F,big); });
-  const L=function(F,plain){ return _pkDayLab(F.d)+(plain?'':'（'+F.gz+'）'); }, S=function(F){ return F.d.getDate()+'日'; };
-  const why=function(F,plain,neg){ const W=_pkDayWhy(F,plain); const x=neg?(W.w[0]||''):(W.g[0]||''); return x?S(F)+'は'+x.replace('で、','で')+'日':''; };
-  const one=function(F,plain){ const W=_pkDayWhy(F,plain); const st=plain?(PK_DAY_TSP[F.star]||'ふつうの'):F.star+'（'+((typeof STAR_KW!=='undefined'&&STAR_KW[F.star])||'')+'）';
-    const body=st+(plain?'日':'の日')+(W.g[0]?'で、'+W.g[0].replace('で、','で')+'日':'');
-    if(act){ const v=F.sc>=1?act+'に向いている日':(F.sc<=-1?act+'は慎重に進めたい日':act+'には大きな良し悪しのない、ふつうの日'); return L(F,plain)+'は'+v+'です（'+(W.g[0]?W.g[0].replace('で、','で')+'日':(plain?st+'日':F.star+'の日'))+'）。'; }
+  const DS=pkDayDates(q); if(!DS.length) return null; const days=DS.map(function(o){ const F=pkDayFacts(c,o.d); if(F) F.range=o.range||''; return F; }).filter(Boolean); if(!days.length) return null;
+  const big=PK_DAY_BIG.test(q)||PK_ACT_LIGHT.test(q), W=big?(pkActWeight(q)||'heavy'):'', light=W==='light'; let act=''; PK_DAY_ACT.some(function(a){ if(a[0].test(q)){ act=a[1]; return true; } return false; });
+  const RG=days.length>2&&days.every(function(F){ return F.range; })?days[0].range:'';
+  const dP=function(F,k){ return _pkDayRelPos(F,k).indexOf('日')>=0; };
+  days.forEach(function(F){ F.sc=_pkDayScore(F,light?'light':big); F.chD=dP(F,'冲')||dP(F,'天戦地冲'); F.keD=dP(F,'刑'); F.avoid=big&&(F.kuu||F.chD||F.keD||(!light&&F.kuMBad)); });
+  const L=function(F,plain){ const r=_pkRelDay(F.d); return (r?r+'（':'')+_pkDayLab(F.d)+(r?'）':'')+(plain?'':'（'+F.gz+'）'); }, S=function(F){ return F.d.getDate()+'日'; };
+  const why=function(F,plain,neg){ const W2=_pkDayWhy(F,plain); const x=neg?(W2.w[0]||''):(W2.g[0]||''); return x?S(F)+'は'+x.replace('で、','で')+'日':''; };
+  const KT=function(plain){ return plain?'〔ひと休みの月〕':'〔空亡〕'; };
+  const ngWhy=function(F,plain){ return F.kuu?(plain?'「ひと休みの日」':'空亡の日'):(F.chD?(plain?'予定や気持ちが揺れやすい日':_pkDayPosLab(_pkDayRelPos(F,'冲').length?_pkDayRelPos(F,'冲'):['日'])+'と冲の日'):(F.keD?(plain?'行き違いが起きやすい日':'日支と刑の日'):(KT(plain)+'の月の中の日'))); };
+  const one=function(F,plain){ const W2=_pkDayWhy(F,plain); const st=plain?(PK_DAY_TSP[F.star]||'ふつうの'):F.star+'（'+((typeof STAR_KW!=='undefined'&&STAR_KW[F.star])||'')+'）';
+    const body=st+(plain?'日':'の日')+(W2.g[0]?'で、'+W2.g[0].replace('で、','で')+'日':'');
+    if(act){ const v=F.sc>=1?act+'に向いている日':(F.sc<=-1?act+'は慎重に進めたい日':act+'には大きな良し悪しのない、ふつうの日'); return L(F,plain)+'は'+v+'です（'+(W2.g[0]?W2.g[0].replace('で、','で')+'日':(plain?st+'日':F.star+'の日'))+'）。'; }
     return L(F,plain)+'は'+body+'です。'; };
+  // かわりの日：軽い動き＝聞かれた日の前後14日でいちばん近い、空亡の日でも日支と冲・刑・天戦地冲でもない日／重い動き＝前後7日の向いた日（空亡の月の日も除く）
+  const near=function(F0){ try{ const T0=_jstToday(); for(let k=1;k<=14;k++){ for(const sg of [1,-1]){ const d=new Date(F0.d.getTime()+sg*k*86400000); if(d<T0||days.some(function(x){ return x.iso===_isoDate(d); })) continue; const F=pkDayFacts(c,d); if(!F) continue; if(F.kuu||dP(F,'冲')||dP(F,'天戦地冲')||dP(F,'刑')) continue; return F; } } }catch(e){} return null; };
+  const altS=function(F0,plain,aw){ if(light){ const A=near(F0); return A?'近いところでは'+L(A,plain)+'がよいでしょう'+(why(A,plain)?'（'+why(A,plain)+'）':'')+'。'+(A.kuMBad?PK_LIGHT_KUU_NOTE(KT(plain),plain):''):(plain?'数日ずらして、軽い一言から始めましょう。':'数日ずらして、軽い一言から始めましょう。'); }
+    const A=_pkDayAlt(c,F0,big); return A?aw+'は'+L(A,plain)+'がおすすめです'+(why(A,plain)?'（'+why(A,plain)+'）':'')+'。':(plain?'この1ヶ月は気持ちを育てる時期にしましょう。':'この1ヶ月は気持ちを育てる時期にしましょう。'); };
   let pick=null, same=false;
-  if(days.length>=2){ const srt=days.slice().sort(function(a,b){ return b.sc-a.sc; }); if(srt[0].sc-srt[1].sc>=1) pick=srt[0]; else same=true; }
-  const mk=function(plain){ let s1='', s2='';
-    if(days.length===1){ const F=days[0]; const W=_pkDayWhy(F,plain); const chD=_pkDayRelPos(F,'冲').indexOf('日')>=0||_pkDayRelPos(F,'天戦地冲').indexOf('日')>=0, avoid=big&&(F.kuu||chD||F.kuMBad);   // 解けない空亡の月の中の日も、自分から動く日にしない（2026-11-06）
-      if(avoid){ const alt=_pkDayAlt(c,F,big); const aw=act||(plain?'大事なこと':'大事な決断');
-        s1=L(F,plain)+'は'+(F.kuu?(plain?'「ひと休みの日」':'空亡の日'):(chD?(plain?'予定や気持ちが揺れやすい日':_pkDayPosLab(_pkDayRelPos(F,'冲').length?_pkDayRelPos(F,'冲'):['日'])+'と冲の日'):(plain?'〔ひと休みの月〕の中の日':'〔空亡〕の月の中の日')))+'なので、'+aw+'は避けたほうが安心です。';
-        s2=alt?(aw+'は'+L(alt,plain)+'がおすすめです'+(why(alt,plain)?'（'+why(alt,plain)+'）':'')+'。'):'';
-        return s1+s2; }
-      s1=one(F,plain); s2=_pkDayCaut(F,q,plain); return s1+s2; }
+  if(days.length>=2&&!RG){ const srt=days.slice().sort(function(a,b){ return b.sc-a.sc; }); if(srt[0].sc-srt[1].sc>=1) pick=srt[0]; else same=true; }
+  const mk=function(plain){ let s1='', s2=''; const aw=act||(plain?'大事なこと':'大事な決断');
+    if(RG){ const okL=days.filter(function(F){ return !F.avoid; }).sort(function(a,b){ return b.sc-a.sc; }).slice(0,2).sort(function(a,b){ return a.d-b.d; }), ngL=days.filter(function(F){ return F.avoid; });
+      if(!okL.length) return RG+'は'+aw+'に向く日が少ないので、'+(light?'数日ずらして、軽い一言から始めましょう。':'この1ヶ月は気持ちを育てる時期にしましょう。');
+      s1=RG+'なら'+okL.map(function(F){ return L(F,plain); }).join('か')+'が'+aw+'に向いています'+(why(okL[0],plain)?'（'+why(okL[0],plain)+'）':'')+'。';
+      s2=ngL.length?ngL.map(S).join('・')+'は'+(plain?'ひと休みの日や気持ちが揺れやすい日':'空亡の日や日支と冲・刑の日')+'なので避けましょう。':''; if(light&&okL.some(function(F){ return F.kuMBad; })) s2+=PK_LIGHT_KUU_NOTE(KT(plain),plain);
+      return s1+s2; }
+    if(days.length===1){ const F=days[0];
+      if(F.avoid){ s1=L(F,plain)+'は'+ngWhy(F,plain)+'なので、'+aw+'は避けたほうが安心です。'; return s1+altS(F,plain,aw); }
+      s1=one(F,plain); s2=_pkDayCaut(F,q,plain); if(light&&F.kuMBad) s2+=PK_LIGHT_KUU_NOTE(KT(plain),plain); return s1+s2; }
     const best=pick||days[0], others=days.filter(function(F){ return F!==best; });
     if(pick){ const rs=[why(best,plain,false)].concat(others.map(function(F){ return why(F,plain,true); })).filter(Boolean);
       s1=(act?act+'なら':'どちらかなら')+L(best,plain)+'のほうが合っています'+(rs.length?'（'+rs.join('、')+'）':'')+'。'; s2=_pkDayCaut(best,q,plain); return s1+(s2?S(best)+'は'+s2:''); }
     const rs=days.map(function(F){ return why(F,plain,false)||why(F,plain,true); }).filter(Boolean);
     s1=(act?act+'なら、':'')+days.map(function(F){ return L(F,plain); }).join('と')+'に大きな差はありません'+(rs.length?'（'+rs.join('、')+'）':'')+'。';
     const cs=days.slice().sort(function(a,b){ return (b.kuu?1:0)-(a.kuu?1:0); }).map(function(F){ const x=_pkDayCaut(F,q,plain); return x?S(F)+'は'+x:''; }).filter(Boolean); s2=cs[0]||''; return s1+s2; };
-  const talk=function(plain){ return days.map(function(F){ const W=_pkDayWhy(F,plain); const x=W.g[0]||W.w[0]||(plain?(PK_DAY_TSP[F.star]||'ふつう'):F.star+'が巡る'); return L(F,plain)+'は'+x+'日'+(F.kuu?(plain?'（ひと休みの日）':'（空亡の日）'):''); }).join('、')+'です'; };
-  return {days:days,pick:pick,same:same,big:big,act:act,pro:mk(false),plain:mk(true),talk:talk(false),talkP:talk(true)}; }catch(e){ return null; } }
+  const talk=function(plain){ return (RG?days.slice(0,3):days).map(function(F){ const W2=_pkDayWhy(F,plain); const x=W2.g[0]||W2.w[0]||(plain?(PK_DAY_TSP[F.star]||'ふつう'):F.star+'が巡る'); return L(F,plain)+'は'+x+'日'+(F.kuu?(plain?'（ひと休みの日）':'（空亡の日）'):''); }).join('、')+'です'; };
+  return {days:days,pick:pick,same:same,big:big,light:light,range:RG,act:act,pro:mk(false),plain:mk(true),talk:talk(false),talkP:talk(true)}; }catch(e){ return null; } }
 /* 大きな始まりを避けたい日のかわり：その日の前後7日（今日から）で、空亡でなく日支と冲・天戦地冲でない、いちばん点の高い日 */
 function _pkDayAlt(c,F0,big){ try{ const J=jstNow(), T0=new Date(J.y,J.m-1,J.d,12,0,0,0); let best=null;
-  for(let k=-7;k<=7;k++){ if(!k) continue; const d=new Date(F0.d.getTime()+k*86400000); if(d<T0) continue; const F=pkDayFacts(c,d); if(!F||F.kuu||(big&&F.kuMBad)||_pkDayRelPos(F,'冲').indexOf('日')>=0||_pkDayRelPos(F,'天戦地冲').length) continue; F.sc=_pkDayScore(F,big);
+  for(let k=-7;k<=7;k++){ if(!k) continue; const d=new Date(F0.d.getTime()+k*86400000); if(d<T0) continue; const F=pkDayFacts(c,d); if(!F||F.kuu||(big&&F.kuMBad)||_pkDayRelPos(F,'刑').indexOf('日')>=0||_pkDayRelPos(F,'冲').indexOf('日')>=0||_pkDayRelPos(F,'天戦地冲').length) continue; F.sc=_pkDayScore(F,big);
     if(F.sc>=1&&(!best||F.sc>best.sc||(F.sc===best.sc&&Math.abs(k)<Math.abs((best.d-F0.d)/86400000)))) best=F; }
   return best; }catch(e){ return null; } }
 /* 1つの日の材料の1行（文章作成への渡し・書き足し・根拠のチェック表で使う） */
@@ -7266,7 +7288,7 @@ function pkDayLine(F,plain){ const W=_pkDayWhy(F,plain), lab=_pkDayLab(F.d,true)
 function pkDayFocusText(c,q,plain){ try{ const D=pkDayDir(c,q); if(!D) return '';
   return '\n\n【相談に出てくる日の日運（ツールが計算済み・この表どおりに書く）】\n'+D.days.map(function(F){ return '・'+pkDayLine(F,false); }).join('\n')
     +'\n・答えの方向（ツールが決めた。1行目は必ずこの向きで書く）：'+(plain?D.plain:D.pro)
-    +'\n・決まり：その日の星の名前（天干の星・十二支の星）と吉凶は、上の表どおりに書く（日ごとに取りちがえない）。注意の星（血刃・劫殺・亡神・羊刃・飛刃・囚獄・妨害殺・隔角）を「魅力」「華やか」「幸運」などの良い意味に言いかえない（注意として書く）。冲・支合・空亡の日は必ず書く。相談文にない日付（翌日・前日など）の運勢は書かない。'
+    +'\n・決まり：その日の星の名前（天干の星・十二支の星）と吉凶は、上の表どおりに書く（日ごとに取りちがえない）。注意の星（血刃・劫殺・亡神・羊刃・飛刃・囚獄・妨害殺・隔角）を「魅力」「華やか」「幸運」などの良い意味に言いかえない（注意として書く）。冲・支合・空亡の日は必ず書く。相談文にない日付（翌日・前日など）の運勢は書かない。近い日を聞かれたら、1行目でその日がどうかに答え、何ヶ月も先の時期だけを答えない。'+(D.light?'連絡・LINE・誘う・会うなど軽い動きは、解けない空亡の月でも避けない（避けるのは空亡の日・日支と冲・刑の日だけ。かわりの日は近い日にする）。空亡の月の中なら「告白など重い話は避け、軽い連絡にとどめる」と添える。':'')
     +(plain?'\n・やさしい言い方：空亡の日＝「ひと休みの日」、冲＝予定や気持ちが揺れやすい、支合＝気持ちが通いやすい、血刃＝ケガや体調の崩れに気をつけたい日。星の名前は書かない。':''); }catch(e){ return ''; } }
 /* その日について書いた通変星がツールとちがえば直す（8日＝比肩→劫財）。曜日のまちがいも直す。聞かれていない日の運勢の言い切りは外す */
 const PK_TSN=['比肩','劫財','食神','傷官','偏財','正財','偏官','正官','偏印','印綬'];
@@ -7285,7 +7307,7 @@ function pkDayStarFix(t,c,q){ try{ t=String(t||''); const D=pkDayDir(c,q); if(!D
     ss.forEach(function(s){ const ds=dayOf(s), asked=ds.filter(function(x){ return x.F; }), Fs=[...new Set(asked.map(function(x){ return x.F; }))];
       // 聞かれていない日（今日から400日のうちの具体的な日）の運勢の言い切りは外す（範囲・「〜まで」・印の文は残す）
       const un=ds.filter(function(x){ return !x.F&&x.mo; });
-      if(un.length&&!Fs.length&&!/[〜～]|から|まで|以降|〔|ごろ|頃|節入り/.test(s)&&/運|日です|日になり|日でしょう|おすすめ|向いて|吉|良い|よい|注意|気をつけ|心がけ/.test(s)){ return; }
+      if(un.length&&!Fs.length&&!/[〜～]|から|まで|以降|〔|ごろ|頃|節入り|近いところでは|かわりに|代わりに/.test(s)&&/運|日です|日になり|日でしょう|おすすめ|向いて|吉|良い|よい|注意|気をつけ|心がけ/.test(s)){ return; }
       if(/[〜～]/.test(s)){ cur=null; keep.push(s); return; }
       if(Fs.length===1) cur=Fs[0]; else if(Fs.length>1) cur=null;
       const F=Fs.length===1?Fs[0]:(Fs.length?null:cur); if(!F||NAT.test(s)){ keep.push(s); return; }
@@ -7326,18 +7348,18 @@ function pkEnsureDays(t,c,q){ try{ t=String(t||''); q=String(q||''); const D=pkD
    遊びの予定（映画・デートなど）の向き＝2人の日の点（_pkDayScore）の合計でくらべる。告白・連絡・大事な話など自分から動くこと＝2人どちらかの空亡の日・どちらかの解けない空亡の月の日・どちらかの日支と冲・刑・天戦地冲の日はすすめない（避ける言い方に）。
    2つは分けて書く。かわりの時期＝これから30日の2人に向いた日（compatDaysPick。空亡の月・日・冲・刑の日を除く）→なければ、聞かれた日より後の2人とも縁が動く月（印のない月）。PRO・ビギナーで同じ向き。計算エンジンは変えない。 */
 const PK_CP_PLAY=[[/映画デート/,'映画デート'],[/映画/,'映画'],[/ライブ|コンサート/,'ライブ'],[/旅行|旅/,'旅行'],[/デート/,'デート'],[/飲み会|食事|ご飯|ごはん/,'食事'],[/買い物/,'買い物'],[/お出かけ|外出|出かけ|遊び/,'お出かけ']];
-function _pkCpBigWord(q){ q=String(q||''); return /プロポーズ/.test(q)?'プロポーズ':(/告白|気持ちを伝え|想いを伝え|思いを伝え|好きと伝え/.test(q)?'告白':(/復縁/.test(q)?'復縁の連絡':(/誘/.test(q)?'お誘い':(/連絡/.test(q)?'連絡':(/入籍|籍を入れ|婚約|結婚(?!式)/.test(q)?'入籍':(/話し合|大事な話/.test(q)?'大事な話':'大事なこと')))))); }
+function _pkCpBigWord(q){ q=String(q||''); return /プロポーズ/.test(q)?'プロポーズ':(/告白|気持ちを伝え|想いを伝え|思いを伝え|好きと伝え/.test(q)?'告白':(/復縁/.test(q)?'復縁の連絡':(/入籍|籍を入れ|婚約|結婚(?!式)/.test(q)?'入籍':(/話し合|大事な話/.test(q)?'大事な話':(/誘/.test(q)?'お誘い':(/連絡|LINE|ライン|メッセージ|メール|電話/.test(q)?'連絡':(/謝/.test(q)?'謝ること':(/お礼/.test(q)?'お礼':(/会いに|会う|会い/.test(q)?'会うこと':'大事なこと'))))))))); }
 function _pkCpWho(A,B,plain,pro0){ return plain?(A&&B?'2人とも':(A?'あなたは':'お相手は')):(A&&B?'2人の'+pro0:(A?'本人の'+pro0:'お相手の'+pro0)); }
-/* 1つの日の2人の材料：{d,iso,gz,A,B,...} */
-function _pkCpDay(a,b,d){ const A=pkDayFacts(a,d), B=pkDayFacts(b,d); if(!A||!B) return null;
+/* 1つの日の2人の材料：{d,iso,gz,A,B,...}。light＝軽い動き（空亡の月は避けない） */
+function _pkCpDay(a,b,d,light){ const A=pkDayFacts(a,d), B=pkDayFacts(b,d); if(!A||!B) return null;
   const on=function(F,k,ps){ return _pkDayRelPos(F,k).some(function(p){ return ps.indexOf(p)>=0; }); };
   const G={d:d,iso:A.iso,gz:A.gz,br:A.br,A:A,B:B,mgz:A.mgz,setsu:A.setsu};
   G.chA=on(A,'冲',['日'])||on(A,'天戦地冲',['日']); G.chB=on(B,'冲',['日'])||on(B,'天戦地冲',['日']);
   G.keA=on(A,'刑',['日']); G.keB=on(B,'刑',['日']);
   G.goA=on(A,'支合',['日'])||on(A,'三合',['日'])||on(A,'方合',['日'])||on(A,'半合',['日']); G.goB=on(B,'支合',['日'])||on(B,'三合',['日'])||on(B,'方合',['日'])||on(B,'半合',['日']);
   G.dA=!!A.kuu; G.dB=!!B.kuu; G.mA=!!A.kuMBad; G.mB=!!B.kuMBad;
-  G.bigNG=G.dA||G.dB||G.mA||G.mB||G.chA||G.chB||G.keA||G.keB;
-  G.play=_pkDayScore(A,false)+_pkDayScore(B,false); G.bigSc=_pkDayScore(A,true)+_pkDayScore(B,true);
+  G.dayNG=G.dA||G.dB||G.chA||G.chB||G.keA||G.keB; G.bigNG=G.dayNG||(!light&&(G.mA||G.mB));
+  G.play=_pkDayScore(A,false)+_pkDayScore(B,false); G.bigSc=_pkDayScore(A,light?'light':true)+_pkDayScore(B,light?'light':true);
   return G; }
 /* 2人の日の「良い点／注意点」の短い言い方（日支＝配偶宮の合冲を先に） */
 function _pkCpWhy(G,plain){ const g=[], w=[], kn=function(F,k){ return _pkDayRelPos(F,k).indexOf('日')>=0; };
@@ -7346,28 +7368,35 @@ function _pkCpWhy(G,plain){ const g=[], w=[], kn=function(F,k){ return _pkDayRel
   if(G.chA||G.chB){ const k=(kn(G.A,'冲')||kn(G.B,'冲'))?'冲':'天戦地冲'; w.push(plain?_pkCpWho(G.chA,G.chB,true)+'予定や気持ちが揺れやすい':_pkCpWho(G.chA,G.chB,false,'日支')+'と'+k+'で、予定や気持ちが揺れやすい'); }
   if(G.keA||G.keB) w.push(plain?_pkCpWho(G.keA,G.keB,true)+'行き違いが起きやすい':_pkCpWho(G.keA,G.keB,false,'日支')+'と刑で、行き違いが起きやすい');
   return {g:g,w:w}; }
-/* 告白などを避ける理由（その日について） */
-function _pkCpNG(G,plain){ const r=[];
+/* 自分から動くことを避ける理由（その日について）。light＝軽い動き（月の空亡は理由にしない） */
+function _pkCpNG(G,plain,light){ const r=[];
   if(G.chA||G.chB||G.keA||G.keB){ const c=G.chA||G.chB; r.push(plain?_pkCpWho(c?G.chA:G.keA,c?G.chB:G.keB,true)+(c?'気持ちが揺れやすい日':'行き違いが起きやすい日'):_pkCpWho(c?G.chA:G.keA,c?G.chB:G.keB,false,'日支')+'と'+(c?'冲':'刑')+'の日'); }
   if(G.dA||G.dB) r.push(pkKuuDayTag(G.dA,G.dB,plain,true));
-  if(G.mA||G.mB){ const t=pkCpKuuMK(G.mA,G.mB,plain); r.push(t+(/月〕$/.test(t)?'':'の月')+(G.setsu?'の始まり':'の中の日')); }
-  return r.join(plain?'で、':'で、'); }
+  if(!light&&(G.mA||G.mB)){ const t=pkCpKuuMK(G.mA,G.mB,plain); r.push(t+(/月〕$/.test(t)?'':'の月')+(G.setsu?'の始まり':'の中の日')); }
+  return r.join('で、'); }
 function pkCpDayDir(a,b,q){ try{ q=String(q||''); if(!a||!a.pillars||!b||!b.pillars||!q) return null; if(typeof pkSafeStop==='function'&&pkSafeStop(q)) return null;
-  const DS=pkDayDates(q); if(!DS.length) return null; const days=DS.map(function(o){ return _pkCpDay(a,b,o.d); }).filter(Boolean); if(!days.length) return null;
-  const big=PK_DAY_BIG.test(q), bw=big?_pkCpBigWord(q):''; let play=''; PK_CP_PLAY.some(function(p){ if(p[0].test(q)){ play=p[1]; return true; } return false; });
-  const L=function(G,plain){ return _pkDayLab(G.d)+(plain?'':'（'+G.gz+'）'); }, S=function(G){ return G.d.getDate()+'日'; };
+  const DS=pkDayDates(q); if(!DS.length) return null;
+  const big=PK_DAY_BIG.test(q)||PK_ACT_LIGHT.test(q), light=big&&pkActWeight(q)!=='heavy', bw=big?_pkCpBigWord(q):''; let play=''; PK_CP_PLAY.some(function(p){ if(p[0].test(q)){ play=p[1]; return true; } return false; });
+  const days=DS.map(function(o){ const G=_pkCpDay(a,b,o.d,light); if(G) G.range=o.range||''; return G; }).filter(Boolean); if(!days.length) return null;
+  const RG=days.length>2&&days.every(function(G){ return G.range; })?days[0].range:'';
+  const L=function(G,plain){ const r=_pkRelDay(G.d); return (r?r+'（':'')+_pkDayLab(G.d)+(r?'）':'')+(plain?'':'（'+G.gz+'）'); }, S=function(G){ return G.d.getDate()+'日'; };
   const why=function(G,plain,neg){ const W=_pkCpWhy(G,plain), x=neg?(W.w[0]||''):(W.g[0]||''); return x?S(G)+'は'+x.replace('で、','で')+'日':''; };
-  let pick=null, same=false; if(days.length>=2){ const srt=days.slice().sort(function(x,y){ return y.play-x.play; }); if(srt[0].play-srt[1].play>=1) pick=srt[0]; else same=true; }
+  let pick=null, same=false; if(days.length>=2&&!RG){ const srt=days.slice().sort(function(x,y){ return y.play-x.play; }); if(srt[0].play-srt[1].play>=1) pick=srt[0]; else same=true; }
   const ng=days.filter(function(G){ return G.bigNG; }), okB=days.filter(function(G){ return !G.bigNG; }).sort(function(x,y){ return y.bigSc-x.bigSc; });
-  const last=days.reduce(function(m,G){ return G.d>m?G.d:m; },days[0].d);
-  // かわりの時期（自分から動くことを避けた日のかわり）
-  const alt=function(plain){ try{ const P=compatDaysPick(a,b), wdn=['日','月','火','水','木','金','土'];
-      const gd=P.good.filter(function(o){ return !(o.kA||o.kB||o.dA||o.dB)&&!days.some(function(G){ return G.iso===_isoDate(o.d); })&&o.d>_jstToday(); });
-      if(gd.length){ const o=gd[0]; return {day:true,lab:(o.d.getMonth()+1)+'月'+o.d.getDate()+'日（'+wdn[o.d.getDay()]+'）'}; }
-      const CM=compatMonths(a,b), both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }), one=CM.filter(function(x){ return (x.A.g.length||x.B.g.length)&&!x.A.w.length&&!x.B.w.length; });
+  const last=days.reduce(function(m,G){ return G.d>m?G.d:m; },days[0].d), today=_jstToday(), nearQ=days.some(function(G){ return (G.d-today)<=30*86400000; });
+  const mTag=function(G,plain){ const t=pkCpKuuMK(G.mA,G.mB,plain); return t; };
+  const lightNote=function(G,plain){ return (light&&(G.mA||G.mB))?PK_LIGHT_KUU_NOTE(mTag(G,plain),plain):''; };
+  // 軽い動きのかわりの日：聞かれた日の前後14日で、いちばん近い（空亡の日でも、日支と冲・刑・天戦地冲でもない）日
+  const nearLight=function(){ try{ const G0=ng[0]||days[0]; for(let k=1;k<=14;k++){ for(const sg of [1,-1]){ const d=new Date(G0.d.getTime()+sg*k*86400000); if(d<today||days.some(function(x){ return x.iso===_isoDate(d); })) continue; const G=_pkCpDay(a,b,d,true); if(G&&!G.dayNG) return G; } } }catch(e){} return null; };
+  // 重い動きのかわりの日：これから30日の2人に向いた日（空亡の月・日・冲・刑の日を除く）
+  const nearHeavy=function(){ try{ const P=compatDaysPick(a,b), wdn=['日','月','火','水','木','金','土']; const gd=P.good.filter(function(o){ return !(o.kA||o.kB||o.dA||o.dB)&&!days.some(function(G){ return G.iso===_isoDate(o.d); })&&o.d>=today; }); if(gd.length){ const o=gd[0]; const r=_pkRelDay(o.d); return r?r+'（'+(o.d.getMonth()+1)+'月'+o.d.getDate()+'日）':(o.d.getMonth()+1)+'月'+o.d.getDate()+'日（'+wdn[o.d.getDay()]+'）'; } }catch(e){} return ''; };
+  const farMon=function(plain){ try{ const CM=compatMonths(a,b), both=CM.filter(function(x){ return x.A.g.length&&x.B.g.length&&!x.A.w.length&&!x.B.w.length; }), one=CM.filter(function(x){ return (x.A.g.length||x.B.g.length)&&!x.A.w.length&&!x.B.w.length; });
       const pickG=function(Lx){ const G=pkMonGroups(Lx).filter(function(g){ return !g[0].ku&&pkSetsuStart(g[0].y,g[0].m)>last; }); return G.length?pkNowLab(pkMonRunLabK(G[0],plain)):''; };
-      const lb=pickG(both); if(lb) return {day:false,lab:lb,both:true}; const lo=pickG(one); if(lo) return {day:false,lab:lo,both:false}; }catch(e){} return null; };
-  const mkPlay=function(plain){ const act=play||(big?'':'');
+      const lb=pickG(both); if(lb) return '2人とも縁が動く'+lb; const lo=pickG(one); if(lo) return '縁が動く'+lo; }catch(e){} return ''; };
+  // 避けたあとの文（軽い＝近い日だけ・何ヶ月先は出さない／重い＝近い向いた日→なければ「この1ヶ月は気持ちを育てる時期」＋本格的な時期は2つ目の文）
+  const after=function(plain){ if(light){ const N=nearLight(); return N?'近いところでは'+L(N,plain)+'がよいでしょう'+(why(N,plain)?'（'+why(N,plain)+'）':'')+'。'+lightNote(N,plain):'数日ずらして、軽い一言から始めましょう。'; }
+    const nh=nearHeavy(); if(nh) return '近いところでは'+nh+'がおすすめです。'; const fm=farMon(plain); return nearQ?'この1ヶ月は気持ちを育てる時期にして、'+(fm?'本格的に'+(bw==='告白'?'気持ちを伝える':bw+'をする')+'なら'+fm+(plain?'がよいでしょう。':'がおすすめです。'):'あせらず次の時期を待ちましょう。'):(fm?'次は'+fm+(plain?'がよいでしょう。':'がおすすめです。'):(plain?'別の日にしましょう。':'空亡でない落ち着いた日を選びましょう。')); };
+  const mkPlay=function(plain){ const act=play;
     if(days.length===1){ const G=days[0], W=_pkCpWhy(G,plain), v=G.play>=1?(act?act+'に向いている日':'2人にとって過ごしやすい日'):(G.play<=-1?(act?act+'は慎重に楽しみたい日':'慎重に過ごしたい日'):(act?act+'には大きな良し悪しのない、ふつうの日':'大きな良し悪しのない、ふつうの日'));
       const x=(G.play<=-1?W.w[0]:W.g[0])||W.g[0]||W.w[0]||''; return L(G,plain)+'は'+v+'です'+(x?'（'+x.replace('で、','で')+'日）':'')+'。'; }
     if(pick){ const others=days.filter(function(G){ return G!==pick; }), rs=[why(pick,plain,false)].concat(others.map(function(G){ return why(G,plain,true); })).filter(Boolean);
@@ -7375,40 +7404,47 @@ function pkCpDayDir(a,b,q){ try{ q=String(q||''); if(!a||!a.pillars||!b||!b.pill
     const rs=days.map(function(G){ return why(G,plain,false)||why(G,plain,true); }).filter(Boolean);
     return (act?act+'なら、':'')+days.map(function(G){ return L(G,plain); }).join('と')+'に大きな差はありません'+(rs.length?'（'+rs.join('、')+'）':'')+'。'; };
   const mkBig=function(plain,lead){ if(!big) return '';
-    const AL=alt(plain), alS=AL?(AL.day?(plain?'近いところでは'+AL.lab+'がよいでしょう':'近いところでは'+AL.lab+'がおすすめです'):'次は'+(AL.both?'2人とも縁が動く':'縁が動く')+AL.lab+(plain?'がよいでしょう':'がおすすめです')):(plain?'別の日にしましょう':'空亡でない落ち着いた日を選びましょう');
-    if(!ng.length){ if(days.length===1){ const G=days[0], gw=(G.goA||G.goB)?(plain?'（気持ちが通いやすい日）':'（'+_pkCpWhy(G,false).g[0].replace('で、','で')+'日）'):''; return lead?bw+'も'+S(G)+'で差し支えありません'+gw+'。':L(G,plain)+'は'+bw+'に'+(G.bigSc>=1?'向いている日':'差し支えない日')+'です'+gw+'。'; }
-      return bw+'なら'+L(okB[0],plain)+'がよいでしょう'+(why(okB[0],plain,false)?'（'+why(okB[0],plain,false)+'）':'')+'。'; }
-    const ngS=ng.map(function(G){ return S(G)+'は'+_pkCpNG(G,plain); }).join('、');
-    if(okB.length) return (lead?'ただし':'')+bw+'は、'+ngS+'なので避け、'+L(okB[0],plain)+'にしましょう。';
-    return (lead?'ただし'+bw+'は、':(days.length===1?L(days[0],plain)+'は':bw+'は、'))+(lead||days.length>1?ngS:_pkCpNG(days[0],plain))+'なので、'+(days.length>1?'どちらも':(lead?'':bw+'は'))+'避け、'+alS+'。'; };
-  const mk=function(plain){ const hasPlay=!!play||!big; const s1=hasPlay?mkPlay(plain):'', s2=mkBig(plain,hasPlay); return s1+s2; };
+    if(!ng.length){ if(days.length===1){ const G=days[0], gw=(G.goA||G.goB)?(plain?'（気持ちが通いやすい日）':'（'+_pkCpWhy(G,false).g[0].replace('で、','で')+'日）'):''; return (lead?bw+'も'+S(G)+'で差し支えありません'+gw+'。':L(G,plain)+'は'+bw+'に'+(G.bigSc>=1?'向いている日':'差し支えない日')+'です'+gw+'。')+lightNote(G,plain); }
+      return bw+'なら'+L(okB[0],plain)+'がよいでしょう'+(why(okB[0],plain,false)?'（'+why(okB[0],plain,false)+'）':'')+'。'+lightNote(okB[0],plain); }
+    const ngS=ng.map(function(G){ return S(G)+'は'+_pkCpNG(G,plain,light); }).join('、');
+    if(okB.length) return (lead?'ただし':'')+bw+'は、'+ngS+'なので避け、'+L(okB[0],plain)+'にしましょう。'+lightNote(okB[0],plain);
+    if(lead) return 'ただし'+bw+'は、'+ngS+'なので、'+(days.length>1?'どちらも':'')+'避け、'+after(plain);
+    if(days.length===1) return L(days[0],plain)+'は'+_pkCpNG(days[0],plain,light)+'なので、'+bw+'は避けたほうが安心です。'+after(plain);
+    return bw+'は、'+ngS+'なので、どちらも避けたほうが安心です。'+after(plain); };
+  const mkRange=function(plain){ const aw=play&&!big?play:(bw||play||'お出かけ'), okL=(big?okB:days.slice().sort(function(x,y){ return y.play-x.play; })).slice(0,2).sort(function(x,y){ return x.d-y.d; }), ngL=big?ng:days.filter(function(G){ return G.play<=-1; });
+    if(!okL.length) return RG+'は'+aw+'に向く日が少ないので、'+(light||!big?'数日ずらして、軽い一言から始めましょう。':after(plain));
+    let s=RG+'なら'+okL.map(function(G){ return L(G,plain); }).join('か')+'が'+aw+'に向いています'+(why(okL[0],plain)?'（'+why(okL[0],plain)+'）':'')+'。';
+    if(ngL.length) s+=ngL.map(S).join('・')+'は'+(plain?'ひと休みの日や気持ちが揺れやすい日':'空亡の日や日支と冲・刑の日')+'なので避けましょう。'; s+=lightNote(okL.filter(function(G){ return G.mA||G.mB; })[0]||{},plain);
+    return s; };
+  const mk=function(plain){ if(RG) return mkRange(plain); const hasPlay=!!play||!big; const s1=hasPlay?mkPlay(plain):'', s2=mkBig(plain,hasPlay); return s1+s2; };
   const line=function(G,plain){ const lab=_pkDayLab(G.d,true);
     if(plain){ const W=_pkCpWhy(G,true), x=[]; W.g.forEach(function(s){ x.push(s+'日'); }); W.w.forEach(function(s){ x.push(s+'日'); });
       if(G.dA||G.dB) x.push(pkKuuDayTag(G.dA,G.dB,true,true)+'（告白や大事な話、大きなことを始めるのは別の日に。楽しみの予定は差し支えない）');
-      if(G.mA||G.mB) x.push(pkCpKuuMK(G.mA,G.mB,true)+'の'+(G.setsu?'始まりの日':'中の日')+'（告白や大事な話は別の時期に）');
+      if(G.mA||G.mB) x.push(pkCpKuuMK(G.mA,G.mB,true)+'の'+(G.setsu?'始まりの日':'中の日')+'（告白や大事な話は別の時期に。軽い連絡やお出かけは差し支えない）');
       G.A.bad.forEach(function(s){ x.push((G.B.bad.indexOf(s)>=0?'2人とも':'あなたは')+PK_DAY_BAD[s].p); }); G.B.bad.forEach(function(s){ if(G.A.bad.indexOf(s)<0) x.push('お相手は'+PK_DAY_BAD[s].p); });
       return lab+'：'+(x.length?x.join('。'):'2人とも大きな良し悪しのない日')+'。'; }
     const one=function(F,who){ const rl=F.rels.map(function(r){ return F.br+'が'+_pkDayPosLab(r.pos||[])+'と'+r.kind+(/^(冲|刑|天戦地冲)$/.test(r.kind)?'（注意）':''); });
       return who+'＝天干の星'+F.star+'・十二支の星'+F.bStar+(rl.length?'・'+rl.join('・'):'・命式と合冲なし')+(F.kuu?'・空亡の日':'')+(F.bad.length?'・注意の星'+F.bad.join('・'):'')+(F.good.length?'・吉星'+F.good.join('・'):'')+(F.kuMBad?'・その月は解けない空亡の月':(F.kuM?'・その月は空亡だが解空':'')); };
-    return lab+' '+G.gz+'の日：'+one(G.A,'本人')+'／'+one(G.B,'お相手')+'／その日の月＝'+G.mgz+'の月'+(G.setsu?'（この日が節入り）':'')+((G.mA||G.mB)?pkCpKuuMK(G.mA,G.mB,false):'')+'／告白・大事な話＝'+(G.bigNG?'すすめない（'+_pkCpNG(G,false)+'）':'差し支えない'); };
+    return lab+' '+G.gz+'の日：'+one(G.A,'本人')+'／'+one(G.B,'お相手')+'／その日の月＝'+G.mgz+'の月'+(G.setsu?'（この日が節入り）':'')+((G.mA||G.mB)?pkCpKuuMK(G.mA,G.mB,false):'')+'／告白など重い話＝'+((G.dayNG||G.mA||G.mB)?'すすめない（'+_pkCpNG(G,false,false)+'）':'差し支えない')+'／連絡・誘うなど軽い動き＝'+(G.dayNG?'避ける（'+_pkCpNG(G,false,true)+'）':'差し支えない'+((G.mA||G.mB)?'（空亡の月の中なので軽い連絡にとどめる）':'')); };
   const caut=function(G,plain){ const M={rels:G.A.rels.concat(G.B.rels).filter(function(r){ return (r.pos||[]).some(function(p){ return p==='日'; }); }),kuu:G.dA||G.dB,bad:G.A.bad.concat(G.B.bad.filter(function(s){ return G.A.bad.indexOf(s)<0; }))}; return _pkDayCaut(M,q,plain); };
   const how=function(plain){ const H=[], bestP=pick||(days.length===1?days[0]:null);
     if((play||!big)&&bestP){ const c=caut(bestP,plain); if(c) H.push(S(bestP)+(play?'の'+play:'')+'は、'+c); }
-    if(big){ const AL=alt(plain); if(ng.length) H.push(plain?bw+'や大事な話は、あなたやお相手の「ひと休みの日」・ひと休みの月の日・気持ちが揺れやすい日には選ばないようにしましょう'+(AL?'（'+(AL.day?'近いところでは'+AL.lab:'次は'+AL.lab)+'）':'')+'。':bw+'・大事な話は、2人どちらかの空亡の日・解けない空亡の月の日・日支と冲・刑の日には選ばない'+(AL?'（'+(AL.day?'近いところでは'+AL.lab:'次は'+AL.lab)+'）':'')+'。');
-      H.push(plain?'当日は'+bw+'を急がず、楽しい時間を一緒に過ごすことを大切にしましょう。':'当日は'+bw+'を急がず、2人で楽しく過ごす時間を大切にすると、次につながりやすくなります。'); }
+    if(big){ if(light) H.push(plain?bw+'は、あなたやお相手の「ひと休みの日」・気持ちが揺れやすい日だけ避ければ大丈夫です。告白など大事な話は、ひと休みの月には別の時期にしましょう。':bw+'など軽い動きは、2人どちらかの空亡の日・日支と冲・刑の日だけ避ける（空亡の月でも軽い連絡は差し支えない。告白など重い話は空亡の月を避ける）。');
+      else { const fm=farMon(plain); H.push(plain?bw+'や大事な話は、あなたやお相手の「ひと休みの日」・ひと休みの月の日・気持ちが揺れやすい日には選ばないようにしましょう'+(fm?'（本格的には'+fm+'）':'')+'。':bw+'・大事な話は、2人どちらかの空亡の日・解けない空亡の月の日・日支と冲・刑の日には選ばない'+(fm?'（本格的には'+fm+'）':'')+'。');
+        H.push(plain?'当日は'+bw+'を急がず、楽しい時間を一緒に過ごすことを大切にしましょう。':'当日は'+bw+'を急がず、2人で楽しく過ごす時間を大切にすると、次につながりやすくなります。'); } }
     return H; };
-  return {days:days,pick:pick,same:same,big:big,bw:bw,play:play,ng:ng,okB:okB,pro:mk(false),plain:mk(true),lines:days.map(function(G){ return line(G,false); }),linesP:days.map(function(G){ return line(G,true); }),how:how(false),howP:how(true),
+  return {days:days,pick:pick,same:same,big:big,light:light,range:RG,bw:bw,play:play,ng:ng,okB:okB,pro:mk(false),plain:mk(true),lines:days.map(function(G){ return line(G,false); }),linesP:days.map(function(G){ return line(G,true); }),how:how(false),howP:how(true),
     talk:days.map(function(G){ return L(G,false)+'は'+((_pkCpWhy(G,false).g[0]||_pkCpWhy(G,false).w[0]||'大きな良し悪しのない').replace('で、','で'))+'日'+((G.dA||G.dB)?pkKuuDayTag(G.dA,G.dB,false,true):''); }).join('、')+'です',
     talkP:days.map(function(G){ return L(G,true)+'は'+((_pkCpWhy(G,true).g[0]||_pkCpWhy(G,true).w[0]||'大きな良し悪しのない'))+'日'+((G.dA||G.dB)?pkKuuDayTag(G.dA,G.dB,true,true):''); }).join('、')+'です'}; }catch(e){ return null; } }
 /* 文章作成への渡し（相性の相談の頼み方に入れる） */
 function pkCpDayFocusText(a,b,q){ try{ const D=pkCpDayDir(a,b,q); if(!D) return '';
   return '\n\n【相談に出てくる日の2人の日運（ツールが計算済み・この表どおりに書く）】\n'+D.lines.map(function(x){ return '・'+x; }).join('\n')
     +'\n・答えの方向（ツールが決めた。1行目は必ずこの向きで書く）：'+D.pro
-    +'\n・決まり：遊びの予定（映画・デートなど）にどの日が合うかと、'+(D.bw||'告白・大事な話')+'をしてよいかは、分けて書く。'+(D.big?D.bw+'・大事な話は、2人どちらかの空亡の日・どちらかの解けない空亡の月（〔本人は空亡〕〔お相手は空亡〕〔2人とも空亡〕）の日・どちらかの日支と冲・刑の日にすすめない（「避ける」と書く）。':'')+'その日の星・合冲・空亡の日は、上の表どおりに書く（本人とお相手を取りちがえない）。注意の星を良い意味に言いかえない。相談文にない日付の運勢は書かない。曜日は表どおりに書く。'; }catch(e){ return ''; } }
+    +'\n・決まり：遊びの予定（映画・デートなど）にどの日が合うかと、'+(D.bw||'告白・大事な話')+'をしてよいかは、分けて書く。'+(D.big?(D.light?D.bw+'は軽い動きなので、空亡の月（〔お相手は空亡〕など）でも避けない。避けるのは2人どちらかの空亡の日・日支と冲・刑の日だけで、かわりの日は近い日（前後2週間のうち）にする。何ヶ月も先の時期は書かない。空亡の月の中なら「告白など重い話は避け、軽い連絡にとどめる」と添える。':D.bw+'・大事な話は、2人どちらかの空亡の日・どちらかの解けない空亡の月（〔本人は空亡〕〔お相手は空亡〕〔2人とも空亡〕）の日・どちらかの日支と冲・刑の日にすすめない（「避ける」と書く）。近い日を聞かれているので、1行目はまずその日がどうかに答え、本格的な時期（何ヶ月か先）は2つ目の文に書く。'):'')+'その日の星・合冲・空亡の日は、上の表どおりに書く（本人とお相手を取りちがえない）。注意の星を良い意味に言いかえない。相談文にない日付の運勢は書かない。曜日は表どおりに書く。'; }catch(e){ return ''; } }
 /* 書いていなければ足す（2人の冲・支合・空亡の日）。告白などを、すすめない日にすすめている文は「避ける」の言い方に書きかえる */
 function pkCpEnsureDays(t,a,b,q){ try{ t=String(t||''); q=String(q||''); const D=pkCpDayDir(a,b,q); if(!D) return t; const plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'));
   // ① すすめない日に告白などをすすめている文を書きかえる（1行目はツールの答えなので見ない）
-  const S0=function(G){ return G.d.getDate()+'日は'+_pkCpNG(G,plain); };
+  const S0=function(G){ return G.d.getDate()+'日は'+_pkCpNG(G,plain,D.light); };
   if(D.big&&D.ng.length){ const BIGW=/告白|プロポーズ|気持ちを伝え|想いを伝え|思いを伝え|好きと伝え|素直な気持ち|気持ちを言葉|想いを言葉|思いを言葉|連絡|誘|復縁|入籍|大事な話|話し合/;
     const NGd=function(s){ return D.ng.filter(function(G){ return new RegExp('(^|[^0-9])'+G.d.getDate()+'日').test(s); }); };
     const CARE=/避け|控え|見送|別の日|向かない|向いていない|すすめ(?:ませ|ない)|ないほう|ない方|やめ|急がず|焦らず|あせらず|待/;
@@ -7439,7 +7475,7 @@ function pkCpDayEvRows(text,a,b,q){ const R=[]; try{ const D=pkCpDayDir(a,b,q); 
   D.days.forEach(function(G){ const lab=_pkDayLab(G.d)+'（'+G.gz+'）', tx=BK[G.iso]||'', calc=D.lines[D.days.indexOf(G)].replace(/^[^：]*：/,'');
     if(!tx){ R.push({st:'warn',what:lab+'の2人の日運',calc:calc,note:'この日の話が鑑定文に見当たりません。確かめてください'}); return; }
     const bad=G.bigNG&&D.big&&tx.split(/(?<=[。！？])/).some(function(s){ return new RegExp(D.bw.slice(0,2)).test(s)&&PK_KG_REC.test(s)&&!/避け|控え|見送|別の日|急がず/.test(s); });
-    R.push(bad?{st:'warn',what:lab+'の'+D.bw,calc:calc,note:'すすめない日（'+_pkCpNG(G,false)+'）に'+D.bw+'をすすめているように読めます。確かめてください'}:{st:'ok',what:lab+'の2人の日運',calc:calc,note:'計算どおり'}); }); }catch(e){} return R; }
+    R.push(bad?{st:'warn',what:lab+'の'+D.bw,calc:calc,note:'すすめない日（'+_pkCpNG(G,false,D.light)+'）に'+D.bw+'をすすめているように読めます。確かめてください'}:{st:'ok',what:lab+'の2人の日運',calc:calc,note:'計算どおり'}); }); }catch(e){} return R; }
 /* 注意の星（血刃・劫殺・亡神・羊刃・飛刃・囚獄・妨害殺・隔角）を良い意味で書いた文は、注意の言い方に直す（全部の答えで。日運の詳細鑑定にも）。
    血刃・妨害殺は注意だけの星なので文ごと注意の言い方に。ほかは両面のある星なので、文は残して注意を一言添える。お客様へのお伝え方の中は星の名前を出さない */
 function pkBadStarFix(t){ try{ t=String(t==null?'':t); const NAMES=Object.keys(PK_DAY_BAD);
@@ -7462,7 +7498,7 @@ function pkNoNoFix(t){ try{ return String(t==null?'':t).replace(/(持つ|する|
    「避け」「控え」「待つ」など、もともと注意として書かれているところ・印がもう付いているところは直さない。解空の月・年は直さない（pkKuuBadMonth・pkKuuBad が解空を除く）。
    自分から動く相談（1人＝pkActQ／相性＝告白したい・自分から動く・復縁）で、1行目がすすめる時期が空亡の月なら、1行目を通信なしの答えと同じ1行目（pkOfflineLead／pkCompatSit）に置きかえる（日・年だけのときは置きかえず、印と書き添え）。
    a＝本人、b＝お相手（相性・相談文に出てくる恋愛のお相手が1人のとき。なければ null）。返す {text, fix:[根拠のチェック表に出す行]}。計算・判定は変えない。 */
-const PK_KG_ACT=[[/プロポーズ/,'プロポーズ'],[/告白|(?:気持ち|想い|思い)を伝え|好きと伝え|アプローチ/,'告白'],[/復縁/,'復縁の連絡'],[/デート|誘/,'お誘い'],[/連絡/,'連絡'],[/結婚|入籍|籍を入れ|婚約/,'結婚・入籍'],[/転職/,'転職'],[/独立|起業|開業|新しい事業|事業を始/,'独立・開業'],[/契約/,'大きな契約'],[/引越|引っ越/,'引越し'],[/大きな買い物|購入|買い替え|家を(?:買|建)|マイホーム/,'大きな買い物'],[/投資/,'投資'],[/新しい(?:こと|仕事|挑戦)|動き出|行動を起こ|勝負/,'大きな始まり']];
+const PK_KG_ACT=[[/プロポーズ/,'プロポーズ'],[/告白|(?:気持ち|想い|思い)を伝え|好きと伝え|アプローチ/,'告白'],[/復縁/,'復縁の連絡'],[/デート|誘/,'お誘い'],[/連絡|LINE|ライン|メッセージ|電話/,'連絡'],[/結婚|入籍|籍を入れ|婚約/,'結婚・入籍'],[/転職/,'転職'],[/独立|起業|開業|新しい事業|事業を始/,'独立・開業'],[/契約/,'大きな契約'],[/引越|引っ越/,'引越し'],[/大きな買い物|購入|買い替え|家を(?:買|建)|マイホーム/,'大きな買い物'],[/投資/,'投資'],[/新しい(?:こと|仕事|挑戦)|動き出|行動を起こ|勝負/,'大きな始まり']];
 // 用語の説明のかっこ（例：劫財（…勝負運…））の言葉を「大きな始まり」と取りちがえないよう、かっこの中を外して見る
 function _pkKgNoPar(s){ return String(s||'').replace(/（[^（）]*）/g,'').replace(/\([^()]*\)/g,''); }
 const PK_KG_LOVE=/プロポーズ|告白|伝え|アプローチ|復縁|デート|誘|連絡/;
@@ -7474,6 +7510,7 @@ const PK_KG_EXCL=/より|ほうが|方が|ではなく|じゃなく|でなく|�
 const PK_KG_PAST=/去年|昨年|一昨年|前回|以前|先月|先週|この前|生まれ|誕生|でした|ました|たのは|たのが|たのも|たこと|たとき|た時|た経験|ていた/;
 const PK_KG_FROM=/(?:から|より)の?(?:連絡|お誘い|誘い|誘われ|告白|アプローチ|返事|プロポーズ)|が来|が届|来る|届く|される|られる/;
 const PK_KG_THIRD=/母|父|祖母|祖父|両親|兄|姉|弟|妹|息子|娘|子ども|子供|お子|友人|友達|友だち|上司|同僚|先輩|後輩|部下|家族|親御|取引先/;
+function _pkKgLight(s){ const a=PK_KG_ACT.filter(function(p){ return p[0].test(_pkKgNoPar(s)); }).map(function(p){ return p[1]; }); return a.length>0&&a.every(function(x){ return x==='お誘い'||x==='連絡'; })&&!PK_ACT_HEAVY.test(_pkKgNoPar(s)); }
 function pkKgSkip(s,H,cp){ s=String(s||''); let rest=s; (H||[]).slice().sort(function(p,q){ return q.i-p.i; }).forEach(function(o){ rest=rest.slice(0,o.i)+'＿'+rest.slice(o.e); });
   rest=rest.replace(/(?:再来年|来年|今年|年明け)(?:の|、)?\s*＿/g,'＿');
   if(/来年|年内|年末|年始|年明け|今年中|今週|来週|上半期|下半期|春|夏|秋|冬|月末|\d+月|\d+日|今月|来月|\d{4}年|\d{1,2}\/\d{1,2}/.test(rest)) return 'two';   // 時期が2つ以上
@@ -7551,7 +7588,9 @@ function pkKuuGuard(t,a,b,q,isCompat,plain){ const fix=[]; try{ t=String(t||'');
     const out=[]; H.forEach(function(o){
       if(o.k==='y'){ if(!YACT.test(s)) return; } else if(!PK_KG_ACT.some(function(p){ return p[0].test(_pkKgNoPar(s)); })) return;
       if(o.k==='d'&&!PK_KG_ACT.some(function(p){ return p[1]!=='お誘い'&&p[0].test(_pkKgNoPar(s)); })&&!/誘/.test(_pkKgNoPar(s))) return;   // 空亡の日の映画・デート・お出かけのような楽しみの予定は差し支えない（誘う・告白・大事な話だけ避ける。2026-11-06）
-      const r=judge(o); if(!r) return; if(r.kind==='年'&&!YACT.test(s)) return; o.r=r; out.push(o); });
+      const r=judge(o); if(!r) return; if(r.kind==='年'&&!YACT.test(s)) return;
+      if(_pkKgLight(s)&&(r.kind==='月'||(r.kind==='日'&&!r.day))) return;   // 連絡・誘うなど軽い動きは、解けない空亡の月でも避けない（空亡の日だけ避ける。先生の指示 2026-11-06）
+      o.r=r; out.push(o); });
     if(!out.length) return null; if(dry) return {hit:true,mon:out.some(function(o){ return o.r.kind==='月'; })};
     const A=actsOf(s,pl), add=[], rows=[]; let ns=s;
     out.slice().sort(function(p,q){ return q.e-p.e; }).forEach(function(o){ const r=o.r; let tag='';
@@ -7601,7 +7640,7 @@ function pkKuuGuard(t,a,b,q,isCompat,plain){ const fix=[]; try{ t=String(t||'');
 }catch(e){} return {text:t,fix:fix}; }
 /* 印のかっこの中に読み・説明を入れない（2026-11-05 点検：「〔本人は空亡（くうぼう）（物事が一度リセット…）〕」）：〔…空亡…〕〔…ひと休み…〕の中の（…）を取る */
 function pkKuuTagClean(t){ try{ return String(t==null?'':t).replace(/((?:19|20)\d\d)年(\d{1,2})月(\d{1,2})日〜\1年(?=\d{1,2}月)/g,'$1年$2月$3日〜').replace(/〔([^〔〕\n]*(?:空亡|ひと休み)[^〔〕\n]*)〕/g,function(m0,x){ let y=x, p=''; while(p!==y){ p=y; y=y.replace(/[（(][^（）()]*[）)]/g,''); } return '〔'+y.trim()+'〕'; }); }catch(e){ return t; } }
-const PK_MON_KUU_RULE='月の〔空亡〕〔本人は空亡〕〔お相手は空亡〕〔2人とも空亡〕の印は、その人の解けない空亡の月（年と同じ決まり：月の十二支が空亡で、命式＋今の大運の支と三合・方合・支合・冲にならない）。印の月に告白の返事を迫る・結婚・入籍・転職・独立・開業・大きな契約・大きな買い物・投資など大きな始まりをすすめない（仕事・お金の月でも同じ。体調の話では無理をせず休養を多めにとる月として書き、治療・手術の日どりは占いで決めない＝医師と決める）。準備・待つ・下調べ・ふだんどおりに過ごす月として書き、すすめる月の先頭にしない。印はそのまま残す。解空の月は印なし（避けない）。告白・プロポーズ・連絡・デートに誘う・復縁の連絡など自分から動く時期を答えるときも、解けない空亡の月と空亡の日（日の十二支がその人の空亡。相性は2人それぞれ）はすすめない。いちばん近い時期が7日以内に終わるときは終わる日（○月○日まで）を書き、そのあとの空亡の月（○月○日〜○月○日）は避けること、次にすすめられる時期も書く（ツールの計算どおり）。印は〔〕ごと、その文字のまま写す（「彼の月」「お相手の充電期間の月」「お相手の天中殺」などに言いかえない。「天中殺」とは書かない）';
+const PK_MON_KUU_RULE='月の〔空亡〕〔本人は空亡〕〔お相手は空亡〕〔2人とも空亡〕の印は、その人の解けない空亡の月（年と同じ決まり：月の十二支が空亡で、命式＋今の大運の支と三合・方合・支合・冲にならない）。印の月に告白の返事を迫る・結婚・入籍・転職・独立・開業・大きな契約・大きな買い物・投資など大きな始まりをすすめない（仕事・お金の月でも同じ。体調の話では無理をせず休養を多めにとる月として書き、治療・手術の日どりは占いで決めない＝医師と決める）。準備・待つ・下調べ・ふだんどおりに過ごす月として書き、すすめる月の先頭にしない。印はそのまま残す。解空の月は印なし（避けない）。告白・プロポーズ・連絡・デートに誘う・復縁の連絡など自分から動く時期を答えるときも、解けない空亡の月と空亡の日（日の十二支がその人の空亡。相性は2人それぞれ）はすすめない。いちばん近い時期が7日以内に終わるときは終わる日（○月○日まで）を書き、そのあとの空亡の月（○月○日〜○月○日）は避けること、次にすすめられる時期も書く（ツールの計算どおり）。連絡・LINE・メッセージ・電話・誘う・会う・デート・お礼・謝るなど軽い動きは、解けない空亡の月でも避けない（避けるのはその日が空亡の日・日支と冲・刑の日のときだけ。かわりの日は近い日にし、何ヶ月も先の時期は書かない。空亡の月の中なら「告白など重い話は避け、軽い連絡にとどめる」と添える）。今日・明日・来週など近い日を聞かれたら、1行目でまずその日がどうかに答え、何ヶ月も先の時期だけを答えない（本格的な時期は2つ目の文に）。印は〔〕ごと、その文字のまま写す（「彼の月」「お相手の充電期間の月」「お相手の天中殺」などに言いかえない。「天中殺」とは書かない）';
 const PK_MON_KUU_NOTE='〔空亡〕の印の月は解けない空亡の月なので、結婚・入籍・告白の返事を迫る・大きな始まりはすすめず、準備・待つ・ふだんどおりに過ごす月に。', PK_MON_KUU_NOTEP='〔ひと休みの月〕は、大きなことを始めるより、準備をしたり、ふだんどおりに過ごしたりするのに向いた月です。';
 /* 仕事・お金の月の空亡の印（先生の指示 2026-11-04「仕事・お金・健康の月にも印を」）：恋愛と同じ扱い（月は外さない・すすめる月の先頭にしない・大きな始まりはすすめない） */
 const PK_MON_KUU_NOTE_W='〔空亡〕の印の月は解けない空亡の月なので、転職・独立・大きな契約・大きな買い物など大きな始まりはすすめず、準備・下調べ・ふだんどおりに進める月に。', PK_MON_KUU_NOTE_WP='〔ひと休みの月〕は、転職や大きな買い物など大きなことを始めるより、準備や下調べをしたり、ふだんどおりに過ごしたりするのに向いた月です。';
@@ -7667,8 +7706,8 @@ function pkABLead(c,q,plain){ try{ q=String(q||''); if(!/(どちら|どっち)/.
 function pkOfflineLead(c,q,plain){ try{ q=String(q||''); if(!c||!c.now) return ''; if(pkKidAge(c)>=0&&(/(転職|独立|起業|就職|辞め|仕事|職場|会社|副業|キャリア|お金|金運)/.test(q)||pkIsLoveQ(q))) return ''; const by=birthYearOf(c), age=function(y){ return by?'（'+(y-by)+'歳）':''; };
   const _loveLead=function(){ const L=loveFourLines(c); const m=L&&((plain?L.monthLabsP:L.monthLabs)||[])[0]; if(m){ let _mn=''; if(/(結婚|入籍|籍を|婚約|プロポーズ)/.test(q)){ const mm=String(m).match(/^(\d{4})年(\d{1,2})月/); if(mm) _mn=pkMarryNote([c],[pkMonAY(+mm[1],+mm[2])],plain); }   // 結婚の相談で、縁が動く月が解けない空亡の年なら、入籍は空亡でない年に（2026-11-03）
     // いちばん近い時期が7日以内に終わるときは終わる日と、そのあとの空亡の月・次の時期も。自分から動く相談は空亡の月より前に注意を（先生の指示 2026-11-05）
-    let AP=null; try{ const _all=monthFortuneList(c,12).filter(function(ev){ return ev&&ev.calYear; }).map(function(ev){ return {y:ev.calYear,m:ev.calMonth,ku:pkKuuMTag(c,ev.branch,false,ev),kuP:pkKuuMTag(c,ev.branch,true,ev)}; }); AP=pkActPlan(L.topM||[],_all,plain,pkActQ(q)?pkActWord(q):'大事なこと'); }catch(e){}
-    if(AP&&!_pkMonKu(m)) return (pkCanQ(q)?'可能性はあります。':'')+'縁が動きやすいのは'+AP.lab+'です。'+(AP.short?AP.follow:(pkActQ(q)?AP.note:''))+_mn;
+    let AP=null; try{ const _all=monthFortuneList(c,12).filter(function(ev){ return ev&&ev.calYear; }).map(function(ev){ return {y:ev.calYear,m:ev.calMonth,ku:pkKuuMTag(c,ev.branch,false,ev),kuP:pkKuuMTag(c,ev.branch,true,ev)}; }); AP=pkActPlan(L.topM||[],_all,plain,pkActQ(q)?pkActWord(q):'大事なこと',pkActQ(q)&&pkActWeight(q)==='light'); }catch(e){}
+    if(AP&&(!_pkMonKu(m)||(pkActQ(q)&&pkActWeight(q)==='light'))) return (pkCanQ(q)?'可能性はあります。':'')+'縁が動きやすいのは'+AP.lab+'です。'+(AP.short?AP.follow:(pkActQ(q)?AP.note:''))+_mn;
     return (pkCanQ(q)?'可能性はあります。':'')+'縁が動きやすいのは'+pkNowLab(m)+'です。'+(_pkMonKu(m)?(plain?PK_MON_KUU_NOTEP:PK_MON_KUU_NOTE):'')+_mn; } return ''; };
   { const _dd=pkDayDir(c,q); if(_dd) return plain?_dd.plain:_dd.pro; }   // 相談に出てくる日（「11月7日と8日」「明日」など）は、その日の日運で答える（オンラインと同じ pkDayDir。2026-11-05）
   { const _w=pkWaitLead(c,q,plain); if(_w) return _w; }   // 告白して返事を待っている：待ち方に答える（2026-11-04）
@@ -8166,6 +8205,28 @@ function pkFactFix(t,aS,bS){ try{ t=String(t==null?'':t);  t=t.replace(/ふた�
       else { var a=new Date(T0.getFullYear(),M-1,D,12,0,0,0); if(a<T0&&(W.charAt(a.getDay())===w||/先月|先週|この前|以前|去年|昨年|前回|でした|ました/.test(ln.slice(Math.max(0,off-10),off)+ln.slice(off,off+30)))) x=a; else x=a<T0?new Date(T0.getFullYear()+1,M-1,D,12,0,0,0):a; }
       if(x.getMonth()!==M-1||x.getDate()!==D) return m0;
       var r=W.charAt(x.getDay()); return r===w?m0:(y||'')+(mo||'')+da+'日'+p1+r+p2; }); }).join('\n');
+  // ⑧ 日付についた干支のまちがい（「11月6日（木申）」→甲申・「2027年（丙未）」→丁未・「12月（庚子の月）」→その月の干支）は、暦から計算して置きかえる（日＝日の干支、月＝節月の月の干支、年＝立春で切りかわる年の干支。直したものは根拠のチェック表に出す。2026-11-06）
+  (function(){ var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', gz=function(i){ i=((i%60)+60)%60; return G.charAt(i%10)+Z.charAt(i%12); };
+    var n=new Date(Date.now()+9*3600000), T0=new Date(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate(),12,0,0,0), LOG=[];
+    var dayGz=function(y,m,d){ return gz(Math.round(Date.UTC(y,m-1,d)/86400000)+2440637); };
+    var monGz=function(y,m){ var yy=m===1?y-1:y, s=((yy-4)%10+10)%10; return G.charAt(((s%5)*2+2+((m+10)%12))%10)+Z.charAt(m%12); };
+    var smOf=function(y,m,d){ var sd=0; try{ if(typeof pkSetsuStart==='function') sd=pkSetsuStart(y,m).getDate(); }catch(e){ sd=0; } if(!sd){ sd=[6,4,6,5,6,6,7,8,8,8,7,7][m-1]; if(Math.abs(d-sd)<=1) return null; } return d>=sd?{y:y,m:m}:(m===1?{y:y-1,m:12}:{y:y,m:m-1}); };
+    var fy=function(m,d){ var y=T0.getFullYear(), x=new Date(y,m-1,d||28,12,0,0,0); return x<T0?y+1:y; };
+    var XY='([甲乙丙丁戊己庚辛壬癸木火土金水日月][子丑寅卯辰巳午未申酉戌亥])(?=[）)・、の（(\\s／]|$)', RD='((?:[（(][ぁ-ん]{2,8}[）)])?)';
+    var put=function(m0,head,bad,rd,good,what){ if(!good||bad===good) return m0; LOG.push({what:what,from:bad,to:good}); return head+good; };
+    t=t.split('\n').map(function(ln){
+      ln=ln.replace(new RegExp('((?:(\\d{4})年)?(\\d{1,2})月(\\d{1,2})日(?:[（(][日月火水木金土](?:曜日?)?[）)])?[（(])'+XY+RD+'(の月)?','g'),function(m0,head,y,mo,da,bad,rd,mon){ var Y=y?+y:0, M=+mo, D=+da; if(M<1||M>12||D<1||D>31) return m0;
+        if(!Y){ var a=new Date(T0.getFullYear(),M-1,D,12,0,0,0); Y=(a<T0&&dayGz(a.getFullYear(),M,D)===bad)?a.getFullYear():(a<T0?a.getFullYear()+1:a.getFullYear()); }
+        var x=new Date(Y,M-1,D,12,0,0,0); if(x.getMonth()!==M-1) return m0;
+        if(mon){ var sm=smOf(Y,M,D); if(!sm) return m0; var g1=monGz(sm.y,sm.m); return g1===bad?m0:put(m0,head,bad,rd,g1,(y||'')+mo+'月'+da+'日の月')+'の月'; }
+        var g=dayGz(Y,M,D); return g===bad?m0:put(m0,head,bad,rd,g,(y||'')+mo+'月'+da+'日')+(mon||''); });
+      ln=ln.replace(new RegExp('((?<![〜～\\d])(?:(\\d{4})年)?(\\d{1,2})月(中旬|下旬|ごろ|頃)?[（(])'+XY+RD,'g'),function(m0,head,y,mo,pt,bad,rd){ var M=+mo; if(M<1||M>12) return m0; var Y=y?+y:fy(M); var g=monGz(Y,M); return g===bad?m0:put(m0,head,bad,rd,g,(y?y+'年':'')+mo+'月'); });
+      ln=ln.replace(new RegExp('((?<![\\d])(\\d{4})年[（(])'+XY+RD,'g'),function(m0,head,y,bad,rd){ var g=gz(+y-4); return g===bad?m0:put(m0,head,bad,rd,g,y+'年'); });
+      return ln; }).join('\n');
+    if(LOG.length&&typeof window!=='undefined'){ try{ window.__pkGzFixLog=(window.__pkGzFixLog||[]).concat(LOG).slice(-30); }catch(e){} } })();
+  // ⑨ 六十干支にない形（十干と十二支の陰陽が合わない「甲丑」「乙子」など）は、直せないものを根拠のチェック表に⚠として出す（文は変えない。日付・柱・運の名前つきのものは ⑧・pkPillarGzFix・pkRunGzFix が直す。2026-11-06）
+  (function(){ var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', m, re=/([甲乙丙丁戊己庚辛壬癸])([子丑寅卯辰巳午未申酉戌亥])/g, W=[]; while((m=re.exec(t))){ if(G.indexOf(m[1])%2!==Z.indexOf(m[2])%2&&!/丁子/.test(m[0])) W.push({st:'warn',what:'干支',from:m[0],to:''}); }
+    if(W.length&&typeof window!=='undefined'){ try{ window.__pkGzFixLog=(window.__pkGzFixLog||[]).concat(W).slice(-30); }catch(e){} } })();
   return t; }catch(e){ return t; } }
 function pkSameGzFix(t,c){ try{ t=String(t==null?'':t); if(!c||!c.pillars) return t;   // 「日柱と同じ干支である丁未」のように、柱の干支とちがうのに「同じ干支」と書いた文を直す（地支だけ同じなら「同じ十二支」に。発注者指示 2026-10-23）
   var PN={年柱:0,月柱:1,日柱:2,時柱:3};
@@ -8717,14 +8778,15 @@ function pkLeadFix(t,c,q,isCompat){ try{ t=String(t||''); q=String(q||''); if(is
   const sens=function(x){ return String(x).split(/(?<=[。！？])/).map(function(s){ return s.trim(); }).filter(Boolean); };
   // D：相談に出てくる日（「11月7日と8日」「明日」など）は、その日の日運で決めた向き（pkDayDir）で答える。1行目が向きと合わなければ、ツールの1行目にする（PRO・ビギナーで同じ答え。2026-11-05）
   const DD=(!isCompat&&c)?pkDayDir(c,q):null;
-  if(DD){ const fst=sens(head).slice(0,2).join(''), dRe=function(F){ return new RegExp('(^|[^0-9])'+F.d.getDate()+'日'); }, REC=/おすすめ|ほうが|方が|合って|向いて|がいい|が良い|がよい|ベスト|選/;
+  if(DD){ const fst=sens(head).slice(0,2).join(''), dRe=function(F){ const r=_pkRelDay(F.d); return new RegExp('(^|[^0-9])'+F.d.getDate()+'日'+(r?'|'+r:'')); }, REC=/おすすめ|ほうが|方が|合って|向いて|がいい|が良い|がよい|ベスト|選/;
     let ok=false;
-    if(DD.pick){ const others=DD.days.filter(function(F){ return F!==DD.pick; });
+    if(DD.range){ const RC=/おすすめ|向いて|がいい|が良い|がよい|ベスト|ぴったり/; ok=DD.days.filter(function(F){ return !F.avoid; }).some(function(F){ return dRe(F).test(fst); })&&!DD.days.filter(function(F){ return F.avoid; }).some(function(F){ return new RegExp('(^|[^0-9])'+F.d.getDate()+'日[^。]{0,30}(?:おすすめ|向いて|がいい|が良い|がよい|ベスト)').test(fst); }); void RC; }
+    else if(DD.pick){ const others=DD.days.filter(function(F){ return F!==DD.pick; });
       const recO=others.some(function(F){ return new RegExp('(^|[^0-9])'+F.d.getDate()+'日[^。]{0,40}(?:おすすめ|ほうが|方が|合って|向いて|がいい|が良い|がよい|ベスト)').test(fst); });
       const recP=new RegExp('(^|[^0-9])'+DD.pick.d.getDate()+'日[^。]{0,40}(?:おすすめ|ほうが|方が|合って|向いて|がいい|が良い|がよい|ベスト)').test(fst);
       ok=recP&&!(recO&&!/より/.test(fst)); }
     else if(DD.same) ok=/大きな差|差はあり/.test(fst);
-    else { const F=DD.days[0], av=DD.big&&(F.kuu||F.kuMBad||_pkDayRelPos(F,'冲').indexOf('日')>=0||_pkDayRelPos(F,'天戦地冲').indexOf('日')>=0), NG=/避け|別の日|控え|見送|向かない|向いていない|慎重/, GO=/おすすめ|ぴったり|最適|ベスト|向いて(?!いない|いませ)|最高|チャンス|好機|吉日/;
+    else { const F=DD.days[0], av=!!F.avoid, NG=/避け|別の日|控え|見送|向かない|向いていない|慎重/, GO=/おすすめ|ぴったり|最適|ベスト|向いて(?!いない|いませ)|最高|チャンス|好機|吉日/;
       ok=dRe(F).test(fst)&&(!F.kuu||/空亡|ひと休み/.test(fst)||!DD.big);
       if(ok&&DD.act){ if(av) ok=NG.test(fst); else if(F.sc>=1) ok=!NG.test(fst); else if(F.sc<=-1) ok=NG.test(fst)&&!GO.test(fst); else ok=!GO.test(fst)&&!/避け|別の日|見送/.test(fst); } }   // 1つの日の相談は、ツールの向き（向いている／ふつう／慎重に）と1行目が合っているか（PRO・ビギナーで同じ答え。2026-11-05）
     if(!ok){ const old=head; head=plain?DD.plain:DD.pro; rest=rest; void old; } }
@@ -8734,6 +8796,12 @@ function pkLeadFix(t,c,q,isCompat){ try{ t=String(t||''); q=String(q||''); if(is
       if(CD.play||!CD.big){ if(CD.pick) ok=recRe(CD.pick).test(fst)&&!CD.days.some(function(G){ return G!==CD.pick&&recRe(G).test(fst)&&!/より/.test(fst); }); else if(CD.same) ok=/大きな差|差はあり/.test(fst); }
       if(ok&&CD.big&&CD.ng.length){ const bw=CD.bw.slice(0,2); ok=new RegExp(bw+'[^。]{0,80}(?:避け|別の日|控え|見送|向かない)|(?:避け|別の日|控え|見送)[^。]{0,30}'+bw).test(fst)&&!CD.ng.some(function(G){ return new RegExp('(^|[^0-9])'+G.d.getDate()+'日[^。]{0,30}'+bw+'[^。]{0,20}(?:おすすめ|ましょう|前向き|いい|良い|よい|ぴったり)').test(fst); }); }
       if(!ok) head=plain?CD.plain:CD.pro; } }
+  // D3：近い日（今日・明日・来週・30日以内の日）を聞かれたのに、1行目が何ヶ月も先（60日より先）の時期だけを答えていたら、ツールの1行目にする（先生の指示 2026-11-06「明日の話を何ヶ月先なんてありえない」）
+  try{ const T0=_jstToday(), nd=pkDayDates(q).filter(function(o){ return (o.d-T0)<=30*86400000; }); if(nd.length){ const fst=sens(head).slice(0,2).join(''), J=jstNow();
+      let far=false, m; const re=/(?:(20\d\d)年)?(\d{1,2})月(?!\d{0,2}日)/g; while((m=re.exec(fst))){ const M=+m[2]; if(M<1||M>12) continue; let y=m[1]?+m[1]:J.y; let d=new Date(y,M-1,1,12); if(!m[1]&&new Date(y,M,0,12)<T0) d=new Date(y+1,M-1,1,12); if(d-T0>60*86400000) far=true; }
+      if(!far&&/20\d\d年/.test(fst)&&(fst.match(/20\d\d(?=年)/g)||[]).some(function(y){ return +y>J.y+0&&new Date(+y,0,1,12)-T0>60*86400000; })) far=true;
+      const nearM=nd.some(function(o){ const r=_pkRelDay(o.d); return new RegExp('(^|[^0-9])'+o.d.getDate()+'日'+(r?'|'+r:'')).test(fst); })||/今日|明日|明後日|あした|今週|来週|再来週|その日|当日|この日/.test(fst);
+      if(far&&!nearM){ const X=isCompat?((typeof chartB!=='undefined'&&chartB&&c)?pkCpDayDir(c,chartB,q):null):(c?pkDayDir(c,q):null); if(X) head=plain?X.plain:X.pro; } } }catch(e){}
   // E：今年か来年か
   if(!DD&&!isCompat&&c){ const D=pkYearDir(c,q); if(D){ const fst=sens(head)[0]||''; const otherRe=D.pick==='来年'?/(今年|年内)[^。]{0,24}(おすすめ|ほうが|方が|がいい|が良い|動き出)/:D.pick==='今年'?/来年[^。]{0,24}(おすすめ|ほうが|方が|がいい|が良い)/:/(今年|来年|年内)[^。]{0,24}(おすすめ|ほうが|方が|がいい|が良い|動き出)/;
       if(D.pick==='同じ'){ if(!/(大きな差|差はあり|どちらも|どちらでも|どちらの年も)/.test(fst)) head=(plain?D.plain:D.pro)+(otherRe.test(fst)?'':head); }   // 引き分け：どちらかに決めつけた1行目は差がない答えにする（2026-11-05）
@@ -8773,37 +8841,41 @@ function pkLeadFix(t,c,q,isCompat){ try{ t=String(t||''); q=String(q||''); if(is
   return head+mark+rest; }catch(e){ return t; } }
 /* F：お客様に読み上げる文から専門用語を外す（「傷官（しょうかん：感性が鋭い星）」→「感性が鋭い星」。PROのお伝え方だけ。2026-10-29） */
 const PK_TALK_W={'傷官見官':'感性とルールがぶつかりやすい形','官殺混雑':'責任やプレッシャーが重なりやすい形','財星混雑':'お金やご縁が入りまじりやすい形','比劫奪財':'お金が出ていきやすい形','食神制殺':'楽しむ力でプレッシャーをかわす形','偏印倒食':'考えすぎて楽しめなくなりやすい形','天乙貴人':'助けの星','天徳貴人':'守りの星','月徳貴人':'守りの星','文昌貴人':'学びの星','駅馬':'動きの星','華蓋':'ひとりで深める星','羊刃':'強い押しの星','日刃':'強い押しの星','命式内':'生まれ持った星の中','剋す':'抑える','剋する':'抑える','支合':'結びつき','三合':'結びつき','半合':'結びつき','方合':'結びつき','干合':'結びつき','比肩':'自分らしさ','劫財':'仲間と張り合う力','食神':'楽しむ力','傷官':'感性の鋭さ','偏財':'人とお金のご縁','正財':'こつこつ築く力','偏官':'行動力','正官':'まじめさと信頼','偏印':'ひらめき','印綬':'学びとまわりの支え','官殺星':'責任やプレッシャー','官殺':'責任やプレッシャー','官星':'仕事や立場の力','財星':'お金とご縁の力','印星':'学びと支えの力','食傷':'表現する力','比劫':'自分と仲間の力','喜神':'調子が上がる力','忌神':'疲れやすい力','空亡':'ひと休みの時期','天中殺':'ひと休みの時期','身旺':'エネルギーが強い','身弱':'繊細で疲れやすい','大運':'10年ごとの運の流れ','年運':'運','月運':'運','命式':'生まれ持った星','通変星':'星','十二運':'運の勢い','配偶宮':'パートナーの場所','月支元命':'性格の中心','魁罡':'リーダー星','天戦地冲':'大きく揺れる時期','冲':'ぶつかり','咸池':'恋愛の星','紅艶':'恋愛の星'};
-function pkPlainTalk(x){ try{ x=String(x||''); const W=Object.keys(PK_TALK_W).sort(function(a,b){ return b.length-a.length; }); const GZ='[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]', PIL='(?:日柱|月柱|年柱|時柱|日干|月干|年干|時干|月支|日支|年支|時支)', T='(?:'+W.join('|')+'|'+GZ+'|'+PIL+')', K='[ぁ-んー・ ]+', SEP='[：:＝=]', RD='(?:[（(]'+K+'[）)])?';
+function _pkPlainTalkCore(x,noGz){ try{ x=String(x||''); const W=Object.keys(PK_TALK_W).sort(function(a,b){ return b.length-a.length; }); const GZ='[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]', PIL='(?:日柱|月柱|年柱|時柱|日干|月干|年干|時干|月支|日支|年支|時支)', T='(?:'+W.join('|')+(noGz?'':'|'+GZ)+'|'+PIL+')', K='[ぁ-んー・ ]+', SEP='[：:＝=]', RD='(?:[（(]'+K+'[）)])?';
   // 文をこわさない形に直した（2026-11-03 na_rules R-1：「2027年は丁未の年です。」→「2027年はす。」などを出さない。柱の名前は消さずにふつうの言葉に、述語の干支は残す）
   const keep=[], P=function(s){ keep.push(s); return '\u0001'+(keep.length-1)+'\u0002'; };
-  x=x.replace(/(生まれ持った)?(?:日柱|月柱|年柱|時柱)[のは]?「[^」]{0,24}」(?:といって|と言って|という|との)?[、]?/g,function(m,a){ return a?'生まれ持った性質として、':''; });   // 「日柱「丙戌（ひのえいぬ）」といって」は丸ごと外す
+  if(!noGz) x=x.replace(/(生まれ持った)?(?:日柱|月柱|年柱|時柱)[のは]?「[^」]{0,24}」(?:といって|と言って|という|との)?[、]?/g,function(m,a){ return a?'生まれ持った性質として、':''; });   // 「日柱「丙戌（ひのえいぬ）」といって」は丸ごと外す
   x=x.replace(new RegExp(T+'[（(]'+K+SEP+'([^）)]{2,40})[）)]','g'),'$1');            // 用語（よみ：意味）／用語（よみ＝意味）→ 意味
   x=x.replace(new RegExp(T+'[（(]'+K+'[）)][（(]([^）)]{2,40})[）)]','g'),'$1');         // 用語（よみ）（意味）→ 意味
   x=x.replace(new RegExp('('+PIL+')[（(]'+K+'[）)]','g'),'$1');                          // 柱の名前（よみ）→ 柱の名前
   x=x.replace(new RegExp(T+'[（(]([^）)]{2,40})[）)]','g'),function(m,a){ return /^[ぁ-んー・ ]+$/.test(a)||/^\d{4}/.test(a)?m:a; });   // 用語（意味）→ 意味（よみだけ・年は残す）
   // 述語の干支（「2027年は丁未の年です」「2026年は丙午で、」「日柱は己未です」）は残す
   x=x.replace(new RegExp('((?:\\d{4}年|今年|来年|再来年|翌年)(?:は|も))('+GZ+')'+RD+'(?=の年(?:です|でした|になり|となり|なので|だから|。)|です|でした|で[、，])','g'),function(m,a,g){ return a+P(g); });
-  x=x.replace(new RegExp('(は|も)'+GZ+RD+'の年(?:で(?![すしき])|であり|となり|になり)[、]?','g'),'$1');   // 「2028年は戊申の年で、仕事が動きます」→「2028年は仕事が動きます」（「の年です」には当てない）
+  if(!noGz) x=x.replace(new RegExp('(は|も)'+GZ+RD+'の年(?:で(?![すしき])|であり|となり|になり)[、]?','g'),'$1');   // 「2028年は戊申の年で、仕事が動きます」→「2028年は仕事が動きます」（「の年です」には当てない）
   x=x.replace(new RegExp('(は|が|も)('+GZ+')'+RD+'(?=です|でした|。|から|まで|より)','g'),function(m,a,g){ return a+P(g); });
-  x=x.replace(new RegExp('(は|が)'+GZ+RD+'(?:で|であり)(?=[、，])','g'),'$1');            // 「今の大運は甲子で、」→「今の10年ごとの運の流れは、」
-  x=x.replace(new RegExp('の'+GZ+RD+'(?=[はがとにを、])','g'),'');                         // 「日柱の庚申は」→「日柱は」
-  x=x.replace(new RegExp(GZ+RD+'の日に生まれた(?:方|人)で[、]?','g'),'生まれつき').replace(new RegExp(GZ+RD+'の日に生まれた','g'),'生まれた');
-  x=x.replace(/(?:日干|月干|年干|時干)の(?=[甲乙丙丁戊己庚辛壬癸][はがの])/g,'');
+  if(!noGz) x=x.replace(new RegExp('(は|が)'+GZ+RD+'(?:で|であり)(?=[、，])','g'),'$1');            // 「今の大運は甲子で、」→「今の10年ごとの運の流れは、」
+  if(!noGz) x=x.replace(new RegExp('の'+GZ+RD+'(?=[はがとにを、])','g'),'');                         // 「日柱の庚申は」→「日柱は」
+  if(!noGz) x=x.replace(new RegExp(GZ+RD+'の日に生まれた(?:方|人)で[、]?','g'),'生まれつき').replace(new RegExp(GZ+RD+'の日に生まれた','g'),'生まれた');
+  if(!noGz) x=x.replace(/(?:日干|月干|年干|時干)の(?=[甲乙丙丁戊己庚辛壬癸][はがの])/g,'');
   const PN={日柱:'生まれた日の星',月柱:'生まれた月の星',年柱:'生まれた年の星',時柱:'生まれた時間の星',日干:'生まれた日の星の中心',月干:'生まれた月の星',年干:'生まれた年の星',時干:'生まれた時間の星',日支:'パートナーの場所',月支:'生まれた月の星',年支:'生まれた年の星',時支:'生まれた時間の星'};
   x=x.replace(new RegExp(PIL,'g'),function(m){ return PN[m]; });
   [['冲して','ぶつかり合って'],['冲した','ぶつかり合った'],['冲します','ぶつかり合います'],['冲する','ぶつかる'],['冲し','ぶつかり'],['支合して','結びついて'],['支合する','結びつく'],['干合して','結びついて'],['干合する','結びつく']].forEach(function(p){ x=x.split(p[0]).join(p[1]); });
   W.forEach(function(w){ x=x.replace(new RegExp(w+'(?:[（(]'+K+'[）)])?','g'),PK_TALK_W[w]); });
-  x=x.replace(new RegExp('([）)])'+GZ+RD+'の年(?=[でにはがも、。])','g'),'$1');   // 「2026年（丙午・34歳）丙午の年で」→「2026年（丙午・34歳）で」
-  x=x.replace(new RegExp('(?<![0-9０-９年〔（(・\\u0002])'+GZ+RD+'の年(?![0-9月日])','g'),'この年');
-  x=x.replace(new RegExp('(?<![0-9０-９年〔（(・])'+GZ+RD+'(?:を持ち|をお持ちの|の)?(?![年月日・〕）)])','g'),'');
+  if(!noGz) x=x.replace(new RegExp('([）)])'+GZ+RD+'の年(?=[でにはがも、。])','g'),'$1');   // 「2026年（丙午・34歳）丙午の年で」→「2026年（丙午・34歳）で」
+  if(!noGz) x=x.replace(new RegExp('(?<![0-9０-９年〔（(・\\u0002])'+GZ+RD+'の年(?![0-9月日])','g'),'この年');
+  if(!noGz) x=x.replace(new RegExp('(?<![0-9０-９年〔（(・])'+GZ+RD+'(?:を持ち|をお持ちの|の)?(?![年月日・〕）)])','g'),'');
   x=x.replace(/「[ 　]*」(?:といって|と言って|という|との|の)?[、 　]*/g,'');
-  x=x.replace(/[ぁ-ん]{3,9}[（(][甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥][）)]/g,'');   // 「かのとうし（辛丑）」のような読みつきの干支も外す
-  x=x.replace(/(?:^|(?<=[、。\n（(「]))(?:きのえ|きのと|ひのえ|ひのと|つちのえ|つちのと|かのえ|かのと|みずのえ|みずのと)(?:ね|うし|とら|う|たつ|み|うま|ひつじ|さる|とり|いぬ|い)(?=[、。は（(]|$)[、]?/g,'');   // 干支の読みだけが残ったもの
+  if(!noGz) x=x.replace(/[ぁ-ん]{3,9}[（(][甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥][）)]/g,'');   // 「かのとうし（辛丑）」のような読みつきの干支も外す
+  if(!noGz) x=x.replace(/(?:^|(?<=[、。\n（(「]))(?:きのえ|きのと|ひのえ|ひのと|つちのえ|つちのと|かのえ|かのと|みずのえ|みずのと)(?:ね|うし|とら|う|たつ|み|うま|ひつじ|さる|とり|いぬ|い)(?=[、。は（(]|$)[、]?/g,'');   // 干支の読みだけが残ったもの
   x=x.replace(/[（(](?:ひけん|ごうざい|しょくじん|しょうかん|へんざい|せいざい|へんかん|せいかん|へんいん|いんじゅ|きしん|きじん|くうぼう|かんち|こうえん|てんちとくごう|てんせんちちゅう|だいうん|ねんうん|めいしき|さんごう|ほうごう|はんごう|しごう|かんごう)[^）)]{0,20}[）)]/g,'');   // 用語の読みが残ったかっこ
   x=x.replace(/(?:ひけん|ごうざい|しょくじん|しょうかん|へんざい|せいざい|へんかん|せいかん|へんいん|いんじゅ|くうぼう|かんち|こうえん)(?=が巡|の巡|が回|の星)/g,'星');
   x=x.replace(/[\u0001]([0-9]+)[\u0002]/g,function(m,i){ return keep[+i]; });
   x=x.replace(/夫様/g,'ご主人').replace(/妻様/g,'奥さま');
   return x.replace(/、、/g,'、').replace(/(^|\n)[、 　]+/g,'$1'); }catch(e){ return x; } }
+/* お客様へのお伝え方の言いかえ（pkPlainTalk）：用語を外したあとに中身が抜けた文（「明日は、とが重なる日に、お持ちの日が巡り」「今日は日で」）ができたら、
+   干支は残して言いかえ直し、それでもくずれるなら元の文に戻す（先生の指示 2026-11-06「信用問題。必ず間違えないように」） */
+function _pkTalkBroken(s){ s=String(s||''); return /(^|[、。！？「（(\s])(?:と|を)(?=[がをにのと、。])|(^|[、。！？「（(\s])が(?=[がをにのと])|は、と|、と(?:が|の|は|を|に)|お持ちの(?:日|年|月)(?:が|に|は|で)|(?:は|が|も)日(?:で|に|が|です)(?=[、。]|$)|「[ 　]*」|（[ 　]*）|\(\s*\)|^[ 　]*(?:日|年|月)で、|[はがもをに]の(?:日|年|月)(?:で|に|は|が|です)|(?:2人|二人|お二人|ふたり|あなた|お相手|本人)の(?:は|が|を|と|、)/.test(s); }
+function pkPlainTalk(x){ try{ x=String(x||''); return x.split('\n').map(function(ln){ return ln.split(/(?<=[。！？])/).map(function(s){ const y=_pkPlainTalkCore(s,false); if(!_pkTalkBroken(y)||_pkTalkBroken(s)) return y; const y2=_pkPlainTalkCore(s,true); return _pkTalkBroken(y2)?s:y2; }).join(''); }).join('\n'); }catch(e){ return String(x||''); } }
 /* 相性の強さを超える言い方をしない（ツールの判定が「中くらい・弱め」なのに「非常に強く惹かれる」と書かない） */
 function pkAttrTone(t,a,b){ try{ t=String(t||''); const ad=attractionDir(a,b); if(!ad) return t; const labs=[ad.px&&ad.px.lab,ad.py&&ad.py.lab].filter(Boolean);
   if(labs.indexOf('強い')>=0) return t;
@@ -8962,7 +9034,7 @@ function pkCrisisExtraLi(q,age){ try{ q=String(q||''); let h=''; if(PK_CRISIS_NO
 /* 文章作成への指示に足す（占いで決めないご相談） */
 function pkSafeGuide(sk){ if(!sk) return ''; return '\n【このご相談の扱い（最優先・厳守）】'+sk.say+' '+sk.guide+' 時期（西暦・月）・「進んでよい」「〜すべき」「控えるのが賢明」などの判定・◎〇△✖は書かない。1行目は上の扱いに沿って、気持ちを受け止める言葉で書く。'+(sk.dest.length?'最後に、ひとりで抱えず「'+sk.dest.join('」「')+'」に相談してほしいと、やさしく一言添える（電話番号は半角数字で）。':'')+'\n'; }
 /* 3ツール共通の決まり（どの相談でも）：ほかの占い師・医療を否定しない／こわがらせない */
-var PK_SAFE_RULE='\n【安全の決まり（どの相談でも守る）】病気になる年・病名・寿命・亡くなる時期・事故・災害を言い当てない。薬・治療・手術・妊娠や出産・法律・投資の判断をしない（専門家に相談するよう添える）。暴力・つきまといを我慢するようすすめない。だれかを不幸にする・呪うことに手を貸さない。霊・祟り・お祓いを受けないと悪いことが起きる・物を買えば運が良くなる、とは書かない（信仰そのものは否定しない）。ほかの占い師・お医者さま・専門家の見立てを否定したり悪く言ったりしない（占いは見方の一つとして伝える）。「最悪の年」「何をしてもだめ」のようなこわがらせる言い方をせず、こわいと言われたら、まず安心できる見方から書く。\n';
+var PK_SAFE_RULE='\n【安全の決まり（どの相談でも守る）】病気になる年・病名・寿命・亡くなる時期・事故・災害を言い当てない。薬・治療・手術・妊娠や出産・法律・投資の判断をしない（専門家に相談するよう添える）。暴力・つきまといを我慢するようすすめない。だれかを不幸にする・呪うことに手を貸さない。霊・祟り・お祓いを受けないと悪いことが起きる・物を買えば運が良くなる、とは書かない（信仰そのものは否定しない）。ほかの占い師・お医者さま・専門家の見立てを否定したり悪く言ったりしない（占いは見方の一つとして伝える）。「最悪の年」「何をしてもだめ」のようなこわがらせる言い方をせず、こわいと言われたら、まず安心できる見方から書く。\n【干支の決まり】日・月・年の干支（例：11月6日（甲申）・11月（己亥の月）・2027年（丁未））は、ツールの表・データに書いてあるとおりに写す。自分で計算したり、字を作ったりしない（表にない干支は書かない）。\n';
 /* お客様に渡る前の最後の直し：命にかかわる・健康を損なう言い切りは外し、霊・祟り・お祓い・ほかの占い師の否定は断定を弱める */
 var PK_SAFE_DROP=[
   /(?:(?:19|20)\d\d年|\d{1,3}(?:歳|才)|今年|来年|再来年|年内|この年|その年|[^。]{0,4}の年)[^。]{0,24}(?:大きな病気|大病|病気|がん|癌|重い病)(?:に(?:なり|なる|かかり|かかる)|を(?:患|わずら))/,
@@ -9768,13 +9840,13 @@ function pkCompatSit(a,b,q,plain){ try{ if(pkSafeStop(q)) return null;
     H.push('付き合う・付き合わないのどちらでも、返事をあいまいなまま長くのばさないほうが、まわりとの関係もこじれにくくなります。');
   } else if(kd==='confess'||kd==='act'){
     // 自分から動く時期：解けない空亡の月はすすめない・7日以内に終わる時期は終わる日と次の時期も（先生の指示 2026-11-05）
-    const AW=kd==='act'?pkActWord(q):(/プロポーズ/.test(q)?'プロポーズ':'告白'), BL=pkMonBest(both,plain)?both:one, AP=pkActPlan(BL,CM,plain,AW), bw=(BL===both&&both.length?'2人とも縁が動く':'縁が動く');
+    const AW=kd==='act'?pkActWord(q):(/プロポーズ/.test(q)?'プロポーズ':'告白'), BL=pkMonBest(both,plain)?both:one, LT=kd==='act'&&pkActWeight(q)==='light', AP=pkActPlan(LT?(both.length?both:one):BL,CM,plain,AW,LT), bw=(BL===both&&both.length?'2人とも縁が動く':'縁が動く');
     const atS=MS+att+'なので、'+(kd==='act'?(Y?'気軽に声をかけてよいでしょう。':'短いやりとりから始めると、受けとめてもらいやすいでしょう。'):(Y?'思いきって伝えてよいでしょう。':'まず2人で話す時間をふやしてから伝えると、受けとめてもらいやすいでしょう。'));
     const vb=kd==='act'?({お誘い:'誘うなら',連絡:'連絡するなら'})[AW]||'動くなら':(AW==='プロポーズ'?'プロポーズするなら':'気持ちを伝えるなら');
     if(AP&&AP.short){ lead=vb+'、'+bw+AP.lab+'がいちばん近いタイミングです。'+AP.follow; H.push(atS); }
     else lead=(AP?vb+'、'+bw+AP.lab+'がいちばん近いタイミングです。':(bm?vb+'、'+bw+bm+'がいちばん近いタイミングです。':'これから12ヶ月は2人とも縁が動く月がないので、まずは一緒に過ごす時間をふやして関係を深める時期です。'))+atS;
     if(AP&&AP.note) H.push(AP.note);
-    { const P=compatDaysPick(a,b), T0=_jstToday(), wdn=['日','月','火','水','木','金','土'], gd=P.good.filter(function(o){ return !(o.kA||o.kB||o.dA||o.dB); });
+    { const P=compatDaysPick(a,b), T0=_jstToday(), wdn=['日','月','火','水','木','金','土'], gd=P.good.filter(function(o){ return LT?!(o.dA||o.dB):!(o.kA||o.kB||o.dA||o.dB); });   // 軽い動きは空亡の月の日も選べる（空亡の日だけ除く。2026-11-06）
       if(gd.length) H.push((plain?'これから30日で'+AW+'に向いた日：':AW+'に向いた日（これから30日・2人の日運と空亡から）：')+gd.slice(0,3).map(function(o){ return (o.d.getMonth()+1)+'月'+o.d.getDate()+'日（'+wdn[o.d.getDay()]+'）'; }).join('・')+'。');
       else if(P.all.some(function(o){ return o.kA||o.dA; })) H.push(plain?'これから30日は、あなたのひと休みの月・ひと休みの日が多いので、'+AW+'の日はその先にしましょう。':'これから30日は本人の解けない空亡の月・空亡の日が多いので、'+AW+'の日はその先に。');
       H.push(plain?'あなたやお相手の「ひと休みの日」（日運の欄で〔ひと休みの日〕の印の日）は、'+AW+'や大事な話には選ばないようにしましょう。':'本人・お相手の空亡の日（日の十二支が空亡。日運の欄の〔空亡の日〕）は、'+AW+'・大事な話の日に選ばない。'); }
@@ -10457,6 +10529,8 @@ function pkEvidence(raw,full,a,b,extra,q){ const R=[]; let text=String(full||'')
     R.push(wrongT.length?{st:'warn',what:lab+'の星（'+wrongT.join('・')+'）',calc:calc,note:'その日の星とちがいます。確かめてください'}:(wrongR.length?{st:'fix',what:lab+'の星（'+wrongR.join('・')+'）',calc:calc,note:'文章作成のまちがいを、ツールが計算どおりに直しました'}:{st:'ok',what:lab+'の日運',calc:calc,note:'計算どおり'}));
     const miss=[]; D.rels.forEach(function(r){ if(tx.indexOf(r.kind)<0&&miss.indexOf(r.kind)<0) miss.push(r.kind); }); if(D.kuu&&!/空亡/.test(tx)) miss.push('空亡の日'); D.bad.forEach(function(n){ if(tx.indexOf(n)<0) miss.push(n); });
     if(miss.length&&!(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'))) R.push({st:'warn',what:lab+'：'+miss.join('・'),calc:calc,note:'書かれていません（書き足しの欄にあるか、確かめてください）'}); }); }catch(e){}
+  // ⑤ 干支の字のまちがい（日付・柱）をツールが直したもの（pkFactFix ⑧・pkPillarGzFix。2026-11-06）
+  try{ if(typeof window!=='undefined'&&window.__pkGzFixLog&&window.__pkGzFixLog.length){ const seen={}; window.__pkGzFixLog.forEach(function(x){ const k=x.what+x.from+x.to; if(seen[k]) return; seen[k]=1; if(x.st==='warn'){ if(text.indexOf(x.from)>=0) R.push({st:'warn',what:x.what+'の干支「'+x.from+'」',calc:'六十干支にない形（十干と十二支の陰陽が合わない）。どの干支か1つに決まらなかった',note:'確かめてください'}); return; } R.push({st:'fix',what:x.what+'の干支「'+x.from+'」',calc:'暦・命式では「'+x.to+'」',note:'文章作成の干支のまちがいを、ツールが計算どおりに直しました'}); }); window.__pkGzFixLog=[]; } }catch(e){}
   // ④' 相性の相談に出てくる日（2026-11-06）：2人の日運と、告白などをすすめない日にすすめていないか
   try{ if(b){ const q2=String(q||'')||String(((typeof document!=='undefined'&&document.getElementById('compat-worry'))||{}).value||'').trim(); if(q2) pkCpDayEvRows(text,a,b,q2).forEach(function(r){ R.push(r); }); } }catch(e){}
   // 同じ文に計算どおりの話もあるときは、文ごと外さずに「確かめてほしい」にする
@@ -11217,8 +11291,36 @@ function pkFinalFix(t,q,isCompat){ try{ t=String(t==null?'':t); q=String(q||'');
   t=t.replace(/双日?子の(日支|配偶宮|日柱)/g,'2人の$1').replace(/冲る(?=[影こと])/g,'冲する');   // 文章作成の打ちまちがい（「双子の日支が冲る」2026-11-06）
   try{ const _pl=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on')); t=pkTenchuFix(t,_pl);
     if(typeof chart!=='undefined'&&chart){ let _b=null; if(isCompat) _b=(typeof chartB!=='undefined'&&chartB)?chartB:null; else { try{ const P=pkConsultPeople(chart,q).filter(function(x){ return /^(love|married|konkatsu)$/.test(x.rel||'love'); }); if(P.length===1) _b=P[0].c; }catch(e){} }
-      t=pkKuuTagRestore(t,chart,_b,_pl); } }catch(e){}   // 「天中殺」は使わない・くずれた空亡の印（「彼の月」「充電期間の月」）を元の印に（2026-11-06）
+      t=pkKuuTagRestore(t,chart,_b,_pl); t=pkPillarGzFix(t,chart,isCompat?_b:null); t=pkRunGzFix(t,chart,isCompat?_b:null); } }catch(e){}   // 「天中殺」は使わない・くずれた空亡の印（「彼の月」「充電期間の月」）を元の印に（2026-11-06）
   return pkKijinYomi(t); }catch(e){ return String(t==null?'':t); } }
+/* 命式の柱の干支のまちがい（「日柱「丙卯」」のように、本人／お相手の命式とちがう・陰陽の合わない干支）を、その人の命式の干支に直す（直したものは根拠のチェック表に✏️。2026-11-06） */
+function pkPillarGzFix(t,a,b){ try{ t=String(t==null?'':t); if(!a||!a.pillars) return t; const L=[], P={年柱:0,月柱:1,日柱:2,時柱:3};
+  t=t.replace(/(お相手の|相手の|彼の|彼女の|本人の|あなたの)?(年柱|月柱|日柱|時柱)((?:[（(][ぁ-ん：:＝=、・ー]{0,30}[）)])?(?:は|が|の|＝|=|：)?[ 　]*「?)([甲乙丙丁戊己庚辛壬癸木火土金水日月][子丑寅卯辰巳午未申酉戌亥])(?=[」）)・、のでは（(。\s]|$)/g,function(m0,who,pl,mid,gz){
+    const c=(who&&/相手|彼/.test(who))?b:a; if(!c||!c.pillars) return m0; const i=P[pl]; if(i===3&&c.timeUnknown) return m0; const ok=c.pillars[i]&&c.pillars[i].ganzhi; if(!ok||ok===gz) return m0;
+    L.push({what:(who||'')+pl,from:gz,to:ok}); return (who||'')+pl+mid+ok; });
+  if(L.length&&typeof window!=='undefined'){ try{ window.__pkGzFixLog=(window.__pkGzFixLog||[]).concat(L).slice(-30); }catch(e){} }
+  return t; }catch(e){ return String(t==null?'':t); } }
+/* 大運・年運・月運・日運の名前のすぐあとの干支のまちがい（「今の大運（癸未）」「大運「甲丑」」「年運 丙未」）を、その人の実際の大運・年運・月運・日運の干支に直す。
+   どれか1つに決まるときだけ直す（今の／次の／前の大運・近くの西暦や月日・今年／来年／今月／今日／明日）。決まらず六十干支にもない形は根拠のチェック表に⚠（2026-11-06） */
+function pkRunGzFix(t,a,b){ try{ t=String(t==null?'':t); if(!a||!a.pillars) return t; const L=[], G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥';
+  const gz=function(i){ i=((i%60)+60)%60; return G.charAt(i%10)+Z.charAt(i%12); }, valid=function(x){ return G.indexOf(x[0])>=0&&Z.indexOf(x[1])>=0&&G.indexOf(x[0])%2===Z.indexOf(x[1])%2; };
+  const N=pkNenInfo(), T0=_jstToday(), J=jstNow();
+  const dus=function(c){ return [c.pillars[1].ganzhi].concat((c.decadeFortunes||[]).map(function(x){ return x.ganzhi; })); };
+  const fwdY=function(M,D){ const y=J.y, x=new Date(y,M-1,D||28,12,0,0,0); return x<T0?y+1:y; };
+  t=t.split(/(?<=[。！？\n])/).map(function(sn){ return sn.replace(/(今の|いまの|現在の|次の|前の)?(大運|年運|月運|日運)((?:[（(][ぁ-ん：:＝=、・ー]{0,30}[）)])?(?:は|が|の|も|＝|=|：)?[ 　]*[「（(]?)([甲乙丙丁戊己庚辛壬癸木火土金水日月][子丑寅卯辰巳午未申酉戌亥])(?=[」）)・、のでは（(。\s]|$)/g,function(m0,pre,kind,mid,x,off){
+      const before=sn.slice(Math.max(0,off-30),off), who=(/お相手|相手|彼/.test(before)&&b&&b.pillars)?b:a; let ok=null;
+      try{
+        if(kind==='大運'){ const D=dus(who); if(D.indexOf(x)>=0||dus(a).indexOf(x)>=0||(b&&b.pillars&&dus(b).indexOf(x)>=0)) return m0; const cu=curDu(who), ci=cu?D.indexOf(cu.ganzhi):-1;
+          if(/今|いま|現在/.test(pre||'')&&cu) ok=cu.ganzhi; else if(pre==='次の'&&ci>=0&&D[ci+1]) ok=D[ci+1]; else if(pre==='前の'&&ci>0) ok=D[ci-1];
+          else { const cand=D.filter(function(g){ return g[0]===x[0]||g[1]===x[1]; }); if(cand.length===1) ok=cand[0]; } }
+        else if(kind==='年運'){ const ym=before.match(/(20\d\d)年(?!\d{1,2}月)[^。]*$/); const y=ym?+ym[1]:(/再来年/.test(before)?N.Y+2:(/来年/.test(before)?N.Y+1:(/今年/.test(before)?N.Y:0))); if(y) ok=gz(y-4); }
+        else if(kind==='月運'){ const mm=before.match(/(?:(20\d\d)年)?(\d{1,2})月(?!\d{1,2}日)[^。]*$/); let d=null; if(mm){ const M=+mm[2]; if(M>=1&&M<=12) d=new Date(mm[1]?+mm[1]:fwdY(M),M-1,20,12,0,0,0); } else if(/来月/.test(before)) d=new Date(J.y,J.m,20,12,0,0,0); else if(/今月/.test(before)) d=T0; if(d) ok=_pillarForDate(d,'month').ganzhi; }
+        else { const dm=before.match(/(?:(20\d\d)年)?(\d{1,2})月(\d{1,2})日[^。]*$/); let d=null; if(dm){ const M=+dm[2], D=+dm[3]; d=new Date(dm[1]?+dm[1]:fwdY(M,D),M-1,D,12,0,0,0); } else if(/明後日/.test(before)) d=new Date(T0.getTime()+2*86400000); else if(/明日|あした/.test(before)) d=new Date(T0.getTime()+86400000); else if(/今日/.test(before)) d=T0; if(d) ok=_pkTransit(d.getFullYear(),d.getMonth()+1,d.getDate(),12,0).pillars[2].ganzhi; }
+      }catch(e){ ok=null; }
+      if(!ok){ if(!valid(x)) L.push({st:'warn',what:(pre||'')+kind,from:x,to:''}); return m0; }
+      if(ok===x) return m0; L.push({what:(pre||'')+kind,from:x,to:ok}); return (pre||'')+kind+mid+ok; }); }).join('');
+  if(L.length&&typeof window!=='undefined'){ try{ window.__pkGzFixLog=(window.__pkGzFixLog||[]).concat(L).slice(-30); }catch(e){} }
+  return t; }catch(e){ return String(t==null?'':t); } }
 /* 「天中殺」は別の流派の言葉なので、文章作成が書いたら空亡に直す（ビギナーのやさしい画面は「ひと休みの時期」）。宿命中殺など、ツールの決まった言葉の文はそのまま（2026-11-06） */
 function pkTenchuFix(t,plain){ try{ t=String(t==null?'':t); if(t.indexOf('天中殺')<0) return t;
   return t.split(/(?<=[。！？\n])/).map(function(s){ if(/宿命中殺|日座|生年中殺|生月中殺|生日中殺|宿命/.test(s)) return s;
