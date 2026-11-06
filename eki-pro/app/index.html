@@ -2496,6 +2496,15 @@ function pkFactFix(t,aS,bS){ try{ t=String(t==null?'':t);  t=t.replace(/ふた�
   t=t.replace(/([甲乙丙丁戊己庚辛壬癸])(?![子丑寅卯辰巳午未申酉戌亥])([（(][^）)\n]{0,20}?)(?:([木火土金水])の(陽|陰)|(陽|陰)の([木火土金水]))/g,function(m,g,mid,e1,y1,y2,e2){ var y=YIN.indexOf(g)>=0?'陰':'陽'; return e1?g+mid+EL[g]+'の'+y:g+mid+y+'の'+EL[g]; });
   // ⑥ 「月支元命に「偏印」が3つ」→ 月支元命は1つ。数は命式全体の数として書き分ける
   t=t.replace(/月支元命((?:[（(][^）)\n]{0,30}[）)])?)に([「『]?[^」』\n]{1,40}?[」』]?)が([0-9０-９一二三四五]+)つ/g,'月支元命$1が$2で、命式全体ではこの星が$3つ');
+  // ⑦ 曜日のまちがい：「11月6日（水）」→ 暦の曜日に直す（年がなければ、今日〈日本時間〉から1年のうちの日として読む。今年のもう過ぎた日で曜日が合っていれば、過ぎた日の話としてそのまま。2026-11-06）
+  t=t.split('\n').map(function(ln){ return ln.replace(/(\d{4}年)?(\d{1,2}月)?(\d{1,2})日([（(])([日月火水木金土])((?:曜日?)?[）)])/g,function(m0,y,mo,da,p1,w,p2,off){ var W='日月火水木金土'; if(/\d/.test(ln.charAt(off-1)||'')) return m0; var Y=y?parseInt(y,10):0, M=mo?parseInt(mo,10):0, D=parseInt(da,10);
+      if(!M){ var mm, last=null, re=/(?:(\d{4})年)?(\d{1,2})月/g, hd=ln.slice(0,off); while((mm=re.exec(hd))) last=mm; if(!last) return m0; M=parseInt(last[2],10); if(!Y&&last[1]) Y=parseInt(last[1],10); }
+      if(M<1||M>12||D<1||D>31) return m0;
+      var n=new Date(Date.now()+9*3600000), T0=new Date(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate(),12,0,0,0), x;
+      if(Y){ x=new Date(Y,M-1,D,12,0,0,0); }
+      else { var a=new Date(T0.getFullYear(),M-1,D,12,0,0,0); if(a<T0&&(W.charAt(a.getDay())===w||/先月|先週|この前|以前|去年|昨年|前回|でした|ました/.test(ln.slice(Math.max(0,off-10),off)+ln.slice(off,off+30)))) x=a; else x=a<T0?new Date(T0.getFullYear()+1,M-1,D,12,0,0,0):a; }
+      if(x.getMonth()!==M-1||x.getDate()!==D) return m0;
+      var r=W.charAt(x.getDay()); return r===w?m0:(y||'')+(mo||'')+da+'日'+p1+r+p2; }); }).join('\n');
   return t; }catch(e){ return t; } }
 /* PRO の「柱・月・年の星の事実あわせ」（pkPillarStarFix・pkMonthFactFix・pkYearKichiFix）と同じ目的の直し（発注者指示 2026-10-23「ツールは3つ必ず同時に直す」）。
    易は命式の吉凶星・月ごとの星を文章作成に渡していないので、それらを書いた文は根拠がない＝外す（空亡・天中殺は画面に出しているので残す）。 */
