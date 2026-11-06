@@ -4657,7 +4657,7 @@ function pkFactFix(t,aS,bS){ try{ t=String(t==null?'':t);  t=t.replace(/ふた�
     var n=new Date(Date.now()+9*3600000), T0=new Date(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate(),12,0,0,0), LOG=[];
     var dayGz=function(y,m,d){ return gz(Math.round(Date.UTC(y,m-1,d)/86400000)+2440637); };
     var monGz=function(y,m){ var yy=m===1?y-1:y, s=((yy-4)%10+10)%10; return G.charAt(((s%5)*2+2+((m+10)%12))%10)+Z.charAt(m%12); };
-    var smOf=function(y,m,d){ var sd=0; try{ if(typeof pkSetsuStart==='function') sd=pkSetsuStart(y,m).getDate(); }catch(e){ sd=0; } if(!sd){ sd=[6,4,6,5,6,6,7,8,8,8,7,7][m-1]; if(Math.abs(d-sd)<=1) return null; } return d>=sd?{y:y,m:m}:(m===1?{y:y-1,m:12}:{y:y,m:m-1}); };
+    var smOf=function(y,m,d){ var sd=0; try{ if(typeof pkSetsuStart==='function') sd=pkSetsuStart(y,m).getDate(); else if(typeof _sheetSetsuStart==='function') sd=_sheetSetsuStart(y,m).getDate(); else if(typeof window!=='undefined'&&window.Bazi&&window.Bazi.computeChart){ var Bz=window.Bazi, mp=function(dd,h,mi){ return Bz.computeChart({year:y,month:m,day:dd,hour:h,minute:mi,sex:'male',correctionMode:'none'}).pillars[1].ganzhi; }, ref=mp(20,12,0); for(var k=1;k<=19;k++){ if(mp(k,23,59)===ref){ sd=k; break; } } } }catch(e){ sd=0; } if(!sd){ sd=[6,4,6,5,6,6,7,8,8,8,7,7][m-1]; if(Math.abs(d-sd)<=1) return null; } return d>=sd?{y:y,m:m}:(m===1?{y:y-1,m:12}:{y:y,m:m-1}); };
     var fy=function(m,d){ var y=T0.getFullYear(), x=new Date(y,m-1,d||28,12,0,0,0); return x<T0?y+1:y; };
     var XY='([甲乙丙丁戊己庚辛壬癸木火土金水日月][子丑寅卯辰巳午未申酉戌亥])(?=[）)・、の（(\\s／]|$)', RD='((?:[（(][ぁ-ん]{2,8}[）)])?)';
     var put=function(m0,head,bad,rd,good,what){ if(!good||bad===good) return m0; LOG.push({what:what,from:bad,to:good}); return head+good; };
@@ -4750,7 +4750,33 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
        鑑定書は台本を入れない紙なので、見出しを足す部分は写さない（直した見出しは _stripTalk が外す）。鑑定書では ■ ◎ ● ▶ で始まる見出しも同じに */
     function sheetFixAnsHeads(t){ try{ t=String(t||'');
       return t.replace(/^([ 　]*[#＃*＊\[［【■◎●▶]*[ 　]*)(?:お相手|お二人|おふたり|ふたり|2人|あなた|相談者|ご相談者|お客さま|お客様)(?:への|へ|の|に)(?:お)?伝え方/gm,'$1お客様へのお伝え方').replace(/^([ 　]*[#＃*＊\[［【■◎●▶]+[ 　]*)(?:お)?伝え方(?=[ 　]*[】\]］*＊]*[ 　]*[：:]?[ 　]*$)/gm,'$1お客様へのお伝え方'); }catch(e){ return String(t==null?'':t); } }
-    function noAIWord(t){ var _by=(_lastResult&&_lastResult.birthYear)||0; return pkRuleFix(pkAIScrub(pkFactFix(pkStampYears(pkFixAge(_stripTalk(sheetFixAnsHeads(_noAIWord1(pkFixHangul(t)))),_by),_by,0,!!window.__bgPlain)))); }   // 十干の陰陽・五行／星の説明の取りちがえ（PROと同じ直し）   // 年齢は生年月日から計算し直す
+    /* 大運・年運・月運・日運の名前つきの干支のまちがい（「今の大運（癸未）」「年運「丙未」」）を、この方の実際の干支に直す（PRO の pkRunGzFix と同じ決まり。鑑定書の大運表 r.daiun・年運 r.annualByYear・暦から）。
+     1つに決まらず、書かれた干支が大運・年運・月運のどれにも無い（六十干支にない形も）＝確実にまちがいなら、干支の部分だけ外す（2026-11-06「鑑定書も必ず直してください」） */
+  function sheetRunGzFix(t,r){ try{ t=String(t==null?'':t); if(!r||!r.daiun) return t; var G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', LOG=[];
+    var gz=function(i){ i=((i%60)+60)%60; return G.charAt(i%10)+Z.charAt(i%12); }, valid=function(x){ return G.indexOf(x[0])>=0&&Z.indexOf(x[1])>=0&&G.indexOf(x[0])%2===Z.indexOf(x[1])%2; };
+    var J=_jstNow(), T0=new Date(J.y,J.m-1,J.d,12,0,0,0), NY=r.nowYear||J.y, mon=(r.pillars&&r.pillars.month&&r.pillars.month.kanshi)||'';
+    var D=[mon].concat(r.daiun.map(function(d){ return d.kanshi; })).filter(Boolean);
+    var cal=function(y,m,d,i){ return window.Bazi.computeChart({year:y,month:m,day:d,hour:12,minute:0,sex:'male',correctionMode:'none'}).pillars[i].ganzhi; };
+    var fwdY=function(M,Dd){ var x=new Date(J.y,M-1,Dd||28,12,0,0,0); return x<T0?J.y+1:J.y; };
+    var curDu=function(){ var x; try{ x=_sheetDuAt(r,T0); }catch(e){ x=undefined; } if(x===null) return mon; if(x&&x.kanshi) return x.kanshi; var f=r.daiun.filter(function(d){ return d.startYear!=null&&d.startYear<=NY&&NY<d.endYear; })[0]; if(f) return f.kanshi; return (r.daiun[0]&&r.daiun[0].startYear>NY)?mon:''; };
+    t=t.split(/(?<=[。！？\n])/).map(function(sn){ return sn.replace(/(今の|いまの|現在の|次の|前の)?(大運|年運|月運|日運)((?:[（(][ぁ-ん：:＝=、・ー]{0,30}[）)])?(?:は|が|の|も|＝|=|：)?[ 　]*[「（(]?)([甲乙丙丁戊己庚辛壬癸木火土金水日月][子丑寅卯辰巳午未申酉戌亥])([」）)]?)(?=[」）)・、のでは（(。\s]|$)/g,function(m0,pre,kind,mid,x,cl,off){
+        var before=sn.slice(Math.max(0,off-30),off), ok=null;
+        try{
+          if(kind==='大運'){ if(D.indexOf(x)>=0) return m0; var cu=curDu(), ci=D.indexOf(cu);
+            if(/今|いま|現在/.test(pre||'')&&cu) ok=cu; else if(pre==='次の'&&ci>=0&&D[ci+1]) ok=D[ci+1]; else if(pre==='前の'&&ci>0) ok=D[ci-1];
+            else { var cand=D.filter(function(g){ return g[0]===x[0]||g[1]===x[1]; }); if(cand.length===1) ok=cand[0]; } }
+          else if(kind==='年運'){ var ym=before.match(/(20\d\d)年(?!\d{1,2}月)[^。]*$/); var y=ym?+ym[1]:(/再来年/.test(before)?NY+2:(/来年/.test(before)?NY+1:(/今年/.test(before)?NY:0))); if(y) ok=gz(y-4); }
+          else if(kind==='月運'){ var mm=before.match(/(?:(20\d\d)年)?(\d{1,2})月(?!\d{1,2}日)[^。]*$/), dt=null; if(mm){ var M=+mm[2]; if(M>=1&&M<=12) dt=[mm[1]?+mm[1]:fwdY(M),M,20]; } else if(/来月/.test(before)){ var n2=new Date(J.y,J.m,20,12); dt=[n2.getFullYear(),n2.getMonth()+1,20]; } else if(/今月/.test(before)) dt=[J.y,J.m,J.d]; if(dt) ok=cal(dt[0],dt[1],dt[2],1); }
+          else { var dm=before.match(/(?:(20\d\d)年)?(\d{1,2})月(\d{1,2})日[^。]*$/), dd=null; if(dm){ var M2=+dm[2], D2=+dm[3]; dd=new Date(dm[1]?+dm[1]:fwdY(M2,D2),M2-1,D2,12); } else if(/明後日/.test(before)) dd=new Date(T0.getTime()+2*86400000); else if(/明日|あした/.test(before)) dd=new Date(T0.getTime()+86400000); else if(/今日/.test(before)) dd=T0; if(dd) ok=cal(dd.getFullYear(),dd.getMonth()+1,dd.getDate(),2); }
+        }catch(e){ ok=null; }
+        if(!ok){ var known=D.indexOf(x)>=0; try{ Object.keys(r.annualByYear||{}).forEach(function(k){ if((r.annualByYear[k]||{}).ganzhi===x) known=true; }); }catch(e){ known=true; }
+          if(valid(x)&&(known||kind==='日運'||kind==='月運')) return m0;
+          LOG.push({st:'drop',what:(pre||'')+kind,from:x,to:''}); return (pre||'')+kind; }
+        if(ok===x) return m0; LOG.push({what:(pre||'')+kind,from:x,to:ok}); return (pre||'')+kind+mid+ok+cl; }); }).join('');
+    if(LOG.length){ try{ window.__pkGzFixLog=(window.__pkGzFixLog||[]).concat(LOG).slice(-30); }catch(e){} }
+    return t; }catch(e){ return String(t==null?'':t); } }
+  function noAIWord(t){ var _by=(_lastResult&&_lastResult.birthYear)||0; return sheetRunGzFix(pkRuleFix(pkAIScrub(pkFactFix(pkStampYears(pkFixAge(_stripTalk(sheetFixAnsHeads(_noAIWord1(pkFixHangul(t)))),_by),_by,0,!!window.__bgPlain)))),_lastResult); }
+  try{ window.sheetRunGzFix=sheetRunGzFix; window.__sheetNoAIWord=noAIWord; window.__sheetFactFix=pkFactFix; window.__sheetLast=function(){ return _lastResult; }; }catch(_e){}   // 点検（gate_compat_rules）から呼べるように   // 十干の陰陽・五行／星の説明の取りちがえ（PROと同じ直し）   // 年齢は生年月日から計算し直す
     function _noAIWord1(t){ t=String(t||'').replace(/주치(의|医)/g,'主治医').replace(/【見出し[：:]?\s*/g,'【').replace(/【([^】\n]{0,40})\n+\s*([^】\n]{0,60})】/g,'【$1$2】').replace(/【\s*】/g,'');   // 【 】の中で改行した見出しをつなぐ（【見出し⏎…】のくずれ）
     return pkSoftWord(pkFixYomi(_noAIWord0(t))); }   // 記号（**など）を消したあとにも、読み仮名とやわらげをもう一度
   function _noAIWord0(t){ t=String(t==null?'':t).replace(/必ずや/g,'必ず').replace(/(\d{4}年(?:[（(][^（）()\n]{0,20}[）)])?)の西暦(?=です|でした|に|で|は|が|を|、|。)/g,'$1'); t=pkSoftWord(pkFixYomi(t));   /* 「必ずや」を「きっとや」にしない（やわらげの「必ず→きっと」の前に。易と同じ。2026-11-05） */ return String(t||'')

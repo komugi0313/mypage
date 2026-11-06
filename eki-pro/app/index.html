@@ -2447,7 +2447,13 @@ const App=(function(){
   function pkFixTel(t){ t=String(t==null?'':t); const D={'〇':'0','零':'0','一':'1','二':'2','三':'3','四':'4','五':'5','六':'6','七':'7','八':'8','九':'9'};
     t=t.replace(/(?:ゼロ|〇|零)(?:ゼロ|[〇零一二三四五六七八九]|[のー−‐](?=ゼロ|[〇零一二三四五六七八九])){5,}/g,function(m){ const x=m.replace(/ゼロ/g,'0').replace(/[〇零一二三四五六七八九]/g,function(c){ return D[c]; }).replace(/[のー−‐]/g,'-'); return x.replace(/-/g,'').length>=6?x:m; });
     return t.replace(/二十四時間(子供|子ども|こども)?(エスオーエス|ＳＯＳ)/g,function(m,a){ return '24時間'+(a||'')+'SOS'; }).replace(/エスオーエス(ダイヤル|ダイアル)/g,'SOS$1'); }
-  function noAIWord(t){ const _by=parseInt(ekiBdVal().slice(0,4),10)||0; const _x=pkTypoFix(pkRuleFix(pkAIScrub(ekiSameSexWord(ekiStarGuard(pkFactFix(pkStampYears(pkFixAge(pkFixTel(_noAIWord1(t)),_by),_by,0,true))))))); /* 十干の陰陽・五行／星の説明の取りちがえ（PROと同じ直し） */ return (typeof LANG!=='undefined'&&LANG==='ko')?_x:pkFixHangul(_x); }   // 日本語の文に混じったハングル（「終つい에는吉」など）を直す。韓国語で表示しているときだけは直さない
+  /* 六十干支にない形（甲丑・乙子など）は、易では命式・運の一覧がなく直し先が決まらないので、干支の部分だけ外す（日付についたものは pkFactFix ⑧ が暦どおりに直したあと。根拠のチェック表に🗑。2026-11-06） */
+function ekiBadGzStrip(t){ try{ t=String(t==null?'':t); const G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', L=[];
+  t=t.replace(/([（(「]?)([甲乙丙丁戊己庚辛壬癸])([子丑寅卯辰巳午未申酉戌亥])((?:[（(][ぁ-ん]{2,8}[）)])?)([）)」]?)(の)?/g,function(m0,o,g,z,rd,c,no){ if(G.indexOf(g)%2===Z.indexOf(z)%2||g+z==='丁子') return m0; L.push({st:'drop',what:'干支',from:g+z,to:''}); if(no) return (o&&!c?o:'')+'その'; if(o&&c) return ''; return o+c; });
+  t=t.replace(/([（(])[・、]/g,'$1');
+  if(L.length){ try{ window.__pkGzFixLog=(window.__pkGzFixLog||[]).concat(L).slice(-30); }catch(e){} } return t; }catch(e){ return String(t==null?'':t); } }
+function noAIWord(t){ const _by=parseInt(ekiBdVal().slice(0,4),10)||0; const _x=pkTypoFix(pkRuleFix(pkAIScrub(ekiSameSexWord(ekiStarGuard(ekiBadGzStrip(pkFactFix(pkStampYears(pkFixAge(pkFixTel(_noAIWord1(t)),_by),_by,0,true)))))))); /* 十干の陰陽・五行／星の説明の取りちがえ（PROと同じ直し） */ return (typeof LANG!=='undefined'&&LANG==='ko')?_x:pkFixHangul(_x); }   // 日本語の文に混じったハングル（「終つい에는吉」など）を直す。韓国語で表示しているときだけは直さない
+try{ window.ekiBadGzStrip=ekiBadGzStrip; window.__ekiNoAIWord=noAIWord; window.__ekiFactFix=pkFactFix; }catch(_e){}   // 点検（gate_compat_rules）から呼べるように
 /* 「AIに相談する」「AIとして申し上げます」など、AIの言葉が残った文は外す・「。。」をまとめる（2026-11-03。PRO・易同じ中身） */
 function pkAIScrub(t){ try{ t=String(t==null?'':t);
   t=t.replace(/(?:AI|ＡＩ)として(?:申し上げ(?:ると|ますと|ます)|お伝えすると|お答えすると)[、，。]?/g,'');
@@ -2510,7 +2516,7 @@ function pkFactFix(t,aS,bS){ try{ t=String(t==null?'':t);  t=t.replace(/ふた�
     var n=new Date(Date.now()+9*3600000), T0=new Date(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate(),12,0,0,0), LOG=[];
     var dayGz=function(y,m,d){ return gz(Math.round(Date.UTC(y,m-1,d)/86400000)+2440637); };
     var monGz=function(y,m){ var yy=m===1?y-1:y, s=((yy-4)%10+10)%10; return G.charAt(((s%5)*2+2+((m+10)%12))%10)+Z.charAt(m%12); };
-    var smOf=function(y,m,d){ var sd=0; try{ if(typeof pkSetsuStart==='function') sd=pkSetsuStart(y,m).getDate(); }catch(e){ sd=0; } if(!sd){ sd=[6,4,6,5,6,6,7,8,8,8,7,7][m-1]; if(Math.abs(d-sd)<=1) return null; } return d>=sd?{y:y,m:m}:(m===1?{y:y-1,m:12}:{y:y,m:m-1}); };
+    var smOf=function(y,m,d){ var sd=0; try{ if(typeof pkSetsuStart==='function') sd=pkSetsuStart(y,m).getDate(); else if(typeof _sheetSetsuStart==='function') sd=_sheetSetsuStart(y,m).getDate(); else if(typeof window!=='undefined'&&window.Bazi&&window.Bazi.computeChart){ var Bz=window.Bazi, mp=function(dd,h,mi){ return Bz.computeChart({year:y,month:m,day:dd,hour:h,minute:mi,sex:'male',correctionMode:'none'}).pillars[1].ganzhi; }, ref=mp(20,12,0); for(var k=1;k<=19;k++){ if(mp(k,23,59)===ref){ sd=k; break; } } } }catch(e){ sd=0; } if(!sd){ sd=[6,4,6,5,6,6,7,8,8,8,7,7][m-1]; if(Math.abs(d-sd)<=1) return null; } return d>=sd?{y:y,m:m}:(m===1?{y:y-1,m:12}:{y:y,m:m-1}); };
     var fy=function(m,d){ var y=T0.getFullYear(), x=new Date(y,m-1,d||28,12,0,0,0); return x<T0?y+1:y; };
     var XY='([甲乙丙丁戊己庚辛壬癸木火土金水日月][子丑寅卯辰巳午未申酉戌亥])(?=[）)・、の（(\\s／]|$)', RD='((?:[（(][ぁ-ん]{2,8}[）)])?)';
     var put=function(m0,head,bad,rd,good,what){ if(!good||bad===good) return m0; LOG.push({what:what,from:bad,to:good}); return head+good; };
@@ -3662,7 +3668,7 @@ function pkSafeFix(t,q,note){ try{ t=String(t==null?'':t); let cut=0, tcut=0, so
     { const RX=/命式|蔵干|通変星|喜神|忌神|咸池|紅艶|天乙貴人|配偶宮|配偶者星|日柱|月柱|年柱|時柱|日干|大運/; const out=String(raw||'').split(/(?<=[。！？\n])/).filter(function(x){ return RX.test(x)&&txt.indexOf(x.replace(/\s+$/,'').slice(0,20))<0; });
       if(out.length) R.push({st:'drop',what:'命式・星の話（'+out.length+'か所）',calc:'易は命式を計算していない',note:'根拠のない話なので外しました：「'+out[0].trim().slice(0,50)+'」'+(out.length>1?'ほか':'')}); }
     // ⑥ 日付についた干支の字のまちがい（pkFactFix ⑧ が直したもの。PRO・鑑定書と同じ直し。2026-11-06）
-    try{ if(window.__pkGzFixLog&&window.__pkGzFixLog.length){ const seen={}; window.__pkGzFixLog.forEach(function(x){ const k=x.what+x.from+x.to; if(seen[k]) return; seen[k]=1; if(x.st==='warn'){ if(String(p||'').indexOf(x.from)>=0||String(raw||'').indexOf(x.from)>=0) R.push({st:'warn',what:x.what+'の干支「'+x.from+'」',calc:'六十干支にない形（十干と十二支の陰陽が合わない）',note:'確かめてください'}); return; } R.push({st:'fix',what:x.what+'の干支「'+x.from+'」',calc:'暦では「'+x.to+'」',note:'文章作成の干支のまちがいを、ツールが計算どおりに直しました'}); }); window.__pkGzFixLog=[]; } }catch(e){}
+    try{ if(window.__pkGzFixLog&&window.__pkGzFixLog.length){ const seen={}; window.__pkGzFixLog.forEach(function(x){ const k=x.what+x.from+x.to; if(seen[k]) return; seen[k]=1; if(x.st==='drop'){ R.push({st:'drop',what:'干支「'+x.from+'」',calc:'六十干支にない形（十干と十二支の陰陽が合わない）',note:'まちがった干支を残さないよう、干支の部分だけ外しました'}); return; } if(x.st==='warn'){ if(String(p||'').indexOf(x.from)>=0||String(raw||'').indexOf(x.from)>=0) R.push({st:'warn',what:x.what+'の干支「'+x.from+'」',calc:'六十干支にない形（十干と十二支の陰陽が合わない）',note:'確かめてください'}); return; } R.push({st:'fix',what:x.what+'の干支「'+x.from+'」',calc:'暦では「'+x.to+'」',note:'文章作成の干支のまちがいを、ツールが計算どおりに直しました'}); }); window.__pkGzFixLog=[]; } }catch(e){}
     // ⑤ 年齢（生年月日があるとき）
     { const by=parseInt(ekiBdVal().slice(0,4),10)||0; if(by){ let m, n=0, bad=0; const re=/((?:19|20)\d\d)年[^。\n（(〔]{0,10}[（(〔]([^。\n]{0,30}?)[）)〕]/g;
       while((m=re.exec(String(raw||'')))){ const y=+m[1]; (m[2].match(/\d{1,3}(?=歳|才)/g)||[]).forEach(function(a){ n++; if([y-by,y-by-1].indexOf(+a)<0) bad++; }); }

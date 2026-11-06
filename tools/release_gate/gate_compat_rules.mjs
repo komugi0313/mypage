@@ -116,6 +116,27 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   const e=[]; if(!r) e.push('仕組みがない'); else { if(r.x.indexOf('今の大運（'+r.cur+'）')<0) e.push('今の大運'); if(r.x.indexOf('2027年の年運「丁未」')<0) e.push('年運'); if(r.x.indexOf('月運は庚子')<0) e.push('月運'); if(r.x.indexOf('日運「乙酉」')<0) e.push('日運'); if(r.x.indexOf('お相手の今の大運は'+r.curB)<0) e.push('お相手の大運');
     if(r.br.some(Boolean)||r.S.some(t=>/、と[がのは]|は、と|お持ちの日|はの日|人のは|「」/.test(t))) e.push('お伝え方の文がくずれた：'+r.S.join('／')); }
   console.log('  '+(e.length?'NG':'OK')+' 運の名前つきの干支の直し・お伝え方の文がくずれない'+(e.length?'  … '+e.join('・')+'｜'+(r?r.x:''):'')); if(e.length) res.fails.push('運の干支・お伝え方: '+e.join('・')); }
+// 鑑定書（本格版・やさしい版）と易の干支の直し、節入りの決め方が3つのツールで同じか（2026-11-06「鑑定書も必ず直してください」）
+{ const e=[]; const ctx2=await b.newContext({serviceWorkers:'block',timezoneId:'Asia/Tokyo'}); await ctx2.clock.setFixedTime(new Date('2026-11-06T10:00:00+09:00'));
+  await ctx2.route('**/.netlify/functions/**',r=>r.fulfill({status:200,contentType:'application/json',body:'{"ok":true}'}));
+  const srvE=http.createServer((q,r)=>{let pp=decodeURIComponent(q.url.split('?')[0]);if(pp.endsWith('/'))pp+='index.html';const f=path.join(ROOT,'eki-pro',pp);if(!fs.existsSync(f)||fs.statSync(f).isDirectory()){r.writeHead(404);r.end();return;}r.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'application/octet-stream'});fs.createReadStream(f).pipe(r);}).listen(0); await new Promise(r=>srvE.on('listening',r));
+  const op=async(u)=>{ const q=await ctx2.newPage(); q.on('dialog',d=>d.accept()); await q.goto(u); await q.waitForTimeout(3000); return q; };
+  const P2=await op(`http://127.0.0.1:${port}/${page0}`), E2=await op(`http://127.0.0.1:${srvE.address().port}/app/index.html`);
+  const SH=await op(`http://127.0.0.1:${port}/meishi-sheet.html#d=2008-03-28&t=14:00&sex=female&corr=none&z=today&clk=1`), SB=await op(`http://127.0.0.1:${port}/meishi-sheet.html#d=2008-03-28&t=14:00&sex=female&corr=none&z=today&clk=1&bg=1`);
+  const T='今の大運（癸未）は学びの10年。2027年の年運「丙未」は動く年。2026年12月の月運は戊子の月。2026年11月7日の日運「甲酉」。大運「甲丑」では。';
+  for(const [nm,q] of [['鑑定書（本格版）',SH],['鑑定書（やさしい版）',SB]]){ const x=await q.evaluate(t=>typeof window.sheetRunGzFix==='function'&&window.__sheetLast&&window.__sheetLast()?window.sheetRunGzFix(t,window.__sheetLast()):'',T);
+    if(!x) e.push(nm+'：仕組みがない'); else [['今の大運（癸丑）','今の大運'],['2027年の年運「丁未」','年運'],['月運は庚子','月運'],['日運「乙酉」','日運'],['大運では。','まちがいで1つに決まらない干支を外す']].forEach(([w,n])=>{ if(x.indexOf(w)<0) e.push(nm+'：'+n); }); }
+  { const x=await P2.evaluate(()=>{ const a=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},'','none'); return pkRunGzFix('大運「甲丑」では。今の大運（癸丑）は。',a,null); }); if(x!=='大運では。今の大運（癸丑）は。') e.push('PRO：1つに決まらないまちがいの干支を外す／正しい干支は残す：'+x); }
+  { const x=await E2.evaluate(()=>typeof window.ekiBadGzStrip==='function'?window.ekiBadGzStrip('（甲丑）の流れ。丙午の年。'):''); if(/甲丑/.test(x)||x.indexOf('丙午の年')<0) e.push('易：六十干支にない形を外す：'+x); }
+  // 節入り：PRO（pkSetsuStart）・易・鑑定書で、節入りの前日・当日・翌日の「○年○月○日（…の月）」が同じに直り、暦の節月（その日を含む節月）の干支になること
+  const strs=await P2.evaluate(()=>{ const L=[]; for(const y of [2026,2027]) for(let m=1;m<=12;m++){ const sd=pkSetsuStart(y,m).getDate(); [sd-1,sd,sd+1].forEach(d=>L.push(y+'年'+m+'月'+d+'日（甲子の月）')); } return L; });
+  const exp=await P2.evaluate(s=>s.map(x=>{ const m=x.match(/(\d+)年(\d+)月(\d+)日/); const sm=pkSmOf(new Date(+m[1],+m[2]-1,+m[3],12)); return _pillarForDate(new Date(sm.y,sm.m-1,20,12),'month').ganzhi; }),strs);
+  const fx=async(q,g)=>q.evaluate(([s,g])=>{ const F=g==='pro'?pkFactFix:(g==='eki'?window.__ekiFactFix:window.__sheetFactFix); return F?s.map(x=>F(x)):[]; },[strs,g]);
+  const A=await fx(P2,'pro'), EE=await fx(E2,'eki'), S2=await fx(SH,'sheet'); let bad=0, dif=0;
+  A.forEach((x,i)=>{ if(x.indexOf('（'+exp[i]+'の月）')<0) bad++; if(x!==EE[i]||x!==S2[i]) dif++; });
+  if(!EE.length||!S2.length) e.push('易・鑑定書の pkFactFix が呼べない'); if(bad) e.push('節入りの月の干支がちがう '+bad+'件'); if(dif) e.push('3つのツールで節入りの決め方がちがう '+dif+'件');
+  await ctx2.close(); srvE.close();
+  console.log('  '+(e.length?'NG':'OK')+' 鑑定書（本格版・やさしい版）・易の干支の直し、節入りが3ツールで同じ（'+strs.length+'日）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('鑑定書・易の干支: '+e.join('・')); }
 // 縁が動く月の三合・刑（2008-03-28 14時 女性：11月己亥＝亥卯未の三合〈時支の未〉、12月庚子＝配偶宮卯と刑）
 { const m=await p.evaluate(()=>{ if(typeof loveFourLines!=='function') return ''; const c=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'); const L=loveFourLines(c); return (L&&L.pro[3]||'')+'|'+pkIsLoveQ('今年の冬に出会う可能性がある男性は？'); });
   const e=[]; if(/己亥の月/.test(m)&&!/己亥の月）＝[^／]*三合（亥卯未/.test(m)) e.push('三合（亥卯未）'); if(/庚子の月/.test(m)&&!/庚子の月）＝配偶宮「卯」と刑/.test(m)) e.push('子卯の刑'); if(!/\|true$/.test(m)) e.push('「出会う」を恋愛相談と見分ける');
