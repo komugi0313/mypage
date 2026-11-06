@@ -103,6 +103,11 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
 { const ff=await p.evaluate(()=>typeof pkFactFix==='function'?[pkFactFix('日干は丁（火の陽＝温かさ）'),pkFactFix('月支元命（性格の中心）に「偏印」が3つある'),pkFactFix('正官（せいかん）（行動力と決断力の星）が巡る'),String(pkIsLoveQ('11月にデートに誘われています。好きになる可能性はありますか？'))]:['','','','']);
   const e=[]; if(!/丁（火の陰/.test(ff[0])) e.push('丁＝火の陰'); if(!/月支元命（性格の中心）が「偏印」で、命式全体ではこの星が3つ/.test(ff[1])) e.push('月支元命の数'); if(!/正官（せいかん）（規律・責任・誠実の星）/.test(ff[2])) e.push('正官の説明'); if(ff[3]!=='true') e.push('デートの相談を恋愛と見分ける');
   console.log('  '+(e.length?'NG':'OK')+' 十干の陰陽・月支元命の数の直し'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('事実の直し: '+e.join('・')); }
+// 文章作成の干支の字のまちがい（日付についた干支を暦どおりに直す。pkFactFix ⑧。PRO・易・鑑定書は同じ中身＝下の中身くらべで確かめる。2026-11-06）
+{ const g=await p.evaluate(()=>typeof pkFactFix==='function'?pkFactFix('2026年11月6日（木申）がよい。2026年11月8日（丁戌（ひのといぬ））。2027年（丙未・19歳）。2026年12月（辛子の月）。2026年11月7日（土）（乙酉）。2026年11月〜12月上旬（己亥・庚子の月）。2026年11月（戊亥の月）。曜日：2026年11月6日（水）。'):'');
+  const e=[]; [['2026年11月6日（甲申）','木申→甲申'],['2026年11月8日（丙戌）','丁戌→丙戌'],['2027年（丁未・19歳）','丙未→丁未'],['2026年12月（庚子の月）','辛子→庚子の月'],['2026年11月7日（土）（乙酉）','正しい干支は変えない'],['（己亥・庚子の月）','月の範囲は変えない'],['2026年11月（己亥の月）','戊亥→己亥'],['2026年11月6日（金）','曜日']].forEach(([x,n])=>{ if(String(g).indexOf(x)<0) e.push(n); });
+  if(/ひのといぬ/.test(g)) e.push('まちがった干支の読みが残った');
+  console.log('  '+(e.length?'NG':'OK')+' 日付についた干支・曜日のまちがいの直し'+(e.length?'  … '+e.join('・')+'｜'+String(g).slice(0,200):'')); if(e.length) res.fails.push('干支の直し: '+e.join('・')); }
 // 縁が動く月の三合・刑（2008-03-28 14時 女性：11月己亥＝亥卯未の三合〈時支の未〉、12月庚子＝配偶宮卯と刑）
 { const m=await p.evaluate(()=>{ if(typeof loveFourLines!=='function') return ''; const c=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'); const L=loveFourLines(c); return (L&&L.pro[3]||'')+'|'+pkIsLoveQ('今年の冬に出会う可能性がある男性は？'); });
   const e=[]; if(/己亥の月/.test(m)&&!/己亥の月）＝[^／]*三合（亥卯未/.test(m)) e.push('三合（亥卯未）'); if(/庚子の月/.test(m)&&!/庚子の月）＝配偶宮「卯」と刑/.test(m)) e.push('子卯の刑'); if(!/\|true$/.test(m)) e.push('「出会う」を恋愛相談と見分ける');
