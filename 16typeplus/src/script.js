@@ -1,3 +1,5 @@
+/* 共有画像：画面と結果の文字を全部先に読みこむ（日本語・韓国語の字体は文字ごとに小分けで届くため） */
+function fontText(){let t="16TYPE+ あア가A♡0123456789";try{t+=document.body.innerText||"";t+=JSON.stringify(window.__me||{});}catch(e){}return [...new Set(t)].filter(ch=>ch>" ").join("");}
 /* 多言語：TR("日本語") で、その言語の辞書にあれば置き換える */
 const LANG=(typeof PAGE_LANG!=="undefined")?PAGE_LANG:"ja";
 const TR=(t)=>(typeof I18N!=="undefined"&&I18N[t]!=null)?I18N[t]:t;
@@ -147,7 +149,7 @@ async function shareChange(){track("share_change");const b=$("cgShare"),lbl=b.te
  catch(e){alert(TR("画像をつくれませんでした。もう一度お試しください。"));}finally{b.disabled=false;b.textContent=lbl;}}
 async function drawChange(){const me=window.__me,W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
- try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"16TYPE+ あア가A")));}catch(e){}
+ try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,fontText())));}catch(e){}
  const prev=me.prev||[],rows=chgData(me.born,me.now,prev),im=await loadImg(charSrc(me.now));
  c.fillStyle=SC.bg;c.fillRect(0,0,W,H);c.fillStyle=SC.card;rrect(c,48,48,W-96,H-96,36);c.fill();c.strokeStyle=SC.rule;c.lineWidth=2;c.stroke();
  c.textAlign="center";c.fillStyle=SC.muted;c.font="500 30px "+SANS;c.fillText(TR("わたしの16タイプの変化"),W/2,138);
@@ -382,7 +384,7 @@ function loadImg(src){return new Promise(r=>{const i=new Image();i.crossOrigin="
 async function drawShare(){
  const me=window.__me,W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const ctx=cv.getContext("2d");
  const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',ROUND=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
- try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"700 40px "+ROUND,"600 40px "+MONO].map(f=>document.fonts.load(f,"16TYPE+ あア가A")));}catch(e){}
+ try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"700 40px "+ROUND,"600 40px "+MONO].map(f=>document.fonts.load(f,fontText())));}catch(e){}
  const one=me.born===me.now&&(!me.bAT||!me.nAT||me.bAT===me.nAT),[ib,inw]=await Promise.all([loadImg(charSrc(me.born)),one?Promise.resolve(null):loadImg(charSrc(me.now))]);
  ctx.fillStyle=SC.bg;ctx.fillRect(0,0,W,H);
  ctx.fillStyle=SC.card;rrect(ctx,48,48,W-96,H-96,36);ctx.fill();ctx.strokeStyle=SC.rule;ctx.lineWidth=2;ctx.stroke();
@@ -440,7 +442,7 @@ function cwList(t){const K=CW[t];if(K)return [...(K.sweet||[]).slice(0,4),...(K.
  const P=ktStu(PS[t])||{};return [...(P.strengths||[]).map(x=>x.split("｜")[0]),...(D.ARUARU[t]||[]),...(P.pitfalls||[]).map(x=>x.split("｜")[0])].slice(0,15);}
 function cwColors(b,n){const GC={NT:SC.jp,NF:SC.tf,SJ:SC.ei,SP:SC.sn},grp=t=>t[1]==="N"?"N"+t[2]:"S"+t[3];const cb=GC[grp(b)];return [cb,b===n?cb:(grp(b)===grp(n)?SC.ink:GC[grp(n)])];}
 function cwFonts(){const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
- return Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"あア가A"))).catch(()=>{}).then(()=>({SANS,MONO}));}
+ return Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,fontText()))).catch(()=>{}).then(()=>({SANS,MONO}));}
 /* 小さくしすぎず、入らないときは2行に折り返して書く */
 function fitText(c,SANS,t,x,y,w,fs,min,col,wt){wt=wt||700;c.font=wt+" "+fs+"px "+SANS;while(c.measureText(t).width>w&&fs>min){fs--;c.font=wt+" "+fs+"px "+SANS;}
  c.fillStyle=col;if(c.measureText(t).width<=w){c.fillText(t,x,y);return;}const ls=wrapLines(c,t,w,2);ls.forEach((l,i)=>c.fillText(l,x,y-(ls.length-1)*fs*0.55+i*fs*1.1));}
@@ -695,7 +697,7 @@ async function lvShareRun(t){track("love_share_click");const b=$("lvShare"),lbl=
   else showShareBox(cvs);}catch(e){alert(TR("画像をつくれませんでした。もう一度お試しください。"));}finally{b.disabled=false;b.textContent=lbl;}}
 const LVC={ink:SC.ink,muted:SC.muted,soft:"#EEF1F5",rule:"#E2E6EC",rose:"#C9607A",roseT:"#F8E4EA",rose2:"#DE8FA3"};
 function lvFonts(){const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
- return Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"あア가A♡"))).catch(()=>{}).then(()=>({SANS,MONO}));}
+ return Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,fontText()))).catch(()=>{}).then(()=>({SANS,MONO}));}
 /* 恋愛のシェア画像1枚目：キャラ・恋のタイプ・ひと言・4文字・恋のことば */
 async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const me=window.__me,t=P.t,X0=70,X1=W-70,im=await loadImg(charSrc(t));
@@ -748,7 +750,7 @@ async function lvSheet(P){const {SANS,MONO}=await lvFonts(),LP=(window.__lvPtImg
 async function drawCV(){
  const me=window.__me,W=1080;let H=2200;const cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
- try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"16TYPE+ あア가A")));}catch(e){}
+ try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,fontText())));}catch(e){}
  const img=await loadImg(charSrc(me.now));
  const P=ktStu(PS[me.now])||{},PB=ktStu(PS[me.born])||{},AN=D.ARUARU[me.now]||[],AB=D.ARUARU[me.born]||[],Q0=(D.QUOTE&&D.QUOTE[me.now])||[],Q=me.kt?[me.kt.say.replace(/^[「"']|[」"']$/g,"")].concat(Q0.slice(0,1)):Q0;
  const head=x=>String(x||"").split("｜")[0];
@@ -1069,7 +1071,7 @@ function groupHTML(G,title){const e=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&am
 /* グループの結果を1枚の画像にしてシェア */
 async function drawGroup(G,title){const W=1080,H=2200,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
- try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,"16TYPE+ あア가A")));}catch(e){}
+ try{await Promise.all(["700 40px "+SANS,"500 40px "+SANS,"600 40px "+MONO].map(f=>document.fonts.load(f,fontText())));}catch(e){}
  c.textAlign="center";c.fillStyle=SC.muted;c.font="500 30px "+SANS;c.fillText(GTR("グループの相性"),W/2,128);
  c.fillStyle=SC.ink;c.font="700 52px "+SANS;c.fillText((title||GTR("{n}人").replace("{n}",G.n)).slice(0,18),W/2,200);
  c.textAlign="left";let y=270;const X=110,RW=W-220;
