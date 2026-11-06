@@ -19,7 +19,7 @@ Site: 16TYPE+ ("16 Type Plus"), a free personality test. It compares the user's 
 | 思考型 / 感情型 | Thinking / Feeling | 사고형 / 감정형 |
 | 計画型 / 柔軟型 | Planning / Flexible | 계획형 / 유연형 |
 | 自己主張型 / 慎重型 | Assertive / Cautious | 자기주장형 / 신중형 |
-| エネルギー / ものの見方 / 判断のしかた / 行動のしかた / 心の構え | Energy / How you see things / How you decide / How you act / Mindset | 에너지 / 보는 방식 / 판단 방식 / 행동 방식 / 마음가짐 |
+| エネルギー / ものの見方 / 判断のしかた / 行動のしかた / 心の構え | Energy / How you see things / How you decide / How you act / Mindset | 에너지 / 보는 방식 / 결정하는 방식 / 행동 방식 / 마음가짐 |
 | 伸びる力・燃える力・支える力・決める力・めぐる力 | power to grow / burn / support / decide / flow | 자라는 힘 / 타오르는 힘 / 받치는 힘 / 결단하는 힘 / 흐르는 힘 |
 | 表現の星・縁の星・学びの星・自分の星 | star of expression / connection / learning / self | 표현의 별 / 인연의 별 / 배움의 별 / 자기의 별 |
 | けじめの星・堅実の星・めぐり合わせの星 | star of order / steadiness / good timing | 원칙의 별 / 성실의 별 / 기회의 별 |

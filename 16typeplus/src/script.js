@@ -871,7 +871,7 @@ function swayNote(born,now){const ks=["EI","SN","TF","JP"];
 /* 鑑定文を読みやすく：気質・性格の言葉に色、かぎかっこを太字、結論の文を太字、ヒントは箇条書き */
 const KW={ja:[/(生まれ持った気質|生まれ持った性質|生まれ持った|生まれつき|気質)|(経験の中で育った性格|経験の中で育った|経験の中で|育ってきた性格|育ってきた|性格)|(両方の力|ゆるがない部分)/g],
  en:[/\b(inborn temperament|temperament|born with|inborn)\b|\b(character you grew|personality|character|grew through experience|through experience)\b|\b(both strengths|steady part|steady core)\b/gi],
- ko:[/(타고난 기질|타고난|기질)|(경험 속에서 자란|경험으로 자란|자라 온 성격|성격)|(두 가지 힘|흔들리지 않는 부분)/g]};
+ ko:[/(타고난 기질|타고난|기질)|(경험으로 자란|자라 온 성격|살아오면서|자라면서|성격)|(두 가지 힘|흔들리지 않는 부분)/g]};
 function sents(t){/* かぎかっこ・引用符の中では文を区切らない */
  const out=[];let cur="",dq=0,inQ=false;const ends=LANG==="ja"?"。！？":".!?";
  for(let i=0;i<t.length;i++){const c=t[i];cur+=c;
