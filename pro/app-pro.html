@@ -8190,9 +8190,9 @@ function pkfmYLab(y,env){ env=env||{}; var P=env.P||[], pl=!!env.plain, a=[], A=
   try{ if(env.yTag) tg=env.yTag(y)||''; }catch(e){ tg=''; }
   return y+'年'+(a.length?'（'+a.join('・')+'）':'')+tg; }
 function pkfmMLab(y,m,env){ env=env||{}; var tg=''; try{ if(env.mTag) tg=env.mTag(y,m)||''; }catch(e){ tg=''; }
-  return (y!==pkfmFwdY(m)?y+'年':'')+m+'月'+((env.plain||env.noMGz)?'':'（'+pkfmMGz(y,m)+'の月）')+tg; }
+  return ((y!==pkfmFwdY(m)||y!==pkfmToday().y)?y+'年':'')+m+'月'+((env.plain||env.noMGz)?'':'（'+pkfmMGz(y,m)+'の月）')+tg; }   /* 今年でない月は西暦も付ける（「10月（庚戌の月）」を今年の10月と読まれないように） */
 function pkfmDLab(y,m,d,env){ env=env||{}; var tg=''; try{ if(env.dTag) tg=env.dTag(y,m,d)||''; }catch(e){ tg=''; }
-  return (y!==pkfmFwdY(m,d)?y+'年':'')+m+'月'+d+'日（'+pkfmWd(y,m,d)+'）'+((env.plain||env.noDGz)?'':pkfmDGz(y,m,d)+'の日')+tg; }
+  return ((y!==pkfmFwdY(m,d)||y!==pkfmToday().y)?y+'年':'')+m+'月'+d+'日（'+pkfmWd(y,m,d)+'）'+((env.plain||env.noDGz)?'':pkfmDGz(y,m,d)+'の日')+tg; }
 function pkfmOne(k,env){ env=env||{}; var pl=!!env.plain, B=false, P=env.P||[], m, T=pkfmToday();
   if(/^B:/.test(k)){ if(!env.two) return null; B=true; k=k.slice(2); }
   var who=P[B?1:0];
@@ -8326,6 +8326,15 @@ function pkFactGate(t,env){ env=env||{}; var t0=String(t==null?'':t), T=pkfmToda
     var crossV=!!env.two||/から見|にとって/.test(s);   /* 相性の「お相手から見てあなたの命式に咸池」は相手の星の話（惹かれ合う星）なので、命式の星としては照らさない */
     var STR='咸池|紅艶|天乙貴人|天徳貴人|月徳貴人|天徳合|月徳合|大極貴人|福星貴人|文昌貴人|駅馬|華蓋|羊刃|飛刃|魁罡|日刃|金与禄|暗禄|劫殺|亡神|血刃|囚獄|隔角|禄馬貴人';
     s.replace(new RegExp('(年柱|月柱|日柱|時柱|命式)(?:に|の中に|には|の中には)(?:ある|持つ|お持ちの|宿る|入っている)?[ 　]*「?((?:'+STR+')(?:[」]?(?:や|・|と|、|及び)「?(?:'+STR+'))*)(?=([^。]{0,14}))','g'),function(m0,pn,lst,aft,off){ if(/巡|めぐ|来る|訪れ|\d年|\d{1,2}月|年運|月運|大運|今年|来年|ない|なく|ません/.test(aft)) return m0; (lst.match(new RegExp(STR,'g'))||[]).forEach(function(st){ chkStar(pn,st,off); }); return m0; });
+    /* ⑨' 「命式（全体）を見ると…咸池や大極貴人を持っています」：命式の話で、時の言葉がない文の星は、その人の命式にあるか */
+    if(!crossV&&/命式|生まれ持|生まれつき/.test(s)&&/を(?:持って|お持ち|持つ|備え)|が(?:あり|ある|あります|備わ)/.test(s)&&!/巡|めぐ|\d年|\d{1,2}月|年運|大運|月運|日運|今年|来年|再来年|時期|ない|なく|ません/.test(s)){ var L9=whoP(0).filter(function(p){ return p.ns; }); if(L9.length) (s.replace(/[（(][^（）()]*[）)]/g,'').match(new RegExp('(?:'+STR+')','g'))||[]).forEach(function(st){ if(!L9.some(function(p){ return p.ns.some(function(a){ return (a||[]).indexOf(st)>=0; }); })) bad.push({what:'命式の'+st,calc:'命式に'+st+'はない'}); }); }
+    /* ⑨'' その日に巡る星：日付を書いた文で、その日にも命式にもない星の名前を言った文（「11月21日のような日は…妨害殺などの影響で」。のような・などのぼかし言葉でも照らす） */
+    (function(){ var DS=[]; s.replace(/(?<![\d年])(?:((?:19|20)\d\d)年)?(\d{1,2})月(\d{1,2})日(?![\d間後前目中]|ぶり|以内|まで)/g,function(m0,y,mo,d){ DS.push([y?+y:0,+mo,+d]); return m0; }); if(!DS.length||/\d年(?!\d{1,2}月)|年運|月運|大運|今月|来月|今年|来年/.test(s)) return;
+      var SL=s.replace(/[（(][^（）()]*[）)]/g,'').match(new RegExp('(?:'+STR+'|妨害殺|淫欲殺|白虎殺)','g'))||[]; if(!SL.length) return;
+      var L=whoP(0).filter(function(p){ return typeof p.dayStars==='function'; }); if(!L.length) return;
+      SL.forEach(function(st){ var i=s.indexOf(st); if(/^[^。]{0,10}(?:ない|なく|巡らない|ません|見当たら)/.test(s.slice(i+st.length,i+st.length+14))) return;
+        var ok=L.some(function(p){ if(p.ns&&p.ns.some(function(a){ return (a||[]).indexOf(st)>=0; })) return true; return DS.some(function(x){ var ys=yrsC(x[0],x[1],x[2],s).filter(function(Y){ return pkfmOkDate(Y,x[1],x[2]); }); return ys.some(function(Y){ var A=null; try{ A=p.dayStars(Y,x[1],x[2]); }catch(e){ A=null; } return !A||A.indexOf(st)>=0; }); }); });
+        if(!ok) bad.push({what:DS.map(function(x){ return x[1]+'月'+x[2]+'日'; }).join('・')+'の'+st,calc:'その日にも命式にも'+st+'は巡らない'}); }); })();
     function chkStar(pn,st,off){ if(crossV) return; var L=whoP(off).filter(function(p){ return p.ns; }); if(!L.length) return; var ix=['年柱','月柱','日柱','時柱'].indexOf(pn);
       var ok=L.some(function(p){ return ix<0?p.ns.some(function(a){ return (a||[]).indexOf(st)>=0; }):((p.ns[ix]||[]).indexOf(st)>=0); }); if(!ok) bad.push({what:pn+'の'+st,calc:pn+'に'+st+'はない'}); }
     if(!crossV) s.replace(/(咸池|紅艶|天乙貴人|天徳貴人|月徳貴人|天徳合|月徳合|大極貴人|福星貴人|文昌貴人|駅馬|華蓋|羊刃|飛刃|魁罡|日刃|金与禄|暗禄|劫殺|亡神|血刃|囚獄|隔角|禄馬貴人)(?:[（(][^（）()\n]{0,40}[）)])?(?:の支|の星)?(?:を(?:持つ|お持ち|生まれ持)|が(?:ある|あり)[^。]{0,4}命式)/g,function(m0,st,off){ if(/ない|なく|ません|巡|めぐ/.test(s.slice(off+m0.length,off+m0.length+6))) return m0; var L=whoP(off).filter(function(p){ return p.ns; }); if(!L.length) return m0;
@@ -8359,7 +8368,7 @@ function pkFmPerson(c,lab){ try{ if(!c||!c.pillars) return null; const by=birthY
   let duI=-1; try{ const J=jstNow(), cd=pkDuAtDate(c,new Date(J.y,J.m-1,J.d,12,0,0,0)); if(cd){ if(cd.isMonth) duI=0; else { const k=df.indexOf(cd); duI=k>=0?k+1:du.indexOf(cd.ganzhi||(cd.stem+cd.branch)); } } }catch(e){}
   let ns=null; try{ ns=c.pillars.map(function(p,i){ return ((i===3&&c.timeUnknown)||!p)?[]:(pillarKichi(c,p)||[]).slice(); }); }catch(e){ ns=null; }
   let kb=null; try{ kb=kubo(c); }catch(e){ kb=null; }
-  return {lab:lab||'',by:by,pil:pil,du:du,duI:duI,ns:ns,kuuBr:kb,kuuY:function(y){ return pkKuuBad(c,+y); },kuuM:function(y,m){ return pkKuuBadMonth(c,PKFM_Z.charAt(m%12),{y:y,m:m}); },kuuD:function(br){ return pkKuuDay(c,br); }}; }catch(e){ return null; } }
+  return {lab:lab||'',by:by,pil:pil,du:du,duI:duI,ns:ns,kuuBr:kb,dayStars:function(y,m,d){ const F=pkDayFacts(c,new Date(y,m-1,d,12,0,0,0)); return F?(F.stars||[]):null; },kuuY:function(y){ return pkKuuBad(c,+y); },kuuM:function(y,m){ return pkKuuBadMonth(c,PKFM_Z.charAt(m%12),{y:y,m:m}); },kuuD:function(br){ return pkKuuDay(c,br); }}; }catch(e){ return null; } }
 function pkFmEnvPro(isCompat,plain,material,q){ const env={plain:!!plain,two:false,P:[],X:[],stars:{}}; try{
   const A=(typeof chart!=='undefined')?chart:null, B=(isCompat&&typeof chartB!=='undefined')?chartB:null;
   const pa=pkFmPerson(A,'本人'); if(pa){ pa.names=[(typeof personName==='string')?personName:'']; env.P.push(pa); } if(B){ const pb=pkFmPerson(B,'お相手'); if(pb){ pb.names=[(typeof personNameB==='string')?personNameB:'']; env.P.push(pb); env.two=true; } }
