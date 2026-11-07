@@ -156,7 +156,7 @@ async function runPk(C) {
     for (let i = 0; i < 150; i++) { await p.waitForTimeout(1000); const s = await p.evaluate(s => { const o = document.querySelector(s); if (!o) return null; return { load: !!o.querySelector('.loading'), bar: !!o.querySelector('.rd-bar'), len: o.innerText.length }; }, sel); if (s && s.bar && !s.load) break; const k = JSON.stringify(s); if (s && !s.load && s.len > 40 && k === last) stable++; else stable = 0; last = k; if (stable >= 12) break; }
     await p.waitForTimeout(2000);
     rec.texts.screen = await p.evaluate(grabOpen, sel);
-    rec.texts.body = await p.evaluate(s => { const L = document.querySelectorAll(s + ' .rd-body'); const it = L[L.length - 1]; if (!it) return ''; const op = [...it.querySelectorAll('details:not([open])')]; op.forEach(d => d.open = true); const t = it.innerText; op.forEach(d => d.open = false); return t; }, sel);
+    rec.texts.body = await p.evaluate(s => { const L = document.querySelectorAll(s + ' .rd-body'); const it = L[L.length - 1]; if (!it) return ''; const op = [...it.querySelectorAll('details:not([open])')].filter(d => !d.classList.contains('ev-box')); op.forEach(d => d.open = true); const t = it.innerText; op.forEach(d => d.open = false); return t; }, sel);
     if (C.mode === 'offline') rec.texts.ui = await p.evaluate(grabOpen, 'main') || await p.evaluate(() => document.body.innerText);
     const hasBar = await p.evaluate(s => !!document.querySelector(s + ' .rd-bar'), sel);
     if (hasBar) {
@@ -174,7 +174,7 @@ async function runPk(C) {
         else { const d3 = new Date(t.getTime() + 3 * 86400000); const d = document.getElementById('kg-d'); if (d) { d.value = d3.getFullYear() + '-' + String(d3.getMonth() + 1).padStart(2, '0') + '-' + String(d3.getDate()).padStart(2, '0'); d.dispatchEvent(new Event('change', { bubbles: true })); d.dispatchEvent(new Event('input', { bubbles: true })); } }
         const btn = document.getElementById(mon ? 'kg-mon-ai-btn' : 'kg-day-ai-btn'); if (btn) btn.click(); }, { mon, today: C.today });
       for (let i = 0; i < 90; i++) { await p.waitForTimeout(1000); const ok = await p.evaluate(o => { const x = document.querySelector(o); const tx = x ? (x.innerText || x.textContent || '') : ''; return x && tx.length > 150 && !x.querySelector('.loading') && !/作成しています|読み解いています/.test(tx); }, out); if (ok) break; }
-      await p.waitForTimeout(1000); rec.texts.kg = await p.evaluate(o => { const x = document.querySelector(o); if (!x) return ''; x.querySelectorAll('details:not([open])').forEach(d => d.open = true); return x.innerText || x.textContent || ''; }, out);
+      await p.waitForTimeout(1000); rec.texts.kg = await p.evaluate(o => { const x = document.querySelector(o); if (!x) return ''; x.querySelectorAll('details:not([open])').forEach(d => { if (!d.classList.contains('ev-box')) d.open = true; }); return x.innerText || x.textContent || ''; }, out);
       rec.kgTarget = await p.evaluate(mon => mon ? (document.getElementById('kg-m') || {}).value : (document.getElementById('kg-d') || {}).value, mon);
     }
     // 鑑定書
