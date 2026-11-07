@@ -100,7 +100,7 @@ window.__FACTS = (function () {
         for (const m of t.matchAll(/((?:19|20)\d\d)年[（(](今年|来年|再来年)[）)]/g)) { const ok = NY + REL[m[2]]; if (+m[1] !== ok) add('今年・来年の西暦のまちがい', 'NG', src, m[0], `${m[2]}＝${ok}年`); } }
       // ── 5. 六十干支にない形・天中殺・くずれ ──
       for (const m of t.matchAll(/([甲丙戊庚壬][丑卯巳未酉亥]|[乙丁己辛癸][子寅辰午申戌])/g)) { if (m[1] === '丁子') continue; const ctx = t.slice(Math.max(0, m.index - 12), m.index + 14); add('六十干支にない形', 'NG', src, ctx, '六十干支にない（十干と十二支の陰陽が合わない）'); }
-      for (const m of t.matchAll(/天中殺/g)) add('「天中殺」と書いた', src === 'ui' ? '要確認' : 'NG', src, t.slice(Math.max(0, m.index - 15), m.index + 15), '空亡（ビギナーはひと休みの時期）');
+      for (const m of t.matchAll(/天中殺/g)) add('「天中殺」と書いた', (src === 'ui' || /空亡期（天中殺）|中殺）?＝天中殺|宿命中殺/.test(t.slice(Math.max(0, m.index - 12), m.index + 12))) ? '要確認' : 'NG', src, t.slice(Math.max(0, m.index - 15), m.index + 15), '空亡（ビギナーはひと休みの時期）');
       for (const m of t.matchAll(/(彼|彼女|お相手さん)の(月|日)(?:なので|は避け|〕)/g)) add('空亡の印が名前に戻った（「彼の月」）', 'NG', src, t.slice(Math.max(0, m.index - 20), m.index + 15), '〔お相手は空亡〕の月');
       for (const m of t.matchAll(/〔([^〕\n]{0,20})〕/g)) { if (/(さん|彼|彼女|花子|さくら)/.test(m[1]) && /(空亡|ひと休み)/.test(m[1])) add('空亡の印が名前に戻った（「彼の月」）', 'NG', src, m[0], '〔お相手は空亡〕'); }
       for (const m of t.matchAll(/〔[^〕\n]{0,30}(?=\n|$)/g)) if (!/〕/.test(t.slice(m.index, m.index + 40))) add('くずれた〔〕（閉じていない）', 'NG', src, t.slice(Math.max(0, m.index - 10), m.index + 30), '');
@@ -124,7 +124,7 @@ window.__FACTS = (function () {
         const whoOf = (s, idx) => { const pre = s.slice(Math.max(0, idx - 14), idx); if (two || B) { if (/(お相手|彼|彼女|相手)(さん)?の?$|(お相手|彼|彼女)(さん)?[はがの][^。]{0,6}$/.test(pre)) return [B]; if (/(本人|あなた|さくら|花子)(さん)?の?$/.test(pre)) return [A]; return PS; } return [A]; };
         for (const m of t.matchAll(new RegExp('(年柱|月柱|日柱|時柱)(?:の干支)?(?:は|が|の|：|:|＝|「|『|（|\\()*(' + GZ + ')(?![^。\\n]{0,2}(?:の年|年|の月|大運|の日))', 'g'))) {
           const i = LBL[m[1]]; const Ps = whoOf(t, m.index).filter(P => !(P.tu && i === 3)); if (!Ps.length) continue;
-          if (/(の日|の月|の年|その日|この日|当日)の?$/.test(t.slice(Math.max(0, m.index - 6), m.index))) continue;   // 「その日の日柱」＝その日の干支の話
+          if (/(の日|の月|の年|その日|この日|当日|今月|来月|先月|今年|来年|再来年|昨年|去年|本年|今日|明日|明後日)の?$/.test(t.slice(Math.max(0, m.index - 6), m.index))) continue;   // 「その日の日柱」「今月の月柱」＝運の柱（その日・その月の干支）の話。本人の柱ではない（2026-11-07）
           if (!Ps.some(P => P.c.pillars[i].ganzhi === m[2])) add('柱の干支のまちがい', 'NG', src, t.slice(Math.max(0, m.index - 8), m.index + m[0].length + 4), Ps.map(P => (P === A ? '本人' : 'お相手') + 'の' + m[1] + '＝' + P.c.pillars[i].ganzhi).join('・')); }
         for (const m of t.matchAll(/日干(?:は|が|の|：|:|＝|「|『)*([甲乙丙丁戊己庚辛壬癸])(?![子丑寅卯辰巳午未申酉戌亥])/g)) { const Ps = whoOf(t, m.index); if (!Ps.some(P => P.c.dayMaster && (P.c.dayMaster.stem || P.c.pillars[2].stem) === m[1])) add('日干のまちがい', 'NG', src, t.slice(Math.max(0, m.index - 8), m.index + 12), Ps.map(P => (P === A ? '本人' : 'お相手') + '＝' + P.c.pillars[2].stem).join('・')); }
         for (const m of t.matchAll(new RegExp('(年柱|月柱|日柱|時柱)の(天干|地支|蔵干|干|支)(?:の(?:星|通変星))?(?:は|が|に|：|:|「|（|\\()*(' + TS + ')', 'g'))) {
@@ -142,19 +142,19 @@ window.__FACTS = (function () {
         for (const s of sentences(t)) {
           for (const m of s.matchAll(new RegExp('(' + GZ + ')の(年運|月運|日運)|(年運|月運|日運)(?:は|が|の|：|:|「|（|\\()*(' + GZ + ')', 'g'))) {
             const gz = m[1] || m[4], kind = m[2] || m[3]; if (!valid60(gz)) continue;
-            if (kind === '年運') { const ys = [...s.matchAll(/((?:19|20)\d\d)年(?!\d{1,2}月)/g)].map(x => +x[1]); if (ys.length && !ys.some(y => gzY(y) === gz)) add('年運の干支のまちがい', 'NG', src, s.slice(0, 160), ys.map(y => y + '年＝' + gzY(y)).join('・')); }
+            if (kind === '年運') { const ys = [...s.matchAll(/((?:19|20)\d\d)年(?!\d{1,2}月)/g)].map(x => +x[1]); if (/今年/.test(s)) ys.push(NY); if (/来年/.test(s)) ys.push(NY + 1); if (/再来年/.test(s)) ys.push(NY + 2); if (ys.length && !ys.some(y => gzY(y) === gz)) add('年運の干支のまちがい', 'NG', src, s.slice(0, 160), ys.map(y => y + '年＝' + gzY(y)).join('・')); }
             if (kind === '月運') { const ms = [...s.matchAll(/(?:((?:19|20)\d\d)年)?(\d{1,2})月(?!\d{0,2}日)/g)]; if (ms.length) { const oks = ms.flatMap(x => { const mo = +x[2]; if (mo < 1 || mo > 12) return []; const y = x[1] ? +x[1] : resolveY(mo, 0, null); return [tr(y, mo, 20)[1].ganzhi, tr(y, mo, 1)[1].ganzhi]; }); if (oks.length && oks.indexOf(gz) < 0) add('月運の干支のまちがい', 'NG', src, s.slice(0, 160), '文中の月の干支＝' + [...new Set(oks)].join('・')); } }
             if (kind === '日運') { const ds = [...s.matchAll(/(?:((?:19|20)\d\d)年)?(\d{1,2})月(\d{1,2})日/g)]; if (ds.length) { const oks = ds.map(x => { const y = x[1] ? +x[1] : resolveY(+x[2], +x[3], null); return dayGz(y, +x[2], +x[3]); }); if (oks.indexOf(gz) < 0) add('日運の干支のまちがい', 'NG', src, s.slice(0, 160), '文中の日の干支＝' + oks.join('・')); } }
           } }
       }
       // ── 9. 空亡の印・空亡の年 ──
       if (PS.length) {
-        const ptn = /〔([^〕\n]{0,24}(?:空亡|ひと休み)[^〕\n]{0,12})〕(の月|の日|の年)?/g;
+        const ptn = /〔([^〕\n]{0,24}(?:空亡|ひと休み)[^〕\n]{0,12})〕(?:[（(][^（）()\n]{0,60}[）)])?(の月|の日|の年)?/g;   // 印のあとに読みのかっこがあっても「の月」を読む（2026-11-07）
         for (const m of t.matchAll(ptn)) {
           const tag = m[1]; if (/解空|解け|弱ま/.test(tag)) continue; if (/^の?印/.test(t.slice(m.index + m[0].length - (m[2] || '').length + (m[2] ? m[2].length : 0)).replace(/^(の年|の月|の日)/, ''))) continue;
           const pre = t.slice(Math.max(0, m.index - 80), m.index).replace(/^\d+/, ''); const line = pre.split(/[\n。]/).pop();
           // いちばん近い時の言葉
-          const cand = [...line.matchAll(/(?:((?:19|20)\d\d)年)?(?:(\d{1,2})月(?:(\d{1,2})日)?)?/g)].filter(x => x[0] && (x[1] || x[2]));
+          const cand = [...line.matchAll(/(?:((?:19|20)\d\d)年)?(?:(\d{1,2})月(?:(\d{1,2})日)?)?/g)].filter(x => x[0] && (x[1] || x[2])).filter(x => !(x[3] && /^[）)]?(?:の立春|の節入り|まで|ごろまで|頃まで)/.test(line.slice(x.index + x[0].length))));   // 期限の日付（「2027年2月4日の立春まで」）は印の時ではない（2026-11-07）
           if (!cand.length && !/いま/.test(line)) continue; const x = cand.length ? cand[cand.length - 1] : null;
           const gran = /日〕|の日/.test(tag + (m[2] || '')) ? 'd' : /の月|月〕/.test(tag + (m[2] || '')) ? 'm' : (x && x[3] ? 'd' : x && x[2] ? 'm' : 'y');
           const who = /2人|ふたり/.test(tag) ? 'both' : /お相手/.test(tag) ? 'B' : /本人|あなた/.test(tag) ? 'A' : (two ? 'any' : 'A');
@@ -163,8 +163,8 @@ window.__FACTS = (function () {
           // 「A〜Bは〔…〕の月」：範囲の始まりの日の月で見る
           const rg = line.match(/(?:((?:19|20)\d\d)年)?(\d{1,2})月(\d{1,2})日〜(?:(?:19|20)\d\d年)?\d{1,2}月\d{1,2}日は$/);
           const yr = /〔(\d{4})年は/.exec(m[0]);
-          const lab = line.match(/(?:((?:19|20)\d\d)年)?(\d{1,2})月〜(?:翌)?\d{1,2}月上旬(?:（[^）]*）)?$/), labNow = /いま〜(?:翌)?\d{1,2}月上旬(?:（[^）]*）)?$/.test(line);
-          if (labNow && gran !== 'd' && !yr) { const e = A.ML[0]; res = Ps.map(P => { const e2 = P.ML[0]; return pkKuuBadMonth(P.c, e2.branch, e2); }); what = 'いまの月（' + (e && e.ganzhi) + '）'; }
+          const lab = line.match(/(?:((?:19|20)\d\d)年)?(\d{1,2})月〜(?:翌)?\d{1,2}月上旬(?:（[^）]*）)?(?:の間|の期間|のあいだ|ごろ|頃)?(?:は|が|、|も)?$/), labNow = /いま〜(?:翌)?\d{1,2}月上旬(?:（[^）]*）)?(?:の間|の期間|のあいだ|ごろ|頃)?(?:は|が|、|も)?$/.test(line);
+          if (labNow && gran !== 'd' && !yr) { const mE = +(line.match(/いま〜(?:翌)?(\d{1,2})月上旬/) || [])[1], tm = mE ? (mE === 1 ? 12 : mE - 1) : 0; const pick = P => (tm && P.ML.find(x => x.calMonth === tm)) || P.ML[0]; const e = pick(A); res = Ps.map(P => { const e2 = pick(P); return pkKuuBadMonth(P.c, e2.branch, e2); }); what = 'いまの月（' + (e && e.ganzhi) + '）'; }   // 「いま〜12月上旬」＝11月の節入りからの月（節入りの日は新しい月。アプリの pkSmBr と同じ。2026-11-07）
           else if (lab && gran !== 'd' && !yr) { const mo = +lab[2]; const Ys = lab[1] ? [+lab[1]] : ycands(mo, 0, yearCtxBefore(t, m.index - 48)); res = Ps.map(P => Ys.some(y => isKuuMonth(P, y, mo))); what = `${Ys[0]}年${mo}月（${tr(Ys[0], mo, 20)[1].ganzhi}の月）`; }
           else if (yr) { const Y = +yr[1]; res = Ps.map(P => pkKuuBad(P.c, Y)); what = Y + '年'; }
           else if (rg && gran !== 'd') { const mo = +rg[2], d = +rg[3]; const y = rg[1] ? +rg[1] : resolveY(mo, d, null); const dt = new Date(y, mo - 1, d, 12); res = Ps.map(P => isKuuMonthOfDate(P, dt)); what = `${y}年${mo}月${d}日からの月（${monGzOfDay(y, mo, d)}）`; }
