@@ -163,7 +163,7 @@ window.__FACTS = (function () {
           // 「A〜Bは〔…〕の月」：範囲の始まりの日の月で見る
           const rg = line.match(/(?:((?:19|20)\d\d)年)?(\d{1,2})月(\d{1,2})日〜(?:(?:19|20)\d\d年)?\d{1,2}月\d{1,2}日は$/);
           const yr = /〔(\d{4})年は/.exec(m[0]);
-          const lab = line.match(/(?:((?:19|20)\d\d)年)?(\d{1,2})月〜(?:翌)?\d{1,2}月上旬(?:（[^）]*）)?(?:は|が|、|も)?$/), labNow = /いま〜(?:翌)?\d{1,2}月上旬(?:（[^）]*）)?(?:は|が|、|も)?$/.test(line);
+          const lab = line.match(/(?:((?:19|20)\d\d)年)?(\d{1,2})月〜(?:翌)?\d{1,2}月上旬(?:（[^）]*）)?(?:の間|の期間|のあいだ|ごろ|頃)?(?:は|が|、|も)?$/), labNow = /いま〜(?:翌)?\d{1,2}月上旬(?:（[^）]*）)?(?:の間|の期間|のあいだ|ごろ|頃)?(?:は|が|、|も)?$/.test(line);
           if (labNow && gran !== 'd' && !yr) { const mE = +(line.match(/いま〜(?:翌)?(\d{1,2})月上旬/) || [])[1], tm = mE ? (mE === 1 ? 12 : mE - 1) : 0; const pick = P => (tm && P.ML.find(x => x.calMonth === tm)) || P.ML[0]; const e = pick(A); res = Ps.map(P => { const e2 = pick(P); return pkKuuBadMonth(P.c, e2.branch, e2); }); what = 'いまの月（' + (e && e.ganzhi) + '）'; }   // 「いま〜12月上旬」＝11月の節入りからの月（節入りの日は新しい月。アプリの pkSmBr と同じ。2026-11-07）
           else if (lab && gran !== 'd' && !yr) { const mo = +lab[2]; const Ys = lab[1] ? [+lab[1]] : ycands(mo, 0, yearCtxBefore(t, m.index - 48)); res = Ps.map(P => Ys.some(y => isKuuMonth(P, y, mo))); what = `${Ys[0]}年${mo}月（${tr(Ys[0], mo, 20)[1].ganzhi}の月）`; }
           else if (yr) { const Y = +yr[1]; res = Ps.map(P => pkKuuBad(P.c, Y)); what = Y + '年'; }
