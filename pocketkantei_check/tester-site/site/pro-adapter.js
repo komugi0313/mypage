@@ -603,6 +603,7 @@ window.pkCompatRoles=pkCompatRoles; window.pkCheckPoints=pkCheckPoints;
 /* 相性の材料（PRO の決まり全部）。鑑定文で使い、最後に全部使ったか確かめる */
 window.pkCompatLogicBlock=function(cd,sameSex){ try{ if(!cd||!cd._a) return ''; var love=(cd.kind||'love')==='love', L=[];
   L.push('[COMPATIBILITY — THE SCHOOL\'S FULL LOGIC (computed; the same rules as the professional tool). Use EVERY part below in a full compatibility reading — say each in plain everyday words, never the technical names]');
+  L.push('PARTNER\u2019S FEELINGS: describe what the partner feels only as a tendency the charts show (ja 〜しやすい／〜と感じやすい, ko ~하기 쉬운 편이에요, zt 容易…, en tends to…) — never as a fact about their heart (not 「あなたを深く大切に思っている」, not 상대분은 깊이 아끼며 곁에 두고 싶어 해요).');
   L.push('VERDICT (overall balance): '+cd.verdict+'. Say the overall balance with exactly this strength every time it comes up in the conversation — never stronger (e.g. 「とても相性が良い」 for 「良い点が注意点を上回る」) and never weaker (e.g. 「同じくらい」).');   /* 返事ごとに強さが変わっていた（運営指摘 2026-11-06） */
   if(sameSex) L.push('SAME-SEX COUPLE: never use any word that means "the opposite sex" in any language (異性・이성・異性・the opposite sex) — say "as a romantic partner" (恋愛の相手として・연인으로서・作為戀愛對象). Never treat being the same sex as unusual or as a caution point.');
   var ad=love?pkAttractionDir(cd._a,cd._b,sameSex):null; if(ad) L.push('WHO IS DRAWN TO WHOM (attraction direction — must be stated in one sentence; say "drawn to each other" ONLY if both sides have love stars): '+ad.line+'.');
