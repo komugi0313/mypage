@@ -100,7 +100,7 @@ window.__FACTS = (function () {
         for (const m of t.matchAll(/((?:19|20)\d\d)年[（(](今年|来年|再来年)[）)]/g)) { const ok = NY + REL[m[2]]; if (+m[1] !== ok) add('今年・来年の西暦のまちがい', 'NG', src, m[0], `${m[2]}＝${ok}年`); } }
       // ── 5. 六十干支にない形・天中殺・くずれ ──
       for (const m of t.matchAll(/([甲丙戊庚壬][丑卯巳未酉亥]|[乙丁己辛癸][子寅辰午申戌])/g)) { if (m[1] === '丁子') continue; const ctx = t.slice(Math.max(0, m.index - 12), m.index + 14); add('六十干支にない形', 'NG', src, ctx, '六十干支にない（十干と十二支の陰陽が合わない）'); }
-      for (const m of t.matchAll(/天中殺/g)) add('「天中殺」と書いた', src === 'ui' ? '要確認' : 'NG', src, t.slice(Math.max(0, m.index - 15), m.index + 15), '空亡（ビギナーはひと休みの時期）');
+      for (const m of t.matchAll(/天中殺/g)) add('「天中殺」と書いた', (src === 'ui' || /空亡期（天中殺）|中殺）?＝天中殺|宿命中殺/.test(t.slice(Math.max(0, m.index - 12), m.index + 12))) ? '要確認' : 'NG', src, t.slice(Math.max(0, m.index - 15), m.index + 15), '空亡（ビギナーはひと休みの時期）');
       for (const m of t.matchAll(/(彼|彼女|お相手さん)の(月|日)(?:なので|は避け|〕)/g)) add('空亡の印が名前に戻った（「彼の月」）', 'NG', src, t.slice(Math.max(0, m.index - 20), m.index + 15), '〔お相手は空亡〕の月');
       for (const m of t.matchAll(/〔([^〕\n]{0,20})〕/g)) { if (/(さん|彼|彼女|花子|さくら)/.test(m[1]) && /(空亡|ひと休み)/.test(m[1])) add('空亡の印が名前に戻った（「彼の月」）', 'NG', src, m[0], '〔お相手は空亡〕'); }
       for (const m of t.matchAll(/〔[^〕\n]{0,30}(?=\n|$)/g)) if (!/〕/.test(t.slice(m.index, m.index + 40))) add('くずれた〔〕（閉じていない）', 'NG', src, t.slice(Math.max(0, m.index - 10), m.index + 30), '');
@@ -163,7 +163,7 @@ window.__FACTS = (function () {
           // 「A〜Bは〔…〕の月」：範囲の始まりの日の月で見る
           const rg = line.match(/(?:((?:19|20)\d\d)年)?(\d{1,2})月(\d{1,2})日〜(?:(?:19|20)\d\d年)?\d{1,2}月\d{1,2}日は$/);
           const yr = /〔(\d{4})年は/.exec(m[0]);
-          const lab = line.match(/(?:((?:19|20)\d\d)年)?(\d{1,2})月〜(?:翌)?\d{1,2}月上旬(?:（[^）]*）)?$/), labNow = /いま〜(?:翌)?\d{1,2}月上旬(?:（[^）]*）)?$/.test(line);
+          const lab = line.match(/(?:((?:19|20)\d\d)年)?(\d{1,2})月〜(?:翌)?\d{1,2}月上旬(?:（[^）]*）)?(?:は|が|、|も)?$/), labNow = /いま〜(?:翌)?\d{1,2}月上旬(?:（[^）]*）)?(?:は|が|、|も)?$/.test(line);
           if (labNow && gran !== 'd' && !yr) { const e = A.ML[0]; res = Ps.map(P => { const e2 = P.ML[0]; return pkKuuBadMonth(P.c, e2.branch, e2); }); what = 'いまの月（' + (e && e.ganzhi) + '）'; }
           else if (lab && gran !== 'd' && !yr) { const mo = +lab[2]; const Ys = lab[1] ? [+lab[1]] : ycands(mo, 0, yearCtxBefore(t, m.index - 48)); res = Ps.map(P => Ys.some(y => isKuuMonth(P, y, mo))); what = `${Ys[0]}年${mo}月（${tr(Ys[0], mo, 20)[1].ganzhi}の月）`; }
           else if (yr) { const Y = +yr[1]; res = Ps.map(P => pkKuuBad(P.c, Y)); what = Y + '年'; }

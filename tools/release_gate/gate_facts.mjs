@@ -182,9 +182,10 @@ async function runPk(C) {
       const [pop] = await Promise.all([ctx.waitForEvent('page', { timeout: 10000 }).catch(() => null), p.evaluate(() => { const x = document.getElementById('jn-print'); if (x) x.click(); })]);
       if (pop) { await pop.waitForLoadState('load').catch(() => {}); const t = Date.now(); let txt = '';
         while (Date.now() - t < 80000) { txt = await pop.evaluate(() => (document.getElementById('sheetsWrap') || {}).innerText || '').catch(() => ''); const busy = await pop.evaluate(() => /作成しています|作成中|生成中|読み解いています/.test((document.getElementById('sheetsWrap') || {}).innerText || '')).catch(() => true); if (txt.length > 1500 && !busy && Date.now() - t > 4000) break; await pop.waitForTimeout(700); }
-        await pop.waitForTimeout(2000); rec.texts.sheet = await pop.evaluate(() => { const o = document.getElementById('sheetsWrap'); if (!o) return ''; o.querySelectorAll('details:not([open])').forEach(d => d.open = true); return o.innerText; }).catch(() => txt); await pop.close().catch(() => {}); }
+        await pop.waitForTimeout(2000); rec.sheetGate = await pop.evaluate(() => ({ drop: (window.__sheetGateRows || []).length, off: /計算と合わないところがあったため、定型文/.test(document.body.innerText) })).catch(() => null); rec.texts.sheet = await pop.evaluate(() => { const o = document.getElementById('sheetsWrap'); if (!o) return ''; o.querySelectorAll('details:not([open])').forEach(d => d.open = true); return o.innerText; }).catch(() => txt); await pop.close().catch(() => {}); }
     }
   } catch (e) { rec.err = String(e.message).slice(0, 200); }
+  rec.gate = await p.evaluate(() => window.__pkGateLog || []).catch(() => []);
   rec.calls = st.calls; rec.errs = errs.slice(0, 3); await ctx.close(); return rec;
 }
 async function runEki(C) {
@@ -208,6 +209,7 @@ async function runEki(C) {
     await p.waitForTimeout(1500); rec.texts.sheet = await p.evaluate(() => (document.getElementById('shoContent') || {}).innerText || '');
     await p.evaluate(() => { window.__shared = null; try { App.shareSho(); } catch (e) {} }); await p.waitForTimeout(800); rec.texts.share = await p.evaluate(() => ((window.__shared || {}).text || ''));
   } catch (e) { rec.err = String(e.message).slice(0, 200); }
+  rec.gate = await p.evaluate(() => window.__pkGateLog || []).catch(() => []);
   rec.calls = st.calls; rec.errs = errs.slice(0, 3); await ctx.close(); return rec;
 }
 
@@ -242,7 +244,7 @@ for (const today of TODAYS) {
   await ctx.route('**/.netlify/functions/**', r => r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
   const p = await ctx.newPage(); await p.goto(`${BASE}/pro/app-pro.html`); await p.waitForTimeout(2500); await p.evaluate(LIB);
   for (const r of recs) { const f = await p.evaluate(r => { try { return window.__FACTS.check(r); } catch (e) { return [{ kind: '照合の道具のエラー', sev: '要確認', src: '-', snip: String(e && e.stack || e).slice(0, 300) }]; } }, r);
-    results.push({ id: r.id, site: r.site, compat: !!r.compat, mode: r.mode, today: r.today, kind: r.kind, q: r.q, A: r.A, B: r.B, calls: r.calls, err: r.err, pageErrs: r.errs, len: Object.fromEntries(Object.entries(r.texts || {}).map(([k, v]) => [k, (v || '').length])), findings: f }); }
+    results.push({ id: r.id, site: r.site, compat: !!r.compat, mode: r.mode, today: r.today, kind: r.kind, q: r.q, A: r.A, B: r.B, calls: r.calls, err: r.err, gate: r.gate || [], sheetGate: r.sheetGate || null, pageErrs: r.errs, len: Object.fromEntries(Object.entries(r.texts || {}).map(([k, v]) => [k, (v || '').length])), findings: f }); }
   await ctx.close();
 }
 await b.close(); srv.close();
@@ -257,9 +259,11 @@ for (const r of results) {
 const kinds = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length);
 const summary = kinds.map(k => ({ kind: k, n: groups[k].length, ng: groups[k].filter(x => x.sev === 'NG').length, online: groups[k].filter(x => x.mode === 'online').length, offline: groups[k].filter(x => x.mode === 'offline').length, tools: [...new Set(groups[k].map(x => x.tool))], srcs: [...new Set(groups[k].flatMap(x => String(x.src).split(',')))] }));
 const NG = summary.reduce((t, s) => t + s.ng, 0);
-const report = { date: new Date().toISOString(), size: SIZE, todays: TODAYS, cases: results.length, online: results.filter(r => r.mode === 'online').length, offline: results.filter(r => r.mode === 'offline').length, ng: NG, summary, groups, results };
+const G_ = results.flatMap(r => (r.gate || []).map(g => ({ ...g, r }))); const gateSum = { checks: G_.length, switched: G_.filter(g => g.off).length, switchedCases: results.filter(r => (r.gate || []).some(g => g.off)).length, dropped: G_.reduce((t, g) => t + (g.drop || 0), 0), droppedCases: results.filter(r => (r.gate || []).some(g => g.drop > 0)).length, sheetSwitched: results.filter(r => r.sheetGate && r.sheetGate.off).length, sheetDropped: results.reduce((t, r) => t + (r.sheetGate ? r.sheetGate.drop : 0), 0),
+  byTool: Object.fromEntries([...new Set(results.map(TOOL))].map(k => { const L = G_.filter(g => TOOL(g.r) === k); return [k, { checks: L.length, switched: L.filter(g => g.off).length, dropped: L.reduce((t, g) => t + (g.drop || 0), 0) }]; })) };
+const report = { gate: gateSum, date: new Date().toISOString(), size: SIZE, todays: TODAYS, cases: results.length, online: results.filter(r => r.mode === 'online').length, offline: results.filter(r => r.mode === 'offline').length, ng: NG, summary, groups, results };
 fs.writeFileSync(path.join(OUT, 'report.json'), JSON.stringify(report, null, 1));
-const md = [`# 事実の自動照合（gate_facts）`, ``, `- 件数：${results.length}（オンライン ${report.online}・通信なし ${report.offline}）／今日：${TODAYS.join('・')}`, `- NG（まちがい）：${NG}件／要確認：${summary.reduce((t, s) => t + s.n - s.ng, 0)}件`, ``, `| 種類 | 件数 | NG | オンライン | 通信なし | ツール | 出た場所 |`, `|---|---|---|---|---|---|---|`,
+const md = [`# 事実の自動照合（gate_facts）`, ``, `- 件数：${results.length}（オンライン ${report.online}・通信なし ${report.offline}）／今日：${TODAYS.join('・')}`, `- NG（まちがい）：${NG}件／要確認：${summary.reduce((t, s) => t + s.n - s.ng, 0)}件`, `- 出す前の照らし合わせ（pkFactGate）：照合 ${gateSum.checks}回・通信なしの答えに切りかえ ${gateSum.switched}回（${gateSum.switchedCases}件）・外した文 ${gateSum.dropped}文（${gateSum.droppedCases}件）／鑑定書：定型文に切りかえ ${gateSum.sheetSwitched}件・外した文 ${gateSum.sheetDropped}文`, ...Object.entries(gateSum.byTool).map(([k, v]) => `  - ${k}：照合 ${v.checks}回・切りかえ ${v.switched}回・外した文 ${v.dropped}文`), ``, `| 種類 | 件数 | NG | オンライン | 通信なし | ツール | 出た場所 |`, `|---|---|---|---|---|---|---|`,
   ...summary.map(s => `| ${s.kind} | ${s.n} | ${s.ng} | ${s.online} | ${s.offline} | ${s.tools.join('・')} | ${s.srcs.join('・')} |`), ``];
 for (const k of kinds) { md.push(`## ${k}（${groups[k].length}件）`, '');
   for (const x of groups[k].slice(0, 8)) md.push(`- [${x.sev}] ${x.tool}・${x.mode === 'online' ? 'オンライン' : '通信なし'}・今日${x.today}・${x.src}｜相談「${x.q || '（空欄）'}」`, `  - 文：${String(x.snip).replace(/\n/g, '⏎').slice(0, 220)}`, ...(x.expect ? [`  - 正しくは：${x.expect}`] : []), `  - 例の id：${x.id}`);
