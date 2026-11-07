@@ -142,7 +142,7 @@ window.__FACTS = (function () {
         for (const s of sentences(t)) {
           for (const m of s.matchAll(new RegExp('(' + GZ + ')の(年運|月運|日運)|(年運|月運|日運)(?:は|が|の|：|:|「|（|\\()*(' + GZ + ')', 'g'))) {
             const gz = m[1] || m[4], kind = m[2] || m[3]; if (!valid60(gz)) continue;
-            if (kind === '年運') { const ys = [...s.matchAll(/((?:19|20)\d\d)年(?!\d{1,2}月)/g)].map(x => +x[1]); if (ys.length && !ys.some(y => gzY(y) === gz)) add('年運の干支のまちがい', 'NG', src, s.slice(0, 160), ys.map(y => y + '年＝' + gzY(y)).join('・')); }
+            if (kind === '年運') { const ys = [...s.matchAll(/((?:19|20)\d\d)年(?!\d{1,2}月)/g)].map(x => +x[1]); if (/今年/.test(s)) ys.push(NY); if (/来年/.test(s)) ys.push(NY + 1); if (/再来年/.test(s)) ys.push(NY + 2); if (ys.length && !ys.some(y => gzY(y) === gz)) add('年運の干支のまちがい', 'NG', src, s.slice(0, 160), ys.map(y => y + '年＝' + gzY(y)).join('・')); }
             if (kind === '月運') { const ms = [...s.matchAll(/(?:((?:19|20)\d\d)年)?(\d{1,2})月(?!\d{0,2}日)/g)]; if (ms.length) { const oks = ms.flatMap(x => { const mo = +x[2]; if (mo < 1 || mo > 12) return []; const y = x[1] ? +x[1] : resolveY(mo, 0, null); return [tr(y, mo, 20)[1].ganzhi, tr(y, mo, 1)[1].ganzhi]; }); if (oks.length && oks.indexOf(gz) < 0) add('月運の干支のまちがい', 'NG', src, s.slice(0, 160), '文中の月の干支＝' + [...new Set(oks)].join('・')); } }
             if (kind === '日運') { const ds = [...s.matchAll(/(?:((?:19|20)\d\d)年)?(\d{1,2})月(\d{1,2})日/g)]; if (ds.length) { const oks = ds.map(x => { const y = x[1] ? +x[1] : resolveY(+x[2], +x[3], null); return dayGz(y, +x[2], +x[3]); }); if (oks.indexOf(gz) < 0) add('日運の干支のまちがい', 'NG', src, s.slice(0, 160), '文中の日の干支＝' + oks.join('・')); } }
           } }
