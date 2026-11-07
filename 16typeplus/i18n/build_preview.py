@@ -31,7 +31,7 @@ def lang_data(lang):
         combos={k:{'karai':v['karai'],'name':v.get('name',''),'atari':v.get('atari',[])} for k,v in combos.items()}
     lvq=js('/home/user/mypage/16typeplus/love/love.json')['questions']
     lvt_p='/home/user/mypage/16typeplus/love/love_types.ja.json'
-    lvt=js(lvt_p) if os.path.exists(lvt_p) else {t['t']:t for t in js('/home/user/mypage/16typeplus/love/love.json')['types']}
+    lvt=js(lvt_p)
     if lang!='ja':
         p=I+'love.{}.json'.format(lang)
         if os.path.exists(p):
