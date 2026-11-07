@@ -455,6 +455,47 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   try{ const { execFileSync } = await import('child_process'); const o=execFileSync('node',[path.join(ROOT,'tools/release_gate/gate_voice_count.cjs')],{encoding:'utf8'}).trim(); if(o!=='OK') e.push('おためしの回数：'+o); }catch(err){ e.push('おためしの回数：'+String((err.stdout||err.message)).trim()); }
   ['pro/privacy-pro.html','beginner/privacy.html','eki-pro/privacy.html'].forEach(f=>{ if(!/占いの言葉の自動直し/.test(fs.readFileSync(path.join(ROOT,f),'utf8'))) e.push(f+' にプライバシーの説明がない'); });
   console.log('  '+(e.length?'NG':'OK')+' 占いの言葉の自動直し（3サイト同じ・安全装置・おためしの回数・画面・プライバシー）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('自動直し: '+e.join('・')); }
+// 事実の差しこみの印（〔F:…〕）と出す前の照らし合わせ（pkFactGate）（先生の指示 2026-11-07「いつになったらミスが無くなるのか」）：
+//  ① 3つのツール（PRO・易・鑑定書＋ミラー・生成したビギナー）に同じ中身が入っている ② 印が計算どおりの言葉になる（ビギナーは干支なし）・知らない印/閉じない印は外す
+//  ③ 材料の事実が印になる（生年月日は変えない） ④ 計算と合わない事実の文だけを外し、正しい文は外さない ⑤ 1行目が消えたら通信なしの答えに切りかえる ⑥ 通信なしの答え（ツールが全部書く）を照らしても1文も外れない
+{ const e=[]; const blk=f=>{ const t=fs.readFileSync(path.join(ROOT,f),'utf8'); const m=t.match(/\/\* PK-FACT-MARKS:start[\s\S]*?\/\* PK-FACT-MARKS:end \*\//); return m?m[0]:''; };
+  const B0=blk('pro/app-pro.html'); if(!B0) e.push('PROに仕組みがない');
+  [dir+'/'+page0,'eki-pro/app/index.html','pro/meishi-sheet.html','meishiki-original/meishi-sheet.html','beginner/meishi-sheet.html'].forEach(f=>{ if(blk(f)!==B0) e.push(f+' の中身がPROと同じでない'); });
+  { const ek=fs.readFileSync(path.join(ROOT,'eki-pro/app/index.html'),'utf8'); if(!/pkFmRule\(ekiFmEnv\(\)\)/.test(ek)||!/pkFmExpand\(t,_fmE\)/.test(ek)||!/pkFactGate\(_o,_fmE\)/.test(ek)) e.push('易の文章作成に印・照らし合わせが入っていない');
+    const sh=fs.readFileSync(path.join(ROOT,'pro/meishi-sheet.html'),'utf8'); if(!/sys=pkFmMaterial\(sys,_fmE\)\+pkFmRule\(_fmE\)/.test(sh)||!/pkFmExpand\(txt,_fmE\)/.test(sh)||!/pkFactGate\(txt,_fmE\)/.test(sh)) e.push('鑑定書の詳細鑑定に印・照らし合わせが入っていない'); }
+  const r=await p.evaluate(()=>{ const out={}; const c0=chart; try{
+    chart=baziCompute({year:1981,month:6,day:10,hour:22,minute:28,sex:'female',tu:false},'','none');
+    const du=curDu(chart), dg=du.ganzhi||(du.stem+du.branch), P=chart.pillars, dayP=P[2].stem+P[2].branch;
+    const T=pkfmToday(), D=new Date(T.y,T.m-1,T.d+10,12), dy=D.getFullYear(), dm=D.getMonth()+1, dd=D.getDate(), W='日月火水木金土'.charAt(D.getDay()), WX='日月火水木金土'.charAt((D.getDay()+3)%7), DG=pkfmDGz(dy,dm,dd);
+    out.cal=[pkfmDGz(2026,11,8),pkfmYGz(2027),pkfmMGz(2026,12),pkfmWd(2026,11,8)].join(',');
+    const env=pkFmEnvPro(false,false,'材料：血刃が巡る',''), envP=pkFmEnvPro(false,true,'','');
+    const src='〔F:y2027〕年に〔F:du_now〕の流れ。日柱（〔F:p_day〕）。〔F:d'+dy+'-'+dm+'-'+dd+'〕（'+W+'）に。〔F:zz9〕は〔F:s:血刃〕と〔F:s:天乙貴人〕。〔F:y2028';
+    out.ex=pkFmExpand(src,env).text; out.exP=pkFmExpand(src,envP).text;
+    out.want={y:'2027年（丁未・46歳）',du:'今の大運（'+dg+'）',p:'日柱（'+dayP+'）',d:dm+'月'+dd+'日（'+W+'）'+DG+'の日',dP:dm+'月'+dd+'日（'+W+'）',yP:'2027年（46歳）'};
+    out.mat=pkFmMaterial('2027年（丁未・46歳）と'+dm+'月'+dd+'日（'+W+'）、今の大運（'+dg+'）、日柱「'+dayP+'」。生年月日：1981年6月10日 22:28',env);
+    out.matWant=['〔F:y2027〕','〔F:d'+pkfmFwdY(dm,dd)+'-'+dm+'-'+dd+'〕','〔F:du_now〕','〔F:p_day〕','1981年6月10日'];
+    const good=['2027年（丁未・46歳）に動くのが合っています。',dm+'月'+dd+'日（'+W+'）は'+DG+'の日です。','日柱（'+dayP+'）の人です。','今の大運（'+dg+'）は大事な10年。'];
+    const bad=['2027年（丙午・46歳）は動きやすい年です。','2028年（戊申・50歳）も良い年です。',dm+'月'+dd+'日（'+WX+'）が向いています。','日柱（甲子）の人です。','大運「'+(dg==='癸亥'?'壬戌':'癸亥')+'」に入ると変わります。','甲丑の気配があります。'];
+    const g1=pkFactGate('【結論】'+good[0]+'\n'+good.slice(1).join('')+bad.join('')+'\n'+'この流れを大切に、自分のペースで準備を重ねていきましょう。焦らずに、できることから一つずつ進めると、気持ちも整っていきます。まわりの人の声にも耳を傾けながら、無理のない計画を立ててください。毎日の小さな積み重ねが、次の一歩を支えてくれます。',pkFmEnvPro(false,false,'',''));
+    out.g1={rows:g1.rows.length,keep:good.every(x=>g1.text.indexOf(x)>=0),gone:bad.every(x=>g1.text.indexOf(x)<0),off:pkFactGateOff(g1)};
+    const g2=pkFactGate(bad[0]+'\n'+good.join(''),pkFmEnvPro(false,false,'','')); out.g2off=pkFactGateOff(g2);
+    // 通信なしの答え（ツールが全部書く）は、照らし合わせても1文も外れない
+    let seed=5; const rnd=()=>{ seed=(seed*1103515245+12345)%2147483648; return seed/2147483648; }; const Q=['転職するなら今年と来年のどちらがいいですか','11月20日と11月27日、告白するならどちらがいいですか','結婚できますか','金運が上がる時期は','明日彼に連絡してもいいですか'];
+    out.fp=[]; for(let k=0;k<25;k++){ const tu=rnd()<0.3; let c=baziCompute({year:1950+Math.floor(rnd()*60),month:1+Math.floor(rnd()*12),day:1+Math.floor(rnd()*28),hour:Math.floor(rnd()*24),minute:0,sex:rnd()<0.5?'male':'female',tu},'','none'); if(tu) c=markTimeUnknown(c); chart=c; const q=Q[k%Q.length];
+      let t=String(consultParts(q).local||''); try{ t=pkEnsureBig(t,chart,q); t=pkEnsureConsult(t,chart,q); t=pkEnsureLove(t,chart,q); t=pkEnsureDays(t,chart,q); }catch(_e){}
+      const g=pkFactGateRun(t,false,false,q); if(g.rows.length) out.fp.push(chart.birth.clock+'：'+g.rows[0].what+'｜'+g.rows[0].calc); }
+  }catch(err){ out.err=String(err&&err.message||err); } chart=c0; return out; });
+  if(r.err) e.push('動かない：'+r.err);
+  else { if(r.cal!=='丙戌,丁未,庚子,日') e.push('暦の計算：'+r.cal);
+    ['y','du','p','d'].forEach(k=>{ if(r.ex.indexOf(r.want[k])<0) e.push('印の置きかえ（'+k+'）：'+r.ex.slice(0,120)); });
+    if(/〔F|F:|年年|\u0011|\u0012/.test(r.ex)) e.push('印・「年」の重なりが残る：'+r.ex.slice(0,120));
+    if(r.ex.indexOf('血刃')<0||r.ex.indexOf('天乙貴人')>=0) e.push('星の印（材料にある星だけ）');
+    if(r.exP.indexOf(r.want.yP)<0||r.exP.indexOf(r.want.dP)<0||/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]|大運|日柱/.test(r.exP)) e.push('ビギナーの印（干支・専門用語なし）：'+r.exP.slice(0,120));
+    r.matWant.forEach(w=>{ if(r.mat.indexOf(w)<0) e.push('材料の印（'+w+'）：'+r.mat.slice(0,120)); });
+    if(r.g1.rows!==6||!r.g1.keep||!r.g1.gone||r.g1.off) e.push('照らし合わせ：'+JSON.stringify(r.g1));
+    if(!r.g2off) e.push('1行目が消えたのに切りかえない');
+    if(r.fp.length) e.push('通信なしの答えの正しい文を外した：'+r.fp.slice(0,2).join(' / ')); }
+  console.log('  '+(e.length?'NG':'OK')+' 事実の差しこみの印・出す前の照らし合わせ（3ツール同じ・置きかえ・ビギナー・材料・正しい文を外さない・切りかえ）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('事実の印・照らし合わせ: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));

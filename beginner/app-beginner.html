@@ -8164,6 +8164,179 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
   out=out.replace(/(（[^（）\n]{1,40}）)([*＊]{0,2})\1/g,'$1$2');   // 同じかっこが2つ続いたら1つに
   out=out.replace(/([一-龥]{1,8})[（(]\1[（(]([^（）()\n]{1,80})[）)][）)]/g,'$1（$2）');   // 「害（害（がい：…））」のような言葉の二重がっこは1つに
   return out.replace(/\u0003/g,''); }catch(e){ return String(s).replace(/\u0003/g,''); } }
+/* PK-FACT-MARKS:start ── 事実の差しこみの印（〔F:…〕）と、出す前の事実の照らし合わせ（pkFactGate）。PRO・易・鑑定書で同じ中身（先生の指示 2026-11-07「いつになったらミスが無くなるのか」）。
+   ① 文章作成には、西暦・年齢・日付・曜日・干支・大運・柱・星の名前を自分で書かせず、印（〔F:y2027〕〔F:d2026-11-08〕〔F:du_now〕〔F:s:血刃〕など）で書かせる（pkFmRule）。
+      画面に出す前に、ツールが印を計算どおりの言葉に置きかえる（pkFmExpand）。知らない印・閉じない印は外す。ビギナーのやさしい版は干支を出さない言葉にする。
+   ② 印を使わずに書いた事実は、今までの直し（pkFactFix・pkRunGzFix・pkFixAge など）のあと、最後に pkFactGate が計算と照らす。
+      合わない事実（日付と曜日・日／月／年の干支・年齢・柱と大運の干支・六十干支にない形・空亡の印）が残った文は外す。
+      外した結果、1行目がなくなる・半分以上が消える・空になるときは、通信なしの答え（ツールが全部書く答え）に切りかえる（pkFactGateOff）。
+   照らし方は「正しい事実を外さない」ほうに寄せる（年が書いていない日付は去年・今年・来年のどれかで合えばよい、など）。 */
+var PKFM_G='甲乙丙丁戊己庚辛壬癸', PKFM_Z='子丑寅卯辰巳午未申酉戌亥', PKFM_W='日月火水木金土';
+function pkfmGz(i){ i=((i%60)+60)%60; return PKFM_G.charAt(i%10)+PKFM_Z.charAt(i%12); }
+function pkfmYGz(y){ return pkfmGz(y-4); }
+function pkfmDGz(y,m,d){ return pkfmGz(Math.round(Date.UTC(y,m-1,d)/86400000)+2440637); }
+function pkfmMGz(y,m){ var yy=m===1?y-1:y, s=((yy-4)%10+10)%10; return PKFM_G.charAt(((s%5)*2+2+((m+10)%12))%10)+PKFM_Z.charAt(m%12); }   /* その年 m 月の節入りから始まる月の干支 */
+function pkfmOkDate(y,m,d){ if(!(y>=1900&&y<=2200&&m>=1&&m<=12&&d>=1&&d<=31)) return false; var x=new Date(y,m-1,d,12,0,0,0); return x.getMonth()===m-1&&x.getDate()===d; }
+function pkfmWd(y,m,d){ return PKFM_W.charAt(new Date(y,m-1,d,12,0,0,0).getDay()); }
+function pkfmToday(){ var n=new Date(Date.now()+9*3600000); return {y:n.getUTCFullYear(),m:n.getUTCMonth()+1,d:n.getUTCDate()}; }   /* 今日は日本時間 */
+function pkfmValid(g){ return !!g&&g.length===2&&PKFM_G.indexOf(g.charAt(0))>=0&&PKFM_Z.indexOf(g.charAt(1))>=0&&PKFM_G.indexOf(g.charAt(0))%2===PKFM_Z.indexOf(g.charAt(1))%2; }
+/* 年を書かない日付・月を、今までの直し（pkFactFix ⑦⑧）と同じく「今日から先」で読む年 */
+function pkfmFwdY(m,d){ var T=pkfmToday(), t0=new Date(T.y,T.m-1,T.d,12,0,0,0), a=new Date(T.y,m-1,d||28,12,0,0,0); return a<t0?T.y+1:T.y; }
+function pkfmYLab(y,env){ env=env||{}; var P=env.P||[], pl=!!env.plain, a=[], A=P[0], B=env.two?P[1]:null, tg='';
+  if(!pl&&!env.noYGz) a.push(pkfmYGz(y));
+  if(A&&A.by&&y>=A.by&&y-A.by<=120){ if(B&&B.by&&y>=B.by) a.push('あなた'+(y-A.by)+'歳／お相手'+(y-B.by)+'歳'); else if(!B) a.push((y-A.by)+'歳'); }
+  try{ if(env.yTag) tg=env.yTag(y)||''; }catch(e){ tg=''; }
+  return y+'年'+(a.length?'（'+a.join('・')+'）':'')+tg; }
+function pkfmMLab(y,m,env){ env=env||{}; var tg=''; try{ if(env.mTag) tg=env.mTag(y,m)||''; }catch(e){ tg=''; }
+  return (y!==pkfmFwdY(m)?y+'年':'')+m+'月'+((env.plain||env.noMGz)?'':'（'+pkfmMGz(y,m)+'の月）')+tg; }
+function pkfmDLab(y,m,d,env){ env=env||{}; var tg=''; try{ if(env.dTag) tg=env.dTag(y,m,d)||''; }catch(e){ tg=''; }
+  return (y!==pkfmFwdY(m,d)?y+'年':'')+m+'月'+d+'日（'+pkfmWd(y,m,d)+'）'+((env.plain||env.noDGz)?'':pkfmDGz(y,m,d)+'の日')+tg; }
+function pkfmOne(k,env){ env=env||{}; var pl=!!env.plain, B=false, P=env.P||[], m, T=pkfmToday();
+  if(/^B:/.test(k)){ if(!env.two) return null; B=true; k=k.slice(2); }
+  var who=P[B?1:0];
+  if((m=k.match(/^y(\d{4})$/))){ if(B) return null; var y=+m[1]; return (y>=1900&&y<=2200)?pkfmYLab(y,env):null; }
+  if((m=k.match(/^m(\d{4})-(\d{1,2})$/))){ if(B) return null; return pkfmOkDate(+m[1],+m[2],1)?pkfmMLab(+m[1],+m[2],env):null; }
+  if((m=k.match(/^d(\d{4})-(\d{1,2})-(\d{1,2})$/))){ if(B) return null; return pkfmOkDate(+m[1],+m[2],+m[3])?pkfmDLab(+m[1],+m[2],+m[3],env):null; }
+  if((m=k.match(/^n(\d{4})-(\d{1,2})$/))){ if(B||!pkfmOkDate(+m[1],+m[2],1)) return null; return (+m[1]!==pkfmFwdY(+m[2])?(+m[1])+'年':'')+(+m[2])+'月'; }   /* 干支・印のつかない月（範囲の終わり「〜12月上旬」など） */
+  if(k==='today') return pkfmDLab(T.y,T.m,T.d,env);
+  if((m=k.match(/^du_(now|next|prev)$/))){ if(env.eki||!who||!who.du||!who.du.length||who.duI==null||who.duI<0) return null; var j=who.duI+(m[1]==='next'?1:(m[1]==='prev'?-1:0)), g=who.du[j]; if(!g) return null;
+    var W=pl?{now:'いまの10年の運の流れ',next:'次の10年の運の流れ',prev:'ひとつ前の10年の運の流れ'}:{now:'今の大運',next:'次の大運',prev:'前の大運'}; return (B?'お相手の':'')+W[m[1]]+(pl?'':'（'+g+'）'); }
+  if((m=k.match(/^p_(year|month|day|hour)$/))){ if(env.eki||!who||!who.pil) return null; var ix={year:0,month:1,day:2,hour:3}[m[1]], g2=who.pil[ix]; if(!g2) return null;
+    return (B?'お相手の':'')+(pl?['生まれた年','生まれた月','生まれた日','生まれた時間'][ix]:['年柱','月柱','日柱','時柱'][ix]+'（'+g2+'）'); }
+  if((m=k.match(/^s:(.{1,8})$/))){ if(pl||env.eki) return null; return (env.stars&&env.stars[m[1]])?m[1]:null; }
+  return null; }
+/* 文章作成への指示（印の一覧。例は実際に置きかわる言葉で見せる） */
+function pkFmRule(env){ try{ env=env||{}; var T=pkfmToday(), pl=!!env.plain, eki=!!env.eki, y1=T.y+1, n1=new Date(T.y,T.m-1,T.d+1,12), m1=new Date(T.y,T.m,1,12);
+  var dk=n1.getFullYear()+'-'+(n1.getMonth()+1)+'-'+n1.getDate(), mk=m1.getFullYear()+'-'+(m1.getMonth()+1);
+  var s='\n【事実の差しこみの印（必ず守る・最優先）】西暦・年齢・日付・曜日'+(pl?'':(eki?'':'・干支・大運・柱・星の名前'))+'は、自分で書かずに次の印だけで書く。画面に出す前に、ツールが計算どおりの言葉（'+(pl?'年齢・曜日':(eki?'年齢・曜日':'干支・年齢・曜日'))+'つき）に置きかえる。印のすぐあとに「年」「月」「日」や、年齢・曜日・干支のかっこを足さない。印の形（〔F:…〕）を変えない。\n';
+  s+='・年は〔F:y'+y1+'〕（'+y1+'年のこと）\n・月は〔F:m'+mk+'〕（'+m1.getFullYear()+'年'+(m1.getMonth()+1)+'月のこと。範囲の終わり「〜○月上旬」のような干支のいらない月は〔F:n'+mk+'〕）\n・日は〔F:d'+dk+'〕（'+n1.getFullYear()+'年'+(n1.getMonth()+1)+'月'+n1.getDate()+'日のこと。今日・明日・来週の○曜日なども、日付を書くときはこの印で）\n';
+  if(!eki){ var A=(env.P||[])[0];
+    if(A&&A.du&&A.duI!=null&&A.duI>=0) s+=pl?'・10年ごとの運の流れ：〔F:du_now〕（いま）〔F:du_next〕（次）\n':'・大運：〔F:du_now〕（今の大運）〔F:du_next〕（次の大運）〔F:du_prev〕（前の大運）。「大運」の言葉と干支は印に入っている\n';
+    if(!pl){ s+='・柱：〔F:p_year〕〔F:p_month〕〔F:p_day〕〔F:p_hour〕（「年柱」などの言葉と干支は印に入っている）\n';
+      if(env.two) s+='・お相手の大運・柱は「B:」を付ける：〔F:B:du_now〕〔F:B:p_day〕\n';
+      var st=Object.keys(env.stars||{}); if(st.length) s+='・星の名前は、材料にある星だけを〔F:s:'+st[0]+'〕のように書く（使える星：'+st.slice(0,30).join('・')+'）\n'; } }
+  s+='・材料の中の印（〔F:…〕）は、そのまま写して使う。西暦・日付・'+(pl?'年齢':'干支・年齢')+'を数字や字で直接書いた文は、ツールの照らし合わせで外されることがある。\n';
+  return s; }catch(e){ return ''; } }
+function pkFmTail(env){ return '\n【最後に確認】西暦・日付・曜日'+((env&&(env.plain||env.eki))?'':'・干支・大運・柱')+'は、自分で書かずに〔F:…〕の印で書く（【事実の差しこみの印】のとおり）。'; }
+/* 印を計算どおりの言葉に置きかえる。stat：ok＝置きかえた印の数・bad＝外した印の数・direct＝印を使わずに書いた事実の数 */
+function pkFmCount(t){ var s=String(t||'').replace(/[〔［\[【]{0,2}[ 　]*F[ 　]*[:：][^〕］\]】\n]{0,40}[〕］\]】]{0,2}/g,''), n=0;
+  [/(?:19|20)\d\d年/g,/(?<!\d)\d{1,2}月\d{1,2}日/g,/(?<!\d)\d{1,2}月(?!\d{1,2}日)/g,/(?<!\d)\d{1,3}(?:歳|才)/g,/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g,/[日月火水木金土]曜/g].forEach(function(re){ n+=(s.match(re)||[]).length; }); return n; }
+function pkFmExpand(t,env){ var st={ok:0,bad:0,direct:0}; t=String(t==null?'':t); try{ st.direct=pkFmCount(t);
+  var KEY='(?:B[:：])?(?:y\\d{4}|[mn]\\d{4}-\\d{1,2}|d\\d{4}-\\d{1,2}-\\d{1,2}|du_(?:now|next|prev)|p_(?:year|month|day|hour)|s[:：][一-龥]{2,5}|today)';
+  t=t.replace(/(?:年柱|月柱|日柱|時柱)(?:の干支)?[ 　]*[（(「『][ 　]*([〔［\[【]{1,2}[ 　]*F[ 　]*[:：][ 　]*(?:B[:：])?p_\w+[ 　]*[〕］\]】]{1,2})[ 　]*[）)」』]/g,'$1')   /* 「日柱（〔F:p_day〕）」→ 印だけ（印が「日柱（…）」になるので） */
+    .replace(/(?:(?:今|いま|現在|次|前)の)?大運[ 　]*[（(「『]?[ 　]*([〔［\[【]{1,2}[ 　]*F[ 　]*[:：][ 　]*(?:B[:：])?du_\w+[ 　]*[〕］\]】]{1,2})[ 　]*[）)」』]?/g,'$1')
+    .replace(/(?:お相手の)?(?:(?:今|いま|現在|次|前)の)?大運(?:は|が|である|とは)[ 　]*(?=[〔［\[【]{1,2}[ 　]*F[ 　]*[:：][ 　]*(?:B[:：])?du_)/g,'')   /* 「大運は〔F:du_now〕」→ 印だけ（印が「今の大運（…）」になるので） */
+    .replace(/(?:お相手の)?(?:年柱|月柱|日柱|時柱)(?:は|が|である|とは)[ 　]*(?=[〔［\[【]{1,2}[ 　]*F[ 　]*[:：][ 　]*(?:B[:：])?p_)/g,'');
+  var one=function(k){ var r=null, kk=String(k).replace(/[ 　]/g,'').replace(/：/g,':'); try{ r=pkfmOne(kk,env); }catch(e){ r=null; } if(r==null){ st.bad++; return '\u0006'; } st.ok++; var ty=kk.replace(/^B:/,'').charAt(0); return '\u0011'+(/[ymdn]/.test(ty)?ty:'x')+r+'\u0012'; };
+  t=t.replace(/[〔［\[【]{1,2}[ 　]*F[ 　]*[:：][ 　]*([^〔〕［］\[\]【】\n]{1,40}?)[ 　]*[〕］\]】]{1,2}/g,function(m0,k){ return one(k); });   /* かっこつき（〔F:…〕〔[F:…]〕[F:…]［F：…］【F:…】） */
+  t=t.replace(/[〔［\[【]{1,2}[ 　]*F[ 　]*[:：][^\n〔〕［］\[\]【】。、]{0,30}/g,function(){ st.bad++; return '\u0006'; });   /* 閉じない印（くずれ）は外す */
+  t=t.replace(new RegExp('(?<![A-Za-z])F[:：]('+KEY+')','g'),function(m0,k){ return one(k); });   /* かっこを付け忘れた印 */
+  if(t.indexOf('\u0006')>=0){ t=t.replace(/([\s\S])?\u0006(では|には|とは|で|が|は|を|に|の|も|と)?/g,function(m0,pv,nx){ pv=pv||''; if(nx==='の') return pv+'その'; if(nx&&(!pv||/[はがのをにでもと、。\n（(]/.test(pv))) return pv; return pv+(nx||''); })
+    .replace(/[（(][、・\s]*[）)]/g,'').replace(/、{2,}/g,'、').replace(/(^|[。！？\n])、/g,'$1'); }
+  /* 印のすぐあとに文章作成が足した「年」「月」「日」・年齢や曜日・干支のかっこは外す（印の言葉にもう入っている） */
+  var ANN=function(c){ return /^[ 　]*$/.test(String(c).replace(/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥](?:の年|の月|の日|年|月|日)?|\d{1,3}(?:歳|才)|[日月火水木金土](?:曜日?)?|[ぁ-ん]{2,10}|あなた|お相手|本人|[・、／\/：:＝=\s]/g,'')); };
+  t=t.replace(/\u0011d([^\u0012]*)\u0012の日(運)?/g,function(m0,r,un){ return /の日(?:〔[^〔〕]*〕)?$/.test(r)?'\u0011d'+r.replace(/の日((?:〔[^〔〕]*〕)?)$/,un?'の日$1':'の日$1')+'\u0012'+(un?'運':''):(un?m0:'\u0011d'+r+'\u0012'); });   /* 「〔F:d…〕の日」→「…丙戌の日」（「の日の日」にしない） */
+  t=t.replace(/\u0011([ymdnx])([^\u0012]*)\u0012((?:年|月|日)(?![間ぶ後前中以目])|)((?:[ 　]*[（(][^（）()\n]{0,24}[）)])*)/g,function(m0,ty,r,unit,par){ if(unit&&!((ty==='y'&&unit==='年')||((ty==='m'||ty==='n')&&unit==='月')||(ty==='d'&&unit==='日'))) return r+unit+par; if(ty==='n') return r+par; var keep=''; String(par||'').replace(/[（(]([^（）()\n]{0,24})[）)]/g,function(x,c){ if(!(ty!=='x'&&ANN(c))) keep+=x; return x; }); return r+keep; });
+  t=t.replace(/[\u0011\u0012]/g,'');
+  t=t.replace(/(〔[^〔〕\n]{1,16}〕)(?:\1)+/g,'$1');   /* 同じ印が2つ続いたら1つに（〔空亡〕〔空亡〕） */
+  }catch(e){} try{ if(typeof window!=='undefined'){ (window.__pkFmStat=window.__pkFmStat||[]).push(st); if(window.__pkFmStat.length>200) window.__pkFmStat.shift(); } }catch(e){}
+  return {text:t,stat:st}; }
+/* 文章作成に渡す材料（相談文・ツールの計算）の事実を、印に置きかえる（文章作成が写すのが印になるように。生年月日は置きかえない） */
+function pkFmMaterial(u,env){ try{ u=String(u==null?'':u); env=env||{}; var GZ='[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]', A=(env.P||[])[0]||{}, B=env.two?((env.P||[])[1]||{}):{};
+  var ANN=function(c){ return /^[ 　]*$/.test(String(c).replace(new RegExp(GZ+'(?:の年|の月|の日|年|月|日)?','g'),'').replace(/\d{1,3}(?:歳|才)|[日月火水木金土](?:曜日?)?|[ぁ-ん]{2,10}|あなた|お相手|本人|[・、／\/：:＝=\s]/g,'')); };
+  var tail=function(str,i,key){ var k=i, m; while((m=str.slice(k).match(/^[ 　]*[（(〔]([^（）()〔〕\n]{0,30})[）)〕]/))&&ANN(m[1])&&!/空亡|休み|解空/.test(m[1])) k+=m[0].length; if((m=str.slice(k).match(new RegExp('^[ 　]*'+GZ+'の(?:日|月)')))) k+=m[0].length;
+    var ym=String(key||'').match(/^y(\d{4})$/); if(ym&&(m=str.slice(k).match(new RegExp('^[ 　・、]*[「『（(]?('+GZ+')(?:の年|年)?[」』）)]?')))&&(m[1]===pkfmYGz(+ym[1])||m[1]===pkfmYGz(+ym[1]-1))) k+=m[0].length;   /* 「2026年 丙午」「2026年・丙午の年」の干支も印に入っている */
+    return k; };
+  var birth=function(str,i,j){ return /生年月日|誕生|生まれ[：:]|生[：:]/.test(str.slice(Math.max(0,i-12),i))||/^[ 　]*(?:[（(][^）)\n]{0,12}[）)])?[ 　]*(?:生|うまれ|に生まれ|\d{1,2}[:：時])/.test(str.slice(j,j+14)); };
+  var rep=function(str,re,mk){ var out='', last=0, m; re.lastIndex=0; while((m=re.exec(str))){ var i=m.index, j=i+m[0].length; var key=mk(m); if(!key||birth(str,i,j)){ continue; } var k=tail(str,j,key); out+=str.slice(last,i)+'〔F:'+key+'〕'; last=k; re.lastIndex=k; } return out+str.slice(last); };
+  u=rep(u,/(?<![\dy])((?:19|20)\d\d)年(\d{1,2})月(\d{1,2})日/g,function(m){ return pkfmOkDate(+m[1],+m[2],+m[3])?'d'+(+m[1])+'-'+(+m[2])+'-'+(+m[3]):''; });
+  u=rep(u,/(?<![\dy])((?:19|20)\d\d)年(\d{1,2})月(?![\d日])/g,function(m){ return (+m[2]>=1&&+m[2]<=12)?'m'+(+m[1])+'-'+(+m[2]):''; });
+  u=rep(u,/(?<![\dy])((?:19|20)\d\d)年(?![\d年度代版生])/g,function(m){ return 'y'+(+m[1]); });
+  u=rep(u,/(?<![\d年\-])(\d{1,2})月(\d{1,2})日(?![\d間])/g,function(m){ var y=pkfmFwdY(+m[1],+m[2]); return pkfmOkDate(y,+m[1],+m[2])?'d'+y+'-'+(+m[1])+'-'+(+m[2]):''; });
+  u=rep(u,new RegExp('(?<![\\d年\\-〜～])(\\d{1,2})月(?=[ 　]*[（(]'+GZ+'の月[）)])','g'),function(m){ return (+m[1]>=1&&+m[1]<=12)?'m'+pkfmFwdY(+m[1])+'-'+(+m[1]):''; });
+  u=u.replace(/〔F:[mn](\d{4})-(\d{1,2})〕([〜～]|から)(翌)?(\d{1,2})月(?![\d日])/g,function(m0,y,mo,sep,yo,m2){ var Y=+y+((yo||+m2<+mo)?1:0); return '〔F:n'+(+y)+'-'+(+mo)+'〕'+sep+(yo||'')+'〔F:n'+Y+'-'+(+m2)+'〕'; });   /* 範囲の月は干支・印のつかない月の印に（範囲のあとの「（庚子の月）」と重ならないように） */   /* 範囲の終わりの月（〜12月上旬・〜翌1月上旬） */
+  u=u.replace(/(いま|今)([〜～]|から)(\d{1,2})月(?![\d日])/g,function(m0,a,sep,mo){ return (+mo>=1&&+mo<=12)?a+sep+'〔F:n'+pkfmFwdY(+mo)+'-'+(+mo)+'〕':m0; });
+  u=u.replace(new RegExp('(年運(?:は|が|：|:|＝|の)?[ 　]*)[「『（(]?('+GZ+')[」』）)]?(?![年月日]|の[年月日])','g'),function(m0,pre,g){ var T=pkfmToday(); for(var y=T.y-1;y<=T.y+12;y++){ if(pkfmYGz(y)===g) return pre+'〔F:y'+y+'〕'; } return m0; });   /* 「今年の年運は丙午」の干支も年の印に */
+  if(!env.eki){ var du=function(P,i){ return (P&&P.du&&P.duI!=null&&P.duI>=0)?P.du[P.duI+i]:''; };
+    u=u.replace(new RegExp('(お相手の)?(今の|いまの|現在の|次の|前の)大運(?:[（(][^（）()\n]{0,16}[）)])?[ 　]*[：:＝は]?[ 　]*[「『（(]?('+GZ+')[」』）)]?','g'),function(m0,b,w,g){ var P=b?B:A, i=/次/.test(w)?1:(/前/.test(w)?-1:0); if(!P.du||du(P,i)!==g) return m0; return '〔F:'+(b?'B:':'')+(i>0?'du_next':(i<0?'du_prev':'du_now'))+'〕'; });
+    u=u.replace(new RegExp('(お相手の)?(年柱|月柱|日柱|時柱)(?:[（(][^（）()\\n]{0,20}[）)])?[ 　]*(?:(?:には|は|が|：|:|＝)[ 　]*)?[「『（(]?('+GZ+')[」』）)]?(?![年月日]|の[年月日])','g'),function(m0,b,pn,g){ var P=b?B:A, ix=['年柱','月柱','日柱','時柱'].indexOf(pn); if(!P.pil||P.pil[ix]!==g) return m0; return '〔F:'+(b?'B:':'')+['p_year','p_month','p_day','p_hour'][ix]+'〕'; }); }
+  return u; }catch(e){ return String(u==null?'':u); } }
+/* 出す前の事実の照らし合わせ。env.P＝本人（とお相手）、env.X＝相談文に出てくるほかの人（年齢・柱・大運の照らしにだけ使う） */
+function pkFactGate(t,env){ env=env||{}; var t0=String(t==null?'':t), T=pkfmToday(), P=(env.P||[]).filter(Boolean), ALL=P.concat((env.X||[]).filter(Boolean)), rows=[], total=0, lost=0, firstLost=false, seenFirst=false;
+  var FAM=/母|父|お子|子ども|子供|娘|息子|孫|祖母|祖父|兄|姉|弟|妹|親|ご主人|奥様|夫|妻|義|家族|ペット|犬|猫|上司|同僚|友人|友達|部下|先輩|後輩|彼/;
+  var t0n=new Date(T.y,T.m-1,T.d,12,0,0,0);
+  var yrsC=function(Y,mo,d,s){ if(Y) return [Y]; var L=[pkfmFwdY(mo,d)]; if(new Date(T.y,mo-1,d,12,0,0,0)<t0n) L.push(T.y); if(/去年|昨年|先月|先週|前回|以前|でした|ました/.test(s||'')) L.push(T.y-1); return L; };   /* 年を書かない日付は、今までの直し（pkFactFix ⑦⑧）と同じく今日から先の日として読む（今年のもう過ぎた日・過去の話も合えばよい） */
+  var DU=[]; ALL.forEach(function(p){ (p.du||[]).forEach(function(g){ if(g&&DU.indexOf(g)<0) DU.push(g); }); });
+  var byL=ALL.filter(function(p){ return p.by; });
+  var whoOf=function(tag){ if(/2人とも|ふたりとも|お二人とも/.test(tag)) return {all:true,L:P.slice(0,2)}; if(/お相手/.test(tag)) return {L:P[1]?[P[1]]:[]}; if(/本人|あなた/.test(tag)) return {L:P[0]?[P[0]]:[]}; return {L:P}; };
+  var kuuOk=function(tag,fn){ var w=whoOf(tag), L=w.L.filter(function(p){ return typeof p[fn.k]==='function'; }); if(!L.length) return true; return w.all?L.every(fn.f):L.some(fn.f); };
+  var chk=function(s){ var bad=[];
+    /* ① 六十干支にない形（丁子・辛子は言葉） */
+    s.replace(/([甲乙丙丁戊己庚辛壬癸])([子丑寅卯辰巳午未申酉戌亥])/g,function(m0,g,z){ var x=g+z; if(!pkfmValid(x)&&x!=='丁子'&&x!=='辛子') bad.push({what:'干支「'+x+'」',calc:'六十干支にない形（十干と十二支の陰陽が合わない）'}); return m0; });
+    /* ② 日付と曜日 */
+    s.replace(/(?<!\d)(?:((?:19|20)\d\d)年)?(\d{1,2})月(\d{1,2})日[（(]([日月火水木金土])(?:曜日?)?[）)]/g,function(m0,y,mo,d,w){ var ys=yrsC(y?+y:0,+mo,+d,s).filter(function(Y){ return pkfmOkDate(Y,+mo,+d); }); if(!ys.length) return m0;
+      if(!ys.some(function(Y){ return pkfmWd(Y,+mo,+d)===w; })) bad.push({what:m0,calc:ys.map(function(Y){ return Y+'年'+mo+'月'+d+'日＝'+pkfmWd(Y,+mo,+d)+'曜日'; }).join('・')}); return m0; });
+    /* ③ 日付の干支（日の干支・その日の月の干支） */
+    s.replace(/(?<!\d)(?:((?:19|20)\d\d)年)?(\d{1,2})月(\d{1,2})日(?:[（(][日月火水木金土](?:曜日?)?[）)])?([（(]|は|、|：|:|＝)?[ 　]?([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])(?:[（(][ぁ-ん]{2,8}[）)])?([）)])?(の日|の月|日|の年|年)?/g,function(m0,y,mo,d,op,g,cl,suf){
+      if(suf==='の年'||suf==='年') return m0; var isM=suf==='の月', dayF=suf==='の日'||suf==='日'||(op&&/[（(]/.test(op)&&cl&&!suf); if(!isM&&!dayF) return m0;
+      var ys=yrsC(y?+y:0,+mo,+d,s).filter(function(Y){ return pkfmOkDate(Y,+mo,+d); }); if(!ys.length) return m0;
+      var ok=ys.some(function(Y){ if(isM) return g===pkfmMGz(Y,+mo)||g===(+mo===1?pkfmMGz(Y-1,12):pkfmMGz(Y,+mo-1)); return pkfmDGz(Y,+mo,+d)===g; });
+      if(!ok) bad.push({what:m0,calc:ys.map(function(Y){ return Y+'年'+mo+'月'+d+'日＝'+(isM?pkfmMGz(Y,+mo)+'の月':pkfmDGz(Y,+mo,+d)+'の日'); }).join('・')}); return m0; });
+    /* ④ 年の干支（立春前の1月は前の年の干支も正しい） */
+    var yOk=function(y,g){ return g===pkfmYGz(y)||(g===pkfmYGz(y-1)&&/1月|立春|節分|2月[1-4]日/.test(s)); };
+    s.replace(/(?<!\d)((?:19|20)\d\d)年[（(〔]([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])(?!の月|月|の日|日)/g,function(m0,y,g){ if(!yOk(+y,g)) bad.push({what:m0+'…',calc:y+'年＝'+pkfmYGz(+y)}); return m0; });
+    s.replace(/([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])(?:の年|年)[（(]((?:19|20)\d\d)年/g,function(m0,g,y){ if(!yOk(+y,g)) bad.push({what:m0,calc:y+'年＝'+pkfmYGz(+y)}); return m0; });
+    /* ⑤ 年の年齢（本人・お相手・相談文の人のだれかの年齢ならよい。家族などの年齢は照らさない） */
+    if(byL.length){ var agOk=function(y,a){ return byL.some(function(p){ return a===y-p.by||a===y-p.by-1; }); }, calcA=function(y){ return y+'年＝'+byL.map(function(p){ return (p.lab?p.lab:'')+(y-p.by)+'歳'; }).join('／'); };
+      s.replace(/(?<!\d)((?:19|20)\d\d)年[（(〔]([^（）()〔〕\n]{0,30})[）)〕]/g,function(m0,y,c,off){ if(FAM.test(c)||FAM.test(s.slice(Math.max(0,off-14),off))) return m0; (c.match(/\d{1,3}(?=歳|才)/g)||[]).forEach(function(a){ if(!agOk(+y,+a)) bad.push({what:m0,calc:calcA(+y)}); }); return m0; });
+      s.replace(/(?<!\d)((?:19|20)\d\d)年(?:に|には|で|、|の)(\d{1,3})(?:歳|才)/g,function(m0,y,a,off){ if(FAM.test(s.slice(Math.max(0,off-14),off))) return m0; if(!agOk(+y,+a)) bad.push({what:m0,calc:calcA(+y)}); return m0; });
+      s.replace(/(?<!\d)(\d{1,3})(?:歳|才)[（(]((?:19|20)\d\d)年/g,function(m0,a,y,off){ if(FAM.test(s.slice(Math.max(0,off-14),off))) return m0; if(!agOk(+y,+a)) bad.push({what:m0,calc:calcA(+y)}); return m0; }); }
+    /* ⑥ 柱の干支（「日柱が庚辰・庚戌…の人」のような一般の言い方は照らさない） */
+    s.replace(/(年柱|月柱|日柱|時柱)(?:は|の|が|＝|=|：|:)?([「『（(]?)([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])(?![年月日]|の[年月日])([^。]{0,8})/g,function(m0,pn,op,g,aft){ if(/^[」』）)]?[・、／]/.test(aft)||(!op&&/^(?:の人|生まれ|など|のよう|のとき|なら|だと|であれば)/.test(aft))) return m0; var ix=['年柱','月柱','日柱','時柱'].indexOf(pn), L=ALL.map(function(p){ return p.pil?p.pil[ix]:''; }).filter(Boolean); if(!L.length) return m0; if(L.indexOf(g)<0) bad.push({what:pn+'「'+g+'」',calc:pn+'＝'+L.join('・')}); return m0; });
+    /* ⑦ 大運の干支（その人の大運〈0歳〜立運の月柱を含む〉のどれか） */
+    if(DU.length){ s.replace(/大運(?:は|の|が|＝|=|：|:)?[「『（(]?([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])(?![年月日]|の[年月日])/g,function(m0,g){ if(DU.indexOf(g)<0) bad.push({what:'大運「'+g+'」',calc:'大運＝'+DU.join('・')}); return m0; });
+      s.replace(/([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])[」』]?の?大運/g,function(m0,g){ if(DU.indexOf(g)<0) bad.push({what:'大運「'+g+'」',calc:'大運＝'+DU.join('・')}); return m0; }); }
+    /* ⑧ 空亡の印（年・月・日）：印の人が、その年・月・日に本当に解けない空亡か */
+    s.replace(/(?<!\d)((?:19|20)\d\d)年(?:[（(][^（）()\n]{0,30}[）)])?〔([^〔〕\n]{0,18})〕/g,function(m0,y,tag){ if(!/空亡|ひと休み/.test(tag)||/日|月|解空|弱まる|年は/.test(tag)) return m0; if(!kuuOk(tag,{k:'kuuY',f:function(p){ return p.kuuY(+y); }})) bad.push({what:m0,calc:y+'年は'+(whoOf(tag).L.length>1?'どちらも':'')+'解けない空亡の年ではない'}); return m0; });
+    s.replace(/(?<!\d)(?:((?:19|20)\d\d)年)?(\d{1,2})月(?:[（(][^（）()\n]{0,16}[）)])?(?:上旬|中旬|下旬|ごろ|頃)?〔([^〔〕\n]{0,18})〕/g,function(m0,y,mo,tag,off){ if(!/空亡|ひと休み/.test(tag)||/日|年|解空|弱まる/.test(tag)) return m0; mo=+mo; if(mo<1||mo>12) return m0;
+      var rng=/[〜～]|から|にかけ/.test(s.slice(Math.max(0,off-12),off)), ms=rng?[mo,mo===1?12:mo-1,mo===12?1:mo+1]:[mo], ys=y?[+y,+y-1,+y+1]:[T.y-1,T.y,T.y+1];
+      if(!kuuOk(tag,{k:'kuuM',f:function(p){ return ys.some(function(Y){ return ms.some(function(M){ return p.kuuM(Y,M); }); }); }})) bad.push({what:m0,calc:mo+'月は解けない空亡の月ではない'}); return m0; });
+    s.replace(/(?<!\d)(?:((?:19|20)\d\d)年)?(\d{1,2})月(\d{1,2})日(?:[（(][^（）()\n]{0,12}[）)])?(?:[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]の日)?〔([^〔〕\n]{0,18})〕/g,function(m0,y,mo,d,tag){ if(!/(?:空亡|ひと休み)の日/.test(tag)) return m0; var ys=yrsC(y?+y:0,+mo,+d,s).filter(function(Y){ return pkfmOkDate(Y,+mo,+d); }); if(!ys.length) return m0;
+      if(!kuuOk(tag,{k:'kuuD',f:function(p){ return ys.some(function(Y){ return p.kuuD(pkfmDGz(Y,+mo,+d).charAt(1)); }); }})) bad.push({what:m0,calc:mo+'月'+d+'日は空亡の日ではない'}); return m0; });
+    return bad; };
+  var HEAD=/^[ 　]*(?:(?:【[^】\n]{0,40}】|▼[^：:\n]{0,12}[：:]|#{1,4}[ 　]|[・●◆■◎○〇△✖✕×][ 　]?|[①-⑳][ 　]?|\d{1,2}[\.．)）][ 　]?)[ 　]*)*/;
+  var out=t0.split('\n').map(function(ln){ var hm=ln.match(HEAD), head=hm?hm[0]:'', body=ln.slice(head.length); if(!body.trim()) return ln;
+    var first=!seenFirst; seenFirst=true; var ps=body.split(/(?<=[。！？])/), kept=[];
+    ps.forEach(function(sn){ var n=sn.replace(/\s/g,'').length; total+=n; var b=[]; try{ b=chk(sn); }catch(e){ b=[]; }
+      if(b.length){ lost+=n; var seen={}; b.forEach(function(x){ var k=x.what+x.calc; if(seen[k]) return; seen[k]=1; rows.push({st:'drop',what:x.what,calc:x.calc,note:'計算と合わない事実が残っていたので、出す前に文ごと外しました：「'+sn.trim().slice(0,60)+'」'}); }); }
+      else kept.push(sn); });
+    if(kept.length===ps.length) return ln;
+    if(!kept.join('').trim()){ if(first) firstLost=true; return /【[^】\n]*】/.test(head)?head.replace(/[ 　]+$/,''):null; }
+    return head+kept.join('').replace(/^[ 　]+/,''); }).filter(function(x){ return x!==null; });
+  var text=out.join('\n').replace(/\n{3,}/g,'\n\n');
+  return {text:text,rows:rows,total:total,lost:lost,firstLost:firstLost}; }
+/* 外した結果、答えとして成り立たないとき（1行目がない・半分以上が消えた・空）は、通信なしの答えに切りかえる */
+function pkFactGateOff(g){ if(!g) return false; if(g.firstLost) return true; if(g.total>0&&g.lost/g.total>=0.5) return true; return !String(g.text||'').replace(/【[^】\n]*】|[\s　]/g,'').length; }
+/* PK-FACT-MARKS:end */
+/* 事実の差しこみの印・出す前の照らし合わせの、PRO（ビギナーも生成で同じ）の材料：本人・お相手・相談文の人の生まれ年・柱・大運・空亡（2026-11-07） */
+function pkFmPerson(c,lab){ try{ if(!c||!c.pillars) return null; const by=birthYearOf(c)||0;
+  const pil=c.pillars.map(function(p,i){ return ((i===3&&c.timeUnknown)||!p||!p.stem)?'':p.stem+p.branch; });
+  const df=c.decadeFortunes||[], mp=c.pillars[1], du=[mp?mp.stem+mp.branch:''].concat(df.map(function(d){ return d.ganzhi||(d.stem+d.branch); }));
+  let duI=-1; try{ const J=jstNow(), cd=pkDuAtDate(c,new Date(J.y,J.m-1,J.d,12,0,0,0)); if(cd){ if(cd.isMonth) duI=0; else { const k=df.indexOf(cd); duI=k>=0?k+1:du.indexOf(cd.ganzhi||(cd.stem+cd.branch)); } } }catch(e){}
+  return {lab:lab||'',by:by,pil:pil,du:du,duI:duI,kuuY:function(y){ return pkKuuBad(c,+y); },kuuM:function(y,m){ return pkKuuBadMonth(c,PKFM_Z.charAt(m%12),{y:y,m:m}); },kuuD:function(br){ return pkKuuDay(c,br); }}; }catch(e){ return null; } }
+function pkFmEnvPro(isCompat,plain,material,q){ const env={plain:!!plain,two:false,P:[],X:[],stars:{}}; try{
+  const A=(typeof chart!=='undefined')?chart:null, B=(isCompat&&typeof chartB!=='undefined')?chartB:null;
+  const pa=pkFmPerson(A,'本人'); if(pa) env.P.push(pa); if(B){ const pb=pkFmPerson(B,'お相手'); if(pb){ env.P.push(pb); env.two=true; } }
+  if(!isCompat&&A&&q){ try{ pkConsultPeople(A,q).forEach(function(x){ const p=pkFmPerson(x.c,''); if(p) env.X.push(p); }); }catch(e){} }
+  const M=String(material||''); PK_EV_STARS.concat(['妨害殺','淫欲殺']).forEach(function(n){ if(M.indexOf(n)>=0) env.stars[n]=1; });
+  env.yTag=function(y){ if(!A) return ''; return env.two?pkCpKuu(A,B,y,env.plain):(pkKuuBad(A,y)?(env.plain?'〔ひと休みの年〕':'〔空亡〕'):''); };
+  env.mTag=function(y,m){ if(!A) return ''; const br=PKFM_Z.charAt(m%12); return env.two?pkCpKuuM(A,B,br,env.plain,{y:y,m:m}):pkKuuMTag(A,br,env.plain,{y:y,m:m}); };
+  env.dTag=function(y,m,d){ if(!A) return ''; const br=pkfmDGz(y,m,d).charAt(1); return pkKuuDayTag(pkKuuDay(A,br),!!(B&&pkKuuDay(B,br)),env.plain,env.two); };
+}catch(e){} return env; }
+/* 出す前の照らし合わせ（答え・くわしい読み解き・専門用語の版）。外したものは根拠のチェック表へ */
+function pkFactGateRun(t,isCompat,plain,q){ const g=pkFactGate(t,pkFmEnvPro(isCompat,plain,'',q)); try{ (window.__pkGateLog=window.__pkGateLog||[]).push({drop:g.rows.length,total:g.total,lost:g.lost,first:g.firstLost,off:pkFactGateOff(g)}); if(window.__pkGateLog.length>200) window.__pkGateLog.shift(); }catch(e){} return g; }
+/* 照らし合わせで答えが成り立たなくなったときの、通信なしの答え（ビギナーのやさしい画面では、やさしい言葉の端末の答え） */
+function pkGateOffA(user,localText){ let t=localText; try{ if(document.documentElement.classList.contains('bg-on')&&typeof window.pkBgPlainOffline==='function'){ const x=window.pkBgPlainOffline(user); if(x) t=x; } }catch(e){} return {ok:true,text:t,fallback:true,online:false,kind:'gate',note:''}; }
 function pkFactFix(t,aS,bS){ try{ t=String(t==null?'':t);  t=t.replace(/ふたの(関係|仲|絆|間|未来|将来|時間|気持ち|距離|ペース|縁|心|暮らし|生活|話し合い)/g,'ふたりの$1');   /* 「ふたりの」の「り」が抜けた打ちまちがい（発注者指示 2026-10-25「必ず直して」） */
    // 命式の事実（日干の五行・十干の五行・十二支と十二運の取りちがえ）を、計算どおりに直す（発注者指示 2026-10-22「普通のことをまちがえない」）
   var EL={甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'金',辛:'金',壬:'水',癸:'水'};
@@ -8324,6 +8497,9 @@ async function generateReading(user,localText,system,deep){
   if(_part==='answer') user=String(user).replace(/構成（必ず守る）：[\s\S]*?(?=\n【|$)/,'').replace(/(^|\n)構成：[\s\S]*?(?=\n【|$)/,'$1');   // 相性の「構成：」も同じく外す（発注者指示 2026-10-22）   // 冒頭の答えには、くわしい読み解き用の見出しの構成を渡さない（形がくずれる・送る量も減る。発注者指示 2026-10-21）
   if(_part==='answer'){ system=String(system||CONSULT_SYSTEM).replace(/【出力フォーマット＝厳守[\s\S]*?(?=\n【|$)/,''); }   // 見出しで区切る・【まとめ】で締めるの指示は、くわしい読み解きだけに使う
   system=(system||CONSULT_SYSTEM)+pkToneRule()+YOMI_RULE+NO_REPEAT_RULE+NO_AI_RULE+pkLifeGuide(user)+pkYearPick(user)+(function(){ try{ var c=(typeof chart!=='undefined')?chart:null; if(!c||typeof _kkAssess!=='function') return ''; var as=_kkAssess(c).assess, F=['木','火','土','金','水'].filter(function(e){ return as(e).fav==='喜'; }), N=['木','火','土','金','水'].filter(function(e){ return F.indexOf(e)<0; }); return F.length?(function(){ try{ if(/【お相手B】/.test(user)) return ''; var c=(typeof chart!=='undefined')?chart:null; var L=natalBondLines(c,false); return L.length?'\n【鑑定文で必ず触れる＝命式内の天地徳合・干合（見つけたら必ず書き、何を意味するかも書く）】\n'+L.map(function(x){ return '・'+x.pro; }).join('\n')+'\n・恋愛・結婚・浮気・遊び人かなどの相談では、配偶者星の干合をいちばんの根拠として使う。\n':''; }catch(e){ return ''; } })()+(function(){ try{ if(/【お相手B】/.test(user)) return ''; var m=/【相談者の悩み】\n([\s\S]*?)(?:\n\n|$)/.exec(user); if(!m||!pkIsLoveQ(m[1])) return ''; var L=loveFourLines(chart); if(!L) return ''; var bg=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on')); return '\n【恋愛相談で必ず入れる4つ（ツールの計算どおりに書く。数字・干支・月を変えない）】\n'+(bg?L.plain:L.pro).map(function(x){ return '・'+x; }).join('\n')+'\n・パートナーの星が喜神かどうかは、「パートナーの星は、あなたの喜神です（＝良い影響を受けやすい）」のように、はっきり1文で書く。そのすぐあとに、これは2人の相性とは別の見方（相性の良し悪しではなく、恋愛をしたときに本人の調子が上がりやすいか・疲れやすいか）だと必ず書く。\n・月の干支（例：癸卯の月）は漢字のまま書く。読みがなに置きかえない。\n・出会いの場は、上の場所（仕事・職場など）を具体的に書く。\n'; }catch(e){ return ''; } })()+'\n【合の書き分け＝厳守】三合と書くのは、3つの十二支がそろうときだけ（例：亥・卯・未）。2つだけなら半合と書く。命式の事実（日干の陰陽・五行、月支元命、星の数、十二運）は、上のデータのとおりに書き、変えない。'+'\n【星の書き分け＝厳守】その年の星（年運）と、いまの10年の星（大運）を同じかっこに並べない。「来年は偏印、いまの10年（大運）は劫財」のように分けて書く。\n【五行のすすめ＝厳守】色・食べ物・身につけるもの・取り入れる五行をすすめるときは、この人の喜神（'+F.join('・')+'）だけをすすめる。'+N.join('・')+'は、少なくても「足りないので補う」とすすめない（身旺・身弱で決めた喜神が正しい）。\n':''; }catch(e){ return ''; } })()+(_part==='detail'?DETAIL_ONLY_RULE:pkAnswerRule(user)+(_part==='answer'?ANSWER_ONLY_RULE:''))+pkSafeTimeRule(user);
+  const _fmEnv=pkFmEnvPro(/【お相手B】/.test(user),/（ビギナー版）/.test(String(system||'')+String(user||'')),String(user||'')+String(system||''));   // 事実の差しこみの印（西暦・年齢・日付・曜日・干支・大運・柱・星の名前は印で書かせ、ツールが置きかえる。2026-11-07）
+  system=pkFmMaterial(system,_fmEnv)+pkFmRule(_fmEnv);
+  user=pkFmMaterial(user,_fmEnv)+pkFmTail(_fmEnv);   // 渡す材料の事実（西暦・日付・月・今の大運・柱）も印に（文章作成が写すのが印になるように）
   const _nm=_nameMasks();
   if(_nm.length){ user=_maskNames(user,_nm); system=_maskNames(system,_nm)+'\n【お名前の印】文章の中の「〔本人〕」「〔お相手〕」は、実際のお名前の代わりの印です。お名前で呼ぶときは、この印を一字も変えずにそのまま書いてください（例：〔本人〕さん）。'; }
   // 電波がない（オフライン）ときはAIを呼ばず、端末内鑑定を出す
@@ -8384,6 +8560,7 @@ async function generateReading(user,localText,system,deep){
   let _authErr=0, _left=null, _srvKind='', _limDay=false;
   let text=await callOnce();
   if(!text&&!_authErr&&!_timedOut&&(!_srvKind||_srvKind==='server')){ _srvKind=''; await new Promise(r=>setTimeout(r,2500)); text=await callOnce(); }   // 混雑・回数・地域・長さ・ログインし直しは、送り直しても直らないので送り直さない   // すぐ失敗したときだけ1回やり直す（45秒待って返事がないときは、すぐ端末内の鑑定へ）
+  if(text){ text=pkFmExpand(text,_fmEnv).text; }   // 印を計算どおりの言葉に（知らない印・閉じない印は外す）
   if(text){ if(!_cont) aiCountInc(_left); return {ok:true,text:(function(){ var _by=(typeof chart!=='undefined'&&chart&&chart.birth&&chart.birth.clock)?parseInt(String(chart.birth.clock).slice(0,4),10):0, _ot=(/【お相手B】/.test(user)&&typeof chartB!=='undefined'&&chartB&&chartB.birth&&chartB.birth.clock)?parseInt(String(chartB.birth.clock).slice(0,4),10):0; var _aS=(typeof chart!=='undefined'&&chart&&chart.dayMaster)?chart.dayMaster.stem:'', _bS=(_ot&&typeof chartB!=='undefined'&&chartB&&chartB.dayMaster)?chartB.dayMaster.stem:''; var _t=pkFactFix(pkStampYears(pkFixAge(noAIWord(_unmaskNames(text,_nm)),_by,_ot),_by,_ot),_aS,_bS); _t=pkFavGuard(_t,(typeof chart!=='undefined')?chart:null); _t=pkYearElGuard(_t); _t=pkYearStarFix(_t,(typeof chart!=='undefined')?chart:null); _t=pkSameGzFix(_t,(typeof chart!=='undefined')?chart:null); return _bS?pkCompatGuard(_t):_t; })(),raw:noAIWord(_unmaskNames(text,_nm)),online:true}; }   // 相談1件＝1回（答え＋くわしい読み解きの2回の生成で1回と数える）
   aiEngine='オフライン鑑定（端末内）';
   if(_authErr===429){ if(!_limDay||aiIsTrial()) aiCountFull(); return {ok:true,text:localText,fallback:true,online:false,note:aiLimitNote(_limDay)}; }   // 今日の上限（お試し）を、お試しでない端末で「今月お休み」にしない
@@ -8460,8 +8637,9 @@ function rdRetryHTML(k,note){ k=(k===true)?'skip':(k||'net');
     setup:'🛠 詳細鑑定のサーバーの準備が整っていないため、'+S+'お手数ですが、運営までお知らせください。',
     busy:'⏳ ただいまサーバーが混み合っているため、'+S+'少し時間をおいて、下のボタンからもう一度ためせます。',
     server:'⏳ 詳細鑑定のサーバーにつながらなかったため、'+S+'少し時間をおいて、下のボタンからもう一度ためせます。',
+    gate:'📝 文章作成の答えに計算と合わないところがあったため、'+S+'くわしい文章は、通信が安定してから下のボタンでもう一度ためせます。',
     plain:'📝 わかりやすい言葉の答えに切りかえました。むずかしい言葉を使わない、端末の中で作った答えを出しています。'}[k]||'';   // 通信は正常で、専門用語が残ったためにやさしい答えへ切りかえたとき（「電波の良い所で」と言わない。2026-11-03）
-  const btn=(k==='skip'||k==='net'||k==='busy'||k==='server')?'<button type="button" class="rd-retry no-print">🔄 もう一度オンラインで鑑定する</button>':'';
+  const btn=(k==='skip'||k==='net'||k==='busy'||k==='server'||k==='gate')?'<button type="button" class="rd-retry no-print">🔄 もう一度オンラインで鑑定する</button>':'';
   return '<div class="rd-offnote no-print">'+msg+'</div>'+btn; }
 function rdWireRetry(out,btn,user,localText,proUser,deep,safety,proLocal){ const b=out.querySelector('.rd-retry'); if(b) b.onclick=function(){ runReading(btn,out,user,localText,proUser,deep,safety,proLocal); }; }
 /* 答えを作っている間、ボタンが押せない理由を、ボタンのすぐ下に一言出す（できあがると消える） */
@@ -8488,7 +8666,7 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
     const A=await ((_pf&&_pf.k===_u&&Date.now()-_pf.t<120000)?(window.__pf=null,_pf.p):generateReading(_u,localText,undefined,deep));
     if(stale())return;
     const _q0off=(out.closest&&out.closest('.rd-item')&&out.closest('.rd-item').dataset.q)||'';
-    if(!A.online){   // 通信できないときは、これまでどおり端末内の鑑定を表示（もう一度オンラインで試せるボタンつき）
+    const _showOff=function(A,_gRows){   // 通信できないとき（と、出す前の照らし合わせで答えが成り立たなかったとき）は、端末内の鑑定を表示（もう一度オンラインで試せるボタンつき）
       const _k=rdOffKind(A);   // 理由ごとの案内は下の一言（rd-offnote）にまとめる（同じことを2回書かない）
       // 通信できないときも、オンラインと同じ順で書き足す・直す（大きな特徴・結びつき・格局・月と年の星の事実あわせ・恋愛の4つ・相談の要点〈金運など〉・相談文のお相手。2026-11-02）。日運・月運の詳細鑑定には付けない
       try{ if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart&&!(out.closest&&out.closest('#kingun-sec'))){ let _t=A.text;
@@ -8507,12 +8685,12 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
         try{ const _rt=RELTYPES[(document.getElementById('rel-type')||{}).value||'love']; if(_rt&&_rt.useSpouse===false) _t=rtWords(_t,_rt,true); }catch(_e){}
         A.text=_t; } }catch(_e){}
       let _dOff=A.text, _cOff=''; try{ if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart&&_q0off){ const _sp=pkCmpSplit(A.text,chart,_q0off); _dOff=_sp.text; _cOff=_sp.html; } }catch(_e){}
-      out.innerHTML=sc+engineBadge(false,'')+rdRetryHTML(_k,A.note)+formatReading(_dOff)+_cOff;
+      out.innerHTML=sc+engineBadge(false,'')+rdRetryHTML(_k,A.note)+formatReading(_dOff)+_cOff+((_gRows&&_gRows.length)?pkEvidenceHTML({rows:_gRows}):'');   // 照らし合わせで切りかえたときは、外したものを根拠のチェック表に（先生の画面だけ）
       rdWireRetry(out,btn,user,localText,proUser,deep,safety,proLocal);
       attachReadingTools(out,A.text);
       if(proUser)appendPro(out,proUser,localText,deep,proLocal);
-      return;
-    }
+    };
+    if(!A.online){ _showOff(A); return; }
     const _q0=(out.closest&&out.closest('.rd-item')&&out.closest('.rd-item').dataset.q)||'';
     let ans=pkFixLabel(pkFixWhen(pkFixAnsHeads(String(A.text).split(/\n[ 　]*[【\[]?くわしい読み解き[】\]]?/)[0].trim()),(out.closest&&out.closest('.rd-item')&&out.closest('.rd-item').dataset.q)||((out.id==='compat'||(out.closest&&out.closest('#compat')))?((document.getElementById('compat-worry')||{}).value||''):'')),_q0);
     try{ if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&!(out.closest&&out.closest('#kingun-sec'))&&typeof chart!=='undefined'&&chart&&_q0) ans=pkDayStarFix(ans,chart,_q0); }catch(_e){}   // 相談に出てくる日の星・曜日をツールの計算に（2026-11-05）
@@ -8520,7 +8698,10 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
     const _kgFix=[], _kgIsCp=(out.id==='compat'||(out.closest&&out.closest('#compat'))), _kgQ=_kgIsCp?((document.getElementById('compat-worry')||{}).value||''):_q0;
     const _kgB=function(){ try{ if(_kgIsCp) return (typeof chartB!=='undefined'&&chartB)?chartB:null; if(out.closest&&out.closest('#kingun-sec')) return null; const P=pkConsultPeople(chart,_q0).filter(function(x){ return /^(love|married|konkatsu)$/.test(x.rel||'love'); }); return P.length===1?P[0].c:null; }catch(e){ return null; } };
     const _kgRun=function(x){ try{ if(typeof chart==='undefined'||!chart) return x; const r=pkKuuGuard(x,chart,_kgB(),_kgQ,_kgIsCp); r.fix.forEach(function(f){ if(!_kgFix.some(function(g){ return g.what===f.what&&g.calc===f.calc; })) _kgFix.push(f); }); return r.text; }catch(e){ return x; } };
-    ans=_kgRun(ans);   // オンラインの答えの空亡の安全装置：空亡の月・日・年にすすめていたら、印と「避ける」の一文（くわしい読み解きにも、直した答えを渡す。先生の指示 2026-11-05）   // 1行目ではっきり答える・2文まで・今年か来年かはツールの方向（2026-10-29）
+    ans=_kgRun(ans);
+    const _gPl=document.documentElement.classList.contains('bg-on'), _gRows=[];
+    { const _g1=pkFactGateRun(ans,_kgIsCp,_gPl,_kgQ); if(pkFactGateOff(_g1)){ _showOff(pkGateOffA(user,localText),_g1.rows.concat([{st:'drop',what:'文章作成の答え',calc:'計算と合わない事実を外すと、答えとして成り立たない（1行目がない・半分以上が消える）',note:'通信なしの答え（ツールが全部書く答え）に切りかえました'}])); return; } ans=_g1.text; _g1.rows.forEach(function(r){ _gRows.push(r); }); }   // 出す前の照らし合わせ：計算と合わない事実が残った文は外す（2026-11-07）
+    // オンラインの答えの空亡の安全装置：空亡の月・日・年にすすめていたら、印と「避ける」の一文（くわしい読み解きにも、直した答えを渡す。先生の指示 2026-11-05）   // 1行目ではっきり答える・2文まで・今年か来年かはツールの方向（2026-10-29）
     out.innerHTML=sc+engineBadge(true,'')+formatReading(ans)+'<div class="loading r-more"><span class="spin"></span>くわしい読み解きを作成しています…（答えは上に出ています。読みながらお待ちください）</div>';
     // ② くわしい読み解き：先に出した答えと食い違わないよう、答えを渡して根拠を書かせる
     const D=await generateReading('〔PART:detail〕\n'+user+'\n\n【先に作成した答え（これと食い違わないように、その根拠を書く）】\n'+ans,localText,undefined,deep);
@@ -8535,8 +8716,11 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
     try{ full=pkRisshunTag(full); }catch(_e){}   // 立春前は今年（年運の年）に期限を添える（先生の決定 2026-11-03）
     try{ full=pkKuuNote(full); }catch(_e){}   // ビギナー：「ひと休みの年」がはじめて出たところに意味を1回だけ添える（2026-11-02）
     try{ full=pkFinalFix(full,_q0,(out.id==='compat'||(out.closest&&out.closest('#compat')))); }catch(_e){}
-    full=_kgRun(full);   // くわしい読み解きも、空亡の月・日・年にすすめていないか（2026-11-05）   // 最後にもう一度：喜神・忌神の読み・1行目の前置き・同性のお相手の言い方・宝くじの時期（2026-11-03）
-    let _evH=''; try{ if(typeof chart!=='undefined'&&chart){ const _isC=(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chartB!=='undefined'&&chartB; const _ev=pkEvidence((A.raw||'')+'\n'+(D.raw||''),full,chart,_isC?chartB:null,_isC?null:pkConsultPeople(chart,_q0).map(function(x){ return x.c; }),_isC?'':_q0); full=_ev.text; if(_kgFix.length) _ev.rows=_kgFix.concat(_ev.rows||[]); _evH=pkEvidenceHTML(_ev); } }catch(_e){}   // ③ 根拠のチェック表（先生の画面だけ。相談文に出てくるお相手の命式も照らし合わせる）
+    full=_kgRun(full);
+    const _gLen0=full.replace(/\s/g,'').length;
+    { const _g2=pkFactGateRun(full,_kgIsCp,_gPl,_kgQ); if(pkFactGateOff(_g2)){ _showOff(pkGateOffA(user,localText),_gRows.concat(_g2.rows,[{st:'drop',what:'文章作成の答え',calc:'計算と合わない事実を外すと、答えとして成り立たない（1行目がない・半分以上が消える）',note:'通信なしの答え（ツールが全部書く答え）に切りかえました'}])); return; } full=_g2.text; _g2.rows.forEach(function(r){ _gRows.push(r); }); }   // くわしい読み解きも、出す前に事実を照らす（2026-11-07）   // くわしい読み解きも、空亡の月・日・年にすすめていないか（2026-11-05）   // 最後にもう一度：喜神・忌神の読み・1行目の前置き・同性のお相手の言い方・宝くじの時期（2026-11-03）
+    let _evH=''; try{ if(typeof chart!=='undefined'&&chart){ const _isC=(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chartB!=='undefined'&&chartB; const _ev=pkEvidence((A.raw||'')+'\n'+(D.raw||''),full,chart,_isC?chartB:null,_isC?null:pkConsultPeople(chart,_q0).map(function(x){ return x.c; }),_isC?'':_q0); full=_ev.text; if(_kgFix.length) _ev.rows=_kgFix.concat(_ev.rows||[]); if(_gRows.length) _ev.rows=_gRows.concat(_ev.rows||[]); _evH=pkEvidenceHTML(_ev); } }catch(_e){}
+    if(_gLen0>0&&full.replace(/\s/g,'').length<_gLen0*0.5){ _showOff(pkGateOffA(user,localText),_gRows.concat([{st:'drop',what:'文章作成の答え',calc:'根拠のない話・計算と合わない事実を外すと、半分以上が消える',note:'通信なしの答え（ツールが全部書く答え）に切りかえました'}])); return; }   // ③ 根拠のチェック表（先生の画面だけ。相談文に出てくるお相手の命式も照らし合わせる）
     let _disp=full, _cmpH=''; try{ if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart){ const _sp=pkCmpSplit(full,chart,_q0); _disp=_sp.text; _cmpH=_sp.html; } }catch(_e){}   // 2人のくらべは画面では表に（コピー・LINEは文章のまま）
     out.innerHTML=sc+engineBadge(true,pkDetailOffNote(D))+formatReading(_disp)+_cmpH+_evH;
     attachReadingTools(out,full);
@@ -8596,7 +8780,8 @@ function appendPro(out,proUser,localText,deep,proLocal){
   btn.onclick=async()=>{
     if(box.dataset.done){box.hidden=!box.hidden;btn.textContent=box.hidden?closed:opened;return;}
     btn.disabled=true;box.hidden=false;box.innerHTML='<div class="loading"><span class="spin"></span>専門用語そのままの本格鑑定を作成しています…</div>';
-    try{const res=await generateReading(proUser,proFallback,CONSULT_SYSTEM,deep); if(res.online){ try{ const _cp=(out.id==='compat'||(out.closest&&out.closest('#compat'))); if(typeof chart!=='undefined'&&chart) res.text=pkKuuGuard(res.text,chart,(_cp&&typeof chartB!=='undefined'&&chartB)?chartB:null,'',_cp,false).text; }catch(_e){} }   // 専門用語の版も、空亡の月・日・年にすすめていたら印と「避ける」の一文（2026-11-05）
+    try{let res=await generateReading(proUser,proFallback,CONSULT_SYSTEM,deep); if(res.online){ try{ const _cp=(out.id==='compat'||(out.closest&&out.closest('#compat'))); if(typeof chart!=='undefined'&&chart) res.text=pkKuuGuard(res.text,chart,(_cp&&typeof chartB!=='undefined'&&chartB)?chartB:null,'',_cp,false).text; }catch(_e){} }
+      try{ if(res.online&&typeof chart!=='undefined'&&chart){ const _cp2=(out.id==='compat'||(out.closest&&out.closest('#compat'))); const _g=pkFactGateRun(res.text,_cp2,false,''); if(pkFactGateOff(_g)){ res={ok:true,text:proFallback,fallback:true,online:false,note:'文章作成の答えに計算と合わないところがあったため、端末内で作成した鑑定を表示しています。'}; } else res.text=_g.text; } }catch(_e){}   // 専門用語の版も、出す前に事実を照らす（2026-11-07）   // 専門用語の版も、空亡の月・日・年にすすめていたら印と「避ける」の一文（2026-11-05）
       box.innerHTML=engineBadge(res.online,res.fallback?res.note:'')+formatReading(res.text);box.dataset.done='1';btn.textContent=opened;}
     catch(e){console.error(e);box.innerHTML=engineBadge(false,'通信できないため、端末内で作成した鑑定（オフライン鑑定）を表示しています。')+formatReading(proFallback);box.dataset.done='1';btn.textContent=opened;}
     finally{btn.disabled=false;}
@@ -13886,6 +14071,8 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
     };
     window.generateReading._bgplain=1;
   }
+  /* 出す前の事実の照らし合わせ（pkFactGate）で文章作成の答えが成り立たなかったとき、PROの runReading が通信なしのやさしい答えを使えるように（2026-11-07） */
+  window.pkBgPlainOffline=function(u){ if(!on()) return ''; return safe(function(){ return plainOffline(u); },''); };
   if(typeof window.appendPro==='function' && !window.appendPro._bgplain){
     var p0=window.appendPro;
     window.appendPro=function(){ if(on()) return; return p0.apply(this,arguments); };  // 初心者モードでは「本格版（専門用語あり）」を追加しない
