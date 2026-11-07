@@ -37,6 +37,11 @@ function cleanPlayer(p) {
   const out = { name, joined: Number(p.joined) || Date.now(), ans: {}, times: {} };
   Object.keys(ans).slice(0, 200).forEach((k) => { if (/^\d{1,3}:\d{1,2}$/.test(k) && (ans[k] === "A" || ans[k] === "B")) out.ans[k] = ans[k]; });
   Object.keys(times).slice(0, 200).forEach((k) => { if (/^\d{1,3}:\d{1,2}$/.test(k)) out.times[k] = Math.max(0, Math.min(600000, Number(times[k]) || 0)); });
+  // この部屋だけの問題（1人3問まで）
+  const t = (x, n) => String(x || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
+  out.mine = (Array.isArray(p.mine) ? p.mine : []).slice(0, 3)
+    .map((q) => ({ a: t(q && q.a, 60), b: t(q && q.b, 60), ex: t(q && q.ex, 60) }))
+    .filter((q) => q.a && q.b);
   return out;
 }
 
