@@ -293,6 +293,14 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
     <button data-v="group" aria-pressed="false">みんなで</button>
   </div>
 
+  <div id="num-box" hidden>
+    <div class="label">問題の数（みんなで遊ぶとき）</div>
+    <div class="seg seg2" id="seg-num">
+      <button data-v="8" aria-pressed="true"><b>8問</b><small>さくっと</small></button>
+      <button data-v="15" aria-pressed="false"><b>15問</b><small>じっくり</small></button>
+    </div>
+  </div>
+
   <div class="label">難しさ</div>
   <div class="seg seg2" id="seg-lv">
     <button data-v="easy" aria-pressed="false"><b>イージー</b><small id="lv-easy">キュン多め</small></button>
@@ -479,7 +487,7 @@ function score(mode, qs, answers){
   return out;
 }
 /* ───── 状態 ───── */
-var S = { mode:'love', who:'solo', num:15, lv:'normal', style:'secret', players:[], qs:[], qi:0, pi:0, ans:[], times:[], t0:0 };
+var S = { mode:'love', who:'solo', num:15, gnum:8, lv:'normal', style:'secret', players:[], qs:[], qi:0, pi:0, ans:[], times:[], t0:0 };
 
 /* ホーム */
 function setMode(m){
@@ -507,7 +515,8 @@ function seg(id, cb){
     b.onclick=function(){ el.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-pressed', x===b?'true':'false'); }); cb(b.dataset.v); };
   });
 }
-seg('seg-who', function(v){ S.who=v; $('go').textContent = v==='solo'?'診断をはじめる':'参加する人を決める'; });
+seg('seg-num', function(v){ S.gnum=+v; });
+seg('seg-who', function(v){ S.who=v; $('num-box').hidden=(v!=='group'); $('go').textContent = v==='solo'?'診断をはじめる':'参加する人を決める'; });
 seg('seg-lv', function(v){ S.lv=v; });
 seg('seg-style', function(v){ S.style=v; styleHint(); });
 function styleHint(){
@@ -560,6 +569,7 @@ $('go2').onclick=function(){
 
 /* 開始 */
 function start(){
+  S.num = S.who==='group' ? S.gnum : 15;
   S.qs = pickQuestions(S.mode, S.num, S.lv);
   S.counts = null; S.sent = {};
   Votes.get(S.qs.map(function(q){ return q.id; })).then(function(c){ S.counts = c; });
@@ -751,7 +761,12 @@ function majorityStats(qs, ans){
 function curScr(){ var e=document.querySelector('.scr.on'); return e ? e.id : 's-home'; }
 function goTop(ask){
   var mid = ['s-pass','s-q','s-rev'].indexOf(curScr())>=0;
-  if(ask && mid && !confirm('途中の答えは消えます。TOPにもどりますか？')) return;
+  if(ask && mid){
+    // 確認窓（confirm）は出ない画面があるので、2回押しで確かめる
+    var now=Date.now();
+    if(!goTop.armed || now-goTop.armed>3000){ goTop.armed=now; toast('途中の答えは消えます。もう一度押すとTOPにもどります'); return; }
+    goTop.armed=0;
+  }
   updatePoolNote(); show('s-home');
 }
 function goBack(){
