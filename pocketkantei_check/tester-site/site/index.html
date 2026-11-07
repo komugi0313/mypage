@@ -6382,15 +6382,27 @@ function _dropPastFuture(t){ try{
     if(bad&&real-dropped>1){ dropped++; return; } out.push(s); });
   return dropped?out.join('').replace(/\s+$/,''):t; }catch(e){ return t; } }
 /* 通変星の名前が説明なしで出た時は、最初の1回に読みと意味を添える（定期テスト 2026-11-07：「年運も「正官」が重なっています」） */
+/* 相性の強さを計算どおりに（定期テスト 2026-11-07：計算は「良い点が注意点を上回る」なのに「良い点と注意点が同じくらい」と書いた。指示だけでは守らないことがある） */
+function _fixVerdictJa(t){ try{ var v=(state.compatDeep&&state.compatDeep.verdict)||''; if(!v||!state.chartB) return t;
+  if(/良い点が注意点を上回る/.test(v)) return t.replace(/(良い|よい)(点|面|ところ)と(注意点|気をつける?(べき)?点|注意する点)が(ちょうど)?同じくらい(存在する|ある|あり)?/g,'良い点が注意点を上回る').replace(/(良い|よい)(点|面|ところ)と(注意点|気をつける?(べき)?点)が打ち消し合う/g,'良い点が注意点を上回る');
+  if(/注意点が良い点を上回る/.test(v)) return t.replace(/(良い|よい)(点|面|ところ)が(注意点|気をつける?(べき)?点)を(大きく|しっかり(と)?)?上回る/g,'注意点が良い点を上回る');
+  if(/同じくらい/.test(v)) return t.replace(/(良い|よい)(点|面|ところ)が(注意点|気をつける?(べき)?点)を(大きく|しっかり(と)?)?上回る/g,'良い点と注意点が同じくらいある');
+  return t; }catch(e){ return t; } }
 var TSUHEN_READ={正官:'せいかん・責任や評価の星',偏官:'へんかん・行動力と試練の星',正財:'せいざい・堅実なお金の星',偏財:'へんざい・動くお金と人とのつながりの星',食神:'しょくじん・楽しみと表現の星',傷官:'しょうかん・鋭い感性の星',比肩:'ひけん・自立の星',劫財:'ごうざい・仲間と競争の星',印綬:'いんじゅ・学びと守りの星',偏印:'へんいん・ひらめきの星'};
 function _tsuhenReading(t){ try{ Object.keys(TSUHEN_READ).forEach(function(k){ if(t.indexOf(k)<0) return; if(new RegExp(k+'[」』]?[（(]').test(t)) return; t=t.replace(new RegExp(k+'([」』]?)'),k+'$1（'+TSUHEN_READ[k]+'）'); }); return t; }catch(e){ return t; } }
 function _finalFix(t){ t=String(t||'').replace(/\n?[ \t]*CHIPS[:：][^\n]*$/gm,'').replace(/\s+$/,'');
   if(state.lang==='ja') t=_tsuhenReading(t);
+  /* 書き直しの AI の前置き（「編集結果は以下の通りです。」）を出さない（定期テスト 2026-11-07） */
+  t=t.replace(/^\s*(編集結果|修正(結果|版|後の文章)|書き直し(た文章|結果)?|以下が(修正|編集)[^。\n]*)(は|を)?(以下の通り|次の通り)?(です|になります)?[。：:]\s*/,'').replace(/^\s*(Here is the (edited|revised|updated) (reply|text|version)[^.\n]*[.:]|수정된 (답변|내용)[^.\n]*[.:]|以下是(修改|編輯|编辑)後?的[^。\n]*[。：:])\s*/i,'');
+  if(state.lang==='ja') t=_fixVerdictJa(t);
+  /* 雑談だけの日に「心の内を聞かせてくれて」と言わない（定期テスト 2026-11-07：天気の話のあとのお別れで言った） */
+  try{ if(state.lang==='ja'&&/心の内を聞かせて/.test(t)&&!(state.msgs||[]).some(function(m){ return m.role==='me'&&/悩|つら|辛|不安|振られ|別れ|失恋|告白|困って|苦し|消えたい|眠れ|しんど|迷って|後悔|心配/.test(m.text||''); })) t=t.replace(/心の内を聞かせてくれて/g,'お話ししてくれて'); }catch(e){}
   if(state.lang==='en') t=t.replace(/\(void\) (years?)/gi,'void $1 (kūbō — a resting phase in your cycle)').replace(/\byour void (years?)\b(?! \()/gi,'your void $1 (kūbō — a resting phase in your cycle)');   /* 定期テスト 2026-11-07：「2028 brings your (void) years」と説明なしで出た */   /* 仕上げの AI がボタン用の行を返しても、吹き出しに出さない（安全網・2026-10-29） */
   return _fixJoints(_dropRepeatQuestion(_wrapClose(_plainVerbs(_dedupeYears(_koNoDangsin(_dropRepeatTopics(_dropWrongVoid(_dropPastFuture(t))))))))); }
 function _koNoDangsin(t){ if(state.lang!=='ko'||!t) return t; t=String(t).replace(/당신(?:은|이|의|을|에게|께서|도|만)?\s*/g,'');
   /* 名前が登録されていない時の「님」だけ（「님은」「님의」）も外す。外したあとに文頭に残った助詞「의」も外す */
-  var _nm=(state.profile&&state.profile.name||'').trim(); if(!_nm) t=t.replace(/(^|[\s.!?。'"「(])님(?=[가-힣])/g,'$1본인');   /* 名前がない時の「님만의」「님에게는」→「본인만의」「본인에게는」 */
+  t=t.replace(/(^|[\s.!?。'"「(])님(?=[가-힣])/g,'$1본인');   /* 名前の前が消えて「님에게」だけ残った時も（名前がある時は「사키님」のように前につながるので当たらない。定期テスト 2026-11-07） */
+  t=t.replace(/(^|[.!?。]\s+)도\s+(?=[가-힣])/g,'$1본인도 ');   /* 名前がない時の「님만의」「님에게는」→「본인만의」「본인에게는」 */
   return t.replace(/(^|[.!?。]\s+)의\s+/g,'$1'); }
 function _softenJargon(t){ if(!t) return t; var L=state.lang, arr=SOFT_MAP[L];
   t=_softenTwelveStage(t,L);
@@ -6807,7 +6819,7 @@ function _answerCore(q,risk){
   /* 直近2回の返事で渡した材料は、もう一度渡さない（運営指摘 2026-11-03：「職場で助けが入る」「2017〜2026年は仕事の動きが多い10年」などが返事ごとに出ていた）。
      時期の質問では、時期の材料は残す。最初の鑑定（材料がすべて新しい）は今まで通り */
   try{ var _mh=window._mustHist||[], _recentL=[].concat.apply([],_mh.slice(-2)), _tq=(typeof RE_TIMINGQ!=='undefined'&&RE_TIMINGQ.test(q));
-    var _keep=_must.filter(function(m){ return _recentL.indexOf(m.label)<0||(_tq&&/month|year|decade|10-year|timing|when|period/i.test(m.label)); });
+    var _keep=_must.filter(function(m){ return _recentL.indexOf(m.label)<0||(_tq&&/month|year|decade|10-year|timing|when|period/i.test(m.label))||/空亡 years BY NUMBER/.test(m.label); });   /* 空亡の質問が続く時は、空亡の年をまた渡す（定期テスト 2026-11-07：2回目で空亡でない年を注意の年として答えた） */
     if(!(typeof RE_FULLQ!=='undefined'&&RE_FULLQ.test(q))) _must=_keep;   /* 全部が直近で渡したものなら、今回は材料を渡さず、聞かれたことだけに答えさせる */   /* 「くわしく」は同じ話を深めるので、そのまま */
     window._mustHist=_mh.concat([_must.map(function(m){ return m.label; })]).slice(-4); }catch(e){}
   var payload={ systemInstruction:{parts:[{text:(_plain?buildLightPrompt():buildSystemPrompt())+(((!smart)||_light3||_koLight||_chainLight)?readerNote(q):('\n'+_usedNote()+((RE_TIRED.test(q)||/眠れ|寝れ|寝られ|can.?t sleep|cannot sleep|잠이 안|잠이 안 와|睡不著|睡不着/i.test(q))&&!/[、,，].{6,}/.test(q)?'[THIS MESSAGE] They say they are tired or cannot sleep, without details yet. In THIS reply: no personality analysis and no advice — keep them company, gently ask what is going on, '+(RE_CHART_TALK.test(((state.msgs||[]).filter(function(m){ return m.role==='ai'; }).slice(-1)[0]||{}).text||'')?'and do NOT mention their period this time (you just did in your last reply).':'and ADD ONE short, gentle line from their chart that makes it understandable, built from this data in your own plain words: '+_monthThemeNote()+' Say WHAT kind of month it is for them and, if a day is given, when it eases — never a vague 「気持ちが揺れやすい時期」.')+' 2-3 short sentences.\n':'')))+(_chainLight?'\n[RIGHT AFTER A SERIOUS TALK] They shared something heavy a moment ago (see the chat above). Stay warm and attentive, keep the thread of what they shared, and do not switch to a cheerful tone that ignores it.\n':'')}]}, contents:(_plain?hist.slice(-12):hist), generationConfig:_gc };   /* 軽い発言（軽量モデル）にも、命式の根拠を1つ渡す（rule 3e） */
