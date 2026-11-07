@@ -492,10 +492,12 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
       const fx=pkPillarGzFix(src,A,B); out.w1={keepB:fx.indexOf('彼さんの月柱「'+gB(1)+'」')>=0&&fx.indexOf('太郎さんの日柱「'+gB(2)+'」')>=0, fixA:fx.indexOf('本人の月柱「'+gA(1)+'」')>=0};
       const env2=pkFmEnvPro(true,false,'',''); const g=pkFactGate('彼さんの月柱「'+gA(1)+'」が当たります。太郎さんの日柱「'+gB(2)+'」です。さくらさんの月柱「'+gA(1)+'」です。',env2);
       out.w1.gate=g.rows.length===1&&g.text.indexOf('太郎さんの日柱')>=0&&g.text.indexOf('さくらさんの月柱')>=0;
+      { const ns=(pkFmPerson(A,'本人').ns||[])[2]||[], all=['天乙貴人','文昌貴人','駅馬','華蓋','咸池','紅艶'], no=all.find(x=>ns.indexOf(x)<0), yes=ns.find(x=>all.indexOf(x)>=0||x==='天徳貴人');
+        const g3=pkFactGate('日柱にある'+no+'が助けます。'+(yes?'日柱にある'+yes+'が支えます。':''),pkFmEnvPro(false,false,'','')); out.w1.star=g3.rows.length===1&&(!yes||g3.text.indexOf(yes)>=0); }   // 命式にない星（鑑定書の「日柱にある天乙貴人」）
       personName=pa; personNameB=pb; chartB=cb0; }
     // ③④ 今年のずれ・「〜11月上旬」を日付にしない
     { const NY=pkNenInfo().Y; out.w3=pkFmRelYearFix('今年の'+(NY+1)+'年に。',{nenY:NY})==='来年の'+(NY+1)+'年に。';
-      out.w4=pkFmExpand('いま〜〔F:d'+(pkfmToday().y+1)+'-11-6〕上旬の時期',pkFmEnvPro(false,false,'','')).text.indexOf('いま〜11月上旬の時期')>=0&&pkFactFix('いま〜11月6日（火）上旬','','')==='いま〜11月6日（火）上旬'; }
+      out.w4=pkFmExpand('いま〜〔F:d'+pkfmFwdY(11,6)+'-11-6〕上旬の時期',pkFmEnvPro(false,false,'','')).text.indexOf('いま〜11月上旬の時期')>=0&&pkFactFix('いま〜11月6日（火）上旬','','')==='いま〜11月6日（火）上旬'; }
   }catch(err){ out.err=String(err&&err.message||err); } chart=c0; return out; });
   if(r.err) e.push('動かない：'+r.err);
   else { if(r.cal!=='丙戌,丁未,庚子,日') e.push('暦の計算：'+r.cal);
@@ -507,7 +509,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(r.g1.rows!==6||!r.g1.keep||!r.g1.gone||r.g1.off) e.push('照らし合わせ：'+JSON.stringify(r.g1));
     if(!r.g2off) e.push('1行目が消えたのに切りかえない');
     if(r.fp.length) e.push('通信なしの答えの正しい文を外した：'+r.fp.slice(0,2).join(' / '));
-    if(!r.w1||!r.w1.keepB||!r.w1.fixA||!r.w1.gate) e.push('誰の柱か（お相手の呼び名・名前）：'+JSON.stringify(r.w1));
+    if(!r.w1||!r.w1.keepB||!r.w1.fixA||!r.w1.gate||!r.w1.star) e.push('誰の柱か（お相手の呼び名・名前）：'+JSON.stringify(r.w1));
     if(!r.w3) e.push('今年と西暦のずれを直さない'); if(!r.w4) e.push('「〜11月上旬」を日付として扱った'); }
   console.log('  '+(e.length?'NG':'OK')+' 事実の差しこみの印・出す前の照らし合わせ（3ツール同じ・置きかえ・ビギナー・材料・正しい文を外さない・切りかえ・誰の柱か・今年のずれ・上旬）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('事実の印・照らし合わせ: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
