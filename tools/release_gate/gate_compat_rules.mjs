@@ -495,6 +495,14 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
       { const ns=(pkFmPerson(A,'本人').ns||[])[2]||[], all=['天乙貴人','文昌貴人','駅馬','華蓋','咸池','紅艶'], no=all.find(x=>ns.indexOf(x)<0), yes=ns.find(x=>all.indexOf(x)>=0||x==='天徳貴人');
         const g3=pkFactGate('日柱にある'+no+'が助けます。'+(yes?'日柱にある'+yes+'が支えます。':''),pkFmEnvPro(false,false,'','')); out.w1.star=g3.rows.length===1&&(!yes||g3.text.indexOf(yes)>=0); }   // 命式にない星（鑑定書の「日柱にある天乙貴人」）
       personName=pa; personNameB=pb; chartB=cb0; }
+    // 運の柱（今月の月柱）を本人の柱として直さない・来年の年運の干支のずれは年の言葉を直す・「今の大運」に次の大運を書いたら直す／星の説明つきなら文を外す（2026-11-07）
+    { const c=baziCompute({year:1981,month:6,day:10,hour:22,minute:28,sex:'female',tu:false},'','none'); chart=c; const NY=pkNenInfo().Y, mp=c.pillars[1].ganzhi, wr=mp===pkfmGz(5)?pkfmGz(7):pkfmGz(5);
+      const D=[mp].concat(c.decadeFortunes.map(d=>d.ganzhi)), cu=curDu(c).ganzhi, nx=D[D.indexOf(cu)+1];
+      const t1='今月の月柱は'+wr+'です。', r1=pkPillarGzFix(t1,c,null), g1=pkFactGate(t1,pkFmEnvPro(false,false,'',''));
+      const r2=pkFmRelYearFix('来年の年運は'+pkfmYGz(NY)+'（天干偏印）です。',{nenY:NY});
+      const r3=pkRunGzFix('今の大運は'+nx+'です。',c,null), r4=pkRunGzFix('前の文です。今の大運は'+nx+'（干は印綬の星）の時期です。次の文です。',c,null);
+      const g5=pkFactGate('今の大運は'+nx+'です。ほかの文です。',pkFmEnvPro(false,false,'',''));
+      out.w5={run:r1===t1&&g1.rows.length===0, rel:r2==='今年の年運は'+pkfmYGz(NY)+'（天干偏印）です。', now:r3==='今の大運は'+cu+'です。', drop:r4==='前の文です。次の文です。', gate:g5.rows.length===1, r3, r4}; }
     // ③④ 今年のずれ・「〜11月上旬」を日付にしない
     { const NY=pkNenInfo().Y; out.w3=pkFmRelYearFix('今年の'+(NY+1)+'年に。',{nenY:NY})==='来年の'+(NY+1)+'年に。';
       out.w4=pkFmExpand('いま〜〔F:d'+pkfmFwdY(11,6)+'-11-6〕上旬の時期',pkFmEnvPro(false,false,'','')).text.indexOf('いま〜11月上旬の時期')>=0&&pkFactFix('いま〜11月6日（火）上旬','','')==='いま〜11月6日（火）上旬'; }
@@ -510,6 +518,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(!r.g2off) e.push('1行目が消えたのに切りかえない');
     if(r.fp.length) e.push('通信なしの答えの正しい文を外した：'+r.fp.slice(0,2).join(' / '));
     if(!r.w1||!r.w1.keepB||!r.w1.fixA||!r.w1.gate||!r.w1.star) e.push('誰の柱か（お相手の呼び名・名前）：'+JSON.stringify(r.w1));
+    if(!r.w5||!r.w5.run||!r.w5.rel||!r.w5.now||!r.w5.drop||!r.w5.gate) e.push('運の柱・来年の年運・今の大運：'+JSON.stringify(r.w5));
     if(!r.w3) e.push('今年と西暦のずれを直さない'); if(!r.w4) e.push('「〜11月上旬」を日付として扱った'); }
   console.log('  '+(e.length?'NG':'OK')+' 事実の差しこみの印・出す前の照らし合わせ（3ツール同じ・置きかえ・ビギナー・材料・正しい文を外さない・切りかえ・誰の柱か・今年のずれ・上旬）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('事実の印・照らし合わせ: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
