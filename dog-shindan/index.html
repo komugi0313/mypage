@@ -171,6 +171,11 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .share button{min-height:52px;border-radius:999px;border:0;font-weight:800;color:#FFFFFF;font-size:.95rem;padding:6px 8px}
 .share .line{background:#00893D}.share .x{background:#111111}.share .ig{background:linear-gradient(45deg,#F58529,#DD2A7B,#8134AF)}
 .share-all{display:block;width:100%;min-height:52px;border-radius:999px;border:3px solid var(--teal);background:var(--teal);color:#FFFFFF;font-weight:800;font-size:1.02rem}
+.qswap{text-align:center;margin:0 0 -4px}.qswap span{display:inline-flex;align-items:center;gap:6px;background:#FFF3C4;color:#5A4500;font-weight:800;font-size:.84rem;border-radius:99px;padding:5px 14px;white-space:nowrap;animation:qsPop .35s ease}.qswap svg{width:15px;height:15px}
+@keyframes qsPop{0%{opacity:0;transform:scale(.7)}70%{transform:scale(1.08)}100%{opacity:1;transform:none}}
+@keyframes qsOut{to{opacity:0;transform:translateX(-30px)}}@keyframes qsIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+.qtext.q-out{animation:qsOut .2s ease forwards}.qtext.q-in{animation:qsIn .3s ease}
+@media (prefers-reduced-motion:reduce){.qswap span,.qtext.q-out,.qtext.q-in{animation:none}}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#FFFFFF;border-radius:14px;padding:10px 16px;font-weight:800;font-size:.9rem;z-index:60;max-width:calc(100% - 32px);text-align:center}
 /* 友だちから */
 .friend{border-color:var(--ball);align-items:center;text-align:center}
@@ -588,6 +593,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
     <div class="qhead"><span class="logo"><img class="paw-s" src="icon/paw.png" alt="">44Wansonalities</span><span class="qcount" id="q-count">Q.1 ／ 30</span></div>
     <div class="progwrap"><div class="prog"><b id="q-prog"></b></div><img class="pball" id="q-ball" src="icon/ball.png" alt=""><img class="pgoal" src="icon/cookie.png" alt=""></div>
     <div class="qscene" id="q-dog"></div>
+    <p class="qswap" id="q-swap" hidden><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>別の質問にかえました</span></p>
     <p class="qtext" id="q-text"></p>
     <div class="answers" id="q-ans"></div>
     <p class="q-hint" id="q-hint">いくつもあてはまるときは、いちばん多いものを選んでね</p>
@@ -3863,7 +3869,7 @@ function renderQ(){
   $("q-count").textContent="Q."+(st.qi+1)+" ／ "+N;
   $("q-prog").style.width=(st.qi/N*100)+"%";$("q-ball").style.left=(st.qi/N*100)+"%";$("q-ball").style.transform="translate(-50%,-50%) rotate("+(st.qi*60)+"deg)";
   $("q-dog").innerHTML=dog(q[3]);
-  $("q-text").textContent=q[1];
+  $("q-text").textContent=q[1];$("q-swap").hidden=st.sw!==st.qi;$("q-text").classList.remove("q-out","q-in");if(st.sw===st.qi&&st.swAnim){st.swAnim=false;void $("q-text").offsetWidth;$("q-text").classList.add("q-in")}
   $("q-ans").innerHTML=orderOf(st.qi).map(function(k){return '<button type="button" data-k="'+k+'"'+(st.ans[st.qi]===k?' class="on"':'')+'>'+q[2][k]+'</button>'}).join("")+'<button type="button" class="skip'+(st.ans[st.qi]==="s"?' on':'')+'" data-k="s">わからない → 別の質問へ</button>';
   $("q-back").textContent=st.qi===0?"← 入力にもどる":"← ひとつもどる";
 }
@@ -3875,12 +3881,12 @@ $("q-ans").addEventListener("click",function(e){
       var pool=QB.filter(function(q){return q[0]===ax&&Q.indexOf(q)<0&&(st.seenQ||[]).indexOf(q)<0});
       var fresh=pool.filter(function(q){return recent.indexOf(QB.indexOf(q))<0}),pick=(fresh.length?fresh:pool);
       if(pick.length){st.seenQ=(st.seenQ||[]).concat([Q[st.qi]]);Q[st.qi]=pick[Math.floor(Math.random()*pick.length)];st.repl[ax]++;st.ans[st.qi]=null;
-        b.classList.add("on");setTimeout(function(){renderQ();toast("同じ性格の、別の質問にかえました")},180);return}}
+        b.classList.add("on");st.sw=st.qi;st.swAnim=true;$("q-text").classList.add("q-out");setTimeout(renderQ,200);return}}
   }
-  st.ans[st.qi]=b.dataset.k==="s"?"s":+b.dataset.k;b.classList.add("on");
+  st.sw=null;st.ans[st.qi]=b.dataset.k==="s"?"s":+b.dataset.k;b.classList.add("on");
   setTimeout(function(){if(st.qi<N-1){st.qi++;renderQ()}else finish()},180);
 });
-$("q-back").addEventListener("click",function(){if(st.qi===0){show("s-start");return}st.qi--;renderQ()});
+$("q-back").addEventListener("click",function(){st.sw=null;if(st.qi===0){show("s-start");return}st.qi--;renderQ()});
 
 // ---------- 判定 ----------
 // 各性格は3問×4点＝12点満点 → 0〜100
