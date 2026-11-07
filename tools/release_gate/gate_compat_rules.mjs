@@ -484,6 +484,18 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     out.fp=[]; for(let k=0;k<25;k++){ const tu=rnd()<0.3; let c=baziCompute({year:1950+Math.floor(rnd()*60),month:1+Math.floor(rnd()*12),day:1+Math.floor(rnd()*28),hour:Math.floor(rnd()*24),minute:0,sex:rnd()<0.5?'male':'female',tu},'','none'); if(tu) c=markTimeUnknown(c); chart=c; const q=Q[k%Q.length];
       let t=String(consultParts(q).local||''); try{ t=pkEnsureBig(t,chart,q); t=pkEnsureConsult(t,chart,q); t=pkEnsureLove(t,chart,q); t=pkEnsureDays(t,chart,q); }catch(_e){}
       const g=pkFactGateRun(t,false,false,q); if(g.rows.length) out.fp.push(chart.birth.clock+'：'+g.rows[0].what+'｜'+g.rows[0].calc); }
+    // ① 誰の柱か：お相手の名前・呼び名（彼さん・太郎さん）の柱を本人の干支に書きかえない／本人の柱のまちがいは直す／照らし合わせはお相手の柱で照らす（2026-11-07）
+    { const pa=personName, pb=personNameB, cb0=(typeof chartB!=='undefined')?chartB:null; personName='さくら'; personNameB='太郎';
+      const A=baziCompute({year:1981,month:6,day:10,hour:22,minute:28,sex:'female',tu:false},'','none'), B=baziCompute({year:1969,month:11,day:16,hour:9,minute:0,sex:'male',tu:false},'','none'); chart=A; chartB=B;
+      const gA=i=>A.pillars[i].ganzhi, gB=i=>B.pillars[i].ganzhi, wrong=gA(1)===pkfmGz(0)?pkfmGz(2):pkfmGz(0);
+      const src='さくらさんから見て、彼さんの月柱「'+gB(1)+'」が当たります。太郎さんの日柱「'+gB(2)+'」です。本人の月柱「'+wrong+'」です。';
+      const fx=pkPillarGzFix(src,A,B); out.w1={keepB:fx.indexOf('彼さんの月柱「'+gB(1)+'」')>=0&&fx.indexOf('太郎さんの日柱「'+gB(2)+'」')>=0, fixA:fx.indexOf('本人の月柱「'+gA(1)+'」')>=0};
+      const env2=pkFmEnvPro(true,false,'',''); const g=pkFactGate('彼さんの月柱「'+gA(1)+'」が当たります。太郎さんの日柱「'+gB(2)+'」です。さくらさんの月柱「'+gA(1)+'」です。',env2);
+      out.w1.gate=g.rows.length===1&&g.text.indexOf('太郎さんの日柱')>=0&&g.text.indexOf('さくらさんの月柱')>=0;
+      personName=pa; personNameB=pb; chartB=cb0; }
+    // ③④ 今年のずれ・「〜11月上旬」を日付にしない
+    { const NY=pkNenInfo().Y; out.w3=pkFmRelYearFix('今年の'+(NY+1)+'年に。',{nenY:NY})==='来年の'+(NY+1)+'年に。';
+      out.w4=pkFmExpand('いま〜〔F:d'+(pkfmToday().y+1)+'-11-6〕上旬の時期',pkFmEnvPro(false,false,'','')).text.indexOf('いま〜11月上旬の時期')>=0&&pkFactFix('いま〜11月6日（火）上旬','','')==='いま〜11月6日（火）上旬'; }
   }catch(err){ out.err=String(err&&err.message||err); } chart=c0; return out; });
   if(r.err) e.push('動かない：'+r.err);
   else { if(r.cal!=='丙戌,丁未,庚子,日') e.push('暦の計算：'+r.cal);
@@ -494,8 +506,10 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     r.matWant.forEach(w=>{ if(r.mat.indexOf(w)<0) e.push('材料の印（'+w+'）：'+r.mat.slice(0,120)); });
     if(r.g1.rows!==6||!r.g1.keep||!r.g1.gone||r.g1.off) e.push('照らし合わせ：'+JSON.stringify(r.g1));
     if(!r.g2off) e.push('1行目が消えたのに切りかえない');
-    if(r.fp.length) e.push('通信なしの答えの正しい文を外した：'+r.fp.slice(0,2).join(' / ')); }
-  console.log('  '+(e.length?'NG':'OK')+' 事実の差しこみの印・出す前の照らし合わせ（3ツール同じ・置きかえ・ビギナー・材料・正しい文を外さない・切りかえ）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('事実の印・照らし合わせ: '+e.join('・')); }
+    if(r.fp.length) e.push('通信なしの答えの正しい文を外した：'+r.fp.slice(0,2).join(' / '));
+    if(!r.w1||!r.w1.keepB||!r.w1.fixA||!r.w1.gate) e.push('誰の柱か（お相手の呼び名・名前）：'+JSON.stringify(r.w1));
+    if(!r.w3) e.push('今年と西暦のずれを直さない'); if(!r.w4) e.push('「〜11月上旬」を日付として扱った'); }
+  console.log('  '+(e.length?'NG':'OK')+' 事実の差しこみの印・出す前の照らし合わせ（3ツール同じ・置きかえ・ビギナー・材料・正しい文を外さない・切りかえ・誰の柱か・今年のずれ・上旬）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('事実の印・照らし合わせ: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
