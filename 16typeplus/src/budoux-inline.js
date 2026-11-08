@@ -5,7 +5,7 @@ let base=0;M.forEach(g=>g.forEach(v=>base+=v));base*=-0.5;
 const F=[['UW1',-3,-2],['UW2',-2,-1],['UW3',-1,0],['UW4',0,1],['UW5',1,2],['UW6',2,3],['BW1',-2,0],['BW2',-1,1],['BW3',0,2],['TW1',-3,0],['TW2',-2,1],['TW3',-1,2],['TW4',0,3]];
 const JA=/[\u3040-\u30ff\u3400-\u9fff]/;
 function seg(t){if(!JA.test(t)||t.indexOf('\u200b')>=0)return t;let out=t[0];
- for(let i=1;i<t.length;i++){let s=base;for(const [k,a,b] of F){const g=M.get(k);if(g)s+=g.get(t.substring(i+a,i+b))||0;}if(s>0)out+='\u200b';out+=t[i];}return out.split('\u200b').map(fine).join('\u200b').replace(/日に\u200bち/g,'日にち').replace(/\u200b(?=[。、，．・）」』】…！？])/g,'');}
+ for(let i=1;i<t.length;i++){let s=base;for(const [k,a,b] of F){const g=M.get(k);if(g)s+=g.get(t.substring(i+a,i+b))||0;}if(s>0)out+='\u200b';out+=t[i];}return out.split('\u200b').map(fine).join('\u200b').replace(/日に\u200bち/g,'日にち').replace(/は\u200b?っ\u200b?き\u200b?り|細\u200b?か\u200b?い|部\u200b?活|生\u200b?年\u200b?月\u200b?日|自\u200b?信\u200b?の\u200b?も\u200b?ち\u200b?方|と\u200b?り\u200b?あ\u200b?え\u200b?ず|働\u200b?い\u200b?て\u200b?い\u200b?る\u200b?人|ち\u200b?が\u200b?い|す\u200b?っ\u200b?き\u200b?り|し\u200b?っ\u200b?か\u200b?り|ゆ\u200b?っ\u200b?く\u200b?り|や\u200b?っ\u200b?ぱ\u200b?り|こ\u200b?っ\u200b?そ\u200b?り/g,m=>m.replace(/\u200b/g,'')).replace(/\u200b(?=[。、，．・）」』】…！？])/g,'');}
 /* 区切りのない長い文節は、助詞のあとでも折り返せるようにする（句読点の前では折らない） */
 const PT=/[がをにはでとへも]/,NB=/[。、，．！？）」』】・…ーぁぃぅぇぉっゃゅょゎァィゥェォッャュョ\u200b]/;
 function fine(x){if(x.length<10)return x;let o='';for(let i=0;i<x.length;i++){o+=x[i];if(i>=2&&i<x.length-2&&PT.test(x[i])&&!NB.test(x[i+1])&&!(/[にでとへ]/.test(x[i])&&/[はも]/.test(x[i+1]))&&!(/[はも]/.test(x[i])&&PT.test(x[i-1])))o+='\u200b';}return o;}
