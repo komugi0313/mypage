@@ -24,6 +24,12 @@ node tools/release_gate/gate_pk.mjs beginner online # ビギナー（offline / n
 node tools/release_gate/gate_eki.mjs online         # 易（offline / nonet も同じ）
 node tools/release_gate/gate_compat.mjs pro           # 相性の詳細鑑定（beginner も）：年の干支・2人の年齢・年なしの年齢・配偶宮の持ち主・判定にない星の話・答えの形
 node tools/release_gate/gate_compat_rules.mjs pro      # 相性の流派の決まり（律音・三合・方合・半会〈子午卯酉を含む2支〉・支合）／神殺・合冲の表が鑑定者本人の表（写真）と1マスずつ同じか（アプリと鑑定書）／恋愛相談の4項目（beginner も・文章作成は使わない）
+node tools/release_gate/gate_facts.mjs --selftest       # 事実の照合そのものの点検（正しい文で何も出ない・わざと間違えた15種類を全部見つける。文章作成は使わない）
+node tools/release_gate/gate_facts.mjs                  # 事実の自動照合・速い版（30件：オンライン20＋通信なし10、今日＝2026-11-07と2027-01-20）
+node tools/release_gate/gate_facts.mjs --size full      # 事実の自動照合・多い版（320件：オンライン210＋通信なし110）。--out <dir> に report.md・report.json
+                                                        #   PRO・ビギナー・易を実際に動かし、画面・LINE・コピー・印刷・鑑定書・日運月運の詳細鑑定の全文から、日付と曜日・暦の干支・年齢・
+                                                        #   大運/年運/月運/日運・柱の干支/日干/通変星（司令）・〔空亡〕の印・吉凶星・合冲刑の表・近い日の質問・空亡の時期の告白など・
+                                                        #   六十干支にない形・天中殺・「彼の月」を抜き出して計算と照らす。--check-only で作った答えを照合し直す
 ```
 
 最後の行が「→ 合格」なら合格です。1回の点検で文章作成を7回ほど使います（PRO・ビギナー）。ビギナーは、返ってきた文に専門用語が混じったときだけ1回書き直してもらうので、1つの相談で最大4回まで合格にしています。

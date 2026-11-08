@@ -26,6 +26,14 @@ ok('開いただけでは文章作成を呼ばない', calls===0, 'calls='+calls
 { const r=await p.evaluate(()=>{ if(typeof window.ekiEvidence!=='function') return ''; const h=HEXDB['1-1'], rr={h:h,ko:2,koData:h.ko[2]};   /* ③ 根拠のチェック表：卦の名前・原文・動いた爻・命式の話 */
     return window.ekiEvidence(rr,{hantei:'乾為天が出ました。卦辞は「乾。元亨利貞。」。動いた爻は三爻です。',script:'「見龍在田」。「天下太平無事」。坤為地のように。'},'あなたの命式では日柱に咸池があります。').map(x=>x.st+'|'+x.what).join('\n'); });
   ok('根拠のチェック表：卦・原文・動いた爻・命式の話を照らし合わせる', /^ok\|乾為天/m.test(r)&&/^warn\|坤為地/m.test(r)&&/^ok\|「乾。元亨利貞。」/m.test(r)&&/^ok\|「見龍在田」/m.test(r)&&/^warn\|「天下太平無事」/m.test(r)&&/^warn\|動いた爻＝三爻/m.test(r)&&/^drop\|命式・星の話/m.test(r), r.replace(/\n/g,' / ').slice(0,200)); }
+{ /* 言い直した現代語訳（TAI_FIX）で、先生の元の訳より答えの記号が上がらないこと（例：水雷屯の初爻が✖→〇になっていた 2026-10-30） */
+  const s=fs.readFileSync(path.join(ROOT,'eki-pro','app','index.html'),'utf8');
+  const grab=st=>{const i=s.indexOf(st);let d=0,j=s.indexOf('{',i);for(;j<s.length;j++){if(s[j]=='{')d++;else if(s[j]=='}'){d--;if(!d)break;}}return s.slice(i,j+1);};
+  const line=st=>{const i=s.indexOf(st);return s.slice(i,s.indexOf('\n',i));};
+  const code=[line('const HEXKK='),line('const HEXDB='),line('const KO_KYO='),grab('const TAI_FIX=')+';',grab('function mTai('),grab('function koTone('),line('const TAI_POS='),line('const TAI_NEG='),grab('function koAdjustRank('),grab('function rankToVerdict(')].join('\n');
+  const up=new Function(code+`;const o={'◎':0,'〇':1,'△':2,'✖':3},bad=[];for(const [k,h] of Object.entries(HEXDB)){const b=HEXKK[k]||'C';for(let ko=1;ko<=6;ko++){const d=h.ko[ko];const now=rankToVerdict(koAdjustRank(b,d.jd,d.tai,mTai(h,ko))).sym, raw=rankToVerdict(koAdjustRank(b,d.jd,d.tai,String(d.tai).replace(/◎/g,''))).sym;if(o[now]<o[raw])bad.push(h.nm+ko+'爻 '+raw+'→'+now);}}return bad;`)();
+  ok('言い直した訳で答えの記号が先生の訳より上がらない（水雷屯の初爻など）', up.length===0, up.join(' / ')); }
+{ const s=fs.readFileSync(path.join(ROOT,'eki-pro','app','index.html'),'utf8'); ok('坤為地の上爻（龍戦于野）は✖（鑑定者本人の判断 2026-10-30）', /var KO_RANK_FIX=\{[^}]*'2-6':'E'/.test(s)&&/return KO_RANK_FIX\[hx\.no\+'-'\+k\]\|\|koAdjustRank\(/.test(s)); }
 async function consult(q,nums){ await p.evaluate(()=>scrollTo(0,0)); await p.click('.ct-number'); await p.waitForTimeout(300);
   for(const [i,v] of [['#num1',nums[0]],['#num2',nums[1]],['#num3',nums[2]]]) await p.fill(i,String(v));
   await p.fill('#question',q); const c0=calls; const t0=Date.now();
@@ -38,6 +46,7 @@ async function consult(q,nums){ await p.evaluate(()=>scrollTo(0,0)); await p.cli
 }
 // 1人目
 const A=await consult('転職するなら今年と来年のどちらがいいですか',[3,8,15]);
+{ const sy=await p.evaluate(()=>({tool:window.__ekiToolSym||'',shown:((document.getElementById('verdictCard')||{}).innerText||'').trim().charAt(0)})); ok('答えの記号がツールの決めた記号と同じ（文章作成が別の記号を書いても）', !!sy.tool&&sy.tool===sy.shown, JSON.stringify(sy)); }
 ok('相談1：答えが出る'+(MODE!=='online'?'（端末の中の答え・40秒以内）':''), A.ms>=0&&A.res.length>200&&(MODE==='online'||A.ms<40000), `${A.secs}秒・卦=${A.hex}`);
 if(MODE==='online') ok('相談1：三度押しでも呼び出しは1件分（2回以下）', A.calls<=2, 'calls='+A.calls);
 const first=(A.v.split('\n').map(s=>s.trim()).filter(s=>s.length>6&&!/^(この相談への答え|[◎〇○△✖×])$/.test(s))[0]||'');

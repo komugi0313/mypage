@@ -92,10 +92,10 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   if(!/パートナーの星（官星＝五行の「木」）は、あなたの喜神（きしん：あると調子が上がる五行）です/.test(L[1]||'')) e.push('パートナーの星が喜神か');
   if(!/2人の相性とは別の見方/.test(L[1]||'')) e.push('相性とは別の見方の一言');
   if(!/月柱/.test(L[2]||'')||!/仕事/.test(L[2]||'')) e.push('出会いの場');
-  if(!/2027年3月ごろ（癸卯の月）/.test(L[3]||'')||/亥の月）＝[^／]*半合/.test(L[3]||'')) e.push('縁が動く月');
+  if(!/2027年3月(?:ごろ|〜4月上旬)（癸卯の月）/.test(L[3]||'')||/亥の月）＝[^／]*半合/.test(L[3]||'')) e.push('縁が動く月');
   if(!/【恋愛で(必ず見る4つ|大事な4つのこと)】/.test(lv.t)||(lv.t.match(/\n・/g)||[]).length!==4) e.push('書き足し');
   if(lv.n!=='テスト。') e.push('恋愛でない相談に書き足している');
-  if(!/2027年3月ごろ（癸卯の月）/.test(lv.g||'')) e.push('月の干支の直し（きみずう→癸卯）');
+  if(!/2027年3月(?:ごろ|〜4月上旬)（癸卯の月）/.test(lv.g||'')) e.push('月の干支の直し（きみずう→癸卯）');
   if(!/出会いの場：|出会いやすい場所は/.test(lv.g||'')) e.push('「出会い」の言葉だけで出会いの場ありと判定している');
   console.log('  '+(e.length?'NG':'OK')+' 恋愛相談の4項目（1981-06-10 女性で確認）'+(e.length?'  … '+e.join('・'):''));
   if(e.length) res.fails.push('恋愛相談の4項目: '+e.join('・')); }
@@ -103,6 +103,44 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
 { const ff=await p.evaluate(()=>typeof pkFactFix==='function'?[pkFactFix('日干は丁（火の陽＝温かさ）'),pkFactFix('月支元命（性格の中心）に「偏印」が3つある'),pkFactFix('正官（せいかん）（行動力と決断力の星）が巡る'),String(pkIsLoveQ('11月にデートに誘われています。好きになる可能性はありますか？'))]:['','','','']);
   const e=[]; if(!/丁（火の陰/.test(ff[0])) e.push('丁＝火の陰'); if(!/月支元命（性格の中心）が「偏印」で、命式全体ではこの星が3つ/.test(ff[1])) e.push('月支元命の数'); if(!/正官（せいかん）（規律・責任・誠実の星）/.test(ff[2])) e.push('正官の説明'); if(ff[3]!=='true') e.push('デートの相談を恋愛と見分ける');
   console.log('  '+(e.length?'NG':'OK')+' 十干の陰陽・月支元命の数の直し'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('事実の直し: '+e.join('・')); }
+// 文章作成の干支の字のまちがい（日付についた干支を暦どおりに直す。pkFactFix ⑧。PRO・易・鑑定書は同じ中身＝下の中身くらべで確かめる。2026-11-06）
+{ const g=await p.evaluate(()=>typeof pkFactFix==='function'?pkFactFix('2026年11月6日（木申）がよい。2026年11月8日（丁戌（ひのといぬ））。2027年（丙未・19歳）。2026年12月（辛子の月）。2026年11月7日（土）（乙酉）。2026年11月〜12月上旬（己亥・庚子の月）。2026年11月（戊亥の月）。曜日：2026年11月6日（水）。'):'');
+  const e=[]; [['2026年11月6日（甲申）','木申→甲申'],['2026年11月8日（丙戌）','丁戌→丙戌'],['2027年（丁未・19歳）','丙未→丁未'],['2026年12月（庚子の月）','辛子→庚子の月'],['2026年11月7日（土）（乙酉）','正しい干支は変えない'],['（己亥・庚子の月）','月の範囲は変えない'],['2026年11月（己亥の月）','戊亥→己亥'],['2026年11月6日（金）','曜日']].forEach(([x,n])=>{ if(String(g).indexOf(x)<0) e.push(n); });
+  if(/ひのといぬ/.test(g)) e.push('まちがった干支の読みが残った');
+  console.log('  '+(e.length?'NG':'OK')+' 日付についた干支・曜日のまちがいの直し'+(e.length?'  … '+e.join('・')+'｜'+String(g).slice(0,200):'')); if(e.length) res.fails.push('干支の直し: '+e.join('・')); }
+// 大運・年運・月運・日運の名前つきの干支のまちがい（pkRunGzFix）と、お客様へのお伝え方の言いかえで文がくずれないこと（pkPlainTalk。2026-11-06）
+{ const r=await p.evaluate(()=>{ if(typeof pkRunGzFix!=='function'||typeof pkPlainTalk!=='function') return null; const a=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},'','none'), b=markTimeUnknown(baziCompute({year:2006,month:6,day:7,hour:12,minute:0,sex:'male',tu:true},'','none'));
+    const x=pkRunGzFix('今の大運（癸未）は学びの10年。2027年の年運「丙未」は動く年。2026年12月の月運は戊子の月。2026年11月7日の日運「甲酉」。お相手の今の大運は乙子です。',a,b);
+    const S=['明日（11月7日）は、乙酉と丁卯が冲で重なる日に、お持ちの丁卯の日が巡り、揺らぎやすい日です。','今日（11月6日）は甲申の日で、追い風の日です。','2人の日柱「丁卯」は同じで、わかり合いやすい関係です。','明日は、日支と月支が冲になる日なので、連絡は控えめに。','今年は丙午の年で、劫財（ごうざい：仲間の星）が巡ります。'].map(t=>pkPlainTalk(t));
+    return {x, cur:curDu(a).ganzhi, curB:curDu(b).ganzhi, S, br:S.map(t=>_pkTalkBroken(t))}; });
+  const e=[]; if(!r) e.push('仕組みがない'); else { if(r.x.indexOf('今の大運（'+r.cur+'）')<0) e.push('今の大運'); if(r.x.indexOf('2027年の年運「丁未」')<0) e.push('年運'); if(r.x.indexOf('月運は庚子')<0) e.push('月運'); if(r.x.indexOf('日運「乙酉」')<0) e.push('日運'); if(r.x.indexOf('お相手の今の大運は'+r.curB)<0) e.push('お相手の大運');
+    if(r.br.some(Boolean)||r.S.some(t=>/、と[がのは]|は、と|お持ちの日|はの日|人のは|「」/.test(t))) e.push('お伝え方の文がくずれた：'+r.S.join('／')); }
+  console.log('  '+(e.length?'NG':'OK')+' 運の名前つきの干支の直し・お伝え方の文がくずれない'+(e.length?'  … '+e.join('・')+'｜'+(r?r.x:''):'')); if(e.length) res.fails.push('運の干支・お伝え方: '+e.join('・')); }
+// 鑑定書（本格版・やさしい版）と易の干支の直し、節入りの決め方が3つのツールで同じか（2026-11-06「鑑定書も必ず直してください」）
+{ const e=[]; const ctx2=await b.newContext({serviceWorkers:'block',timezoneId:'Asia/Tokyo'}); await ctx2.clock.setFixedTime(new Date('2026-11-06T10:00:00+09:00'));
+  await ctx2.route('**/.netlify/functions/**',r=>r.fulfill({status:200,contentType:'application/json',body:'{"ok":true}'}));
+  const srvE=http.createServer((q,r)=>{let pp=decodeURIComponent(q.url.split('?')[0]);if(pp.endsWith('/'))pp+='index.html';const f=path.join(ROOT,'eki-pro',pp);if(!fs.existsSync(f)||fs.statSync(f).isDirectory()){r.writeHead(404);r.end();return;}r.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'application/octet-stream'});fs.createReadStream(f).pipe(r);}).listen(0); await new Promise(r=>srvE.on('listening',r));
+  const op=async(u)=>{ const q=await ctx2.newPage(); q.on('dialog',d=>d.accept()); await q.goto(u); await q.waitForTimeout(3000); return q; };
+  const P2=await op(`http://127.0.0.1:${port}/${page0}`), E2=await op(`http://127.0.0.1:${srvE.address().port}/app/index.html`);
+  const SH=await op(`http://127.0.0.1:${port}/meishi-sheet.html#d=2008-03-28&t=14:00&sex=female&corr=none&z=today&clk=1`), SB=await op(`http://127.0.0.1:${port}/meishi-sheet.html#d=2008-03-28&t=14:00&sex=female&corr=none&z=today&clk=1&bg=1`);
+  const T='今の大運（癸未）は学びの10年。2027年の年運「丙未」は動く年。2026年12月の月運は戊子の月。2026年11月7日の日運「甲酉」。大運「甲丑」では。';
+  for(const [nm,q] of [['鑑定書（本格版）',SH],['鑑定書（やさしい版）',SB]]){ const x=await q.evaluate(t=>typeof window.sheetRunGzFix==='function'&&window.__sheetLast&&window.__sheetLast()?window.sheetRunGzFix(t,window.__sheetLast()):'',T);
+    if(!x) e.push(nm+'：仕組みがない'); else [['今の大運（癸丑）','今の大運'],['2027年の年運「丁未」','年運'],['月運は庚子','月運'],['日運「乙酉」','日運'],['大運では。','まちがいで1つに決まらない干支を外す']].forEach(([w,n])=>{ if(x.indexOf(w)<0) e.push(nm+'：'+n); }); }
+  { const x=await P2.evaluate(()=>{ const a=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},'','none'); return pkRunGzFix('大運「甲丑」では。今の大運（癸丑）は。',a,null); }); if(x!=='大運では。今の大運（癸丑）は。') e.push('PRO：1つに決まらないまちがいの干支を外す／正しい干支は残す：'+x); }
+  { const x=await E2.evaluate(()=>typeof window.ekiBadGzStrip==='function'?window.ekiBadGzStrip('（甲丑）の流れ。丙午の年。'):''); if(/甲丑/.test(x)||x.indexOf('丙午の年')<0) e.push('易：六十干支にない形を外す：'+x); }
+  // 節入り：PRO（pkSetsuStart）・易・鑑定書で、節入りの前日・当日・翌日の「○年○月○日（…の月）」が同じに直り、暦の節月（その日を含む節月）の干支になること
+  const strs=await P2.evaluate(()=>{ const L=[]; for(const y of [2026,2027]) for(let m=1;m<=12;m++){ const sd=pkSetsuStart(y,m).getDate(); [sd-1,sd,sd+1].forEach(d=>L.push(y+'年'+m+'月'+d+'日（甲子の月）')); } return L; });
+  const exp=await P2.evaluate(s=>s.map(x=>{ const m=x.match(/(\d+)年(\d+)月(\d+)日/); const sm=pkSmOf(new Date(+m[1],+m[2]-1,+m[3],12)); return _pillarForDate(new Date(sm.y,sm.m-1,20,12),'month').ganzhi; }),strs);
+  const fx=async(q,g)=>q.evaluate(([s,g])=>{ const F=g==='pro'?pkFactFix:(g==='eki'?window.__ekiFactFix:window.__sheetFactFix); return F?s.map(x=>F(x)):[]; },[strs,g]);
+  const A=await fx(P2,'pro'), EE=await fx(E2,'eki'), S2=await fx(SH,'sheet'); let bad=0, dif=0;
+  A.forEach((x,i)=>{ if(x.indexOf('（'+exp[i]+'の月）')<0) bad++; if(x!==EE[i]||x!==S2[i]) dif++; });
+  if(!EE.length||!S2.length) e.push('易・鑑定書の pkFactFix が呼べない'); if(bad) e.push('節入りの月の干支がちがう '+bad+'件'); if(dif) e.push('3つのツールで節入りの決め方がちがう '+dif+'件');
+  await ctx2.close(); srvE.close();
+  console.log('  '+(e.length?'NG':'OK')+' 鑑定書（本格版・やさしい版）・易の干支の直し、節入りが3ツールで同じ（'+strs.length+'日）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('鑑定書・易の干支: '+e.join('・')); }
+// 六十干支にない形は名前がなくても外し、前後を自然につなぐ（pkFactFix ⑨。3ツール同じ中身。2026-11-06）
+{ const r=await p.evaluate(()=>{ if(typeof pkFactFix!=='function') return null; window.__pkGzFixLog=[]; const L=[['この流れは（甲丑）で、よい。','この流れは、よい。'],['「乙子」の気配。','その気配。'],['流れは甲丑の年に。','流れはその年に。'],['甲・丑の話。甲と丑。丁子の香り。丙午の年。','甲・丑の話。甲と丑。丁子の香り。丙午の年。'],['この時期は乙子が巡り、動く。','この時期は巡り、動く。']]; const out=L.map(([a,b])=>[pkFactFix(a),b]); return {out, drop:(window.__pkGzFixLog||[]).filter(x=>x.st==='drop').length}; });
+  const e=[]; if(!r) e.push('仕組みがない'); else { r.out.forEach(([x,w])=>{ if(x!==w) e.push(x+'≠'+w); }); if(r.drop<4) e.push('根拠のチェック表に🗑の記録がない'); if(r.out.some(([x])=>/はで|のの|はは|がで|（、|、、/.test(x))) e.push('助詞が続く・読点が続く'); }
+  console.log('  '+(e.length?'NG':'OK')+' 六十干支にない形を外して自然につなぐ'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('ない干支: '+e.join('・')); }
 // 縁が動く月の三合・刑（2008-03-28 14時 女性：11月己亥＝亥卯未の三合〈時支の未〉、12月庚子＝配偶宮卯と刑）
 { const m=await p.evaluate(()=>{ if(typeof loveFourLines!=='function') return ''; const c=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'); const L=loveFourLines(c); return (L&&L.pro[3]||'')+'|'+pkIsLoveQ('今年の冬に出会う可能性がある男性は？'); });
   const e=[]; if(/己亥の月/.test(m)&&!/己亥の月）＝[^／]*三合（亥卯未/.test(m)) e.push('三合（亥卯未）'); if(/庚子の月/.test(m)&&!/庚子の月）＝配偶宮「卯」と刑/.test(m)) e.push('子卯の刑'); if(!/\|true$/.test(m)) e.push('「出会う」を恋愛相談と見分ける');
@@ -111,7 +149,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   const e=[]; if(!/12月の星回りには、この月に咸池や偏官/.test(mf[0])) e.push('12月の星（偏官）・配偶宮の取りちがえ'); if(!/卯と未で半合/.test(mf[1])) e.push('三合→半合');
   console.log('  '+(e.length?'NG':'OK')+' 月の話の事実あわせ'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('月の話: '+e.join('・')); }
 { const r=await p.evaluate(()=>{ if(typeof pkEnsureLove!=='function') return ''; const c=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'); return pkEnsureLove('配偶宮の蔵干は甲と乙。パートナーの星（官星）は忌神です。出会いは地元の紹介から。11月と12月に縁が動きます。',c,'冬に出会う男性は？'); });
-  const ok2=/庚子の月）＝配偶宮「卯」と刑|2026年12月ごろ（気持ちがすれ違いやすい月）/.test(r); console.log('  '+(ok2?'OK':'NG')+' 注意の月（刑・冲）が文になければ書き足す'); if(!ok2) res.fails.push('注意の月の書き足し'); }
+  const ok2=/庚子の月）＝配偶宮「卯」と刑|2026年12月(?:ごろ|〜翌1月上旬)（気持ちがすれ違いやすい月）/.test(r); console.log('  '+(ok2?'OK':'NG')+' 注意の月（刑・冲）が文になければ書き足す'); if(!ok2) res.fails.push('注意の月の書き足し'); }
 { const y=await p.evaluate(()=>{ if(typeof pkYearKichiFix!=='function') return ''; const c=baziCompute({year:2008,month:3,day:28,hour:14,minute:0,sex:'female',tu:false},0,'none'); return pkYearKichiFix('2027年や2028年に天徳貴人（強い守りの星）が巡ります。',c); });
   const ok3=/天徳貴人（強い守りの星）（天徳貴人が巡るのは2028年）/.test(y); console.log('  '+(ok3?'OK':'NG')+' 年の吉凶星の事実あわせ（天徳貴人は2028年だけ）'); if(!ok3) res.fails.push('年の吉凶星'); }
 // 3つのツールに同じ直しが入っているか（PRO＝元、易・鑑定書は同じ中身。ビギナーはPROから生成）
@@ -248,7 +286,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(!/適職の手がかり：喜神の星＝食傷（火）/.test(r.f)||!/月柱（仕事・職場・暮らしの環境）と冲・刑/.test(r.f)) e.push('適職・柱の場面');
     if(!/命式からの答えの方向：出る|遠くへ出るほうが合って/.test(r.e)||!/2027年は空亡の年|2027年は、新しく大きく始めることが形になりにくい/.test(r.e)) e.push('書き足し（判定と逆の答え・空亡）');   /* ビギナーのやさしい画面は専門用語なしの言い方 */
     if(/【この相談で大事なこと】/.test(r.e)&&/(空亡|駅馬|印星|大運)/.test(r.e.split('【この相談で大事なこと】')[1])) e.push('やさしい言い方に専門用語');
-    if(/【この相談でツールが確かめたこと】/.test(r.ok)) e.push('書いてあるのに書き足している'); }
+    if(/【この相談で(?:ツールが|命式から)確かめたこと】/.test(r.ok)) e.push('書いてあるのに書き足している'); }
   { const t=await p.evaluate(()=>{ const c=baziCompute({year:2001,month:2,day:9,hour:16,minute:0,sex:'female',tu:false},0,'none'); return pkConsultFocusText(c,'彼氏がいるけど他に好きな人ができた'); });   /* 中和（喜神・忌神なし）でも空にしない */
     if(/喜神（[^）]*）＝／|忌神（[^）]*）＝$/m.test(t)||!/はっきりした喜神/.test(t)) e.push('中和の喜神・忌神が空'); }
   console.log('  '+(e.length?'NG':'OK')+' 相談の要点（大運・4年の年運・空亡・駅馬・六親・適職・答えの方向）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('相談の要点: '+e.join('・')); }
@@ -259,14 +297,14 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   const e=[]; if(!r) e.push('関数がない'); else {
     if(!/【お相手：今の彼（2000年3月20日（時刻不明）・男性・恋人・パートナーとして見た相性）】判定＝良い点が注意点を上回る組み合わせ（良い点6／注意点1）/.test(r.t)) e.push('今の彼（時刻不明）');
     if(!/【お相手：好きな人（1995年4月4日 16時・男性・恋人・パートナーとして見た相性）】判定＝良い点が注意点を上回る組み合わせ（良い点12.5／注意点4）/.test(r.t)||!/天地徳合（本人の月柱「庚寅」×お相手の年柱「乙亥」）/.test(r.t)) e.push('好きな人（16時）');
-    if(!/暮らしの土台（方合・三合・支合など）が強いのは 今の彼／惹かれ合い（恋愛の星）が強いのは 好きな人/.test(r.t)||!/2026年12月・2027年9月は注意の月/.test(r.t)) e.push('くらべた結果・決める時期');
+    if(!/暮らしの土台（方合・三合・支合など）が強いのは 今の彼／惹かれ合い（恋愛の星）が強いのは 好きな人/.test(r.t)||!/2026年12月(?:〜翌1月上旬)?・2027年9月(?:〜10月上旬)?は注意の月/.test(r.t)) e.push('くらべた結果・決める時期');
     if(!/命式の相性だけで見ると、好きな人のほうが良い組み合わせ（差3.5点）/.test(r.t)||!/今の彼（良い点6／注意点1・差＋5）：よいところ＝強いぶつかり（天戦地冲）がない/.test(r.t)||!/気をつけたいところ＝天戦地冲（年柱どうし/.test(r.t)) e.push('命式の相性のくらべ（数字・理由）');
     if(!/【お相手ごとの相性/.test(r.e)||/【お相手ごとの相性/.test(r.ok)) e.push('書き足し');
     if(r.n) e.push('生年月日のない相談に出している');
     const fm=await p.evaluate(()=>{ const c=baziCompute({year:1982,month:6,day:1,hour:12,minute:0,sex:'female',tu:false},0,'none'); const q='夫は1980年5月5日、義母は1955年3月3日、息子は2010年8月8日です。家族がうまくいくにはどうしたらいいですか？'; const L=pkConsultPeopleLines(c,q); return {who:L.P.map(o=>o.lab+'/'+o.rel+'/'+o.sex).join(','), two:!!L.V.two, love:pkIsLoveQ(q), love2:pkIsLoveQ('夫と離婚すべきか、息子のことも心配'), txt:pkConsultPeopleText(c,q)+pkEnsurePeople('本文。',c,q), ov:window.__pkRelOv}; });   /* 家族の相談を恋愛のくらべにしない（2026-10-25） */
     if(fm.who!=='夫/married/male,義母/family/female,息子/family/male'||fm.two||fm.love||!fm.love2||/二股のまま|二股を勧めない|命式の相性のくらべ|(義母|息子)[^\n]*惹かれ方/.test(fm.txt)||!/家族・親子として見た相性/.test(fm.txt)||fm.ov) e.push('家族の相談（夫・義母・息子）を恋愛のくらべにした：'+fm.who);
     const tb=await p.evaluate(()=>{ const c=baziCompute({year:2001,month:2,day:9,hour:16,minute:0,sex:'female',tu:false},0,'none'); const q='彼氏がいる。彼は2000年3月20日、好きな人は1995年4月4日16時生まれ男性'; const full=pkEnsurePeople('本文。',c,q), sp=pkCmpSplit(full,c,q); return {full,disp:sp.text,html:sp.html}; });   /* B＝画面は表・コピーは文章（鑑定者本人の指示 2026-10-25） */
-    if(!/【(命式の相性のくらべ（ツールの判定）|生まれ持った相性のくらべ)】\n今の彼：/.test(tb.full)||/【(命式の相性のくらべ|生まれ持った相性のくらべ)/.test(tb.disp)||!/class="cmp-t"/.test(tb.html)||!/cmp-sec/.test(tb.html)) e.push('くらべの表（画面は表・コピーは文章）');
+    if(!/【(命式の相性のくらべ(?:（ツールの判定）)?|生まれ持った相性のくらべ)】\n今の彼：/.test(tb.full)||/【(命式の相性のくらべ|生まれ持った相性のくらべ)/.test(tb.disp)||!/class="cmp-t"/.test(tb.html)||!/cmp-sec/.test(tb.html)) e.push('くらべの表（画面は表・コピーは文章）');
     const fl=await p.evaluate(()=>{ const c=baziCompute({year:2001,month:2,day:9,hour:16,minute:0,sex:'female',tu:false},0,'none'); const q='彼氏がいる。彼は2000年3月20日、好きな人は1995年4月4日16時生まれ男性'; const plain=document.documentElement.classList.contains('bg-on'); return [pkEnsurePeople('今の彼を選ぶのがおすすめです。\n本文',c,q).split('\n')[0], pkEnsurePeople((plain?'生まれ持った相性だけで見ると、好きな人のほうが合う組み合わせです。':'命式の相性だけで見ると、好きな人のほうが良い組み合わせです。')+'\n本文',c,q).split('\n').length]; });
     if(!/相性だけで見ると、好きな人のほうが(良い|合う)組み合わせです/.test(fl[0])) e.push('1行目の判定（逆のときに上に入れる）'); if(fl[1]<2) e.push('1行目の判定（二重）');
     const fc=await p.evaluate(()=>{ const c=baziCompute({year:2001,month:2,day:9,hour:16,minute:0,sex:'female',tu:false},0,'none'); return pkEnsurePeople('相性から見ると、今の彼とお付き合いを続けるほうが合っています。\n本文',c,'彼氏がいる。彼は2000年3月20日、好きな人は1995年4月4日16時生まれ男性').split('\n').slice(0,2).join('|'); });
@@ -417,6 +455,83 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   try{ const { execFileSync } = await import('child_process'); const o=execFileSync('node',[path.join(ROOT,'tools/release_gate/gate_voice_count.cjs')],{encoding:'utf8'}).trim(); if(o!=='OK') e.push('おためしの回数：'+o); }catch(err){ e.push('おためしの回数：'+String((err.stdout||err.message)).trim()); }
   ['pro/privacy-pro.html','beginner/privacy.html','eki-pro/privacy.html'].forEach(f=>{ if(!/占いの言葉の自動直し/.test(fs.readFileSync(path.join(ROOT,f),'utf8'))) e.push(f+' にプライバシーの説明がない'); });
   console.log('  '+(e.length?'NG':'OK')+' 占いの言葉の自動直し（3サイト同じ・安全装置・おためしの回数・画面・プライバシー）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('自動直し: '+e.join('・')); }
+// 事実の差しこみの印（〔F:…〕）と出す前の照らし合わせ（pkFactGate）（先生の指示 2026-11-07「いつになったらミスが無くなるのか」）：
+//  ① 3つのツール（PRO・易・鑑定書＋ミラー・生成したビギナー）に同じ中身が入っている ② 印が計算どおりの言葉になる（ビギナーは干支なし）・知らない印/閉じない印は外す
+//  ③ 材料の事実が印になる（生年月日は変えない） ④ 計算と合わない事実の文だけを外し、正しい文は外さない ⑤ 1行目が消えたら通信なしの答えに切りかえる ⑥ 通信なしの答え（ツールが全部書く）を照らしても1文も外れない
+{ const e=[]; const blk=f=>{ const t=fs.readFileSync(path.join(ROOT,f),'utf8'); const m=t.match(/\/\* PK-FACT-MARKS:start[\s\S]*?\/\* PK-FACT-MARKS:end \*\//); return m?m[0]:''; };
+  const B0=blk('pro/app-pro.html'); if(!B0) e.push('PROに仕組みがない');
+  [dir+'/'+page0,'eki-pro/app/index.html','pro/meishi-sheet.html','meishiki-original/meishi-sheet.html','beginner/meishi-sheet.html'].forEach(f=>{ if(blk(f)!==B0) e.push(f+' の中身がPROと同じでない'); });
+  { const ek=fs.readFileSync(path.join(ROOT,'eki-pro/app/index.html'),'utf8'); if(!/pkFmRule\(ekiFmEnv\(\)\)/.test(ek)||!/pkFmExpand\(t,_fmE\)/.test(ek)||!/pkFactGate\(_o,_fmE\)/.test(ek)) e.push('易の文章作成に印・照らし合わせが入っていない');
+    const sh=fs.readFileSync(path.join(ROOT,'pro/meishi-sheet.html'),'utf8'); if(!/sys=pkFmMaterial\(sys,_fmE\)\+pkFmRule\(_fmE\)/.test(sh)||!/pkFmExpand\(txt,_fmE\)/.test(sh)||!/pkFactGate\(txt,_fmE\)/.test(sh)) e.push('鑑定書の詳細鑑定に印・照らし合わせが入っていない'); }
+  const r=await p.evaluate(()=>{ const out={}; const c0=chart; try{
+    chart=baziCompute({year:1981,month:6,day:10,hour:22,minute:28,sex:'female',tu:false},'','none');
+    const du=curDu(chart), dg=du.ganzhi||(du.stem+du.branch), P=chart.pillars, dayP=P[2].stem+P[2].branch;
+    const T=pkfmToday(), D=new Date(T.y,T.m-1,T.d+10,12), dy=D.getFullYear(), dm=D.getMonth()+1, dd=D.getDate(), W='日月火水木金土'.charAt(D.getDay()), WX='日月火水木金土'.charAt((D.getDay()+3)%7), DG=pkfmDGz(dy,dm,dd);
+    out.cal=[pkfmDGz(2026,11,8),pkfmYGz(2027),pkfmMGz(2026,12),pkfmWd(2026,11,8)].join(',');
+    const env=pkFmEnvPro(false,false,'材料：血刃が巡る',''), envP=pkFmEnvPro(false,true,'','');
+    const src='〔F:y2027〕年に〔F:du_now〕の流れ。日柱（〔F:p_day〕）。〔F:d'+dy+'-'+dm+'-'+dd+'〕（'+W+'）に。〔F:zz9〕は〔F:s:血刃〕と〔F:s:天乙貴人〕。〔F:y2028';
+    out.ex=pkFmExpand(src,env).text; out.exP=pkFmExpand(src,envP).text;
+    out.want={y:'2027年（丁未・46歳）',du:'今の大運（'+dg+'）',p:'日柱（'+dayP+'）',d:dm+'月'+dd+'日（'+W+'）'+DG+'の日',dP:dm+'月'+dd+'日（'+W+'）',yP:'2027年（46歳）'};
+    out.mat=pkFmMaterial('2027年（丁未・46歳）と'+dm+'月'+dd+'日（'+W+'）、今の大運（'+dg+'）、日柱「'+dayP+'」。生年月日：1981年6月10日 22:28',env);
+    out.matWant=['〔F:y2027〕','〔F:d'+pkfmFwdY(dm,dd)+'-'+dm+'-'+dd+'〕','〔F:du_now〕','〔F:p_day〕','1981年6月10日'];
+    const good=['2027年（丁未・46歳）に動くのが合っています。',dm+'月'+dd+'日（'+W+'）は'+DG+'の日です。','日柱（'+dayP+'）の人です。','今の大運（'+dg+'）は大事な10年。'];
+    const bad=['2027年（丙午・46歳）は動きやすい年です。','2028年（戊申・50歳）も良い年です。',dm+'月'+dd+'日（'+WX+'）が向いています。','日柱（甲子）の人です。','大運「'+(dg==='癸亥'?'壬戌':'癸亥')+'」に入ると変わります。','甲丑の気配があります。'];
+    const g1=pkFactGate('【結論】'+good[0]+'\n'+good.slice(1).join('')+bad.join('')+'\n'+'この流れを大切に、自分のペースで準備を重ねていきましょう。焦らずに、できることから一つずつ進めると、気持ちも整っていきます。まわりの人の声にも耳を傾けながら、無理のない計画を立ててください。毎日の小さな積み重ねが、次の一歩を支えてくれます。',pkFmEnvPro(false,false,'',''));
+    out.g1={rows:g1.rows.length,keep:good.every(x=>g1.text.indexOf(x)>=0),gone:bad.every(x=>g1.text.indexOf(x)<0),off:pkFactGateOff(g1)};
+    const g2=pkFactGate(bad[0]+'\n'+good.join(''),pkFmEnvPro(false,false,'','')); out.g2off=pkFactGateOff(g2);
+    // 通信なしの答え（ツールが全部書く）は、照らし合わせても1文も外れない
+    let seed=5; const rnd=()=>{ seed=(seed*1103515245+12345)%2147483648; return seed/2147483648; }; const Q=['転職するなら今年と来年のどちらがいいですか','11月20日と11月27日、告白するならどちらがいいですか','結婚できますか','金運が上がる時期は','明日彼に連絡してもいいですか'];
+    out.fp=[]; for(let k=0;k<25;k++){ const tu=rnd()<0.3; let c=baziCompute({year:1950+Math.floor(rnd()*60),month:1+Math.floor(rnd()*12),day:1+Math.floor(rnd()*28),hour:Math.floor(rnd()*24),minute:0,sex:rnd()<0.5?'male':'female',tu},'','none'); if(tu) c=markTimeUnknown(c); chart=c; const q=Q[k%Q.length];
+      let t=String(consultParts(q).local||''); try{ t=pkEnsureBig(t,chart,q); t=pkEnsureConsult(t,chart,q); t=pkEnsureLove(t,chart,q); t=pkEnsureDays(t,chart,q); }catch(_e){}
+      const g=pkFactGateRun(t,false,false,q); if(g.rows.length) out.fp.push(chart.birth.clock+'：'+g.rows[0].what+'｜'+g.rows[0].calc); }
+    // ① 誰の柱か：お相手の名前・呼び名（彼さん・太郎さん）の柱を本人の干支に書きかえない／本人の柱のまちがいは直す／照らし合わせはお相手の柱で照らす（2026-11-07）
+    { const pa=personName, pb=personNameB, cb0=(typeof chartB!=='undefined')?chartB:null; personName='さくら'; personNameB='太郎';
+      const A=baziCompute({year:1981,month:6,day:10,hour:22,minute:28,sex:'female',tu:false},'','none'), B=baziCompute({year:1969,month:11,day:16,hour:9,minute:0,sex:'male',tu:false},'','none'); chart=A; chartB=B;
+      const gA=i=>A.pillars[i].ganzhi, gB=i=>B.pillars[i].ganzhi, wrong=gA(1)===pkfmGz(0)?pkfmGz(2):pkfmGz(0);
+      const src='さくらさんから見て、彼さんの月柱「'+gB(1)+'」が当たります。太郎さんの日柱「'+gB(2)+'」です。本人の月柱「'+wrong+'」です。';
+      const fx=pkPillarGzFix(src,A,B); out.w1={keepB:fx.indexOf('彼さんの月柱「'+gB(1)+'」')>=0&&fx.indexOf('太郎さんの日柱「'+gB(2)+'」')>=0, fixA:fx.indexOf('本人の月柱「'+gA(1)+'」')>=0};
+      const env2=pkFmEnvPro(true,false,'',''); const g=pkFactGate('彼さんの月柱「'+gA(1)+'」が当たります。太郎さんの日柱「'+gB(2)+'」です。さくらさんの月柱「'+gA(1)+'」です。',env2);
+      out.w1.gate=g.rows.length===1&&g.text.indexOf('太郎さんの日柱')>=0&&g.text.indexOf('さくらさんの月柱')>=0;
+      { const ns=(pkFmPerson(A,'本人').ns||[])[2]||[], all=['天乙貴人','文昌貴人','駅馬','華蓋','咸池','紅艶'], no=all.find(x=>ns.indexOf(x)<0), yes=ns.find(x=>all.indexOf(x)>=0||x==='天徳貴人');
+        const g3=pkFactGate('日柱にある'+no+'が助けます。'+(yes?'日柱にある'+yes+'が支えます。':''),pkFmEnvPro(false,false,'','')); out.w1.star=g3.rows.length===1&&(!yes||g3.text.indexOf(yes)>=0); }   // 命式にない星（鑑定書の「日柱にある天乙貴人」）
+      personName=pa; personNameB=pb; chartB=cb0; }
+    // 運の柱（今月の月柱）を本人の柱として直さない・来年の年運の干支のずれは年の言葉を直す・「今の大運」に次の大運を書いたら直す／星の説明つきなら文を外す（2026-11-07）
+    { const c=baziCompute({year:1981,month:6,day:10,hour:22,minute:28,sex:'female',tu:false},'','none'); chart=c; const NY=pkNenInfo().Y, mp=c.pillars[1].ganzhi, wr=mp===pkfmGz(5)?pkfmGz(7):pkfmGz(5);
+      const D=[mp].concat(c.decadeFortunes.map(d=>d.ganzhi)), cu=curDu(c).ganzhi, nx=D[D.indexOf(cu)+1];
+      const t1='今月の月柱は'+wr+'です。', r1=pkPillarGzFix(t1,c,null), g1=pkFactGate(t1,pkFmEnvPro(false,false,'',''));
+      const r2=pkFmRelYearFix('来年の年運は'+pkfmYGz(NY)+'（天干偏印）です。',{nenY:NY});
+      const r3=pkRunGzFix('今の大運は'+nx+'です。',c,null), r4=pkRunGzFix('前の文です。今の大運は'+nx+'（干は印綬の星）の時期です。次の文です。',c,null);
+      const g5=pkFactGate('今の大運は'+nx+'です。ほかの文です。',pkFmEnvPro(false,false,'',''));
+      const r6=pkFmRelYearFix((NY+1)+'年（今年）と'+NY+'年（来年）',{nenY:NY}), ns0=(pkFmPerson(c,'本人').ns||[]).flat(), st0=['駅馬','華蓋','文昌貴人','咸池','紅艶'].find(x=>ns0.indexOf(x)<0);
+      const g7=pkFactGate('ご自身の命式にはもともと **'+st0+'**があります。ほかの文です。',pkFmEnvPro(false,false,'',''));
+      const kb0=kubo(c), yN=[0,1,2,3,4,5,6,7,8,9,10,11].map(k=>NY+k).find(y=>kb0.indexOf(pkfmYGz(y).charAt(1))<0&&kb0.indexOf(pkfmYGz(y-1).charAt(1))>=0), g8=pkFactGate(yN+'年を迎えるとひと休みの時期が明け、温かい空気に変わります。ほかの文です。',pkFmEnvPro(false,false,'',''));
+      const T9=pkfmToday(), d9=new Date(T9.y,T9.m-1,T9.d+12,12), F9=pkDayFacts(c,d9), all9=['妨害殺','血刃','亡神','劫殺','囚獄','飛刃','天乙貴人','月徳貴人'], ns9=(pkFmPerson(c,'本人').ns||[]).flat(), no9=all9.find(x=>(F9.stars||[]).indexOf(x)<0&&ns9.indexOf(x)<0), yes9=(F9.stars||[]).find(x=>all9.indexOf(x)>=0);
+      const g9=pkFactGate((d9.getMonth()+1)+'月'+d9.getDate()+'日のような日は、'+no9+'などの影響で行き違いが起きやすくなります。'+(yes9?(d9.getMonth()+1)+'月'+d9.getDate()+'日は'+yes9+'が巡ります。':'')+'ほかの文です。',pkFmEnvPro(false,false,'',''));
+      const g10=pkFactGate('命式全体の五行を見ると、'+no9+'（注意の星）を持っています。ほかの文です。',pkFmEnvPro(false,false,'',''));
+      out.w10=!no9||g10.rows.length===1;   // 「命式全体を見ると…○○を持っています」で命式にない星（2026-11-07）
+      out.w9=!no9||(g9.rows.length===1&&(!yes9||g9.text.indexOf(yes9)>=0));   // その日にも命式にもない星を言った文（「のような」「など」でも）を外す（2026-11-07）
+      out.w6={yr:r6===(NY+1)+'年（来年）と'+NY+'年（今年）', star:g7.rows.length===1&&!/[*＊]/.test(g7.rows[0].note), ake:!yN||g8.rows.length===0};   // 「○年を迎えるとひと休みが明け」は空亡と書いていない   // 「2027年（今年）」（立春前）・外した文の引用に＊を出さない（2026-11-07）
+      out.w5={run:r1===t1&&g1.rows.length===0, rel:r2==='今年の年運は'+pkfmYGz(NY)+'（天干偏印）です。', now:r3==='今の大運は'+cu+'です。', drop:r4==='前の文です。次の文です。', gate:g5.rows.length===1, r3, r4}; }
+    // ③④ 今年のずれ・「〜11月上旬」を日付にしない
+    { const NY=pkNenInfo().Y; out.w3=pkFmRelYearFix('今年の'+(NY+1)+'年に。',{nenY:NY})==='来年の'+(NY+1)+'年に。';
+      out.w4=pkFmExpand('いま〜〔F:d'+pkfmFwdY(11,6)+'-11-6〕上旬の時期',pkFmEnvPro(false,false,'','')).text.indexOf('いま〜11月上旬の時期')>=0&&pkFactFix('いま〜11月6日（火）上旬','','')==='いま〜11月6日（火）上旬'; }
+  }catch(err){ out.err=String(err&&err.message||err); } chart=c0; return out; });
+  if(r.err) e.push('動かない：'+r.err);
+  else { if(r.cal!=='丙戌,丁未,庚子,日') e.push('暦の計算：'+r.cal);
+    ['y','du','p','d'].forEach(k=>{ if(r.ex.indexOf(r.want[k])<0) e.push('印の置きかえ（'+k+'）：'+r.ex.slice(0,120)); });
+    if(/〔F|F:|年年|\u0011|\u0012/.test(r.ex)) e.push('印・「年」の重なりが残る：'+r.ex.slice(0,120));
+    if(r.ex.indexOf('血刃')<0||r.ex.indexOf('天乙貴人')>=0) e.push('星の印（材料にある星だけ）');
+    if(r.exP.indexOf(r.want.yP)<0||r.exP.indexOf(r.want.dP)<0||/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]|大運|日柱/.test(r.exP)) e.push('ビギナーの印（干支・専門用語なし）：'+r.exP.slice(0,120));
+    r.matWant.forEach(w=>{ if(r.mat.indexOf(w)<0) e.push('材料の印（'+w+'）：'+r.mat.slice(0,120)); });
+    if(r.g1.rows!==6||!r.g1.keep||!r.g1.gone||r.g1.off) e.push('照らし合わせ：'+JSON.stringify(r.g1));
+    if(!r.g2off) e.push('1行目が消えたのに切りかえない');
+    if(r.fp.length) e.push('通信なしの答えの正しい文を外した：'+r.fp.slice(0,2).join(' / '));
+    if(!r.w1||!r.w1.keepB||!r.w1.fixA||!r.w1.gate||!r.w1.star) e.push('誰の柱か（お相手の呼び名・名前）：'+JSON.stringify(r.w1));
+    if(!r.w5||!r.w5.run||!r.w5.rel||!r.w5.now||!r.w5.drop||!r.w5.gate) e.push('運の柱・来年の年運・今の大運：'+JSON.stringify(r.w5));
+    if(!r.w6||!r.w6.yr||!r.w6.star||!r.w6.ake) e.push('西暦（今年）・引用の＊：'+JSON.stringify(r.w6));
+    if(!r.w9) e.push('その日にない星の名前を外さない'); if(!r.w10) e.push('命式にない星を「持っています」');
+    if(!r.w3) e.push('今年と西暦のずれを直さない'); if(!r.w4) e.push('「〜11月上旬」を日付として扱った'); }
+  console.log('  '+(e.length?'NG':'OK')+' 事実の差しこみの印・出す前の照らし合わせ（3ツール同じ・置きかえ・ビギナー・材料・正しい文を外さない・切りかえ・誰の柱か・今年のずれ・上旬）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('事実の印・照らし合わせ: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));

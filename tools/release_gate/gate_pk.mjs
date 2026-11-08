@@ -43,7 +43,7 @@ const t1=Date.now(); await p.click('#f-go'); await p.click('#f-go').catch(()=>{}
 const ms=await waitFor(()=>{const it=document.querySelector('#reading .rd-item:last-child');return it&&it.querySelector('.rd-bar')&&!it.querySelector('.loading');},60000);
 await p.waitForTimeout(1500);
 const items=await p.evaluate(()=>document.querySelectorAll('#reading .rd-item').length);
-const A=await p.evaluate(()=>{const it=document.querySelector('#reading .rd-item:last-child');return it?it.querySelector('.rd-body').innerText:'';});
+const A=await p.evaluate(()=>{const it=document.querySelector('#reading .rd-item:last-child');if(!it) return ''; const op=[...it.querySelectorAll('details.r-fold:not([open])')]; op.forEach(d=>d.open=true); const t=it.querySelector('.rd-body').innerText; op.forEach(d=>d.open=false); return t;});   /* たたんだ「くわしい読み解き」の中も読む（タップで開く欄）*/
 { const need=await p.evaluate(()=>{ try{ const g=kakukyoku(chart); const plain=document.documentElement.classList.contains('bg-on'); if(plain&&typeof window.pkBTypeOf==='function'){ const t=window.pkBTypeOf(g,chart); return t?[t[0].replace(/\s/g,'')]:[]; } const m=String(g.name).match(/（([^）]+)）/); return [g.name].concat(m?[m[1]]:[]).map(x=>x.replace(/（.*$/,'')); }catch(e){ return ['(計算エラー)']; } });
   ok('相談1：鑑定文に格局（ビギナーは生まれ持った型）が入っている（安全装置）', need.length>0&&need.some(n=>A.replace(/\s/g,'').includes(n)), need.join('/')); }
 ok('相談1：答えが出る（60秒以内）'+(MODE!=='online'?'（端末の中の答え・30秒以内）':''), ms>=0&&(MODE==='online'||ms<30000) && A.length>200, `${(Date.now()-t1)/1000}秒・${A.length}字`);
@@ -53,7 +53,9 @@ const first=(A.split('\n').map(s=>s.trim()).filter(s=>s.length>8&&!/^(コピー|
 ok('相談1：答えの最初に結論がある', first.length>=10, first.slice(0,80));
 if(MODE==='online'){ ok('相談1：年を比べる質問に、年で答えている', /今年|来年|2026|2027|年内/.test(first), first.slice(0,80));
   ok('相談1：くわしい読み解きの見出しだけが残っていない', !/くわしい読み解き\s*$/.test(A.trim()), ''); }
-const calCheck=(t,by)=>{ const G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', gz=y=>{const i=((y-4)%60+60)%60; return G[i%10]+Z[i%12];}, NY=new Date().getFullYear(), bad=[];
+// 今年＝年運の年（立春で切りかわる。1/1〜立春は前の年。先生の決定 2026-11-03）。ツールの計算（chart.now.year＝日本時間のいまの年柱）から取り、暦の1/1では数えない
+const NYR=await p.evaluate(()=>{ try{ return chart.now.year; }catch(e){ return null; } }), PRE=await p.evaluate(()=>{ try{ return pkNenInfo().pre; }catch(e){ return false; } });
+const calCheck=(t,by)=>{ const G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅卯辰巳午未申酉戌亥', gz=y=>{const i=((y-4)%60+60)%60; return G[i%10]+Z[i%12];}, NY=NYR||new Date().getFullYear(), bad=[];
   for(const m of t.matchAll(/((?:19|20)\d\d)年[（(]?(?:[^）)\n]{0,8}[・：:、])?(\d{1,3})歳/g)){ const e=+m[1]-by; if(+m[2]!==e) bad.push(m[0]+'（正しくは'+e+'歳）'); }
   for(const m of t.matchAll(/((?:19|20)\d\d)年[（(のは：:]([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])(?![^\n]{0,3}(?:大運|月|日|時))/g)){ if(m[2]!==gz(+m[1])) bad.push(m[0]+'（正しくは'+gz(+m[1])+'）'); }
   const REL={今年:0,来年:1,再来年:2,昨年:-1,去年:-1}; for(const m of t.matchAll(/(再来年|今年|来年|昨年|去年)[（(の]((?:19|20)\d\d)/g)){ if(+m[2]!==NY+REL[m[1]]) bad.push(m[0]); }
@@ -61,6 +63,7 @@ const calCheck=(t,by)=>{ const G='甲乙丙丁戊己庚辛壬癸', Z='子丑寅�
   return bad; };
 const unStamped=t=>{ const ys={}, ok2={}; for(const m of t.matchAll(/((?:19|20)\d\d)年(?!\d{1,2}月|[0-9]|生|度|代)/g)){ const y=m[1], a=t.slice(m.index+m[0].length,m.index+m[0].length+6), b=t.slice(Math.max(0,m.index-6),m.index); if(/[0-9]$/.test(b)) continue; /* 「〜2027年（丁未・42歳）」の〜のあとの年も数える */ ys[y]=1; if(/^[（(〔]|^の?[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]|^(?:に|には|で|、)?\d{1,3}歳/.test(a)||/\d{1,3}歳(?:になる|を迎える)?[（(]?$/.test(b)||/[（(「『]$/.test(b)) ok2[y]=1; } return Object.keys(ys).filter(y=>!ok2[y]); };
 { const cb=calCheck(A,1985); ok('暦：年齢・年の干支・今年/来年が正しい（相談1）', cb.length===0, cb.slice(0,3).join(' / ')); }
+if(PRE) ok('暦：立春前は「今年」に期限（○年2月○日の立春まで）がある（相談1）', !/今年/.test(A)||/立春まで/.test(A), '');
 if(MODE==='online'){ const u=unStamped(A); ok('相談1：西暦にツールの干支・年齢が付いている', u.length===0, u.map(y=>{const i=A.indexOf(y+'年');return A.slice(Math.max(0,i-15),i+12).replace(/\n/g,'⏎');}).join(' / ')); }
 if(MODE==='online'){ const kinds=await p.evaluate(()=>{ try{ return natalBondLines(chart,false).map(x=>x.kind); }catch(e){ return []; } }); const plainMode=await p.evaluate(()=>document.documentElement.classList.contains('bg-on')); const miss=plainMode?(kinds.length&&!/強く結びつ/.test(A)?['結びつき']:[]):kinds.filter(k=>!A.includes(k)); ok('相談1：命式内の天地徳合・干合を必ず伝える（'+(kinds.join('・')||'なし')+'）', miss.length===0, miss.join('・')); }
 ok('相談1：見出しが途中で改行していない', !/【[^】\n]{0,40}\n[^】]{0,40}】/.test(A), (A.match(/【[^】\n]{0,40}\n[^】]{0,40}】/)||[''])[0].replace(/\n/g,'⏎'));
@@ -70,7 +73,7 @@ const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃�
 const ms2=await waitFor(()=>{const it=document.querySelectorAll('#reading .rd-item');const l=it[it.length-1];return it.length>=2&&l.querySelector('.rd-bar')&&!l.querySelector('.loading');},60000);
 await p.waitForTimeout(1500);
 const items2=await p.evaluate(()=>document.querySelectorAll('#reading .rd-item').length);
-const A2=await p.evaluate(()=>{const it=document.querySelectorAll('#reading .rd-item');return it.length?it[it.length-1].querySelector('.rd-body').innerText:'';});
+const A2=await p.evaluate(()=>{const L=document.querySelectorAll('#reading .rd-item');if(!L.length) return ''; const it=L[L.length-1]; const op=[...it.querySelectorAll('details.r-fold:not([open])')]; op.forEach(d=>d.open=true); const t=it.querySelector('.rd-body').innerText; op.forEach(d=>d.open=false); return t;});
 if(process.env.GATE_DUMP){ (await import('fs')).writeFileSync(process.env.GATE_DUMP,A+'\n=====\n'+A2); }
 ok('相談2（続けて質問）：答えが出る', ms2>=0 && A2.length>200, A2.length+'字');
 { const f2=(A2.split('\n').map(s=>s.trim()).filter(s=>s.length>8&&!/^(コピー|言葉の意味|ご相談|彼から連絡が来るのはいつ頃ですか|▲|オンライン鑑定|オフライン鑑定|📵|⏩|🔄|端末の中で作った)/.test(s))[0]||''); ok('相談2：「いつ」の質問に、1行目で時期を答えている', /20\d\d年|年内|来年|再来年|\d{1,3}歳|[春夏秋冬]|\d{1,2}月/.test(f2), f2.slice(0,80)); }
