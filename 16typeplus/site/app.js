@@ -120,7 +120,19 @@ function drawCareer(){const box=$("carBody"),me=window.__me;if(!box||!me||typeof
   h+=kv("今の仕事で疲れやすい理由",'<p>'+esc(X.tired)+'</p>')+kv("転職の前に、今の職場で試せること",'<p>'+esc(X.try)+'</p>')
    +kv("転職先を選ぶときに見たい条件",'<p>'+X.env.map(esc).join(TR("／"))+'</p>'+g.map((x,i)=>'<p class="cnote">'+esc(tadashi(x,i))+'</p>').join(""))+kv("向いている職種",chips(X.jobs))+bl;}
  h+='<p class="hint cnote">'+TR("最初のタブは、生年月日から選んでいます。今の自分に近いタブを選ぶと、次からはそのタブで開きます。")+'</p>';
- box.innerHTML=h;box.querySelectorAll(".ctabs button").forEach(b=>b.onclick=()=>{window.__carTab=b.dataset.k;sset(KCT,b.dataset.k);drawCareer();try{track("career_tab",{tab:b.dataset.k});}catch(e){}});}
+ box.innerHTML=h;box.querySelectorAll(".ctabs button").forEach(b=>b.onclick=()=>{window.__carTab=b.dataset.k;sset(KCT,b.dataset.k);drawCareer();try{track("career_tab",{tab:b.dataset.k});}catch(e){}});
+ carPeek(tab,C,me,bl);}
+/* 仕事・進路のヒントから、年齢に合ったいちばん役に立つ1枚を、結果のすぐ下に出す */
+function carPeek(tab,C,me,bl){let el=$("carPeek");const hero=document.querySelector(".hero");if(!hero)return;
+ if(!el){el=document.createElement("section");el.id="carPeek";el.className="card carpeek";}
+ const dC=$("dCareer");if(!C||(dC&&dC.dataset.kid)){el.hidden=true;return;}
+ let h='<p class="eyebrow">'+TR(tab==="hs"?"進路のヒント":tab==="uni"?"就活のヒント":"仕事のヒント")+'</p>';
+ if(tab==="hs"){const X=C.hs;h+='<h2 class="cph">'+TR("文系・理系のヒント")+'</h2><p>'+esc(X.bunri)+'</p>';}
+ else if(tab==="uni"){const t=C.uni.strengths[0];h+='<h2 class="cph">'+TR("ESに使える強み")+'</h2><p class="csn">'+esc(t.name)+'</p><p class="ces"><b>'+TR("ESでは：")+'</b>'+esc(t.es)+'</p><p class="cq">'+TR("思い出してみよう：")+esc(t.q)+'</p>';}
+ else{const X=C.work,g=[0,1,2,3].filter(i=>me.born[i]!==me.now[i]&&!((me.weak||[]).includes(AX[i].k))).map(i=>CAR.gap&&CAR.gap[me.born[i]+">"+me.now[i]]).filter(Boolean);h+='<h2 class="cph">'+TR("転職の前に、今の職場で試せること")+'</h2><p>'+esc(X.try)+'</p>'+(g[0]?'<p class="cnote">'+esc(tadashi(g[0],0))+'</p>':'');}
+ h+=(tab!=="work"?bl:'')+'<button type="button" class="btn cpmore" id="cpMore">'+TR("仕事・進路のヒントをもっと見る")+'</button>';
+ el.innerHTML=h;el.hidden=false;if(!el.parentNode)hero.after(el);el.classList.toggle("wait2",!!document.querySelector(".hero .shr.wait2"));
+ $("cpMore").onclick=()=>{const d=$("dCareer");if(d){d.open=true;d.scrollIntoView({behavior:"smooth",block:"start"});}try{track("career_peek",{tab});}catch(e){}};}
 
 /* 長い説明は最初の3行だけ見せて「続きを読む」で開く（文章は削らない） */
 function clampFix(el){if(!el||!el.offsetParent)return;let bt=el.nextElementSibling;if(!(bt&&bt.classList.contains("more3"))){bt=null;}
@@ -370,7 +382,7 @@ function render(instant){
  {const r0=document.querySelector("#recheck p"),ov=$("psOv");[r0,ov].forEach(x=>{if(x){x.classList.add("clamp3w");x.dataset.open="";}});setTimeout(clampAll,0);}
  window.__me={born,now,N,bAT,nAT,weak:AX.filter(A=>aligned[A.k]).map(A=>A.k),prev:(st.prev||[]).filter(t=>t!==now)};drawChg(born,now,window.__me.prev);drawPersona("now");
  const nw=(a,b)=>'<span class="nw">'+a+'</span><span class="nw">'+b+'</span>';$("p16Born").innerHTML=nw(bornF.split("").map((ch,i)=>i<4&&aligned[AX[i].k]?'<span class="wk">'+ch+'</span>':ch).join(""),p16h(born));
- {let wn=$("wkNote");if(!wn){wn=document.createElement("p");wn.id="wkNote";wn.className="wknote";const nk=document.querySelector(".nicks");if(nk)nk.after(wn);}const anyW=AX.some(A=>aligned[A.k]);wn.innerHTML=(anyW?TR("気質の薄い文字は、生年月日からはどちらとも言えない文字です。"):"")+(bAT&&!sameAll?(anyW?"<br>":"")+TR("気質の最後の A/T も、生年月日から出しています。"):"");wn.hidden=!wn.innerHTML;}$("p16Now").innerHTML=nw(nowF,p16h(now));
+ {let wn=$("wkNote");if(!wn){wn=document.createElement("p");wn.id="wkNote";wn.className="wknote";const nk=document.querySelector(".nicks");if(nk)nk.after(wn);}const anyW=AX.some(A=>aligned[A.k]);const dI=[0,1,2,3].filter(i=>born[i]!==now[i]),onlyW=dI.length>0&&dI.every(i=>aligned[AX[i].k]);wn.innerHTML=(onlyW?'<b>'+TR(dI.length>1?"気質と性格で違うのは{L}ですが、どれも生年月日からははっきりしない文字です。大きな違いではないので、ここは今の性格のほうを見てください。":"気質と性格で違うのは{L}だけですが、この文字は生年月日からははっきりしません。大きな違いではないので、ここは今の性格のほうを見てください。").replace("{L}",dI.map(i=>now[i]).join(TR("・")))+'</b><br>':"")+(anyW?TR("気質の薄い文字は、生年月日からはどちらとも言えない文字です。"):"")+(bAT&&!sameAll?(anyW?"<br>":"")+TR("気質の最後の A/T も、生年月日から出しています。"):"");wn.hidden=!wn.innerHTML;}$("p16Now").innerHTML=nw(nowF,p16h(now));
  $("nkBorn").textContent=D.NICK[born];[["imBorn",born],["imNow",now]].forEach(([id,t])=>{const im=$(id);if(im){im.src=charSrc(t);im.alt=an(t);}});
  {const one=sameAll,nb=$("imBorn").closest(".nk"),nn=$("imNow").closest(".nk"),nr=document.querySelector(".nicks .nar");nb.hidden=one;if(nr)nr.hidden=one;document.querySelector(".nicks").classList.toggle("one",one);
   const lb=nn.querySelector(".nl");if(!lb.dataset.def)lb.dataset.def=lb.textContent;lb.textContent=one?TR("気質も性格も"):lb.dataset.def;
@@ -584,7 +596,7 @@ function drawSaved(){const L=savedList();let c=$("savedCard");
  c.querySelectorAll(".svdel").forEach(b=>b.onclick=()=>askInline(b.closest("li"),TR("この結果を一覧から消しますか？"),TR("消す"),()=>delSaved(+b.dataset.id)));}
 $("saveBtn").onclick=()=>{const btn=$("saveBtn");let bx=btn.nextElementSibling;if(bx&&bx.classList.contains("askbox")){const had=!!bx.querySelector("input");bx.remove();if(had)return;}
  bx=document.createElement("div");bx.className="askbox savebox";const def=($("myName")&&$("myName").value.trim())||window.__nick||sget("16tp.nick.v1")||"";
- bx.innerHTML='<p>'+TR("誰の結果か、名前をつけて保存")+'</p><input class="txt" maxlength="12" placeholder="'+TR("例：自分、ママ、ゆうと")+'" value="'+esc(def)+'"><div><button type="button" class="btn primary ask-y">'+TR("保存する")+'</button><button type="button" class="btn ask-n">'+TR("やめる")+'</button></div>';
+ bx.innerHTML='<p>'+TR("名前をつけて保存します。家族や友だちの結果も、ならべて保存できます。")+'</p><input class="txt" maxlength="12" placeholder="'+TR("例：自分、ママ、ゆうと")+'" value="'+esc(def)+'"><div><button type="button" class="btn primary ask-y">'+TR("保存する")+'</button><button type="button" class="btn ask-n">'+TR("やめる")+'</button></div>';
  btn.after(bx);const inp=bx.querySelector("input");bx.querySelector(".ask-n").onclick=()=>bx.remove();
  bx.querySelector(".ask-y").onclick=()=>{saveCurrent(inp.value.trim());savedMark();bx.innerHTML='<p>'+TR("保存しました。「保存した結果」から、いつでも開けます。")+'</p>';setTimeout(()=>bx.remove(),3500);try{track("save_click");}catch(e){}};
  inp.focus();};
@@ -689,7 +701,7 @@ function lvPair(me,pt,sit){const P2=LV.partner&&LV.partner[pt],AXT=((sit==="kata
   +'<p class="lvpth">'+TR("2人のあいだで、起きやすいこと")+'</p>'+(d.length?'<ul class="lvptl">'+d.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul>':'<p>'+esc(AXT.same||"")+'</p>');}
 function lvShow(t){const me=window.__me,P=lvTy(t);if(!me)return;const el=$("lvRes");el.hidden=false;$("lvStart").hidden=true;$("lvQ").hidden=true;if($("lvSit"))$("lvSit").hidden=true;
  const sit=(st.love&&st.love.sit)||"koi";
- const lab=i=>t[i]===me.born[i]&&t[i]===me.now[i]?'<em class="s">'+TR("気質・性格とも")+'</em>':t[i]===me.born[i]?'<em class="b">'+TR("気質")+'</em>':t[i]===me.now[i]?'<em class="n">'+TR("性格")+'</em>':'<em class="x">'+TR("恋だけ")+'</em>';
+ const lab=i=>t[i]===me.born[i]&&t[i]===me.now[i]?'<em class="s">'+TR("気質も性格も")+'</em>':t[i]===me.born[i]?'<em class="b">'+TR("気質")+'</em>':t[i]===me.now[i]?'<em class="n">'+TR("性格")+'</em>':'<em class="x">'+TR("恋だけ")+'</em>';
  let h=(P?'<div class="lvhero"><p class="lab">'+TR("恋をしたときのあなたは")+'</p><div class="fr"><img src="'+charSrc(t)+'" alt="'+esc(an(t))+'"></div><p class="tp">'+esc(t)+'</p><p class="nm">'+p16h(t)+'</p><p class="one">'+lvQ(esc(P.one))+'</p></div>'
   +((P.words||[]).length?'<div class="lvwords"><p class="lab">'+TR("恋のあなたを表すことば")+'</p><div class="ch">'+P.words.slice().sort((a,b)=>b[1]-a[1]).slice(0,8).map(([w,n])=>'<span class="'+(n>=3?'b':'')+'">'+esc(w)+'</span>').join("")+'</div></div>':''):'')
   +'<div class="lvdiff"><h3>'+TR("ふだんのあなたとくらべると")+'</h3><div class="lvtiles">'+t.split("").map((l,i)=>'<div class="lt'+(me.born[i]!==me.now[i]&&l===me.born[i]?' isb':'')+'"><b>'+l+'</b>'+lab(i)+'</div>').join("")+'</div>'
@@ -738,7 +750,7 @@ async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=doc
  c.fillStyle=LVC.ink;ls.forEach((l,i)=>c.fillText(l,W/2,py+50+i*46));
  /* 恋の4文字と、どこから来たか（小さく） */
  const tw=120,gap=22,x0=(W-(tw*4+gap*3))/2,ty=py+ph+40;
- for(let i=0;i<4;i++){const x=x0+i*(tw+gap),l=t[i],b=me?me.born[i]:l,n=me?me.now[i]:l,both=l===b&&l===n,src=both?TR("気質・性格とも"):l===b?TR("気質"):l===n?TR("性格"):TR("恋だけ");
+ for(let i=0;i<4;i++){const x=x0+i*(tw+gap),l=t[i],b=me?me.born[i]:l,n=me?me.now[i]:l,both=l===b&&l===n,src=both?TR("気質も性格も"):l===b?TR("気質"):l===n?TR("性格"):TR("恋だけ");
   c.fillStyle=!both&&src!==TR("性格")?LVC.roseT:"#F3F5F8";rrect(c,x,ty,tw,96,18);c.fill();
   c.font="600 56px "+MONO;c.fillStyle=LVC.ink;c.fillText(l,x+tw/2,ty+68);
   {let fz=22;c.font="700 22px "+SANS;while(fz>14&&c.measureText(src).width>tw+gap-6){fz--;c.font="700 "+fz+"px "+SANS;}}c.fillStyle=both?LVC.muted:src===TR("性格")?LVC.ink:LVC.rose;c.fillText(src,x+tw/2,ty+128);}
@@ -932,7 +944,7 @@ function setupCards(instant,one){waitHide();if(!instant)setTimeout(()=>{const fb
  cards.forEach(n=>{let bk=n.querySelector(".nkback");if(!bk){bk=document.createElement("div");bk.className="nkback";n.appendChild(bk);}
   const born=n.classList.contains("born");bk.innerHTML='<span class="q">?</span><b>'+(one?TR("気質も性格も"):born?TR("気質のあなた"):TR("性格のあなた"))+'</b><small>'+TR("タップしてめくる")+'</small>';
   n.classList.remove("turn","turn2");n.classList.toggle("open",!!instant);n.onclick=()=>flipCard(n);});
- const cb=$("coreBox");if(cb)cb.classList.toggle("wait2",!instant);const fb=$("funBox");if(fb)fb.classList.toggle("wait2",!instant);const cf=$("cloudFig");if(cf)cf.classList.toggle("wait2",!instant);const cg=$("chgBox");if(cg)cg.classList.toggle("wait2",!instant);const wn=$("wkNote");if(wn)wn.classList.toggle("wait2",!instant);const kt0=$("kt");if(kt0)kt0.classList.toggle("wait2",!instant);/* めくる前はシェア・保存も出さない */document.querySelectorAll(".hero .shr").forEach(x=>x.classList.toggle("wait2",!instant));
+ const cb=$("coreBox");if(cb)cb.classList.toggle("wait2",!instant);const fb=$("funBox");if(fb)fb.classList.toggle("wait2",!instant);const cf=$("cloudFig");if(cf)cf.classList.toggle("wait2",!instant);const cg=$("chgBox");if(cg)cg.classList.toggle("wait2",!instant);const wn=$("wkNote");if(wn)wn.classList.toggle("wait2",!instant);const kt0=$("kt");if(kt0)kt0.classList.toggle("wait2",!instant);/* めくる前はシェア・保存も出さない */document.querySelectorAll(".hero .shr,#carPeek").forEach(x=>x.classList.toggle("wait2",!instant));
  if(!instant)story.innerHTML=one?TR('<span class="ln">カードをタップして、</span><span class="ln">あなたの性質を見てみよう</span>'):TR('<span class="ln">カードをタップして、</span><span class="ln">あなたの2つの性質を見てみよう</span>');}
 /* 1枚だけめくったとき：見出しで次のカードを案内し、隠れている欄の場所に「2枚めくると出る」枠を出す */
 function waitShow(){const cards=[...document.querySelectorAll(".nicks .nk")].filter(x=>!x.hidden),rest=cards.filter(x=>!x.classList.contains("open"));
@@ -946,7 +958,7 @@ function waitShow(){const cards=[...document.querySelectorAll(".nicks .nk")].fil
 function waitHide(){["waitBox","waitFun"].forEach(id=>{const x=$(id);if(x)x.remove();});document.querySelectorAll(".nicks .nk.pz").forEach(x=>x.classList.remove("pz"));}
 function flipCard(n){if(n.classList.contains("open")||n.classList.contains("turn"))return;n.classList.add("turn");
  setTimeout(()=>{n.classList.add("open");n.classList.remove("turn");n.classList.add("turn2");setTimeout(()=>n.classList.remove("turn2"),300);
-  const left=[...document.querySelectorAll(".nicks .nk")].filter(x=>!x.hidden&&!x.classList.contains("open")).length;if(left)waitShow();if(!left){waitHide();if(window.__story)$("rStory").innerHTML=window.__story;document.querySelectorAll(".hero .shr").forEach(x=>x.classList.remove("wait2"));["chgBox","coreBox","funBox","cloudFig","wkNote","kt"].forEach(id=>{const cb=$(id);if(cb&&cb.classList.contains("wait2")){cb.classList.remove("wait2");cb.classList.add("reveal");}});}},240);}
+  const left=[...document.querySelectorAll(".nicks .nk")].filter(x=>!x.hidden&&!x.classList.contains("open")).length;if(left)waitShow();if(!left){waitHide();if(window.__story)$("rStory").innerHTML=window.__story;document.querySelectorAll(".hero .shr,#carPeek").forEach(x=>x.classList.remove("wait2"));["chgBox","coreBox","funBox","cloudFig","wkNote","kt"].forEach(id=>{const cb=$(id);if(cb&&cb.classList.contains("wait2")){cb.classList.remove("wait2");cb.classList.add("reveal");}});}},240);}
 /* ---- 結果ページの「もっと知りたい人へ」：たたんだ中身をカードの一覧にまとめ、読んだ数を見せる ---- */
 const KREAD="16tp.read.v1";
 function moreMenu(list){let m=$("moreMenu");if(!m){m=document.createElement("section");m.id="moreMenu";m.className="card moremenu";m.innerHTML='<h2>'+TR("もっと知りたい人へ")+'</h2><p class="mmsub" id="mmSub"></p><div class="mmbar"><i id="mmBar"></i></div><p class="mmcount" id="mmCount"></p><div class="mmgrid" id="mmGrid"></div>';}
@@ -985,7 +997,9 @@ function layoutResult(){const hero=document.querySelector(".hero");if(!hero)retu
  if(!$("carBody")){const cb=document.createElement("div");cb.id="carBody";body(dC).appendChild(cb);}
  dB.hidden=!$("bal")||$("bal").hidden;
  const mm=moreMenu([[dC,"仕事・進路のヒント","就活・転職・進路に使える強みと職種",1],[window.__dF,"あなたが言いそうなこと・やりそうなこと","辛口のひと言も"],[window.__dL,"4つの文字を、くわしく見る","文字くらべ・生年月日から出た理由"],[dP,"タイプごとのくわしい説明","気質と性格、それぞれの説明"],[dB,"気質の力のバランス","5つの力の多い・少ない"],[dH,"悩みのヒント","悩みやすいことと、その見方"],[dK,"性格カルテ","気質と性格の処方せん"],[dR,"性格の記録","結果をためて、変わりやすい文字を見る"],[$("group"),"グループの相性","友だちや職場の人とくらべる"]]);
- let at=hero;[$("love"),mm].forEach(el=>{if(el){at.after(el);at=el;}});if($("partner")){at.after($("partner"));at=$("partner");}at=kaiunCard(at);{const w=wanCard("wanRes","result");if(w){at.after(w);at=w;}}dB.hidden=!$("bal")||$("bal").hidden;
+ let at=hero;[$("carPeek"),$("love"),mm].forEach(el=>{if(el){at.after(el);at=el;}});if($("partner")){at.after($("partner"));at=$("partner");}/* 開運予報・ワンソナは「姉妹サイト」として、結果のいちばん下（トップに戻るボタンの下）に置く */
+ {const cta=document.querySelector(".cta");let sh=$("sisH");if(!sh){sh=document.createElement("p");sh.id="sisH";sh.className="sish";sh.textContent="姉妹サイト";}
+  if(cta&&LANG==="ja"){cta.after(sh);let a2=kaiunCard(sh);const w=wanCard("wanRes","result");if(w){a2.after(w);a2=w;}sh.hidden=a2===sh;}else{sh.hidden=true;kaiunCard(at);wanCard("wanRes","result");}}dB.hidden=!$("bal")||$("bal").hidden;
  /* 中学生より下の年齢には、恋愛編と仕事・進路を出さない */
  {const g=stageAge(),kid=g!=null&&g<13;[$("love"),$("partner"),dC].forEach(el=>{if(!el)return;if(kid){el.hidden=true;el.dataset.kid="1";}else if(el.dataset.kid){el.hidden=false;delete el.dataset.kid;}});}if(window.__dF)window.__dF.hidden=!$("funBox")||!$("funBox").innerHTML;drawCareer();savedMark();mmCount();}
 
@@ -1019,6 +1033,10 @@ function drawRec(){const box=$("recBody");if(!box)return;const born=natal(st.y,s
   h+='<div class="rc-sum">'+s+'</div><p class="rc-big">'+(sw.length?TR("変わるのは、場面に合わせて使い分けているから。どちらも、あなたです。"):(rows.every(r=>r.main===born[r.i])?TR("いつ受けても同じ。生まれつきのまま、変わらずに育っています。"):TR("いつ受けても同じです。生まれつきの気質と違う{L}も、今のあなたにしっかり根づいています。").replace("{L}",rows.filter(r=>r.main!==born[r.i]).map(r=>r.main).join(LANG==="en"?" and ":TR("・")))))+'</p>';
   h+='<div class="rc-track">'+rows.map(r=>{const side=L=>'<div class="side'+(born[r.i]===L?' born':'')+'"><span class="L">'+L+'</span><div class="dots">'+R.map(x=>'<span class="dot'+(x.t[r.i]===L?' on':'')+'"></span>').join("")+'</div></div>';
    return '<div class="tr" style="--c:var('+r.A.c+')"><span class="nm">'+TR(r.name)+'</span><div class="lane">'+side(r.A.a)+side(r.A.b)+'</div></div>';}).join("")+'<div class="dl">'+R.map(x=>'<span>'+md(x.d)+'</span>').join("")+'</div><p class="rc-leg">'+TR("赤いふちの段が、生まれつきの気質の文字です。")+'</p></div>';}
+ {const ds=R.map(x=>x.d).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)).sort(),last=ds.length?new Date(ds[ds.length-1]+"T00:00"):new Date(),nx=new Date(last.getFullYear(),last.getMonth()+3,last.getDate()),p2=v=>String(v).padStart(2,"0"),ymd=d=>d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate()),nx1=new Date(nx.getFullYear(),nx.getMonth(),nx.getDate()+1);
+  const nd=LANG==="ja"?(nx.getMonth()+1)+"月"+nx.getDate()+"日":LANG==="ko"?(nx.getMonth()+1)+"월 "+nx.getDate()+"일":nx.toLocaleDateString("en-US",{month:"long",day:"numeric"});
+  const cal="https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(TR("16TYPE+ でもう一度診断する"))+"&dates="+ymd(nx)+"/"+ymd(nx1)+"&details="+encodeURIComponent(SHARE_URL);
+  h+='<div class="rc-next"><p><b>'+TR("次は{d}ごろに、もう一度受けてみてください。").replace("{d}",nd)+'</b>'+TR("3か月ほどあけて受けると、季節や忙しさで変わる文字と、変わらない文字が見えてきます。")+'</p><a class="btn rc-cal" href="'+cal+'" target="_blank" rel="noopener">'+TR("カレンダーに入れる")+'</a></div>';}
  if(n)h+='<h3 class="rc-h">'+TR("記録の一覧")+'</h3><ul class="rc-list">'+R.slice().reverse().map((r,j)=>'<li><span class="d">'+(r.d==="-"?TR("前に"):LANG==="en"?new Date(r.d+"T00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):r.d.replace(/-/g,DS))+'</span><span class="t">'+r.t.split("").map((L,i)=>L!==born[i]?'<span class="diff">'+L+'</span>':L).join("")+'<span class="m">'+(r.src==="site"?"16TYPE+":TR("ほかの診断"))+((r.tags||[]).length?TR("・")+r.tags.map(TR).join(TR("、")):"")+'</span></span><button class="del" type="button" data-id="'+r.id+'">'+TR("消す")+'</button>'
   +(j===0?'<div class="rc-tags"><small>'+TR("このころのようすを選んでおくと、記録がたまった時に、変わる理由が見えてきます")+'</small>'+htags().map(tg=>'<button type="button" data-id="'+r.id+'" data-tg="'+tg+'" aria-pressed="'+((r.tags||[]).includes(tg))+'">'+TR(tg)+'</button>').join("")+'</div>'+tagNeed(r,R):'<details class="rc-more" data-id="'+r.id+'"'+((window.__rcOpen||[]).includes(r.id)?' open':'')+'><summary>'+TR("このころのようすを選ぶ ▼")+'</summary><div class="rc-tags">'+htags().map(tg=>'<button type="button" data-id="'+r.id+'" data-tg="'+tg+'" aria-pressed="'+((r.tags||[]).includes(tg))+'">'+TR(tg)+'</button>').join("")+'</div>'+tagNeed(r,R)+'</details>')+'</li>').join("")+'</ul>';
  h+='<details class="pmore rc-add"><summary>'+TR("記録を手で足す")+'</summary><div class="rc-form"><label class="lbl" for="recDate">'+TR("受けた日")+'</label><input type="date" id="recDate" class="txt" value="'+(recDateV||today())+'"><span class="lbl">'+TR("出た16タイプ")+'</span><div class="rc-seg">'+AX.map((A,i)=>'<div style="--c:var('+A.c+')">'+[A.a,A.b].map(L=>'<button type="button" data-i="'+i+'" data-l="'+L+'" aria-pressed="'+(recPick[i]===L)+'">'+L+'</button>').join("")+'</div>').join("")+'</div><span class="lbl">'+TR("どこで受けた？")+'</span><div class="rc-tags rc-src">'+[["other","ほかの診断"],["site","16TYPE+"]].map(([v,l])=>'<button type="button" data-src="'+v+'" aria-pressed="'+(recSrc===v)+'">'+TR(l)+'</button>').join("")+'</div><span class="lbl">'+TR("このころのようす（あれば）")+'</span><div class="rc-tags rc-ftag">'+htags().map(tg=>'<button type="button" data-tg="'+tg+'" aria-pressed="'+recTags.includes(tg)+'">'+TR(tg)+'</button>').join("")+'</div><button class="btn primary" type="button" id="recAdd">'+TR("この結果を記録する")+'</button></div></details>';
