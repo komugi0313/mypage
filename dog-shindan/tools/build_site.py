@@ -15,7 +15,7 @@ if OUT.exists():
 OUT.mkdir()
 for d in ["img", "icon", "lp"]:
     shutil.copytree(ROOT / d, OUT / d)
-for f in ["robots.txt", "sitemap.xml"]:
+for f in ["robots.txt", "sitemap.xml", "favicon.ico"]:
     shutil.copy(ROOT / f, OUT / f)
 
 for name in ["index.html", "lp.html", "privacy.html", "404.html"]:
