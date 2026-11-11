@@ -165,6 +165,12 @@ h2{font-size:20px;margin:22px 0 10px;font-weight:900}
 .ppl .nm{font-weight:900;font-size:17px}
 .ppl .ty{color:var(--accent);font-weight:900}
 .ppl .ds{font-size:14px;color:var(--sub)}
+.pk{border:2px solid #2E1A47;border-radius:14px;padding:8px 12px;margin-top:8px;background:#fff}
+.pk-h{display:flex;justify-content:space-between;font-size:14px;font-weight:900;color:#2E1A47}
+.pk-h span{font-size:13px;color:#584870}
+.pk-c{font-size:15px;font-weight:900;color:#2E1A47;line-height:1.5;margin-top:2px}
+.pk-o{font-size:13px;color:#584870;line-height:1.5}
+.pks{margin-top:4px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:18px;width:max-content;max-width:calc(100% - 32px);text-align:center;line-height:1.5;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9}
 .toast.on{opacity:1}
 @media (max-width:360px){h1{font-size:34px}.choice{font-size:17px}}
@@ -1033,12 +1039,21 @@ function axisHTML(mode, sc, bsc, noComment){
       (noComment?'':'<p>'+axComment(ax.k,v)+'</p>')+'</div>';
   }).join('');
 }
-function speedStats(qs, times){
-  var arr = times.map(function(t,i){ return {t:t||0, q:qs[i]}; }).filter(function(x){ return x.t>0; });
+/* 答えるまでの時間。読むのにかかる時間（1文字0.11秒）を引いて、文の長さで差が出ないようにくらべる */
+function speedStats(qs, times, ans){
+  var arr = (times||[]).map(function(t,i){ var q=qs[i]||{}; return {t:t||0, q:q, c:(ans||[])[i], d:(t||0)-110*((q.a||'').length+(q.b||'').length)}; }).filter(function(x){ return x.t>0; });
   if(!arr.length) return null;
   var fast = arr.filter(function(x){ return x.t<3000; }).length;
-  var slow = arr.slice().sort(function(a,b){ return b.t-a.t; })[0];
-  return { rate: Math.round(100*fast/arr.length), slow: slow };
+  var by = arr.slice().sort(function(a,b){ return b.d-a.d; });
+  return { rate: Math.round(100*fast/arr.length), slow: by[0], quick: by.length>1 ? by[by.length-1] : null };
+}
+/* 即決した問題・いちばん悩んだ問題（選んだ答えつき） */
+function pickHTML(icon, label, x){
+  if(!x) return '';
+  var mine = x.c==='A' ? x.q.a : (x.c==='B' ? x.q.b : ''), other = x.c==='A' ? x.q.b : x.q.a;
+  return '<div class="pk"><div class="pk-h">'+icon+' '+label+'<span>'+(Math.round(x.t/100)/10)+'秒</span></div>'+
+    (mine ? '<div class="pk-c">「'+esc(mine)+'」を選んだ</div><div class="pk-o">vs「'+esc(other)+'」</div>'
+          : '<div class="pk-o">「'+esc(x.q.a)+'」vs「'+esc(x.q.b)+'」</div>')+'</div>';
 }
 function pctLine(mode, sc){ return AXES[mode].map(function(ax){ return ax.name+sc[ax.k]+'%'; }).join('／'); }
 function shareText(mode, sc){
@@ -1082,7 +1097,7 @@ function bindEnd(){
 
 function showResult(){
   var mode=S.mode, sc=score(mode,S.qs,S.ans[0]), hd=headline(mode), val=sc[hd.k];
-  var sp=speedStats(S.qs,S.times[0]);
+  var sp=speedStats(S.qs,S.times[0],S.ans[0]);
   var others = AXES[mode].filter(function(ax){ return ax.k!==hd.k; });
   var h='<div class="res-hero"><div class="pre">'+playName(mode)+'　あなたの結果</div>'+
     '<div class="meter"><div class="cap">'+hd.cap+'</div><div class="num">'+val+'<small>%</small></div></div>'+
@@ -1095,7 +1110,8 @@ function showResult(){
     h+='<div class="card"><h3>選び方のくせ</h3><div class="stat">'+
        '<div><b>'+sp.rate+'%</b><small>3秒以内の即決</small></div>'+
        '<div><b>'+(Math.round(sp.slow.t/100)/10)+'秒</b><small>いちばん悩んだ時間</small></div></div>'+
-       '<p style="margin-top:10px;font-size:14px">いちばん悩んだのは<br><b>「'+esc(sp.slow.q.a)+'」<br>vs「'+esc(sp.slow.q.b)+'」</b></p>'+
+       pickHTML('⚡','即決した問題',sp.quick)+pickHTML('🌀','いちばん悩んだ問題',sp.slow)+
+       '<p style="font-size:13px;color:var(--sub);margin:8px 0 0">悩んだ問題は、あなたの「迷いどころ」。どっちも捨てがたい本音が、そこにあるのかも。</p>'+
        '<p style="font-size:14px;color:var(--sub)">'+(sp.rate>=70?'迷いのなさがすごい。自分の気持ちがはっきりしている人。':(sp.rate<=30?'どっちも本気で考えてしまう、やさしい人。':'ここぞという問題で、ちゃんと悩める人。'))+'</p></div>';
   }
   h+='<button class="big" id="share">結果をシェアする</button>'+endButtons();
@@ -1176,6 +1192,7 @@ function showGroupResult(){
     h+='<div class="ppl"><div class="nm">'+esc(r.p.name)+'　<span class="ty">'+hd.cap+' '+r.sc[hd.k]+'%</span></div>'+
        '<div class="ds">'+pctLine(mode, r.sc)+'</div>'+
        '<div class="ds">'+axComment(hd.k, r.sc[hd.k])+'</div>'+
+       (function(){ var sp=speedStats(S.qs,S.times[r.i],S.ans[r.i]); return sp ? '<div class="pks">'+pickHTML('⚡','即決',sp.quick)+pickHTML('🌀','いちばん悩んだ',sp.slow)+'</div>' : ''; })()+
        '<details style="margin-top:6px"><summary style="font-size:14px;font-weight:700;min-height:44px;display:flex;align-items:center;cursor:pointer">心の中を見る</summary>'+axisHTML(mode,r.sc)+'</details></div>';
   });
   h+='</div>';
