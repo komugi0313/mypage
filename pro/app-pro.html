@@ -4106,6 +4106,13 @@ function natalBondLines(c,plain){ try{ if(!c||!c.pillars) return []; const p=c.p
   return o; }catch(e){ return []; } }
 /* 格局（内格・外格）が鑑定文になければ、ツールが一言足す（鑑定者本人の指示 2026-10-26「安全装置をつけてください」）。
    ビギナーのやさしい画面は、専門用語なしの「生まれ持った型」（beginner_ui の pkBTypeOf）で足す */
+/* 1人の鑑定文（命式全体・相談の答え）に、その人の日柱の持ち味（60干支の説明 KANSHI60）がなければ書き足す（鑑定者本人の指示 2026-11-11「干支の特徴は明確に鑑定にだしてほしい」）。
+   PRO＝【生まれ持った持ち味（日柱「庚午」）】、ビギナーのやさしい画面＝【生まれ持った性質】（干支の名前を出さない・魁罡はリーダー星）。説明の最初の一文がもう本文にあれば足さない。日運・月運の詳細鑑定と相性には付けない（相性は pkEnsureDayTraits）。 */
+function pkEnsureDayTrait(t,c){ try{ t=String(t||''); if(/【生まれ持った持ち味（日柱|【生まれ持った性質】/.test(t)) return t;
+  const gz=c&&c.pillars&&c.pillars[2]&&c.pillars[2].ganzhi, d=gz&&(typeof KANSHI60!=='undefined')&&KANSHI60[gz]; if(!d) return t;
+  const first=d.split('。')[0]; if(first&&t.indexOf(first)>=0) return t;
+  const pl=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'));
+  return t.replace(/\s+$/,'')+'\n\n'+(pl?'【生まれ持った性質】\n'+d.replace(/（魁罡＝かいごう）/g,'（リーダー星）'):'【生まれ持った持ち味（日柱「'+gz+'」）】\n'+d); }catch(e){ return t; } }
 function pkEnsureKaku(t,c){ try{ t=String(t||''); const g=kakukyoku(c); if(!g||!g.name) return t;
   const plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'));
   const ex=(g.extra||[]).map(function(e){ return e.name; });
@@ -8688,6 +8695,7 @@ function pkFixWhen(t,q){ try{   // 「いつ」を聞かれたのに1行目に�
   return L.join('\n'); }catch(e){ return t; } }
 function pkFixAnsHeads(t){ try{   // 冒頭の答えで【お客様へのお伝え方】【どうすればよいか】の見出しが抜けたときに補う（文章作成を呼び直さない。発注者指示 2026-10-21）
   t=String(t||'');
+  t=t.replace(/^(?![ 　]*【)[ 　]*[^\n【】]{0,6}?への(?:お)?伝え方[】\]］][ 　]*/gm,'');   /* 本文の頭に残った見出しの切れはし「へのお伝え方】」を外す（ビギナーで出ていた。2026-11-11） */
   t=t.replace(/^([ 　]*[#＃*＊\[［【]*[ 　]*)(?:お相手|お二人|おふたり|ふたり|2人|あなた|相談者|ご相談者|お客さま|お客様)(?:への|へ|の|に)(?:お)?伝え方/gm,'$1お客様へのお伝え方').replace(/^([ 　]*[#＃*＊\[［【]+[ 　]*)(?:お)?伝え方(?=[ 　]*[】\]］*＊]*[ 　]*[：:]?[ 　]*$)/gm,'$1お客様へのお伝え方');   // 見出しの名前がずれたとき（お相手へのお伝え方・お相手のお伝え方 など）は正しい名前に（2026-10-26：「の」も）
   t=t.replace(/^[ 　]*[#＃*＊\[［【]*[ 　]*(お客様への(?:お)?伝え方|どうすればよいか)[ 　]*[】\]］*＊]*[ 　]*[：:]?[ 　]*(?=\n|$)/gm,'【$1】').replace(/^[ 　]*【(お客様への(?:お)?伝え方|どうすればよいか)】[ 　]*[：:]?[ 　]*(?=[^\s])/gm,'【$1】\n');   // 見出しの書きくずれ（かっこなし・同じ行に本文）をそろえる（発注者指示 2026-10-22）
   { const m0=t.match(/^\s*【お客様への(?:お)?伝え方】\s*\n+([\s\S]*?)(?=\n[ 　]*【|$)/); if(m0){ const ss=(m0[1].replace(/\n+/g,'').match(/[^。！？]+[。！？]/g)||[]).map(function(x){ return x.trim(); }); const pre=function(x){ return /ですね。$|ありがとう|ご相談|お気持ち|お察し|不安|心配|待ち遠し|結論から|見ると、?$/.test(x); };
@@ -8756,7 +8764,7 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
       const _k=rdOffKind(A);   // 理由ごとの案内は下の一言（rd-offnote）にまとめる（同じことを2回書かない）
       // 通信できないときも、オンラインと同じ順で書き足す・直す（大きな特徴・結びつき・格局・月と年の星の事実あわせ・恋愛の4つ・相談の要点〈金運など〉・相談文のお相手。2026-11-02）。日運・月運の詳細鑑定には付けない
       try{ if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart&&!(out.closest&&out.closest('#kingun-sec'))){ let _t=A.text;
-        try{ _t=pkEnsureBig(_t,chart,_q0off); }catch(_e){} try{ _t=pkEnsureBonds(_t,chart,_q0off); }catch(_e){} try{ _t=pkEnsureKaku(_t,chart); }catch(_e){}
+        try{ _t=pkEnsureBig(_t,chart,_q0off); }catch(_e){} try{ _t=pkEnsureBonds(_t,chart,_q0off); }catch(_e){} try{ _t=pkEnsureDayTrait(_t,chart); }catch(_e){} try{ _t=pkEnsureKaku(_t,chart); }catch(_e){}
         try{ _t=pkMonthFactFix(_t,chart); }catch(_e){} try{ _t=pkYearKichiFix(_t,chart); }catch(_e){} try{ _t=pkPillarStarFix(_t,chart); }catch(_e){} try{ _t=pkPillarTsFix(_t,chart); _t=pkNatalTrioFix(_t,chart); }catch(_e){}
         if(_q0off){ try{ _t=pkEnsureLove(_t,chart,_q0off); }catch(_e){} try{ _t=pkEnsureConsult(_t,chart,_q0off); }catch(_e){} try{ _t=pkEnsureDays(_t,chart,_q0off); }catch(_e){} }
         A.text=_t; } }catch(_e){}
@@ -8798,7 +8806,7 @@ async function runReading(btn,out,user,localText,proUser,deep,safety,proLocal){
     let full=((D.online&&_dup>0.6)||String(det2).replace(/【[^】]*】|\s/g,'').length<40)?ans:(ans+'\n\n【くわしい読み解き】\n'+det2);   // 中身のないくわしい読み解きは見出しも出さない   // ほとんど同じ文なら、くわしい読み解きは出さない（同じ文を2回見せない。発注者指示 2026-10-21）
     if((out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart&&typeof chartB!=='undefined'&&chartB){ full=pkFixMutual(full,chart,chartB); full=pkEnsureCompatBig(full,chart,chartB); full=pkEnsureWeave(full,chart,chartB); try{ full=pkEnsureDayTraits(full,chart,chartB); }catch(_e){} full=pkEnsureTrio(full,chart,chartB,(document.getElementById('compat-worry')||{}).value||''); full=pkEnsureCross(full,chart,chartB); full=pkEnsureRoles(full,chart,chartB); try{ full=pkCpEnsureDays(full,chart,chartB,((document.getElementById('compat-worry')||{}).value||'').trim()); }catch(_e){} full=pkSameSexWord(full,chart,chartB); full=pkAttrTone(full,chart,chartB); }   // 相性の書き足しは相性の答えだけ（1人の相談に「惹かれ合う星」などを付けない）   // 惹かれ合う星（相手の命式に自分の咸池・紅艶・貴人）がなければ書き足す
     { let _seen=false; full=full.replace(/\n*[ 　]*【くわしい読み解き】[ 　]*(?:\n[ 　]*【くわしい読み解き】[ 　]*)*/g,function(m0){ if(_seen) return '\n'; _seen=true; return '\n\n【くわしい読み解き】\n'; }); }   // 見出しが2回続かないように
-    if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart) { full=pkEnsureBig(full,chart,_q0); full=pkEnsureBonds(full,chart,_q0); if(!(out.closest&&out.closest('#kingun-sec'))) full=pkEnsureKaku(full,chart); full=pkMonthFactFix(full,chart); full=pkYearKichiFix(full,chart); full=pkPillarStarFix(full,chart); full=pkPillarTsFix(full,chart); full=pkNatalTrioFix(full,chart); full=pkEnsureLove(full,chart,_q0); full=pkEnsureConsult(full,chart,_q0); full=pkEnsureDays(full,chart,_q0); full=pkEnsurePeople(full,chart,_q0); full=pkInLawWord(full,_q0); full=pkSoftDeceased(full,_q0); full=pkNoGambleTiming(full,_q0); }   // 命式内の天地徳合・干合は、鑑定文になければツールが書き足す（発注者指示 2026-10-23）
+    if(!(out.id==='compat'||(out.closest&&out.closest('#compat')))&&typeof chart!=='undefined'&&chart) { full=pkEnsureBig(full,chart,_q0); full=pkEnsureBonds(full,chart,_q0); if(!(out.closest&&out.closest('#kingun-sec'))){ try{ full=pkEnsureDayTrait(full,chart); }catch(_e){} full=pkEnsureKaku(full,chart); } full=pkMonthFactFix(full,chart); full=pkYearKichiFix(full,chart); full=pkPillarStarFix(full,chart); full=pkPillarTsFix(full,chart); full=pkNatalTrioFix(full,chart); full=pkEnsureLove(full,chart,_q0); full=pkEnsureConsult(full,chart,_q0); full=pkEnsureDays(full,chart,_q0); full=pkEnsurePeople(full,chart,_q0); full=pkInLawWord(full,_q0); full=pkSoftDeceased(full,_q0); full=pkNoGambleTiming(full,_q0); }   // 命式内の天地徳合・干合は、鑑定文になければツールが書き足す（発注者指示 2026-10-23）
     try{ full=pkRisshunTag(full); }catch(_e){}   // 立春前は今年（年運の年）に期限を添える（先生の決定 2026-11-03）
     try{ full=pkKuuNote(full); }catch(_e){}   // ビギナー：「ひと休みの年」がはじめて出たところに意味を1回だけ添える（2026-11-02）
     try{ full=pkFinalFix(full,_q0,(out.id==='compat'||(out.closest&&out.closest('#compat')))); }catch(_e){}
