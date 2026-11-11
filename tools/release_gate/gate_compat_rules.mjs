@@ -522,6 +522,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
       out.w11={ok:!bad.length&&ff.indexOf('2027年2月から6月上旬')>=0, bad:bad.slice(0,3), ff:ff.slice(0,60)}; }finally{ pkfmToday=_td; } }
     // ③④ 今年のずれ・「〜11月上旬」を日付にしない
     { const NY=pkNenInfo().Y; out.w3=pkFmRelYearFix('今年の'+(NY+1)+'年に。',{nenY:NY})==='来年の'+(NY+1)+'年に。';
+      { const _yy=pkfmToday().y+6, _ex=pkFmExpand('まず〔F:y'+_yy+'〕（〔F:y'+_yy+'〕歳）には縁が動きます。',pkFmEnvPro(false,false,'','')).text; out.w4b=!/年歳/.test(_ex)&&_ex.indexOf(String(_yy)+'年')>=0; }   // 年の印に「歳」を付けたくずれ（2026-11-11）
       out.w4=pkFmExpand('いま〜〔F:d'+pkfmFwdY(11,6)+'-11-6〕上旬の時期',pkFmEnvPro(false,false,'','')).text.indexOf('いま〜11月上旬の時期')>=0&&pkFactFix('いま〜11月6日（火）上旬','','')==='いま〜11月6日（火）上旬'; }
   }catch(err){ out.err=String(err&&err.message||err); } chart=c0; return out; });
   if(r.err) e.push('動かない：'+r.err);
@@ -539,7 +540,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(!r.w6||!r.w6.yr||!r.w6.star||!r.w6.ake) e.push('西暦（今年）・引用の＊：'+JSON.stringify(r.w6));
     if(!r.w9) e.push('その日にない星の名前を外さない'); if(!r.w10) e.push('命式にない星を「持っています」');
     if(!r.w11||!r.w11.ok) e.push('西暦のない来年の月・つなぎの言葉の重なり：'+JSON.stringify(r.w11));
-    if(!r.w3) e.push('今年と西暦のずれを直さない'); if(!r.w4) e.push('「〜11月上旬」を日付として扱った'); }
+    if(!r.w3) e.push('今年と西暦のずれを直さない'); if(!r.w4) e.push('「〜11月上旬」を日付として扱った'); if(!r.w4b) e.push('「（2032年歳）」のくずれが残る'); }
   console.log('  '+(e.length?'NG':'OK')+' 事実の差しこみの印・出す前の照らし合わせ（3ツール同じ・置きかえ・ビギナー・材料・正しい文を外さない・切りかえ・誰の柱か・今年のずれ・上旬・来年の月の西暦・つなぎの重なり）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('事実の印・照らし合わせ: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
