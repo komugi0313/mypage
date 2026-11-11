@@ -8,7 +8,7 @@ import hashlib, pathlib, re, shutil
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "public"
 HEAD = ('<!doctype html>\n<html lang="ja">\n<meta charset="utf-8">\n'
-        '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n')
+        '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">\n')
 
 if OUT.exists():
     shutil.rmtree(OUT)
