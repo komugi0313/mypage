@@ -542,6 +542,43 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(!r.w11||!r.w11.ok) e.push('西暦のない来年の月・つなぎの言葉の重なり：'+JSON.stringify(r.w11));
     if(!r.w3) e.push('今年と西暦のずれを直さない'); if(!r.w4) e.push('「〜11月上旬」を日付として扱った'); if(!r.w4b) e.push('「（2032年歳）」のくずれが残る'); }
   console.log('  '+(e.length?'NG':'OK')+' 事実の差しこみの印・出す前の照らし合わせ（3ツール同じ・置きかえ・ビギナー・材料・正しい文を外さない・切りかえ・誰の柱か・今年のずれ・上旬・来年の月の西暦・つなぎの重なり）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('事実の印・照らし合わせ: '+e.join('・')); }
+// 恋愛・仕事の持ち味（長所・気をつけたいこと・向いている仕事・アドバイス。鑑定者本人の指示 2026-11-11）：
+//  ① 材料 KANSHI60_TRAITS が PRO・生成したビギナー・鑑定書（＋ミラー）で同じ中身 ② 60干支×7項目がそろい、干支名・星の名前・専門用語・AI・＊がない
+//  ③ 相談の中身で出すほうを決める（相談なし＝両方／仕事＝仕事だけ／恋愛＝恋愛だけ／どちらでもない・安全・つらさ＝出さない／13歳未満は恋愛なし）
+//  ④ 書き足しは1回だけ（もう一度通しても増えない）・見出しだけあるときは抜けた項目だけ足す・ビギナーのやさしい画面は専門用語なしの見出し ⑤ 鑑定書の定型文・詳細鑑定に入っている
+{ const e=[]; const blk=f=>{ const m=fs.readFileSync(path.join(ROOT,f),'utf8').match(/\/\*PK-KANSHI-TRAITS:start\*\/([\s\S]*?)\/\*PK-KANSHI-TRAITS:end\*\//); return m?m[1]:''; };
+  const B0=blk('pro/app-pro.html'); if(!B0) e.push('PROに材料がない');
+  [dir+'/'+page0,'pro/meishi-sheet.html','meishiki-original/meishi-sheet.html','beginner/meishi-sheet.html'].forEach(f=>{ if(blk(f)!==B0) e.push(f+' の中身がPROと同じでない'); });
+  { const sh=fs.readFileSync(path.join(ROOT,'pro/meishi-sheet.html'),'utf8');
+    if(!/b\+=sheetTraitHTML\(dayGZ,'work'/.test(sh)||!/b\+=sheetTraitHTML\(dayGZ,'love'/.test(sh)) e.push('鑑定書の本格版（定型文）に入っていない');
+    if(!/kan\.恋愛\+'<\/p>'\+sheetTraitHTML\(dayGZ,'love'/.test(sh)||!/kan\.仕事\+'<\/p>'\+sheetTraitHTML\(dayGZ,'work'/.test(sh)) e.push('鑑定書のやさしい版に入っていない');
+    if(!/sheetTraitMaterial\(/.test(sh)||!/txt=window\.sheetEnsureTraitsTxt\(txt,/.test(sh)) e.push('鑑定書の詳細鑑定（材料・書き足し）に入っていない'); }
+  const r=await p.evaluate(()=>{ const o={bad:[]}; const c0=chart; try{
+    const K=Object.keys(KANSHI60_TRAITS), F=['恋長','恋注','恋助','仕長','仕注','仕適','仕助'], NG=/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]|命式|通変|大運|十二運|蔵干|比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬|魁罡|空亡|AI|[*＊]|男性|女性/;
+    if(K.length!==60||K.join('')!==Object.keys(KANSHI60_DETAIL).join('')) o.bad.push('60干支がそろわない');
+    K.forEach(k=>F.forEach(f=>{ const v=KANSHI60_TRAITS[k][f]; if(!v||v.length<10) o.bad.push(k+f+'がない'); else if(NG.test(v)) o.bad.push(k+f+'に専門用語など：'+v); }));
+    const kd=q=>{ const x=pkTraitKinds(q,null); return (x.love?'L':'')+(x.work?'W':''); };
+    [['','LW'],['今の仕事を続けるか転職か迷っています','W'],['彼と結婚できますか','L'],['金運はどうですか',''],['もう死にたいです',''],['彼の仕事が忙しくて会えません。付き合いを続けるべきですか','L'],['適職を教えてください','W'],['職場の恋愛は結婚につながりますか','LW']].forEach(([q,w])=>{ if(kd(q)!==w) o.bad.push('出すほう「'+q+'」＝'+kd(q)+'（正しくは'+(w||'なし')+'）'); });
+    const T=pkfmToday(); const mk=(y,m,d,sex,tu)=>{ const c=baziCompute({year:y,month:m,day:d,hour:12,minute:0,sex,tu},'','none'); return tu?markTimeUnknown(c):c; };
+    const c=mk(1976,5,18,'male',true), d=KANSHI60_TRAITS[c.pillars[2].ganzhi], pl=document.documentElement.classList.contains('bg-on');
+    const hL=pl?'【恋愛での持ち味】':'【恋愛の持ち味】', hW=pl?'【お仕事での持ち味】':'【仕事の持ち味】';
+    const a1=pkEnsureTraits('この方はまじめな人です。',c,''), a2=pkEnsureTraits(a1,c,'');
+    if(a1.indexOf(hL)<0||a1.indexOf(hW)<0||a1.indexOf(d.恋長)<0||a1.indexOf(d.仕適)<0||a1.indexOf('向いている仕事：')<0) o.bad.push('相談なしで両方が出ない：'+a1.slice(0,80));
+    if(a2!==a1) o.bad.push('2回通すと増える');
+    if(pl&&/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/.test(a1)) o.bad.push('やさしい画面に干支が出た');
+    const w=pkEnsureTraits('転職はよい流れです。',c,'今の仕事を続けるか転職か迷っています'); if(w.indexOf(hW)<0||w.indexOf(hL)>=0) o.bad.push('仕事の相談で仕事だけにならない');
+    const l=pkEnsureTraits('結婚の縁はあります。',c,'彼と結婚できますか'); if(l.indexOf(hL)<0||l.indexOf(hW)>=0) o.bad.push('恋愛の相談で恋愛だけにならない');
+    if(pkEnsureTraits('金運は上向きます。',c,'金運はどうですか')!=='金運は上向きます。') o.bad.push('どちらでもない相談に足した');
+    const h=pkEnsureTraits('前の文。\n\n'+hW+'\n・長所：粘り強い人です。\n\n【次の見出し】\n次の文。',c,'転職したいです');
+    const sec=h.split(hW)[1].split('【次の見出し】')[0];
+    if((h.match(new RegExp(hW.replace(/[【】]/g,'\\$&'),'g'))||[]).length!==1||sec.indexOf('向いている仕事：')<0||sec.indexOf('アドバイス：')<0||sec.indexOf('気をつけたいこと：')<0||sec.indexOf(d.仕長)>=0) o.bad.push('見出しだけあるときに抜けた項目を見出しの中に足さない：'+sec.slice(0,120));
+    const kid=mk(T.y-5,3,3,'female',true); const k1=pkEnsureTraits('元気な子です。',kid,''); if(k1.indexOf(hL)>=0||k1.indexOf(hW)<0) o.bad.push('13歳未満に恋愛を出した');
+    const m1=pkTraitsText(c,pl,''); if(m1.indexOf(d.恋長)<0||m1.indexOf(d.仕適)<0||m1.indexOf(hL)<0) o.bad.push('文章作成への材料がない');
+    if(pkTraitsText(c,pl,'金運はどうですか')!=='') o.bad.push('どちらでもない相談に材料を渡した');
+    if(proReadUser(c).indexOf(d.仕長)<0) o.bad.push('命式全体の鑑定の頼み方に材料がない');
+  }catch(err){ o.bad.push('動かない：'+String(err&&err.message||err)); } chart=c0; return o; });
+  r.bad.forEach(x=>e.push(x));
+  console.log('  '+(e.length?'NG':'OK')+' 恋愛・仕事の持ち味（材料が3か所同じ・60干支×7項目・出すほう・1回だけ・見出しの中に足す・やさしい画面・鑑定書）'+(e.length?'  … '+e.slice(0,6).join('・'):'')); if(e.length) res.fails.push('恋愛・仕事の持ち味: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
