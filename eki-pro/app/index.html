@@ -2454,7 +2454,7 @@ function ekiBadGzStrip(t){ try{ t=String(t==null?'':t); const G='甲乙丙丁戊
   t=t.replace(/([（(「]?)([甲乙丙丁戊己庚辛壬癸])([子丑寅卯辰巳午未申酉戌亥])((?:[（(][ぁ-ん]{2,8}[）)])?)([）)」]?)(の)?/g,function(m0,o,g,z,rd,c,no){ if(G.indexOf(g)%2===Z.indexOf(z)%2||g+z==='丁子') return m0; L.push({st:'drop',what:'干支',from:g+z,to:''}); if(no) return (o&&!c?o:'')+'その'; if(o&&c) return ''; return o+c; });
   t=t.replace(/([（(])[・、]/g,'$1');
   if(L.length){ try{ window.__pkGzFixLog=(window.__pkGzFixLog||[]).concat(L).slice(-30); }catch(e){} } return t; }catch(e){ return String(t==null?'':t); } }
-function noAIWord(t){ const _by=parseInt(ekiBdVal().slice(0,4),10)||0; const _x=pkTypoFix(pkRuleFix(pkAIScrub(ekiSameSexWord(ekiStarGuard(ekiBadGzStrip(pkFactFix(pkStampYears(pkFixAge(pkFixTel(_noAIWord1(t)),_by),_by,0,true)))))))); /* 十干の陰陽・五行／星の説明の取りちがえ（PROと同じ直し） */ return (typeof LANG!=='undefined'&&LANG==='ko')?_x:pkFixHangul(_x); }   // 日本語の文に混じったハングル（「終つい에는吉」など）を直す。韓国語で表示しているときだけは直さない
+function noAIWord(t){ const _by=parseInt(ekiBdVal().slice(0,4),10)||0; const _x=pkFmDupConnFix(pkFmMonYearFix(pkTypoFix(pkRuleFix(pkAIScrub(ekiSameSexWord(ekiStarGuard(ekiBadGzStrip(pkFactFix(pkStampYears(pkFixAge(pkFixTel(_noAIWord1(t)),_by),_by,0,true)))))))))); /* 西暦のない来年の月に西暦・同じつなぎの言葉の重なりを1つに（PROと同じ。2026-11-11）／ 十干の陰陽・五行／星の説明の取りちがえ（PROと同じ直し） */ return (typeof LANG!=='undefined'&&LANG==='ko')?_x:pkFixHangul(_x); }   // 日本語の文に混じったハングル（「終つい에는吉」など）を直す。韓国語で表示しているときだけは直さない
 try{ window.ekiBadGzStrip=ekiBadGzStrip; window.__ekiNoAIWord=noAIWord; window.__ekiFactFix=pkFactFix; }catch(_e){}   // 点検（gate_compat_rules）から呼べるように
 /* 「AIに相談する」「AIとして申し上げます」など、AIの言葉が残った文は外す・「。。」をまとめる（2026-11-03。PRO・易同じ中身） */
 function pkAIScrub(t){ try{ t=String(t==null?'':t);
@@ -2499,6 +2499,44 @@ function pkfmWho(pre,N){ N=N||{}; pre=String(pre||''); var m=pre.match(/([^\s、
 /* 今年（年運の年＝立春で切りかわる）のずれ：「今年の2027年」「来年（2026年）」のように、すぐあとの西暦と合わない言葉を西暦に合わせる */
 /* 空亡の印のすぐあとの読み・説明のかっこ（「〔本人は空亡〕（くうぼう：…）の月」）は外す。印と「の月・の日・の年」を離さない */
 function pkFmTagGlossFix(t){ try{ return String(t==null?'':t).replace(/(〔[^〔〕\n]{0,20}(?:空亡|ひと休み)[^〔〕\n]{0,12}〕)[（(][^（）()\n]{0,60}[）)](?=の?[月日年]|の(?:時期|期間))/g,'$1'); }catch(e){ return String(t==null?'':t); } }
+/* 西暦のない月（「2月から6月上旬にかけて」）は、今日から先の月として読むと今年（暦年）でない年になるとき、西暦を書き足す（先生の指示 2026-11-11「両方直してください」。お客様が今年の2月と読まないように）。
+   年をまたぐ範囲（「12月〜2月」）は両はしに西暦。続けて並べた月（から・〜・・・と）は前の月から順に年を数える。
+   さわらないもの：過去の話（〜した・〜だった）・「○月生まれ」・毎年／例年の話・季節のたとえ（〜のように）・文の中にもう年（西暦・今年・来年など）が書いてある文・日付（○月○日）。年は立春ではなく暦の年。 */
+function pkFmMonYearFix(t){ try{ t=String(t==null?'':t); var T=pkfmToday();
+  var Z=function(s){ return String(s).replace(/[０-９]/g,function(c){ return String.fromCharCode(c.charCodeAt(0)-0xFEE0); }); };
+  var YR=/(?:[0-9０-９]{4}年|今年|本年|来年|再来年|翌年|翌々年|年明け|年内|年末|年始|昨年|去年|一昨年|前年|毎年|例年|毎月|旧暦|生まれ年)/;
+  var PAST=/(?:ました|でした|だった|かった|[っいえけしれきちみせてねべめりぎじびん]た|[んい]だ)(?=[。、！？\n」』）)]|$|と(?:[、。]|の|いう|言|思)|が|けど|けれど|ので|のに|のは|のです|んです|ね|よ|わ)/;
+  return t.split(/(?<=[。！？\n])/).map(function(s){
+    if(!/[0-9０-９]{1,2}月/.test(s)) return s;
+    var re=/(?<![0-9０-９年翌\/／.．第])([0-9０-９]{1,2})月(?![0-9０-９]|日|間|分|号|期|度|生|ぶん|ごと|毎)/g, toks=[], m;
+    while((m=re.exec(s))){ var mo=+Z(m[1]); if(mo<1||mo>12) continue; toks.push({i:m.index,e:m.index+m[0].length,m:mo}); }
+    if(!toks.length||/(?:毎年|例年|毎月|翌年|翌々年|立春で切りかわ|年は立春)/.test(s)) return s;   /* 毎年の話・暦の決まりの説明（「2月〜翌年1月で1年」）はそのまま */
+    var G=[], cur=null, stop=false;   /* 使う月を、続けて並べた月のまとまりに分ける */
+    for(var k=0;k<toks.length;k++){ var o=toks[k], pre=s.slice(0,o.i), aft=s.slice(o.e), seg=(aft.split(/[、。！？\n]/)[0]||'');
+      if(YR.test(pre)||/(?:今月|先月|来月)[^。]{0,3}$/.test(pre)){ stop=true; break; }   /* 前にもう年がある（「来年の2月」「2027年2月から6月」「毎年2月は」「今月（10月〜11月上旬）」）は、この文はそのまま */
+      if(/(?:春|夏|秋|冬|季節|梅雨|旧暦)[はの]?[ 　]*[（(][^（）()]{0,8}$/.test(pre)){ stop=true; break; }   /* 季節の説明（「冬（12月〜2月）」） */
+      if(/^(?:[上中下]旬|末|ごろ|頃)?(?:生まれ|うまれ|誕生)/.test(aft)||/^[ 　]*(?:の|ごろの|頃の)?(?:ように|ような|みたいな|みたいに|寒さ|暑さ|桜|雪|梅雨)/.test(aft)||PAST.test(seg)||/(?:先月|以前|前回|この前|さっき|先日|すでに|もう(?:過ぎ|終わ))/.test(pre.slice(-14))){ cur=null; continue; }
+      var gap=cur?s.slice(cur[cur.length-1].e,o.i):null;
+      if(cur&&/^(?:[上中下]旬|初め|初旬|半ば|末|ごろ|頃|いっぱい)?(?:〔[^〔〕\n]{0,16}〕)?[ 　]*(?:から|〜|～|－|ー|‐|-|–|・|、|と|や|か|及び|および)[ 　]*$/.test(gap)) cur.push(o); else { cur=[o]; G.push(cur); } }
+    if(stop||!G.length) return s;
+    var out=[], ctx=T.y, lastY=0;
+    G.forEach(function(g){ var L=g[g.length-1], sx=(s.slice(L.e).match(/^(?:[上中下]旬|初め|初旬|半ば|末)?/)||[''])[0], dd={'上旬':10,'初め':10,'初旬':10,'中旬':20,'半ば':20}[sx]||31;
+      var tE=new Date(T.y,L.m-1,Math.min(dd,new Date(T.y,L.m,0).getDate()),12), t0=new Date(T.y,T.m-1,T.d,12), Y=[]; Y[g.length-1]=(g.length>1||sx?tE>=t0:L.m>=T.m)?T.y:T.y+1;   /* まとまりの終わりの月が、今日から先で最初に来る年（「10月〜11月上旬」は11月上旬がまだなら今年） */
+      for(var i=g.length-2;i>=0;i--) Y[i]=g[i].m<=g[i+1].m?Y[i+1]:Y[i+1]-1;
+      if(lastY&&Y[0]<lastY) return;   /* 前の月より前の年になる（「2月に動き、11月に…」）は順番があいまいなので書き足さない */
+      var cross=Y[0]!==Y[g.length-1];
+      for(var i=0;i<g.length;i++){ if(Y[i]!==ctx||(cross&&i===0&&Y[0]!==T.y)||(cross&&i===0)){ out.push({i:g[i].i,y:Y[i]}); ctx=Y[i]; } }
+      lastY=Y[g.length-1]; });
+    if(stop||!out.length) return s;
+    out.sort(function(a,b){ return b.i-a.i; });
+    out.forEach(function(x){ if(x.y&&!/[0-9０-９]{4}年$/.test(s.slice(0,x.i))) s=s.slice(0,x.i)+x.y+'年'+s.slice(x.i); });
+    return s; }).join(''); }catch(e){ return String(t==null?'':t); } }
+/* 同じつなぎの言葉が1文の中で続けて重なったら（「お二人の命式を合わせると、2人の地支（しし：…）を合わせると巳午未」）、前のほうを外して1つに（「お二人の命式で、2人の地支（…）を合わせると」）。
+   人ごとに見る（「本人から見ると、お相手から見ると」）・あいだに文の述べ方（は・が・も・。）がはさまるものは、意味が変わるのでさわらない（先生の指示 2026-11-11）。 */
+function pkFmDupConnFix(t){ try{ t=String(t==null?'':t); var C='(を合わせると|と合わせると|を重ねると|を並べると|を照らし合わせると|に照らすと|を見ると|から見ると|で見ると|を見れば|から見れば|でいうと|で言うと)';
+  var re=new RegExp(C+'[、，]?((?:[^。！？\\n、，はがも（(）)]|[（(][^（）()\\n]{0,80}[）)]){1,40}?)\\1','g'), P=/^(?:本人|あなた|お相手|相手|彼女?|自分|私|わたし|ご主人|奥さま|奥様|旦那|夫|妻|[^\s、。（(]{1,8}(?:さん|様|さま|くん|ちゃん))/;
+  for(var n=0;n<3;n++){ var t2=t.replace(re,function(m0,c,gap,off,all){ var g=gap.replace(/[（(][^（）()\n]*[）)]/g,''); if(P.test(g)||/(?:本人|あなた|お相手|相手|彼女?|自分|さん|様|さま)$/.test(all.slice(Math.max(0,off-8),off))) return m0; if(/[をにで]$/.test(g)||!g.replace(/[ 　]/g,'')) return m0; return 'で、'+gap+c; }); if(t2===t) break; t=t2; }
+  return t; }catch(e){ return String(t==null?'':t); } }
 function pkfmNenY(env){ if(env&&env.nenY) return +env.nenY; var T=pkfmToday(); return (T.m<2||(T.m===2&&T.d<4))?T.y-1:T.y; }
 function pkFmRelYearFix(t,env){ try{ var NY=pkfmNenY(env), REL={去年:-1,昨年:-1,今年:0,本年:0,来年:1,再来年:2}, W={'-1':'昨年','0':'今年','1':'来年','2':'再来年'};
   t=String(t==null?'':t).replace(/((?:19|20)\d\d)年([（(])(去年|昨年|今年|本年|来年|再来年)([）)])/g,function(m0,y,o,r,c){ var d=+y-NY; if(d===REL[r]) return m0; return W[String(d)]?y+'年'+o+W[String(d)]+c:y+'年'; });   /* 「2027年（今年）」（立春前の今年＝2026年）→「2027年（来年）」 */
@@ -2559,6 +2597,7 @@ function pkFmExpand(t,env){ var st={ok:0,bad:0,direct:0}; t=String(t==null?'':t)
     .replace(/[（(][、・\s]*[）)]/g,'').replace(/、{2,}/g,'、').replace(/(^|[。！？\n])、/g,'$1'); }
   /* 印のすぐあとに文章作成が足した「年」「月」「日」・年齢や曜日・干支のかっこは外す（印の言葉にもう入っている） */
   var ANN=function(c){ return /^[ 　]*$/.test(String(c).replace(/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥](?:の年|の月|の日|年|月|日)?|\d{1,3}(?:歳|才)|[日月火水木金土](?:曜日?)?|[ぁ-ん]{2,10}|あなた|お相手|本人|[・、／\/：:＝=\s]/g,'')); };
+  t=t.replace(/[ 　]*[（(]\u0011y[^\u0012]*\u0012[ 　]*(?:歳|才)(?:ごろ|頃)?[）)]/g,'').replace(/(\u0011y[^\u0012]*\u0012)[ 　]*(?:歳|才)/g,'$1');   /* 「（〔F:y2032〕歳）」＝年の印に「歳」を付けたくずれ（「2032年（壬子・51歳）（2032年歳）」になっていた。2026-11-11）。年の印に年齢は入っている */
   t=t.replace(/(\u0011y[^\u0012]*\u0012)(?:の|、)?\d{1,3}(?:歳|才)/g,'$1');   /* 「〔F:y2028〕の39歳ごろ」の年齢は印に入っている（その年の誕生日を迎えたときの年齢） */
   t=t.replace(/\u0011d([^\u0012]*)\u0012(?=[ 　]*(?:[上中下]旬|末|いっぱい))/g,function(m0,r){ var m=r.match(/^(?:(\d{4})年)?(\d{1,2}月)/); if(!m) return m0; return (m[1]&&Math.abs(+m[1]-pkfmToday().y)>1?m[1]+'年':'')+m[2]; });   /* 「〔F:d…〕上旬」は日付ではなく月（「いま〜11月上旬」） */
   /* 範囲の終わり・期限の日付（「いま〜12月6日は」「2月4日の立春まで」）は、曜日・干支・印を付けない（その日の話ではない） */
@@ -2572,6 +2611,7 @@ function pkFmExpand(t,env){ var st={ok:0,bad:0,direct:0}; t=String(t==null?'':t)
   t=t.replace(/((?:の日|その日|この日|当日)[）)]?)の日柱(?:の干支)?/g,'$1の干支');   /* 「明日（…庚子の日）の日柱の干支は庚子」→ その日の干支（本人の日柱と取りちがえない） */
   t=t.replace(/(〔[^〔〕\n]{1,16}〕)(?:\1)+/g,'$1');   /* 同じ印が2つ続いたら1つに（〔空亡〕〔空亡〕） */
   }catch(e){} try{ if(typeof window!=='undefined'){ (window.__pkFmStat=window.__pkFmStat||[]).push(st); if(window.__pkFmStat.length>200) window.__pkFmStat.shift(); } }catch(e){}
+  t=t.replace(/[ 　]*[（(]\d{4}年[ 　]*(?:歳|才)[）)]/g,'').replace(/(\d{4}年)(?:歳|才)(?![0-9０-９])/g,'$1');   /* 念のため：展開後に残った「（2032年歳）」「2032年歳」も外す */
   return {text:t,stat:st}; }
 /* 文章作成に渡す材料（相談文・ツールの計算）の事実を、印に置きかえる（文章作成が写すのが印になるように。生年月日は置きかえない） */
 function pkFmMaterial(u,env){ try{ u=String(u==null?'':u); env=env||{}; var GZ='[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]', A=(env.P||[])[0]||{}, B=env.two?((env.P||[])[1]||{}):{};

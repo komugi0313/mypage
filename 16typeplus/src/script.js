@@ -661,7 +661,7 @@ function lvHook(born,now,love){const D=[0,1,2,3].filter(i=>born[i]!==now[i]),nb=
  S=[0,1,2,3].filter(i=>born[i]===now[i]&&love[i]!==now[i]),sp=LANG==="ja"?"":" ",ax=i=>TR(RECAX[i][1]),co=x=>TR(CORE[x]);
  let s=!D.length?(S.length?TR("気質も性格も同じタイプです。"):TR("気質も性格も同じタイプ。恋をしても、いつものあなたのままです。"))
   :!nb?TR("恋をしても、ふだんの性格（{N}）らしさはそのまま出ます。"):!nn?TR("恋をすると、ふだんの性格（{N}）より、生まれつきの気質（{B}）らしさが出てきます。"):TR("恋をすると、生まれつきの気質（{B}）と今の性格（{N}）が、まざって出てきます。");
- if(S.length===1){const i=S[0];s+=sp+TR("ただ、ひとつだけ違うのが「{a}」。ふだんは「{c1}」ほうなのに、恋をすると「{c2}」ほうになります。").replace("{a}",ax(i)).replace("{c1}",co(now[i])).replace("{c2}",co(love[i]));}
+ if(S.length===1){const i=S[0];s+=sp+TR("ただ、ひとつだけ違うのが「{a}」。ふだんは「{c1}」ほうなのに、恋をすると「{c2}」ほうになりやすいです。").replace("{a}",ax(i)).replace("{c1}",co(now[i])).replace("{c2}",co(love[i]));}
  else if(S.length>1)s+=sp+TR("ただ、「{a}」は違います。恋をすると、「{c2}」という、ふだんは出ないあなたが出てきます。").replace("{a}",S.map(ax).join(TR("」と「"))).replace("{c2}",S.map(i=>co(love[i])).join(TR("」「")));
  return s.replace(/\{B\}/g,born).replace(/\{N\}/g,now);}
 /* 恋愛タイプの文：22歳以下は〇〇_s、23歳以上は〇〇_w があればそちらを出す */
@@ -684,6 +684,16 @@ function lvPair(me,pt,sit){const P2=LV.partner&&LV.partner[pt],AXT=((sit==="kata
  const d=[0,1,2,3].filter(i=>me[i]!==pt[i]).map(i=>AXT[me[i]+">"+pt[i]]).filter(Boolean).slice(0,2);
  return '<p class="lvptn"><b>'+pt+'</b>'+p16h(pt)+'</p><p>'+esc(lvRp(P2[(sit==="kata"||sit==="kini")?"pt_kata":"pt_koi"]||"",sit))+'</p>'
   +'<p class="lvpth">'+TR("2人のあいだで、起きやすいこと")+'</p>'+(d.length?'<ul class="lvptl">'+d.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul>':'<p>'+esc(AXT.same||"")+'</p>');}
+/* ---- 恋の悩み別ヒント：悩みを1つ選ぶと、恋のタイプに合わせた答え（相手の16タイプがわかれば、ひと言も）を出す ---- */
+const LVW=[["confess","告白したい",["あなたのくせ","言い方","タイミング","返事の待ち方"]],["invite","デートに誘いたい",["あなたのくせ","誘い方","タイミング","断られたら"]],["signs","脈ありか知りたい",["見落としやすいところ","見るとよいところ","確かめ方","気をつけたいこと"]],["line","LINEが続かない",["あなたのくせ","送り方","送るタイミング","返事が来ないとき"]],["fight","ケンカした・仲直りしたい",["あなたのくせ","最初のひと言","タイミング","そのあと"]],["after","ふられた・別れた",["あなたのくせ","まずやること","やめておくこと","次に向けて"]]];
+const LVWF=["habit","how","when","after"];
+function lvWorryBox(t,sit){const W=LV&&LV.worry&&LV.worry.types&&LV.worry.types[t];if(!W)return "";
+ const ord=sit==="koi"?["fight","line","after","invite","signs","confess"]:sit==="none"?["after","invite","signs","line","confess","fight"]:["confess","invite","signs","line","fight","after"];
+ return '<div class="lvworry" id="lvWorry"><h3>'+TR("恋の悩み別ヒント")+'</h3><p class="hint">'+TR("いま気になっていることを選ぶと、あなたの恋のタイプに合わせたヒントが出ます。")+'</p><div class="lvwb">'+ord.map(k=>{const x=LVW.find(w=>w[0]===k);return '<button type="button" data-w="'+k+'" aria-pressed="'+(window.__lvW===k)+'">'+TR(x[1])+'</button>';}).join("")+'</div><div id="lvWR" class="lvwr" hidden></div></div>';}
+function lvWorryInit(t){const box=$("lvWorry");if(!box)return;box.querySelectorAll(".lvwb button").forEach(b=>b.onclick=()=>{window.__lvW=window.__lvW===b.dataset.w?null:b.dataset.w;box.querySelectorAll(".lvwb button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.w===window.__lvW));lvWorryDraw(t);try{track("love_worry",{w:b.dataset.w});}catch(e){}});lvWorryDraw(t);}
+function lvWorryDraw(t){const R=$("lvWR");if(!R)return;const k=window.__lvW,W=LV.worry&&LV.worry.types&&LV.worry.types[t];if(!k||!W||!W[k]){R.hidden=true;R.innerHTML="";return;}
+ const x=LVW.find(w=>w[0]===k),A=W[k],pt=$("lvPt")&&$("lvPt").value,P=pt&&LV.worry.partner&&LV.worry.partner[pt]&&LV.worry.partner[pt][k];
+ R.innerHTML='<p class="lvwh">'+TR(x[1])+'</p>'+LVWF.map((f,i)=>A[f]?'<div class="lvs"><h3>'+TR(x[2][i])+'</h3><p>'+esc(A[f])+'</p></div>':'').join("")+(P?'<div class="lvs lvwp"><h3>'+TR("相手が{t}なら").replace("{t}",esc(pt+p16(pt)))+'</h3><p>'+esc(P)+'</p></div>':'');R.hidden=false;}
 function lvShow(t){const me=window.__me,P=lvTy(t);if(!me)return;const el=$("lvRes");el.hidden=false;$("lvStart").hidden=true;$("lvQ").hidden=true;if($("lvSit"))$("lvSit").hidden=true;
  const sit=(st.love&&st.love.sit)||"koi";
  const lab=i=>t[i]===me.born[i]&&t[i]===me.now[i]?'<em class="s">'+TR("気質も性格も")+'</em>':t[i]===me.born[i]?'<em class="b">'+TR("気質")+'</em>':t[i]===me.now[i]?'<em class="n">'+TR("性格")+'</em>':'<em class="x">'+TR("恋だけ")+'</em>';
@@ -697,6 +707,7 @@ function lvShow(t){const me=window.__me,P=lvTy(t);if(!me)return;const el=$("lvRe
   +'<div class="lvsit-r"><p class="lvsith">'+TR(B[0])+'</p>'+B[1].filter(([k])=>P[k]).map(([k,hh])=>'<div class="lvs lvs-'+k+'"><h3>'+TR(hh)+'</h3><p>'+esc(P[k])+'</p></div>').join("")+'</div>'
   +(sit!=="none"?'<div class="lvpt"><label class="lvptq" for="lvPt">'+TR(sit==="kata"?"好きな人の16タイプ（わかれば）":sit==="kini"?"気になる人の16タイプ（わかれば）":"恋人の16タイプ（わかれば）")+'</label><select id="lvPt"><option value="">'+TR("16タイプを選ぶ")+'</option>'+Object.keys(D.NICK).map(k=>'<option value="'+k+'"'+(st.love&&st.love.pt===k?' selected':'')+'>'+esc(nm(k))+'</option>').join("")+'</select><p class="hint">'+TR("16タイプだけで出す、2人のヒントです。")+'</p><div id="lvPtR" class="lvptr"></div></div>':'')
   +(sit!=="none"?'<label class="lvptimg" id="lvPtImgW"><input type="checkbox" id="lvPtImg"'+(window.__lvPtImg?' checked':'')+'> '+TR(sit==="kata"?"好きな人のタイプも画像に入れる":sit==="kini"?"気になる人のタイプも画像に入れる":"恋人のタイプも画像に入れる")+'</label>':'')
+  +lvWorryBox(t,sit)
   +'<button class="btn primary" type="button" id="lvShare">'+TR("恋愛編の結果を画像でシェア")+'</button>'
   +'<details class="mdet lvmore"><summary><span>'+TR("恋のタイプを、もっとくわしく")+'<small>'+TR("恋の傾向・いいところ・気をつけたいところ・恋の相性")+'</small></span></summary>'
   +'<p class="desc">'+esc(P.desc)+'</p>'
@@ -705,7 +716,8 @@ function lvShow(t){const me=window.__me,P=lvTy(t);if(!me)return;const el=$("lvRe
   +'<div class="cpl"><div class="o"><em>'+TR("恋で気が合う相手")+'</em><b>'+esc(nm(P.best[0]))+'</b>'+esc(P.best[1])+'</div><div class="x"><em>'+TR("恋ですれ違いやすい相手")+'</em><b>'+esc(nm(P.hard[0]))+'</b>'+esc(P.hard[1])+'</div></div></details></div>';}
  h+='<p class="lvnote">'+TR("恋をしたときの気持ちは、その時によって少し変わります。答え直すと、違う質問が出て、結果が変わることもあります。")+'</p><button class="qlink" type="button" id="lvRedo">'+TR("恋愛編に答え直す")+'</button>';
  el.innerHTML=h;
- const ptS=$("lvPt"),ptR=$("lvPtR"),drawPt=()=>{if(!ptS||!ptR)return;const v=ptS.value;ptR.innerHTML=v?lvPair(t,v,sit):"";ptR.hidden=!v;const w=$("lvPtImgW");if(w)w.hidden=!v;};
+ const ptS=$("lvPt"),ptR=$("lvPtR"),drawPt=()=>{if(!ptS||!ptR)return;const v=ptS.value;ptR.innerHTML=v?lvPair(t,v,sit):"";ptR.hidden=!v;const w=$("lvPtImgW");if(w)w.hidden=!v;lvWorryDraw(t);};
+ lvWorryInit(t);
  if(ptS){ptS.onchange=()=>{if(st.love){st.love.pt=ptS.value||null;saveResult();}drawPt();try{track("love_partner");}catch(e){}};drawPt();}
  if($("lvPtImg"))$("lvPtImg").onchange=e=>{window.__lvPtImg=e.target.checked;};if($("lvPtImgW")&&!(ptS&&ptS.value))$("lvPtImgW").hidden=true;
  if($("lvShare"))$("lvShare").onclick=()=>lvShareRun(t);
@@ -1050,17 +1062,17 @@ const GAX=[["E","I"],["S","N"],["T","F"],["J","P"]];
 /* 多い方の文字ごとの、グループでよくある場面 */
 const GMANY={E:"集まると話が止まらず、気づいたら予定の時間を過ぎている。",I:"集まっても静かな時間がある。でも、それで気まずくならない。",S:"行ったことのあるお店や、いつもの流れで話がまとまりやすい。",N:"「今度あれやろう」という話で盛り上がる。そのまま話だけで終わることも多い。",T:"意見が違っても、言い合ったあとはすっきりしている。",F:"誰かが元気がないと、すぐ気づいて声をかける。",J:"待ち合わせの時間と場所が、早めに決まる。",P:"当日の気分で、行き先が変わることがある。"};
 /* だれもいない文字ごとのコツ */
-const GNONE={E:"みんな、自分からは誘いにくい人です。帰る前に、次に会う日を決めておきましょう。",I:"みんな話すのが好きなので、話す人がかたよりやすいです。決める前に1人ずつ意見を聞いてみましょう。",S:"案はたくさん出るのに、細かいところがよく抜けます。お金と時間だけは、誰か1人が確認しましょう。",N:"いつものお店、いつもの流れになりやすいです。たまに、誰も行ったことのない場所を選んでみましょう。",T:"言いにくいことを、みんな言わずにためてしまいます。決めるときは多数決で、さっぱり決めましょう。",F:"話が早いぶん、言い方がきつくなることがあります。決まったあとに「ありがとう」をひと言。",J:"計画を立てる人がいません。日にちと集合場所だけは、その場で決めてしまいましょう。",P:"予定が変わると、みんな少し困ります。雨の日の案を1つ決めておきましょう。"};
+const GNONE={E:"みんな、自分からは誘いにくいほうかもしれません。帰る前に、次に会う日を決めておきましょう。",I:"みんな話すのが好きなので、話す人がかたよりやすいです。決める前に1人ずつ意見を聞いてみましょう。",S:"案はたくさん出るのに、細かいところが抜けやすいです。お金と時間だけは、誰か1人が確認しましょう。",N:"いつものお店、いつもの流れになりやすいです。たまに、誰も行ったことのない場所を選んでみましょう。",T:"言いにくいことを、みんな言わずにためてしまいがちです。決めるときは多数決で、さっぱり決めましょう。",F:"話が早いぶん、言い方がきつくなることがあります。決まったあとに「ありがとう」をひと言。",J:"計画を立てる人がいません。日にちと集合場所だけは、その場で決めてしまいましょう。",P:"予定が変わると、みんな少し困りやすいです。雨の日の案を1つ決めておきましょう。"};
 /* 職場・クラス・部活のグループ用 */
 const GMANY_W={"E": "話し合いで意見がどんどん出て、時間をこえることがある。", "I": "話し合いは静かだけど、あとからメッセージで、しっかりした意見が出てくる。", "S": "前のやり方や数字をもとに、具体的に話が進む。", "N": "「こうしたらもっとよくなる」という話で盛り上がる。でも、決めるところまで進まないことがある。", "T": "意見が違っても、言い合ったあとはすっきりしている。", "F": "疲れていそうな人がいると、すぐ気づいて声をかける。", "J": "締め切りと順番が、早めに決まる。", "P": "急な変更にも、みんなあわてずに動ける。"};
-const GNONE_W={"E": "みんな、自分からは話しかけにくい人です。困ったときに声をかける相手を、先に決めておきましょう。", "I": "みんな話すのが好きなので、話す人がかたよりやすいです。決める前に1人ずつ意見を聞いてみましょう。", "S": "案はたくさん出るのに、細かいところがよく抜けます。締め切りと数字だけは、誰か1人が確認しましょう。", "N": "いつものやり方になりやすいです。たまに、新しいやり方を1つ試してみましょう。", "T": "言いにくいことを、みんな言わずにためてしまいます。決めるときは理由を書き出して、さっぱり決めましょう。", "F": "話が早いぶん、言い方がきつくなることがあります。決まったあとに「ありがとう」をひと言。", "J": "段取りを組む人がいません。締め切りと担当だけは、その場で決めてしまいましょう。", "P": "予定が変わると、みんな少し困ります。うまくいかなかったときの案を1つ決めておきましょう。"};
+const GNONE_W={"E": "みんな、自分からは話しかけにくいほうかもしれません。困ったときに声をかける相手を、先に決めておきましょう。", "I": "みんな話すのが好きなので、話す人がかたよりやすいです。決める前に1人ずつ意見を聞いてみましょう。", "S": "案はたくさん出るのに、細かいところが抜けやすいです。締め切りと数字だけは、誰か1人が確認しましょう。", "N": "いつものやり方になりやすいです。たまに、新しいやり方を1つ試してみましょう。", "T": "言いにくいことを、みんな言わずにためてしまいがちです。決めるときは理由を書き出して、さっぱり決めましょう。", "F": "話が早いぶん、言い方がきつくなることがあります。決まったあとに「ありがとう」をひと言。", "J": "段取りを組む人がいません。締め切りと担当だけは、その場で決めてしまいましょう。", "P": "予定が変わると、みんな少し困りやすいです。うまくいかなかったときの案を1つ決めておきましょう。"};
 const GROLE_W=[["締め切りと担当を決める人", "EJ"], ["抜けやもれを確認する人", "SJ"], ["新しい案を出す人", "NP"], ["場の空気を明るくする人", "EP"], ["じっくり話を聞く人", "IF"], ["疲れている人に気づく人", "SF"], ["意見をまとめる人", "TJ"], ["損か得かを冷静に見る人", "IT"], ["急なトラブルにもあわてない人", "SP"], ["先のことを考えておく人", "NJ"], ["本音で相談できる相手になる人", "NF"], ["違う意見をはっきり言う人", "ET"]];
 const gWk=()=>typeof gst!=="undefined"&&gst&&gst.kind==="wk";
 /* 役まわり：性格の文字で決める。同じ役はなるべく重ならないようにする */
 const GROLE=[["日にちと場所を決める人","EJ"],["予約や持ち物を確認する人","SJ"],["新しい案を出す人","NP"],["その場を盛り上げる人","EP"],["じっくり話を聞く人","IF"],["元気がない人に気づく人","SF"],["意見をまとめる人","TJ"],["損か得かを冷静に見る人","IT"],["予定が変わってもあわてない人","SP"],["先のことを考えておく人","NJ"],["本音で話せる相手になる人","NF"],["違う意見をはっきり言う人","ET"]];
 function gRoles(types){const used=new Set();return types.map(t=>{let best=null,bs=-1;
   (gWk()?GROLE_W:GROLE).forEach(([r,k],i)=>{const s=[...k].filter(c=>t.includes(c)).length*2-(used.has(i)?3:0);if(s>bs){bs=s;best=i;}});used.add(best);return GTR((gWk()?GROLE_W:GROLE)[best][0]);});}
-function gNone(L,n){if(L==="T"&&n<=2)return GTR("言いにくいことを、2人とも言わずにためてしまいます。決めるときは、理由をひとつずつ言い合ってから決めましょう。");return GTR((gWk()?GNONE_W:GNONE)[L]);}
+function gNone(L,n){if(L==="T"&&n<=2)return GTR("言いにくいことを、2人とも言わずにためてしまいがちです。決めるときは、理由をひとつずつ言い合ってから決めましょう。");return GTR((gWk()?GNONE_W:GNONE)[L]);}
 const GDEF=new Set();function san(n){const t=GTR("さん");return n===GTR("あなた")||GDEF.has(n)||(t&&n.endsWith(t))||/(さん|ちゃん|くん|君|様|さま|氏|님|씨)$/.test(n)?n:n+t;}
 function gSame(a,b){let n=0;for(let i=0;i<4;i++)if(a[i]===b[i])n++;return n;}
 function groupResult(members){
