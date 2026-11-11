@@ -180,6 +180,16 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 @keyframes qsOut{to{opacity:0;transform:translateX(-30px)}}@keyframes qsIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
 .qtext.q-out{animation:qsOut .2s ease forwards}.qtext.q-in{animation:qsIn .3s ease}
 @media (prefers-reduced-motion:reduce){.qswap span,.qtext.q-out,.qtext.q-in{animation:none}}
+/* 会員だけの機能の案内 */
+.gate{position:fixed;inset:0;z-index:80;background:rgba(20,30,36,.5);display:flex;align-items:flex-end;justify-content:center;padding:0 0 env(safe-area-inset-bottom,0px)}
+.gate[hidden]{display:none}
+.gate .in{background:var(--card);width:100%;max-width:460px;border-radius:24px 24px 0 0;padding:20px 18px 22px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box}
+.gate h2{margin:0;text-align:center;font-size:1.15rem}
+.gate .gname{margin:0;text-align:center;font-weight:800;color:var(--teal)}
+.gate ul{margin:0;padding-left:1.3em;font-size:.9rem;font-weight:700}
+.gate .row{display:flex;gap:8px}.gate .row>*{flex:1;margin:0;padding:0 12px}
+.gate .later{background:transparent;border:0;color:var(--muted);font-weight:800;min-height:44px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.g-lock{background:var(--soft);border-radius:16px;padding:12px 14px;font-size:.88rem;font-weight:700;display:flex;flex-direction:column;gap:8px}
 /* 会員登録・ログイン */
 .ac-v{display:flex;flex-direction:column;gap:10px;max-width:420px;margin:0 auto}
 .ac-v h2{text-align:center;margin:8px 0 0}
@@ -4348,6 +4358,7 @@ function renderGrow(){var g=lsGet("w44_grow",{}),keys=Object.keys(g);
   $("g-dogs").innerHTML='<span class="dogs-l">どの子の記録を見る？</span>'+keys.map(function(k){var d=g[k],o=ownId(d.b);return '<button type="button" data-k="'+esc(k)+'"'+(k===gDog?' class="on"':'')+'>'+(o&&IMG[o]?'<img src="'+IMG[o]+'?v=5" alt="">':'')+esc(d.n)+'</button>'}).join("");
   var d=g[gDog],A=d.list.filter(function(r){return BY[r.m]}),L=d.list.filter(function(r){return r.p&&r.p.length===AXES.length});$("g-tl-title").textContent=d.n+"の気質の犬種のうつりかわり";
   $("g-tl").innerHTML=A.slice().reverse().map(function(r,i){var b=BY[r.m];return '<div class="it">'+(IMG[r.m]?'<img src="'+IMG[r.m]+'?v=5" alt="">':'')+'<div><small>'+ymd(r.t)+'・'+ageLabel(r.a)+(i===0?'（いちばん新しい）':'')+'</small><em>'+esc(b?b.s:"")+'気質</em></div></div>'}).join("");
+  if(accGated()){$("g-tl").innerHTML=$("g-tl").innerHTML.split('</div></div>')[0]+'</div></div>';$("g-chart").innerHTML='<div class="g-lock"><span>これまでの記録と性格の変化のグラフは、無料の会員登録で見られます。今は、いちばん新しい1回だけを見られます。</span><div class="row" style="display:flex;gap:8px"><button class="mp-btn" type="button" data-acv="signup" style="flex:1">無料で登録</button><button class="sub" type="button" data-acv="login" style="flex:1;margin:0">ログイン</button></div></div>';$("g-note").textContent="";return}
   if(L.length<2){$("g-chart").innerHTML='<p class="note">'+(L.length?'次に診断すると':'新しい診断（10の性格）を2回すると')+'、性格の変化がグラフで見られます。</p>';$("g-note").textContent="";return}
   var f=L[0].p,l=L[L.length-1].p,ch=AXI.slice().sort(function(a,b){return Math.abs(l[b]-f[b])-Math.abs(l[a]-f[a])}).slice(0,3);
   var W=300,H=130,x=function(i){return 24+(W-40)*(L.length===1?0:i/(L.length-1))},y=function(v){return 10+(100-v)};
@@ -4569,6 +4580,23 @@ $("ac-news").addEventListener("change",function(){var b=this.checked;ACC.api.set
   if(code&&(mode==="verify"||mode==="reset")){try{history.replaceState(null,"",location.pathname+location.hash)}catch(e){}
     if(mode==="verify")accVerify(code);else{accResetCode=code;accView("newpass")}}
 })();
+// ---------- 会員だけの機能（基盤につながってから有効。つながる前からの利用者は60日そのまま使える） ----------
+function accGated(){if(typeof ACC==="undefined"||!ACC.on)return false;if(ACC.user&&ACC.user.verified)return false;
+  if(!ACC.demo){try{var f=+localStorage.getItem("w44x_first")||0;if(!f){f=Date.now();localStorage.setItem("w44x_first",String(f));localStorage.setItem("w44x_legacy",Object.keys(lsGet("w44_grow",{})).length?"1":"0")}
+    if(localStorage.getItem("w44x_legacy")==="1"&&Date.now()-f<60*864e5)return false}catch(e){}}
+  return true}
+accGated();
+function showGate(name){var g=$("gate");if(!g){g=document.createElement("div");g.id="gate";g.className="gate";g.setAttribute("role","dialog");g.setAttribute("aria-modal","true");
+    g.innerHTML='<div class="in"><h2>無料の会員登録で使えます</h2><p class="gname" id="gate-name"></p><ul><li>うちの子の記録が、ずっと消えない</li><li>機種を変えても、ログインすれば同じ記録</li><li>名刺・ワン友QR・予定・成長の記録なども使える</li></ul><div class="row"><button class="mp-btn" type="button" data-acv="signup">会員登録（無料）</button><button class="sub" type="button" data-acv="login">ログイン</button></div><button class="later" type="button" id="gate-x">あとで</button></div>';
+    document.body.appendChild(g);g.addEventListener("click",function(e){if(e.target===g||e.target.id==="gate-x"||e.target.closest("[data-acv]"))g.hidden=true})}
+  $("gate-name").textContent="「"+name+"」は、会員の方が使える機能です";g.hidden=false;w44ev("gate_view",{feature:name})}
+var GATE_TOOL={"meishi-more":"名刺カード","wf-more":"ワン友QR","rq-more":"おねがい（黄色いリボン）"},GATE_GO={rem:"予定",wb:"ワン友帳",ec:"届いたもしものときカード"};
+document.addEventListener("click",function(e){if(!e.target.closest||!accGated())return;
+  var t=e.target.closest("[data-tool],#sh-ec-line,.mp-grid [data-go],.mytabs [data-t],#mp-ribbon,#new-dog,#g-save,#go-quiz");if(!t)return;var name=null;
+  if(t.dataset.tool)name=GATE_TOOL[t.dataset.tool];else if(t.id==="sh-ec-line")name="もしものときカードをLINEで送る";else if(t.dataset.go)name=GATE_GO[t.dataset.go];else if(t.dataset.t)name=GATE_GO[t.dataset.t];
+  else if(t.id==="mp-ribbon")name="おねがい（黄色いリボン）";else if(t.id==="new-dog")name="2匹目からの診断";else if(t.id==="g-save")name="成長の記録の画像";
+  else if(t.id==="go-quiz"){var g=lsGet("w44_grow",{}),ns=Object.keys(g).map(function(k){return g[k].n}),nm=($("in-name").value||"").trim();if(ns.length&&nm&&ns.indexOf(nm)<0)name="2匹目からの診断"}
+  if(!name)return;e.preventDefault();e.stopImmediatePropagation();showGate(name)},true);
 // 予定：あなたが入れた予定を並べ、カレンダーに登録できる
 var REP={none:"くり返しなし",m:"毎月","2m":"2か月ごと",y:"毎年"};
 // 月をたすとき、その月にない日（2月30日など）は月末にする（31日の予定が、次の月の3日などにずれないように）
