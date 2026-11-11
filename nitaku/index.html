@@ -606,20 +606,31 @@ function pickQuestions(mode, n, level){
   function take(list){
     shuffle(list.slice()).forEach(function(q){ if(pick.length<n && !used[q.id]){ used[q.id]=1; pick.push(q); } });
   }
+  // 直前の3回ぶんに出た問題は、いつも後回しにする
+  var recent = {}; (store('nitaku_recent_'+mode)||[]).forEach(function(id){ recent[id]=1; });
+  groups.forEach(function(g){ take(g.filter(function(q){ return !seenSet[q.id] && !recent[q.id]; })); });
   groups.forEach(function(g){ take(g.filter(function(q){ return !seenSet[q.id]; })); });
   if(pick.length < n){
     // この難しさの問題を出しきったので、まぜ直してもう一度
     var again = {};
     groups.forEach(function(g){ g.forEach(function(q){ again[q.id]=1; }); });
     seen = seen.filter(function(id){ return !again[id]; });
+    groups.forEach(function(g){ take(g.filter(function(q){ return !recent[q.id]; })); });
     groups.forEach(function(g){ take(g); });
   }
   pick.forEach(function(q){ if(seen.indexOf(q.id)<0) seen.push(q.id); });
   store(key, seen);
+  addRecent(mode, pick);
   // A/B の左右もランダムに入れかえる
   return pick.map(function(q){
     return Math.random()<0.5 ? { id:q.id, a:q.a, b:q.b, ta:q.ta, tb:q.tb, ex:q.ex, user:q.user, sw:false } : { id:q.id, a:q.b, b:q.a, ta:q.tb, tb:q.ta, ex:q.ex, user:q.user, sw:true };
   });
+}
+/* 直前の3回ぶん（45問まで）に出た問題を覚えておく */
+function addRecent(mode, qs){
+  var key='nitaku_recent_'+mode, r=store(key)||[];
+  (qs||[]).forEach(function(q){ var i=r.indexOf(q.id); if(i>=0) r.splice(i,1); r.push(q.id); });
+  store(key, r.slice(-45));
 }
 function remaining(mode){
   var seen = store('nitaku_seen_'+mode) || [];
@@ -960,7 +971,7 @@ function resetAll(){
   if(!resetAll.armed || now-resetAll.armed>3000){ resetAll.armed=now; toast('名前も答えも全部消えます。もう一度押すとリセットします'); return; }
   resetAll.armed=0;
   leaveRoom();
-  try{ localStorage.removeItem('nitaku_me'); localStorage.removeItem('nitaku_room'); localStorage.removeItem('nitaku_players'); localStorage.removeItem('nitaku_seen_love'); localStorage.removeItem('nitaku_seen_normal'); }catch(e){}
+  try{ localStorage.removeItem('nitaku_me'); localStorage.removeItem('nitaku_room'); localStorage.removeItem('nitaku_players'); localStorage.removeItem('nitaku_seen_love'); localStorage.removeItem('nitaku_seen_normal'); localStorage.removeItem('nitaku_recent_love'); localStorage.removeItem('nitaku_recent_normal'); }catch(e){}
   S.players=[]; S.qs=[]; S.qi=0; S.pi=0; S.ans=[]; S.times=[]; S.counts=null; S.sent={}; S.mix=false;
   S.who='solo'; S.lv='normal'; S.gnum=8; S.style='room';
   [['seg-who','solo'],['seg-lv','normal'],['seg-num','8'],['seg-style','room']].forEach(function(x){
@@ -1361,6 +1372,7 @@ function markSeen(mode, qs){
   (POOL[mode]||[]).forEach(function(q){ ids[q.id]=1; });
   (qs||[]).forEach(function(q){ if(ids[q.id] && seen.indexOf(q.id)<0) seen.push(q.id); });
   store(key, seen);
+  addRecent(mode, (qs||[]).filter(function(q){ return ids[q.id]; }));
 }
 function syncGame(room, players){
   var R=S.room;
