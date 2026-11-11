@@ -512,6 +512,14 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
       out.w9=!no9||(g9.rows.length===1&&(!yes9||g9.text.indexOf(yes9)>=0));   // その日にも命式にもない星を言った文（「のような」「など」でも）を外す（2026-11-07）
       out.w6={yr:r6===(NY+1)+'年（来年）と'+NY+'年（今年）', star:g7.rows.length===1&&!/[*＊]/.test(g7.rows[0].note), ake:!yN||g8.rows.length===0};   // 「○年を迎えるとひと休みが明け」は空亡と書いていない   // 「2027年（今年）」（立春前）・外した文の引用に＊を出さない（2026-11-07）
       out.w5={run:r1===t1&&g1.rows.length===0, rel:r2==='今年の年運は'+pkfmYGz(NY)+'（天干偏印）です。', now:r3==='今の大運は'+cu+'です。', drop:r4==='前の文です。次の文です。', gate:g5.rows.length===1, r3, r4}; }
+    // 西暦のない来年の月に西暦・同じつなぎの言葉の重なり（先生の指示 2026-11-11。今日を 2026-11-11 に固定して確かめる＝今日が変わっても同じ結果）
+    { const _td=pkfmToday; try{ pkfmToday=function(){ return {y:2026,m:11,d:11}; };
+      const C=[['この先は、2月から6月上旬にかけて縁が動きます。','この先は、2027年2月から6月上旬にかけて縁が動きます。'],['12月〜2月は準備の時期です。','2026年12月〜2027年2月は準備の時期です。'],['1月・3月が縁の動く月です。','2027年1月・3月が縁の動く月です。'],
+        ['11月から12月上旬は動きやすい時期です。',0],['2月に告白されたとのことですね。',0],['3月生まれの方です。',0],['毎年2月は体調に気をつけて。',0],['来年の2月から6月がよいでしょう。',0],['2027年2月から6月が狙い目です。',0],['冬（12月〜2月）は休む季節です。',0],['12月の寒さのように静かです。',0],['今月（10月〜11月上旬）は足場を固めます。',0],['12月から翌1月上旬にかけて。',0],['2月4日の立春まで。',0],['年は立春で切りかわり、2月〜翌年1月で1年。',0],
+        ['お二人の命式を合わせると、2人の地支（しし：十二支）を合わせると巳午未がそろいます。','お二人の命式で、2人の地支（しし：十二支）を合わせると巳午未がそろいます。'],['命式を見ると、日柱を見ると落ち着いた人です。','命式で、日柱を見ると落ち着いた人です。'],['本人から見ると、お相手から見ると印象が違います。',0],['命式を見ると穏やかで、日柱を見ると芯が強い人です。',0]];
+      const bad=C.filter(x=>pkFmDupConnFix(pkFmMonYearFix(x[0]))!==(x[1]||x[0])).map(x=>pkFmDupConnFix(pkFmMonYearFix(x[0])));
+      const ff=pkFinalFix('この先は、2月から6月上旬にかけて縁が動きます。','',false);
+      out.w11={ok:!bad.length&&ff.indexOf('2027年2月から6月上旬')>=0, bad:bad.slice(0,3), ff:ff.slice(0,60)}; }finally{ pkfmToday=_td; } }
     // ③④ 今年のずれ・「〜11月上旬」を日付にしない
     { const NY=pkNenInfo().Y; out.w3=pkFmRelYearFix('今年の'+(NY+1)+'年に。',{nenY:NY})==='来年の'+(NY+1)+'年に。';
       out.w4=pkFmExpand('いま〜〔F:d'+pkfmFwdY(11,6)+'-11-6〕上旬の時期',pkFmEnvPro(false,false,'','')).text.indexOf('いま〜11月上旬の時期')>=0&&pkFactFix('いま〜11月6日（火）上旬','','')==='いま〜11月6日（火）上旬'; }
@@ -530,8 +538,9 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(!r.w5||!r.w5.run||!r.w5.rel||!r.w5.now||!r.w5.drop||!r.w5.gate) e.push('運の柱・来年の年運・今の大運：'+JSON.stringify(r.w5));
     if(!r.w6||!r.w6.yr||!r.w6.star||!r.w6.ake) e.push('西暦（今年）・引用の＊：'+JSON.stringify(r.w6));
     if(!r.w9) e.push('その日にない星の名前を外さない'); if(!r.w10) e.push('命式にない星を「持っています」');
+    if(!r.w11||!r.w11.ok) e.push('西暦のない来年の月・つなぎの言葉の重なり：'+JSON.stringify(r.w11));
     if(!r.w3) e.push('今年と西暦のずれを直さない'); if(!r.w4) e.push('「〜11月上旬」を日付として扱った'); }
-  console.log('  '+(e.length?'NG':'OK')+' 事実の差しこみの印・出す前の照らし合わせ（3ツール同じ・置きかえ・ビギナー・材料・正しい文を外さない・切りかえ・誰の柱か・今年のずれ・上旬）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('事実の印・照らし合わせ: '+e.join('・')); }
+  console.log('  '+(e.length?'NG':'OK')+' 事実の差しこみの印・出す前の照らし合わせ（3ツール同じ・置きかえ・ビギナー・材料・正しい文を外さない・切りかえ・誰の柱か・今年のずれ・上旬・来年の月の西暦・つなぎの重なり）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('事実の印・照らし合わせ: '+e.join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
