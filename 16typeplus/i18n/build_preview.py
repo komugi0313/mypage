@@ -42,6 +42,9 @@ def lang_data(lang):
         if os.path.exists(p2):
             x2=js(p2);lvp=x2.get('partner',lvp);lva=x2.get('axis',lva);lvk=x2.get('axis_kata',lvk)
     LVd={'questions':lvq,'types':lvt,'partner':lvp,'axis':lva,'axis_kata':lvk}
+    # 恋の悩み別ヒント（その言語のファイルがなければ出さない）
+    lwp='/home/user/mypage/16typeplus/love/love_worry.{}.json'.format(lang)
+    if os.path.exists(lwp): LVd['worry']=js(lwp)
     carp='/home/user/mypage/16typeplus/content/career.json'
     CARd={}
     if os.path.exists(carp):
