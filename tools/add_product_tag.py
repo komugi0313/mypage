@@ -23,6 +23,7 @@ PRODUCTS = {          # フォルダ : 商品ID（基盤の商品マスタと同
     'pro': 'pro',
     'beginner': 'beginner',
     'eki-pro': 'eki',
+    'koi16': 'koi16',       # 恋のかたち診断（無料の入口。答えを集める受け口 koi16-collect を呼ぶ）
 }
 SKIP = {'meishi-sheet.html'}   # 3か所でバイト同一に保つファイル（鑑定書は localStorage['pk_product'] を読む）
 
