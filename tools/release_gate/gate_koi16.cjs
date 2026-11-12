@@ -56,11 +56,11 @@ function scan() {
     await p.goto(URL); await check('はじめ');
     await p.goto(URL + '?from=RATC'); await check('はじめ（招待）');
     await p.goto(URL + '?types=1'); await check('16タイプ一覧');
-    await p.goto(URL); await p.click('#start');
+    await p.goto(URL); await p.click('#start'); await check('恋の状況'); await p.click('[data-status=crush]');
     for (let i = 0; i < 40; i++) { await check('質問' + (i + 1)); const bs = await p.$$('#scale button'); await bs[i % 5].click(); await p.waitForTimeout(200); }
     for (const [i, c] of CODES.entries()) {
       const other = CODES[(i + 5) % 16];
-      const me = { code: c, pct: { LR: 62, VA: 71, TS: 55, PC: 80 }, anx: 30 + i * 4, mode: 'full', at: 1 };
+      const me = { code: c, pct: { LR: 62, VA: 71, TS: 55, PC: 80 }, anx: 30 + i * 4, mode: 'full', status: ['partner','crush','none'][i % 3], at: 1 };
       await p.evaluate(m => localStorage.setItem('koi16_v1', JSON.stringify({ me: m })), me);
       await p.goto(URL + '?t=' + c + '&with=' + other); await p.selectOption('#cmp-sel', other); await check('結果 ' + c);
       await p.evaluate(m => localStorage.setItem('koi16_v1', JSON.stringify({ me: Object.assign({}, m, { anx: null, mode: 'quick' }) })), me);
