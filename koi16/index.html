@@ -609,7 +609,15 @@ function wrapLines(x,s,maxW){
   return lines;
 }
 window.__koiWrapLines=wrapLines; window.__koiCatch=function(c){return T[c].catch;};   // 点検用（tools/release_gate/gate_koi16.cjs）
-function art(code,size){ return '<svg class="art" viewBox="0 0 120 120" width="'+size+'" height="'+size+'" role="img" aria-label="'+T[code].c+'">'+ART[code]()+'</svg>'; }
+/* キャラクターの絵：画像（img/タイプ.png。鑑定者本人が作った絵を tools/koi16_cutout.py で背景を消したもの）があるタイプは画像、
+   まだないタイプは上の SVG を出す。画像を足したら、ここにタイプの4文字を足す。 */
+var CHARA_IMG = {LVTP:1};
+function artSvg(code,size){ return '<svg class="art" viewBox="0 0 120 120" width="'+size+'" height="'+size+'" role="img" aria-label="'+T[code].c+'">'+ART[code]()+'</svg>'; }
+window.__koiArtSvg=artSvg;
+function art(code,size){
+  if(CHARA_IMG[code]) return '<img class="art" src="img/'+code+'.png" width="'+size+'" height="'+size+'" alt="'+T[code].c+'" decoding="async" onerror="this.outerHTML=window.__koiArtSvg(\''+code+'\','+size+')">';
+  return artSvg(code,size);
+}
 
 /* ===== 状態 ===== */
 var LS='koi16_v1';
@@ -881,7 +889,7 @@ function doShare(act,code){
 function saveImage(code){
   var im=new Image();
   im.onload=function(){ drawCard(code,im); }; im.onerror=function(){ drawCard(code,null); };
-  im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(art(code,250).replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" '));
+  im.src = CHARA_IMG[code] ? 'img/'+code+'.png' : 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(artSvg(code,250).replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" '));
 }
 function drawCard(code,img){
   var t=T[code], g=grp(code), W=1080, H=1350, cv=document.createElement('canvas'); cv.width=W; cv.height=H;
