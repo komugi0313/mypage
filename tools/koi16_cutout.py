@@ -4,12 +4,15 @@
 キャラクターの太いふちどりの外側の、白・薄いグレーの部分だけを消す（ふちどりの内側の白は残る）。
 使い方：
     python3 -I tools/koi16_cutout.py 元の画像 koi16/img/LVTP.png
+  取っ手の輪の中など、ふちどりに囲まれた白い背景は外から消せないので、元の画像の中の位置（x,y）を足して消す：
+    python3 -I tools/koi16_cutout.py 元の画像 koi16/img/LVTC.png 1480,1080
   そのあと koi16/index.html の CHARA_IMG にタイプの4文字を足す。
 """
 import sys
 from PIL import Image, ImageFilter
 from collections import deque
 src, dst = sys.argv[1], sys.argv[2]
+holes = [tuple(int(v) for v in h.split(',')) for h in sys.argv[3:]]
 im = Image.open(src).convert('RGB')
 W, H = im.size
 px = im.load()
@@ -24,6 +27,8 @@ for x in range(W):
 for y in range(H):
     for x in (0, W - 1):
         if bg(px[x, y]) and not mask[y * W + x]: mask[y * W + x] = 1; q.append((x, y))
+for x, y in holes:   # 囲まれた背景（取っ手の輪の中など）
+    if bg(px[x, y]) and not mask[y * W + x]: mask[y * W + x] = 1; q.append((x, y))
 while q:
     x, y = q.popleft()
     for nx, ny in ((x+1,y),(x-1,y),(x,y+1),(x,y-1)):
