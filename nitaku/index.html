@@ -279,6 +279,11 @@ html.jw body{word-break:keep-all;overflow-wrap:anywhere;line-break:strict}
 .navb{background:#fff;border:2px solid var(--ink);border-radius:999px;padding:4px 16px;font-weight:900;font-size:15px;color:var(--ink);box-shadow:3px 3px 0 var(--shadow)}
 .navb:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
 .choice{overflow:hidden}
+/* 問題を大きく・下の空きを使う（鑑定者本人の指示 2026-11-13）。A/Bの丸の文字はまん中に */
+.choice{display:grid;align-content:center;font-size:22px;line-height:1.55;letter-spacing:.01em;padding:20px 18px 20px 70px;min-height:clamp(132px,calc((100svh - 380px)/2),210px)}
+.choice .tag{left:16px;width:40px;height:40px;font-family:"Helvetica Neue",Arial,"Hiragino Sans",sans-serif;font-weight:800;font-size:21px;line-height:1;padding:0;text-box:trim-both cap alphabetic}
+.qhint{font-size:16px}
+@media (max-width:360px){.choice{font-size:19px;padding-left:62px}.choice .tag{width:36px;height:36px;font-size:19px;left:13px}}
 .choice .wpct{display:block;margin-top:6px;font-size:15px;font-weight:900;color:var(--ink)}
 .choice .wbar{position:absolute;left:0;bottom:0;height:8px;background:#E0457B;transition:width .6s ease}
 .wnote{text-align:center;font-weight:900;font-size:14px;color:var(--sub);margin:14px 0 0}
@@ -894,11 +899,12 @@ function showQ(){
   var group = S.who==='group';
   var turn=$('q-turn');
   if(group && !S.room){ turn.hidden=false; turn.firstChild.textContent=S.players[S.pi].name+' さん'; } else turn.hidden=true;
+  var bk=document.querySelector('#s-q [data-nav=back]'); if(bk) bk.textContent=(S.who==='solo'&&!S.room&&S.qi>0)?'← 1問もどる':'← もどる';
   var h='';
   {
-    h+='<button class="choice A" data-c="A"><span class="tag">A</span>'+esc(q.a)+'</button>'+
+    h+='<button class="choice A" data-c="A"><span class="tag">A</span><span class="ct">'+esc(q.a)+'</span></button>'+
        '<div class="vsmark"><b>VS</b></div>'+
-       '<button class="choice B" data-c="B"><span class="tag">B</span>'+esc(q.b)+'</button>';
+       '<button class="choice B" data-c="B"><span class="tag">B</span><span class="ct">'+esc(q.b)+'</span></button>';
     $('q-body').innerHTML=h;
     S.t0=Date.now();
     $('q-body').querySelectorAll('.choice').forEach(function(b){ b.onclick=function(){ answer(b.dataset.c, b); }; });
@@ -2109,12 +2115,14 @@ setMode('love'); lvBox();
       else if(END.test(cur)) brk=true;
       else if(OPEN.test(w)) brk=true;
       else if(OPEN.test(cur)) brk=false;
-      else if(HIRA.test(w)) brk=(PART.test(prev)&&len(cur)>=6&&w.length>=2&&!PART.test(w));
+      else if(HIRA.test(w)) brk=(PART.test(prev)&&len(cur)>=3&&w.length>=2&&!PART.test(w));
       else brk=HIRA.test(prev);
       if(brk){ out.push(cur); cur=w; } else cur+=w;
       prev=w;
     }
     if(cur) out.push(cur);
+    // 「でも」「けど」のような短いつなぎの言葉は、次の言葉と同じ行へ
+    for(var i=out.length-2;i>=0;i--){ if(HIRA.test(out[i])&&out[i].length<=3){ out[i]+=out[i+1]; out.splice(i+1,1); } }
     // 最後の行が1〜2文字だけにならないよう、短い最後のまとまりは前とくっつける
     while(out.length>1&&len(out[out.length-1])<=2){ var l=out.pop(); out[out.length-1]+=l; }
     // 最初の1〜2文字だけのまとまりも次とくっつける
