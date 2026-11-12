@@ -3,7 +3,12 @@
 const { chromium } = require('playwright');
 const path = require('path');
 const URL = 'file://' + path.resolve(__dirname, '../../koi16/index.html');
-const WIDTHS = [320, 360, 375, 390, 414, 430];
+// 端末の想定（鑑定者本人 2026-11-12「Android と Apple 両方の挙動を試して」）：
+//   KOI_MODE=android … Android の Chrome（幅 360・384・393・412・432）
+//   KOI_MODE=iphone  … iPhone の Safari に近い条件（幅 375・390・393・402・430・440。Safari は text-wrap:pretty を使わないので切る）
+//   KOI_NOFONT=1     … Web フォントが読めないとき（端末の文字で表示）
+const MODE = process.env.KOI_MODE || '';
+const WIDTHS = MODE === 'android' ? [360, 384, 393, 412, 432] : MODE === 'iphone' ? [375, 390, 393, 402, 430, 440] : [320, 360, 375, 390, 414, 430];
 const CODES = ['LVTP','LVTC','LATP','LATC','LVSP','LVSC','LASP','LASC','RVTP','RVTC','RATP','RATC','RVSP','RVSC','RASP','RASC'];
 
 function scan() {
@@ -26,10 +31,10 @@ function scan() {
   for (const [el, nodes] of blocks) {
     const chars = [];
     for (const t of nodes) for (let i = 0; i < t.nodeValue.length; i++) {
-      if (/\s/.test(t.nodeValue[i])) continue;
+      if (/\s/.test(t.nodeValue[i])) { if (chars.length) chars[chars.length - 1].spAfter = true; continue; }
       const r = document.createRange(); r.setStart(t, i); r.setEnd(t, i + 1);
       const b = r.getBoundingClientRect(); if (!b.width) continue;
-      chars.push({ c: t.nodeValue[i], top: b.top, bottom: b.bottom, nw: t.parentElement.closest('.nw') });
+      chars.push({ c: t.nodeValue[i], top: b.top, bottom: b.bottom, nw: t.parentElement.closest('.nw'), st: i === 0 || !t.nodeValue.slice(0, i).trim() });
     }
     if (chars.length < 2) continue;
     const lines = [];
@@ -39,6 +44,13 @@ function scan() {
     const last = lines[lines.length - 1];
     // 言葉のまとまり（.nw）がまるごと1行になっているのは、言葉の切れ目での改行なので泣き別れではない
     const wholeWord = last && last.nws[0] && last.nws.every(x => x === last.nws[0]) && last.nws[0].textContent.replace(/\s/g, '') === last.s;
+    // 言葉の途中での改行：行の頭が、文節の切れ目（文のかたまりの頭）でも、句読点・かっこのあとでもない
+    for (let li = 1; li < lines.length; li++) {
+      const firstIdx = chars.findIndex(ch => ch.top >= lines[li].top - 1 && ch.bottom <= lines[li].bottom + 1);
+      if (firstIdx <= 0) continue;
+      const ch = chars[firstIdx], prev = chars[firstIdx - 1].c;
+      if (!ch.st && !chars[firstIdx - 1].spAfter && !/[（「『【]/.test(ch.c) && !/[、。，．・）」』】！？!?…：―ー\/／]/.test(prev) && /[\u3040-\u30ff\u4e00-\u9fff]/.test(ch.c + prev)) out.push('言葉の途中で改行「' + lines[li - 1].s.slice(-6) + '／' + lines[li].s.slice(0, 6) + '」');
+    }
     if (lines.length > 1 && last.s.length <= 3 && !wholeWord) out.push('泣き別れ「' + lines[lines.length - 1].s + '」← ' + lines[lines.length - 2].s.slice(-12));
   }
   if (document.documentElement.scrollWidth > innerWidth + 1) out.push('横にはみ出し');
@@ -50,7 +62,10 @@ function scan() {
   const b = await chromium.launch();
   const problems = [];
   for (const w of WIDTHS) {
-    const ctx = await b.newContext({ viewport: { width: w, height: 800 } });
+    const ctx = await b.newContext({ viewport: { width: w, height: 800 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2,
+      userAgent: MODE === 'iphone' ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' : 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Mobile Safari/537.36' });
+    if (MODE === 'iphone') await ctx.addInitScript(() => document.addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '*{text-wrap-style:auto!important}'; document.head.appendChild(s); }));
+    if (process.env.KOI_NOFONT) await ctx.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
     const p = await ctx.newPage();
     const check = async (label) => { (await p.evaluate(scan)).forEach(x => problems.push(w + 'px ' + label + '：' + x)); };
     await p.goto(URL); await check('はじめ');
