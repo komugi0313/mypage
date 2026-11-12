@@ -56,7 +56,10 @@ p{margin:0 0 12px}
 .progress{height:10px;background:#F2E4DF;border-radius:999px;overflow:hidden;margin:6px 0 4px}
 .progress>i{display:block;height:100%;background:var(--rose);width:0;transition:width .25s}
 .qnum{font-size:14px;color:var(--sub)}
-.qtext{font-size:20px;font-weight:700;min-height:5.4em;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px 4px}
+.opt-sub{display:block;font-size:13px;color:var(--text);line-height:1.5}
+.q-ex{background:#FFF6E5;border:1.5px dashed #E3C38E;border-radius:12px;padding:8px 12px;margin:0 0 14px;font-size:14px;line-height:1.7;color:var(--text)}
+.q-ex b{display:inline-block;background:#8A4B00;color:#fff;border-radius:999px;font-size:11px;padding:0 8px;margin-right:6px;vertical-align:1px}
+.qtext{font-size:20px;font-weight:700;min-height:4.2em;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px 4px}
 .scale{display:grid;gap:10px}
 .scale button{width:100%;border:2px solid var(--line);background:#fff;color:var(--ink);border-radius:14px;padding:10px 14px;font-size:16px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:12px;min-height:52px}
 .scale button .dot{flex:0 0 auto;width:22px;height:22px;border-radius:50%;border:2px solid #B9A9A3;background:#fff}
@@ -288,10 +291,11 @@ header.top .navbtn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(
     <section class="card hidden" id="status-pick">
       <h2>はじめに、いまの恋の状況を教えてください</h2>
       <p class="muted">恋の状況によって答え方が変わりやすいので、結果にも添えてお伝えします。</p>
+      <p class="muted">この答えは、あなたの結果の説明にだけ使います。どこにも送らず、シェアや保存する画像にも出ません。</p>
       <div class="scale">
         <button type="button" data-status="partner"><span class="dot" aria-hidden="true"></span><span>恋人・パートナーがいる</span></button>
         <button type="button" data-status="crush"><span class="dot" aria-hidden="true"></span><span>片思い中</span></button>
-        <button type="button" data-status="none"><span class="dot" aria-hidden="true"></span><span>いまはいない</span></button>
+        <button type="button" data-status="none"><span class="dot" aria-hidden="true"></span><span>いまはいない<small class="opt-sub">恋をしたことがない人も、こちら</small></span></button>
       </div>
     </section>
     <section class="card" id="q-card">
@@ -299,6 +303,7 @@ header.top .navbtn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(
       <div class="progress" aria-hidden="true"><i id="qbar"></i></div>
       <p class="muted hidden" id="q-hint"></p>
       <div class="qtext" id="qtext" aria-live="polite"></div>
+      <p class="q-ex" id="q-ex"></p>
       <div class="scale" id="scale" role="group" aria-label="答えを選んでください"></div>
       <div class="qfoot"><button class="linkbtn" id="q-back" type="button">← ひとつ前へ</button><span class="muted">直感で答えてください</span></div>
     </section>
@@ -743,11 +748,55 @@ function score(a){
 }
 
 /* ===== 質問 ===== */
+/* 質問ごとの「たとえば」（鑑定者本人 2026-11-12「恋人がいないと分からない質問も多い」「はい、進めてください」）：恋人がいてもいなくても想像できる身近な場面。研究の質問文は写さず、こちらの言葉で書いた。QS と同じ順 */
+var QEX = [
+  '気になる人と同じ場にいたら、自分から声をかける？ 声をかけられるのを待つ？',
+  'うれしかったとき、「ありがとう」をその場で言葉にする？',
+  'つらい日、いちばん近い人にすぐ連絡したくなる？ 落ち着くまで黙っている？',
+  'やさしくて落ち着く人と、会うたびドキドキする人なら、どちらにひかれる？',
+  '自分ばかり好きなのでは、と感じてさみしくなることがある？',
+  '好きな人と目が合っても、話しかけるのは相手からを待つ？',
+  '好きな人には、言葉よりも手伝いや差し入れで気持ちを伝えたい？',
+  '悩みがあるとき、だれかに話すより、まずひとりで考えて解決したい？',
+  '毎回ちがう場所へ出かけるデートと、いつもの場所でゆっくり過ごす日。選ぶならどっち？',
+  '「好き」と言われたら、そのまま信じられる？',
+  '「週末どこ行く？」となったとき、行き先を出すのは自分？ 相手？',
+  '気持ちのすれ違いがあったとき、言葉でとことん話したい？',
+  '泣きたいとき、相手の前で泣ける？ 平気なふりをする？',
+  '穏やかな毎日が続くより、胸が高鳴る瞬間がほしい？',
+  'うまくいっているときでも、「いつか終わるかも」と考えてしまう？',
+  'デートの計画や関係の進め方は、相手に任せたほうが気が楽？',
+  '「大好き」と口に出すのは、照れてなかなか言えない？',
+  '困っても、相手に迷惑かなと思ってお願いをひかえる？',
+  '一目ぼれより、仲よくなるうちに好きになることが多い？',
+  'いつもより返事がそっけない日、理由を考えこんでしまう？',
+  '好きだと気づいたら、様子を見るより早めに伝えたい？',
+  '行動だけでなく、「好きだよ」と言葉で言ってもらえるとうれしい？',
+  '大変な作業や重い荷物があるとき、素直に「手伝って」と頼める？',
+  '恋のはじまりは、「この人だ！」と強く感じた瞬間が多い？',
+  '1日連絡がなくても、「忙しいのかな」と気にせずいられる？',
+  '相手に好かれているとわかってから、気になりはじめることが多い？',
+  '大切な人には、料理や手伝いなど「何かしてあげる」ことで気持ちを伝える？',
+  '本音や昔の話を深く聞かれると、少し身構えてしまう？',
+  'ドキドキしなくても、気をつかわずにいられる人がいい？',
+  'しばらく「好き」と言われないと、「まだ好き？」と聞きたくなる？',
+  '告白や「次いつ会う？」を言い出すのは、自分のことが多い？',
+  '会って話すより、メッセージのほうが気持ちを素直に書ける？',
+  '考えていることや将来の不安も、相手と深く話したい？',
+  '落ち着いた日々が続くと、少し退屈に感じてしまう？',
+  '送ったメッセージに半日返事がないと、何か悪いことを言ったかなと思う？',
+  '会いたいと思っても、自分から「会おう」とは言い出しにくい？',
+  '何も言わなくても、そばにいるだけで気持ちは伝わると思う？',
+  '何日も一緒に過ごすと、ひとりの時間がほしくなる？',
+  '燃え上がる恋より、何年も穏やかに続く恋にひかれる？',
+  'けんかをしても、「これで嫌われた」とはあまり思わない？'
+];
 function renderQ(){
   var L=qlist(), k=L[qi], q=QS[k];
   $('qnum').textContent=(mode==='quick'?'かんたん版 ':'')+(qi+1)+' / '+L.length;
   $('qbar').style.width=(qi/L.length*100)+'%';
   $('qtext').innerHTML='<span>'+esc(q[2])+'</span>';
+  var ex=$('q-ex'); ex.innerHTML='<b>たとえば</b>'+esc(QEX[k]||''); ex.classList.toggle('hidden',!QEX[k]); glue(ex);
   var box=$('scale'); box.innerHTML='';
   CHOICES.forEach(function(c){
     var b=document.createElement('button'); b.type='button';
@@ -776,7 +825,7 @@ function startQuiz(fresh,m){
 var STATUS = {
   partner:{n:'恋人・パートナーがいる',hint:'',note:''},
   crush:{n:'片思い中',hint:'「恋人」とある質問は、好きな人と付き合ったときを思い浮かべて答えてください。',note:'片思いのときは、ときめきが強く出やすい時期です。研究でも、片思いの人は「情熱」が恋人のいる人と同じくらい高い一方で、「親しさ」や「この関係を続けようという気持ち」は低めに出ることがわかっています。'},
-  none:{n:'いまはいない',hint:'「恋人」とある質問は、前の恋や、恋人がいるときを思い浮かべて答えてください。',note:'前の恋や、恋人がいるときを思い浮かべた結果です。'}
+  none:{n:'いまはいない',hint:'「恋人」とある質問は、前の恋か、恋をしたことがなければ、いちばん仲のいい友だちや家族を思い浮かべて答えてください。',note:'前の恋や、身近な人との関わり方を思い浮かべた結果です。恋をしたときに出やすい傾向として読んでください。'}
 };
 function pickStatus(k){
   st.status=k; save(st);
