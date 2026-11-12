@@ -433,6 +433,7 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
   </div>
 
   <button class="big" id="go">診断をはじめる</button>
+  <button class="big" id="room-back" hidden>🔙 さっきの部屋（<span id="room-back-code"></span>）にもどる</button>
   <button class="big alt" id="join-open">友だちの部屋に参加する（部屋番号）</button>
   <!-- 問題の投稿は、しくみがわかりにくいので今は出さない（鑑定者本人の判断 2026-11-07）。中身は残してあるので、hidden を外せば戻せる -->
   <button class="big alt" id="post-open" hidden>✏️ あなたも問題を作ってみる<small class="bsub">考えた二択を送ると、みんなが遊ぶ問題に加わるかも</small></button>
@@ -1145,7 +1146,8 @@ function goTop(ask){
     goTop.armed=0;
   }
   leaveRoom();
-  updatePoolNote(); show('s-home');
+  var st=store('nitaku_room'); if(st && !st.left){ st.left=true; store('nitaku_room', st); }
+  updatePoolNote(); show('s-home'); roomResume(false);
 }
 function openAbout(){ openAbout.from=curScr(); show('s-about'); }
 document.addEventListener('click', function(e){ var t=e.target.closest && e.target.closest('[data-about],#about-open'); if(t) openAbout(); });
@@ -1674,7 +1676,7 @@ function onRoom(room, players){
   syncGame(room, players);
   if(R.cntRound!==room.round){ R.cntRound=room.round; S.counts=null; Votes.get(room.qs.filter(function(q){ return !q.custom; }).map(function(q){ return q.id; })).then(function(c){ S.counts=c; }); }
   if(room.phase==='q'){
-    if(R.view!==key){ var first=/^(lobby|)$/.test(R.view); R.view=key; R.qAt=Date.now(); if(R.lateT){ clearTimeout(R.lateT); R.lateT=null; } showQ(); if(first){ toast(room.qi>0 ? '途中から参加しました（'+(room.qi+1)+'問目）' : 'スタート！'); try{ navigator.vibrate&&navigator.vibrate(150); }catch(e){} } } else updateWait();
+    if(R.view!==key){ var first=/^(lobby|)$/.test(R.view); R.view=key; R.qAt=Date.now(); if(R.lateT){ clearTimeout(R.lateT); R.lateT=null; } showQ(); if(first){ toast(S.resuming ? 'さっきの部屋にもどりました' : room.qi>0 ? '途中から参加しました（'+(room.qi+1)+'問目）' : 'スタート！'); S.resuming=false; try{ navigator.vibrate&&navigator.vibrate(150); }catch(e){} } } else updateWait();
     autoCheck();
   } else if(room.phase==='reveal'){
     if(R.view!==key){ R.view=key; showReveal(); }
@@ -1780,6 +1782,32 @@ function renderQR(code){
     el.setAttribute('data-url', joinUrl(code));
   }).catch(function(){ el.innerHTML='<p class="hint">QRコードを出せませんでした。部屋番号で参加してね。</p>'; });
 }
+/* 部屋から抜けてしまったとき（画面を消した・別のアプリから戻ってページが読み直された など）に、さっきの部屋へもどる。
+   ページを開いたときは自動でもどす（TOPを押して自分で出たときは自動ではもどさず、トップに「さっきの部屋にもどる」を出す）。前の答えは引きつぐ */
+async function roomResume(auto){
+  var btn=$('room-back'); btn.hidden=true;
+  var st=store('nitaku_room'); if(!st || !st.code || !st.pid || S.room) return;
+  try{
+    await Room.init(); if(Room.mode()==='off') return;
+    var d=await Room.get(st.code), r=d.room;
+    var me=(d.players||[]).filter(function(p){ return p.pid===st.pid; })[0];
+    if(!r || r.phase==='closed' || !me){ try{ localStorage.removeItem('nitaku_room'); }catch(e){} return; }
+    if(S.room || curScr()!=='s-home') return;
+    var go=async function(){
+      btn.disabled=true;
+      try{
+        S.resuming=(r.phase==='q');
+        var ok=await enterRoom(st.code, st.pid, { name:me.name||'？', joined:me.joined||Date.now(), ans:me.ans||{}, times:me.times||{}, mine:me.mine||[] }, r.host===st.pid);
+        if(ok && r.phase!=='q') toast('さっきの部屋にもどりました');
+      }catch(e){ toast('通信できませんでした。もう一度押してね'); }
+      finally{ btn.disabled=false; }
+    };
+    if(auto && !st.left){ go(); return; }
+    $('room-back-code').textContent=st.code; btn.hidden=false; btn.onclick=go;
+  }catch(e){}
+}
+var _joinHash=/^#join-/.test(location.hash||'');
+setTimeout(function(){ if(!_joinHash) roomResume(true); }, 0);
 /* QRコードから開いたとき（#join-1234）は、参加の画面から始める */
 (function(){
   var m=/^#join-(\d{4})$/.exec(location.hash||'');
