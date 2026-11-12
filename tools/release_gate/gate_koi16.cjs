@@ -49,11 +49,14 @@ function scan() {
       const firstIdx = chars.findIndex(ch => ch.top >= lines[li].top - 1 && ch.bottom <= lines[li].bottom + 1);
       if (firstIdx <= 0) continue;
       const ch = chars[firstIdx], prev = chars[firstIdx - 1].c;
-      if (!ch.st && !chars[firstIdx - 1].spAfter && !/[（「『【]/.test(ch.c) && !/[、。，．・）」』】！？!?…：―ー\/／]/.test(prev) && /[\u3040-\u30ff\u4e00-\u9fff]/.test(ch.c + prev)) out.push('言葉の途中で改行「' + lines[li - 1].s.slice(-6) + '／' + lines[li].s.slice(0, 6) + '」');
+      if (/[\u30a1-\u30fa\u30fc]/.test(prev) && /[\u30a1-\u30fa\u30fc]/.test(ch.c)) out.push('カタカナの言葉の途中で改行「' + lines[li - 1].s.slice(-6) + '／' + lines[li].s.slice(0, 6) + '」');
+      else if (!ch.st && !chars[firstIdx - 1].spAfter && !/[（「『【]/.test(ch.c) && !/[、。，．・）」』】！？!?…：―ー\/／]/.test(prev) && /[\u3040-\u30ff\u4e00-\u9fff]/.test(ch.c + prev)) out.push('言葉の途中で改行「' + lines[li - 1].s.slice(-6) + '／' + lines[li].s.slice(0, 6) + '」');
     }
     if (lines.length > 1 && last.s.length <= 3 && !wholeWord) out.push('泣き別れ「' + lines[lines.length - 1].s + '」← ' + lines[lines.length - 2].s.slice(-12));
   }
   if (document.documentElement.scrollWidth > innerWidth + 1) out.push('横にはみ出し');
+  // ボタンの文字は横並びの箱なので、文字を分けるとすき間ができる（「この診断の考 え方を見る」）
+  document.querySelectorAll('button .nb,.btn .nb,button wbr,.btn wbr').forEach(x => out.push('ボタンの文字にすき間：' + x.closest('button,.btn').textContent.trim().slice(0, 15)));
   document.querySelectorAll('button,a.btn,select').forEach(b => { const r = b.getBoundingClientRect(); if (r.width && r.height < 44) out.push('小さいボタン：' + b.textContent.trim().slice(0, 15)); });
   return out;
 }
