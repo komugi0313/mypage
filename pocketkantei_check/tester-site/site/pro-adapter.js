@@ -562,9 +562,11 @@ function pkCompatRoles(cd){ var R={role:[],energy:[],stars:[],scene:[]}; try{ va
     R.role.push(q[2]+'から見て、'+q[3]+'の日干「'+q[1].dayMaster.stem+'」は'+st+'＝'+t+(PK_ROLE_SUB[st]?'（'+PK_ROLE_SUB[st]+'）':'')); });
   [[a,b,cd._fa,'本人','お相手'],[b,a,cd._fb,'お相手','本人']].forEach(function(q){ var fav=q[2]||{}, fe=q[1].fiveElements||{}, ki=0, im=0, kL=[], iL=[];
     ['木','火','土','金','水'].forEach(function(el){ var n=fe[el]||0; if(!n) return; if(fav[el]==='喜'){ ki+=n; kL.push(el+n); } else if(fav[el]==='忌'){ im+=n; iL.push(el+n); } });
-    if(!ki&&!im){ R.energy.push(q[3]+'には喜神・忌神がない（中和）、または'+q[4]+'の五行が当たらない＝一緒にいて調子が大きく変わる組み合わせではない'); return; }
-    var v=ki>im?q[3]+'は'+q[4]+'と一緒にいると調子が上がりやすい':(im>ki?q[3]+'は'+q[4]+'と長く一緒にいると疲れやすいことがある（'+q[4]+'が悪いのではない。ひとりの時間をとるとよい）':'調子が上がる面と疲れる面が同じくらい');
-    R.energy.push(q[3]+'の喜神を'+q[4]+'は'+ki+'つ'+(kL.length?'（'+kL.join('・')+'）':'')+'、忌神を'+im+'つ'+(iL.length?'（'+iL.join('・')+'）':'')+'持つ＝'+v); });
+    var W1=q[3]==='本人'?'あなた（本人）':'お相手', W2=q[4]==='本人'?'あなた（本人）':'お相手';
+    if(!ki&&!im){ R.energy.push('【'+W1+'について】'+W1+'は、'+W2+'と一緒にいて調子が大きく変わることはない（理由：'+W1+'には喜神・忌神がない（中和）、または'+W2+'の五行が当たらない）'); return; }
+    /* 結論を先に、だれのことかをはっきり（会話テスト 2026-11-12：「あなたがそばにいるとお相手の元気が補われてあなたの調子が上がる」と、だれの調子か取り違えた） */
+    var v=ki>im?W1+'は、'+W2+'と一緒にいると調子が上がりやすい':(im>ki?W1+'は、'+W2+'と長く一緒にいると疲れやすいことがある（'+W2+'が悪いのではない。'+W1+'がひとりの時間をとるとよい）':W1+'は、'+W2+'と一緒にいて調子が上がる面と疲れる面が同じくらい');
+    R.energy.push('【'+W1+'について】'+v+'（理由：'+W2+'が、'+W1+'の喜神を'+ki+'つ'+(kL.length?'（'+kL.join('・')+'）':'')+'、忌神を'+im+'つ'+(iL.length?'（'+iL.join('・')+'）':'')+'持つ）'); });
   var SX={文昌貴人:'一緒に学ぶと身につきやすい相手（勉強仲間・先生に向く）',駅馬:'一緒にいると動きが出る相手（旅行・引っ越し・新しいことを一緒に始める）'};
   [[a,b,'本人','お相手'],[b,a,'お相手','本人']].forEach(function(q){ var hit={}; (q[1].pillars||[]).forEach(function(p,j){ if(!p||!p.stem) return; pkStarsOn(q[0],p).forEach(function(n){ if(SX[n]) (hit[n]=hit[n]||[]).push(CP_PL[j]+'「'+p.ganzhi+'」'); }); });
     Object.keys(hit).forEach(function(n){ R.stars.push(q[2]+'から見て、'+q[3]+'の'+hit[n].join('・')+'が'+q[2]+'の'+n+'に当たる＝'+q[3]+'は'+SX[n]+'（参考）'); }); });
@@ -610,7 +612,8 @@ window.pkCompatLogicBlock=function(cd,sameSex){ try{ if(!cd||!cd._a) return ''; 
   var cs=[]; [[cd._a,cd._b,'本人','お相手'],[cd._b,cd._a,'お相手','本人']].forEach(function(q){ pkCrossStars(q[0],q[1],love).forEach(function(c){ cs.push(q[2]+'から見て'+q[3]+'は「'+c.plain+'」（'+q[3]+'の'+c.at.map(function(z){ return z.label; }).join('・')+'が'+q[2]+'の'+c.star+'に当たる）'); }); });
   L.push('WHAT EACH ONE IS TO THE OTHER (stars in the partner\'s chart): '+(cs.length?cs.join(' / '):'none')+'.');
   var R=pkCompatRoles(cd); if(R.role.length) L.push('ROLES (the partner\'s day stem seen from each side): '+R.role.join(' / ')+'.');
-  if(R.energy.length) L.push('ENERGY TOGETHER (喜神・忌神 — never blame the other person): '+R.energy.join(' / ')+'.');
+  if(R.energy.length) L.push('ENERGY TOGETHER (喜神・忌神 — never blame the other person; say each side in its OWN sentence that starts with who it is about — 「あなたは彼といると…」「彼は…」 — never mix the two in one sentence): '+R.energy.join(' / ')+'.');
+  L.push('SMALL FRICTIONS: either name one concrete scene and one concrete thing to do, or leave them out — never a vague line like 「小さなすれ違いの兆しも含まれますので、無理に踏み込みすぎない節度を」.');
   if(R.stars.length) L.push('ALSO (reference only): '+R.stars.join(' / ')+'.');
   if(R.scene.length) L.push('WHERE IT SHOWS UP (which life scene each bond or clash belongs to — day-pillar ones first): '+R.scene.join(' / ')+'.');
   var meaning=cd.items.filter(function(x){ return /^律音/.test(x.k); }); if(meaning.length) L.push('RITSUON (same pillar — a deep bond; explain its meaning exactly): '+meaning.map(function(x){ return x.k+'＝'+x.desc; }).join(' / ')+'.');
