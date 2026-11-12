@@ -615,7 +615,8 @@ window.pkCompatLogicBlock=function(cd,sameSex){ try{ if(!cd||!cd._a) return ''; 
   if(R.scene.length) L.push('WHERE IT SHOWS UP (which life scene each bond or clash belongs to — day-pillar ones first): '+R.scene.join(' / ')+'.');
   var meaning=cd.items.filter(function(x){ return /^律音/.test(x.k); }); if(meaning.length) L.push('RITSUON (same pillar — a deep bond; explain its meaning exactly): '+meaning.map(function(x){ return x.k+'＝'+x.desc; }).join(' / ')+'.');
   var ckB=pkCheckPoints(cd._b,cd._fb,love), ckA=pkCheckPoints(cd._a,cd._fa,love);
-  L.push('GETTING TO KNOW THE PARTNER — things to check as you spend time together (not "a bad person"; mention the top 2-3): '+ckB.check.join(' / ')+(ckB.good.length?' | GOOD SIDES to see in them: '+ckB.good.join(' / '):'')+'.');
+  var _stg=(window._relStage&&window._relStage())||'dating', _ck=ckB.check.filter(function(x){ return _stg==='married'||!/親|家族|身内|親族|実家/.test(x); });
+  L.push('GETTING TO KNOW THE PARTNER — things to check as you spend time together (not "a bad person"; '+(_stg==='before'?'they are not dating yet: mention at most 2, as light things to notice on the next dates':'mention the top 2-3')+'): '+_ck.join(' / ')+(ckB.good.length?' | GOOD SIDES to see in them: '+ckB.good.join(' / '):'')+'.');
   L.push('HOW THE USER LOOKS FROM THE PARTNER\'S SIDE (use 1 point in the advice): '+ckA.check.slice(0,2).join(' / ')+'.');
   return L.join('\n'); }catch(e){ return ''; } };
 window.compatDeepGrounding=function(cd){
