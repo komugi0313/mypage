@@ -29,7 +29,8 @@ def build():
     head=rd(R+'src/head.html');js=rd(R+'src/budoux-inline.js')+rd(R+'src/script.js')
     head=re.sub(r'<title>.*?</title>\n?','',head);head=re.sub(r'<meta name="claude:viewport-fit-sides"[^>]*>\n?','',head)
     head=re.sub(r'<meta charset="utf-8">\n?|<meta name="viewport"[^>]*>\n?','',head)
-    for lang in ['ja','en','ko']:
+    # 英語は止めている（2026-11-12 鑑定者本人の決定）：frozen/en/ の固めたページ（プログラムごと）をそのまま使い、作り直さない
+    for lang in ['ja','ko']:
         d=lang_data(lang);body=d.pop('BODY')
         body=body.replace('<p class="note">デザイン見本（実際に診断できます）</p>','')
         body=re.sub(r'\s*<p class="note">[^<]*</p>','',body,count=1)
@@ -81,5 +82,7 @@ def build():
                       {'src':'/img/icon-maskable-192.png','sizes':'192x192','type':'image/png','purpose':'maskable'},{'src':'/img/icon-maskable-512.png','sizes':'512x512','type':'image/png','purpose':'maskable'}]}
         open(OUT+('' if lang=='ja' else lang+'/')+'manifest.webmanifest','w',encoding='utf-8').write(json.dumps(man,ensure_ascii=False,indent=1))
     open(OUT+'app.js','w',encoding='utf-8').write(js)
+    os.makedirs(OUT+'en',exist_ok=True)
+    for f in os.listdir(R+'frozen/en'): shutil.copy(R+'frozen/en/'+f,OUT+'en/'+f)
     print('built',OUT)
 if __name__=='__main__': build()
