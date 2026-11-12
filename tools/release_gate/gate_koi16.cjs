@@ -56,6 +56,7 @@ function scan() {
     await p.goto(URL); await check('はじめ');
     await p.goto(URL + '?from=RATC'); await check('はじめ（招待）');
     await p.goto(URL + '?types=1'); await check('16タイプ一覧');
+    await p.goto(URL + '?about=1'); await check('この診断の考え方');
     await p.goto(URL); await p.click('#start'); await check('恋の状況'); await p.click('[data-status=crush]');
     for (let i = 0; i < 40; i++) { await check('質問' + (i + 1)); const bs = await p.$$('#scale button'); await bs[i % 5].click(); await p.waitForTimeout(200); }
     for (const [i, c] of CODES.entries()) {
