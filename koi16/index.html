@@ -64,6 +64,8 @@ p{margin:0 0 12px}
 .scale button.sel .dot{background:var(--rose);border-color:var(--rose)}
 .scale button:focus-visible{outline:3px solid #4F46E5;outline-offset:2px}
 .qfoot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:8px}
+.qfoot>*{white-space:nowrap}
+.qfoot .muted{font-size:13px}
 .linkbtn{background:none;border:none;color:#5A4A55;text-decoration:underline;font-size:15px;cursor:pointer;padding:8px 4px}
 /* 結果の画面 */
 .rhero{border-radius:24px;color:#fff;padding:26px 20px 22px;text-align:center;margin:12px 0}
@@ -90,13 +92,18 @@ ul.list li{margin:4px 0}
 .mini a .e{font-size:24px}
 .mini a b{display:block;font-size:15px;line-height:1.45;margin:2px 0}
 .nw{display:inline-block}
+.nb{white-space:nowrap}
+.btn{flex-wrap:wrap;text-align:center}
+.btn .nw{flex-shrink:0;white-space:nowrap}
+p,li,.say,.catch,.invite,small,.pct,.qtext{text-wrap:pretty}
+h1,h2,h3{text-wrap:balance}
 .mini a small{color:var(--sub);font-size:12px}
 .mini a .score{font-size:13px;color:#8A1246;font-weight:700}
 select{width:100%;min-height:48px;font-size:16px;border:2px solid var(--line);border-radius:12px;padding:8px 12px;background:#fff;color:var(--ink);font-family:inherit}
 .compat-out{margin-top:14px}
 .score-big{font-size:44px;font-weight:800;color:var(--rose);line-height:1.1}
 .share{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.share .btn{padding:10px 12px;font-size:15px}
+.share .btn{padding:10px 8px;font-size:14px;white-space:nowrap}
 .btn-line{background:#06801F;color:#fff}
 .btn-x{background:#111;color:#fff}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2A2230;color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;z-index:50}
@@ -139,8 +146,8 @@ footer a{color:var(--sub)}
       <div id="hero-art" class="hero-art" aria-hidden="true"></div>
       <div id="invite-home" class="invite hidden"></div>
       <div class="start-grid">
-        <button class="btn btn-main btn-wide" id="start" type="button">本格版で診断する（40問）</button>
-        <button class="btn btn-sub btn-wide" id="start-quick" type="button">かんたん版で診断する（16問）</button>
+        <button class="btn btn-main btn-wide" id="start" type="button"><span class="nw">本格版で診断する</span><span class="nw">（40問）</span></button>
+        <button class="btn btn-sub btn-wide" id="start-quick" type="button"><span class="nw">かんたん版で診断する</span><span class="nw">（16問）</span></button>
       </div>
       <p class="muted" style="margin-top:8px">本格版は、4つのものさしの割合がより正確になり、「心のゆれやすさ」もわかります。</p>
       <p class="muted" id="resume-wrap" style="margin-top:10px"></p>
@@ -489,6 +496,38 @@ RASC: function(){ return '<path d="M28 104 L34 40 Q60 26 86 40 L92 104 Q60 114 2
 var CSPLIT={LVTP:4,LATP:4,RVTP:4,RATP:3,LVTC:4,LATC:4,RVTC:4,RATC:4,LVSP:4,LASP:4,RVSP:4,RASP:4,LVSC:4,LASC:4,RVSC:4,RASC:4};
 function cname(code){ var c=T[code].c, k=CSPLIT[code]; return '<span class="nw">'+esc(c.slice(0,k))+'</span><span class="nw">'+esc(c.slice(k))+'</span>'; }
 function fname(code){ var f=T[code].f, m=f.match(/^(.*?(?:な|る|い|す))(.+)$/); return m?'<span class="nw">'+esc(m[1])+'</span><span class="nw">'+esc(m[2])+'</span>':esc(f); }
+/* 泣き別れを作らない：文のおしまいの5文字は、いっしょに改行させる（スマホで最後の行が1〜2文字にならないように） */
+var GLUE_SEL='p,li,.say,.catch,.invite,small,.pct,.qtext,h1,h2,h3,.facts li,.names span,.score,.formal,.label';
+function glue(el){
+  if(el.querySelector('.nb')) return;
+  var w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null), t=null, n;
+  while((n=w.nextNode())){ if(n.nodeValue.trim()) t=n; }
+  if(!t || (t.parentNode && t.parentNode.closest && t.parentNode.closest('.nw,.nb'))) return;
+  var v=t.nodeValue.replace(/\s+$/,''), tail=t.nodeValue.slice(v.length);
+  if(v.length<7) return;
+  var k=5, cut=v.length-k;
+  var sp=document.createElement('span'); sp.className='nb'; sp.textContent=v.slice(cut);
+  t.nodeValue=v.slice(0,cut); t.parentNode.insertBefore(sp,t.nextSibling);
+  if(tail) sp.parentNode.insertBefore(document.createTextNode(tail),sp.nextSibling);
+}
+function glueAll(root){ Array.prototype.forEach.call((root||document).querySelectorAll(GLUE_SEL),glue); }
+/* 画像の中の文：読点で切れるところを選び、行の長さをそろえ、最後の行を4文字以上にする */
+function wrapLines(x,s,maxW){
+  var total=x.measureText(s).width, n=Math.max(1,Math.ceil(total/maxW)), target=total/n, lines=[], line='';
+  for(var i=0;i<s.length;i++){
+    var c=s[i], next=line+c;
+    if(x.measureText(next).width>target+2 && line && lines.length<n-1){
+      var j=Math.max(line.lastIndexOf('、'),line.lastIndexOf('。'));
+      if(j>=0 && line.length-j-1<=6 && x.measureText(line.slice(0,j+1)).width>target*0.6){ lines.push(line.slice(0,j+1)); line=line.slice(j+1)+c; }
+      else { lines.push(line); line=c; }
+    } else line=next;
+  }
+  if(line) lines.push(line);
+  var L=lines.length;
+  if(L>1 && lines[L-1].length<4){ var need=4-lines[L-1].length; lines[L-1]=lines[L-2].slice(-need)+lines[L-1]; lines[L-2]=lines[L-2].slice(0,-need); }
+  return lines;
+}
+window.__koiWrapLines=wrapLines; window.__koiCatch=function(c){return T[c].catch;};   // 点検用（tools/release_gate/gate_koi16.cjs）
 function art(code,size){ return '<svg class="art" viewBox="0 0 120 120" width="'+size+'" height="'+size+'" role="img" aria-label="'+T[code].c+'">'+ART[code]()+'</svg>'; }
 
 /* ===== 状態 ===== */
@@ -529,7 +568,7 @@ function renderQ(){
   var L=qlist(), k=L[qi], q=QS[k];
   $('qnum').textContent=(mode==='quick'?'かんたん版 ':'')+(qi+1)+' / '+L.length;
   $('qbar').style.width=(qi/L.length*100)+'%';
-  $('qtext').textContent=q[2];
+  $('qtext').innerHTML='<span>'+esc(q[2])+'</span>';
   var box=$('scale'); box.innerHTML='';
   CHOICES.forEach(function(c){
     var b=document.createElement('button'); b.type='button';
@@ -543,6 +582,7 @@ function renderQ(){
     box.appendChild(b);
   });
   $('q-back').style.visibility = qi>0?'visible':'hidden';
+  glueAll($('v-quiz'));
 }
 function startQuiz(fresh,m){
   if(m){ mode=m; st.mode=m; save(st); }
@@ -612,7 +652,7 @@ function renderResult(code,mine,withCode){
   h+='<section class="card"><h2>長く続けるコツ</h2><ul class="list">'+poles.map(function(p){return '<li>'+esc(POLE[p].tip)+'</li>';}).join('')+'</ul></section>';
 
   if(isMine && mine.anx==null){
-    h+='<section class="card quick-note"><h2>本格版で、もっと正確に</h2><p>いまの結果は、かんたん版（16問）の結果です。本格版（40問）では、4つのものさしの割合がより正確になり、恋をしているときの「心のゆれやすさ」もわかります。</p><button class="btn btn-main btn-wide" type="button" data-act="full">本格版で診断する（40問）</button></section>';
+    h+='<section class="card quick-note"><h2>本格版で、もっと正確に</h2><p>いまの結果は、かんたん版（16問）の結果です。本格版（40問）では、4つのものさしの割合がより正確になり、恋をしているときの「心のゆれやすさ」もわかります。</p><button class="btn btn-main btn-wide" type="button" data-act="full"><span class="nw">本格版で診断する</span><span class="nw">（40問）</span></button></section>';
   }
   if(isMine && mine.anx!=null){
     var a=mine.anx, lv=ANX.filter(function(x){return a<=x.max;})[0], on=Math.min(5,Math.max(1,Math.ceil(a/20)));
@@ -645,11 +685,11 @@ function renderResult(code,mine,withCode){
   h+='<button class="btn btn-sub btn-wide" type="button" data-act="types">16タイプ一覧を見る</button>'+
      '<button class="btn btn-sub btn-wide" type="button" data-act="retry">もう一度診断する</button></div>';
 
-  var v=$('v-result'); v.innerHTML=h; show('v-result');
+  var v=$('v-result'); v.innerHTML=h; glueAll(v); show('v-result');
   v.dataset.code=code;
   var sel=$('cmp-sel');
-  sel.addEventListener('change',function(){ $('cmp-out').innerHTML = sel.value?compatBlock(code,sel.value,'相性'):''; });
-  if(!isMine && st.me && st.me.code){ sel.value=st.me.code; $('cmp-out').innerHTML=compatBlock(code,st.me.code,'このタイプと、あなた（'+T[st.me.code].c+'）'); }
+  sel.addEventListener('change',function(){ $('cmp-out').innerHTML = sel.value?compatBlock(code,sel.value,'相性'):''; glueAll($('cmp-out')); });
+  if(!isMine && st.me && st.me.code){ sel.value=st.me.code; $('cmp-out').innerHTML=compatBlock(code,st.me.code,'このタイプと、あなた（'+T[st.me.code].c+'）'); glueAll($('cmp-out')); }
 }
 function miniCard(x){ var t=T[x.o]; return '<a href="?t='+x.o+'" data-type="'+x.o+'">'+art(x.o,56)+'<b>'+cname(x.o)+'</b><small>'+fname(x.o)+'・'+x.o+'</small><div class="score">相性 '+x.c.score+'点・'+esc(x.c.label)+'</div></a>'; }
 
@@ -664,7 +704,7 @@ function renderTypes(){
     h+='</div>';
   });
   h+='<p style="margin-top:16px"><button class="btn btn-main btn-wide" type="button" data-act="start">診断をはじめる</button></p></section>';
-  $('v-types').innerHTML=h; show('v-types');
+  $('v-types').innerHTML=h; glueAll($('v-types')); show('v-types');
 }
 
 /* ===== シェア ===== */
@@ -707,7 +747,7 @@ function drawCard(code,img){
   },'image/png');
 }
 function roundRect(x,l,t,w,h,r){ x.beginPath(); x.moveTo(l+r,t); x.arcTo(l+w,t,l+w,t+h,r); x.arcTo(l+w,t+h,l,t+h,r); x.arcTo(l,t+h,l,t,r); x.arcTo(l,t,l+w,t,r); x.closePath(); }
-function wrap(x,s,cx,y,maxW,lh){ var line=''; for(var i=0;i<s.length;i++){ var n=line+s[i]; if(x.measureText(n).width>maxW&&line){ x.fillText(line,cx,y); y+=lh; line=s[i]; } else line=n; } if(line) x.fillText(line,cx,y); }
+function wrap(x,s,cx,y,maxW,lh){ wrapLines(x,s,maxW).forEach(function(l,i){ x.fillText(l,cx,y+i*lh); }); }
 
 /* ===== 画面の切りかえ ===== */
 function home(){
@@ -719,6 +759,7 @@ function home(){
   $('hero-art').innerHTML = ORDER.filter(function(_,i){return i%2===0;}).map(function(o){return art(o,52);}).join('');
   if(started){ var n=ans.filter(function(v){return v!=null;}).length; rw.innerHTML='<button class="linkbtn" type="button" data-act="resume">前回のつづき（'+n+'問目まで）から再開する</button>'; }
   else if(st.me&&st.me.code){ rw.innerHTML='<button class="linkbtn" type="button" data-act="mine">前回の結果（'+esc(T[st.me.code].c)+'）を見る</button>'; }
+  glueAll($('v-home')); glueAll(document.querySelector('footer'));
   show('v-home');
 }
 document.addEventListener('click',function(e){
@@ -752,6 +793,7 @@ function route(){
   if(t) return renderResult(t,st.me,(st.me&&st.me.code===t)?w:null);
   home();
 }
+glueAll(document.querySelector('footer'));
 route();
 })();
 </script>
