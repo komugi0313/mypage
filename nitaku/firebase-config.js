@@ -13,4 +13,11 @@
  *   appId: "...."
  * };
  */
-window.NITAKU_FB = null;
+window.NITAKU_FB = {
+  apiKey: "AIzaSyCS3ijFH8Y67oILeIcAYXPfUMvvYA9eGLk",
+  authDomain: "typeplus-69c66.firebaseapp.com",
+  projectId: "typeplus-69c66",
+  storageBucket: "typeplus-69c66.firebasestorage.app",
+  messagingSenderId: "263347336943",
+  appId: "1:263347336943:web:724a41f58d1694ce2ccd1a"
+};
