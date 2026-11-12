@@ -270,7 +270,8 @@ body{background-color:var(--bg);background-image:radial-gradient(#D9C8FA 1.5px,t
 .gauge b{font-size:22px}
 .ht{transform:none}
 .vsmark b{color:var(--ink)}
-body{word-break:auto-phrase}
+html.jw body{word-break:keep-all;overflow-wrap:anywhere;line-break:strict}
+.choice,.qhint,.tab,.popq li,.txt,p{text-wrap:pretty}
 @media (max-width:360px){.ht{font-size:58px;transform:none}.gauge{width:72px;height:72px;top:130px}.gauge b{font-size:19px}}
 .nav{display:flex;justify-content:space-between;align-items:center;margin:0 0 10px}
 .navr{display:flex;gap:8px}
@@ -278,6 +279,11 @@ body{word-break:auto-phrase}
 .navb{background:#fff;border:2px solid var(--ink);border-radius:999px;padding:4px 16px;font-weight:900;font-size:15px;color:var(--ink);box-shadow:3px 3px 0 var(--shadow)}
 .navb:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
 .choice{overflow:hidden}
+/* 問題を大きく・下の空きを使う（鑑定者本人の指示 2026-11-13）。A/Bの丸の文字はまん中に */
+.choice{display:grid;align-content:center;font-size:22px;line-height:1.55;letter-spacing:.01em;padding:20px 18px 20px 70px;min-height:clamp(132px,calc((100svh - 380px)/2),210px)}
+.choice .tag{left:16px;width:40px;height:40px;font-family:"Helvetica Neue",Arial,"Hiragino Sans",sans-serif;font-weight:800;font-size:21px;line-height:1;padding:0;text-box:trim-both cap alphabetic}
+.qhint{font-size:16px}
+@media (max-width:360px){.choice{font-size:19px;padding-left:62px}.choice .tag{width:36px;height:36px;font-size:19px;left:13px}}
 .choice .wpct{display:block;margin-top:6px;font-size:15px;font-weight:900;color:var(--ink)}
 .choice .wbar{position:absolute;left:0;bottom:0;height:8px;background:#E0457B;transition:width .6s ease}
 .wnote{text-align:center;font-weight:900;font-size:14px;color:var(--sub);margin:14px 0 0}
@@ -319,6 +325,11 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
 .lb-list li{background:#FFD6E8;border:2px solid #2E1A47;border-radius:999px;padding:4px 14px;font-weight:900;font-size:15px;color:#2E1A47}
 .lb-list li.me{background:#FFE68A}
 .lb-wait{text-align:center;font-size:15px;font-weight:700;color:var(--ink)}
+.lb-status{background:#FFF3C4;border:3px solid var(--ink);border-radius:16px;box-shadow:4px 4px 0 var(--ink);padding:12px 14px;margin:0 0 14px;text-align:center}
+.lb-status b{display:block;font-size:17px;font-weight:900}
+.lb-status small{display:block;font-size:14px;font-weight:700;line-height:1.6;margin-top:4px}
+.join-st{margin:14px 0 0;padding:10px 12px;border-radius:12px;background:#fff;border:2px solid var(--ink);font-weight:700;font-size:15px;line-height:1.6}
+.join-st:empty{display:none}
 .wait-box{text-align:center;margin-top:16px}
 .wait-box p{font-size:16px;font-weight:900;margin:0}
 .big:disabled{opacity:.45}
@@ -445,6 +456,12 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
   </div>
   <p class="hint" id="style-hint"></p>
 
+  <div class="label">答え合わせ</div>
+  <div class="seg seg2" id="seg-rv">
+    <button data-v="each" aria-pressed="true"><b>1問ずつ</b><small>答えるたびに発表</small></button>
+    <button data-v="end" aria-pressed="false"><b>最後にまとめて</b><small>全部答えてから発表</small></button>
+  </div>
+
   <div id="names-box" hidden>
     <h2>だれが参加する？</h2>
     <div id="plist"></div>
@@ -529,12 +546,14 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
   <div class="prow"><div class="pf"><input type="text" id="join-code" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="例：1234" autocomplete="off"></div></div>
   <div class="label">あなたの名前</div>
   <div class="prow"><div class="pf"><input type="text" id="join-name" maxlength="10" placeholder="名前（ニックネームでOK）"></div></div>
+  <p class="join-st" id="join-st"></p>
   <button class="big" id="join-go">参加する</button>
 </section>
 
 <!-- 部屋（集まるまで） -->
 <section class="scr" id="s-lobby">
   <div class="nav"><button class="navb" data-nav="back">← もどる</button><span class="navr"><button class="navb" data-nav="reset">リセット</button><button class="navb" data-nav="top">TOP</button></span></div>
+  <div class="lb-status" id="lb-status"></div>
   <div class="card lobby">
     <div class="lb-cap">この部屋の番号</div>
     <div class="lb-code" id="lb-code"></div>
@@ -773,7 +792,7 @@ function score(mode, qs, answers){
   return out;
 }
 /* ───── 状態 ───── */
-var S = { mode:'love', who:'solo', num:15, gnum:8, lv:'normal', style:'room', room:null, players:[], qs:[], qi:0, pi:0, ans:[], times:[], t0:0 };
+var S = { mode:'love', who:'solo', num:15, gnum:8, lv:'normal', style:'room', rv:'each', room:null, players:[], qs:[], qi:0, pi:0, ans:[], times:[], t0:0 };
 
 /* ホーム */
 function setMode(m){
@@ -806,6 +825,7 @@ seg('seg-num', function(v){ S.gnum=+v; lvBox(); });
 seg('seg-who', function(v){ S.who=v; $('num-box').hidden=(v!=='group'); lvBox(); $('go').textContent = v==='solo'?'診断をはじめる':'参加する人を決める'; });
 seg('seg-lv', function(v){ S.lv=v; });
 seg('seg-style', function(v){ S.style=v; styleHint(); });
+seg('seg-rv', function(v){ S.rv=v; });
 function styleHint(){
   $('style-hint').textContent = S.style==='room'
     ? '部屋を作るとQRコードが出ます。みんなは自分のスマホのカメラで読みとって参加。答えはそれぞれのスマホでこっそり選び、全員そろうと「結果発表」が全員の画面に出ます。'
@@ -893,11 +913,12 @@ function showQ(){
   var group = S.who==='group';
   var turn=$('q-turn');
   if(group && !S.room){ turn.hidden=false; turn.firstChild.textContent=S.players[S.pi].name+' さん'; } else turn.hidden=true;
+  var bk=document.querySelector('#s-q [data-nav=back]'); if(bk) bk.textContent=(S.who==='solo'&&!S.room&&S.qi>0)?'← 1問もどる':'← もどる';
   var h='';
   {
-    h+='<button class="choice A" data-c="A"><span class="tag">A</span>'+esc(q.a)+'</button>'+
+    h+='<button class="choice A" data-c="A"><span class="tag">A</span><span class="ct">'+esc(q.a)+'</span></button>'+
        '<div class="vsmark"><b>VS</b></div>'+
-       '<button class="choice B" data-c="B"><span class="tag">B</span>'+esc(q.b)+'</button>';
+       '<button class="choice B" data-c="B"><span class="tag">B</span><span class="ct">'+esc(q.b)+'</span></button>';
     $('q-body').innerHTML=h;
     S.t0=Date.now();
     $('q-body').querySelectorAll('.choice').forEach(function(b){ b.onclick=function(){ answer(b.dataset.c, b); }; });
@@ -922,6 +943,7 @@ function answer(c, el){
     busy=false;
     if(S.who==='group'){
       if(S.pi < S.players.length-1){ S.pi++; showPass(); }
+      else if(S.rv==='end'){ if(S.qi < S.qs.length-1){ S.qi++; S.pi=0; showPass(); } else showGroupResult(); }
       else showReveal();
     } else {
       if(S.qi < S.qs.length-1){ S.qi++; showQ(); } else showResult();
@@ -951,6 +973,8 @@ var FB=(function(){
         // Firestore は「空の値（undefined）」を受けつけないので、送る前に取りのぞく
         set:function(d){ return r.set(ttl(path, JSON.parse(JSON.stringify(d||{})))); },
         delete:function(){ return r.delete(); },
+        // 取引：いまの値が expect のときだけ patch を書く（2人が同時に押しても1回だけ進む）
+        advance:function(expect, patch){ return fs.runTransaction(function(t){ return t.get(r).then(function(sn){ if(!sn.exists) return false; var d=sn.data(); for(var k in expect){ if(d[k]!==expect[k]) return false; } t.update(r, JSON.parse(JSON.stringify(patch))); return true; }); }); },
         onSnapshot:function(cb,err){ return r.onSnapshot(function(s){ cb(snapDoc(s)); }, err); }
       }; },
       collection:function(path){ var c=fs.collection(P(path)); return {
@@ -1143,8 +1167,8 @@ function resetAll(){
   leaveRoom();
   try{ localStorage.removeItem('nitaku_me'); localStorage.removeItem('nitaku_room'); localStorage.removeItem('nitaku_players'); localStorage.removeItem('nitaku_seen_love'); localStorage.removeItem('nitaku_seen_normal'); localStorage.removeItem('nitaku_recent_love'); localStorage.removeItem('nitaku_recent_normal'); localStorage.removeItem('nitaku_hist_love'); localStorage.removeItem('nitaku_hist_normal'); }catch(e){}
   S.players=[]; S.qs=[]; S.qi=0; S.pi=0; S.ans=[]; S.times=[]; S.counts=null; S.sent={}; S.mix=false;
-  S.who='solo'; S.lv='normal'; S.gnum=8; S.style='room';
-  [['seg-who','solo'],['seg-lv','normal'],['seg-num','8'],['seg-style','room']].forEach(function(x){
+  S.who='solo'; S.lv='normal'; S.gnum=8; S.style='room'; S.rv='each';
+  [['seg-who','solo'],['seg-lv','normal'],['seg-num','8'],['seg-style','room'],['seg-rv','each']].forEach(function(x){
     document.querySelectorAll('#'+x[0]+' button').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.v===x[1]?'true':'false'); });
   });
   $('num-box').hidden=true; lvBox(); styleHint();
@@ -1184,12 +1208,11 @@ function showReveal(){
   setProg('r-prog','r-count');
   $('rev-next').textContent = S.qi<S.qs.length-1 ? '次の問題へ' : 'みんなの診断結果を見る';
   $('rev-next').disabled = false;
-  if(S.room && !S.room.host){ $('rev-next').textContent='次へは、部屋を作った人が進めます'; $('rev-next').disabled=true; }
   show('s-rev');
 }
 function pickOne(a){ return a[Math.floor(Math.random()*a.length)]; }
 $('rev-next').onclick=function(){
-  if(S.room){ if(S.room.host) hostSet(S.qi < S.qs.length-1 ? { phase:'q', qi:S.qi+1 } : { phase:'done' }); return; }
+  if(S.room){ roomStep(nextPatch()); return; }
   if(S.qi < S.qs.length-1){ S.qi++; S.pi=0; showPass(); }
   else showGroupResult();
 };
@@ -1252,7 +1275,7 @@ function endButtons(){
 }
 function bindEnd(){
   if(S.room){
-    var again=function(){ var qs=roomQs(), used=mixCustom(qs); hostSet({ mode:S.mode, round:S.room.data.round+1, qs:qs, used:used, mix:S.mix, num:S.num, lv:S.lv, phase:'q', qi:0 }); };
+    var again=function(){ var qs=roomQs(), used=mixCustom(qs); hostSet({ mode:S.mode, round:S.room.data.round+1, qs:qs, used:used, mix:S.mix, num:S.num, lv:roomLv(), phase:'q', qi:0 }); };
     if($('again')) $('again').onclick=again;
     if($('swap')) $('swap').onclick=function(){ setMode(S.mode==='love'?'normal':'love'); again(); };
     $('home').onclick=function(){ goTop(false); };
@@ -1318,6 +1341,8 @@ function showResult(){
 /* ───── 結果（みんな） ───── */
 function showGroupResult(){
   var mode=S.mode, hd=headline(mode), n=S.players.length;
+  // 最後にまとめて答え合わせしたときは、ここでみんなの回答％に数える（1問ずつのときは結果発表のたびに数えている）
+  if(S.rv==='end' && (!S.room || S.room.host)) S.qs.forEach(function(q,qi){ if(q.custom || S.sent[q.id]) return; var picks=S.ans.map(function(a){ return a[qi]; }).filter(Boolean); if(!picks.length) return; S.sent[q.id]=1; Votes.send(picks.map(function(c){ return { id:q.id, c:canon(q,c) }; })); });
   var R = S.players.map(function(p,i){
     var sc=score(mode,S.qs,S.ans[i]);
     return { p:p, sc:sc, i:i };
@@ -1488,10 +1513,22 @@ var Room=(function(){
     tick(gen);
     return stop;
   }
-  return { init:init, create:create, setRoom:setRoom, setPlayer:setPlayer, get:get, watch:watch, mode:function(){ return mode; }, where:function(){ return where; } };
+  /* 部屋の進み具合が expect のときだけ patch で書きかえる（だれのスマホからでも安全に進めるため） */
+  async function advance(code, expect, patch){
+    await init();
+    if(mode!=='db') return false;
+    var ref=db.doc('rooms/'+code);
+    if(ref.advance) return await ref.advance(expect, patch);
+    var s=await ref.get(); if(!s.exists) return false; var d=s.data();
+    for(var k in expect){ if(d[k]!==expect[k]) return false; }
+    await ref.set(Object.assign({}, d, patch)); return true;
+  }
+  async function delPlayer(code, pid){ await init(); if(mode==='db') await db.doc('rooms/'+code+'/players/'+pid).delete(); }
+  return { init:init, create:create, setRoom:setRoom, advance:advance, delPlayer:delPlayer, setPlayer:setPlayer, get:get, watch:watch, mode:function(){ return mode; }, where:function(){ return where; } };
 })();
 function newPid(){ var x=''; while(x.length<12) x+=Math.random().toString(36).slice(2); return x.slice(0,12); }
 /* 部屋で出す問題（みんなで遊ぶときと同じ決まり） */
+function roomLv(){ return S.lv+(S.rv==='end'?'|end':''); }
 function roomQs(){
   S.num = S.gnum; S.mix = S.num===8;
   return S.mix ? pickQuestions(S.mode, 4, 'normalOnly').concat(pickQuestions(S.mode, 4, 'hard')) : pickQuestions(S.mode, S.num, S.lv);
@@ -1505,7 +1542,7 @@ async function createRoom(){
     if(Room.mode()==='off'){ toast('この画面では部屋を作れません。「1台を回して」で遊んでね'); return; }
     var pid=newPid(), room=null, res='taken';
     for(var k=0; k<6 && res==='taken'; k++){
-      room={ code:String(1000+Math.floor(Math.random()*9000)), host:pid, mode:S.mode, lv:S.lv, num:S.gnum, mix:S.gnum===8, round:1, qs:[], phase:'lobby', qi:0 };
+      room={ code:String(1000+Math.floor(Math.random()*9000)), host:pid, mode:S.mode, lv:roomLv(), num:S.gnum, mix:S.gnum===8, round:1, qs:[], phase:'lobby', qi:0 };
       try{ res=await Room.create(room); }catch(e){ res='ng'; }
     }
     if(res!=='ok'){ toast('部屋を作れませんでした。少し待ってから、もう一度押してね'); return; }
@@ -1517,7 +1554,24 @@ function openJoin(code){
   $('join-code').value = code || '';
   if(!$('join-name').value) $('join-name').value = store('nitaku_me') || '';
   show('s-join');
+  joinStatus();
 }
+/* 参加する前に、その部屋がもう始まっているかを見せる */
+var joinT=null;
+async function joinStatus(){
+  var el=$('join-st'), code=($('join-code').value||'').replace(/\D/g,'');
+  if(code.length!==4){ el.textContent=''; return; }
+  try{
+    await Room.init(); if(Room.mode()==='off'){ el.textContent=''; return; }
+    var d=await Room.get(code), r=d.room, n=(d.players||[]).length;
+    if(($('join-code').value||'').replace(/\D/g,'')!==code) return;
+    if(!r || r.phase==='closed') el.textContent='この番号の部屋は見つかりません。番号を確かめてね。';
+    else if(r.phase==='lobby') el.textContent='まだ始まっていません（いま'+n+'人）。名前を入れて「参加する」を押してね。';
+    else if(r.phase==='done') el.textContent='いまは結果発表中です。参加すると、次の回から一緒に遊べます。';
+    else el.textContent='もう始まっています（'+(r.qi+1)+'問目）。参加すると、いまの問題から一緒に遊べます。';
+  }catch(e){ el.textContent=''; }
+}
+$('join-code').addEventListener('input', function(){ clearTimeout(joinT); joinT=setTimeout(joinStatus, 400); });
 $('join-open').onclick=function(){ openJoin(''); };
 $('join-go').onclick=async function(){
   var code=($('join-code').value||'').replace(/\D/g,''), name=($('join-name').value||'').trim();
@@ -1554,6 +1608,7 @@ function leaveRoom(){
   var R=S.room; if(!R) return;
   S.room=null;
   try{ if(R.stop) R.stop(); }catch(e){}
+  if(!R.host && R.data && R.data.phase==='lobby'){ Room.delPlayer(R.code, R.pid).catch(function(){}); }
   if(R.host && R.data && R.data.phase!=='closed'){
     var room=JSON.parse(JSON.stringify(R.data)); room.phase='closed';
     Room.setRoom(room).catch(function(){});
@@ -1575,7 +1630,7 @@ function roomAnswer(c){
   R.me.ans[k]=c; R.me.times[k]=Date.now()-S.t0;
   var snap=JSON.parse(JSON.stringify(R.me));
   R.chain=R.chain.then(function(){ return Room.setPlayer(R.code, R.pid, snap); }).then(function(){ if(R.stop && R.stop.poke) R.stop.poke(); }, function(){ toast('通信できませんでした'); });
-  setTimeout(function(){ busy=false; if(S.room!==R) return; syncGame(R.data, R.players); showWait(); if(R.host) hostCheck(); }, 260);
+  setTimeout(function(){ busy=false; if(S.room!==R) return; syncGame(R.data, R.players); showWait(); autoCheck(); }, 260);
 }
 function answeredKey(R, p, k){ return p.pid===R.pid ? R.me.ans[k] : (p.ans && p.ans[k]); }
 /* 部屋のデータを、1台で遊ぶときと同じ形（S.players・S.ans・S.times）に直す */
@@ -1607,14 +1662,14 @@ function onRoom(room, players){
   }
   R.data=room; R.players=players;
   if(S.mode!==room.mode) setMode(room.mode);
-  S.lv=room.lv; S.mix=!!room.mix; S.num=room.num||8;
+  var lp=String(room.lv||'normal').split('|'); S.lv=lp[0]; S.rv=(lp[1]==='end'?'end':'each'); S.mix=!!room.mix; S.num=room.num||8;
   var key=room.phase+':'+room.round+':'+room.qi;
   if(room.phase==='lobby'){ renderLobby(); return; }
   syncGame(room, players);
   if(R.cntRound!==room.round){ R.cntRound=room.round; S.counts=null; Votes.get(room.qs.filter(function(q){ return !q.custom; }).map(function(q){ return q.id; })).then(function(c){ S.counts=c; }); }
   if(room.phase==='q'){
-    if(R.view!==key){ R.view=key; showQ(); } else updateWait();
-    if(R.host) hostCheck();
+    if(R.view!==key){ var first=/^(lobby|)$/.test(R.view); R.view=key; R.qAt=Date.now(); if(R.lateT){ clearTimeout(R.lateT); R.lateT=null; } showQ(); if(first){ toast(room.qi>0 ? '途中から参加しました（'+(room.qi+1)+'問目）' : 'スタート！'); try{ navigator.vibrate&&navigator.vibrate(150); }catch(e){} } } else updateWait();
+    autoCheck();
   } else if(room.phase==='reveal'){
     if(R.view!==key){ R.view=key; showReveal(); }
   } else if(room.phase==='done'){
@@ -1623,11 +1678,14 @@ function onRoom(room, players){
 }
 function renderLobby(){
   var R=S.room, room=R.data;
-  $('lb-game').textContent = MODE_NAME[room.mode]+'・'+(room.num===8 ? '8問（ノーマル→ハード）' : '15問（'+LV_NAME[room.lv]+'）');
+  $('lb-game').textContent = MODE_NAME[room.mode]+'・'+(room.num===8 ? '8問（ノーマル→ハード）' : '15問（'+LV_NAME[S.lv]+'）')+'・答え合わせは'+(S.rv==='end'?'最後にまとめて':'1問ずつ');
   $('lb-count').textContent='参加している人（'+R.players.length+'人）';
   $('lb-list').innerHTML=R.players.map(function(p){ return '<li'+(p.pid===R.pid?' class="me"':'')+'>'+esc(p.name||'？')+(p.pid===room.host?' 👑':'')+'</li>'; }).join('');
   renderMine();
   $('lb-start').hidden=!R.host; $('lb-wait').hidden=R.host;
+  $('lb-status').innerHTML = R.host
+    ? '<b>参加した人の名前が、下に出ます</b><small>QRを読みとった人が名前を入れて「参加する」を押すと、ここに出ます。全員の名前が出てから、いちばん下の「スタート」を押してね。</small>'
+    : '<b>⏳ まだ始まっていません</b><small>部屋を作った人が「スタート」を押すと、この画面が自動で問題に変わります。このまま待っていてね。</small>';
   $('lb-start').disabled = R.players.length<2;
   $('lb-start').textContent = R.players.length<2 ? 'みんなの参加を待っています…' : 'みんなそろった！ スタート';
   if(R.view!=='lobby'){ R.view='lobby'; show('s-lobby'); }
@@ -1636,7 +1694,7 @@ $('lb-start').onclick=function(){
   var R=S.room; if(!R || !R.host) return;
   if(R.players.length<2){ toast('もう1人以上の参加を待ってね'); return; }
   var qs=roomQs(), used=mixCustom(qs);
-  hostSet({ mode:S.mode, qs:qs, used:used, mix:S.mix, num:S.num, lv:S.lv, phase:'q', qi:0 });
+  hostSet({ mode:S.mode, qs:qs, used:used, mix:S.mix, num:S.num, lv:roomLv(), phase:'q', qi:0 });
 };
 function showWait(){
   var R=S.room; if(!R) return;
@@ -1650,14 +1708,34 @@ function updateWait(){
   var k=R.data.round+':'+S.qi, n=R.players.length;
   var done=R.players.filter(function(p){ return answeredKey(R, p, k); }).length;
   var h='<p>みんなの答えを待っています（'+done+' / '+n+'人）</p>';
-  if(R.host && done<n && done>=1) h+='<button class="big alt" id="wait-go">答えた人だけで発表する</button>';
+  // 答えない人（スマホを閉じた人など）がいて止まったときだけ、答えた人だけで先へ（20秒たってから出す）
+  var late = Date.now()-(R.qAt||0) > 20000;
+  if(done<n && done>=1 && late) h+='<p class="hint">まだ答えていない人がいます。画面を閉じてしまった人がいるときは、下のボタンで先に進めます。</p><button class="big alt" id="wait-go">答えた人だけで先に進む</button>';
+  else if(done<n && done>=1 && !R.lateT){ R.lateT=setTimeout(function(){ R.lateT=null; updateWait(); }, 20500); }
   box.innerHTML=h;
-  if($('wait-go')) $('wait-go').onclick=function(){ hostSet({ phase:'reveal' }); };
+  if($('wait-go')) $('wait-go').onclick=function(){ roomStep(allPatch()); };
 }
-function hostCheck(){
-  var R=S.room; if(!R || !R.host || R.busy || !R.data || R.data.phase!=='q') return;
-  var k=R.data.round+':'+R.data.qi;
-  if(R.players.length && R.players.every(function(p){ return answeredKey(R, p, k); })) hostSet({ phase:'reveal' });
+/* 全員が答えたら、だれのスマホからでも次へ進める（前は部屋を作った人のスマホだけが進めていたので、そのスマホが
+   画面を消したり別のアプリに切りかえたりすると止まっていた）。2人が同時に進めても1回だけ進むよう、Firestore の取引で確かめる */
+function nextPatch(){ var d=S.room.data; return d.qi < (d.qs||[]).length-1 ? { phase:'q', qi:d.qi+1 } : { phase:'done' }; }
+function allPatch(){ return S.rv==='end' ? nextPatch() : { phase:'reveal' }; }
+function allAnswered(R){ var k=R.data.round+':'+R.data.qi; return R.players.length>0 && R.players.every(function(p){ return answeredKey(R, p, k); }) && !!R.me.ans[k]; }
+function autoCheck(){
+  var R=S.room; if(!R || !R.data || R.data.phase!=='q' || !allAnswered(R)) return;
+  var key=R.data.round+':'+R.data.qi;
+  if(R.autoKey===key) return; R.autoKey=key;
+  // 部屋を作った人のスマホが先に、ほかの人は少しあとに（同時に書きこまないように）
+  setTimeout(function(){ if(S.room!==R || !R.data || R.data.phase!=='q' || R.data.round+':'+R.data.qi!==key){ return; } if(!allAnswered(R)){ R.autoKey=''; return; } roomStep(allPatch()); }, R.host ? 300 : 1500);
+}
+async function roomStep(patch){
+  var R=S.room; if(!R || !R.data || R.stepping) return;
+  var d=R.data, expect={ phase:d.phase, qi:d.qi, round:d.round };
+  if(Room.mode()!=='db'){ if(R.host) hostSet(patch); return; }
+  R.stepping=true; var ok=false;
+  try{ ok=await Room.advance(R.code, expect, patch); }catch(e){ ok=null; }
+  R.stepping=false;
+  if(ok===null){ toast('通信できませんでした。もう一度押してね'); R.autoKey=''; return; }
+  if(ok && S.room===R) onRoom(Object.assign({}, R.data, patch), R.players);
 }
 /* 離れている人への招待（スマホの「共有」でメール・SMS・DMなどへ。使えないときはコピー） */
 $('lb-invite').onclick=function(){
@@ -2085,6 +2163,57 @@ setMode('love'); lvBox();
       if(b.dataset.a==='copy'){ var ok=function(){ b.textContent='コピーしました。Safari・Chromeに貼りつけて開いてください'; }; try{ navigator.clipboard.writeText(u).then(ok,function(){ window.prompt('このリンクをコピーしてください',u); }); }catch(_e){ try{ window.prompt('このリンクをコピーしてください',u); }catch(__e){} } } });
     (document.body||document.documentElement).appendChild(d); }catch(e){} }
   window.print=function(){ opened=false; var r; try{ r=orig.apply(window,arguments); }catch(e){} setTimeout(function(){ if(!opened&&!document.hidden) show(); },1500); return r; };
+})();
+</script>
+<script>
+/* 文節で改行する（「い／まだに」のような途中の改行・1〜2文字だけの行を作らない。iPhoneでも同じ） */
+(function(){
+  if(!(window.Intl&&Intl.Segmenter)) return;
+  var seg=new Intl.Segmenter('ja',{granularity:'word'});
+  document.documentElement.classList.add('jw');
+  var HIRA=/^[ぁ-ゟー]+$/, PUN=/^[、。！？!?…・）」』】〕）\)\s～〜ー]+$/, OPEN=/[（「『【〔\(]$/, END=/[、。！？!?…）」』】〕\)]$/;
+  var PART=/^(を|が|に|で|と|は|も|へ|の|から|まで|より|って|や|か|ね|よ|な)$/;
+  var JP=/[぀-ヿ一-鿿]/;
+  function len(t){ return t.replace(/[、。！？!?…・（）「」『』\s]/g,'').length; }
+  function phrases(t){
+    var out=[],cur='',prev='';
+    var it=seg.segment(t)[Symbol.iterator](),r;
+    while(!(r=it.next()).done){
+      var w=r.value.segment;
+      if(cur===''){ cur=w; prev=w; continue; }
+      var brk=false;
+      if(PUN.test(w)) brk=false;
+      else if(END.test(cur)) brk=true;
+      else if(OPEN.test(w)) brk=true;
+      else if(OPEN.test(cur)) brk=false;
+      else if(HIRA.test(w)) brk=(PART.test(prev)&&len(cur)>=3&&w.length>=2&&!PART.test(w));
+      else brk=HIRA.test(prev);
+      if(brk){ out.push(cur); cur=w; } else cur+=w;
+      prev=w;
+    }
+    if(cur) out.push(cur);
+    // 「でも」「けど」のような短いつなぎの言葉は、次の言葉と同じ行へ
+    for(var i=out.length-2;i>=0;i--){ if(HIRA.test(out[i])&&out[i].length<=3){ out[i]+=out[i+1]; out.splice(i+1,1); } }
+    // 最後の行が1〜2文字だけにならないよう、短い最後のまとまりは前とくっつける
+    while(out.length>1&&len(out[out.length-1])<=2){ var l=out.pop(); out[out.length-1]+=l; }
+    // 最初の1〜2文字だけのまとまりも次とくっつける
+    if(out.length>1&&len(out[0])<=1){ out[1]=out[0]+out[1]; out.shift(); }
+    return out;
+  }
+  var SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,OPTION:1,TITLE:1,NOSCRIPT:1};
+  function run(root){
+    var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null),ns=[],n;
+    while((n=w.nextNode())){ var pe=n.parentNode; if(!pe||SKIP[pe.nodeName]||pe.isContentEditable) continue; if(pe.nodeName==='J-P') continue; if(n.nodeValue.length>=5&&JP.test(n.nodeValue)) ns.push(n); }
+    ns.forEach(function(n){
+      var ps=phrases(n.nodeValue); if(ps.length<2) return;
+      var f=document.createDocumentFragment();
+      ps.forEach(function(p,i){ if(i) f.appendChild(document.createElement('wbr')); var s=document.createElement('j-p'); if(len(p)<=12) s.style.whiteSpace='nowrap'; s.textContent=p; f.appendChild(s); });
+      n.parentNode.replaceChild(f,n);
+    });
+  }
+  window.jwRun=run;
+  function start(){ run(document.body); var t=null,q=[]; new MutationObserver(function(rs){ rs.forEach(function(r){ [].forEach.call(r.addedNodes,function(x){ if(x.nodeType===3){ if(x.parentNode&&x.parentNode.nodeName!=='J-P') q.push(x.parentNode); } else if(x.nodeType===1&&x.nodeName!=='J-P') q.push(x); }); if(r.type==='characterData'&&r.target.parentNode&&r.target.parentNode.nodeName!=='J-P') q.push(r.target.parentNode); }); if(!t) t=setTimeout(function(){ t=null; var a=q; q=[]; a.forEach(function(e){ if(e.isConnected) run(e); }); },0); }).observe(document.body,{childList:true,subtree:true,characterData:true}); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
 })();
 </script>
 </body>
