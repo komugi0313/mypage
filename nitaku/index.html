@@ -683,7 +683,7 @@ function pickQuestions(mode, n, level){
     return Math.random()<0.5 ? { id:q.id, a:q.a, b:q.b, ta:q.ta, tb:q.tb, ex:q.ex, user:q.user, sw:false } : { id:q.id, a:q.b, b:q.a, ta:q.tb, tb:q.ta, ex:q.ex, user:q.user, sw:true };
   });
 }
-/* 4つの％それぞれを見る問題が、1回の中に2問以上入るように入れかえる
+/* 4つの％それぞれを見る問題が、1回の中に4問以上入るように入れかえる（鑑定者本人の指示 2026-11-12「AとBの両方」）
    （少ないと、その％が50%のまま動かないため。入れかえるのは、同じ難しさのまだ出ていない問題） */
 function balanceAxes(mode, pick, groups, seenSet, recent){
   if(pick.length<8) return;
@@ -694,14 +694,14 @@ function balanceAxes(mode, pick, groups, seenSet, recent){
   var pool=groups[0].filter(function(q){ return !inPick[q.id] && !seenSet[q.id] && !recent[q.id]; });
   axes.forEach(function(k){
     var guard=0;
-    while(cnt(k)<2 && guard++<4){
+    while(cnt(k)<4 && guard++<8){
       var cand=shuffle(pool.filter(function(q){ return has(q,k) && !inPick[q.id]; }))[0];
       if(!cand) return;
       // 外しても、ほかの％が2問を下回らない問題を外す（点のない問題を先に）
       var out=null, best=99;
       pick.forEach(function(q,i){
         if(has(q,k)) return;
-        var ok=axes.every(function(j){ return !has(q,j) || cnt(j)>2; });
+        var ok=axes.every(function(j){ return !has(q,j) || cnt(j)>4; });
         var w=axes.filter(function(j){ return has(q,j); }).length;
         if(ok && w<best){ best=w; out=i; }
       });
@@ -1059,7 +1059,7 @@ function resetAll(){
   if(!resetAll.armed || now-resetAll.armed>3000){ resetAll.armed=now; toast('名前も答えも全部消えます。もう一度押すとリセットします'); return; }
   resetAll.armed=0;
   leaveRoom();
-  try{ localStorage.removeItem('nitaku_me'); localStorage.removeItem('nitaku_room'); localStorage.removeItem('nitaku_players'); localStorage.removeItem('nitaku_seen_love'); localStorage.removeItem('nitaku_seen_normal'); localStorage.removeItem('nitaku_recent_love'); localStorage.removeItem('nitaku_recent_normal'); }catch(e){}
+  try{ localStorage.removeItem('nitaku_me'); localStorage.removeItem('nitaku_room'); localStorage.removeItem('nitaku_players'); localStorage.removeItem('nitaku_seen_love'); localStorage.removeItem('nitaku_seen_normal'); localStorage.removeItem('nitaku_recent_love'); localStorage.removeItem('nitaku_recent_normal'); localStorage.removeItem('nitaku_hist_love'); localStorage.removeItem('nitaku_hist_normal'); }catch(e){}
   S.players=[]; S.qs=[]; S.qi=0; S.pi=0; S.ans=[]; S.times=[]; S.counts=null; S.sent={}; S.mix=false;
   S.who='solo'; S.lv='normal'; S.gnum=8; S.style='room';
   [['seg-who','solo'],['seg-lv','normal'],['seg-num','8'],['seg-style','room']].forEach(function(x){
@@ -1181,15 +1181,39 @@ function bindEnd(){
   $('home').onclick=function(){ updatePoolNote(); show('s-home'); };
 }
 
+/* あなたの平均：ひとりで遊んだ％をスマホが覚えておき（編ごとに最新20回）、平均を出す（鑑定者本人の指示 2026-11-12） */
+function saveHist(mode, sc){
+  var key='nitaku_hist_'+mode, h=store(key)||[];
+  var id=S.qs.map(function(q){ return q.id; }).join(',');
+  if(S.histId!==id){
+    S.histId=id;
+    var row={}; AXES[mode].forEach(function(ax){ row[ax.k]=sc[ax.k]; });
+    h.push(row); h=h.slice(-20); store(key, h);
+  }
+  return h;
+}
+function histHTML(mode, h){
+  if(!h || !h.length) return '';
+  var n=h.length;
+  if(n<2) return '<div class="card"><h3>あなたの平均</h3><p class="hint" style="margin:0">％は、選んだ問題で毎回少し変わります。何回か遊ぶと、ここに平均が出て、本当のあなたに近づいていきます。</p></div>';
+  var avg=function(k){ return Math.round(h.reduce(function(a,r){ return a+(r[k]||0); },0)/n); };
+  return '<div class="card"><h3>あなたの平均（'+n+'回ぶん）</h3>'+
+    '<p class="hint" style="margin:0 0 4px">遊ぶほど、本当のあなたに近づきます。</p>'+
+    AXES[mode].map(function(ax){ var v=avg(ax.k);
+      return '<div class="ax2"><div class="ax2h"><b>'+ax.name+'</b><em>'+v+'<small>%</small></em></div><div class="ax2bar"><i style="width:'+v+'%"></i></div></div>'; }).join('')+
+    '</div>';
+}
 function showResult(){
   var mode=S.mode, sc=score(mode,S.qs,S.ans[0]), hd=headline(mode), val=sc[hd.k];
   var sp=speedStats(S.qs,S.times[0],S.ans[0]);
+  var hist=saveHist(mode, sc);
   var others = AXES[mode].filter(function(ax){ return ax.k!==hd.k; });
   var h='<div class="res-hero"><div class="pre">'+playName(mode)+'　あなたの結果</div>'+
     '<div class="meter"><div class="cap">'+hd.cap+'</div><div class="num">'+val+'<small>%</small></div></div>'+
     '<div class="catch">'+axComment(hd.k,val)+'</div>'+
     '<div class="minis">'+others.map(function(ax){ return '<div><b>'+sc[ax.k]+'<small>%</small></b><span>'+ax.name+'</span></div>'; }).join('')+'</div></div>';
   h+='<div class="card"><h3>あなたの数字</h3>'+axisHTML(mode,sc)+'<button class="linkb" data-about>この診断について（％の考え方）</button></div>';
+  h+=histHTML(mode, hist);
   var maj=majorityStats(S.qs, S.ans[0]);
   if(maj) h+=maj;
   if(sp){
