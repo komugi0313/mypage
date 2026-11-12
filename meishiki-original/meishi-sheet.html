@@ -4869,7 +4869,25 @@ function pkFmMaterial(u,env){ try{ u=String(u==null?'':u); env=env||{}; var GZ='
     u=u.replace(new RegExp('(お相手の)?(年柱|月柱|日柱|時柱)(?:[（(][^（）()\\n]{0,20}[）)])?[ 　]*(?:(?:には|は|が|：|:|＝)[ 　]*)?[「『（(]?('+GZ+')[」』）)]?(?![年月日]|の[年月日])','g'),function(m0,b,pn,g){ var P=b?B:A, ix=['年柱','月柱','日柱','時柱'].indexOf(pn); if(!P.pil||P.pil[ix]!==g) return m0; return '〔F:'+(b?'B:':'')+['p_year','p_month','p_day','p_hour'][ix]+'〕'; }); }
   return u; }catch(e){ return String(u==null?'':u); } }
 /* 出す前の事実の照らし合わせ。env.P＝本人（とお相手）、env.X＝相談文に出てくるほかの人（年齢・柱・大運の照らしにだけ使う） */
-function pkFactGate(t,env){ env=env||{}; var t0=String(t==null?'':t), T=pkfmToday(), P=(env.P||[]).filter(Boolean), ALL=P.concat((env.X||[]).filter(Boolean)), rows=[], total=0, lost=0, firstLost=false, seenFirst=false;
+/* 先生の決まりで「頼むだけ」だったものを、出す前に確かめて直す（2026-11-12。3ツール同じ中身）
+   ①害・破（使わない決まり）を書いた文は外す ②蔵干の余気・中気を書いた文は外す（格局の説明は残す）
+   ③養生の話の「用神」は「養生で整えたい五行」に ④強旺格・従旺格の「女性は凶」は前向きな言い方に
+   ⑤二股・両方との関係をすすめる文は外す ⑥決まり文句（お互いを尊重 など）だけの短い文は答え全体で2回まで */
+var PK_RW_STOCK=/お互いを尊重|尊重し合|コミュニケーションを大切に|思いやりの(?:気持ち|心)を忘れず|感謝の(?:気持ち|心)を忘れず|焦らずじっくり|無理をせず(?:に)?自分のペース|心穏やかに過ご/;
+function pkRuleWordFix(t){ try{ t=String(t==null?'':t); var ZZ='[子丑寅卯辰巳午未申酉戌亥]', nStock=0;
+  var BAD_HP=new RegExp('六害|六破|支破|相害|相破|害・破|破・害|'+ZZ+'[・と×]?'+ZZ+'(?:の|が|は)?(?:害|破)(?![壊綻棄産損滅])|(?:^|[^被損障妨災殺水公迫侵弊危有無利加阻])害(?:[（(]がい|の関係|に当た|にあた)|(?:^|[^突撃打看論喝難走爆読])破(?:[（(]は[：:）)]|の関係|に当た|にあた)');
+  return t.split('\n').map(function(ln,li){ if(/^[ 　]*[【\[]/.test(ln)||!ln.trim()) return ln;
+    var ss=ln.split(/(?<=[。！？])/);
+    var out=ss.map(function(x){
+      if(BAD_HP.test(x)) return '';
+      if(/余気|中気/.test(x)&&!/格/.test(x)) return '';
+      if(/用神/.test(x)&&/養生|体調|健康|食べ|からだ|体の/.test(x)) x=x.replace(/用神(?:[（(]ようじん[^）)]*[）)])?/g,/養生/.test(x.replace(/用神/g,''))?'整えたい五行':'養生で整えたい五行');
+      if(/強旺格|従旺格/.test(x)&&/凶/.test(x)){ var _k=x.match(/強旺格|従旺格/)[0], _i=x.indexOf(_k); x=x.slice(0,_i)+_k+'は、自分の力がとても強い型で、強さが出すぎないよう周りと力を合わせると大きく活きます。'; }
+      if(/(?:二股|両方と|2人と|二人と|ふたりと|どちらとも)[^。]{0,14}(?:続けて(?:も|いい|よい)|付き合(?:って|い続け)[^。]{0,4}(?:いい|よい|大丈夫|問題な)|キープ)/.test(x)&&!/ない|避け|おすすめしません|控え|やめ/.test(x)) return '';
+      if(PK_RW_STOCK.test(x)&&x.replace(/[\s　]/g,'').length<=45){ nStock++; if(nStock>2&&li>0) return ''; }
+      return x; }).join('');
+    return out; }).join('\n').replace(/\n{3,}/g,'\n\n'); }catch(e){ return String(t==null?'':t); } }
+function pkFactGate(t,env){ env=env||{}; var t0=pkRuleWordFix(String(t==null?'':t)), T=pkfmToday(), P=(env.P||[]).filter(Boolean), ALL=P.concat((env.X||[]).filter(Boolean)), rows=[], total=0, lost=0, firstLost=false, seenFirst=false;
   var FAM=/母|父|お子|子ども|子供|娘|息子|孫|祖母|祖父|兄|姉|弟|妹|親|ご主人|奥様|夫|妻|義|家族|ペット|犬|猫|上司|同僚|友人|友達|部下|先輩|後輩|彼/;
   var t0n=new Date(T.y,T.m-1,T.d,12,0,0,0);
   var yrsC=function(Y,mo,d,s){ if(Y) return [Y]; var L=[pkfmFwdY(mo,d)]; if(new Date(T.y,mo-1,d,12,0,0,0)<t0n) L.push(T.y); if(/去年|昨年|先月|先週|前回|以前|でした|ました/.test(s||'')) L.push(T.y-1); return L; };   /* 年を書かない日付は、今までの直し（pkFactFix ⑦⑧）と同じく今日から先の日として読む（今年のもう過ぎた日・過去の話も合えばよい） */
