@@ -523,6 +523,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     // ③④ 今年のずれ・「〜11月上旬」を日付にしない
     { const NY=pkNenInfo().Y; out.w3=pkFmRelYearFix('今年の'+(NY+1)+'年に。',{nenY:NY})==='来年の'+(NY+1)+'年に。';
       { const _yy=pkfmToday().y+6, _ex=pkFmExpand('まず〔F:y'+_yy+'〕（〔F:y'+_yy+'〕歳）には縁が動きます。',pkFmEnvPro(false,false,'','')).text; out.w4b=!/年歳/.test(_ex)&&_ex.indexOf(String(_yy)+'年')>=0; }   // 年の印に「歳」を付けたくずれ（2026-11-11）
+      { const _ex=pkFmExpand('今は〔F:du_now〕という、内面を深める10年です。',pkFmEnvPro(false,false,'','')).text; out.w12={ex:!/今は今/.test(_ex), pt:pkPlainTalk('今は今の大運（戊戌）という、内面を深める10年です。')==='今は、内面を深める10年です。', hd:/^【お客様へのお伝え方】/m.test(pkFixAnsHeads('結論の文です。\n\n【田中さんへのお伝え方】\n本文の文です。本文の文です。本文の文です。本文の文です。')), nm:pkTypoFix('本人さんとお相手さん')==='ご本人とお相手'}; }   // 「今は今という」・名前入りの見出し・本人さん（2026-11-12）
       out.w4=pkFmExpand('いま〜〔F:d'+pkfmFwdY(11,6)+'-11-6〕上旬の時期',pkFmEnvPro(false,false,'','')).text.indexOf('いま〜11月上旬の時期')>=0&&pkFactFix('いま〜11月6日（火）上旬','','')==='いま〜11月6日（火）上旬'; }
   }catch(err){ out.err=String(err&&err.message||err); } chart=c0; return out; });
   if(r.err) e.push('動かない：'+r.err);
@@ -540,7 +541,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(!r.w6||!r.w6.yr||!r.w6.star||!r.w6.ake) e.push('西暦（今年）・引用の＊：'+JSON.stringify(r.w6));
     if(!r.w9) e.push('その日にない星の名前を外さない'); if(!r.w10) e.push('命式にない星を「持っています」');
     if(!r.w11||!r.w11.ok) e.push('西暦のない来年の月・つなぎの言葉の重なり：'+JSON.stringify(r.w11));
-    if(!r.w3) e.push('今年と西暦のずれを直さない'); if(!r.w4) e.push('「〜11月上旬」を日付として扱った'); if(!r.w4b) e.push('「（2032年歳）」のくずれが残る'); }
+    if(!r.w3) e.push('今年と西暦のずれを直さない'); if(!r.w4) e.push('「〜11月上旬」を日付として扱った'); if(!r.w4b) e.push('「（2032年歳）」のくずれが残る'); if(!r.w12||!r.w12.ex||!r.w12.pt||!r.w12.hd||!r.w12.nm) e.push('今は今・名前入りの見出し・本人さん：'+JSON.stringify(r.w12)); }
   console.log('  '+(e.length?'NG':'OK')+' 事実の差しこみの印・出す前の照らし合わせ（3ツール同じ・置きかえ・ビギナー・材料・正しい文を外さない・切りかえ・誰の柱か・今年のずれ・上旬・来年の月の西暦・つなぎの重なり）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('事実の印・照らし合わせ: '+e.join('・')); }
 // 恋愛・仕事の持ち味（長所・気をつけたいこと・向いている仕事・アドバイス。鑑定者本人の指示 2026-11-11）：
 //  ① 材料 KANSHI60_TRAITS が PRO・生成したビギナー・鑑定書（＋ミラー）で同じ中身 ② 60干支×7項目がそろい、干支名・星の名前・専門用語・AI・＊がない
