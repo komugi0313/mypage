@@ -622,6 +622,7 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="firebase-config.js"></script>
 <script src="questions.js"></script>
 <script src="questions-mine.js"></script>
 <script>
@@ -928,6 +929,56 @@ function answer(c, el){
   }, wait);
 }
 
+/* ───── Firebase（Firestore）：公開先（honbare.com）で、部屋と回答％を共有する ─────
+   firebase-config.js に設定があるときだけ、Firebase の道具を読みこんで使う。
+   ほかのサイトとまざらないよう、置き場所の名前の頭に「nitaku_」を付ける（rooms → nitaku_rooms）。 */
+var FB=(function(){
+  var ready=null;
+  function load(src){ return new Promise(function(ok,ng){ var s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=ng; document.head.appendChild(s); }); }
+  function wrap(fs){
+    var P=function(path){ return 'nitaku_'+path; };
+    var ttl=function(path, data){
+      // 部屋は12時間で消す（Firestore の「TTL」をこの expireAt に設定すると自動で消える）
+      if(data && /^rooms\//.test(path)){ var c=(data.created||data.joined||Date.now()); data=Object.assign({}, data, { expireAt:new Date(c+12*3600e3) }); }
+      return data;
+    };
+    var clean=function(d){ if(d){ d=Object.assign({}, d); delete d.expireAt; } return d; };
+    var snapDoc=function(s){ return { id:s.id, exists:s.exists, data:function(){ return clean(s.data()); } }; };
+    var snapCol=function(q){ return { docs:q.docs.map(snapDoc) }; };
+    return {
+      doc:function(path){ var r=fs.doc(P(path)); return {
+        get:function(){ return r.get().then(snapDoc); },
+        // Firestore は「空の値（undefined）」を受けつけないので、送る前に取りのぞく
+        set:function(d){ return r.set(ttl(path, JSON.parse(JSON.stringify(d||{})))); },
+        delete:function(){ return r.delete(); },
+        onSnapshot:function(cb,err){ return r.onSnapshot(function(s){ cb(snapDoc(s)); }, err); }
+      }; },
+      collection:function(path){ var c=fs.collection(P(path)); return {
+        get:function(){ return c.get().then(snapCol); },
+        onSnapshot:function(cb,err){ return c.onSnapshot(function(q){ cb(snapCol(q)); }, err); }
+      }; },
+      raw:fs
+    };
+  }
+  function init(){
+    if(ready) return ready;
+    ready=(async function(){
+      var cfg=window.NITAKU_FB;
+      if(!cfg || !cfg.projectId) return null;
+      try{
+        if(!window.firebase || !firebase.firestore){
+          await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+          await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js');
+        }
+        var app=(firebase.apps||[]).filter(function(a){ return a.name==='nitaku'; })[0] || firebase.initializeApp(cfg,'nitaku');
+        return wrap(app.firestore());
+      }catch(e){ return null; }
+    })();
+    return ready;
+  }
+  return { init:init };
+})();
+
 /* ───── みんなの回答％ ─────
    公開先のサーバー（functions/nitaku-vote.mjs）で数える。確認用ページ（claude.ai）ではページのデータ保存を使う。
    どちらも使えないときは％を出さないだけで、遊ぶのには困らない。数えるのは「どちらを選んだか」だけ。 */
@@ -948,6 +999,7 @@ var Votes=(function(){
           }
         }
       }catch(e){}
+      try{ var f=await FB.init(); if(f){ db=f; mode='fs'; return; } }catch(e){}
       try{
         var r=await fetch(VOTE_API+'?ids=0');
         if(r.ok && (r.headers.get('content-type')||'').indexOf('json')>=0){ mode='api'; return; }
@@ -962,6 +1014,14 @@ var Votes=(function(){
       if(mode==='api'){
         var r=await fetch(VOTE_API+'?ids='+ids.join(','));
         return r.ok ? await r.json() : null;
+      }
+      if(mode==='fs'){
+        var out={};
+        await Promise.all(ids.map(async function(id){
+          var s=await db.doc('votes/'+id).get(), d=s.exists ? (s.data()||{}) : {};
+          out[id]={ a:+d.a||0, b:+d.b||0 };
+        }));
+        return out;
       }
       if(mode==='db'){
         var snap=await db.collection('ballots').get(), want={}, out={};
@@ -982,6 +1042,13 @@ var Votes=(function(){
       try{
         if(mode==='api'){
           await fetch(VOTE_API,{ method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({votes:list}) });
+        } else if(mode==='fs'){
+          // 「どちらを選んだか」の数だけを1つ足す（名前などは送らない）
+          var inc=firebase.firestore.FieldValue.increment;
+          for(var i=0;i<list.length;i++){
+            var v=list[i]; if(!/^[0-9a-z]+$/.test(v.id)) continue;
+            await db.raw.doc('nitaku_votes/'+v.id).set(v.c==='a' ? { a:inc(1), b:inc(0) } : { a:inc(0), b:inc(1) }, { merge:true });
+          }
         } else if(mode==='db'){
           list.forEach(function(v){ mine[v.id]=v.c; });   // 確認用ページでは1人1票（同じ問題は上書き）
           await db.doc('ballots/'+uid).set({ v:mine });
@@ -1343,11 +1410,13 @@ function showGroupResult(){
 var ROOM_API='/.netlify/functions/nitaku-room';
 var ART_URL='https://claude.ai/artifact/ExA5Gq2dXGfeP9aoN4pMKj';
 var Room=(function(){
-  var mode=null, db=null, ready=null;
+  var mode=null, db=null, ready=null, where='';
   function init(){
     if(ready) return ready;
     ready=(async function(){
-      try{ if(window.claude && typeof claude.use==='function'){ var d=await claude.use('db'); if(d){ db=d; mode='db'; return; } } }catch(e){}
+      try{ if(window.claude && typeof claude.use==='function'){ var d=await claude.use('db'); if(d){ db=d; mode='db'; where='claude'; return; } } }catch(e){}
+      // 公開先（Firebase）：確認用ページと同じ書き方で Firestore を使う
+      try{ var f=await FB.init(); if(f){ db=f; mode='db'; where='firebase'; return; } }catch(e){}
       try{
         var r=await fetch(ROOM_API+'?code=0000');
         if(r.ok && (r.headers.get('content-type')||'').indexOf('json')>=0){ mode='api'; return; }
@@ -1419,7 +1488,7 @@ var Room=(function(){
     tick(gen);
     return stop;
   }
-  return { init:init, create:create, setRoom:setRoom, setPlayer:setPlayer, get:get, watch:watch, mode:function(){ return mode; } };
+  return { init:init, create:create, setRoom:setRoom, setPlayer:setPlayer, get:get, watch:watch, mode:function(){ return mode; }, where:function(){ return where; } };
 })();
 function newPid(){ var x=''; while(x.length<12) x+=Math.random().toString(36).slice(2); return x.slice(0,12); }
 /* 部屋で出す問題（みんなで遊ぶときと同じ決まり） */
@@ -1615,7 +1684,8 @@ function loadQR(){
   return qrLoad;
 }
 function joinUrl(code){
-  var base = Room.mode()==='db' ? ART_URL : location.href.split('#')[0].split('?')[0];
+  // 確認用ページ（claude.ai）のときだけ確認用ページのアドレス。公開先では今開いているアドレス
+  var base = Room.where()==='claude' ? ART_URL : location.href.split('#')[0].split('?')[0];
   return base+'#join-'+code;
 }
 function renderQR(code){
