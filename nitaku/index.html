@@ -642,12 +642,40 @@ function pickQuestions(mode, n, level){
     groups.forEach(function(g){ take(g.filter(function(q){ return !recent[q.id]; })); });
     groups.forEach(function(g){ take(g); });
   }
+  balanceAxes(mode, pick, groups, seenSet, recent);
   pick.forEach(function(q){ if(seen.indexOf(q.id)<0) seen.push(q.id); });
   store(key, seen);
   addRecent(mode, pick);
   // A/B の左右もランダムに入れかえる
   return pick.map(function(q){
     return Math.random()<0.5 ? { id:q.id, a:q.a, b:q.b, ta:q.ta, tb:q.tb, ex:q.ex, user:q.user, sw:false } : { id:q.id, a:q.b, b:q.a, ta:q.tb, tb:q.ta, ex:q.ex, user:q.user, sw:true };
+  });
+}
+/* 4つの％それぞれを見る問題が、1回の中に2問以上入るように入れかえる
+   （少ないと、その％が50%のまま動かないため。入れかえるのは、同じ難しさのまだ出ていない問題） */
+function balanceAxes(mode, pick, groups, seenSet, recent){
+  if(pick.length<8) return;
+  var axes=(AXES[mode]||[]).map(function(a){ return a.k; });
+  var has=function(q,k){ return (q.ta[k]||0)!==(q.tb[k]||0); };
+  var cnt=function(k){ return pick.filter(function(q){ return has(q,k); }).length; };
+  var inPick={}; pick.forEach(function(q){ inPick[q.id]=1; });
+  var pool=groups[0].filter(function(q){ return !inPick[q.id] && !seenSet[q.id] && !recent[q.id]; });
+  axes.forEach(function(k){
+    var guard=0;
+    while(cnt(k)<2 && guard++<4){
+      var cand=shuffle(pool.filter(function(q){ return has(q,k) && !inPick[q.id]; }))[0];
+      if(!cand) return;
+      // 外しても、ほかの％が2問を下回らない問題を外す（点のない問題を先に）
+      var out=null, best=99;
+      pick.forEach(function(q,i){
+        if(has(q,k)) return;
+        var ok=axes.every(function(j){ return !has(q,j) || cnt(j)>2; });
+        var w=axes.filter(function(j){ return has(q,j); }).length;
+        if(ok && w<best){ best=w; out=i; }
+      });
+      if(out===null) return;
+      delete inPick[pick[out].id]; pick[out]=cand; inPick[cand.id]=1;
+    }
   });
 }
 /* 直前の3回ぶん（45問まで）に出た問題を覚えておく */
