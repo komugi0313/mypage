@@ -366,6 +366,8 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .g-row{display:flex;gap:8px;flex-wrap:wrap}
 .pick{display:flex;flex-direction:column;gap:6px;align-items:center;font-weight:800;font-size:.9rem}
 .pick .seg{width:100%;max-width:420px}
+.seg-s{justify-content:center}
+.seg-s button{min-height:44px;font-size:.84rem;padding:4px 12px;flex:0 1 auto}
 .visit{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-weight:800;font-size:.85rem;color:var(--muted)}
 .visit .st{display:inline-flex;gap:1px}.visit .st img{width:18px;height:18px}.visit .st img.off{opacity:.22;filter:grayscale(1)}
 .visit .chg{flex-basis:100%;color:var(--teal)}
@@ -666,6 +668,10 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
     <div class="pick" id="pick-wrap" hidden>
       <span>カードに出すのは</span>
       <div class="seg" id="in-pick"><button type="button" data-v="photo" class="on">うちの子の写真</button><button type="button" data-v="art">イラスト</button></div>
+    </div>
+    <div class="pick" id="season-wrap">
+      <span>カードの着せかえ</span>
+      <div class="seg seg-s" id="in-season"></div>
     </div>
     <div class="tags">
       <span class="tags-l">シェアするときのハッシュタグ</span>
@@ -4755,12 +4761,104 @@ function blendOf(){var oid=ownId(st.breed),r=last.rank,pick=[];
   var out=pick.map(function(x,i){return {id:x.b.id,name:x.b.id===oid?bodyShort(st.breed):x.b.s,col:PAL[i],pct:Math.round(pc[i]),own:x.b.id===oid}});
   var diff=100-out.reduce(function(a,b){return a+b.pct},0);out[0].pct+=diff;return out}
 function lum(hex){var n=parseInt(hex.slice(1),16);return (0.299*(n>>16)+0.587*((n>>8)&255)+0.114*(n&255))/255}
+// ===== 季節のカード（着せかえ） =====
+var SD={
+ sakura:function(c,x,y,r,a){c.save();c.translate(x,y);c.rotate(a||0);c.fillStyle="#F6B8C8";for(var i=0;i<5;i++){c.rotate(Math.PI*2/5);c.beginPath();c.ellipse(0,-r*.55,r*.38,r*.55,0,0,Math.PI*2);c.fill()}
+  c.fillStyle="#E58AA5";c.beginPath();c.arc(0,0,r*.18,0,Math.PI*2);c.fill();c.restore()},
+ petal:function(c,x,y,r,a){c.save();c.translate(x,y);c.rotate(a);c.fillStyle="#FBD3DE";c.beginPath();c.ellipse(0,0,r*.4,r*.65,0,0,Math.PI*2);c.fill();c.restore()},
+ ume:function(c,x,y,r,a,col){c.save();c.translate(x,y);c.rotate(a||0);c.fillStyle=col||"#FFFFFF";for(var i=0;i<5;i++){var t=i*Math.PI*2/5;c.beginPath();c.arc(Math.cos(t)*r*.5,Math.sin(t)*r*.5,r*.42,0,Math.PI*2);c.fill()}
+  c.fillStyle="#F2C14E";c.beginPath();c.arc(0,0,r*.22,0,Math.PI*2);c.fill();c.restore()},
+ pumpkin:function(c,x,y,r){c.save();c.translate(x,y);c.fillStyle="#3E7D3A";roundRect(c,-r*.1,-r*.95,r*.2,r*.35,r*.06);c.fill();
+  c.fillStyle="#E8862E";[-.45,.45,0].forEach(function(dx){c.beginPath();c.ellipse(dx*r,0,r*.55,r*.72,0,0,Math.PI*2);c.fill()});
+  c.strokeStyle="#C96A1C";c.lineWidth=r*.05;[-.28,.28].forEach(function(dx){c.beginPath();c.ellipse(dx*r,0,r*.18,r*.68,0,0,Math.PI*2);c.stroke()});
+  c.fillStyle="#5A3410";c.beginPath();c.moveTo(-r*.38,-r*.12);c.lineTo(-r*.2,-r*.32);c.lineTo(-r*.08,-r*.12);c.fill();c.beginPath();c.moveTo(r*.38,-r*.12);c.lineTo(r*.2,-r*.32);c.lineTo(r*.08,-r*.12);c.fill();
+  c.beginPath();c.moveTo(-r*.4,r*.12);c.quadraticCurveTo(0,r*.5,r*.4,r*.12);c.quadraticCurveTo(0,r*.3,-r*.4,r*.12);c.fill();c.restore()},
+ candy:function(c,x,y,r,a){c.save();c.translate(x,y);c.rotate(a);c.fillStyle="#B58BD6";c.beginPath();c.moveTo(-r,-r*.4);c.lineTo(-r*.45,0);c.lineTo(-r,r*.4);c.fill();c.beginPath();c.moveTo(r,-r*.4);c.lineTo(r*.45,0);c.lineTo(r,r*.4);c.fill();
+  c.fillStyle="#F2C14E";c.beginPath();c.arc(0,0,r*.5,0,Math.PI*2);c.fill();c.restore()},
+ moon:function(c,x,y,r){c.save();c.fillStyle="#F7E08A";c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fill();c.fillStyle="#FFFFFF";c.beginPath();c.arc(x+r*.45,y-r*.25,r*.85,0,Math.PI*2);c.fill();c.restore()},
+ star:function(c,x,y,r,col,a){c.save();c.translate(x,y);c.rotate(a||0);c.fillStyle=col;c.beginPath();for(var i=0;i<10;i++){var t=i*Math.PI/5-Math.PI/2,q=i%2?r*.45:r;c.lineTo(Math.cos(t)*q,Math.sin(t)*q)}c.closePath();c.fill();c.restore()},
+ snow:function(c,x,y,r,col){c.save();c.translate(x,y);c.strokeStyle=col||"#FFFFFF";c.lineWidth=Math.max(2,r*.12);c.lineCap="round";for(var i=0;i<6;i++){c.rotate(Math.PI/3);c.beginPath();c.moveTo(0,0);c.lineTo(0,-r);c.moveTo(0,-r*.55);c.lineTo(-r*.25,-r*.78);c.moveTo(0,-r*.55);c.lineTo(r*.25,-r*.78);c.stroke()}c.restore()},
+ holly:function(c,x,y,r){c.save();c.translate(x,y);c.fillStyle="#2F7A4A";[-0.5,0.5].forEach(function(s){c.save();c.rotate(s);c.beginPath();c.ellipse(0,-r*.55,r*.25,r*.55,0,0,Math.PI*2);c.fill();c.restore()});
+  c.fillStyle="#D33A3A";[[-.15,0],[.15,0],[0,-.2]].forEach(function(p){c.beginPath();c.arc(p[0]*r,p[1]*r,r*.17,0,Math.PI*2);c.fill()});c.restore()},
+ sun:function(c,x,y,r){c.save();c.translate(x,y);c.fillStyle="#F6C33B";for(var i=0;i<12;i++){c.rotate(Math.PI/6);c.beginPath();c.ellipse(0,-r*.62,r*.16,r*.38,0,0,Math.PI*2);c.fill()}
+  c.fillStyle="#8A5A2B";c.beginPath();c.arc(0,0,r*.38,0,Math.PI*2);c.fill();c.fillStyle="#6E4520";for(var k=0;k<6;k++){c.beginPath();c.arc(Math.cos(k)*r*.18,Math.sin(k)*r*.18,r*.05,0,Math.PI*2);c.fill()}c.restore()},
+ balloon:function(c,x,y,r,col){c.save();c.strokeStyle="#9AA5AE";c.lineWidth=2;c.beginPath();c.moveTo(x,y+r*1.2);c.quadraticCurveTo(x-r*.3,y+r*1.8,x,y+r*2.4);c.stroke();
+  c.fillStyle=col;c.beginPath();c.ellipse(x,y,r*.85,r*1.05,0,0,Math.PI*2);c.fill();c.beginPath();c.moveTo(x,y+r*1.02);c.lineTo(x-r*.15,y+r*1.22);c.lineTo(x+r*.15,y+r*1.22);c.fill();
+  c.fillStyle="rgba(255,255,255,.55)";c.beginPath();c.ellipse(x-r*.32,y-r*.4,r*.16,r*.28,-.5,0,Math.PI*2);c.fill();c.restore()},
+ mikan:function(c,x,y,r,a){c.save();c.translate(x,y);c.rotate(a||0);c.fillStyle="#F29A2E";c.beginPath();c.ellipse(0,0,r,r*.88,0,0,Math.PI*2);c.fill();
+  c.fillStyle="rgba(255,255,255,.35)";c.beginPath();c.ellipse(-r*.35,-r*.3,r*.2,r*.13,-.6,0,Math.PI*2);c.fill();
+  c.fillStyle="#3E7D3A";c.beginPath();c.ellipse(r*.25,-r*.95,r*.38,r*.16,-.5,0,Math.PI*2);c.fill();c.fillStyle="#6B4A1E";c.beginPath();c.arc(0,-r*.84,r*.09,0,Math.PI*2);c.fill();c.restore()},
+ ajisai:function(c,x,y,r,cols){c.save();c.translate(x,y);var pts=[[0,0],[-.45,-.3],[.45,-.3],[-.5,.3],[.5,.3],[0,-.6],[0,.6],[-.2,-.05],[.25,.1]];
+  pts.forEach(function(p,i){var px=p[0]*r,py=p[1]*r,q=r*.28;c.fillStyle=cols[i%cols.length];for(var k=0;k<4;k++){var t=k*Math.PI/2+i*.4;c.beginPath();c.ellipse(px+Math.cos(t)*q*.5,py+Math.sin(t)*q*.5,q*.42,q*.3,t,0,Math.PI*2);c.fill()}
+   c.fillStyle="#FFFFFF";c.beginPath();c.arc(px,py,q*.12,0,Math.PI*2);c.fill()});
+  c.fillStyle="#4E8F57";c.beginPath();c.ellipse(-r*.7,r*.75,r*.42,r*.2,.6,0,Math.PI*2);c.fill();c.beginPath();c.ellipse(r*.7,r*.75,r*.42,r*.2,-.6,0,Math.PI*2);c.fill();c.restore()},
+ snail:function(c,x,y,r,flip){c.save();c.translate(x,y);if(flip)c.scale(-1,1);c.fillStyle="#E9C79B";c.beginPath();c.moveTo(-r*1.1,r*.55);c.quadraticCurveTo(-r*.2,r*.75,r*.9,r*.55);c.quadraticCurveTo(r*1.05,r*.2,r*.8,r*.05);c.lineTo(r*.5,r*.5);c.closePath();c.fill();
+  c.strokeStyle="#C9A06E";c.lineWidth=r*.07;c.lineCap="round";c.beginPath();c.moveTo(r*.8,r*.1);c.lineTo(r*.9,-r*.35);c.moveTo(r*.68,r*.12);c.lineTo(r*.62,-r*.3);c.stroke();
+  c.fillStyle="#5A4630";c.beginPath();c.arc(r*.9,-r*.38,r*.07,0,Math.PI*2);c.arc(r*.62,-r*.33,r*.07,0,Math.PI*2);c.fill();
+  c.fillStyle="#B07A4A";c.beginPath();c.arc(-r*.15,0,r*.6,0,Math.PI*2);c.fill();c.strokeStyle="#7E5230";c.lineWidth=r*.09;c.beginPath();
+  for(var t=0;t<4*Math.PI;t+=.2){var rr2=r*.52*(1-t/(4*Math.PI));c.lineTo(-r*.15+Math.cos(t)*rr2,Math.sin(t)*rr2)}c.stroke();
+  c.fillStyle="#3A2A1C";c.beginPath();c.arc(r*.86,r*.25,r*.05,0,Math.PI*2);c.fill();c.restore()},
+ drop:function(c,x,y,r,col){c.save();c.fillStyle=col;c.beginPath();c.moveTo(x,y-r);c.quadraticCurveTo(x+r*.75,y+r*.1,x,y+r*.6);c.quadraticCurveTo(x-r*.75,y+r*.1,x,y-r);c.fill();c.restore()},
+ dot:function(c,x,y,r,col){c.fillStyle=col;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fill()},
+ conf:function(c,x,y,r,col,a){c.save();c.translate(x,y);c.rotate(a);c.fillStyle=col;c.fillRect(-r,-r*.35,r*2,r*.7);c.restore()}
+};
+// 季節ごとの設定：bg=まわりの色、sh=カードのかげ、pat=まわりの模様、corner=カードの角のかざり、rib=上のリボン
+var SEASON={
+ newyear:{label:"お正月",bg:"#C8423A",sh:"#8E2A24",rib:"#A3302A",ribTx:"#FFFFFF",msg:"あけましておめでとう",
+  pat:function(c,x,y,i){if(i%3===0)SD.ume(c,x,y,13,i,"#FFE3E3");else SD.dot(c,x,y,4,"#E8B34A")},
+  corner:function(c){SD.ume(c,120,128,34,.2,"#E85A6B");SD.ume(c,178,170,22,.6,"#F6A3B0");SD.ume(c,960,128,34,.4,"#E85A6B");SD.ume(c,902,170,22,.1,"#F6A3B0");
+   SD.ume(c,110,1238,28,.3,"#E85A6B");SD.ume(c,970,1238,28,.5,"#F6A3B0")}},
+ spring:{label:"春",bg:"#F7C9D6",sh:"#D98EA6",rib:"#B8436A",ribTx:"#FFFFFF",msg:"春がきたよ",
+  pat:function(c,x,y,i){if(i%2===0)SD.petal(c,x,y,22,i*.7);else SD.dot(c,x,y,4,"#FFFFFF")},
+  corner:function(c){SD.sakura(c,118,130,42,.2);SD.sakura(c,184,182,26,.8);SD.sakura(c,962,130,42,.5);SD.sakura(c,896,182,26,.1);
+   SD.petal(c,250,150,18,.6);SD.petal(c,830,160,18,-.4);SD.sakura(c,110,1238,30,.4);SD.sakura(c,970,1238,30,.9)}},
+ tsuyu:{label:"梅雨",bg:"#9DB3E0",sh:"#5F76AE",rib:"#4E3E96",ribTx:"#FFFFFF",msg:"雨の日もいっしょに",
+  pat:function(c,x,y,i){if(i%3===0)SD.drop(c,x,y,11,"#FFFFFF");else SD.dot(c,x,y,4,"#C3D0EE")},
+  corner:function(c){SD.ajisai(c,122,140,52,["#7A8FE0","#9C7FD8","#B9A6EC"]);SD.ajisai(c,958,140,52,["#D98BC4","#B58BD6","#E8B4DA"]);
+   SD.snail(c,212,182,34,false);SD.drop(c,860,182,12,"#7FA6E0");SD.drop(c,250,128,10,"#7FA6E0");
+   SD.snail(c,120,1242,34,false);SD.ajisai(c,966,1236,30,["#7A8FE0","#9C7FD8","#B9A6EC"])}},
+ summer:{label:"夏",bg:"#7FC8DE",sh:"#3F8EA8",rib:"#1F6E8A",ribTx:"#FFFFFF",msg:"夏もいっしょに",
+  pat:function(c,x,y,i){if(i%4===0){c.save();c.strokeStyle="#FFFFFF";c.lineWidth=4;c.lineCap="round";c.beginPath();c.moveTo(x-16,y);c.quadraticCurveTo(x-8,y-8,x,y);c.quadraticCurveTo(x+8,y+8,x+16,y);c.stroke();c.restore()}else SD.dot(c,x,y,4,"#B4E1EE")},
+  corner:function(c){SD.sun(c,122,134,48);SD.sun(c,958,134,48);SD.sun(c,112,1236,30);SD.sun(c,968,1236,30)}},
+ halloween:{label:"ハロウィン",bg:"#4B3A78",sh:"#2E2350",rib:"#E8862E",ribTx:"#3A2400",msg:"Happy Halloween",
+  pat:function(c,x,y,i){if(i%5===0)SD.star(c,x,y,9,"#F7E08A",i);else if(i%5===2)SD.dot(c,x,y,3,"#8E7CC9");else SD.dot(c,x,y,4,"#6A58A0")},
+  corner:function(c){SD.pumpkin(c,124,146,46);SD.moon(c,960,124,36);SD.star(c,904,170,12,"#F2C14E",.3);SD.candy(c,200,192,20,.5);
+   SD.pumpkin(c,112,1240,30);SD.candy(c,968,1240,24,-.4)}},
+ nensei:{label:"年の瀬",bg:"#2E4A7A",sh:"#1C2F50",rib:"#F2C14E",ribTx:"#2A2000",msg:"今年もありがとう",
+  pat:function(c,x,y,i){if(i%4===0)SD.snow(c,x,y,11,"#FFFFFF");else if(i%4===2)SD.dot(c,x,y,4,"#E8B34A");else SD.dot(c,x,y,4,"#4B6798")},
+  corner:function(c){SD.mikan(c,118,140,40,-.1);SD.mikan(c,180,180,26,.3);SD.mikan(c,962,140,40,.1);SD.mikan(c,900,180,26,-.3);
+   SD.snow(c,250,150,14,"#A9D3DC");SD.snow(c,830,150,14,"#A9D3DC");SD.mikan(c,112,1240,28,0);SD.mikan(c,968,1240,28,.2)}},
+ xmas:{label:"クリスマス",bg:"#2F6B4F",sh:"#1D4533",rib:"#C8323A",ribTx:"#FFFFFF",msg:"Merry Christmas",
+  pat:function(c,x,y,i){if(i%4===0)SD.snow(c,x,y,12,"#FFFFFF");else SD.dot(c,x,y,4,"#5E9A7C")},
+  corner:function(c){SD.holly(c,122,138,56);SD.star(c,958,128,36,"#F2C14E",0);SD.snow(c,898,180,16,"#A9D3DC");SD.snow(c,190,190,14,"#A9D3DC");
+   SD.holly(c,112,1244,38);SD.holly(c,968,1244,38)}},
+ birthday:{label:"誕生日",bg:"#FFE3A6",sh:"#E0B054",rib:"#C2416B",ribTx:"#FFFFFF",msg:"{n}　お誕生日おめでとう",
+  pat:function(c,x,y,i){var C=["#E85A6B","#4A9FC1","#7BC47F","#B58BD6","#F2A33B"];SD.conf(c,x,y,9,C[i%5],i*.9)},
+  corner:function(c){SD.balloon(c,104,120,34,"#E85A6B");SD.balloon(c,170,150,26,"#4A9FC1");SD.balloon(c,976,120,34,"#7BC47F");SD.balloon(c,910,150,26,"#F2A33B");
+   var C=["#E85A6B","#4A9FC1","#7BC47F","#B58BD6","#F2A33B"];for(var i=0;i<6;i++){SD.conf(c,90+i*28,1230+(i%2)*22,8,C[i%5],i);SD.conf(c,850+i*28,1230+(i%2)*22,8,C[(i+2)%5],-i)}}}
+};
+function seasonBg(c,W,H,s){c.fillStyle=s.bg;c.fillRect(0,0,W,H);var i=0;for(var y=24;y<H;y+=56)for(var x=24+((y/56|0)%2)*28;x<W;x+=56){if(x>40&&x<W-40&&y>40&&y<H-40){i++;continue}s.pat(c,x,y,i++)}}
+function seasonTop(c,W,s,name){var t=s.msg.replace("{n}",name||""),fs=38,FN=' "M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif';c.font='800 '+fs+'px'+FN;while(c.measureText(t).width>W-240&&fs>24){fs-=2;c.font='800 '+fs+'px'+FN}var w=c.measureText(t).width+80,x=W/2-w/2,y=8;
+ c.fillStyle="rgba(0,0,0,.18)";roundRect(c,x,y+6,w,64,32);c.fill();c.fillStyle=s.rib;roundRect(c,x,y,w,64,32);c.fill();c.fillStyle=s.ribTx;c.textAlign="center";c.textBaseline="middle";c.fillText(t,W/2,y+34);c.textBaseline="alphabetic"}
+
+// 季節のカード：出る時期（日本時間）。誕生日は時期なし（自分で選ぶ）
+var SEASON_ORDER=["newyear","spring","tsuyu","summer","halloween","xmas","nensei","birthday"];
+function seasonAuto(){var t=new Date(Date.now()+9*3600e3),m=t.getUTCMonth()+1,d=t.getUTCDate();
+  if(m===1&&d<=15)return "newyear";if((m===3&&d>=15)||m===4)return "spring";if(m===6)return "tsuyu";if(m===7||m===8)return "summer";
+  if(m===10)return "halloween";if(m===12)return d<=25?"xmas":"nensei";return ""}
+function seasonCur(){return st.season===undefined?seasonAuto():st.season}
+function seasonPickRender(){var w=$("in-season");if(!w)return;var cur=seasonCur();
+  w.innerHTML=[""].concat(SEASON_ORDER).map(function(k){return '<button type="button" data-v="'+k+'"'+(k===cur?' class="on"':'')+'>'+(k?SEASON[k].label:"いつもの")+'</button>'}).join("")}
+
 function renderCardC(o){
   var W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;var ctx=cv.getContext("2d");
   var B=o.main,F='"Mochiy Pop One","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',R='"M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',dark="#2F3A45",mute="#5A6672",teal="#357385";
+  var SEA=o.season&&SEASON[o.season];
+  if(SEA){seasonBg(ctx,W,H,SEA);ctx.fillStyle=SEA.sh;roundRect(ctx,48,58,W-96,H-96,56);ctx.fill();ctx.fillStyle="#FFFFFF";roundRect(ctx,48,48,W-96,H-96,56);ctx.fill();ctx.save();SEA.corner(ctx);ctx.restore()}
+  else{
   ctx.fillStyle="#A9D3DC";ctx.fillRect(0,0,W,H);ctx.fillStyle="#C2E1E8";
   for(var y=10;y<H;y+=40)for(var x=10;x<W;x+=40){ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill()}
-  ctx.fillStyle="#5E8FA6";roundRect(ctx,48,58,W-96,H-96,56);ctx.fill();ctx.fillStyle="#FFFFFF";roundRect(ctx,48,48,W-96,H-96,56);ctx.fill();
+  ctx.fillStyle="#5E8FA6";roundRect(ctx,48,58,W-96,H-96,56);ctx.fill();ctx.fillStyle="#FFFFFF";roundRect(ctx,48,48,W-96,H-96,56);ctx.fill();}
   ctx.textAlign="center";ctx.fillStyle=teal;ctx.font="400 34px "+F;ctx.fillText("44Wansonalities",W/2,122);
   if(o.paw){var tw=ctx.measureText("44Wansonalities").width,ps=46;ctx.drawImage(o.paw,W/2-tw/2-ps-14,122-ps+8,ps,ps);ctx.drawImage(o.paw,W/2+tw/2+14,122-ps+8,ps,ps)}
   // うちの子（主役）：写真 か 体の犬種の絵
@@ -4809,6 +4907,7 @@ function renderCardC(o){
   chips.forEach(function(c,i){ctx.fillStyle="#FFF3C4";roundRect(ctx,c0,1200,cws[i],50,25);ctx.fill();ctx.fillStyle=dark;ctx.textAlign="left";ctx.fillText(c,c0+25,1235);
     if(c==="レア度"){var sx2=c0+25+ctx.measureText(c).width+8;for(var k=0;k<5;k++){if(o.star){ctx.globalAlpha=k<o.rare.stars?1:.25;ctx.drawImage(o.star,sx2+k*30,1211,28,28)}}ctx.globalAlpha=1}c0+=cws[i]+20});
   ctx.textAlign="center";ctx.fillStyle=mute;ctx.font="800 22px "+R;ctx.fillText("44wansona.com",W/2,1285);
+  if(SEA){ctx.save();seasonTop(ctx,W,SEA,o.name);ctx.restore()}
   return cv.toDataURL("image/jpeg",.9);
 }
 
@@ -4942,8 +5041,8 @@ function renderResult(){
   $("pick-wrap").hidden=!canArt;$("card-img").hidden=true;$("card-load").hidden=false;$("card-load-t")&&($("card-load-t").textContent=name+"の心を、そっとのぞいています…");
   Promise.all([fontsReady(),artImage(B),pawImage(),starImage(),crownImage(),(oidC&&!PH&&IMG[oidC])?artImage(BY[oidC]):null]).then(function(r){
     $("card-img").onload=function(){$("card-img").hidden=false;$("card-load").hidden=true};
-    var CO={sub:subOf(spread(last.pct)),main:B,name:name,bodyLine:bodyLine,img:PH,art:r[1],pos:st,ears:false,pct:spread(last.pct).map(Math.round),hidden:HB,pure:pure,paw:r[2],star:r[3],crown:r[4],bodyArt:r[5],bodyId:oidC,bodyName:short,layout:window.CARD_LAYOUT||"C",blend:blendOf(),head:pure?"生粋の"+short:headName(B,short,false),headPre:(pure||isUnknown())?"":B.s+"気質の",headMain:(pure||isUnknown())?"":short,gap:gapOf(),rare:rarityOf(last.pct)};
-    $("card-img").src=renderCard(CO);$("meishi-img").src=renderMeishi(CO);GKEY="w44_guide_"+st.name+"_"+last.main.id;GEDIT=gGet();CO.guide=guideOf();rqLoad();CO.req=rqTexts("card",1);CO.headFun=CO.head;CO.head=nstHead(CO);nstLoad(CO);$("meishi-img").src=renderMeishi(CO);renderGuide();CO.msg=($("in-msg").value||"").trim();$("meishi-back").src=renderMeishiBack(CO);FEST={o:CO};$("fest-out").hidden=true;
+    var CO={sub:subOf(spread(last.pct)),main:B,name:name,bodyLine:bodyLine,img:PH,art:r[1],pos:st,ears:false,pct:spread(last.pct).map(Math.round),hidden:HB,pure:pure,paw:r[2],star:r[3],crown:r[4],bodyArt:r[5],bodyId:oidC,bodyName:short,layout:window.CARD_LAYOUT||"C",season:seasonCur(),blend:blendOf(),head:pure?"生粋の"+short:headName(B,short,false),headPre:(pure||isUnknown())?"":B.s+"気質の",headMain:(pure||isUnknown())?"":short,gap:gapOf(),rare:rarityOf(last.pct)};
+    window.__CO=CO;seasonPickRender();$("card-img").src=renderCard(CO);$("meishi-img").src=renderMeishi(CO);GKEY="w44_guide_"+st.name+"_"+last.main.id;GEDIT=gGet();CO.guide=guideOf();rqLoad();CO.req=rqTexts("card",1);CO.headFun=CO.head;CO.head=nstHead(CO);nstLoad(CO);$("meishi-img").src=renderMeishi(CO);renderGuide();CO.msg=($("in-msg").value||"").trim();$("meishi-back").src=renderMeishiBack(CO);FEST={o:CO};$("fest-out").hidden=true;
   });
   renderMeters();renderPairPanel();
   var V=st.visit||{n:1},stn=Math.min(5,V.n),vs="";for(var si=0;si<5;si++)vs+='<img src="icon/star.png" alt=""'+(si<stn?"":' class="off"')+'>';
@@ -4995,6 +5094,7 @@ function renderResult(){
 }
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 
+$("in-season").addEventListener("click",function(e){var b=e.target.closest("button[data-v]");if(!b||!window.__CO)return;st.season=b.dataset.v;[].forEach.call(this.children,function(x){x.classList.toggle("on",x===b)});window.__CO.season=st.season;$("card-img").src=renderCard(window.__CO)});
 $("in-pick").addEventListener("click",function(e){var b=e.target.closest("button[data-v]");if(!b)return;st.useArt=b.dataset.v==="art";[].forEach.call(this.children,function(x){x.classList.toggle("on",x===b)});renderResult()});
 
 
