@@ -381,6 +381,7 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
 .join-hello{margin:0 0 12px;padding:12px 14px;border:3px solid var(--ink);border-radius:16px;background:#FFF4C9;box-shadow:4px 4px 0 var(--ink);font-weight:900;font-size:17px;line-height:1.5;text-align:center}
 .join-hello small{display:block;font-size:14px;font-weight:700}
 .join-hello:empty{display:none}
+#s-join.ended .label,#s-join.ended .prow,#s-join.ended #join-go,#s-join.ended .join-st{display:none}
 .wait-box{text-align:center;margin-top:16px}
 .wait-box p{font-size:16px;font-weight:900;margin:0}
 .big:disabled{opacity:.45}
@@ -1728,6 +1729,7 @@ function openJoin(code, fromLink){
   S.who='group';
   $('join-code').value = code || '';
   $('join-codebox').hidden = !!(fromLink && code);
+  $('s-join').classList.remove('ended'); S.autoJoin=false;
   $('join-hello').innerHTML = (fromLink && code) ? '部屋 '+code+' に招待されています<small>名前を入れて「参加する」を押してね</small>' : '';
   if(!$('join-name').value) $('join-name').value = String(store('nitaku_me') || '').slice(0,6);
   show('s-join');
@@ -1735,9 +1737,18 @@ function openJoin(code, fromLink){
   // QR・LINEのリンクから来て、前に入れた名前があれば、そのまま部屋に入る（何も押さなくてよい）
   var nm=($('join-name').value||'').trim();
   if(fromLink && code && nm){
+    S.autoJoin=true;
     $('join-hello').innerHTML='「'+esc(nm)+'」として部屋 '+code+' に入っています…<small>名前を変えたいときは、下で直して「参加する」を押してね</small>';
-    setTimeout(function(){ if($('s-join').classList.contains('on')) $('join-go').onclick(); }, 300);
+    setTimeout(function(){ if($('s-join').classList.contains('on') && !$('s-join').classList.contains('ended')) $('join-go').onclick(); S.autoJoin=false; }, 300);
   }
+}
+/* 部屋が閉じた・12時間たった */
+function roomEnded(r){ return !r || r.phase==='closed' || (typeof r.created==='number' && Date.now()-r.created >= 12*3600e3); }
+var ROOM_ENDED_MSG='この部屋は終わっています。招待してくれた人に、新しい部屋のリンクを送ってもらってね。';
+function showEnded(){
+  $('s-join').classList.add('ended');
+  $('join-hello').innerHTML='この部屋は終わっています<small>招待してくれた人に、新しい部屋のリンクを送ってもらってね。</small>';
+  $('join-st').textContent='';
 }
 /* 参加する前に、その部屋がもう始まっているかを見せる */
 var joinT=null;
@@ -1749,9 +1760,10 @@ async function joinStatus(){
     var d=await Room.get(code), r=d.room, n=(d.players||[]).length;
     if(($('join-code').value||'').replace(/\D/g,'')!==code) return;
     var hp=r && (d.players||[]).filter(function(p){ return p.pid===r.host; })[0];
-    if(hp && hp.name && $('join-codebox').hidden) $('join-hello').innerHTML=esc(hp.name)+'さんの部屋（'+code+'）に<br>招待されています<small>名前を入れて「参加する」を押してね</small>';
-    if(!r || r.phase==='closed') el.textContent='この番号の部屋は見つかりません。番号を確かめてね。';
-    else if(r.phase==='lobby') el.textContent='まだ始まっていません（いま'+n+'人）。名前を入れて「参加する」を押してね。';
+    if(roomEnded(r)){ if($('join-codebox').hidden) showEnded(); else el.textContent='この番号の部屋は見つからないか、もう終わっています。番号を確かめるか、招待してくれた人に新しい部屋のリンクを送ってもらってね。'; return; }
+    if(hp && hp.name && $('join-codebox').hidden && !S.autoJoin) $('join-hello').innerHTML=esc(hp.name)+'さんの部屋（'+code+'）に<br>招待されています<small>名前を入れて「参加する」を押してね</small>';
+    var who=(d.players||[]).map(function(p){ return (p.name||'？')+(p.pid===r.host?'👑':''); }).join('・');
+    if(r.phase==='lobby') el.textContent='まだ始まっていません。いま部屋にいる人：'+who+'（'+n+'人）。名前を入れて「参加する」を押してね。';
     else if(r.phase==='done') el.textContent='いまは結果発表中です。参加すると、次の回から一緒に遊べます。';
     else el.textContent='もう始まっています（'+(r.qi+1)+'問目）。参加すると、いまの問題から一緒に遊べます。';
   }catch(e){ el.textContent=''; }
@@ -1768,7 +1780,7 @@ $('join-go').onclick=async function(){
     await Room.init();
     if(Room.mode()==='off'){ toast('この画面では部屋に参加できません'); return; }
     var d=await Room.get(code);
-    if(!d.room || d.room.phase==='closed'){ toast('部屋が見つかりません。番号を確かめてね'); return; }
+    if(roomEnded(d.room)){ if($('join-codebox').hidden) showEnded(); else toast('部屋が見つからないか、もう終わっています'); return; }
     // 同じ部屋にもどってきたときは、前の答えを引きつぐ
     var old=store('nitaku_room'), pid=(old && old.code===code) ? old.pid : newPid();
     var prev=(d.players||[]).filter(function(p){ return p.pid===pid; })[0];
@@ -1883,7 +1895,10 @@ function renderLobby(){
     pill.className='lb-pill '+(n<2?'wait':'ok');
     pill.textContent = n<2 ? '⏳ 友だちを待っています' : '✅ '+n+'人そろいました';
     $('lb-head').textContent = n<2 ? 'まだ誰も来ていません' : 'スタートできます！';
-    $('lb-sub').textContent = n<2 ? '下の「LINEで友だちを招待する」で呼んでね。入った人の名前がここに出ます。' : 'ほかに来る人がいなければ、下の「スタート」を押してね。押すと全員の画面で問題が始まります。';
+    if(!R.lobbyAt) R.lobbyAt=Date.now();
+    var long=Date.now()-R.lobbyAt>=60e3;
+    if(n<2 && !long && !R.lobbyT) R.lobbyT=setTimeout(function(){ R.lobbyT=null; if(S.room===R && R.view==='lobby') renderLobby(); }, 60e3+200);
+    $('lb-sub').textContent = n<2 ? (long ? 'なかなか来ないときは、もう一度LINEで送ってみてね。この画面を閉じても、部屋は12時間のこっています（サイトを開くと、この部屋にもどれます）。' : '下の「LINEで友だちを招待する」で呼んでね。入った人の名前がここに出ます。') : 'ほかに来る人がいなければ、下の「スタート」を押してね。押すと全員の画面で問題が始まります。';
     $('lb-start').disabled = n<2;
     $('lb-start').textContent = n<2 ? '友だちを待っています…' : 'スタート（'+n+'人で遊ぶ）';
   } else {
