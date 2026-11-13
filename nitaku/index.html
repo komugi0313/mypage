@@ -455,6 +455,17 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
 .stp{display:flex;gap:8px;align-items:center;font-weight:900;font-size:16px;margin:4px 0 10px}
 .stp .num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#1E1E2A;color:#fff;font-size:15px;flex:none}
 .lb-main{text-align:center;padding:20px 16px}
+.lb-pill{display:inline-block;margin:0 0 10px;padding:6px 16px;border:2.5px solid #1E1E2A;border-radius:999px;font-weight:900;font-size:15px}
+.lb-pill:empty{display:none}
+.lb-pill.wait{background:#FFE071}
+.lb-pill.ok{background:#9BE7B4}
+.splash{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));background:rgba(255,248,225,.94);text-align:center}
+.splash[hidden]{display:none}
+.splash b{font-family:"Mochiy Pop One","Zen Maru Gothic",sans-serif;font-weight:400;font-size:30px;line-height:1.35;color:#1E1E2A;background:#9BE7B4;border:3px solid #1E1E2A;border-radius:22px;box-shadow:5px 5px 0 #1E1E2A;padding:18px 22px;max-width:92%}
+.splash.go b{background:#FF3D7F;font-size:44px}
+.splash small{font-size:16px;font-weight:900;color:#1E1E2A}
+@media (prefers-reduced-motion:no-preference){.splash b{animation:pop .35s ease-out}}
+@keyframes pop{from{transform:scale(.7);opacity:0}to{transform:none;opacity:1}}
 .lb-head{margin:0;font-family:"Mochiy Pop One","Zen Maru Gothic",sans-serif;font-size:22px;line-height:1.35}
 .lb-sub{margin:6px 0 0;font-size:14.5px;font-weight:700;color:#4A4A5A}
 .lb-sub:empty{display:none}
@@ -663,11 +674,13 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
   <button class="big" id="join-go">参加する</button>
 </section>
 
+<div class="splash" id="splash" hidden><b id="splash-t"></b><small id="splash-s"></small></div>
 <!-- 部屋（集まるまで） -->
 <section class="scr" id="s-lobby">
   <div class="nav"><button class="navb" data-nav="back">← もどる</button><span class="navr"><button class="navb" data-nav="reset">リセット</button><button class="navb" data-nav="top">TOP</button></span></div>
   <div hidden><div id="lb-status"></div><span id="lb-count"></span></div>
   <div class="card lb-main">
+    <p class="lb-pill" id="lb-pill"></p>
     <p class="lb-head" id="lb-head">部屋ができました</p>
     <p class="lb-sub" id="lb-sub"></p>
     <ul class="lb-list" id="lb-list"></ul>
@@ -1382,6 +1395,15 @@ function doShare(text){
   if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(full).then(done, function(){ prompt('コピーしてください', full); }); }
   else prompt('コピーしてください', full);
 }
+/* 大きなお知らせ（だれかが入った・スタート）。離れていても、いま何が起きたかがわかるように */
+var splashT=null;
+function splash(t, sub, kind){
+  var el=$('splash'); $('splash-t').textContent=t; $('splash-s').textContent=sub||'';
+  el.className='splash '+(kind||''); el.hidden=false;
+  try{ navigator.vibrate&&navigator.vibrate(kind==='go'?[120,60,120]:80); }catch(e){}
+  clearTimeout(splashT); splashT=setTimeout(function(){ el.hidden=true; }, kind==='go'?1600:2200);
+}
+$('splash').onclick=function(){ $('splash').hidden=true; };
 function toast(t){ var el=$('toast'); el.textContent=t; el.classList.add('on'); setTimeout(function(){ el.classList.remove('on'); }, 2200); }
 
 function endButtons(){
@@ -1799,7 +1821,7 @@ function onRoom(room, players){
   syncGame(room, players);
   if(R.cntRound!==room.round){ R.cntRound=room.round; S.counts=null; Votes.get(room.qs.filter(function(q){ return !q.custom; }).map(function(q){ return q.id; })).then(function(c){ S.counts=c; }); }
   if(room.phase==='q'){
-    if(R.view!==key){ var first=/^(lobby|)$/.test(R.view); R.view=key; R.qAt=Date.now(); if(R.lateT){ clearTimeout(R.lateT); R.lateT=null; } showQ(); if(first){ toast(S.resuming ? 'さっきの部屋にもどりました' : room.qi>0 ? '途中から参加しました（'+(room.qi+1)+'問目）' : 'スタート！'); S.resuming=false; try{ navigator.vibrate&&navigator.vibrate(150); }catch(e){} } } else updateWait();
+    if(R.view!==key){ var first=/^(lobby|)$/.test(R.view); R.view=key; R.qAt=Date.now(); if(R.lateT){ clearTimeout(R.lateT); R.lateT=null; } showQ(); if(first){ if(!S.resuming && room.qi===0) splash('スタート！', '1問目です。答えを選んでね', 'go'); else toast(S.resuming ? 'さっきの部屋にもどりました' : '途中から参加しました（'+(room.qi+1)+'問目）'); S.resuming=false; try{ navigator.vibrate&&navigator.vibrate(150); }catch(e){} } } else updateWait();
     autoCheck();
   } else if(room.phase==='reveal'){
     if(R.view!==key){ R.view=key; showReveal(); }
@@ -1816,15 +1838,25 @@ function renderLobby(){
   renderMine();
   $('lb-host').hidden = !R.host;
   $('lb-start').hidden=!R.host; $('lb-wait').hidden=R.host;
+  // 新しく入った人を、全員の画面で知らせる
+  var seen=R.seenP||null, fresh=[];
+  R.players.forEach(function(p){ if(seen && !seen[p.pid] && p.pid!==R.pid) fresh.push(p.name||'？'); });
+  R.seenP={}; R.players.forEach(function(p){ R.seenP[p.pid]=1; });
+  if(fresh.length){ splash(fresh.join('さん・')+'さんが入りました！', n+'人になりました', 'join'); }
+  var pill=$('lb-pill');
   if(R.host){
-    $('lb-head').textContent = n<2 ? '部屋ができました' : n+'人そろいました！';
-    $('lb-sub').textContent = n<2 ? '下の「LINEで友だちを招待する」で呼んでね。入った人の名前がここに出ます。' : '全員の名前が出たら「スタート」を押してね。';
+    pill.className='lb-pill '+(n<2?'wait':'ok');
+    pill.textContent = n<2 ? '⏳ 友だちを待っています' : '✅ '+n+'人そろいました';
+    $('lb-head').textContent = n<2 ? 'まだ誰も来ていません' : 'スタートできます！';
+    $('lb-sub').textContent = n<2 ? '下の「LINEで友だちを招待する」で呼んでね。入った人の名前がここに出ます。' : 'ほかに来る人がいなければ、下の「スタート」を押してね。押すと全員の画面で問題が始まります。';
     $('lb-start').disabled = n<2;
     $('lb-start').textContent = n<2 ? '友だちを待っています…' : 'スタート（'+n+'人で遊ぶ）';
   } else {
-    $('lb-head').textContent = '参加できました！';
+    pill.className='lb-pill ok';
+    pill.textContent = '✅ 参加できました（いま'+n+'人）';
+    $('lb-head').textContent = hn+'さんのスタートを待っています';
     $('lb-sub').textContent = '';
-    $('lb-wait').textContent = hn+'さんが「スタート」を押すと、自動で始まります。このまま待っていてね。';
+    $('lb-wait').textContent = 'あなたは何もしなくて大丈夫です。'+hn+'さんが「スタート」を押すと、この画面が自動で問題に変わります。';
   }
   if(R.view!=='lobby'){ R.view='lobby'; show('s-lobby'); }
 }
