@@ -6,7 +6,7 @@
 /* ===== 問題 ===== */
 // CATS: [名前, 問題の上に出す札]  Q: [テーマ番号, 問題, 答えA, 答えB]
 const CATS=window.SY_CATS||[];
-const Q=[].concat(window.SY_Q||[],window.SY_MINE||[]).map(r=>[CATS.findIndex(c=>c[0]===r[0]),r[1],r[2],r[3]]).filter(r=>r[0]>=0&&r[1]&&r[2]&&r[3]);
+const Q=[].concat(window.SY_Q||[],window.SY_MINE||[]).map(r=>[CATS.findIndex(c=>c[0]===r[0]),r[1],r[2],r[3],r[4]||'']).filter(r=>r[0]>=0&&r[1]&&r[2]&&r[3]);
 const CI=n=>CATS.findIndex(c=>c[0]===n);
 // 話題：いろいろ＝6テーマを同じくらい／盛り上がる＝ドキドキ多め・結婚とお金の話はなし
 const TOPICS={all:['恋愛・連絡','暮らし','食','お金','休日・遊び','将来・家族'].map(CI),
@@ -19,7 +19,7 @@ function store(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 const app=$('app');
 function view(h){app.innerHTML='<div class="scr">'+h+'</div>';window.scrollTo(0,0)}
-const ans=(o,k)=>o===0?Q[k][2]:o===1?Q[k][3]:o===2?'こだわらない':'時間切れ';
+const ans=(o,k)=>o===0?Q[k][2]:o===1?Q[k][3]:o===2?(Q[k][4]||'こだわらない'):'時間切れ';
 
 /* テーマが偏らないように配る：テーマを順番に回して、まだ出ていない問題から選ぶ */
 function deal(len,topic){
@@ -94,7 +94,7 @@ function goTop(){
     <label class="one-name" for="sn"><span>ニックネーム</span><input type="text" id="sn" maxlength="10" placeholder="なくてもOK" value="${esc(store('kv_name')||'')}"></label>
     <button class="btn" id="sgo">はじめる</button>
   </section>
-  <p class="note">どの問題にも正解はありません。どちらでもいいときは「こだわらない」を選んでください。</p>`);
+  <p class="note">どの問題にも正解はありません。どちらでもいいときは、3つ目の答え（「こだわらない」「どっちも好き」など）を選んでください。</p>`);
   const DESC={each:'2〜10人で。1人が部屋を作り、そばにいる人はQRコードを読みとるだけで参加できます。離れている人には、LINEなどでリンクを送ります。1問20秒。',solo:'自分の答えから、あなたのこだわりと、ゆずれることがわかります。'};
   const refresh=()=>{['each','solo'].forEach(m=>$('m-'+m).hidden=CFG.mode!==m);
     $('m-desc').textContent=DESC[CFG.mode];$('m-anon').hidden=CFG.mode!=='each';
@@ -182,7 +182,7 @@ function guessHits(G){
 // 称号：だれも負けないように、全員に1つずつ配る
 const TITLES=[
   ['読み名人','みんなの答えを、いちばん当てた人',p=>p.gh],
-  ['合わせ上手','「こだわらない」がいちばん多い、まわりに合わせられる人',p=>p.flex],
+  ['合わせ上手','まん中の答え（こだわらない など）がいちばん多い、まわりに合わせられる人',p=>p.flex],
   ['ブレない人','自分の好みがはっきりしている人',p=>-p.flex],
   ['みんなの真ん中','多数派の答えがいちばん多い人',p=>p.maj],
   ['個性派','少数派の答えがいちばん多い、自分らしさ全開の人',p=>p.min],
@@ -243,7 +243,7 @@ function showResult(G){
       ${r.starSame.length?`<details class="sfold"><summary>同じだったところ（${r.starSame.length}問）を見る</summary><ul class="slist">${r.starSame.map(i=>row(i,'s')).join('')}</ul></details>`:''}</div>`};
   h+=`<section class="card"><p class="label">${ps.length===2?'2人のぴったり度':me?'あなたと合う人':'合うペア'}</p>
     <ul class="pairs">${(me?mine:pairs).slice(0,me?MAXP:3).map(pairCard).join('')}</ul>
-    <p class="hint">同じ答え＝ぴったり、片方が「こだわらない」＝合わせられる、として数えています。★ゆずれないをつけた問題は、2倍の重さで数えています。</p></section>`;
+    <p class="hint">同じ答え＝ぴったり、片方がまん中の答え（こだわらない・どっちも好き など）＝合わせられる、として数えています。★ゆずれないをつけた問題は、2倍の重さで数えています。</p></section>`;
   // ④ 問題のランキング
   const qst=G.qs.map((k,i)=>{const c=[0,0,0],to=[];let ms=0,m=0;ps.forEach(p=>{const a=p.ans[i];if(!a)return;if(a.o>=0)c[a.o]++;if(a.to)to.push(p);if(a.o>=0||a.to){ms+=a.ms;m++}});return{i,k,c,to,avg:m?ms/m:0}});
   const split=qst.filter(x=>x.c[0]&&x.c[1]).sort((a,b)=>Math.abs(a.c[0]-a.c[1])-Math.abs(b.c[0]-b.c[1])).slice(0,3);
@@ -272,7 +272,7 @@ function soloHTML(G){
   return `<section class="card score"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true">
     <p class="cap">${p.name==='あなた'?'あなた':esc(p.name)+'さん'}の「合わせられる度」</p>
     <div class="ring" style="background:conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)"><div class="in"><span class="num">${pct}<small>%</small></span></div></div>
-    <p class="msg">${msg}</p><p class="hint">${xs.length}問のうち「こだわらない」が${flex.length}問</p></section>
+    <p class="msg">${msg}</p><p class="hint">${xs.length}問のうち、まん中の答え（こだわらない など）が${flex.length}問</p></section>
   ${star.length?`<section class="card"><p class="label">★ ゆずれないこと</p><ul class="list">${star.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${esc(ans(x.a.o,x.k))}</li>`).join('')}</ul></section>`:''}
   <section class="card"><p class="label">あなたのこだわり</p><ul class="list">${firm.filter(x=>!x.a.st).map(x=>`<li><b>${esc(CATS[Q[x.k][0]][0])}｜${esc(Q[x.k][1])}</b><span class="ansrow"><i class="o${x.a.o}">${esc(ans(x.a.o,x.k))}</i></span></li>`).join('')||'<li>今回はぜんぶ「こだわらない」でした</li>'}</ul></section>
   ${flex.length?`<section class="card"><p class="label">合わせられること</p><p class="hint">${flex.map(x=>esc(Q[x.k][1])).join('　')}</p></section>`:''}
