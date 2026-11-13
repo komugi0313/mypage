@@ -95,7 +95,8 @@ function goTop(){
       <li><b>シンクロ率</b><span>2人の答えが、どれだけ重なったか</span></li>
       <li><b>ぴったり度</b><span>同じ・合わせられる・ちがう答えの数</span></li>
       <li><b>ゆずれないこと</b><span>「★ゆずれない」をつけた大事なところが合うか（しっかり版）</span></li>
-      <li><b>みんなの称号</b><span>即決さん・こだわり職人 など</span></li>
+      <li><b>価値観のタイプ</b><span>きっちり派？計画派？いつも一緒派？コツコツ派？</span></li>
+      <li><b>話しておきたいこと</b><span>答えが反対になった、大事なところ</span></li>
     </ul>
     <p class="hint">恋人・気になる人・友だち・家族と。ひとりでも遊べます（10問・約3分）。</p>
     <p class="hint">婚活パーティー・街コンでも使えます。QRを読むだけで、その場の2〜10人で遊べます（アプリ不要）。</p>
@@ -233,45 +234,6 @@ function syncStat(G){
     s+=r.pct;n++;[ps[i],ps[j]].forEach(p=>{per[p.id].s+=r.pct;per[p.id].n++})}
   return{pct:n?Math.round(s/n):0,per};
 }
-// 称号＝答えから作るキャラ：価値観のタイプ（4つの物差し）の組み合わせと、答え方のくせから、全員にちがうキャラを1つずつ配る
-// [称号, ひとこと, 根拠, 似合い度（0〜200）]。物差しは左寄りの％（K＝きっちり・P＝計画・F＝いつも一緒・M＝コツコツ）
-const AXC=(x,y)=>(x==null||y==null)?-1:x+y;
-const CHARAS=[
-  ['しっかり者の司令塔','予定もお金も、この人にまかせれば安心。みんなの頼れるリーダー','計画派×コツコツ派',f=>AXC(f.P,f.M)],
-  ['自由な風来坊','気分しだいでふらっとどこへでも。ひとりの時間も大好き','その場で決める派×ひとりの時間も派',f=>AXC(f.P==null?null:100-f.P,f.F==null?null:100-f.F)],
-  ['さみしがりな幸せ者','好きな人とずっと一緒に、毎日を思いきり楽しみたい','いつも一緒派×楽しみ優先派',f=>AXC(f.F,f.M==null?null:100-f.M)],
-  ['家計を守る名執事','部屋もお財布も、いつもピカピカ。暮らしの守り神','きっちり派×コツコツ派',f=>AXC(f.K,f.M)],
-  ['気ままなエンジョイ勢','細かいことは気にしない。今日を楽しんだ者勝ち','おおらか派×楽しみ優先派',f=>AXC(f.K==null?null:100-f.K,f.M==null?null:100-f.M)],
-  ['段取り命の幹事長','みんなで楽しむ計画を立てるのが生きがい','計画派×いつも一緒派',f=>AXC(f.P,f.F)],
-  ['こだわりのマイペース職人','自分のやり方とひとりの時間を、大切に守る人','きっちり派×ひとりの時間も派',f=>AXC(f.K,f.F==null?null:100-f.F)],
-  ['ゆるふわ癒やし係','そばにいるだけで、まわりの空気がふんわりやわらぐ人','おおらか派×いつも一緒派',f=>AXC(f.K==null?null:100-f.K,f.F)],
-  ['思い立ったら冒険家','「行きたい」と思ったら、もう出発している人','その場で決める派×楽しみ優先派',f=>AXC(f.P==null?null:100-f.P,f.M==null?null:100-f.M)],
-  ['きっちり几帳面さん','予定も部屋も、決めたとおりがいちばん落ち着く','きっちり派×計画派',f=>AXC(f.K,f.P)],
-  ['みんなのお母さん','「どっちでもいいよ」と合わせてあげられる、心の広い人','「こだわらない」がいちばん多い',f=>f.rk.flex],
-  ['ゆずらない頑固職人','ここだけは曲げない、という芯がある人','★ゆずれないがいちばん多い',f=>f.rk.star],
-  ['迷える哲学者','1問1問、じっくり考えぬく人','答えるまでの時間がいちばん長い',f=>f.rk.ms],
-  ['秒速の決断王','迷わず即決。決めたら早い人','答えるまでの時間がいちばん短い',f=>f.rk.fast],
-  ['我が道をゆく個性派','みんなとちがっても気にしない。自分らしさ全開','少ないほうの答えがいちばん多い',f=>f.rk.min],
-  ['空気が読める平和主義','みんなの気持ちが自然とわかる、場のまとめ役','多いほうの答えがいちばん多い',f=>f.rk.maj],
-];
-function titles(G){
-  const fs=G.players.map(p=>{const xs=G.qs.map((k,i)=>p.ans[i]).filter(a=>a&&a.o>=0);
-    let maj=0,min=0;G.qs.forEach((k,i)=>{const a=p.ans[i];if(!a||a.o<0||a.o===2)return;const c=[0,0,0];G.players.forEach(o=>{const x=o.ans[i];if(x&&x.o>=0)c[x.o]++});
-      if(c[a.o]>c[1-a.o])maj++;else if(c[a.o]<c[1-a.o])min++});
-    const ax=k=>{const a=AX.find(x=>x.key===k),r=a&&axScore(p,G.qs,a);return r?r.pct:null};
-    const ms=xs.length?xs.reduce((s,a)=>s+a.ms,0)/xs.length:0;
-    return{id:p.id,K:ax('kicchiri'),P:ax('keikaku'),F:ax('futari'),M:ax('okane'),v:{flex:xs.filter(a=>a.o===2).length/Math.max(1,xs.length),star:xs.filter(a=>a.st).length,ms,fast:-ms,maj,min}}});
-  // 答え方のくせは、その中でいちばんの人だけが似合う（120〜200）。差がないときは似合わない
-  fs.forEach(f=>{f.rk={};Object.keys(f.v).forEach(k=>{const vs=fs.map(x=>x.v[k]),mx=Math.max(...vs),mn=Math.min(...vs);
-    f.rk[k]=(mx>mn&&f.v[k]===mx&&(k!=='star'||mx>0))?120+Math.round(80*(mx-mn)/(Math.abs(mx)||1)):-1})});
-  const cand=[];fs.forEach(f=>CHARAS.forEach((c,ci)=>{const sc=c[3](f);if(sc>=0)cand.push({f,ci,sc:sc+Math.random()*.01})}));
-  cand.sort((a,b)=>b.sc-a.sc);
-  const out={},used=new Set();
-  cand.forEach(x=>{if(out[x.f.id]||used.has(x.ci))return;out[x.f.id]=CHARAS[x.ci];used.add(x.ci)});
-  fs.forEach(f=>{if(!out[f.id])out[f.id]=['なぞめいた新キャラ','まだ正体がつかめない人。もっと遊ぶとわかるかも','']});
-  return out;
-}
-
 /* ===== くわしい結果（テーマ別・価値観のタイプ・話しておきたいこと・ひとこと） ===== */
 // テーマ別のシンクロ率：そのテーマの問題だけで、全員の組み合わせのぴったり度を平均
 function themeRows(G){
@@ -341,12 +303,6 @@ function showResult(G){
   if(trows.length)h+=themeHTML(trows,ps.length===2?'2人':'みんな');
   h+=axHTML(G,(G.anon&&me)?[me]:ps,nm);
   h+=talkHTML(G,nm);
-  // ② 称号
-  const T=titles(G);
-  const tl=(G.anon&&me)?[me]:ps;
-  h+=`<section class="card"><p class="label">${G.anon?'あなたの称号':'みんなの称号'}</p>
-    <ul class="titles">${tl.map(p=>`<li><b>${esc(T[p.id][0])}</b><span>${nm(p)}</span><small>${esc(T[p.id][1])}</small>${T[p.id][2]?`<i class="tr">${esc(T[p.id][2])}</i>`:''}</li>`).join('')}</ul>
-    <p class="hint">答えから見た、遊びのキャラです。全員ちがうキャラになります。</p></section>`;
   // ③ 合う人
   const pairs=[];for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++)pairs.push({a:ps[i],b:ps[j],r:pairStat(ps[i],ps[j],G.qs)});
   pairs.sort((x,y)=>y.r.pct-x.r.pct);
