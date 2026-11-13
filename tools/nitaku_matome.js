@@ -28,7 +28,7 @@ function page(p){
 <title>${esc(p.h1)}${p.qs.length}選｜究極の二択 本音バレ診断</title>
 <meta name="description" content="${esc(p.desc)}">
 <link rel="canonical" href="${SITE}/${p.f}/">
-<meta property="og:title" content="${esc(p.h1)}${p.qs.length}選｜究極の二択 本音バレ診断"><meta property="og:description" content="${esc(p.desc)}"><meta property="og:image" content="${SITE}/og-image.png?v=2"><meta property="og:url" content="${SITE}/${p.f}/"><meta name="twitter:card" content="summary_large_image">
+<meta property="og:title" content="${esc(p.h1)}${p.qs.length}選｜究極の二択 本音バレ診断"><meta property="og:description" content="${esc(p.desc)}"><meta property="og:image" content="${SITE}/og-image.png?v=3"><meta property="og:url" content="${SITE}/${p.f}/"><meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Zen+Maru+Gothic:wght@700;900&display=swap">
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
 <style>
