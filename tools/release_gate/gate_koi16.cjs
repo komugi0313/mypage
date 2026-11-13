@@ -79,6 +79,16 @@ function scan() {
     await p.goto(URL + '?types=1'); await check('16タイプ一覧');
     await p.goto(URL + '?about=1'); await check('この診断の考え方');
     await p.goto(URL + '?privacy=1'); await check('プライバシーポリシー');
+    { // みんなで診断（グループ）：入る前・入ったあと（QR）・8人いっぱい、と結果の「QRを見せる」
+      const nm = ['みき','ゆう','さき','あおい','はるか','りん','そら','ひなた'], cs = ['LVTP','RASC','RATC','LATC','RVSP','LVSC','RASP','RVTC'];
+      const m = k => cs.slice(0, k).map((c, i) => c + '.' + encodeURIComponent(nm[i])).join('~');
+      await p.evaluate(() => localStorage.removeItem('koi16_v1'));
+      await p.goto(URL + '?g=gate01&m=' + m(3)); await check('みんなで診断（入る前）');
+      await p.evaluate(() => localStorage.setItem('koi16_v1', JSON.stringify({ me: { code: 'RASC', pct: { LR: 60, VA: 60, TS: 60, PC: 60 }, anx: 40, mode: 'full', at: 1 }, groups: { gate01: { me: 'ゆう', m: [], at: 1 } } })));
+      await p.goto(URL + '?g=gate01&m=' + m(5)); await check('みんなで診断（入ったあと）');
+      await p.goto(URL + '?g=gate02&m=' + m(8)); await check('みんなで診断（8人）');
+      await p.goto(URL + '?t=RASC'); await p.click('[data-act=qr]'); await check('結果のQR');
+    }
     await p.goto(URL); await p.click('#start'); await check('恋の状況'); await p.click('[data-status=crush]');
     for (let i = 0; i < 40; i++) { await check('質問' + (i + 1)); const bs = await p.$$('#scale button'); await bs[i % 5].click(); await p.waitForTimeout(200); }
     for (const [i, c] of CODES.entries()) {
