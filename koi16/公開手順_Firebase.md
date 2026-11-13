@@ -1,39 +1,37 @@
 # 恋のかたち診断を Firebase Hosting で公開する手順
 
-ほかのサイト（究極二択診断など）と同じ Firebase で公開します。
-サーバーの処理はなく、`koi16` フォルダの中身をそのまま置くだけです（Firebase Hosting の無料枠で足ります）。
-`firebase.json` は用意済みです（この手順書と firebase.json 自体は公開されません）。
+置き場：Firebase プロジェクト **16typeplus**（ID `typeplus-69c66`）の中のサイト **koikata**。
+サーバーの処理はなく、`koi16` フォルダの中身をそのまま置くだけです（無料枠で足ります）。
+GitHub に保存すると自動で公開されます（`.github/workflows/koi16-deploy.yml`）。コマンドは打たなくて大丈夫です。
+この手順書・`firebase.json`・`.firebaserc` は公開されません。
 
-## 1. Firebase にサイトを1つ足す（コンソール）
+## 1. Firebase にサイト「koikata」を作る（はじめの1回だけ）
 
-1. https://console.firebase.google.com/ で、いつも使っているプロジェクトを開く
-2. 左の「Hosting」→「別のサイトを追加」→ サイトID に `koikata` と入れる
-   （使われていて入れられないときは `koikata-jp` など。下の 3 の `koikata` の右側をその名前にする）
+1. https://console.firebase.google.com/ → **16typeplus** を開く
+2. 左のメニュー「構築」→「Hosting」（はじめてなら「始める」を押して、説明は「次へ」で進めて最後まで）
+3. Hosting の画面のいちばん下「別のサイトを追加」→ サイトID に **koikata** と入れて追加
+   - 「使われています」と出たら **koikata-jp** にして、そのことを Claude に伝える（設定を合わせます）
 
-## 2. パソコンの準備（はじめの1回だけ）
+## 2. 公開用の鍵を作って GitHub に入れる（はじめの1回だけ）
 
-```
-npm install -g firebase-tools
-firebase login
-```
+1. Firebase の左上の ⚙（歯車）→「プロジェクトの設定」→ タブ「サービス アカウント」
+2. 「新しい秘密鍵を生成」→「キーを生成」→ JSON のファイルがダウンロードされる
+   - **このファイルはだれにも送らない・チャットにも貼らない**（サイトを書きかえられる鍵です）
+3. https://github.com/komugi0313/mypage/settings/secrets/actions を開く
+4. 「New repository secret」→ Name に **FIREBASE_SERVICE_ACCOUNT_KOIKATA**、Secret に、ダウンロードした JSON ファイルの中身をまるごと貼りつけ →「Add secret」
+5. 貼りつけたら、パソコンの JSON ファイルは消してよい（もう一度必要になったら作り直せます）
 
 ## 3. 公開する
 
-`koi16` フォルダで：
-
-```
-firebase use --add            （いつものプロジェクトを選ぶ）
-firebase target:apply hosting koikata koikata
-firebase deploy --only hosting:koikata
-```
-
-終わると `https://koikata.web.app/` で見られます。
+- https://github.com/komugi0313/mypage/actions →「koi16 deploy (Firebase Hosting)」→「Run workflow」→「Run workflow」
+- 数分で緑のチェックになれば完了。`https://koikata.web.app/` で見られます
+- これからは、koi16 を直して GitHub に保存するたびに自動で公開されます
 
 ## 4. koikata.jp をつなぐ
 
-1. Firebase コンソールの Hosting → サイト `koikata` →「カスタムドメインを追加」→ `koikata.jp`
+1. Firebase の Hosting → サイト **koikata** の「カスタムドメインを追加」→ `koikata.jp`
 2. 表示された値（A レコード・TXT レコード）を、ドメインを取ったお店の「DNS の設定」に入れる
-3. 数分〜最大24時間で `https://koikata.jp/` が開くようになる（安全な通信の証明書も Firebase が自動でつける）
+3. 数分〜最大24時間で `https://koikata.jp/` が開く（安全な通信の証明書も Firebase が自動でつける）
 
 ## 5. koinokatachi.jp を koikata.jp へ飛ばす
 
