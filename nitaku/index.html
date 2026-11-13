@@ -534,6 +534,21 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
 .lb-mine-d{margin-top:18px}
 .lb-mine-d #lb-mine{border:0;box-shadow:none;padding:0;margin:0}
 #lb-code{font-family:"Mochiy Pop One",sans-serif;color:#CC3166;letter-spacing:.06em}
+/* もう1回の「準備OK」（読んでいる途中で次が始まらないように＝鑑定者本人の指示 2026-11-13） */
+.rdy{position:fixed;left:0;right:0;bottom:0;z-index:60;padding:0 12px calc(12px + env(safe-area-inset-bottom))}
+.rdy-in{max-width:520px;margin:0 auto;background:#fff;border:2.5px solid #1E1E2A;border-radius:20px;box-shadow:0 5px 0 #F2C94C;padding:14px 16px}
+.rdy-t{margin:0;font-weight:900;font-size:16px;color:#1E1E2A;line-height:1.5}
+.rdy-t small{font-size:14px;color:#B0124D}
+.rdy-s{margin:4px 0 0;font-size:14px;color:#4A4458;line-height:1.6}
+.rdy-n{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0;padding:0;list-style:none}
+.rdy-n li{font-size:14px;font-weight:700;border:2px solid #1E1E2A;border-radius:999px;padding:3px 10px;background:#F1EEF6;color:#1E1E2A}
+.rdy-n li.ok{background:#DDF6E8}
+.rdy .big{margin-top:10px;padding:13px}
+body.rdy-on #gres-body{padding-bottom:230px}
+.imgov{position:fixed;inset:0;z-index:80;background:rgba(30,30,42,.72);overflow:auto;padding:16px}
+.imgov-in{max-width:520px;margin:0 auto;background:#fff;border-radius:20px;padding:16px}
+.imgov-t{margin:0 0 10px;font-weight:900;font-size:16px;text-align:center;color:#1E1E2A}
+.imgov img{display:block;width:100%;border:2px solid #1E1E2A;border-radius:12px}
 </style>
 </head>
 <body data-mode="love">
@@ -826,6 +841,8 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
 
 </div>
 <div class="toast" id="toast"></div>
+<div class="rdy" id="rdy" hidden></div>
+<div class="imgov" id="imgov" hidden><div class="imgov-in"><p class="imgov-t">画像を長押しして「写真に保存」してね</p><img id="imgov-img" alt="結果の画像"><a class="big" id="imgov-dl" download="kyukyoku-nitaku.png">画像をダウンロード</a><button class="big alt" id="imgov-x" type="button">とじる</button></div></div>
 
 <script src="firebase-config.js"></script>
 <script src="questions.js"></script>
@@ -1022,7 +1039,7 @@ function styleHint(){
   $('style-sw').textContent = room ? 'スマホが1台だけのときは、こちら' : 'それぞれのスマホで遊ぶ（部屋を作る）';
 }
 
-function show(id){ document.querySelectorAll('.scr').forEach(function(s){ s.classList.toggle('on', s.id===id); }); window.scrollTo(0,0);
+function show(id){ document.querySelectorAll('.scr').forEach(function(s){ s.classList.toggle('on', s.id===id); }); window.scrollTo(0,0); if(id!=='s-gres') hideReady();
   if(id!=='s-home' && !pushed){ try{ history.pushState({nitaku:1},''); pushed=true; }catch(e){} } }
 
 function pickWho(v){ document.querySelectorAll('#seg-who button').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.v===v?'true':'false'); }); S.who=v; }
@@ -1472,9 +1489,10 @@ function toast(t){ var el=$('toast'); el.textContent=t; el.classList.add('on'); 
 function endButtons(){
   var other = S.mode==='love'?'normal':'love';
   if(S.room){
-    if(S.room.host) return '<button class="big" id="again">同じメンバーでもう1回</button>'+
+    if(S.room.host || Room.mode()==='db') return '<button class="big" id="again">同じメンバーでもう1回</button>'+
       '<button class="big alt" id="swap">'+MODE_NAME[other]+'でもう1回</button>'+
-      '<button class="big alt" id="home">部屋を閉じてトップへ</button>';
+      '<p class="hint">押すと、みんなが「準備OK」を押してから始まります。読んでいる途中で次の問題に変わることはありません。</p>'+
+      '<button class="big alt" id="home">'+(S.room.host?'部屋を閉じてトップへ':'部屋を出てトップへ')+'</button>';
     return '<p class="hint lb-wait" style="margin-top:22px">部屋を作った人が「もう1回」を押すと、このまま次が始まります。</p>'+
       '<button class="big alt" id="home">部屋を出てトップへ</button>';
   }
@@ -1484,9 +1502,8 @@ function endButtons(){
 }
 function bindEnd(){
   if(S.room){
-    var again=function(){ var qs=roomQs(), used=mixCustom(qs); hostSet({ mode:S.mode, round:S.room.data.round+1, qs:qs, used:used, mix:S.mix, num:S.num, lv:roomLv(), phase:'q', qi:0 }); };
-    if($('again')) $('again').onclick=again;
-    if($('swap')) $('swap').onclick=function(){ setMode(S.mode==='love'?'normal':'love'); again(); };
+    if($('again')) $('again').onclick=function(){ askAgain(S.mode); };
+    if($('swap')) $('swap').onclick=function(){ askAgain(S.mode==='love'?'normal':'love'); };
     $('home').onclick=function(){ goTop(false); };
     return;
   }
@@ -1539,11 +1556,12 @@ function showResult(){
        '<p style="font-size:13px;color:var(--sub);margin:8px 0 0">悩んだ問題は、あなたの「迷いどころ」。どっちも捨てがたい本音が、そこにあるのかも。</p>'+
        '<p style="font-size:14px;color:var(--sub)">'+(sp.rate>=70?'迷いのなさがすごい。自分の気持ちがはっきりしている人。':(sp.rate<=30?'どっちも本気で考えてしまう、やさしい人。':'ここぞという問題で、ちゃんと悩める人。'))+'</p></div>';
   }
-  h+=PROMO+'<a class="big lb-line" id="lshare" href="https://line.me/R/share" target="_blank" rel="noopener">LINEで結果を送る</a><button class="big alt" id="share">ほかのアプリでシェアする</button>'+endButtons();
+  h+=PROMO+'<a class="big lb-line" id="lshare" href="https://line.me/R/share" target="_blank" rel="noopener">LINEで結果を送る</a><button class="big alt" id="share">ほかのアプリでシェアする</button><button class="big alt" id="save">📷 結果を画像で保存</button>'+endButtons();
   $('gres-body').innerHTML='';
   $('res-body').innerHTML=h;
   $('share').onclick=function(){ doShare(shareText(mode,sc)); };
   $('lshare').href=lineHref(shareText(mode,sc));
+  $('save').onclick=function(){ saveImage($('res-body')); };
   bindEnd();
   show('s-res');
 }
@@ -1626,7 +1644,7 @@ function showGroupResult(){
   });
   h+='</div>';
 
-  h+=PROMO+'<a class="big lb-line" id="lgshare" href="https://line.me/R/share" target="_blank" rel="noopener">LINEで結果を送る</a><button class="big alt" id="gshare">ほかのアプリでシェアする</button>'+endButtons();
+  h+=PROMO+'<a class="big lb-line" id="lgshare" href="https://line.me/R/share" target="_blank" rel="noopener">LINEで結果を送る</a><button class="big alt" id="gshare">ほかのアプリでシェアする</button><button class="big alt" id="gsave">📷 結果を画像で保存</button>'+endButtons();
   $('res-body').innerHTML='';
   $('gres-body').innerHTML=h;
   var gt='究極の二択【'+playName(mode)+'】'+n+'人で遊んだ結果\n'+
@@ -1634,6 +1652,7 @@ function showGroupResult(){
       (pb ? '\nいちばん気が合う2人：'+S.players[pb.x].name+'×'+S.players[pb.y].name : '')+'\n\nみんなでやると本音がバレて盛り上がる！\n#究極の二択 #本音バレ診断';
   $('gshare').onclick=function(){ doShare(gt); };
   $('lgshare').href=lineHref(gt);
+  $('gsave').onclick=function(){ saveImage($('gres-body')); };
   bindEnd();
   show('s-gres');
 }
@@ -1829,7 +1848,7 @@ async function joinStatus(){
     if(hp && hp.name && $('join-codebox').hidden && !S.autoJoin) $('join-hello').innerHTML=esc(hp.name)+'さんの部屋（'+code+'）に<br>招待されています<small>名前を入れて「参加する」を押してね</small>';
     var who=(d.players||[]).map(function(p){ return (p.name||'？')+(p.pid===r.host?'👑':''); }).join('・');
     if(r.phase==='lobby') el.textContent='まだ始まっていません。いま部屋にいる人：'+who+'（'+n+'人）。名前を入れて「参加する」を押してね。';
-    else if(r.phase==='done') el.textContent='いまは結果発表中です。参加すると、次の回から一緒に遊べます。';
+    else if(r.phase==='done' || r.phase==='ready') el.textContent='いまは結果発表中です。参加すると、次の回から一緒に遊べます。';
     else el.textContent='もう始まっています（'+(r.qi+1)+'問目）。参加すると、いまの問題から一緒に遊べます。';
   }catch(e){ el.textContent=''; }
 }
@@ -1936,7 +1955,7 @@ function syncGame(room, players){
   if(room.qs && R.seenRound!==room.round+':'+room.qs.length){ R.seenRound=room.round+':'+room.qs.length; markSeen(room.mode, room.qs); }
   if(!players.some(function(p){ return p.pid===R.pid; })) players=players.concat([Object.assign({ pid:R.pid }, R.me)]);
   var list=players;
-  if(room.phase==='done') list=players.filter(function(p){ return room.qs.some(function(q,i){ return answeredKey(R, p, room.round+':'+i); }); });
+  if(room.phase==='done' || room.phase==='ready') list=players.filter(function(p){ return room.qs.some(function(q,i){ return answeredKey(R, p, room.round+':'+i); }); });
   var cnt={}, idx={};
   list.forEach(function(p){ cnt[p.name]=(cnt[p.name]||0)+1; });
   S.qs=room.qs; S.qi=room.qi;
@@ -1955,7 +1974,7 @@ function onRoom(room, players){
   var mine=(players||[]).filter(function(p){ return p.pid===R.pid; })[0];
   if(mine){ ['ans','times'].forEach(function(k){ var o=mine[k]||{}; R.me[k]=R.me[k]||{}; Object.keys(o).forEach(function(x){ if(R.me[k][x]==null) R.me[k][x]=o[x]; }); }); }
   if(S.mode!==room.mode) setMode(room.mode);
-  var lp=String(room.lv||'normal').split('|'); S.lv=lp[0]; S.rv=(lp[1]==='end'?'end':'each'); S.mix=!!room.mix; S.num=room.num||8;
+  var lp=String(room.lv||'normal').split('#')[0].split('|'); S.lv=lp[0]; S.rv=(lp[1]==='end'?'end':'each'); S.mix=!!room.mix; S.num=room.num||8;
   var key=room.phase+':'+room.round+':'+room.qi;
   if(room.phase==='lobby'){
     // 2分以上つながっていない人は、集まっている一覧から外す（作った人のスマホが部屋からも消す。戻ってきたらまた出る）
@@ -1975,7 +1994,18 @@ function onRoom(room, players){
     if(R.view!==key){ R.view=key; showReveal(); }
   } else if(room.phase==='done'){
     if(R.view!==key){ R.view=key; showGroupResult(); }
+  } else if(room.phase==='ready'){
+    // だれかが「もう1回」を押した：結果の画面はそのまま。全員が「準備OK」を押したら始まる
+    if(R.view!==key){
+      var was=R.view; R.view=key;
+      if(was!=='done:'+room.round+':'+room.qi || curScr()!=='s-gres') showGroupResult();
+      var rp=readyParts(room);
+      R.rdyAt=Date.now();
+      if(rp.by!==R.pid) splash(readyName(rp.by)+'さんが「もう1回」を押しました', '読み終わったら、下の「準備OK」を押してね', 'join');
+    }
+    renderReady(); readyCheck();
   }
+  if(room.phase!=='ready') hideReady();
 }
 function renderLobby(){
   var R=S.room, room=R.data, n=R.players.length;
@@ -2064,7 +2094,104 @@ async function roomStep(patch){
   R.stepping=false;
   if(ok===null){ toast('通信できませんでした。もう一度押してね'); R.autoKey=''; return; }
   if(ok && S.room===R) onRoom(Object.assign({}, R.data, patch), R.players);
+  return ok;
 }
+/* 同じメンバーでもう1回：押した人がいても、ほかの人の結果の画面はそのまま。全員が「準備OK」を押したら始まる
+   （前はだれかが押すとすぐ全員の画面が次の問題に変わり、読んでいる途中の人が困った＝鑑定者本人の指示 2026-11-13）。
+   次の編と押した人は、Firestore の決まりを変えずにすむよう lv の後ろに「#編#押した人」として覚える。準備OKは自分の ans の「ok:回」 */
+function readyParts(d){ var p=String((d||{}).lv||'').split('#'); return { base:p[0]||'normal', nx:p[1]||(d&&d.mode)||'love', by:p[2]||'' }; }
+function readyName(pid){ var R=S.room, p=R && (R.players||[]).filter(function(x){ return x.pid===pid; })[0]; return (p && p.name) || (pid===(R&&R.pid) ? (R.me.name||'？') : 'だれか'); }
+function readyOk(R, p){ return !!answeredKey(R, p, 'ok:'+R.data.round); }
+function readyNeed(R){ var now=Date.now(); return R.players.filter(function(p){ return p.pid===R.pid || !p.seen || now-p.seen<=120e3; }); }
+async function askAgain(nx){
+  var R=S.room; if(!R || !R.data) return;
+  R.me.ans['ok:'+R.data.round]=1; saveMe();
+  if(R.data.phase==='ready'){ renderReady(); readyCheck(); return; }
+  var base=readyParts(R.data).base;
+  if(Room.mode()!=='db'){ startNext(base+'#'+nx+'#'+R.pid); return; }
+  await roomStep({ phase:'ready', lv:base+'#'+nx+'#'+R.pid });
+}
+function hideReady(){ var el=$('rdy'); if(el && !el.hidden){ el.hidden=true; el.innerHTML=''; } document.body.classList.remove('rdy-on'); }
+function renderReady(){
+  var R=S.room; if(!R || !R.data || R.data.phase!=='ready' || curScr()!=='s-gres'){ hideReady(); return; }
+  var rp=readyParts(R.data), need=readyNeed(R), me=readyOk(R, { pid:R.pid });
+  var ok=need.filter(function(p){ return readyOk(R, p); }).length;
+  var h='<div class="rdy-in"><p class="rdy-t">🔁 '+esc(readyName(rp.by))+'さんが「もう1回」を押しました'+(rp.nx!==R.data.mode ? '<br><small>次は'+MODE_NAME[rp.nx]+'です</small>' : '')+'</p>';
+  if(!me){
+    h+='<p class="rdy-s">結果を読み終わったら「準備OK」を押してね。みんながそろうと、次の問題が始まります。</p><button class="big" id="rdy-go" type="button">準備OK</button>';
+  } else {
+    h+='<p class="rdy-s">みんなの準備を待っています（'+ok+' / '+need.length+'人）。待っているあいだも、結果は読めます。</p>';
+    h+='<ul class="rdy-n">'+need.map(function(p){ var o=readyOk(R, p); return '<li class="'+(o?'ok':'')+'">'+(o?'✅ ':'⏳ ')+esc(p.name||'？')+'</li>'; }).join('')+'</ul>';
+    var late=Date.now()-(R.rdyAt||0)>=60e3;
+    if(late && ok<need.length) h+='<button class="big alt" id="rdy-force" type="button">そろった人だけで始める</button>';
+    else if(!R.rdyT) R.rdyT=setTimeout(function(){ R.rdyT=null; renderReady(); }, Math.max(1000, 60e3-(Date.now()-(R.rdyAt||0))+200));
+  }
+  h+='</div>';
+  var el=$('rdy'); el.innerHTML=h; el.hidden=false; document.body.classList.add('rdy-on');
+  ['again','swap'].forEach(function(id){ if($(id)) $(id).disabled=true; });
+  if($('rdy-go')) $('rdy-go').onclick=function(){ R.me.ans['ok:'+R.data.round]=1; saveMe(); renderReady(); readyCheck(); };
+  if($('rdy-force')) $('rdy-force').onclick=function(){ startNext(null, true); };
+}
+function readyCheck(){
+  var R=S.room; if(!R || !R.data || R.data.phase!=='ready') return;
+  var need=readyNeed(R); if(!need.length || !need.every(function(p){ return readyOk(R, p); })) return;
+  var key='ready:'+R.data.round; if(R.rdyKey===key) return; R.rdyKey=key;
+  setTimeout(function(){ if(S.room!==R || !R.data || R.data.phase!=='ready' || 'ready:'+R.data.round!==key) return; startNext(); }, R.host ? 300 : 1500);
+}
+async function startNext(lvx, force){
+  var R=S.room; if(!R || !R.data) return;
+  var d=R.data, rp=readyParts(lvx ? { lv:lvx, mode:d.mode } : d);
+  if(S.mode!==rp.nx) setMode(rp.nx);
+  S.gnum=d.num||S.num; S.lv=rp.base.split('|')[0];
+  var qs=roomQs(), used=mixCustom(qs);
+  var patch={ mode:rp.nx, round:d.round+1, qs:qs, used:used, mix:S.mix, num:S.num, lv:rp.base, phase:'q', qi:0 };
+  if(Room.mode()!=='db'){ if(R.host) hostSet(patch); return; }
+  // 準備OKを押していない人（画面を閉じた人など）は一覧から外す（まだ開いていれば、30秒ごとの知らせでまた入る）
+  var off=R.players.filter(function(p){ return p.pid!==R.pid && !readyOk(R, p); });
+  var ok=await roomStep(patch);
+  if(ok) off.forEach(function(p){ Room.delPlayer(R.code, p.pid).catch(function(){}); });
+  else if(force) R.rdyKey='';
+}
+/* 結果を画像で保存（スマホの写真に残す。読み終わる前に次が始まっても、あとで見返せるように） */
+var h2c=null;
+function loadH2C(){
+  if(window.html2canvas) return Promise.resolve();
+  if(h2c) return h2c;
+  h2c=new Promise(function(ok, ng){ var sc=document.createElement('script'); sc.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'; sc.onload=ok; sc.onerror=function(){ h2c=null; ng(); }; document.head.appendChild(sc); });
+  return h2c;
+}
+async function saveImage(el){
+  var b=document.activeElement; if(b && b.tagName==='BUTTON') b.disabled=true;
+  toast('画像を作っています…');
+  try{
+    await loadH2C();
+    var w=el.scrollWidth, hh=el.scrollHeight, sc=Math.min(2, Math.sqrt(14e6/(w*hh)));
+    var cv=await html2canvas(el, { backgroundColor:'#FFF8E1', scale:sc, useCORS:true, logging:false,
+      ignoreElements:function(x){ return x.tagName==='BUTTON' || (x.classList && (x.classList.contains('big') || x.classList.contains('promo') || x.classList.contains('promo-u') || x.classList.contains('kok') || x.classList.contains('hint'))); },
+      onclone:function(doc){
+        // たたんである中身（「この％について」など）は画像に入れない（html2canvas は閉じた中身も重ねて描いてしまう）
+        doc.querySelectorAll('details:not([open])').forEach(function(d){ Array.prototype.slice.call(d.children).forEach(function(ch){ if(ch.tagName!=='SUMMARY') ch.remove(); }); });
+        // html2canvas は円グラフの色（conic-gradient）を描けないので、同じ形を絵（SVG）にして置きかえる
+        doc.querySelectorAll('.pp-ring').forEach(function(r){
+          var v=+(r.style.getPropertyValue('--v'))||0, purple=!!r.closest('.ppl-b');
+          var c1=purple?'#7B5CFF':'#FF3D7F', c2=purple?'#E4DDFF':'#FFE3EE', L=2*Math.PI*38;
+          var svg='<svg xmlns="http://www.w3.org/2000/svg" width="86" height="86" viewBox="0 0 86 86"><circle cx="43" cy="43" r="38" fill="none" stroke="'+c2+'" stroke-width="10"/><circle cx="43" cy="43" r="38" fill="none" stroke="'+c1+'" stroke-width="10" stroke-dasharray="'+(L*v/100)+' '+L+'" transform="rotate(-90 43 43)"/><circle cx="43" cy="43" r="32" fill="#fff" stroke="#1E1E2A" stroke-width="2"/></svg>';
+          r.style.background='url("data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)+'") center/86px 86px no-repeat';
+          r.classList.add('h2c');
+        });
+        var st=doc.createElement('style'); st.textContent='.pp-ring.h2c::after{display:none}'; doc.head.appendChild(st);
+      } });
+    var blob=await new Promise(function(ok){ cv.toBlob(ok, 'image/png'); });
+    var file=null; try{ file=new File([blob], 'kyukyoku-nitaku.png', { type:'image/png' }); }catch(e){}
+    if(file && navigator.canShare && navigator.canShare({ files:[file] })){
+      try{ await navigator.share({ files:[file], title:'究極の二択の結果' }); return; }catch(e){ if(e && e.name==='AbortError') return; }
+    }
+    var url=URL.createObjectURL(blob);
+    $('imgov-img').src=url; $('imgov-dl').href=url; $('imgov').hidden=false;
+  }catch(e){ toast('画像を作れませんでした。画面のスクリーンショットで残してね'); }
+  finally{ if(b && b.tagName==='BUTTON') b.disabled=false; }
+}
+$('imgov-x').onclick=function(){ $('imgov').hidden=true; };
 /* 離れている人への招待（スマホの「共有」でメール・SMS・DMなどへ。使えないときはコピー） */
 $('lb-invite').onclick=function(){
   var R=S.room; if(!R) return;
