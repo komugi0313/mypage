@@ -9,14 +9,14 @@ const used=new Set();
 function take(list,n,max){const r=[];for(const q of list){if(r.length>=n)break;const k=q[0]+'|'+q[1];if(used.has(k)||!short(q,max))continue;used.add(k);r.push(q);}return r;}
 const L=B.love, N=B.normal;
 const PAGES=[
- {f:'renai',name:'恋愛の究極の二択',h1:'恋愛の究極の二択',lead:'付き合うなら？ 結婚するなら？ 恋人とのLINEは？ 好きな人のことを考えながら、本気で選んでみてください。',mode:'love',
+ {f:'renai',name:'恋愛の究極の二択',h1:'恋愛の究極の二択',lead:'付き合うなら？ 結婚するなら？ 恋人とのLINEは？ 好きな人のことを考えながら、本気で選んでみてください。',mode:'love',sub:'答えるだけで、小悪魔度や本音が％でわかる',
   qs:take(L.filter(q=>q[4]===1||q[4]===2),40,26),desc:'恋愛の究極の二択を40問まとめました。付き合うなら・結婚するなら・恋人のLINEなど、思わず本音が出る質問ばかり。そのまま無料で遊べて、小悪魔度もわかります。'},
- {f:'omoshiroi',name:'面白い究極の二択',h1:'面白い究極の二択（あるある）',lead:'朝の電車、飲み会、スマホ、ごはん。毎日の「あるある」から、くだらないけど本気で悩む二択を集めました。',mode:'normal',
-  qs:take(N.filter(q=>q[4]===1),40,26),desc:'くだらないけど本気で悩む、面白い究極の二択を40問まとめました。毎日のあるあるから選んだ質問なので、友達や家族とすぐ盛り上がれます。'},
- {f:'muzukashii',name:'難しい究極の二択',h1:'難しい究極の二択（地獄の二択）',lead:'どっちを選んでも痛い、本気で悩む地獄の二択です。答えるまでの時間で、あなたの迷いどころが見えてきます。',mode:'love',
+ {f:'omoshiroi',name:'面白い究極の二択',h1:'面白い究極の二択（あるある）',lead:'朝の電車、職場、スマホ、ごはん。毎日の「あるある」から、くだらないけど本気で悩む二択を集めました。',mode:'normal',sub:'答えるだけで、見栄っぱり度や本音が％でわかる',
+  qs:take(N.filter(q=>q[4]===1),40,26),desc:'くだらないけど本気で悩む、面白い究極の二択を40問まとめました。毎日のあるあるから選んだ質問なので、友だちや家族とすぐ盛り上がれます。'},
+ {f:'muzukashii',name:'難しい究極の二択',h1:'難しい究極の二択（地獄の二択）',lead:'どっちを選んでも痛い、本気で悩む地獄の二択です。答えるまでの時間で、あなたの迷いどころが見えてきます。',mode:'love',sub:'答えるだけで、小悪魔度・見栄っぱり度などが％でわかる',
   qs:take(L.filter(q=>q[4]===3).concat(N.filter(q=>q[4]===3)),40,30),desc:'どっちを選んでも痛い、難しい究極の二択（地獄の二択）を40問まとめました。恋愛も人生も、本気で悩む質問ばかりです。'},
- {f:'minna',name:'みんなで盛り上がる究極の二択',h1:'みんなで盛り上がる究極の二択',lead:'答えが分かれるほど盛り上がる二択を集めました。その場でそれぞれのスマホで答えて、みんなの答えをくらべられます。',mode:'normal',
-  qs:take(N.filter(q=>q[4]===2),28,26).concat(take(L.filter(q=>q[4]===2),12,26)),desc:'みんなで盛り上がる究極の二択を40問まとめました。友達・家族・職場で答えが分かれる質問ばかり。QRコードで、それぞれのスマホから一緒に遊べます。'},
+ {f:'minna',name:'みんなで盛り上がる究極の二択',h1:'みんなで盛り上がる究極の二択',lead:'答えが分かれるほど盛り上がる二択を集めました。その場でそれぞれのスマホで答えて、みんなの答えをくらべられます。',mode:'normal',sub:'答えるだけで、小悪魔度・見栄っぱり度などが％でわかる',
+  qs:take(N.filter(q=>q[4]===2),28,26).concat(take(L.filter(q=>q[4]===2),12,26)),desc:'みんなで盛り上がる究極の二択を40問まとめました。友だち・家族・職場で答えが分かれる質問ばかり。近くの人はQRコード、離れた人はLINEで呼んで、それぞれのスマホから一緒に遊べます。'},
 ];
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const SITE='https://honbare.com';
@@ -62,14 +62,14 @@ ol{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 </style></head><body><div class="w">
 <nav class="crumb"><a href="/">究極の二択 本音バレ診断</a> ＞ ${esc(p.name)}</nav>
 <header class="hero"><h1>${esc(p.h1)}</h1><span class="cnt">${p.qs.length}選</span><p class="lead">${esc(p.lead)}</p></header>
-<a class="cta" href="/">この問題で遊ぶ（無料・3分）<small>答えるだけで、小悪魔度や本音が％でわかる</small></a>
+<a class="cta" href="/">究極の二択で遊ぶ（無料・3分）<small>${esc(p.sub)}</small></a>
 <h2><span>${esc(p.name)} ${p.qs.length}選</span></h2>
 <ol>
 ${items}
 </ol>
 <a class="cta" href="/">答えて本音をチェックする<small>ひとりでも、みんなでも遊べます</small></a>
 <h2><span>遊び方</span></h2>
-<div class="how"><p>① 「どっちで遊ぶ？」で恋愛編かふつう編を選びます。</p><p>② 出てくる二択を、直感でどんどん選びます（1回15問）。</p><p>③ 最後に、小悪魔度などが％で出ます。みんなで遊ぶときは、QRコードでそれぞれのスマホから参加できます。</p></div>
+<div class="how"><p>① 「どっちで遊ぶ？」で恋愛編かふつう編を選びます。</p><p>② 出てくる二択を、直感でどんどん選びます（ひとりで15問・友だちとは8問から）。</p><p>③ 最後に、小悪魔度などが％で出ます。みんなで遊ぶときは、近くの人はQRコード、離れた人はLINEで呼べます。</p></div>
 <h2><span>ほかの究極の二択</span></h2>
 <div class="others">${others}</div>
 <p class="foot">究極の二択 本音バレ診断</p>
