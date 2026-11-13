@@ -79,6 +79,7 @@ function scan() {
     await p.goto(URL + '?types=1'); await check('16タイプ一覧');
     await p.goto(URL + '?about=1'); await check('この診断の考え方');
     await p.goto(URL + '?privacy=1'); await check('プライバシーポリシー');
+    await p.goto(URL + '?licenses=1'); await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true)); await p.waitForTimeout(400); await check('ライセンス');
     { // みんなで診断（グループ）：入る前・入ったあと（QR）・8人いっぱい、と結果の「QRを見せる」
       const nm = ['みき','ゆう','さき','あおい','はるか','りん','そら','ひなた'], cs = ['LVTP','RASC','RATC','LATC','RVSP','LVSC','RASP','RVTC'];
       const m = k => cs.slice(0, k).map((c, i) => c + '.' + encodeURIComponent(nm[i])).join('~');
