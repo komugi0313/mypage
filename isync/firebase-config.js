@@ -1,7 +1,7 @@
 /* アイ・シンク ── Firebase の設定（みんなのスマホで遊ぶ部屋を Firestore で共有するため）
  * 究極の二択・ワンソナと同じ Firebase プロジェクト（typeplus-69c66）を使う。
  * apiKey などは公開してよい値です（秘密の鍵ではありません）。
- * null にすると、みんなのスマホで遊ぶ部屋だけが動かなくなり、ひとりで・1台を回しては、ふつうに使えます。 */
+ * null にすると、みんなのスマホで遊ぶ部屋だけが動かなくなり、ひとりでは、ふつうに使えます。 */
 window.ISYNC_FB = {
   apiKey: "AIzaSyCS3ijFH8Y67oILeIcAYXPfUMvvYA9eGLk",
   authDomain: "typeplus-69c66.firebaseapp.com",

@@ -1,5 +1,5 @@
 /* アイ・シンク（I-Sync）― わたしとあなたの、重なるところ（isync/）
- * 2択＋「こだわらない」に答えて、答え合わせをする。ひとりで／1台を回して／みんなのスマホで（2〜10人）。
+ * 2択＋「こだわらない」に答えて、答え合わせをする。ひとりで／みんなのスマホで（2〜10人）／大人数の部屋（40人まで）。
  * 問題は questions.js（こちらで用意）と questions-mine.js（あなたが足す）。
  * みんなのスマホで遊ぶ部屋は、公開先では Firebase（Firestore の isync_rooms）、確認用ページ（claude.ai）ではページのデータ保存で共有する。 */
 
@@ -314,7 +314,8 @@ function showResult(G){
       ${r.starN?starBox(x.a,x.b,r):''}</li>`};
   // ★ゆずれないところ：同じ・合わせられる・ちがうの数と、1問ずつの2人の答え。ちがいが多いときは、はっきり伝える
   const starBox=(A,B,r)=>{const row=(i,cls)=>{const k=G.qs[i],aa=A.ans[i],bb=B.ans[i];
-      return `<li class="${cls}"><b>${esc(Q[k][1])}</b><span class="who"><em>${esc(A.name)}</em>${esc(ans(aa.o,k))}${aa.st?' ★':''}</span><span class="who"><em>${esc(B.name)}</em>${esc(ans(bb.o,k))}${bb.st?' ★':''}</span></li>`};
+      const who=(P,x)=>(G.anon&&me&&P!==me)?'':`<span class="who"><em>${esc(P.name)}</em>${esc(ans(x.o,k))}${x.st?' ★':''}</span>`;
+      return `<li class="${cls}"><b>${esc(Q[k][1])}</b>${who(A,aa)}${who(B,bb)}</li>`};
     const many=r.starDiff.length>=2&&r.starDiff.length>=r.starSame.length+r.starAdj.length;
     const verdict=!r.starDiff.length?`<p class="good">大事なところは、ちがいがありません</p>`
       :many?`<p class="warn">大事なところで、考え方がちがうことが多めです。この${r.starDiff.length}問は、先にゆっくり話しておくと安心です</p>`
@@ -350,7 +351,7 @@ function soloHTML(G){
   const firm=xs.filter(x=>x.a.o<2),flex=xs.filter(x=>x.a.o===2),star=firm.filter(x=>x.a.st);
   const byT=xs.slice().sort((a,b)=>b.a.ms-a.a.ms);
   const pct=xs.length?Math.round(flex.length/xs.length*100):0;
-  const msg=pct>=50?'まわりに合わせられる、やわらかい人':pct>=25?'こだわりと柔らかさのバランス型':'自分の好みがはっきりしている人';
+  const msg=pct>=50?'まわりに合わせられる、やわらかい人':pct>=25?'こだわりとやわらかさのバランス型':'自分の好みがはっきりしている人';
   return `<section class="card score"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true">
     <p class="cap">${p.name==='あなた'?'あなた':esc(p.name)+'さん'}の「合わせられる度」</p>
     <div class="ring" style="background:conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)"><div class="in"><span class="num">${pct}<small>%</small></span></div></div>
@@ -434,7 +435,7 @@ const FB=(()=>{
     return ready}
   return{init};
 })();
-const NO_DB='この画面では「みんなのスマホで」が使えません。「1台を回して」で遊んでください。';
+const NO_DB='この画面では、みんなで遊ぶ部屋が使えません。Safari・Chromeで開きなおすか、「ひとりで」で遊んでください。';
 const pPath=(c,id)=>'rooms/'+c+'/players/'+id;
 const alive=r=>r&&Date.now()-(r.created||0)<12*3600e3;
 const plist=()=>Object.entries(R.players).map(([id,p])=>Object.assign({id},p)).sort((a,b)=>(a.joined||0)-(b.joined||0));
@@ -567,7 +568,7 @@ async function sync(){
 }
 function countdown(qk,go){
   const ps=plist();let n=3;
-  const draw=()=>view(`<section class="card hand"><p class="cap">${ps.length}人そろいました</p><p class="cd">${n}</p><p class="hint">時間の制限はありません。全員が答えたら、次の問題へ。</p></section>`);
+  const draw=()=>view(`<section class="card hand"><p class="cap">${ps.length}人そろいました</p><p class="cd">${n}</p><p class="hint">${R.room&&R.room.kind==='kon'?'あわてなくて大丈夫です。全員が答えたら、次の問題へ進みます。':'時間の制限はありません。全員が答えたら、次の問題へ。'}</p></section>`);
   draw();clearInterval(R.tick);
   R.tick=setInterval(()=>{if(R.key!==qk){clearInterval(R.tick);return}n--;if(n>0)draw();else{clearInterval(R.tick);go()}},800);
 }
