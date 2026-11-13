@@ -63,15 +63,15 @@ function goTop(){
     <p class="hint" id="t-desc"></p>
     <div id="m-anon" class="stack">
       <p class="label">名前は？</p>
-      ${seg('anon',[[false,'みんなに見せる'],[true,'見せない<br><small>婚活・イベントむけ</small>']])}
+      ${seg('anon',[[false,'見せる'],[true,'見せない']])}
     </div>
   </section>
   <section class="card" id="m-each">
-    <label class="one-name" for="me">ニックネーム（本名でなくてOK）<input type="text" id="me" maxlength="10" placeholder="ニックネーム" value="${esc(store('kv_name')||'')}"></label>
+    <label class="one-name" for="me"><span>ニックネーム</span><input type="text" id="me" maxlength="10" placeholder="本名でなくてOK" value="${esc(store('kv_name')||'')}"></label>
     <button class="btn" id="mk">部屋を作る</button>
     <div class="join">
-      <label for="code">友だちの部屋に参加する（部屋番号）</label>
-      <div class="join-row"><input type="text" id="code" inputmode="numeric" maxlength="4" placeholder="4けた" value="${esc(JOIN)}"><button class="btn small" id="jn">参加</button></div>
+      <label for="code"><span>友だちの部屋に参加する</span></label>
+      <div class="join-row"><input type="text" id="code" inputmode="numeric" maxlength="4" placeholder="部屋番号（4けた）" value="${esc(JOIN)}"><button class="btn small" id="jn">参加</button></div>
     </div>
     <p class="hint">部屋のQRコードを、自分のスマホのカメラで読みとっても参加できます。</p>
     <p class="err" id="err" role="alert"></p>
@@ -83,7 +83,7 @@ function goTop(){
     <button class="btn" id="pgo">はじめる</button>
   </section>
   <section class="card" id="m-solo">
-    <label class="one-name" for="sn">ニックネーム（なくてもOK）<input type="text" id="sn" maxlength="10" placeholder="ニックネーム" value="${esc(store('kv_name')||'')}"></label>
+    <label class="one-name" for="sn"><span>ニックネーム</span><input type="text" id="sn" maxlength="10" placeholder="なくてもOK" value="${esc(store('kv_name')||'')}"></label>
     <button class="btn" id="sgo">はじめる</button>
   </section>
   <p class="note">どの問題にも正解はありません。どちらでもいいときは「こだわらない」を選んでください。</p>`);
