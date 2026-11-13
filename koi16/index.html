@@ -71,6 +71,8 @@ p{margin:0 0 12px}
 .st-fold p{margin:4px 0 0}
 .opt-sub{display:block;font-size:14px;color:var(--text);line-height:1.5}
 .q-hint-s{font-size:12px!important}
+.pills.ng li{background:#F3EEF8;border:1.5px solid #CDBFE0}.pills.ng li::before{content:"✕";background:#6A4A8C}
+.adv{margin-top:14px;padding-top:4px;border-top:1.5px dashed var(--line)}
 .q-ex{background:#FFF6E5;border:1.5px dashed #E3C38E;border-radius:12px;padding:8px 12px;margin:0 0 14px;font-size:14px;line-height:1.7;color:var(--text)}
 .q-ex b{display:inline-block;background:#8A4B00;color:#fff;border-radius:999px;font-size:12px;padding:0 8px;margin-right:6px;vertical-align:1px}
 .qtext{font-size:20px;font-weight:700;min-height:4.2em;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px 4px}
@@ -941,14 +943,51 @@ function finish(){
 function shareUrl(code){ return location.origin+location.pathname+'?t='+code; }
 function typeLink(code){ var t=T[code]; return '<a href="?t='+code+'" data-type="'+code+'">'+art(code,56)+'<span class="e" hidden>'+t.e+'</span><b>'+esc(t.c)+'</b><small>'+esc(t.f)+'・'+code+'</small></a>'; }
 
-function compatBlock(me,other,title){
+/* 相手に響くこと・言わないで・ワンポイント（鑑定者本人 2026-11-13「どうやったら相手に響くか、良くないことのワンポイントアドバイスは」「はい。相性の欄にお願いします」）。
+   「あなた」から見た相手へのアドバイス。響く＝相手のタイプの「してほしいこと」、言わないで＝相手の「言われるとつらい言葉」（ちがうものさしを先に）、ワンポイント＝2人がちがうものさしを頼り方→伝え方→原動力→近づき方の順に2〜3つ（足りなければ同じものさしの文で足す） */
+var TIP_DIFF={LR:'誘うときは「土曜と日曜、どっちがいい？」のように選べる形に。答えを急がずに待つと、相手は安心して乗ってきます。',
+ RL:'誘われたら「うれしい！」をはっきり伝えて。たまに自分から小さく誘うと、相手は「好かれている」と自信が持てます。',
+ VA:'相手は気持ちを行動で示すタイプ。言葉が少なくても、してくれたことに「うれしい」と言葉で返すと、ちゃんと伝わります。',
+ AV:'相手は言葉で確かめたいタイプ。行動にひとこと（「会いたかったから来たよ」など）を添えるだけで、気持ちが何倍にも伝わります。',
+ TS:'相手は、ひとりで気持ちを整理してから話すタイプ。すぐに答えを求めず、「話したくなったら聞くよ」と待つのがいちばんの近道です。',
+ ST:'相手は、打ち明けることで安心するタイプ。話を最後まで聞いて「話してくれてありがとう」と返すだけで、信頼がぐっと深まります。',
+ PC:'相手は、変わらないことに安心するタイプ。サプライズより「いつもの約束」を守るほうが響きます。新しいことは前もって伝えて。',
+ CP:'相手は、ときめきで元気になるタイプ。年に数回でいいので、いつもとちがうデートや小さなサプライズを。'};
+var TIP_SAME={L:'2人とも自分から動くタイプ。予定を決める役を「今回はわたし、次はあなた」と交代にすると、ぶつからずに進めます。',
+ R:'2人とも待つタイプ。「次はわたしから誘う」と順番を決めておくと、関係が止まりません。',
+ V:'2人とも言葉で伝えるタイプ。話し合える強みを活かして、言いにくいことほど早めに言葉に。言い方だけはやわらかく。',
+ A:'2人とも行動で示すタイプ。言わなくても通じ合える2人。でも大事な場面では、あえて「好き」「ありがとう」を言葉に。',
+ T:'2人とも頼り合えるタイプ。支え合える強みがあるぶん、相手の都合も聞いてから甘えると、もっと長続きします。',
+ S:'2人とも自分で立つタイプ。気持ちを話さないまま距離が開きやすい2人。月に1回は「最近どう？」と本音を話す時間を。',
+ P:'2人ともときめき優先。落ち着いた時期も「絆が深まったしるし」と受けとめて。ときめきは小さな新しさで足していって。',
+ C:'2人とも安心優先。穏やかで長続きしやすい2人。ときどき新しいお店や場所を選ぶと、マンネリ知らずです。'};
+function adviceHTML(you,partner){
+  var order=[2,1,3,0], diff=[], same=[];
+  order.forEach(function(i){ if(you[i]!==partner[i]) diff.push(i); else same.push(i); });
+  var tips=diff.map(function(i){return TIP_DIFF[you[i]+partner[i]];});
+  var sameOrder=same.slice().sort(function(a,b){ var w=function(i){return (partner[i]==='S'||partner[i]==='R')?0:1;}; return w(a)-w(b); });
+  for(var k=0;tips.length<2&&k<sameOrder.length;k++) tips.push(TIP_SAME[partner[sameOrder[k]]]);
+  tips=tips.slice(0,3);
+  var want=[0,1,2,3].map(function(i){return POLE[partner[i]].want;});
+  var ngIdx=diff.concat(same).slice(0,3), ng=ngIdx.map(function(i){return POLE[partner[i]].hurt;});
+  var pt=T[partner];
+  return '<div class="adv">'+secH('h3','want','この人に響くこと')+pills(want,'want')+
+    secH('h3','hurt','これは言わないで')+pills(ng,'ng')+
+    secH('h3','tip','あなたからのワンポイント')+pills(tips,'tip')+
+    '<p class="muted" style="margin-top:8px">'+esc(pt.c)+'タイプの人に向けた、あなたからの目安です。</p></div>';
+}
+function compatBlock(me,other,title,you){
   var c=compat(me,other), t=T[other];
   var h='<div class="compat-out"><p class="muted" style="margin:0">'+esc(title)+'</p>'+
     '<div style="display:flex;align-items:center;gap:10px;margin-top:4px">'+art(other,64)+'<p style="margin:0"><b>'+esc(t.c)+'</b>（'+esc(t.f)+'・'+other+'）</p></div>'+
     '<div class="score-big">'+c.score+'<span style="font-size:18px">点</span></div>'+
     '<p><b>'+esc(c.label)+'</b>：'+esc(c.lead)+'</p><ul class="list">';
   c.parts.forEach(function(p){ h+='<li><b>'+esc(p.title)+'</b>：'+esc(p.text)+'</li>'; });
-  return h+'</ul></div>';
+  h+='</ul>';
+  if(you&&you===me&&other!==me) h+=adviceHTML(me,other);
+  else if(you&&you===other&&me!==other) h+=adviceHTML(other,me);
+  else if(you&&me===other) h+=adviceHTML(me,other);
+  return h+'</div>';
 }
 
 function pills(arr,kind){ return '<ul class="pills '+kind+'">'+arr.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>'; }
@@ -990,7 +1029,7 @@ function renderResult(code,mine,withCode){
   }
 
   if(withCode && isMine){
-    h+='<section class="card" id="with-card"><h2>💞 2人の相性</h2>'+compatBlock(code,withCode,'あなたと、診断をすすめてくれた人')+'</section>';
+    h+='<section class="card" id="with-card"><h2>💞 2人の相性</h2>'+compatBlock(code,withCode,'あなたと、診断をすすめてくれた人',code)+'</section>';
   }
 
   if(isMine){
@@ -1055,8 +1094,8 @@ function renderResult(code,mine,withCode){
   var v=$('v-result'); v.innerHTML=h; glueAll(v); show('v-result');
   v.dataset.code=code;
   var sel=$('cmp-sel');
-  sel.addEventListener('change',function(){ $('cmp-out').innerHTML = sel.value?compatBlock(code,sel.value,'相性'):''; glueAll($('cmp-out')); });
-  if(!isMine && st.me && st.me.code){ sel.value=st.me.code; $('cmp-out').innerHTML=compatBlock(code,st.me.code,'このタイプと、あなた（'+T[st.me.code].c+'）'); glueAll($('cmp-out')); }
+  sel.addEventListener('change',function(){ $('cmp-out').innerHTML = sel.value?compatBlock(code,sel.value,'相性',isMine?code:(st.me&&st.me.code)):''; glueAll($('cmp-out')); });
+  if(!isMine && st.me && st.me.code){ sel.value=st.me.code; $('cmp-out').innerHTML=compatBlock(code,st.me.code,'このタイプと、あなた（'+T[st.me.code].c+'）',st.me.code); glueAll($('cmp-out')); }
 }
 function miniCard(x){ var t=T[x.o]; return '<a href="?t='+x.o+'" data-type="'+x.o+'">'+art(x.o,56)+'<b>'+cname(x.o)+'</b><small>'+fname(x.o)+'・'+x.o+'</small><div class="score">相性 '+x.c.score+'点・'+esc(x.c.label)+'</div></a>'; }
 
