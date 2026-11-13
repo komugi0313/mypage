@@ -48,7 +48,7 @@ function goTop(){
   view(`
   <header class="brand">
     <div class="orb" aria-hidden="true"></div>
-    <h1>シンクロ<small>こころが重なる2択</small></h1>
+    <h1>シンクロ</h1><p class="ribbon">こころが重なる2択</p>
     <p class="lead">2択に答えて、答え合わせ。<br>恋人・友だち・家族、だれとでも。</p>
   </header>
   ${st&&st.code?`<button class="btn ghost small" id="back">さっきの部屋（${esc(st.code)}）にもどる</button>`:''}
