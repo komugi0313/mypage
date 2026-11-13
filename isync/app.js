@@ -39,6 +39,7 @@ function markSeen(ids){const s=new Set(store('kv_seen')||[]);ids.forEach(i=>s.ad
 
 /* ===== トップ ===== */
 const CFG=Object.assign({mode:'each',len:10,topic:'all',anon:false},store('kv_cfg')||{});
+if(CFG.mode!=='each'&&CFG.mode!=='solo')CFG.mode='each';  // 前の「1台を回して」はなくした
 let JOIN=(/^#join-(\d{4})$/.exec(location.hash||'')||[])[1]||'';
 if(JOIN)CFG.mode='each';
 const saveCfg=()=>store('kv_cfg',{mode:CFG.mode,len:CFG.len,topic:CFG.topic,anon:CFG.anon});
@@ -54,13 +55,12 @@ function goTop(){
   ${st&&st.code?`<button class="btn ghost small" id="back">さっきの部屋（${esc(st.code)}）にもどる</button>`:''}
   <section class="card">
     <p class="label">だれと遊ぶ？</p>
-    ${seg('mode',[['each','みんなの<br>スマホで'],['pass','1台を<br>回して'],['solo','ひとりで']])}
+    ${seg('mode',[['each','みんなで<br><small>それぞれのスマホで</small>'],['solo','ひとりで']])}
     <p class="hint" id="m-desc"></p>
     <p class="label">長さは？</p>
     ${seg('len',[[10,'簡易版<br><small>10問・さくっと</small>'],[30,'しっかり版<br><small>30問・★ゆずれない</small>']])}
     <p class="label">話題は？</p>
-    ${seg('topic',[['all','いろいろ<br><small>恋愛・婚活むけ</small>'],['party','盛り上がる<br><small>友だち・飲み会むけ</small>']])}
-    <p class="hint" id="t-desc"></p>
+    ${seg('topic',[['all','いろいろ'],['party','盛り上がる']])}
     <div id="m-anon" class="stack">
       <p class="label">名前は？</p>
       ${seg('anon',[[false,'見せる'],[true,'見せない']])}
@@ -76,21 +76,15 @@ function goTop(){
     <p class="hint">部屋のQRコードを、自分のスマホのカメラで読みとっても参加できます。</p>
     <p class="err" id="err" role="alert"></p>
   </section>
-  <section class="card" id="m-pass">
-    <p class="label">参加する人（2〜${MAXP}人）</p>
-    <div id="plist" class="stack"></div>
-    <button class="btn ghost small" id="padd">＋ 人を足す</button>
-    <button class="btn" id="pgo">はじめる</button>
-  </section>
   <section class="card" id="m-solo">
     <label class="one-name" for="sn"><span>ニックネーム</span><input type="text" id="sn" maxlength="10" placeholder="なくてもOK" value="${esc(store('kv_name')||'')}"></label>
     <button class="btn" id="sgo">はじめる</button>
   </section>
   <p class="note">どの問題にも正解はありません。どちらでもいいときは「こだわらない」を選んでください。</p>`);
-  const DESC={each:'2〜10人で。1人が部屋を作って、みんなは自分のスマホで参加します。1問20秒。離れていても遊べます。',pass:'1台のスマホを順番に回して、ひとりずつこっそり答えます。',solo:'自分の答えから、あなたのこだわりと、ゆずれることがわかります。'};
-  const refresh=()=>{['each','pass','solo'].forEach(m=>$('m-'+m).hidden=CFG.mode!==m);
+  const DESC={each:'2〜10人で。1人が部屋を作り、そばにいる人はQRコードを読みとるだけで参加できます。離れている人には、LINEなどでリンクを送ります。1問20秒。',solo:'自分の答えから、あなたのこだわりと、ゆずれることがわかります。'};
+  const refresh=()=>{['each','solo'].forEach(m=>$('m-'+m).hidden=CFG.mode!==m);
     $('m-desc').textContent=DESC[CFG.mode];$('m-anon').hidden=CFG.mode!=='each';
-    $('t-desc').textContent=CFG.topic==='party'?'「ドキドキ」（キス・ハグ・手をつなぐ など）が多めに出ます。結婚・お金の話は出ません。':'恋愛・暮らし・食・お金・休日・将来の6つのテーマから、かたよらずに出ます。'};
+  };
   app.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k,v=b.dataset.v;
     CFG[k]=k==='len'?+v:k==='anon'?v==='true':v;saveCfg();
     app.querySelectorAll(`[data-k="${k}"]`).forEach(x=>x.setAttribute('aria-pressed',x===b));refresh()});
@@ -102,15 +96,6 @@ function goTop(){
   $('jn').onclick=async e=>{const n=myName(),c=$('code').value.replace(/\D/g,'');if(!n)return err('ニックネームを入れてください');if(c.length!==4)return err('4けたの部屋番号を入れてください');
     e.target.disabled=true;const r=await joinRoom(c,n);if(r!=='ok'){err(r);e.target.disabled=false}};
   const bk=$('back');if(bk)bk.onclick=async()=>{const r=await joinRoom(st.code,store('kv_name')||'');if(r!=='ok'){store('kv_room',null);goTop()}};
-  // 1台を回して
-  let names=store('kv_pnames')||['',''];
-  const drawP=()=>{$('plist').innerHTML=names.map((n,i)=>`<div class="join-row"><input type="text" id="pn${i}" maxlength="10" placeholder="${i+1}人目のニックネーム" value="${esc(n)}">${names.length>2?`<button class="btn ghost small" data-del="${i}" aria-label="${i+1}人目を消す">✕</button>`:''}</div>`).join('');
-    $('plist').querySelectorAll('input').forEach((x,i)=>x.oninput=()=>{names[i]=x.value});
-    $('plist').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{names.splice(+b.dataset.del,1);drawP()});
-    $('padd').hidden=names.length>=MAXP};
-  drawP();
-  $('padd').onclick=()=>{names.push('');drawP()};
-  $('pgo').onclick=()=>{const ns=names.map((n,i)=>n.trim()||(i+1)+'人目');store('kv_pnames',names);passStart(ns)};
   // ひとりで
   $('sgo').onclick=()=>{const v=$('sn').value.trim();if(v)store('kv_name',v);soloStart(v)};
   if(JOIN)setTimeout(()=>$('me').focus(),0);
@@ -143,21 +128,6 @@ function soloStart(name){
   Object.assign(L,{mode:'solo',qs:deal(CFG.len,CFG.topic),players:[{id:'me',name:name||'あなた',ans:{}}],p:0,i:0});
   localAsk();
 }
-/* ===== 1台を回して ===== */
-function passStart(names){
-  Object.assign(L,{mode:'pass',qs:deal(CFG.len,CFG.topic),players:names.map((n,i)=>({id:'p'+i,name:n,ans:{}})),p:0,i:0});
-  passHand();
-}
-function passHand(){
-  const p=L.players[L.p],nx=L.players.length;
-  view(`<section class="card hand">
-    <p class="cap">${L.p+1}人目／${nx}人</p>
-    <p class="big">${esc(p.name)}さんの番です</p>
-    <p class="hint">ほかの人には画面を見せないでね。<br>自分の答えと、${nx===2?esc(L.players[1-L.p].name)+'さん':'みんなの多数派'}の予想を${L.qs.length}問選びます。</p>
-    <button class="btn" id="ready" style="align-self:stretch">準備できた</button>
-  </section>`);
-  $('ready').onclick=localAsk;
-}
 function localAsk(){
   const p=L.players[L.p],k=L.qs[L.i],n=L.qs.length,multi=L.players.length>1;
   const a=p.ans[L.i]||(p.ans[L.i]={o:-1,g:-1,st:0,ms:0});
@@ -171,7 +141,6 @@ function localAsk(){
     L.i++;
     if(L.i<n){localAsk();return}
     L.i=0;L.p++;
-    if(L.p<L.players.length){passHand();return}
     showResult({players:L.players,qs:L.qs,me:L.mode==='solo'?'me':null,anon:false,local:true});
   });
 }
@@ -302,7 +271,7 @@ function bindTail(G){
   $('share').onclick=()=>doShare(G);
   const t=$('tog');if(t)t.onclick=()=>{CFG.mode='each';saveCfg();goTop()};
   $('again').onclick=e=>{if(R.code){e.target.disabled=true;roomAgain();return}
-    if(L.mode==='solo')soloStart(L.players[0].name==='あなた'?'':L.players[0].name);else passStart(L.players.map(p=>p.name))};
+    soloStart(L.players[0].name==='あなた'?'':L.players[0].name)};
   $('home').onclick=()=>{if(R.code)leaveRoom();goTop()};
 }
 
@@ -465,7 +434,7 @@ function lobby(){
     <p class="cap">部屋番号</p><p class="code">${esc(c)}</p>
     <div class="qr" id="qr" aria-label="参加用のQRコード"></div>
     <p class="hint">みんなのスマホのカメラで、このQRコードを読みとってください。<br>または、トップの「友だちの部屋に参加する」に ${esc(c)} を入れます。</p>
-    <button class="btn ghost small" id="cp" style="align-self:stretch">離れている人に送るリンクをコピー</button><p class="hint" id="cpd" hidden></p>
+    <button class="btn ghost small" id="cp" style="align-self:stretch">離れている人にLINEなどで送る</button><p class="hint" id="cpd" hidden></p>
     <p class="hint">${room.len===30?'しっかり版（30問・★ゆずれない）':'簡易版（10問）'}・話題は${room.topic==='party'?'盛り上がる':'いろいろ'}${room.anon?'・名前は見せない':''}</p>
   </section>
   <section class="card">
@@ -477,7 +446,10 @@ function lobby(){
   </section>
   <button class="btn ghost small" id="home">部屋を出てトップへ</button>`);
   loadQR().then(()=>{const el=$('qr');if(!el)return;el.innerHTML='';new QRCode(el,{text:url,width:180,height:180,colorDark:'#22253A',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M})}).catch(()=>{const el=$('qr');if(el)el.hidden=true});
-  $('cp').onclick=()=>{const d=$('cpd');d.hidden=false;try{navigator.clipboard.writeText(url).then(()=>{d.textContent='コピーしました。メッセージで送ってください。'},()=>{d.textContent=url})}catch(e){d.textContent=url}};
+  $('cp').onclick=()=>{const d=$('cpd'),text='アイ・シンクで一緒に遊ぼう！\n部屋番号：'+c+'\nリンクを開いて、ニックネームを入れたら参加できます。';
+    // スマホの「共有」でLINE・メッセージなどへ。使えないときはリンクと文をコピー
+    if(navigator.share){navigator.share({title:'アイ・シンク',text,url}).catch(()=>{});return}
+    d.hidden=false;const full=text+'\n'+url;try{navigator.clipboard.writeText(full).then(()=>{d.textContent='招待の文をコピーしました。LINEなどに貼って送ってください。'},()=>{d.textContent=full})}catch(e){d.textContent=full}};
   $('rd').onclick=async e=>{e.target.disabled=true;const db=await getDb();try{await db.doc(pPath(R.code,PID)).update({ready:!me.ready})}catch(x){}pull()};
   const st=$('st');if(st)st.onclick=e=>{e.target.disabled=true;roomUpdate({phase:'play',qi:0})};
   $('home').onclick=async()=>{const db=await getDb(),code=R.code;leaveRoom();try{await db.doc(pPath(code,PID)).delete()}catch(e){}goTop()};
