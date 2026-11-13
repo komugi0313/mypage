@@ -1511,11 +1511,37 @@ var Room=(function(){
   /* 部屋の様子が変わるたびに cb(room, players) を呼ぶ。止めるときは返した関数を呼ぶ */
   function watch(code, cb){
     if(mode==='db'){
-      var room=null, players=[], un=[];
-      un.push(db.doc('rooms/'+code).onSnapshot(function(s){ room=s.exists ? s.data() : null; cb(alive(room)?room:null, players); }, function(){}));
-      un.push(db.collection('rooms/'+code+'/players').onSnapshot(function(s){ players=plist(s.docs); if(room) cb(room, players); }, function(){}));
-      var stopDb=function(){ un.forEach(function(f){ try{ f(); }catch(e){} }); };
-      stopDb.poke=function(){};
+      /* 1人だけ取り残されないように（3人で遊んだとき、2人は始まっているのに1人だけ部屋の画面のままになったことがあった）：
+         ①変わったときの知らせ（onSnapshot）②知らせが止まっても追いつけるよう、2秒ごとに自分からも部屋を確かめる
+         ③知らせの通り道が切れたら1秒後につなぎ直す ④ほかのアプリから戻ってきたら、つなぎ直してすぐ確かめる。
+         同じ中身を何度も渡さない（部屋の画面の入力が消えないように） */
+      var room=null, players=[], un=[], stopped=false, got=false, sig='', pt=null, pulling=false;
+      var deliver=function(){
+        if(stopped || !got) return;
+        var r=alive(room)?room:null, sg=JSON.stringify([r, players]);
+        if(sg===sig) return; sig=sg; cb(r, players);
+      };
+      var sub=function(){
+        un.forEach(function(f){ try{ f(); }catch(e){} }); un=[];
+        if(stopped) return;
+        var again=function(){ setTimeout(function(){ if(!stopped) sub(); }, 1000); };
+        un.push(db.doc('rooms/'+code).onSnapshot(function(s){ room=s.exists ? s.data() : null; got=true; deliver(); }, again));
+        un.push(db.collection('rooms/'+code+'/players').onSnapshot(function(s){ players=plist(s.docs); deliver(); }, again));
+      };
+      var pull=async function(){
+        if(stopped || pulling) return; pulling=true;
+        try{
+          var rs=await db.doc('rooms/'+code).get(), ps=await db.collection('rooms/'+code+'/players').get();
+          if(!stopped){ room=rs.exists ? rs.data() : null; players=plist(ps.docs); got=true; deliver(); }
+        }catch(e){}
+        pulling=false;
+      };
+      var vis=function(){ if(document.visibilityState==='visible' && !stopped){ sub(); pull(); } };
+      sub(); pt=setInterval(pull, 2000);
+      document.addEventListener('visibilitychange', vis);
+      window.addEventListener('online', vis);
+      var stopDb=function(){ stopped=true; clearInterval(pt); document.removeEventListener('visibilitychange', vis); window.removeEventListener('online', vis); un.forEach(function(f){ try{ f(); }catch(e){} }); un=[]; };
+      stopDb.poke=function(){ pull(); };
       return stopDb;
     }
     var gen=0, t=null, stopped=false;
@@ -1524,8 +1550,10 @@ var Room=(function(){
       try{ var d=await get(code); if(!stopped && g===gen) cb(d.room, d.players||[]); }catch(e){}
       if(!stopped && g===gen) t=setTimeout(function(){ tick(g); }, 1500);
     }
-    var stop=function(){ stopped=true; clearTimeout(t); };
+    var stop=function(){ stopped=true; clearTimeout(t); document.removeEventListener('visibilitychange', vis2); };
     stop.poke=function(){ if(stopped) return; clearTimeout(t); gen++; tick(gen); };
+    var vis2=function(){ if(document.visibilityState==='visible') stop.poke(); };
+    document.addEventListener('visibilitychange', vis2);
     tick(gen);
     return stop;
   }
