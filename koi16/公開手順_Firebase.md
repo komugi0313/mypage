@@ -33,12 +33,7 @@ GitHub に保存すると自動で公開されます（`.github/workflows/koi16-
 2. 表示された値（A レコード・TXT レコード）を、ドメインを取ったお店の「DNS の設定」に入れる
 3. 数分〜最大24時間で `https://koikata.jp/` が開く（安全な通信の証明書も Firebase が自動でつける）
 
-## 5. koinokatachi.jp を koikata.jp へ飛ばす
-
-1. 同じ「カスタムドメインを追加」で `koinokatachi.jp` を入れ、「既存のウェブサイトにリダイレクト」にチェック → 飛ばし先 `koikata.jp`
-2. 表示された値をお店の DNS の設定に入れる
-
-## 6. 公開したら確かめること
+## 5. 公開したら確かめること
 
 - `https://koikata.jp/` を iPhone と Android で開く
 - LINE に `https://koikata.jp/` を送って、紹介画像（スイーツのキャラクターの画像）が出るか
