@@ -465,6 +465,11 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
 .splash b{font-family:"Mochiy Pop One","Zen Maru Gothic",sans-serif;font-weight:400;font-size:30px;line-height:1.35;color:#1E1E2A;background:#9BE7B4;border:3px solid #1E1E2A;border-radius:22px;box-shadow:5px 5px 0 #1E1E2A;padding:18px 22px;max-width:92%}
 .splash.go b{background:#FF3D7F;font-size:44px}
 .splash small{font-size:16px;font-weight:900;color:#1E1E2A}
+.splash b{font-size:26px;overflow-wrap:anywhere;box-sizing:border-box}
+.splash b j-p{white-space:normal!important}
+.lb-list li{display:inline-flex;align-items:center;gap:4px}
+.lb-kick{min-width:32px;min-height:32px;margin:-4px -8px -4px 2px;border:0;background:none;font-size:18px;font-weight:900;color:#4A4A5A;border-radius:50%}
+.lb-dup{margin:10px 0 0;padding:10px 12px;border-radius:12px;background:#FFF4C9;border:2px solid #1E1E2A;font-size:14px;font-weight:700;line-height:1.6;text-align:left}
 @media (prefers-reduced-motion:no-preference){.splash b{animation:pop .35s ease-out}}
 @keyframes pop{from{transform:scale(.7);opacity:0}to{transform:none;opacity:1}}
 .lb-head{margin:0;font-family:"Mochiy Pop One","Zen Maru Gothic",sans-serif;font-size:22px;line-height:1.35}
@@ -686,6 +691,7 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
     <p class="lb-head" id="lb-head">部屋ができました</p>
     <p class="lb-sub" id="lb-sub"></p>
     <ul class="lb-list" id="lb-list"></ul>
+    <p class="lb-dup" id="lb-dup" hidden>同じ名前の人が2人います。前に開いた画面から入った分が残っているかもしれません。いない人は名前の横の × で外せます。</p>
     <button class="big lb-go" id="lb-start">スタート</button>
     <p class="lb-wait" id="lb-wait" hidden></p>
     <p class="lb-game" id="lb-game"></p>
@@ -1881,7 +1887,14 @@ function renderLobby(){
   var hp=R.players.filter(function(p){ return p.pid===room.host; })[0], hn=hp&&hp.name ? hp.name : '部屋を作った人';
   $('lb-game').textContent = MODE_NAME[room.mode]+'・'+(room.num===8 ? '8問' : '15問')+'・答え合わせは'+(S.rv==='end'?'最後にまとめて':'1問ずつ');
   $('lb-count').textContent='参加している人（'+n+'人）';
-  $('lb-list').innerHTML=R.players.map(function(p){ return '<li'+(p.pid===R.pid?' class="me"':'')+'>'+esc(p.name||'？')+(p.pid===room.host?' 👑':'')+(p.pid===R.pid?'<small>（あなた）</small>':'')+'</li>'; }).join('');
+  $('lb-list').innerHTML=R.players.map(function(p){ return '<li'+(p.pid===R.pid?' class="me"':'')+'>'+esc(p.name||'？')+(p.pid===room.host?' 👑':'')+(p.pid===R.pid?'<small>（あなた）</small>':'')+(R.host && p.pid!==R.pid ? '<button class="lb-kick" type="button" data-kick="'+esc(p.pid)+'" aria-label="'+esc(p.name||'？')+'さんを部屋から外す">×</button>':'')+'</li>'; }).join('');
+  $('lb-list').querySelectorAll('[data-kick]').forEach(function(b){ b.onclick=function(){
+    var now=Date.now(), pid=b.dataset.kick, nm=(R.players.filter(function(p){ return p.pid===pid; })[0]||{}).name||'？';
+    if(R.kickArm!==pid || now-R.kickAt>3000){ R.kickArm=pid; R.kickAt=now; toast('もう一度 × を押すと、'+nm+'さんを部屋から外します'); return; }
+    R.kickArm=null; Room.delPlayer(R.code, pid).then(function(){ toast(nm+'さんを外しました'); if(R.stop && R.stop.poke) R.stop.poke(); }).catch(function(){ toast('外せませんでした。もう一度押してね'); });
+  }; });
+  var names={}, dup=false; R.players.forEach(function(p){ var k=(p.name||'').trim(); if(names[k]) dup=true; names[k]=1; });
+  $('lb-dup').hidden = !(R.host && dup);
   renderMine();
   $('lb-host').hidden = !R.host;
   $('lb-start').hidden=!R.host; $('lb-wait').hidden=R.host;
@@ -2017,7 +2030,8 @@ async function roomResume(auto){
       }catch(e){ toast('通信できませんでした。もう一度押してね'); }
       finally{ btn.disabled=false; }
     };
-    if(auto && !st.left){ go(); return; }
+    // 自動でもどるのは、遊んでいる途中（問題・答え合わせ）のときだけ。集まっている途中・終わったあとの部屋は、ボタンを出して本人に選んでもらう
+    if(auto && !st.left && (r.phase==='q' || r.phase==='reveal')){ go(); return; }
     $('room-back-code').textContent=st.code; btn.hidden=false; btn.onclick=go;
   }catch(e){}
 }
