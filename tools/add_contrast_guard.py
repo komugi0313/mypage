@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-文字の見えやすさの安全装置（tools/contrast_guard.js）を、3サイト（pro/・beginner/・eki-pro/）と個人版の全HTMLに埋め込む。
+文字の見えやすさの安全装置（tools/contrast_guard.js）を、3サイト（pro/・beginner/・eki-pro/）と個人版・究極の二択・アイ・シンクの全HTMLに埋め込む。
 すでに埋め込まれていれば最新の中身に入れ替える（何度実行しても同じ結果）。
 
 使い方（リポジトリのルートで）：
@@ -17,9 +17,11 @@ BLOCK = '<script id="pk-contrast-guard">\n' + JS + '\n</script>\n'
 PAT = re.compile(r'<script id="pk-contrast-guard">[\s\S]*?</script>\n?')
 
 done = []
-for d in ('pro', 'beginner', 'eki-pro', 'meishiki-original', 'nitaku'):
+for d in ('pro', 'beginner', 'eki-pro', 'meishiki-original', 'nitaku', 'isync'):
     for p in sorted((ROOT / d).rglob('*.html')):
         if 'node_modules' in p.parts:
+            continue
+        if p.name.endswith('-src.html'):  # アイコン・シェア画像の元（撮るときに色が変わらないよう入れない）
             continue
         s = p.read_text(encoding='utf-8')
         if PAT.search(s):
