@@ -1,0 +1,28 @@
+# 恋のかたち診断（koi16）を Firebase Hosting（プロジェクト 16typeplus のサイト koikata）へ自動で公開する。
+# koi16 の中を直して GitHub に保存すると動く。Actions の画面の「Run workflow」からも動かせる。
+# 必要なもの：GitHub の Secrets に FIREBASE_SERVICE_ACCOUNT_KOIKATA（Firebase のサービスアカウントの鍵 JSON）。
+name: koi16 deploy (Firebase Hosting)
+on:
+  push:
+    branches: [main, claude/elegant-lovelace-hdgl8a]
+    paths: ['koi16/**', '.github/workflows/koi16-deploy.yml']
+  workflow_dispatch:
+concurrency: koi16-deploy
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check secret
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KOIKATA }}
+        run: |
+          if [ -z "$SA" ]; then echo "::error::GitHub の Secrets に FIREBASE_SERVICE_ACCOUNT_KOIKATA がありません（koi16/公開手順_Firebase.md を見てください）"; exit 1; fi
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KOIKATA }}
+          projectId: typeplus-69c66
+          target: koikata
+          channelId: live
+          entryPoint: koi16
