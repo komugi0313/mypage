@@ -1,12 +1,12 @@
-/* ぴたっとシンクロ（pitatto/）
+/* シンクロ ― こころが重なる2択（synchro/）
  * 2択＋「こだわらない」に答えて、答え合わせをする。ひとりで／1台を回して／みんなのスマホで（2〜10人・1問20秒）。
  * 問題は questions.js（こちらで用意）と questions-mine.js（あなたが足す）。
- * みんなのスマホで遊ぶ部屋は、公開先では Firebase（Firestore の pitatto_rooms）、確認用ページ（claude.ai）ではページのデータ保存で共有する。 */
+ * みんなのスマホで遊ぶ部屋は、公開先では Firebase（Firestore の synchro_rooms）、確認用ページ（claude.ai）ではページのデータ保存で共有する。 */
 
 /* ===== 問題 ===== */
 // CATS: [名前, 問題の上に出す札]  Q: [テーマ番号, 問題, 答えA, 答えB]
-const CATS=window.PT_CATS||[];
-const Q=[].concat(window.PT_Q||[],window.PT_MINE||[]).map(r=>[CATS.findIndex(c=>c[0]===r[0]),r[1],r[2],r[3]]).filter(r=>r[0]>=0&&r[1]&&r[2]&&r[3]);
+const CATS=window.SY_CATS||[];
+const Q=[].concat(window.SY_Q||[],window.SY_MINE||[]).map(r=>[CATS.findIndex(c=>c[0]===r[0]),r[1],r[2],r[3]]).filter(r=>r[0]>=0&&r[1]&&r[2]&&r[3]);
 const CI=n=>CATS.findIndex(c=>c[0]===n);
 // 話題：いろいろ＝6テーマを同じくらい／盛り上がる＝ドキドキ多め・結婚とお金の話はなし
 const TOPICS={all:['恋愛・連絡','暮らし','食','お金','休日・遊び','将来・家族'].map(CI),
@@ -47,8 +47,8 @@ function goTop(){
   const st=store('kv_room');
   view(`
   <header class="brand">
-    <div class="logo" aria-hidden="true"><span></span><span></span><span></span></div>
-    <h1>ぴたっとシンクロ</h1>
+    <div class="orb" aria-hidden="true"></div>
+    <h1>シンクロ<small>こころが重なる2択</small></h1>
     <p class="lead">2択に答えて、答え合わせ。<br>恋人・友だち・家族、だれとでも。</p>
   </header>
   ${st&&st.code?`<button class="btn ghost small" id="back">さっきの部屋（${esc(st.code)}）にもどる</button>`:''}
@@ -292,10 +292,10 @@ function tailHTML(){return `<a class="promo" href="https://166unmei.com" target=
 function shareText(G){
   const ps=G.players,url=WHERE==='claude'?ART_URL:location.href.split('#')[0].split('?')[0];
   if(ps.length<2){const p=ps[0],xs=G.qs.map((k,i)=>p.ans[i]).filter(a=>a&&a.o>=0),f=xs.filter(a=>a.o===2).length;
-    return{t:`わたしの「合わせられる度」は ${xs.length?Math.round(f/xs.length*100):0}% でした。あなたは？\n#ぴたっとシンクロ`,url}}
-  const gh=guessHits(G);return{t:`${ps.length===2?'2人':ps.length+'人'}のシンクロ率は ${gh.tot?Math.round(gh.hit/gh.tot*100):0}% でした！\n2択に答えて答え合わせ。みんなでも遊べます\n#ぴたっとシンクロ`,url}}
+    return{t:`わたしの「合わせられる度」は ${xs.length?Math.round(f/xs.length*100):0}% でした。あなたは？\n#シンクロ2択`,url}}
+  const gh=guessHits(G);return{t:`${ps.length===2?'2人':ps.length+'人'}のシンクロ率は ${gh.tot?Math.round(gh.hit/gh.tot*100):0}% でした！\n2択に答えて答え合わせ。みんなでも遊べます\n#シンクロ2択`,url}}
 function doShare(G){const {t,url}=shareText(G),d=$('shared');
-  if(navigator.share){navigator.share({title:'ぴたっとシンクロ',text:t,url}).catch(()=>{});return}
+  if(navigator.share){navigator.share({title:'シンクロ ― こころが重なる2択',text:t,url}).catch(()=>{});return}
   const full=t+'\n'+url;d.hidden=false;
   try{navigator.clipboard.writeText(full).then(()=>{d.textContent='シェアの文をコピーしました。SNSやメッセージに貼ってください。'},()=>{d.textContent=full})}catch(e){d.textContent=full}}
 function bindTail(G){
@@ -318,11 +318,11 @@ function getDb(){if(!dbP)dbP=(async()=>{
   return null})();return dbP}
 
 /* Firebase（Firestore）：公開先で部屋を共有する。firebase-config.js に設定があるときだけ読みこむ。
-   ほかのサイトとまざらないよう、置き場所の名前の頭に「pitatto_」を付ける（rooms → pitatto_rooms）。 */
+   ほかのサイトとまざらないよう、置き場所の名前の頭に「synchro_」を付ける（rooms → synchro_rooms）。 */
 const FB=(()=>{
   let ready=null;
   const load=src=>new Promise((ok,ng)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=ng;document.head.appendChild(s)});
-  const P=p=>'pitatto_'+p;
+  const P=p=>'synchro_'+p;
   const clean=d=>JSON.parse(JSON.stringify(d||{}));   // Firestore は空の値（undefined）を受けつけないので取りのぞく
   const ttl=(path,d)=>/^rooms\//.test(path)?Object.assign({},d,{expireAt:new Date((d.created||d.joined||Date.now())+12*3600e3)}):d; // 部屋は12時間で消す（expireAt に TTL を設定）
   const strip=d=>{if(d){d=Object.assign({},d);delete d.expireAt}return d};
@@ -339,9 +339,9 @@ const FB=(()=>{
       onSnapshot:(cb,err)=>c.onSnapshot(q=>cb({docs:q.docs.map(sd)}),err)}}}}
   function init(){
     if(ready)return ready;
-    ready=(async()=>{const cfg=window.PITATTO_FB;if(!cfg||!cfg.projectId)return null;
+    ready=(async()=>{const cfg=window.SYNCHRO_FB;if(!cfg||!cfg.projectId)return null;
       try{if(!window.firebase||!firebase.firestore){await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js')}
-        const app=(firebase.apps||[]).find(a=>a.name==='pitatto')||firebase.initializeApp(cfg,'pitatto');return wrap(app.firestore())}catch(e){return null}})();
+        const app=(firebase.apps||[]).find(a=>a.name==='synchro')||firebase.initializeApp(cfg,'synchro');return wrap(app.firestore())}catch(e){return null}})();
     return ready}
   return{init};
 })();
