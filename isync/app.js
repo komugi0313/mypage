@@ -29,28 +29,28 @@ const ans=(o,k)=>o===0?Q[k][2]:o===1?Q[k][3]:o===2?(Q[k][4]||'こだわらない
 function deal(len,topic){
   let cats=shuffle(TOPICS[topic]||TOPICS.all);
   if(topic==='party'){const d=CI('ドキドキ');cats=cats.filter(c=>c!==d);cats.splice(0,0,d);cats.splice(3,0,d)} // ドキドキは1つおきくらいに
-  const seen=new Set(store('kv_seen')||[]);
+  const seen=new Set(store('kv_seen2')||[]);
   const pool={};[...new Set(cats)].forEach(c=>{const all=Q.map((q,i)=>i).filter(i=>Q[i][0]===c),need=Math.ceil(len*cats.filter(x=>x===c).length/cats.length)+1;
     let fresh=shuffle(all.filter(i=>!seen.has(i)));
     if(fresh.length<need){all.forEach(i=>seen.delete(i));fresh=shuffle(all)} // そのテーマを出しきったら一周目にもどす
     pool[c]=fresh});
   const out=[];let r=0;
   while(out.length<len){const c=cats[r%cats.length];const i=pool[c].shift();if(i!=null&&!out.includes(i))out.push(i);r++;if(r>len*20)break}
-  out.forEach(i=>seen.add(i));store('kv_seen',[...seen]);
+  out.forEach(i=>seen.add(i));store('kv_seen2',[...seen]);
   return out;
 }
 /* 婚活・街コン：大事な問題を中心に20問（大事14問＋暮らし・食・お金・休日のふつうの問題6問）。ドキドキは出さない */
 function dealKon(len){
-  const dk=CI('ドキドキ'),seen=new Set(store('kv_seen')||[]);
+  const dk=CI('ドキドキ'),seen=new Set(store('kv_seen2')||[]);
   const pick=(pool,m)=>{let f=shuffle(pool.filter(i=>!seen.has(i)));if(f.length<m)f=shuffle(pool);
     const by={};f.forEach(i=>(by[Q[i][0]]=by[Q[i][0]]||[]).push(i));const cs=shuffle(Object.keys(by)),out=[];let r=0;
     while(out.length<m&&r<m*20){const i=by[cs[r%cs.length]].shift();if(i!=null)out.push(i);r++}return out};
   const all=Q.map((q,i)=>i).filter(i=>Q[i][0]!==dk),daily=[CI('暮らし'),CI('食'),CI('お金'),CI('休日・遊び')];
   const big=pick(all.filter(i=>WB.has(i)),Math.round(len*.7));
   const mid=pick(all.filter(i=>!WB.has(i)&&!WL.has(i)&&daily.includes(Q[i][0])),len-big.length);
-  const out=shuffle(big.concat(mid));out.forEach(i=>seen.add(i));store('kv_seen',[...seen]);return out;
+  const out=shuffle(big.concat(mid));out.forEach(i=>seen.add(i));store('kv_seen2',[...seen]);return out;
 }
-function markSeen(ids){const s=new Set(store('kv_seen')||[]);ids.forEach(i=>s.add(i));store('kv_seen',[...s])}
+function markSeen(ids){const s=new Set(store('kv_seen2')||[]);ids.forEach(i=>s.add(i));store('kv_seen2',[...s])}
 
 /* ===== トップ ===== */
 const CFG=Object.assign({mode:'each',len:10,topic:'all',anon:false},store('kv_cfg')||{});
