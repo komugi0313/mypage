@@ -127,6 +127,7 @@ function goTop(){
     <label class="one-name" for="sn"><span>ニックネーム</span><input type="text" id="sn" maxlength="10" placeholder="なくてもOK" value="${esc(store('kv_name')||'')}"></label>
     <button class="btn" id="sgo">はじめる</button>
   </section>
+  ${PROMO}
   <p class="note">どの問題にも正解はありません。どちらでもいいときは、3つ目の答え（「こだわらない」「どっちも好き」など）を選んでください。</p>`);
   const DESC={kon:'最大40人。番号だけで参加して、名前を出さずに一斉に20問。終わると、自分と合う人が、自分のスマホにだけ出ます。',each:'2〜10人で。1人が部屋を作り、そばにいる人はQRコードを読みとるだけで参加できます。離れている人には、LINEなどでリンクを送ります。1問20秒。',solo:'自分の答えから、あなたのこだわりと、ゆずれることがわかります。'};
   const refresh=()=>{['each','solo','kon'].forEach(m=>$('m-'+m).hidden=CFG.mode!==m);
@@ -313,8 +314,14 @@ function soloHTML(G){
     <p class="hint">いちばん即決は「${esc(Q[byT[byT.length-1].k][1])}」（${sec(byT[byT.length-1].a.ms)} 秒）</p></section>`:''}
   <section class="card"><p class="label">だれかと答え合わせしてみる？</p><p class="hint">好みが合うか、2〜10人で遊べます。</p><button class="btn" id="tog">みんなで遊ぶ</button></section>`;
 }
-function tailHTML(){return `<a class="promo" href="https://166unmei.com" target="_blank" rel="noopener">
-    <span class="t"><b>1.66 奇跡の相性診断</b><span>生年月日で、2人の運命の相性がわかる</span><em>166unmei.com</em></span><span class="go" aria-hidden="true">↗</span></a>
+// 1.66 奇跡の相性診断（鑑定者本人のメインサービス）へのバナー。無料の診断から会員登録（毎朝の開運予報メール）へつながる
+const PROMO=`<a class="promo" href="https://166unmei.com" target="_blank" rel="noopener" aria-label="1.66 奇跡の相性診断で占う（別のサイト 166unmei.com が開きます）">
+    <span class="pr-top">価値観の次は、生まれた日でわかる「運命の相性」</span>
+    <span class="pr-pair" aria-hidden="true"><img src="img/166-cow.webp" alt="" width="68" height="72" loading="lazy"><i>×</i><img src="img/166-mouse.webp" alt="" width="66" height="72" loading="lazy"></span>
+    <span class="pr-m"><span class="pr-k">奇跡の相性診断</span><span class="pr-n">1.66<small>%</small></span><span class="pr-d">あの人は、<em>奇跡の1.66%</em>に入っている？</span></span>
+    <span class="pr-pts"><span>2人の生年月日だけ・1分</span><span>料金はかかりません</span><span>毎朝6時の開運予報メールも</span></span>
+    <span class="pr-btn">二人の相性を占う <small>↗</small></span></a><p class="promo-u">166unmei.com（別のサイト）</p>`;
+function tailHTML(){return `${PROMO}
   <button class="btn ghost small" id="share">結果をシェアする</button><p class="hint" id="shared" hidden></p>
   <div class="row"><button class="btn" id="again">もう1回あそぶ</button><button class="btn ghost" id="home">トップへ</button></div>`}
 // シェア：スマホの共有（使えないときはコピー）。名前は入れない
@@ -615,7 +622,7 @@ function hostSync(){
       <p class="hint">参加した${ps.length}人それぞれのスマホに、その人と合う人が出ています。ほかの人どうしの結果は、主催者の画面にも出ません。</p>
       <p class="hint">名前は、2人とも「名前を見せてもいい」を押したときだけ、その2人に出ます。</p>
       <button class="btn" id="again" style="align-self:stretch">もう1回（別の${KON_LEN}問）</button></section>
-      <button class="btn ghost small" id="home">主催者の画面を閉じてトップへ</button>`);
+      ${PROMO}<button class="btn ghost small" id="home">主催者の画面を閉じてトップへ</button>`);
     $('again').onclick=e=>{e.target.disabled=true;roomAgain()};$('home').onclick=()=>{leaveRoom();goTop()}}
 }
 function hostLobby(){
@@ -651,6 +658,7 @@ function konWait(){
       <li><b>${KON_LEN}問・1問${LIMIT}秒</b><span>大事なことには「★ ここはゆずれない」を押せます</span></li>
       <li><b>合う人は、あなたのスマホにだけ</b><span>ほかの人には見えません</span></li>
     </ul></section>
+  ${PROMO}
   <button class="btn ghost small" id="home">部屋を出る</button>`);
   $('home').onclick=async()=>{const db=await getDb(),code=R.code;leaveRoom();try{await db.doc(pPath(code,PID)).delete()}catch(e){}goTop()};
 }
