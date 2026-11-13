@@ -61,7 +61,7 @@ function goTop(){
     <ul class="know">
       <li><b>シンクロ率</b><span>相手の答えを予想して、何%当たったか</span></li>
       <li><b>ぴったり度</b><span>同じ答え・合わせられる答え・ちがう答えの数</span></li>
-      <li><b>ゆずれないこと</b><span>おたがいの「ここだけはゆずれない」（しっかり版）</span></li>
+      <li><b>ゆずれないこと</b><span>自分の答えに「★ゆずれない」をつけて、おたがいの大事なところが合うかがわかる（しっかり版）</span></li>
       <li><b>みんなの称号</b><span>読み名人・即決さん・こだわり職人 など</span></li>
     </ul>
     <p class="hint">恋人・気になる人・友だち・家族と。ひとりでも遊べます（10問・約3分）。</p>
@@ -161,11 +161,14 @@ function localAsk(){
 /* ===== 結果 ===== */
 // 2人の合い方：同じ＝ぴったり／片方が「こだわらない」＝合わせられる／AとBで分かれた＝ちがい
 function pairStat(A,B,qs){
-  let s=0,n=0;const r={same:[],adj:[],diff:[],starSame:[],starDiff:[]};
-  qs.forEach((k,i)=>{const a=A.ans[i],b=B.ans[i];if(!a||!b||a.o<0||b.o<0)return;n++;
-    if(a.o===b.o){s+=1;r.same.push(i);if(a.st&&b.st&&a.o<2)r.starSame.push(i)}
-    else if(a.o===2||b.o===2){s+=.5;r.adj.push(i)}
-    else{r.diff.push(i);if(a.st||b.st)r.starDiff.push(i)}});
+  // ★ゆずれない（どちらかがつけた問題）は2倍で数える。★の問題は別にも数えて、結果ではっきり見せる
+  let s=0,n=0;const r={same:[],adj:[],diff:[],starSame:[],starAdj:[],starDiff:[]};
+  qs.forEach((k,i)=>{const a=A.ans[i],b=B.ans[i];if(!a||!b||a.o<0||b.o<0)return;
+    const st=(a.st&&a.o<2)||(b.st&&b.o<2),w=st?2:1;n+=w;
+    if(a.o===b.o){s+=w;r.same.push(i);if(st)r.starSame.push(i)}
+    else if(a.o===2||b.o===2){s+=w/2;r.adj.push(i);if(st)r.starAdj.push(i)}
+    else{r.diff.push(i);if(st)r.starDiff.push(i)}});
+  r.starN=r.starSame.length+r.starAdj.length+r.starDiff.length;
   r.pct=n?Math.round(s/n*100):0;r.n=n;return r;
 }
 function guessHits(G){
@@ -225,11 +228,22 @@ function showResult(G){
     return `<li class="pair"><div class="ph"><b>${me?nm(o):nm(x.a)+' × '+nm(x.b)}</b><em>${r.pct}%</em></div>
       <div class="bar"><i style="width:${r.pct}%"></i></div>
       <p class="hint">ぴったり ${r.same.length}問・合わせられる ${r.adj.length}問・ちがい ${r.diff.length}問</p>
-      ${r.starSame.length?`<p class="good">★ ゆずれないところが同じ：${r.starSame.map(i=>esc(Q[G.qs[i]][1])).join('、')}</p>`:''}
-      ${r.starDiff.length?`<p class="warn">★ ゆずれないところがちがう：${r.starDiff.map(i=>esc(Q[G.qs[i]][1])).join('、')}<br>ここは先に話しておくと安心です</p>`:''}</li>`};
+      ${r.starN?starBox(x.a,x.b,r):''}</li>`};
+  // ★ゆずれないところ：同じ・合わせられる・ちがうの数と、1問ずつの2人の答え。ちがいが多いときは、はっきり伝える
+  const starBox=(A,B,r)=>{const row=(i,cls)=>{const k=G.qs[i],aa=A.ans[i],bb=B.ans[i];
+      return `<li class="${cls}"><b>${esc(Q[k][1])}</b><span class="who"><em>${esc(A.name)}</em>${esc(ans(aa.o,k))}${aa.st?' ★':''}</span><span class="who"><em>${esc(B.name)}</em>${esc(ans(bb.o,k))}${bb.st?' ★':''}</span></li>`};
+    const many=r.starDiff.length>=2&&r.starDiff.length>=r.starSame.length+r.starAdj.length;
+    const verdict=!r.starDiff.length?`<p class="good">大事なところは、ちがいがありません</p>`
+      :many?`<p class="warn">大事なところで、考え方がちがうことが多めです。この${r.starDiff.length}問は、先にゆっくり話しておくと安心です</p>`
+      :`<p class="warn">大事なところで、ちがいが${r.starDiff.length}問あります。ここは先に話しておくと安心です</p>`;
+    return `<div class="starbox"><p class="sh">★ ゆずれないところ　${r.starN}問</p>
+      <div class="sc"><span class="s0">同じ <b>${r.starSame.length}</b></span><span class="s2">合わせられる <b>${r.starAdj.length}</b></span><span class="s1">ちがう <b>${r.starDiff.length}</b></span></div>
+      ${verdict}
+      ${r.starDiff.length+r.starAdj.length?`<ul class="slist">${r.starDiff.map(i=>row(i,'d')).join('')}${r.starAdj.map(i=>row(i,'m')).join('')}</ul>`:''}
+      ${r.starSame.length?`<details class="sfold"><summary>同じだったところ（${r.starSame.length}問）を見る</summary><ul class="slist">${r.starSame.map(i=>row(i,'s')).join('')}</ul></details>`:''}</div>`};
   h+=`<section class="card"><p class="label">${ps.length===2?'2人のぴったり度':me?'あなたと合う人':'合うペア'}</p>
     <ul class="pairs">${(me?mine:pairs).slice(0,me?MAXP:3).map(pairCard).join('')}</ul>
-    <p class="hint">同じ答え＝ぴったり、片方が「こだわらない」＝合わせられる、として数えています。</p></section>`;
+    <p class="hint">同じ答え＝ぴったり、片方が「こだわらない」＝合わせられる、として数えています。★ゆずれないをつけた問題は、2倍の重さで数えています。</p></section>`;
   // ④ 問題のランキング
   const qst=G.qs.map((k,i)=>{const c=[0,0,0],to=[];let ms=0,m=0;ps.forEach(p=>{const a=p.ans[i];if(!a)return;if(a.o>=0)c[a.o]++;if(a.to)to.push(p);if(a.o>=0||a.to){ms+=a.ms;m++}});return{i,k,c,to,avg:m?ms/m:0}});
   const split=qst.filter(x=>x.c[0]&&x.c[1]).sort((a,b)=>Math.abs(a.c[0]-a.c[1])-Math.abs(b.c[0]-b.c[1])).slice(0,3);
