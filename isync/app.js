@@ -8,10 +8,14 @@
 const CATS=window.SY_CATS||[];
 const Q=[].concat(window.SY_Q||[],window.SY_MINE||[]).map(r=>[CATS.findIndex(c=>c[0]===r[0]),r[1],r[2],r[3],r[4]||'']).filter(r=>r[0]>=0&&r[1]&&r[2]&&r[3]);
 const CI=n=>CATS.findIndex(c=>c[0]===n);
+// 問題ごとの重さ：大事＝2・ふつう＝1・軽い＝0.5（weights.js）
+const WB=new Set((window.SY_W||{}).b||[]),WL=new Set((window.SY_W||{}).l||[]);
+const WT=k=>WB.has(k)?2:WL.has(k)?.5:1;
 // 話題：いろいろ＝6テーマを同じくらい／盛り上がる＝ドキドキ多め・結婚とお金の話はなし
 const TOPICS={all:['恋愛・連絡','暮らし','食','お金','休日・遊び','将来・家族'].map(CI),
   party:['ドキドキ','恋愛・連絡','休日・遊び','ドキドキ','食','暮らし'].map(CI)};
-const LIMIT=20, MAXP=10;
+const LIMIT=20, MAXP=10, KON_MAX=40, KON_LEN=20;
+const maxOf=room=>room&&room.kind==='kon'?KON_MAX:MAXP;
 const OPTS=['A','B','こだわらない'];
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -35,11 +39,22 @@ function deal(len,topic){
   out.forEach(i=>seen.add(i));store('kv_seen',[...seen]);
   return out;
 }
+/* 婚活・街コン：大事な問題を中心に20問（大事14問＋暮らし・食・お金・休日のふつうの問題6問）。ドキドキは出さない */
+function dealKon(len){
+  const dk=CI('ドキドキ'),seen=new Set(store('kv_seen')||[]);
+  const pick=(pool,m)=>{let f=shuffle(pool.filter(i=>!seen.has(i)));if(f.length<m)f=shuffle(pool);
+    const by={};f.forEach(i=>(by[Q[i][0]]=by[Q[i][0]]||[]).push(i));const cs=shuffle(Object.keys(by)),out=[];let r=0;
+    while(out.length<m&&r<m*20){const i=by[cs[r%cs.length]].shift();if(i!=null)out.push(i);r++}return out};
+  const all=Q.map((q,i)=>i).filter(i=>Q[i][0]!==dk),daily=[CI('暮らし'),CI('食'),CI('お金'),CI('休日・遊び')];
+  const big=pick(all.filter(i=>WB.has(i)),Math.round(len*.7));
+  const mid=pick(all.filter(i=>!WB.has(i)&&!WL.has(i)&&daily.includes(Q[i][0])),len-big.length);
+  const out=shuffle(big.concat(mid));out.forEach(i=>seen.add(i));store('kv_seen',[...seen]);return out;
+}
 function markSeen(ids){const s=new Set(store('kv_seen')||[]);ids.forEach(i=>s.add(i));store('kv_seen',[...s])}
 
 /* ===== トップ ===== */
 const CFG=Object.assign({mode:'each',len:10,topic:'all',anon:false},store('kv_cfg')||{});
-if(CFG.mode!=='each'&&CFG.mode!=='solo')CFG.mode='each';  // 前の「1台を回して」はなくした
+if(!['each','solo','kon'].includes(CFG.mode))CFG.mode='each';  // 前の「1台を回して」はなくした
 let JOIN=(/^#join-(\d{4})$/.exec(location.hash||'')||[])[1]||'';
 if(JOIN)CFG.mode='each';
 const saveCfg=()=>store('kv_cfg',{mode:CFG.mode,len:CFG.len,topic:CFG.topic,anon:CFG.anon});
@@ -51,7 +66,7 @@ function goTop(){
     <div class="bubbles" aria-hidden="true"><i class="m" style="left:4%;top:30px;--s:34px;--d:0s;--t:9s"></i><i class="p" style="left:16%;top:150px;--s:16px;--d:2s;--t:7s"></i><i class="p" style="left:80%;top:18px;--s:44px;--d:1s;--t:10s"></i><i class="m" style="left:90%;top:170px;--s:20px;--d:3s;--t:8s"></i><i class="l" style="left:70%;top:110px;--s:12px;--d:0.5s;--t:6s"></i><i class="l" style="left:24%;top:80px;--s:10px;--d:4s;--t:7s"></i><i class="m" style="left:58%;top:4px;--s:22px;--d:2.5s;--t:9s"></i><i class="p" style="left:3%;top:222px;--s:18px;--d:1.5s;--t:11s"></i><i class="m" style="left:93%;top:240px;--s:12px;--d:5s;--t:8s"></i></div>
     <div class="orb" aria-hidden="true"></div>
     <h1 class="logo">I-Sync</h1><p class="kana">アイ・シンク</p><p class="tl">わたしとあなたの、重なるところ</p>
-    <p class="lead">好みや考え方の2択に答えて、相手の答えも予想。<br>どれだけわかり合えているかがわかる診断です。</p>
+    <p class="lead">好みや考え方の2択に答えて、答え合わせ。<br>どこが重なって、どこがちがうかがわかる診断です。</p>
   </header>
   <section class="card intro">
     <p class="label">たとえば、こんな問題</p>
@@ -59,7 +74,7 @@ function goTop(){
       <p class="exo"><span class="o0">A　毎日やりとりしたい</span><span class="o1">B　用があるときだけでいい</span><span class="o2">こだわらない</span></p></div>
     <p class="label">わかること</p>
     <ul class="know">
-      <li><b>シンクロ率</b><span>相手の答えを予想して、何%当たったか</span></li>
+      <li><b>シンクロ率</b><span>答えがどれだけ重なったか（大事な問題は重く数える）</span></li>
       <li><b>ぴったり度</b><span>同じ答え・合わせられる答え・ちがう答えの数</span></li>
       <li><b>ゆずれないこと</b><span>自分の答えに「★ゆずれない」をつけて、おたがいの大事なところが合うかがわかる（しっかり版）</span></li>
       <li><b>みんなの称号</b><span>読み名人・即決さん・こだわり職人 など</span></li>
@@ -70,8 +85,9 @@ function goTop(){
   ${st&&st.code?`<button class="btn ghost small" id="back">さっきの部屋（${esc(st.code)}）にもどる</button>`:''}
   <section class="card">
     <p class="label">だれと遊ぶ？</p>
-    ${seg('mode',[['each','みんなで<br><small>それぞれのスマホで</small>'],['solo','ひとりで']])}
+    ${seg('mode',[['each','みんなで<br><small>それぞれのスマホで</small>'],['kon','婚活・街コン<br><small>名前を出さずに</small>'],['solo','ひとりで']])}
     <p class="hint" id="m-desc"></p>
+    <div id="m-opts" class="stack">
     <p class="label">長さは？</p>
     ${seg('len',[[10,'簡易版<br><small>10問・さくっと</small>'],[30,'しっかり版<br><small>30問・★ゆずれない</small>']])}
     <p class="label">話題は？</p>
@@ -80,6 +96,22 @@ function goTop(){
       <p class="label">名前は？</p>
       ${seg('anon',[[false,'見せる'],[true,'見せない']])}
     </div>
+    </div>
+  </section>
+  <section class="card" id="m-kon">
+    <ul class="know">
+      <li><b>番号だけで参加</b><span>会場の番号札の番号を入れるだけ。名前は出ません</span></li>
+      <li><b>みんなで一斉に20問</b><span>お金・将来・暮らしなど、聞きにくい大事なことが中心。★ゆずれないも使えます</span></li>
+      <li><b>合う人は自分のスマホにだけ</b><span>答えが重なった順に出ます。ほかの人どうしの結果は見えません</span></li>
+      <li><b>名前はおたがいがOKのときだけ</b><span>2人とも「名前を見せてもいい」を押したときだけ、その2人に名前が出ます</span></li>
+    </ul>
+    <button class="btn" id="mkk">部屋を作る（主催者の方）</button>
+    <div class="join">
+      <label for="kcode"><span>参加する方（部屋番号を入れる）</span></label>
+      <div class="join-row"><input type="text" id="kcode" inputmode="numeric" maxlength="4" placeholder="部屋番号（4けた）"><button class="btn small" id="kjn">参加</button></div>
+    </div>
+    <p class="hint">主催者の画面のQRコードを、自分のスマホのカメラで読みとっても参加できます。</p>
+    <p class="err" id="kerr" role="alert"></p>
   </section>
   <section class="card" id="m-each">
     <label class="one-name" for="me"><span>ニックネーム</span><input type="text" id="me" maxlength="10" placeholder="本名でなくてOK" value="${esc(store('kv_name')||'')}"></label>
@@ -96,9 +128,9 @@ function goTop(){
     <button class="btn" id="sgo">はじめる</button>
   </section>
   <p class="note">どの問題にも正解はありません。どちらでもいいときは、3つ目の答え（「こだわらない」「どっちも好き」など）を選んでください。</p>`);
-  const DESC={each:'2〜10人で。1人が部屋を作り、そばにいる人はQRコードを読みとるだけで参加できます。離れている人には、LINEなどでリンクを送ります。1問20秒。',solo:'自分の答えから、あなたのこだわりと、ゆずれることがわかります。'};
-  const refresh=()=>{['each','solo'].forEach(m=>$('m-'+m).hidden=CFG.mode!==m);
-    $('m-desc').textContent=DESC[CFG.mode];$('m-anon').hidden=CFG.mode!=='each';
+  const DESC={kon:'最大40人。番号だけで参加して、名前を出さずに一斉に20問。終わると、自分と合う人が、自分のスマホにだけ出ます。',each:'2〜10人で。1人が部屋を作り、そばにいる人はQRコードを読みとるだけで参加できます。離れている人には、LINEなどでリンクを送ります。1問20秒。',solo:'自分の答えから、あなたのこだわりと、ゆずれることがわかります。'};
+  const refresh=()=>{['each','solo','kon'].forEach(m=>$('m-'+m).hidden=CFG.mode!==m);
+    $('m-desc').textContent=DESC[CFG.mode];$('m-anon').hidden=CFG.mode!=='each';$('m-opts').hidden=CFG.mode==='kon';
   };
   app.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k,v=b.dataset.v;
     CFG[k]=k==='len'?+v:k==='anon'?v==='true':v;saveCfg();
@@ -111,13 +143,16 @@ function goTop(){
   $('jn').onclick=async e=>{const n=myName(),c=$('code').value.replace(/\D/g,'');if(!n)return err('ニックネームを入れてください');if(c.length!==4)return err('4けたの部屋番号を入れてください');
     e.target.disabled=true;const r=await joinRoom(c,n);if(r!=='ok'){err(r);e.target.disabled=false}};
   const bk=$('back');if(bk)bk.onclick=async()=>{const r=await joinRoom(st.code,store('kv_name')||'');if(r!=='ok'){store('kv_room',null);goTop()}};
+  // 婚活・街コン
+  $('mkk').onclick=async e=>{e.target.disabled=true;const r=await createKonRoom();if(r!=='ok'){$('kerr').textContent=r;e.target.disabled=false}};
+  $('kjn').onclick=()=>{const c=$('kcode').value.replace(/\D/g,'');if(c.length!==4){$('kerr').textContent='4けたの部屋番号を入れてください';return}joinFromLink(c)};
   // ひとりで
   $('sgo').onclick=()=>{const v=$('sn').value.trim();if(v)store('kv_name',v);soloStart(v)};
 }
 
 /* ===== 1問の画面（どのモードでも同じ） =====
-   o: 0=A 1=B 2=こだわらない ／ g: 予想 ／ st: ★ゆずれない */
-function askHTML(k,i,n,{who,guessLabel,step,star,starOn,timer}){
+   o: 0=A 1=B 2=こだわらない（3つ目の答え） ／ st: ★ゆずれない（相手の答えの予想はなくした＝鑑定者本人の判断 2026-11-13） */
+function askHTML(k,i,n,{who,step,star,starOn,timer}){
   const q=Q[k],cat=CATS[q[0]];
   const opt=(v,cls='')=>`<button class="opt ${cls}" data-v="${v}">${v<2?`<span class="k">${OPTS[v]}</span>`:''}<span>${esc(ans(v,k))}</span></button>`;
   return `<section class="card ask"><img class="chara c-ask" src="img/pair-think.webp" width="124" height="79" alt="" aria-hidden="true">
@@ -126,8 +161,8 @@ function askHTML(k,i,n,{who,guessLabel,step,star,starOn,timer}){
     ${cat[1]?`<p class="if">${esc(cat[1])}</p>`:''}
     <h2 class="q">${esc(q[1])}</h2>
     ${step==='done'?`<div class="match">答えました！</div><p class="hint" id="tcnt">みんなを待っています</p>`:`
-    <p class="label">${step==='own'?'あなたはどっち？':esc(guessLabel)}</p>
-    ${step==='own'&&star?`<button class="star" id="star" aria-pressed="${!!starOn}">★ ここはゆずれない</button>`:''}
+    <p class="label">あなたはどっち？</p>
+    ${star?`<button class="star" id="star" aria-pressed="${!!starOn}">★ ここはゆずれない</button>`:''}
     <div class="opts">${opt(0)}${opt(1)}${opt(2,'mid')}</div>`}
   </section>`;
 }
@@ -144,14 +179,12 @@ function soloStart(name){
 }
 function localAsk(){
   const p=L.players[L.p],k=L.qs[L.i],n=L.qs.length,multi=L.players.length>1;
-  const a=p.ans[L.i]||(p.ans[L.i]={o:-1,g:-1,st:0,ms:0});
-  const step=a.o<0?'own':'guess';
-  const other=L.players.length===2?L.players[1-L.p].name+'さんはどっちを選んだと思う？':'みんな（自分以外）でいちばん多い答えは？';
-  view(askHTML(k,L.i,n,{who:multi?p.name+'さん':'',guessLabel:other,step,star:CFG.len===30,starOn:a.st}));
+  const a=p.ans[L.i]||(p.ans[L.i]={o:-1,st:0,ms:0});
+  view(askHTML(k,L.i,n,{who:multi?p.name+'さん':'',step:'own',star:CFG.len===30,starOn:a.st}));
   const t0=Date.now();
   bindAsk((v,starOn)=>{
     if(v===null){a.st=starOn?1:0;return}
-    if(step==='own'){a.o=v;a.ms=Date.now()-t0;if(multi){localAsk();return}}else a.g=v;
+    a.o=v;a.ms=Date.now()-t0;
     L.i++;
     if(L.i<n){localAsk();return}
     L.i=0;L.p++;
@@ -162,27 +195,26 @@ function localAsk(){
 /* ===== 結果 ===== */
 // 2人の合い方：同じ＝ぴったり／片方が「こだわらない」＝合わせられる／AとBで分かれた＝ちがい
 function pairStat(A,B,qs){
-  // ★ゆずれない（どちらかがつけた問題）は2倍で数える。★の問題は別にも数えて、結果ではっきり見せる
+  // 問題の重さ（大事＝2・軽い＝0.5）に、★ゆずれない（どちらかがつけた問題）はさらに2倍で数える。★の問題は別にも数えて、結果ではっきり見せる
   let s=0,n=0;const r={same:[],adj:[],diff:[],starSame:[],starAdj:[],starDiff:[]};
   qs.forEach((k,i)=>{const a=A.ans[i],b=B.ans[i];if(!a||!b||a.o<0||b.o<0)return;
-    const st=(a.st&&a.o<2)||(b.st&&b.o<2),w=st?2:1;n+=w;
+    const st=(a.st&&a.o<2)||(b.st&&b.o<2),w=WT(k)*(st?2:1);n+=w;
     if(a.o===b.o){s+=w;r.same.push(i);if(st)r.starSame.push(i)}
     else if(a.o===2||b.o===2){s+=w/2;r.adj.push(i);if(st)r.starAdj.push(i)}
     else{r.diff.push(i);if(st)r.starDiff.push(i)}});
   r.starN=r.starSame.length+r.starAdj.length+r.starDiff.length;
   r.pct=n?Math.round(s/n*100):0;r.n=n;return r;
 }
-function guessHits(G){
-  let hit=0,tot=0;const per={};G.players.forEach(p=>per[p.id]={h:0,t:0});
-  G.qs.forEach((k,i)=>G.players.forEach(p=>{const a=p.ans[i];if(!a||a.g<0)return;
-    const os=G.players.filter(o=>o!==p).map(o=>o.ans[i]).filter(x=>x&&x.o>=0);if(!os.length)return;
-    const c=[0,0,0];os.forEach(x=>c[x.o]++);const mx=Math.max(...c);
-    tot++;per[p.id].t++;if(c[a.g]===mx){hit++;per[p.id].h++}}));
-  return{hit,tot,per};
+// シンクロ率：全員の組み合わせのぴったり度（大事な問題・★は重く数える）の平均。全員で1つの数字＝勝ち負けなし
+function syncStat(G){
+  const ps=G.players,per={};ps.forEach(p=>per[p.id]={s:0,n:0});let s=0,n=0;
+  for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){const r=pairStat(ps[i],ps[j],G.qs);if(!r.n)continue;
+    s+=r.pct;n++;[ps[i],ps[j]].forEach(p=>{per[p.id].s+=r.pct;per[p.id].n++})}
+  return{pct:n?Math.round(s/n):0,per};
 }
 // 称号：だれも負けないように、全員に1つずつ配る
 const TITLES=[
-  ['読み名人','みんなの答えを、いちばん当てた人',p=>p.gh],
+  ['みんなと重なる人','ほかの人と答えがいちばん重なった人',p=>p.ov],
   ['合わせ上手','まん中の答え（こだわらない など）がいちばん多い、まわりに合わせられる人',p=>p.flex],
   ['ブレない人','自分の好みがはっきりしている人',p=>-p.flex],
   ['みんなの真ん中','多数派の答えがいちばん多い人',p=>p.maj],
@@ -195,7 +227,7 @@ function titles(G,gh){
   const ps=G.players.map(p=>{const xs=G.qs.map((k,i)=>p.ans[i]).filter(a=>a&&a.o>=0);
     let maj=0,min=0;G.qs.forEach((k,i)=>{const a=p.ans[i];if(!a||a.o<0||a.o===2)return;const c=[0,0,0];G.players.forEach(o=>{const x=o.ans[i];if(x&&x.o>=0)c[x.o]++});
       if(c[a.o]>c[1-a.o])maj++;else if(c[a.o]<c[1-a.o])min++});
-    return{id:p.id,flex:xs.filter(a=>a.o===2).length,star:xs.filter(a=>a.st).length,ms:xs.length?xs.reduce((s,a)=>s+a.ms,0)/xs.length:0,maj,min,gh:gh.per[p.id].t?gh.per[p.id].h/gh.per[p.id].t:0}});
+    return{id:p.id,flex:xs.filter(a=>a.o===2).length,star:xs.filter(a=>a.st).length,ms:xs.length?xs.reduce((s,a)=>s+a.ms,0)/xs.length:0,maj,min,ov:gh.per[p.id].n?gh.per[p.id].s/gh.per[p.id].n:0}});
   const out={},used=new Set();
   const usable=TITLES.filter(t=>t[0]!=='こだわり職人'||ps.some(p=>p.star>0));
   // ばらつきの大きい称号から順に、その称号がいちばん似合う人へ
@@ -209,13 +241,13 @@ function showResult(G){
   const nm=p=>esc(p.name)+(p===me?'（あなた）':'');
   let h='';
   if(!multi){h=soloHTML(G);view(h+tailHTML());bindTail(G);return}
-  // ① シンクロ率（予想が当たった割合。全員で1つの数字）
-  const gh=guessHits(G),pct=gh.tot?Math.round(gh.hit/gh.tot*100):0;
+  // ① シンクロ率（答えの重なり。全員で1つの数字）
+  const gh=syncStat(G),pct=gh.pct;
   const msg=pct>=80?'ほとんど以心伝心！':pct>=50?'いい感じにわかり合えています':'まだ知らない顔がたくさん。だから楽しい';
   h+=`<section class="card score"><img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
     <p class="cap">${ps.length===2?'2人':ps.length+'人'}のシンクロ率</p>
     <div class="ring" style="background:conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)"><div class="in"><span class="num">${pct}<small>%</small></span></div></div>
-    <p class="msg">${msg}</p><p class="hint">${ps.length===2?'おたがいの答えを':'みんなの答えを'}${gh.tot}回予想して、${gh.hit}回当たりました</p></section>`;
+    <p class="msg">${msg}</p><p class="hint">${ps.length===2?'2人の':'みんなの'}答えが、どれだけ重なったか（大事な問題と★ゆずれないは重く数えています）</p></section>`;
   // ② 称号
   const T=titles(G,gh);
   const tl=(G.anon&&me)?[me]:ps;
@@ -244,7 +276,7 @@ function showResult(G){
       ${r.starSame.length?`<details class="sfold"><summary>同じだったところ（${r.starSame.length}問）を見る</summary><ul class="slist">${r.starSame.map(i=>row(i,'s')).join('')}</ul></details>`:''}</div>`};
   h+=`<section class="card"><p class="label">${ps.length===2?'2人のぴったり度':me?'あなたと合う人':'合うペア'}</p>
     <ul class="pairs">${(me?mine:pairs).slice(0,me?MAXP:3).map(pairCard).join('')}</ul>
-    <p class="hint">同じ答え＝ぴったり、片方がまん中の答え（こだわらない・どっちも好き など）＝合わせられる、として数えています。★ゆずれないをつけた問題は、2倍の重さで数えています。</p></section>`;
+    <p class="hint">同じ答え＝ぴったり、片方がまん中の答え（こだわらない・どっちも好き など）＝合わせられる、として数えています。お金・将来・暮らしなど大事な問題は2倍、味の好みなど軽い問題は半分、★ゆずれないをつけた問題はさらに2倍の重さで数えています。</p></section>`;
   // ④ 問題のランキング
   const qst=G.qs.map((k,i)=>{const c=[0,0,0],to=[];let ms=0,m=0;ps.forEach(p=>{const a=p.ans[i];if(!a)return;if(a.o>=0)c[a.o]++;if(a.to)to.push(p);if(a.o>=0||a.to){ms+=a.ms;m++}});return{i,k,c,to,avg:m?ms/m:0}});
   const split=qst.filter(x=>x.c[0]&&x.c[1]).sort((a,b)=>Math.abs(a.c[0]-a.c[1])-Math.abs(b.c[0]-b.c[1])).slice(0,3);
@@ -290,7 +322,7 @@ function shareText(G){
   const ps=G.players,url=WHERE==='claude'?ART_URL:location.href.split('#')[0].split('?')[0];
   if(ps.length<2){const p=ps[0],xs=G.qs.map((k,i)=>p.ans[i]).filter(a=>a&&a.o>=0),f=xs.filter(a=>a.o===2).length;
     return{t:`わたしの「合わせられる度」は ${xs.length?Math.round(f/xs.length*100):0}% でした。あなたは？\n#アイシンク`,url}}
-  const gh=guessHits(G);return{t:`${ps.length===2?'2人':ps.length+'人'}のシンクロ率は ${gh.tot?Math.round(gh.hit/gh.tot*100):0}% でした！\n2択に答えて答え合わせ。みんなでも遊べます\n#アイシンク`,url}}
+  return{t:`${ps.length===2?'2人':ps.length+'人'}のシンクロ率は ${syncStat(G).pct}% でした！\n2択に答えて答え合わせ。みんなでも遊べます\n#アイシンク`,url}}
 function doShare(G){const {t,url}=shareText(G),d=$('shared');
   if(navigator.share){navigator.share({title:'アイ・シンク（I-Sync）',text:t,url}).catch(()=>{});return}
   const full=t+'\n'+url;d.hidden=false;
@@ -359,12 +391,41 @@ async function createRoom(name){
     enterRoom(code);return 'ok';
   }catch(e){return '部屋を作れませんでした。この画面では書きこみが許可されていないかもしれません。'}
 }
+async function createKonRoom(){
+  const db=await getDb();if(!db)return NO_DB;
+  try{
+    let code='';
+    for(let t=0;t<8;t++){const c=String(1000+Math.floor(Math.random()*9000));const s=await db.doc('rooms/'+c).get();if(!s.exists||!alive(s.data())){code=c;break}}
+    if(!code)return '部屋を作れませんでした。もう一度押してください。';
+    const old=await db.collection('rooms/'+code+'/players').get();
+    for(const d of old.docs)await db.doc(pPath(code,d.id)).delete();
+    // 主催者は答えない（部屋の画面＝QR・人数・スタートだけ）
+    await db.doc('rooms/'+code).set({created:Date.now(),round:1,phase:'lobby',qi:0,qs:dealKon(KON_LEN),len:KON_LEN,topic:'kon',anon:true,kind:'kon',host:PID});
+    enterRoom(code);return 'ok';
+  }catch(e){return '部屋を作れませんでした。この画面では書きこみが許可されていないかもしれません。'}
+}
+async function joinKon(code,f){
+  const db=await getDb();if(!db)return NO_DB;
+  try{
+    const rs=await db.doc('rooms/'+code).get();
+    if(!rs.exists||!alive(rs.data()))return 'その番号の部屋が見つかりません。番号を確かめてください。';
+    const room=rs.data(),ps=await db.collection('rooms/'+code+'/players').get();
+    if(!ps.docs.some(d=>d.id===PID)){
+      if(ps.docs.length>=KON_MAX)return 'この部屋は、もう'+KON_MAX+'人そろっています。';
+      if(ps.docs.some(d=>String((d.data()||{}).no)===String(f.no)))return 'その番号は、もう使われています。番号札を確かめてください。';
+      await db.doc(pPath(code,PID)).set({name:'',no:String(f.no),sex:f.sex,want:f.want,ans:{},round:room.round||1,joined:Date.now(),ready:true});
+    }
+    enterRoom(code);return 'ok';
+  }catch(e){return '参加できませんでした。この画面では書きこみが許可されていないかもしれません。'}
+}
 async function joinRoom(code,name){
   const db=await getDb();if(!db)return NO_DB;
   try{
     const rs=await db.doc('rooms/'+code).get();
     if(!rs.exists||!alive(rs.data()))return 'その番号の部屋が見つかりません。番号を確かめてください。';
     const room=rs.data(),ps=await db.collection('rooms/'+code+'/players').get();
+    if(room.host===PID){enterRoom(code);return 'ok'}   // 婚活の部屋を作った主催者
+    if(room.kind==='kon'&&!ps.docs.some(d=>d.id===PID)){joinFromLink(code);return 'ok'}
     if(!ps.docs.some(d=>d.id===PID)){
       if(!name)return 'ニックネームを入れてください';
       if(ps.docs.length>=MAXP)return 'この部屋は、もう'+MAXP+'人そろっています。';
@@ -398,11 +459,12 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 function leaveRoom(keep){R.un.forEach(f=>{try{f()}catch(e){}});R.un=[];R.code=null;clearInterval(R.tick);clearInterval(R.poll);if(!keep)store('kv_room',null)}
 async function roomUpdate(patch){const db=await getDb();try{await db.doc('rooms/'+R.code).update(patch)}catch(e){}}
 function advance(k,rd){const id=rd+'-'+k;if(R.adv[id])return;R.adv[id]=1;const n=(R.room.qs||[]).length;roomUpdate(k+1<n?{qi:k+1}:{phase:'result'})}
-const rAns=(p,k)=>{const x=p&&p.ans&&p.ans[k];return x?{o:x.o,g:x.g,st:x.st||0,ms:x.ms||0,to:!!x.to,d:!!x.d}:null};
+const rAns=(p,k)=>{const x=p&&p.ans&&p.ans[k];return x?{o:x.o,st:x.st||0,ms:x.ms||0,to:!!x.to,d:!!x.d}:null};
 async function sync(){
   const room=R.room,me=R.players[PID];
   if(!R.code||room===undefined)return;
   if(!room||!alive(room)){leaveRoom();goTop();return}
+  if(room.kind==='kon'&&room.host===PID){hostSync();return}
   if(!me)return;
   const db=await getDb(),rd=room.round||1,ps=plist(),n=(room.qs||[]).length;
   if((me.round||1)<rd){db.doc(pPath(R.code,PID)).update({ans:{},round:rd});return}
@@ -410,18 +472,23 @@ async function sync(){
     const key='lobby'+ps.map(p=>p.id+':'+p.name).join('|');
     if(key!==R.key){
       // 新しく入ってきた人を知らせる（最初に開いたときは知らせない）
-      if(R.key.startsWith('lobby')){const before=R.seenIds||[];ps.filter(p=>p.id!==PID&&!before.includes(p.id)).forEach(p=>{toast(p.name+'さんが入りました');try{navigator.vibrate&&navigator.vibrate(120)}catch(e){}})}
-      R.seenIds=ps.map(p=>p.id);R.key=key;lobby()}
+      if(R.key.startsWith('lobby')){const before=R.seenIds||[];ps.filter(p=>p.id!==PID&&!before.includes(p.id)).forEach(p=>{toast((room.kind==='kon'?p.no+'番':p.name)+'さんが入りました');try{navigator.vibrate&&navigator.vibrate(120)}catch(e){}})}
+      R.seenIds=ps.map(p=>p.id);R.key=key;room.kind==='kon'?konWait():lobby()}
     return}
   if(room.phase==='play'){
     const k=room.qi||0,done=ps.filter(p=>{const a=rAns(p,k);return a&&a.d&&(p.round||1)===rd});
     if(done.length>=ps.length&&ps.length>0){advance(k,rd);return}
     const qk='q'+rd+'-'+k;
-    if(R.key!==qk){const fresh=k===0&&!/^q/.test(R.key);R.key=qk;R.my={o:-1,g:-1,st:0,ms:0,fin:false};
+    if(R.key!==qk){const fresh=k===0&&!/^q/.test(R.key);R.key=qk;R.my={o:-1,st:0,ms:0,fin:false};
       if(fresh){markSeen(room.qs);countdown(qk,()=>{R.seen[qk]=Date.now();rAsk(k,qk)})}else{R.seen[qk]=Date.now();rAsk(k,qk)}}
     else if(R.seen[qk])rCount(done.length,ps.length);
     return}
   clearInterval(R.tick);
+  if(room.phase==='result'&&room.kind==='kon'){
+    // 婚活：名前を見せる「OK」が変わったら描き直す（名前を入力中なら待つ）
+    const key='kres'+rd+'-'+ps.map(p=>p.id+(p.rname||'')+Object.keys(p.reveal||{}).sort().join(',')).join('|');
+    if(key===R.key)return;const ae=document.activeElement;if(ae&&ae.tagName==='INPUT'&&app.contains(ae)){R.konLater=true;return}
+    R.key=key;konResult();return}
   if(room.phase==='result'){const key='res'+rd+'-'+ps.map(p=>p.id).join();if(key===R.key)return;R.key=key;
     showResult({players:ps.map(p=>({id:p.id,name:p.name,ans:room.qs.map((q,i)=>rAns(p,i))})),qs:room.qs,me:PID,anon:!!room.anon})}
 }
@@ -432,14 +499,13 @@ function countdown(qk,go){
   R.tick=setInterval(()=>{if(R.key!==qk){clearInterval(R.tick);return}n--;if(n>0)draw();else{clearInterval(R.tick);go()}},800);
 }
 function rAsk(k,qk){
-  const room=R.room,ps=plist(),two=ps.length<=2,o=ps.find(p=>p.id!==PID),qid=room.qs[k],n=room.qs.length;
-  const gl=two?`${o?o.name:'相手'}さんはどっちを選んだと思う？`:'みんな（自分以外）でいちばん多い答えは？';
-  const draw=()=>{const m=R.my,step=m.fin?'done':m.o<0?'own':'guess';
-    view(askHTML(qid,k,n,{guessLabel:gl,step,star:room.len===30,starOn:m.st,timer:true}));
+  const room=R.room,qid=room.qs[k],n=room.qs.length;
+  const draw=()=>{const m=R.my,step=m.fin?'done':'own';
+    view(askHTML(qid,k,n,{step,star:room.len===30||room.kind==='kon',starOn:m.st,timer:true}));
     bindAsk(tap);paint()};
   const tap=(v,starOn)=>{const m=R.my;if(v===null){m.st=starOn?1:0;return}
     if(m.fin)return;
-    if(m.o<0){m.o=v;m.ms=Date.now()-R.seen[qk]}else{m.g=v;m.fin=true}
+    m.o=v;m.ms=Date.now()-R.seen[qk];m.fin=true;
     save(k,!!m.fin,false);draw()};
   const paint=()=>{const left=Math.max(0,LIMIT*1000-(Date.now()-R.seen[qk])),s=$('tsec'),b=$('tbar');
     if(s){s.textContent=Math.ceil(left/1000);s.classList.toggle('hurry',left<=5000)}if(b)b.style.width=(left/(LIMIT*10))+'%';return left};
@@ -451,7 +517,7 @@ function rAsk(k,qk){
 }
 async function save(k,fin,to){const db=await getDb(),me=R.players[PID];if(!db||!me)return;
   const m=R.my,a=Object.assign({},me.ans||{});
-  a[k]={o:m.o<0?-1:m.o,g:m.g<0?-1:m.g,st:m.st||0,ms:m.ms||0,to:!!to,d:!!fin};
+  a[k]={o:m.o<0?-1:m.o,st:m.st||0,ms:m.ms||0,to:!!to,d:!!fin};
   R.players[PID]=Object.assign({},me,{ans:a});
   try{await db.doc(pPath(R.code,PID)).update({ans:a})}catch(e){}
   if(fin){const ps=plist(),rd=R.room.round||1;   // 自分が最後の1人なら、知らせを待たずにすぐ次へ
@@ -499,7 +565,8 @@ async function joinFromLink(code){
   const fail=msg=>{clearHash();view(`<section class="card hand"><p class="big">${msg}</p><p class="hint">部屋は12時間で閉じます。部屋を作った人に、もう一度送ってもらってください。</p><button class="btn" id="tp" style="align-self:stretch">トップへ</button></section>`);$('tp').onclick=goTop};
   if(!room)return fail('この部屋は見つかりませんでした');
   if(ps.includes(PID)){enterRoom(code);return}                     // もう入っている（ページを開きなおした）
-  if(ps.length>=MAXP)return fail('この部屋は、もう'+MAXP+'人そろっています');
+  if(ps.length>=maxOf(room))return fail('この部屋は、もう'+maxOf(room)+'人そろっています');
+  if(room.kind==='kon'){if(room.host===PID){enterRoom(code);return}konJoin(code,room,ps.length);return}
   const saved=store('kv_name');
   const go=async name=>{const r=await joinRoom(code,name);if(r!=='ok')fail(r)};
   if(saved){go(saved);return}                                        // 名前がわかっている人は、そのまま入る
@@ -518,7 +585,131 @@ async function joinFromLink(code){
 /* 画面の下に、短いお知らせを出す（数秒で消える） */
 function toast(t){let el=$('toast');if(!el){el=document.createElement('div');el.id='toast';el.setAttribute('role','status');el.setAttribute('data-nojw','');document.body.appendChild(el)}
   el.textContent=t;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),2600)}
-function roomAgain(){const r=R.room;roomUpdate({round:(r.round||1)+1,phase:'play',qi:0,qs:deal(r.len||10,r.topic||'all')})}
+function roomAgain(){const r=R.room;roomUpdate({round:(r.round||1)+1,phase:'play',qi:0,qs:r.kind==='kon'?dealKon(KON_LEN):deal(r.len||10,r.topic||'all')})}
+
+/* ===== 婚活・街コンの部屋（最大40人・番号だけ・名前はおたがいがOKのときだけ） =====
+   主催者（部屋を作った人）は答えない。主催者の画面＝QR・人数・スタート・進み具合。
+   参加する人は番号（会場の番号札）と、自分の性別・合う人に出してほしい人を選ぶ。 */
+const SEXL={m:'男性',f:'女性',x:'答えない'},WANTL={m:'男性',f:'女性',a:'どちらも'};
+function hostSync(){
+  const room=R.room,ps=plist(),rd=room.round||1,n=(room.qs||[]).length;
+  if(room.phase==='lobby'){const key='h-lobby'+ps.map(p=>p.id).join();if(key===R.key)return;
+    if(R.key.startsWith('h-lobby')){const before=R.seenIds||[];ps.filter(p=>!before.includes(p.id)).forEach(p=>toast(p.no+'番さんが入りました'))}
+    R.seenIds=ps.map(p=>p.id);R.key=key;hostLobby();return}
+  if(room.phase==='play'){
+    const k=room.qi||0,qk='h'+rd+'-'+k,done=ps.filter(p=>{const a=rAns(p,k);return a&&a.d&&(p.round||1)===rd});
+    if(ps.length&&done.length>=ps.length){advance(k,rd);return}
+    if(R.key!==qk){R.key=qk;R.seen[qk]=Date.now()+(k===0?2400:0);clearInterval(R.tick);
+      // 答えない人がいても止まらないよう、20秒たったら主催者の画面からも次へ進める
+      R.tick=setInterval(()=>{if(R.key!==qk){clearInterval(R.tick);return}if(Date.now()-R.seen[qk]>LIMIT*1000+2500)advance(k,rd)},500)}
+    const pc=Math.round(done.length/Math.max(1,ps.length)*100);
+    view(`<section class="card hand"><p class="cap">婚活・街コンの部屋 ${esc(R.code)}（主催者の画面）</p>
+      <p class="big">${k+1}問目／${n}問</p>
+      <div class="bar"><i style="width:${pc}%"></i></div>
+      <p class="hint">答えた人 ${done.length}／${ps.length}人。全員が答えるか、${LIMIT}秒たつと次の問題へ進みます。</p></section>`);
+    return}
+  clearInterval(R.tick);
+  if(room.phase==='result'){const key='h-res'+rd;if(key===R.key)return;R.key=key;
+    view(`<section class="card hand"><img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
+      <p class="big">結果が出ました</p>
+      <p class="hint">参加した${ps.length}人それぞれのスマホに、その人と合う人が出ています。ほかの人どうしの結果は、主催者の画面にも出ません。</p>
+      <p class="hint">名前は、2人とも「名前を見せてもいい」を押したときだけ、その2人に出ます。</p>
+      <button class="btn" id="again" style="align-self:stretch">もう1回（別の${KON_LEN}問）</button></section>
+      <button class="btn ghost small" id="home">主催者の画面を閉じてトップへ</button>`);
+    $('again').onclick=e=>{e.target.disabled=true;roomAgain()};$('home').onclick=()=>{leaveRoom();goTop()}}
+}
+function hostLobby(){
+  const c=R.code,url=joinUrl(c),ps=plist(),can=ps.length>=2;
+  const nos=ps.map(p=>p.no).sort((a,b)=>(+a)-(+b));
+  view(`<section class="card hand">
+    <p class="cap">婚活・街コンの部屋（主催者の画面）</p>
+    <p class="hint">この画面を参加する方に見せて、QRコードを読みとってもらってください。</p>
+    <div class="qr" id="qr" aria-label="参加用のQRコード"></div>
+    <p class="cap">部屋番号</p><p class="code">${esc(c)}</p>
+    <p class="hint">参加する方は、番号札の番号を入れるだけ。名前は出ません。</p>
+  </section>
+  <section class="card">
+    <div class="lobby-head"><p class="label">参加している人</p><span class="cnt">${ps.length}／${KON_MAX}人</span></div>
+    ${nos.length?`<p class="nos">${nos.map(n=>`<span>${esc(n)}番</span>`).join('')}</p>`:'<p class="hint">まだだれも入っていません。</p>'}
+    <p class="status ${can?'go':''}">${can?'みんな入ったら、スタートを押してください。全員のスマホで同時に始まります':'2人以上入ると、スタートできます'}</p>
+    <button class="btn" id="st" ${can?'':'disabled'}>${can?`スタート（${ps.length}人で）`:'スタート'}</button>
+    <p class="hint">${KON_LEN}問・1問${LIMIT}秒（約8分）。お金・将来・暮らしなど大事な問題が中心です。</p>
+  </section>
+  <button class="btn ghost small" id="home">主催者の画面を閉じてトップへ</button>`);
+  loadQR().then(()=>{const el=$('qr');if(!el)return;el.innerHTML='';new QRCode(el,{text:url,width:220,height:220,colorDark:'#22253A',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M})}).catch(()=>{const el=$('qr');if(el)el.hidden=true});
+  $('st').onclick=e=>{if(!can)return;e.target.disabled=true;roomUpdate({phase:'play',qi:0})};
+  $('home').onclick=()=>{leaveRoom();goTop()};
+}
+function konWait(){
+  const ps=plist(),me=R.players[PID];
+  view(`<section class="card hand"><img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
+    <p class="cap">婚活・街コンの部屋 ${esc(R.code)}</p>
+    <p class="big">${esc(me.no)}番で参加しています</p>
+    <p class="hint">いま${ps.length}人。主催者がスタートを押すと、全員のスマホで同時に始まります。</p>
+    <ul class="know">
+      <li><b>名前は出ません</b><span>番号だけです</span></li>
+      <li><b>${KON_LEN}問・1問${LIMIT}秒</b><span>大事なことには「★ ここはゆずれない」を押せます</span></li>
+      <li><b>合う人は、あなたのスマホにだけ</b><span>ほかの人には見えません</span></li>
+    </ul></section>
+  <button class="btn ghost small" id="home">部屋を出る</button>`);
+  $('home').onclick=async()=>{const db=await getDb(),code=R.code;leaveRoom();try{await db.doc(pPath(code,PID)).delete()}catch(e){}goTop()};
+}
+/* 招待のQR・部屋番号から：番号と、性別・合う人に出してほしい人を選んで入る */
+function konJoin(code,room,count){
+  const f={no:'',sex:'',want:''};
+  const chips=(k,L)=>`<div class="chips c3" role="group">${Object.entries(L).map(([v,l])=>`<button class="chip" data-f="${k}" data-v="${v}" aria-pressed="false">${l}</button>`).join('')}</div>`;
+  view(`<section class="card hand" style="align-items:stretch;text-align:left">
+    <p class="big" style="text-align:center">婚活・街コンの部屋に参加</p>
+    <p class="hint" style="text-align:center">${room.phase!=='lobby'?'もう始まっています。入ると、いまの問題から参加します。':`いま${count}人が待っています。`}名前は出ません。</p>
+    <label class="one-name" for="kno"><span>番号（会場の番号札）</span><input type="text" id="kno" inputmode="numeric" maxlength="3" placeholder="例：7"></label>
+    <p class="label">あなたは？</p>${chips('sex',SEXL)}
+    <p class="label">合う人に出してほしいのは？</p>${chips('want',WANTL)}
+    <button class="btn" id="kgo">参加する</button>
+    <p class="err" id="kerr2" role="alert"></p>
+    <p class="hint">性別と番号は、合う人を選ぶためだけに使います。結果は、あなたのスマホにだけ出ます。</p>
+  </section>`);
+  app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{f[b.dataset.f]=b.dataset.v;app.querySelectorAll(`[data-f="${b.dataset.f}"]`).forEach(x=>x.setAttribute('aria-pressed',x===b))});
+  $('kgo').onclick=async e=>{const err=t=>{$('kerr2').textContent=t};f.no=$('kno').value.replace(/\D/g,'').replace(/^0+/,'');
+    if(!f.no)return err('番号を入れてください');if(!f.sex)return err('「あなたは？」を選んでください');if(!f.want)return err('「合う人に出してほしいのは？」を選んでください');
+    e.target.disabled=true;const r=await joinKon(code,f);if(r!=='ok'){err(r);e.target.disabled=false}};
+}
+/* 婚活の結果：自分と合う人だけを、合う順に。名前は2人とも「見せてもいい」を押したときだけ */
+function konResult(){
+  const room=R.room,ps=plist(),me=ps.find(p=>p.id===PID);if(!me)return;
+  const P=p=>({id:p.id,ans:room.qs.map((q,i)=>rAns(p,i))});
+  const fit=(a,b)=>(a.want==='a'||a.want===b.sex)&&(b.want==='a'||b.want===a.sex);
+  const cand=ps.filter(p=>p.id!==PID&&fit(me,p)).map(p=>({p,r:pairStat(P(me),P(p),room.qs)})).filter(x=>x.r.n).sort((a,b)=>b.r.pct-a.r.pct);
+  const mine=me.reveal||{};
+  const card=(x,i)=>{const p=x.p,r=x.r,mutual=mine[p.id]&&(p.reveal||{})[PID];
+    return `<li class="pair"><div class="ph"><b>${i+1}位　${esc(p.no)}番さん${mutual&&p.rname?`（${esc(p.rname)}さん）`:''}</b><em>${r.pct}%</em></div>
+      <div class="bar"><i style="width:${r.pct}%"></i></div>
+      <p class="hint">ぴったり ${r.same.length}問・合わせられる ${r.adj.length}問・ちがい ${r.diff.length}問</p>
+      ${r.starN?`<p class="${r.starDiff.length?'warn':'good'}">★ ゆずれないところ ${r.starN}問のうち、同じ ${r.starSame.length}・合わせられる ${r.starAdj.length}・ちがう ${r.starDiff.length}</p>`:''}
+      ${mutual?`<p class="good">おたがいに「名前を見せてもいい」を押しました。${p.rname?'':'（お相手の名前はまだ入っていません）'}</p>`
+        :mine[p.id]?`<p class="hint">押しました。${esc(p.no)}番さんも押したら、ここに名前が出ます。</p>`
+        :`<div class="rvbox" data-id="${p.id}"><button class="btn small ghost rv">${esc(p.no)}番さんに名前を見せてもいい</button></div>`}</li>`};
+  const top=cand.slice(0,5),rest=cand.slice(5);
+  view(`<section class="card score"><img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
+      <p class="cap">${esc(me.no)}番さんと合う人</p>
+      <p class="hint">答えが重なった順です。お金・将来・暮らしなど大事な問題と、★ゆずれないは重く数えています。この画面は、あなたにしか見えません。</p></section>
+    <section class="card"><p class="label">あなたと合う人</p>
+      ${cand.length?`<ul class="pairs">${top.map(card).join('')}</ul>${rest.length?`<details><summary class="label">${top.length+1}位から下も見る（${rest.length}人）</summary><ul class="pairs">${rest.map((x,i)=>card(x,i+5)).join('')}</ul></details>`:''}`
+        :'<p class="hint">いま、合う人に出せる人がいません（「合う人に出してほしいのは？」の選び方で、出る人が変わります）。</p>'}
+      <p class="hint">「名前を見せてもいい」は、2人とも押したときだけ、その2人にだけ名前が出ます。片方だけが押しても、相手にはわかりません。</p></section>
+    ${tailHTML().split('<button class="btn ghost small" id="share">')[0]}
+    <button class="btn ghost small" id="home">部屋を出てトップへ</button>`);
+  app.querySelectorAll('.rvbox .rv').forEach(b=>b.onclick=()=>{const box=b.parentElement,id=box.dataset.id;
+    if(me.rname){reveal(id,me.rname);return}
+    box.innerHTML=`<label class="one-name" for="rv-${id}"><span>見せる名前（ニックネームでOK）</span><input type="text" id="rv-${id}" maxlength="10" value="${esc(store('kv_name')||'')}"></label><button class="btn small" id="rvok-${id}">この名前を見せてもいい</button>`;
+    const inp=$('rv-'+id);inp.focus();
+    $('rvok-'+id).onclick=()=>{const v=inp.value.trim();if(!v){inp.focus();return}store('kv_name',v);reveal(id,v)}});
+  $('home').onclick=()=>{leaveRoom();goTop()};
+}
+async function reveal(id,name){const db=await getDb(),me=R.players[PID];if(!db||!me)return;
+  const rv=Object.assign({},me.reveal||{},{[id]:true});R.players[PID]=Object.assign({},me,{reveal:rv,rname:name});
+  try{await db.doc(pPath(R.code,PID)).update({reveal:rv,rname:name})}catch(e){}
+  R.key='';R.konLater=false;konResult()}
+document.addEventListener('focusout',()=>{if(R.konLater){R.konLater=false;setTimeout(()=>{if(R.code)sync()},50)}});
 
 // 招待のリンクで開いたら、その部屋へ。ふつうに開いたらトップ
 if(JOIN)joinFromLink(JOIN);else goTop();

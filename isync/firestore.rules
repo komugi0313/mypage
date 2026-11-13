@@ -12,18 +12,23 @@ service cloud.firestore {
     match /isync_rooms/{code} {
       allow read: if code.matches('^[0-9]{4}$');
       allow create, update: if code.matches('^[0-9]{4}$')
-        && request.resource.data.keys().hasOnly(['created','round','phase','qi','qs','len','topic','anon','expireAt'])
+        && request.resource.data.keys().hasOnly(['created','round','phase','qi','qs','len','topic','anon','kind','host','expireAt'])
         && request.resource.data.qs is list && request.resource.data.qs.size() <= 30
         && request.resource.data.phase in ['lobby','play','result'];
       allow delete: if false;
 
-      // 部屋に入った人（ニックネームと答えだけ）
+      // 部屋に入った人（ニックネームと答え。婚活・街コンの部屋では、番号・性別・合う人に出してほしい人・名前を見せてもいい相手・見せる名前）
       match /players/{pid} {
         allow read: if code.matches('^[0-9]{4}$');
         allow create, update: if pid.size() <= 64
-          && request.resource.data.keys().hasOnly(['name','ans','round','joined','ready','expireAt'])
+          && request.resource.data.keys().hasOnly(['name','ans','round','joined','ready','no','sex','want','reveal','rname','expireAt'])
           && request.resource.data.name is string && request.resource.data.name.size() <= 20
-          && request.resource.data.ans is map && request.resource.data.ans.size() <= 30;
+          && request.resource.data.ans is map && request.resource.data.ans.size() <= 30
+          && (!('no' in request.resource.data) || (request.resource.data.no is string && request.resource.data.no.size() <= 3))
+          && (!('sex' in request.resource.data) || request.resource.data.sex in ['m','f','x'])
+          && (!('want' in request.resource.data) || request.resource.data.want in ['m','f','a'])
+          && (!('reveal' in request.resource.data) || (request.resource.data.reveal is map && request.resource.data.reveal.size() <= 40))
+          && (!('rname' in request.resource.data) || (request.resource.data.rname is string && request.resource.data.rname.size() <= 20));
         allow delete: if true;
       }
     }
