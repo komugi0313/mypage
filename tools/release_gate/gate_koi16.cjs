@@ -49,7 +49,9 @@ function scan() {
       const firstIdx = chars.findIndex(ch => ch.top >= lines[li].top - 1 && ch.bottom <= lines[li].bottom + 1);
       if (firstIdx <= 0) continue;
       const ch = chars[firstIdx], prev = chars[firstIdx - 1].c;
-      if (/[\u30a1-\u30fa\u30fc]/.test(prev) && /[\u30a1-\u30fa\u30fc]/.test(ch.c)) out.push('カタカナの言葉の途中で改行「' + lines[li - 1].s.slice(-6) + '／' + lines[li].s.slice(0, 6) + '」');
+      if (/[（「『【(]/.test(prev)) out.push('かっこの直後で改行「' + lines[li - 1].s.slice(-6) + '／' + lines[li].s.slice(0, 6) + '」');
+      if (!ch.st && /[A-Za-z0-9]/.test(prev) && /[A-Za-z0-9]/.test(ch.c) && !chars[firstIdx - 1].spAfter) out.push('英字の言葉の途中で改行「' + lines[li - 1].s.slice(-6) + '／' + lines[li].s.slice(0, 6) + '」');
+      if (!ch.st && /[\u30a1-\u30fa\u30fc]/.test(prev) && /[\u30a1-\u30fa\u30fc]/.test(ch.c)) out.push('カタカナの言葉の途中で改行「' + lines[li - 1].s.slice(-6) + '／' + lines[li].s.slice(0, 6) + '」');
       else if (!ch.st && !chars[firstIdx - 1].spAfter && !/[（「『【]/.test(ch.c) && !/[、。，．・）」』】！？!?…：―ー\/／]/.test(prev) && /[\u3040-\u30ff\u4e00-\u9fff]/.test(ch.c + prev)) out.push('言葉の途中で改行「' + lines[li - 1].s.slice(-6) + '／' + lines[li].s.slice(0, 6) + '」');
     }
     if (lines.length > 1 && last.s.length <= 3 && !wholeWord) out.push('泣き別れ「' + lines[lines.length - 1].s + '」← ' + lines[lines.length - 2].s.slice(-12));
@@ -76,6 +78,7 @@ function scan() {
     await p.goto(URL + '?from=RATC'); await check('はじめ（招待）');
     await p.goto(URL + '?types=1'); await check('16タイプ一覧');
     await p.goto(URL + '?about=1'); await check('この診断の考え方');
+    await p.goto(URL + '?privacy=1'); await check('プライバシーポリシー');
     await p.goto(URL); await p.click('#start'); await check('恋の状況'); await p.click('[data-status=crush]');
     for (let i = 0; i < 40; i++) { await check('質問' + (i + 1)); const bs = await p.$$('#scale button'); await bs[i % 5].click(); await p.waitForTimeout(200); }
     for (const [i, c] of CODES.entries()) {
