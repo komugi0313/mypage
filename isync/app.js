@@ -29,28 +29,28 @@ const ans=(o,k)=>o===0?Q[k][2]:o===1?Q[k][3]:o===2?(Q[k][4]||'こだわらない
 function deal(len,topic){
   let cats=shuffle(TOPICS[topic]||TOPICS.all);
   if(topic==='party'){const d=CI('ドキドキ');cats=cats.filter(c=>c!==d);cats.splice(0,0,d);cats.splice(3,0,d)} // ドキドキは1つおきくらいに
-  const seen=new Set(store('kv_seen')||[]);
+  const seen=new Set(store('kv_seen3')||[]);
   const pool={};[...new Set(cats)].forEach(c=>{const all=Q.map((q,i)=>i).filter(i=>Q[i][0]===c),need=Math.ceil(len*cats.filter(x=>x===c).length/cats.length)+1;
     let fresh=shuffle(all.filter(i=>!seen.has(i)));
     if(fresh.length<need){all.forEach(i=>seen.delete(i));fresh=shuffle(all)} // そのテーマを出しきったら一周目にもどす
     pool[c]=fresh});
   const out=[];let r=0;
   while(out.length<len){const c=cats[r%cats.length];const i=pool[c].shift();if(i!=null&&!out.includes(i))out.push(i);r++;if(r>len*20)break}
-  out.forEach(i=>seen.add(i));store('kv_seen',[...seen]);
+  out.forEach(i=>seen.add(i));store('kv_seen3',[...seen]);
   return out;
 }
 /* 婚活・街コン：大事な問題を中心に20問（大事14問＋暮らし・食・お金・休日のふつうの問題6問）。ドキドキは出さない */
 function dealKon(len){
-  const dk=CI('ドキドキ'),seen=new Set(store('kv_seen')||[]);
+  const dk=CI('ドキドキ'),seen=new Set(store('kv_seen3')||[]);
   const pick=(pool,m)=>{let f=shuffle(pool.filter(i=>!seen.has(i)));if(f.length<m)f=shuffle(pool);
     const by={};f.forEach(i=>(by[Q[i][0]]=by[Q[i][0]]||[]).push(i));const cs=shuffle(Object.keys(by)),out=[];let r=0;
     while(out.length<m&&r<m*20){const i=by[cs[r%cs.length]].shift();if(i!=null)out.push(i);r++}return out};
   const all=Q.map((q,i)=>i).filter(i=>Q[i][0]!==dk),daily=[CI('暮らし'),CI('食'),CI('お金'),CI('休日・遊び')];
   const big=pick(all.filter(i=>WB.has(i)),Math.round(len*.7));
   const mid=pick(all.filter(i=>!WB.has(i)&&!WL.has(i)&&daily.includes(Q[i][0])),len-big.length);
-  const out=shuffle(big.concat(mid));out.forEach(i=>seen.add(i));store('kv_seen',[...seen]);return out;
+  const out=shuffle(big.concat(mid));out.forEach(i=>seen.add(i));store('kv_seen3',[...seen]);return out;
 }
-function markSeen(ids){const s=new Set(store('kv_seen')||[]);ids.forEach(i=>s.add(i));store('kv_seen',[...s])}
+function markSeen(ids){const s=new Set(store('kv_seen3')||[]);ids.forEach(i=>s.add(i));store('kv_seen3',[...s])}
 
 /* ===== トップ ===== */
 const CFG=Object.assign({mode:'each',len:10,topic:'all',anon:false},store('kv_cfg')||{});
@@ -74,10 +74,10 @@ function goTop(){
       <p class="exo"><span class="o0">A　毎日やりとりしたい</span><span class="o1">B　用があるときだけでいい</span><span class="o2">こだわらない</span></p></div>
     <p class="label">わかること</p>
     <ul class="know">
-      <li><b>シンクロ率</b><span>答えがどれだけ重なったか（大事な問題は重く数える）</span></li>
-      <li><b>ぴったり度</b><span>同じ答え・合わせられる答え・ちがう答えの数</span></li>
-      <li><b>ゆずれないこと</b><span>自分の答えに「★ゆずれない」をつけて、おたがいの大事なところが合うかがわかる（しっかり版）</span></li>
-      <li><b>みんなの称号</b><span>読み名人・即決さん・こだわり職人 など</span></li>
+      <li><b>シンクロ率</b><span>2人の答えが、どれだけ重なったか</span></li>
+      <li><b>ぴったり度</b><span>同じ・合わせられる・ちがう答えの数</span></li>
+      <li><b>ゆずれないこと</b><span>「★ゆずれない」をつけた大事なところが合うか（しっかり版）</span></li>
+      <li><b>みんなの称号</b><span>即決さん・こだわり職人 など</span></li>
     </ul>
     <p class="hint">恋人・気になる人・友だち・家族と。ひとりでも遊べます（10問・約3分）。</p>
     <p class="hint">婚活パーティー・街コンでも使えます。QRを読むだけで、その場の2〜10人で遊べます（アプリ不要）。</p>
@@ -127,6 +127,8 @@ function goTop(){
     <label class="one-name" for="sn"><span>ニックネーム</span><input type="text" id="sn" maxlength="10" placeholder="なくてもOK" value="${esc(store('kv_name')||'')}"></label>
     <button class="btn" id="sgo">はじめる</button>
   </section>
+  <a class="btn line small" id="lntop" href="#" target="_blank" rel="noopener">LINEでアイ・シンクを教える</a>
+  ${PROMO}
   <p class="note">どの問題にも正解はありません。どちらでもいいときは、3つ目の答え（「こだわらない」「どっちも好き」など）を選んでください。</p>`);
   const DESC={kon:'最大40人。番号だけで参加して、名前を出さずに一斉に20問。終わると、自分と合う人が、自分のスマホにだけ出ます。',each:'2〜10人で。1人が部屋を作り、そばにいる人はQRコードを読みとるだけで参加できます。離れている人には、LINEなどでリンクを送ります。1問20秒。',solo:'自分の答えから、あなたのこだわりと、ゆずれることがわかります。'};
   const refresh=()=>{['each','solo','kon'].forEach(m=>$('m-'+m).hidden=CFG.mode!==m);
@@ -146,6 +148,7 @@ function goTop(){
   // 婚活・街コン
   $('mkk').onclick=async e=>{e.target.disabled=true;const r=await createKonRoom();if(r!=='ok'){$('kerr').textContent=r;e.target.disabled=false}};
   $('kjn').onclick=()=>{const c=$('kcode').value.replace(/\D/g,'');if(c.length!==4){$('kerr').textContent='4けたの部屋番号を入れてください';return}joinFromLink(c)};
+  const lt=$('lntop'),ltSet=()=>{lt.href=lineUrl('アイ・シンク｜2択に答えて答え合わせ。おたがいの重なるところがわかる無料の診断です。',siteUrl())};ltSet();lt.addEventListener('click',ltSet);
   // ひとりで
   $('sgo').onclick=()=>{const v=$('sn').value.trim();if(v)store('kv_name',v);soloStart(v)};
 }
@@ -313,9 +316,16 @@ function soloHTML(G){
     <p class="hint">いちばん即決は「${esc(Q[byT[byT.length-1].k][1])}」（${sec(byT[byT.length-1].a.ms)} 秒）</p></section>`:''}
   <section class="card"><p class="label">だれかと答え合わせしてみる？</p><p class="hint">好みが合うか、2〜10人で遊べます。</p><button class="btn" id="tog">みんなで遊ぶ</button></section>`;
 }
-function tailHTML(){return `<a class="promo" href="https://166unmei.com" target="_blank" rel="noopener">
-    <span class="t"><b>1.66 奇跡の相性診断</b><span>生年月日で、2人の運命の相性がわかる</span><em>166unmei.com</em></span><span class="go" aria-hidden="true">↗</span></a>
-  <button class="btn ghost small" id="share">結果をシェアする</button><p class="hint" id="shared" hidden></p>
+// 1.66 奇跡の相性診断（鑑定者本人のメインサービス）へのバナー。無料の診断から会員登録（毎朝の開運予報メール）へつながる
+const PROMO=`<a class="promo" href="https://166unmei.com" target="_blank" rel="noopener" aria-label="1.66 奇跡の相性診断で占う（別のサイト 166unmei.com が開きます）">
+    <span class="pr-top">価値観の次は、生まれた日でわかる「運命の相性」</span>
+    <span class="pr-pair" aria-hidden="true"><img src="img/166-cow.webp" alt="" width="68" height="72" loading="lazy"><i>×</i><img src="img/166-mouse.webp" alt="" width="66" height="72" loading="lazy"></span>
+    <span class="pr-m"><span class="pr-k">奇跡の相性診断</span><span class="pr-n">1.66<small>%</small></span><span class="pr-d">あの人は、<em>奇跡の1.66%</em>に入っている？</span></span>
+    <span class="pr-pts"><span>2人の生年月日だけ・1分</span><span>料金はかかりません</span><span>毎朝6時の開運予報メールも</span></span>
+    <span class="pr-btn">二人の相性を占う <small>↗</small></span></a><p class="promo-u">166unmei.com（別のサイト）</p>`;
+function tailHTML(){return `${PROMO}
+  <a class="btn line small" id="lnres" href="#" target="_blank" rel="noopener">LINEで結果を送る</a>
+  <button class="btn ghost small" id="share">ほかのアプリでシェアする</button><p class="hint" id="shared" hidden></p>
   <div class="row"><button class="btn" id="again">もう1回あそぶ</button><button class="btn ghost" id="home">トップへ</button></div>`}
 // シェア：スマホの共有（使えないときはコピー）。名前は入れない
 function shareText(G){
@@ -329,6 +339,7 @@ function doShare(G){const {t,url}=shareText(G),d=$('shared');
   try{navigator.clipboard.writeText(full).then(()=>{d.textContent='シェアの文をコピーしました。SNSやメッセージに貼ってください。'},()=>{d.textContent=full})}catch(e){d.textContent=full}}
 function bindTail(G){
   $('share').onclick=()=>doShare(G);
+  const lr=$('lnres');if(lr){const {t,url}=shareText(G);lr.href=lineUrl(t,url)}
   const t=$('tog');if(t)t.onclick=()=>{CFG.mode='each';saveCfg();goTop()};
   $('again').onclick=e=>{if(R.code){e.target.disabled=true;roomAgain();return}
     soloStart(L.players[0].name==='あなた'?'':L.players[0].name)};
@@ -370,7 +381,9 @@ const FB=(()=>{
     if(ready)return ready;
     ready=(async()=>{const cfg=window.ISYNC_FB;if(!cfg||!cfg.projectId)return null;
       try{if(!window.firebase||!firebase.firestore){await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js')}
-        const app=(firebase.apps||[]).find(a=>a.name==='isync')||firebase.initializeApp(cfg,'isync');return wrap(app.firestore())}catch(e){return null}})();
+        const app=(firebase.apps||[]).find(a=>a.name==='isync')||firebase.initializeApp(cfg,'isync');const fs=app.firestore();
+        try{fs.settings({experimentalAutoDetectLongPolling:true,merge:true})}catch(e){}   // LINE・アプリの中の画面など、ふつうのつなぎ方が止められる所でもつながるように
+        return wrap(fs)}catch(e){return null}})();
     return ready}
   return{init};
 })();
@@ -441,6 +454,19 @@ async function enterRoom(code){
   view('<section class="card hand"><p class="hint">部屋につないでいます…</p></section>');
   await subscribe();
   R.poll=setInterval(pull,2000);   // 知らせが止まっても取り残されないよう、2秒ごとに自分からも確かめる
+  setTimeout(()=>connWatch(code),6000);
+}
+/* 「部屋につないでいます…」のまま止まらないように：
+   部屋はあるのに自分が入っていない → 参加の画面へ／つながらない → もう一度つなぐ・トップへ */
+function connWatch(code){
+  if(R.code!==code||R.key)return;
+  if(R.room&&alive(R.room)&&!R.players[PID]&&R.room.host!==PID){leaveRoom();joinFromLink(code);return}
+  view(`<section class="card hand"><p class="big">部屋にうまくつながりません</p>
+    <p class="hint">電波の弱い所や、LINEなどのアプリの中の画面では、つながりにくいことがあります。もう一度押すか、Safari・Chromeで開いてみてください。</p>
+    <button class="btn" id="cw-re" style="align-self:stretch">もう一度つなぐ</button>
+    <button class="btn ghost small" id="cw-top">トップへ</button></section>`);
+  $('cw-re').onclick=()=>enterRoom(code);
+  $('cw-top').onclick=()=>{leaveRoom();goTop()};
 }
 async function subscribe(){
   const db=await getDb(),code=R.code;if(!code)return;
@@ -523,6 +549,9 @@ async function save(k,fin,to){const db=await getDb(),me=R.players[PID];if(!db||!
   if(fin){const ps=plist(),rd=R.room.round||1;   // 自分が最後の1人なら、知らせを待たずにすぐ次へ
     if(ps.every(p=>{const x=rAns(p,k);return x&&x.d&&(p.round||1)===rd}))advance(k,rd)}}
 function rCount(d,n){const el=$('tcnt');if(el)el.textContent=`みんなを待っています（${d}／${n}人 答えた）`}
+// LINEを開いて、文とリンクが入った状態にする（受け取った人はリンクを押すだけ）
+const lineUrl=(t,u)=>'https://line.me/R/share?text='+encodeURIComponent(t+'\n'+u);
+const siteUrl=()=>WHERE==='claude'?ART_URL:location.href.split('#')[0].split('?')[0];
 function joinUrl(c){return (WHERE==='claude'?ART_URL:location.href.split('#')[0].split('?')[0])+'#join-'+c}
 let qrP=null;
 function loadQR(){if(window.QRCode)return Promise.resolve();if(!qrP)qrP=new Promise((ok,ng)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';sc.onload=ok;sc.onerror=ng;document.head.appendChild(sc)});return qrP}
@@ -533,7 +562,8 @@ function lobby(){
     <p class="cap">部屋番号</p><p class="code">${esc(c)}</p>
     <div class="qr" id="qr" aria-label="参加用のQRコード"></div>
     <p class="hint">そばにいる人は、スマホのカメラでこのQRコードを読みとるだけで入れます。</p>
-    <button class="btn" id="cp" style="align-self:stretch">離れている人にLINEなどで送る</button><p class="hint" id="cpd" hidden></p>
+    <a class="btn line" id="ln" href="#" target="_blank" rel="noopener" style="align-self:stretch">LINEで友だちを招待する</a>
+    <button class="btn ghost small" id="cp" style="align-self:stretch">ほかのアプリで送る</button><p class="hint" id="cpd" hidden></p>
     <p class="hint">送ったリンクを開くだけで、この部屋に入れます。</p>
   </section>
   <section class="card">
@@ -545,6 +575,7 @@ function lobby(){
   </section>
   <button class="btn ghost small" id="home">部屋を出てトップへ</button>`);
   loadQR().then(()=>{const el=$('qr');if(!el)return;el.innerHTML='';new QRCode(el,{text:url,width:180,height:180,colorDark:'#22253A',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M})}).catch(()=>{const el=$('qr');if(el)el.hidden=true});
+  $('ln').href=lineUrl('アイ・シンクで一緒に遊ぼう！\nこのリンクを開くだけで、部屋に入れます。',url);
   $('cp').onclick=()=>{const d=$('cpd'),text='アイ・シンクで一緒に遊ぼう！\nこのリンクを開くだけで、部屋に入れます。';
     // スマホの「共有」でLINE・メッセージなどへ（送るのは部屋に直接入れるリンク）。使えないときは文とリンクをコピー
     if(navigator.share){navigator.share({title:'アイ・シンク',text,url}).catch(()=>{});return}
@@ -615,7 +646,7 @@ function hostSync(){
       <p class="hint">参加した${ps.length}人それぞれのスマホに、その人と合う人が出ています。ほかの人どうしの結果は、主催者の画面にも出ません。</p>
       <p class="hint">名前は、2人とも「名前を見せてもいい」を押したときだけ、その2人に出ます。</p>
       <button class="btn" id="again" style="align-self:stretch">もう1回（別の${KON_LEN}問）</button></section>
-      <button class="btn ghost small" id="home">主催者の画面を閉じてトップへ</button>`);
+      ${PROMO}<button class="btn ghost small" id="home">主催者の画面を閉じてトップへ</button>`);
     $('again').onclick=e=>{e.target.disabled=true;roomAgain()};$('home').onclick=()=>{leaveRoom();goTop()}}
 }
 function hostLobby(){
@@ -627,6 +658,7 @@ function hostLobby(){
     <div class="qr" id="qr" aria-label="参加用のQRコード"></div>
     <p class="cap">部屋番号</p><p class="code">${esc(c)}</p>
     <p class="hint">参加する方は、番号札の番号を入れるだけ。名前は出ません。</p>
+    <a class="btn line small" id="ln" href="#" target="_blank" rel="noopener" style="align-self:stretch">LINEで参加のリンクを送る</a>
   </section>
   <section class="card">
     <div class="lobby-head"><p class="label">参加している人</p><span class="cnt">${ps.length}／${KON_MAX}人</span></div>
@@ -637,6 +669,7 @@ function hostLobby(){
   </section>
   <button class="btn ghost small" id="home">主催者の画面を閉じてトップへ</button>`);
   loadQR().then(()=>{const el=$('qr');if(!el)return;el.innerHTML='';new QRCode(el,{text:url,width:220,height:220,colorDark:'#22253A',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M})}).catch(()=>{const el=$('qr');if(el)el.hidden=true});
+  $('ln').href=lineUrl('アイ・シンク（婚活・街コン）の部屋です。\nこのリンクを開いて、番号札の番号を入れてください。',url);
   $('st').onclick=e=>{if(!can)return;e.target.disabled=true;roomUpdate({phase:'play',qi:0})};
   $('home').onclick=()=>{leaveRoom();goTop()};
 }
@@ -651,6 +684,7 @@ function konWait(){
       <li><b>${KON_LEN}問・1問${LIMIT}秒</b><span>大事なことには「★ ここはゆずれない」を押せます</span></li>
       <li><b>合う人は、あなたのスマホにだけ</b><span>ほかの人には見えません</span></li>
     </ul></section>
+  ${PROMO}
   <button class="btn ghost small" id="home">部屋を出る</button>`);
   $('home').onclick=async()=>{const db=await getDb(),code=R.code;leaveRoom();try{await db.doc(pPath(code,PID)).delete()}catch(e){}goTop()};
 }
@@ -696,7 +730,7 @@ function konResult(){
       ${cand.length?`<ul class="pairs">${top.map(card).join('')}</ul>${rest.length?`<details><summary class="label">${top.length+1}位から下も見る（${rest.length}人）</summary><ul class="pairs">${rest.map((x,i)=>card(x,i+5)).join('')}</ul></details>`:''}`
         :'<p class="hint">いま、合う人に出せる人がいません（「合う人に出してほしいのは？」の選び方で、出る人が変わります）。</p>'}
       <p class="hint">「名前を見せてもいい」は、2人とも押したときだけ、その2人にだけ名前が出ます。片方だけが押しても、相手にはわかりません。</p></section>
-    ${tailHTML().split('<button class="btn ghost small" id="share">')[0]}
+    ${tailHTML().split('<a class="btn line small" id="lnres"')[0]}
     <button class="btn ghost small" id="home">部屋を出てトップへ</button>`);
   app.querySelectorAll('.rvbox .rv').forEach(b=>b.onclick=()=>{const box=b.parentElement,id=box.dataset.id;
     if(me.rname){reveal(id,me.rname);return}
