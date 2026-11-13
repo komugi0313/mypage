@@ -98,7 +98,6 @@ function goTop(){
   const bk=$('back');if(bk)bk.onclick=async()=>{const r=await joinRoom(st.code,store('kv_name')||'');if(r!=='ok'){store('kv_room',null);goTop()}};
   // ひとりで
   $('sgo').onclick=()=>{const v=$('sn').value.trim();if(v)store('kv_name',v);soloStart(v)};
-  if(JOIN)setTimeout(()=>$('me').focus(),0);
 }
 
 /* ===== 1問の画面（どのモードでも同じ） =====
@@ -327,7 +326,7 @@ async function createRoom(name){
     const old=await db.collection('rooms/'+code+'/players').get();
     for(const d of old.docs)await db.doc(pPath(code,d.id)).delete();
     await db.doc('rooms/'+code).set({created:Date.now(),round:1,phase:'lobby',qi:0,qs:deal(CFG.len,CFG.topic),len:CFG.len,topic:CFG.topic,anon:CFG.anon});
-    await db.doc(pPath(code,PID)).set({name,ans:{},round:1,joined:Date.now(),ready:false});
+    await db.doc(pPath(code,PID)).set({name,ans:{},round:1,joined:Date.now(),ready:true});
     enterRoom(code);return 'ok';
   }catch(e){return '部屋を作れませんでした。この画面では書きこみが許可されていないかもしれません。'}
 }
@@ -340,7 +339,7 @@ async function joinRoom(code,name){
     if(!ps.docs.some(d=>d.id===PID)){
       if(!name)return 'ニックネームを入れてください';
       if(ps.docs.length>=MAXP)return 'この部屋は、もう'+MAXP+'人そろっています。';
-      await db.doc(pPath(code,PID)).set({name,ans:{},round:room.round||1,joined:Date.now(),ready:false});
+      await db.doc(pPath(code,PID)).set({name,ans:{},round:room.round||1,joined:Date.now(),ready:true});
     }
     enterRoom(code);return 'ok';
   }catch(e){return '参加できませんでした。この画面では書きこみが許可されていないかもしれません。'}
@@ -379,8 +378,12 @@ async function sync(){
   const db=await getDb(),rd=room.round||1,ps=plist(),n=(room.qs||[]).length;
   if((me.round||1)<rd){db.doc(pPath(R.code,PID)).update({ans:{},round:rd});return}
   if(room.phase==='lobby'){
-    if(ps.length>=2&&ps.every(p=>p.ready)&&!R.adv['go'+rd]){R.adv['go'+rd]=1;roomUpdate({phase:'play',qi:0})}
-    const key='lobby'+ps.map(p=>p.name+(p.ready?1:0)).join('|');if(key!==R.key){R.key=key;lobby()}return}
+    const key='lobby'+ps.map(p=>p.id+':'+p.name).join('|');
+    if(key!==R.key){
+      // 新しく入ってきた人を知らせる（最初に開いたときは知らせない）
+      if(R.key.startsWith('lobby')){const before=R.seenIds||[];ps.filter(p=>p.id!==PID&&!before.includes(p.id)).forEach(p=>{toast(p.name+'さんが入りました');try{navigator.vibrate&&navigator.vibrate(120)}catch(e){}})}
+      R.seenIds=ps.map(p=>p.id);R.key=key;lobby()}
+    return}
   if(room.phase==='play'){
     const k=room.qi||0,done=ps.filter(p=>{const a=rAns(p,k);return a&&a.d&&(p.round||1)===rd});
     if(done.length>=ps.length&&ps.length>0){advance(k,rd);return}
@@ -429,31 +432,63 @@ function joinUrl(c){return (WHERE==='claude'?ART_URL:location.href.split('#')[0]
 let qrP=null;
 function loadQR(){if(window.QRCode)return Promise.resolve();if(!qrP)qrP=new Promise((ok,ng)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';sc.onload=ok;sc.onerror=ng;document.head.appendChild(sc)});return qrP}
 function lobby(){
-  const c=R.code,url=joinUrl(c),ps=plist(),me=R.players[PID]||{},nr=ps.filter(p=>p.ready).length,all=ps.length>=2&&nr===ps.length,room=R.room;
+  const c=R.code,url=joinUrl(c),ps=plist(),room=R.room,can=ps.length>=2;
   view(`<section class="card hand">
     <p class="cap">部屋番号</p><p class="code">${esc(c)}</p>
     <div class="qr" id="qr" aria-label="参加用のQRコード"></div>
-    <p class="hint">みんなのスマホのカメラで、このQRコードを読みとってください。<br>または、トップの「友だちの部屋に参加する」に ${esc(c)} を入れます。</p>
-    <button class="btn ghost small" id="cp" style="align-self:stretch">離れている人にLINEなどで送る</button><p class="hint" id="cpd" hidden></p>
-    <p class="hint">${room.len===30?'しっかり版（30問・★ゆずれない）':'簡易版（10問）'}・話題は${room.topic==='party'?'盛り上がる':'いろいろ'}${room.anon?'・名前は見せない':''}</p>
+    <p class="hint">そばにいる人は、スマホのカメラでこのQRコードを読みとるだけで入れます。</p>
+    <button class="btn" id="cp" style="align-self:stretch">離れている人にLINEなどで送る</button><p class="hint" id="cpd" hidden></p>
+    <p class="hint">送ったリンクを開くだけで、この部屋に入れます。</p>
   </section>
   <section class="card">
-    <div class="lobby-head"><p class="label">参加している人</p><span class="cnt">${ps.length}／${MAXP}人</span></div>
-    <ul class="members">${ps.map(p=>`<li class="${p.ready?'ok':''}"><span>${esc(p.name)}${p.id===PID?'（あなた）':''}</span><b>${p.ready?'✓ 準備OK':'まだ'}</b></li>`).join('')}</ul>
-    <p class="status ${all?'go':''}">${all?'全員そろいました！ スタートします':ps.length<2?'もう1人以上の参加を待っています':`準備OK ${nr}／${ps.length}人。全員がOKになったら、自動でスタートします`}</p>
-    <button class="btn ${me.ready?'ghost':''}" id="rd">${me.ready?'準備OKを取り消す':'準備OK'}</button>
-    ${ps.length>=2&&!all?'<button class="btn ghost small" id="st">来ない人がいるので、このメンバーでスタート</button>':''}
+    <div class="lobby-head"><p class="label">部屋に入っている人</p><span class="cnt">${ps.length}／${MAXP}人</span></div>
+    <ul class="members">${ps.map(p=>`<li class="ok"><span>${esc(p.name)}${p.id===PID?'（あなた）':''}</span><b>入りました</b></li>`).join('')}</ul>
+    <p class="status ${can?'go':''}">${can?'みんな入ったら、スタートを押してください（だれが押してもOK）':'もう1人、入るのを待っています'}</p>
+    <button class="btn" id="st" ${can?'':'disabled'}>${can?`スタート（${ps.length}人で）`:'スタート'}</button>
+    <p class="hint">${room.len===30?'しっかり版（30問・★ゆずれない）':'簡易版（10問）'}・話題は${room.topic==='party'?'盛り上がる':'いろいろ'}${room.anon?'・名前は見せない':''}</p>
   </section>
   <button class="btn ghost small" id="home">部屋を出てトップへ</button>`);
   loadQR().then(()=>{const el=$('qr');if(!el)return;el.innerHTML='';new QRCode(el,{text:url,width:180,height:180,colorDark:'#22253A',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M})}).catch(()=>{const el=$('qr');if(el)el.hidden=true});
-  $('cp').onclick=()=>{const d=$('cpd'),text='アイ・シンクで一緒に遊ぼう！\n部屋番号：'+c+'\nリンクを開いて、ニックネームを入れたら参加できます。';
-    // スマホの「共有」でLINE・メッセージなどへ。使えないときはリンクと文をコピー
+  $('cp').onclick=()=>{const d=$('cpd'),text='アイ・シンクで一緒に遊ぼう！\nこのリンクを開くだけで、部屋に入れます。';
+    // スマホの「共有」でLINE・メッセージなどへ（送るのは部屋に直接入れるリンク）。使えないときは文とリンクをコピー
     if(navigator.share){navigator.share({title:'アイ・シンク',text,url}).catch(()=>{});return}
-    d.hidden=false;const full=text+'\n'+url;try{navigator.clipboard.writeText(full).then(()=>{d.textContent='招待の文をコピーしました。LINEなどに貼って送ってください。'},()=>{d.textContent=full})}catch(e){d.textContent=full}};
-  $('rd').onclick=async e=>{e.target.disabled=true;const db=await getDb();try{await db.doc(pPath(R.code,PID)).update({ready:!me.ready})}catch(x){}pull()};
-  const st=$('st');if(st)st.onclick=e=>{e.target.disabled=true;roomUpdate({phase:'play',qi:0})};
+    d.hidden=false;const full=text+'\n'+url;try{navigator.clipboard.writeText(full).then(()=>{d.textContent='招待の文とリンクをコピーしました。LINEなどに貼って送ってください。'},()=>{d.textContent=full})}catch(e){d.textContent=full}};
+  $('st').onclick=e=>{if(!can)return;e.target.disabled=true;roomUpdate({phase:'play',qi:0})};
   $('home').onclick=async()=>{const db=await getDb(),code=R.code;leaveRoom();try{await db.doc(pPath(code,PID)).delete()}catch(e){}goTop()};
 }
+/* 招待のリンク・QRコード（…#join-1234）で開いたとき：トップを出さずに、その部屋へまっすぐ入る。
+   前に名前を入れたことがあれば何も押さずに入る。はじめての人は、ニックネームを入れて「参加する」を1回押すだけ（空でも入れる） */
+async function joinFromLink(code){
+  view('<section class="card hand"><div class="orb" aria-hidden="true"></div><p class="hint">部屋に入っています…</p></section>');
+  const db=await getDb();
+  const clearHash=()=>{try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}JOIN=''};
+  if(!db){clearHash();goTop();return}
+  let room=null,ps=[];
+  try{const rs=await db.doc('rooms/'+code).get();room=rs.exists&&alive(rs.data())?rs.data():null;
+    if(room){const q=await db.collection('rooms/'+code+'/players').get();ps=q.docs.map(d=>d.id)}}catch(e){}
+  const fail=msg=>{clearHash();view(`<section class="card hand"><p class="big">${msg}</p><p class="hint">部屋は12時間で閉じます。部屋を作った人に、もう一度送ってもらってください。</p><button class="btn" id="tp" style="align-self:stretch">トップへ</button></section>`);$('tp').onclick=goTop};
+  if(!room)return fail('この部屋は見つかりませんでした');
+  if(ps.includes(PID)){enterRoom(code);return}                     // もう入っている（ページを開きなおした）
+  if(ps.length>=MAXP)return fail('この部屋は、もう'+MAXP+'人そろっています');
+  const saved=store('kv_name');
+  const go=async name=>{const r=await joinRoom(code,name);if(r!=='ok')fail(r)};
+  if(saved){go(saved);return}                                        // 名前がわかっている人は、そのまま入る
+  const started=room.phase!=='lobby';
+  view(`<section class="card hand">
+    <div class="orb" aria-hidden="true"></div>
+    <p class="big">部屋に招待されました</p>
+    <p class="hint">${started?'もう始まっています。入ると、いまの問題から参加します。':`いま${ps.length}人が待っています。`}</p>
+    <label class="one-name" for="jn-name" style="align-self:stretch;text-align:left"><span>ニックネーム</span><input type="text" id="jn-name" maxlength="10" placeholder="本名でなくてOK" autocomplete="nickname"></label>
+    <button class="btn" id="jn-go" style="align-self:stretch">参加する</button>
+  </section>`);
+  const inp=$('jn-name');
+  const submit=e=>{if(e)e.preventDefault();const v=inp.value.trim();if(v)store('kv_name',v);$('jn-go').disabled=true;go(v||('ゲスト'+(ps.length+1)))};
+  $('jn-go').onclick=submit;inp.onkeydown=e=>{if(e.key==='Enter')submit(e)};
+}
+/* 画面の下に、短いお知らせを出す（数秒で消える） */
+function toast(t){let el=$('toast');if(!el){el=document.createElement('div');el.id='toast';el.setAttribute('role','status');el.setAttribute('data-nojw','');document.body.appendChild(el)}
+  el.textContent=t;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),2600)}
 function roomAgain(){const r=R.room;roomUpdate({round:(r.round||1)+1,phase:'play',qi:0,qs:deal(r.len||10,r.topic||'all')})}
 
-goTop();
+// 招待のリンクで開いたら、その部屋へ。ふつうに開いたらトップ
+if(JOIN)joinFromLink(JOIN);else goTop();

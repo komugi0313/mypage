@@ -37,7 +37,7 @@
   var SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,OPTION:1,TITLE:1,NOSCRIPT:1};
   function run(root){
     var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null),ns=[],n;
-    while((n=w.nextNode())){ var pe=n.parentNode; if(!pe||SKIP[pe.nodeName]||pe.isContentEditable) continue; if(pe.nodeName==='J-P') continue; if(n.nodeValue.length>=5&&JP.test(n.nodeValue)) ns.push(n); }
+    while((n=w.nextNode())){ var pe=n.parentNode; if(!pe||SKIP[pe.nodeName]||pe.isContentEditable) continue; if(pe.nodeName==='J-P') continue; if(pe.closest&&pe.closest('[data-nojw]')) continue; if(n.nodeValue.length>=5&&JP.test(n.nodeValue)) ns.push(n); }
     ns.forEach(function(n){
       var ps=phrases(n.nodeValue); if(ps.length<2) return;
       var f=document.createDocumentFragment();
