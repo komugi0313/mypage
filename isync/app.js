@@ -381,7 +381,9 @@ const FB=(()=>{
     if(ready)return ready;
     ready=(async()=>{const cfg=window.ISYNC_FB;if(!cfg||!cfg.projectId)return null;
       try{if(!window.firebase||!firebase.firestore){await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js')}
-        const app=(firebase.apps||[]).find(a=>a.name==='isync')||firebase.initializeApp(cfg,'isync');return wrap(app.firestore())}catch(e){return null}})();
+        const app=(firebase.apps||[]).find(a=>a.name==='isync')||firebase.initializeApp(cfg,'isync');const fs=app.firestore();
+        try{fs.settings({experimentalAutoDetectLongPolling:true,merge:true})}catch(e){}   // LINE・アプリの中の画面など、ふつうのつなぎ方が止められる所でもつながるように
+        return wrap(fs)}catch(e){return null}})();
     return ready}
   return{init};
 })();
@@ -452,6 +454,19 @@ async function enterRoom(code){
   view('<section class="card hand"><p class="hint">部屋につないでいます…</p></section>');
   await subscribe();
   R.poll=setInterval(pull,2000);   // 知らせが止まっても取り残されないよう、2秒ごとに自分からも確かめる
+  setTimeout(()=>connWatch(code),6000);
+}
+/* 「部屋につないでいます…」のまま止まらないように：
+   部屋はあるのに自分が入っていない → 参加の画面へ／つながらない → もう一度つなぐ・トップへ */
+function connWatch(code){
+  if(R.code!==code||R.key)return;
+  if(R.room&&alive(R.room)&&!R.players[PID]&&R.room.host!==PID){leaveRoom();joinFromLink(code);return}
+  view(`<section class="card hand"><p class="big">部屋にうまくつながりません</p>
+    <p class="hint">電波の弱い所や、LINEなどのアプリの中の画面では、つながりにくいことがあります。もう一度押すか、Safari・Chromeで開いてみてください。</p>
+    <button class="btn" id="cw-re" style="align-self:stretch">もう一度つなぐ</button>
+    <button class="btn ghost small" id="cw-top">トップへ</button></section>`);
+  $('cw-re').onclick=()=>enterRoom(code);
+  $('cw-top').onclick=()=>{leaveRoom();goTop()};
 }
 async function subscribe(){
   const db=await getDb(),code=R.code;if(!code)return;
