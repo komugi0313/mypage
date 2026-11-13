@@ -279,6 +279,8 @@ header.top .navbtn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(
 .g-mine{background:#FCE8EF}.g-mine .gi{background:#B01A5A}
 .g-zukan{background:#FFF3DA}.g-zukan .gi{background:#8A4B00}
 .g-retry{background:#E6F4F1}.g-retry .gi{background:#0F5F55}
+.g-group{background:#EEF0FF}.g-group .gi{background:#4F46E5}
+.glist{display:grid;gap:10px;margin-top:10px}
 /* 読みやすさ（鑑定者本人 2026-11-12「黒文字だらけで読みづらい・読み疲れる・頭に入ってこない」）：
    本文はやわらかいこげ茶、見出しに色の丸じるし、箇条書きは色つきの札、説明は最初の1文を大きく */
 .card p,.card li{color:var(--text)}
@@ -329,6 +331,7 @@ header.top .navbtn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(
       <p class="muted" style="margin-top:8px">本格版は、4つのものさしの割合がより正確になり、「心のゆれやすさ」と「恋の心のくせ」もわかります。</p>
       <p class="muted" id="resume-wrap" style="margin-top:10px"></p>
     </section>
+    <section class="card hidden" id="home-groups"></section>
 
     <section class="card">
       <h2><span class="nw">4つのものさしで、</span><span class="nw">恋を見る</span></h2>
@@ -2750,7 +2753,7 @@ function renderResult(code,mine,withCode){
     h+='<section class="card">'+secH('h2','match','みんなで診断する')+'<p>友だちと何人でも（8人まで）。全員の相性と、いちばん相性のいい2人がわかります。人のスマホにはさわらず、QRを見せるか、LINEで送るだけです。</p>'+
        '<label class="muted" for="g-name-new">あなたのニックネーム（8文字まで）</label><input class="gname" id="g-name-new" maxlength="8" autocomplete="off" value="'+esc(st.nick||'')+'" placeholder="例：みき">'+
        '<button class="btn btn-main btn-wide" type="button" data-act="gnew">グループをつくる</button>'+
-       '<p class="muted" style="margin-top:8px">ニックネームは、グループのリンクの中にだけ入ります。リンクを受けとった人には見えますが、どこにも送りません。本名でなくて大丈夫です。</p></section>';
+       '<p class="muted" style="margin-top:8px">ニックネームは、グループのリンクの中にだけ入ります。リンクを受けとった人には見えますが、どこにも送りません。本名でなくて大丈夫です。</p>'+(function(){ var gl=groupListHTML(); return gl?'<h3 style="margin-top:16px">参加したグループ</h3>'+gl:''; })()+'</section>';
   }
 
   if(CTA.url){
@@ -2933,6 +2936,57 @@ function qrSVG(text){
   for(var r=0;r<n;r++) for(var c=0;c<n;c++) if(q.isDark(r,c)) d+='M'+(c+M)+' '+(r+M)+'h1v1h-1z';
   return '<svg viewBox="0 0 '+(n+2*M)+' '+(n+2*M)+'" shape-rendering="crispEdges" role="img" aria-label="QRコード"><rect width="100%" height="100%" fill="#fff"/><path d="'+d+'" fill="#000"/></svg>';
 }
+/* 参加したグループの一覧（鑑定者本人 2026-11-13「両方作成」）：この端末が覚えているグループを新しい順に。押すとそのグループの画面へ */
+function gLabel(m){ var ns=m.map(function(x){return x.n;}); return ns.slice(0,3).map(function(n){return '<span class="nw">'+esc(n)+'</span>';}).join('・')+(ns.length>3?'<span class="nw">（ほか'+(ns.length-3)+'人）</span>':''); }
+function groupListHTML(skipId){
+  var gs=st.groups||{}, ks=Object.keys(gs).filter(function(k){return k!==skipId&&gs[k].me&&(gs[k].m||[]).length;}).sort(function(a,b){return (gs[b].at||0)-(gs[a].at||0);});
+  if(!ks.length) return '';
+  return '<div class="glist">'+ks.map(function(k){ var g=gs[k], d=new Date(g.at||Date.now());
+    return '<button class="gobtn g-group" type="button" data-act="gopen" data-gid="'+esc(k)+'"><span class="gi" aria-hidden="true">∞</span><span class="gt"><b>'+gLabel(g.m)+'</b><small>'+g.m.length+'人のグループ・'+(d.getMonth()+1)+'/'+d.getDate()+'</small></span><span class="ga" aria-hidden="true">›</span></button>'; }).join('')+'</div>';
+}
+/* グループの結果を1枚の画像に（参加した人・いちばん相性のいい2人・相性の高い組み合わせ。見た目は個人の画像と同じピーチとこげ茶） */
+function gImage(g){
+  var codes={}; g.m.forEach(function(m){codes[m.c]=1;});
+  var imgs={}, ks=Object.keys(codes), left=ks.length;
+  ks.forEach(function(c){ var im=new Image(); im.onload=function(){imgs[c]=im; if(--left===0) gDraw(g,imgs);}; im.onerror=function(){ if(--left===0) gDraw(g,imgs);};
+    im.src = CHARA_IMG[c] ? 'img/'+c+'.png' : 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(artSvg(c,250).replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" ')); });
+}
+function gDraw(g,imgs){
+  var n=g.m.length, ps=[]; for(var i=0;i<n;i++) for(var j=i+1;j<n;j++) ps.push({a:g.m[i],b:g.m[j],s:compat(g.m[i].c,g.m[j].c).score});
+  ps.sort(function(x,y){return y.s-x.s;});
+  var W=1080, cols=4, rows=Math.ceil(n/cols), top=ps.slice(1,6), H=330+rows*270+(ps.length?520:0)+top.length*78+170;
+  var cv=document.createElement('canvas'); cv.width=W; cv.height=H; var x=cv.getContext('2d'), F='"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif';
+  var fit=function(t,w,size,weight){ var sz=size; do{ x.font=weight+' '+sz+'px '+F; sz-=2; }while(x.measureText(t).width>w&&sz>18); return t; };
+  var drawImg=function(c,cx,cy,sz){ x.fillStyle='#fff'; x.beginPath(); x.arc(cx,cy,sz/2+12,0,Math.PI*2); x.fill(); x.lineWidth=5; x.strokeStyle='#5A3A2A'; x.stroke(); if(imgs[c]) x.drawImage(imgs[c],cx-sz/2,cy-sz/2,sz,sz); };
+  x.fillStyle='#FFF1EA'; x.fillRect(0,0,W,H);
+  x.fillStyle='#5A3A2A'; roundRect(x,72,62,W-124,H-118,44); x.fill();
+  x.fillStyle='#FFFCF7'; roundRect(x,56,46,W-124,H-118,44); x.fill(); x.lineWidth=7; x.strokeStyle='#5A3A2A'; x.stroke();
+  x.textAlign='center'; x.fillStyle='#B01A5A'; x.font='900 64px '+F; x.fillText('みんなの恋のかたち',W/2-8,160);
+  x.fillStyle='#45352B'; x.font='700 34px '+F; x.fillText(n+'人の相性',W/2-8,222);
+  var y=270, cw=(W-180)/cols;
+  g.m.forEach(function(m,k){ var r=Math.floor(k/cols), c=k%cols, inRow=Math.min(cols,n-r*cols), ox=(W-16-inRow*cw)/2, cx=ox+cw*c+cw/2, cy=y+r*270+80;
+    drawImg(m.c,cx,cy,140); x.fillStyle='#2A1A12'; fit(m.n,cw-16,34,'800'); x.fillText(m.n,cx,cy+122); x.fillStyle='#45352B'; fit(T[m.c].c,cw-16,24,'700'); x.fillText(T[m.c].c,cx,cy+160); });
+  y+=rows*270+20;
+  if(ps.length){
+    var b=ps[0]; x.fillStyle='#FCE8EF'; roundRect(x,110,y,W-236,470,32); x.fill(); x.lineWidth=4; x.strokeStyle='#5A3A2A'; x.stroke();
+    x.fillStyle='#B01A5A'; x.font='900 40px '+F; x.fillText('いちばん相性のいい2人',W/2-8,y+68);
+    drawImg(b.a.c,W/2-170,y+200,150); drawImg(b.b.c,W/2+154,y+200,150);
+    x.fillStyle='#B01A5A'; x.font='900 64px '+F; x.fillText('♡',W/2-8,y+222);
+    x.fillStyle='#2A1A12'; fit(b.a.n+' と '+b.b.n,W-320,40,'800'); x.fillText(b.a.n+' と '+b.b.n,W/2-8,y+346);
+    x.fillStyle='#B01A5A'; x.font='900 72px '+F; x.fillText(b.s+'点',W/2-8,y+432);
+    y+=520;
+    top.forEach(function(p){ x.fillStyle='#2A1A12'; x.textAlign='left'; fit(p.a.n+' × '+p.b.n,W-470,36,'700'); x.fillText(p.a.n+' × '+p.b.n,150,y+40);
+      x.textAlign='right'; x.fillStyle='#B01A5A'; x.font='900 38px '+F; x.fillText(p.s+'点',W-170,y+42); x.textAlign='center';
+      x.strokeStyle='#E0CFBC'; x.lineWidth=2; x.beginPath(); x.moveTo(150,y+64); x.lineTo(W-170,y+64); x.stroke(); y+=78; });
+  }
+  x.textAlign='center'; x.fillStyle='#5A3A2A'; x.font='800 34px '+F; x.fillText(SITE_NAME+'　koikata.jp',W/2-8,H-112);
+  cv.toBlob(function(bl){
+    var file=new File([bl],'koi16-group.png',{type:'image/png'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){ navigator.share({files:[file],text:gShareText(g)}).catch(function(){}); return; }
+    var a=document.createElement('a'); a.href=URL.createObjectURL(bl); a.download=file.name; document.body.appendChild(a); a.click(); a.remove();
+    toast('画像を保存しました');
+  },'image/png');
+}
 function gShareText(g){ return 'みんなで「恋のかたち診断」をしています（いま'+g.m.length+'人）。診断すると、全員との相性と、いちばん相性のいい2人がわかります。｜'+SITE_NAME; }
 function pairRow(a,b){
   var c=compat(a.c,b.c);
@@ -2972,8 +3026,10 @@ function renderGroup(g){
   if(me&&n<G_MAX){
     h+='<section class="card">'+secH('h2','want','次の人を招待する')+'<p>となりの人には、このQRを見せて、スマホのカメラで読んでもらうだけ。人のスマホにはさわりません。</p><div class="qr-box">'+qrSVG(gUrl(g))+'<p class="muted">読みこむと、このグループに入って診断できます</p></div>'+
        '<div class="share" style="margin-top:14px"><button class="btn btn-line" type="button" data-act="gline">LINEで送る</button><button class="btn btn-sub" type="button" data-act="gcopy">リンクをコピー</button></div>'+
+       (n>=2?'<p style="margin-top:10px"><button class="btn btn-sub btn-wide" type="button" data-act="gimg"><span class="nw">グループの結果を</span><span class="nw">画像で保存</span></button></p>':'')+
        '<p class="muted" style="margin-top:10px">診断が終わった人の画面に、その人まで入った新しいQRが出ます。次の人は、いちばん最後に入った人のQRを読んでください。最後の人がLINEのグループに送ると、全員で同じ結果を見られます。</p></section>';
-  } else if(me) h+='<section class="card"><p>8人そろいました。この画面のリンクをLINEのグループに送ると、全員で同じ結果を見られます。</p><div class="share"><button class="btn btn-line" type="button" data-act="gline">LINEで送る</button><button class="btn btn-sub" type="button" data-act="gcopy">リンクをコピー</button></div></section>';
+  } else if(me) h+='<section class="card"><p>8人そろいました。この画面のリンクをLINEのグループに送ると、全員で同じ結果を見られます。</p><div class="share"><button class="btn btn-line" type="button" data-act="gline">LINEで送る</button><button class="btn btn-sub" type="button" data-act="gcopy">リンクをコピー</button></div><p style="margin-top:10px"><button class="btn btn-sub btn-wide" type="button" data-act="gimg"><span class="nw">グループの結果を</span><span class="nw">画像で保存</span></button></p></section>';
+  var og=groupListHTML(g.id); if(og) h+='<section class="card">'+secH('h2','match','ほかの参加したグループ')+og+'</section>';
   if(CTA.url) h+=c66HTML();
   h+='<div class="gogrid">';
   if(st.me&&st.me.code) h+='<button class="gobtn g-mine" type="button" data-act="mine"><span class="gi" aria-hidden="true">♡</span><span class="gt"><b>自分の結果を見る</b><small>あなたのタイプにもどる</small></span><span class="ga" aria-hidden="true">›</span></button>';
@@ -3034,6 +3090,7 @@ function home(){
   $('hero-art').innerHTML = ['LVTP','LATC','LVSP','LASC','RATP','RVTC','RASP','RVSC'].map(function(o){return art(o,76);}).join(''); // 4つの色の仲間から2つずつ、4つ×2段
   if(started){ var n=ans.filter(function(v){return v!=null;}).length; rw.innerHTML='<button class="linkbtn" type="button" data-act="resume">前回のつづき（'+n+'問目まで）から再開する</button>'; }
   else if(st.me&&st.me.code){ rw.innerHTML='<button class="linkbtn" type="button" data-act="mine">前回の結果（'+esc(T[st.me.code].c)+'）を見る</button>'; }
+  var gl=groupListHTML(), hg=$('home-groups'); hg.innerHTML=gl?'<h2>参加したグループ</h2><p class="muted">押すと、みんなの相性の画面が開きます。</p>'+gl:''; hg.classList.toggle('hidden',!gl);
   glueAll($('v-home')); glueAll(document.querySelector('footer'));
   show('v-home');
 }
@@ -3054,6 +3111,8 @@ document.addEventListener('click',function(e){
   else if(act==='wipe'){ wipeAll(); }
   else if(act==='qr'){ var qo=$('qr-out'); if(qo.innerHTML){ qo.innerHTML=''; } else { qo.innerHTML='<div class="qr-box">'+qrSVG(inviteUrl(code))+'<p class="muted">となりの人に、スマホのカメラで読んでもらってください。診断が終わると、2人の相性が出ます。</p></div>'; glueAll(qo); } }
   else if(act==='gnew'){ var nm=gName($('g-name-new').value); if(!nm){ toast('ニックネームを入れてください'); return; } var ng={id:Math.random().toString(36).slice(2,8),m:[]}; history.pushState(null,'',location.pathname); gJoin(ng,nm); }
+  else if(act==='gopen'){ var gid=b.getAttribute('data-gid'), sg=st.groups&&st.groups[gid]; if(sg){ var go={id:gid,m:sg.m.slice()}; history.pushState(null,'',gQuery(go)); renderGroup(go); } }
+  else if(act==='gimg'){ gImage($('v-group').__g); }
   else if(act==='gjoin'){ gJoin($('v-group').__g,$('g-name').value); }
   else if(act==='gquiz-full'||act==='gquiz-quick'){ var gg=$('v-group').__g, nm2=gName($('g-name').value); if(!nm2){ toast('ニックネームを入れてください'); return; } if(gg.m.some(function(m){return m.n===nm2;})){ toast('同じニックネームの人がいます。少し変えてください'); return; } st.pendingG={id:gg.id,m:gg.m,name:nm2}; save(st); startQuiz(true,act==='gquiz-full'?'full':'quick'); }
   else if(act==='gline'||act==='gcopy'){ var g3=$('v-group').__g, gu=gUrl(g3), gt=gShareText(g3);

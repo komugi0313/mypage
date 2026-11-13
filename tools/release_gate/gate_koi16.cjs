@@ -88,6 +88,11 @@ function scan() {
       await p.goto(URL + '?g=gate01&m=' + m(5)); await check('みんなで診断（入ったあと）');
       await p.goto(URL + '?g=gate02&m=' + m(8)); await check('みんなで診断（8人）');
       await p.goto(URL + '?t=RASC'); await p.click('[data-act=qr]'); await check('結果のQR');
+      await p.evaluate(([a8, a3]) => { const o = JSON.parse(localStorage.getItem('koi16_v1') || '{}'); o.groups = { g8: { me: 'ゆう', m: a8, at: Date.now() }, g3: { me: 'ゆう', m: a3, at: Date.now() - 1000 } }; localStorage.setItem('koi16_v1', JSON.stringify(o)); },
+        [cs.map((c, i) => ({ c, n: nm[i] })), cs.slice(0, 3).map((c, i) => ({ c, n: nm[i] }))]);
+      await p.goto(URL); await check('はじめ（参加したグループ）');
+      await p.goto(URL + '?t=RASC'); await check('結果（参加したグループ）');
+      await p.goto(URL); await p.click('[data-gid=g3]'); await check('参加したグループから開く');
     }
     await p.goto(URL); await p.click('#start'); await check('恋の状況'); await p.click('[data-status=crush]');
     for (let i = 0; i < 40; i++) { await check('質問' + (i + 1)); const bs = await p.$$('#scale button'); await bs[i % 5].click(); await p.waitForTimeout(200); }
