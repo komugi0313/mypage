@@ -66,7 +66,9 @@
      ・はじめて🎤を押したときに、たくさん話してほしいこと・おためしのことを1回だけ案内する。
      ・サーバーにつながらないとき（通信なし・確認環境）は、何も出さずに今までどおり。 */
   var FN=CFG.fn||'/.netlify/functions/voice-fix', OPT=CFG.opt||'';
+  var OPT_ON=CFG.optOn===true;   // 音声入力オプション（月1,000円）の販売を始めたら true にする（鑑定者本人 2026-11-02「オプションは後から始めます」）。false のあいだは料金の案内を出さない
   var W=CFG.w||'占いの言葉（星の名前など）', WS=CFG.ws||'占いの言葉';
+  var KR=CFG.kr||'カルテ';   // 鑑定が残る場所の呼び名（易は「鑑定の記録（顧客名簿・最近の鑑定）」。2026-11-02）
   var EX=CFG.ex||'';   // はじめの案内に出す例（PRO＝月支元命・魁罡／ビギナー＝専門用語を出さない決まりなので甲子（甲子園）／易＝卦の名前。鑑定者本人の指示 2026-10-27）   // 易は「易の言葉（卦の名前など）」（鑑定者本人の指示 2026-10-27）
   var VS={option:null,left:null,trial:10,off:false};
   try{ var _v=JSON.parse(sessionStorage.getItem('pk_vfx')||'null'); if(_v) VS=Object.assign(VS,_v); }catch(_){}
@@ -119,15 +121,19 @@
   }
   function endPop(){
     if(lsGet('pk_vfx_end')) return; lsSet('pk_vfx_end',String(Date.now()));   // おためし終了の案内は1回だけ
+    if(!OPT_ON){ pop('<h3>🎤 <span class="nw">無料のおためしが</span><span class="nw">終わりました</span></h3>'+
+        '<p>🎤 声で入力は、<span class="nw">これからも<b>無料</b>で</span><span class="nw">そのままお使いいただけます。</span></p>'+
+        '<p class="vfx-s">話した言葉は相談の欄に入り、<span class="nw">鑑定するとそのまま'+KR+'に残ります。</span></p>',[{t:'閉じる'}]); return; }
     var b=[{t:'あとで'}]; if(OPT) b.unshift({t:'オプションを見る',main:true,href:OPT});
     pop('<h3>🎤 <span class="nw">無料のおためしが</span><span class="nw">終わりました</span></h3>'+
         '<p>🎤 声で入力は、<span class="nw">これからも<b>無料</b>で</span><span class="nw">そのままお使いいただけます。</span></p>'+
         '<p><b class="nw">月1,000円のオプション</b>をつけると、<span class="nw">話した言葉を読みやすく整えて、</span><span class="nw">'+WS+'も正しい字に直します。</span><span class="nw">キーボードで打った文字も直ります。</span></p>'+
-        '<p class="vfx-s">話した言葉は相談の欄に入り、<span class="nw">鑑定するとそのままカルテに残ります。</span></p>',b);
+        '<p class="vfx-s">話した言葉は相談の欄に入り、<span class="nw">鑑定するとそのまま'+KR+'に残ります。</span></p>',b);
   }
   // おためしが終わったあと、無料の声の入力を20回使った方にだけ、もう1回だけ案内する（これで最後。何度も出さない）
   var FOLLOW_N=20;
   function freeUse(){
+    if(!OPT_ON) return;
     if(VS.option!==false||VS.left!==0||lsGet('pk_vfx_follow')) return;
     if(!lsGet('pk_vfx_end')){ setTimeout(endPop,600); return; }   // おためし終了の案内をこの端末でまだ見ていなければ、先にそれを1回
     var n=(+(lsGet('pk_vfx_free')||0))+1; lsSet('pk_vfx_free',String(n));
@@ -138,13 +144,47 @@
         '<p>おためしで便利だと感じていただけたら、<span class="nw">ぜひどうぞ。</span></p>'+
         '<p class="vfx-s">このご案内は、これで最後です。</p>',b); },800);
   }
+  /* お客様のお名前はサーバーに送らない（依頼書 §5-5 の 5・プライバシーポリシー「お名前は送信しません」）：
+     送る前に、保存したお客様・いま入れているお名前を印（〔人A〕〔人B〕…）に置きかえ、戻ってきた文で元に戻す。
+     印が1つでも消えた・増えた答えは使わない（話した文をそのまま残す）。お名前は2文字以上のものだけ（PRO の _nameMasks と同じ）。 */
+  function nameList(){
+    var out=[];
+    function add(n,whole){ n=String(n||'').trim(); if(!n||n.length>40||/名前なし/.test(n)) return;
+      var c=n.replace(/[\s\u3000]+/g,''); if(c.length>=2) out.push(c); if(n!==c&&n.length>=2) out.push(n);
+      if(!whole) n.split(/[\s\u3000]+/).forEach(function(p){ if(p.length>=2&&!/^[\u3041-\u309F]+$/.test(p)) out.push(p); }); }
+    function addKana(k){ k=String(k||'').replace(/[\s\u3000]+/g,''); if(k.length>=3&&k.length<=40) out.push(k); }
+    try{ if(typeof CFG.names==='function') (CFG.names()||[]).forEach(function(n){ add(n); }); }catch(_){}
+    try{ if(typeof personName==='string') add(personName); }catch(_){}
+    try{ if(typeof personNameB==='string') add(personNameB); }catch(_){}
+    try{ document.querySelectorAll(CFG.nameSel||'#f-name, #b-name, #custNewName, #coName, #coEditName').forEach(function(e){ add(e.value); }); }catch(_){}
+    try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(!/^(bazi_mypage_v2|bazi_clients_v1|eki_pro_v1)/.test(k||'')) continue;
+      var d=JSON.parse(localStorage.getItem(k)||'null'); var L=Array.isArray(d)?d:(d&&(d.clients||d.customers))||[];
+      L.forEach(function(c){ if(c&&typeof c==='object'&&!c.deleted){ add(c.name); addKana(c.kana); } }); } }catch(_){}
+    var seen={}, u=[]; out.forEach(function(n){ if(!seen[n]){ seen[n]=1; u.push(n); } });
+    return u.sort(function(a,b){ return b.length-a.length; });
+  }
+  function maskNames(t){
+    t=String(t||''); var map=[], L=nameList();
+    for(var i=0;i<L.length&&map.length<26;i++){ if(t.indexOf(L[i])<0) continue; var k='〔人'+String.fromCharCode(65+map.length)+'〕'; t=t.split(L[i]).join(k); map.push([L[i],k]); }
+    return {t:t,map:map};
+  }
+  function unmaskNames(t,mk){
+    t=String(t||'');
+    for(var i=0;i<mk.map.length;i++){ var k=mk.map[i][1]; if(t.split(k).length!==mk.t.split(k).length) return null; }   // 印の数が送ったときと違う＝使わない
+    if((t.match(/〔人[A-Z]〕/g)||[]).length!==(mk.t.match(/〔人[A-Z]〕/g)||[]).length) return null;   // 送っていない印がある
+    for(var j=0;j<mk.map.length;j++) t=t.split(mk.map[j][1]).join(mk.map[j][0]);
+    return t;
+  }
+  window.__pkVfxMask={mask:maskNames,unmask:unmaskNames,names:nameList};   // 点検用
   // 声で入れた文字（または打った文字）を直す。欄の文字がそのあいだに変わっていなければ入れかえる
   function smartFix(ta,m,base,part,quiet){
     if(!canFix()||!String(part||'').trim()) return;
     var snap=ta.value; if(!quiet) say(m,'✨ 読みやすく整えています…');
-    vfxCall({text:part},function(j,why){
+    var mk=maskNames(part);
+    vfxCall({text:mk.t},function(j,why){
       if(why==='end'){ say(m,''); endPop(); return; }
       if(!j||typeof j.text!=='string'){ if(!quiet) say(m,''); return; }
+      if(j.changed){ var back=unmaskNames(j.text,mk); if(back===null||!back.trim()) j.changed=false; else j.text=back; }   // 空の文・お名前の印がくずれた文では上書きしない（話した文をそのまま残す）
       if(j.changed){
         if(ta.value===snap){ ta.value=base===null?j.text:joinText(base,j.text); fire(ta); ta.__vfxLast=ta.value; }
         else { var at=ta.value.lastIndexOf(part); if(at>=0){ ta.value=ta.value.slice(0,at)+j.text+ta.value.slice(at+part.length); fire(ta); ta.__vfxLast=ta.value; } }   // 直しが届くまでに続きを話した・打ったときも、その部分だけ入れかえる（直しを捨てない。2026-10-29）
@@ -227,7 +267,7 @@
       c.textContent=UNDO; c.classList.add('undo'); clearTimeout(timer); timer=setTimeout(endUndo,8000);
     });
     ta.addEventListener('input',function(){ if(saved!==null&&ta.value.length) endUndo(); else sync(); });
-    setInterval(sync,700); sync();   // 例文ボタンなどで欄に文字が入ったときも出す
+    var _iv=setInterval(function(){ if(!ta.isConnected){ clearInterval(_iv); return; } sync(); },700); sync();   // 例文ボタンなどで欄に文字が入ったときも出す
   }
   function scan(root){ try{ (root||document).querySelectorAll(SEL).forEach(attach); }catch(e){} }
   function wire(){

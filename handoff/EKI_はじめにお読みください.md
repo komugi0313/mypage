@@ -1,6 +1,6 @@
 # 易 EKI Pro ― 引き渡しメモ（この商品だけ）
 
-最終更新：2026-10-17　／　販売事業者：72k株式会社　／　対応バージョン：`eki-pro/app/sw.js` の `CACHE = 'eki-pro-v127'`
+最終更新：2026-11-03　／　販売事業者：72k株式会社　／　対応バージョン：`eki-pro/app/sw.js` の `CACHE = 'eki-pro-v226'` **以降**（渡された `sw.js` の数字がこれと同じか大きければ最新です）
 
 > **この ZIP は「易 EKI Pro」だけ**です。四柱推命 PRO・今日から占い師（ビギナー）は**別の商品**で、別の ZIP です。混ぜないでください。
 > サーバー（会員・決済・オンライン鑑定の中継）は全商品で共通の基盤です。依頼の全体は「【最終完成版】0_共通サーバー基盤」ZIP の `エンジニアへの実装依頼_3サイト.md` を先に読んでください。
@@ -25,19 +25,22 @@
 
 | # | 内容 | 場所 |
 |---|---|---|
-| 1 | `var PREVIEW_MODE = true;` → **`false`** | `eki-pro/app/index.html` 793行 |
-| 2 | `STUB` の式 → **`STUB: false`** | `eki-pro/auth.html` 241行・`eki-pro/mypage.html` 195行・`eki-pro/upgrade.html` 388行（`TRIAL_CHECK`）・559行（`FIX`）・`eki-pro/register.html` 164行（`CONFIG`） |
-| 3 | 決済ページURL `TELECOM_PAYMENT_URL={ month:'' }`・`TELECOM_PARAM`（`ORDER_PREFIX='E'` はそのまま） | `eki-pro/upgrade.html` 358〜360行 |
-| 4 | テスト用キー欄 `#demoKeyCard`・`#geminiCard` と、`?gtest=1` で表示する1行を削除（欄を消してもアプリは止まらない作り）。`GEMINI_API_KEY = ""` は空のまま | `eki-pro/app/index.html` 973行・1265行・3929行・1467行 |
-| 5 | 「▶ 登録せずに、そのまま鑑定を体験する（デモ）」リンク（`#demoLink`）を削除 | `eki-pro/register.html` 146行 |
-| 6 | `DEMO_MODE` は `false` のまま | `eki-pro/app/index.html` 803行 |
+| 1 | `var PREVIEW_MODE = true;` → **`false`** | `eki-pro/app/index.html`（`var PREVIEW_MODE` で探す） |
+| 2 | `STUB` の式 → **`STUB: false`** | `eki-pro/auth.html`・`eki-pro/mypage.html`・`eki-pro/upgrade.html`（`TRIAL_CHECK` と `FIX` の2か所）・`eki-pro/register.html`（`CONFIG`）。どれも `ekipro\.jp)$/i.test(location.hostname)` で探す |
+| 3 | 決済ページURL `TELECOM_PAYMENT_URL={ month:'' }`・`TELECOM_PARAM`（`ORDER_PREFIX='E'` はそのまま） | `eki-pro/upgrade.html`（`var TELECOM_PAYMENT_URL` で探す） |
+| 4 | テスト用キー欄 `#demoKeyCard`・`#geminiCard` と、`?gtest=1` で表示する1行を削除（欄を消してもアプリは止まらない作り）。`GEMINI_API_KEY = ""` は空のまま | `eki-pro/app/index.html`（欄は `id="demoKeyCard"`・`id="geminiCard"`、表示する1行は `gtest=1\b/.test(location.search+location.hash)){ ['d`、キーは `const GEMINI_API_KEY` で探す） |
+| 5 | 「▶ 登録せずに、そのまま鑑定を体験する（デモ）」リンク（`#demoLink`）を削除 | `eki-pro/register.html`（`id="demoLink"` で探す） |
+| 6 | `DEMO_MODE` は `false` のまま | `eki-pro/app/index.html`（`var DEMO_MODE` で探す） |
 | 7 | サーバー中継 `eki-pro/functions/gemini.js` の環境変数 | 共通仕様 §5 |
-| 8 | 変えたら `eki-pro/app/sw.js` の `CACHE` を1つ上げる | `eki-pro/app/sw.js` 4行 |
+| 8 | 変えたら `eki-pro/app/sw.js` の `CACHE` を1つ上げる | `eki-pro/app/sw.js`（`const CACHE` で探す） |
 
 - 本番ドメイン（ekipro.jp）では 1・2 を書き忘れても自動で false になりますが、それ以外のドメインでは効かないので必ず書きかえてください。
+- 画面のファイルは毎日のように直しているので、場所は行番号ではなく「探す文字」で書いています。
+- **3つの商品は、確認用も本番も、商品ごとに別のサイト（別のドメイン＝オリジン）に置いてください**。1つのドメインの中にフォルダを並べて置くと、端末に保存する値（ログイン・顧客カルテ・商品の目印など）が商品どうしで混ざり、鑑定書が別の商品の目印 `X-Product` を送って詳細鑑定が 403 `PRODUCT` で断られます（依頼書 §1）。
+- `README.md`・`実装仕様_*.md` などの `.md` と `functions/`・`package.json`・`netlify.toml` は、公開するファイルから外してください（依頼書 §4-2）。
 
 ## 3. ★大事：画面の一部は PRO から自動で作っています
-- `upgrade.html`・`auth.html`・`mypage.html` は、四柱推命 PRO の申込・ログイン・マイページから **`tools/eki_pay_from_pro.py eki-pro` で自動生成**しています（流れ・APIは共通で、色・名前・リンク先・説明文が違う）。**直接直さないでください**（作り直すと消えます）。生成ツールは「共通サーバー基盤」ZIP の `tools/` にあります。
+- `upgrade.html`・`auth.html`・`mypage.html` は、四柱推命 PRO の申込・ログイン・マイページから **`tools/eki_pay_from_pro.py eki-pro` で自動生成**しています（流れ・APIは共通で、色・名前・リンク先・説明文が違う）。**直接直さないでください**（作り直すと消えます）。生成ツールは「共通サーバー基盤」ZIP の `tools/` にあります。今の易の3ページは、PRO の今の画面からこのツールで作り直すとバイト単位で同じになることを確かめています（2026-11-03）。
 - 生成すると PRO の値（`STUB`・決済URL）が写るので、上の切替は**生成のあと**に行ってください。生成のあとは `python3 tools/add_product_tag.py` で商品ID（`eki`）を入れ直します。
 - `register.html`・`app/index.html`・LP・規約類は、このフォルダで直接管理しています。
 

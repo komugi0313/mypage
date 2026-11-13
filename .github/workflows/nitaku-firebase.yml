@@ -1,0 +1,28 @@
+# 究極の二択（nitaku/）を Firebase Hosting に公開する（ワンソナと同じしくみ）
+# main に PR をマージすると、nitaku/ に変更があったときだけ自動で公開する。
+# 必要なもの：この倉庫の Settings → Secrets に FIREBASE_SERVICE_ACCOUNT_16TYPEPLUS（Firebase のサービスアカウントの鍵）
+name: 究極の二択を Firebase に公開
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'nitaku/**'
+      - '.github/workflows/nitaku-firebase.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # ページに版の番号を入れる（新しい版が出たら、前の版を開いている画面が1回だけ読み直す）
+      - run: sed -i "s/__BUILD__/${GITHUB_SHA}/" nitaku/index.html
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_16TYPEPLUS }}
+          projectId: typeplus-69c66
+          channelId: live
+          target: honbare
+          entryPoint: ./nitaku

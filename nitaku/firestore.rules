@@ -1,0 +1,39 @@
+// 究極の二択（honbare.com）が使う Firestore の決まり。
+// 置き場所は nitaku_rooms（みんなで遊ぶ部屋）と nitaku_votes（みんなの回答％）だけ。
+// 同じプロジェクトにほかの決まりがあるときは、全部を置きかえず、下の2つの match をいまの決まりの中に足してください。
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // みんなで遊ぶ部屋（4けたの部屋番号。12時間で消す＝expireAt に TTL を設定）
+    match /nitaku_rooms/{code} {
+      allow read: if code.matches('^[0-9]{4}$');
+      allow create, update: if code.matches('^[0-9]{4}$')
+        && request.resource.data.keys().hasOnly(['code','host','mode','lv','num','mix','round','qs','phase','qi','used','created','expireAt'])
+        && request.resource.data.code == code
+        && request.resource.data.qs.size() <= 15;
+      allow delete: if false;
+
+      // 部屋に入った人（名前と答えだけ）
+      match /players/{pid} {
+        allow read: if code.matches('^[0-9]{4}$');
+        allow create, update: if pid.size() <= 64
+          && request.resource.data.keys().hasOnly(['name','joined','ans','times','mine','expireAt'])
+          && request.resource.data.name is string && request.resource.data.name.size() <= 20;
+        allow delete: if true;
+      }
+    }
+
+    // みんなの回答％（問題ごとに a・b の数だけ。1回に1つずつしか増やせない）
+    match /nitaku_votes/{qid} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['a','b'])
+        && ((request.resource.data.a == 1 && request.resource.data.b == 0)
+         || (request.resource.data.a == 0 && request.resource.data.b == 1));
+      allow update: if request.resource.data.keys().hasOnly(['a','b'])
+        && ((request.resource.data.a == resource.data.a + 1 && request.resource.data.b == resource.data.b)
+         || (request.resource.data.b == resource.data.b + 1 && request.resource.data.a == resource.data.a));
+      allow delete: if false;
+    }
+  }
+}

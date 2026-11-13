@@ -36,7 +36,11 @@ if (!DRY && !process.env.GEMINI_API_KEY) {
   const real0 = globalThis.fetch;
   globalThis.fetch = (url, opt) => {   // 仮の値を Google に送らない（本物の鍵はヘッダーで付く）
     let u = String(url);
-    if (u.includes('generativelanguage.googleapis.com')) u = u.replace(/([?&])key=via-network-secret(&|$)/, (m, a, b) => (b ? a : '')).replace(/[?&]$/, '');
+    if (u.includes('generativelanguage.googleapis.com')) {
+      u = u.replace(/([?&])key=via-network-secret(&|$)/, (m, a, b) => (b ? a : '')).replace(/[?&]$/, '');
+      // 中継はキーをヘッダ x-goog-api-key で送る（2026-11-02〜）。仮の値のヘッダは外す（本物の鍵は通信の途中で付く）
+      if (opt && opt.headers && opt.headers['x-goog-api-key'] === 'via-network-secret') { const hh = Object.assign({}, opt.headers); delete hh['x-goog-api-key']; opt = Object.assign({}, opt, { headers: hh }); }
+    }
     return real0(u, opt);
   };
   console.log('鍵：ネットワークシークレットを使います（このセッションからは鍵は見えません）');

@@ -41,11 +41,13 @@ BEGINNER_SKIN = """<style id="beginner-skin">
 .brand .sub{display:block;font-weight:800;color:var(--ink2)}
 #bg-intro{background:linear-gradient(135deg,#FDF3E2,#FCE9E6);border:2px solid #F2D9A6;border-radius:16px;padding:16px 18px;margin:0 0 14px}
 #bg-intro .t{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:900;font-size:16px;color:#B4471F;margin-bottom:8px}
-#bg-intro-x{flex:0 0 auto;width:40px;height:40px;border:1px solid #E9CF9E;background:#fff;color:#8A5A12;border-radius:50%;padding:0;font-family:inherit;font-weight:900;font-size:14px;line-height:1;cursor:pointer}
+#bg-intro .t>span{min-width:0;flex:1 1 auto}
+#bg-intro-x{flex:0 0 auto;width:44px;height:44px;border:1px solid #E9CF9E;background:#fff;color:#8A5A12;border-radius:50%;padding:0;font-family:inherit;font-weight:900;font-size:14px;line-height:1;cursor:pointer}
 html.bg-intro-done #bg-intro{display:none}
 #bg-intro .steps{display:flex;gap:8px;flex-wrap:wrap}
 #bg-intro .s{flex:1 1 150px;background:#fff;border:1px solid #F0DFBE;border-radius:12px;padding:10px 12px;font-size:13.5px;font-weight:800;color:#4A4030}
 #bg-intro .s b{color:#E8392B}
+#bg-intro-manabi{display:inline-flex;align-items:center;min-height:44px;margin-top:10px;padding:6px 14px;border-radius:999px;background:#E4F3F1;color:#1F625A;border:1px solid #A9D6CF;font-weight:900;font-size:14px;text-decoration:none}
 </style>
 """
 
@@ -130,8 +132,9 @@ def build_app():
     s = rep(s, '  <section class="card panel">',
             '  <div id="bg-intro"><div class="t"><span><span class="nobr">むずかしい知識は、</span><span class="nobr">いりません。</span></span>'
             '<button type="button" id="bg-intro-x" aria-label="この案内を閉じる" title="閉じる">✕</button></div><div class="steps">'
-            '<div class="s"><b>①</b> 生年月日を入れる</div><div class="s"><b>②</b> 相談を書いて「この相談を鑑定する」を押す</div>'
-            '<div class="s"><b>③</b> 出てきた文章を読むだけ</div></div></div>\n  <section class="card panel">', 1)
+            '<div class="s"><b>①</b> お名前と生年月日を入れる</div><div class="s personal-only"><b>②</b> 相談を書いて「この相談を鑑定する」を押す</div><div class="s compat-only"><b>②</b> お相手の生年月日を入れて「この2人の相性を見る」を押す</div>'
+            '<div class="s"><b>③</b> 出てきた文章を読むだけ</div></div>'
+            '<a id="bg-intro-manabi" href="manabi.html" target="_blank" rel="noopener">📖 はじめての学び方（20分ほど）を開く</a></div>\n  <section class="card panel">', 1)
     # 相談の入口（何を占いますか？）と「この相談を鑑定する」ボタンはPROと同じ（ことばも専門用語なし）。あることだけ確かめる
     rep(s, '<span>この相談を鑑定する</span></button>', '', 1, label='相談ボタン（この相談を鑑定する）')
 
@@ -166,7 +169,7 @@ def build_app():
 def build_auth():
     s = (PRO / 'auth.html').read_text(encoding='utf-8').replace('四柱推命占い自動鑑定 PRO','四柱推命占い自動鑑定').replace('<meta name="apple-mobile-web-app-title" content="自動鑑定PRO">','<meta name="apple-mobile-web-app-title" content="'+B_NAME+'">').replace('<span class="pk-pro" style="display:inline-block;margin-left:.3em;padding:0 .35em;border-radius:6px;background:#B23A2E;color:#fff;font-size:.62em;font-weight:900;vertical-align:.25em;letter-spacing:.04em">PRO</span>','')
     s = to_beginner_colors(s)
-    s = rep(s, '｜四柱推命占い 自動鑑定</title>', f'｜{B_NAME}</title>', 1)
+    s = rep(s, '｜四柱推命占い自動鑑定</title>', f'｜{B_NAME}</title>', 1)
     s = rep(s, 'mypage-pro.html', 'mypage.html')
     s = rep(s, 'pricing-pro.html', 'pricing.html')
     s = rep(s, "AFTER_LOGIN: 'app-pro.html'", "AFTER_LOGIN: 'app-beginner.html'", 1)
@@ -196,7 +199,7 @@ def build_pricing():
     s = rep(s, '<br>本格鑑定を、はじめる。</h1>', '<br>今日から占い師をはじめる。</h1>', 1)
     s = rep(s, '    <!-- お申し込みで困ったとき -->', '''    <ul class="rz">
       <li><span class="ck">✓</span>知識ゼロからでも大丈夫。生年月日を入れるだけで、やさしい文章が出てきます。</li>
-      <li><span class="ck">✓</span>鑑定は1件ごとの追加料金なし。詳細鑑定は1日の上限なし。月の利用枠を使い切っても、オフラインの詳細鑑定で続けられます。無料期間中は1日3回までです。</li>
+      <li><span class="ck">✓</span>鑑定は1件ごとの追加料金なし。詳細鑑定は1日の上限なし。月の利用枠を使い切っても、端末の中で作る鑑定（オフライン鑑定）で続けられます。無料期間中は1日3回までです。</li>
       <li><span class="ck">✓</span>スマホひとつで、場所を問わず鑑定。鑑定文はそのままLINEで送れます。</li>
       <li><span class="ck">✓</span>合わなければ、いつでも解約OK。無料期間中の解約は費用0円です。</li>
     </ul>
