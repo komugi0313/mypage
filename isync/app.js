@@ -48,7 +48,7 @@ function goTop(){
   const st=store('kv_room');
   view(`
   <header class="brand">
-    <div class="orb" aria-hidden="true"></div>
+    <img class="chara c-top" src="img/pair-smile.webp" width="260" height="144" alt="" aria-hidden="true">
     <h1 class="logo">I-Sync</h1><p class="kana">アイ・シンク</p><p class="tl">わたしとあなたの、重なるところ</p>
     <p class="lead">2択に答えて、答え合わせ。<br>恋人・友だち・家族、だれとでも。</p>
   </header>
@@ -105,7 +105,7 @@ function goTop(){
 function askHTML(k,i,n,{who,guessLabel,step,star,starOn,timer}){
   const q=Q[k],cat=CATS[q[0]];
   const opt=(v,cls='')=>`<button class="opt ${cls}" data-v="${v}">${v<2?`<span class="k">${OPTS[v]}</span>`:''}<span>${esc(ans(v,k))}</span></button>`;
-  return `<section class="card ask">
+  return `<section class="card ask"><img class="chara c-ask" src="img/pair-think.webp" width="124" height="79" alt="" aria-hidden="true">
     ${timer?`<div class="timer" aria-hidden="true"><i id="tbar"></i></div>`:`<div class="prog">${Array.from({length:n},(_,j)=>`<i class="${j<=i?'on':''}"></i>`).join('')}</div>`}
     <div class="qhead"><span class="tag catg c${q[0]}">${esc(cat[0])}</span><span class="qn">${i+1}／${n}${who?`　${esc(who)}`:''}</span>${timer?`<span class="sec" id="tsec">${LIMIT}</span>`:''}</div>
     ${cat[1]?`<p class="if">${esc(cat[1])}</p>`:''}
@@ -194,7 +194,7 @@ function showResult(G){
   // ① シンクロ率（予想が当たった割合。全員で1つの数字）
   const gh=guessHits(G),pct=gh.tot?Math.round(gh.hit/gh.tot*100):0;
   const msg=pct>=80?'ほとんど以心伝心！':pct>=50?'いい感じにわかり合えています':'まだ知らない顔がたくさん。だから楽しい';
-  h+=`<section class="card score">
+  h+=`<section class="card score"><img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
     <p class="cap">${ps.length===2?'2人':ps.length+'人'}のシンクロ率</p>
     <div class="ring" style="background:conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)"><div class="in"><span class="num">${pct}<small>%</small></span></div></div>
     <p class="msg">${msg}</p><p class="hint">${ps.length===2?'おたがいの答えを':'みんなの答えを'}${gh.tot}回予想して、${gh.hit}回当たりました</p></section>`;
@@ -241,7 +241,7 @@ function soloHTML(G){
   const byT=xs.slice().sort((a,b)=>b.a.ms-a.a.ms);
   const pct=xs.length?Math.round(flex.length/xs.length*100):0;
   const msg=pct>=50?'まわりに合わせられる、やわらかい人':pct>=25?'こだわりと柔らかさのバランス型':'自分の好みがはっきりしている人';
-  return `<section class="card score">
+  return `<section class="card score"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true">
     <p class="cap">${p.name==='あなた'?'あなた':esc(p.name)+'さん'}の「合わせられる度」</p>
     <div class="ring" style="background:conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)"><div class="in"><span class="num">${pct}<small>%</small></span></div></div>
     <p class="msg">${msg}</p><p class="hint">${xs.length}問のうち「こだわらない」が${flex.length}問</p></section>
@@ -433,7 +433,8 @@ let qrP=null;
 function loadQR(){if(window.QRCode)return Promise.resolve();if(!qrP)qrP=new Promise((ok,ng)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';sc.onload=ok;sc.onerror=ng;document.head.appendChild(sc)});return qrP}
 function lobby(){
   const c=R.code,url=joinUrl(c),ps=plist(),room=R.room,can=ps.length>=2;
-  view(`<section class="card hand">
+  view(`<img class="chara c-lobby" src="img/pair-smile.webp" width="180" height="100" alt="" aria-hidden="true">
+  <section class="card hand">
     <p class="cap">部屋番号</p><p class="code">${esc(c)}</p>
     <div class="qr" id="qr" aria-label="参加用のQRコード"></div>
     <p class="hint">そばにいる人は、スマホのカメラでこのQRコードを読みとるだけで入れます。</p>
@@ -475,7 +476,7 @@ async function joinFromLink(code){
   if(saved){go(saved);return}                                        // 名前がわかっている人は、そのまま入る
   const started=room.phase!=='lobby';
   view(`<section class="card hand">
-    <div class="orb" aria-hidden="true"></div>
+    <img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
     <p class="big">部屋に招待されました</p>
     <p class="hint">${started?'もう始まっています。入ると、いまの問題から参加します。':`いま${ps.length}人が待っています。`}</p>
     <label class="one-name" for="jn-name" style="align-self:stretch;text-align:left"><span>ニックネーム</span><input type="text" id="jn-name" maxlength="10" placeholder="本名でなくてOK" autocomplete="nickname"></label>
