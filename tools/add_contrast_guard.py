@@ -17,7 +17,7 @@ BLOCK = '<script id="pk-contrast-guard">\n' + JS + '\n</script>\n'
 PAT = re.compile(r'<script id="pk-contrast-guard">[\s\S]*?</script>\n?')
 
 done = []
-for d in ('pro', 'beginner', 'eki-pro', 'meishiki-original', 'nitaku', 'isync'):
+for d in ('pro', 'beginner', 'eki-pro', 'meishiki-original', 'nitaku', 'isync', 'koi16'):
     for p in sorted((ROOT / d).rglob('*.html')):
         if 'node_modules' in p.parts:
             continue
