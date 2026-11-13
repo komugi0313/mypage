@@ -50,8 +50,21 @@ function goTop(){
   <header class="brand">
     <img class="chara c-top" src="img/pair-smile.webp" width="260" height="144" alt="" aria-hidden="true">
     <h1 class="logo">I-Sync</h1><p class="kana">アイ・シンク</p><p class="tl">わたしとあなたの、重なるところ</p>
-    <p class="lead">2択に答えて、答え合わせ。<br>恋人・友だち・家族、だれとでも。</p>
+    <p class="lead">好みや考え方の2択に答えて、相手の答えも予想。<br>どれだけわかり合えているかがわかる診断です。</p>
   </header>
+  <section class="card intro">
+    <p class="label">たとえば、こんな問題</p>
+    <div class="ex"><p class="exq">LINEは？</p>
+      <p class="exo"><span class="o0">A　毎日やりとりしたい</span><span class="o1">B　用があるときだけでいい</span><span class="o2">こだわらない</span></p></div>
+    <p class="label">わかること</p>
+    <ul class="know">
+      <li><b>シンクロ率</b><span>相手の答えを予想して、何%当たったか</span></li>
+      <li><b>ぴったり度</b><span>同じ答え・合わせられる答え・ちがう答えの数</span></li>
+      <li><b>ゆずれないこと</b><span>おたがいの「ここだけはゆずれない」（しっかり版）</span></li>
+      <li><b>みんなの称号</b><span>読み名人・即決さん・こだわり職人 など</span></li>
+    </ul>
+    <p class="hint">恋人・気になる人・友だち・家族と。ひとりでも遊べます（10問・約3分）。</p>
+  </section>
   ${st&&st.code?`<button class="btn ghost small" id="back">さっきの部屋（${esc(st.code)}）にもどる</button>`:''}
   <section class="card">
     <p class="label">だれと遊ぶ？</p>
