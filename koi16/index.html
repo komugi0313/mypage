@@ -70,6 +70,7 @@ p{margin:0 0 12px}
 .st-fold summary{cursor:pointer;font-size:14px;font-weight:700;color:var(--sub);min-height:44px;display:flex;align-items:center}
 .st-fold p{margin:4px 0 0}
 .opt-sub{display:block;font-size:14px;color:var(--text);line-height:1.5}
+.q-hint-s{font-size:12px!important}
 .q-ex{background:#FFF6E5;border:1.5px dashed #E3C38E;border-radius:12px;padding:8px 12px;margin:0 0 14px;font-size:14px;line-height:1.7;color:var(--text)}
 .q-ex b{display:inline-block;background:#8A4B00;color:#fff;border-radius:999px;font-size:12px;padding:0 8px;margin-right:6px;vertical-align:1px}
 .qtext{font-size:20px;font-weight:700;min-height:4.2em;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px 4px}
@@ -176,6 +177,16 @@ body{background:var(--bg) radial-gradient(#F4CFC4 1.6px,transparent 2px) 0 0/22p
 .zk h3{margin-top:18px}
 .zk-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-top:16px}
 .zk{scroll-margin-top:12px}
+/* 結果の上の小さい帯 */
+.c66-mini{display:flex;align-items:center;gap:8px;margin:0 0 12px;padding:6px 8px 6px 6px;border-radius:14px;border:1px solid rgba(196,137,43,.5);background:linear-gradient(100deg,#FEF5EC 0%,#FDEBE2 60%,#FBDCDF 100%);text-decoration:none;color:#2A3047;min-height:52px;box-shadow:0 6px 16px -12px rgba(190,52,16,.5)}
+.c66-mini img{flex:0 0 auto;width:34px;height:34px;border-radius:50%;background:#fff;border:1.5px solid #fff}
+.c66m-num{flex:0 0 auto;font-family:'Shippori Mincho B1',serif;font-weight:800;font-size:22px;line-height:1;background:linear-gradient(125deg,#DD9B22,#BD7012 48%,#C2491A);-webkit-background-clip:text;background-clip:text;color:transparent}
+.c66m-num small{font-size:12px}
+.c66m-t{flex:1;min-width:0;display:grid;line-height:1.3}
+.c66m-t b{font-family:'Shippori Mincho B1',serif;font-size:14px;font-weight:800;color:#2A3047}
+.c66m-t small{font-size:11px;color:#474E62}
+.c66m-go{flex:0 0 auto;border-radius:10px;padding:8px 12px;color:#fff;font-family:'Shippori Mincho B1',serif;font-weight:800;font-size:14px;background:linear-gradient(135deg,#D84522,#C23A17 52%,#A92E0E)}
+@media (max-width:360px){.c66-mini img{display:none}}
 /* 1.66 へのバナー（1.66 の本番の色・文字に合わせる。小さめ＝鑑定者本人 2026-11-13「こんなに大きいバナーにしなくていい」） */
 .cta-166{margin:16px 0;border-radius:16px;border:1px solid rgba(196,137,43,.5);background:linear-gradient(170deg,#FEF5EC 0%,#FDEBE2 55%,#FBDCDF 100%);padding:10px 12px 8px;color:#2A3047;box-shadow:0 8px 20px -14px rgba(190,52,16,.45)}
 .c66-row{display:flex;align-items:center;gap:10px}
@@ -868,6 +879,13 @@ function renderQ(){
   $('qnum').textContent=(mode==='quick'?'かんたん版 ':'')+(qi+1)+' / '+L.length;
   $('qbar').style.width=(qi/L.length*100)+'%';
   $('qtext').innerHTML='<span>'+esc(q[2])+'</span>'; glue($('qtext'));
+  // 「恋人」の案内は毎回は出さない（鑑定者本人 2026-11-13「ずっとこの文字は必要か」）：「恋人」が出てくる質問のときだけ、最初の1回はくわしく、2回目からは短く
+  var hEl=$('q-hint'), full=(STATUS[st.status]||{}).hint||'';
+  if(full && q[2].indexOf('恋人')>=0){
+    var firstLove=L.filter(function(x){return QS[x][2].indexOf('恋人')>=0;})[0]===k;
+    hEl.textContent=firstLove?full:'※「恋人」は、最初に思い浮かべた人でOKです';
+    hEl.classList.toggle('q-hint-s',!firstLove); hEl.classList.remove('hidden'); glue(hEl);
+  } else hEl.classList.add('hidden');
   var ex=$('q-ex'); ex.innerHTML='<b>たとえば</b>'+esc(QEX[k]||''); ex.classList.toggle('hidden',!QEX[k]); glue(ex);
   var box=$('scale'); box.innerHTML='';
   CHOICES.forEach(function(c){
@@ -946,6 +964,11 @@ function c66HTML(){
     '<a class="c66-btn" data-nocg href="'+esc(ctaHref())+'" target="_blank" rel="noopener"><span class="nw">二人の相性を占う</span></a>'+
     '<p class="c66-ext"><span class="nw">1.66 奇跡の相性診断</span>　<span class="nw">生年月日だけ・無料・登録不要</span></p></section>';
 }
+/* 結果の上の、いちばん小さい 1.66 の帯（1行。鑑定者本人 2026-11-13「結果の上にも小さいバナーを入れて」） */
+function c66MiniHTML(){
+  if(!CTA.url) return '';
+  return '<a class="c66-mini" data-nocg href="'+esc(ctaHref())+'" target="_blank" rel="noopener"><img src="img/166/c3.webp" alt="" width="34" height="34" loading="lazy" decoding="async"><span class="c66m-num">1.66<small>%</small></span><span class="c66m-t"><b><span class="nw">あなたと、</span><span class="nw">運命の相手は？</span></b><small><span class="nw">生年月日で1分・無料</span></small></span><span class="c66m-go"><span class="nw">占う</span></span></a>';
+}
 function renderResult(code,mine,withCode){
   var t=T[code], g=grp(code), isMine = mine&&mine.code===code&&mine.pct;
   var poles=code.split('');
@@ -957,6 +980,7 @@ function renderResult(code,mine,withCode){
      '<div aria-hidden="true">'+art(code,132)+'</div><div class="chara">'+cname(code)+'</div><div class="formal">'+fname(code)+'</div>'+
      '<div class="code">'+code+'</div><p class="catch">'+esc(t.catch)+'</p></section>';
 
+  h+=c66MiniHTML();
   if(!isMine){
     h+='<button class="btn btn-main btn-wide" type="button" data-act="invite" data-code="'+code+'">'+(st.me?'自分のタイプとの相性を見る':'自分も診断して相性を見る')+'</button>';
   }
