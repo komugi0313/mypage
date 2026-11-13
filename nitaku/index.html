@@ -1105,10 +1105,11 @@ var FB=(function(){
     var P=function(path){ return 'nitaku_'+path; };
     var ttl=function(path, data){
       // 部屋は12時間で消す（Firestore の「TTL」をこの expireAt に設定すると自動で消える）
-      if(data && /^rooms\//.test(path)){ var c=(data.created||data.joined||Date.now()); data=Object.assign({}, data, { expireAt:new Date(c+12*3600e3) }); }
+      // 最後に書いた時刻を expireAt（＝その12時間後）に入れておき、読むときに「最後に動いた時刻（seen）」にもどす（決まりを変えずにすむように）
+      if(data && /^rooms\//.test(path)){ var c=data.seen||Date.now(); data=Object.assign({}, data, { expireAt:new Date(c+12*3600e3) }); delete data.seen; }
       return data;
     };
-    var clean=function(d){ if(d){ d=Object.assign({}, d); delete d.expireAt; } return d; };
+    var clean=function(d){ if(d){ d=Object.assign({}, d); if(d.expireAt && typeof d.expireAt.toMillis==='function') d.seen=d.expireAt.toMillis()-12*3600e3; delete d.expireAt; } return d; };
     var snapDoc=function(s){ return { id:s.id, exists:s.exists, data:function(){ return clean(s.data()); } }; };
     var snapCol=function(q){ return { docs:q.docs.map(snapDoc) }; };
     return {
@@ -1118,7 +1119,7 @@ var FB=(function(){
         set:function(d){ return r.set(ttl(path, JSON.parse(JSON.stringify(d||{})))); },
         delete:function(){ return r.delete(); },
         // 取引：いまの値が expect のときだけ patch を書く（2人が同時に押しても1回だけ進む）
-        advance:function(expect, patch){ return fs.runTransaction(function(t){ return t.get(r).then(function(sn){ if(!sn.exists) return false; var d=sn.data(); for(var k in expect){ if(d[k]!==expect[k]) return false; } t.update(r, JSON.parse(JSON.stringify(patch))); return true; }); }); },
+        advance:function(expect, patch){ return fs.runTransaction(function(t){ return t.get(r).then(function(sn){ if(!sn.exists) return false; var d=sn.data(); for(var k in expect){ if(d[k]!==expect[k]) return false; } t.update(r, Object.assign(JSON.parse(JSON.stringify(patch)), { expireAt:new Date(Date.now()+12*3600e3) })); return true; }); }); },
         onSnapshot:function(cb,err){ return r.onSnapshot(function(s){ cb(snapDoc(s)); }, err); }
       }; },
       collection:function(path){ var c=fs.collection(P(path)); return {
@@ -1604,7 +1605,9 @@ var Room=(function(){
     })();
     return ready;
   }
-  function alive(r){ return !!r && typeof r.created==='number' && Date.now()-r.created < 12*3600e3; }
+  /* 部屋は、だれかが入る・答える・スタートする・画面を開いている（30秒ごとに知らせる）などの最後の動きから30分で終わる（鑑定者本人の決定 2026-11-13）。作ってから12時間でも終わる */
+  function lastAct(r, ps){ var t=(r && (r.seen||r.created))||0; (ps||[]).forEach(function(p){ t=Math.max(t, p.seen||p.joined||0); }); return t; }
+  function alive(r, ps){ return !!r && typeof r.created==='number' && Date.now()-r.created < 12*3600e3 && Date.now()-lastAct(r, ps) < 30*60e3; }
   function plist(docs){ return docs.map(function(d){ return Object.assign({ pid:d.id }, d.data()); }).sort(function(a,b){ return (a.joined||0)-(b.joined||0); }); }
   async function post(body){
     var r=await fetch(ROOM_API,{ method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body) });
@@ -1616,23 +1619,23 @@ var Room=(function(){
     if(mode==='api'){ var r=await post({ op:'create', room:room }); if(r.ok){ room.created=r.j.room.created; return 'ok'; } return r.status===409?'taken':'ng'; }
     if(mode==='db'){
       var ref=db.doc('rooms/'+room.code), cur=await ref.get();
-      if(cur.exists && alive(cur.data())) return 'taken';
       var old=await db.collection('rooms/'+room.code+'/players').get();
+      if(cur.exists && alive(cur.data(), plist(old.docs))) return 'taken';
       for(var i=0;i<old.docs.length;i++){ await db.doc('rooms/'+room.code+'/players/'+old.docs[i].id).delete(); }
-      room.created=Date.now(); await ref.set(room); return 'ok';
+      room.created=Date.now(); await ref.set(Object.assign({}, room, { seen:Date.now() })); return 'ok';
     }
     return 'off';
   }
   async function setRoom(room){
     await init();
     if(mode==='api') return (await post({ op:'room', code:room.code, host:room.host, room:room })).ok;
-    if(mode==='db'){ await db.doc('rooms/'+room.code).set(room); return true; }
+    if(mode==='db'){ await db.doc('rooms/'+room.code).set(Object.assign({}, room, { seen:Date.now() })); return true; }
     return false;
   }
   async function setPlayer(code, pid, p){
     await init();
     if(mode==='api'){ var r=await post({ op:'player', code:code, pid:pid, player:p }); return r.ok ? 'ok' : (r.j.error||'ng'); }
-    if(mode==='db'){ await db.doc('rooms/'+code+'/players/'+pid).set(p); return 'ok'; }
+    if(mode==='db'){ await db.doc('rooms/'+code+'/players/'+pid).set(Object.assign({}, p, { seen:Date.now() })); return 'ok'; }
     return 'off';
   }
   async function get(code){
@@ -1640,9 +1643,9 @@ var Room=(function(){
     if(mode==='api'){ var r=await fetch(ROOM_API+'?code='+code); return r.ok ? await r.json() : { room:null, players:[] }; }
     if(mode==='db'){
       var rs=await db.doc('rooms/'+code).get(), room=rs.exists ? rs.data() : null;
-      if(!alive(room)) return { room:null, players:[] };
-      var ps=await db.collection('rooms/'+code+'/players').get();
-      return { room:room, players:plist(ps.docs) };
+      var ps=await db.collection('rooms/'+code+'/players').get(), pl=plist(ps.docs);
+      if(!alive(room, pl)) return { room:null, players:[] };
+      return { room:room, players:pl };
     }
     return { room:null, players:[] };
   }
@@ -1656,7 +1659,7 @@ var Room=(function(){
       var room=null, players=[], un=[], stopped=false, got=false, sig='', pt=null, pulling=false;
       var deliver=function(){
         if(stopped || !got) return;
-        var r=alive(room)?room:null, sg=JSON.stringify([r, players]);
+        var r=alive(room, players)?room:null, sg=JSON.stringify([r, players]);
         if(sg===sig) return; sig=sg; cb(r, players);
       };
       var sub=function(){
@@ -1703,7 +1706,7 @@ var Room=(function(){
     if(ref.advance) return await ref.advance(expect, patch);
     var s=await ref.get(); if(!s.exists) return false; var d=s.data();
     for(var k in expect){ if(d[k]!==expect[k]) return false; }
-    await ref.set(Object.assign({}, d, patch)); return true;
+    await ref.set(Object.assign({}, d, patch, { seen:Date.now() })); return true;
   }
   async function delPlayer(code, pid){ await init(); if(mode==='db') await db.doc('rooms/'+code+'/players/'+pid).delete(); }
   return { init:init, create:create, setRoom:setRoom, advance:advance, delPlayer:delPlayer, setPlayer:setPlayer, get:get, watch:watch, mode:function(){ return mode; }, where:function(){ return where; } };
@@ -1808,12 +1811,18 @@ async function enterRoom(code, pid, me, host){
   renderQR(code);
   $('lb-line').href='https://line.me/R/share?text='+encodeURIComponent(inviteText(code, me.name)+'\n'+joinUrl(code));
   R.stop=Room.watch(code, onRoom);
+  // 30秒ごとに「まだ部屋にいます」を知らせる（いなくなった人を一覧から外す・部屋を30分で終わらせるため）
+  var beat=function(){ if(S.room!==R) return; R.chain=R.chain.then(function(){ return Room.setPlayer(R.code, R.pid, R.me); }).catch(function(){}); };
+  R.hb=setInterval(beat, 30000);
+  R.vis=function(){ if(document.visibilityState==='visible') beat(); };
+  document.addEventListener('visibilitychange', R.vis);
   return true;
 }
 function leaveRoom(){
   var R=S.room; if(!R) return;
   S.room=null;
   try{ if(R.stop) R.stop(); }catch(e){}
+  try{ clearInterval(R.hb); document.removeEventListener('visibilitychange', R.vis); }catch(e){}
   if(!R.host && R.data && R.data.phase==='lobby'){ Room.delPlayer(R.code, R.pid).catch(function(){}); }
   if(R.host && R.data && R.data.phase!=='closed'){
     var room=JSON.parse(JSON.stringify(R.data)); room.phase='closed';
@@ -1870,7 +1879,15 @@ function onRoom(room, players){
   if(S.mode!==room.mode) setMode(room.mode);
   var lp=String(room.lv||'normal').split('|'); S.lv=lp[0]; S.rv=(lp[1]==='end'?'end':'each'); S.mix=!!room.mix; S.num=room.num||8;
   var key=room.phase+':'+room.round+':'+room.qi;
-  if(room.phase==='lobby'){ renderLobby(); return; }
+  if(room.phase==='lobby'){
+    // 2分以上つながっていない人は、集まっている一覧から外す（作った人のスマホが部屋からも消す。戻ってきたらまた出る）
+    var now=Date.now(), gone=players.filter(function(p){ return p.pid!==R.pid && p.seen && now-p.seen>120e3; });
+    if(gone.length){
+      R.players=players.filter(function(p){ return gone.indexOf(p)<0; });
+      if(R.host) gone.forEach(function(p){ Room.delPlayer(R.code, p.pid).catch(function(){}); });
+    }
+    renderLobby(); return;
+  }
   syncGame(room, players);
   if(R.cntRound!==room.round){ R.cntRound=room.round; S.counts=null; Votes.get(room.qs.filter(function(q){ return !q.custom; }).map(function(q){ return q.id; })).then(function(c){ S.counts=c; }); }
   if(room.phase==='q'){
@@ -2032,7 +2049,7 @@ async function roomResume(auto){
     };
     // 自動でもどるのは、遊んでいる途中（問題・答え合わせ）のときだけ。集まっている途中・終わったあとの部屋は、ボタンを出して本人に選んでもらう
     if(auto && !st.left && (r.phase==='q' || r.phase==='reveal')){ go(); return; }
-    $('room-back-code').textContent=st.code; btn.hidden=false; btn.onclick=go;
+    // 「さっきの部屋にもどる」のボタンは出さない（鑑定者本人の決定 2026-11-13。古い部屋にもどってしまうため）
   }catch(e){}
 }
 var _joinHash=/^#join-/.test(location.hash||'');
