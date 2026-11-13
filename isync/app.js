@@ -104,7 +104,7 @@ function goTop(){
   ${st&&st.code?`<button class="btn ghost small" id="back">さっきの部屋（${esc(st.code)}）にもどる</button>`:''}
   <section class="card">
     <p class="label">だれと遊ぶ？</p>
-    ${seg('mode',[['each','みんなで<br><small>それぞれのスマホで</small>'],['kon','婚活・街コン<br><small>名前を出さずに</small>'],['solo','ひとりで']])}
+    ${seg('mode',[['each','みんなで<br><small>それぞれのスマホで</small>'],['kon','大人数で<br><small>名前を出さずに</small>'],['solo','ひとりで']])}
     <p class="hint" id="m-desc"></p>
     <div id="m-opts" class="stack">
     <p class="label">長さは？</p>
@@ -682,7 +682,7 @@ function hostSync(){
       // 答えない人がいても止まらないよう、60秒たったら主催者の画面から次へ進める（参加する人の画面には秒数を出さない）
       R.tick=setInterval(()=>{if(R.key!==qk){clearInterval(R.tick);return}if(Date.now()-R.seen[qk]>KON_WAIT*1000)advance(k,rd)},500)}
     const pc=Math.round(done.length/Math.max(1,ps.length)*100);
-    view(`<section class="card hand"><p class="cap">婚活・街コンの部屋 ${esc(R.code)}（主催者の画面）</p>
+    view(`<section class="card hand"><p class="cap">大人数の部屋 ${esc(R.code)}（主催者の画面）</p>
       <p class="big">${k+1}問目／${n}問</p>
       <div class="bar"><i style="width:${pc}%"></i></div>
       <p class="hint">答えた人 ${done.length}／${ps.length}人。全員が答えるか、${KON_WAIT}秒たつと次の問題へ進みます（参加する人の画面に秒数は出ません）。</p></section>`);
@@ -701,7 +701,7 @@ function hostLobby(){
   const c=R.code,url=joinUrl(c),ps=plist(),can=ps.length>=2;
   const nos=ps.map(p=>p.no).sort((a,b)=>(+a)-(+b));
   view(`<section class="card hand">
-    <p class="cap">婚活・街コンの部屋（主催者の画面）</p>
+    <p class="cap">大人数の部屋（主催者の画面）</p>
     <p class="hint">この画面を参加する方に見せて、QRコードを読みとってもらってください。</p>
     <div class="qr" id="qr" aria-label="参加用のQRコード"></div>
     <p class="cap">部屋番号</p><p class="code">${esc(c)}</p>
@@ -717,14 +717,14 @@ function hostLobby(){
   </section>
   <button class="btn ghost small" id="home">主催者の画面を閉じてトップへ</button>`);
   loadQR().then(()=>{const el=$('qr');if(!el)return;el.innerHTML='';new QRCode(el,{text:url,width:220,height:220,colorDark:'#22253A',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M})}).catch(()=>{const el=$('qr');if(el)el.hidden=true});
-  $('ln').href=lineUrl('アイ・シンク（婚活・街コン）の部屋です。\nこのリンクを開いて、番号札の番号を入れてください。',url);
+  $('ln').href=lineUrl('アイ・シンク（大人数・名前を出さずに）の部屋です。\nこのリンクを開いて、番号札の番号を入れてください。',url);
   $('st').onclick=e=>{if(!can)return;e.target.disabled=true;roomUpdate({phase:'play',qi:0})};
   $('home').onclick=()=>{leaveRoom();goTop()};
 }
 function konWait(){
   const ps=plist(),me=R.players[PID];
   view(`<section class="card hand"><img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
-    <p class="cap">婚活・街コンの部屋 ${esc(R.code)}</p>
+    <p class="cap">大人数の部屋 ${esc(R.code)}</p>
     <p class="big">${esc(me.no)}番で参加しています</p>
     <p class="hint">いま${ps.length}人。主催者がスタートを押すと、全員のスマホで同時に始まります。</p>
     <ul class="know">
@@ -741,7 +741,7 @@ function konJoin(code,room,count){
   const f={no:'',sex:'',want:''};
   const chips=(k,L)=>`<div class="chips c3" role="group">${Object.entries(L).map(([v,l])=>`<button class="chip" data-f="${k}" data-v="${v}" aria-pressed="false">${l}</button>`).join('')}</div>`;
   view(`<section class="card hand" style="align-items:stretch;text-align:left">
-    <p class="big" style="text-align:center">婚活・街コンの部屋に参加</p>
+    <p class="big" style="text-align:center">大人数の部屋に参加</p>
     <p class="hint" style="text-align:center">${room.phase!=='lobby'?'もう始まっています。入ると、いまの問題から参加します。':`いま${count}人が待っています。`}名前は出ません。</p>
     <label class="one-name" for="kno"><span>番号（会場の番号札）</span><input type="text" id="kno" inputmode="numeric" maxlength="3" placeholder="例：7"></label>
     <p class="label">あなたは？</p>${chips('sex',SEXL)}
