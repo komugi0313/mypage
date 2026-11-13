@@ -360,6 +360,13 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
 .lb-status small{display:block;font-size:14px;font-weight:700;line-height:1.6;margin-top:4px}
 .join-st{margin:14px 0 0;padding:10px 12px;border-radius:12px;background:#fff;border:2px solid var(--ink);font-weight:700;font-size:15px;line-height:1.6}
 .join-st:empty{display:none}
+.lb-inv{display:flex;flex-direction:column;gap:10px;margin:0 0 14px}
+.lb-inv .hint{margin:0;text-align:center}
+.lb-inv .big{margin-top:0}
+.lb-line{display:flex;align-items:center;justify-content:center;text-decoration:none;background:#06C755!important;color:#1E1E2A!important}
+.join-hello{margin:0 0 12px;padding:12px 14px;border:3px solid var(--ink);border-radius:16px;background:#FFF4C9;box-shadow:4px 4px 0 var(--ink);font-weight:900;font-size:17px;line-height:1.5;text-align:center}
+.join-hello small{display:block;font-size:14px;font-weight:700}
+.join-hello:empty{display:none}
 .wait-box{text-align:center;margin-top:16px}
 .wait-box p{font-size:16px;font-weight:900;margin:0}
 .big:disabled{opacity:.45}
@@ -578,9 +585,12 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
 <section class="scr" id="s-join">
   <div class="nav"><button class="navb" data-nav="back">← もどる</button><span class="navr"><button class="navb" data-nav="reset">リセット</button><button class="navb" data-nav="top">TOP</button></span></div>
   <h2>友だちの部屋に参加する</h2>
+  <p class="join-hello" id="join-hello"></p>
+  <div id="join-codebox">
   <p class="hint">部屋を作った人のスマホに出ているQRコードを、カメラで読みとるだけでも参加できます。</p>
   <div class="label">部屋番号（4けた）</div>
   <div class="prow"><div class="pf"><input type="text" id="join-code" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="例：1234" autocomplete="off"></div></div>
+  </div>
   <div class="label">あなたの名前</div>
   <div class="prow"><div class="pf"><input type="text" id="join-name" maxlength="10" placeholder="名前（ニックネームでOK）"></div></div>
   <p class="join-st" id="join-st"></p>
@@ -591,6 +601,11 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
 <section class="scr" id="s-lobby">
   <div class="nav"><button class="navb" data-nav="back">← もどる</button><span class="navr"><button class="navb" data-nav="reset">リセット</button><button class="navb" data-nav="top">TOP</button></span></div>
   <div class="lb-status" id="lb-status"></div>
+  <div class="lb-inv">
+    <a class="big lb-line" id="lb-line" href="https://line.me/R/share" target="_blank" rel="noopener">LINEで友だちを招待する</a>
+    <button class="big alt" id="lb-invite">📨 ほかのアプリで招待する</button>
+    <p class="hint">送られたリンクを押すと、この部屋の参加の画面がそのまま開きます。名前を入れて「参加する」を押すだけです。</p>
+  </div>
   <div class="card lobby">
     <div class="lb-cap">この部屋の番号</div>
     <div class="lb-code" id="lb-code"></div>
@@ -599,8 +614,6 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
       <p class="hint" style="text-align:center">参加する人は、このQRコードをカメラで読みとるか、トップの「友だちの部屋に参加する」から番号を入れてね。</p>
     </div>
     <p class="lb-game" id="lb-game"></p>
-    <button class="big alt" id="lb-invite">📨 離れている人に招待を送る</button>
-    <p class="hint" style="text-align:center">メール・SMS（ショートメール）・インスタのDMなど、ふだん使っている方法で送れます。</p>
   </div>
   <div class="card">
     <h3 id="lb-count">参加している人</h3>
@@ -1586,9 +1599,11 @@ async function createRoom(){
     await enterRoom(room.code, pid, { name:name, joined:Date.now(), ans:{}, times:{} }, true);
   } finally { btn.disabled=false; }
 }
-function openJoin(code){
+function openJoin(code, fromLink){
   S.who='group';
   $('join-code').value = code || '';
+  $('join-codebox').hidden = !!(fromLink && code);
+  $('join-hello').innerHTML = (fromLink && code) ? '部屋 '+code+' に招待されています<small>名前を入れて「参加する」を押してね</small>' : '';
   if(!$('join-name').value) $('join-name').value = store('nitaku_me') || '';
   show('s-join');
   joinStatus();
@@ -1602,6 +1617,8 @@ async function joinStatus(){
     await Room.init(); if(Room.mode()==='off'){ el.textContent=''; return; }
     var d=await Room.get(code), r=d.room, n=(d.players||[]).length;
     if(($('join-code').value||'').replace(/\D/g,'')!==code) return;
+    var hp=r && (d.players||[]).filter(function(p){ return p.pid===r.host; })[0];
+    if(hp && hp.name && $('join-codebox').hidden) $('join-hello').innerHTML=esc(hp.name)+'さんの部屋（'+code+'）に<br>招待されています<small>名前を入れて「参加する」を押してね</small>';
     if(!r || r.phase==='closed') el.textContent='この番号の部屋は見つかりません。番号を確かめてね。';
     else if(r.phase==='lobby') el.textContent='まだ始まっていません（いま'+n+'人）。名前を入れて「参加する」を押してね。';
     else if(r.phase==='done') el.textContent='いまは結果発表中です。参加すると、次の回から一緒に遊べます。';
@@ -1609,7 +1626,7 @@ async function joinStatus(){
   }catch(e){ el.textContent=''; }
 }
 $('join-code').addEventListener('input', function(){ clearTimeout(joinT); joinT=setTimeout(joinStatus, 400); });
-$('join-open').onclick=function(){ openJoin(''); };
+$('join-open').onclick=function(){ openJoin('', false); };
 $('join-go').onclick=async function(){
   var code=($('join-code').value||'').replace(/\D/g,''), name=($('join-name').value||'').trim();
   if(code.length!==4){ toast('4けたの部屋番号を入れてね'); return; }
@@ -1638,6 +1655,7 @@ async function enterRoom(code, pid, me, host){
   store('nitaku_room', { code:code, pid:pid });
   $('lb-code').textContent=code;
   renderQR(code);
+  $('lb-line').href='https://line.me/R/share?text='+encodeURIComponent(inviteText(code, me.name)+'\n'+joinUrl(code));
   R.stop=Room.watch(code, onRoom);
   return true;
 }
@@ -1778,7 +1796,7 @@ async function roomStep(patch){
 $('lb-invite').onclick=function(){
   var R=S.room; if(!R) return;
   var url=joinUrl(R.code);
-  var text='「究極の二択」でいっしょに遊ぼう！\n部屋番号：'+R.code+'\n下のリンクを開いて、名前を入れたら参加できます。';
+  var text=inviteText(R.code, R.me && R.me.name);
   if(navigator.share){ navigator.share({ title:'究極の二択', text:text, url:url }).catch(function(){}); return; }
   var full=text+'\n'+url;
   var done=function(){ toast('招待の文をコピーしました。メールやメッセージに貼ってね'); };
@@ -1797,6 +1815,9 @@ function loadQR(){
     document.head.appendChild(sc);
   });
   return qrLoad;
+}
+function inviteText(code, name){
+  return (name ? name+'さんが' : '')+'「究極の二択」の部屋で待っています！\n下のリンクを押して、名前を入れたらすぐ参加できます（部屋番号：'+code+'）';
 }
 function joinUrl(code){
   // 確認用ページ（claude.ai）のときだけ確認用ページのアドレス。公開先では今開いているアドレス
@@ -1842,7 +1863,7 @@ setTimeout(function(){ if(!_joinHash) roomResume(true); }, 0);
   var m=/^#join-(\d{4})$/.exec(location.hash||'');
   if(!m) return;
   try{ history.replaceState(null, '', location.href.split('#')[0]); }catch(e){}
-  setTimeout(function(){ openJoin(m[1]); }, 0);
+  setTimeout(function(){ openJoin(m[1], true); }, 0);
 })();
 
 /* ───── この部屋だけの問題（部屋に集まっているあいだに、だれでも1人3問まで） ───── */
