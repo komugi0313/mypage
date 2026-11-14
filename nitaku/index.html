@@ -612,6 +612,7 @@ body.rdy-on #gres-body{padding-bottom:230px}
 .lb-main #lb-host{margin:14px 0 2px;text-align:left}
 /* 結果のいちばん下のボタン */
 .big.end-sub{min-height:48px;padding:10px 14px;font-size:16px;margin-top:12px;box-shadow:3px 3px 0 #1E1E2A}
+.end-pick{margin:18px 0 10px}.end-pick-t{margin:0 0 6px;text-align:center;font-weight:700;font-size:15px}.end-pick .seg button{min-height:44px;font-size:15px}.end-pick .seg button[aria-pressed="true"]{background:#FFE071;color:#1E1E2A}
 .end-hint{margin:8px 0 0;text-align:center;font-size:13.5px}
 .big.end-line{margin-top:22px}
 .end-links{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:6px}
@@ -1177,7 +1178,7 @@ $('go2').onclick=function(){
 
 /* 開始 */
 function start(){
-  S.honPlay=false;
+  S.honPlay=false; S.lastHon=false;
   S.num = S.who==='group' ? S.gnum : 15;
   S.mix = S.who==='group' && S.num===8;
   S.qs = S.mix
@@ -1293,7 +1294,7 @@ function honPick(){
     return { id:q.id, a:sw?q.b:q.a, b:sw?q.a:q.b, ta:{}, tb:{}, ex:q.ex, m:x.m, sw:sw }; });
 }
 function startHon(){
-  S.honPlay=true; S.room=null; S.who='solo';
+  S.honPlay=true; S.lastHon=true; S.room=null; S.who='solo';
   S.players=[{name:'あなた'}];
   S.qs=honPick(); S.counts=null; S.sent={};
   S.qi=0; S.pi=0; S.ans=[[]]; S.times=[[]];
@@ -1367,13 +1368,14 @@ function showHonResult(){
       '<div class="rank"><span class="k">時間切れ</span><span class="v">'+out+'問</span></div></div>';
   }
   var txt='究極の二択【本能モード】1問3秒で選んだら…\nわたしの本能スピードは '+(ok.length?avg.toFixed(1)+'秒':'全部時間切れ')+'（'+lvl+'）\n\nあなたは何秒？\n#究極の二択 #本音バレ診断';
-  h+=PROMO+'<button class="big" id="again">もう1回（ちがう問題で）</button>'+shareRow('lshare','share','save')+'<button class="tell-s end-home" id="home" type="button">トップにもどる</button>';
+  h+=PROMO+endButtons()+shareRow('lshare','share','save')+'<button class="tell-s end-home" id="home" type="button">トップにもどる</button>';
   $('gres-body').innerHTML='';
   $('res-body').innerHTML=h;
   $('share').onclick=function(){ doShare(txt); };
   $('lshare').href=lineHref(txt);
   $('save').onclick=function(){ saveImage($('res-body')); };
-  $('again').onclick=function(){ startHon(); };
+  bindPick();
+  $('again').onclick=soloAgain;
   $('home').onclick=function(){ show('s-home'); };
   show('s-res');
 }
@@ -1776,16 +1778,25 @@ $('splash').onclick=function(){ $('splash').hidden=true; };
 function toast(t){ var el=$('toast'); el.textContent=t; el.classList.add('on'); setTimeout(function(){ el.classList.remove('on'); }, 2200); }
 
 function endButtons(){
-  var other = S.mode==='love'?'normal':'love';
   if(S.room){
-    if(S.room.host || Room.mode()==='db') return '<button class="big" id="again">同じメンバーでもう1回</button>'+
-      (S.room.data && S.room.data.mode==='hon' ? '' : '<button class="big alt end-sub" id="swap">'+MODE_NAME[other]+'でもう1回</button>')+
+    if(S.room.host || Room.mode()==='db') return nextPick()+'<button class="big" id="again">同じメンバーでもう1回</button>'+
       '<p class="hint end-hint">みんなが「準備OK」を押してから始まります。</p>';
     return '<p class="hint lb-wait" style="margin-top:22px">部屋を作った人が「もう1回」を押すと、このまま次が始まります。</p>';
   }
-  return '<button class="big" id="again">もう1回（ちがう問題で）</button>'+
-    '<button class="big alt end-sub" id="swap">'+MODE_NAME[other]+'をやってみる</button>';
+  return nextPick()+'<button class="big" id="again">もう1回（ちがう問題で）</button>';
 }
+/* もう1回の前に、次のモードを選ぶ（「○○編でもう1回」のボタンはやめた＝鑑定者本人 2026-11-14「普通編とかは要らないかも　また選ばせたら？」） */
+function curPlayMode(){ return (S.room && S.room.data && S.room.data.mode==='hon') || (!S.room && S.lastHon) ? 'hon' : S.mode; }
+function nextPick(){
+  S.nextM=curPlayMode();
+  return '<div class="end-pick"><p class="end-pick-t">次は、どれで遊ぶ？</p><div class="seg" id="nxt">'+
+    ['love','normal','hon'].map(function(m){ return '<button type="button" data-m="'+m+'" aria-pressed="'+(m===S.nextM)+'">'+(m==='hon'?'⚡本能':MODE_NAME[m].replace('編',''))+'</button>'; }).join('')+'</div></div>';
+}
+function bindPick(){
+  var el=$('nxt'); if(!el) return;
+  el.onclick=function(e){ var b=e.target.closest('button'); if(!b) return; S.nextM=b.dataset.m; [].forEach.call(el.children, function(x){ x.setAttribute('aria-pressed', x===b?'true':'false'); }); };
+}
+function soloAgain(){ var m=S.nextM||curPlayMode(); if(m==='hon') S.hon=true; else setMode(m); document.querySelectorAll('.mode').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.m===m?'true':'false'); }); honSoloText(); if(m==='hon'){ startHon(); return; } start(); }
 /* 結果のいちばん下：大きいボタンは「もう1回」と「LINEで送る」だけ。ほかは小さい文字のリンク（鑑定者本人の指摘 2026-11-14「こんなにボタンがあるのどうかな？やや見づらい」） */
 function shareRow(l, a, v){
   return '<a class="big lb-line end-line" id="'+l+'" href="https://line.me/R/share" target="_blank" rel="noopener">LINEで結果を送る</a>'+
@@ -1794,13 +1805,13 @@ function shareRow(l, a, v){
 function homeLink(){ return '<button class="tell-s end-home" id="home" type="button">'+(S.room ? (S.room.host?'部屋を閉じてトップへ':'部屋を出てトップへ') : 'トップにもどる')+'</button>'; }
 function bindEnd(){
   if(S.room){
-    if($('again')) $('again').onclick=function(){ askAgain(S.room.data && S.room.data.mode==='hon' ? 'hon' : S.mode); };
-    if($('swap')) $('swap').onclick=function(){ askAgain(S.mode==='love'?'normal':'love'); };
+    bindPick();
+    if($('again')) $('again').onclick=function(){ askAgain(S.nextM||curPlayMode()); };
     $('home').onclick=function(){ goTop(false); };
     return;
   }
-  $('again').onclick=function(){ start(); };
-  $('swap').onclick=function(){ setMode(S.mode==='love'?'normal':'love'); start(); };
+  bindPick();
+  $('again').onclick=soloAgain;
   $('home').onclick=function(){ updatePoolNote(); show('s-home'); };
 }
 
@@ -2507,7 +2518,7 @@ function renderReady(){
   }
   h+='</div>';
   var el=$('rdy'); el.innerHTML=h; el.hidden=false; document.body.classList.add('rdy-on');
-  ['again','swap'].forEach(function(id){ if($(id)) $(id).disabled=true; });
+  ['again'].forEach(function(id){ if($(id)) $(id).disabled=true; }); if($('nxt')) [].forEach.call($('nxt').children,function(x){ x.disabled=true; });
   if($('rdy-go')) $('rdy-go').onclick=function(){ R.me.ans['ok:'+R.data.round]=1; saveMe(); renderReady(); readyCheck(); };
   if($('rdy-force')) $('rdy-force').onclick=function(){ startNext(null, true); };
 }
@@ -2521,6 +2532,7 @@ async function startNext(lvx, force){
   var R=S.room; if(!R || !R.data) return;
   var d=R.data, rp=readyParts(lvx ? { lv:lvx, mode:d.mode } : d);
   applyMode(rp.nx);
+  if(rp.nx==='hon' && rp.base.indexOf('|end')<0) rp.base+='|end';
   S.gnum=(rp.nx==='hon' ? 8 : (d.mode==='hon' ? 8 : d.num))||S.num; S.lv=rp.base.split('|')[0];
   var qs=roomQs(), used=mixCustom(qs);
   var patch={ mode:rp.nx, round:d.round+1, qs:qs, used:used, mix:S.mix, num:S.num, lv:rp.base, phase:'q', qi:0 };
