@@ -570,6 +570,24 @@ body.rdy-on #gres-body{padding-bottom:230px}
 .hpd{position:absolute;bottom:-18px;object-fit:contain;filter:drop-shadow(1px 2px 0 rgba(30,30,42,.18));pointer-events:none}
 .hpd.l{left:-10px;width:72px;height:72px}.hpd.r{right:-10px;width:78px;height:78px}
 @media (max-width:360px){.hpd.l{width:60px;height:60px}.hpd.r{width:66px;height:66px}}
+/* 本能モード（鑑定者本人の指示 2026-11-14「恋愛・ふつうのほかに本能モードだけを付け加える」「3秒で次の問題へ」）。今の見た目はそのまま、カードを1枚足すだけ */
+.mode-hon{grid-column:1/-1;display:flex;align-items:center;gap:12px;text-align:left;padding:12px 16px}
+.mode-hon .ic{flex:none}
+.mode-hon .hic{display:grid;place-items:center;width:56px;height:56px;font-size:34px;line-height:1}
+.mode-hon b{margin-top:0}
+.mode-hon small{margin-top:2px}
+.mode-hon .new{display:inline-block;font-size:12px;line-height:1.5;background:#FFE071;border:2px solid #1E1E2A;border-radius:999px;padding:0 8px;margin-left:6px;vertical-align:3px}
+.mode[aria-pressed="true"][data-m="hon"]{border-color:var(--ink);background:#FFD9B8}
+.htimer{display:flex;align-items:center;gap:10px;margin:10px 0 0}
+.htimer .tb{flex:1;height:16px;border:2.5px solid #1E1E2A;border-radius:99px;background:#fff;overflow:hidden}
+.htimer .tb i{display:block;height:100%;width:100%;background:#FF8A3D;transform-origin:left center}
+.htimer b{font-family:"Mochiy Pop One",sans-serif;font-weight:400;font-size:24px;line-height:1;color:#B4410C;min-width:30px;text-align:center;white-space:nowrap}
+.htimer b.fl{font-size:18px;min-width:auto}
+.htimer b.out{color:#4B5563;font-size:16px;min-width:auto}
+.hon-list .rank .k{color:var(--ink)}
+.hon-list .rank .k.to,.hon-list .rank .v.to{color:#5B6170}
+.hon-list .rank .v.to{font-size:14px}
+.hon-list .rank .v{white-space:nowrap}
 </style>
 </head>
 <body data-mode="love">
@@ -591,6 +609,7 @@ body.rdy-on #gres-body{padding-bottom:230px}
   <div class="modes">
     <button class="mode" data-m="love" aria-pressed="true"><span class="ic"><img src="img/mode-love.webp" alt="" width="56" height="56"></span><b>恋愛編</b><small>小悪魔度がバレる</small></button>
     <button class="mode" data-m="normal" aria-pressed="false"><span class="ic"><img src="img/mode-normal.webp" alt="" width="56" height="56"></span><b>ふつう編</b><small>心の中がちょっと見える</small></button>
+    <button class="mode mode-hon" data-m="hon" aria-pressed="false" type="button"><span class="ic"><span class="hic" aria-hidden="true">⚡</span></span><span class="hm"><b>本能モード<span class="new">NEW</span></b><small>1問3秒。考える前に選ぶ</small></span></button>
   </div>
 
   <div class="label hd"><span>だれと遊ぶ？</span></div>
@@ -837,6 +856,7 @@ body.rdy-on #gres-body{padding-bottom:230px}
     <div class="prog"><i id="q-prog"></i></div>
     <div class="count" id="q-count"></div>
   </div>
+  <div class="htimer" id="htimer" hidden><span class="tb"><i id="htbar"></i></span><b id="hnum">3</b></div>
   <p class="turn" id="q-turn" hidden><span></span></p>
   <div class="qcard" id="q-card"><span class="qno" id="q-no"></span><p class="qhint" id="q-hint"></p></div>
   <p class="qby" id="q-by" hidden></p>
@@ -1023,7 +1043,7 @@ var S = { mode:'love', who:'solo', num:15, gnum:8, lv:'normal', style:'room', rv
 
 /* ホーム */
 function setMode(m){
-  S.mode=m; document.body.setAttribute('data-mode',m);
+  S.mode=m; S.hon=false; document.body.setAttribute('data-mode',m); honSoloText();
   $('lv-easy').textContent = m==='love' ? 'キュン多め' : 'ゆるく笑える';
   var T = m==='love'
     ? ['一緒にいて楽な人', '一緒にいてドキドキする人', '小悪魔度も、心の中も。<br>真剣に選ぶほど、バレていく。']
@@ -1039,7 +1059,10 @@ function setMode(m){
 function updatePoolNote(){
 
 }
-document.querySelectorAll('.mode').forEach(function(b){ b.onclick=function(){ setMode(b.dataset.m); }; });
+document.querySelectorAll('.mode').forEach(function(b){ b.onclick=function(){
+  if(b.dataset.m==='hon'){ S.hon=true; document.querySelectorAll('.mode').forEach(function(x){ x.setAttribute('aria-pressed', x===b?'true':'false'); }); honSoloText(); return; }
+  setMode(b.dataset.m); }; });
+function honSoloText(){ var sm=document.querySelector('#go-solo small'); if(sm) sm.textContent = S.hon ? '押したらすぐ1問目。10問・1問3秒' : '押したらすぐ1問目。15問・約3分'; }
 function seg(id, cb){
   var el=$(id);
   el.querySelectorAll('button').forEach(function(b){
@@ -1063,11 +1086,12 @@ function styleHint(){
   $('style-sw').textContent = room ? 'スマホが1台だけのときは、こちら' : 'それぞれのスマホで遊ぶ（部屋を作る）';
 }
 
-function show(id){ document.querySelectorAll('.scr').forEach(function(s){ s.classList.toggle('on', s.id===id); }); window.scrollTo(0,0); if(id!=='s-gres') hideReady();
+function show(id){ if(id!=='s-q') honStop(); if(id==='s-home') document.body.setAttribute('data-mode',S.mode);
+  document.querySelectorAll('.scr').forEach(function(s){ s.classList.toggle('on', s.id===id); }); window.scrollTo(0,0); if(id!=='s-gres') hideReady();
   if(id!=='s-home' && !pushed){ try{ history.pushState({nitaku:1},''); pushed=true; }catch(e){} } }
 
 function pickWho(v){ document.querySelectorAll('#seg-who button').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.v===v?'true':'false'); }); S.who=v; }
-$('go-solo').onclick=function(){ pickWho('solo'); $('go').onclick(); };
+$('go-solo').onclick=function(){ pickWho('solo'); if(S.hon){ startHon(); return; } $('go').onclick(); };
 $('go-group').onclick=function(){ pickWho('group'); S.style='room'; document.querySelectorAll('#seg-style button').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.v==='room'?'true':'false'); }); $('go').onclick(); };
 $('style-sw').onclick=function(){ S.style = S.style==='room' ? 'secret' : 'room'; document.querySelectorAll('#seg-style button').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.v===S.style?'true':'false'); }); renderSetup(); };
 $('go').onclick=function(){
@@ -1113,6 +1137,7 @@ $('go2').onclick=function(){
 
 /* 開始 */
 function start(){
+  S.honPlay=false;
   S.num = S.who==='group' ? S.gnum : 15;
   S.mix = S.who==='group' && S.num===8;
   S.qs = S.mix
@@ -1149,7 +1174,8 @@ function showQ(){
   var group = S.who==='group';
   var turn=$('q-turn');
   if(group && !S.room){ turn.hidden=false; turn.firstChild.textContent=S.players[S.pi].name+' さん'; } else turn.hidden=true;
-  var bk=document.querySelector('#s-q [data-nav=back]'); if(bk) bk.textContent=(S.who==='solo'&&!S.room&&S.qi>0)?'← 1問もどる':'← もどる';
+  var bk=document.querySelector('#s-q [data-nav=back]'); if(bk) bk.textContent=(S.who==='solo'&&!S.room&&!S.honPlay&&S.qi>0)?'← 1問もどる':'← もどる';
+  $('htimer').hidden=!S.honPlay; if(S.honPlay) document.body.setAttribute('data-mode', q.m||S.mode);
   var h='';
   {
     h+='<button class="choice A" data-c="A"><span class="tag">A</span><span class="ct">'+esc(q.a)+'</span></button>'+
@@ -1160,6 +1186,7 @@ function showQ(){
     $('q-body').querySelectorAll('.choice').forEach(function(b){ b.onclick=function(){ answer(b.dataset.c, b); }; });
   }
   show('s-q');
+  if(S.honPlay) honRun();
   if(S.room && S.room.me.ans[S.room.data.round+':'+S.qi]) showWait();
 }
 var busy=false;
@@ -1167,6 +1194,7 @@ function answer(c, el){
   if(busy) return; busy=true;
   el.classList.add('picked');
   if(S.room){ roomAnswer(c); return; }
+  if(S.honPlay){ honAnswer(c); return; }
   S.ans[S.pi][S.qi]=c;
   S.times[S.pi][S.qi]=Date.now()-S.t0;
   var wait=260;
@@ -1185,6 +1213,114 @@ function answer(c, el){
       if(S.qi < S.qs.length-1){ S.qi++; showQ(); } else showResult();
     }
   }, wait);
+}
+
+/* ───── 本能モード：1問3秒で、考える前に選ぶ（ひとりで・10問）─────
+   問題は、答えが短い問題（イージー・ノーマル、答えが12文字まで）を恋愛編・ふつう編から半分ずつ。
+   問題の文を読む時間を0.8秒とってから3秒数え、すぎたら「時間切れ」で次の問題へ。時間切れは結果に数えない。 */
+var HON_N=10, HON_LIMIT=3000, HON_READ=800;
+function honPool(m){ return POOL[m].filter(function(q){ return q.lv<3 && q.a.length<=12 && q.b.length<=12; }); }
+function honPick(){
+  var seen=store('nitaku_seen_hon')||[], ss={}; seen.forEach(function(id){ ss[id]=1; });
+  var out=[];
+  ['love','normal'].forEach(function(m){
+    var all=honPool(m), fresh=shuffle(all.filter(function(q){ return !ss[q.id]; }));
+    if(fresh.length<HON_N/2){
+      var ids={}; all.forEach(function(q){ ids[q.id]=1; });
+      seen=seen.filter(function(id){ return !ids[id]; });
+      fresh=fresh.concat(shuffle(all.filter(function(q){ return fresh.indexOf(q)<0; })));
+    }
+    fresh.slice(0,HON_N/2).forEach(function(q){ out.push({q:q, m:m}); });
+  });
+  out.forEach(function(x){ if(seen.indexOf(x.q.id)<0) seen.push(x.q.id); });
+  store('nitaku_seen_hon', seen);
+  return shuffle(out).map(function(x){ var q=x.q, sw=Math.random()<0.5;
+    return { id:q.id, a:sw?q.b:q.a, b:sw?q.a:q.b, ta:{}, tb:{}, ex:q.ex, m:x.m, sw:sw }; });
+}
+function startHon(){
+  S.honPlay=true; S.room=null; S.who='solo';
+  S.players=[{name:'あなた'}];
+  S.qs=honPick(); S.counts=null; S.sent={};
+  S.qi=0; S.pi=0; S.ans=[[]]; S.times=[[]];
+  showQ();
+}
+function honStop(){ cancelAnimationFrame(S.honRaf||0); clearTimeout(S.honT); S.honT=null; S.honRaf=0; }
+function honRun(){
+  honStop();
+  var bar=$('htbar'), num=$('hnum'), qi=S.qi;
+  bar.style.transform='scaleX(1)'; num.className=''; num.textContent='3';
+  S.honStart=Date.now()+HON_READ;
+  S.honT=setTimeout(function(){
+    (function loop(){
+      if(S.qi!==qi || curScr()!=='s-q' || !S.honPlay) return;
+      var el=Date.now()-S.honStart, r=Math.max(0,1-el/HON_LIMIT);
+      bar.style.transform='scaleX('+r+')'; num.textContent=String(Math.max(1,Math.ceil(r*3)));
+      if(el>=HON_LIMIT){ honTimeout(); return; }
+      S.honRaf=requestAnimationFrame(loop);
+    })();
+  }, HON_READ);
+}
+function honNext(wait){
+  setTimeout(function(){
+    busy=false;
+    if(!S.honPlay || curScr()!=='s-q') return;
+    if(S.qi < S.qs.length-1){ S.qi++; showQ(); } else showHonResult();
+  }, wait);
+}
+function honAnswer(c){
+  honStop();
+  var t=Math.max(100, Date.now()-S.honStart);
+  S.ans[0][S.qi]=c; S.times[0][S.qi]=t;
+  var q=S.qs[S.qi];
+  if(!S.sent[q.id]){ S.sent[q.id]=1; Votes.send([{ id:q.id, c:canon(q,c) }]); }
+  var num=$('hnum'); num.className='fl'; num.textContent=(Math.round(t/100)/10).toFixed(1)+'秒！';
+  honNext(450);
+}
+function honTimeout(){
+  if(busy) return; busy=true; honStop();
+  S.ans[0][S.qi]=null; S.times[0][S.qi]=null;
+  $('htbar').style.transform='scaleX(0)';
+  var num=$('hnum'); num.className='out'; num.textContent='時間切れ…';
+  document.querySelectorAll('#q-body .choice').forEach(function(b){ b.disabled=true; b.style.opacity='.45'; });
+  honNext(700);
+}
+function honLevel(avg, n){
+  if(!n) return '全部時間切れ。次はもっと早く！';
+  return avg<1.2 ? '反射神経レベル（迷いゼロ）' : (avg<2 ? '本能タイプ（直感で生きてる）' : 'じっくり派（3秒でも考えちゃう）');
+}
+function showHonResult(){
+  S.honPlay=false; honStop(); document.body.setAttribute('data-mode', S.mode);
+  var rows=S.qs.map(function(q,i){ var c=S.ans[0][i]; return { q:q, c:c, t:S.times[0][i] }; });
+  var ok=rows.filter(function(r){ return r.c; }), out=rows.length-ok.length;
+  var avg=ok.length ? ok.reduce(function(a,r){ return a+r.t; },0)/ok.length/1000 : 0;
+  var lvl=honLevel(avg, ok.length), sec=function(t){ return (Math.round(t/100)/10).toFixed(1); };
+  var pick=function(r){ return r.c==='A' ? r.q.a : r.q.b; };
+  var h='<div class="res-hero"><div class="pre">本能モード　あなたの結果</div>'+
+    '<img class="pnd" src="img/panda-'+(!ok.length?'sad':(avg<1.2?'joy':(avg<2?'smirk':'1')))+'.webp" alt="" width="96" height="96">'+
+    '<div class="type" style="font-size:44px">'+(ok.length?avg.toFixed(1):'—')+'<span style="font-size:22px">秒</span></div>'+
+    '<div class="catch">本能スピード（答えた'+ok.length+'問の平均）</div><div class="subt">⚡ '+lvl+'</div></div>';
+  h+='<div class="card hon-list"><h3>あなたの本能の答え</h3>'+rows.map(function(r){
+      return r.c ? '<div class="rank"><span class="k">'+esc(pick(r))+'</span><span class="v">'+sec(r.t)+'秒</span></div>'
+                 : '<div class="rank"><span class="k to">'+esc(r.q.a)+' ／ '+esc(r.q.b)+'</span><span class="v to">時間切れ</span></div>';
+    }).join('')+'</div>';
+  if(ok.length){
+    var by=ok.slice().sort(function(a,b){ return a.t-b.t; }), f=by[0], sl=by[by.length-1];
+    h+='<div class="card"><h3>速さのランキング</h3>'+
+      '<div class="rank"><span class="k">いちばん即決</span><span class="v">'+esc(pick(f))+'（'+sec(f.t)+'秒）</span></div>'+
+      (ok.length>1?'<div class="rank"><span class="k">いちばん迷った</span><span class="v">'+esc(pick(sl))+'（'+sec(sl.t)+'秒）</span></div>':'')+
+      '<div class="rank"><span class="k">時間切れ</span><span class="v">'+out+'問</span></div></div>';
+  }
+  var txt='究極の二択【本能モード】1問3秒で選んだら…\nわたしの本能スピードは '+(ok.length?avg.toFixed(1)+'秒':'全部時間切れ')+'（'+lvl+'）\n\nあなたは何秒？\n#究極の二択 #本音バレ診断';
+  h+=PROMO+'<a class="big lb-line" id="lshare" href="https://line.me/R/share" target="_blank" rel="noopener">LINEで結果を送る</a><button class="big alt" id="share">ほかのアプリでシェアする</button><button class="big alt" id="save">📷 結果を画像で保存</button>'+
+    '<button class="big" id="again">もう1回（ちがう問題で）</button><button class="big alt" id="home">トップにもどる</button>';
+  $('gres-body').innerHTML='';
+  $('res-body').innerHTML=h;
+  $('share').onclick=function(){ doShare(txt); };
+  $('lshare').href=lineHref(txt);
+  $('save').onclick=function(){ saveImage($('res-body')); };
+  $('again').onclick=function(){ startHon(); };
+  $('home').onclick=function(){ show('s-home'); };
+  show('s-res');
 }
 
 /* ───── Firebase（Firestore）：公開先（honbare.com）で、部屋と回答％を共有する ─────
@@ -1387,6 +1523,7 @@ function goBack(){
   if(c==='s-about'){ show(openAbout.from||'s-home'); return; }
   if(c==='s-setup' || c==='s-join' || c==='s-post' || c==='s-review' || c==='s-res' || c==='s-gres'){ goTop(false); return; }
   if(S.room){ goTop(true); return; }
+  if(S.honPlay && c==='s-q'){ goTop(true); return; }
   if(S.who==='solo'){
     if(S.qi>0){ S.qi--; showQ(); } else goTop(true);
     return;
