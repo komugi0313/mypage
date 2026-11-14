@@ -263,6 +263,9 @@ h2{font-size:20px;margin:22px 0 10px;font-weight:900}
 .pks{margin-top:4px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:18px;width:max-content;max-width:calc(100% - 32px);text-align:center;line-height:1.5;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9}
 .toast.on{opacity:1}
+/* お知らせは白い札に（1.66 の夜空のカードなど濃い色の上に重なっても読めるように＝鑑定者本人の指摘 2026-11-14） */
+.toast{background:#fff;color:#1E1E2A;border:3px solid #1E1E2A;box-shadow:0 5px 0 #F2C94C;bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+.reset-note{margin:4px auto 10px;max-width:420px;background:#FFF1B8;border:2.5px solid #1E1E2A;border-radius:14px;padding:10px 14px;font-size:14px;font-weight:700;line-height:1.6;text-align:center;color:#1E1E2A}
 @media (max-width:360px){h1{font-size:34px}.choice{font-size:17px}}
 
 /* ───── パステル・ステッカー（色はこの組み合わせにそろえる） ───── */
@@ -632,6 +635,7 @@ body.rdy-on #gres-body{padding-bottom:230px}
   <a class="tl-line" id="tell-line" href="https://line.me/R/share" target="_blank" rel="noopener">LINEで友だちに教える</a>
   <button class="tell-s" id="tell" type="button">ほかのアプリでシェアする</button>
   <button class="tell-s" id="reset-top" type="button">記録をリセットする</button>
+  <p class="reset-note" id="reset-note" role="status" hidden></p>
   <!-- メインサービスの紹介（鑑定者本人の指示 2026-11-12「堂々とリンクを貼ってほしい」） -->
   <a class="promo" href="https://166unmei.com" target="_blank" rel="noopener" aria-label="1.66 奇跡の相性診断で占う（別のサイト 166unmei.com が開きます）"><span class="pr-pair" aria-hidden="true"><img src="img/166-cow.webp" alt="" width="68" height="72" loading="lazy"><i>×</i><img src="img/166-mouse.webp" alt="" width="66" height="72" loading="lazy"></span><span class="pr-m"><span class="pr-k">奇跡の相性診断</span><span class="pr-n">1.66<small>%</small></span><span class="pr-d">あの人は、<em>奇跡の1.66%</em>に入っている？</span></span><span class="pr-btn">生年月日で占う <small>1分・無料 ↗</small></span></a><p class="promo-u">166unmei.com（別のサイト）</p>
 
@@ -1397,8 +1401,16 @@ function goBack(){
 /* リセット：名前・答え・選んだ設定・出た問題の記録を全部消して、いちばん最初のトップへ */
 function resetAll(){
   var now=Date.now();
-  if(!resetAll.armed || now-resetAll.armed>3000){ resetAll.armed=now; toast('名前・答え・選んだ設定・出た問題の記録・平均が全部消えます。もう一度押すと消します'); return; }
-  resetAll.armed=0;
+  var msg='名前・答え・選んだ設定・出た問題の記録・平均が全部消えます。もう一度押すと消します';
+  if(!resetAll.armed || now-resetAll.armed>3000){
+    resetAll.armed=now;
+    // トップでは、ボタンのすぐ下に出す（画面の下のお知らせは 1.66 のカードと重なって読みにくかった）
+    var rn=$('reset-note');
+    if(rn && $('s-home').classList.contains('on')){ rn.textContent=msg; rn.hidden=false; clearTimeout(resetAll.t); resetAll.t=setTimeout(function(){ rn.hidden=true; }, 3000); }
+    else toast(msg);
+    return;
+  }
+  resetAll.armed=0; clearTimeout(resetAll.t); if($('reset-note')) $('reset-note').hidden=true;
   leaveRoom();
   try{ localStorage.removeItem('nitaku_me'); localStorage.removeItem('nitaku_room'); localStorage.removeItem('nitaku_players'); localStorage.removeItem('nitaku_seen_love'); localStorage.removeItem('nitaku_seen_normal'); localStorage.removeItem('nitaku_recent_love'); localStorage.removeItem('nitaku_recent_normal'); localStorage.removeItem('nitaku_hist_love'); localStorage.removeItem('nitaku_hist_normal'); }catch(e){}
   S.players=[]; S.qs=[]; S.qi=0; S.pi=0; S.ans=[]; S.times=[]; S.counts=null; S.sent={}; S.mix=false;
