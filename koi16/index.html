@@ -100,6 +100,8 @@ p{margin:0 0 12px}
 .q-ex b{display:inline-block;background:#8A4B00;color:#fff;border-radius:999px;font-size:12px;padding:0 8px;margin-right:6px;vertical-align:1px}
 .qtext{font-size:20px;font-weight:700;min-height:4.2em;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px 4px}
 .scale{display:grid;gap:10px}
+.sl-mid-b{display:block;font-size:14px;color:#8A5A1E;margin-bottom:2px}
+.sl-mid-p{margin:8px 0 0;font-size:15px;line-height:1.75;background:#FFF6E0;border:1.5px solid #E9C77A;border-radius:12px;padding:8px 12px}
 .scale button{width:100%;border:2px solid var(--line);background:#fff;color:var(--ink);border-radius:14px;padding:10px 14px;font-size:16px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:12px;min-height:52px}
 .scale button .dot{flex:0 0 auto;width:22px;height:22px;border-radius:50%;border:2px solid #B9A9A3;background:#fff}
 .scale button.sel{border-color:var(--rose);background:var(--rose-soft)}
@@ -2071,6 +2073,15 @@ var AXES = [
   {key:'PC', a:'P', b:'C', an:'ときめき優先', bn:'安心優先', title:'恋の原動力'}
 ];
 
+/* 50%近く（±MID_W）のものさしは「両方もってる」として出す（鑑定者本人 2026-11-14「50%が7割いたらつまらなくないか」→「当たり前と思われない？」→ 場面・落とし穴・ひとこと助言の形で「OK」）。タイプの4文字・相性は変えない。境目は恋の心のくせと同じ ±8 */
+var MID_W = 8;
+var MID_TXT = {
+  LR:'好きになった相手のタイプで動き方が変わります。相手が待つ人なら自分から行き、ぐいぐい来る人なら受け身になりがち。そのぶん、どちらが動くかで探り合いになって、話が進まないこともあります。',
+  VA:'言葉も行動も使えるぶん、相手の伝え方に合わせて自分も変わりやすいほうです。言葉の少ない相手だと、自分の「好き」まで減ってしまうことがあるので、ときどきは自分から言葉にすると安心が続きます。',
+  TS:'元気なときは自分で片づけ、本当に弱ったときだけ頼るタイプです。まわりからは「しっかりした人」に見えやすく、ほんとうは頼りたいときに気づいてもらえないことがあります。',
+  PC:'はじめはときめきで動き、続くうちに安心を求めるようになりやすいほうです。関係が落ち着いてきたときに「このままでいいのかな」と迷いやすいので、そのときは2人で新しいことをひとつ足すとうまくいきます。'
+};
+
 /* 40の質問（k：ものさし／d：+1＝左の型〈L・V・T・P・ゆれやすい〉に向く、-1＝逆）
    本格版（2026-11-12 作り直し）：頼り方（T/S）＝愛着の「回避」、心のゆれやすさ＝愛着の「見捨てられ不安」
    （古村ほか 2016・中尾・加藤 2004）、恋の原動力（P/C）＝ときめきと安心の「どちらを優先するか」
@@ -2703,12 +2714,13 @@ function renderResult(code,mine,withCode){
   }
 
   if(isMine){
-    h+='<section class="card"><h2>4つのものさし</h2><p class="muted">まん中から、どちらにどれだけ寄っているかを表しています。</p><div class="sls">';
+    var anyMid=AXES.some(function(ax){ return Math.abs(mine.pct[ax.key]-50)<=MID_W; });
+    h+='<section class="card"><h2>4つのものさし</h2><p class="muted">まん中から、どちらにどれだけ寄っているかを表しています。'+(anyMid?'まん中に近いものさしは、どちらの面も持っているしるしです。':'')+'</p><div class="sls">';
     AXES.forEach(function(ax,i){
-      var p=mine.pct[ax.key], onA=poles[i]===ax.a, v=onA?p:100-p, x=100-p, lo=Math.min(50,x), w=Math.abs(x-50);
-      h+='<div class="sl"><div class="sl-top"><span class="sl-t">'+ax.title+'</span><span class="sl-res">'+(onA?ax.an:ax.bn)+'寄り・'+v+'%</span></div>'+
+      var p=mine.pct[ax.key], onA=poles[i]===ax.a, v=onA?p:100-p, x=100-p, lo=Math.min(50,x), w=Math.abs(x-50), mid=Math.abs(p-50)<=MID_W;
+      h+='<div class="sl'+(mid?' sl-both':'')+'"><div class="sl-top"><span class="sl-t">'+ax.title+'</span><span class="sl-res">'+(mid?'両方もってる':(onA?ax.an:ax.bn)+'寄り・'+v+'%')+'</span></div>'+
          '<div class="sl-track" role="img" aria-label="'+ax.title+'：'+(onA?ax.an:ax.bn)+' '+v+'％"><i class="sl-fill" style="left:'+lo+'%;width:'+w+'%"></i><i class="sl-mid"></i><i class="sl-dot" style="left:'+x+'%"></i></div>'+
-         '<div class="sl-ends"><span class="'+(onA?'on':'')+'">'+ax.an+'</span><span class="sl-c">まん中</span><span class="'+(onA?'':'on')+'">'+ax.bn+'</span></div></div>';
+         '<div class="sl-ends"><span class="'+(onA?'on':'')+'">'+ax.an+'</span><span class="sl-c">まん中</span><span class="'+(onA?'':'on')+'">'+ax.bn+'</span></div>'+(mid?'<p class="sl-mid-p"><b class="sl-mid-b">少し'+(onA?ax.an:ax.bn)+'寄り・'+v+'%</b>'+esc(MID_TXT[ax.key])+'</p>':'')+'</div>';
     });
     h+='</div>';
     // 恋の状況は、押すと開く欄にしまう（画面をのぞかれても見えないように。鑑定者本人 2026-11-12「両方入れてください」）。「答えたくない」のときは出さない
