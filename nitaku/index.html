@@ -2330,6 +2330,11 @@ $('join-go').onclick=async function(){
     // 同じ部屋にもどってきたときは、前の答えを引きつぐ
     var pid=joinPid(code);
     var prev=(d.players||[]).filter(function(p){ return p.pid===pid; })[0];
+    // 部屋に入れるのは8人まで（鑑定者本人の指示 2026-11-14「8人にして」）。前に入っていた人・同じ名前の自分は数えなおさない
+    var inRoom=(d.players||[]).filter(function(p){ return (p.name||'').trim() && p.pid!==pid; });
+    if(!prev && inRoom.length>=ROOM_MAX && !inRoom.some(function(p){ return (p.name||'').trim()===name; })){
+      okEnd=false; bn.fail('この部屋はいっぱいです（'+ROOM_MAX+'人まで）。部屋を作った人に、新しい部屋を作ってもらってね。'); return;
+    }
     var same=(d.players||[]).filter(function(p){ return p.pid!==pid && (p.name||'').trim()===name; })[0];
     if(same){
       // 同じ名前の人がもういる＝自分が別のアプリ（LINEの中など）から開いたことが多い。自分かどうかを聞く
@@ -2370,6 +2375,7 @@ $('join-same-yes').onclick=async function(){
 /* 同じ人が2つの画面（ふだんのブラウザと、LINEの中の画面など）で同じ部屋に入ったとき（鑑定者本人の指摘 2026-11-14「LINEで送ると、つい送ったラインから自分も入りたくなる」「どちらから入っても繋がるように」）：
    あとから入った画面で続け、前の画面は「別の画面で続いています」にして書きこみを止める（本能モードで2つの画面の時間切れが答えを上書きしないように）。
    どの画面かの目印は、部屋の決まりを変えずにすむよう、自分の ans の「dev」に「画面の番号:入った時刻」で入れる */
+var ROOM_MAX=8;
 var TAB=Math.random().toString(36).slice(2,10);
 function devT(v){ var m=String(v||'').split(':'); return +m[1]||0; }
 function goPassive(R, sp){
@@ -2394,7 +2400,7 @@ async function enterRoom(code, pid, me, host, made, pre){
   var fast = !made && pre && pre.room && Room.mode()==='db';
   if(fast){ R.wrote=Room.setPlayer(code, pid, me); }
   var r= (made || fast) ? 'ok' : await Room.setPlayer(code, pid, me);
-  if(r!=='ok'){ toast(r==='full' ? 'この部屋はいっぱいです（12人まで）' : '参加できませんでした。番号を確かめてね'); return false; }
+  if(r!=='ok'){ toast(r==='full' ? 'この部屋はいっぱいです（'+ROOM_MAX+'人まで）' : '参加できませんでした。番号を確かめてね'); return false; }
   S.room=R; S.who='group'; S.sent={};
   var prevSt=store('nitaku_room'); if(prevSt && prevSt.code===code && prevSt.inv) R.inv=prevSt.inv;
   store('nitaku_room', { code:code, pid:pid, inv:R.inv });
