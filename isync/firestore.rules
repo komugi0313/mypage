@@ -1,4 +1,4 @@
-// アイ・シンク（isync/）が使う Firestore の決まり。置き場所は isync_rooms（みんなのスマホで遊ぶ部屋）だけ。
+// アイ・シンク（isync/）が使う Firestore の決まり。置き場所は isync_rooms（みんなのスマホで遊ぶ部屋）と isync_votes（みんなの答えの数）だけ。
 // ★ このプロジェクト（typeplus-69c66）には、究極の二択（nitaku_）・ワンソナの決まりがすでにあります。
 //   全部を置きかえると、ほかのサイトが動かなくなります。
 //   Firebase の画面「Firestore Database → ルール」で、いまの決まりの
@@ -31,6 +31,22 @@ service cloud.firestore {
           && (!('rname' in request.resource.data) || (request.resource.data.rname is string && request.resource.data.rname.size() <= 20));
         allow delete: if true;
       }
+    }
+    // みんなの答え（問題ごとに、答えA＝a・答えB＝b・3つ目＝c の数だけ。1回に1つずつしか増やせない・減らせない・消せない。名前は入れない）
+    match /isync_votes/{qid} {
+      function cnt(d, k) { return d.get(k, 0); }
+      function total(d) { return cnt(d, 'a') + cnt(d, 'b') + cnt(d, 'c'); }
+      allow read: if qid.matches('^q[0-9a-z]{1,8}$');
+      allow create: if qid.matches('^q[0-9a-z]{1,8}$')
+        && request.resource.data.keys().hasOnly(['a','b','c'])
+        && total(request.resource.data) == 1
+        && cnt(request.resource.data, 'a') >= 0 && cnt(request.resource.data, 'b') >= 0 && cnt(request.resource.data, 'c') >= 0;
+      allow update: if request.resource.data.keys().hasOnly(['a','b','c'])
+        && total(request.resource.data) == total(resource.data) + 1
+        && cnt(request.resource.data, 'a') >= cnt(resource.data, 'a')
+        && cnt(request.resource.data, 'b') >= cnt(resource.data, 'b')
+        && cnt(request.resource.data, 'c') >= cnt(resource.data, 'c');
+      allow delete: if false;
     }
     // ===== ここまで =====
   }
