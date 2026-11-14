@@ -94,6 +94,10 @@ function scan() {
       await p.goto(URL); await check('はじめ（参加したグループ）');
       await p.goto(URL + '?t=RASC'); await check('結果（参加したグループ）');
       await p.goto(URL); await p.click('[data-gid=g3]'); await check('参加したグループから開く');
+      // 50%近くのものさし（両方もってる）が4つとも出る結果
+      await p.evaluate(() => { const o = JSON.parse(localStorage.getItem('koi16_v1') || '{}'); o.me = { code: 'RATC', pct: { LR: 45, VA: 44, TS: 55, PC: 43 }, anx: 50, mode: 'full', at: 1 }; localStorage.setItem('koi16_v1', JSON.stringify(o)); });
+      await p.goto(URL + '?t=RATC'); await check('結果（両方もってる）');
+      await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true)); await p.waitForTimeout(400); await check('結果（たたんだ欄を開いた）');
     }
     await p.goto(URL); await p.click('#start'); await check('恋の状況'); await p.click('[data-status=crush]');
     for (let i = 0; i < 40; i++) { await check('質問' + (i + 1)); const bs = await p.$$('#scale button'); await bs[i % 5].click(); await p.waitForTimeout(200); }
