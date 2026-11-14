@@ -2099,14 +2099,18 @@ var Room=(function(){
       var code=String(1000+Math.floor(Math.random()*9000));
       var both=await Promise.all([db.doc('rooms/'+code).get(), db.collection('rooms/'+code+'/players').get()]);
       if(both[0].exists && alive(both[0].data(), plist(both[1].docs))) continue;
-      return { code:code, old:both[1].docs.map(function(d){ return d.id; }) };
+      // 名前を入れているあいだに、部屋を先に置いておく（「部屋を作る」を押したときには、友だちから部屋が見える＝QRをすぐ読んでも入れる）
+      var now=Date.now(), ops=both[1].docs.map(function(d){ return { path:'rooms/'+code+'/players/'+d.id, del:true }; });
+      ops.push({ path:'rooms/'+code, data:{ code:code, host:'', mode:'love', lv:'normal|end', num:8, mix:true, round:1, qs:[], phase:'lobby', qi:0, created:now, seen:now } });
+      if(db.batch) await db.batch(ops);
+      return { code:code, old:[] };
     }
     return null;
   }
   function prep(){
     return init().then(function(){
       if(mode!=='db') return null;
-      if(prepP && Date.now()-prepAt<60e3) return prepP;
+      if(prepP && Date.now()-prepAt<20*60e3) return prepP;   // 置いておいた部屋は30分もつので、20分までは同じ番号を使う
       prepAt=Date.now(); prepP=findCode().catch(function(){ prepP=null; return null; });
       return prepP;
     });
@@ -2138,6 +2142,35 @@ var Room=(function(){
     if(mode==='api'){ var r=await post({ op:'player', code:code, pid:pid, player:p }); return r.ok ? 'ok' : (r.j.error||'ng'); }
     if(mode==='db'){ await db.doc('rooms/'+code+'/players/'+pid).set(Object.assign({}, p, { seen:Date.now() })); return 'ok'; }
     return 'off';
+  }
+  /* 部屋をすばやく読む（友だちがQR・リンクを開いたとき）：Firebase の道具の準備（数秒かかる）を待たずに、1回の通信で部屋と参加者を読む。
+     読めないときは今までの読み方にもどす */
+  function restVal(v){
+    if(!v) return null;
+    if('stringValue' in v) return v.stringValue;
+    if('integerValue' in v) return +v.integerValue;
+    if('doubleValue' in v) return v.doubleValue;
+    if('booleanValue' in v) return v.booleanValue;
+    if('nullValue' in v) return null;
+    if('timestampValue' in v) return { toMillis:(function(t){ return function(){ return t; }; })(Date.parse(v.timestampValue)) };
+    if('arrayValue' in v) return (v.arrayValue.values||[]).map(restVal);
+    if('mapValue' in v) return restMap(v.mapValue.fields);
+    return null;
+  }
+  function restMap(f){ var o={}; Object.keys(f||{}).forEach(function(k){ o[k]=restVal(f[k]); }); return o; }
+  function restClean(d){ if(d && d.expireAt && typeof d.expireAt.toMillis==='function'){ d.seen=d.expireAt.toMillis()-12*3600e3; } if(d) delete d.expireAt; return d; }
+  async function getFast(code){
+    var cfg=window.NITAKU_FB;
+    if(!cfg || !cfg.projectId || (window.claude && typeof claude.use==='function')) return get(code);
+    try{
+      var base='https://firestore.googleapis.com/v1/projects/'+cfg.projectId+'/databases/(default)/documents/nitaku_rooms/'+code, key='?key='+encodeURIComponent(cfg.apiKey);
+      var rs=await Promise.all([fetch(base+key), fetch(base+'/players'+key+'&pageSize=50')]);
+      if(rs[1].status>=400 || (rs[0].status>=400 && rs[0].status!==404)) throw new Error('rest');
+      var room = rs[0].status===404 ? null : upk(restClean(restMap((await rs[0].json()).fields)));
+      var pj=await rs[1].json(), pl=(pj.documents||[]).map(function(d){ return Object.assign({ pid:d.name.split('/').pop() }, restClean(restMap(d.fields))); }).sort(function(a,b){ return (a.joined||0)-(b.joined||0); });
+      if(!alive(room, pl)) return { room:null, players:[] };
+      return { room:room, players:pl };
+    }catch(e){ return get(code); }
   }
   async function get(code){
     await init();
@@ -2214,7 +2247,7 @@ var Room=(function(){
     await ref.set(Object.assign({}, d, patch, { seen:Date.now() })); return true;
   }
   async function delPlayer(code, pid){ await init(); if(mode==='db') await db.doc('rooms/'+code+'/players/'+pid).delete(); }
-  return { init:init, prep:prep, create:create, setRoom:setRoom, advance:advance, delPlayer:delPlayer, setPlayer:setPlayer, get:get, watch:watch, mode:function(){ return mode; }, where:function(){ return where; } };
+  return { init:init, prep:prep, create:create, getFast:getFast, setRoom:setRoom, advance:advance, delPlayer:delPlayer, setPlayer:setPlayer, get:get, watch:watch, mode:function(){ return mode; }, where:function(){ return where; } };
 })();
 function newPid(){ var x=''; while(x.length<12) x+=Math.random().toString(36).slice(2); return x.slice(0,12); }
 /* 部屋で出す問題（みんなで遊ぶときと同じ決まり） */
@@ -2292,15 +2325,16 @@ function joinPending(code){
 /* 部屋をすぐ読む：作ったばかりの部屋は、作った人の書きこみが届くまで数秒「ない」ように見えることがある（部屋を作るのを速くしたため）。
    見つからないときは、すぐ「終わっています」と出さず、1.5秒ごとに4回まで読み直す */
 async function getRoomSure(code){
-  var d=await Room.get(code);
-  for(var k=0; k<4 && !d.room; k++){ await new Promise(function(z){ setTimeout(z, 1500); }); d=await Room.get(code); }
+  var d=await Room.getFast(code);
+  for(var k=0; k<6 && !d.room; k++){ await new Promise(function(z){ setTimeout(z, 1000); }); d=await Room.getFast(code); }
   return d;
 }
 async function joinStatus(){
   var el=$('join-st'), code=($('join-code').value||'').replace(/\D/g,'');
   if(code.length!==4){ el.textContent=''; return; }
   try{
-    await Room.init(); if(Room.mode()==='off'){ el.textContent=''; return; }
+    // Firebase の道具の準備を待たずに、まず部屋を読む（準備はうしろで進める）
+    if(window.NITAKU_FB && window.NITAKU_FB.projectId){ Room.init(); } else { await Room.init(); if(Room.mode()==='off'){ el.textContent=''; return; } }
     var d=await getRoomSure(code), r=d.room, n=(d.players||[]).length;
     S.joinPre={ code:code, d:d, at:Date.now() };
     if(($('join-code').value||'').replace(/\D/g,'')!==code) return;
