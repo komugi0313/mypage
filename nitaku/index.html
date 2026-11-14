@@ -584,6 +584,21 @@ body.rdy-on #gres-body{padding-bottom:230px}
 .htimer b{font-weight:900;font-size:15px;line-height:1;color:#4A4458;white-space:nowrap}
 .htimer b.fl{font-family:"Mochiy Pop One",sans-serif;font-weight:400;font-size:18px;color:#B4410C}
 #q-body.hon-wait .choice,#q-body.hon-wait .vsmark{pointer-events:none}
+/* 本能モード：答えはカードのまんなかに大きく・まんなかの丸が残り時間（鑑定者本人の選択 2026-11-14「C」） */
+.choice.hon{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:16px 14px;font-size:25px;line-height:1.45;min-height:clamp(140px,calc((100svh - 410px)/2),205px)}
+.choice.hon .tag{position:static;transform:none;width:34px;height:34px;font-size:17px}
+.vsmark.hring{margin:0;height:30px;padding-right:5px}
+.vsmark.hring .ring{width:76px;height:76px;flex:none;border-radius:50%;background:conic-gradient(#FF3D7F calc(var(--p)*1%),#fff 0);border:3px solid #1E1E2A;box-shadow:3px 3px 0 #1E1E2A;display:flex;align-items:center;justify-content:center}
+.vsmark.hring .ring b{width:54px;height:54px;border-radius:50%;background:#fff;border:2.5px solid #1E1E2A;box-shadow:none;transform:none;padding:0;display:flex;align-items:center;justify-content:center;font-family:"Mochiy Pop One",sans-serif;font-weight:400;font-size:27px;line-height:1;color:#1E1E2A}
+.vsmark.hring .ring b small{font-size:11px;margin-left:1px}
+.vsmark.hring .ring.done b{font-size:17px}
+.vsmark.hring .ring.out{background:#E5E1EA}
+.vsmark.hring .ring.out b{font-size:24px;color:#6B6478}
+#q-body.hon-wait .ring{filter:none}
+@media (prefers-reduced-motion:no-preference){.vsmark.hring .ring b.tick{animation:htick .35s ease}@keyframes htick{0%{transform:scale(1.25)}100%{transform:none}}}
+#s-q .htimer{margin:14px 0 2px}
+.htimer b{font-size:14px}
+@media (max-width:360px){.choice.hon{font-size:22px}}
 #q-body .choice,#q-body .vsmark{transition:filter .25s,opacity .25s}
 .htimer b.out{color:#4B5563;font-size:16px;min-width:auto}
 .hon-list .rank .k{color:var(--ink)}
@@ -900,9 +915,9 @@ body.rdy-on #gres-body{padding-bottom:230px}
   </div>
   <p class="turn" id="q-turn" hidden><span></span></p>
   <div class="qcard" id="q-card"><span class="qno" id="q-no"></span><p class="qhint" id="q-hint"></p></div>
-  <div class="htimer" id="htimer" hidden><span class="hdots" id="hdots"><i></i><i></i><i></i></span><b id="hnum"></b><i id="htbar" hidden></i></div>
   <p class="qby" id="q-by" hidden></p>
   <div id="q-body"></div>
+  <div class="htimer" id="htimer" hidden><span class="hdots" id="hdots" hidden><i></i><i></i><i></i></span><b id="hnum"></b><i id="htbar" hidden></i></div>
 </section>
 
 <!-- 発表（飲み会） -->
@@ -1230,9 +1245,11 @@ function showQ(){
   $('htimer').hidden=!S.honPlay; if(S.honPlay) document.body.setAttribute('data-mode', q.m||S.mode);
   var h='';
   {
-    h+='<button class="choice A" data-c="A"><span class="tag">A</span><span class="ct">'+esc(q.a)+'</span></button>'+
-       '<div class="vsmark"><b>VS</b></div>'+
-       '<button class="choice B" data-c="B"><span class="tag">B</span><span class="ct">'+esc(q.b)+'</span></button>';
+    // 本能モードは、まんなかの「VS」が残り時間の時計になり、答えはカードのまんなかに大きく（鑑定者本人の選択 2026-11-14「C」）
+    var hc = S.honPlay ? ' hon' : '';
+    h+='<button class="choice A'+hc+'" data-c="A"><span class="tag">A</span><span class="ct">'+esc(q.a)+'</span></button>'+
+       (S.honPlay ? '<div class="vsmark hring"><span class="ring" id="hring" style="--p:100"><b id="hcount">3</b></span></div>' : '<div class="vsmark"><b>VS</b></div>')+
+       '<button class="choice B'+hc+'" data-c="B"><span class="tag">B</span><span class="ct">'+esc(q.b)+'</span></button>';
     $('q-body').innerHTML=h;
     S.t0=Date.now();
     $('q-body').querySelectorAll('.choice').forEach(function(b){ b.onclick=function(){ answer(b.dataset.c, b); }; });
@@ -1247,7 +1264,7 @@ function answer(c, el){
   if(S.honPlay && S.honStart && Date.now()<S.honStart) return;   // 問題を読んでいるあいだは押せない
   if(busy) return; busy=true;
   el.classList.add('picked');
-  if(S.room){ if(S.honPlay){ honStop(); var hn=$('hnum'); hn.className='fl'; hn.textContent=(Math.round(Math.max(100,Date.now()-S.honStart)/100)/10).toFixed(1)+'秒！'; $('htimer').classList.add('read'); } roomAnswer(c); return; }
+  if(S.room){ if(S.honPlay){ honStop(); var hn=$('hnum'); hn.className='fl'; hn.textContent=(Math.round(Math.max(100,Date.now()-S.honStart)/100)/10).toFixed(1)+'秒！'; $('htimer').classList.add('read'); honRingDone((Math.round(Math.max(100,Date.now()-S.honStart)/100)/10).toFixed(1)); } roomAnswer(c); return; }
   if(S.honPlay){ honAnswer(c); return; }
   S.ans[S.pi][S.qi]=c;
   S.times[S.pi][S.qi]=Date.now()-S.t0;
@@ -1323,20 +1340,24 @@ function honRun(){
   var num=$('hnum'), qi=S.qi, tm=$('htimer'), body=$('q-body'), dots=[].slice.call(document.querySelectorAll('#hdots i'));
   dots.forEach(function(d){ d.className=''; });
   tm.classList.remove('read'); body.classList.add('hon-wait'); num.className=''; num.textContent='';
+  if($('hcount')) $('hcount').textContent='3';
   S.honStart=Date.now()+HON_READ;
   S.honT=setTimeout(function(){
     if(S.qi!==qi || curScr()!=='s-q' || !S.honPlay) return;
-    tm.classList.remove('read'); body.classList.remove('hon-wait'); num.textContent='どっち？';
-    var last=3;
+    tm.classList.remove('read'); body.classList.remove('hon-wait'); num.textContent='0になる前に、どっちか押してね';
+    var last=3, ring=$('hring'), cnt=$('hcount');
     (function loop(){
       if(S.qi!==qi || curScr()!=='s-q' || !S.honPlay) return;
       var el=Date.now()-S.honStart, rem=Math.max(0, Math.ceil((HON_LIMIT-el)/1000));
-      if(rem!==last){ last=rem; dots.forEach(function(d,k){ d.className = k<rem ? '' : 'off'; }); }
+      if(ring) ring.style.setProperty('--p', Math.max(0, 100*(1-el/HON_LIMIT)).toFixed(1));
+      if(rem!==last){ last=rem; if(cnt){ cnt.textContent=rem; cnt.classList.remove('tick'); void cnt.offsetWidth; cnt.classList.add('tick'); } }
       if(el>=HON_LIMIT){ honTimeout(); return; }
       S.honRaf=requestAnimationFrame(loop);
     })();
   }, HON_READ);
 }
+/* 時計の丸に、選んだ秒数（時間切れなら ×）を出す */
+function honRingDone(sec){ var r=$('hring'), c=$('hcount'); if(!r||!c) return; r.classList.add('done'); if(sec){ c.innerHTML=sec+'<small>秒</small>'; } else { r.classList.add('out'); c.textContent='×'; } }
 function honNext(wait){
   setTimeout(function(){
     busy=false;
@@ -1350,15 +1371,15 @@ function honAnswer(c){
   S.ans[0][S.qi]=c; S.times[0][S.qi]=t;
   var q=S.qs[S.qi];
   if(!S.sent[q.id]){ S.sent[q.id]=1; Votes.send([{ id:q.id, c:canon(q,c) }]); }
-  var num=$('hnum'); num.className='fl'; num.textContent=(Math.round(t/100)/10).toFixed(1)+'秒！'; $('htimer').classList.add('read');
+  var num=$('hnum'); num.className='fl'; num.textContent=(Math.round(t/100)/10).toFixed(1)+'秒！'; $('htimer').classList.add('read'); honRingDone((Math.round(t/100)/10).toFixed(1));
   honNext(450);
 }
 function honTimeout(){
   if(busy) return; busy=true; honStop();
-  if(S.room){ $('htbar').style.transform='scaleX(0)'; var n0=$('hnum'); n0.className='out'; n0.textContent='時間切れ…'; $('htimer').classList.add('read'); roomAnswer('T'); return; }   // 部屋では「時間切れ」を答えとして書く（全員そろって次へ進むため）
+  if(S.room){ $('htbar').style.transform='scaleX(0)'; var n0=$('hnum'); n0.className='out'; n0.textContent='時間切れ…'; $('htimer').classList.add('read'); honRingDone(''); roomAnswer('T'); return; }   // 部屋では「時間切れ」を答えとして書く（全員そろって次へ進むため）
   S.ans[0][S.qi]=null; S.times[0][S.qi]=null;
   $('htbar').style.transform='scaleX(0)';
-  var num=$('hnum'); num.className='out'; num.textContent='時間切れ…'; $('htimer').classList.add('read');
+  var num=$('hnum'); num.className='out'; num.textContent='時間切れ…'; $('htimer').classList.add('read'); honRingDone('');
   document.querySelectorAll('#q-body .choice').forEach(function(b){ b.disabled=true; b.style.opacity='.45'; });
   honNext(700);
 }
