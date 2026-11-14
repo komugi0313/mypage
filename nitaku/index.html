@@ -603,6 +603,10 @@ body.rdy-on #gres-body{padding-bottom:230px}
 .mix b{font-family:"Mochiy Pop One",sans-serif;font-weight:400;font-size:26px;color:#B0124D;flex:none}.mix div{min-width:0}.mix small{display:block;font-size:13px;color:#4A4458}
 .mix .mx-n{display:block;font-size:17px;font-weight:900}
 .mix.gray{background:#EEF0F6}.mix.gray b{color:#374151}
+.aw{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px dashed #E9D9A6}.aw:last-child{border-bottom:0}.aw-i{flex:none;font-size:30px;line-height:1.1}.aw-b{flex:1;min-width:0}.aw-t{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}.aw-t b{font-family:"Mochiy Pop One",sans-serif;font-size:18px;font-weight:400;color:#B0174F}.aw-n{font-weight:900;font-size:16px}.aw-b p{margin:2px 0 0;font-size:14.5px;font-weight:700}.aw-b p small{display:block;font-size:13px;color:#4A4458;font-weight:700}
+.fo{margin:8px 0;padding:10px 12px;background:#FFF6D6;border-radius:12px;font-size:15px;font-weight:700;line-height:1.6}
+.tsk{margin:6px 0 0;font-size:14px;font-weight:900;color:#4B2FC4}
+.hsp{margin-top:10px;padding:10px 12px;border-radius:12px;background:#fff;border:2px solid #1E1E2A}.hsp-r{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 6px;font-size:13.5px;font-weight:700}.hsp-r b{font-size:20px;font-weight:900}.hsp-r b small{font-size:12.5px}.hsp-vs{color:#7A7488}.hsp-s{margin:4px 0 0;font-size:14.5px;font-weight:900}
 .hs-sec{flex:none;min-width:92px;display:flex;align-items:baseline;justify-content:center;gap:2px;padding:10px 12px;border:2.5px solid #1E1E2A;border-radius:16px;background:#fff;box-shadow:3px 3px 0 #FF3D7F}.hs-sec b{font-size:32px;font-weight:900;line-height:1;color:#B0174F}.hs-sec small{font-size:15px;font-weight:900;color:#B0174F}.ppl-b .hs-sec{box-shadow:3px 3px 0 #7B5CFF}.ppl-b .hs-sec b,.ppl-b .hs-sec small{color:#4B2FC4}
 .hon-all{margin-top:14px}.hon-all>summary{flex-direction:column;gap:2px;border-radius:22px;padding:12px 14px}.hon-all>summary::after,.hon-all[open]>summary::after{content:none}.hon-all>summary small{font-size:13.5px;font-weight:700}.hon-all[open] .ha-a{display:none}.hon-all[open]>summary .ha-t::after{content:' ▲'}
 /* 部屋を作った人の画面：いまどこまで進んだかをはっきり（鑑定者本人の指摘 2026-11-14「まだ誰も誘ってないのに、もう誘ってる通信中みたいな書き方が良くない」「何分か相手が出なかったら、この部屋が一回なしになります、とやってくれないと」） */
@@ -1345,6 +1349,36 @@ function honLevel(avg, n){
   if(!n) return '全部時間切れ。次はもっと早く！';
   return avg<1.2 ? '反射神経レベル（迷いゼロ）' : (avg<2 ? '本能タイプ（直感で生きてる）' : 'じっくり派（3秒でも考えちゃう）');
 }
+/* 本能モードの結果を面白く（鑑定者本人の指示 2026-11-14「結果をもっと読み手が面白い内容に」「ぜんぶ入れて」）：
+   ①本能アワード ②秒で選んだのに、みんなと逆 ③恋愛とふつう、どっちが速い？ ④迷った問題にひとこと ⑤満場一致の即答 */
+var HON_MODE={}; ['love','normal'].forEach(function(m){ HON_EXTRA[m].forEach(function(q){ HON_MODE[q.id]=m; }); });
+function honQM(q){ return HON_MODE[q.id] || (POOL.love.some(function(x){ return x.id===q.id; }) ? 'love' : 'normal'); }
+function honSplit(rows){   // rows: {q,c,t}（答えた問題だけ）→ 恋愛とふつうの平均秒数
+  var L=[], N=[]; rows.forEach(function(r){ (honQM(r.q)==='love'?L:N).push(r.t); });
+  var av=function(a){ return a.length ? a.reduce(function(x,y){ return x+y; },0)/a.length/1000 : null; };
+  return { love:av(L), normal:av(N) };
+}
+function honSplitHTML(sp){
+  if(sp.love==null || sp.normal==null) return '';
+  var d=sp.love-sp.normal, say= d<=-0.3 ? '恋には迷わないのに、日常の二択で悩む人' : (d>=0.3 ? '日常はサクサク、恋になると慎重になる人' : '恋も日常も、同じリズムで選ぶ人');
+  return '<div class="hsp"><div class="hsp-r"><span class="hsp-l">恋愛の問題</span><b>'+sp.love.toFixed(1)+'<small>秒</small></b><span class="hsp-vs">／</span><span class="hsp-l">ふつうの問題</span><b>'+sp.normal.toFixed(1)+'<small>秒</small></b></div><p class="hsp-s">→ '+say+'</p></div>';
+}
+function honTsukkomi(q, who){
+  var L=['ちょっとドキッとした？','心のどこかで迷いあり？','本音と建前がたたかってた？'], N=['そこ、そんなに悩む？','意外なところで慎重派。','ここには、こだわりがあるみたい。'];
+  var a=honQM(q)==='love'?L:N; return a[Math.abs(hashStr(q.id+'t'+(who||'')).split('').reduce(function(x,c){ return x+c.charCodeAt(0); },0))%a.length];
+}
+function honSd(ts){ if(ts.length<2) return 0; var m=ts.reduce(function(a,b){ return a+b; },0)/ts.length; return Math.sqrt(ts.reduce(function(a,b){ return a+(b-m)*(b-m); },0)/ts.length)/1000; }
+/* 自分だけの賞（ひとりで遊んだとき・みんなで賞が当たらなかった人） */
+function honSelfAward(avg, out, sp, sd){
+  if(avg!=null && avg<1.2) return ['🏆','即決王','考える前に指が動いてる'];
+  if(out>=3) return ['😴','時間切れ常習犯','本能がときどきお昼寝する'];
+  if(sp && sp.love!=null && sp.normal!=null && sp.love-sp.normal<=-0.3) return ['💘','恋は即決賞','恋の二択には迷いがない'];
+  if(sp && sp.love!=null && sp.normal!=null && sp.normal-sp.love<=-0.3) return ['🍙','日常サクサク賞','毎日の二択はおまかせ'];
+  if(sd>=0.7) return ['🎢','気分屋賞','即答の問題と迷う問題の差が大きい'];
+  if(avg!=null && avg>=2) return ['🐢','熟考大賞','3秒をフルに使う慎重派'];
+  return ['🎯','安定の本能賞','いつも同じリズムで選べる'];
+}
+function honAwardRow(a, who){ return '<div class="aw"><span class="aw-i">'+a[0]+'</span><div class="aw-b"><div class="aw-t"><b>'+a[1]+'</b>'+(who?'<span class="aw-n">'+esc(who)+'</span>':'')+'</div><p>'+a[2]+(a[3]?'<small>'+a[3]+'</small>':'')+'</p></div></div>'; }
 function showHonResult(){
   S.honPlay=false; honStop(); document.body.setAttribute('data-mode', S.mode);
   var rows=S.qs.map(function(q,i){ var c=S.ans[0][i]; return { q:q, c:c, t:S.times[0][i] }; });
@@ -1360,14 +1394,16 @@ function showHonResult(){
       return r.c ? '<div class="rank"><span class="k">'+esc(pick(r))+'</span><span class="v">'+sec(r.t)+'秒</span></div>'
                  : '<div class="rank"><span class="k to">'+esc(r.q.a)+' ／ '+esc(r.q.b)+'</span><span class="v to">時間切れ</span></div>';
     }).join('')+'</div>';
+  var spS=honSplit(ok), aw=ok.length ? honSelfAward(avg, out, spS, honSd(ok.map(function(r){ return r.t; }))) : ['😴','時間切れ常習犯','本能がずっとお昼寝していた'];
+  h=h.replace('<div class="card hon-list">','<div class="card"><h3>🏆 あなたの本能アワード</h3>'+honAwardRow(aw)+'</div><div class="card hon-list">');
   if(ok.length){
     var by=ok.slice().sort(function(a,b){ return a.t-b.t; }), f=by[0], sl=by[by.length-1];
     h+='<div class="card"><h3>速さのランキング</h3>'+
       '<div class="rank"><span class="k">いちばん即決</span><span class="v">'+esc(pick(f))+'（'+sec(f.t)+'秒）</span></div>'+
-      (ok.length>1?'<div class="rank"><span class="k">いちばん迷った</span><span class="v">'+esc(pick(sl))+'（'+sec(sl.t)+'秒）</span></div>':'')+
-      '<div class="rank"><span class="k">時間切れ</span><span class="v">'+out+'問</span></div></div>';
+      (ok.length>1?'<div class="rank"><span class="k">いちばん迷った</span><span class="v">'+esc(pick(sl))+'（'+sec(sl.t)+'秒）</span></div><p class="tsk">「'+esc(pick(sl))+'」に'+sec(sl.t)+'秒。'+honTsukkomi(sl.q)+'</p>':'')+
+      '<div class="rank"><span class="k">時間切れ</span><span class="v">'+out+'問</span></div>'+honSplitHTML(spS)+'</div>';
   }
-  var txt='究極の二択【本能モード】1問3秒で選んだら…\nわたしの本能スピードは '+(ok.length?avg.toFixed(1)+'秒':'全部時間切れ')+'（'+lvl+'）\n\nあなたは何秒？\n#究極の二択 #本音バレ診断';
+  var txt='究極の二択【本能モード】1問3秒で選んだら…\nわたしの本能スピードは '+(ok.length?avg.toFixed(1)+'秒':'全部時間切れ')+'（'+lvl+'）\n'+aw[0]+aw[1]+'でした\n\nあなたは何秒？\n#究極の二択 #本音バレ診断';
   h+=PROMO+endButtons()+shareRow('lshare','share','save')+'<button class="tell-s end-home" id="home" type="button">トップにもどる</button>';
   $('gres-body').innerHTML='';
   $('res-body').innerHTML=h;
@@ -1389,7 +1425,7 @@ function showHonGroupResult(){
     var ok=rows.filter(function(r){ return (r.c==='A'||r.c==='B') && r.t; });
     var avg=ok.length ? ok.reduce(function(a,r){ return a+r.t; },0)/ok.length : null;
     var by=ok.slice().sort(function(a,b){ return a.t-b.t; });
-    return { name:p.name, i:i, avg:avg, out:Q-ok.length, quick:by[0], slow:by.length>1?by[by.length-1]:null };
+    return { name:p.name, i:i, avg:avg, out:Q-ok.length, quick:by[0], slow:by.length>1?by[by.length-1]:null, sp:honSplit(ok), sd:honSd(ok.map(function(r){ return r.t; })), aw:[] };
   });
   var rank=P.slice().sort(function(a,b){ return (a.avg==null?1e9:a.avg)-(b.avg==null?1e9:b.avg); }), top=rank[0];
   var pick=function(r){ return r.c==='A' ? r.q.a : r.q.b; };
@@ -1409,6 +1445,46 @@ function showHonGroupResult(){
     h+='<div class="card"><h3>💞 本能が合う2人</h3><div class="mix"><b>'+pb.r+'%</b><div><small>いちばん本能が合う2人</small><span class="mx-n">'+esc(S.players[pb.x].name)+' × '+esc(S.players[pb.y].name)+'</span><small>'+Q+'問中'+pb.same+'問が同じ答え</small></div></div>'+
       (pairs.length>1 ? '<div class="mix gray"><b>'+pw.r+'%</b><div><small>本能がバラバラの2人</small><span class="mx-n">'+esc(S.players[pw.x].name)+' × '+esc(S.players[pw.y].name)+'</span><small>'+(pw.same ? Q+'問中'+pw.same+'問だけ同じ答え' : '同じ答えは1問もなし')+'</small></div></div>' : '')+'</div>';
   }
+  // ①本能アワード（全員に1つ以上）
+  var answered=function(i,qi){ var c=S.ans[i][qi]; return c==='A'||c==='B'; };
+  var minor=P.map(function(){ return 0; }), major=P.map(function(){ return 0; }), lone=[];
+  S.qs.forEach(function(q,qi){
+    var who=P.filter(function(r){ return answered(r.i,qi); });
+    if(who.length<2) return;
+    who.forEach(function(r){
+      var mine=S.ans[r.i][qi], same=who.filter(function(o){ return S.ans[o.i][qi]===mine; }).length;
+      if(n>=3 && same===1 && who.length>=3){ minor[r.i]++; lone.push({ r:r, q:q, qi:qi, c:mine, t:S.times[r.i][qi] }); }
+      if(n>=3 && same*2>who.length) major[r.i]++;
+    });
+  });
+  var withAvg=P.filter(function(r){ return r.avg!=null; });
+  var best=function(list, f, min){ var b=null; list.forEach(function(r){ var v=f(r); if(v==null) return; if(min!=null && v<min) return; if(!b || v>b.v) b={ r:r, v:v }; }); return b; };
+  var give=function(b, a){ if(b) b.r.aw.push(a); };
+  if(withAvg.length){ var fs=withAvg.slice().sort(function(a,b){ return a.avg-b.avg; });
+    give({ r:fs[0] }, ['🏆','即決王','考える前に指が動いてる','平均 '+sec(fs[0].avg)+'秒']);
+    var sl=fs[fs.length-1];
+    if(fs.length>1 && sl!==fs[0]) give({ r:sl }, sl.avg>=1500 ? ['🐢','熟考大賞','3秒をフルに使う慎重派','平均 '+sec(sl.avg)+'秒'] : ['🐢','マイペース賞','みんなの中では、いちばんじっくり派','平均 '+sec(sl.avg)+'秒']); }
+  var bo=best(P, function(r){ return r.out; }, 1); if(bo) give(bo, ['😴','時間切れ常習犯','本能がときどきお昼寝する','時間切れ '+bo.v+'問']);
+  var bm=best(P, function(r){ return minor[r.i]; }, 2); if(bm) give(bm, ['🦄','ひとりだけ賞','群れない本能','ひとりだけちがう答えが '+bm.v+'問']);
+  var bj=best(P, function(r){ return major[r.i]; }, 1); if(bj && !bj.r.aw.length) give(bj, ['🙌','みんなの代表賞','みんなの本能とよくそろう','多い方の答えが '+bj.v+'問']);
+  P.forEach(function(r){ if(!r.aw.length) r.aw.push(honSelfAward(r.avg==null?null:r.avg/1000, r.out, r.sp, r.sd)); });
+  h+='<div class="card"><h3>🏆 本能アワード</h3>'+P.map(function(r){ return r.aw.map(function(a){ return honAwardRow(a, r.name); }).join(''); }).join('')+'</div>';
+  // ②秒で選んだのに、みんなと逆（3人以上）／迷いなく真逆（2人）
+  var fastOpp=[];
+  if(n>=3){ lone.filter(function(x){ return x.t && x.t<=1200; }).sort(function(a,b){ return a.t-b.t; }).slice(0,3).forEach(function(x){
+      var other=x.c==='A'?x.q.b:x.q.a;
+      fastOpp.push('<b>'+esc(x.r.name)+'</b>さんは'+sec(x.t)+'秒で「'+esc(x.c==='A'?x.q.a:x.q.b)+'」。ほかの全員は「'+esc(other)+'」でした'); });
+  } else if(n===2){ S.qs.forEach(function(q,qi){ var a=S.ans[0][qi], b=S.ans[1][qi], ta=S.times[0][qi], tb=S.times[1][qi];
+      if((a==='A'||a==='B') && (b==='A'||b==='B') && a!==b && ta<=1200 && tb<=1200) fastOpp.push({ t:Math.max(ta,tb), s:'<b>'+esc(S.players[0].name)+'</b>は'+sec(ta)+'秒で「'+esc(a==='A'?q.a:q.b)+'」、<b>'+esc(S.players[1].name)+'</b>は'+sec(tb)+'秒で「'+esc(b==='A'?q.a:q.b)+'」' }); });
+    fastOpp=fastOpp.sort(function(x,y){ return x.t-y.t; }).slice(0,3).map(function(x){ return x.s; }); }
+  if(fastOpp.length) h+='<div class="card"><h3>'+(n>=3?'😳 秒で選んだのに、みんなと逆':'⚡ 迷いなく、真逆')+'</h3>'+fastOpp.map(function(t){ return '<p class="fo">'+t+'</p>'; }).join('')+(n===2?'<p class="hint" style="margin-bottom:0">どっちも即答。なのに答えは反対。</p>':'')+'</div>';
+  // ⑤満場一致の即答
+  var uni=[];
+  S.qs.forEach(function(q,qi){ var c0=S.ans[0][qi]; if(c0!=='A'&&c0!=='B') return; var mx=0, okk=true;
+    for(var i=0;i<n;i++){ if(S.ans[i][qi]!==c0 || !S.times[i][qi]){ okk=false; break; } mx=Math.max(mx,S.times[i][qi]); }
+    if(okk && mx<=1000) uni.push({ t:mx, c:c0==='A'?q.a:q.b }); });
+  if(uni.length && n>=2){ uni.sort(function(a,b){ return a.t-b.t; });
+    h+='<div class="card"><h3>🤝 満場一致の即答</h3>'+uni.slice(0,3).map(function(u){ return '<p class="fo">全員が'+sec(u.t)+'秒以内に「'+esc(u.c)+'」</p>'; }).join('')+'<p class="hint" style="margin-bottom:0">'+(uni.length>=3?'このメンバー、好みが同じすぎる。':'ここは迷う余地なし。')+'</p></div>'; }
   // みんなの答え（だれが何秒で選んだか）
   h+='<details class="kok hon-all"><summary><span class="ha-t">📋 みんなの答えを見る<b class="ha-a"> ▼</b></span><small>だれが・どっちを・何秒で選んだか（'+Q+'問）</small></summary><div class="card" style="margin-top:10px">';
   S.qs.forEach(function(q,qi){
@@ -1428,11 +1504,11 @@ function showHonGroupResult(){
     h+='<div class="ppl hsr '+(ri%2?'ppl-b':'ppl-a')+'"><div class="pp-top"><div class="hs-sec">'+(r.avg==null?'<b>—</b>':'<b>'+sec(r.avg)+'</b><small>秒</small>')+'</div><div class="pp-who"><strong>'+esc(r.name)+'</strong><span>本能スピード</span></div></div>'+
        '<div class="pp-say">'+esc(honLevel(r.avg==null?0:r.avg/1000, r.avg==null?0:1))+(r.out?'　時間切れ '+r.out+'問':'')+'</div>'+
        (r.quick ? '<div class="pks">'+'<div class="pk pk-q"><div class="pk-h"><b>⚡ いちばん即決</b><span>'+sec(r.quick.t)+'秒</span></div><div class="pk-c">「'+esc(pick(r.quick))+'」を選んだ</div></div>'+
-         (r.slow ? '<div class="pk pk-s"><div class="pk-h"><b>🌀 いちばん迷った</b><span>'+sec(r.slow.t)+'秒</span></div><div class="pk-c">「'+esc(pick(r.slow))+'」を選んだ</div></div>' : '')+'</div>' : '')+'</div>';
+         (r.slow ? '<div class="pk pk-s"><div class="pk-h"><b>🌀 いちばん迷った</b><span>'+sec(r.slow.t)+'秒</span></div><div class="pk-c">「'+esc(pick(r.slow))+'」を選んだ</div><p class="tsk">'+honTsukkomi(r.slow.q, r.name)+'</p></div>' : '')+'</div>' : '')+honSplitHTML(r.sp)+'</div>';
   });
   h+='</div>';
   var gt='究極の二択【本能モード】'+n+'人で1問3秒の勝負！\n'+rank.map(function(r,k){ return (k+1)+'位 '+r.name+'（'+(r.avg==null?'時間切れ':sec(r.avg)+'秒')+'）'; }).join('\n')+
-    (pairs.length ? '\nいちばん本能が合う2人：'+S.players[pairs[0].x].name+'×'+S.players[pairs[0].y].name : '')+'\n\nあなたの本能は何秒？\n#究極の二択 #本音バレ診断';
+    (pairs.length ? '\nいちばん本能が合う2人：'+S.players[pairs[0].x].name+'×'+S.players[pairs[0].y].name : '')+'\n'+P.map(function(r){ return r.aw[0][0]+r.aw[0][1]+'：'+r.name; }).join('\n')+'\n\nあなたの本能は何秒？\n#究極の二択 #本音バレ診断';
   h+=PROMO+endButtons()+shareRow('lgshare','gshare','gsave')+homeLink();
   $('res-body').innerHTML='';
   $('gres-body').innerHTML=h;
