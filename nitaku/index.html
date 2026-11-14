@@ -619,6 +619,7 @@ body.rdy-on #gres-body{padding-bottom:230px}
 /* 結果のいちばん下のボタン */
 .big.end-sub{min-height:48px;padding:10px 14px;font-size:16px;margin-top:12px;box-shadow:3px 3px 0 #1E1E2A}
 .end-pick{margin:18px 0 10px}.end-pick-t{margin:0 0 6px;text-align:center;font-weight:700;font-size:15px}.end-pick .seg button{min-height:44px;font-size:15px}.end-pick .seg button[aria-pressed="true"]{background:#FFE071;color:#1E1E2A}
+.passive .jn-l,.passive>h2{display:none}
 .big.end-q{margin-top:18px;background:#fff;min-height:52px;font-size:17px}
 .rdy-end{display:block;margin:10px auto 0;min-height:44px;padding:8px 14px;border:0;background:none;font-weight:900;font-size:15px;color:#1E1E2A;text-decoration:underline;text-underline-offset:4px;cursor:pointer}
 .end-hint{margin:8px 0 0;text-align:center;font-size:13.5px}
@@ -814,8 +815,8 @@ body.rdy-on #gres-body{padding-bottom:230px}
   <div class="label">部屋番号（4けた）</div>
   <div class="prow"><div class="pf"><input type="text" id="join-code" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="例：1234" autocomplete="off"></div></div>
   </div>
-  <div class="label">あなたの名前</div>
-  <div class="prow"><div class="pf"><input type="text" id="join-name" maxlength="6" placeholder="名前（6文字まで・ニックネームOK）"></div></div>
+  <div class="label jn-l">あなたの名前</div>
+  <div class="prow jn-l"><div class="pf"><input type="text" id="join-name" maxlength="6" placeholder="名前（6文字まで・ニックネームOK）"></div></div>
   <p class="join-st" id="join-st"></p>
   <p class="join-wait" id="join-wait" role="status" hidden></p>
   <div class="join-same" id="join-same" hidden>
@@ -2232,7 +2233,7 @@ async function createRoom(){
   try{
     await Room.init();
     if(Room.mode()==='off'){ toast('いまは部屋を作れません。電波のよいところで、もう一度押してね'); return; }
-    var pid=newPid(), me={ name:name, joined:Date.now(), ans:{}, times:{} }, res='ng';
+    var pid=newPid(), me={ name:name, joined:Date.now(), ans:{ dev:TAB+':'+Date.now() }, times:{} }, res='ng';
     var room={ code:'', host:pid, mode:roomMode(), lv:roomLv(), num:S.hon?HON_N:S.gnum, mix:!S.hon && S.gnum===8, round:1, qs:[], phase:'lobby', qi:0 };
     if(Room.mode()==='db'){
       try{ res=await Room.create(room, pid, me); }catch(e){ res='ng'; }
@@ -2256,7 +2257,7 @@ function openJoin(code, fromLink){
   S.who='group';
   $('join-code').value = code || '';
   $('join-codebox').hidden = !!(fromLink && code);
-  $('s-join').classList.remove('ended'); S.autoJoin=false; $('join-wait').hidden=true; $('join-same').hidden=true; $('join-go').hidden=false;
+  $('s-join').classList.remove('ended','passive'); $('join-same-yes').textContent='はい、自分です'; S.autoJoin=false; $('join-wait').hidden=true; $('join-same').hidden=true; $('join-same-no').hidden=false; $('join-go').hidden=false;
   $('join-hello').innerHTML = (fromLink && code) ? '部屋（'+code+'）に招待されています<small>名前を入れて「参加する」を押してね</small>' : '';
   if(!$('join-name').value) $('join-name').value = String(store('nitaku_me') || '').slice(0,6);
   show('s-join');
@@ -2357,15 +2358,37 @@ $('join-same-yes').onclick=async function(){
   var j=S.sameJoin; if(!j) return;
   var b=$('join-same-yes'); b.disabled=true;
   try{
-    var p=j.p, me={ name:p.name, joined:p.joined||Date.now(), ans:p.ans||{}, times:p.times||{}, mine:p.mine||[] };
-    $('join-same').hidden=true; $('join-go').hidden=false; S.sameJoin=null;
+    // いまの答えを引きつぐため、入る直前に部屋からその人の最新の答えを読み直す
+    var p=j.p; try{ var d=await withTimeout(Room.get(j.code), 15000), np=(d.players||[]).filter(function(x){ return x.pid===p.pid; })[0]; if(np) p=np; }catch(e){}
+    var me={ name:p.name, joined:p.joined||Date.now(), ans:JSON.parse(JSON.stringify(p.ans||{})), times:JSON.parse(JSON.stringify(p.times||{})), mine:p.mine||[] };
+    $('join-same').hidden=true; $('join-go').hidden=false; $('join-same-no').hidden=false; S.sameJoin=null; $('s-join').classList.remove('passive'); $('join-same-yes').textContent='はい、自分です';
     var ok=await enterRoom(j.code, p.pid, me, j.host);
     if(ok!==false) toast(j.host ? 'この画面で続けます。ここから「スタート」を押せます' : 'この画面で続けます');
   }catch(e){ toast('通信できませんでした。もう一度押してね'); }
   finally{ b.disabled=false; }
 };
+/* 同じ人が2つの画面（ふだんのブラウザと、LINEの中の画面など）で同じ部屋に入ったとき（鑑定者本人の指摘 2026-11-14「LINEで送ると、つい送ったラインから自分も入りたくなる」「どちらから入っても繋がるように」）：
+   あとから入った画面で続け、前の画面は「別の画面で続いています」にして書きこみを止める（本能モードで2つの画面の時間切れが答えを上書きしないように）。
+   どの画面かの目印は、部屋の決まりを変えずにすむよう、自分の ans の「dev」に「画面の番号:入った時刻」で入れる */
+var TAB=Math.random().toString(36).slice(2,10);
+function devT(v){ var m=String(v||'').split(':'); return +m[1]||0; }
+function goPassive(R, sp){
+  if(S.room!==R) return;
+  S.room=null;
+  try{ if(R.stop) R.stop(); }catch(e){}
+  try{ clearInterval(R.hb); document.removeEventListener('visibilitychange', R.vis); }catch(e){}
+  honStop(); hideReady(); busy=false;
+  S.sameJoin={ code:R.code, p:sp, host:R.host, take:true };
+  $('join-code').value=R.code; $('join-codebox').hidden=true; $('s-join').classList.remove('ended');
+  $('join-hello').innerHTML='この部屋は、別の画面で続いています<small>LINEの中の画面など、あとから開いた画面で遊べます</small>';
+  $('join-same-t').innerHTML='「'+esc(R.me.name||'')+'」として、<br>この画面で続けることもできます。';
+  $('join-same').hidden=false; $('join-same-no').hidden=true; $('join-go').hidden=true; $('join-st').textContent='';
+  $('s-join').classList.add('passive'); $('join-same-yes').textContent='この画面で続ける';
+  show('s-join');
+}
 async function enterRoom(code, pid, me, host, made, pre){
   leaveRoom();
+  me.ans=me.ans||{}; me.ans.dev=TAB+':'+Date.now();
   var R={ code:code, pid:pid, host:host, me:me, data:null, players:[], view:'', busy:false, chain:Promise.resolve() };
   // 参加するとき：先に読んでおいた部屋の様子があれば、書きこみの返事を待たずに部屋の画面を出す（失敗したときだけ参加の画面にもどす）
   var fast = !made && pre && pre.room && Room.mode()==='db';
@@ -2473,6 +2496,7 @@ function onRoom(room, players){
   // 同じ人が2つの画面（LINEの中とブラウザなど）で開いているとき、もう片方で答えた分を引きつぐ
   var mine=(players||[]).filter(function(p){ return p.pid===R.pid; })[0];
   if(mine){ ['ans','times'].forEach(function(k){ var o=mine[k]||{}; R.me[k]=R.me[k]||{}; Object.keys(o).forEach(function(x){ if(R.me[k][x]==null) R.me[k][x]=o[x]; }); }); }
+  if(mine && mine.ans && mine.ans.dev && mine.ans.dev!==R.me.ans.dev && devT(mine.ans.dev)>devT(R.me.ans.dev)){ goPassive(R, mine); return; }
   applyMode(room.mode);
   S.honPlay = room.mode==='hon' && room.phase==='q';
   var lp=String(room.lv||'normal').split('#')[0].split('|'); S.lv=lp[0]; S.rv=(lp[1]==='end'?'end':'each'); S.mix=!!room.mix; S.num=room.num||8;
