@@ -619,6 +619,9 @@ body.rdy-on #gres-body{padding-bottom:230px}
 /* 結果のいちばん下のボタン */
 .big.end-sub{min-height:48px;padding:10px 14px;font-size:16px;margin-top:12px;box-shadow:3px 3px 0 #1E1E2A}
 .end-pick{margin:18px 0 10px}.end-pick-t{margin:0 0 6px;text-align:center;font-weight:700;font-size:15px}.end-pick .seg button{min-height:44px;font-size:15px}.end-pick .seg button[aria-pressed="true"]{background:#FFE071;color:#1E1E2A}
+.passive .jn-l,.passive>h2{display:none}
+.big.end-q{margin-top:18px;background:#fff;min-height:52px;font-size:17px}
+.rdy-end{display:block;margin:10px auto 0;min-height:44px;padding:8px 14px;border:0;background:none;font-weight:900;font-size:15px;color:#1E1E2A;text-decoration:underline;text-underline-offset:4px;cursor:pointer}
 .end-hint{margin:8px 0 0;text-align:center;font-size:13.5px}
 .big.end-line{margin-top:22px}
 .end-links{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:6px}
@@ -812,8 +815,8 @@ body.rdy-on #gres-body{padding-bottom:230px}
   <div class="label">部屋番号（4けた）</div>
   <div class="prow"><div class="pf"><input type="text" id="join-code" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="例：1234" autocomplete="off"></div></div>
   </div>
-  <div class="label">あなたの名前</div>
-  <div class="prow"><div class="pf"><input type="text" id="join-name" maxlength="6" placeholder="名前（6文字まで・ニックネームOK）"></div></div>
+  <div class="label jn-l">あなたの名前</div>
+  <div class="prow jn-l"><div class="pf"><input type="text" id="join-name" maxlength="6" placeholder="名前（6文字まで・ニックネームOK）"></div></div>
   <p class="join-st" id="join-st"></p>
   <p class="join-wait" id="join-wait" role="status" hidden></p>
   <div class="join-same" id="join-same" hidden>
@@ -1858,19 +1861,20 @@ function doShare(text){
 var splashT=null;
 function splash(t, sub, kind){
   var el=$('splash'); $('splash-t').textContent=t; $('splash-s').textContent=sub||'';
-  $('splash-img').src='img/panda-'+({go:'joy',join:'bye',again:'wait'}[kind]||'joy')+'.webp';
+  $('splash-img').src='img/panda-'+({go:'joy',join:'bye',again:'wait',bye:'bye'}[kind]||'joy')+'.webp';
   el.className='splash '+(kind==='again'?'join':(kind||'')); el.hidden=false;
   try{ navigator.vibrate&&navigator.vibrate(kind==='go'?[120,60,120]:80); }catch(e){}
-  clearTimeout(splashT); splashT=setTimeout(function(){ el.hidden=true; }, kind==='go'?1600:2200);
+  clearTimeout(splashT); splashT=setTimeout(function(){ el.hidden=true; }, kind==='go'?1600:(kind==='bye'?3000:2200));
 }
 $('splash').onclick=function(){ $('splash').hidden=true; };
 function toast(t){ var el=$('toast'); el.textContent=t; el.classList.add('on'); setTimeout(function(){ el.classList.remove('on'); }, 2200); }
 
 function endButtons(){
   if(S.room){
+    var endq='<button class="big alt end-q" id="endq" type="button">🏁 ここで終わる</button>';
     if(S.room.host || Room.mode()==='db') return nextPick()+'<button class="big" id="again">同じメンバーでもう1回</button>'+
-      '<p class="hint end-hint">みんなが「準備OK」を押してから始まります。</p>';
-    return '<p class="hint lb-wait" style="margin-top:22px">部屋を作った人が「もう1回」を押すと、このまま次が始まります。</p>';
+      '<p class="hint end-hint">みんなが「準備OK」を押してから始まります。</p>'+endq;
+    return '<p class="hint lb-wait" style="margin-top:22px">部屋を作った人が「もう1回」を押すと、このまま次が始まります。</p>'+endq;
   }
   return nextPick()+'<button class="big" id="again">もう1回（ちがう問題で）</button>';
 }
@@ -1891,12 +1895,13 @@ function shareRow(l, a, v){
   return '<a class="big lb-line end-line" id="'+l+'" href="https://line.me/R/share" target="_blank" rel="noopener">LINEで結果を送る</a>'+
     '<div class="end-links"><button class="tell-s" id="'+a+'" type="button">ほかのアプリでシェア</button><span aria-hidden="true">・</span><button class="tell-s" id="'+v+'" type="button">📷 画像で保存</button></div>';
 }
-function homeLink(){ return '<button class="tell-s end-home" id="home" type="button">'+(S.room ? (S.room.host?'部屋を閉じてトップへ':'部屋を出てトップへ') : 'トップにもどる')+'</button>'; }
+function homeLink(){ return S.room ? '' : '<button class="tell-s end-home" id="home" type="button">トップにもどる</button>'; }
 function bindEnd(){
   if(S.room){
     bindPick();
     if($('again')) $('again').onclick=function(){ askAgain(S.nextM||curPlayMode()); };
-    $('home').onclick=function(){ goTop(false); };
+    if($('endq')) $('endq').onclick=endRoom;
+    if($('home')) $('home').onclick=function(){ goTop(false); };
     return;
   }
   bindPick();
@@ -2228,7 +2233,7 @@ async function createRoom(){
   try{
     await Room.init();
     if(Room.mode()==='off'){ toast('いまは部屋を作れません。電波のよいところで、もう一度押してね'); return; }
-    var pid=newPid(), me={ name:name, joined:Date.now(), ans:{}, times:{} }, res='ng';
+    var pid=newPid(), me={ name:name, joined:Date.now(), ans:{ dev:TAB+':'+Date.now() }, times:{} }, res='ng';
     var room={ code:'', host:pid, mode:roomMode(), lv:roomLv(), num:S.hon?HON_N:S.gnum, mix:!S.hon && S.gnum===8, round:1, qs:[], phase:'lobby', qi:0 };
     if(Room.mode()==='db'){
       try{ res=await Room.create(room, pid, me); }catch(e){ res='ng'; }
@@ -2252,7 +2257,7 @@ function openJoin(code, fromLink){
   S.who='group';
   $('join-code').value = code || '';
   $('join-codebox').hidden = !!(fromLink && code);
-  $('s-join').classList.remove('ended'); S.autoJoin=false; $('join-wait').hidden=true; $('join-same').hidden=true; $('join-go').hidden=false;
+  $('s-join').classList.remove('ended','passive'); $('join-same-yes').textContent='はい、自分です'; S.autoJoin=false; $('join-wait').hidden=true; $('join-same').hidden=true; $('join-same-no').hidden=false; $('join-go').hidden=false;
   $('join-hello').innerHTML = (fromLink && code) ? '部屋（'+code+'）に招待されています<small>名前を入れて「参加する」を押してね</small>' : '';
   if(!$('join-name').value) $('join-name').value = String(store('nitaku_me') || '').slice(0,6);
   show('s-join');
@@ -2325,6 +2330,11 @@ $('join-go').onclick=async function(){
     // 同じ部屋にもどってきたときは、前の答えを引きつぐ
     var pid=joinPid(code);
     var prev=(d.players||[]).filter(function(p){ return p.pid===pid; })[0];
+    // 部屋に入れるのは8人まで（鑑定者本人の指示 2026-11-14「8人にして」）。前に入っていた人・同じ名前の自分は数えなおさない
+    var inRoom=(d.players||[]).filter(function(p){ return (p.name||'').trim() && p.pid!==pid; });
+    if(!prev && inRoom.length>=ROOM_MAX && !inRoom.some(function(p){ return (p.name||'').trim()===name; })){
+      okEnd=false; bn.fail('この部屋はいっぱいです（'+ROOM_MAX+'人まで）。部屋を作った人に、新しい部屋を作ってもらってね。'); return;
+    }
     var same=(d.players||[]).filter(function(p){ return p.pid!==pid && (p.name||'').trim()===name; })[0];
     if(same){
       // 同じ名前の人がもういる＝自分が別のアプリ（LINEの中など）から開いたことが多い。自分かどうかを聞く
@@ -2353,21 +2363,44 @@ $('join-same-yes').onclick=async function(){
   var j=S.sameJoin; if(!j) return;
   var b=$('join-same-yes'); b.disabled=true;
   try{
-    var p=j.p, me={ name:p.name, joined:p.joined||Date.now(), ans:p.ans||{}, times:p.times||{}, mine:p.mine||[] };
-    $('join-same').hidden=true; $('join-go').hidden=false; S.sameJoin=null;
+    // いまの答えを引きつぐため、入る直前に部屋からその人の最新の答えを読み直す
+    var p=j.p; try{ var d=await withTimeout(Room.get(j.code), 15000), np=(d.players||[]).filter(function(x){ return x.pid===p.pid; })[0]; if(np) p=np; }catch(e){}
+    var me={ name:p.name, joined:p.joined||Date.now(), ans:JSON.parse(JSON.stringify(p.ans||{})), times:JSON.parse(JSON.stringify(p.times||{})), mine:p.mine||[] };
+    $('join-same').hidden=true; $('join-go').hidden=false; $('join-same-no').hidden=false; S.sameJoin=null; $('s-join').classList.remove('passive'); $('join-same-yes').textContent='はい、自分です';
     var ok=await enterRoom(j.code, p.pid, me, j.host);
     if(ok!==false) toast(j.host ? 'この画面で続けます。ここから「スタート」を押せます' : 'この画面で続けます');
   }catch(e){ toast('通信できませんでした。もう一度押してね'); }
   finally{ b.disabled=false; }
 };
+/* 同じ人が2つの画面（ふだんのブラウザと、LINEの中の画面など）で同じ部屋に入ったとき（鑑定者本人の指摘 2026-11-14「LINEで送ると、つい送ったラインから自分も入りたくなる」「どちらから入っても繋がるように」）：
+   あとから入った画面で続け、前の画面は「別の画面で続いています」にして書きこみを止める（本能モードで2つの画面の時間切れが答えを上書きしないように）。
+   どの画面かの目印は、部屋の決まりを変えずにすむよう、自分の ans の「dev」に「画面の番号:入った時刻」で入れる */
+var ROOM_MAX=8;
+var TAB=Math.random().toString(36).slice(2,10);
+function devT(v){ var m=String(v||'').split(':'); return +m[1]||0; }
+function goPassive(R, sp){
+  if(S.room!==R) return;
+  S.room=null;
+  try{ if(R.stop) R.stop(); }catch(e){}
+  try{ clearInterval(R.hb); document.removeEventListener('visibilitychange', R.vis); }catch(e){}
+  honStop(); hideReady(); busy=false;
+  S.sameJoin={ code:R.code, p:sp, host:R.host, take:true };
+  $('join-code').value=R.code; $('join-codebox').hidden=true; $('s-join').classList.remove('ended');
+  $('join-hello').innerHTML='この部屋は、別の画面で続いています<small>LINEの中の画面など、あとから開いた画面で遊べます</small>';
+  $('join-same-t').innerHTML='「'+esc(R.me.name||'')+'」として、<br>この画面で続けることもできます。';
+  $('join-same').hidden=false; $('join-same-no').hidden=true; $('join-go').hidden=true; $('join-st').textContent='';
+  $('s-join').classList.add('passive'); $('join-same-yes').textContent='この画面で続ける';
+  show('s-join');
+}
 async function enterRoom(code, pid, me, host, made, pre){
   leaveRoom();
+  me.ans=me.ans||{}; me.ans.dev=TAB+':'+Date.now();
   var R={ code:code, pid:pid, host:host, me:me, data:null, players:[], view:'', busy:false, chain:Promise.resolve() };
   // 参加するとき：先に読んでおいた部屋の様子があれば、書きこみの返事を待たずに部屋の画面を出す（失敗したときだけ参加の画面にもどす）
   var fast = !made && pre && pre.room && Room.mode()==='db';
   if(fast){ R.wrote=Room.setPlayer(code, pid, me); }
   var r= (made || fast) ? 'ok' : await Room.setPlayer(code, pid, me);
-  if(r!=='ok'){ toast(r==='full' ? 'この部屋はいっぱいです（12人まで）' : '参加できませんでした。番号を確かめてね'); return false; }
+  if(r!=='ok'){ toast(r==='full' ? 'この部屋はいっぱいです（'+ROOM_MAX+'人まで）' : '参加できませんでした。番号を確かめてね'); return false; }
   S.room=R; S.who='group'; S.sent={};
   var prevSt=store('nitaku_room'); if(prevSt && prevSt.code===code && prevSt.inv) R.inv=prevSt.inv;
   store('nitaku_room', { code:code, pid:pid, inv:R.inv });
@@ -2386,12 +2419,22 @@ async function enterRoom(code, pid, me, host, made, pre){
   document.addEventListener('visibilitychange', R.vis);
   return true;
 }
-function leaveRoom(){
+/* 「ここで終わる」（鑑定者本人の指示 2026-11-14「終わる時にわかりやすいボタンが欲しい」「ずっと次に続けるを押されて困る」「また遊ぼう！とかメッセージを出したい」）：
+   部屋を作った人が押すと部屋が閉じて全員がトップへ。招待された人はその人だけ部屋を出る。どちらも「また遊ぼう！」を出す */
+function endRoom(){
+  var R=S.room; if(!R) return;
+  var host=R.host;
+  leaveRoom(true);
+  var st=store('nitaku_room'); if(st && !st.left){ st.left=true; store('nitaku_room', st); }
+  hideReady(); updatePoolNote(); show('s-home');
+  splash('また遊ぼう！', host ? '部屋を閉じました。遊んでくれてありがとう！' : '遊んでくれてありがとう！', 'bye');
+}
+function leaveRoom(quit){
   var R=S.room; if(!R) return;
   S.room=null;
   try{ if(R.stop) R.stop(); }catch(e){}
   try{ clearInterval(R.hb); document.removeEventListener('visibilitychange', R.vis); }catch(e){}
-  if(!R.host && R.data && R.data.phase==='lobby'){ Room.delPlayer(R.code, R.pid).catch(function(){}); }
+  if(!R.host && R.data && (R.data.phase==='lobby' || quit)){ Room.delPlayer(R.code, R.pid).catch(function(){}); }
   if(R.host && R.data && R.data.phase!=='closed'){
     var room=JSON.parse(JSON.stringify(R.data)); room.phase='closed';
     Room.setRoom(room).catch(function(){});
@@ -2441,15 +2484,25 @@ function syncGame(room, players){
 function onRoom(room, players){
   var R=S.room; if(!R) return;
   if(!room || room.phase==='closed'){
-    if(R.data || room){ leaveRoom(); show('s-home'); toast('部屋が閉じられました'); }
+    if(R.data || room){
+      var hp=(R.players||[]).filter(function(p){ return R.data && p.pid===R.data.host; })[0];
+      leaveRoom(); hideReady(); show('s-home');
+      splash('また遊ぼう！', (hp && hp.name ? hp.name+'さんが' : '')+'部屋を閉じました。遊んでくれてありがとう！', 'bye');
+    }
     return;
   }
   // 名前がまだの人＝リンクを開いて名前を入れているところ（部屋を作った人に「だれかがリンクを開きました」と見せるだけ。人数には数えない）
   var allP=players||[]; R.pending=allP.filter(function(p){ return !(p.name||'').trim() && p.pid!==R.pid; }); players=allP.filter(function(p){ return (p.name||'').trim() || p.pid===R.pid; });
+  // 結果を見ているときにだれかが「ここで終わる」で出たら知らせる
+  if(R.data && (room.phase==='done' || room.phase==='ready') && R.players && R.players.length){
+    var nowIds={}; players.forEach(function(p){ nowIds[p.pid]=1; });
+    R.players.forEach(function(p){ if(p.pid!==R.pid && !nowIds[p.pid] && p.name) toast(p.name+'さんは終わりました'); });
+  }
   R.data=room; R.players=players;
   // 同じ人が2つの画面（LINEの中とブラウザなど）で開いているとき、もう片方で答えた分を引きつぐ
   var mine=(players||[]).filter(function(p){ return p.pid===R.pid; })[0];
   if(mine){ ['ans','times'].forEach(function(k){ var o=mine[k]||{}; R.me[k]=R.me[k]||{}; Object.keys(o).forEach(function(x){ if(R.me[k][x]==null) R.me[k][x]=o[x]; }); }); }
+  if(mine && mine.ans && mine.ans.dev && mine.ans.dev!==R.me.ans.dev && devT(mine.ans.dev)>devT(R.me.ans.dev)){ goPassive(R, mine); return; }
   applyMode(room.mode);
   S.honPlay = room.mode==='hon' && room.phase==='q';
   var lp=String(room.lv||'normal').split('#')[0].split('|'); S.lv=lp[0]; S.rv=(lp[1]==='end'?'end':'each'); S.mix=!!room.mix; S.num=room.num||8;
@@ -2639,7 +2692,9 @@ function renderReady(){
   var rp=readyParts(R.data), need=readyNeed(R), me=readyOk(R, { pid:R.pid });
   var ok=need.filter(function(p){ return readyOk(R, p); }).length;
   var h='<div class="rdy-in"><div class="rdy-row"><img src="img/panda-wait.webp" alt="" width="58" height="58"><div><p class="rdy-t">🔁 '+esc(readyName(rp.by))+'さんが「もう1回」を押しました'+(rp.nx!==R.data.mode ? '<br><small>次は'+MODE_NAME[rp.nx]+'です</small>' : '')+'</p></div></div>';
-  if(!me){
+  if(need.length<2){
+    h+='<p class="rdy-s">ほかの人は、みんな終わりました。</p>';
+  } else if(!me){
     h+='<p class="rdy-s">結果を読み終わったら「準備OK」を押してね。みんながそろうと、次の問題が始まります。</p><button class="big" id="rdy-go" type="button">準備OK</button>';
   } else {
     h+='<p class="rdy-s">みんなの準備を待っています（'+ok+' / '+need.length+'人）。待っているあいだも、結果は読めます。</p>';
@@ -2648,15 +2703,16 @@ function renderReady(){
     if(late && ok<need.length) h+='<button class="big alt" id="rdy-force" type="button">そろった人だけで始める</button>';
     else if(!R.rdyT) R.rdyT=setTimeout(function(){ R.rdyT=null; renderReady(); }, Math.max(1000, 60e3-(Date.now()-(R.rdyAt||0))+200));
   }
-  h+='</div>';
+  h+='<button class="rdy-end" id="rdy-end" type="button">🏁 わたしはここで終わる</button></div>';
   var el=$('rdy'); el.innerHTML=h; el.hidden=false; document.body.classList.add('rdy-on');
   ['again'].forEach(function(id){ if($(id)) $(id).disabled=true; }); if($('nxt')) [].forEach.call($('nxt').children,function(x){ x.disabled=true; });
   if($('rdy-go')) $('rdy-go').onclick=function(){ R.me.ans['ok:'+R.data.round]=1; saveMe(); renderReady(); readyCheck(); };
   if($('rdy-force')) $('rdy-force').onclick=function(){ startNext(null, true); };
+  if($('rdy-end')) $('rdy-end').onclick=endRoom;
 }
 function readyCheck(){
   var R=S.room; if(!R || !R.data || R.data.phase!=='ready') return;
-  var need=readyNeed(R); if(!need.length || !need.every(function(p){ return readyOk(R, p); })) return;
+  var need=readyNeed(R); if(need.length<2 || !need.every(function(p){ return readyOk(R, p); })) return;
   var key='ready:'+R.data.round; if(R.rdyKey===key) return; R.rdyKey=key;
   setTimeout(function(){ if(S.room!==R || !R.data || R.data.phase!=='ready' || 'ready:'+R.data.round!==key) return; startNext(); }, R.host ? 300 : 1500);
 }
