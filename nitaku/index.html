@@ -1111,7 +1111,9 @@ function applyMode(m){
   if(m==='hon'){ if(!S.hon){ S.hon=true; document.querySelectorAll('.mode').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.m==='hon'?'true':'false'); }); honSoloText(); } }
   else if(S.mode!==m || S.hon) setMode(m);
 }
-function honSoloText(){ var sm=document.querySelector('#go-solo small'); if(sm) sm.textContent = S.hon ? '押したらすぐ1問目。20問・1問3秒' : '押したらすぐ1問目。15問・約3分'; }
+function honSoloText(){ var sm=document.querySelector('#go-solo small'); if(sm) sm.textContent = S.hon ? '押したらすぐ1問目。20問・1問3秒' : '押したらすぐ1問目。15問・約3分';
+  // 本能モードは20問・1問3秒・最後にまとめて答え合わせと決まっているので、細かい設定（問題の数・難しさ・答え合わせ）は出さない
+  var op=$('opts'); if(op){ op.hidden=!!S.hon; if(S.hon) op.open=false; } }
 function seg(id, cb){
   var el=$(id);
   el.querySelectorAll('button').forEach(function(b){
@@ -1443,13 +1445,16 @@ function showHonGroupResult(){
     return { name:p.name, i:i, avg:avg, out:Q-ok.length, quick:by[0], slow:by.length>1?by[by.length-1]:null, sp:honSplit(ok), sd:honSd(ok.map(function(r){ return r.t; })), aw:[] };
   });
   var rank=P.slice().sort(function(a,b){ return (a.avg==null?1e9:a.avg)-(b.avg==null?1e9:b.avg); }), top=rank[0];
+  var topN=rank.filter(function(r){ return top.avg!=null ? (r.avg!=null && sec(r.avg)===sec(top.avg)) : r===top; }).map(function(r){ return esc(r.name); });
   var pick=function(r){ return r.c==='A' ? r.q.a : r.q.b; };
   var h='<div class="res-hero"><div class="pre">本能モード　'+n+'人の結果</div><img class="pnd" src="img/panda-joy.webp" alt="" width="96" height="96">'+
-    '<div class="catch">いちばん本能が速いのは…</div><div class="meter"><div class="num" style="font-size:40px">'+esc(top.name)+'</div><div class="cap">'+(top.avg!=null ? '平均 '+sec(top.avg)+'秒・'+honLevel(top.avg/1000, 1).replace(/（.*$/,'') : '全員時間切れ')+'</div></div></div>';
-  h+='<div class="card"><h3>⚡ 本能スピードのランキング</h3>'+rank.map(function(r,k){
-      return '<div class="hspd"><span class="md'+(k<3?' m'+(k+1):'')+'">'+(k+1)+'</span><span class="nm">'+esc(r.name)+'<small>'+esc(honLevel(r.avg==null?0:r.avg/1000, r.avg==null?0:1))+'</small></span><span class="sc">'+(r.avg==null?'—':sec(r.avg)+'<small>秒</small>')+'</span></div>'; }).join('');
+    '<div class="catch">いちばん本能が速いのは…</div><div class="meter"><div class="num" style="font-size:'+(topN.length>1?30:40)+'px">'+topN.join('・')+'</div><div class="cap">'+(top.avg!=null ? '平均 '+sec(top.avg)+'秒・'+honLevel(top.avg/1000, 1).replace(/（.*$/,'') : '全員時間切れ')+'</div></div></div>';
+  // 平均の秒数が同じ人は同じ順位にする
+  var place=[]; rank.forEach(function(r,k){ place[k] = k>0 && r.avg!=null && rank[k-1].avg!=null && sec(r.avg)===sec(rank[k-1].avg) ? place[k-1] : k+1; });
+  h+='<div class="card"><h3>⚡ 本能スピードのランキング</h3>'+rank.map(function(r,k){ var pl=place[k];
+      return '<div class="hspd"><span class="md'+(pl<=3?' m'+pl:'')+'">'+pl+'</span><span class="nm">'+esc(r.name)+'<small>'+esc(honLevel(r.avg==null?0:r.avg/1000, r.avg==null?0:1))+'</small></span><span class="sc">'+(r.avg==null?'—':sec(r.avg)+'<small>秒</small>')+'</span></div>'; }).join('');
   var mo=P.slice().sort(function(a,b){ return b.out-a.out; })[0];
-  h+= mo && mo.out>0 ? '<div class="rank"><span class="k">時間切れがいちばん多かった人</span><span class="v">'+esc(mo.name)+'（'+mo.out+'問）</span></div>' : '<div class="rank"><span class="k">時間切れ</span><span class="v">だれもいない！</span></div>';
+  h+= mo && mo.out>0 ? '<div class="rank"><span class="k">時間切れがいちばん多かった人</span><span class="v">'+P.filter(function(r){ return r.out===mo.out; }).map(function(r){ return esc(r.name); }).join('・')+'（'+mo.out+'問）</span></div>' : '<div class="rank"><span class="k">時間切れ</span><span class="v">だれもいない！</span></div>';
   h+='</div>';
   // 本能が合う2人（同じ答えの数。時間切れは同じに数えない）
   var pairs=[];
@@ -1458,7 +1463,7 @@ function showHonGroupResult(){
   if(pairs.length){
     var pb=pairs[0], pw=pairs[pairs.length-1];
     h+='<div class="card"><h3>💞 本能が合う2人</h3><div class="mix"><b>'+pb.r+'%</b><div><small>いちばん本能が合う2人</small><span class="mx-n">'+esc(S.players[pb.x].name)+' × '+esc(S.players[pb.y].name)+'</span><small>'+Q+'問中'+pb.same+'問が同じ答え</small></div></div>'+
-      (pairs.length>1 ? '<div class="mix gray"><b>'+pw.r+'%</b><div><small>本能がバラバラの2人</small><span class="mx-n">'+esc(S.players[pw.x].name)+' × '+esc(S.players[pw.y].name)+'</span><small>'+(pw.same ? Q+'問中'+pw.same+'問だけ同じ答え' : '同じ答えは1問もなし')+'</small></div></div>' : '')+'</div>';
+      (pairs.length>1 && pw.same<pb.same ? '<div class="mix gray"><b>'+pw.r+'%</b><div><small>本能がバラバラの2人</small><span class="mx-n">'+esc(S.players[pw.x].name)+' × '+esc(S.players[pw.y].name)+'</span><small>'+(pw.same ? Q+'問中'+pw.same+'問だけ同じ答え' : '同じ答えは1問もなし')+'</small></div></div>' : '')+'</div>';
   }
   // ①本能アワード（全員に1つ以上）
   var answered=function(i,qi){ var c=S.ans[i][qi]; return c==='A'||c==='B'; };
@@ -1476,11 +1481,14 @@ function showHonGroupResult(){
   var best=function(list, f, min){ var b=null; list.forEach(function(r){ var v=f(r); if(v==null) return; if(min!=null && v<min) return; if(!b || v>b.v) b={ r:r, v:v }; }); return b; };
   var give=function(b, a){ if(b) b.r.aw.push(a); };
   if(withAvg.length){ var fs=withAvg.slice().sort(function(a,b){ return a.avg-b.avg; });
-    give({ r:fs[0] }, ['🏆','即決王','考える前に指が動いてる','平均 '+sec(fs[0].avg)+'秒']);
-    var sl=fs[fs.length-1];
-    if(fs.length>1 && sl!==fs[0]) give({ r:sl }, sl.avg>=1500 ? ['🐢','熟考大賞','3秒をフルに使う慎重派','平均 '+sec(sl.avg)+'秒'] : ['🐢','マイペース賞','みんなの中では、いちばんじっくり派','平均 '+sec(sl.avg)+'秒']); }
-  var bo=best(P, function(r){ return r.out; }, 1); if(bo) give(bo, ['😴','時間切れ常習犯','本能がときどきお昼寝する','時間切れ '+bo.v+'問']);
-  var bm=best(P, function(r){ return minor[r.i]; }, 2); if(bm) give(bm, ['🦄','ひとりだけ賞','群れない本能','ひとりだけちがう答えが '+bm.v+'問']);
+    // 平均の秒数（0.1秒まで）が同じ人は、全員に同じ賞を出す
+    var f0=sec(fs[0].avg), sl=fs[fs.length-1], s0=sec(sl.avg);
+    fs.forEach(function(r){ if(sec(r.avg)===f0) give({ r:r }, ['🏆','即決王','考える前に指が動いてる','平均 '+f0+'秒']); });
+    if(s0!==f0) fs.forEach(function(r){ if(sec(r.avg)===s0) give({ r:r }, sl.avg>=1500 ? ['🐢','熟考大賞','3秒をフルに使う慎重派','平均 '+s0+'秒'] : ['🐢','マイペース賞','みんなの中では、いちばんじっくり派','平均 '+s0+'秒']); }); }
+  // 同じ数の人がいれば、全員に同じ賞
+  var giveAll=function(b, f, a){ if(b) P.forEach(function(r){ if(f(r)===b.v) give({ r:r }, a); }); };
+  var bo=best(P, function(r){ return r.out; }, 1); giveAll(bo, function(r){ return r.out; }, bo && ['😴','時間切れ常習犯','本能がときどきお昼寝する','時間切れ '+bo.v+'問']);
+  var bm=best(P, function(r){ return minor[r.i]; }, 2); giveAll(bm, function(r){ return minor[r.i]; }, bm && ['🦄','ひとりだけ賞','群れない本能','ひとりだけちがう答えが '+bm.v+'問']);
   var bj=best(P, function(r){ return major[r.i]; }, 1); if(bj && !bj.r.aw.length) give(bj, ['🙌','みんなの代表賞','みんなの本能とよくそろう','多い方の答えが '+bj.v+'問']);
   P.forEach(function(r){ if(!r.aw.length) r.aw.push(honSelfAward(r.avg==null?null:r.avg/1000, r.out, r.sp, r.sd)); });
   h+='<div class="card"><h3>🏆 本能アワード</h3>'+P.map(function(r){ return r.aw.map(function(a){ return honAwardRow(a, r.name); }).join(''); }).join('')+'</div>';
@@ -1977,14 +1985,19 @@ function showGroupResult(){
   var h='<div class="res-hero"><div class="pre">'+playName(mode)+'　'+n+'人の結果</div><div class="type">みんなの本音、発表</div>'+
         '<div class="catch">いちばん'+hd.cap.replace('度','')+'なのは…</div>';
   var top = R.slice().sort(function(a,b){ return b.sc[hd.k]-a.sc[hd.k]; })[0];
-  h+='<div class="meter"><div class="num" style="font-size:40px">'+esc(top.p.name)+'</div><div class="cap">'+hd.cap+' '+top.sc[hd.k]+'%</div></div></div>';
+  // 同じ％で並んだ人がいれば、全員の名前を出す
+  var tops = R.filter(function(r){ return r.sc[hd.k]===top.sc[hd.k]; }).map(function(r){ return esc(r.p.name); });
+  h+='<div class="meter"><div class="num" style="font-size:'+(tops.length>1?30:40)+'px">'+tops.join('・')+'</div><div class="cap">'+hd.cap+' '+top.sc[hd.k]+'%'+(tops.length>1?'（同じ）':'')+'</div></div></div>';
 
   // 物差しごとのランキング
   h+='<div class="card"><h3>ランキング</h3>';
   AXES[mode].forEach(function(ax){
-    var s=R.slice().sort(function(a,b){ return b.sc[ax.k]-a.sc[ax.k]; });
-    h+='<div class="rank"><span class="k">'+ax.name+'がいちばん高い</span><span class="v">'+esc(s[0].p.name)+'（'+s[0].sc[ax.k]+'%）</span></div>';
-    h+='<div class="rank"><span class="k">'+ax.name+'がいちばん低い</span><span class="v">'+esc(s[s.length-1].p.name)+'（'+s[s.length-1].sc[ax.k]+'%）</span></div>';
+    // 同じ％の人がいるときは全員の名前を出す。全員同じなら「みんな同じ」の1行だけ（同じ人が「高い」と「低い」の両方に出ないように）
+    var hi=Math.max.apply(null,R.map(function(r){ return r.sc[ax.k]; })), lo=Math.min.apply(null,R.map(function(r){ return r.sc[ax.k]; }));
+    var who=function(v){ return R.filter(function(r){ return r.sc[ax.k]===v; }).map(function(r){ return esc(r.p.name); }).join('・'); };
+    if(hi===lo){ h+='<div class="rank"><span class="k">'+ax.name+'</span><span class="v">みんな同じ（'+hi+'%）</span></div>'; return; }
+    h+='<div class="rank"><span class="k">'+ax.name+'がいちばん高い</span><span class="v">'+who(hi)+'（'+hi+'%）</span></div>';
+    h+='<div class="rank"><span class="k">'+ax.name+'がいちばん低い</span><span class="v">'+who(lo)+'（'+lo+'%）</span></div>';
   });
   // 少数派の回数
   var minority=R.map(function(){return 0;});
@@ -1995,27 +2008,38 @@ function showGroupResult(){
     R.forEach(function(r,k){ if(S.ans[r.i][qi]===minor) minority[k]++; });
   });
   var mi = minority.indexOf(Math.max.apply(null,minority));
-  if(minority[mi]>0) h+='<div class="rank rank-pnd"><span class="k"><img class="mini-pnd" src="img/panda-wow.webp" alt="" width="34" height="34"><span>いちばんの少数派（個性派）</span></span><span class="v">'+esc(R[mi].p.name)+'（'+minority[mi]+'回）</span></div>';
+  var miN = R.filter(function(r,k){ return minority[k]===minority[mi]; }).map(function(r){ return esc(r.p.name); });
+  // 2人のときは、ちがう答えのたびに両方が「少数派」になるので出さない。全員同じ回数のときも出さない
+  if(minority[mi]>0 && n>=3 && miN.length<n) h+='<div class="rank rank-pnd"><span class="k"><img class="mini-pnd" src="img/panda-wow.webp" alt="" width="34" height="34"><span>いちばんの少数派（個性派）</span></span><span class="v">'+miN.join('・')+'（'+minority[mi]+'回）</span></div>';
   // 即決王（答えるまでの時間）
   {
     var avg=R.map(function(r){ var t=S.times[r.i].filter(Boolean); return t.length? t.reduce(function(x,y){return x+y;},0)/t.length : 1e9; });
-    var fi=avg.indexOf(Math.min.apply(null,avg)), si=avg.indexOf(Math.max.apply(null,avg));
-    h+='<div class="rank"><span class="k">即決王</span><span class="v">'+esc(R[fi].p.name)+'（平均'+(Math.round(avg[fi]/100)/10)+'秒）</span></div>';
-    h+='<div class="rank"><span class="k">いちばん悩んだ人</span><span class="v">'+esc(R[si].p.name)+'（平均'+(Math.round(avg[si]/100)/10)+'秒）</span></div>';
+    // 答えた時間がない人（あとから入った・答えていない人）は数えない。速さが同じなら全員の名前を出す
+    var okA=avg.filter(function(v){ return v<1e9; });
+    if(okA.length>=2){
+      var sec=function(v){ return Math.round(v/100)/10; }, mn=Math.min.apply(null,okA), mx=Math.max.apply(null,okA);
+      var whoT=function(v){ return R.filter(function(r,k){ return avg[k]<1e9 && sec(avg[k])===sec(v); }).map(function(r){ return esc(r.p.name); }).join('・'); };
+      if(sec(mn)===sec(mx)) h+='<div class="rank"><span class="k">答える速さ</span><span class="v">みんな同じ（平均'+sec(mn)+'秒）</span></div>';
+      else {
+        h+='<div class="rank"><span class="k">即決王</span><span class="v">'+whoT(mn)+'（平均'+sec(mn)+'秒）</span></div>';
+        h+='<div class="rank"><span class="k">いちばん悩んだ人</span><span class="v">'+whoT(mx)+'（平均'+sec(mx)+'秒）</span></div>';
+      }
+    }
   }
   h+='</div>';
 
   // 2人ずつの一致率
   var pairs=[];
   for(var x=0;x<n;x++) for(var y=x+1;y<n;y++){
-    var same=0; S.qs.forEach(function(q,qi){ if(S.ans[x][qi]===S.ans[y][qi]) same++; });
+    var same=0; S.qs.forEach(function(q,qi){ var a=S.ans[x][qi]; if((a==='A'||a==='B') && a===S.ans[y][qi]) same++; });   // 答えていない問題は「同じ」に数えない
     pairs.push({x:x,y:y,r:Math.round(100*same/S.qs.length)});
   }
   pairs.sort(function(a,b){ return b.r-a.r; });
   h+='<div class="card"><h3>答えの一致率</h3>';
   var pb=pairs[0], pw=pairs[pairs.length-1];
-  if(pb) h+='<div class="rank"><span class="k">いちばん気が合う2人</span><span class="v">'+esc(S.players[pb.x].name)+' × '+esc(S.players[pb.y].name)+'（'+pb.r+'%）</span></div>';
-  if(pairs.length>1) h+='<div class="rank"><span class="k">永遠に平行線の2人</span><span class="v">'+esc(S.players[pw.x].name)+' × '+esc(S.players[pw.y].name)+'（'+pw.r+'%）</span></div>';
+  if(pb) h+='<div class="rank"><span class="k">'+(n===2?'2人の答えが同じだった割合':'いちばん気が合う2人')+'</span><span class="v">'+esc(S.players[pb.x].name)+' × '+esc(S.players[pb.y].name)+'（'+pb.r+'%）</span></div>';
+  if(pairs.length>1 && pw.r===pb.r) h+='<div class="rank"><span class="k">ほかの組み合わせ</span><span class="v">どの2人も同じ（'+pw.r+'%）</span></div>';
+  else if(pairs.length>1) h+='<div class="rank"><span class="k">永遠に平行線の2人</span><span class="v">'+esc(S.players[pw.x].name)+' × '+esc(S.players[pw.y].name)+'（'+pw.r+'%）</span></div>';
   h+='</div>';
 
   // みんなの答え（1問ずつ、だれがどっちを選んだか）
@@ -2306,7 +2330,7 @@ function openJoin(code, fromLink){
   }
 }
 /* 部屋が閉じた・12時間たった */
-function roomEnded(r){ return !r || r.phase==='closed' || (typeof r.created==='number' && Date.now()-r.created >= 12*3600e3); }
+function roomEnded(r){ return !r || !r.host || r.phase==='closed' || (typeof r.created==='number' && Date.now()-r.created >= 12*3600e3); }
 var ROOM_ENDED_MSG='この部屋は終わっています。招待してくれた人に、新しい部屋のリンクを送ってもらってね。';
 function showEnded(){
   $('s-join').classList.add('ended');
@@ -2323,10 +2347,10 @@ function joinPending(code){
   S.pendT={ code:code, iv:setInterval(put, 30000) }; put();
 }
 /* 部屋をすぐ読む：作ったばかりの部屋は、作った人の書きこみが届くまで数秒「ない」ように見えることがある（部屋を作るのを速くしたため）。
-   見つからないときは、すぐ「終わっています」と出さず、1.5秒ごとに4回まで読み直す */
+   見つからないとき・番号だけ先に置いた部屋（まだ作った人がいない）のときは、すぐ「終わっています」と出さず、1秒ごとに6回まで読み直す */
 async function getRoomSure(code){
   var d=await Room.getFast(code);
-  for(var k=0; k<6 && !d.room; k++){ await new Promise(function(z){ setTimeout(z, 1000); }); d=await Room.getFast(code); }
+  for(var k=0; k<6 && !(d.room && d.room.host); k++){ await new Promise(function(z){ setTimeout(z, 1000); }); d=await Room.getFast(code); }
   return d;
 }
 async function joinStatus(){
@@ -2365,9 +2389,9 @@ $('join-go').onclick=async function(){
     await withTimeout(Room.init(), 20000);
     if(Room.mode()==='off') throw new Error('off');
     // QRを開いたときに読んでおいた部屋の様子があれば、それを使う（待ち時間を短く）
-    var pre=S.joinPre, d=(pre && pre.code===code && Date.now()-pre.at<90000 && pre.d.room) ? pre.d : await withTimeout(getRoomSure(code), 25000);
+    var pre=S.joinPre, d=(pre && pre.code===code && Date.now()-pre.at<90000 && pre.d.room && pre.d.room.host) ? pre.d : await withTimeout(getRoomSure(code), 25000);
     S.joinPre=null;
-    if(roomEnded(d.room)){ if($('join-codebox').hidden) showEnded(); else toast('部屋が見つからないか、もう終わっています'); return; }
+    if(roomEnded(d.room)){ if($('join-codebox').hidden) showEnded(); else { okEnd=false; bn.fail('この番号の部屋は見つからないか、もう終わっています。番号を確かめてね。'); } return; }
     // 同じ部屋にもどってきたときは、前の答えを引きつぐ
     var pid=joinPid(code);
     var prev=(d.players||[]).filter(function(p){ return p.pid===pid; })[0];
