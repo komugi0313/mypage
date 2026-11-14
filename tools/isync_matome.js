@@ -1,6 +1,6 @@
-// アイ・シンク：テーマ別の質問のページ（検索から来てもらうため）と、主催者の方へのページを作る。
+// アイ・シンク：テーマ別の質問のページ（検索から来てもらうため）を作る。
 // 使い方：node tools/isync_matome.js （問題を直したら回し直す）
-//  作るもの：isync/packs.js（テーマごとの質問の目印＝アプリが ?pack= で使う）・isync/<テーマ>/index.html・isync/host/index.html・isync/sitemap.xml
+//  作るもの：isync/packs.js（テーマごとの質問の目印＝アプリが ?pack= で使う）・isync/<テーマ>/index.html・isync/sitemap.xml
 //  問題の目印は app.js と同じ作り方（問題の文｜答えA のハッシュ）。i-sync.jp がつながったら BASE を書きかえて回し直す。
 const fs = require('fs'), path = require('path');
 const D = path.join(__dirname, '..', 'isync');
@@ -82,7 +82,7 @@ const head = (title, desc, url) => `<!doctype html>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@700&family=Zen+Maru+Gothic:wght@700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>${CSS}</style></head><body><div class="wrap">
 <a class="top" href="../"><b>I-Sync</b><small>アイ・シンク　わたしとあなたの、重なるところ</small></a>`;
-const others = (self) => `<section class="card"><h2>ほかのテーマの質問</h2><ul class="links">${PAGES.filter(p => p.slug !== self).map(p => `<li><a href="../${p.slug}/">${esc(p.h1)}</a></li>`).join('')}${self === 'host' ? '' : '<li><a href="../host/">婚活パーティー・街コンの主催者の方へ</a></li>'}<li><a href="../">アイ・シンクのトップへ</a></li></ul></section>`;
+const others = (self) => `<section class="card"><h2>ほかのテーマの質問</h2><ul class="links">${PAGES.filter(p => p.slug !== self).map(p => `<li><a href="../${p.slug}/">${esc(p.h1)}</a></li>`).join('')}<li><a href="../">アイ・シンクのトップへ</a></li></ul></section>`;
 const foot = `<footer>アイ・シンク（I-Sync）｜2択に答えて答え合わせ。無料・登録なし</footer></div><script src="../jw.js"></script></body></html>\n`;
 
 PAGES.forEach(p => {
@@ -110,58 +110,11 @@ ${others(p.slug)}
   fs.writeFileSync(path.join(D, p.slug, 'index.html'), html);
 });
 
-// 主催者の方へ（使い方と、印刷して机に置ける案内）
-{
-  const url = BASE + 'host/', join = BASE + '?mode=kon';
-  const title = '婚活パーティー・街コンの主催者の方へ｜アイ・シンク（I-Sync）';
-  const desc = '婚活パーティー・街コンで使える、無料の価値観の答え合わせ。参加者は自分のスマホでQRを読むだけ（アプリ・登録なし）。40人まで、名前を出さずに番号だけで参加でき、合う人は自分のスマホにだけ出ます。';
-  const html = head(title, desc, url).replace('</style>', `
-.poster{border:3px solid var(--ink)}
-.poster .pt{font-family:Quicksand,sans-serif;font-weight:700;font-size:44px;text-align:center;line-height:1}
-.poster .ps{font-family:"Zen Maru Gothic",sans-serif;font-weight:900;font-size:18px;text-align:center}
-.poster ol{font-size:18px;font-weight:700;margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:8px}
-.poster .room{display:inline-block;min-width:7em;border-bottom:3px solid var(--ink);margin-left:6px}
-#qr{display:flex;justify-content:center}
-#qr img,#qr canvas{width:200px;height:200px}
-@media print{body{background:#fff;padding:0}.wrap>*:not(.poster){display:none!important}.poster{box-shadow:none;border:3px solid #000;margin:0}}
-</style>`) + `
-<h1>婚活パーティー・街コンの主催者の方へ</h1>
-<section class="card"><p class="lead">アイ・シンクは、2択の質問に答えて「価値観がどれだけ重なるか」を答え合わせする無料のサイトです。会場の参加者がそれぞれのスマホで同時に答え、終わると自分と合う人が、自分のスマホにだけ出ます。</p>
-<ul class="links" style="pointer-events:none">
- <li><a>参加者は自分のスマホでQRを読むだけ（アプリ・登録なし）</a></li>
- <li><a>40人まで・20問で約10分</a></li>
- <li><a>名前は出さず、番号札の番号だけで参加</a></li>
- <li><a>合う人は本人のスマホにだけ（主催者の画面にも出ません）</a></li>
- <li><a>名前は、2人ともが「見せてもいい」を押したときだけ</a></li>
-</ul>
-<a class="btn" href="../?mode=kon">主催者として部屋を作る</a></section>
-<section class="card"><h2>当日の流れ</h2><ol class="steps">
- <li>主催者が「部屋を作る（主催者の方）」を押すと、大きなQRコードと4けたの部屋番号が出ます。</li>
- <li>参加者はQRを読みとり（または下の案内のQRを読んで部屋番号を入れ）、番号札の番号と、合う人に出してほしい性別を選びます。</li>
- <li>全員の番号がそろったら、主催者がスタートを押します。全員のスマホで同時に始まります。</li>
- <li>20問に答え終わると、それぞれのスマホに「あなたと合う人」が答えが重なった順に出ます。</li>
- <li>話してみたい人に「名前を見せてもいい」を押すと、2人とも押したときだけ名前が出ます。</li></ol>
-<p class="note">ゆっくり答えて大丈夫です。答えない人がいて止まったときは、主催者の画面が60秒で次の問題へ進めます。結果のあとに、合う人どうしで話す時間をとると盛り上がります。</p></section>
-<section class="card poster" id="poster"><p class="pt">I-Sync</p><p class="ps">アイ・シンク　価値観の答え合わせ</p>
- <div id="qr" aria-label="参加用のQRコード"></div>
- <ol><li>スマホのカメラで、上のQRコードを読みとる</li><li>今日の部屋番号を入れる：<span class="room">&nbsp;</span></li><li>番号札の番号を入れて「参加する」</li></ol>
- <p class="note" style="text-align:center">名前は出ません。合う人は、あなたのスマホにだけ出ます。</p></section>
-<button class="btn ghost" type="button" onclick="window.print()">この案内を印刷する（テーブル用）</button>
-<p class="note">印刷すると、上の「テーブル用の案内」だけが出ます。部屋番号は、当日の部屋を作ってから手で書きこんでください。</p>
-${others('host')}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script>try{new QRCode(document.getElementById('qr'),{text:${JSON.stringify(join)},width:400,height:400,colorDark:'#22253A',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M})}catch(e){}</script>
-` + foot;
-  fs.mkdirSync(path.join(D, 'host'), { recursive: true });
-  fs.writeFileSync(path.join(D, 'host', 'index.html'), html);
-}
-
 // サイトマップ
 fs.writeFileSync(path.join(D, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>${BASE}</loc></url>
 ${PAGES.map(p => `  <url><loc>${BASE}${p.slug}/</loc></url>`).join('\n')}
-  <url><loc>${BASE}host/</loc></url>
 </urlset>
 `);
 console.log(PAGES.map(p => p.slug + ':' + p.list.length).join(' '), '／ 目印の重なり', Q.length - new Set(Q.map(x => x.key.slice(0, 5))).size);

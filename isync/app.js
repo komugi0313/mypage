@@ -82,10 +82,10 @@ function markSeen(ids){const s=new Set(store('kv_seen3')||[]);ids.forEach(i=>s.a
 
 /* ===== トップ ===== */
 const CFG=Object.assign({mode:'each',len:10,topic:'all',anon:false},store('kv_cfg')||{});
-if(!['each','solo','kon'].includes(CFG.mode))CFG.mode='each';  // 前の「1台を回して」はなくした
+if(!['each','solo'].includes(CFG.mode))CFG.mode='each';  // 大人数の部屋（kon）はやめた（2026-11-14）。中身は残してある  // 前の「1台を回して」はなくした
 let JOIN=(/^#join-(\d{4})$/.exec(location.hash||'')||[])[1]||'';
 if(JOIN)CFG.mode='each';
-if(['kon','solo','each'].includes(QS.get('mode')))CFG.mode=QS.get('mode');
+if(['solo','each'].includes(QS.get('mode')))CFG.mode=QS.get('mode');
 const saveCfg=()=>store('kv_cfg',{mode:CFG.mode,len:CFG.len,topic:CFG.topic,anon:CFG.anon});
 function seg(name,items){return `<div class="chips c${items.length}" role="group">${items.map(([v,l])=>`<button class="chip" data-k="${name}" data-v="${v}" aria-pressed="${String(CFG[name])===String(v)}">${l}</button>`).join('')}</div>`}
 function goTop(){
@@ -111,12 +111,12 @@ function goTop(){
       <li><b>話しておきたいこと</b><span>答えが反対になった、大事なところ</span></li>
     </ul>
     <p class="hint">恋人・気になる人・友だち・家族と。ひとりでも遊べます（10問・約3分）。</p>
-    <p class="hint">婚活パーティー・街コンでも使えます。QRを読むだけで、その場の40人まで遊べます（アプリ不要）。</p>
+    <p class="hint">婚活パーティー・街コンでも使えます。QRを読むだけで、その場の2〜10人で遊べます（アプリ不要）。</p>
   </section>
   ${st&&st.code?`<button class="btn ghost small" id="back">さっきの部屋（${esc(st.code)}）にもどる</button>`:''}
   <section class="card">
     <p class="label">だれと遊ぶ？</p>
-    ${seg('mode',[['each','みんなで<br><small>それぞれのスマホで</small>'],['kon','大人数で<br><small>名前を出さずに</small>'],['solo','ひとりで']])}
+    ${seg('mode',[['each','みんなで<br><small>それぞれのスマホで</small>'],['solo','ひとりで']])}
     <p class="hint" id="m-desc"></p>
     <div id="m-opts" class="stack">
     <p class="label">長さは？</p>
@@ -143,7 +143,6 @@ function goTop(){
     </div>
     <p class="hint">主催者の画面のQRコードを、自分のスマホのカメラで読みとっても参加できます。</p>
     <p class="err" id="kerr" role="alert"></p>
-    <a class="btn ghost small" href="host/">主催者の方へ（使い方・テーブル用の案内）</a>
   </section>
   <section class="card" id="m-each">
     <label class="one-name" for="me"><span>ニックネーム</span><input type="text" id="me" maxlength="10" placeholder="本名でなくてOK" value="${esc(store('kv_name')||'')}"></label>
@@ -161,7 +160,7 @@ function goTop(){
   </section>
   <a class="btn line small" id="lntop" href="#" target="_blank" rel="noopener">LINEでアイ・シンクを教える</a>
   <section class="card themes"><p class="label">テーマ別の質問</p>
-    <ul class="tlinks">${(window.SY_PAGES||[]).map(p=>`<li><a href="${p.slug}/">${esc(p.h1)}</a></li>`).join('')}<li><a href="host/">婚活パーティー・街コンの主催者の方へ</a></li></ul></section>
+    <ul class="tlinks">${(window.SY_PAGES||[]).map(p=>`<li><a href="${p.slug}/">${esc(p.h1)}</a></li>`).join('')}</ul></section>
   ${PROMO}
   <p class="note">どの問題にも正解はありません。どちらでもいいときは、3つ目の答え（「こだわらない」「どっちも好き」など）を選んでください。</p>`);
   const DESC={kon:'最大40人。番号だけで参加して、名前を出さずに一斉に20問。終わると、自分と合う人が、自分のスマホにだけ出ます。',each:'2〜10人で。1人が部屋を作り、そばにいる人はQRコードを読みとるだけで参加できます。離れている人には、LINEなどでリンクを送ります。',solo:'自分の答えから、あなたのこだわりと、ゆずれることがわかります。'};
@@ -671,7 +670,7 @@ async function enterRoom(code){
   try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}JOIN='';
   view('<section class="card hand"><p class="hint">部屋につないでいます…</p></section>');
   await subscribe();
-  R.poll=setInterval(pull,2000);   // 知らせが止まっても取り残されないよう、2秒ごとに自分からも確かめる
+  R.last=Date.now();pull(true);R.poll=setInterval(()=>pull(),2000);   // 知らせが止まっても取り残されないよう、2秒ごとに自分からも確かめる
   setTimeout(()=>connWatch(code),6000);
 }
 /* 「部屋につないでいます…」のまま止まらないように：
@@ -690,16 +689,20 @@ async function subscribe(){
   const db=await getDb(),code=R.code;if(!code)return;
   R.un.forEach(f=>{try{f()}catch(e){}});R.un=[];
   const again=()=>setTimeout(()=>{if(R.code===code)subscribe()},1000);
-  R.un.push(db.doc('rooms/'+code).onSnapshot(s=>{R.room=s.exists?s.data():null;sync()},again));
-  R.un.push(db.collection('rooms/'+code+'/players').onSnapshot(q=>{R.players={};q.docs.forEach(d=>R.players[d.id]=d.data());sync()},again));
+  R.un.push(db.doc('rooms/'+code).onSnapshot(s=>{R.last=Date.now();R.room=s.exists?s.data():null;sync()},again));
+  R.un.push(db.collection('rooms/'+code+'/players').onSnapshot(q=>{R.last=Date.now();R.players={};q.docs.forEach(d=>R.players[d.id]=d.data());sync()},again));
 }
-async function pull(){
-  const db=await getDb(),code=R.code;if(!code||R.pulling)return;R.pulling=true;
-  try{const [rs,ps]=await Promise.all([db.doc('rooms/'+code).get(),db.collection('rooms/'+code+'/players').get()]);
-    if(R.code!==code)return;R.room=rs.exists?rs.data():null;R.players={};ps.docs.forEach(d=>R.players[d.id]=d.data());sync()}
+/* 読む回数を少なく（データを読む回数には1日の上限がある）：知らせが4秒以上届いていないときだけ自分から確かめる。
+   ふだんは部屋だけ（1回）、全員の答えは5回に1回（約10秒ごと）。アプリから戻ったとき・つながったばかりのときは全部読む */
+async function pull(force){
+  const db=await getDb(),code=R.code;if(!code||R.pulling)return;
+  if(!force&&Date.now()-(R.last||0)<4000)return;
+  const all=force||((R.nth=(R.nth||0)+1)%5===1);R.pulling=true;
+  try{const [rs,ps]=await Promise.all([db.doc('rooms/'+code).get(),all?db.collection('rooms/'+code+'/players').get():null]);
+    if(R.code!==code)return;R.room=rs.exists?rs.data():null;if(ps){R.players={};ps.docs.forEach(d=>R.players[d.id]=d.data())}sync()}
   catch(e){}finally{R.pulling=false}
 }
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&R.code){subscribe();pull()}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&R.code){subscribe();pull(true)}});
 function leaveRoom(keep){R.un.forEach(f=>{try{f()}catch(e){}});R.un=[];R.code=null;clearInterval(R.tick);clearInterval(R.poll);if(!keep)store('kv_room',null)}
 async function roomUpdate(patch){const db=await getDb();try{await db.doc('rooms/'+R.code).update(patch)}catch(e){}}
 function advance(k,rd){const id=rd+'-'+k;if(R.adv[id])return;R.adv[id]=1;const n=(R.room.qs||[]).length;roomUpdate(k+1<n?{qi:k+1}:{phase:'result'})}

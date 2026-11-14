@@ -1751,7 +1751,7 @@ var Room=(function(){
          ①変わったときの知らせ（onSnapshot）②知らせが止まっても追いつけるよう、2秒ごとに自分からも部屋を確かめる
          ③知らせの通り道が切れたら1秒後につなぎ直す ④ほかのアプリから戻ってきたら、つなぎ直してすぐ確かめる。
          同じ中身を何度も渡さない（部屋の画面の入力が消えないように） */
-      var room=null, players=[], un=[], stopped=false, got=false, sig='', pt=null, pulling=false;
+      var room=null, players=[], un=[], stopped=false, got=false, sig='', pt=null, pulling=false, last=Date.now(), nth=0;
       var deliver=function(){
         if(stopped || !got) return;
         var r=alive(room, players)?room:null, sg=JSON.stringify([r, players]);
@@ -1761,23 +1761,27 @@ var Room=(function(){
         un.forEach(function(f){ try{ f(); }catch(e){} }); un=[];
         if(stopped) return;
         var again=function(){ setTimeout(function(){ if(!stopped) sub(); }, 1000); };
-        un.push(db.doc('rooms/'+code).onSnapshot(function(s){ room=s.exists ? s.data() : null; got=true; deliver(); }, again));
-        un.push(db.collection('rooms/'+code+'/players').onSnapshot(function(s){ players=plist(s.docs); deliver(); }, again));
+        un.push(db.doc('rooms/'+code).onSnapshot(function(s){ last=Date.now(); room=s.exists ? s.data() : null; got=true; deliver(); }, again));
+        un.push(db.collection('rooms/'+code+'/players').onSnapshot(function(s){ last=Date.now(); players=plist(s.docs); deliver(); }, again));
       };
-      var pull=async function(){
-        if(stopped || pulling) return; pulling=true;
+      /* 読む回数を少なく（データを読む回数には1日の上限がある）：知らせが4秒以上届いていないときだけ、自分から確かめる。
+         ふだんは部屋だけ（1回）を読み、全員の答えは5回に1回（約10秒ごと）。アプリから戻ったときは全部すぐ読む */
+      var pull=async function(force){
+        if(stopped || pulling) return;
+        if(!force && Date.now()-last<4000) return;
+        var all=force || (nth++%5===0); pulling=true;
         try{
-          var rs=await db.doc('rooms/'+code).get(), ps=await db.collection('rooms/'+code+'/players').get();
-          if(!stopped){ room=rs.exists ? rs.data() : null; players=plist(ps.docs); got=true; deliver(); }
+          var rs=await db.doc('rooms/'+code).get(), ps=all ? await db.collection('rooms/'+code+'/players').get() : null;
+          if(!stopped){ room=rs.exists ? rs.data() : null; if(ps) players=plist(ps.docs); got=true; deliver(); }
         }catch(e){}
         pulling=false;
       };
-      var vis=function(){ if(document.visibilityState==='visible' && !stopped){ sub(); pull(); } };
+      var vis=function(){ if(document.visibilityState==='visible' && !stopped){ sub(); pull(true); } };
       sub(); pt=setInterval(pull, 2000);
       document.addEventListener('visibilitychange', vis);
       window.addEventListener('online', vis);
       var stopDb=function(){ stopped=true; clearInterval(pt); document.removeEventListener('visibilitychange', vis); window.removeEventListener('online', vis); un.forEach(function(f){ try{ f(); }catch(e){} }); un=[]; };
-      stopDb.poke=function(){ pull(); };
+      stopDb.poke=function(){ pull(true); };
       return stopDb;
     }
     var gen=0, t=null, stopped=false;
