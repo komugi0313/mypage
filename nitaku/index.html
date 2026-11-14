@@ -2289,12 +2289,19 @@ function joinPending(code){
   var pid=joinPid(code), put=function(){ if(!$('s-join').classList.contains('on') || S.room){ clearInterval(S.pendT && S.pendT.iv); S.pendT=null; return; } Room.setPlayer(code, pid, { name:'', joined:Date.now(), ans:{}, times:{} }).catch(function(){}); };
   S.pendT={ code:code, iv:setInterval(put, 30000) }; put();
 }
+/* 部屋をすぐ読む：作ったばかりの部屋は、作った人の書きこみが届くまで数秒「ない」ように見えることがある（部屋を作るのを速くしたため）。
+   見つからないときは、すぐ「終わっています」と出さず、1.5秒ごとに4回まで読み直す */
+async function getRoomSure(code){
+  var d=await Room.get(code);
+  for(var k=0; k<4 && !d.room; k++){ await new Promise(function(z){ setTimeout(z, 1500); }); d=await Room.get(code); }
+  return d;
+}
 async function joinStatus(){
   var el=$('join-st'), code=($('join-code').value||'').replace(/\D/g,'');
   if(code.length!==4){ el.textContent=''; return; }
   try{
     await Room.init(); if(Room.mode()==='off'){ el.textContent=''; return; }
-    var d=await Room.get(code), r=d.room, n=(d.players||[]).length;
+    var d=await getRoomSure(code), r=d.room, n=(d.players||[]).length;
     S.joinPre={ code:code, d:d, at:Date.now() };
     if(($('join-code').value||'').replace(/\D/g,'')!==code) return;
     var hp=r && (d.players||[]).filter(function(p){ return p.pid===r.host; })[0];
@@ -2324,7 +2331,7 @@ $('join-go').onclick=async function(){
     await withTimeout(Room.init(), 20000);
     if(Room.mode()==='off') throw new Error('off');
     // QRを開いたときに読んでおいた部屋の様子があれば、それを使う（待ち時間を短く）
-    var pre=S.joinPre, d=(pre && pre.code===code && Date.now()-pre.at<90000) ? pre.d : await withTimeout(Room.get(code), 20000);
+    var pre=S.joinPre, d=(pre && pre.code===code && Date.now()-pre.at<90000 && pre.d.room) ? pre.d : await withTimeout(getRoomSure(code), 25000);
     S.joinPre=null;
     if(roomEnded(d.room)){ if($('join-codebox').hidden) showEnded(); else toast('部屋が見つからないか、もう終わっています'); return; }
     // 同じ部屋にもどってきたときは、前の答えを引きつぐ
