@@ -8405,6 +8405,7 @@ function pkfmOne(k,env){ env=env||{}; var pl=!!env.plain, B=false, P=env.P||[], 
 function pkFmRule(env){ try{ env=env||{}; var T=pkfmToday(), pl=!!env.plain, eki=!!env.eki, y1=T.y+1, n1=new Date(T.y,T.m-1,T.d+1,12), m1=new Date(T.y,T.m,1,12);
   var dk=n1.getFullYear()+'-'+(n1.getMonth()+1)+'-'+n1.getDate(), mk=m1.getFullYear()+'-'+(m1.getMonth()+1);
   var s='\n【事実の差しこみの印（必ず守る・最優先）】西暦・年齢・日付・曜日'+(pl?'':(eki?'':'・干支・大運・柱・星の名前'))+'は、自分で書かずに次の印だけで書く。画面に出す前に、ツールが計算どおりの言葉（'+(pl?'年齢・曜日':(eki?'年齢・曜日':'干支・年齢・曜日'))+'つき）に置きかえる。印のすぐあとに「年」「月」「日」や、年齢・曜日・干支のかっこを足さない。印の形（〔F:…〕）を変えない。\n';
+  if(!eki) s+='・今の10年（今の大運）は、その期間が終わるまで続いている。今年の年運の星の話を「これからの10年」「これまでの10年は終わった」と取りちがえない。今の10年の性質は、渡した材料の今の大運の説明どおりに書く。\n・1つの日・1つの月について、良い向きと注意を書くときは、どちらが主かをはっきりさせる（「〜に向いた日です。ただ〜だけ気をつけて」）。同じ日を「向いている」と「大事な話は急がず」の両方で書かない。\n';   /* 実機点検で出た食いちがい（2026-11-14） */
   s+='・年は〔F:y'+y1+'〕（'+y1+'年のこと）\n・月は〔F:m'+mk+'〕（'+m1.getFullYear()+'年'+(m1.getMonth()+1)+'月のこと。範囲の終わり「〜○月上旬」のような干支のいらない月は〔F:n'+mk+'〕）\n・日は〔F:d'+dk+'〕（'+n1.getFullYear()+'年'+(n1.getMonth()+1)+'月'+n1.getDate()+'日のこと。今日・明日・来週の○曜日なども、日付を書くときはこの印で）\n';
   if(!eki){ var A=(env.P||[])[0];
     if(A&&A.du&&A.duI!=null&&A.duI>=0) s+=pl?'・10年ごとの運の流れ：〔F:du_now〕（いま）〔F:du_next〕（次）\n':'・大運：〔F:du_now〕（今の大運）〔F:du_next〕（次の大運）〔F:du_prev〕（前の大運）。「大運」の言葉と干支は印に入っている\n';
@@ -8446,6 +8447,11 @@ function pkFmExpand(t,env){ var st={ok:0,bad:0,direct:0}; t=String(t==null?'':t)
   t=t.replace(/(〔[^〔〕\n]{1,16}〕)(?:\1)+/g,'$1');   /* 同じ印が2つ続いたら1つに（〔空亡〕〔空亡〕） */
   }catch(e){} try{ if(typeof window!=='undefined'){ (window.__pkFmStat=window.__pkFmStat||[]).push(st); if(window.__pkFmStat.length>200) window.__pkFmStat.shift(); } }catch(e){}
   t=t.replace(/[ 　]*[（(]\d{4}年[ 　]*(?:歳|才)[）)]/g,'').replace(/(\d{4}年)(?:歳|才)(?![0-9０-９])/g,'$1');   /* 念のため：展開後に残った「（2032年歳）」「2032年歳」も外す */
+  t=t.replace(/(\d{4}年(?:[（(][^（）()\n]{0,24}[）)])?)の西暦/g,'$1');
+  t=t.replace(/[ 　]*[（(](\d{4})年(?:[・／/、][ 　]*\1年)+[）)]/g,'');   /* 「2033年（2033年・2033年）」の同じ年だけのかっこを外す（2026-11-14 実機点検） */
+  t=t.replace(/〕運・(好調|順調|ふつう|静かに整える時期)/g,'〕・$1');
+  t=t.replace(/(\d{1,2}月\d{1,2}日[（(][月火水木金土日][）)])の日(?=[）)は、。がにで])/g,'$1');   /* 「明日（11月16日（月）の日）」の「の日」 */   /* 「2026年〔丙午・45歳〕運・ふつう」のくずれ */
+  t=t.replace(/(\d{4}年(?:[（(〔][^（）()〔〕\n]{0,24}[）)〕])?[ 　]*)(\d{1,2})月((?:上旬|中旬|下旬|ごろ|頃)?(?:から|〜|～|-|－)[ 　]*)翌[ 　]*(\d{1,2})月/g,function(m,a,m1,mid,m2){ return (+m2>+m1)?a+m1+'月'+mid+m2+'月':m; });   /* 「2027年1月から翌2月上旬」の「翌」は、後ろの月が大きいときは外す（2028年と読めるため） */   /* 「2028年（47歳）の西暦や」の「の西暦」を外す（2026-11-14 実機点検） */
   t=t.replace(/(今は|いまは|現在は)([ 　]*)今の(大運|10年)/g,'$1$2$3').replace(/今の今の/g,'今の');   /* 「今は〔F:du_now〕」が「今は今の大運」になる重なりを外す（言いかえで「今は今という」になっていた。2026-11-12） */
   return {text:t,stat:st}; }
 /* 文章作成に渡す材料（相談文・ツールの計算）の事実を、印に置きかえる（文章作成が写すのが印になるように。生年月日は置きかえない） */
@@ -8487,7 +8493,13 @@ function pkRuleWordFix(t){ try{ t=String(t==null?'':t); var ZZ='[子丑寅卯辰
       if(PK_RW_STOCK.test(x)&&x.replace(/[\s　]/g,'').length<=45){ nStock++; if(nStock>2&&li>0) return ''; }
       return x; }).join('');
     return out; }).join('\n').replace(/\n{3,}/g,'\n\n'); }catch(e){ return String(t==null?'':t); } }
-function pkFactGate(t,env){ env=env||{}; var t0=pkRuleWordFix(String(t==null?'':t)), T=pkfmToday(), P=(env.P||[]).filter(Boolean), ALL=P.concat((env.X||[]).filter(Boolean)), rows=[], total=0, lost=0, firstLost=false, seenFirst=false;
+/* 今の10年（今の大運）について、その大運の干支にない五行の「〜のエネルギー・〜の気」を書いた文は、大運の天干の五行に直す（鑑定書で「土の10年」を「火のエネルギーが巡る」と書いていた。2026-11-14 実機点検） */
+function pkDuElFix(t,env){ try{ var P=(env&&env.P||[])[0]; if(!P||!P.du||P.duI==null||P.duI<0) return t; var g=P.du[P.duI]; if(!g||g.length<2) return t;
+  var SE={甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'金',辛:'金',壬:'水',癸:'水'}, BE={寅:'木',卯:'木',巳:'火',午:'火',辰:'土',戌:'土',丑:'土',未:'土',申:'金',酉:'金',亥:'水',子:'水'}, e1=SE[g.charAt(0)], e2=BE[g.charAt(1)]; if(!e1) return t;
+  return String(t).split('\n').map(function(ln){ return ln.split(/(?<=[。！？])/).map(function(x){
+    if(!/今の10年|いまの10年|この10年|今の大運|現在の大運|10年間|10年ごとの運/.test(x)||/(?:19|20)\d\d年(?!〜|から|まで|（)/.test(x.replace(/(?:19|20)\d\d年[^。]{0,12}(?:から|〜)[^。]{0,12}(?:19|20)\d\d年/,''))) return x;
+    return x.replace(/([木火土金水])(のエネルギー|の気|の力)(?=が巡|に満ち|が強|を受け|の流れ|が流れ)/g,function(m,el,suf){ return (el===e1||el===e2)?m:e1+suf; }); }).join(''); }).join('\n'); }catch(e){ return t; } }
+function pkFactGate(t,env){ env=env||{}; var t0=pkDuElFix(pkRuleWordFix(String(t==null?'':t)),env), T=pkfmToday(), P=(env.P||[]).filter(Boolean), ALL=P.concat((env.X||[]).filter(Boolean)), rows=[], total=0, lost=0, firstLost=false, seenFirst=false;
   var FAM=/母|父|お子|子ども|子供|娘|息子|孫|祖母|祖父|兄|姉|弟|妹|親|ご主人|奥様|夫|妻|義|家族|ペット|犬|猫|上司|同僚|友人|友達|部下|先輩|後輩|彼/;
   var t0n=new Date(T.y,T.m-1,T.d,12,0,0,0);
   var yrsC=function(Y,mo,d,s){ if(Y) return [Y]; var L=[pkfmFwdY(mo,d)]; if(new Date(T.y,mo-1,d,12,0,0,0)<t0n) L.push(T.y); if(/去年|昨年|先月|先週|前回|以前|でした|ました/.test(s||'')) L.push(T.y-1); return L; };   /* 年を書かない日付は、今までの直し（pkFactFix ⑦⑧）と同じく今日から先の日として読む（今年のもう過ぎた日・過去の話も合えばよい） */
@@ -9480,10 +9492,12 @@ function pkSafeKind(q,age){ try{ const q0=String(q||''); q=pkSafeNegStrip(q0); i
 /* LINE・コピーの文の終わりに付ける相談先（つらさのご相談・占いで決めないご相談） */
 function pkSafeTail(q,age,crisis){ try{ q=String(q||''); const mn=pkSafeMinor(q,age);
   if(crisis){ const L=[]; if(PK_CRISIS_NOW.test(q)) L.push('いま薬をたくさん飲んだ・けがをしたときは、すぐに 119 へ（迷うときは #7119）'); if(mn) L.push.apply(L,PK_KID_TEL); return L.length?'\n'+L.join('\n'):''; }
-  const sk=pkSafeKind(q,age); if(!sk||!sk.dest.length) return ''; return '\n\n📞 相談先（無料）\n'+sk.dest.join('\n'); }catch(e){ return ''; } }
+  const sk=pkSafeKind(q,age); if(!sk||!sk.dest.length) return ''; return '\n\n📞 '+pkSafeDestHead(sk,true)+'\n'+sk.dest.join('\n'); }catch(e){ return ''; } }
+/* 相談先の見出し：医療機関・弁護士など「無料」でない相談先が入るときは「無料」と書かない（2026-11-14。眠れない・病院のご相談で「無料」と出ていた） */
+function pkSafeDestHead(sk,short){ try{ const d=(sk&&sk.dest)||[]; const allFree=d.length&&d.every(function(x){ return /通話無料|0120-|#\d{3,4}|(?<![\d-])1(?:10|19|88|89)(?![\d-])|にんしんSOS|相談窓口|相談センター|ホットライン|ダイヤル|チャイルドライン/.test(x)&&!/医療機関|病院|医院|主治医|かかりつけ|産婦人科|婦人科|弁護士(?!会)|動物病院|クリニック/.test(x); }); return allFree?(short?'相談先（無料）':'相談先（無料・秘密は守られます）'):'相談先'; }catch(e){ return '相談先'; } }
 /* 画面に出す相談先の欄（答えの上）。dv はつらさのカードと同じく目立たせる */
 function pkSafeDestHTML(sk){ try{ if(!sk||!sk.dest||!sk.dest.length) return ''; const e=function(x){ return String(x).replace(/[&<>]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }).replace(/(#\d{3,4}|\d{2,4}-\d{2,4}-\d{3,4}|\b1\d{2}\b)/g,'<b style="white-space:nowrap">$1</b>'); };
-  return '<div class="safe-dest" role="'+(sk.card?'alert':'note')+'" style="border:'+(sk.card?'2px solid #B5382B;background:#FFF5F3':'1.5px solid #8FB0C9;background:#F3F8FC')+';border-radius:12px;padding:10px 14px;margin:0 0 12px;line-height:1.8;font-size:14.5px;color:#22303A"><div style="font-weight:800;margin-bottom:4px">'+(sk.card?'🛡️ あなたの安全がいちばん大切です':'📞 相談先（無料・秘密は守られます）')+'</div><ul style="margin:0;padding-left:1.2em">'+sk.dest.map(function(x){ return '<li>'+e(x)+'</li>'; }).join('')+'</ul></div>'; }catch(e){ return ''; } }
+  return '<div class="safe-dest" role="'+(sk.card?'alert':'note')+'" style="border:'+(sk.card?'2px solid #B5382B;background:#FFF5F3':'1.5px solid #8FB0C9;background:#F3F8FC')+';border-radius:12px;padding:10px 14px;margin:0 0 12px;line-height:1.8;font-size:14.5px;color:#22303A"><div style="font-weight:800;margin-bottom:4px">'+(sk.card?'🛡️ あなたの安全がいちばん大切です':'📞 '+pkSafeDestHead(sk,false))+'</div><ul style="margin:0;padding-left:1.2em">'+sk.dest.map(function(x){ return '<li>'+e(x)+'</li>'; }).join('')+'</ul></div>'; }catch(e){ return ''; } }
 /* つらさのカードに足す行（今の危険・18歳未満の窓口） */
 function pkCrisisExtraLi(q,age){ try{ q=String(q||''); let h=''; if(PK_CRISIS_NOW.test(q)) h+='<li><b>いま薬をたくさん飲んだ・けがをしたときは、すぐに <span style="white-space:nowrap">119</span> へ</b>（迷うときは <span style="white-space:nowrap">#7119</span>）</li>'; if(pkSafeMinor(q,age)) h+=PK_KID_TEL.map(function(x){ return '<li>'+x.replace(/(0120-[\d-]+)/,'<b style="white-space:nowrap">$1</b>')+'</li>'; }).join(''); return h; }catch(e){ return ''; } }
 /* 文章作成への指示に足す（占いで決めないご相談） */

@@ -34,6 +34,25 @@ ok('開いただけでは文章作成を呼ばない', calls===0, 'calls='+calls
   const up=new Function(code+`;const o={'◎':0,'〇':1,'△':2,'✖':3},bad=[];for(const [k,h] of Object.entries(HEXDB)){const b=HEXKK[k]||'C';for(let ko=1;ko<=6;ko++){const d=h.ko[ko];const now=rankToVerdict(koAdjustRank(b,d.jd,d.tai,mTai(h,ko))).sym, raw=rankToVerdict(koAdjustRank(b,d.jd,d.tai,String(d.tai).replace(/◎/g,''))).sym;if(o[now]<o[raw])bad.push(h.nm+ko+'爻 '+raw+'→'+now);}}return bad;`)();
   ok('言い直した訳で答えの記号が先生の訳より上がらない（水雷屯の初爻など）', up.length===0, up.join(' / ')); }
 { const s=fs.readFileSync(path.join(ROOT,'eki-pro','app','index.html'),'utf8'); ok('坤為地の上爻（龍戦于野）は✖（鑑定者本人の判断 2026-10-30）', /var KO_RANK_FIX=\{[^}]*'2-6':'E'/.test(s)&&/return KO_RANK_FIX\[hx\.no\+'-'\+k\]\|\|koAdjustRank\(/.test(s)); }
+{ /* 2026-11-14 実地の点検で直したもの：頼み方の注記・「続けるべきか」・ちがいの書かれていないA社B社・金運の時期・近い日の試験・今は「今は…」・要点メモの「・」 */
+  const r=await p.evaluate(()=>{ const F=window.__ekiFix; if(!F) return {bad:['点検用の __ekiFix がない']}; const bad=[];
+    const key=nm=>Object.keys(HEXDB).find(k=>HEXDB[k].nm===nm).split('-').map(Number);
+    const run=(nm,ko,txt,q)=>{ const [u,l]=key(nm); const rr=F.buildResult(u,l,ko,[ko]); window.__ekiQ=q; return F.ekiFixSym(F.ekiCleanReading(F.parseReading(txt),q),rr,q); };
+    let P=run('山火賁',3,'▼判定：〇 今の転職は急がない方がよいでしょう （※指示にある記号と一言の形式に合わせ、お仕事は丁寧な準備から進めるのが良い時期です）\n▼伝え方：いまの仕事について、内面を磨く時期です。\n▼助言：・生活を整えましょう','今の仕事を続けるべきか迷っています');
+    if(/指示|形式|転職/.test(P.hantei)||!/続け/.test(P.hantei)) bad.push('続けるべきか：'+P.hantei);
+    P=run('山火賁',3,'▼判定：〇 素直に進めるA社が合います。\n▼伝え方：素直に進めるほうの「A社」が合っていますよ。今は実力を蓄えるときです。次の春の足音が聞こえる頃には、良い方向へ向かいやすくなりますよ。\n▼助言：・小細工をしないようにしましょう。','A社とB社どちらに転職すべきですか');
+    if(/A社が合|「A社」が合/.test(P.hantei+P.tsutae)||!/ほうを選ぶのが合います/.test(P.hantei)||/春の足音/.test(P.tsutae)) bad.push('A社B社：'+P.hantei+' / '+P.tsutae.slice(0,60));
+    P=run('地天泰',2,'▼判定：〇 金運は上向きです\n▼伝え方：金運は良い流れです。上向く時期は来年の春以降が目安です。固定費を見直しましょう。\n▼助言：・貯金をしましょう','金運はどうですか');
+    if(/来年|以降が目安|春/.test(P.tsutae)) bad.push('金運の時期：'+P.tsutae.slice(0,80));
+    { const [u,l]=key('地天泰'); const mf=F.ekiMoneyFlow(F.buildResult(u,l,2,[2])); if(/来年|時期|ごろ|頃|以降/.test(mf)) bad.push('ekiMoneyFlow に時期：'+mf); }
+    P=run('水雷屯',2,'▼判定：△ 焦らず準備を重ねましょう\n▼伝え方：これからの数か月で基礎を固め、整った頃を見据えて試験に臨みましょう。毎日少しずつ過去問を解きましょう。\n▼助言：・過去問を解く','来月の資格試験は受かりますか');
+    if(/数か月|見据えて/.test(P.tsutae)||!/見込み|五分|厳しめ/.test(P.hantei)) bad.push('近い日の試験：'+P.hantei+' / '+P.tsutae.slice(0,80));
+    { const [u,l]=key('雷地豫'); const o=F.buildOfflineReading(F.buildResult(u,l,2,[2]),'来月の資格試験は受かりますか'); if(!/見込み|五分|厳しめ/.test(o.hantei)||/前向きに進んで大丈夫/.test(o.hantei)) bad.push('通信なしの試験の1行目：'+o.hantei); }
+    { const [u,l]=key('水天需'); const o=F.buildOfflineReading(F.buildResult(u,l,4,[4]),'仕事はこのままでいいですか'); if(/今は「今は/.test(o.tsutae)) bad.push('今は「今は…」：'+o.tsutae.slice(0,60)); }
+    { const L=F.ekiBulSplit('今回の線（三爻＝下から3本目。物語でいうと内から外への境目・試練の段階）の言葉ですよ\n・Aです。・Bです'); if(L.length!==3) bad.push('要点メモの分け方：'+JSON.stringify(L)); }
+    { const t=F.ekiNoTameguchi('今は準備の時期に入っているよ。大事なんだよね。一緒に進んでいこうね。'); if(/いるよ。|だよね|いこうね/.test(t)) bad.push('ため口：'+t); }
+    return {bad}; });
+  ok('実地の点検の直し（注記・続けるべきか・A社B社・金運の時期・近い日の試験・今は今は・要点メモ・ため口）', r.bad.length===0, r.bad.join(' | ')); }
 async function consult(q,nums){ await p.evaluate(()=>scrollTo(0,0)); await p.click('.ct-number'); await p.waitForTimeout(300);
   for(const [i,v] of [['#num1',nums[0]],['#num2',nums[1]],['#num3',nums[2]]]) await p.fill(i,String(v));
   await p.fill('#question',q); const c0=calls; const t0=Date.now();
