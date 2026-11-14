@@ -42,5 +42,8 @@ out = out.crop(bbox)
 s = max(out.size); pad = int(s * 0.06); side = s + pad * 2
 sq = Image.new('RGBA', (side, side), (0, 0, 0, 0))
 sq.paste(out, ((side - out.size[0]) // 2, (side - out.size[1]) // 2), out)
-sq.resize((512, 512), Image.LANCZOS).save(dst, optimize=True)
+sq2 = sq.resize((512, 512), Image.LANCZOS)
+sq2.save(dst, optimize=True)
+# サイトで使うのは軽い .webp（見た目は同じ・大きさは約5分の1）
+sq2.save(dst[:-4] + '.webp', 'WEBP', quality=88, method=6, alpha_quality=100)
 print('saved', dst, 'transparent px:', sum(mask))

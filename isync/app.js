@@ -121,8 +121,8 @@ function goTop(){
     <div id="m-opts" class="stack">
     <p class="label">長さは？</p>
     ${seg('len',[[10,'簡易版<br><small>10問・さくっと</small>'],[30,'しっかり版<br><small>30問・★ゆずれない</small>']])}
-    <p class="label">話題は？</p>
-    ${seg('topic',[['all','いろいろ'],['party','盛り上がる']])}
+    ${PACK?'':`<p class="label">話題は？</p>
+    ${seg('topic',[['all','いろいろ'],['party','盛り上がる']])}`}
     <div id="m-anon" class="stack">
       <p class="label">名前は？</p>
       ${seg('anon',[[false,'見せる'],[true,'見せない']])}
@@ -349,11 +349,13 @@ function showResult(G){
   const split=qst.filter(x=>x.c[0]&&x.c[1]).sort((a,b)=>Math.abs(a.c[0]-a.c[1])-Math.abs(b.c[0]-b.c[1])).slice(0,3);
   const uni=qst.filter(x=>{const t=x.c[0]+x.c[1]+x.c[2];return t>=2&&(x.c[0]===t||x.c[1]===t)});
   const hard=qst.slice().sort((a,b)=>b.avg-a.avg)[0];
-  h+=`<section class="card"><p class="label">問題のランキング</p>
-    ${split.length?`<p class="sub">意見がまっぷたつ</p><ul class="list">${split.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${[0,1].map(v=>`<span class="ansrow"><i class="o${v}">${esc(Q[x.k][v+2])}</i>${x.c[v]}人</span>`).join('')}</li>`).join('')}</ul>`:''}
+  // 2人のときの「意見がまっぷたつ」は「話しておきたいこと」と同じなので出さない。答えの時間がない人（答え合わせのリンク）がいるときは「悩んだ問題」を出さない
+  const two=ps.length===2,timed=hard&&hard.avg>0&&ps.every(p=>G.qs.some((k,i)=>p.ans[i]&&p.ans[i].ms>0));
+  if((!two&&split.length)||uni.length||timed)h+=`<section class="card"><p class="label">問題のランキング</p>
+    ${!two&&split.length?`<p class="sub">意見がまっぷたつ</p><ul class="list">${split.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${[0,1].map(v=>`<span class="ansrow"><i class="o${v}">${esc(Q[x.k][v+2])}</i>${x.c[v]}人</span>`).join('')}</li>`).join('')}</ul>`:''}
     ${uni.length?`<p class="sub">全員一致</p><ul class="list">${uni.slice(0,3).map(x=>`<li><b>${esc(Q[x.k][1])}</b><span class="ansrow"><i class="o${x.c[0]?0:1}">${esc(x.c[0]?Q[x.k][2]:Q[x.k][3])}</i>全員</span></li>`).join('')}</ul>`:''}
-    <p class="sub">いちばん悩んだ問題</p>
-    <div class="ponder"><b>${esc(Q[hard.k][1])}</b><span>平均 <em>${sec(hard.avg)}</em> 秒</span></div>
+    ${timed?`<p class="sub">いちばん悩んだ問題</p>
+    <div class="ponder"><b>${esc(Q[hard.k][1])}</b><span>平均 <em>${sec(hard.avg)}</em> 秒</span></div>`:''}
   </section>`;
   // ⑤ ゆずれないこと
   const starP=(G.anon&&me?[me]:ps).map(p=>({p,xs:G.qs.map((k,i)=>({k,a:p.ans[i]})).filter(x=>x.a&&x.a.st&&x.a.o>=0&&x.a.o<2)})).filter(x=>x.xs.length);
@@ -461,10 +463,12 @@ function sendVia(text,url,msgEl){
   try{navigator.clipboard.writeText(full).then(()=>{msgEl.textContent='文とリンクをコピーしました。LINEなどに貼って送ってください。'},()=>{msgEl.textContent=full})}catch(e){msgEl.textContent=full}}
 function bindInvite(G){
   const me=G.players.find(p=>p.id===G.me)||G.players[0],n=G.qs.length;
-  const myName=()=>{const i=$('inv-name');const v=i?i.value.trim():'';if(v){store('kv_name',v);return v}return ['あなた','ともだち'].includes(me.name)?(store('kv_name')||'ともだち'):me.name};
+  const myName=()=>{const i=$('inv-name');const v=i?i.value.trim():'';if(v){store('kv_name',v);return v}return ['あなた','ともだち'].includes(me.name)?(store('kv_name')||''):me.name};
+  // ニックネームがないと、相手の画面が「ともだちさんから…」になってわかりにくいので、先に入れてもらう
+  const need=e=>{if(myName())return false;if(e)e.preventDefault();const m=$('inv-msg'),i=$('inv-name');if(m){m.hidden=false;m.textContent='先にニックネームを入れてください（相手の画面に「○○さんから」と出ます）。'}if(i)i.focus();return true};
   const inv=()=>({t:inviteText(myName(),n),u:withLink(myName(),G.qs,me.ans)});
-  const il=$('inv-line');if(il){const set=()=>{const x=inv();il.href=lineUrl(x.t,x.u)};set();il.addEventListener('click',set);const nmI=$('inv-name');if(nmI)nmI.addEventListener('input',set)}
-  const is=$('inv-share');if(is)is.onclick=()=>{const x=inv();sendVia(x.t,x.u,$('inv-msg'))};
+  const il=$('inv-line');if(il){const set=()=>{const x=inv();il.href=lineUrl(x.t,x.u)};set();il.addEventListener('click',e=>{if(!need(e))set()});const nmI=$('inv-name');if(nmI)nmI.addEventListener('input',set)}
+  const is=$('inv-share');if(is)is.onclick=()=>{if(need())return;const x=inv();sendVia(x.t,x.u,$('inv-msg'))};
   if(G.pair){const A=G.players[0],pct=pairStat(A,me,G.qs).pct,t=`${me.name}さんが答え終わりました！\n2人のシンクロ率は ${pct}% でした。くわしい結果はこちら`,u=pairLink(A,me,G.qs);
     const bl=$('back-line');if(bl)bl.href=lineUrl(t,u);const bs=$('back-share');if(bs)bs.onclick=()=>sendVia(t,u,$('back-msg'))}}
 // 答え合わせのリンクを開いた人：説明 → ニックネーム → 同じ問題に答える
@@ -476,15 +480,16 @@ function withStart(x){
     <p class="hint">${esc(x.name)}さんが答えた${n}問に、あなたも答えてください（約${minsOf(n)}分）。答え終わると、2人の答えがどれだけ重なるかがわかります。</p>
     <p class="hint">${esc(x.name)}さんの答えは、あなたが答え終わるまで見えません。</p>
     <label class="one-name" for="wn" style="align-self:stretch;text-align:left"><span>ニックネーム</span><input type="text" id="wn" maxlength="10" placeholder="本名でなくてOK" value="${esc(store('kv_name')||'')}"></label>
+    <p class="hint" id="wmsg" hidden>ニックネームを入れてください（2人の結果に出ます）。</p>
     <button class="btn" id="wgo" style="align-self:stretch">答えはじめる</button>
     <button class="btn ghost small" id="wtop">アイ・シンクのトップを見る</button></section>`);
-  $('wgo').onclick=()=>{const v=$('wn').value.trim();if(v)store('kv_name',v);
+  $('wgo').onclick=()=>{const v=$('wn').value.trim();if(!v){$('wmsg').hidden=false;$('wn').focus();return}store('kv_name',v);
     Object.assign(L,{mode:'pair',qs:x.qs,players:[{id:'me',name:v||'ともだち',ans:{}}],partner:{id:'p',name:x.name,ans:x.ans},p:0,i:0});localAsk()};
   $('wtop').onclick=goTop}
 // 結果のリンク（送り返された結果）を開いた人
 function pairView(x){
   try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
-  L.players=[];showResult({players:[x.A,x.B],qs:x.qs,me:null,anon:false,local:true,view:true})}
+  L.players=[];showResult({players:[x.A,x.B],qs:x.qs,me:'a',anon:false,local:true,view:true})}
 
 /* ===== みんなの答え（これまでに遊んだ人の割合） =====
    Firestore の isync_votes/<問題の目印> に、答えA・B・3つ目の数だけを1つずつ足す（名前は送らない）。同じスマホで同じ問題は1回だけ数える */
