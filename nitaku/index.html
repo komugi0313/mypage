@@ -2022,6 +2022,8 @@ function openJoin(code, fromLink){
   if(!$('join-name').value) $('join-name').value = String(store('nitaku_me') || '').slice(0,6);
   show('s-join');
   joinStatus();
+  // 名前を入れるだけで入れるよう、名前の欄にすぐ入れる状態にする
+  if(fromLink && code && !($('join-name').value||'').trim()) setTimeout(function(){ try{ $('join-name').focus(); }catch(e){} }, 400);
   // QR・LINEのリンクから来て、前に入れた名前があれば、そのまま部屋に入る（何も押さなくてよい）
   var nm=($('join-name').value||'').trim();
   if(fromLink && code && nm){
@@ -2046,6 +2048,7 @@ async function joinStatus(){
   try{
     await Room.init(); if(Room.mode()==='off'){ el.textContent=''; return; }
     var d=await Room.get(code), r=d.room, n=(d.players||[]).length;
+    S.joinPre={ code:code, d:d, at:Date.now() };
     if(($('join-code').value||'').replace(/\D/g,'')!==code) return;
     var hp=r && (d.players||[]).filter(function(p){ return p.pid===r.host; })[0];
     if(roomEnded(r)){ if($('join-codebox').hidden) showEnded(); else el.textContent='この番号の部屋は見つからないか、もう終わっています。番号を確かめるか、招待してくれた人に新しい部屋のリンクを送ってもらってね。'; return; }
@@ -2066,9 +2069,14 @@ $('join-go').onclick=async function(){
   var btn=$('join-go'); btn.disabled=true;
   var bn=busyNote($('join-wait'), btn, '参加しています…'), okEnd=true;
   try{
-    await withTimeout(Room.init(), 30000);
-    if(Room.mode()==='off'){ okEnd=false; bn.fail('この画面では部屋に参加できません。SafariかChromeで開きなおしてね。'); return; }
-    var d=await withTimeout(Room.get(code), 30000);
+   // つながらなくても、こちらで自動で3回までやり直す（参加する人には何もさせない）
+   for(var tryN=1; ; tryN++){
+   try{
+    await withTimeout(Room.init(), 20000);
+    if(Room.mode()==='off') throw new Error('off');
+    // QRを開いたときに読んでおいた部屋の様子があれば、それを使う（待ち時間を短く）
+    var pre=S.joinPre, d=(pre && pre.code===code && Date.now()-pre.at<20000) ? pre.d : await withTimeout(Room.get(code), 20000);
+    S.joinPre=null;
     if(roomEnded(d.room)){ if($('join-codebox').hidden) showEnded(); else toast('部屋が見つからないか、もう終わっています'); return; }
     // 同じ部屋にもどってきたときは、前の答えを引きつぐ
     var old=store('nitaku_room'), pid=(old && old.code===code) ? old.pid : newPid();
@@ -2082,11 +2090,19 @@ $('join-go').onclick=async function(){
       return;
     }
     var me = prev ? { name:name, joined:prev.joined||Date.now(), ans:prev.ans||{}, times:prev.times||{}, mine:prev.mine||[] } : { name:name, joined:Date.now(), ans:{}, times:{} };
-    var ok=await withTimeout(enterRoom(code, pid, me, d.room.host===pid), 30000);
+    var ok=await withTimeout(enterRoom(code, pid, me, d.room.host===pid), 20000);
     if(ok===false) okEnd=false;
-  }catch(e){ okEnd=false; bn.fail('つながりませんでした。もう一度「参加する」を押してね。だめなときは、このページをSafariかChromeで開きなおしてね（QRを読んだアプリの中の画面だと、つながらないことがあります）。'); }
+    break;
+   }catch(e){
+    S.joinPre=null;
+    if(tryN>=3) throw e;
+    await new Promise(function(z){ setTimeout(z, 1500); });
+   }
+   }
+  }catch(e){ okEnd=false; bn.fail('うまくつながりませんでした。もう一度「参加する」を押してね。'); }
   finally { btn.disabled=false; if(okEnd) bn.done(); else bn.done(false); }
 };
+$('join-name').addEventListener('keydown', function(e){ if(e.key==='Enter' && !e.isComposing){ e.preventDefault(); if(!$('join-go').hidden && !$('join-go').disabled) $('join-go').onclick(); } });
 $('join-name').addEventListener('input', function(){ if(!$('join-same').hidden){ S.sameJoin=null; $('join-same').hidden=true; $('join-go').hidden=false; } });
 $('join-same-no').onclick=function(){ S.sameJoin=null; $('join-same').hidden=true; $('join-go').hidden=false; $('join-name').value=''; $('join-name').focus(); toast('別の名前を入れて「参加する」を押してね'); };
 $('join-same-yes').onclick=async function(){
@@ -2219,7 +2235,7 @@ function busyNote(el, btn, label){
   btn.textContent=label; el.className='join-wait'; el.hidden=false;
   el.textContent='部屋につないでいます…（数秒かかることがあります）';
   var iv=setInterval(function(){ var s=(Date.now()-t0)/1000;
-    if(s>=10) el.textContent='まだつないでいます…。このまま少し待ってね（画面を閉じないでね）。'; }, 1000);
+    if(s>=8) el.textContent='もう少しで入れます。このまま待ってね。'; }, 1000);
   return { done:function(ok){ clearInterval(iv); btn.textContent=old; if(ok!==false){ el.hidden=true; } },
            fail:function(msg){ clearInterval(iv); btn.textContent=old; el.className='join-wait ng'; el.hidden=false; el.textContent=msg; } };
 }
