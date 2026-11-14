@@ -588,6 +588,14 @@ body.rdy-on #gres-body{padding-bottom:230px}
 .hon-list .rank .k.to,.hon-list .rank .v.to{color:#5B6170}
 .hon-list .rank .v.to{font-size:14px}
 .hon-list .rank .v{white-space:nowrap}
+/* 部屋を作った人の3つの手順・つないでいる間の知らせ（鑑定者本人の指摘 2026-11-14「娘が友達と遊ぼうとしたらつながらなかった」「送った人がどうしたら良いか明確にわからない」） */
+.lb-steps{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:8px;text-align:left;counter-reset:st}
+.lb-steps li{display:flex;gap:10px;align-items:flex-start;background:#FFF8E1;border:2px solid #1E1E2A;border-radius:14px;padding:9px 11px;font-size:15px;font-weight:700;line-height:1.55}
+.lb-steps li::before{counter-increment:st;content:counter(st);flex:none;width:28px;height:28px;border-radius:50%;background:#FF3D7F;color:#1E1E2A;border:2px solid #1E1E2A;font-family:"Mochiy Pop One",sans-serif;font-size:15px;display:grid;place-items:center;margin-top:1px}
+.lb-steps li b{display:block;font-size:16px}
+.lb-steps li small{display:block;margin-top:2px;font-size:13.5px;color:#4A4458;font-weight:700}
+.join-wait{margin:10px 0 0;background:#FFF1B8;border:2px solid #1E1E2A;border-radius:14px;padding:10px 12px;font-size:15px;font-weight:700;line-height:1.6;text-align:center;color:#1E1E2A}
+.join-wait.ng{background:#FFE3EE}
 </style>
 </head>
 <body data-mode="love">
@@ -777,6 +785,7 @@ body.rdy-on #gres-body{padding-bottom:230px}
   <div class="label">あなたの名前</div>
   <div class="prow"><div class="pf"><input type="text" id="join-name" maxlength="6" placeholder="名前（6文字まで・ニックネームOK）"></div></div>
   <p class="join-st" id="join-st"></p>
+  <p class="join-wait" id="join-wait" role="status" hidden></p>
   <div class="join-same" id="join-same" hidden>
     <p id="join-same-t"></p>
     <button class="big" id="join-same-yes" type="button">はい、自分です</button>
@@ -795,6 +804,11 @@ body.rdy-on #gres-body{padding-bottom:230px}
     <p class="lb-pill" id="lb-pill"></p>
     <p class="lb-head" id="lb-head">部屋ができました</p>
     <p class="lb-sub" id="lb-sub"></p>
+    <ol class="lb-steps" id="lb-steps" hidden>
+      <li><span><b>友だちを呼ぶ</b><small>遠くの人には → 下の緑のボタンでLINEを送る</small><small>となりの人には → 下の「QRコードを見せる」</small></span></li>
+      <li><span><b>送ったら、この画面にもどる</b><small>LINEを閉じて、この画面へ。自分で送ったリンクは押さなくて大丈夫です。</small></span></li>
+      <li><span><b>友だちの名前がここに出たら「スタート」</b><small>名前が出るまで、この画面のまま待ってね。</small></span></li>
+    </ol>
     <ul class="lb-list" id="lb-list"></ul>
     <p class="lb-dup" id="lb-dup" hidden>同じ名前の人が2人います。同じ人が、前に開いた画面からもう1回入っているのかもしれません。いない人は名前の横の × で外せます。</p>
     <button class="big lb-go" id="lb-start">スタート</button>
@@ -804,9 +818,8 @@ body.rdy-on #gres-body{padding-bottom:230px}
   <div id="lb-host">
     <a class="big lb-line" id="lb-line" href="https://line.me/R/share" target="_blank" rel="noopener">LINEで友だちを招待する</a>
     <p class="lb-note">送った相手は、リンクを押して名前を入れるだけで、この部屋に入れます。</p>
-    <p class="lb-back">📌 送ったら、<u>この画面にもどって</u>「スタート」を押してね。自分で送ったリンクは押さなくて大丈夫です。</p>
     <details class="lb-near">
-      <summary><span>近くの人はQRコードで呼ぶ</span></summary>
+      <summary><span>となりの人に、QRコードを見せる</span></summary>
       <p class="lb-note">みんなにスマホのカメラでこのQRを読みとってもらうと、そのまま部屋に入れます。</p>
       <div id="lb-qrbox"><div class="lb-qr" id="lb-qr"></div></div>
       <p class="lb-note">QRが読めないときは、トップの「招待された人はこちら」で番号 <b id="lb-code"></b> を入れてもらってね。</p>
@@ -1987,6 +2000,7 @@ async function createRoom(){
   if(!name){ toast('名前を入れてね'); try{ $('me-name').focus(); }catch(e){} return; }
   store('nitaku_me', name);
   var btn=$('go2'); btn.disabled=true;
+  var oldT=btn.textContent; btn.textContent='部屋を作っています…（数秒かかります）';
   try{
     await Room.init();
     if(Room.mode()==='off'){ toast('いまは部屋を作れません。電波のよいところで、もう一度押してね'); return; }
@@ -1997,13 +2011,13 @@ async function createRoom(){
     }
     if(res!=='ok'){ toast('部屋を作れませんでした。少し待ってから、もう一度押してね'); return; }
     await enterRoom(room.code, pid, { name:name, joined:Date.now(), ans:{}, times:{} }, true);
-  } finally { btn.disabled=false; }
+  } finally { btn.disabled=false; btn.textContent=oldT; }
 }
 function openJoin(code, fromLink){
   S.who='group';
   $('join-code').value = code || '';
   $('join-codebox').hidden = !!(fromLink && code);
-  $('s-join').classList.remove('ended'); S.autoJoin=false; $('join-same').hidden=true; $('join-go').hidden=false;
+  $('s-join').classList.remove('ended'); S.autoJoin=false; $('join-wait').hidden=true; $('join-same').hidden=true; $('join-go').hidden=false;
   $('join-hello').innerHTML = (fromLink && code) ? '部屋（'+code+'）に招待されています<small>名前を入れて「参加する」を押してね</small>' : '';
   if(!$('join-name').value) $('join-name').value = String(store('nitaku_me') || '').slice(0,6);
   show('s-join');
@@ -2050,10 +2064,11 @@ $('join-go').onclick=async function(){
   if(!name){ toast('名前を入れてね'); return; }
   store('nitaku_me', name);
   var btn=$('join-go'); btn.disabled=true;
+  var bn=busyNote($('join-wait'), btn, '参加しています…'), okEnd=true;
   try{
-    await Room.init();
-    if(Room.mode()==='off'){ toast('この画面では部屋に参加できません'); return; }
-    var d=await Room.get(code);
+    await withTimeout(Room.init(), 30000);
+    if(Room.mode()==='off'){ okEnd=false; bn.fail('この画面では部屋に参加できません。SafariかChromeで開きなおしてね。'); return; }
+    var d=await withTimeout(Room.get(code), 30000);
     if(roomEnded(d.room)){ if($('join-codebox').hidden) showEnded(); else toast('部屋が見つからないか、もう終わっています'); return; }
     // 同じ部屋にもどってきたときは、前の答えを引きつぐ
     var old=store('nitaku_room'), pid=(old && old.code===code) ? old.pid : newPid();
@@ -2067,9 +2082,10 @@ $('join-go').onclick=async function(){
       return;
     }
     var me = prev ? { name:name, joined:prev.joined||Date.now(), ans:prev.ans||{}, times:prev.times||{}, mine:prev.mine||[] } : { name:name, joined:Date.now(), ans:{}, times:{} };
-    await enterRoom(code, pid, me, d.room.host===pid);
-  }catch(e){ toast('通信できませんでした。もう一度押してね'); }
-  finally { btn.disabled=false; }
+    var ok=await withTimeout(enterRoom(code, pid, me, d.room.host===pid), 30000);
+    if(ok===false) okEnd=false;
+  }catch(e){ okEnd=false; bn.fail('つながりませんでした。電波のよいところで、もう一度「参加する」を押してね。'); }
+  finally { btn.disabled=false; if(okEnd) bn.done(); else bn.done(false); }
 };
 $('join-name').addEventListener('input', function(){ if(!$('join-same').hidden){ S.sameJoin=null; $('join-same').hidden=true; $('join-go').hidden=false; } });
 $('join-same-no').onclick=function(){ S.sameJoin=null; $('join-same').hidden=true; $('join-go').hidden=false; $('join-name').value=''; $('join-name').focus(); toast('別の名前を入れて「参加する」を押してね'); };
@@ -2197,6 +2213,17 @@ function onRoom(room, players){
   }
   if(room.phase!=='ready') hideReady();
 }
+/* つないでいる間の知らせ：数秒かかることがあるので、止まって見えないようにする。30秒でつながらなければ、もう一度押してもらう */
+function busyNote(el, btn, label){
+  var t0=Date.now(), old=btn.textContent;
+  btn.textContent=label; el.className='join-wait'; el.hidden=false;
+  el.textContent='部屋につないでいます…（数秒かかることがあります）';
+  var iv=setInterval(function(){ var s=(Date.now()-t0)/1000;
+    if(s>=10) el.textContent='まだつないでいます…。電波のよいところで、このまま少し待ってね。'; }, 1000);
+  return { done:function(ok){ clearInterval(iv); btn.textContent=old; if(ok!==false){ el.hidden=true; } },
+           fail:function(msg){ clearInterval(iv); btn.textContent=old; el.className='join-wait ng'; el.hidden=false; el.textContent=msg; } };
+}
+function withTimeout(pr, ms){ return Promise.race([pr, new Promise(function(_,ng){ setTimeout(function(){ ng(new Error('timeout')); }, ms); })]); }
 function renderLobby(){
   var R=S.room, room=R.data, n=R.players.length;
   var hp=R.players.filter(function(p){ return p.pid===room.host; })[0], hn=hp&&hp.name ? hp.name : '部屋を作った人';
@@ -2212,6 +2239,7 @@ function renderLobby(){
   $('lb-dup').hidden = !(R.host && dup);
   renderMine();
   $('lb-host').hidden = !R.host;
+  $('lb-steps').hidden = !(R.host && n<2);
   $('lb-start').hidden=!R.host; $('lb-wait').hidden=R.host;
   // 新しく入った人を、全員の画面で知らせる
   var seen=R.seenP||null, fresh=[];
@@ -2227,7 +2255,7 @@ function renderLobby(){
     if(!R.lobbyAt) R.lobbyAt=Date.now();
     var long=Date.now()-R.lobbyAt>=60e3;
     if(n<2 && !long && !R.lobbyT) R.lobbyT=setTimeout(function(){ R.lobbyT=null; if(S.room===R && R.view==='lobby') renderLobby(); }, 60e3+200);
-    $('lb-sub').textContent = n<2 ? (long ? 'なかなか来ないときは、もう一度LINEで送ってみてね。この画面を閉じても、30分は部屋がのこっています。' : '下の「LINEで友だちを招待する」で呼んでね。入った人の名前がここに出ます。') : 'ほかに来る人がいなければ、下の「スタート」を押してね。押すと全員の画面で問題が始まります。';
+    $('lb-sub').textContent = n<2 ? (long ? 'なかなか来ないときは、もう一度LINEで送るか、QRコードを見せてね。この画面を閉じても、30分は部屋がのこっています。' : 'この3つだけで遊べます。') : 'ほかに来る人がいなければ、下の「スタート」を押してね。押すと全員の画面で問題が始まります。';
     $('lb-start').disabled = n<2;
     $('lb-start').textContent = n<2 ? '友だちを待っています…' : 'スタート（'+n+'人で遊ぶ）';
   } else {
