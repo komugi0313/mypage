@@ -619,6 +619,8 @@ body.rdy-on #gres-body{padding-bottom:230px}
 /* 結果のいちばん下のボタン */
 .big.end-sub{min-height:48px;padding:10px 14px;font-size:16px;margin-top:12px;box-shadow:3px 3px 0 #1E1E2A}
 .end-pick{margin:18px 0 10px}.end-pick-t{margin:0 0 6px;text-align:center;font-weight:700;font-size:15px}.end-pick .seg button{min-height:44px;font-size:15px}.end-pick .seg button[aria-pressed="true"]{background:#FFE071;color:#1E1E2A}
+.big.end-q{margin-top:18px;background:#fff;min-height:52px;font-size:17px}
+.rdy-end{display:block;margin:10px auto 0;min-height:44px;padding:8px 14px;border:0;background:none;font-weight:900;font-size:15px;color:#1E1E2A;text-decoration:underline;text-underline-offset:4px;cursor:pointer}
 .end-hint{margin:8px 0 0;text-align:center;font-size:13.5px}
 .big.end-line{margin-top:22px}
 .end-links{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:6px}
@@ -1858,19 +1860,20 @@ function doShare(text){
 var splashT=null;
 function splash(t, sub, kind){
   var el=$('splash'); $('splash-t').textContent=t; $('splash-s').textContent=sub||'';
-  $('splash-img').src='img/panda-'+({go:'joy',join:'bye',again:'wait'}[kind]||'joy')+'.webp';
+  $('splash-img').src='img/panda-'+({go:'joy',join:'bye',again:'wait',bye:'bye'}[kind]||'joy')+'.webp';
   el.className='splash '+(kind==='again'?'join':(kind||'')); el.hidden=false;
   try{ navigator.vibrate&&navigator.vibrate(kind==='go'?[120,60,120]:80); }catch(e){}
-  clearTimeout(splashT); splashT=setTimeout(function(){ el.hidden=true; }, kind==='go'?1600:2200);
+  clearTimeout(splashT); splashT=setTimeout(function(){ el.hidden=true; }, kind==='go'?1600:(kind==='bye'?3000:2200));
 }
 $('splash').onclick=function(){ $('splash').hidden=true; };
 function toast(t){ var el=$('toast'); el.textContent=t; el.classList.add('on'); setTimeout(function(){ el.classList.remove('on'); }, 2200); }
 
 function endButtons(){
   if(S.room){
+    var endq='<button class="big alt end-q" id="endq" type="button">🏁 ここで終わる</button>';
     if(S.room.host || Room.mode()==='db') return nextPick()+'<button class="big" id="again">同じメンバーでもう1回</button>'+
-      '<p class="hint end-hint">みんなが「準備OK」を押してから始まります。</p>';
-    return '<p class="hint lb-wait" style="margin-top:22px">部屋を作った人が「もう1回」を押すと、このまま次が始まります。</p>';
+      '<p class="hint end-hint">みんなが「準備OK」を押してから始まります。</p>'+endq;
+    return '<p class="hint lb-wait" style="margin-top:22px">部屋を作った人が「もう1回」を押すと、このまま次が始まります。</p>'+endq;
   }
   return nextPick()+'<button class="big" id="again">もう1回（ちがう問題で）</button>';
 }
@@ -1891,12 +1894,13 @@ function shareRow(l, a, v){
   return '<a class="big lb-line end-line" id="'+l+'" href="https://line.me/R/share" target="_blank" rel="noopener">LINEで結果を送る</a>'+
     '<div class="end-links"><button class="tell-s" id="'+a+'" type="button">ほかのアプリでシェア</button><span aria-hidden="true">・</span><button class="tell-s" id="'+v+'" type="button">📷 画像で保存</button></div>';
 }
-function homeLink(){ return '<button class="tell-s end-home" id="home" type="button">'+(S.room ? (S.room.host?'部屋を閉じてトップへ':'部屋を出てトップへ') : 'トップにもどる')+'</button>'; }
+function homeLink(){ return S.room ? '' : '<button class="tell-s end-home" id="home" type="button">トップにもどる</button>'; }
 function bindEnd(){
   if(S.room){
     bindPick();
     if($('again')) $('again').onclick=function(){ askAgain(S.nextM||curPlayMode()); };
-    $('home').onclick=function(){ goTop(false); };
+    if($('endq')) $('endq').onclick=endRoom;
+    if($('home')) $('home').onclick=function(){ goTop(false); };
     return;
   }
   bindPick();
@@ -2386,12 +2390,22 @@ async function enterRoom(code, pid, me, host, made, pre){
   document.addEventListener('visibilitychange', R.vis);
   return true;
 }
-function leaveRoom(){
+/* 「ここで終わる」（鑑定者本人の指示 2026-11-14「終わる時にわかりやすいボタンが欲しい」「ずっと次に続けるを押されて困る」「また遊ぼう！とかメッセージを出したい」）：
+   部屋を作った人が押すと部屋が閉じて全員がトップへ。招待された人はその人だけ部屋を出る。どちらも「また遊ぼう！」を出す */
+function endRoom(){
+  var R=S.room; if(!R) return;
+  var host=R.host;
+  leaveRoom(true);
+  var st=store('nitaku_room'); if(st && !st.left){ st.left=true; store('nitaku_room', st); }
+  hideReady(); updatePoolNote(); show('s-home');
+  splash('また遊ぼう！', host ? '部屋を閉じました。遊んでくれてありがとう！' : '遊んでくれてありがとう！', 'bye');
+}
+function leaveRoom(quit){
   var R=S.room; if(!R) return;
   S.room=null;
   try{ if(R.stop) R.stop(); }catch(e){}
   try{ clearInterval(R.hb); document.removeEventListener('visibilitychange', R.vis); }catch(e){}
-  if(!R.host && R.data && R.data.phase==='lobby'){ Room.delPlayer(R.code, R.pid).catch(function(){}); }
+  if(!R.host && R.data && (R.data.phase==='lobby' || quit)){ Room.delPlayer(R.code, R.pid).catch(function(){}); }
   if(R.host && R.data && R.data.phase!=='closed'){
     var room=JSON.parse(JSON.stringify(R.data)); room.phase='closed';
     Room.setRoom(room).catch(function(){});
@@ -2441,11 +2455,20 @@ function syncGame(room, players){
 function onRoom(room, players){
   var R=S.room; if(!R) return;
   if(!room || room.phase==='closed'){
-    if(R.data || room){ leaveRoom(); show('s-home'); toast('部屋が閉じられました'); }
+    if(R.data || room){
+      var hp=(R.players||[]).filter(function(p){ return R.data && p.pid===R.data.host; })[0];
+      leaveRoom(); hideReady(); show('s-home');
+      splash('また遊ぼう！', (hp && hp.name ? hp.name+'さんが' : '')+'部屋を閉じました。遊んでくれてありがとう！', 'bye');
+    }
     return;
   }
   // 名前がまだの人＝リンクを開いて名前を入れているところ（部屋を作った人に「だれかがリンクを開きました」と見せるだけ。人数には数えない）
   var allP=players||[]; R.pending=allP.filter(function(p){ return !(p.name||'').trim() && p.pid!==R.pid; }); players=allP.filter(function(p){ return (p.name||'').trim() || p.pid===R.pid; });
+  // 結果を見ているときにだれかが「ここで終わる」で出たら知らせる
+  if(R.data && (room.phase==='done' || room.phase==='ready') && R.players && R.players.length){
+    var nowIds={}; players.forEach(function(p){ nowIds[p.pid]=1; });
+    R.players.forEach(function(p){ if(p.pid!==R.pid && !nowIds[p.pid] && p.name) toast(p.name+'さんは終わりました'); });
+  }
   R.data=room; R.players=players;
   // 同じ人が2つの画面（LINEの中とブラウザなど）で開いているとき、もう片方で答えた分を引きつぐ
   var mine=(players||[]).filter(function(p){ return p.pid===R.pid; })[0];
@@ -2639,7 +2662,9 @@ function renderReady(){
   var rp=readyParts(R.data), need=readyNeed(R), me=readyOk(R, { pid:R.pid });
   var ok=need.filter(function(p){ return readyOk(R, p); }).length;
   var h='<div class="rdy-in"><div class="rdy-row"><img src="img/panda-wait.webp" alt="" width="58" height="58"><div><p class="rdy-t">🔁 '+esc(readyName(rp.by))+'さんが「もう1回」を押しました'+(rp.nx!==R.data.mode ? '<br><small>次は'+MODE_NAME[rp.nx]+'です</small>' : '')+'</p></div></div>';
-  if(!me){
+  if(need.length<2){
+    h+='<p class="rdy-s">ほかの人は、みんな終わりました。</p>';
+  } else if(!me){
     h+='<p class="rdy-s">結果を読み終わったら「準備OK」を押してね。みんながそろうと、次の問題が始まります。</p><button class="big" id="rdy-go" type="button">準備OK</button>';
   } else {
     h+='<p class="rdy-s">みんなの準備を待っています（'+ok+' / '+need.length+'人）。待っているあいだも、結果は読めます。</p>';
@@ -2648,15 +2673,16 @@ function renderReady(){
     if(late && ok<need.length) h+='<button class="big alt" id="rdy-force" type="button">そろった人だけで始める</button>';
     else if(!R.rdyT) R.rdyT=setTimeout(function(){ R.rdyT=null; renderReady(); }, Math.max(1000, 60e3-(Date.now()-(R.rdyAt||0))+200));
   }
-  h+='</div>';
+  h+='<button class="rdy-end" id="rdy-end" type="button">🏁 わたしはここで終わる</button></div>';
   var el=$('rdy'); el.innerHTML=h; el.hidden=false; document.body.classList.add('rdy-on');
   ['again'].forEach(function(id){ if($(id)) $(id).disabled=true; }); if($('nxt')) [].forEach.call($('nxt').children,function(x){ x.disabled=true; });
   if($('rdy-go')) $('rdy-go').onclick=function(){ R.me.ans['ok:'+R.data.round]=1; saveMe(); renderReady(); readyCheck(); };
   if($('rdy-force')) $('rdy-force').onclick=function(){ startNext(null, true); };
+  if($('rdy-end')) $('rdy-end').onclick=endRoom;
 }
 function readyCheck(){
   var R=S.room; if(!R || !R.data || R.data.phase!=='ready') return;
-  var need=readyNeed(R); if(!need.length || !need.every(function(p){ return readyOk(R, p); })) return;
+  var need=readyNeed(R); if(need.length<2 || !need.every(function(p){ return readyOk(R, p); })) return;
   var key='ready:'+R.data.round; if(R.rdyKey===key) return; R.rdyKey=key;
   setTimeout(function(){ if(S.room!==R || !R.data || R.data.phase!=='ready' || 'ready:'+R.data.round!==key) return; startNext(); }, R.host ? 300 : 1500);
 }
