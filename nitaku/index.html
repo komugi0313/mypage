@@ -1135,7 +1135,7 @@ $('go-solo').onclick=function(){ pickWho('solo'); if(S.hon){ startHon(); return;
 $('go-group').onclick=function(){ pickWho('group'); S.style='room'; document.querySelectorAll('#seg-style button').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.v==='room'?'true':'false'); }); $('go').onclick(); };
 $('style-sw').onclick=function(){ S.style = S.style==='room' ? 'secret' : 'room'; document.querySelectorAll('#seg-style button').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.v===S.style?'true':'false'); }); renderSetup(); };
 $('go').onclick=function(){
-  if(S.who==='group'){ renderSetup(); show('s-setup'); return; }
+  if(S.who==='group'){ renderSetup(); show('s-setup'); try{ Room.prep().catch(function(){}); }catch(e){} return; }
   S.players=[{name:'あなた'}];
   start();
 };
@@ -1475,6 +1475,8 @@ var FB=(function(){
         get:function(){ return c.get().then(snapCol); },
         onSnapshot:function(cb,err){ return c.onSnapshot(function(q){ cb(snapCol(q)); }, err); }
       }; },
+      // いくつかの書きこみを1回の通信でまとめて送る（部屋を作るのを速くするため）
+      batch:function(ops){ var b=fs.batch(); ops.forEach(function(o){ var r=fs.doc(P(o.path)); if(o.del) b.delete(r); else b.set(r, ttl(o.path, JSON.parse(JSON.stringify(o.data||{})))); }); return b.commit(); },
       raw:fs
     };
   }
@@ -1996,15 +1998,40 @@ var Room=(function(){
     var j={}; try{ j=await r.json(); }catch(e){}
     return { ok:r.ok, status:r.status, j:j };
   }
-  async function create(room){
+  /* 部屋を作るのを速くする（鑑定者本人の指摘 2026-11-14「数秒のレベルじゃない。せめて5秒以内」）：
+     ①「みんなで遊ぶ」の画面を開いたときに、空いている部屋番号を先に探しておく（名前を入れているあいだに通信が終わる）
+     ②部屋と自分の書きこみを1回の通信にまとめる ③書きこみの返事を待たずに部屋の画面を出す（失敗したときだけもどす） */
+  var prepP=null, prepAt=0;
+  async function findCode(){
+    for(var k=0;k<6;k++){
+      var code=String(1000+Math.floor(Math.random()*9000));
+      var both=await Promise.all([db.doc('rooms/'+code).get(), db.collection('rooms/'+code+'/players').get()]);
+      if(both[0].exists && alive(both[0].data(), plist(both[1].docs))) continue;
+      return { code:code, old:both[1].docs.map(function(d){ return d.id; }) };
+    }
+    return null;
+  }
+  function prep(){
+    return init().then(function(){
+      if(mode!=='db') return null;
+      if(prepP && Date.now()-prepAt<60e3) return prepP;
+      prepAt=Date.now(); prepP=findCode().catch(function(){ prepP=null; return null; });
+      return prepP;
+    });
+  }
+  async function create(room, pid, me){
     await init();
     if(mode==='api'){ var r=await post({ op:'create', room:room }); if(r.ok){ room.created=r.j.room.created; return 'ok'; } return r.status===409?'taken':'ng'; }
     if(mode==='db'){
-      var ref=db.doc('rooms/'+room.code), cur=await ref.get();
-      var old=await db.collection('rooms/'+room.code+'/players').get();
-      if(cur.exists && alive(cur.data(), plist(old.docs))) return 'taken';
-      for(var i=0;i<old.docs.length;i++){ await db.doc('rooms/'+room.code+'/players/'+old.docs[i].id).delete(); }
-      room.created=Date.now(); await ref.set(Object.assign({}, pk(room), { seen:Date.now() })); return 'ok';
+      var pre=await prep(); prepP=null;
+      if(!pre) return 'ng';
+      room.code=pre.code; room.created=Date.now();
+      var ops=pre.old.map(function(id){ return { path:'rooms/'+room.code+'/players/'+id, del:true }; });
+      ops.push({ path:'rooms/'+room.code, data:Object.assign({}, pk(room), { seen:Date.now() }) });
+      if(pid) ops.push({ path:'rooms/'+room.code+'/players/'+pid, data:Object.assign({}, me, { seen:Date.now() }) });
+      if(db.batch){ create.done=db.batch(ops); return 'ok'; }
+      for(var i=0;i<ops.length;i++){ var d=db.doc(ops[i].path); if(ops[i].del) await d.delete(); else await d.set(ops[i].data); }
+      create.done=Promise.resolve(); return 'ok';
     }
     return 'off';
   }
@@ -2095,7 +2122,7 @@ var Room=(function(){
     await ref.set(Object.assign({}, d, patch, { seen:Date.now() })); return true;
   }
   async function delPlayer(code, pid){ await init(); if(mode==='db') await db.doc('rooms/'+code+'/players/'+pid).delete(); }
-  return { init:init, create:create, setRoom:setRoom, advance:advance, delPlayer:delPlayer, setPlayer:setPlayer, get:get, watch:watch, mode:function(){ return mode; }, where:function(){ return where; } };
+  return { init:init, prep:prep, create:create, setRoom:setRoom, advance:advance, delPlayer:delPlayer, setPlayer:setPlayer, get:get, watch:watch, mode:function(){ return mode; }, where:function(){ return where; } };
 })();
 function newPid(){ var x=''; while(x.length<12) x+=Math.random().toString(36).slice(2); return x.slice(0,12); }
 /* 部屋で出す問題（みんなで遊ぶときと同じ決まり） */
@@ -2114,13 +2141,24 @@ async function createRoom(){
   try{
     await Room.init();
     if(Room.mode()==='off'){ toast('いまは部屋を作れません。電波のよいところで、もう一度押してね'); return; }
-    var pid=newPid(), room=null, res='taken';
-    for(var k=0; k<6 && res==='taken'; k++){
-      room={ code:String(1000+Math.floor(Math.random()*9000)), host:pid, mode:roomMode(), lv:roomLv(), num:S.hon?HON_N:S.gnum, mix:!S.hon && S.gnum===8, round:1, qs:[], phase:'lobby', qi:0 };
+    var pid=newPid(), me={ name:name, joined:Date.now(), ans:{}, times:{} }, res='ng';
+    var room={ code:'', host:pid, mode:roomMode(), lv:roomLv(), num:S.hon?HON_N:S.gnum, mix:!S.hon && S.gnum===8, round:1, qs:[], phase:'lobby', qi:0 };
+    if(Room.mode()==='db'){
+      try{ res=await Room.create(room, pid, me); }catch(e){ res='ng'; }
+      if(res!=='ok'){ toast('部屋を作れませんでした。少し待ってから、もう一度押してね'); return; }
+      await enterRoom(room.code, pid, me, true, room);
+      // 書きこみが届かなかったときだけ、部屋を作る画面にもどす
+      var done=Room.create.done, R0=S.room;
+      if(done) done.catch(function(){ if(S.room===R0){ try{ R0.stop&&R0.stop(); clearInterval(R0.hb); }catch(e){} S.room=null; renderSetup(); show('s-setup'); toast('部屋を作れませんでした。電波のよいところで、もう一度押してね'); } });
+      return;
+    }
+    for(var k=0; k<6 && res!=='ok'; k++){
+      room.code=String(1000+Math.floor(Math.random()*9000));
       try{ res=await Room.create(room); }catch(e){ res='ng'; }
+      if(res==='ng') break;
     }
     if(res!=='ok'){ toast('部屋を作れませんでした。少し待ってから、もう一度押してね'); return; }
-    await enterRoom(room.code, pid, { name:name, joined:Date.now(), ans:{}, times:{} }, true);
+    await enterRoom(room.code, pid, me, true);
   } finally { btn.disabled=false; btn.textContent=oldT; }
 }
 function openJoin(code, fromLink){
@@ -2194,7 +2232,7 @@ $('join-go').onclick=async function(){
     await withTimeout(Room.init(), 20000);
     if(Room.mode()==='off') throw new Error('off');
     // QRを開いたときに読んでおいた部屋の様子があれば、それを使う（待ち時間を短く）
-    var pre=S.joinPre, d=(pre && pre.code===code && Date.now()-pre.at<20000) ? pre.d : await withTimeout(Room.get(code), 20000);
+    var pre=S.joinPre, d=(pre && pre.code===code && Date.now()-pre.at<90000) ? pre.d : await withTimeout(Room.get(code), 20000);
     S.joinPre=null;
     if(roomEnded(d.room)){ if($('join-codebox').hidden) showEnded(); else toast('部屋が見つからないか、もう終わっています'); return; }
     // 同じ部屋にもどってきたときは、前の答えを引きつぐ
@@ -2209,7 +2247,7 @@ $('join-go').onclick=async function(){
       return;
     }
     var me = prev ? { name:name, joined:prev.joined||Date.now(), ans:prev.ans||{}, times:prev.times||{}, mine:prev.mine||[] } : { name:name, joined:Date.now(), ans:{}, times:{} };
-    var ok=await withTimeout(enterRoom(code, pid, me, d.room.host===pid), 20000);
+    var ok=await withTimeout(enterRoom(code, pid, me, d.room.host===pid, null, d), 20000);
     if(ok===false) okEnd=false;
     break;
    }catch(e){
@@ -2235,10 +2273,13 @@ $('join-same-yes').onclick=async function(){
   }catch(e){ toast('通信できませんでした。もう一度押してね'); }
   finally{ b.disabled=false; }
 };
-async function enterRoom(code, pid, me, host){
+async function enterRoom(code, pid, me, host, made, pre){
   leaveRoom();
   var R={ code:code, pid:pid, host:host, me:me, data:null, players:[], view:'', busy:false, chain:Promise.resolve() };
-  var r=await Room.setPlayer(code, pid, me);
+  // 参加するとき：先に読んでおいた部屋の様子があれば、書きこみの返事を待たずに部屋の画面を出す（失敗したときだけ参加の画面にもどす）
+  var fast = !made && pre && pre.room && Room.mode()==='db';
+  if(fast){ R.wrote=Room.setPlayer(code, pid, me); }
+  var r= (made || fast) ? 'ok' : await Room.setPlayer(code, pid, me);
   if(r!=='ok'){ toast(r==='full' ? 'この部屋はいっぱいです（12人まで）' : '参加できませんでした。番号を確かめてね'); return false; }
   S.room=R; S.who='group'; S.sent={};
   var prevSt=store('nitaku_room'); if(prevSt && prevSt.code===code && prevSt.inv) R.inv=prevSt.inv;
@@ -2247,6 +2288,10 @@ async function enterRoom(code, pid, me, host){
   renderQR(code);
   $('lb-line').href='https://line.me/R/share?text='+encodeURIComponent(inviteText(code, me.name)+'\n'+joinUrl(code));
   R.stop=Room.watch(code, onRoom);
+  // 部屋を作った人：通信の返事を待たずに、すぐ部屋の画面を出す
+  if(made && S.room===R && !R.data) onRoom(made, [Object.assign({ pid:pid, seen:Date.now() }, me)]);
+  if(fast && S.room===R && !R.data) onRoom(pre.room, (pre.players||[]).filter(function(p){ return p.pid!==pid; }).concat([Object.assign({ pid:pid, seen:Date.now() }, me)]));
+  if(fast) R.wrote.then(function(x){ if(x!=='ok') throw x; }).catch(function(){ if(S.room!==R) return; try{ R.stop&&R.stop(); clearInterval(R.hb); }catch(e){} S.room=null; show('s-join'); toast('うまくつながりませんでした。もう一度「参加する」を押してね'); });
   // 30秒ごとに「まだ部屋にいます」を知らせる（いなくなった人を一覧から外す・部屋を30分で終わらせるため）
   var beat=function(){ if(S.room!==R) return; R.chain=R.chain.then(function(){ return Room.setPlayer(R.code, R.pid, R.me); }).catch(function(){}); };
   R.hb=setInterval(beat, 30000);
