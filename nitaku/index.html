@@ -1445,13 +1445,16 @@ function showHonGroupResult(){
     return { name:p.name, i:i, avg:avg, out:Q-ok.length, quick:by[0], slow:by.length>1?by[by.length-1]:null, sp:honSplit(ok), sd:honSd(ok.map(function(r){ return r.t; })), aw:[] };
   });
   var rank=P.slice().sort(function(a,b){ return (a.avg==null?1e9:a.avg)-(b.avg==null?1e9:b.avg); }), top=rank[0];
+  var topN=rank.filter(function(r){ return top.avg!=null ? (r.avg!=null && sec(r.avg)===sec(top.avg)) : r===top; }).map(function(r){ return esc(r.name); });
   var pick=function(r){ return r.c==='A' ? r.q.a : r.q.b; };
   var h='<div class="res-hero"><div class="pre">本能モード　'+n+'人の結果</div><img class="pnd" src="img/panda-joy.webp" alt="" width="96" height="96">'+
-    '<div class="catch">いちばん本能が速いのは…</div><div class="meter"><div class="num" style="font-size:40px">'+esc(top.name)+'</div><div class="cap">'+(top.avg!=null ? '平均 '+sec(top.avg)+'秒・'+honLevel(top.avg/1000, 1).replace(/（.*$/,'') : '全員時間切れ')+'</div></div></div>';
-  h+='<div class="card"><h3>⚡ 本能スピードのランキング</h3>'+rank.map(function(r,k){
-      return '<div class="hspd"><span class="md'+(k<3?' m'+(k+1):'')+'">'+(k+1)+'</span><span class="nm">'+esc(r.name)+'<small>'+esc(honLevel(r.avg==null?0:r.avg/1000, r.avg==null?0:1))+'</small></span><span class="sc">'+(r.avg==null?'—':sec(r.avg)+'<small>秒</small>')+'</span></div>'; }).join('');
+    '<div class="catch">いちばん本能が速いのは…</div><div class="meter"><div class="num" style="font-size:'+(topN.length>1?30:40)+'px">'+topN.join('・')+'</div><div class="cap">'+(top.avg!=null ? '平均 '+sec(top.avg)+'秒・'+honLevel(top.avg/1000, 1).replace(/（.*$/,'') : '全員時間切れ')+'</div></div></div>';
+  // 平均の秒数が同じ人は同じ順位にする
+  var place=[]; rank.forEach(function(r,k){ place[k] = k>0 && r.avg!=null && rank[k-1].avg!=null && sec(r.avg)===sec(rank[k-1].avg) ? place[k-1] : k+1; });
+  h+='<div class="card"><h3>⚡ 本能スピードのランキング</h3>'+rank.map(function(r,k){ var pl=place[k];
+      return '<div class="hspd"><span class="md'+(pl<=3?' m'+pl:'')+'">'+pl+'</span><span class="nm">'+esc(r.name)+'<small>'+esc(honLevel(r.avg==null?0:r.avg/1000, r.avg==null?0:1))+'</small></span><span class="sc">'+(r.avg==null?'—':sec(r.avg)+'<small>秒</small>')+'</span></div>'; }).join('');
   var mo=P.slice().sort(function(a,b){ return b.out-a.out; })[0];
-  h+= mo && mo.out>0 ? '<div class="rank"><span class="k">時間切れがいちばん多かった人</span><span class="v">'+esc(mo.name)+'（'+mo.out+'問）</span></div>' : '<div class="rank"><span class="k">時間切れ</span><span class="v">だれもいない！</span></div>';
+  h+= mo && mo.out>0 ? '<div class="rank"><span class="k">時間切れがいちばん多かった人</span><span class="v">'+P.filter(function(r){ return r.out===mo.out; }).map(function(r){ return esc(r.name); }).join('・')+'（'+mo.out+'問）</span></div>' : '<div class="rank"><span class="k">時間切れ</span><span class="v">だれもいない！</span></div>';
   h+='</div>';
   // 本能が合う2人（同じ答えの数。時間切れは同じに数えない）
   var pairs=[];
@@ -1478,11 +1481,14 @@ function showHonGroupResult(){
   var best=function(list, f, min){ var b=null; list.forEach(function(r){ var v=f(r); if(v==null) return; if(min!=null && v<min) return; if(!b || v>b.v) b={ r:r, v:v }; }); return b; };
   var give=function(b, a){ if(b) b.r.aw.push(a); };
   if(withAvg.length){ var fs=withAvg.slice().sort(function(a,b){ return a.avg-b.avg; });
-    give({ r:fs[0] }, ['🏆','即決王','考える前に指が動いてる','平均 '+sec(fs[0].avg)+'秒']);
-    var sl=fs[fs.length-1];
-    if(fs.length>1 && sl!==fs[0]) give({ r:sl }, sl.avg>=1500 ? ['🐢','熟考大賞','3秒をフルに使う慎重派','平均 '+sec(sl.avg)+'秒'] : ['🐢','マイペース賞','みんなの中では、いちばんじっくり派','平均 '+sec(sl.avg)+'秒']); }
-  var bo=best(P, function(r){ return r.out; }, 1); if(bo) give(bo, ['😴','時間切れ常習犯','本能がときどきお昼寝する','時間切れ '+bo.v+'問']);
-  var bm=best(P, function(r){ return minor[r.i]; }, 2); if(bm) give(bm, ['🦄','ひとりだけ賞','群れない本能','ひとりだけちがう答えが '+bm.v+'問']);
+    // 平均の秒数（0.1秒まで）が同じ人は、全員に同じ賞を出す
+    var f0=sec(fs[0].avg), sl=fs[fs.length-1], s0=sec(sl.avg);
+    fs.forEach(function(r){ if(sec(r.avg)===f0) give({ r:r }, ['🏆','即決王','考える前に指が動いてる','平均 '+f0+'秒']); });
+    if(s0!==f0) fs.forEach(function(r){ if(sec(r.avg)===s0) give({ r:r }, sl.avg>=1500 ? ['🐢','熟考大賞','3秒をフルに使う慎重派','平均 '+s0+'秒'] : ['🐢','マイペース賞','みんなの中では、いちばんじっくり派','平均 '+s0+'秒']); }); }
+  // 同じ数の人がいれば、全員に同じ賞
+  var giveAll=function(b, f, a){ if(b) P.forEach(function(r){ if(f(r)===b.v) give({ r:r }, a); }); };
+  var bo=best(P, function(r){ return r.out; }, 1); giveAll(bo, function(r){ return r.out; }, bo && ['😴','時間切れ常習犯','本能がときどきお昼寝する','時間切れ '+bo.v+'問']);
+  var bm=best(P, function(r){ return minor[r.i]; }, 2); giveAll(bm, function(r){ return minor[r.i]; }, bm && ['🦄','ひとりだけ賞','群れない本能','ひとりだけちがう答えが '+bm.v+'問']);
   var bj=best(P, function(r){ return major[r.i]; }, 1); if(bj && !bj.r.aw.length) give(bj, ['🙌','みんなの代表賞','みんなの本能とよくそろう','多い方の答えが '+bj.v+'問']);
   P.forEach(function(r){ if(!r.aw.length) r.aw.push(honSelfAward(r.avg==null?null:r.avg/1000, r.out, r.sp, r.sd)); });
   h+='<div class="card"><h3>🏆 本能アワード</h3>'+P.map(function(r){ return r.aw.map(function(a){ return honAwardRow(a, r.name); }).join(''); }).join('')+'</div>';
