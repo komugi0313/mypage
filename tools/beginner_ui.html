@@ -718,6 +718,10 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
     jn.querySelectorAll('[data-bg]').forEach(function(b){ b.remove(); });
     jn.querySelectorAll('.bg-hide').forEach(function(b){ b.classList.remove('bg-hide'); });
   }
+  function relabelAiOff(){   // 上級者モードでは、鑑定の欄の見出し・説明をもとの言い方に戻す（「やさしい言葉で」のままだった。2026-11-14 実機点検）
+    var s=document.getElementById('ai-slot'); if(!s) return;
+    [s.querySelector('h2'),s.querySelector('.eyebrow'),s.querySelector('h2+p, .lead'),document.getElementById('autoReadBtn')].forEach(function(e){ if(e&&e.dataset.bg&&e.dataset.bg!=='1'){ if(e.tagName==='H2') e.textContent=e.dataset.bg; else e.innerHTML=e.dataset.bg; delete e.dataset.bg; } });
+  }
   function relabelAi(){
     var s=document.getElementById('ai-slot'); if(!s) return;
     var h2=s.querySelector('h2'); if(h2&&!h2.dataset.bg){ h2.dataset.bg=h2.textContent; h2.textContent=WHOt()+'への鑑定（やさしい言葉で）'; }
@@ -760,7 +764,7 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
   function apply(){
     document.documentElement.classList.toggle('bg-on',on());
     relabelStatic(on()); relabelTips(on());
-    if(!on()){ navOff(); document.body.classList.remove('sample-fold'); return; }   // 上級者の表示では見本も全部出す
+    if(!on()){ navOff(); relabelAiOff(); document.body.classList.remove('sample-fold'); return; }   // 上級者の表示では見本も全部出す
     safe(function(){
       var c=(typeof chart!=='undefined')?chart:null; if(!c) return;
       var res=document.getElementById('result'), body=document.getElementById('result-body'); if(!res) return;
@@ -1073,7 +1077,7 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
   (function(){
     function fold(){ try{
       var ar=document.getElementById('autoReading'); if(!ar) return;
-      var has=!!(ar.textContent||'').trim(), tg=document.getElementById('bg-ar-toggle');
+      var has=!!(ar.textContent||'').trim()&&!ar.querySelector('.loading,.rd-loading')&&!!ar.querySelector('.rd-item,.reading,.err,p,div'), tg=document.getElementById('bg-ar-toggle');   // 作成中・空のときはたたまない（通信に失敗したとき、開いても中身がなかった。2026-11-14 実機点検）
       if(!on()||!has){ ar.classList.remove('bg-ar-closed'); if(tg) tg.remove(); return; }
       if(!tg){ tg=document.createElement('button'); tg.type='button'; tg.id='bg-ar-toggle'; tg.className='bg-ar-toggle';
         tg.onclick=function(){ var c=ar.classList.toggle('bg-ar-closed'); tg.textContent=c?'📝 作った鑑定文（お客様に送る文）を開く':'▲ 鑑定文を閉じる'; };
