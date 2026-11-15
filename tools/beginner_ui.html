@@ -398,8 +398,10 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
     var by=birthYearOf(c)||(c.now?c.now.year-c.now.age:0), y0=c.now?c.now.year:0, seenY={};
     var per=(kk.periods||[]).filter(function(p){ return p.when!=='大運'&&p.year0>=y0&&p.year0<y0+10; }).filter(function(p){ var k=p.year0+'|'+p.el; if(seenY[k]) return false; seenY[k]=1; return true; })
       .sort(function(a,b){ return (a.kind==='半合')-(b.kind==='半合')||a.year0-b.year0; }).slice(0,5).sort(function(a,b){return a.year0-b.year0;});
-    var rows=per.map(function(p){ var e=MEAN[p.el]; if(!e) return ''; var big=p.kind!=='半合';
-      return '<li><b class="nobr">'+p.year0+'年（'+(p.year0-by)+'歳）</b>：<span style="color:'+col(p.el)+';font-weight:900">'+e.n.split('（')[0]+'の力</span>が'+(big?'<b>大きくまとまり、運が良い方へ動く年</b>':'ゆるやかに後押しされる、良い年')+'。'+(p.kiNote?'がんばりすぎには少し気をつけて。':'')+'</li>'; }).filter(Boolean);
+    var gy=[], gm={}; per.forEach(function(p){ if(!MEAN[p.el]) return; if(!gm[p.year0]){ gm[p.year0]=[]; gy.push(p.year0); } gm[p.year0].push(p); });   // 同じ年は1行にまとめる（「2034年（44歳）」が2回出ていた。2026-11-15 実機点検）
+    var rows=gy.map(function(yy){ var L=gm[yy].slice().sort(function(a,b){ return (a.kind==='半合')-(b.kind==='半合'); }), anyBig=L.some(function(p){ return p.kind!=='半合'; });
+      var parts=L.map(function(p,i){ var e=MEAN[p.el]; return '<span style="color:'+col(p.el)+';font-weight:900">'+e.n.split('（')[0]+'の力</span>'+(i>0?'も':'が')+(p.kind!=='半合'?'<b>大きくまとまり</b>':'ゆるやかに後押しされ'); });
+      return '<li><b class="nobr">'+yy+'年（'+(yy-by)+'歳）</b>：'+parts.join('、')+(anyBig?'、<b>運が良い方へ動く年</b>':'る、良い年')+'。'+(L.some(function(p){ return p.kiNote; })?'がんばりすぎには少し気をつけて。':'')+'</li>'; });
     if(!items.length&&!nat.length&&!rows.length) return '';
     var h='<div class="bgc" id="bg-bond"><div class="bgh"><span class="ic">🤝</span>生まれ持った結びつきと、運が結びつく年</div>'+
       '<div class="bgl">人生の場面どうしが引き合う「結びつき」を見ています。となり合う場面どうしは<b>しっかり</b>、はなれた場面どうしは<b>ゆるやか</b>に働きます。</div>';
@@ -507,7 +509,7 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
       ['🌱','うまくいくコツ：','相手を思いどおりに動かそうとしない。踏み込みすぎない距離を保ち、違いを持ち味として認める。']
     ];
   }
-  function yrs(o,nowY){ var by=safe(function(){ return (typeof chart!=='undefined'&&chart&&typeof birthYearOf==='function')?birthYearOf(chart):0; },0); return o.map(function(x){var n=x.year-nowY;return x.year+'年（'+(n<=0?'今年':n+'年後')+(by?'・'+WHOt()+(x.year-by)+'歳':'')+'）'+kuT(x.year);}); }
+  function yrs(o,nowY){ var by=safe(function(){ return (typeof chart!=='undefined'&&chart&&typeof birthYearOf==='function')?birthYearOf(chart):0; },0); return o.map(function(x){var n=x.year-nowY;return x.year+'年（'+(n<=0?'今年':n+'年後')+(by?'・あなた'+(x.year-by)+'歳':'')+'）'+kuT(x.year);}); }
   // どちらかの「ひと休みの年」（PROの pkCpKuu＝解けない空亡の年。解ける年は印なし）の印（2026-11-04）
   function kuT(y){ return safe(function(){ return (typeof pkCpKuu==='function'&&typeof chart!=='undefined'&&typeof chartB!=='undefined'&&chart&&chartB)?pkCpKuu(chart,chartB,y,true):''; },''); }   // 西暦には年齢も付ける
   function plainCompatHTML(a,b,rt){
@@ -646,7 +648,7 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
     if(dd){ var s2=sig(c,dd), m2=dot(meanFor(c,dd).意); var m2a=m2.split(/(?<=。)/), m2b=m2a.filter(function(x){ return !(x.trim()&&nw.some(function(n){ return n.indexOf(x.trim())>=0; })); }); m2=m2b.join('').trim()+((m2b.length<m2a.length&&!(s2.mk==='◎'||s2.mk==='○'))?'こちらも大きな追い風というほどではないので、日々の積み重ねが力になります。':''); nw.push('いまの10年は「'+s2.lab+'」。'+m2); }   // 今年の段と同じ文（「とはいえ…」）はくり返さない（2026-11-02）
     if(nw.length) P.now='【いまの運気】\n'+nw.join('\n\n');   // 段ごとに空行を入れる（1行の改行だと文がくっつく。2026-11-02）
     var gd=[];
-    if(c.now){ var ys=(c.annualFortunes||[]).filter(function(a){return a.year>y&&a.year<y+10;});
+    if(c.now){ var ys=(c.annualFortunes||[]).filter(function(a){return a.year>=y&&a.year<y+10;});   // 今年も入れる（1行目の「本格的に動き出しやすいのは今年」と合わせる。2026-11-15 実機点検）
       var skY=shakyYears(c);
       var kbY=kuboYears(c);
       gd=ys.filter(function(a){var m=sig(c,a).mk;return (m==='◎'||m==='○')&&!skY[a.year]&&!kbY[a.year];}).map(function(a){return a.year+'年'+safe(function(){ return (typeof pkKuuTag==='function')?pkKuuTag(c,a.year,true):''; },'');});
@@ -656,7 +658,8 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
       if(fl.length) P.flow='【これからの流れ】\n'+fl.map(function(x){ return x+'。'; }).join('\n\n'); }
     var ts=safe(function(){return detectTensen(c);},null);
     if(ts&&ts.any){ var wl=[]; ['U','A'].forEach(function(sd){ [ts,ts.work||{}].forEach(function(x){ if(!x['d'+sd]) return; x['d'+sd].filter(function(l){return futureLab(c,l,'d');}).map(function(l){return duOfLab(c,l);}).concat(x['y'+sd].filter(function(l){return futureLab(c,l,'y');}).map(clean)).forEach(function(l){ if(wl.indexOf(l)<0) wl.push(l); }); }); });
-      wl.sort(function(p,q){ var a=String(p).match(/(\d{4})年(?:(\d+)月)?/), b=String(q).match(/(\d{4})年(?:(\d+)月)?/); return (a?(+a[1])*12+(+(a[2]||0)):-1)-(b?(+b[1])*12+(+(b[2]||0)):-1); });
+      var _by=safe(function(){ return birthYearOf(c); },0)||(c.now?c.now.year-c.now.age:0), _wk=function(x){ var a=String(x).match(/(\d{4})年(?:(\d+)月)?/); if(a) return (+a[1])*12+(+(a[2]||0)); var g=String(x).match(/(\d+)歳(?:(\d+)ヶ月)?/); return g?(_by+(+g[1]))*12+(+(g[2]||0)):-1; };   // 年のない「56歳7ヶ月〜」も年齢で並べる（若い順。2026-11-15）
+      wl.sort(function(p,q){ return _wk(p)-_wk(q); });
       if(wl.length) P.shake='【とくに揺れやすい時期】\n'+wl.join('・')+'。暮らしや仕事が大きく入れ替わりやすい時期です。大きな買い物や一か八かの勝負は避け、休む日を先に予定へ入れておきましょう。'; }
     var age=(c.now&&c.now.age)||0;
     if(det&&det.恋愛&&age>=18) P.love='【恋愛・結婚】\n'+det.恋愛;
@@ -718,17 +721,19 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
     jn.querySelectorAll('[data-bg]').forEach(function(b){ b.remove(); });
     jn.querySelectorAll('.bg-hide').forEach(function(b){ b.classList.remove('bg-hide'); });
   }
+  function descOf(b){ var n=b&&b.nextElementSibling; while(n&&n.classList.contains('busy-note')) n=n.nextElementSibling; return n; }   // 作成中の札（busy-note）をとばして、ボタンの説明を見つける
   function relabelAiOff(){   // 上級者モードでは、鑑定の欄の見出し・説明をもとの言い方に戻す（「やさしい言葉で」のままだった。2026-11-14 実機点検）
     var s=document.getElementById('ai-slot'); if(!s) return;
-    [s.querySelector('h2'),s.querySelector('.eyebrow'),s.querySelector('h2+p, .lead'),document.getElementById('autoReadBtn')].forEach(function(e){ if(e&&e.dataset.bg&&e.dataset.bg!=='1'){ if(e.tagName==='H2') e.textContent=e.dataset.bg; else e.innerHTML=e.dataset.bg; delete e.dataset.bg; } });
+    var _ab=document.getElementById('autoReadBtn'), _abd=descOf(_ab);   // 説明（btn-desc）と下の質問欄の説明（.qbox-sub）も元に戻す（2026-11-15 実機点検）
+    [s.querySelector('h2'),s.querySelector('.eyebrow'),s.querySelector('h2+p, .lead'),s.querySelector('.qbox-sub'),_ab,(_abd&&_abd.classList.contains('btn-desc'))?_abd:null].forEach(function(e){ if(e&&e.dataset.bg&&e.dataset.bg!=='1'){ if(e.tagName==='H2') e.textContent=e.dataset.bg; else e.innerHTML=e.dataset.bg; delete e.dataset.bg; } });
   }
   function relabelAi(){
     var s=document.getElementById('ai-slot'); if(!s) return;
     var h2=s.querySelector('h2'); if(h2&&!h2.dataset.bg){ h2.dataset.bg=h2.textContent; h2.textContent=WHOt()+'への鑑定（やさしい言葉で）'; }
     var eb=s.querySelector('.eyebrow'); if(eb&&!eb.dataset.bg){ eb.dataset.bg=eb.innerHTML; eb.innerHTML='<b>鑑定</b>文章で読む'; }
     var p=s.querySelector('h2+p, .lead'); if(p&&!p.dataset.bg){ p.dataset.bg=p.innerHTML; p.innerHTML='下のボタンを押すと、'+WHO()+'の生まれ持った性格や、これからの運の流れを、むずかしい言葉を使わずに文章でお伝えします。'; }
-    var qs=s.querySelector('.qbox-sub'); if(qs&&!qs.dataset.bg){ qs.dataset.bg='1'; qs.textContent='上の答えを読んで、もっと聞きたいことがあれば書いてください（答えの下に続けて出します）。'; }   // 下の質問欄は「続けて質問する」（2026-10-27）
-    var b=document.getElementById('autoReadBtn'); if(b&&!b.dataset.bg){ b.dataset.bg=b.innerHTML; b.innerHTML='📝 お客様に送る鑑定文を作る（性格と運の流れのまとめ）'; var _bd=b.nextElementSibling; if(_bd&&_bd.classList.contains('btn-desc')&&!_bd.dataset.bg){ _bd.dataset.bg=_bd.textContent; _bd.textContent='相談の答えとは別に、性格と運の流れを、やさしい言葉の文章にします（相談の欄が空のまま鑑定したときは、これが自動で作られます）'; } }
+    var qs=s.querySelector('.qbox-sub'); if(qs&&!qs.dataset.bg){ qs.dataset.bg=qs.innerHTML; qs.textContent='上の答えを読んで、もっと聞きたいことがあれば書いてください（答えの下に続けて出します）。'; }   // 下の質問欄は「続けて質問する」（2026-10-27）
+    var b=document.getElementById('autoReadBtn'); if(b&&!b.dataset.bg){ b.dataset.bg=b.innerHTML; b.innerHTML='📝 お客様に送る鑑定文を作る（性格と運の流れのまとめ）'; var _bd=descOf(b); if(_bd&&_bd.classList.contains('btn-desc')&&!_bd.dataset.bg){ _bd.dataset.bg=_bd.innerHTML; _bd.textContent='相談の答えとは別に、性格と運の流れを、やさしい言葉の文章にします（相談の欄が空のまま鑑定したときは、これが自動で作られます）'; } }
   }
   var foldOpen=false;
   // 相談の例（チップ）を押したときに入る文章も、専門用語を使わない言い方にする
