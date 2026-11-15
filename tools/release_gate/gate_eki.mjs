@@ -51,8 +51,14 @@ ok('開いただけでは文章作成を呼ばない', calls===0, 'calls='+calls
     { const [u,l]=key('水天需'); const o=F.buildOfflineReading(F.buildResult(u,l,4,[4]),'仕事はこのままでいいですか'); if(/今は「今は/.test(o.tsutae)) bad.push('今は「今は…」：'+o.tsutae.slice(0,60)); }
     { const L=F.ekiBulSplit('今回の線（三爻＝下から3本目。物語でいうと内から外への境目・試練の段階）の言葉ですよ\n・Aです。・Bです'); if(L.length!==3) bad.push('要点メモの分け方：'+JSON.stringify(L)); }
     { const t=F.ekiNoTameguchi('今は準備の時期に入っているよ。大事なんだよね。一緒に進んでいこうね。'); if(/いるよ。|だよね|いこうね/.test(t)) bad.push('ため口：'+t); }
+    { const TM=/(?:19|20)\d\d年|再来年|来年|今年|年内|来月|(?<![\d日])\d{1,2}月(?!\d)|か月|ヶ月|年後|以降が目安|が目安/;   /* 易は時期を出さない（鑑定者本人の決定 2026-11-15） */
+      for(const [nm,ko] of [['乾為天',2],['水天需',4],['坤為地',6],['火地晋',3]]) for(const q of ['いつ転職すればいいですか','今年と来年どちらがいいですか','彼とはいつ結婚できますか']){ const [u,l]=key(nm); const o=F.buildOfflineReading(F.buildResult(u,l,ko,[ko]),q); const t=[o.hantei,o.tsutae,o.leadTodo].join('\n'); if(TM.test(t)) bad.push('通信なしの時期：'+nm+' '+q+' → '+t.split('\n').find(x=>TM.test(x)).slice(0,60)); }
+      P=run('乾為天',2,'▼判定：◎ 来年の春に動くのがおすすめです\n▼伝え方：来年の春ごろに動くと流れに乗れます。準備が整ったら動き出しましょう。\n▼助言：・情報を集める','いつ転職すればいいですか');
+      if(TM.test(P.hantei)||!P.hantei.trim()||TM.test(P.tsutae)) bad.push('オンラインの時期：'+P.hantei+' / '+P.tsutae.slice(0,60));
+      const ts=F.ekiTimeStrip('来月の試験に向けて準備しましょう。春が来て氷が解けるように楽になります。3か月後には結果が出ます。','来月の試験は受かりますか');
+      if(!/来月の試験/.test(ts)||!/氷が解ける/.test(ts)||/3か月後/.test(ts)) bad.push('時期の外し方：'+ts); }
     return {bad}; });
-  ok('実地の点検の直し（注記・続けるべきか・A社B社・金運の時期・近い日の試験・今は今は・要点メモ・ため口）', r.bad.length===0, r.bad.join(' | ')); }
+  ok('実地の点検の直し（注記・続けるべきか・A社B社・易の時期を出さない・近い日の試験・今は今は・要点メモ・ため口）', r.bad.length===0, r.bad.join(' | ')); }
 async function consult(q,nums){ await p.evaluate(()=>scrollTo(0,0)); await p.click('.ct-number'); await p.waitForTimeout(300);
   for(const [i,v] of [['#num1',nums[0]],['#num2',nums[1]],['#num3',nums[2]]]) await p.fill(i,String(v));
   await p.fill('#question',q); const c0=calls; const t0=Date.now();
