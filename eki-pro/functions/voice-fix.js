@@ -210,7 +210,7 @@ async function getStore(event) {
   try {
     const blobs = require('@netlify/blobs');
     if (event && event.blobs && typeof blobs.connectLambda === 'function') blobs.connectLambda(event);   // exports.handler（Lambda 形式）では必要
-    return blobs.getStore({ name: 'voice-fix', consistency: 'strong' });   // 書いた直後の読みも最新に
+    return blobs.getStore('voice-fix');
   } catch (e) { return null; }
 }
 function periodId(pe) { const today = jstDay(); return (pe && pe >= today) ? pe : 'm' + today.slice(0, 7); }
