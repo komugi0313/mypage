@@ -476,6 +476,22 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
 .rv-ap{display:flex;gap:8px;align-items:center;border-top:2px dashed #F5E3A8;padding:8px 0;font-size:14px}
 .rv-ap span{flex:1}
 .rv-ap button{min-height:44px;border:2px solid var(--ink);background:#fff;border-radius:12px;font-weight:900;padding:0 12px;color:var(--ink)}
+/* あなたの中にあることば（恋愛編。鑑定者本人の指示 2026-11-15。見本 https://claude.ai/artifact/YHo39Rmnh9xy5LcvRDyCj7） */
+.kt .kt-hd{margin:0 0 2px;font-size:16px;font-weight:900;color:#1E1E2A}
+.kt .kt-hd .nm{color:#B0174F}
+.kt .kt-sub{margin:0 0 12px;font-size:13px;color:#5A546A;line-height:1.6}
+.kt-hito{background:#FFF6D6;border-radius:12px;padding:10px 10px 12px;margin-bottom:14px}
+.kt-hito h4{margin:0 0 8px;font-size:13px;font-weight:700;color:#5A546A;text-align:center;letter-spacing:.06em}
+.kt-hw{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.kt-h{white-space:nowrap;background:#fff;border:1.5px solid #1E1E2A;border-radius:999px;padding:3px 10px;font-size:14px;font-weight:700;color:#1E1E2A}
+.kt-grp{display:flex;flex-direction:column;gap:12px}
+.kt-g h4{display:flex;align-items:center;gap:6px;margin:0 0 6px;font-size:13px;font-weight:700;color:#5A546A}
+.kt-g h4 i{width:9px;height:9px;border-radius:50%;background:var(--kc);flex:none}
+.kt-ws{display:flex;flex-wrap:wrap;gap:6px}
+.kt-c{white-space:nowrap;background:var(--kb);color:var(--kt);border-radius:8px;padding:3px 9px;font-size:14px;font-weight:700;line-height:1.5}
+.kt-g0{--kc:#E0457B;--kb:#FFE3EC;--kt:#8E1240} .kt-g1{--kc:#3B7DD8;--kb:#E2EEFF;--kt:#1F4E91} .kt-g2{--kc:#E08A1E;--kb:#FFEFD9;--kt:#8A4A06}
+.kt-g3{--kc:#2E9E78;--kb:#DDF5EC;--kt:#17634A} .kt-g4{--kc:#7A5BD6;--kb:#ECE6FF;--kt:#4A2FA3} .kt-g5{--kc:#5A546A;--kb:#EEECF2;--kt:#2F2A3D}
+.kt.kt-a{background:#FFF7FA} .kt.kt-b{background:#F7F4FF}
 </style>
 <style id="flow2">
 /* はじめ方を「押したら何が起きるか」でわかる形に（鑑定者本人の指示 2026-11-13「この形で進めてください」） */
@@ -972,6 +988,7 @@ body.rdy-on #gres-body{padding-bottom:230px}
 <script src="questions.js"></script>
 <script src="questions-mine.js"></script>
 <script src="questions-hon.js"></script>
+<script src="kotoba-love.js"></script>
 <script>
 (function(){
 'use strict';
@@ -1755,6 +1772,52 @@ var Votes=(function(){
 })();
 Votes.init();
 function canon(q, c){ return (c==='A') !== !!q.sw ? 'a' : 'b'; }
+/* あなたの中にあることば（恋愛編）：答えた答えのことばを集め、よく付くことばほど軽く数えて、その人らしいことばを出す */
+var KOTOBA = (function(){
+  var byId={}, freq={}, hfreq={}, theme={};
+  (window.KOTOBA_THEMES||[]).forEach(function(t,n){ t[1].forEach(function(w){ theme[w]=n; }); });
+  (window.KOTOBA_LOVE||[]).forEach(function(r){
+    byId[hashStr(r[0]+'｜'+r[1])]={ a:r[2], ah:r[3], b:r[4], bh:r[5] };
+    r[2].concat(r[4]).forEach(function(w){ freq[w]=(freq[w]||0)+1; });
+    [r[3],r[5]].forEach(function(w){ if(w) hfreq[w]=(hfreq[w]||0)+1; });
+  });
+  return { byId:byId, freq:freq, hfreq:hfreq, theme:theme };
+})();
+var KOTOBA_OPP=[['一目ぼれしやすい','好きになるまで時間がかかる'],['慎重','直感で動く'],['追いかけたい','追いかけられたい'],['かまってほしい','ほうっておいてほしい'],
+  ['ふたりの時間を大切にしたい','みんなでわいわいも好き'],['おうちが好き','おでかけ派'],['のんびり派','新しいことをしたい'],['安心がいちばん','ドキドキしたい'],
+  ['ムードを大事にする','現実派'],['ストレート','照れ隠し'],['ストレート','素直になれない'],['恥ずかしがり','自分から話しかける'],['自分の時間もほしい','かまってほしい'],
+  ['さっぱり系','重め'],['さっぱり系','かまってちゃん'],['さっぱり系','恋愛全力'],['さっぱり系','甘えんぼう'],['しっかり者','甘えんぼう'],['自由人','根っから一途'],
+  ['自由人','重め'],['甘えんぼう','ほうっておいてほしい'],['甘えんぼう','自分の時間もほしい'],['かまってちゃん','ほうっておいてほしい'],['かまってちゃん','自分の時間もほしい'],['さっぱり系','やきもちやき'],['しっかり者','甘えたい'],['恋愛全力','慎重'],['ロマンチスト','さっぱり系'],['照れ屋','恋愛全力'],['マイペース','尽くし系']];
+function kotobaOf(qs, ans){
+  var sc={}, hs={}, order=0, first={};
+  qs.forEach(function(q,qi){
+    var c=ans&&ans[qi]; if(c!=='A' && c!=='B') return;
+    var k=KOTOBA.byId[q.id]; if(!k) return;
+    var side=canon(q,c);
+    (k[side]||[]).forEach(function(w){ if(KOTOBA.theme[w]==null) return; sc[w]=(sc[w]||0)+1/Math.sqrt(KOTOBA.freq[w]||1); if(first[w]==null) first[w]=order++; });
+    var h=k[side+'h']; if(h){ hs[h]=(hs[h]||0)+1/Math.sqrt(KOTOBA.hfreq[h]||1); if(first[h]==null) first[h]=order++; }
+  });
+  var by=function(o){ return function(a,b){ return (o[b]-o[a]) || (first[a]-first[b]); }; };
+  // 反対の意味のことばは、強く出たほうだけ出す
+  var opp=function(w,got){ return KOTOBA_OPP.some(function(p){ var i=p.indexOf(w); return i>=0 && got.indexOf(p[1-i])>=0; }); };
+  var ws=Object.keys(sc).sort(by(sc)), per={}, pick=[];
+  ws.forEach(function(w){ var t=KOTOBA.theme[w]; if(pick.length<13 && (per[t]||0)<3 && !opp(w,pick)){ per[t]=(per[t]||0)+1; pick.push(w); } });
+  if(!pick.length) return null;
+  var hito=[]; Object.keys(hs).sort(by(hs)).forEach(function(w){ if(hito.length<3 && !opp(w,hito.concat(pick))) hito.push(w); });
+  return { words:pick, hito:hito };
+}
+function kotobaHTML(qs, ans, label, cls){
+  var r=kotobaOf(qs, ans); if(!r) return '';
+  var h='<div class="card kt'+(cls?' '+cls:'')+'"><p class="kt-hd"><span class="nm">'+esc(label)+'</span>の中にあることば</p><p class="kt-sub">答えから見えた、恋のかたちです。</p>';
+  if(r.hito.length) h+='<div class="kt-hito"><h4>ひとことで言うと</h4><div class="kt-hw">'+r.hito.map(function(w){ return '<span class="kt-h">'+esc(w)+'</span>'; }).join('')+'</div></div>';
+  h+='<div class="kt-grp">';
+  (window.KOTOBA_THEMES||[]).forEach(function(t,n){
+    var ws=r.words.filter(function(w){ return KOTOBA.theme[w]===n; }); if(!ws.length) return;
+    h+='<div class="kt-g kt-g'+n+'"><h4><i></i><span>'+esc(t[0])+'</span></h4><div class="kt-ws">'+ws.map(function(w){ return '<span class="kt-c">'+esc(w)+'</span>'; }).join('')+'</div></div>';
+  });
+  return h+'</div></div>';
+}
+
 /* 表示の A/B に合わせた、みんなの数（今の答えも足す） */
 function worldCounts(q, picks){
   var c = S.counts && S.counts[q.id];
@@ -2020,7 +2083,7 @@ function showResult(){
   var sp=speedStats(S.qs,S.times[0],S.ans[0]);
   var hist=saveHist(mode, sc);
   var others = AXES[mode].filter(function(ax){ return ax.k!==hd.k; });
-  var h='<div class="res-hero"><div class="pre">'+playName(mode)+'　あなたの結果</div>'+
+  var h=(mode==='love' ? kotobaHTML(S.qs, S.ans[0], 'あなた', '') : '')+'<div class="res-hero"><div class="pre">'+playName(mode)+'　あなたの結果</div>'+
     '<img class="pnd" src="img/panda-'+(val>=65?'smirk':(val<35?'shy':'1'))+'.webp" alt="" width="96" height="96">'+
     '<div class="meter"><div class="cap">'+hd.cap+'</div><div class="num">'+val+'<small>%</small></div></div>'+
     '<div class="catch">'+axComment(hd.k,val)+'</div>'+
@@ -2064,6 +2127,8 @@ function showGroupResult(){
   var tops = R.filter(function(r){ return r.sc[hd.k]===top.sc[hd.k]; }).map(function(r){ return esc(r.p.name); });
   h+='<div class="meter"><div class="num" style="font-size:'+(tops.length>1?30:40)+'px">'+tops.join('・')+'</div><div class="cap">'+hd.cap+' '+top.sc[hd.k]+'%'+(tops.length>1?'（同じ）':'')+'</div></div></div>';
 
+  // あなたの中にあることば（恋愛編。1人ずつ）
+  if(mode==='love') R.forEach(function(r,k){ h+=kotobaHTML(S.qs, S.ans[r.i], r.p.name+'さん', k%2?'kt-b':'kt-a'); });
   // 物差しごとのランキング
   h+='<div class="card"><h3>ランキング</h3>';
   AXES[mode].forEach(function(ax){
