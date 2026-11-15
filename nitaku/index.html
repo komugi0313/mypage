@@ -450,9 +450,9 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
 .aq-row>div{flex:1;min-width:0}
 .aq-row p{margin:0;font-size:14px;font-weight:700;line-height:1.5}
 .aq-n{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
-.aq-n span{background:#FFD3E2;border:2px solid #1E1E2A;border-radius:999px;padding:0 10px;font-size:13px;font-weight:900;color:#1E1E2A}
-.aq-row.B .aq-n span{background:#CFE3FF}
-.aq-n span.none{background:#fff;border-style:dashed;color:var(--sub);font-weight:700}
+.aq-n>span{background:#FFD3E2;border:2px solid #1E1E2A;border-radius:999px;padding:0 10px;font-size:13px;font-weight:900;color:#1E1E2A}
+.aq-row.B .aq-n>span{background:#CFE3FF}
+.aq-n>span.none{background:#fff;border-style:dashed;color:var(--sub);font-weight:700}
 .big .bsub{display:block;font-family:"Zen Maru Gothic",sans-serif;font-size:13px;font-weight:700;margin-top:2px;line-height:1.4}
 .qby{text-align:center;margin:-6px 0 12px}
 .qby span{display:inline-block;background:#FFE071;border:2px solid #1E1E2A;border-radius:999px;padding:2px 12px;font-size:13px;font-weight:900;color:#1E1E2A}
@@ -1419,7 +1419,26 @@ function honTimeout(){
 }
 function honLevel(avg, n){
   if(!n) return '全部時間切れ。次はもっと早く！';
-  return avg<1.2 ? '反射神経レベル（迷いゼロ）' : (avg<2 ? '本能タイプ（直感で生きてる）' : 'じっくり派（3秒でも考えちゃう）');
+  return avg<0.9 ? '読む前に押してる疑惑' : avg<1.3 ? '迷いゼロの即決人間' : avg<1.7 ? '迷う前に答えが出る人' : avg<2.2 ? 'ちょっと迷ってから選ぶ人' : '3秒をぜんぶ使う慎重派';
+}
+/* みんなの結果：ひとりずつ、その人だけのひとこと（全員同じ言葉にしない。鑑定者本人 2026-11-15「みんな直感で生きてるだと全然面白くない」） */
+function honSay(r, k, rank, place, used){
+  var c=[], f=function(t){ return (Math.round(t*10)/10).toFixed(1); };
+  if(r.avg==null) c.push('全部時間切れ。本能がお昼寝中');
+  else {
+    var top=rank[0].avg, last=rank[rank.length-1];
+    if(place[k]===1 && rank.length>1) c.push('自分の気持ちに、いちばん正直な人');
+    if(r.quick && r.quick.t<800) c.push('最速'+f(r.quick.t/1000)+'秒。自分の「好き」がはっきりしてる人');
+    if(r.sp && r.sp.love!=null && r.sp.normal!=null){ var d=r.sp.normal-r.sp.love; if(d>=0.3) c.push('恋の問題だけ'+f(d)+'秒速い'); else if(d<=-0.3) c.push('恋の問題になると'+f(-d)+'秒ためらう'); }
+    if(r.out>0) c.push('時間切れ'+r.out+'問。そこで本能がフリーズ');
+    if(r.sd>=0.7) c.push('即答と長考の差が激しい');
+    if(r.sd>0 && r.sd<0.3) c.push('どの問題も同じペース。ブレない');
+    if(rank.length>1 && r===last && place[k]>1) c.push('3秒をじっくり味わう派');
+    if(place[k]>1) c.push('1位まで、あと'+f((r.avg-top)/1000)+'秒');
+    c.push('平均'+f(r.avg/1000)+'秒で駆けぬけた');
+  }
+  for(var i=0;i<c.length;i++) if(!used[c[i]]){ used[c[i]]=1; return c[i]; }
+  return c[c.length-1];
 }
 /* 本能モードの結果を面白く（鑑定者本人の指示 2026-11-14「結果をもっと読み手が面白い内容に」「ぜんぶ入れて」）：
    ①本能アワード ②秒で選んだのに、みんなと逆 ③恋愛とふつう、どっちが速い？ ④迷った問題にひとこと ⑤満場一致の即答 */
@@ -1503,11 +1522,12 @@ function showHonGroupResult(){
   var topN=rank.filter(function(r){ return top.avg!=null ? (r.avg!=null && sec(r.avg)===sec(top.avg)) : r===top; }).map(function(r){ return esc(r.name); });
   var pick=function(r){ return r.c==='A' ? r.q.a : r.q.b; };
   var h='<div class="res-hero"><div class="pre">本能モード　'+n+'人の結果</div><img class="pnd" src="img/panda-joy.webp" alt="" width="96" height="96">'+
-    '<div class="catch">いちばん本能が速いのは…</div><div class="meter"><div class="num" style="font-size:'+(topN.length>1?30:40)+'px">'+topN.join('・')+'</div><div class="cap">'+(top.avg!=null ? '平均 '+sec(top.avg)+'秒・'+honLevel(top.avg/1000, 1).replace(/（.*$/,'') : '全員時間切れ')+'</div></div></div>';
+    '<div class="catch">いちばん本能が速いのは…</div><div class="meter"><div class="num" style="font-size:'+(topN.length>1?30:40)+'px">'+topN.join('・')+'</div><div class="cap">'+(top.avg!=null ? '平均 '+sec(top.avg)+'秒・'+honLevel(top.avg/1000, 1) : '全員時間切れ')+'</div></div></div>';
   // 平均の秒数が同じ人は同じ順位にする
   var place=[]; rank.forEach(function(r,k){ place[k] = k>0 && r.avg!=null && rank[k-1].avg!=null && sec(r.avg)===sec(rank[k-1].avg) ? place[k-1] : k+1; });
+  var usedSay={}; rank.forEach(function(r,k){ r.say=honSay(r,k,rank,place,usedSay); });
   h+='<div class="card"><h3>⚡ 本能スピードのランキング</h3>'+rank.map(function(r,k){ var pl=place[k];
-      return '<div class="hspd"><span class="md'+(pl<=3?' m'+pl:'')+'">'+pl+'</span><span class="nm">'+esc(r.name)+'<small>'+esc(honLevel(r.avg==null?0:r.avg/1000, r.avg==null?0:1))+'</small></span><span class="sc">'+(r.avg==null?'—':sec(r.avg)+'<small>秒</small>')+'</span></div>'; }).join('');
+      return '<div class="hspd"><span class="md'+(pl<=3?' m'+pl:'')+'">'+pl+'</span><span class="nm">'+esc(r.name)+'<small>'+esc(r.say)+'</small></span><span class="sc">'+(r.avg==null?'—':sec(r.avg)+'<small>秒</small>')+'</span></div>'; }).join('');
   var mo=P.slice().sort(function(a,b){ return b.out-a.out; })[0];
   h+= mo && mo.out>0 ? '<div class="rank"><span class="k">時間切れがいちばん多かった人</span><span class="v">'+P.filter(function(r){ return r.out===mo.out; }).map(function(r){ return esc(r.name); }).join('・')+'（'+mo.out+'問）</span></div>' : '<div class="rank"><span class="k">時間切れ</span><span class="v">だれもいない！</span></div>';
   h+='</div>';
@@ -1580,7 +1600,7 @@ function showHonGroupResult(){
   h+='<div class="card"><h3>ひとりずつの本能</h3>';
   P.forEach(function(r, ri){
     h+='<div class="ppl hsr '+(ri%2?'ppl-b':'ppl-a')+'"><div class="pp-top"><div class="hs-sec">'+(r.avg==null?'<b>—</b>':'<b>'+sec(r.avg)+'</b><small>秒</small>')+'</div><div class="pp-who"><strong>'+esc(r.name)+'</strong><span>本能スピード</span></div></div>'+
-       '<div class="pp-say">'+esc(honLevel(r.avg==null?0:r.avg/1000, r.avg==null?0:1))+(r.out?'　時間切れ '+r.out+'問':'')+'</div>'+
+       '<div class="pp-say">'+esc(r.say)+(r.out && !/時間切れ/.test(r.say)?'　時間切れ '+r.out+'問':'')+'</div>'+
        (r.quick ? '<div class="pks">'+'<div class="pk pk-q"><div class="pk-h"><b>⚡ いちばん即決</b><span>'+sec(r.quick.t)+'秒</span></div><div class="pk-c">「'+esc(pick(r.quick))+'」を選んだ</div></div>'+
          (r.slow ? '<div class="pk pk-s"><div class="pk-h"><b>🌀 いちばん迷った</b><span>'+sec(r.slow.t)+'秒</span></div><div class="pk-c">「'+esc(pick(r.slow))+'」を選んだ</div><p class="tsk">'+(r.slow.t<1500?'それでも速い。迷いなし！':honTsukkomi(r.slow.q, r.name))+'</p></div>' : '')+'</div>' : '')+honSplitHTML(r.sp)+'</div>';
   });
