@@ -57,8 +57,16 @@ ok('開いただけでは文章作成を呼ばない', calls===0, 'calls='+calls
       if(TM.test(P.hantei)||!P.hantei.trim()||TM.test(P.tsutae)) bad.push('オンラインの時期：'+P.hantei+' / '+P.tsutae.slice(0,60));
       const ts=F.ekiTimeStrip('来月の試験に向けて準備しましょう。春が来て氷が解けるように楽になります。3か月後には結果が出ます。','来月の試験は受かりますか');
       if(!/来月の試験/.test(ts)||!/氷が解ける/.test(ts)||/3か月後/.test(ts)) bad.push('時期の外し方：'+ts); }
+    { /* ③は卦のテーマ名の中の「整った」で選ばない・④のかぎかっこを重ねない・この先の流れ（2026-11-15） */
+      const [u,l]=key('水火既済'); const rr=F.buildResult(u,l,3,[3]); window.__ekiQ='A社とB社どちらに転職すべきですか';
+      const h=F.ekiTalkHTML({hantei:'〇 卦から見ると、自分の力を出して伸びていけるほうを選ぶのが合います',tsutae:'卦から見ると合います。今は「整った状態を守る時」に入っています。'},rr,['卦から見ると合います。今は「整った状態を守る時」に入っています。'],['「A社」「B社」の条件を書き出してくらべましょう。']);
+      const d=document.createElement('div'); d.innerHTML=h; const tx=d.innerText;
+      if(/今は「整った状態を守る時」に入っています/.test((tx.split('動き出す合図を伝える')[1]||'').split('どうすればよいか')[0])) bad.push('③がテーマ名を拾った');
+      if(!/動き出す合図を伝える/.test(tx)) bad.push('③がない');
+      if(/「「/.test(tx)) bad.push('かぎかっこの重なり：'+(tx.match(/「「[^\n]{0,30}/)||[''])[0]);
+      for(const nm of ['坎為水','沢天夬','天山遯']){ const k2=Object.keys(HEXDB).find(k=>HEXDB[k].nm===nm); for(const rk of ['C','D','E']){ const w=F.ekiFlowWord(HEXDB[k2],rk); if(/大きな波はなく|時期/.test(w)) bad.push('この先の流れ：'+nm+rk+' '+w); } } }
     return {bad}; });
-  ok('実地の点検の直し（注記・続けるべきか・A社B社・易の時期を出さない・近い日の試験・今は今は・要点メモ・ため口）', r.bad.length===0, r.bad.join(' | ')); }
+  ok('実地の点検の直し（注記・続けるべきか・A社B社・易の時期を出さない・近い日の試験・今は今は・要点メモ・ため口・③の合図・かぎかっこ・この先の流れ）', r.bad.length===0, r.bad.join(' | ')); }
 async function consult(q,nums){ await p.evaluate(()=>scrollTo(0,0)); await p.click('.ct-number'); await p.waitForTimeout(300);
   for(const [i,v] of [['#num1',nums[0]],['#num2',nums[1]],['#num3',nums[2]]]) await p.fill(i,String(v));
   await p.fill('#question',q); const c0=calls; const t0=Date.now();

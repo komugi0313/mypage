@@ -403,7 +403,7 @@ async function getStore(event) {
   try {
     const blobs = require('@netlify/blobs');
     if (event && event.blobs && typeof blobs.connectLambda === 'function') blobs.connectLambda(event);   // exports.handler（Lambda 形式）では必要
-    return blobs.getStore('pro-usage');
+    return blobs.getStore({ name: 'pro-usage', consistency: 'strong' });   // 書いた直後の読みも最新に（続けての質問で STORE 503 になっていた）
   } catch (e) { return null; }
 }
 

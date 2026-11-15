@@ -3035,7 +3035,8 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
       if(code==='TOO_LONG'||res.status===413) throw stop('ご相談の文が長すぎるため、オンライン鑑定（本格鑑定）を作れませんでした。文を短くしてお試しください。','TOO_LONG');
       if(code==='BUSY') throw stop('短い時間に続けてご利用があったため、オンライン鑑定（本格鑑定）を少しお休みしています。1〜2分おいてお試しください。','BUSY');
       if(code==='MEMBER_ID') throw stop('🔑 会員の確認ができなかったため、オンライン鑑定（本格鑑定）を作れませんでした。一度ログアウトして、もう一度ログインしてください。',code);   // PRO・ビギナーと同じ案内（会員IDが取れない＝ログインし直す。2026-11-02）
-      if(code==='STORE'||code==='MEMBER_CHECK') throw stop('ただいまサーバーでご契約の確認ができないため、オンライン鑑定（本格鑑定）を作れませんでした。少し時間をおいてお試しください。',code);
+      if(code==='STORE') throw stop('ただいまサーバーが混み合っています。少し時間をおいてお試しください。',code);   // STORE＝サーバーの保存場所（回数の記録）が使えない。ご契約の問題ではない（2026-11-15）
+      if(code==='MEMBER_CHECK') throw stop('ただいまサーバーでご契約の確認ができないため、オンライン鑑定（本格鑑定）を作れませんでした。少し時間をおいてお試しください。',code);
       if(/^(SETUP|NO_KEY|ORIGIN|PRODUCT|METHOD|BAD_REQUEST)$/.test(code)) throw stop('オンライン鑑定（本格鑑定）の設定を確認できませんでした。時間をおいてもつながらないときは、お問い合わせください。',code);
       let msg=`HTTP ${res.status}`; try{ msg=(e0&&e0.error&&e0.error.message)||msg; }catch(_){}
       const busy=code==='UPSTREAM_BUSY'||code==='UPSTREAM'||res.status===429||res.status>=500||/overload|unavailable|rate|demand/i.test(msg);
@@ -3108,7 +3109,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
   function ekiAsksTime(q){ q=String(q||''); const f=ekiQForm(q); return f==='when'||f==='year'; }
   /* 時期を言い当てる文を外す（どの相談でも）。お客様が自分で書いた日・月（「来月の試験」）だけの文、季節のたとえ、相談先の番号の文、生年月日（四柱推命）から見た文は残す */
   function ekiTimeStrip(t,q){ if(t==null) return t; q=String(q||'');
-    const qw=(String(q).match(EKI_TIME_ANY_G)||[]);
+    const qw=ekiQForm(q)==='year'?[]:(String(q).match(EKI_TIME_ANY_G)||[]);   // 「今年か来年か」の相談では、相談文の「今年・来年」も答えの時期として使わない（2026-11-15）
     return String(t).split('\n').map(function(ln){ const ss=ln.split(/(?<=[。！？])/); const out=ss.filter(function(x){ if(/\d{2,4}-\d{1,4}-\d{3,4}|#\d{3,4}/.test(x)) return true;
         if(/生年月日|四柱推命|生まれ持った/.test(x)) return true;
         const ms=x.match(EKI_TIME_ANY_G); if(!ms) return true;
@@ -3151,7 +3152,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
   /* 要点メモ・助言を「・」で分ける：行頭・文の終わりのあとの「・」だけで分け、かっこの中や語と語のあいだの「・」（始まり・準備）では分けない（2026-11-14） */
   function ekiBulSplit(s){ const out=[]; String(s||'').split('\n').forEach(function(ln){ let c='', d=0; const a=Array.from(ln); for(let i=0;i<a.length;i++){ const ch=a[i]; if('「『（(【'.indexOf(ch)>=0) d++; else if('」』）)】'.indexOf(ch)>=0){ if(d>0) d--; }
       if(ch==='・'&&d===0&&(!c.trim()||/[。！？!?\s　]$/.test(c))){ if(c.trim()) out.push(c); c=''; continue; } c+=ch; } if(c.trim()) out.push(c); }); return out.map(function(x){ return x.trim(); }).filter(Boolean); }
-  try{ window.__ekiFix={ekiMetaStrip:ekiMetaStrip,ekiStayQ:ekiStayQ,ekiPairNoInfo:ekiPairNoInfo,ekiTimeStrip:ekiTimeStrip,ekiExamNear:ekiExamNear,ekiExamLead:ekiExamLead,ekiNoImaDup:ekiNoImaDup,ekiKeigo:ekiKeigo,ekiNoTameguchi:ekiNoTameguchi,ekiVisitNote:ekiVisitNote,ekiDedupe:ekiDedupe,ekiBulSplit:ekiBulSplit,ekiFixSym:ekiFixSym,ekiCleanReading:ekiCleanReading,parseReading:parseReading,buildResult:buildResult,buildOfflineReading:buildOfflineReading,ekiOfflineLead:ekiOfflineLead,ekiMoneyFlow:ekiMoneyFlow}; }catch(_){ }   // 点検用（2026-11-14）
+  try{ window.__ekiFix={ekiMetaStrip:ekiMetaStrip,ekiStayQ:ekiStayQ,ekiPairNoInfo:ekiPairNoInfo,ekiTimeStrip:ekiTimeStrip,ekiExamNear:ekiExamNear,ekiExamLead:ekiExamLead,ekiNoImaDup:ekiNoImaDup,ekiKeigo:ekiKeigo,ekiNoTameguchi:ekiNoTameguchi,ekiVisitNote:ekiVisitNote,ekiDedupe:ekiDedupe,ekiBulSplit:ekiBulSplit,ekiFixSym:ekiFixSym,ekiCleanReading:ekiCleanReading,parseReading:parseReading,buildResult:buildResult,buildOfflineReading:buildOfflineReading,ekiOfflineLead:ekiOfflineLead,ekiMoneyFlow:ekiMoneyFlow,ekiTalkHTML:ekiTalkHTML,ekiFlowWord:ekiFlowWord}; }catch(_){ }   // 点検用（2026-11-14）
   function buildPrompt(r, question){
     const _cn=clientName()?NAME_TOKEN:'';
     const tone={soft:'やさしく寄り添う、安心させる口調',firm:'きっぱりと、背中を押す力強い口調',spiritual:'スピリチュアルで神秘的な、魂に語りかける口調',business:'現実的で具体的、論理的にアドバイスする口調'}[cur.tone];
@@ -3482,7 +3483,7 @@ ${jargonLine}${koStageLine}プロの鑑定に聞こえるよう、温かく具�
   function ekiNowWaitLead(r,o){ const g=ekiGrp(r.rank); if(g==='g') return '易で見ると、待つより「今」動くほうが合います。今は動いてよい流れなので、準備を整えたうえで進みましょう。';
     return '易で見ると、今すぐより「'+o.st+'」'+ekiHou(o.st)+'が合います。'+(g==='m'?'準備と下調べを進めながら、足元が整ってから動くのがよいでしょう。':'今は決めるのを急がず、流れが変わってから動きましょう。'); }
   /* 1行目がAかBかの問いに答えているか（どちらかを選んでいる・両方見送りと読めない） */
-  function ekiChoiceAnswered(ph,q){ ph=String(ph||''); const f=ekiQForm(q); if(f==='year'||f==='when') return !EKI_TIME_ANY.test(ph);   /* 易は時期を出さない：1行目が年・月・季節を言い当てていたら、ツールの1行目に（2026-11-15） */
+  function ekiChoiceAnswered(ph,q){ ph=String(ph||''); const f=ekiQForm(q); if(f==='year'||f==='when') return !EKI_TIME_ANY.test(ph)&&/言い当て|合図/.test(ph);   /* 易は時期を出さない：1行目が年・月・季節を言い当てていたら、ツールの1行目に（2026-11-15） */
     if(f!=='choice') return true; const o=ekiChoiceOpts(q); if(!o) return true;
     const pick=x=>{ x=String(x||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); return x&&new RegExp(x+'[」』]?(?:の方|のほう|ほう|方|が合|を選|に決|に進|に行|へ|がおすすめ|がよ|が良|を視野|を軸|を中心)').test(ph); };
     if(o.pair){ if(pick(o.a)||pick(o.b)) return true; return /どちらを選(?:ぶにしても|んでも)/.test(ph)&&!/見送|控え|やめ/.test(ph.replace(/控えめ/g,'')); }
@@ -3492,6 +3493,14 @@ ${jargonLine}${koStageLine}プロの鑑定に聞こえるよう、温かく具�
   function ekiHou(x){ return /[うくすつぬふむゆるぐずづぶぷいた]$/.test(x)?'ほう':'のほう'; }
   /* 1行目（2文まで）：問いの形に答える。記号の向き（◎〇＝動いてよい／△＝整えてから／✖＝今は控える）と、動いた爻の位置・之卦（この先）から */
   /* 動き出す合図（時期ではなく、卦から見た「〜が整ったら」の条件。鑑定者本人の決定 2026-11-15「易も時期は出さないで」） */
+  /* 「この先の流れ」の一言：卦の記号と意味から（難しい卦に「大きな波はなく」と言わない・「時期」と言わない。2026-11-15） */
+  const EKI_HARD=/苦|困難|危|難|険|窮|閉|退|争|対立|試練|ふさが|衰|剥|迫|行き詰|落とし穴|障害|止ま|離れ|損|疑|乱|散/;
+  function ekiFlowWord(hx,rank){ const g=ekiGrp(rank), hard=!!hx&&EKI_HARD.test(String(mTheme(hx)||'')+String(mMsg(hx)||''));
+    if(g==='g') return hard?'厳しさはあっても、前に進める流れです。':'追い風の流れです。';
+    if(g==='b') return '無理をせず、守りを固めたい流れです。';
+    return hard?'慎重さが求められる流れです。':'大きな波はなく、足元を整えていく流れです。'; }
+  /* 動き出す合図の短い言い直し（話す順番③。①に合図が入っているとき） */
+  function ekiSignShort(r){ const g=ekiGrp(r.rank); return g==='g'?'「準備が整い、気持ちが前に向いた」と感じたら、それが合図です。そのときは迷わず一歩を踏み出しましょう。':g==='m'?'「気がかりが一つ片づいた」と感じたら、それが合図です。それまでは足元を整えておきましょう。':'「状況が落ち着き、無理なく進める見通しが立った」と感じたら、それが合図です。それまでは守りを固めましょう。'; }
   function ekiSignLine(r){ const g=ekiGrp(r.rank), sh=r.shika&&r.shika.hex, shT=sh?mTheme(sh):'', T=mTheme(r.h)||'';
     const base=T?'易で出た「'+T+'」から見ると、':'';
     if(g==='g') return base+'今は動いてよい流れです。準備が整い、気持ちが前に向いたときが動き出す合図です。';
@@ -3551,8 +3560,9 @@ ${jargonLine}${koStageLine}プロの鑑定に聞こえるよう、温かく具�
     const shika=r.shika&&r.shika.hex?r.shika.hex:null;
     // 相談の形（2026-11-02）：亡くなった方／吉凶を問わない／今年か来年か・いつ・AかB／お金（金運の流れ）
     const _dec=!_sf&&ekiDeceasedQ(q), _nj=!_sf&&!_dec&&ekiNoJudgeQ(q), _fromShi=ekiFromShi(r);
-    const _lead=(!_sf&&!_dec&&!_nj)?(ekiOfflineLead(r,q)||ekiExamLead(r,q)||ekiExamPh('',rankToVerdict(r.rank).sym,q)):'';   // 「受かりますか」は見込み＋準備で答える（2026-11-14）   // 試験・資格の✖・△は準備のしかたで答える（2026-11-05）
-    const _money=(!(_sf&&_sf.crisis)&&!_dec&&ekiMoneyQ(q))?ekiMoneyFlow(r):'';
+    let _lead=(!_sf&&!_dec&&!_nj)?(ekiOfflineLead(r,q)||ekiExamLead(r,q)||ekiExamPh('',rankToVerdict(r.rank).sym,q)):'';   // 「受かりますか」は見込み＋準備で答える（2026-11-14）   // 試験・資格の✖・△は準備のしかたで答える（2026-11-05）
+    let _money=(!(_sf&&_sf.crisis)&&!_dec&&ekiMoneyQ(q))?ekiMoneyFlow(r):'';
+    if(_money&&!_lead&&!_sf&&!_dec&&!_nj){ const mf=_money.split(/(?<=。)/); _lead=mf[0]; _money=mf.slice(1).join(''); }   // 金運の1行目はお金の話で（時期なし。2026-11-15）
     const _decLead=_dec?ekiDecLead(r,q):'', _njLead=_nj?ekiNoJudgeLead(r,q):'';
     // 運気に応じた締めの言葉
     const close = _dec ? 'これまでのご縁を大切に、ご自分の毎日を穏やかに過ごしていきましょう。'
@@ -3607,7 +3617,7 @@ ${jargonLine}${koStageLine}プロの鑑定に聞こえるよう、温かく具�
       unki,
       script,
       jokyo: unsei || `「${theme}」の局面です。`,
-      nagare: shika?`この先は「${shika.nm}」＝「${mTheme(shika)}」へ。${goodRank?'追い風の流れです。':(r.rank==='C')?'大きな波はなく、整える時期です。':'今は慎重さが求められる流れです。'}`:((r.rank==='A'||r.rank==='B')?'追い風の流れです。':(r.rank==='C')?'大きな波はなく、整える時期です。':'今は慎重さが求められる流れです。'),
+      nagare: shika?`この先は「${shika.nm}」＝「${mTheme(shika)}」へ。${ekiFlowWord(shika,r.shika.rank)}`:ekiFlowWord(h,r.rank),   // 「この先の流れ」は之卦の吉凶・意味から（難しい卦に「大きな波はなく」と書かない。2026-11-15）
       jogen: _dec?EKI_DEC_TODO.join('\n'):(_sf&&_sf.health)?EKI_HEALTH_TODO.join('\n'):_nj?[`易で出た「${theme}」を、向き合い方のヒントに。`,'決めつけず、実際の様子や反応をよく見て確かめましょう。','気づいたことを書き留めておくと、次に生かせます。'].join('\n'):(koTai || '今の自分の役目を、丁寧に守りましょう。'),
       leadTodo: ekiLeadTodo(r,q,_lead)||(ekiExamQ(q)&&!_sf?'過去問や出やすいところを中心に、苦手を一つずつつぶしていきましょう。本番前は睡眠と体調を整え、当日の段取りも前日までに確かめておきましょう。':''),   // 試験・資格：準備のしかた（2026-11-14）
       chui: _dec?'無理に気持ちを切りかえようとしなくて大丈夫です。':_nj?'占いの結果だけで決めつけないこと。':(r.rank==='D'||r.rank==='E')?'勢いまかせの大きな決断は避けましょう。':'油断せず、基本を大切に。',
@@ -3888,7 +3898,7 @@ function pkSafeFix(t,q,note){ try{ t=String(t==null?'':t); let cut=0, tcut=0, so
     { const nr=ekiExamNear(q); if(nr&&p.tsutae&&!/本番|残り|それまで|までの/.test(String(p.tsutae))) p.tsutae=String(p.tsutae).replace(/\s*$/,'')+'\n\n'+nr+'の本番に向けて、残りの時間は、出やすいところと苦手に絞って仕上げていきましょう。'; }   // 近い日の試験は、受ける前提で残りの期間の準備を（2026-11-14）
     /* 「AかBか」「今か待つか」「今年か来年か」に答えていない（両方見送り・どちらも選ばない）1行目は、卦の向きから決めた答えにする（2026-11-05） */
     let chFix=false; if(!ekiChoiceAnswered(ph,q)){ const L=ekiOfflineLead(r,q); if(L){ ph=L.replace(/。$/,''); chFix=true;
-      if(p.tsutae){ const t0=String(p.tsutae).replace(/^\s+/,''), h2=t0.split(/(?<=[。！？])/).slice(0,2).join(''); if(!ekiChoiceAnswered(h2,q)) p.tsutae=L+'\n\n'+t0; } } }
+      if(p.tsutae){ let t0=String(p.tsutae).replace(/^\s+/,''); const h2=t0.split(/(?<=[。！？])/).slice(0,2).join(''); if(!ekiChoiceAnswered(h2,q)){ for(let i=0;i<3;i++){ const m=t0.match(/^\s*([^。！？\n]*[。！？])\s*/); if(!m||!(ekiAizuchiS(m[1])||/ご相談ですね|お悩みですね|迷われて|迷っていらっしゃ/.test(m[1]))||t0.slice(m[0].length).trim().length<20) break; t0=t0.slice(m[0].length); } p.tsutae=L+'\n\n'+t0; } } } }   // ツールの1行目のすぐあとに、あいづち（「〜というご相談ですね。」）を残さない（2026-11-15）
     /* 「今の仕事を続けるべきか」に、聞かれていない「転職」などで答えた1行目は、卦の向きから決めた「続ける」の答えにする（2026-11-14） */
     let stFix=false; if(ekiQForm(q)==='stay'&&/転職|辞め|退職|独立|起業|やめ/.test(ph)){ const L=ekiOfflineLead(r,q); if(L){ ph=L.split(/(?<=。)/)[0].replace(/。$/,''); stFix=true; } }
     if(ekiExamPassQ(q)&&!/見込み|可能性|合格|受か|五分|厳し|通る|通り/.test(ph)){ const L=ekiExamLead(r,q); if(L){ ph=L.split(/(?<=。)/)[0].replace(/。$/,''); stFix=true; } }   // 「受かりますか」は見込みで答える（2026-11-14）
@@ -3958,18 +3968,21 @@ function pkSafeFix(t,q,note){ try{ t=String(t==null?'':t); let cut=0, tcut=0, so
        「今年か来年か」の相談は、答えの向きから具体的な文にする */
     /* ③ 動き出す合図：易は時期を出さない（鑑定者本人の決定 2026-11-15「易も時期は出さないで」）。本文から「〜が整ったら」のような合図の文（時期の言葉なし）を選び、なければ卦から決めた合図の一文 */
     let tmS=''; if(!(sf&&(sf.sk||sf.crisis))&&!ekiDeceasedQ(window.__ekiQ)){ const ss=String((talkP||[]).join('')+'\n'+(p.jogen||'')).split(/(?<=[。！？\n])/).map(x=>x.replace(/^[・\s]+/,'').trim()).filter(Boolean);
-      tmS=ss.filter(x=>!ekiAizuchiS(x)).map(ekiNoLeadIn).find(x=>/合図|整った|整って|整えば|そろっ|落ち着いたら|見通しが立|たら|れば/.test(x)&&!EKI_TIME_ANY.test(x)&&lead.indexOf(x.replace(/。$/,''))<0&&x!==whyS&&x.length<=90)||'';
-      if(!tmS&&r&&r.h){ const sl=ekiSignLine(r).replace(/^易で出た「[^」]*」から見ると、/,''); if(lead.indexOf(sl.split(/(?<=。)/).pop().replace(/。$/,''))<0) tmS=sl; } }
+      const _cond=x=>{ const y=String(x).replace(/「[^」]*」/g,''); return /合図|(?:たら|れば|えば|けば|せば|てば|めば|べば|ねば)[、，]|(?:た|る)(?:とき|時)(?:が|に|こそ|は)/.test(y)&&!/^(?:今は|いまは)/.test(String(x).trim()); };   // 卦のテーマ名（「整った状態を守る時」）の中の言葉では選ばない・「〜たら」「〜とき」の条件の形だけ（2026-11-15）
+      tmS=ss.filter(x=>!ekiAizuchiS(x)).map(ekiNoLeadIn).find(x=>_cond(x)&&!EKI_TIME_ANY.test(x)&&lead.indexOf(x.replace(/。$/,''))<0&&x!==whyS&&x.length<=90)||'';
+      if(!tmS&&r&&r.h){ const sl=ekiSignLine(r).replace(/^易で出た「[^」]*」から見ると、/,''); tmS=(lead.indexOf(sl.split(/(?<=。)/).pop().replace(/。$/,''))<0)?sl:ekiSignShort(r); } }   // ①に合図が入っているときも③は出す（短い言い直し＋行動。2026-11-15）
     const nq=(sf&&sf.sk)?EKI_NEXTQ.safe:(EKI_NEXTQ[ekiTalkTopic(window.__ekiQ)]||EKI_NEXTQ.other);   // 占いで決めないご相談には、時期や恋愛の質問をすすめない（2026-11-03）
     const NUM='①②③④⑤⑥'; let ix=0; const li=(n,t,b)=>'<li><span class="pkt-n">'+NUM[ix++]+'</span><div><div class="pkt-t">'+t+'</div><div class="pkt-b">'+b+'</div></div></li>';
     let h='<div class="pk-talk"><div class="pkt-h">🗣 お客様に話す順番<small>（上から読めば、そのまま鑑定になります）</small></div><ol class="pkt-l">';
-    h+=li('①','まず結論を伝える','「'+esc(lead)+'」');
+    const _qt=x=>{ x=String(x||'').trim(); return /^「/.test(x)?esc(x):'「'+esc(x)+'」'; };   // すでに「で始まる文は、かぎかっこを重ねない（2026-11-15）
+    lead=lead.replace(/([^。！？!?」』）)])$/,'$1。');   // 1行目は句点で終える（2026-11-15）
+    h+=li('①','まず結論を伝える',_qt(lead));
     const _stg=(r&&r.basis&&r.basis.src==='hon'&&EKI_KO_STAGE[r.ko]&&!(sf&&(sf.sk||sf.crisis)))?('動いた線は'+String(KO_NAME[r.ko]||'').replace(/（.*$/,'')+'で、物語でいうと「'+EKI_KO_STAGE[r.ko].replace(/（.*$/,'')+'」にいます。'):'';   /* 爻の位置＝物語の進み具合（鑑定者本人の説明 2026-11-11） */
     if(theme) h+=li('②','卦のイメージで理由を伝える','「'+esc(theme+_stg)+'」'+(whyS?'<small>続けて：「'+esc(whyS)+'」</small>':''));
     const _mq=ekiMoneyQ(window.__ekiQ)&&!(sf&&(sf.sk||sf.crisis));   // 金運は時期を出さない（鑑定者本人の決定 2026-11-14）：③は「お金との向き合い方」に
-    if(_mq){ const mf=ekiMoneyFlow(r).split(/(?<=。)/).filter(Boolean); const mS=mf.slice(1).join('')||mf[0]||''; if(mS&&lead.indexOf(mS.replace(/。$/,''))<0) h+=li('③','お金との向き合い方を伝える','「'+esc(mS)+'」'); }
-    else if(tmS) h+=li('③','動き出す合図を伝える','「'+esc(tmS)+'」');
-    if(todo&&todo[0]) h+=li('④','どうすればよいかを1つ伝える','「'+esc(String(todo[0]).replace(/<[^>]+>/g,''))+'」');
+    if(_mq){ const mf=ekiMoneyFlow(r).split(/(?<=。)/).filter(Boolean); const mS=mf.slice(1).join('')||mf[0]||''; if(mS&&lead.indexOf(mS.replace(/。$/,''))<0) h+=li('③','お金との向き合い方を伝える',_qt(mS)); }
+    else if(tmS) h+=li('③','動き出す合図を伝える',_qt(tmS));
+    if(todo&&todo[0]) h+=li('④','どうすればよいかを1つ伝える',_qt(String(todo[0]).replace(/<[^>]+>/g,'')));
     h+=li('⑤','次に聞かれそうなこと（押すと「続けて質問」に入ります）','<div class="pkt-q">'+nq.map(x=>'<button type="button" class="pkt-qb" data-q="'+esc(x)+'">'+esc(x)+'</button>').join('')+'</div>');
     return h+'</ol></div>'; }
   document.addEventListener('click',function(e){ const b=e.target.closest&&e.target.closest('.pkt-qb'); if(b){ const w=document.getElementById('fuText'); if(w){ w.value=b.dataset.q; w.dispatchEvent(new Event('input',{bubbles:true})); try{ w.scrollIntoView({block:'center',behavior:ekiSm()}); w.focus({preventScroll:true}); }catch(_){ } } return; }
@@ -3991,6 +4004,7 @@ function pkSafeFix(t,q,note){ try{ t=String(t==null?'':t); let cut=0, tcut=0, so
     let phrase=v.phrase;
     try{ window.__ekiToolSym=rankToVerdict(r.rank).sym; }catch(_){}   // 点検用：ツールが決めた記号
     if(!v.sym){ const rv=rankToVerdict(r.rank); v={sym:rv.sym,cls:rv.cls}; if(!phrase) phrase=ekiExamPh('',rv.sym,window.__ekiQ)||({'◎':'よい流れです。進んで大丈夫。','〇':'前向きに進んでよいでしょう。','△':'今は慎重に。急がないのが吉。','✖':'今は控えるのが賢明です。'})[rv.sym]; }
+    if(phrase&&/[。！？]/.test(String(phrase).slice(0,-1))) phrase=String(phrase).replace(/([^。！？!?」』）)])$/,'$1。');   // 2文以上の1行目は句点で終える（2026-11-15）
     el.innerHTML=`<div class="verdict ${v.cls}"><div class="v-mark">${v.sym}</div><div class="v-body"><div class="v-lbl">${t('verdict_lbl')}</div><div class="v-txt">${fmtRich(phrase||'—')}</div></div></div>`;
   }
   function playCoinAnim(sums){
@@ -4676,6 +4690,7 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')), c1=ek
       if(noSym) t=ekiShoNoJudge(t); else { t=ekiSymWords(t); if(want) t=t.replace(new RegExp('(答え[^。\n]{0,6}?)('+EKI_SHO_WORDS+')','g'),function(m,a){ return a+want; }); }
       if(dec) t=ekiShoNoLove(t,q);
       if(!sf&&!dec&&/ご相談への答え/.test(String(x.h||''))) t=ekiShoLeadFix(t);
+      if(!sf&&!dec&&/ご相談への答え/.test(String(x.h||''))&&/^(?:year|when)$/.test(ekiQForm(q))&&!/言い当て|合図/.test(t)){ const L=ekiOfflineLead(r,q); if(L) t=plainEki?plainEki(L)+'\n'+t:L+'\n'+t; }   // 「いつ」の相談：易は時期を言い当てないこと＋動き出す合図を最初に（2026-11-15）
       if(sf&&sf.health) t=ekiShoNoExercise(t);
       if(sf&&sf.crisis) t=ekiSoftCrisis(t); else if(sf||dec||nj) t=ekiDropJudge(t);
       if(sf&&(sf.sk||sf.crisis)) t=ekiShoNoLuck(t);
@@ -4709,7 +4724,7 @@ ${(function(){ const s=ekiSafety(String(L.q||'')+' '+String(followQ||'')), c1=ek
       if(sf.kind==='money'&&!sf.sk) fl.push(ekiMoneyFlow(r));   // お金との向き合い方（時期・当たる時期は書かない。2026-11-14）
       fl.push(sf.kind==='deceased'?'無理に気持ちを整理しようとせず、ご自分のペースで過ごしてください。':'結果を急がず、気持ちと暮らしを整えることを大切にしてください。');
       S.push({h:'これからの流れ', t:fl.join('\n')});
-      if(sf.sk&&sf.sk.dest&&sf.sk.dest.length) S.push({h:pkSafeDestHead(sf.sk,true), t:sf.sk.dest.map(x=>'・'+x).join('\n')});
+      /* 相談先は鑑定書のいちばん上の欄（pkSafeDestHTML）に出るので、本文の章にはくり返さない（2026-11-15） */
       if(ch){
         S.push({h:'生まれ持った性質', t:['生年月日から見ると、あなたは'+(SHO_STEM[ch.dm]||''), shoStrongLine(ch), shoWeakLine(ch), ch.hasH?'':'（生まれた時刻が分からないため、時刻を除いた生年月日から見ています）'].filter(Boolean).join('\n')});
         const yl=['生年月日から見た、これから3年の流れです。'].concat(ch.years.map(y=>`・${ekiYearLab(y.year)}：${SHO_YEAR[y.star]||''}（勢いは「${SHO_TERRAIN[y.terrain]||'ふつう'}」）`));
