@@ -547,6 +547,36 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(!r.w11||!r.w11.ok) e.push('西暦のない来年の月・つなぎの言葉の重なり：'+JSON.stringify(r.w11));
     if(!r.w3) e.push('今年と西暦のずれを直さない'); if(!r.w4) e.push('「〜11月上旬」を日付として扱った'); if(!r.w4b) e.push('「（2032年歳）」のくずれが残る'); if(!r.w12||!r.w12.ex||!r.w12.pt||!r.w12.hd||!r.w12.nm) e.push('今は今・名前入りの見出し・本人さん：'+JSON.stringify(r.w12)); if(!r.w15||Object.values(r.w15).some(v=>!v)) e.push('の西暦・同じ年のかっこ・翌の直し：'+JSON.stringify(r.w15)); if(!r.w13||Object.values(r.w13).some(v=>!v)) e.push('害・破／余気・中気／用神／強旺格の凶／二股の直し：'+JSON.stringify(r.w13)); }
   console.log('  '+(e.length?'NG':'OK')+' 事実の差しこみの印・出す前の照らし合わせ（3ツール同じ・置きかえ・ビギナー・材料・正しい文を外さない・切りかえ・誰の柱か・今年のずれ・上旬・来年の月の西暦・つなぎの重なり）'+(e.length?'  … '+e.join('・'):'')); if(e.length) res.fails.push('事実の印・照らし合わせ: '+e.join('・')); }
+// 実機点検 2026-11-15 で直したところ：①何十年も先の大運を年齢・西暦で出さない ③「明日（11月16日（月）の日）」「明日（11月16日）（甲午）」 ④「2027年（2027年・35歳）」「（戊申・47歳）（戊申の年・…）」
+//  ⑤注意点0なのに「打ち消し合う」と書かない ⑥「お互いにの五行の補い合い」 ⑨年運・大運の十二運のまちがい
+{ const e=[]; const r=await p.evaluate(()=>{ const o={bad:[]}; const c0=chart; try{
+    const mk=(y,m,d,h,mi,sex,tu)=>{ const c=baziCompute({year:y,month:m,day:d,hour:h,minute:mi,sex,tu},0,'none'); return tu?markTimeUnknown(c):c; };
+    const A=mk(1981,6,10,22,28,'female',false); chart=A;
+    // ① 何十年も先の大運（今の年齢＋25歳より先）の年齢・西暦を出さない
+    let seed=1115; const rnd=()=>{ seed=(seed*1103515245+12345)%2147483648; return seed/2147483648; };
+    for(let k=0;k<60;k++){ const c=mk(1960+Math.floor(rnd()*40),1+Math.floor(rnd()*12),1+Math.floor(rnd()*28),12,0,rnd()<0.5?'male':'female',true); chart=c; const na=c.now&&c.now.age; if(!na) continue;
+      let z=null; try{ z=jyuZone(c); }catch(e){} if(z&&z.far&&z.farAge>na+25&&!z.farTooFar) o.bad.push('jyuZone が遠い大運に印を付けない');
+      const t=localAnswer(c,'来年結婚できますか'); const m=t.match(/主役になる大運は\**(\d+)歳/); if(m&&+m[1]>na+25) o.bad.push('遠い大運：'+na+'歳の人に'+m[1]+'歳'); }
+    chart=A;
+    // ③④ かっこのくずれ
+    const env=pkFmEnvPro(false,false,'',''), E=x=>pkFmExpand(x,env).text, Y=pkfmToday().y+1, ag=Y-1981;
+    const C=[['明日（11月16日（月）の日）は、良い日です。','明日（11月16日（月））は、良い日です。'],['甲午の日・甲午の日は','甲午の日は'],[Y+'年（'+Y+'年・'+ag+'歳）は',Y+'年（'+ag+'歳）は'],['2028年（戊申・47歳）（戊申の年・劫財）は','2028年（戊申・47歳・劫財）は'],['2033年（2033年・2033年）','2033年']];
+    C.forEach(([x,w])=>{ const v=pkFmTidy(x); if(v!==w) o.bad.push('かっこ：'+v); });
+    if(/年（\d{4}年[・）]/.test(E(Y+'年（'+Y+'年・'+ag+'歳）は縁が動きます。'))) o.bad.push('年の重なりが展開後に残る');
+    { const D=pkDayDir(A,'明日、彼に連絡してもいいですか'); if(!D) o.bad.push('明日の日運が出ない'); else if(/）（/.test(D.talk+D.pro)) o.bad.push('明日の二重かっこ：'+D.talk.slice(0,50)); }
+    // ⑤ 注意点0なのに「打ち消し合う」
+    let n5=0; for(let k=0;k<160;k++){ const a=mk(1960+Math.floor(rnd()*45),1+Math.floor(rnd()*12),1+Math.floor(rnd()*28),12,0,'female',true), b=mk(1960+Math.floor(rnd()*45),1+Math.floor(rnd()*12),1+Math.floor(rnd()*28),12,0,'male',true); const cb=compatBalance(a,b);
+      if(cb.bad===0&&cb.good>0){ n5++; if(/打ち消し|同じくらい/.test(cb.verdict)||/同じくらい/.test(pkCbPlain(cb))) o.bad.push('注意点0で打ち消し合う：'+cb.verdict); }
+      // ⑥ この2人だけの読み
+      const K=pkRelHeads('kizuna'); const w=pkEnsureWeave('結論の文です。\n\n【'+K[0]+'】\n本文の文です。',a,b); if(/にの/.test(w)) o.bad.push('「にの」のつなぎ：'+(w.match(/[^。\n]{0,10}にの[^。\n]{0,10}/)||[''])[0]); }
+    if(!pkCbPlain({cls:'mid',good:2.5,bad:0,net:2.5}).match(/良いところがあり/)) o.bad.push('やさしい言い方の判定');
+    // ⑨ 十二運
+    if(pkFmJuniFix('2028年の年運は戊申（＝劫財と長生の巡り）です。',{P:[{pil:['','','己未','']}]})!=='2028年の年運は戊申（＝劫財と沐浴の巡り）です。') o.bad.push('年運の十二運を直さない');
+    if(pkFmJuniFix('2028年の年運は戊申（＝劫財と長生の巡り）です。',{two:true,P:[{pil:['','','己未','']}]})!=='2028年の年運は戊申（＝劫財と長生の巡り）です。') o.bad.push('相性で十二運を書きかえた');
+    o.n5=n5;
+  }catch(err){ o.bad.push('動かない：'+String(err&&err.message||err)); } chart=c0; return o; });
+  r.bad.forEach(x=>e.push(x));
+  console.log('  '+(e.length?'NG':'OK')+' 実機点検 2026-11-15（遠い大運・かっこのくずれ・明日の二重かっこ・注意点0の判定〈'+(r.n5||0)+'組〉・にのつなぎ・十二運）'+(e.length?'  … '+[...new Set(e)].slice(0,6).join('・'):'')); if(e.length) res.fails.push('実機点検 2026-11-15: '+[...new Set(e)].join('・')); }
 // 恋愛・仕事の持ち味（長所・気をつけたいこと・向いている仕事・アドバイス。鑑定者本人の指示 2026-11-11）：
 //  ① 材料 KANSHI60_TRAITS が PRO・生成したビギナー・鑑定書（＋ミラー）で同じ中身 ② 60干支×7項目がそろい、干支名・星の名前・専門用語・AI・＊がない
 //  ③ 相談の中身で出すほうを決める（相談なし＝両方／仕事＝仕事だけ／恋愛＝恋愛だけ／どちらでもない・安全・つらさ＝出さない／13歳未満は恋愛なし）
