@@ -104,6 +104,12 @@ const c2=calls; await p.evaluate(()=>{document.getElementById('shoContent').inne
 const sm=await waitFor(()=>{const t=document.getElementById('shoContent').innerText; return t.length>300&&/結びのことば|ご相談について/.test(t)&&!/作成しています/.test(t);},70000);
 await p.waitForTimeout(800); const S=await p.evaluate(()=>document.getElementById('shoContent').innerText);
 ok('鑑定書：中身が空でない', sm>=0&&S.length>300, S.length+'字');
+if(MODE!=='online'){ /* 生年月日を入れた鑑定書にも「時期の目安」・追い風の年を出さない（鑑定者本人 2026-11-15） */
+  await p.evaluate(()=>{ const e=document.getElementById('fuBd'); e.value='1981-06-10'; e.dispatchEvent(new Event('input',{bubbles:true})); e.dispatchEvent(new Event('change',{bubbles:true})); document.getElementById('shoContent').innerHTML=''; document.getElementById('makeSho').click(); });
+  const sm2=await waitFor(()=>{const t=document.getElementById('shoContent').innerText; return t.length>300&&/結びのことば|ご相談について/.test(t)&&!/作成しています/.test(t);},70000);
+  await p.waitForTimeout(800); const S2=await p.evaluate(()=>document.getElementById('shoContent').innerText+'\n'+((document.getElementById('fuBdSum')||{}).innerText||''));
+  ok('鑑定書（生年月日あり）：生まれ持った性質は入り、時期の目安・追い風の年は出ない', sm2>=0&&/生まれ持った性質/.test(S2)&&!/時期の目安|追い風の年|これから3年の流れ|20\d\d年がとくに/.test(S2), (S2.match(/時期の目安|追い風の年|これから3年の流れ|20\d\d年がとくに/)||['ok'])[0]);
+  await p.evaluate(()=>{ const e=document.getElementById('fuBd'); e.value=''; e.dispatchEvent(new Event('input',{bubbles:true})); e.dispatchEvent(new Event('change',{bubbles:true})); }); }
 ok('鑑定書：＊なし', star(S)===0, star(S));
 if(MODE==='online') ok('鑑定書：呼び出し1回', calls-c2===1, 'calls='+(calls-c2));
 await p.evaluate(()=>{const o=document.getElementById('shoOverlay'); if(o) o.classList.remove('open'); document.body.classList.remove('sho-open');});
