@@ -684,6 +684,78 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   }catch(err){ o.bad.push('動かない：'+String(err&&err.message||err)); } chart=c0; return o; });
   r.bad.forEach(x=>e.push(x));
   console.log('  '+(e.length?'NG':'OK')+' オンラインの1行目と③（別れ・子どもの受験・引っ越し・続けるか独立か〈方向なし '+r.nd+'人〉・良い1行目は残す・やさしい言い方）'+(e.length?'  … '+[...new Set(e)].slice(0,6).join('・'):'')); if(e.length) res.fails.push('オンラインの1行目と③: '+[...new Set(e)].join('・')); }
+// 実機点検 2026-11-16（先生の指示「悩み事をきちんとした言葉で適正時期で診断判断して出力して欲しい」）：
+//  時期のそろえ（お伝え方・箇条書き・「一番おすすめ」「めぐってくる」「〜を目標に」・期間・金運の期間）／年の残りが少ない今年／続けるか独立か（方向なし）はPRO・ビギナー同じ1行目／
+//  来年の結婚を根拠なく「準備の年」にしない・空亡でない年の「大きな始まりは控え」を外す／別れの相談の何年も先までの先送り／頭の切れた1行目・「待たほうが」／
+//  安全の相談の1行目・症状の言い当て・食べ物のすすめ／同じ一文のくり返し／文のくずれ（別の文字・印の重なり・読みと意味の重なり・今月のずれ・今年の五行）／一字の干支の読み／
+//  お伝え方の言いかえのくずれ／持ち味の写しまちがいと見出しの重なり／月の星の取りちがえ／健康以外の食べ物のすすめ／ひと休みの年の説明の場所
+{ const e=[]; const r=await p.evaluate(()=>{ const o={bad:[]}; const c0=chart; try{
+    const mk=(y,m,d,h,mi,sex)=>baziCompute({year:y,month:m,day:d,hour:h,minute:mi,sex},'','none'), pl=document.documentElement.classList.contains('bg-on');
+    const A=mk(1981,6,10,22,28,'female'), B=mk(1990,3,16,12,0,'male');
+    const L1=(c,q,l)=>pkLeadFix(l+'\n【お客様へのお伝え方】\n説明です。',c,q,false).split('\n')[0];
+    // 1 時期のそろえ（仕事）
+    chart=B; { const q='転職はいつがいいですか', T=pkTcTopic(B,q); if(!T){ o.bad.push('仕事の時期が出ない'); } else { const tg=T.list[0], far=Math.max(tg,T.nenY)+9;
+      const x=pkTimingConsistFix('本格的に動きやすいのは'+tg+'年です。\n【お客様へのお伝え方】\n本格的に環境を変えて新しい一歩を踏み出すのは、'+far+'年ごろが一番おすすめのタイミングです。\n【どうすればよいか】\n・'+T.nenY+'年から'+(far-1)+'年までの間は、資格の勉強に励み、実力を高める。\n・大運が切り替わる'+far+'年の時期を目標に据えて、新しい環境への扉を叩く。',B,q,pl);
+      if(x.indexOf(far+'年')>=0) o.bad.push('ずっと先の年（目標・一番おすすめ）が残る：'+x.slice(0,300));
+      if((x.match(new RegExp(tg+'年','g'))||[]).length<3) o.bad.push('ツールの年に置きかえない：'+x.slice(0,300));
+      if(T.nenY<tg&&x.indexOf((far-1)+'年まで')>=0) o.bad.push('ずっと先まで準備を続ける期間が残る');
+      if(pkTimingConsistFix(x,B,q,pl)!==x) o.bad.push('2回通すと変わる（仕事）'); }
+      const S=pkWorkStart(B), N=pkNenInfo(); if(N.leftDays<90&&S.y===N.Y) o.bad.push('年の残りが少ない今年を本格的に動く年にした');
+      if(N.leftDays<90&&S.late&&pkOfflineLead(B,q,pl).indexOf('今年の残り')<0) o.bad.push('今年の残りは準備、と書かない');
+      const L0=pkOfflineLead(B,q,pl), t3=pkTalkSpec(B,q,pl); if(t3!==L0) o.bad.push('仕事の時期の③が1行目とちがう：'+t3); }
+    // 2 続けるか独立か（方向なし）：文章作成が独立と決めても、PRO・ビギナーで同じツールの1行目
+    { let n=0; [A,B].concat([mk(1975,4,4,12,0,'male'),mk(1988,9,9,12,0,'female'),mk(1965,1,20,12,0,'male')]).forEach(c=>{ chart=c; const qW='今の会社を続けるか独立するか迷っています'; if(!pkWorkNoDirQ(c,qW)) return; n++;
+      const L0=pkOfflineLead(c,qW,pl); if(L1(c,qW,'いまの会社を続けるよりも、独立に向けて準備を進めるのがおすすめです。')!==L0) o.bad.push('方向なしなのに独立と決めた1行目を残した'); });
+      if(!n) o.bad.push('方向なしの人がいない'); }
+    // 3 来年の結婚：根拠なく「準備の年」・空亡でない年の「大きな始まりは控え」
+    chart=A; { const q='来年結婚できますか？', NY=pkNextYearLoveLead(A,q,pl);
+      if(NY&&!NY.bad&&!NY.caut){ if(L1(A,q,'来年の結婚は、お互いの絆をじっくり深める準備の年にするのが自然です。').indexOf(NY.line.split('。')[0])!==0) o.bad.push('根拠のない「準備の年」の1行目を置きかえない');
+        const y=pkFalseKuuFix('答え。\n【どうすればよいか】\n・'+NY.Y+'年の1年間は、婚姻届を出すような大きな始まりの決断は少し控え、将来の暮らしをじっくり話し合う時間に充てる。',A,q);
+        if(/控え/.test(y)||y.indexOf('将来の暮らし')<0) o.bad.push('空亡でない年の「大きな始まりは控え」を外さない：'+y); }
+      const ky=(A.annualFortunes||[]).map(a=>a.year).filter(y=>y>=pkNenInfo().Y&&pkKuuBad(A,y))[0]; if(ky){ const z='答え。\n'+ky+'年は大きな始まりの決断は控え、準備をしましょう。'; if(pkFalseKuuFix(z,A,q)!==z) o.bad.push('空亡の年の「控え」を外した'); } }
+    // 4 別れ：何年も先までの先送り
+    { const q='彼と別れるべきか迷っています', F=pkTalkSpec(A,q,pl), ny=pkNenInfo().Y;
+      const x=pkBreakFarFix('答え。\n【お客様へのお伝え方】\n'+(ny+7)+'年頃には関係に大きな変化が訪れやすいので、それまでは焦らず関係を整えましょう。その時期に向かって気持ちが整います。\n【どうすればよいか】\n・相談する。\n・'+(ny+7)+'年頃の大きな転機に向けて、暮らしを考える。',A,q,pl);
+      if(x.indexOf((ny+7)+'年')>=0||x.indexOf(F)<0||(x.split(F).length-1)!==1||/その時期に向か/.test(x)) o.bad.push('別れの先送りを考える順番にしない：'+x); }
+    // 5 頭の切れた1行目・「待たほうが」
+    { const q='彼と別れるべきか迷っています', x=pkLeadFragFix('は、ご自身の負担が大きいなら距離を置くことも大切です。\n【お客様へのお伝え方】\n説明。',q,pl);
+      if(x.indexOf(pkOfflineLead(A,q,pl))!==0) o.bad.push('頭の切れた1行目を置きかえない：'+x.slice(0,60));
+      if(pkLeadFragFix('もし迷うなら話し合いましょう。',q,pl)!=='もし迷うなら話し合いましょう。') o.bad.push('ふつうの1行目を変えた');
+      if(pkFmTidy('今すぐ決めるのは少し待たほうが安心です。').indexOf('待ったほうが')<0) o.bad.push('待たほうが'); }
+    // 6 安全の相談（体調）
+    { const q='最近ずっと体調が悪いです', x=pkSafeAnsFix('お辛いお気持ちでいらっしゃるのですね。\n【お客様へのお伝え方】\n火が強まると、動悸やのぼせ、不眠といったサインが出やすくなります。ゆっくり休みましょう。\n【どうすればよいか】\n・あたたかい飲み物を飲んでリラックスする\n・休む時間をつくる',q);
+      if(x.split('\n')[0].indexOf('医療機関')<0) o.bad.push('共感だけの1行目に答えを足さない'); if(/動悸|飲み物/.test(x)||x.indexOf('休む時間')<0||x.indexOf('ゆっくり休みましょう')<0) o.bad.push('体の相談の症状・飲み物の文：'+x);
+      if(pkDupLineFix('いつでも応援しています。\n本文。\nいつでも応援しています。').split('いつでも応援').length!==2) o.bad.push('同じ一文のくり返し'); }
+    // 7 文のくずれ（PK-FACT-MARKS）
+    { const env={P:[{pil:A.pillars.map(x=>x.ganzhi)}],nenY:pkNenInfo().Y}, T=_jstToday(), M=T.getMonth()+1, M1=M%12+1;
+      const chk=[['【どう ভয়াবহよいか】','【どうすればよいか】'],['日柱にある日柱（己未）は','日柱（己未）は'],['現在巡っている大運は 今の大運（戊戌）であり','現在巡っている大運は戊戌であり'],['大運癸未（今の大運（癸未）・傷官が巡る時期）','大運癸未（傷官が巡る時期）'],
+        ['傷官（＝感性・才能の星）＝しょうかん・感性と才能の星が巡る','傷官（しょうかん＝感性・才能の星）が巡る'],['いまの今の流れ','今の流れ'],['今年のその年の運では','今年の運では'],['日柱（己未）の日柱（にっちゅう＝冠帯）を持つ','日柱（己未）（冠帯）を持つ'],['한국어テスト','テスト']];
+      if(T.getDate()>7) chk.push(['今月（'+M1+'月）から','来月（'+M1+'月）から']);
+      chk.forEach(([a,b])=>{ const y=pkFmTidy(a); if(y!==b) o.bad.push('くずれ：'+a+'→'+y); });
+      if(pkFmTidy('今月（'+M+'月）は')!=='今月（'+M+'月）は') o.bad.push('正しい今月を変えた');
+      const yg=pkfmYGz(pkNenInfo().Y), SE={甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'金',辛:'金',壬:'水',癸:'水'}, e1=SE[yg[0]], wr='木火土金水'.split('').filter(x=>x!==e1)[0];
+      const z=pkYrElFix('今年は'+wr+'のエネルギーが強まっています。',{P:[{pil:[]}]}); if(z.indexOf(e1+'のエネルギー')<0&&z.indexOf(wr)>=0&&!/[申子辰亥卯未寅午戌巳酉丑]/.test('')) { const br=yg[1], BE={寅:'木',卯:'木',巳:'火',午:'火',辰:'土',戌:'土',丑:'土',未:'土',申:'金',酉:'金',亥:'水',子:'水'}; if(BE[br]!==wr) o.bad.push('今年の五行のまちがいを直さない：'+z); }
+      if(pkYrElFix('今年は'+e1+'のエネルギーが強まっています。',{P:[{pil:[]}]}).indexOf(e1)<0) o.bad.push('今年の正しい五行を変えた'); }
+    // 8 一字の干支の読み
+    { const y=pkFixYomi('長所：日干庚（かのえたつ＝金性）の星が日支辰（かのえたつ）に座す。様子（ようす）を見る。'); if(y.indexOf('日干庚（かのえ＝金性）')<0||y.indexOf('日支辰（たつ）')<0||y.indexOf('様子（ようす）')<0) o.bad.push('一字の干支の読み：'+y); }
+    // 9 お伝え方の言いかえ
+    { ['己未の日にお生まれのあなたは、力を持っています。','いまの今の大運（戊戌）（劫財・土）の時期は、結果が出やすい。','お金の星である財星が少ない配置です。'].forEach(x=>{ const y=pkPlainTalk(x); if(/^の日に|いまの今の|今の今の|お金の星であるお金|今の（/.test(y)) o.bad.push('言いかえのくずれ：'+y); }); }
+    // 10 持ち味の写しまちがい・見出しの重なり
+    { chart=B; const d=pkTraitData(B), hW=pl?'【お仕事での持ち味】':'【仕事の持ち味】', bad=d.仕助.replace('を','').replace('つ','');
+      const x=pkEnsureTraits('答え。\n'+hW+'\n・長所：'+d.仕長+'\n・アドバイス：'+bad+'\n【くわしい読み解き】\n'+hW+'\n・長所：魁罡なので芯が強い。\n月支元命は正財です。',B,'転職はいつがいいですか');
+      if(x.indexOf(d.仕助)<0) o.bad.push('写しまちがいを材料に戻さない'); if(x.split(hW).length!==2||x.indexOf('月支元命は正財です。')<0||/魁罡なので/.test(x)) o.bad.push('見出しの重なり：'+x); }
+    // 11 月の星の取りちがえ
+    { chart=A; const ml=monthFortuneList(A,12).filter(Boolean), ev=ml[1], X=['比肩','劫財','食神','傷官','偏財','正財','偏官','正官','偏印','印綬'].filter(x=>x!==ev.star&&x!==ev.bStar)[0];
+      const y=pkMonthFactFix(ev.calMonth+'月から'+(ev.calMonth%12+1)+'月上旬にかけては、月柱に巡る'+X+'（よみ）の影響があります。',A); if(y.indexOf('月柱に巡る'+ev.star)<0) o.bad.push('月の星を直さない：'+y); }
+    // 12 健康以外の食べ物のすすめ・金運の期間
+    { const y=pkOffTopicDiet('甘いものや脂っこいものを控え、基盤を固めると好機をつかめます。','金運を上げたい'); if(/甘いもの/.test(y)||y.indexOf('基盤を固め')<0) o.bad.push('健康以外の食べ物のすすめ：'+y);
+      if(pkOffTopicDiet('甘いものを控えましょう。','体調を整えたい')!=='甘いものを控えましょう。') o.bad.push('健康の相談の食べ物を外した');
+      chart=A; const q='金運を上げたい。いつ頃お金が回りますか', T=pkTcTopic(A,q); if(T&&T.list.length>=2){ const Ls=T.list.slice().sort(), x=pkTimingConsistFix('答え。\n【どうすればよいか】\n・財星が巡る'+(Ls[0]+1)+'年から'+(Ls[Ls.length-1]+1)+'年の時期に合わせて、蓄えを意識する',A,q,pl); if(x.indexOf(Ls[0]+'年')<0||x.indexOf(Ls[Ls.length-1]+'年')<0) o.bad.push('金運の期間をツールの年にしない：'+x); } }
+    // 13 ひと休みの年の説明の場所
+    { const y=pkKuuNoteMove('動き出すのは2027年以降が安心です。（「ひと休みの年」は、力が抜けやすい年のことです）\n・2028年〔ひと休みの年〕以降に動く'); if(/安心です。（「ひと休み/.test(y)||y.indexOf('以降に動く（「ひと休みの年」は')<0) o.bad.push('ひと休みの年の説明の場所：'+y); }
+  }catch(err){ o.bad.push('動かない：'+String(err&&err.message||err)); } chart=c0; return o; });
+  r.bad.forEach(x=>e.push(x));
+  console.log('  '+(e.length?'NG':'OK')+' 実機点検 2026-11-16（時期のそろえ・年の残り・続けるか独立か・来年の結婚・別れの先送り・頭の切れた1行目・安全の相談・文のくずれ・読み・言いかえ・持ち味・月の星・食べ物・ひと休み）'+(e.length?'  … '+[...new Set(e)].slice(0,8).join('・'):'')); if(e.length) res.fails.push('実機点検 2026-11-16: '+[...new Set(e)].join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
