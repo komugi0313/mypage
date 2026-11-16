@@ -3216,7 +3216,7 @@ var KFB=(function(){
     return ready;
   } };
 })();
-var RM={code:null,room:null,ps:[],un:[],poll:null,snapAt:0,view:null,sig:'',gotR:false,gotP:false,mode:'quick'};
+var RM={code:null,room:null,ps:[],un:[],poll:null,snapAt:0,view:null,sig:'',gotR:false,gotP:false,mode:'quick',mine:null,healthy:false,lastPull:0};
 function rPid(){ if(!st.pid){ st.pid=Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4); save(st); } return st.pid; }
 function rDoc(fs,c){ return fs.collection('koi16_rooms').doc(c); }
 function rExp(){ return new Date(Date.now()+ROOM_TTL); }
@@ -3234,34 +3234,55 @@ function rGroup(){ var r=RM.room; return {id:'r'+RM.code+(r?(r.created%1679616).
 function rNote(id,msg,warn){ var el=$(id); if(!el) return; el.textContent=msg||''; el.className='rnote'+(msg?'':' hidden')+(warn?' warn':''); }
 
 async function roomCreate(name,m){
-  var fs=await KFB.init(); if(!fs) throw new Error('nofb');
+  // 部屋を作るのも REST（ふつうの通信）で。アプリの中の画面でも止まらないように
+  if(!(window.KOI16_FB&&KOI16_FB.projectId)) throw new Error('nofb');
+  KFB.init();
   for(var k=0;k<10;k++){
     var c=String(1000+Math.floor(Math.random()*9000));
-    var sn=await rTO(rDoc(fs,c).get(),12000);
-    if(sn.exists&&rAlive(sn.data())) continue;
-    var now=Date.now(), b=fs.batch();
-    b.set(rDoc(fs,c),{created:now,phase:'lobby',mode:m,host:rPid(),expireAt:rExp()});
-    b.set(rDoc(fs,c).collection('players').doc(rPid()),{name:name,code:'',done:false,joined:now,rc:now,expireAt:rExp()});
-    await rTO(b.commit(),15000);
+    var ex=await rRest(c);
+    if(ex&&rAlive(rFields(ex))) continue;
+    var now=Date.now();
+    await rRestSet(c,{created:now,phase:'lobby',mode:m,host:rPid(),expireAt:rExp()});
+    await rRestSet(c+'/players/'+rPid(),{name:name,code:'',done:false,joined:now,rc:now,expireAt:rExp()});
     return {c:c,room:{created:now,phase:'lobby',mode:m,host:rPid()},me:{id:rPid(),name:name,code:'',done:false,joined:now,rc:now}};
   }
   throw new Error('busy');
 }
+// Gmail・LINE などアプリの中の画面では、Firebase の知らせ（onSnapshot）が届かないことがある（本番で見つけた 2026-11-16：2人目が入っても作った人の画面が1人のまま）。
+// そのため、部屋を作る・入る・スタート・結果を送るのは REST（ふつうの通信）で書き、知らせが届いていないときは REST で部屋と参加者を直接読む。
+function rRestBase(){ var cfg=window.KOI16_FB||{}, e=window.KOI16_EMU; return (e?'http://'+e.host+':'+e.port:'https://firestore.googleapis.com')+'/v1/projects/'+cfg.projectId+'/databases/(default)/documents/koi16_rooms/'; }
+function rRest(path){ var cfg=window.KOI16_FB||{}; return rTO(fetch(rRestBase()+path+'?key='+encodeURIComponent(cfg.apiKey||'')+'&pageSize=50',{cache:'no-store'}).then(function(r){ if(r.status===404) return null; if(!r.ok) throw new Error('rest '+r.status); return r.json(); }),9000); }
+function rVal(v){ if(!v) return null; if('integerValue' in v) return +v.integerValue; if('doubleValue' in v) return +v.doubleValue; if('stringValue' in v) return v.stringValue; if('booleanValue' in v) return !!v.booleanValue; if('timestampValue' in v) return v.timestampValue; return null; }
+function rFields(d){ var o={}, f=(d&&d.fields)||{}; for(var k in f) o[k]=rVal(f[k]); return o; }
+// 自分が書いたばかりの中身は、届いた古い中身より優先する（診断が終わったのに、また問題が始まらないように）
+function rApplyMine(){ var m=RM.mine; if(!m) return; var id=rPid(), x=RM.ps.filter(function(p){ return p.id===id; })[0];
+  if(!x) RM.ps.push(Object.assign({id:id},m)); else if((m.done&&!x.done)||(m.name&&!x.name)) Object.assign(x,m); }
+async function roomPullRest(){
+  var c=RM.code; if(!c||!(window.KOI16_FB&&KOI16_FB.projectId)) return false;
+  RM.lastPull=Date.now();
+  try{ var a=await Promise.all([rRest(c),rRest(c+'/players')]); if(RM.code!==c) return true;
+    RM.room=a[0]?rFields(a[0]):null; RM.ps=((a[1]&&a[1].documents)||[]).map(function(d){ var x=rFields(d); x.id=d.name.split('/').pop(); return x; });
+    rApplyMine(); RM.gotR=RM.gotP=true; roomUpdate(); return true; }catch(e){ return false; }
+}
 function roomStop(){ RM.un.forEach(function(u){ try{ u(); }catch(e){} }); RM.un=[]; if(RM.poll){ clearInterval(RM.poll); RM.poll=null; } }
 function rSnapP(q){ return q.docs.map(function(d){ var x=d.data(); x.id=d.id; return x; }); }
 function roomWatch(c){
-  roomStop(); RM.code=c;
+  roomStop(); RM.code=c; RM.healthy=false; RM.lastPull=0;
   KFB.init().then(function(fs){
     if(!fs||RM.code!==c) return;
     var rd=rDoc(fs,c);
-    RM.un.push(rd.onSnapshot(function(sn){ if(RM.code!==c) return; RM.snapAt=Date.now(); RM.gotR=true; RM.room=sn.exists?sn.data():null; roomUpdate(); },function(){}));
-    RM.un.push(rd.collection('players').onSnapshot(function(q){ if(RM.code!==c) return; RM.snapAt=Date.now(); RM.gotP=true; RM.ps=rSnapP(q); roomUpdate(); },function(){}));
-    // 知らせ（onSnapshot）が届かないスマホのために、6秒以上なにも届いていないときだけ3秒ごとに自分から確かめる
-    RM.poll=setInterval(function(){ if(Date.now()-RM.snapAt>6000) roomPull(); },3000);
+    RM.un.push(rd.onSnapshot({includeMetadataChanges:true},function(sn){ if(RM.code!==c) return; if(!sn.metadata.fromCache){ RM.snapAt=Date.now(); } RM.gotR=true; RM.room=sn.exists?sn.data():null; roomUpdate(); },function(){ RM.healthy=false; }));
+    RM.un.push(rd.collection('players').onSnapshot({includeMetadataChanges:true},function(q){ if(RM.code!==c) return; if(!q.metadata.fromCache){ RM.snapAt=Date.now(); RM.healthy=true; } RM.gotP=true; RM.ps=rSnapP(q); rApplyMine(); roomUpdate(); },function(){ RM.healthy=false; }));
   });
+  // 知らせが届いていない（つながりが確かめられない）あいだは3秒ごと、届いているときも15秒ごとに、REST で直接確かめる（診断中は読まない＝読む回数を少なく）
+  if(RM.poll) clearInterval(RM.poll);
+  RM.poll=setInterval(function(){
+    if(RM.code!==c||!RM.view||RM.view==='quiz'||RM.view==='setup') return;
+    var gap=RM.healthy?15000:3000; if(Date.now()-RM.lastPull<gap||Date.now()-RM.snapAt<2500) return; roomPullRest();
+  },1000);
 }
 async function roomPull(){
-  var c=RM.code; if(!c) return; var fs=await KFB.init(); if(!fs) return;
+  var c=RM.code; if(!c) return; if(await roomPullRest()) return; var fs=await KFB.init(); if(!fs) return;
   try{ var sn=await rTO(rDoc(fs,c).get(),10000), q=await rTO(rDoc(fs,c).collection('players').get(),10000); if(RM.code!==c) return;
     RM.room=sn.exists?sn.data():null; RM.ps=rSnapP(q); RM.gotR=RM.gotP=true; RM.snapAt=Date.now(); roomUpdate(); }catch(e){}
 }
@@ -3283,12 +3304,12 @@ function roomSetup(){
   var v=$('v-room'); v.innerHTML=h; glueAll(v); show('v-room'); RM.view='setup';
 }
 function roomOpen(c){
-  RM.code=c; RM.room=null; RM.ps=[]; RM.gotR=RM.gotP=false; RM.sig='';
+  RM.code=c; RM.room=null; RM.ps=[]; RM.gotR=RM.gotP=false; RM.sig=''; RM.mine=null;
   var v=$('v-room'); v.innerHTML='<section class="card"><p class="rchip wait">部屋につないでいます…</p><p class="muted">部屋 '+c+'</p></section>'; show('v-room'); RM.view='loading';
   KFB.init().then(function(fs){
     if(RM.code!==c) return;
-    if(!fs){ roomRender('nofb'); return; }
-    roomWatch(c);
+    if(!fs&&!(window.KOI16_FB&&KOI16_FB.projectId)){ roomRender('nofb'); return; }
+    roomWatch(c); roomPullRest();
     setTimeout(function(){ if(RM.code===c&&RM.view==='loading') roomPull(); },6000);
     setTimeout(function(){ if(RM.code===c&&RM.view==='loading') roomRender('slow'); },14000);
   });
@@ -3387,14 +3408,16 @@ function roomQuiz(){
   if(cont){ mode=RM.room.mode==='full'?'full':'quick'; startQuiz(false); } else startQuiz(true,RM.room.mode==='full'?'full':'quick');
   toast('スタート！ 診断が始まりました');
 }
+function rTyped(v){ if(typeof v==='boolean') return {booleanValue:v}; if(typeof v==='number') return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v}; if(v instanceof Date) return {timestampValue:v.toISOString()}; return {stringValue:String(v)}; }
+function rRestSet(path,d){ var cfg=window.KOI16_FB||{}, f={}; for(var k in d) if(d[k]!=null) f[k]=rTyped(d[k]); return rTO(fetch(rRestBase()+path+'?key='+encodeURIComponent(cfg.apiKey||''),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:f})}).then(function(r){ if(!r.ok) throw new Error('rest '+r.status); return true; }),12000); }
 async function roomWriteMe(d){
   for(var k=0;k<4;k++){
-    try{ var fs=await KFB.init(); if(!fs) throw new Error('nofb'); await rTO(rDoc(fs,RM.code).collection('players').doc(rPid()).set(Object.assign({},d,{expireAt:rExp()})),15000); return true; }
+    try{ var fs=await KFB.init(), dd=Object.assign({},d,{expireAt:rExp()}); if(k%2===0||!fs) await rRestSet(RM.code+'/players/'+rPid(),dd); else await rTO(rDoc(fs,RM.code).collection('players').doc(rPid()).set(dd),15000); return true; }
     catch(e){ await rSleep(1200*(k+1)); }
   }
   return false;
 }
-function rLocalMe(d){ var id=rPid(), f=false; RM.ps.forEach(function(p){ if(p.id===id){ Object.assign(p,d); f=true; } }); if(!f) RM.ps.push(Object.assign({id:id},d)); }
+function rLocalMe(d){ RM.mine=Object.assign({},d); var id=rPid(), f=false; RM.ps.forEach(function(p){ if(p.id===id){ Object.assign(p,d); f=true; } }); if(!f) RM.ps.push(Object.assign({id:id},d)); }
 async function roomDone(code){
   var me=rMe()||{name:st.nick||'ゲスト',joined:Date.now(),rc:RM.room&&RM.room.created};
   var d={name:me.name,code:code,done:true,joined:me.joined,rc:me.rc};
@@ -3426,7 +3449,7 @@ async function roomDoCreate(){
   try{
     var o=await roomCreate(nm,RM.mode);
     history.pushState(null,'','?room='+o.c);
-    RM.code=o.c; RM.room=o.room; RM.ps=[o.me]; RM.gotR=RM.gotP=true; RM.view='loading'; RM.sig='';
+    RM.code=o.c; RM.room=o.room; RM.ps=[o.me]; RM.mine=Object.assign({},o.me); delete RM.mine.id; RM.gotR=RM.gotP=true; RM.view='loading'; RM.sig='';
     roomWatch(o.c); roomUpdate();
   }catch(e){
     bt.disabled=false; bt.textContent='部屋を作る';
@@ -3436,7 +3459,7 @@ async function roomDoCreate(){
 async function roomDoStart(){
   var bt=$('r-start'); if(bt){ bt.disabled=true; bt.textContent='スタートしています…'; }
   for(var k=0;k<3;k++){
-    try{ var fs=await KFB.init(); await rTO(rDoc(fs,RM.code).update({phase:'play',expireAt:rExp()}),15000); return; }catch(e){ await rSleep(1200); }
+    try{ var r0=RM.room||{}; if(k%2===0) await rRestSet(RM.code,{created:r0.created,phase:'play',mode:r0.mode,host:r0.host,expireAt:rExp()}); else { var fs=await KFB.init(); await rTO(rDoc(fs,RM.code).update({phase:'play',expireAt:rExp()}),15000); } RM.room=Object.assign({},r0,{phase:'play'}); RM.sig=''; roomUpdate(); return; }catch(e){ await rSleep(1200); }
   }
   if(bt){ bt.disabled=false; bt.textContent='スタート'; }
   rNote('r-snote','うまくつながりませんでした。もう一度「スタート」を押してください',true);
