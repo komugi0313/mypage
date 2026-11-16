@@ -211,10 +211,22 @@ function bindAsk(onPick){
 /* ===== ひとりで ===== */
 const L={};  // 手元で遊ぶときのゲーム
 function soloStart(name){
-  Object.assign(L,{mode:'solo',qs:deal(CFG.len,CFG.topic),players:[{id:'me',name:name||'あなた',ans:{}}],p:0,i:0});
+  Object.assign(L,{counts:undefined,mode:'solo',qs:deal(CFG.len,CFG.topic),players:[{id:'me',name:name||'あなた',ans:{}}],p:0,i:0});
   localAsk();
 }
+/* 答えたあと、これまでに遊んだ人の答えの割合を少しだけ出す（究極の二択と同じ。ひとり・答え合わせのリンクのとき。鑑定者本人の指示 2026-11-16）
+   問題の数は、はじめに1回だけまとめて読む（L.counts）。読めないとき・確認用ページでは出さないだけ */
+function prefetchVotes(){L.counts=null;const qs=L.qs;getDb().then(db=>db&&db.vote&&db.votes?db.votes(qs.map(k=>'q'+QKEY[k])):null).then(c=>{if(c&&L.qs===qs)L.counts=c}).catch(()=>{})}
+function flashVotes(k,v){
+  if(!L.counts)return false;const id='q'+QKEY[k],c=L.counts[id]||{},cnt=[c.a||0,c.b||0,c.c||0],before=cnt[0]+cnt[1]+cnt[2];
+  if(!(store('kv_voted')||[]).includes(id))cnt[v]++;
+  const t=cnt[0]+cnt[1]+cnt[2];if(!t)return false;
+  app.querySelectorAll('.opt').forEach(b=>{const o=+b.dataset.v,pc=Math.round(cnt[o]/t*100);b.disabled=true;if(o===v)b.classList.add('picked');
+    b.classList.add('w');b.insertAdjacentHTML('beforeend',`<span class="wrow"><span class="wpct">みんなの${pc}%</span></span><i class="wbar" style="width:${pc}%"></i>`)});
+  const o=app.querySelector('.opts');if(o)o.insertAdjacentHTML('afterend',`<p class="wnote">${before?`これまでに${t.toLocaleString()}人が答えました`:'この問題に答えたのは、あなたが最初です！'}</p>`);
+  return true}
 function localAsk(){
+  if(L.i===0&&L.p===0&&L.counts===undefined)prefetchVotes();
   const p=L.players[L.p],k=L.qs[L.i],n=L.qs.length,multi=L.players.length>1;
   const a=p.ans[L.i]||(p.ans[L.i]={o:-1,st:0,ms:0});
   view(askHTML(k,L.i,n,{who:multi?p.name+'さん':'',step:'own',star:n===30,starOn:a.st}));
@@ -222,11 +234,14 @@ function localAsk(){
   bindAsk((v,starOn)=>{
     if(v===null){a.st=starOn?1:0;return}
     a.o=v;a.ms=Date.now()-t0;
+    const go=()=>{
     L.i++;
     if(L.i<n){localAsk();return}
     L.i=0;L.p++;
     if(L.mode==='pair'){showResult({players:[L.partner,L.players[0]],qs:L.qs,me:'me',anon:false,local:true,pair:true});return}
     showResult({players:L.players,qs:L.qs,me:L.mode==='solo'?'me':null,anon:false,local:true});
+    };
+    if(!multi&&flashVotes(k,v))setTimeout(go,1400);else go();
   });
 }
 
@@ -375,10 +390,11 @@ function soloHTML(G){
     <div class="ring" style="background:conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)"><div class="in"><span class="num">${pct}<small>%</small></span></div></div>
     <p class="msg">${msg}</p><p class="hint">${xs.length}問のうち、まん中の答え（こだわらない など）が${flex.length}問</p></section>
   ${axHTML(G,[p],()=>p.name==='あなた'?'あなた':esc(p.name))}
+  ${G.me==='me'&&!G.view?`<div id="hist">${histHTML(saveHist(G,p,pct))}</div>`:''}
   ${star.length?`<section class="card"><p class="label">★ ゆずれないこと</p><ul class="list">${star.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${esc(ans(x.a.o,x.k))}</li>`).join('')}</ul></section>`:''}
   <section class="card"><p class="label">あなたのこだわり</p><ul class="list">${firm.filter(x=>!x.a.st).map(x=>`<li><b>${esc(CATS[Q[x.k][0]][0])}｜${esc(Q[x.k][1])}</b><span class="ansrow"><i class="o${x.a.o}">${esc(ans(x.a.o,x.k))}</i></span></li>`).join('')||'<li>今回はぜんぶ「こだわらない」でした</li>'}</ul></section>
   ${flex.length?`<section class="card"><p class="label">合わせられること</p><p class="hint">${flex.map(x=>esc(Q[x.k][1])).join('　')}</p></section>`:''}
-  ${byT.length>1?`<section class="card"><p class="label">いちばん悩んだ問題</p><div class="ponder"><b>${esc(Q[byT[0].k][1])}</b><span>「${esc(ans(byT[0].a.o,byT[0].k))}」まで <em>${sec(byT[0].a.ms)}</em> 秒</span></div>
+  ${byT.length>1?`<section class="card"><p class="label">いちばん悩んだ問題</p><div class="ponder"><b>${esc(Q[byT[0].k][1])}</b><span>「${esc(ans(byT[0].a.o,byT[0].k))}<span style="white-space:nowrap">」まで <em>${sec(byT[0].a.ms)}</em> 秒</span></span></div>
     <p class="hint">いちばん即決は「${esc(Q[byT[byT.length-1].k][1])}」（${sec(byT[byT.length-1].a.ms)} 秒）</p></section>`:''}
   ${inviteCard(G,p)}`;
 }
@@ -484,7 +500,7 @@ function withStart(x){
     <button class="btn" id="wgo" style="align-self:stretch">答えはじめる</button>
     <button class="btn ghost small" id="wtop">アイ・シンクのトップを見る</button></section>`);
   $('wgo').onclick=()=>{const v=$('wn').value.trim();if(!v){$('wmsg').hidden=false;$('wn').focus();return}store('kv_name',v);
-    Object.assign(L,{mode:'pair',qs:x.qs,players:[{id:'me',name:v||'ともだち',ans:{}}],partner:{id:'p',name:x.name,ans:x.ans},p:0,i:0});localAsk()};
+    Object.assign(L,{counts:undefined,mode:'pair',qs:x.qs,players:[{id:'me',name:v||'ともだち',ans:{}}],partner:{id:'p',name:x.name,ans:x.ans},p:0,i:0});localAsk()};
   $('wtop').onclick=goTop}
 // 結果のリンク（送り返された結果）を開いた人
 function pairView(x){
@@ -506,6 +522,7 @@ async function votesRun(G){
     return{k,i,cnt,tot,o:a&&a.o>=0?a.o:-1,share:tot&&a&&a.o>=0?cnt[a.o]/tot:null}}).filter(r=>r.tot>=3&&r.o>=0);
   const el=$('vs');if(!el||!rows.length)return;
   const avg=Math.round(rows.reduce((s,r)=>s+r.share,0)/rows.length*100);
+  if(G.players.length===1&&G.me==='me')histSetM(G,avg);
   const msg=avg>=55?'みんなと感覚が近いタイプ':avg<=38?'少数派の答えが多い、個性派':'ほどよくバランスのとれたタイプ';
   const minor=rows.slice().sort((a,b)=>a.share-b.share).slice(0,3).filter(r=>r.share<0.5);
   const pc=x=>Math.round(x*100);
@@ -517,6 +534,23 @@ async function votesRun(G){
     <details><summary class="label">1問ずつ、みんなの答えを見る</summary><ul class="list vlist">${rows.map(r=>`<li><b>${esc(Q[r.k][1])}</b>${bar(r)}<small>${r.tot}人が答えました</small></li>`).join('')}</ul></details>
     <p class="hint">これまでにアイ・シンクで答えた人の割合です（答えの数だけを数えていて、名前などは送っていません）。</p>`;
   el.hidden=false;if(window.__jw)window.__jw(el)}
+
+/* ===== あなたの平均（究極の二択と同じ。ひとりで遊んだ結果をスマホが覚えておき、最新20回の平均を出す。鑑定者本人の指示 2026-11-16） ===== */
+function saveHist(G,p,pct){
+  const id=G.qs.join('.'),h=(store('kv_hist')||[]).filter(r=>r&&r.id);
+  if(!h.some(r=>r.id===id)){const ax={};AX.forEach(a=>{const s=axScore(p,G.qs,a);if(s)ax[a.key]=s.pct});h.push({id,f:pct,ax,m:null});store('kv_hist',h.slice(-20))}
+  return store('kv_hist')||h}
+function histHTML(h){
+  if(!h||!h.length)return '';const n=h.length;
+  if(n<2)return `<section class="card"><p class="label">あなたの平均</p><p class="hint">出た問題によって、数字は毎回少し変わります。何回か遊ぶと、ここに平均が出て、あなたらしい数字に近づいていきます。</p></section>`;
+  const av=xs=>xs.length?Math.round(xs.reduce((a,b)=>a+b,0)/xs.length):null;
+  const f=av(h.map(r=>r.f)),m=av(h.map(r=>r.m).filter(x=>x!=null)),mn=h.filter(r=>r.m!=null).length;
+  const axs=AX.map(a=>({a,v:av(h.map(r=>r.ax&&r.ax[a.key]).filter(x=>x!=null))})).filter(x=>x.v!=null);
+  const bar=(name,v,sub)=>`<li><span class="thn"><b>${esc(name)}</b>${sub?`<small>${esc(sub)}</small>`:''}</span><b>${v}%</b><div class="bar"><i style="width:${v}%"></i></div></li>`;
+  return `<section class="card"><p class="label">あなたの平均（${n}回ぶん）</p><p class="hint">遊ぶほど、あなたらしい数字に近づきます。</p>
+    <ul class="thl">${bar('合わせられる度',f)}${m!=null?bar('多数派度',m,mn<n?mn+'回ぶん':''):''}</ul>
+    ${axs.length?`<ul class="list havg">${axs.map(({a,v})=>`<li><b>${esc(a.name)}</b>${esc(axSide(a,v))}</li>`).join('')}</ul>`:''}</section>`}
+function histSetM(G,m){const id=G.qs.join('.'),h=store('kv_hist')||[],r=h.find(x=>x&&x.id===id);if(!r||r.m!=null)return;r.m=m;store('kv_hist',h);const el=$('hist');if(el){el.innerHTML=histHTML(h);if(window.__jw)window.__jw(el)}}
 
 /* ===== 結果を画像で保存（インスタのストーリーズの縦長 1080×1920） ===== */
 async function saveImage(G){
