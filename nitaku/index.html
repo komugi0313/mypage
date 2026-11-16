@@ -2495,11 +2495,22 @@ function showResult(){
 
 /* ───── 結果（みんな） ───── */
 /* みんなの価値観の近さ（答えが重なるほど価値観が近い。鑑定者本人の考え 2026-11-16） */
+/* みんなの回答％を使った重さ（鑑定者本人 2026-11-16「1・2」）：みんなの答えが分かれる問題ほど重く数える。
+   答えた人が少ないうちは、5人ずつA・Bを選んだことにしてならす（＝最初はどの問題もほぼ同じ重さ） */
+function aishoShare(q){
+  var c=S.counts && S.counts[q.id]; if(!c) return null;
+  var a=c.a||0, b=c.b||0, n=a+b; return { n:n, pa:(a+5)/(n+10) };
+}
+function aishoW(q){ var s=aishoShare(q); if(!s) return 1; var pb=1-s.pa; return 2*(1-(s.pa*s.pa+pb*pb)); }
+/* その答えを選んだ人の割合（20人以上答えた問題だけ） */
+function aishoPct(q,c){ var s=aishoShare(q); if(!s || s.n<20) return null; var c0=canon(q,c), c1=S.counts[q.id]; return Math.round(100*(c0==='a'?c1.a:c1.b)/s.n); }
 function aishoPairs(){
   var n=S.players.length, out=[];
   for(var x=0;x<n;x++) for(var y=x+1;y<n;y++){
     var same=0,both=0,sm=[],df=[];
-    S.qs.forEach(function(q,qi){ var a=S.ans[x]&&S.ans[x][qi], b=S.ans[y]&&S.ans[y][qi]; if(!(a==='A'||a==='B')||!(b==='A'||b==='B')) return; both++; if(a===b){ same++; sm.push(qi); } else df.push(qi); });
+    S.qs.forEach(function(q,qi){ var a=S.ans[x]&&S.ans[x][qi], b=S.ans[y]&&S.ans[y][qi]; if(!(a==='A'||a==='B')||!(b==='A'||b==='B')) return; var w=aishoW(q); both+=w; if(a===b){ same+=w; sm.push(qi); } else df.push(qi); });
+    // 重なった答えは、みんなの中で選ぶ人が少ない答えから先に見せる
+    sm.sort(function(i,j){ var pi=aishoPct(S.qs[i],S.ans[x][i]), pj=aishoPct(S.qs[j],S.ans[x][j]); return (pi==null?101:pi)-(pj==null?101:pj); });
     if(both) out.push({x:x,y:y,r:Math.round(100*same/both),sm:sm,df:df});
   }
   return out.sort(function(a,b){ return b.r-a.r; });
@@ -2515,11 +2526,11 @@ function aishoHTML(mode){
   var nm=function(i){ return esc(S.players[i].name); };
   var pick=function(i,qi){ var c=S.ans[i][qi], q=S.qs[qi]; return esc(c==='A'?q.a:q.b); };
   var word=mode==='love'?'恋の価値観':'ふだんの価値観';
-  var h='<div class="card aisho"><h3 class="ai-t"><img src="img/icon-aisho.webp" alt="" width="40" height="40"><span>'+(n===2?'2人の価値観の近さ':'みんなの価値観の近さ')+'</span></h3><p class="hint" style="margin-top:0">同じ答えを選んだ問題が多いほど、'+word+'が近い、と考えます。</p>';
+  var h='<div class="card aisho"><h3 class="ai-t"><img src="img/icon-aisho.webp" alt="" width="40" height="40"><span>'+(n===2?'2人の価値観の近さ':'みんなの価値観の近さ')+'</span></h3><p class="hint" style="margin-top:0">同じ答えを選んだ問題が多いほど、'+word+'が近い、と考えます。みんなの答えが分かれる問題で重なるほど、重く数えます。</p>';
   if(n===2){
     var p=P[0], L=aishoLab(p.r);
     h+='<div class="ai-big"><div class="pp-ring" style="--v:'+p.r+'"><b>'+p.r+'%</b></div><div class="ai-nm">'+nm(p.x)+' × '+nm(p.y)+'<br><span class="ai-lab">'+L[0]+'</span></div></div><p class="ai-say">'+L[1]+'</p>';
-    if(p.sm.length) h+='<p class="ai-h">重なった答え</p><ul class="ai-li">'+p.sm.slice(0,3).map(function(qi){ return '<li>'+pick(p.x,qi)+'</li>'; }).join('')+'</ul>';
+    if(p.sm.length) h+='<p class="ai-h">重なった答え</p><ul class="ai-li">'+p.sm.slice(0,3).map(function(qi){ var pc=aishoPct(S.qs[qi],S.ans[p.x][qi]); return '<li>'+pick(p.x,qi)+(pc!=null && pc<50 ? '<small>みんなの中では少数派（'+pc+'%）の答え</small>' : '')+'</li>'; }).join('')+'</ul>';
     if(p.df.length) h+='<p class="ai-h">分かれた答え（話すと盛り上がる）</p><ul class="ai-li df">'+p.df.slice(0,3).map(function(qi){ return '<li>'+nm(p.x)+'：'+pick(p.x,qi)+'<small>'+nm(p.y)+'：'+pick(p.y,qi)+'</small></li>'; }).join('')+'</ul>';
   } else {
     var me=-1; if(S.room && S.room.pid) S.players.forEach(function(pl,i){ if(pl.pid===S.room.pid) me=i; });
