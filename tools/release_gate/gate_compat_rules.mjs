@@ -614,6 +614,76 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   }catch(err){ o.bad.push('動かない：'+String(err&&err.message||err)); } chart=c0; return o; });
   r.bad.forEach(x=>e.push(x));
   console.log('  '+(e.length?'NG':'OK')+' 恋愛・仕事の持ち味（材料が3か所同じ・60干支×7項目・出すほう・1回だけ・見出しの中に足す・やさしい画面・鑑定書）'+(e.length?'  … '+e.slice(0,6).join('・'):'')); if(e.length) res.fails.push('恋愛・仕事の持ち味: '+e.join('・')); }
+// 時期のそろえ（先生の指示 2026-11-16「悩み事をきちんとした言葉で適正時期で診断判断して出力して欲しい」）：
+//  A 本文が「本格的に・いちばん・チャンスの年」として出した年が、ツールの時期（1行目・まとめ）にないとき、理由のない文は年を置きかえ、理由のある文は1回だけ年を添える（pkTimingConsistFix）。過去・注意・2つの年・ツールにもある年は触らない
+//  B 相性の「2人の結びつきが強くまとまる時期」の大運を「あなたの2049年（あなた68歳／お相手73歳）からの10年」と書かない（_trDuPlain）
+{ const e=[]; const r=await p.evaluate(()=>{ const o={bad:[],nB:0}; const c0=chart; try{
+    const mk=(y,m,d,h,mi,sex)=>baziCompute({year:y,month:m,day:d,hour:h,minute:mi,sex},'','none'), pl=document.documentElement.classList.contains('bg-on'), GZ=/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/;
+    const A=mk(1981,6,10,22,28,'female'); chart=A;
+    const cases=[['来年結婚できますか','love','結婚のご縁が本格的に動き出すのは','年頃です。','結婚のご縁がいちばん強まります'],['金運はどうですか','money','','年は収入アップのチャンスの年です。','金運がいちばん高まります'],['転職はいつがいいですか','work','','年が転職のいちばんのチャンスです。','転職のいちばんのチャンスです']];
+    cases.forEach(([q,k,pre,post,rs])=>{ const T=pkTcTopic(A,q); if(!T||T.k!==k){ o.bad.push(q+'：時期の種類が出ない'); return; }
+      let Y=T.list[T.list.length-1]+1; while(T.list.indexOf(Y)>=0) Y++; const t0=T.list[0];
+      const head='いちばん動きやすいのは'+t0+'年です。\n\n';
+      const x1=pkTimingConsistFix(head+pre+Y+'年（'+(pl?'':'辛亥・')+'50歳）'+post,A,q,pl);
+      if(x1.indexOf(Y+'年')>=0||x1.split('\n\n')[1].indexOf(t0+'年')<0) o.bad.push(q+'：理由のない文の年を置きかえない：'+x1.split('\n\n')[1]);
+      if(pl&&GZ.test(x1.split('\n\n')[1])) o.bad.push(q+'：やさしい画面に干支を付けた');
+      const x2=pkTimingConsistFix(head+'また、'+Y+'年は配偶宮と支合するため、'+rs+'。\n'+Y+'年は星が巡るので、'+rs+'。',A,q,pl);
+      if((x2.match(/（(?:命式の計算では|生まれ持った運の流れで見ると)、/g)||[]).length!==1||x2.indexOf(Y+'年は配偶宮')<0) o.bad.push(q+'：理由のある文に年を1回だけ添えない：'+x2.slice(0,160));
+      if(pkTimingConsistFix(x2,A,q,pl)!==x2) o.bad.push(q+'：2回通すと変わる');
+      const keep=[head+'2025年は'+rs+'でした。',head+Y+'年は'+rs+'が、出費にも注意。',head+t0+'年と'+Y+'年は'+rs+'。',head+t0+'年は'+rs+'。',head+'母の'+rs+'のは'+Y+'年です。'];
+      keep.forEach(x=>{ if(pkTimingConsistFix(x,A,q,pl)!==x) o.bad.push(q+'：触らない文を変えた：'+x.split('\n\n')[1]); }); });
+    if(pkTimingConsistFix('結婚のご縁が本格的に動き出すのは2099年です。',A,'もう死にたいです',pl)!=='結婚のご縁が本格的に動き出すのは2099年です。') o.bad.push('つらさの相談を変えた');
+    { const T=pkTcTopic(A,'来年結婚できますか'); let Y=T.list[T.list.length-1]+1; window.__pkTcRows=[]; const f=pkFinalFix('いちばん縁が動きやすいのは'+T.list[0]+'年です。\n\n結婚のご縁が本格的に動き出すのは'+Y+'年です。','来年結婚できますか',false);
+      if(f.indexOf(Y+'年')>=0) o.bad.push('pkFinalFix で時期をそろえない'); if(!(window.__pkTcRows||[]).length) o.bad.push('根拠のチェック表（✏️）に出ない'); }
+    // B
+    let seed=7; const rnd=()=>{ seed=(seed*1103515245+12345)%2147483648; return seed/2147483648; };
+    for(let k=0;k<400&&o.nB<6;k++){ const a=mk(1950+Math.floor(rnd()*50),1+Math.floor(rnd()*12),1+Math.floor(rnd()*28),12,0,'female'), b=mk(1950+Math.floor(rnd()*50),1+Math.floor(rnd()*12),1+Math.floor(rnd()*28),12,0,'male');
+      const L=compatTrioLines(a,b); if(!L.T.some(t=>t.du.some(d=>!d.now))) continue; o.nB++;
+      const st=x=>pkStampYears(x,birthYearOf(a),birthYearOf(b)), sum=compatSummaryHTML?String(compatSummaryHTML(a,b)||''):'';
+      L.plain.concat([sum.replace(/<[^>]+>/g,' ')]).forEach(x=>{ if(/からの10年/.test(x)) o.bad.push('「からの10年」が残る：'+x.slice(0,120));
+        const y=st(x); if(/\d{4}年（[^）]*歳／[^）]*）から[、新]/.test(y)) o.bad.push('大運の年に2人分の年齢：'+y.slice(0,160)); });
+      L.T.forEach(t=>t.du.filter(d=>!d.now).forEach(d=>{ const by=d.who==='本人'?birthYearOf(a):birthYearOf(b); if(L.plain.join('').indexOf((d.from-by)+'歳になる'+d.from+'年から')<0) o.bad.push('大運の年齢がない：'+d.who+d.from); })); }
+    if(!o.nB) o.bad.push('大運の時期がある組が見つからない');
+  }catch(err){ o.bad.push('動かない：'+String(err&&err.message||err)); } chart=c0; return o; });
+  r.bad.forEach(x=>e.push(x));
+  console.log('  '+(e.length?'NG':'OK')+' 時期のそろえ（恋愛・金運・仕事の本文の年・理由のある文に1回だけ添える・触らない文・pkFinalFix・✏️）と相性の大運の言い方（'+r.nB+'組）'+(e.length?'  … '+[...new Set(e)].slice(0,6).join('・'):'')); if(e.length) res.fails.push('時期のそろえ: '+[...new Set(e)].join('・')); }
+// オンラインの1行目と話す順番③（2026-11-16）：恋人と別れるか・子どもの受験・引っ越しの時期・続けるか独立か（方向なし）は、
+//  1行目が問いに答えていない／ツールと食いちがうときだけ通信なしと同じ1行目にし（良い1行目は残す）、③は1行目と同じツールの時期・順番にする
+{ const e=[]; const r=await p.evaluate(()=>{ const o={bad:[],nd:0}; const c0=chart; try{
+    const mk=(y,m,d,h,mi,sex)=>baziCompute({year:y,month:m,day:d,hour:h,minute:mi,sex},'','none'), pl=document.documentElement.classList.contains('bg-on'), JG=/命式|大運|通変|空亡|解空|喜神|忌神|[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/;
+    const L1=(c,q,l)=>pkLeadFix(l+'\n【お客様へのお伝え方】\n説明です。',c,q,false).split('\n')[0];
+    const T3=(c,q)=>{ const h=pkTalkHTML('答えです。\n【お客様へのお伝え方】\n説明。',q,c,pl); const m=h.match(/③<\/span><div><div class="pkt-t">[^<]*<\/div><div class="pkt-b">(.*?)<\/div><\/div><\/li>/); return m?m[1].replace(/<[^>]+>/g,'').replace(/^「|」$/g,''):''; };
+    let seed=11; const rnd=()=>{ seed=(seed*1103515245+12345)%2147483648; return seed/2147483648; };
+    const P=[mk(1981,6,10,22,28,'female'),mk(1990,3,16,12,0,'male')]; for(let k=0;k<10;k++) P.push(mk(1960+Math.floor(rnd()*40),1+Math.floor(rnd()*12),1+Math.floor(rnd()*28),12,0,rnd()<0.5?'female':'male'));
+    const nenY=pkNenInfo().Y;
+    P.forEach(c=>{ chart=c;
+      const qB='彼と別れるべきか悩んでいます', BK=pkBreakLead(c,qB,pl);
+      if(!BK) o.bad.push('別れの1行目が出ない'); else {
+        if(L1(c,qB,'別れたほうがいいでしょう。今の関係は負担が大きいです。')!==BK) o.bad.push('別れを決めた1行目を置きかえない');
+        if(L1(c,qB,'あなたは本来とても魅力的な人です。')!==BK) o.bad.push('別れに答えていない1行目を置きかえない');
+        const g='今は別れを急がず、気持ちを整理してから話し合うのがよい時期です。'; if(L1(c,qB,g)!==g) o.bad.push('良い別れの1行目を変えた');
+        const t=T3(c,qB); if(!/順で考え/.test(t)||/別れ(?:た)?ほうが/.test(t)) o.bad.push('別れの③が順番になっていない：'+t);
+        const cy=(loveFourLines(c).cautionYears||[]).filter(y=>y>=nenY); cy.forEach(y=>{ if(t.indexOf(y+'年')<0) o.bad.push('別れの③に揺れやすい年がない'); }); }
+      const qK='子どもの受験が心配です', KE=pkKidExamLead(c,qK,pl);
+      if(!KE) o.bad.push('受験の1行目が出ない'); else {
+        if(L1(c,qK,'お子さんは合格できます。安心してください。').indexOf(KE.split('。')[0])!==0||/合格できます/.test(L1(c,qK,'お子さんは合格できます。安心してください。')))   /* 「お子さんの生年月日がわかれば…」の文は、今までの決まりで1行目のうしろへ移る */ o.bad.push('合格を言い切った1行目を置きかえない');
+        const g='受験の結果を言い切ることはしませんが、今年のあなたはお子さんを支えやすい流れです。'; if(L1(c,qK,g)!==g) o.bad.push('良い受験の1行目を変えた');
+        if(!/お子さんの生年月日/.test(T3(c,qK))) o.bad.push('受験の③'); }
+      const qM='引っ越しはいつがいいですか', MY=pkMoveYears(c).filter(y=>!pkKuuBad(c,y)), MV=pkMoveLead(c,qM,pl);
+      if(!MV) o.bad.push('引っ越しの1行目が出ない'); else {
+        const t=T3(c,qM); if(t!==MV) o.bad.push('引っ越しの③が1行目とちがう：'+t);
+        if(MY.length){ let Y=nenY; while(MY.indexOf(Y)>=0) Y++;
+          if(L1(c,qM,'引っ越しは'+Y+'年がおすすめです。').indexOf(MV)!==0) o.bad.push('ツールにない年の引っ越しを置きかえない');
+          const g='引っ越しは'+MY[0]+'年がおすすめです。'; if(L1(c,qM,g)!==g) o.bad.push('良い引っ越しの1行目を変えた');
+          if(L1(c,qM,'運の流れは安定しています。').indexOf(MV)!==0) o.bad.push('年のない引っ越しの1行目に足さない'); } }
+      const qW='今の仕事を続けるか独立するか';
+      if(pkWorkNoDirQ(c,qW)){ o.nd++; const L0=pkOfflineLead(c,qW,pl); if(L1(c,qW,'あなたはまじめな努力家です。')!==L0) o.bad.push('続けるか独立かに答えていない1行目を置きかえない');
+        const ym=(L0.match(/(?:19|20)\d\d(?=年)/)||[])[0]; if(ym&&T3(c,qW).indexOf(ym+'年')<0) o.bad.push('続けるか独立かの③の年が1行目とちがう'); }
+      if(pl) [BK,KE,MV,T3(c,qB),T3(c,qK),T3(c,qM)].forEach(x=>{ if(x&&JG.test(x)) o.bad.push('やさしい画面に専門用語：'+x.slice(0,60)); }); });
+    if(!o.nd) o.bad.push('方向が決まらない人が見つからない');
+  }catch(err){ o.bad.push('動かない：'+String(err&&err.message||err)); } chart=c0; return o; });
+  r.bad.forEach(x=>e.push(x));
+  console.log('  '+(e.length?'NG':'OK')+' オンラインの1行目と③（別れ・子どもの受験・引っ越し・続けるか独立か〈方向なし '+r.nd+'人〉・良い1行目は残す・やさしい言い方）'+(e.length?'  … '+[...new Set(e)].slice(0,6).join('・'):'')); if(e.length) res.fails.push('オンラインの1行目と③: '+[...new Set(e)].join('・')); }
 const ok=res.fails.length===0&&res.rit>=1&&res.ritMD>=1&&calls===0;
 console.log(`■ 相性の流派の決まり / ${site}：${res.checked}組を確認（律音 日柱どうし ${res.rit}組・月柱×日柱 ${res.ritMD}組・半会 ${res.han}か所）`);
 res.fails.slice(0,10).forEach(f=>console.log('  NG '+f));
