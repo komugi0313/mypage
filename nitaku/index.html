@@ -1824,7 +1824,7 @@ function kotobaOf(qs, ans, mode, times, max){
   var ws=Object.keys(sc).sort(by(sc)), per={}, pick=[];
   ws.forEach(function(w){ var t=K.theme[w]; if(pick.length<max && (per[t]||0)<3 && !opp(w,pick)){ per[t]=(per[t]||0)+1; pick.push(w); } });
   if(!pick.length) return null;
-  var hito=[]; Object.keys(hs).sort(by(hs)).forEach(function(w){ if(hito.length<3 && !opp(w,hito.concat(pick))) hito.push(w); });
+  var hito=[]; Object.keys(hs).sort(by(hs)).forEach(function(w){ if(hito.length<3 && pick.indexOf(w)<0 && !opp(w,hito.concat(pick))) hito.push(w); });
   return { words:pick, hito:hito, hs:hs };
 }
 /* 本能モード：恋愛の問題のことば（恋愛編のテーマ）と、ふつうの問題のことば（「ふだんのあなた」1行）をまとめて出す */
@@ -1832,7 +1832,9 @@ function kotobaHonHTML(qs, ans, times, label, cls){
   var rL=kotobaOf(qs, ans, 'honL', times), rN=kotobaOf(qs, ans, 'honN', times, 5);
   if(!rL && !rN) return '';
   var hp=[]; [rL,rN].forEach(function(r){ if(r) r.hito.forEach(function(w){ hp.push([w, r.hs[w]||0]); }); });
-  var hito=hp.sort(function(a,b){ return b[1]-a[1]; }).map(function(x){ return x[0]; }).slice(0,3);
+  // テーマのことばと同じことばは「ひとことで言うと」に出さない（同じことばが2回出ないように）
+  var shown=(rL?rL.words:[]).concat(rN?rN.words:[]);
+  var hito=hp.sort(function(a,b){ return b[1]-a[1]; }).map(function(x){ return x[0]; }).filter(function(w,i,a){ return shown.indexOf(w)<0 && a.indexOf(w)===i; }).slice(0,3);
   var h='<div class="card kt'+(cls?' '+cls:'')+'"><p class="kt-hd"><span class="nm">'+esc(label)+'</span>の中にあることば</p><p class="kt-sub">'+KOTOBA_SUB.hon+'</p>';
   if(hito.length) h+='<div class="kt-hito"><h4>ひとことで言うと</h4><div class="kt-hw">'+hito.map(function(w){ return '<span class="kt-h">'+esc(w)+'</span>'; }).join('')+'</div></div>';
   h+='<div class="kt-grp">';
