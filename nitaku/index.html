@@ -229,6 +229,23 @@ h2{font-size:20px;margin:22px 0 10px;font-weight:900}
 .pk.pk-q{background:#FFF0D6}.pk.pk-s{background:#E2F3FD}
 .pk-c{font-size:16px!important}
 .pp-top{display:flex;align-items:center;gap:12px}
+.ai-big{display:flex;align-items:center;gap:14px;margin:4px 0 10px}
+.ai-big .pp-ring{width:104px;height:104px}.ai-big .pp-ring b{font-size:25px}
+.ai-nm{min-width:0;font-family:"Mochiy Pop One",sans-serif;font-weight:400;font-size:19px;color:#1E1E2A;line-height:1.35}
+.ai-lab{display:inline-block;margin-top:4px;background:#FFE3EC;color:#9C1445;border:2px solid #1E1E2A;border-radius:999px;padding:2px 12px;font-size:15px}
+.ai-say{margin:0 0 10px;font-size:15px;font-weight:700;line-height:1.6}
+.ai-h{margin:12px 0 6px;font-size:14px;font-weight:900;color:#5A546A}
+.ai-li{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.ai-li li{background:#FFF8E1;border:2px solid #1E1E2A;border-radius:12px;padding:8px 10px;font-size:14px;font-weight:700;line-height:1.5}
+.ai-li.df li{background:#E2F3FD}
+.ai-li small{display:block;color:#5A546A;font-weight:500}
+.ai-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.ai-row b{font-size:15px;min-width:0}.ai-row em{font-style:normal;font-family:"Mochiy Pop One",sans-serif;font-size:17px;color:#B0124D}
+.ai-row i{grid-column:1/-1;display:block;height:8px;border-radius:99px;background:#FFE3EE;overflow:hidden}
+.ai-row i::before{content:"";display:block;height:100%;width:calc(var(--v)*1%);background:#FF3D7F}
+.ai-row.top b::before{content:"👑 "}
+.ai-more summary{min-height:44px;display:flex;align-items:center;font-size:14px;font-weight:900;color:#9C1445;cursor:pointer}
+.ai-me{background:#FFF0F5;border:2px solid #1E1E2A;border-radius:14px;padding:10px 12px;margin:0 0 10px;font-size:15px;font-weight:700}
 .pp-ring{flex:none;width:86px;height:86px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#FF3D7F calc(var(--v)*1%),#FFE3EE 0);position:relative}
 .pp-ring::after{content:"";position:absolute;inset:10px;border-radius:50%;background:#fff;border:2px solid #1E1E2A}
 .pp-ring b{position:relative;z-index:1;font-family:"Mochiy Pop One",sans-serif;font-weight:400;font-size:21px;color:#B0124D}
@@ -2476,6 +2493,49 @@ function showResult(){
 }
 
 /* ───── 結果（みんな） ───── */
+/* みんなの価値観の近さ（答えが重なるほど価値観が近い。鑑定者本人の考え 2026-11-16） */
+function aishoPairs(){
+  var n=S.players.length, out=[];
+  for(var x=0;x<n;x++) for(var y=x+1;y<n;y++){
+    var same=0,both=0,sm=[],df=[];
+    S.qs.forEach(function(q,qi){ var a=S.ans[x]&&S.ans[x][qi], b=S.ans[y]&&S.ans[y][qi]; if(!(a==='A'||a==='B')||!(b==='A'||b==='B')) return; both++; if(a===b){ same++; sm.push(qi); } else df.push(qi); });
+    if(both) out.push({x:x,y:y,r:Math.round(100*same/both),sm:sm,df:df});
+  }
+  return out.sort(function(a,b){ return b.r-a.r; });
+}
+function aishoLab(r){
+  return r>=80 ? ['価値観がぴったり','答えがほとんど重なりました。言わなくても通じ合える2人です。'] :
+         r>=60 ? ['かなり近い','大事なところが重なる2人。ちがう答えは、話のタネになります。'] :
+         r>=40 ? ['ほどよく近い','似ているところと、ちがうところが半分ずつ。おたがいに新しい発見がある2人です。'] :
+                 ['正反対','答えが分かれることが多い2人。自分にないものを持っている相手です。'];
+}
+function aishoHTML(mode){
+  var P=aishoPairs(), n=S.players.length; if(!P.length) return '';
+  var nm=function(i){ return esc(S.players[i].name); };
+  var pick=function(i,qi){ var c=S.ans[i][qi], q=S.qs[qi]; return esc(c==='A'?q.a:q.b); };
+  var word=mode==='love'?'恋の価値観':'ふだんの価値観';
+  var h='<div class="card aisho"><h3>💞 '+(n===2?'2人の価値観の近さ':'みんなの価値観の近さ')+'</h3><p class="hint" style="margin-top:0">同じ答えを選んだ問題が多いほど、'+word+'が近い、と考えます。</p>';
+  if(n===2){
+    var p=P[0], L=aishoLab(p.r);
+    h+='<div class="ai-big"><div class="pp-ring" style="--v:'+p.r+'"><b>'+p.r+'%</b></div><div class="ai-nm">'+nm(p.x)+' × '+nm(p.y)+'<br><span class="ai-lab">'+L[0]+'</span></div></div><p class="ai-say">'+L[1]+'</p>';
+    if(p.sm.length) h+='<p class="ai-h">重なった答え</p><ul class="ai-li">'+p.sm.slice(0,3).map(function(qi){ return '<li>'+pick(p.x,qi)+'</li>'; }).join('')+'</ul>';
+    if(p.df.length) h+='<p class="ai-h">分かれた答え（話すと盛り上がる）</p><ul class="ai-li df">'+p.df.slice(0,3).map(function(qi){ return '<li>'+nm(p.x)+'：'+pick(p.x,qi)+'<small>'+nm(p.y)+'：'+pick(p.y,qi)+'</small></li>'; }).join('')+'</ul>';
+  } else {
+    var me=-1; if(S.room && S.room.pid) S.players.forEach(function(pl,i){ if(pl.pid===S.room.pid) me=i; });
+    if(me>=0){
+      var mine=P.filter(function(p){ return p.x===me||p.y===me; });
+      if(mine.length){ var b=mine[0].r, ws=mine.filter(function(p){ return p.r===b; }).map(function(p){ return nm(p.x===me?p.y:p.x); }); h+='<p class="ai-me">あなたといちばん価値観が近いのは、'+ws.join('・')+'さん（'+b+'%・'+aishoLab(b)[0]+'）</p>'; }
+    }
+    var row=function(p,k){ return '<div class="ai-row'+(p.r===P[0].r?' top':'')+'"><b>'+nm(p.x)+' × '+nm(p.y)+'</b><em>'+p.r+'%</em><i style="--v:'+p.r+'"></i></div>'; };
+    if(P[0].r===P[P.length-1].r) h+='<p class="ai-say">どの2人も同じ近さ（'+P[0].r+'%・'+aishoLab(P[0].r)[0]+'）でした。</p>';
+    else {
+      h+='<p class="ai-say">いちばん価値観が近いのは、'+P.filter(function(p){ return p.r===P[0].r; }).map(function(p){ return nm(p.x)+' × '+nm(p.y); }).join('、')+'（'+aishoLab(P[0].r)[0]+'）。</p>';
+      h+=P.slice(0,6).map(row).join('');
+      if(P.length>6) h+='<details class="ai-more"><summary>ほかの組み合わせも見る（'+(P.length-6)+'組）</summary>'+P.slice(6).map(row).join('')+'</details>';
+    }
+  }
+  return h+'</div>';
+}
 function showGroupResult(){
   if(S.room && S.room.data && S.room.data.mode==='hon') return showHonGroupResult();
   var mode=S.mode, hd=headline(mode), n=S.players.length;
@@ -2492,6 +2552,7 @@ function showGroupResult(){
   var tops = R.filter(function(r){ return r.sc[hd.k]===top.sc[hd.k]; }).map(function(r){ return esc(r.p.name); });
   h+='<div class="meter"><div class="num" style="font-size:'+(tops.length>1?30:40)+'px">'+tops.join('・')+'</div><div class="cap">'+hd.cap+' '+top.sc[hd.k]+'%'+(tops.length>1?'（同じ）':'')+'</div></div></div>';
 
+  h+=aishoHTML(mode);
   // あなたの中にあることば（恋愛編・ふつう編。1人ずつ）
   R.forEach(function(r,k){ h+=charaHTML(S.qs, S.ans[r.i], r.p.name+'さん', k%2?'kt-b':'kt-a', true, {mode:mode})+kotobaHTML(S.qs, S.ans[r.i], r.p.name+'さん', k%2?'kt-b':'kt-a', mode); });
   // 物差しごとのランキング
@@ -2533,20 +2594,7 @@ function showGroupResult(){
   }
   h+='</div>';
 
-  // 2人ずつの一致率
-  var pairs=[];
-  for(var x=0;x<n;x++) for(var y=x+1;y<n;y++){
-    var same=0; S.qs.forEach(function(q,qi){ var a=S.ans[x][qi]; if((a==='A'||a==='B') && a===S.ans[y][qi]) same++; });   // 答えていない問題は「同じ」に数えない
-    pairs.push({x:x,y:y,r:Math.round(100*same/S.qs.length)});
-  }
-  pairs.sort(function(a,b){ return b.r-a.r; });
-  h+='<div class="card"><h3>答えの一致率</h3>';
-  var pb=pairs[0], pw=pairs[pairs.length-1];
-  if(pb) h+='<div class="rank"><span class="k">'+(n===2?'2人の答えが同じだった割合':'いちばん気が合う2人')+'</span><span class="v">'+esc(S.players[pb.x].name)+' × '+esc(S.players[pb.y].name)+'（'+pb.r+'%）</span></div>';
-  if(pairs.length>1 && pw.r===pb.r) h+='<div class="rank"><span class="k">ほかの組み合わせ</span><span class="v">どの2人も同じ（'+pw.r+'%）</span></div>';
-  else if(pairs.length>1) h+='<div class="rank"><span class="k">永遠に平行線の2人</span><span class="v">'+esc(S.players[pw.x].name)+' × '+esc(S.players[pw.y].name)+'（'+pw.r+'%）</span></div>';
-  h+='</div>';
-
+  var AP=aishoPairs(), pb=AP[0];
   // みんなの答え（1問ずつ、だれがどっちを選んだか）
   h+='<div class="card"><h3>📋 みんなの答え</h3><p class="hint" style="margin-top:0">1問ずつ、だれがどっちを選んだかを見られます。</p>';
   S.qs.forEach(function(q,qi){
@@ -2577,7 +2625,7 @@ function showGroupResult(){
   $('gres-body').innerHTML=h;
   var gt='究極の二択【'+playName(mode)+'】'+n+'人で遊んだ結果\n'+
       R.map(function(r){ return r.p.name+'：'+pctLine(mode, r.sc); }).join('\n')+
-      (pb ? '\nいちばん気が合う2人：'+S.players[pb.x].name+'×'+S.players[pb.y].name : '')+'\n\nみんなでやると本音がバレて盛り上がる！\n#究極の二択 #本音バレ診断';
+      (pb ? '\n'+(n===2?'2人の価値観の近さ：':'いちばん価値観が近い2人：')+S.players[pb.x].name+'×'+S.players[pb.y].name+'（'+pb.r+'%）' : '')+'\n\nみんなでやると本音がバレて盛り上がる！\n#究極の二択 #本音バレ診断';
   $('gshare').onclick=function(){ doShare(gt); };
   $('lgshare').href=lineHref(gt);
   $('gsave').onclick=function(){ saveImage($('gres-body')); };
