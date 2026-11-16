@@ -247,6 +247,19 @@ h2{font-size:20px;margin:22px 0 10px;font-weight:900}
 .ai-row.top b::before{content:"👑 "}
 .ai-more summary{min-height:44px;display:flex;align-items:center;font-size:14px;font-weight:900;color:#9C1445;cursor:pointer}
 .ai-me{background:#FFF0F5;border:2px solid #1E1E2A;border-radius:14px;padding:10px 12px;margin:0 0 10px;font-size:15px;font-weight:700}
+.pc-h{margin:18px 2px 0;font-size:18px;font-weight:900}.pc-hint{margin:2px 2px 8px}
+.pcard{border:2.5px solid #1E1E2A;border-radius:18px;box-shadow:4px 4px 0 #F2C94C;background:#fff;margin:0 0 12px;overflow:hidden}
+.pcard.ppl-a{background:#FFF0F5}.pcard.ppl-b{background:#F2EEFF}
+.pc-sum{list-style:none;display:flex;align-items:center;gap:10px;min-height:64px;padding:8px 44px 8px 12px;cursor:pointer;position:relative}
+.pc-sum::-webkit-details-marker{display:none}
+.pc-sum::after{content:'▼';position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:13px}
+.pcard[open]>.pc-sum::after{content:'▲'}
+.pc-sum img{flex:none;width:52px;height:52px;object-fit:contain}
+.pc-ring{flex:none;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#FF3D7F calc(var(--v)*1%),#FFE3EE 0);font-weight:900}
+.pc-n{min-width:0;display:flex;flex-direction:column}.pc-n b{font-size:18px}.pc-n small{font-size:14px;color:#5A546A;font-weight:700}
+.pcard>.ppl{border:0;margin:0;border-radius:0;background:transparent}
+.pcard>.card{margin:10px 10px 0;box-shadow:none}
+.pcard>.kok{margin:10px 10px 12px}
 .pp-ring{flex:none;width:86px;height:86px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#FF3D7F calc(var(--v)*1%),#FFE3EE 0);position:relative}
 .pp-ring::after{content:"";position:absolute;inset:10px;border-radius:50%;background:#fff;border:2px solid #1E1E2A}
 .pp-ring b{position:relative;z-index:1;font-family:"Mochiy Pop One",sans-serif;font-weight:400;font-size:21px;color:#B0124D}
@@ -2466,13 +2479,15 @@ function showResult(){
   var sp=speedStats(S.qs,S.times[0],S.ans[0]);
   var hist=saveHist(mode, sc);
   var others = AXES[mode].filter(function(ax){ return ax.k!==hd.k; });
-  var h=charaHTML(S.qs, S.ans[0], 'あなた', '', false, {mode:mode})+kotobaHTML(S.qs, S.ans[0], 'あなた', '', mode)+'<div class="res-hero"><div class="pre">'+playName(mode)+'　あなたの結果</div>'+
+  // 見せる順番（鑑定者本人 2026-11-16「ユーザーの視点で」→見本）：結果発表 → 恋のキャラ → ことば → くわしい％（たたむ）→ 選び方のくせ
+  var h='<div class="res-hero"><div class="pre">'+playName(mode)+'　あなたの結果</div>'+
     '<img class="pnd" src="img/panda-'+(val>=65?'smirk':(val<35?'shy':'1'))+'.webp" alt="" width="96" height="96">'+
     '<div class="meter"><div class="cap">'+hd.cap+'</div><div class="num">'+val+'<small>%</small></div></div>'+
     '<div class="catch">'+axComment(hd.k,val)+'</div>'+
     '<div class="minis">'+others.map(function(ax){ return '<div><b>'+sc[ax.k]+'<small>%</small></b><span>'+ax.name+'</span></div>'; }).join('')+'</div></div>';
-  h+='<div class="card"><h3>あなたの数字</h3>'+axisHTML(mode,sc)+'<button class="linkb" data-about>この診断について（％の考え方）</button></div>';
-  h+=histHTML(mode, hist);
+  h+=charaHTML(S.qs, S.ans[0], 'あなた', '', false, {mode:mode})+kotobaHTML(S.qs, S.ans[0], 'あなた', '', mode);
+  h+='<div class="card"><details class="kok"><summary><span>📊 4つの％をくわしく見る</span></summary>'+axisHTML(mode,sc)+'<button class="linkb" data-about>この診断について（％の考え方）</button></details></div>';
+  if(hist && hist.length>=2) h+=histHTML(mode, hist);   // 1回目は中身のない「平均」のカードを出さない
   var maj=majorityStats(S.qs, S.ans[0]);
   if(maj) h+=maj;
   if(sp){
@@ -2565,8 +2580,6 @@ function showGroupResult(){
   h+='<div class="meter"><div class="num" style="font-size:'+(tops.length>1?30:40)+'px">'+tops.join('・')+'</div><div class="cap">'+hd.cap+' '+top.sc[hd.k]+'%'+(tops.length>1?'（同じ）':'')+'</div></div></div>';
 
   h+=aishoHTML(mode);
-  // あなたの中にあることば（恋愛編・ふつう編。1人ずつ）
-  R.forEach(function(r,k){ h+=charaHTML(S.qs, S.ans[r.i], r.p.name+'さん', k%2?'kt-b':'kt-a', true, {mode:mode})+kotobaHTML(S.qs, S.ans[r.i], r.p.name+'さん', k%2?'kt-b':'kt-a', mode); });
   // 物差しごとのランキング
   h+='<div class="card"><h3>ランキング</h3>';
   AXES[mode].forEach(function(ax){
@@ -2607,8 +2620,26 @@ function showGroupResult(){
   h+='</div>';
 
   var AP=aishoPairs(), pb=AP[0];
+  // ひとりずつ（1人1枚にまとめて、押すと開く。部屋で自分がわかるときは自分を先頭にして開いておく）
+  var meI=-1; if(S.room && S.room.pid) S.players.forEach(function(pl,i){ if(pl.pid===S.room.pid) meI=i; });
+  var RO=R.slice(); if(meI>=0) RO.sort(function(a,b){ return (b.i===meI)-(a.i===meI); });
+  h+='<h3 class="pc-h">ひとりずつの結果</h3><p class="hint pc-hint">名前を押すと、その人のキャラ・ことば・％が開きます。</p>';
+  RO.forEach(function(r, ri){
+    var hv=r.sc[hd.k], oth=AXES[mode].filter(function(ax){ return ax.k!==hd.k; });
+    var co=charaOf(S.qs, S.ans[r.i], {mode:mode}), cimg=co && CHARA_IMG[co.main.id];
+    var me=(r.i===meI), tone=ri%2?'kt-b':'kt-a';
+    h+='<details class="pcard '+(ri%2?'ppl-b':'ppl-a')+'"'+(me||(meI<0&&ri===0)?' open':'')+'><summary class="pc-sum">'+
+       (cimg?'<img src="'+cimg+'" alt="" width="52" height="52">':'<span class="pc-ring" style="--v:'+hv+'"><b>'+hv+'</b></span>')+
+       '<span class="pc-n"><b>'+esc(r.p.name)+(me?'（あなた）':'')+'</b><small>'+(co?esc(co.main.name)+'・':'')+hd.cap+' '+hv+'%</small></span></summary>'+
+       '<div class="ppl '+(ri%2?'ppl-b':'ppl-a')+'"><div class="pp-top"><div class="pp-ring" style="--v:'+hv+'"><b>'+hv+'%</b></div><div class="pp-who"><strong>'+esc(r.p.name)+'</strong><span>'+hd.cap+'</span></div></div>'+
+       '<div class="pp-say">'+axComment(hd.k, hv)+'</div>'+
+       '<div class="pp-tiles">'+oth.map(function(ax,j){ return '<div class="pt'+j+'"><small>'+ax.name.replace(/度$/,'')+'</small><b>'+r.sc[ax.k]+'%</b></div>'; }).join('')+'</div>'+
+       (function(){ var sp=speedStats(S.qs,S.times[r.i],S.ans[r.i]); return sp ? '<div class="pks">'+pickHTML('⚡','即決',sp.quick)+pickHTML('🌀','いちばん悩んだ',sp.slow)+'</div>' : ''; })()+
+       '</div>'+charaHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone, true, {mode:mode})+kotobaHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone, mode)+
+       '<details class="kok"><summary><span>🔍 4つの％をくわしく見る</span></summary>'+axisHTML(mode,r.sc)+'</details></details>';
+  });
   // みんなの答え（1問ずつ、だれがどっちを選んだか）
-  h+='<div class="card"><h3>📋 みんなの答え</h3><p class="hint" style="margin-top:0">1問ずつ、だれがどっちを選んだかを見られます。</p>';
+  h+='<div class="card"><details class="kok"><summary><span>📋 みんなの答えを見る（'+S.qs.length+'問）</span></summary><p class="hint">1問ずつ、だれがどっちを選んだかを見られます。</p>';
   S.qs.forEach(function(q,qi){
     var A=[], B=[];
     S.players.forEach(function(p,i){ var c=S.ans[i][qi]; if(c==='A') A.push(p.name); else if(c==='B') B.push(p.name); });
@@ -2618,19 +2649,7 @@ function showGroupResult(){
        '<div class="aq-row A"><b>A</b><div><p>'+esc(q.a)+'</p><div class="aq-n">'+nm(A)+'</div></div></div>'+
        '<div class="aq-row B"><b>B</b><div><p>'+esc(q.b)+'</p><div class="aq-n">'+nm(B)+'</div></div></div></div>';
   });
-  h+='</div>';
-
-  // ひとりずつ
-  h+='<div class="card"><h3>ひとりずつの診断</h3>';
-  R.forEach(function(r, ri){
-    var hv=r.sc[hd.k], oth=AXES[mode].filter(function(ax){ return ax.k!==hd.k; });
-    h+='<div class="ppl '+(ri%2?'ppl-b':'ppl-a')+'"><div class="pp-top"><div class="pp-ring" style="--v:'+hv+'"><b>'+hv+'%</b></div><div class="pp-who"><strong>'+esc(r.p.name)+'</strong><span>'+hd.cap+'</span></div></div>'+
-       '<div class="pp-say">'+axComment(hd.k, hv)+'</div>'+
-       '<div class="pp-tiles">'+oth.map(function(ax,j){ return '<div class="pt'+j+'"><small>'+ax.name.replace(/度$/,'')+'</small><b>'+r.sc[ax.k]+'%</b></div>'; }).join('')+'</div>'+
-       (function(){ var sp=speedStats(S.qs,S.times[r.i],S.ans[r.i]); return sp ? '<div class="pks">'+pickHTML('⚡','即決',sp.quick)+pickHTML('🌀','いちばん悩んだ',sp.slow)+'</div>' : ''; })()+
-       '<details class="kok"><summary><span>🔍 心の中をくわしく見る</span></summary>'+axisHTML(mode,r.sc)+'</details></div>';
-  });
-  h+='</div>';
+  h+='</details></div>';
 
   h+=PROMO+endButtons()+shareRow('lgshare','gshare','gsave')+homeLink();
   $('res-body').innerHTML='';
