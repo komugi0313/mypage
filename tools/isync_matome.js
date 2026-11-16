@@ -4,7 +4,7 @@
 //  問題の目印は app.js と同じ作り方（問題の文｜答えA のハッシュ）。i-sync.jp がつながったら BASE を書きかえて回し直す。
 const fs = require('fs'), path = require('path');
 const D = path.join(__dirname, '..', 'isync');
-const BASE = 'https://isync-futari.web.app/';
+const BASE = 'https://i-sync.jp/';
 global.window = {};
 require(path.join(D, 'questions.js')); require(path.join(D, 'weights.js'));
 const CATS = window.SY_CATS, W = window.SY_W;
