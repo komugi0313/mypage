@@ -501,6 +501,7 @@ html[data-tone="f"] .tn-f,html[data-tone="s"] .tn-s{display:revert}
 .kc.kt-a{background:#FFF7FA} .kc.kt-b{background:#F7F4FF}
 .kc-pre{margin:0 0 8px;font-size:16px;font-weight:900;color:#1E1E2A}
 .kc-pre .nm{color:#B0174F}
+.kc-from{margin:-4px 0 10px;font-size:13px;color:#5A546A}
 .kc-top{display:flex;gap:12px;align-items:center}
 .kc-badge{flex:none;width:84px;height:84px;border-radius:50%;border:2.5px solid #1E1E2A;background:#FFE3EC;display:flex;align-items:center;justify-content:center;text-align:center;box-shadow:3px 3px 0 #F2C94C}
 .kc-badge span{font-family:'Mochiy Pop One',sans-serif;font-size:14px;line-height:1.25;color:#8E1240;padding:0 2px;white-space:nowrap}
@@ -1581,7 +1582,7 @@ function showHonResult(){
   var avg=ok.length ? ok.reduce(function(a,r){ return a+r.t; },0)/ok.length/1000 : 0;
   var lvl=honLevel(avg, ok.length), sec=function(t){ return (Math.round(t/100)/10).toFixed(1); };
   var pick=function(r){ return r.c==='A' ? r.q.a : r.q.b; };
-  var h=kotobaHonHTML(S.qs, S.ans[0], S.times[0], 'あなた', '')+'<div class="res-hero"><div class="pre">本能モード　あなたの結果</div>'+
+  var h=charaHTML(S.qs, S.ans[0], 'あなた', '', false, {hon:true, times:S.times[0]})+kotobaHonHTML(S.qs, S.ans[0], S.times[0], 'あなた', '')+'<div class="res-hero"><div class="pre">本能モード　あなたの結果</div>'+
     '<img class="pnd" src="img/panda-'+(!ok.length?'sad':(avg<1.2?'joy':(avg<2?'smirk':'1')))+'.webp" alt="" width="96" height="96">'+
     '<div class="type" style="font-size:44px">'+(ok.length?avg.toFixed(1):'—')+'<span style="font-size:22px">秒</span></div>'+
     '<div class="catch">本能スピード（答えた'+ok.length+'問の平均）</div><div class="subt">⚡ '+lvl+'</div></div>';
@@ -1628,7 +1629,7 @@ function showHonGroupResult(){
   var h='<div class="res-hero"><div class="pre">本能モード　'+n+'人の結果</div><img class="pnd" src="img/panda-joy.webp" alt="" width="96" height="96">'+
     '<div class="catch">いちばん本能が速いのは…</div><div class="meter"><div class="num" style="font-size:'+(topN.length>1?30:40)+'px">'+topN.join('・')+'</div><div class="cap">'+(top.avg!=null ? '平均 '+sec(top.avg)+'秒・'+honLevel(top.avg/1000, 1) : '全員時間切れ')+'</div></div></div>';
   // あなたの中にあることば（1人ずつ）
-  S.players.forEach(function(p,i){ h+=kotobaHonHTML(S.qs, S.ans[i], S.times[i], p.name+'さん', i%2?'kt-b':'kt-a'); });
+  S.players.forEach(function(p,i){ h+=charaHTML(S.qs, S.ans[i], p.name+'さん', i%2?'kt-b':'kt-a', true, {hon:true, times:S.times[i]})+kotobaHonHTML(S.qs, S.ans[i], S.times[i], p.name+'さん', i%2?'kt-b':'kt-a'); });
   // 平均の秒数が同じ人は同じ順位にする
   var place=[]; rank.forEach(function(r,k){ place[k] = k>0 && r.avg!=null && rank[k-1].avg!=null && sec(r.avg)===sec(rank[k-1].avg) ? place[k-1] : k+1; });
   var usedSay={}; rank.forEach(function(r,k){ r.say=honSay(r,k,rank,place,usedSay); });
@@ -1997,28 +1998,36 @@ var CH = window.CHARA_LOVE || null;
 function toneGet(){ try{ var t=localStorage.getItem('nitaku_tone'); if(t==='y'||t==='f'||t==='s') return t; }catch(e){} return 'y'; }
 function toneApply(t){ document.documentElement.setAttribute('data-tone', t); document.querySelectorAll('.kc-tone button').forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-tone')===t ? 'true' : 'false'); }); }
 toneApply(toneGet());
-function charaOf(qs, ans){
-  if(!CH) return null;
-  var K=KOTOBA.love, sc=score('love', qs, ans), cs={}, as={}, pf={}, words={}, hs={}, cnt={}, n=0;
+function charaOf(qs, ans, opt){
+  if(!CH) return null; opt=opt||{};
+  // 本能モード：恋の問題のことば（KOTOBA.honL）から。1秒以内に選んだ答えは2倍に数える（鑑定者本人の指示 2026-11-16「おすすめで」）
+  var K=opt.hon ? KOTOBA.honL : KOTOBA.love, sc=score('love', qs, ans), tm=opt.times, cs={}, as={}, pf={}, words={}, hs={}, cnt={}, n=0;
   CH.list.forEach(function(c){ cs[c.id]=0; }); CH.ani.forEach(function(a){ as[a.id]=0; });
   qs.forEach(function(q,qi){
-    var c=ans&&ans[qi]; if(c!=='A' && c!=='B') return; n++;
-    var side=canon(q,c), k=K.byId[q.id], t=CH.q[q[side]];
-    if(k){ (k[side]||[]).forEach(function(w){ words[w]=(words[w]||0)+1/Math.sqrt(K.freq[w]||1); cnt[w]=(cnt[w]||0)+1; }); var h=k[side+'h']; if(h){ hs[h]=(hs[h]||0)+1/Math.sqrt(K.hfreq[h]||1); cnt[h]=(cnt[h]||0)+1; } }
+    var c=ans&&ans[qi]; if(c!=='A' && c!=='B') return;
+    var side=canon(q,c), k=K.byId[q.id], t=CH.q[q[side]], wt=(tm && tm[qi]>0 && tm[qi]<=1000) ? 2 : 1;
+    if(k || t) n++;
+    if(k){ (k[side]||[]).forEach(function(w){ words[w]=(words[w]||0)+wt/Math.sqrt(K.freq[w]||1); cnt[w]=(cnt[w]||0)+1; }); var h=k[side+'h']; if(h){ hs[h]=(hs[h]||0)+wt/Math.sqrt(K.hfreq[h]||1); cnt[h]=(cnt[h]||0)+1; } }
     if(t){ (t.c||[]).forEach(function(id){ cs[id]+=1.2; }); (t.a||[]).forEach(function(id){ as[id]+=1.2; }); (t.p||[]).forEach(function(p){ pf[p]=(pf[p]||0)+1; }); }
   });
   if(!n) return null;
   CH.list.forEach(function(c){
-    cs[c.id]+=c.b||0;
+    cs[c.id]+=(c.b||0)+(opt.hon && CH.honB ? CH.honB[c.id]||0 : 0);
     c.w.forEach(function(w){ cs[c.id]+=words[w]||0; }); c.h.forEach(function(h){ cs[c.id]+=hs[h]||0; });
     Object.keys(c.ax).forEach(function(k){ cs[c.id]+=c.ax[k]*(sc['_'+k]||0)*1.5; });
   });
-  CH.ani.forEach(function(a){ as[a.id]+=a.b||0; a.w.forEach(function(w){ as[a.id]+=words[w]||0; }); a.h.forEach(function(h){ as[a.id]+=hs[h]||0; }); });
+  CH.ani.forEach(function(a){ as[a.id]+=(a.b||0)+(opt.hon && CH.honB ? CH.honB[a.id]||0 : 0); a.w.forEach(function(w){ as[a.id]+=words[w]||0; }); a.h.forEach(function(h){ as[a.id]+=hs[h]||0; }); });
   var ord=CH.list.slice().sort(function(x,y){ return cs[y.id]-cs[x.id]; }), main=ord[0];
   var sub=(cs[ord[1].id]>0.5 && cs[ord[1].id]>=cs[main.id]*0.6) ? ord[1] : null;
   var ao=CH.ani.slice().sort(function(x,y){ return as[y.id]-as[x.id]; }), ani=ao[0];
   if(!(as[ani.id]>0.3)) ani=CH.ani[(sc.A>=60) ? 2 : (sc.K>=60 ? 1 : 0)];
   var pref=[]; [['年上','年下'],['かわいい系','かっこいい系']].forEach(function(p){ var d=(pf[p[0]]||0)-(pf[p[1]]||0); if(d) pref.push(d>0?p[0]:p[1]); });
+  // 本能モードの問題には％の点がないので、成分表示・通知表の％はことばの数から出す（キャラの決め方には使わない）
+  if(opt.hon){
+    var cc=function(pl,mi){ var a=0,b=0; pl.forEach(function(w){ a+=cnt[w]||0; }); mi.forEach(function(w){ b+=cnt[w]||0; }); return Math.round(50+50*(a-b)/(a+b+2)); };
+    sc={ K:cc(['駆け引き上手','追いかけられたい','ひみつ主義','小悪魔'],['ストレート','一途']), R:cc(['ムードを大事にする','サプライズが好き','記念日を覚えている','ロマンチスト'],['現実派','態度で伝える','安心がいちばん','さっぱり系']),
+         S:cc(['ドキドキしたい','新しいことをしたい','直感で動く'],['安心がいちばん','のんびり派']), A:cc(['甘えたい','かまってほしい','じつは、さびしがり','甘えんぼう'],['尽くしたい','しっかり者','自分の時間もほしい','ほうっておいてほしい','対等でいたい']) };
+  }
   // 通知表の科目
   var g5=function(v){ return v<20?1:(v<40?2:(v<60?3:(v<80?4:5))); };
   var net=function(plus, minus){ var s=0; plus.forEach(function(w){ s+=cnt[w]||0; }); minus.forEach(function(w){ s-=cnt[w]||0; }); return Math.max(1, Math.min(5, 3+s)); };
@@ -2031,12 +2040,12 @@ function tnHTML(o, tag){ tag=tag||'span'; return ['y','f','s'].map(function(t){ 
 function tnList(c, from, to, key){ // あるある（または症状）の from〜to 番目を、やさしめ・辛口・激辛のぶん並べる
   var h=''; ['y','f','s'].forEach(function(t){ c[key||'tone'][t].slice(from,to).forEach(function(s){ h+='<li class="tn tn-'+t+'">'+esc(s)+'</li>'; }); }); return h;
 }
-function charaHTML(qs, ans, label, cls, fold){
-  var r=charaOf(qs, ans); if(!r) return '';
+function charaHTML(qs, ans, label, cls, fold, opt){
+  var r=charaOf(qs, ans, opt); if(!r) return ''; opt=opt||{};
   var c=r.main, kt=kotobaOf(qs, ans, 'love') || { words:[], hito:[], both:[] }, sc=r.sc;
   var pill=function(s){ return '<span class="kc-pill">'+esc(s)+'</span>'; };
   var who=label==='あなた' ? 'あなた' : label.replace(/さん$/,'');
-  var h='<div class="card kc'+(cls?' '+cls:'')+'"><p class="kc-pre"><span class="nm">'+esc(label)+'</span>の恋のキャラ</p>'+
+  var h='<div class="card kc'+(cls?' '+cls:'')+'"><p class="kc-pre"><span class="nm">'+esc(label)+'</span>の'+(opt.hon?'本能の':'')+'恋のキャラ</p>'+(opt.hon?'<p class="kc-from">考える前に選んだ恋の答えから決めました</p>':'')+
     '<div class="kc-top"><div class="kc-badge"><span>'+esc(c.name)+'</span></div><div class="kc-tx"><p class="kc-say">'+esc(c.say)+'</p><p class="kc-desc">'+esc(c.desc)+'</p></div></div>'+
     '<div class="kc-rows">'+
       (r.sub ? '<div class="kc-row"><b>もう1つの顔</b>'+pill(r.sub.name)+'<span class="kc-rs">'+esc(r.sub.say)+'</span></div>' : '')+
