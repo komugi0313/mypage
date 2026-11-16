@@ -3840,8 +3840,12 @@ function _classifyTopic(q){ q=q||'';
 }
 /* 話題の継続を含めた実効トピック。いまの発言が曖昧（general/timing）でも、直近の会話が具体的な話題（恋愛・仕事など）ならそのスレッドを引き継ぐ。
    例：「男の人をデートに誘った」→「でも返信がない」→「返事どうなる？」を、恋愛の相談として一貫して読む（毎回一般論に落とさない）。 */
+var RE_WORK_CLEAR=/独立|起業|開業|フリーランス|副業|転職|就職|就活|退職|辞職|会社を辞|仕事を辞|昇進|昇給|上司|部下|職場|freelanc|start(ing)? (a|my own) business|quit my job|change jobs|job hunt|promotion|my boss|창업|프리랜서|이직|취업|퇴사|승진|상사|직장|創業|自由業|轉職|转职|跳槽|辭職|辞职|升職|升职|老闆|老板|主管/i;
+var RE_LOVE_WORDS=/恋|愛|結婚|彼氏|彼女|付き合|出会|片思い|好きな人|脈|元カレ|元カノ|元彼|元恋人|love|dating|marri|partner|boyfriend|girlfriend|crush|ex\b|연애|결혼|남자친구|여자친구|만남|짝사랑|戀|恋|婚|男朋友|女朋友|桃花|對象|暗戀|前任/i;
 function _effectiveTopic(q){
   /* ハイブリッド：直近のAI分類結果があればそれを最優先（誰の話かまで汲む）。無ければ正規表現＋会話継続にフォールバック */
+  /* 仕事のはっきりした言葉があり、恋愛の言葉がない時は、仕事として扱う（定期テスト 2026-11-16：AI の分類が「今年中に独立しても大丈夫？」を恋愛とし、パートナーの話が3回続けて入った） */
+  try{ if(RE_WORK_CLEAR.test(q)&&!RE_LOVE_WORDS.test(q)) return 'work'; }catch(e){}
   try{ if(window._aiTopicHint&&window._aiTopicHint.q===q&&window._aiTopicHint.topic) return window._aiTopicHint.topic; }catch(e){}
   /* AI分類が使えなかった時の安全網：結婚・復縁・LGBT・不倫などの恋愛の定番の相談は、10言語の単語で「恋愛」と見分ける（家族の話は除く） */
   try{ var _fam=/親|父|母|兄|姉|弟|妹|祖父|祖母|両親|parents?\b|mother|father|mom|dad|sister|brother|爸|妈|媽|父母|姐|哥|弟弟|妹妹|엄마|아빠|부모|언니|누나|형|오빠|bố|mẹ|anh trai|chị gái|padres|madre|padre|hermana|hermano|pais|mãe|pai|irmã|irmão|orang tua|ibu|ayah|kakak|adik|พ่อ|แม่|พี่|น้อง/i.test(q); if(!_fam&&(RE_LOVE_MARRIAGE.test(q)||RE_LOVE_REUNION.test(q)||RE_LOVE_LGBT.test(q)||/不倫|略奪|浮気|既婚|affair|cheat|married (man|woman)|mistress|出轨|出軌|外遇|小三|불륜|바람|ngoại tình|amante|infiel|selingkuh|ชู้|นอกใจ/i.test(q))) return RE_LOVE_MARRIAGE.test(q)?'marriage':'love'; }catch(e){}
@@ -6868,7 +6872,7 @@ function _answerCore(q,risk){
   /* 毎回のチェック用：この返事で必ず使う項目（運営指示 2026-10-24「フルで使っているか毎回チェック」）。返事のあとで確かめ、抜けていたら書き足す（_coverFix） */
   var _must=[]; try{ if(window.PK_COVER!==false&&!RE_THEORY.test(q)&&!_plain&&!_short&&!_minor&&!_drug&&!_sens&&!_sexAskTurn&&!risk) _must=pkBuildMust(q,{loveA:_loveA,loveB:_loveB}); if(_brief) _must=_mustTop(_must,5); }catch(e){ _must=[]; }
   /* 恋愛の話でない時は、恋愛の材料を入れない（定期テスト 2026-11-07：「今年中に独立しても大丈夫？」の返事に「恋愛面では、パートナーの場所に…」が入った） */
-  try{ if(state.mode!=='aisho'&&!_loveA&&!_loveB&&!/恋|愛|結婚|彼氏|彼女|付き合|出会|片思い|好きな人|脈|love|dating|marri|partner|boyfriend|girlfriend|crush|연애|결혼|남자친구|여자친구|만남|짝사랑|戀|恋|婚|男朋友|女朋友|桃花|對象|暗戀/i.test(q)&&!/^(love|marriage)$/.test(_etop||'')) _must=_must.filter(function(m){ return !/love|partner seat|partner star|where they may meet|the key month|shaky month/i.test(m.label); }); }catch(e){}
+  try{ if(state.mode!=='aisho'&&!_loveA&&!_loveB&&!/恋|愛|結婚|彼氏|彼女|付き合|出会|片思い|好きな人|脈|love|dating|marri|partner|boyfriend|girlfriend|crush|연애|결혼|남자친구|여자친구|만남|짝사랑|戀|恋|婚|男朋友|女朋友|桃花|對象|暗戀/i.test(q)&&(!/^(love|marriage)$/.test(_etop||'')||RE_WORK_CLEAR.test(q))) _must=_must.filter(function(m){ return !/love|partner seat|partner star|where they may meet|the key month|shaky month/i.test(m.label); }); }catch(e){}
   /* 直近2回の返事で渡した材料は、もう一度渡さない（運営指摘 2026-11-03：「職場で助けが入る」「2017〜2026年は仕事の動きが多い10年」などが返事ごとに出ていた）。
      時期の質問では、時期の材料は残す。最初の鑑定（材料がすべて新しい）は今まで通り */
   try{ var _mh=window._mustHist||[], _recentL=[].concat.apply([],_mh.slice(-2)), _tq=(typeof RE_TIMINGQ!=='undefined'&&RE_TIMINGQ.test(q));
