@@ -491,6 +491,7 @@ body[data-mode="normal"] .wtrack.b i{background:#7FCFAF}
 .kt-c{white-space:nowrap;background:var(--kb);color:var(--kt);border-radius:8px;padding:3px 9px;font-size:14px;font-weight:700;line-height:1.5}
 .kt-g0{--kc:#E0457B;--kb:#FFE3EC;--kt:#8E1240} .kt-g1{--kc:#3B7DD8;--kb:#E2EEFF;--kt:#1F4E91} .kt-g2{--kc:#E08A1E;--kb:#FFEFD9;--kt:#8A4A06}
 .kt-g3{--kc:#2E9E78;--kb:#DDF5EC;--kt:#17634A} .kt-g4{--kc:#7A5BD6;--kb:#ECE6FF;--kt:#4A2FA3} .kt-g5{--kc:#5A546A;--kb:#EEECF2;--kt:#2F2A3D}
+.kt-g6{--kc:#B07A3B;--kb:#F6EBDD;--kt:#6B4417}
 .kt.kt-a{background:#FFF7FA} .kt.kt-b{background:#F7F4FF}
 </style>
 <style id="flow2">
@@ -990,6 +991,7 @@ body.rdy-on #gres-body{padding-bottom:230px}
 <script src="questions-hon.js"></script>
 <script src="kotoba-love.js"></script>
 <script src="kotoba-normal.js"></script>
+<script src="kotoba-hon.js"></script>
 <script>
 (function(){
 'use strict';
@@ -1495,7 +1497,7 @@ function showHonResult(){
   var avg=ok.length ? ok.reduce(function(a,r){ return a+r.t; },0)/ok.length/1000 : 0;
   var lvl=honLevel(avg, ok.length), sec=function(t){ return (Math.round(t/100)/10).toFixed(1); };
   var pick=function(r){ return r.c==='A' ? r.q.a : r.q.b; };
-  var h='<div class="res-hero"><div class="pre">本能モード　あなたの結果</div>'+
+  var h=kotobaHonHTML(S.qs, S.ans[0], S.times[0], 'あなた', '')+'<div class="res-hero"><div class="pre">本能モード　あなたの結果</div>'+
     '<img class="pnd" src="img/panda-'+(!ok.length?'sad':(avg<1.2?'joy':(avg<2?'smirk':'1')))+'.webp" alt="" width="96" height="96">'+
     '<div class="type" style="font-size:44px">'+(ok.length?avg.toFixed(1):'—')+'<span style="font-size:22px">秒</span></div>'+
     '<div class="catch">本能スピード（答えた'+ok.length+'問の平均）</div><div class="subt">⚡ '+lvl+'</div></div>';
@@ -1541,6 +1543,8 @@ function showHonGroupResult(){
   var pick=function(r){ return r.c==='A' ? r.q.a : r.q.b; };
   var h='<div class="res-hero"><div class="pre">本能モード　'+n+'人の結果</div><img class="pnd" src="img/panda-joy.webp" alt="" width="96" height="96">'+
     '<div class="catch">いちばん本能が速いのは…</div><div class="meter"><div class="num" style="font-size:'+(topN.length>1?30:40)+'px">'+topN.join('・')+'</div><div class="cap">'+(top.avg!=null ? '平均 '+sec(top.avg)+'秒・'+honLevel(top.avg/1000, 1) : '全員時間切れ')+'</div></div></div>';
+  // あなたの中にあることば（1人ずつ）
+  S.players.forEach(function(p,i){ h+=kotobaHonHTML(S.qs, S.ans[i], S.times[i], p.name+'さん', i%2?'kt-b':'kt-a'); });
   // 平均の秒数が同じ人は同じ順位にする
   var place=[]; rank.forEach(function(r,k){ place[k] = k>0 && r.avg!=null && rank[k-1].avg!=null && sec(r.avg)===sec(rank[k-1].avg) ? place[k-1] : k+1; });
   var usedSay={}; rank.forEach(function(r,k){ r.say=honSay(r,k,rank,place,usedSay); });
@@ -1784,8 +1788,9 @@ function kotobaBuild(themes, list){
   });
   return { themes:themes||[], byId:byId, freq:freq, hfreq:hfreq, theme:theme };
 }
-var KOTOBA = { love:kotobaBuild(window.KOTOBA_THEMES, window.KOTOBA_LOVE), normal:kotobaBuild(window.KOTOBA_THEMES_N, window.KOTOBA_NORMAL) };
-var KOTOBA_SUB = { love:'答えから見えた、恋のかたちです。', normal:'答えから見えた、あなたらしさです。' };
+var KOTOBA = { love:kotobaBuild(window.KOTOBA_THEMES, window.KOTOBA_LOVE), normal:kotobaBuild(window.KOTOBA_THEMES_N, window.KOTOBA_NORMAL),
+  honL:kotobaBuild(window.KOTOBA_THEMES, (window.KOTOBA_HON||{}).love), honN:kotobaBuild(window.KOTOBA_THEMES_N, (window.KOTOBA_HON||{}).normal) };
+var KOTOBA_SUB = { love:'答えから見えた、恋のかたちです。', normal:'答えから見えた、あなたらしさです。', hon:'考える前に選んだ答えから見えた、あなたの本音です。' };
 var KOTOBA_OPP={
   love:[['一目ぼれしやすい','好きになるまで時間がかかる'],['慎重','直感で動く'],['追いかけたい','追いかけられたい'],['かまってほしい','ほうっておいてほしい'],
   ['ふたりの時間を大切にしたい','みんなでわいわいも好き'],['おうちが好き','おでかけ派'],['のんびり派','新しいことをしたい'],['安心がいちばん','ドキドキしたい'],
@@ -1799,25 +1804,44 @@ var KOTOBA_OPP={
   ['ハプニングも楽しむ','心配性'],['心配性','冒険家'],['めんどうくさがり','しっかり者'],['ぱっと使う','堅実派'],
   ['慎重派','即決派'],['慎重派','直感で選ぶ'],['慎重派','ハプニングも楽しむ'],['せっかち','じっくり考える'],['冒険家','いつものが安心'],['少人数が好き','盛り上げ役'],['ひとりの時間が好き','盛り上げ役'],['クール','盛り上げ役'],['自由人','計画どおりに進めたい'],['のんびり屋','即決派'],['マイペース','気をつかう']]
 };
-function kotobaOf(qs, ans, mode){
-  var K=KOTOBA[mode]; if(!K) return null;
+function kotobaOf(qs, ans, mode, times, max){
+  var K=KOTOBA[mode]; if(!K) return null; max=max||13;
+  var OPM=mode==='honL'?'love':(mode==='honN'?'normal':mode);
   var sc={}, hs={}, order=0, first={};
   qs.forEach(function(q,qi){
     var c=ans&&ans[qi]; if(c!=='A' && c!=='B') return;
     var k=K.byId[q.id]; if(!k) return;
     var side=canon(q,c);
-    (k[side]||[]).forEach(function(w){ if(K.theme[w]==null) return; sc[w]=(sc[w]||0)+1/Math.sqrt(K.freq[w]||1); if(first[w]==null) first[w]=order++; });
-    var h=k[side+'h']; if(h){ hs[h]=(hs[h]||0)+1/Math.sqrt(K.hfreq[h]||1); if(first[h]==null) first[h]=order++; }
+    // 本能モード：1秒以内に選んだ答えは「考える前に出た本音」として2倍に数える
+    var wt=(times && times[qi]>0 && times[qi]<=1000) ? 2 : 1;
+    (k[side]||[]).forEach(function(w){ if(K.theme[w]==null) return; sc[w]=(sc[w]||0)+wt/Math.sqrt(K.freq[w]||1); if(first[w]==null) first[w]=order++; });
+    var h=k[side+'h']; if(h){ hs[h]=(hs[h]||0)+wt/Math.sqrt(K.hfreq[h]||1); if(first[h]==null) first[h]=order++; }
   });
   var by=function(o){ return function(a,b){ return (o[b]-o[a]) || (first[a]-first[b]); }; };
   // 反対の意味のことばは、強く出たほうだけ出す
-  var OP=KOTOBA_OPP[mode]||[];
+  var OP=KOTOBA_OPP[OPM]||[];
   var opp=function(w,got){ return OP.some(function(p){ var i=p.indexOf(w); return i>=0 && got.indexOf(p[1-i])>=0; }); };
   var ws=Object.keys(sc).sort(by(sc)), per={}, pick=[];
-  ws.forEach(function(w){ var t=K.theme[w]; if(pick.length<13 && (per[t]||0)<3 && !opp(w,pick)){ per[t]=(per[t]||0)+1; pick.push(w); } });
+  ws.forEach(function(w){ var t=K.theme[w]; if(pick.length<max && (per[t]||0)<3 && !opp(w,pick)){ per[t]=(per[t]||0)+1; pick.push(w); } });
   if(!pick.length) return null;
   var hito=[]; Object.keys(hs).sort(by(hs)).forEach(function(w){ if(hito.length<3 && !opp(w,hito.concat(pick))) hito.push(w); });
-  return { words:pick, hito:hito };
+  return { words:pick, hito:hito, hs:hs };
+}
+/* 本能モード：恋愛の問題のことば（恋愛編のテーマ）と、ふつうの問題のことば（「ふだんのあなた」1行）をまとめて出す */
+function kotobaHonHTML(qs, ans, times, label, cls){
+  var rL=kotobaOf(qs, ans, 'honL', times), rN=kotobaOf(qs, ans, 'honN', times, 5);
+  if(!rL && !rN) return '';
+  var hp=[]; [rL,rN].forEach(function(r){ if(r) r.hito.forEach(function(w){ hp.push([w, r.hs[w]||0]); }); });
+  var hito=hp.sort(function(a,b){ return b[1]-a[1]; }).map(function(x){ return x[0]; }).slice(0,3);
+  var h='<div class="card kt'+(cls?' '+cls:'')+'"><p class="kt-hd"><span class="nm">'+esc(label)+'</span>の中にあることば</p><p class="kt-sub">'+KOTOBA_SUB.hon+'</p>';
+  if(hito.length) h+='<div class="kt-hito"><h4>ひとことで言うと</h4><div class="kt-hw">'+hito.map(function(w){ return '<span class="kt-h">'+esc(w)+'</span>'; }).join('')+'</div></div>';
+  h+='<div class="kt-grp">';
+  if(rL) KOTOBA.honL.themes.forEach(function(t,n){
+    var ws=rL.words.filter(function(w){ return KOTOBA.honL.theme[w]===n; }); if(!ws.length) return;
+    h+='<div class="kt-g kt-g'+n+'"><h4><i></i><span>'+esc(t[0])+'</span></h4><div class="kt-ws">'+ws.map(function(w){ return '<span class="kt-c">'+esc(w)+'</span>'; }).join('')+'</div></div>';
+  });
+  if(rN && rN.words.length) h+='<div class="kt-g kt-g6"><h4><i></i><span>ふだんのあなた</span></h4><div class="kt-ws">'+rN.words.map(function(w){ return '<span class="kt-c">'+esc(w)+'</span>'; }).join('')+'</div></div>';
+  return h+'</div></div>';
 }
 function kotobaHTML(qs, ans, label, cls, mode){
   var K=KOTOBA[mode], r=kotobaOf(qs, ans, mode); if(!r) return '';
