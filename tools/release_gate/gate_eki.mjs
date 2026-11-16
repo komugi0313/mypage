@@ -62,11 +62,24 @@ ok('開いただけでは文章作成を呼ばない', calls===0, 'calls='+calls
       const h=F.ekiTalkHTML({hantei:'〇 卦から見ると、自分の力を出して伸びていけるほうを選ぶのが合います',tsutae:'卦から見ると合います。今は「整った状態を守る時」に入っています。'},rr,['卦から見ると合います。今は「整った状態を守る時」に入っています。'],['「A社」「B社」の条件を書き出してくらべましょう。']);
       const d=document.createElement('div'); d.innerHTML=h; const tx=d.innerText;
       if(/今は「整った状態を守る時」に入っています/.test((tx.split('動き出す合図を伝える')[1]||'').split('どうすればよいか')[0])) bad.push('③がテーマ名を拾った');
-      if(!/動き出す合図を伝える/.test(tx)) bad.push('③がない');
+      if(!/合図を伝える/.test(tx)) bad.push('③がない');
       if(/「「/.test(tx)) bad.push('かぎかっこの重なり：'+(tx.match(/「「[^\n]{0,30}/)||[''])[0]);
       for(const nm of ['坎為水','沢天夬','天山遯']){ const k2=Object.keys(HEXDB).find(k=>HEXDB[k].nm===nm); for(const rk of ['C','D','E']){ const w=F.ekiFlowWord(HEXDB[k2],rk); if(/大きな波はなく|時期/.test(w)) bad.push('この先の流れ：'+nm+rk+' '+w); } } }
+    { /* 2026-11-16：③は相談の種類で変わる・「できますか」は可能性・「いつ」の1行目は2文まで・台本の空 */
+      const [u,l]=key('水天需'); const rr=F.buildResult(u,l,4,[4]); const th={};
+      for(const q of ['来月の資格試験は受かりますか','元彼と復縁できますか','A社とB社どちらに転職すべきですか','職場の人間関係がつらいです']){ window.__ekiQ=q; const d=document.createElement('div'); document.body.appendChild(d); d.innerHTML=F.ekiTalkHTML({hantei:'△ 今は慎重に',tsutae:'今は焦らず待つ時です。力を蓄えましょう。'},rr,['今は焦らず待つ時です。力を蓄えましょう。'],['準備をしましょう。']); const m=d.innerText.match(/③\s*\n?([^\n]*)\n([^\n]*)/); th[q]=m?(m[1]+'|'+m[2]):''; d.remove(); }
+      const vals=Object.values(th); if(vals.some(x=>!x)||new Set(vals).size!==vals.length) bad.push('③が相談で変わらない：'+JSON.stringify(th).slice(0,200));
+      if(!/気持ちが軽くなる/.test(th['職場の人間関係がつらいです'])) bad.push('つらさの相談の③の見出し：'+th['職場の人間関係がつらいです']);
+      if(/選/.test(th['来月の資格試験は受かりますか'])) bad.push('試験の③に「選ぶ」：'+th['来月の資格試験は受かりますか']);
+      for(const [nm,ko] of [['乾為天',2],['坤為地',6],['水天需',4]]){ const [u2,l2]=key(nm); const r2=F.buildResult(u2,l2,ko,[ko]);
+        const o=F.buildOfflineReading(r2,'元彼と復縁できますか'); if(!/可能性/.test(o.hantei)) bad.push('通信なしの「できますか」：'+o.hantei);
+        for(const q of ['いつ転職すればいいですか','今年と来年どちらがいいですか']){ const o2=F.buildOfflineReading(r2,q); const n=String(o2.hantei).replace(/\s*[◎〇△✖]\s*$/,'').split(/(?<=[。！？])/).filter(x=>x.trim()).length; if(n>2) bad.push('「いつ」の1行目が'+n+'文：'+o2.hantei); }
+        if(!String(o.script||'').trim()) bad.push('台本が空'); }
+      P=run('水天需',4,'▼判定：〇 焦らず進めましょう\n▼伝え方：今は焦らず待つ時です。\n▼助言：・連絡を控える','元彼と復縁できますか');
+      if(!/可能性/.test(P.hantei)||!/。\s*[◎〇△✖]$/.test(P.hantei)) bad.push('オンラインの「できますか」：'+P.hantei);
+      if(/台本が取得できませんでした|要点を取得できませんでした/.test(document.documentElement.innerHTML)) bad.push('「取得できませんでした」が残っている'); }
     return {bad}; });
-  ok('実地の点検の直し（注記・続けるべきか・A社B社・易の時期を出さない・近い日の試験・今は今は・要点メモ・ため口・③の合図・かぎかっこ・この先の流れ）', r.bad.length===0, r.bad.join(' | ')); }
+  ok('実地の点検の直し（注記・続けるべきか・A社B社・易の時期を出さない・近い日の試験・今は今は・要点メモ・ため口・③の合図・かぎかっこ・この先の流れ・③が相談で変わる・できますか・いつは2文まで・台本）', r.bad.length===0, r.bad.join(' | ')); }
 async function consult(q,nums){ await p.evaluate(()=>scrollTo(0,0)); await p.click('.ct-number'); await p.waitForTimeout(300);
   for(const [i,v] of [['#num1',nums[0]],['#num2',nums[1]],['#num3',nums[2]]]) await p.fill(i,String(v));
   await p.fill('#question',q); const c0=calls; const t0=Date.now();
