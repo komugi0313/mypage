@@ -1,0 +1,36 @@
+// 恋のかたち診断（koi16/）が使う Firestore の決まり。置き場所は koi16_rooms（みんなで一斉に診断の部屋）だけ。
+// ★ このプロジェクト（typeplus-69c66）には、究極の二択（nitaku_）・アイ・シンク（isync_）・ワンソナの決まりがすでにあります。
+//   全部を置きかえると、ほかのサイトが動かなくなります。
+//   Firebase の画面「Firestore Database → ルール」で、いまの決まりの
+//   「match /databases/{database}/documents {」のすぐ下に、下の match /koi16_rooms/... のかたまりだけを足して「公開」を押してください。
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== ここから足す =====
+    // みんなで一斉に診断の部屋（4けたの部屋番号。作ってから12時間で使えなくなる）
+    match /koi16_rooms/{code} {
+      allow read: if code.matches('^[0-9]{4}$');
+      allow create, update: if code.matches('^[0-9]{4}$')
+        && request.resource.data.keys().hasOnly(['created','phase','mode','host','expireAt'])
+        && request.resource.data.created is int
+        && request.resource.data.phase in ['lobby','play']
+        && request.resource.data.mode in ['quick','full']
+        && request.resource.data.host is string && request.resource.data.host.size() <= 32;
+      allow delete: if false;
+
+      // 部屋に入った人（ニックネームと、診断が終わった人のタイプ4文字だけ。答え・恋の状況は入れない）
+      match /players/{pid} {
+        allow read: if code.matches('^[0-9]{4}$');
+        allow create, update: if code.matches('^[0-9]{4}$') && pid.size() <= 32
+          && request.resource.data.keys().hasOnly(['name','code','done','joined','rc','expireAt'])
+          && request.resource.data.name is string && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 8
+          && request.resource.data.code is string && request.resource.data.code.matches('^([LR][VA][TS][PC])?$')
+          && request.resource.data.done is bool
+          && request.resource.data.joined is int && request.resource.data.rc is int;
+        allow delete: if code.matches('^[0-9]{4}$');
+      }
+    }
+    // ===== ここまで =====
+  }
+}
