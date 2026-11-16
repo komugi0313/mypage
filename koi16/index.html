@@ -77,6 +77,7 @@ p{margin:0 0 12px}
 .q-hint-s{font-size:12px!important}
 .pills.ng li{background:#F3EEF8;border:1.5px solid #CDBFE0}.pills.ng li::before{content:"✕";background:#6A4A8C}
 .adv{margin-top:14px;padding-top:4px;border-top:1.5px dashed var(--line)}
+.g-prev{text-align:center;margin:6px 0 0;font-size:14px}
 .adv-ref{margin:12px 0 4px;padding:10px 12px;background:#FFF0F5;border:1.5px solid #E8A7C0;border-radius:12px;font-size:15px}
 /* みんなで診断・QR（鑑定者本人 2026-11-13「2+1 の QR でお願いします」） */
 .gname{width:100%;min-height:48px;font-size:16px;border:2px solid var(--brown);border-radius:12px;padding:8px 12px;background:#fff;color:var(--ink);font-family:inherit;margin:8px 0 10px}
@@ -3051,42 +3052,45 @@ function groupListHTML(skipId){
   return '<div class="glist">'+ks.map(function(k){ var g=gs[k], d=new Date(g.at||Date.now());
     return '<button class="gobtn g-group" type="button" data-act="gopen" data-gid="'+esc(k)+'"><span class="gi" aria-hidden="true">∞</span><span class="gt"><b>'+gLabel(g.m)+'</b><small>'+g.m.length+'人のグループ・'+(d.getMonth()+1)+'/'+d.getDate()+'</small></span><span class="ga" aria-hidden="true">›</span></button>'; }).join('')+'</div>';
 }
-/* グループの結果を1枚の画像に（参加した人・いちばん相性のいい2人・相性の高い組み合わせ。見た目は個人の画像と同じピーチとこげ茶） */
+/* グループの結果を1枚の画像に（参加した人・いちばん相性のいい2人・相性の高い組み合わせ。見た目は個人の画像と同じ表紙風＝アイボリー・白いカード・細い線・明朝体） */
 function gImage(g){
   var codes={}; g.m.forEach(function(m){codes[m.c]=1;});
   var imgs={}, ks=Object.keys(codes), left=ks.length;
-  ks.forEach(function(c){ var im=new Image(); im.onload=function(){imgs[c]=im; if(--left===0) gDraw(g,imgs);}; im.onerror=function(){ if(--left===0) gDraw(g,imgs);};
+  var fin=function(){ cvFonts(['みんなの恋のかたちいちばん相性のいい2人0123456789点'+SITE_NAME],function(){ gDraw(g,imgs); }); };
+  ks.forEach(function(c){ var im=new Image(); im.onload=function(){imgs[c]=im; if(--left===0) fin();}; im.onerror=function(){ if(--left===0) fin();};
     im.src = CHARA_IMG[c] ? 'img/'+c+'.webp' : 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(artSvg(c,250).replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" ')); });
 }
 function gDraw(g,imgs){
   var n=g.m.length, ps=[]; for(var i=0;i<n;i++) for(var j=i+1;j<n;j++) ps.push({a:g.m[i],b:g.m[j],s:compat(g.m[i].c,g.m[j].c).score});
   ps.sort(function(x,y){return y.s-x.s;});
-  var W=1080, cols=4, rows=Math.ceil(n/cols), top=ps.slice(1,6), H=330+rows*270+(ps.length?520:0)+top.length*78+170;
+  var W=1080, cols=4, rows=Math.ceil(n/cols), top=ps.slice(1,6), H=360+rows*270+(ps.length?520:0)+top.length*78+170;
   var cv=document.createElement('canvas'); cv.width=W; cv.height=H; var x=cv.getContext('2d'), F='"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif';
   var fit=function(t,w,size,weight){ var sz=size; do{ x.font=weight+' '+sz+'px '+F; sz-=2; }while(x.measureText(t).width>w&&sz>18); return t; };
-  var drawImg=function(c,cx,cy,sz){ x.fillStyle='#fff'; x.beginPath(); x.arc(cx,cy,sz/2+12,0,Math.PI*2); x.fill(); x.lineWidth=5; x.strokeStyle='#5A3A2A'; x.stroke(); if(imgs[c]) x.drawImage(imgs[c],cx-sz/2,cy-sz/2,sz,sz); };
-  x.fillStyle='#FFF1EA'; x.fillRect(0,0,W,H);
-  x.fillStyle='#5A3A2A'; roundRect(x,72,62,W-124,H-118,44); x.fill();
-  x.fillStyle='#FFFCF7'; roundRect(x,56,46,W-124,H-118,44); x.fill(); x.lineWidth=7; x.strokeStyle='#5A3A2A'; x.stroke();
-  x.textAlign='center'; x.fillStyle='#B01A5A'; x.font='900 64px '+F; x.fillText('みんなの恋のかたち',W/2-8,160);
-  x.fillStyle='#45352B'; x.font='700 34px '+F; x.fillText(n+'人の相性',W/2-8,222);
-  var y=270, cw=(W-180)/cols;
+  var drawImg=function(c,cx,cy,sz){ x.fillStyle=GPALE[c[2]+c[3]]; x.beginPath(); x.arc(cx,cy,sz/2+12,0,Math.PI*2); x.fill(); x.lineWidth=2; x.strokeStyle='#EADDD3'; x.stroke(); if(imgs[c]) x.drawImage(imgs[c],cx-sz/2,cy-sz/2,sz,sz); };
+  // 表紙のような見た目（鑑定者本人 2026-11-16）：アイボリーの地・白いカード・細い線・やわらかい影・明朝体の題名
+  x.fillStyle='#FBF6F1'; x.fillRect(0,0,W,H);
+  x.save(); x.shadowColor='rgba(90,58,42,.14)'; x.shadowBlur=48; x.shadowOffsetY=16; x.fillStyle='#fff'; roundRect(x,56,46,W-124,H-118,40); x.fill(); x.restore();
+  x.lineWidth=2; x.strokeStyle='#EADDD3'; roundRect(x,56,46,W-124,H-118,40); x.stroke();
+  x.textAlign='center'; x.fillStyle='#B01A5A'; x.font='700 28px '+F; x.fillText('LOVE TYPE · '+n+' MEMBERS',W/2-8,128);
+  x.fillStyle='#2A1A12'; x.font='800 64px '+MINCHO; x.fillText('みんなの恋のかたち',W/2-8,200);
+  x.fillStyle='#8A7364'; x.font='700 32px '+F; x.fillText(n+'人の相性',W/2-8,250);
+  var y=300, cw=(W-180)/cols;
   g.m.forEach(function(m,k){ var r=Math.floor(k/cols), c=k%cols, inRow=Math.min(cols,n-r*cols), ox=(W-16-inRow*cw)/2, cx=ox+cw*c+cw/2, cy=y+r*270+80;
     drawImg(m.c,cx,cy,140); x.fillStyle='#2A1A12'; fit(m.n,cw-16,34,'800'); x.fillText(m.n,cx,cy+122); x.fillStyle='#45352B'; fit(T[m.c].c,cw-16,24,'700'); x.fillText(T[m.c].c,cx,cy+160); });
   y+=rows*270+20;
   if(ps.length){
-    var b=ps[0]; x.fillStyle='#FCE8EF'; roundRect(x,110,y,W-236,470,32); x.fill(); x.lineWidth=4; x.strokeStyle='#5A3A2A'; x.stroke();
-    x.fillStyle='#B01A5A'; x.font='900 40px '+F; x.fillText('いちばん相性のいい2人',W/2-8,y+68);
+    var b=ps[0]; var bg=x.createLinearGradient(0,y,0,y+470); bg.addColorStop(0,'#FCE6EE'); bg.addColorStop(1,'#fff'); x.fillStyle=bg; roundRect(x,110,y,W-236,470,32); x.fill(); x.lineWidth=2; x.strokeStyle='#EADDD3'; x.stroke();
+    x.fillStyle='#B01A5A'; x.font='800 42px '+MINCHO; x.fillText('いちばん相性のいい2人',W/2-8,y+70);
     drawImg(b.a.c,W/2-170,y+200,150); drawImg(b.b.c,W/2+154,y+200,150);
     x.fillStyle='#B01A5A'; x.font='900 64px '+F; x.fillText('♡',W/2-8,y+222);
     x.fillStyle='#2A1A12'; fit(b.a.n+' と '+b.b.n,W-320,40,'800'); x.fillText(b.a.n+' と '+b.b.n,W/2-8,y+346);
-    x.fillStyle='#B01A5A'; x.font='900 72px '+F; x.fillText(b.s+'点',W/2-8,y+432);
+    x.fillStyle='#B01A5A'; x.font='800 76px '+MINCHO; x.fillText(b.s+'点',W/2-8,y+432);
     y+=520;
     top.forEach(function(p){ x.fillStyle='#2A1A12'; x.textAlign='left'; fit(p.a.n+' × '+p.b.n,W-470,36,'700'); x.fillText(p.a.n+' × '+p.b.n,150,y+40);
       x.textAlign='right'; x.fillStyle='#B01A5A'; x.font='900 38px '+F; x.fillText(p.s+'点',W-170,y+42); x.textAlign='center';
-      x.strokeStyle='#E0CFBC'; x.lineWidth=2; x.beginPath(); x.moveTo(150,y+64); x.lineTo(W-170,y+64); x.stroke(); y+=78; });
+      x.strokeStyle='#EADDD3'; x.lineWidth=2; x.beginPath(); x.moveTo(150,y+64); x.lineTo(W-170,y+64); x.stroke(); y+=78; });
   }
-  x.textAlign='center'; x.fillStyle='#5A3A2A'; x.font='800 34px '+F; x.fillText(SITE_NAME+'　koikata.jp',W/2-8,H-112);
+  x.textAlign='center'; x.fillStyle='#5A3A2A'; x.font='800 36px '+MINCHO; x.fillText(SITE_NAME,W/2-8,H-130); x.fillStyle='#9A8576'; x.font='700 26px '+F; x.fillText('koikata.jp',W/2-8,H-88);
   cv.toBlob(function(bl){
     var file=new File([bl],'koi16-group.png',{type:'image/png'});
     if(navigator.canShare&&navigator.canShare({files:[file]})){ navigator.share({files:[file],text:gShareText(g)}).catch(function(){}); return; }
@@ -3110,7 +3114,7 @@ function renderGroup(g){
     if(n>=G_MAX) h+='<section class="card"><p>このグループは8人でいっぱいです。新しいグループをつくるときは、自分の結果の画面の「みんなで診断する」から始めてください。</p></section>';
     else{
       h+='<section class="card">'+secH('h2','sum','このグループに入る')+'<label class="muted" for="g-name">あなたのニックネーム（8文字まで）</label><input class="gname" id="g-name" maxlength="8" autocomplete="off" value="'+esc(st.nick||'')+'" placeholder="例：ゆう">';
-      if(st.me&&st.me.code) h+='<button class="btn btn-main btn-wide" type="button" data-act="gjoin"><span class="nw">前回の結果（'+esc(T[st.me.code].c)+'）で</span><span class="nw">入る</span></button><p style="margin-top:10px"><button class="btn btn-sub btn-wide" type="button" data-act="gquiz-quick">診断し直して入る</button></p>';
+      if(st.me&&st.me.code) h+='<button class="btn btn-main btn-wide" type="button" data-act="gjoin">前回の結果で入る</button><p class="muted g-prev">（'+esc(T[st.me.code].c)+'）</p><p style="margin-top:10px"><button class="btn btn-sub btn-wide" type="button" data-act="gquiz-quick">診断し直して入る</button></p>';
       else h+='<div class="start-grid"><button class="btn btn-main btn-wide" type="button" data-act="gquiz-full"><span class="nw">本格版で診断して入る</span><span class="nw">（40問）</span></button><button class="btn btn-sub btn-wide" type="button" data-act="gquiz-quick"><span class="nw">かんたん版で診断して入る</span><span class="nw">（16問）</span></button></div>';
       h+='<p class="muted" style="margin-top:8px">ニックネームは、グループのリンクの中にだけ入ります。リンクを受けとった人には見えますが、どこにも送りません。本名でなくて大丈夫です。</p></section>';
     }
@@ -3157,26 +3161,38 @@ function doShare(act,code){
     else prompt('コピーしてください',s);
   } else if(act==='img') saveImage(code);
 }
+function cvFonts(texts,cb){
+  // 保存する画像の明朝体（Shippori Mincho B1）は、使う文字の分だけ先に読みこむ（読めなくても描く）
+  var done=false, go=function(){ if(!done){ done=true; cb(); } };
+  try{ if(document.fonts&&document.fonts.load){ Promise.all([document.fonts.load('800 80px "Shippori Mincho B1"',texts.join('')),document.fonts.load('700 40px "Noto Sans JP"',texts.join(''))]).then(go,go); setTimeout(go,2500); return; } }catch(e){}
+  go();
+}
+var MINCHO='"Shippori Mincho B1","Noto Serif JP","Hiragino Mincho ProN","Yu Mincho",serif';
 function saveImage(code){
-  var im=new Image();
-  im.onload=function(){ drawCard(code,im); }; im.onerror=function(){ drawCard(code,null); };
+  var im=new Image(), t=T[code];
+  var draw=function(img){ cvFonts([t.c,t.f,t.catch,'私の恋愛タイプは'+SITE_NAME+'16の恋愛タイプ診断koikata.jp'+code+grp(code).n],function(){ drawCard(code,img); }); };
+  im.onload=function(){ draw(im); }; im.onerror=function(){ draw(null); };
   im.src = CHARA_IMG[code] ? 'img/'+code+'.webp' : 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(artSvg(code,250).replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" '));
 }
 function drawCard(code,img){
-  var t=T[code], g=grp(code), W=1080, H=1350, cv=document.createElement('canvas'); cv.width=W; cv.height=H;
-  var x=cv.getContext('2d'), F='"Hiragino Sans","Noto Sans JP","Yu Gothic",sans-serif';
-  x.fillStyle='#FFF1EA'; x.fillRect(0,0,W,H);
-  x.fillStyle='#5A3A2A'; roundRect(x,82,72,W-132,H-132,48); x.fill(); // こげ茶の影
-  x.fillStyle=g.hex; roundRect(x,66,56,W-132,H-132,48); x.fill(); x.lineWidth=8; x.strokeStyle='#5A3A2A'; x.stroke();
-  x.fillStyle='#fff'; x.textAlign='center';
-  x.font='700 40px '+F; x.fillText('私の恋愛タイプは',W/2,172);
-  x.fillStyle='rgba(255,255,255,.92)'; x.beginPath(); x.arc(W/2,360,150,0,Math.PI*2); x.fill(); x.lineWidth=6; x.strokeStyle='#5A3A2A'; x.stroke(); x.fillStyle='#fff';
-  if(img) x.drawImage(img,W/2-125,235,250,250);
-  x.font='800 84px '+F; x.fillText(t.c,W/2,610);
-  x.font='700 52px '+F; x.fillText(t.f,W/2,700);
-  x.font='700 44px '+F; x.fillText(code.split('').join(' '),W/2,790);
-  x.font='400 38px '+F; wrap(x,t.catch,W/2,900,W-260,58);
-  x.font='700 36px '+F; x.fillText(SITE_NAME+'｜16の恋愛タイプ診断',W/2,H-120);
+  // 表紙のような見た目（鑑定者本人 2026-11-16「両方お願いします」）：アイボリーの地・白いカード・細い線・やわらかい影・明朝体のキャラクター名
+  var t=T[code], g=grp(code), gp=GPALE[code[2]+code[3]], W=1080, H=1350, cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  var x=cv.getContext('2d'), F='"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif';
+  var L=64, Tp=64, CW=W-128, CH=H-128;
+  x.fillStyle='#FBF6F1'; x.fillRect(0,0,W,H);
+  x.save(); x.shadowColor='rgba(90,58,42,.14)'; x.shadowBlur=48; x.shadowOffsetY=16; x.fillStyle='#fff'; roundRect(x,L,Tp,CW,CH,40); x.fill(); x.restore();
+  x.save(); roundRect(x,L,Tp,CW,CH,40); x.clip(); var gr=x.createLinearGradient(0,Tp,0,Tp+640); gr.addColorStop(0,gp); gr.addColorStop(1,'#fff'); x.fillStyle=gr; x.fillRect(L,Tp,CW,640); x.restore();
+  x.lineWidth=2; x.strokeStyle='#EADDD3'; roundRect(x,L,Tp,CW,CH,40); x.stroke();
+  x.textAlign='center';
+  x.fillStyle=g.hex; x.font='700 36px '+F; x.fillText('私の恋愛タイプは',W/2,176);
+  if(img) x.drawImage(img,W/2-210,206,420,420);
+  x.fillStyle='#2A1A12'; var sz=92; do{ x.font='800 '+sz+'px '+MINCHO; sz-=4; }while(x.measureText(t.c).width>CW-120&&sz>48); x.fillText(t.c,W/2,738);
+  x.fillStyle=g.hex; x.font='700 44px '+F; x.fillText(t.f,W/2,816);
+  x.strokeStyle='#EADDD3'; x.lineWidth=2; x.beginPath(); x.moveTo(W/2-150,858); x.lineTo(W/2+150,858); x.stroke();
+  x.fillStyle='#8A7364'; x.font='700 32px '+F; x.fillText(code.split('').join(' ')+'  ·  '+g.n,W/2,912);
+  x.fillStyle='#4A362B'; x.font='500 36px '+F; wrap(x,t.catch,W/2,1000,CW-180,58);
+  x.fillStyle='#5A3A2A'; x.font='800 38px '+MINCHO; x.fillText(SITE_NAME,W/2,H-150);
+  x.fillStyle='#9A8576'; x.font='700 26px '+F; x.fillText('16の恋愛タイプ診断　koikata.jp',W/2,H-104);
   cv.toBlob(function(b){
     var file=new File([b],'koi16-'+code+'.png',{type:'image/png'});
     if(navigator.canShare&&navigator.canShare({files:[file]})){ navigator.share({files:[file],text:shareText(code)}).catch(function(){}); return; }
