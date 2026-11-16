@@ -96,7 +96,7 @@ function drawCareer(){const box=$("carBody"),me=window.__me;if(!box||!me||typeof
  let h='<div class="ctabs" role="tablist">'+CARTAB.map(([k,l])=>'<button type="button" role="tab" data-k="'+k+'" aria-selected="'+(k===tab)+'">'+TR(l)+'</button>').join("")+'</div>'
 
   +'<p class="cfor">'+TR("今の16タイプ")+' <b>'+me.now+'</b>'+p16h(me.now)+TR("の人へ")+'</p>';
- if(tab==="hs"){const X=C.hs;h+=kv("文系・理系のヒント",'<p>'+esc(X.bunri)+'</p>')+kv("興味が出やすい学部",chips(X.majors))+kv("向いている勉強のしかた",'<p>'+esc(X.study)+'</p>')+kv("部活や委員会で合う役",'<p>'+esc(X.club)+'</p>')+bl;}
+ if(tab==="hs"){const X=C.hs;h+=kv("文系・理系のヒント",'<p>'+esc(X.bunri)+'</p>')+kv("興味が出やすい学部",chips(X.majors))+kv("向いている勉強のしかた",'<p>'+esc(X.study)+'</p>')+kv("部活や委員会で合う役",'<p>'+esc(X.club)+'</p>');}
  else if(tab==="uni"){const X=C.uni;
   h+=kv("ESに使える強み",X.strengths.map((t,i)=>'<div class="cstr"><p class="csn">'+(i+1)+'. '+esc(t.name)+'</p><p class="ces"><b>'+TR("ESでは：")+'</b>'+esc(t.es)+'</p><p class="cq">'+TR("思い出してみよう：")+esc(t.q)+'</p></div>').join(""))
    +kv("短所の言いかえ",'<p><b>'+esc(X.weak.name)+'</b></p><p class="ces"><b>'+TR("ESでは：")+'</b>'+esc(X.weak.es)+'</p>')
@@ -115,7 +115,7 @@ function carPeek(tab,C,me,bl){let el=$("carPeek");const hero=document.querySelec
  if(tab==="hs"){const X=C.hs;h+='<h2 class="cph">'+TR("文系・理系のヒント")+'</h2><p>'+esc(X.bunri)+'</p>';}
  else if(tab==="uni"){const t=C.uni.strengths[0];h+='<h2 class="cph">'+TR("ESに使える強み")+'</h2><p class="csn">'+esc(t.name)+'</p><p class="ces"><b>'+TR("ESでは：")+'</b>'+esc(t.es)+'</p><p class="cq">'+TR("思い出してみよう：")+esc(t.q)+'</p>';}
  else{const X=C.work,g=[0,1,2,3].filter(i=>me.born[i]!==me.now[i]&&!((me.weak||[]).includes(AX[i].k))).map(i=>CAR.gap&&CAR.gap[me.born[i]+">"+me.now[i]]).filter(Boolean);h+='<h2 class="cph">'+TR("転職の前に、今の職場で試せること")+'</h2><p>'+esc(X.try)+'</p>'+(g[0]?'<p class="cnote">'+esc(tadashi(g[0],0))+'</p>':'');}
- h+=(tab!=="work"?bl:'')+'<button type="button" class="btn cpmore" id="cpMore">'+TR("仕事・進路のヒントをもっと見る")+'</button>';
+ h+=(tab==="uni"?bl:'')+'<button type="button" class="btn cpmore" id="cpMore">'+TR("仕事・進路のヒントをもっと見る")+'</button>';
  el.innerHTML=h;el.hidden=false;if(!el.parentNode)hero.after(el);el.classList.toggle("wait2",!!document.querySelector(".hero .shr.wait2"));
  $("cpMore").onclick=()=>{const d=$("dCareer");if(d){d.open=true;d.scrollIntoView({behavior:"smooth",block:"start"});}try{track("career_peek",{tab});}catch(e){}};}
 
@@ -367,7 +367,7 @@ function render(instant){
  {const r0=document.querySelector("#recheck p"),ov=$("psOv");[r0,ov].forEach(x=>{if(x){x.classList.add("clamp3w");x.dataset.open="";}});setTimeout(clampAll,0);}
  window.__me={born,now,N,bAT,nAT,weak:AX.filter(A=>aligned[A.k]).map(A=>A.k),prev:(st.prev||[]).filter(t=>t!==now)};drawChg(born,now,window.__me.prev);drawPersona("now");
  const nw=(a,b)=>'<span class="nw">'+a+'</span><span class="nw">'+b+'</span>';$("p16Born").innerHTML=nw(bornF.split("").map((ch,i)=>i<4&&aligned[AX[i].k]?'<span class="wk">'+ch+'</span>':ch).join(""),p16h(born));
- {let wn=$("wkNote");if(!wn){wn=document.createElement("p");wn.id="wkNote";wn.className="wknote";const nk=document.querySelector(".nicks");if(nk)nk.after(wn);}const anyW=AX.some(A=>aligned[A.k]);const dI=[0,1,2,3].filter(i=>born[i]!==now[i]),onlyW=dI.length>0&&dI.every(i=>aligned[AX[i].k]);wn.innerHTML=(onlyW?'<b>'+TR(dI.length>1?"気質と性格で違うのは{L}ですが、どれも生年月日からははっきりしない文字です。大きな違いではないので、ここは今の性格のほうを見てください。":"気質と性格で違うのは{L}だけですが、この文字は生年月日からははっきりしません。大きな違いではないので、ここは今の性格のほうを見てください。").replace("{L}",dI.map(i=>now[i]).join(TR("・")))+'</b><br>':"")+(anyW?TR("気質の薄い文字は、生年月日からはどちらとも言えない文字です。"):"")+(bAT&&!sameAll?(anyW?"<br>":"")+TR("気質の最後の A/T も、生年月日から出しています。"):"");wn.hidden=!wn.innerHTML;}$("p16Now").innerHTML=nw(nowF,p16h(now));
+ {let wn=$("wkNote");if(!wn){wn=document.createElement("p");wn.id="wkNote";wn.className="wknote";const nk=document.querySelector(".nicks");if(nk)nk.after(wn);}const anyW=AX.some(A=>aligned[A.k]);const dI=[0,1,2,3].filter(i=>born[i]!==now[i]),onlyW=dI.length>0&&dI.every(i=>aligned[AX[i].k]);wn.innerHTML=(onlyW?'<b>'+TR(dI.length>1?"気質と性格で違うのは{L}ですが、どれも生年月日からははっきりしない文字です。大きな違いではないので、ここは今の性格のほうを見てください。":"気質と性格で違うのは{L}だけですが、この文字は生年月日からははっきりしません。大きな違いではないので、ここは今の性格のほうを見てください。").replace("{L}",dI.map(i=>born[i]+"→"+now[i]).join(TR("・")))+'</b><br>':"")+(anyW?TR("気質の薄い文字は、生年月日からはどちらとも言えない文字です。この文字の「生まれつき」は、「どちらかといえば」の意味で読んでください。"):"")+(bAT&&!sameAll?(anyW?"<br>":"")+TR("気質の最後の A/T も、生年月日から出しています。"):"");wn.hidden=!wn.innerHTML;}$("p16Now").innerHTML=nw(nowF,p16h(now));
  $("nkBorn").textContent=D.NICK[born];[["imBorn",born],["imNow",now]].forEach(([id,t])=>{const im=$(id);if(im){im.src=charSrc(t);im.alt=an(t);}});
  {const one=sameAll,nb=$("imBorn").closest(".nk"),nn=$("imNow").closest(".nk"),nr=document.querySelector(".nicks .nar");nb.hidden=one;if(nr)nr.hidden=one;document.querySelector(".nicks").classList.toggle("one",one);
   const lb=nn.querySelector(".nl");if(!lb.dataset.def)lb.dataset.def=lb.textContent;lb.textContent=one?TR("気質も性格も"):lb.dataset.def;
@@ -380,7 +380,7 @@ function render(instant){
  {const kf=$("karteFig");if(kf){const tk=(window.__karteTok=(window.__karteTok||0)+1);setTimeout(()=>drawKarte().then(cv=>{if(tk!==window.__karteTok)return;$("karteImg").src=cv.toDataURL("image/png");$("karteImg").alt=TR("性格カルテ");kf.hidden=false;}).catch(()=>{}),0);}}
  {const K=ktStu(KT[born+">"+now]),el=$("kt");window.__me.kt=K||null;["hWorryH","hWorryQ","hWorry"].forEach(i=>{const x=$(i);if(x)x.style.display=(K&&K.aru)?"none":"";});if(el){el.hidden=!K;const box=(id,cls)=>{let x=$(id);if(!x){x=document.createElement("div");x.id=id;x.className=cls;document.querySelector(".hero").appendChild(x);}return x;};box("coreBox","corebox").innerHTML=K?coreCard(born,now):"";(window.__me&&(window.__me.ktKarai=K?K.karai:"")),(fx=>{fx.classList.toggle("wait2",$("coreBox").classList.contains("wait2"));return fx;})(box("funBox","funbox")).innerHTML=K?'<p class="kfh">'+(born===now?TR("あなたは、こんな人"):TR("気質と性格をあわせると、あなたはこんな人"))+'</p><dl class="ktl"><dt>'+TR("言いそうなこと")+'</dt><dd class="say">'+esc(K.say)+'</dd><dt>'+TR("やりそうなこと")+'</dt><dd>'+esc(K.do)+'</dd></dl><div class="ktk"><span>'+TR("辛口のひと言")+'</span>'+esc(K.karai)+'</div>':"";
  if(K){const wk=AX.filter(A=>aligned[A.k]).map(A=>born[AX.indexOf(A)]),wkL=LANG==="en"?(wk.length<3?wk.join(" and "):wk.slice(0,-1).join(", ")+", and "+wk[wk.length-1]):LANG==="ja"?(wk.length<3?wk.join(" と "):wk.join("・")):wk.join(TR("・")),wkIn=!!(K.aru&&K.why&&sents(K.why).length>1);
- const wkH=wk.length?'<p class="ktwk in">'+TR("※ {L} は生年月日からははっきりしない文字なので、「生まれつき」は「どちらかといえば」の意味で読んでください。").replace("{L}",wkL)+'</p>':'';
+ const wkH='';
  el.innerHTML='<h3 class="kth">'+TR("くわしい鑑定")+'</h3>'+wkH+(K.aru?(()=>{const yureH=born!==now?TR("{a} と {b} を行き来しやすいわけ").replace("{a}",born).replace("{b}",now):TR("結果が変わりにくいわけ"),hT=(f,h)=>f==="yure"?yureH:TR(h);
    const sec=([f,h],n)=>'<div class="kts kt-'+f+'"><h4>'+(n?'<span class="ktn">'+n+'</span>':'')+hT(f,h)+'</h4>'+(f==="plus"&&K.worry?'<p class="ktworry">'+esc(K.worry)+'</p>':'')+(f==="why"&&n&&wkIn?whyFold(K.why,""):kfmt(K[f],f))+(f==="yure"?(born===now&&wk.length?'<p>'+TR("ただ、{L} は生年月日からははっきりしない文字なので、ここは答えが変わることもあります。").replace("{L}",wkL)+'</p>':'')+swayNote(born,now)+yureSee(born,now):'')+'</div>';
    /* 大事な3つ（こんなこと→どうして→生かすヒント）だけ先に見せ、残りは「もっと読む」にたたむ */
@@ -602,10 +602,11 @@ $("reset").onclick=()=>askInline($("reset"),TR("今回の結果を消して、�
 const POWN=[TR("始める力"),TR("明るくする力"),TR("支える力"),TR("やり切る力"),TR("合わせる力")];
 const POWC=["--tf","--rose","--sn","--muted","--ei"];
 const POWTOP=[TR("新しいことを始めたり、伸ばしたりするのが得意。"),TR("気持ちを表に出し、場を明るくするのが得意。"),TR("どっしり構えて、人や物事を支えるのが得意。"),TR("決めたことを、最後までやり切るのが得意。"),TR("まわりを見て、その場に合わせて動くのが得意。")];
-const POWLOW=[TR("新しいことは、小さく始めるくらいがちょうどいい。"),TR("気持ちが顔に出にくいぶん、言葉にして伝えると届きやすい。"),TR("人の世話や頼まれごとが続くと疲れやすいので、ひとりで休む日を先に予定に入れておくと安心。"),TR("途中で手が止まりやすいので、終わらせる日を先に決めておくと最後まで進めやすい。"),TR("まわりに合わせるのが大変なときは、考えすぎる前に一度誰かに相談してみて。")];
+const POWLOW=[TR("新しいことは、小さく始めるくらいがちょうどいい。"),TR("楽しい・うれしいといった気持ちは、言葉にして伝えると、まわりにも届きやすい。"),TR("人の世話や頼まれごとが続くと疲れやすいので、ひとりで休む日を先に予定に入れておくと安心。"),TR("途中で手が止まりやすいので、終わらせる日を先に決めておくと最後まで進めやすい。"),TR("まわりに合わせるのが大変なときは、考えすぎる前に一度誰かに相談してみると楽になる。")];
 const STARS={"比肩":[TR("自分の星"),TR("自分のやり方とペースを守る力。")],"劫財":[TR("仲間の星"),TR("仲間と一緒だと、力が出やすい人。")],"食神":[TR("表現の星"),TR("楽しいこと、好きなことを素直に出す力。")],"傷官":[TR("感性の星"),TR("細かいところまでこだわって、いい物にする力。")],"偏財":[TR("めぐり合わせの星"),TR("人やチャンスを広くつかむ力。")],"正財":[TR("こつこつの星"),TR("少しずつ積み上げて、大事なものを守る力。")],"偏官":[TR("挑戦の星"),TR("勢いで動いて、人を引っぱる力。")],"正官":[TR("けじめの星"),TR("ルールを守り、信頼を積み重ねる力。")],"偏印":[TR("個性の星"),TR("ひらめきで、人と違うやり方を見つける力。")],"印綬":[TR("学びの星"),TR("じっくり学んで、よくわかるまで考える力。")]};
 /* 生まれつき少なめの力でも、今の16タイプで身につけているなら1行足す */
 const POWL=["EN","EF","S","J","PF"],POWS=[TR("新しいことをどんどん始められる"),TR("場を明るくできる"),TR("人や物事を支えられる"),TR("決めたことを最後までやれる"),TR("まわりに合わせられる")];
+function balGainIdx(pc){const now=(st.t||[]).join("");if(now.length!==4)return [];const born=(window.__me&&window.__me.born)||"";return [0,1,2,3,4].filter(i=>pc[i]<15&&[...POWL[i]].every(c=>now.includes(c))&&![...POWL[i]].every(c=>born.includes(c)));}
 function balGain(pc){const now=(st.t||[]).join("");if(now.length!==4)return "";const born=(window.__me&&window.__me.born)||"",ls=[0,1,2,3,4].filter(i=>pc[i]<15&&[...POWL[i]].every(c=>now.includes(c))&&![...POWL[i]].every(c=>born.includes(c)));
  return ls.map(i=>'<p class="bnote bgain">'+TR("「{p}」は生まれつき少なめです。でも今のあなたは、{s}人。経験の中で身につけた力です。").replace("{p}",POWN[i]).replace("{s}",POWS[i])+'</p>').join("");}
 function drawBalance(N){let el=$("bal");const c=N.chart;
@@ -615,7 +616,7 @@ function drawBalance(N){let el=$("bal");const c=N.chart;
  const order=[0,1,2,3,4],hi=order.reduce((a,b)=>pc[b]>pc[a]?b:a,0),lo=order.reduce((a,b)=>pc[b]<pc[a]?b:a,0);
  el.innerHTML='<h2>'+TR("気質の力のバランス")+'</h2><p class="hint">'+TR("生まれた日から見た、生まれつきの力の多い・少ないです。経験の中で身につけた力（今の16タイプ）は、ここには入っていません。")+'</p>'
   +'<div class="bars">'+pc.map((v,i)=>'<div class="br" style="--c:var('+POWC[i]+')"><span class="bn">'+POWN[i]+'</span><span class="bt"><i style="width:'+Math.max(8,mx?v/mx*100:0)+'%"></i></span><span class="bv">'+(v>=30?TR("多い"):v>=15?TR("ふつう"):TR("少なめ"))+'</span></div>').join("")+'</div>'
-  +'<p class="bnote"><b>'+TR("いちばん多いのは「")+POWN[hi]+TR("」。")+'</b>'+POWTOP[hi]+'<br>'+TR("少なめなのは「")+(()=>{const ls=order.filter(i=>pc[i]<15);return (ls.length?ls:[lo]).map(i=>POWN[i]).join(TR("」「"));})()+TR("」。")+(()=>{const ls=order.filter(i=>pc[i]<15);return (ls.length?ls:[lo]).sort((a,b)=>pc[a]-pc[b]).slice(0,2).map(i=>POWLOW[i]).join(LANG==="ja"?"":" ");})()+'</p>'+balGain(pc);}
+  +'<p class="bnote"><b>'+TR("いちばん多いのは「")+POWN[hi]+TR("」。")+'</b>'+POWTOP[hi]+'<br>'+TR("少なめなのは「")+(()=>{const ls=order.filter(i=>pc[i]<15);return (ls.length?ls:[lo]).map(i=>POWN[i]).join(TR("」「"));})()+TR("」。")+(()=>{const ls=order.filter(i=>pc[i]<15);const gi=balGainIdx(pc),ad=(ls.length?ls:[lo]).filter(i=>!gi.includes(i)).sort((a,b)=>pc[a]-pc[b]).slice(0,2);return ad.map(i=>POWLOW[i]).join(LANG==="ja"?"":" ");})()+'</p>'+balGain(pc);}
 
 /* ---- 恋愛編（16問）：恋のときのあなたと、2人のどちらが顔を出すか ---- */
 const LVSCALE=SCALE;
