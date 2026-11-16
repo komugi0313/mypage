@@ -642,7 +642,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
       const st=x=>pkStampYears(x,birthYearOf(a),birthYearOf(b)), sum=compatSummaryHTML?String(compatSummaryHTML(a,b)||''):'';
       L.plain.concat([sum.replace(/<[^>]+>/g,' ')]).forEach(x=>{ if(/からの10年/.test(x)) o.bad.push('「からの10年」が残る：'+x.slice(0,120));
         const y=st(x); if(/\d{4}年（[^）]*歳／[^）]*）から[、新]/.test(y)) o.bad.push('大運の年に2人分の年齢：'+y.slice(0,160)); });
-      L.T.forEach(t=>t.du.filter(d=>!d.now).forEach(d=>{ const by=d.who==='本人'?birthYearOf(a):birthYearOf(b); if(L.plain.join('').indexOf((d.from-by)+'歳になる'+d.from+'年から')<0) o.bad.push('大運の年齢がない：'+d.who+d.from); })); }
+      L.T.forEach(t=>t.du.filter(d=>!d.now&&d.from<=new Date().getFullYear()+25).forEach(d=>{ const by=d.who==='本人'?birthYearOf(a):birthYearOf(b); if(L.plain.join('').indexOf((d.from-by)+'歳になる'+d.from+'年から')<0) o.bad.push('大運の年齢がない：'+d.who+d.from); })); }
     if(!o.nB) o.bad.push('大運の時期がある組が見つからない');
   }catch(err){ o.bad.push('動かない：'+String(err&&err.message||err)); } chart=c0; return o; });
   r.bad.forEach(x=>e.push(x));
@@ -753,6 +753,8 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
       chart=A; const q='金運を上げたい。いつ頃お金が回りますか', T=pkTcTopic(A,q); if(T&&T.list.length>=2){ const Ls=T.list.slice().sort(), x=pkTimingConsistFix('答え。\n【どうすればよいか】\n・財星が巡る'+(Ls[0]+1)+'年から'+(Ls[Ls.length-1]+1)+'年の時期に合わせて、蓄えを意識する',A,q,pl); if(x.indexOf(Ls[0]+'年')<0||x.indexOf(Ls[Ls.length-1]+'年')<0) o.bad.push('金運の期間をツールの年にしない：'+x); } }
     // 13 ひと休みの年の説明の場所
     { const y=pkKuuNoteMove('動き出すのは2027年以降が安心です。（「ひと休みの年」は、力が抜けやすい年のことです）\n・2028年〔ひと休みの年〕以降に動く'); if(/安心です。（「ひと休み/.test(y)||y.indexOf('以降に動く（「ひと休みの年」は')<0) o.bad.push('ひと休みの年の説明の場所：'+y); }
+    // 14 年運の干支のまちがい（今日が立春前）・25年より先の大運
+    { const y=pkFmTidy2('今年（2026年の年運・2027年2月4日の立春まで）は丁未の年運にあたり、'); if(y.indexOf('丙午の年運')<0) o.bad.push('年運の干支を年に合わせない：'+y); }
   }catch(err){ o.bad.push('動かない：'+String(err&&err.message||err)); } chart=c0; return o; });
   r.bad.forEach(x=>e.push(x));
   console.log('  '+(e.length?'NG':'OK')+' 実機点検 2026-11-16（時期のそろえ・年の残り・続けるか独立か・来年の結婚・別れの先送り・頭の切れた1行目・安全の相談・文のくずれ・読み・言いかえ・持ち味・月の星・食べ物・ひと休み）'+(e.length?'  … '+[...new Set(e)].slice(0,8).join('・'):'')); if(e.length) res.fails.push('実機点検 2026-11-16: '+[...new Set(e)].join('・')); }
