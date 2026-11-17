@@ -33,6 +33,34 @@ ok('開いただけでは文章作成を呼ばない', calls===0, 'calls='+calls
   const code=[line('const HEXKK='),line('const HEXDB='),line('const KO_KYO='),grab('const TAI_FIX=')+';',grab('function mTai('),grab('function koTone('),line('const TAI_POS='),line('const TAI_NEG='),grab('function koAdjustRank('),grab('function rankToVerdict(')].join('\n');
   const up=new Function(code+`;const o={'◎':0,'〇':1,'△':2,'✖':3},bad=[];for(const [k,h] of Object.entries(HEXDB)){const b=HEXKK[k]||'C';for(let ko=1;ko<=6;ko++){const d=h.ko[ko];const now=rankToVerdict(koAdjustRank(b,d.jd,d.tai,mTai(h,ko))).sym, raw=rankToVerdict(koAdjustRank(b,d.jd,d.tai,String(d.tai).replace(/◎/g,''))).sym;if(o[now]<o[raw])bad.push(h.nm+ko+'爻 '+raw+'→'+now);}}return bad;`)();
   ok('言い直した訳で答えの記号が先生の訳より上がらない（水雷屯の初爻など）', up.length===0, up.join(' / ')); }
+{ /* 64卦・384爻の点検（2026-11-17）：天水訟の五爻の訳・田（かり）の読み・互卦／綜卦／錯卦／之卦の計算（文王の順と陰陽の線から照らし合わせ） */
+  const s=fs.readFileSync(path.join(ROOT,'eki-pro','app','index.html'),'utf8');
+  const grab=st=>{const i=s.indexOf(st);let d=0,j=s.indexOf('{',i);for(;j<s.length;j++){if(s[j]=='{')d++;else if(s[j]=='}'){d--;if(!d)break;}}return s.slice(i,j+1);};
+  const line=st=>{const i=s.indexOf(st);return s.slice(i,s.indexOf('\n',i));};
+  const tg=(()=>{const i=s.indexOf('const TG=[');return s.slice(i,s.indexOf('];',i)+2);})();
+  const code=[tg,line('const HEXKK='),line('const HEXDB='),grab('const TAI_FIX=')+';',grab('function mTai('),grab('function calcGoka('),grab('function calcSoka('),grab('function calcSakka('),grab('function calcShika('),grab('function ekiShikaMulti(')].join('\n');
+  const bad=new Function(code+`;const bad=[];
+    const KW=[[1,10,13,25,44,6,33,12],[43,58,49,17,28,47,31,45],[14,38,30,21,50,64,56,35],[34,54,55,51,32,40,62,16],[9,61,37,42,57,59,53,20],[5,60,63,3,48,29,39,8],[26,41,22,27,18,4,52,23],[11,19,36,24,46,7,15,2]];
+    const tri=n=>{const l=TG[n-1].l;return [l[2],l[1],l[0]];};
+    const key=b=>{const f=t=>TG.find(g=>g.l[0]===t[2]&&g.l[1]===t[1]&&g.l[2]===t[0]).n;return f(b.slice(3,6))+'-'+f(b.slice(0,3));};
+    for(let u=1;u<=8;u++)for(let l=1;l<=8;l++){ const k=u+'-'+l, h=HEXDB[k], b=tri(l).concat(tri(u));
+      if(!h||h.no!==KW[u-1][l-1]){bad.push('卦の番号 '+k);continue;}
+      if(calcGoka(u,l).key!==key([b[1],b[2],b[3],b[2],b[3],b[4]])) bad.push('互卦 '+h.nm);
+      if(calcSoka(u,l).key!==key(b.slice().reverse())) bad.push('綜卦 '+h.nm);
+      if(calcSakka(u,l).key!==key(b.map(x=>1-x))) bad.push('錯卦 '+h.nm);
+      for(let m=1;m<64;m++){ const mv=[],bb=b.slice(); for(let i=0;i<6;i++) if(m>>i&1){mv.push(i+1);bb[i]=1-bb[i];}
+        if(ekiShikaMulti(u,l,mv).key!==key(bb)) bad.push('之卦 '+h.nm+mv.join(''));
+        if(mv.length===1&&calcShika(u,l,mv[0]).key!==key(bb)) bad.push('之卦1本 '+h.nm+mv[0]); } }
+    const sho=Object.values(HEXDB).find(h=>h.nm==='天水訟'), t5=mTai(sho,5);
+    if(/戦って|勝利/.test(t5)||!/公正/.test(t5)) bad.push('天水訟の五爻の訳：'+t5);
+    const kou=Object.values(HEXDB).find(h=>h.nm==='雷風恒'), kai=Object.values(HEXDB).find(h=>h.nm==='雷水解'), ket=Object.values(HEXDB).find(h=>h.nm==='沢天夬');
+    if(!/^田（かり）して/.test(kou.ko[4].kd)||!/^田（かり）して/.test(kai.ko[2].kd)) bad.push('田（かり）の読み');
+    if(/あって/.test(ket.kd)) bad.push('沢天夬の卦辞の読み下し：'+ket.kd);
+    { const mi=Object.values(HEXDB).find(h=>h.nm==='地火明夷'), ri=Object.values(HEXDB).find(h=>h.nm==='地沢臨'); if(/うまい話/.test(mTai(mi,4))||!/本心/.test(mTai(mi,4))) bad.push('地火明夷の四爻の訳：'+mTai(mi,4)); if(/口は上手/.test(mTai(ri,3))||!/改めれば/.test(mTai(ri,3))) bad.push('地沢臨の三爻の訳：'+mTai(ri,3)); }
+    { const J=JSON.stringify(HEXDB); if(/冽|[己巳]日乃/.test(J)) bad.push('水風井の「洌」・沢火革の「已日」の字がそろっていない（通行本の字にそろえる。2026-11-17）'); }
+    if(JSON.stringify(HEXDB).includes('祇')) bad.push('祇と祗の字がそろっていない（祗にそろえる。2026-11-17）');
+    return bad;`)();
+  ok('64卦の番号・互卦・綜卦・錯卦・之卦の計算と、天水訟の五爻の訳・読み下しの直し（2026-11-17）', bad.length===0, bad.slice(0,6).join(' / ')); }
 { const s=fs.readFileSync(path.join(ROOT,'eki-pro','app','index.html'),'utf8'); ok('坤為地の上爻（龍戦于野）は✖（鑑定者本人の判断 2026-10-30）', /var KO_RANK_FIX=\{[^}]*'2-6':'E'/.test(s)&&/return KO_RANK_FIX\[hx\.no\+'-'\+k\]\|\|koAdjustRank\(/.test(s)); }
 { /* 2026-11-14 実地の点検で直したもの：頼み方の注記・「続けるべきか」・ちがいの書かれていないA社B社・金運の時期・近い日の試験・今は「今は…」・要点メモの「・」 */
   const r=await p.evaluate(()=>{ const F=window.__ekiFix; if(!F) return {bad:['点検用の __ekiFix がない']}; const bad=[];
