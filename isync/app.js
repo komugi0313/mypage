@@ -725,35 +725,52 @@ function getDb(){if(!dbP)dbP=(async()=>{
   try{const f=await FB.init();if(f){WHERE='firebase';return f}}catch(e){}
   return null})();return dbP}
 
-/* Firebase（Firestore）：公開先で部屋を共有する。firebase-config.js に設定があるときだけ読みこむ。
-   ほかのサイトとまざらないよう、置き場所の名前の頭に「isync_」を付ける（rooms → isync_rooms）。 */
+/* Firebase（Firestore）：公開先で部屋を共有する。firebase-config.js に設定があるときだけ使う。
+   ほかのサイトとまざらないよう、置き場所の名前の頭に「isync_」を付ける（rooms → isync_rooms）。
+   読む・書くはふつうの通信（Firestore の REST）で行う。Gmail・LINE などのアプリの中の画面では Firebase の道具のつなぎ方が止められ、
+   部屋が作れない・つながらないことがあったため（鑑定者本人 2026-11-17。恋のかたち診断と同じ直し）。変わったときの知らせ（onSnapshot）だけは道具を後から読んで使い、届かなくても2秒ごとの確認で追いつく */
 const FB=(()=>{
-  let ready=null;
+  let ready=null,sdkP=null,base='',key='';
   const load=src=>new Promise((ok,ng)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=ng;document.head.appendChild(s)});
   const P=p=>'isync_'+p;
-  const clean=d=>JSON.parse(JSON.stringify(d||{}));   // Firestore は空の値（undefined）を受けつけないので取りのぞく
-  const ttl=(path,d)=>/^rooms\//.test(path)?Object.assign({},d,{expireAt:new Date((d.created||d.joined||Date.now())+12*3600e3)}):d; // 部屋は12時間で消す（expireAt に TTL を設定）
+  const clean=d=>JSON.parse(JSON.stringify(d||{}));   // 空の値（undefined）を取りのぞく
+  const ttl=(path,d)=>/^rooms\/[0-9]+$/.test(path)?Object.assign({},d,{expireAt:new Date((d.created||d.joined||Date.now())+12*3600e3)}):d; // 部屋は12時間で消す（expireAt に TTL を設定）
   const strip=d=>{if(d){d=Object.assign({},d);delete d.expireAt}return d};
-  const sd=s=>({id:s.id,exists:s.exists,data:()=>strip(s.data())});
-  function wrap(fs){return{
-    doc(path){const r=fs.doc(P(path));return{
-      get:()=>r.get().then(sd),
-      set:d=>r.set(ttl(path,clean(d))),
-      update:d=>r.update(clean(d)),
-      delete:()=>r.delete(),
-      onSnapshot:(cb,err)=>r.onSnapshot(s=>cb(sd(s)),err)}},
-    async vote(key,f){return fs.doc(P('votes/'+key)).set({[f]:firebase.firestore.FieldValue.increment(1)},{merge:true})},
-    votes(keys){return Promise.all(keys.map(k=>fs.doc(P('votes/'+k)).get().then(s=>[k,s.exists?s.data():null]))).then(Object.fromEntries)},
-    collection(path){const c=fs.collection(P(path));return{
-      get:()=>c.get().then(q=>({docs:q.docs.map(sd)})),
-      onSnapshot:(cb,err)=>c.onSnapshot(q=>cb({docs:q.docs.map(sd)}),err)}}}}
+  const enc=v=>v===null||v===undefined?{nullValue:null}:v instanceof Date?{timestampValue:v.toISOString()}:typeof v==='boolean'?{booleanValue:v}:typeof v==='number'?(Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v}):typeof v==='string'?{stringValue:v}:Array.isArray(v)?{arrayValue:{values:v.map(enc)}}:{mapValue:{fields:encF(v)}};
+  const encF=o=>{const f={};Object.keys(o).forEach(k=>{if(o[k]!==undefined)f[k]=enc(o[k])});return f};
+  const dec=v=>!v?null:'nullValue' in v?null:'booleanValue' in v?v.booleanValue:'integerValue' in v?Number(v.integerValue):'doubleValue' in v?v.doubleValue:'stringValue' in v?v.stringValue:'timestampValue' in v?new Date(v.timestampValue):'arrayValue' in v?(v.arrayValue.values||[]).map(dec):'mapValue' in v?decF(v.mapValue.fields):null;
+  const decF=f=>{const o={};Object.keys(f||{}).forEach(k=>o[k]=dec(f[k]));return o};
+  const mask=ks=>ks.map(k=>'updateMask.fieldPaths='+encodeURIComponent(k)).join('&');
+  async function rq(method,path,body,q){
+    const ac=typeof AbortController==='function'?new AbortController():null,tm=ac&&setTimeout(()=>ac.abort(),12000);
+    try{const r=await fetch((path===':commit'?base.replace(/\/$/,''):base)+path+'?key='+key+(q?'&'+q:''),{method,headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:ac&&ac.signal,cache:'no-store'});
+      if(r.status===404&&method==='GET')return null;
+      const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error((j.error&&j.error.message)||('HTTP '+r.status));return j}
+    finally{tm&&clearTimeout(tm)}}
+  const snap=(id,doc)=>({id,exists:!!doc,data:()=>doc?strip(decF(doc.fields)):undefined});
+  // 変わったときの知らせだけ、Firebase の道具を後から読んで使う（読めない画面では使わない）
+  function sdk(cfg){if(!sdkP)sdkP=(async()=>{try{if(!window.firebase||!firebase.firestore){await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js')}
+    const app=(firebase.apps||[]).find(a=>a.name==='isync')||firebase.initializeApp(cfg,'isync');const fs=app.firestore();
+    try{fs.settings({experimentalAutoDetectLongPolling:true,merge:true})}catch(e){}return fs}catch(e){return null}})();return sdkP}
+  function live(make,cb,err){let off=false,un=null;sdk(window.ISYNC_FB).then(fs=>{if(off||!fs)return;try{un=make(fs).onSnapshot(cb,err)}catch(e){}});return()=>{off=true;if(un)try{un()}catch(e){}}}
+  function wrap(){return{
+    doc(path){const p=P(path),id=path.split('/').pop();return{
+      get:()=>rq('GET',p).then(d=>snap(id,d)),
+      set:d=>rq('PATCH',p,{fields:encF(ttl(path,clean(d)))}),
+      update:d=>{const c=clean(d);return rq('PATCH',p,{fields:encF(c)},mask(Object.keys(c))+'&currentDocument.exists=true')},
+      delete:()=>rq('DELETE',p),
+      onSnapshot:(cb,err)=>live(fs=>fs.doc(p),s=>cb({id:s.id,exists:s.exists,data:()=>strip(s.data())}),err)}},
+    async vote(k,f){const name='projects/'+window.ISYNC_FB.projectId+'/databases/(default)/documents/'+P('votes/'+k);
+      return rq('POST',':commit',{writes:[{transform:{document:name,fieldTransforms:[{fieldPath:f,increment:{integerValue:'1'}}]}}]})},
+    votes(keys){return Promise.all(keys.map(k=>rq('GET',P('votes/'+k)).then(d=>[k,d?decF(d.fields):null]).catch(()=>[k,null]))).then(Object.fromEntries)},
+    collection(path){const p=P(path);return{
+      get:()=>rq('GET',p,null,'pageSize=300').then(j=>({docs:((j&&j.documents)||[]).map(d=>snap(d.name.split('/').pop(),d))})),
+      onSnapshot:(cb,err)=>live(fs=>fs.collection(p),q=>cb({docs:q.docs.map(d=>({id:d.id,exists:true,data:()=>strip(d.data())}))}),err)}}}}
   function init(){
     if(ready)return ready;
-    ready=(async()=>{const cfg=window.ISYNC_FB;if(!cfg||!cfg.projectId)return null;
-      try{if(!window.firebase||!firebase.firestore){await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js')}
-        const app=(firebase.apps||[]).find(a=>a.name==='isync')||firebase.initializeApp(cfg,'isync');const fs=app.firestore();
-        try{fs.settings({experimentalAutoDetectLongPolling:true,merge:true})}catch(e){}   // LINE・アプリの中の画面など、ふつうのつなぎ方が止められる所でもつながるように
-        return wrap(fs)}catch(e){return null}})();
+    ready=(async()=>{const cfg=window.ISYNC_FB;if(!cfg||!cfg.projectId||typeof fetch!=='function')return null;
+      base='https://firestore.googleapis.com/v1/projects/'+cfg.projectId+'/databases/(default)/documents/';key=encodeURIComponent(cfg.apiKey);
+      sdk(cfg);return wrap()})();
     return ready}
   return{init};
 })();
@@ -819,7 +836,7 @@ async function joinRoom(code,name){
 }
 async function enterRoom(code){
   leaveRoom(true);
-  Object.assign(R,{code,key:'',room:undefined,players:{},seen:{},adv:{},my:null});store('kv_room',{code});
+  Object.assign(R,{code,key:'',room:undefined,players:{},seen:{},adv:{},my:null,snapAt:0});store('kv_room',{code});
   try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}JOIN='';
   view('<section class="card hand"><p class="hint">部屋につないでいます…</p></section>');
   await subscribe();
@@ -842,15 +859,16 @@ async function subscribe(){
   const db=await getDb(),code=R.code;if(!code)return;
   R.un.forEach(f=>{try{f()}catch(e){}});R.un=[];
   const again=()=>setTimeout(()=>{if(R.code===code)subscribe()},1000);
-  R.un.push(db.doc('rooms/'+code).onSnapshot(s=>{R.last=Date.now();R.room=s.exists?s.data():null;sync()},again));
-  R.un.push(db.collection('rooms/'+code+'/players').onSnapshot(q=>{R.last=Date.now();R.players={};q.docs.forEach(d=>R.players[d.id]=d.data());sync()},again));
+  R.un.push(db.doc('rooms/'+code).onSnapshot(s=>{R.last=R.snapAt=Date.now();R.room=s.exists?s.data():null;sync()},again));
+  R.un.push(db.collection('rooms/'+code+'/players').onSnapshot(q=>{R.last=R.snapAt=Date.now();R.players={};q.docs.forEach(d=>R.players[d.id]=d.data());sync()},again));
 }
 /* 読む回数を少なく（データを読む回数には1日の上限がある）：知らせが4秒以上届いていないときだけ自分から確かめる。
    ふだんは部屋だけ（1回）、全員の答えは5回に1回（約10秒ごと）。アプリから戻ったとき・つながったばかりのときは全部読む */
 async function pull(force){
   const db=await getDb(),code=R.code;if(!code||R.pulling)return;
   if(!force&&Date.now()-(R.last||0)<4000)return;
-  const all=force||((R.nth=(R.nth||0)+1)%5===1);R.pulling=true;
+  // 知らせが一度も届いていない画面（アプリの中の画面など）は、全員の答えも毎回読む（止まって見えないように）
+  const all=force||!R.snapAt||((R.nth=(R.nth||0)+1)%5===1);R.pulling=true;
   try{const [rs,ps]=await Promise.all([db.doc('rooms/'+code).get(),all?db.collection('rooms/'+code+'/players').get():null]);
     if(R.code!==code)return;R.room=rs.exists?rs.data():null;if(ps){R.players={};ps.docs.forEach(d=>R.players[d.id]=d.data())}sync()}
   catch(e){}finally{R.pulling=false}
