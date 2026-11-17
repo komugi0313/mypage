@@ -126,6 +126,32 @@ ok('開いただけでは文章作成を呼ばない', calls===0, 'calls='+calls
     let L; try{ L=new Function(ln)(); }catch(e){ bad.push(f+'：読めない '+e.message); continue; } let t=T; L.forEach(x=>{ t=t.replace(x[0],x[1]); }); if(!/センター #7119/.test(t)||/落ち針/.test(t)) bad.push(f+'：'+t); }
   for(const f of ['pro/app-pro.html','beginner/app-beginner.html']){ const src=fs.readFileSync(path.join(ROOT,f),'utf8'); if(/\^#\{1,6\}\[ 　\]/.test(src)) bad.push(f+'：行頭の「#7119」の#を見出しとして外す'); }
   ok('#7119 の「#」・誤字「落ち針く」を PRO・ビギナー・鑑定書でも直す（2026-11-17）', bad.length===0, bad.join(' | ')); }
+{ /* 2026-11-17「A」：つらさの相談は軽いものでも◎〇△✖を付けない（答えの欄・答え・話す順番・鑑定書・続けての質問）。1行目・③の合図はそのまま。「続けるべきか」の通信なしの助言に思い切っての後押しを入れない */
+  const r=await p.evaluate(()=>{ const F=window.__ekiFix; const bad=[]; if(!F||!F.ekiFeelNoSym||!F.renderVerdict||!F.shoOffline) return {bad:['点検用の関数がない']};
+    const key=nm=>Object.keys(HEXDB).find(k=>HEXDB[k].nm===nm).split('-').map(Number);
+    const mk=(nm,ko,q)=>{ const [u,l]=key(nm); const rr=F.buildResult(u,l,ko,[ko]); window.__ekiQ=q; return rr; };
+    const SYM=/[◎〇○◯△▲✖✕×]/, SW=/とても良い流れ|前向きに進めてよい流れ|慎重に進めたい流れ|今は控えたほうがよい流れ/;
+    const box=(p0,rr)=>{ let el=document.getElementById('verdictCard'), tmp=null; if(!el){ tmp=document.createElement('div'); tmp.id='verdictCard'; document.body.appendChild(tmp); el=tmp; } const keep=el.innerHTML; F.renderVerdict(p0,rr); const tx=el.innerText, mk2=!!el.querySelector('.v-mark'); el.innerHTML=keep; if(tmp) tmp.remove(); return {tx,mk:mk2}; };
+    const talk=(p0,rr)=>{ const d=document.createElement('div'); document.body.appendChild(d); d.innerHTML=F.ekiTalkHTML(p0,rr,[p0.tsutae],['休みましょう。']); const tx=d.innerText; d.remove(); return tx; };
+    { const q='不安で眠れない', rr=mk('乾為天',2,q); const o=F.buildOfflineReading(rr,q), b=box(o,rr); if(b.mk||SYM.test(b.tx)) bad.push('不安で眠れない（体のご相談として答えの欄は記号なし）：'+b.tx.slice(0,60)); }   // 「眠れない」は体のご相談（占いで決めないご相談）として、もともと答えの欄に記号を出さない
+    for(const q of ['つらくて何もしたくない','職場の人間関係がつらい','将来が不安でたまらない']){ if(!F.ekiFeelNoSym(q)) { bad.push('つらさの相談として記号なしにしない：'+q); continue; }
+      for(const [nm,ko] of [['乾為天',2],['雷水解',3],['山地剥',3],['坤為地',6]]){ const rr=mk(nm,ko,q);
+        const o=F.buildOfflineReading(rr,q); if(SYM.test(o.hantei)||SW.test(o.hantei+o.tsutae+o.ketsuron)) bad.push('通信なしの答えに記号：'+q+' '+nm+' '+o.hantei);
+        if(!/流れ|守る|気持ち|自分/.test(o.hantei)) bad.push('つらさの1行目：'+o.hantei);
+        const b1=box(o,rr); if(b1.mk||SYM.test(b1.tx)) bad.push('答えの欄に記号：'+q+' '+nm+' '+b1.tx);
+        const t1=talk(o,rr); if(!/気持ちが軽くなる合図/.test(t1)) bad.push('つらさの③の見出し：'+q); if(SYM.test(t1.replace(/[①-⑥]/g,''))||SW.test(t1)) bad.push('話す順番に記号：'+q+' '+nm);
+        const P=F.ekiFixSym(F.ekiCleanReading(F.parseReading('▼判定：〇 今は前向きに進んで大丈夫です。\n▼伝え方：答えは「〇」、とても良い流れです。少しずつ気持ちを休めていきましょう。'),q),rr,q);
+        if(SYM.test(P.hantei)||/進んで大丈夫/.test(P.hantei)||SW.test(P.tsutae)||SYM.test(P.tsutae)) bad.push('オンラインの答えに記号：'+q+' '+P.hantei+' / '+P.tsutae);
+        const b2=box(P,rr); if(b2.mk||SYM.test(b2.tx)) bad.push('オンラインの答えの欄に記号：'+b2.tx);
+        const S=F.ekiShoClean(F.shoOffline(rr,q,o,null),rr,q,o), st=S.map(x=>x.t).join('\n'); if(SYM.test(st)||SW.test(st)||/答えは「/.test(st)) bad.push('鑑定書に記号・答えの言葉：'+q+' '+nm+' '+(st.match(/[^\n]*(?:答えは「|とても良い流れ|前向きに進めてよい流れ|慎重に進めたい流れ|今は控えたほうがよい流れ|[◎〇△✖])[^\n]*/)||[''])[0]); }
+      if(!/◎〇△✖を付けず/.test(F.ekiSafetyPrompt(q))) bad.push('頼み方に記号なしの決まりがない：'+q); }
+    // つらさでない相談は記号のまま
+    for(const q of ['彼と復縁できますか','転職がつらいけど転職すべきですか']){ if(F.ekiFeelNoSym(q)) bad.push('記号ありの相談を記号なしにした：'+q); const rr=mk('乾為天',2,q); const o=F.buildOfflineReading(rr,q); if(!SYM.test(o.hantei)) bad.push('記号が消えた：'+q+' '+o.hantei); const b=box(o,rr); if(!b.mk) bad.push('答えの欄の記号が消えた：'+q); }
+    // 「続けるべきか」の通信なしの助言
+    { const q='仕事を続けるべきか迷っています'; const A=F.ekiAdvSet(q); for(const g of ['g','m','b']) for(const x of (A[g]||[])) if(/思い切|転職|退職|動かすのに|時期/.test(x)) bad.push('続けるべきかの助言：'+x);
+      for(const [nm,ko] of [['乾為天',2],['風地観',4],['山地剥',3]]){ const rr=mk(nm,ko,q); const o=F.buildOfflineReading(rr,q); const S=F.shoOffline(rr,q,o,null); const adv=(S.find(x=>/アドバイス/.test(x.h))||{t:''}).t; if(/思い切|転職/.test(adv)) bad.push('続けるべきかの鑑定書の助言：'+adv); } }
+    return {bad}; });
+  ok('つらさの相談は記号なし・続けるべきかの助言（2026-11-17「A」）', r.bad.length===0, r.bad.join(' | ')); }
 async function consult(q,nums){ await p.evaluate(()=>scrollTo(0,0)); await p.click('.ct-number'); await p.waitForTimeout(300);
   for(const [i,v] of [['#num1',nums[0]],['#num2',nums[1]],['#num3',nums[2]]]) await p.fill(i,String(v));
   await p.fill('#question',q); const c0=calls; const t0=Date.now();
