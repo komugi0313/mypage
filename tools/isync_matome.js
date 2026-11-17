@@ -4,11 +4,11 @@
 //  問題の目印は app.js と同じ作り方（問題の文｜答えA のハッシュ）。i-sync.jp がつながったら BASE を書きかえて回し直す。
 const fs = require('fs'), path = require('path');
 const D = path.join(__dirname, '..', 'isync');
-const BASE = 'https://isync-futari.web.app/';
+const BASE = 'https://i-sync.jp/';
 global.window = {};
 require(path.join(D, 'questions.js')); require(path.join(D, 'weights.js'));
 const CATS = window.SY_CATS, W = window.SY_W;
-const Q = window.SY_Q.map(r => ({ cat: r[0], q: r[1], a: r[2], b: r[3], c: r[4] || 'こだわらない' }));
+const Q = window.SY_Q.map(r => ({ cat: r[0], q: r[1], a: r[2], b: r[3], c: r[4] || 'どっちでも合わせられる' }));
 const hq = s => { let h = 5381; for (const c of s) h = (Math.imul(h, 33) ^ c.codePointAt(0)) >>> 0; return h.toString(36); };
 Q.forEach(x => { x.key = hq(x.q + '|' + x.a); });
 const WB = new Set(W.b), WL = new Set(W.l);
