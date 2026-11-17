@@ -1553,7 +1553,7 @@ function answer(c, el){
   var wait=260, solo=S.who==='solo';
   if(solo){
     var q=S.qs[S.qi];
-    if(!S.sent[sentKey(q)]){ S.sent[sentKey(q)]=1; Votes.send([{ id:q.id, c:canon(q,c) }]); }
+    if(!S.sent[sentKey(q)]){ S.sent[sentKey(q)]=1; if(votedOnce(q.id)) Votes.send([{ id:q.id, c:canon(q,c) }]); }
     if(showPctOnCards(q, [c])) wait=1500;
     var sw=stampWord(q, c, S.times[S.pi][S.qi]), st=document.createElement('span');
     st.className='qstamp'; st.textContent=sw;
@@ -1661,7 +1661,7 @@ function honAnswer(c){
   var t=Math.max(100, Date.now()-S.honStart);
   S.ans[0][S.qi]=c; S.times[0][S.qi]=t;
   var q=S.qs[S.qi];
-  if(!S.sent[sentKey(q)]){ S.sent[sentKey(q)]=1; Votes.send([{ id:q.id, c:canon(q,c) }]); }
+  if(!S.sent[sentKey(q)]){ S.sent[sentKey(q)]=1; if(votedOnce(q.id)) Votes.send([{ id:q.id, c:canon(q,c) }]); }
   var num=$('hnum'); num.className='fl'; num.textContent=(Math.round(t/100)/10).toFixed(1)+'秒！'; $('htimer').classList.add('read'); honRingDone((Math.round(t/100)/10).toFixed(1));
   honNext(450);
 }
@@ -2299,6 +2299,10 @@ document.addEventListener('click', function(e){
   if(sv){ var cd=sv.closest('.kc').querySelector('.kc-c:not([hidden]) .kcd'); if(cd) saveImage(cd); }
 });
 
+/* 同じスマホで同じ問題は1回だけ数える（鑑定者本人 2026-11-16「同じ人が何回遊んでも1カウントに」）。初めての問題なら true を返して覚える */
+function votedOnce(id){ var v=store('nitaku_voted')||[]; if(v.indexOf(id)>=0) return false; v.push(id); store('nitaku_voted', v.slice(-3000)); (S.fresh=S.fresh||{})[id]=1; return true; }
+/* 答えた人の数は、その問題に10人以上が答えてから出す（少ないうちは％だけ。鑑定者本人 2026-11-16） */
+var SHOW_COUNT=10;
 /* ───── 遊んだ回数と、4つの％の分布（鑑定者本人 2026-11-17「遊んだ人数を統計取り、一問一問統計を取りたい」「それで%を測っていきたい」） ─────
    遊び終わったときに、①遊んだ回数（ひとりで／部屋 × 編 × 難しさ）を1つ足す ②4つの％を5%きざみの数として1つずつ足す。
    名前・答え・ほかの人の結果は送らない。置き場所は Firestore の nitaku_stats/plays と nitaku_hist/<編>_<％の記号>（決まりは firestore.rules）。
@@ -2362,7 +2366,9 @@ function worldCounts(q, picks){
   var c = S.counts && S.counts[q.id];
   if(!c) return null;
   var a=c.a||0, b=c.b||0, before=a+b;
-  picks.forEach(function(p){ if(!p) return; if(canon(q,p)==='a') a++; else b++; });
+  // 前に遊んだときに、もう数えてある問題なら、自分の答えを足さない（2回数えない）
+  var mineIn = picks.length===1 && S.who==='solo' && !(S.fresh&&S.fresh[q.id]) && (store('nitaku_voted')||[]).indexOf(q.id)>=0 && before>0;
+  if(!mineIn) picks.forEach(function(p){ if(!p) return; if(canon(q,p)==='a') a++; else b++; });
   var A = q.sw ? b : a, B = q.sw ? a : b, t=A+B;
   return { A:A, B:B, t:t, before:before, pa: t?Math.round(100*A/t):0, pb: t?100-Math.round(100*A/t):0 };
 }
@@ -2383,9 +2389,7 @@ function showPctOnCards(q, picks){
       requestAnimationFrame(function(){ requestAnimationFrame(function(){ bar.style.width=pct+'%'; }); });
     } else bar.style.width=pct+'%';
   });
-  var note=document.createElement('p'); note.className='wnote';
-  note.textContent = w.before===0 ? 'あなたが最初の回答者！' : (w.t.toLocaleString()+'人が回答');
-  $('q-body').appendChild(note);
+  if(w.t>=SHOW_COUNT){ var note=document.createElement('p'); note.className='wnote'; note.textContent=w.t.toLocaleString()+'人が回答'; $('q-body').appendChild(note); }
   return true;
 }
 function worldLine(q, picks){
@@ -2393,7 +2397,7 @@ function worldLine(q, picks){
   if(!w) return '';
   return '<div class="world"><b>みんなの回答</b><div class="wrow"><span>A</span><div class="wtrack"><i style="width:'+w.pa+'%"></i></div><em>'+w.pa+'%</em></div>'+
          '<div class="wrow"><span>B</span><div class="wtrack b"><i style="width:'+w.pb+'%"></i></div><em>'+w.pb+'%</em></div>'+
-         '<small>'+(w.before===0?'この問題に答えたのは、ここにいる人だけ！':w.t.toLocaleString()+'人が回答')+'</small></div>';
+         (w.t>=SHOW_COUNT?'<small>'+w.t.toLocaleString()+'人が回答</small>':'')+'</div>';
 }
 /* みんなと同じ答えだった数（多数派度） */
 function majorityStats(qs, ans){
