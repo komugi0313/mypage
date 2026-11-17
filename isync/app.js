@@ -88,6 +88,7 @@ if(JOIN)CFG.mode='each';
 if(['solo','each'].includes(QS.get('mode')))CFG.mode=QS.get('mode');
 const saveCfg=()=>store('kv_cfg',{mode:CFG.mode,len:CFG.len,topic:CFG.topic,anon:CFG.anon});
 /* トップの「まず1問、答えてみて」（鑑定者本人 2026-11-17 トップの見本で「2のオーロラ」。押すと、これまでに遊んだ人の％が出る。ここでは数えない） */
+const TH_N=CATS.map((c,i)=>[c[0],Q.filter(q=>q[0]===i).length]).filter(x=>x[1]);
 const TRY_K=Math.max(0,Q.findIndex(q=>q[1]==='LINEは？'));
 function bindTry(){
   const box=$('try');if(!box)return;let done=false,counts=null;
@@ -118,13 +119,26 @@ function goTop(){
     <div class="tops">${[0,1,2].map(v=>`<button class="topt o${v}" data-tv="${v}"><span class="t">${v<2?OPTS[v]+'　':''}${esc(ans(v,TRY_K))}</span><span class="pct"></span><i class="tbar"></i></button>`).join('')}</div>
     <p class="tnote" id="tnote"></p>
   </section>
-  <section class="card smp">
-    <p class="kick">遊ぶと、こんな結果に（見本）</p>
-    <div class="smp-box">
-      <div class="smp-top"><p class="smp-big">78<small>%</small></p><p class="smp-who">あなた × あの人<span>シンクロ率</span></p></div>
-      <div class="smp-chips"><i>食<b>92%</b></i><i>休日<b>81%</b></i><i>お金<b>54%</b></i></div>
-      <div class="smp-ayu"><b>歩み寄りの案</b>お風呂は湯船／シャワーで分かれた → 平日はシャワー、週末は湯船に。</div>
+  <div class="stat" aria-label="質問の数">
+    <div><b>${Q.length}</b><span>の質問</span></div><div><b>${TH_N.length}</b><span>のテーマ</span></div><div><b>${AX.length}</b><span>つのものさし</span></div>
+  </div>
+  <section class="card rep">
+    <div class="rep-h"><b>2人の価値観レポート</b><span>見本・あなた × あの人</span></div>
+    <div class="rep-b">
+      <div class="rep-top"><p class="smp-big">78<small>%</small></p><p class="smp-who">シンクロ率<span>答えがどれだけ重なったか</span></p></div>
+      <p class="rep-k">テーマ別の重なり</p>
+      <div class="rep-rows">${[['食',92],['休日・遊び',81],['暮らし',74],['お金',54]].map(([n,v])=>`<div class="rr"><i>${n}</i><span class="t"><s style="width:${v}%"></s></span><em>${v}%</em></div>`).join('')}</div>
+      <p class="rep-k">価値観のタイプ（4つのものさし）</p>
+      <div class="rep-ax"><p class="n">2人の距離感</p><div class="bar"><span class="dot d1" style="left:22%"></span><span class="dot d2" style="left:66%"></span></div><div class="ends"><span>いつも一緒派</span><span>ひとりの時間も派</span></div><p class="lg"><i class="d1"></i>あなた　<i class="d2"></i>あの人</p></div>
+      <p class="rep-k">★ ゆずれないところ</p>
+      <p class="rep-star">同じ 4問・合わせられる 2問・ちがう 1問</p>
+      <div class="smp-ayu"><b>歩み寄りの案（お風呂は？）</b>${esc((window.SY_AYUMI||{})['お風呂は？']||'平日はシャワー、週末は湯船に。')}</div>
     </div>
+  </section>
+  <section class="card ths">
+    <p class="kick">${TH_N.length}つのテーマから、まんべんなく</p>
+    <p class="ths-s">遊ぶたびに、まだ出ていない質問が出ます。</p>
+    <div class="tiles">${TH_N.map(([n,c])=>`<div class="tile"><span>${esc(n)}</span><em>${c}</em></div>`).join('')}</div>
   </section>
   <div class="gos">
     <button class="gobig g1" id="go-each"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg></span><span><b>2人で・みんなで</b><small>QRを読むだけ・2〜10人</small></span></button>
