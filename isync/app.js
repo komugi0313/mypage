@@ -194,7 +194,8 @@ function goTop(){
   <section class="card themes"><p class="label">テーマ別の質問</p>
     <ul class="tlinks">${(window.SY_PAGES||[]).map(p=>`<li><a href="${p.slug}/">${esc(p.h1)}</a></li>`).join('')}</ul></section>
   ${PROMO}
-  <p class="note">どの問題にも正解はありません。どちらでもいいときは、3つ目の答え（「どっちでも合わせられる」「どっちも好き」など）を選んでください。</p>`);
+  <p class="note">どの問題にも正解はありません。どちらでもいいときは、3つ目の答え（「どっちでも合わせられる」「どっちも好き」など）を選んでください。</p>
+  <p class="credit" data-nocg>アイ・シンク（I-Sync）<br>Produced by Mizuki Nico</p>`);
   const DESC={kon:'最大40人。番号だけで参加して、名前を出さずに一斉に20問。終わると、自分と合う人が、自分のスマホにだけ出ます。',each:'2〜10人で。1人が部屋を作り、そばにいる人はQRコードを読みとるだけで参加できます。離れている人には、LINEなどでリンクを送ります。',solo:'自分の答えから、あなたのこだわりと、ゆずれることがわかります。'};
   const refresh=()=>{['each','solo','kon'].forEach(m=>$('m-'+m).hidden=CFG.mode!==m);
     $('m-desc').textContent=DESC[CFG.mode];$('m-anon').hidden=CFG.mode!=='each';$('m-opts').hidden=CFG.mode==='kon';
