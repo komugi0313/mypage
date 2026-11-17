@@ -2720,8 +2720,18 @@ function pickHTML(icon, label, x){
           : '<div class="pk-o">「'+esc(x.q.a)+'」VS「'+esc(x.q.b)+'」</div>')+'</div>';
 }
 function pctLine(mode, sc){ return AXES[mode].map(function(ax){ return ax.name+sc[ax.k]+'%'; }).join('／'); }
-function shareText(mode, sc){
+// 送る一言は「1問だけ見せて、問いかける」（鑑定者本人 2026-11-17「案Bでお願いします」）：いちばん早く決めた問題とその答え＋キャラ
+function shareText(mode, sc, sp, ch){
   var hd=headline(mode), others=AXES[mode].filter(function(ax){ return ax.k!==hd.k; });
+  try{
+    var x=sp&&sp.quick;
+    if(!(x&&(x.c==='A'||x.c==='B'))){ x=null; (S.qs||[]).some(function(q,i){ var c=(S.ans[0]||[])[i]; if(c==='A'||c==='B'){ x={q:q,c:c,t:(S.times[0]||[])[i]||0}; return true; } }); }
+    if(x&&x.q&&x.q.a&&x.q.b){
+      var mine=x.c==='A'?x.q.a:x.q.b, sec=Math.round((x.t||0)/100)/10;
+      var tail=ch&&ch.main ? '（ちなみに、わたしの'+(mode==='love'?'恋':'ふだん')+'のキャラは「'+ch.main.name+'」）' : '（ちなみに、わたしの'+hd.cap+'は'+sc[hd.k]+'%）';
+      return '【究極の二択】\n'+x.q.a+' VS '+x.q.b+'\n\nわたしは'+(sec>0&&sec<3?sec+'秒で':'')+'「'+mine+'」を選んだ。\nあなたはどっち？\n\n'+tail+'\n#究極の二択 #本音バレ診断';
+    }
+  }catch(e){}
   return 'わたしの'+hd.cap+'は '+sc[hd.k]+'% でした\n'+others.map(function(ax){ return ax.name+sc[ax.k]+'%'; }).join('／')+
     '\n\n究極の二択に答えるだけで本音がバレる…\nあなたは何%？\n#究極の二択 #本音バレ診断';
 }
@@ -2843,8 +2853,8 @@ function showResult(){
   if(!S.qs._g) S.qs._g=Date.now()+'-'+Math.random();
   fillRanks($('res-body'));
   Stats.play('solo:'+S.qs._g, 'solo', mode, playLv(), S.qs, S.ans[0]);
-  $('share').onclick=function(){ doShare(shareText(mode,sc)); };
-  $('lshare').href=lineHref(shareText(mode,sc));
+  $('share').onclick=function(){ doShare(shareText(mode,sc,sp,ch)); };
+  $('lshare').href=lineHref(shareText(mode,sc,sp,ch));
   $('save').onclick=function(){ saveImage($('res-body')); };
   bindEnd();
   show('s-res');
