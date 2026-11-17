@@ -121,7 +121,7 @@ function goTop(){
   <section class="card smp">
     <p class="kick">遊ぶと、こんな結果に（見本）</p>
     <div class="smp-box">
-      <div class="smp-top"><p class="smp-big">78<small>%</small></p><p class="smp-who">りえ × ゆうと<span>シンクロ率</span></p></div>
+      <div class="smp-top"><p class="smp-big">78<small>%</small></p><p class="smp-who">あなた × あの人<span>シンクロ率</span></p></div>
       <div class="smp-chips"><i>食<b>92%</b></i><i>休日<b>81%</b></i><i>お金<b>54%</b></i></div>
       <div class="smp-ayu"><b>歩み寄りの案</b>お風呂は湯船／シャワーで分かれた → 平日はシャワー、週末は湯船に。</div>
     </div>
