@@ -381,6 +381,30 @@ html.jw body{word-break:keep-all;overflow-wrap:anywhere;line-break:strict}
 .choice.picked{outline:none;border-color:#C2185B;box-shadow:5px 5px 0 #C2185B;border-width:4px}
 .choice.picked::after{content:"✓ これを選んだ";position:absolute;right:10px;top:10px;background:#C2185B;color:#fff;font-size:13px;font-weight:900;line-height:1;padding:6px 10px;border-radius:999px}
 #q-body:has(.choice.picked) .choice:not(.picked){opacity:.4;filter:saturate(.5)}
+/* 押した手ごたえ・ハンコ・大きな％・なめらかな切りかわり（鑑定者本人 2026-11-17「OK」「紙吹雪のような演出は不要」。ひとりで遊ぶとき） */
+#q-body.sp .choice{overflow:visible}
+#q-body.sp .choice .wbar{border-radius:16px 0 0 16px}
+#q-body.sp .choice.picked{animation:qpop .4s ease-out}
+@keyframes qpop{0%{transform:scale(1)}40%{transform:scale(1.05)}100%{transform:scale(1)}}
+#q-body.sp .choice.stamped::after{display:none}
+.qstamp{position:absolute;right:-10px;top:-18px;z-index:3;height:38px;padding:0 12px;border-radius:10px;border:2.5px solid #C2185B;box-shadow:inset 0 0 0 2px rgba(255,255,255,.9),inset 0 0 0 3.5px #C2185B;background:#fff;color:#C2185B;display:flex;align-items:center;justify-content:center;text-align:center;font-family:"Mochiy Pop One",sans-serif;font-size:14px;line-height:1;letter-spacing:.04em;transform:rotate(-8deg);pointer-events:none;animation:qstamp .38s cubic-bezier(.2,1.4,.4,1) both;white-space:nowrap}
+@keyframes qstamp{0%{opacity:0;transform:rotate(-8deg) scale(2.2)}60%{opacity:1;transform:rotate(-8deg) scale(.92)}100%{opacity:1;transform:rotate(-8deg) scale(1)}}
+#q-body.sp .choice .ct,#q-body.sp .choice .wpct{position:relative;z-index:1}
+#q-body.sp .choice .tag{z-index:2}
+#q-body.sp .choice .wpct{font-family:"Mochiy Pop One",sans-serif;font-weight:400;font-size:24px;line-height:1.2;margin-top:6px}
+#q-body.sp .choice .wpct small{font-family:"Zen Maru Gothic",sans-serif;font-weight:900;font-size:13px;margin-right:4px}
+#q-body.sp .choice .wbar{height:100%;transition:width .6s cubic-bezier(.2,.8,.2,1);z-index:0}
+/* ％の帯は、カードの色より濃い色（濃いところ＝選んだ人の割合。鑑定者本人 2026-11-17「濃い方が多い方にしてほしい」） */
+#q-body.sp .choice.A .wbar{background:#FFA8C6}
+#q-body.sp .choice.B .wbar{background:#A6C8FF}
+body[data-mode="normal"] #q-body.sp .choice.A .wbar{background:#FFCB2E}
+body[data-mode="normal"] #q-body.sp .choice.B .wbar{background:#8EDDBA}
+#s-q.qout #q-card,#s-q.qout #q-body{animation:qout .2s ease-in forwards}
+#s-q.qin #q-card,#s-q.qin #q-body{animation:qin .26s ease-out}
+@keyframes qout{to{opacity:0;transform:translateX(-50px)}}
+@keyframes qin{from{opacity:0;transform:translateX(50px)}to{opacity:1;transform:none}}
+@media (max-width:360px){.qstamp{right:-6px;font-size:13px;padding:0 10px}}
+@media (prefers-reduced-motion:reduce){#q-body.sp .choice.picked,.qstamp,#s-q.qout #q-card,#s-q.qout #q-body,#s-q.qin #q-card,#s-q.qin #q-body{animation:none}#q-body.sp .choice .wbar{transition:none}}
 /* 「その場でみんなで」などの説明は、押せるボタンに見えないよう枠をなくして文字だけに（鑑定者本人の指摘 2026-11-13「ここのバーが押せそうに見える」） */
 .feat-h{margin:16px 4px 2px;font-size:14px;font-weight:900;color:var(--sub)}
 .feat{margin:4px 4px 0;gap:6px}
@@ -1440,11 +1464,39 @@ function setProg(barId, cntId){
   $(barId).style.width = (100*S.qi/S.qs.length)+'%';
   $(cntId).textContent = (S.qi+1)+' / '+S.qs.length;
 }
+/* 問題の文の改行（鑑定者本人 2026-11-17「泣き崩れを起こさず読みやすい形に」）：1行に入らないときは、
+   区切り（、。？！」のあと）で切る。それで入らなければ、自然な切れ目（「の前・なら／たら／ときのあと・どっち／まだ／あなたはの前）も使う。
+   行の数がいちばん少なく、区切りでない切れ目が少なく、行の長さがそろう切り方を選ぶ。どれも入らなければ今までの改行のまま */
+function hintWrap(el, t){
+  el.textContent=t;
+  var cw=el.clientWidth; if(!cw) return;
+  var m=document.createElement('span'); m.style.cssText='white-space:nowrap;position:absolute;visibility:hidden'; el.appendChild(m);
+  var wd=function(x){ m.textContent=x; return m.getBoundingClientRect().width; };
+  if(wd(t)<=cw){ m.remove(); return; }
+  var cut=[];   // [位置, 区切りでない=1]
+  for(var i=1;i<t.length;i++){
+    var pv=t[i-1], rest=t.slice(i);
+    if('、。？！」'.indexOf(pv)>=0 && '、。？！」）'.indexOf(t[i])<0) cut.push([i,0]);
+    else if(t[i]==='「' || /^(どっち|まだ|あなたは)/.test(rest) || /(なら|たら|とき)$/.test(t.slice(0,i))) cut.push([i,1]);
+  }
+  var best=null;
+  var tryK=function(k){
+    var go=function(from, left, picks, soft){
+      if(left===0){ var seg=t.slice(from); if(!seg || wd(seg)>cw) return; var ps=picks.concat([t.length]), ws=[], st=0; ps.forEach(function(e){ ws.push(wd(t.slice(st,e))); st=e; });
+        var sc=soft*1000+(Math.max.apply(null,ws)-Math.min.apply(null,ws)); if(!best || sc<best.sc) best={sc:sc, ps:picks.slice()}; return; }
+      cut.forEach(function(c){ if(c[0]<=from) return; var seg=t.slice(from,c[0]); if(wd(seg)>cw) return; go(c[0], left-1, picks.concat([c[0]]), soft+c[1]); });
+    };
+    go(0, k-1, [], 0);
+  };
+  for(var k=2;k<=3 && !best;k++) tryK(k);
+  m.remove();
+  if(best){ var st=0, out=[]; best.ps.concat([t.length]).forEach(function(e){ out.push(esc(t.slice(st,e))); st=e; }); el.innerHTML=out.join('<br>'); }
+}
 function showQ(){
   var q = S.qs[S.qi];
   setProg('q-prog','q-count');
   // 問題の文を主役に（鑑定者本人の選択 2026-11-13「A」）。「たとえば」の一文がない問題（部屋で作った問題など）は「どっちを選ぶ？」
-  $('q-no').textContent='Q.'+(S.qi+1); $('q-hint').textContent = q.ex || 'どっちを選ぶ？';
+  $('q-no').textContent='Q.'+(S.qi+1); hintWrap($('q-hint'), q.ex || 'どっちを選ぶ？');
   var by=$('q-by'), byt = q.by ? q.by+'さんが考えた問題' : (q.user ? 'みんなの投稿から' : '');
   by.hidden=!byt; by.innerHTML = byt ? '<span>'+esc(byt)+'</span>' : '';
   var group = S.who==='group';
@@ -1462,15 +1514,29 @@ function showQ(){
        (S.honPlay ? '<div class="vsmark hring"><span class="ring" id="hring" style="--p:100"><b id="hcount">3</b></span></div>' : '<div class="vsmark"><b>VS</b></div>')+
        '<button class="choice B'+hc+'" data-c="B"><span class="tag">B</span><span class="ct">'+esc(q.b)+'</span></button>';
     $('q-body').innerHTML=h;
+    $('q-body').classList.toggle('sp', S.who==='solo' && !S.room && !S.honPlay);
     S.t0=Date.now();
     $('q-body').querySelectorAll('.choice').forEach(function(b){ b.onclick=function(){ answer(b.dataset.c, b); }; });
   }
   show('s-q');
+  hintWrap($('q-hint'), q.ex || 'どっちを選ぶ？');   // 画面が出てから測り直す（前の画面から来たときは、まだ幅がないため）
   var done = S.room && S.room.me.ans[S.room.data.round+':'+S.qi];
   if(S.honPlay && !done) honRun();
   if(done) showWait();
 }
 var busy=false;
+/* ハンコの言葉（鑑定者本人 2026-11-17「OK」）：上から順に見て、最初に当てはまったもの。
+   ％＝自分と同じ答えを選んだ人の割合（自分の1票もふくむ）。時間＝押すまでの秒数から読む時間（2つの答えの文字数×0.11秒）を引いたもの */
+function stampWord(q, c, ms){
+  var w=worldCounts(q, [c]), n=w ? w.t : 0, p=w ? (c==='A'?w.pa:w.pb) : 0;
+  var d=(ms||0)-110*((q.a||'').length+(q.b||'').length);
+  if(n>=20 && p<=10) return '激レア';
+  if(n>=20 && p>=90) return 'みんな一緒';
+  if(ms>0 && ms<=1500) return '即決';
+  if(d>=10000) return '熟考';
+  if(n>=20) return p<=40 ? '少数派' : (p<=59 ? 'まっぷたつ' : '多数派');
+  return '本音';
+}
 function answer(c, el){
   if(S.honPlay && S.honStart && Date.now()<S.honStart) return;   // 問題を読んでいるあいだは押せない
   if(busy) return; busy=true;
@@ -1479,11 +1545,15 @@ function answer(c, el){
   if(S.honPlay){ honAnswer(c); return; }
   S.ans[S.pi][S.qi]=c;
   S.times[S.pi][S.qi]=Date.now()-S.t0;
-  var wait=260;
-  if(S.who==='solo'){
+  var wait=260, solo=S.who==='solo';
+  if(solo){
     var q=S.qs[S.qi];
     if(!S.sent[q.id]){ S.sent[q.id]=1; Votes.send([{ id:q.id, c:canon(q,c) }]); }
     if(showPctOnCards(q, [c])) wait=1500;
+    var sw=stampWord(q, c, S.times[S.pi][S.qi]), st=document.createElement('span');
+    st.className='qstamp'; st.textContent=sw;
+    el.classList.add('stamped'); el.appendChild(st);
+    wait=Math.max(wait, 900);
   }
   setTimeout(function(){
     busy=false;
@@ -1492,7 +1562,11 @@ function answer(c, el){
       else if(S.rv==='end'){ if(S.qi < S.qs.length-1){ S.qi++; S.pi=0; showPass(); } else showGroupResult(); }
       else showReveal();
     } else {
-      if(S.qi < S.qs.length-1){ S.qi++; showQ(); } else showResult();
+      if(S.qi < S.qs.length-1){
+        // 次の問題へなめらかに：今の問題が左へ消えて、次の問題が右からすべりこむ
+        var sq=$('s-q'); sq.classList.add('qout');
+        setTimeout(function(){ sq.classList.remove('qout'); S.qi++; showQ(); sq.classList.add('qin'); setTimeout(function(){ sq.classList.remove('qin'); }, 280); }, 200);
+      } else showResult();
     }
   }, wait);
 }
@@ -2231,9 +2305,17 @@ function showPctOnCards(q, picks){
   if(!w) return false;
   document.querySelectorAll('#q-body .choice').forEach(function(el){
     var k=el.dataset.c, pct = k==='A'?w.pa:w.pb;
-    var tag=document.createElement('span'); tag.className='wpct'; tag.textContent='みんなの'+pct+'%';
-    var bar=document.createElement('i'); bar.className='wbar'; bar.style.width=pct+'%';
+    var big=$('q-body').classList.contains('sp');
+    var tag=document.createElement('span'); tag.className='wpct';
+    if(big){ tag.innerHTML='<small>みんなの</small><b>0</b>%'; } else tag.textContent='みんなの'+pct+'%';
+    var bar=document.createElement('i'); bar.className='wbar'; if(big && pct>=95) bar.style.borderRadius='16px';
     el.appendChild(tag); el.appendChild(bar);
+    if(big){
+      // 数字を0から数え上げ、帯をすっと伸ばす
+      var nb=tag.querySelector('b'), t0=performance.now();
+      (function f(t){ var k=Math.min(1,(t-t0)/550); nb.textContent=Math.round(pct*(1-Math.pow(1-k,3))); if(k<1) requestAnimationFrame(f); })(t0);
+      requestAnimationFrame(function(){ requestAnimationFrame(function(){ bar.style.width=pct+'%'; }); });
+    } else bar.style.width=pct+'%';
   });
   var note=document.createElement('p'); note.className='wnote';
   note.textContent = w.before===0 ? 'あなたが最初の回答者！' : (w.t.toLocaleString()+'人が回答');
