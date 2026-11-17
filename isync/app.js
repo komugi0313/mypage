@@ -334,13 +334,13 @@ function talkItems(G){
     .sort((x,y)=>wt(y.i)-wt(x.i)||Math.abs(x.c[0]-x.c[1])-Math.abs(y.c[0]-y.c[1])).slice(0,5).map(x=>x.i)}
 function talkHTML(G,nm){
   const ps=G.players,its=talkItems(G),two=ps.length===2;
-  if(!its.length)return `<section class="card"><p class="label">${two?'2人で':'みんなで'}話しておきたいこと</p><p class="hint">答えが反対になった問題はありませんでした。</p></section>`;
+  if(!its.length)return `<section class="card" id="talk"><p class="label">${two?'2人で':'みんなで'}話しておきたいこと</p><p class="hint">答えが反対になった問題はありませんでした。</p></section>`;
   const row=i=>{const k=G.qs[i];
     const ws=[0,1,2].map(v=>{const who=ps.filter(p=>p.ans[i]&&p.ans[i].o===v);if(!who.length)return '';
       return `<span class="who"><em>${G.anon?who.length+'人':who.map(p=>esc(p.name)).join('・')}</em>${esc(ans(v,k))}${who.some(p=>p.ans[i].st&&v<2)?' ★':''}</span>`}).join('');
     const ay=(window.SY_AYUMI||{})[Q[k][1]];
     return `<li><b>${esc(Q[k][1])}</b>${ws}${ay?`<span class="ayu"><b>歩み寄りの案</b>${esc(ay)}</span>`:''}</li>`};
-  return `<section class="card"><p class="label">${two?'2人で':'みんなで'}話しておきたいこと</p>
+  return `<section class="card" id="talk"><p class="label">${two?'2人で':'みんなで'}話しておきたいこと</p>
     <p class="hint">答えが反対になった問題です（大事な問題・★から順に）。ちがいは悪いことではありません。「どうしてそう思う？」と聞いてみてから、下の「歩み寄りの案」を2人なりの形にしてみてください。</p>
     <ul class="slist tk">${its.map(row).join('')}</ul></section>`}
 // ひとこと診断：テーマ別・価値観のタイプ・★ゆずれないから、数行の文を作る
@@ -360,25 +360,39 @@ function hitokoto(G,rows){
   return out}
 /* ===== 2人の結果（鑑定者本人 2026-11-17「この形でお願いします」。見本 https://claude.ai/artifact/SExPZc7b5EReqEh8AptCih）
  * シンクロ率 → 2人だけの共通点 → 話しておきたいこと＋歩み寄りの案 → 残りはたたむ。計算は今のまま ===== */
-const KYO_MIN=20, KYO_MAX=0.4;
+/* ===== 2人・3人以上の結果（鑑定者本人 2026-11-17「この形でお願いします」。見本 https://claude.ai/artifact/Gcvek9hNsyE1gucoH1Tiz3）
+ * 共通点はいつも出す（20人以上の決まりはやめた）・低いシンクロ率も前向きな言い方・3人以上も2人と同じ並び。計算は今のまま ===== */
+const KYO_MIN=3, KYO_FEW=20, KYO_MAX=0.5;
 const HIGH_SYNC=80; // シンクロ率がこれ以上なら「HIGH SYNC」（鑑定者本人 2026-11-17「80%いけばいい」）
 // 数字を0から数え上げる（動きを減らす設定のスマホでは動かさない）
 function countUp(){const el=document.querySelector('.score .num');if(!el)return;const t=+el.dataset.v;if(!t||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   const st=performance.now(),D=900;const f=n=>{const k=Math.min(1,(n-st)/D),e=1-Math.pow(1-k,3);el.firstChild.nodeValue=String(Math.round(t*e));if(k<1)requestAnimationFrame(f)};el.firstChild.nodeValue='0';requestAnimationFrame(f)}
-// 2人とも★を付けて同じ答えだった問題（遊ぶ人が少ないうちの代わり）
-function kyoStar(G){const [A,B]=G.players;return G.qs.map((k,i)=>({k,i,a:A.ans[i],b:B.ans[i]})).filter(x=>x.a&&x.b&&x.a.o>=0&&x.a.o<2&&x.a.o===x.b.o&&x.a.st&&x.b.st)}
-function kyoItem(k,o,share){return `<div class="kq"><b>${esc(Q[k][1])}</b><p class="a">2人とも「${esc(ans(o,k))}」</p>${share!=null?`<div class="pc"><span class="t"><i style="width:${Math.max(3,Math.round(share*100))}%"></i></span><em>みんなの${Math.round(share*100)}%</em></div>`:''}</div>`}
-function kyoInner(list,star){return `<p class="label">2人だけの共通点</p><p class="hint">${star?'2人とも★ゆずれないを付けて、同じ答えを選んだ問題。大事にしたいことが、そろっています。':'みんなの中では少数派なのに、2人とも同じ答え。'}</p>${list}`}
-function kyoSlot(G){const st=kyoStar(G).slice(0,2);
-  return `<section class="card kyo" id="kyo"${st.length?'':' hidden'}>${st.length?kyoInner(st.map(x=>kyoItem(x.k,x.a.o,null)).join(''),true):''}</section>`}
+// 共通点：全員が同じ答え（AかB）を選んだ問題。★＝全員が★／大事＝大事な問題
+function kyoSame(G){const ps=G.players;
+  return G.qs.map((k,i)=>{const a=ps[0].ans[i];return{k,i,o:a?a.o:-1}}).filter(x=>(x.o===0||x.o===1)&&ps.every(p=>p.ans[x.i]&&p.ans[x.i].o===x.o))
+    .map(x=>({...x,st:ps.every(p=>p.ans[x.i].st),big:WB.has(x.k)}))}
+// 選ぶ順番：少数派の答え（3人以上が答えた問題で半分より少ない）→ ★ → 大事な問題 → ほかの同じ答え。2つまで
+function kyoPick(G,rare){const same=kyoSame(G),used=new Set(),out=[];
+  const add=(x,why)=>{if(out.length<2&&!used.has(x.i)){used.add(x.i);out.push({...x,why})}};
+  (rare||[]).forEach(x=>add(x,'r'));same.filter(x=>x.st).forEach(x=>add(x,'s'));same.filter(x=>x.big).forEach(x=>add(x,'d'));same.forEach(x=>add(x,''));return out}
+function kyoHTML(G,list){const two=G.players.length===2,all=two?'2人とも':'全員';
+  const why=x=>x.why==='r'?'少数派の答え':x.why==='s'?(two?'2人とも★ゆずれない':'全員★ゆずれない'):x.why==='d'?'大事な問題で一致':'';
+  const item=x=>`<div class="kq">${why(x)?`<span class="why w-${x.why}">${why(x)}</span>`:''}<b>${esc(Q[x.k][1])}</b><p class="a">${all}「${esc(ans(x.o,x.k))}」</p>${x.share!=null?`<div class="pc"><span class="t"><i style="width:${Math.max(3,Math.round(x.share*100))}%"></i></span><em>みんなの${Math.round(x.share*100)}%</em></div>${x.tot<KYO_FEW?`<p class="kfew">まだ${x.tot}人の答えから</p>`:''}`:''}</div>`;
+  return `<p class="label">${two?'2人の共通点':'みんなの共通点'}</p><p class="hint">${two?'同じ答えを選んだ問題から、2人らしいものを選びました。':'全員が同じ答えを選んだ問題から、このメンバーらしいものを選びました。'}</p>${list.map(item).join('')}`}
+function kyoSlot(G){const list=kyoPick(G);return `<section class="card kyo" id="kyo"${list.length?'':' hidden'}>${list.length?kyoHTML(G,list):''}</section>`}
 async function kyoRun(G){
-  const db=await getDb();if(!db||!db.votes)return;const [A,B]=G.players;
-  const same=G.qs.map((k,i)=>({k,i,a:A.ans[i],b:B.ans[i]})).filter(x=>x.a&&x.b&&x.a.o>=0&&x.a.o===x.b.o&&x.a.o<2);if(!same.length)return;
+  const same=kyoSame(G);if(!same.length)return;const db=await getDb();if(!db||!db.votes)return;
   let got;try{got=await db.votes(same.map(x=>'q'+QKEY[x.k]))}catch(e){return}
-  const rows=same.map(x=>{const c=got['q'+QKEY[x.k]]||{},cnt=[c.a||0,c.b||0,c.c||0],tot=cnt[0]+cnt[1]+cnt[2];return{...x,tot,share:tot?cnt[x.a.o]/tot:1}})
-    .filter(r=>r.tot>=KYO_MIN&&r.share<=KYO_MAX).sort((a,b)=>a.share-b.share).slice(0,2);
-  const el=$('kyo');if(!el||!rows.length)return;
-  el.innerHTML=kyoInner(rows.map(r=>kyoItem(r.k,r.a.o,r.share)).join(''),false);el.hidden=false;if(window.__jw)window.__jw(el)}
+  const rare=same.map(x=>{const c=got['q'+QKEY[x.k]]||{},cnt=[c.a||0,c.b||0,c.c||0],tot=cnt[0]+cnt[1]+cnt[2];return{...x,tot,share:tot?cnt[x.o]/tot:1}})
+    .filter(r=>r.tot>=KYO_MIN&&r.share<KYO_MAX).sort((a,b)=>a.share-b.share);
+  const el=$('kyo');if(!el||!rare.length)return;
+  el.innerHTML=kyoHTML(G,kyoPick(G,rare));el.hidden=false;if(window.__jw)window.__jw(el)}
+// シンクロ率のひとこと（低くても前向きに読める言い方。鑑定者本人 2026-11-17）
+function syncMsg(pct,two){const w=two?'2人':'メンバー';
+  if(pct>=HIGH_SYNC)return{msg:two?'とても相性のいい2人です':'とても相性のいいメンバーです',sub:''};
+  if(pct>=60)return{msg:'いい感じにわかり合えています',sub:''};
+  if(pct>=40)return{msg:'ほどよく重なって、ほどよくちがう'+w,sub:'同じところは安心に、ちがうところは新しい発見に。'};
+  return{msg:'発見の多い'+w,sub:'答えが分かれたところほど、話すとおたがいのことがよくわかります。'}}
 const foldBox=(t,sm,inner)=>`<details class="fold"><summary><span class="ft">${t}${sm?`<small>${sm}</small>`:''}</span></summary><div class="fb">${inner}</div></details>`;
 function twoFolds(G,trows,nm,r){
   const [A,B]=G.players,me=G.players.find(p=>p.id===G.me);let out='';
@@ -398,85 +412,83 @@ function twoFolds(G,trows,nm,r){
   return out}
 function showResult(G){
   const ps=G.players,me=ps.find(p=>p.id===G.me),multi=ps.length>1,sec=ms=>(ms/1000).toFixed(1);
-  const nm=p=>esc(p.name)+(p===me?'（あなた）':'');
+  const nm=p=>esc(p.name)+(p===me?'（あなた）':''),sn=p=>p===me?'あなた':esc(p.name);
   let h='';
   if(!multi){h=soloHTML(G)+VS_SLOT;view(h+tailHTML(G));bindTail(G);votesRun(G);return}
   // ① シンクロ率（答えの重なり。全員で1つの数字）
-  const gh=syncStat(G),pct=gh.pct,P2=ps.length===2?pairStat(ps[0],ps[1],G.qs):null;
-  const hi=pct>=HIGH_SYNC,two2=ps.length===2;
-  const msg=hi?(two2?'とても相性のいい2人です':'とても相性のいいメンバーです'):pct>=50?'いい感じにわかり合えています':'まだ知らない顔がたくさん。だから楽しい';
+  const gh=syncStat(G),pct=gh.pct,two=ps.length===2,P2=two?pairStat(ps[0],ps[1],G.qs):null;
+  const hi=pct>=HIGH_SYNC,sm=syncMsg(pct,two);
+  const diffN=two?P2.diff.length:G.qs.filter((k,i)=>{const c=[0,0];ps.forEach(p=>{const a=p.ans[i];if(a&&a.o>=0&&a.o<2)c[a.o]++});return c[0]&&c[1]}).length;
   h+=`<section class="card score${hi?' hisync':''}">${hi?'<span class="hs-badge" data-nocg>HIGH SYNC</span>':''}<img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
-    <p class="cap">${ps.length===2?'2人':ps.length+'人'}のシンクロ率</p>
+    <p class="cap">${two?'2人':ps.length+'人'}のシンクロ率</p>
     <div class="ring" style="background:${hi?`conic-gradient(#8FE3CF 0,#A9B2F5 ${pct/2}%,#F4B6D6 ${pct}%,var(--line) ${pct}% 100%)`:`conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)`}"><div class="in"><span class="num" data-v="${pct}">${pct}<small>%</small></span></div></div>
-    <p class="msg">${msg}</p>${hi?`<p class="hs-sub">${two2?'暮らしの感覚が、ほとんど重なっています。<br>一緒にいて自然体でいられる組み合わせ。':'みんなの感覚が、ほとんど重なっています。<br>集まると自然体でいられるメンバー。'}</p>`:''}${P2?`<p class="hint p2n">ぴったり ${P2.same.length}問・合わせられる ${P2.adj.length}問・ちがい ${P2.diff.length}問</p>`:''}<p class="hint">${ps.length===2?'2人の':'みんなの'}答えが、どれだけ重なったか（大事な問題と★ゆずれないは重く数えています）</p></section>`;
+    <p class="msg">${sm.msg}</p>${hi?`<p class="hs-sub">${two?'暮らしの感覚が、ほとんど重なっています。<br>一緒にいて自然体でいられる組み合わせ。':'みんなの感覚が、ほとんど重なっています。<br>集まると自然体でいられるメンバー。'}</p>`:sm.sub?`<p class="hs-sub">${sm.sub}</p>`:''}${P2?`<p class="hint p2n">ぴったり ${P2.same.length}問・合わせられる ${P2.adj.length}問・ちがい ${P2.diff.length}問</p>`:''}
+    ${!hi&&diffN?`<span class="seed">話のタネ ${diffN}問</span><button class="jump" id="tojump" type="button">${diffN<=5?`ちがった${diffN}問を見る ↓`:'話しておきたいことを見る ↓'}</button>`:''}
+    <p class="hint">${two?'2人の':'みんなの'}答えが、どれだけ重なったか（大事な問題と★ゆずれないは重く数えています）</p></section>`;
   const trows=themeRows(G);
-  if(P2){h+=kyoSlot(G)+talkHTML(G,nm)+twoFolds(G,trows,nm,P2);view(h+VS_SLOT+tailHTML(G));bindTail(G);countUp();votesRun(G);kyoRun(G);return}
-  h+=`<section class="card hk"><p class="label">相性のひとこと診断</p>${hitokoto(G,trows).map(t=>`<p>${esc(t)}</p>`).join('')}</section>`;
-  if(trows.length)h+=themeHTML(trows,ps.length===2?'2人':'みんな');
-  h+=axHTML(G,(G.anon&&me)?[me]:ps,nm);
-  h+=talkHTML(G,nm);
-  // ③ 合う人
+  const done=()=>{bindTail(G);countUp();votesRun(G);kyoRun(G);const j=$('tojump');if(j)j.onclick=()=>{const t=$('talk');if(t)t.scrollIntoView({behavior:'smooth',block:'start'})}};
+  if(P2){h+=kyoSlot(G)+talkHTML(G,nm)+twoFolds(G,trows,nm,P2);view(h+VS_SLOT+tailHTML(G));done();return}
+  // ② あなたといちばん合う人（3人以上）
   const pairs=[];for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++)pairs.push({a:ps[i],b:ps[j],r:pairStat(ps[i],ps[j],G.qs)});
   pairs.sort((x,y)=>y.r.pct-x.r.pct);
-  const mine=me?pairs.filter(x=>x.a===me||x.b===me):pairs;
-  const pairCard=x=>{const o=me?(x.a===me?x.b:x.a):null,r=x.r;
-    return `<li class="pair"><div class="ph"><b>${me?nm(o):nm(x.a)+' × '+nm(x.b)}</b><em>${r.pct}%</em></div>
-      <div class="bar"><i style="width:${r.pct}%"></i></div>
-      <p class="hint">ぴったり ${r.same.length}問・合わせられる ${r.adj.length}問・ちがい ${r.diff.length}問</p>
-      ${r.starN?starBox(x.a,x.b,r):''}</li>`};
-  // ★ゆずれないところ：同じ・合わせられる・ちがうの数と、1問ずつの2人の答え。ちがいが多いときは、はっきり伝える
-  const starBox=(A,B,r)=>{const row=(i,cls)=>{const k=G.qs[i],aa=A.ans[i],bb=B.ans[i];
-      const who=(P,x)=>(G.anon&&me&&P!==me)?'':`<span class="who"><em>${esc(P.name)}</em>${esc(ans(x.o,k))}${x.st?' ★':''}</span>`;
-      return `<li class="${cls}"><b>${esc(Q[k][1])}</b>${who(A,aa)}${who(B,bb)}</li>`};
-    const many=r.starDiff.length>=2&&r.starDiff.length>=r.starSame.length+r.starAdj.length;
-    const verdict=!r.starDiff.length?`<p class="good">大事なところは、ちがいがありません</p>`
-      :many?`<p class="warn">大事なところで、考え方がちがうことが多めです。この${r.starDiff.length}問は、先にゆっくり話しておくと安心です</p>`
-      :`<p class="warn">大事なところで、ちがいが${r.starDiff.length}問あります。ここは先に話しておくと安心です</p>`;
-    return `<div class="starbox"><p class="sh">★ ゆずれないところ　${r.starN}問</p>
-      <div class="sc"><span class="s0">同じ <b>${r.starSame.length}</b></span><span class="s2">合わせられる <b>${r.starAdj.length}</b></span><span class="s1">ちがう <b>${r.starDiff.length}</b></span></div>
-      ${verdict}
-      ${r.starDiff.length+r.starAdj.length?`<ul class="slist">${r.starDiff.map(i=>row(i,'d')).join('')}${r.starAdj.map(i=>row(i,'m')).join('')}</ul>`:''}
-      ${r.starSame.length?`<details class="sfold"><summary>同じだったところ（${r.starSame.length}問）を見る</summary><ul class="slist">${r.starSame.map(i=>row(i,'s')).join('')}</ul></details>`:''}</div>`};
-  h+=`<section class="card"><p class="label">${ps.length===2?'2人のぴったり度':me?'あなたと合う人':'合うペア'}</p>
-    <ul class="pairs">${(me?mine:pairs).slice(0,me?MAXP:3).map(pairCard).join('')}</ul>
-    <p class="hint">同じ答え＝ぴったり、片方がまん中の答え（どっちでも合わせられる・どっちも好き など）＝合わせられる、として数えています。お金・将来・暮らしなど大事な問題は2倍、味の好みなど軽い問題は半分、★ゆずれないをつけた問題はさらに2倍の重さで数えています。</p></section>`;
-  // ④ 問題のランキング
-  const qst=G.qs.map((k,i)=>{const c=[0,0,0],to=[];let ms=0,m=0;ps.forEach(p=>{const a=p.ans[i];if(!a)return;if(a.o>=0)c[a.o]++;if(a.to)to.push(p);if(a.o>=0||a.to){ms+=a.ms;m++}});return{i,k,c,to,avg:m?ms/m:0}});
-  const split=qst.filter(x=>x.c[0]&&x.c[1]).sort((a,b)=>Math.abs(a.c[0]-a.c[1])-Math.abs(b.c[0]-b.c[1])).slice(0,3);
-  const uni=qst.filter(x=>{const t=x.c[0]+x.c[1]+x.c[2];return t>=2&&(x.c[0]===t||x.c[1]===t)});
-  const hard=qst.slice().sort((a,b)=>b.avg-a.avg)[0];
-  // 2人のときの「意見がまっぷたつ」は「話しておきたいこと」と同じなので出さない。答えの時間がない人（答え合わせのリンク）がいるときは「悩んだ問題」を出さない
-  const two=ps.length===2,timed=hard&&hard.avg>0&&ps.every(p=>G.qs.some((k,i)=>p.ans[i]&&p.ans[i].ms>0));
-  if((!two&&split.length)||uni.length||timed)h+=`<section class="card"><p class="label">問題のランキング</p>
-    ${!two&&split.length?`<p class="sub">意見がまっぷたつ</p><ul class="list">${split.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${[0,1].map(v=>`<span class="ansrow"><i class="o${v}">${esc(Q[x.k][v+2])}</i>${x.c[v]}人</span>`).join('')}</li>`).join('')}</ul>`:''}
-    ${uni.length?`<p class="sub">全員一致</p><ul class="list">${uni.slice(0,3).map(x=>`<li><b>${esc(Q[x.k][1])}</b><span class="ansrow"><i class="o${x.c[0]?0:1}">${esc(x.c[0]?Q[x.k][2]:Q[x.k][3])}</i>全員</span></li>`).join('')}</ul>`:''}
-    ${timed?`<p class="sub">いちばん悩んだ問題</p>
-    <div class="ponder"><b>${esc(Q[hard.k][1])}</b><span>平均 <em>${sec(hard.avg)}</em> 秒</span></div>`:''}
-  </section>`;
-  // ⑤ ゆずれないこと
+  const mine=me?pairs.filter(x=>x.a===me||x.b===me):pairs,other=x=>x.a===me?x.b:x.a;
+  const list=(G.anon&&me)?mine:pairs;
+  const prow=x=>`<li><span class="pn">${(G.anon&&me)?esc(other(x).name):sn(x.a)+' × '+sn(x.b)}</span><span class="t"><i style="width:${x.r.pct}%"></i></span><em>${x.r.pct}%</em></li>`;
+  const best=me&&mine.length?`<div class="best"><span class="bn">${esc(other(mine[0]).name)}さん</span><span class="bp">${mine[0].r.pct}<small>%</small></span></div>`:'';
+  h+=`<section class="card"><p class="label">${me?'あなたといちばん合う人':'いちばん合うペア'}</p>${best}
+    <ul class="prs">${list.slice(0,3).map(prow).join('')}</ul>
+    ${list.length>3?`<details class="sfold"><summary>ほかの組み合わせ（${list.length-3}組）を見る</summary><ul class="prs">${list.slice(3).map(prow).join('')}</ul></details>`:''}
+    <p class="hint">同じ答え＝ぴったり、片方がまん中の答え（どっちでも合わせられる など）＝合わせられる、として数えています。大事な問題と★ゆずれないは重く数えています。</p></section>`;
+  // ③ みんなの共通点 → ④ みんなで話しておきたいこと
+  h+=kyoSlot(G)+talkHTML(G,nm);
+  // ⑤ 残りはたたむ
+  if(trows.length)h+=foldBox('テーマ別のシンクロ率',trows.length+'つのテーマ',themeHTML(trows,'みんな'));
+  const ax=axHTML(G,(G.anon&&me)?[me]:ps,nm);if(ax)h+=foldBox('価値観のタイプ',(G.anon&&me)?'あなたの位置':ps.length+'人の位置',ax);
   const starP=(G.anon&&me?[me]:ps).map(p=>({p,xs:G.qs.map((k,i)=>({k,a:p.ans[i]})).filter(x=>x.a&&x.a.st&&x.a.o>=0&&x.a.o<2)})).filter(x=>x.xs.length);
-  if(starP.length)h+=`<section class="card"><p class="label">★ ゆずれないこと</p>${starP.map(x=>`<div class="tori"><p class="sub">${nm(x.p)}</p><ul>${x.xs.map(y=>`<li>${esc(Q[y.k][1])} ${esc(ans(y.a.o,y.k))}</li>`).join('')}</ul></div>`).join('')}</section>`;
-  // ⑥ みんなの答え（1問ずつ）
-  h+=`<section class="card"><details><summary class="label">みんなの答えを1問ずつ見る</summary><ul class="list all">${qst.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${[0,1,2].map(v=>{const who=ps.filter(p=>p.ans[x.i]&&p.ans[x.i].o===v);return who.length?`<span class="ansrow"><i class="o${v}">${esc(ans(v,x.k))}</i>${G.anon?who.length+'人':who.map(nm).join('、')}</span>`:''}).join('')}</li>`).join('')}</ul></details></section>`;
-  view(h+VS_SLOT+tailHTML(G));bindTail(G);votesRun(G);countUp();
+  if(starP.length)h+=foldBox('★ ゆずれないこと',starP.length+'人',starP.map(x=>`<div class="tori"><p class="sub">${nm(x.p)}</p><ul>${x.xs.map(y=>`<li>${esc(Q[y.k][1])} ${esc(ans(y.a.o,y.k))}</li>`).join('')}</ul></div>`).join(''));
+  const qst=G.qs.map((k,i)=>{let ms=0,m=0;ps.forEach(p=>{const a=p.ans[i];if(!a)return;if(a.o>=0||a.to){ms+=a.ms;m++}});return{i,k,avg:m?ms/m:0}});
+  const hard=qst.slice().sort((a,b)=>b.avg-a.avg)[0],timed=hard&&hard.avg>0&&ps.every(p=>G.qs.some((k,i)=>p.ans[i]&&p.ans[i].ms>0));
+  if(timed)h+=foldBox('いちばん悩んだ問題','',`<div class="ponder"><b>${esc(Q[hard.k][1])}</b><span>平均 <em>${sec(hard.avg)}</em> 秒</span></div>`);
+  const all=G.qs.map((k,i)=>`<li><b>${esc(Q[k][1])}</b>${[0,1,2].map(v=>{const who=ps.filter(p=>p.ans[i]&&p.ans[i].o===v);return who.length?`<span class="ansrow"><i class="o${v}">${esc(ans(v,k))}</i>${G.anon?who.length+'人':who.map(nm).join('、')}</span>`:''}).join('')}</li>`).join('');
+  h+=foldBox('みんなの答えを1問ずつ','全'+G.qs.length+'問',`<ul class="list all">${all}</ul>`);
+  view(h+VS_SLOT+tailHTML(G));done();
 }
+/* ひとりの結果：いちばん上は「価値観のかたち」（4つのものさしで強く出た2つ。称号・キャラクターではなく、ものさしの言葉そのまま） */
+const POLE={kicchiri:['身のまわりや決めごとを、きちんと整えておくと落ち着く。','細かいことは気にせず、ゆるやかに暮らせると落ち着く。'],
+  keikaku:['予定は、先に決めておくと安心。','予定は、その場の気分で決めるのが楽しい。'],
+  futari:['好きな人とは、できるだけ一緒に過ごしたい。','好きな人がいても、ひとりの時間も大事にしたい。'],
+  okane:['お金は先のことを考えて、コツコツためたい。','お金は、今の楽しみにもしっかり使いたい。']};
+function shapeHTML(G,p,who){
+  const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x=>x.s);if(!rows.length)return '';
+  const lean=rows.filter(x=>Math.abs(x.s.pct-50)>=10).sort((x,y)=>Math.abs(y.s.pct-50)-Math.abs(x.s.pct-50)).slice(0,2)
+    .map(x=>x.s.pct>50?{w:x.a.l,t:(POLE[x.a.key]||[])[0]}:{w:x.a.r,t:(POLE[x.a.key]||[])[1]});
+  const big=lean.length?lean.map(x=>`<span class="nw">${esc(x.w)}</span>`).join('<span class="x">×</span>'):'どれにも寄らない、やわらかい人';
+  const desc=(lean.length?lean.map(x=>x.t||''):['どのものさしでも、まん中あたり。相手に合わせて動ける人です。']).filter(Boolean).map(t=>`<span class="sl">${esc(t)}</span>`).join('');
+  const bars=rows.map(({a,s})=>`<div class="shx"><p>${esc(a.name)}</p><div class="sbar"><i style="left:calc(9px + (100% - 18px) * ${(100-s.pct)/100})"></i></div><div class="ends"><span${s.pct>=60?' class="on"':''}>${esc(a.l)}</span><span${s.pct<=40?' class="on"':''}>${esc(a.r)}</span></div></div>`).join('');
+  return `<section class="card shape"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true">
+    <p class="cap">${who}の価値観のかたち</p><p class="big">${big}</p><p class="sdesc">${desc}</p>${bars}
+    ${G.qs.length<30?'<p class="hint">しっかり版（30問）なら、もっとはっきりわかります。</p>':''}</section>`}
 function soloHTML(G){
   const p=G.players[0],xs=G.qs.map((k,i)=>({k,i,a:p.ans[i]})).filter(x=>x.a&&x.a.o>=0),sec=ms=>(ms/1000).toFixed(1);
   const firm=xs.filter(x=>x.a.o<2),flex=xs.filter(x=>x.a.o===2),star=firm.filter(x=>x.a.st);
   const byT=xs.slice().sort((a,b)=>b.a.ms-a.a.ms);
   const pct=xs.length?Math.round(flex.length/xs.length*100):0;
   const msg=pct>=50?'まわりに合わせられる、やわらかい人':pct>=25?'こだわりとやわらかさのバランス型':'自分の好みがはっきりしている人';
-  return `<section class="card score"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true">
-    <p class="cap">${p.name==='あなた'?'あなた':esc(p.name)+'さん'}の「合わせられる度」</p>
-    <div class="ring" style="background:conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)"><div class="in"><span class="num">${pct}<small>%</small></span></div></div>
-    <p class="msg">${msg}</p><p class="hint">${xs.length}問のうち、まん中の答え（どっちでも合わせられる など）が${flex.length}問</p></section>
-  ${axHTML(G,[p],()=>p.name==='あなた'?'あなた':esc(p.name))}
+  const who=p.name==='あなた'?'あなた':esc(p.name)+'さん';
+  const shape=shapeHTML(G,p,who);
+  const top=shape||`<section class="card score"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true"><p class="cap">${who}の「合わせられる度」</p>
+    <div class="ring" style="background:conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)"><div class="in"><span class="num">${pct}<small>%</small></span></div></div><p class="msg">${msg}</p></section>`;
+  const kod=(star.length?`<p class="sub">★ ゆずれないこと</p><ul class="list">${star.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${esc(ans(x.a.o,x.k))}</li>`).join('')}</ul>`:'')
+    +`<ul class="list">${firm.filter(x=>!x.a.st).map(x=>`<li><b>${esc(CATS[Q[x.k][0]][0])}｜${esc(Q[x.k][1])}</b><span class="ansrow"><i class="o${x.a.o}">${esc(ans(x.a.o,x.k))}</i></span></li>`).join('')||(star.length?'':'<li>今回はぜんぶ「こだわらない」でした</li>')}</ul>`;
+  const flx=(flex.length?`<p class="sub">合わせられること</p><p class="hint">${flex.map(x=>esc(Q[x.k][1])).join('　')}</p>`:'')
+    +(byT.length>1?`<p class="sub">いちばん悩んだ問題</p><div class="ponder"><b>${esc(Q[byT[0].k][1])}</b><span>「${esc(ans(byT[0].a.o,byT[0].k))}<span style="white-space:nowrap">」まで <em>${sec(byT[0].a.ms)}</em> 秒</span></span></div>
+    <p class="hint">いちばん即決は「${esc(Q[byT[byT.length-1].k][1])}」（${sec(byT[byT.length-1].a.ms)} 秒）</p>`:'');
+  return `${top}
+  ${shape?`<section class="card"><div class="stiles"><div class="tile"><span>合わせられる度</span><em>${pct}%</em></div><div class="tile" id="tmaj" hidden><span>多数派度</span><em></em></div></div>
+    <p class="hint">${msg}。${xs.length}問のうち、まん中の答え（どっちでも合わせられる など）が${flex.length}問</p></section>`:''}
   ${G.me==='me'&&!G.view?`<div id="hist">${histHTML(saveHist(G,p,pct))}</div>`:''}
-  ${star.length?`<section class="card"><p class="label">★ ゆずれないこと</p><ul class="list">${star.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${esc(ans(x.a.o,x.k))}</li>`).join('')}</ul></section>`:''}
-  <section class="card"><p class="label">あなたのこだわり</p><ul class="list">${firm.filter(x=>!x.a.st).map(x=>`<li><b>${esc(CATS[Q[x.k][0]][0])}｜${esc(Q[x.k][1])}</b><span class="ansrow"><i class="o${x.a.o}">${esc(ans(x.a.o,x.k))}</i></span></li>`).join('')||'<li>今回はぜんぶ「こだわらない」でした</li>'}</ul></section>
-  ${flex.length?`<section class="card"><p class="label">合わせられること</p><p class="hint">${flex.map(x=>esc(Q[x.k][1])).join('　')}</p></section>`:''}
-  ${byT.length>1?`<section class="card"><p class="label">いちばん悩んだ問題</p><div class="ponder"><b>${esc(Q[byT[0].k][1])}</b><span>「${esc(ans(byT[0].a.o,byT[0].k))}<span style="white-space:nowrap">」まで <em>${sec(byT[0].a.ms)}</em> 秒</span></span></div>
-    <p class="hint">いちばん即決は「${esc(Q[byT[byT.length-1].k][1])}」（${sec(byT[byT.length-1].a.ms)} 秒）</p></section>`:''}
+  ${firm.length?foldBox('あなたのこだわり',firm.length+'問',kod):''}
+  ${flx?foldBox(flex.length?'合わせられること・悩んだ問題':'いちばん悩んだ問題',flex.length?flex.length+'問':'',flx):''}
   ${inviteCard(G,p)}`;
 }
 // 1.66 奇跡の相性診断（鑑定者本人のメインサービス）へのバナー。無料の診断から会員登録（毎朝の開運予報メール）へつながる
@@ -605,6 +617,7 @@ async function votesRun(G){
   const el=$('vs');if(!el||!rows.length)return;
   const avg=Math.round(rows.reduce((s,r)=>s+r.share,0)/rows.length*100);
   if(G.players.length===1&&G.me==='me')histSetM(G,avg);
+  {const t=$('tmaj');if(t){t.querySelector('em').textContent=avg+'%';t.hidden=false}}
   const msg=avg>=55?'みんなと感覚が近いタイプ':avg<=38?'少数派の答えが多い、個性派':'ほどよくバランスのとれたタイプ';
   const minor=rows.slice().sort((a,b)=>a.share-b.share).slice(0,3).filter(r=>r.share<0.5);
   const pc=x=>Math.round(x*100);
@@ -664,7 +677,7 @@ function drawResult(c,G){
     cap='わたしの「合わせられる度」';who='';msgT=pct>=50?'まわりに合わせられる、やわらかい人':pct>=25?'こだわりとやわらかさのバランス型':'自分の好みがはっきりしている人'}
   else{pct=syncStat(G).pct;cap=ps.length===2?'2人のシンクロ率':ps.length+'人のシンクロ率';
     who=G.anon?'':ps.length===2?ps[0].name+' × '+ps[1].name:ps.slice(0,4).map(p=>p.name).join('・')+(ps.length>4?' ほか':'');
-    msgT=pct>=HIGH_SYNC?(ps.length===2?'とても相性のいい2人です':'とても相性のいいメンバーです'):pct>=50?'いい感じにわかり合えています':'まだ知らない顔がたくさん。だから楽しい'}
+    msgT=syncMsg(pct,ps.length===2).msg}
   if(!solo&&pct>=HIGH_SYNC)T('HIGH SYNC',W/2,545,F(700,30,'q'),'#6F72C9');
   T(cap,W/2,590,F(900,46,'m'),ink);
   if(who)T(fit(who,820,F(700,40,'m')),W/2,650,F(700,40,'m'),sub);
