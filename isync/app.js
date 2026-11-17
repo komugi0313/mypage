@@ -358,19 +358,54 @@ function hitokoto(G,rows){
   if(two){const r=pairStat(ps[0],ps[1],G.qs);if(r.starDiff.length)out.push(`★ゆずれないところで、ちがいが${r.starDiff.length}問。先にゆっくり話しておくと安心です。`)}
   if(!out.length)out.push('答えの重なりを、下でくわしく見てみましょう。');
   return out}
+/* ===== 2人の結果（鑑定者本人 2026-11-17「この形でお願いします」。見本 https://claude.ai/artifact/SExPZc7b5EReqEh8AptCih）
+ * シンクロ率 → 2人だけの共通点 → 話しておきたいこと＋歩み寄りの案 → 残りはたたむ。計算は今のまま ===== */
+const KYO_MIN=20, KYO_MAX=0.4;
+// 2人とも★を付けて同じ答えだった問題（遊ぶ人が少ないうちの代わり）
+function kyoStar(G){const [A,B]=G.players;return G.qs.map((k,i)=>({k,i,a:A.ans[i],b:B.ans[i]})).filter(x=>x.a&&x.b&&x.a.o>=0&&x.a.o<2&&x.a.o===x.b.o&&x.a.st&&x.b.st)}
+function kyoItem(k,o,share){return `<div class="kq"><b>${esc(Q[k][1])}</b><p class="a">2人とも「${esc(ans(o,k))}」</p>${share!=null?`<div class="pc"><span class="t"><i style="width:${Math.max(3,Math.round(share*100))}%"></i></span><em>みんなの${Math.round(share*100)}%</em></div>`:''}</div>`}
+function kyoInner(list,star){return `<p class="label">2人だけの共通点</p><p class="hint">${star?'2人とも★ゆずれないを付けて、同じ答えを選んだ問題。大事にしたいことが、そろっています。':'みんなの中では少数派なのに、2人とも同じ答え。'}</p>${list}`}
+function kyoSlot(G){const st=kyoStar(G).slice(0,2);
+  return `<section class="card kyo" id="kyo"${st.length?'':' hidden'}>${st.length?kyoInner(st.map(x=>kyoItem(x.k,x.a.o,null)).join(''),true):''}</section>`}
+async function kyoRun(G){
+  const db=await getDb();if(!db||!db.votes)return;const [A,B]=G.players;
+  const same=G.qs.map((k,i)=>({k,i,a:A.ans[i],b:B.ans[i]})).filter(x=>x.a&&x.b&&x.a.o>=0&&x.a.o===x.b.o&&x.a.o<2);if(!same.length)return;
+  let got;try{got=await db.votes(same.map(x=>'q'+QKEY[x.k]))}catch(e){return}
+  const rows=same.map(x=>{const c=got['q'+QKEY[x.k]]||{},cnt=[c.a||0,c.b||0,c.c||0],tot=cnt[0]+cnt[1]+cnt[2];return{...x,tot,share:tot?cnt[x.a.o]/tot:1}})
+    .filter(r=>r.tot>=KYO_MIN&&r.share<=KYO_MAX).sort((a,b)=>a.share-b.share).slice(0,2);
+  const el=$('kyo');if(!el||!rows.length)return;
+  el.innerHTML=kyoInner(rows.map(r=>kyoItem(r.k,r.a.o,r.share)).join(''),false);el.hidden=false;if(window.__jw)window.__jw(el)}
+const foldBox=(t,sm,inner)=>`<details class="fold"><summary><span class="ft">${t}${sm?`<small>${sm}</small>`:''}</span></summary><div class="fb">${inner}</div></details>`;
+function twoFolds(G,trows,nm,r){
+  const [A,B]=G.players,me=G.players.find(p=>p.id===G.me);let out='';
+  const keep=trows.filter(x=>x.q>=2),drop=trows.filter(x=>x.q<2);
+  if(trows.length){const few=drop.length?`<p class="few">${drop.map(x=>'「'+esc(x.name)+'」').join('')}は1問だけだったので出していません。${G.qs.length<30?'しっかり版（30問）なら、テーマごとにくわしくわかります。':''}</p>`:'';
+    out+=foldBox('テーマ別のシンクロ率',keep.length?keep.length+'つのテーマ':'',(keep.length?themeHTML(keep,'2人'):'')+few)}
+  const ax=axHTML(G,(G.anon&&me)?[me]:G.players,nm);if(ax)out+=foldBox('価値観のタイプ','4つのものさしで、2人の位置',ax);
+  if(r.starN){const row=(i,cls)=>{const k=G.qs[i],aa=A.ans[i],bb=B.ans[i];
+      const who=(P,x)=>(G.anon&&me&&P!==me)?'':`<span class="who"><em>${esc(P.name)}</em>${esc(ans(x.o,k))}${x.st?' ★':''}</span>`;
+      return `<li class="${cls}"><b>${esc(Q[k][1])}</b>${who(A,aa)}${who(B,bb)}</li>`};
+    const many=r.starDiff.length>=2&&r.starDiff.length>=r.starSame.length+r.starAdj.length;
+    const verdict=!r.starDiff.length?`<p class="good">大事なところは、ちがいがありません</p>`:many?`<p class="warn">大事なところで、考え方がちがうことが多めです。この${r.starDiff.length}問は、先にゆっくり話しておくと安心です</p>`:`<p class="warn">大事なところで、ちがいが${r.starDiff.length}問あります。ここは先に話しておくと安心です</p>`;
+    out+=foldBox('★ ゆずれないところ',`同じ ${r.starSame.length}・合わせられる ${r.starAdj.length}・ちがう ${r.starDiff.length}`,
+      `<div class="starbox">${verdict}<ul class="slist">${r.starDiff.map(i=>row(i,'d')).join('')}${r.starAdj.map(i=>row(i,'m')).join('')}${r.starSame.map(i=>row(i,'s')).join('')}</ul></div>`)}
+  const all=G.qs.map((k,i)=>`<li><b>${esc(Q[k][1])}</b>${[0,1,2].map(v=>{const who=G.players.filter(p=>p.ans[i]&&p.ans[i].o===v);return who.length?`<span class="ansrow"><i class="o${v}">${esc(ans(v,k))}</i>${G.anon?who.length+'人':who.map(nm).join('、')}</span>`:''}).join('')}</li>`).join('');
+  out+=foldBox('みんなの答えを1問ずつ','全'+G.qs.length+'問',`<ul class="list all">${all}</ul>`);
+  return out}
 function showResult(G){
   const ps=G.players,me=ps.find(p=>p.id===G.me),multi=ps.length>1,sec=ms=>(ms/1000).toFixed(1);
   const nm=p=>esc(p.name)+(p===me?'（あなた）':'');
   let h='';
   if(!multi){h=soloHTML(G)+VS_SLOT;view(h+tailHTML(G));bindTail(G);votesRun(G);return}
   // ① シンクロ率（答えの重なり。全員で1つの数字）
-  const gh=syncStat(G),pct=gh.pct;
+  const gh=syncStat(G),pct=gh.pct,P2=ps.length===2?pairStat(ps[0],ps[1],G.qs):null;
   const msg=pct>=80?'ほとんど以心伝心！':pct>=50?'いい感じにわかり合えています':'まだ知らない顔がたくさん。だから楽しい';
   h+=`<section class="card score"><img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
     <p class="cap">${ps.length===2?'2人':ps.length+'人'}のシンクロ率</p>
     <div class="ring" style="background:conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)"><div class="in"><span class="num">${pct}<small>%</small></span></div></div>
-    <p class="msg">${msg}</p><p class="hint">${ps.length===2?'2人の':'みんなの'}答えが、どれだけ重なったか（大事な問題と★ゆずれないは重く数えています）</p></section>`;
+    <p class="msg">${msg}</p>${P2?`<p class="hint p2n">ぴったり ${P2.same.length}問・合わせられる ${P2.adj.length}問・ちがい ${P2.diff.length}問</p>`:''}<p class="hint">${ps.length===2?'2人の':'みんなの'}答えが、どれだけ重なったか（大事な問題と★ゆずれないは重く数えています）</p></section>`;
   const trows=themeRows(G);
+  if(P2){h+=kyoSlot(G)+talkHTML(G,nm)+twoFolds(G,trows,nm,P2);view(h+VS_SLOT+tailHTML(G));bindTail(G);votesRun(G);kyoRun(G);return}
   h+=`<section class="card hk"><p class="label">相性のひとこと診断</p>${hitokoto(G,trows).map(t=>`<p>${esc(t)}</p>`).join('')}</section>`;
   if(trows.length)h+=themeHTML(trows,ps.length===2?'2人':'みんな');
   h+=axHTML(G,(G.anon&&me)?[me]:ps,nm);
