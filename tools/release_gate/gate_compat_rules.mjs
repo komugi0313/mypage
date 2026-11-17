@@ -700,7 +700,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
       if((x.match(new RegExp(tg+'年','g'))||[]).length<3) o.bad.push('ツールの年に置きかえない：'+x.slice(0,300));
       if(T.nenY<tg&&x.indexOf((far-1)+'年まで')>=0) o.bad.push('ずっと先まで準備を続ける期間が残る');
       if(pkTimingConsistFix(x,B,q,pl)!==x) o.bad.push('2回通すと変わる（仕事）'); }
-      const S=pkWorkStart(B), N=pkNenInfo(); if(N.leftDays<90&&S.y===N.Y) o.bad.push('年の残りが少ない今年を本格的に動く年にした');
+      const S=pkWorkStart(B), N=pkNenInfo(); if(S.y===N.Y&&!/立春まで/.test(S.until||'')) o.bad.push('今年を動く年にしたのに立春までの期限がない');   /* 立春で区切る（2026-11-17 鑑定者本人「立春でいいのでは？」） */
       if(N.leftDays<90&&S.late&&pkOfflineLead(B,q,pl).indexOf('今年の残り')<0) o.bad.push('今年の残りは準備、と書かない');
       const L0=pkOfflineLead(B,q,pl), t3=pkTalkSpec(B,q,pl); if(t3!==L0) o.bad.push('仕事の時期の③が1行目とちがう：'+t3); }
     // 2 続けるか独立か（方向なし）：文章作成が独立と決めても、PRO・ビギナーで同じツールの1行目
