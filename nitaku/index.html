@@ -881,6 +881,8 @@ body.rdy-on #gres-body{padding-bottom:230px}
 .lb-line.end-line::before{content:"LINE";background:#06C755;color:#fff;font-size:12px;font-weight:900;padding:4px 8px;border-radius:7px;margin-right:10px;letter-spacing:.02em}
 .promo{border:3px solid #1E1E2A;box-shadow:4px 4px 0 #1E1E2A;border-radius:22px}
 .promo .pr-btn{background:#FFE071;color:#1E1E2A;box-shadow:none}
+/* 結果・部屋を作る・参加の画面では「もどる」は TOP と同じ動きなので出さない（2026-11-17） */
+#s-res .nav [data-nav=back],#s-gres .nav [data-nav=back],#s-setup .nav [data-nav=back],#s-join .nav [data-nav=back]{visibility:hidden}
 </style>
 </head>
 <body data-mode="love">
@@ -1516,6 +1518,8 @@ function showQ(){
   var turn=$('q-turn');
   if(group && !S.room){ turn.hidden=false; turn.firstChild.textContent=S.players[S.pi].name+' さん'; } else turn.hidden=true;
   var bk=document.querySelector('#s-q [data-nav=back]'); if(bk) bk.textContent=(S.who==='solo'&&!S.room&&!S.honPlay&&S.qi>0)?'← 1問もどる':'← もどる';
+  // TOP と同じ動きになるとき（1問目・部屋・本能モード）は「もどる」を出さない
+  if(bk) bk.style.visibility=((S.who==='solo'&&!S.room&&!S.honPlay&&S.qi>0)||(S.who!=='solo'&&!S.room&&!S.honPlay))?'':'hidden';
   $('htimer').hidden=!S.honPlay; if(S.honPlay) document.body.setAttribute('data-mode', q.m||S.mode);
   // 本能モードは色をパステル（ピーチ×ラベンダー）に固定し、問題のカードの中でパンダが見守る（鑑定者本人の選択 2026-11-14「2」）
   $('q-card').classList.toggle('hon', !!S.honPlay); var qpd=$('q-pd'); qpd.hidden=!S.honPlay; if(S.honPlay) qpd.src='img/panda-1.webp';
@@ -1645,7 +1649,7 @@ function honRun(){
   S.honStart=Date.now()+HON_READ;
   S.honT=setTimeout(function(){
     if(S.qi!==qi || curScr()!=='s-q' || !S.honPlay) return;
-    tm.classList.remove('read'); body.classList.remove('hon-wait'); num.textContent='0になる前に、どっちか押してね';
+    tm.classList.remove('read'); body.classList.remove('hon-wait'); num.textContent='時間切れの前に、どっちか押してね';
     var last=3, ring=$('hring'), cnt=$('hcount');
     (function loop(){
       if(S.qi!==qi || curScr()!=='s-q' || !S.honPlay) return;
@@ -2237,7 +2241,7 @@ function charaOf(qs, ans, opt){
   var g5=function(v){ return v<20?1:(v<40?2:(v<60?3:(v<80?4:5))); };
   var net=function(plus, minus){ var s=0; plus.forEach(function(w){ s+=cnt[w]||0; }); minus.forEach(function(w){ s-=cnt[w]||0; }); return Math.max(1, Math.min(5, 3+s)); };
   var grade=NM ? {} : { kake:g5(sc.K), amae:g5(sc.A), roman:g5(sc.R), doki:g5(sc.S),
-    sunao:net(['ストレート'],['素直になれない','照れ隠し','プライドが高め','強がり','言えない']),
+    sunao:net(['ストレート'],['素直になれない','照れ隠し','プライドが高め','強がり','本音を言えない']),
     mame:net(['こまめな連絡がほしい'],['自分の時間もほしい','ほうっておいてほしい','マイペース','自由人']) };
   // ふつう編の通知表：％で決める科目（ax）と、ことばで決める科目（pl・mi）
   if(NM) D.subj.forEach(function(s){ grade[s.k]= s.ax ? g5(sc[s.ax]) : net(s.pl||[], s.mi||[]); });
@@ -2578,7 +2582,9 @@ function speedStats(qs, times, ans){
   if(!arr.length) return null;
   var fast = arr.filter(function(x){ return x.t<3000; }).length;
   var by = arr.slice().sort(function(a,b){ return b.d-a.d; });
-  return { rate: Math.round(100*fast/arr.length), slow: by[0], quick: by.length>1 ? by[by.length-1] : null };
+  // いちばん長くても3秒未満（全部すぐ答えた）なら「いちばん悩んだ問題」は出さない
+  var slow = by[0].t>=3000 ? by[0] : null;
+  return { rate: Math.round(100*fast/arr.length), slow: slow, quick: by.length>1 ? by[by.length-1] : (slow?null:by[0]) };
 }
 /* 即決した問題・いちばん悩んだ問題（選んだ答えつき） */
 function pickHTML(icon, label, x){
@@ -2701,9 +2707,9 @@ function showResult(){
   if(sp){
     h+='<div class="card"><h3>選び方のくせ</h3><div class="stat">'+
        '<div><b>'+sp.rate+'%</b><small>3秒以内の即決</small></div>'+
-       '<div><b>'+(Math.round(sp.slow.t/100)/10)+'秒</b><small>いちばん悩んだ時間</small></div></div>'+
+       (sp.slow ? '<div><b>'+(Math.round(sp.slow.t/100)/10)+'秒</b><small>いちばん悩んだ時間</small></div></div>' : '<div><b>0問</b><small>3秒以上悩んだ問題</small></div></div>')+
        pickHTML('⚡','即決した問題',sp.quick)+pickHTML('🌀','いちばん悩んだ問題',sp.slow)+
-       '<p style="font-size:13px;color:var(--sub);margin:8px 0 0">悩んだ問題は、あなたの「迷いどころ」。どっちも捨てがたい本音が、そこにあるのかも。</p>'+
+       (sp.slow ? '<p style="font-size:13px;color:var(--sub);margin:8px 0 0">悩んだ問題は、あなたの「迷いどころ」。どっちも捨てがたい本音が、そこにあるのかも。</p>' : '')+
        '<p style="font-size:14px;color:var(--sub)">'+(sp.rate>=70?'迷いのなさがすごい。自分の気持ちがはっきりしている人。':(sp.rate<=30?'どっちも本気で考えてしまう、やさしい人。':'ここぞという問題で、ちゃんと悩める人。'))+'</p></div>';
   }
   h+=PROMO+endButtons()+shareRow('lshare','share','save')+homeLink();
@@ -4141,6 +4147,7 @@ setMode('love'); lvBox();
   var HIRA=/^[ぁ-ゟー]+$/, PUN=/^[、。！？!?…・）」』】〕）\)\s～〜ー]+$/, OPEN=/[（「『【〔\(]$/, END=/[、。！？!?…）」』】〕\)]$/;
   var PART=/^(を|が|に|で|と|は|も|へ|の|から|まで|より|って|や|か|ね|よ|な)$/;
   var JP=/[぀-ヿ一-鿿]/;
+  var FN=/^(こと|もの|ほう|ところ|とき|ため|よう|くらい)/; // 「あなたの／ことが」のように切らない
   function len(t){ return t.replace(/[、。！？!?…・（）「」『』\s]/g,'').length; }
   function phrases(t){
     var out=[],cur='',prev='';
@@ -4153,6 +4160,7 @@ setMode('love'); lvBox();
       else if(END.test(cur)) brk=true;
       else if(OPEN.test(w)) brk=true;
       else if(OPEN.test(cur)) brk=false;
+      else if(prev==='の'&&FN.test(w)) brk=false;
       else if(HIRA.test(w)) brk=(PART.test(prev)&&len(cur)>=3&&w.length>=2&&!PART.test(w));
       else brk=HIRA.test(prev);
       if(brk){ out.push(cur); cur=w; } else cur+=w;
