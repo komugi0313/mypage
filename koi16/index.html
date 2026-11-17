@@ -2961,22 +2961,30 @@ function renderResult(code,mine,withCode){
     h+='<section class="card" id="with-card"><h2>💞 2人の相性</h2>'+compatBlock(code,withCode,'あなたと、診断をすすめてくれた人',code)+'</section>';
   }
 
+  /* 面白いところを上に（鑑定者本人 2026-11-17「結果画面の面白くする案A」）：4つのものさしのグラフと解説は下に回してたたむ（axH） */
+  var axH='';
   if(isMine){
+    var h0=h; h='';
     var anyMid=AXES.some(function(ax){ return Math.abs(mine.pct[ax.key]-50)<=MID_W; });
-    h+='<section class="card"><h2>4つのものさし</h2><p class="muted">まん中から、どちらにどれだけ寄っているかを表しています。'+(anyMid?'まん中に近いものさしは、どちらの面も持っているしるしです。':'')+'</p><div class="sls">';
+    h+='<section class="card ax-card"><h2>4つのものさし</h2><p class="muted">'+AXES.map(function(ax,i){ var p=mine.pct[ax.key], onA=poles[i]===ax.a, mid=Math.abs(p-50)<=MID_W; return '<span class="nw">'+ax.title+'：'+(mid?'両方もってる':(onA?ax.an:ax.bn)+'寄り')+'</span>'; }).join('　')+'</p><details class="st-fold ax-fold"><summary>グラフと説明を見る</summary><p class="muted">まん中から、どちらにどれだけ寄っているかを表しています。'+(anyMid?'まん中に近いものさしは、どちらの面も持っているしるしです。':'')+'</p><div class="sls">';
     AXES.forEach(function(ax,i){
       var p=mine.pct[ax.key], onA=poles[i]===ax.a, v=onA?p:100-p, x=100-p, lo=Math.min(50,x), w=Math.abs(x-50), mid=Math.abs(p-50)<=MID_W;
       h+='<div class="sl'+(mid?' sl-both':'')+'"><div class="sl-top"><span class="sl-t">'+ax.title+'</span><span class="sl-res">'+(mid?'両方もってる':(onA?ax.an:ax.bn)+'寄り・'+v+'%')+'</span></div>'+
          '<div class="sl-track" role="img" aria-label="'+ax.title+'：'+(onA?ax.an:ax.bn)+' '+v+'％"><i class="sl-fill" style="left:'+lo+'%;width:'+w+'%"></i><i class="sl-mid"></i><i class="sl-dot" style="left:'+x+'%"></i></div>'+
          '<div class="sl-ends"><span class="'+(onA?'on':'')+'">'+ax.an+'</span><span class="sl-c">まん中</span><span class="'+(onA?'':'on')+'">'+ax.bn+'</span></div>'+(mid?'<p class="sl-mid-p"><b class="sl-mid-b">少し'+(onA?ax.an:ax.bn)+'寄り・'+v+'%</b>'+esc(MID_TXT[ax.key])+'</p>':'')+'</div>';
     });
-    h+='</div>';
+    h+='</div></details>';
     // 恋の状況は、押すと開く欄にしまう（画面をのぞかれても見えないように。鑑定者本人 2026-11-12「両方入れてください」）。「答えたくない」のときは出さない
     if(mine.status&&STATUS[mine.status]&&mine.status!=='skip'){ var S=STATUS[mine.status]; h+='<details class="st-fold"><summary>答えたときの状況にあわせた説明</summary><p class="muted">いまの恋の状況：'+esc(S.n)+'での結果です。'+(S.note?esc(S.note):'')+'</p></details>'; }
     h+='</section>';
+    axH=h; h=h0;
   }
 
   h+=digestHTML(code);
+  var aruH='<section class="card">'+secH('h2','aru','好きな人の前でやりがちなこと')+pills(poles.map(function(p){return POLE[p].aru;}),'aru')+
+     secH('h3','sign',isMine?'あなたの脈ありサイン':'このタイプの脈ありサイン')+'<p class="muted">好きなとき、つい出てしまうしぐさです。</p>'+pills(poles.map(function(p){return POLE[p].sign;}),'sign')+
+     '<details class="st-fold"><summary>'+(isMine?'けんかしたときのあなた':'けんかしたとき')+'</summary>'+pills(poles.map(function(p){return POLE[p].fight;}),'fight')+'</details></section>';
+  h+=aruH;
   // 上の「ひとことで言うと」に出した文は、下でくり返さない（鑑定者本人 2026-11-15「両方お願いします」）
   var fallRest=t.fall.replace(/^(.+?。)/,'').trim(), stRest=t.st.length>1?t.st.slice(1):t.st, caRest=t.ca.length>1?t.ca.slice(1):t.ca;
   h+='<section class="card">'+secH('h2','sum','どんな恋をする人？')+leadSplit(t.sum)+(fallRest?secH('h3','fall','好きになり方')+'<p>'+esc(fallRest)+'</p>':'')+'</section>';
@@ -2985,10 +2993,8 @@ function renderResult(code,mine,withCode){
      secH('h3','want','恋人にしてほしいこと')+pills(poles.map(function(p){return POLE[p].want;}),'want')+
      secH('h3','hurt','言われるとつらい言葉')+poles.map(function(p){return '<div class="say">'+esc(POLE[p].hurt)+'</div>';}).join('')+'</section>';
   // 恋愛の特徴（鑑定者本人 2026-11-14「もっと恋愛の特徴を増やせないか」→「1・2・4」「OK」）：ものさしの両はしごとの1文を、その人の4文字ぶん並べる
-  h+='<section class="card">'+secH('h2','aru','好きな人の前でやりがちなこと')+pills(poles.map(function(p){return POLE[p].aru;}),'aru')+
-     secH('h3','sign',isMine?'あなたの脈ありサイン':'このタイプの脈ありサイン')+'<p class="muted">好きなとき、つい出てしまうしぐさです。</p>'+pills(poles.map(function(p){return POLE[p].sign;}),'sign')+
-     '<details class="st-fold"><summary>'+(isMine?'けんかしたときのあなた':'けんかしたとき')+'</summary>'+pills(poles.map(function(p){return POLE[p].fight;}),'fight')+'</details></section>';
   h+='<section class="card">'+secH('h2','tip','長く続けるコツ')+pills(poles.map(function(p){return POLE[p].tip;}),'tip')+'</section>';
+  h+=axH;
 
   if(isMine && mine.anx==null){
     h+='<section class="card quick-note"><h2>本格版で、もっと正確に</h2><p>いまの結果は、かんたん版（16問）の結果です。本格版（48問）では、4つのものさしの割合がより正確になり、恋をしているときの「心のゆれやすさ」「恋の心のくせ」と、「2人のこれから」「けんかのしかた」もわかります。</p><button class="btn btn-main btn-wide" type="button" data-act="full"><span class="nw">本格版で診断する</span><span class="nw">（48問）</span></button></section>';
