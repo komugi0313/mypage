@@ -99,7 +99,7 @@ function scan() {
       await p.goto(URL + '?t=RATC'); await check('結果（両方もってる）');
       // 2人のこれから・けんかのしかた（両はし）
       for (const [fu, fg] of [[90, 10], [10, 90]]) {
-        await p.evaluate(([a, b]) => { const o = JSON.parse(localStorage.getItem('koi16_v1') || '{}'); o.me = { code: 'LVTP', pct: { LR: 80, VA: 80, TS: 80, PC: 80 }, anx: 30, fu: a, fg: b, mode: 'full', at: 1 }; localStorage.setItem('koi16_v1', JSON.stringify(o)); }, [fu, fg]);
+        await p.evaluate(([a, b]) => { const o = JSON.parse(localStorage.getItem('koi16_v1') || '{}'); o.prev = { code: 'RASC', at: 0 }; o.me = { code: 'LVTP', pct: { LR: 80, VA: 80, TS: 80, PC: 80 }, anx: 30, fu: a, fg: b, mode: 'full', at: 1 }; localStorage.setItem('koi16_v1', JSON.stringify(o)); }, [fu, fg]);
         await p.goto(URL + '?t=LVTP'); await check('結果（これから' + fu + '・けんか' + fg + '）');
       }
       await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true)); await p.waitForTimeout(400); await check('結果（たたんだ欄を開いた）');
