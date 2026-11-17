@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>究極の二択 統計</title>
+<link rel="icon" href="favicon-32.png">
+<style>
+/* 究極の二択の統計（鑑定者本人だけが見るページ。2026-11-17「遊んだ人数を統計取り、一問一問統計を取りたい」）
+   データは公開の Firestore（nitaku_stats・nitaku_hist・nitaku_votes）から読むだけ。書きこみはしない */
+:root{--bg:#FFF8E1;--ink:#1E1E2A;--sub:#4A4A5A;--shadow:#F2C94C;--pink:#FF3D7F;--deep:#C2185B;--a:#FFD3E2;--b:#CFE3FF;color-scheme:light}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Maru Gothic ProN","Zen Maru Gothic","Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.6;
+  padding:16px max(16px,env(safe-area-inset-left,0px)) 48px max(16px,env(safe-area-inset-right,0px));word-break:keep-all;overflow-wrap:anywhere}
+.wrap{max-width:860px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px}
+.lead{margin:0 0 14px;color:var(--sub);font-size:14px}
+.card{background:#fff;border:2.5px solid var(--ink);border-radius:18px;box-shadow:4px 4px 0 var(--shadow);padding:14px 16px;margin:0 0 16px}
+h2{font-size:17px;margin:0 0 10px}
+.big{font-size:34px;font-weight:900;line-height:1.1}
+.big small{font-size:15px;margin-left:4px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border-bottom:1px solid #E8DDB8;padding:6px 6px;text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-size:13px;color:var(--sub)}
+.tw{overflow-x:auto}
+.hist{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.hx{border:2px solid #E8DDB8;border-radius:12px;padding:10px}
+.hx h3{font-size:15px;margin:0 0 4px}
+.hx p{margin:0 0 6px;font-size:13px;color:var(--sub)}
+.bars{display:flex;align-items:flex-end;gap:2px;height:80px}
+.bars i{flex:1;background:var(--pink);border-radius:2px 2px 0 0;min-height:1px}
+.axl{display:flex;justify-content:space-between;font-size:11px;color:var(--sub)}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}
+.ctl button{min-height:44px;border:2px solid var(--ink);border-radius:999px;background:#fff;padding:0 14px;font:inherit;font-size:14px;font-weight:700;color:var(--ink);cursor:pointer}
+.ctl button[aria-pressed="true"]{background:#FFE071}
+.q{border-top:1px solid #E8DDB8;padding:10px 0}
+.q:first-child{border-top:0}
+.qh{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--sub)}
+.tg{display:inline-block;border:1.5px solid var(--ink);border-radius:999px;padding:0 8px;margin-left:4px;font-weight:700;color:var(--ink);background:#fff}
+.tg.w{background:#FFE071}.tg.s{background:#CFF0E0}
+.ab{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;font-size:14px;margin-top:4px}
+.ab .n{font-weight:900;text-align:right}
+.bar{grid-column:1/-1;display:flex;height:10px;border-radius:999px;overflow:hidden;border:1.5px solid var(--ink)}
+.bar .x{background:#FFA8C6}.bar .y{background:#A6C8FF}
+.pt{font-size:12px;color:var(--sub)}
+.note{font-size:13px;color:var(--sub);margin:8px 0 0}
+.err{color:var(--deep);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>究極の二択 統計</h1>
+  <p class="lead">遊んだ回数・4つの％の分布・1問ずつの答え。このページは検索に出ない設定です（リンクを知っている人は見られます）。</p>
+  <div id="out"><p>読みこんでいます…</p></div>
+</div>
+<script src="firebase-config.js"></script>
+<script src="questions.js"></script>
+<script src="questions-mine.js"></script>
+<script src="questions-hon.js"></script>
+<script>
+(function(){
+'use strict';
+var cfg=window.NITAKU_FB||{}, BASE='https://firestore.googleapis.com/v1/projects/'+cfg.projectId+'/databases/(default)/documents/';
+function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function hashStr(s){ var h=5381; for(var i=0;i<s.length;i++){ h=((h<<5)+h+s.charCodeAt(i))|0; } return (h>>>0).toString(36); }
+function num(f){ return f ? +(f.integerValue||f.doubleValue||0) : 0; }
+function fields(doc){ var o={}, f=(doc&&doc.fields)||{}; Object.keys(f).forEach(function(k){ o[k]=num(f[k]); }); return o; }
+async function getDoc(path){ var r=await fetch(BASE+path+'?key='+cfg.apiKey); if(r.status===404) return {}; if(!r.ok) throw new Error(path+' '+r.status); return fields(await r.json()); }
+async function listCol(path){ var out=[], tok=''; do{ var r=await fetch(BASE+path+'?pageSize=300&key='+cfg.apiKey+(tok?'&pageToken='+tok:'')); if(!r.ok) throw new Error(path+' '+r.status); var d=await r.json(); (d.documents||[]).forEach(function(x){ out.push({ id:x.name.split('/').pop(), f:fields(x) }); }); tok=d.nextPageToken||''; }while(tok); return out; }
+
+var MODE={love:'恋愛編',normal:'ふつう編',hon:'本能モード'}, LVN={easy:'イージー',normal:'ノーマル',hard:'ハード',mix:'ノーマル→ハード（8問）',x:'—'}, WHO={solo:'ひとりで',room:'みんなで（部屋）'};
+var AX={love:[['K','小悪魔度'],['R','ロマン度'],['S','刺激好き度'],['A','甘えたい度']],normal:[['B','冒険度'],['Y','こだわり度'],['M','見栄っぱり度'],['N','ノリ度']]};
+// 問題（サイトと同じ目印）
+var Q={};
+['love','normal'].forEach(function(m){
+  ((window.NITAKU_BASE||{})[m]||[]).concat(((window.NITAKU_MINE||{})[m])||[]).forEach(function(q){ if(!q||!q[0]||!q[1]) return; var id=hashStr(q[0]+'｜'+q[1]); if(!Q[id]) Q[id]={ m:m, a:q[0], b:q[1], ta:q[2]||'', tb:q[3]||'', lv:+q[4]||2 }; });
+  ((window.NITAKU_HON||{})[m]||[]).forEach(function(q){ if(!q||!q[0]||!q[1]) return; var id=hashStr(q[0]+'｜'+q[1]); if(!Q[id]) Q[id]={ m:'hon', sub:m, a:q[0], b:q[1], ta:'', tb:'', lv:0 }; });
+});
+
+var st={ mode:'love', sort:'n' }, V=[];
+function playsHTML(P){
+  var tot=0; Object.keys(P).forEach(function(k){ tot+=P[k]; });
+  var h='<div class="card"><h2>遊んだ回数</h2><div class="big">'+tot.toLocaleString()+'<small>回</small></div><p class="note">遊び終わって結果が出た回数（部屋は1人ずつ数える）。2026-11-17 から数えはじめた。</p>';
+  if(tot){
+    var rows=Object.keys(P).sort(function(a,b){ return P[b]-P[a]; });
+    h+='<div class="tw"><table><tr><th>遊び方</th><th>編</th><th>難しさ</th><th>回数</th><th>割合</th></tr>'+rows.map(function(k){ var p=k.split('_'); return '<tr><td>'+WHO[p[0]]+'</td><td>'+MODE[p[1]]+'</td><td>'+(LVN[p[2]]||p[2])+'</td><td>'+P[k].toLocaleString()+'</td><td>'+Math.round(100*P[k]/tot)+'%</td></tr>'; }).join('')+'</table></div>';
+  }
+  return h+'</div>';
+}
+function histHTML(H){
+  var any=0; Object.keys(H).forEach(function(k){ Object.keys(H[k]).forEach(function(b){ any+=H[k][b]; }); });
+  if(!any) return '<div class="card"><h2>4つの％の分布</h2><p class="note">まだ数えていません（遊んだ人の％がたまると、ここにグラフが出ます）。</p></div>';
+  var h='<div class="card"><h2>4つの％の分布</h2><p class="note">遊んだ人の％を5%きざみで数えたもの（その％を見る問題に2問以上答えた人だけ）。結果の「○人中、あなたより○○度が高い人は○%」は、ここが100人をこえたら出る。</p><div class="hist">';
+  ['love','normal'].forEach(function(m){ AX[m].forEach(function(ax){
+    var d=H[m+'_'+ax[0]]||{}, a=[], tot=0, sum=0; for(var i=0;i<=20;i++){ var v=d['b'+i]||0; a.push(v); tot+=v; sum+=v*i*5; }
+    var mx=Math.max.apply(null,a)||1;
+    h+='<div class="hx"><h3>'+MODE[m]+'・'+ax[1]+'</h3><p>'+tot.toLocaleString()+'人'+(tot?'・平均'+Math.round(sum/tot)+'%':'')+'</p><div class="bars">'+a.map(function(v,i){ return '<i title="'+(i*5)+'%：'+v+'人" style="height:'+Math.round(100*v/mx)+'%"></i>'; }).join('')+'</div><div class="axl"><span>0%</span><span>50%</span><span>100%</span></div></div>';
+  }); });
+  return h+'</div></div>';
+}
+function qsHTML(){
+  var L=V.filter(function(x){ return x.q.m===st.mode; });
+  var key={ n:function(x){ return -x.n; }, split:function(x){ return (x.n<5?1e6:0)+Math.abs(x.pa-50); }, lean:function(x){ return (x.n<5?1e6:0)-Math.abs(x.pa-50); } }[st.sort];
+  L.sort(function(a,b){ return key(a)-key(b); });
+  var all=Object.keys(Q).filter(function(id){ return Q[id].m===st.mode; }).length, got=L.length, votes=L.reduce(function(s,x){ return s+x.n; },0);
+  var h='<div class="card"><h2>1問ずつの答え</h2>'+
+    '<div class="ctl">'+['love','normal','hon'].map(function(m){ return '<button type="button" data-m="'+m+'" aria-pressed="'+(st.mode===m)+'">'+MODE[m]+'</button>'; }).join('')+'</div>'+
+    '<div class="ctl">'+[['n','答えた人が多い順'],['split','意見が分かれた順'],['lean','かたよった順']].map(function(x){ return '<button type="button" data-s="'+x[0]+'" aria-pressed="'+(st.sort===x[0])+'">'+x[1]+'</button>'; }).join('')+'</div>'+
+    '<p class="note">'+all+'問のうち、答えがあるのは'+got+'問・'+votes.toLocaleString()+'票。「かたよった」＝20人以上答えて、9割が同じ答え（％がほとんど動かない問題。点数の見直し候補）。「意見が分かれた順」「かたよった順」は、5人以上答えた問題を先に並べる。</p>';
+  L.slice(0,200).forEach(function(x){
+    var q=x.q, lean=x.n>=20 && Math.max(x.pa,100-x.pa)>=90, split=x.n>=20 && Math.abs(x.pa-50)<=5;
+    h+='<div class="q"><div class="qh"><span>'+(q.lv?['','イージー','ノーマル','ハード'][q.lv]:'本能')+(lean?'<span class="tg w">かたよった</span>':'')+(split?'<span class="tg s">まっぷたつ</span>':'')+'</span><span>'+x.n+'人</span></div>'+
+      '<div class="ab"><span>A：'+esc(q.a)+'</span><span class="n">'+x.pa+'%（'+x.a+'）</span><span>B：'+esc(q.b)+'</span><span class="n">'+(100-x.pa)+'%（'+x.b+'）</span>'+
+      '<div class="bar"><span class="x" style="width:'+x.pa+'%"></span><span class="y" style="width:'+(100-x.pa)+'%"></span></div></div>'+
+      ((q.ta||q.tb)?'<div class="pt">点数　A：'+esc(q.ta||'なし')+'　B：'+esc(q.tb||'なし')+'</div>':'')+'</div>';
+  });
+  if(L.length>200) h+='<p class="note">ほかに'+(L.length-200)+'問（多い順の200問まで出しています）</p>';
+  return h+'</div>';
+}
+var P={}, H={};
+function render(){ var m=window.__miss||[]; document.getElementById('out').innerHTML=(m.length?'<div class="card"><p class="err">'+m.join('・')+'は、まだ読めません。Firebase の決まり（firestore.rules）に nitaku_stats と nitaku_hist を足すと出ます。</p></div>':'')+playsHTML(P)+histHTML(H)+qsHTML(); }
+document.addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; if(b.dataset.m){ st.mode=b.dataset.m; render(); } else if(b.dataset.s){ st.sort=b.dataset.s; render(); } });
+(async function(){
+  try{
+    if(!cfg.projectId) throw new Error('firebase-config.js がありません');
+    // 遊んだ回数・分布は、Firebase の決まりに nitaku_stats・nitaku_hist を足すまで読めない（読めなくても1問ずつの答えは出す）
+    var miss=[], soft=function(pr, name, empty){ return pr.catch(function(){ miss.push(name); return empty; }); };
+    var r=await Promise.all([soft(getDoc('nitaku_stats/plays'),'遊んだ回数',{}), soft(listCol('nitaku_hist'),'4つの％の分布',[]), listCol('nitaku_votes')]);
+    window.__miss=miss;
+    P=r[0]; r[1].forEach(function(d){ H[d.id]=d.f; });
+    r[2].forEach(function(d){ var q=Q[d.id]; if(!q) return; var a=d.f.a||0, b=d.f.b||0, n=a+b; if(!n) return; V.push({ id:d.id, q:q, a:a, b:b, n:n, pa:Math.round(100*a/n) }); });
+    render();
+  }catch(e){ document.getElementById('out').innerHTML='<p class="err">読みこめませんでした（'+esc(e.message)+'）</p>'; }
+})();
+})();
+</script>
+<script id="pk-contrast-guard">
+/* 文字の見えやすさの安全装置（tools/add_contrast_guard.py が3サイトの全ページに埋め込む。直すときはこのファイルを直して再実行）
+   文字の色と、その後ろの背景の色を比べて、読みにくい組み合わせ（薄い背景に薄い文字／濃い背景に濃い文字）を見つけたら、
+   その文字だけ色を自動で調整する（明るい背景→同じ色みのまま濃く、暗い背景→白く）。計算・鑑定の中身には一切さわらない。
+   目安：明るい背景の上の文字はコントラスト比7以上（大きい文字＝24px以上、または18.66px以上の太字は4.5以上）。濃い色の上の白い文字は4.5以上（大きい文字は3以上）。 */
+(function(){
+  if(window.__pkContrast) return; window.__pkContrast=true;
+  function P(c){ var m=c&&c.match(/[\d.]+/g); return m?[+m[0],+m[1],+m[2],m.length>3?+m[3]:1]:null; }
+  function L(c){ function f(v){ v/=255; return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4); } return 0.2126*f(c[0])+0.7152*f(c[1])+0.0722*f(c[2]); }
+  function CR(a,b){ var x=L(a),y=L(b); return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05); }
+  function mix(a,b,t){ return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]; }
+  function over(f,b){ var a=f[3]==null?1:f[3]; return [f[0]*a+b[0]*(1-a),f[1]*a+b[1]*(1-a),f[2]*a+b[2]*(1-a)]; }
+  // 文字の後ろの背景：背景色のある祖先を上へたどる。グラデーションは色の幅を見る。写真などの画像背景は判定しない
+  var BG=null, OP=null;   // 1回の点検の中だけ使う覚え書き（同じ祖先を何度も調べない）
+  function bgOf(n){
+    if(!n||n.nodeType!==1) return {lo:1,hi:1,rgb:[255,255,255]};
+    if(BG&&BG.has(n)) return BG.get(n);
+    var cs=getComputedStyle(n), bi=cs.backgroundImage, r;
+    // 飾りの層（::before／::after に背景がある）が文字の後ろにあるときは、正しく判定できないので触らない
+    var deco=false; ['::before','::after'].forEach(function(ps){ try{ var pc=getComputedStyle(n,ps); if(pc.content&&pc.content!=='none'&&(pc.position==='absolute'||pc.position==='fixed')){ var pb=P(pc.backgroundColor); if((pb&&pb[3]>0.3)||(pc.backgroundImage&&pc.backgroundImage!=='none')){ var pw=parseFloat(pc.width)||0, ph=parseFloat(pc.height)||0, nr=n.getBoundingClientRect(); /* 端の細い帯・小さな飾りは文字の後ろにかからないので測ってよい */ var thin=(pw>0&&pw<=12)||(ph>0&&ph<=12)||(nr.width>0&&pw>0&&pw<nr.width*0.2)||(nr.height>0&&ph>0&&ph<nr.height*0.2); if(!thin) deco=true; } } }catch(_e){} });
+    if(deco||(bi&&bi!=='none'&&/url\(/.test(bi))) r=null;
+    else{
+      var parent=bgOf(n.parentElement);
+      if(parent===null) r=null;
+      else{
+        var bc=P(cs.backgroundColor), base=parent.rgb;
+        if(bc&&bc[3]>0) base=over(bc,base);
+        var cols=(bi&&bi!=='none')?(bi.match(/rgba?\([^)]*\)/g)||[]).map(P).filter(Boolean):[];
+        if(cols.length){ var lo=1,hi=0,acc=[0,0,0]; cols.forEach(function(c){ var m=over(c,base), l=L(m); if(l<lo)lo=l; if(l>hi)hi=l; acc[0]+=m[0];acc[1]+=m[1];acc[2]+=m[2]; });
+          r={lo:lo,hi:hi,rgb:[acc[0]/cols.length,acc[1]/cols.length,acc[2]/cols.length]}; }
+        else if(bc&&bc[3]>0){ var l2=L(base); r={lo:l2,hi:l2,rgb:base}; }
+        else r=parent;
+      }
+    }
+    if(BG) BG.set(n,r); return r;
+  }
+  function opac(n){ if(!n||n.nodeType!==1) return 1; if(OP&&OP.has(n)) return OP.get(n); var o=(+getComputedStyle(n).opacity)*opac(n.parentElement); if(OP) OP.set(n,o); return o; }
+  function fix(e,cs){
+    var own=''; for(var c=e.firstChild;c;c=c.nextSibling) if(c.nodeType===3) own+=c.nodeValue; if(!own.trim()) return;
+    cs=cs||getComputedStyle(e); if(cs.display==='none'||cs.visibility==='hidden') return;
+    var fill=cs.webkitTextFillColor; if(fill&&/rgba\(0, 0, 0, 0\)|transparent/.test(fill)) return;   // 文字そのものがグラデーションのもの
+    var fixed=e.hasAttribute('data-pkcg'), fg=P(fixed?(e.getAttribute('data-pkco')||cs.color):cs.color); if(!fg) return;   // 前に直した文字は、元の色で測り直す（背景が変わったら戻す・直し直す）
+    var undo=function(){ if(!fixed) return; var o=e.getAttribute('data-pkcg'); if(o) e.style.setProperty('color',o); else e.style.removeProperty('color'); e.removeAttribute('data-pkcg'); e.removeAttribute('data-pkco'); };
+    var bg=bgOf(e); if(!bg){ undo(); return; }
+    if(bg.hi-bg.lo>0.35){ undo(); return; }                       // 明暗が大きく混ざった背景は判定しない
+    var fs=parseFloat(cs.fontSize)||14, bold=(+cs.fontWeight||400)>=700;
+    var big=(fs>=24||(fs>=18.66&&bold)), need=big?3:4.5;
+    var op=opac(e); if(op<0.6) return;                 // 透明・半透明で隠している途中のもの（通知・ふわっと出る表示など）は触らない
+    var a=(fg[3]==null?1:fg[3])*op;
+    var light=((bg.lo+bg.hi)/2)>0.4, to=light?[0,0,0]:[255,255,255], c2=null;
+    if(light) need=big?4.5:7;
+    if(printing&&!light) return;   // 印刷中は、濃い背景の上の文字を白っぽくしない（紙では背景の色が出ないことがあるため）   // 明るい背景の上の文字は一段きびしく（ふつうの文字7以上・大きい文字4.5以上）。濃い色の上の白い文字は4.5のまま（発注者指示 2026-10-21）
+    var base=bg.rgb, seen=over([fg[0],fg[1],fg[2],a],base);
+    if(CR(seen,base)>=need){ undo(); return; }
+    for(var t=0.1;t<=1.0001;t+=0.1){ var cand=mix([fg[0],fg[1],fg[2]],to,t); if(CR(over([cand[0],cand[1],cand[2],a],base),base)>=need){ c2=cand; break; } }
+    if(!c2){   // 中くらいの明るさの色の上（白い文字＋黄土色の札など）：白くしても足りないときは、濃い文字にする
+      var to2=light?[255,255,255]:[0,0,0];
+      for(var t2=0.1;t2<=1.0001;t2+=0.1){ var cand2=mix([fg[0],fg[1],fg[2]],to2,t2); if(CR(over([cand2[0],cand2[1],cand2[2],a],base),base)>=need){ c2=cand2; break; } }
+    }
+    if(!c2) c2=(CR(to,base)>=CR(light?[255,255,255]:[0,0,0],base))?to:(light?[255,255,255]:[0,0,0]);                                     // 透明度は変えない（隠している表示を出してしまわないように）
+    if(!fixed){ e.setAttribute('data-pkcg',e.style.getPropertyValue('color')||''); e.setAttribute('data-pkco',cs.color); }   // 元の色を覚えておく（印刷のとき・背景が変わったときに戻す）
+    var nv='rgb('+Math.round(c2[0])+', '+Math.round(c2[1])+', '+Math.round(c2[2])+')'; if(e.style.getPropertyValue('color')!==nv||e.style.getPropertyPriority('color')!=='important') e.style.setProperty('color',nv,'important');   // 同じ色なら触らない（自分の変更で何度も点検が走らないように）
+  }
+  var SKIP='script,style,noscript,svg,canvas,video,option,select,textarea,input,img,.yomi,.ysr,[aria-hidden="true"],[data-nocg]';   // data-nocg＝色を自分で決めている切りかえボタン（選ぶと背景が変わるので、前の色を残さない）
+  // 点検のしかた（2026-11-02 速さの点検 chk_perf：押すたびにページ全体〈鑑定後は約5,000の要素〉を測り直して、折りたたみを1つ開くだけで数秒固まっていた）：
+  //  ・見えていないところ（display:none の中・閉じている <details> の中）は測らない。開いたとき・見えるようになったとき（下の見張りが気づく）に、その部分だけ測る。
+  //  ・押したとき（click）は、押したところのまわりの欄だけ測り直す（:checked などで色だけ変わるものも拾う）。
+  //  ・ページ全体を測り直すのは、開いたとき・1.5秒後・画面の幅が変わったとき・<html>/<body> の印（画面の色の切りかえなど）が変わったとき・印刷のときだけ。
+  //  読みにくい組み合わせを見つけて直す働き（fix）はそのまま。
+  function pass(root){ if(!root||root.nodeType!==1||!root.isConnected) return;   /* 印刷中も、濃くするほうだけは動く（fix の中で白っぽくするのは止める） */
+    try{ var cd=root.closest('details:not([open])'); if(cd&&cd!==root){ var sm=root.closest('summary'); if(!sm||sm.parentElement!==cd) return; } }catch(_e){}   // 閉じている欄の中は、開いたときに見る
+    BG=new Map(); OP=new Map(); var st=[root];
+    while(st.length){ var e=st.pop(), cs=null;
+      if(!(e.matches&&e.matches(SKIP))){ try{ cs=getComputedStyle(e); }catch(_e){} if(cs&&cs.display==='none') continue; try{ fix(e,cs); }catch(_e){} }
+      var ch=e.children; if(!ch||!ch.length) continue;
+      if(e.tagName==='DETAILS'&&!e.open){ for(var k=ch.length-1;k>=0;k--) if(ch[k].tagName==='SUMMARY') st.push(ch[k]); continue; }
+      for(var j=ch.length-1;j>=0;j--) st.push(ch[j]); }
+    BG=null; OP=null; }
+  function passAll(list){ var set=new Set(list.filter(function(n){ return n&&n.nodeType===1&&n.isConnected; }));   // 重なっている部分は、いちばん外側だけ測る
+    set.forEach(function(n){ for(var p=n.parentElement;p;p=p.parentElement){ if(set.has(p)){ set.delete(n); return; } } });
+    set.forEach(function(n){ pass(n); }); }
+  var tm=null; function full(){ clearTimeout(tm); tm=setTimeout(function(){ pass(document.body); },350); }
+  // 押したところのまわり：押したボタン・札の入っている小さなまとまり（となりの札も選んだ色が変わるので一緒に）。大きな欄ごとは測らない（開いた欄・足された部分は下の見張りが測る）
+  var REG='[role="tablist"],[role="radiogroup"],[role="group"],[role="dialog"],dialog,fieldset,label,li,tr';
+  var ck=[], ckt=null; function near(ev){ var t=ev&&ev.target; if(t&&t.nodeType!==1) t=t.parentElement; if(!t||!t.closest) return;
+    if(t.closest('summary')) return;   // 欄の開け閉め：open の変化で、その欄だけ測る
+    var r=t.closest(REG)||t.parentElement||t; if(r===document.body||r===document.documentElement) r=t;
+    if(r.parentElement&&r.parentElement!==document.body&&r.parentElement.getElementsByTagName('*').length<=400) r=r.parentElement;
+    if(r.getElementsByTagName('*').length>1500) r=t;
+    ck.push(r); clearTimeout(ckt); ckt=setTimeout(function(){ var w=ck; ck=[]; passAll(w); },350); }
+  // <body> の印のうち、スクロールで付け外しするだけのもの（下の丸いボタンを薄くする・固定ボタンを出す）は、文字の色に関係しないので測り直さない
+  var MOTION={'fl-moving':1,'fl-idle':1,'sticky-on':1};
+  function onlyMotion(a,b){ var x={},k; String(a||'').split(/\s+/).forEach(function(t){ if(t) x[t]=(x[t]||0)+1; }); String(b||'').split(/\s+/).forEach(function(t){ if(t) x[t]=(x[t]||0)-1; }); for(k in x){ if(x[k]!==0&&!MOTION[k]) return false; } return true; }
+  var lastW=window.innerWidth; function rs(){ if(window.innerWidth===lastW) return; lastW=window.innerWidth; full(); }   // 高さだけの変化（スマホのアドレスバーの出し入れ）では測り直さない
+  // 印刷：濃くした文字はそのまま印刷する。濃い背景の上で白っぽくした文字だけは、紙では背景の色が出ないことがあるので元に戻してから印刷し、終わったら画面用に戻す
+  function unfixAll(){ [].forEach.call(document.querySelectorAll('[data-pkcg]'),function(e){ if(printing){ var f0=P(e.getAttribute('data-pkco')||''), f1=P(e.style.getPropertyValue('color')||''); if(f0&&f1&&L(f1)<=L(f0)) return; }   /* 印刷：濃くした文字はそのまま（紙でも読みやすく）。白っぽくした文字だけ元に戻す（紙では背景の色が出ないことがあるため）。発注者指示 2026-10-21 */ var o=e.getAttribute('data-pkcg'); if(o) e.style.setProperty('color',o); else e.style.removeProperty('color'); e.removeAttribute('data-pkcg'); e.removeAttribute('data-pkco'); }); }
+  window.addEventListener('beforeprint',function(){ printing=true; unfixAll(); try{ pass(document.body); }catch(_e){} setTimeout(function(){ try{ pass(document.body); }catch(_e){} },0); });   // 印刷の直前に作り直された文字も濃くする
+  window.addEventListener('afterprint',function(){ printing=false; pass(document.body); });
+  var printing=false;
+  function start(){
+    pass(document.body); setTimeout(function(){ pass(document.body); },1500);
+    document.addEventListener('click',near,true); window.addEventListener('resize',rs);   // 開いた欄（toggle）は、下の見張りが open の変化で気づいて、その欄だけ測る
+    if(window.MutationObserver){ var q=[],qt=null; new MutationObserver(function(rs){ rs.forEach(function(r){ if(r.type==='childList'){ [].forEach.call(r.addedNodes,function(n){ if(n.nodeType===1) q.push(n); else if(n.parentElement) q.push(n.parentElement); }); } else if(r.target&&r.target.nodeType===1){ if(r.target===document.body&&r.attributeName==='class'&&onlyMotion(r.oldValue,r.target.className)) return; q.push(r.target); } });
+      if(!qt) qt=setTimeout(function(){ var w=q; q=[]; qt=null; passAll(w); },200); })
+      .observe(document.body,{childList:true,subtree:true,attributes:true,attributeOldValue:true,attributeFilter:['class','style','hidden','open','data-theme','data-mode']});
+      new MutationObserver(function(){ full(); }).observe(document.documentElement,{attributes:true,attributeFilter:['class','style','data-theme','data-mode']}); }   // 画面の色の切りかえ（<html> の印）は全体が変わるので、全体を測り直す
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
+/* 行末の1〜2文字残り（泣き別れ）を防ぐ：紹介ページ・教科書・申し込み画面にも同じ仕組みを入れる（アプリと同じ処理。横並び（flex/grid）の中では触らない） */
+(function(){
+  if(window.__pkOrphan) return; window.__pkOrphan=true;   // 行末の1〜2文字残りを防ぐ仕組みは、ページに1つだけ動かす
+  function lines(e){ const rg=document.createRange(); rg.selectNodeContents(e); const L={};
+    [...rg.getClientRects()].forEach(r=>{ if(!(r.width>0&&r.height>0))return; const k=Math.round((r.top+r.bottom)/8); const o=L[k]||(L[k]={l:1e9,r:-1e9}); o.l=Math.min(o.l,r.left); o.r=Math.max(o.r,r.right); });
+    return Object.keys(L).map(Number).sort((a,b)=>a-b).map(k=>L[k]); }
+  function isShort(e){ const ls=lines(e); if(ls.length<2) return false; const fs=parseFloat(getComputedStyle(e).fontSize)||14; const z=ls[ls.length-1]; return (z.r-z.l)<fs*2.3; }
+  function glue(nodes){ const sp=document.createElement('span'); sp.className='og-t'; sp.style.whiteSpace='nowrap'; nodes[0].parentNode.insertBefore(sp,nodes[0]); nodes.forEach(n=>sp.appendChild(n)); }
+  function tail(e){
+    const w=document.createTreeWalker(e,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.nodeValue.trim()?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_SKIP}); let last=null,n; while((n=w.nextNode())) last=n; if(!last) return;
+    const v=last.nodeValue.replace(/\s+$/,'');
+    if(v.length>=4){ glue([last.splitText(v.length-4)]); return; }
+    // 「▾」など短い文字：その前の数文字と一緒にする
+    let t=last, p=t.parentNode; while(p&&p!==e&&!t.previousSibling){ t=p; p=p.parentNode; }
+    const prev=t.previousSibling; if(!prev) return;
+    if(prev.nodeType===3){ const pv=prev.nodeValue; if(pv.trim().length<1) return; glue([prev.splitText(Math.max(0,pv.length-3)),t]); }
+    else glue([prev,t]);
+  }
+  function run(){
+    document.querySelectorAll('p,li,h1,h2,h3,h4,label,summary,div,span,b,small,a,button,td').forEach(e=>{
+      if(e.dataset.og||!e.offsetParent) return;
+      if(e.closest('table:not(.og-ok),svg,select,textarea,[contenteditable],.no-og,#verTag')) return;
+      if(/flex|grid/.test(getComputedStyle(e).display)) return;   // 横並び（flex/grid）の中で包むと、文字の途中にすき間ができるので触らない
+      let own=false; for(const c of e.childNodes){ if(c.nodeType===3&&c.nodeValue.trim()){own=true;break;} } if(!own) return;
+      if((e.textContent||'').trim().length<5) return;
+      e.dataset.og='1';
+      if(!isShort(e)) return;
+      e.style.textWrap='balance'; if(!isShort(e)) return;
+      e.style.textWrap=''; tail(e);
+    }); }
+  let t=null; const sch=()=>{ clearTimeout(t); t=setTimeout(()=>{ try{run();}catch(_e){} },220); };
+  try{ new MutationObserver(sch).observe(document.body,{childList:true,subtree:true}); }catch(e){}
+  document.addEventListener('toggle',sch,true); document.addEventListener('click',sch,true);
+  sch();
+})();
+/* 印刷が開かないときの案内（鑑定者本人の指摘 2026-10-29「印刷ボタンを押しても何の動きもない」）：
+   Gmail・LINE・Instagram などアプリの中の画面では、ブラウザの印刷（window.print）が止められていて、押しても何も起きない。
+   印刷を頼んで1.5秒たっても印刷の画面が開かなければ、「Safari・Chromeで開いてから」の案内を出す。3サイトの全ページ（鑑定書・アプリの鑑定書の画面も）で同じ。 */
+(function(){
+  if(window.__pkPrintHelp) return; window.__pkPrintHelp=true;
+  var orig=window.print; if(typeof orig!=='function') return;
+  var opened=false; function mark(){ opened=true; }
+  try{ window.addEventListener('beforeprint',mark); window.addEventListener('afterprint',mark); var mq=window.matchMedia&&window.matchMedia('print'); if(mq){ if(mq.addEventListener) mq.addEventListener('change',function(e){ if(e.matches) mark(); }); else if(mq.addListener) mq.addListener(function(e){ if(e.matches) mark(); }); } }catch(e){}
+  function link(){ try{ var u=(window.top&&window.top.location&&window.top.location.href)||location.href; return /^https?:/.test(u)?u:''; }catch(e){ return /^https?:/.test(location.href)?location.href:''; } }
+  function show(){ try{ var old=document.getElementById('pk-print-help'); if(old) old.remove();
+    var karte=false; try{ karte=!!((window.top&&window.top.document||document).getElementById('mypageToggle')); }catch(_e){ karte=!!document.getElementById('mypageToggle'); }
+    var ua=navigator.userAgent||'', ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&'ontouchend' in document), u=link();
+    var d=document.createElement('div'); d.id='pk-print-help'; d.className='no-print'; d.setAttribute('role','dialog'); d.setAttribute('aria-label','印刷の画面が開かないとき');
+    d.style.cssText='position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:2147483647;max-width:560px;margin:0 auto;background:#fff;color:#1b1b1b;border:2px solid #4F46E5;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.22);padding:14px 14px 12px;font:700 14.5px/1.7 system-ui,-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif';
+    d.innerHTML='<div style="font-size:16px;font-weight:900;color:#3730A3;margin-bottom:4px">🖨 印刷の画面が開かないときは</div>'+
+      '<div>Gmail・LINE などのアプリの中で開いていると、印刷・PDF保存が使えません。ブラウザで開き直してから、もう一度押してください。</div>'+
+      '<div style="margin-top:6px;background:#F4F5FF;border-radius:10px;padding:8px 10px">'+(ios?'<b>iPhone</b>：画面の右下か右上の <b>共有ボタン</b>（□に↑）や <b>「…」</b> →「<b>Safariで開く</b>」<br><span style="font-weight:700;color:#4A4458">共有ボタンの中の「プリント」からも印刷・PDF保存できます</span>':'<b>Android</b>：右上の <b>「︙」</b> →「<b>ブラウザで開く</b>」（Chromeで開く）')+'</div>'+
+      (karte?'<div style="margin-top:6px;font-size:13px;color:#4A4458">鑑定は顧客カルテに保存されています。ブラウザで開いたあと、顧客カルテから開けます。</div>':'')+
+      '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'+(u?'<button type="button" data-a="copy" style="flex:1 1 160px;min-height:44px;border:0;border-radius:12px;background:#4F46E5;color:#fff;font:inherit;font-weight:900;cursor:pointer">このページのリンクをコピー</button>':'')+'<button type="button" data-a="close" style="flex:0 0 auto;min-height:44px;padding:0 16px;border:1.5px solid #C9CDF5;border-radius:12px;background:#fff;color:#3730A3;font:inherit;font-weight:900;cursor:pointer">閉じる</button></div>';
+    d.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('button'); if(!b) return; if(b.dataset.a==='close'){ d.remove(); return; }
+      if(b.dataset.a==='copy'){ var ok=function(){ b.textContent='コピーしました。Safari・Chromeに貼りつけて開いてください'; }; try{ navigator.clipboard.writeText(u).then(ok,function(){ window.prompt('このリンクをコピーしてください',u); }); }catch(_e){ try{ window.prompt('このリンクをコピーしてください',u); }catch(__e){} } } });
+    (document.body||document.documentElement).appendChild(d); }catch(e){} }
+  window.print=function(){ opened=false; var r; try{ r=orig.apply(window,arguments); }catch(e){} setTimeout(function(){ if(!opened&&!document.hidden) show(); },1500); return r; };
+})();
+</script>
+</body>
+</html>
