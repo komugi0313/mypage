@@ -778,6 +778,7 @@ body.rdy-on #gres-body{padding-bottom:230px}
 .rh-ch{margin:4px 0 10px}.rh-ch img{width:132px;height:132px;object-fit:contain;display:block;margin:0 auto}
 .rh-you{margin:2px 0 0;font-size:14px;font-weight:700;color:var(--sub)}
 .res-hero .rh-ch .type{margin:0;font-size:30px}
+.res-hero .type.gtt{font-size:26px;margin:4px 0 2px}
 .rh-say{margin:4px 0 0;font-size:15px;font-weight:700}
 .res-hero .rh-ch+.meter{border-top:2px dashed #E6D9B8;padding-top:10px}
 .rdy-in .rdy-row{display:flex;align-items:center;gap:10px}
@@ -893,6 +894,14 @@ body.rdy-on #gres-body{padding-bottom:230px}
 .rdy-n{margin:18px 0 0;font-size:15px;font-weight:700;line-height:1.8;text-align:center!important;text-align-last:center;word-spacing:0}
 .rdy-n span{display:block;width:100%;text-align:center}
 .big.rdy-go{background:#FF3D7F;color:#1E1E2A;border:3px solid #1E1E2A;box-shadow:4px 4px 0 #1E1E2A;margin-top:20px;font-size:22px}
+.rdy-card .rdy-t{text-wrap:balance}
+#s-with .rdy-card{text-align:center;padding:26px 20px 24px}
+#s-with .rdy-t{font-size:22px;line-height:1.5}
+#s-with .pf{margin-top:18px}
+.wcard h3{margin:0 0 4px}
+.wcard .pf{margin-top:10px}
+.wcard .lb-line{margin-top:12px}
+.wcard .tell-s{display:block;margin:8px auto 0}
 /* 1問15秒（恋愛編・ふつう編。鑑定者本人 2026-11-17「20秒にしたい」「何人でやってもそうしたい」→「15秒でお願いします」） */
 .ntimer{display:flex;align-items:center;gap:10px;margin:12px 2px 14px}
 .nt-bar{flex:1;height:10px;border:2px solid #1E1E2A;border-radius:999px;background:#fff;overflow:hidden}
@@ -917,6 +926,8 @@ body.rdy-on #gres-body{padding-bottom:230px}
 @keyframes qthink{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
 @keyframes qdots{from{width:0}to{width:1.1em}}
 @media (prefers-reduced-motion:reduce){.qwho .think .av img,.qwho .think .st em{animation:none}}
+.pc-part{display:inline-block;margin-left:6px;font-style:normal;font-size:12px;font-weight:800;color:#5A5A6E;background:#EEEEF2;border-radius:999px;padding:0 7px;vertical-align:middle}
+.gone-note{margin:10px 4px 0;padding:8px 12px;background:#EEEEF2;border:2px solid #1E1E2A;border-radius:12px;font-size:13.5px;line-height:1.6}
 </style>
 </head>
 <body data-mode="love">
@@ -1184,6 +1195,19 @@ body.rdy-on #gres-body{padding-bottom:230px}
     <div class="rdy-tags" id="rdy-tags"></div>
     <div class="rdy-n" id="rdy-n" style="margin-top:20px;text-align:center"></div>
     <button class="big rdy-go" id="rdy-go" type="button">スタート</button>
+  </div>
+</section>
+
+<section class="scr" id="s-with">
+  <div class="nav"><span class="navr"><button class="navb" data-nav="top">TOP</button></span></div>
+  <div class="card rdy-card">
+    <img class="rdy-pd" src="img/panda-2.webp" alt="" width="96" height="96">
+    <p class="rdy-k">答え合わせのお誘い</p>
+    <h2 class="rdy-t" id="wi-t"></h2>
+    <div class="rdy-tags" id="wi-tags"></div>
+    <div class="rdy-n" id="wi-n" style="margin-top:20px;text-align:center"></div>
+    <div class="prow"><div class="pf"><input type="text" id="wi-name" maxlength="6" placeholder="名前（ニックネームOK）"></div></div>
+    <button class="big rdy-go" id="wi-go" type="button">答えはじめる</button>
   </div>
 </section>
 
@@ -2717,15 +2741,25 @@ function pickHTML(icon, label, x){
           : '<div class="pk-o">「'+esc(x.q.a)+'」VS「'+esc(x.q.b)+'」</div>')+'</div>';
 }
 function pctLine(mode, sc){ return AXES[mode].map(function(ax){ return ax.name+sc[ax.k]+'%'; }).join('／'); }
-function shareText(mode, sc){
+// 送る一言は「1問だけ見せて、問いかける」（鑑定者本人 2026-11-17「案Bでお願いします」）：いちばん早く決めた問題とその答え＋キャラ
+function shareText(mode, sc, sp, ch){
   var hd=headline(mode), others=AXES[mode].filter(function(ax){ return ax.k!==hd.k; });
+  try{
+    var x=sp&&sp.quick;
+    if(!(x&&(x.c==='A'||x.c==='B'))){ x=null; (S.qs||[]).some(function(q,i){ var c=(S.ans[0]||[])[i]; if(c==='A'||c==='B'){ x={q:q,c:c,t:(S.times[0]||[])[i]||0}; return true; } }); }
+    if(x&&x.q&&x.q.a&&x.q.b){
+      var mine=x.c==='A'?x.q.a:x.q.b, sec=Math.round((x.t||0)/100)/10;
+      var tail=ch&&ch.main ? '（ちなみに、わたしの'+(mode==='love'?'恋':'ふだん')+'のキャラは「'+ch.main.name+'」）' : '（ちなみに、わたしの'+hd.cap+'は'+sc[hd.k]+'%）';
+      return '【究極の二択】\n'+x.q.a+' VS '+x.q.b+'\n\nわたしは'+(sec>0&&sec<3?sec+'秒で':'')+(/^「.*」$/.test(mine)?mine:'「'+mine+'」')+'を選んだ。\nあなたはどっち？\n\n'+tail+'\n#究極の二択 #本音バレ診断';
+    }
+  }catch(e){}
   return 'わたしの'+hd.cap+'は '+sc[hd.k]+'% でした\n'+others.map(function(ax){ return ax.name+sc[ax.k]+'%'; }).join('／')+
     '\n\n究極の二択に答えるだけで本音がバレる…\nあなたは何%？\n#究極の二択 #本音バレ診断';
 }
 // LINEを開いて、文とサイトのリンクが入った状態にする
 function lineHref(text){ return 'https://line.me/R/share?text='+encodeURIComponent(text+'\n'+location.href.split('#')[0].split('?')[0]); }
-function doShare(text){
-  var url = location.href.split('#')[0].split('?')[0];
+function doShare(text, u){
+  var url = u || location.href.split('#')[0].split('?')[0];
   if(navigator.share){ navigator.share({ title:'究極の二択', text:text, url:url }).catch(function(){}); return; }
   var full = text+'\n'+url;
   var done=function(){ toast('コピーしました。LINEやSNSに貼ってね'); };
@@ -2808,6 +2842,7 @@ function histHTML(mode, h){
 }
 var PROMO='<a class="promo" href="https://166unmei.com" target="_blank" rel="noopener" aria-label="1.66 奇跡の相性診断で占う（別のサイト 166unmei.com が開きます）"><span class="pr-pair" aria-hidden="true"><img src="img/166-usagi.webp" alt="" width="74" height="72" loading="lazy"><i>×</i><img src="img/166-inu.webp" alt="" width="63" height="72" loading="lazy"></span><span class="pr-m"><span class="pr-k">奇跡の相性診断</span><span class="pr-n">1.66<small>%</small></span><span class="pr-d">あの人は、<em>奇跡の1.66%</em>に入っている？</span></span><span class="pr-btn">生年月日で占う <small>1分・無料 ↗</small></span></a><p class="promo-u">166unmei.com（別のサイト）</p>';
 function showResult(){
+  if(S.withInv) return showWithResult();
   var mode=S.mode, sc=score(mode,S.qs,S.ans[0]), hd=headline(mode), val=sc[hd.k];
   var sp=speedStats(S.qs,S.times[0],S.ans[0]);
   var hist=saveHist(mode, sc);
@@ -2834,14 +2869,20 @@ function showResult(){
        (sp.slow ? '<p style="font-size:13px;color:var(--sub);margin:8px 0 0">悩んだ問題は、あなたの「迷いどころ」。どっちも捨てがたい本音が、そこにあるのかも。</p>' : '')+
        '<p style="font-size:14px;color:var(--sub)">'+(sp.rate>=70?'迷いのなさがすごい。自分の気持ちがはっきりしている人。':(sp.rate<=30?'どっちも本気で考えてしまう、やさしい人。':'ここぞという問題で、ちゃんと悩める人。'))+'</p></div>';
   }
+  h+=wCardHTML();
   h+=PROMO+endButtons()+shareRow('lshare','share','save')+homeLink();
   $('gres-body').innerHTML='';
   $('res-body').innerHTML=h;
   if(!S.qs._g) S.qs._g=Date.now()+'-'+Math.random();
   fillRanks($('res-body'));
   Stats.play('solo:'+S.qs._g, 'solo', mode, playLv(), S.qs, S.ans[0]);
-  $('share').onclick=function(){ doShare(shareText(mode,sc)); };
-  $('lshare').href=lineHref(shareText(mode,sc));
+  var stx=shareText(mode,sc,sp,ch);
+  // 名前がわかっていれば、送る文のリンクは「同じ問題で答え合わせ」のリンクにする（案D）
+  S.wShare=function(){ var nm=wName(), ok=nm && wCount(S.ans[0])*2>=S.qs.length, u=ok ? withUrl(nm) : null, t=ok ? stx+'\n\nこの問題をふくむ'+S.qs.length+'問で、わたしと答え合わせできるよ↓' : stx;
+    $('lshare').href= u ? 'https://line.me/R/share?text='+encodeURIComponent(t+'\n'+u) : lineHref(t);
+    $('share').onclick=function(){ doShare(t, u); }; };
+  S.wShare();
+  bindWCard();
   $('save').onclick=function(){ saveImage($('res-body')); };
   bindEnd();
   show('s-res');
@@ -2907,7 +2948,148 @@ function aishoHTML(mode){
   }
   return h+'</div>';
 }
+/* 部屋で途中で抜けた人（答えた問題が半分より少ない人）は、ランキング・発表・価値観の近さ・ひとりずつの結果に入れず、
+   「途中で抜けた人」の1行にまとめる。半分以上答えた人は名前の横に「12/15問」（鑑定者本人 2026-11-17「半分の案でお願いします」）。
+   答えたかどうかは部屋の記録で見る（時間切れも「その場にいた」に数える）。残りが2人より少なくなるときは外さない */
+/* ───── 答え合わせのリンク（鑑定者本人 2026-11-17「案Dもお願いします」。見本 https://claude.ai/artifact/Nmy2rcocMWZryDMHa8Rujz）─────
+   ひとりで遊んだ人の問題と答えをリンクの中に入れて送る（どこにも保存しない）。開いた人は同じ問題に答え、2人の結果（価値観の近さ）を見る。
+   #with=編.難しさ.名前.答え ／ 2人の結果を送り返す #pair=編.難しさ.名前1.答え1.名前2.答え2。答え＝問題の番号_a/b/x（x＝時間切れ）＋秒（0.1秒きざみ）。
+   a/b は問題データの左右（画面の左右は毎回入れかわるため） */
+var W_LV={easy:'e',normal:'n',hard:'h'}, W_LVR={e:'easy',n:'normal',h:'hard'};
+function wName(){ return String(store('nitaku_me')||'').replace(/[.~#]/g,'').slice(0,6); }
+function wCount(ans){ return (ans||[]).filter(function(c){ return c==='A'||c==='B'; }).length; }
+function wPack(qs, ans, times){ return qs.map(function(q,i){ var c=(ans||[])[i], cc=(c==='A'||c==='B') ? canon(q,c) : 'x', t=Math.max(0,Math.min(150,Math.round(((times||[])[i]||0)/100))); return q.id+'_'+cc+t.toString(36); }).join('-'); }
+function wUnpack(mode, str){
+  var map={}; (POOL[mode]||[]).forEach(function(q){ map[q.id]=q; });
+  var out=[]; String(str||'').split('-').forEach(function(it){ var m=/^([0-9a-z]+)_([abx])([0-9a-z]*)$/.exec(it); if(m && map[m[1]]) out.push({ q:map[m[1]], c:m[2], t:(parseInt(m[3]||'0',36)||0)*100 }); });
+  return out;
+}
+function wBase(){ return location.href.split('#')[0].split('?')[0]; }
+function wHead(mode, lv, name){ return (mode==='love'?'l':'n')+'.'+(W_LV[lv]||'n')+'.'+encodeURIComponent(String(name).replace(/[.~#]/g,'')); }
+function withUrl(name){ return wBase()+'#with='+wHead(S.mode, S.lv, name)+'.'+wPack(S.qs, S.ans[0], S.times[0]); }
+function wParse(h){
+  var m=/^#(with|pair)=([ln])\.([enh])\.([^.]*)\.([0-9a-z_\-]+)(?:\.([^.]*)\.([0-9a-z_\-]+))?$/.exec(h||'');
+  if(!m) return null;
+  var dn=function(x){ try{ return decodeURIComponent(x||'').slice(0,6); }catch(e){ return ''; } };
+  var mode=m[2]==='l'?'love':'normal';
+  return { kind:m[1], mode:mode, lv:W_LVR[m[3]]||'normal', n1:dn(m[4])||'ともだち', raw1:m[5], i1:wUnpack(mode,m[5]), n2:dn(m[6])||'ともだち', raw2:m[7]||'', i2:m[7]?wUnpack(mode,m[7]):[] };
+}
+// リンクの答え（問題データの左右）を、いまの画面の A/B にもどす
+function wAns(qs, items){ return qs.map(function(q,i){ var it=items[i]; if(!it || it.c==='x') return undefined; return ((it.c==='a') !== !!q.sw) ? 'A' : 'B'; }); }
+function wTimes(items){ return items.map(function(it){ return it && it.c!=='x' && it.t ? it.t : undefined; }); }
+function wQs(items, swap){ return items.map(function(it){ var q=it.q, sw=swap && Math.random()<0.5; return { id:q.id, a:sw?q.b:q.a, b:sw?q.a:q.b, ta:sw?q.tb:q.ta, tb:sw?q.ta:q.tb, ex:q.ex, user:q.user, sw:sw }; }); }
+function wFail(){ toast('リンクをうまく読みとれませんでした。もう一度送ってもらってね'); updatePoolNote(); show('s-home'); }
+/* ひとりの結果の「答え合わせに誘う」カード */
+function wCardHTML(){
+  if(wCount(S.ans[0])*2 < S.qs.length) return '';
+  return '<div class="card wcard"><h3>この'+S.qs.length+'問で、だれかと答え合わせ</h3>'+
+    '<p class="hint">リンクを開いた人が同じ問題に答えると、2人の価値観の近さが出ます。あなたの答えは、相手が答え終わるまで見えません。</p>'+
+    '<div class="prow"><div class="pf"><input type="text" id="w-name" maxlength="6" placeholder="あなたの名前（6文字まで）" value="'+esc(wName())+'"></div></div>'+
+    '<a class="big lb-line" id="w-line" href="https://line.me/R/share" target="_blank" rel="noopener">LINEで答え合わせに誘う</a>'+
+    '<button class="tell-s" id="w-share" type="button">ほかのアプリで送る</button></div>';
+}
+function bindWCard(){
+  var inp=$('w-name'); if(!inp) return;
+  var text=function(){ return '究極の二択、同じ'+S.qs.length+'問で答え合わせしよう！\nわたしの答えは、あなたが答え終わるまで見えないよ。\n終わったら、2人の価値観の近さが何%か出る！\n#究極の二択 #本音バレ診断'; };
+  var nm=function(){ var v=inp.value.replace(/[.~#]/g,'').trim().slice(0,6); if(!v){ toast('名前を入れてね'); inp.focus(); return ''; } store('nitaku_me', v); if(S.wShare) S.wShare(); return v; };
+  inp.onchange=function(){ var v=inp.value.replace(/[.~#]/g,'').trim().slice(0,6); if(v){ store('nitaku_me', v); if(S.wShare) S.wShare(); } };
+  $('w-line').onclick=function(e){ var v=nm(); if(!v){ e.preventDefault(); return; } this.href='https://line.me/R/share?text='+encodeURIComponent(text()+'\n'+withUrl(v)); };
+  $('w-share').onclick=function(){ var v=nm(); if(v) doShare(text(), withUrl(v)); };
+}
+/* リンクを開いた人：お誘いの画面 → 同じ問題に答える */
+function withOpen(W){
+  if(!W || W.i1.length < 5){ wFail(); return; }
+  setMode(W.mode); S.lv=W.lv; S.hon=false; S.honPlay=false; S.lastHon=false; S.room=null; S.mix=false;
+  document.querySelectorAll('.mode').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.m===W.mode?'true':'false'); });
+  pickWho('solo');
+  S.withInv=W;
+  var LV={easy:'イージー',normal:'ノーマル',hard:'🔥ハード'};
+  $('wi-t').innerHTML='<span class="nw">'+esc(W.n1)+'さんから、</span><span class="nw">答え合わせのお誘い</span>';
+  $('wi-tags').innerHTML=[MODE_NAME[W.mode], LV[W.lv]||'ノーマル', W.i1.length+'問', '1問15秒'].map(function(t){ return '<span>'+t+'</span>'; }).join('');
+  $('wi-n').innerHTML='<span>'+esc(W.n1)+'さんと同じ問題に答えます。</span><span>'+esc(W.n1)+'さんの答えは、あなたが答え終わるまで見えません。</span>';
+  if(!$('wi-name').value) $('wi-name').value=wName();
+  show('s-with');
+}
+$('wi-go').onclick=function(){
+  var W=S.withInv; if(!W){ wFail(); return; }
+  var v=$('wi-name').value.replace(/[.~#]/g,'').trim().slice(0,6);
+  if(!v){ toast('名前を入れてね'); $('wi-name').focus(); return; }
+  store('nitaku_me', v); W.me=v;
+  try{ history.replaceState(null,'',wBase()); }catch(e){}
+  S.who='solo'; S.num=W.i1.length;
+  S.qs=wQs(W.i1, true);
+  markSeen(W.mode, S.qs);
+  S.counts=null; S.sent={};
+  Votes.get(S.qs.map(function(q){ return q.id; })).then(function(c){ S.counts=c; });
+  S.players=[{name:v}]; S.qi=0; S.pi=0; S.ans=[[]]; S.times=[[]];
+  showQ();
+};
+$('wi-name').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); $('wi-go').onclick(); } });
+/* 2人の結果（みんなの結果と同じ形）。答えた人＝自分を先に */
+function wTwo(n1, a1, t1, n2, a2, t2, opt){
+  var P0=S.players, A0=S.ans, T0=S.times, rv=S.rv;
+  S.players=[{name:n1},{name:n2}]; S.ans=[a1,a2]; S.times=[t1,t2];
+  S.sent=S.sent||{}; S.qs.forEach(function(q){ S.sent[sentKey(q)]=1; });   // 相手の答えは相手のスマホが数えている
+  var pb=null;
+  try{ showGroupResultCore(); pb=aishoPairs()[0]; }
+  finally{ S.players=[{name:'あなた'}]; S.ans=[A0[0]||[]]; S.times=[T0[0]||[]]; S.rv=rv; }
+  var hero=$('gres-body').querySelector('.res-hero .gtt'); if(hero) hero.textContent='2人の答え合わせ';
+  var pre=$('gres-body').querySelector('.res-hero .pre'); if(pre) pre.textContent=playName(S.mode)+'　'+n1+'さん × '+n2+'さん';
+  return pb;
+}
+function showWithResult(){
+  var W=S.withInv, mode=S.mode; S.withInv=null;
+  var me=W.me||wName()||'あなた', myA=S.ans[0]||[], myT=S.times[0]||[];
+  Stats.play('solo:'+(S.qs._g=Date.now()+'-'+Math.random()), 'solo', mode, playLv(), S.qs, myA);
+  saveHist(mode, score(mode,S.qs,myA));
+  var invA=wAns(S.qs, W.i1), invT=wTimes(W.i1);
+  var pb=wTwo(me, myA, myT, W.n1, invA, invT);
+  var pairUrl=wBase()+'#pair='+wHead(mode, W.lv, me)+'.'+wPack(S.qs, myA, myT)+'.'+encodeURIComponent(W.n1.replace(/[.~#]/g,''))+'.'+W.raw1;
+  var t='究極の二択で、'+W.n1+'さんと答え合わせしたよ！'+(pb?'\n2人の価値観の近さは '+pb.r+'%':'')+'\n\n2人の結果はこちら↓';
+  var l=$('lgshare'); if(l){ l.textContent=W.n1+'さんに結果を送る'; l.href='https://line.me/R/share?text='+encodeURIComponent(t+'\n'+pairUrl); }
+  $('gshare').onclick=function(){ doShare(t, pairUrl); };
+}
+/* 送り返された2人の結果を開いたとき */
+function pairOpen(W){
+  if(!W || W.i1.length<5 || W.i2.length!==W.i1.length){ wFail(); return; }
+  setMode(W.mode); S.lv=W.lv; S.hon=false; S.honPlay=false; S.lastHon=false; S.room=null; S.mix=false; S.withInv=null;
+  pickWho('solo');
+  S.qs=wQs(W.i1, false); S.counts=null;
+  Votes.get(S.qs.map(function(q){ return q.id; })).then(function(c){ S.counts=c; });
+  // 開くのはふつう誘った人なので、誘った人（2人目）を先に
+  wTwo(W.n2, wAns(S.qs, W.i2), wTimes(W.i2), W.n1, wAns(S.qs, W.i1), wTimes(W.i1));
+}
+function wRoute(){
+  var h=location.hash||''; if(!/^#(with|pair)=/.test(h)) return;
+  var W=wParse(h);
+  if(W && W.kind==='pair') pairOpen(W); else withOpen(W);
+}
+setTimeout(wRoute, 0);
+window.addEventListener('hashchange', wRoute);
 function showGroupResult(){
+  var R=S.room;
+  if(!R || !R.data || !S.qs.length) return showGroupResultCore();
+  var Q=S.qs.length, keep=[], gone=[];
+  S.players.forEach(function(p,i){
+    var pl=(R.players||[]).filter(function(x){ return x.pid===p.pid; })[0] || (p.pid===R.pid ? Object.assign({pid:R.pid}, R.me) : null);
+    var c=0; for(var k=0;k<Q;k++){ if(pl && answeredKey(R, pl, R.data.round+':'+k)) c++; }
+    (c*2>=Q ? keep : gone).push({ i:i, c:c });
+  });
+  if(keep.length<2){ keep=keep.concat(gone).sort(function(a,b){ return a.i-b.i; }); gone=[]; }
+  if(!gone.length && keep.every(function(x){ return x.c>=Q; })) return showGroupResultCore();
+  var P0=S.players, A0=S.ans, T0=S.times;
+  S.players=keep.map(function(x){ var p=Object.assign({}, P0[x.i]); if(x.c<Q) p.part=x.c+'/'+Q; return p; });
+  S.ans=keep.map(function(x){ return A0[x.i]; }); S.times=keep.map(function(x){ return T0[x.i]; });
+  try{ showGroupResultCore(); }
+  finally{ S.players=P0; S.ans=A0; S.times=T0; }
+  var body=$('gres-body'), hero=body && body.querySelector('.res-hero');
+  if(hero && gone.length){
+    var d=document.createElement('p'); d.className='hint gone-note';
+    d.textContent='途中で抜けた人：'+gone.map(function(x){ return P0[x.i].name+'さん（'+x.c+'／'+Q+'問）'; }).join('、')+'。答えた問題が半分より少ないので、結果には入れていません。';
+    hero.parentNode.insertBefore(d, hero.nextSibling);
+  }
+}
+function showGroupResultCore(){
   if(S.room && S.room.data && S.room.data.mode==='hon') return showHonGroupResult();
   var mode=S.mode, hd=headline(mode), n=S.players.length;
   // 最後にまとめて答え合わせしたときは、ここでみんなの回答％に数える（1問ずつのときは結果発表のたびに数えている）
@@ -2916,7 +3098,7 @@ function showGroupResult(){
     var sc=score(mode,S.qs,S.ans[i]);
     return { p:p, sc:sc, i:i };
   });
-  var h='<div class="res-hero"><div class="pre">'+playName(mode)+'　'+n+'人の結果</div><div class="type">みんなの本音、発表</div>'+
+  var h='<div class="res-hero"><div class="pre">'+playName(mode)+'　'+n+'人の結果</div><div class="type gtt">みんなの本音、発表</div>'+
         '<div class="catch">いちばん'+hd.cap.replace('度','')+'なのは…</div>';
   var top = R.slice().sort(function(a,b){ return b.sc[hd.k]-a.sc[hd.k]; })[0];
   // 同じ％で並んだ人がいれば、全員の名前を出す
@@ -2974,7 +3156,7 @@ function showGroupResult(){
     var me=(r.i===meI), tone=ri%2?'kt-b':'kt-a';
     h+='<details class="pcard '+(ri%2?'ppl-b':'ppl-a')+'"'+(me||(meI<0&&ri===0)?' open':'')+'><summary class="pc-sum">'+
        (cimg?'<img src="'+cimg+'" alt="" width="52" height="52">':'<span class="pc-ring" style="--v:'+hv+'"><b>'+hv+'</b></span>')+
-       '<span class="pc-n"><b>'+esc(r.p.name)+(me?'（あなた）':'')+'</b><small>'+(co?esc(co.main.name)+'・':'')+hd.cap+' '+hv+'%</small></span></summary>'+
+       '<span class="pc-n"><b>'+esc(r.p.name)+(me?'（あなた）':'')+(r.p.part?'<i class="pc-part">'+r.p.part+'問</i>':'')+'</b><small>'+(co?esc(co.main.name)+'・':'')+hd.cap+' '+hv+'%</small></span></summary>'+
        '<div class="ppl '+(ri%2?'ppl-b':'ppl-a')+'"><div class="pp-top"><div class="pp-ring" style="--v:'+hv+'"><b>'+hv+'%</b></div><div class="pp-who"><strong>'+esc(r.p.name)+'</strong><span>'+hd.cap+'</span></div></div>'+
        '<div class="pp-say">'+axComment(hd.k, hv)+'</div>'+rkSpan(mode, hd.k, hv, me?'あなた':r.p.name+'さん')+
        '<div class="pp-tiles">'+oth.map(function(ax,j){ return '<div class="pt'+j+'"><small>'+ax.name.replace(/度$/,'')+'</small><b>'+r.sc[ax.k]+'%</b></div>'; }).join('')+'</div>'+

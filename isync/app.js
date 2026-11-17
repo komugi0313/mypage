@@ -23,8 +23,19 @@ const WT=k=>WB.has(k)?2:WL.has(k)?.5:1;
 const TOPICS={all:['恋愛・連絡','暮らし','食','お金','休日・遊び','将来・家族'].map(CI),
   party:['ドキドキ','恋愛・連絡','休日・遊び','ドキドキ','食','暮らし'].map(CI)};
 const MAXP=10, KON_MAX=40, KON_LEN=20;
-// 時間の制限は出さない（焦らせないため）。答えない人がいて止まったときだけ：ふつうの部屋は45秒で「答えた人だけで先に進む」、婚活の部屋は60秒で自動で次へ
-const WAIT_BTN=45, KON_WAIT=60;
+// 婚活の部屋は主催者の画面が60秒で自動で次へ
+const KON_WAIT=60;
+// 1問15秒（ひとりでも部屋でも）。部屋は、問題が出てから20秒たっても答えがそろわなければ、だれのスマホからでも次へ進む（鑑定者本人 2026-11-17「15秒」「20秒待機して来なかったら強制的に進む」）
+const Q_LIMIT=15, WAIT_ADV=20;
+let QT=null;
+function qTimer(t0,onEnd){clearInterval(QT);let ended=false;
+  const tick=()=>{const el=$('qtime');if(!el){clearInterval(QT);return}
+    const left=Math.max(0,Q_LIMIT*1000-(Date.now()-t0)),sec=Math.ceil(left/1000);
+    const bar=el.querySelector('i'),tx=el.querySelector('span');if(bar)bar.style.width=(left/(Q_LIMIT*10))+'%';
+    if(tx&&tx.dataset.s!==String(sec)){tx.dataset.s=sec;tx.textContent=sec+'秒'}
+    el.classList.toggle('low',sec<=5);
+    if(left<=0&&!ended){ended=true;clearInterval(QT);onEnd()}};
+  tick();QT=setInterval(tick,200)}
 const maxOf=room=>room&&room.kind==='kon'?KON_MAX:MAXP;
 const OPTS=['A','B','どっちでも合わせられる'];
 const $=id=>document.getElementById(id);
@@ -227,7 +238,7 @@ function goTop(){
 
 /* ===== 1問の画面（どのモードでも同じ） =====
    o: 0=A 1=B 2=こだわらない（3つ目の答え） ／ st: ★ゆずれない（相手の答えの予想はなくした＝鑑定者本人の判断 2026-11-13） */
-function askHTML(k,i,n,{who,step,star,starOn}){
+function askHTML(k,i,n,{who,step,star,starOn,to}){
   const q=Q[k],cat=CATS[q[0]];
   const opt=(v,cls='')=>`<button class="opt ${cls}" data-v="${v}">${v<2?`<span class="k">${OPTS[v]}</span>`:''}<span>${esc(ans(v,k))}</span></button>`;
   return `<section class="card ask"><img class="chara c-ask" src="img/pair-think.webp" width="124" height="79" alt="" aria-hidden="true">
@@ -235,7 +246,8 @@ function askHTML(k,i,n,{who,step,star,starOn}){
     <div class="qhead"><span class="tag catg c${q[0]}">${esc(cat[0])}</span><span class="qn">${i+1}／${n}${who?`　${esc(who)}`:''}</span></div>
     ${cat[1]?`<p class="if">${esc(cat[1])}</p>`:''}
     <h2 class="q">${esc(q[1])}</h2>
-    ${step==='done'?`<div class="match">答えました！</div><p class="hint" id="tcnt">みんなを待っています</p><div id="skipq"></div>`:`
+    ${step==='done'?`<div class="match">${to?'時間切れ':'答えました！'}</div><div class="hint" id="tcnt">みんなを待っています</div><div id="skipq"></div>`:`
+    <div class="qtime" id="qtime" role="timer" aria-label="のこり時間"><span class="qt-s">${Q_LIMIT}秒</span><b class="qt-b"><i></i></b></div>
     <p class="label">あなたはどっち？</p>
     ${star?`<button class="star" id="star" aria-pressed="${!!starOn}">★ ここはゆずれない</button>`:''}
     <div class="opts">${opt(0)}${opt(1)}${opt(2,'mid')}</div>`}
@@ -270,19 +282,25 @@ function localAsk(){
   const p=L.players[L.p],k=L.qs[L.i],n=L.qs.length,multi=L.players.length>1;
   const a=p.ans[L.i]||(p.ans[L.i]={o:-1,st:0,ms:0});
   view(askHTML(k,L.i,n,{who:multi?p.name+'さん':'',step:'own',star:n===30,starOn:a.st}));
-  const t0=Date.now();
-  bindAsk((v,starOn)=>{
-    if(v===null){a.st=starOn?1:0;return}
-    a.o=v;a.ms=Date.now()-t0;
-    const go=()=>{
+  const t0=Date.now();let fin=false;
+  const go=()=>{
     L.i++;
     if(L.i<n){localAsk();return}
     L.i=0;L.p++;
     if(L.mode==='pair'){showResult({players:[L.partner,L.players[0]],qs:L.qs,me:'me',anon:false,local:true,pair:true});return}
     showResult({players:L.players,qs:L.qs,me:L.mode==='solo'?'me':null,anon:false,local:true});
     };
+  bindAsk((v,starOn)=>{
+    if(v===null){a.st=starOn?1:0;return}
+    if(fin)return;fin=true;clearInterval(QT);
+    a.o=v;a.ms=Date.now()-t0;a.to=0;
     if(!multi&&flashVotes(k,v))setTimeout(go,1400);else go();
   });
+  // 15秒たったら「時間切れ」で次の問題へ（答えなしとして数えない）
+  qTimer(t0,()=>{if(fin)return;fin=true;a.o=-1;a.ms=Q_LIMIT*1000;a.to=1;
+    app.querySelectorAll('.opt,#star').forEach(b=>b.disabled=true);
+    const el=$('qtime');if(el){el.classList.add('end');el.querySelector('span').textContent='時間切れ'}
+    setTimeout(go,900)});
 }
 
 /* ===== 結果 ===== */
@@ -390,7 +408,7 @@ async function kyoRun(G){
 // シンクロ率のひとこと（低くても前向きに読める言い方。鑑定者本人 2026-11-17）
 function syncMsg(pct,two){const w=two?'2人':'メンバー';
   if(pct>=HIGH_SYNC)return{msg:two?'とても相性のいい2人です':'とても相性のいいメンバーです',sub:''};
-  if(pct>=60)return{msg:'いい感じにわかり合えています',sub:''};
+  if(pct>=60)return{msg:'いい感じにわかり合えています',sub:'重なるところが多いから、ちがうところも話しやすい関係です。'};
   if(pct>=40)return{msg:'ほどよく重なって、ほどよくちがう'+w,sub:'同じところは安心に、ちがうところは新しい発見に。'};
   return{msg:'発見の多い'+w,sub:'答えが分かれたところほど、話すとおたがいのことがよくわかります。'}}
 const foldBox=(t,sm,inner)=>`<details class="fold"><summary><span class="ft">${t}${sm?`<small>${sm}</small>`:''}</span></summary><div class="fb">${inner}</div></details>`;
@@ -423,7 +441,7 @@ function showResult(G){
     <p class="cap">${two?'2人':ps.length+'人'}のシンクロ率</p>
     <div class="ring" style="background:${hi?`conic-gradient(#8FE3CF 0,#A9B2F5 ${pct/2}%,#F4B6D6 ${pct}%,var(--line) ${pct}% 100%)`:`conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)`}"><div class="in"><span class="num" data-v="${pct}">${pct}<small>%</small></span></div></div>
     <p class="msg">${sm.msg}</p>${hi?`<p class="hs-sub">${two?'暮らしの感覚が、ほとんど重なっています。<br>一緒にいて自然体でいられる組み合わせ。':'みんなの感覚が、ほとんど重なっています。<br>集まると自然体でいられるメンバー。'}</p>`:sm.sub?`<p class="hs-sub">${sm.sub}</p>`:''}${P2?`<p class="hint p2n">ぴったり ${P2.same.length}問・合わせられる ${P2.adj.length}問・ちがい ${P2.diff.length}問</p>`:''}
-    ${!hi&&diffN?`<span class="seed">話のタネ ${diffN}問</span><button class="jump" id="tojump" type="button">${diffN<=5?`ちがった${diffN}問を見る ↓`:'話しておきたいことを見る ↓'}</button>`:''}
+    ${diffN?`<span class="seed">${hi?'100%に近づく話のタネ':'話のタネ'} ${diffN}問</span><button class="jump" id="tojump" type="button">${diffN<=5?`ちがった${diffN}問を見る ↓`:'話しておきたいことを見る ↓'}</button>`:''}
     <p class="hint">${two?'2人の':'みんなの'}答えが、どれだけ重なったか（大事な問題と★ゆずれないは重く数えています）</p></section>`;
   const trows=themeRows(G);
   const done=()=>{bindTail(G);countUp();votesRun(G);kyoRun(G);const j=$('tojump');if(j)j.onclick=()=>{const t=$('talk');if(t)t.scrollIntoView({behavior:'smooth',block:'start'})}};
@@ -479,7 +497,7 @@ function soloHTML(G){
   const top=shape||`<section class="card score"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true"><p class="cap">${who}の「合わせられる度」</p>
     <div class="ring" style="background:conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)"><div class="in"><span class="num">${pct}<small>%</small></span></div></div><p class="msg">${msg}</p></section>`;
   const kod=(star.length?`<p class="sub">★ ゆずれないこと</p><ul class="list">${star.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${esc(ans(x.a.o,x.k))}</li>`).join('')}</ul>`:'')
-    +`<ul class="list">${firm.filter(x=>!x.a.st).map(x=>`<li><b>${esc(CATS[Q[x.k][0]][0])}｜${esc(Q[x.k][1])}</b><span class="ansrow"><i class="o${x.a.o}">${esc(ans(x.a.o,x.k))}</i></span></li>`).join('')||(star.length?'':'<li>今回はぜんぶ「こだわらない」でした</li>')}</ul>`;
+    +`<ul class="list">${firm.filter(x=>!x.a.st).map(x=>`<li><b>${esc(CATS[Q[x.k][0]][0])}｜${esc(Q[x.k][1])}</b><span class="ansrow"><i class="o${x.a.o}">${esc(ans(x.a.o,x.k))}</i></span></li>`).join('')||(star.length?'':xs.length?'<li>今回はぜんぶ「こだわらない」でした</li>':'<li>時間切れで、答えた問題がありませんでした</li>')}</ul>`;
   const flx=(flex.length?`<p class="sub">合わせられること</p><p class="hint">${flex.map(x=>esc(Q[x.k][1])).join('　')}</p>`:'')
     +(byT.length>1?`<p class="sub">いちばん悩んだ問題</p><div class="ponder"><b>${esc(Q[byT[0].k][1])}</b><span>「${esc(ans(byT[0].a.o,byT[0].k))}<span style="white-space:nowrap">」まで <em>${sec(byT[0].a.ms)}</em> 秒</span></span></div>
     <p class="hint">いちばん即決は「${esc(Q[byT[byT.length-1].k][1])}」（${sec(byT[byT.length-1].a.ms)} 秒）</p>`:'');
@@ -840,8 +858,11 @@ async function pull(force){
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&R.code){subscribe();pull(true)}});
 function leaveRoom(keep){R.un.forEach(f=>{try{f()}catch(e){}});R.un=[];R.code=null;clearInterval(R.tick);clearInterval(R.poll);if(!keep)store('kv_room',null)}
 async function roomUpdate(patch){const db=await getDb();try{await db.doc('rooms/'+R.code).update(patch)}catch(e){}}
-function advance(k,rd){const id=rd+'-'+k;if(R.adv[id])return;R.adv[id]=1;const n=(R.room.qs||[]).length;roomUpdate(k+1<n?{qi:k+1}:{phase:'result'})}
+function advance(k,rd){const id=rd+'-'+k;if(R.adv[id])return;if(R.room&&((R.room.qi||0)!==k||(R.room.round||1)!==rd||R.room.phase!=='play'))return;R.adv[id]=1;const n=(R.room.qs||[]).length;roomUpdate(k+1<n?{qi:k+1}:{phase:'result'})}
 const rAns=(p,k)=>{const x=p&&p.ans&&p.ans[k];return x?{o:x.o,st:x.st||0,ms:x.ms||0,to:!!x.to,d:!!x.d}:null};
+// 前の問題にも今の問題にも答えの書きこみがない人（画面を閉じた人）は「お休み中」として待たない。また答えれば次の問題から待つ
+const rDone=(p,k,rd)=>{const a=rAns(p,k);return !!(a&&a.d&&(p.round||1)===rd)};
+const rActive=(p,k,rd)=>p.id===PID||k===0||(p.round||1)!==rd?true:!!(rAns(p,k-1)&&rAns(p,k-1).d)||!!rAns(p,k);
 async function sync(){
   const room=R.room,me=R.players[PID];
   if(!R.code||room===undefined)return;
@@ -858,12 +879,12 @@ async function sync(){
       R.seenIds=ps.map(p=>p.id);R.key=key;room.kind==='kon'?konWait():lobby()}
     return}
   if(room.phase==='play'){
-    const k=room.qi||0,done=ps.filter(p=>{const a=rAns(p,k);return a&&a.d&&(p.round||1)===rd});
-    if(done.length>=ps.length&&ps.length>0){advance(k,rd);return}
+    const k=room.qi||0,done=ps.filter(p=>rDone(p,k,rd)),act=ps.filter(p=>rActive(p,k,rd));
+    if(act.length&&act.every(p=>rDone(p,k,rd))&&room.kind!=='kon'||(room.kind==='kon'&&done.length>=ps.length&&ps.length>0)){advance(k,rd);return}
     const qk='q'+rd+'-'+k;
     if(R.key!==qk){const fresh=k===0&&!/^q/.test(R.key);R.key=qk;R.my={o:-1,st:0,ms:0,fin:false};
       if(fresh){markSeen(room.qs);countdown(qk,()=>{R.seen[qk]=Date.now();rAsk(k,qk)})}else{R.seen[qk]=Date.now();rAsk(k,qk)}}
-    else if(R.seen[qk])rCount(done.length,ps.length);
+    else if(R.seen[qk])rCount(done.length,ps.length,ps,done);
     return}
   clearInterval(R.tick);
   if(room.phase==='result'&&room.kind==='kon'){
@@ -876,26 +897,26 @@ async function sync(){
 }
 function countdown(qk,go){
   const ps=plist();let n=3;
-  const draw=()=>view(`<section class="card hand"><p class="cap">${ps.length}人そろいました</p><p class="cd">${n}</p><p class="hint">${R.room&&R.room.kind==='kon'?'あわてなくて大丈夫です。全員が答えたら、次の問題へ進みます。':'時間の制限はありません。全員が答えたら、次の問題へ。'}</p></section>`);
+  const draw=()=>view(`<section class="card hand"><p class="cap">${ps.length}人そろいました</p><p class="cd">${n}</p><p class="hint">${R.room&&R.room.kind==='kon'?'あわてなくて大丈夫です。全員が答えたら、次の問題へ進みます。':'1問15秒です。全員が答えたら、次の問題へ。'}</p></section>`);
   draw();clearInterval(R.tick);
   R.tick=setInterval(()=>{if(R.key!==qk){clearInterval(R.tick);return}n--;if(n>0)draw();else{clearInterval(R.tick);go()}},800);
 }
 function rAsk(k,qk){
   const room=R.room,qid=room.qs[k],n=room.qs.length;
   const draw=()=>{const m=R.my,step=m.fin?'done':'own';
-    view(askHTML(qid,k,n,{step,star:room.len===30||room.kind==='kon',starOn:m.st}));
-    bindAsk(tap);paint()};
+    view(askHTML(qid,k,n,{step,star:room.len===30||room.kind==='kon',starOn:m.st,to:m.to}));
+    bindAsk(tap);paint();if(m.fin)rCountNow();else if(room.kind!=='kon')qTimer(R.seen[qk],timeUp)};
+  // 15秒たったら「時間切れ」を書いて待つ（答えなしとして数えない）
+  const timeUp=()=>{const m=R.my;if(m.fin||R.key!==qk)return;m.o=-1;m.ms=Q_LIMIT*1000;m.fin=true;m.to=true;save(k,true,true);draw()};
   const tap=(v,starOn)=>{const m=R.my;if(v===null){m.st=starOn?1:0;return}
-    if(m.fin)return;
-    m.o=v;m.ms=Date.now()-R.seen[qk];m.fin=true;
+    if(m.fin)return;clearInterval(QT);
+    m.o=v;m.ms=Date.now()-R.seen[qk];m.fin=true;m.to=false;
     save(k,!!m.fin,false);draw()};
   const paint=()=>{};
   clearInterval(R.tick);
-  // 答えない人がいて止まったときだけ、答えた人に「答えた人だけで先に進む」を出す（婚活の部屋は主催者の画面が60秒で進める）
+  // 問題が出てから20秒たっても答えがそろわなければ、そのまま次へ進む（画面を閉じた人を待たない。婚活の部屋は主催者の画面が60秒で進める）
   R.tick=setInterval(()=>{if(R.key!==qk){clearInterval(R.tick);return}
-    if(room.kind==='kon'||!R.my.fin||Date.now()-R.seen[qk]<WAIT_BTN*1000)return;const el=$('skipq');if(!el||el.firstChild)return;
-    el.innerHTML='<p class="hint">まだ答えていない人がいます。画面を閉じてしまったのかも。</p><button class="btn ghost small" id="skipgo">答えた人だけで先に進む</button>';
-    $('skipgo').onclick=()=>advance(k,R.room.round||1)},1000);
+    if(room.kind==='kon'||Date.now()-R.seen[qk]<WAIT_ADV*1000)return;clearInterval(R.tick);advance(k,R.room.round||1)},500);
   draw();
 }
 async function save(k,fin,to){const db=await getDb(),me=R.players[PID];if(!db||!me)return;
@@ -904,8 +925,18 @@ async function save(k,fin,to){const db=await getDb(),me=R.players[PID];if(!db||!
   R.players[PID]=Object.assign({},me,{ans:a});
   try{await db.doc(pPath(R.code,PID)).update({ans:a})}catch(e){}
   if(fin){const ps=plist(),rd=R.room.round||1;   // 自分が最後の1人なら、知らせを待たずにすぐ次へ
-    if(ps.every(p=>{const x=rAns(p,k);return x&&x.d&&(p.round||1)===rd}))advance(k,rd)}}
-function rCount(d,n){const el=$('tcnt');if(el)el.textContent=`みんなを待っています（${d}／${n}人 答えた）`}
+    if(ps.filter(p=>R.room.kind==='kon'||rActive(p,k,rd)).every(p=>rDone(p,k,rd)))advance(k,rd)}}
+// 答えたあと、ほかの人のようすを「考え中…／答えた」で見せる（答えの中身は見せない。鑑定者本人 2026-11-17「相手の様子は考え中ぐらい」）。
+// 名前を見せない部屋・大人数の部屋は人数だけ。新しい通信はなく、今ある答えの書きこみを見るだけ
+function rCount(d,n,ps,done){const el=$('tcnt');if(!el)return;const room=R.room||{};
+  if(!ps||room.anon||room.kind==='kon'){el.textContent=`みんなを待っています（${d}／${n}人 答えた）`;return}
+  const k=room.qi||0,rd=room.round||1,ok=new Set(done.map(p=>p.id));ok.add(PID);
+  const stOf=p=>{if(ok.has(p.id)){const a=p.id===PID?R.my:rAns(p,k);return a&&a.to?'to':'ok'}return rActive(p,k,rd)?'think':'rest'};
+  const key=ps.map(p=>p.id+stOf(p)).join();if(el.dataset.k===key)return;el.dataset.k=key;
+  const lab={ok:'<span class="st ok">答えた</span>',to:'<span class="st off">時間切れ</span>',rest:'<span class="st off">お休み中</span>',think:'<span class="st think">考え中<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></span>'};
+  el.innerHTML=`<div class="seats">${ps.map(p=>`<div class="seat"><span class="nm">${p.id===PID?'あなた':esc(p.name)+'さん'}</span>${lab[stOf(p)]}</div>`).join('')}</div>`}
+function rCountNow(){const room=R.room;if(!room||room.phase!=='play')return;const k=room.qi||0,rd=room.round||1,ps=plist();
+  const done=ps.filter(p=>rDone(p,k,rd));rCount(done.length,ps.length,ps,done)}
 // LINEを開いて、文とリンクが入った状態にする（受け取った人はリンクを押すだけ）
 const lineUrl=(t,u)=>'https://line.me/R/share?text='+encodeURIComponent(t+'\n'+u);
 const siteUrl=()=>WHERE==='claude'?ART_URL:location.href.split('#')[0].split('?')[0];

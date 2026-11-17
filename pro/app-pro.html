@@ -7819,10 +7819,9 @@ function pkWorkStart(c){ try{ const isK=function(y){ return pkKuuBad(c,y); }, gy
   const ny=[]; for(let yy=c.now.year; yy<=c.now.year+8; yy++){ const sg=pkYearSig(c,yy); if(sg&&!isK(yy)) ny.push(sg); }
   const g1=ny.filter(function(x){ return x.mk==='◎'||x.mk==='○'; })[0], g2=ny.filter(function(x){ return x.mk!=='△'; })[0];
   let y=(g1&&g1.y<=c.now.year+4)?g1.y:(g2?g2.y:gy.filter(function(y){ return !isK(y); })[0]), good=!!(g1&&g1.y===y), late=null;
-  // 年運の年の残りが3ヶ月を切っている（立春まで90日未満）ときは、今年を「本格的に動く年」にせず、今年は準備・本格的に動くのは次の良い年にする（2026-11-16 実機点検：11月に「2026年ごろ」と答えていた）
-  try{ const N=pkNenInfo(); if(y&&N&&y===N.Y&&N.leftDays<90){ const h1=ny.filter(function(x){ return x.y>y&&(x.mk==='◎'||x.mk==='○')&&x.y<=c.now.year+4; })[0], h2=ny.filter(function(x){ return x.y>y&&x.mk!=='△'; })[0], h=h1||h2;
-    if(h){ late={y:y,until:N.until}; y=h.y; good=!!(h1&&h1.y===y); } } }catch(e){}
-  return {y:y||0, good:good, prep:[c.now.year,c.now.year+1].filter(isK), late:late}; }catch(e){ return {y:0,good:false,prep:[]}; } }
+  // 今年（年運の年）が動く年なら、立春までの期限を添える（立春で区切る。前の「立春まで90日を切ったら次の年」はやめた＝鑑定者本人の判断 2026-11-17「立春でいいのでは？」）
+  let until=''; try{ const N=pkNenInfo(); if(y&&N&&y===N.Y&&N.until) until=N.until; }catch(e){}
+  return {y:y||0, good:good, prep:[c.now.year,c.now.year+1].filter(isK), late:late, until:until}; }catch(e){ return {y:0,good:false,prep:[]}; } }
 /* 仕事で動く時期の相談（「今年か来年か」の形でないもの）：pkWorkStart の年と、今年・来年のうち解空の年（準備の年に数えない）。pkConsultFocus・pkLeadFix・pkEnsureConsult で同じ（2026-11-05） */
 function pkWorkSt(c,q){ try{ q=String(q||''); if(!c||!c.now||pkKidAge(c)>=0) return null; if(!/(転職|独立|起業|就職|辞め|開業|副業|フリーランス|自営)/.test(q)||!/(いつ|今年|来年|時期|タイミング|頃|ごろ|べき|いい|良い|よい|ほうが|方が)/.test(q)) return null;
   if(pkYearDir0(c,q)) return null; const S=pkWorkStart(c); if(!S||!S.y) return null; const nowY=c.now.year;
@@ -7935,7 +7934,7 @@ function pkOfflineLead(c,q,plain){ try{ q=String(q||''); if(!c||!c.now) return '
     if(y&&kNow.length&&y>kNow[kNow.length-1]) t+=(plain?kNow.map(function(x){ return x+'年'; }).join('・')+'は準備の年にして、':kNow.map(function(x){ return x+'年'+pkKuuTag(c,x,false); }).join('・')+'は準備・試す年にして、');
     else if(y&&S.late) t+='今年の残り（'+S.late.until+'）は準備を進める時期にして、';   // 年運の年の残りが少ないときは「準備は今から、本格的に動くのは次の年」（2026-11-16）
     const _good=S.good;
-    if(y) t+=_good?((plain?'仕事で本格的に動き出しやすいのは、':'本格的に動きやすいのは')+y+'年'+age(y)+'ごろです。'):((plain?'仕事で本格的に動くのは、':'本格的に動くのは')+y+'年'+age(y)+'以降がおすすめです（準備の年が明けるため）。');
+    if(y) t+=_good?((plain?'仕事で本格的に動き出しやすいのは、':'本格的に動きやすいのは')+y+'年'+age(y)+'ごろ'+(S.until?'（'+S.until+'）':'')+'です。'):((plain?'仕事で本格的に動くのは、':'本格的に動くのは')+y+'年'+age(y)+'以降がおすすめです（準備の年が明けるため）。');
     return t; }
   { const D=pkYearDir(c,q); if(D) return plain?D.plain:D.pro; }   // 仕事の言葉がない「今年か来年か」も、オンラインと同じ pkYearDir の向きで答える（2026-11-03）
   { const _r=pkRelLead(c,q,plain); if(_r) return _r; const _ab=pkABLead(c,q,plain); if(_ab) return _ab; }   // 夫婦・家族の関係の悩み／AかB（部活と勉強など）にも1行目で答える（2026-11-02）
