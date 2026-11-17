@@ -300,9 +300,10 @@ function talkHTML(G,nm){
   const row=i=>{const k=G.qs[i];
     const ws=[0,1,2].map(v=>{const who=ps.filter(p=>p.ans[i]&&p.ans[i].o===v);if(!who.length)return '';
       return `<span class="who"><em>${G.anon?who.length+'人':who.map(p=>esc(p.name)).join('・')}</em>${esc(ans(v,k))}${who.some(p=>p.ans[i].st&&v<2)?' ★':''}</span>`}).join('');
-    return `<li><b>${esc(Q[k][1])}</b>${ws}</li>`};
+    const ay=(window.SY_AYUMI||{})[Q[k][1]];
+    return `<li><b>${esc(Q[k][1])}</b>${ws}${ay?`<span class="ayu"><b>歩み寄りの案</b>${esc(ay)}</span>`:''}</li>`};
   return `<section class="card"><p class="label">${two?'2人で':'みんなで'}話しておきたいこと</p>
-    <p class="hint">答えが反対になった問題です（大事な問題・★から順に）。ちがいは悪いことではありません。「どうしてそう思う？」と聞いてみると、相手のことがもっとわかります。</p>
+    <p class="hint">答えが反対になった問題です（大事な問題・★から順に）。ちがいは悪いことではありません。「どうしてそう思う？」と聞いてみてから、下の「歩み寄りの案」を2人なりの形にしてみてください。</p>
     <ul class="slist tk">${its.map(row).join('')}</ul></section>`}
 // ひとこと診断：テーマ別・価値観のタイプ・★ゆずれないから、数行の文を作る
 function hitokoto(G,rows){
