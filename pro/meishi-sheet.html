@@ -1025,6 +1025,17 @@ function _inDu(r,d){ var x=_nowX(r); if(x==null||!d) return false; var m=(d.ageM
         <div class="act" style="margin-left:0"><button type="submit" class="primary">鑑定する</button></div>
         <span class="calc-msg" id="calcMsg" role="status"></span>
       </form>
+      <script>/* アプリから開いたとき（from=app）は、入力欄をたたみ「入力を変える」だけを出す（入れ直さなくてよいことが分かるように。2026-11-17 UX点検） */
+      (function(){ try{ if(!/[?&]from=app(&|$)/.test(window.__SQ||'')) return; var f=document.getElementById('calcForm'); if(!f) return; f.style.display='none';
+        var w=document.createElement('div'); w.id='fromAppBox'; w.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;width:100%;margin:0 0 6px;font-size:14px;font-weight:700;line-height:1.6;color:#3A3226';
+        w.innerHTML='<span id="fromAppTx" style="flex:1 1 220px">アプリで入れた生年月日で作っています（入れ直さなくて大丈夫です）</span><button type="button" id="fromAppTg" class="ghost" aria-expanded="false" style="min-height:44px">✏️ 入力を変える</button>';
+        f.parentNode.insertBefore(w,f);
+        w.querySelector('#fromAppTg').onclick=function(){ var op=f.style.display==='none'; f.style.display=op?'':'none'; this.textContent=op?'▲ 入力をとじる':'✏️ 入力を変える'; this.setAttribute('aria-expanded',String(op)); };
+        var upd=function(){ try{ var n=(document.getElementById('iName')||{}).value||'', d=(document.getElementById('iDate')||{}).value||'', t=(document.getElementById('iTime')||{}).value||'', x=document.getElementById('iSex'), sx=x&&x.selectedIndex>=0?x.options[x.selectedIndex].text:'';
+          var tu=document.getElementById('iTimeTu'), tm=(tu&&tu.style.display!=='none')?'時刻不明':t; if(!d) return;
+          document.getElementById('fromAppTx').textContent=(n?n+'さん　':'')+d.replace(/^(\d{4})-(\d{2})-(\d{2})$/,function(m,y,mo,da){ return y+'年'+(+mo)+'月'+(+da)+'日'; })+(tm?' '+tm:'')+(sx?'・'+sx:'')+'（アプリで入れた内容です。入れ直さなくて大丈夫です）'; }catch(e){} };
+        window.addEventListener('load',function(){ setTimeout(upd,300); }); setTimeout(upd,1500); }catch(e){} })();
+      </script>
       <div class="act">
         <button type="button" id="advToggle" class="ghost" aria-expanded="false">⚙ 詳細設定</button>
         <button type="button" id="outToggle" class="ghost" aria-expanded="false">⚙ 出力内容</button>
@@ -4825,7 +4836,20 @@ function pkFmTidy(t){ try{ t=String(t==null?'':t); var GZ='[甲乙丙丁戊己�
   t=t.replace(/((?:19|20)\d\d)年([（(])[ 　]*\1年[ 　]*[・、／\/][ 　]*/g,'$1年$2').replace(/((?:19|20)\d\d)年[（(][ 　]*\1年[ 　]*[）)]/g,'$1年');
   t=t.replace(new RegExp('((?:19|20)\\d\\d年[（(]('+GZ+')[^（）()\\n]{0,20})([）)])[（(]\\2(?:の年|年)?(?:[・、][ 　]*([^（）()\\n]{1,20}))?[）)]','g'),function(m0,a,g,cl,rest){ return a+(rest&&a.indexOf(rest)<0?'・'+rest:'')+cl; });
   t=pkFmTidy2(t);
+  t=pkFmParenTidy(t);
   return t; }catch(e){ return t; } }
+/* かっこの重なりと「○年の時期は」の直し（2026-11-17 UX点検）：
+   ①「冠帯（かんたい）（誇り高く…）」→「冠帯（かんたい：誇り高く…）」（読みのかっこと説明のかっこを1つに）
+   ②かっこの中のかっこ（「（劫財（＝仲間…）が巡る時期）」）は、中のかっこを〈〉にする（年・干支・年齢など数字の入ったかっこと、喜神・忌神の読みのかっこは変えない）
+   ③「2027年の時期は、」→「2027年は、」（年のあとの「の時期」を外す。範囲・期間の言い方は変えない） */
+function pkFmParenTidy(t){ try{ t=String(t==null?'':t);
+  t=t.replace(/([一-龥]{1,6})（([ぁ-ゖー]{2,14})）（＝?[ 　]*([^（）()\n\d〔〕]{2,40})）/g,function(m0,w,y,g){ return w+'（'+y+'：'+g.replace(/^[ 　]+/,'')+'）'; });
+  if(/（[^（）\n]*（/.test(t)){ var a=t.split(''), st=[];
+    for(var i=0;i<a.length;i++){ var ch=a[i]; if(ch==='\n'){ st=[]; continue; } if(ch==='（'){ st.push(i); continue; }
+      if(ch==='）'&&st.length){ var o=st.pop(); if(st.length){ var inner=a.slice(o+1,i).join(''); if(inner.length>1&&inner.length<=40&&!/[\d０-９〔〕年歳才（）〈〉]/.test(inner)&&!/^(?:きしん|きじん)/.test(inner)&&!/^[月火水木金土日](?:曜日?)?$/.test(inner)){ a[o]='〈'; a[i]='〉'; if(a[o+1]==='＝') a[o+1]=''; } } } }
+    t=a.join(''); }
+  t=t.replace(/((?:19|20)\d\d年(?:（[^（）\n]{0,20}）)?)の時期(?=は|には|になったら|になれば|になると|に(?![向入])|から)/g,'$1');
+  return t; }catch(e){ return String(t==null?'':t); } }
 /* 文のくずれの直し（2026-11-16 実機点検）：
    ①日本語にまじった別の文字（ベンガル文字・ハングルなど。「どう ভয়াবহよいか」）を外し、見出し【どうすればよいか】を元に戻す
    ②印の重なり（「日柱にある日柱（己未）」「日柱（己未）の日柱（にっちゅう＝…）」「大運は 今の大運（戊戌）」「大運癸未（今の大運（癸未）・…）」「いまの今の」「今年のその年の」）

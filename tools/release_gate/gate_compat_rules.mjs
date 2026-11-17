@@ -598,7 +598,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     const c=mk(1976,5,18,'male',true), d=KANSHI60_TRAITS[c.pillars[2].ganzhi], pl=document.documentElement.classList.contains('bg-on');
     const hL=pl?'【恋愛での持ち味】':'【恋愛の持ち味】', hW=pl?'【お仕事での持ち味】':'【仕事の持ち味】';
     const a1=pkEnsureTraits('この方はまじめな人です。',c,''), a2=pkEnsureTraits(a1,c,'');
-    if(a1.indexOf(hL)<0||a1.indexOf(hW)<0||a1.indexOf(d.恋長)<0||a1.indexOf(d.仕適)<0||a1.indexOf('向いている仕事：')<0) o.bad.push('相談なしで両方が出ない：'+a1.slice(0,80));
+    if(a1.indexOf(hL)<0||a1.indexOf(hW)<0||a1.indexOf(d.恋長)<0||a1.indexOf((typeof pkJobFit==='function'&&pkJobFit(c,pl)||{}).text||d.仕適)<0||a1.indexOf('向いている仕事：')<0) o.bad.push('相談なしで両方が出ない：'+a1.slice(0,80));
     if(a2!==a1) o.bad.push('2回通すと増える');
     if(pl&&/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/.test(a1)) o.bad.push('やさしい画面に干支が出た');
     const w=pkEnsureTraits('転職はよい流れです。',c,'今の仕事を続けるか転職か迷っています'); if(w.indexOf(hW)<0||w.indexOf(hL)>=0) o.bad.push('仕事の相談で仕事だけにならない');
@@ -608,7 +608,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     const sec=h.split(hW)[1].split('【次の見出し】')[0];
     if((h.match(new RegExp(hW.replace(/[【】]/g,'\\$&'),'g'))||[]).length!==1||sec.indexOf('向いている仕事：')<0||sec.indexOf('アドバイス：')<0||sec.indexOf('気をつけたいこと：')<0||sec.indexOf(d.仕長)>=0) o.bad.push('見出しだけあるときに抜けた項目を見出しの中に足さない：'+sec.slice(0,120));
     const kid=mk(T.y-5,3,3,'female',true); const k1=pkEnsureTraits('元気な子です。',kid,''); if(k1.indexOf(hL)>=0||k1.indexOf(hW)<0) o.bad.push('13歳未満に恋愛を出した');
-    const m1=pkTraitsText(c,pl,''); if(m1.indexOf(d.恋長)<0||m1.indexOf(d.仕適)<0||m1.indexOf(hL)<0) o.bad.push('文章作成への材料がない');
+    const m1=pkTraitsText(c,pl,''); if(m1.indexOf(d.恋長)<0||m1.indexOf((typeof pkJobFit==='function'&&pkJobFit(c,pl)||{}).text||d.仕適)<0||m1.indexOf(hL)<0) o.bad.push('文章作成への材料がない');   // 向いている仕事は pkJobFit にそろえた（2026-11-17）
     if(pkTraitsText(c,pl,'金運はどうですか')!=='') o.bad.push('どちらでもない相談に材料を渡した');
     if(proReadUser(c).indexOf(d.仕長)<0) o.bad.push('命式全体の鑑定の頼み方に材料がない');
   }catch(err){ o.bad.push('動かない：'+String(err&&err.message||err)); } chart=c0; return o; });
