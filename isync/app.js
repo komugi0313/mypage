@@ -217,13 +217,15 @@ function soloStart(name){
 /* 答えたあと、これまでに遊んだ人の答えの割合を少しだけ出す（究極の二択と同じ。ひとり・答え合わせのリンクのとき。鑑定者本人の指示 2026-11-16）
    問題の数は、はじめに1回だけまとめて読む（L.counts）。読めないとき・確認用ページでは出さないだけ */
 function prefetchVotes(){L.counts=null;const qs=L.qs;getDb().then(db=>db&&db.vote&&db.votes?db.votes(qs.map(k=>'q'+QKEY[k])):null).then(c=>{if(c&&L.qs===qs)L.counts=c}).catch(()=>{})}
+// 答えた人の数は、ふえてから出す（鑑定者本人 2026-11-16「人数は増えたら面白いがまだ出したくない」）。この数より少ないうちは人数を出さない
+const SHOW_COUNT=100;
 function flashVotes(k,v){
   if(!L.counts)return false;const id='q'+QKEY[k],c=L.counts[id]||{},cnt=[c.a||0,c.b||0,c.c||0],before=cnt[0]+cnt[1]+cnt[2];
   if(!(store('kv_voted')||[]).includes(id))cnt[v]++;
   const t=cnt[0]+cnt[1]+cnt[2];if(!t)return false;
   app.querySelectorAll('.opt').forEach(b=>{const o=+b.dataset.v,pc=Math.round(cnt[o]/t*100);b.disabled=true;if(o===v)b.classList.add('picked');
     b.classList.add('w');b.insertAdjacentHTML('beforeend',`<span class="wrow"><span class="wpct">みんなの${pc}%</span></span><i class="wbar" style="width:${pc}%"></i>`)});
-  const o=app.querySelector('.opts');if(o)o.insertAdjacentHTML('afterend',`<p class="wnote">${before?`これまでに${t.toLocaleString()}人が答えました`:'この問題に答えたのは、あなたが最初です！'}</p>`);
+  const o=app.querySelector('.opts');if(o&&t>=SHOW_COUNT)o.insertAdjacentHTML('afterend',`<p class="wnote">これまでに${t.toLocaleString()}人が答えました</p>`);
   return true}
 function localAsk(){
   if(L.i===0&&L.p===0&&L.counts===undefined)prefetchVotes();
@@ -531,7 +533,7 @@ async function votesRun(G){
   el.innerHTML=`<p class="label">これまでに遊んだ人とくらべると</p>
     <p class="vtop">${G.players.length>1?'あなたの':''}多数派度 <b>${avg}%</b></p><p class="msg">${msg}</p>
     ${minor.length?`<p class="sub">少数派だった答え</p><ul class="list">${minor.map(r=>`<li><b>${esc(Q[r.k][1])}</b><span class="ansrow"><i class="o${r.o}">${esc(ans(r.o,r.k))}</i>同じ答えの人 ${pc(r.share)}%</span></li>`).join('')}</ul>`:''}
-    <details><summary class="label">1問ずつ、みんなの答えを見る</summary><ul class="list vlist">${rows.map(r=>`<li><b>${esc(Q[r.k][1])}</b>${bar(r)}<small>${r.tot}人が答えました</small></li>`).join('')}</ul></details>
+    <details><summary class="label">1問ずつ、みんなの答えを見る</summary><ul class="list vlist">${rows.map(r=>`<li><b>${esc(Q[r.k][1])}</b>${bar(r)}${r.tot>=SHOW_COUNT?`<small>${r.tot}人が答えました</small>`:''}</li>`).join('')}</ul></details>
     <p class="hint">これまでにアイ・シンクで答えた人の割合です（答えの数だけを数えていて、名前などは送っていません）。</p>`;
   el.hidden=false;if(window.__jw)window.__jw(el)}
 
