@@ -99,8 +99,13 @@ function scan() {
       await p.goto(URL + '?t=RATC'); await check('結果（両方もってる）');
       await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true)); await p.waitForTimeout(400); await check('結果（たたんだ欄を開いた）');
     }
-    await p.goto(URL); await p.click('#start'); await check('恋の状況'); await p.click('[data-status=crush]');
-    for (let i = 0; i < 40; i++) { await check('質問' + (i + 1)); const bs = await p.$$('#scale button'); await bs[i % 5].click(); await p.waitForTimeout(200); }
+    // 質問は遊ぶたびに言いかえの文に入れかわる（1問3通り）。3回遊んで120の文をすべて確かめる
+    const seenQ = new Set();
+    for (let r = 0; r < 3; r++) {
+      await p.goto(URL); await p.click('#start'); if (r === 0) await check('恋の状況'); await p.click('[data-status=crush]');
+      for (let i = 0; i < 40; i++) { seenQ.add(await p.$eval('#qtext', e => e.textContent)); await check('質問' + (i + 1) + '（' + (r + 1) + '回目）'); const bs = await p.$$('#scale button'); await bs[i % 5].click(); await p.waitForTimeout(200); }
+    }
+    if (seenQ.size !== 120) problems.push(w + 'px 質問の文が3回で120通りになっていない（' + seenQ.size + '）');
     for (const [i, c] of CODES.entries()) {
       const other = CODES[(i + 5) % 16];
       const me = { code: c, pct: { LR: 62, VA: 71, TS: 55, PC: 80 }, anx: 30 + i * 4, mode: 'full', status: ['partner','crush','none','skip'][i % 4], at: 1 };
