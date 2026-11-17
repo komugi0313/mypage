@@ -885,6 +885,7 @@ h2.sec.res-pill,.ans-detail{display:inline-block !important;background:#2B2236 !
 <script>document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('#fuChips button');if(!b)return;var t=document.getElementById('fuText');if(t){t.value=b.textContent;t.focus();}});</script>
 <style id="tap-size">/* 押しやすい大きさ：指で押すところは高さ44px以上（Apple・Googleの目安。鑑定者本人の指示 2026-10-25） */
 .res-toc button{min-height:44px}
+@media (max-width:760px){ .res-toc{flex-wrap:wrap;overflow-x:visible} .res-toc button{padding:6px 11px} .res-toc button.rt-next{position:static;margin-left:0;box-shadow:none} }   /* スマホの目次は横にすべらせず、折り返して全部見せる（2026-11-17 UX点検。PRO・ビギナーと同じ） */
 .hex-band .hb-mean{display:inline-flex;align-items:center;min-height:44px}
 .hex-band .hb-ref{min-height:44px}
 button,[role=button],.kkclick,.tapf,input[type=button],input[type=submit]{min-height:44px!important}
@@ -2595,7 +2596,20 @@ function pkFmTidy(t){ try{ t=String(t==null?'':t); var GZ='[甲乙丙丁戊己�
   t=t.replace(/((?:19|20)\d\d)年([（(])[ 　]*\1年[ 　]*[・、／\/][ 　]*/g,'$1年$2').replace(/((?:19|20)\d\d)年[（(][ 　]*\1年[ 　]*[）)]/g,'$1年');
   t=t.replace(new RegExp('((?:19|20)\\d\\d年[（(]('+GZ+')[^（）()\\n]{0,20})([）)])[（(]\\2(?:の年|年)?(?:[・、][ 　]*([^（）()\\n]{1,20}))?[）)]','g'),function(m0,a,g,cl,rest){ return a+(rest&&a.indexOf(rest)<0?'・'+rest:'')+cl; });
   t=pkFmTidy2(t);
+  t=pkFmParenTidy(t);
   return t; }catch(e){ return t; } }
+/* かっこの重なりと「○年の時期は」の直し（2026-11-17 UX点検）：
+   ①「冠帯（かんたい）（誇り高く…）」→「冠帯（かんたい：誇り高く…）」（読みのかっこと説明のかっこを1つに）
+   ②かっこの中のかっこ（「（劫財（＝仲間…）が巡る時期）」）は、中のかっこを〈〉にする（年・干支・年齢など数字の入ったかっこと、喜神・忌神の読みのかっこは変えない）
+   ③「2027年の時期は、」→「2027年は、」（年のあとの「の時期」を外す。範囲・期間の言い方は変えない） */
+function pkFmParenTidy(t){ try{ t=String(t==null?'':t);
+  t=t.replace(/([一-龥]{1,6})（([ぁ-ゖー]{2,14})）（＝?[ 　]*([^（）()\n\d〔〕]{2,40})）/g,function(m0,w,y,g){ return w+'（'+y+'：'+g.replace(/^[ 　]+/,'')+'）'; });
+  if(/（[^（）\n]*（/.test(t)){ var a=t.split(''), st=[];
+    for(var i=0;i<a.length;i++){ var ch=a[i]; if(ch==='\n'){ st=[]; continue; } if(ch==='（'){ st.push(i); continue; }
+      if(ch==='）'&&st.length){ var o=st.pop(); if(st.length){ var inner=a.slice(o+1,i).join(''); if(inner.length>1&&inner.length<=40&&!/[\d０-９〔〕年歳才（）〈〉]/.test(inner)&&!/^(?:きしん|きじん)/.test(inner)&&!/^[月火水木金土日](?:曜日?)?$/.test(inner)){ a[o]='〈'; a[i]='〉'; if(a[o+1]==='＝') a[o+1]=''; } } } }
+    t=a.join(''); }
+  t=t.replace(/((?:19|20)\d\d年(?:（[^（）\n]{0,20}）)?)の時期(?=は|には|になったら|になれば|になると|に(?![向入])|から)/g,'$1');
+  return t; }catch(e){ return String(t==null?'':t); } }
 /* 文のくずれの直し（2026-11-16 実機点検）：
    ①日本語にまじった別の文字（ベンガル文字・ハングルなど。「どう ভয়াবহよいか」）を外し、見出し【どうすればよいか】を元に戻す
    ②印の重なり（「日柱にある日柱（己未）」「日柱（己未）の日柱（にっちゅう＝…）」「大運は 今の大運（戊戌）」「大運癸未（今の大運（癸未）・…）」「いまの今の」「今年のその年の」）
@@ -3260,13 +3274,15 @@ ${jargonLine}${koStageLine}プロの鑑定に聞こえるよう、温かく具�
       { const mo=document.getElementById('ekiMore'); if(mo) mo.style.display='none'; }
       if(!w){ w=document.createElement('div'); w.id='ekiAnsWait'; w.className='eki-ans-wait'; w.setAttribute('role','status');
         w.innerHTML='<span class="spin" aria-hidden="true"></span><span><b>この相談への答えを作成しています…</b><br><span class="ib">ふつうは10秒ほどで出ます。</span><span class="ib">電波が弱いと、もう少しかかります。</span><span class="ib">下の卦の説明は、もう読めます。</span></span>'
-          +'<button type="button" class="eaw-skip" hidden><span class="ib">待たずに内蔵データで</span><span class="ib">答えを出す</span></button>';
+          +'<button type="button" class="eaw-skip" hidden><span class="ib">内蔵データで作った答えを</span><span class="ib">今すぐ見る</span></button>';
         w.querySelector('.eaw-skip').onclick=function(){ this.disabled=true; try{ if(window.__ekiSkip) window.__ekiSkip(); }catch(_){} };
         if(vc&&vc.parentNode) vc.parentNode.insertBefore(w,vc);
         /* 8秒たっても届かないときは「待たずに内蔵データで答えを出す」を出す（電波の弱い会場で、お客様を待たせない。発注者指示 2026-10-20） */
-        clearTimeout(window.__ekiSkipTm); window.__ekiSkipTm=setTimeout(function(){ const b=w.querySelector('.eaw-skip'); if(b&&w.isConnected) b.hidden=false; },8000); }
+        clearTimeout(window.__ekiSkipTm); window.__ekiSkipTm=setTimeout(function(){ const b=w.querySelector('.eaw-skip'); if(b&&w.isConnected) b.hidden=false; },8000);
+        /* 15秒たっても届かないときは、待っていることが分かる言い方に（2026-11-17 UX点検。PRO・ビギナーと同じ） */
+        clearTimeout(window.__ekiSlowTm); window.__ekiSlowTm=setTimeout(function(){ if(!w.isConnected) return; const t=w.querySelector('span:not(.spin)'); if(t) t.innerHTML='<b>時間がかかっています。もう少しお待ちください</b><br><span class="ib">（通信が悪いときは、</span><span class="ib">内蔵データで作った答えを出します）</span>'; },15000); }
     }else{
-      clearTimeout(window.__ekiSkipTm);
+      clearTimeout(window.__ekiSkipTm); clearTimeout(window.__ekiSlowTm);
       if(w) w.remove(); if(vc) vc.style.display=''; if(ab) ab.style.display='';
       const mo=document.getElementById('ekiMore'); if(mo) mo.style.display='';
     }
