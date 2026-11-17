@@ -217,8 +217,8 @@ function soloStart(name){
 /* 答えたあと、これまでに遊んだ人の答えの割合を少しだけ出す（究極の二択と同じ。ひとり・答え合わせのリンクのとき。鑑定者本人の指示 2026-11-16）
    問題の数は、はじめに1回だけまとめて読む（L.counts）。読めないとき・確認用ページでは出さないだけ */
 function prefetchVotes(){L.counts=null;const qs=L.qs;getDb().then(db=>db&&db.vote&&db.votes?db.votes(qs.map(k=>'q'+QKEY[k])):null).then(c=>{if(c&&L.qs===qs)L.counts=c}).catch(()=>{})}
-// 答えた人の数は、ふえてから出す（鑑定者本人 2026-11-16「人数は増えたら面白いがまだ出したくない」）。この数より少ないうちは人数を出さない
-const SHOW_COUNT=100;
+// 答えた人の数は、その問題に10人以上が答えてから出す（鑑定者本人 2026-11-16「5人、10人に遊んでもらって、それでカウントして始めても」）。少ないうちは％だけ
+const SHOW_COUNT=10;
 function flashVotes(k,v){
   if(!L.counts)return false;const id='q'+QKEY[k],c=L.counts[id]||{},cnt=[c.a||0,c.b||0,c.c||0],before=cnt[0]+cnt[1]+cnt[2];
   if(!(store('kv_voted')||[]).includes(id))cnt[v]++;
