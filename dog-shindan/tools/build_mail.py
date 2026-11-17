@@ -10,6 +10,7 @@ OUT = ROOT / "mail"
 OUT.mkdir(exist_ok=True)
 SITE = "https://44wansona.com"
 LOGO = SITE + "/icon/favicon-96.png"
+OPERATOR, CONTACT = "72k株式会社", "info@72k.ai"
 
 # 色は診断の画面と同じ（地＝うす青・文字＝こい灰・ボタン＝青緑）
 BG, CARD, INK, MUTED, TEAL, MINT = "#E9F1F4", "#FFFFFF", "#2F3A45", "#4E5A66", "#2F6878", "#CFE7EC"
@@ -116,7 +117,7 @@ def build_html(m):
 </td></tr>
 <tr><td align="center" style="padding:18px 8px 0;font-size:12px;line-height:1.8;color:{MUTED}">
 ワンソナ（44Wansonalities）　<a href="{SITE}" style="color:{TEAL}">44wansona.com</a><br>
-運営：{{{{OPERATOR}}}}　お問い合わせ：{{{{CONTACT}}}}
+運営：{OPERATOR}　お問い合わせ：<a href="mailto:{CONTACT}" style="color:{TEAL}">{CONTACT}</a>
 </td></tr>
 </table>
 </td></tr>
@@ -136,7 +137,7 @@ def build_txt(m):
     if m.get("unsub"):
         lines += ["", "▼ メールの配信を止める", "{{UNSUBSCRIBE_URL}}"]
     lines += ["", "――", "ワンソナ（44Wansonalities）" + " " + SITE,
-              "運営：{{OPERATOR}}　お問い合わせ：{{CONTACT}}", ""]
+              f"運営：{OPERATOR}　お問い合わせ：{CONTACT}", ""]
     return "\n".join(lines)
 
 
