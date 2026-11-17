@@ -1652,6 +1652,7 @@ function renderWho(){
   var k=R.data.round+':'+S.qi;
   el.innerHTML=R.players.map(function(p){
     var a=answeredKey(R, p, k), me=p.pid===R.pid, nm='<b>'+esc(p.name||'？')+(me?'<i>あなた</i>':'')+'</b>';
+    if(!a && !roomActive(R, p)) return '<div class="seat tout"><span class="av"><img src="img/panda-sad.webp" alt=""></span>'+nm+'<span class="st">お休み中</span></div>';
     if(a==='T') return '<div class="seat tout"><span class="av"><img src="img/panda-sad.webp" alt=""></span>'+nm+'<span class="st">時間切れ</span></div>';
     if(a) return '<div class="seat done"><span class="av"><img src="img/panda-joy.webp" alt=""><span class="ok">✓</span></span>'+nm+'<span class="st">決めた！</span></div>';
     return '<div class="seat think"><span class="av"><img src="img/panda-1.webp" alt=""></span>'+nm+'<span class="st">悩み中<em>…</em></span></div>';
@@ -3634,7 +3635,7 @@ function showWait(){
 function updateWait(){
   renderWho();
   var R=S.room, box=$('wait-box'); if(!R || !box || !R.data) return;
-  var k=R.data.round+':'+S.qi, n=R.players.length;
+  var k=R.data.round+':'+S.qi, n=R.players.filter(function(p){ return S.honPlay || roomActive(R, p) || answeredKey(R, p, k); }).length;
   var done=R.players.filter(function(p){ return answeredKey(R, p, k); }).length;
   var h='<p>みんなの答えを待っています（'+done+' / '+n+'人）</p>';
   // 答えない人（スマホを閉じた人など）がいて止まったときだけ、答えた人だけで先へ（20秒たってから出す）
@@ -3648,7 +3649,9 @@ function updateWait(){
    画面を消したり別のアプリに切りかえたりすると止まっていた）。2人が同時に進めても1回だけ進むよう、Firestore の取引で確かめる */
 function nextPatch(){ var d=S.room.data; return d.qi < (d.qs||[]).length-1 ? { phase:'q', qi:d.qi+1 } : { phase:'done' }; }
 function allPatch(){ return S.rv==='end' ? nextPatch() : { phase:'reveal' }; }
-function allAnswered(R){ var k=R.data.round+':'+R.data.qi; return R.players.length>0 && R.players.every(function(p){ return answeredKey(R, p, k); }) && !!R.me.ans[k]; }
+/* 前の問題にも今の問題にも答えがない人（画面を消した・抜けた人）は待たない。また答えたら、次の問題から待つ */
+function roomActive(R, p){ if(p.pid===R.pid || !R.data || !R.data.qi) return true; var r=R.data.round; return !!answeredKey(R, p, r+':'+(R.data.qi-1)) || !!answeredKey(R, p, r+':'+R.data.qi); }
+function allAnswered(R){ var k=R.data.round+':'+R.data.qi; return R.players.length>0 && R.players.every(function(p){ return answeredKey(R, p, k) || (!S.honPlay && !roomActive(R, p)); }) && !!R.me.ans[k]; }
 function autoCheck(){
   var R=S.room; if(!R || !R.data || R.data.phase!=='q' || !allAnswered(R)) return;
   var key=R.data.round+':'+R.data.qi;
