@@ -740,6 +740,12 @@ html[data-tone="f"] .tn-f,html[data-tone="s"] .tn-s{display:revert}
 .lb-main .lb-list{justify-content:center;margin:14px 0 4px}
 .lb-list li small{font-size:12px;font-weight:700;margin-left:2px}
 .lb-go{margin:16px 0 0;min-height:64px;font-size:21px}
+/* スタートを押せるときは、ボタンがゆっくりふくらみ、まわりに輪が広がる（鑑定者本人 2026-11-17「スタート押せる時はもっとわかりやすく」） */
+.lb-go.ready{position:relative;animation:lbpulse 1.4s ease-in-out infinite}
+.lb-go.ready::after{content:"";position:absolute;inset:-7px;border-radius:999px;border:3px solid #FF3D7F;animation:lbring 1.4s ease-out infinite;pointer-events:none}
+@keyframes lbpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+@keyframes lbring{0%{opacity:.85;transform:scale(1)}100%{opacity:0;transform:scale(1.1)}}
+@media (prefers-reduced-motion:reduce){.lb-go.ready{animation:none}.lb-go.ready::after{animation:none;opacity:.6}}
 .lb-wait{margin:14px 0 0;padding:12px;border-radius:14px;background:#FFF4C9;border:2px solid #1E1E2A;font-weight:900;font-size:15px;line-height:1.6}
 .lb-game{margin:12px 0 0;font-size:13px;font-weight:700;color:#4A4A5A}
 #lb-host{display:flex;flex-direction:column;gap:10px;margin:18px 0 0}
@@ -2777,7 +2783,7 @@ function splash(t, sub, kind){
   $('splash-img').src='img/panda-'+({go:'joy',join:'bye',again:'wait',bye:'bye'}[kind]||'joy')+'.webp';
   el.className='splash '+(kind==='again'?'join':(kind||'')); el.hidden=false;
   try{ navigator.vibrate&&navigator.vibrate(kind==='go'?[120,60,120]:80); }catch(e){}
-  clearTimeout(splashT); splashT=setTimeout(function(){ el.hidden=true; }, kind==='go'?1600:(kind==='bye'?3000:2200));
+  clearTimeout(splashT); splashT=setTimeout(function(){ el.hidden=true; }, kind==='go'?1600:(kind==='bye'?3000:(kind==='join'?1300:2200)));  // だれかが入ったお知らせは短く（その下のスタートをすぐ押せるように。2026-11-17）
 }
 $('splash').onclick=function(){ $('splash').hidden=true; };
 function toast(t){ var el=$('toast'); el.textContent=t; el.classList.add('on'); setTimeout(function(){ el.classList.remove('on'); }, 2200); }
@@ -3680,6 +3686,8 @@ function onRoom(room, players){
     var nowIds={}; players.forEach(function(p){ nowIds[p.pid]=1; });
     R.players.forEach(function(p){ if(p.pid!==R.pid && !nowIds[p.pid] && p.name) toast(p.name+'さんは終わりました'); });
   }
+  // スタートを押した直後は、まだ届いていない古い部屋（集まっている途中）の知らせでもどらない
+  if(R.optim && Date.now()<R.optim && room.phase==='lobby' && R.data && R.data.phase==='q'){ R.players=players; return; }
   R.data=room; R.players=players;
   // 同じ人が2つの画面（LINEの中とブラウザなど）で開いているとき、もう片方で答えた分を引きつぐ
   var mine=(players||[]).filter(function(p){ return p.pid===R.pid; })[0];
@@ -3769,6 +3777,8 @@ function renderLobby(){
     $('lb-start').hidden = n<2;
     $('lb-start').disabled = n<2;
     $('lb-start').textContent = 'スタート（'+n+'人で遊ぶ）';
+    $('lb-start').classList.toggle('ready', n>=2);
+    if(n>=2 && R.host && !R.readyShown){ R.readyShown=1; try{ navigator.vibrate&&navigator.vibrate(80); }catch(e){} setTimeout(function(){ var b=$('lb-start'); if(b && !b.hidden && b.getBoundingClientRect().bottom>innerHeight) b.scrollIntoView({block:'center',behavior:'smooth'}); }, 300); }
     // 誘うボタンは、だれも来ていないあいだはカードの中（いちばん上）に、そろったらカードの下に
     if(n<2){ if(hostBox.parentNode!==card) $('lb-timer').insertAdjacentElement('afterend', hostBox); }
     else if(hostBox.parentNode===card) card.insertAdjacentElement('afterend', hostBox);
@@ -3808,7 +3818,20 @@ $('lb-start').onclick=function(){
   var R=S.room; if(!R || !R.host) return;
   if(R.players.length<2){ toast('もう1人来るまで待ってね'); return; }
   var qs=roomQs(), used=mixCustom(qs);
-  hostSet({ mode:roomMode(), qs:qs, used:used, mix:S.mix, num:S.num, lv:roomLv(), phase:'q', qi:0 });
+  // 押したらすぐ1問目を出す（書きこみの返事を待たない。鑑定者本人 2026-11-17「入ってからスタートするまで時間がかかる」）。
+  // 届かなかったときは3回までやり直し、だめなら部屋の画面にもどす
+  var btn=this; btn.disabled=true; btn.textContent='始めています…';
+  var old=R.data, room=Object.assign(JSON.parse(JSON.stringify(R.data)), { mode:roomMode(), qs:qs, used:used, mix:S.mix, num:S.num, lv:roomLv(), phase:'q', qi:0 });
+  R.optim=Date.now()+12000;
+  onRoom(room, R.players);
+  (async function(){
+    for(var i=0;i<3;i++){
+      var ok=false; try{ ok=await withTimeout(Room.setRoom(room), 8000); }catch(e){}
+      if(ok){ R.optim=0; if(R.stop && R.stop.poke) R.stop.poke(); return; }
+    }
+    R.optim=0; if(S.room!==R) return;
+    toast('通信できませんでした。もう一度「スタート」を押してね'); onRoom(old, R.players);
+  })();
 };
 function showWait(){
   var R=S.room; if(!R) return;
