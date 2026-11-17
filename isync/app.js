@@ -26,7 +26,7 @@ const MAXP=10, KON_MAX=40, KON_LEN=20;
 // 時間の制限は出さない（焦らせないため）。答えない人がいて止まったときだけ：ふつうの部屋は45秒で「答えた人だけで先に進む」、婚活の部屋は60秒で自動で次へ
 const WAIT_BTN=45, KON_WAIT=60;
 const maxOf=room=>room&&room.kind==='kon'?KON_MAX:MAXP;
-const OPTS=['A','B','こだわらない'];
+const OPTS=['A','B','どっちでも合わせられる'];
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function store(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(k)||'null');if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}}
@@ -37,7 +37,7 @@ function view(h){app.innerHTML='<div class="scr">'+h+'</div>';window.scrollTo(0,
 const AX=Object.entries(window.SY_AX||{}).map(([key,a])=>{const m=new Map();a.qs.forEach(([t,o])=>{const i=Q.findIndex(q=>q[1]===t);if(i>=0)m.set(i,o)});return{key,l:a.l,r:a.r,name:a.name,m}}).filter(a=>a.m.size);
 // その人の傾向：左の答え＝1・こだわらない＝0.5・右の答え＝0 の平均（左寄りの％）。その物差しの問題に答えていなければ null
 function axScore(p,qs,a){let s=0,n=0;qs.forEach((k,i)=>{if(!a.m.has(k))return;const x=p.ans[i];if(!x||x.o<0)return;n++;s+=x.o===2?.5:x.o===a.m.get(k)?1:0});return n?{pct:Math.round(s/n*100),n}:null}
-const ans=(o,k)=>o===0?Q[k][2]:o===1?Q[k][3]:o===2?(Q[k][4]||'こだわらない'):'時間切れ';
+const ans=(o,k)=>o===0?Q[k][2]:o===1?Q[k][3]:o===2?(Q[k][4]||'どっちでも合わせられる'):'時間切れ';
 
 /* テーマが偏らないように配る：テーマを順番に回して、まだ出ていない問題から選ぶ */
 function deal(len,topic){
@@ -101,7 +101,7 @@ function goTop(){
   <section class="card intro">
     <p class="label">たとえば、こんな問題</p>
     <div class="ex"><p class="exq">LINEは？</p>
-      <p class="exo"><span class="o0">A　毎日やりとりしたい</span><span class="o1">B　用があるときだけでいい</span><span class="o2">こだわらない</span></p></div>
+      <p class="exo"><span class="o0">A　毎日やりとりしたい</span><span class="o1">B　用があるときだけでいい</span><span class="o2">どっちでも合わせられる</span></p></div>
     <p class="label">わかること</p>
     <ul class="know">
       <li><b>シンクロ率</b><span>2人の答えが、どれだけ重なったか</span></li>
@@ -162,7 +162,7 @@ function goTop(){
   <section class="card themes"><p class="label">テーマ別の質問</p>
     <ul class="tlinks">${(window.SY_PAGES||[]).map(p=>`<li><a href="${p.slug}/">${esc(p.h1)}</a></li>`).join('')}</ul></section>
   ${PROMO}
-  <p class="note">どの問題にも正解はありません。どちらでもいいときは、3つ目の答え（「こだわらない」「どっちも好き」など）を選んでください。</p>`);
+  <p class="note">どの問題にも正解はありません。どちらでもいいときは、3つ目の答え（「どっちでも合わせられる」「どっちも好き」など）を選んでください。</p>`);
   const DESC={kon:'最大40人。番号だけで参加して、名前を出さずに一斉に20問。終わると、自分と合う人が、自分のスマホにだけ出ます。',each:'2〜10人で。1人が部屋を作り、そばにいる人はQRコードを読みとるだけで参加できます。離れている人には、LINEなどでリンクを送ります。',solo:'自分の答えから、あなたのこだわりと、ゆずれることがわかります。'};
   const refresh=()=>{['each','solo','kon'].forEach(m=>$('m-'+m).hidden=CFG.mode!==m);
     $('m-desc').textContent=DESC[CFG.mode];$('m-anon').hidden=CFG.mode!=='each';$('m-opts').hidden=CFG.mode==='kon';
@@ -361,7 +361,7 @@ function showResult(G){
       ${r.starSame.length?`<details class="sfold"><summary>同じだったところ（${r.starSame.length}問）を見る</summary><ul class="slist">${r.starSame.map(i=>row(i,'s')).join('')}</ul></details>`:''}</div>`};
   h+=`<section class="card"><p class="label">${ps.length===2?'2人のぴったり度':me?'あなたと合う人':'合うペア'}</p>
     <ul class="pairs">${(me?mine:pairs).slice(0,me?MAXP:3).map(pairCard).join('')}</ul>
-    <p class="hint">同じ答え＝ぴったり、片方がまん中の答え（こだわらない・どっちも好き など）＝合わせられる、として数えています。お金・将来・暮らしなど大事な問題は2倍、味の好みなど軽い問題は半分、★ゆずれないをつけた問題はさらに2倍の重さで数えています。</p></section>`;
+    <p class="hint">同じ答え＝ぴったり、片方がまん中の答え（どっちでも合わせられる・どっちも好き など）＝合わせられる、として数えています。お金・将来・暮らしなど大事な問題は2倍、味の好みなど軽い問題は半分、★ゆずれないをつけた問題はさらに2倍の重さで数えています。</p></section>`;
   // ④ 問題のランキング
   const qst=G.qs.map((k,i)=>{const c=[0,0,0],to=[];let ms=0,m=0;ps.forEach(p=>{const a=p.ans[i];if(!a)return;if(a.o>=0)c[a.o]++;if(a.to)to.push(p);if(a.o>=0||a.to){ms+=a.ms;m++}});return{i,k,c,to,avg:m?ms/m:0}});
   const split=qst.filter(x=>x.c[0]&&x.c[1]).sort((a,b)=>Math.abs(a.c[0]-a.c[1])-Math.abs(b.c[0]-b.c[1])).slice(0,3);
@@ -391,7 +391,7 @@ function soloHTML(G){
   return `<section class="card score"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true">
     <p class="cap">${p.name==='あなた'?'あなた':esc(p.name)+'さん'}の「合わせられる度」</p>
     <div class="ring" style="background:conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)"><div class="in"><span class="num">${pct}<small>%</small></span></div></div>
-    <p class="msg">${msg}</p><p class="hint">${xs.length}問のうち、まん中の答え（こだわらない など）が${flex.length}問</p></section>
+    <p class="msg">${msg}</p><p class="hint">${xs.length}問のうち、まん中の答え（どっちでも合わせられる など）が${flex.length}問</p></section>
   ${axHTML(G,[p],()=>p.name==='あなた'?'あなた':esc(p.name))}
   ${G.me==='me'&&!G.view?`<div id="hist">${histHTML(saveHist(G,p,pct))}</div>`:''}
   ${star.length?`<section class="card"><p class="label">★ ゆずれないこと</p><ul class="list">${star.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${esc(ans(x.a.o,x.k))}</li>`).join('')}</ul></section>`:''}
