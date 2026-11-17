@@ -2774,6 +2774,13 @@ window.KANSHI60_TRAITS=/*PK-KANSHI-TRAITS:start*/{
     if(!gs.length){ var g=SHEET_TS_GRP[(((r.pillars||{}).month||{}).zokanTsuhen)||'']; if(g){ gs=[g]; why='月支元命'; } }
     if(!gs.length) return null; return {gs:gs,why:why,text:gs.map(function(g){ return SHEET_GRP_JOB[g][plain?1:0]; }).join('／')}; }catch(e){ return null; } }
   window.sheetJobFit=sheetJobFit;
+  /* 60干支の説明の「仕事」の文から向いている仕事を言う文を外し、sheetJobFit の言葉を先頭に置く（アプリの pkWorkDetail と同じ。2026-11-17） */
+  function sheetWorkDetail(txt,plain,noHead,inline){ try{ txt=String(txt||''); var JF=sheetJobFit(plain); if(!JF) return txt;
+    var rest=txt.split('。').filter(function(x){ return x.trim()&&!/向く|向いて|適職|活躍|力を生かせる|才能が(?:光|出)/.test(x); }).join('。');
+    if(noHead) return rest?rest+'。':'';
+    if(inline) return JF.text+'に向いています。'+(rest?rest+'。':'');   // 「仕事：」「【仕事の軸】」のあとは見出しを重ねない   // すぐ下に持ち味の「向いている仕事」があるときは、同じ行を2回出さない
+    return '向いている仕事：'+JF.text+'。'+(rest?rest+'。':''); }catch(e){ return String(txt||''); } }
+  window.sheetWorkDetail=sheetWorkDetail;
   function sheetTraitItems(gz,k,plain){ var d=(window.KANSHI60_TRAITS&&window.KANSHI60_TRAITS[gz])||null; if(!d) return null;
     return k==='love'?[['長所',d.恋長,/長所|強み|良いところ|よいところ/],['気をつけたいこと',d.恋注,/気をつけ|注意|クセ|くせ/],['アドバイス',d.恋助,/アドバイス|おすすめ|心がけ|コツ|ヒント/]]
       :[['長所',d.仕長,/長所|強み|良いところ|よいところ/],['気をつけたいこと',d.仕注,/気をつけ|注意|クセ|くせ/],['向いている仕事',(function(){ var JF=sheetJobFit(!!plain); return JF?JF.text:d.仕適+'など'; })(),/向いている仕事|向いてる仕事|適職|向く仕事|向いている職/],['アドバイス',d.仕助,/アドバイス|おすすめ|心がけ|コツ|ヒント/]]; }
@@ -3143,7 +3150,7 @@ window.KANSHI60_TRAITS=/*PK-KANSHI-TRAITS:start*/{
       b+=para('この星が活きると、<b>'+g.t+'</b>が持ち味になります。'+(g.c?'一方で、<b>'+g.c+'</b>——これは強みの裏返しなので、気づいて手綱を握れば大きな武器になります。':''));
       // 月支元命の厚い解説（性格・仕事）
       if(MEIGEN[genmei]){ b+=para('<b>【性格の軸】</b>'+MEIGEN[genmei].sei);
-        b+=para('<b>【仕事の軸】</b>'+MEIGEN[genmei].shi); }
+        b+=para('<b>【仕事の軸】</b>'+sheetWorkDetail(MEIGEN[genmei].shi,!!window.__bgPlain,false,true)); }   // 向いている仕事は sheetJobFit の言葉（2026-11-17）
       addSec(2, '性格の軸（月支元命）', b);
     })();
     // 3. 才能と活かし方・仕事
@@ -3153,7 +3160,8 @@ window.KANSHI60_TRAITS=/*PK-KANSHI-TRAITS:start*/{
       var jobs=starList.map(function(s){return TSU[s].w;});
       b+=para('通変星（性格や才能を表す星）の集計から、あなたに強く出るのは<b>'+starList.map(function(s){return s+(tcount[s]?'（'+tcount[s]+'）':'');}).join('・')+'</b>。<span class="rd-gloss">かっこ内の数字は、その星が命式に出ている回数です。</span>これらの星の力を仕事や活動に乗せると、持ち味がまっすぐ発揮されます。');
       if(taika.length){ b+=para('特に<b>'+taika.map(function(s){return s+'（'+tcount[s]+'つ＝太過（たいか＝多すぎて強く出る状態））';}).join('・')+'</b>は非常に強く出ます。'+taika.map(function(s){return TSU[s]?TSU[s].t:'';}).filter(Boolean).join('／')+'が際立つ反面、'+taika.map(function(s){return TSU[s]?TSU[s].c:'';}).filter(Boolean).join('／')+'。強みとして活かしつつ、出すぎに気をつけると安定します。'); }
-      b+=para('向きやすい方向は<b>'+jobs.filter(function(v,i,a){return a.indexOf(v)===i;}).join('／')+'</b>など。'+((maxList.length===1&&maxEl)?'五行では<b>'+maxEl+'</b>が強く、その分野の適性も後押しになります。':'')+'（固定の職業名より、この持ち味が活きる働き方を選ぶのがコツです）');
+      var _JF=sheetJobFit(!!window.__bgPlain,r);   // 向いている仕事は1つの出どころ（sheetJobFit。2026-11-17）
+      b+=para('向きやすい方向は<b>'+(_JF?_JF.text:jobs.filter(function(v,i,a){return a.indexOf(v)===i;}).join('／'))+'</b>など。'+((maxList.length===1&&maxEl)?'五行では<b>'+maxEl+'</b>が強く、その分野の適性も後押しになります。':'')+'（固定の職業名より、この持ち味が活きる働き方を選ぶのがコツです）');
       // 総合鑑定（テーマ指定なし）でも、働き方の型と今の10年の追い風を添えて厚みを持たせる
       if(theme!=='work'){
         var _ws3=(tcount['正官']||tcount['偏官'])?'責任ある役割・組織の中核を任されるほど伸びます。筋を通し、信用を積むのが最大の武器です。':((tcount['食神']||tcount['傷官'])?'表現・専門・技術で抜きん出るタイプ。得意を尖らせ、独立や専門職で力を発揮します。':((tcount['正財']||tcount['偏財'])?'現場で人やお金を動かす実務・商いに強み。成果を数字で示すほど評価されます。':((tcount['印綬']||tcount['偏印'])?'学び・資格・知識が武器。専門性を深め、教える・支える役割で信頼を得ます。':'仲間と組む・独立するなど、自分の裁量で動ける環境ほど力が出ます。')));
@@ -3795,7 +3803,7 @@ window.KANSHI60_TRAITS=/*PK-KANSHI-TRAITS:start*/{
     // 命式の読み解き（要素ごとに、やさしい言葉で箇条書き）＝full版のみ
     if(!ezSolo){ var yomi=ezYomitoki(r); if(yomi) H+=ezCard('🔎 あなたの命式からわかること', yomi+'<p class="ez-note2">これは生年月日時から出た「生まれ持った傾向」です。良し悪しを決めるものではなく、知って上手に活かすためのもの。行動しだいで運は育ちます。</p>', 'ez-flow'); }
     // 性格・仕事の軸（月支元命）を厚く
-    if(ezShow('axis') && genmei&&MEIGEN[genmei]){ H+=ezCard('🧭 あなたの軸（性格と仕事の中心）', '<p class="ez-p"><b>性格：</b>'+MEIGEN[genmei].sei+'</p><p class="ez-p"><b>仕事：</b>'+MEIGEN[genmei].shi+'</p><p class="ez-note2">これは生まれ月から出る“あなたの主役の持ち味”で、社会で見せる顔にもなります。</p>'); }
+    if(ezShow('axis') && genmei&&MEIGEN[genmei]){ H+=ezCard('🧭 あなたの軸（性格と仕事の中心）', '<p class="ez-p"><b>性格：</b>'+MEIGEN[genmei].sei+'</p><p class="ez-p"><b>仕事：</b>'+sheetWorkDetail(MEIGEN[genmei].shi,true,false,true)+'</p><p class="ez-note2">これは生まれ月から出る“あなたの主役の持ち味”で、社会で見せる顔にもなります。</p>'); }
     if(ezShow('mochi')) H+=ezCard('⭐ あなたの持ち味バランス', '<div class="ez-meter">'+ezMeter(cat)+'</div><p class="ez-note2">'+(isBalanced?'いくつかの持ち味が<b>同じ高さで並ぶバランス型</b>です（'+topGoodText+'）':'いちばんの持ち味は<b>'+(EZGOOD[topCat]||'')+'</b>')+'。ほかは弱点ではなく<b>“伸びしろ”</b>——意識して使うほど育ちます。これは生まれ持った傾向で、経験や環境で変えていけます（運勢は動きます）。</p>');
     if(ezShow('gogyo')) H+=ezCard('🌈 五行バランス（生まれ持ったエネルギー）', ezGogyo(fe));
     var kuse=(genmei&&TSU[genmei])?TSU[genmei].c:'';
@@ -3803,7 +3811,7 @@ window.KANSHI60_TRAITS=/*PK-KANSHI-TRAITS:start*/{
     if(ezShow('ai')) H+=ezCard('🤝 相性のいい人', '<p class="ez-p">あなたが<b>ラクでいられる</b>のは、あなたを立ててくれる人や褒めてくれる年上。<b>力を発揮できる</b>のは、あなたを頼ってくれる後輩。<b>楽しく過ごせる</b>のは一緒に遊べる人。ちょっと<b>疲れやすい</b>のは、張り合う相手やダメ出しの多い人です。相手のタイプを見て距離を選ぶと、人間関係がぐっとラクになります。</p>');
     // 恋愛・仕事は60干支の詳しい記述で（あれば）
     if(ezShow('koi') && kan && kan.恋愛){ H+=ezCard('❤️ 恋愛のこと', '<p class="ez-p">'+kan.恋愛+'</p>'+sheetTraitHTML(dayGZ,'love',true,'ez-p')); }
-    if(ezShow('shigoto') && kan && kan.仕事){ H+=ezCard('💼 仕事・適職のこと', '<p class="ez-p">'+kan.仕事+'</p>'+sheetTraitHTML(dayGZ,'work',true,'ez-p')); }
+    if(ezShow('shigoto') && kan && kan.仕事){ H+=ezCard('💼 仕事・適職のこと', '<p class="ez-p">'+sheetWorkDetail(kan.仕事,true,true)+'</p>'+sheetTraitHTML(dayGZ,'work',true,'ez-p')); }
     var moneyOne=(cat.財>=2?'お金を動かす・増やすのが上手なタイプ。収入源を複数持つと安定します。':cat.財===1?'コツコツ堅実に貯めるのが向くタイプ。計画的な積立が力になります。':'得意なこと・好きなことを収入につなげると金運が育つタイプです。');
     var healthOne=(shugoEls.length? '疲れたら「'+care+'」を意識するとすぐ整います。元気が出る色は'+col+'。':'生活リズムを一定に保つのが一番の元気の秘訣です。');
     if(ezShow('money')) H+=ezCard('💰🌿 お金・健康のヒント', '<div class="ez-grid"><div><b>💰 お金</b><br><span class="ez-txt">'+moneyOne+'</span></div><div><b>🌿 健康</b><br><span class="ez-txt">'+healthOne+'</span></div></div>');
