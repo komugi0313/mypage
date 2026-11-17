@@ -917,6 +917,8 @@ body.rdy-on #gres-body{padding-bottom:230px}
 @keyframes qthink{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
 @keyframes qdots{from{width:0}to{width:1.1em}}
 @media (prefers-reduced-motion:reduce){.qwho .think .av img,.qwho .think .st em{animation:none}}
+.pc-part{display:inline-block;margin-left:6px;font-style:normal;font-size:12px;font-weight:800;color:#5A5A6E;background:#EEEEF2;border-radius:999px;padding:0 7px;vertical-align:middle}
+.gone-note{margin:10px 4px 0;padding:8px 12px;background:#EEEEF2;border:2px solid #1E1E2A;border-radius:12px;font-size:13.5px;line-height:1.6}
 </style>
 </head>
 <body data-mode="love">
@@ -2907,7 +2909,33 @@ function aishoHTML(mode){
   }
   return h+'</div>';
 }
+/* 部屋で途中で抜けた人（答えた問題が半分より少ない人）は、ランキング・発表・価値観の近さ・ひとりずつの結果に入れず、
+   「途中で抜けた人」の1行にまとめる。半分以上答えた人は名前の横に「12/15問」（鑑定者本人 2026-11-17「半分の案でお願いします」）。
+   答えたかどうかは部屋の記録で見る（時間切れも「その場にいた」に数える）。残りが2人より少なくなるときは外さない */
 function showGroupResult(){
+  var R=S.room;
+  if(!R || !R.data || !S.qs.length) return showGroupResultCore();
+  var Q=S.qs.length, keep=[], gone=[];
+  S.players.forEach(function(p,i){
+    var pl=(R.players||[]).filter(function(x){ return x.pid===p.pid; })[0] || (p.pid===R.pid ? Object.assign({pid:R.pid}, R.me) : null);
+    var c=0; for(var k=0;k<Q;k++){ if(pl && answeredKey(R, pl, R.data.round+':'+k)) c++; }
+    (c*2>=Q ? keep : gone).push({ i:i, c:c });
+  });
+  if(keep.length<2){ keep=keep.concat(gone).sort(function(a,b){ return a.i-b.i; }); gone=[]; }
+  if(!gone.length && keep.every(function(x){ return x.c>=Q; })) return showGroupResultCore();
+  var P0=S.players, A0=S.ans, T0=S.times;
+  S.players=keep.map(function(x){ var p=Object.assign({}, P0[x.i]); if(x.c<Q) p.part=x.c+'/'+Q; return p; });
+  S.ans=keep.map(function(x){ return A0[x.i]; }); S.times=keep.map(function(x){ return T0[x.i]; });
+  try{ showGroupResultCore(); }
+  finally{ S.players=P0; S.ans=A0; S.times=T0; }
+  var body=$('gres-body'), hero=body && body.querySelector('.res-hero');
+  if(hero && gone.length){
+    var d=document.createElement('p'); d.className='hint gone-note';
+    d.textContent='途中で抜けた人：'+gone.map(function(x){ return P0[x.i].name+'さん（'+x.c+'／'+Q+'問）'; }).join('、')+'。答えた問題が半分より少ないので、結果には入れていません。';
+    hero.parentNode.insertBefore(d, hero.nextSibling);
+  }
+}
+function showGroupResultCore(){
   if(S.room && S.room.data && S.room.data.mode==='hon') return showHonGroupResult();
   var mode=S.mode, hd=headline(mode), n=S.players.length;
   // 最後にまとめて答え合わせしたときは、ここでみんなの回答％に数える（1問ずつのときは結果発表のたびに数えている）
@@ -2974,7 +3002,7 @@ function showGroupResult(){
     var me=(r.i===meI), tone=ri%2?'kt-b':'kt-a';
     h+='<details class="pcard '+(ri%2?'ppl-b':'ppl-a')+'"'+(me||(meI<0&&ri===0)?' open':'')+'><summary class="pc-sum">'+
        (cimg?'<img src="'+cimg+'" alt="" width="52" height="52">':'<span class="pc-ring" style="--v:'+hv+'"><b>'+hv+'</b></span>')+
-       '<span class="pc-n"><b>'+esc(r.p.name)+(me?'（あなた）':'')+'</b><small>'+(co?esc(co.main.name)+'・':'')+hd.cap+' '+hv+'%</small></span></summary>'+
+       '<span class="pc-n"><b>'+esc(r.p.name)+(me?'（あなた）':'')+(r.p.part?'<i class="pc-part">'+r.p.part+'問</i>':'')+'</b><small>'+(co?esc(co.main.name)+'・':'')+hd.cap+' '+hv+'%</small></span></summary>'+
        '<div class="ppl '+(ri%2?'ppl-b':'ppl-a')+'"><div class="pp-top"><div class="pp-ring" style="--v:'+hv+'"><b>'+hv+'%</b></div><div class="pp-who"><strong>'+esc(r.p.name)+'</strong><span>'+hd.cap+'</span></div></div>'+
        '<div class="pp-say">'+axComment(hd.k, hv)+'</div>'+rkSpan(mode, hd.k, hv, me?'あなた':r.p.name+'さん')+
        '<div class="pp-tiles">'+oth.map(function(ax,j){ return '<div class="pt'+j+'"><small>'+ax.name.replace(/度$/,'')+'</small><b>'+r.sc[ax.k]+'%</b></div>'; }).join('')+'</div>'+
