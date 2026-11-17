@@ -902,14 +902,21 @@ body.rdy-on #gres-body{padding-bottom:230px}
 .ntimer.low b{color:#C2185B}
 .ntimer.out b{color:#5A5A6E}
 /* 部屋：だれが答えて、だれがまだ悩んでいるか（鑑定者本人 2026-11-17「お互い悩んでるとこ見られたらめっちゃ面白い」） */
-.qwho{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:10px 0 0}
-.qwho span{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border:2px solid #1E1E2A;border-radius:999px;background:#fff;font-weight:800;font-size:14px;white-space:nowrap}
-.qwho span.done{background:#DDF3E6}
-.qwho span.think{background:#FFF3C4}
-.qwho span.think i{font-style:normal;display:inline-block;animation:qthink 1.2s ease-in-out infinite}
-.qwho span.tout{background:#EEE;color:#5A5A6E}
-@keyframes qthink{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(10deg)}}
-@media (prefers-reduced-motion:reduce){.qwho span.think i{animation:none}}
+.qwho{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px;margin:12px 0 0}
+.qwho .seat{background:#fff;border:2.5px solid #1E1E2A;border-radius:16px;padding:7px 3px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;min-width:0}
+.qwho .av{position:relative;width:44px;height:44px;border-radius:50%;background:#FFF3C4;border:2px solid #1E1E2A;display:grid;place-items:center}
+.qwho .av img{width:38px;height:38px;object-fit:contain}
+.qwho .seat>b{font-size:14px;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qwho .seat>b i{display:block;font-style:normal;font-size:11px;color:#5A5A6E}
+.qwho .st{font-size:12px;padding:1px 8px;border-radius:999px;background:#FFF3C4;white-space:nowrap}
+.qwho .think .av img{animation:qthink 1.3s ease-in-out infinite}
+.qwho .think .st em{font-style:normal;display:inline-block;width:1.1em;overflow:hidden;vertical-align:bottom;text-align:left;animation:qdots 1.2s steps(4) infinite}
+.qwho .done{background:#DDF3E6}.qwho .done .av{background:#fff}.qwho .done .st{background:#7BC8A4}
+.qwho .ok{position:absolute;right:-6px;bottom:-4px;width:20px;height:20px;border-radius:50%;background:#1F7A50;color:#fff;font-size:12px;line-height:1;display:grid;place-items:center;border:2px solid #1E1E2A}
+.qwho .tout{background:#EEEEF2}.qwho .tout .av{background:#fff}.qwho .tout .av img{opacity:.75}.qwho .tout .st{background:#D6D6DE}
+@keyframes qthink{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+@keyframes qdots{from{width:0}to{width:1.1em}}
+@media (prefers-reduced-motion:reduce){.qwho .think .av img,.qwho .think .st em{animation:none}}
 </style>
 </head>
 <body data-mode="love">
@@ -1622,17 +1629,32 @@ function ntTimeout(){
   toast('時間切れ！ 次の問題へ');
   setTimeout(function(){ localNext(); }, 900);
 }
-/* 部屋：答えた人と、まだ悩んでいる人を、全員の画面に出す */
+/* 部屋：20秒＋5秒たっても答えていない人（画面を消した・別のアプリに切りかえた人など）がいたら、だれのスマホからでも次へ進める
+   （その人のスマホでは時計が止まり「時間切れ」が届かないため。作った人のスマホが先、ほかは少しあと。進むのは取引で1回だけ） */
+var NT_GRACE=5000;
+function ntAutoNext(R, key){
+  if(!R || S.honPlay) return;
+  clearTimeout(R.ntAuto);
+  R.ntAuto=setTimeout(function(){
+    if(S.room!==R || !R.data || R.data.phase!=='q' || R.view!==key) return;
+    var k=R.data.round+':'+R.data.qi;
+    if(!R.me.ans[k]) roomAnswer('T');   // 自分がまだなら、自分の時間切れも書く
+    if(!R.players.some(function(p){ return answeredKey(R, p, k); })) return;
+    roomStep(allPatch());
+  }, NT_LIMIT+NT_GRACE+(R.host?0:2500));
+}
+/* 部屋：答えた人と、まだ悩んでいる人を、全員の画面に出す（見た目A＝席のように1人1マス。鑑定者本人 2026-11-17「A」） */
 function renderWho(){
+  if(!renderWho.pre){ renderWho.pre=1; ['panda-joy','panda-sad','panda-1'].forEach(function(n){ var im=new Image(); im.src='img/'+n+'.webp'; }); }
   var el=$('q-who'), R=S.room;
   if(!el) return;
   if(!R || !R.data || S.honPlay || R.data.phase!=='q'){ el.hidden=true; el.innerHTML=''; return; }
   var k=R.data.round+':'+S.qi;
   el.innerHTML=R.players.map(function(p){
-    var a=answeredKey(R, p, k), me=p.pid===R.pid, nm=esc(p.name||'？')+(me?'（あなた）':'');
-    if(a==='T') return '<span class="tout">⌛ '+nm+'</span>';
-    if(a) return '<span class="done">✅ '+nm+'</span>';
-    return '<span class="think"><i>🤔</i> '+nm+'<small>悩み中…</small></span>';
+    var a=answeredKey(R, p, k), me=p.pid===R.pid, nm='<b>'+esc(p.name||'？')+(me?'<i>あなた</i>':'')+'</b>';
+    if(a==='T') return '<div class="seat tout"><span class="av"><img src="img/panda-sad.webp" alt=""></span>'+nm+'<span class="st">時間切れ</span></div>';
+    if(a) return '<div class="seat done"><span class="av"><img src="img/panda-joy.webp" alt=""><span class="ok">✓</span></span>'+nm+'<span class="st">決めた！</span></div>';
+    return '<div class="seat think"><span class="av"><img src="img/panda-1.webp" alt=""></span>'+nm+'<span class="st">悩み中<em>…</em></span></div>';
   }).join('');
   el.hidden=false;
 }
@@ -3492,7 +3514,7 @@ function onRoom(room, players){
   syncGame(room, players);
   if(R.cntRound!==room.round){ R.cntRound=room.round; S.counts=null; Votes.get(room.qs.filter(function(q){ return !q.custom; }).map(function(q){ return q.id; })).then(function(c){ S.counts=c; }); }
   if(room.phase==='q'){
-    if(R.view!==key){ var first=/^(lobby|)$/.test(R.view); R.view=key; R.qAt=Date.now(); if(R.lateT){ clearTimeout(R.lateT); R.lateT=null; } showQ(); if(first){ if(!S.resuming && room.qi===0) splash('スタート！', '1問目です。答えを選んでね', 'go'); else toast(S.resuming ? 'さっきの部屋にもどりました' : '途中から参加しました（'+(room.qi+1)+'問目）'); S.resuming=false; try{ navigator.vibrate&&navigator.vibrate(150); }catch(e){} } } else updateWait();
+    if(R.view!==key){ var first=/^(lobby|)$/.test(R.view); R.view=key; R.qAt=Date.now(); if(R.lateT){ clearTimeout(R.lateT); R.lateT=null; } showQ(); ntAutoNext(R, key); if(first){ if(!S.resuming && room.qi===0) splash('スタート！', '1問目です。答えを選んでね', 'go'); else toast(S.resuming ? 'さっきの部屋にもどりました' : '途中から参加しました（'+(room.qi+1)+'問目）'); S.resuming=false; try{ navigator.vibrate&&navigator.vibrate(150); }catch(e){} } } else updateWait();
     autoCheck();
   } else if(room.phase==='reveal'){
     if(R.view!==key){ R.view=key; showReveal(); }
