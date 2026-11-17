@@ -56,6 +56,7 @@ ok('開いただけでは文章作成を呼ばない', calls===0, 'calls='+calls
     const kou=Object.values(HEXDB).find(h=>h.nm==='雷風恒'), kai=Object.values(HEXDB).find(h=>h.nm==='雷水解'), ket=Object.values(HEXDB).find(h=>h.nm==='沢天夬');
     if(!/^田（かり）して/.test(kou.ko[4].kd)||!/^田（かり）して/.test(kai.ko[2].kd)) bad.push('田（かり）の読み');
     if(/あって/.test(ket.kd)) bad.push('沢天夬の卦辞の読み下し：'+ket.kd);
+    { const mi=Object.values(HEXDB).find(h=>h.nm==='地火明夷'), ri=Object.values(HEXDB).find(h=>h.nm==='地沢臨'); if(/うまい話/.test(mTai(mi,4))||!/本心/.test(mTai(mi,4))) bad.push('地火明夷の四爻の訳：'+mTai(mi,4)); if(/口は上手/.test(mTai(ri,3))||!/改めれば/.test(mTai(ri,3))) bad.push('地沢臨の三爻の訳：'+mTai(ri,3)); }
     if(JSON.stringify(HEXDB).includes('祇')) bad.push('祇と祗の字がそろっていない（祗にそろえる。2026-11-17）');
     return bad;`)();
   ok('64卦の番号・互卦・綜卦・錯卦・之卦の計算と、天水訟の五爻の訳・読み下しの直し（2026-11-17）', bad.length===0, bad.slice(0,6).join(' / ')); }
