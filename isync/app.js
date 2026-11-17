@@ -235,7 +235,7 @@ function askHTML(k,i,n,{who,step,star,starOn}){
     <div class="qhead"><span class="tag catg c${q[0]}">${esc(cat[0])}</span><span class="qn">${i+1}／${n}${who?`　${esc(who)}`:''}</span></div>
     ${cat[1]?`<p class="if">${esc(cat[1])}</p>`:''}
     <h2 class="q">${esc(q[1])}</h2>
-    ${step==='done'?`<div class="match">答えました！</div><p class="hint" id="tcnt">みんなを待っています</p><div id="skipq"></div>`:`
+    ${step==='done'?`<div class="match">答えました！</div><div class="hint" id="tcnt">みんなを待っています</div><div id="skipq"></div>`:`
     <p class="label">あなたはどっち？</p>
     ${star?`<button class="star" id="star" aria-pressed="${!!starOn}">★ ここはゆずれない</button>`:''}
     <div class="opts">${opt(0)}${opt(1)}${opt(2,'mid')}</div>`}
@@ -863,7 +863,7 @@ async function sync(){
     const qk='q'+rd+'-'+k;
     if(R.key!==qk){const fresh=k===0&&!/^q/.test(R.key);R.key=qk;R.my={o:-1,st:0,ms:0,fin:false};
       if(fresh){markSeen(room.qs);countdown(qk,()=>{R.seen[qk]=Date.now();rAsk(k,qk)})}else{R.seen[qk]=Date.now();rAsk(k,qk)}}
-    else if(R.seen[qk])rCount(done.length,ps.length);
+    else if(R.seen[qk])rCount(done.length,ps.length,ps,done);
     return}
   clearInterval(R.tick);
   if(room.phase==='result'&&room.kind==='kon'){
@@ -884,7 +884,7 @@ function rAsk(k,qk){
   const room=R.room,qid=room.qs[k],n=room.qs.length;
   const draw=()=>{const m=R.my,step=m.fin?'done':'own';
     view(askHTML(qid,k,n,{step,star:room.len===30||room.kind==='kon',starOn:m.st}));
-    bindAsk(tap);paint()};
+    bindAsk(tap);paint();if(m.fin)rCountNow()};
   const tap=(v,starOn)=>{const m=R.my;if(v===null){m.st=starOn?1:0;return}
     if(m.fin)return;
     m.o=v;m.ms=Date.now()-R.seen[qk];m.fin=true;
@@ -905,7 +905,15 @@ async function save(k,fin,to){const db=await getDb(),me=R.players[PID];if(!db||!
   try{await db.doc(pPath(R.code,PID)).update({ans:a})}catch(e){}
   if(fin){const ps=plist(),rd=R.room.round||1;   // 自分が最後の1人なら、知らせを待たずにすぐ次へ
     if(ps.every(p=>{const x=rAns(p,k);return x&&x.d&&(p.round||1)===rd}))advance(k,rd)}}
-function rCount(d,n){const el=$('tcnt');if(el)el.textContent=`みんなを待っています（${d}／${n}人 答えた）`}
+// 答えたあと、ほかの人のようすを「考え中…／答えた」で見せる（答えの中身は見せない。鑑定者本人 2026-11-17「相手の様子は考え中ぐらい」）。
+// 名前を見せない部屋・大人数の部屋は人数だけ。新しい通信はなく、今ある答えの書きこみを見るだけ
+function rCount(d,n,ps,done){const el=$('tcnt');if(!el)return;const room=R.room||{};
+  if(!ps||room.anon||room.kind==='kon'){el.textContent=`みんなを待っています（${d}／${n}人 答えた）`;return}
+  const ok=new Set(done.map(p=>p.id));ok.add(PID);
+  const key=ps.map(p=>p.id+(ok.has(p.id)?1:0)).join();if(el.dataset.k===key)return;el.dataset.k=key;
+  el.innerHTML=`<div class="seats">${ps.map(p=>`<div class="seat"><span class="nm">${p.id===PID?'あなた':esc(p.name)+'さん'}</span>${ok.has(p.id)?'<span class="st ok">答えた</span>':'<span class="st think">考え中<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></span>'}</div>`).join('')}</div>`}
+function rCountNow(){const room=R.room;if(!room||room.phase!=='play')return;const k=room.qi||0,rd=room.round||1,ps=plist();
+  const done=ps.filter(p=>{const a=rAns(p,k);return a&&a.d&&(p.round||1)===rd});rCount(done.length,ps.length,ps,done)}
 // LINEを開いて、文とリンクが入った状態にする（受け取った人はリンクを押すだけ）
 const lineUrl=(t,u)=>'https://line.me/R/share?text='+encodeURIComponent(t+'\n'+u);
 const siteUrl=()=>WHERE==='claude'?ART_URL:location.href.split('#')[0].split('?')[0];
