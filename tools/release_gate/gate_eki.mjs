@@ -80,6 +80,78 @@ ok('開いただけでは文章作成を呼ばない', calls===0, 'calls='+calls
       if(/台本が取得できませんでした|要点を取得できませんでした/.test(document.documentElement.innerHTML)) bad.push('「取得できませんでした」が残っている'); }
     return {bad}; });
   ok('実地の点検の直し（注記・続けるべきか・A社B社・易の時期を出さない・近い日の試験・今は今は・要点メモ・ため口・③の合図・かぎかっこ・この先の流れ・③が相談で変わる・できますか・いつは2文まで・台本）', r.bad.length===0, r.bad.join(' | ')); }
+{ /* 2026-11-17 テスト用サイト v268 の実地の点検で直したもの */
+  const r=await p.evaluate(()=>{ const F=window.__ekiFix; const bad=[]; if(!F||!F.ekiHarshKo) return {bad:['点検用の関数がない']};
+    const key=nm=>Object.keys(HEXDB).find(k=>HEXDB[k].nm===nm).split('-').map(Number);
+    const run=(nm,ko,txt,q)=>{ const [u,l]=key(nm); const rr=F.buildResult(u,l,ko,[ko]); window.__ekiQ=q; return F.ekiFixSym(F.ekiCleanReading(F.parseReading(txt),q),rr,q); };
+    const off=(nm,ko,q)=>{ const [u,l]=key(nm); const rr=F.buildResult(u,l,ko,[ko]); window.__ekiQ=q; return {o:F.buildOfflineReading(rr,q),rr}; };
+    const third=(o,rr,talk)=>{ const d=document.createElement('div'); document.body.appendChild(d); d.innerHTML=F.ekiTalkHTML(o,rr,talk||[o.tsutae],['準備をしましょう。']); const tx=d.innerText; d.remove(); const m=tx.match(/③\s*\n?[^\n]*\n([^\n]*)/); return m?m[1]:''; };
+    const nS=x=>String(x).replace(/\s*[◎〇△✖]\s*$/,'').split(/(?<=[。！？])/).filter(z=>z.trim()).length;
+    // ① 「できますか」：記号と合わない可能性の言葉（△なのに「低い」）は置きかえる
+    { let P=run('山地剥',3,'▼判定：△ 復縁の可能性は低い時期です。\n▼伝え方：今は無理に進めようとせず、様子を見ていく時期です。','彼と復縁できますか'); const sym=(P.hantei.match(/[◎〇△✖]\s*$/)||[''])[0].trim();
+      if(/低い時期/.test(P.hantei)||(sym==='△'&&!/可能性はあります（条件しだいです）/.test(P.hantei))) bad.push('可能性の言葉と記号：'+P.hantei); }
+    // ② お相手の出てこない恋愛・「来年〜できますか」
+    for(const [nm,ko] of [['山風蠱',4],['乾為天',2],['坤為地',6]]){ const {o}=off(nm,ko,'来年結婚できますか'); if(/相手の気持ち/.test(o.hantei)||!/言い当て/.test(o.hantei)||!/可能性/.test(o.hantei)||nS(o.hantei)>2) bad.push('通信なしの来年結婚：'+o.hantei); }
+    { const P=run('山風蠱',4,'▼判定：△ 可能性はあります（条件しだいです）。相手の気持ちが落ち着くのを待ち、追いかけすぎないことが条件です。\n▼伝え方：来年結婚できるかというご心配ですね。\n\n表面はよさそうに見えても、内側に問題がたまっている時期です。このまま進めば恥の上塗りになるという意味も出ています。','来年結婚できますか');
+      if(/相手の気持ち/.test(P.hantei)||!/言い当て/.test(P.hantei)||nS(P.hantei)>2) bad.push('オンラインの来年結婚：'+P.hantei);
+      if(/^\s*来年結婚できるかというご心配ですね/.test(P.tsutae)) bad.push('本文の書き出しのあいづち：'+P.tsutae.slice(0,40));
+      if(/恥の上塗り/.test(P.tsutae)) bad.push('恥の上塗り：'+P.tsutae.slice(0,80)); }
+    // ③ 助言の文（〜たときは…します）を合図にしない・「続けるべきか」は続ける相談の合図（通信なし・オンライン同じ）
+    { const q='仕事を続けるべきか迷っています'; const {o,rr}=off('風地観',4,q); if(F.ekiSignKey(q)!=='stay') bad.push('続けるべきかの合図の種類：'+F.ekiSignKey(q));
+      const t1=third(o,rr); if(/条件（仕事の中身|転職|次に求める条件/.test(t1)||!/続け/.test(t1)) bad.push('通信なしの続けるべきかの③：'+t1);
+      const t2=third({hantei:'〇 仕事を続けることは進めて大丈夫です。',tsutae:'今の場所で力を出せる流れです。心が疲れたときは一人で抱え込まず、リフレッシュできる時間を意識して作るようにします。転職先の情報を集めるときは、条件だけに流されず慎重に確かめます。'},rr,['今の場所で力を出せる流れです。心が疲れたときは一人で抱え込まず、リフレッシュできる時間を意識して作るようにします。転職先の情報を集めるときは、条件だけに流されず慎重に確かめます。']);
+      if(/疲れたときは|集めるときは/.test(t2)||!t2) bad.push('③が助言の文を拾った：'+t2); }
+    // ④ つらさ（「つらくて」「しんどくて」「やる気が出ない」）・飲み物食べ物の助言・季節のたとえは1回
+    for(const q of ['つらくて何もしたくない','しんどくて何も手につかない','やる気が出ない毎日です','辛くて泣いてしまう']) if(F.ekiSignTopic(q)!=='feel'||F.ekiNoJudgeQ(q)) bad.push('つらさの相談として見分けない：'+q);
+    { const {o,rr}=off('雷水解',3,'つらくて何もしたくない'); const d=document.createElement('div'); document.body.appendChild(d); d.innerHTML=F.ekiTalkHTML(o,rr,[o.tsutae],['休みましょう。']); const tx=d.innerText; d.remove();
+      if(!/気持ちが軽くなる合図/.test(tx)||/距離のとり方|関係を変え/.test(tx)) bad.push('つらさの③：'+(tx.match(/③[^\n]*\n[^\n]*\n[^\n]*/)||[''])[0]); if(/チャンスを逃さ|ぐずぐず/.test(o.ketsuron+o.tsutae)) bad.push('つらさの相談に後押し：'+o.ketsuron.slice(0,80)); }
+    { const t=F.ekiFeelSoft('今は無理に動こうとせず、温かい飲み物を飲んだり、静かな部屋で横になったりしてください。ゆっくり休みましょう。','つらくて何もしたくない'); if(/飲み物/.test(t)||!/ゆっくり休み/.test(t)) bad.push('つらさの相談の飲み物：'+t); }
+    { const P=run('雷水解',3,'▼判定：△ 今は休む時期です。\n▼伝え方：春が来て氷が解けるように、少しずつ心が軽くなります。ゆっくり休みましょう。\n▼台本：いまの時は、春が来て氷が解けるように、困っていたことから解放される時期です。現代の言葉にすると、冬の寒さで固まっていた氷が春の陽気で自然にとけるように、つらい状況から解放されていきます。穏やかな春を待つようにゆっくり蓄えましょう。','つらくて何もしたくない');
+      const n=(String(P.tsutae+P.script).match(/氷が|春を待つ/g)||[]).length; if(n!==1) bad.push('季節のたとえ '+n+'回：'+P.script.slice(0,80)); }
+    // ⑤ #7119 の「#」・落ち針く
+    { const t=F.pkTypoFix('救急車を呼ぶか迷うときは、救急安心センター 7119 に相談してください。心が落ち針くまで。＃8000'); if(!/センター #7119/.test(t)||/落ち針/.test(t)||!/#8000/.test(t)) bad.push('電話番号の#・誤字：'+t); }
+    // ⑦ 体のご相談：きつい爻の原文（死如）を読み上げない・「チャンス」を書かない
+    { const q='最近ずっと体調が悪い日が続きます'; const P=run('離為火',4,'▼判定：ご心配ですね。\n▼伝え方：温かいハーブティーを飲んでほっとしましょう。才能を発揮するチャンスの時期です。お体のことはお医者さまに相談してくださいね。\n▼台本：今回動いた四爻の爻辞は「突如其来如。焚如。死如。棄如。」であり、読み下しは「突如（とつじょ）として其（そ）れ来如（らいじょ）たり。焚如（ふんじょ）たり。死如（しじょ）たり。棄如（きじょ）たり。」です。現代の言葉にすると「守りに徹した上で細心の注意が必要な状態」となります。',q);
+      if(/死如/.test(P.script)||!/細心の注意/.test(P.script)) bad.push('体の相談の台本：'+P.script.slice(0,80)); if(/ハーブティー|チャンス/.test(P.tsutae)) bad.push('体の相談の本文：'+P.tsutae.slice(0,80));
+      const {o}=off('離為火',4,q); if(/死如|チャンス/.test(o.script+o.tsutae)) bad.push('通信なしの体の相談：'+(o.script.match(/[^。]*(?:死如|チャンス)[^。]*/)||[''])[0]); }
+    // ⑧ 「時期は、易では言い当てません」・恥の上塗り（通信なし）
+    { const {o}=off('雷沢帰妹',3,'転職はいつがいいですか'); if(/いつかは/.test(o.hantei)||!/時期は、易では言い当てません/.test(o.hantei)) bad.push('いつの1行目：'+o.hantei); }
+    { const {o}=off('山風蠱',4,'仕事はうまくいきますか'); if(/恥の上塗り/.test(o.tsutae+o.script+o.ketsuron)) bad.push('通信なしの恥の上塗り'); }
+    return {bad}; });
+  ok('実地の点検の直し 2026-11-17（できますかの可能性と記号・お相手なし・来年〜できますか・③は合図の文だけ・続けるべきかの合図・つらくて・飲み物・季節のたとえ1回・#7119・きつい爻の原文・時期は言い当てない・恥の上塗り・あいづち）', r.bad.length===0, r.bad.join(' | ')); }
+{ /* 2026-11-17：#7119 の「#」・「落ち針く」は PRO・ビギナー・鑑定書でも同じに直す（3つのツールを一緒に直す） */
+  const bad=[]; const T='救急車を呼ぶか迷うときは、救急安心センター 7119 に相談してください。心が落ち針くまで。';
+  for(const [f,nm] of [['pro/app-pro.html','const PK_TYPO='],['beginner/app-beginner.html','const PK_TYPO='],['pro/meishi-sheet.html','var SHEET_TYPO='],['beginner/meishi-sheet.html','var SHEET_TYPO='],['meishiki-original/meishi-sheet.html','var SHEET_TYPO=']]){
+    const src=fs.readFileSync(path.join(ROOT,f),'utf8'); const i=src.indexOf(nm); if(i<0){ bad.push(f+'：表がない'); continue; } const ln=src.slice(i,src.indexOf('\n',i)).replace(/^(?:const|var)\s+\w+=/,'return ').replace(/;\s*(?:\/\/.*)?$/,'').replace(/\]\];.*$/,']]');
+    let L; try{ L=new Function(ln)(); }catch(e){ bad.push(f+'：読めない '+e.message); continue; } let t=T; L.forEach(x=>{ t=t.replace(x[0],x[1]); }); if(!/センター #7119/.test(t)||/落ち針/.test(t)) bad.push(f+'：'+t); }
+  for(const f of ['pro/app-pro.html','beginner/app-beginner.html']){ const src=fs.readFileSync(path.join(ROOT,f),'utf8'); if(/\^#\{1,6\}\[ 　\]/.test(src)) bad.push(f+'：行頭の「#7119」の#を見出しとして外す'); }
+  ok('#7119 の「#」・誤字「落ち針く」を PRO・ビギナー・鑑定書でも直す（2026-11-17）', bad.length===0, bad.join(' | ')); }
+{ /* 2026-11-17「A」：つらさの相談は軽いものでも◎〇△✖を付けない（答えの欄・答え・話す順番・鑑定書・続けての質問）。1行目・③の合図はそのまま。「続けるべきか」の通信なしの助言に思い切っての後押しを入れない */
+  const r=await p.evaluate(()=>{ const F=window.__ekiFix; const bad=[]; if(!F||!F.ekiFeelNoSym||!F.renderVerdict||!F.shoOffline) return {bad:['点検用の関数がない']};
+    const key=nm=>Object.keys(HEXDB).find(k=>HEXDB[k].nm===nm).split('-').map(Number);
+    const mk=(nm,ko,q)=>{ const [u,l]=key(nm); const rr=F.buildResult(u,l,ko,[ko]); window.__ekiQ=q; return rr; };
+    const SYM=/[◎〇○◯△▲✖✕×]/, SW=/とても良い流れ|前向きに進めてよい流れ|慎重に進めたい流れ|今は控えたほうがよい流れ/;
+    const box=(p0,rr)=>{ let el=document.getElementById('verdictCard'), tmp=null; if(!el){ tmp=document.createElement('div'); tmp.id='verdictCard'; document.body.appendChild(tmp); el=tmp; } const keep=el.innerHTML; F.renderVerdict(p0,rr); const tx=el.innerText, mk2=!!el.querySelector('.v-mark'); el.innerHTML=keep; if(tmp) tmp.remove(); return {tx,mk:mk2}; };
+    const talk=(p0,rr)=>{ const d=document.createElement('div'); document.body.appendChild(d); d.innerHTML=F.ekiTalkHTML(p0,rr,[p0.tsutae],['休みましょう。']); const tx=d.innerText; d.remove(); return tx; };
+    { const q='不安で眠れない', rr=mk('乾為天',2,q); const o=F.buildOfflineReading(rr,q), b=box(o,rr); if(b.mk||SYM.test(b.tx)) bad.push('不安で眠れない（体のご相談として答えの欄は記号なし）：'+b.tx.slice(0,60)); }   // 「眠れない」は体のご相談（占いで決めないご相談）として、もともと答えの欄に記号を出さない
+    for(const q of ['つらくて何もしたくない','職場の人間関係がつらい','将来が不安でたまらない']){ if(!F.ekiFeelNoSym(q)) { bad.push('つらさの相談として記号なしにしない：'+q); continue; }
+      for(const [nm,ko] of [['乾為天',2],['雷水解',3],['山地剥',3],['坤為地',6]]){ const rr=mk(nm,ko,q);
+        const o=F.buildOfflineReading(rr,q); if(SYM.test(o.hantei)||SW.test(o.hantei+o.tsutae+o.ketsuron)) bad.push('通信なしの答えに記号：'+q+' '+nm+' '+o.hantei);
+        if(!/流れ|守る|気持ち|自分/.test(o.hantei)) bad.push('つらさの1行目：'+o.hantei);
+        const b1=box(o,rr); if(b1.mk||SYM.test(b1.tx)) bad.push('答えの欄に記号：'+q+' '+nm+' '+b1.tx);
+        const t1=talk(o,rr); if(!/気持ちが軽くなる合図/.test(t1)) bad.push('つらさの③の見出し：'+q); if(SYM.test(t1.replace(/[①-⑥]/g,''))||SW.test(t1)) bad.push('話す順番に記号：'+q+' '+nm);
+        const P=F.ekiFixSym(F.ekiCleanReading(F.parseReading('▼判定：〇 今は前向きに進んで大丈夫です。\n▼伝え方：答えは「〇」、とても良い流れです。少しずつ気持ちを休めていきましょう。'),q),rr,q);
+        if(SYM.test(P.hantei)||/進んで大丈夫/.test(P.hantei)||SW.test(P.tsutae)||SYM.test(P.tsutae)) bad.push('オンラインの答えに記号：'+q+' '+P.hantei+' / '+P.tsutae);
+        const b2=box(P,rr); if(b2.mk||SYM.test(b2.tx)) bad.push('オンラインの答えの欄に記号：'+b2.tx);
+        const S=F.ekiShoClean(F.shoOffline(rr,q,o,null),rr,q,o), st=S.map(x=>x.t).join('\n'); if(SYM.test(st)||SW.test(st)||/答えは「/.test(st)) bad.push('鑑定書に記号・答えの言葉：'+q+' '+nm+' '+(st.match(/[^\n]*(?:答えは「|とても良い流れ|前向きに進めてよい流れ|慎重に進めたい流れ|今は控えたほうがよい流れ|[◎〇△✖])[^\n]*/)||[''])[0]); }
+      if(!/◎〇△✖を付けず/.test(F.ekiSafetyPrompt(q))) bad.push('頼み方に記号なしの決まりがない：'+q); }
+    // つらさでない相談は記号のまま
+    for(const q of ['彼と復縁できますか','転職がつらいけど転職すべきですか']){ if(F.ekiFeelNoSym(q)) bad.push('記号ありの相談を記号なしにした：'+q); const rr=mk('乾為天',2,q); const o=F.buildOfflineReading(rr,q); if(!SYM.test(o.hantei)) bad.push('記号が消えた：'+q+' '+o.hantei); const b=box(o,rr); if(!b.mk) bad.push('答えの欄の記号が消えた：'+q); }
+    // 「続けるべきか」の通信なしの助言
+    { const q='仕事を続けるべきか迷っています'; const A=F.ekiAdvSet(q); for(const g of ['g','m','b']) for(const x of (A[g]||[])) if(/思い切|転職|退職|動かすのに|時期/.test(x)) bad.push('続けるべきかの助言：'+x);
+      for(const [nm,ko] of [['乾為天',2],['風地観',4],['山地剥',3]]){ const rr=mk(nm,ko,q); const o=F.buildOfflineReading(rr,q); const S=F.shoOffline(rr,q,o,null); const adv=(S.find(x=>/アドバイス/.test(x.h))||{t:''}).t; if(/思い切|転職/.test(adv)) bad.push('続けるべきかの鑑定書の助言：'+adv); } }
+    return {bad}; });
+  ok('つらさの相談は記号なし・続けるべきかの助言（2026-11-17「A」）', r.bad.length===0, r.bad.join(' | ')); }
 async function consult(q,nums){ await p.evaluate(()=>scrollTo(0,0)); await p.click('.ct-number'); await p.waitForTimeout(300);
   for(const [i,v] of [['#num1',nums[0]],['#num2',nums[1]],['#num3',nums[2]]]) await p.fill(i,String(v));
   await p.fill('#question',q); const c0=calls; const t0=Date.now();
