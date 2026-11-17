@@ -1592,7 +1592,10 @@ function stampWord(q, c, ms){
 }
 function answer(c, el){
   if(S.honPlay && S.honStart && Date.now()<S.honStart) return;   // 問題を読んでいるあいだは押せない
-  if(busy) return; busy=true;
+  if(busy) return;
+  // 答えたあとの問題は、もう一度押しても何もしない（結果へ進めなかったときに、％やハンコが何重にも重なっていたため。2026-11-17）
+  if(!S.room && !S.honPlay && $('q-body').querySelector('.qstamp')) return;
+  busy=true;
   el.classList.add('picked');
   if(S.room){ if(S.honPlay){ honStop(); var hn=$('hnum'); hn.className='fl'; hn.textContent=(Math.round(Math.max(100,Date.now()-S.honStart)/100)/10).toFixed(1)+'秒！'; $('htimer').classList.add('read'); honRingDone((Math.round(Math.max(100,Date.now()-S.honStart)/100)/10).toFixed(1)); } roomAnswer(c); return; }
   if(S.honPlay){ honAnswer(c); return; }
@@ -1619,7 +1622,7 @@ function answer(c, el){
         // 次の問題へなめらかに：今の問題が左へ消えて、次の問題が右からすべりこむ
         var sq=$('s-q'); sq.classList.add('qout');
         setTimeout(function(){ sq.classList.remove('qout'); S.qi++; showQ(); sq.classList.add('qin'); setTimeout(function(){ sq.classList.remove('qin'); }, 280); }, 200);
-      } else showResult();
+      } else { try{ showResult(); }catch(e){ console.error(e); toast('結果をうまく出せませんでした。TOPからもう一度遊んでね'); } }
     }
   }, wait);
 }
@@ -2070,6 +2073,7 @@ function kotobaBuild(themes, list){
   var byId={}, freq={}, hfreq={}, theme={};
   (themes||[]).forEach(function(t,n){ t[1].forEach(function(w){ theme[w]=n; }); });
   (list||[]).forEach(function(r){
+    if(!Array.isArray(r) || !Array.isArray(r[2]) || !Array.isArray(r[4])) return;   // 表の行がくずれていても、ページ全体を止めない
     byId[hashStr(r[0]+'｜'+r[1])]={ a:r[2], ah:r[3], b:r[4], bh:r[5] };
     r[2].concat(r[4]).forEach(function(w){ freq[w]=(freq[w]||0)+1; });
     [r[3],r[5]].forEach(function(w){ if(w) hfreq[w]=(hfreq[w]||0)+1; });
@@ -2786,6 +2790,11 @@ function aishoLab(r){
          r>=40 ? ['ほどよく近い','似ているところと、ちがうところが半分ずつ。おたがいに新しい発見がある2人です。'] :
                  ['正反対','答えが分かれることが多い2人。自分にないものを持っている相手です。'];
 }
+/* 結果の1つの欄でまちがいが起きても、ほかの欄と結果の画面は出す（2026-11-17：ことばの表のまちがいで、15問目のあと結果に進めなくなっていた） */
+['charaHTML','kotobaHTML','kotobaHonHTML','kotobaBothHTML','histHTML'].forEach(function(n){
+  var f=window[n]; if(typeof f!=='function') return;
+  window[n]=function(){ try{ return f.apply(this, arguments); }catch(e){ console.error(n, e); return ''; } };
+});
 function aishoHTML(mode){
   var P=aishoPairs(), n=S.players.length; if(!P.length) return '';
   var nm=function(i){ return esc(S.players[i].name); };
