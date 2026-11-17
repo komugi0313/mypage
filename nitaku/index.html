@@ -893,6 +893,23 @@ body.rdy-on #gres-body{padding-bottom:230px}
 .rdy-n{margin:18px 0 0;font-size:15px;font-weight:700;line-height:1.8;text-align:center!important;text-align-last:center;word-spacing:0}
 .rdy-n span{display:block;width:100%;text-align:center}
 .big.rdy-go{background:#FF3D7F;color:#1E1E2A;border:3px solid #1E1E2A;box-shadow:4px 4px 0 #1E1E2A;margin-top:20px;font-size:22px}
+/* 1問20秒（恋愛編・ふつう編。鑑定者本人 2026-11-17「20秒にしたい」「何人でやってもそうしたい」） */
+.ntimer{display:flex;align-items:center;gap:10px;margin:12px 2px 14px}
+.nt-bar{flex:1;height:10px;border:2px solid #1E1E2A;border-radius:999px;background:#fff;overflow:hidden}
+.nt-bar i{display:block;height:100%;width:100%;background:#7BC8A4;transform-origin:left center}
+.ntimer b{min-width:52px;text-align:right;font-size:17px;font-weight:900;color:#1E1E2A;white-space:nowrap}
+.ntimer.low .nt-bar i{background:#FF3D7F}
+.ntimer.low b{color:#C2185B}
+.ntimer.out b{color:#5A5A6E}
+/* 部屋：だれが答えて、だれがまだ悩んでいるか（鑑定者本人 2026-11-17「お互い悩んでるとこ見られたらめっちゃ面白い」） */
+.qwho{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:10px 0 0}
+.qwho span{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border:2px solid #1E1E2A;border-radius:999px;background:#fff;font-weight:800;font-size:14px;white-space:nowrap}
+.qwho span.done{background:#DDF3E6}
+.qwho span.think{background:#FFF3C4}
+.qwho span.think i{font-style:normal;display:inline-block;animation:qthink 1.2s ease-in-out infinite}
+.qwho span.tout{background:#EEE;color:#5A5A6E}
+@keyframes qthink{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(10deg)}}
+@media (prefers-reduced-motion:reduce){.qwho span.think i{animation:none}}
 </style>
 </head>
 <body data-mode="love">
@@ -1172,6 +1189,8 @@ body.rdy-on #gres-body{padding-bottom:230px}
   <p class="turn" id="q-turn" hidden><span></span></p>
   <div class="qcard" id="q-card"><img class="q-pd" id="q-pd" src="img/panda-1.webp" alt="" width="56" height="56" hidden><span class="qno" id="q-no"></span><p class="qhint" id="q-hint"></p></div>
   <p class="qby" id="q-by" hidden></p>
+  <div class="qwho" id="q-who" hidden></div>
+  <div class="ntimer" id="ntimer" hidden><span class="nt-bar"><i id="nt-fill"></i></span><b id="nt-num">20</b></div>
   <div id="q-body"></div>
   <div class="htimer" id="htimer" hidden><span class="hdots" id="hdots" hidden><i></i><i></i><i></i></span><b id="hnum"></b><i id="htbar" hidden></i></div>
 </section>
@@ -1423,7 +1442,7 @@ function styleHint(){
   $('style-sw').textContent = room ? 'スマホが1台だけのときは、こちら' : 'それぞれのスマホで遊ぶ（部屋を作る）';
 }
 
-function show(id){ if(id!=='s-q') honStop(); if(id==='s-home') document.body.setAttribute('data-mode',S.mode);
+function show(id){ if(id!=='s-q'){ honStop(); ntStop(); } if(id==='s-home') document.body.setAttribute('data-mode',S.mode);
   document.querySelectorAll('.scr').forEach(function(s){ s.classList.toggle('on', s.id===id); }); window.scrollTo(0,0); if(id!=='s-gres') hideReady();
   if(id!=='s-home' && !pushed){ try{ history.pushState({nitaku:1},''); pushed=true; }catch(e){} } }
 
@@ -1433,9 +1452,9 @@ $('go-solo').onclick=function(){ pickWho('solo'); showReady(); };
 function showReady(){
   var LV={easy:'イージー',normal:'ノーマル',hard:'🔥ハード'};
   $('rdy-t').textContent = S.hon ? '⚡本能モード' : (S.mode==='love' ? '恋愛編' : 'ふつう編');
-  var tags = S.hon ? ['20問','1問3秒'] : [LV[S.lv]||'ノーマル','15問','約3分'];
+  var tags = S.hon ? ['20問','1問3秒'] : [LV[S.lv]||'ノーマル','15問','1問20秒'];
   $('rdy-tags').innerHTML = tags.map(function(t){ return '<span>'+t+'</span>'; }).join('');
-  $('rdy-n').innerHTML = S.hon ? '<span>1問3秒で次へ進みます。</span><span>考える前に、直感で選んでね。</span>' : '<span>時間の制限はありません。</span><span>ゆっくり考えて選んでね。</span>';
+  $('rdy-n').innerHTML = S.hon ? '<span>1問3秒で次へ進みます。</span><span>考える前に、直感で選んでね。</span>' : '<span>1問20秒で次の問題へ進みます。</span><span>じっくり悩んで選んでね。</span>';
   show('s-ready');
 }
 $('rdy-go').onclick=function(){ if(S.hon){ startHon(); return; } $('go').onclick(); };
@@ -1572,9 +1591,51 @@ function showQ(){
   hintWrap($('q-hint'), q.ex || 'どっちを選ぶ？');   // 画面が出てから測り直す（前の画面から来たときは、まだ幅がないため）
   var done = S.room && S.room.me.ans[S.room.data.round+':'+S.qi];
   if(S.honPlay && !done) honRun();
+  if(!S.honPlay && !done) ntRun(); else { ntStop(); $('ntimer').hidden=true; }
+  renderWho();
   if(done) showWait();
 }
 var busy=false;
+/* ───── 1問20秒（恋愛編・ふつう編。ひとりでも、みんなでも）。すぎたら「時間切れ」で次へ。時間切れは％・結果に数えない ───── */
+var NT_LIMIT=20000;
+function ntStop(){ clearInterval(S.ntI); S.ntI=null; }
+function ntRun(){
+  ntStop(); var box=$('ntimer'); box.hidden=false; box.className='ntimer';
+  var start=Date.now(), qkey=S.qi+':'+S.pi+':'+(S.room?S.room.view:'');
+  function tick(){
+    var left=Math.max(0, NT_LIMIT-(Date.now()-start));
+    $('nt-fill').style.transform='scaleX('+(left/NT_LIMIT)+')';
+    $('nt-num').textContent=Math.ceil(left/1000)+'秒';
+    box.classList.toggle('low', left<=5000);
+    if(left<=0){ ntStop(); if(curScr()==='s-q' && qkey===S.qi+':'+S.pi+':'+(S.room?S.room.view:'')) ntTimeout(); }
+  }
+  tick(); S.ntI=setInterval(tick, 200);
+}
+function ntTimeout(){
+  if(busy) return;
+  if(!S.room && $('q-body').querySelector('.qstamp, .picked')) return;
+  var box=$('ntimer'); box.className='ntimer out'; $('nt-num').textContent='時間切れ';
+  $('q-body').querySelectorAll('.choice').forEach(function(b){ b.disabled=true; b.onclick=null; });
+  if(S.room){ busy=true; roomAnswer('T'); return; }
+  busy=true;
+  S.ans[S.pi][S.qi]=undefined; S.times[S.pi][S.qi]=null;
+  toast('時間切れ！ 次の問題へ');
+  setTimeout(function(){ localNext(); }, 900);
+}
+/* 部屋：答えた人と、まだ悩んでいる人を、全員の画面に出す */
+function renderWho(){
+  var el=$('q-who'), R=S.room;
+  if(!el) return;
+  if(!R || !R.data || S.honPlay || R.data.phase!=='q'){ el.hidden=true; el.innerHTML=''; return; }
+  var k=R.data.round+':'+S.qi;
+  el.innerHTML=R.players.map(function(p){
+    var a=answeredKey(R, p, k), me=p.pid===R.pid, nm=esc(p.name||'？')+(me?'（あなた）':'');
+    if(a==='T') return '<span class="tout">⌛ '+nm+'</span>';
+    if(a) return '<span class="done">✅ '+nm+'</span>';
+    return '<span class="think"><i>🤔</i> '+nm+'<small>悩み中…</small></span>';
+  }).join('');
+  el.hidden=false;
+}
 /* ハンコの言葉（鑑定者本人 2026-11-17「OK」）：上から順に見て、最初に当てはまったもの。
    ％＝自分と同じ答えを選んだ人の割合（自分の1票もふくむ）。時間＝押すまでの秒数から読む時間（2つの答えの文字数×0.11秒）を引いたもの */
 /* みんなの回答％に1回ぶん数えたかの目印。部屋では回（round）ごとに分けるので、同じ人が次の回で同じ問題に答えても、また数える
@@ -1595,7 +1656,7 @@ function answer(c, el){
   if(busy) return;
   // 答えたあとの問題は、もう一度押しても何もしない（結果へ進めなかったときに、％やハンコが何重にも重なっていたため。2026-11-17）
   if(!S.room && !S.honPlay && $('q-body').querySelector('.qstamp')) return;
-  busy=true;
+  busy=true; ntStop();
   el.classList.add('picked');
   if(S.room){ if(S.honPlay){ honStop(); var hn=$('hnum'); hn.className='fl'; hn.textContent=(Math.round(Math.max(100,Date.now()-S.honStart)/100)/10).toFixed(1)+'秒！'; $('htimer').classList.add('read'); honRingDone((Math.round(Math.max(100,Date.now()-S.honStart)/100)/10).toFixed(1)); } roomAnswer(c); return; }
   if(S.honPlay){ honAnswer(c); return; }
@@ -1611,7 +1672,9 @@ function answer(c, el){
     el.classList.add('stamped'); el.appendChild(st);
     wait=Math.max(wait, 900);
   }
-  setTimeout(function(){
+  setTimeout(localNext, wait);
+}
+function localNext(){
     busy=false;
     if(S.who==='group'){
       if(S.pi < S.players.length-1){ S.pi++; showPass(); }
@@ -1624,7 +1687,6 @@ function answer(c, el){
         setTimeout(function(){ sq.classList.remove('qout'); S.qi++; showQ(); sq.classList.add('qin'); setTimeout(function(){ sq.classList.remove('qin'); }, 280); }, 200);
       } else { try{ showResult(); }catch(e){ console.error(e); toast('結果をうまく出せませんでした。TOPからもう一度遊んでね'); } }
     }
-  }, wait);
 }
 
 /* ───── 本能モード：1問3秒で、考える前に選ぶ（ひとりで・10問）─────
@@ -3389,7 +3451,7 @@ function syncGame(room, players){
   list.forEach(function(p){ cnt[p.name]=(cnt[p.name]||0)+1; });
   S.qs=room.qs; S.qi=room.qi;
   S.players=list.map(function(p){ var nm=p.name||'？'; if(cnt[nm]>1){ idx[nm]=(idx[nm]||0)+1; nm+=idx[nm]; } return { name:nm, pid:p.pid }; });
-  S.ans=list.map(function(p){ return room.qs.map(function(q,i){ return answeredKey(R, p, room.round+':'+i); }); });
+  S.ans=list.map(function(p){ return room.qs.map(function(q,i){ var a=answeredKey(R, p, room.round+':'+i); return (a==='T' && room.mode!=='hon') ? undefined : a; }); });   // 恋愛編・ふつう編の時間切れは数えない
   S.times=list.map(function(p){ var t=p.pid===R.pid ? R.me.times : (p.times||{}); return room.qs.map(function(q,i){ return t[room.round+':'+i]; }); });
 }
 function onRoom(room, players){
@@ -3541,13 +3603,14 @@ $('lb-start').onclick=function(){
 };
 function showWait(){
   var R=S.room; if(!R) return;
-  honStop();
+  honStop(); ntStop(); if(!S.honPlay){ var nb=$('ntimer'); if(!nb.classList.contains('out')) nb.hidden=true; }
   var mine=R.me.ans[R.data.round+':'+S.qi];
   $('q-body').querySelectorAll('.choice').forEach(function(b){ b.disabled=true; b.onclick=null; if(b.dataset.c===mine) b.classList.add('picked'); });
   if(!$('wait-box')){ var box=document.createElement('div'); box.id='wait-box'; box.className='wait-box'; $('q-body').appendChild(box); }
   updateWait();
 }
 function updateWait(){
+  renderWho();
   var R=S.room, box=$('wait-box'); if(!R || !box || !R.data) return;
   var k=R.data.round+':'+S.qi, n=R.players.length;
   var done=R.players.filter(function(p){ return answeredKey(R, p, k); }).length;
