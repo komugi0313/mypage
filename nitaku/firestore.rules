@@ -1,6 +1,6 @@
 // 究極の二択（honbare.com）が使う Firestore の決まり。
-// 置き場所は nitaku_rooms（みんなで遊ぶ部屋）と nitaku_votes（みんなの回答％）だけ。
-// 同じプロジェクトにほかの決まりがあるときは、全部を置きかえず、下の2つの match をいまの決まりの中に足してください。
+// 置き場所は nitaku_rooms（みんなで遊ぶ部屋）・nitaku_votes（みんなの回答％）・nitaku_stats（遊んだ回数）・nitaku_hist（4つの％の分布）だけ。
+// 同じプロジェクトにほかの決まりがあるときは、全部を置きかえず、下の match と function をいまの決まりの中に足してください。
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -33,6 +33,57 @@ service cloud.firestore {
       allow update: if request.resource.data.keys().hasOnly(['a','b'])
         && ((request.resource.data.a == resource.data.a + 1 && request.resource.data.b == resource.data.b)
          || (request.resource.data.b == resource.data.b + 1 && request.resource.data.a == resource.data.a));
+      allow delete: if false;
+    }
+
+    // 1つの項目を1だけ増やす書きこみか（ほかの項目は変えない・消さない・名前などは入れられない）
+    function nitakuUp1(k) {
+      return request.resource.data.get(k, 0) == resource.data.get(k, 0)
+        || request.resource.data.get(k, 0) == resource.data.get(k, 0) + 1;
+    }
+    function nitakuNew1(keys) {
+      return request.resource.data.size() == 1 && request.resource.data.keys().hasOnly(keys)
+        && request.resource.data.values()[0] == 1;
+    }
+    function nitakuPlaysUp() {
+      return request.resource.data.keys().hasOnly(['solo_love_easy','solo_love_normal','solo_love_hard','solo_love_mix','solo_love_x','solo_normal_easy','solo_normal_normal','solo_normal_hard','solo_normal_mix','solo_normal_x','solo_hon_easy','solo_hon_normal','solo_hon_hard','solo_hon_mix','solo_hon_x','room_love_easy','room_love_normal','room_love_hard','room_love_mix','room_love_x','room_normal_easy','room_normal_normal','room_normal_hard','room_normal_mix','room_normal_x','room_hon_easy','room_hon_normal','room_hon_hard','room_hon_mix','room_hon_x'])
+        && request.resource.data.diff(resource.data).affectedKeys().size() == 1
+        && resource.data.keys().hasOnly(request.resource.data.keys()) &&
+        nitakuUp1('solo_love_easy') && nitakuUp1('solo_love_normal') && nitakuUp1('solo_love_hard') &&
+        nitakuUp1('solo_love_mix') && nitakuUp1('solo_love_x') && nitakuUp1('solo_normal_easy') &&
+        nitakuUp1('solo_normal_normal') && nitakuUp1('solo_normal_hard') && nitakuUp1('solo_normal_mix') &&
+        nitakuUp1('solo_normal_x') && nitakuUp1('solo_hon_easy') && nitakuUp1('solo_hon_normal') &&
+        nitakuUp1('solo_hon_hard') && nitakuUp1('solo_hon_mix') && nitakuUp1('solo_hon_x') &&
+        nitakuUp1('room_love_easy') && nitakuUp1('room_love_normal') && nitakuUp1('room_love_hard') &&
+        nitakuUp1('room_love_mix') && nitakuUp1('room_love_x') && nitakuUp1('room_normal_easy') &&
+        nitakuUp1('room_normal_normal') && nitakuUp1('room_normal_hard') && nitakuUp1('room_normal_mix') &&
+        nitakuUp1('room_normal_x') && nitakuUp1('room_hon_easy') && nitakuUp1('room_hon_normal') &&
+        nitakuUp1('room_hon_hard') && nitakuUp1('room_hon_mix') && nitakuUp1('room_hon_x');
+    }
+    function nitakuHistUp() {
+      return request.resource.data.keys().hasOnly(['b0','b1','b2','b3','b4','b5','b6','b7','b8','b9','b10','b11','b12','b13','b14','b15','b16','b17','b18','b19','b20'])
+        && request.resource.data.diff(resource.data).affectedKeys().size() == 1
+        && resource.data.keys().hasOnly(request.resource.data.keys()) &&
+        nitakuUp1('b0') && nitakuUp1('b1') && nitakuUp1('b2') && nitakuUp1('b3') && nitakuUp1('b4') &&
+        nitakuUp1('b5') && nitakuUp1('b6') && nitakuUp1('b7') && nitakuUp1('b8') && nitakuUp1('b9') &&
+        nitakuUp1('b10') && nitakuUp1('b11') && nitakuUp1('b12') && nitakuUp1('b13') && nitakuUp1('b14') &&
+        nitakuUp1('b15') && nitakuUp1('b16') && nitakuUp1('b17') && nitakuUp1('b18') && nitakuUp1('b19') &&
+        nitakuUp1('b20');
+    }
+
+    // 遊んだ回数（ひとりで／部屋 × 編 × 難しさ の数だけ。2026-11-17）
+    match /nitaku_stats/{id} {
+      allow read: if true;
+      allow create: if id == 'plays' && nitakuNew1(['solo_love_easy','solo_love_normal','solo_love_hard','solo_love_mix','solo_love_x','solo_normal_easy','solo_normal_normal','solo_normal_hard','solo_normal_mix','solo_normal_x','solo_hon_easy','solo_hon_normal','solo_hon_hard','solo_hon_mix','solo_hon_x','room_love_easy','room_love_normal','room_love_hard','room_love_mix','room_love_x','room_normal_easy','room_normal_normal','room_normal_hard','room_normal_mix','room_normal_x','room_hon_easy','room_hon_normal','room_hon_hard','room_hon_mix','room_hon_x']);
+      allow update: if id == 'plays' && nitakuPlaysUp();
+      allow delete: if false;
+    }
+
+    // 4つの％の分布（編と％ごとに、5%きざみの21の数だけ。名前・答えは入れない。2026-11-17）
+    match /nitaku_hist/{id} {
+      allow read: if true;
+      allow create: if id.matches('^(love_[KRSA]|normal_[BYMN])$') && nitakuNew1(['b0','b1','b2','b3','b4','b5','b6','b7','b8','b9','b10','b11','b12','b13','b14','b15','b16','b17','b18','b19','b20']);
+      allow update: if id.matches('^(love_[KRSA]|normal_[BYMN])$') && nitakuHistUp();
       allow delete: if false;
     }
   }
