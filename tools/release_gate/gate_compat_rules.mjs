@@ -588,6 +588,11 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     if(!/b\+=sheetTraitHTML\(dayGZ,'work'/.test(sh)||!/b\+=sheetTraitHTML\(dayGZ,'love'/.test(sh)) e.push('鑑定書の本格版（定型文）に入っていない');
     if(!/kan\.恋愛\+'<\/p>'\+sheetTraitHTML\(dayGZ,'love'/.test(sh)||!/kan\.仕事\+'<\/p>'\+sheetTraitHTML\(dayGZ,'work'/.test(sh)) e.push('鑑定書のやさしい版に入っていない');
     if(!/sheetTraitMaterial\(/.test(sh)||!/txt=window\.sheetEnsureTraitsTxt\(txt,/.test(sh)) e.push('鑑定書の詳細鑑定（材料・書き足し）に入っていない'); }
+    { /* 向いている仕事は1つの出どころ（2026-11-17）：鑑定書の言葉の表と決め方が、アプリの pkJobFit（PK_GRP_JOB・喜神→月支元命）と同じか（3か所の鑑定書） */
+      const ap=fs.readFileSync(path.join(ROOT,dir,page0),'utf8'), am=/const PK_GRP_JOB=(\{[^\n]*?\});/.exec(ap), A=am?Function('return '+am[1])():null;
+      ['pro','beginner','meishiki-original'].forEach(dd=>{ const st=fs.readFileSync(path.join(ROOT,dd,'meishi-sheet.html'),'utf8'), m=/var SHEET_GRP_JOB=(\{[^\n]*?\});/.exec(st), S=m?Function('return '+m[1])():null;
+        if(!A||!S||JSON.stringify(A)!==JSON.stringify(S)) e.push(dd+'の鑑定書：向いている仕事の言葉がアプリ（PK_GRP_JOB）とちがう');
+        if(!/\['向いている仕事',\(function\(\)\{ var JF=sheetJobFit\(!!plain\);/.test(st)||!/window\.__sheetJobR=r;/.test(st)) e.push(dd+'の鑑定書：持ち味の向いている仕事が sheetJobFit を使っていない'); }); }
   const r=await p.evaluate(()=>{ const o={bad:[]}; const c0=chart; try{
     const K=Object.keys(KANSHI60_TRAITS), F=['恋長','恋注','恋助','仕長','仕注','仕適','仕助'], NG=/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]|命式|通変|大運|十二運|蔵干|比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬|魁罡|空亡|AI|[*＊]|男性|女性/;
     if(K.length!==60||K.join('')!==Object.keys(KANSHI60_DETAIL).join('')) o.bad.push('60干支がそろわない');

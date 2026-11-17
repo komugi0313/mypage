@@ -2765,17 +2765,26 @@ window.KANSHI60_TRAITS=/*PK-KANSHI-TRAITS:start*/{
      命式内の天地徳合・天戦地冲、魁罡、生まれ持った三合・方合、これから3年の天戦地冲（日柱・月柱）。計算は表と同じデータから。 */
   /* 恋愛・仕事の持ち味（長所・気をつけたいこと・向いている仕事・アドバイス）を鑑定書の「才能・仕事」「恋愛・結婚」の章に必ず入れる（鑑定者本人の指示 2026-11-11。
      アプリの pkTraitItems と同じ項目・同じ材料 KANSHI60_TRAITS）。定型文の本格版・やさしい版はここから書き、詳細鑑定の文は書いていなければ足す（sheetEnsureTraitsTxt）。 */
-  function sheetTraitItems(gz,k){ var d=(window.KANSHI60_TRAITS&&window.KANSHI60_TRAITS[gz])||null; if(!d) return null;
+  /* 向いている仕事は1つの出どころ（アプリの pkJobFit と同じ決め方・同じ言葉。鑑定者本人の承認 2026-11-17「#3」）：喜神の星の流れ（喜神の五行が 比劫・食傷・財・官殺・印 のどれか。この順で2つまで）。
+     中和などで喜神がないときは、月支元命（月柱の司令の星）の流れ。KANSHI60_TRAITS の中身は変えない */
+  var SHEET_GRP_JOB={比劫:['独立・仲間と組む仕事・体を動かす仕事','自分の力で進める仕事、仲間と組む仕事'],食傷:['話す・教える・表現する・技術や語学を生かす仕事','話す・教える・表現する仕事、技術や語学を生かす仕事'],財:['営業・商売・お金や物を扱う実務','人やお金、物を動かす仕事'],官殺:['組織の中で責任を持つ仕事・管理・公務','組織の中で役割と責任を任される仕事'],印:['学び・研究・資格や専門知識を生かす仕事','学びや専門の知識を生かす仕事']};
+  var SHEET_TS_GRP={比肩:'比劫',劫財:'比劫',食神:'食傷',傷官:'食傷',偏財:'財',正財:'財',偏官:'官殺',正官:'官殺',偏印:'印',印綬:'印'};
+  function sheetJobFit(plain,r){ try{ r=r||window.__sheetJobR; if(!r) return null; var de=r.dayEl||'', SH=['木','火','土','金','水'], i=SH.indexOf(de); if(i<0) return null;
+    var G=['比劫','食傷','財','官殺','印'], els=r.shugojin||[], gs=G.filter(function(g,k){ return els.indexOf(SH[(i+k)%5])>=0; }).slice(0,2), why='喜神';
+    if(!gs.length){ var g=SHEET_TS_GRP[(((r.pillars||{}).month||{}).zokanTsuhen)||'']; if(g){ gs=[g]; why='月支元命'; } }
+    if(!gs.length) return null; return {gs:gs,why:why,text:gs.map(function(g){ return SHEET_GRP_JOB[g][plain?1:0]; }).join('／')}; }catch(e){ return null; } }
+  window.sheetJobFit=sheetJobFit;
+  function sheetTraitItems(gz,k,plain){ var d=(window.KANSHI60_TRAITS&&window.KANSHI60_TRAITS[gz])||null; if(!d) return null;
     return k==='love'?[['長所',d.恋長,/長所|強み|良いところ|よいところ/],['気をつけたいこと',d.恋注,/気をつけ|注意|クセ|くせ/],['アドバイス',d.恋助,/アドバイス|おすすめ|心がけ|コツ|ヒント/]]
-      :[['長所',d.仕長,/長所|強み|良いところ|よいところ/],['気をつけたいこと',d.仕注,/気をつけ|注意|クセ|くせ/],['向いている仕事',d.仕適+'など',/向いている仕事|向いてる仕事|適職|向く仕事|向いている職/],['アドバイス',d.仕助,/アドバイス|おすすめ|心がけ|コツ|ヒント/]]; }
+      :[['長所',d.仕長,/長所|強み|良いところ|よいところ/],['気をつけたいこと',d.仕注,/気をつけ|注意|クセ|くせ/],['向いている仕事',(function(){ var JF=sheetJobFit(!!plain); return JF?JF.text:d.仕適+'など'; })(),/向いている仕事|向いてる仕事|適職|向く仕事|向いている職/],['アドバイス',d.仕助,/アドバイス|おすすめ|心がけ|コツ|ヒント/]]; }
   function sheetTraitHead(k,plain){ return k==='love'?(plain?'【恋愛での持ち味】':'【恋愛の持ち味】'):(plain?'【お仕事での持ち味】':'【仕事の持ち味】'); }
-  function sheetTraitHTML(gz,k,plain,cls){ var it=sheetTraitItems(gz,k); if(!it) return ''; var e=function(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  function sheetTraitHTML(gz,k,plain,cls){ var it=sheetTraitItems(gz,k,plain); if(!it) return ''; var e=function(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
     return '<p class="'+(cls||'rd-p')+'"><b>'+sheetTraitHead(k,plain)+'</b><br>'+it.map(function(x){ return '<b>'+x[0]+'：</b>'+e(x[1]); }).join('<br>')+'</p>'; }
-  function sheetTraitMaterial(gz,plain){ var L=sheetTraitItems(gz,'love'), W=sheetTraitItems(gz,'work'); if(!L||!W) return '';
+  function sheetTraitMaterial(gz,plain){ var L=sheetTraitItems(gz,'love',plain), W=sheetTraitItems(gz,'work',plain); if(!L||!W) return '';
     var f=function(a){ return a.map(function(x){ return x[0]+'：'+x[1]; }).join('／'); };
     return '\n【恋愛と仕事の持ち味（ツールの材料。生まれた日から出したもの）】\n恋愛＝'+f(L)+'\n仕事＝'+f(W)+'\n書き方：「才能・仕事」の章に'+sheetTraitHead('work',plain)+'、「恋愛・結婚」の章に'+sheetTraitHead('love',plain)+'の小見出しを必ず置き、「・長所：」「・気をつけたいこと：」（仕事は「・向いている仕事：」も）「・アドバイス：」の形で、この材料の意味を変えずに書く。気をつけたいことは責めない前向きな言い方で。性別で決めつけない。\n'; }
   function sheetEnsureTraitsTxt(txt,gz,plain){ try{ txt=String(txt||''); var flat=function(x){ return String(x||'').replace(/[\s　]/g,''); };
-    [['work',/仕事|才能|適職/,'才能・仕事'],['love',/恋愛|結婚|パートナー/,'恋愛・結婚']].forEach(function(K){ var k=K[0], it=sheetTraitItems(gz,k); if(!it) return;
+    [['work',/仕事|才能|適職/,'才能・仕事'],['love',/恋愛|結婚|パートナー/,'恋愛・結婚']].forEach(function(K){ var k=K[0], it=sheetTraitItems(gz,k,plain); if(!it) return;
       var first=it[0][1].split('。')[0]; if(first&&flat(txt).indexOf(flat(first))>=0) return;
       var lines=txt.split('\n'), hs=[]; lines.forEach(function(ln,i){ if(/^\s*#{1,3}\s*/.test(ln)) hs.push(i); });
       var ci=-1; hs.forEach(function(i){ if(ci<0&&K[1].test(lines[i])) ci=i; });
@@ -4481,7 +4490,7 @@ window.KANSHI60_TRAITS=/*PK-KANSHI-TRAITS:start*/{
       });
     }
     // ── 2枚目：命式から読み解いた鑑定文 ──
-    _lastResult = r;
+    _lastResult = r; window.__sheetJobR=r;   // 向いている仕事（sheetJobFit）に使う
     _autoShugoKind = r.shugoStrength; _autoShugojin = r.shugojin;   // 自動判定の控え（上書き解除で戻す）
     _ykStrengthOverride = null; if(typeof _resetStrengthButtons==='function') _resetStrengthButtons();  // 別人を鑑定したら上書きは必ずリセット（喜神忌神の取り違え防止）
     if(_readEngine==='ai'){ setEngine('template'); }   // 別の人を鑑定したら定型文に戻す（古いAI文・不要な課金を防ぐ）
