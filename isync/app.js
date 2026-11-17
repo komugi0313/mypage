@@ -87,6 +87,19 @@ let JOIN=(/^#join-(\d{4})$/.exec(location.hash||'')||[])[1]||'';
 if(JOIN)CFG.mode='each';
 if(['solo','each'].includes(QS.get('mode')))CFG.mode=QS.get('mode');
 const saveCfg=()=>store('kv_cfg',{mode:CFG.mode,len:CFG.len,topic:CFG.topic,anon:CFG.anon});
+/* トップの「まず1問、答えてみて」（鑑定者本人 2026-11-17 トップの見本で「2のオーロラ」。押すと、これまでに遊んだ人の％が出る。ここでは数えない） */
+const TRY_K=Math.max(0,Q.findIndex(q=>q[1]==='LINEは？'));
+function bindTry(){
+  const box=$('try');if(!box)return;let done=false,counts=null;
+  getDb().then(db=>db&&db.votes?db.votes(['q'+QKEY[TRY_K]]):null).then(c=>{counts=c&&c['q'+QKEY[TRY_K]]}).catch(()=>{});
+  box.querySelectorAll('.topt').forEach(b=>b.onclick=()=>{if(done)return;done=true;const v=+b.dataset.tv;
+    const c=counts||{},cnt=[c.a||0,c.b||0,c.c||0];const t0=cnt[0]+cnt[1]+cnt[2];cnt[v]++;const t=t0+1;
+    box.classList.add('done');
+    box.querySelectorAll('.topt').forEach(o=>{const k=+o.dataset.tv;o.classList.toggle('me',o===b);
+      if(t0>0){const pc=Math.round(cnt[k]*100/t);o.querySelector('.pct').textContent=pc+'%';o.querySelector('.tbar').style.width=pc+'%'}});
+    $('tnote').innerHTML=t0>0?`これが<b>みんなの答え</b>です${t0+1>=SHOW_COUNT?`（${t.toLocaleString()}人）`:''}。大事な人の答えは、同じ？`:'大事な人の答えは、同じ？　下から一緒に遊べます。';
+  });
+}
 function seg(name,items){return `<div class="chips c${items.length}" role="group">${items.map(([v,l])=>`<button class="chip" data-k="${name}" data-v="${v}" aria-pressed="${String(CFG[name])===String(v)}">${l}</button>`).join('')}</div>`}
 function goTop(){
   const st=store('kv_room');
@@ -94,27 +107,32 @@ function goTop(){
   <header class="brand">
     <div class="bubbles" aria-hidden="true"><i class="m" style="left:4%;top:30px;--s:34px;--d:0s;--t:9s"></i><i class="p" style="left:16%;top:150px;--s:16px;--d:2s;--t:7s"></i><i class="p" style="left:80%;top:18px;--s:44px;--d:1s;--t:10s"></i><i class="m" style="left:90%;top:170px;--s:20px;--d:3s;--t:8s"></i><i class="l" style="left:70%;top:110px;--s:12px;--d:0.5s;--t:6s"></i><i class="l" style="left:24%;top:80px;--s:10px;--d:4s;--t:7s"></i><i class="m" style="left:58%;top:4px;--s:22px;--d:2.5s;--t:9s"></i><i class="p" style="left:3%;top:222px;--s:18px;--d:1.5s;--t:11s"></i><i class="m" style="left:93%;top:240px;--s:12px;--d:5s;--t:8s"></i></div>
     <div class="orb" aria-hidden="true"></div>
-    <h1 class="logo">I-Sync</h1><p class="kana">アイ・シンク</p><p class="tl">わたしとあなたの、重なるところ</p>
-    <p class="lead">好みや考え方の2択に答えて、答え合わせ。<br>どこが重なって、どこがちがうかがわかる診断です。</p>
+    <h1 class="logo">I-Sync</h1><p class="kana">アイ・シンク</p>
+    <p class="catch">2人の「ふつう」、<br>どこまで同じ？</p>
+    <p class="lead">2択に答えて、答え合わせ。</p>
   </header>
   ${PACK?`<section class="card packb"><p class="label">「${esc(PACK.title)}」の質問から出します</p><p class="hint">このテーマの質問だけで、ひとりでも、みんなでも遊べます。</p><button class="btn ghost small" id="packx">いつもの質問にもどす</button></section>`:''}
-  <section class="card intro">
-    <p class="label">たとえば、こんな問題</p>
-    <div class="ex"><p class="exq">LINEは？</p>
-      <p class="exo"><span class="o0">A　毎日やりとりしたい</span><span class="o1">B　用があるときだけでいい</span><span class="o2">どっちでも合わせられる</span></p></div>
-    <p class="label">わかること</p>
-    <ul class="know">
-      <li><b>シンクロ率</b><span>2人の答えが、どれだけ重なったか</span></li>
-      <li><b>ぴったり度</b><span>同じ・合わせられる・ちがう答えの数</span></li>
-      <li><b>ゆずれないこと</b><span>「★ゆずれない」をつけた大事なところが合うか（しっかり版）</span></li>
-      <li><b>価値観のタイプ</b><span>きっちり派？計画派？いつも一緒派？コツコツ派？</span></li>
-      <li><b>話しておきたいこと</b><span>答えが反対になった、大事なところ</span></li>
-    </ul>
-    <p class="hint">恋人・気になる人・友だち・家族と。ひとりでも遊べます（10問・約3分）。</p>
-    <p class="hint">婚活パーティー・街コンでも使えます。QRを読むだけで、その場の2〜10人で遊べます（アプリ不要）。</p>
+  <section class="card try" id="try">
+    <p class="kick">まず1問、答えてみて</p>
+    <p class="exq">${esc(Q[TRY_K][1])}</p>
+    <div class="tops">${[0,1,2].map(v=>`<button class="topt o${v}" data-tv="${v}"><span class="t">${v<2?OPTS[v]+'　':''}${esc(ans(v,TRY_K))}</span><span class="pct"></span><i class="tbar"></i></button>`).join('')}</div>
+    <p class="tnote" id="tnote"></p>
   </section>
+  <section class="card smp">
+    <p class="kick">遊ぶと、こんな結果に（見本）</p>
+    <div class="smp-box">
+      <div class="smp-top"><p class="smp-big">78<small>%</small></p><p class="smp-who">りえ × ゆうと<span>シンクロ率</span></p></div>
+      <div class="smp-chips"><i>食<b>92%</b></i><i>休日<b>81%</b></i><i>お金<b>54%</b></i></div>
+      <div class="smp-ayu"><b>歩み寄りの案</b>お風呂は湯船／シャワーで分かれた → 平日はシャワー、週末は湯船に。</div>
+    </div>
+  </section>
+  <div class="gos">
+    <button class="gobig g1" id="go-each"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg></span><span><b>2人で・みんなで</b><small>QRを読むだけ・2〜10人</small></span></button>
+    <button class="gobig g2" id="go-solo"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span><span><b>ひとりで遊ぶ</b><small>10問・約3分。あとで答え合わせ</small></span></button>
+    <p class="free">無料・登録なし・アプリ不要</p>
+  </div>
   ${st&&st.code?`<button class="btn ghost small" id="back">さっきの部屋（${esc(st.code)}）にもどる</button>`:''}
-  <section class="card">
+  <section class="card" id="setup">
     <p class="label">だれと遊ぶ？</p>
     ${seg('mode',[['each','みんなで<br><small>それぞれのスマホで</small>'],['solo','ひとりで']])}
     <p class="hint" id="m-desc"></p>
@@ -171,6 +189,11 @@ function goTop(){
     CFG[k]=k==='len'?+v:k==='anon'?v==='true':v;saveCfg();
     app.querySelectorAll(`[data-k="${k}"]`).forEach(x=>x.setAttribute('aria-pressed',x===b));refresh()});
   refresh();
+  // トップの大きな2つのボタン：選んで、下の設定へ
+  const pickMode=m=>{CFG.mode=m;saveCfg();app.querySelectorAll('[data-k="mode"]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===m));refresh();
+    const t=$('setup');if(t)t.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'})};
+  $('go-each').onclick=()=>pickMode('each');$('go-solo').onclick=()=>pickMode('solo');
+  bindTry();
   // みんなのスマホで
   const myName=()=>{const v=$('me').value.trim();if(v)store('kv_name',v);return v};
   const err=t=>{$('err').textContent=t};
