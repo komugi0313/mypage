@@ -192,7 +192,7 @@ function goTop(){
     <p class="err" id="kerr" role="alert"></p>
   </section>
   <section class="card" id="m-each">
-    <label class="one-name" for="me"><span>ニックネーム</span><input type="text" id="me" maxlength="10" placeholder="本名でなくてOK" value="${esc(store('kv_name')||'')}"></label>
+    <label class="one-name" for="me"><span>ニックネーム</span><input type="text" id="me" maxlength="10" value="${esc(store('kv_name')||'')}"></label>
     <button class="btn" id="mk">部屋を作る</button>
     <p class="hint mk-what">押すと部屋ができて、そばの友だちに見せるQRコードと、LINEで送るリンクが出ます。</p>
     <div class="join">
@@ -576,7 +576,7 @@ function inviteText(name,n){return `${name}さんから、アイ・シンクの�
 function inviteCard(G,p){const n=G.qs.length,nm=['あなた','ともだち'].includes(p.name)?(store('kv_name')||''):p.name;
   return `<section class="card invite"><p class="label">この${n}問で、だれかと答え合わせ</p>
     <p class="hint">リンクを送ると、相手が同じ${n}問に答えるだけで、2人の答えがどれだけ重なるかがわかります。同じ時間に開いていなくても大丈夫です。</p>
-    <label class="one-name" for="inv-name"><span>あなたのニックネーム（相手に出ます）</span><input type="text" id="inv-name" maxlength="10" placeholder="本名でなくてOK" value="${esc(nm)}"></label>
+    <label class="one-name" for="inv-name"><span>あなたのニックネーム（相手に出ます）</span><input type="text" id="inv-name" maxlength="10" value="${esc(nm)}"></label>
     <a class="btn line" id="inv-line" href="#" target="_blank" rel="noopener">LINEで答え合わせに誘う</a>
     <button class="btn ghost small" id="inv-share">ほかのアプリで送る</button><p class="hint" id="inv-msg" hidden></p>
     <p class="hint">あなたの答えはリンクの中に入っていて、相手が答え終わるまで見えません。どこにも保存されません。</p>
@@ -613,7 +613,7 @@ function withStart(x){
     <p class="big">${esc(x.name)}さんから、答え合わせのお誘いです</p>
     <p class="hint">${esc(x.name)}さんが答えた${n}問に、あなたも答えてください（約${minsOf(n)}分）。答え終わると、2人の答えがどれだけ重なるかがわかります。</p>
     <p class="hint">${esc(x.name)}さんの答えは、あなたが答え終わるまで見えません。</p>
-    <label class="one-name" for="wn" style="align-self:stretch;text-align:left"><span>ニックネーム</span><input type="text" id="wn" maxlength="10" placeholder="本名でなくてOK" value="${esc(store('kv_name')||'')}"></label>
+    <label class="one-name" for="wn" style="align-self:stretch;text-align:left"><span>ニックネーム</span><input type="text" id="wn" maxlength="10" value="${esc(store('kv_name')||'')}"></label>
     <p class="hint" id="wmsg" hidden>ニックネームを入れてください（2人の結果に出ます）。</p>
     <button class="btn" id="wgo" style="align-self:stretch">答えはじめる</button>
     <button class="btn ghost small" id="wtop">アイ・シンクのトップを見る</button></section>`);
@@ -1018,7 +1018,7 @@ async function joinFromLink(code){
     <img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
     <p class="big">部屋に招待されました</p>
     <p class="hint">${started?'もう始まっています。入ると、いまの問題から参加します。':`いま${ps.length}人が待っています。`}</p>
-    <label class="one-name" for="jn-name" style="align-self:stretch;text-align:left"><span>ニックネーム</span><input type="text" id="jn-name" maxlength="10" placeholder="本名でなくてOK" autocomplete="nickname"></label>
+    <label class="one-name" for="jn-name" style="align-self:stretch;text-align:left"><span>ニックネーム</span><input type="text" id="jn-name" maxlength="10" autocomplete="nickname"></label>
     <button class="btn" id="jn-go" style="align-self:stretch">参加する</button>
   </section>`);
   const inp=$('jn-name');
