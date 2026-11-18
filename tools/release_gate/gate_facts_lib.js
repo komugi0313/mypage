@@ -161,13 +161,14 @@ window.__FACTS = (function () {
           const Ps = who === 'both' ? [A, B] : who === 'B' ? [B] : who === 'A' ? [A] : PS; if (Ps.some(P => !P)) continue;
           let res = null, what = '';
           // 「A〜Bは〔…〕の月」：範囲の始まりの日の月で見る
-          const rg = line.match(/(?:((?:19|20)\d\d)年)?(\d{1,2})月(\d{1,2})日〜(?:(?:19|20)\d\d年)?\d{1,2}月\d{1,2}日は$/);
+          const rg = line.match(/(?:((?:19|20)\d\d)年)?(\d{1,2})月(\d{1,2})日〜(?:(?:19|20)\d\d年)?\d{1,2}月\d{1,2}日(?:は)?$/);   // 画面の月の区切りを日付で見せる形（「2027年6月6日〜7月6日〔本人は空亡〕」＝始まりの日の月。UX点検② 2026-11-18）も読む
+          const rgM = rg && !/日〕|の日/.test(tag + (m[2] || ''));
           const yr = /〔(\d{4})年は/.exec(m[0]);
           const lab = line.match(/(?:((?:19|20)\d\d)年)?(\d{1,2})月〜(?:翌)?\d{1,2}月上旬(?:（[^）]*）)?(?:の間|の期間|のあいだ|ごろ|頃)?(?:は|が|、|も)?$/) || line.match(/(?:((?:19|20)\d\d)年)?(\d{1,2})月(?:〜|から)(?:翌)?\d{1,2}月上旬(?:に?かけて|まで)?[^\d。]{0,30}$/), labNow = /いま〜(?:翌)?\d{1,2}月上旬(?:（[^）]*）)?(?:の間|の期間|のあいだ|ごろ|頃)?(?:は|が|、|も)?$/.test(line) || /いま(?:〜|から)(?:翌)?\d{1,2}月上旬(?:に?かけて|まで)?[^\d。]{0,24}$/.test(line)   // 「いまから12月上旬にかけての時期は、お相手が〔…〕の月」も、いまの月（2026-11-07）;
           if (labNow && gran !== 'd' && !yr) { const mE = +(line.match(/いま(?:〜|から)(?:翌)?(\d{1,2})月上旬/) || [])[1], tm = mE ? (mE === 1 ? 12 : mE - 1) : 0; const pick = P => (tm && P.ML.find(x => x.calMonth === tm)) || P.ML[0]; const e = pick(A); res = Ps.map(P => { const e2 = pick(P); return pkKuuBadMonth(P.c, e2.branch, e2); }); what = 'いまの月（' + (e && e.ganzhi) + '）'; }   // 「いま〜12月上旬」＝11月の節入りからの月（節入りの日は新しい月。アプリの pkSmBr と同じ。2026-11-07）
           else if (lab && gran !== 'd' && !yr) { const mo = +lab[2]; const Ys = lab[1] ? [+lab[1]] : ycands(mo, 0, yearCtxBefore(t, m.index - 48)); res = Ps.map(P => Ys.some(y => isKuuMonth(P, y, mo))); what = `${Ys[0]}年${mo}月（${tr(Ys[0], mo, 20)[1].ganzhi}の月）`; }
           else if (yr) { const Y = +yr[1]; res = Ps.map(P => pkKuuBad(P.c, Y)); what = Y + '年'; }
-          else if (rg && gran !== 'd') { const mo = +rg[2], d = +rg[3]; const y = rg[1] ? +rg[1] : resolveY(mo, d, null); const dt = new Date(y, mo - 1, d, 12); res = Ps.map(P => isKuuMonthOfDate(P, dt)); what = `${y}年${mo}月${d}日からの月（${monGzOfDay(y, mo, d)}）`; }
+          else if (rg && (gran !== 'd' || rgM)) { const mo = +rg[2], d = +rg[3]; const y = rg[1] ? +rg[1] : resolveY(mo, d, null); const dt = new Date(y, mo - 1, d, 12); res = Ps.map(P => isKuuMonthOfDate(P, dt)); what = `${y}年${mo}月${d}日からの月（${monGzOfDay(y, mo, d)}）`; }
           else if (!x) continue;
           else if (gran === 'd' && x[3]) { const mo = +x[2], d = +x[3]; const Ys = x[1] ? [+x[1]] : ycands(mo, d, yearCtxBefore(t, m.index - 48)); const y = Ys[0]; res = Ps.map(P => Ys.some(yy => kuuDay(P, new Date(yy, mo - 1, d, 12)))); what = `${y}年${mo}月${d}日（${dayGz(y, mo, d)}の日）`; }
           else if (gran === 'm' && x[2]) { const mo = +x[2]; const Ys = x[1] ? [+x[1]] : ycands(mo, 0, yearCtxBefore(t, m.index - 48)); const y = Ys[0]; if (x[3]) { res = Ps.map(P => Ys.some(yy => isKuuMonthOfDate(P, new Date(yy, mo - 1, +x[3], 12)))); what = `${y}年${mo}月${x[3]}日の月`; } else { res = Ps.map(P => Ys.some(yy => isKuuMonth(P, yy, mo))); what = `${y}年${mo}月（${tr(y, mo, 20)[1].ganzhi}の月）`; } }

@@ -76,7 +76,9 @@ html.bg-on body.sample-fold #bg-easy > .bgc:nth-of-type(n+3){display:none!import
 .beginner-pro-collapse>summary .bar-sub{display:block;margin-top:6px;font-size:13.5px;font-weight:700;color:#7E4232;line-height:1.7}
 .beginner-pro-collapse>section,.beginner-pro-collapse>details,.beginner-pro-collapse>div{margin:10px}
 #bg-modebar{display:none;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:8px 0 12px;padding:9px 12px;border-radius:12px;background:#F4EFE4;border:1px solid var(--line2);font-size:13.5px;font-weight:800;color:var(--ink2);line-height:1.5}
-#bg-modebar{display:flex}   /* 表示の切りかえは、最初の結果の前から見えるように（2026-11-17 UX点検） */
+#bg-modebar{display:flex}
+.bg-sheet-btn{display:none}
+html.bg-on .bg-sheet-btn{display:block;width:100%;min-height:46px;margin:10px 0 0;border:1.5px solid #EDB3AA;border-radius:12px;background:#FCE9E6;color:#A8322B;font-family:inherit;font-weight:900;font-size:14px;cursor:pointer}   /* 表示の切りかえは、最初の結果の前から見えるように（2026-11-17 UX点検） */
 #bg-modebar button{flex:0 0 auto;border:0;border-radius:999px;padding:7px 13px;background:#3A3226;color:#fff;font-family:inherit;font-weight:800;font-size:13.5px;cursor:pointer;white-space:nowrap}
 /* 初心者モードの項目ナビ：横にはみ出さず、2段に折り返して全部見えるように */
 html.bg-on #jumpnav{flex-wrap:nowrap;overflow-x:auto;gap:6px;padding:6px 10px}   /* 1段で横にすべらせる（画面をふさがない。発注者指示 2026-10-20） */
@@ -436,7 +438,7 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
     ent.forEach(function(e){ e.sd.split('').forEach(function(k){ used[k]=1; }); });
     var h='';
     dec.forEach(function(e){ h+='<div class="when">10年の流れ：<span class="nobr">'+esc(e.lab)+'</span><span class="nobr">'+decYears(c,e.lab)+'</span>'+tag(e)+'</div>'; });
-    if(pt.length) h+='<div class="when"'+(dec.length?' style="margin-top:4px"':'')+'>'+(dec.length?'このほか、とくにこの時期（古い順）：':'とくにこの時期（古い順）：')+'</div><ul class="whl">'+pt.map(function(e){ return '<li><span class="nobr">'+esc(e.lab)+'</span>'+tag(e)+'</li>'; }).join('')+'</ul>';
+    if(pt.length) h+='<div class="when"'+(dec.length?' style="margin-top:4px"':'')+'>'+(dec.length?'このほか、とくにこの時期（早い順）：':'とくにこの時期（早い順）：')+'</div><ul class="whl">'+pt.map(function(e){ return '<li><span class="nobr">'+esc(e.lab)+'</span>'+tag(e)+'</li>'; }).join('')+'</ul>';
     if(used.U) h+='<div class="how">→ 「まわりから」＝まわりの出来事や人から、思いがけず崩されやすい形。自分を責めすぎず、ひとりで抱え込まないことが大切です。</div>';
     if(used.A) h+='<div class="how">→ 「自分から」＝自分の言動がきっかけで崩しやすい形。勢いで決めたり押し切ったりせず、ひと呼吸おきましょう。</div>';
     return '<div class="warn"><div class="wt">'+title+'</div>'+h+'</div>';
@@ -964,21 +966,31 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
     // 上の項目ナビ（常に画面上に固定）にも切り替えボタンを置く＝どこまで読み進めても切り替えられる
     var jn2=document.getElementById('jumpnav');
     if(jn2&&!document.getElementById('bg-navmode')){ var nb=document.createElement('button'); nb.type='button'; nb.id='bg-navmode'; nb.onclick=function(){ switchMode(); }; jn2.appendChild(nb); }
-    label(); apply();
+    label(); apply(); placeModebar();
+    try{ new MutationObserver(placeModebar).observe(document.body,{attributes:true,attributeFilter:['class']}); }catch(e){}
   }
+  /* 相性では、表示の切りかえを「本人」と「お相手」の入力のあいだに置かない＝相性の結果の前へ（UX点検② 2026-11-18） */
+  function placeModebar(){ var m=document.getElementById('bg-modebar'); if(!m) return;
+    var cp=document.body.classList.contains('mode-compat'), nav=document.getElementById('cpnav'), jn=document.getElementById('jumpnav');
+    if(cp&&nav&&nav.parentNode){ if(m.nextSibling!==nav) nav.parentNode.insertBefore(m,nav); }
+    else if(!cp&&jn&&jn.parentNode){ if(jn.nextSibling!==m) jn.parentNode.insertBefore(m,jn.nextSibling); } }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
 
   /* ---------- 大1：答えの下の案内（「共有」→「LINEで送る」）。上級者モードでは元の文のまま ---------- */
   function shareHint(out){
     if(!out||!out.querySelector) return;
     [].slice.call(out.querySelectorAll('.no-print.no-yomi')).forEach(function(h){
-      if(h.dataset.bgsh||!/「LINEで送る」/.test(h.textContent)) return; h.dataset.bgsh='1';
+      if(h.dataset.bgsh||!/お伝え方/.test(h.textContent)) return; h.dataset.bgsh='1';
       var keep=h.querySelector('.rd-saved'); var pro=document.createElement('span'); pro.className='bg-shx-pro';
       [].slice.call(h.childNodes).forEach(function(n){ if(n!==keep) pro.appendChild(n); });
       h.appendChild(pro);
       var ez=document.createElement('span'); ez.className='bg-shx-easy';
-      ez.innerHTML='緑の「LINEで送る」を押すと、LINEやメールに<b>文章で</b>送れます。紙やPDFで渡したいときは「📄 PDFで渡す」を押してください。<span style="display:block;margin-top:3px">※お客様に送る文章には、鑑定する人向けの「お客様へのお伝え方」は入りません。</span>';
+      ez.innerHTML='※お客様に送る文章には、鑑定する人向けの「お客様へのお伝え方」は入りません。';   // 1行に（UX点検② 2026-11-18）
       h.appendChild(ez);
+      /* やさしい表示でも、答えのすぐ下から「印刷用の鑑定書」を開ける（相性は2人分なので出さない。UX点検② 2026-11-18） */
+      if(out.id!=='compat'&&!(out.closest&&out.closest('#compat-card'))&&typeof openMeishiSheet==='function'&&!out.querySelector('.bg-sheet-btn')){
+        var sb=document.createElement('button'); sb.type='button'; sb.className='bg-sheet-btn no-print'; sb.textContent='📄 印刷用の鑑定書を開く';
+        sb.onclick=function(){ openMeishiSheet(); }; h.parentNode.insertBefore(sb,h.nextSibling); }
     });
   }
   if(typeof window.attachReadingTools==='function' && !window.attachReadingTools._bgsh){

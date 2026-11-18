@@ -250,12 +250,14 @@
   window.addEventListener('beforeprint',function(){ printing=true; unfixAll(); try{ pass(document.body); }catch(_e){} setTimeout(function(){ try{ pass(document.body); }catch(_e){} },0); });   // 印刷の直前に作り直された文字も濃くする
   window.addEventListener('afterprint',function(){ printing=false; pass(document.body); });
   var printing=false;
+  // ボタンの「作成中（押せない）」が終わったとき：押せないときの色で直した文字を元に戻してから測り直す（易の鑑定書の紫のボタンに濃い字が残っていた。UX点検② 2026-11-18）
+  function reset(n){ [n].concat([].slice.call(n.querySelectorAll('[data-pkcg]'))).forEach(function(e){ if(!e.hasAttribute||!e.hasAttribute('data-pkcg')) return; var o=e.getAttribute('data-pkcg'); if(o) e.style.setProperty('color',o); else e.style.removeProperty('color'); e.removeAttribute('data-pkcg'); e.removeAttribute('data-pkco'); }); }
   function start(){
     pass(document.body); setTimeout(function(){ pass(document.body); },1500);
     document.addEventListener('click',near,true); window.addEventListener('resize',rs);   // 開いた欄（toggle）は、下の見張りが open の変化で気づいて、その欄だけ測る
-    if(window.MutationObserver){ var q=[],qt=null; new MutationObserver(function(rs){ rs.forEach(function(r){ if(r.type==='childList'){ [].forEach.call(r.addedNodes,function(n){ if(n.nodeType===1) q.push(n); else if(n.parentElement) q.push(n.parentElement); }); } else if(r.target&&r.target.nodeType===1){ if(r.target===document.body&&r.attributeName==='class'&&onlyMotion(r.oldValue,r.target.className)) return; q.push(r.target); } });
+    if(window.MutationObserver){ var q=[],qt=null; new MutationObserver(function(rs){ rs.forEach(function(r){ if(r.type==='childList'){ [].forEach.call(r.addedNodes,function(n){ if(n.nodeType===1) q.push(n); else if(n.parentElement) q.push(n.parentElement); }); } else if(r.target&&r.target.nodeType===1){ if(r.target===document.body&&r.attributeName==='class'&&onlyMotion(r.oldValue,r.target.className)) return; if(r.attributeName==='disabled') reset(r.target); q.push(r.target); } });
       if(!qt) qt=setTimeout(function(){ var w=q; q=[]; qt=null; passAll(w); },200); })
-      .observe(document.body,{childList:true,subtree:true,attributes:true,attributeOldValue:true,attributeFilter:['class','style','hidden','open','data-theme','data-mode']});
+      .observe(document.body,{childList:true,subtree:true,attributes:true,attributeOldValue:true,attributeFilter:['class','style','hidden','open','disabled','data-theme','data-mode']});
       new MutationObserver(function(){ full(); }).observe(document.documentElement,{attributes:true,attributeFilter:['class','style','data-theme','data-mode']}); }   // 画面の色の切りかえ（<html> の印）は全体が変わるので、全体を測り直す
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();

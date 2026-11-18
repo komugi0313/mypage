@@ -80,6 +80,26 @@ ok('相談1：画面に＊が出ない', cleanStar(A)===0, cleanStar(A));
   ok('UX：五行の色の見本は入力欄の中に出さない', !U.lgIn);
   ok('UX：鑑定文のPDFの窓に viewport がある', U.pv);
   ok('UX：天戦地冲（ぶつかり）の大きな特徴は🌟ではなく⚠', U.neg); }
+// UX点検②（2026-11-18）：目次の帯は1段・相性の答えはいちばん上で帯つき・入口は相性診断タブ・職業の一覧は1つ・言葉の意味は答えの下・？は丸いまま・カルテの削除は書き分け・月の区切りは日付
+{ const U2=await p.evaluate(()=>{ const jn=document.getElementById('jumpnav'), vis=e=>e&&e.offsetParent!==null&&getComputedStyle(e).display!=='none';
+    const bt=[...jn.querySelectorAll('button')].filter(vis), tops=[...new Set(bt.map(b=>Math.round(b.getBoundingClientRect().top)))];
+    const cp=document.getElementById('compat'), cv=document.getElementById('compat-verdict'), nav=document.getElementById('cpnav');
+    const order=!!(cp&&cv&&nav&&(nav.compareDocumentPosition(cp)&4)&&(cp.compareDocumentPosition(cv)&4));
+    const cc=document.getElementById('compat-card'); const ccHidden=!document.body.classList.contains('mode-compat')?!(cc&&cc.offsetParent):true;
+    const fb=String(featBookHTML(chart)); const jobs=(fb.match(/向く仕事＝/g)||[]).length;
+    const rc=document.querySelector('#cs-ans .reading-card'), lg=rc&&rc.querySelector('details.r-legend'); const lgLast=!lg||rc.lastElementChild===lg;
+    const q=[...document.querySelectorAll('.gl-q')].filter(e=>e.offsetParent).filter(e=>Math.abs(e.offsetWidth-e.offsetHeight)>1).length;
+    const kl=/お客様を削除/.test(String(renderClients||''))||/お客様を削除/.test(document.documentElement.innerHTML);
+    const ml=pkMonDayLab('2026年12月〜翌1月上旬');
+    return {rows:tops.length, n:bt.length, order, ccHidden, jobs, lgLast, q, kl, ml}; });
+  ok('UX②：スマホの目次の帯は1段（390px）', U2.rows<=1, 'rows='+U2.rows+' n='+U2.n);
+  ok('UX②：相性の答えは「まとめ」より上・目次の帯つき', U2.order);
+  ok('UX②：個人鑑定ではお相手の入力欄を出さない（入口は相性診断タブ）', U2.ccHidden);
+  ok('UX②：特徴の欄に柱ごとの「向く仕事＝」の一覧を出さない', U2.jobs===0, 'n='+U2.jobs);
+  ok('UX②：言葉の意味（木火土金水）は答えの下', U2.lgLast);
+  ok('UX②：用語の「？」は丸いまま（縦横同じ）', U2.q===0, 'n='+U2.q);
+  ok('UX②：カルテの削除は「お客様を削除」と書き分け', U2.kl);
+  ok('UX②：相性の月の区切りは節入りの日付で見せる', /^2026年12月\d+日〜2027年1月\d+日$/.test(U2.ml), U2.ml); }
 // 追加の質問
 const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃ですか'); await p.click('#consultBtn'); await p.click('#consultBtn').catch(()=>{});
 const ms2=await waitFor(()=>{const it=document.querySelectorAll('#reading .rd-item');const l=it[it.length-1];return it.length>=2&&l.querySelector('.rd-bar')&&!l.querySelector('.loading');},60000);

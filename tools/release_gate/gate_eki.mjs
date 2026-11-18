@@ -61,6 +61,12 @@ ok('開いただけでは文章作成を呼ばない', calls===0, 'calls='+calls
     if(JSON.stringify(HEXDB).includes('祇')) bad.push('祇と祗の字がそろっていない（祗にそろえる。2026-11-17）');
     return bad;`)();
   ok('64卦の番号・互卦・綜卦・錯卦・之卦の計算と、天水訟の五爻の訳・読み下しの直し（2026-11-17）', bad.length===0, bad.slice(0,6).join(' / ')); }
+{ const s=fs.readFileSync(path.join(ROOT,'eki-pro','app','index.html'),'utf8'), g=fs.readFileSync(path.join(ROOT,'tools','contrast_guard.js'),'utf8');   // UX点検②（2026-11-18）
+  ok('UX②：易の「① まずこれを読む」は、すぐ上の答えと同じ1段落目をくり返さない', /talkV=talkP\.filter/.test(s)&&/\$\{talkV\.map/.test(s));
+  ok('UX②：易の続けて質問の例は相談の種類に合わせる（転職に「相手の気持ちは？」を出さない）', /work:'決め手になることは？'/.test(s));
+  ok('UX②：易の「新しい鑑定」は「同じお客様のまま、別の相談を占う」（次のお客様へとの違いが分かる名前）', /btn_newReading:'同じお客様のまま、別の相談を占う'/.test(s)&&!/>新しい鑑定をする</.test(s));
+  ok('UX②：易のスマホの結果は屋号とタブを貼りつけない', /html\.eki-resv \.topbar,html\.eki-resv \.tabs\{position:static!important\}/.test(s));
+  ok('UX②：見えやすさの安全装置は、押せないときの色で直した字を、押せるようになったら戻す', /attributeName==='disabled'\) reset\(/.test(g)&&/'disabled','data-theme'/.test(g)); }
 { const s=fs.readFileSync(path.join(ROOT,'eki-pro','app','index.html'),'utf8'); ok('坤為地の上爻（龍戦于野）は✖（鑑定者本人の判断 2026-10-30）', /var KO_RANK_FIX=\{[^}]*'2-6':'E'/.test(s)&&/return KO_RANK_FIX\[hx\.no\+'-'\+k\]\|\|koAdjustRank\(/.test(s)); }
 { /* 2026-11-14 実地の点検で直したもの：頼み方の注記・「続けるべきか」・ちがいの書かれていないA社B社・金運の時期・近い日の試験・今は「今は…」・要点メモの「・」 */
   const r=await p.evaluate(()=>{ const F=window.__ekiFix; if(!F) return {bad:['点検用の __ekiFix がない']}; const bad=[];
