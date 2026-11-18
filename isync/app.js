@@ -140,9 +140,13 @@ function goTop(){
       <p class="rep-k">テーマ別の重なり</p>
       <div class="rep-rows">${[['食',92],['休日・遊び',81],['暮らし',74],['お金',54]].map(([n,v])=>`<div class="rr"><i>${n}</i><span class="t"><s style="width:${v}%"></s></span><em>${v}%</em></div>`).join('')}</div>
       <p class="rep-k">価値観のタイプ（4つのものさし）</p>
-      <div class="rep-ax"><p class="n">2人の距離感</p><div class="bar"><span class="dot d1" style="left:22%"></span><span class="dot d2" style="left:66%"></span></div><div class="ends"><span>いつも一緒派</span><span>ひとりの時間も派</span></div><p class="lg"><i class="d1"></i>あなた　<i class="d2"></i>あの人</p></div>
+      <div class="rep-ax"><p class="n">2人の距離感</p>
+        <div class="ends"><span>いつも一緒派</span><span>ひとりの時間も派</span></div>
+        <div class="dbar"><span class="pin p1" style="left:22%"><em>あなた</em></span><span class="pin p2" style="left:66%"><em>あの人</em></span></div>
+        <p class="rd"><span class="nw">あなたは「いつも一緒」寄り、</span><span class="nw">あの人は「ひとりの時間も」寄り。</span><span class="nw">会う回数は、先に話しておくと安心。</span></p></div>
       <p class="rep-k">★ ゆずれないところ</p>
-      <p class="rep-star">同じ 4問・合わせられる 2問・ちがう 1問</p>
+      <details class="rep-st"><summary><span class="sm"><span class="nw">同じ 4問・</span><span class="nw">合わせられる 2問・</span><span class="nw">ちがう 1問</span></span><span class="tap"><span class="t1">タップで問題を見る ▼</span><span class="t2">閉じる ▲</span></span></summary>
+        <ul>${[['s','同じ','記念日は？','2人とも「しっかりお祝いしたい」'],['s','同じ','貯金の目標は？','2人とも「決めたい」'],['s','同じ','家事は？','2人とも「担当を決めたい」'],['s','同じ','朝ごはんの量は？','2人とも「しっかり食べたい」'],['a','合わせられる','休みの日の予定は？','あなた「入れたい」・あの人「どっちでも合わせられる」'],['a','合わせられる','休みの日の過ごし方は？','あなた「家でのんびり」・あの人「その日の気分で」'],['d','ちがう','お風呂は？','あなた「湯船につかりたい」・あの人「シャワーで十分」']].map(([c,t,q,a])=>`<li><span class="tg ${c}">${t}</span><b>${q}</b><span class="an">${a}</span></li>`).join('')}</ul></details>
       <div class="smp-ayu"><b>歩み寄りの案（お風呂は？）</b>${esc((window.SY_AYUMI||{})['お風呂は？']||'平日はシャワー、週末は湯船に。')}</div>
     </div>
   </section>
