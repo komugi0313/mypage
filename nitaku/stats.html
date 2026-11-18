@@ -121,7 +121,8 @@ function qsHTML(){
   return h+'</div>';
 }
 var P={}, H={};
-function render(){ var m=window.__miss||[]; document.getElementById('out').innerHTML=(m.length?'<div class="card"><p class="err">'+m.join('・')+'は、まだ読めません。Firebase の決まり（firestore.rules）に nitaku_stats と nitaku_hist を足すと出ます。</p></div>':'')+playsHTML(P)+histHTML(H)+qsHTML(); }
+function mineCard(){ var M=window.__mine; if(!M) return ''; var n=function(k){ return (+M[k]||0).toLocaleString(); }; return '<div class="card"><h2>わたしの結果を開いた回数</h2><p>トップの一覧：'+n('list')+'回／部屋の「さっきの結果」：'+n('last')+'回／一覧から1つ開いた：'+n('entry')+'回</p></div>'; }
+function render(){ var m=window.__miss||[]; document.getElementById('out').innerHTML=mineCard()+(m.length?'<div class="card"><p class="err">'+m.join('・')+'は、まだ読めません。Firebase の決まり（firestore.rules）に nitaku_stats と nitaku_hist を足すと出ます。</p></div>':'')+playsHTML(P)+histHTML(H)+qsHTML(); }
 document.addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; if(b.dataset.m){ st.mode=b.dataset.m; render(); } else if(b.dataset.s){ st.sort=b.dataset.s; render(); } });
 (async function(){
   try{
@@ -129,6 +130,7 @@ document.addEventListener('click',function(e){ var b=e.target.closest('button');
     // 遊んだ回数・分布は、Firebase の決まりに nitaku_stats・nitaku_hist を足すまで読めない（読めなくても1問ずつの答えは出す）
     var miss=[], soft=function(pr, name, empty){ return pr.catch(function(){ miss.push(name); return empty; }); };
     var r=await Promise.all([soft(getDoc('nitaku_stats/plays'),'遊んだ回数',{}), soft(listCol('nitaku_hist'),'4つの％の分布',[]), listCol('nitaku_votes')]);
+    window.__mine=await getDoc('nitaku_stats/mine').catch(function(){ return null; });
     window.__miss=miss;
     P=r[0]; r[1].forEach(function(d){ H[d.id]=d.f; });
     r[2].forEach(function(d){ var q=Q[d.id]; if(!q) return; var a=d.f.a||0, b=d.f.b||0, n=a+b; if(!n) return; V.push({ id:d.id, q:q, a:a, b:b, n:n, pa:Math.round(100*a/n) }); });

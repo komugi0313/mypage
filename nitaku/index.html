@@ -901,6 +901,24 @@ body.rdy-on #gres-body{padding-bottom:230px}
 .pc-wrap .pc-tab.pcard{margin:0 -4px;box-shadow:none;border:0;background:transparent;overflow:visible}
 .pc-wrap .pc-tab>.ppl{border:0!important;margin:0!important;border-radius:14px}
 .pc-partn{margin:10px 12px 0;font-size:14px;font-weight:700}
+.mine-open{margin-bottom:10px}
+.q-mine{background:#FFF3C4!important}
+html.mine-on,html.mine-on body{overflow:hidden}
+#mine-ov{position:fixed;inset:0;z-index:60;background:#FFF8E1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+#mine-ov[hidden]{display:none}
+.mo-bar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;justify-content:space-between;background:#FFF8E1;border-bottom:2.5px solid #1E1E2A;padding:calc(8px + env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px))}
+.mo-bar b{font-family:"Mochiy Pop One","Zen Maru Gothic",sans-serif;font-weight:400;font-size:17px}
+.mo-x{min-height:44px;border:2.5px solid #1E1E2A;border-radius:999px;background:#fff;padding:4px 16px;font:inherit;font-weight:900;font-size:15px;color:#1E1E2A;cursor:pointer}
+.mo-in{max-width:640px;margin:0 auto;padding:14px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:10px}
+.mo-in>.hint{margin:0}
+.mo-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;min-height:64px;border:2.5px solid #1E1E2A;border-radius:16px;background:#fff;box-shadow:3px 3px 0 #F2C94C;padding:8px 12px;font:inherit;color:#1E1E2A;cursor:pointer}
+.mo-row img{flex:none;width:48px;height:48px;object-fit:contain}
+.mo-row span{display:flex;flex-direction:column;min-width:0}
+.mo-row small{font-size:13px;color:#4A4458;font-weight:700}
+.mo-row b{font-size:17px}
+.mo-row i{font-style:normal;font-size:13.5px;font-weight:700;color:#4A4458}
+.mo-res{display:block}
+.mo-res>*{margin-bottom:14px}
 .end-links{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:6px}
 .end-links .tell-s{width:auto;margin-top:0;padding:0 6px}
 .end-links span{color:#4A4A5A}
@@ -1033,6 +1051,7 @@ body.rdy-on #gres-body{padding-bottom:230px}
 
   <!-- 「人気の究極の二択」の一覧もトップから外した（遊ぶ前に問題が読めるとつまらないため。鑑定者本人の判断 2026-11-16） -->
   <!-- テーマ別のまとめページ（/renai/ など）はトップからリンクしない（遊ぶ前に問題が読めるとつまらないため。鑑定者本人の判断 2026-11-16「1」）。ページは sitemap.xml から検索に出る -->
+  <button type="button" class="zk-open mine-open" id="mine-open" hidden><span><b>わたしの結果</b><small>このスマホに残っている結果</small></span><i aria-hidden="true">›</i></button>
   <button type="button" class="zk-open" data-zukan="love"><span><b>キャラ図鑑</b><small>恋のキャラ・ふだんのキャラ 全20体</small></span><i aria-hidden="true">›</i></button>
   <button class="linkb" id="about-open">この診断について（％の考え方）</button>
   <!-- サイト名と作った人の表示（薄く小さく。鑑定者本人の指示 2026-11-12） -->
@@ -1244,7 +1263,7 @@ body.rdy-on #gres-body{padding-bottom:230px}
 </section>
 
 <section class="scr" id="s-q">
-  <div class="nav"><button class="navb" data-nav="back">← もどる</button><span class="navr"><button class="navb" data-nav="top">TOP</button></span></div>
+  <div class="nav"><button class="navb" data-nav="back">← もどる</button><span class="navr"><button class="navb q-mine" id="q-mine" type="button" hidden>さっきの結果</button><button class="navb" data-nav="top">TOP</button></span></div>
   <div class="top">
     <div class="prog"><i id="q-prog"></i></div>
     <div class="count" id="q-count"></div>
@@ -1516,7 +1535,7 @@ function styleHint(){
   $('style-sw').textContent = room ? 'スマホが1台だけのときは、こちら' : 'それぞれのスマホで遊ぶ（部屋を作る）';
 }
 
-function show(id){ if(id!=='s-q'){ honStop(); ntStop(); } if(id==='s-home') document.body.setAttribute('data-mode',S.mode);
+function show(id){ if(id!=='s-q'){ honStop(); ntStop(); } if(id==='s-q') setTimeout(mineQBtn,0); if(id==='s-home') setTimeout(mineCount,0); if(id==='s-home') document.body.setAttribute('data-mode',S.mode);
   document.querySelectorAll('.scr').forEach(function(s){ s.classList.toggle('on', s.id===id); }); window.scrollTo(0,0); if(id!=='s-gres') hideReady();
   if(id!=='s-home' && !pushed){ try{ history.pushState({nitaku:1},''); pushed=true; }catch(e){} } }
 
@@ -2543,7 +2562,9 @@ var Stats=(function(){
     }).catch(function(){ return null; });
     return cache[m];
   }
-  return { play:play, hist:hist };
+  /* 「わたしの結果」を開いた回数（名前なし・1回ずつ）。list＝トップの一覧・last＝部屋の「さっきの結果」・entry＝一覧から1つ開いた */
+  function mine(k){ init().then(function(fs){ if(!fs) return; try{ var o={}; o[k]=firebase.firestore.FieldValue.increment(1); fs.doc('nitaku_stats/mine').set(o,{merge:true}).catch(function(){}); }catch(e){} }); }
+  return { play:play, hist:hist, mine:mine };
 })();
 /* 遊んだ人の中での位置：「あなたより○○度が高い人は○%」。人数が STATS_MIN より少ない・数えられないときは何も出さない */
 function rankText(H, k, v, name, who){
@@ -2856,6 +2877,69 @@ document.addEventListener('click', function(e){
   w.querySelectorAll('.pc-tb').forEach(function(x){ var on=x===b; x.classList.toggle('on',on); x.setAttribute('aria-selected',on); });
   w.querySelectorAll('.pc-tab').forEach(function(t){ t.hidden=t.getAttribute('data-pi')!==i; });
 });
+
+/* ───── わたしの結果（鑑定者本人 2026-11-18「マージして、2と3を進めて」）
+   遊んだ結果を、このスマホの中に自動で残す（最新10回。どこにも送らない）。結果の画面を出したときに、その中身を写して覚える。
+   トップの「わたしの結果」と、部屋の問題の画面の「さっきの結果」から、重ねた画面（#mine-ov）で読める。遊んでいる部屋の流れは止めない。
+   開いた回数だけを名前なしで数える（Stats.mine。いずれ登録を足すかを決める材料） */
+var MINE_KEY='nitaku_mine', MINE_MAX=10;
+function mineLoad(){ try{ var a=JSON.parse(localStorage.getItem(MINE_KEY)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function mineStore(a){ for(var n=a.length;n>0;n--){ try{ localStorage.setItem(MINE_KEY, JSON.stringify(a.slice(0,n))); return; }catch(e){} } }
+function mineSave(body){
+  if(S.mineView || !body) return;
+  var hero=body.querySelector('.res-hero'); if(!hero) return;
+  var c=body.cloneNode(true);
+  c.querySelectorAll('.top-share,.promo,.promo-u,.big,.end-links,.end-home,.end-pick,.end-hint,.credit-res,.wcard,.rdy').forEach(function(x){ x.remove(); });
+  c.querySelectorAll('[id]').forEach(function(x){ x.removeAttribute('id'); });
+  var html=c.innerHTML; if(html.length>400000) return;
+  var tx=function(sel){ var e=hero.querySelector(sel); return e ? e.textContent.replace(/\s+/g,' ').trim() : ''; };
+  var pre=tx('.pre'), main=tx('.rh-ch .type')||tx('.type'), sub='';
+  var names=[].slice.call(body.querySelectorAll('.pc-tb span')).map(function(e){ return e.textContent.replace('（あなた）',''); });
+  if(names.length) sub=names.join('・');
+  else { var cap=tx('.meter .cap'), num=tx('.meter .num'); sub=(cap&&num&&!/人/.test(pre)) ? cap+' '+num : (tx('.catch')||''); }
+  var im=hero.querySelector('img') || body.querySelector('.pc-tb img');
+  if(!S.qs) S.qs=[]; if(!S.qs._mine) S.qs._mine=Date.now()+'-'+Math.random();
+  var a=mineLoad().filter(function(e){ return e.k!==S.qs._mine; });
+  a.unshift({ k:S.qs._mine, t:Date.now(), pre:pre, main:main, sub:sub, img:im?im.getAttribute('src'):'', room:(S.room&&S.room.code)||'', html:html });
+  mineStore(a.slice(0,MINE_MAX));
+  mineCount();
+}
+function mineDate(t){ var d=new Date(t); return (d.getMonth()+1)+'/'+d.getDate()+' '+d.getHours()+':'+('0'+d.getMinutes()).slice(-2); }
+function mineCount(){ var n=mineLoad().length, b=$('mine-open'); if(b){ b.hidden=!n; var c=b.querySelector('small'); if(c) c.textContent='このスマホに残っている結果（'+n+'回ぶん）'; } }
+function mineOv(){ var o=$('mine-ov'); if(!o){ o=document.createElement('div'); o.id='mine-ov'; o.setAttribute('role','dialog'); o.setAttribute('aria-modal','true'); o.setAttribute('aria-label','わたしの結果'); document.body.appendChild(o); } return o; }
+function mineClose(){ var o=$('mine-ov'); if(o){ o.hidden=true; o.innerHTML=''; } document.documentElement.classList.remove('mine-on'); S.mineView=false; }
+function mineList(){
+  var a=mineLoad(), o=mineOv();
+  o.innerHTML='<div class="mo-bar"><b>わたしの結果</b><button type="button" class="mo-x" data-mine-close>閉じる</button></div><div class="mo-in">'+
+    (a.length ? '<p class="hint">このスマホの中にだけ、最新'+MINE_MAX+'回ぶん残ります。どこにも送りません。</p>'+a.map(function(e,i){
+      return '<button type="button" class="mo-row" data-mine-i="'+i+'">'+(e.img?'<img src="'+esc(e.img)+'" alt="" width="48" height="48">':'')+'<span><small>'+mineDate(e.t)+'　'+esc(e.pre)+'</small><b>'+esc(e.main)+'</b>'+(e.sub?'<i>'+esc(e.sub)+'</i>':'')+'</span></button>'; }).join('')
+      : '<p class="hint">まだ結果はありません。遊ぶと、ここに自動で残ります。</p>')+'</div>';
+  o.hidden=false; o.scrollTop=0; document.documentElement.classList.add('mine-on'); S.mineView=true;
+}
+function mineShow(i, from){
+  var e=mineLoad()[i]; if(!e) return;
+  var o=mineOv();
+  o.innerHTML='<div class="mo-bar"><button type="button" class="mo-x" data-mine-'+(from==='list'?'list':'close')+'>'+(from==='list'?'← 一覧':'閉じる')+'</button><b>'+mineDate(e.t)+'の結果</b></div><div class="mo-in mo-res">'+e.html+'</div>';
+  o.hidden=false; o.scrollTop=0; document.documentElement.classList.add('mine-on'); S.mineView=true;
+}
+document.addEventListener('click', function(e){
+  var t=e.target.closest && e.target.closest('[data-mine-close],[data-mine-list],[data-mine-i],#mine-open,#q-mine');
+  if(!t) return;
+  if(t.hasAttribute('data-mine-close')) return mineClose();
+  if(t.hasAttribute('data-mine-list')) return mineList();
+  if(t.id==='mine-open'){ Stats.mine('list'); return mineList(); }
+  if(t.id==='q-mine'){ Stats.mine('last'); return mineShow(0, 'last'); }
+  Stats.mine('entry'); mineShow(+t.getAttribute('data-mine-i'), 'list');
+});
+document.addEventListener('keydown', function(e){ if(e.key==='Escape' && $('mine-ov') && !$('mine-ov').hidden) mineClose(); });
+setTimeout(mineCount,0);
+/* 部屋で遊んでいる問題の画面に「さっきの結果」（同じ部屋の前の回の結果があるときだけ） */
+function mineQBtn(){
+  var b=$('q-mine'); if(!b) return;
+  var e=mineLoad()[0];
+  b.hidden=!(S.room && S.room.code && e && e.room===S.room.code);
+}
+
 function topShare(){
   [['res-body','lshare','share','save'],['gres-body','lgshare','gshare','gsave']].forEach(function(k){
     var body=$(k[0]), l=$(k[1]); if(!body || !l) return;
@@ -2872,6 +2956,7 @@ function topShare(){
       box.querySelector('.ts-save').onclick=function(){ var b=$(k[3]); if(b) b.click(); };
     }
     var a2=box.querySelector('.ts-line'); a2.textContent=l.textContent; a2.href=l.href;
+    if(body.closest('.scr.on')) mineSave(body);
   });
 }
 function homeLink(){ return S.room ? '' : '<button class="tell-s end-home" id="home" type="button">トップにもどる</button>'; }
