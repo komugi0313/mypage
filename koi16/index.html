@@ -152,8 +152,8 @@ p{margin:0 0 12px}
 .qr-box svg{width:min(240px,70vw);height:auto;display:block}
 .qr-box p{margin:0;text-align:center}
 .lic{white-space:pre-wrap;overflow-wrap:break-word;font-family:inherit;font-size:13px;line-height:1.65;color:var(--text);background:#fff;border:2px solid var(--line);border-radius:12px;padding:12px;margin:10px 0 0}
-.q-ex{background:#FFF6E5;border:1.5px dashed #E3C38E;border-radius:12px;padding:8px 12px;margin:0 0 14px;font-size:14px;line-height:1.7;color:var(--text)}
-.q-ex b{display:inline-block;background:#8A4B00;color:#fff;border-radius:999px;font-size:12px;padding:0 8px;margin-right:6px;vertical-align:1px}
+.q-ex{background:#FFF6E5;border:0;border-left:4px solid #E0AE62;border-radius:10px;padding:8px 12px 10px;margin:0 0 14px;font-size:15px;line-height:1.75;color:var(--ink)}
+.q-ex b{display:block;width:max-content;background:none;color:#8A4B00;font-size:12.5px;font-weight:800;letter-spacing:.06em;padding:0;margin:0 0 2px}
 .qtext{font-size:20px;font-weight:700;min-height:4.2em;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px 4px}
 .scale{display:grid;gap:10px}
 .sl-mid-b{display:block;font-size:14px;color:#8A5A1E;margin-bottom:2px}
@@ -163,8 +163,20 @@ p{margin:0 0 12px}
 .scale button.sel{border-color:var(--rose);background:var(--rose-soft)}
 .scale button.sel .dot{background:var(--rose);border-color:var(--rose)}
 .scale button:focus-visible{outline:3px solid #4F46E5;outline-offset:2px}
-.qfoot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:8px}
+.qfoot{display:flex;justify-content:center;align-items:center;margin-top:14px;gap:8px}
 .qfoot>*{white-space:nowrap}
+.qback{visibility:hidden;border:1.5px solid var(--line);background:var(--card);color:var(--text);border-radius:999px;padding:0 14px;min-height:44px;font-size:14px;font-weight:700;cursor:pointer}
+.qhead .qnum{flex:1;text-align:center}
+.scale button{position:relative;overflow:visible}
+.scale button.pick{animation:qpick .38s ease}
+@keyframes qpick{0%{transform:scale(1)}40%{transform:scale(1.035)}100%{transform:scale(1)}}
+.scale button.sel .dot{display:flex;align-items:center;justify-content:center}
+.scale button.sel .dot::after{content:'';width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:translateY(-1px) rotate(45deg)}
+.hb{position:absolute;left:22px;top:50%;width:14px;height:14px;pointer-events:none;color:var(--rose);font-size:14px;line-height:1;animation:hbup .7s ease-out forwards}
+@keyframes hbup{0%{opacity:0;transform:translate(0,-50%) scale(.4)}25%{opacity:1}100%{opacity:0;transform:translate(var(--hx),-42px) scale(1.1)}}
+#q-card.qout{animation:qout .2s ease-in forwards}#q-card.qin{animation:qin .26s ease-out}
+@keyframes qout{to{opacity:0;transform:translateX(-24px)}}@keyframes qin{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.scale button.pick,.hb,#q-card.qout,#q-card.qin{animation:none}.hb{display:none}}
 .qfoot .muted{font-size:14px}
 .linkbtn{background:none;border:none;color:#5A4A55;text-decoration:underline;font-size:15px;cursor:pointer;padding:8px 4px}
 /* 結果の画面 */
@@ -575,14 +587,14 @@ header.top .navbtn:active{transform:translateY(1px)}
       </div>
     </section>
     <section class="card" id="q-card">
-      <div class="qhead"><span class="qnum" id="qnum">1 / 40</span><button class="linkbtn" id="q-quit" type="button">中断する</button></div>
+      <div class="qhead"><button class="qback" id="q-back" type="button" data-nocg>‹ 前の問題</button><span class="qnum" id="qnum">1 / 40</span><button class="linkbtn" id="q-quit" type="button">中断する</button></div>
       <div class="progress" aria-hidden="true"><i id="qbar"></i></div>
       <p class="muted hidden" id="q-hint"></p>
       <p class="q-cheer hidden" id="q-cheer"></p>
       <div class="qtext" id="qtext" aria-live="polite"></div>
       <p class="q-ex" id="q-ex"></p>
       <div class="scale" id="scale" role="group" aria-label="答えを選んでください"></div>
-      <div class="qfoot"><button class="linkbtn" id="q-back" type="button">← ひとつ前へ</button><span class="muted">直感で答えてください</span></div>
+      <div class="qfoot"><span class="muted">直感で答えてください</span></div>
     </section>
   </main>
 
@@ -2879,15 +2891,21 @@ function renderQ(){
     hEl.classList.toggle('q-hint-s',!firstLove); hEl.classList.remove('hidden'); glue(hEl);
   } else hEl.classList.add('hidden');
   var exT=qEx(k), ex=$('q-ex'); ex.innerHTML='<b>たとえば</b>'+esc(exT); ex.classList.toggle('hidden',!exT); glue(ex);
-  var box=$('scale'); box.innerHTML='';
+  var box=$('scale'); box.innerHTML=''; delete box.dataset.busy;
   CHOICES.forEach(function(c){
     var b=document.createElement('button'); b.type='button';
     b.innerHTML='<span class="dot" aria-hidden="true"></span><span>'+c.t+'</span>';
     if(ans[k]===c.v) b.classList.add('sel');
     b.addEventListener('click',function(){
       ans[k]=c.v; st.ans=ans; save(st);
-      Array.prototype.forEach.call(box.children,function(x){x.classList.remove('sel');}); b.classList.add('sel');
-      setTimeout(function(){ if(qi<L.length-1){ qi++; renderQ(); } else finish(); },180);
+      if(box.dataset.busy) return; box.dataset.busy='1';
+      Array.prototype.forEach.call(box.children,function(x){x.classList.remove('sel','pick');}); b.classList.add('sel','pick');
+      // 選んだときの手ごたえ（鑑定者本人 2026-11-18「選んだ時にもう少しアクションがあると面白い」）：ふくらむ・✓・小さなハートが3つ浮かぶ・次の問題がすべりこむ
+      var calm=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if(!calm) [-14,4,20].forEach(function(x,i){ var h=document.createElement('span'); h.className='hb'; h.textContent='\u2665'; h.style.setProperty('--hx',x+'px'); h.style.animationDelay=(i*70)+'ms'; b.appendChild(h); });
+      var card=$('q-card');
+      setTimeout(function(){ if(!calm) card.classList.add('qout'); },calm?0:430);
+      setTimeout(function(){ card.classList.remove('qout'); if(qi<L.length-1){ qi++; renderQ(); if(!calm){ card.classList.add('qin'); setTimeout(function(){card.classList.remove('qin');},280);} } else finish(); },calm?250:630);
     });
     box.appendChild(b);
   });
