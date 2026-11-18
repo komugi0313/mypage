@@ -100,6 +100,13 @@ ok('相談1：画面に＊が出ない', cleanStar(A)===0, cleanStar(A));
   ok('UX②：用語の「？」は丸いまま（縦横同じ）', U2.q===0, 'n='+U2.q);
   ok('UX②：カルテの削除は「お客様を削除」と書き分け', U2.kl);
   ok('UX②：相性の月の区切りは節入りの日付で見せる', /^2026年12月\d+日〜2027年1月\d+日$/.test(U2.ml), U2.ml); }
+// UX点検②の続き（2026-11-18）：相性のこれからの年は1つの表に早い順（縁が深まる・三合方合・揺れやすい・運気の谷）
+{ const Y=await p.evaluate(()=>{ try{ const h=compatTimingHTML(chart,chart,RELTYPES.love), tb=(h.match(/<table class="cty"/g)||[]).length, fold=/cty-fold/.test(h);
+    const ys=[...h.matchAll(/<td class="cty-y">(\d{4})/g)].map(m=>+m[1]), sorted=ys.every((y,i)=>!i||ys[i-1]<y);
+    const bg=[...document.scripts].some(s=>/pkCpYearRows\(a,b,d\.good,d\.strain,d\.low\)/.test(s.textContent));
+    const isB=/app-beginner/.test(location.pathname);
+    return {tb,fold,n:ys.length,sorted,bgOK:!isB||bg}; }catch(e){ return {err:String(e)}; } });
+  ok('UX②：相性のこれからの年は1つの表（早い順・年は1行ずつ）', Y.tb===1&&!Y.fold&&Y.sorted&&Y.bgOK, JSON.stringify(Y)); }
 // 追加の質問
 const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃ですか'); await p.click('#consultBtn'); await p.click('#consultBtn').catch(()=>{});
 const ms2=await waitFor(()=>{const it=document.querySelectorAll('#reading .rd-item');const l=it[it.length-1];return it.length>=2&&l.querySelector('.rd-bar')&&!l.querySelector('.loading');},60000);
