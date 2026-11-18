@@ -666,7 +666,8 @@ async function inboxBanner(){const box=$('ibx');if(!box||!ibxSent().length)retur
   const got=await inboxLoad();if(!got.length||!document.body.contains(box))return;
   const seen=new Set(store('kv_ibseen')||[]),nw=got.filter(x=>!seen.has(x.key)).length;
   const names=[...new Set(got.map(x=>x.name))];
-  box.innerHTML=`<button class="ib-ban" id="ibgo"><i class="ib-dot" aria-hidden="true"></i><span class="ib-t"><b>答え合わせの結果が届いています</b><span>${esc(names.slice(0,3).map(n=>n+'さん').join('・'))}${names.length>3?'ほか':''}${nw?`<small class="ib-new">新しく${nw}人</small>`:''}</span></span><em>${got.length}人 ›</em></button>`;
+  const nm=names.slice(0,2).map(n=>n+'さん').join('・')+(names.length>2?'ほか':'');
+  box.innerHTML=`<button class="ib-ban" id="ibgo"><i class="ib-dot" aria-hidden="true"></i><span class="ib-t"><b>${got.length}人から、答え合わせが届きました</b><span>${esc(nm)}</span></span><span class="ib-go" aria-hidden="true">›</span></button>`;
   box.hidden=false;$('ibgo').onclick=()=>inboxView(got)}
 function inboxView(got){
   store('kv_ibseen',got.map(x=>x.key).slice(-200));
@@ -674,7 +675,7 @@ function inboxView(got){
   const md=t=>{const d=new Date(t);return(d.getMonth()+1)+'月'+d.getDate()+'日'};
   const row=x=>{const P=ibxPair(x),G={players:[P.A,P.B],qs:P.qs},pc=pairStat(P.A,P.B,P.qs).pct,tr=themeRows(G).filter(r=>r.q>=2);
     let t='';if(tr.length){const hi=tr.reduce((a,b)=>b.pct>a.pct?b:a),lo=tr.reduce((a,b)=>b.pct<a.pct?b:a);
-      t=hi.pct>=60||hi===lo?`いちばん重なったのは「${hi.name}」`:`答えが分かれたのは「${lo.name}」`}
+      t=hi.pct>=60||hi===lo?`よく重なった：${hi.name}`:`分かれた：${lo.name}`}
     return `<button class="ib-row" data-k="${esc(x.key)}"><span class="ib-r" style="--p:${pc}%"><i>${pc}%</i></span><span class="ib-n"><b>${esc(x.name)}さん${pc>=HIGH_SYNC?'<span class="ib-hs">HIGH SYNC</span>':''}</b><span>${esc(t||md(x.at)+'に届きました')}</span></span><span class="ib-go" aria-hidden="true">›</span></button>`};
   view(`<section class="card ibx"><p class="label">答え合わせの結果</p>
     ${groups.map(g=>`<p class="hint ib-h">${md(g.s.at)}に送った${g.s.k.split('.').length}問</p>${g.xs.map(row).join('')}`).join('')}
