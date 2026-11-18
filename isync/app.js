@@ -529,19 +529,25 @@ function tailHTML(G){const pr=G&&G.pair?pairBackCard(G):'';return `${pr}
   <button class="btn ghost small" id="share">ほかのアプリでシェアする</button><p class="hint" id="shared" hidden></p>
   <div class="row"><button class="btn" id="again">もう1回あそぶ</button><button class="btn ghost" id="home">トップへ</button></div>`}
 // シェア：スマホの共有（使えないときはコピー）。名前は入れない
-function shareText(G){
+// ひとりの結果は、名前がわかれば答え合わせのリンクで送る（相手が同じ問題に答えると2人の結果が出る。鑑定者本人 2026-11-18）
+function shareText(G,name){
   const ps=G.players,url=WHERE==='claude'?ART_URL:location.href.split('#')[0].split('?')[0];
-  if(ps.length<2){const p=ps[0],xs=G.qs.map((k,i)=>p.ans[i]).filter(a=>a&&a.o>=0),f=xs.filter(a=>a.o===2).length;
-    return{t:`わたしの「合わせられる度」は ${xs.length?Math.round(f/xs.length*100):0}% でした。あなたは？\n#アイシンク`,url}}
+  if(ps.length<2){const p=ps[0],xs=G.qs.map((k,i)=>p.ans[i]).filter(a=>a&&a.o>=0),f=xs.filter(a=>a.o===2).length,pc=xs.length?Math.round(f/xs.length*100):0,n=G.qs.length;
+    if(name)return{t:`わたしの「合わせられる度」は ${pc}% でした。\n同じ${n}問で、わたしと答え合わせしてみて！（約${minsOf(n)}分・無料）\n#アイシンク`,url:withLink(name,G.qs,p.ans)};
+    return{t:`わたしの「合わせられる度」は ${pc}% でした。あなたは？\n#アイシンク`,url}}
   const sp=syncStat(G).pct;
   return{t:`${sp>=HIGH_SYNC?'HIGH SYNC！ ':''}${ps.length===2?'2人':ps.length+'人'}のシンクロ率は ${sp}% でした！\n2択に答えて答え合わせ。みんなでも遊べます\n#アイシンク`,url}}
-function doShare(G){const {t,url}=shareText(G),d=$('shared');
+function doShare(G,name){const {t,url}=shareText(G,name),d=$('shared');
   if(navigator.share){navigator.share({title:'アイ・シンク（I-Sync）',text:t,url}).catch(()=>{});return}
   const full=t+'\n'+url;d.hidden=false;
   try{navigator.clipboard.writeText(full).then(()=>{d.textContent='シェアの文をコピーしました。SNSやメッセージに貼ってください。'},()=>{d.textContent=full})}catch(e){d.textContent=full}}
 function bindTail(G){
-  $('share').onclick=()=>doShare(G);
-  const lr=$('lnres');if(lr){const {t,url}=shareText(G);lr.href=lineUrl(t,url)}
+  // ひとりの結果：名前（答え合わせの欄・前に入れた名前）があれば答え合わせのリンク。なければ先に名前を入れてもらう
+  const solo=G.players.length<2&&!G.pair&&!!$('inv-name');
+  const nmNow=()=>{if(!solo)return '';const i=$('inv-name'),v=i?i.value.trim():'';if(v){store('kv_name',v);return v}const p=G.players[0];return ['あなた','ともだち'].includes(p.name)?(store('kv_name')||''):p.name};
+  const askName=e=>{if(!solo||nmNow())return false;if(e)e.preventDefault();const m=$('inv-msg'),i=$('inv-name');if(m){m.hidden=false;m.textContent='先にニックネームを入れてください。相手は同じ問題に答えて、あなたと答え合わせできます（相手の画面に「○○さんから」と出ます）。'}if(i){i.scrollIntoView({block:'center'});i.focus()}return true};
+  $('share').onclick=()=>{if(askName())return;doShare(G,nmNow())};
+  const lr=$('lnres');if(lr){const set=()=>{const {t,url}=shareText(G,nmNow());lr.href=lineUrl(t,url)};set();lr.addEventListener('click',e=>{if(!askName(e))set()});const ni=$('inv-name');if(ni)ni.addEventListener('input',set)}
   const t=$('tog');if(t)t.onclick=()=>{CFG.mode='each';saveCfg();goTop()};
   $('again').onclick=e=>{if(R.code){e.target.disabled=true;roomAgain();return}
     const nm=L.players&&L.players[0]?L.players[0].name:'';soloStart(['あなた','ともだち'].includes(nm)?'':nm)};
