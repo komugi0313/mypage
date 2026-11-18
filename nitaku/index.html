@@ -884,6 +884,11 @@ body.rdy-on #gres-body{padding-bottom:230px}
 .rdy-end{display:block;margin:10px auto 0;min-height:44px;padding:8px 14px;border:0;background:none;font-weight:900;font-size:15px;color:#1E1E2A;text-decoration:underline;text-underline-offset:4px;cursor:pointer}
 .end-hint{margin:8px 0 0;text-align:center;font-size:13.5px}
 .big.end-line{margin-top:22px}
+.top-share{background:#fff;border:2.5px solid #1E1E2A;border-radius:18px;padding:12px;margin:14px 0 4px;display:flex;flex-direction:column;gap:6px}
+.top-share .ts-t{margin:0;text-align:center;font-weight:900;font-size:15px}
+.top-share .ts-line{margin:0}
+.top-share .end-links{margin-top:0}
+.bridge{margin:10px 0 0;background:#FFF3C4;border:2px solid #1E1E2A;border-radius:14px;padding:8px 12px;font-size:14.5px;font-weight:700;text-align:left;line-height:1.6;color:#1E1E2A}
 .end-links{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:6px}
 .end-links .tell-s{width:auto;margin-top:0;padding:0 6px}
 .end-links span{color:#4A4A5A}
@@ -1402,6 +1407,17 @@ var AXC = {
   N:['その場の空気より自分のペース。冷静に考える人。','ノリと冷静さを、場面で使い分けられる人。','ノリのよさは天下一品。いるだけで場が明るくなる。']
 };
 function axComment(k, v){ return AXC[k][v<35?0:(v<65?1:2)]; }
+/* ％とキャラをつなぐ1行（鑑定者本人 2026-11-18「この形でお願いします」）。大きな％とキャラの名前が食いちがって見えないように */
+function bridgeLine(mode, k, v, ch){
+  if(!ch || !ch.main) return '';
+  var cap=headline(mode).cap, c=ch.main, ax=(c.ax||{})[k]||0, sk=mode==='love'?'駆け引き':'見せ方の工夫';
+  var t;
+  if((ax>0 && v>=65) || (ax<0 && v<35)) t=cap+v+'%で、キャラも「'+c.name+'」。％とキャラがぴったりそろいました。';
+  else if(v>=65) t=cap+'は'+v+'%と高め。'+sk+'もできるけれど、いちばん強く出たのは「'+c.say+'」の顔です。';
+  else if(v<35) t=cap+'は'+v+'%と低め。'+sk+'より、「'+c.say+'」の顔が強く出ました。';
+  else t=cap+'は'+(v===50?'まん中の':'ほどほどの')+v+'%。いちばん強く出たのは「'+c.say+'」の顔です。';
+  return '<p class="bridge">'+esc(t)+'</p>';
+}
 function headline(mode){ return mode==='love' ? {k:'K', cap:'小悪魔度'} : {k:'M', cap:'見栄っぱり度'}; }
 
 /* ───── 点数 ───── */
@@ -1940,7 +1956,7 @@ function showHonResult(){
   bindPick();
   $('again').onclick=soloAgain;
   $('home').onclick=function(){ show('s-home'); };
-  show('s-res');
+  show('s-res'); topShare();
 }
 
 /* 本能モードをみんなで遊んだ結果（鑑定者本人の指示 2026-11-14「作って」。見本 https://claude.ai/artifact/NwJwcCj7gL7XiDpV12mE8F） */
@@ -2053,7 +2069,7 @@ function showHonGroupResult(){
   $('lgshare').href=lineHref(gt);
   $('gsave').onclick=function(){ saveImage($('gres-body')); };
   bindEnd();
-  show('s-gres');
+  show('s-gres'); topShare();
 }
 
 /* ───── Firebase（Firestore）：公開先（honbare.com）で、部屋と回答％を共有する ─────
@@ -2821,6 +2837,25 @@ function shareRow(l, a, v){
   return '<a class="big lb-line end-line" id="'+l+'" href="https://line.me/R/share" target="_blank" rel="noopener">LINEで結果を送る</a>'+
     '<div class="end-links"><button class="tell-s" id="'+a+'" type="button">ほかのアプリでシェア</button><span aria-hidden="true">・</span><button class="tell-s" id="'+v+'" type="button">📷 画像で保存</button></div>';
 }
+/* 結果の上にも「送る」（鑑定者本人 2026-11-18「この形でお願いします」）：いちばん上の発表のすぐ下に、下のボタンと同じ動きのボタンを出す */
+function topShare(){
+  [['res-body','lshare','share','save'],['gres-body','lgshare','gshare','gsave']].forEach(function(k){
+    var body=$(k[0]), l=$(k[1]); if(!body || !l) return;
+    var hero=body.querySelector('.res-hero'); if(!hero) return;
+    var box=body.querySelector('.top-share');
+    if(!box){
+      box=document.createElement('div'); box.className='top-share';
+      box.innerHTML='<p class="ts-t">この結果、だれかに見せる？</p><a class="big lb-line end-line ts-line" href="https://line.me/R/share" target="_blank" rel="noopener"></a>'+
+        '<div class="end-links"><button class="tell-s ts-share" type="button">ほかのアプリでシェア</button><span aria-hidden="true">・</span><button class="tell-s ts-save" type="button">画像で保存</button></div>';
+      hero.insertAdjacentElement('afterend', box);
+      var a=box.querySelector('.ts-line');
+      a.addEventListener('click', function(){ var b=$(k[1]); if(b) a.href=b.href; });
+      box.querySelector('.ts-share').onclick=function(){ var b=$(k[2]); if(b) b.click(); };
+      box.querySelector('.ts-save').onclick=function(){ var b=$(k[3]); if(b) b.click(); };
+    }
+    var a2=box.querySelector('.ts-line'); a2.textContent=l.textContent; a2.href=l.href;
+  });
+}
 function homeLink(){ return S.room ? '' : '<button class="tell-s end-home" id="home" type="button">トップにもどる</button>'; }
 function bindEnd(){
   if(S.room){
@@ -2871,7 +2906,7 @@ function showResult(){
     (chImg ? '<div class="rh-ch"><img src="'+chImg+'" alt="" width="132" height="132"><p class="rh-you">あなたは</p><p class="type">'+esc(ch.main.name)+'</p><p class="rh-say">'+esc(ch.main.say)+'</p></div>'
       : '<img class="pnd" src="img/panda-'+(val>=65?'smirk':(val<35?'shy':'1'))+'.webp" alt="" width="96" height="96">')+
     '<div class="meter"><div class="cap">'+hd.cap+'</div><div class="num">'+val+'<small>%</small></div></div>'+rkSpan(mode, hd.k, val)+
-    '<div class="catch">'+axComment(hd.k,val)+'</div>'+
+    '<div class="catch">'+axComment(hd.k,val)+'</div>'+bridgeLine(mode, hd.k, val, ch)+
     '<div class="minis">'+others.map(function(ax){ return '<div><b>'+sc[ax.k]+'<small>%</small></b><span>'+ax.name+'</span></div>'; }).join('')+'</div></div>';
   h+=charaHTML(S.qs, S.ans[0], 'あなた', '', false, {mode:mode, hero:!!chImg})+kotobaHTML(S.qs, S.ans[0], 'あなた', '', mode);
   h+='<div class="card"><details class="kok"><summary><span>📊 4つの％をくわしく見る</span></summary>'+axisHTML(mode,sc)+AXES[mode].map(function(ax){ return rkSpan(mode, ax.k, sc[ax.k]); }).join('')+'<button class="linkb" data-about>この診断について（％の考え方）</button></details></div>';
@@ -2902,7 +2937,7 @@ function showResult(){
   bindWCard();
   $('save').onclick=function(){ saveImage($('res-body')); };
   bindEnd();
-  show('s-res');
+  show('s-res'); topShare();
 }
 
 /* ───── 結果（みんな） ───── */
@@ -3065,6 +3100,7 @@ function showWithResult(){
   var t='究極の二択で、'+W.n1+'さんと答え合わせしたよ！'+(pb?'\n2人の価値観の近さは '+pb.r+'%':'')+'\n\n2人の結果はこちら↓';
   var l=$('lgshare'); if(l){ l.textContent=W.n1+'さんに結果を送る'; l.href='https://line.me/R/share?text='+encodeURIComponent(t+'\n'+pairUrl); }
   $('gshare').onclick=function(){ doShare(t, pairUrl); };
+  topShare();
 }
 /* 送り返された2人の結果を開いたとき */
 function pairOpen(W){
@@ -3175,7 +3211,7 @@ function showGroupResultCore(){
        (cimg?'<img src="'+cimg+'" alt="" width="52" height="52">':'<span class="pc-ring" style="--v:'+hv+'"><b>'+hv+'</b></span>')+
        '<span class="pc-n"><b>'+esc(r.p.name)+(me?'（あなた）':'')+(r.p.part?'<i class="pc-part">'+r.p.part+'問</i>':'')+'</b><small>'+(co?esc(co.main.name)+'・':'')+hd.cap+' '+hv+'%</small></span></summary>'+
        '<div class="ppl '+(ri%2?'ppl-b':'ppl-a')+'"><div class="pp-top"><div class="pp-ring" style="--v:'+hv+'"><b>'+hv+'%</b></div><div class="pp-who"><strong>'+esc(r.p.name)+'</strong><span>'+hd.cap+'</span></div></div>'+
-       '<div class="pp-say">'+axComment(hd.k, hv)+'</div>'+rkSpan(mode, hd.k, hv, me?'あなた':r.p.name+'さん')+
+       '<div class="pp-say">'+axComment(hd.k, hv)+'</div>'+bridgeLine(mode, hd.k, hv, co)+rkSpan(mode, hd.k, hv, me?'あなた':r.p.name+'さん')+
        '<div class="pp-tiles">'+oth.map(function(ax,j){ return '<div class="pt'+j+'"><small>'+ax.name.replace(/度$/,'')+'</small><b>'+r.sc[ax.k]+'%</b></div>'; }).join('')+'</div>'+
        (function(){ var sp=speedStats(S.qs,S.times[r.i],S.ans[r.i]); return sp ? '<div class="pks">'+pickHTML('⚡','即決',sp.quick)+pickHTML('🌀','いちばん悩んだ',sp.slow)+'</div>' : ''; })()+
        '</div>'+charaHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone, true, {mode:mode})+kotobaHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone, mode)+
@@ -3207,7 +3243,7 @@ function showGroupResultCore(){
   $('lgshare').href=lineHref(gt);
   $('gsave').onclick=function(){ saveImage($('gres-body')); };
   bindEnd();
-  show('s-gres');
+  show('s-gres'); topShare();
 }
 
 /* ───── それぞれのスマホで（部屋） ─────
@@ -3961,7 +3997,7 @@ async function saveImage(el){
     await loadH2C();
     var w=el.scrollWidth, hh=el.scrollHeight, sc=Math.min(2, Math.sqrt(14e6/(w*hh)));
     var cv=await html2canvas(el, { backgroundColor:'#FFF8E1', scale:sc, useCORS:true, logging:false,
-      ignoreElements:function(x){ return x.tagName==='BUTTON' || (x.classList && (x.classList.contains('big') || x.classList.contains('promo') || x.classList.contains('promo-u') || x.classList.contains('kok') || x.classList.contains('hint') || x.classList.contains('end-links'))); },
+      ignoreElements:function(x){ return x.tagName==='BUTTON' || (x.classList && (x.classList.contains('big') || x.classList.contains('promo') || x.classList.contains('promo-u') || x.classList.contains('kok') || x.classList.contains('hint') || x.classList.contains('end-links') || x.classList.contains('top-share'))); },
       onclone:function(doc){
         // たたんである中身（「この％について」など）は画像に入れない（html2canvas は閉じた中身も重ねて描いてしまう）
         doc.querySelectorAll('details:not([open])').forEach(function(d){ Array.prototype.slice.call(d.children).forEach(function(ch){ if(ch.tagName!=='SUMMARY') ch.remove(); }); });
