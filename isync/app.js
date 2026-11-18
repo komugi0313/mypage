@@ -120,9 +120,10 @@ function goTop(){
     <div class="bubbles" aria-hidden="true"><i class="m" style="left:4%;top:30px;--s:34px;--d:0s;--t:9s"></i><i class="p" style="left:16%;top:150px;--s:16px;--d:2s;--t:7s"></i><i class="p" style="left:80%;top:18px;--s:44px;--d:1s;--t:10s"></i><i class="m" style="left:90%;top:170px;--s:20px;--d:3s;--t:8s"></i><i class="l" style="left:70%;top:110px;--s:12px;--d:0.5s;--t:6s"></i><i class="l" style="left:24%;top:80px;--s:10px;--d:4s;--t:7s"></i><i class="m" style="left:58%;top:4px;--s:22px;--d:2.5s;--t:9s"></i><i class="p" style="left:3%;top:222px;--s:18px;--d:1.5s;--t:11s"></i><i class="m" style="left:93%;top:240px;--s:12px;--d:5s;--t:8s"></i></div>
     <div class="orb" aria-hidden="true"></div>
     <h1 class="logo">I-Sync</h1><p class="kana">アイ・シンク</p>
-    <p class="catch">2人の「ふつう」、<br>どこまで同じ？</p>
+    <p class="catch">あの人と、みんなと。<br>「ふつう」はどこまで同じ？</p>
     <p class="lead">2択に答えて、答え合わせ。</p>
   </header>
+  <div id="ibx" hidden></div>
   ${PACK?`<section class="card packb"><p class="label">「${esc(PACK.title)}」の質問から出します</p><p class="hint">このテーマの質問だけで、ひとりでも、みんなでも遊べます。</p><button class="btn ghost small" id="packx">いつもの質問にもどす</button></section>`:''}
   <section class="card try" id="try">
     <p class="kick">まず1問、答えてみて</p>
@@ -237,6 +238,7 @@ function goTop(){
   $('mkk').onclick=async e=>{e.target.disabled=true;const r=await createKonRoom();if(r!=='ok'){$('kerr').textContent=r;e.target.disabled=false}};
   $('kjn').onclick=()=>{const c=$('kcode').value.replace(/\D/g,'');if(c.length!==4){$('kerr').textContent='4けたの部屋番号を入れてください';return}joinFromLink(c)};
   const px=$('packx');if(px)px.onclick=()=>{location.href=location.pathname};
+  inboxBanner();
   const lt=$('lntop'),ltSet=()=>{lt.href=lineUrl('アイ・シンク｜2択に答えて答え合わせ。おたがいの重なるところがわかる無料の診断です。',siteUrl())};ltSet();lt.addEventListener('click',ltSet);
   // ひとりで
   $('sgo').onclick=()=>{const v=$('sn').value.trim();if(v)store('kv_name',v);soloStart(v)};
@@ -293,7 +295,7 @@ function localAsk(){
     L.i++;
     if(L.i<n){localAsk();return}
     L.i=0;L.p++;
-    if(L.mode==='pair'){showResult({players:[L.partner,L.players[0]],qs:L.qs,me:'me',anon:false,local:true,pair:true});return}
+    if(L.mode==='pair'){showResult({players:[L.partner,L.players[0]],qs:L.qs,me:'me',anon:false,local:true,pair:true});inboxSend(L.partner.ibx,L.players[0],L.qs);return}
     showResult({players:L.players,qs:L.qs,me:L.mode==='solo'?'me':null,anon:false,local:true});
     };
   bindAsk((v,starOn)=>{
@@ -538,7 +540,7 @@ function shareText(G,name){
   if(ps.length<2){const p=ps[0],xs=G.qs.map((k,i)=>p.ans[i]).filter(a=>a&&a.o>=0),f=xs.filter(a=>a.o===2).length,pc=xs.length?Math.round(f/xs.length*100):0,n=G.qs.length;
     // 送る文は「価値観のかたち」で問いかける（％は出さない。鑑定者本人 2026-11-18「B」）
     const sw=shapeWords(G,p);
-    if(name)return{t:`わたしは「${sw}」でした。あなたは何派？\n同じ${n}問に答えると、2人のシンクロ率がわかります（約${minsOf(n)}分・無料）\n#アイシンク`,url:withLink(name,G.qs,p.ans)};
+    if(name)return{t:`わたしは「${sw}」でした。あなたは何派？\n同じ${n}問に答えると、2人のシンクロ率がわかります（約${minsOf(n)}分・無料）\n#アイシンク`,url:withLink(name,G.qs,p.ans,ibxId(G,p,name))};
     return{t:`わたしは「${sw}」でした。あなたは何派？\n#アイシンク`,url}}
   const sp=syncStat(G).pct;
   return{t:`${sp>=HIGH_SYNC?'HIGH SYNC！ ':''}${ps.length===2?'2人':ps.length+'人'}のシンクロ率は ${sp}% でした！\n2択に答えて答え合わせ。みんなでも遊べます\n#アイシンク`,url}}
@@ -564,21 +566,21 @@ function bindTail(G){
 /* ===== 答え合わせのリンク（2人が同時に開いていなくても遊べる） =====
    ひとりで答えたあと、同じ問題と自分の答えをリンクに入れて送る。受けとった人が同じ問題に答えると、2人の結果が出る。
    受けとった人は、結果のリンクを送り返せる（送った人も同じ結果を見られる）・同じ問題のまま、ほかの人も誘える（広がる）。
-   答えはリンクの中だけ（どこにも保存しない）。問題は目印（QKEY の先頭5文字）で入れる */
+   リンクに目印（ibx）があれば、答えた人の結果（ニックネームと答え）を Firestore の isync_inbox/<目印>/r に30日だけ置き、送った人のトップに届ける（鑑定者本人 2026-11-18「Aで、保存30日で」）。問題は目印（QKEY の先頭5文字）で入れる */
 const ansCode=a=>!a||a.o<0?'-':String(a.o+(a.st&&a.o<2?3:0));
 const ansDecode=c=>c==='-'?{o:-1,st:0,ms:0}:{o:(+c)%3,st:+c>=3?1:0,ms:0};
 const linkOf=(kind,parts)=>siteUrl()+'#'+kind+'='+parts.map(x=>encodeURIComponent(x)).join('~');
 const keysOf=qs=>qs.map(k=>QKEY[k].slice(0,5)).join('.');
 const codesOf=(qs,ans)=>qs.map((k,i)=>ansCode(ans[i])).join('');
-function withLink(name,qs,ans){return linkOf('with',['1',name,keysOf(qs),codesOf(qs,ans)])}
+function withLink(name,qs,ans,id){return id?linkOf('with',['2',name,keysOf(qs),codesOf(qs,ans),id]):linkOf('with',['1',name,keysOf(qs),codesOf(qs,ans)])}
 function pairLink(A,B,qs){return linkOf('pair',['1',A.name,B.name,keysOf(qs),codesOf(qs,A.ans),codesOf(qs,B.ans)])}
 function parseLink(){
   const m=/^#(with|pair)=(.+)$/.exec(location.hash||'');if(!m)return null;
-  const p=m[2].split('~').map(x=>{try{return decodeURIComponent(x)}catch(e){return ''}});if(p[0]!=='1')return{bad:1};
+  const p=m[2].split('~').map(x=>{try{return decodeURIComponent(x)}catch(e){return ''}});if(p[0]!=='1'&&!(p[0]==='2'&&m[1]==='with'))return{bad:1};
   const qi=k=>KEY5.has(k)?KEY5.get(k):-1,nm=(x,d)=>(x||'').trim().slice(0,10)||d;
   const ok=(qs,...c)=>qs.length>0&&qs.length<=30&&qs.every(i=>i>=0)&&c.every(x=>x.length===qs.length&&/^[0-5-]+$/.test(x));
   if(m[1]==='with'){const qs=(p[2]||'').split('.').map(qi);if(!ok(qs,p[3]||''))return{bad:1};
-    return{kind:'with',name:nm(p[1],'ともだち'),qs,ans:[...p[3]].map(ansDecode)}}
+    return{kind:'with',name:nm(p[1],'ともだち'),qs,ans:[...p[3]].map(ansDecode),id:p[0]==='2'&&IBX_ID.test(p[4]||'')?p[4]:''}}
   const qs=(p[3]||'').split('.').map(qi);if(!ok(qs,p[4]||'',p[5]||''))return{bad:1};
   return{kind:'pair',qs,A:{id:'a',name:nm(p[1],'ひとり目'),ans:[...p[4]].map(ansDecode)},B:{id:'b',name:nm(p[2],'ふたり目'),ans:[...p[5]].map(ansDecode)}}}
 const minsOf=n=>Math.max(2,Math.round(n/3));
@@ -590,7 +592,7 @@ function inviteCard(G,p){const n=G.qs.length,nm=['あなた','ともだち'].inc
     <label class="one-name" for="inv-name"><span>あなたのニックネーム（相手に出ます）</span><input type="text" id="inv-name" maxlength="10" value="${esc(nm)}"></label>
     <a class="btn line" id="inv-line" href="#" target="_blank" rel="noopener">LINEで答え合わせに誘う</a>
     <button class="btn ghost small" id="inv-share">ほかのアプリで送る</button><p class="hint" id="inv-msg" hidden></p>
-    <p class="hint">あなたの答えはリンクの中に入っていて、相手が答え終わるまで見えません。どこにも保存されません。</p>
+    <p class="hint">あなたの答えは、相手が答え終わるまで見えません。答えた人との結果は、このスマホのトップに30日間届きます（答えた人どうしは、おたがいの結果を見られません）。</p>
     <button class="btn ghost small" id="tog">みんなで遊ぶ（部屋を作る）</button></section>`}
 // 答え合わせのリンクから答えた人の結果の下：送ってくれた人に結果を返す／同じ問題のまま、ほかの人も誘う
 function pairBackCard(G){const A=G.players[0],me=G.players[1],n=G.qs.length;
@@ -611,7 +613,7 @@ function bindInvite(G){
   const myName=()=>{const i=$('inv-name');const v=i?i.value.trim():'';if(v){store('kv_name',v);return v}return ['あなた','ともだち'].includes(me.name)?(store('kv_name')||''):me.name};
   // ニックネームがないと、相手の画面が「ともだちさんから…」になってわかりにくいので、先に入れてもらう
   const need=e=>{if(myName())return false;if(e)e.preventDefault();const m=$('inv-msg'),i=$('inv-name');if(m){m.hidden=false;m.textContent='先にニックネームを入れてください（相手の画面に「○○さんから」と出ます）。'}if(i)i.focus();return true};
-  const inv=()=>({t:inviteText(myName(),n),u:withLink(myName(),G.qs,me.ans)});
+  const inv=()=>({t:inviteText(myName(),n),u:withLink(myName(),G.qs,me.ans,ibxId(G,me,myName()))});
   const il=$('inv-line');if(il){const set=()=>{const x=inv();il.href=lineUrl(x.t,x.u)};set();il.addEventListener('click',e=>{if(!need(e))set()});const nmI=$('inv-name');if(nmI)nmI.addEventListener('input',set)}
   const is=$('inv-share');if(is)is.onclick=()=>{if(need())return;const x=inv();sendVia(x.t,x.u,$('inv-msg'))};
   if(G.pair){const A=G.players[0],pct=pairStat(A,me,G.qs).pct,t=`${me.name}さんが答え終わりました！\n2人のシンクロ率は ${pct}% でした。くわしい結果はこちら`,u=pairLink(A,me,G.qs);
@@ -624,17 +626,63 @@ function withStart(x){
     <p class="big">${esc(x.name)}さんから、答え合わせのお誘いです</p>
     <p class="hint">${esc(x.name)}さんが答えた${n}問に、あなたも答えてください（約${minsOf(n)}分）。答え終わると、2人の答えがどれだけ重なるかがわかります。</p>
     <p class="hint">${esc(x.name)}さんの答えは、あなたが答え終わるまで見えません。</p>
+    ${x.id?`<p class="ib-note">答え終わると、2人の結果は${esc(x.name)}さんにも届きます（ほかの人には見えません）。</p>`:''}
     <label class="one-name" for="wn" style="align-self:stretch;text-align:left"><span>ニックネーム</span><input type="text" id="wn" maxlength="10" value="${esc(store('kv_name')||'')}"></label>
     <p class="hint" id="wmsg" hidden>ニックネームを入れてください（2人の結果に出ます）。</p>
     <button class="btn" id="wgo" style="align-self:stretch">答えはじめる</button>
     <button class="btn ghost small" id="wtop">アイ・シンクのトップを見る</button></section>`);
   $('wgo').onclick=()=>{const v=$('wn').value.trim();if(!v){$('wmsg').hidden=false;$('wn').focus();return}store('kv_name',v);
-    Object.assign(L,{counts:undefined,mode:'pair',qs:x.qs,players:[{id:'me',name:v||'ともだち',ans:{}}],partner:{id:'p',name:x.name,ans:x.ans},p:0,i:0});localAsk()};
+    Object.assign(L,{counts:undefined,mode:'pair',qs:x.qs,players:[{id:'me',name:v||'ともだち',ans:{}}],partner:{id:'p',name:x.name,ans:x.ans,ibx:x.id||''},p:0,i:0});localAsk()};
   $('wtop').onclick=goTop}
 // 結果のリンク（送り返された結果）を開いた人
 function pairView(x){
   try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
   L.players=[];showResult({players:[x.A,x.B],qs:x.qs,me:'a',anon:false,local:true,view:true})}
+
+/* ===== 答え合わせが届く（送った人のトップに、答えた人の結果を30日間） =====
+   送った人：リンクに目印（12文字）を入れ、このスマホの kv_sent に目印・問題・自分の答えを覚える。
+   答えた人：答え終わったら、isync_inbox/<目印>/r/<番号> にニックネームと答え（送るのはこの2つと時刻だけ）。
+   一覧は目印を知っている送った人の画面にだけ出す。30日すぎたものは読むときに消す */
+const IBX_ID=/^[0-9a-z]{12}$/,IBX_DAYS=30,IBX_MS=IBX_DAYS*864e5;
+const rid=n=>{const c='0123456789abcdefghijklmnopqrstuvwxyz';let s='';const a=new Uint8Array(n);try{crypto.getRandomValues(a)}catch(e){for(let i=0;i<n;i++)a[i]=Math.random()*256}a.forEach(x=>s+=c[x%36]);return s};
+function ibxSent(){const now=Date.now();return(store('kv_sent')||[]).filter(x=>x&&IBX_ID.test(x.id)&&now-x.at<IBX_MS)}
+function ibxId(G,p,name){if(WHERE==='claude'||!window.ISYNC_FB||!window.ISYNC_FB.projectId)return'';
+  if(!G.ibx)G.ibx=rid(12);const k=keysOf(G.qs),c=codesOf(G.qs,p.ans),l=ibxSent().filter(x=>x.id!==G.ibx);
+  const old=(store('kv_sent')||[]).find(x=>x&&x.id===G.ibx);
+  l.push({id:G.ibx,k,c,n:name||'',at:old?old.at:Date.now()});store('kv_sent',l.slice(-20));return G.ibx}
+async function inboxSend(id,me,qs){if(!id)return;const db=await getDb();if(!db)return;
+  try{await db.doc('inbox/'+id+'/r/'+rid(10)).set({name:(me.name||'ともだち').slice(0,10),codes:codesOf(qs,me.ans),at:Date.now()})}catch(e){}}
+// 送った人：届いた結果を集める（30日すぎたものは消す）
+async function inboxLoad(){const sent=ibxSent();if(!sent.length)return[];const db=await getDb();if(!db)return[];
+  const out=[];await Promise.all(sent.map(async s=>{let g;try{g=await db.collection('inbox/'+s.id+'/r').get()}catch(e){return}
+    const qs=s.k.split('.').map(k=>KEY5.has(k)?KEY5.get(k):-1);if(!qs.length||qs.some(i=>i<0)||s.c.length!==qs.length)return;
+    g.docs.forEach(d=>{const v=d.data()||{};if(Date.now()-(v.at||0)>IBX_MS){db.doc('inbox/'+s.id+'/r/'+d.id).delete().catch(()=>{});return}
+      if(typeof v.codes!=='string'||v.codes.length!==qs.length||!/^[0-5-]+$/.test(v.codes))return;
+      out.push({key:s.id+'/'+d.id,s,qs,name:String(v.name||'ともだち').slice(0,10),ans:[...v.codes].map(ansDecode),at:v.at||0})})}));
+  return out.sort((a,b)=>b.at-a.at)}
+function ibxPair(x){const me=x.s.n||store('kv_name')||'あなた';
+  return{qs:x.qs,A:{id:'a',name:me,ans:[...x.s.c].map(ansDecode)},B:{id:'b',name:x.name,ans:x.ans}}}
+async function inboxBanner(){const box=$('ibx');if(!box||!ibxSent().length)return;
+  const got=await inboxLoad();if(!got.length||!document.body.contains(box))return;
+  const seen=new Set(store('kv_ibseen')||[]),nw=got.filter(x=>!seen.has(x.key)).length;
+  const names=[...new Set(got.map(x=>x.name))];
+  box.innerHTML=`<button class="ib-ban" id="ibgo"><i class="ib-dot" aria-hidden="true"></i><span class="ib-t"><b>答え合わせの結果が届いています</b><span>${esc(names.slice(0,3).map(n=>n+'さん').join('・'))}${names.length>3?'ほか':''}${nw?`<small class="ib-new">新しく${nw}人</small>`:''}</span></span><em>${got.length}人 ›</em></button>`;
+  box.hidden=false;$('ibgo').onclick=()=>inboxView(got)}
+function inboxView(got){
+  store('kv_ibseen',got.map(x=>x.key).slice(-200));
+  const groups=[];got.forEach(x=>{let g=groups.find(y=>y.s.id===x.s.id);if(!g)groups.push(g={s:x.s,xs:[]});g.xs.push(x)});
+  const md=t=>{const d=new Date(t);return(d.getMonth()+1)+'月'+d.getDate()+'日'};
+  const row=x=>{const P=ibxPair(x),G={players:[P.A,P.B],qs:P.qs},pc=pairStat(P.A,P.B,P.qs).pct,tr=themeRows(G).filter(r=>r.q>=2);
+    let t='';if(tr.length){const hi=tr.reduce((a,b)=>b.pct>a.pct?b:a),lo=tr.reduce((a,b)=>b.pct<a.pct?b:a);
+      t=hi.pct>=60||hi===lo?`いちばん重なったのは「${hi.name}」`:`答えが分かれたのは「${lo.name}」`}
+    return `<button class="ib-row" data-k="${esc(x.key)}"><span class="ib-r" style="--p:${pc}%"><i>${pc}%</i></span><span class="ib-n"><b>${esc(x.name)}さん${pc>=HIGH_SYNC?'<span class="ib-hs">HIGH SYNC</span>':''}</b><span>${esc(t||md(x.at)+'に届きました')}</span></span><span class="ib-go" aria-hidden="true">›</span></button>`};
+  view(`<section class="card ibx"><p class="label">答え合わせの結果</p>
+    ${groups.map(g=>`<p class="hint ib-h">${md(g.s.at)}に送った${g.s.k.split('.').length}問</p>${g.xs.map(row).join('')}`).join('')}
+    <p class="ib-wait">まだ答えていない人もいます。答えると、ここに増えます。</p>
+    <p class="ib-note">この一覧は、あなたにしか見えません。答えた人どうしは、おたがいの結果を見られません。届いた結果は${IBX_DAYS}日で消えます。</p>
+    <button class="btn ghost small" id="ibtop">トップへ</button></section>`);
+  document.querySelectorAll('.ib-row').forEach(b=>b.onclick=()=>{const x=got.find(y=>y.key===b.dataset.k);if(x)pairView(ibxPair(x))});
+  $('ibtop').onclick=goTop}
 
 /* ===== みんなの答え（これまでに遊んだ人の割合） =====
    Firestore の isync_votes/<問題の目印> に、答えA・B・3つ目の数だけを1つずつ足す（名前は送らない）。同じスマホで同じ問題は1回だけ数える */
@@ -751,7 +799,7 @@ const FB=(()=>{
   const load=src=>new Promise((ok,ng)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=ng;document.head.appendChild(s)});
   const P=p=>'isync_'+p;
   const clean=d=>JSON.parse(JSON.stringify(d||{}));   // 空の値（undefined）を取りのぞく
-  const ttl=(path,d)=>/^rooms\/[0-9]+$/.test(path)?Object.assign({},d,{expireAt:new Date((d.created||d.joined||Date.now())+12*3600e3)}):d; // 部屋は12時間で消す（expireAt に TTL を設定）
+  const ttl=(path,d)=>/^rooms\/[0-9]+$/.test(path)?Object.assign({},d,{expireAt:new Date((d.created||d.joined||Date.now())+12*3600e3)}):/^inbox\//.test(path)?Object.assign({},d,{expireAt:new Date((d.at||Date.now())+30*864e5)}):d; // 部屋は12時間で消す（expireAt に TTL を設定）
   const strip=d=>{if(d){d=Object.assign({},d);delete d.expireAt}return d};
   const enc=v=>v===null||v===undefined?{nullValue:null}:v instanceof Date?{timestampValue:v.toISOString()}:typeof v==='boolean'?{booleanValue:v}:typeof v==='number'?(Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v}):typeof v==='string'?{stringValue:v}:Array.isArray(v)?{arrayValue:{values:v.map(enc)}}:{mapValue:{fields:encF(v)}};
   const encF=o=>{const f={};Object.keys(o).forEach(k=>{if(o[k]!==undefined)f[k]=enc(o[k])});return f};
