@@ -482,6 +482,9 @@ const POLE={kicchiri:['身のまわりや決めごとを、きちんと整えて
   keikaku:['予定は、先に決めておくと安心。','予定は、その場の気分で決めるのが楽しい。'],
   futari:['好きな人とは、できるだけ一緒に過ごしたい。','好きな人がいても、ひとりの時間も大事にしたい。'],
   okane:['お金は先のことを考えて、コツコツためたい。','お金は、今の楽しみにもしっかり使いたい。']};
+function shapeLean(G,p){const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x=>x.s);
+  return rows.filter(x=>Math.abs(x.s.pct-50)>=10).sort((x,y)=>Math.abs(y.s.pct-50)-Math.abs(x.s.pct-50)).slice(0,2).map(x=>x.s.pct>50?x.a.l:x.a.r)}
+function shapeWords(G,p){const l=shapeLean(G,p);return l.length?l.join('×'):'どれにも寄らない、やわらかい人'}
 function shapeHTML(G,p,who){
   const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x=>x.s);if(!rows.length)return '';
   const lean=rows.filter(x=>Math.abs(x.s.pct-50)>=10).sort((x,y)=>Math.abs(y.s.pct-50)-Math.abs(x.s.pct-50)).slice(0,2)
@@ -533,8 +536,10 @@ function tailHTML(G){const pr=G&&G.pair?pairBackCard(G):'';return `${pr}
 function shareText(G,name){
   const ps=G.players,url=WHERE==='claude'?ART_URL:location.href.split('#')[0].split('?')[0];
   if(ps.length<2){const p=ps[0],xs=G.qs.map((k,i)=>p.ans[i]).filter(a=>a&&a.o>=0),f=xs.filter(a=>a.o===2).length,pc=xs.length?Math.round(f/xs.length*100):0,n=G.qs.length;
-    if(name)return{t:`わたしの「合わせられる度」は ${pc}% でした。\n同じ${n}問で、わたしと答え合わせしてみて！（約${minsOf(n)}分・無料）\n#アイシンク`,url:withLink(name,G.qs,p.ans)};
-    return{t:`わたしの「合わせられる度」は ${pc}% でした。あなたは？\n#アイシンク`,url}}
+    // 送る文は「価値観のかたち」で問いかける（％は出さない。鑑定者本人 2026-11-18「B」）
+    const sw=shapeWords(G,p);
+    if(name)return{t:`わたしは「${sw}」でした。あなたは何派？\n同じ${n}問に答えると、2人のシンクロ率がわかります（約${minsOf(n)}分・無料）\n#アイシンク`,url:withLink(name,G.qs,p.ans)};
+    return{t:`わたしは「${sw}」でした。あなたは何派？\n#アイシンク`,url}}
   const sp=syncStat(G).pct;
   return{t:`${sp>=HIGH_SYNC?'HIGH SYNC！ ':''}${ps.length===2?'2人':ps.length+'人'}のシンクロ率は ${sp}% でした！\n2択に答えて答え合わせ。みんなでも遊べます\n#アイシンク`,url}}
 function doShare(G,name){const {t,url}=shareText(G,name),d=$('shared');
