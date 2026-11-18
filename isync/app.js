@@ -92,7 +92,7 @@ function dealKon(len){
 function markSeen(ids){const s=new Set(store('kv_seen3')||[]);ids.forEach(i=>s.add(i));store('kv_seen3',[...s])}
 
 /* ===== トップ ===== */
-const CFG=Object.assign({mode:'each',len:10,topic:'all',anon:false},store('kv_cfg')||{});
+const CFG=Object.assign({mode:'each',len:30,topic:'party',anon:false},store('kv_cfg')||{});
 if(!['each','solo'].includes(CFG.mode))CFG.mode='each';  // 大人数の部屋（kon）はやめた（2026-11-14）。中身は残してある  // 前の「1台を回して」はなくした
 let JOIN=(/^#join-(\d{4})$/.exec(location.hash||'')||[])[1]||'';
 if(JOIN)CFG.mode='each';
@@ -157,7 +157,7 @@ function goTop(){
   </section>
   <div class="gos">
     <button class="gobig g1" id="go-each"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg></span><span><b>2人で・みんなで</b><small>QRを読むだけ・2〜10人</small></span></button>
-    <button class="gobig g2" id="go-solo"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span><span><b>ひとりで遊ぶ</b><small>10問・約3分。あとで答え合わせ</small></span></button>
+    <button class="gobig g2" id="go-solo"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span><span><b>ひとりで遊ぶ</b><small id="solo-sub">${CFG.len}問・約${CFG.len>=30?6:3}分。あとで答え合わせ</small></span></button>
     <p class="free">無料・登録なし・アプリ不要</p>
   </div>
   ${st&&st.code?`<button class="btn ghost small" id="back">さっきの部屋（${esc(st.code)}）にもどる</button>`:''}
@@ -194,8 +194,9 @@ function goTop(){
   <section class="card" id="m-each">
     <label class="one-name" for="me"><span>ニックネーム</span><input type="text" id="me" maxlength="10" placeholder="本名でなくてOK" value="${esc(store('kv_name')||'')}"></label>
     <button class="btn" id="mk">部屋を作る</button>
+    <p class="hint mk-what">押すと部屋ができて、そばの友だちに見せるQRコードと、LINEで送るリンクが出ます。</p>
     <div class="join">
-      <label for="code"><span>友だちの部屋に参加する</span></label>
+      <label for="code"><span>招待された人は、こちら（部屋番号で参加）</span></label>
       <div class="join-row"><input type="text" id="code" inputmode="numeric" maxlength="4" placeholder="部屋番号（4けた）" value="${esc(JOIN)}"><button class="btn small" id="jn">参加</button></div>
     </div>
     <p class="hint">部屋のQRコードを、自分のスマホのカメラで読みとっても参加できます。</p>
@@ -205,7 +206,8 @@ function goTop(){
     <label class="one-name" for="sn"><span>ニックネーム</span><input type="text" id="sn" maxlength="10" placeholder="なくてもOK" value="${esc(store('kv_name')||'')}"></label>
     <button class="btn" id="sgo">はじめる</button>
   </section>
-  <a class="btn line small" id="lntop" href="#" target="_blank" rel="noopener">LINEでアイ・シンクを教える</a>
+  <a class="btn line small" id="lntop" href="#" target="_blank" rel="noopener">LINEでこのサイトを紹介する</a>
+  <p class="hint lntop-what">あとで遊んでほしい友だちに、サイトのリンクだけを送ります。いま一緒に遊ぶときは「部屋を作る」から誘ってください。</p>
   <section class="card themes"><p class="label">テーマ別の質問</p>
     <ul class="tlinks">${(window.SY_PAGES||[]).map(p=>`<li><a href="${p.slug}/">${esc(p.h1)}</a></li>`).join('')}</ul></section>
   ${PROMO}
@@ -213,7 +215,7 @@ function goTop(){
   <p class="credit" data-nocg>アイ・シンク（I-Sync）<br>Produced by Mizuki Nico</p>`);
   const DESC={kon:'最大40人。番号だけで参加して、名前を出さずに一斉に20問。終わると、自分と合う人が、自分のスマホにだけ出ます。',each:'2〜10人で。1人が部屋を作り、そばにいる人はQRコードを読みとるだけで参加できます。離れている人には、LINEなどでリンクを送ります。',solo:'自分の答えから、あなたのこだわりと、ゆずれることがわかります。'};
   const refresh=()=>{['each','solo','kon'].forEach(m=>$('m-'+m).hidden=CFG.mode!==m);
-    $('m-desc').textContent=DESC[CFG.mode];$('m-anon').hidden=CFG.mode!=='each';$('m-opts').hidden=CFG.mode==='kon';
+    $('m-desc').textContent=DESC[CFG.mode];$('solo-sub').textContent=CFG.len+'問・約'+(CFG.len>=30?6:3)+'分。あとで答え合わせ';$('m-anon').hidden=CFG.mode!=='each';$('m-opts').hidden=CFG.mode==='kon';
   };
   app.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k,v=b.dataset.v;
     CFG[k]=k==='len'?+v:k==='anon'?v==='true':v;saveCfg();
