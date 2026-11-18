@@ -901,7 +901,8 @@ body.rdy-on #gres-body{padding-bottom:230px}
 .pc-wrap .pc-tab.pcard{margin:0 -4px;box-shadow:none;border:0;background:transparent;overflow:visible}
 .pc-wrap .pc-tab>.ppl{border:0!important;margin:0!important;border-radius:14px}
 .pc-partn{margin:10px 12px 0;font-size:14px;font-weight:700}
-.mine-open{margin-bottom:10px}
+.mine-open{margin:14px 0 4px}
+.ts-kept{margin:12px 0 0;font-size:13px;line-height:1.6;color:#3A3550;font-weight:700}
 .q-mine{background:#FFF3C4!important}
 html.mine-on,html.mine-on body{overflow:hidden}
 #mine-ov{position:fixed;inset:0;z-index:60;background:#FFF8E1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
@@ -1017,6 +1018,7 @@ html.mine-on,html.mine-on body{overflow:hidden}
   <button class="act act-group" id="go-group" type="button"><span class="ic ic-panda" aria-hidden="true"><img src="img/panda-2.webp" alt="" width="64" height="64"></span><span class="am"><b>みんなで遊ぶ</b><small>それぞれのスマホで。近くの人はQRで、離れた人はLINEで呼べます</small></span><span class="ag" aria-hidden="true">▶</span></button>
   <button class="big" id="room-back" hidden>🔙 さっきの部屋（<span id="room-back-code"></span>）にもどる</button>
   <button class="joinl" id="join-open" type="button">招待された人はこちら（部屋番号で参加）</button>
+  <button type="button" class="zk-open mine-open" id="mine-open" hidden><span><b>わたしの結果</b><small>このスマホに残っている結果</small></span><i aria-hidden="true">›</i></button>
   <details class="opts" id="opts">
     <summary><span>細かい設定（問題の数・答え合わせ）</span></summary>
     <div id="num-box">
@@ -1051,7 +1053,6 @@ html.mine-on,html.mine-on body{overflow:hidden}
 
   <!-- 「人気の究極の二択」の一覧もトップから外した（遊ぶ前に問題が読めるとつまらないため。鑑定者本人の判断 2026-11-16） -->
   <!-- テーマ別のまとめページ（/renai/ など）はトップからリンクしない（遊ぶ前に問題が読めるとつまらないため。鑑定者本人の判断 2026-11-16「1」）。ページは sitemap.xml から検索に出る -->
-  <button type="button" class="zk-open mine-open" id="mine-open" hidden><span><b>わたしの結果</b><small>このスマホに残っている結果</small></span><i aria-hidden="true">›</i></button>
   <button type="button" class="zk-open" data-zukan="love"><span><b>キャラ図鑑</b><small>恋のキャラ・ふだんのキャラ 全20体</small></span><i aria-hidden="true">›</i></button>
   <button class="linkb" id="about-open">この診断について（％の考え方）</button>
   <!-- サイト名と作った人の表示（薄く小さく。鑑定者本人の指示 2026-11-12） -->
@@ -2107,56 +2108,128 @@ function showHonGroupResult(){
    firebase-config.js に設定があるときだけ、Firebase の道具を読みこんで使う。
    ほかのサイトとまざらないよう、置き場所の名前の頭に「nitaku_」を付ける（rooms → nitaku_rooms）。 */
 var FB=(function(){
-  var ready=null;
+  /* 読む・書くはふつうの通信（Firestore の REST）で行う（鑑定者本人 2026-11-18「通信がうまくいかなかったら全てダメ」）。
+     Gmail・LINE などアプリの中の画面では、Firebase の道具のつなぎ方が止められて、部屋が作れない・つながらないことがある
+     （アイ・シンク・恋のかたち診断で本番で起きた）。変わったときの知らせ（onSnapshot）だけ道具を後から読んで使い、
+     届かない画面でも Room.watch の2秒ごとの確認で追いつく。 */
+  var ready=null, sdkP=null, base='', key='', proj='';
   function load(src){ return new Promise(function(ok,ng){ var s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=ng; document.head.appendChild(s); }); }
-  function wrap(fs){
-    var P=function(path){ return 'nitaku_'+path; };
-    var ttl=function(path, data){
-      // 部屋は12時間で消す（Firestore の「TTL」をこの expireAt に設定すると自動で消える）
-      // 最後に書いた時刻を expireAt（＝その12時間後）に入れておき、読むときに「最後に動いた時刻（seen）」にもどす（決まりを変えずにすむように）
-      if(data && /^rooms\//.test(path)){ var c=data.seen||Date.now(); data=Object.assign({}, data, { expireAt:new Date(c+12*3600e3) }); delete data.seen; }
-      return data;
-    };
-    var clean=function(d){ if(d){ d=Object.assign({}, d); if(d.expireAt && typeof d.expireAt.toMillis==='function') d.seen=d.expireAt.toMillis()-12*3600e3; delete d.expireAt; } return d; };
-    var snapDoc=function(s){ return { id:s.id, exists:s.exists, data:function(){ return clean(s.data()); } }; };
-    var snapCol=function(q){ return { docs:q.docs.map(snapDoc) }; };
+  var P=function(path){ return 'nitaku_'+path; };
+  var ttl=function(path, data){
+    // 部屋は12時間で消す（Firestore の「TTL」をこの expireAt に設定すると自動で消える）
+    // 最後に書いた時刻を expireAt（＝その12時間後）に入れておき、読むときに「最後に動いた時刻（seen）」にもどす（決まりを変えずにすむように）
+    if(data && /^rooms\//.test(path)){ var c=data.seen||Date.now(); data=Object.assign({}, data, { expireAt:new Date(c+12*3600e3) }); delete data.seen; }
+    return data;
+  };
+  var TS=function(ms){ return { toMillis:function(){ return ms; } }; };
+  var clean=function(d){ if(d){ d=Object.assign({}, d); if(d.expireAt && typeof d.expireAt.toMillis==='function') d.seen=d.expireAt.toMillis()-12*3600e3; delete d.expireAt; } return d; };
+  function enc(v){
+    if(v===null || v===undefined) return { nullValue:null };
+    if(v instanceof Date) return { timestampValue:v.toISOString() };
+    if(typeof v==='boolean') return { booleanValue:v };
+    if(typeof v==='number') return Number.isInteger(v) ? { integerValue:String(v) } : { doubleValue:v };
+    if(typeof v==='string') return { stringValue:v };
+    if(Array.isArray(v)) return { arrayValue:{ values:v.map(enc) } };
+    return { mapValue:{ fields:encF(v) } };
+  }
+  function encF(o){ var f={}; Object.keys(o||{}).forEach(function(k){ if(o[k]!==undefined) f[k]=enc(o[k]); }); return f; }
+  function dec(v){
+    if(!v || 'nullValue' in v) return null;
+    if('booleanValue' in v) return v.booleanValue;
+    if('integerValue' in v) return Number(v.integerValue);
+    if('doubleValue' in v) return v.doubleValue;
+    if('stringValue' in v) return v.stringValue;
+    if('timestampValue' in v) return TS(Date.parse(v.timestampValue));
+    if('arrayValue' in v) return (v.arrayValue.values||[]).map(dec);
+    if('mapValue' in v) return decF(v.mapValue.fields);
+    return null;
+  }
+  function decF(f){ var o={}; Object.keys(f||{}).forEach(function(k){ o[k]=dec(f[k]); }); return o; }
+  // Firestore は「空の値（undefined）」を受けつけないので、送る前に取りのぞく（Date はそのまま残す）
+  function strip(d){ var o={}; Object.keys(d||{}).forEach(function(k){ var v=d[k]; if(v===undefined) return; o[k]=(v instanceof Date) ? v : (v && typeof v==='object' ? JSON.parse(JSON.stringify(v)) : v); }); return o; }
+  function mask(ks){ return ks.map(function(k){ return 'updateMask.fieldPaths='+encodeURIComponent(k); }).join('&'); }
+  function docName(full){ return 'projects/'+proj+'/databases/(default)/documents/'+full; }
+  async function rq(method, path, body, q){
+    var ac=typeof AbortController==='function' ? new AbortController() : null, tm=ac && setTimeout(function(){ ac.abort(); }, 12000);
+    try{
+      var url=(path.charAt(0)===':' ? base.replace(/\/$/,'') : base)+path+'?key='+key+(q?'&'+q:'');
+      var r=await fetch(url, { method:method, headers:body?{'Content-Type':'application/json'}:{}, body:body?JSON.stringify(body):undefined, signal:ac&&ac.signal, cache:'no-store' });
+      if(r.status===404 && method==='GET') return null;
+      var j={}; try{ j=await r.json(); }catch(e){}
+      if(!r.ok){ var er=new Error((j.error&&j.error.message)||('HTTP '+r.status)); er.status=r.status; throw er; }
+      return j;
+    }finally{ if(tm) clearTimeout(tm); }
+  }
+  var snapOf=function(id, d){ return { id:id, exists:!!d, data:function(){ return d ? clean(decF(d.fields)) : undefined; }, _t:d && d.updateTime }; };
+  function sdk(){
+    if(!sdkP) sdkP=(async function(){
+      try{
+        var cfg=window.NITAKU_FB;
+        if(!window.firebase || !firebase.firestore){
+          await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+          await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js');
+        }
+        var app=(firebase.apps||[]).filter(function(a){ return a.name==='nitaku'; })[0] || firebase.initializeApp(cfg,'nitaku');
+        var fs=app.firestore(); try{ fs.settings({experimentalAutoDetectLongPolling:true, merge:true}); }catch(e){}
+        return fs;
+      }catch(e){ return null; }
+    })();
+    return sdkP;
+  }
+  // 変わったときの知らせ：道具が読めた画面だけ。読めない・切れたときは何もしない（2秒ごとの確認で追いつく）
+  function live(make, cb, err){
+    var off=false, un=null;
+    sdk().then(function(fs){ if(off || !fs) return; try{ un=make(fs).onSnapshot(cb, err||function(){}); }catch(e){} });
+    return function(){ off=true; if(un) try{ un(); }catch(e){} };
+  }
+  function wrap(){
     return {
-      doc:function(path){ var r=fs.doc(P(path)); return {
-        get:function(){ return r.get().then(snapDoc); },
-        // Firestore は「空の値（undefined）」を受けつけないので、送る前に取りのぞく
-        set:function(d){ return r.set(ttl(path, JSON.parse(JSON.stringify(d||{})))); },
-        delete:function(){ return r.delete(); },
-        // 取引：いまの値が expect のときだけ patch を書く（2人が同時に押しても1回だけ進む）
-        advance:function(expect, patch){ return fs.runTransaction(function(t){ return t.get(r).then(function(sn){ if(!sn.exists) return false; var d=sn.data(); for(var k in expect){ if(d[k]!==expect[k]) return false; } t.update(r, Object.assign(JSON.parse(JSON.stringify(patch)), { expireAt:new Date(Date.now()+12*3600e3) })); return true; }); }); },
-        onSnapshot:function(cb,err){ return r.onSnapshot(function(s){ cb(snapDoc(s)); }, err); }
+      doc:function(path){ var full=P(path), id=path.split('/').pop(); return {
+        get:function(){ return rq('GET', full).then(function(d){ return snapOf(id, d); }); },
+        set:function(d){ return rq('PATCH', full, { fields:encF(ttl(path, strip(d))) }); },
+        delete:function(){ return rq('DELETE', full); },
+        // いまの値が expect のときだけ patch を書く（2人が同時に押しても1回だけ進む）。読んだときの updateTime を条件に書きこむ
+        advance:async function(expect, patch){
+          for(var k2=0; k2<3; k2++){
+            var d=await rq('GET', full); if(!d) return false;
+            var cur=clean(decF(d.fields));
+            for(var k in expect){ if(cur[k]!==expect[k]) return false; }
+            var up=Object.assign(strip(patch), { expireAt:new Date(Date.now()+12*3600e3) });
+            try{
+              await rq('POST', ':commit', { writes:[{ update:{ name:docName(full), fields:encF(up) }, updateMask:{ fieldPaths:Object.keys(up) }, currentDocument:{ updateTime:d.updateTime } }] });
+              return true;
+            }catch(e){ if(!(e.status===400 || e.status===409 || e.status===412)) throw e; }   // ほかの人が先に書いた → 読み直してもう一度
+          }
+          return false;
+        },
+        onSnapshot:function(cb, err){ return live(function(fs){ return fs.doc(full); }, function(s){ cb({ id:s.id, exists:s.exists, data:function(){ return clean(s.data()); } }); }, err); }
       }; },
-      collection:function(path){ var c=fs.collection(P(path)); return {
-        get:function(){ return c.get().then(snapCol); },
-        onSnapshot:function(cb,err){ return c.onSnapshot(function(q){ cb(snapCol(q)); }, err); }
+      collection:function(path){ var full=P(path); return {
+        get:function(){ return rq('GET', full, null, 'pageSize=300').then(function(j){ return { docs:((j&&j.documents)||[]).map(function(d){ return snapOf(d.name.split('/').pop(), d); }) }; }); },
+        onSnapshot:function(cb, err){ return live(function(fs){ return fs.collection(full); }, function(q){ cb({ docs:q.docs.map(function(s){ return { id:s.id, exists:true, data:function(){ return clean(s.data()); } }; }) }); }, err); }
       }; },
       // いくつかの書きこみを1回の通信でまとめて送る（部屋を作るのを速くするため）
-      batch:function(ops){ var b=fs.batch(); ops.forEach(function(o){ var r=fs.doc(P(o.path)); if(o.del) b.delete(r); else b.set(r, ttl(o.path, JSON.parse(JSON.stringify(o.data||{})))); }); return b.commit(); },
-      raw:fs
+      batch:function(ops){ return rq('POST', ':commit', { writes:ops.map(function(o){ var full=P(o.path); return o.del ? { delete:docName(full) } : { update:{ name:docName(full), fields:encF(ttl(o.path, strip(o.data))) } }; }) }); },
+      // 数を1つずつ足す（回答％・遊んだ回数）。list＝[{ path:'nitaku_votes/123', inc:{ a:1, b:0 } }, …]（path は頭に nitaku_ を付けた名前）
+      incr:function(list){ return rq('POST', ':commit', { writes:list.map(function(x){ return { transform:{ document:docName(x.path), fieldTransforms:Object.keys(x.inc).map(function(f){ return { fieldPath:f, increment:{ integerValue:String(x.inc[f]) } }; }) } }; }) }); },
+      // 頭に nitaku_ を付けた名前でそのまま読む（統計の分布）
+      rawGet:function(full){ return rq('GET', full).then(function(d){ return snapOf(full.split('/').pop(), d); }); }
     };
   }
   function init(){
     if(ready) return ready;
     ready=(async function(){
       var cfg=window.NITAKU_FB;
-      if(!cfg || !cfg.projectId) return null;
-      try{
-        if(!window.firebase || !firebase.firestore){
-          await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
-          await load('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js');
-        }
-        var app=(firebase.apps||[]).filter(function(a){ return a.name==='nitaku'; })[0] || firebase.initializeApp(cfg,'nitaku');
-        const fs=app.firestore();try{fs.settings({experimentalAutoDetectLongPolling:true,merge:true})}catch(e){}
-        return wrap(fs);
-      }catch(e){ return null; }
+      if(!cfg || !cfg.projectId || typeof fetch!=='function') return null;
+      proj=cfg.projectId; key=encodeURIComponent(cfg.apiKey||'');
+      base=(cfg.restBase || 'https://firestore.googleapis.com/v1/')+'projects/'+proj+'/databases/(default)/documents/';
+      sdk();   // 知らせの道具は後ろで読んでおく（待たない）
+      return wrap();
     })();
     return ready;
   }
-  return { init:init };
+  function restBase(){ var cfg=window.NITAKU_FB||{}; return (cfg.restBase || 'https://firestore.googleapis.com/v1/')+'projects/'+cfg.projectId+'/databases/(default)/documents/'; }
+  return { init:init, restBase:restBase };
 })();
 
 /* ───── みんなの回答％ ─────
@@ -2224,10 +2297,9 @@ var Votes=(function(){
           await fetch(VOTE_API,{ method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({votes:list}) });
         } else if(mode==='fs'){
           // 「どちらを選んだか」の数だけを1つ足す（名前などは送らない）
-          var inc=firebase.firestore.FieldValue.increment;
           for(var i=0;i<list.length;i++){
             var v=list[i]; if(!/^[0-9a-z]+$/.test(v.id)) continue;
-            await db.raw.doc('nitaku_votes/'+v.id).set(v.c==='a' ? { a:inc(1), b:inc(0) } : { a:inc(0), b:inc(1) }, { merge:true });
+            await db.incr([{ path:'nitaku_votes/'+v.id, inc: v.c==='a' ? { a:1, b:0 } : { a:0, b:1 } }]);
           }
         } else if(mode==='db'){
           list.forEach(function(v){ mine[v.id]=v.c; });   // 確認用ページでは1人1票（同じ問題は上書き）
@@ -2535,7 +2607,7 @@ var SHOW_COUNT=10;
 var STATS_MIN=100;   // これより少ない人数のうちは「上位○%」を出さない
 var Stats=(function(){
   var ready=null, cache={}, done={};
-  function init(){ if(!ready) ready=FB.init().then(function(f){ return f && f.raw ? f.raw : null; }, function(){ return null; }); return ready; }
+  function init(){ if(!ready) ready=FB.init().then(function(f){ return f || null; }, function(){ return null; }); return ready; }
   // その％を見る問題に2問以上答えたときだけ、その％を数える（測っていない％を50%として入れないように）
   function measured(m, qs, ans, k){ var n=0; qs.forEach(function(q,i){ if((q.ta[k]||0)!==(q.tb[k]||0) && (ans[i]==='A'||ans[i]==='B')) n++; }); return n>=2; }
   function play(key, who, m, lv, qs, ans){
@@ -2546,10 +2618,10 @@ var Stats=(function(){
       var fs=r[0];
       if(!fs) return;
       try{
-        var inc=firebase.firestore.FieldValue.increment, b=fs.batch(), o={};
-        o[who+'_'+m+'_'+lv]=inc(1); b.set(fs.doc('nitaku_stats/plays'), o, { merge:true });
-        if(sc) AXES[m].forEach(function(ax){ if(!measured(m, qs, ans, ax.k)) return; var h={}; h['b'+Math.round(sc[ax.k]/5)]=inc(1); b.set(fs.doc('nitaku_hist/'+m+'_'+ax.k), h, { merge:true }); });
-        b.commit().catch(function(){});
+        var L=[], o={};
+        o[who+'_'+m+'_'+lv]=1; L.push({ path:'nitaku_stats/plays', inc:o });
+        if(sc) AXES[m].forEach(function(ax){ if(!measured(m, qs, ans, ax.k)) return; var h={}; h['b'+Math.round(sc[ax.k]/5)]=1; L.push({ path:'nitaku_hist/'+m+'_'+ax.k, inc:h }); });
+        fs.incr(L).catch(function(){});
       }catch(e){}
     });
   }
@@ -2557,13 +2629,13 @@ var Stats=(function(){
     if(cache[m]) return cache[m];
     cache[m]=init().then(function(fs){
       if(!fs) return null;
-      return Promise.all(AXES[m].map(function(ax){ return fs.doc('nitaku_hist/'+m+'_'+ax.k).get().then(function(sn){ var d=sn.exists?(sn.data()||{}):{}, a=[]; for(var i=0;i<=20;i++) a.push(+d['b'+i]||0); return [ax.k,a]; }); }))
+      return Promise.all(AXES[m].map(function(ax){ return fs.rawGet('nitaku_hist/'+m+'_'+ax.k).then(function(sn){ var d=sn.exists?(sn.data()||{}):{}, a=[]; for(var i=0;i<=20;i++) a.push(+d['b'+i]||0); return [ax.k,a]; }); }))
         .then(function(L){ var o={}; L.forEach(function(x){ o[x[0]]=x[1]; }); return o; });
     }).catch(function(){ return null; });
     return cache[m];
   }
   /* 「わたしの結果」を開いた回数（名前なし・1回ずつ）。list＝トップの一覧・last＝部屋の「さっきの結果」・entry＝一覧から1つ開いた */
-  function mine(k){ init().then(function(fs){ if(!fs) return; try{ var o={}; o[k]=firebase.firestore.FieldValue.increment(1); fs.doc('nitaku_stats/mine').set(o,{merge:true}).catch(function(){}); }catch(e){} }); }
+  function mine(k){ init().then(function(fs){ if(!fs) return; var o={}; o[k]=1; fs.incr([{ path:'nitaku_stats/mine', inc:o }]).catch(function(){}); }); }
   return { play:play, hist:hist, mine:mine };
 })();
 /* 遊んだ人の中での位置：「あなたより○○度が高い人は○%」。人数が STATS_MIN より少ない・数えられないときは何も出さない */
@@ -2634,7 +2706,7 @@ function majorityStats(qs, ans){
     var c=S.counts[q.id]; if(!c || (c.a+c.b)<3 || c.a===c.b || !ans[i]) return;
     n++; if(canon(q,ans[i]) === (c.a>c.b?'a':'b')) same++;
   });
-  if(n<5) return '<div class="card"><h3>みんなと同じ答え？</h3><p>まだ回答が少ない問題が多いので、くらべられません。回答が集まると「多数派度」が出ます。</p></div>';
+  if(n<5) return '';   // 回答が少ないうちは欄ごと出さない（中身のない欄で結果が長くならないように）
   var r=Math.round(100*same/n);
   var cm = r>=70 ? '王道タイプ。みんなの気持ちがわかる人。' : (r<=35 ? '少数派タイプ。あなたの答えは、個性そのもの。' : '王道と個性のバランス型。');
   return '<div class="card"><h3>みんなと同じ答え？</h3><div class="stat"><div><b>'+same+' / '+n+'</b><small>みんなと同じ答え</small></div><div><b>'+r+'%</b><small>多数派度</small></div></div><p style="margin-top:10px;font-size:15px;font-weight:700">'+(r<=35?'<img class="mini-pnd" src="img/panda-wow.webp" alt="" width="52" height="52">':'')+cm+'</p></div>';
@@ -2948,7 +3020,8 @@ function topShare(){
     if(!box){
       box=document.createElement('div'); box.className='top-share';
       box.innerHTML='<p class="ts-t">この結果、だれかに見せる？</p><a class="big lb-line end-line ts-line" href="https://line.me/R/share" target="_blank" rel="noopener"></a>'+
-        '<div class="end-links"><button class="tell-s ts-share" type="button">ほかのアプリでシェア</button><span aria-hidden="true">・</span><button class="tell-s ts-save" type="button">画像で保存</button></div>';
+        '<div class="end-links"><button class="tell-s ts-share" type="button">ほかのアプリでシェア</button><span aria-hidden="true">・</span><button class="tell-s ts-save" type="button">画像で保存</button></div>'+
+        '<p class="ts-kept"><img class="ico-ok" src="img/icon-ok.webp" alt="" width="18" height="18">この結果は、このスマホに残りました。<br>トップの「わたしの結果」から、いつでも見られます。</p>';
       hero.insertAdjacentElement('afterend', box);
       var a=box.querySelector('.ts-line');
       a.addEventListener('click', function(){ var b=$(k[1]); if(b) a.href=b.href; });
@@ -3461,7 +3534,7 @@ var Room=(function(){
     var cfg=window.NITAKU_FB;
     if(!cfg || !cfg.projectId || (window.claude && typeof claude.use==='function')) return get(code);
     try{
-      var base='https://firestore.googleapis.com/v1/projects/'+cfg.projectId+'/databases/(default)/documents/nitaku_rooms/'+code, key='?key='+encodeURIComponent(cfg.apiKey);
+      var base=FB.restBase()+'nitaku_rooms/'+code, key='?key='+encodeURIComponent(cfg.apiKey);
       var rs=await Promise.all([fetch(base+key), fetch(base+'/players'+key+'&pageSize=50')]);
       if(rs[1].status>=400 || (rs[0].status>=400 && rs[0].status!==404)) throw new Error('rest');
       var room = rs[0].status===404 ? null : upk(restClean(restMap((await rs[0].json()).fields)));
@@ -3488,7 +3561,7 @@ var Room=(function(){
          ①変わったときの知らせ（onSnapshot）②知らせが止まっても追いつけるよう、2秒ごとに自分からも部屋を確かめる
          ③知らせの通り道が切れたら1秒後につなぎ直す ④ほかのアプリから戻ってきたら、つなぎ直してすぐ確かめる。
          同じ中身を何度も渡さない（部屋の画面の入力が消えないように） */
-      var room=null, players=[], un=[], stopped=false, got=false, sig='', pt=null, pulling=false, last=Date.now(), nth=0;
+      var room=null, players=[], un=[], stopped=false, got=false, sig='', pt=null, pulling=false, last=0, snapAt=0, nth=0;
       var deliver=function(){
         if(stopped || !got) return;
         var r=alive(room, players)?room:null, sg=JSON.stringify([r, players]);
@@ -3498,15 +3571,15 @@ var Room=(function(){
         un.forEach(function(f){ try{ f(); }catch(e){} }); un=[];
         if(stopped) return;
         var again=function(){ setTimeout(function(){ if(!stopped) sub(); }, 1000); };
-        un.push(db.doc('rooms/'+code).onSnapshot(function(s){ last=Date.now(); room=s.exists ? upk(s.data()) : null; got=true; deliver(); }, again));
-        un.push(db.collection('rooms/'+code+'/players').onSnapshot(function(s){ last=Date.now(); players=plist(s.docs); deliver(); }, again));
+        un.push(db.doc('rooms/'+code).onSnapshot(function(s){ last=snapAt=Date.now(); room=s.exists ? upk(s.data()) : null; got=true; deliver(); }, again));
+        un.push(db.collection('rooms/'+code+'/players').onSnapshot(function(s){ last=snapAt=Date.now(); players=plist(s.docs); deliver(); }, again));
       };
       /* 読む回数を少なく（データを読む回数には1日の上限がある）：知らせが4秒以上届いていないときだけ、自分から確かめる。
          ふだんは部屋だけ（1回）を読み、全員の答えは5回に1回（約10秒ごと）。アプリから戻ったときは全部すぐ読む */
       var pull=async function(force){
         if(stopped || pulling) return;
         if(!force && Date.now()-last<4000) return;
-        var all=force || (nth++%5===0); pulling=true;
+        var all=force || !snapAt || (nth++%5===0); pulling=true;   // 知らせが一度も届いていない画面（アプリの中の画面など）は、全員の答えも毎回読む
         try{
           var rs=await db.doc('rooms/'+code).get(), ps=all ? await db.collection('rooms/'+code+'/players').get() : null;
           if(!stopped){ room=rs.exists ? upk(rs.data()) : null; if(ps) players=plist(ps.docs); got=true; deliver(); }
@@ -3514,7 +3587,7 @@ var Room=(function(){
         pulling=false;
       };
       var vis=function(){ if(document.visibilityState==='visible' && !stopped){ sub(); pull(true); } };
-      sub(); pt=setInterval(pull, 2000);
+      sub(); pull(true); pt=setInterval(pull, 2000);
       document.addEventListener('visibilitychange', vis);
       window.addEventListener('online', vis);
       var stopDb=function(){ stopped=true; clearInterval(pt); document.removeEventListener('visibilitychange', vis); window.removeEventListener('online', vis); un.forEach(function(f){ try{ f(); }catch(e){} }); un=[]; };
