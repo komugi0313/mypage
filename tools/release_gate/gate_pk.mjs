@@ -68,6 +68,18 @@ if(MODE==='online'){ const u=unStamped(A); ok('相談1：西暦にツールの�
 if(MODE==='online'){ const kinds=await p.evaluate(()=>{ try{ return natalBondLines(chart,false).map(x=>x.kind); }catch(e){ return []; } }); const plainMode=await p.evaluate(()=>document.documentElement.classList.contains('bg-on')); const miss=plainMode?(kinds.length&&!/強く結びつ/.test(A)?['結びつき']:[]):kinds.filter(k=>!A.includes(k)); ok('相談1：命式内の天地徳合・干合を必ず伝える（'+(kinds.join('・')||'なし')+'）', miss.length===0, miss.join('・')); }
 ok('相談1：見出しが途中で改行していない', !/【[^】\n]{0,40}\n[^】]{0,40}】/.test(A), (A.match(/【[^】\n]{0,40}\n[^】]{0,40}】/)||[''])[0].replace(/\n/g,'⏎'));
 ok('相談1：画面に＊が出ない', cleanStar(A)===0, cleanStar(A));
+// 画面の使いやすさ（2026-11-17 UX点検）：目次の帯がはみ出さない・鑑定まとめは1回・五行の見本は入力欄の外・PDFの窓に viewport・ぶつかりの特徴は⚠
+{ const U=await p.evaluate(()=>{ const jn=document.getElementById('jumpnav'), vis=e=>e&&e.offsetParent!==null&&getComputedStyle(e).display!=='none';
+    const bt=[...jn.querySelectorAll('button')].filter(vis), cut=bt.filter(b=>b.getBoundingClientRect().right>innerWidth+1).map(b=>b.textContent.trim());
+    const qm=bt.some(b=>b.classList.contains('pk-qm-tg'));
+    const dg=[...document.querySelectorAll('#pk-digest,.pk-digest-a')].filter(e=>vis(e)&&e.innerText.trim()).length;
+    const lg=document.getElementById('legend5');
+    return {sw:jn.scrollWidth,cw:jn.clientWidth,cut,qm,dg,lgIn:!!(lg&&lg.closest('section.card.panel')),pv:/name="viewport"/.test(String(printHTML)),neg:/neg:true/.test(String(compatBigFeatures))&&/x\.neg\?/.test(String(compatSummaryHTML))}; });
+  ok('UX：目次の帯が横にはみ出さず、⚡すぐ答えが切れない（390px）', U.sw<=U.cw+1&&!U.cut.length&&U.qm, JSON.stringify(U.cut)+' sw='+U.sw+'/'+U.cw);
+  ok('UX：鑑定まとめは画面に1回だけ', U.dg<=1, 'dg='+U.dg);
+  ok('UX：五行の色の見本は入力欄の中に出さない', !U.lgIn);
+  ok('UX：鑑定文のPDFの窓に viewport がある', U.pv);
+  ok('UX：天戦地冲（ぶつかり）の大きな特徴は🌟ではなく⚠', U.neg); }
 // 追加の質問
 const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃ですか'); await p.click('#consultBtn'); await p.click('#consultBtn').catch(()=>{});
 const ms2=await waitFor(()=>{const it=document.querySelectorAll('#reading .rd-item');const l=it[it.length-1];return it.length>=2&&l.querySelector('.rd-bar')&&!l.querySelector('.loading');},60000);
@@ -92,7 +104,7 @@ const k=await p.evaluate(()=>{try{const c=mpLoad().clients.find(x=>x.name==='山
 ok('カルテに2件とも保存・空でない・＊なし', k.length>=2&&k.every(t=>t.length>100&&cleanStar(t)===0), k.map(t=>t.length).join(','));
 // 鑑定書
 const c2=calls;
-const [pop]=await Promise.all([ctx.waitForEvent('page',{timeout:10000}).catch(()=>null), p.click('#jn-print')]);
+const [pop]=await Promise.all([ctx.waitForEvent('page',{timeout:10000}).catch(()=>null), p.evaluate(()=>document.getElementById('jn-print').click())]);   // スマホ幅では「☰ 目次」の中にあるので、直接押す（2026-11-17）
 if(!pop){ ok('鑑定書が開く', false); } else {
   await pop.waitForLoadState('load').catch(()=>{});
   const t=Date.now(); let txt='';

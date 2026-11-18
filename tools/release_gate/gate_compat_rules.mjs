@@ -586,8 +586,14 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
   [dir+'/'+page0,'pro/meishi-sheet.html','meishiki-original/meishi-sheet.html','beginner/meishi-sheet.html'].forEach(f=>{ if(blk(f)!==B0) e.push(f+' の中身がPROと同じでない'); });
   { const sh=fs.readFileSync(path.join(ROOT,'pro/meishi-sheet.html'),'utf8');
     if(!/b\+=sheetTraitHTML\(dayGZ,'work'/.test(sh)||!/b\+=sheetTraitHTML\(dayGZ,'love'/.test(sh)) e.push('鑑定書の本格版（定型文）に入っていない');
-    if(!/kan\.恋愛\+'<\/p>'\+sheetTraitHTML\(dayGZ,'love'/.test(sh)||!/kan\.仕事\+'<\/p>'\+sheetTraitHTML\(dayGZ,'work'/.test(sh)) e.push('鑑定書のやさしい版に入っていない');
+    if(!/kan\.恋愛\+'<\/p>'\+sheetTraitHTML\(dayGZ,'love'/.test(sh)||!/kan\.仕事(?:,true,true\))?\+'<\/p>'\+sheetTraitHTML\(dayGZ,'work'/.test(sh)) e.push('鑑定書のやさしい版に入っていない');
     if(!/sheetTraitMaterial\(/.test(sh)||!/txt=window\.sheetEnsureTraitsTxt\(txt,/.test(sh)) e.push('鑑定書の詳細鑑定（材料・書き足し）に入っていない'); }
+    { /* 向いている仕事は1つの出どころ（2026-11-17）：鑑定書の言葉の表と決め方が、アプリの pkJobFit（PK_GRP_JOB・喜神→月支元命）と同じか（3か所の鑑定書） */
+      const ap=fs.readFileSync(path.join(ROOT,dir,page0),'utf8'), am=/const PK_GRP_JOB=(\{[^\n]*?\});/.exec(ap), A=am?Function('return '+am[1])():null;
+      ['pro','beginner','meishiki-original'].forEach(dd=>{ const st=fs.readFileSync(path.join(ROOT,dd,'meishi-sheet.html'),'utf8'), m=/var SHEET_GRP_JOB=(\{[^\n]*?\});/.exec(st), S=m?Function('return '+m[1])():null;
+        if(!A||!S||JSON.stringify(A)!==JSON.stringify(S)) e.push(dd+'の鑑定書：向いている仕事の言葉がアプリ（PK_GRP_JOB）とちがう');
+        if(!/\['向いている仕事',\(function\(\)\{ var JF=sheetJobFit\(!!plain\);/.test(st)||!/window\.__sheetJobR=r;/.test(st)) e.push(dd+'の鑑定書：持ち味の向いている仕事が sheetJobFit を使っていない');
+        if(/\+kan\.仕事\+|\+MEIGEN\[genmei\]\.shi(?:\)|\+)/.test(st)||!/sheetWorkDetail\(kan\.仕事,/.test(st)||!/var _JF=sheetJobFit\(/.test(st)) e.push(dd+'の鑑定書：60干支・月支元命の仕事の文に、sheetJobFit 以外の職業の一覧が残っている'); }); }
   const r=await p.evaluate(()=>{ const o={bad:[]}; const c0=chart; try{
     const K=Object.keys(KANSHI60_TRAITS), F=['恋長','恋注','恋助','仕長','仕注','仕適','仕助'], NG=/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]|命式|通変|大運|十二運|蔵干|比肩|劫財|食神|傷官|偏財|正財|偏官|正官|偏印|印綬|魁罡|空亡|AI|[*＊]|男性|女性/;
     if(K.length!==60||K.join('')!==Object.keys(KANSHI60_DETAIL).join('')) o.bad.push('60干支がそろわない');
@@ -598,7 +604,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     const c=mk(1976,5,18,'male',true), d=KANSHI60_TRAITS[c.pillars[2].ganzhi], pl=document.documentElement.classList.contains('bg-on');
     const hL=pl?'【恋愛での持ち味】':'【恋愛の持ち味】', hW=pl?'【お仕事での持ち味】':'【仕事の持ち味】';
     const a1=pkEnsureTraits('この方はまじめな人です。',c,''), a2=pkEnsureTraits(a1,c,'');
-    if(a1.indexOf(hL)<0||a1.indexOf(hW)<0||a1.indexOf(d.恋長)<0||a1.indexOf(d.仕適)<0||a1.indexOf('向いている仕事：')<0) o.bad.push('相談なしで両方が出ない：'+a1.slice(0,80));
+    if(a1.indexOf(hL)<0||a1.indexOf(hW)<0||a1.indexOf(d.恋長)<0||a1.indexOf((typeof pkJobFit==='function'&&pkJobFit(c,pl)||{}).text||d.仕適)<0||a1.indexOf('向いている仕事：')<0) o.bad.push('相談なしで両方が出ない：'+a1.slice(0,80));
     if(a2!==a1) o.bad.push('2回通すと増える');
     if(pl&&/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/.test(a1)) o.bad.push('やさしい画面に干支が出た');
     const w=pkEnsureTraits('転職はよい流れです。',c,'今の仕事を続けるか転職か迷っています'); if(w.indexOf(hW)<0||w.indexOf(hL)>=0) o.bad.push('仕事の相談で仕事だけにならない');
@@ -608,7 +614,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     const sec=h.split(hW)[1].split('【次の見出し】')[0];
     if((h.match(new RegExp(hW.replace(/[【】]/g,'\\$&'),'g'))||[]).length!==1||sec.indexOf('向いている仕事：')<0||sec.indexOf('アドバイス：')<0||sec.indexOf('気をつけたいこと：')<0||sec.indexOf(d.仕長)>=0) o.bad.push('見出しだけあるときに抜けた項目を見出しの中に足さない：'+sec.slice(0,120));
     const kid=mk(T.y-5,3,3,'female',true); const k1=pkEnsureTraits('元気な子です。',kid,''); if(k1.indexOf(hL)>=0||k1.indexOf(hW)<0) o.bad.push('13歳未満に恋愛を出した');
-    const m1=pkTraitsText(c,pl,''); if(m1.indexOf(d.恋長)<0||m1.indexOf(d.仕適)<0||m1.indexOf(hL)<0) o.bad.push('文章作成への材料がない');
+    const m1=pkTraitsText(c,pl,''); if(m1.indexOf(d.恋長)<0||m1.indexOf((typeof pkJobFit==='function'&&pkJobFit(c,pl)||{}).text||d.仕適)<0||m1.indexOf(hL)<0) o.bad.push('文章作成への材料がない');   // 向いている仕事は pkJobFit にそろえた（2026-11-17）
     if(pkTraitsText(c,pl,'金運はどうですか')!=='') o.bad.push('どちらでもない相談に材料を渡した');
     if(proReadUser(c).indexOf(d.仕長)<0) o.bad.push('命式全体の鑑定の頼み方に材料がない');
   }catch(err){ o.bad.push('動かない：'+String(err&&err.message||err)); } chart=c0; return o; });
