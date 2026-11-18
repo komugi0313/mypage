@@ -72,6 +72,8 @@ function scan() {
     if (MODE === 'iphone') await ctx.addInitScript(() => document.addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '*{text-wrap-style:auto!important}'; document.head.appendChild(s); }));
     if (process.env.KOI_NOFONT) await ctx.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
     const p = await ctx.newPage();
+    // 答えを押したあとの動き（約0.6秒）は、動きを減らす設定では出さず0.25秒で次へ進む。点検はこの設定で速く回す
+    await p.emulateMedia({ reducedMotion: 'reduce' });
     p.on('pageerror', e => problems.push(w + 'px プログラムのエラー：' + e.message));
     const check = async (label) => { (await p.evaluate(scan)).forEach(x => problems.push(w + 'px ' + label + '：' + x)); };
     await p.goto(URL); await check('はじめ');
@@ -110,7 +112,7 @@ function scan() {
     for (let r = 0; r < 7; r++) {
       await p.goto(URL); await p.click('#start'); if (r === 0) await check('恋の状況'); await p.click('[data-status=crush]');
       const cur = []; rounds.push(cur);
-      for (let i = 0; i < 48; i++) { const qt = await p.$eval('#qtext', e => e.textContent); cur.push(qt); if (r < 5) seenQ.add(qt); if (r >= 5) { const bs0 = await p.$$('#scale button'); await bs0[i % 5].click(); await p.waitForTimeout(220); continue; } await check('質問' + (i + 1) + '（' + (r + 1) + '回目）'); const bs = await p.$$('#scale button'); await bs[i % 5].click(); await p.waitForTimeout(200); }
+      for (let i = 0; i < 48; i++) { const qt = await p.$eval('#qtext', e => e.textContent); cur.push(qt); if (r < 5) seenQ.add(qt); if (r >= 5) { const bs0 = await p.$$('#scale button'); await bs0[i % 5].click(); await p.waitForTimeout(330); continue; } await check('質問' + (i + 1) + '（' + (r + 1) + '回目）'); const bs = await p.$$('#scale button'); await bs[i % 5].click(); await p.waitForTimeout(320); }
     }
     if (seenQ.size !== 240) problems.push(w + 'px 質問の文が5回で240通りになっていない（' + seenQ.size + '）');
     // 6回目・7回目（くじ引き）：どの問いも前回とちがう文になる
