@@ -4054,6 +4054,10 @@ function pkSafeFix(t,q,note){ try{ t=String(t==null?'':t); let cut=0, tcut=0, so
     /* 「AかBか」「今か待つか」「今年か来年か」に答えていない（両方見送り・どちらも選ばない）1行目は、卦の向きから決めた答えにする（2026-11-05） */
     let chFix=false; if(!ekiChoiceAnswered(ph,q)){ const L=ekiOfflineLead(r,q); if(L){ ph=L.replace(/。$/,''); chFix=true;
       if(p.tsutae){ let t0=String(p.tsutae).replace(/^\s+/,''); const h2=t0.split(/(?<=[。！？])/).slice(0,2).join(''); if(!ekiChoiceAnswered(h2,q)){ for(let i=0;i<3;i++){ const m=t0.match(/^\s*([^。！？\n]*[。！？])\s*/); if(!m||!(ekiAizuchiS(m[1])||/ご相談ですね|お悩みですね|迷われて|迷っていらっしゃ/.test(m[1]))||t0.slice(m[0].length).trim().length<20) break; t0=t0.slice(m[0].length); } p.tsutae=L+'\n\n'+t0; } } } }   // ツールの1行目のすぐあとに、あいづち（「〜というご相談ですね。」）を残さない（2026-11-15）
+    /* 「AかBか」の相談で、1行目は答えているのに、本文・要点メモが「どちらも見送る・今は選ばない」と読める文を書いたら、選ぶときの条件の言い方にする（2026-11-18 本物の答えでの点検：A社とB社で「今は急いで結論を出さずに見送るのが賢明です」が出た） */
+    try{ if(ekiQForm(q)==='choice'){ const _o=ekiChoiceOpts(q); if(_o&&_o.pair){ const _SK=/(?:どちらか一方を(?:安易に)?選ぶ(?:こと)?(?:は|を)(?:避け|控え)|(?:結論|決断|答え)を出さずに?(?:見送|保留)|見送(?:る|り)(?:の|こと)?が(?:賢明|よい|良い|おすすめ)|どちらも(?:見送|選ばない|控え)|両方(?:とも)?(?:見送|控え)|今は(?:どちらも)?選ばない|今の段階で大きな決断を下してしまうと)/;
+      const _fx=function(t){ if(!t) return t; return String(t).split(/(?<=[。！？\n])/).map(function(x){ return _SK.test(x)?(/\n$/.test(x)?'どちらを選ぶにしても急がず、条件をよく確かめてから決めましょう。\n':'どちらを選ぶにしても急がず、条件をよく確かめてから決めましょう。'):x; }).filter(function(x,i,A){ return !(i&&x===A[i-1]&&/条件をよく確かめてから決めましょう/.test(x)); }).join(''); };
+      ['tsutae','ketsuron','jogen','hitokoto'].forEach(function(k){ if(typeof p[k]==='string') p[k]=_fx(p[k]); }); } } }catch(e){}
     /* 「今の仕事を続けるべきか」に、聞かれていない「転職」などで答えた1行目は、卦の向きから決めた「続ける」の答えにする（2026-11-14） */
     let stFix=false; if(ekiQForm(q)==='stay'&&/転職|辞め|退職|独立|起業|やめ/.test(ph)){ const L=ekiOfflineLead(r,q); if(L){ ph=L.split(/(?<=。)/)[0].replace(/。$/,''); stFix=true; } }
     if(ekiExamPassQ(q)&&!/見込み|可能性|合格|受か|五分|厳し|通る|通り/.test(ph)){ const L=ekiExamLead(r,q); if(L){ ph=L.split(/(?<=。)/)[0].replace(/。$/,''); stFix=true; } }   // 「受かりますか」は見込みで答える（2026-11-14）

@@ -759,6 +759,7 @@
   .cty .cty-gz{white-space:nowrap;font-weight:700}
   .cty tr.cty-both{background:#FFF3F8}
   .cty .cty-none{color:var(--muted);text-align:center}
+  .cyc{display:inline-block;white-space:nowrap;border-radius:999px;padding:1px 8px;margin:1px 3px 2px 0;font-size:12px;font-weight:800;line-height:1.6;border:1px solid}.cyc.g{background:#E8F6EE;color:#17663A;border-color:#A9D9BC}.cyc.t{background:#F1F6E6;color:#4B6116;border-color:#C9D9A8}.cyc.w{background:#FDECEA;color:#9E2A1F;border-color:#F0B8B0}.cyc.l{background:#F0F2F5;color:#4A5260;border-color:#CBD2DC}.cyc.b{background:#FFF3F8;color:#A3164F;border-color:#EFB5CC}.cyd{display:block;font-size:11.5px;color:var(--muted);font-weight:600;line-height:1.55;margin:0 0 3px}
   .cty-ttl{font-weight:900;font-size:13px;margin:8px 0 2px}.cty-ttl.good{color:#1f7a44}.cty-ttl.warn{color:#b23b2e}
   /* 時期の目安：各表を折りたたみ（既定は閉じ・見出し＋件数で中身がわかる） */
   .cty-fold{border:1px solid var(--line);border-radius:11px;margin:8px 0;background:#fff;overflow:hidden}
@@ -10413,40 +10414,48 @@ function compatSelfLowYears(a){
   });
   return out;
 }
-/* 相性：時期の目安を表で（結婚・縁が深まる年／揺れやすい年・今後25年） */
+/* 相性：これからの年を1つにまとめる（縁が深まる年・三合方合になる年・揺れやすい年・本人の運気の谷を、年の早い順に1行ずつ。
+   画面の見せ方だけ。判定・点数・文章作成への渡しは変えない。鑑定者本人の承認 2026-11-18「お願いします」）。low はビギナーが自分の物差しの一覧を渡せるように引数で受ける */
+function pkCpYearRows(a,b,good,strain,low){ const M={}; try{
+  const nowY=(a&&a.now&&a.now.year)||new Date().getFullYear(), gz={}; (a.annualFortunes||[]).forEach(function(y){ gz[y.year]=y.ganzhi; });
+  const R=function(y){ y=+y; if(!M[y]) M[y]={year:y,gz:gz[y]||'',good:null,strain:null,low:null,trio:[],kuu:''}; return M[y]; };
+  (good||[]).forEach(function(x){ R(x.year).good=x.cues||[]; });
+  (strain||[]).forEach(function(x){ R(x.year).strain=x.tags||[]; });
+  (low||[]).forEach(function(x){ R(x.year).low=x.tags||[]; });
+  try{ compatTrio(a,b).forEach(function(o){ (o.years||[]).forEach(function(q){ if(q.year<nowY||q.year>nowY+25) return; const r=R(q.year); const k=o.kind+'（'+o.trio+'）'; if(r.trio.indexOf(k)<0) r.trio.push(k); }); }); }catch(e){}
+  Object.keys(M).forEach(function(y){ M[y].kuu=(typeof pkCpKuu==='function')?pkCpKuu(a,b,+y,false):''; M[y].kuuP=(typeof pkCpKuu==='function')?pkCpKuu(a,b,+y,true):''; });
+}catch(e){} return Object.keys(M).map(function(y){ return M[y]; }).filter(function(r){ return r.good||r.strain||r.low||r.trio.length; }).sort(function(p,q){ return p.year-q.year; }); }
+/* 相性：時期の目安を1つの表で（今後25年・早い順） */
 function compatTimingHTML(a,b,rt){
   try{
     if(!a||!a.now)return '';
     rt=rt||RELTYPES.love;
     const good=compatGoodYears(a,b,rt.useSpouse), strain=compatStrainYears(a,b), low=compatSelfLowYears(a);
-    const nowY=a.now.year;
-    const goodYs=new Set(good.map(g=>g.year)), strainYs=new Set(strain.map(s=>s.year));
-    const both=good.map(g=>g.year).filter(y=>strainYs.has(y));
-    const yrow=(o,cuesKey,markSet,kq)=>o.length?o.map(x=>`<tr${(markSet&&markSet.has(x.year))?' class="cty-both"':''}><td class="cty-y">${x.year}<small>（${x.year===nowY?'今年':(x.year-nowY)+'年後'}）</small>${kq?(function(t){ return t?'<small style="display:block;color:#8A4A00;font-weight:800">'+t+'</small>':''; })(pkCpKuu(a,b,x.year,false)):''}</td><td class="cty-gz">${x.ganzhi}</td><td>${esc((cuesKey==='cues'?x.cues:x.tags).join('・'))}</td></tr>`).join(''):'<tr><td colspan="3" class="cty-none">目立つ年は見当たりません</td></tr>';
-    const rowG=yrow(good,'cues',strainYs,1);
-    let rowS=yrow(strain,'tags',goodYs,1); if(!rt.useSpouse) rowS=rowS.replace(/配偶宮/g,'関係の土台');
-    const rowL=yrow(low,'tags',null);
+    const nowY=a.now.year, byA=birthYearOf(a), byB=birthYearOf(b);
+    const rows=pkCpYearRows(a,b,good,strain,low);
     // 家族・友人・仕事の相性では「結婚」「離婚」「配偶宮」の言葉を出さない（関係に合った言い方にする）
     const sp=!!rt.useSpouse;
-    const tGood=sp?'結婚・縁が深まりやすい年':rt.timing.replace(/時期$/,'年');
-    const tStrain=sp?'関係が揺れやすい年（配偶宮の冲・刑）':'すれ違いやすい年';
-    const tHead=sp?'結婚・縁が深まる年／揺れやすい年／運気の谷':tGood+'／'+tStrain+'／運気の谷';
-    const tHint=sp?`年運に配偶者星・出会いの星・貴人が巡り、相手の干支と響き合う年＝<b>縁が深まりやすい年</b>。配偶宮（日支）が<b>冲・刑</b>になる年＝<b>この関係が揺れやすい年</b>。`
-                  :`相手の干支と響き合う年＝<b>${esc(tGood)}</b>。2人の関係の土台が動く年＝<b>${esc(tStrain)}</b>（話し合い・役割の見直しの目安）。`;
+    const tGood=sp?'縁が深まりやすい年':rt.timing.replace(/時期$/,'年');
+    const tStrain=sp?'関係が揺れやすい年':'すれ違いやすい年';
+    const tr=rows.map(function(r){ const ch=[], ds=[];
+      if(r.good&&r.strain) ch.push('<span class="cyc b">★ 動きが大きい年</span>');
+      if(r.good){ ch.push('<span class="cyc g">💗 '+(sp?'縁が深まる':esc(tGood.replace(/年$/,'')))+'</span>'); ds.push(r.good.join('・')); }
+      if(r.trio.length){ ch.push('<span class="cyc t">🔺 三合・方合</span>'); ds.push(r.trio.join('・')+'がそろう'+(r.strain?'（すれ違いにも注意）':'')); }
+      if(r.strain){ ch.push('<span class="cyc w">🌀 '+(sp?'揺れやすい':'すれ違いやすい')+'</span>'); ds.push(r.strain.join('・')); }
+      if(r.low){ ch.push('<span class="cyc l">🌙 運気の谷</span>'); ds.push(r.low.join('・')); }
+      return '<tr'+((r.good&&r.strain)?' class="cty-both"':'')+'><td class="cty-y">'+r.year+'<small>（'+(r.year===nowY?'今年':(r.year-nowY)+'年後')+'）</small><small>本人'+(r.year-byA)+'歳</small><small>お相手'+(r.year-byB)+'歳</small>'+(r.kuu?'<small style="display:block;color:#8A4A00;font-weight:800">'+esc(r.kuu)+'</small>':'')+'</td><td class="cty-gz">'+esc(r.gz)+'</td><td>'+ch.join('')+ds.map(function(x){ return '<span class="cyd">'+esc(x)+'</span>'; }).join('')+'</td></tr>'; }).join('')||'<tr><td colspan="3" class="cty-none">目立つ年は見当たりません</td></tr>';
+    const tHint=sp?'💗 年運に配偶者星・出会いの星・貴人が巡り、相手の干支と響き合う年＝<b>縁が深まりやすい年</b>。🔺 2人の支合・半合に年の十二支が加わって<b>三合・方合</b>がそろう年。🌀 配偶宮（日支）が<b>冲・刑</b>になる年＝<b>この関係が揺れやすい年</b>。🌙 本人の総合運の谷（空亡・用神剋。相性とは別軸）。'
+                  :'💗 相手の干支と響き合う年＝<b>'+esc(tGood)+'</b>。🔺 2人の合が三合・方合になる年。🌀 2人の関係の土台が動く年＝<b>'+esc(tStrain)+'</b>（話し合い・役割の見直しの目安）。🌙 本人の総合運の谷（相性とは別軸）。';
     const tNote=sp?'※四柱推命は「離婚に良い年」と断定はしません。「関係が揺れやすい年」は関係を見直す・話し合う転機の目安。'
                   :'※「すれ違いやすい年」は、関係を見直す・よく話し合う目安です。悪いことが起きると決まっているわけではありません。';
-    return `<section class="card sec" style="border:1.5px solid #E7B8CF;box-shadow:0 6px 18px rgba(232,93,158,.12)">
-      <span class="eyebrow"><b>時期の目安</b>今後25年</span>
-      <h2 style="margin-bottom:2px">いつ動く？——年ごとの目安</h2>
-      <div style="font-size:13.5px;font-weight:800;color:var(--ink2);margin:1px 0 4px;line-height:1.6">${esc(tHead)}</div>
-      <div class="mhint" style="margin:6px 0 10px">${tHint}${both.length?'<b style="color:#C2185B">'+both.join('・')+' は両方に出る＝動きが大きい年</b>（縁も揺れも起きやすい転機）。':''}</div>
-      <details class="cty-fold"><summary><span class="cty-ttl good">${esc(tGood)}</span><span class="cty-cnt">${good.length}件</span><span class="cty-arw">▼</span></summary>
-        <table class="cty"><thead><tr><th>西暦</th><th>干支</th><th>手がかり</th></tr></thead><tbody>${rowG}</tbody></table></details>
-      <details class="cty-fold"><summary><span class="cty-ttl warn">${esc(tStrain)}</span><span class="cty-cnt">${strain.length}件</span><span class="cty-arw">▼</span></summary>
-        <table class="cty"><thead><tr><th>西暦</th><th>干支</th><th>内容</th></tr></thead><tbody>${rowS}</tbody></table></details>
-      <details class="cty-fold"><summary><span class="cty-ttl" style="color:#5B6472">本人の運気が低調な年（空亡・用神剋）</span><span class="cty-cnt">${low.length}件</span><span class="cty-arw">▼</span></summary>
-        <table class="cty"><thead><tr><th>西暦</th><th>干支</th><th>内容</th></tr></thead><tbody>${rowL}</tbody></table></details>
-      <div class="mhint" style="margin-top:8px">${good.concat(strain).some(x=>pkCpKuu(a,b,x.year,false))?'〔本人は空亡〕〔お相手は空亡〕〔2人とも空亡〕の年は、その人の解けない空亡の年です。'+(sp?'結婚・入籍など大きな始まりは避け、準備・話し合いの年に（解空の年は印なし）。':'大きな始まりは避け、準備・話し合いの年に（解空の年は印なし）。'):''}${tNote}「運気が低調な年」は<b>本人の総合運の谷</b>（相性とは別軸）で、無理をせず整える時期の参考です。深い読みは${esc(rt.label)}の相性鑑定で。</div>
+    const cnt=function(k){ return rows.filter(function(r){ return k==='trio'?r.trio.length:r[k]; }).length; };
+    return `<section class="card sec" id="cy-sec" style="border:1.5px solid #E7B8CF;box-shadow:0 6px 18px rgba(232,93,158,.12)">
+      <span class="eyebrow"><b>時期の目安</b>今後25年・早い順</span>
+      <h2 style="margin-bottom:2px">これからの年（1つの表）</h2>
+      <div style="font-size:13px;font-weight:800;color:var(--ink2);margin:1px 0 4px;line-height:1.7">💗 ${esc(tGood)} ${cnt('good')}件 ／ 🔺 三合・方合 ${cnt('trio')}件 ／ 🌀 ${esc(tStrain)} ${cnt('strain')}件 ／ 🌙 運気の谷 ${cnt('low')}件</div>
+      <div class="mhint" style="margin:6px 0 10px">${tHint}</div>
+      <table class="cty"><thead><tr><th>西暦</th><th>干支</th><th>この年のこと</th></tr></thead><tbody>${tr}</tbody></table>
+      <div class="mhint" style="margin-top:8px">${rows.some(function(r){ return r.kuu; })?'〔本人は空亡〕〔お相手は空亡〕〔2人とも空亡〕の年は、その人の解けない空亡の年です。'+(sp?'結婚・入籍など大きな始まりは避け、準備・話し合いの年に（解空の年は印なし）。':'大きな始まりは避け、準備・話し合いの年に（解空の年は印なし）。'):''}${rows.some(function(r){ return r.good&&r.strain; })?'★ は縁も揺れも起きやすい転機の年です。':''}${tNote}三合・方合のしくみ（どの柱どうしか・大運）は「🔺 2人の合が三合・方合になる年・大運」の欄に。深い読みは${esc(rt.label)}の相性鑑定で。</div>
     </section>`;
   }catch(e){ return ''; }
 }
@@ -11561,7 +11570,7 @@ function buildCompatBase(out){
   const na=personName||'本人', nb=personNameB||'お相手';
   const rt=RELTYPES[document.getElementById('rel-type')?.value||'love']||RELTYPES.love;
   { const g=pkMinorLoveBlock(chart,chartB,rt); if(g){ out.innerHTML=g; ['compat-verdict','compat-meishi'].forEach(function(id){ const e=document.getElementById(id); if(e) e.innerHTML=''; }); try{ out.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} return null; } }   // 大人×未成年の恋愛の相性は出さない
-  try{var _cv=document.getElementById('compat-verdict'); if(_cv){ let _h=compatSummaryHTML(chart,chartB,rt)+pkCvFold(compatFlowHTML(chart,chartB),'fl-w','📈 これから12ヶ月の流れ',1)+pkCvFold(compatVerdictHTML(chart,chartB,rt),'cv-verdict','⚖️ 相性の判定（良い点・注意点のくわしい中身）')+pkCvFold(compatTimingHTML(chart,chartB,rt),'cv-timing',rt.useSpouse?'📅 これからの年：結婚・縁が深まる年／揺れやすい年（今後25年）':'📅 これからの年：関係が深まる年／すれ違いやすい年（今後25年）')+pkCvFold(compatDaysHTML(chart,chartB,(typeof personName!=='undefined'&&personName)||'本人',(typeof personNameB!=='undefined'&&personNameB)||'お相手'),'kd-w','📆 2人の日運を並べて見る（日選び）',1)+pkCvFold(compatMonthsHTML(chart,chartB),'cm-w','🗓 2人の縁が動く月（これから12ヶ月）',1)+pkCvFold(compatTrioHTML(chart,chartB),'tr-w','🔺 2人の合が三合・方合になる年・大運',1)+pkCvFold(compatAttractHTML(chart,chartB),'at-w','💗 惹かれ方のしくみ',1)+pkCvFold(compatRolesHTML(chart,chartB),'rl-w','🧭 2人の役割と、一緒にいるときの調子',1)+pkCvFold(compatCheckHTML(chart,chartB),'ck-w','🔎 お相手を知るためのチェックポイント',1);   /* まとめ＋目次＋たためる欄（2026-10-25） */   /* 2人の日運を並べて見る（発注者指示 2026-10-23） */ if(!rt.useSpouse)_h=_h.replace(/配偶者宮|配偶宮/g,'関係の土台').replace(/配偶者星/g,'縁の星'); _h=pkSameSexWord(_h,chart,chartB); _cv.innerHTML=_h; try{ pkReadable(_cv); }catch(_e2){} }}catch(_e){}   // 家族・友人・仕事の相性では「配偶宮」などの夫婦向けの言葉を使わない
+  try{var _cv=document.getElementById('compat-verdict'); if(_cv){ let _h=compatSummaryHTML(chart,chartB,rt)+pkCvFold(compatFlowHTML(chart,chartB),'fl-w','📈 これから12ヶ月の流れ',1)+pkCvFold(compatVerdictHTML(chart,chartB,rt),'cv-verdict','⚖️ 相性の判定（良い点・注意点のくわしい中身）')+pkCvFold(compatTimingHTML(chart,chartB,rt),'cv-timing','📅 これからの年（縁が深まる年・三合方合・揺れやすい年を1つの表に。今後25年・早い順）')+pkCvFold(compatDaysHTML(chart,chartB,(typeof personName!=='undefined'&&personName)||'本人',(typeof personNameB!=='undefined'&&personNameB)||'お相手'),'kd-w','📆 2人の日運を並べて見る（日選び）',1)+pkCvFold(compatMonthsHTML(chart,chartB),'cm-w','🗓 2人の縁が動く月（これから12ヶ月）',1)+pkCvFold(compatTrioHTML(chart,chartB),'tr-w','🔺 2人の合が三合・方合になる年・大運',1)+pkCvFold(compatAttractHTML(chart,chartB),'at-w','💗 惹かれ方のしくみ',1)+pkCvFold(compatRolesHTML(chart,chartB),'rl-w','🧭 2人の役割と、一緒にいるときの調子',1)+pkCvFold(compatCheckHTML(chart,chartB),'ck-w','🔎 お相手を知るためのチェックポイント',1);   /* まとめ＋目次＋たためる欄（2026-10-25） */   /* 2人の日運を並べて見る（発注者指示 2026-10-23） */ if(!rt.useSpouse)_h=_h.replace(/配偶者宮|配偶宮/g,'関係の土台').replace(/配偶者星/g,'縁の星'); _h=pkSameSexWord(_h,chart,chartB); _cv.innerHTML=_h; try{ pkReadable(_cv); }catch(_e2){} }}catch(_e){}   // 家族・友人・仕事の相性では「配偶宮」などの夫婦向けの言葉を使わない
   try{var _cm=document.getElementById('compat-meishi'); if(_cm)_cm.innerHTML=compatMeishiHTML(chart,chartB,na,nb);}catch(_e){}
   const head=`【本人A】${na}（${chart.birth.sex==='male'?'男性':'女性'}）: ${compatBrief(chart)}\n【お相手B】${nb}（${sexB==='male'?'男性':'女性'}）: ${compatBrief(chartB)}\n\n【2人の関係】${rt.label}\n\n【2人の関係の自動分析（計算済み）】\n${compatBigText(chart,chartB)}${compatAnalysis(chart,chartB,rt)}${compatWeaveLines(chart,chartB)}${(function(){ const L=compatTrioLines(chart,chartB); return L.pro.length?'\n\n【2人の合が三合・方合になる時期（ツールが計算済み・必ず書く）】\n'+L.pro.map(function(x){ return '・'+x; }).join('\n')+(/〔(?:本人|お相手|2人とも)は?空亡〕/.test(L.pro.join(''))?'\n※'+PK_CP_KUU_RULE+'。':''):''; })()}`;
   return {na,nb,rt,head};
