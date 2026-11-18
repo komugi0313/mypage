@@ -19,16 +19,16 @@ const len = x => x.q.length + x.a.length + x.b.length;
 const used = new Set();
 const pick = (filter, n) => { const out = Q.map((x, i) => ({ x, i })).filter(({ x, i }) => !used.has(i) && filter(x, i)).sort((a, b) => len(a.x) - len(b.x)).slice(0, n); out.forEach(o => used.add(o.i)); return out.map(o => o.i).sort((a, b) => a - b); };
 const PAGES = [
-  { slug: 'kekkon', h1: '結婚前に話し合っておきたいこと40選', title: '結婚前に話し合っておきたいこと40選｜2択で答え合わせ', short: '結婚前に話し合っておきたいこと',
+  { slug: 'kekkon', h1: '結婚前に話し合っておきたいこと40選', title: '結婚前に話し合っておきたいこと40選｜2択で答え合わせ｜アイシンク', short: '結婚前に話し合っておきたいこと',
     lead: 'お金・仕事・家族・暮らしなど、結婚の前に知っておきたい価値観の質問を40こ集めました。言いにくいことも、2択なら気軽に聞けます。2人で答え合わせすると、重なるところとちがうところがわかります。',
     ids: () => pick((x, i) => WB.has(i) && x.cat !== 'ドキドキ', 40) },
-  { slug: 'tsukiau', h1: '付き合う前に知りたい、恋愛の価値観の質問40選', title: '付き合う前に知りたい恋愛の価値観の質問40選｜2択で答え合わせ', short: '付き合う前に知りたい恋愛の価値観',
+  { slug: 'tsukiau', h1: '付き合う前に知りたい、恋愛の価値観の質問40選', title: '付き合う前に知りたい恋愛の価値観の質問40選｜2択で答え合わせ｜アイシンク', short: '付き合う前に知りたい恋愛の価値観',
     lead: 'LINEの回数、会うペース、記念日、ケンカしたとき。付き合う前に知っておくと安心な、恋愛の価値観の質問を40こ集めました。気になる人と答え合わせしてみましょう。',
     ids: () => pick(x => x.cat === '恋愛・連絡', 40) },
-  { slug: 'couple', h1: 'カップル・夫婦で答え合わせしたい、暮らしの質問40選', title: 'カップル・夫婦で答え合わせしたい暮らしの質問40選｜2択', short: 'カップル・夫婦の暮らしの質問',
+  { slug: 'couple', h1: 'カップル・夫婦で答え合わせしたい、暮らしの質問40選', title: 'カップル・夫婦で答え合わせしたい暮らしの質問40選｜2択｜アイシンク', short: 'カップル・夫婦の暮らしの質問',
     lead: '朝型か夜型か、部屋の片づけ、ごはん、お金の使い方。一緒に暮らすと気になる、毎日の小さな価値観の質問を40こ集めました。',
     ids: () => pick(x => ['暮らし', 'お金', '食'].includes(x.cat), 40) },
-  { slug: 'tomodachi', h1: '友だち・グループで盛り上がる2択の質問40選', title: '友だち・グループで盛り上がる2択の質問40選｜みんなで答え合わせ', short: '友だち・グループで盛り上がる質問',
+  { slug: 'tomodachi', h1: '友だち・グループで盛り上がる2択の質問40選', title: '友だち・グループで盛り上がる2択の質問40選｜みんなで答え合わせ｜アイシンク', short: '友だち・グループで盛り上がる質問',
     lead: '休みの日の過ごし方、旅行、食べもの。友だちどうしで答えが分かれて盛り上がる2択の質問を40こ集めました。みんなのスマホで同時に答えられます。',
     ids: () => pick(x => ['休日・遊び', '食', '暮らし'].includes(x.cat), 40) },
 ];
@@ -83,7 +83,7 @@ const head = (title, desc, url) => `<!doctype html>
 <style>${CSS}</style></head><body><div class="wrap">
 <a class="top" href="../"><b>I-Sync</b><small>アイ・シンク　わたしとあなたの、重なるところ</small></a>`;
 const others = (self) => `<section class="card"><h2>ほかのテーマの質問</h2><ul class="links">${PAGES.filter(p => p.slug !== self).map(p => `<li><a href="../${p.slug}/">${esc(p.h1)}</a></li>`).join('')}<li><a href="../">アイ・シンクのトップへ</a></li></ul></section>`;
-const foot = `<footer>アイ・シンク（I-Sync）｜2択に答えて答え合わせ。無料・登録なし</footer></div><script src="../jw.js"></script></body></html>\n`;
+const foot = `<footer>アイシンク（アイ・シンク／I-Sync）｜2択に答えて答え合わせ。無料・登録なし</footer></div><script src="../jw.js"></script></body></html>\n`;
 
 PAGES.forEach(p => {
   const url = BASE + p.slug + '/';
