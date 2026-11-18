@@ -7942,6 +7942,7 @@ function pkBreakLead(c,q,plain){ try{ q=String(q||''); if(!c||!c.now||!/(別れ|
     :yl+'は関係が大きく揺れる年ではないので、まず気持ちを整理し、よく話し合ってから答えを出す順番がおすすめです'+(nx?'（関係が揺れやすい'+nx+'年は、大事な答えを急がないようにしましょう）':'')+'。'); }catch(e){ return ''; } }
 /* 子どもの受験・試験の心配の1行目：結果は言い切らず、相談した人の今年の流れ（支え方）と、お子さんの生年月日で見られることを答える（2026-11-16） */
 function pkKidExamLead(c,q,plain){ try{ q=String(q||''); if(!c||!c.now||!/(子ども|子供|息子|娘|お子)/.test(q)||!/(受験|入試|試験|合格|進学|受か)/.test(q)) return '';
+  if(/(どちら|どっち)/.test(q)&&!/(合格|受か|落ち)/.test(q)) return '';   // 「私立と公立どちら」のような選ぶ相談は、受験の結果の話にしない（AかBかで答える。2026-11-18 本物の答えでの点検）
   const a=pkYearSig(c,(typeof pkNenInfo==='function'?pkNenInfo().Y:c.now.year)); if(!a) return ''; const yl='今年（'+a.y+'年）のあなたは';
   return '受験の結果を占いで言い切ることはしませんが、'+((a.mk==='◎'||a.mk==='○')?yl+'お子さんを前向きに支えやすい流れです。':a.mk==='△'?yl+'心配が強まりやすい流れなので、ご自身が疲れをためないことが、お子さんへのいちばんの支えになります。':yl+'大きく揺れず、ふだんどおりにお子さんを支えやすい流れです。')
     +'お子さんの生年月日がわかれば、お子さん自身の運の流れでくわしく見られます。'; }catch(e){ return ''; } }
@@ -8306,7 +8307,7 @@ function _unmaskNames(t,m){ t=String(t||''); m.forEach(([n,k])=>{ t=t.split(k).j
       return a?a+hon:'あなた'; }); }catch(e){}
   return pkTypoFix(t); }
 /* よく出る誤字の直し（鑑定書の SHEET_TYPO と同じ3つ。2026-11-03。言いかえはしない） */
-const PK_TYPO=[[/[＃♯]\s*(7119|8000|9110)(?!\d)/g,'#$1'],[/((?:救急安心センター|救急相談センター|救急(?:電話)?相談|子ども医療電話相談|小児救急電話相談|警察相談(?:専用)?電話|警察の相談窓口)[^#\d。\n]{0,4})(7119|8000|9110)(?!\d)/g,'$1#$2'],[/落ち針(?=[かきくけこい])/g,'落ち着'],[/うまくいかどうか/g,'うまくいくかどうか'],[/新しい30年の季節/g,'人生の新しい季節（30年ほど続く大きな流れ）'],[/(?:ご)?本人さん(?![a-zA-Z])/g,'ご本人'],[/お相手さん/g,'お相手'],[/お客(?:様|さま)さん/g,'お客様'],[/長れて(おり|いる|います|いて)/g,'長けて$1'],[/頼も存在/g,'頼もしい存在'],[/たまっていやすい/g,'たまりやすい'],[/(持つ|する|ある|なる|いる|出る|巡る|重なる|強まる|高まる|向く)の(日|年|月|時期|星)(?=[。、でにはがもと）)」]|$)/g,'$1$2']];
+const PK_TYPO=[[/によによ(?=く|り)/g,'によ'],[/[＃♯]\s*(7119|8000|9110)(?!\d)/g,'#$1'],[/((?:救急安心センター|救急相談センター|救急(?:電話)?相談|子ども医療電話相談|小児救急電話相談|警察相談(?:専用)?電話|警察の相談窓口)[^#\d。\n]{0,4})(7119|8000|9110)(?!\d)/g,'$1#$2'],[/落ち針(?=[かきくけこい])/g,'落ち着'],[/うまくいかどうか/g,'うまくいくかどうか'],[/新しい30年の季節/g,'人生の新しい季節（30年ほど続く大きな流れ）'],[/(?:ご)?本人さん(?![a-zA-Z])/g,'ご本人'],[/お相手さん/g,'お相手'],[/お客(?:様|さま)さん/g,'お客様'],[/長れて(おり|いる|います|いて)/g,'長けて$1'],[/頼も存在/g,'頼もしい存在'],[/たまっていやすい/g,'たまりやすい'],[/(持つ|する|ある|なる|いる|出る|巡る|重なる|強まる|高まる|向く)の(日|年|月|時期|星)(?=[。、でにはがもと）)」]|$)/g,'$1$2']];
 function pkTypoFix(t){ t=String(t==null?'':t); PK_TYPO.forEach(function(x){ t=t.replace(x[0],x[1]); }); return t; }
 /* 「AIに相談する」「AIとして申し上げます」など、AIの言葉が残った文は外す・「。。」をまとめる（2026-11-03。PRO・易同じ中身） */
 function pkAIScrub(t){ try{ t=String(t==null?'':t);
@@ -12071,6 +12072,16 @@ function pkTcTopic(c,q){ try{ q=String(q||''); if(!c||!c.now||pkSafeStop(q)) ret
     const R=(pkConsultFocus(c,q)||{}).R||{}; const list=uniq((R.moneyY||[]).filter(function(y){ return y>=nenY&&!tsk[y]; }));
     return list.length?{k:'money',list:list,TW:/金運|お金|収入|財|稼|儲|給料|昇給|貯|資産|副業/,pro:(R.moneyGood?'金運が上がりやすいのは':'自分の力で稼ぎやすいのは'),plain:(R.moneyGood?'金運が上がりやすいのは':'自分の力で稼ぎやすいのは'),by:by,nenY:nenY}:null; }
   return null; }catch(e){ return null; } }
+/* 「AかBか」の相談で、1行目はどちらかに答えているのに、本文・お伝え方・どうすればよいかに「今は結論を出さずに見送る」「どちらも選ばない」と読める文があれば、
+   「どちらを選ぶにしても急がず、条件をよく確かめてから決めましょう。」に置きかえる（易の ekiChoice の直しと同じ文。鑑定者本人の指示 2026-11-18「PROとビギナーも確かめて」） */
+const PK_CHOICE_HOLD=/(?:どちらか一方を(?:安易に)?選ぶ(?:こと)?(?:は|を)(?:避け|控え)|(?:結論|決断|答え)を(?:急いで)?出さずに?(?:見送|保留)|見送(?:る|り)(?:の|こと)?が(?:賢明|よい|良い|おすすめ)|どちらも(?:見送|選ばない|控え)|両方(?:とも)?(?:見送|控え)|今は(?:どちらも)?選ばない|今の段階で大きな決断を下してしまうと)/;
+function pkChoiceQ(q){ q=String(q||''); return /(どちら|どっち)/.test(q)||/[^、。]{1,20}か[、\s]*[^、。]{1,20}か(?:で|を)?(?:迷|悩|決め|選)/.test(q); }
+function pkChoiceHoldFix(t,q){ try{ t=String(t==null?'':t); if(!pkChoiceQ(q)) return t;
+  const L=t.split('\n'); let i0=L.findIndex(function(x){ return x.trim()&&!/^【/.test(x.trim()); }); if(i0<0||PK_CHOICE_HOLD.test(L[i0])) return t;   // 1行目が見送りなら、ここでは触らない（1行目の直しは pkLeadFix）
+  const R='どちらを選ぶにしても急がず、条件をよく確かめてから決めましょう。';
+  for(let i=i0+1;i<L.length;i++){ if(!PK_CHOICE_HOLD.test(L[i])) continue; const pre=(L[i].match(/^\s*(?:[・\-●○◆▶]\s*)?/)||[''])[0];
+    L[i]=L[i].split(/(?<=[。！？])/).map(function(x){ return PK_CHOICE_HOLD.test(x)?(x.indexOf(pre)===0&&pre?pre:'')+R:x; }).filter(function(x,j,A){ return !(j&&x===A[j-1]&&x.indexOf(R)>=0); }).join(''); }
+  return L.join('\n'); }catch(e){ return t; } }
 function pkTimingConsistFix(t,c,q,plain){ try{ t=String(t==null?'':t); const T=pkTcTopic(c,q); if(!T) return t; if(plain==null) plain=(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'));
   const rows=[], L=t.split('\n'), i0=L.findIndex(function(x){ return x.trim(); });
   const first=(i0>=0?L[i0]:''), fy=(first.match(/(?:19|20)\d\d(?=年)/g)||[]).map(Number).filter(function(y){ return T.list.indexOf(y)>=0; })[0];
@@ -12184,6 +12195,7 @@ function pkFinalFix(t,q,isCompat){ try{ t=String(t==null?'':t); q=String(q||'');
     if(P.length&&P.every(function(o){ return o.sex===chart.birth.sex; })) t=pkSameSexWord(t,chart,{birth:{sex:chart.birth.sex}}); }
   if(!isCompat&&typeof chart!=='undefined'&&chart){ try{ t=pkKaiKuuFix(t,chart); }catch(e){} try{ t=pkTimingConsistFix(t,chart,q); }catch(e){} try{ t=pkFalseKuuFix(t,chart,q); }catch(e){} try{ t=pkBreakFarFix(t,chart,q,(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'))); }catch(e){} }   // 空亡でない年の「大きな始まりは控え」・別れの相談の何年も先までの先送り（2026-11-16）
   if(!isCompat&&q){ try{ t=pkLeadFragFix(t,q,(typeof document!=='undefined'&&document.documentElement.classList.contains('bg-on'))); }catch(e){} try{ t=pkOffTopicDiet(t,q); }catch(e){} }   // 本文の「いちばん・本格的に」の年を、ツールの時期（1行目・話す順番・まとめ）にそろえる（2026-11-16）
+  if(!isCompat&&q){ try{ t=pkChoiceHoldFix(t,q); }catch(e){} }   // 「AかBか」で1行目は選んでいるのに、本文が「どちらも見送る・結論を出さずに保留」と読める文を書いたら、選ぶときの条件の言い方に（易と同じ。2026-11-18）
   if(isCompat) t=t.replace(/^([ 　]*)(?:ご)?本人との(お付き合い|関係|相性|ご縁|恋愛)/m,'$1お二人の$2');   // 相性の1行目「本人とのお付き合いは」（お客様本人に向けて「本人と」と書いていた。2026-11-14 実機点検）
   t=pkSafeFix(t,q); if(!isCompat&&q){ try{ t=pkSafeAnsFix(t,q); }catch(e){} } t=pkDupLineFix(t); if(!isCompat&&q){ const _sk=pkSafeKind(q,pkSafeAgeNow()), _f=(t.split('\n').find(function(x){ return x.trim(); })||''); if((_sk||isCrisis(q))&&(!_f||/^\s*[【\[]/.test(_f))) t=(_sk?PK_SAFE_LEAD[_sk.k]||_sk.say:PK_CRISIS_LEAD)+'\n\n'+t; }   // 1行目が外れて空になったら、決まった1行目を入れる
   // 命にかかわる・健康を損なう言い切りを外し、霊・祟り・ほかの占い師の否定は弱める（3ツール同じ。2026-11-03）
@@ -14443,12 +14455,7 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
     var gc=ganzhiCompat(a.pillars[2].ganzhi,b.pillars[2].ganzhi);
     var tc=safe(function(){return detectTensenCompat(a,b);},{any:false,list:[]});
     var good=safe(function(){return compatGoodYears(a,b,rt.useSpouse);},[]), strain=safe(function(){return compatStrainYears(a,b);},[]), low=safe(function(){return compatSelfLowYears(a);},[]);
-    // 「あなたが整えたい年」は、あなた個人の画面の判定（◎○◦△）と食い違わないよう、個人の判定が△の年と、◦/△で注意の重なる年だけにする
-    low=safe(function(){ var ny=a.now.year, out=[], seen={};
-      var mk=function(y){ var e=(a.annualFortunes||[]).filter(function(x){return x.year===y;})[0]; return e?sig(a,e).mk:''; };
-      low.forEach(function(x){ var m=mk(x.year); if(m==='◦'||m==='△'){ out.push(x); seen[x.year]=1; } });
-      (a.annualFortunes||[]).forEach(function(e){ if(e.year>=ny&&e.year<=ny+25&&!seen[e.year]&&sig(a,e).mk==='△'){ out.push({year:e.year}); seen[e.year]=1; } });
-      return out.sort(function(p,q){return p.year-q.year;}); },low);
+    // 「整えたい年」はPROの「運気の谷」と同じ年（compatSelfLowYears をそのまま使う。鑑定者本人の指示 2026-11-18「そろえてください」）
     return {gc:gc,tc:tc,good:good,strain:strain,low:low};
   }
   function tsBase(){ return String(TSC_TXT.base).replace(/^2人の柱の間に天戦地冲がある場合、/,''); }
@@ -14500,7 +14507,7 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
         (lis?'<ul style="margin:6px 0 0;padding:0">'+lis+'</ul>':'<p>とくに目立つ年はありません</p>')+
         (rows.some(function(r){ return r.good&&r.strain; })?'<p style="margin:8px 0 0;background:#FFF6E0;border-radius:10px;padding:9px 12px;font-size:13.5px;font-weight:700;color:#5A3E08">★ の年は、縁が深まることも、ゆれることも起きやすい“大きく動く年”です。</p>':'')+
         (kuY?'<p style="margin:8px 0 0;background:#FFF3E6;border-radius:10px;padding:9px 12px;font-size:13.5px;font-weight:700;color:#6B3A00">〔ひと休みの年〕の印の年は、その人の力が抜けやすい年です。結婚・入籍など大きな始まりより、準備や話し合いの年にすると安心です。</p>':'')+
-        '<div class="note">※「揺れやすい」は、別れの年という意味ではありません。関係を見直したり話し合ったりする節目の目安です。「整えたい」は相性とは別に、'+WHO()+'自身の運の流れから見た目安です（上の「'+WHO()+'」の画面の判定と同じ物差しです）。</div></div>'; }
+        '<div class="note">※「揺れやすい」は、別れの年という意味ではありません。関係を見直したり話し合ったりする節目の目安です。「整えたい」は相性とは別に、'+WHO()+'自身の運の流れから見た目安です（上級者向けの表示の「運気の谷」と同じ年です）。</div></div>'; }
     return h+'</div>';
   }
   function plainCompatText(a,b,rt,q){

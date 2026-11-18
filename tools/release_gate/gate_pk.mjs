@@ -107,6 +107,17 @@ ok('相談1：画面に＊が出ない', cleanStar(A)===0, cleanStar(A));
     const isB=/app-beginner/.test(location.pathname);
     return {tb,fold,n:ys.length,sorted,bgOK:!isB||bg}; }catch(e){ return {err:String(e)}; } });
   ok('UX②：相性のこれからの年は1つの表（早い順・年は1行ずつ）', Y.tb===1&&!Y.fold&&Y.sorted&&Y.bgOK, JSON.stringify(Y)); }
+// UX点検②の続き（2026-11-18）：ビギナーの「整えたい年」はPROの「運気の谷」と同じ年（compatSelfLowYears をそのまま使う）／「AかBか」の見送りの文の直し
+{ const Z=await p.evaluate(()=>{ try{ const isB=/app-beginner/.test(location.pathname);
+    const src=[...document.scripts].map(s=>s.textContent).join('\n');
+    const bgSame=!isB||(/low=safe\(function\(\)\{return compatSelfLowYears\(a\);\},\[\]\)/.test(src)&&!/個人の判定が△の年と、◦\/△で注意の重なる年だけにする/.test(src));
+    const B=window.Bazi, P=[[1981,6,10,22,28,'female'],[1979,3,15,8,0,'male'],[1990,1,1,12,0,'female'],[1975,11,20,6,30,'male']];
+    let same=true, info=[]; P.forEach(function(x){ const c=B.computeChart({year:x[0],month:x[1],day:x[2],hour:x[3],minute:x[4],sex:x[5],correctionMode:'none'}); const lo=compatSelfLowYears(c).map(o=>o.year), rw=pkCpYearRows(c,c,[],[],compatSelfLowYears(c)).filter(r=>r.low).map(r=>r.year); if(lo.join()!==rw.join()) same=false; info.push(lo.join('/')); });
+    const T='A社のほうが合います。\n今は急いで結論を出さずに見送るのが賢明です。\n・どちらも見送るのがよいでしょう。', o=pkChoiceHoldFix(T,'A社とB社、どちらに転職すべきですか');
+    const ab=!/見送/.test(o)&&/条件をよく確かめてから決めましょう/.test(o)&&/^A社のほうが合います。/.test(o)&&pkChoiceHoldFix(T,'転職はいつがいいですか')===T;
+    return {bgSame,same,ab,info:info.join(' | ')}; }catch(e){ return {err:String(e)}; } });
+  ok('UX②：ビギナーの「整えたい年」はPROの「運気の谷」と同じ年', Z.bgSame&&Z.same, JSON.stringify(Z));
+  ok('UX②：「AかBか」で本文の「どちらも見送る」は条件の言い方に（1行目は選ぶ答えのまま）', Z.ab, JSON.stringify(Z)); }
 // 追加の質問
 const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃ですか'); await p.click('#consultBtn'); await p.click('#consultBtn').catch(()=>{});
 const ms2=await waitFor(()=>{const it=document.querySelectorAll('#reading .rd-item');const l=it[it.length-1];return it.length>=2&&l.querySelector('.rd-bar')&&!l.querySelector('.loading');},60000);
