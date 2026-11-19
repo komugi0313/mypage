@@ -48,4 +48,4 @@ function glue(el){
   if(tail) sp.parentNode.insertBefore(document.createTextNode(tail),sp.nextSibling);
 }
 function glueAll(root){ Array.prototype.forEach.call((root||document).querySelectorAll(GLUE_SEL),glue); }
-glueAll(document);Array.prototype.forEach.call(document.querySelectorAll(".map div,.q>b,.q>span,.jk .t,.jk .lb,.tip,.hero .k,.pair i,.crumb,.cta small"),glue);})();
+glueAll(document);Array.prototype.forEach.call(document.querySelectorAll(".ty b,.ty>span,.dif .n,.links a>span,.q>b,.q>span,.jk .t,.jk .lb,.tip,.hero .k,.hero .sub,.pair i,.crumb,.cta small,.meta,.kick,.ex div>span,.ex b,.wk span,.kp>span,.dif p,summary span,.rk i"),glue);})();
