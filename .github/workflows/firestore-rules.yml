@@ -1,0 +1,42 @@
+# Firestore の決まり（究極の二択・アイ・シンク・恋のかたち診断）を Firebase に公開する。
+# 各サイトの firestore.rules を直して main に入ると、1つのファイルにまとめて自動で公開する。
+# 決まりの文がまちがっていると Firebase が受けつけず、公開されない（今の決まりのまま）。
+# 必要なもの：Secrets の FIREBASE_SERVICE_ACCOUNT_16TYPEPLUS（サイトの公開と同じ鍵）に「Firebase Rules 管理者」の役割
+name: Firestore の決まりを公開
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'nitaku/firestore.rules'
+      - 'isync/firestore.rules'
+      - 'koi16/firestore.rules'
+      - 'firestore-rules/**'
+      - 'tools/build_firestore_rules.py'
+      - '.github/workflows/firestore-rules.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: firestore-rules
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: python3 tools/build_firestore_rules.py
+      - name: 鍵を置く
+        run: printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_16TYPEPLUS }}
+      - name: 公開
+        working-directory: firestore-rules
+        run: npx -y firebase-tools@13.0.0 deploy --only firestore:rules --project typeplus-69c66 --non-interactive
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+      - if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"
