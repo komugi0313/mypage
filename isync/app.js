@@ -1055,6 +1055,7 @@ async function joinRoom(code,name,force){
     const room=rs.data(),ps=await db.collection('rooms/'+code+'/players').get();
     if(room.host===PID){enterRoom(code);return 'ok'}   // 婚活の部屋を作った主催者
     if(room.kind==='kon'&&!ps.docs.some(d=>d.id===PID)){joinFromLink(code);return 'ok'}
+    if(room.phase==='result'&&!ps.docs.some(d=>d.id===PID)){doneRoom();return 'ok'}
     if(!ps.docs.some(d=>d.id===PID)){
       if(!name)return 'ニックネームを入れてください';
       // 同じ名前の人がもういる＝部屋を作った人が、自分で送ったLINEのリンクを開いたことが多い（LINEの中の画面は別のブラウザあつかい）
@@ -1254,6 +1255,7 @@ async function joinFromLink(code){
   const fail=msg=>{clearHash();view(`<section class="card hand"><p class="big">${msg}</p><p class="hint">部屋は12時間で閉じます。部屋を作った人に、もう一度送ってもらってください。</p><button class="btn" id="tp" style="align-self:stretch">トップへ</button></section>`);$('tp').onclick=goTop};
   if(!room)return fail('この部屋は見つかりませんでした');
   if(ps.includes(PID)){enterRoom(code);return}                     // もう入っている（ページを開きなおした）
+  if(room.phase==='result'&&room.kind!=='kon')return doneRoom(clearHash);   // 診断が終わった部屋には、あとから入れない（入ると、みんなの結果に答えのない人が加わってしまう）
   if(ps.length>=maxOf(room))return fail('この部屋は、もう'+maxOf(room)+'人そろっています');
   if(room.kind==='kon'){if(room.host===PID){enterRoom(code);return}konJoin(code,room,ps.length);return}
   const saved=store('kv_name');
@@ -1287,6 +1289,14 @@ function sameAsk(code,name,id,shown){
       if(v===String(shown||name).trim()){$('sm-err').textContent='同じ名前の人がいます。少し変えてください（例：'+esc(v)+'2）';return}
       store('kv_name',v);$('sm-go').disabled=true;const r=await joinRoom(code,v);if(r!=='ok'){$('sm-err').textContent=r;$('sm-go').disabled=false}};
     $('sm-go').onclick=go;inp.onkeydown=e=>{if(e.key==='Enter')go(e)};try{inp.focus()}catch(e){}}}
+// 診断が終わった部屋のリンクを、あとから開いたとき
+function doneRoom(clear){if(clear)clear();
+  view(`<section class="card hand"><img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
+    <p class="big">この部屋の診断は、もう終わりました</p>
+    <p class="hint">あとから入ると、みんなの結果が変わってしまうので、終わった部屋には入れません。</p>
+    <p class="hint">送ってくれた人に、新しい部屋か「答え合わせのリンク」（ひとりで診断したあとに送れるリンク。好きなときに答えられます）を送ってもらってください。</p>
+    <button class="btn" id="dr-solo" style="align-self:stretch">ひとりで診断する</button><button class="btn ghost" id="dr-top" style="align-self:stretch">トップへ</button></section>`);
+  $('dr-top').onclick=goTop;$('dr-solo').onclick=()=>{soloStart(store('kv_name')||'')}}
 /* 画面の下に、短いお知らせを出す（数秒で消える） */
 function toast(t){let el=$('toast');if(!el){el=document.createElement('div');el.id='toast';el.setAttribute('role','status');el.setAttribute('data-nojw','');document.body.appendChild(el)}
   el.textContent=t;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),2600)}
