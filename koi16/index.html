@@ -148,6 +148,9 @@ h3.whoh{font-size:16px;margin:18px 0 10px}
 .rmem li{display:flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;font-weight:700;font-size:15px;color:var(--ink)}
 .rmem small{font-weight:500;color:var(--sub);font-size:13px}.rmem .rdone{color:#1F6B4F}
 .rmem .rkick{min-width:44px;min-height:44px;margin:-10px -12px -10px 0;border:0;background:none;color:var(--sub);font-size:18px;font-weight:700;cursor:pointer}
+.rback{margin:10px 0 14px;padding:12px;border-radius:12px;background:#FFF6D8;border:1px solid #E9D38C}.rback p{margin:4px 0 0;font-size:14px}
+.rlate{margin-top:14px;padding:10px 12px;border-radius:12px;background:#FFF6D8;border:1px solid #E9D38C}.rlate p{margin:2px 0 0;font-size:14px}
+.rsolo{text-align:center;margin:6px 0 0}.rsolo .linkbtn{min-height:44px}
 .rline-back{margin:10px 0 0;padding:8px 10px;border-radius:10px;background:#F6F0EA;font-size:14px}
 .rcode{font-size:15px;color:var(--ink)!important}.rcode b{font-size:22px;letter-spacing:.12em}
 .rnote{margin:8px 0 0;padding:8px 12px;border-radius:12px;background:#FFF7E0;border:1px solid #F0D48A;color:#5A4200;font-size:14px}
@@ -3901,6 +3904,7 @@ function roomSetup(){
   var h='<section class="card"><p class="rc-eye">FOR GROUPS</p><h1><span class="nw">みんなで</span><span class="nw">診断する</span></h1>'+
     '<ol class="rsteps"><li><b>1</b><span>部屋を作る</span></li><li><b>2</b><span>みんながQRを読む</span></li><li><b>3</b><span>スタートでみんなの診断が始まる</span></li></ol>'+
     '<p>診断が終わった人から、全員の相性といちばん相性のいい2人が出てきます（8人まで）。</p>'+
+    (function(){ var mr=st.myRoom; if(!mr||!mr.c||Date.now()-(mr.t||0)>=ROOM_TTL) return ''; return '<div class="rback"><b><span class="nw">さっき作った部屋（'+esc(mr.c)+'）が</span><span class="nw">まだあります</span></b><p>同じみんなと診断するなら、その部屋にもどってください。新しく作ると、前の部屋のリンクを開いた人とは別の部屋になります。</p><button class="btn btn-main btn-wide" type="button" data-act="room-back">その部屋にもどる</button></div>'; })()+
     '<label class="muted" for="r-name">あなたのニックネーム（8文字まで）</label><input class="gname" id="r-name" maxlength="8" autocomplete="off" value="'+esc(st.nick||'')+'" placeholder="例：みき">'+
     '<p class="rlabel">みんなで、どちらを診断する？</p><div class="rseg" role="group" aria-label="診断の長さ">'+
     '<button type="button" data-act="room-mode" data-m="quick" class="'+(m==='quick'?'on':'')+'" aria-pressed="'+(m==='quick')+'"><b>かんたん版</b><small>20問・約4分</small></button>'+
@@ -3936,7 +3940,7 @@ function roomUpdate(){
   roomRender('result');
 }
 function roomRender(kind){
-  var sig=kind+'|'+JSON.stringify([RM.room&&RM.room.phase,rPlayers().map(function(p){ return [p.id,p.name,p.code,!!p.done,p.q||0]; })]);
+  var sig=kind+'|'+(RM.room&&Date.now()-(RM.room.created||0)>180000?'L':'')+'|'+JSON.stringify([RM.room&&RM.room.phase,rPlayers().map(function(p){ return [p.id,p.name,p.code,!!p.done,p.q||0]; })]);
   if(RM.view===kind&&RM.sig===sig) return;
   var same=RM.view===kind, keep=$('r-jname')?$('r-jname').value:null, y=window.scrollY, h;
   if(kind==='join') h=roomJoinHTML(); else if(kind==='lobby') h=roomLobbyHTML(); else if(kind==='result') h=roomResultHTML();
@@ -3949,7 +3953,7 @@ function roomRender(kind){
   RM.view=kind; RM.sig=sig;
 }
 function rMembers(ps,host,me,showDone,kick){
-  return '<ul class="rmem">'+ps.map(function(p){ return '<li><span class="nw">'+esc(p.name)+'</span>'+(p.id===host?'<span class="rcrown" aria-label="部屋を作った人">👑</span>':'')+(me&&p.id===me.id?'<small>（あなた）</small>':'')+(showDone&&p.done?'<small class="rdone">結果あり</small>':'')+(kick&&p.id!==host?'<button class="rkick" type="button" data-act="room-kick" data-id="'+esc(p.id)+'" aria-label="'+esc(p.name)+'さんを部屋から外す">×</button>':'')+'</li>'; }).join('')+'</ul>';
+  return '<ul class="rmem">'+ps.map(function(p){ return '<li><span class="nw">'+esc(p.name)+'</span>'+(p.id===host?'<span class="rcrown" aria-label="部屋を作った人">👑</span>':'')+(me&&p.id===me.id?'<small>（あなた）</small>':'')+(showDone&&p.done?'<small class="rdone">結果あり</small>':'')+(showDone&&!p.done&&p.q>0?'<small>診断中</small>':'')+(kick&&p.id!==host?'<button class="rkick" type="button" data-act="room-kick" data-id="'+esc(p.id)+'" aria-label="'+esc(p.name)+'さんを部屋から外す">×</button>':'')+'</li>'; }).join('')+'</ul>';
 }
 function rRestDel(path){ var cfg=window.KOI16_FB||{}; return rTO(fetch(rRestBase()+path+'?key='+encodeURIComponent(cfg.apiKey||''),{method:'DELETE'}).then(function(r){ if(!r.ok&&r.status!==404) throw new Error('rest '+r.status); return true; }),12000); }
 async function roomKick(id){
@@ -3969,7 +3973,7 @@ function roomJoinHTML(){
   else{
     h+='<label class="muted" for="r-jname">あなたのニックネーム（8文字まで）</label><input class="gname" id="r-jname" maxlength="8" autocomplete="off" enterkeyhint="go" value="'+esc(st.nick||'')+'" placeholder="例：ゆう">'+
       '<button class="btn btn-main btn-wide" type="button" data-act="room-join" id="r-join">参加する</button><p class="rnote hidden" id="r-jnote"></p>'+
-      (play?'<p class="muted">参加すると、すぐに診断が始まります。</p>':'<p class="muted">'+esc(hn)+'さんが「スタート」を押すと、全員いっしょに診断が始まります。</p>');
+      (play?'<p class="muted">参加すると、すぐに診断が始まります。</p>':'<p class="muted">'+esc(hn)+'さんが「スタート」を押すと、全員いっしょに診断が始まります。待たずに、自分のタイミングで始めることもできます。</p>');
     if(st.me&&st.me.code) h+='<p class="g-prev"><button class="linkbtn" type="button" data-act="room-join-mine">前回の結果（'+esc(T[st.me.code].c)+'）で参加する</button></p>';
     h+='<p class="muted" style="margin-top:8px">部屋に送るのは、ニックネームと診断のタイプ（4文字）・愛着スタイルと、答えた問題の数だけです。質問への答え・恋の状況は送りません。本名でなくて大丈夫です。</p></section>';
   }
@@ -3983,10 +3987,19 @@ function roomLobbyHTML(){
   h+='<p class="muted">部屋 '+RM.code+'・'+rModeTxt(r.mode)+'</p><p class="rlabel">いま部屋にいる人（'+n+'人）</p>'+rMembers(ps,r.host,me,true,host);
   if(host&&n>=2) h+='<p class="muted rkick-note">来ていない人・まちがえて入った人は、名前の横の × を2回押すと外せます。</p>';
   var dn=rDupNames(ps); if(host&&dn.length) h+='<p class="rnote warn">同じニックネームの人が2人います（'+dn.map(esc).join('・')+'）。同じ人が2回入ったときは、× で外してください。</p>';
-  if(host){
-    h+='<button class="btn btn-main btn-wide" type="button" data-act="room-start" id="r-start"'+(n<2?' disabled':'')+'>スタート（'+n+'人で診断する）</button>';
-    h+='<p class="muted">'+(n<2?'2人以上そろうと押せます。':'あとから来た人も、途中から参加できます。')+'</p>';
-  } else h+='<p class="rwait-t">あなたは何もしなくて大丈夫です。'+esc(hn)+'さんが「スタート」を押すと、自動で診断が始まります。</p>';
+  // 1人ずつ始めてもよい（鑑定者本人 2026-11-19「クイズじゃないから、一人一人が始めてもいい」「結果が12時間以内に出る形で」）
+  if(host&&n>=2){
+    h+='<button class="btn btn-main btn-wide" type="button" data-act="room-start" id="r-start">スタート（'+n+'人で診断する）</button>';
+    h+='<p class="muted">押すと、全員のスマホで一斉に始まります。あとから来た人も、入るとすぐに診断できます。</p>';
+    h+='<p class="rsolo"><button class="linkbtn" type="button" data-act="room-solo">自分だけ先に始める</button></p>';
+  } else if(host){
+    h+='<button class="btn btn-main btn-wide" type="button" data-act="room-solo">先に自分だけ始める</button>';
+    h+='<p class="muted">あとから来た人は、入るとすぐに自分の診断を始められます。部屋は12時間あいていて、終わった人から全員の相性が出てきます。</p>';
+    if(Date.now()-(r.created||0)>180000) h+='<div class="rlate"><b>なかなか来ないときは</b><p>もう一度LINEで送ってみてね。この画面を閉じても、部屋は12時間のこっています。</p><button class="btn btn-line btn-wide" type="button" data-act="room-line">LINEでもう一度送る</button></div>';
+  } else {
+    h+='<p class="rwait-t">'+esc(hn)+'さんが「スタート」を押すと、自動で診断が始まります。待たずに、自分のタイミングで始めてもOKです。</p>';
+    h+='<button class="btn btn-sub btn-wide" type="button" data-act="room-solo">自分の診断をはじめる</button>';
+  }
   h+='<p class="rnote hidden" id="r-snote"></p></section>';
   if(n<ROOM_MAX){
     if(host) h+='<section class="card">'+secH('h2','want','みんなを呼ぶ')+'<p>その場にいる人は、このQRをスマホのカメラで読むだけ。人のスマホにはさわりません。</p>'+rQrBox()+rInviteBtns()+'<p class="rline-back">LINEで送ったら、この画面にもどって「スタート」を押してね。自分で送ったリンクは押さなくて大丈夫です。</p></section>';
@@ -4087,6 +4100,7 @@ async function roomDoCreate(){
   try{
     var o=await roomCreate(nm,RM.mode);
     history.pushState(null,'','?room='+o.c);
+    st.myRoom={c:o.c,t:o.room.created}; save(st);
     RM.code=o.c; RM.room=o.room; RM.ps=[o.me]; RM.mine=Object.assign({},o.me); delete RM.mine.id; RM.mineAt=Date.now(); RM.gotR=RM.gotP=true; RM.view='loading'; RM.sig='';
     roomWatch(o.c); roomUpdate();
   }catch(e){
@@ -4262,6 +4276,8 @@ document.addEventListener('click',function(e){
   else if(act==='room-join-mine'){ roomDoJoin(true); }
   else if(act==='room-kick'){ var kid=b.getAttribute('data-id'); if(RM.kick!==kid){ RM.kick=kid; toast('もう一度 × を押すと、この人を部屋から外します'); setTimeout(function(){ if(RM.kick===kid) RM.kick=null; },5000); } else { RM.kick=null; roomKick(kid); } }
   else if(act==='room-start'){ roomDoStart(); }
+  else if(act==='room-back'){ var mr=st.myRoom; if(mr&&mr.c){ history.pushState(null,'','?room='+mr.c); roomOpen(mr.c); } }
+  else if(act==='room-solo'){ if(RM.room&&rMe()) roomQuiz(); }
   else if(act==='room-leave'){ roomLeave(); }
   else if(act==='room-home'){ roomStop(); RM.code=null; history.pushState(null,'',location.pathname); home(); }
   else if(act==='room-retry'){ roomOpen(RM.code); }
