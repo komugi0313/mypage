@@ -2805,6 +2805,7 @@ window.KANSHI60_TRAITS=/*PK-KANSHI-TRAITS:start*/{
       if(ci>=0){ var e2=lines.length; for(var j2=ci+1;j2<lines.length;j2++){ if(/^\s*#{1,3}\s*/.test(lines[j2])){ e2=j2; break; } } while(e2>ci+1&&!lines[e2-1].trim()) e2--;
         lines.splice.apply(lines,[e2,0].concat(blk,[''])); txt=lines.join('\n'); return; }
       txt=txt.replace(/\s+$/,'')+'\n\n# '+K[2]+'\n'+blk.slice(1).join('\n'); });
+    txt=txt.replace(/^([ \t]*#{1,3}[ \t]*[^\n]*(?:恋愛|結婚|仕事|才能|適職)[^\n]*)\n(?:[ \t]*\n)*[ \t]*【(?:恋愛|お?仕事)(?:の|での)持ち味】[ \t]*\n/gm,'$1\n');   // 章の見出しのすぐ下に「恋愛での持ち味」などの見出しが重ならないように（UX点検③ 2026-11-19）
     return txt; }catch(e){ return txt; } }
   function sheetBigFeatures(r){ var o=[]; try{
     var P=r.pillars||{}, ks=(window.__sheetPKeys?window.__sheetPKeys():['year','month','day','hour']), LB={year:'年柱',month:'月柱',day:'日柱',hour:'時柱'};
@@ -4877,6 +4878,11 @@ function pkFmTidy2(t){ try{ t=String(t==null?'':t); var GZ='[甲乙丙丁戊己�
   t=t.replace(new RegExp('((?:20|19)\\d\\d)年の年運([^（）()\\n。]{0,30}[）)][^。\\n]{0,4}?)('+GZ+')(の年運)','g'),function(m0,y,mid,g,tail){ var Y=+y, gg='甲乙丙丁戊己庚辛壬癸'.charAt((Y-4)%10)+'子丑寅卯辰巳午未申酉戌亥'.charAt((Y-4)%12); return y+'年の年運'+mid+gg+tail; });   /* 「今年（2026年の年運・…まで）は丁未の年運」の干支を年に合わせる（2026-11-16 点検） */
   t=t.split('\n').map(function(ln){ return ln.replace(/〔(?![^〔〕]*〕)/g,''); }).join('\n');   // 閉じていない〔（文章作成が書いた行の中の切れはし）を外す（事実の点検 2026-11-19）
   t=t.split('\n').map(function(ln){ return /^[ 　]*[【\[]?どう[^【】\[\]\n。]{0,6}よいか[】\]]?[ 　]*$/.test(ln)?ln.replace(/どう[^【】\[\]\n。]{0,6}よいか/,'どうすればよいか'):ln; }).join('\n');
+  /* 中国語（簡体字）がまじった見出し・文（「どう做什么」など）：見出しは【どうすればよいか】に戻し、日本語にない字・言い回しは外す（UX点検③ 2026-11-19） */
+  var CNC='做什么怎这们吗么说时对让给还进过样该话办应吧呢';
+  t=t.split('\n').map(function(ln){ return (new RegExp('^[ 　]*[【\\[]?[ 　]*どう[^【】\\[\\]\\n。]{0,8}['+CNC+'][^【】\\[\\]\\n。]{0,8}[】\\]]?[ 　]*$')).test(ln)?(/[【\[]/.test(ln)?'【どうすればよいか】':'どうすればよいか'):ln; }).join('\n');
+  t=t.replace(/做什么|什么|怎么样|怎么|怎样|这样|那样|为什么/g,'').replace(new RegExp('['+CNC.replace(/[什怎]/g,'')+']','g'),'');
+  t=t.replace(/((?:19|20)\d\d年(?:（[^（）\n]{0,24}）)?)のごろ/g,'$1ごろ');   // 「2027年（丁未・46歳）のごろ」→「…ごろ」
   t=t.replace(new RegExp('(年柱|月柱|日柱|時柱)(?:にある|の)[ 　]*\\1([（(]'+GZ+'[）)])','g'),'$1$2');
   t=t.replace(new RegExp('(年柱|月柱|日柱|時柱)([（(]'+GZ+'[）)])の\\1[（(][ぁ-ん]{2,8}[）)]','g'),'$1$2').replace(new RegExp('(年柱|月柱|日柱|時柱)([（(]'+GZ+'[）)])の\\1[（(](?:[ぁ-ん]{2,8}[＝=：:・、])?','g'),'$1$2（');
   t=t.replace(new RegExp('大運(は|が|：|:|＝|=)?[ 　]*(?:今の|いまの|現在の|次の|前の)大運[（(]('+GZ+')[）)]','g'),'大運$1$2');

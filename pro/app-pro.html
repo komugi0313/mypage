@@ -853,7 +853,7 @@
   /* 日本語の文を、ことばの切れ目で折り返す（「か／ら」「つなが／り」のような変な行がえを防ぐ。対応ブラウザのみ・ほかはこれまでどおり）。発注者指示 2026-10-20 */
   body{word-break:auto-phrase;overflow-wrap:break-word}
   table,svg,.ganzhi,.mtab{word-break:normal}
-  #jn-ans[hidden]{display:none!important}
+  #jn-ans[hidden],#jn-ar[hidden]{display:none!important}
   details.dev-fold{display:block;margin-top:4px} details.dev-fold>summary{cursor:pointer;font-size:12px;font-weight:800;color:var(--muted);list-style:none} details.dev-fold>summary::before{content:'▸ '} details.dev-fold[open]>summary::before{content:'▾ '}
   @media (max-width:760px){ #toTop{width:44px!important;height:44px!important;padding:0!important;font-size:0!important;right:12px!important} #toTop::before{content:'↑';font-size:20px;line-height:44px;color:#fff} }
   .gl-q{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;margin-left:6px;border-radius:50%;background:#1F625A;color:#fff!important;font-size:14px;font-weight:900;text-decoration:none!important;vertical-align:middle;line-height:1;flex:0 0 auto}
@@ -962,7 +962,7 @@ html.pk-qm #cs-slot .reading-card>.r-answer~:not(.r-answer),html.pk-qm #cs-slot 
 body:has(.pk-digest-a) #pk-digest{display:none!important}   /* 鑑定まとめは1回だけ：相談の答えのすぐ下に出ているときは、表紙の下・やさしい画面のまとめは出さない（2026-11-17 UX点検） */
 html.pk-qm #cs-slot .ev-box,html.pk-qm #cs-slot .rd-body>.no-yomi,html.pk-qm #cs-slot .prowrap,html.pk-qm #cs-slot .qbox .chips,html.pk-qm #cs-slot .ca-next{display:none!important}
 html.pk-qm body:not(.mode-compat) #compat-card{display:none!important}
-html.pk-qm #jumpnav button:not(#jn-ans):not(#jn-next):not(.pk-qm-tg){display:none!important}
+html.pk-qm #jumpnav button:not(#jn-ans):not(#jn-ar):not(#jn-next):not(.pk-qm-tg){display:none!important}
 @media print{ .pk-qm-tg,#pk-qm-more{display:none!important} }
 /* スマホの目次の帯（2026-11-17 UX点検）：横にすべらせず、「💬 答え・👤 次のお客様へ・⚡ すぐ答え・☰ 目次」だけを出す（折り返して全部見える）。「☰ 目次」でほかの項目を折り返して全部出す */
 #jn-more{display:none}
@@ -971,9 +971,9 @@ body:not(:has(#jumpnav.on)) #legend5.lg-res{display:none!important}
 @media (max-width:760px){
   html #jumpnav.on{flex-wrap:wrap!important;overflow:visible!important;gap:6px!important;padding:6px 10px!important}
   html #jumpnav.on>*{order:2}
-  html #jumpnav.on>#jn-ans,html #jumpnav.on>#jn-next,html #jumpnav.on>.pk-qm-tg,html #jumpnav.on>#jn-more{order:1}
+  html #jumpnav.on>#jn-ans,html #jumpnav.on>#jn-ar,html #jumpnav.on>#jn-next,html #jumpnav.on>.pk-qm-tg,html #jumpnav.on>#jn-more{order:1}
   html #jumpnav.on>#jn-more{display:inline-flex;align-items:center;justify-content:center}
-  html #jumpnav.on:not(.jn-open)>:not(#jn-ans):not(#jn-next):not(.pk-qm-tg):not(#jn-more){display:none!important}
+  html #jumpnav.on:not(.jn-open)>:not(#jn-ans):not(#jn-ar):not(#jn-next):not(.pk-qm-tg):not(#jn-more){display:none!important}
   html #jumpnav.on .pk-qm-tg{position:static!important;box-shadow:none!important;white-space:nowrap}
   html #jumpnav.on::after{display:none}
   html #jumpnav.on #bg-navhint{display:none!important}
@@ -9033,7 +9033,7 @@ async function generateReading(user,localText,system,deep){
   // それでもダメなときだけオフライン鑑定に切替（ユーザーが質問を打ち直す必要はありません）。
   let _authErr=0, _left=null, _srvKind='', _limDay=false;
   let text=await callOnce();
-  if(!text&&!_authErr&&!_timedOut&&(!_srvKind||_srvKind==='server')){ _srvKind=''; await new Promise(r=>setTimeout(r,2500)); text=await callOnce(); }   // 混雑・回数・地域・長さ・ログインし直しは、送り直しても直らないので送り直さない   // すぐ失敗したときだけ1回やり直す（45秒待って返事がないときは、すぐ端末内の鑑定へ）
+  if(!text&&!_authErr&&!_skipped&&!(typeof navigator!=='undefined'&&navigator.onLine===false)&&((!_timedOut&&(!_srvKind||_srvKind==='server'||_srvKind==='busy'))||(_timedOut&&_part==='answer'&&!_srvKind))){ const _wasTO=_timedOut; _srvKind=''; _timedOut=false; await new Promise(r=>setTimeout(r,_wasTO?300:2500)); text=await callOnce(); }   // 1回目がだめでも、通信できるならもう1回だけためす（答えの20秒の打ち切り・一時的な混み合いも。通信できるのに通信なしの答えに切りかわっていた。UX点検③ 2026-11-19）   // 混雑・回数・地域・長さ・ログインし直しは、送り直しても直らないので送り直さない   // すぐ失敗したときだけ1回やり直す（45秒待って返事がないときは、すぐ端末内の鑑定へ）
   if(text){ text=pkFmExpand(text,_fmEnv).text; }   // 印を計算どおりの言葉に（知らない印・閉じない印は外す）
   if(text){ if(!_cont) aiCountInc(_left); return {ok:true,text:(function(){ var _by=(typeof chart!=='undefined'&&chart&&chart.birth&&chart.birth.clock)?parseInt(String(chart.birth.clock).slice(0,4),10):0, _ot=(/【お相手B】/.test(user)&&typeof chartB!=='undefined'&&chartB&&chartB.birth&&chartB.birth.clock)?parseInt(String(chartB.birth.clock).slice(0,4),10):0; var _aS=(typeof chart!=='undefined'&&chart&&chart.dayMaster)?chart.dayMaster.stem:'', _bS=(_ot&&typeof chartB!=='undefined'&&chartB&&chartB.dayMaster)?chartB.dayMaster.stem:''; var _t=pkFactFix(pkStampYears(pkFixAge(noAIWord(_unmaskNames(text,_nm)),_by,_ot),_by,_ot),_aS,_bS); _t=pkFavGuard(_t,(typeof chart!=='undefined')?chart:null); _t=pkYearElGuard(_t); _t=pkYearStarFix(_t,(typeof chart!=='undefined')?chart:null); _t=pkSameGzFix(_t,(typeof chart!=='undefined')?chart:null); return _bS?pkCompatGuard(_t):_t; })(),raw:noAIWord(_unmaskNames(text,_nm)),online:true}; }   // 相談1件＝1回（答え＋くわしい読み解きの2回の生成で1回と数える）
   aiEngine='オフライン鑑定（端末内）';

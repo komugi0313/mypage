@@ -2625,6 +2625,11 @@ function pkFmTidy2(t){ try{ t=String(t==null?'':t); var GZ='[甲乙丙丁戊己�
   t=t.replace(new RegExp('((?:20|19)\\d\\d)年の年運([^（）()\\n。]{0,30}[）)][^。\\n]{0,4}?)('+GZ+')(の年運)','g'),function(m0,y,mid,g,tail){ var Y=+y, gg='甲乙丙丁戊己庚辛壬癸'.charAt((Y-4)%10)+'子丑寅卯辰巳午未申酉戌亥'.charAt((Y-4)%12); return y+'年の年運'+mid+gg+tail; });   /* 「今年（2026年の年運・…まで）は丁未の年運」の干支を年に合わせる（2026-11-16 点検） */
   t=t.split('\n').map(function(ln){ return ln.replace(/〔(?![^〔〕]*〕)/g,''); }).join('\n');   // 閉じていない〔（文章作成が書いた行の中の切れはし）を外す（事実の点検 2026-11-19）
   t=t.split('\n').map(function(ln){ return /^[ 　]*[【\[]?どう[^【】\[\]\n。]{0,6}よいか[】\]]?[ 　]*$/.test(ln)?ln.replace(/どう[^【】\[\]\n。]{0,6}よいか/,'どうすればよいか'):ln; }).join('\n');
+  /* 中国語（簡体字）がまじった見出し・文（「どう做什么」など）：見出しは【どうすればよいか】に戻し、日本語にない字・言い回しは外す（UX点検③ 2026-11-19） */
+  var CNC='做什么怎这们吗么说时对让给还进过样该话办应吧呢';
+  t=t.split('\n').map(function(ln){ return (new RegExp('^[ 　]*[【\\[]?[ 　]*どう[^【】\\[\\]\\n。]{0,8}['+CNC+'][^【】\\[\\]\\n。]{0,8}[】\\]]?[ 　]*$')).test(ln)?(/[【\[]/.test(ln)?'【どうすればよいか】':'どうすればよいか'):ln; }).join('\n');
+  t=t.replace(/做什么|什么|怎么样|怎么|怎样|这样|那样|为什么/g,'').replace(new RegExp('['+CNC.replace(/[什怎]/g,'')+']','g'),'');
+  t=t.replace(/((?:19|20)\d\d年(?:（[^（）\n]{0,24}）)?)のごろ/g,'$1ごろ');   // 「2027年（丁未・46歳）のごろ」→「…ごろ」
   t=t.replace(new RegExp('(年柱|月柱|日柱|時柱)(?:にある|の)[ 　]*\\1([（(]'+GZ+'[）)])','g'),'$1$2');
   t=t.replace(new RegExp('(年柱|月柱|日柱|時柱)([（(]'+GZ+'[）)])の\\1[（(][ぁ-ん]{2,8}[）)]','g'),'$1$2').replace(new RegExp('(年柱|月柱|日柱|時柱)([（(]'+GZ+'[）)])の\\1[（(](?:[ぁ-ん]{2,8}[＝=：:・、])?','g'),'$1$2（');
   t=t.replace(new RegExp('大運(は|が|：|:|＝|=)?[ 　]*(?:今の|いまの|現在の|次の|前の)大運[（(]('+GZ+')[）)]','g'),'大運$1$2');
@@ -3086,7 +3091,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
       if(opt&&opt.signal&&opt.signal.aborted){ const er=new Error('待たずに内蔵データで出しました'); er.net=true; er.skip=true; throw er; }   // 「待たずに」を押したあとは、もう送り直さない
       try{ res=await geminiPost(body,kind,opt); }
       catch(e){ if(opt&&opt.signal&&opt.signal.aborted){ const er=new Error('待たずに内蔵データで出しました'); er.net=true; er.skip=true; throw er; }
-        if(netTry<1&&!(e&&e.name==='AbortError')){ netTry++; await sleep(700); continue; }
+        if(netTry<1&&!(e&&e.name==='AbortError'&&navigator.onLine===false)){ netTry++; await sleep(e&&e.name==='AbortError'?300:700); continue; }   // 打ち切り（時間切れ）でも、通信できるならもう1回だけためす（UX点検③ 2026-11-19）
         const er=new Error('通信に失敗しました。電波の良い場所で再度お試しください。'); er.net=true; if(e&&e.name==='AbortError') er.timeout=true; throw er; }
       if(res.ok){ try{ const lf=res.headers.get('x-pk-left'); if(lf!=null&&lf!=='') _ekiLeft=lf; }catch(_){} try{ const ct=res.headers.get('x-pk-cont'); if(ct) _ekiContTk=ct; }catch(_){}   // 続きの印（このあとの detail・sho の呼び出しに付けて送り返す）
         let d=null; try{ d=await res.json(); }catch(_){} let t=d&&d.candidates?.[0]?.content?.parts?.[0]?.text; if(!t){ const er=new Error('応答が空でした'); er.empty=true; throw er; } const _fmE=ekiFmEnv(); t=pkFmExpand(t,_fmE).text;   /* 事実の差しこみの印を計算どおりの言葉に（2026-11-07） */ try{ const _k=String((opt&&opt.q)||''); const R=window.__ekiRaw=window.__ekiRaw||{}; if(kind!=='sho') R[_k]=((kind==='detail'&&R[_k])?R[_k]+'\n':'')+t; }catch(_){}
@@ -3105,6 +3110,7 @@ function pkStampYears(s,by,other,noGz){ try{ s=String(s==null?'':s); by=+by||0; 
       if(code==='TOO_LONG'||res.status===413) throw stop('ご相談の文が長すぎるため、オンライン鑑定（本格鑑定）を作れませんでした。文を短くしてお試しください。','TOO_LONG');
       if(code==='BUSY') throw stop('短い時間に続けてご利用があったため、オンライン鑑定（本格鑑定）を少しお休みしています。1〜2分おいてお試しください。','BUSY');
       if(code==='MEMBER_ID') throw stop('🔑 会員の確認ができなかったため、オンライン鑑定（本格鑑定）を作れませんでした。一度ログアウトして、もう一度ログインしてください。',code);   // PRO・ビギナーと同じ案内（会員IDが取れない＝ログインし直す。2026-11-02）
+      if(code==='STORE'&&busyTry<1){ busyTry++; await sleep(1500); continue; }   // 回数の記録が追いついていないだけのことが多いので、1回だけ送り直す（UX点検③ 2026-11-19）
       if(code==='STORE') throw stop('ただいまサーバーが混み合っています。少し時間をおいてお試しください。',code);   // STORE＝サーバーの保存場所（回数の記録）が使えない。ご契約の問題ではない（2026-11-15）
       if(code==='MEMBER_CHECK') throw stop('ただいまサーバーでご契約の確認ができないため、オンライン鑑定（本格鑑定）を作れませんでした。少し時間をおいてお試しください。',code);
       if(/^(SETUP|NO_KEY|ORIGIN|PRODUCT|METHOD|BAD_REQUEST)$/.test(code)) throw stop('オンライン鑑定（本格鑑定）の設定を確認できませんでした。時間をおいてもつながらないときは、お問い合わせください。',code);

@@ -160,6 +160,8 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
   html.bg-on #autoReading.bg-ar-closed{display:none}
   .bg-ar-toggle{display:block;width:100%;min-height:48px;margin:8px 0;padding:10px 14px;border-radius:12px;border:1.5px solid #D9B8C4;background:#FFF7FA;color:#6B2440;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer}
   html:not(.bg-on) .bg-ar-toggle{display:none}
+  .bg-ar-go{display:block;width:100%;min-height:48px;margin:6px 0 14px;padding:10px 14px;border-radius:12px;border:1.5px solid #E9C27A;background:#FFF1D6;color:#7A4A00;font-family:inherit;font-size:15px;font-weight:900;cursor:pointer}
+  html:not(.bg-on) .bg-ar-jump{display:none}
 </style>
 <script id="beginner-ui">
 /* ===== ビギナー専用の見せ方（初心者モード・既定ON）。tools/sync_beginner_from_pro.py が付与 =====
@@ -209,6 +211,7 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
         '<p style="font-weight:800;color:#6E4A0E">'+esc(ichi)+'</p>'+(yo?'<p>'+esc(yo+'。')+'</p>':'')+
         '<p style="font-size:13px;color:#5A4630">生まれた日が、四柱推命の中でも特別な星にあたる人です（60通りの生まれ日のうち、5つだけ）。</p></div>'; },'');
     var dg=safe(function(){ return (typeof pkDigestHTML==='function')?pkDigestHTML(c,true):''; },'');   // この方の鑑定まとめ（PROと同じ形・専門用語なし。鑑定者本人の承認 2026-10-29）
+    if(dg) dg+='<div class="bg-ar-jump no-print"><button type="button" class="bg-ar-go">📝 お客様に送る鑑定文へ</button></div>';   // 鑑定文のボタンを、まとめのすぐ下からも（ページのいちばん下まで探さなくてよいように。UX点検③ 2026-11-19）
     var h=top+kg+dg+'<div class="bgc" id="bg-me"><div class="bgh"><span class="ic">🌟</span>'+WHO()+'はこんな人</div>';
     if(phrase&&!top) h+='<div class="phrase">'+esc(phrase)+'</div>';
     if(det){
@@ -221,6 +224,16 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
     }
     return h+'</div>';
   }
+
+  /* 「📝 お客様に送る鑑定文へ」・目次の帯の「💬 鑑定文」：作った鑑定文があれば開いて動く／まだなら作りはじめて動く（UX点検③ 2026-11-19） */
+  function goAR(){ try{ var ar=document.getElementById('autoReading'), btn=document.getElementById('autoReadBtn'); if(!ar||!btn) return;
+      var has=!!(ar.textContent||'').trim(); if(has){ ar.classList.remove('bg-ar-closed'); var tg=document.getElementById('bg-ar-toggle'); if(tg) tg.textContent='▲ 鑑定文を閉じる'; }
+      else btn.click();
+      var t=document.getElementById('bg-ar-toggle')||btn; setTimeout(function(){ try{ t.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} },60); }catch(e){} }
+  document.addEventListener('click',function(e){ if(e.target&&e.target.closest&&e.target.closest('.bg-ar-go,#jn-ar')){ e.preventDefault(); goAR(); } });
+  setInterval(function(){ try{ var jn=document.getElementById('jumpnav'), ja=document.getElementById('jn-ans'); if(!jn||!ja) return;
+      var b=document.getElementById('jn-ar'); if(!b){ b=document.createElement('button'); b.type='button'; b.id='jn-ar'; b.hidden=true; b.textContent='💬 鑑定文'; b.style.cssText='background:#FFF1D6;color:#7A4A00;border-color:#E9C27A;font-weight:900'; b.setAttribute('data-nocg',''); jn.insertBefore(b,jn.firstChild); }
+      var need=on()&&jn.classList.contains('on')&&ja.hidden&&!!document.getElementById('autoReadBtn'); if(b.hidden===need) b.hidden=!need; }catch(e){} },800);   // 相談を書かずに鑑定したとき（答えがないとき）は、目次の帯に「💬 鑑定文」を出す
 
   /* ---------- ①' 生まれ持った型（PROの格局＝内格・外格と同じ判定。専門用語なし。鑑定者本人の指示 2026-10-26「内格と外格の格局論はビギナーにも」） ---------- */
   var BTYPE={
@@ -528,7 +541,7 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
         '<ul class="tsp">'+tsPoints(d.tc).map(function(x){ return '<li><span class="ti">'+x[0]+'</span><span><b>'+x[1]+'</b>'+esc(x[2])+'</span></li>'; }).join('')+'</ul>'+
         (d.tc.list.length>1?'<div class="how">2人の間に、このぶつかりが'+d.tc.list.length+'か所あります。数が多いほど、衝突が起きやすくなります。</div>':'')+'</div>';
     }
-    try{ if(typeof attractionDir==='function'){ var _ad=attractionDir(a,b,'あなた','お相手'); if(_ad) h+='<p style="margin-top:12px;background:#FCEFF5;border-radius:10px;padding:9px 12px;font-weight:800;color:#5A1F3C">💘 '+esc(_ad.plain)+'</p>'; } }catch(_e){}   // 惹かれ方の向き（発注者指示 2026-10-23）
+    try{ /* 惹かれ方は「この2人のまとめ」と「惹かれ方のしくみ」にあるので、ここでは出さない（くり返しを減らす。UX点検③ 2026-11-19） */ if(false&&typeof attractionDir==='function'){ var _ad=attractionDir(a,b,'あなた','お相手'); if(_ad) h+='<p style="margin-top:12px;background:#FCEFF5;border-radius:10px;padding:9px 12px;font-weight:800;color:#5A1F3C">💘 '+esc(_ad.plain)+'</p>'; } }catch(_e){}   // 惹かれ方の向き（発注者指示 2026-10-23）
     h+='<div class="note">※ひとつの目安です。相性は、お互いの違いを活かす工夫でよくできます。</div></div>';
     if(a.now){ var ny=a.now.year, byA=safe(function(){ return birthYearOf(a); },0), kuY=0;
       // 縁が深まる年・強くまとまる年・揺れやすい年・整えたい年を、1つの一覧に年の早い順で（PROの pkCpYearRows と同じ年。鑑定者本人の承認 2026-11-18）
@@ -585,7 +598,8 @@ html.bg-on details.bg-legend>summary{min-height:44px!important;display:flex!impo
         var cm=document.getElementById('compat-meishi');
         var det=document.createElement('details'); det.className='beginner-pro-collapse'; det.id='bg-compat-fold';
         det.innerHTML='<summary><span class="bar-main"><span>🔍 2人のくわしい内容を見る</span><span class="bar-arrow"></span></span><span class="bar-sub">上級者向け：占いの専門的な表や言葉が出てきます。読まなくても大丈夫です。</span></summary>';
-        if(cv) [].slice.call(cv.children).forEach(function(n){ if(n.id!=='bg-easy-compat'&&n.id!=='sum-sec'&&n.getAttribute('data-keep')!=='1'&&n.id!=='kd-sec'&&n.id!=='ck-sec'&&n.id!=='cm-sec'&&n.id!=='rl-sec'&&n.id!=='at-sec') det.appendChild(n); });   // 2人の日運（日選び）はやさしい言い方を持つので、たたまずに見せる
+        var DUP={'cm-w':1,'tr-w':1};   // やさしい表示でくり返しになる欄（縁が動く月＝「これから12ヶ月の流れ」と同じ月／三合・方合の年＝「これからの年」の🔺と同じ年）は「くわしい内容」の中へ（UX点検③ 2026-11-19）
+        if(cv) [].slice.call(cv.children).forEach(function(n){ if(DUP[n.id]){ det.appendChild(n); return; } if(n.id!=='bg-easy-compat'&&n.id!=='sum-sec'&&n.getAttribute('data-keep')!=='1'&&n.id!=='kd-sec'&&n.id!=='ck-sec'&&n.id!=='cm-sec'&&n.id!=='rl-sec'&&n.id!=='at-sec') det.appendChild(n); });   // 2人の日運（日選び）はやさしい言い方を持つので、たたまずに見せる
         if(cm&&cm.innerHTML){ var w=document.createElement('div'); w.className='bg-meishi-wrap'; w.innerHTML=cm.innerHTML; cm.innerHTML=''; det.appendChild(w); }
         if(cv) cv.appendChild(det);
     });

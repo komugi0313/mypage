@@ -128,6 +128,38 @@ ok('相談1：画面に＊が出ない', cleanStar(A)===0, cleanStar(A));
       if(bg!==pro) ok=false; if(pro) n++; info.push(bg+'='+pro); });
     chart=keep; return {ok,n,info:info.join(' | ')}; }catch(e){ return {ok:false,err:String(e)}; } });
   ok('UX②：ビギナー1人の鑑定の「静かに整えたい年」はPROの年運の判定（整える時期）と同じ年', W.ok&&(W.skip||W.n>0), JSON.stringify(W)); }
+// UX点検③（2026-11-19）：送る文にお伝え方（最初から✓）・中国語の見出し・恋愛の「いつ」の1行目・生年月日のまちがいは赤・広い画面の目次は折り返す・カルテの開く／LINEの知らせ・ビギナーの鑑定文への近道・相性の入力の順と帯・画像の題とPDF・転職の言葉・もう1回ためす
+{ const V=await p.evaluate(async()=>{ try{ const isB=/app-beginner/.test(location.pathname), src=[...document.scripts].map(s=>s.textContent).join('\n'), css=[...document.querySelectorAll('style')].map(s=>s.textContent).join('\n');
+    const bars=document.querySelectorAll('.rd-bar .rd-incl'), incl=bars.length>0&&[...bars].every(b=>b.checked);
+    const cn=pkFmTidy2('答え。\n\n【どう做什么】\n・a'), cnOK=/\n【どうすればよいか】\n/.test(cn)&&!/做|么/.test(cn), goro=pkFmTidy2('2027年（丁未・46歳）のごろです。')==='2027年（丁未・46歳）ごろです。';
+    const q='彼と復縁できますか？いつ頃連絡が来そうですか', L0=pkOfflineLead(chart,q,false), k=(L0.match(/(?:19|20)\d\d年(?:1[0-2]|[1-9])?月?/)||[''])[0];
+    const lf=pkLeadFix('2026年の年内から2027年のごろです。\n【お客様へのお伝え方】\nあ\n【どうすればよいか】\n・い',chart,q,false).split('\n')[0], e5=!k||lf.indexOf(k)>=0;
+    const wide=/@media \(min-width:761px\)\{ html #jumpnav\.on\{flex-wrap:wrap!important/.test(css);
+    const fb=/鑑定の記録を別の画面で開きました/.test(String(viewReading))&&/LINEに貼りつけてください/.test(String(copyText))&&/navigator\.share&&!_desk/.test(String(shareText));
+    const bq=document.getElementById('b-quick'), bn=document.getElementById('b-name'), border=!!(bq&&bn&&(bq.compareDocumentPosition(bn)&4));
+    const cn2=[...document.querySelectorAll('#cpnav button')].map(b=>b.getAttribute('data-cp')||(b.classList.contains('pk-qm-tg')?'qm':'?')).join(','), cpOrder=/^compat,next,qm,sum-sec,toc$/.test(cn2);
+    const img=/t:brandName\|\|'鑑定文'/.test(String(pkShareImage)), pdf=/タップで開く\(\?:/.test(String(printHTML));
+    const job=/続けるか転職するか/.test(pkOfflineLead(chart,'今の会社を続けるべきか転職するべきか迷っています',false)||'')||!!pkWorkDir(chart,'今の会社を続けるべきか転職するべきか迷っています');
+    const retry=/_timedOut&&_part==='answer'&&!_srvKind/.test(src);
+    const bg=!isB||(/bg-ar-go/.test(src)&&/jn-ar/.test(src)&&/var DUP=\{'cm-w':1,'tr-w':1\}/.test(src));
+    // 生年月日のまちがいは赤い字・赤い枠（前の ✓ の緑が残らない）
+    const qi=document.getElementById('f-quick'), m=document.getElementById('f-quick-msg'), keep=qi.value; const fire=v=>{ qi.value=v; qi.dispatchEvent(new Event('input',{bubbles:true})); };
+    fire('19810610 2228'); await new Promise(r=>setTimeout(r,500)); fire('19811350'); await new Promise(r=>setTimeout(r,500));
+    const col=getComputedStyle(m).color, red=/rgb\((1[5-9]\d|2\d\d), (\d{1,2}), (\d{1,2})\)/.test(col)&&qi.classList.contains('qd-bad');
+    fire(keep); qi.dispatchEvent(new Event('change',{bubbles:true})); await new Promise(r=>setTimeout(r,500));
+    return {incl,cnOK,goro,e5,lf:lf.slice(0,60),k,wide,fb,border,cpOrder,cn2,img,pdf,job,retry,bg,red,col,back:!qi.classList.contains('qd-bad')}; }catch(e){ return {err:String(e)}; } });
+  ok('UX③：送る文に「お伝え方」が最初から入る（✓が入っている）', V.incl, JSON.stringify(V).slice(0,120));
+  ok('UX③：中国語がまじった見出しは【どうすればよいか】に戻す・「のごろ」を直す', V.cnOK&&V.goro);
+  ok('UX③：恋愛・復縁の「いつ」の1行目は、話す順番③（通信なし）と同じ時期', V.e5, V.k+' / '+V.lf);
+  ok('UX③：生年月日のまちがいは赤い字・赤い枠（前の ✓ の緑を残さない）', V.red&&V.back, V.col);
+  ok('UX③：タブレット・パソコンでは目次の帯を折り返す', V.wide);
+  ok('UX③：カルテの「開く」・パソコンの「LINEで送る」に知らせ', V.fb);
+  ok('UX③：お相手の入力は生年月日が先・相性の帯は答え→次のお客様へ→すぐ答え', V.border&&V.cpOrder, V.cn2);
+  ok('UX③：画像の題は「鑑定文」・PDFに「タップで開く」を出さない', V.img&&V.pdf);
+  ok('UX③：「続けるか転職か」に「独立」と答えない', V.job);
+  ok('UX③：答えが時間切れでも、通信できるならもう1回だけためす', V.retry);
+  ok('UX③：ビギナーのまとめの下に鑑定文への近道・相性のくり返しを「くわしい内容」へ', V.bg); }
+ok('UX③：鑑定書の章の見出しのすぐ下に「恋愛での持ち味」などの見出しを重ねない', /章の見出しのすぐ下に「恋愛での持ち味」などの見出しが重ならないように/.test(fs.readFileSync(path.join(ROOT,'pro','meishi-sheet.html'),'utf8')));
 // 追加の質問
 const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃ですか'); await p.click('#consultBtn'); await p.click('#consultBtn').catch(()=>{});
 const ms2=await waitFor(()=>{const it=document.querySelectorAll('#reading .rd-item');const l=it[it.length-1];return it.length>=2&&l.querySelector('.rd-bar')&&!l.querySelector('.loading');},60000);
