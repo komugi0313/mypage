@@ -887,7 +887,9 @@ h2.sec.res-pill,.ans-detail{display:inline-block !important;background:#2B2236 !
 .res-toc button{min-height:44px}
 /* スマホで結果を読むときは、上の屋号とタブは貼りつけない（目次の帯だけ上に残して、読める所を広く。UX点検② 2026-11-18） */
 @media (max-width:760px){ html.eki-resv .topbar,html.eki-resv .tabs{position:static!important} html.eki-resv .res-toc .rt-lb{display:none} html.eki-resv .res-toc{gap:5px;padding:5px} html.eki-resv .res-toc button{padding:6px 9px!important;font-size:13px} .pk-qm-tg .qm-st{display:none} }
-@media (max-width:760px){ .res-toc{flex-wrap:wrap;overflow-x:visible} .res-toc button{padding:6px 11px} .res-toc button.rt-next{position:static;margin-left:0;box-shadow:none} }   /* スマホの目次は横にすべらせず、折り返して全部見せる（2026-11-17 UX点検。PRO・ビギナーと同じ） */
+@media (max-width:760px){ .res-toc{flex-wrap:wrap;overflow-x:visible} .res-toc button{padding:6px 11px} .res-toc button.rt-next{position:static;margin-left:0;box-shadow:none} }
+.res-toc .rt-more{display:none}
+@media (max-width:760px){ #resToc>*{order:2} #resToc>button[data-go="verdictCard"],#resToc>.rt-next,#resToc>.pk-qm-tg,#resToc>.rt-more{order:1} #resToc .rt-lb{display:none} #resToc .rt-more{display:inline-flex;align-items:center;justify-content:center} #resToc:not(.rt-open)>button[data-go]:not([data-go="verdictCard"]){display:none!important} #resToc .rt-more[aria-expanded="true"]{background:#3A3226;color:#fff;border-color:#3A3226} }   /* スマホの目次の帯は1段（答え・次のお客様へ・すぐ答え・☰ 目次。☰で全部を出す。PROと同じ形。UX点検③ 2026-11-19） */   /* スマホの目次は横にすべらせず、折り返して全部見せる（2026-11-17 UX点検。PRO・ビギナーと同じ） */
 .hex-band .hb-mean{display:inline-flex;align-items:center;min-height:44px}
 .hex-band .hb-ref{min-height:44px}
 button,[role=button],.kkclick,.tapf,input[type=button],input[type=submit]{min-height:44px!important}
@@ -1352,6 +1354,7 @@ html.pk-qm #concBox,html.pk-qm #hexSec,html.pk-qm #hexSec+.card,html.pk-qm #scri
         <button type="button" data-go="scriptSec">台本</button>
         <button type="button" data-go="shoSec">鑑定書</button>
         <button type="button" class="rt-next" data-next-cust="1" aria-label="次のお客様へ（入力と結果を空にする）">次のお客様へ</button>
+        <button type="button" class="rt-more" id="rtMore" aria-expanded="false" aria-label="目次をすべて表示" onclick="var n=document.getElementById('resToc'),o=n.classList.toggle('rt-open');this.setAttribute('aria-expanded',String(o));this.textContent=o?'✕ 閉じる':'☰ 目次';">☰ 目次</button>
       </nav>
       <style>#offlineNote.eki-online{background:#E6F4EC!important;color:#2f7a4e!important;border-color:#BFE0CC!important;font-weight:800}</style><div id="offlineNote" style="display:none;"></div>
       <div id="autoSaveNote" class="autosave-note" role="status" aria-live="polite" style="display:none;"></div>
@@ -4039,6 +4042,7 @@ function pkSafeFix(t,q,note){ try{ t=String(t==null?'':t); let cut=0, tcut=0, so
     ekiFixHexNo(p,r);   // 「第63卦 火水未済」のような卦の名前と番号のずれは、出た卦の名前に合わせて番号を直す（2026-11-03）
     const want=ekiToolSym(r,q); const v=parseVerdict(p.hantei); let ph=String(v.phrase||'').trim();
     const ph0=ph; ph=ph.split(/(?<=[。！？])/).filter(function(x){ x=x.trim(); return !(x.length<70&&/(のですね|んですね|ですね|ますね)。$/.test(x)); }).join('').replace(/(^|[。！？\s　])(?:結論から(?:お伝えしますと|お伝えすると|申し上げますと|申し上げると|言うと|いうと)|結論として|結論[：:])[、，]?\s*/g,'$1').trim();   // 一言の前置き・あいづち（迷われているのですね。結論からお伝えすると）を外す（2026-11-03）
+    ph=ph.replace(/する動向(?=は|を|が|に)/g,'こと').replace(/の動向(?=は)/g,'');   // 「転職する動向は進めて大丈夫」のくずれ→相談の言葉のまま「転職することは…」（UX点検③ 2026-11-19）
     const phCut=(ph!==ph0);
     if(p.tsutae){ const _ts=String(p.tsutae), _m=_ts.match(/^(\s*)([^。！？\n]{1,60}(?:のですね|んですね|ですね|ますね)。)(?=\S)/); if(_m) p.tsutae=_m[1]+_ts.slice(_m[0].length).replace(/^(?:結論から(?:お伝えしますと|お伝えすると|申し上げますと|申し上げると|言うと)|結論として)[、，]?/,''); }   // 伝え方の書き出しのあいづち（迷われているのですね。）も外す（2026-11-03）
     /* 一言が記号と本当に逆のときだけ決まった一言に置きかえる（2026-11-03）。
@@ -5483,8 +5487,9 @@ ${sf.crisis?'・「ご相談への答え」の章は、まずつらい・心配�
   function shareSho(){ const el=document.getElementById('shoContent'); let txt=''; try{ txt=shoShareText(el); }catch(e){ txt=''; } if(!txt) txt=(el?el.innerText:'').replace(/\n{2,}/g,'\n').trim(); if(!txt) return;
     try{ const _q=(cur.last&&cur.last.q)||'', _sf=ekiSafety(_q); txt=ekiCrisisTail(txt,!!(_sf&&_sf.crisis),_q); }catch(e){}   // つらさの窓口・相談先を送る文にも必ず（2026-11-03）
     const title=(document.querySelector('#shoContent .ks-title')||{}).textContent||'鑑定書';
-    if(navigator.share){ navigator.share({title:title,text:txt}).catch(function(){}); return; }
-    try{ navigator.clipboard.writeText(txt).then(function(){ toast('鑑定書の文章をコピーしました。LINEやメールに貼り付けて送れます'); },function(){ alert('コピーできませんでした。「印刷 / PDFで保存」でPDFにして送ってください。'); }); }catch(e){ alert('コピーできませんでした。「印刷 / PDFで保存」でPDFにして送ってください。'); } }
+    const _desk=(function(){ try{ return matchMedia('(pointer:fine)').matches&&window.innerWidth>=761; }catch(e){ return false; } })();   // パソコン・タブレットの横向きは、共有の画面ではなくコピー＋知らせ（UX点検③ 2026-11-19）
+    if(navigator.share&&!_desk){ navigator.share({title:title,text:txt}).catch(function(){}); return; }
+    try{ navigator.clipboard.writeText(txt).then(function(){ toast('文章をコピーしました。LINEに貼りつけてください'); },function(){ alert('コピーできませんでした。「印刷 / PDFで保存」でPDFにして送ってください。'); }); }catch(e){ alert('コピーできませんでした。「印刷 / PDFで保存」でPDFにして送ってください。'); } }
   /* 鑑定書を1枚の画像（PNG）にする。お祭りなどで、はじめて会うお客様にLINEの友だち登録なしでお渡しするため（発注者指示 2026-10-20）。
      外部の部品を使わず、端末の中だけで文字を描く（電波がなくても使える）。できた画像は画面に大きく出す（お客様のスマホで撮れる）。 */
   function shoImage(){
