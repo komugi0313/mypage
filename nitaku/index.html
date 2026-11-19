@@ -1026,6 +1026,8 @@ body:has(#s-setup.on),body:has(#s-lobby.on){background-image:none}
 #s-lobby .lb-timer,#s-lobby .lb-wait,#s-lobby .lb-dup{border-width:1.5px;border-color:#E9C649}
 /* スタートの外の輪はやめ、ピンクのボタンだけがぷくぷくする（鑑定者本人 2026-11-19「外の輪をなくして」） */
 .lb-go.ready{margin:18px 0 6px}
+.lb-go .lb-now{display:block;font-family:"Zen Maru Gothic",sans-serif;font-size:13px;font-weight:700;margin-top:2px;opacity:.85}
+.lb-more{margin:4px 0 -2px;font-weight:900;font-size:15px;color:#1E1E2A}
 </style>
 </head>
 <body data-mode="love">
@@ -1243,6 +1245,7 @@ body:has(#s-setup.on),body:has(#s-lobby.on){background-image:none}
     <p class="lb-game" id="lb-game"></p>
   </div>
   <div id="lb-host">
+    <p class="lb-more" id="lb-more" hidden>＋ もっと誘う</p>
     <a class="big lb-line" id="lb-line" href="https://line.me/R/share" target="_blank" rel="noopener">LINEで友だちを誘う</a>
     <p class="lb-note">送った相手は、リンクを押して名前を入れるだけで、この部屋に入れます。</p>
     <details class="lb-near">
@@ -4064,7 +4067,9 @@ function renderLobby(){
     var pend=(R.pending||[]).length, inv=R.inv;
     $('lb-start').hidden = n<2;
     $('lb-start').disabled = n<2;
-    $('lb-start').textContent = 'スタート（'+n+'人で遊ぶ）';
+    $('lb-start').innerHTML = 'スタート<small class="lb-now">いまの'+n+'人で始める</small>';
+    $('lb-more').hidden = n<2 || n>=ROOM_MAX;
+    $('lb-line').style.display = n>=ROOM_MAX ? 'none' : '';
     $('lb-start').classList.toggle('ready', n>=2);
     if(n>=2 && R.host && !R.readyShown){ R.readyShown=1; try{ navigator.vibrate&&navigator.vibrate(80); }catch(e){} setTimeout(function(){ var b=$('lb-start'); if(b && !b.hidden && b.getBoundingClientRect().bottom>innerHeight) b.scrollIntoView({block:'center',behavior:'smooth'}); }, 300); }
     // 誘うボタンは、だれも来ていないあいだはカードの中（いちばん上）に、そろったらカードの下に
@@ -4072,9 +4077,14 @@ function renderLobby(){
     else if(hostBox.parentNode===card) card.insertAdjacentElement('afterend', hostBox);
     $('lb-line').textContent = n>=2 ? 'LINEでほかの友だちも誘う' : (inv && inv.by!=='qr' ? 'もう一度LINEで送る' : 'LINEで友だちを誘う');
     if(n>=2){
-      pill.className='lb-pill ok'; pill.innerHTML='<img class="ico-ok" src="img/icon-ok.webp" alt="" width="20" height="20">'+n+'人そろいました';
-      $('lb-head').textContent='スタートできます！';
-      $('lb-sub').textContent='ほかに来る人がいなければ、下の「スタート」を押してね。押すと全員の画面で問題が始まります。'+(pend ? '（ほかにも'+pend+'人が名前を入れています）' : '');
+      pill.className='lb-pill ok'; pill.innerHTML='<img class="ico-ok" src="img/icon-ok.webp" alt="" width="20" height="20">'+n+'人が入りました';
+      if(n>=ROOM_MAX){
+        $('lb-head').textContent='いま'+n+'人。満員です';
+        $('lb-sub').textContent='この部屋は'+ROOM_MAX+'人までです。「スタート」を押すと、全員の画面で問題が始まります。';
+      } else {
+        $('lb-head').textContent='いま'+n+'人。まだ友だちを増やせます';
+        $('lb-sub').textContent='友だちが入るたびに人数がふえます（'+ROOM_MAX+'人まで）。そろったら「スタート」を押してね。'+(pend ? '（ほかにも'+pend+'人が名前を入れています）' : '');
+      }
     } else if(pend){
       pill.className='lb-pill open'; pill.innerHTML='<img class="ico-i" src="img/icon-eyes.webp" alt="" width="20" height="20">友だちがリンクを開きました';
       $('lb-head').textContent='いま名前を入れています…';
