@@ -308,13 +308,14 @@ function localAsk(){
     if(fin)return;fin=true;clearInterval(QT);
     if(v===3){a.o=-1;a.u=1;a.ms=Date.now()-t0;a.to=0;go();return}
     a.o=v;a.u=0;a.ms=Date.now()-t0;a.to=0;
+    if(L.mode==='late'&&lateTimes(L.i)){flashVotes(k,v);setTimeout(go,2000);return}
     if(!multi&&flashVotes(k,v))setTimeout(go,1400);else go();
   });
   // 15秒たったら「時間切れ」で次の問題へ（答えなしとして数えない）
   qTimer(t0,()=>{if(fin)return;fin=true;a.o=-1;a.ms=Q_LIMIT*1000;a.to=1;
     app.querySelectorAll('.opt,.opt-u,#star').forEach(b=>b.disabled=true);
     const el=$('qtime');if(el){el.classList.add('end');el.querySelector('span').textContent='時間切れ'}
-    setTimeout(go,900)});
+    setTimeout(go,L.mode==='late'&&lateTimes(L.i)?2000:900)});
 }
 
 /* ===== 結果 ===== */
@@ -1298,7 +1299,7 @@ function sameAsk(code,name,id,shown){
  * 先に答えた人がいる部屋（結果の画面）のリンクを開いた人は、同じ問題にひとりで答え（1問15秒）、答え終わったら結果に加わる。
  * 答えは終わってからまとめて書くので、答えていない人が結果に加わることはない ===== */
 async function lateJoin(code,room){
-  const db=await getDb();let ps=[];try{const q=await db.collection('rooms/'+code+'/players').get();ps=q.docs.map(d=>({id:d.id,name:String((d.data()||{}).name||'')}))}catch(e){}
+  const db=await getDb();let ps=[];try{const q=await db.collection('rooms/'+code+'/players').get();ps=q.docs.map(d=>({id:d.id,name:String((d.data()||{}).name||''),ans:(d.data()||{}).ans||{},round:(d.data()||{}).round||1}))}catch(e){}
   if(ps.some(p=>p.id===PID)){enterRoom(code);return}
   if(ps.length>=MAXP){view(`<section class="card hand"><p class="big">この部屋は、もう${MAXP}人そろっています</p><button class="btn" id="tp" style="align-self:stretch">トップへ</button></section>`);$('tp').onclick=goTop;return}
   const n=(room.qs||[]).length,nm=ps.map(p=>esc(p.name)+'さん').slice(0,3).join('・')+(ps.length>3?' ほか':'');
@@ -1313,8 +1314,15 @@ async function lateJoin(code,room){
   const inp=$('lj-name'),go=e=>{if(e)e.preventDefault();const v=inp.value.trim();if(!v){$('lj-err').textContent='ニックネームを入れてください';return}
     const sm=ps.find(p=>p.name.trim()===v);if(sm){sameAsk(code,v,sm.id,sm.name);return}
     store('kv_name',v);
-    Object.assign(L,{counts:undefined,mode:'late',qs:(room.qs||[]).slice(),players:[{id:'me',name:v,ans:{}}],p:0,i:0,late:{code,round:room.round||1,name:v}});localAsk()};
+    Object.assign(L,{counts:undefined,mode:'late',qs:(room.qs||[]).slice(),players:[{id:'me',name:v,ans:{}}],p:0,i:0,late:{code,round:room.round||1,name:v,others:ps.filter(p=>p.round===(room.round||1))}});localAsk()};
   $('lj-go').onclick=go;inp.onkeydown=e=>{if(e.key==='Enter')go(e)}}
+// あとから答える人に、先に答えた人がその問題で何秒悩んだかを見せる（答えの中身は見せない。鑑定者本人 2026-11-19「はい」）
+function lateTimes(i){const os=((L.late||{}).others||[]).filter(p=>p.ans&&p.ans[i]);if(!os.length)return false;
+  const row=p=>{const a=p.ans[i],sec=(a.ms||0)/1000,nm=esc(p.name)+'さん';
+    const t=a.to?'時間切れでした':a.u?`${sec.toFixed(1)}秒、ずっと悩んでいました`:sec<=2.5?`<b>${sec.toFixed(1)}秒</b>で即決！`:sec>=8?`<b>${sec.toFixed(1)}秒</b>悩みました`:`<b>${sec.toFixed(1)}秒</b>で決めました`;
+    return `<li><img src="img/yuu.webp" width="34" height="30" alt="" aria-hidden="true"><span>${nm}は、${t}</span></li>`};
+  const o=app.querySelector('.opts');if(!o)return false;
+  o.insertAdjacentHTML('afterend',`<ul class="late-t">${os.slice(0,4).map(row).join('')}</ul>`);return true}
 async function lateFinish(){const j=L.late,me=L.players[0];view('<section class="card hand"><div class="orb" aria-hidden="true"></div><p class="hint">みんなの結果に加わっています…</p></section>');
   const ans={};L.qs.forEach((k,i)=>{const a=me.ans[i];if(!a)return;ans[i]={o:a.o<0?-1:a.o,st:a.st||0,ms:a.ms||0,to:!!a.to,d:true};if(a.u)ans[i].u=true});
   const db=await getDb();
