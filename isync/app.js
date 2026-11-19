@@ -26,13 +26,13 @@ const MAXP=10, KON_MAX=40, KON_LEN=20;
 // 婚活の部屋は主催者の画面が60秒で自動で次へ
 const KON_WAIT=60;
 // 1問15秒（ひとりでも部屋でも）。部屋は、問題が出てから20秒たっても答えがそろわなければ、だれのスマホからでも次へ進む（鑑定者本人 2026-11-17「15秒」「20秒待機して来なかったら強制的に進む」）
-const Q_LIMIT=15, WAIT_ADV=20;
+const Q_LIMIT=15, WAIT_ADV=16;   // 15秒で答えなければ時間切れ。答えない人（電話・圏外など）がいても、16秒で次へ（鑑定者本人 2026-11-19）
 let QT=null;
 function qTimer(t0,onEnd){clearInterval(QT);let ended=false;
   const tick=()=>{const el=$('qtime');if(!el){clearInterval(QT);return}
     const left=Math.max(0,Q_LIMIT*1000-(Date.now()-t0)),sec=Math.ceil(left/1000);
     const bar=el.querySelector('i'),tx=el.querySelector('span');if(bar)bar.style.width=(left/(Q_LIMIT*10))+'%';
-    if(tx&&tx.dataset.s!==String(sec)){tx.dataset.s=sec;tx.textContent=sec+'秒'}
+    if(tx&&tx.dataset.s!==String(sec)){tx.dataset.s=sec;tx.innerHTML='のこり<b>'+sec+'</b>秒'}
     el.classList.toggle('low',sec<=5);
     if(left<=0&&!ended){ended=true;clearInterval(QT);onEnd()}};
   tick();QT=setInterval(tick,200)}
@@ -246,9 +246,9 @@ function askHTML(k,i,n,{who,step,star,starOn,to,u}){
     <h2 class="q">${esc(q[1])}</h2>
     <div class="hint" id="tcnt"></div><div class="allok" id="allok" hidden>全員決めた！<small>次の問題へ…</small></div>
     ${step==='done'?`<div class="match">${to?'時間切れ':u?'「'+UNDEC+'」にしました':'答えました！'}</div><div id="skipq"></div>`:`
-    <div class="qtime" id="qtime" role="timer" aria-label="のこり時間"><span class="qt-s">${Q_LIMIT}秒</span><b class="qt-b"><i></i></b></div>
+    <div class="qtime" id="qtime" role="timer" aria-label="のこり時間"><span class="qt-s">のこり<b>${Q_LIMIT}</b>秒</span><b class="qt-b"><i></i></b></div>
     <p class="label">あなたはどっち？</p>
-    ${star?`<button class="star" id="star" aria-pressed="${!!starOn}">★ ここはゆずれない</button>`:''}
+    ${star?`<div class="star-row${i<3?' nudge':''}"><button class="star" id="star" aria-pressed="${!!starOn}">★ ここはゆずれない</button>${i<3?'<span class="star-tip">ゆずれない問題なら、答える前にここをタップ</span>':''}</div>`:''}
     <div class="opts">${opt(0)}${opt(1)}${opt(2,'mid')}</div>
     <button class="opt-u" type="button" data-v="3">${UNDEC}</button>`}
   </section>`;
