@@ -14,7 +14,7 @@ const TODAY=process.env.KUU_TODAY||'2026-11-05T10:00:00+09:00', TZ=process.env.K
 const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
 const srv=http.createServer((q,r)=>{let p=decodeURIComponent(q.url.split('?')[0]);if(p.endsWith('/'))p+='index.html';const f=path.join(ROOT,dir,p);if(!fs.existsSync(f)||fs.statSync(f).isDirectory()){r.writeHead(404);r.end();return;}r.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'application/octet-stream'});fs.createReadStream(f).pipe(r);}).listen(0);
 await new Promise(r=>srv.on('listening',r)); const port=srv.address().port;
-const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
 let calls=0, uiFrom=-1; const errs=[], callFrom={};
 const R=[], W=[]; const ok=(name,pass,info='')=>{ R.push({name,pass}); console.log((pass?'  OK ':'  NG ')+name+(info?'  … '+String(info).slice(0,600):'')); };
 const warn=(name,info)=>{ W.push(name); console.log('  注意 '+name+(info?'  … '+String(info).slice(0,600):'')); };

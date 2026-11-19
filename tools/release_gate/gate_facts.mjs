@@ -117,7 +117,7 @@ _log(`■ 事実の自動照合（${SIZE}・${RUN.length}件：オンライン $
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json', '.jpg': 'image/jpeg' };
 const srv = http.createServer((q, r) => { let p = decodeURIComponent(q.url.split('?')[0]); if (p.endsWith('/')) p += 'index.html'; const f = path.join(ROOT, p); if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); r.end(); return; } r.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(r); }).listen(0);
 await new Promise(r => srv.on('listening', r)); const port = srv.address().port; const BASE = `http://127.0.0.1:${port}`;
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
 let gemActive = 0; const gemQ = []; const gemAcq = () => new Promise(r => { if (gemActive < GEM_MAX) { gemActive++; r(); } else gemQ.push(r); }); const gemRel = () => { const n = gemQ.shift(); if (n) n(); else gemActive--; };
 const tISO = d => d + 'T10:00:00+09:00';
 
