@@ -217,7 +217,8 @@ ${body}
 const crumbLd = (items) => ({ '@context': 'https://schema.org', '@type': 'BreadcrumbList',
   itemListElement: items.map((x, i) => ({ '@type': 'ListItem', position: i + 1, name: x[0], item: BASE + x[1] })) });
 const crumb = (items) => '<div class="crumb"><a href="/">恋のかたち診断</a>' + items.map(x => ' › ' + (x[1] ? `<a href="/${x[1]}">${esc(x[0])}</a>` : esc(x[0]))).join('') + '</div>';
-const START = (t) => `<a class="btn" href="/">${(t || '無料で診断する').split(/(?=（)/).map(nw).join('')}</a>`;
+let CUR = '';
+const START = (t) => `<a class="btn" href="/${CUR ? '?e=' + CUR : ''}">${(t || '無料で診断する').split(/(?=（)/).map(nw).join('')}</a>`;
 const CTA = (lead, btn, note) => `<section class="cta"><p>${esc(lead)}</p>${START(btn)}<small>${esc(note || 'かんたん版20問・約4分／本格版48問・約8分　登録なし・無料')}</small></section>`;
 const card = (c, cur) => `<a href="/type/${lc(c)}/" style="--gp:${GPALE[c[2] + c[3]]};--gc:${grp(c).hex}"${cur ? ' aria-current="page"' : ''}><img src="/img/${c}.webp" alt="" width="64" height="64" loading="lazy"><b>${fname(c)}</b><small>${esc(T[c].c)}</small></a>`;
 const allGrid = (cur) => ['TP', 'TC', 'SP', 'SC'].map(k => `<div class="gh" style="color:${GROUP[k].hex}">${esc(GROUP[k].n)}</div><div class="grid">${ORDER.filter(o => o[2] + o[3] === k).map(o => card(o, o === cur)).join('')}</div>`).join('');
@@ -237,6 +238,7 @@ const out = [];
 function write(rel, html) { const f = path.join(K, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, html); out.push(rel.replace(/index\.html$/, '')); }
 
 // ===== 16タイプのページ（本格名を先に、お菓子の名前はあと＝鑑定者本人 2026-11-19） =====
+CUR = 'chara';
 ORDER.forEach(c => {
   const t = T[c], a = ARU_T[c], j = JAKU[c], g = grp(c);
   const best = ORDER.filter(x => x !== c).map(x => ({ o: x, s: compat(c, x).score })).sort((p, q) => q.s - p.s).slice(0, 2);
@@ -271,6 +273,7 @@ ${LINKS('')}`;
 });
 
 // ===== 愛着スタイル診断 =====
+CUR = 'aichaku';
 write('aichaku/index.html', page({
   url: 'aichaku/',
   title: '愛着スタイル診断｜あなたは何型の恋をする？安定型・不安型・回避型・恐れ型（無料・4分）',
@@ -290,6 +293,7 @@ ${LINKS('aichaku/')}`,
 }));
 
 // ===== 恋愛キャラ診断（16キャラの一覧） =====
+CUR = 'chara';
 write('chara/index.html', page({
   url: 'chara/',
   title: '恋愛キャラ診断｜あなたの恋は16キャラのどれ？（無料・16タイプ×愛着スタイル）',
@@ -305,6 +309,7 @@ ${LINKS('chara/')}`,
 
 // ===== 片思い診断 =====
 const exT = ['RATP', 'LVTP', 'RASP'], wkT = ['RATP', 'RASC', 'RVTC'];
+CUR = 'kataomoi';
 write('kataomoi/index.html', page({
   url: 'kataomoi/',
   title: '片思い診断｜あなたの脈ありサインと恋の弱点がわかる（無料・4分）｜恋のかたち診断',
@@ -322,6 +327,7 @@ ${LINKS('kataomoi/')}`,
 
 // ===== 自分に合う人のタイプ診断 =====
 const ex = 'RATP', exBest = ORDER.filter(x => x !== ex).map(x => ({ o: x, s: compat(ex, x).score })).sort((p, q) => q.s - p.s).slice(0, 2);
+CUR = 'aisho';
 write('aisho/index.html', page({
   url: 'aisho/',
   title: '自分に合う人のタイプ診断｜相性のいいタイプと2人の愛着スタイル（無料）｜恋のかたち診断',
@@ -337,6 +343,7 @@ ${LINKS('aisho/')}`,
 }));
 
 // ===== 恋愛依存体質チェック =====
+CUR = 'izon';
 write('izon/index.html', page({
   url: 'izon/',
   title: '恋愛依存体質チェック｜どこからが依存？心のゆれやすさを診断（無料）｜恋のかたち診断',
