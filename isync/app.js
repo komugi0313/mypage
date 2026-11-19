@@ -242,7 +242,7 @@ function goTop(){
   $('kjn').onclick=()=>{const c=$('kcode').value.replace(/\D/g,'');if(c.length!==4){$('kerr').textContent='4けたの部屋番号を入れてください';return}joinFromLink(c)};
   const px=$('packx');if(px)px.onclick=()=>{location.href=location.pathname};
   inboxBanner();
-  const lt=$('lntop'),ltSet=()=>{lt.href=lineUrl('アイ・シンク｜2択に答えて答え合わせ。おたがいの重なるところがわかる無料の診断です。',siteUrl())};ltSet();lt.addEventListener('click',ltSet);
+  const lt=$('lntop'),ltSet=()=>{lt.href=lineUrl('アイ・シンク｜カップル・友だちで答える価値観診断。2人の答えを重ねると、シンクロ率がわかる無料の診断です。',siteUrl())};ltSet();lt.addEventListener('click',ltSet);
   // ひとりで
   $('sgo').onclick=()=>{const v=$('sn').value.trim();if(v)store('kv_name',v);soloStart(v)};
 }
@@ -501,8 +501,8 @@ const GTIP={
 function groupShapeHTML(G){const ps=G.players;if(ps.length<3||G.anon)return'';
   const rows=AX.map(a=>{const c={l:0,r:0,m:0};ps.forEach(p=>{const s=axScore(p,G.qs,a);if(s)c[axSideK(s.pct)]++});if(!GTIP[a.key]||c.l+c.r===0)return'';
     const kind=c.l>c.r?'l':c.r>c.l?'r':'s',lab=c.l&&c.r?`${Math.max(c.l,c.r)}対${Math.min(c.l,c.r)}`:'同じ向き';
-    return `<div class="dax"><div class="daxh"><b>${esc(a.name)}</b><span class="kind ${kind==='s'?'m':c.l&&c.r?'d':'s'}">${kind==='s'?'半々':lab}</span></div>
-      <div class="dends"><span>${esc(a.l)} ${c.l}人</span>${c.m?`<span>まん中 ${c.m}人</span>`:''}<span>${esc(a.r)} ${c.r}人</span></div><p class="dtip">${GTIP[a.key][kind]}</p></div>`}).join('');
+    return `<div class="dax"><div class="daxh"><b>${esc(a.name.replace(/^2人の/,''))}</b><span class="kind ${kind==='s'?'m':c.l&&c.r?'d':'s'}">${kind==='s'?'半々':lab}</span></div>
+      <div class="gcnt"><span><b>${esc(a.l)}</b>${c.l}人</span>${c.m?`<span><b>まん中</b>${c.m}人</span>`:''}<span><b>${esc(a.r)}</b>${c.r}人</span></div><p class="dtip">${GTIP[a.key][kind]}</p></div>`}).join('');
   return rows?`<section class="card dist"><p class="label">このメンバーのかたち</p><p class="hint">4つのものさしで、メンバーがどちらに多いかと、みんなで過ごすときのコツです。</p>${rows}</section>`:''}
 function bridgeHTML(G){const ps=G.players;if(ps.length<3||G.anon)return'';const me=ps.find(p=>p.id===G.me);
   const c=ps.map(p=>({p,n:G.qs.filter((k,i)=>p.ans[i]&&p.ans[i].o===2).length})).sort((a,b)=>b.n-a.n);
@@ -515,11 +515,11 @@ function againHTML(G,P2){const ps=G.players,me=ps.find(p=>p.id===G.me);if(ps.len
   if(!hist.some(x=>x.id===id&&x.h===h)){hist.push({id,h,pct:P2.pct,dk,at:Date.now()});hist=hist.slice(-30);store('kv_again',hist)}
   let cmp='';if(prev){const up=P2.pct-prev.pct,closer=(prev.dk||[]).filter(x=>!dk.includes(x)),nm=x=>{const k=G.qs.find(q=>QKEY[q].slice(0,5)===x);return k!=null?Q[k][1]:''};
     const d=new Date(prev.at);cmp=`<div class="cmp"><div><small>前回（${d.getMonth()+1}月${d.getDate()}日）</small><b>${prev.pct}%</b></div><div class="up${up<0?' dn':''}">${up>0?'＋'+up:up<0?'−'+(-up):'±0'}</div><div><small>今回</small><b>${P2.pct}%</b></div></div>
-      ${closer.length?`<p class="hint">近づいた問題：${closer.map(x=>esc(nm(x))).filter(Boolean).join('・')}</p>`:''}`}
+      ${closer.length?`<p class="hint">近づいた問題（${closer.length}問）：${closer.map(x=>esc(nm(x))).filter(Boolean).slice(0,5).join('・')}${closer.length>5?' ほか':''}</p>`:''}`}
   return `<section class="card again"><p class="label">${prev?'前回の答え合わせと、くらべると':'1か月後に、もう一度答え合わせ'}</p>${cmp}
     <p class="hint">${prev?'同じ':'1か月くらいたったら、同じ'}${G.qs.length}問にもう一度答えて、${esc(other.name)}さんに答え合わせのリンクを送ってください。話し合ったあと、2人がどれだけ近づいたかがわかります。この結果は、このスマホに残ります。</p>
-    <button class="btn ghost" id="again" type="button">同じ${G.qs.length}問に、もう一度答える</button></section>`}
-function bindAgain(G){const b=$('again');if(!b)return;const me=G.players.find(p=>p.id===G.me);
+    <button class="btn ghost" id="reans" type="button">同じ${G.qs.length}問に、もう一度答える</button></section>`}
+function bindAgain(G){const b=$('reans');if(!b)return;const me=G.players.find(p=>p.id===G.me);
   b.onclick=()=>{Object.assign(L,{counts:undefined,mode:'solo',qs:G.qs.slice(),players:[{id:'me',name:(me&&me.name)||store('kv_name')||'あなた',ans:{}}],p:0,i:0});localAsk()}}
 // シンクロ率のひとこと（低くても前向きに読める言い方。鑑定者本人 2026-11-17）
 function syncMsg(pct,two){const w=two?'2人':'メンバー';
@@ -551,6 +551,10 @@ function showResult(G){
   if(!multi){h=soloHTML(G)+VS_SLOT;view(h+tailHTML(G));bindTail(G);votesRun(G);return}
   // ① シンクロ率（答えの重なり。全員で1つの数字）
   const gh=syncStat(G),pct=gh.pct,two=ps.length===2,P2=two?pairStat(ps[0],ps[1],G.qs):null;
+  if(!ps.some((a,i)=>ps.slice(i+1).some(b=>pairStat(a,b,G.qs).n))){
+    view(`<section class="card score none"><img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true"><p class="cap">${two?'2人':ps.length+'人'}のシンクロ率</p>
+      <p class="msg">くらべられる答えがありませんでした</p><p class="hint">時間切れの問題と「${UNDEC}」の問題は、シンクロ率に数えていません。もう一度あそぶと、答えが重なるところがわかります。</p></section>${undecHTML(G,nm)}`+VS_SLOT+tailHTML(G));
+    bindTail(G);votesRun(G);return}
   const hi=pct>=HIGH_SYNC,sm=syncMsg(pct,two);
   const diffN=two?P2.diff.length:G.qs.filter((k,i)=>{const c=[0,0];ps.forEach(p=>{const a=p.ans[i];if(a&&a.o>=0&&a.o<2)c[a.o]++});return c[0]&&c[1]}).length;
   h+=`<section class="card score${hi?' hisync':''}">${hi?'<span class="hs-badge" data-nocg>HIGH SYNC</span>':''}<img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
@@ -619,6 +623,9 @@ function soloHTML(G){
   const msg=pct>=50?'まわりに合わせられる、やわらかい人':pct>=25?'こだわりとやわらかさのバランス型':'自分の好みがはっきりしている人';
   const who=p.name==='あなた'?'あなた':esc(p.name)+'さん';
   const shape=shapeHTML(G,p,who);
+  if(!xs.length){const und=G.qs.some((k,i)=>p.ans[i]&&p.ans[i].u);
+    return `<section class="card score none"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true"><p class="msg">${und?'どの問題も、まだ決められませんでした':'時間切れで、答えた問題がありませんでした'}</p>
+      <p class="hint">${und?'':'1問15秒で、次の問題へ進みます。'}答えた問題があると、あなたの価値観のかたちがわかります。下の「もう1回あそぶ」から、もう一度どうぞ。</p></section>${undecHTML(G,q=>esc(q.name))}`}
   const top=shape||`<section class="card score"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true"><p class="cap">${who}の「合わせられる度」</p>
     <div class="ring" style="background:conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)"><div class="in"><span class="num">${pct}<small>%</small></span></div></div><p class="msg">${msg}</p></section>`;
   const kod=(star.length?`<p class="sub">★ ゆずれないこと</p><ul class="list">${star.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${esc(ans(x.a.o,x.k))}</li>`).join('')}</ul>`:'')
