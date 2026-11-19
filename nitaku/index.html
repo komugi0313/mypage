@@ -967,11 +967,6 @@ html.mine-on,html.mine-on body{overflow:hidden}
 .wcard .tell-s{display:block;margin:8px auto 0}
 /* 1問20秒（恋愛編・ふつう編。鑑定者本人 2026-11-17「20秒にしたい」「何人でやってもそうしたい」→「15秒でお願いします」→「やはり15秒じゃ短かったので20秒に」） */
 .ntimer{display:flex;align-items:center;gap:10px;margin:12px 2px 14px}
-/* この質問はパス（ひとりで遊ぶとき。鑑定者本人 2026-11-19） */
-.qpass-w{text-align:center;margin:14px 0 0}
-.qpass{background:none;border:0;min-height:44px;padding:8px 14px;font-size:15px;font-weight:700;color:#5A5470;text-decoration:underline;text-underline-offset:4px;cursor:pointer}
-#q-card.passin{animation:qin .35s ease-out}
-.qpass:disabled{opacity:.45;text-decoration:none}
 .nt-bar{flex:1;height:10px;border:2px solid #1E1E2A;border-radius:999px;background:#fff;overflow:hidden}
 .nt-bar i{display:block;height:100%;width:100%;background:#7BC8A4;transform-origin:left center}
 .ntimer b{min-width:52px;text-align:right;font-size:17px;font-weight:900;color:#1E1E2A;white-space:nowrap}
@@ -1295,7 +1290,6 @@ html.mine-on,html.mine-on body{overflow:hidden}
   <div class="qwho" id="q-who" hidden></div>
   <div class="ntimer" id="ntimer" hidden><span class="nt-bar"><i id="nt-fill"></i></span><b id="nt-num">15</b></div>
   <div id="q-body"></div>
-  <p class="qpass-w" id="qpass-w" hidden><button class="qpass" id="qpass" type="button">この質問はパス</button></p>
   <div class="htimer" id="htimer" hidden><span class="hdots" id="hdots" hidden><i></i><i></i><i></i></span><b id="hnum"></b><i id="htbar" hidden></i></div>
 </section>
 
@@ -1626,7 +1620,7 @@ function start(){
   S.qs = S.mix
     ? pickQuestions(S.mode, 4, 'normalOnly').concat(pickQuestions(S.mode, 4, 'hard'))   // 前半ノーマル・後半ハード
     : pickQuestions(S.mode, S.num, S.lv);
-  S.counts = null; S.sent = {}; S.passN = 0;
+  S.counts = null; S.sent = {};
   Votes.get(S.qs.map(function(q){ return q.id; })).then(function(c){ S.counts = c; });
   S.qi=0; S.pi=0;
   S.ans = S.players.map(function(){ return []; });
@@ -1700,8 +1694,6 @@ function showQ(){
        '<button class="choice B'+hc+'" data-c="B"><span class="tag">B</span><span class="ct">'+esc(q.b)+'</span></button>';
     $('q-body').innerHTML=h;
     $('q-body').classList.toggle('sp', S.who==='solo' && !S.room && !S.honPlay);
-    var pw=$('qpass-w'), canPass=S.who==='solo' && !S.room && !S.honPlay;
-    pw.hidden=!canPass; if(canPass){ var pb=$('qpass'), left=PASS_MAX-(S.passN||0); pb.disabled=left<=0; pb.textContent=left>0?'この質問はパス':'パスは'+PASS_MAX+'回まで'; }
     S.t0=Date.now();
     $('q-body').querySelectorAll('.choice').forEach(function(b){ b.onclick=function(){ answer(b.dataset.c, b); }; });
   }
@@ -1714,36 +1706,6 @@ function showQ(){
   if(done) showWait();
 }
 var busy=false;
-/* ───── この質問はパス（ひとりで遊ぶ恋愛編・ふつう編。鑑定者本人 2026-11-19）：選びにくい問題を、同じ難しさのまだ出ていない問題に入れかえる。
-   1回の中で3回まで（多すぎると、4つの％を見る問題が足りなくなるため）。入れかえた問題は「出た問題」として覚える ───── */
-var PASS_MAX=3;
-function passQ(){
-  if(busy || S.room || S.honPlay || S.who!=='solo') return;
-  if($('q-body').querySelector('.qstamp, .picked')) return;
-  if((S.passN||0)>=PASS_MAX) return;
-  var cur=S.qs[S.qi], mode=S.mode, pool=POOL[mode]||[];
-  var base=pool.filter(function(q){ return q.id===cur.id; })[0], lvq=base?base.lv:2;
-  var inS={}; S.qs.forEach(function(q){ inS[q.id]=1; });
-  var seen=store('nitaku_seen_'+mode)||[], ss={}; seen.forEach(function(id){ ss[id]=1; });
-  var axk=function(q){ return Object.keys(Object.assign({}, q.ta, q.tb)).filter(function(k){ return (q.ta[k]||0)!==(q.tb[k]||0); }); };
-  var want=axk(cur), share=function(q){ return want.some(function(k){ return axk(q).indexOf(k)>=0; }); };
-  var tiers=[
-    function(q){ return q.lv===lvq && !ss[q.id] && (!want.length || share(q)); },
-    function(q){ return q.lv===lvq && !ss[q.id]; },
-    function(q){ return q.lv===lvq; },
-    function(){ return true; }
-  ], cand=null;
-  tiers.some(function(f){ cand=shuffle(pool.filter(function(q){ return !inS[q.id] && f(q); }))[0]; return !!cand; });
-  if(!cand) return;
-  var sw=Math.random()<0.5;
-  S.qs[S.qi]= sw ? { id:cand.id, a:cand.b, b:cand.a, ta:cand.tb, tb:cand.ta, ex:cand.ex, user:cand.user, sw:true } : { id:cand.id, a:cand.a, b:cand.b, ta:cand.ta, tb:cand.tb, ex:cand.ex, user:cand.user, sw:false };
-  if(seen.indexOf(cand.id)<0){ seen.push(cand.id); store('nitaku_seen_'+mode, seen); }
-  S.passN=(S.passN||0)+1;
-  Votes.get([cand.id]).then(function(c){ if(c){ S.counts=S.counts||{}; Object.keys(c).forEach(function(k){ S.counts[k]=c[k]; }); } }).catch(function(){});
-  var card=$('q-card'); card.classList.remove('passin'); void card.offsetWidth; card.classList.add('passin');
-  showQ();
-}
-$('qpass').onclick=passQ;
 /* ───── 1問20秒（恋愛編・ふつう編。ひとりでも、みんなでも）。すぎたら「時間切れ」で次へ。時間切れは％・結果に数えない ───── */
 var NT_LIMIT=20000;
 function ntStop(){ clearInterval(S.ntI); S.ntI=null; }
