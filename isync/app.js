@@ -1233,9 +1233,10 @@ function lobby(){
   <section class="card">
     <div class="lobby-head"><p class="label">部屋に入っている人</p><span class="cnt">${ps.length}／${MAXP}人</span></div>
     <ul class="members">${ps.map(p=>`<li class="ok"><span>${esc(p.name)}${p.id===PID?'（あなた）':''}</span><b>入りました</b></li>`).join('')}</ul>
-    <p class="status go">${ps.length>=2?'みんな入ったら、スタートを押してください（だれが押してもOK）':'いまはあなただけです。友だちを待つか、先に答えておけます'}</p>
-    <button class="btn" id="st">${ps.length>=2?`スタート（${ps.length}人で）`:'先にひとりで答える'}</button>
-    <p class="hint later-note">そろわなくても大丈夫。部屋ができてから12時間以内なら、あとからリンクを開いた人も同じ問題に答えて、結果に加わります。</p>
+    <p class="status ${ps.length>=2?'go':''}">${ps.length>=2?'みんな入ったら、スタートを押してください（だれが押してもOK）':'友だちが入るのを待っています'}</p>
+    <button class="btn" id="st" ${ps.length>=2?'':'disabled'}>${ps.length>=2?`スタート（${ps.length}人で）`:'スタート（2人そろったら）'}</button>
+    <p class="hint live-note">一緒に答えると、おたがいの「悩み中…」「決めた！」がリアルタイムで見えます。</p>
+    ${ps.length<2?`<details class="sfold later-fold"><summary>今すぐそろわないときは</summary><p class="hint later-note">先にひとりで答えておくこともできます。部屋ができてから12時間以内なら、あとからリンクを開いた人も同じ問題に答えて、結果に加わります。</p><button class="btn ghost small" id="st1" style="align-self:stretch">先にひとりで答える</button></details>`:''}
     <p class="hint">${room.len===30?'しっかり版（30問・★ゆずれない）':'簡易版（10問）'}・話題は${room.topic==='party'?'盛り上がる':'いろいろ'}${room.anon?'・名前は見せない':''}</p>
   </section>
   <button class="btn ghost small" id="home">部屋を出てトップへ</button>`);
@@ -1245,7 +1246,8 @@ function lobby(){
     // スマホの「共有」でLINE・メッセージなどへ（送るのは部屋に直接入れるリンク）。使えないときは文とリンクをコピー
     if(navigator.share){navigator.share({title:'アイ・シンク',text,url}).catch(()=>{});return}
     d.hidden=false;const full=text+'\n'+url;try{navigator.clipboard.writeText(full).then(()=>{d.textContent='招待の文とリンクをコピーしました。LINEなどに貼って送ってください。'},()=>{d.textContent=full})}catch(e){d.textContent=full}};
-  $('st').onclick=e=>{if(!can)return;e.target.disabled=true;roomUpdate({phase:'play',qi:0})};
+  $('st').onclick=e=>{if(ps.length<2)return;e.target.disabled=true;roomUpdate({phase:'play',qi:0})};
+  const s1=$('st1');if(s1)s1.onclick=e=>{e.target.disabled=true;roomUpdate({phase:'play',qi:0})};
   $('home').onclick=async()=>{const db=await getDb(),code=R.code;leaveRoom();try{await db.doc(pPath(code,PID)).delete()}catch(e){}goTop()};
 }
 /* 招待のリンク・QRコード（…#join-1234）で開いたとき：トップを出さずに、その部屋へまっすぐ入る。
