@@ -148,7 +148,6 @@ h3.whoh{font-size:16px;margin:18px 0 10px}
 .rmem li{display:flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;font-weight:700;font-size:15px;color:var(--ink)}
 .rmem small{font-weight:500;color:var(--sub);font-size:13px}.rmem .rdone{color:#1F6B4F}
 .rmem .rkick{min-width:44px;min-height:44px;margin:-10px -12px -10px 0;border:0;background:none;color:var(--sub);font-size:18px;font-weight:700;cursor:pointer}
-.rsame{margin-top:12px;padding:12px;border-radius:12px;background:#FFF6D8;border:1px solid #E9D38C}.rsame p{margin:0 0 6px}
 .rline-back{margin:10px 0 0;padding:8px 10px;border-radius:10px;background:#F6F0EA;font-size:14px}
 .rcode{font-size:15px;color:var(--ink)!important}.rcode b{font-size:22px;letter-spacing:.12em}
 .rnote{margin:8px 0 0;padding:8px 12px;border-radius:12px;background:#FFF7E0;border:1px solid #F0D48A;color:#5A4200;font-size:14px}
@@ -3962,7 +3961,7 @@ function roomJoinHTML(){
   if(n>=ROOM_MAX) h+='<p class="rnote warn">この部屋はいっぱいです（8人まで）。部屋を作った人に、新しい部屋を作ってもらってね。</p></section>';
   else{
     h+='<label class="muted" for="r-jname">あなたのニックネーム（8文字まで）</label><input class="gname" id="r-jname" maxlength="8" autocomplete="off" enterkeyhint="go" value="'+esc(st.nick||'')+'" placeholder="例：ゆう">'+
-      '<button class="btn btn-main btn-wide" type="button" data-act="room-join" id="r-join">参加する</button><p class="rnote hidden" id="r-jnote"></p><div class="rsame hidden" id="r-same"></div>'+
+      '<button class="btn btn-main btn-wide" type="button" data-act="room-join" id="r-join">参加する</button><p class="rnote hidden" id="r-jnote"></p>'+
       (play?'<p class="muted">参加すると、すぐに診断が始まります。</p>':'<p class="muted">'+esc(hn)+'さんが「スタート」を押すと、全員いっしょに診断が始まります。</p>');
     if(st.me&&st.me.code) h+='<p class="g-prev"><button class="linkbtn" type="button" data-act="room-join-mine">前回の結果（'+esc(T[st.me.code].c)+'）で参加する</button></p>';
     h+='<p class="muted" style="margin-top:8px">部屋に送るのは、ニックネームと診断のタイプ（4文字）・愛着スタイルだけです。質問への答え・恋の状況は送りません。本名でなくて大丈夫です。</p></section>';
@@ -4048,7 +4047,13 @@ async function roomDoJoin(useMine){
   if(!nm){ rNote('r-jnote','ニックネームを入れてください',true); return; }
   var ps=rPlayers(), id=rPid();
   var same=ps.filter(function(p){ return p.name===nm&&p.id!==id; })[0];
-  if(same){ RM.samePid=same.id; RM.sameName=nm; var sb=$('r-same'); if(sb){ sb.innerHTML='<p><b>「'+esc(nm)+'」さんは、もうこの部屋にいます'+(same.id===RM.room.host?'（部屋を作った人）':'')+'。</b>あなた自身ですか？</p><p class="muted">LINEで送ったリンクを自分で開いたときなど、別の画面から入ると、こう聞かれます。</p><div class="share"><button class="btn btn-main" type="button" data-act="room-same-yes">はい、自分です</button><button class="btn btn-sub" type="button" data-act="room-same-no">ちがう人です</button></div>'; sb.classList.remove('hidden'); glueAll(sb); } rNote('r-jnote',''); return; }
+  if(same){
+    // 同じ名前の人がもういる＝部屋を作った人が、自分で送ったLINEのリンクを開いたことが多い（LINEの中の画面は別のブラウザあつかい。鑑定者本人 2026-11-19）
+    RM.same=same; var el=$('r-jnote'); if(el){ el.className='rnote warn';
+      el.innerHTML='「'+esc(nm)+'」さんは、もうこの部屋にいます'+(RM.room&&RM.room.host===same.id?'（部屋を作った人）':'')+'。あなた自身ですか？'+
+      '<button class="btn btn-main btn-wide" type="button" data-act="room-same-yes" style="margin-top:10px">はい、自分です（この画面で続ける）</button>'+
+      '<button class="linkbtn" type="button" data-act="room-same-no" style="display:block;margin:10px auto 0;min-height:44px">ちがう人です（名前を変える）</button>'; }
+    return; }
   if(ps.length>=ROOM_MAX&&!rMe()){ rNote('r-jnote','この部屋はいっぱいです（8人まで）',true); return; }
   st.nick=nm; save(st);
   var bt=$('r-join'); if(bt){ bt.disabled=true; bt.textContent='参加しています…'; }
@@ -4237,9 +4242,9 @@ document.addEventListener('click',function(e){
   else if(act==='room-mode'){ RM.mode=b.getAttribute('data-m')==='full'?'full':'quick'; Array.prototype.forEach.call(document.querySelectorAll('.rseg button'),function(x){ var on=x.getAttribute('data-m')===RM.mode; x.classList.toggle('on',on); x.setAttribute('aria-pressed',on); }); }
   else if(act==='room-create'){ roomDoCreate(); }
   else if(act==='room-join'){ roomDoJoin(false); }
+  else if(act==='room-same-yes'){ var sm=RM.same; if(sm){ st.pid=sm.id; st.nick=sm.name; save(st); RM.same=null; RM.sig=''; roomUpdate(); } }
+  else if(act==='room-same-no'){ RM.same=null; rNote('r-jnote','同じ名前の人がいるので、少し変えてください（例：'+gName($('r-jname').value)+'2）',true); var ji=$('r-jname'); if(ji){ ji.value=''; ji.focus(); } }
   else if(act==='room-join-mine'){ roomDoJoin(true); }
-  else if(act==='room-same-yes'){ if(RM.samePid){ st.pid=RM.samePid; st.nick=RM.sameName; save(st); RM.samePid=null; RM.sig=''; RM.mine=null; toast('「'+st.nick+'」として部屋にもどりました'); roomUpdate(); } }
-  else if(act==='room-same-no'){ RM.samePid=null; var sb2=$('r-same'); if(sb2) sb2.classList.add('hidden'); rNote('r-jnote','同じニックネームの人がいます。少し変えて「参加する」を押してください',true); var ji=$('r-jname'); if(ji) ji.focus(); }
   else if(act==='room-kick'){ var kid=b.getAttribute('data-id'); if(RM.kick!==kid){ RM.kick=kid; toast('もう一度 × を押すと、この人を部屋から外します'); setTimeout(function(){ if(RM.kick===kid) RM.kick=null; },5000); } else { RM.kick=null; roomKick(kid); } }
   else if(act==='room-start'){ roomDoStart(); }
   else if(act==='room-leave'){ roomLeave(); }
