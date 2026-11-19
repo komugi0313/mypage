@@ -102,7 +102,7 @@ if(['solo','each'].includes(QS.get('mode')))CFG.mode=QS.get('mode');
 const saveCfg=()=>store('kv_cfg',{mode:CFG.mode,len:CFG.len,topic:CFG.topic,anon:CFG.anon});
 /* トップの「まず1問、答えてみて」（鑑定者本人 2026-11-17 トップの見本で「2のオーロラ」。押すと、これまでに診断した人の％が出る。ここでは数えない） */
 const TH_N=CATS.map((c,i)=>[c[0],Q.filter(q=>q[0]===i).length]).filter(x=>x[1]);
-const TRY_K=Math.max(0,Q.findIndex(q=>q[1]==='LINEは？'));
+const TRY_K=Math.max(0,Q.findIndex(q=>q[1]==='休みの日は、恋人と？'));   // 上の見本に「LINEは？」があるので、ちがう問題にする（鑑定者本人 2026-11-19）
 // トップの見本：3問の答えを左右に並べて、重なる／分かれるを見せる（鑑定者本人 2026-11-19「B」）
 const OV_ROWS=[['記念日は？',0,0],['LINEは？',0,2],['お風呂は？',0,1]];
 function bindTry(){
@@ -372,7 +372,7 @@ function talkHTML(G,nm){
   if(!its.length)return `<section class="card" id="talk"><p class="label">${two?'2人で':'みんなで'}話しておきたいこと</p><p class="hint">答えが反対になった問題はありませんでした。</p></section>`;
   const row=(i,n)=>{const k=G.qs[i],key=QKEY[k].slice(0,5),ok=done.has(key);
     const ws=ansGroups(G,i).map(({v,who})=>`<span class="tkr"><span class="tkw">${G.anon?`<span class="nmc pn">${who.length}人</span>`:who.map(p=>nmChip(G,p,p===me?'あなた':p.name)).join('')}</span><span class="tka">${esc(ans(v,k))}${who.some(p=>p.ans[i].st&&v<2)?' ★':''}</span></span>`).join('');
-    const ay=(window.SY_AYUMI||{})[Q[k][1]],hint=!two&&n<3?talkPairHint(G,i,me):'';
+    const ay=ayOf(k,two),hint=!two&&n<3?talkPairHint(G,i,me):'';
     return `<li class="${ok?'ok':''}">${two?'':`<span class="tkn">${n+2}</span>`}<b>${esc(Q[k][1])}</b>${ws}${hint?`<span class="tph">${hint}</span>`:''}${ay?`<span class="ayu"><b>${two?'歩み寄りの案':'みんなの歩み寄りの案'}</b>${esc(ay)}</span>`:''}<button class="talked" type="button" data-k="${key}" aria-pressed="${ok}">${ok?'✓ 話した':'話した'}</button></li>`};
   const rest=its.slice(1),top=rest.slice(0,2),more=rest.slice(2),ul=(xs,o)=>`<ul class="slist tk${two?'':' tkm'}">${xs.map((x,j)=>row(x,j+o)).join('')}</ul>`;
   return `<section class="card pt-a" id="talk"><p class="pt-h"><em>歩み寄り</em>${two?'ほかに話しておきたいこと':'みんなで話す順番（2つ目から）'}</p>
@@ -439,8 +439,9 @@ function talkPairHint(G,i,me){if(G.anon)return'';const ps=G.players,k=G.qs[i],si
   if(!a.length||!b.length)return'';
   if(a.length===1&&b.length>=2||b.length===1&&a.length>=2){const one=a.length===1?a[0]:b[0];return `${nmS(one)}の考えを、先に聞いてみてください。理由がわかると、みんなの落としどころが見えやすくなります。`}
   let best=null;a.forEach(x=>b.forEach(y=>{const r=pairStat(x,y,G.qs);if(!best||r.pct<best.pct)best={x,y,pct:r.pct}}));
-  let t=best?`${nmS(best.x)}と${nmS(best.y)}の話から聞くと、みんなの落としどころが見えやすくなります。`:'';
-  if(c.length)t+=`${c.map(nmS).join('と')}は合わせられるので、間に入ってもらうと決まりやすい問題です。`;
+  let t=best?`まず、${nmS(best.x)}と${nmS(best.y)}に「どうしてそう思う？」を聞くと、みんなの落としどころが見えやすくなります。`:'';
+  if(c.length){const cn=c.length===1?'':c.length===2?'2人が':'みんなが';
+    t+=c.includes(me)?`${c.map(nmS).join('と')}は合わせられるので、${c.length===1?'':cn}間に入ると決まりやすい問題です。`:`${c.map(nmS).join('と')}は合わせられるので、間に入ってもらうと決まりやすい問題です。`}
   return t}
 // B：これからの3つのステップ（まず話すこと→今週ためすこと→大切にしたいこと）
 function stepsHTML(G){const ps=G.players,two=ps.length===2,me=ps.find(p=>p.id===G.me),its=talkItems(G);
@@ -449,7 +450,7 @@ function stepsHTML(G){const ps=G.players,two=ps.length===2,me=ps.find(p=>p.id===
   const side=g=>{const c=G.anon?'pn':g.who.length===1?pcls(G,g.who[0]):'pm';
     return `<div class="vside ${c}"><span class="vw">${G.anon?g.who.length+'人':g.who.map(p=>p===me?'あなた':esc(p.name)).join('・')}</span><span class="va">${esc(ans(g.v,k))}</span></div>`};
   const vs=gs.length===2?`<div class="vs2">${side(gs[0])}<span class="vmid" aria-hidden="true">⇔</span>${side(gs[1])}</div>`:`<div class="vsn">${gs.map(side).join('')}</div>`;
-  const ay=(window.SY_AYUMI||{})[Q[k][1]],key=QKEY[k].slice(0,5),ok=talkedOf(talkId(G)).includes(key);
+  const ay=ayOf(k,two),key=QKEY[k].slice(0,5),ok=talkedOf(talkId(G)).includes(key);
   return `<section class="hero-pt" id="steps"><p class="hp-ttl">${two?'答えが分かれた1問から話そう':'答えが分かれた1問から、みんなで話そう'}<small>${st?'★ゆずれないがついた問題で、答えが分かれました':WB.has(k)?'大事な問題で、'+(two?'2人':'みんな')+'の答えが分かれました':(two?'2人':'みんな')+'の答えが分かれた問題です'}</small></p>
     <div class="hq"><span class="hql">Q</span><p class="hqt">${esc(Q[k][1])}</p>${vs}</div>
     <p class="hp-arrow">↓ 歩み寄るなら</p>
@@ -513,7 +514,7 @@ function groupShapeHTML(G){const ps=G.players;if(ps.length<3||G.anon)return'';
 function bridgeHTML(G){const ps=G.players;if(ps.length<3||G.anon)return'';const me=ps.find(p=>p.id===G.me);
   const c=ps.map(p=>({p,n:G.qs.filter((k,i)=>p.ans[i]&&p.ans[i].o===2).length})).sort((a,b)=>b.n-a.n);
   if(!c[0]||c[0].n<2||(c[1]&&c[1].n===c[0].n))return'';const p=c[0].p,nm=p===me?'あなた':esc(p.name)+'さん';
-  return `<section class="card bridge"><p class="label">このメンバーのつなぎ役</p><div class="brg"><span class="face">${esc((p===me?'あなた':p.name).slice(0,3))}</span><p><b>${nm}</b><span class="hint">「どっちでも合わせられる」がいちばん多く、みんなの答えの間にいることが多い人です。意見が分かれたら、${nm}に進めてもらうとまとまりやすくなります。</span></p></div></section>`}
+  return `<section class="card bridge"><p class="label">このメンバーのつなぎ役</p><div class="brg"><p class="brg-h"><img class="face" src="img/${p===me?'ai':'yuu'}.webp" width="44" height="44" alt="" aria-hidden="true"><b>${nm}</b></p><p class="hint">「どっちでも合わせられる」がいちばん多く、みんなの答えの間にいることが多い人です。意見が分かれたら、${p===me?'あなたが話を進めてみてください':nm+'に話を進めてもらいましょう'}。</p></div></section>`}
 // D：もう一度の答え合わせ（同じ問題・同じ2人の前の結果と比べる。このスマホにだけ残す）
 function againHTML(G,P2){const ps=G.players,me=ps.find(p=>p.id===G.me);if(ps.length!==2||!me)return'';
   const other=ps.find(p=>p!==me),id=talkId(G),h=G.qs.map((k,i)=>ps.map(p=>ansCode(p.ans[i])).join('')).join(''),dk=P2.diff.map(i=>QKEY[G.qs[i]].slice(0,5));
@@ -567,6 +568,10 @@ function twoFolds(G,trows,nm,r){
 /* ===== わたしの結果（鑑定者本人 2026-11-19「保存もできますか」→「入れてください」。究極の二択と同じ）
  * 結果を出すたびに、このスマホの中に自動で残す（最新10回・どこにも送らない）。トップの「わたしの結果」から開ける。部屋が12時間で消えたあとも見られる ===== */
 const MINE_MAX=10;
+// 3人以上の結果では、歩み寄りの案の「2人で」などを「みんなで」に言いかえる（鑑定者本人 2026-11-19「全部直してください」）。
+// 「2人きり」・暮らし／結婚の話（もともと2人の話）はそのまま
+function ayOf(k,two){const a=(window.SY_AYUMI||{})[Q[k][1]];if(!a||two)return a;
+  return a.split(/(?<=。)/).map(t=>/2人きり|暮らし|生活費|職場|家賃|結婚|一緒に住/.test(t)?t:t.replace(/2人とも/g,'みんな').replace(/2人で/g,'みんなで').replace(/2人の/g,'みんなの').replace(/2人に。/g,'みんなに。')).join('')}
 function mineList(){const a=store('kv_mine');return Array.isArray(a)?a:[]}
 function mineSave(G){try{
   const ps=G.players;if(!ps.some(p=>G.qs.some((k,i)=>{const a=p.ans[i];return a&&a.o>=0})))return;
@@ -582,9 +587,11 @@ function mineLabel(ent){const n=ent.pl.length,me=ent.pl[ent.me];
   const who=n<2?'ひとりで':ent.pl.filter((p,j)=>j!==ent.me).map(p=>p.n+'さん').slice(0,3).join('・')+(n>4?' ほか':'')+'と';
   const d=new Date(ent.at),dt=(d.getMonth()+1)+'月'+d.getDate()+'日 '+d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');
   return {who,dt,q:ent.qs.length}}
+// ひとりの結果は、一覧に価値観のかたち（○○派×○○派）を添える（％がないので見分けられなかった。鑑定者本人 2026-11-19）
+function mineShape(e){try{const x=e.pl[0],p={name:x.n,ans:x.a.map(v=>v?{o:v[0],st:v[1],ms:v[2]*100,to:!!v[3],u:v[4]}:null)};return shapeWords({qs:e.qs,players:[p]},p)}catch(err){return''}}
 function mineView(){const L2=mineList();
   view(`<section class="card"><p class="label">わたしの結果</p><p class="hint">このスマホに残っている結果です（新しい順・${MINE_MAX}回まで）。どこにも送っていません。</p>
-    ${L2.length?`<ul class="mine-l">${L2.map((e,j)=>{const x=mineLabel(e);return `<li><button type="button" class="mine-b" data-j="${j}"><span class="md">${x.dt}</span><b>${esc(x.who)}診断</b><small>${e.pct!=null?`<em>${e.pct}%</em>`:''}${x.q}問</small></button></li>`}).join('')}</ul>`:'<p class="hint">まだありません。</p>'}
+    ${L2.length?`<ul class="mine-l">${L2.map((e,j)=>{const x=mineLabel(e);return `<li><button type="button" class="mine-b" data-j="${j}"><span class="md">${x.dt}</span><b>${esc(x.who)}診断${e.pl.length<2&&mineShape(e)?`<span class="md-sw">${mineShape(e).split('×').map(w=>`<span style="white-space:nowrap">${esc(w)}</span>`).join('×<wbr>')}</span>`:''}</b><small>${e.pct!=null?`<em>${e.pct}%</em>`:''}${x.q}問</small></button></li>`}).join('')}</ul>`:'<p class="hint">まだありません。</p>'}
     <button class="btn ghost" id="mine-back" style="align-self:stretch">トップへ</button></section>`);
   app.querySelectorAll('.mine-b').forEach(b=>b.onclick=()=>mineOpen(L2[+b.dataset.j]));$('mine-back').onclick=goTop}
 function showResult(G){showResultCore(G);
