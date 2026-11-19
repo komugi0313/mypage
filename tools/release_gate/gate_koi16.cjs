@@ -84,6 +84,17 @@ function scan() {
     await p.goto(URL + '?about=1'); await check('この診断の考え方');
     await p.goto(URL + '?privacy=1'); await check('プライバシーポリシー');
     await p.goto(URL + '?licenses=1'); await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true)); await p.waitForTimeout(400); await check('ライセンス');
+    { // わたしの結果（自分の診断・みんなで診断）と、そこから開いた前の結果
+      const now = Date.now(), me = (c, d, q) => ({ code: c, pct: { LR: 60, VA: 30, TS: 70, PC: 40 }, anx: 62, fu: 50, fg: 50, mode: q ? 'quick' : 'full', status: null, at: now - d * 86400000 });
+      const hs = [me('LATC', 0), me('RASP', 3, 1), me('RVSC', 9), me('LVTP', 20, 1)];
+      await p.evaluate(o => localStorage.setItem('koi16_v1', JSON.stringify(o)), { me: hs[0], hist: hs, groups: { gx: { me: 'みき', t0: now - 86400000, at: now, m: [{ c: 'LATC', n: 'みき', k: 's' }, { c: 'RASP', n: 'ニックネーム長い' }, { c: 'LVTP', n: 'さき' }, { c: 'RVSC', n: 'あおい' }] }, gy: { me: 'みき', t0: now - 5 * 86400000, at: now, m: [{ c: 'RVSC', n: 'みき' }, { c: 'LATC', n: 'ゆう' }] } } });
+      await p.goto(URL); await check('はじめ（わたしの結果あり）');
+      await p.goto(URL + '?mine=1'); await check('わたしの結果（自分の診断）');
+      await p.goto(URL + '?mine=1&tab=g'); await check('わたしの結果（みんなで診断）');
+      await p.goto(URL + '?t=RASP&h=' + hs[1].at); await check('わたしの結果から開いた前の結果');
+      await p.goto(URL + '?g=gx&m=LATCs.%E3%81%BF%E3%81%8D~RASP.x&mine=1'); await check('わたしの結果から開いたグループ');
+      await p.evaluate(() => localStorage.removeItem('koi16_v1'));
+    }
     { // みんなで診断（グループ）：入る前・入ったあと（QR）・8人いっぱい、と結果の「QRを見せる」
       const nm = ['みき','ゆう','さき','あおい','はるか','りん','そら','ひなた'], cs = ['LVTP','RASC','RATC','LATC','RVSP','LVSC','RASP','RVTC'];
       const m = k => cs.slice(0, k).map((c, i) => c + '.' + encodeURIComponent(nm[i])).join('~');
@@ -97,7 +108,7 @@ function scan() {
         [cs.map((c, i) => ({ c, n: nm[i] })), cs.slice(0, 3).map((c, i) => ({ c, n: nm[i] }))]);
       await p.goto(URL); await check('はじめ（参加したグループ）');
       await p.goto(URL + '?t=RASC'); await check('結果（参加したグループ）');
-      await p.goto(URL); await p.click('[data-gid=g3]'); await check('参加したグループから開く');
+      await p.goto(URL + '?mine=1&tab=g'); await check('わたしの結果（参加したグループ）'); await p.click('[data-gid=g3]'); await check('参加したグループから開く');
       // 50%近くのものさし（両方もってる）が4つとも出る結果
       await p.evaluate(() => { const o = JSON.parse(localStorage.getItem('koi16_v1') || '{}'); o.me = { code: 'RATC', pct: { LR: 45, VA: 44, TS: 55, PC: 43 }, anx: 50, fu: 50, fg: 50, mode: 'full', at: 1 }; localStorage.setItem('koi16_v1', JSON.stringify(o)); });
       await p.goto(URL + '?t=RATC'); await check('結果（両方もってる）');
