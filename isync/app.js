@@ -102,7 +102,7 @@ if(['solo','each'].includes(QS.get('mode')))CFG.mode=QS.get('mode');
 const saveCfg=()=>store('kv_cfg',{mode:CFG.mode,len:CFG.len,topic:CFG.topic,anon:CFG.anon});
 /* トップの「まず1問、答えてみて」（鑑定者本人 2026-11-17 トップの見本で「2のオーロラ」。押すと、これまでに診断した人の％が出る。ここでは数えない） */
 const TH_N=CATS.map((c,i)=>[c[0],Q.filter(q=>q[0]===i).length]).filter(x=>x[1]);
-const TRY_K=Math.max(0,Q.findIndex(q=>q[1]==='LINEは？'));
+const TRY_K=Math.max(0,Q.findIndex(q=>q[1]==='休みの日は、恋人と？'));   // 上の見本に「LINEは？」があるので、ちがう問題にする（鑑定者本人 2026-11-19）
 // トップの見本：3問の答えを左右に並べて、重なる／分かれるを見せる（鑑定者本人 2026-11-19「B」）
 const OV_ROWS=[['記念日は？',0,0],['LINEは？',0,2],['お風呂は？',0,1]];
 function bindTry(){
@@ -438,8 +438,9 @@ function talkPairHint(G,i,me){if(G.anon)return'';const ps=G.players,k=G.qs[i],si
   if(!a.length||!b.length)return'';
   if(a.length===1&&b.length>=2||b.length===1&&a.length>=2){const one=a.length===1?a[0]:b[0];return `${nmS(one)}の考えを、先に聞いてみてください。理由がわかると、みんなの落としどころが見えやすくなります。`}
   let best=null;a.forEach(x=>b.forEach(y=>{const r=pairStat(x,y,G.qs);if(!best||r.pct<best.pct)best={x,y,pct:r.pct}}));
-  let t=best?`${nmS(best.x)}と${nmS(best.y)}の話から聞くと、みんなの落としどころが見えやすくなります。`:'';
-  if(c.length)t+=`${c.map(nmS).join('と')}は合わせられるので、間に入ってもらうと決まりやすい問題です。`;
+  let t=best?`まず、${nmS(best.x)}と${nmS(best.y)}に「どうしてそう思う？」を聞くと、みんなの落としどころが見えやすくなります。`:'';
+  if(c.length){const cn=c.length===1?'':c.length===2?'2人が':'みんなが';
+    t+=c.includes(me)?`${c.map(nmS).join('と')}は合わせられるので、${c.length===1?'':cn}間に入ると決まりやすい問題です。`:`${c.map(nmS).join('と')}は合わせられるので、間に入ってもらうと決まりやすい問題です。`}
   return t}
 // B：これからの3つのステップ（まず話すこと→今週ためすこと→大切にしたいこと）
 function stepsHTML(G){const ps=G.players,two=ps.length===2,me=ps.find(p=>p.id===G.me),its=talkItems(G);
@@ -512,7 +513,7 @@ function groupShapeHTML(G){const ps=G.players;if(ps.length<3||G.anon)return'';
 function bridgeHTML(G){const ps=G.players;if(ps.length<3||G.anon)return'';const me=ps.find(p=>p.id===G.me);
   const c=ps.map(p=>({p,n:G.qs.filter((k,i)=>p.ans[i]&&p.ans[i].o===2).length})).sort((a,b)=>b.n-a.n);
   if(!c[0]||c[0].n<2||(c[1]&&c[1].n===c[0].n))return'';const p=c[0].p,nm=p===me?'あなた':esc(p.name)+'さん';
-  return `<section class="card bridge"><p class="label">このメンバーのつなぎ役</p><div class="brg"><span class="face">${esc((p===me?'あなた':p.name).slice(0,3))}</span><p><b>${nm}</b><span class="hint">「どっちでも合わせられる」がいちばん多く、みんなの答えの間にいることが多い人です。意見が分かれたら、${nm}に進めてもらうとまとまりやすくなります。</span></p></div></section>`}
+  return `<section class="card bridge"><p class="label">このメンバーのつなぎ役</p><div class="brg"><p class="brg-h"><span class="face">${esc((p===me?'あなた':p.name).slice(0,3))}</span><b>${nm}</b></p><p class="hint">「どっちでも合わせられる」がいちばん多く、みんなの答えの間にいることが多い人です。意見が分かれたら、${p===me?'あなたが話を進めてみてください':nm+'に話を進めてもらいましょう'}。</p></div></section>`}
 // D：もう一度の答え合わせ（同じ問題・同じ2人の前の結果と比べる。このスマホにだけ残す）
 function againHTML(G,P2){const ps=G.players,me=ps.find(p=>p.id===G.me);if(ps.length!==2||!me)return'';
   const other=ps.find(p=>p!==me),id=talkId(G),h=G.qs.map((k,i)=>ps.map(p=>ansCode(p.ans[i])).join('')).join(''),dk=P2.diff.map(i=>QKEY[G.qs[i]].slice(0,5));
