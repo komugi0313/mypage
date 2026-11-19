@@ -26,7 +26,7 @@ function page(p){
  const ld={"@context":"https://schema.org","@type":"ItemList","name":p.h1+' '+p.qs.length+'選',"numberOfItems":p.qs.length,"itemListElement":p.qs.map((q,i)=>({"@type":"ListItem","position":i+1,"name":q[0]+' VS '+q[1]}))};
  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${esc(p.h1)}${p.qs.length}選｜究極の二択 本音バレ診断</title>
-<link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
+<link rel="icon" href="/favicon.ico?v=3" sizes="48x48"><link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png?v=3"><link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3">
 <meta name="description" content="${esc(p.desc)}">
 <link rel="canonical" href="${SITE}/${p.f}/">
 <meta property="og:title" content="${esc(p.h1)}${p.qs.length}選｜究極の二択 本音バレ診断"><meta property="og:description" content="${esc(p.desc)}"><meta property="og:image" content="${SITE}/og-image.png?v=3"><meta property="og:url" content="${SITE}/${p.f}/"><meta name="twitter:card" content="summary_large_image">
