@@ -4029,7 +4029,7 @@ function roomResultHTML(){
   ps.forEach(function(p){
     if(p.done&&validCode(p.code)){ var pk=/^[spdf]$/.test(p.ak||'')?p.ak:''; h+='<a href="?t='+p.code+'" data-type="'+p.code+'"'+(me&&p.id===me.id?' class="me"':'')+'><span class="gm-p">'+art(p.code,56)+(pk?'<i>×</i>'+akHeart(pk,44):'')+'</span>'+(me&&p.id===me.id?'<span class="you">あなた</span>':'')+'<b class="nw">'+esc(p.name)+'</b><small>'+cname(p.code)+(pk?'<span class="gm-k">'+akName(pk)+'</span>':'')+'</small></a>'; }
     else { var pq=(p.q>0&&p.qn>0)?Math.min(p.q,p.qn):0, pn=p.qn||(RM.room&&RM.room.mode==='full'?48:20);
-      h+='<div class="gmem-w"><span class="wpic sil rsil" aria-hidden="true"><img src="img/RATP.webp" width="56" height="56" alt=""><i>?</i></span><b class="nw">'+esc(p.name)+'</b><small class="rnay">悩み中<span class="rdt" aria-hidden="true"><i></i><i></i><i></i></span></small>'+(pq?'<span class="rbar" aria-hidden="true"><span style="width:'+Math.round(pq/pn*100)+'%"></span></span><small class="rqn">'+pq+'／'+pn+'問</small>':'')+'</div>'; }
+      h+='<div class="gmem-w"><span class="wpic sil rsil" aria-hidden="true"><img src="img/'+silOf(p.id)+'.webp" width="56" height="56" alt=""><i>?</i></span><b class="nw">'+esc(p.name)+'</b><small class="rnay">悩み中<span class="rdt" aria-hidden="true"><i></i><i></i><i></i></span></small>'+(pq?'<span class="rbar" aria-hidden="true"><span style="width:'+Math.round(pq/pn*100)+'%"></span></span><small class="rqn">'+pq+'／'+pn+'問</small>':'')+'</div>'; }
   });
   h+='</div></section>';
   if(n>=2) h+=groupSecs(g,me?me.name:null);
@@ -4075,6 +4075,8 @@ function roomProg(q,qn){
   RM.progP=(async function(){ while(RM.progWant){ var w=RM.progWant; RM.progWant=null; try{ await rRestSet(w.c+'/players/'+rPid(),w.d); }catch(e){} } RM.progBusy=false; })();
 }
 // 答えているあいだのみんなのマス（鑑定者本人 2026-11-19 見本 https://claude.ai/artifact/Ag2TVQinsaokug42sv4zG3 で「OK」）：影がゆれて「悩み中…」→答えた瞬間に「決めた！」（1.4秒）。2回目からの人は前回のキャラクター。答えの中身は出さない
+// まだタイプがわからない人の影は、人ごとにちがうキャラクターの形（鑑定者本人 2026-11-19「いろんなシルエットを出したら」）。同じ人はいつも同じ形
+function silOf(id){ var h=0, t=String(id||''); for(var i=0;i<t.length;i++) h=(h*31+t.charCodeAt(i))>>>0; return ORDER[h%ORDER.length]; }
 function qSeats(){
   var el=$('q-seats'); if(!el) return;
   if(RM.view!=='quiz'||!RM.code){ el.classList.add('hidden'); el.innerHTML=''; return; }
@@ -4082,7 +4084,7 @@ function qSeats(){
   ps.forEach(function(p){ var pv=RM.lastQ[p.id]; if(pv!=null&&((p.q||0)>pv||(p.done&&!RM.lastD[p.id]))) RM.okAt[p.id]=now; RM.lastQ[p.id]=p.q||0; RM.lastD[p.id]=!!p.done; });
   var h='<div class="qs-g'+(ps.length>4?' many':'')+'">';
   ps.forEach(function(p){ var me=p.id===id, ok=p.done||(now-(RM.okAt[p.id]||0)<1400), pc=me?(st.me&&validCode(st.me.code)?st.me.code:''):(validCode(p.pc||'')?p.pc:''), code=p.done&&validCode(p.code)?p.code:pc;
-    h+='<div class="qs'+(ok?' ok':' think')+(me?' me':'')+'"><span class="qs-p">'+(code?art(code,40):'<img class="sil" src="img/RATP.webp" width="40" height="40" alt="">')+'</span><b>'+(me?'あなた':esc(p.name))+'</b><small>'+(p.done?'終わった！':ok?'決めた！':'悩み中<span class="rdt" aria-hidden="true"><i></i><i></i><i></i></span>')+'</small></div>'; });
+    h+='<div class="qs'+(ok?' ok':' think')+(me?' me':'')+'"><span class="qs-p">'+(code?art(code,40):'<img class="sil" src="img/'+silOf(p.id)+'.webp" width="40" height="40" alt="">')+'</span><b>'+(me?'あなた':esc(p.name))+'</b><small>'+(p.done?'終わった！':ok?'決めた！':'悩み中<span class="rdt" aria-hidden="true"><i></i><i></i><i></i></span>')+'</small></div>'; });
   el.innerHTML=h+'</div>'; el.classList.remove('hidden');
   if(RM.seatT) clearTimeout(RM.seatT); RM.seatT=setTimeout(qSeats,1500);
 }
