@@ -9,7 +9,7 @@ const dir=site==='pro'?'pro':'beginner', page0=site==='pro'?'app-pro.html':'app-
 const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
 const srv=http.createServer((q,r)=>{let p=decodeURIComponent(q.url.split('?')[0]);if(p.endsWith('/'))p+='index.html';const f=path.join(ROOT,dir,p);if(!fs.existsSync(f)||fs.statSync(f).isDirectory()){r.writeHead(404);r.end();return;}r.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'application/octet-stream'});fs.createReadStream(f).pipe(r);}).listen(0);
 await new Promise(r=>srv.on('listening',r)); const port=srv.address().port;
-const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
 const ctx=await b.newContext({serviceWorkers:'block',viewport:{width:390,height:844},isMobile:true,hasTouch:true});
 let calls=0; const R=[]; const ok=(name,pass,info='')=>{R.push({name,pass,info:String(info).slice(0,200)}); console.log((pass?'  OK ':'  NG ')+name+(info?'  … '+String(info).slice(0,160):''));};
 await ctx.route('**/.netlify/functions/**',r=>r.fulfill({status:200,contentType:'application/json',body:'{"ok":true}'}));
@@ -118,6 +118,16 @@ ok('相談1：画面に＊が出ない', cleanStar(A)===0, cleanStar(A));
     return {bgSame,same,ab,info:info.join(' | ')}; }catch(e){ return {err:String(e)}; } });
   ok('UX②：ビギナーの「整えたい年」はPROの「運気の谷」と同じ年', Z.bgSame&&Z.same, JSON.stringify(Z));
   ok('UX②：「AかBか」で本文の「どちらも見送る」は条件の言い方に（1行目は選ぶ答えのまま）', Z.ab, JSON.stringify(Z)); }
+// UX点検②の続き（2026-11-19）：ビギナー1人の鑑定の「静かに整えたい年」はPROの年運の判定「静かに整える時期（△）」（pkYearMk）と同じ年
+{ const W=await p.evaluate(()=>{ try{ const isB=/app-beginner/.test(location.pathname); if(!isB||typeof window.pkBgPlainOffline!=='function') return {skip:true,ok:true};
+    const B=window.Bazi, P=[[1981,6,10,22,28,'female'],[1979,3,15,8,0,'male'],[1990,1,1,12,0,'female'],[1975,11,20,6,30,'male'],[2001,8,3,3,15,'female'],[1968,4,22,17,0,'male']];
+    const keep=chart; let ok=true, info=[], n=0;
+    P.forEach(function(x){ const c=B.computeChart({year:x[0],month:x[1],day:x[2],hour:x[3],minute:x[4],sex:x[5],correctionMode:'none'}); chart=c;
+      const t=window.pkBgPlainOffline('')||'', m=t.match(/静かに整えたい年：([^。\n]*)/), bg=m?(m[1].match(/\d{4}/g)||[]).join('/'):'';
+      const pro=(c.annualFortunes||[]).filter(a=>a.year>=c.now.year&&a.year<c.now.year+10&&pkYearMk(c,a)==='△').map(a=>a.year).join('/');
+      if(bg!==pro) ok=false; if(pro) n++; info.push(bg+'='+pro); });
+    chart=keep; return {ok,n,info:info.join(' | ')}; }catch(e){ return {ok:false,err:String(e)}; } });
+  ok('UX②：ビギナー1人の鑑定の「静かに整えたい年」はPROの年運の判定（整える時期）と同じ年', W.ok&&(W.skip||W.n>0), JSON.stringify(W)); }
 // 追加の質問
 const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃ですか'); await p.click('#consultBtn'); await p.click('#consultBtn').catch(()=>{});
 const ms2=await waitFor(()=>{const it=document.querySelectorAll('#reading .rd-item');const l=it[it.length-1];return it.length>=2&&l.querySelector('.rd-bar')&&!l.querySelector('.loading');},60000);
