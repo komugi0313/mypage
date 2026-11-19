@@ -182,10 +182,11 @@ async function runPk(C) {
       const [pop] = await Promise.all([ctx.waitForEvent('page', { timeout: 10000 }).catch(() => null), p.evaluate(() => { const x = document.getElementById('jn-print'); if (x) x.click(); })]);
       if (pop) { await pop.waitForLoadState('load').catch(() => {}); const t = Date.now(); let txt = '';
         while (Date.now() - t < 80000) { txt = await pop.evaluate(() => (document.getElementById('sheetsWrap') || {}).innerText || '').catch(() => ''); const busy = await pop.evaluate(() => /作成しています|作成中|生成中|読み解いています/.test((document.getElementById('sheetsWrap') || {}).innerText || '')).catch(() => true); if (txt.length > 1500 && !busy && Date.now() - t > 4000) break; await pop.waitForTimeout(700); }
-        await pop.waitForTimeout(2000); rec.sheetGate = await pop.evaluate(() => ({ drop: (window.__sheetGateRows || []).length, off: /計算と合わないところがあったため、定型文/.test(document.body.innerText) })).catch(() => null); rec.texts.sheet = await pop.evaluate(() => { const o = document.getElementById('sheetsWrap'); if (!o) return ''; o.querySelectorAll('details:not([open])').forEach(d => d.open = true); return o.innerText; }).catch(() => txt); await pop.close().catch(() => {}); }
+        await pop.waitForTimeout(2000); rec.sheetYgz = await pop.evaluate(() => window.__pkYgzLog || []).catch(() => []); rec.sheetGate = await pop.evaluate(() => ({ drop: (window.__sheetGateRows || []).length, off: /計算と合わないところがあったため、定型文/.test(document.body.innerText) })).catch(() => null); rec.texts.sheet = await pop.evaluate(() => { const o = document.getElementById('sheetsWrap'); if (!o) return ''; o.querySelectorAll('details:not([open])').forEach(d => d.open = true); return o.innerText; }).catch(() => txt); await pop.close().catch(() => {}); }
     }
   } catch (e) { rec.err = String(e.message).slice(0, 200); }
   rec.gate = await p.evaluate(() => window.__pkGateLog || []).catch(() => []);
+  rec.ygz = await p.evaluate(() => window.__pkYgzLog || []).catch(() => []);   // 年の干支の照らし合わせ（pkFmYearGzFix）が直した・外した干支
   rec.calls = st.calls; rec.errs = errs.slice(0, 3); await ctx.close(); return rec;
 }
 async function runEki(C) {
@@ -210,6 +211,7 @@ async function runEki(C) {
     await p.evaluate(() => { window.__shared = null; try { App.shareSho(); } catch (e) {} }); await p.waitForTimeout(800); rec.texts.share = await p.evaluate(() => ((window.__shared || {}).text || ''));
   } catch (e) { rec.err = String(e.message).slice(0, 200); }
   rec.gate = await p.evaluate(() => window.__pkGateLog || []).catch(() => []);
+  rec.ygz = await p.evaluate(() => window.__pkYgzLog || []).catch(() => []);   // 年の干支の照らし合わせ（pkFmYearGzFix）が直した・外した干支
   rec.calls = st.calls; rec.errs = errs.slice(0, 3); await ctx.close(); return rec;
 }
 
