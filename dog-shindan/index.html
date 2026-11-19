@@ -1622,7 +1622,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
           <div class="ws-cnt"><span id="ws-cnt">0</span> / 30</div></div>
         <p class="ws-auto" id="ws-auto"></p>
         <label class="ws-oj"><input type="checkbox" id="ws-odai-on" checked><span id="ws-odai-lb">今週のお題に参加する</span></label>
-        <label class="ws-chk"><input type="checkbox" id="ws-sns-on"><span>入賞したら、ワンソナのSNS（インスタなど）で紹介してもOK<small class="ws-opt">チェックしなくても、のせられます</small></span></label>
+        <label class="ws-chk" id="ws-sns-lb"><input type="checkbox" id="ws-sns-on"><span>入賞したら、ワンソナのSNS（インスタなど）で紹介してもOK<small class="ws-opt">チェックしなくても、のせられます</small></span></label>
         <label class="ws-chk"><input type="checkbox" id="ws-ok1"><span>自分で撮った、うちの子の写真です</span></label>
         <label class="ws-chk"><input type="checkbox" id="ws-ok2"><span>ほかの方の顔や、住所・名札・車のナンバーなど、だれかがわかるものは写っていません（自分や家族の顔はOK）</span></label>
         <p class="ws-err" id="ws-up-err" hidden></p>
@@ -5992,8 +5992,10 @@ function wsOdaiAt(n){var L=WS_ODAI.length,i=((n%L)+L)%L,st=WS_ODAI_0+n*7*864e5,j
   var a=j(st),b=j(st+6*864e5),r=j(st+7*864e5),ymd=function(d){return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0")},md=function(d){return (d.getUTCMonth()+1)+"月"+d.getUTCDate()+"日"};
   return {n:n,id:ymd(a),t:WS_ODAI[i][0],d:WS_ODAI[i][1],range:md(a)+"〜"+md(b),result:md(r)+"（月）"}}
 function wsOdaiNow(){return wsOdaiAt(Math.floor((Date.now()-WS_ODAI_0)/(7*864e5)))}
-function wsOdaiHTML(o,count){o=o||wsOdaiNow();return '<div class="ws-odai"><span class="k">今週のお題（'+esc(o.range)+'）</span><span class="t">'+esc(o.t)+'</span><p class="d">'+esc(o.d)+'</p><span class="m">'+(count!=null?'<span>のせた子 '+wsN(count)+'匹</span>':'')+'<span>結果は'+esc(o.result)+'</span></span></div>'}
-function wsMedal(i){return i>=0&&i<3?'<span class="ws-md m'+(i+1)+'">'+(i===0?'👑 ':'')+(i+1)+'位</span>':''}
+function wsOdaiHTML(o,count){o=o||wsOdaiNow();return '<div class="ws-odai"><span class="k">今週のお題（'+esc(o.range)+'）</span><span class="t">'+esc(o.t)+'</span><p class="d">'+esc(o.d)+'</p><span class="m">'+(count!=null?'<span>のせた子 '+wsN(count)+'匹</span>':'')+''+(WS_RANK?'<span>結果は'+esc(o.result)+'</span>':'<span>次のお題は'+esc(o.result)+'から</span>')+'</span></div>'}
+// ランキング・入賞の札・受賞歴・入賞のお知らせ・SNS紹介の同意は、写真が集まるまで出さない（鑑定者本人 2026-11-19）。出すときは true にする
+var WS_RANK=false;
+function wsMedal(i){if(!WS_RANK)return "";return i>=0&&i<3?'<span class="ws-md m'+(i+1)+'">'+(i===0?'👑 ':'')+(i+1)+'位</span>':''}
 var WS_AWK={odai:"のお題",week:"の今週のワンスタ",month:"の今月のワンスタ",kishitsu:"の気質ごと"};
 function wsAwTitle(a){return a.kind==="odai"?a.title:a.kind==="week"?"今週のワンスタ":a.kind==="month"?"今月のワンスタ":(a.title||"")+"気質"}
 var WS_REASON={face:"ほかの人の顔・住所などが写っている",caption:"ひとことが気になる",sad:"犬がかわいそう",other:"その他"};
@@ -6085,7 +6087,7 @@ function wsGo(v,arg,keep){if(!keep)wsStack.push([v,arg]);wsShowV(v);if(v==="feed
 function openWansta(from,v,arg){if(!WS.on)return;var cur=["s-start","s-result","s-my","s-zukan","s-about","s-ecbook","s-acct"].filter(function(s){return !$(s).hidden})[0];wsFrom=from||cur||"s-start";wsStack=[];show("s-wansta");wsGo(v||"feed",arg);w44ev("wansta_open",{view:v||"feed"})}
 $("ws-back").addEventListener("click",function(){wsStack.pop();var t=wsStack[wsStack.length-1];if(!t){if(wsFrom==="s-my")openMy();else show(wsFrom);return}wsGo(t[0],t[1],true)});
 // みんなの写真
-function wsCard(p,rk){rk=typeof rk==="number"?rk:-1;return '<button class="ws-fc'+(rk>=0&&rk<3?' r'+(rk+1):'')+'" type="button" data-wsid="'+esc(p.id)+'">'+wsMedal(rk)+wsImg(p,"ws-ph")+'<span class="ws-fm"><b>'+esc(p.dog.name)+'</b><span class="ws-tp">'+esc(wsKi(p))+'</span><span class="ws-st"><span class="ws-lk">♥ '+wsN(p.likes)+'</span><span class="ws-vw">'+WS_EYE+wsN(p.views)+'</span></span></span></button>'}
+function wsCard(p,rk){rk=WS_RANK&&typeof rk==="number"?rk:-1;return '<button class="ws-fc'+(rk>=0&&rk<3?' r'+(rk+1):'')+'" type="button" data-wsid="'+esc(p.id)+'">'+wsMedal(rk)+wsImg(p,"ws-ph")+'<span class="ws-fm"><b>'+esc(p.dog.name)+'</b><span class="ws-tp">'+esc(wsKi(p))+'</span><span class="ws-st"><span class="ws-lk">♥ '+wsN(p.likes)+'</span><span class="ws-vw">'+WS_EYE+wsN(p.views)+'</span></span></span></button>'}
 function wsFeed(reset){
   [].forEach.call($$("#ws-ftabs button"),function(b){b.classList.toggle("on",b.dataset.k===wsKind)});
   $("ws-adm-go").hidden=!(WS.api.admin&&(WS.demo||WS.api.isAdmin));
@@ -6120,7 +6122,7 @@ function wsPostRender(){var p=wsCur,m=p.mine||{},own=!!m.own,h='<div class="ws-c
   h+='</div>';if(!lsGet("w44_grow",null))h+='<button class="sub" type="button" id="ws-quiz">うちの子も診断してみる</button>';
   $("ws-post").innerHTML=h;if(own&&WS.api.standing)wsStanding(p)}
 // 応援：自分の写真の順位と「あと何いいね」
-function wsStanding(p){WS.api.standing(p.id).then(function(r){if(!r||wsCur!==p)return;var el=$("ws-cheer");if(!el)return;var x=r.odai||r.week;if(!x)return;
+function wsStanding(p){if(!WS_RANK)return;WS.api.standing(p.id).then(function(r){if(!r||wsCur!==p)return;var el=$("ws-cheer");if(!el)return;var x=r.odai||r.week;if(!x)return;
   var lab=r.odai?"今週のお題「"+wsOdaiNow().t+"」で":"今週の人気で";
   el.querySelector("b").textContent=x.rank===1?lab+" 1位！ このまま応援してもらおう":lab+" "+x.rank+"位。あと"+wsN(x.toNext)+"いいねで"+(x.rank-1)+"位";
   el.querySelector("span").textContent="家族や友だちに、♥で応援してもらおう"},function(){})}
@@ -6167,7 +6169,7 @@ $("ws-cap").addEventListener("input",function(){$("ws-cnt").textContent=[].slice
 ["ws-ok1","ws-ok2"].forEach(function(id){$(id).addEventListener("change",wsUpCheck)});
 $("ws-up-quiz").addEventListener("click",function(){show("s-start")});
 $("ws-send").addEventListener("click",function(){if(wsNeedLogin()||!wsUp.blob)return;var b=$("ws-send"),d=wsUp.dog;b.disabled=true;b.textContent="のせています…";$("ws-up-err").hidden=true;
-  WS.api.upload(wsUp.blob,$("ws-cap").value.trim(),{name:d.name,breed:d.breed,kishitsu:d.kishitsu,kishitsuId:d.kishitsuId},{odai:$("ws-odai-on").checked?wsOdaiNow().id:null,sns:$("ws-sns-on").checked}).then(function(p){b.textContent="のせる";wsUpReset();toast("のせました！みんなに見えています");w44ev("wansta_upload");wsStack=[["feed"]];wsKind="new";wsGo("post",p.id)},
+  WS.api.upload(wsUp.blob,$("ws-cap").value.trim(),{name:d.name,breed:d.breed,kishitsu:d.kishitsu,kishitsuId:d.kishitsuId},{odai:$("ws-odai-on").checked?wsOdaiNow().id:null,sns:WS_RANK&&$("ws-sns-on").checked}).then(function(p){b.textContent="のせる";wsUpReset();toast("のせました！みんなに見えています");w44ev("wansta_upload");wsStack=[["feed"]];wsKind="new";wsGo("post",p.id)},
     function(e){b.textContent="のせる";wsUpCheck();$("ws-up-err").textContent=wsMsg(e);$("ws-up-err").hidden=false})});
 // ランキング
 function wsRank(){[].forEach.call($$("#ws-rtabs button"),function(b){b.classList.toggle("on",b.dataset.k===wsRankP)});$("ws-rank-ttl").textContent=wsRankP==="odai"?"お題「"+wsOdaiNow().t+"」":wsRankP==="month"?"今月のワンスタ":wsRankP==="kishitsu"?"気質ごとの1位":"今週のワンスタ";
@@ -6199,7 +6201,7 @@ function wsOnShow(id){if(typeof WS==="undefined"||!WS||!WS.on)return;
     if(wsCan())WS.api.mine().then(function(m){var el=$("ws-mine");if(!el)return;el.innerHTML='<b>あなたがのせた写真</b><span>'+wsN((m.posts||[]).length)+'枚 ・ '+WS_EYE+'見た人 '+wsN(m.views)+'人</span><span>フォローしてくれた人 '+wsN(m.followers)+'人</span><small>フォローの数は、あなたにだけ見えます</small>'+wsAwardsHTML(m.awards);wsAwards=m.awards||[];el.hidden=false},function(){})}}
 // 受賞歴と記念カード
 var wsAwards=[];
-function wsAwardsHTML(A){if(!A||!A.length)return '';return '<div class="ws-aws"><b>受賞歴</b>'+A.map(function(a,i){return '<button class="ws-aw" type="button" data-wsaw="'+i+'"><span class="ic m'+a.rank+'">'+a.rank+'</span><span class="tx"><b>'+esc((a.post&&a.post.dog?a.post.dog.name+"　":"")+wsAwTitle(a)+" "+a.rank+"位")+'</b><small>'+esc((a.range||"")+(a.kind==="odai"?"のお題":a.kind==="kishitsu"?"の気質ごと":""))+'</small></span><span class="go">記念カード</span></button>'}).join("")+'<div class="ws-kn" id="ws-kn" hidden></div></div>'}
+function wsAwardsHTML(A){if(!WS_RANK||!A||!A.length)return '';return '<div class="ws-aws"><b>受賞歴</b>'+A.map(function(a,i){return '<button class="ws-aw" type="button" data-wsaw="'+i+'"><span class="ic m'+a.rank+'">'+a.rank+'</span><span class="tx"><b>'+esc((a.post&&a.post.dog?a.post.dog.name+"　":"")+wsAwTitle(a)+" "+a.rank+"位")+'</b><small>'+esc((a.range||"")+(a.kind==="odai"?"のお題":a.kind==="kishitsu"?"の気質ごと":""))+'</small></span><span class="go">記念カード</span></button>'}).join("")+'<div class="ws-kn" id="ws-kn" hidden></div></div>'}
 function wsLoadImg(src){return new Promise(function(res,rej){var im=new Image();im.crossOrigin="anonymous";im.onload=function(){res(im)};im.onerror=rej;im.src=src})}
 function wsRRect(x,c,y,w,h,r){x.beginPath();x.moveTo(c+r,y);x.arcTo(c+w,y,c+w,y+h,r);x.arcTo(c+w,y+h,c,y+h,r);x.arcTo(c,y+h,c,y,r);x.arcTo(c,y,c+w,y,r);x.closePath()}
 function wsFitFont(x,t,max,w,fam,wt){var f=max,set=function(){x.font=(wt?wt+" ":"")+f+"px "+fam};set();while(x.measureText(t).width>w&&f>24){f-=2;set()}return f}
@@ -6225,7 +6227,7 @@ document.addEventListener("click",function(e){var b=e.target.closest("[data-wsaw
 document.addEventListener("click",function(e){var b=e.target.closest("#ws-res-go,#ws-hub-go");if(!b||!WS.on)return;openWansta(b.id==="ws-res-go"?"s-result":"s-my")});
 // トップのワンスタ：新着／人気の写真を6枚（名前と気質の札つき）
 var wsTopK="odai",wsTopC={},wsTopN=null;
-function wsTopTile(p,i){var rk=wsTopK==="new"?-1:i;return '<button class="wt-it" type="button" data-wtid="'+esc(p.id)+'"><span class="wt-ph'+(rk>=0&&rk<3?' r'+(rk+1):'')+'">'+wsMedal(rk)+wsImg(p,"")+'<span class="wt-lk">♥ '+wsN(p.likes)+'</span></span><span class="wt-nm">'+esc(p.dog.name)+'</span>'+(p.dog.kishitsu?'<span class="wt-ks">'+esc(p.dog.kishitsu).replace(/・/g,"・<wbr>")+'<wbr>気質</span>':'')+'</button>'}
+function wsTopTile(p,i){var rk=!WS_RANK||wsTopK==="new"?-1:i;return '<button class="wt-it" type="button" data-wtid="'+esc(p.id)+'"><span class="wt-ph'+(rk>=0&&rk<3?' r'+(rk+1):'')+'">'+wsMedal(rk)+wsImg(p,"")+'<span class="wt-lk">♥ '+wsN(p.likes)+'</span></span><span class="wt-nm">'+esc(p.dog.name)+'</span>'+(p.dog.kishitsu?'<span class="wt-ks">'+esc(p.dog.kishitsu).replace(/・/g,"・<wbr>")+'<wbr>気質</span>':'')+'</button>'}
 function wsTopGrid(){var el=$("wt-grid");if(!el)return;var L=wsTopC[wsTopK];
   [].forEach.call($$("#wt-tabs button"),function(b){var on=b.dataset.k===wsTopK;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)});
   if(!L){var k=wsTopK;WS.api.feed(k,null).then(function(r){wsTopC[k]=(r.posts||[]).slice(0,6);if(k==="odai"){wsTopN=r.total!=null?r.total:null;if(!wsTopC.odai.length&&wsTopK==="odai")wsTopK="new";var ob=$("wt-odai");if(ob)ob.innerHTML=wsOdaiHTML(null,wsTopN)}wsTopGrid()},function(){wsTopC[k]=[];if(k==="odai"&&wsTopK==="odai")wsTopK="new";wsTopGrid()});return}
@@ -6236,7 +6238,7 @@ function wsTopRender(){$("ws-top").innerHTML='<div class="wt-hd"><span class="wt
 function wsTopShow(){$("ws-top").hidden=false;wsTopC={};wsTopK="odai";if(!$("wt-grid"))wsTopRender();else wsTopGrid();wsWinCheck()}
 // 入賞のお知らせ：まだ見ていない入賞を、トップのワンスタの上に1回だけ出す
 function wsAwKey(a){return [a.kind,a.range,a.rank,a.post&&a.post.id||""].join("|")}
-function wsWinCheck(){if(!WS.on||!wsCan()||$("wt-win"))return;WS.api.mine().then(function(m){var seen=lsGet("w44_ws_win",[]),A=(m.awards||[]).filter(function(a){return seen.indexOf(wsAwKey(a))<0});if(!A.length||$("wt-win"))return;
+function wsWinCheck(){if(!WS_RANK||!WS.on||!wsCan()||$("wt-win"))return;WS.api.mine().then(function(m){var seen=lsGet("w44_ws_win",[]),A=(m.awards||[]).filter(function(a){return seen.indexOf(wsAwKey(a))<0});if(!A.length||$("wt-win"))return;
   var a=A[0],nm=a.post&&a.post.dog?a.post.dog.name:"うちの子",el=document.createElement("div");el.className="wt-win";el.id="wt-win";
   el.innerHTML='<span class="ic m'+a.rank+'">'+a.rank+'</span><div><b>おめでとう！ '+esc(nm)+'が'+esc(a.kind==="odai"?"お題「"+a.title+"」":a.kind==="week"?"週間ランキング":a.kind==="month"?"月間ランキング":(a.title||"")+"気質の部門")+'で'+a.rank+'位になりました</b><small>'+esc((a.range||"")+(A.length>1?"・ほかにも"+(A.length-1)+"つ入賞しています":""))+'</small><button type="button" id="wt-win-go">記念カードを見る</button></div>';
   $("ws-top").insertBefore(el,$("ws-top").firstChild);lsSet("w44_ws_win",seen.concat(A.map(wsAwKey)).slice(-60));w44ev("wansta_win",{kind:a.kind,rank:a.rank})},function(){})}
@@ -6247,6 +6249,7 @@ $("ws-top").addEventListener("click",function(e){var b=e.target.closest("button"
   if(b.id==="wt-all"){wsKind=wsTopK;openWansta("s-start");return}
   if(b.id==="wt-up"){if(wsNeedLogin())return;openWansta("s-start","up")}});
 (function(){if(!WS.on)return;
+  $("ws-rank-go").hidden=!WS_RANK;$("ws-sns-lb").hidden=!WS_RANK;
   if(!$("s-start").hidden)wsTopShow()
   var wsHash=function(){var hm=location.hash.match(/(?:^|[#&])wansta-([\w-]+)/);
     if(hm)setTimeout(function(){openWansta("s-start","post",decodeURIComponent(hm[1]))},0);
