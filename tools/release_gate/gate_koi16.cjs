@@ -78,6 +78,7 @@ function scan() {
     const check = async (label) => { (await p.evaluate(scan)).forEach(x => problems.push(w + 'px ' + label + '：' + x)); };
     await p.goto(URL); await check('はじめ');
     await p.goto(URL + '?from=RATC'); await check('はじめ（招待）');
+    for (const e of ['aichaku', 'izon', 'kataomoi', 'aisho', 'chara']) { await p.goto(URL + '?e=' + e); await check('はじめ（入口 ' + e + '）'); }
     await p.goto(URL + '?types=1'); await check('16タイプ一覧');
     await p.goto(URL + '?about=1'); await check('この診断の考え方');
     await p.goto(URL + '?privacy=1'); await check('プライバシーポリシー');
