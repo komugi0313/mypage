@@ -475,8 +475,9 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     out.mat=pkFmMaterial('2027年（丁未・46歳）と'+dm+'月'+dd+'日（'+W+'）、今の大運（'+dg+'）、日柱「'+dayP+'」。生年月日：1981年6月10日 22:28',env);
     out.matWant=['〔F:y2027〕','〔F:d'+pkfmFwdY(dm,dd)+'-'+dm+'-'+dd+'〕','〔F:du_now〕','〔F:p_day〕','1981年6月10日'];
     const good=['2027年（丁未・46歳）に動くのが合っています。',dm+'月'+dd+'日（'+W+'）は'+DG+'の日です。','日柱（'+dayP+'）の人です。','今の大運（'+dg+'）は大事な10年。'];
-    const bad=['2027年（丙午・46歳）は動きやすい年です。','2028年（戊申・50歳）も良い年です。',dm+'月'+dd+'日（'+WX+'）が向いています。','日柱（甲子）の人です。','大運「'+(dg==='癸亥'?'壬戌':'癸亥')+'」に入ると変わります。','甲丑の気配があります。'];
+    const bad=['2027年（丁未・50歳）は動きやすい年です。','2028年（戊申・50歳）も良い年です。',dm+'月'+dd+'日（'+WX+'）が向いています。','日柱（甲子）の人です。','大運「'+(dg==='癸亥'?'壬戌':'癸亥')+'」に入ると変わります。','甲丑の気配があります。'];
     const g1=pkFactGate('【結論】'+good[0]+'\n'+good.slice(1).join('')+bad.join('')+'\n'+'この流れを大切に、自分のペースで準備を重ねていきましょう。焦らずに、できることから一つずつ進めると、気持ちも整っていきます。まわりの人の声にも耳を傾けながら、無理のない計画を立ててください。毎日の小さな積み重ねが、次の一歩を支えてくれます。',pkFmEnvPro(false,false,'',''));
+    out.ygz=pkFactGate('2027年（丙午・46歳）は動きやすい年です。',pkFmEnvPro(false,false,'','')).text;   /* 年の干支のまちがいは外さず直す（pkFmYearGzFix 2026-11-19） */
     out.g1={rows:g1.rows.length,keep:good.every(x=>g1.text.indexOf(x)>=0),gone:bad.every(x=>g1.text.indexOf(x)<0),off:pkFactGateOff(g1)};
     const g2=pkFactGate(bad[0]+'\n'+good.join(''),pkFmEnvPro(false,false,'','')); out.g2off=pkFactGateOff(g2);
     // 通信なしの答え（ツールが全部書く）は、照らし合わせても1文も外れない
@@ -539,6 +540,7 @@ if(bad.length) res.fails.push('アプリの表: '+bad.join(' / '));
     r.matWant.forEach(w=>{ if(r.mat.indexOf(w)<0) e.push('材料の印（'+w+'）：'+r.mat.slice(0,120)); });
     if(r.g1.rows!==6||!r.g1.keep||!r.g1.gone||r.g1.off) e.push('照らし合わせ：'+JSON.stringify(r.g1));
     if(!r.g2off) e.push('1行目が消えたのに切りかえない');
+    if(r.ygz.indexOf('2027年（丁未・46歳）は動きやすい年です。')<0) e.push('年の干支のまちがいを年に合わせて直さない：'+r.ygz);
     if(r.fp.length) e.push('通信なしの答えの正しい文を外した：'+r.fp.slice(0,2).join(' / '));
     if(!r.w1||!r.w1.keepB||!r.w1.fixA||!r.w1.gate||!r.w1.star) e.push('誰の柱か（お相手の呼び名・名前）：'+JSON.stringify(r.w1));
     if(!r.w5||!r.w5.run||!r.w5.rel||!r.w5.now||!r.w5.drop||!r.w5.gate) e.push('運の柱・来年の年運・今の大運：'+JSON.stringify(r.w5));
