@@ -823,7 +823,7 @@ const FB=(()=>{
     const ac=typeof AbortController==='function'?new AbortController():null,tm=ac&&setTimeout(()=>ac.abort(),12000);
     try{const r=await fetch((path===':commit'?base.replace(/\/$/,''):base)+path+'?key='+key+(q?'&'+q:''),{method,headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:ac&&ac.signal,cache:'no-store'});
       if(r.status===404&&method==='GET')return null;
-      const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error((j.error&&j.error.message)||('HTTP '+r.status));return j}
+      const j=await r.json().catch(()=>({}));if(!r.ok){const er=new Error((j.error&&j.error.message)||('HTTP '+r.status));er.status=r.status;throw er}return j}
     finally{tm&&clearTimeout(tm)}}
   const snap=(id,doc)=>({id,exists:!!doc,data:()=>doc?strip(decF(doc.fields)):undefined});
   // 変わったときの知らせだけ、Firebase の道具を後から読んで使う（読めない画面では使わない）
@@ -840,6 +840,14 @@ const FB=(()=>{
       onSnapshot:(cb,err)=>live(fs=>fs.doc(p),s=>cb({id:s.id,exists:s.exists,data:()=>strip(s.data())}),err)}},
     async vote(k,f){const name='projects/'+window.ISYNC_FB.projectId+'/databases/(default)/documents/'+P('votes/'+k);
       return rq('POST',':commit',{writes:[{transform:{document:name,fieldTransforms:[{fieldPath:f,increment:{integerValue:'1'}}]}}]})},
+    // 部屋を作る：部屋と自分を1回の通信でまとめて書く。番号がまだない／12時間たった部屋のときだけ書けるので、2人が同時に同じ番号を引いても上書きしない（2026-11-19）
+    async mkRoom(code,room,pid,me){const nm=x=>'projects/'+window.ISYNC_FB.projectId+'/databases/(default)/documents/'+P(x),rp='rooms/'+code;
+      const w=(pre,old)=>(old||[]).map(id=>({delete:nm(rp+'/players/'+id)})).concat([{update:{name:nm(rp),fields:encF(ttl(rp,clean(room)))},currentDocument:pre},{update:{name:nm(rp+'/players/'+pid),fields:encF(clean(me))}}]);
+      const pc=e=>e&&(e.status===409||e.status===400);
+      try{await rq('POST',':commit',{writes:w({exists:false})});return 'ok'}catch(e){if(!pc(e))throw e}
+      const d=await rq('GET',P(rp));if(!d)return 'taken';const r0=decF(d.fields);if(Date.now()-(r0.created||0)<12*3600e3)return 'taken';
+      const ol=await rq('GET',P(rp+'/players'),null,'pageSize=300'),old=((ol&&ol.documents)||[]).map(x=>x.name.split('/').pop()).filter(id=>id!==pid);
+      try{await rq('POST',':commit',{writes:w({updateTime:d.updateTime},old)});return 'ok'}catch(e){if(pc(e))return 'taken';throw e}},
     votes(keys){return Promise.all(keys.map(k=>rq('GET',P('votes/'+k)).then(d=>[k,d?decF(d.fields):null]).catch(()=>[k,null]))).then(Object.fromEntries)},
     collection(path){const p=P(path);return{
       get:()=>rq('GET',p,null,'pageSize=300').then(j=>({docs:((j&&j.documents)||[]).map(d=>snap(d.name.split('/').pop(),d))})),
@@ -859,6 +867,9 @@ const plist=()=>Object.entries(R.players).map(([id,p])=>Object.assign({id},p)).s
 async function createRoom(name){
   const db=await getDb();if(!db)return NO_DB;
   try{
+    if(db.mkRoom){const now=Date.now(),room={created:now,round:1,phase:'lobby',qi:0,qs:deal(CFG.len,CFG.topic),len:CFG.len,topic:CFG.topic,anon:CFG.anon},me={name,ans:{},round:1,joined:now,ready:true};
+      for(let t=0;t<8;t++){const c=String(1000+Math.floor(Math.random()*9000));if(await db.mkRoom(c,room,PID,me)==='ok'){enterRoom(c);return 'ok'}}
+      return '部屋を作れませんでした。もう一度押してください。'}
     let code='';
     for(let t=0;t<8;t++){const c=String(1000+Math.floor(Math.random()*9000));const s=await db.doc('rooms/'+c).get();if(!s.exists||!alive(s.data())){code=c;break}}
     if(!code)return '部屋を作れませんでした。もう一度押してください。';
@@ -945,6 +956,9 @@ async function subscribe(){
 async function pull(force){
   const db=await getDb(),code=R.code;if(!code||R.pulling)return;
   if(!force&&Date.now()-(R.last||0)<4000)return;
+  // 結果が出たあとは5秒ごとで十分（読む回数を少なく。2026-11-19）
+  if(!force&&R.room&&R.room.phase==='result'&&Date.now()-(R.lastPull||0)<5000)return;
+  R.lastPull=Date.now();
   // 知らせが一度も届いていない画面（アプリの中の画面など）は、全員の答えも毎回読む（止まって見えないように）
   const all=force||!R.snapAt||((R.nth=(R.nth||0)+1)%5===1);R.pulling=true;
   try{const [rs,ps]=await Promise.all([db.doc('rooms/'+code).get(),all?db.collection('rooms/'+code+'/players').get():null]);
