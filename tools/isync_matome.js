@@ -123,7 +123,24 @@ ul.ck input:checked+.cq{opacity:.6}
 .ay{padding:12px 14px;border-radius:14px;background:#FFF8E0;border:1.5px solid #F0D98A}
 .ay p{margin:0}.ayq{font-family:"Zen Maru Gothic",sans-serif;font-weight:900}
 .ayab{font-size:14px;color:var(--sub)}.ayab span{font-weight:700;padding:0 6px;border-radius:6px}.ayab .o0{background:#E6F8F2}.ayab .o1{background:#FDEBF4}
-.ayt{margin-top:4px!important}`;
+.ayt{margin-top:4px!important}
+.smp{background:linear-gradient(180deg,#fff 0,#fff 100%)}
+.smp-h{display:flex;gap:10px;align-items:center}.smp-h i{flex:none;width:34px;height:34px;border-radius:50%;background:conic-gradient(#8FE3CF,#A9B2F5,#F4B6D6,#8FE3CF);-webkit-mask:radial-gradient(circle,transparent 9px,#000 10px);mask:radial-gradient(circle,transparent 9px,#000 10px)}
+.smp-h p{margin:0;line-height:1.4}.smp-h b{display:block;font-family:"Zen Maru Gothic",sans-serif;font-weight:900;font-size:19px}.smp-h span{font-size:13px;color:var(--sub);font-weight:700}
+.sr{display:flex;gap:14px;align-items:center;padding:12px;border-radius:16px;background:#F6F4FC}
+.ring{flex:none;width:92px;height:92px;border-radius:50%;background:conic-gradient(#6F8FE8 calc(var(--p)*1%),#E2DDF5 0);display:flex;align-items:center;justify-content:center}
+.ring b{width:72px;height:72px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-family:Quicksand,sans-serif;font-size:28px}.ring small{font-size:14px}
+.sr p{margin:0;line-height:1.5}.sr p b{display:block;font-family:"Zen Maru Gothic",sans-serif;font-weight:900;font-size:18px}.sr p span{font-weight:700;color:var(--sub)}
+h3.g-ok{background:#DDF6EE}h3.g-ng{background:#FCE6F1}
+ul.sl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+ul.sl li{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:14px;border:1.5px solid var(--line)}
+.sq{font-family:"Zen Maru Gothic",sans-serif;font-weight:900}
+.sa{font-size:14px;font-weight:700;padding:2px 10px;border-radius:10px;align-self:flex-start}
+.sa.ok{background:#E6F8F2;color:#1F6E5A}.sa.ad{background:#F1EEFA;color:#4B3C8F}.sa.ng{background:#FDEBF4;color:#9C2F67}
+.sl .ayt{display:block;padding:8px 10px;border-radius:10px;background:#FFF8E0;border:1.5px solid #F0D98A;font-size:15px}.sl .ayt b{display:block;font-size:13px;color:#8A6A00}
+.smp-q{margin:0}.smp-q b{display:block;font-size:17px}
+ul.ql{list-style:none;margin:0;padding:0 4px;display:flex;flex-wrap:wrap;gap:2px 16px}
+ul.ql li{font-size:15px;font-weight:700;color:var(--sub)}ul.ql li::before{content:"・"}`;
 const head = (title, desc, url) => `<!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${esc(title)}</title>
@@ -145,56 +162,46 @@ const STRONG = `<section class="card strong"><h2>アイ・シンクで、でき�
  <li><b>シンクロ率と、テーマごとの重なり</b>2人の答えがどれだけ重なったかが、数字でわかります。</li>
  <li><b>分かれた答えには「歩み寄りの案」</b>どちらかががまんするのではない、2人の間の案を出します。</li>
  <li><b>相手が答えると、結果があなたにも届く</b>送ったあとは待つだけ。アイ・シンクを開くと、届いた結果が見られます。</li></ul></section>`;
-// ページの中で試す（みんなの答えの％を出すだけ。ここでは数えない）
-const TRYJS = `(function(){var C=window.TRY_CFG,box=document.getElementById('try');if(!box||!C)return;var done=0;
-box.querySelectorAll('.tq').forEach(function(q){var key=q.dataset.k,cnt=null,fin=false;
- fetch('https://firestore.googleapis.com/v1/projects/'+C.p+'/databases/(default)/documents/isync_votes/q'+key+'?key='+C.k).then(function(r){return r.ok?r.json():null}).then(function(d){var f=d&&d.fields||{};cnt=['a','b','c'].map(function(x){return f[x]?+(f[x].integerValue||0):0})}).catch(function(){});
- q.querySelectorAll('.tb').forEach(function(b){b.onclick=function(){if(fin)return;fin=true;var v=+b.dataset.v,c=(cnt||[0,0,0]).slice(),t0=c[0]+c[1]+c[2];c[v]++;var t=t0+1;q.classList.add('done');
-  q.querySelectorAll('.tb').forEach(function(o){var k=+o.dataset.v;o.classList.toggle('me',o===b);if(t0>0){var pc=Math.round(c[k]*100/t);o.querySelector('.pc').textContent=pc+'%';o.querySelector('.bar').style.width=pc+'%'}});
-  var n=q.querySelector('.tn');n.hidden=false;n.querySelector('.mm').textContent=t0>0?('これがみんなの答えです'+(t>=10?'（'+t+'人）':'')+'。'):'';
-  done++;if(done>=3){var e=document.getElementById('try-end');if(e){e.hidden=false}}}})})})();`;
-
 PAGES.forEach(p => {
   const url = BASE + p.slug + '/';
   const desc = p.lead.split('。').slice(0, 2).join('。') + '。無料・登録なしで、2人でもみんなでも答え合わせできます。';
   const ld = { '@context': 'https://schema.org', '@type': 'ItemList', name: p.h1s, numberOfItems: p.n,
-    itemListElement: p.list.map((i, n) => ({ '@type': 'ListItem', position: n + 1, name: `${Q[i].q}　${Q[i].a}／${Q[i].b}` })) };
-  // 試す3問：一覧のうちテーマのちがう短い問題
-  const tri = []; const seenCat = new Set();
-  [...p.list].sort((a, b) => len(Q[a]) - len(Q[b])).forEach(i => { if (tri.length < 3 && !seenCat.has(Q[i].cat)) { tri.push(i); seenCat.add(Q[i].cat); } });
-  [...p.list].sort((a, b) => len(Q[a]) - len(Q[b])).forEach(i => { if (tri.length < 3 && !tri.includes(i)) tri.push(i); });
-  // 歩み寄りの案の見本：大事な問題から3つ（試す3問とは別）
-  const ay = p.list.filter(i => AY[Q[i].q] && !tri.includes(i)).sort((a, b) => (WB.has(b) - WB.has(a)) || len(Q[a]) - len(Q[b])).slice(0, 3);
-  // チェックリスト：テーマごとに「○○編」
+    itemListElement: p.list.map((i, n) => ({ '@type': 'ListItem', position: n + 1, name: Q[i].q })) };
+  // 結果の見本：ずれた2問（歩み寄りの案がある大事な問題）・ぴったり4問・合わせられる1問
+  const byW = [...p.list].sort((a, b) => (WB.has(b) - WB.has(a)) || len(Q[a]) - len(Q[b]));
+  const dif = byW.filter(i => AY[Q[i].q]).slice(0, 2);
+  const rest = byW.filter(i => !dif.includes(i));
+  const same = rest.slice(0, 4), adj = rest.slice(4, 5);
+  const tot = dif.length + same.length + adj.length, pct = Math.round((same.length + adj.length * 0.5) * 100 / tot);
   const groups = [...new Set(p.list.map(i => Q[i].cat))].map(c => ({ c, is: p.list.filter(i => Q[i].cat === c) }));
-  let no = 0;
   const cta = `<a class="btn" href="../?pack=${p.slug}&amp;mode=solo">この質問で、2人で答え合わせ<small>無料・アプリ不要・約6分</small></a>`;
   const G = p.guide;
+  const ans = (x, v) => v ? x.b : x.a;
   const html = head(p.titles, desc, url) + `
 <h1>${esc(p.h1s)}</h1>
 <section class="card"><p class="lead">${esc(p.lead)}</p>
  ${cta}
  <a class="btn ghost" href="../?pack=${p.slug}&amp;mode=each">そばにいる人と、みんなのスマホで（部屋を作る）</a></section>
+<section class="card smp"><div class="smp-h"><i aria-hidden="true"></i><p><b>2人の結果は、こんなふうに出ます</b><span>見本・あなた × あの人</span></p></div>
+ <div class="sr"><div class="ring" style="--p:${pct}"><b>${pct}<small>%</small></b></div><p><b>シンクロ率</b><span>合う ${same.length + adj.length}問・ずれた ${dif.length}問</span></p></div>
+ <h3 class="g-ok">合うところ</h3><ul class="sl">
+ ${same.map((i, n) => { const x = Q[i]; return `<li><span class="sq">${esc(x.q)}</span><span class="sa ok">2人とも「${esc(ans(x, n % 2))}」</span></li>`; }).join('')}
+ ${adj.map(i => { const x = Q[i]; return `<li><span class="sq">${esc(x.q)}</span><span class="sa ad">あなた「${esc(x.a)}」／あの人「${esc(x.c)}」＝合わせられる</span></li>`; }).join('')}</ul>
+ <h3 class="g-ng">ずれたところ</h3><ul class="sl">
+ ${dif.map(i => { const x = Q[i]; return `<li><span class="sq">${esc(x.q)}</span><span class="sa ng">あなた「${esc(x.a)}」／あの人「${esc(x.b)}」</span><span class="ayt"><b>歩み寄りの案</b>${esc(AY[x.q])}</span></li>`; }).join('')}</ul>
+ <p class="smp-q"><b>あなたとあの人は、どこが合って、どこがずれる？</b>同じ質問に別々に答えると、わかります。</p>
+ ${cta}</section>
 ${STRONG}
-<section class="card" id="try"><h2>まず3問、答えてみて</h2><p class="note">押すと、これまでに答えた人の割合が出ます（ここでは数えません）。</p>
-${tri.map(i => { const x = Q[i]; return `<div class="tq" data-k="${x.key}"><p class="tqq">${esc(x.q)}</p><div class="tbs">${[x.a, x.b, x.c].map((t, v) => `<button class="tb o${v}" type="button" data-v="${v}"><span class="tt">${esc(t)}</span><span class="pc"></span><i class="bar"></i></button>`).join('')}</div><p class="tn" hidden><span class="mm"></span>あの人は、同じ答え？</p></div>`; }).join('\n')}
-<div id="try-end" class="tend" hidden><p><b>あの人の答えと、くらべてみませんか？</b>同じ質問に答えると、2人のシンクロ率がわかります。</p>${cta}</div></section>
 <section class="card"><h2>${esc(G.h)}</h2><${G.ol ? 'ol' : 'ul'} class="gd">${G.items.map(t => `<li>${esc(t)}</li>`).join('')}</${G.ol ? 'ol' : 'ul'}></section>
-<section class="card"><h2>${esc(p.short)}のチェックリスト（${p.n}問）</h2><p class="note">話し合ったものに、チェックを入れていけます（チェックはこのスマホの中だけ）。</p>
-${groups.map(g => `<h3>${esc(g.c)}編</h3><ul class="ck">${g.is.map(i => { const x = Q[i]; no++; return `<li><label><input type="checkbox" data-k="${x.key}"><span class="cq"><span class="qq">Q${no}．${esc(x.q)}</span>${opt3(x)}</span></label></li>`; }).join('\n')}</ul>`).join('\n')}
-<p class="cknum" id="cknum"></p>${cta}</section>
-${ay.length ? `<section class="card"><h2>答えが分かれたら：歩み寄りの案（見本）</h2><p class="note">アイ・シンクでは、2人の答えが分かれた質問に、こんな案を出します。</p>
-<div class="ays">${ay.map(i => { const x = Q[i]; return `<div class="ay"><p class="ayq">${esc(x.q)}</p><p class="ayab"><span class="o0">${esc(x.a)}</span>と<span class="o1">${esc(x.b)}</span>に分かれたら</p><p class="ayt">${esc(AY[x.q])}</p></div>`; }).join('')}</div></section>` : ''}
+<section class="card"><h2>こんな質問が出ます（${p.n}問）</h2><p class="note">答えは、アプリの中で。口で聞くと相手に合わせた答えになりがちですが、別々に答えると本音が見えます。</p>
+${groups.map(g => `<h3>${esc(g.c)}編</h3><ul class="ql">${g.is.map(i => `<li>${esc(Q[i].q)}</li>`).join('')}</ul>`).join('\n')}
+${cta}</section>
 <section class="card"><h2>答え合わせのしかた</h2><ol class="steps">
  <li>「この質問で、2人で答え合わせ」を押して、まず自分が答えます。</li>
  <li>結果の画面の「LINEで答え合わせに誘う」で、相手にリンクを送ります。</li>
  <li>相手が同じ質問に答えると、2人のシンクロ率・重なったところ・話しておきたいこと・歩み寄りの案がわかります。結果はあなたにも届きます。</li></ol>
  ${cta}</section>
 ${others(p.slug)}
-<script>window.TRY_CFG={p:${JSON.stringify(window.ISYNC_FB.projectId)},k:${JSON.stringify(window.ISYNC_FB.apiKey)}};${TRYJS}
-(function(){var K='isync_ck_${p.slug}',s={};try{s=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}var bs=document.querySelectorAll('.ck input'),n=document.getElementById('cknum');
-function up(){var c=0;bs.forEach(function(b){if(b.checked)c++});n.textContent=c?('チェックした質問：'+c+'／'+bs.length):''}
-bs.forEach(function(b){b.checked=!!s[b.dataset.k];b.onchange=function(){s[b.dataset.k]=b.checked?1:0;try{localStorage.setItem(K,JSON.stringify(s))}catch(e){}up()}});up()})();</script>
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
 ` + foot;
   fs.mkdirSync(path.join(D, p.slug), { recursive: true });
