@@ -188,7 +188,7 @@ PAGES.forEach(p => {
  ${same.map((i, n) => { const x = Q[i]; return `<li><span class="sq">${esc(x.q)}</span><span class="sa ok">2人とも「${esc(ans(x, n % 2))}」</span></li>`; }).join('')}
  ${adj.map(i => { const x = Q[i]; return `<li><span class="sq">${esc(x.q)}</span><span class="sa ad">あなた「${esc(x.a)}」／あの人「${esc(x.c)}」＝合わせられる</span></li>`; }).join('')}</ul>
  <h3 class="g-ng">ずれたところ</h3><ul class="sl">
- ${dif.map(i => { const x = Q[i]; return `<li><span class="sq">${esc(x.q)}</span><span class="sa ng">あなた「${esc(x.a)}」／あの人「${esc(x.b)}」</span><span class="ayt"><b>歩み寄りの案</b>${esc(AY[x.q])}</span></li>`; }).join('')}</ul>
+ ${dif.map((i, n) => { const x = Q[i]; return `<li><span class="sq">${esc(x.q)}</span><span class="sa ng">あなた「${esc(x.a)}」／あの人「${esc(x.b)}」</span>${n ? '' : `<span class="ayt"><b>歩み寄りの案</b>${esc(AY[x.q])}</span>`}</li>`; }).join('')}</ul>
  <p class="smp-q"><b>あなたとあの人は、どこが合って、どこがずれる？</b>同じ質問に別々に答えると、わかります。</p>
  ${cta}</section>
 ${STRONG}
