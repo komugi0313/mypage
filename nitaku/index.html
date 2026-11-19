@@ -1545,9 +1545,11 @@ function balanceAxes(mode, pick, groups, seenSet, recent){
 function kimoEnsure(mode, pick, groups, seenSet, recent){
   if(pick.length<4) return;
   // 恋愛編＝気持ちの出し方（15問に3問）／ふつう編＝決め方・元気の出し方（15問にそれぞれ2問）
-  var sets = mode==='love' ? [[KIMO.love, pick.length>=8?3:2]] : (mode==='normal' ? [[NHINT.kime, pick.length>=8?2:1],[NHINT.genki, pick.length>=8?2:1]] : []);
-  var keep=function(q){ return sets.some(function(st){ return !!st[0][q.id]; }); };
-  sets.forEach(function(st){ kimoEnsureOne(mode, pick, groups, seenSet, recent, st[0], st[1], keep); });
+  // 恋愛編は「あなたの許せるライン」の問題も入れる（15問に2問・8問に1問。同じ難しさにこの問題が6問より少ないとき〈イージー〉は入れかえない＝同じ問題ばかりになるため）
+  var yN=((groups[0]||[]).filter(function(q){ return YURUSU[q.id]!=null; }).length>=6) ? (pick.length>=15?2:1) : 0;
+  var sets = mode==='love' ? [[KIMO.love, pick.length>=8?3:2]].concat(yN?[[YURUSU, yN]]:[]) : (mode==='normal' ? [[NHINT.kime, pick.length>=8?2:1],[NHINT.genki, pick.length>=8?2:1]] : []);
+  // 外さない問題は、それまでに入れた見方の問題だけ（後から入れる許せるラインの問題が、気持ちの出し方の入れかえをじゃましないように）
+  sets.forEach(function(st,si){ var keep=function(q){ return sets.slice(0,si+1).some(function(x){ return !!x[0][q.id]; }); }; kimoEnsureOne(mode, pick, groups, seenSet, recent, st[0], st[1], keep); });
 }
 function kimoEnsureOne(mode, pick, groups, seenSet, recent, MAP, need, keep){
   var th=pick.length>=8?4:1;
