@@ -164,15 +164,16 @@ service cloud.firestore {
         && request.resource.data.host is string && request.resource.data.host.size() <= 32;
       allow delete: if false;
 
-      // 部屋に入った人（ニックネームと、診断が終わった人のタイプ4文字だけ。答え・恋の状況は入れない）
+      // 部屋に入った人（ニックネームと、診断が終わった人のタイプ4文字と愛着スタイルの1文字〈s・p・d・f〉だけ。答え・恋の状況・心のゆれやすさの数字は入れない）
       match /players/{pid} {
         allow read: if code.matches('^[0-9]{4}$');
         allow create, update: if code.matches('^[0-9]{4}$') && pid.size() <= 32
-          && request.resource.data.keys().hasOnly(['name','code','done','joined','rc','expireAt'])
+          && request.resource.data.keys().hasOnly(['name','code','done','joined','rc','ak','expireAt'])
           && request.resource.data.name is string && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 8
           && request.resource.data.code is string && request.resource.data.code.matches('^([LR][VA][TS][PC])?$')
           && request.resource.data.done is bool
-          && request.resource.data.joined is int && request.resource.data.rc is int;
+          && request.resource.data.joined is int && request.resource.data.rc is int
+          && (!('ak' in request.resource.data) || (request.resource.data.ak is string && request.resource.data.ak.matches('^[spdf]?$')));
         allow delete: if code.matches('^[0-9]{4}$');
       }
     }
