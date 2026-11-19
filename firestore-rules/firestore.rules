@@ -1,0 +1,181 @@
+rules_version = '2';
+// このファイルは tools/build_firestore_rules.py が作る。直すときは各サイトの firestore.rules を直して、もう一度作る。
+// main に入ると GitHub Actions が Firebase に自動で公開する（Firebase の画面で直接書きかえない。次の公開で消えてしまう）。
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- 究極の二択（nitaku/firestore.rules）----------
+    // みんなで遊ぶ部屋（4けたの部屋番号。12時間で消す＝expireAt に TTL を設定）
+    match /nitaku_rooms/{code} {
+      allow read: if code.matches('^[0-9]{4}$');
+      allow create, update: if code.matches('^[0-9]{4}$')
+        && request.resource.data.keys().hasOnly(['code','host','mode','lv','num','mix','round','qs','phase','qi','used','created','expireAt'])
+        && request.resource.data.code == code
+        && request.resource.data.qs.size() <= 15;
+      allow delete: if false;
+
+      // 部屋に入った人（名前と答えだけ）
+      match /players/{pid} {
+        allow read: if code.matches('^[0-9]{4}$');
+        allow create, update: if pid.size() <= 64
+          && request.resource.data.keys().hasOnly(['name','joined','ans','times','mine','expireAt'])
+          && request.resource.data.name is string && request.resource.data.name.size() <= 20;
+        allow delete: if true;
+      }
+    }
+
+    // みんなの回答％（問題ごとに a・b の数だけ。1回に1つずつしか増やせない）
+    match /nitaku_votes/{qid} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['a','b'])
+        && ((request.resource.data.a == 1 && request.resource.data.b == 0)
+         || (request.resource.data.a == 0 && request.resource.data.b == 1));
+      allow update: if request.resource.data.keys().hasOnly(['a','b'])
+        && ((request.resource.data.a == resource.data.a + 1 && request.resource.data.b == resource.data.b)
+         || (request.resource.data.b == resource.data.b + 1 && request.resource.data.a == resource.data.a));
+      allow delete: if false;
+    }
+
+    // 1つの項目を1だけ増やす書きこみか（ほかの項目は変えない・消さない・名前などは入れられない）
+    function nitakuUp1(k) {
+      return request.resource.data.get(k, 0) == resource.data.get(k, 0)
+        || request.resource.data.get(k, 0) == resource.data.get(k, 0) + 1;
+    }
+    function nitakuNew1(keys) {
+      return request.resource.data.size() == 1 && request.resource.data.keys().hasOnly(keys)
+        && request.resource.data.values()[0] == 1;
+    }
+    function nitakuPlaysUp() {
+      return request.resource.data.keys().hasOnly(['solo_love_easy','solo_love_normal','solo_love_hard','solo_love_mix','solo_love_x','solo_normal_easy','solo_normal_normal','solo_normal_hard','solo_normal_mix','solo_normal_x','solo_hon_easy','solo_hon_normal','solo_hon_hard','solo_hon_mix','solo_hon_x','room_love_easy','room_love_normal','room_love_hard','room_love_mix','room_love_x','room_normal_easy','room_normal_normal','room_normal_hard','room_normal_mix','room_normal_x','room_hon_easy','room_hon_normal','room_hon_hard','room_hon_mix','room_hon_x'])
+        && request.resource.data.diff(resource.data).affectedKeys().size() == 1
+        && resource.data.keys().hasOnly(request.resource.data.keys()) &&
+        nitakuUp1('solo_love_easy') && nitakuUp1('solo_love_normal') && nitakuUp1('solo_love_hard') &&
+        nitakuUp1('solo_love_mix') && nitakuUp1('solo_love_x') && nitakuUp1('solo_normal_easy') &&
+        nitakuUp1('solo_normal_normal') && nitakuUp1('solo_normal_hard') && nitakuUp1('solo_normal_mix') &&
+        nitakuUp1('solo_normal_x') && nitakuUp1('solo_hon_easy') && nitakuUp1('solo_hon_normal') &&
+        nitakuUp1('solo_hon_hard') && nitakuUp1('solo_hon_mix') && nitakuUp1('solo_hon_x') &&
+        nitakuUp1('room_love_easy') && nitakuUp1('room_love_normal') && nitakuUp1('room_love_hard') &&
+        nitakuUp1('room_love_mix') && nitakuUp1('room_love_x') && nitakuUp1('room_normal_easy') &&
+        nitakuUp1('room_normal_normal') && nitakuUp1('room_normal_hard') && nitakuUp1('room_normal_mix') &&
+        nitakuUp1('room_normal_x') && nitakuUp1('room_hon_easy') && nitakuUp1('room_hon_normal') &&
+        nitakuUp1('room_hon_hard') && nitakuUp1('room_hon_mix') && nitakuUp1('room_hon_x');
+    }
+    function nitakuHistUp() {
+      return request.resource.data.keys().hasOnly(['b0','b1','b2','b3','b4','b5','b6','b7','b8','b9','b10','b11','b12','b13','b14','b15','b16','b17','b18','b19','b20'])
+        && request.resource.data.diff(resource.data).affectedKeys().size() == 1
+        && resource.data.keys().hasOnly(request.resource.data.keys()) &&
+        nitakuUp1('b0') && nitakuUp1('b1') && nitakuUp1('b2') && nitakuUp1('b3') && nitakuUp1('b4') &&
+        nitakuUp1('b5') && nitakuUp1('b6') && nitakuUp1('b7') && nitakuUp1('b8') && nitakuUp1('b9') &&
+        nitakuUp1('b10') && nitakuUp1('b11') && nitakuUp1('b12') && nitakuUp1('b13') && nitakuUp1('b14') &&
+        nitakuUp1('b15') && nitakuUp1('b16') && nitakuUp1('b17') && nitakuUp1('b18') && nitakuUp1('b19') &&
+        nitakuUp1('b20');
+    }
+
+    // 遊んだ回数（ひとりで／部屋 × 編 × 難しさ の数だけ。2026-11-17）
+    match /nitaku_stats/{id} {
+      allow read: if true;
+      allow create: if id == 'plays' && nitakuNew1(['solo_love_easy','solo_love_normal','solo_love_hard','solo_love_mix','solo_love_x','solo_normal_easy','solo_normal_normal','solo_normal_hard','solo_normal_mix','solo_normal_x','solo_hon_easy','solo_hon_normal','solo_hon_hard','solo_hon_mix','solo_hon_x','room_love_easy','room_love_normal','room_love_hard','room_love_mix','room_love_x','room_normal_easy','room_normal_normal','room_normal_hard','room_normal_mix','room_normal_x','room_hon_easy','room_hon_normal','room_hon_hard','room_hon_mix','room_hon_x']);
+      allow update: if id == 'plays' && nitakuPlaysUp();
+      // わたしの結果を開いた回数（list・last・entry を1つずつ増やすだけ）
+      allow create: if id == 'mine' && nitakuNew1(['list','last','entry']);
+      allow update: if id == 'mine' && request.resource.data.keys().hasOnly(['list','last','entry'])
+        && request.resource.data.diff(resource.data).affectedKeys().size() == 1
+        && resource.data.keys().hasOnly(request.resource.data.keys())
+        && nitakuUp1('list') && nitakuUp1('last') && nitakuUp1('entry');
+      allow delete: if false;
+    }
+
+    // 4つの％の分布（編と％ごとに、5%きざみの21の数だけ。名前・答えは入れない。2026-11-17）
+    match /nitaku_hist/{id} {
+      allow read: if true;
+      allow create: if id.matches('^(love_[KRSA]|normal_[BYMN])$') && nitakuNew1(['b0','b1','b2','b3','b4','b5','b6','b7','b8','b9','b10','b11','b12','b13','b14','b15','b16','b17','b18','b19','b20']);
+      allow update: if id.matches('^(love_[KRSA]|normal_[BYMN])$') && nitakuHistUp();
+      allow delete: if false;
+    }
+  
+
+    // ---------- アイ・シンク（isync/firestore.rules）----------
+    // みんなのスマホで遊ぶ部屋（4けたの部屋番号。12時間で消す＝expireAt に TTL を設定）
+    match /isync_rooms/{code} {
+      allow read: if code.matches('^[0-9]{4}$');
+      allow create, update: if code.matches('^[0-9]{4}$')
+        && request.resource.data.keys().hasOnly(['created','round','phase','qi','qs','len','topic','anon','kind','host','expireAt'])
+        && request.resource.data.qs is list && request.resource.data.qs.size() <= 30
+        && request.resource.data.phase in ['lobby','play','result'];
+      allow delete: if false;
+
+      // 部屋に入った人（ニックネームと答え。婚活・街コンの部屋では、番号・性別・合う人に出してほしい人・名前を見せてもいい相手・見せる名前）
+      match /players/{pid} {
+        allow read: if code.matches('^[0-9]{4}$');
+        allow create, update: if pid.size() <= 64
+          && request.resource.data.keys().hasOnly(['name','ans','round','joined','ready','no','sex','want','reveal','rname','expireAt'])
+          && request.resource.data.name is string && request.resource.data.name.size() <= 20
+          && request.resource.data.ans is map && request.resource.data.ans.size() <= 30
+          && (!('no' in request.resource.data) || (request.resource.data.no is string && request.resource.data.no.size() <= 3))
+          && (!('sex' in request.resource.data) || request.resource.data.sex in ['m','f','x'])
+          && (!('want' in request.resource.data) || request.resource.data.want in ['m','f','a'])
+          && (!('reveal' in request.resource.data) || (request.resource.data.reveal is map && request.resource.data.reveal.size() <= 40))
+          && (!('rname' in request.resource.data) || (request.resource.data.rname is string && request.resource.data.rname.size() <= 20));
+        allow delete: if true;
+      }
+    }
+    // みんなの答え（問題ごとに、答えA＝a・答えB＝b・3つ目＝c の数だけ。1回に1つずつしか増やせない・減らせない・消せない。名前は入れない）
+    match /isync_votes/{qid} {
+      function cnt(d, k) { return d.get(k, 0); }
+      function total(d) { return cnt(d, 'a') + cnt(d, 'b') + cnt(d, 'c'); }
+      allow read: if qid.matches('^q[0-9a-z]{1,8}$');
+      allow create: if qid.matches('^q[0-9a-z]{1,8}$')
+        && request.resource.data.keys().hasOnly(['a','b','c'])
+        && total(request.resource.data) == 1
+        && cnt(request.resource.data, 'a') >= 0 && cnt(request.resource.data, 'b') >= 0 && cnt(request.resource.data, 'c') >= 0;
+      allow update: if request.resource.data.keys().hasOnly(['a','b','c'])
+        && total(request.resource.data) == total(resource.data) + 1
+        && cnt(request.resource.data, 'a') >= cnt(resource.data, 'a')
+        && cnt(request.resource.data, 'b') >= cnt(resource.data, 'b')
+        && cnt(request.resource.data, 'c') >= cnt(resource.data, 'c');
+      allow delete: if false;
+    }
+    // 答え合わせが届く（答え合わせのリンクに答えた人の、ニックネームと答えだけ。30日で消す＝expireAt。書きかえ不可。消せるのは30日すぎたものだけ）
+    match /isync_inbox/{id}/r/{rid} {
+      allow read: if id.matches('^[0-9a-z]{12}$');
+      allow create: if id.matches('^[0-9a-z]{12}$') && rid.matches('^[0-9a-z]{10}$')
+        && request.resource.data.keys().hasOnly(['name','codes','at','expireAt'])
+        && request.resource.data.keys().hasAll(['name','codes','at','expireAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() <= 10
+        && request.resource.data.codes is string && request.resource.data.codes.size() <= 30
+        && request.resource.data.codes.matches('^[0-5u-]+$')
+        && request.resource.data.at is int
+        && request.resource.data.expireAt is timestamp
+        && request.resource.data.expireAt <= request.time + duration.value(31, 'd');
+      allow update: if false;
+      allow delete: if resource.data.expireAt < request.time;
+    }
+  
+
+    // ---------- 恋のかたち診断（koi16/firestore.rules）----------
+    // みんなで一斉に診断の部屋（4けたの部屋番号。作ってから12時間で使えなくなる）
+    match /koi16_rooms/{code} {
+      allow read: if code.matches('^[0-9]{4}$');
+      allow create, update: if code.matches('^[0-9]{4}$')
+        && request.resource.data.keys().hasOnly(['created','phase','mode','host','expireAt'])
+        && request.resource.data.created is int
+        && request.resource.data.phase in ['lobby','play']
+        && request.resource.data.mode in ['quick','full']
+        && request.resource.data.host is string && request.resource.data.host.size() <= 32;
+      allow delete: if false;
+
+      // 部屋に入った人（ニックネームと、診断が終わった人のタイプ4文字だけ。答え・恋の状況は入れない）
+      match /players/{pid} {
+        allow read: if code.matches('^[0-9]{4}$');
+        allow create, update: if code.matches('^[0-9]{4}$') && pid.size() <= 32
+          && request.resource.data.keys().hasOnly(['name','code','done','joined','rc','expireAt'])
+          && request.resource.data.name is string && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 8
+          && request.resource.data.code is string && request.resource.data.code.matches('^([LR][VA][TS][PC])?$')
+          && request.resource.data.done is bool
+          && request.resource.data.joined is int && request.resource.data.rc is int;
+        allow delete: if code.matches('^[0-9]{4}$');
+      }
+    }
+  
+  }
+}
