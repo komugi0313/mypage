@@ -7,7 +7,8 @@ A=json.load(open(os.path.join(H,'akc_traits.json')))['breeds']
 IDS=list(A.keys())
 AK=['affectionate','children','otherDogs','strangers','playfulness','protective','adaptability','trainability','energy','barking','mental']
 # 研究の因子 → このサイトの性格（向きをそろえる：大きいほど左の言葉）
-RES={'social':('F1',1),'dogs':('F6',1),'curious':('F7',-1),'energy':('F2',-1),'clingy':('F8',-1),'toys':('F3',-1),'learn':('F4',-1)}
+# 好奇心は因子7（まわりへの関心）を使わない：中身が「ぼんやりする・壁を見つめる」など老いのようすの質問のため。下で好奇心の質問から出す
+RES={'social':('F1',1),'dogs':('F6',1),'energy':('F2',-1),'clingy':('F8',-1),'toys':('F3',-1),'learn':('F4',-1)}
 def lstsq(X,y):
     # 正規方程式（小さいので手で解く）＋少しのリッジ
     n=len(X[0]);XtX=[[sum(r[i]*r[j] for r in X)+(0.5 if i==j and i>0 else 0) for j in range(n)] for i in range(n)];Xty=[sum(r[i]*t for r,t in zip(X,y)) for i in range(n)]
@@ -42,6 +43,21 @@ wc=lstsq([[1]+[A[i]['traits'][k] for k in AK] for i in hc],[cres[i] for i in hc]
 for i in IDS:
     if i in cres:raw[i]['calm']=cres[i];how[i]['calm']='研究（こわがり・自信の質問8つ）'
     else:raw[i]['calm']=sum(a*b for a,b in zip(wc,[1]+[A[i]['traits'][k] for k in AK]));how[i]['calm']='研究にないためAKCから推定'
+# 好奇心：研究の質問「好奇心がある」「新しいものへの興味がなかなか冷めない」（犬種ごとの「はい」の割合）から出す
+# （「新しいものに興味をもち、すぐなじむ」は度胸で使っているので、2回数えないよう入れない）
+CUR_Q=['106','89']
+ust={}
+for k in CUR_Q:
+    xs=[QB[b][k]['yes'] for b in QB if k in QB[b] and QB[b][k]['n']>=15];m=sum(xs)/len(xs);ust[k]=(m,math.sqrt(sum((x-m)**2 for x in xs)/len(xs)))
+ures={}
+for b in IDS:
+    ks=[k for k in CUR_Q if b in QB and k in QB[b] and QB[b][k]['n']>=15]
+    if len(ks)==2:ures[b]=sum((QB[b][k]['yes']-ust[k][0])/ust[k][1] for k in ks)/2
+hu=[i for i in IDS if i in ures]
+wu=lstsq([[1]+[A[i]['traits'][k] for k in AK] for i in hu],[ures[i] for i in hu])
+for i in IDS:
+    if i in ures:raw[i]['curious']=ures[i];how[i]['curious']='研究（好奇心の質問2つ）'
+    else:raw[i]['curious']=sum(a*b for a,b in zip(wu,[1]+[A[i]['traits'][k] for k in AK]));how[i]['curious']='研究にないためAKCから推定'
 # おしゃべり：AKCの「よくほえるか」と、研究の声の質問3つ（遠吠え・ウォーウォー鳴く・クンクン鳴いて甘える）を半分ずつ
 BARK_Q=['17','18','20']
 bst={}
