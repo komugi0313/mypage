@@ -67,6 +67,11 @@ ok('開いただけでは文章作成を呼ばない', calls===0, 'calls='+calls
   ok('UX②：易の「新しい鑑定」は「同じお客様のまま、別の相談を占う」（次のお客様へとの違いが分かる名前）', /btn_newReading:'同じお客様のまま、別の相談を占う'/.test(s)&&!/>新しい鑑定をする</.test(s));
   ok('UX②：易のスマホの結果は屋号とタブを貼りつけない', /html\.eki-resv \.topbar,html\.eki-resv \.tabs\{position:static!important\}/.test(s));
   ok('UX②：見えやすさの安全装置は、押せないときの色で直した字を、押せるようになったら戻す', /attributeName==='disabled'\) reset\(/.test(g)&&/'disabled','data-theme'/.test(g)); }
+{ const s=fs.readFileSync(path.join(ROOT,'eki-pro','app','index.html'),'utf8');   // UX点検③（2026-11-19）
+  ok('UX③：易のスマホの目次の帯は1段（答え・次のお客様へ・すぐ答え・☰ 目次）', /id="rtMore"/.test(s)&&/#resToc:not\(\.rt-open\)>button\[data-go\]:not\(\[data-go="verdictCard"\]\)\{display:none!important\}/.test(s));
+  ok('UX③：易の「LINEで送る」はパソコンではコピー＋「LINEに貼りつけてください」の知らせ', /if\(navigator\.share&&!_desk\)/.test(s)&&/文章をコピーしました。LINEに貼りつけてください/.test(s));
+  ok('UX③：易の1行目「〜する動向は」のくずれは相談の言葉に直す', /する動向\(\?=は\|を\|が\|に\)/.test(s));
+  ok('UX③：易は時間切れ・回数の記録の混み合いでも、もう1回だけためす', /e&&e\.name==='AbortError'&&navigator\.onLine===false/.test(s)&&/code==='STORE'&&busyTry<1/.test(s)); }
 { const s=fs.readFileSync(path.join(ROOT,'eki-pro','app','index.html'),'utf8'); ok('坤為地の上爻（龍戦于野）は✖（鑑定者本人の判断 2026-10-30）', /var KO_RANK_FIX=\{[^}]*'2-6':'E'/.test(s)&&/return KO_RANK_FIX\[hx\.no\+'-'\+k\]\|\|koAdjustRank\(/.test(s)); }
 { /* 2026-11-14 実地の点検で直したもの：頼み方の注記・「続けるべきか」・ちがいの書かれていないA社B社・金運の時期・近い日の試験・今は「今は…」・要点メモの「・」 */
   const r=await p.evaluate(()=>{ const F=window.__ekiFix; if(!F) return {bad:['点検用の __ekiFix がない']}; const bad=[];
