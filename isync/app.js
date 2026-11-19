@@ -202,6 +202,7 @@ function goTop(){
   <section class="card themes"><p class="label">テーマ別の質問</p>
     <ul class="tlinks">${(window.SY_PAGES||[]).map(p=>`<li><a href="${p.slug}/">${esc(p.h1)}</a></li>`).join('')}</ul></section>
   ${PROMO}
+  <a class="koi-ai" href="https://koikata.jp/aichaku/" target="_blank" rel="noopener" aria-label="愛着スタイル診断（恋のかたち診断・別のサイト koikata.jp が開きます）"><span class="ka-h" aria-hidden="true"><img src="img/koi-fear.webp" alt="" width="30" height="30" loading="lazy"><img src="img/koi-secure.webp" alt="" width="30" height="30" loading="lazy"><img src="img/koi-preoc.webp" alt="" width="30" height="30" loading="lazy"></span><span class="ka-t"><b><span class="nw">恋のくせを知るなら、</span><span class="nw">愛着スタイル診断</span></b><small><span class="nw">恋のかたち診断・</span><span class="nw">無料4分</span></small></span><span class="ka-a" aria-hidden="true">↗</span></a>
   <p class="note">どの問題にも正解はありません。どちらでもいいときは、3つ目の答え（「どっちでも合わせられる」「どっちも好き」など）を選んでください。</p>
   <p class="credit" data-nocg>アイ・シンク（I-Sync）<br>Produced by Mizuki Nico</p>`);
   const DESC={kon:'最大40人。番号だけで参加して、名前を出さずに一斉に20問。終わると、自分と合う人が、自分のスマホにだけ出ます。',each:'2〜10人で。1人が部屋を作り、そばにいる人はQRコードを読みとるだけで参加できます。離れている人には、LINEなどでリンクを送ります。',solo:'自分の答えから、あなたのこだわりと、ゆずれることがわかります。'};
