@@ -924,7 +924,7 @@ function drawResult(c,G){
 /* ===== みんなのスマホで（部屋・10人まで） ===== */
 const ART_URL='https://claude.ai/artifact/AdtUnSrAdJDGECVQmtHSht';  // 確認用ページ（claude.ai）のときだけQRの行き先にする
 let WHERE='';  // 'claude'＝確認用ページ／'firebase'＝公開先
-const PID=store('kv_pid')||(()=>{const p='p'+Math.random().toString(36).slice(2,10);store('kv_pid',p);return p})();
+let PID=store('kv_pid')||(()=>{const p='p'+Math.random().toString(36).slice(2,10);store('kv_pid',p);return p})();
 const R={code:null,room:undefined,players:{},un:[],key:'',seen:{},adv:{},tick:null,my:null,poll:null};
 let dbP=null;
 function getDb(){if(!dbP)dbP=(async()=>{
@@ -1036,7 +1036,7 @@ async function joinKon(code,f){
     enterRoom(code);return 'ok';
   }catch(e){return '参加できませんでした。この画面では書きこみが許可されていないかもしれません。'}
 }
-async function joinRoom(code,name){
+async function joinRoom(code,name,force){
   const db=await getDb();if(!db)return NO_DB;
   try{
     const rs=await db.doc('rooms/'+code).get();
@@ -1046,6 +1046,9 @@ async function joinRoom(code,name){
     if(room.kind==='kon'&&!ps.docs.some(d=>d.id===PID)){joinFromLink(code);return 'ok'}
     if(!ps.docs.some(d=>d.id===PID)){
       if(!name)return 'ニックネームを入れてください';
+      // 同じ名前の人がもういる＝部屋を作った人が、自分で送ったLINEのリンクを開いたことが多い（LINEの中の画面は別のブラウザあつかい）
+      const sm=!force&&ps.docs.find(d=>String((d.data()||{}).name||'').trim()===String(name).trim());
+      if(sm){sameAsk(code,name,sm.id,(sm.data()||{}).name);return 'ok'}
       if(ps.docs.length>=MAXP)return 'この部屋は、もう'+MAXP+'人そろっています。';
       await db.doc(pPath(code,PID)).set({name,ans:{},round:room.round||1,joined:Date.now(),ready:true});
     }
@@ -1252,6 +1255,22 @@ async function joinFromLink(code){
   const submit=e=>{if(e)e.preventDefault();const v=inp.value.trim();if(v)store('kv_name',v);$('jn-go').disabled=true;go(v||('ゲスト'+(ps.length+1)))};
   $('jn-go').onclick=submit;inp.onkeydown=e=>{if(e.key==='Enter')submit(e)};
 }
+// 同じ名前の人がいるとき：「あなた自身ですか？」→ はい＝その人として続ける／ちがう人＝別の名前で入る（鑑定者本人 2026-11-19「作った人がLINEのリンクから入ると3人になる」）
+function sameAsk(code,name,id,shown){
+  view(`<section class="card hand"><img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
+    <p class="big">「${esc(shown||name)}」さんは、もうこの部屋にいます</p>
+    <p class="hint">部屋を作った人が、自分で送ったリンクを開いたときなどに出ます。あなた自身ですか？</p>
+    <button class="btn" id="sm-yes" style="align-self:stretch">はい、自分です（この画面で続ける）</button>
+    <button class="btn ghost" id="sm-no" style="align-self:stretch">ちがう人です（別の名前で入る）</button></section>`);
+  $('sm-yes').onclick=()=>{PID=id;store('kv_pid',id);store('kv_name',shown||name);enterRoom(code)};
+  $('sm-no').onclick=()=>{
+    view(`<section class="card hand"><p class="big">別のニックネームで入る</p><p class="hint">同じ名前の人がいるので、ちがうニックネームにしてください。</p>
+      <label class="one-name" for="sm-name" style="align-self:stretch;text-align:left"><span>ニックネーム</span><input type="text" id="sm-name" maxlength="10" autocomplete="nickname"></label>
+      <p class="err" id="sm-err" role="alert"></p><button class="btn" id="sm-go" style="align-self:stretch">参加する</button></section>`);
+    const inp=$('sm-name'),go=async e=>{if(e)e.preventDefault();const v=inp.value.trim();if(!v){$('sm-err').textContent='ニックネームを入れてください';return}
+      if(v===String(shown||name).trim()){$('sm-err').textContent='同じ名前の人がいます。少し変えてください（例：'+esc(v)+'2）';return}
+      store('kv_name',v);$('sm-go').disabled=true;const r=await joinRoom(code,v);if(r!=='ok'){$('sm-err').textContent=r;$('sm-go').disabled=false}};
+    $('sm-go').onclick=go;inp.onkeydown=e=>{if(e.key==='Enter')go(e)};try{inp.focus()}catch(e){}}}
 /* 画面の下に、短いお知らせを出す（数秒で消える） */
 function toast(t){let el=$('toast');if(!el){el=document.createElement('div');el.id='toast';el.setAttribute('role','status');el.setAttribute('data-nojw','');document.body.appendChild(el)}
   el.textContent=t;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),2600)}

@@ -4001,7 +4001,14 @@ async function roomDoJoin(useMine){
   var nm=gName($('r-jname').value);
   if(!nm){ rNote('r-jnote','ニックネームを入れてください',true); return; }
   var ps=rPlayers(), id=rPid();
-  if(ps.some(function(p){ return p.name===nm&&p.id!==id; })){ rNote('r-jnote','同じニックネームの人がいます。少し変えてください',true); return; }
+  var same=ps.filter(function(p){ return p.name===nm&&p.id!==id; })[0];
+  if(same){
+    // 同じ名前の人がもういる＝部屋を作った人が、自分で送ったLINEのリンクを開いたことが多い（LINEの中の画面は別のブラウザあつかい。鑑定者本人 2026-11-19）
+    RM.same=same; var el=$('r-jnote'); if(el){ el.className='rnote warn';
+      el.innerHTML='「'+esc(nm)+'」さんは、もうこの部屋にいます'+(RM.room&&RM.room.host===same.id?'（部屋を作った人）':'')+'。あなた自身ですか？'+
+      '<button class="btn btn-main btn-wide" type="button" data-act="room-same-yes" style="margin-top:10px">はい、自分です（この画面で続ける）</button>'+
+      '<button class="linkbtn" type="button" data-act="room-same-no" style="display:block;margin:10px auto 0;min-height:44px">ちがう人です（名前を変える）</button>'; }
+    return; }
   if(ps.length>=ROOM_MAX&&!rMe()){ rNote('r-jnote','この部屋はいっぱいです（8人まで）',true); return; }
   st.nick=nm; save(st);
   var bt=$('r-join'); if(bt){ bt.disabled=true; bt.textContent='参加しています…'; }
@@ -4190,6 +4197,8 @@ document.addEventListener('click',function(e){
   else if(act==='room-mode'){ RM.mode=b.getAttribute('data-m')==='full'?'full':'quick'; Array.prototype.forEach.call(document.querySelectorAll('.rseg button'),function(x){ var on=x.getAttribute('data-m')===RM.mode; x.classList.toggle('on',on); x.setAttribute('aria-pressed',on); }); }
   else if(act==='room-create'){ roomDoCreate(); }
   else if(act==='room-join'){ roomDoJoin(false); }
+  else if(act==='room-same-yes'){ var sm=RM.same; if(sm){ st.pid=sm.id; st.nick=sm.name; save(st); RM.same=null; RM.sig=''; roomUpdate(); } }
+  else if(act==='room-same-no'){ RM.same=null; rNote('r-jnote','同じ名前の人がいるので、少し変えてください（例：'+gName($('r-jname').value)+'2）',true); var ji=$('r-jname'); if(ji){ ji.value=''; ji.focus(); } }
   else if(act==='room-join-mine'){ roomDoJoin(true); }
   else if(act==='room-start'){ roomDoStart(); }
   else if(act==='room-leave'){ roomLeave(); }
