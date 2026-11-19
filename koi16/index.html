@@ -147,6 +147,9 @@ h3.whoh{font-size:16px;margin:18px 0 10px}
 .rmem{list-style:none;display:flex;flex-wrap:wrap;gap:6px;padding:0;margin:0 0 14px}
 .rmem li{display:flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;font-weight:700;font-size:15px;color:var(--ink)}
 .rmem small{font-weight:500;color:var(--sub);font-size:13px}.rmem .rdone{color:#1F6B4F}
+.rmem .rkick{min-width:44px;min-height:44px;margin:-10px -12px -10px 0;border:0;background:none;color:var(--sub);font-size:18px;font-weight:700;cursor:pointer}
+.rsame{margin-top:12px;padding:12px;border-radius:12px;background:#FFF6D8;border:1px solid #E9D38C}.rsame p{margin:0 0 6px}
+.rline-back{margin:10px 0 0;padding:8px 10px;border-radius:10px;background:#F6F0EA;font-size:14px}
 .rcode{font-size:15px;color:var(--ink)!important}.rcode b{font-size:22px;letter-spacing:.12em}
 .rnote{margin:8px 0 0;padding:8px 12px;border-radius:12px;background:#FFF7E0;border:1px solid #F0D48A;color:#5A4200;font-size:14px}
 .rnote.warn{background:#FFF0F5;border-color:#E8A7C0;color:#8A1246}
@@ -3852,7 +3855,7 @@ function rVal(v){ if(!v) return null; if('integerValue' in v) return +v.integerV
 function rFields(d){ var o={}, f=(d&&d.fields)||{}; for(var k in f) o[k]=rVal(f[k]); return o; }
 // 自分が書いたばかりの中身は、届いた古い中身より優先する（診断が終わったのに、また問題が始まらないように）
 function rApplyMine(){ var m=RM.mine; if(!m) return; var id=rPid(), x=RM.ps.filter(function(p){ return p.id===id; })[0];
-  if(!x) RM.ps.push(Object.assign({id:id},m)); else if((m.done&&!x.done)||(m.name&&!x.name)) Object.assign(x,m); }
+  if(!x){ if(Date.now()-(RM.mineAt||0)>20000){ RM.mine=null; return; } /* 書いてから20秒たっても部屋にいなければ、外された（または消えた）とみなす */ RM.ps.push(Object.assign({id:id},m)); } else if((m.done&&!x.done)||(m.name&&!x.name)) Object.assign(x,m); }
 async function roomPullRest(){
   var c=RM.code; if(!c||!(window.KOI16_FB&&KOI16_FB.projectId)) return false;
   RM.lastPull=Date.now();
@@ -3939,9 +3942,16 @@ function roomRender(kind){
   if(same&&!$('v-room').classList.contains('hidden')) window.scrollTo(0,y); else show('v-room');
   RM.view=kind; RM.sig=sig;
 }
-function rMembers(ps,host,me,showDone){
-  return '<ul class="rmem">'+ps.map(function(p){ return '<li><span class="nw">'+esc(p.name)+'</span>'+(p.id===host?'<span class="rcrown" aria-label="部屋を作った人">👑</span>':'')+(me&&p.id===me.id?'<small>（あなた）</small>':'')+(showDone&&p.done?'<small class="rdone">結果あり</small>':'')+'</li>'; }).join('')+'</ul>';
+function rMembers(ps,host,me,showDone,kick){
+  return '<ul class="rmem">'+ps.map(function(p){ return '<li><span class="nw">'+esc(p.name)+'</span>'+(p.id===host?'<span class="rcrown" aria-label="部屋を作った人">👑</span>':'')+(me&&p.id===me.id?'<small>（あなた）</small>':'')+(showDone&&p.done?'<small class="rdone">結果あり</small>':'')+(kick&&p.id!==host?'<button class="rkick" type="button" data-act="room-kick" data-id="'+esc(p.id)+'" aria-label="'+esc(p.name)+'さんを部屋から外す">×</button>':'')+'</li>'; }).join('')+'</ul>';
 }
+function rRestDel(path){ var cfg=window.KOI16_FB||{}; return rTO(fetch(rRestBase()+path+'?key='+encodeURIComponent(cfg.apiKey||''),{method:'DELETE'}).then(function(r){ if(!r.ok&&r.status!==404) throw new Error('rest '+r.status); return true; }),12000); }
+async function roomKick(id){
+  if(!rHost()||!id||id===RM.room.host) return;
+  try{ await rRestDel(RM.code+'/players/'+id); RM.ps=RM.ps.filter(function(p){ return p.id!==id; }); RM.sig=''; roomUpdate(); toast('部屋から外しました'); }
+  catch(e){ toast('うまく外せませんでした。もう一度ためしてください'); }
+}
+function rDupNames(ps){ var seen={}, d=[]; ps.forEach(function(p){ if(seen[p.name]&&d.indexOf(p.name)<0) d.push(p.name); seen[p.name]=1; }); return d; }
 function rQrBox(){ return '<div class="qr-box">'+qrSVG(rUrl(RM.code))+'<p class="muted">スマホのカメラで読むと、この部屋に入れます</p><p class="rcode">部屋番号 <b>'+RM.code+'</b></p></div>'; }
 function rInviteBtns(){ return '<div class="share" style="margin-top:14px"><button class="btn btn-line" type="button" data-act="room-line">LINEで招待する</button><button class="btn btn-sub" type="button" data-act="room-copy">リンクをコピー</button></div>'; }
 function roomJoinHTML(){
@@ -3952,7 +3962,7 @@ function roomJoinHTML(){
   if(n>=ROOM_MAX) h+='<p class="rnote warn">この部屋はいっぱいです（8人まで）。部屋を作った人に、新しい部屋を作ってもらってね。</p></section>';
   else{
     h+='<label class="muted" for="r-jname">あなたのニックネーム（8文字まで）</label><input class="gname" id="r-jname" maxlength="8" autocomplete="off" enterkeyhint="go" value="'+esc(st.nick||'')+'" placeholder="例：ゆう">'+
-      '<button class="btn btn-main btn-wide" type="button" data-act="room-join" id="r-join">参加する</button><p class="rnote hidden" id="r-jnote"></p>'+
+      '<button class="btn btn-main btn-wide" type="button" data-act="room-join" id="r-join">参加する</button><p class="rnote hidden" id="r-jnote"></p><div class="rsame hidden" id="r-same"></div>'+
       (play?'<p class="muted">参加すると、すぐに診断が始まります。</p>':'<p class="muted">'+esc(hn)+'さんが「スタート」を押すと、全員いっしょに診断が始まります。</p>');
     if(st.me&&st.me.code) h+='<p class="g-prev"><button class="linkbtn" type="button" data-act="room-join-mine">前回の結果（'+esc(T[st.me.code].c)+'）で参加する</button></p>';
     h+='<p class="muted" style="margin-top:8px">部屋に送るのは、ニックネームと診断のタイプ（4文字）・愛着スタイルだけです。質問への答え・恋の状況は送りません。本名でなくて大丈夫です。</p></section>';
@@ -3964,14 +3974,16 @@ function roomLobbyHTML(){
   var h='<section class="card">';
   if(host) h+=(n<2?'<p class="rchip wait">⏳ みんなを待っています</p><h1><span class="nw">みんなに</span><span class="nw">QRを読んでもらおう</span></h1>':'<p class="rchip ok">✅ '+n+'人そろいました</p><h1>スタートできます！</h1>');
   else h+='<p class="rchip ok">✅ 参加できました（いま'+n+'人）</p><h1><span class="nw">'+esc(hn)+'さんの</span><span class="nw">スタートを</span><span class="nw">待っています</span></h1>';
-  h+='<p class="muted">部屋 '+RM.code+'・'+rModeTxt(r.mode)+'</p><p class="rlabel">いま部屋にいる人（'+n+'人）</p>'+rMembers(ps,r.host,me,true);
+  h+='<p class="muted">部屋 '+RM.code+'・'+rModeTxt(r.mode)+'</p><p class="rlabel">いま部屋にいる人（'+n+'人）</p>'+rMembers(ps,r.host,me,true,host);
+  if(host&&n>=2) h+='<p class="muted rkick-note">来ていない人・まちがえて入った人は、名前の横の × を2回押すと外せます。</p>';
+  var dn=rDupNames(ps); if(host&&dn.length) h+='<p class="rnote warn">同じニックネームの人が2人います（'+dn.map(esc).join('・')+'）。同じ人が2回入ったときは、× で外してください。</p>';
   if(host){
     h+='<button class="btn btn-main btn-wide" type="button" data-act="room-start" id="r-start"'+(n<2?' disabled':'')+'>スタート（'+n+'人で診断する）</button>';
     h+='<p class="muted">'+(n<2?'2人以上そろうと押せます。':'あとから来た人も、途中から参加できます。')+'</p>';
   } else h+='<p class="rwait-t">あなたは何もしなくて大丈夫です。'+esc(hn)+'さんが「スタート」を押すと、自動で診断が始まります。</p>';
   h+='<p class="rnote hidden" id="r-snote"></p></section>';
   if(n<ROOM_MAX){
-    if(host) h+='<section class="card">'+secH('h2','want','みんなを呼ぶ')+'<p>その場にいる人は、このQRをスマホのカメラで読むだけ。人のスマホにはさわりません。</p>'+rQrBox()+rInviteBtns()+'</section>';
+    if(host) h+='<section class="card">'+secH('h2','want','みんなを呼ぶ')+'<p>その場にいる人は、このQRをスマホのカメラで読むだけ。人のスマホにはさわりません。</p>'+rQrBox()+rInviteBtns()+'<p class="rline-back">LINEで送ったら、この画面にもどって「スタート」を押してね。自分で送ったリンクは押さなくて大丈夫です。</p></section>';
     else h+='<details class="card st-fold"><summary><span><span class="nw">ほかの人を呼ぶ</span><span class="nw">（QRコード）</span></span></summary>'+rQrBox()+rInviteBtns()+'</details>';
   }
   h+='<p class="rleave"><button class="linkbtn" type="button" data-act="room-leave">'+(host?'トップにもどる':'この部屋から出る')+'</button></p>';
@@ -3982,7 +3994,7 @@ function roomResultHTML(){
   if(me&&n) gStore(g,me.name);
   // 自分の結果をいちばん上に（鑑定者本人 2026-11-17「結果が下すぎます」「結果がないサイトかと思いました」）
   var mc=(me&&me.done&&validCode(me.code))?me.code:null, h='';
-  if(mc) h+='<section class="card myres" style="--gp:'+GPALE[mc[2]+mc[3]]+'"><p class="mr-l">あなたの結果</p><div class="mr-row"><span class="mr-a">'+art(mc,92)+'</span><div class="mr-t"><b class="mr-c">'+cname(mc)+'</b><span class="mr-f">'+fname(mc)+'</span></div></div><p class="mr-catch">'+esc(T[mc].catch)+'</p><button class="btn btn-main btn-wide" type="button" data-act="mine">あなたの結果をくわしく見る</button></section>';
+  if(mc) h+='<section class="card myres" style="--gp:'+GPALE[mc[2]+mc[3]]+'"><p class="mr-l">あなたの結果</p><div class="mr-row"><span class="mr-a">'+art(mc,92)+'</span><div class="mr-t"><b class="mr-c">'+cname(mc)+'</b><span class="mr-f">'+fname(mc)+'</span></div></div><p class="mr-catch">'+esc(T[mc].catch)+'</p><button class="btn btn-main btn-wide" type="button" data-act="mine"><span class="nw">あなたの結果を</span><span class="nw">くわしく見る</span></button></section>';
   h+='<section class="card"><h1>みんなの恋のかたち</h1>'+
     (wait.length?'<p class="rchip wait">⏳ あと'+wait.length+'人が診断中です</p><p class="muted">終わった人から、ここに出てきます。この画面のままで大丈夫です。</p>':'<p class="rchip ok">✅ 全員の診断が終わりました</p>')+
     '<p class="muted">部屋 '+RM.code+'・名前を押すと、その人のタイプの説明が見られます。</p><div class="gmem">';
@@ -4022,7 +4034,7 @@ async function roomWriteMe(d){
   }
   return false;
 }
-function rLocalMe(d){ RM.mine=Object.assign({},d); var id=rPid(), f=false; RM.ps.forEach(function(p){ if(p.id===id){ Object.assign(p,d); f=true; } }); if(!f) RM.ps.push(Object.assign({id:id},d)); }
+function rLocalMe(d){ RM.mine=Object.assign({},d); RM.mineAt=Date.now(); var id=rPid(), f=false; RM.ps.forEach(function(p){ if(p.id===id){ Object.assign(p,d); f=true; } }); if(!f) RM.ps.push(Object.assign({id:id},d)); }
 async function roomDone(code){
   var me=rMe()||{name:st.nick||'ゲスト',joined:Date.now(),rc:RM.room&&RM.room.created};
   var d={name:me.name,code:code,done:true,joined:me.joined,rc:me.rc,ak:myAK()};
@@ -4035,7 +4047,8 @@ async function roomDoJoin(useMine){
   var nm=gName($('r-jname').value);
   if(!nm){ rNote('r-jnote','ニックネームを入れてください',true); return; }
   var ps=rPlayers(), id=rPid();
-  if(ps.some(function(p){ return p.name===nm&&p.id!==id; })){ rNote('r-jnote','同じニックネームの人がいます。少し変えてください',true); return; }
+  var same=ps.filter(function(p){ return p.name===nm&&p.id!==id; })[0];
+  if(same){ RM.samePid=same.id; RM.sameName=nm; var sb=$('r-same'); if(sb){ sb.innerHTML='<p><b>「'+esc(nm)+'」さんは、もうこの部屋にいます'+(same.id===RM.room.host?'（部屋を作った人）':'')+'。</b>あなた自身ですか？</p><p class="muted">LINEで送ったリンクを自分で開いたときなど、別の画面から入ると、こう聞かれます。</p><div class="share"><button class="btn btn-main" type="button" data-act="room-same-yes">はい、自分です</button><button class="btn btn-sub" type="button" data-act="room-same-no">ちがう人です</button></div>'; sb.classList.remove('hidden'); glueAll(sb); } rNote('r-jnote',''); return; }
   if(ps.length>=ROOM_MAX&&!rMe()){ rNote('r-jnote','この部屋はいっぱいです（8人まで）',true); return; }
   st.nick=nm; save(st);
   var bt=$('r-join'); if(bt){ bt.disabled=true; bt.textContent='参加しています…'; }
@@ -4054,7 +4067,7 @@ async function roomDoCreate(){
   try{
     var o=await roomCreate(nm,RM.mode);
     history.pushState(null,'','?room='+o.c);
-    RM.code=o.c; RM.room=o.room; RM.ps=[o.me]; RM.mine=Object.assign({},o.me); delete RM.mine.id; RM.gotR=RM.gotP=true; RM.view='loading'; RM.sig='';
+    RM.code=o.c; RM.room=o.room; RM.ps=[o.me]; RM.mine=Object.assign({},o.me); delete RM.mine.id; RM.mineAt=Date.now(); RM.gotR=RM.gotP=true; RM.view='loading'; RM.sig='';
     roomWatch(o.c); roomUpdate();
   }catch(e){
     bt.disabled=false; bt.textContent='部屋を作る';
@@ -4225,6 +4238,9 @@ document.addEventListener('click',function(e){
   else if(act==='room-create'){ roomDoCreate(); }
   else if(act==='room-join'){ roomDoJoin(false); }
   else if(act==='room-join-mine'){ roomDoJoin(true); }
+  else if(act==='room-same-yes'){ if(RM.samePid){ st.pid=RM.samePid; st.nick=RM.sameName; save(st); RM.samePid=null; RM.sig=''; RM.mine=null; toast('「'+st.nick+'」として部屋にもどりました'); roomUpdate(); } }
+  else if(act==='room-same-no'){ RM.samePid=null; var sb2=$('r-same'); if(sb2) sb2.classList.add('hidden'); rNote('r-jnote','同じニックネームの人がいます。少し変えて「参加する」を押してください',true); var ji=$('r-jname'); if(ji) ji.focus(); }
+  else if(act==='room-kick'){ var kid=b.getAttribute('data-id'); if(RM.kick!==kid){ RM.kick=kid; toast('もう一度 × を押すと、この人を部屋から外します'); setTimeout(function(){ if(RM.kick===kid) RM.kick=null; },5000); } else { RM.kick=null; roomKick(kid); } }
   else if(act==='room-start'){ roomDoStart(); }
   else if(act==='room-leave'){ roomLeave(); }
   else if(act==='room-home'){ roomStop(); RM.code=null; history.pushState(null,'',location.pathname); home(); }
