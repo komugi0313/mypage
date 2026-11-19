@@ -565,7 +565,7 @@ function showResult(G){
     <p class="cap">${two?'2人':ps.length+'人'}のシンクロ率</p>
     <div class="ring" style="background:${hi?`conic-gradient(#8FE3CF 0,#A9B2F5 ${pct/2}%,#F4B6D6 ${pct}%,var(--line) ${pct}% 100%)`:`conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)`}"><div class="in"><span class="num" data-v="${pct}">${pct}<small>%</small></span></div></div>
     <p class="msg">${sm.msg}</p>${hi?`<p class="hs-sub">${two?'暮らしの感覚が、ほとんど重なっています。<br>一緒にいて自然体でいられる組み合わせ。':'みんなの感覚が、ほとんど重なっています。<br>集まると自然体でいられるメンバー。'}</p>`:sm.sub?`<p class="hs-sub">${sm.sub}</p>`:''}${P2?`<div class="nums"><div class="n1"><small>ぴったり</small><b>${P2.same.length}<i>問</i></b></div><div class="n2"><small>合わせられる</small><b>${P2.adj.length}<i>問</i></b></div><div class="n3"><small>ちがい</small><b>${P2.diff.length}<i>問</i></b></div></div>`:''}
-    ${diffN?`<span class="seed">${hi?'100%に近づく話のタネ':'話のタネ'} ${diffN}問</span><button class="jump" id="tojump" type="button">${diffN<=5?`ちがった${diffN}問を見る ↓`:'話しておきたいことを見る ↓'}</button>`:''}
+    ${diffN?`<button class="jump" id="tojump" type="button">${hi?'100%に近づくヒントを見る ↓':`ちがった${diffN}問から、話すことを見る ↓`}</button>`:''}
     <p class="hint">${two?'2人の':'みんなの'}答えが、どれだけ重なったか（大事な問題と★ゆずれないは重く数えています）</p></section>`;
   const trows=themeRows(G);
   const done=()=>{bindTail(G);bindTalked(G);bindAgain(G);countUp();votesRun(G);kyoRun(G);const j=$('tojump');if(j)j.onclick=()=>{const t=$('steps')||$('talk');if(t)t.scrollIntoView({behavior:'smooth',block:'start'})}};
