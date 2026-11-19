@@ -1065,6 +1065,36 @@ body:has(#s-setup.on),body:has(#s-lobby.on){background-image:none}
 #s-q .qwho .seat{border:1.5px solid #E2D7BC;box-shadow:0 3px 10px rgba(120,90,20,.07)}
 #s-q .qwho .av{border-width:1.5px}
 </style>
+<style id="yurusu">
+/* あなたの許せるライン（鑑定者本人 2026-11-19「この形で作ってください」） */
+.yl .yl-hd{display:flex;align-items:center;gap:10px;margin:0 0 6px}
+.yl .yl-ic{width:36px;height:36px;flex:none;border-radius:50%;background:#FFE3EC;border:2px solid #1E1E2A;display:grid;place-items:center;font-weight:800;font-size:16px;color:#1E1E2A}
+.yl .yl-hd h3{margin:0;font-size:18px;line-height:1.4}
+.yl .yl-lead{margin:0 0 10px;font-size:14px;color:#55556A}
+.yl .yl-row{border:2px solid #E7DCC0;border-radius:14px;padding:10px 12px;margin-top:8px;background:#FFFDF6;display:flex;flex-direction:column;gap:6px}
+.yl .yl-th{font-size:12.5px;font-weight:800;color:#55556A;letter-spacing:.03em}
+.yl .yl-c{display:flex;align-items:flex-start;gap:8px;border-radius:10px;padding:7px 10px;font-weight:700;font-size:15px;line-height:1.5}
+.yl .yl-c>b{flex:none;font-size:12px;font-weight:800;border-radius:6px;padding:1px 7px;margin-top:2px;color:#fff}
+.yl .yl-c>span{min-width:0}
+.yl .yl-c.ok{background:#DDF5E4} .yl .yl-c.ok>b{background:#0A6B34}
+.yl .yl-c.no{background:#FFE3EC} .yl .yl-c.no>b{background:#B0124D}
+.yl .yl-min{font-size:13px;color:#55556A;font-weight:700}
+.yl .yl-min em{font-style:normal;color:#B0124D}
+.yl .yl-who{display:grid;grid-template-columns:1fr;gap:6px}
+.yl .yl-p{border-radius:10px;padding:7px 9px;font-size:14px;font-weight:700;line-height:1.5;min-width:0}
+.yl .yl-p .n{display:block;font-size:12.5px;font-weight:800}
+.yl .yl-p.a{background:#FFE3EC} .yl .yl-p.a .n{color:#B0124D}
+.yl .yl-p.b{background:#E2EEFF} .yl .yl-p.b .n{color:#1C4FA0}
+.yl .yl-hint{background:#FFF1C2;border:2px solid #1E1E2A;border-radius:12px;padding:9px 12px;font-size:14px;font-weight:700;margin-top:10px}
+.yl .yl-same{margin:10px 0 0;padding-left:1.2em;font-size:14px}
+.yl .yl-same li{margin-top:2px}
+.yl .yl-foot{margin:10px 0 0;font-size:13px;color:#55556A}
+.yl details.yl-more{margin-top:8px}
+.yl details.yl-more>summary{display:inline-flex;align-items:center;min-height:44px;cursor:pointer;font-weight:800;font-size:14px;background:#FFF1C2;border:2px solid #1E1E2A;border-radius:999px;padding:6px 14px;list-style:none}
+.yl details.yl-more>summary::-webkit-details-marker{display:none}
+@media (max-width:380px){.yl .yl-c{flex-direction:column;gap:3px}.yl .yl-c>b{margin-top:0}}
+.yl details.yl-more[open]>summary{margin-bottom:2px}
+</style>
 </head>
 <body data-mode="love">
 <div class="wrap">
@@ -1405,6 +1435,7 @@ body:has(#s-setup.on),body:has(#s-lobby.on){background-image:none}
 <script src="kotoba-normal.js"></script>
 <script src="kotoba-hon.js"></script>
 <script src="kimochi.js"></script>
+<script src="yurusu.js"></script>
 <script src="chara-love.js"></script>
 <script src="chara-normal.js"></script>
 <script>
@@ -1514,9 +1545,11 @@ function balanceAxes(mode, pick, groups, seenSet, recent){
 function kimoEnsure(mode, pick, groups, seenSet, recent){
   if(pick.length<4) return;
   // 恋愛編＝気持ちの出し方（15問に3問）／ふつう編＝決め方・元気の出し方（15問にそれぞれ2問）
-  var sets = mode==='love' ? [[KIMO.love, pick.length>=8?3:2]] : (mode==='normal' ? [[NHINT.kime, pick.length>=8?2:1],[NHINT.genki, pick.length>=8?2:1]] : []);
-  var keep=function(q){ return sets.some(function(st){ return !!st[0][q.id]; }); };
-  sets.forEach(function(st){ kimoEnsureOne(mode, pick, groups, seenSet, recent, st[0], st[1], keep); });
+  // 恋愛編は「あなたの許せるライン」の問題も入れる（15問に2問・8問に1問。同じ難しさにこの問題が6問より少ないとき〈イージー〉は入れかえない＝同じ問題ばかりになるため）
+  var yN=((groups[0]||[]).filter(function(q){ return YURUSU[q.id]!=null; }).length>=6) ? (pick.length>=15?2:1) : 0;
+  var sets = mode==='love' ? [[KIMO.love, pick.length>=8?3:2]].concat(yN?[[YURUSU, yN]]:[]) : (mode==='normal' ? [[NHINT.kime, pick.length>=8?2:1],[NHINT.genki, pick.length>=8?2:1]] : []);
+  // 外さない問題は、それまでに入れた見方の問題だけ（後から入れる許せるラインの問題が、気持ちの出し方の入れかえをじゃましないように）
+  sets.forEach(function(st,si){ var keep=function(q){ return sets.slice(0,si+1).some(function(x){ return !!x[0][q.id]; }); }; kimoEnsureOne(mode, pick, groups, seenSet, recent, st[0], st[1], keep); });
 }
 function kimoEnsureOne(mode, pick, groups, seenSet, recent, MAP, need, keep){
   var th=pick.length>=8?4:1;
@@ -3225,7 +3258,7 @@ function showResult(){
     '<div class="meter"><div class="cap">'+hd.cap+'</div><div class="num">'+val+'<small>%</small></div></div>'+rkSpan(mode, hd.k, val)+
     '<div class="catch">'+axComment(hd.k,val)+'</div>'+bridgeLine(mode, hd.k, val, ch)+
     '<div class="minis">'+others.map(function(ax){ return '<div><b>'+sc[ax.k]+'<small>%</small></b><span>'+ax.name+'</span></div>'; }).join('')+'</div></div>';
-  h+=charaHTML(S.qs, S.ans[0], 'あなた', '', false, {mode:mode, hero:!!chImg})+(mode==='love'?kimochiHTML(S.qs, S.ans[0], 'あなた', ''):nHintHTML(S.qs, S.ans[0], 'あなた', ''))+kotobaHTML(S.qs, S.ans[0], 'あなた', '', mode);
+  h+=charaHTML(S.qs, S.ans[0], 'あなた', '', false, {mode:mode, hero:!!chImg})+(mode==='love'?kimochiHTML(S.qs, S.ans[0], 'あなた', '')+yurusuHTML(S.qs, S.ans[0], 'あなた'):nHintHTML(S.qs, S.ans[0], 'あなた', ''))+kotobaHTML(S.qs, S.ans[0], 'あなた', '', mode);
   h+='<div class="card"><details class="kok"><summary><span><img class="ico-i" src="img/icon-detail.webp" alt="" width="20" height="20">4つの％をくわしく見る</span></summary>'+axisHTML(mode,sc)+AXES[mode].map(function(ax){ return rkSpan(mode, ax.k, sc[ax.k]); }).join('')+'<button class="linkb" data-about>この診断について（％の考え方）</button></details></div>';
   if(hist && hist.length>=2) h+=histHTML(mode, hist);   // 1回目は中身のない「平均」のカードを出さない
   var maj=majorityStats(S.qs, S.ans[0]);
@@ -3383,8 +3416,53 @@ function kimochiGroupHTML(idx, meI){
   }
   return h+'</div>';
 }
+/* あなたの許せるライン（yurusu.js。鑑定者本人 2026-11-19「この形で作ってください」）。
+   「どっちがまだマシ？」で選んだ答え＝まだ平気、選ばなかった答え＝つらい。性格の％・キャラ・ことばには使わない */
+var YURUSU=(function(){ var m={}; (window.NITAKU_YURUSU||[]).forEach(function(r){ if(Array.isArray(r)) m[hashStr(r[0]+'｜'+r[1])]=r[2]||''; }); return m; })();
+function yurusuItems(qs, ans){
+  var out=[]; (qs||[]).forEach(function(q,qi){ var c=ans&&ans[qi]; if(c!=='A'&&c!=='B') return; var lab=YURUSU[q.id]; if(lab==null) return;
+    out.push({ qi:qi, q:q, c:c, lab:lab, ok:(c==='A'?q.a:q.b), no:(c==='A'?q.b:q.a) }); });
+  return out;
+}
+function yurusuHTML(qs, ans, label){
+  var L=yurusuItems(qs, ans); if(!L.length) return '';
+  // みんなの中で少数派の答えを先に見せる
+  L.forEach(function(x){ x.pc=aishoPct(x.q, x.c); });
+  L.sort(function(a,b){ var pa=a.pc==null?100:a.pc, pb=b.pc==null?100:b.pc; return pa-pb; });
+  var me=label==='あなた';
+  var row=function(x){ return '<div class="yl-row"><div class="yl-th">'+esc(x.lab)+'</div>'+
+    '<div class="yl-c ok"><b>まだ平気</b><span>'+esc(x.ok)+'</span></div><div class="yl-c no"><b>つらい</b><span>'+esc(x.no)+'</span></div>'+
+    (x.pc!=null && x.pc<50 ? '<div class="yl-min">この答えは、みんなの中では<em>少数派（'+x.pc+'%）</em></div>' : '')+'</div>'; };
+  var h='<div class="card yl"><div class="yl-hd"><span class="yl-ic" aria-hidden="true">♡</span><h3>'+(me?'あなた':esc(label))+'の許せるライン</h3></div>'+
+    '<p class="yl-lead">「どっちがまだマシ？」で選んだ答えです。性格ではなく、'+(me?'あなた':esc(label))+'が「まだ平気」なほうと、「こっちはつらい」ほうです。</p>'+
+    L.slice(0,3).map(row).join('');
+  if(L.length>3) h+='<details class="yl-more"><summary>ほかに'+(L.length-3)+'問を見る ▼</summary>'+L.slice(3).map(row).join('')+'</details>';
+  return h+'<p class="yl-foot">相手に伝えておくと、すれ違いが減るところです。</p></div>';
+}
+function yurusuGroupHTML(idx, meI){
+  var P=(idx||[]).filter(function(i){ return S.players[i]; }); if(P.length<2) return '';
+  var nm=function(i){ return esc(S.players[i].name)+(i===meI?'（あなた）':''); };
+  var diff=[], same=[];
+  S.qs.forEach(function(q,qi){ var lab=YURUSU[q.id]; if(lab==null) return;
+    var by={A:[],B:[]}; P.forEach(function(i){ var c=S.ans[i]&&S.ans[i][qi]; if(c==='A'||c==='B') by[c].push(i); });
+    if(by.A.length+by.B.length<2) return;
+    if(by.A.length && by.B.length) diff.push({ q:q, lab:lab, by:by }); else same.push({ q:q, lab:lab, ok:(by.A.length?q.a:q.b) });
+  });
+  if(!diff.length && !same.length) return '';
+  var two=P.length===2;
+  var row=function(d){ return '<div class="yl-row"><div class="yl-th">'+esc(d.lab)+'</div><div class="yl-who">'+
+    ['A','B'].map(function(c,k){ return '<div class="yl-p '+(k?'b':'a')+'"><span class="n">'+d.by[c].map(nm).join('・')+' が まだ平気</span>'+esc(c==='A'?d.q.a:d.q.b)+'</div>'; }).join('')+'</div></div>'; };
+  var h='<div class="card yl"><div class="yl-hd"><span class="yl-ic" aria-hidden="true">≠</span><h3>'+(two?'2人':'みんな')+'の許せるライン'+(diff.length?'、ここがちがう':'')+'</h3></div>';
+  if(diff.length){
+    h+=diff.slice(0,3).map(row).join('');
+    if(diff.length>3) h+='<details class="yl-more"><summary>ほかに'+(diff.length-3)+'問を見る ▼</summary>'+diff.slice(3).map(row).join('')+'</details>';
+    h+='<div class="yl-hint">相手が「つらい」ほうは、相手のいちばん苦手なところ。そこだけ気をつけると、けんかが減ります。</div>';
+  }else h+='<p class="yl-lead">「どっちがまだマシ？」の答えは、'+(two?'2人とも':'みんな')+'同じでした。</p>';
+  if(same.length) h+='<div class="yl-th" style="margin-top:12px">ここは同じ（'+(two?'2人とも':'みんな')+'「まだ平気」）</div><ul class="yl-same">'+same.slice(0,4).map(function(x){ return '<li>'+esc(x.ok)+'</li>'; }).join('')+(same.length>4?'<li>ほか'+(same.length-4)+'問</li>':'')+'</ul>';
+  return h+'</div>';
+}
 /* 結果の1つの欄でまちがいが起きても、ほかの欄と結果の画面は出す（2026-11-17：ことばの表のまちがいで、15問目のあと結果に進めなくなっていた） */
-['charaHTML','kotobaHTML','kotobaHonHTML','kotobaBothHTML','histHTML','kimochiHTML','kimochiGroupHTML','nHintHTML','nHintGroupHTML'].forEach(function(n){
+['charaHTML','kotobaHTML','kotobaHonHTML','kotobaBothHTML','histHTML','kimochiHTML','kimochiGroupHTML','nHintHTML','nHintGroupHTML','yurusuHTML','yurusuGroupHTML'].forEach(function(n){
   var f=window[n]; if(typeof f!=='function') return;
   window[n]=function(){ try{ return f.apply(this, arguments); }catch(e){ console.error(n, e); return ''; } };
 });
@@ -3596,7 +3674,7 @@ function showGroupResultCore(){
        '<details class="kok"><summary><span><img class="ico-i" src="img/icon-detail.webp" alt="" width="20" height="20">4つの％をくわしく見る</span></summary>'+axisHTML(mode,r.sc)+AXES[mode].map(function(ax){ return rkSpan(mode, ax.k, r.sc[ax.k], me?'あなた':r.p.name+'さん'); }).join('')+'</details></div>';
   });
   h+='</div>';
-  h+= mode==='love' ? kimochiGroupHTML(R.map(function(r){ return r.i; }), meI) : nHintGroupHTML(R.map(function(r){ return r.i; }), meI);
+  h+= mode==='love' ? kimochiGroupHTML(R.map(function(r){ return r.i; }), meI)+yurusuGroupHTML(R.map(function(r){ return r.i; }), meI) : nHintGroupHTML(R.map(function(r){ return r.i; }), meI);
   h+=aishoHTML(mode);
   // 物差しごとのランキング
   h+='<div class="card"><h3>ランキング</h3>';
