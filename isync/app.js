@@ -907,21 +907,28 @@ function drawResult(c,G){
   else{pct=syncStat(G).pct;cap=ps.length===2?'2人のシンクロ率':ps.length+'人のシンクロ率';
     who=G.anon?'':ps.length===2?ps[0].name+' × '+ps[1].name:ps.slice(0,4).map(p=>p.name).join('・')+(ps.length>4?' ほか':'');
     msgT=syncMsg(pct,ps.length===2).msg}
-  if(!solo&&pct>=HIGH_SYNC)T('HIGH SYNC',W/2,545,F(700,30,'q'),'#6F72C9');
+  // くらべられる答えが1つもないとき（時間切れ・まだ決められないだけ）は 0% を出さない
+  const none=!solo&&!ps.some((a,i)=>ps.slice(i+1).some(b=>pairStat(a,b,G.qs).n));
+  if(!solo&&pct>=HIGH_SYNC&&!none)T('HIGH SYNC',W/2,545,F(700,30,'q'),'#6F72C9');
   T(cap,W/2,590,F(900,46,'m'),ink);
   if(who)T(fit(who,820,F(700,40,'m')),W/2,650,F(700,40,'m'),sub);
-  T(pct+'%',W/2,880,F(700,230,'q'),ink);
-  T(fit(msgT,840,F(900,44,'m')),W/2,1000,F(900,44,'m'),'#4B3C8F');
+  if(none){T('くらべられる答えが',W/2,800,F(900,62,'m'),'#4B3C8F');T('ありませんでした',W/2,885,F(900,62,'m'),'#4B3C8F');
+    T('時間切れの問題は、シンクロ率に数えていません',W/2,990,F(700,34,'k'),sub)}
+  else{T(pct+'%',W/2,880,F(700,230,'q'),ink);
+    T(fit(msgT,840,F(900,44,'m')),W/2,1000,F(900,44,'m'),'#4B3C8F')}
   // 下のカード：テーマ別（2人以上）／価値観のタイプ（ひとり）
   rr(80,1150,920,560,48,'#FFFFFF');
   if(solo){T('わたしの価値観のタイプ',W/2,1240,F(900,42,'m'),ink);
     const rows=axRows(G,[ps[0]]).slice(0,4);rows.forEach(({a,xs},j)=>{const y=1310+j*100,pc=xs[0].s.pct;
       T(a.l,140,y,F(700,30,'k'),ink,'left');T(a.r,940,y,F(700,30,'k'),ink,'right');
       rr(140,y+20,800,18,9,'#E2DDF5');c.beginPath();c.arc(140+800*(100-pc)/100,y+29,22,0,7);c.fillStyle='#4B3C8F';c.fill();c.lineWidth=6;c.strokeStyle='#fff';c.stroke()})}
+  else if(none||!themeRows(G).length){T('もう一度、診断してみよう',W/2,1290,F(900,46,'m'),ink);
+    ['同じ問題に2人で答えると、','どこが重なって、どこがちがうかが','テーマごとにわかります。'].forEach((t,j)=>T(t,W/2,1380+j*62,F(700,36,'k'),sub));
+    T('1問15秒・答えないと時間切れになります',W/2,1610,F(700,32,'k'),'#4B3C8F')}
   else{T('テーマ別のシンクロ率',W/2,1240,F(900,42,'m'),ink);
     themeRows(G).slice(0,6).forEach((r,j)=>{const y=1310+j*66;T(r.name,140,y,F(700,32,'k'),ink,'left');T(r.pct+'%',940,y,F(700,34,'q'),ink,'right');
       rr(420,y-22,400,22,11,'#E2DDF5');if(r.pct)rr(420,y-22,Math.max(22,400*r.pct/100),22,11,'#9A86C4')})}
-  T('#アイシンク　2択で答え合わせ',W/2,1800,F(900,40,'m'),ink);
+  T('#アイシンク　2人の価値観を答え合わせ',W/2,1800,F(900,40,'m'),ink);
   T(siteUrl().replace(/^https?:\/\//,'').replace(/\/$/,''),W/2,1860,F(700,32,'q'),sub);
 }
 
