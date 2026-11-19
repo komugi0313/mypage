@@ -131,8 +131,8 @@ function goTop(){
   ${PACK?`<section class="card packb"><p class="label">「${esc(PACK.title)}」の質問から出します</p><p class="hint">このテーマの質問だけで、ひとりでも、みんなでも遊べます。</p><button class="btn ghost small" id="packx">いつもの質問にもどす</button></section>`:''}
   <section class="card ov" aria-label="見本：2人の答えの重なり">
     <div class="ov-who"><span>あなた</span><span>あの人</span></div>
-    ${OV_ROWS.map(([q,a,b])=>{const k=Q.findIndex(x=>x[1]===q);if(k<0)return'';const mk=a===b?['eq','＝']:(a===2||b===2)?['al','≒']:['ne','≠'];
-      return `<div class="ov-r"><p class="ov-q">${esc(q)}</p><span class="ov-c me">${esc(ans(a,k))}</span><i class="ov-m ${mk[0]}" aria-label="${mk[0]==='eq'?'同じ':mk[0]==='al'?'合わせられる':'ちがう'}">${mk[1]}</i><span class="ov-c you">${esc(ans(b,k))}</span></div>`}).join('')}
+    ${OV_ROWS.map(([q,a,b])=>{const k=Q.findIndex(x=>x[1]===q);if(k<0)return'';const mk=a===b?['eq','ぴったり']:(a===2||b===2)?['al','合わせられる']:['ne','ちがい'];
+      return `<div class="ov-r"><p class="ov-q"><span>${esc(q)}</span><i class="ov-m ${mk[0]}">${mk[1]}</i></p><span class="ov-c me">${esc(ans(a,k))}</span><span class="ov-c you">${esc(ans(b,k))}</span></div>`}).join('')}
     <div class="ov-sum"><div class="ov-ring"><span>78<small>%</small></span></div><p><b>2人のシンクロ率</b><span>分かれたところには、歩み寄りの案が出ます。</span></p></div>
   </section>
   <div class="gos">
