@@ -2225,7 +2225,7 @@ var FB=(function(){
         onSnapshot:function(cb, err){ return live(function(fs){ return fs.collection(full); }, function(q){ cb({ docs:q.docs.map(function(s){ return { id:s.id, exists:true, data:function(){ return clean(s.data()); } }; }) }); }, err); }
       }; },
       // いくつかの書きこみを1回の通信でまとめて送る（部屋を作るのを速くするため）
-      batch:function(ops){ return rq('POST', ':commit', { writes:ops.map(function(o){ var full=P(o.path); return o.del ? { delete:docName(full) } : { update:{ name:docName(full), fields:encF(ttl(o.path, strip(o.data))) } }; }) }); },
+      batch:function(ops){ return rq('POST', ':commit', { writes:ops.map(function(o){ var full=P(o.path); var w=o.del ? { delete:docName(full) } : { update:{ name:docName(full), fields:encF(ttl(o.path, strip(o.data))) } }; if(o.pre) w.currentDocument=o.pre; return w; }) }); },   // o.pre＝その部屋がまだない／読んだときのままのときだけ書く（2人が同時に同じ番号を引いても上書きしない）
       // 数を1つずつ足す（回答％・遊んだ回数）。list＝[{ path:'nitaku_votes/123', inc:{ a:1, b:0 } }, …]（path は頭に nitaku_ を付けた名前）
       incr:function(list){ return rq('POST', ':commit', { writes:list.map(function(x){ return { transform:{ document:docName(x.path), fieldTransforms:Object.keys(x.inc).map(function(f){ return { fieldPath:f, increment:{ integerValue:String(x.inc[f]) } }; }) } }; }) }); },
       // 頭に nitaku_ を付けた名前でそのまま読む（統計の分布）
@@ -3488,8 +3488,8 @@ var Room=(function(){
       if(both[0].exists && alive(both[0].data(), plist(both[1].docs))) continue;
       // 名前を入れているあいだに、部屋を先に置いておく（「部屋を作る」を押したときには、友だちから部屋が見える＝QRをすぐ読んでも入れる）
       var now=Date.now(), ops=both[1].docs.map(function(d){ return { path:'rooms/'+code+'/players/'+d.id, del:true }; });
-      ops.push({ path:'rooms/'+code, data:{ code:code, host:'', mode:'love', lv:'normal|end', num:15, mix:false, round:1, qs:[], phase:'lobby', qi:0, created:now, seen:now } });
-      if(db.batch) await db.batch(ops);
+      ops.push({ path:'rooms/'+code, data:{ code:code, host:'', mode:'love', lv:'normal|end', num:15, mix:false, round:1, qs:[], phase:'lobby', qi:0, created:now, seen:now }, pre:both[0].exists?(both[0]._t?{ updateTime:both[0]._t }:null):{ exists:false } });
+      if(db.batch){ try{ await db.batch(ops); }catch(e){ if(e&&(e.status===409||e.status===400)) continue; throw e; } }   // ほかの人が同じ番号を先に取った＝別の番号を探す
       return { code:code, old:[] };
     }
     return null;
@@ -3577,7 +3577,7 @@ var Room=(function(){
          ①変わったときの知らせ（onSnapshot）②知らせが止まっても追いつけるよう、2秒ごとに自分からも部屋を確かめる
          ③知らせの通り道が切れたら1秒後につなぎ直す ④ほかのアプリから戻ってきたら、つなぎ直してすぐ確かめる。
          同じ中身を何度も渡さない（部屋の画面の入力が消えないように） */
-      var room=null, players=[], un=[], stopped=false, got=false, sig='', pt=null, pulling=false, last=0, snapAt=0, nth=0;
+      var room=null, players=[], un=[], stopped=false, got=false, sig='', pt=null, pulling=false, last=0, snapAt=0, nth=0, lastPull=0;
       var deliver=function(){
         if(stopped || !got) return;
         var r=alive(room, players)?room:null, sg=JSON.stringify([r, players]);
@@ -3595,6 +3595,9 @@ var Room=(function(){
       var pull=async function(force){
         if(stopped || pulling) return;
         if(!force && Date.now()-last<4000) return;
+        // 結果が出たあと（全員の結果発表・部屋が閉じた）は5秒ごとで十分（読む回数を少なく。2026-11-19）。「もう1回」の準備OKは今までどおり2秒ごと
+        if(!force && room && (room.phase==='done'||room.phase==='closed') && Date.now()-lastPull<5000) return;
+        lastPull=Date.now();
         var all=force || !snapAt || (nth++%5===0); pulling=true;   // 知らせが一度も届いていない画面（アプリの中の画面など）は、全員の答えも毎回読む
         try{
           var rs=await db.doc('rooms/'+code).get(), ps=all ? await db.collection('rooms/'+code+'/players').get() : null;
