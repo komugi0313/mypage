@@ -513,7 +513,7 @@ function groupShapeHTML(G){const ps=G.players;if(ps.length<3||G.anon)return'';
 function bridgeHTML(G){const ps=G.players;if(ps.length<3||G.anon)return'';const me=ps.find(p=>p.id===G.me);
   const c=ps.map(p=>({p,n:G.qs.filter((k,i)=>p.ans[i]&&p.ans[i].o===2).length})).sort((a,b)=>b.n-a.n);
   if(!c[0]||c[0].n<2||(c[1]&&c[1].n===c[0].n))return'';const p=c[0].p,nm=p===me?'あなた':esc(p.name)+'さん';
-  return `<section class="card bridge"><p class="label">このメンバーのつなぎ役</p><div class="brg"><p class="brg-h"><span class="face">${esc((p===me?'あなた':p.name).slice(0,3))}</span><b>${nm}</b></p><p class="hint">「どっちでも合わせられる」がいちばん多く、みんなの答えの間にいることが多い人です。意見が分かれたら、${p===me?'あなたが話を進めてみてください':nm+'に話を進めてもらいましょう'}。</p></div></section>`}
+  return `<section class="card bridge"><p class="label">このメンバーのつなぎ役</p><div class="brg"><p class="brg-h"><img class="face" src="img/${p===me?'ai':'yuu'}.webp" width="44" height="44" alt="" aria-hidden="true"><b>${nm}</b></p><p class="hint">「どっちでも合わせられる」がいちばん多く、みんなの答えの間にいることが多い人です。意見が分かれたら、${p===me?'あなたが話を進めてみてください':nm+'に話を進めてもらいましょう'}。</p></div></section>`}
 // D：もう一度の答え合わせ（同じ問題・同じ2人の前の結果と比べる。このスマホにだけ残す）
 function againHTML(G,P2){const ps=G.players,me=ps.find(p=>p.id===G.me);if(ps.length!==2||!me)return'';
   const other=ps.find(p=>p!==me),id=talkId(G),h=G.qs.map((k,i)=>ps.map(p=>ansCode(p.ans[i])).join('')).join(''),dk=P2.diff.map(i=>QKEY[G.qs[i]].slice(0,5));
