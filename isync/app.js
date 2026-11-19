@@ -243,7 +243,7 @@ function askHTML(k,i,n,{who,step,star,starOn,to,u}){
     <div class="prog">${Array.from({length:n},(_,j)=>`<i class="${j<=i?'on':''}"></i>`).join('')}</div>
     <div class="qhead"><span class="tag catg c${q[0]}">${esc(cat[0])}</span><span class="qn">${i+1}／${n}${who?`　${esc(who)}`:''}</span></div>
     ${cat[1]?`<p class="if">${esc(cat[1])}</p>`:''}
-    <h2 class="q">${esc(q[1])}</h2>
+    <h2 class="q"><span class="qmark" aria-hidden="true">Q</span>${esc(q[1])}</h2>
     <div class="hint" id="tcnt"></div><div class="allok" id="allok" hidden>全員決めた！<small>次の問題へ…</small></div>
     ${step==='done'?`<div class="match">${to?'時間切れ':u?'「'+UNDEC+'」にしました':'答えました！'}</div><div id="skipq"></div>`:`
     <div class="qtime" id="qtime" role="timer" aria-label="のこり時間"><span class="qt-s">のこり<b>${Q_LIMIT}</b>秒</span><b class="qt-b"><i></i></b></div>
@@ -1235,7 +1235,7 @@ function rCount(d,n,ps,done){const el=$('tcnt');if(!el)return;const room=R.room|
   const others=ps.filter(p=>p.id!==PID),col=p=>p.id===PID?'p0':'p'+((others.indexOf(p)+1)%6);
   const seat=p=>{const st=stOf(p),nm=p.id===PID?'あなた':String(p.name||'');return `<div class="seat ${col(p)} s-${st}"><span class="av" aria-hidden="true"><img src="img/${p.id===PID?'ai':'yuu'}.webp" width="40" height="36" alt=""></span><span class="nm">${esc(nm)}</span>${lab[st]}</div>`};
   const me=ps.filter(p=>p.id===PID);
-  el.innerHTML=`<div class="seats${ps.length>4?' many':''}">${me.concat(others).map(seat).join('')}</div>`}
+  el.innerHTML=`<div class="seats-w"><span class="seats-l">みんなのようす</span><div class="seats${ps.length>4?' many':''}">${me.concat(others).map(seat).join('')}</div></div>`}
 function rCountNow(){const room=R.room;if(!room||room.phase!=='play')return;const k=room.qi||0,rd=room.round||1,ps=plist();
   const done=ps.filter(p=>rDone(p,k,rd));rCount(done.length,ps.length,ps,done)}
 // LINEを開いて、文とリンクが入った状態にする（受け取った人はリンクを押すだけ）
