@@ -560,6 +560,19 @@ html[data-tone="f"] .tn-y,html[data-tone="s"] .tn-y{display:none}
 html[data-tone="f"] .tn-f,html[data-tone="s"] .tn-s{display:revert}
 .kc{border-color:#1E1E2A}
 .kc.kt-a{background:#FFF7FA} .kc.kt-b{background:#F7F4FF}
+/* 気持ちの出し方（言える派／察して派） */
+.kmc .km-t{display:inline-block;margin:2px 6px 8px 0;padding:3px 12px;border-radius:999px;font-weight:900;font-size:15px;line-height:1.5}
+.kmc .km-t.say{background:#FFD3E2;color:#7A1240}.kmc .km-t.sas{background:#D8E9FF;color:#123E7A}.kmc .km-t.both{background:#E8E1FA;color:#3D2A7A}
+.kmc .kmeter{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#5A5A6E;margin:2px 0 10px}
+.kmc .kmeter .bar{flex:1;height:8px;border-radius:99px;background:linear-gradient(90deg,#FFD3E2,#D8E9FF);position:relative}
+.kmc .kmeter .bar i{position:absolute;top:50%;width:16px;height:16px;border-radius:50%;background:#FF3D7F;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25);transform:translate(-50%,-50%)}
+.kmc .km-row{border-radius:12px;padding:10px 12px;margin-top:8px;font-size:14.5px;line-height:1.7;color:#2A2638;text-align:left}
+.kmc .km-row b{display:block;font-size:13px;color:#5F5A6E;margin-bottom:2px}
+.kmc .km-row.me{background:#FFF7E6}.kmc .km-row.tip{background:#EEF6EF}
+.kmc .km-src{margin:10px 0 0;font-size:13px;color:#5F5A6E;line-height:1.6;text-align:left}
+.kmc .km-pair{display:flex;flex-wrap:wrap;gap:0}
+.kmc .kt-hd{margin:0 0 8px;font-size:16px;font-weight:900;color:#1E1E2A}.kmc .kt-hd .nm{color:#B0174F}
+.kmc.kt-a{background:#FFF7FA} .kmc.kt-b{background:#F7F4FF}
 .kc.kc-n .kc-badge{background:#DDF5EC} .kc.kc-n .kc-badge span{color:#17634A} .kc.kc-n .kc-pre .nm{color:#17634A}
 .kc-pre{margin:0 0 8px;font-size:16px;font-weight:900;color:#1E1E2A}
 .kc-pre .nm{color:#B0174F}
@@ -1389,6 +1402,7 @@ body:has(#s-setup.on),body:has(#s-lobby.on){background-image:none}
 <script src="kotoba-love.js"></script>
 <script src="kotoba-normal.js"></script>
 <script src="kotoba-hon.js"></script>
+<script src="kimochi.js"></script>
 <script src="chara-love.js"></script>
 <script src="chara-normal.js"></script>
 <script>
@@ -1457,6 +1471,7 @@ function pickQuestions(mode, n, level){
     groups.forEach(function(g){ take(g); });
   }
   balanceAxes(mode, pick, groups, seenSet, recent);
+  kimoEnsure(mode, pick, groups, seenSet, recent);
   pick.forEach(function(q){ if(seen.indexOf(q.id)<0) seen.push(q.id); });
   store(key, seen);
   addRecent(mode, pick);
@@ -1491,6 +1506,33 @@ function balanceAxes(mode, pick, groups, seenSet, recent){
       delete inPick[pick[out].id]; pick[out]=cand; inPick[cand.id]=1;
     }
   });
+}
+/* 気持ちの出し方（言える派／察して派）を見る問題が、恋愛編の1回の中に入るようにする（kimochi.js。15問なら3問・8問〈ノーマル→ハード〉はノーマルの4問に2問）
+   入れかえるのは、選んだ難しさの問題だけ（ハードにはまだこの問題がないので入れかえない）。4つの％の問題は減らしすぎない */
+function kimoEnsure(mode, pick, groups, seenSet, recent){
+  if(mode!=='love' || pick.length<4) return;
+  var need=pick.length>=8?3:2, th=pick.length>=8?4:1;
+  var axes=(AXES[mode]||[]).map(function(a){ return a.k; });
+  var has=function(q,k){ return (q.ta[k]||0)!==(q.tb[k]||0); };
+  var cnt=function(k){ return pick.filter(function(q){ return has(q,k); }).length; };
+  var isK=function(q){ return !!KIMO.love[q.id]; };
+  var inPick={}; pick.forEach(function(q){ inPick[q.id]=1; });
+  var cands=[];
+  var g0=groups[0]||[];
+  cands=shuffle(g0.filter(function(q){ return isK(q) && !inPick[q.id] && !seenSet[q.id] && !recent[q.id]; }));
+  cands=cands.concat(shuffle(g0.filter(function(q){ return isK(q) && !inPick[q.id] && cands.indexOf(q)<0; })));
+  while(pick.filter(isK).length<need && cands.length){
+    var cand=cands.shift(); if(inPick[cand.id]) continue;
+    var out=null, best=99;
+    pick.forEach(function(q,i){
+      if(isK(q)) return;
+      var ok=axes.every(function(j){ return !has(q,j) || cnt(j)>th; });
+      var w=axes.filter(function(j){ return has(q,j); }).length;
+      if(ok && w<best){ best=w; out=i; }
+    });
+    if(out===null) return;
+    delete inPick[pick[out].id]; pick[out]=cand; inPick[cand.id]=1;
+  }
 }
 /* 直前の3回ぶん（45問まで）に出た問題を覚えておく */
 function addRecent(mode, qs){
@@ -1915,6 +1957,11 @@ function honPick(){
       seen=seen.filter(function(id){ return !ids[id]; });
       fresh=fresh.concat(shuffle(all.filter(function(q){ return fresh.indexOf(q)<0; })));
     }
+    // 恋の問題には、気持ちの出し方を見る問題を5問入れる（kimochi.js）
+    if(m==='love'){ var top=fresh.slice(0,half[m]), isK=function(q){ return !!KIMO.hon[q.id]; };
+      var rest=fresh.slice(half[m]).concat(shuffle(all.filter(function(q){ return fresh.indexOf(q)<0; })));   // まだ出ていない問題を先に、なければ出た問題から
+      rest.filter(isK).forEach(function(q){ if(top.filter(isK).length>=5) return; var j=-1; top.forEach(function(t,i){ if(j<0 && !isK(t)) j=i; }); if(j>=0) top[j]=q; });
+      fresh=top; }
     fresh.slice(0,half[m]).forEach(function(q){ out.push({q:q, m:m}); });
   });
   out.forEach(function(x){ if(seen.indexOf(x.q.id)<0) seen.push(x.q.id); });
@@ -2044,7 +2091,7 @@ function showHonResult(){
   var avg=ok.length ? ok.reduce(function(a,r){ return a+r.t; },0)/ok.length/1000 : 0;
   var lvl=honLevel(avg, ok.length), sec=function(t){ return (Math.round(t/100)/10).toFixed(1); };
   var pick=function(r){ return r.c==='A' ? r.q.a : r.q.b; };
-  var h=charaHTML(S.qs, S.ans[0], 'あなた', '', false, {hon:true, times:S.times[0]})+kotobaHonHTML(S.qs, S.ans[0], S.times[0], 'あなた', '')+'<div class="res-hero"><div class="pre">本能モード　あなたの結果</div>'+
+  var h=charaHTML(S.qs, S.ans[0], 'あなた', '', false, {hon:true, times:S.times[0]})+kimochiHTML(S.qs, S.ans[0], 'あなた', '', {hon:true})+kotobaHonHTML(S.qs, S.ans[0], S.times[0], 'あなた', '')+'<div class="res-hero"><div class="pre">本能モード　あなたの結果</div>'+
     '<img class="pnd" src="img/panda-'+(!ok.length?'sad':(avg<1.2?'joy':(avg<2?'smirk':'1')))+'.webp" alt="" width="96" height="96">'+
     '<div class="type" style="font-size:44px">'+(ok.length?avg.toFixed(1):'—')+'<span style="font-size:22px">秒</span></div>'+
     '<div class="catch">本能スピード（答えた'+ok.length+'問の平均）</div><div class="subt"><img class="ico-zap" src="img/icon-zap.webp" alt="" width="20" height="20">'+lvl+'</div></div>';
@@ -2093,7 +2140,8 @@ function showHonGroupResult(){
   var h='<div class="res-hero"><div class="pre">本能モード　'+n+'人の結果</div><img class="pnd" src="img/panda-joy.webp" alt="" width="96" height="96">'+
     '<div class="catch">いちばん本能が速いのは…</div><div class="meter"><div class="num" style="font-size:'+(topN.length>1?30:40)+'px">'+topN.join('・')+'</div><div class="cap">'+(top.avg!=null ? '平均 '+sec(top.avg)+'秒・'+honLevel(top.avg/1000, 1) : '全員時間切れ')+'</div></div></div>';
   // あなたの中にあることば（1人ずつ）
-  S.players.forEach(function(p,i){ h+=charaHTML(S.qs, S.ans[i], p.name+'さん', i%2?'kt-b':'kt-a', true, {hon:true, times:S.times[i]})+kotobaHonHTML(S.qs, S.ans[i], S.times[i], p.name+'さん', i%2?'kt-b':'kt-a'); });
+  S.players.forEach(function(p,i){ h+=charaHTML(S.qs, S.ans[i], p.name+'さん', i%2?'kt-b':'kt-a', true, {hon:true, times:S.times[i]})+kimochiHTML(S.qs, S.ans[i], p.name+'さん', i%2?'kt-b':'kt-a', {hon:true})+kotobaHonHTML(S.qs, S.ans[i], S.times[i], p.name+'さん', i%2?'kt-b':'kt-a'); });
+  h+=kimochiGroupHTML(S.players.map(function(p,i){ return i; }), (function(){ var m=-1; if(S.room && S.room.pid) S.players.forEach(function(pl,i){ if(pl.pid===S.room.pid) m=i; }); return m; })());
   // 平均の秒数が同じ人は同じ順位にする
   var place=[]; rank.forEach(function(r,k){ place[k] = k>0 && r.avg!=null && rank[k-1].avg!=null && sec(r.avg)===sec(rank[k-1].avg) ? place[k-1] : k+1; });
   var usedSay={}; rank.forEach(function(r,k){ r.say=honSay(r,k,rank,place,usedSay); });
@@ -3169,7 +3217,7 @@ function showResult(){
     '<div class="meter"><div class="cap">'+hd.cap+'</div><div class="num">'+val+'<small>%</small></div></div>'+rkSpan(mode, hd.k, val)+
     '<div class="catch">'+axComment(hd.k,val)+'</div>'+bridgeLine(mode, hd.k, val, ch)+
     '<div class="minis">'+others.map(function(ax){ return '<div><b>'+sc[ax.k]+'<small>%</small></b><span>'+ax.name+'</span></div>'; }).join('')+'</div></div>';
-  h+=charaHTML(S.qs, S.ans[0], 'あなた', '', false, {mode:mode, hero:!!chImg})+kotobaHTML(S.qs, S.ans[0], 'あなた', '', mode);
+  h+=charaHTML(S.qs, S.ans[0], 'あなた', '', false, {mode:mode, hero:!!chImg})+(mode==='love'?kimochiHTML(S.qs, S.ans[0], 'あなた', ''):'')+kotobaHTML(S.qs, S.ans[0], 'あなた', '', mode);
   h+='<div class="card"><details class="kok"><summary><span><img class="ico-i" src="img/icon-detail.webp" alt="" width="20" height="20">4つの％をくわしく見る</span></summary>'+axisHTML(mode,sc)+AXES[mode].map(function(ax){ return rkSpan(mode, ax.k, sc[ax.k]); }).join('')+'<button class="linkb" data-about>この診断について（％の考え方）</button></details></div>';
   if(hist && hist.length>=2) h+=histHTML(mode, hist);   // 1回目は中身のない「平均」のカードを出さない
   var maj=majorityStats(S.qs, S.ans[0]);
@@ -3229,8 +3277,53 @@ function aishoLab(r){
          r>=40 ? ['ほどよく近い','似ているところと、ちがうところが半分ずつ。おたがいに新しい発見がある2人です。'] :
                  ['正反対','答えが分かれることが多い2人。自分にないものを持っている相手です。'];
 }
+/* 気持ちの出し方（言える派／察して派／場面で変わる派）（鑑定者本人 2026-11-19「この方向で OK」「OK です。お願いします」。文と問題は kimochi.js）
+   恋の問題で「気持ちをその場で言葉にする答え」と「のみこむ答え」を数え、2問以上あるときだけ出す。良い・悪いは言わず、まわりの人の接し方のヒントを出す */
+var KIMO=(function(){ var m={love:{},hon:{}}, K=window.NITAKU_KIMOCHI||{};
+  ['love','hon'].forEach(function(k){ (K[k]||[]).forEach(function(r){ if(Array.isArray(r)) m[k][hashStr(r[0]+'｜'+r[1])]={ a:r[2]||'', b:r[3]||'' }; }); });
+  return m; })();
+function kimochiOf(qs, ans){
+  var n={say:0,sas:0}, ex={say:[],sas:[]};
+  (qs||[]).forEach(function(q,qi){
+    var c=ans&&ans[qi]; if(c!=='A' && c!=='B') return;
+    var t=KIMO.love[q.id]||KIMO.hon[q.id]; if(!t) return;
+    var v=t[canon(q,c)]; if(v!=='say' && v!=='sas') return;
+    n[v]++; ex[v].push(c==='A'?q.a:q.b);
+  });
+  var all=n.say+n.sas; if(all<2) return null;
+  var r=n.say/all, type=r>=0.67?'say':(r<=0.33?'sas':'both');
+  return { type:type, r:r, ex:(type==='both'?[ex.say[0],ex.sas[0]]:ex[type].slice(0,2)) };
+}
+function kimochiHTML(qs, ans, label, cls, opt){
+  var k=kimochiOf(qs, ans), TX=window.KIMOCHI_TXT; if(!k || !TX) return '';
+  var T=TX.type[k.type], me=label==='あなた', pos=Math.round(10+80*(1-k.r));
+  return '<div class="card kmc'+(cls?' '+cls:'')+'"><p class="kt-hd"><span class="nm">'+esc(label)+'</span>の気持ちの出し方</p>'+
+    '<span class="km-t '+k.type+'">'+T.name+'</span>'+
+    '<div class="kmeter"><span>言える</span><span class="bar"><i style="left:'+pos+'%"></i></span><span>察して</span></div>'+
+    '<div class="km-row me"><b>'+esc(label)+'は</b>'+T.me+'</div>'+
+    '<div class="km-row tip"><b>'+(me?'まわりの人へ（接し方のヒント）':esc(label)+'への接し方のヒント')+'</b>'+T.tip+'</div>'+
+    '<p class="km-src">'+((opt&&opt.hon)?'考える前に選んだ':'')+k.ex.filter(Boolean).map(function(a){ return '「'+esc(a)+'」'; }).join('')+'などの答えから見ています。</p></div>';
+}
+/* みんなの結果：だれが何派か・2人ならその組み合わせ、3人以上ならメンバーのコツ */
+function kimochiGroupHTML(idx, meI){
+  var TX=window.KIMOCHI_TXT; if(!TX) return '';
+  var L=(idx||[]).map(function(i){ return { i:i, k:kimochiOf(S.qs, S.ans[i]) }; }).filter(function(x){ return x.k; });
+  if(L.length<2) return '';
+  var two=L.length===2;
+  var h='<div class="card kmc kmg"><p class="kt-hd">'+(two?'2人':'みんな')+'の気持ちの出し方</p><div class="km-pair">'+
+    L.map(function(x){ return '<span class="km-t '+x.k.type+'">'+esc(S.players[x.i].name)+(x.i===meI?'（あなた）':'')+'：'+TX.type[x.k.type].name+'</span>'; }).join('')+'</div>';
+  if(two){
+    var a=L[0].k.type, b=L[1].k.type, P=TX.pair[a+'|'+b]||TX.pair[b+'|'+a];
+    if(P) h+='<div class="km-row me"><b>この2人は</b>'+P[0]+'</div><div class="km-row tip"><b>うまくいくコツ</b>'+P[1]+'</div>';
+  }else{
+    var ts=L.map(function(x){ return x.k.type; }), hs=function(t){ return ts.indexOf(t)>=0; };
+    var g=hs('say')&&hs('sas') ? 'mix' : (hs('sas') ? 'sas' : (hs('both') ? 'both' : 'say'));
+    h+='<div class="km-row tip"><b>うまくいくコツ</b>'+TX.group[g]+'</div>';
+  }
+  return h+'</div>';
+}
 /* 結果の1つの欄でまちがいが起きても、ほかの欄と結果の画面は出す（2026-11-17：ことばの表のまちがいで、15問目のあと結果に進めなくなっていた） */
-['charaHTML','kotobaHTML','kotobaHonHTML','kotobaBothHTML','histHTML'].forEach(function(n){
+['charaHTML','kotobaHTML','kotobaHonHTML','kotobaBothHTML','histHTML','kimochiHTML','kimochiGroupHTML'].forEach(function(n){
   var f=window[n]; if(typeof f!=='function') return;
   window[n]=function(){ try{ return f.apply(this, arguments); }catch(e){ console.error(n, e); return ''; } };
 });
@@ -3438,10 +3531,11 @@ function showGroupResultCore(){
        '<div class="pp-say">'+axComment(hd.k, hv)+'</div>'+bridgeLine(mode, hd.k, hv, co)+rkSpan(mode, hd.k, hv, me?'あなた':r.p.name+'さん')+
        '<div class="pp-tiles">'+oth.map(function(ax,j){ return '<div class="pt'+j+'"><small>'+ax.name.replace(/度$/,'')+'</small><b>'+r.sc[ax.k]+'%</b></div>'; }).join('')+'</div>'+
        (function(){ var sp=speedStats(S.qs,S.times[r.i],S.ans[r.i]); return sp ? '<div class="pks">'+pickHTML('⚡','即決',sp.quick)+pickHTML('🌀','いちばん悩んだ',sp.slow)+'</div>' : ''; })()+
-       '</div>'+charaHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone, true, {mode:mode})+kotobaHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone, mode)+
+       '</div>'+charaHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone, true, {mode:mode})+(mode==='love'?kimochiHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone):'')+kotobaHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone, mode)+
        '<details class="kok"><summary><span><img class="ico-i" src="img/icon-detail.webp" alt="" width="20" height="20">4つの％をくわしく見る</span></summary>'+axisHTML(mode,r.sc)+AXES[mode].map(function(ax){ return rkSpan(mode, ax.k, r.sc[ax.k], me?'あなた':r.p.name+'さん'); }).join('')+'</details></div>';
   });
   h+='</div>';
+  if(mode==='love') h+=kimochiGroupHTML(R.map(function(r){ return r.i; }), meI);
   h+=aishoHTML(mode);
   // 物差しごとのランキング
   h+='<div class="card"><h3>ランキング</h3>';
