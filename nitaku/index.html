@@ -2823,7 +2823,7 @@ function charaOf(qs, ans, opt){
     mame:net(['こまめな連絡がほしい'],['自分の時間もほしい','ほうっておいてほしい','マイペース','自由人']) };
   // ふつう編の通知表：％で決める科目（ax）と、ことばで決める科目（pl・mi）
   if(NM) D.subj.forEach(function(s){ grade[s.k]= s.ax ? g5(sc[s.ax]) : net(s.pl||[], s.mi||[]); });
-  return { main:main, sub:sub, ani:ani, pref:pref, sc:sc, grade:grade };
+  return { main:main, sub:sub, ani:ani, pref:pref, sc:sc, grade:grade, cs:cs };
 }
 function tnHTML(o, tag){ tag=tag||'span'; return ['y','f','s'].map(function(t){ return '<'+tag+' class="tn tn-'+t+'">'+esc(o[t])+'</'+tag+'>'; }).join(''); }
 function tnList(c, from, to, key){ // あるある（または症状）の from〜to 番目を、やさしめ・辛口・激辛のぶん並べる
@@ -3380,33 +3380,34 @@ function histHTML(mode, h){
 var KOI_AI='<a class="koi-ai" href="https://koikata.jp/aichaku/" target="_blank" rel="noopener" aria-label="愛着スタイル診断（恋のかたち診断・別のサイト koikata.jp が開きます）"><span class="ka-h" aria-hidden="true"><img src="img/koi-secure.webp" alt="" width="30" height="30" loading="lazy"><img src="img/koi-preoc.webp" alt="" width="30" height="30" loading="lazy"><img src="img/koi-dismiss.webp" alt="" width="30" height="30" loading="lazy"></span><span class="ka-t"><b><span class="nw">愛着スタイル診断も</span><span class="nw">やってみる</span></b><small><span class="nw">あなたは安定型？</span><span class="nw">不安型？</span>　<span class="nw">無料・4分</span></small></span><span class="ka-a" aria-hidden="true">↗</span></a>'; // 恋のかたち診断の愛着スタイル診断へ（鑑定者本人 2026-11-19「愛着スタイル診断の公式になりたい」→見本の C）
 var PROMO='<a class="promo" href="https://166unmei.com" target="_blank" rel="noopener" aria-label="1.66 奇跡の相性診断で占う（別のサイト 166unmei.com が開きます）"><span class="pr-pair" aria-hidden="true"><img src="img/166-usagi.webp" alt="" width="74" height="72" loading="lazy"><i>×</i><img src="img/166-inu.webp" alt="" width="63" height="72" loading="lazy"></span><span class="pr-m"><span class="pr-k">奇跡の相性診断</span><span class="pr-n">1.66<small>%</small></span><span class="pr-d">あの人は、<em>奇跡の1.66%</em><span class="pr-dn">に入っている？</span></span></span><span class="pr-btn">生年月日で占う <small>1分・無料 ↗</small></span></a><p class="promo-u">166unmei.com（別のサイト）</p>';
 /* これまでを合わせたキャラ（鑑定者本人 2026-11-19「結果のキャラが遊ぶたびに違う」「自分のキャラに定着しない」→「A」）：
-   問題が毎回ちがい、1回の中でキャラに効く答えは数問なので、1回ごとのキャラは入れかわりやすい。
-   ひとりで遊んだ答え（問題の目印と、選んだのが問題データの左右どちらか）をこのスマホにためて、これまでの答えをまとめてキャラを決める。
-   どこにも送らない。恋の問題・日常の問題それぞれ新しい順に150問まで（同じ問題は新しい答え）。2回目から出す */
-var CT_KEY='nitaku_chara_ans', CT_MAX=150;
-function ctSave(qs, ans, g){
-  var d=store(CT_KEY)||{}; if(g && d.last===g) return d;
-  var ids={love:{}, normal:{}}; POOL.love.forEach(function(q){ ids.love[q.id]=1; }); POOL.normal.forEach(function(q){ ids.normal[q.id]=1; });
-  var got={};
-  qs.forEach(function(q,qi){ var c=ans&&ans[qi]; if(c!=='A'&&c!=='B') return; var pl=ids.love[q.id]?'love':(ids.normal[q.id]?'normal':null); if(!pl) return;
-    var L=d[pl]=d[pl]||{n:0,a:[]}; L.a=L.a.filter(function(x){ return x[0]!==q.id; }); L.a.unshift([q.id, canon(q,c)]); if(L.a.length>CT_MAX) L.a.length=CT_MAX; got[pl]=1; });
-  Object.keys(got).forEach(function(pl){ d[pl].n=(d[pl].n||0)+1; });
+   1回ごとのキャラは、問題が毎回ちがい・キャラに効く答えが数問しかないので入れかわりやすい。
+   ひとりで遊んだ回ごとに、その回のキャラ（主役＝2点・もう1つの顔＝1点）と点を、このスマホに新しい順に10回ぶん残し、
+   いちばん点の多いキャラを「いつものあなた」にする（同じ点なら、回ごとの点〈その回の平均との差〉の合計で決める）。
+   答えをまとめて1回で決めると、1回15問に合わせたキャラの出やすさの調整がきかず、一部のキャラにかたよったので、この決め方にした。どこにも送らない */
+var CT_KEY='nitaku_chara_ans', CT_MAX=10;
+function ctRec(r){ if(!r || !r.main) return null; var ids=Object.keys(r.cs||{}), m=ids.reduce(function(a,k){ return a+r.cs[k]; },0)/(ids.length||1), v={};
+  ids.forEach(function(k){ v[k]=Math.round((r.cs[k]-m)*100)/100; }); return { m:r.main.id, s:r.sub?r.sub.id:'', v:v }; }
+function ctSave(qs, ans, g, pm){
+  var d=store(CT_KEY)||{}; if(!d.v2) d={v2:1}; if(g && d.last===g) return d;
+  var add=function(pl){ try{ var rec=ctRec(charaOf(qs, ans, {mode:pl})); if(!rec) return; var L=d[pl]=d[pl]||[]; L.unshift(rec); if(L.length>CT_MAX) L.length=CT_MAX; }catch(e){} };
+  add('love'); if(pm==='normal') add('normal');
   d.last=g; store(CT_KEY, d); return d;
 }
 function ctChara(pl){
-  var d=store(CT_KEY)||{}, L=d[pl]; if(!L || (L.n||0)<2) return null;
-  var by={}, qs=[], ans=[]; POOL[pl].forEach(function(q){ by[q.id]=q; });
-  L.a.forEach(function(x){ var q=by[x[0]]; if(!q) return; qs.push(Object.assign({}, q, {sw:false})); ans.push(x[1]==='a'?'A':'B'); });
-  if(qs.length<10) return null;
-  try{ var r=charaOf(qs, ans, {mode:pl}); return r && r.main ? {c:r.main, n:L.n, q:qs.length} : null; }catch(e){ return null; }
+  var d=store(CT_KEY)||{}, L=(d.v2 && d[pl])||[]; if(L.length<2) return null;
+  var D=pl==='normal'?CHN:CH, pt={}, sum={};
+  L.forEach(function(r){ pt[r.m]=(pt[r.m]||0)+2; if(r.s) pt[r.s]=(pt[r.s]||0)+1; Object.keys(r.v||{}).forEach(function(k){ sum[k]=(sum[k]||0)+r.v[k]; }); });
+  var best=D.list.slice().sort(function(x,y){ return ((pt[y.id]||0)-(pt[x.id]||0)) || ((sum[y.id]||0)-(sum[x.id]||0)); })[0];
+  var times=L.filter(function(r){ return r.m===best.id; }).length;
+  return best ? {c:best, n:L.length, t:times} : null;
 }
 function ctHTML(now, pl){
   var t=ctChara(pl); if(!t) return '';
   var c=t.c, im=CHARA_IMG[c.id], same=now && now.id===c.id, lab=pl==='normal'?'ふだんのキャラ':'恋のキャラ';
   return '<div class="card ct-card'+(same?' same':'')+'">'+(im?'<img src="'+im+'" alt="" width="72" height="72">':'')+
-    '<div class="ct-t"><small><span class="nw">これまでの'+t.n+'回を合わせた、</span><span class="nw">あなたの'+lab+'</span></small><b>'+esc(c.name)+'</b><span>'+esc(c.say)+'</span>'+
+    '<div class="ct-t"><small><span class="nw">'+(t.n>=CT_MAX?'最近の':'これまでの')+t.n+'回を合わせた、</span><span class="nw">あなたの'+lab+'</span></small><b>'+esc(c.name)+'</b><span>'+esc(c.say)+'</span>'+
     '<p class="ct-n">'+(same ? '今回も「'+esc(c.name)+'」。あなたの'+lab+'が、はっきりしてきました。' : '今回は「'+esc(now?now.name:'')+'」の顔が強く出ました。いつものあなたは「'+esc(c.name)+'」です。')+
-    '</p><p class="ct-q">これまで答えた'+t.q+'問から決めています。遊ぶほど、あなたらしさがはっきりします。</p></div></div>';
+    '</p><p class="ct-q">'+(t.n>=CT_MAX?'最近の':'これまでの')+t.n+'回のうち'+t.t+'回、「'+esc(c.name)+'」がいちばん強く出ました（もう1つの顔もふくめて決めています）。遊ぶほど、あなたらしさがはっきりします。</p></div></div>';
 }
 function showResult(){
   if(S.withInv) return showWithResult();
@@ -3418,7 +3419,7 @@ function showResult(){
   // いちばん上はキャラの絵と「あなたは〇〇」（鑑定者本人 2026-11-16「1と2も進めて」。表情のパンダと下のキャラの絵が2つ並ばないように）
   var ch=charaOf(S.qs, S.ans[0], {mode:mode}), chImg=ch && CHARA_IMG[ch.main.id];
   if(!S.qs._g) S.qs._g=Date.now()+'-'+Math.random();
-  try{ ctSave(S.qs, S.ans[0], S.qs._g); }catch(e){}
+  try{ ctSave(S.qs, S.ans[0], S.qs._g, pm); }catch(e){}
   var ctLove='', ctNorm='';
   try{ ctLove=ch ? ctHTML(ch.main, mode) : ''; if(pm==='normal'){ var chN=charaOf(S.qs, S.ans[0], {mode:'normal'}); ctNorm=chN ? ctHTML(chN.main, 'normal') : ''; } }catch(e){}
   var h='<div class="res-hero"><div class="pre">'+playName2(pm)+'　あなたの結果</div>'+
