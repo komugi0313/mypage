@@ -588,7 +588,15 @@ function mineView(){const L2=mineList();
   app.querySelectorAll('.mine-b').forEach(b=>b.onclick=()=>mineOpen(L2[+b.dataset.j]));$('mine-back').onclick=goTop}
 function showResult(G){showResultCore(G);
   if(G.mine){const sc=app.querySelector('.scr'),x=mineLabel(G.mine);if(sc)sc.insertAdjacentHTML('afterbegin',`<section class="card mine-note"><p class="pt-h"><em>わたしの結果</em>${x.dt}の結果</p><p class="hint">このスマホに残っていた結果です。</p><button class="btn ghost small" id="mine-ls" style="align-self:stretch">わたしの結果の一覧へ</button></section>`);const b=$('mine-ls');if(b)b.onclick=mineView;scrollTo(0,0)}
-  else if(!G.view)mineSave(G)}
+  else if(!G.view){mineSave(G);statPlay(G)}}
+/* 診断した回数を数える（統計のページ stats.html 用。名前・答えは送らない。同じ回は1回だけ＝部屋に人が加わって描き直しても数え直さない。2026-11-19） */
+function statPlay(G){try{if(!G.qs||!G.qs.length)return;
+  const me=G.players.find(p=>p.id===G.me);if(!me)return;
+  const kind=G.pair?'with':!G.local?'room':'solo',len=G.qs.length>=30?30:10;
+  const id=kind==='room'?'r'+(R.code||'')+'-'+((R.room||{}).round||1)+'-'+((R.room||{}).created||0):kind+'-'+G.qs.join('.')+'-'+G.qs.map((k,i)=>{const a=(me.ans||{})[i];return a&&a.ms||0}).join('');
+  let seen=[];try{seen=JSON.parse(sessionStorage.getItem('kv_play')||'[]')}catch(e){}
+  if(seen.includes(id))return;seen.push(id);try{sessionStorage.setItem('kv_play',JSON.stringify(seen.slice(-50)))}catch(e){}
+  getDb().then(db=>{if(db&&db.stat)db.stat(kind+len).catch(()=>{})}).catch(()=>{})}catch(e){}}
 function showResultCore(G){
   const ps=G.players,me=ps.find(p=>p.id===G.me),multi=ps.length>1,sec=ms=>(ms/1000).toFixed(1);
   const nm=p=>esc(p.name)+(p===me?'（あなた）':''),sn=p=>p===me?'あなた':esc(p.name);
@@ -1016,6 +1024,8 @@ const FB=(()=>{
       const d=await rq('GET',P(rp));if(!d)return 'taken';const r0=decF(d.fields);if(Date.now()-(r0.created||0)<12*3600e3)return 'taken';
       const ol=await rq('GET',P(rp+'/players'),null,'pageSize=300'),old=((ol&&ol.documents)||[]).map(x=>x.name.split('/').pop()).filter(id=>id!==pid);
       try{await rq('POST',':commit',{writes:w({updateTime:d.updateTime},old)});return 'ok'}catch(e){if(pc(e))return 'taken';throw e}},
+    async stat(f){const name='projects/'+window.ISYNC_FB.projectId+'/databases/(default)/documents/'+P('stats/plays');
+      return rq('POST',':commit',{writes:[{transform:{document:name,fieldTransforms:[{fieldPath:f,increment:{integerValue:'1'}}]}}]})},
     votes(keys){return Promise.all(keys.map(k=>rq('GET',P('votes/'+k)).then(d=>[k,d?decF(d.fields):null]).catch(()=>[k,null]))).then(Object.fromEntries)},
     collection(path){const p=P(path);return{
       get:()=>rq('GET',p,null,'pageSize=300').then(j=>({docs:((j&&j.documents)||[]).map(d=>snap(d.name.split('/').pop(),d))})),
