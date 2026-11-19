@@ -222,15 +222,15 @@ const CTA = (lead, btn, note) => `<section class="cta"><p>${esc(lead)}</p>${STAR
 const card = (c, cur) => `<a href="/type/${lc(c)}/" style="--gp:${GPALE[c[2] + c[3]]};--gc:${grp(c).hex}"${cur ? ' aria-current="page"' : ''}><img src="/img/${c}.webp" alt="" width="64" height="64" loading="lazy"><b>${fname(c)}</b><small>${esc(T[c].c)}</small></a>`;
 const allGrid = (cur) => ['TP', 'TC', 'SP', 'SC'].map(k => `<div class="gh" style="color:${GROUP[k].hex}">${esc(GROUP[k].n)}</div><div class="grid">${ORDER.filter(o => o[2] + o[3] === k).map(o => card(o, o === cur)).join('')}</div>`).join('');
 const ul = xs => '<ul class="pl">' + xs.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>';
-const HEARTS = '<div class="hearts" aria-hidden="true">' + ['sign', 'aru', 'fight', 'jaku'].map(n => `<img src="/img/ico/h-${n}.webp" alt="" width="56" height="56">`).join('') + '</div>';
+const HEARTS = '<div class="hearts" aria-hidden="true">' + ['secure', 'preoc', 'dismiss', 'fear'].map(n => `<img src="/img/ico/k-${n}.webp" alt="" width="56" height="56">`).join('') + '</div>';
 // 4つの心のくせ＝愛着スタイル（鑑定者本人 2026-11-19「不安型・回避型とかも出していい」）
 const KT = {
-  secure: { k: '安定型', h: '甘えもひとり時間も平気派', ico: 'sign' },
-  preoc: { k: '不安型', h: '既読がつくと気になる派', ico: 'jaku' },
-  dismiss: { k: '回避型', h: '大事なことはひとりで決めたい派', ico: 'aru' },
-  fear: { k: '恐れ型（不安＋回避）', h: '好きなのに一歩引いちゃう派', ico: 'fight' },
+  secure: { k: '安定型', h: '甘えもひとり時間も平気派' },
+  preoc: { k: '不安型', h: '既読がつくと気になる派' },
+  dismiss: { k: '回避型', h: '大事なことはひとりで決めたい派' },
+  fear: { k: '恐れ型（不安＋回避）', h: '好きなのに一歩引いちゃう派' },
 };
-const tyCell = k => `<div class="ty t-${k}"><img src="/img/ico/h-${KT[k].ico}.webp" alt="" width="44" height="44" loading="lazy"><span class="k">${esc(KT[k].k)}</span><b>${esc(KT[k].h)}</b><span>${esc(KUSE[k].one)}</span></div>`;
+const tyCell = k => `<div class="ty t-${k}"><img src="/img/ico/k-${k}.webp" alt="" width="44" height="44" loading="lazy"><span class="k">${esc(KT[k].k)}</span><b>${esc(KT[k].h)}</b><span>${esc(KUSE[k].one)}</span></div>`;
 const LINKS = (skip) => '<section class="box"><h2>ほかの恋愛診断</h2><div class="links">' + [['aichaku/', '愛着スタイル診断'], ['chara/', '恋愛キャラ診断'], ['kataomoi/', '片思い診断'], ['aisho/', '自分に合う人のタイプ診断'], ['izon/', '恋愛依存体質チェック']].filter(x => x[0] !== skip).map(x => `<a href="/${x[0]}"><span>${esc(x[1])}</span></a>`).join('') + '</div></section>';
 
 const out = [];
