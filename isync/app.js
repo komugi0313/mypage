@@ -103,6 +103,8 @@ const saveCfg=()=>store('kv_cfg',{mode:CFG.mode,len:CFG.len,topic:CFG.topic,anon
 /* トップの「まず1問、答えてみて」（鑑定者本人 2026-11-17 トップの見本で「2のオーロラ」。押すと、これまでに遊んだ人の％が出る。ここでは数えない） */
 const TH_N=CATS.map((c,i)=>[c[0],Q.filter(q=>q[0]===i).length]).filter(x=>x[1]);
 const TRY_K=Math.max(0,Q.findIndex(q=>q[1]==='LINEは？'));
+// トップの見本：3問の答えを左右に並べて、重なる／分かれるを見せる（鑑定者本人 2026-11-19「B」）
+const OV_ROWS=[['記念日は？',0,0],['LINEは？',0,2],['お風呂は？',0,1]];
 function bindTry(){
   const box=$('try');if(!box)return;let done=false,counts=null;
   getDb().then(db=>db&&db.votes?db.votes(['q'+QKEY[TRY_K]]):null).then(c=>{counts=c&&c['q'+QKEY[TRY_K]]}).catch(()=>{});
@@ -127,43 +129,25 @@ function goTop(){
   </header>
   <div id="ibx" hidden></div>
   ${PACK?`<section class="card packb"><p class="label">「${esc(PACK.title)}」の質問から出します</p><p class="hint">このテーマの質問だけで、ひとりでも、みんなでも遊べます。</p><button class="btn ghost small" id="packx">いつもの質問にもどす</button></section>`:''}
+  <section class="card ov" aria-label="見本：2人の答えの重なり">
+    <div class="ov-who"><span>あなた</span><span>あの人</span></div>
+    ${OV_ROWS.map(([q,a,b])=>{const k=Q.findIndex(x=>x[1]===q);if(k<0)return'';const mk=a===b?['eq','＝']:(a===2||b===2)?['al','≒']:['ne','≠'];
+      return `<div class="ov-r"><p class="ov-q">${esc(q)}</p><span class="ov-c me">${esc(ans(a,k))}</span><i class="ov-m ${mk[0]}" aria-label="${mk[0]==='eq'?'同じ':mk[0]==='al'?'合わせられる':'ちがう'}">${mk[1]}</i><span class="ov-c you">${esc(ans(b,k))}</span></div>`}).join('')}
+    <div class="ov-sum"><div class="ov-ring"><span>78<small>%</small></span></div><p><b>2人のシンクロ率</b><span>分かれたところには、歩み寄りの案が出ます。</span></p></div>
+  </section>
+  <div class="gos">
+    <p class="gos-h">あの人と、みんなと。<br>「ふつう」はどこまで同じ？</p>
+    <button class="gobig g1" id="go-each"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg></span><span><b>2人で・みんなで</b><small>QRを読むだけ・2〜10人</small></span></button>
+    <button class="gobig g2" id="go-solo"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span><span><b>ひとりで遊ぶ</b><small id="solo-sub">${CFG.len}問・約${CFG.len>=30?6:3}分。あとで答え合わせ</small></span></button>
+    <p class="free">${Q.length}の質問・${TH_N.length}つのテーマ　無料・登録なし・アプリ不要</p>
+  </div>
   <section class="card try" id="try">
     <p class="kick">まず1問、答えてみて</p>
     <p class="exq">${esc(Q[TRY_K][1])}</p>
     <div class="tops">${[0,1,2].map(v=>`<button class="topt o${v}" data-tv="${v}"><span class="t">${v<2?OPTS[v]+'　':''}${esc(ans(v,TRY_K))}</span><span class="pct"></span><i class="tbar"></i></button>`).join('')}</div>
     <p class="tnote" id="tnote"></p>
   </section>
-  <div class="stat" aria-label="質問の数">
-    <div><b>${Q.length}</b><span>の質問</span></div><div><b>${TH_N.length}</b><span>のテーマ</span></div><div><b>${AX.length}</b><span>つのものさし</span></div>
-  </div>
-  <section class="card rep">
-    <div class="rep-h"><b>2人の価値観レポート</b><span>見本・あなた × あの人</span></div>
-    <div class="rep-b">
-      <div class="rep-top"><p class="smp-big">78<small>%</small></p><p class="smp-who">シンクロ率<span>答えがどれだけ重なったか</span></p></div>
-      <p class="rep-k">テーマ別の重なり</p>
-      <div class="rep-rows">${[['食',92],['休日・遊び',81],['暮らし',74],['お金',54]].map(([n,v])=>`<div class="rr"><i>${n}</i><span class="t"><s style="width:${v}%"></s></span><em>${v}%</em></div>`).join('')}</div>
-      <p class="rep-k">価値観のタイプ（4つのものさし）</p>
-      <div class="rep-ax"><p class="n">2人の距離感</p>
-        <div class="ends"><span>いつも一緒派</span><span>ひとりの時間も派</span></div>
-        <div class="dbar"><span class="pin p1" style="left:22%"><em>あなた</em></span><span class="pin p2" style="left:66%"><em>あの人</em></span></div>
-        <p class="rd"><span class="nw">あなたは「いつも一緒」寄り、</span><span class="nw">あの人は「ひとりの時間も」寄り。</span><span class="nw">会う回数は、先に話しておくと安心。</span></p></div>
-      <p class="rep-k">★ ゆずれないところ</p>
-      <details class="rep-st"><summary><span class="sm"><span class="nw">同じ 4問・</span><span class="nw">合わせられる 2問・</span><span class="nw">ちがう 1問</span></span><span class="tap"><span class="t1">タップで問題を見る ▼</span><span class="t2">閉じる ▲</span></span></summary>
-        <ul>${[['s','同じ','記念日は？','2人とも「しっかりお祝いしたい」'],['s','同じ','貯金の目標は？','2人とも「決めたい」'],['s','同じ','家事は？','2人とも「担当を決めたい」'],['s','同じ','朝ごはんの量は？','2人とも「しっかり食べたい」'],['a','合わせられる','休みの日の予定は？','あなた「入れたい」・あの人「どっちでも合わせられる」'],['a','合わせられる','休みの日の過ごし方は？','あなた「家でのんびり」・あの人「その日の気分で」'],['d','ちがう','お風呂は？','あなた「湯船につかりたい」・あの人「シャワーで十分」']].map(([c,t,q,a])=>`<li><span class="tg ${c}">${t}</span><b>${q}</b><span class="an">${a}</span></li>`).join('')}</ul></details>
-      <div class="smp-ayu"><b>歩み寄りの案（お風呂は？）</b>${esc((window.SY_AYUMI||{})['お風呂は？']||'平日はシャワー、週末は湯船に。')}</div>
-    </div>
-  </section>
-  <section class="card ths">
-    <p class="kick">${TH_N.length}つのテーマから、まんべんなく</p>
-    <p class="ths-s">遊ぶたびに、まだ出ていない質問が出ます。</p>
-    <div class="tiles">${TH_N.map(([n,c])=>`<div class="tile"><span>${esc(n)}</span><em>${c}</em></div>`).join('')}</div>
-  </section>
-  <div class="gos">
-    <p class="gos-h">あの人と、みんなと。<br>「ふつう」はどこまで同じ？</p>
-    <button class="gobig g1" id="go-each"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg></span><span><b>2人で・みんなで</b><small>QRを読むだけ・2〜10人</small></span></button>
-    <button class="gobig g2" id="go-solo"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span><span><b>ひとりで遊ぶ</b><small id="solo-sub">${CFG.len}問・約${CFG.len>=30?6:3}分。あとで答え合わせ</small></span></button>
-    <p class="free">無料・登録なし・アプリ不要</p>
-  </div>
+
   ${st&&st.code?`<button class="btn ghost small" id="back">さっきの部屋（${esc(st.code)}）にもどる</button>`:''}
   <section class="card" id="setup">
     <p class="label">だれと遊ぶ？</p>
