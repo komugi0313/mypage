@@ -150,6 +150,21 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if resource.data.expireAt < request.time;
     }
+    // 診断した回数（ひとりで／みんなの部屋／答え合わせのリンク × 10問・30問 の数だけ。1回に1つずつしか増やせない・減らせない・消せない。名前は入れない。2026-11-19）
+    function isyncUp1(k) {
+      return request.resource.data.get(k, 0) == resource.data.get(k, 0)
+        || request.resource.data.get(k, 0) == resource.data.get(k, 0) + 1;
+    }
+    match /isync_stats/{id} {
+      allow read: if true;
+      allow create: if id == 'plays' && request.resource.data.size() == 1
+        && request.resource.data.keys().hasOnly(['solo10','solo30','room10','room30','with10','with30'])
+        && request.resource.data.values()[0] == 1;
+      allow update: if id == 'plays' && request.resource.data.keys().hasOnly(['solo10','solo30','room10','room30','with10','with30'])
+        && request.resource.data.diff(resource.data).affectedKeys().size() == 1
+        && isyncUp1('solo10') && isyncUp1('solo30') && isyncUp1('room10') && isyncUp1('room30') && isyncUp1('with10') && isyncUp1('with30');
+      allow delete: if false;
+    }
   
 
     // ---------- 恋のかたち診断（koi16/firestore.rules）----------
