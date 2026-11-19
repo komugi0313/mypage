@@ -51,7 +51,7 @@ const PAGES = [
     ids: quota([[cat('恋愛・連絡'), 14], [cat('休日・遊び'), 8], [cat('お金'), 6], [cat('暮らし'), 3], [cat('将来・家族'), 9]]) },
   { slug: 'tomodachi', title: n => `友だちと価値観診断｜グループで盛り上がる2択の質問${n}選｜アイシンク`, h1: n => `友だち・グループで盛り上がる2択の質問${n}選`, short: '友だち・グループで盛り上がる質問',
     lead: '休みの日の過ごし方、旅行、食べもの。友だちどうしで答えが分かれて盛り上がる2択の質問を集めました。みんなのスマホで同時に答えられます。',
-    guide: { h: 'みんなで遊ぶときのコツ', items: ['答えは同時に出す。あとから合わせられないので、本音が出ます。', '少数派の人に「どうして？」を聞くと、意外な話が出てきます。'] },
+    guide: { h: 'みんなで診断するときのコツ', items: ['答えは同時に出す。あとから合わせられないので、本音が出ます。', '少数派の人に「どうして？」を聞くと、意外な話が出てきます。'] },
     ids: quota([[cat('休日・遊び'), 16], [cat('食'), 14], [cat('暮らし'), 10]]) },
 ];
 ['dousei', 'kekkon', 'hatsudate', 'kachikan', 'couple', 'tsukiau', 'tomodachi'].forEach(sl => { const p = PAGES.find(x => x.slug === sl); p.list = p.ids(); p.list.slice(40).forEach(i => used.delete(i)); p.list = p.list.slice(0, 40); });
