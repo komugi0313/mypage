@@ -123,7 +123,7 @@ function goTop(){
     <div class="orb" aria-hidden="true"></div>
     <h1 class="logo">I-Sync</h1><p class="kana">アイ・シンク</p>
     <p class="catch">あの人と、みんなと。<br>「ふつう」はどこまで同じ？</p>
-    <p class="lead">2択に答えて、答え合わせ。</p>
+    <p class="lead">別々に答えるだけで、2人の<span class="nw">シンクロ率</span>がわかる。</p>
   </header>
   <div id="ibx" hidden></div>
   ${PACK?`<section class="card packb"><p class="label">「${esc(PACK.title)}」の質問から出します</p><p class="hint">このテーマの質問だけで、ひとりでも、みんなでも遊べます。</p><button class="btn ghost small" id="packx">いつもの質問にもどす</button></section>`:''}
