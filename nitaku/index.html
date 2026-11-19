@@ -3382,7 +3382,7 @@ var PROMO='<a class="promo" href="https://166unmei.com" target="_blank" rel="noo
 /* これまでを合わせたキャラ（鑑定者本人 2026-11-19「結果のキャラが遊ぶたびに違う」「自分のキャラに定着しない」→「A」）：
    1回ごとのキャラは、問題が毎回ちがい・キャラに効く答えが数問しかないので入れかわりやすい。
    ひとりで遊んだ回ごとに、その回のキャラ（主役＝2点・もう1つの顔＝1点）と点を、このスマホに新しい順に10回ぶん残し、
-   いちばん点の多いキャラを「いつものあなた」にする（同じ点なら、回ごとの点〈その回の平均との差〉の合計で決める）。
+   主役として出た回数がいちばん多いキャラを「いつものあなた」にする（同じ回数なら、もう1つの顔の回数→回ごとの点〈その回の平均との差〉の合計で決める）。
    答えをまとめて1回で決めると、1回15問に合わせたキャラの出やすさの調整がきかず、一部のキャラにかたよったので、この決め方にした。どこにも送らない */
 var CT_KEY='nitaku_chara_ans', CT_MAX=10;
 function ctRec(r){ if(!r || !r.main) return null; var ids=Object.keys(r.cs||{}), m=ids.reduce(function(a,k){ return a+r.cs[k]; },0)/(ids.length||1), v={};
@@ -3395,11 +3395,13 @@ function ctSave(qs, ans, g, pm){
 }
 function ctChara(pl){
   var d=store(CT_KEY)||{}, L=(d.v2 && d[pl])||[]; if(L.length<2) return null;
-  var D=pl==='normal'?CHN:CH, pt={}, sum={};
-  L.forEach(function(r){ pt[r.m]=(pt[r.m]||0)+2; if(r.s) pt[r.s]=(pt[r.s]||0)+1; Object.keys(r.v||{}).forEach(function(k){ sum[k]=(sum[k]||0)+r.v[k]; }); });
-  var best=D.list.slice().sort(function(x,y){ return ((pt[y.id]||0)-(pt[x.id]||0)) || ((sum[y.id]||0)-(sum[x.id]||0)); })[0];
-  var times=L.filter(function(r){ return r.m===best.id; }).length;
-  return best ? {c:best, n:L.length, t:times} : null;
+  // 選ぶのは、主役として1回以上出たキャラだけ（出てきたことのないキャラを「いつものあなた」にしない＝鑑定者本人 2026-11-19「出てきた事ないキャラとか間違えて言いませんか？」）。
+  // 主役になった回数が多い順 → 同じなら「もう1つの顔」の回数 → 回ごとの点の合計
+  var D=pl==='normal'?CHN:CH, mn={}, sb={}, sum={};
+  L.forEach(function(r){ mn[r.m]=(mn[r.m]||0)+1; if(r.s) sb[r.s]=(sb[r.s]||0)+1; Object.keys(r.v||{}).forEach(function(k){ sum[k]=(sum[k]||0)+r.v[k]; }); });
+  var cand=D.list.filter(function(c){ return mn[c.id]>0; }); if(!cand.length) return null;
+  var best=cand.sort(function(x,y){ return (mn[y.id]-mn[x.id]) || ((sb[y.id]||0)-(sb[x.id]||0)) || ((sum[y.id]||0)-(sum[x.id]||0)); })[0];
+  return {c:best, n:L.length, t:mn[best.id]};
 }
 function ctHTML(now, pl){
   var t=ctChara(pl); if(!t) return '';
@@ -3407,7 +3409,7 @@ function ctHTML(now, pl){
   return '<div class="card ct-card'+(same?' same':'')+'">'+(im?'<img src="'+im+'" alt="" width="72" height="72">':'')+
     '<div class="ct-t"><small><span class="nw">'+(t.n>=CT_MAX?'最近の':'これまでの')+t.n+'回を合わせた、</span><span class="nw">あなたの'+lab+'</span></small><b>'+esc(c.name)+'</b><span>'+esc(c.say)+'</span>'+
     '<p class="ct-n">'+(same ? '今回も「'+esc(c.name)+'」。あなたの'+lab+'が、はっきりしてきました。' : '今回は「'+esc(now?now.name:'')+'」の顔が強く出ました。いつものあなたは「'+esc(c.name)+'」です。')+
-    '</p><p class="ct-q">'+(t.n>=CT_MAX?'最近の':'これまでの')+t.n+'回のうち'+t.t+'回、「'+esc(c.name)+'」がいちばん強く出ました（もう1つの顔もふくめて決めています）。遊ぶほど、あなたらしさがはっきりします。</p></div></div>';
+    '</p><p class="ct-q">'+(t.n>=CT_MAX?'最近の':'これまでの')+t.n+'回のうち'+t.t+'回、「'+esc(c.name)+'」がいちばん強く出ました。遊ぶほど、あなたらしさがはっきりします。</p></div></div>';
 }
 function showResult(){
   if(S.withInv) return showWithResult();
