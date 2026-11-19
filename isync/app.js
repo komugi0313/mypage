@@ -552,7 +552,7 @@ function twoFolds(G,trows,nm,r){
       return `<li class="${cls}"><b>${esc(Q[k][1])}</b>${who(A,aa)}${who(B,bb)}</li>`};
     const many=r.starDiff.length>=2&&r.starDiff.length>=r.starSame.length+r.starAdj.length;
     const verdict=!r.starDiff.length?`<p class="good">大事なところは、ちがいがありません</p>`:many?`<p class="warn">大事なところで、考え方がちがうことが多めです。この${r.starDiff.length}問は、先にゆっくり話しておくと安心です</p>`:`<p class="warn">大事なところで、ちがいが${r.starDiff.length}問あります。ここは先に話しておくと安心です</p>`;
-    out+=foldBox('★ ゆずれないところ',`<em>同じ ${r.starSame.length}・合わせられる ${r.starAdj.length}・ちがう ${r.starDiff.length}</em>${r.starDiff.length?'　ちがう問題：<em>'+esc(Q[G.qs[r.starDiff[0]]][1])+'</em>':''}`,
+    out+=foldBox('★ ゆずれないところ',`<span class="ftc"><i class="c-s">同じ ${r.starSame.length}</i><i class="c-m">合わせられる ${r.starAdj.length}</i><i class="c-d">ちがう ${r.starDiff.length}</i></span>${r.starDiff.length?'<span class="ftl">ちがう問題：<em>'+esc(Q[G.qs[r.starDiff[0]]][1])+'</em></span>':''}`,
       `<div class="starbox">${starCnt(G)}${verdict}<ul class="slist">${r.starDiff.map(i=>row(i,'d')).join('')}${r.starAdj.map(i=>row(i,'m')).join('')}${r.starSame.map(i=>row(i,'s')).join('')}</ul></div>`)}
   const all=G.qs.map((k,i)=>`<li><b>${esc(Q[k][1])}</b>${[0,1,2,3].map(v=>{const who=G.players.filter(p=>oOf(p.ans[i])===v);return who.length?`<span class="ansrow"><i class="o${v}">${esc(ans(v,k))}</i>${G.anon?who.length+'人':who.map(nm).join('、')}</span>`:''}).join('')}</li>`).join('');
   out+=foldBox('みんなの答えを1問ずつ','全'+G.qs.length+'問',`<ul class="list all">${all}</ul>`);
