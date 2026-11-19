@@ -676,9 +676,11 @@ function soloHTML(G){
   const pct=xs.length?Math.round(flex.length/xs.length*100):0;
   const msg=pct>=50?'まわりに合わせられる、やわらかい人':pct>=25?'こだわりとやわらかさのバランス型':'自分の好みがはっきりしている人';
   const who=p.name==='あなた'?'あなた':esc(p.name)+'さん';
-  const tiles=`<div class="stiles"><div class="tile"><span>合わせられる度</span><em>${pct}%</em></div><div class="tile" id="tmaj" hidden><span>多数派度</span><em></em></div></div>
-    <p class="hint">${msg}。${xs.length}問のうち、まん中の答え（どっちでも合わせられる など）が${flex.length}問</p>`;
-  const shape=shapeHTML(G,p,who,tiles),bars=shape?shapeBars(G,p):'';
+  // 「合わせられる度 17%」は低い点数に見えるので、％ではなく問題の数で出す（鑑定者本人 2026-11-19「全部直して」）。4つのものさしはたたまずに見せる
+  const bars0=shapeBars(G,p);
+  const tiles=`${bars0?`<div class="shape-in">${bars0}</div>`:''}<div class="stiles"><div class="tile"><span>どっちでも合わせられる</span><em>${flex.length}<small>／${xs.length}問</small></em></div><div class="tile" id="tmaj" hidden><span>多数派度</span><em></em></div></div>
+    <p class="hint">${msg}。</p>`;
+  const shape=shapeHTML(G,p,who,tiles);
   if(!xs.length){const und=G.qs.some((k,i)=>p.ans[i]&&p.ans[i].u);
     return `<section class="card score none"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true"><p class="msg">${und?'どの問題も、まだ決められませんでした':'時間切れで、答えた問題がありませんでした'}</p>
       <p class="hint">${und?'':'1問15秒で、次の問題へ進みます。'}答えた問題があると、あなたの価値観のかたちがわかります。下の「もう1回診断する」から、もう一度どうぞ。</p></section>${undecHTML(G,q=>esc(q.name))}`}
@@ -689,10 +691,17 @@ function soloHTML(G){
   const flx=(flex.length?`<p class="sub">合わせられること</p><p class="hint">${flex.map(x=>`<span class="qi">${esc(Q[x.k][1])}</span>`).join('　')}</p>`:'')
     +(byT.length>1?`<p class="sub">いちばん悩んだ問題</p><div class="ponder"><b>${esc(Q[byT[0].k][1])}</b><span>「${esc(ans(byT[0].a.o,byT[0].k))}<span style="white-space:nowrap">」まで <em>${sec(byT[0].a.ms)}</em> 秒</span></span></div>
     <p class="hint">いちばん即決は「${esc(Q[byT[byT.length-1].k][1])}」（${sec(byT[byT.length-1].a.ms)} 秒）</p>`:'');
+  // あなたの大事な答え（★→大事な問題の順に5つまで）と、選び方のくせ（悩んだ・即決）。たたまずに見せる（鑑定者本人 2026-11-19「1人の結果が中身が少なく見えるのは問題」）
+  const imp=firm.filter(x=>x.a.st).concat(firm.filter(x=>!x.a.st&&WB.has(x.k))).slice(0,5);
+  const mine=imp.length?`<section class="card mykey"><p class="pt-h"><em>あなたの答え</em>${who}の大事な答え</p>
+    <p class="hint">お金・暮らし・将来など、大事な問題で選んだ答えです。</p>
+    <ul class="mk-l">${imp.map(x=>`<li><b>${esc(Q[x.k][1])}</b><span class="mk-a">${x.a.st?'<i class="mk-s">★</i>':''}${esc(ans(x.a.o,x.k))}</span></li>`).join('')}</ul>
+    <p class="hint mk-n">相手と答え合わせすると、同じ問題の相手の答えと並べて見られます。</p>
+    ${byT.length>1?`<div class="mk-t"><div><span>いちばん悩んだ</span><b>${esc(Q[byT[0].k][1])}</b><em>${sec(byT[0].a.ms)}秒</em></div><div><span>いちばん即決</span><b>${esc(Q[byT[byT.length-1].k][1])}</b><em>${sec(byT[byT.length-1].a.ms)}秒</em></div></div>`:''}</section>`:'';
   return `${top}
+  ${mine}
   ${inviteCard(G,p)}
   <p class="ref-h">くわしく見る</p>
-  ${bars?foldBox('4つのものさし','あなたの位置',`<div class="shape-in">${bars}</div>`):''}
   ${firm.length?foldBox('あなたのこだわり',firm.length+'問',kod):''}
   ${flx?foldBox(flex.length?'合わせられること・悩んだ問題':'いちばん悩んだ問題',flex.length?flex.length+'問':'',flx):''}
   ${undecHTML(G,q=>esc(q.name))}
@@ -708,8 +717,8 @@ const PROMO=`<a class="promo" href="https://166unmei.com" target="_blank" rel="n
 function tailHTML(G){const pr=G&&G.pair?pairBackCard(G):'';return `${pr}
   <button class="btn img small" id="img">結果を画像で保存</button><p class="hint" id="imgmsg" hidden></p>
   ${PROMO}
-  <a class="btn line small${G&&(G.pair||G.players.length<2)?' line-w':''}" id="lnres" href="#" target="_blank" rel="noopener">LINEで結果を送る</a>
-  <button class="btn ghost small" id="share">ほかのアプリでシェアする</button><p class="hint" id="shared" hidden></p>
+  ${G&&G.backTop?'':`<a class="btn line small${G&&(G.pair||G.players.length<2)?' line-w':''}" id="lnres" href="#" target="_blank" rel="noopener">LINEで結果を送る</a>
+  <button class="btn ghost small" id="share">ほかのアプリでシェアする</button><p class="hint" id="shared" hidden></p>`}
   <div class="row"><button class="btn" id="again">もう1回診断する</button><button class="btn ghost" id="home">トップへ</button></div>`}
 // シェア：スマホの共有（使えないときはコピー）。名前は入れない
 // ひとりの結果は、名前がわかれば答え合わせのリンクで送る（相手が同じ問題に答えると2人の結果が出る。鑑定者本人 2026-11-18）
@@ -731,7 +740,7 @@ function bindTail(G){
   const solo=G.players.length<2&&!G.pair&&!!$('inv-name');
   const nmNow=()=>{if(!solo)return '';const i=$('inv-name'),v=i?i.value.trim():'';if(v){store('kv_name',v);return v}const p=G.players[0];return ['あなた','ともだち'].includes(p.name)?(store('kv_name')||''):p.name};
   const askName=e=>{if(!solo||nmNow())return false;if(e)e.preventDefault();const m=$('inv-msg'),i=$('inv-name');if(m){m.hidden=false;m.textContent='先にニックネームを入れてください。相手は同じ問題に答えて、あなたと答え合わせできます（相手の画面に「○○さんから」と出ます）。'}if(i){i.scrollIntoView({block:'center'});i.focus()}return true};
-  $('share').onclick=()=>{if(askName())return;doShare(G,nmNow())};
+  if($('share'))$('share').onclick=()=>{if(askName())return;doShare(G,nmNow())};
   const lr=$('lnres');if(lr){const set=()=>{const {t,url}=shareText(G,nmNow());lr.href=lineUrl(t,url)};set();lr.addEventListener('click',e=>{if(!askName(e))set()});const ni=$('inv-name');if(ni)ni.addEventListener('input',set)}
   const t=$('tog');if(t)t.onclick=()=>{CFG.mode='each';saveCfg();goTop()};
   $('again').onclick=e=>{if(R.code){e.target.disabled=true;roomAgain();return}
@@ -908,7 +917,7 @@ function histHTML(h){
   const f=av(h.map(r=>r.f)),m=av(h.map(r=>r.m).filter(x=>x!=null)),mn=h.filter(r=>r.m!=null).length;
   const axs=AX.map(a=>({a,v:av(h.map(r=>r.ax&&r.ax[a.key]).filter(x=>x!=null))})).filter(x=>x.v!=null);
   const bar=(name,v,sub)=>`<li><span class="thn"><b>${esc(name)}</b>${sub?`<small>${esc(sub)}</small>`:''}</span><b>${v}%</b><div class="bar"><i style="width:${v}%"></i></div></li>`;
-  return foldBox(`あなたの平均（${n}回ぶん）`,'診断するほど、あなたらしい数字に',`<ul class="thl">${bar('合わせられる度',f)}${m!=null?bar('多数派度',m,mn<n?mn+'回ぶん':''):''}</ul>
+  return foldBox(`あなたの平均（${n}回ぶん）`,'診断するほど、あなたらしい数字に',`<ul class="thl">${bar('どっちでも合わせられる答え',f)}${m!=null?bar('多数派度',m,mn<n?mn+'回ぶん':''):''}</ul>
     ${axs.length?`<ul class="list havg">${axs.map(({a,v})=>`<li><b>${esc(a.name)}</b>${esc(axSide(a,v))}</li>`).join('')}</ul>`:''}`)}
 function histSetM(G,m){const id=G.qs.join('.'),h=store('kv_hist')||[],r=h.find(x=>x&&x.id===id);if(!r||r.m!=null)return;r.m=m;store('kv_hist',h);const el=$('hist');if(el){el.innerHTML=histHTML(h);if(window.__jw)window.__jw(el)}}
 
@@ -937,9 +946,9 @@ function drawResult(c,G){
   T('I-Sync',W/2,370,F(700,110,'q'),'#FFFFFF');T('アイ・シンク　わたしとあなたの、重なるところ',W/2,430,F(700,34,'m'),'#FFFFFF');
   // 大きな数字のカード
   rr(80,490,920,620,48,'#FFFFFF');
-  let pct,cap,who,msgT;
+  let pct,cap,who,msgT,sF=0,sN=0;
   if(solo){const p=ps[0],xs=G.qs.map((k,i)=>p.ans[i]).filter(a=>a&&a.o>=0),f=xs.filter(a=>a.o===2).length;pct=xs.length?Math.round(f/xs.length*100):0;
-    cap='わたしの「合わせられる度」';who='';msgT=pct>=50?'まわりに合わせられる、やわらかい人':pct>=25?'こだわりとやわらかさのバランス型':'自分の好みがはっきりしている人'}
+    cap='わたしの価値観のかたち';who='';msgT=shapeWords(G,p);sF=f;sN=xs.length}
   else{pct=syncStat(G).pct;cap=ps.length===2?'2人のシンクロ率':ps.length+'人のシンクロ率';
     who=G.anon?'':ps.length===2?ps[0].name+' × '+ps[1].name:ps.slice(0,4).map(p=>p.name).join('・')+(ps.length>4?' ほか':'');
     msgT=syncMsg(pct,ps.length===2).msg}
@@ -950,6 +959,10 @@ function drawResult(c,G){
   if(who)T(fit(who,820,F(700,40,'m')),W/2,650,F(700,40,'m'),sub);
   if(none){T('くらべられる答えが',W/2,800,F(900,62,'m'),'#4B3C8F');T('ありませんでした',W/2,885,F(900,62,'m'),'#4B3C8F');
     T('時間切れの問題は、シンクロ率に数えていません',W/2,990,F(700,34,'k'),sub)}
+  else if(solo){const ws=msgT.split('×');
+    if(ws.length>1){T(fit(ws[0],820,F(900,84,'m')),W/2,800,F(900,84,'m'),ink);T('×',W/2,880,F(700,52,'q'),'#7A72AE');T(fit(ws[1],820,F(900,84,'m')),W/2,975,F(900,84,'m'),ink)}
+    else T(fit(msgT,840,F(900,58,'m')),W/2,880,F(900,58,'m'),ink);
+    T(sF+'／'+sN+'問は「どっちでも合わせられる」',W/2,1065,F(700,34,'k'),sub)}
   else{T(pct+'%',W/2,880,F(700,230,'q'),ink);
     T(fit(msgT,840,F(900,44,'m')),W/2,1000,F(900,44,'m'),'#4B3C8F')}
   // 下のカード：テーマ別（2人以上）／価値観のタイプ（ひとり）
