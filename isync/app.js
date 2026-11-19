@@ -122,8 +122,8 @@ function goTop(){
     <div class="bubbles" aria-hidden="true"><i class="m" style="left:4%;top:30px;--s:34px;--d:0s;--t:9s"></i><i class="p" style="left:16%;top:150px;--s:16px;--d:2s;--t:7s"></i><i class="p" style="left:80%;top:18px;--s:44px;--d:1s;--t:10s"></i><i class="m" style="left:90%;top:170px;--s:20px;--d:3s;--t:8s"></i><i class="l" style="left:70%;top:110px;--s:12px;--d:0.5s;--t:6s"></i><i class="l" style="left:24%;top:80px;--s:10px;--d:4s;--t:7s"></i><i class="m" style="left:58%;top:4px;--s:22px;--d:2.5s;--t:9s"></i><i class="p" style="left:3%;top:222px;--s:18px;--d:1.5s;--t:11s"></i><i class="m" style="left:93%;top:240px;--s:12px;--d:5s;--t:8s"></i></div>
     <div class="orb" aria-hidden="true"></div>
     <h1 class="logo">I-Sync</h1><p class="kana">アイ・シンク</p>
-    <p class="catch">あの人と、みんなと。<br>「ふつう」はどこまで同じ？</p>
-    <p class="lead">別々に答えるだけで、2人の<span class="nw">シンクロ率</span>がわかる。</p>
+    <p class="catch">わたしとあなたの、<br>重なるところ。</p>
+    <p class="lead">2人の答えを重ねると、<span class="nw">シンクロ率</span>がわかる。</p>
   </header>
   <div id="ibx" hidden></div>
   ${PACK?`<section class="card packb"><p class="label">「${esc(PACK.title)}」の質問から出します</p><p class="hint">このテーマの質問だけで、ひとりでも、みんなでも遊べます。</p><button class="btn ghost small" id="packx">いつもの質問にもどす</button></section>`:''}
