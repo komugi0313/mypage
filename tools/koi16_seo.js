@@ -64,7 +64,7 @@ const EXTRA = '.ty b,.ty>span,.dif .n,.links a>span,.q>b,.q>span,.jk .t,.jk .lb,
 fs.writeFileSync(path.join(K, 'seo.js'),
   '/* 恋のかたち診断の説明ページ用（tools/koi16_seo.js が koi16/index.html から写して作る。直接直さない）。\n' +
   '   文節で改行する（BudouX・Google・Apache License 2.0 https://github.com/google/budoux の日本語モデル）。 */\n' +
-  '(function(){' + bxSrc + 'glueAll(document);Array.prototype.forEach.call(document.querySelectorAll("' + EXTRA + '"),glue);})();\n');
+  '(function(){' + bxSrc + 'glueAll(document);var pk=document.querySelector("[data-pick]"),sp=document.getElementById("spick");if(pk&&sp)pk.addEventListener("click",function(e){e.preventDefault();pk.hidden=true;var m=pk.parentNode.querySelector(".meta");if(m)m.hidden=true;sp.hidden=false;});Array.prototype.forEach.call(document.querySelectorAll("' + EXTRA + '"),glue);})();\n');
 
 const CSS = `/* 恋のかたち診断の説明ページ用（tools/koi16_seo.js が作る。直すときは道具の中を直して作り直す） */
 :root{--bg:#FBF6F1;--card:#FFFFFF;--ink:#33241B;--sub:#5E4A3D;--line:#E6D7CA;--rose:#B01A5A;--rose-soft:#FCE8EF;--rose-ink:#8A1246;--navy:#3B2A6B;
@@ -130,6 +130,14 @@ details.fold[open] summary::after{content:"閉じる ▲"}
 .faq summary::after{content:"▼";margin-left:auto;flex:none;font-size:11px;color:var(--rose)}
 .faq details[open] summary::after{content:"▲"}
 .faq details p{margin:0 0 12px;font-size:15px}
+[hidden]{display:none!important}
+.spick{min-width:0;background:#fff;border-radius:18px;padding:12px 12px 10px;display:grid;gap:7px;text-align:left}
+.spick .sq{font-weight:900;font-size:15px;margin:2px 0 4px;text-align:center;line-height:1.6}
+.spick .o{display:flex;align-items:center;gap:10px;border:1.5px solid #D9C4B4;border-radius:12px;padding:9px 12px;font-weight:700;font-size:15px;min-height:48px;box-sizing:border-box;background:#fff;color:var(--text);text-decoration:none}
+.spick .o:active{border-color:var(--rose)}
+.spick .o i{width:16px;height:16px;border:2px solid #C9B6A8;border-radius:50%;flex:none}
+.spick .o small{display:block;font-size:12px;font-weight:500;color:var(--sub)}
+.spick .n{font-size:12.5px;color:var(--sub);text-align:center;margin:2px 0 0;line-height:1.7}.spick .n b{display:block;color:var(--rose);font-size:13px}
 details.fold .in{padding:0 16px 14px;font-size:15px}
 details.fold .in h3{font-size:16px;margin:12px 0 2px}
 .q{border-left:3px solid var(--rose);padding:2px 0 2px 12px;margin:12px 0}
@@ -291,6 +299,10 @@ const AI_REFS = [
   { t: ['“一般他者”を', '想定した', '愛着スタイル尺度の', '信頼性と', '妥当性の検討'], j: '九州大学心理学研究・2004年', u: 'https://doi.org/10.15017/3567' },
   { t: ['Attachment styles among young adults: a test of a four-category model'], j: 'Journal of Personality and Social Psychology・1991年（4つの型のもとになった研究）', u: 'https://doi.org/10.1037/0022-3514.61.2.226' },
 ];
+// A2「やってみる」は残す（鑑定者本人 2026-11-19 見本 https://claude.ai/artifact/5giML4oncqhs962E9xBmVw で「A2」）：押すとトップへ移らず、カードの中が恋の状況のボタンに変わる。
+// 選ぶと /?e=aichaku&go=quick&s=状況 で、診断の1問目（恋人がいる人は「付き合ってどれくらい？」）から始まる。JS がないときは今までどおりトップへ
+const PICK_ST = [['partner', '恋人・パートナーがいる', '結婚している人もこちら'], ['crush', '片思い中', ''], ['none', 'いまはいない', '前に恋をしたことがある'], ['never', '恋をしたことがない', ''], ['skip', '答えたくない', '']];
+const PICK = `<a class="btn" href="/?e=aichaku" data-pick="aichaku"><span class="nw">やってみる</span><span class="nw">（20問）</span></a><div class="spick" id="spick" hidden><p class="sq"><span class="nw">はじめに、</span><wbr><span class="nw">いまの恋の状況を</span><wbr><span class="nw">教えてください</span></p>${PICK_ST.map(x => `<a class="o" href="/?e=aichaku&amp;go=quick&amp;s=${x[0]}"><i aria-hidden="true"></i><span>${esc(x[1])}${x[2] ? '<small>' + esc(x[2]) + '</small>' : ''}</span></a>`).join('')}<p class="n"><b>この答えは、あなただけのものです。</b><span class="nw">みんなで診断するときも、</span><wbr><span class="nw">ほかの人には見えません。</span><wbr><span class="nw">結果の説明にだけ使い、</span><wbr><span class="nw">どこにも送りません。</span></p></div>`;
 const AI_FAQ = [
   ['愛着障害とのちがいは？', '愛着スタイルは、だれにでもある「大切な人への近づき方のくせ」で、良い・悪いはありません。愛着障害は、子どものころの育ちに関わる医療の言葉で、お医者さんが見立てるものです。この診断では、愛着障害はわかりません。'],
   ['不安型や回避型は、変わりますか？', '変わることがあります。新しい恋人との関係や、年齢を重ねることで、心のゆれやすさや、頼るのを避ける気持ちが少しずつ変わる人が多いとされています。'],
@@ -306,7 +318,7 @@ write('aichaku/index.html', page({
   ld: [crumbLd([['恋のかたち診断', ''], ['愛着スタイル診断', 'aichaku/']]), { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: AI_FAQ.map(x => ({ '@type': 'Question', name: x[0], acceptedAnswer: { '@type': 'Answer', text: x[1] } })) }],
   img: BASE + 'img/og-aichaku.png?v=1',
   body: `${crumb([['愛着スタイル診断', '']])}
-<section class="hero"><span class="kick">無料・登録なし・4分</span><h1>愛着スタイル診断<span class="sub">あなたは、何型の恋をする？</span></h1>${HEARTS}${START('やってみる（20問）')}<span class="meta">安定型・不安型・回避型・恐れ型の4つから、あなたの心のくせがわかります</span></section>
+<section class="hero"><span class="kick">無料・登録なし・4分</span><h1>愛着スタイル診断<span class="sub">あなたは、何型の恋をする？</span></h1>${HEARTS}${PICK}<span class="meta">安定型・不安型・回避型・恐れ型の4つから、あなたの心のくせがわかります</span></section>
 <section class="box"><h2>こんなこと、ありませんか？</h2>${ul(['既読がついたのに返事がないと、何度もスマホを見てしまう', '好きな人ができると、なぜかそっけなくしてしまう', '恋人に頼るより、ひとりで片づけたほうが楽', '近づきたいのに、近づくと少し怖くなる'])}<p class="note">1つでも思い当たったら、あなたの「心のくせ」が関わっているかもしれません。</p></section>
 <section class="box"><h2>4つの愛着スタイル</h2><div class="types">${tyCell('preoc')}${tyCell('fear')}${tyCell('secure')}${tyCell('dismiss')}</div><div class="axis"><span>← 頼れる</span><span>ひとりで立つ →</span></div><p class="note">上の段ほど、心がゆれやすい型です。どれが良い・悪いではありません。境目の近くの人は、となりの型の面もあわせ持っています。</p></section>
 ${START('自分の型を見る（無料）')}

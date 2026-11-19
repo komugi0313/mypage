@@ -48,4 +48,4 @@ function glue(el){
   if(tail) sp.parentNode.insertBefore(document.createTextNode(tail),sp.nextSibling);
 }
 function glueAll(root){ Array.prototype.forEach.call((root||document).querySelectorAll(GLUE_SEL),glue); }
-glueAll(document);Array.prototype.forEach.call(document.querySelectorAll(".ty b,.ty>span,.dif .n,.links a>span,.q>b,.q>span,.jk .t,.jk .lb,.tip,.hero .k,.hero .sub,.pair i,.crumb,.cta small,.meta,.kick,.ex div>span,.ex b,.wk span,.kp>span,.dif p,summary span,.rk i"),glue);})();
+glueAll(document);var pk=document.querySelector("[data-pick]"),sp=document.getElementById("spick");if(pk&&sp)pk.addEventListener("click",function(e){e.preventDefault();pk.hidden=true;var m=pk.parentNode.querySelector(".meta");if(m)m.hidden=true;sp.hidden=false;});Array.prototype.forEach.call(document.querySelectorAll(".ty b,.ty>span,.dif .n,.links a>span,.q>b,.q>span,.jk .t,.jk .lb,.tip,.hero .k,.hero .sub,.pair i,.crumb,.cta small,.meta,.kick,.ex div>span,.ex b,.wk span,.kp>span,.dif p,summary span,.rk i"),glue);})();
