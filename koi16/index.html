@@ -162,8 +162,9 @@ h3.whoh{font-size:16px;margin:18px 0 10px}
 .rmem li{display:flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;font-weight:700;font-size:15px;color:var(--ink)}
 .rmem small{font-weight:500;color:var(--sub);font-size:13px}.rmem .rdone{color:#1F6B4F}
 .rmem .rkick{min-width:44px;min-height:44px;margin:-10px -12px -10px 0;border:0;background:none;color:var(--sub);font-size:18px;font-weight:700;cursor:pointer}
+.rback-n{margin:10px 0;padding:10px 12px;border-radius:12px;background:#FFF6D8;border:1px solid #E9D38C;font-size:14px}.rback-n b{display:block}
 .rback{margin:10px 0 14px;padding:12px;border-radius:12px;background:#FFF6D8;border:1px solid #E9D38C}.rback p{margin:4px 0 0;font-size:14px}
-.qseats{margin:0 0 10px}
+.qseats{margin:0 0 10px;position:sticky;top:0;z-index:6;background:var(--bg);padding:6px 0 4px;box-shadow:0 6px 8px -8px rgba(90,58,42,.25)}
 .qs-g{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .qs{text-align:center;border-radius:12px;padding:6px 2px 5px;background:#fff;border:1px solid var(--line);min-width:0}
 .qs-p{display:flex;height:40px;align-items:center;justify-content:center}.qs-p img,.qs-p .art{width:40px;height:40px}
@@ -4000,6 +4001,7 @@ function roomJoinHTML(){
     '<p class="muted">部屋 '+RM.code+'・'+rModeTxt(r.mode)+'</p><p class="rlabel">いま部屋にいる人（'+n+'人）</p>'+rMembers(ps,r.host,null,false);
   if(n>=ROOM_MAX) h+='<p class="rnote warn">この部屋はいっぱいです（8人まで）。部屋を作った人に、新しい部屋を作ってもらってね。</p></section>';
   else{
+    if(ps.some(function(p){ return p.done; })) h+='<p class="rback-n"><b>もう診断した人へ</b>前と同じニックネームを入れると、あなたの結果とみんなの結果にもどれます（画面を閉じても、部屋は12時間のこっています）。</p>';
     h+='<label class="muted" for="r-jname">あなたのニックネーム（8文字まで）</label><input class="gname" id="r-jname" maxlength="8" autocomplete="off" enterkeyhint="go" value="'+esc(st.nick||'')+'" placeholder="例：ゆう">'+
       '<button class="btn btn-main btn-wide" type="button" data-act="room-join" id="r-join">参加する</button><p class="rnote hidden" id="r-jnote"></p>'+
       (play?'<p class="muted">参加すると、すぐに診断が始まります。</p>':'<p class="muted">'+esc(hn)+'さんが「スタート」を押すと、全員いっしょに診断が始まります。</p>');
@@ -4046,8 +4048,11 @@ function roomResultHTML(){
       h+='<div class="gmem-w"><span class="wpic sil rsil" aria-hidden="true"><img src="img/'+silOf(p.id)+'.webp" width="56" height="56" alt=""><i>?</i></span><b class="nw">'+esc(p.name)+'</b><small class="rnay">悩み中<span class="rdt" aria-hidden="true"><i></i><i></i><i></i></span></small>'+(pq?'<span class="rbar" aria-hidden="true"><span style="width:'+Math.round(pq/pn*100)+'%"></span></span><small class="rqn">'+pq+'／'+pn+'問</small>':'')+'</div>'; }
   });
   h+='</div></section>';
-  if(n>=2) h+=groupSecs(g,me?me.name:null);
-  else h+='<section class="card"><p>2人以上の診断が終わると、全員の相性といちばん相性のいい2人が出てきます。</p></section>';
+  // 大事な結果を上に（鑑定者本人 2026-11-19「結果が一番下にありすぎて、誰も気づかない」）：いちばん相性のいい2人を「あなたの結果」のすぐ下へ。メンバーの一覧はそのあと
+  var gsH=n>=2?groupSecs(g,me?me.name:null):'', cut=gsH.indexOf('</section>')+10, memH=h.slice(h.lastIndexOf('<section class="card"><h1>みんなの恋のかたち</h1>'));
+  h=h.slice(0,h.length-memH.length);
+  if(n>=2) h+=gsH.slice(0,cut)+memH+gsH.slice(cut);
+  else h+=memH+'<section class="card"><p>2人以上の診断が終わると、全員の相性といちばん相性のいい2人が出てきます。</p></section>';
   if(n>=2) h+='<section class="card">'+secH('h2','want','結果を残す・送る')+'<p>部屋は12時間で使えなくなります。LINEのグループに送っておくと、あとからいつでも全員の相性を見られます。</p><div class="share"><button class="btn btn-line" type="button" data-act="room-rline">LINEで結果を送る</button><button class="btn btn-sub" type="button" data-act="room-rcopy">リンクをコピー</button></div><p style="margin-top:10px"><button class="btn btn-sub btn-wide" type="button" data-act="room-img"><span class="nw">みんなの結果を</span><span class="nw">画像で保存</span></button></p></section>';
   if(ps.length<ROOM_MAX) h+='<details class="card st-fold"><summary><span><span class="nw">あとから来た人を呼ぶ</span><span class="nw">（QRコード）</span></span></summary>'+rQrBox()+rInviteBtns()+'</details>';
   if(CTA.url) h+=c66HTML();
