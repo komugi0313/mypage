@@ -3568,13 +3568,18 @@ async function roomCreate(name,m){
   // 部屋を作るのも REST（ふつうの通信）で。アプリの中の画面でも止まらないように
   if(!(window.KOI16_FB&&KOI16_FB.projectId)) throw new Error('nofb');
   KFB.init();
+  // 部屋と自分を1回の通信でまとめて書く。番号がまだ使われていないとき（または12時間たった部屋のとき）だけ書けるようにして、
+  // 2人が同時に同じ番号を引いても、あとの人が先の部屋を上書きしない（2026-11-19）
   for(var k=0;k<10;k++){
-    var c=String(1000+Math.floor(Math.random()*9000));
-    var ex=await rRest(c);
-    if(ex&&rAlive(rFields(ex))) continue;
-    var now=Date.now();
-    await rRestSet(c,{created:now,phase:'lobby',mode:m,host:rPid(),expireAt:rExp()});
-    await rRestSet(c+'/players/'+rPid(),{name:name,code:'',done:false,joined:now,rc:now,expireAt:rExp()});
+    var c=String(1000+Math.floor(Math.random()*9000)), now=Date.now();
+    var room={created:now,phase:'lobby',mode:m,host:rPid(),expireAt:rExp()}, pl={name:name,code:'',done:false,joined:now,rc:now,expireAt:rExp()};
+    var ws=function(pre){ return [{update:{name:rDocName(c),fields:rFieldsOf(room)},currentDocument:pre},{update:{name:rDocName(c+'/players/'+rPid()),fields:rFieldsOf(pl)}}]; };
+    try{ await rRestCommit(ws({exists:false})); }
+    catch(e){
+      if(e.message!=='precond') throw e;
+      var ex=await rRest(c); if(!ex||rAlive(rFields(ex))) continue;
+      try{ await rRestCommit(ws({updateTime:ex.updateTime})); }catch(e2){ if(e2.message==='precond') continue; throw e2; }
+    }
     return {c:c,room:{created:now,phase:'lobby',mode:m,host:rPid()},me:{id:rPid(),name:name,code:'',done:false,joined:now,rc:now}};
   }
   throw new Error('busy');
@@ -3609,7 +3614,9 @@ function roomWatch(c){
   if(RM.poll) clearInterval(RM.poll);
   RM.poll=setInterval(function(){
     if(RM.code!==c||!RM.view||RM.view==='quiz'||RM.view==='setup') return;
-    var gap=RM.healthy?15000:3000; if(Date.now()-RM.lastPull<gap||Date.now()-RM.snapAt<2500) return; roomPullRest();
+    // 読む回数を少なく（2026-11-19）：全員の結果がそろったら1分ごと、だれかが診断中なら5秒ごと、集まっているあいだは3秒ごと（知らせが届いているときは15秒ごと）
+    var ps=rPlayers(), allDone=RM.view==='result'&&ps.length>0&&ps.every(function(p){ return p.done; });
+    var gap=allDone?60000:RM.healthy?15000:RM.view==='result'?5000:3000; if(Date.now()-RM.lastPull<gap||Date.now()-RM.snapAt<2500) return; roomPullRest();
   },1000);
 }
 async function roomPull(){
@@ -3743,7 +3750,11 @@ function roomQuiz(){
   toast('スタート！ 診断が始まりました');
 }
 function rTyped(v){ if(typeof v==='boolean') return {booleanValue:v}; if(typeof v==='number') return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v}; if(v instanceof Date) return {timestampValue:v.toISOString()}; return {stringValue:String(v)}; }
-function rRestSet(path,d){ var cfg=window.KOI16_FB||{}, f={}; for(var k in d) if(d[k]!=null) f[k]=rTyped(d[k]); return rTO(fetch(rRestBase()+path+'?key='+encodeURIComponent(cfg.apiKey||''),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:f})}).then(function(r){ if(!r.ok) throw new Error('rest '+r.status); return true; }),12000); }
+function rFieldsOf(d){ var f={}; for(var k in d) if(d[k]!=null) f[k]=rTyped(d[k]); return f; }
+function rDocName(path){ return 'projects/'+(window.KOI16_FB||{}).projectId+'/databases/(default)/documents/koi16_rooms/'+path; }
+// いくつかの書きこみを1回の通信でまとめて（全部書けるか、全部書けないか）。前提がちがう（番号がもう使われている）ときは 'precond'
+function rRestCommit(writes){ var cfg=window.KOI16_FB||{}; return rTO(fetch(rRestBase().replace(/\/koi16_rooms\/$/,'')+':commit?key='+encodeURIComponent(cfg.apiKey||''),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({writes:writes})}).then(function(r){ if(r.ok) return true; return r.text().then(function(t){ if(r.status===409||/FAILED_PRECONDITION|ALREADY_EXISTS/.test(t)) throw new Error('precond'); throw new Error('rest '+r.status); }); }),12000); }
+function rRestSet(path,d){ var cfg=window.KOI16_FB||{}, f=rFieldsOf(d); return rTO(fetch(rRestBase()+path+'?key='+encodeURIComponent(cfg.apiKey||''),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:f})}).then(function(r){ if(!r.ok) throw new Error('rest '+r.status); return true; }),12000); }
 async function roomWriteMe(d){
   for(var k=0;k<4;k++){
     try{ var fs=await KFB.init(), dd=Object.assign({},d,{expireAt:rExp()}); if(k%2===0||!fs) await rRestSet(RM.code+'/players/'+rPid(),dd); else await rTO(rDoc(fs,RM.code).collection('players').doc(rPid()).set(dd),15000); return true; }
