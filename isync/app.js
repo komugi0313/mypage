@@ -274,9 +274,20 @@ function flashVotes(k,v){
     b.classList.add('w');b.insertAdjacentHTML('beforeend',`<span class="wrow"><span class="wpct">みんなの${pc}%</span></span><i class="wbar" style="width:${pc}%"></i>`)});
   const o=app.querySelector('.opts');if(o&&t>=SHOW_COUNT)o.insertAdjacentHTML('afterend',`<p class="wnote">これまでに${t.toLocaleString()}人が答えました</p>`);
   return true}
+// ★ゆずれないの使い方：はじめる前に画面いっぱいで説明し、「わかった」で進む（鑑定者本人 2026-11-19「押すってことが絶対分からない」「OKしたらスタート」）
+function starIntro(key,ok,go){if(R.starSeen===key){go&&go();return}const old=$('siov');if(old)return;
+  const d=document.createElement('div');d.id='siov';d.className='si-ov';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-labelledby','si-t');
+  d.innerHTML=`<section class="si-card"><p class="si-tag">はじめる前に</p><h2 id="si-t">「★ ここはゆずれない」ボタン</h2>
+    <div class="si-demo" aria-hidden="true"><span class="si-q">お風呂は？</span><span class="star si-star">★ ここはゆずれない</span><span class="si-finger">↑ ここを押す</span></div>
+    <p class="si-lead">「これだけは、ゆずれない」と思った問題では、答えを選ぶ前にこのボタンを押してください。</p>
+    <ul class="si-list"><li>押した問題は、2倍の重さで数えます</li><li>結果で「★ ゆずれないところ」として、答えをくらべます</li><li>押さなくても大丈夫。ゆずれない問題にだけ押してください</li></ul>
+    <button class="btn" id="si-ok" type="button">${esc(ok)}</button></section>`;
+  document.body.appendChild(d);const b=$('si-ok');try{b.focus()}catch(e){}
+  b.onclick=()=>{R.starSeen=key;d.remove();go&&go()}}
 function localAsk(){
   if(L.i===0&&L.p===0&&L.counts===undefined)prefetchVotes();
   const p=L.players[L.p],k=L.qs[L.i],n=L.qs.length,multi=L.players.length>1;
+  if(n===30&&L.i===0&&L.p===0&&R.starSeen!==L.qs){starIntro(L.qs,'わかった、はじめる',localAsk);return}
   const a=p.ans[L.i]||(p.ans[L.i]={o:-1,st:0,ms:0});
   view(askHTML(k,L.i,n,{who:multi?p.name+'さん':'',step:'own',star:n===30,starOn:a.st}));
   const t0=Date.now();let fin=false;
@@ -1130,6 +1141,7 @@ function countdown(qk,go){
 }
 function rAsk(k,qk){
   const room=R.room,qid=room.qs[k],n=room.qs.length;
+  if(room.len===30&&room.kind!=='kon')starIntro('room'+R.code,'わかった');
   const draw=()=>{const m=R.my,step=m.fin?'done':'own';
     view(askHTML(qid,k,n,{step,star:room.len===30||room.kind==='kon',starOn:m.st,to:m.to,u:m.u}));
     bindAsk(tap);paint();rCountNow();if(!m.fin&&room.kind!=='kon')qTimer(R.seen[qk],timeUp)};
@@ -1179,6 +1191,7 @@ let qrP=null;
 function loadQR(){if(window.QRCode)return Promise.resolve();if(!qrP)qrP=new Promise((ok,ng)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';sc.onload=ok;sc.onerror=ng;document.head.appendChild(sc)});return qrP}
 function lobby(){
   const c=R.code,url=joinUrl(c),ps=plist(),room=R.room,can=ps.length>=2;
+  if(room&&room.len===30&&room.kind!=='kon')setTimeout(()=>starIntro('room'+c,'わかった'),300);
   view(`<img class="chara c-lobby" src="img/pair-smile.webp" width="180" height="100" alt="" aria-hidden="true">
   <section class="card hand">
     <p class="cap">部屋番号</p><p class="code">${esc(c)}</p>
