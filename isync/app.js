@@ -158,6 +158,7 @@ function goTop(){
     <div id="m-opts" class="stack">
     <p class="label">長さは？</p>
     ${seg('len',[[10,'簡易版<br><small>10問・さくっと</small>'],[30,'しっかり版<br><small>30問・★ゆずれない</small>']])}
+    <p class="hint star-what" id="star-what"${CFG.len===30?'':' hidden'}><b>★ゆずれない</b>＝「ここは相手に合わせられない」と思う問題に付ける印です。結果で、2人のゆずれないところをくらべます（点数には入りません）。</p>
     ${PACK?'':`<p class="label">話題は？</p>
     ${seg('topic',[['all','いろいろ'],['party','盛り上がる']])}`}
     <div id="m-anon" class="stack">
@@ -209,7 +210,7 @@ function goTop(){
   };
   app.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k,v=b.dataset.v;
     CFG[k]=k==='len'?+v:k==='anon'?v==='true':v;saveCfg();
-    app.querySelectorAll(`[data-k="${k}"]`).forEach(x=>x.setAttribute('aria-pressed',x===b));refresh()});
+    app.querySelectorAll(`[data-k="${k}"]`).forEach(x=>x.setAttribute('aria-pressed',x===b));const sw=$('star-what');if(sw)sw.hidden=CFG.len!==30;refresh()});
   refresh();
   // トップの大きな2つのボタン：選んで、下の設定へ
   const pickMode=m=>{CFG.mode=m;saveCfg();app.querySelectorAll('[data-k="mode"]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===m));refresh();
@@ -281,7 +282,8 @@ function starIntro(key,ok,go){if(R.starSeen===key){go&&go();return}const old=$('
   const d=document.createElement('div');d.id='siov';d.className='si-ov';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-labelledby','si-t');
   d.innerHTML=`<section class="si-card"><p class="si-tag">はじめる前に</p><h2 id="si-t">「★ ここはゆずれない」ボタン</h2>
     <div class="si-demo" aria-hidden="true"><span class="si-q">お風呂は？</span><span class="star si-star">★ ここはゆずれない</span><span class="si-finger">↑ ここを押す</span></div>
-    <p class="si-lead">「これだけは、ゆずれない」と思った問題では、答えを選ぶ前にこのボタンを押してください。</p>
+    <p class="si-what"><b>ゆずれない</b>とは、「ここは相手に合わせられない」「大事だから、ちがうと困る」と思うことです。<br><small>例：「お金のため方」は、絶対にこうしたい。</small></p>
+    <p class="si-lead">そう思った問題では、答えを選ぶ前にこのボタンを押してください。</p>
     <ul class="si-list"><li>結果の「★ ゆずれないところ」で、答えをくらべます</li><li>シンクロ率の点数には入りません。気軽に押してください</li><li>押さなくても大丈夫。ゆずれない問題にだけ押してください</li></ul>
     <button class="btn" id="si-ok" type="button">${esc(ok)}</button></section>`;
   document.body.appendChild(d);const b=$('si-ok');try{b.focus()}catch(e){}
