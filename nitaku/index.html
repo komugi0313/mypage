@@ -1130,6 +1130,28 @@ body:has(#s-setup.on),body:has(#s-lobby.on){background-image:none}
 @media (max-width:380px){.yl .yl-c{flex-direction:column;gap:3px}.yl .yl-c>b{margin-top:0}}
 .yl details.yl-more[open]>summary{margin-bottom:2px}
 </style>
+<style id="resB">
+/* 結果の見直し（鑑定者本人 2026-11-19「B・C・D・E 直したあとに変更」） */
+.kt-top{margin:10px 0 0}
+.kt-top h4{margin:0 0 6px;font-size:13px;font-weight:700;color:var(--sub)}
+.kt-top .kt-ws{display:flex;flex-wrap:wrap;gap:6px}
+.kt-top .kt-c{--kb:#FFE3EC;--kt:#8E1240}
+.kt-more,.km-more{margin-top:10px}
+.kt-more>summary,.km-more>summary{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border:2px solid #1E1E2A;border-radius:999px;background:#FFE071;font-weight:900;font-size:14px;cursor:pointer;list-style:none}
+.kt-more>summary::-webkit-details-marker,.km-more>summary::-webkit-details-marker{display:none}
+.kt-more>summary::after,.km-more>summary::after{content:' ▼';font-size:11px;margin-left:4px}
+.kt-more[open]>summary::after,.km-more[open]>summary::after{content:' ▲'}
+.km-rest{margin:8px 0 0;font-size:14px;line-height:1.7}
+.km-rest b{display:block;font-size:13px;color:var(--sub)}
+.res-toc{margin:14px 0 0;background:#fff;border:1.5px solid #E2D9C3;border-radius:18px;padding:12px 12px 10px;box-shadow:0 2px 10px rgba(60,40,10,.07)}
+.res-toc .rt-h{margin:0 0 8px;font-weight:900;font-size:15px;color:#1E1E2A}
+.res-toc .rt-h small{display:inline-block;font-size:12.5px;font-weight:700;color:var(--sub);margin-left:4px}
+.res-toc .rt-l{display:flex;flex-wrap:wrap;gap:6px}
+.res-toc button i{font-style:normal;color:#C22A64;margin-right:4px;font-weight:900}
+.res-toc button{min-height:44px;padding:0 13px;border:2px solid #1E1E2A;border-radius:999px;background:#fff;font:inherit;font-weight:900;font-size:13.5px;color:#1E1E2A;cursor:pointer;white-space:nowrap}
+.res-toc button:focus-visible{outline:3px solid #FF3D7F;outline-offset:2px}
+#res-body>.card:not(.kc),.pcb .card.kmc,.pcb .card.yl,.pcb .card.kt,.pcb .card.kc-mixn{border:1.5px solid #E2D9C3;box-shadow:0 2px 10px rgba(60,40,10,.07)}
+</style>
 </head>
 <body data-mode="love">
 <div class="wrap">
@@ -2699,12 +2721,18 @@ function kotobaHTML(qs, ans, label, cls, mode){
   var K=KOTOBA[mode], r=kotobaOf(qs, ans, mode); if(!r) return '';
   var h='<div class="card kt'+(cls?' '+cls:'')+'"><p class="kt-hd"><span class="nm">'+esc(label)+'</span>の中にあることば</p><p class="kt-sub">'+KOTOBA_SUB[mode]+'</p>';
   if(r.hito.length) h+='<div class="kt-hito"><h4>ひとことで言うと</h4><div class="kt-hw">'+r.hito.map(function(w){ return '<span class="kt-h">'+esc(w)+'</span>'; }).join('')+'</div></div>';
-  h+='<div class="kt-grp">';
-  K.themes.forEach(function(t,n){
-    var ws=r.words.filter(function(w){ return K.theme[w]===n; }); if(!ws.length) return;
-    h+='<div class="kt-g kt-g'+n+'"><h4><i></i><span>'+esc(t[0])+'</span></h4><div class="kt-ws">'+ws.map(function(w){ return '<span class="kt-c">'+esc(w)+'</span>'; }).join('')+'</div></div>';
-  });
-  h+=kotobaBothHTML(r.both);
+  // 結果の見直し（鑑定者本人 2026-11-19「C 直したあとに変更」）：ことばが多いときは、いちばん強く出た5つだけを1色で見せ、残りはテーマごとにたたむ
+  var TOP=5, top=r.words.length>TOP+1 ? r.words.slice(0,TOP) : null, rest=top ? r.words.slice(TOP) : r.words;
+  var grp=function(list){ var g=''; K.themes.forEach(function(t,n){
+    var ws=list.filter(function(w){ return K.theme[w]===n; }); if(!ws.length) return;
+    g+='<div class="kt-g kt-g'+n+'"><h4><i></i><span>'+esc(t[0])+'</span></h4><div class="kt-ws">'+ws.map(function(w){ return '<span class="kt-c">'+esc(w)+'</span>'; }).join('')+'</div></div>';
+  }); return g; };
+  if(top){
+    h+='<div class="kt-top"><h4>とくに強く出たことば</h4><div class="kt-ws">'+top.map(function(w){ return '<span class="kt-c">'+esc(w)+'</span>'; }).join('')+'</div></div>';
+    h+='<details class="kt-more"><summary>ほかのことば（'+(rest.length+r.both.length*2)+'個）を見る</summary><div class="kt-grp">'+grp(rest)+kotobaBothHTML(r.both)+'</div></details>';
+    return h+'</div>';
+  }
+  h+='<div class="kt-grp">'+grp(rest)+kotobaBothHTML(r.both);
   return h+'</div></div>';
 }
 
@@ -3339,7 +3367,7 @@ function showResult(){
   var maj=majorityStats(S.qs, S.ans[0]);
   if(maj) h+=maj;
   if(sp){
-    h+='<div class="card"><h3>選び方のくせ</h3><div class="stat">'+
+    h+='<div class="card" data-sec="kuse"><h3>選び方のくせ</h3><div class="stat">'+
        '<div><b>'+sp.rate+'%</b><small>3秒以内の即決</small></div>'+
        (sp.slow ? '<div><b>'+(Math.round(sp.slow.t/100)/10)+'秒</b><small>いちばん悩んだ時間</small></div></div>' : '<div><b>0問</b><small>3秒以上悩んだ問題</small></div></div>')+
        pickHTML('⚡','即決した問題',sp.quick)+pickHTML('🌀','いちばん悩んだ問題',sp.slow)+
@@ -3362,8 +3390,27 @@ function showResult(){
   bindWCard();
   $('save').onclick=function(){ saveImage($('res-body')); };
   bindEnd();
-  show('s-res'); topShare();
+  show('s-res'); topShare(); resToc($('res-body'));
 }
+/* 結果の小さな目次（鑑定者本人 2026-11-19「D 直した後に変更」）：送る枠のすぐ下に、押すとその欄へ飛ぶ札を1列 */
+function resToc(body){
+  if(!body || body.querySelector('.res-toc')) return;
+  var L=[['.card.kc','恋のカード'],['.card.kmc','気持ちの出し方'],['.card.yl','許せるライン'],['.card.kt','ことば'],['.card.kc-mixn','ふだんのキャラ'],['[data-sec="kuse"]','選び方のくせ']];
+  var items=L.filter(function(x){ return body.querySelector(x[0]); });
+  if(items.length<3) return;
+  var d=document.createElement('div'); d.className='res-toc'; d.setAttribute('aria-label','結果の目次');
+  // ボタンの列だけだと目次だと気づかれにくい（鑑定者本人 2026-11-19「分かりづらい」「結果を全て読んでもらえないのが一番怖い」）ので、
+  // 「この下に、まだ結果が続く」とわかる見出しと ↓ を付ける
+  d.innerHTML='<p class="rt-h">このあとに続く結果<small>（押すと、そこへ飛べます）</small></p><div class="rt-l">'+items.map(function(x){ return '<button type="button" data-go="'+x[0].replace(/"/g,'&quot;')+'"><i aria-hidden="true">↓</i>'+x[1]+'</button>'; }).join('')+'</div>';
+  var at=body.querySelector('.top-share')||body.querySelector('.res-hero'); if(!at) return;
+  at.insertAdjacentElement('afterend', d);
+}
+document.addEventListener('click', function(e){
+  var b=e.target.closest && e.target.closest('.res-toc button[data-go]'); if(!b) return;
+  var box=b.closest('.res-toc').parentElement, t=box && box.querySelector(b.getAttribute('data-go')); if(!t) return;
+  var sc=t.closest('#mine-ov');
+  try{ t.scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'start'}); }catch(err){ t.scrollIntoView(); }
+});
 
 /* ───── 結果（みんな） ───── */
 /* みんなの価値観の近さ（答えが重なるほど価値観が近い。鑑定者本人の考え 2026-11-16） */
@@ -3410,15 +3457,20 @@ function kimochiOf(qs, ans){
   var r=n.say/all, type=r>=0.67?'say':(r<=0.33?'sas':'both');
   return { type:type, r:r, ex:(type==='both'?[ex.say[0],ex.sas[0]]:ex[type].slice(0,2)) };
 }
+function firstSent(t){ var m=/^[^。]*。/.exec(String(t||'')); return m ? m[0] : String(t||''); }
+function restSent(t){ return String(t||'').slice(firstSent(t).length).trim(); }
 function kimochiHTML(qs, ans, label, cls, opt){
   var k=kimochiOf(qs, ans), TX=window.KIMOCHI_TXT; if(!k || !TX) return '';
   var T=TX.type[k.type], me=label==='あなた', pos=Math.round(10+80*(1-k.r));
   return '<div class="card kmc'+(cls?' '+cls:'')+'"><p class="kt-hd"><span class="nm">'+esc(label)+'</span>の気持ちの出し方</p>'+
     '<span class="km-t '+k.type+'">'+T.name+'</span>'+
     '<div class="kmeter"><span>言える</span><span class="bar"><i style="left:'+pos+'%"></i></span><span>察して</span></div>'+
-    '<div class="km-row me"><b>'+esc(label)+'は</b>'+T.me+'</div>'+
-    '<div class="km-row tip"><b>'+(me?'まわりの人へ（接し方のヒント）':esc(label)+'への接し方のヒント')+'</b>'+T.tip+'</div>'+
-    '<p class="km-src">'+((opt&&opt.hon)?'考える前に選んだ':'')+k.ex.filter(Boolean).map(function(a){ return '「'+esc(a)+'」'; }).join('')+'などの答えから見ています。</p></div>';
+    // 結果の見直し（鑑定者本人 2026-11-19「B 直したあとに変更」）：それぞれ1文目だけ見せて、つづきと「どの答えから見たか」はたたむ
+    '<div class="km-row me"><b>'+esc(label)+'は</b>'+firstSent(T.me)+'</div>'+
+    '<div class="km-row tip"><b>'+(me?'まわりの人へ（接し方のヒント）':esc(label)+'への接し方のヒント')+'</b>'+firstSent(T.tip)+'</div>'+
+    '<details class="km-more"><summary>くわしく見る</summary>'+
+    (restSent(T.me)?'<p class="km-rest"><b>'+esc(label)+'は</b>'+restSent(T.me)+'</p>':'')+(restSent(T.tip)?'<p class="km-rest"><b>接し方のヒント</b>'+restSent(T.tip)+'</p>':'')+
+    '<p class="km-src">'+((opt&&opt.hon)?'考える前に選んだ':'')+k.ex.filter(Boolean).map(function(a){ return '「'+esc(a)+'」'; }).join('')+'などの答えから見ています。</p></details></div>';
 }
 /* ふつう編の接し方のヒント（決め方・元気の出し方）。鑑定者本人 2026-11-19「案aと案b」。文と問題は kimochi.js の NITAKU_HINT_N・HINT_N_TXT */
 var NHINT=(function(){ var m={kime:{},genki:{}}, K=window.NITAKU_HINT_N||{};
