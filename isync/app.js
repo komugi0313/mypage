@@ -590,7 +590,11 @@ function mineLabel(ent){const n=ent.pl.length,me=ent.pl[ent.me];
 function mineShape(e){try{const x=e.pl[0],p={name:x.n,ans:x.a.map(v=>v?{o:v[0],st:v[1],ms:v[2]*100,to:!!v[3],u:v[4]}:null)};return shapeWords({qs:e.qs,players:[p]},p)}catch(err){return''}}
 function mineView(){const L2=mineList();
   view(`<section class="card"><p class="label">わたしの結果</p><p class="hint">このスマホに残っている結果です（新しい順・${MINE_MAX}回まで）。どこにも送っていません。</p>
-    ${L2.length?`<ul class="mine-l">${L2.map((e,j)=>{const x=mineLabel(e);return `<li><button type="button" class="mine-b" data-j="${j}"><span class="md">${x.dt}</span><b>${esc(x.who)}診断${e.pl.length<2&&mineShape(e)?`<span class="md-sw">${mineShape(e).split('×').map(w=>`<span style="white-space:nowrap">${esc(w)}</span>`).join('×<wbr>')}</span>`:''}</b><small>${e.pct!=null?`<em>${e.pct}%</em>`:''}${x.q}問</small></button></li>`}).join('')}</ul>`:'<p class="hint">まだありません。</p>'}
+    ${L2.length?`<ul class="mine-l">${L2.map((e,j)=>{const x=mineLabel(e),n=e.pl.length,solo=n<2;
+      const others=e.pl.filter((p,k)=>k!==e.me).map(p=>p.n+'さん'),sw=solo?mineShape(e):'';
+      const tag=solo?'<span class="mb-tag t1">ひとりで</span>':n===2?'<span class="mb-tag t2">2人で</span>':`<span class="mb-tag t3">みんなで（${n}人）</span>`;
+      const main=solo?(sw?sw.split('×').map(w=>`<span class="nw">${esc(w)}</span>`).join('<span class="mb-x">×</span><wbr>'):'価値観のかたち'):others.slice(0,3).map(w=>`<span class="nw">${esc(w)}</span>`).join('・<wbr>')+(others.length>3?`<span class="mb-more">ほか${others.length-3}人</span>`:'');
+      return `<li><button type="button" class="mine-b" data-j="${j}"><span class="mb-top">${tag}<span class="md">${x.dt}・${x.q}問</span></span><span class="mb-main${solo?' solo':''}">${main}</span>${e.pct!=null?`<span class="mb-pct"><i>シンクロ率</i><b>${e.pct}<small>%</small></b></span>`:''}<span class="mb-go" aria-hidden="true">›</span></button></li>`}).join('')}</ul>`:'<p class="hint">まだありません。</p>'}
     <button class="btn ghost" id="mine-back" style="align-self:stretch">トップへ</button></section>`);
   app.querySelectorAll('.mine-b').forEach(b=>b.onclick=()=>mineOpen(L2[+b.dataset.j]));$('mine-back').onclick=goTop}
 function showResult(G){showResultCore(G);
