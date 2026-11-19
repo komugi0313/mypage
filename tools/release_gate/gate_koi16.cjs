@@ -80,6 +80,7 @@ function scan() {
     await p.goto(URL + '?from=RATC'); await check('はじめ（招待）');
     for (const e of ['aichaku', 'izon', 'kataomoi', 'aisho', 'chara']) { await p.goto(URL + '?e=' + e); await check('はじめ（入口 ' + e + '）'); }
     await p.goto(URL + '?types=1'); await check('16タイプ一覧');
+    await p.goto(URL + '?types=1&z=h'); await check('ハートの図鑑');
     await p.goto(URL + '?about=1'); await check('この診断の考え方');
     await p.goto(URL + '?privacy=1'); await check('プライバシーポリシー');
     await p.goto(URL + '?licenses=1'); await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true)); await p.waitForTimeout(400); await check('ライセンス');
