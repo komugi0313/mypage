@@ -127,7 +127,7 @@ function goTop(){
     <p class="catch">わたしとあなたの、<br>重なるところ。</p>
     <p class="lead">2人の答えを重ねると、<span class="nw">シンクロ率</span>がわかる。</p>
   </header>
-  <div id="ibx" hidden></div>
+  <div id="ibx" hidden></div>${mineList().length?`<button type="button" class="mine-top" id="mine-top"><span>わたしの結果</span><small>${mineList().length}回ぶん・このスマホに保存</small></button>`:''}
   ${PACK?`<section class="card packb"><p class="label">「${esc(PACK.title)}」の質問から出します</p><p class="hint">このテーマの質問だけで、ひとりでも、みんなでも診断できます。</p><button class="btn ghost small" id="packx">いつもの質問にもどす</button></section>`:''}
   <section class="card ov" aria-label="見本：2人の答えの重なり">
     <div class="ov-who"><span>あなた</span><span>あの人</span></div>
@@ -228,7 +228,7 @@ function goTop(){
   $('mkk').onclick=async e=>{e.target.disabled=true;const r=await createKonRoom();if(r!=='ok'){$('kerr').textContent=r;e.target.disabled=false}};
   $('kjn').onclick=()=>{const c=$('kcode').value.replace(/\D/g,'');if(c.length!==4){$('kerr').textContent='4けたの部屋番号を入れてください';return}joinFromLink(c)};
   const px=$('packx');if(px)px.onclick=()=>{location.href=location.pathname};
-  inboxBanner();
+  inboxBanner();const mt=$('mine-top');if(mt)mt.onclick=mineView;
   const lt=$('lntop'),ltSet=()=>{lt.href=lineUrl('アイ・シンク｜カップル・友だちで答える価値観診断。2人の答えを重ねると、シンクロ率がわかる無料の診断です。',siteUrl())};ltSet();lt.addEventListener('click',ltSet);
   // ひとりで
   $('sgo').onclick=()=>{const v=$('sn').value.trim();if(v)store('kv_name',v);soloStart(v)};
@@ -563,7 +563,33 @@ function twoFolds(G,trows,nm,r){
   const all=G.qs.map((k,i)=>`<li><b>${esc(Q[k][1])}</b>${[0,1,2,3].map(v=>{const who=G.players.filter(p=>oOf(p.ans[i])===v);return who.length?`<span class="ansrow"><i class="o${v}">${esc(ans(v,k))}</i>${G.anon?who.length+'人':who.map(nm).join('、')}</span>`:''}).join('')}</li>`).join('');
   out+=foldBox('みんなの答えを1問ずつ','全'+G.qs.length+'問',`<ul class="list all">${all}</ul>`);
   return out}
-function showResult(G){
+/* ===== わたしの結果（鑑定者本人 2026-11-19「保存もできますか」→「入れてください」。究極の二択と同じ）
+ * 結果を出すたびに、このスマホの中に自動で残す（最新10回・どこにも送らない）。トップの「わたしの結果」から開ける。部屋が12時間で消えたあとも見られる ===== */
+const MINE_MAX=10;
+function mineList(){const a=store('kv_mine');return Array.isArray(a)?a:[]}
+function mineSave(G){try{
+  const ps=G.players;if(!ps.some(p=>G.qs.some((k,i)=>{const a=p.ans[i];return a&&a.o>=0})))return;
+  const pk=a=>a?[a.o,a.st?1:0,Math.round((a.ms||0)/100),a.to?1:0,a.u?1:0]:null;
+  const ent={id:R.code&&!G.local?'r'+R.code+'-'+((R.room||{}).round||1)+'-'+((R.room||{}).created||0):'l'+G.qs.map(k=>QKEY[k].slice(0,4)).join('')+'|'+ps.map(p=>p.name).join(','),
+    at:Date.now(),qs:G.qs,pct:ps.length>1?syncStat(G).pct:null,me:ps.findIndex(p=>p.id===G.me),anon:!!G.anon,pair:!!G.pair,
+    pl:ps.map(p=>({n:String(p.name||''),a:G.qs.map((k,i)=>pk(p.ans[i]))}))};
+  let L2=mineList().filter(x=>x&&x.id!==ent.id);L2.unshift(ent);store('kv_mine',L2.slice(0,MINE_MAX))}catch(e){}}
+function mineOpen(ent){const un=x=>x?{o:x[0],st:x[1],ms:x[2]*100,to:!!x[3],u:x[4]}:null;
+  const players=ent.pl.map((p,j)=>({id:j===ent.me?'me':'p'+j,name:p.n,ans:p.a.map(un)}));
+  showResult({players,qs:ent.qs,me:ent.me>=0?'me':null,anon:ent.anon,local:true,pair:ent.pair,view:true,mine:ent})}
+function mineLabel(ent){const n=ent.pl.length,me=ent.pl[ent.me];
+  const who=n<2?'ひとりで':ent.pl.filter((p,j)=>j!==ent.me).map(p=>p.n+'さん').slice(0,3).join('・')+(n>4?' ほか':'')+'と';
+  const d=new Date(ent.at),dt=(d.getMonth()+1)+'月'+d.getDate()+'日 '+d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');
+  return {who,dt,q:ent.qs.length}}
+function mineView(){const L2=mineList();
+  view(`<section class="card"><p class="label">わたしの結果</p><p class="hint">このスマホに残っている結果です（新しい順・${MINE_MAX}回まで）。どこにも送っていません。</p>
+    ${L2.length?`<ul class="mine-l">${L2.map((e,j)=>{const x=mineLabel(e);return `<li><button type="button" class="mine-b" data-j="${j}"><span class="md">${x.dt}</span><b>${esc(x.who)}診断</b><small>${e.pct!=null?`<em>${e.pct}%</em>`:''}${x.q}問</small></button></li>`}).join('')}</ul>`:'<p class="hint">まだありません。</p>'}
+    <button class="btn ghost" id="mine-back" style="align-self:stretch">トップへ</button></section>`);
+  app.querySelectorAll('.mine-b').forEach(b=>b.onclick=()=>mineOpen(L2[+b.dataset.j]));$('mine-back').onclick=goTop}
+function showResult(G){showResultCore(G);
+  if(G.mine){const sc=app.querySelector('.scr'),x=mineLabel(G.mine);if(sc)sc.insertAdjacentHTML('afterbegin',`<section class="card mine-note"><p class="pt-h"><em>わたしの結果</em>${x.dt}の結果</p><p class="hint">このスマホに残っていた結果です。</p><button class="btn ghost small" id="mine-ls" style="align-self:stretch">わたしの結果の一覧へ</button></section>`);const b=$('mine-ls');if(b)b.onclick=mineView;scrollTo(0,0)}
+  else if(!G.view)mineSave(G)}
+function showResultCore(G){
   const ps=G.players,me=ps.find(p=>p.id===G.me),multi=ps.length>1,sec=ms=>(ms/1000).toFixed(1);
   const nm=p=>esc(p.name)+(p===me?'（あなた）':''),sn=p=>p===me?'あなた':esc(p.name);
   let h='';
