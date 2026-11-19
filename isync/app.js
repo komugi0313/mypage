@@ -158,7 +158,7 @@ function goTop(){
     <div id="m-opts" class="stack">
     <p class="label">長さは？</p>
     ${seg('len',[[10,'簡易版<br><small>10問・さくっと</small>'],[30,'しっかり版<br><small>30問・★ゆずれない</small>']])}
-    <p class="hint star-what" id="star-what"${CFG.len===30?'':' hidden'}><b>★ゆずれない</b>＝「ここは相手に合わせられない」と思う問題に付ける印です。結果で、2人のゆずれないところをくらべます（点数には入りません）。</p>
+    <div class="star-what" id="star-what"${CFG.len===30?'':' hidden'}><b>★ゆずれない とは？</b><span>「ここは相手に合わせられない」と思う問題に付ける印です。</span><span>結果で、2人のゆずれないところをくらべます。点数には入りません。</span></div>
     ${PACK?'':`<p class="label">話題は？</p>
     ${seg('topic',[['all','いろいろ'],['party','盛り上がる']])}`}
     <div id="m-anon" class="stack">
@@ -282,7 +282,7 @@ function starIntro(key,ok,go){if(R.starSeen===key){go&&go();return}const old=$('
   const d=document.createElement('div');d.id='siov';d.className='si-ov';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-labelledby','si-t');
   d.innerHTML=`<section class="si-card"><p class="si-tag">はじめる前に</p><h2 id="si-t">「★ ここはゆずれない」ボタン</h2>
     <div class="si-demo" aria-hidden="true"><span class="si-q">お風呂は？</span><span class="star si-star">★ ここはゆずれない</span><span class="si-finger">↑ ここを押す</span></div>
-    <p class="si-what"><b>ゆずれない</b>とは、「ここは相手に合わせられない」「大事だから、ちがうと困る」と思うことです。<br><small>例：「お金のため方」は、絶対にこうしたい。</small></p>
+    <div class="si-what"><b>「ゆずれない」とは？</b><span>相手とちがうと困る、ここは合わせられない、と思うことです。</span><span class="ex">例：お金のため方は、絶対にこうしたい</span></div>
     <p class="si-lead">そう思った問題では、答えを選ぶ前にこのボタンを押してください。</p>
     <ul class="si-list"><li>結果の「★ ゆずれないところ」で、答えをくらべます</li><li>シンクロ率の点数には入りません。気軽に押してください</li><li>押さなくても大丈夫。ゆずれない問題にだけ押してください</li></ul>
     <button class="btn" id="si-ok" type="button">${esc(ok)}</button></section>`;
@@ -1129,9 +1129,9 @@ async function sync(){
     const qk='q'+rd+'-'+k;
     if(room.kind==='kon'&&done.length>=ps.length&&ps.length>0){advance(k,rd);return}
     if(act.length&&act.every(p=>rDone(p,k,rd))&&room.kind!=='kon'){if(R.key===qk&&R.seen[qk]){rCount(done.length,ps.length,ps,done);holdAdvance(k,rd)}else advance(k,rd);return}
-    if(R.key!==qk){const fresh=k===0&&!/^q/.test(R.key),pid=rd+'-'+(k-1),late=!fresh&&R.key==='q'+pid&&!(R.hold||{})[pid]&&$('tcnt');R.key=qk;R.my={o:-1,st:0,ms:0,fin:false};
+    if(R.key!==qk){const fresh=k===0&&!/^q/.test(R.key),pid=rd+'-'+(k-1),late=!fresh&&R.key==='q'+pid&&!(R.hold||{})[pid]&&$('tcnt')&&R.my&&R.my.fin&&ps.every(p=>rDone(p,k-1,rd));/* 本当に全員が答えたときだけ（時間切れ・20秒で進んだときは出さない） */R.key=qk;R.my={o:-1,st:0,ms:0,fin:false};
       // 知らせがおそい画面でも「全員決めた！」を見てから次の問題へ（先に進んだ人との差は約1秒）
-      if(late){R.hold=R.hold||{};R.hold[pid]=1;allDoneNow();setTimeout(()=>{if(R.key!==qk)return;R.seen[qk]=Date.now();rAsk(k,qk)},1100)}
+      if(late){R.hold=R.hold||{};R.hold[pid]=1;allDoneNow(ps.some(p=>{const x=p.id===PID?null:rAns(p,k-1);return x&&x.to}));setTimeout(()=>{if(R.key!==qk)return;R.seen[qk]=Date.now();rAsk(k,qk)},1100)}
       else if(fresh){markSeen(room.qs);countdown(qk,()=>{R.seen[qk]=Date.now();rAsk(k,qk)})}else{R.seen[qk]=Date.now();rAsk(k,qk)}}
     else if(R.seen[qk])rCount(done.length,ps.length,ps,done);
     return}
@@ -1178,8 +1178,13 @@ async function save(k,fin,to){const db=await getDb(),me=R.players[PID];if(!db||!
     if(ps.filter(p=>R.room.kind==='kon'||rActive(p,k,rd)).every(p=>rDone(p,k,rd))){if(R.room.kind==='kon')advance(k,rd);else{rCountNow();holdAdvance(k,rd)}}}}
 // 全員が決めたら、すぐには進まず「全員決めた！」を約2秒見せてから次へ（鑑定者本人 2026-11-19「一旦その間を空けて悩み中っていうのも一つの面白さ」）
 const HOLD_MS=1800;
-function allDoneNow(){const el=$('tcnt');if(el)el.querySelectorAll('.seat.s-think').forEach(x=>{x.classList.replace('s-think','s-ok');const st=x.querySelector('.st');if(st){st.className='st ok';st.textContent='決めた！'}});const a=$('allok');if(a)a.hidden=false}
-function holdAdvance(k,rd){const id=rd+'-'+k;R.hold=R.hold||{};const a=$('allok');if(a)a.hidden=false;if(R.hold[id])return;R.hold[id]=1;setTimeout(()=>advance(k,rd),HOLD_MS)}
+function allDoneNow(to){allOkShow(to)}
+function holdAdvance(k,rd){const id=rd+'-'+k;R.hold=R.hold||{};
+  // 全員（お休み中の人もふくめて）が本当に答えたときだけ「全員決めた！」を見せる。そうでなければ待たずに次へ
+  if(!plist().every(p=>rDone(p,k,rd))){advance(k,rd);return}
+  allOkShow(plist().some(p=>{const x=p.id===PID?R.my:rAns(p,k);return x&&x.to}));if(R.hold[id])return;R.hold[id]=1;setTimeout(()=>advance(k,rd),HOLD_MS)}
+// 全員が答えたときの帯。時間切れの人がいれば「全員決めた！」とは書かない
+function allOkShow(to){const a=$('allok');if(!a)return;a.innerHTML=to?'時間切れの人がいます<small>次の問題へ…</small>':'全員決めた！<small>次の問題へ…</small>';a.classList.toggle('to',!!to);a.hidden=false}
 // 答えたあと、ほかの人のようすを「考え中…／答えた」で見せる（答えの中身は見せない。鑑定者本人 2026-11-17「相手の様子は考え中ぐらい」）。
 // 名前を見せない部屋・大人数の部屋は人数だけ。新しい通信はなく、今ある答えの書きこみを見るだけ
 function rCount(d,n,ps,done){const el=$('tcnt');if(!el)return;const room=R.room||{};
@@ -1189,7 +1194,7 @@ function rCount(d,n,ps,done){const el=$('tcnt');if(!el)return;const room=R.room|
   const key=ps.map(p=>p.id+stOf(p)).join();if(el.dataset.k===key)return;el.dataset.k=key;
   const lab={ok:'<span class="st ok">決めた！</span>',to:'<span class="st off">時間切れ</span>',rest:'<span class="st off">お休み中</span>',think:'<span class="st think">悩み中<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></span>'};
   const others=ps.filter(p=>p.id!==PID),col=p=>p.id===PID?'p0':'p'+((others.indexOf(p)+1)%6);
-  const seat=p=>{const st=stOf(p),nm=p.id===PID?'あなた':String(p.name||'');return `<div class="seat ${col(p)} s-${st}"><span class="av" aria-hidden="true">${esc(nm.slice(0,1))}</span><span class="nm">${esc(nm)}</span>${lab[st]}</div>`};
+  const seat=p=>{const st=stOf(p),nm=p.id===PID?'あなた':String(p.name||'');return `<div class="seat ${col(p)} s-${st}"><span class="av" aria-hidden="true"><img src="img/${p.id===PID?'ai':'yuu'}.webp" width="40" height="36" alt=""></span><span class="nm">${esc(nm)}</span>${lab[st]}</div>`};
   const me=ps.filter(p=>p.id===PID);
   el.innerHTML=`<div class="seats${ps.length>4?' many':''}">${me.concat(others).map(seat).join('')}</div>`}
 function rCountNow(){const room=R.room;if(!room||room.phase!=='play')return;const k=room.qi||0,rd=room.round||1,ps=plist();
