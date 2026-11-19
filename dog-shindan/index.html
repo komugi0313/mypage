@@ -364,11 +364,12 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .column{background:var(--card);border-color:var(--mint)}
 .column h2{color:var(--ink)}
 .aru.tl li::before{content:none}
-.secs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.secs{display:grid;grid-template-columns:repeat(auto-fit,minmax(14em,1fr));gap:8px} /* 1つの枠が14字ぶんより細くなるときは1列にする（2列のままだと言葉の途中で切れる） */
 .secs div{background:var(--bg);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
 .secs b{color:var(--tc,var(--teal));font-size:.8rem}
-.secs span{font-size:.9rem;line-height:1.6}
-@media (max-width:420px){.secs{grid-template-columns:1fr}}
+.secs span{font-size:.9rem;line-height:1.6;text-wrap:pretty}
+.secs .sec-note{display:block;margin-top:4px;font-size:.76rem;line-height:1.5;color:var(--muted);text-wrap:pretty}
+.secs div:last-child:nth-child(odd){grid-column:1/-1}
 .prof{border-color:var(--tc,var(--mint))}
 .prof .phead{margin:-20px -20px 0;padding:18px 20px 14px;border-radius:19px 19px 0 0;background:var(--tcl,var(--mint-l));display:flex;gap:12px;align-items:center}
 .prof .phead img{width:84px;height:84px;object-fit:contain;flex:0 0 auto}
@@ -5720,8 +5721,8 @@ var PROF2={"toypoodle": ["覚えが早く、家族の表情や声の調子をよ
 function secsHTML(b){var v=b.v,o=axOrder(v),q=PROF2[b.id];
   var strong=q?q[0]:TRAITS(o[0],v)+"。"+TRAITS(o[1],v);
   var items=[["強み",strong],["ちょっと苦手",b.w],["家での過ごし方",q?q[1]:PROF.home[hl(v[4],v[3])]],["お散歩スタイル",q?q[2]:PROF.walk[hl(v[2],v[1])]],
-   ["好きな遊び",q?q[3]:PROF.play[hl(v[3],v[2])]],["うれしいほめ方",b.p],["安心する時間",b.k],["ストレスのサイン",(q?q[4]:PROF.stress[hl(v[5],100-v[4])])+"（続くときや急にふえたときは、獣医さんに相談を）"],["相性のいい飼い主さん",q?q[5]:PROF.owner[hl(v[3],v[4])]]];
-  return '<div class="secs">'+items.map(function(x){return '<div><b>'+x[0]+'</b><span>'+esc(x[1])+'</span></div>'}).join("")+'</div>'}
+   ["好きな遊び",q?q[3]:PROF.play[hl(v[3],v[2])]],["うれしいほめ方",b.p],["安心する時間",b.k],["ストレスのサイン",(q?q[4]:PROF.stress[hl(v[5],100-v[4])]),"続くときや急にふえたときは、獣医さんに相談を"],["相性のいい飼い主さん",q?q[5]:PROF.owner[hl(v[3],v[4])]]];
+  return '<div class="secs">'+items.map(function(x){return '<div><b>'+x[0]+'</b><span>'+esc(x[1])+'</span>'+(x[2]?'<small class="sec-note">'+esc(x[2])+'</small>':'')+'</div>'}).join("")+'</div>'}
 function TRAITS(i,v){return v[i]>=50?AXES[i].ta:AXES[i].tb}
 function lighten(hex,f){var n=parseInt(hex.slice(1),16),r=n>>16,g=(n>>8)&255,b=n&255;return "rgb("+Math.round(r+(255-r)*f)+","+Math.round(g+(255-g)*f)+","+Math.round(b+(255-b)*f)+")"}
 
@@ -6161,7 +6162,8 @@ $("ws-top").addEventListener("click",function(e){var b=e.target.closest("button"
   function phrase(n){var t=n.textContent,el=n.parentElement;if(!el||SKIP[el.tagName]||el.closest("[data-plain]")||t.indexOf("\u200B")>=0||!/[ぁ-ゖ]/.test(t)||t.length<8)return;
     var out="",i,c,p,pp;for(i=0;i<t.length;i++){c=t[i];p=t[i-1];pp=t[i-2];
       if(i>0&&HIRA.test(p)&&HEAD.test(c)&&!/[おご]/.test(p)&&(pp&&HIRA.test(pp)||/[はがをにでともへのや]/.test(p)))out+="\u200B"; // 「お気に入り」「ご家族」の「お・ご」のあとでは切らない
-      out+=c;if(/[、。！？]/.test(c)&&i<t.length-1)out+="\u200B"}
+      out+=c;if(/[、。！？]/.test(c)&&i<t.length-1)out+="\u200B";
+      else if(HIRA.test(t[i+1]||"")&&/(のを|たり|ながら)$/.test(t.slice(Math.max(0,i-2),i+1))&&!/^[すし、。]/.test(t[i+1]))out+="\u200B"} // 「鳴いたり｜いたずら」「さわられるのを｜いやがる」「ふりながら｜くつろぐ」のように、ひらがなが長く続くところも言葉の切れ目で折り返せるように
     if(out!==t)n.textContent=out}
   var busy=false;
   function run(){busy=true;try{[].slice.call(document.querySelectorAll("span.nob")).forEach(function(sp){var par=sp.parentNode;if(!par)return;par.replaceChild(document.createTextNode(sp.textContent),sp);par.normalize()});var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),list=[],n;while(n=w.nextNode())list.push(n);
