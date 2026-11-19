@@ -100,7 +100,7 @@ let JOIN=(/^#join-(\d{4})$/.exec(location.hash||'')||[])[1]||'';
 if(JOIN)CFG.mode='each';
 if(['solo','each'].includes(QS.get('mode')))CFG.mode=QS.get('mode');
 const saveCfg=()=>store('kv_cfg',{mode:CFG.mode,len:CFG.len,topic:CFG.topic,anon:CFG.anon});
-/* トップの「まず1問、答えてみて」（鑑定者本人 2026-11-17 トップの見本で「2のオーロラ」。押すと、これまでに遊んだ人の％が出る。ここでは数えない） */
+/* トップの「まず1問、答えてみて」（鑑定者本人 2026-11-17 トップの見本で「2のオーロラ」。押すと、これまでに診断した人の％が出る。ここでは数えない） */
 const TH_N=CATS.map((c,i)=>[c[0],Q.filter(q=>q[0]===i).length]).filter(x=>x[1]);
 const TRY_K=Math.max(0,Q.findIndex(q=>q[1]==='LINEは？'));
 // トップの見本：3問の答えを左右に並べて、重なる／分かれるを見せる（鑑定者本人 2026-11-19「B」）
@@ -113,7 +113,7 @@ function bindTry(){
     box.classList.add('done');
     box.querySelectorAll('.topt').forEach(o=>{const k=+o.dataset.tv;o.classList.toggle('me',o===b);
       if(t0>0){const pc=Math.round(cnt[k]*100/t);o.querySelector('.pct').textContent=pc+'%';o.querySelector('.tbar').style.width=pc+'%'}});
-    $('tnote').innerHTML=t0>0?`これが<b>みんなの答え</b>です${t0+1>=SHOW_COUNT?`（${t.toLocaleString()}人）`:''}。大事な人の答えは、同じ？`:'大事な人の答えは、同じ？　下から一緒に遊べます。';
+    $('tnote').innerHTML=t0>0?`これが<b>みんなの答え</b>です${t0+1>=SHOW_COUNT?`（${t.toLocaleString()}人）`:''}。大事な人の答えは、同じ？`:'大事な人の答えは、同じ？　下から一緒に診断できます。';
   });
 }
 function seg(name,items){return `<div class="chips c${items.length}" role="group">${items.map(([v,l])=>`<button class="chip" data-k="${name}" data-v="${v}" aria-pressed="${String(CFG[name])===String(v)}">${l}</button>`).join('')}</div>`}
@@ -128,17 +128,19 @@ function goTop(){
     <p class="lead">2人の答えを重ねると、<span class="nw">シンクロ率</span>がわかる。</p>
   </header>
   <div id="ibx" hidden></div>
-  ${PACK?`<section class="card packb"><p class="label">「${esc(PACK.title)}」の質問から出します</p><p class="hint">このテーマの質問だけで、ひとりでも、みんなでも遊べます。</p><button class="btn ghost small" id="packx">いつもの質問にもどす</button></section>`:''}
+  ${PACK?`<section class="card packb"><p class="label">「${esc(PACK.title)}」の質問から出します</p><p class="hint">このテーマの質問だけで、ひとりでも、みんなでも診断できます。</p><button class="btn ghost small" id="packx">いつもの質問にもどす</button></section>`:''}
   <section class="card ov" aria-label="見本：2人の答えの重なり">
     <div class="ov-who"><span>あなた</span><span>あの人</span></div>
     ${OV_ROWS.map(([q,a,b])=>{const k=Q.findIndex(x=>x[1]===q);if(k<0)return'';const mk=a===b?['eq','ぴったり']:(a===2||b===2)?['al','合わせられる']:['ne','ちがい'];
       return `<div class="ov-r"><p class="ov-q"><span>${esc(q)}</span><i class="ov-m ${mk[0]}">${mk[1]}</i></p><span class="ov-c me">${esc(ans(a,k))}</span><span class="ov-c you">${esc(ans(b,k))}</span></div>`}).join('')}
-    <div class="ov-sum"><div class="ov-ring"><span>78<small>%</small></span></div><p><b>2人のシンクロ率</b><span>分かれたところには、歩み寄りの案が出ます。</span></p></div>
+    <div class="ov-sum"><p class="ov-cap">2人のシンクロ率</p><div class="ov-ring"><span>78<small>%</small></span></div>
+      <p class="ov-why"><b>2人の価値観が、どれだけ重なっているか</b>がひと目でわかる数字です。お金・将来・暮らしのような大事な問題ほど、重く数えます。</p>
+      <p class="ov-next">分かれたところには、<b>歩み寄りの案</b>が出ます。</p></div>
   </section>
   <div class="gos">
     <p class="gos-h">あの人と、みんなと。<br>「ふつう」はどこまで同じ？</p>
     <button class="gobig g1" id="go-each"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg></span><span><b>2人で・みんなで</b><small>QRを読むだけ・2〜10人</small></span></button>
-    <button class="gobig g2" id="go-solo"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span><span><b>ひとりで遊ぶ</b><small id="solo-sub">${CFG.len}問・約${CFG.len>=30?6:3}分。あとで答え合わせ</small></span></button>
+    <button class="gobig g2" id="go-solo"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span><span><b>ひとりで診断</b><small id="solo-sub">${CFG.len}問・約${CFG.len>=30?6:3}分。あとで答え合わせ</small></span></button>
     <p class="free">${Q.length}の質問・${TH_N.length}つのテーマ　無料・登録なし・アプリ不要</p>
   </div>
   <section class="card try" id="try">
@@ -150,7 +152,7 @@ function goTop(){
 
   ${st&&st.code?`<button class="btn ghost small" id="back">さっきの部屋（${esc(st.code)}）にもどる</button>`:''}
   <section class="card" id="setup">
-    <p class="label">だれと遊ぶ？</p>
+    <p class="label">だれと診断する？</p>
     ${seg('mode',[['each','みんなで<br><small>それぞれのスマホで</small>'],['solo','ひとりで']])}
     <p class="hint" id="m-desc"></p>
     <div id="m-opts" class="stack">
@@ -195,7 +197,7 @@ function goTop(){
     <button class="btn" id="sgo">はじめる</button>
   </section>
   <a class="btn line small" id="lntop" href="#" target="_blank" rel="noopener">LINEでこのサイトを紹介する</a>
-  <p class="hint lntop-what">あとで遊んでほしい友だちに、サイトのリンクだけを送ります。いま一緒に遊ぶときは「部屋を作る」から誘ってください。</p>
+  <p class="hint lntop-what">あとで診断してほしい友だちに、サイトのリンクだけを送ります。いま一緒に診断するときは「部屋を作る」から誘ってください。</p>
   <section class="card themes"><p class="label">テーマ別の質問</p>
     <ul class="tlinks">${(window.SY_PAGES||[]).map(p=>`<li><a href="${p.slug}/">${esc(p.h1)}</a></li>`).join('')}</ul></section>
   ${PROMO}
@@ -241,7 +243,8 @@ function askHTML(k,i,n,{who,step,star,starOn,to,u}){
     <div class="qhead"><span class="tag catg c${q[0]}">${esc(cat[0])}</span><span class="qn">${i+1}／${n}${who?`　${esc(who)}`:''}</span></div>
     ${cat[1]?`<p class="if">${esc(cat[1])}</p>`:''}
     <h2 class="q">${esc(q[1])}</h2>
-    ${step==='done'?`<div class="match">${to?'時間切れ':u?'「'+UNDEC+'」にしました':'答えました！'}</div><div class="hint" id="tcnt">みんなを待っています</div><div id="skipq"></div>`:`
+    <div class="hint" id="tcnt"></div><div class="allok" id="allok" hidden>全員決めた！<small>次の問題へ…</small></div>
+    ${step==='done'?`<div class="match">${to?'時間切れ':u?'「'+UNDEC+'」にしました':'答えました！'}</div><div id="skipq"></div>`:`
     <div class="qtime" id="qtime" role="timer" aria-label="のこり時間"><span class="qt-s">${Q_LIMIT}秒</span><b class="qt-b"><i></i></b></div>
     <p class="label">あなたはどっち？</p>
     ${star?`<button class="star" id="star" aria-pressed="${!!starOn}">★ ここはゆずれない</button>`:''}
@@ -260,7 +263,7 @@ function soloStart(name){
   Object.assign(L,{counts:undefined,mode:'solo',qs:deal(CFG.len,CFG.topic),players:[{id:'me',name:name||'あなた',ans:{}}],p:0,i:0});
   localAsk();
 }
-/* 答えたあと、これまでに遊んだ人の答えの割合を少しだけ出す（究極の二択と同じ。ひとり・答え合わせのリンクのとき。鑑定者本人の指示 2026-11-16）
+/* 答えたあと、これまでに診断した人の答えの割合を少しだけ出す（究極の二択と同じ。ひとり・答え合わせのリンクのとき。鑑定者本人の指示 2026-11-16）
    問題の数は、はじめに1回だけまとめて読む（L.counts）。読めないとき・確認用ページでは出さないだけ */
 function prefetchVotes(){L.counts=null;const qs=L.qs;getDb().then(db=>db&&db.vote&&db.votes?db.votes(qs.map(k=>'q'+QKEY[k])):null).then(c=>{if(c&&L.qs===qs)L.counts=c}).catch(()=>{})}
 // 答えた人の数は、その問題に10人以上が答えてから出す（鑑定者本人 2026-11-16「5人、10人に遊んでもらって、それでカウントして始めても」）。少ないうちは％だけ
@@ -273,9 +276,20 @@ function flashVotes(k,v){
     b.classList.add('w');b.insertAdjacentHTML('beforeend',`<span class="wrow"><span class="wpct">みんなの${pc}%</span></span><i class="wbar" style="width:${pc}%"></i>`)});
   const o=app.querySelector('.opts');if(o&&t>=SHOW_COUNT)o.insertAdjacentHTML('afterend',`<p class="wnote">これまでに${t.toLocaleString()}人が答えました</p>`);
   return true}
+// ★ゆずれないの使い方：はじめる前に画面いっぱいで説明し、「わかった」で進む（鑑定者本人 2026-11-19「押すってことが絶対分からない」「OKしたらスタート」）
+function starIntro(key,ok,go){if(R.starSeen===key){go&&go();return}const old=$('siov');if(old)return;
+  const d=document.createElement('div');d.id='siov';d.className='si-ov';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-labelledby','si-t');
+  d.innerHTML=`<section class="si-card"><p class="si-tag">はじめる前に</p><h2 id="si-t">「★ ここはゆずれない」ボタン</h2>
+    <div class="si-demo" aria-hidden="true"><span class="si-q">お風呂は？</span><span class="star si-star">★ ここはゆずれない</span><span class="si-finger">↑ ここを押す</span></div>
+    <p class="si-lead">「これだけは、ゆずれない」と思った問題では、答えを選ぶ前にこのボタンを押してください。</p>
+    <ul class="si-list"><li>結果の「★ ゆずれないところ」で、答えをくらべます</li><li>シンクロ率の点数には入りません。気軽に押してください</li><li>押さなくても大丈夫。ゆずれない問題にだけ押してください</li></ul>
+    <button class="btn" id="si-ok" type="button">${esc(ok)}</button></section>`;
+  document.body.appendChild(d);const b=$('si-ok');try{b.focus()}catch(e){}
+  b.onclick=()=>{R.starSeen=key;d.remove();go&&go()}}
 function localAsk(){
   if(L.i===0&&L.p===0&&L.counts===undefined)prefetchVotes();
   const p=L.players[L.p],k=L.qs[L.i],n=L.qs.length,multi=L.players.length>1;
+  if(n===30&&L.i===0&&L.p===0&&!(R.starDone||{}).local){starIntro('local','わかった、はじめる',()=>{R.starDone=Object.assign(R.starDone||{},{local:1});localAsk()});return}
   const a=p.ans[L.i]||(p.ans[L.i]={o:-1,st:0,ms:0});
   view(askHTML(k,L.i,n,{who:multi?p.name+'さん':'',step:'own',star:n===30,starOn:a.st}));
   const t0=Date.now();let fin=false;
@@ -303,10 +317,10 @@ function localAsk(){
 /* ===== 結果 ===== */
 // 2人の合い方：同じ＝ぴったり／片方が「こだわらない」＝合わせられる／AとBで分かれた＝ちがい
 function pairStat(A,B,qs,only){
-  // 問題の重さ（大事＝2・軽い＝0.5）に、★ゆずれない（どちらかがつけた問題）はさらに2倍で数える。★の問題は別にも数えて、結果ではっきり見せる
+  // 問題の重さ（大事＝2・軽い＝0.5）で数える。★ゆずれないはシンクロ率に入れず、「★ ゆずれないところ」の枠で別に見せる（鑑定者本人 2026-11-19「点数差はつけない方がいい」）
   let s=0,n=0;const r={same:[],adj:[],diff:[],starSame:[],starAdj:[],starDiff:[]};
   qs.forEach((k,i)=>{if(only&&!only.has(i))return;const a=A.ans[i],b=B.ans[i];if(!a||!b||a.o<0||b.o<0)return;
-    const st=(a.st&&a.o<2)||(b.st&&b.o<2),w=WT(k)*(st?2:1);n+=w;
+    const st=(a.st&&a.o<2)||(b.st&&b.o<2),w=WT(k);n+=w;
     if(a.o===b.o){s+=w;r.same.push(i);if(st)r.starSame.push(i)}
     else if(a.o===2||b.o===2){s+=w/2;r.adj.push(i);if(st)r.starAdj.push(i)}
     else{r.diff.push(i);if(st)r.starDiff.push(i)}});
@@ -352,13 +366,12 @@ function talkHTML(G,nm){
   if(its.length<2)return '';
   if(!its.length)return `<section class="card" id="talk"><p class="label">${two?'2人で':'みんなで'}話しておきたいこと</p><p class="hint">答えが反対になった問題はありませんでした。</p></section>`;
   const row=(i,n)=>{const k=G.qs[i],key=QKEY[k].slice(0,5),ok=done.has(key);
-    const ws=[0,1,2].map(v=>{const who=ps.filter(p=>p.ans[i]&&p.ans[i].o===v);if(!who.length)return '';
-      return `<span class="who"><em>${G.anon?who.length+'人':who.map(p=>esc(p.name)).join('・')}</em>${esc(ans(v,k))}${who.some(p=>p.ans[i].st&&v<2)?' ★':''}</span>`}).join('');
+    const ws=ansGroups(G,i).map(({v,who})=>`<span class="tkr"><span class="tkw">${G.anon?`<span class="nmc pn">${who.length}人</span>`:who.map(p=>nmChip(G,p,p===me?'あなた':p.name)).join('')}</span><span class="tka">${esc(ans(v,k))}${who.some(p=>p.ans[i].st&&v<2)?' ★':''}</span></span>`).join('');
     const ay=(window.SY_AYUMI||{})[Q[k][1]],hint=!two&&n<3?talkPairHint(G,i,me):'';
     return `<li class="${ok?'ok':''}">${two?'':`<span class="tkn">${n+2}</span>`}<b>${esc(Q[k][1])}</b>${ws}${hint?`<span class="tph">${hint}</span>`:''}${ay?`<span class="ayu"><b>${two?'歩み寄りの案':'みんなの歩み寄りの案'}</b>${esc(ay)}</span>`:''}<button class="talked" type="button" data-k="${key}" aria-pressed="${ok}">${ok?'✓ 話した':'話した'}</button></li>`};
   const rest=its.slice(1),top=rest.slice(0,2),more=rest.slice(2),ul=(xs,o)=>`<ul class="slist tk${two?'':' tkm'}">${xs.map((x,j)=>row(x,j+o)).join('')}</ul>`;
-  return `<section class="card" id="talk"><p class="label">${two?'ほかに話しておきたいこと':'みんなで話す順番（2つ目から）'}</p>
-    <p class="hint">${two?'ステップ①のほかに、答えが反対になった問題です（大事な問題・★から順に）。「どうしてそう思う？」と聞いてから、「歩み寄りの案」を2人なりの形にしてみてください。':'ステップ①のつぎに話すとよい問題です。上から1つずつ話すと、まとまりやすくなります。'}</p>
+  return `<section class="card pt-a" id="talk"><p class="pt-h"><em>歩み寄り</em>${two?'ほかに話しておきたいこと':'みんなで話す順番（2つ目から）'}</p>
+    <p class="hint">${two?'「どうしてそう思う？」から聞いてみてください。':'上から1つずつ話すと、まとまりやすくなります。'}</p>
     ${ul(top,0)}${more.length?`<details class="sfold"><summary>ほかに${more.length}問を見る</summary>${ul(more,2)}</details>`:''}
     <p class="tk-cnt" id="tkcnt">話した問題　${its.filter(i=>done.has(QKEY[G.qs[i]].slice(0,5))).length}／${its.length}</p>
     <p class="hint tk-note">話したら「話した」を押しておくと、このスマホに残ります。</p></section>`}
@@ -396,8 +409,8 @@ function kyoPick(G,rare){const same=kyoSame(G),used=new Set(),out=[];
   (rare||[]).forEach(x=>add(x,'r'));same.filter(x=>x.st).forEach(x=>add(x,'s'));same.filter(x=>x.big).forEach(x=>add(x,'d'));same.forEach(x=>add(x,''));return out}
 function kyoHTML(G,list){const two=G.players.length===2,all=two?'2人とも':'全員';
   const why=x=>x.why==='r'?'少数派の答え':x.why==='s'?(two?'2人とも★ゆずれない':'全員★ゆずれない'):x.why==='d'?'大事な問題で一致':'';
-  const item=x=>`<div class="kq">${why(x)?`<span class="why w-${x.why}">${why(x)}</span>`:''}<b>${esc(Q[x.k][1])}</b><p class="a">${all}「${esc(ans(x.o,x.k))}」</p>${x.share!=null?`<div class="pc"><span class="t"><i style="width:${Math.max(3,Math.round(x.share*100))}%"></i></span><em>みんなの${Math.round(x.share*100)}%</em></div>${x.tot<KYO_FEW?`<p class="kfew">まだ${x.tot}人の答えから</p>`:''}`:''}</div>`;
-  return `<p class="label">${two?'2人の共通点':'みんなの共通点'}</p><p class="hint">${two?'同じ答えを選んだ問題から、2人らしいものを選びました。':'全員が同じ答えを選んだ問題から、このメンバーらしいものを選びました。'}</p>${list.map(item).join('')}`}
+  const item=x=>`<div class="kq"><div class="kqt"><b>${esc(Q[x.k][1])}</b>${why(x)?`<span class="why w-${x.why}">${why(x)}</span>`:''}</div><p class="a"><span class="ck" aria-hidden="true">✓</span><span>${all}「${esc(ans(x.o,x.k))}」</span></p>${x.share!=null?`<div class="pc"><span class="t"><i style="width:${Math.max(3,Math.round(x.share*100))}%"></i></span><em>みんなの${Math.round(x.share*100)}%</em></div>${x.tot<KYO_FEW?`<p class="kfew">まだ${x.tot}人の答えから</p>`:''}`:''}</div>`;
+  return `<p class="pt-h"><em>共通点</em>${two?'2人の共通点':'みんなの共通点'}</p><p class="hint">${two?'2人が同じ答えを選んだ問題です。':'全員が同じ答えを選んだ問題です。'}</p>${list.map(item).join('')}`}
 function kyoSlot(G){const list=kyoPick(G);return `<section class="card kyo" id="kyo"${list.length?'':' hidden'}>${list.length?kyoHTML(G,list):''}</section>`}
 async function kyoRun(G){
   const same=kyoSame(G);if(!same.length)return;const db=await getDb();if(!db||!db.votes)return;
@@ -413,7 +426,7 @@ function talkedOf(id){const m=store('kv_talked')||{};return Array.isArray(m[id])
 function talkedSet(id,key,on){const m=store('kv_talked')||{};let a=Array.isArray(m[id])?m[id]:[];a=a.filter(x=>x!==key);if(on)a.push(key);m[id]=a;
   const ks=Object.keys(m);if(ks.length>30)delete m[ks[0]];store('kv_talked',m)}
 function bindTalked(G){const id=talkId(G),bs=[...app.querySelectorAll('.talked')],c=$('tkcnt');
-  bs.forEach(b=>b.onclick=()=>{const on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',on);b.textContent=on?'✓ 話した':'話した';
+  bs.forEach(b=>b.onclick=()=>{const on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',on);b.textContent=b.classList.contains('big')?(on?'✓ 話しました':'話したら、ここを押す'):(on?'✓ 話した':'話した');
     const li=b.closest('li');if(li)li.classList.toggle('ok',on);talkedSet(id,b.dataset.k,on);if(c)c.textContent='話した問題　'+bs.filter(x=>x.getAttribute('aria-pressed')==='true').length+'／'+bs.length})}
 // E：だれの話から聞くとよいか（3人以上・名前を見せる部屋だけ）
 function talkPairHint(G,i,me){if(G.anon)return'';const ps=G.players,k=G.qs[i],side=v=>ps.filter(p=>p.ans[i]&&p.ans[i].o===v);
@@ -425,30 +438,30 @@ function talkPairHint(G,i,me){if(G.anon)return'';const ps=G.players,k=G.qs[i],si
   if(c.length)t+=`${c.map(nmS).join('と')}は合わせられるので、間に入ってもらうと決まりやすい問題です。`;
   return t}
 // B：これからの3つのステップ（まず話すこと→今週ためすこと→大切にしたいこと）
-function stepsHTML(G){const ps=G.players,two=ps.length===2,me=ps.find(p=>p.id===G.me),its=talkItems(G),kyo=kyoPick(G)[0];
-  if(!its.length&&!kyo)return'';
-  const who=(i,v)=>{const w=ps.filter(p=>p.ans[i]&&p.ans[i].o===v);return w.length?(G.anon?w.length+'人':w.map(p=>p===me?'あなた':esc(p.name)).join('・')):''};
-  let h='';
-  if(its.length){const i=its[0],k=G.qs[i],st=ps.some(p=>p.ans[i]&&p.ans[i].st&&p.ans[i].o<2);
-    const chips=[0,1,2].map(v=>{const w=who(i,v);return w?`<span class="nxc c${v}"><em>${w}</em>${esc(ans(v,k))}</span>`:''}).join('');
-    const ay=(window.SY_AYUMI||{})[Q[k][1]];
-    h+=`<div class="sp s1"><i>1</i><div><span class="k">まず話すこと</span><span class="m">「${esc(Q[k][1])}」</span><div class="nxcs">${chips}</div>
-      <span class="nt">${st?'★ゆずれないがついた問題で、答えが分かれました。':WB.has(k)?'大事な問題で、答えが分かれました。':'答えが分かれた問題です。'}ここから話すのがおすすめです。</span>${(()=>{const key=QKEY[k].slice(0,5),ok=talkedOf(talkId(G)).includes(key);return `<button class="talked" type="button" data-k="${key}" aria-pressed="${ok}">${ok?'✓ 話した':'話した'}</button>`})()}</div></div>
-      <div class="sp s2"><i>2</i><div><span class="k">今週ためすこと</span><span class="ay2">${ay?esc(ay):'「どうしてそう思うの？」を聞き合って、'+(two?'2人':'みんな')+'のやり方を1つだけ決めてみる。'}</span>
-      <span class="nt">1週間ためしたら、どうだったか話してみてください。</span></div></div>`}
-  if(kyo)h+=`<div class="sp s3"><i>${its.length?3:1}</i><div><span class="k">大切にしたいこと</span><div class="nxcs"><span class="nxc c0"><em>${two?'2人とも':'全員'}</em>${esc(ans(kyo.o,kyo.k))}</span></div>
-      <span class="nt">「${esc(Q[kyo.k][1])}」の答えです。${two?'2人':'みんな'}の土台になっているところです。</span></div></div>`;
-  return `<section class="card steps" id="steps"><p class="label">${two?'2人のこれから　3つのステップ':'みんなのこれから　3つのステップ'}</p><div class="nxst">${h}</div></section>`}
+function stepsHTML(G){const ps=G.players,two=ps.length===2,me=ps.find(p=>p.id===G.me),its=talkItems(G);
+  if(!its.length)return'';
+  const i=its[0],k=G.qs[i],st=ps.some(p=>p.ans[i]&&p.ans[i].st&&p.ans[i].o<2),gs=ansGroups(G,i);
+  const side=g=>{const c=G.anon?'pn':g.who.length===1?pcls(G,g.who[0]):'pm';
+    return `<div class="vside ${c}"><span class="vw">${G.anon?g.who.length+'人':g.who.map(p=>p===me?'あなた':esc(p.name)).join('・')}</span><span class="va">${esc(ans(g.v,k))}</span></div>`};
+  const vs=gs.length===2?`<div class="vs2">${side(gs[0])}<span class="vmid" aria-hidden="true">⇔</span>${side(gs[1])}</div>`:`<div class="vsn">${gs.map(side).join('')}</div>`;
+  const ay=(window.SY_AYUMI||{})[Q[k][1]],key=QKEY[k].slice(0,5),ok=talkedOf(talkId(G)).includes(key);
+  return `<section class="hero-pt" id="steps"><p class="hp-ttl">${two?'答えが分かれた1問から話そう':'答えが分かれた1問から、みんなで話そう'}<small>${st?'★ゆずれないがついた問題で、答えが分かれました':WB.has(k)?'大事な問題で、'+(two?'2人':'みんな')+'の答えが分かれました':(two?'2人':'みんな')+'の答えが分かれた問題です'}</small></p>
+    <div class="hq"><span class="hql">Q</span><p class="hqt">${esc(Q[k][1])}</p>${vs}</div>
+    <p class="hp-arrow">↓ 歩み寄るなら</p>
+    <div class="hp-ayu"><span class="rb">歩み寄りの案</span><p>${ay?esc(ay):'「どうしてそう思うの？」を聞き合って、'+(two?'2人':'みんな')+'のやり方を1つだけ決めてみる。'}</p></div>
+    <div class="howto"><b>1</b><span>「どうしてそう思う？」と聞いてみる</span><b>2</b><span>この案を1週間ためして、また話す</span></div>
+    <button class="talked big" type="button" data-k="${key}" aria-pressed="${ok}">${ok?'✓ 話しました':'話したら、ここを押す'}</button></section>`}
 // C：話し合うときのコツ（切り出しの例は、いちばん上の分かれた問題の答えから作る）
 function tipsHTML(G){const ps=G.players,me=ps.find(p=>p.id===G.me),its=talkItems(G);let open='この答え、どうしてそう思ったの？';
   if(its.length){const i=its[0],k=G.qs[i],my=me&&me.ans[i]&&me.ans[i].o<2&&me.ans[i].o>=0?me.ans[i].o:0,ot=1-my;
     open=`わたしは<em>「${esc(ans(my,k))}」</em>にしたけど、<em>「${esc(ans(ot,k))}」</em>にしたのは、どうして？`}
-  return `<section class="card tips"><p class="label">話し合うときのコツ</p><div class="bub"><div><small>切り出すとき（例）</small><p>${open}</p></div></div><details class="sfold"><summary>話し合いの4つのコツと、話がかたくなったときの一言</summary><div class="tp">
+  let tz='切り出しの例と、4つのコツ';if(its.length){const k=G.qs[its[0]],my=me&&me.ans[its[0]]&&me.ans[its[0]].o>=0&&me.ans[its[0]].o<2?me.ans[its[0]].o:0;tz=`切り出しの例：<em>「わたしは${esc(ans(my,k))}にしたけど…」</em>`}
+  return foldBox('話し合うときのコツ',tz,`<div class="tips"><div class="bub"><div><small>切り出すとき（例）</small><p>${open}</p></div></div><div class="tp">
     <div><b>はじめに</b><span>同じだったところを1つ話す。</span></div>
     <div><b>1回に1つ</b><span>分かれた問題は、1つずつ話す。</span></div>
     <div><b>聞きかた</b><span>正しさより先に、「どうしてそう思うの？」と聞く。</span></div>
     <div><b>決めたら</b><span>まず1か月ためして、合わなければ変える。</span></div></div>
-    <div class="bub"><div><small>話がかたくなったとき</small><p>どっちがいい・悪いじゃなくて、${ps.length===2?'2人':'みんな'}のやり方を決めたいな。</p></div></div></details></section>`}
+    <div class="bub"><div><small>話がかたくなったとき</small><p>どっちがいい・悪いじゃなくて、${ps.length===2?'2人':'みんな'}のやり方を決めたいな。</p></div></div></div>`)}
 // A：2人の距離の縮め方（4つのものさしで、2人の組み合わせに合わせた一言）
 const AXTIP={
   kicchiri:{d:'共有の場所だけ「ここまで片づいていればOK」のラインを2人で1つ決めて、自分の場所はそれぞれの自由にする。',
@@ -473,13 +486,13 @@ function distHTML(G){const ps=G.players;if(ps.length!==2||G.anon)return'';const 
   const rows=AX.map(a=>{const sa=axScore(ps[0],G.qs,a),sb=axScore(ps[1],G.qs,a);if(!sa||!sb||!AXTIP[a.key])return null;
     const ka=axSideK(sa.pct),kb=axSideK(sb.pct),kind=ka==='m'||kb==='m'?'m':ka===kb?ka:'d',t=AXTIP[a.key][kind];
     const lab=kind==='d'?['d','ちがう向き']:kind==='m'?['m','合わせやすい']:['s','同じ向き'];
-    const pin=(p,s,c)=>`<i class="nxpin ${c}" style="left:${100-s.pct}%"><span>${nmS(p)}</span></i>`;
-    return {d:kind==='d',h:`<div class="dax"><div class="daxh"><b>${esc(a.name)}</b><span class="kind ${lab[0]}">${lab[1]}</span></div>
-      <div class="dbar2">${pin(ps[0],sa,'p0')}${pin(ps[1],sb,'p1')}</div><div class="dends"><span>${esc(a.l)}</span><span>${esc(a.r)}</span></div><p class="dtip">${t}</p></div>`}}).filter(Boolean);
+    const pin=(p,s)=>`<i class="nxpin ${pcls(G,p)}" style="left:${100-s.pct}%" title="${nmS(p)}"></i>`;
+    return {d:kind==='d',n:a.name,h:`<div class="dax"><div class="daxh"><b>${esc(a.name)}</b><span class="kind ${lab[0]}">${lab[1]}</span></div>
+      <div class="dlg">${[me||ps[0],ps.find(p=>p!==(me||ps[0]))].map(p=>`<span><i class="${pcls(G,p)}"></i>${nmS(p)}</span>`).join('')}</div><div class="dbar2">${pin(ps[0],sa)}${pin(ps[1],sb)}</div><div class="dends"><span>${esc(a.l)}</span><span>${esc(a.r)}</span></div><p class="dtip">${t}</p></div>`}}).filter(Boolean);
   if(!rows.length)return'';
   const dd=rows.filter(x=>x.d),ot=rows.filter(x=>!x.d);
-  return `<section class="card dist"><p class="label">2人の距離の縮め方</p><p class="hint">${dd.length?`4つのものさしのうち、2人の向きがちがう${dd.length}つです。`:'4つのものさしで、2人の向きがちがうところはありませんでした。'}</p>${dd.map(x=>x.h).join('')}
-    ${ot.length?`<details class="sfold"><summary>${dd.length?'ほかのものさし':'4つのものさし'}（合わせやすい・同じ向き ${ot.length}つ）を見る</summary>${ot.map(x=>x.h).join('')}</details>`:''}</section>`}
+  return foldBox('2人の距離の縮め方',dd.length?`ちがう向き：<em>${dd.map(x=>esc(x.n.replace(/^2人の/,''))).join('・')}</em>`:'ちがう向きはなし（合わせやすい2人）',`<div class="dist"><p class="hint">${dd.length?`4つのものさしのうち、2人の向きがちがう${dd.length}つです。`:'4つのものさしで、2人の向きがちがうところはありませんでした。'}</p>${dd.map(x=>x.h).join('')}
+    ${ot.length?`<details class="sfold"><summary>${dd.length?'ほかのものさし':'4つのものさし'}（合わせやすい・同じ向き ${ot.length}つ）を見る</summary>${ot.map(x=>x.h).join('')}</details>`:''}</div>`)}
 // E：このメンバーのかたち（3人以上）・つなぎ役
 const GTIP={
   kicchiri:{l:'きっちり派が多いメンバーです。みんなで使う場所は、きっちり派の基準に合わせると気持ちよく過ごせます。',r:'おおらか派が多いメンバーです。片づけや決めごとは、最後に1人だけ確かめ役を決めておくと安心です。',s:'半々に分かれています。みんなで使う場所のルールを、1つだけ決めておくとうまくいきます。'},
@@ -491,7 +504,7 @@ function groupShapeHTML(G){const ps=G.players;if(ps.length<3||G.anon)return'';
     const kind=c.l>c.r?'l':c.r>c.l?'r':'s',lab=c.l&&c.r?`${Math.max(c.l,c.r)}対${Math.min(c.l,c.r)}`:'同じ向き';
     return `<div class="dax"><div class="daxh"><b>${esc(a.name.replace(/^2人の/,''))}</b><span class="kind ${kind==='s'?'m':c.l&&c.r?'d':'s'}">${kind==='s'?'半々':lab}</span></div>
       <div class="gcnt"><span><b>${esc(a.l)}</b>${c.l}人</span>${c.m?`<span><b>まん中</b>${c.m}人</span>`:''}<span><b>${esc(a.r)}</b>${c.r}人</span></div><p class="dtip">${GTIP[a.key][kind]}</p></div>`}).join('');
-  return rows?`<section class="card dist"><p class="label">このメンバーのかたち</p><p class="hint">4つのものさしで、メンバーがどちらに多いかと、みんなで過ごすときのコツです。</p>${rows}</section>`:''}
+  return rows?foldBox('このメンバーのかたち','4つのものさしの人数とコツ',`<div class="dist"><p class="hint">4つのものさしで、メンバーがどちらに多いかと、みんなで過ごすときのコツです。</p>${rows}</div>`):''}
 function bridgeHTML(G){const ps=G.players;if(ps.length<3||G.anon)return'';const me=ps.find(p=>p.id===G.me);
   const c=ps.map(p=>({p,n:G.qs.filter((k,i)=>p.ans[i]&&p.ans[i].o===2).length})).sort((a,b)=>b.n-a.n);
   if(!c[0]||c[0].n<2||(c[1]&&c[1].n===c[0].n))return'';const p=c[0].p,nm=p===me?'あなた':esc(p.name)+'さん';
@@ -504,9 +517,9 @@ function againHTML(G,P2){const ps=G.players,me=ps.find(p=>p.id===G.me);if(ps.len
   let cmp='';if(prev){const up=P2.pct-prev.pct,closer=(prev.dk||[]).filter(x=>!dk.includes(x)),nm=x=>{const k=G.qs.find(q=>QKEY[q].slice(0,5)===x);return k!=null?Q[k][1]:''};
     const d=new Date(prev.at);cmp=`<div class="cmp"><div><small>前回（${d.getMonth()+1}月${d.getDate()}日）</small><b>${prev.pct}%</b></div><div class="up${up<0?' dn':''}">${up>0?'＋'+up:up<0?'−'+(-up):'±0'}</div><div><small>今回</small><b>${P2.pct}%</b></div></div>
       ${closer.length?`<p class="hint">近づいた問題（${closer.length}問）：${closer.map(x=>esc(nm(x))).filter(Boolean).slice(0,5).join('・')}${closer.length>5?' ほか':''}</p>`:''}`}
-  return `<section class="card again"><p class="label">${prev?'前回の答え合わせと、くらべると':'1か月後に、もう一度答え合わせ'}</p>${cmp}
-    <p class="hint">${prev?'同じ':'1か月くらいたったら、同じ'}${G.qs.length}問にもう一度答えて、${esc(other.name)}さんに答え合わせのリンクを送ってください。話し合ったあと、2人がどれだけ近づいたかがわかります。この結果は、このスマホに残ります。</p>
-    <button class="btn ghost" id="reans" type="button">同じ${G.qs.length}問に、もう一度答える</button></section>`}
+  const inner=`${cmp}<p class="hint">${prev?'同じ':'1か月くらいたったら、同じ'}${G.qs.length}問にもう一度答えて、${esc(other.name)}さんに答え合わせのリンクを送ってください。話し合ったあと、2人がどれだけ近づいたかがわかります。この結果は、このスマホに残ります。</p>
+    <button class="btn ghost" id="reans" type="button">同じ${G.qs.length}問に、もう一度答える</button>`;
+  return prev?`<section class="card again"><p class="label">前回の答え合わせと、くらべると</p>${inner}</section>`:foldBox('1か月後に、もう一度答え合わせ','話し合ったあと、近づいたかがわかります',`<div class="again">${inner}</div>`)}
 function bindAgain(G){const b=$('reans');if(!b)return;const me=G.players.find(p=>p.id===G.me);
   b.onclick=()=>{Object.assign(L,{counts:undefined,mode:'solo',qs:G.qs.slice(),players:[{id:'me',name:(me&&me.name)||store('kv_name')||'あなた',ans:{}}],p:0,i:0});localAsk()}}
 // シンクロ率のひとこと（低くても前向きに読める言い方。鑑定者本人 2026-11-17）
@@ -515,20 +528,34 @@ function syncMsg(pct,two){const w=two?'2人':'メンバー';
   if(pct>=60)return{msg:'いい感じにわかり合えています',sub:'重なるところが多いから、ちがうところも話しやすい関係です。'};
   if(pct>=40)return{msg:'ほどよく重なって、ほどよくちがう'+w,sub:'同じところは安心に、ちがうところは新しい発見に。'};
   return{msg:'発見の多い'+w,sub:'答えが分かれたところほど、話すとおたがいのことがよくわかります。'}}
-const foldBox=(t,sm,inner)=>`<details class="fold"><summary><span class="ft">${t}${sm?`<small>${sm}</small>`:''}</span></summary><div class="fb">${inner}</div></details>`;
+// たたむ欄：左に色のマーク、題名の下に中身の一部（鑑定者本人 2026-11-19「表のバーが簡素すぎて開いてもらえない」）
+const FIC={'話し合うときのコツ':['話','a'],'2人の距離の縮め方':['距','b'],'テーマ別のシンクロ率':['テ','c'],'価値観のタイプ':['型','a'],'★ ゆずれないところ':['★','d'],'★ ゆずれないこと':['★','d'],'みんなの答えを1問ずつ':['答','c'],'1か月後に、もう一度答え合わせ':['再','b'],'まだ決められなかった問題':['？','c'],'このメンバーのかたち':['形','b'],'いちばん悩んだ問題':['悩','d'],'4つのものさし':['型','a'],'あなたのこだわり':['芯','b'],'合わせられること・悩んだ問題':['柔','a']};
+// ★を押した数（人によって、ゆずれないことの多さがちがう。シンクロ率には入れない）
+function starCnt(G){const ps=G.players,me=ps.find(p=>p.id===G.me),list=(G.anon&&me)?[me]:ps;
+  const n=p=>G.qs.filter((k,i)=>{const a=p.ans[i];return a&&a.st&&a.o>=0&&a.o<2}).length;
+  return `<p class="stcnt"><b>★を押した数</b>${list.map(p=>`<span>${nmChip(G,p,p===me?'あなた':p.name)}${n(p)}問</span>`).join('')}</p><p class="hint stnote">★はシンクロ率の点数には入れていません。ゆずれないことの多さは、人それぞれです。</p>`}
+const foldBox=(t,sm,inner)=>{const ic=FIC[t]||[t.replace(/^★\s*/,'').charAt(0),'c'];return `<details class="fold"><summary><span class="fic f${ic[1]}" aria-hidden="true">${ic[0]}</span><span class="ft">${t}${sm?`<small>${sm}</small>`:''}</span></summary><div class="fb">${inner}</div></details>`};
+// 人の色：あなた＝p0（みどり）・相手は順に p1（ピンク）…。あなたがわからないときは1人目が p0
+function pcls(G,p){const ps=G.players,me=ps.find(x=>x.id===G.me)||ps[0];if(p===me)return 'p0';const o=ps.filter(x=>x!==me);return 'p'+((o.indexOf(p)+1)%6)}
+const nmChip=(G,p,txt)=>`<span class="nmc ${pcls(G,p)}">${esc(txt)}</span>`;
+// 自分のいる答えを先に（自分がいなければ答えの順）
+function ansGroups(G,i){const ps=G.players,me=ps.find(p=>p.id===G.me);
+  const gs=[0,1,2].map(v=>({v,who:ps.filter(p=>p.ans[i]&&p.ans[i].o===v)})).filter(g=>g.who.length);
+  return gs.sort((a,b)=>(me&&b.who.includes(me)?1:0)-(me&&a.who.includes(me)?1:0))}
 function twoFolds(G,trows,nm,r){
   const [A,B]=G.players,me=G.players.find(p=>p.id===G.me);let out='';
   const keep=trows.filter(x=>x.q>=2),drop=trows.filter(x=>x.q<2);
   if(trows.length){const few=drop.length?`<p class="few">${drop.map(x=>'「'+esc(x.name)+'」').join('')}は1問だけだったので出していません。${G.qs.length<30?'しっかり版（30問）なら、テーマごとにくわしくわかります。':''}</p>`:'';
-    out+=foldBox('テーマ別のシンクロ率',keep.length?keep.length+'つのテーマ':'',(keep.length?themeHTML(keep,'2人'):'')+few)}
+    const ks=keep.slice().sort((a,b)=>b.pct-a.pct),tz=ks.length?`いちばん重なった：<em>${esc(ks[0].name)}（${ks[0].pct}%）</em>${ks.length>1&&ks[ks.length-1].pct<ks[0].pct?`　分かれた：<em>${esc(ks[ks.length-1].name)}</em>`:''}`:'';
+    out+=foldBox('テーマ別のシンクロ率',tz,(keep.length?themeHTML(keep,'2人'):'')+few)}
   const ax=axHTML(G,(G.anon&&me)?[me]:G.players,nm);if(ax)out+=foldBox('価値観のタイプ','4つのものさしで、2人の位置',ax);
   if(r.starN){const row=(i,cls)=>{const k=G.qs[i],aa=A.ans[i],bb=B.ans[i];
-      const who=(P,x)=>(G.anon&&me&&P!==me)?'':`<span class="who"><em>${esc(P.name)}</em>${esc(ans(x.o,k))}${x.st?' ★':''}</span>`;
+      const who=(P,x)=>(G.anon&&me&&P!==me)?'':`<span class="tkr"><span class="tkw">${nmChip(G,P,P===me?'あなた':P.name)}</span><span class="tka">${esc(ans(x.o,k))}${x.st?' ★':''}</span></span>`;
       return `<li class="${cls}"><b>${esc(Q[k][1])}</b>${who(A,aa)}${who(B,bb)}</li>`};
     const many=r.starDiff.length>=2&&r.starDiff.length>=r.starSame.length+r.starAdj.length;
     const verdict=!r.starDiff.length?`<p class="good">大事なところは、ちがいがありません</p>`:many?`<p class="warn">大事なところで、考え方がちがうことが多めです。この${r.starDiff.length}問は、先にゆっくり話しておくと安心です</p>`:`<p class="warn">大事なところで、ちがいが${r.starDiff.length}問あります。ここは先に話しておくと安心です</p>`;
-    out+=foldBox('★ ゆずれないところ',`同じ ${r.starSame.length}・合わせられる ${r.starAdj.length}・ちがう ${r.starDiff.length}`,
-      `<div class="starbox">${verdict}<ul class="slist">${r.starDiff.map(i=>row(i,'d')).join('')}${r.starAdj.map(i=>row(i,'m')).join('')}${r.starSame.map(i=>row(i,'s')).join('')}</ul></div>`)}
+    out+=foldBox('★ ゆずれないところ',`<span class="ftc"><i class="c-s">同じ ${r.starSame.length}</i><i class="c-m">合わせられる ${r.starAdj.length}</i><i class="c-d">ちがう ${r.starDiff.length}</i></span>${r.starDiff.length?'<span class="ftl">ちがう問題：<em>'+esc(Q[G.qs[r.starDiff[0]]][1])+'</em></span>':''}`,
+      `<div class="starbox">${starCnt(G)}${verdict}<ul class="slist">${r.starDiff.map(i=>row(i,'d')).join('')}${r.starAdj.map(i=>row(i,'m')).join('')}${r.starSame.map(i=>row(i,'s')).join('')}</ul></div>`)}
   const all=G.qs.map((k,i)=>`<li><b>${esc(Q[k][1])}</b>${[0,1,2,3].map(v=>{const who=G.players.filter(p=>oOf(p.ans[i])===v);return who.length?`<span class="ansrow"><i class="o${v}">${esc(ans(v,k))}</i>${G.anon?who.length+'人':who.map(nm).join('、')}</span>`:''}).join('')}</li>`).join('');
   out+=foldBox('みんなの答えを1問ずつ','全'+G.qs.length+'問',`<ul class="list all">${all}</ul>`);
   return out}
@@ -541,7 +568,7 @@ function showResult(G){
   const gh=syncStat(G),pct=gh.pct,two=ps.length===2,P2=two?pairStat(ps[0],ps[1],G.qs):null;
   if(!ps.some((a,i)=>ps.slice(i+1).some(b=>pairStat(a,b,G.qs).n))){
     view(`<section class="card score none"><img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true"><p class="cap">${two?'2人':ps.length+'人'}のシンクロ率</p>
-      <p class="msg">くらべられる答えがありませんでした</p><p class="hint">時間切れの問題と「${UNDEC}」の問題は、シンクロ率に数えていません。もう一度あそぶと、答えが重なるところがわかります。</p></section>${undecHTML(G,nm)}`+VS_SLOT+tailHTML(G));
+      <p class="msg">くらべられる答えがありませんでした</p><p class="hint">時間切れの問題と「${UNDEC}」の問題は、シンクロ率に数えていません。もう一度診断すると、答えが重なるところがわかります。</p></section>${undecHTML(G,nm)}`+VS_SLOT+tailHTML(G));
     bindTail(G);votesRun(G);return}
   const hi=pct>=HIGH_SYNC,sm=syncMsg(pct,two);
   const diffN=two?P2.diff.length:G.qs.filter((k,i)=>{const c=[0,0];ps.forEach(p=>{const a=p.ans[i];if(a&&a.o>=0&&a.o<2)c[a.o]++});return c[0]&&c[1]}).length;
@@ -550,10 +577,10 @@ function showResult(G){
     <div class="ring" style="background:${hi?`conic-gradient(#8FE3CF 0,#A9B2F5 ${pct/2}%,#F4B6D6 ${pct}%,var(--line) ${pct}% 100%)`:`conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)`}"><div class="in"><span class="num" data-v="${pct}">${pct}<small>%</small></span></div></div>
     <p class="msg">${sm.msg}</p>${hi?`<p class="hs-sub">${two?'暮らしの感覚が、ほとんど重なっています。<br>一緒にいて自然体でいられる組み合わせ。':'みんなの感覚が、ほとんど重なっています。<br>集まると自然体でいられるメンバー。'}</p>`:sm.sub?`<p class="hs-sub">${sm.sub}</p>`:''}${P2?`<div class="nums"><div class="n1"><small>ぴったり</small><b>${P2.same.length}<i>問</i></b></div><div class="n2"><small>合わせられる</small><b>${P2.adj.length}<i>問</i></b></div><div class="n3"><small>ちがい</small><b>${P2.diff.length}<i>問</i></b></div></div>`:''}
     ${diffN?`<button class="jump" id="tojump" type="button">${hi?'100%に近づくヒントを見る ↓':`ちがった${diffN}問から、話すことを見る ↓`}</button>`:''}
-    <p class="hint">${two?'2人の':'みんなの'}答えが、どれだけ重なったか（大事な問題と★ゆずれないは重く数えています）</p></section>`;
+    <p class="hint">${two?'2人の':'みんなの'}答えが、どれだけ重なったか（大事な問題は重く数えています）</p></section>`;
   const trows=themeRows(G);
   const done=()=>{bindTail(G);bindTalked(G);bindAgain(G);countUp();votesRun(G);kyoRun(G);const j=$('tojump');if(j)j.onclick=()=>{const t=$('steps')||$('talk');if(t)t.scrollIntoView({behavior:'smooth',block:'start'})}};
-  if(P2){if(G.pair){h+=pairBackCard(G,true);G.backTop=1}h+=stepsHTML(G)+talkHTML(G,nm)+tipsHTML(G)+kyoSlot(G)+undecHTML(G,nm)+distHTML(G)+againHTML(G,P2)+twoFolds(G,trows,nm,P2);view(h+VS_SLOT+tailHTML(G));done();return}
+  if(P2){if(G.pair){h+=pairBackCard(G,true);G.backTop=1}h+=stepsHTML(G)+kyoSlot(G)+talkHTML(G,nm)+'<p class="ref-h">くわしく見る</p>'+tipsHTML(G)+distHTML(G)+undecHTML(G,nm)+againHTML(G,P2)+twoFolds(G,trows,nm,P2);view(h+VS_SLOT+tailHTML(G));done();return}
   // ② あなたといちばん合う人（3人以上）
   const pairs=[];for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++)pairs.push({a:ps[i],b:ps[j],r:pairStat(ps[i],ps[j],G.qs)});
   pairs.sort((x,y)=>y.r.pct-x.r.pct);
@@ -564,14 +591,14 @@ function showResult(G){
   h+=`<section class="card"><p class="label">${me?'あなたといちばん合う人':'いちばん合うペア'}</p>${best}
     <ul class="prs">${list.slice(0,3).map(prow).join('')}</ul>
     ${list.length>3?`<details class="sfold"><summary>ほかの組み合わせ（${list.length-3}組）を見る</summary><ul class="prs">${list.slice(3).map(prow).join('')}</ul></details>`:''}
-    <p class="hint">同じ答え＝ぴったり、片方がまん中の答え（どっちでも合わせられる など）＝合わせられる、として数えています。大事な問題と★ゆずれないは重く数えています。</p></section>`;
+    <p class="hint">同じ答え＝ぴったり、片方がまん中の答え（どっちでも合わせられる など）＝合わせられる、として数えています。大事な問題は重く数えています。</p></section>`;
   // ③ みんなの共通点 → ④ みんなで話しておきたいこと
-  h+=stepsHTML(G)+talkHTML(G,nm)+tipsHTML(G)+kyoSlot(G)+undecHTML(G,nm)+bridgeHTML(G)+groupShapeHTML(G);
+  h+=stepsHTML(G)+kyoSlot(G)+talkHTML(G,nm)+bridgeHTML(G)+'<p class="ref-h">くわしく見る</p>'+tipsHTML(G)+undecHTML(G,nm)+groupShapeHTML(G);
   // ⑤ 残りはたたむ
-  if(trows.length)h+=foldBox('テーマ別のシンクロ率',trows.length+'つのテーマ',themeHTML(trows,'みんな'));
+  if(trows.length){const ks=trows.slice().sort((a,b)=>b.pct-a.pct);h+=foldBox('テーマ別のシンクロ率',`いちばん重なった：<em>${esc(ks[0].name)}（${ks[0].pct}%）</em>`,themeHTML(trows,'みんな'))}
   const ax=axHTML(G,(G.anon&&me)?[me]:ps,nm);if(ax)h+=foldBox('価値観のタイプ',(G.anon&&me)?'あなたの位置':ps.length+'人の位置',ax);
   const starP=(G.anon&&me?[me]:ps).map(p=>({p,xs:G.qs.map((k,i)=>({k,a:p.ans[i]})).filter(x=>x.a&&x.a.st&&x.a.o>=0&&x.a.o<2)})).filter(x=>x.xs.length);
-  if(starP.length)h+=foldBox('★ ゆずれないこと',starP.length+'人',starP.map(x=>`<div class="tori"><p class="sub">${nm(x.p)}</p><ul>${x.xs.map(y=>`<li>${esc(Q[y.k][1])} ${esc(ans(y.a.o,y.k))}</li>`).join('')}</ul></div>`).join(''));
+  if(starP.length)h+=foldBox('★ ゆずれないこと',starP.slice().sort((a,b)=>b.xs.length-a.xs.length).slice(0,2).map(x=>`<em>${esc(x.p===me?'あなた':x.p.name)} ${x.xs.length}問</em>`).join('・')+(starP.length>2?'　ほか':''),starCnt(G)+starP.map(x=>`<div class="tori"><p class="sub">${nm(x.p)}</p><ul>${x.xs.map(y=>`<li>${esc(Q[y.k][1])} ${esc(ans(y.a.o,y.k))}</li>`).join('')}</ul></div>`).join(''));
   const qst=G.qs.map((k,i)=>{let ms=0,m=0;ps.forEach(p=>{const a=p.ans[i];if(!a)return;if(a.o>=0||a.to){ms+=a.ms;m++}});return{i,k,avg:m?ms/m:0}});
   const hard=qst.slice().sort((a,b)=>b.avg-a.avg)[0],timed=hard&&hard.avg>0&&ps.every(p=>G.qs.some((k,i)=>p.ans[i]&&p.ans[i].ms>0));
   if(timed)h+=foldBox('いちばん悩んだ問題','',`<div class="ponder"><b>${esc(Q[hard.k][1])}</b><span>平均 <em>${sec(hard.avg)}</em> 秒</span></div>`);
@@ -582,9 +609,8 @@ function showResult(G){
 // まだ決められなかった問題（だれかが「まだ決められない」を選んだ問題。名前を見せない部屋では自分の分だけ）
 function undecHTML(G,nm){const me=G.players.find(p=>p.id===G.me),ps=(G.anon&&me)?[me]:G.players,solo=G.players.length<2;
   const xs=G.qs.map((k,i)=>({k,who:ps.filter(p=>p.ans[i]&&p.ans[i].u)})).filter(x=>x.who.length);if(!xs.length)return'';
-  return `<section class="card undec"><p class="label">まだ決められなかった問題</p><p class="ud-n">${xs.length}<small>問</small></p>
-    <ul class="list">${xs.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${solo?'':`<span class="ansrow"><i class="o3">${UNDEC}</i>${x.who.map(nm).join('、')}</span>`}</li>`).join('')}</ul>
-    <p class="hint">${solo?'すぐに決められないのも、ひとつの答えです。だれかと答え合わせすると、自分の気持ちが見えてくるかもしれません。':'迷った問題は、話してみると、おたがいの考えがわかるきっかけになります。'}</p></section>`}
+  return foldBox('まだ決められなかった問題',xs.length+'問',`<div class="undec"><ul class="list">${xs.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${solo?'':`<span class="ansrow"><i class="o3">${UNDEC}</i>${x.who.map(nm).join('、')}</span>`}</li>`).join('')}</ul>
+    <p class="hint">${solo?'すぐに決められないのも、ひとつの答えです。だれかと答え合わせすると、自分の気持ちが見えてくるかもしれません。':'迷った問題は、話してみると、おたがいの考えがわかるきっかけになります。'}</p></div>`)}
 /* ひとりの結果：いちばん上は「価値観のかたち」（4つのものさしで強く出た2つ。称号・キャラクターではなく、ものさしの言葉そのまま） */
 const POLE={kicchiri:['身のまわりや決めごとを、きちんと整えておくと落ち着く。','細かいことは気にせず、ゆるやかに暮らせると落ち着く。'],
   keikaku:['予定は、先に決めておくと安心。','予定は、その場の気分で決めるのが楽しい。'],
@@ -593,7 +619,9 @@ const POLE={kicchiri:['身のまわりや決めごとを、きちんと整えて
 function shapeLean(G,p){const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x=>x.s);
   return rows.filter(x=>Math.abs(x.s.pct-50)>=10).sort((x,y)=>Math.abs(y.s.pct-50)-Math.abs(x.s.pct-50)).slice(0,2).map(x=>x.s.pct>50?x.a.l:x.a.r)}
 function shapeWords(G,p){const l=shapeLean(G,p);return l.length?l.join('×'):'どれにも寄らない、やわらかい人'}
-function shapeHTML(G,p,who){
+function shapeBars(G,p){const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x=>x.s);
+  return rows.map(({a,s})=>`<div class="shx"><p>${esc(a.name)}</p><div class="sbar"><i style="left:calc(9px + (100% - 18px) * ${(100-s.pct)/100})"></i></div><div class="ends"><span${s.pct>=60?' class="on"':''}>${esc(a.l)}</span><span${s.pct<=40?' class="on"':''}>${esc(a.r)}</span></div></div>`).join('')}
+function shapeHTML(G,p,who,extra){
   const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x=>x.s);if(!rows.length)return '';
   const lean=rows.filter(x=>Math.abs(x.s.pct-50)>=10).sort((x,y)=>Math.abs(y.s.pct-50)-Math.abs(x.s.pct-50)).slice(0,2)
     .map(x=>x.s.pct>50?{w:x.a.l,t:(POLE[x.a.key]||[])[0]}:{w:x.a.r,t:(POLE[x.a.key]||[])[1]});
@@ -601,7 +629,7 @@ function shapeHTML(G,p,who){
   const desc=(lean.length?lean.map(x=>x.t||''):['どのものさしでも、まん中あたり。相手に合わせて動ける人です。']).filter(Boolean).map(t=>`<span class="sl">${esc(t)}</span>`).join('');
   const bars=rows.map(({a,s})=>`<div class="shx"><p>${esc(a.name)}</p><div class="sbar"><i style="left:calc(9px + (100% - 18px) * ${(100-s.pct)/100})"></i></div><div class="ends"><span${s.pct>=60?' class="on"':''}>${esc(a.l)}</span><span${s.pct<=40?' class="on"':''}>${esc(a.r)}</span></div></div>`).join('');
   return `<section class="card shape"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true">
-    <p class="cap">${who}の価値観のかたち</p><p class="big">${big}</p><p class="sdesc">${desc}</p>${bars}
+    <p class="cap">${who}の価値観のかたち</p><p class="big">${big}</p><p class="sdesc">${desc}</p>${extra!=null?extra:bars}
     ${G.qs.length<30?'<p class="hint">しっかり版（30問）なら、もっとはっきりわかります。</p>':''}</section>`}
 function soloHTML(G){
   const p=G.players[0],xs=G.qs.map((k,i)=>({k,i,a:p.ans[i]})).filter(x=>x.a&&x.a.o>=0),sec=ms=>(ms/1000).toFixed(1);
@@ -610,10 +638,12 @@ function soloHTML(G){
   const pct=xs.length?Math.round(flex.length/xs.length*100):0;
   const msg=pct>=50?'まわりに合わせられる、やわらかい人':pct>=25?'こだわりとやわらかさのバランス型':'自分の好みがはっきりしている人';
   const who=p.name==='あなた'?'あなた':esc(p.name)+'さん';
-  const shape=shapeHTML(G,p,who);
+  const tiles=`<div class="stiles"><div class="tile"><span>合わせられる度</span><em>${pct}%</em></div><div class="tile" id="tmaj" hidden><span>多数派度</span><em></em></div></div>
+    <p class="hint">${msg}。${xs.length}問のうち、まん中の答え（どっちでも合わせられる など）が${flex.length}問</p>`;
+  const shape=shapeHTML(G,p,who,tiles),bars=shape?shapeBars(G,p):'';
   if(!xs.length){const und=G.qs.some((k,i)=>p.ans[i]&&p.ans[i].u);
     return `<section class="card score none"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true"><p class="msg">${und?'どの問題も、まだ決められませんでした':'時間切れで、答えた問題がありませんでした'}</p>
-      <p class="hint">${und?'':'1問15秒で、次の問題へ進みます。'}答えた問題があると、あなたの価値観のかたちがわかります。下の「もう1回あそぶ」から、もう一度どうぞ。</p></section>${undecHTML(G,q=>esc(q.name))}`}
+      <p class="hint">${und?'':'1問15秒で、次の問題へ進みます。'}答えた問題があると、あなたの価値観のかたちがわかります。下の「もう1回診断する」から、もう一度どうぞ。</p></section>${undecHTML(G,q=>esc(q.name))}`}
   const top=shape||`<section class="card score"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true"><p class="cap">${who}の「合わせられる度」</p>
     <div class="ring" style="background:conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)"><div class="in"><span class="num">${pct}<small>%</small></span></div></div><p class="msg">${msg}</p></section>`;
   const kod=(star.length?`<p class="sub">★ ゆずれないこと</p><ul class="list">${star.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${esc(ans(x.a.o,x.k))}</li>`).join('')}</ul>`:'')
@@ -622,13 +652,13 @@ function soloHTML(G){
     +(byT.length>1?`<p class="sub">いちばん悩んだ問題</p><div class="ponder"><b>${esc(Q[byT[0].k][1])}</b><span>「${esc(ans(byT[0].a.o,byT[0].k))}<span style="white-space:nowrap">」まで <em>${sec(byT[0].a.ms)}</em> 秒</span></span></div>
     <p class="hint">いちばん即決は「${esc(Q[byT[byT.length-1].k][1])}」（${sec(byT[byT.length-1].a.ms)} 秒）</p>`:'');
   return `${top}
-  ${shape?`<section class="card"><div class="stiles"><div class="tile"><span>合わせられる度</span><em>${pct}%</em></div><div class="tile" id="tmaj" hidden><span>多数派度</span><em></em></div></div>
-    <p class="hint">${msg}。${xs.length}問のうち、まん中の答え（どっちでも合わせられる など）が${flex.length}問</p></section>`:''}
-  ${G.me==='me'&&!G.view?`<div id="hist">${histHTML(saveHist(G,p,pct))}</div>`:''}
+  ${inviteCard(G,p)}
+  <p class="ref-h">くわしく見る</p>
+  ${bars?foldBox('4つのものさし','あなたの位置',`<div class="shape-in">${bars}</div>`):''}
   ${firm.length?foldBox('あなたのこだわり',firm.length+'問',kod):''}
   ${flx?foldBox(flex.length?'合わせられること・悩んだ問題':'いちばん悩んだ問題',flex.length?flex.length+'問':'',flx):''}
   ${undecHTML(G,q=>esc(q.name))}
-  ${inviteCard(G,p)}`;
+  ${G.me==='me'&&!G.view?`<div id="hist">${histHTML(saveHist(G,p,pct))}</div>`:''}`;
 }
 // 1.66 奇跡の相性診断（鑑定者本人のメインサービス）へのバナー。無料の診断から会員登録（毎朝の開運予報メール）へつながる
 const PROMO=`<a class="promo" href="https://166unmei.com" target="_blank" rel="noopener" aria-label="1.66 奇跡の相性診断で占う（別のサイト 166unmei.com が開きます）">
@@ -640,9 +670,9 @@ const PROMO=`<a class="promo" href="https://166unmei.com" target="_blank" rel="n
 function tailHTML(G){const pr=G&&G.pair?pairBackCard(G):'';return `${pr}
   <button class="btn img small" id="img">結果を画像で保存</button><p class="hint" id="imgmsg" hidden></p>
   ${PROMO}
-  <a class="btn line small" id="lnres" href="#" target="_blank" rel="noopener">LINEで結果を送る</a>
+  <a class="btn line small${G&&(G.pair||G.players.length<2)?' line-w':''}" id="lnres" href="#" target="_blank" rel="noopener">LINEで結果を送る</a>
   <button class="btn ghost small" id="share">ほかのアプリでシェアする</button><p class="hint" id="shared" hidden></p>
-  <div class="row"><button class="btn" id="again">もう1回あそぶ</button><button class="btn ghost" id="home">トップへ</button></div>`}
+  <div class="row"><button class="btn" id="again">もう1回診断する</button><button class="btn ghost" id="home">トップへ</button></div>`}
 // シェア：スマホの共有（使えないときはコピー）。名前は入れない
 // ひとりの結果は、名前がわかれば答え合わせのリンクで送る（相手が同じ問題に答えると2人の結果が出る。鑑定者本人 2026-11-18）
 function shareText(G,name){
@@ -653,7 +683,7 @@ function shareText(G,name){
     if(name)return{t:`わたしは「${sw}」でした。あなたは何派？\n同じ${n}問に答えると、2人のシンクロ率がわかります（約${minsOf(n)}分・無料）\n#アイシンク`,url:withLink(name,G.qs,p.ans,ibxId(G,p,name))};
     return{t:`わたしは「${sw}」でした。あなたは何派？\n#アイシンク`,url}}
   const sp=syncStat(G).pct;
-  return{t:`${sp>=HIGH_SYNC?'HIGH SYNC！ ':''}${ps.length===2?'2人':ps.length+'人'}のシンクロ率は ${sp}% でした！\n2択に答えて答え合わせ。みんなでも遊べます\n#アイシンク`,url}}
+  return{t:`${sp>=HIGH_SYNC?'HIGH SYNC！ ':''}${ps.length===2?'2人':ps.length+'人'}のシンクロ率は ${sp}% でした！\n2択に答えて答え合わせ。みんなでも診断できます\n#アイシンク`,url}}
 function doShare(G,name){const {t,url}=shareText(G,name),d=$('shared');
   if(navigator.share){navigator.share({title:'アイ・シンク（I-Sync）',text:t,url}).catch(()=>{});return}
   const full=t+'\n'+url;d.hidden=false;
@@ -697,16 +727,17 @@ const minsOf=n=>Math.max(2,Math.round(n/3));
 function inviteText(name,n){return `${name}さんから、アイ・シンクの答え合わせのお誘いです！\n同じ${n}問に答えると、2人の価値観がどれだけ重なるかがわかります（約${minsOf(n)}分・無料）。`}
 // ひとりの結果の下：この問題で、だれかと答え合わせ
 function inviteCard(G,p){const n=G.qs.length,nm=['あなた','ともだち'].includes(p.name)?(store('kv_name')||''):p.name;
-  return `<section class="card invite"><p class="label">この${n}問で、だれかと答え合わせ</p>
-    <p class="hint">リンクを送ると、相手が同じ${n}問に答えるだけで、2人の答えがどれだけ重なるかがわかります。同じ時間に開いていなくても大丈夫です。</p>
+  return `<section class="hero-pt invite-hero"><span class="hp-tag">次は、この${n}問で答え合わせ</span>
+    <p class="hp-q">大事な人に送ると、<br>2人のシンクロ率がわかります</p>
+    <p class="hint">相手が同じ${n}問に答えるだけ。同じ時間に開いていなくても大丈夫です。</p>
     <label class="one-name" for="inv-name"><span>あなたのニックネーム（相手に出ます）</span><input type="text" id="inv-name" maxlength="10" value="${esc(nm)}"></label>
     <a class="btn line" id="inv-line" href="#" target="_blank" rel="noopener">LINEで答え合わせに誘う</a>
     <button class="btn ghost small" id="inv-share">ほかのアプリで送る</button><p class="hint" id="inv-msg" hidden></p>
-    <p class="hint">あなたの答えは、相手が答え終わるまで見えません。答えた人との結果は、このスマホのトップに30日間届きます（答えた人どうしは、おたがいの結果を見られません）。</p>
-    <button class="btn ghost small" id="tog">みんなで遊ぶ（部屋を作る）</button></section>`}
+    <p class="hint hp-note">あなたの答えは、相手が答え終わるまで見えません。答えた人との結果は、このスマホのトップに30日間届きます（答えた人どうしは、おたがいの結果を見られません）。</p>
+    <button class="btn ghost small" id="tog">みんなで診断する（部屋を作る）</button></section>`}
 // 答え合わせのリンクから答えた人の結果の下：送ってくれた人に結果を返す／同じ問題のまま、ほかの人も誘う
 function pairBackCard(G,part){const A=G.players[0],me=G.players[1],n=G.qs.length;
-  const back=`<section class="card invite${part===true?' back-top':''}"><p class="label">${esc(A.name)}さんにも結果を送る</p>
+  const back=`<section class="card send-pt${part===true?' back-top':''}"><p class="pt-h"><em class="g">送る</em>${esc(A.name)}さんにも結果を送る</p>
     <p class="hint">${part===true?`まだ${esc(A.name)}さんには届いていません。送ったリンクを開くと、${esc(A.name)}さんにも同じ結果が出ます。`:`送ったリンクを開くと、${esc(A.name)}さんにもこの結果が出ます。`}</p>
     <a class="btn line" id="back-line" href="#" target="_blank" rel="noopener">LINEで${esc(A.name)}さんに送る</a>
     <button class="btn ghost small" id="back-share">ほかのアプリで送る</button><p class="hint" id="back-msg" hidden></p></section>`;
@@ -714,7 +745,7 @@ function pairBackCard(G,part){const A=G.players[0],me=G.players[1],n=G.qs.length
   return `${G.backTop?'':back}
   <section class="card invite"><p class="label">この${n}問で、ほかの人とも答え合わせ</p>
     <p class="hint">あなたの答えを入れたリンクを、ほかの友だちにも送れます。</p>
-    <a class="btn line" id="inv-line" href="#" target="_blank" rel="noopener">LINEで答え合わせに誘う</a>
+    <a class="btn line line-w small" id="inv-line" href="#" target="_blank" rel="noopener">LINEで答え合わせに誘う</a>
     <button class="btn ghost small" id="inv-share">ほかのアプリで送る</button><p class="hint" id="inv-msg" hidden></p></section>`}
 function sendVia(text,url,msgEl){
   if(navigator.share){navigator.share({title:'アイ・シンク（I-Sync）',text,url}).catch(()=>{});return}
@@ -798,7 +829,7 @@ function inboxView(got){
   document.querySelectorAll('.ib-row').forEach(b=>b.onclick=()=>{const x=got.find(y=>y.key===b.dataset.k);if(x)pairView(ibxPair(x))});
   $('ibtop').onclick=goTop}
 
-/* ===== みんなの答え（これまでに遊んだ人の割合） =====
+/* ===== みんなの答え（これまでに診断した人の割合） =====
    Firestore の isync_votes/<問題の目印> に、答えA・B・3つ目の数だけを1つずつ足す（名前は送らない）。同じスマホで同じ問題は1回だけ数える */
 const VS_SLOT='<section class="card vs" id="vs" hidden></section>';
 async function votesRun(G){
@@ -820,7 +851,7 @@ async function votesRun(G){
   const pc=x=>Math.round(x*100);
   const bar=r=>{const p=r.cnt.map(c=>pc(c/r.tot));return `<div class="vbar" aria-hidden="true">${p.map((v,j)=>v?`<i class="v${j}" style="width:${v}%"></i>`:'').join('')}</div>
     <p class="vleg">${[0,1,2].map(j=>`<span class="v${j}">${esc(ans(j,r.k))} ${p[j]}%</span>`).join('')}</p>`};
-  el.innerHTML=`<p class="label">これまでに遊んだ人とくらべると</p>
+  el.innerHTML=`<p class="label">これまでに診断した人とくらべると</p>
     <p class="vtop">${G.players.length>1?'あなたの':''}多数派度 <b>${avg}%</b></p><p class="msg">${msg}</p>
     ${minor.length?`<p class="sub">少数派だった答え</p><ul class="list">${minor.map(r=>`<li><b>${esc(Q[r.k][1])}</b><span class="ansrow"><i class="o${r.o}">${esc(ans(r.o,r.k))}</i>同じ答えの人 ${pc(r.share)}%</span></li>`).join('')}</ul>`:''}
     <details><summary class="label">1問ずつ、みんなの答えを見る</summary><ul class="list vlist">${rows.map(r=>`<li><b>${esc(Q[r.k][1])}</b>${bar(r)}${r.tot>=SHOW_COUNT?`<small>${r.tot}人が答えました</small>`:''}</li>`).join('')}</ul></details>
@@ -834,14 +865,13 @@ function saveHist(G,p,pct){
   return store('kv_hist')||h}
 function histHTML(h){
   if(!h||!h.length)return '';const n=h.length;
-  if(n<2)return `<section class="card"><p class="label">あなたの平均</p><p class="hint">出た問題によって、数字は毎回少し変わります。何回か遊ぶと、ここに平均が出て、あなたらしい数字に近づいていきます。</p></section>`;
+  if(n<2)return `<p class="hist-note">あなたの平均は、2回目から出ます</p>`;
   const av=xs=>xs.length?Math.round(xs.reduce((a,b)=>a+b,0)/xs.length):null;
   const f=av(h.map(r=>r.f)),m=av(h.map(r=>r.m).filter(x=>x!=null)),mn=h.filter(r=>r.m!=null).length;
   const axs=AX.map(a=>({a,v:av(h.map(r=>r.ax&&r.ax[a.key]).filter(x=>x!=null))})).filter(x=>x.v!=null);
   const bar=(name,v,sub)=>`<li><span class="thn"><b>${esc(name)}</b>${sub?`<small>${esc(sub)}</small>`:''}</span><b>${v}%</b><div class="bar"><i style="width:${v}%"></i></div></li>`;
-  return `<section class="card"><p class="label">あなたの平均（${n}回ぶん）</p><p class="hint">遊ぶほど、あなたらしい数字に近づきます。</p>
-    <ul class="thl">${bar('合わせられる度',f)}${m!=null?bar('多数派度',m,mn<n?mn+'回ぶん':''):''}</ul>
-    ${axs.length?`<ul class="list havg">${axs.map(({a,v})=>`<li><b>${esc(a.name)}</b>${esc(axSide(a,v))}</li>`).join('')}</ul>`:''}</section>`}
+  return foldBox(`あなたの平均（${n}回ぶん）`,'診断するほど、あなたらしい数字に',`<ul class="thl">${bar('合わせられる度',f)}${m!=null?bar('多数派度',m,mn<n?mn+'回ぶん':''):''}</ul>
+    ${axs.length?`<ul class="list havg">${axs.map(({a,v})=>`<li><b>${esc(a.name)}</b>${esc(axSide(a,v))}</li>`).join('')}</ul>`:''}`)}
 function histSetM(G,m){const id=G.qs.join('.'),h=store('kv_hist')||[],r=h.find(x=>x&&x.id===id);if(!r||r.m!=null)return;r.m=m;store('kv_hist',h);const el=$('hist');if(el){el.innerHTML=histHTML(h);if(window.__jw)window.__jw(el)}}
 
 /* ===== 結果を画像で保存（インスタのストーリーズの縦長 1080×1920） ===== */
@@ -896,7 +926,7 @@ function drawResult(c,G){
 /* ===== みんなのスマホで（部屋・10人まで） ===== */
 const ART_URL='https://claude.ai/artifact/AdtUnSrAdJDGECVQmtHSht';  // 確認用ページ（claude.ai）のときだけQRの行き先にする
 let WHERE='';  // 'claude'＝確認用ページ／'firebase'＝公開先
-const PID=store('kv_pid')||(()=>{const p='p'+Math.random().toString(36).slice(2,10);store('kv_pid',p);return p})();
+let PID=store('kv_pid')||(()=>{const p='p'+Math.random().toString(36).slice(2,10);store('kv_pid',p);return p})();
 const R={code:null,room:undefined,players:{},un:[],key:'',seen:{},adv:{},tick:null,my:null,poll:null};
 let dbP=null;
 function getDb(){if(!dbP)dbP=(async()=>{
@@ -961,7 +991,7 @@ const FB=(()=>{
     return ready}
   return{init};
 })();
-const NO_DB='この画面では、みんなで遊ぶ部屋が使えません。Safari・Chromeで開きなおすか、「ひとりで」で遊んでください。';
+const NO_DB='この画面では、みんなで診断する部屋が使えません。Safari・Chromeで開きなおすか、「ひとりで」で診断してください。';
 const pPath=(c,id)=>'rooms/'+c+'/players/'+id;
 const alive=r=>r&&Date.now()-(r.created||0)<12*3600e3;
 const plist=()=>Object.entries(R.players).map(([id,p])=>Object.assign({id},p)).sort((a,b)=>(a.joined||0)-(b.joined||0));
@@ -1008,7 +1038,7 @@ async function joinKon(code,f){
     enterRoom(code);return 'ok';
   }catch(e){return '参加できませんでした。この画面では書きこみが許可されていないかもしれません。'}
 }
-async function joinRoom(code,name){
+async function joinRoom(code,name,force){
   const db=await getDb();if(!db)return NO_DB;
   try{
     const rs=await db.doc('rooms/'+code).get();
@@ -1018,6 +1048,9 @@ async function joinRoom(code,name){
     if(room.kind==='kon'&&!ps.docs.some(d=>d.id===PID)){joinFromLink(code);return 'ok'}
     if(!ps.docs.some(d=>d.id===PID)){
       if(!name)return 'ニックネームを入れてください';
+      // 同じ名前の人がもういる＝部屋を作った人が、自分で送ったLINEのリンクを開いたことが多い（LINEの中の画面は別のブラウザあつかい）
+      const sm=!force&&ps.docs.find(d=>String((d.data()||{}).name||'').trim()===String(name).trim());
+      if(sm){sameAsk(code,name,sm.id,(sm.data()||{}).name);return 'ok'}
       if(ps.docs.length>=MAXP)return 'この部屋は、もう'+MAXP+'人そろっています。';
       await db.doc(pPath(code,PID)).set({name,ans:{},round:room.round||1,joined:Date.now(),ready:true});
     }
@@ -1091,10 +1124,13 @@ async function sync(){
     return}
   if(room.phase==='play'){
     const k=room.qi||0,done=ps.filter(p=>rDone(p,k,rd)),act=ps.filter(p=>rActive(p,k,rd));
-    if(act.length&&act.every(p=>rDone(p,k,rd))&&room.kind!=='kon'||(room.kind==='kon'&&done.length>=ps.length&&ps.length>0)){advance(k,rd);return}
     const qk='q'+rd+'-'+k;
-    if(R.key!==qk){const fresh=k===0&&!/^q/.test(R.key);R.key=qk;R.my={o:-1,st:0,ms:0,fin:false};
-      if(fresh){markSeen(room.qs);countdown(qk,()=>{R.seen[qk]=Date.now();rAsk(k,qk)})}else{R.seen[qk]=Date.now();rAsk(k,qk)}}
+    if(room.kind==='kon'&&done.length>=ps.length&&ps.length>0){advance(k,rd);return}
+    if(act.length&&act.every(p=>rDone(p,k,rd))&&room.kind!=='kon'){if(R.key===qk&&R.seen[qk]){rCount(done.length,ps.length,ps,done);holdAdvance(k,rd)}else advance(k,rd);return}
+    if(R.key!==qk){const fresh=k===0&&!/^q/.test(R.key),pid=rd+'-'+(k-1),late=!fresh&&R.key==='q'+pid&&!(R.hold||{})[pid]&&$('tcnt');R.key=qk;R.my={o:-1,st:0,ms:0,fin:false};
+      // 知らせがおそい画面でも「全員決めた！」を見てから次の問題へ（先に進んだ人との差は約1秒）
+      if(late){R.hold=R.hold||{};R.hold[pid]=1;allDoneNow();setTimeout(()=>{if(R.key!==qk)return;R.seen[qk]=Date.now();rAsk(k,qk)},1100)}
+      else if(fresh){markSeen(room.qs);countdown(qk,()=>{R.seen[qk]=Date.now();rAsk(k,qk)})}else{R.seen[qk]=Date.now();rAsk(k,qk)}}
     else if(R.seen[qk])rCount(done.length,ps.length,ps,done);
     return}
   clearInterval(R.tick);
@@ -1114,9 +1150,10 @@ function countdown(qk,go){
 }
 function rAsk(k,qk){
   const room=R.room,qid=room.qs[k],n=room.qs.length;
+  if(room.len===30&&room.kind!=='kon')starIntro('room'+R.code,'わかった');
   const draw=()=>{const m=R.my,step=m.fin?'done':'own';
     view(askHTML(qid,k,n,{step,star:room.len===30||room.kind==='kon',starOn:m.st,to:m.to,u:m.u}));
-    bindAsk(tap);paint();if(m.fin)rCountNow();else if(room.kind!=='kon')qTimer(R.seen[qk],timeUp)};
+    bindAsk(tap);paint();rCountNow();if(!m.fin&&room.kind!=='kon')qTimer(R.seen[qk],timeUp)};
   // 15秒たったら「時間切れ」を書いて待つ（答えなしとして数えない）
   const timeUp=()=>{const m=R.my;if(m.fin||R.key!==qk)return;m.o=-1;m.ms=Q_LIMIT*1000;m.fin=true;m.to=true;save(k,true,true);draw()};
   const tap=(v,starOn)=>{const m=R.my;if(v===null){m.st=starOn?1:0;return}
@@ -1136,16 +1173,23 @@ async function save(k,fin,to){const db=await getDb(),me=R.players[PID];if(!db||!
   R.players[PID]=Object.assign({},me,{ans:a});
   try{await db.doc(pPath(R.code,PID)).update({ans:a})}catch(e){}
   if(fin){const ps=plist(),rd=R.room.round||1;   // 自分が最後の1人なら、知らせを待たずにすぐ次へ
-    if(ps.filter(p=>R.room.kind==='kon'||rActive(p,k,rd)).every(p=>rDone(p,k,rd)))advance(k,rd)}}
+    if(ps.filter(p=>R.room.kind==='kon'||rActive(p,k,rd)).every(p=>rDone(p,k,rd))){if(R.room.kind==='kon')advance(k,rd);else{rCountNow();holdAdvance(k,rd)}}}}
+// 全員が決めたら、すぐには進まず「全員決めた！」を約2秒見せてから次へ（鑑定者本人 2026-11-19「一旦その間を空けて悩み中っていうのも一つの面白さ」）
+const HOLD_MS=1800;
+function allDoneNow(){const el=$('tcnt');if(el)el.querySelectorAll('.seat.s-think').forEach(x=>{x.classList.replace('s-think','s-ok');const st=x.querySelector('.st');if(st){st.className='st ok';st.textContent='決めた！'}});const a=$('allok');if(a)a.hidden=false}
+function holdAdvance(k,rd){const id=rd+'-'+k;R.hold=R.hold||{};const a=$('allok');if(a)a.hidden=false;if(R.hold[id])return;R.hold[id]=1;setTimeout(()=>advance(k,rd),HOLD_MS)}
 // 答えたあと、ほかの人のようすを「考え中…／答えた」で見せる（答えの中身は見せない。鑑定者本人 2026-11-17「相手の様子は考え中ぐらい」）。
 // 名前を見せない部屋・大人数の部屋は人数だけ。新しい通信はなく、今ある答えの書きこみを見るだけ
 function rCount(d,n,ps,done){const el=$('tcnt');if(!el)return;const room=R.room||{};
   if(!ps||room.anon||room.kind==='kon'){el.textContent=`みんなを待っています（${d}／${n}人 答えた）`;return}
-  const k=room.qi||0,rd=room.round||1,ok=new Set(done.map(p=>p.id));ok.add(PID);
+  const k=room.qi||0,rd=room.round||1,ok=new Set(done.map(p=>p.id));if(R.my&&R.my.fin)ok.add(PID);else ok.delete(PID);
   const stOf=p=>{if(ok.has(p.id)){const a=p.id===PID?R.my:rAns(p,k);return a&&a.to?'to':'ok'}return rActive(p,k,rd)?'think':'rest'};
   const key=ps.map(p=>p.id+stOf(p)).join();if(el.dataset.k===key)return;el.dataset.k=key;
-  const lab={ok:'<span class="st ok">答えた</span>',to:'<span class="st off">時間切れ</span>',rest:'<span class="st off">お休み中</span>',think:'<span class="st think">考え中<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></span>'};
-  el.innerHTML=`<div class="seats">${ps.map(p=>`<div class="seat"><span class="nm">${p.id===PID?'あなた':esc(p.name)+'さん'}</span>${lab[stOf(p)]}</div>`).join('')}</div>`}
+  const lab={ok:'<span class="st ok">決めた！</span>',to:'<span class="st off">時間切れ</span>',rest:'<span class="st off">お休み中</span>',think:'<span class="st think">悩み中<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></span>'};
+  const others=ps.filter(p=>p.id!==PID),col=p=>p.id===PID?'p0':'p'+((others.indexOf(p)+1)%6);
+  const seat=p=>{const st=stOf(p),nm=p.id===PID?'あなた':String(p.name||'');return `<div class="seat ${col(p)} s-${st}"><span class="av" aria-hidden="true">${esc(nm.slice(0,1))}</span><span class="nm">${esc(nm)}</span>${lab[st]}</div>`};
+  const me=ps.filter(p=>p.id===PID);
+  el.innerHTML=`<div class="seats${ps.length>4?' many':''}">${me.concat(others).map(seat).join('')}</div>`}
 function rCountNow(){const room=R.room;if(!room||room.phase!=='play')return;const k=room.qi||0,rd=room.round||1,ps=plist();
   const done=ps.filter(p=>rDone(p,k,rd));rCount(done.length,ps.length,ps,done)}
 // LINEを開いて、文とリンクが入った状態にする（受け取った人はリンクを押すだけ）
@@ -1156,6 +1200,7 @@ let qrP=null;
 function loadQR(){if(window.QRCode)return Promise.resolve();if(!qrP)qrP=new Promise((ok,ng)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';sc.onload=ok;sc.onerror=ng;document.head.appendChild(sc)});return qrP}
 function lobby(){
   const c=R.code,url=joinUrl(c),ps=plist(),room=R.room,can=ps.length>=2;
+  if(room&&room.len===30&&room.kind!=='kon')setTimeout(()=>starIntro('room'+c,'わかった'),300);
   view(`<img class="chara c-lobby" src="img/pair-smile.webp" width="180" height="100" alt="" aria-hidden="true">
   <section class="card hand">
     <p class="cap">部屋番号</p><p class="code">${esc(c)}</p>
@@ -1174,8 +1219,8 @@ function lobby(){
   </section>
   <button class="btn ghost small" id="home">部屋を出てトップへ</button>`);
   loadQR().then(()=>{const el=$('qr');if(!el)return;el.innerHTML='';new QRCode(el,{text:url,width:180,height:180,colorDark:'#22253A',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M})}).catch(()=>{const el=$('qr');if(el)el.hidden=true});
-  $('ln').href=lineUrl('アイ・シンクで一緒に遊ぼう！\nこのリンクを開くだけで、部屋に入れます。',url);
-  $('cp').onclick=()=>{const d=$('cpd'),text='アイ・シンクで一緒に遊ぼう！\nこのリンクを開くだけで、部屋に入れます。';
+  $('ln').href=lineUrl('アイ・シンクで一緒に診断しよう！\nこのリンクを開くだけで、部屋に入れます。',url);
+  $('cp').onclick=()=>{const d=$('cpd'),text='アイ・シンクで一緒に診断しよう！\nこのリンクを開くだけで、部屋に入れます。';
     // スマホの「共有」でLINE・メッセージなどへ（送るのは部屋に直接入れるリンク）。使えないときは文とリンクをコピー
     if(navigator.share){navigator.share({title:'アイ・シンク',text,url}).catch(()=>{});return}
     d.hidden=false;const full=text+'\n'+url;try{navigator.clipboard.writeText(full).then(()=>{d.textContent='招待の文とリンクをコピーしました。LINEなどに貼って送ってください。'},()=>{d.textContent=full})}catch(e){d.textContent=full}};
@@ -1212,6 +1257,22 @@ async function joinFromLink(code){
   const submit=e=>{if(e)e.preventDefault();const v=inp.value.trim();if(v)store('kv_name',v);$('jn-go').disabled=true;go(v||('ゲスト'+(ps.length+1)))};
   $('jn-go').onclick=submit;inp.onkeydown=e=>{if(e.key==='Enter')submit(e)};
 }
+// 同じ名前の人がいるとき：「あなた自身ですか？」→ はい＝その人として続ける／ちがう人＝別の名前で入る（鑑定者本人 2026-11-19「作った人がLINEのリンクから入ると3人になる」）
+function sameAsk(code,name,id,shown){
+  view(`<section class="card hand"><img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
+    <p class="big">「${esc(shown||name)}」さんは、もうこの部屋にいます</p>
+    <p class="hint">部屋を作った人が、自分で送ったリンクを開いたときなどに出ます。あなた自身ですか？</p>
+    <button class="btn" id="sm-yes" style="align-self:stretch">はい、自分です（この画面で続ける）</button>
+    <button class="btn ghost" id="sm-no" style="align-self:stretch">ちがう人です（別の名前で入る）</button></section>`);
+  $('sm-yes').onclick=()=>{PID=id;store('kv_pid',id);store('kv_name',shown||name);enterRoom(code)};
+  $('sm-no').onclick=()=>{
+    view(`<section class="card hand"><p class="big">別のニックネームで入る</p><p class="hint">同じ名前の人がいるので、ちがうニックネームにしてください。</p>
+      <label class="one-name" for="sm-name" style="align-self:stretch;text-align:left"><span>ニックネーム</span><input type="text" id="sm-name" maxlength="10" autocomplete="nickname"></label>
+      <p class="err" id="sm-err" role="alert"></p><button class="btn" id="sm-go" style="align-self:stretch">参加する</button></section>`);
+    const inp=$('sm-name'),go=async e=>{if(e)e.preventDefault();const v=inp.value.trim();if(!v){$('sm-err').textContent='ニックネームを入れてください';return}
+      if(v===String(shown||name).trim()){$('sm-err').textContent='同じ名前の人がいます。少し変えてください（例：'+esc(v)+'2）';return}
+      store('kv_name',v);$('sm-go').disabled=true;const r=await joinRoom(code,v);if(r!=='ok'){$('sm-err').textContent=r;$('sm-go').disabled=false}};
+    $('sm-go').onclick=go;inp.onkeydown=e=>{if(e.key==='Enter')go(e)};try{inp.focus()}catch(e){}}}
 /* 画面の下に、短いお知らせを出す（数秒で消える） */
 function toast(t){let el=$('toast');if(!el){el=document.createElement('div');el.id='toast';el.setAttribute('role','status');el.setAttribute('data-nojw','');document.body.appendChild(el)}
   el.textContent=t;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),2600)}
@@ -1324,7 +1385,7 @@ function konResult(){
   const top=cand.slice(0,5),rest=cand.slice(5);
   view(`<section class="card score"><img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
       <p class="cap">${esc(me.no)}番さんと合う人</p>
-      <p class="hint">答えが重なった順です。お金・将来・暮らしなど大事な問題と、★ゆずれないは重く数えています。この画面は、あなたにしか見えません。</p></section>
+      <p class="hint">答えが重なった順です。お金・将来・暮らしなど大事な問題は重く数えています。この画面は、あなたにしか見えません。</p></section>
     <section class="card"><p class="label">あなたと合う人</p>
       ${cand.length?`<ul class="pairs">${top.map(card).join('')}</ul>${rest.length?`<details><summary class="label">${top.length+1}位から下も見る（${rest.length}人）</summary><ul class="pairs">${rest.map((x,i)=>card(x,i+5)).join('')}</ul></details>`:''}`
         :'<p class="hint">いま、合う人に出せる人がいません（「合う人に出してほしいのは？」の選び方で、出る人が変わります）。</p>'}
