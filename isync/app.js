@@ -159,6 +159,7 @@ function goTop(){
     <div class="tiles">${TH_N.map(([n,c])=>`<div class="tile"><span>${esc(n)}</span><em>${c}</em></div>`).join('')}</div>
   </section>
   <div class="gos">
+    <p class="gos-h">あの人と、みんなと。<br>「ふつう」はどこまで同じ？</p>
     <button class="gobig g1" id="go-each"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg></span><span><b>2人で・みんなで</b><small>QRを読むだけ・2〜10人</small></span></button>
     <button class="gobig g2" id="go-solo"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span><span><b>ひとりで遊ぶ</b><small id="solo-sub">${CFG.len}問・約${CFG.len>=30?6:3}分。あとで答え合わせ</small></span></button>
     <p class="free">無料・登録なし・アプリ不要</p>
