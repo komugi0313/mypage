@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>アイ・シンク 統計</title>
+<link rel="icon" href="favicon-32.png">
+<style>
+/* アイ・シンクの統計（鑑定者本人だけが見るページ。2026-11-19「統計のページも作ってください」）
+   データは公開の Firestore（isync_stats・isync_votes）から読むだけ。書きこみはしない */
+:root{--bg:#F6F3FA;--card:#fff;--ink:#2A2559;--sub:#5C5872;--line:#E2DDF0;--a:#3FA98F;--al:#E6F8F2;--b:#D46FA3;--bl:#FDEBF4;--c:#9C93C8;--cl:#F1EEFA;--warn:#8A5A00;--warnl:#FFF4D6;color-scheme:light}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",sans-serif;font-weight:500;line-height:1.6;
+  padding:16px max(16px,env(safe-area-inset-left,0px)) 48px max(16px,env(safe-area-inset-right,0px));word-break:keep-all;overflow-wrap:break-word}
+.wrap{max-width:860px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px}
+.lead{margin:0 0 14px;color:var(--sub);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 4px 16px rgba(42,37,89,.06);padding:14px 16px;margin:0 0 16px}
+h2{font-size:17px;margin:0 0 10px}
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.nums div{background:var(--cl);border-radius:14px;padding:10px 12px}
+.nums b{display:block;font-size:28px;line-height:1.2}
+.nums span{font-size:13px;color:var(--sub)}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{border-bottom:1px solid var(--line);padding:6px;text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-size:13px;color:var(--sub)}
+tr.sum td{font-weight:700}
+.tw{overflow-x:auto}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}
+.ctl button{min-height:44px;border:2px solid var(--line);border-radius:999px;background:#fff;padding:0 14px;font:inherit;font-size:14px;font-weight:700;color:var(--ink);cursor:pointer}
+.ctl button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:#fff}
+.q{border-top:1px solid var(--line);padding:10px 0}
+.q:first-child{border-top:0}
+.qh{display:flex;flex-wrap:wrap;gap:4px 6px;font-size:12px;color:var(--sub);align-items:center}
+.tg{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:0 8px;font-weight:700;color:var(--ink);background:#fff}
+.tg.big{background:var(--warnl);border-color:#F1D27A;color:var(--warn)}
+.tg.skew{background:var(--bl);border-color:var(--b);color:#9C2F67}
+.qt{font-weight:700;margin:2px 0 4px}
+.ab{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;font-size:14px}
+.ab .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ab i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:0}
+.bar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--line);margin-top:6px}
+.bar .x{background:var(--a)}.bar .y{background:var(--b)}.bar .z{background:var(--c)}
+.ia{background:var(--a)}.ib{background:var(--b)}.ic{background:var(--c)}
+.note{font-size:13px;color:var(--sub);margin:8px 0 0}
+.err{color:#9C2F67;font-weight:700}
+.more{display:block;width:100%;min-height:44px;margin-top:8px;border:2px solid var(--line);border-radius:12px;background:#fff;font:inherit;font-weight:700;color:var(--ink);cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>アイ・シンク 統計</h1>
+  <p class="lead">診断した回数と、1問ずつの答えの数。このページは検索に出ない設定です（リンクを知っている人は見られます）。</p>
+  <div id="out"><p>読みこんでいます…</p></div>
+</div>
+<script src="firebase-config.js"></script>
+<script src="questions.js"></script>
+<script src="questions-mine.js"></script>
+<script src="weights.js"></script>
+<script>
+(function(){
+'use strict';
+var cfg=window.ISYNC_FB||{}, BASE='https://firestore.googleapis.com/v1/projects/'+cfg.projectId+'/databases/(default)/documents/';
+var DOCS='projects/'+cfg.projectId+'/databases/(default)/documents/';
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+// 問題の目印は app.js と同じ作り方（問題の文｜答えA）
+function hq(s){var h=5381;for(var ch of s)h=(Math.imul(h,33)^ch.codePointAt(0))>>>0;return h.toString(36)}
+var CATS=window.SY_CATS||[];
+var Q=[].concat(window.SY_Q||[],window.SY_MINE||[]).map(function(r){return [CATS.findIndex(function(c){return c[0]===r[0]}),r[1],r[2],r[3],r[4]||'']}).filter(function(r){return r[0]>=0&&r[1]&&r[2]&&r[3]});
+var W=window.SY_W||{b:[],l:[]};
+function num(f){return f?+(f.integerValue||f.doubleValue||0):0}
+function fields(doc){var o={},f=(doc&&doc.fields)||{};Object.keys(f).forEach(function(k){o[k]=num(f[k])});return o}
+async function getDoc(path){var r=await fetch(BASE+path+'?key='+cfg.apiKey,{cache:'no-store'});if(r.status===404)return {};if(!r.ok)throw new Error(path+' '+r.status);return fields(await r.json())}
+async function batchGet(paths){var out={};for(var i=0;i<paths.length;i+=100){var part=paths.slice(i,i+100);
+  var r=await fetch(BASE.replace(/\/$/,'')+':batchGet?key='+cfg.apiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({documents:part.map(function(p){return DOCS+p})}),cache:'no-store'});
+  if(!r.ok)throw new Error('votes '+r.status);var j=await r.json();(j||[]).forEach(function(x){if(x.found)out[x.found.name.split('/').pop()]=fields(x.found)})}return out}
+var PL=[['solo','ひとりで'],['room','みんなの部屋'],['with','答え合わせのリンク']];
+function playsHTML(p){var t10=0,t30=0;var rows=PL.map(function(k){var a=p[k[0]+'10']||0,b=p[k[0]+'30']||0;t10+=a;t30+=b;return '<tr><td>'+k[1]+'</td><td>'+a+'</td><td>'+b+'</td><td>'+(a+b)+'</td></tr>'}).join('');
+  return '<section class="card"><h2>診断した回数</h2><div class="tw"><table><thead><tr><th></th><th>10問</th><th>30問</th><th>合計</th></tr></thead><tbody>'+rows+'<tr class="sum"><td>合計</td><td>'+t10+'</td><td>'+t30+'</td><td>'+(t10+t30)+'</td></tr></tbody></table></div>'+
+  '<p class="note">結果が出たときに1回と数えます（2026年11月19日から）。みんなの部屋は、答えた人のスマホがそれぞれ1回ずつ数えるので「人数×回数」です。保存した結果を見直したときは数えません。</p></section>'}
+var rows=[],sortBy='many',shown=40;
+function rowHTML(r){var t=r.t,p=function(n){return t?Math.round(n/t*100):0};var c3=r.q[4]||'どっちでも合わせられる';
+  var tags='<span class="tg">'+esc(CATS[r.q[0]][0])+'</span>'+(W.b.indexOf(r.i)>=0?'<span class="tg big">大事</span>':W.l.indexOf(r.i)>=0?'<span class="tg">軽い</span>':'')+(r.skew?'<span class="tg skew">9割以上が同じ答え</span>':'');
+  return '<div class="q"><div class="qh">'+tags+'<span>'+t+'人</span></div><p class="qt">'+esc(r.q[1])+'</p><div class="ab">'+
+    '<span><i class="ia"></i>'+esc(r.q[2])+'</span><span class="n">'+r.a+'人　'+p(r.a)+'%</span>'+
+    '<span><i class="ib"></i>'+esc(r.q[3])+'</span><span class="n">'+r.b+'人　'+p(r.b)+'%</span>'+
+    '<span><i class="ic"></i>'+esc(c3)+'</span><span class="n">'+r.c+'人　'+p(r.c)+'%</span></div>'+
+    (t?'<div class="bar" aria-hidden="true"><span class="x" style="width:'+p(r.a)+'%"></span><span class="y" style="width:'+p(r.b)+'%"></span><span class="z" style="width:'+p(r.c)+'%"></span></div>':'')+'</div>'}
+function sorted(){var a=rows.slice();
+  if(sortBy==='many')a.sort(function(x,y){return y.t-x.t});
+  else if(sortBy==='split')a=a.filter(function(r){return r.t>=5}).sort(function(x,y){return x.gap-y.gap||y.t-x.t});
+  else if(sortBy==='skew')a=a.filter(function(r){return r.skew}).sort(function(x,y){return y.top-x.top});
+  else if(sortBy==='zero')a=a.filter(function(r){return r.t===0});
+  else a.sort(function(x,y){return x.q[0]-y.q[0]||x.i-y.i});return a}
+function listHTML(){var a=sorted(),btn=function(k,l){return '<button type="button" data-s="'+k+'" aria-pressed="'+(sortBy===k)+'">'+l+'</button>'};
+  return '<section class="card" id="qcard"><h2>1問ずつの答え</h2><div class="ctl">'+btn('many','答えた人が多い順')+btn('split','意見が分かれた順')+btn('skew','かたよった問題')+btn('theme','テーマ順')+btn('zero','まだ0人')+'</div>'+
+   (a.length?a.slice(0,shown).map(rowHTML).join(''):'<p class="note">あてはまる問題はまだありません。</p>')+
+   (a.length>shown?'<button type="button" class="more" id="more">ほかに'+(a.length-shown)+'問を見る</button>':'')+
+   '<p class="note">意見が分かれた順＝5人以上が答えた問題で、AとBの数が近い順。かたよった問題＝20人以上が答えて、9割以上が同じ答え（片方が正解に見える聞き方になっていないか、見直す候補）。文を変えた問題は、数が0から数え直しになっています。</p></section>'}
+function themeHTML(){var m={};rows.forEach(function(r){var k=r.q[0];m[k]=m[k]||{n:0,t:0,on:0};m[k].n++;m[k].t+=r.t;if(r.t)m[k].on++});
+  return '<section class="card"><h2>テーマ別</h2><div class="tw"><table><thead><tr><th>テーマ</th><th>問題</th><th>答えがある問題</th><th>答えの数</th></tr></thead><tbody>'+
+   Object.keys(m).map(function(k){return '<tr><td>'+esc(CATS[k][0])+'</td><td>'+m[k].n+'</td><td>'+m[k].on+'</td><td>'+m[k].t+'</td></tr>'}).join('')+'</tbody></table></div></section>'}
+function bind(){var q=document.getElementById('qcard');if(!q)return;
+  q.querySelectorAll('.ctl button').forEach(function(b){b.onclick=function(){sortBy=b.dataset.s;shown=40;q.outerHTML=listHTML();bind()}});
+  var mo=document.getElementById('more');if(mo)mo.onclick=function(){shown+=80;q.outerHTML=listHTML();bind()}}
+async function main(){var out=document.getElementById('out');
+  if(!cfg.projectId){out.innerHTML='<p class="err">Firebase の設定が読めませんでした。</p>';return}
+  var plays={},errP='';try{plays=await getDoc('isync_stats/plays')}catch(e){errP='診断した回数を読めませんでした（'+esc(e.message)+'）。'}
+  var keys=Q.map(function(q){return 'q'+hq(q[1]+'|'+q[2])}),got={};
+  try{got=await batchGet(keys.map(function(k){return 'isync_votes/'+k}))}catch(e){out.innerHTML=(errP?'<p class="err">'+errP+'</p>':playsHTML(plays))+'<p class="err">答えの数を読めませんでした（'+esc(e.message)+'）。</p>';return}
+  rows=Q.map(function(q,i){var c=got[keys[i]]||{},a=c.a||0,b=c.b||0,cc=c.c||0,t=a+b+cc,top=t?Math.max(a,b,cc)/t:0;
+    return {q:q,i:i,a:a,b:b,c:cc,t:t,top:top,gap:(a+b)?Math.abs(a-b)/(a+b):1,skew:t>=20&&top>=0.9}});
+  var tot=rows.reduce(function(s,r){return s+r.t},0),on=rows.filter(function(r){return r.t}).length,b20=rows.filter(function(r){return r.t>=20}).length;
+  out.innerHTML=(errP?'<p class="err">'+errP+'</p>':playsHTML(plays))+
+   '<section class="card"><h2>答えの数</h2><div class="nums"><div><b>'+tot+'</b><span>答えの数（ぜんぶ）</span></div><div><b>'+on+'／'+Q.length+'</b><span>答えがある問題</span></div><div><b>'+b20+'</b><span>20人以上が答えた問題</span></div></div>'+
+   '<p class="note">同じスマホで同じ問題は1回だけ数えています。時間切れと「まだ決められない」は数えていません。「みんなの○%」は3人から、「○人が答えました」は10人から画面に出ます。</p></section>'+
+   themeHTML()+listHTML();bind()}
+main();
+})();
+</script>
+<script id="pk-contrast-guard">
+/* 文字の見えやすさの安全装置（tools/add_contrast_guard.py が3サイトの全ページに埋め込む。直すときはこのファイルを直して再実行）
+   文字の色と、その後ろの背景の色を比べて、読みにくい組み合わせ（薄い背景に薄い文字／濃い背景に濃い文字）を見つけたら、
+   その文字だけ色を自動で調整する（明るい背景→同じ色みのまま濃く、暗い背景→白く）。計算・鑑定の中身には一切さわらない。
+   目安：明るい背景の上の文字はコントラスト比7以上（大きい文字＝24px以上、または18.66px以上の太字は4.5以上）。濃い色の上の白い文字は4.5以上（大きい文字は3以上）。 */
+(function(){
+  if(window.__pkContrast) return; window.__pkContrast=true;
+  function P(c){ var m=c&&c.match(/[\d.]+/g); return m?[+m[0],+m[1],+m[2],m.length>3?+m[3]:1]:null; }
+  function L(c){ function f(v){ v/=255; return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4); } return 0.2126*f(c[0])+0.7152*f(c[1])+0.0722*f(c[2]); }
+  function CR(a,b){ var x=L(a),y=L(b); return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05); }
+  function mix(a,b,t){ return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]; }
+  function over(f,b){ var a=f[3]==null?1:f[3]; return [f[0]*a+b[0]*(1-a),f[1]*a+b[1]*(1-a),f[2]*a+b[2]*(1-a)]; }
+  // 文字の後ろの背景：背景色のある祖先を上へたどる。グラデーションは色の幅を見る。写真などの画像背景は判定しない
+  var BG=null, OP=null;   // 1回の点検の中だけ使う覚え書き（同じ祖先を何度も調べない）
+  function bgOf(n){
+    if(!n||n.nodeType!==1) return {lo:1,hi:1,rgb:[255,255,255]};
+    if(BG&&BG.has(n)) return BG.get(n);
+    var cs=getComputedStyle(n), bi=cs.backgroundImage, r;
+    // 飾りの層（::before／::after に背景がある）が文字の後ろにあるときは、正しく判定できないので触らない
+    var deco=false; ['::before','::after'].forEach(function(ps){ try{ var pc=getComputedStyle(n,ps); if(pc.content&&pc.content!=='none'&&(pc.position==='absolute'||pc.position==='fixed')){ var pb=P(pc.backgroundColor); if((pb&&pb[3]>0.3)||(pc.backgroundImage&&pc.backgroundImage!=='none')){ var pw=parseFloat(pc.width)||0, ph=parseFloat(pc.height)||0, nr=n.getBoundingClientRect(); /* 端の細い帯・小さな飾りは文字の後ろにかからないので測ってよい */ var thin=(pw>0&&pw<=12)||(ph>0&&ph<=12)||(nr.width>0&&pw>0&&pw<nr.width*0.2)||(nr.height>0&&ph>0&&ph<nr.height*0.2); if(!thin) deco=true; } } }catch(_e){} });
+    if(deco||(bi&&bi!=='none'&&/url\(/.test(bi))) r=null;
+    else{
+      var parent=bgOf(n.parentElement);
+      if(parent===null) r=null;
+      else{
+        var bc=P(cs.backgroundColor), base=parent.rgb;
+        if(bc&&bc[3]>0) base=over(bc,base);
+        var cols=(bi&&bi!=='none')?(bi.match(/rgba?\([^)]*\)/g)||[]).map(P).filter(Boolean):[];
+        if(cols.length){ var lo=1,hi=0,acc=[0,0,0]; cols.forEach(function(c){ var m=over(c,base), l=L(m); if(l<lo)lo=l; if(l>hi)hi=l; acc[0]+=m[0];acc[1]+=m[1];acc[2]+=m[2]; });
+          r={lo:lo,hi:hi,rgb:[acc[0]/cols.length,acc[1]/cols.length,acc[2]/cols.length]}; }
+        else if(bc&&bc[3]>0){ var l2=L(base); r={lo:l2,hi:l2,rgb:base}; }
+        else r=parent;
+      }
+    }
+    if(BG) BG.set(n,r); return r;
+  }
+  function opac(n){ if(!n||n.nodeType!==1) return 1; if(OP&&OP.has(n)) return OP.get(n); var o=(+getComputedStyle(n).opacity)*opac(n.parentElement); if(OP) OP.set(n,o); return o; }
+  function fix(e,cs){
+    var own=''; for(var c=e.firstChild;c;c=c.nextSibling) if(c.nodeType===3) own+=c.nodeValue; if(!own.trim()) return;
+    cs=cs||getComputedStyle(e); if(cs.display==='none'||cs.visibility==='hidden') return;
+    var fill=cs.webkitTextFillColor; if(fill&&/rgba\(0, 0, 0, 0\)|transparent/.test(fill)) return;   // 文字そのものがグラデーションのもの
+    var fixed=e.hasAttribute('data-pkcg'), fg=P(fixed?(e.getAttribute('data-pkco')||cs.color):cs.color); if(!fg) return;   // 前に直した文字は、元の色で測り直す（背景が変わったら戻す・直し直す）
+    var undo=function(){ if(!fixed) return; var o=e.getAttribute('data-pkcg'); if(o) e.style.setProperty('color',o); else e.style.removeProperty('color'); e.removeAttribute('data-pkcg'); e.removeAttribute('data-pkco'); };
+    var bg=bgOf(e); if(!bg){ undo(); return; }
+    if(bg.hi-bg.lo>0.35){ undo(); return; }                       // 明暗が大きく混ざった背景は判定しない
+    var fs=parseFloat(cs.fontSize)||14, bold=(+cs.fontWeight||400)>=700;
+    var big=(fs>=24||(fs>=18.66&&bold)), need=big?3:4.5;
+    var op=opac(e); if(op<0.6) return;                 // 透明・半透明で隠している途中のもの（通知・ふわっと出る表示など）は触らない
+    var a=(fg[3]==null?1:fg[3])*op;
+    var light=((bg.lo+bg.hi)/2)>0.4, to=light?[0,0,0]:[255,255,255], c2=null;
+    if(light) need=big?4.5:7;
+    if(printing&&!light) return;   // 印刷中は、濃い背景の上の文字を白っぽくしない（紙では背景の色が出ないことがあるため）   // 明るい背景の上の文字は一段きびしく（ふつうの文字7以上・大きい文字4.5以上）。濃い色の上の白い文字は4.5のまま（発注者指示 2026-10-21）
+    var base=bg.rgb, seen=over([fg[0],fg[1],fg[2],a],base);
+    if(CR(seen,base)>=need){ undo(); return; }
+    for(var t=0.1;t<=1.0001;t+=0.1){ var cand=mix([fg[0],fg[1],fg[2]],to,t); if(CR(over([cand[0],cand[1],cand[2],a],base),base)>=need){ c2=cand; break; } }
+    if(!c2){   // 中くらいの明るさの色の上（白い文字＋黄土色の札など）：白くしても足りないときは、濃い文字にする
+      var to2=light?[255,255,255]:[0,0,0];
+      for(var t2=0.1;t2<=1.0001;t2+=0.1){ var cand2=mix([fg[0],fg[1],fg[2]],to2,t2); if(CR(over([cand2[0],cand2[1],cand2[2],a],base),base)>=need){ c2=cand2; break; } }
+    }
+    if(!c2) c2=(CR(to,base)>=CR(light?[255,255,255]:[0,0,0],base))?to:(light?[255,255,255]:[0,0,0]);                                     // 透明度は変えない（隠している表示を出してしまわないように）
+    if(!fixed){ e.setAttribute('data-pkcg',e.style.getPropertyValue('color')||''); e.setAttribute('data-pkco',cs.color); }   // 元の色を覚えておく（印刷のとき・背景が変わったときに戻す）
+    var nv='rgb('+Math.round(c2[0])+', '+Math.round(c2[1])+', '+Math.round(c2[2])+')'; if(e.style.getPropertyValue('color')!==nv||e.style.getPropertyPriority('color')!=='important') e.style.setProperty('color',nv,'important');   // 同じ色なら触らない（自分の変更で何度も点検が走らないように）
+  }
+  var SKIP='script,style,noscript,svg,canvas,video,option,select,textarea,input,img,.yomi,.ysr,[aria-hidden="true"],[data-nocg]';   // data-nocg＝色を自分で決めている切りかえボタン（選ぶと背景が変わるので、前の色を残さない）
+  // 点検のしかた（2026-11-02 速さの点検 chk_perf：押すたびにページ全体〈鑑定後は約5,000の要素〉を測り直して、折りたたみを1つ開くだけで数秒固まっていた）：
+  //  ・見えていないところ（display:none の中・閉じている <details> の中）は測らない。開いたとき・見えるようになったとき（下の見張りが気づく）に、その部分だけ測る。
+  //  ・押したとき（click）は、押したところのまわりの欄だけ測り直す（:checked などで色だけ変わるものも拾う）。
+  //  ・ページ全体を測り直すのは、開いたとき・1.5秒後・画面の幅が変わったとき・<html>/<body> の印（画面の色の切りかえなど）が変わったとき・印刷のときだけ。
+  //  読みにくい組み合わせを見つけて直す働き（fix）はそのまま。
+  function pass(root){ if(!root||root.nodeType!==1||!root.isConnected) return;   /* 印刷中も、濃くするほうだけは動く（fix の中で白っぽくするのは止める） */
+    try{ var cd=root.closest('details:not([open])'); if(cd&&cd!==root){ var sm=root.closest('summary'); if(!sm||sm.parentElement!==cd) return; } }catch(_e){}   // 閉じている欄の中は、開いたときに見る
+    BG=new Map(); OP=new Map(); var st=[root];
+    while(st.length){ var e=st.pop(), cs=null;
+      if(!(e.matches&&e.matches(SKIP))){ try{ cs=getComputedStyle(e); }catch(_e){} if(cs&&cs.display==='none') continue; try{ fix(e,cs); }catch(_e){} }
+      var ch=e.children; if(!ch||!ch.length) continue;
+      if(e.tagName==='DETAILS'&&!e.open){ for(var k=ch.length-1;k>=0;k--) if(ch[k].tagName==='SUMMARY') st.push(ch[k]); continue; }
+      for(var j=ch.length-1;j>=0;j--) st.push(ch[j]); }
+    BG=null; OP=null; }
+  function passAll(list){ var set=new Set(list.filter(function(n){ return n&&n.nodeType===1&&n.isConnected; }));   // 重なっている部分は、いちばん外側だけ測る
+    set.forEach(function(n){ for(var p=n.parentElement;p;p=p.parentElement){ if(set.has(p)){ set.delete(n); return; } } });
+    set.forEach(function(n){ pass(n); }); }
+  var tm=null; function full(){ clearTimeout(tm); tm=setTimeout(function(){ pass(document.body); },350); }
+  // 押したところのまわり：押したボタン・札の入っている小さなまとまり（となりの札も選んだ色が変わるので一緒に）。大きな欄ごとは測らない（開いた欄・足された部分は下の見張りが測る）
+  var REG='[role="tablist"],[role="radiogroup"],[role="group"],[role="dialog"],dialog,fieldset,label,li,tr';
+  var ck=[], ckt=null; function near(ev){ var t=ev&&ev.target; if(t&&t.nodeType!==1) t=t.parentElement; if(!t||!t.closest) return;
+    if(t.closest('summary')) return;   // 欄の開け閉め：open の変化で、その欄だけ測る
+    var r=t.closest(REG)||t.parentElement||t; if(r===document.body||r===document.documentElement) r=t;
+    if(r.parentElement&&r.parentElement!==document.body&&r.parentElement.getElementsByTagName('*').length<=400) r=r.parentElement;
+    if(r.getElementsByTagName('*').length>1500) r=t;
+    ck.push(r); clearTimeout(ckt); ckt=setTimeout(function(){ var w=ck; ck=[]; passAll(w); },350); }
+  // <body> の印のうち、スクロールで付け外しするだけのもの（下の丸いボタンを薄くする・固定ボタンを出す）は、文字の色に関係しないので測り直さない
+  var MOTION={'fl-moving':1,'fl-idle':1,'sticky-on':1};
+  function onlyMotion(a,b){ var x={},k; String(a||'').split(/\s+/).forEach(function(t){ if(t) x[t]=(x[t]||0)+1; }); String(b||'').split(/\s+/).forEach(function(t){ if(t) x[t]=(x[t]||0)-1; }); for(k in x){ if(x[k]!==0&&!MOTION[k]) return false; } return true; }
+  var lastW=window.innerWidth; function rs(){ if(window.innerWidth===lastW) return; lastW=window.innerWidth; full(); }   // 高さだけの変化（スマホのアドレスバーの出し入れ）では測り直さない
+  // 印刷：濃くした文字はそのまま印刷する。濃い背景の上で白っぽくした文字だけは、紙では背景の色が出ないことがあるので元に戻してから印刷し、終わったら画面用に戻す
+  function unfixAll(){ [].forEach.call(document.querySelectorAll('[data-pkcg]'),function(e){ if(printing){ var f0=P(e.getAttribute('data-pkco')||''), f1=P(e.style.getPropertyValue('color')||''); if(f0&&f1&&L(f1)<=L(f0)) return; }   /* 印刷：濃くした文字はそのまま（紙でも読みやすく）。白っぽくした文字だけ元に戻す（紙では背景の色が出ないことがあるため）。発注者指示 2026-10-21 */ var o=e.getAttribute('data-pkcg'); if(o) e.style.setProperty('color',o); else e.style.removeProperty('color'); e.removeAttribute('data-pkcg'); e.removeAttribute('data-pkco'); }); }
+  window.addEventListener('beforeprint',function(){ printing=true; unfixAll(); try{ pass(document.body); }catch(_e){} setTimeout(function(){ try{ pass(document.body); }catch(_e){} },0); });   // 印刷の直前に作り直された文字も濃くする
+  window.addEventListener('afterprint',function(){ printing=false; pass(document.body); });
+  var printing=false;
+  // ボタンの「作成中（押せない）」が終わったとき：押せないときの色で直した文字を元に戻してから測り直す（易の鑑定書の紫のボタンに濃い字が残っていた。UX点検② 2026-11-18）
+  function reset(n){ [n].concat([].slice.call(n.querySelectorAll('[data-pkcg]'))).forEach(function(e){ if(!e.hasAttribute||!e.hasAttribute('data-pkcg')) return; var o=e.getAttribute('data-pkcg'); if(o) e.style.setProperty('color',o); else e.style.removeProperty('color'); e.removeAttribute('data-pkcg'); e.removeAttribute('data-pkco'); }); }
+  function start(){
+    pass(document.body); setTimeout(function(){ pass(document.body); },1500);
+    document.addEventListener('click',near,true); window.addEventListener('resize',rs);   // 開いた欄（toggle）は、下の見張りが open の変化で気づいて、その欄だけ測る
+    if(window.MutationObserver){ var q=[],qt=null; new MutationObserver(function(rs){ rs.forEach(function(r){ if(r.type==='childList'){ [].forEach.call(r.addedNodes,function(n){ if(n.nodeType===1) q.push(n); else if(n.parentElement) q.push(n.parentElement); }); } else if(r.target&&r.target.nodeType===1){ if(r.target===document.body&&r.attributeName==='class'&&onlyMotion(r.oldValue,r.target.className)) return; if(r.attributeName==='disabled') reset(r.target); q.push(r.target); } });
+      if(!qt) qt=setTimeout(function(){ var w=q; q=[]; qt=null; passAll(w); },200); })
+      .observe(document.body,{childList:true,subtree:true,attributes:true,attributeOldValue:true,attributeFilter:['class','style','hidden','open','disabled','data-theme','data-mode']});
+      new MutationObserver(function(){ full(); }).observe(document.documentElement,{attributes:true,attributeFilter:['class','style','data-theme','data-mode']}); }   // 画面の色の切りかえ（<html> の印）は全体が変わるので、全体を測り直す
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
+/* 行末の1〜2文字残り（泣き別れ）を防ぐ：紹介ページ・教科書・申し込み画面にも同じ仕組みを入れる（アプリと同じ処理。横並び（flex/grid）の中では触らない） */
+(function(){
+  if(window.__pkOrphan) return; window.__pkOrphan=true;   // 行末の1〜2文字残りを防ぐ仕組みは、ページに1つだけ動かす
+  function lines(e){ const rg=document.createRange(); rg.selectNodeContents(e); const L={};
+    [...rg.getClientRects()].forEach(r=>{ if(!(r.width>0&&r.height>0))return; const k=Math.round((r.top+r.bottom)/8); const o=L[k]||(L[k]={l:1e9,r:-1e9}); o.l=Math.min(o.l,r.left); o.r=Math.max(o.r,r.right); });
+    return Object.keys(L).map(Number).sort((a,b)=>a-b).map(k=>L[k]); }
+  function isShort(e){ const ls=lines(e); if(ls.length<2) return false; const fs=parseFloat(getComputedStyle(e).fontSize)||14; const z=ls[ls.length-1]; return (z.r-z.l)<fs*2.3; }
+  function glue(nodes){ const sp=document.createElement('span'); sp.className='og-t'; sp.style.whiteSpace='nowrap'; nodes[0].parentNode.insertBefore(sp,nodes[0]); nodes.forEach(n=>sp.appendChild(n)); }
+  function tail(e){
+    const w=document.createTreeWalker(e,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.nodeValue.trim()?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_SKIP}); let last=null,n; while((n=w.nextNode())) last=n; if(!last) return;
+    const v=last.nodeValue.replace(/\s+$/,'');
+    if(v.length>=4){ glue([last.splitText(v.length-4)]); return; }
+    // 「▾」など短い文字：その前の数文字と一緒にする
+    let t=last, p=t.parentNode; while(p&&p!==e&&!t.previousSibling){ t=p; p=p.parentNode; }
+    const prev=t.previousSibling; if(!prev) return;
+    if(prev.nodeType===3){ const pv=prev.nodeValue; if(pv.trim().length<1) return; glue([prev.splitText(Math.max(0,pv.length-3)),t]); }
+    else glue([prev,t]);
+  }
+  function run(){
+    document.querySelectorAll('p,li,h1,h2,h3,h4,label,summary,div,span,b,small,a,button,td').forEach(e=>{
+      if(e.dataset.og||!e.offsetParent) return;
+      if(e.closest('table:not(.og-ok),svg,select,textarea,[contenteditable],.no-og,#verTag')) return;
+      if(/flex|grid/.test(getComputedStyle(e).display)) return;   // 横並び（flex/grid）の中で包むと、文字の途中にすき間ができるので触らない
+      let own=false; for(const c of e.childNodes){ if(c.nodeType===3&&c.nodeValue.trim()){own=true;break;} } if(!own) return;
+      if((e.textContent||'').trim().length<5) return;
+      e.dataset.og='1';
+      if(!isShort(e)) return;
+      e.style.textWrap='balance'; if(!isShort(e)) return;
+      e.style.textWrap=''; tail(e);
+    }); }
+  let t=null; const sch=()=>{ clearTimeout(t); t=setTimeout(()=>{ try{run();}catch(_e){} },220); };
+  try{ new MutationObserver(sch).observe(document.body,{childList:true,subtree:true}); }catch(e){}
+  document.addEventListener('toggle',sch,true); document.addEventListener('click',sch,true);
+  sch();
+})();
+/* 印刷が開かないときの案内（鑑定者本人の指摘 2026-10-29「印刷ボタンを押しても何の動きもない」）：
+   Gmail・LINE・Instagram などアプリの中の画面では、ブラウザの印刷（window.print）が止められていて、押しても何も起きない。
+   印刷を頼んで1.5秒たっても印刷の画面が開かなければ、「Safari・Chromeで開いてから」の案内を出す。3サイトの全ページ（鑑定書・アプリの鑑定書の画面も）で同じ。 */
+(function(){
+  if(window.__pkPrintHelp) return; window.__pkPrintHelp=true;
+  var orig=window.print; if(typeof orig!=='function') return;
+  var opened=false; function mark(){ opened=true; }
+  try{ window.addEventListener('beforeprint',mark); window.addEventListener('afterprint',mark); var mq=window.matchMedia&&window.matchMedia('print'); if(mq){ if(mq.addEventListener) mq.addEventListener('change',function(e){ if(e.matches) mark(); }); else if(mq.addListener) mq.addListener(function(e){ if(e.matches) mark(); }); } }catch(e){}
+  function link(){ try{ var u=(window.top&&window.top.location&&window.top.location.href)||location.href; return /^https?:/.test(u)?u:''; }catch(e){ return /^https?:/.test(location.href)?location.href:''; } }
+  function show(){ try{ var old=document.getElementById('pk-print-help'); if(old) old.remove();
+    var karte=false; try{ karte=!!((window.top&&window.top.document||document).getElementById('mypageToggle')); }catch(_e){ karte=!!document.getElementById('mypageToggle'); }
+    var ua=navigator.userAgent||'', ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&'ontouchend' in document), u=link();
+    var d=document.createElement('div'); d.id='pk-print-help'; d.className='no-print'; d.setAttribute('role','dialog'); d.setAttribute('aria-label','印刷の画面が開かないとき');
+    d.style.cssText='position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:2147483647;max-width:560px;margin:0 auto;background:#fff;color:#1b1b1b;border:2px solid #4F46E5;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.22);padding:14px 14px 12px;font:700 14.5px/1.7 system-ui,-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif';
+    d.innerHTML='<div style="font-size:16px;font-weight:900;color:#3730A3;margin-bottom:4px">🖨 印刷の画面が開かないときは</div>'+
+      '<div>Gmail・LINE などのアプリの中で開いていると、印刷・PDF保存が使えません。ブラウザで開き直してから、もう一度押してください。</div>'+
+      '<div style="margin-top:6px;background:#F4F5FF;border-radius:10px;padding:8px 10px">'+(ios?'<b>iPhone</b>：画面の右下か右上の <b>共有ボタン</b>（□に↑）や <b>「…」</b> →「<b>Safariで開く</b>」<br><span style="font-weight:700;color:#4A4458">共有ボタンの中の「プリント」からも印刷・PDF保存できます</span>':'<b>Android</b>：右上の <b>「︙」</b> →「<b>ブラウザで開く</b>」（Chromeで開く）')+'</div>'+
+      (karte?'<div style="margin-top:6px;font-size:13px;color:#4A4458">鑑定は顧客カルテに保存されています。ブラウザで開いたあと、顧客カルテから開けます。</div>':'')+
+      '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'+(u?'<button type="button" data-a="copy" style="flex:1 1 160px;min-height:44px;border:0;border-radius:12px;background:#4F46E5;color:#fff;font:inherit;font-weight:900;cursor:pointer">このページのリンクをコピー</button>':'')+'<button type="button" data-a="close" style="flex:0 0 auto;min-height:44px;padding:0 16px;border:1.5px solid #C9CDF5;border-radius:12px;background:#fff;color:#3730A3;font:inherit;font-weight:900;cursor:pointer">閉じる</button></div>';
+    d.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('button'); if(!b) return; if(b.dataset.a==='close'){ d.remove(); return; }
+      if(b.dataset.a==='copy'){ var ok=function(){ b.textContent='コピーしました。Safari・Chromeに貼りつけて開いてください'; }; try{ navigator.clipboard.writeText(u).then(ok,function(){ window.prompt('このリンクをコピーしてください',u); }); }catch(_e){ try{ window.prompt('このリンクをコピーしてください',u); }catch(__e){} } } });
+    (document.body||document.documentElement).appendChild(d); }catch(e){} }
+  window.print=function(){ opened=false; var r; try{ r=orig.apply(window,arguments); }catch(e){} setTimeout(function(){ if(!opened&&!document.hidden) show(); },1500); return r; };
+})();
+</script>
+</body>
+</html>
