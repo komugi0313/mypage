@@ -450,14 +450,14 @@ function bindTalked(G){const id=talkId(G),bs=[...app.querySelectorAll('.talked')
   bs.forEach(b=>b.onclick=()=>{const on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',on);b.textContent=b.classList.contains('big')?(on?'✓ 話しました':'話したら、ここを押す'):(on?'✓ 話した':'話した');
     const li=b.closest('li');if(li)li.classList.toggle('ok',on);talkedSet(id,b.dataset.k,on);if(c)c.textContent='話した問題　'+bs.filter(x=>x.getAttribute('aria-pressed')==='true').length+'／'+bs.length})}
 // E：だれの話から聞くとよいか（3人以上・名前を見せる部屋だけ）
-function talkPairHint(G,i,me){if(G.anon)return'';const ps=G.players,k=G.qs[i],side=v=>ps.filter(p=>p.ans[i]&&p.ans[i].o===v);
-  const a=side(0),b=side(1),c=side(2),nmS=p=>p===me?'あなた':esc(p.name)+'さん';
+function talkPairHint(G,i,me){if(G.anon)return'';const ps=G.players,side=v=>ps.filter(p=>p.ans[i]&&p.ans[i].o===v);
+  // 名前は色の札・2文までに（鑑定者本人 2026-11-20「1、2、3を修正」）
+  const a=side(0),b=side(1),c=side(2),ch=p=>nmChip(G,p,p===me?'あなた':p.name),chs=xs=>xs.map(ch).join('');
   if(!a.length||!b.length)return'';
-  if(a.length===1&&b.length>=2||b.length===1&&a.length>=2){const one=a.length===1?a[0]:b[0];return `${nmS(one)}の考えを、先に聞いてみてください。理由がわかると、みんなの落としどころが見えやすくなります。`}
+  if(a.length===1&&b.length>=2||b.length===1&&a.length>=2){const one=a.length===1?a[0]:b[0];return `<span class="tph-l"><span class="nw">${ch(one)}の考えを、</span>先に聞いてみてください。</span>`}
   let best=null;a.forEach(x=>b.forEach(y=>{const r=pairStat(x,y,G.qs);if(!best||r.pct<best.pct)best={x,y,pct:r.pct}}));
-  let t=best?`まず、${nmS(best.x)}と${nmS(best.y)}に「どうしてそう思う？」を聞くと、みんなの落としどころが見えやすくなります。`:'';
-  if(c.length){const cn=c.length===1?'':c.length===2?'2人が':'みんなが';
-    t+=c.includes(me)?`${c.map(nmS).join('と')}はまん中の答えなので、${c.length===1?'':cn}間に入ると決まりやすい問題です。`:`${c.map(nmS).join('と')}はまん中の答えなので、間に入ってもらうと決まりやすい問題です。`}
+  let t=best?`<span class="tph-l">まず<span class="nw">${ch(best.x)}${ch(best.y)}に、</span>「どうしてそう思う？」と聞いてみてください。</span>`:'';
+  if(c.length)t+=`<span class="tph-l"><span class="nw">${chs(c)}は</span>まん中の答え。間に入ると決まりやすい問題です。</span>`;
   return t}
 // 左右に並べた答えが枠に入りきらないときは、縦に並べる（「考えがまとまってか…」で切れていた）
 function vsFit(){document.querySelectorAll('.vs2').forEach(v=>{if([...v.querySelectorAll('.va,.vw')].some(e=>e.scrollWidth>e.clientWidth+1)||v.scrollWidth>v.clientWidth+1){v.className='vsn';const m=v.querySelector('.vmid');if(m)m.remove()}})}
@@ -467,10 +467,11 @@ function stepsHTML(G){const ps=G.players,two=ps.length===2,me=ps.find(p=>p.id===
   const i=its[0],k=G.qs[i],st=ps.some(p=>p.ans[i]&&p.ans[i].st&&p.ans[i].o<2),gs=ansGroups(G,i);
   const side=g=>{const c=G.anon?'pn':g.who.length===1?pcls(G,g.who[0]):'pm';
     return `<div class="vside ${c}"><span class="vw">${G.anon?g.who.length+'人':g.who.map(p=>p===me?'あなた':esc(p.name)).join('・')}</span><span class="va">${esc(ans(g.v,k))}</span></div>`};
-  const vs=gs.length===2?`<div class="vs2">${side(gs[0])}<span class="vmid" aria-hidden="true">⇔</span>${side(gs[1])}</div>`:`<div class="vsn">${gs.map(side).join('')}</div>`;
+  const vlong=gs.some(g=>ans(g.v,k).replace(/[、。（）「」\s]/g,'').length>10);
+  const vs=gs.length===2&&!vlong?`<div class="vs2">${side(gs[0])}<span class="vmid" aria-hidden="true">⇔</span>${side(gs[1])}</div>`:`<div class="vsn">${gs.map(side).join('')}</div>`;
   const ay=ayOf(k,two),key=QKEY[k].slice(0,5),ok=talkedOf(talkId(G)).includes(key);
   return `<section class="hero-pt" id="steps"><p class="hp-ttl">${two?'答えが分かれた1問から話そう':'答えが分かれた1問から、みんなで話そう'}<small>${st?'★ゆずれないがついた問題で、答えが分かれました':WB.has(k)?'大事な問題で、'+(two?'2人':'みんな')+'の答えが分かれました':(two?'2人':'みんな')+'の答えが分かれた問題です'}</small></p>
-    <div class="hq"><span class="hql">Q</span><p class="hqt">${esc(Q[k][1])}</p>${vs}</div>
+    <div class="hq"><div class="hqh"><span class="qmark" aria-hidden="true">Q</span><p class="hqt">${esc(Q[k][1])}</p></div>${vs}</div>
     <p class="hp-arrow">↓ 歩み寄るなら</p>
     <div class="hp-ayu"><span class="rb">歩み寄りの案</span><p>${ay?esc(ay):'「どうしてそう思うの？」を聞き合って、'+(two?'2人':'みんな')+'のやり方を1つだけ決めてみる。'}</p></div>
     <div class="howto"><b>1</b><span>「どうしてそう思う？」と聞いてみる</span><b>2</b><span>この案を1週間ためして、また話す</span></div>
@@ -797,9 +798,9 @@ const PROMO=`<a class="promo" href="https://166unmei.com" target="_blank" rel="n
     <span class="pr-btn">二人の相性を占う <small>↗</small></span></a><p class="promo-u">166unmei.com（別のサイト）</p>`;
 function tailHTML(G){const pr=G&&G.pair?pairBackCard(G):'';return `${pr}
   <button class="btn img small" id="img"><svg class="ic-ph" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="1.8" fill="currentColor"/><path d="M4.5 17.5l5-5 3.5 3.5 2.5-2.5 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>結果を画像で保存</button><p class="hint" id="imgmsg" hidden></p>
-  ${PROMO}
   ${G&&G.backTop?'':`<a class="btn line small${G&&(G.pair||G.players.length<2)?' line-w':''}" id="lnres" href="#" target="_blank" rel="noopener">LINEで結果を送る</a>
   <button class="btn ghost small" id="share">ほかのアプリでシェアする</button><p class="hint" id="shared" hidden></p>`}
+  ${PROMO}
   <div class="row"><button class="btn" id="again">もう1回診断する</button><button class="btn ghost" id="home">トップへ</button></div>
   ${SIS_HTML}`}
 // シェア：スマホの共有（使えないときはコピー）。名前は入れない
