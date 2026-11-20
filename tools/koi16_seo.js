@@ -64,7 +64,7 @@ const EXTRA = '.ty b,.ty>span,.dif .n,.links a>span,.q>b,.q>span,.jk .t,.jk .lb,
 fs.writeFileSync(path.join(K, 'seo.js'),
   '/* 恋のかたち診断の説明ページ用（tools/koi16_seo.js が koi16/index.html から写して作る。直接直さない）。\n' +
   '   文節で改行する（BudouX・Google・Apache License 2.0 https://github.com/google/budoux の日本語モデル）。 */\n' +
-  '(function(){' + bxSrc + 'glueAll(document);Array.prototype.forEach.call(document.querySelectorAll("' + EXTRA + '"),glue);})();\n');
+  '(function(){' + bxSrc + 'glueAll(document);var pk=document.querySelector("[data-pick]"),sp=document.getElementById("spick");if(pk&&sp)pk.addEventListener("click",function(e){e.preventDefault();pk.hidden=true;var m=pk.parentNode.querySelector(".meta");if(m)m.hidden=true;sp.hidden=false;});Array.prototype.forEach.call(document.querySelectorAll("' + EXTRA + '"),glue);})();\n');
 
 const CSS = `/* 恋のかたち診断の説明ページ用（tools/koi16_seo.js が作る。直すときは道具の中を直して作り直す） */
 :root{--bg:#FBF6F1;--card:#FFFFFF;--ink:#33241B;--sub:#5E4A3D;--line:#E6D7CA;--rose:#B01A5A;--rose-soft:#FCE8EF;--rose-ink:#8A1246;--navy:#3B2A6B;
@@ -119,6 +119,25 @@ details.fold summary{list-style:none;cursor:pointer;padding:12px 16px;font-weigh
 details.fold summary::-webkit-details-marker{display:none}
 details.fold summary::after{content:"開く ▼";flex:0 0 auto;font-size:12px;color:var(--rose);background:var(--rose-soft);border-radius:999px;padding:2px 10px}
 details.fold[open] summary::after{content:"閉じる ▲"}
+.refs .ref{border-top:1px solid var(--line);padding:10px 0 2px;display:flex;flex-direction:column;gap:2px}
+.refs .ref b{font-size:15px;line-height:1.6}
+.refs .ref small{font-size:13px;color:var(--sub)}
+.refs .ref a{align-self:flex-start;display:inline-flex;align-items:center;min-height:44px;color:var(--rose);font-weight:700;font-size:14px}
+.faq details{border-top:1px solid var(--line)}
+.faq summary{list-style:none;cursor:pointer;display:flex;gap:8px;align-items:center;min-height:48px;padding:6px 0;font-weight:700}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::before{content:"Q";flex:none;color:var(--rose);font-weight:900}
+.faq summary::after{content:"▼";margin-left:auto;flex:none;font-size:11px;color:var(--rose)}
+.faq details[open] summary::after{content:"▲"}
+.faq details p{margin:0 0 12px;font-size:15px}
+[hidden]{display:none!important}
+.spick{min-width:0;background:#fff;border-radius:18px;padding:12px 12px 10px;display:grid;gap:7px;text-align:left}
+.spick .sq{font-weight:900;font-size:15px;margin:2px 0 4px;text-align:center;line-height:1.6}
+.spick .o{display:flex;align-items:center;gap:10px;border:1.5px solid #D9C4B4;border-radius:12px;padding:9px 12px;font-weight:700;font-size:15px;min-height:48px;box-sizing:border-box;background:#fff;color:var(--text);text-decoration:none}
+.spick .o:active{border-color:var(--rose)}
+.spick .o i{width:16px;height:16px;border:2px solid #C9B6A8;border-radius:50%;flex:none}
+.spick .o small{display:block;font-size:12px;font-weight:500;color:var(--sub)}
+.spick .n{font-size:12.5px;color:var(--sub);text-align:center;margin:2px 0 0;line-height:1.7}.spick .n b{display:block;color:var(--rose);font-size:13px}
 details.fold .in{padding:0 16px 14px;font-size:15px}
 details.fold .in h3{font-size:16px;margin:12px 0 2px}
 .q{border-left:3px solid var(--rose);padding:2px 0 2px 12px;margin:12px 0}
@@ -273,15 +292,33 @@ ${LINKS('')}`;
 });
 
 // ===== 愛着スタイル診断 =====
+// 検索で信用してもらう材料（鑑定者本人 2026-11-19「愛着スタイル診断の公式になりたい」→見本 https://claude.ai/artifact/RT4ttRRhyGPS5CyEKqZsrq の B）：
+// もとにした研究（題名・雑誌・年・論文へのリンク。書き手の名前は出さない）・病気の診断ではないこと・よくある質問（Google に FAQPage として渡す）
+const AI_REFS = [
+  { t: ['アダルト・', 'アタッチメント・', 'スタイル尺度', '（ECR-RS）', '日本語版の', '妥当性評価'], j: '心理学研究・2016年', u: 'https://doi.org/10.4992/jjpsy.87.15208' },
+  { t: ['“一般他者”を', '想定した', '愛着スタイル尺度の', '信頼性と', '妥当性の検討'], j: '九州大学心理学研究・2004年', u: 'https://doi.org/10.15017/3567' },
+  { t: ['Attachment styles among young adults: a test of a four-category model'], j: 'Journal of Personality and Social Psychology・1991年（4つの型のもとになった研究）', u: 'https://doi.org/10.1037/0022-3514.61.2.226' },
+];
+// A2「やってみる」は残す（鑑定者本人 2026-11-19 見本 https://claude.ai/artifact/5giML4oncqhs962E9xBmVw で「A2」）：押すとトップへ移らず、カードの中が恋の状況のボタンに変わる。
+// 選ぶと /?e=aichaku&go=quick&s=状況 で、診断の1問目（恋人がいる人は「付き合ってどれくらい？」）から始まる。JS がないときは今までどおりトップへ
+const PICK_ST = [['partner', '恋人・パートナーがいる', '結婚している人もこちら'], ['crush', '片思い中', ''], ['none', 'いまはいない', '前に恋をしたことがある'], ['never', '恋をしたことがない', ''], ['skip', '答えたくない', '']];
+const PICK = `<a class="btn" href="/?e=aichaku" data-pick="aichaku"><span class="nw">やってみる</span><span class="nw">（20問）</span></a><div class="spick" id="spick" hidden><p class="sq"><span class="nw">はじめに、</span><wbr><span class="nw">いまの恋の状況を</span><wbr><span class="nw">教えてください</span></p>${PICK_ST.map(x => `<a class="o" href="/?e=aichaku&amp;go=quick&amp;s=${x[0]}"><i aria-hidden="true"></i><span>${esc(x[1])}${x[2] ? '<small>' + esc(x[2]) + '</small>' : ''}</span></a>`).join('')}<p class="n"><b>いまの恋の状況は、あなただけの答えです。</b><span class="nw">みんなで診断するときも、</span><wbr><span class="nw">ほかの人には見えません</span><wbr><span class="nw">（みんなに見えるのは、</span><wbr><span class="nw">ニックネームとタイプ・</span><wbr><span class="nw">愛着スタイルの結果だけです）。</span><wbr><span class="nw">結果の説明にだけ使い、</span><wbr><span class="nw">どこにも送りません。</span></p></div>`;
+const AI_FAQ = [
+  ['愛着障害とのちがいは？', '愛着スタイルは、だれにでもある「大切な人への近づき方のくせ」で、良い・悪いはありません。愛着障害は、子どものころの育ちに関わる医療の言葉で、お医者さんが見立てるものです。この診断では、愛着障害はわかりません。'],
+  ['不安型や回避型は、変わりますか？', '変わることがあります。新しい恋人との関係や、年齢を重ねることで、心のゆれやすさや、頼るのを避ける気持ちが少しずつ変わる人が多いとされています。'],
+  ['ほかの愛着スタイル診断とのちがいは？', '恋愛の場面の質問に答えて、4つの愛着スタイルと恋愛の16タイプを1回で見られます。好きな人にも診断してもらうと、2人の心のくせの組み合わせもわかります。'],
+  ['何問ありますか？', 'かんたん版は20問（約4分）、本格版は48問（約8分）です。'],
+  ['本当に無料ですか？', '無料で、登録もいりません。答えと結果は、このスマホの中だけに残り、どこにも送りません。'],
+];
 CUR = 'aichaku';
 write('aichaku/index.html', page({
   url: 'aichaku/',
-  title: '愛着スタイル診断｜あなたは何型の恋をする？安定型・不安型・回避型・恐れ型（無料・4分）',
+  title: '愛着スタイル診断｜あなたは何型の恋をする？安定型・不安型・回避型・恐れ型（無料・4分）｜恋のかたち診断',
   desc: '既読がつくと気になる、好きなのに一歩引いてしまう。そんな恋のくせを、安定型・不安型・回避型・恐れ型の4つの愛着スタイルで見られる無料の診断。20問・約4分・登録なし。恋愛の16タイプと好きな人との相性もわかります。',
-  ld: crumbLd([['恋のかたち診断', ''], ['愛着スタイル診断', 'aichaku/']]),
+  ld: [crumbLd([['恋のかたち診断', ''], ['愛着スタイル診断', 'aichaku/']]), { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: AI_FAQ.map(x => ({ '@type': 'Question', name: x[0], acceptedAnswer: { '@type': 'Answer', text: x[1] } })) }],
   img: BASE + 'img/og-aichaku.png?v=1',
   body: `${crumb([['愛着スタイル診断', '']])}
-<section class="hero"><span class="kick">無料・登録なし・4分</span><h1>愛着スタイル診断<span class="sub">あなたは、何型の恋をする？</span></h1>${HEARTS}${START('やってみる（20問）')}<span class="meta">安定型・不安型・回避型・恐れ型の4つから、あなたの心のくせがわかります</span></section>
+<section class="hero"><span class="kick">無料・登録なし・4分</span><h1>愛着スタイル診断<span class="sub">あなたは、何型の恋をする？</span></h1>${HEARTS}${PICK}<span class="meta">安定型・不安型・回避型・恐れ型の4つから、あなたの心のくせがわかります</span></section>
 <section class="box"><h2>こんなこと、ありませんか？</h2>${ul(['既読がついたのに返事がないと、何度もスマホを見てしまう', '好きな人ができると、なぜかそっけなくしてしまう', '恋人に頼るより、ひとりで片づけたほうが楽', '近づきたいのに、近づくと少し怖くなる'])}<p class="note">1つでも思い当たったら、あなたの「心のくせ」が関わっているかもしれません。</p></section>
 <section class="box"><h2>4つの愛着スタイル</h2><div class="types">${tyCell('preoc')}${tyCell('fear')}${tyCell('secure')}${tyCell('dismiss')}</div><div class="axis"><span>← 頼れる</span><span>ひとりで立つ →</span></div><p class="note">上の段ほど、心がゆれやすい型です。どれが良い・悪いではありません。境目の近くの人は、となりの型の面もあわせ持っています。</p></section>
 ${START('自分の型を見る（無料）')}
@@ -289,6 +326,9 @@ ${START('自分の型を見る（無料）')}
 <details class="fold"><summary><span>愛着スタイルって？</span></summary><div class="in"><p>大切な人に、どのくらい近づきたいか・頼りたいか、という心の向きのことです。「心のゆれやすさ（不安）」と「頼るのを避ける気持ち（回避）」の2つで、4つの型に分けて見るのが一般的です。</p><p>これまでの人とのかかわりの中で形づくられ、恋人ができたときに強く出やすいと言われています。同じ人でも、相手や時期によって変わります。</p></div></details>
 <details class="fold"><summary><span>4つの型のくわしい説明</span></summary><div class="in">${['secure', 'preoc', 'dismiss', 'fear'].map(k => `<h3>${esc(KT[k].k)}（${esc(kn(k))}）</h3><p>${esc(KUSE[k].lead)}</p><p class="note">ひとこと：${esc(KUSE[k].tip)}</p>`).join('')}</div></details>
 <details class="fold"><summary><span>この診断の考え方</span></summary><div class="in"><p>愛着の研究で使われている考え方を参考に、恋愛の場面の質問をこちらで作りました。研究の質問の文は使っていません。医療や心理の専門的な検査ではありません。</p><p>参考にした研究は「<a href="/?about=1">この診断の考え方</a>」にまとめています。</p></div></details>
+<section class="box refs"><h2>この診断のもとにした研究</h2><p class="note">愛着の研究の考え方を参考に、恋愛の場面の質問をこちらで作りました（研究の質問の文は使っていません）。</p>${AI_REFS.map(r => `<div class="ref"><b>${r.t.length > 1 ? r.t.map(nw).join('') : esc(r.t[0])}</b><small>${esc(r.j)}</small><a href="${r.u}" target="_blank" rel="noopener">論文を見る ›</a></div>`).join('')}</section>
+<section class="help"><h2>これは病気の診断ではありません</h2><p>「愛着障害」は、お医者さんが見立てるもので、この診断ではわかりません。この診断は、恋愛での気持ちのくせを知るためのものです。</p><p>つらい気持ちが続くときは、ひとりで抱えずに相談してください。</p><p>こころの健康相談統一ダイヤル<br><span class="tel">0570-064-556</span></p></section>
+<section class="box faq"><h2>よくある質問</h2>${AI_FAQ.map((x, i) => `<details${i ? '' : ' open'}><summary><span>${esc(x[0])}</span></summary><p>${esc(x[1])}</p></details>`).join('')}</section>
 ${LINKS('aichaku/')}`,
 }));
 
@@ -296,7 +336,7 @@ ${LINKS('aichaku/')}`,
 CUR = 'chara';
 write('chara/index.html', page({
   url: 'chara/',
-  title: '恋愛キャラ診断｜あなたの恋は16キャラのどれ？（無料・16タイプ×愛着スタイル）',
+  title: '恋愛キャラ診断｜あなたの恋は16キャラのどれ？（無料・16タイプ×愛着スタイル）｜恋のかたち診断',
   desc: '近づき方・気持ちの伝え方・頼り方・恋の原動力の4つで決まる、16の恋愛キャラ。好きになり方・脈ありサイン・恋の弱点・相性のいいキャラがわかる無料の恋愛診断。登録なし。',
   ld: crumbLd([['恋のかたち診断', ''], ['恋愛キャラ診断', 'chara/']]),
   body: `${crumb([['恋愛キャラ診断', '']])}

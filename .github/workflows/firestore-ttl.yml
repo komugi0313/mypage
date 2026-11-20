@@ -1,0 +1,33 @@
+# 部屋のデータを自動で消す設定（TTL）を Firestore に付ける（究極の二択・アイシンク・恋のかたち診断で共通）。
+# 鑑定者本人 2026-11-20「3つのサイト共通で、12時間で消える」。
+# 部屋（*_rooms）と参加者（players）は expireAt＝12時間後、アイシンクの届いた答え合わせ（isync_inbox/*/r）は expireAt＝30日後。
+# expireAt をすぎた記録は、Google が自動で消す（消えるまで最大で1日ほどかかる）。
+# Actions の画面から手で1回動かせば設定が残る（何回動かしても同じ）。
+# 必要なもの：Secrets の FIREBASE_SERVICE_ACCOUNT_16TYPEPLUS の鍵に、Firestore の索引を変える権限（Cloud Datastore インデックス管理者など）
+name: Firestore の自動削除（TTL）を設定
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ttl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 鍵を置く
+        run: printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_16TYPEPLUS }}
+      - name: ログイン
+        run: gcloud auth activate-service-account --key-file="$RUNNER_TEMP/sa.json"
+      - name: TTL を付ける
+        run: |
+          set -e
+          for g in nitaku_rooms isync_rooms koi16_rooms players r; do
+            echo "== $g"
+            gcloud firestore fields ttls update expireAt --collection-group="$g" --enable-ttl --project=typeplus-69c66 --async --quiet
+          done
+      - name: いまの設定
+        if: always()
+        run: gcloud firestore fields ttls list --project=typeplus-69c66 || true
+      - if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"
