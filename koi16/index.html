@@ -3483,6 +3483,13 @@ function renderResult(code,mine,withCode){
      '<div class="code"><span class="nw">'+code+'</span><span class="rc-dot" aria-hidden="true">·</span><span class="nw">'+esc(g.n)+'</span></div><p class="catch">'+esc(t.catch)+'</p>'+(isMine?stabHTML(code,mine):'')+((isMine&&mine&&st.prev&&st.prev.code&&st.prev.code!==code&&(!mine.at||st.prev.at<mine.at))?'<p class="prev"><span class="nw">前回：<b>'+esc(st.prev.code)+'</b></span> → <span class="nw">今回：<b>'+code+'</b></span></p>':'')+(isMine?'<div class="rc-share"><button class="btn btn-line" type="button" data-act="line">LINEで送る</button><button class="btn btn-sub" type="button" data-act="img">画像で保存</button></div><p class="rc-share-note">送った人が診断すると、2人の相性がわかります</p>':'')+'</section>';
 
   if(isMine && mine.anx!=null && mine.pct) h+=atCardHTML(mine);
+  // 行き先のボタンは、結果の表紙のすぐ下（鑑定者本人 2026-11-20「メインの結果が一番下では誰も読まない」「自分の結果のバナーの下に」）。
+  // 最後の行き先（鑑定者本人 2026-11-12「バーが同じ色で分かりづらい」）：ボタンごとに色とマーク、ひとことの説明を変える
+  var go=function(act,cls,ico,t1,t2){ return '<button class="gobtn '+cls+'" type="button" data-act="'+act+'"><span class="gi" aria-hidden="true">'+ico+'</span><span class="gt"><b>'+t1+'</b><small>'+t2+'</small></span><span class="ga" aria-hidden="true">›</span></button>'; };
+  h+='<div class="gogrid">';
+  if(st.me && !isMine) h+=go('mine','g-mine','♡','自分の結果を見る','あなたのタイプにもどる');
+  h+=go('types','g-zukan','★','キャラ図鑑を見る','16のお菓子と恋のかたち')+
+     go('retry','g-retry','↺','もう一度診断する','最初の質問からやり直す')+'</div>';
   h+=c66MiniHTML();
   if(!isMine){
     h+='<button class="btn btn-main btn-wide" type="button" data-act="invite" data-code="'+code+'">'+(st.me?'自分のタイプとの相性を見る':'自分も診断して相性を見る')+'</button>';
@@ -3573,12 +3580,6 @@ function renderResult(code,mine,withCode){
        '<button class="btn btn-main btn-wide" type="button" data-act="room-new">部屋を作る</button>'+(function(){ var gl=groupListHTML(); return gl?'<h3 style="margin-top:16px">参加したグループ</h3>'+gl:''; })()+'</section>';
   }
 
-  // 最後の行き先（鑑定者本人 2026-11-12「バーが同じ色で分かりづらい」）：ボタンごとに色とマーク、ひとことの説明を変える
-  var go=function(act,cls,ico,t1,t2){ return '<button class="gobtn '+cls+'" type="button" data-act="'+act+'"><span class="gi" aria-hidden="true">'+ico+'</span><span class="gt"><b>'+t1+'</b><small>'+t2+'</small></span><span class="ga" aria-hidden="true">›</span></button>'; };
-  h+='<div class="gogrid">';
-  if(st.me && !isMine) h+=go('mine','g-mine','♡','自分の結果を見る','あなたのタイプにもどる');
-  h+=go('types','g-zukan','★','キャラ図鑑を見る','16のお菓子と恋のかたち')+
-     go('retry','g-retry','↺','もう一度診断する','最初の質問からやり直す')+'</div>';
   // 自分の結果・キャラ図鑑は、ほかのサイトのバナーより上（鑑定者本人 2026-11-20「バナーの上に」）
   if(CTA.url){
     h+=c66HTML();
@@ -4308,6 +4309,10 @@ function roomResultHTML(){
   // 自分の結果をいちばん上に（鑑定者本人 2026-11-17「結果が下すぎます」「結果がないサイトかと思いました」）
   var mc=(me&&me.done&&validCode(me.code))?me.code:null, h='';
   if(mc) h+='<section class="card myres" style="--gp:'+GPALE[mc[2]+mc[3]]+'"><p class="mr-l">あなたの結果</p><div class="mr-row"><span class="mr-a">'+art(mc,92)+'</span><div class="mr-t"><b class="mr-c">'+cname(mc)+'</b><span class="mr-f">'+fname(mc)+'</span></div></div><p class="mr-catch">'+esc(T[mc].catch)+'</p><button class="btn btn-main btn-wide" type="button" data-act="mine"><span class="nw">あなたの結果を</span><span class="nw">くわしく見る</span></button></section>';
+  // 自分の結果・キャラ図鑑は「あなたの結果」のカードのすぐ下（鑑定者本人 2026-11-20）
+  h+='<div class="gogrid">';
+  if(!mc&&st.me&&st.me.code) h+='<button class="gobtn g-mine" type="button" data-act="mine"><span class="gi" aria-hidden="true">♡</span><span class="gt"><b>自分の結果を見る</b><small>あなたのタイプのくわしい説明</small></span><span class="ga" aria-hidden="true">›</span></button>';
+  h+='<button class="gobtn g-zukan" type="button" data-act="types"><span class="gi" aria-hidden="true">★</span><span class="gt"><b>キャラ図鑑を見る</b><small>16のお菓子と恋のかたち</small></span><span class="ga" aria-hidden="true">›</span></button></div>';
   h+='<section class="card"><h1>みんなの恋のかたち</h1>'+
     (wait.length?'<p class="rchip wait">⏳ あと'+wait.length+'人が診断中です</p><p class="muted">終わった人から、ここに出てきます。この画面のままで大丈夫です。</p>':'<p class="rchip ok">✅ 全員の診断が終わりました</p>')+
     '<p class="muted">部屋 '+dcode(RM.code)+'・名前を押すと、その人のタイプの説明が見られます。</p><div class="gmem">';
@@ -4324,9 +4329,6 @@ function roomResultHTML(){
   else h+=memH+'<section class="card"><p>2人以上の診断が終わると、全員の相性といちばん相性のいい2人が出てきます。</p></section>';
   if(n>=2) h+='<section class="card">'+secH('h2','want','結果を残す・送る')+'<p>この部屋のリンクは、作ってから10日使えます（あとから開いた人も、診断すると結果に加わります）。LINEのグループに送っておくと、10日たったあとも全員の相性を見られます。</p><div class="share"><button class="btn btn-line" type="button" data-act="room-rline">LINEで結果を送る</button><button class="btn btn-sub" type="button" data-act="room-rcopy">リンクをコピー</button></div><p style="margin-top:10px"><button class="btn btn-sub btn-wide" type="button" data-act="room-img"><span class="nw">みんなの結果を</span><span class="nw">画像で保存</span></button></p></section>';
   if(ps.length<ROOM_MAX) h+='<details class="card st-fold"><summary><span><span class="nw">あとから来た人を呼ぶ</span><span class="nw">（QRコード）</span></span></summary>'+rQrBox()+rInviteBtns()+'</details>';
-  h+='<div class="gogrid">';
-  if(st.me&&st.me.code) h+='<button class="gobtn g-mine" type="button" data-act="mine"><span class="gi" aria-hidden="true">♡</span><span class="gt"><b>自分の結果を見る</b><small>あなたのタイプのくわしい説明</small></span><span class="ga" aria-hidden="true">›</span></button>';
-  h+='<button class="gobtn g-zukan" type="button" data-act="types"><span class="gi" aria-hidden="true">★</span><span class="gt"><b>キャラ図鑑を見る</b><small>16のお菓子と恋のかたち</small></span><span class="ga" aria-hidden="true">›</span></button></div>';
   if(CTA.url) h+=c66HTML();
   return h;
 }
