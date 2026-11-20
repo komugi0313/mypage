@@ -701,6 +701,39 @@ function shapeHTML(G,p,who,extra){
   return `<section class="card shape"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true">
     <p class="cap">${who}の価値観のかたち</p><p class="big">${big}</p><p class="sdesc">${desc}</p>${extra!=null?extra:bars}
     ${G.qs.length<30?'<p class="hint">しっかり版（30問）なら、もっとはっきりわかります。</p>':''}</section>`}
+// ひとりの結果：あなたと合いやすい人・ぶつかりやすい人（鑑定者本人 2026-11-20「お願いします」）。[合いやすい理由, ぶつかりやすい場面, 合わせ方]
+const MATCH={kicchiri:[['暮らしのリズムが合い、片づけや決めごとでもめにくい。','脱いだ服・洗い物・片づけのタイミングで、ぶつかりやすい。','共有の場所だけ「ここまで片づいていればOK」のラインを1つ決めて、相手の場所には口を出さない。'],
+    ['細かいことで注意し合わず、気楽に過ごせる。','「なんで片づけないの？」と言われて、窮屈に感じやすい。','共有の場所のルールを1つだけ聞いて、そこだけは守る。']],
+  keikaku:[['予定を立てる楽しさを、一緒に味わえる。','旅行やデートの予定を、いつ・どこまで決めるかでぶつかりやすい。','大きな予定はあなたが先に決めて、当日の過ごし方は相手にまかせる。'],
+    ['思いつきの寄り道を、一緒に楽しめる。','「まだ決めてないの？」と、予定を決める早さでぶつかりやすい。','大事な予定だけは先に決めて、あとは当日の気分で。']],
+  futari:[['会いたい気持ちの強さが同じで、さみしくなりにくい。','会う回数や連絡の多さで、ぶつかりやすい（会えない日をさみしく感じやすい）。','会う日を先に決めておき、ひとりの日は相手が元気をためる日と考える。'],
+    ['おたがいの時間を大事にできて、しばられない。','「もっと会いたい」と言われて、窮屈に感じやすい。','会えない日も、ひと言だけ連絡を入れる。']],
+  okane:[['将来のお金の話がしやすく、安心できる。','外食・旅行・買い物にかけるお金で、ぶつかりやすい。','毎月ためる分を先に一緒に決めて、残りの使い方には口を出さない。'],
+    ['一緒に楽しむことに、気持ちよくお金を使える。','「それ、本当に必要？」と、お金の使い方でぶつかりやすい。','ためる分だけは先に一緒に決めて、楽しむお金は気持ちよく使う。']]};
+function matchHTML(G,p){const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x=>x.s&&MATCH[x.a.key]);if(!rows.length)return'';
+  const lean=rows.filter(x=>Math.abs(x.s.pct-50)>=10).sort((x,y)=>Math.abs(y.s.pct-50)-Math.abs(x.s.pct-50)).slice(0,2);
+  const nw=t=>`<span class="nw">${esc(t)}</span>`;
+  const body=lean.length?lean.map(({a,s})=>{const l=s.pct>50,me=l?a.l:a.r,ot=l?a.r:a.l,m=MATCH[a.key][l?0:1];
+    return `<div class="mt-ax"><p class="mt-h">${nw(me)}のあなたは</p>
+      <div class="mt-r ok"><span class="mt-k">合いやすい</span><p><b>同じ${nw(me)}の人</b>${esc(m[0])}</p></div>
+      <div class="mt-r ng"><span class="mt-k">ぶつかりやすい</span><p><b>${nw(ot)}の人</b>${esc(m[1])}</p></div>
+      <p class="mt-tip"><span>合わせ方</span>${esc(m[2])}</p></div>`}).join('')
+    :`<div class="mt-ax"><p class="mt-h">どれにも寄らないあなたは</p>
+      <div class="mt-r ok"><span class="mt-k">合いやすい</span><p><b>どの人とも</b>相手のやり方に合わせやすく、大きくぶつかりにくい。</p></div>
+      <div class="mt-r ng"><span class="mt-k">気をつけたい</span><p><b>こだわりの強い人</b>合わせすぎて、自分の気持ちを言いそびれやすい。</p></div>
+      <p class="mt-tip"><span>合わせ方</span>ときどき「わたしはこうしたい」を1つだけ言ってみる。</p></div>`;
+  return `<section class="card match"><p class="pt-h"><em>相性のヒント</em><span><span class="nw">あなたと合いやすい人・</span><span class="nw">ぶつかりやすい人</span></span></p>${body}</section>`}
+// 恋人と話しておきたい3問：★→大事な問題の答えから3つ（ちがうと困るので、先に聞いておきたい問題）
+const TALK3_WHY={'お金':'お金の考え方のちがいは、毎月くり返し出てきます。','将来・家族':'将来のことは、あとから変えにくいところです。','暮らし':'毎日のことなので、小さなちがいが積み重なります。','恋愛・連絡':'連絡や会い方のちがいは、気持ちのすれ違いにつながりやすいところです。','食':'毎日のごはんは、一緒にいる時間の大部分です。','休日・遊び':'一緒に過ごす時間の楽しさに関わります。','ドキドキ':'仲が近づくペースのちがいは、言葉にしないと伝わりにくいところです。'};
+// 順番：★の大事な問題→大事な問題→★のほかの問題→ふつうの問題（軽い問題は入れない）。同じテーマは、ほかがなければ2つ目から
+function talk3Pick(firm){const B=x=>WB.has(x.k),pool=firm.filter(x=>x.a.st&&B(x)).concat(firm.filter(x=>!x.a.st&&B(x)),firm.filter(x=>x.a.st&&!B(x)&&!WL.has(x.k)),firm.filter(x=>!x.a.st&&!B(x)&&!WL.has(x.k)));
+  const out=[],th=new Set();for(const x of pool){if(out.length>=3)break;const t=Q[x.k][0];if(!th.has(t)){out.push(x);th.add(t)}}
+  for(const x of pool){if(out.length>=3)break;if(!out.includes(x))out.push(x)}return out}
+function talk3HTML(G,t3){if(!t3.length)return'';
+  return `<section class="card talk3"><p class="pt-h"><em>答え合わせの前に</em>恋人と話しておきたい${t3.length}問</p>
+    <p class="hint">あなたの答え（★ゆずれない・大事な問題）から、相手とちがうと困りやすい問題を選びました。先に聞いておくと安心です。</p>
+    <ol class="t3-l">${t3.map(x=>{const th=CATS[Q[x.k][0]][0];return `<li><b>${esc(Q[x.k][1])}</b><span class="t3-a">あなた：${x.a.st?'<i class="mk-s">★</i>':''}${esc(ans(x.a.o,x.k))}</span><small>${esc(TALK3_WHY[th]||'')}</small></li>`}).join('')}</ol>
+    <button class="btn ghost small" id="t3-go" type="button"><span class="nw">この${t3.length}問もふくめて、</span><span class="nw">答え合わせに誘う ↓</span></button></section>`}
 function soloHTML(G){
   const p=G.players[0],xs=G.qs.map((k,i)=>({k,i,a:p.ans[i]})).filter(x=>x.a&&x.a.o>=0),sec=ms=>(ms/1000).toFixed(1);
   const firm=xs.filter(x=>x.a.o<2),flex=xs.filter(x=>x.a.o===2),star=firm.filter(x=>x.a.st);
@@ -724,14 +757,17 @@ function soloHTML(G){
     +(byT.length>1&&byT[0].a.ms>=PONDER_MIN?`<p class="sub">いちばん悩んだ問題</p><div class="ponder"><b>${esc(Q[byT[0].k][1])}</b><span>「${esc(ans(byT[0].a.o,byT[0].k))}<span style="white-space:nowrap">」まで <em>${sec(byT[0].a.ms)}</em> 秒</span></span></div>
     <p class="hint">いちばん即決は「${esc(Q[byT[byT.length-1].k][1])}」（${SECF(byT[byT.length-1].a.ms)}）</p>`:'');
   // あなたの大事な答え（★→大事な問題の順に5つまで）と、選び方のくせ（悩んだ・即決）。たたまずに見せる（鑑定者本人 2026-11-19「1人の結果が中身が少なく見えるのは問題」）
-  const imp=firm.filter(x=>x.a.st).concat(firm.filter(x=>!x.a.st&&WB.has(x.k))).slice(0,5);
-  const mine=imp.length?`<section class="card mykey"><p class="pt-h"><em>あなたの答え</em>${who}の大事な答え</p>
+  const t3=talk3Pick(firm),t3k=new Set(t3.map(x=>x.k));
+  const imp=firm.filter(x=>x.a.st).concat(firm.filter(x=>!x.a.st&&WB.has(x.k))).filter(x=>!t3k.has(x.k)).slice(0,5);
+  const mine=imp.length?`<section class="card mykey"><p class="pt-h"><em>あなたの答え</em>${t3.length?'そのほかの大事な答え':who+'の大事な答え'}</p>
     <p class="hint">お金・暮らし・将来など、大事な問題で選んだ答えです。</p>
     ${star.length?'<p class="stl"><i>★</i>＝ゆずれない（答える前に付けた印）</p>':''}<ul class="mk-l">${imp.map(x=>`<li><b>${esc(Q[x.k][1])}</b><span class="mk-a">${x.a.st?'<i class="mk-s">★</i>':''}${esc(ans(x.a.o,x.k))}</span></li>`).join('')}</ul>
     <p class="hint mk-n">相手と答え合わせすると、同じ問題の相手の答えと並べて見られます。</p>
     ${byT.length>1?`<div class="mk-t">${byT[0].a.ms>=PONDER_MIN?`<div><span>いちばん悩んだ</span><b>${esc(Q[byT[0].k][1])}</b><em>${sec(byT[0].a.ms)}秒</em></div>`:''}<div class="qk"><span>いちばん即決</span><b>${esc(Q[byT[byT.length-1].k][1])}</b><em>${SECF(byT[byT.length-1].a.ms)}</em></div></div>`:''}</section>`:'';
   return `${top}
+  ${matchHTML(G,p)}
   ${mine}
+  ${talk3HTML(G,t3)}
   ${inviteCard(G,p)}
   <p class="ref-h">くわしく見る</p>
   ${firm.length?foldBox('あなたのこだわり',firm.length+'問',kod):''}
@@ -842,7 +878,7 @@ function sendVia(text,url,msgEl){
   if(navigator.share){navigator.share({title:'アイ・シンク（I-Sync）',text,url}).catch(()=>{});return}
   const full=text+'\n'+url;msgEl.hidden=false;
   try{navigator.clipboard.writeText(full).then(()=>{msgEl.textContent='文とリンクをコピーしました。LINEなどに貼って送ってください。'},()=>{msgEl.textContent=full})}catch(e){msgEl.textContent=full}}
-function bindInvite(G){
+function bindInvite(G){const t3g=$('t3-go');if(t3g)t3g.onclick=()=>{const h=document.querySelector('.invite-hero');if(h)h.scrollIntoView({behavior:'smooth',block:'start'})};
   const me=G.players.find(p=>p.id===G.me)||G.players[0],n=G.qs.length;
   const myName=()=>{const i=$('inv-name');const v=i?i.value.trim():'';if(v){store('kv_name',v);return v}return ['あなた','ともだち'].includes(me.name)?(store('kv_name')||''):me.name};
   // ニックネームがないと、相手の画面が「ともだちさんから…」になってわかりにくいので、先に入れてもらう
