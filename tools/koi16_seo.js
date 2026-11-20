@@ -313,7 +313,7 @@ const AI_FAQ = [
 CUR = 'aichaku';
 write('aichaku/index.html', page({
   url: 'aichaku/',
-  title: '愛着スタイル診断｜あなたは何型の恋をする？安定型・不安型・回避型・恐れ型（無料・4分）',
+  title: '愛着スタイル診断｜あなたは何型の恋をする？安定型・不安型・回避型・恐れ型（無料・4分）｜恋のかたち診断',
   desc: '既読がつくと気になる、好きなのに一歩引いてしまう。そんな恋のくせを、安定型・不安型・回避型・恐れ型の4つの愛着スタイルで見られる無料の診断。20問・約4分・登録なし。恋愛の16タイプと好きな人との相性もわかります。',
   ld: [crumbLd([['恋のかたち診断', ''], ['愛着スタイル診断', 'aichaku/']]), { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: AI_FAQ.map(x => ({ '@type': 'Question', name: x[0], acceptedAnswer: { '@type': 'Answer', text: x[1] } })) }],
   img: BASE + 'img/og-aichaku.png?v=1',
@@ -336,7 +336,7 @@ ${LINKS('aichaku/')}`,
 CUR = 'chara';
 write('chara/index.html', page({
   url: 'chara/',
-  title: '恋愛キャラ診断｜あなたの恋は16キャラのどれ？（無料・16タイプ×愛着スタイル）',
+  title: '恋愛キャラ診断｜あなたの恋は16キャラのどれ？（無料・16タイプ×愛着スタイル）｜恋のかたち診断',
   desc: '近づき方・気持ちの伝え方・頼り方・恋の原動力の4つで決まる、16の恋愛キャラ。好きになり方・脈ありサイン・恋の弱点・相性のいいキャラがわかる無料の恋愛診断。登録なし。',
   ld: crumbLd([['恋のかたち診断', ''], ['恋愛キャラ診断', 'chara/']]),
   body: `${crumb([['恋愛キャラ診断', '']])}
