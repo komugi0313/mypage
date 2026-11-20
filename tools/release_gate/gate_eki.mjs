@@ -131,7 +131,7 @@ ok('開いただけでは文章作成を呼ばない', calls===0, 'calls='+calls
     if(!/おすすめしません/.test(T2.hantei)) bad.push('二股：'+T2.hantei);
     return {bad}; });
   ok('恋愛：易の「どうすれば」は「〜すると近づきやすい」で答える・「届いていく時期」を外す・二股はすすめない', r.bad.length===0, r.bad.join(' / ')); }
-{ const s=fs.readFileSync(path.join(ROOT,'eki-pro','app','index.html'),'utf8'); ok('年齢差：易も年齢差を説教せず卦から答える（頼み方に決まり・時期は書かない・ふれていなければ一言）', /var EKI_AGEGAP_Q=/.test(s)&&/【年齢差のご相談】/.test(s)&&/年齢差について：易では、年齢差そのもので良い悪いを決めず/.test(s)&&/function ekiAgeGapQ/.test(s)); }
+{ const s=fs.readFileSync(path.join(ROOT,'eki-pro','app','index.html'),'utf8'); ok('年齢差：易も年齢差を説教せず卦から答える（頼み方に決まり・時期は書かない・ふれていなければ一言）', /var EKI_AGEGAP_Q=/.test(s)&&/【年齢差のご相談】/.test(s)&&/年齢差について：易では、年齢差そのもので良い悪いを決めず/.test(s)&&/function ekiAgeGapQ/.test(s)&&/ekiAgeGapEnsure\(_o,q\)/.test(s)&&/ekiAgeGapEnsure\(p,q\)/.test(s)); }
 { const s=fs.readFileSync(path.join(ROOT,'eki-pro','app','index.html'),'utf8'); ok('不倫：易も既婚の方との恋を説教せず卦から答える（頼み方に決まり・時期は書かない）', /var EKI_AFFAIR_Q=/.test(s)&&/【不倫・既婚の方との恋のご相談】/.test(s)&&/時期は書かない（易の決まり）/.test(s)); }
 { const s=fs.readFileSync(path.join(ROOT,'eki-pro','app','index.html'),'utf8'); ok('恋愛：易の「優しや」を「優しさや」に直す', /\[\/優しや\(\?=\[思気心言\]\)\/g,'優しさや'\]/.test(s)); }
 { /* 2026-11-17 テスト用サイト v268 の実地の点検で直したもの */
