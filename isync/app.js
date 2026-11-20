@@ -301,7 +301,7 @@ function localAsk(){
     if(L.i<n){localAsk();return}
     L.i=0;L.p++;
     if(L.mode==='late'){lateFinish();return}
-    if(L.mode==='pair'){showResult({players:[L.partner,L.players[0]],qs:L.qs,me:'me',anon:false,local:true,pair:true});inboxSend(L.partner.ibx,L.players[0],L.qs);return}
+    if(L.mode==='pair'){{const G2={players:[L.partner,L.players[0]],qs:L.qs,me:'me',anon:false,local:true,pair:true,ibx:L.partner.ibx};showResult(G2);inboxSend(L.partner.ibx,L.players[0],L.qs).then(ok=>backDone(G2,ok))}return}
     showResult({players:L.players,qs:L.qs,me:L.mode==='solo'?'me':null,anon:false,local:true});
     };
   bindAsk((v,starOn)=>{
@@ -592,7 +592,7 @@ function mineLabel(ent){const n=ent.pl.length,me=ent.pl[ent.me];
 // ひとりの結果は、一覧に価値観のかたち（○○派×○○派）を添える（％がないので見分けられなかった。鑑定者本人 2026-11-19）
 function mineShape(e){try{const x=e.pl[0],p={name:x.n,ans:x.a.map(v=>v?{o:v[0],st:v[1],ms:v[2]*100,to:!!v[3],u:v[4]}:null)};return shapeWords({qs:e.qs,players:[p]},p)}catch(err){return''}}
 function mineView(){const L2=mineList();
-  view(`<section class="card"><p class="label">わたしの結果</p><p class="hint">このスマホに残っている結果です（新しい順・${MINE_MAX}回まで）。どこにも送っていません。</p>
+  view(`<section class="card"><p class="label">わたしの結果</p><p class="hint">このスマホに残っている結果です（新しい順・${MINE_MAX}回まで）。この一覧は、このスマホの中だけにあります。</p>
     ${L2.length?`<ul class="mine-l">${L2.map((e,j)=>{const x=mineLabel(e),n=e.pl.length,solo=n<2;
       const others=e.pl.filter((p,k)=>k!==e.me).map(p=>p.n+'さん'),sw=solo?mineShape(e):'';
       const tag=solo?'<span class="mb-tag t1">ひとりで</span>':n===2?'<span class="mb-tag t2">2人で</span>':`<span class="mb-tag t3">みんなで（${n}人）</span>`;
@@ -802,12 +802,21 @@ function inviteCard(G,p){const n=G.qs.length,nm=['あなた','ともだち'].inc
     <p class="hint hp-note">あなたの答えは、相手が答え終わるまで見えません。答えた人との結果は、このスマホのトップに30日間届きます（答えた人どうしは、おたがいの結果を見られません）。</p>
     <button class="btn ghost small" id="tog">みんなで診断する（部屋を作る）</button></section>`}
 // 答え合わせのリンクから答えた人の結果の下：送ってくれた人に結果を返す／同じ問題のまま、ほかの人も誘う
+// 答え合わせのリンクから答えた人：2人の結果は自動で相手のスマホに届く（答え合わせが届く・2026-11-18〜）。
+// 届いたときは1行だけ。届かなかったとき（古いリンク・通信の失敗）だけ「送り返す」枠を出す（鑑定者本人 2026-11-20「今ここで出す必要があるか」）
+function backFullHTML(G,top){const A=G.players[0];
+  return `<section class="card send-pt${top?' back-top':''}"><p class="pt-h"><em class="g">送る</em>${esc(A.name)}さんにも結果を送る</p>
+    <p class="hint">${top&&!G.view?`${esc(A.name)}さんには、まだ届いていません。送ったリンクを開くと、${esc(A.name)}さんにも同じ結果が出ます。`:`送ったリンクを開くと、${esc(A.name)}さんにもこの結果が出ます。`}</p>
+    <a class="btn line" id="back-line" href="#" target="_blank" rel="noopener">LINEで送る</a>
+    <button class="btn ghost small" id="back-share">ほかのアプリで送る</button><p class="hint" id="back-msg" hidden></p></section>`}
+function backOkHTML(G,st){const A=esc(G.players[0].name);
+  return `<p class="back-ok${st?' ok':''}">${st?`<b>✓ ${A}さんのスマホにも、この結果が届きました</b><span>${A}さんがアイ・シンクを開くと見られます。</span>`:`<b>${A}さんのスマホに、この結果を届けています…</b>`}</p>
+    <p class="back-also">${st?`<a class="btn line line-w small" id="back-line" href="#" target="_blank" rel="noopener">LINEでも知らせる</a><button class="btn ghost small" id="back-share" hidden></button><span class="hint" id="back-msg" hidden></span>`:''}</p>`}
+function backDone(G,ok){const s=$('back-slot');if(!s)return;
+  if(ok){s.innerHTML=backOkHTML(G,true)}else{s.innerHTML=backFullHTML(G,true)}bindBack(G)}
 function pairBackCard(G,part){const A=G.players[0],me=G.players[1],n=G.qs.length;
-  const back=`<section class="card send-pt${part===true?' back-top':''}"><p class="pt-h"><em class="g">送る</em>${esc(A.name)}さんにも結果を送る</p>
-    <p class="hint">${part===true?`まだ${esc(A.name)}さんには届いていません。送ったリンクを開くと、${esc(A.name)}さんにも同じ結果が出ます。`:`送ったリンクを開くと、${esc(A.name)}さんにもこの結果が出ます。`}</p>
-    <a class="btn line" id="back-line" href="#" target="_blank" rel="noopener">LINEで${esc(A.name)}さんに送る</a>
-    <button class="btn ghost small" id="back-share">ほかのアプリで送る</button><p class="hint" id="back-msg" hidden></p></section>`;
-  if(part===true)return back;
+  const back=backFullHTML(G,part===true);
+  if(part===true)return G.ibx&&!G.view?`<div id="back-slot">${backOkHTML(G,false)}</div>`:back;
   return `${G.backTop?'':back}
   <section class="card invite"><p class="label">この${n}問で、ほかの人とも答え合わせ</p>
     <p class="hint">あなたの答えを入れたリンクを、ほかの友だちにも送れます。</p>
@@ -825,8 +834,9 @@ function bindInvite(G){
   const inv=()=>({t:inviteText(myName(),n),u:withLink(myName(),G.qs,me.ans,ibxId(G,me,myName()))});
   const il=$('inv-line');if(il){const set=()=>{const x=inv();il.href=lineUrl(x.t,x.u)};set();il.addEventListener('click',e=>{if(!need(e))set()});const nmI=$('inv-name');if(nmI)nmI.addEventListener('input',set)}
   const is=$('inv-share');if(is)is.onclick=()=>{if(need())return;const x=inv();sendVia(x.t,x.u,$('inv-msg'))};
-  if(G.pair){const A=G.players[0],pct=pairStat(A,me,G.qs).pct,t=`${me.name}さんが答え終わりました！\n2人のシンクロ率は ${pct}% でした。くわしい結果はこちら`,u=pairLink(A,me,G.qs);
-    const bl=$('back-line');if(bl)bl.href=lineUrl(t,u);const bs=$('back-share');if(bs)bs.onclick=()=>sendVia(t,u,$('back-msg'))}}
+  if(G.pair)bindBack(G)}
+function bindBack(G){const A=G.players[0],me=G.players.find(p=>p.id===G.me)||G.players[1],pct=pairStat(A,me,G.qs).pct,t=`${me.name}さんが答え終わりました！\n2人のシンクロ率は ${pct}% でした。くわしい結果はこちら`,u=pairLink(A,me,G.qs);
+    const bl=$('back-line');if(bl)bl.href=lineUrl(t,u);const bs=$('back-share');if(bs)bs.onclick=()=>sendVia(t,u,$('back-msg'))}
 // 答え合わせのリンクを開いた人：説明 → ニックネーム → 同じ問題に答える
 function withStart(x){
   try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
@@ -859,9 +869,10 @@ function ibxId(G,p,name){if(WHERE==='claude'||!window.ISYNC_FB||!window.ISYNC_FB
   if(!G.ibx)G.ibx=rid(12);const k=keysOf(G.qs),c=codesOf(G.qs,p.ans),l=ibxSent().filter(x=>x.id!==G.ibx);
   const old=(store('kv_sent')||[]).find(x=>x&&x.id===G.ibx);
   l.push({id:G.ibx,k,c,n:name||'',at:old?old.at:Date.now()});store('kv_sent',l.slice(-20));return G.ibx}
-async function inboxSend(id,me,qs){if(!id)return;const db=await getDb();if(!db)return;
+// 届けられたら true（届かなかったときは、送り返す枠を出す）
+async function inboxSend(id,me,qs){if(!id)return false;let db;try{db=await getDb()}catch(e){return false}if(!db)return false;
   const put=c=>db.doc('inbox/'+id+'/r/'+rid(10)).set({name:(me.name||'ともだち').slice(0,10),codes:c,at:Date.now()});
-  const c=codesOf(qs,me.ans);try{await put(c)}catch(e){if(c.includes('u'))try{await put(c.replace(/u/g,'-'))}catch(e2){}}}
+  const c=codesOf(qs,me.ans);try{await put(c);return true}catch(e){if(c.includes('u'))try{await put(c.replace(/u/g,'-'));return true}catch(e2){}}return false}
 // 送った人：届いた結果を集める（30日すぎたものは消す）
 async function inboxLoad(){const sent=ibxSent();if(!sent.length)return[];const db=await getDb();if(!db)return[];
   const out=[];await Promise.all(sent.map(async s=>{let g;try{g=await db.collection('inbox/'+s.id+'/r').get()}catch(e){return}
@@ -1410,7 +1421,7 @@ function doneRoom(clear){if(clear)clear();
 function roomLaterCard(ps,room){const sc=app.querySelector('.scr');if(!sc||room.kind==='kon')return;const url=joinUrl(R.code),left=Math.max(0,Math.round(((room.created||0)+12*3600e3-Date.now())/3600e3));
   const sco=ps.length>=2&&sc.querySelector('.score');(sco?sco:sc).insertAdjacentHTML(sco?'afterend':'afterbegin',`<section class="card later-card"><p class="pt-h"><em>あとからでもOK</em>${ps.length<2?'まだあなただけです':'ほかの人も、あとから加われます'}</p>
     <p class="hint">この部屋のリンクを開いた人は、同じ問題に答えると、この結果に加わります（あと${left}時間くらい）。加わると、この画面も新しくなります。</p>
-    <a class="btn line${ps.length<2?'':' line-w'}" id="lt-ln" href="${lineUrl('アイ・シンクで価値観の答え合わせをしよう！\nこのリンクを開いて答えると、2人の結果が見られます。',url)}" target="_blank" rel="noopener" style="align-self:stretch">LINEで友だちに送る</a></section>`)}
+    <a class="btn line${ps.length<2?'':' line-w'}" id="lt-ln" href="${lineUrl('アイ・シンクで価値観の答え合わせをしよう！\nこのリンクを開いて答えると、'+(ps.length<2?'2人の結果が見られます。':'みんなの結果に加われます。'),url)}" target="_blank" rel="noopener" style="align-self:stretch">LINEで友だちに送る</a></section>`)}
 /* 画面の下に、短いお知らせを出す（数秒で消える） */
 function toast(t){let el=$('toast');if(!el){el=document.createElement('div');el.id='toast';el.setAttribute('role','status');el.setAttribute('data-nojw','');document.body.appendChild(el)}
   el.textContent=t;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),2600)}
