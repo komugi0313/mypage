@@ -44,7 +44,7 @@
     for(var i=0;i<ws.length;i++){ cur+=ws[i]; var nx=ws[i+1]; if(nx===undefined) break;
       var rest=ws.slice(i+1).join('');
       // 切ってよいのは「助詞のあと（3文字以上の言葉の前）」か「漢字・カタカナの言葉の前」だけ。数字のすぐあと（1｜回）では切らない
-      var AFT=/^(を|が|に|で|と|は|も|へ|の|から|まで|より)$/;
+      var AFT=/^(を|が|に|で|と|は|も|へ|の|から|まで|より|では|には|とは|だから|ので|のに|けど|ても|でも)$/;   // 「では」「だから」などのあとも切ってよい（「ではあ／りません」と割れていた。2026-11-21）
       var good=((!HIRA.test(nx)&&!/^ー/.test(nx))||AFT.test(ws[i]))&&!(HIRA.test(ws[i])&&ws[i].length===1&&!AFT.test(ws[i]));
       var ok=good&&len(cur)>=3&&len(rest)>=3&&!PUN.test(nx)&&!SMALL.test(nx)&&!OPEN.test(ws[i])&&!/[0-9０-９]$/.test(cur);
       if(ok){ out.push(cur); cur=''; } }
