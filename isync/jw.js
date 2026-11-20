@@ -56,6 +56,8 @@
     var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null),ns=[],n;
     while((n=w.nextNode())){ var pe=n.parentNode; if(!pe||SKIP[pe.nodeName]||pe.isContentEditable) continue; if(pe.nodeName==='J-P') continue; if(pe.closest&&pe.closest('[data-nojw]')) continue; if(n.nodeValue.length>=5&&JP.test(n.nodeValue)) ns.push(n); }
     ns.forEach(function(n){
+      // 「くん」「ちゃん」「さん」で終わる名前に「さん」を重ねない（けんたろうくんさん → けんたろうくん）
+      if(/(くん|ちゃん|さん)さん/.test(n.nodeValue)) n.nodeValue=n.nodeValue.replace(/(くん|ちゃん|さん)さん/g,'$1');
       var ps=phrases(n.nodeValue),xs=[];
       ps.forEach(function(p){ if(ps.length<2&&len(p)<=8) xs.push(p); else if(len(p)>12||(ps.length<2&&len(p)>=9)) sub(p).forEach(function(q){ xs.push(q); }); else xs.push(p); });
       ps=xs;
