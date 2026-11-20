@@ -77,10 +77,19 @@
       var pa=a.parentNode,ps=pa&&pa.nodeType===1?getComputedStyle(pa):null;
       if(ps&&/flex/.test(ps.display)&&!/column/.test(ps.flexDirection)&&ps.flexWrap==='nowrap'){ var w=cw(pa),n=0; [].forEach.call(pa.children,function(c){ if(c!==a&&getComputedStyle(c).position!=='absolute'){ var r=c.getBoundingClientRect(); if(r.width){ w-=r.width; n++; } } }); w-=n*(parseFloat(ps.columnGap)||0); return Math.min(cw(a),w-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight)-parseFloat(cs.marginLeft||0)-parseFloat(cs.marginRight||0)); }
       return cw(a); } a=a.parentNode; } return 0; }
+  // それでも分けられないときは、ふつうの言葉の切れ目で分ける（ひらがな1〜2文字の言葉は前にくっつける。言葉の途中では切らない）
+  function words(t){ var ws=[],it=seg.segment(t)[Symbol.iterator](),r; while(!(r=it.next()).done) ws.push(r.value.segment);
+    var out=[],cur='';
+    for(var i=0;i<ws.length;i++){ cur+=ws[i]; var nx=ws[i+1]; if(nx===undefined) break;
+      // 切るのは「て・ら・に・が・を・は・で・と・も・の・ば」で終わる言葉のあとだけ（「お｜こづかい」「そっ｜と」のようには切らない）
+      if(/[てらにがをはでともの\u3070]$/.test(ws[i])&&HIRA.test(ws[i])&&len(cur)>=2&&!PUN.test(nx)&&!SMALL.test(nx)&&ws.slice(i+1).join('').length>=2){ out.push(cur); cur=''; } }
+    if(cur) out.push(cur);
+    return out; }
   function fit(root){
     var js=(root||document.body).querySelectorAll('j-p'); var big=[],ch=0;
     for(var i=0;i<js.length;i++){ var j=js[i]; if(j.style.whiteSpace!=='nowrap'||j.dataset.fit) continue; var w=j.getBoundingClientRect().width; if(!w) continue; var bw=boxW(j); if(bw>0&&w>bw+1) big.push(j); }
     big.forEach(function(j){ var t=j.textContent,pc=t.replace(/・/g,'・\u0001').split('\u0001').filter(Boolean),xs=[]; pc.forEach(function(q){ sub(q).forEach(function(r){ xs.push(r); }); });
+      if(xs.length<2){ xs=words(t); }
       if(xs.length<2){ j.dataset.fit=1; return; } ch++;
       var f=document.createDocumentFragment(); xs.forEach(function(q,i){ if(i) f.appendChild(document.createElement('wbr')); var s=document.createElement('j-p'); s.style.whiteSpace='nowrap'; s.textContent=q; f.appendChild(s); });
       j.parentNode.replaceChild(f,j); });
