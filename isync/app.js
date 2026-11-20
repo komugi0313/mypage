@@ -385,12 +385,17 @@ function talkItems(G){
   if(ps.length===2){const r=pairStat(ps[0],ps[1],G.qs);return r.diff.slice().sort((x,y)=>wt(y)-wt(x)).slice(0,5)}
   return G.qs.map((k,i)=>{const c=[0,0];ps.forEach(p=>{const a=p.ans[i];if(a&&a.o>=0&&a.o<2)c[a.o]++});return{i,c}}).filter(x=>x.c[0]&&x.c[1])
     .sort((x,y)=>wt(y.i)-wt(x.i)||Math.abs(x.c[0]-x.c[1])-Math.abs(y.c[0]-y.c[1])).slice(0,5).map(x=>x.i)}
+// 答えのうしろの★が1つだけ次の行に落ちないよう、最後の言葉と★をひとまとめにする（2026-11-21）
+const ANS_SEG=window.Intl&&Intl.Segmenter?new Intl.Segmenter('ja',{granularity:'word'}):null;
+function ansSt(t,st){t=String(t);if(!st)return esc(t);let h=t,tl='';
+  if(ANS_SEG){const ws=[...ANS_SEG.segment(t)].map(x=>x.segment);tl=ws.pop()||'';while(ws.length&&tl.replace(/[、。！？]/g,'').length<3)tl=ws.pop()+tl;h=ws.join('')}else{h=t.slice(0,-3);tl=t.slice(-3)}
+  return `${esc(h)}<span class="nw" data-nojw>${esc(tl)}<span class="tk-st">★</span></span>`}
 function talkHTML(G,nm){
   const ps=G.players,its=talkItems(G),two=ps.length===2,me=ps.find(p=>p.id===G.me),tid=talkId(G),done=new Set(talkedOf(tid));
   if(its.length<2)return '';
   if(!its.length)return `<section class="card" id="talk"><p class="label">${two?'2人で':'みんなで'}話しておきたいこと</p><p class="hint">答えが反対になった問題はありませんでした。</p></section>`;
   const row=(i,n)=>{const k=G.qs[i],key=QKEY[k].slice(0,5),ok=done.has(key);
-    const ws=ansGroups(G,i).map(({v,who})=>`<span class="tkr"><span class="tkw">${G.anon?`<span class="nmc pn">${who.length}人</span>`:who.map(p=>nmChip(G,p,p===me?'あなた':p.name)).join('')}</span><span class="tka"><span>${esc(ans(v,k))}${who.some(p=>p.ans[i].st&&v<2)?'\u2060<span class="tk-st">★</span>':''}</span></span></span>`).join('');
+    const ws=ansGroups(G,i).map(({v,who})=>`<span class="tkr"><span class="tkw">${G.anon?`<span class="nmc pn">${who.length}人</span>`:who.map(p=>nmChip(G,p,p===me?'あなた':p.name)).join('')}</span><span class="tka"><span>${ansSt(ans(v,k),who.some(p=>p.ans[i].st&&v<2))}</span></span></span>`).join('');
     const ay=ayOf(k,two),hint='';   // だれから聞くかの1文は出さない（答えは名前の札で見え、聞き方はコツ・主役のカードにある。鑑定者本人 2026-11-20「はい」）
     return `<li class="${ok?'ok':''}"><b>${esc(Q[k][1])}</b><span class="tkg">${ws}</span>${hint?`<span class="tph">${hint}</span>`:''}${ay?`<span class="ayu"><b>${two?'歩み寄りの案':'みんなの歩み寄りの案'}</b>${esc(ay)}</span>`:''}<button class="talked" type="button" data-k="${key}" aria-pressed="${ok}">${ok?'✓ 話した':'話した'}</button></li>`};
   const rest=its.slice(1),top=rest.slice(0,2),more=rest.slice(2),ul=(xs,o)=>`<ul class="slist tk${two?'':' tkm'}">${xs.map((x,j)=>row(x,j+o)).join('')}</ul>`;
@@ -590,7 +595,7 @@ function twoFolds(G,trows,nm,r){
     out+=foldBox('テーマ別のシンクロ率',tz,(keep.length?themeHTML(keep,'2人'):'')+few)}
   if(G.anon){const ax=axHTML(G,me?[me]:G.players,nm);if(ax)out+=foldBox('価値観のタイプ',me?'あなたの位置':'2人の位置',ax)}
   if(r.starN){const row=(i,cls)=>{const k=G.qs[i],aa=A.ans[i],bb=B.ans[i];
-      const who=(P,x)=>(G.anon&&me&&P!==me)?'':`<span class="tkr"><span class="tkw">${nmChip(G,P,P===me?'あなた':P.name)}</span><span class="tka"><span>${esc(ans(x.o,k))}${x.st?'\u2060<span class="tk-st">★</span>':''}</span></span></span>`;
+      const who=(P,x)=>(G.anon&&me&&P!==me)?'':`<span class="tkr"><span class="tkw">${nmChip(G,P,P===me?'あなた':P.name)}</span><span class="tka"><span>${ansSt(ans(x.o,k),x.st)}</span></span></span>`;
       return `<li class="${cls}"><b>${esc(Q[k][1])}</b><span class="tkg">${who(A,aa)}${who(B,bb)}</span></li>`};
     const many=r.starDiff.length>=2&&r.starDiff.length>=r.starSame.length+r.starAdj.length;
     const verdict=!r.starDiff.length?`<p class="good">大事なところは、ちがいがありません</p>`:many?`<p class="warn">大事なところで、考え方がちがうことが多めです。この${r.starDiff.length}問は、先にゆっくり話しておくと安心です</p>`:`<p class="warn">大事なところで、ちがいが${r.starDiff.length}問あります。ここは先に話しておくと安心です</p>`;
