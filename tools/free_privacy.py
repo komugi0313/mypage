@@ -74,7 +74,7 @@ def build(key, s):
     sec.append(('1. 集める情報',
       '<p>' + esc(s['name']) + '（以下「このサイト」）は、本名・メールアドレス・電話番号・住所・生年月日などを集めません。会員登録もありません。ニックネームは本名でなくてかまいません。</p>'))
     sec.append(('2. 端末の中に保存するもの',
-      '<p>続きから診断したり、前の結果を見たりできるように、ブラウザの保存場所（ローカルストレージ）に次のものを保存します。この保存は、あなたの端末の中だけです。</p><p class="box">' + esc(s['local']) + '</p><p>クッキーは使っていません。' + esc(s['reset']) + '</p>'))
+      '<p>続きから診断したり、前の結果を見たりできるように、ブラウザの保存場所（ローカルストレージ）に次のものを保存します。この保存は、あなたの端末の中だけです。</p><p class="box">' + esc(s['local']) + '</p><p>このサイト自身はクッキーを使いませんが、アクセス解析（下の4.の Google アナリティクス）がクッキーを使います。' + esc(s['reset']) + '</p>'))
     h = '<p>次の場合に、情報がこのサイトのサーバー（Google LLC の Firebase）に送られます。</p>'
     for t, to, what, why in s['sends']:
         h += '<div class="it"><b>' + esc(t) + '</b>' + table([('送り先', esc(to)), ('送る情報', esc(what)), ('目的', esc(why))]) + '</div>'
@@ -83,6 +83,7 @@ def build(key, s):
     h += '<div class="it"><b>文字の形（Google Fonts）</b>' + table([('送り先', 'Google LLC'), ('送られる情報', 'IPアドレス、ブラウザの種類、表示したページのアドレスなど'), ('目的', '画面の文字をきれいに表示するため')]) + '</div>'
     h += '<div class="it"><b>' + esc(s['cdn']) + '</b>' + table([('送り先', 'Cloudflare, Inc.'), ('送られる情報', 'IPアドレス、ブラウザの種類など'), ('目的', '部品を読みこむため')]) + '</div>'
     h += '<div class="it"><b>サイトを置いているサーバー</b>' + table([('送り先', 'Google LLC（Firebase Hosting）'), ('送られる情報', 'IPアドレス、ブラウザの種類、見た日時など（アクセスの記録）'), ('目的', 'ページを届けるため')]) + '</div>'
+    h += '<div class="it"><b>アクセス解析（Google アナリティクス）</b>' + table([('送り先', 'Google LLC'), ('送られる情報', '見たページのアドレス（名前や答えが入る部分は消してから送ります）、どのサイトから来たか、診断が終わったこと（モードの種類だけ）、ブラウザの種類、おおよその地域など。クッキーを使います。'), ('目的', '何人が見て、何回診断されたかを数え、サイトをよくするため')]) + '<p class="mini">止めたいときは、ブラウザでクッキーをブロックするか、Google の「アナリティクス オプトアウト アドオン」（tools.google.com/dlpage/gaoptout）を使ってください。</p></div>'
     h += '<div class="it"><b>LINE・共有のボタン</b><p>押したときだけ、LINE（LINEヤフー株式会社）などのアプリが開き、送る文とリンクがその会社に渡ります。</p></div>'
     h += '<p class="mini">Google のプライバシーポリシー：<a href="https://policies.google.com/privacy?hl=ja" target="_blank" rel="noopener">policies.google.com/privacy</a></p>'
     sec.append(('4. 外部に送られる情報（外部送信）', h))

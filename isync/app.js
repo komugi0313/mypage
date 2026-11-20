@@ -623,6 +623,7 @@ function statPlay(G){try{if(!G.qs||!G.qs.length)return;
   const id=kind==='room'?'r'+(R.code||'')+'-'+((R.room||{}).round||1)+'-'+((R.room||{}).created||0):kind+'-'+G.qs.join('.')+'-'+G.qs.map((k,i)=>{const a=(me.ans||{})[i];return a&&a.ms||0}).join('');
   let seen=[];try{seen=JSON.parse(sessionStorage.getItem('kv_play')||'[]')}catch(e){}
   if(seen.includes(id))return;seen.push(id);try{sessionStorage.setItem('kv_play',JSON.stringify(seen.slice(-50)))}catch(e){}
+  try{if(window.gaEv)gaEv('play_done',{kind:kind,len:len})}catch(e){}  // アクセス解析：診断された回数（種類だけ）
   getDb().then(db=>{if(db&&db.stat)db.stat(kind+len).catch(()=>{})}).catch(()=>{})}catch(e){}}
 // 秒の出し方：1秒未満は「1秒未満」（読む時間を引くので 0.0秒・0.1秒 が出ていた）。いちばん悩んだ問題は3秒以上のときだけ出す
 const SECF=ms=>ms<1000?'1秒未満':(ms/1000).toFixed(1)+'秒',PONDER_MIN=3000;
