@@ -76,17 +76,17 @@
       if(ps&&/flex/.test(ps.display)&&!/column/.test(ps.flexDirection)&&ps.flexWrap==='nowrap'){ var w=cw(pa),n=0; [].forEach.call(pa.children,function(c){ if(c!==a&&getComputedStyle(c).position!=='absolute'){ var r=c.getBoundingClientRect(); if(r.width){ w-=r.width; n++; } } }); w-=n*(parseFloat(ps.columnGap)||0); return Math.min(cw(a),w-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight)-parseFloat(cs.marginLeft||0)-parseFloat(cs.marginRight||0)); }
       return cw(a); } a=a.parentNode; } return 0; }
   function fit(root){
-    var js=(root||document.body).querySelectorAll('j-p'); var big=[];
-    for(var i=0;i<js.length;i++){ var j=js[i]; if(j.style.whiteSpace!=='nowrap') continue; var w=j.getBoundingClientRect().width; if(!w) continue; var bw=boxW(j); if(bw>0&&w>bw+1) big.push(j); }
+    var js=(root||document.body).querySelectorAll('j-p'); var big=[],ch=0;
+    for(var i=0;i<js.length;i++){ var j=js[i]; if(j.style.whiteSpace!=='nowrap'||j.dataset.fit) continue; var w=j.getBoundingClientRect().width; if(!w) continue; var bw=boxW(j); if(bw>0&&w>bw+1) big.push(j); }
     big.forEach(function(j){ var t=j.textContent,pc=t.replace(/・/g,'・\u0001').split('\u0001').filter(Boolean),xs=[]; pc.forEach(function(q){ sub(q).forEach(function(r){ xs.push(r); }); });
-      if(xs.length<2) return;
+      if(xs.length<2){ j.dataset.fit=1; return; } ch++;
       var f=document.createDocumentFragment(); xs.forEach(function(q,i){ if(i) f.appendChild(document.createElement('wbr')); var s=document.createElement('j-p'); s.style.whiteSpace='nowrap'; s.textContent=q; f.appendChild(s); });
       j.parentNode.replaceChild(f,j); });
-    if(big.length) fit(root);
+    if(ch) fit(root);
   }
   var fq=null; function fitSoon(){ if(fq) return; fq=requestAnimationFrame(function(){ fq=null; fit(document.body); }); }
   window.addEventListener('resize',fitSoon);
   window.jwRun=run;
-  function start(){ run(document.body); fitSoon(); var t=null,q=[]; new MutationObserver(function(rs){ rs.forEach(function(r){ [].forEach.call(r.addedNodes,function(x){ if(x.nodeType===3){ if(x.parentNode&&x.parentNode.nodeName!=='J-P') q.push(x.parentNode); } else if(x.nodeType===1&&x.nodeName!=='J-P') q.push(x); }); if(r.type==='characterData'&&r.target.parentNode&&r.target.parentNode.nodeName!=='J-P') q.push(r.target.parentNode); }); if(!t) t=setTimeout(function(){ t=null; var a=q; q=[]; a.forEach(function(e){ if(e.isConnected) run(e); }); fitSoon(); },0); }).observe(document.body,{childList:true,subtree:true,characterData:true}); }
+  function start(){ run(document.body); fitSoon(); var t=null,q=[]; new MutationObserver(function(rs){ rs.forEach(function(r){ [].forEach.call(r.addedNodes,function(x){ if(x.nodeType===3){ if(x.parentNode&&x.parentNode.nodeName!=='J-P') q.push(x.parentNode); } else if(x.nodeType===1&&x.nodeName!=='J-P'&&x.nodeName!=='WBR') q.push(x); }); if(r.type==='characterData'&&r.target.parentNode&&r.target.parentNode.nodeName!=='J-P') q.push(r.target.parentNode); }); if(!t) t=setTimeout(function(){ t=null; var a=q; q=[]; a.forEach(function(e){ if(e.isConnected) run(e); }); fitSoon(); },0); }).observe(document.body,{childList:true,subtree:true,characterData:true}); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
 })();
