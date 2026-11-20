@@ -629,6 +629,16 @@ html[data-tone="f"] .tn-f,html[data-tone="s"] .tn-s{display:revert}
 .kc-tone button{flex:1;min-width:0;min-height:44px;border:2px solid #1E1E2A;border-radius:12px;background:#fff;color:#1E1E2A;font:inherit;font-weight:900;font-size:15px;white-space:nowrap}
 .kc-tone button[aria-pressed="true"]{background:#FFE071}
 .kc-tone button[data-tone="s"][aria-pressed="true"]{background:#FF9A8B}
+.kc-aru3{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.kc-aru3 .kg{border-radius:14px;padding:10px 12px;border:1.5px solid}
+.kc-aru3 h4{margin:0 0 6px;font-size:15px;font-weight:900}
+.kc-aru3 ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:15px;line-height:1.6;color:#1E1E2A}
+.kc-aru3 li{display:flex;gap:8px;align-items:flex-start}
+.kc-aru3 li>span{min-width:0}
+.kc-aru3 li i{flex:none;font-style:normal;font-weight:900;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;margin-top:2px;color:#fff}
+.kc-aru3 .kg-y{background:#E6F6EC;border-color:#9FD8B4}.kc-aru3 .kg-y h4{color:#1B7A43}.kc-aru3 .kg-y i{background:#1F8A4C}
+.kc-aru3 .kg-f{background:#FFF5D1;border-color:#EBCB6A}.kc-aru3 .kg-f h4{color:#8A5A00}.kc-aru3 .kg-f i{background:#B07A00}
+.kc-aru3 .kg-s{background:#FFEAF1;border-color:#F5A8C3}.kc-aru3 .kg-s h4{color:#B0184F}.kc-aru3 .kg-s i{background:#C81E5A}
 .kc-aru{margin-top:12px;background:#fff;border:2px solid #1E1E2A;border-radius:14px;padding:10px 12px}
 .kc-aru h4,.kc-cap{margin:0 0 6px;font-size:13px;font-weight:700;color:#5A546A}
 .kc-cap{margin:14px 0 6px}
@@ -2841,6 +2851,10 @@ function charaOf(qs, ans, opt){
   return { main:main, sub:sub, ani:ani, pref:pref, sc:sc, grade:grade, cs:cs, fit:fit.map(function(c){ return c.id; }) };
 }
 function tnHTML(o, tag){ tag=tag||'span'; return ['y','f','s'].map(function(t){ return '<'+tag+' class="tn tn-'+t+'">'+esc(o[t])+'</'+tag+'>'; }).join(''); }
+function aru3HTML(c){ // あるある9つを「いいところ／あるある／じつは」の3段で全部見せる（言い方の切りかえはやめた）
+  var g=[['y','kg-y','✓',c.name+'のいいところ'],['f','kg-f','！',c.name+'のあるある'],['s','kg-s','♡','じつは…（本音）']];
+  return '<div class="kc-aru3">'+g.map(function(x){ return '<div class="kg '+x[1]+'"><h4>'+esc(x[3])+'</h4><ul>'+c.tone[x[0]].slice(0,3).map(function(t){ return '<li><i aria-hidden="true">'+x[2]+'</i><span>'+esc(t)+'</span></li>'; }).join('')+'</ul></div>'; }).join('')+'</div>';
+}
 function tnList(c, from, to, key){ // あるある（または症状）の from〜to 番目を、やさしめ・辛口・激辛のぶん並べる
   var h=''; ['y','f','s'].forEach(function(t){ c[key||'tone'][t].slice(from,to).forEach(function(s){ h+='<li class="tn tn-'+t+'">'+esc(s)+'</li>'; }); }); return h;
 }
@@ -2865,8 +2879,7 @@ function charaHTML(qs, ans, label, cls, fold, opt){
       (r.ani ? '<div class="kc-row"><b>動物でいうと</b>'+pill(r.ani.name)+'<span class="kc-rs">'+esc(r.ani.say)+'</span></div>' : '')+
       (r.pref.length ? '<div class="kc-row"><b>好きになりやすい人</b>'+r.pref.map(pill).join('')+'</div>' : '')+
     '</div>'+
-    '<div class="kc-tone"><span>言い方</span>'+[['y','やさしめ'],['f','辛口'],['s','激辛']].map(function(x){ return '<button type="button" data-tone="'+x[0]+'" aria-pressed="'+(toneGet()===x[0])+'">'+x[1]+'</button>'; }).join('')+'</div>'+
-    '<div class="kc-aru"><h4>'+esc(c.name)+'のあるある</h4><ul>'+tnList(c,0,3)+'</ul></div>'+
+    aru3HTML(c)+
     '<button type="button" class="linkb kc-zk" data-zukan="'+MK+'">ほかのキャラも見る（キャラ図鑑）</button>';
   // 4枚のカード
   var top=kt.words.slice(0,6), hito=kt.hito.slice(0,3), hx='「'+(hito[0]||c.name)+'」';
@@ -2876,20 +2889,20 @@ function charaHTML(qs, ans, label, cls, fold, opt){
     hito.slice(0,2).map(function(w,i){ return '<div class="lb-row lb-sub"><span>うち、'+esc(w)+'</span><span>'+(i?'多め':'かなり多め')+'</span></div>'; }).join('')+
     (top.length ? '<p class="lb-raw"><b>原材料名：</b>'+top.map(esc).join('、')+(hito[2]?'（一部に'+esc(hito[2])+'を含む）':'')+'</p>' : '')+
     (r.pref.length ? '<p class="lb-raw"><b>好きになりやすい人：</b>'+r.pref.map(esc).join('・')+'</p>' : '')+
-    '<p class="lb-warn">注意：'+tnHTML({y:D.warn.y.replace('{x}',hx),f:D.warn.f.replace('{x}',hx),s:D.warn.s.replace('{x}',hx)})+'</p></div>';
+    '<p class="lb-warn">注意：'+esc(D.warn.f.replace('{x}',hx))+'</p></div>';
   var C='<div class="kcd kc-manual"><p class="mn-h">'+esc(who)+' 取扱説明書（'+esc(c.name)+(an?'・'+esc(an):'')+'）</p><div class="mn-b">'+
     '<div class="mn-s"><b>よろこぶこと</b><ul>'+c.yoro.map(function(s){ return '<li>'+esc(s)+'</li>'; }).join('')+'</ul></div>'+
     '<div class="mn-s"><b>こうすると、すねます</b><ul>'+c.sune.map(function(s){ return '<li>'+esc(s)+'</li>'; }).join('')+'</ul></div>'+
-    '<div class="mn-s mn-c"><b>注意</b><ul>'+tnHTML(c.chui,'li')+'</ul></div>'+
+    '<div class="mn-s mn-c"><b>注意</b><ul>'+['y','f','s'].map(function(t){ return '<li>'+esc(c.chui[t])+'</li>'; }).join('')+'</ul></div>'+
     '<div class="mn-s"><b>相性のいい機種</b><ul><li>'+c.kiki.map(esc).join('・')+'</li></ul></div></div></div>';
   var cause=kt.words.filter(function(w){ return KOTOBA[MK].theme[w]===5; }).slice(0,2); if(!cause.length) cause=top.slice(0,2);
   var E='<div class="kcd kc-karte"><h3>診断書</h3><dl class="kr">'+
     '<dt>患者名</dt><dd>'+esc(who)+(who==='あなた'?'':' 様')+'</dd>'+
     '<dt>病名</dt><dd><span class="kr-byo">'+byoH(c.byo)+'</span>'+(r.sub?'<span class="kr-sub">ほか「'+byoH(r.sub.byo)+'」の疑い</span>':'')+'</dd>'+
-    '<dt>症状</dt><dd><ul>'+tnList(c,0,2,'sym')+'</ul></dd>'+
+    '<dt>症状</dt><dd><ul>'+['y','f','s'].map(function(t){ return '<li>'+esc(c.sym[t][0])+'</li>'; }).join('')+'</ul></dd>'+
     (cause.length ? '<dt>原因</dt><dd>'+cause.map(esc).join('／')+'</dd>' : '')+
     '<dt>処方</dt><dd><ul>'+c.sho.map(function(s){ return '<li>'+String(s).split('　').map(function(x){ return '<span class="byw">'+esc(x)+'</span>'; }).join(' ')+'</li>'; }).join('')+'</ul></dd></dl>'+
-    '<p class="kr-doc">医師より：'+tnHTML(c.doc)+'</p><div class="kr-hanko">'+(NM?'ふだんの':'恋の')+'<br>クリニック</div></div>';
+    '<p class="kr-doc">医師より：'+esc(c.doc.f)+'</p><div class="kr-hanko">'+(NM?'ふだんの':'恋の')+'<br>クリニック</div></div>';
   var G=D.subj.map(function(s){ return { s:s, g:r.grade[s.k] }; });
   var hi=G.slice().sort(function(a,b){ return b.g-a.g; })[0], lo=G.slice().sort(function(a,b){ return a.g-b.g; })[0];
   var tch=hi.g===lo.g ? {y:'どの科目も、バランスよくできました。',f:'どの科目もそろっています。次は、どれか1つで目立ってみましょう。',s:'全部の科目が同じ点です。逆に、先生はあなたのことがまだよくわかりません。'} :
@@ -2898,7 +2911,7 @@ function charaHTML(qs, ans, label, cls, fold, opt){
   var F='<div class="kcd kc-tsuchi"><h3>'+(NM?'ふだんの':'恋の')+'通知表</h3><p class="ts-nm">'+esc(who)+(who==='あなた'?'':' さん')+'　'+esc(c.name)+(an?'（'+esc(an)+'）':'')+'</p>'+
     '<table class="ts-t"><tr><th>科目</th><th>評価</th><th>先生から</th></tr>'+
     G.map(function(x){ return '<tr><td class="ts-k">'+esc(x.s.name)+'</td><td class="ts-g'+(x.g<=2?' lo':'')+'">'+x.g+'</td><td>'+esc(x.s.g[x.g-1])+'</td></tr>'; }).join('')+
-    '</table><div class="ts-tc"><b>先生のひとこと</b>'+tnHTML(tch)+'</div></div>';
+    '</table><div class="ts-tc"><b>先生のひとこと</b>'+esc(tch.f)+'</div></div>';
   var tabs='<div class="kc-tabs" role="tablist">'+[['E','診断書'],['F','通知表'],['A','成分表示'],['C','取扱説明書']].map(function(x,i){ return '<button type="button" data-nocg data-card="'+x[0]+'" aria-selected="'+(i?'false':'true')+'">'+x[1]+'</button>'; }).join('')+'</div>'+
     '<div class="kc-cards"><div class="kc-c" data-c="E">'+E+'</div><div class="kc-c" data-c="F" hidden>'+F+'</div><div class="kc-c" data-c="A" hidden>'+A+'</div><div class="kc-c" data-c="C" hidden>'+C+'</div></div>'+
     '<button type="button" class="linkb kc-save">このカードを画像で送る</button>';
@@ -3059,8 +3072,7 @@ function renderZukan(){
     var li=function(a){ return a.map(function(s){ return '<li>'+esc(s)+'</li>'; }).join(''); };
     h+='<div class="card kc zk-d'+(NM?' kc-n':'')+'"><div class="zk-dpic">'+zkPic(c,200)+'</div>'+
       '<p class="zk-dnm">'+esc(c.name)+'</p><p class="kc-say zk-dsay">'+esc(c.say)+'</p>'+(c.miryoku?'<p class="kc-mi zk-mi"><b>このキャラの恋の魅力</b>'+esc(c.miryoku)+'</p>':'')+'<p class="kc-desc">'+esc(c.desc)+'</p>'+
-      '<div class="kc-tone"><span>言い方</span>'+[['y','やさしめ'],['f','辛口'],['s','激辛']].map(function(x){ return '<button type="button" data-tone="'+x[0]+'" aria-pressed="'+(toneGet()===x[0])+'">'+x[1]+'</button>'; }).join('')+'</div>'+
-      '<div class="kc-aru"><h4>'+esc(c.name)+'のあるある</h4><ul>'+tnList(c,0,3)+'</ul></div>'+
+        aru3HTML(c)+
       '<div class="kc-aru"><h4>よろこぶこと</h4><ul>'+li(c.yoro)+'</ul></div>'+
       '<div class="kc-aru"><h4>こうすると、すねます</h4><ul>'+li(c.sune)+'</ul></div>'+
       '<div class="kc-aru"><h4>相性のいいキャラ</h4><p class="zk-kiki">'+c.kiki.map(esc).join('・')+'</p></div>'+
