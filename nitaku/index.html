@@ -1269,15 +1269,7 @@ input,select,textarea{font-size:max(16px,1em)}
     <li><span class="fi"><img src="img/icon-change.webp" alt="" width="32" height="32"></span><span><b>遊ぶたびに問題が変わる</b>一度出た問題は、全部出しきるまで出てきません</span></li>
   </ul>
   <details class="opts" id="opts">
-    <summary><span id="opts-t">細かい設定（問題の数・答え合わせ）</span></summary>
-    <div id="num-box">
-      <div class="label">みんなで遊ぶときの問題の数</div>
-      <div class="seg seg2" id="seg-num">
-        <button data-v="8" aria-pressed="false"><b>8問</b><small>さくっと</small></button>
-        <button data-v="15" aria-pressed="true"><b>15問</b><small>じっくり</small></button>
-      </div>
-      <p class="hint" id="mix-note">8問で難しさがノーマルのときは、前半にノーマル4問、後半にハード4問が出ます（だんだん地獄に）。イージー・ハードを選ぶと、8問ともその難しさです。ひとりで遊ぶときは15問です。</p>
-    </div>
+    <summary><span id="opts-t">細かい設定（答え合わせ）</span></summary>
     <p class="hint" id="mix-num" hidden>まぜまぜ編は、いつも20問（恋の問題12問＋日常の問題8問）です。</p>
     <div class="label">みんなで遊ぶときの答え合わせ</div>
     <div class="seg seg2" id="seg-rv">
@@ -1826,9 +1818,7 @@ function applyMode(m){
   else if(S.mode!==m || S.hon) setMode(m);
 }
 function honSoloText(){ var sm=document.querySelector('#go-solo small'); if(sm) sm.textContent = S.hon ? '20問・1問5秒' : (S.mode==='normal' ? MIX_N+'問・約5分' : '15問・約5分');
-  if($('num-box')) $('num-box').hidden = S.mode==='normal';   // まぜまぜ編はいつも20問
   if($('mix-num')) $('mix-num').hidden = S.mode!=='normal';
-  if($('opts-t')) $('opts-t').textContent = S.mode==='normal' ? '細かい設定（答え合わせ）' : '細かい設定（問題の数・答え合わせ）';
   // 本能モードは20問・1問5秒・最後にまとめて答え合わせと決まっているので、細かい設定（問題の数・難しさ・答え合わせ）は出さない
   var op=$('opts'); if(op){ op.hidden=!!S.hon; if(S.hon) op.open=false; } if($('lv-box')) lvBox(); }
 function seg(id, cb){
@@ -1846,7 +1836,7 @@ function startLabels(){
   if(a) a.innerHTML='<span class="nwp">ひとりで</span> <span class="nwp">'+nm+'</span>'; if(g) g.innerHTML='<span class="nwp">みんなで</span> <span class="nwp">'+nm+'</span>';
   var w=$('stp-who'); if(w) w.textContent = S.hon ? '2' : '3';
 }
-seg('seg-num', function(v){ S.gnum=+v; lvBox(); });
+S.gnum=15;   // みんなで遊ぶときもいつも15問（8問の切りかえは出さない）
 seg('seg-who', function(v){ S.who=v; });
 seg('seg-lv', function(v){ S.lv=v; });
 seg('seg-style', function(v){ S.style=v; styleHint(); });
@@ -1932,7 +1922,7 @@ $('go2').onclick=function(){
 /* 開始 */
 function start(){
   S.honPlay=false; S.lastHon=false;
-  S.num = S.mode==='normal' ? MIX_N : (S.who==='group' ? S.gnum : 15);
+  S.num = S.mode==='normal' ? MIX_N : 15;
   S.mix = S.mode!=='normal' && S.who==='group' && S.num===8 && S.lv==='normal';   // イージー・ハードを選んだときは、みんなで8問でも全部その難しさ（鑑定者本人の指示 2026-11-15）
   S.qs = S.mode==='normal' ? pickMix(S.lv) : S.mix
     ? pickQuestions(S.mode, 4, 'normalOnly').concat(pickQuestions(S.mode, 4, 'hard'))   // 前半ノーマル・後半ハード
@@ -3182,7 +3172,7 @@ function resetAll(){
   try{ localStorage.removeItem('nitaku_mine'); localStorage.removeItem('nitaku_me'); localStorage.removeItem('nitaku_room'); localStorage.removeItem('nitaku_players'); localStorage.removeItem('nitaku_seen_love'); localStorage.removeItem('nitaku_seen_normal'); localStorage.removeItem('nitaku_recent_love'); localStorage.removeItem('nitaku_recent_normal'); localStorage.removeItem('nitaku_hist_love'); localStorage.removeItem('nitaku_hist_normal'); localStorage.removeItem('nitaku_seen_hon'); localStorage.removeItem('nitaku_chara_ans'); }catch(e){}
   S.players=[]; S.qs=[]; S.qi=0; S.pi=0; S.ans=[]; S.times=[]; S.counts=null; S.sent={}; S.mix=false;
   S.who='solo'; S.lv='normal'; S.gnum=15; S.style='room'; S.rv='end';
-  [['seg-who','solo'],['seg-lv','normal'],['seg-num','15'],['seg-style','room'],['seg-rv','end']].forEach(function(x){
+  [['seg-who','solo'],['seg-lv','normal'],['seg-style','room'],['seg-rv','end']].forEach(function(x){
     document.querySelectorAll('#'+x[0]+' button').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.v===x[1]?'true':'false'); });
   });
   lvBox(); styleHint(); try{ $('opts').open=false; }catch(e){}
@@ -4248,7 +4238,7 @@ function roomLv(){ return S.lv+(S.rv==='end' || S.hon ?'|end':''); }
 function roomQs(){
   if(S.hon){ S.num=HON_N; S.mix=false; return honPick(); }   // 本能モード：答え合わせは最後にまとめて
   if(S.mode==='normal'){ S.num=MIX_N; S.mix=false; return pickMix(S.lv); }
-  S.num = S.gnum===8 ? 8 : 15; S.mix = S.num===8 && S.lv==='normal';
+  S.num = 15; S.mix = false;
   return S.mix ? pickQuestions(S.mode, 4, 'normalOnly').concat(pickQuestions(S.mode, 4, 'hard')) : pickQuestions(S.mode, S.num, S.lv);
 }
 async function createRoom(){
@@ -4261,7 +4251,7 @@ async function createRoom(){
     await Room.init();
     if(Room.mode()==='off'){ toast('いまは部屋を作れません。電波のよいところで、もう一度押してね'); return; }
     var pid=newPid(), me={ name:name, joined:Date.now(), ans:{ dev:TAB+':'+Date.now() }, times:{} }, res='ng';
-    var room={ code:'', host:pid, mode:roomMode(), lv:roomLv(), num:S.hon?HON_N:(S.mode==='normal'?MIX_N:S.gnum), mix:!S.hon && S.mode!=='normal' && S.gnum===8, round:1, qs:[], phase:'lobby', qi:0 };
+    var room={ code:'', host:pid, mode:roomMode(), lv:roomLv(), num:S.hon?HON_N:(S.mode==='normal'?MIX_N:15), mix:false, round:1, qs:[], phase:'lobby', qi:0 };
     if(Room.mode()==='db'){
       try{ res=await Room.create(room, pid, me); }catch(e){ res='ng'; }
       if(res!=='ok'){ toast('部屋を作れませんでした。少し待ってから、もう一度押してね'); return; }
