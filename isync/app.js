@@ -265,7 +265,28 @@ function askHTML(k,i,n,{who,step,star,starOn,to,u,nav,qs,room,quit}){
     <button class="opt-u" type="button" data-v="3">${UNDEC}</button>${seatsLow?seats:''}`}
   </section>`;
 }
+// その問題が長くて「まだ決められない」まで1画面に入らないときだけ、その問題の文字・答えのボタンを少しずつ小さくする
+// （問題の文17px・答え15px・ボタンの高さ46pxまで。鑑定者本人 2026-11-21「とにかくはみ出さないで綺麗に見えたい」）
+function askFit(){
+  const a=app.querySelector('.card.ask'),q=a&&a.querySelector('.q'),u=a&&a.querySelector('.opt-u');if(!a||!q||!u)return;
+  const os=[...a.querySelectorAll('.opt')],tip=a.querySelector('.star-tip'),ifl=a.querySelector('.if');
+  a.style.rowGap='';const op=a.querySelector('.opts');if(op)op.style.gap='';
+  q.style.fontSize='';os.forEach(o=>{o.style.fontSize='';o.style.minHeight=''});if(tip)tip.style.display='';if(ifl)ifl.style.display='';
+  const need=()=>u.getBoundingClientRect().bottom+(window.scrollY||0);
+  let qf=parseFloat(getComputedStyle(q).fontSize)||20,of=os[0]?parseFloat(getComputedStyle(os[0]).fontSize)||17:17,oh=os[0]?parseFloat(getComputedStyle(os[0]).minHeight)||52:52,n=0;
+  let rg=parseFloat(getComputedStyle(a).rowGap)||0;
+  while(need()>innerHeight&&n<30){n++;
+    if(rg>7){rg=7;a.style.rowGap='7px';if(op)op.style.gap='6px'}
+    else if(qf>17){qf=Math.max(17,qf-.5);q.style.fontSize=qf+'px'}
+    else if(oh>46){oh=Math.max(46,oh-2);os.forEach(o=>o.style.minHeight=oh+'px')}
+    else if(of>15){of=Math.max(15,of-.5);os.forEach(o=>o.style.fontSize=of+'px')}
+    else if(tip&&tip.style.display!=='none'){tip.style.display='none'}
+    else if(ifl&&ifl.style.display!=='none'){ifl.style.display='none'}
+    else break}
+}
+(()=>{let tm;window.addEventListener('resize',()=>{clearTimeout(tm);tm=setTimeout(askFit,120)})})();
 function bindAsk(onPick){
+  askFit();
   app.querySelectorAll('.opt,.opt-u').forEach(b=>b.onclick=()=>onPick(+b.dataset.v));
   const s=$('star');if(s)s.onclick=()=>{const on=s.getAttribute('aria-pressed')!=='true';s.setAttribute('aria-pressed',on);onPick(null,on)};
 }
