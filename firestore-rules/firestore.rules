@@ -5,23 +5,40 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ---------- 究極の二択（nitaku/firestore.rules）----------
-    // みんなで遊ぶ部屋（4けたの部屋番号。12時間で消す＝expireAt に TTL を設定）
+    // みんなで遊ぶ部屋。置き場所の名前は「4けたの番号-見分けの印（6文字）」（2026-11-20。前の部屋は4けたの番号だけ）。
+    // 部屋と参加者は、作ってから10日で消す（expireAt に TTL を設定する）。最後に動いた時刻は seen
     match /nitaku_rooms/{code} {
-      allow read: if code.matches('^[0-9]{4}$');
-      allow create, update: if code.matches('^[0-9]{4}$')
-        && request.resource.data.keys().hasOnly(['code','host','mode','lv','num','mix','round','qs','phase','qi','used','created','expireAt'])
-        && request.resource.data.code == code
+      allow read: if code.matches('^[0-9]{4}(-[a-z0-9]{6})?$');
+      allow create, update: if code.matches('^[0-9]{4}(-[a-z0-9]{6})?$')
+        && request.resource.data.keys().hasOnly(['code','host','mode','lv','num','mix','round','qs','phase','qi','used','created','seen','expireAt'])
+        && request.resource.data.code == code.split('-')[0]
         && request.resource.data.qs.size() <= 15;
       allow delete: if false;
 
-      // 部屋に入った人（名前と答えだけ）
+      // 部屋に入った人（名前と答えだけ。late＝あとから答えて加わった回）
       match /players/{pid} {
-        allow read: if code.matches('^[0-9]{4}$');
+        allow read: if code.matches('^[0-9]{4}(-[a-z0-9]{6})?$');
         allow create, update: if pid.size() <= 64
-          && request.resource.data.keys().hasOnly(['name','joined','ans','times','mine','expireAt'])
+          && request.resource.data.keys().hasOnly(['name','joined','ans','times','mine','seen','late','expireAt'])
           && request.resource.data.name is string && request.resource.data.name.size() <= 20;
         allow delete: if true;
       }
+    }
+
+    // 番号の表：いまその4けたの番号を使っている部屋の見分けの印（番号を手で入れたときに探す）。
+    // 作ってから12時間たった番号だけ、別の部屋に使い回せる
+    match /nitaku_codes/{code} {
+      allow read: if code.matches('^[0-9]{4}$');
+      allow create: if code.matches('^[0-9]{4}$')
+        && request.resource.data.keys().hasOnly(['tag','created','expireAt'])
+        && request.resource.data.tag is string && request.resource.data.tag.matches('^[a-z0-9]{6}$')
+        && request.resource.data.created is int;
+      allow update: if code.matches('^[0-9]{4}$')
+        && request.resource.data.keys().hasOnly(['tag','created','expireAt'])
+        && request.resource.data.tag is string && request.resource.data.tag.matches('^[a-z0-9]{6}$')
+        && request.resource.data.created is int
+        && request.time.toMillis() - resource.data.created >= 43200000;
+      allow delete: if false;
     }
 
     // みんなの回答％（問題ごとに a・b の数だけ。1回に1つずつしか増やせない）
@@ -95,8 +112,16 @@ service cloud.firestore {
   
 
     // ---------- アイ・シンク（isync/firestore.rules）----------
-    // みんなのスマホで診断する部屋。置き場所の名前は「4けたの番号-見分けの印（6文字）」（2026-11-20。前の部屋は4けたの番号だけ）。
-    // 部屋のリンクは作ってから10日使える。部屋と参加者は作ってから10日で消す（expireAt に TTL を設定する）
+    // 部屋番号の表（番号→いまこの番号を使っている部屋の見分けの印。作ってから12時間。2026-11-20）
+    match /isync_codes/{code} {
+      allow read: if code.matches('^[0-9]{4}$');
+      allow create, update: if code.matches('^[0-9]{4}$')
+        && request.resource.data.keys().hasOnly(['tag','created','expireAt'])
+        && request.resource.data.tag is string && request.resource.data.tag.matches('^[a-z0-9]{6}$')
+        && request.resource.data.created is int;
+      allow delete: if false;
+    }
+    // みんなのスマホで診断する部屋（置き場所の名前は「4けたの番号-見分けの印6文字」。前の形の4けただけの部屋も読める。作ってから10日で消す＝expireAt に TTL を設定。2026-11-20）
     match /isync_rooms/{code} {
       allow read: if code.matches('^[0-9]{4}(-[a-z0-9]{6})?$');
       allow create, update: if code.matches('^[0-9]{4}(-[a-z0-9]{6})?$')
@@ -108,7 +133,7 @@ service cloud.firestore {
       // 部屋に入った人（ニックネームと答え。婚活・街コンの部屋では、番号・性別・合う人に出してほしい人・名前を見せてもいい相手・見せる名前）
       match /players/{pid} {
         allow read: if code.matches('^[0-9]{4}(-[a-z0-9]{6})?$');
-        allow create, update: if pid.size() <= 64
+        allow create, update: if code.matches('^[0-9]{4}(-[a-z0-9]{6})?$') && pid.size() <= 64
           && request.resource.data.keys().hasOnly(['name','ans','round','joined','ready','no','sex','want','reveal','rname','expireAt'])
           && request.resource.data.name is string && request.resource.data.name.size() <= 20
           && request.resource.data.ans is map && request.resource.data.ans.size() <= 30
@@ -119,20 +144,6 @@ service cloud.firestore {
           && (!('rname' in request.resource.data) || (request.resource.data.rname is string && request.resource.data.rname.size() <= 20));
         allow delete: if true;
       }
-    }
-    // 番号の表：いまその4けたの番号を使っている部屋の見分けの印（番号を手で入れたときに探す）。作ってから12時間たった番号だけ、別の部屋に使い回せる
-    match /isync_codes/{code} {
-      allow read: if code.matches('^[0-9]{4}$');
-      allow create: if code.matches('^[0-9]{4}$')
-        && request.resource.data.keys().hasOnly(['tag','created','expireAt'])
-        && request.resource.data.tag is string && request.resource.data.tag.matches('^[a-z0-9]{6}$')
-        && request.resource.data.created is int;
-      allow update: if code.matches('^[0-9]{4}$')
-        && request.resource.data.keys().hasOnly(['tag','created','expireAt'])
-        && request.resource.data.tag is string && request.resource.data.tag.matches('^[a-z0-9]{6}$')
-        && request.resource.data.created is int
-        && request.time.toMillis() - resource.data.created >= 43200000;
-      allow delete: if false;
     }
     // みんなの答え（問題ごとに、答えA＝a・答えB＝b・3つ目＝c の数だけ。1回に1つずつしか増やせない・減らせない・消せない。名前は入れない）
     match /isync_votes/{qid} {
@@ -161,7 +172,7 @@ service cloud.firestore {
         && request.resource.data.codes.matches('^[0-5u-]+$')
         && request.resource.data.at is int
         && request.resource.data.expireAt is timestamp
-        && request.resource.data.expireAt <= request.time + duration.value(31, 'd');
+        && request.resource.data.expireAt <= request.time + duration.value(11, 'd');
       allow update: if false;
       allow delete: if resource.data.expireAt < request.time;
     }

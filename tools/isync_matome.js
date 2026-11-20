@@ -167,7 +167,7 @@ PAGES.forEach(p => {
   const desc = p.lead.split('。').slice(0, 2).join('。') + '。無料・登録なしで、2人でもみんなでも答え合わせできます。';
   const ld = { '@context': 'https://schema.org', '@type': 'ItemList', name: p.h1s, numberOfItems: p.n,
     itemListElement: p.list.map((i, n) => ({ '@type': 'ListItem', position: n + 1, name: Q[i].q })) };
-  // 結果の見本：ずれた2問（歩み寄りの案がある大事な問題）・ぴったり4問・合わせられる1問
+  // 結果の見本：ずれた2問（歩み寄りの案がある大事な問題）・ぴったり4問・近い1問
   const byW = [...p.list].sort((a, b) => (WB.has(b) - WB.has(a)) || len(Q[a]) - len(Q[b]));
   const dif = byW.filter(i => AY[Q[i].q]).slice(0, 2);
   const rest = byW.filter(i => !dif.includes(i));
@@ -186,7 +186,7 @@ PAGES.forEach(p => {
  <div class="sr"><div class="ring" style="--p:${pct}"><b>${pct}<small>%</small></b></div><p><b>シンクロ率</b><span>合う ${same.length + adj.length}問・ずれた ${dif.length}問</span></p></div>
  <h3 class="g-ok">合うところ</h3><ul class="sl">
  ${same.map((i, n) => { const x = Q[i]; return `<li><span class="sq">${esc(x.q)}</span><span class="sa ok">2人とも「${esc(ans(x, n % 2))}」</span></li>`; }).join('')}
- ${adj.map(i => { const x = Q[i]; return `<li><span class="sq">${esc(x.q)}</span><span class="sa ad">あなた「${esc(x.a)}」／あの人「${esc(x.c)}」＝合わせられる</span></li>`; }).join('')}</ul>
+ ${adj.map(i => { const x = Q[i]; return `<li><span class="sq">${esc(x.q)}</span><span class="sa ad">あなた「${esc(x.a)}」／あの人「${esc(x.c)}」＝近い</span></li>`; }).join('')}</ul>
  <h3 class="g-ng">ずれたところ</h3><ul class="sl">
  ${dif.map((i, n) => { const x = Q[i]; return `<li><span class="sq">${esc(x.q)}</span><span class="sa ng">あなた「${esc(x.a)}」／あの人「${esc(x.b)}」</span>${n ? '' : `<span class="ayt"><b>歩み寄りの案</b>${esc(AY[x.q])}</span>`}</li>`; }).join('')}</ul>
  <p class="smp-q"><b>あなたとあの人は、どこが合って、どこがずれる？</b>同じ質問に別々に答えると、わかります。</p>

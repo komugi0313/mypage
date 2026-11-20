@@ -46,11 +46,12 @@ CSS = """<style>
 .sis166 .bn-is .nm{font-family:'Quicksand',sans-serif;font-weight:700;font-size:21px;letter-spacing:.02em}
 .sis166 .bn-is .nm small{font-family:inherit;font-size:11px;font-weight:700;margin-left:5px;letter-spacing:0}
 .sis166 .bn-is .go{background:#fff;color:#2A2559}
-.sis166 .bn-wa{background:linear-gradient(180deg,#E6F3F6,#F8FCFD);border:1px solid #BCDCE3;box-shadow:0 4px 14px rgba(47,104,120,.14);color:#2F3A45}
+.sis166 .bn-wa{background:#E8F3F4;border:1.5px solid #A9D3D6;box-shadow:0 4px 14px rgba(40,90,100,.10);color:#244E57}
 .sis166 .bn-wa .pic img{border-radius:14px}
-.sis166 .bn-wa .nm{font-weight:900;color:#2F6878}
-.sis166 .bn-wa .dm{color:#4E5A66}
-.sis166 .bn-wa .go{background:#2F6878;color:#fff}
+.sis166 .bn-wa .nm{font-weight:900;color:#1F4A55}
+.sis166 .bn-wa .ln{color:#2F5560}
+.sis166 .bn-wa .dm{color:#3E6670}
+.sis166 .bn-wa .go{background:#2C6573;color:#fff}
 .sis166 .bn:active{transform:translateY(1px)}
 @media (max-width:360px){.sis166 .bn{gap:8px;padding:10px}.sis166 .bn .nm{font-size:16px}.sis166 .bn-is .nm{font-size:18px}.sis166 .bn .go{padding:8px 10px;font-size:12px}.sis166 .bn .pic img{transform:scale(.88);transform-origin:bottom}}
 </style>"""

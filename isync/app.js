@@ -51,6 +51,9 @@ function view(h){app.innerHTML='<div class="scr">'+h+'</div>';window.scrollTo(0,
 const AX=Object.entries(window.SY_AX||{}).map(([key,a])=>{const m=new Map();a.qs.forEach(([t,o])=>{const i=Q.findIndex(q=>q[1]===t);if(i>=0)m.set(i,o)});return{key,l:a.l,r:a.r,name:a.name,m}}).filter(a=>a.m.size);
 // その人の傾向：左の答え＝1・こだわらない＝0.5・右の答え＝0 の平均（左寄りの％）。その物差しの問題に答えていなければ null
 function axScore(p,qs,a){let s=0,n=0;qs.forEach((k,i)=>{if(!a.m.has(k))return;const x=p.ans[i];if(!x||x.o<0)return;n++;s+=x.o===2?.5:x.o===a.m.get(k)?1:0});return n?{pct:Math.round(s/n*100),n}:null}
+// 本当に「どっちでも合わせられる」答え（3つ目の答えが「日による」「ふつう」などの問題は、まん中の答えで、合わせられるには数えない。鑑定者本人 2026-11-20）
+const FLEX_L=new Set(['どっちも','どっちも好き','どっちも大事','気にしない','金額は気にしない']);
+const isFlex=(o,k)=>o===2&&(!Q[k][4]||FLEX_L.has(Q[k][4]));
 const ans=(o,k)=>o===0?Q[k][2]:o===1?Q[k][3]:o===2?(Q[k][4]||'どっちでも合わせられる'):o===3?UNDEC:'時間切れ';
 // 「まだ決められない」（鑑定者本人 2026-11-19「絶対に答えなくても良いように」「即決できないという答えもわかる」）：答えの o は -1 のまま u:1 を付ける＝シンクロ率・みんなの答えの％には数えない。結果に「まだ決められなかった問題」として出す
 const UNDEC='まだ決められない',oOf=a=>!a?-1:a.u?3:a.o;
@@ -134,7 +137,7 @@ function goTop(){
   ${PACK?`<section class="card packb"><p class="label">「${esc(PACK.title)}」の質問から出します</p><p class="hint">このテーマの質問だけで、ひとりでも、みんなでも診断できます。</p><button class="btn ghost small" id="packx">いつもの質問にもどす</button></section>`:''}
   <section class="card ov" aria-label="見本：2人の答えの重なり">
     <div class="ov-who"><span>あなた</span><span>あの人</span></div>
-    ${OV_ROWS.map(([q,a,b])=>{const k=Q.findIndex(x=>x[1]===q);if(k<0)return'';const mk=a===b?['eq','ぴったり']:(a===2||b===2)?['al','合わせられる']:['ne','ちがい'];
+    ${OV_ROWS.map(([q,a,b])=>{const k=Q.findIndex(x=>x[1]===q);if(k<0)return'';const mk=a===b?['eq','ぴったり']:(a===2||b===2)?['al','近い']:['ne','ちがい'];
       return `<div class="ov-r"><p class="ov-q"><span>${esc(q)}</span><i class="ov-m ${mk[0]}">${mk[1]}</i></p><span class="ov-c me">${esc(ans(a,k))}</span><span class="ov-c you">${esc(ans(b,k))}</span></div>`}).join('')}
     <div class="ov-sum"><p class="ov-cap">2人のシンクロ率</p><div class="ov-ring"><span>78<small>%</small></span></div>
       <p class="ov-why"><b>2人の価値観が、どれだけ重なっているか</b>がひと目でわかる数字です。お金・将来・暮らしのような大事な問題ほど、重く数えます。</p>
@@ -153,7 +156,7 @@ function goTop(){
     <p class="tnote" id="tnote"></p>
   </section>
 
-  ${st&&st.code?`<button class="btn ghost small" id="back">さっきの部屋（${esc(st.code)}）にもどる</button>`:''}
+  ${st&&st.code?`<button class="btn ghost small" id="back">さっきの部屋（${esc(dcode(st.code))}）にもどる</button>`:''}
   <section class="card" id="setup">
     <p class="label">だれと診断する？</p>
     ${seg('mode',[['each','みんなで<br><small>それぞれのスマホで</small>'],['solo','ひとりで']])}
@@ -191,7 +194,7 @@ function goTop(){
     <p class="hint mk-what">押すと部屋ができて、そばの友だちに見せるQRコードと、LINEで送るリンクが出ます。</p>
     <div class="join">
       <label for="code"><span>招待された人は、こちら（部屋番号で参加）</span></label>
-      <div class="join-row"><input type="text" id="code" inputmode="numeric" maxlength="4" placeholder="部屋番号（4けた）" value="${esc(JOIN)}"><button class="btn small" id="jn">参加</button></div>
+      <div class="join-row"><input type="text" id="code" inputmode="numeric" maxlength="4" placeholder="部屋番号（4けた）" value="${esc(dcode(JOIN))}"><button class="btn small" id="jn">参加</button></div>
     </div>
     <p class="hint">部屋のQRコードを、自分のスマホのカメラで読みとっても参加できます。</p>
     <p class="err" id="err" role="alert"></p>
@@ -226,12 +229,11 @@ function goTop(){
   const err=t=>{$('err').textContent=t};
   $('mk').onclick=async e=>{const n=myName();if(!n)return err('ニックネームを入れてください');e.target.disabled=true;const r=await createRoom(n);if(r!=='ok'){err(r);e.target.disabled=false}};
   $('jn').onclick=async e=>{const n=myName(),c=$('code').value.replace(/\D/g,'');if(!n)return err('ニックネームを入れてください');if(c.length!==4)return err('4けたの部屋番号を入れてください');
-    e.target.disabled=true;const id=await findRoom(c,false);if(!id){err('その番号の部屋が見つかりません。番号を確かめてください（番号で入れるのは、部屋ができてから12時間までです）。');e.target.disabled=false;return}
-    const r=await joinRoom(id,n);if(r!=='ok'){err(r);e.target.disabled=false}};
+    e.target.disabled=true;const r=await joinRoom(c,n,false,true);if(r!=='ok'){err(r);e.target.disabled=false}};
   const bk=$('back');if(bk)bk.onclick=async()=>{const r=await joinRoom(st.code,store('kv_name')||'');if(r!=='ok'){store('kv_room',null);goTop()}};
   // 婚活・街コン
   $('mkk').onclick=async e=>{e.target.disabled=true;const r=await createKonRoom();if(r!=='ok'){$('kerr').textContent=r;e.target.disabled=false}};
-  $('kjn').onclick=()=>{const c=$('kcode').value.replace(/\D/g,'');if(c.length!==4){$('kerr').textContent='4けたの部屋番号を入れてください';return}joinFromLink(c)};
+  $('kjn').onclick=()=>{const c=$('kcode').value.replace(/\D/g,'');if(c.length!==4){$('kerr').textContent='4けたの部屋番号を入れてください';return}joinFromLink(c,true)};
   const px=$('packx');if(px)px.onclick=()=>{location.href=location.pathname};
   inboxBanner();const mt=$('mine-top');if(mt)mt.onclick=mineView;
   const lt=$('lntop'),ltSet=()=>{lt.href=lineUrl('アイ・シンク｜カップル・友だちで答える価値観診断。2人の答えを重ねると、シンクロ率がわかる無料の診断です。',siteUrl())};ltSet();lt.addEventListener('click',ltSet);
@@ -334,7 +336,7 @@ function localAsk(){
 }
 
 /* ===== 結果 ===== */
-// 2人の合い方：同じ＝ぴったり／片方が「こだわらない」＝合わせられる／AとBで分かれた＝ちがい
+// 2人の合い方：同じ＝ぴったり／片方がまん中の答え＝近い／AとBで分かれた＝ちがい
 function pairStat(A,B,qs,only){
   // 問題の重さ（大事＝2・軽い＝0.5）で数える。★ゆずれないはシンクロ率に入れず、「★ ゆずれないところ」の枠で別に見せる（鑑定者本人 2026-11-19「点数差はつけない方がいい」）
   let s=0,n=0;const r={same:[],adj:[],diff:[],starSame:[],starAdj:[],starDiff:[]};
@@ -455,7 +457,7 @@ function talkPairHint(G,i,me){if(G.anon)return'';const ps=G.players,k=G.qs[i],si
   let best=null;a.forEach(x=>b.forEach(y=>{const r=pairStat(x,y,G.qs);if(!best||r.pct<best.pct)best={x,y,pct:r.pct}}));
   let t=best?`まず、${nmS(best.x)}と${nmS(best.y)}に「どうしてそう思う？」を聞くと、みんなの落としどころが見えやすくなります。`:'';
   if(c.length){const cn=c.length===1?'':c.length===2?'2人が':'みんなが';
-    t+=c.includes(me)?`${c.map(nmS).join('と')}は合わせられるので、${c.length===1?'':cn}間に入ると決まりやすい問題です。`:`${c.map(nmS).join('と')}は合わせられるので、間に入ってもらうと決まりやすい問題です。`}
+    t+=c.includes(me)?`${c.map(nmS).join('と')}はまん中の答えなので、${c.length===1?'':cn}間に入ると決まりやすい問題です。`:`${c.map(nmS).join('と')}はまん中の答えなので、間に入ってもらうと決まりやすい問題です。`}
   return t}
 // 左右に並べた答えが枠に入りきらないときは、縦に並べる（「考えがまとまってか…」で切れていた）
 function vsFit(){document.querySelectorAll('.vs2').forEach(v=>{if([...v.querySelectorAll('.va,.vw')].some(e=>e.scrollWidth>e.clientWidth+1)||v.scrollWidth>v.clientWidth+1){v.className='vsn';const m=v.querySelector('.vmid');if(m)m.remove()}})}
@@ -503,18 +505,21 @@ const AXTIP={
     r:'2人とも楽しみ優先派。毎日が楽しい一方、急な出費に弱くなりがち。自動でためるしくみを1つだけ作っておく。',
     m:'どちらかがまん中に近いので、合わせやすい組み合わせです。大きな買い物のときだけ、先に話しておけば十分です。'}};
 const axSideK=pct=>pct>=60?'l':pct<=40?'r':'m';
+// 2人の価値観のかたち：シンクロ率のすぐ下に、4つのものさしで2人の位置を並べる（たたまない。鑑定者本人 2026-11-20）
 function distHTML(G){const ps=G.players;if(ps.length!==2||G.anon)return'';const me=ps.find(p=>p.id===G.me);
-  const nmS=p=>p===me?'あなた':esc(p.name);
+  const nmS=p=>p===me?'あなた':esc(p.name);const P0=me||ps[0],P1=ps.find(p=>p!==P0);
   const rows=AX.map(a=>{const sa=axScore(ps[0],G.qs,a),sb=axScore(ps[1],G.qs,a);if(!sa||!sb||!AXTIP[a.key])return null;
     const ka=axSideK(sa.pct),kb=axSideK(sb.pct),kind=ka==='m'||kb==='m'?'m':ka===kb?ka:'d',t=AXTIP[a.key][kind];
     const lab=kind==='d'?['d','ちがう向き']:kind==='m'?['m','合わせやすい']:['s','同じ向き'];
-    const pin=(p,s)=>`<i class="nxpin ${pcls(G,p)}" style="left:${100-s.pct}%" title="${nmS(p)}"></i>`;
-    return {d:kind==='d',n:a.name,h:`<div class="dax"><div class="daxh"><b>${esc(a.name)}</b><span class="kind ${lab[0]}">${lab[1]}</span></div>
-      <div class="dlg">${[me||ps[0],ps.find(p=>p!==(me||ps[0]))].map(p=>`<span><i class="${pcls(G,p)}"></i>${nmS(p)}</span>`).join('')}</div><div class="dbar2">${pin(ps[0],sa)}${pin(ps[1],sb)}</div><div class="dends"><span>${esc(a.l)}</span><span>${esc(a.r)}</span></div><p class="dtip">${t}</p></div>`}}).filter(Boolean);
+    const near=Math.abs(sa.pct-sb.pct)<6,pin=(p,s,dx)=>`<i class="nxpin ${pcls(G,p)}" style="left:calc(${100-s.pct}% ${near?(dx<0?'- 7px':'+ 7px'):'+ 0px'})" title="${nmS(p)}"></i>`;
+    return {d:kind==='d',n:a.name,t,h:`<div class="dax"><div class="daxh"><b>${esc(a.name)}</b><span class="kind ${lab[0]}">${lab[1]}</span></div>
+      <div class="dbar2">${pin(ps[0],sa,-1)}${pin(ps[1],sb,1)}</div><div class="dends"><span>${esc(a.l)}</span><span>${esc(a.r)}</span></div>${kind==='d'?`<p class="dtip">${t}</p>`:''}</div>`}}).filter(Boolean);
   if(!rows.length)return'';
   const dd=rows.filter(x=>x.d),ot=rows.filter(x=>!x.d);
-  return foldBox('2人の距離の縮め方',dd.length?`ちがう向き：<em>${dd.map(x=>esc(x.n.replace(/^2人の/,''))).join('・')}</em>`:'ちがう向きはなし（合わせやすい2人）',`<div class="dist"><p class="hint">${dd.length?`4つのものさしのうち、2人の向きがちがう${dd.length}つです。`:'4つのものさしで、2人の向きがちがうところはありませんでした。'}</p>${dd.map(x=>x.h).join('')}
-    ${ot.length?`<details class="sfold"><summary>${dd.length?'ほかのものさし':'4つのものさし'}（合わせやすい・同じ向き ${ot.length}つ）を見る</summary>${ot.map(x=>x.h).join('')}</details>`:''}</div>`)}
+  const sum=dd.length?`${rows.length}つのうち、${ot.length}つが同じ向き・合わせやすい、${dd.length}つがちがう向きです。`:`${rows.length}つのものさしで、ちがう向きはありませんでした。`;
+  return `<section class="card pshape"><p class="label">2人の価値観のかたち</p><p class="hint">${sum}</p>
+    <div class="dist"><div class="dlg">${[P0,P1].map(p=>`<span><i class="${pcls(G,p)}"></i>${nmS(p)}</span>`).join('')}</div>${dd.map(x=>x.h).join('')}${ot.map(x=>x.h).join('')}
+    ${ot.length?`<details class="sfold"><summary>ほかのものさしのコツ（${ot.length}つ）</summary><ul class="list">${ot.map(x=>`<li><b>${esc(x.n)}</b>${x.t}</li>`).join('')}</ul></details>`:''}</div></section>`}
 // E：このメンバーのかたち（3人以上）・つなぎ役
 const GTIP={
   kicchiri:{l:'きっちり派が多いメンバーです。みんなで使う場所は、きっちり派の基準に合わせると気持ちよく過ごせます。',r:'おおらか派が多いメンバーです。片づけや決めごとは、最後に1人だけ確かめ役を決めておくと安心です。',s:'半々に分かれています。みんなで使う場所のルールを、1つだけ決めておくとうまくいきます。'},
@@ -528,7 +533,7 @@ function groupShapeHTML(G){const ps=G.players;if(ps.length<3||G.anon)return'';
       <div class="gcnt"><span><b>${esc(a.l)}</b>${c.l}人</span>${c.m?`<span><b>まん中</b>${c.m}人</span>`:''}<span><b>${esc(a.r)}</b>${c.r}人</span></div><p class="dtip">${GTIP[a.key][kind]}</p></div>`}).join('');
   return rows?foldBox('このメンバーのかたち','4つのものさしの人数とコツ',`<div class="dist"><p class="hint">4つのものさしで、メンバーがどちらに多いかと、みんなで過ごすときのコツです。</p>${rows}</div>`):''}
 function bridgeHTML(G){const ps=G.players;if(ps.length<3||G.anon)return'';const me=ps.find(p=>p.id===G.me);
-  const c=ps.map(p=>({p,n:G.qs.filter((k,i)=>p.ans[i]&&p.ans[i].o===2).length})).sort((a,b)=>b.n-a.n);
+  const c=ps.map(p=>({p,n:G.qs.filter((k,i)=>p.ans[i]&&isFlex(p.ans[i].o,k)).length})).sort((a,b)=>b.n-a.n);
   if(!c[0]||c[0].n<2||(c[1]&&c[1].n===c[0].n))return'';const p=c[0].p,nm=p===me?'あなた':esc(p.name)+'さん';
   return `<section class="card bridge"><p class="label">このメンバーのつなぎ役</p><div class="brg"><p class="brg-h"><img class="face" src="img/${p===me?'ai':'yuu'}.webp" width="44" height="44" alt="" aria-hidden="true"><b>${nm}</b></p><p class="hint">「どっちでも合わせられる」がいちばん多く、みんなの答えの間にいることが多い人です。意見が分かれたら、${p===me?'あなたが話を進めてみてください':nm+'に話を進めてもらいましょう'}。</p></div></section>`}
 // D：もう一度の答え合わせ（同じ問題・同じ2人の前の結果と比べる。このスマホにだけ残す）
@@ -551,7 +556,7 @@ function syncMsg(pct,two){const w=two?'2人':'メンバー';
   if(pct>=40)return{msg:'ほどよく重なって、ほどよくちがう'+w,sub:'同じところは安心に、ちがうところは新しい発見に。'};
   return{msg:'発見の多い'+w,sub:'答えが分かれたところほど、話すとおたがいのことがよくわかります。'}}
 // たたむ欄：左に色のマーク、題名の下に中身の一部（鑑定者本人 2026-11-19「表のバーが簡素すぎて開いてもらえない」）
-const FIC={'話し合うときのコツ':['話','a'],'2人の距離の縮め方':['距','b'],'テーマ別のシンクロ率':['テ','c'],'価値観のタイプ':['型','a'],'★ ゆずれないところ':['★','d'],'★ ゆずれないこと':['★','d'],'みんなの答えを1問ずつ':['答','c'],'1か月後に、もう一度答え合わせ':['再','b'],'まだ決められなかった問題':['？','c'],'このメンバーのかたち':['形','b'],'いちばん悩んだ問題':['悩','d'],'4つのものさし':['型','a'],'あなたのこだわり':['芯','b'],'合わせられること・悩んだ問題':['柔','a']};
+const FIC={'話し合うときのコツ':['話','a'],'2人の距離の縮め方':['距','b'],'テーマ別のシンクロ率':['テ','c'],'価値観のタイプ':['型','a'],'★ ゆずれないところ':['★','d'],'★ ゆずれないこと':['★','d'],'みんなの答えを1問ずつ':['答','c'],'1か月後に、もう一度答え合わせ':['再','b'],'まだ決められなかった問題':['？','c'],'このメンバーのかたち':['形','b'],'いちばん悩んだ問題':['悩','d'],'4つのものさし':['型','a'],'あなたのこだわり':['芯','b'],'合わせられること・悩んだ問題':['柔','a'],'合わせられること':['柔','a'],'まん中の答え':['柔','a'],'まん中の答え・悩んだ問題':['柔','a'],'2人の価値観のかたち':['型','a']};
 // ★を押した数（人によって、ゆずれないことの多さがちがう。シンクロ率には入れない）
 function starCnt(G){const ps=G.players,me=ps.find(p=>p.id===G.me),list=(G.anon&&me)?[me]:ps;
   const n=p=>G.qs.filter((k,i)=>{const a=p.ans[i];return a&&a.st&&a.o>=0&&a.o<2}).length;
@@ -570,19 +575,19 @@ function twoFolds(G,trows,nm,r){
   if(trows.length){const few=drop.length?`<p class="few">${drop.map(x=>'「'+esc(x.name)+'」').join('')}は1問だけだったので出していません。${G.qs.length<30?'しっかり版（30問）なら、テーマごとにくわしくわかります。':''}</p>`:'';
     const ks=keep.slice().sort((a,b)=>b.pct-a.pct),tz=ks.length?`いちばん重なった：<em>${esc(ks[0].name)}（${ks[0].pct}%）</em>${ks.length>1&&ks[ks.length-1].pct<ks[0].pct?`　分かれた：<em>${esc(ks[ks.length-1].name)}</em>`:''}`:'';
     out+=foldBox('テーマ別のシンクロ率',tz,(keep.length?themeHTML(keep,'2人'):'')+few)}
-  const ax=axHTML(G,(G.anon&&me)?[me]:G.players,nm);if(ax)out+=foldBox('価値観のタイプ','4つのものさしで、2人の位置',ax);
+  if(G.anon){const ax=axHTML(G,me?[me]:G.players,nm);if(ax)out+=foldBox('価値観のタイプ',me?'あなたの位置':'2人の位置',ax)}
   if(r.starN){const row=(i,cls)=>{const k=G.qs[i],aa=A.ans[i],bb=B.ans[i];
       const who=(P,x)=>(G.anon&&me&&P!==me)?'':`<span class="tkr"><span class="tkw">${nmChip(G,P,P===me?'あなた':P.name)}</span><span class="tka">${esc(ans(x.o,k))}${x.st?' ★':''}</span></span>`;
       return `<li class="${cls}"><b>${esc(Q[k][1])}</b>${who(A,aa)}${who(B,bb)}</li>`};
     const many=r.starDiff.length>=2&&r.starDiff.length>=r.starSame.length+r.starAdj.length;
     const verdict=!r.starDiff.length?`<p class="good">大事なところは、ちがいがありません</p>`:many?`<p class="warn">大事なところで、考え方がちがうことが多めです。この${r.starDiff.length}問は、先にゆっくり話しておくと安心です</p>`:`<p class="warn">大事なところで、ちがいが${r.starDiff.length}問あります。ここは先に話しておくと安心です</p>`;
-    out+=foldBox('★ ゆずれないところ',`<span class="ftc"><i class="c-s">同じ ${r.starSame.length}</i><i class="c-m">合わせられる ${r.starAdj.length}</i><i class="c-d">ちがう ${r.starDiff.length}</i></span>${r.starDiff.length?'<span class="ftl">ちがう問題：<em>'+esc(Q[G.qs[r.starDiff[0]]][1])+'</em></span>':''}`,
+    out+=foldBox('★ ゆずれないところ',`<span class="ftc"><i class="c-s">同じ ${r.starSame.length}</i><i class="c-m">近い ${r.starAdj.length}</i><i class="c-d">ちがう ${r.starDiff.length}</i></span>${r.starDiff.length?'<span class="ftl">ちがう問題：<em>'+esc(Q[G.qs[r.starDiff[0]]][1])+'</em></span>':''}`,
       `<div class="starbox">${starCnt(G)}${verdict}<ul class="slist">${r.starDiff.map(i=>row(i,'d')).join('')}${r.starAdj.map(i=>row(i,'m')).join('')}${r.starSame.map(i=>row(i,'s')).join('')}</ul></div>`)}
   const all=G.qs.map((k,i)=>`<li><b>${esc(Q[k][1])}</b>${[0,1,2,3].map(v=>{const who=G.players.filter(p=>oOf(p.ans[i])===v);return who.length?`<span class="ansrow"><i class="o${v}">${esc(ans(v,k))}</i>${G.anon?who.length+'人':who.map(nm).join('、')}</span>`:''}).join('')}</li>`).join('');
   out+=foldBox('みんなの答えを1問ずつ','全'+G.qs.length+'問',`<ul class="list all">${all}</ul>`);
   return out}
 /* ===== わたしの結果（鑑定者本人 2026-11-19「保存もできますか」→「入れてください」。究極の二択と同じ）
- * 結果を出すたびに、このスマホの中に自動で残す（最新10回・どこにも送らない）。トップの「わたしの結果」から開ける。部屋が終わったあとも見られる ===== */
+ * 結果を出すたびに、このスマホの中に自動で残す（最新10回・どこにも送らない）。トップの「わたしの結果」から開ける。部屋が12時間で消えたあとも見られる ===== */
 const MINE_MAX=10;
 // 3人以上の結果では、歩み寄りの案の「2人で」などを「みんなで」に言いかえる（鑑定者本人 2026-11-19「全部直してください」）。
 // 「2人きり」・暮らし／結婚の話（もともと2人の話）はそのまま
@@ -624,6 +629,7 @@ function statPlay(G){try{if(!G.qs||!G.qs.length)return;
   const id=kind==='room'?'r'+(R.code||'')+'-'+((R.room||{}).round||1)+'-'+((R.room||{}).created||0):kind+'-'+G.qs.join('.')+'-'+G.qs.map((k,i)=>{const a=(me.ans||{})[i];return a&&a.ms||0}).join('');
   let seen=[];try{seen=JSON.parse(sessionStorage.getItem('kv_play')||'[]')}catch(e){}
   if(seen.includes(id))return;seen.push(id);try{sessionStorage.setItem('kv_play',JSON.stringify(seen.slice(-50)))}catch(e){}
+  try{if(window.gaEv)gaEv('play_done',{kind:kind,len:len})}catch(e){}  // アクセス解析：診断された回数（種類だけ）
   getDb().then(db=>{if(db&&db.stat)db.stat(kind+len).catch(()=>{})}).catch(()=>{})}catch(e){}}
 // 秒の出し方：1秒未満は「1秒未満」（読む時間を引くので 0.0秒・0.1秒 が出ていた）。いちばん悩んだ問題は3秒以上のときだけ出す
 const SECF=ms=>ms<1000?'1秒未満':(ms/1000).toFixed(1)+'秒',PONDER_MIN=3000;
@@ -647,11 +653,11 @@ function showResultCore(G){
   h+=`<section class="card score${hi?' hisync':''}">${hi?'<span class="hs-badge" data-nocg>HIGH SYNC</span>':''}<img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
     ${whoLine(G)}<p class="cap">${two?'2人':ps.length+'人'}のシンクロ率</p><p class="hint cap-h">${two?'2人の':'みんなの'}答えが、どれだけ重なったか。お金・将来・暮らしのような大事な問題ほど、大きく効きます。</p>
     <div class="ring" style="background:${hi?`conic-gradient(#8FE3CF 0,#A9B2F5 ${pct/2}%,#F4B6D6 ${pct}%,var(--line) ${pct}% 100%)`:`conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)`}"><div class="in"><span class="num" data-v="${pct}">${pct}<small>%</small></span></div></div>
-    <p class="msg">${sm.msg}</p>${hi?`<p class="hs-sub">${two?'暮らしの感覚が、ほとんど重なっています。<br>一緒にいて自然体でいられる組み合わせ。':'みんなの感覚が、ほとんど重なっています。<br>集まると自然体でいられるメンバー。'}</p>`:sm.sub?`<p class="hs-sub">${sm.sub}</p>`:''}${P2?`<div class="nums"><div class="n1"><small>ぴったり</small><b>${P2.same.length}<i>問</i></b></div><div class="n2"><small>合わせられる</small><b>${P2.adj.length}<i>問</i></b></div><div class="n3"><small>ちがい</small><b>${P2.diff.length}<i>問</i></b></div></div>`:''}
+    <p class="msg">${sm.msg}</p>${hi?`<p class="hs-sub">${two?'暮らしの感覚が、ほとんど重なっています。<br>一緒にいて自然体でいられる組み合わせ。':'みんなの感覚が、ほとんど重なっています。<br>集まると自然体でいられるメンバー。'}</p>`:sm.sub?`<p class="hs-sub">${sm.sub}</p>`:''}${P2?`<div class="nums"><div class="n1"><small>ぴったり</small><b>${P2.same.length}<i>問</i></b></div><div class="n2"><small>近い</small><b>${P2.adj.length}<i>問</i></b></div><div class="n3"><small>ちがい</small><b>${P2.diff.length}<i>問</i></b></div></div>`:''}
     ${diffN?`<button class="jump" id="tojump" type="button">${hi?'100%に近づくヒントを見る ↓':(()=>{const tn=talkItems(G).length;return tn<diffN?`話しておきたい${tn}問を見る ↓`:`ちがった${diffN}問から、話すことを見る ↓`})()}</button>`:''}</section>`;
   const trows=themeRows(G);
   const done=()=>{vsFit();setTimeout(vsFit,60);setTimeout(vsFit,600);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(vsFit);bindTail(G);bindTalked(G);bindAgain(G);countUp();votesRun(G);kyoRun(G);const j=$('tojump');if(j)j.onclick=()=>{const t=$('steps')||$('talk');if(t)t.scrollIntoView({behavior:'smooth',block:'start'})}};
-  if(P2){if(G.pair){h+=pairBackCard(G,true);G.backTop=1}h+=stepsHTML(G)+kyoSlot(G)+talkHTML(G,nm)+'<p class="ref-h">くわしく見る</p>'+tipsHTML(G)+distHTML(G)+undecHTML(G,nm)+againHTML(G,P2)+twoFolds(G,trows,nm,P2);view(h+VS_SLOT+tailHTML(G));done();return}
+  if(P2){if(G.pair){h+=pairBackCard(G,true);G.backTop=1}h+=distHTML(G)+stepsHTML(G)+kyoSlot(G)+talkHTML(G,nm)+'<p class="ref-h">くわしく見る</p>'+tipsHTML(G)+undecHTML(G,nm)+againHTML(G,P2)+twoFolds(G,trows,nm,P2);view(h+VS_SLOT+tailHTML(G));done();return}
   // ② あなたといちばん合う人（3人以上）
   const pairs=[];for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++)pairs.push({a:ps[i],b:ps[j],r:pairStat(ps[i],ps[j],G.qs)});
   pairs.sort((x,y)=>y.r.pct-x.r.pct);
@@ -662,7 +668,7 @@ function showResultCore(G){
   h+=`<section class="card"><p class="label">${me?'あなたといちばん合う人':'いちばん合うペア'}</p>${best}
     <ul class="prs">${list.slice(0,3).map(prow).join('')}</ul>
     ${list.length>3?`<details class="sfold"><summary>ほかの組み合わせ（${list.length-3}組）を見る</summary><ul class="prs">${list.slice(3).map(prow).join('')}</ul></details>`:''}
-    <p class="hint">同じ答え＝ぴったり、片方がまん中の答え（どっちでも合わせられる など）＝合わせられる、として数えています。お金・将来・暮らしのような大事な問題ほど、大きく効きます。</p></section>`;
+    <p class="hint">同じ答え＝ぴったり、片方がまん中の答え（どっちでも合わせられる・日による など）＝近い、として数えています。お金・将来・暮らしのような大事な問題ほど、大きく効きます。</p></section>`;
   // ③ みんなの共通点 → ④ みんなで話しておきたいこと
   h+=stepsHTML(G)+kyoSlot(G)+talkHTML(G,nm)+bridgeHTML(G)+'<p class="ref-h">くわしく見る</p>'+tipsHTML(G)+undecHTML(G,nm)+groupShapeHTML(G);
   // ⑤ 残りはたたむ
@@ -739,7 +745,7 @@ function talk3HTML(G,t3){if(!t3.length)return'';
     <button class="btn ghost small" id="t3-go" type="button"><span class="nw">この${t3.length}問もふくめて、</span><span class="nw">答え合わせに誘う ↓</span></button></section>`}
 function soloHTML(G){
   const p=G.players[0],xs=G.qs.map((k,i)=>({k,i,a:p.ans[i]})).filter(x=>x.a&&x.a.o>=0),sec=ms=>(ms/1000).toFixed(1);
-  const firm=xs.filter(x=>x.a.o<2),flex=xs.filter(x=>x.a.o===2),star=firm.filter(x=>x.a.st);
+  const firm=xs.filter(x=>x.a.o<2),flex=xs.filter(x=>isFlex(x.a.o,x.k)),mid=xs.filter(x=>x.a.o===2&&!isFlex(x.a.o,x.k)),star=firm.filter(x=>x.a.st);
   const byT=xs.slice().sort((a,b)=>b.a.ms-a.a.ms);
   const pct=xs.length?Math.round(flex.length/xs.length*100):0;
   const msg=pct>=50?'まわりに合わせられる、やわらかい人':pct>=25?'こだわりとやわらかさのバランス型':'自分の好みがはっきりしている人';
@@ -757,6 +763,7 @@ function soloHTML(G){
   const kod=(star.length?`<p class="sub">★ ゆずれないこと</p><ul class="list">${star.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${esc(ans(x.a.o,x.k))}</li>`).join('')}</ul>`:'')
     +`<ul class="list">${firm.filter(x=>!x.a.st).map(x=>`<li><b>${esc(CATS[Q[x.k][0]][0])}｜${esc(Q[x.k][1])}</b><span class="ansrow"><i class="o${x.a.o}">${esc(ans(x.a.o,x.k))}</i></span></li>`).join('')||(star.length?'':xs.length?'<li>今回はぜんぶ「こだわらない」でした</li>':(G.qs.some((k,i)=>p.ans[i]&&p.ans[i].u)?'<li>どの問題も、まだ決められませんでした</li>':'<li>時間切れで、答えた問題がありませんでした</li>'))}</ul>`;
   const flx=(flex.length?`<p class="sub">合わせられること</p><p class="hint">${flex.map(x=>`<span class="qi">${esc(Q[x.k][1])}</span>`).join('　')}</p>`:'')
+    +(mid.length?`<p class="sub">まん中の答え</p><ul class="list">${mid.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${esc(ans(x.a.o,x.k))}</li>`).join('')}</ul>`:'')
     +(byT.length>1&&byT[0].a.ms>=PONDER_MIN?`<p class="sub">いちばん悩んだ問題</p><div class="ponder"><b>${esc(Q[byT[0].k][1])}</b><span>「${esc(ans(byT[0].a.o,byT[0].k))}<span style="white-space:nowrap">」まで <em>${sec(byT[0].a.ms)}</em> 秒</span></span></div>
     <p class="hint">いちばん即決は「${esc(Q[byT[byT.length-1].k][1])}」（${SECF(byT[byT.length-1].a.ms)}）</p>`:'');
   // あなたの大事な答え（★→大事な問題の順に5つまで）と、選び方のくせ（悩んだ・即決）。たたまずに見せる（鑑定者本人 2026-11-19「1人の結果が中身が少なく見えるのは問題」）
@@ -775,13 +782,13 @@ function soloHTML(G){
   ${inviteCard(G,p)}
   <p class="ref-h">くわしく見る</p>
   ${firm.length?foldBox('あなたのこだわり',firm.length+'問',kod):''}
-  ${flx?foldBox(flex.length?(byT.length>1&&byT[0].a.ms>=PONDER_MIN?'合わせられること・悩んだ問題':'合わせられること'):'いちばん悩んだ問題',flex.length?flex.length+'問':'',flx):''}
+  ${flx?foldBox(flex.length||mid.length?(()=>{const t=flex.length?'合わせられること':'まん中の答え';return byT.length>1&&byT[0].a.ms>=PONDER_MIN?t+'・悩んだ問題':t})():'いちばん悩んだ問題',flex.length?flex.length+'問':mid.length?'まん中の答え '+mid.length+'問':'',flx):''}
   ${undecHTML(G,q=>esc(q.name))}
   ${G.me==='me'&&!G.view?`<div id="hist">${histHTML(saveHist(G,p,pct))}</div>`:''}`;
 }
 // 1.66 奇跡の相性診断（鑑定者本人のメインサービス）へのバナー。無料の診断から会員登録（毎朝の開運予報メール）へつながる
 /* ほかの診断（3つのサイトの相互リンク。鑑定者本人 2026-11-20「見本その1のバナーでいきます」） */
-const SIS_HTML=`<section class="sis"><p class="sis-h">あなたのこと、もっと知りたくない？</p><a class="bn bn-ko" data-nocg href="https://koikata.jp/aichaku/?ref=isync" target="_blank" rel="noopener" aria-label="恋のかたち診断（別のサイト koikata.jp が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/latc.webp" alt="" width="58" height="58" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">恋のかたち診断</span><span class="ln"><span class="nw">16の恋愛タイプ×</span><span class="nw">愛着スタイル</span></span><span class="dm"><span class="nw">koikata.jp・</span><span class="nw">無料4分</span></span></span><span class="go">診断 ↗</span></a><a class="bn bn-nt" data-nocg href="https://honbare.com/?ref=isync" target="_blank" rel="noopener" aria-label="究極の二択（別のサイト honbare.com が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/panda.webp" alt="" width="56" height="56" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">究極の二択</span><span class="ln"><span class="nw">恋もあるあるも、</span><span class="nw">本音がバレる2択</span></span><span class="dm"><span class="nw">honbare.com・</span><span class="nw">無料3分</span></span></span><span class="go">あそぶ ↗</span></a><a class="bn bn-wa" data-nocg href="https://44wansona.com/?ref=isync" target="_blank" rel="noopener" aria-label="ワンソナ（別のサイト 44wansona.com が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/wansona.webp" alt="" width="56" height="56" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">ワンソナ</span><span class="ln"><span class="nw">うちの子の性格を、</span><span class="nw">44犬種の</span><span class="nw">タイプで診断</span></span><span class="dm"><span class="nw">44wansona.com・</span><span class="nw">無料</span></span></span><span class="go">診断 ↗</span></a></section>`;
+const SIS_HTML=`<section class="sis"><p class="sis-h">あなたのこと、もっと知りたくない？</p><a class="bn bn-ko" data-nocg href="https://koikata.jp/aichaku/?ref=isync" target="_blank" rel="noopener" aria-label="恋のかたち診断（別のサイト koikata.jp が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/latc.webp" alt="" width="58" height="58" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">恋のかたち診断</span><span class="ln"><span class="nw">16の恋愛タイプ×</span><span class="nw">愛着スタイル</span></span><span class="dm"><span class="nw">koikata.jp・</span><span class="nw">無料4分</span></span></span><span class="go">診断 ↗</span></a><a class="bn bn-nt" data-nocg href="https://honbare.com/?ref=isync" target="_blank" rel="noopener" aria-label="究極の二択（別のサイト honbare.com が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/panda.webp" alt="" width="56" height="56" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">究極の二択</span><span class="ln"><span class="nw">恋もあるあるも、</span><span class="nw">本音がバレる2択</span></span><span class="dm"><span class="nw">honbare.com・</span><span class="nw">無料3分</span></span></span><span class="go">あそぶ ↗</span></a><a class="bn bn-wa" data-nocg href="https://44wansona.com/?ref=isync" target="_blank" rel="noopener" aria-label="ワンソナ（別のサイト 44wansona.com が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/wansona.webp" alt="" width="54" height="54" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">ワンソナ</span><span class="ln"><span class="nw">うちの子の性格を、</span><span class="nw">44犬種のタイプで診断</span></span><span class="dm"><span class="nw">44wansona.com・</span><span class="nw">無料</span></span></span><span class="go">診断 ↗</span></a></section>`;
 const PROMO=`<a class="promo" href="https://166unmei.com" target="_blank" rel="noopener" aria-label="1.66 奇跡の相性診断で占う（別のサイト 166unmei.com が開きます）">
     <span class="pr-top">価値観の次は、生まれた日でわかる「運命の相性」</span>
     <span class="pr-pair" aria-hidden="true"><img src="img/166-usagi.webp" alt="" width="74" height="72" loading="lazy"><i>×</i><img src="img/166-inu.webp" alt="" width="63" height="72" loading="lazy"></span>
@@ -799,7 +806,7 @@ function tailHTML(G){const pr=G&&G.pair?pairBackCard(G):'';return `${pr}
 // ひとりの結果は、名前がわかれば答え合わせのリンクで送る（相手が同じ問題に答えると2人の結果が出る。鑑定者本人 2026-11-18）
 function shareText(G,name){
   const ps=G.players,url=WHERE==='claude'?ART_URL:location.href.split('#')[0].split('?')[0];
-  if(ps.length<2){const p=ps[0],xs=G.qs.map((k,i)=>p.ans[i]).filter(a=>a&&a.o>=0),f=xs.filter(a=>a.o===2).length,pc=xs.length?Math.round(f/xs.length*100):0,n=G.qs.length;
+  if(ps.length<2){const p=ps[0],xs=G.qs.map((k,i)=>p.ans[i]).filter(a=>a&&a.o>=0),f=G.qs.filter((k,i)=>p.ans[i]&&isFlex(p.ans[i].o,k)).length,pc=xs.length?Math.round(f/xs.length*100):0,n=G.qs.length;
     // 送る文は「価値観のかたち」で問いかける（％は出さない。鑑定者本人 2026-11-18「B」）
     const sw=shapeWords(G,p);
     if(name)return{t:`わたしは「${sw}」でした。あなたは何派？\n同じ${n}問に答えると、2人のシンクロ率がわかります（約${minsOf(n)}分・無料）\n#アイシンク`,url:withLink(name,G.qs,p.ans,ibxId(G,p,name))};
@@ -828,7 +835,7 @@ function bindTail(G){
 /* ===== 答え合わせのリンク（2人が同時に開いていなくても遊べる） =====
    ひとりで答えたあと、同じ問題と自分の答えをリンクに入れて送る。受けとった人が同じ問題に答えると、2人の結果が出る。
    受けとった人は、結果のリンクを送り返せる（送った人も同じ結果を見られる）・同じ問題のまま、ほかの人も誘える（広がる）。
-   リンクに目印（ibx）があれば、答えた人の結果（ニックネームと答え）を Firestore の isync_inbox/<目印>/r に30日だけ置き、送った人のトップに届ける（鑑定者本人 2026-11-18「Aで、保存30日で」）。問題は目印（QKEY の先頭5文字）で入れる */
+   リンクに目印（ibx）があれば、答えた人の結果（ニックネームと答え）を Firestore の isync_inbox/<目印>/r に10日だけ置き（2026-11-20 に30日から10日へ）、送った人のトップに届ける（鑑定者本人 2026-11-18「Aで、保存30日で」）。問題は目印（QKEY の先頭5文字）で入れる */
 const ansCode=a=>!a||a.o<0?(a&&a.u?'u':'-'):String(a.o+(a.st&&a.o<2?3:0));
 const ansDecode=c=>c==='-'?{o:-1,st:0,ms:0}:c==='u'?{o:-1,u:1,st:0,ms:0}:{o:(+c)%3,st:+c>=3?1:0,ms:0};
 const linkOf=(kind,parts)=>siteUrl()+'#'+kind+'='+parts.map(x=>encodeURIComponent(x)).join('~');
@@ -855,7 +862,7 @@ function inviteCard(G,p){const n=G.qs.length,nm=['あなた','ともだち'].inc
     <label class="one-name" for="inv-name"><span>あなたのニックネーム（相手に出ます）</span><input type="text" id="inv-name" maxlength="10" value="${esc(nm)}"></label>
     <a class="btn line" id="inv-line" href="#" target="_blank" rel="noopener">LINEで答え合わせに誘う</a>
     <button class="btn ghost small" id="inv-share">ほかのアプリで送る</button><p class="hint" id="inv-msg" hidden></p>
-    <p class="hint hp-note">あなたの答えは、相手が答え終わるまで見えません。答えた人との結果は、このスマホのトップに30日間届きます（答えた人どうしは、おたがいの結果を見られません）。</p>
+    <p class="hint hp-note">あなたの答えは、相手が答え終わるまで見えません。答えた人との結果は、このスマホのトップに${IBX_DAYS}日間届きます（答えた人どうしは、おたがいの結果を見られません）。</p>
     <button class="btn ghost small" id="tog">みんなで診断する（部屋を作る）</button></section>`}
 // 答え合わせのリンクから答えた人の結果の下：送ってくれた人に結果を返す／同じ問題のまま、ほかの人も誘う
 // 答え合わせのリンクから答えた人：2人の結果は自動で相手のスマホに届く（答え合わせが届く・2026-11-18〜）。
@@ -914,11 +921,11 @@ function pairView(x){
   try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
   L.players=[];showResult({players:[x.A,x.B],qs:x.qs,me:'a',anon:false,local:true,view:true})}
 
-/* ===== 答え合わせが届く（送った人のトップに、答えた人の結果を30日間） =====
+/* ===== 答え合わせが届く（送った人のトップに、答えた人の結果を10日間） =====
    送った人：リンクに目印（12文字）を入れ、このスマホの kv_sent に目印・問題・自分の答えを覚える。
    答えた人：答え終わったら、isync_inbox/<目印>/r/<番号> にニックネームと答え（送るのはこの2つと時刻だけ）。
-   一覧は目印を知っている送った人の画面にだけ出す。30日すぎたものは読むときに消す */
-const IBX_ID=/^[0-9a-z]{12}$/,IBX_DAYS=30,IBX_MS=IBX_DAYS*864e5;
+   一覧は目印を知っている送った人の画面にだけ出す。10日すぎたものは読むときに消す */
+const IBX_ID=/^[0-9a-z]{12}$/,IBX_DAYS=10,IBX_MS=IBX_DAYS*864e5;
 const rid=n=>{const c='0123456789abcdefghijklmnopqrstuvwxyz';let s='';const a=new Uint8Array(n);try{crypto.getRandomValues(a)}catch(e){for(let i=0;i<n;i++)a[i]=Math.random()*256}a.forEach(x=>s+=c[x%36]);return s};
 function ibxSent(){const now=Date.now();return(store('kv_sent')||[]).filter(x=>x&&IBX_ID.test(x.id)&&now-x.at<IBX_MS)}
 function ibxId(G,p,name){if(WHERE==='claude'||!window.ISYNC_FB||!window.ISYNC_FB.projectId)return'';
@@ -929,7 +936,7 @@ function ibxId(G,p,name){if(WHERE==='claude'||!window.ISYNC_FB||!window.ISYNC_FB
 async function inboxSend(id,me,qs){if(!id)return false;let db;try{db=await getDb()}catch(e){return false}if(!db)return false;
   const put=c=>db.doc('inbox/'+id+'/r/'+rid(10)).set({name:(me.name||'ともだち').slice(0,10),codes:c,at:Date.now()});
   const c=codesOf(qs,me.ans);try{await put(c);return true}catch(e){if(c.includes('u'))try{await put(c.replace(/u/g,'-'));return true}catch(e2){}}return false}
-// 送った人：届いた結果を集める（30日すぎたものは消す）
+// 送った人：届いた結果を集める（10日すぎたものは消す）
 async function inboxLoad(){const sent=ibxSent();if(!sent.length)return[];const db=await getDb();if(!db)return[];
   const out=[];await Promise.all(sent.map(async s=>{let g;try{g=await db.collection('inbox/'+s.id+'/r').get()}catch(e){return}
     const qs=s.k.split('.').map(k=>KEY5.has(k)?KEY5.get(k):-1);if(!qs.length||qs.some(i=>i<0)||s.c.length!==qs.length)return;
@@ -1033,7 +1040,7 @@ function drawResult(c,G){
   // 大きな数字のカード
   rr(80,490,920,620,48,'#FFFFFF');
   let pct,cap,who,msgT,sF=0,sN=0;
-  if(solo){const p=ps[0],xs=G.qs.map((k,i)=>p.ans[i]).filter(a=>a&&a.o>=0),f=xs.filter(a=>a.o===2).length;pct=xs.length?Math.round(f/xs.length*100):0;
+  if(solo){const p=ps[0],xs=G.qs.map((k,i)=>p.ans[i]).filter(a=>a&&a.o>=0),f=G.qs.filter((k,i)=>p.ans[i]&&isFlex(p.ans[i].o,k)).length;pct=xs.length?Math.round(f/xs.length*100):0;
     cap='わたしの価値観のかたち';who='';msgT=shapeWords(G,p);sF=f;sN=xs.length}
   else{pct=syncStat(G).pct;cap=ps.length===2?'2人のシンクロ率':ps.length+'人のシンクロ率';
     who=G.anon?'':ps.length===2?ps[0].name+' × '+ps[1].name:ps.slice(0,4).map(p=>p.name).join('・')+(ps.length>4?' ほか':'');
@@ -1078,7 +1085,6 @@ function getDb(){if(!dbP)dbP=(async()=>{
   try{const f=await FB.init();if(f){WHERE='firebase';return f}}catch(e){}
   return null})();return dbP}
 
-const H12=12*3600e3,ROOM_LIFE=10*864e5,ROOM_CR={};   // 部屋：そろって始めるのは12時間まで・リンクは作ってから10日（2026-11-20）
 /* Firebase（Firestore）：公開先で部屋を共有する。firebase-config.js に設定があるときだけ使う。
    ほかのサイトとまざらないよう、置き場所の名前の頭に「isync_」を付ける（rooms → isync_rooms）。
    読む・書くはふつうの通信（Firestore の REST）で行う。Gmail・LINE などのアプリの中の画面では Firebase の道具のつなぎ方が止められ、
@@ -1088,11 +1094,13 @@ const FB=(()=>{
   const load=src=>new Promise((ok,ng)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=ng;document.head.appendChild(s)});
   const P=p=>'isync_'+p;
   const clean=d=>JSON.parse(JSON.stringify(d||{}));   // 空の値（undefined）を取りのぞく
-  // 部屋と参加者は、部屋を作ってから10日で消す日（expireAt）を書く（Firestore の TTL を設定すると自動で消える。2026-11-20）。番号の表は12時間
-  const rmOf=path=>{const m=/^rooms\/([0-9]{4}(?:-[a-z0-9]{6})?)(\/players\/[^/]+)?$/.exec(path);return m&&m[1]};
-  const ttl=(path,d)=>{const rm=rmOf(path);if(rm)return Object.assign({},d,{expireAt:new Date((d.created||ROOM_CR[rm]||Date.now())+ROOM_LIFE)});
+  // 消す日（expireAt。Firestore の TTL をこの欄に設定すると自動で消える）：部屋と、部屋に入った人（ニックネーム・答え）＝部屋を作ってから10日／番号の表＝12時間／答え合わせ＝10日（鑑定者本人 2026-11-20「10日にそろえる」）
+  const ttl=(path,d)=>{let m;
+    if((m=/^rooms\/([0-9a-z-]+)$/.exec(path))){const c=d.created||d.joined||Date.now();ROOM_CR[m[1]]=c;return Object.assign({},d,{expireAt:new Date(c+ROOM_MS)})}
+    if((m=/^rooms\/([0-9a-z-]+)\/players\//.exec(path)))return Object.assign({},d,{expireAt:new Date((ROOM_CR[m[1]]||d.joined||Date.now())+ROOM_MS)});
     if(/^codes\//.test(path))return Object.assign({},d,{expireAt:new Date((d.created||Date.now())+H12)});
-    return /^inbox\//.test(path)?Object.assign({},d,{expireAt:new Date((d.at||Date.now())+30*864e5)}):d};
+    if(/^inbox\//.test(path))return Object.assign({},d,{expireAt:new Date((d.at||Date.now())+IBX_MS)});
+    return d};
   const strip=d=>{if(d){d=Object.assign({},d);delete d.expireAt}return d};
   const enc=v=>v===null||v===undefined?{nullValue:null}:v instanceof Date?{timestampValue:v.toISOString()}:typeof v==='boolean'?{booleanValue:v}:typeof v==='number'?(Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v}):typeof v==='string'?{stringValue:v}:Array.isArray(v)?{arrayValue:{values:v.map(enc)}}:{mapValue:{fields:encF(v)}};
   const encF=o=>{const f={};Object.keys(o).forEach(k=>{if(o[k]!==undefined)f[k]=enc(o[k])});return f};
@@ -1120,18 +1128,16 @@ const FB=(()=>{
       onSnapshot:(cb,err)=>live(fs=>fs.doc(p),s=>cb({id:s.id,exists:s.exists,data:()=>strip(s.data())}),err)}},
     async vote(k,f){const name='projects/'+window.ISYNC_FB.projectId+'/databases/(default)/documents/'+P('votes/'+k);
       return rq('POST',':commit',{writes:[{transform:{document:name,fieldTransforms:[{fieldPath:f,increment:{integerValue:'1'}}]}}]})},
-    // 部屋を作る：部屋・自分・番号の表を1回の通信でまとめて書く（2026-11-19。2026-11-20 から部屋の名前は「番号-見分けの印」）。
-    // 番号の表は、まだない／作ってから12時間たったときだけ書けるので、2人が同時に同じ番号を引いても上書きしない。12時間たった番号だけ使い回す
-    async mkRoom(code,tag,room,pid,me){const nm=x=>'projects/'+window.ISYNC_FB.projectId+'/databases/(default)/documents/'+P(x),id=code+'-'+tag,rp='rooms/'+id,cp='codes/'+code;
-      ROOM_CR[id]=room.created;
-      const w=pre=>[{update:{name:nm(rp),fields:encF(ttl(rp,clean(room)))},currentDocument:{exists:false}},{update:{name:nm(rp+'/players/'+pid),fields:encF(ttl(rp+'/players/'+pid,clean(me)))}},
-        {update:{name:nm(cp),fields:encF(ttl(cp,{tag,created:room.created}))},currentDocument:pre}];
-      const pc=e=>e&&(e.status===409||e.status===400);
-      try{await rq('POST',':commit',{writes:w({exists:false})});return 'ok'}catch(e){if(!pc(e))throw e}
-      const d=await rq('GET',P(cp));if(!d)return 'taken';const r0=decF(d.fields);if(Date.now()-(r0.created||0)<H12)return 'taken';
-      try{await rq('POST',':commit',{writes:w({updateTime:d.updateTime})});return 'ok'}catch(e){if(pc(e))return 'taken';throw e}},
-    // 番号を手で入れたとき：番号の表から、作ってから12時間以内の部屋だけを探す
-    async resolve(code){const d=await rq('GET',P('codes/'+code));if(!d)return null;const r=decF(d.fields);return r.tag&&Date.now()-(r.created||0)<H12?code+'-'+r.tag:null},
+    // 部屋を作る：番号の表（codes/番号＝いまこの番号を使っている部屋の印）・部屋（rooms/番号-印）・自分を1回の通信でまとめて書く。
+    // 番号の表は、その番号がまだない／12時間たった番号のときだけ書けるので、2人が同時に同じ番号を引いても上書きしない（2026-11-19）。
+    // 部屋の置き場所は毎回ちがう名前なので、番号を使い回しても、前に送ったリンク（番号-印）は10日のあいだ前の部屋につながる（2026-11-20）
+    async mkRoom(code,room,pid,me){const nm=x=>'projects/'+window.ISYNC_FB.projectId+'/databases/(default)/documents/'+P(x),key=code+'-'+newTag(),rp='rooms/'+key,cp='codes/'+code;
+      const ix=await rq('GET',P(cp));let pre={exists:false};
+      if(ix){const x=decF(ix.fields);if(Date.now()-(x.created||0)<H12)return 'taken';pre={updateTime:ix.updateTime}}
+      const writes=[{update:{name:nm(cp),fields:encF(ttl(cp,{tag:key.split('-')[1],created:room.created}))},currentDocument:pre},
+        {update:{name:nm(rp),fields:encF(ttl(rp,clean(room)))},currentDocument:{exists:false}},
+        {update:{name:nm(rp+'/players/'+pid),fields:encF(ttl(rp+'/players/'+pid,clean(me)))}}];
+      try{await rq('POST',':commit',{writes});return key}catch(e){if(e&&(e.status===409||e.status===400||e.status===412))return 'taken';throw e}},
     async stat(f){const name='projects/'+window.ISYNC_FB.projectId+'/databases/(default)/documents/'+P('stats/plays');
       return rq('POST',':commit',{writes:[{transform:{document:name,fieldTransforms:[{fieldPath:f,increment:{integerValue:'1'}}]}}]})},
     votes(keys){return Promise.all(keys.map(k=>rq('GET',P('votes/'+k)).then(d=>[k,d?decF(d.fields):null]).catch(()=>[k,null]))).then(Object.fromEntries)},
@@ -1148,31 +1154,46 @@ const FB=(()=>{
 })();
 const NO_DB='この画面では、みんなで診断する部屋が使えません。Safari・Chromeで開きなおすか、「ひとりで」で診断してください。';
 const pPath=(c,id)=>'rooms/'+c+'/players/'+id;
-/* 部屋のリンクは作ってから10日使える（3つのサイト共通。鑑定者本人 2026-11-20）。
-   live＝そろって一緒に診断（作ってから12時間まで）／12時間をすぎた・結果が出たあと＝同じ問題にひとりで答えて結果に加わる（10日まで）／
-   10日すぎ・12時間すぎても始まっていない部屋＝終わった */
-const age=r=>Date.now()-((r&&r.created)||0);
-const alive=r=>!!r&&age(r)<ROOM_LIFE&&!(r.phase==='lobby'&&age(r)>=H12);
-const lateRoom=r=>!!r&&r.kind!=='kon'&&(r.phase==='result'||(r.phase==='play'&&age(r)>=H12));
-const dcode=c=>String(c||'').split('-')[0];
-// 番号を手で入れたとき（12時間以内の部屋だけ）／番号だけの前のリンク（前の形の部屋があればそこへ）
-async function findRoom(c,fromLink){const db=await getDb();if(!db)return null;if(/-/.test(c))return c;
-  const old=async()=>{try{const s=await db.doc('rooms/'+c).get();return s.exists&&(fromLink||age(s.data())<H12)?c:null}catch(e){return null}};
-  if(fromLink){const o=await old();if(o)return o}
-  try{if(db.resolve){const id=await db.resolve(c);if(id)return id}}catch(e){}
-  return fromLink?null:old()}
+/* ===== 部屋の有効期限（鑑定者本人 2026-11-20「3つのサイトで作ってから10日にそろえる」。究極の二択と同じ決まり） =====
+ * ① 作ってから12時間までは、みんなでそろって「スタート」で一斉に始まる（悩み中・決めた！）
+ * ② 結果が出たあと、または12時間をすぎたあとにリンクを開いた人は、同じ問題にひとりで答えて、みんなの結果に加わる
+ * ③ 10日をすぎたら「この部屋は終わりました」
+ * ④ 部屋とニックネーム・答えは、作ってから10日で消す日（expireAt）を書く
+ * ⑤ 部屋番号を手で入れて入れるのは12時間まで。リンクは「番号-見分けの印」なので、番号が使い回されても10日のあいだはもとの部屋につながる */
+const H12=12*3600e3,ROOM_DAYS=10,ROOM_MS=ROOM_DAYS*864e5,ROOM_CR={};
+const dcode=k=>String(k||'').split('-')[0];
+const newTag=()=>{let x='';while(x.length<6)x+=Math.random().toString(36).slice(2).replace(/[^a-z0-9]/g,'');return x.slice(0,6)};
+const alive=r=>r&&Date.now()-(r.created||0)<ROOM_MS;
+// live＝一緒に診断（12時間まで・結果の前）／late＝同じ問題にひとりで答えて結果に加わる／ended＝終わった（10日すぎ・12時間すぎても始まらなかった）／none＝見つからない（番号を手で入れたときは12時間まで）
+function rState(r,typed){if(!r||!r.created)return 'none';const age=Date.now()-r.created;
+  if(age>=ROOM_MS)return 'ended';if(typed&&age>=H12)return 'none';
+  if(r.kind==='kon')return age>=H12?'ended':'live';
+  if(r.phase==='result')return 'late';
+  if(age>=H12)return r.phase==='play'?'late':'ended';
+  return 'live'}
+// 番号・リンクから部屋の置き場所の名前を決める。印つきならそのまま。番号だけ：リンク（前の形のリンク）は前の形の部屋があればそれ、なければ番号の表から12時間以内の部屋
+async function resolveRoom(raw,link){raw=String(raw||'');if(raw.includes('-'))return raw;const db=await getDb();if(!db)return raw;
+  try{if(link){const s=await db.doc('rooms/'+raw).get();if(s.exists)return raw}
+    const ix=await db.doc('codes/'+raw).get();if(ix.exists){const x=ix.data()||{};if(x.tag&&Date.now()-(x.created||0)<H12)return raw+'-'+x.tag}
+    if(!link){const s=await db.doc('rooms/'+raw).get();if(s.exists&&Date.now()-((s.data()||{}).created||0)<H12)return raw}}catch(e){}
+  return raw}
+// 確認用ページなど（まとめて書けないとき）：番号の表を見て、空いている番号に印を付けて取る
+async function pickKey(db){for(let t=0;t<8;t++){const c=String(1000+Math.floor(Math.random()*9000));
+    const s=await db.doc('codes/'+c).get();if(s.exists&&Date.now()-((s.data()||{}).created||0)<H12)continue;
+    const key=c+'-'+newTag();await db.doc('codes/'+c).set({tag:key.split('-')[1],created:Date.now()});return key}
+  return ''}
+const ENDED_MSG='部屋のリンクは、作ってから10日まで使えます。送ってくれた人に、新しい部屋か答え合わせのリンクを送ってもらってください。';
+function endedView(){view(`${tnav('en-top')}<section class="card hand"><img class="chara c-mid" src="img/pair-think.webp" width="200" height="127" alt="" aria-hidden="true"><p class="big">この部屋は終わりました</p><p class="hint">${ENDED_MSG}</p><button class="btn" id="en-solo" style="align-self:stretch">ひとりで診断する</button><button class="btn ghost" id="en-go" style="align-self:stretch">トップへ</button></section>`);
+  $('en-top').onclick=goTop;$('en-go').onclick=goTop;$('en-solo').onclick=()=>soloStart(store('kv_name')||'')}
 const plist=()=>Object.entries(R.players).map(([id,p])=>Object.assign({id},p)).sort((a,b)=>(a.joined||0)-(b.joined||0));
 async function createRoom(name){
   const db=await getDb();if(!db)return NO_DB;
   try{
     if(db.mkRoom){const now=Date.now(),room={created:now,round:1,phase:'lobby',qi:0,qs:deal(CFG.len,CFG.topic),len:CFG.len,topic:CFG.topic,anon:CFG.anon},me={name,ans:{},round:1,joined:now,ready:true};
-      for(let t=0;t<8;t++){const c=String(1000+Math.floor(Math.random()*9000)),tag=Math.random().toString(36).slice(2,8).padEnd(6,'0');if(await db.mkRoom(c,tag,room,PID,me)==='ok'){enterRoom(c+'-'+tag);return 'ok'}}
+      for(let t=0;t<8;t++){const c=String(1000+Math.floor(Math.random()*9000)),k=await db.mkRoom(c,room,PID,me);if(k&&k!=='taken'){enterRoom(k);return 'ok'}}
       return '部屋を作れませんでした。もう一度押してください。'}
-    let code='';
-    for(let t=0;t<8;t++){const c=String(1000+Math.floor(Math.random()*9000));const s=await db.doc('rooms/'+c).get();if(!s.exists||!alive(s.data())){code=c;break}}
+    const code=await pickKey(db);
     if(!code)return '部屋を作れませんでした。もう一度押してください。';
-    const old=await db.collection('rooms/'+code+'/players').get();
-    for(const d of old.docs)await db.doc(pPath(code,d.id)).delete();
     await db.doc('rooms/'+code).set({created:Date.now(),round:1,phase:'lobby',qi:0,qs:deal(CFG.len,CFG.topic),len:CFG.len,topic:CFG.topic,anon:CFG.anon});
     await db.doc(pPath(code,PID)).set({name,ans:{},round:1,joined:Date.now(),ready:true});
     enterRoom(code);return 'ok';
@@ -1181,11 +1202,8 @@ async function createRoom(name){
 async function createKonRoom(){
   const db=await getDb();if(!db)return NO_DB;
   try{
-    let code='';
-    for(let t=0;t<8;t++){const c=String(1000+Math.floor(Math.random()*9000));const s=await db.doc('rooms/'+c).get();if(!s.exists||!alive(s.data())){code=c;break}}
+    const code=await pickKey(db);
     if(!code)return '部屋を作れませんでした。もう一度押してください。';
-    const old=await db.collection('rooms/'+code+'/players').get();
-    for(const d of old.docs)await db.doc(pPath(code,d.id)).delete();
     // 主催者は答えない（部屋の画面＝QR・人数・スタートだけ）
     await db.doc('rooms/'+code).set({created:Date.now(),round:1,phase:'lobby',qi:0,qs:dealKon(KON_LEN),len:KON_LEN,topic:'kon',anon:true,kind:'kon',host:PID});
     enterRoom(code);return 'ok';
@@ -1195,7 +1213,7 @@ async function joinKon(code,f){
   const db=await getDb();if(!db)return NO_DB;
   try{
     const rs=await db.doc('rooms/'+code).get();
-    if(!rs.exists||!alive(rs.data()))return 'その番号の部屋が見つかりません。番号を確かめてください。';
+    if(rState(rs.exists?rs.data():null)!=='live')return 'その番号の部屋が見つかりません。番号を確かめてください。';
     const room=rs.data(),ps=await db.collection('rooms/'+code+'/players').get();
     if(!ps.docs.some(d=>d.id===PID)){
       if(ps.docs.length>=KON_MAX)return 'この部屋は、もう'+KON_MAX+'人そろっています。';
@@ -1205,15 +1223,17 @@ async function joinKon(code,f){
     enterRoom(code);return 'ok';
   }catch(e){return '参加できませんでした。この画面では書きこみが許可されていないかもしれません。'}
 }
-async function joinRoom(code,name,force){
+async function joinRoom(code,name,force,typed){
   const db=await getDb();if(!db)return NO_DB;
   try{
-    const rs=await db.doc('rooms/'+code).get();
-    if(!rs.exists||!alive(rs.data()))return 'その番号の部屋が見つかりません。番号を確かめてください。';
-    const room=rs.data(),ps=await db.collection('rooms/'+code+'/players').get();ROOM_CR[code]=room.created;
+    if(typed)code=await resolveRoom(code,false);   // 番号を手で入れたとき：12時間以内の部屋だけ
+    const rs=await db.doc('rooms/'+code).get(),st=rState(rs.exists?rs.data():null,typed);
+    if(st==='none')return typed?'その番号の部屋が見つかりません。番号で入れるのは、部屋ができてから12時間までです。':'その部屋が見つかりません。';
+    if(st==='ended')return 'この部屋は終わりました。'+ENDED_MSG;
+    const room=rs.data(),ps=await db.collection('rooms/'+code+'/players').get();
     if(room.host===PID){enterRoom(code);return 'ok'}   // 婚活の部屋を作った主催者
     if(room.kind==='kon'&&!ps.docs.some(d=>d.id===PID)){joinFromLink(code);return 'ok'}
-    if(lateRoom(room)&&!ps.docs.some(d=>d.id===PID)){lateJoin(code,room);return 'ok'}
+    if(st==='late'&&!ps.docs.some(d=>d.id===PID)){lateJoin(code,room);return 'ok'}
     if(!ps.docs.some(d=>d.id===PID)){
       if(!name)return 'ニックネームを入れてください';
       // 同じ名前の人がもういる＝部屋を作った人が、自分で送ったLINEのリンクを開いたことが多い（LINEの中の画面は別のブラウザあつかい）
@@ -1279,8 +1299,8 @@ const rActive=(p,k,rd)=>p.id===PID||k===0||(p.round||1)!==rd?true:!!(rAns(p,k-1)
 async function sync(){
   const room=R.room,me=R.players[PID];
   if(!R.code||room===undefined)return;
-  if(!room||!alive(room)){leaveRoom();goTop();if(room)toast('この部屋は終わりました');return}
-  ROOM_CR[R.code]=room.created;
+  if(!room){leaveRoom();goTop();return}
+  if(rState(room)==='ended'){leaveRoom();endedView();return}
   if(room.kind==='kon'&&room.host===PID){hostSync();return}
   if(!me)return;
   const db=await getDb(),rd=room.round||1,ps=plist(),n=(room.qs||[]).length;
@@ -1402,7 +1422,7 @@ function lobby(){
     <p class="status ${ps.length>=2?'go':''}">${ps.length>=2?'みんな入ったら、スタートを押してください（だれが押してもOK）':'友だちが入るのを待っています'}</p>
     <button class="btn" id="st" ${ps.length>=2?'':'disabled'}>${ps.length>=2?`スタート（${ps.length}人で）`:'スタート（2人そろったら）'}</button>
     <p class="hint live-note">一緒に答えると、おたがいの「悩み中…」「決めた！」がリアルタイムで見えます。</p>
-    ${ps.length<2?`<details class="sfold later-fold"><summary>今すぐそろわないときは</summary><p class="hint later-note">先にひとりで答えておくこともできます。あとからリンクを開いた人も、同じ問題に答えて結果に加わります（部屋ができてから10日まで）。</p><button class="btn ghost small" id="st1" style="align-self:stretch">先にひとりで答える</button></details>`:''}
+    ${ps.length<2?`<details class="sfold later-fold"><summary>今すぐそろわないときは</summary><p class="hint later-note">先にひとりで答えておくこともできます。部屋ができてから10日のあいだは、あとからリンクを開いた人も同じ問題に答えて、結果に加わります（部屋番号で入れるのは12時間まで）。</p><button class="btn ghost small" id="st1" style="align-self:stretch">先にひとりで答える</button></details>`:''}
     <p class="hint">${room.len===30?'しっかり版（30問・★ゆずれない）':'簡易版（10問）'}・話題は${room.topic==='party'?'恋愛多め':'暮らし・価値観'}${room.anon?'・名前は見せない':''}</p>
   </section>
   <button class="btn ghost small" id="home">部屋を出てトップへ</button>`);
@@ -1418,22 +1438,21 @@ function lobby(){
 }
 /* 招待のリンク・QRコード（…#join-1234）で開いたとき：トップを出さずに、その部屋へまっすぐ入る。
    前に名前を入れたことがあれば何も押さずに入る。はじめての人は、ニックネームを入れて「参加する」を1回押すだけ（空でも入れる） */
-async function joinFromLink(code){
+async function joinFromLink(code,typed){
   view(tnav('jl-top','やめてトップへ')+'<section class="card hand"><div class="orb" aria-hidden="true"></div><p class="hint">部屋に入っています…</p></section>');
   $('jl-top').onclick=()=>{clearJoinHash();goTop()};
   const db=await getDb();
   const clearHash=()=>{try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}JOIN=''};
   if(!db){clearHash();goTop();return}
-  let room=null,ps=[];
-  const fail=(msg,hint)=>{clearHash();view(`<section class="card hand"><p class="big">${msg}</p><p class="hint">${hint||'部屋のリンクは、作ってから10日使えます。招待してくれた人に、新しい部屋か、答え合わせのリンクを送ってもらってね。'}</p><button class="btn" id="tp" style="align-self:stretch">トップへ</button></section>`);$('tp').onclick=goTop};
-  const id=await findRoom(code,true);
-  if(!id)return fail('この部屋は終わりました');
-  code=id;let found=null;
-  try{const rs=await db.doc('rooms/'+code).get();found=rs.exists?rs.data():null;room=found&&alive(found)?found:null;
-    if(room){ROOM_CR[code]=room.created;const q=await db.collection('rooms/'+code+'/players').get();ps=q.docs.map(d=>d.id)}}catch(e){}
-  if(!room)return fail('この部屋は終わりました');
+  code=await resolveRoom(code,!typed);   // リンク（番号-印）はもとの部屋へ。番号を手で入れたときは12時間以内の部屋だけ
+  let room=null,ps=[],st='none';
+  try{const rs=await db.doc('rooms/'+code).get();room=rs.exists?rs.data():null;st=rState(room,typed);
+    if(st!=='none'&&st!=='ended'){const q=await db.collection('rooms/'+code+'/players').get();ps=q.docs.map(d=>d.id)}}catch(e){}
+  const fail=msg=>{clearHash();view(`${tnav('fl-top')}<section class="card hand"><p class="big">${msg}</p><p class="hint">${typed?'部屋番号で入れるのは、部屋ができてから12時間までです。番号を確かめるか、部屋を作った人にリンクを送ってもらってください。':'部屋を作った人に、もう一度リンクを送ってもらってください。'}</p><button class="btn" id="tp" style="align-self:stretch">トップへ</button></section>`);$('tp').onclick=goTop;$('fl-top').onclick=goTop};
+  if(st==='ended'){clearHash();return endedView()}                    // 10日すぎ・12時間すぎても始まらなかった
+  if(st==='none')return fail('この部屋は見つかりませんでした');
   if(ps.includes(PID)){enterRoom(code);return}                     // もう入っている（ページを開きなおした）
-  if(lateRoom(room)){clearHash();return lateJoin(code,room)}   // 結果が出たあと・12時間をすぎた部屋：同じ問題にひとりで答えて、結果に加わる（10日まで）
+  if(st==='late'&&room.kind!=='kon'){clearHash();return lateJoin(code,room)}   // 結果が出たあと・12時間すぎ：同じ問題にひとりで答えて、結果に加わる
   if(ps.length>=maxOf(room))return fail('この部屋は、もう'+maxOf(room)+'人そろっています');
   if(room.kind==='kon'){if(room.host===PID){enterRoom(code);return}konJoin(code,room,ps.length);return}
   const saved=store('kv_name');
@@ -1468,7 +1487,7 @@ function sameAsk(code,name,id,shown){
       if(v===String(shown||name).trim()){$('sm-err').textContent='同じ名前の人がいます。少し変えてください（例：'+esc(v)+'2）';return}
       store('kv_name',v);$('sm-go').disabled=true;const r=await joinRoom(code,v);if(r!=='ok'){$('sm-err').textContent=r;$('sm-go').disabled=false}};
     $('sm-back').onclick=()=>sameAsk(code,name,id,shown);$('sm-go').onclick=go;inp.onkeydown=e=>{if(e.key==='Enter')go(e)};try{inp.focus()}catch(e){}}}
-/* ===== あとから参加（鑑定者本人 2026-11-19「12時間の中でいつやっても答えが見れて」。2026-11-20 から部屋のリンクは10日使える）
+/* ===== あとから参加（鑑定者本人 2026-11-19「いつやっても答えが見れて」。2026-11-20 から作ってから10日まで）
  * 先に答えた人がいる部屋（結果の画面）のリンクを開いた人は、同じ問題にひとりで答え（1問15秒）、答え終わったら結果に加わる。
  * 答えは終わってからまとめて書くので、答えていない人が結果に加わることはない ===== */
 async function lateJoin(code,room){
@@ -1487,7 +1506,7 @@ async function lateJoin(code,room){
   const inp=$('lj-name'),go=e=>{if(e)e.preventDefault();const v=inp.value.trim();if(!v){$('lj-err').textContent='ニックネームを入れてください';return}
     const sm=ps.find(p=>p.name.trim()===v);if(sm){sameAsk(code,v,sm.id,sm.name);return}
     store('kv_name',v);
-    Object.assign(L,{counts:undefined,mode:'late',qs:(room.qs||[]).slice(),players:[{id:'me',name:v,ans:{}}],p:0,i:0,late:{code,round:room.round||1,name:v,toResult:room.phase==='play',others:ps.filter(p=>p.round===(room.round||1))}});localAsk()};
+    Object.assign(L,{counts:undefined,mode:'late',qs:(room.qs||[]).slice(),players:[{id:'me',name:v,ans:{}}],p:0,i:0,late:{code,round:room.round||1,name:v,toResult:room.phase!=='result',others:ps.filter(p=>p.round===(room.round||1))}});localAsk()};
   $('lj-go').onclick=go;inp.onkeydown=e=>{if(e.key==='Enter')go(e)}}
 // あとから答える人に、先に答えた人がその問題で何秒悩んだかを見せる（答えの中身は見せない。鑑定者本人 2026-11-19「はい」）
 function lateTimes(i){const os=((L.late||{}).others||[]).filter(p=>p.ans&&p.ans[i]);if(!os.length)return false;
@@ -1499,9 +1518,8 @@ function lateTimes(i){const os=((L.late||{}).others||[]).filter(p=>p.ans&&p.ans[
 async function lateFinish(){const j=L.late,me=L.players[0];view('<section class="card hand"><div class="orb" aria-hidden="true"></div><p class="hint">みんなの結果に加わっています…</p></section>');
   const ans={};L.qs.forEach((k,i)=>{const a=me.ans[i];if(!a)return;ans[i]={o:a.o<0?-1:a.o,st:a.st||0,ms:a.ms||0,to:!!a.to,d:true};if(a.u)ans[i].u=true});
   const db=await getDb();
-  for(let t=0;t<3;t++){try{await db.doc(pPath(j.code,PID)).set({name:j.name,ans,round:j.round,joined:Date.now(),ready:true});
-    if(j.toResult)try{await db.doc('rooms/'+j.code).update({phase:'result'})}catch(e){}
-    enterRoom(j.code);return}catch(e){await new Promise(r=>setTimeout(r,1200))}}
+  if(j.toResult)try{await db.doc('rooms/'+j.code).update({phase:'result'})}catch(e){}   // 12時間すぎて止まっていた部屋は、ここで結果の画面にする
+  for(let t=0;t<3;t++){try{await db.doc(pPath(j.code,PID)).set({name:j.name,ans,round:j.round,joined:Date.now(),ready:true});enterRoom(j.code);return}catch(e){await new Promise(r=>setTimeout(r,1200))}}
   showResult({players:L.players,qs:L.qs,me:'me',anon:false,local:true})}
 // 診断が終わった部屋のリンクを、あとから開いたとき（今は使っていない。あとから参加に置きかえた）
 function doneRoom(clear){if(clear)clear();
@@ -1512,7 +1530,7 @@ function doneRoom(clear){if(clear)clear();
     <button class="btn" id="dr-solo" style="align-self:stretch">ひとりで診断する</button><button class="btn ghost" id="dr-top" style="align-self:stretch">トップへ</button></section>`);
   $('dr-top').onclick=goTop;$('dr-solo').onclick=()=>{soloStart(store('kv_name')||'')}}
 // 部屋の結果のいちばん上：まだ1人のとき／あとからでも加われること（部屋ができてから10日）
-function roomLaterCard(ps,room){const sc=app.querySelector('.scr');if(!sc||room.kind==='kon')return;const url=joinUrl(R.code),ms=Math.max(0,(room.created||0)+ROOM_LIFE-Date.now()),left=ms>=864e5?Math.floor(ms/864e5)+'日':Math.max(1,Math.round(ms/3600e3))+'時間';
+function roomLaterCard(ps,room){const sc=app.querySelector('.scr');if(!sc||room.kind==='kon')return;const url=joinUrl(R.code),ms=Math.max(0,(room.created||0)+ROOM_MS-Date.now()),left=ms>=2*864e5?Math.floor(ms/864e5)+'日':Math.max(1,Math.round(ms/3600e3))+'時間';
   const sco=ps.length>=2&&sc.querySelector('.score');(sco?sco:sc).insertAdjacentHTML(sco?'afterend':'afterbegin',`<section class="card later-card"><p class="pt-h"><em>あとからでもOK</em>${ps.length<2?'まだあなただけです':'ほかの人も、あとから加われます'}</p>
     <p class="hint">この部屋のリンクを開いた人は、同じ問題に答えると、この結果に加わります（あと${left}くらい）。加わると、この画面も新しくなります。</p>
     <a class="btn line${ps.length<2?'':' line-w'}" id="lt-ln" href="${lineUrl('アイ・シンクで価値観の答え合わせをしよう！\nこのリンクを開いて答えると、'+(ps.length<2?'2人の結果が見られます。':'みんなの結果に加われます。'),url)}" target="_blank" rel="noopener" style="align-self:stretch">LINEで友だちに送る</a></section>`)}
@@ -1620,8 +1638,8 @@ function konResult(){
   const card=(x,i)=>{const p=x.p,r=x.r,mutual=mine[p.id]&&(p.reveal||{})[PID];
     return `<li class="pair"><div class="ph"><b>${i+1}位　${esc(p.no)}番さん${mutual&&p.rname?`（${esc(p.rname)}さん）`:''}</b><em>${r.pct}%</em></div>
       <div class="bar"><i style="width:${r.pct}%"></i></div>
-      <p class="hint">ぴったり ${r.same.length}問・合わせられる ${r.adj.length}問・ちがい ${r.diff.length}問</p>
-      ${r.starN?`<p class="${r.starDiff.length?'warn':'good'}">★ ゆずれないところ ${r.starN}問のうち、同じ ${r.starSame.length}・合わせられる ${r.starAdj.length}・ちがう ${r.starDiff.length}</p>`:''}
+      <p class="hint">ぴったり ${r.same.length}問・近い ${r.adj.length}問・ちがい ${r.diff.length}問</p>
+      ${r.starN?`<p class="${r.starDiff.length?'warn':'good'}">★ ゆずれないところ ${r.starN}問のうち、同じ ${r.starSame.length}・近い ${r.starAdj.length}・ちがう ${r.starDiff.length}</p>`:''}
       ${mutual?`<p class="good">おたがいに「名前を見せてもいい」を押しました。${p.rname?'':'（お相手の名前はまだ入っていません）'}</p>`
         :mine[p.id]?`<p class="hint">押しました。${esc(p.no)}番さんも押したら、ここに名前が出ます。</p>`
         :`<div class="rvbox" data-id="${p.id}"><button class="btn small ghost rv">${esc(p.no)}番さんに名前を見せてもいい</button></div>`}</li>`};
