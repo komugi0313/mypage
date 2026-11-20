@@ -1487,7 +1487,7 @@ input,select,textarea{font-size:max(16px,1em)}
   </div>
   <details class="lb-near lb-solo-d" id="lb-solo-d" hidden>
     <summary><span>今すぐそろわないときは</span></summary>
-    <p class="lb-note">友だちがすぐにリンクを開けないときは、先にあなただけで答えておけます。あとからリンクを開いた友だちは、同じ問題に答えて、みんなの結果に加わります（30日まで）。</p>
+    <p class="lb-note">友だちがすぐにリンクを開けないときは、先にあなただけで答えておけます。あとからリンクを開いた友だちは、同じ問題に答えて、みんなの結果に加わります（10日まで）。</p>
     <p class="lb-note">一緒に答えると、おたがいの「悩み中…」「決めた！」がリアルタイムで見えます。そろいそうなときは、待つのがおすすめです。</p>
     <button class="big alt lb-solo" id="lb-solo" type="button">先にひとりで答える</button>
   </details>
@@ -2479,9 +2479,9 @@ function showHonGroupResult(){
 /* ───── Firebase（Firestore）：公開先（honbare.com）で、部屋と回答％を共有する ─────
    firebase-config.js に設定があるときだけ、Firebase の道具を読みこんで使う。
    ほかのサイトとまざらないよう、置き場所の名前の頭に「nitaku_」を付ける（rooms → nitaku_rooms）。 */
-/* 部屋のリンクは30日使える（2026-11-20）。部屋の置き場所の名前は「番号-見分けの印」（例 1234-ab12cd）。
+/* 部屋のリンクは10日使える（2026-11-20）。部屋の置き場所の名前は「番号-見分けの印」（例 1234-ab12cd）。
    番号は使い回すので、古いリンクが知らない人の部屋につながらないよう、見分けの印でもとの部屋を指す */
-var DAY30=30*86400e3, H12=12*3600e3, ROOM_CR={};
+var ROOM_LIFE=10*86400e3, H12=12*3600e3, ROOM_CR={};
 function dcode(k){ return String(k||'').split('-')[0]; }
 function newTag(){ var x=''; while(x.length<6) x+=Math.random().toString(36).slice(2).replace(/[^a-z0-9]/g,''); return x.slice(0,6); }
 var FB=(function(){
@@ -2493,13 +2493,13 @@ var FB=(function(){
   function load(src){ return new Promise(function(ok,ng){ var s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=ng; document.head.appendChild(s); }); }
   var P=function(path){ return 'nitaku_'+path; };
   var ttl=function(path, data){
-    // 部屋と参加者は、部屋を作ってから30日で消す（Firestore の「TTL」をこの expireAt に設定すると自動で消える。2026-11-20）。
+    // 部屋と参加者は、部屋を作ってから10日で消す（Firestore の「TTL」をこの expireAt に設定すると自動で消える。2026-11-20）。
     // 最後に動いた時刻は seen に入れる（前は expireAt を「最後の動き＋12時間」の代わりに使っていた）
     if(data && /^rooms\//.test(path)){
       var seg=path.split('/'), k=seg[1], isRoom=seg.length===2;
       if(isRoom && typeof data.created==='number') ROOM_CR[k]=data.created;
       var c=(isRoom && typeof data.created==='number') ? data.created : (ROOM_CR[k]||Date.now());
-      data=Object.assign({}, data, { expireAt:new Date(c+DAY30) });
+      data=Object.assign({}, data, { expireAt:new Date(c+ROOM_LIFE) });
       if(data.seen==null) data.seen=Date.now();
     }
     return data;
@@ -2577,7 +2577,7 @@ var FB=(function(){
             var d=await rq('GET', full); if(!d) return false;
             var cur=clean(decF(d.fields));
             for(var k in expect){ if(cur[k]!==expect[k]) return false; }
-            var up=Object.assign(strip(patch), { seen:Date.now(), expireAt:new Date((cur.created||Date.now())+DAY30) });
+            var up=Object.assign(strip(patch), { seen:Date.now(), expireAt:new Date((cur.created||Date.now())+ROOM_LIFE) });
             try{
               await rq('POST', ':commit', { writes:[{ update:{ name:docName(full), fields:encF(up) }, updateMask:{ fieldPaths:Object.keys(up) }, currentDocument:{ updateTime:d.updateTime } }] });
               return true;
@@ -3966,7 +3966,7 @@ function soloRoomNote(){
   var hero=body.querySelector('.res-hero'); if(!hero || body.querySelector('.solo-room')) return;
   var me=(R.me&&R.me.name)||'', url=joinUrl(R.code);
   var d=document.createElement('div'); d.className='card solo-room';
-  d.innerHTML='<p class="sr-h">まだ、あなただけの結果です</p><p class="sr-t">送ったリンクを開いた友だちが同じ問題に答えると、ここに結果が加わります（30日まで）。加わると、この画面も新しくなります。</p>'+
+  d.innerHTML='<p class="sr-h">まだ、あなただけの結果です</p><p class="sr-t">送ったリンクを開いた友だちが同じ問題に答えると、ここに結果が加わります（10日まで）。加わると、この画面も新しくなります。</p>'+
     '<a class="big lb-line" target="_blank" rel="noopener" href="'+esc('https://line.me/R/share?text='+encodeURIComponent(inviteText(dcode(R.code), me)+'\n'+url))+'">LINEで友だちを誘う</a>';
   hero.parentNode.insertBefore(d, hero.nextSibling);
 }
@@ -4128,12 +4128,12 @@ var Room=(function(){
     })();
     return ready;
   }
-  /* 部屋は作ってから30日使える（2026-11-20。前の「最後の動きから30分」「作ってから12時間」はやめた）。
+  /* 部屋は作ってから10日使える（2026-11-20。前の「最後の動きから30分」「作ってから12時間」はやめた）。
      12時間までは一緒に遊ぶのが主役。結果が出たあと・12時間をすぎたあとにリンクを開いた人は、同じ問題にひとりで答えて結果に加わる */
   /* 部屋の決まり（Firestore）は問題を15こまでしか置けないので、本能モードの20問は2問ずつまとめて置き、読むときにもどす */
   function pk(r){ if(r && r.qs && r.qs.length>15){ r=Object.assign({}, r); var z=[]; for(var i=0;i<r.qs.length;i+=2) z.push({ z:r.qs.slice(i,i+2) }); r.qs=z; } return r; }
   function upk(r){ if(r && r.qs && r.qs.length && r.qs[0] && r.qs[0].z){ r=Object.assign({}, r); var q=[]; r.qs.forEach(function(x){ q=q.concat(x.z||[]); }); r.qs=q; } return r; }
-  function alive(r){ return !!r && typeof r.created==='number' && Date.now()-r.created < DAY30; }
+  function alive(r){ return !!r && typeof r.created==='number' && Date.now()-r.created < ROOM_LIFE; }
   function plist(docs){ return docs.map(function(d){ return Object.assign({ pid:d.id }, d.data()); }).sort(function(a,b){ return (a.joined||0)-(b.joined||0); }); }
   async function post(body){
     var r=await fetch(ROOM_API,{ method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body) });
@@ -4384,12 +4384,12 @@ function openJoin(code, fromLink){
   }
 }
 /* 部屋のいまの状態（2026-11-20）：
-   live＝一緒に遊ぶ（作ってから12時間まで・結果が出る前）／late＝同じ問題にひとりで答えて結果に加わる（結果が出たあと・12時間をすぎたあと。30日まで）／
-   ended＝終わった（30日すぎ・問題を出す前に閉じた・12時間すぎても始まらなかった）／none＝見つからない（番号を手で入れたときは12時間以内の部屋だけ） */
+   live＝一緒に遊ぶ（作ってから12時間まで・結果が出る前）／late＝同じ問題にひとりで答えて結果に加わる（結果が出たあと・12時間をすぎたあと。10日まで）／
+   ended＝終わった（10日すぎ・問題を出す前に閉じた・12時間すぎても始まらなかった）／none＝見つからない（番号を手で入れたときは12時間以内の部屋だけ） */
 function roomState(r, typed){
   if(!r || !r.host) return 'none';
   var age=Date.now()-(r.created||0);
-  if(age>=DAY30) return 'ended';
+  if(age>=ROOM_LIFE) return 'ended';
   if(typed && age>=H12) return 'none';
   var hasQ=!!(r.qs && r.qs.length);
   if(hasQ && (/^(done|ready|closed)$/.test(r.phase) || age>=H12)) return 'late';
@@ -4743,7 +4743,7 @@ function onRoom(room, players){
   // 作った人の書きこみが届く前に読んだ「先に置いておいた部屋」（host が空）は使わない。使うと、その中身で部屋を書きもどして、作った人がいない部屋になる
   if(room && !room.host && R.host){ if(R.data && R.data.host) return; if(!R.made) return; room=Object.assign({}, R.made, { code:room.code||R.made.code }); }
   if(!room || room.phase==='closed'){
-    if(!room) R.gone=true;   // 30日たった・消えた部屋：古い中身で部屋を書きもどさない
+    if(!room) R.gone=true;   // 10日たった・消えた部屋：古い中身で部屋を書きもどさない
     if(R.data || room){
       var hp=(R.players||[]).filter(function(p){ return R.data && p.pid===R.data.host; })[0];
       leaveRoom(); hideReady(); show('s-home');
@@ -4818,7 +4818,7 @@ function busyNote(el, btn, label){
            fail:function(msg){ clearInterval(iv); btn.textContent=old; el.className='join-wait ng'; el.hidden=false; el.textContent=msg; } };
 }
 function withTimeout(pr, ms){ return Promise.race([pr, new Promise(function(_,ng){ setTimeout(function(){ ng(new Error('timeout')); }, ms); })]); }
-/* 「誘ってから10分だれも来なければ部屋を閉じる」はやめた（2026-11-20。リンクは30日使える） */
+/* 「誘ってから10分だれも来なければ部屋を閉じる」はやめた（2026-11-20。リンクは10日使える） */
 function renderLobby(){
   var R=S.room, room=R.data, n=R.players.length;
   var hp=R.players.filter(function(p){ return p.pid===room.host; })[0], hn=hp&&hp.name ? hp.name : '部屋を作った人';
