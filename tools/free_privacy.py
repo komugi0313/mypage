@@ -8,18 +8,29 @@ SEIT = '2026年11月20日'  # 制定日
 REV = '2026年11月20日'   # 改定日
 MAIL = 'info@72k.ai'
 
+# 文のおしまいの5文字ほどを改行しないまとまりにする。漢字・カタカナの言葉の途中（表｜示 など）では区切らない（2026-11-21）
+def _tailnw(v):
+    m = re.search(r'([^<>&;\s]{2,5})$', v)
+    if not m: return v
+    cut = m.start(1)
+    K = re.compile(r'[\u4e00-\u9fff々ァ-ヺー]')
+    while cut > 0 and K.match(v[cut-1]) and K.match(v[cut]) and v[cut-1] not in '<>&;':
+        cut -= 1
+    return v[:cut] + '<span class="nw">' + v[cut:] + '</span>'
+
 def esc(s): return html.escape(s, quote=True)
 
 def table(rows):
     out = '<dl class="xt">'
     for k, v in rows:
         # 文の最後の5文字は一緒に改行する（「…表示する／ため」のように1〜2文字だけ残さない）
-        v = re.sub(r'([^<>&;\s]{2,5})$', lambda m: '<span class="nw">' + m.group(1) + '</span>', v)
+        v = _tailnw(v)
         out += '<dt>' + esc(k) + '</dt><dd>' + v + '</dd>'
     return out + '</dl>'
 
 SITES = {
   'nitaku': dict(
+    tail='<style>html.jw body{word-break:keep-all;overflow-wrap:break-word;line-break:strict}</style><script src="jw.js"></script>',  # 言葉の切れ目で改行（2026-11-21）  # 究極の二択のプライバシーポリシーにも同じしくみ（nitaku/jw.js はアイ・シンクの jw.js と同じもの。2026-11-21「単語の途中で段が分かれている」）
     name='究極の二択 本音バレ診断', short='究極の二択', url='https://honbare.com/',
     bg='#FFF8E1', card='#FFFFFF', ink='#1E1E2A', sub='#4A4A5A', accent='#C42E62', line='#1E1E2A', soft='#FCE6EE',
     prefix='nitaku_',
@@ -44,7 +55,7 @@ SITES = {
     about='この診断は、心理学の考え方を参考にした遊びです。医療や心理の専門的な検査ではありません。結果は、自分や友だちを知るヒントとしてお使いください。',
   ),
   'isync': dict(
-    tail='<style>html.jw body{word-break:keep-all;overflow-wrap:anywhere;line-break:strict}</style><script src="jw.js"></script>',  # 言葉の切れ目で改行（2026-11-21）
+    tail='<style>html.jw body{word-break:keep-all;overflow-wrap:break-word;line-break:strict}</style><script src="jw.js"></script>',  # 言葉の切れ目で改行（2026-11-21）
     name='アイシンク（I-Sync）', short='アイシンク', url='https://i-sync.jp/',
     bg='#FBEFEA', card='#FFFFFF', ink='#2A2559', sub='#4E4880', accent='#6E5FA8', line='#BFB6E2', soft='#F1EEFA',
     prefix='kv_',
