@@ -8,6 +8,7 @@
   var HIRA=/^[ぁ-ゟー]+$/, PUN=/^[、。！？!?…・）」』】〕）\)\s～〜ー]+$/, OPEN=/[（「『【〔\(]$/, END=/[、。！？!?…）」』】〕\)]$/;
   var PART=/^(を|が|に|で|と|は|も|へ|の|から|まで|より|って|や|か|ね|よ|な)$/;
   var JP=/[぀-ヿ一-鿿]/;
+  var AFTP=/^(を|が|に|で|と|は|も|へ|の|から|まで|より|って)$/;
   function len(t){ return t.replace(/[、。！？!?…・（）「」『』\s]/g,'').length; }
   function phrases(t){
     var out=[],cur='',prev='';
@@ -20,7 +21,7 @@
       else if(END.test(cur)) brk=true;
       else if(OPEN.test(w)) brk=true;
       else if(OPEN.test(cur)) brk=false;
-      else if(HIRA.test(w)) brk=(PART.test(prev)&&len(cur)>=3&&w.length>=2&&!PART.test(w));
+      else if(HIRA.test(w)) brk=(AFTP.test(prev)&&len(cur)>=3&&w.length>=2&&!PART.test(w));   // や・か・な・よ・ね のあとでは切らない（「見えや／すく」と切れていた。2026-11-20）
       else brk=HIRA.test(prev);
       if(brk){ out.push(cur); cur=w; } else cur+=w;
       prev=w;
@@ -34,12 +35,31 @@
     if(out.length>1&&len(out[0])<=1){ out[1]=out[0]+out[1]; out.shift(); }
     return out;
   }
+  // 1つだけのまとまり・12文字より長いまとまりは、言葉の切れ目で3文字以上の小さなまとまりに分ける
+  // （前は手つかずで、せまい枠では「ちょっといいお／店へ」「将来・／家族」のように言葉の途中で切れていた。2026-11-20）
+  var SMALL=/^[ぁぃぅぇぉっゃゅょゎー]/;
+  function sub(p){
+    var ws=[],it=seg.segment(p)[Symbol.iterator](),r; while(!(r=it.next()).done) ws.push(r.value.segment);
+    var out=[],cur='';
+    for(var i=0;i<ws.length;i++){ cur+=ws[i]; var nx=ws[i+1]; if(nx===undefined) break;
+      var rest=ws.slice(i+1).join('');
+      // 切ってよいのは「助詞のあと（3文字以上の言葉の前）」か「漢字・カタカナの言葉の前」だけ。数字のすぐあと（1｜回）では切らない
+      var AFT=/^(を|が|に|で|と|は|も|へ|の|から|まで|より)$/;
+      var good=((!HIRA.test(nx)&&!/^ー/.test(nx))||AFT.test(ws[i]))&&!(HIRA.test(ws[i])&&ws[i].length===1&&!AFT.test(ws[i]));
+      var ok=good&&len(cur)>=3&&len(rest)>=3&&!PUN.test(nx)&&!SMALL.test(nx)&&!OPEN.test(ws[i])&&!/[0-9０-９]$/.test(cur);
+      if(ok){ out.push(cur); cur=''; } }
+    if(cur) out.push(cur);
+    return out;
+  }
   var SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,OPTION:1,TITLE:1,NOSCRIPT:1};
   function run(root){
     var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null),ns=[],n;
     while((n=w.nextNode())){ var pe=n.parentNode; if(!pe||SKIP[pe.nodeName]||pe.isContentEditable) continue; if(pe.nodeName==='J-P') continue; if(pe.closest&&pe.closest('[data-nojw]')) continue; if(n.nodeValue.length>=5&&JP.test(n.nodeValue)) ns.push(n); }
     ns.forEach(function(n){
-      var ps=phrases(n.nodeValue); if(ps.length<2) return;
+      var ps=phrases(n.nodeValue),xs=[];
+      ps.forEach(function(p){ if(ps.length<2&&len(p)<=8) xs.push(p); else if(len(p)>12||(ps.length<2&&len(p)>=9)) sub(p).forEach(function(q){ xs.push(q); }); else xs.push(p); });
+      ps=xs;
+      if(ps.length<2){ if(!(len(ps[0]||'')<=12&&/^[^\s]+$/.test(ps[0]||''))) return; }
       var f=document.createDocumentFragment();
       ps.forEach(function(p,i){ if(i) f.appendChild(document.createElement('wbr')); var s=document.createElement('j-p'); if(len(p)<=12) s.style.whiteSpace='nowrap'; s.textContent=p; f.appendChild(s); });
       // 親が横・縦に並べる箱（flex・grid）だと、部品が1つずつ別の段に並んでしまうので、ひとまとめにして入れる
