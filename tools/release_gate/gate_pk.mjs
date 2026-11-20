@@ -185,6 +185,22 @@ ok('UX③：鑑定書の章の見出しのすぐ下に「恋愛での持ち味�
   ok('恋愛：ご相談者（本人／お相手）を選べる', L.who);
   ok('恋愛：説明の二重（〈調子が上がる五行〉）を1つに・送る文に日柱の専門用語を出さない・「優しや」を直す', L.par&&L.shOK&&L.ty);
   ok('恋愛：お相手の生年月日がない「好かれたい」も1行目で答える', L.oneOK); }
+{ const L2=await p.evaluate(()=>{ try{ const pl=document.documentElement.classList.contains('bg-on'), k0=chart, k1=chartB; const mk=(y,m,d,h,sex)=>baziCompute({year:y,month:m,day:d,hour:h,minute:0,sex},0,'none');
+    const W=mk(1990,3,3,12,'female'), M=mk(1988,8,15,9,'male'); chart=W; chartB=M; const T='\n【お客様へのお伝え方】\n本文。', f=(x,q,cp)=>pkLeadFix(x+T,W,q,cp).split('\n')[0];
+    const ch=pkCompatQKind('彼に浮気されました。許して続けるべきですか')==='breakup';
+    const fate=f('結婚まで進む可能性は十分にあります。お相手から見るとあなたはとても魅力的に映り、自然と心惹かれる組み合わせだからです。','彼と結婚できますか？いつ頃ですか',true), fateOK=!/十分|魅力的に映/.test(fate)&&/可能性はあります/.test(fate);
+    const pre=f('お相手を許して関係を続けるべきかというご相談について、2人の生まれ持った性質と結びつきの強さからお答えします。','彼に浮気されました。許して続けるべきですか',true), preOK=!/お答えします/.test(pre)&&/決める/.test(pre);
+    const two=f('どちらと付き合うかはあなた次第です。','2人の男性の間で迷っています。両方と付き合ってもいいですか',true), twoOK=/おすすめしません/.test(two);
+    chartB=null; const re=pkOfflineLead(W,'別れた彼とやり直せますか',pl)||'', reOK=!/別れるかどうか/.test(re);
+    const one=f('お互いの歩みを整えれば、一緒に未来へ進む可能性は十分にあります。','既婚者の彼と付き合っています。この先2人で一緒になれる可能性はありますか',false), oneOK=!/十分/.test(one)&&/可能性はあります/.test(one);
+    const ch1=pkOfflineLead(W,'彼に浮気されました。許して続けるべきですか',pl)||'', ch1OK=/許して続けるか/.test(ch1);
+    chart=k0; chartB=k1; return {ch,fateOK,fate:fate.slice(0,60),preOK,pre:pre.slice(0,60),twoOK,reOK,re:re.slice(0,50),oneOK,one:one.slice(0,50),ch1OK,ch1:ch1.slice(0,40)}; }catch(e){ return {err:String(e)}; } });
+  ok('恋愛②：浮気された（許して続けるか）は別れるかの相談と同じ答え方', L2.ch&&L2.ch1OK, L2.ch1||L2.err);
+  ok('恋愛②：結ばれるか・結婚できるかの1行目はツールの見込みにそろえる（「十分」・気持ちの言い切りを置きかえ）', L2.fateOK, L2.fate||L2.err);
+  ok('恋愛②：1行目が前置きの1文だけならツールの1行目に', L2.preOK, L2.pre);
+  ok('恋愛②：二股・両方と付き合う相談はすすめない', L2.twoOK);
+  ok('恋愛②：「別れた彼とやり直せますか」を別れるかの相談にしない', L2.reOK, L2.re);
+  ok('恋愛②：1人の「一緒になれるか」で「可能性は十分」と言い切らない（pkLeadFix が止まらない）', L2.oneOK, L2.one); }
 // 追加の質問
 const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃ですか'); await p.click('#consultBtn'); await p.click('#consultBtn').catch(()=>{});
 const ms2=await waitFor(()=>{const it=document.querySelectorAll('#reading .rd-item');const l=it[it.length-1];return it.length>=2&&l.querySelector('.rd-bar')&&!l.querySelector('.loading');},60000);

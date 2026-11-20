@@ -7924,11 +7924,12 @@ function pkTalkSpec(c,q,plain){ try{ q=String(q||''); if(!c||!c.now) return '';
   { const WS=pkWorkSt(c,q); if(WS&&WS.y){ const L0=pkOfflineLead(c,q,plain); if(L0&&new RegExp(WS.y+'年').test(L0)) return L0; } }   // 仕事で動く時期：1行目（通信なし）と同じツールの年（「2026年・2036年ごろ・2035年がポイントです」のように本文の年を並べていた。2026-11-16 実機点検）
   return ''; }catch(e){ return ''; } }
 /* 恋人（彼・彼女）と別れるか迷う相談の1行目：別れる・別れないは決めず、いつ・どの順で考えるかを、関係が揺れやすい年（配偶宮の冲・刑＝loveFourLines の注意の年）から答える（2026-11-16。夫婦・家族は pkRelLead） */
-function pkBreakLead(c,q,plain){ try{ q=String(q||''); if(!c||!c.now||!/(別れ|離れ(?:る|た|よう)|距離を置)/.test(q)||!/(彼|恋人|パートナー|交際|付き合|カレ)/.test(q)) return '';
+function pkBreakLead(c,q,plain){ try{ q=String(q||''); if(!c||!c.now||!(/(別れ|離れ(?:る|た|よう)|距離を置)/.test(q)||PK_CHEATED_Q.test(q))||!/(彼|恋人|パートナー|交際|付き合|カレ)/.test(q)) return '';
+  if(/復縁|やり直|よりを戻|ヨリを戻|元彼|元カレ|元カノ|元恋人|戻りたい|戻れ(?:る|ます)|別れた(?:彼|恋人|人|相手|お相手|パートナー|カレ)/.test(q)&&!PK_CHEATED_Q.test(q)) return '';   // 「別れた彼とやり直せますか」は復縁の相談（別れるかどうかの1行目にしない。2026-11-20 恋愛相談の点検）
   if(/((?<![大工丈])夫|妻|旦那|奥さん|嫁|主人|配偶者|夫婦|離婚)/.test(q)) return '';
   const L=loveFourLines(c); const ny=(typeof pkNenInfo==='function'?pkNenInfo().Y:c.now.year), cau=(L&&L.cautionYears)||[], nx=cau.filter(function(y){ return y>ny; })[0];
   const yl='今年（'+ny+'年）';
-  return '別れるかどうかは、今すぐ決めなくて大丈夫です。'+(cau.indexOf(ny)>=0?yl+'は2人の関係が揺れやすい年なので、まず気持ちを整理し、よく話し合ってから答えを出す順番がおすすめです。'
+  return (PK_CHEATED_Q.test(q)?'許して続けるか、離れるかは、今すぐ決めなくて大丈夫です。':'別れるかどうかは、今すぐ決めなくて大丈夫です。')+(cau.indexOf(ny)>=0?yl+'は2人の関係が揺れやすい年なので、まず気持ちを整理し、よく話し合ってから答えを出す順番がおすすめです。'
     :yl+'は関係が大きく揺れる年ではないので、まず気持ちを整理し、よく話し合ってから答えを出す順番がおすすめです'+(nx?'（関係が揺れやすい'+nx+'年は、大事な答えを急がないようにしましょう）':'')+'。'); }catch(e){ return ''; } }
 /* 子どもの受験・試験の心配の1行目：結果は言い切らず、相談した人の今年の流れ（支え方）と、お子さんの生年月日で見られることを答える（2026-11-16） */
 function pkKidExamLead(c,q,plain){ try{ q=String(q||''); if(!c||!c.now||!/(子ども|子供|息子|娘|お子)/.test(q)||!/(受験|入試|試験|合格|進学|受か)/.test(q)) return '';
@@ -9574,7 +9575,8 @@ function pkLeadFix(t,c,q,isCompat){ try{ t=String(t||''); q=String(q||''); if(is
   head=head.replace(/^[〔［\[(（][^〕］\]）)]{0,90}(?:生年月日|誕生日)[^〕］\]）)]{0,90}[〕］\]）)][、]?/,'').replace(/^[^。]{0,40}(?:生年月日|誕生日)[^。]{0,90}(?:ませんが|ますが|ですが|けれど|けど|ものの)、/,'').replace(/^[^。]{0,40}(?:生年月日|誕生日)[^。]{0,16}(?:分から|わから|不明)[^。]{0,8}(?:ため|ので)、/,'');
   { const _hs=sens(head), _bd=_hs.filter(function(x){ return /生年月日|誕生日/.test(x)&&/相性|くわしく|詳しく/.test(x); }); if(_bd.length&&_bd.length<_hs.length){ head=_hs.filter(function(x){ return _bd.indexOf(x)<0; }).join(''); rest=_bd.join('')+'\n\n'+rest.replace(/^\s+/,''); } }   // 「お相手の生年月日が分かれば…」の文は1行目に置かず、うしろへ（2026-11-05 点検）
   // A：できますか
-  if(!DD&&!isCompat&&c&&pkCanQ(q)&&!(/脈/.test(q)?/可能性|見込み|脈|望み|難し/:/可能性|でき(ます|る)|難し|叶(い|う)|うまくいき|見込み|戻れ|望みは/).test(sens(head)[0]||'')&&pkIsLoveQ(q)){   // 「脈ありですか」は「できます」だけでは答えにしない（2026-11-05） const L=loveFourLines(c); let s='';
+  if(!DD&&!isCompat&&c&&(pkCanQ(q)||/可能性|なれ(?:ます|る)か|叶(?:い|う)/.test(q))&&pkIsLoveQ(q)&&/可能性は十分|十分(?:に)?(?:可能|あり)|必ず(?:結ばれ|一緒|叶|うまく|結婚)|間違いなく|確実に/.test(sens(head)[0]||'')) head=sens(head).slice(1).join('');   // 1人の恋愛の「できますか」で「可能性は十分」「必ず」と言い切った1文は外し、ツールの見込みの文に（PROとビギナーで同じ。2026-11-20 恋愛相談の点検）
+  if(!DD&&!isCompat&&c&&pkCanQ(q)&&!(/脈/.test(q)?/可能性|見込み|脈|望み|難し/:/可能性|でき(ます|る)|難し|叶(い|う)|うまくいき|見込み|戻れ|望みは/).test(sens(head)[0]||'')&&pkIsLoveQ(q)){ const L=loveFourLines(c); let s='';   // 「脈ありですか」は「できます」だけでは答えにしない（2026-11-05）。前は宣言がこのコメントの中に入っていて、ここを通ると pkLeadFix 全体が止まり直しが何もかからなかった（2026-11-20 恋愛相談の点検で直した）
     const _ML=L?((plain?L.monthLabsP:L.monthLabs)||[]):[];
     if(L&&(_ML.length||(L.goodYears||[]).length)) s='可能性はあります。縁が動きやすいのは'+((_ML[0]&&pkNowLab(_ML[0]))||((L.goodYears||[])[0]+'年'))+'です。'+(_ML[0]&&_pkMonKu(_ML[0])?(plain?PK_MON_KUU_NOTEP:PK_MON_KUU_NOTE):'');
     else s='今すぐは動きにくい時期ですが、可能性がなくなったわけではありません。';
@@ -9589,10 +9591,21 @@ function pkLeadFix(t,c,q,isCompat){ try{ t=String(t||''); q=String(q||''); if(is
     if(isCompat&&c&&typeof chartB!=='undefined'&&chartB){ const P2=pkCpAB(c,chartB), kd=pkCompatQKind(q), neg=PK_CP_PREM_NEG.test(q);
       const contra=(neg||kd==='win')&&sens(head).slice(0,2).some(pkCpFeelAssert), noHow=kd==='win'&&!PK_WIN_HOW.test(fst);
       if(contra||noHow){ const S=pkCompatSit(P2[0],P2[1],q,plain); if(S&&S.lead) head=S.lead; else if(contra){ const k=sens(head).filter(function(x){ return !pkCpFeelAssert(x); }); head=k.length?k.join(''):pkCpFeelSoft(head); } } }
+    // 結ばれるか・結婚できるか（fate）：1行目の見込みの言葉（高い／ある／低め）がツールとちがう・「十分」「必ず」と言い切る・お相手の気持ちを言い切るときは、ツールの1行目に（PROとビギナーで同じ答えに。2026-11-20 恋愛相談の点検）
+    if(isCompat&&c&&typeof chartB!=='undefined'&&chartB&&pkCompatQKind(q)==='fate'){ const P2=pkCpAB(c,chartB), S=pkCompatSit(P2[0],P2[1],q,plain);
+      if(S&&S.lead){ const lv=function(x){ const m=String(x||'').match(/可能性(?:は|が)[^。、]{0,6}?(十分|高い|高め|大いに|あります|ある|低め|低い)/); return m?({'十分':'高','高い':'高','高め':'高','大いに':'高','あります':'有','ある':'有','低め':'低','低い':'低'})[m[1]]:''; };
+        const f2=sens(head).slice(0,2).join(''), a0=lv(f2), b0=lv(S.lead);
+        const over=/十分|必ず|間違いな|確実|きっと/.test(sens(head)[0]||''), feel=sens(head).slice(0,2).some(function(x){ return /(?:お相手|彼女|彼(?![らの方岸])|相手)[^。]{0,24}(?:惹かれ(?:て|、|る)|魅力的に映|心惹かれ|好意を)/.test(x)&&!PK_CP_HEDGE.test(x)&&!/命式|生まれ持った性質|星/.test(x); });
+        if((a0&&b0&&a0!==b0)||over||feel||!a0) head=S.lead; } }
+    // 二股・両方と付き合う相談：1行目ですすめないと書いていなければ、その一文を先に（1人・相性とも。2026-11-20）
+    if(PK_TWO_Q.test(q)&&!/おすすめしません|すすめません|勧めません|控え|避け|誠実|不誠実|どちらか(?:一方|ひとり|1人)/.test(sens(head).slice(0,2).join(''))) head=PK_TWO_NO+head;
     else if(!isCompat&&c&&PK_WIN_Q.test(q)&&!PK_WIN_HOW.test(fst)&&!(pkConsultPeople(c,q)||[]).length){ const L1=pkWinLead1(c,q,plain); if(L1) head=L1; }
   }catch(e){}
   { const PRE=function(x){ x=x.replace(/^結論[：:]\s*/,''); return x.length<70&&(/(お答えします|お伝えします|見ていきます|読み解きます|ご説明します|拝見します)。$/.test(x)||/(のですね|んですね|ですね|ますね)。$/.test(x)); };
-    const h0=sens(head); if(h0.length>1){ const h1=h0.filter(function(x){ return !PRE(x); }); if(h1.length&&h1.length<h0.length) head=h1.join('').replace(/^結論として、?/,''); } }   // 前置き・あいづちだけの文（「迷われているのですね。」）は、ツールの答えを足したあとの何文目でも1行目に入れない（2026-11-03）
+    const h0=sens(head); if(h0.length>1){ const h1=h0.filter(function(x){ return !PRE(x); }); if(h1.length&&h1.length<h0.length) head=h1.join('').replace(/^結論として、?/,''); }
+    else if(h0.length===1&&PRE(h0[0].replace(/^[ 　]+/,''))&&/(?:ご相談|について|から)[^。]{0,40}(?:お答えします|お伝えします|見ていきます|読み解きます)。$/.test(h0[0])){ try{   // 1行目が前置きの1文だけ（「…というご相談について、…からお答えします。」）なら、ツールの1行目に（2026-11-20 恋愛相談の点検）
+      let L0=''; if(isCompat&&typeof chartB!=='undefined'&&chartB){ const P2=pkCpAB(c,chartB), S=pkCompatSit(P2[0],P2[1],q,plain); L0=S&&S.lead||''; } else if(c) L0=pkOfflineLead(c,q,plain)||'';
+      if(L0) head=L0; }catch(e){} } }   // 前置き・あいづちだけの文（「迷われているのですね。」）は、ツールの答えを足したあとの何文目でも1行目に入れない（2026-11-03）
   head=head.replace(/(^|[。！？])結論[：:]\s*/g,'$1');
   // F：PROのお伝え方（お客様に読み上げる文）は専門用語なし
   if(!plain){ const k=rest.search(/\n[ 　]*[【\[]/); const say=k<0?rest:rest.slice(0,k), tail=k<0?'':rest.slice(k); rest=pkPlainTalk(say)+tail; }
@@ -10541,6 +10554,9 @@ function pkCompatOffLead(a,b,q,plain){ try{ { const _st=q?pkCompatSit(a,b,q,plai
    PK_WIN_Q＝「もっと好かれるには」「振り向かせたい」「距離を縮めたい」。PK_CP_PREM_NEG＝相談の前提が「お相手は惹かれていない」。
    1行目で「どうすれば」に答える（お相手が好きになりやすい人と本人の重なり・お相手から見た本人の役割・2人とも縁が動く月・注意の月）。
    前提を「もう惹かれています」と打ち消さない・お相手の気持ちを言い切らない・駆け引きはすすめない。 */
+const PK_CHEATED_Q=/(?:浮気|裏切)(?:を)?(?:され|られ)|浮気(?:が|を)(?:発覚|わか|分か|知っ)|(?:彼|彼女|相手|お相手|恋人)[^。]{0,6}浮気(?:して|した|していた)/;   // 浮気された相談（許して続けるか）＝別れるかの相談と同じ答え方（2026-11-20）
+const PK_TWO_Q=/(?:両方|二股|ふたまた|2人とも|二人とも|ふたりとも|同時に)[^。]{0,12}(?:付き合|交際|関係を続|キープ)/;   // 二股・両方と付き合う相談：すすめない（2026-11-20）
+const PK_TWO_NO='両方と同時にお付き合いするのはおすすめしません（どちらの方とも信頼が育ちにくくなります）。';
 const PK_WIN_Q=/好かれ(?:たい|る(?:には|ため|方法|よう)|るに|ようと)|振り向(?:かせ|いて(?:もらい|ほし|欲し|くれ))|距離を縮め|仲(?:良く|を深め)(?:なりたい|たい|るには|なるには)|好きになって(?:もら|ほし|欲し)|意識して(?:もら|ほし|欲し)|気を引|惹きつけ|アプローチ(?:の仕方|方法|したい|するには)|もっと好きに/;
 const PK_CP_PREM_NEG=/惹かれて(?:い)?ない|好きじゃない|好きではない|好きでない|興味が(?:ない|なさそう)|脈が?(?:ない|なさそう)|振り向いて(?:くれない|もらえない)|そっけない|冷たい|片思い|片想い|気持ちが(?:ない|離れ)|好かれて(?:い)?ない|あまり[^。]{0,10}(?:惹かれ|好き|興味)/;
 const PK_WIN_HOW=/すると|ことで|ことです|見せ|伝え|ふや|増や|大切に|近道|意識|心がけ|コツ|鍵|ように/;
@@ -10561,7 +10577,7 @@ function pkCompatQKind(q){ q=String(q||''); if(!q) return '';
   if(/断り方|断りたい|断(?:れ|る|っ)(?:ば|たら|には|方法|べき|て(?:も|いい|よい))|お断り|どう伝え|伝え方|どう言え|どう言っ|なんて言え|何て言え|どう返事|返事の仕方|どう答え/.test(q)&&!(/告白(?:したい|しよう|する(?:か|べき|には))|(?:気持ち|想い|思い)を伝えたい|好きと伝えたい/.test(q)&&!/され|言われ|られ/.test(q))) return 'howto';
   if(/告白され|告られ|コクられ|付き合って(?:ほしい|欲しい|ください)[^。]{0,6}(?:と|って)言われ|好き(?:だ|です)?(?:と|って)言われ|交際を申し込まれ|プロポーズされ|求婚され/.test(q)) return 'confessed';
   if(/復縁|やり直(?:し|せ|す|した)|よりを戻|ヨリを戻|元彼|元カレ|元カノ|元夫|元妻|元恋人|戻りたい|戻れ(?:る|ます)/.test(q)) return 'reunion';
-  if(/別れ(?:る|た|よう|ようか|るべき|たい|を考え|話)|離婚|距離を置|終わりにし/.test(q)) return 'breakup';
+  if(/別れ(?:る|た|よう|ようか|るべき|たい|を考え|話)|離婚|距離を置|終わりにし/.test(q)||PK_CHEATED_Q.test(q)) return 'breakup';   // 浮気された（許して続けるか）も別れるかの相談と同じ答え方（2026-11-20）
   if(/告白(?:したい|しよう|する|して(?:も|いい|よい|みた)|のタイミング|すべき)|気持ちを伝え|想いを伝え|思いを伝え|好きと伝え|プロポーズ(?:したい|しよう|する|して)/.test(q)) return 'confess';
   if(PK_WIN_Q.test(q)||(PK_CP_PREM_NEG.test(q)&&/どう(?:すれば|したら|やったら)|には|方法|コツ/.test(q))) return 'win';   // 好かれたい・振り向かせたい・距離を縮めたい（2026-11-20 恋愛相談の点検）
   if(pkActQ(q)) return 'act';   // いつ連絡・デートに誘う・会いに行くなど、自分から動く時期（空亡の月・日を避ける。2026-11-05）
@@ -10676,7 +10692,7 @@ function pkCompatSit(a,b,q,plain){ try{ if(pkSafeStop(q)) return null;
     if(big) H.push(big);
     H.push('お相手の本当の気持ちは、お相手にしかわかりません。決めつけず、ふだんのやりとりの中で確かめましょう。');
   } else if(kd==='decide'){
-    lead='付き合うかどうかはあなたが決めてよいことですが、'+MS+att+'です。'+(bm?'前向きに考えるなら'+bm+'のうちに、':'')+(wm?'迷うなら'+wm+'は大事な答えを出さないでおきましょう。':'迷ううちは急がず、気持ちが固まってから答えましょう。');
+    lead=(PK_TWO_Q.test(q)?PK_TWO_NO:'')+'付き合うかどうかはあなたが決めてよいことですが、'+MS+att+'です。'+(bm?'前向きに考えるなら'+bm+'のうちに、':'')+(wm?'迷うなら'+wm+'は大事な答えを出さないでおきましょう。':'迷ううちは急がず、気持ちが固まってから答えましょう。');
     if(big) H.push(big);
     H.push('「好き」の気持ちと「一緒にいて安心できるか」の両方を、自分に聞いてみましょう。');
     H.push('決めるのはあなたです。どちらを選んでも、お相手への感謝は言葉にして伝えましょう。');
@@ -11297,7 +11313,7 @@ function _evBr(sn){ const B=[]; const add=function(x){ if(B.indexOf(x)<0) B.push
   return B; }
 function _evSplit(t){ const out=[]; let cur='', d=0; for(const ch of String(t)){ cur+=ch; if(ch==='（'||ch==='(')d++; else if((ch==='）'||ch===')')&&d>0)d--; if((ch==='\n')||((ch==='。'||ch==='！'||ch==='？')&&d===0)){ out.push(cur); cur=''; d=ch==='\n'?0:d; } } if(cur) out.push(cur); return out; }   // かっこの中の「。」では切らない
 /* 文に「月柱と支合」のように柱の名前が合・冲のすぐ近くに書いてあれば、その柱の十二支を返す（1人の命式のときだけ。2026-11-03） */
-function _evPilBr(sn,k,a,b){ try{ if(b||!a||!a.pillars||!/^(支合|三合|方合|半合|半会|冲|刑)$/.test(k)) return null;   // 十二支の合・冲だけ（干合は天干どうしなので見ない） const PLN=['年柱','月柱','日柱','時柱'];
+function _evPilBr(sn,k,a,b){ try{ if(b||!a||!a.pillars||!/^(支合|三合|方合|半合|半会|冲|刑)$/.test(k)) return null; const PLN=['年柱','月柱','日柱','時柱'];   // 十二支の合・冲だけ（干合は天干どうしなので見ない）。PLN の宣言がコメントの中に入っていて、柱の照らし合わせが毎回止まっていた（2026-11-20 に直した）
   const m=sn.match(new RegExp('(?:あなたの|ご本人の)?(年柱|月柱|日柱|時柱|配偶宮)(?:[（(][^）)]{0,40}[）)])?(?:と|との|に|が|を)[^。、]{0,6}'+k))||sn.match(new RegExp(k+'[^。、]{0,4}(?:する|して|の相手は)?(年柱|月柱|日柱|時柱|配偶宮)')); if(!m) return null;
   if(/お相手|相手の|彼の|彼女の|夫の|妻の/.test(sn.slice(Math.max(0,sn.indexOf(m[0])-10),sn.indexOf(m[0])))) return null;
   const j=m[1]==='配偶宮'?2:PLN.indexOf(m[1]), P=a.pillars[j]; if(!P||(j===3&&a.timeUnknown)) return null; return {pl:m[1],br:P.branch}; }catch(e){ return null; } }
