@@ -1212,6 +1212,35 @@ body:has(#s-setup.on),body:has(#s-lobby.on){background-image:none}
 #s-q .nt-bar{border:0;background:#F1E7C8}
 #s-q .qwho .seat{border:1.5px solid #E2D7BC;box-shadow:0 3px 10px rgba(120,90,20,.07)}
 #s-q .qwho .av{border-width:1.5px}
+/* 問題の画面 案A（鑑定者本人 2026-11-20「これにします」。見本 https://claude.ai/artifact/JoF5wd9gRaJahthD12Y5p1）：
+   上の空きをなくし（もどる・進み具合・TOPを1段）、みんなの席は小さな札にして問題の上、問題と答えをひと続きに。問題の文は左よせ */
+#s-q .qnav{margin:0 0 6px;gap:10px}
+#s-q .qnav .top{flex:1;min-width:0}
+#s-q .qnav .count{min-width:0;font-size:14px}
+#s-q .qnav .navb{white-space:nowrap}
+#s-q .qnav .navb[hidden]{display:none}
+#s-q .qwho{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 8px;margin:4px 0 0}
+#s-q .qwho .seat{position:relative;flex:0 1 auto;max-width:none;width:auto;margin-top:9px;flex-direction:row;align-items:center;gap:6px;padding:4px 12px 4px 4px;border-radius:999px;background:#fff}
+#s-q .qwho .av{width:32px;height:32px;flex:0 0 auto}
+#s-q .qwho .av img{width:28px;height:28px}
+#s-q .qwho .seat>b{font-size:14px;max-width:7em}
+#s-q .qwho .st{font-size:12px}
+#s-q .qwho .ok{width:15px;height:15px;font-size:9px;right:-4px;bottom:-3px;border-width:1.5px}
+#s-q .qwho .qs-you{left:12px;transform:none;top:-10px}
+#s-q .qwho .think{background:#fff}
+#s-q .qwho .done{background:#E6F6EC}
+#s-q .qwho .tout{background:#F1F1F4}
+/* 5人以上は、状態の文字を出さず色だけ（札が何段にもならないように） */
+#s-q .qwho.many .st{display:none}
+#s-q .qwho.many .think{background:#FFF6D2}
+#s-q .qwho.many .seat{padding-right:10px}
+#s-q .qwho.many .av{width:28px;height:28px}#s-q .qwho.many .av img{width:24px;height:24px}
+#s-q #q-card{margin-top:10px}
+#s-q #q-card:not(.hon){text-align:left}
+#s-q #q-card:not(.hon) #q-hint{font-size:18px;text-align:left;text-align-last:left}
+@media (max-width:360px){#s-q #q-card:not(.hon) #q-hint{font-size:17px}}
+#s-q.who-on .choice:not(.hon){min-height:0;font-size:18px;padding-top:14px;padding-bottom:14px}
+@media (max-width:360px){#s-q .qwho{gap:5px 6px}#s-q .qwho .seat{gap:4px;padding-right:8px}#s-q .qwho .av{width:26px;height:26px}#s-q .qwho .av img{width:22px;height:22px}#s-q .qwho .seat>b{font-size:13px}#s-q .qwho .st{font-size:11px;padding:1px 6px}#s-q.who-on .choice:not(.hon){font-size:16px}}
 </style>
 <style id="yurusu">
 /* あなたの許せるライン（鑑定者本人 2026-11-19「この形で作ってください」） */
@@ -1575,15 +1604,15 @@ input,select,textarea{font-size:max(16px,1em)}
 </section>
 
 <section class="scr" id="s-q">
-  <div class="nav"><button class="navb" data-nav="back">← もどる</button><span class="navr"><button class="navb q-mine" id="q-mine" type="button" hidden>さっきの結果</button><button class="navb" data-nav="top">TOP</button></span></div>
-  <div class="top">
+  <!-- 案A（鑑定者本人 2026-11-20「これにします」）：もどる・進み具合・TOPを1段に／みんなの席は問題の上／問題と答えをひと続きに -->
+  <div class="nav qnav"><button class="navb" data-nav="back">← もどる</button><div class="top">
     <div class="prog"><i id="q-prog"></i></div>
     <div class="count" id="q-count"></div>
-  </div>
+  </div><span class="navr"><button class="navb q-mine" id="q-mine" type="button" hidden>さっきの結果</button><button class="navb" data-nav="top">TOP</button></span></div>
   <p class="turn" id="q-turn" hidden><span></span></p>
+  <div class="qwho" id="q-who" hidden></div>
   <div class="qcard" id="q-card"><img class="q-pd" id="q-pd" src="img/panda-1.webp" alt="" width="56" height="56" hidden><span class="qno" id="q-no"></span><p class="qhint" id="q-hint"></p></div>
   <p class="qby" id="q-by" hidden></p>
-  <div class="qwho" id="q-who" hidden></div>
   <div class="ntimer" id="ntimer" hidden><span class="nt-bar"><i id="nt-fill"></i></span><b id="nt-num">15</b></div>
   <div id="q-body"></div>
   <div class="htimer" id="htimer" hidden><span class="hdots" id="hdots" hidden><i></i><i></i><i></i></span><b id="hnum"></b><i id="htbar" hidden></i></div>
@@ -2050,7 +2079,7 @@ function showQ(){
   if(group && !S.room){ turn.hidden=false; turn.firstChild.textContent=S.players[S.pi].name+' さん'; } else turn.hidden=true;
   var bk=document.querySelector('#s-q [data-nav=back]'); if(bk) bk.textContent=(S.who==='solo'&&!S.room&&!S.honPlay&&S.qi>0)?'← 1問もどる':'← もどる';
   // TOP と同じ動きになるとき（1問目・部屋・本能モード）は「もどる」を出さない
-  if(bk) bk.style.visibility=((S.who==='solo'&&!S.room&&!S.honPlay&&S.qi>0)||(S.who!=='solo'&&!S.room&&!S.honPlay))?'':'hidden';
+  if(bk) bk.hidden=!((S.who==='solo'&&!S.room&&!S.honPlay&&S.qi>0)||(S.who!=='solo'&&!S.room&&!S.honPlay));   // 出さないときは場所も取らない（進み具合と1段に並べるため）
   $('htimer').hidden=!S.honPlay; if(S.honPlay) document.body.setAttribute('data-mode', q.m||S.mode);
   // 本能モードは色をパステル（ピーチ×ラベンダー）に固定し、問題のカードの中でパンダが見守る（鑑定者本人の選択 2026-11-14「2」）
   $('q-card').classList.toggle('hon', !!S.honPlay); var qpd=$('q-pd'); qpd.hidden=!S.honPlay; if(S.honPlay) qpd.src='img/panda-1.webp';
