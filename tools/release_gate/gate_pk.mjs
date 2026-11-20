@@ -191,7 +191,7 @@ ok('UX③：鑑定書の章の見出しのすぐ下に「恋愛での持ち味�
     const fate=f('結婚まで進む可能性は十分にあります。お相手から見るとあなたはとても魅力的に映り、自然と心惹かれる組み合わせだからです。','彼と結婚できますか？いつ頃ですか',true), fateOK=!/十分|魅力的に映/.test(fate)&&/可能性はあります/.test(fate);
     const pre=f('お相手を許して関係を続けるべきかというご相談について、2人の生まれ持った性質と結びつきの強さからお答えします。','彼に浮気されました。許して続けるべきですか',true), preOK=!/お答えします/.test(pre)&&/決める/.test(pre);
     const two=f('どちらと付き合うかはあなた次第です。','2人の男性の間で迷っています。両方と付き合ってもいいですか',true), twoOK=/おすすめしません/.test(two);
-    chartB=null; const re=pkOfflineLead(W,'別れた彼とやり直せますか',pl)||'', reOK=!/別れるかどうか/.test(re);
+    chartB=null; const re=pkOfflineLead(W,'別れた彼とやり直せますか',pl)||'', reOK=!/別れるかどうか/.test(re)&&/可能性/.test(re);
     const one=f('お互いの歩みを整えれば、一緒に未来へ進む可能性は十分にあります。','既婚者の彼と付き合っています。この先2人で一緒になれる可能性はありますか',false), oneOK=!/十分/.test(one)&&/可能性はあります/.test(one);
     const ch1=pkOfflineLead(W,'彼に浮気されました。許して続けるべきですか',pl)||'', ch1OK=/許して続けるか/.test(ch1);
     chart=k0; chartB=k1; return {ch,fateOK,fate:fate.slice(0,60),preOK,pre:pre.slice(0,60),twoOK,reOK,re:re.slice(0,50),oneOK,one:one.slice(0,50),ch1OK,ch1:ch1.slice(0,40)}; }catch(e){ return {err:String(e)}; } });
@@ -199,7 +199,7 @@ ok('UX③：鑑定書の章の見出しのすぐ下に「恋愛での持ち味�
   ok('恋愛②：結ばれるか・結婚できるかの1行目はツールの見込みにそろえる（「十分」・気持ちの言い切りを置きかえ）', L2.fateOK, L2.fate||L2.err);
   ok('恋愛②：1行目が前置きの1文だけならツールの1行目に', L2.preOK, L2.pre);
   ok('恋愛②：二股・両方と付き合う相談はすすめない', L2.twoOK);
-  ok('恋愛②：「別れた彼とやり直せますか」を別れるかの相談にしない', L2.reOK, L2.re);
+  ok('恋愛②：「別れた彼とやり直せますか」を別れるかの相談にせず、1行目で見込みに答える', L2.reOK, L2.re);
   ok('恋愛②：1人の「一緒になれるか」で「可能性は十分」と言い切らない（pkLeadFix が止まらない）', L2.oneOK, L2.one); }
 // 追加の質問
 const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃ですか'); await p.click('#consultBtn'); await p.click('#consultBtn').catch(()=>{});
