@@ -247,6 +247,20 @@ ok('UX③：鑑定書の章の見出しのすぐ下に「恋愛での持ち味�
   ok('不倫②：【既婚の立場から見た流れ】（ビギナー【結婚している立場から見た流れ】）を1回だけ書き足す／不倫の相談でなければ足さない', F.enOK&&F.dup&&F.no);
   ok('不倫②：1行目が家庭の側にふれていなければツールの1行目に・文章作成への渡しに材料', F.lfOK&&F.txOK, F.lf);
   ok('不倫②：1人の相談も1行目に家庭の側・お相手がいないときは相性の文を出さない', F.l1OK&&F.e1OK, F.L1); }
+{ /* 「これからどうしたら良いですか」は1行目を助言から・三合方合の大運は25年まで（鑑定者本人の承認 2026-11-20「直してください」） */
+  const H=await p.evaluate(()=>{ try{ const pl=document.documentElement.classList.contains('bg-on'), k0=chart, k1=chartB; const mk=(y,m,d,h,sx)=>baziCompute({year:y,month:m,day:d,hour:h,minute:0,sex:sx},0,'none');
+    const W=mk(1981,6,10,22,'female'), M=mk(2006,6,7,12,'male'); chart=W; chartB=M;
+    const Q1='私は既婚者で、25歳年下の彼と不倫関係です。これからどうしたら良いですか。', Q2='彼とこれからどうしたら良いですか。';
+    const S1=pkCompatSit(W,M,Q1,pl)||{}, S2=pkCompatSit(W,M,Q2,pl)||{}, Sf=pkCompatSit(W,M,'私は既婚者で、25歳年下の彼と不倫関係です。この2人の関係はこれからどうなりますか。',pl)||{};
+    const adv=/^(?:年齢差（約\d+歳）[^、]*、)?これからは、/;
+    const l1=S1.lead||'', l2=S2.lead||'', ok1=adv.test(l1)&&/話し合/.test(l1)&&/流れ/.test(S1.why||''), ok2=adv.test(l2)&&/とよいでしょう/.test(l2), okf=!/^これからは、/.test(Sf.lead||'');
+    const lf=pkLeadFix('この2人は縁の深い関係で、関係は続きやすい流れです。\n【お客様へのお伝え方】\n本文。',W,Q1,true).split('\n')[0], lfOK=adv.test(lf);
+    chartB=null; const L1=pkOfflineLead(W,'私は既婚者で、年下の彼と不倫関係です。これからどうしたら良いですか。',pl)||'', l1OK=/^これからは、/.test(L1);
+    const T=compatTrio(W,M), lim=new Date().getFullYear()+25, far=[]; T.forEach(o=>o.du.forEach(d=>{ if(d.from>lim) far.push(d.from); }));
+    chart=k0; chartB=k1; return {ok1,ok2,okf,l1:l1.slice(0,110),l2:l2.slice(0,90),lfOK,lf:lf.slice(0,80),l1OK,L1:L1.slice(0,90),far}; }catch(e){ return {err:String(e)}; } });
+  ok('どうしたら：「これからどうしたら良いですか」は1行目を助言から（不倫・ふつうの恋愛とも。見通しは理由へ。「どうなりますか」は今までどおり見通しから）', H.ok1&&H.ok2&&H.okf, H.err||(H.l1+' / '+H.l2));
+  ok('どうしたら：1行目が助言になっていなければツールの1行目に・1人の相談も助言から', H.lfOK&&H.l1OK, H.lf+' / '+H.L1);
+  ok('どうしたら：三合・方合になる大運は25年より先を出さない', H.far&&!H.far.length, JSON.stringify(H.far)); }
 // 追加の質問
 const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃ですか'); await p.click('#consultBtn'); await p.click('#consultBtn').catch(()=>{});
 const ms2=await waitFor(()=>{const it=document.querySelectorAll('#reading .rd-item');const l=it[it.length-1];return it.length>=2&&l.querySelector('.rd-bar')&&!l.querySelector('.loading');},60000);

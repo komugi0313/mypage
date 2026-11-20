@@ -144,6 +144,16 @@ ok('開いただけでは文章作成を呼ばない', calls===0, 'calls='+calls
     const [P3]=run('火風鼎',4,'▼判定：✖ 今は控えるのが賢明です\n▼伝え方：x\n▼助言：・x','彼と付き合ってもいいですか'); if(/^卦から見ると、この関係/.test(P3.hantei)) bad.push('この先でない相談まで変えた：'+P3.hantei.slice(0,60));
     return {bad}; });
   ok('この先：易の「この先どうなりますか」は「卦から見ると、〜の流れです」で答える（記号は卦のまま・控えるのが賢明の型にしない・卦の名前と記号のちがいはひとこと）', r.bad.length===0, r.bad.join(' / ')); }
+{ /* 不倫の「どうしたら」は近づきたい人と決めつけない（2026-11-20） */
+  const r=await p.evaluate(()=>{ const F=window.__ekiFix; if(!F) return {bad:['点検用の __ekiFix がない']}; const bad=[];
+    const key=nm=>Object.keys(HEXDB).find(k=>HEXDB[k].nm===nm).split('-').map(Number);
+    const [u,l]=key('火風鼎'); const rr=F.buildResult(u,l,4,[4]); const q='私は既婚者で、25歳年下の彼と不倫関係です。これからどうしたら良いですか。'; window.__ekiQ=q;
+    const P=F.ekiFixSym(F.ekiCleanReading(F.parseReading('▼判定：✖ 今は控えるのが賢明です\n▼伝え方：x\n▼助言：・x'),q),rr,q), h=String(P.hantei||'');
+    if(/近づき/.test(h)||!/進む道が見えやすい/.test(h)) bad.push('不倫のどうしたら：'+h.slice(0,80));
+    const q2='彼ともっと仲良くなるにはどうしたらいいですか'; window.__ekiQ=q2; const P2=F.ekiFixSym(F.ekiCleanReading(F.parseReading('▼判定：✖ 今は控えるのが賢明です\n▼伝え方：x\n▼助言：・x'),q2),rr,q2);
+    if(!/近づき/.test(String(P2.hantei||''))) bad.push('ふつうの恋愛まで変えた：'+String(P2.hantei).slice(0,60));
+    return {bad}; });
+  ok('不倫：易の不倫の「どうしたら」は近づきたい人と決めつけず「進む道が見えやすい流れ」で答える（ふつうの恋愛は今までどおり）', r.bad.length===0, r.bad.join(' / ')); }
 { const s=fs.readFileSync(path.join(ROOT,'eki-pro','app','index.html'),'utf8'); ok('年齢差：易も年齢差を説教せず卦から答える（頼み方に決まり・時期は書かない・ふれていなければ一言）', /var EKI_AGEGAP_Q=/.test(s)&&/【年齢差のご相談】/.test(s)&&/年齢差について：易では、年齢差そのもので良い悪いを決めず/.test(s)&&/function ekiAgeGapQ/.test(s)&&/ekiAgeGapEnsure\(_o,q\)/.test(s)&&/ekiAgeGapEnsure\(p,q\)/.test(s)); }
 { const s=fs.readFileSync(path.join(ROOT,'eki-pro','app','index.html'),'utf8'); ok('不倫：易も既婚の方との恋を説教せず卦から答える（頼み方に決まり・時期は書かない）', /var EKI_AFFAIR_Q=/.test(s)&&/【不倫・既婚の方との恋のご相談】/.test(s)&&/時期は書かない（易の決まり）/.test(s)); }
 { const s=fs.readFileSync(path.join(ROOT,'eki-pro','app','index.html'),'utf8'); ok('恋愛：易の「優しや」を「優しさや」に直す', /\[\/優しや\(\?=\[思気心言\]\)\/g,'優しさや'\]/.test(s)); }
