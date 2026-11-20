@@ -479,8 +479,9 @@ function stepsHTML(G){const ps=G.players,two=ps.length===2,me=ps.find(p=>p.id===
 // C：話し合うときのコツ（切り出しの例は、いちばん上の分かれた問題の答えから作る）
 function tipsHTML(G){const ps=G.players,me=ps.find(p=>p.id===G.me),its=talkItems(G);let open='この答え、どうしてそう思ったの？';
   if(its.length){const i=its[0],k=G.qs[i],my=me&&me.ans[i]&&me.ans[i].o<2&&me.ans[i].o>=0?me.ans[i].o:0,ot=1-my;
-    open=`わたしは<em>「${esc(ans(my,k))}」</em>にしたけど、<em>「${esc(ans(ot,k))}」</em>にしたのは、どうして？`}
-  let tz='切り出しの例と、4つのコツ';if(its.length){const k=G.qs[its[0]],my=me&&me.ans[its[0]]&&me.ans[its[0]].o>=0&&me.ans[its[0]].o<2?me.ans[its[0]].o:0;tz=`切り出しの例：<em>「わたしは${esc(ans(my,k))}にしたけど…」</em>`}
+    const qa=t=>{const x=esc(t);return x.length<=12?`<em class="nw" data-nojw>「${x}」</em>`:`<em>「${x}」</em>`};
+    open=`わたしは${qa(ans(my,k))}にしたけど、${qa(ans(ot,k))}にしたのは、どうして？`}
+  let tz='切り出しの例と、4つのコツ';if(its.length){const k=G.qs[its[0]],my=me&&me.ans[its[0]]&&me.ans[its[0]].o>=0&&me.ans[its[0]].o<2?me.ans[its[0]].o:0;tz=`<span class="sml">切り出しの例：</span><span class="sml"><em>わたしは「${esc(ans(my,k))}」にしたけど…</em></span>`}
   return foldBox('話し合うときのコツ',tz,`<div class="tips"><div class="bub"><div><small>切り出すとき（例）</small><p>${open}</p></div></div><div class="tp">
     <div><b>はじめに</b><span>同じだったところを1つ話す。</span></div>
     <div><b>1回に1つ</b><span>分かれた問題は、1つずつ話す。</span></div>
@@ -582,7 +583,7 @@ function twoFolds(G,trows,nm,r){
   const [A,B]=G.players,me=G.players.find(p=>p.id===G.me);let out='';
   const keep=trows.filter(x=>x.q>=2),drop=trows.filter(x=>x.q<2);
   if(trows.length){const few=drop.length?`<p class="few">${drop.map(x=>'「'+esc(x.name)+'」').join('')}は1問だけだったので出していません。${G.qs.length<30?'しっかり版（30問）なら、テーマごとにくわしくわかります。':''}</p>`:'';
-    const ks=keep.slice().sort((a,b)=>b.pct-a.pct),tz=ks.length?`いちばん重なった：<em>${esc(ks[0].name)}（${ks[0].pct}%）</em>${ks.length>1&&ks[ks.length-1].pct<ks[0].pct?`　分かれた：<em>${esc(ks[ks.length-1].name)}</em>`:''}`:'';
+    const ks=keep.slice().sort((a,b)=>b.pct-a.pct),tz=ks.length?`<span class="sml">いちばん重なった：<em class="nw">${esc(ks[0].name)}（${ks[0].pct}%）</em></span>${ks.length>1&&ks[ks.length-1].pct<ks[0].pct?`<span class="sml">分かれた：<em class="nw">${esc(ks[ks.length-1].name)}（${ks[ks.length-1].pct}%）</em></span>`:''}`:'';
     out+=foldBox('テーマ別のシンクロ率',tz,(keep.length?themeHTML(keep,'2人'):'')+few)}
   if(G.anon){const ax=axHTML(G,me?[me]:G.players,nm);if(ax)out+=foldBox('価値観のタイプ',me?'あなたの位置':'2人の位置',ax)}
   if(r.starN){const row=(i,cls)=>{const k=G.qs[i],aa=A.ans[i],bb=B.ans[i];
@@ -681,7 +682,7 @@ function showResultCore(G){
   // ③ みんなの共通点 → ④ みんなで話しておきたいこと
   h+=stepsHTML(G)+kyoSlot(G)+talkHTML(G,nm)+bridgeHTML(G)+'<p class="ref-h">くわしく見る</p>'+tipsHTML(G)+undecHTML(G,nm)+groupShapeHTML(G);
   // ⑤ 残りはたたむ
-  if(trows.length){const ks=trows.slice().sort((a,b)=>b.pct-a.pct);h+=foldBox('テーマ別のシンクロ率',`いちばん重なった：<em>${esc(ks[0].name)}（${ks[0].pct}%）</em>`,themeHTML(trows,'みんな'))}
+  if(trows.length){const ks=trows.slice().sort((a,b)=>b.pct-a.pct);h+=foldBox('テーマ別のシンクロ率',`<span class="sml">いちばん重なった：<em class="nw">${esc(ks[0].name)}（${ks[0].pct}%）</em></span>`,themeHTML(trows,'みんな'))}
   const ax=axHTML(G,(G.anon&&me)?[me]:ps,nm);if(ax)h+=foldBox('価値観のタイプ',(G.anon&&me)?'あなたの位置':ps.length+'人の位置',ax);
   const starP=(G.anon&&me?[me]:ps).map(p=>({p,xs:G.qs.map((k,i)=>({k,a:p.ans[i]})).filter(x=>x.a&&x.a.st&&x.a.o>=0&&x.a.o<2)})).filter(x=>x.xs.length);
   if(starP.length)h+=foldBox('★ ゆずれないこと',starP.slice().sort((a,b)=>b.xs.length-a.xs.length).slice(0,2).map(x=>`<em>${esc(x.p===me?'あなた':x.p.name)} ${x.xs.length}問</em>`).join('・')+(starP.length>2?'　ほか':''),starCnt(G)+starP.map(x=>`<div class="tori"><p class="sub">${nm(x.p)}</p><ul>${x.xs.map(y=>`<li>${esc(Q[y.k][1])} ${esc(ans(y.a.o,y.k))}</li>`).join('')}</ul></div>`).join(''));
