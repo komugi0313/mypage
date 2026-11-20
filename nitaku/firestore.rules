@@ -1,27 +1,44 @@
 // 究極の二択（honbare.com）が使う Firestore の決まり。
-// 置き場所は nitaku_rooms（みんなで遊ぶ部屋）・nitaku_votes（みんなの回答％）・nitaku_stats（遊んだ回数）・nitaku_hist（4つの％の分布）だけ。
+// 置き場所は nitaku_rooms（みんなで遊ぶ部屋）・nitaku_codes（部屋番号の表）・nitaku_votes（みんなの回答％）・nitaku_stats（遊んだ回数）・nitaku_hist（4つの％の分布）だけ。
 // 同じプロジェクトにほかの決まりがあるときは、全部を置きかえず、下の match と function をいまの決まりの中に足してください。
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // みんなで遊ぶ部屋（4けたの部屋番号。12時間で消す＝expireAt に TTL を設定）
+    // みんなで遊ぶ部屋。置き場所の名前は「4けたの番号-見分けの印（6文字）」（2026-11-20。前の部屋は4けたの番号だけ）。
+    // 部屋と参加者は、作ってから30日で消す（expireAt に TTL を設定する）。最後に動いた時刻は seen
     match /nitaku_rooms/{code} {
-      allow read: if code.matches('^[0-9]{4}$');
-      allow create, update: if code.matches('^[0-9]{4}$')
-        && request.resource.data.keys().hasOnly(['code','host','mode','lv','num','mix','round','qs','phase','qi','used','created','expireAt'])
-        && request.resource.data.code == code
+      allow read: if code.matches('^[0-9]{4}(-[a-z0-9]{6})?$');
+      allow create, update: if code.matches('^[0-9]{4}(-[a-z0-9]{6})?$')
+        && request.resource.data.keys().hasOnly(['code','host','mode','lv','num','mix','round','qs','phase','qi','used','created','seen','expireAt'])
+        && request.resource.data.code == code.split('-')[0]
         && request.resource.data.qs.size() <= 15;
       allow delete: if false;
 
-      // 部屋に入った人（名前と答えだけ）
+      // 部屋に入った人（名前と答えだけ。late＝あとから答えて加わった回）
       match /players/{pid} {
-        allow read: if code.matches('^[0-9]{4}$');
+        allow read: if code.matches('^[0-9]{4}(-[a-z0-9]{6})?$');
         allow create, update: if pid.size() <= 64
-          && request.resource.data.keys().hasOnly(['name','joined','ans','times','mine','expireAt'])
+          && request.resource.data.keys().hasOnly(['name','joined','ans','times','mine','seen','late','expireAt'])
           && request.resource.data.name is string && request.resource.data.name.size() <= 20;
         allow delete: if true;
       }
+    }
+
+    // 番号の表：いまその4けたの番号を使っている部屋の見分けの印（番号を手で入れたときに探す）。
+    // 作ってから12時間たった番号だけ、別の部屋に使い回せる
+    match /nitaku_codes/{code} {
+      allow read: if code.matches('^[0-9]{4}$');
+      allow create: if code.matches('^[0-9]{4}$')
+        && request.resource.data.keys().hasOnly(['tag','created','expireAt'])
+        && request.resource.data.tag is string && request.resource.data.tag.matches('^[a-z0-9]{6}$')
+        && request.resource.data.created is int;
+      allow update: if code.matches('^[0-9]{4}$')
+        && request.resource.data.keys().hasOnly(['tag','created','expireAt'])
+        && request.resource.data.tag is string && request.resource.data.tag.matches('^[a-z0-9]{6}$')
+        && request.resource.data.created is int
+        && request.time.toMillis() - resource.data.created >= 43200000;
+      allow delete: if false;
     }
 
     // みんなの回答％（問題ごとに a・b の数だけ。1回に1つずつしか増やせない）
