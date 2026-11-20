@@ -194,10 +194,11 @@ service cloud.firestore {
   
 
     // ---------- 恋のかたち診断（koi16/firestore.rules）----------
-    // みんなで一斉に診断の部屋（4けたの部屋番号。作ってから12時間で使えなくなる）
+    // みんなで診断の部屋。置き場所の名前は「4けたの番号-見分けの印（6文字）」（2026-11-20。前の部屋は4けたの番号だけ）。
+    // 部屋のリンクは作ってから10日使える（そろって始めるのは12時間まで）。部屋と参加者は作ってから10日で消す（expireAt に TTL を設定する）
     match /koi16_rooms/{code} {
-      allow read: if code.matches('^[0-9]{4}$');
-      allow create, update: if code.matches('^[0-9]{4}$')
+      allow read: if code.matches('^[0-9]{4}(-[a-z0-9]{6})?$');
+      allow create, update: if code.matches('^[0-9]{4}(-[a-z0-9]{6})?$')
         && request.resource.data.keys().hasOnly(['created','phase','mode','host','expireAt'])
         && request.resource.data.created is int
         && request.resource.data.phase in ['lobby','play']
@@ -207,8 +208,8 @@ service cloud.firestore {
 
       // 部屋に入った人（ニックネームと、診断が終わった人のタイプ4文字と愛着スタイルの1文字〈s・p・d・f〉と、答えた問題の数〈q・qn〉と、前に診断したことのある人の前回のタイプ〈pc〉だけ。答え・恋の状況・心のゆれやすさの数字は入れない）
       match /players/{pid} {
-        allow read: if code.matches('^[0-9]{4}$');
-        allow create, update: if code.matches('^[0-9]{4}$') && pid.size() <= 32
+        allow read: if code.matches('^[0-9]{4}(-[a-z0-9]{6})?$');
+        allow create, update: if code.matches('^[0-9]{4}(-[a-z0-9]{6})?$') && pid.size() <= 32
           && request.resource.data.keys().hasOnly(['name','code','done','joined','rc','ak','q','qn','pc','expireAt'])
           && request.resource.data.name is string && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 8
           && request.resource.data.code is string && request.resource.data.code.matches('^([LR][VA][TS][PC])?$')
@@ -218,8 +219,22 @@ service cloud.firestore {
           && (!('q' in request.resource.data) || (request.resource.data.q is int && request.resource.data.q >= 0 && request.resource.data.q <= 60))
           && (!('qn' in request.resource.data) || (request.resource.data.qn is int && request.resource.data.qn >= 1 && request.resource.data.qn <= 60))
           && (!('pc' in request.resource.data) || (request.resource.data.pc is string && request.resource.data.pc.matches('^([LR][VA][TS][PC])?$')));
-        allow delete: if code.matches('^[0-9]{4}$');
+        allow delete: if code.matches('^[0-9]{4}(-[a-z0-9]{6})?$');
       }
+    }
+    // 番号の表：いまその4けたの番号を使っている部屋の見分けの印。作ってから12時間たった番号だけ、別の部屋に使い回せる
+    match /koi16_codes/{code} {
+      allow read: if code.matches('^[0-9]{4}$');
+      allow create: if code.matches('^[0-9]{4}$')
+        && request.resource.data.keys().hasOnly(['tag','created','expireAt'])
+        && request.resource.data.tag is string && request.resource.data.tag.matches('^[a-z0-9]{6}$')
+        && request.resource.data.created is int;
+      allow update: if code.matches('^[0-9]{4}$')
+        && request.resource.data.keys().hasOnly(['tag','created','expireAt'])
+        && request.resource.data.tag is string && request.resource.data.tag.matches('^[a-z0-9]{6}$')
+        && request.resource.data.created is int
+        && request.time.toMillis() - resource.data.created >= 43200000;
+      allow delete: if false;
     }
   
   }

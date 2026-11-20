@@ -1,4 +1,4 @@
-# 1.66 奇跡の相性診断（166unmei.com）に貼る、3つの無料サイトのバナーを作る。
+# 1.66 奇跡の相性診断（166unmei.com）に貼る、無料サイトのバナー（恋のかたち診断・究極の二択・アイシンク・ワンソナ）を作る。
 # 鑑定者本人 2026-11-20「1.66 の愛情診断にも全てのバナーを貼りたい」。
 # 1.66 のファイルはこの作業場所にないので、貼るだけで動く部品を作る（絵は中に入れてあるので、ほかのファイルはいらない）。
 # 見た目は3つのサイトの相互リンク（.sis）と同じ。ほかのページの見た目とまざらないよう、名前の頭は sis166。
@@ -17,6 +17,7 @@ LATC = img('nitaku/img/sis/latc.webp')
 PANDA = img('isync/img/sis/panda.webp')
 AI = img('nitaku/img/sis/ai.webp')
 YUU = img('nitaku/img/sis/yuu.webp')
+WAN = img('nitaku/img/sis/wansona.webp')
 
 FONT_TEXT = urllib.parse.quote('恋のかたち診断究極の二択I-Sync')
 FONTS = ('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One'
@@ -45,6 +46,12 @@ CSS = """<style>
 .sis166 .bn-is .nm{font-family:'Quicksand',sans-serif;font-weight:700;font-size:21px;letter-spacing:.02em}
 .sis166 .bn-is .nm small{font-family:inherit;font-size:11px;font-weight:700;margin-left:5px;letter-spacing:0}
 .sis166 .bn-is .go{background:#fff;color:#2A2559}
+.sis166 .bn-wa{background:#E8F3F4;border:1.5px solid #A9D3D6;box-shadow:0 4px 14px rgba(40,90,100,.10);color:#244E57}
+.sis166 .bn-wa .pic img{border-radius:14px}
+.sis166 .bn-wa .nm{font-weight:900;color:#1F4A55}
+.sis166 .bn-wa .ln{color:#2F5560}
+.sis166 .bn-wa .dm{color:#3E6670}
+.sis166 .bn-wa .go{background:#2C6573;color:#fff}
 .sis166 .bn:active{transform:translateY(1px)}
 @media (max-width:360px){.sis166 .bn{gap:8px;padding:10px}.sis166 .bn .nm{font-size:16px}.sis166 .bn-is .nm{font-size:18px}.sis166 .bn .go{padding:8px 10px;font-size:12px}.sis166 .bn .pic img{transform:scale(.88);transform-origin:bottom}}
 </style>"""
@@ -53,6 +60,7 @@ HTML = ('<section class="sis166"><p class="sis-h">あなたのこと、もっと
  '<a class="bn bn-ko" data-nocg href="https://koikata.jp/aichaku/?ref=166" target="_blank" rel="noopener" aria-label="恋のかたち診断（別のサイト koikata.jp が開きます）"><span class="pic" aria-hidden="true"><img src="' + LATC + '" alt="" width="58" height="58" decoding="async"></span><span class="tx"><span class="nm">恋のかたち診断</span><span class="ln"><span class="nw">16の恋愛タイプ×</span><span class="nw">愛着スタイル</span></span><span class="dm"><span class="nw">koikata.jp・</span><span class="nw">無料4分</span></span></span><span class="go">診断 ↗</span></a>'
  '<a class="bn bn-nt" data-nocg href="https://honbare.com/?ref=166" target="_blank" rel="noopener" aria-label="究極の二択（別のサイト honbare.com が開きます）"><span class="pic" aria-hidden="true"><img src="' + PANDA + '" alt="" width="56" height="56" decoding="async"></span><span class="tx"><span class="nm">究極の二択</span><span class="ln"><span class="nw">恋もあるあるも、</span><span class="nw">本音がバレる2択</span></span><span class="dm"><span class="nw">honbare.com・</span><span class="nw">無料3分</span></span></span><span class="go">あそぶ ↗</span></a>'
  '<a class="bn bn-is" data-nocg href="https://i-sync.jp/?ref=166" target="_blank" rel="noopener" aria-label="アイシンク（別のサイト i-sync.jp が開きます）"><span class="pic" aria-hidden="true"><img src="' + AI + '" alt="" width="34" height="30" decoding="async"><img src="' + YUU + '" alt="" width="34" height="30" decoding="async"></span><span class="tx"><span class="nm">I-Sync<small>アイシンク</small></span><span class="ln"><span class="nw">2人の答えを重ねて、</span><span class="nw">シンクロ率がわかる</span></span><span class="dm"><span class="nw">i-sync.jp・</span><span class="nw">無料</span></span></span><span class="go">診断 ↗</span></a>'
+ '<a class="bn bn-wa" data-nocg href="https://44wansona.com/?ref=166" target="_blank" rel="noopener" aria-label="ワンソナ（別のサイト 44wansona.com が開きます）"><span class="pic" aria-hidden="true"><img src="' + WAN + '" alt="" width="56" height="56" decoding="async"></span><span class="tx"><span class="nm">ワンソナ</span><span class="ln"><span class="nw">うちの子の性格を、</span><span class="nw">44犬種の</span><span class="nw">タイプで診断</span></span><span class="dm"><span class="nw">44wansona.com・</span><span class="nw">無料</span></span></span><span class="go">診断 ↗</span></a>'
  '</section>')
 
 SNIPPET = ('<!-- 3つの無料サイトのバナー（恋のかたち診断・究極の二択・アイシンク）ここから。\n'
@@ -70,9 +78,9 @@ with open(os.path.join(OUT, '見本.html'), 'w', encoding='utf-8') as f:
 
 README = """# 1.66 奇跡の相性診断に貼る、3つの無料サイトのバナー
 
-- `3サイトのバナー_貼る部品.html` … このかたまりを、1.66 のページの置きたい場所にそのまま貼ります（トップのいちばん下・結果の下など）。
+- `3サイトのバナー_貼る部品.html` … （2026-11-20 にワンソナ〈44wansona.com〉も足して4枚） このかたまりを、1.66 のページの置きたい場所にそのまま貼ります（トップのいちばん下・結果の下など）。
   - 絵は中に入っているので、ほかのファイルをアップロードする必要はありません。
-  - 押すと別のタブで、恋のかたち診断（koikata.jp/aichaku/）・究極の二択（honbare.com）・アイシンク（i-sync.jp）が開きます。
+  - 押すと別のタブで、恋のかたち診断（koikata.jp/aichaku/）・究極の二択（honbare.com）・アイシンク（i-sync.jp）・ワンソナ（44wansona.com）が開きます。
   - アドレスの後ろに `?ref=166` が付いているので、1.66 から来た人だとわかります。
   - 見た目は、3つのサイトどうしの相互リンクと同じです。
 - `見本.html` … ブラウザで開くと、貼ったときの見え方を確かめられます。
