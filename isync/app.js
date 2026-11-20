@@ -245,21 +245,24 @@ function goTop(){
    o: 0=A 1=B 2=こだわらない（3つ目の答え） ／ st: ★ゆずれない（相手の答えの予想はなくした＝鑑定者本人の判断 2026-11-13） */
 // 恋愛・ドキドキの問題の案内（鑑定者本人 2026-11-20「あなたが思う人を浮かべてくださいって言葉でいい」）。その回の最初の1問だけくわしく
 const IF_LONG='あなたが思う人（恋人・好きな人）を思い浮かべて答えてください。いない人は、いたらどうするかで答えてください。',IF_SHORT='※あなたが思う人を思い浮かべて答えてください';
-function askHTML(k,i,n,{who,step,star,starOn,to,u,nav,qs}){
+function askHTML(k,i,n,{who,step,star,starOn,to,u,nav,qs,room,quit}){
   const q=Q[k],cat=CATS[q[0]],first=!(qs||[]).slice(0,i).some(x=>CATS[Q[x][0]][1]);
   const opt=(v,cls='')=>`<button class="opt ${cls}" data-v="${v}">${v<2?`<span class="k">${OPTS[v]}</span>`:''}<span>${esc(ans(v,k))}</span></button>`;
-  return `${nav||''}<section class="card ask"><img class="chara c-ask" src="img/pair-think.webp" width="124" height="79" alt="" aria-hidden="true">
+  // みんなの部屋：答える前は答えのボタンを先に、席（みんなのようす）はその下に。答えたら答えのボタンが消えるので、席が問題のすぐ下に上がる。「やめる」はカードの中へ
+  // （背の低いスマホで答えのボタンが画面の下にはみ出していた。鑑定者本人 2026-11-21「案bでお願い」）
+  const seats='<div class="hint" id="tcnt"></div><div class="allok" id="allok" hidden>全員決めた！<small>次の問題へ…</small></div>',seatsLow=room&&step!=='done';
+  return `${nav||''}<section class="card ask${room?' rm':''}">${room?'':'<img class="chara c-ask" src="img/pair-think.webp" width="124" height="79" alt="" aria-hidden="true">'}
     <div class="prog">${Array.from({length:n},(_,j)=>`<i class="${j<=i?'on':''}"></i>`).join('')}</div>
-    <div class="qhead"><span class="tag catg c${q[0]}">${esc(cat[0])}</span><span class="qn">${i+1}／${n}${who?`　${esc(who)}`:''}</span></div>
+    <div class="qhead"><span class="tag catg c${q[0]}">${esc(cat[0])}</span><span class="qn">${i+1}／${n}${who?`　${esc(who)}`:''}</span>${quit?'<button class="tnav-b quit qh-q" id="rquit" type="button">やめる</button>':''}</div>
     ${cat[1]?`<p class="if">${esc(cat[1])}</p><p class="if-note${first?'':' s'}">${first?IF_LONG:IF_SHORT}</p>`:''}
     <h2 class="q"><span class="qmark" aria-hidden="true">Q</span><span class="qtx">${esc(q[1])}</span></h2>
-    <div class="hint" id="tcnt"></div><div class="allok" id="allok" hidden>全員決めた！<small>次の問題へ…</small></div>
+    ${seatsLow?'':seats}
     ${step==='done'?`<div class="match">${to?'時間切れ':u?'「'+UNDEC+'」にしました':'答えました！'}</div><div id="skipq"></div>`:`
     <div class="qtime" id="qtime" role="timer" aria-label="のこり時間"><span class="qt-s">のこり<b>${Q_LIMIT}</b>秒</span><b class="qt-b"><i></i></b></div>
     <p class="label">あなたはどっち？</p>
     ${star?`<div class="star-row${i<3?' nudge':''}"><button class="star" id="star" aria-pressed="${!!starOn}">★ ここはゆずれない</button>${i<3?'<span class="star-tip">ゆずれない問題なら、答える前にここをタップ</span>':''}</div>`:''}
     <div class="opts">${opt(0)}${opt(1)}${opt(2,'mid')}</div>
-    <button class="opt-u" type="button" data-v="3">${UNDEC}</button>`}
+    <button class="opt-u" type="button" data-v="3">${UNDEC}</button>${seatsLow?seats:''}`}
   </section>`;
 }
 function bindAsk(onPick){
@@ -387,7 +390,7 @@ function talkHTML(G,nm){
   if(its.length<2)return '';
   if(!its.length)return `<section class="card" id="talk"><p class="label">${two?'2人で':'みんなで'}話しておきたいこと</p><p class="hint">答えが反対になった問題はありませんでした。</p></section>`;
   const row=(i,n)=>{const k=G.qs[i],key=QKEY[k].slice(0,5),ok=done.has(key);
-    const ws=ansGroups(G,i).map(({v,who})=>`<span class="tkr"><span class="tkw">${G.anon?`<span class="nmc pn">${who.length}人</span>`:who.map(p=>nmChip(G,p,p===me?'あなた':p.name)).join('')}</span><span class="tka">${esc(ans(v,k))}${who.some(p=>p.ans[i].st&&v<2)?' ★':''}</span></span>`).join('');
+    const ws=ansGroups(G,i).map(({v,who})=>`<span class="tkr"><span class="tkw">${G.anon?`<span class="nmc pn">${who.length}人</span>`:who.map(p=>nmChip(G,p,p===me?'あなた':p.name)).join('')}</span><span class="tka"><span>${esc(ans(v,k))}${who.some(p=>p.ans[i].st&&v<2)?'\u2060<span class="tk-st">★</span>':''}</span></span></span>`).join('');
     const ay=ayOf(k,two),hint='';   // だれから聞くかの1文は出さない（答えは名前の札で見え、聞き方はコツ・主役のカードにある。鑑定者本人 2026-11-20「はい」）
     return `<li class="${ok?'ok':''}"><b>${esc(Q[k][1])}</b><span class="tkg">${ws}</span>${hint?`<span class="tph">${hint}</span>`:''}${ay?`<span class="ayu"><b>${two?'歩み寄りの案':'みんなの歩み寄りの案'}</b>${esc(ay)}</span>`:''}<button class="talked" type="button" data-k="${key}" aria-pressed="${ok}">${ok?'✓ 話した':'話した'}</button></li>`};
   const rest=its.slice(1),top=rest.slice(0,2),more=rest.slice(2),ul=(xs,o)=>`<ul class="slist tk${two?'':' tkm'}">${xs.map((x,j)=>row(x,j+o)).join('')}</ul>`;
@@ -587,7 +590,7 @@ function twoFolds(G,trows,nm,r){
     out+=foldBox('テーマ別のシンクロ率',tz,(keep.length?themeHTML(keep,'2人'):'')+few)}
   if(G.anon){const ax=axHTML(G,me?[me]:G.players,nm);if(ax)out+=foldBox('価値観のタイプ',me?'あなたの位置':'2人の位置',ax)}
   if(r.starN){const row=(i,cls)=>{const k=G.qs[i],aa=A.ans[i],bb=B.ans[i];
-      const who=(P,x)=>(G.anon&&me&&P!==me)?'':`<span class="tkr"><span class="tkw">${nmChip(G,P,P===me?'あなた':P.name)}</span><span class="tka">${esc(ans(x.o,k))}${x.st?' ★':''}</span></span>`;
+      const who=(P,x)=>(G.anon&&me&&P!==me)?'':`<span class="tkr"><span class="tkw">${nmChip(G,P,P===me?'あなた':P.name)}</span><span class="tka"><span>${esc(ans(x.o,k))}${x.st?'\u2060<span class="tk-st">★</span>':''}</span></span></span>`;
       return `<li class="${cls}"><b>${esc(Q[k][1])}</b><span class="tkg">${who(A,aa)}${who(B,bb)}</span></li>`};
     const many=r.starDiff.length>=2&&r.starDiff.length>=r.starSame.length+r.starAdj.length;
     const verdict=!r.starDiff.length?`<p class="good">大事なところは、ちがいがありません</p>`:many?`<p class="warn">大事なところで、考え方がちがうことが多めです。この${r.starDiff.length}問は、先にゆっくり話しておくと安心です</p>`:`<p class="warn">大事なところで、ちがいが${r.starDiff.length}問あります。ここは先に話しておくと安心です</p>`;
@@ -1359,8 +1362,7 @@ function rAsk(k,qk){
   const room=R.room,qid=room.qs[k],n=room.qs.length;
   if(room.len===30&&room.kind!=='kon')starIntro('room'+R.code,'わかった');
   const draw=()=>{const m=R.my,step=m.fin?'done':'own';
-    const nav=room.kind==='kon'?'':'<nav class="tnav" aria-label="もどる"><span></span><button class="tnav-b quit" id="rquit" type="button">やめる</button></nav>';
-    view(askHTML(qid,k,n,{step,star:room.len===30||room.kind==='kon',starOn:m.st,to:m.to,u:m.u,nav,qs:room.qs}));
+    view(askHTML(qid,k,n,{step,star:room.len===30||room.kind==='kon',starOn:m.st,to:m.to,u:m.u,qs:room.qs,room:true,quit:room.kind!=='kon'}));
     bindAsk(tap);paint();bindQuit();rCountNow();if(!m.fin&&room.kind!=='kon')qTimer(R.seen[qk],timeUp)};
   // 15秒たったら「時間切れ」を書いて待つ（答えなしとして数えない）
   const timeUp=()=>{const m=R.my;if(m.fin||R.key!==qk)return;m.o=-1;m.ms=Q_LIMIT*1000;m.fin=true;m.to=true;save(k,true,true);draw()};
