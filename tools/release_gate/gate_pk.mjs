@@ -161,6 +161,46 @@ ok('相談1：画面に＊が出ない', cleanStar(A)===0, cleanStar(A));
   ok('UX③：答えが時間切れでも、通信できるならもう1回だけためす', V.retry);
   ok('UX③：ビギナーのまとめの下に鑑定文への近道・相性のくり返しを「くわしい内容」へ', V.bg); }
 ok('UX③：鑑定書の章の見出しのすぐ下に「恋愛での持ち味」などの見出しを重ねない', /章の見出しのすぐ下に「恋愛での持ち味」などの見出しが重ならないように/.test(fs.readFileSync(path.join(ROOT,'pro','meishi-sheet.html'),'utf8')));
+// 恋愛相談の点検（2026-11-20 鑑定者本人の承認「1から6を直して」）：好かれたい・前提と星のくいちがい・ご相談者・時刻不明・説明の二重・送る文の日柱・優しや
+{ const L=await p.evaluate(()=>{ try{ const pl=document.documentElement.classList.contains('bg-on'), mk=(y,m,d,h,mi,sex,tu)=>{ const c=baziCompute({year:y,month:m,day:d,hour:h,minute:mi,sex,tu},0,'none'); return tu?markTimeUnknown(c):c; };
+    const k0=chart, k1=(typeof chartB!=='undefined')?chartB:null, W=mk(1981,6,10,22,0,'female',false), M=mk(1971,4,25,12,0,'male',true); chart=M; chartB=W;
+    const q='男性のほうが女性を好きだけど、女性はあまり男性に惹かれていない。もっと女性に好かれるにはどうしたらいいですか';
+    const kinds=['彼に振り向いてほしい','もっと仲良くなりたいです','彼女に好かれるにはどうしたらいいですか',q].map(pkCompatQKind), kindOK=kinds.every(x=>x==='win')&&pkCompatQKind('告白したい')==='confess'&&pkCompatQKind('復縁したい')==='reunion';
+    const S=pkCompatSit(M,W,q,pl), lead=(S&&S.lead)||'', leadOK=/近道/.test(lead)&&!pkCpFeelAssert(lead)&&/\d{1,2}月/.test(lead)&&!/(?:20[3-9]\d)年/.test(lead);
+    const howOK=S&&S.how.some(x=>/好きになりやすい/.test(x))&&S.how.some(x=>/揺れやすい月/.test(x))&&S.how.some(x=>/駆け引き/.test(x))&&S.how.some(x=>/時刻がわかれば/.test(x));
+    const ans='お相手はあなたにしっかり惹かれていますし、温かい相性です。\n【お客様へのお伝え方】\nお相手もあなたを大切に思っています。2032年は距離を縮めやすい好機です。\n【どうすればよいか】\n- ペースを大切に\n';
+    const lf=pkLeadFix(ans,M,q,true).split('\n')[0], lfOK=lf===lead;
+    const ew=pkEnsureWin(ans,M,W,q), ewOK=!/2032年/.test(ew)&&/星の並びからは見られます/.test(ew)&&/揺れやすい月/.test(ew)&&/好きになりやすい/.test(ew);
+    const sel=document.getElementById('cp-who'); let who=false; if(sel){ sel.value='b'; const ab=pkCpAB(M,W); who=ab[0]===W&&ab[1]===M; sel.value='a'; who=who&&pkCpAB(M,W)[0]===M; }
+    const par=pkFmParenTidy('喜神（きしん：あると調子が上がる五行〈調子が上がる五行〉）')==='喜神（きしん：あると調子が上がる五行）';
+    const sh=pkShareTidy('【2人の持ち味（日柱）】\n・本人の日柱「庚辰」＝芯が強い（魁罡＝かいごう）。'), shOK=/【2人の持ち味】/.test(sh)&&/あなた：/.test(sh)&&!/日柱|魁罡/.test(sh);
+    const ty=PK_TYPO.reduce((t,x)=>t.replace(x[0],x[1]),'小さな優しや思いやり')==='小さな優しさや思いやり';
+    const one=pkOfflineLead(M,'好きな人にもっと好かれるにはどうしたらいいですか',pl)||'', oneOK=/近道/.test(one)&&/生年月日がわかれば/.test(one);
+    chart=k0; chartB=k1; return {kindOK,kinds,leadOK,lead:lead.slice(0,90),howOK,lfOK,lf:lf.slice(0,60),ewOK,who,par,shOK,ty,oneOK}; }catch(e){ return {err:String(e)}; } });
+  ok('恋愛：「好かれたい・振り向かせたい・距離を縮めたい」を相談の種類（win）として見分ける', L.kindOK, JSON.stringify(L.kinds||L.err));
+  ok('恋愛：好かれたい相談の1行目は「どうすれば」に答え、前提を打ち消さず、これから12ヶ月の月で答える', L.leadOK, L.lead||L.err);
+  ok('恋愛：どうすればよいかに、好きになりやすい人・注意の月・駆け引きをしない・時刻不明の一言', L.howOK);
+  ok('恋愛：1行目が「もう惹かれています」と前提を打ち消したら、ツールの1行目に置きかえる', L.lfOK, L.lf);
+  ok('恋愛：お相手の気持ちの言い切りをやわらげ、3年以上先の年を主な時期にせず、材料を足す', L.ewOK);
+  ok('恋愛：ご相談者（本人／お相手）を選べる', L.who);
+  ok('恋愛：説明の二重（〈調子が上がる五行〉）を1つに・送る文に日柱の専門用語を出さない・「優しや」を直す', L.par&&L.shOK&&L.ty);
+  ok('恋愛：お相手の生年月日がない「好かれたい」も1行目で答える', L.oneOK); }
+{ const L2=await p.evaluate(()=>{ try{ const pl=document.documentElement.classList.contains('bg-on'), k0=chart, k1=chartB; const mk=(y,m,d,h,sex)=>baziCompute({year:y,month:m,day:d,hour:h,minute:0,sex},0,'none');
+    const W=mk(1990,3,3,12,'female'), M=mk(1988,8,15,9,'male'); chart=W; chartB=M; const T='\n【お客様へのお伝え方】\n本文。', f=(x,q,cp)=>pkLeadFix(x+T,W,q,cp).split('\n')[0];
+    const ch=pkCompatQKind('彼に浮気されました。許して続けるべきですか')==='breakup';
+    const fate=f('結婚まで進む可能性は十分にあります。お相手から見るとあなたはとても魅力的に映り、自然と心惹かれる組み合わせだからです。','彼と結婚できますか？いつ頃ですか',true), fateOK=!/十分|魅力的に映/.test(fate)&&/可能性はあります/.test(fate);
+    const pre=f('お相手を許して関係を続けるべきかというご相談について、2人の生まれ持った性質と結びつきの強さからお答えします。','彼に浮気されました。許して続けるべきですか',true), preOK=!/お答えします/.test(pre)&&/決める/.test(pre);
+    const two=f('どちらと付き合うかはあなた次第です。','2人の男性の間で迷っています。両方と付き合ってもいいですか',true), twoOK=/おすすめしません/.test(two);
+    chartB=null; const re=pkOfflineLead(W,'別れた彼とやり直せますか',pl)||'', reOK=!/別れるかどうか/.test(re);
+    const one=f('お互いの歩みを整えれば、一緒に未来へ進む可能性は十分にあります。','既婚者の彼と付き合っています。この先2人で一緒になれる可能性はありますか',false), oneOK=!/十分/.test(one)&&/可能性はあります/.test(one);
+    const ch1=pkOfflineLead(W,'彼に浮気されました。許して続けるべきですか',pl)||'', ch1OK=/許して続けるか/.test(ch1);
+    chart=k0; chartB=k1; return {ch,fateOK,fate:fate.slice(0,60),preOK,pre:pre.slice(0,60),twoOK,reOK,re:re.slice(0,50),oneOK,one:one.slice(0,50),ch1OK,ch1:ch1.slice(0,40)}; }catch(e){ return {err:String(e)}; } });
+  ok('恋愛②：浮気された（許して続けるか）は別れるかの相談と同じ答え方', L2.ch&&L2.ch1OK, L2.ch1||L2.err);
+  ok('恋愛②：結ばれるか・結婚できるかの1行目はツールの見込みにそろえる（「十分」・気持ちの言い切りを置きかえ）', L2.fateOK, L2.fate||L2.err);
+  ok('恋愛②：1行目が前置きの1文だけならツールの1行目に', L2.preOK, L2.pre);
+  ok('恋愛②：二股・両方と付き合う相談はすすめない', L2.twoOK);
+  ok('恋愛②：「別れた彼とやり直せますか」を別れるかの相談にしない', L2.reOK, L2.re);
+  ok('恋愛②：1人の「一緒になれるか」で「可能性は十分」と言い切らない（pkLeadFix が止まらない）', L2.oneOK, L2.one); }
 // 追加の質問
 const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃ですか'); await p.click('#consultBtn'); await p.click('#consultBtn').catch(()=>{});
 const ms2=await waitFor(()=>{const it=document.querySelectorAll('#reading .rd-item');const l=it[it.length-1];return it.length>=2&&l.querySelector('.rd-bar')&&!l.querySelector('.loading');},60000);

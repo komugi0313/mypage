@@ -119,6 +119,19 @@ ok('開いただけでは文章作成を呼ばない', calls===0, 'calls='+calls
       if(/台本が取得できませんでした|要点を取得できませんでした/.test(document.documentElement.innerHTML)) bad.push('「取得できませんでした」が残っている'); }
     return {bad}; });
   ok('実地の点検の直し（注記・続けるべきか・A社B社・易の時期を出さない・近い日の試験・今は今は・要点メモ・ため口・③の合図・かぎかっこ・この先の流れ・③が相談で変わる・できますか・いつは2文まで・台本）', r.bad.length===0, r.bad.join(' | ')); }
+{ /* 恋愛相談の点検（2026-11-20）：「どうすれば好かれるか」は「〜は進めて大丈夫」の型でなく「〜すると近づきやすい」で答える・「届いていく時期」を外す・「優しや」 */
+  const r=await p.evaluate(()=>{ const F=window.__ekiFix; if(!F) return {bad:['点検用の __ekiFix がない']}; const bad=[];
+    const key=nm=>Object.keys(HEXDB).find(k=>HEXDB[k].nm===nm).split('-').map(Number);
+    const run=(nm,ko,txt,q)=>{ const [u,l]=key(nm); const rr=F.buildResult(u,l,ko,[ko]); window.__ekiQ=q; return F.ekiFixSym(F.ekiCleanReading(F.parseReading(txt),q),rr,q); };
+    const q='男性のほうが女性を好きだけど、女性はあまり男性に惹かれていない。もっと女性に好かれるにはどうしたらいいですか';
+    const P=run('火風鼎',6,'▼判定：◎ 彼女に好かれるために協力して関係を深めるのは進めて大丈夫です\n▼伝え方：あなたの気持ちはしっかりと届いていく時期です。日々の小さな優しや思いやりを大切にしましょう。\n▼助言：・笑顔で話す',q);
+    if(/進めて大丈夫|進んで大丈夫/.test(P.hantei)||!/近づきやすい/.test(P.hantei)) bad.push('どうすれば：'+P.hantei);
+    const ts=F.ekiTimeStrip('あなたの気持ちはしっかりと届いていく時期です。素直に伝えましょう。',q); if(/届いていく時期/.test(ts)) bad.push('時期の言い方：'+ts);
+    const q2='2人の男性の間で迷っています。両方と付き合ってもいいですか', T2=run('火風鼎',6,'▼判定：〇 自分の気持ちを整えてから向き合うほうがよいです\n▼伝え方：落ち着いて考えましょう。\n▼助言：・自分の気持ちを書き出す',q2);
+    if(!/おすすめしません/.test(T2.hantei)) bad.push('二股：'+T2.hantei);
+    return {bad}; });
+  ok('恋愛：易の「どうすれば」は「〜すると近づきやすい」で答える・「届いていく時期」を外す・二股はすすめない', r.bad.length===0, r.bad.join(' / ')); }
+{ const s=fs.readFileSync(path.join(ROOT,'eki-pro','app','index.html'),'utf8'); ok('恋愛：易の「優しや」を「優しさや」に直す', /\[\/優しや\(\?=\[思気心言\]\)\/g,'優しさや'\]/.test(s)); }
 { /* 2026-11-17 テスト用サイト v268 の実地の点検で直したもの */
   const r=await p.evaluate(()=>{ const F=window.__ekiFix; const bad=[]; if(!F||!F.ekiHarshKo) return {bad:['点検用の関数がない']};
     const key=nm=>Object.keys(HEXDB).find(k=>HEXDB[k].nm===nm).split('-').map(Number);
