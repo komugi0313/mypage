@@ -11,11 +11,11 @@ const L=B.love, N=B.normal;
 const PAGES=[
  {f:'renai',name:'恋愛の究極の二択',h1:'恋愛の究極の二択',lead:'付き合うなら？ 結婚するなら？ 恋人とのLINEは？ 好きな人のことを考えながら、本気で選んでみてください。',mode:'love',sub:'答えるだけで、小悪魔度や本音が％でわかる',
   qs:take(L.filter(q=>q[4]===1||q[4]===2),40,26),desc:'恋愛の究極の二択を40問まとめました。付き合うなら・結婚するなら・恋人のLINEなど、思わず本音が出る質問ばかり。そのまま無料で遊べて、小悪魔度もわかります。'},
- {f:'omoshiroi',name:'面白い究極の二択',h1:'面白い究極の二択（あるある）',lead:'朝の電車、職場、スマホ、ごはん。毎日の「あるある」から、くだらないけど本気で悩む二択を集めました。',mode:'normal',sub:'答えるだけで、見栄っぱり度や本音が％でわかる',
+ {f:'omoshiroi',name:'面白い究極の二択',h1:'面白い究極の二択（あるある）',lead:'朝の電車、職場、スマホ、ごはん。毎日の「あるある」から、くだらないけど本気で悩む二択を集めました。',mode:'normal',sub:'答えるだけで、恋のキャラとふだんのキャラがわかる',
   qs:take(N.filter(q=>q[4]===1),40,26),desc:'くだらないけど本気で悩む、面白い究極の二択を40問まとめました。毎日のあるあるから選んだ質問なので、友だちや家族とすぐ盛り上がれます。'},
- {f:'muzukashii',name:'難しい究極の二択',h1:'難しい究極の二択（地獄の二択）',lead:'どっちを選んでも痛い、本気で悩む地獄の二択です。答えるまでの時間で、あなたの迷いどころが見えてきます。',mode:'love',sub:'答えるだけで、小悪魔度・見栄っぱり度などが％でわかる',
+ {f:'muzukashii',name:'難しい究極の二択',h1:'難しい究極の二択（地獄の二択）',lead:'どっちを選んでも痛い、本気で悩む地獄の二択です。答えるまでの時間で、あなたの迷いどころが見えてきます。',mode:'love',sub:'答えるだけで、小悪魔度などの％と恋のキャラがわかる',
   qs:take(L.filter(q=>q[4]===3).concat(N.filter(q=>q[4]===3)),40,30),desc:'どっちを選んでも痛い、難しい究極の二択（地獄の二択）を40問まとめました。恋愛も人生も、本気で悩む質問ばかりです。'},
- {f:'minna',name:'みんなで盛り上がる究極の二択',h1:'みんなで盛り上がる究極の二択',lead:'答えが分かれるほど盛り上がる二択を集めました。その場でそれぞれのスマホで答えて、みんなの答えをくらべられます。',mode:'normal',sub:'答えるだけで、小悪魔度・見栄っぱり度などが％でわかる',
+ {f:'minna',name:'みんなで盛り上がる究極の二択',h1:'みんなで盛り上がる究極の二択',lead:'答えが分かれるほど盛り上がる二択を集めました。その場でそれぞれのスマホで答えて、みんなの答えをくらべられます。',mode:'normal',sub:'答えるだけで、小悪魔度などの％と恋のキャラがわかる',
   qs:take(N.filter(q=>q[4]===2),28,26).concat(take(L.filter(q=>q[4]===2),12,26)),desc:'みんなで盛り上がる究極の二択を40問まとめました。友だち・家族・職場で答えが分かれる質問ばかり。近くの人はQRコード、離れた人はLINEで呼んで、それぞれのスマホから一緒に遊べます。'},
 ];
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -54,6 +54,7 @@ ol{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 .a{background:var(--a)}.b{background:var(--b)}
 .vs{text-align:center;font-family:"Mochiy Pop One",sans-serif;font-size:13px;margin:4px 0!important}
 .ex{font-size:13px;color:var(--sub);margin-top:6px!important}
+html.jw body{word-break:keep-all;overflow-wrap:anywhere;line-break:strict}
 .how{background:#fff;border:2px solid var(--ink);border-radius:16px;padding:14px 16px;font-size:14px}
 .how p{margin:0 0 6px}
 .others{display:grid;gap:8px}
@@ -63,18 +64,82 @@ ol{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 </style></head><body><div class="w">
 <nav class="crumb"><a href="/">究極の二択 本音バレ診断</a> ＞ ${esc(p.name)}</nav>
 <header class="hero"><h1>${esc(p.h1)}</h1><span class="cnt">${p.qs.length}選</span><p class="lead">${esc(p.lead)}</p></header>
-<a class="cta" href="/">究極の二択で遊ぶ（無料・3分）<small>${esc(p.sub)}</small></a>
+<a class="cta" href="/">究極の二択で遊ぶ（無料・約5分）<small>${esc(p.sub)}</small></a>
 <h2><span>${esc(p.name)} ${p.qs.length}選</span></h2>
 <ol>
 ${items}
 </ol>
 <a class="cta" href="/">答えて本音をチェックする<small>ひとりでも、みんなでも遊べます</small></a>
 <h2><span>遊び方</span></h2>
-<div class="how"><p>① 「どっちで遊ぶ？」で恋愛編かまぜまぜ編を選びます。</p><p>② 出てくる二択を、直感でどんどん選びます（ひとりで15問・友だちとは8問から）。</p><p>③ 最後に、小悪魔度などが％で出ます。みんなで遊ぶときは、近くの人はQRコード、離れた人はLINEで呼べます。</p></div>
+<div class="how"><p>① 「どっちで遊ぶ？」で恋愛編かまぜまぜ編を選びます。</p><p>② 出てくる二択を、直感でどんどん選びます（ひとりでも友だちとも15問。まぜまぜ編は20問）。</p><p>③ 最後に、小悪魔度などの％と恋のキャラが出ます。みんなで遊ぶときは、近くの人はQRコード、離れた人はLINEで呼べます。</p></div>
 <h2><span>ほかの究極の二択</span></h2>
 <div class="others">${others}</div>
 <p class="foot">究極の二択 本音バレ診断</p>
-</div></body></html>`;
+</div>
+<script>
+/* 文節で改行する（「い／まだに」のような途中の改行・1〜2文字だけの行を作らない。iPhoneでも同じ） */
+(function(){
+  if(!(window.Intl&&Intl.Segmenter)) return;
+  var seg=new Intl.Segmenter('ja',{granularity:'word'});
+  document.documentElement.classList.add('jw');
+  var HIRA=/^[ぁ-ゟー]+$/, PUN=/^[、。！？!?…・）」』】〕）\\)\\s～〜ー]+$/, OPEN=/[（「『【〔\\(]$/, END=/[、。！？!?…）」』】〕\\)]$/;
+  var PART=/^(を|が|に|で|と|は|も|へ|の|から|まで|より|って|や|か|ね|よ|な)$/;
+  var JP=/[぀-ヿ一-鿿]/;
+  var FN=/^(こと|もの|ほう|ところ|とき|ため|よう|くらい)/; // 「あなたの／ことが」のように切らない
+  function len(t){ return t.replace(/[、。！？!?…・（）「」『』\\s]/g,'').length; }
+  function phrases(t){
+    var out=[],cur='',prev='';
+    var it=seg.segment(t)[Symbol.iterator](),r;
+    while(!(r=it.next()).done){
+      var w=r.value.segment;
+      if(cur===''){ cur=w; prev=w; continue; }
+      var brk=false;
+      if(PUN.test(w)) brk=false;
+      else if(END.test(cur)) brk=true;
+      else if(OPEN.test(w)) brk=true;
+      else if(OPEN.test(cur)) brk=false;
+      else if(prev==='の'&&FN.test(w)) brk=false;
+      else if(HIRA.test(w)) brk=(PART.test(prev)&&len(cur)>=3&&w.length>=2&&!PART.test(w));
+      else brk=HIRA.test(prev);
+      if(brk){ out.push(cur); cur=w; } else cur+=w;
+      prev=w;
+    }
+    if(cur) out.push(cur);
+    // 「でも」「けど」のような短いつなぎの言葉は、次の言葉と同じ行へ
+    for(var i=out.length-2;i>=0;i--){ if(HIRA.test(out[i])&&out[i].length<=3){ out[i]+=out[i+1]; out.splice(i+1,1); } }
+    // 最後の行が1〜2文字だけにならないよう、短い最後のまとまりは前とくっつける
+    while(out.length>1&&len(out[out.length-1])<=2){ var l=out.pop(); out[out.length-1]+=l; }
+    // 最初の1〜2文字だけのまとまりも次とくっつける
+    if(out.length>1&&len(out[0])<=1){ out[1]=out[0]+out[1]; out.shift(); }
+    return out;
+  }
+  // 12文字より長いまとまり（「ずっとくっついていたくなる」など）は、どこでも切れて「る」だけの行ができていた。
+  // 単語の切れ目で3文字以上の小さなまとまりに分け、最後のまとまりも3文字以上にする（2026-11-18）
+  function longSplit(p){
+    if(len(p)<=12) return [p];
+    var ws=[],it=seg.segment(p)[Symbol.iterator](),r; while(!(r=it.next()).done) ws.push(r.value.segment);
+    var out=[],cur='';
+    ws.forEach(function(w){ if(cur&&len(cur)>=3&&!PUN.test(w)){ out.push(cur); cur=w; } else cur+=w; });
+    if(cur) out.push(cur);
+    while(out.length>1&&len(out[out.length-1])<3){ var l=out.pop(); out[out.length-1]+=l; }
+    return out;
+  }
+  var SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,OPTION:1,TITLE:1,NOSCRIPT:1};
+  function run(root){
+    var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null),ns=[],n;
+    while((n=w.nextNode())){ var pe=n.parentNode; if(!pe||SKIP[pe.nodeName]||pe.isContentEditable) continue; if(pe.nodeName==='J-P') continue; if(n.nodeValue.length>=5&&JP.test(n.nodeValue)) ns.push(n); }
+    ns.forEach(function(n){
+      var ps=[].concat.apply([],phrases(n.nodeValue).map(longSplit)); if(ps.length<2) return;
+      var f=document.createDocumentFragment();
+      ps.forEach(function(p,i){ if(i) f.appendChild(document.createElement('wbr')); var s=document.createElement('j-p'); if(len(p)<=12) s.style.whiteSpace='nowrap'; s.textContent=p; f.appendChild(s); });
+      n.parentNode.replaceChild(f,n);
+    });
+  }
+  window.jwRun=run;
+  function start(){ run(document.body); var t=null,q=[]; new MutationObserver(function(rs){ rs.forEach(function(r){ [].forEach.call(r.addedNodes,function(x){ if(x.nodeType===3){ if(x.parentNode&&x.parentNode.nodeName!=='J-P') q.push(x.parentNode); } else if(x.nodeType===1&&x.nodeName!=='J-P') q.push(x); }); if(r.type==='characterData'&&r.target.parentNode&&r.target.parentNode.nodeName!=='J-P') q.push(r.target.parentNode); }); if(!t) t=setTimeout(function(){ t=null; var a=q; q=[]; a.forEach(function(e){ if(e.isConnected) run(e); }); },0); }).observe(document.body,{childList:true,subtree:true,characterData:true}); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
+</script></body></html>`;
 }
 for(const p of PAGES){ const d=path.join(ROOT,p.f); fs.mkdirSync(d,{recursive:true}); fs.writeFileSync(path.join(d,'index.html'),page(p)); console.log(p.f,p.qs.length); }
 module.exports={PAGES};
