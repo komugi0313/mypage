@@ -2134,8 +2134,24 @@ function showQ(){
   if(S.honPlay && !done) honRun();
   if(!S.honPlay && !done) ntRun(); else { ntStop(); $('ntimer').hidden=true; }
   renderWho();
+  ntFit();
   if(done) showWait();
 }
+/* その問題の答えのカードが1画面に入らないときだけ、カードの高さ・文字を少しずつ小さくする
+   （カードの高さ92px・答え17px・問題の文15pxまで。鑑定者本人 2026-11-21「とにかくはみ出さないで綺麗に見えたい」）。ふつうの大きさのスマホでは何も変わらない */
+function ntFit(){
+  var sq=$('s-q'), body=$('q-body'), hint=$('q-hint'); if(!sq||!body||!sq.classList.contains('on')) return;
+  var cs=[].slice.call(body.querySelectorAll('.choice')); if(!cs.length) return;
+  cs.forEach(function(c){ c.style.minHeight=''; c.style.fontSize=''; c.style.paddingTop=''; c.style.paddingBottom=''; }); if(hint) hint.style.fontSize='';
+  var need=function(){ return cs[cs.length-1].getBoundingClientRect().bottom+(window.scrollY||0); };
+  var mh=parseFloat(getComputedStyle(cs[0]).minHeight)||110, fs=parseFloat(getComputedStyle(cs[0]).fontSize)||19, hf=hint?parseFloat(getComputedStyle(hint).fontSize)||17:0, n=0;
+  while(need()>innerHeight && n<40){ n++;
+    if(mh>92){ mh=Math.max(92,mh-8); cs.forEach(function(c){ c.style.minHeight=mh+'px'; c.style.paddingTop=c.style.paddingBottom=Math.max(12,Math.round(mh/7.5))+'px'; }); }
+    else if(fs>17){ fs=Math.max(17,fs-.5); cs.forEach(function(c){ c.style.fontSize=fs+'px'; }); }
+    else if(hint&&hf>15){ hf=Math.max(15,hf-.5); hint.style.fontSize=hf+'px'; }
+    else break; }
+}
+(function(){ var tm; window.addEventListener('resize',function(){ clearTimeout(tm); tm=setTimeout(ntFit,120); }); })();
 var busy=false;
 /* ───── 1問20秒（恋愛編・ふつう編。ひとりでも、みんなでも）。すぎたら「時間切れ」で次へ。時間切れは％・結果に数えない ───── */
 var NT_LIMIT=20000;
