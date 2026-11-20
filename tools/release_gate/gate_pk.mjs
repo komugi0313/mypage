@@ -261,6 +261,21 @@ ok('UX③：鑑定書の章の見出しのすぐ下に「恋愛での持ち味�
   ok('どうしたら：「これからどうしたら良いですか」は1行目を助言から（不倫・ふつうの恋愛とも。見通しは理由へ。「どうなりますか」は今までどおり見通しから）', H.ok1&&H.ok2&&H.okf, H.err||(H.l1+' / '+H.l2));
   ok('どうしたら：1行目が助言になっていなければツールの1行目に・1人の相談も助言から', H.lfOK&&H.l1OK, H.lf+' / '+H.L1);
   ok('どうしたら：三合・方合になる大運は25年より先を出さない', H.far&&!H.far.length, JSON.stringify(H.far)); }
+{ /* 聞き方を広げた点検（2026-11-20）：1行目が聞き方に合っているか（どうしたら＝助言／できますか＝見込み／今月と来月・今年と来年＝どちらか） */
+  const K=await p.evaluate(()=>{ try{ const pl=document.documentElement.classList.contains('bg-on'), k0=chart, k1=chartB; const mk=(y,m,d,h,sx)=>baziCompute({year:y,month:m,day:d,hour:h,minute:0,sex:sx},0,'none');
+    const W=mk(1990,3,3,12,'female'), M=mk(1988,8,15,9,'male'), bad=[]; chart=W; chartB=null;
+    const L=q=>pkOfflineLead(W,q,pl)||'';
+    [['好きな人がいます。どうしたら良いですか',/^まずは/],['元恋人とやり直すにはどうしたら良いですか',/^やり直したいなら/],['これから結婚に向けてどうしたら良いですか',/^結婚に向けては/],['転職すべきか迷っています。どうしたら良いですか',/^迷っているうちは/],['お金を貯めるにはどうしたら良いですか',/^お金を貯めるには/],['職場の人間関係がつらいです。どうしたら良いですか',/^職場の人間関係は/],['既婚者の人と付き合っています。どうしたら良いですか',/^これからは、勢いで決めず/],['独立できますか',/可能性/],['告白するなら今月と来月どちらがいいですか',/^(?:今月|来月)（\d+月）のほうが|^今月と来月で大きな差/]].forEach(([q,re])=>{ const t=L(q); if(!re.test(t)) bad.push(q+'→'+t.slice(0,50)); });
+    if(/〜翌1[01]月|〜\d{4}年/.test(L('既婚者の人と付き合っています。どうしたら良いですか'))) bad.push('不倫のどうしたら：長すぎる期間');
+    if(/可能性は十分/.test(L('来年結婚できますか'))) bad.push('来年結婚：十分と言い切る');
+    chartB=M; const C=q=>pkCompatOffLead(W,M,q,pl)||'';
+    if(!/^ぶつかりやすいときは/.test(C('喧嘩が多いです。どうしたら良いですか'))) bad.push('相性の喧嘩：'+C('喧嘩が多いです。どうしたら良いですか').slice(0,40));
+    if(!/^やり直したいなら/.test(C('別れた彼とやり直したいです。どうしたら良いですか'))) bad.push('相性の復縁のどうしたら');
+    if(!/^今年と来年なら、(?:今年|来年)（\d{4}年）のほうが|^今年（\d{4}年）と来年（\d{4}年）で/.test(C('今年と来年どちらで結婚するのがいいですか'))) bad.push('相性の今年と来年：'+C('今年と来年どちらで結婚するのがいいですか').slice(0,40));
+    const lf=pkLeadFix('2人の相性は良い組み合わせです。\n【お客様へのお伝え方】\n本文。',W,'喧嘩が多いです。どうしたら良いですか',true).split('\n')[0]; if(!/^ぶつかりやすいときは/.test(lf)) bad.push('オンラインの1行目の置きかえ（相性のどうしたら）：'+lf.slice(0,40));
+    chartB=null; const lf1=pkLeadFix('縁が動きやすいのは来月です。\n【お客様へのお伝え方】\n本文。',W,'好きな人がいます。どうしたら良いですか',false).split('\n')[0]; if(!/^まずは/.test(lf1)) bad.push('オンラインの1行目の置きかえ（1人のどうしたら）：'+lf1.slice(0,40));
+    chart=k0; chartB=k1; return {bad}; }catch(e){ return {bad:[String(e)]}; } });
+  ok('聞き方：どうしたら＝助言・できますか＝見込み・今月と来月／今年と来年＝どちらか（1人・相性・通信なし・オンラインの1行目の置きかえ）', K.bad.length===0, K.bad.join(' / ')); }
 // 追加の質問
 const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃ですか'); await p.click('#consultBtn'); await p.click('#consultBtn').catch(()=>{});
 const ms2=await waitFor(()=>{const it=document.querySelectorAll('#reading .rd-item');const l=it[it.length-1];return it.length>=2&&l.querySelector('.rd-bar')&&!l.querySelector('.loading');},60000);

@@ -7975,7 +7975,27 @@ function pkMoneyTalk(c,q,plain){ try{ if(!c||!c.now) return ''; q=String(q||'');
   const R=(pkConsultFocus(c,q||'金運')||{}).R||{}; const sk=pkTensenYears(c), ys=(R.moneyY||[]).filter(function(y,i,a){ return a.indexOf(y)===i&&!sk[y]; }).slice(0,3); if(!ys.length) return '';   // 天戦地冲の年（大きく揺れやすい年）は金運の年としてすすめない
   const by=birthYearOf(c); return (R.moneyGood?'金運が上がりやすいのは':'自分の力で稼ぎやすいのは')+ys.map(function(y){ return y+'年'+(by?'（'+(y-by)+'歳）':''); }).join('・')+'です。'; }catch(e){ return ''; } }
 function pkMoneyLeadQ(q){ q=String(q||''); return typeof PK_MONEY_Q!=='undefined'&&PK_MONEY_Q.test(q)&&!/宝くじ|ロト|toto|ギャンブル|競馬|パチンコ|借金/.test(q)&&/金運|お金の運|財運|いつ|時期|何年|上が|良くな|よくな|伸び|増え|流れ/.test(q); }
-function pkOfflineLead(c,q,plain){ try{ q=String(q||''); if(!c||!c.now) return ''; if(pkKidAge(c)>=0&&(/(転職|独立|起業|就職|辞め|仕事|職場|会社|副業|キャリア|お金|金運)/.test(q)||pkIsLoveQ(q))) return ''; const by=birthYearOf(c), age=function(y){ return by?'（'+(y-by)+'歳）':''; };
+/* 1行目の仕上げ（どの相談でも同じ。2026-11-20 聞き方を広げた点検）：
+   「どうしたら」には助言を先に／「できますか」には見込みの言葉／「今月と来月どちら」にはどちらかを答える */
+const PK_ADV_RE=/ましょう|とよい|がよい|のがよ|おすすめ|大切に|向いて|ことです|すすめ|してみ|心がけ/;
+const PK_WANTS_WHEN=/いつ|時期|何歳|何年|来年|今年|将来|これから|タイミング/;
+function pkHowAdv1(c,q,plain){ q=String(q||''); const P=/彼|彼女|相手|恋人|パートナー|婚約者|好きな人|気になる人|夫|妻/.test(q);
+  if(/人間関係|上司|同僚|部下|職場の人|苦手な人|ママ友|友人関係|友だち関係|友達関係/.test(q)) return {t:(/職場|上司|同僚|部下/.test(q)?'職場の人間関係は、':'人との関係は、')+'無理に合わせすぎず、話しやすい人を1人つくるところから整えていきましょう。',solo:true,tail:'つらさが強いときは一人で抱えず、信頼できる人にも相談してください。'};
+  if(/復縁|やり直|よりを戻|ヨリを戻|元彼|元カレ|元カノ|元恋人|元夫|元妻/.test(q)) return {t:'やり直したいなら、まず自分の気持ちを整え、短く軽い連絡から少しずつ始めるとよいでしょう。'};
+  if(/結婚|入籍|婚約|婚活/.test(q)) return {t:P?'結婚に向けては、お相手と将来の話を少しずつ言葉にし、暮らしのイメージをすり合わせていきましょう。':'結婚に向けては、出会いの場に気持ちよく出かけ、結婚したい気持ちをまわりにも伝えておきましょう。'};
+  if(typeof pkIsLoveQ==='function'&&pkIsLoveQ(q)) return {t:P?'まずは会う・話す機会を少しずつふやし、あなたらしさを自然に見せることから始めましょう。':'人と会う場に気持ちよく出かけ、あなたらしさを自然に見せることから始めましょう。'};
+  if(/(転職|独立|起業|就職|辞め|仕事|会社|副業|キャリア)/.test(q)) return {t:'迷っているうちは、今の仕事を続けながら情報を集め、準備を整えることから始めましょう。'};
+  if(/お金|貯め|貯金|節約|金運|収入|家計/.test(q)) return {t:'お金を貯めるには、入ったときに決まった額を先に分けておく形から始めるとよいでしょう。'};
+  return null; }
+function pkOfflineLead(c,q,plain){ let t=pkOfflineLead0(c,q,plain); try{ q=String(q||''); if(!t||!c||!c.now) return t;
+  const f1=(String(t).match(/^[^。]*。?/)||[''])[0];
+  if(pkHowQ(q)&&!PK_ADV_RE.test(f1)){ const A=pkHowAdv1(c,q,plain); if(A) t=A.solo?A.t+(A.tail||''):A.t+t; }
+  else if(pkCanQ(q)&&!/可能性|見込み/.test(t)&&!/^(?:別れ|付き合うか|返事)/.test(t)) t=/^(?:来年|今年)/.test(t)?'可能性はありますが、'+t:'可能性はあります。'+t;
+  t=t.replace(/可能性は十分あります。/,'可能性は高いと見てよいでしょう。');
+  if(/今月(?:と|か)来月|来月(?:と|か)今月/.test(q)){ const S=pkSmOf(_jstToday()), N=_pkKgYM(S.y,S.m+1), m=String(t).match(/(\d{4})年(\d{1,2})月/);
+    if(m){ const y=+m[1], mo=+m[2]; t=(y===S.y&&mo===S.m?'今月（'+S.m+'月）のほうが向いています。':(y===N.y&&mo===N.m?'来月（'+N.m+'月）のほうが向いています。':'今月と来月で大きな差はありません。'))+t; } }
+  }catch(e){} return t; }
+function pkOfflineLead0(c,q,plain){ try{ q=String(q||''); if(!c||!c.now) return ''; if(pkKidAge(c)>=0&&(/(転職|独立|起業|就職|辞め|仕事|職場|会社|副業|キャリア|お金|金運)/.test(q)||pkIsLoveQ(q))) return ''; const by=birthYearOf(c), age=function(y){ return by?'（'+(y-by)+'歳）':''; };
   const _loveLead=function(){ const L=loveFourLines(c); const m=L&&((plain?L.monthLabsP:L.monthLabs)||[])[0]; if(m){ let _mn=''; if(/(結婚|入籍|籍を|婚約|プロポーズ)/.test(q)){ const mm=String(m).match(/^(\d{4})年(\d{1,2})月/); if(mm) _mn=pkMarryNote([c],[pkMonAY(+mm[1],+mm[2])],plain); }   // 結婚の相談で、縁が動く月が解けない空亡の年なら、入籍は空亡でない年に（2026-11-03）
     // いちばん近い時期が7日以内に終わるときは終わる日と、そのあとの空亡の月・次の時期も。自分から動く相談は空亡の月より前に注意を（先生の指示 2026-11-05）
     let AP=null; try{ const _all=monthFortuneList(c,12).filter(function(ev){ return ev&&ev.calYear; }).map(function(ev){ return {y:ev.calYear,m:ev.calMonth,ku:pkKuuMTag(c,ev.branch,false,ev),kuP:pkKuuMTag(c,ev.branch,true,ev)}; }); AP=pkActPlan(L.topM||[],_all,plain,pkActQ(q)?pkActWord(q):'大事なこと',pkActQ(q)&&pkActWeight(q)==='light'); }catch(e){}
@@ -8022,7 +8042,7 @@ function localAnswer0(c,worry){
   if(!worry)return localReading(c,'');   // 質問なし＝従来どおり命式全体の整理
   const cav=worryCaveat(worry);          // 占いで断定できない質問は、ことわってから読める範囲へ
   if(cav&&cav.sk) return pkSafeLocal(c,worry,cav.sk,false);   // 命・体・暴力・妊娠・法律・投資など：時期や「進んでよい」を出さない（2026-11-03）
-  const topic=cav?cav.to:classifyWorry(worry), wantsWhen=/いつ|時期|何歳|何年|来年|今年|将来|これから|タイミング/.test(String(worry));
+  const topic=cav?cav.to:classifyWorry(worry), wantsWhen=PK_WANTS_WHEN.test(String(worry));
   const q=String(worry).slice(0,40)+(String(worry).length>40?'…':'');
   // 共通の下ごしらえ（命式から算出済みの値だけを使う）
   const el=c.dayMaster.element, ds=c.dayMaster.stem;
@@ -8215,7 +8235,7 @@ function localAnswer0(c,worry){
       const yl=ys.map(y=>y+'年'+(by?'（'+(y-by)+'歳）':'')+_tag(y)).join('・'), _bad=ys.some(y=>{ const k=_kq(y); return k&&!k.gou.length&&!k.chong.length; });
       const _ln=(_move?'引っ越し・環境を変える時期の目安は':'時期の目安は')+yl+'ごろです。'+(_move?'移動・環境の変化が起こりやすい年です。':loveQ?'縁や出会いの星が巡って、気持ちや関係が動きやすい年です。':_money?(_pl?'お金の流れが上向きやすい年です。':'お金の星（財星）などが巡り、金運が上向きやすい年です。'):'運の流れが良く、動きやすい年です。')+(_bad?(_pl?'ひと休みの年は、大きく変えるより準備に向いています。':'〔空亡〕の年は、大きな決断より準備・見直しに向きます。'):'');
       // 1行目は問いへの答え（pkOfflineLead＝仕事の方向・今年か来年か・恋愛はいちばん近い縁が動く月）を残し、時期の目安はそのすぐ下に（2026-11-02）
-      const _keep=_ol&&(/(転職|独立|起業|就職|辞め|仕事|職場|会社|副業|キャリア)/.test(_w)||(typeof pkIsLoveQ==='function'&&pkIsLoveQ(_w))||!!_yd);
+      const _keep=_ol&&(/(転職|独立|起業|就職|辞め|仕事|職場|会社|副業|キャリア)/.test(_w)||(typeof pkIsLoveQ==='function'&&pkIsLoveQ(_w))||!!_yd||(typeof pkRelLead==='function'&&!!pkRelLead(c,_w,false))||(pkHowQ(_w)&&PK_ADV_RE.test(_ol)));   // 家族の関係・「どうしたら」の助言の1行目も残す（2026-11-20）
       if(_move&&_ol&&/引っ越し・環境を変える/.test(_ol)){}   // 引っ越しは1行目（pkMoveLead）が同じ年で答えている
       else if(_keep) L.splice(1,0,_ln); else L[0]=_ln;
     } }catch(e){} }
@@ -9604,6 +9624,10 @@ function pkLeadFix(t,c,q,isCompat){ try{ t=String(t||''); q=String(q||''); if(is
     // E7：年齢差の相談で1行目が年齢差にふれていない／「どうなるか」で全体の見通しがないときは、ツールの1行目に（2026-11-20）
     if(isCompat&&c&&typeof chartB!=='undefined'&&chartB&&pkRelLove()){ const kd7=pkCompatQKind(q), f7=sens(head).slice(0,2).join(''), ag7=pkAgeGapQ(q);
       if((ag7&&!/年齢差|年の差|歳の差|年齢の差|年上|年下|(?:歳|才)(?:も)?(?:離れ|はなれ)|年齢は離れ/.test(f7))||(kd7==='future'&&!(pkHowQ(q)?/ましょう|とよい|がよい|のがよ|向いて|話し合|伝え合/:/流れ|見通し|深ま|育っ|続き|縁の深い/).test(f7))||(PK_AFFAIR_Q.test(q)&&/^(?:future|fate)$/.test(kd7)&&!/家庭/.test(f7))){ const P2=pkCpAB(c,chartB), S=pkCompatSit(P2[0],P2[1],q,plain); if(S&&S.lead) head=S.lead; } }
+    // 「どうしたら」で1行目に助言がない／「今年と来年どちら」でツールの年を書いていないときは、ツールの1行目に（相性・1人とも。2026-11-20 聞き方を広げた点検）
+    if(isCompat&&c&&typeof chartB!=='undefined'&&chartB&&pkRelLove()){ const f8=sens(head).slice(0,2).join(''), P2=pkCpAB(c,chartB), L8=pkCompatOffLead(P2[0],P2[1],q,plain), Y8=pkCpLeadFinish(P2[0],P2[1],q,plain,'','').yp;
+      if(L8&&((pkHowQ(q)&&!PK_ADV_RE.test(f8)&&PK_ADV_RE.test(L8))||(Y8&&Y8.y&&f8.indexOf(Y8.y+'年')<0))) head=L8; }
+    else if(!isCompat&&c&&pkHowQ(q)&&!pkSafeStop(q)&&!PK_ADV_RE.test(sens(head).slice(0,2).join(''))){ const L8=pkOfflineLead(c,q,plain); if(L8&&PK_ADV_RE.test(L8)) head=L8; }
     // 二股・両方と付き合う相談：1行目ですすめないと書いていなければ、その一文を先に（1人・相性とも。2026-11-20）
     if(PK_TWO_Q.test(q)&&!/おすすめしません|すすめません|勧めません|控え|避け|誠実|不誠実|どちらか(?:一方|ひとり|1人)/.test(sens(head).slice(0,2).join(''))) head=PK_TWO_NO+head;
     else if(!isCompat&&c&&PK_WIN_Q.test(q)&&!PK_WIN_HOW.test(fst)&&!(pkConsultPeople(c,q)||[]).length){ const L1=pkWinLead1(c,q,plain); if(L1) head=L1; }
@@ -10558,6 +10582,7 @@ function pkCompatOffLead(a,b,q,plain){ try{ { const _st=q?pkCompatSit(a,b,q,plai
   else if(tp==='timing'){ { const gy=compatGoodYears(a,b,pkRelLove()), g0=gy.filter(function(x){ return !pkCpKuu(a,b,x.year,plain); })[0]||gy[0]; if(g0) s2='2人の縁が動きやすいのは'+g0.year+'年'+pkCpKuu(a,b,g0.year,plain)+'です。'; } }
   else if(tp==='clash'&&warn.length) s2='気持ちが揺れやすく、大事な話を避けたいのは'+pkMonRuns(warn,plain)[0]+'です。';
   try{ s2=pkStampYears(s2,birthYearOf(a),birthYearOf(b)); }catch(e){}
+  if(q&&pkRelLove()) return pkCpLeadFinish(a,b,q,plain,s1+s2,'').lead;   // 種類に当たらない相談も「どうしたら」「今年と来年どちら」に1行目で答える（2026-11-20）
   return s1+s2; }catch(e){ return ''; } }
 /* 相性の相談の種類（恋人・夫婦・婚活の相性だけ）：告白された／告白したい／復縁／別れるか／脈あり／付き合うか迷う（2026-11-04）
    足したもの（先生の決定 2026-11-04「全部足してください」）：guilt＝心苦しい・申し訳ない・罪悪感／howto＝どう伝えたらいい・断り方／attract＝相手は私のどこに惹かれているか・どう思っているか／fate＝結ばれるか・うまくいくか・結婚できるか／future＝この先どうなる・これからの流れ */
@@ -10672,12 +10697,12 @@ const PK_HOW_Q=/どう(?:すれば|したら|やったら|やれば|していけ
 function pkHowQ(q){ return PK_HOW_Q.test(String(q||'')); }
 /* 不倫の相談の「どうしたら」の1行目：まず助言、次に時期（家庭の側が揺れやすい月は避ける） */
 function pkAffairHowLead(AF,bm){ try{ const t1='これからは、勢いで決めず、2人で気持ちを確かめ合いながら落ち着いて話し合っていくのがよいでしょう。';
-  const t2=bm?'お互いの気持ちを確かめ合うなら'+bm+'が向いています。':(AF&&AF.calm?'先のことを話し合うなら'+AF.calm+'が向いています。':'');
+  const t2=bm?'お互いの気持ちを確かめ合うなら'+bm+'が向いています。':(AF&&AF.calm&&(function(x){ const r=String(x).match(/(\d{1,2})月〜(翌)?(\d{1,2})月/); if(!r) return !/〜\d{4}年/.test(x); const d=(+r[3]+(r[2]?12:0))-(+r[1]); return d>=0&&d<=3; })(AF.calm)?'先のことを話し合うなら'+AF.calm+'が向いています。':'');   // 1年まるごとのような長い期間は出さない
   return t1+(AF&&AF.mons?'家庭の側が揺れやすい'+AF.mons+'は大きな決断を避け、'+(t2||'気持ちの整理にあてましょう。'):t2); }catch(e){ return ''; } }
 /* 1人の相談：本人が既婚のとき、本人の命式だけで家庭の側の流れを出す（お相手の生年月日があれば相性で見る） */
-function pkAffairLead1(c,q,plain){ try{ q=String(q||''); if(!c||!c.now||!PK_AFFAIR_Q.test(q)||!pkAffairFutQ(q)||pkCanQ(q)) return ''; const AF=pkAffairFlow(c,null,q,plain); if(!AF) return '';
+function pkAffairLead1(c,q,plain){ try{ q=String(q||''); if(!c||!c.now||!PK_AFFAIR_Q.test(q)||!(pkAffairFutQ(q)||pkHowQ(q))||pkCanQ(q)) return ''; const AF=pkAffairFlow(c,null,q,plain); if(!AF) return '';
   const L=loveFourLines(c), m=L&&((plain?L.monthLabsP:L.monthLabs)||[])[0];
-  if(pkHowQ(q)) return pkAffairHowLead(AF,'');   // 「これからどうしたら」は助言から（2026-11-20）
+  if(pkHowQ(q)){ let bm=''; if(m){ const mm=String(m).match(/(\d{4})年(\d{1,2})月/); if(!mm||AF.mk.indexOf(+mm[1]+'-'+(+mm[2]))<0) bm=pkNowLab(m); } return pkAffairHowLead(AF,bm); }   // 「これからどうしたら」は助言から。時期は縁が動く月（家庭の側が揺れやすい月は使わない。2026-11-20）
   return '関係の行方は決まった未来ではありませんが、'+(m?'あなたの縁が動きやすいのは'+pkNowLab(m)+'です。':'これから1年は、ふだんの積み重ねが鍵になります。')+(AF.fam?AF.fam+(/組み合わせ$/.test(AF.fam)?'です。':'。'):''); }catch(e){ return ''; } }
 function pkAffairHead(plain){ return plain?'【結婚している立場から見た流れ】':'【既婚の立場から見た流れ】'; }
 /* 書いていなければ【既婚の立場から見た流れ】を書き足す（相性・1人とも。オンライン・通信なし） */
@@ -10753,6 +10778,22 @@ function pkWaitMat(c,b,plain,ad,bm){ try{ const T0=_jstToday(), wd=['日','月',
 /* 1人の相談の「返事を待っている」の1行目（pkOfflineLead）。お相手の生年月日がないので相性の話はしない */
 function pkWaitLead(c,q,plain){ try{ if(!pkWaitQ(q)) return ''; const L=loveFourLines(c), ML=L?((plain?L.monthLabsP:L.monthLabs)||[]):[], m0=ML[0]&&!_pkMonKu(ML[0])?pkNowLab(ML[0]):''; const W=pkWaitMat(c,null,plain,null,m0); return W?W.lead:''; }catch(e){ return ''; } }
 /* 相性の相談の1行目と「どうすればよいか」：惹かれ方の向き（attractionDir）・大きな特徴（律音など）・2人とも縁が動く月／注意の月（compatMonths）・判定（compatBalance）から。決めるのは本人（押し付けない）。PRO・ビギナー・オンラインへの渡しで同じ向き */
+/* 相性の1行目の仕上げ：「今年と来年どちら」に答える・「どうしたら」には助言を先に（pkCompatSit・pkCompatOffLead で同じ。2026-11-20 聞き方を広げた点検） */
+function pkCpLeadFinish(a,b,q,plain,lead,kd){ q=String(q||''); lead=String(lead||'');
+  // 「今年と来年どちら」（結婚・入籍・付き合う・同棲など）：2人の縁が深まる年／揺れやすい年／空亡の年でくらべて、1行目でどちらかを答える（2026-11-20 聞き方を広げた点検）
+  let YP=null; try{ if(/今年[^。]{0,12}来年|来年[^。]{0,12}今年/.test(q)&&!PK_AFFAIR_Q.test(q)){ const Y0=(typeof pkNenInfo==='function'?pkNenInfo().Y:(a.now&&a.now.year)), Y1=Y0+1;
+    const G=compatGoodYears(a,b,true).map(function(x){ return x.year; }), Sy=compatStrainYears(a,b).map(function(x){ return x.year; });
+    const sc=function(y){ return (G.indexOf(y)>=0?1:0)-(Sy.indexOf(y)>=0?1:0)-(pkCpKuu(a,b,y,plain)?1:0); }, s0=sc(Y0), s1=sc(Y1);
+    const why1=function(y){ const w=[]; if(G.indexOf(y)>=0) w.push('2人の縁が深まりやすい年'); if(Sy.indexOf(y)>=0) w.push('関係が揺れやすい年'); if(pkCpKuu(a,b,y,plain)) w.push(plain?'どちらかがひと休みの年':'どちらかが空亡の年'); return w.length?w.join('で、'):'大きな動きの少ない年'; };
+    if(s0!==s1){ const pk=s1>s0?Y1:Y0, ot=pk===Y1?Y0:Y1; YP={y:pk}; lead='今年と来年なら、'+(pk===Y1?'来年':'今年')+'（'+pk+'年）のほうが向いています（'+why1(pk)+'）。'+(pk===Y1?'今年':'来年')+'（'+ot+'年）は'+why1(ot)+'です。'; }
+    else { YP={y:0}; lead='今年（'+Y0+'年）と来年（'+Y1+'年）で、'+(plain?'生まれ持った相性では':'命式の上では')+'大きな差はありません。'+lead; } } }catch(e){}
+  // 「どうしたら」には1行目で助言を先に（喧嘩・すれ違い・復縁など。2026-11-20）
+  if(pkHowQ(q)&&kd!=='wait'&&!PK_ADV_RE.test((String(lead).match(/^[^。]*。?/)||[''])[0])){
+    const adv=/喧嘩|ケンカ|けんか|言い合い|すれ違|ぶつか|衝突|イライラ/.test(q)?'ぶつかりやすいときは、すぐに結論を出そうとせず、落ち着いてから気持ちを言葉にして伝え合うとよいでしょう。'
+      :(kd==='reunion'?'やり直したいなら、まず自分の気持ちを整え、短く軽い連絡から少しずつ始めるとよいでしょう。'
+      :'これからは、気持ちを言葉にして伝え合い、お互いのペースを大切にするとよいでしょう。');
+    lead=adv+lead; }
+  return {lead:lead,yp:YP}; }
 function pkCompatSit(a,b,q,plain){ try{ if(pkSafeStop(q)) return null;
   { const DD=pkCpDayDir(a,b,q); if(DD){ let lead=plain?DD.plain:DD.pro, why=(plain?DD.linesP:DD.lines).map(function(x){ return '・'+x; }).join('\n'), H=(plain?DD.howP:DD.how).slice();   // 相談に出てくる日（「11月7日と8日」「明日」など）は、2人の日運で答える（2026-11-06）
       try{ lead=pkSameSexWord(lead,a,b); why=pkSameSexWord(why,a,b); H=H.map(function(x){ return pkSameSexWord(x,a,b); }); }catch(e){}
@@ -10892,7 +10933,8 @@ function pkCompatSit(a,b,q,plain){ try{ if(pkSafeStop(q)) return null;
   if(/結婚|入籍|プロポーズ/.test(String(q||''))){ try{ const ny2=(a.now&&a.now.year)||0, ys=both.concat(one).map(function(x){ return pkMonAY(x.y,x.m); }).concat(ny2?compatGoodYears(a,b,true).filter(function(x){ return x.year<=ny2+5; }).map(function(x){ return x.year; }):[]), mn=pkMarryNote([a,b],ys,plain); if(mn&&H.indexOf(mn)<0) H.splice(Math.max(0,H.length-1),0,mn); }catch(e){} }   // 結婚を聞かれたら、解けない空亡の年は入籍を「空亡でない○年から」に（pkMarryNote と同じ。2026-11-04）
   try{ lead=pkStampYears(lead,birthYearOf(a),birthYearOf(b)); why=pkStampYears(why,birthYearOf(a),birthYearOf(b)); H=H.map(function(x){ return pkStampYears(x,birthYearOf(a),birthYearOf(b)); }); }catch(e){}
   try{ lead=pkSameSexWord(lead,a,b); why=pkSameSexWord(why,a,b); H=H.map(function(x){ return pkSameSexWord(x,a,b); }); }catch(e){}
-  return {kind:kd, lead:lead, why:why, how:H, ag:AG, af:AF}; }catch(e){ return null; } }
+  const _fin=pkCpLeadFinish(a,b,q,plain,lead,kd); lead=_fin.lead; const YP=_fin.yp;
+  return {kind:kd, lead:lead, why:why, how:H, ag:AG, af:AF, yp:YP}; }catch(e){ return null; } }
 /* オンラインの相性の相談に渡す「答えの方向」（通信なしの1行目と同じ向き） */
 function pkCompatSitText(a,b,q){ const S=pkCompatSit(a,b,q,false); if(!S) return ''; if(S.kind==='day') return pkCpDayFocusText(a,b,q); return '\n【この相談の答えの方向＝ツールの計算（惹かれ方の向き・惹かれ方のしくみ・好きになりやすい人・大きな特徴・これから1年の流れ・縁が深まる年／揺れやすい年・判定）。1行目はこの向きで問いに答える（2文まで・前置きなし。決めるのは本人なので押し付けない。相手を悪く言わない。二股をすすめない'+(S.kind==='fate'?'。「結ばれるか」は可能性の高さで答え、断定しない':'')+(S.kind==='howto'?'。例文を「お付き合いしない場合」「考える時間がほしい場合」の2つ書く':'')+((S.kind==='confess'||S.kind==='act'||S.kind==='reunion')?'。自分から動く時期は、解けない空亡の月（〔本人は空亡〕など）と空亡の日をすすめない（解空の月は避けない）。いちばん近い時期が7日以内に終わるときは終わる日と、そのあとの空亡の月（日付）・次にすすめられる時期を、この方向の文どおりに書く':'')+(S.kind==='wait'?'。待ち方に答える：急かさない・数日たったら軽い一言を一度だけ・返事の期限を決めさせない。軽い一言を送るのに向いた日・避けたい日・空亡の月はツールの計算どおりに書く。例文を1つ。返事を受け取ったとき（うまくいった／断られた）の一言も。お相手を責めない':'')+(S.kind==='win'?'。「どうすれば好かれるか」に1行目で答える：お相手が好きになりやすい人とあなたの重なり・お相手から見たあなたの役割・2人とも縁が動く月・注意の月を使って具体的に書く。相談の前提（お相手はあまり惹かれていない）を「もう惹かれています」と打ち消さない。お相手の気持ちを言い切らない（「〜と星の上では見られる」の言い方）。駆け引き・相手を試す・操る方法はすすめない。時期はこれから12ヶ月の月で答え、何年も先の年を主な時期にしない':'')+(S.kind==='future'?'。「どうなるか」は1行目でまず全体の見通し（判定・大きな特徴から）を書き、次にいちばん近い2人とも縁が動く月を書く':'')+(S.ag?'。年齢差の相談：1行目で年齢差にふれて答える（命式では年齢差で良い悪いを決めない）。本文に【年齢差について】の見出しを立て、2人の共通点・お互いの役割・いま歩んでいる10年のちがい（年齢・大運はこの材料どおり）・時期で書く。説教・世代の決めつけ・年齢差を問題や心配ごととして書かない（やめたほうがよい・まわりの目・将来の介護などは書かない）':'')+'）】'+S.lead+(S.why?'\n【答えの理由に使う材料（ツールの計算）】'+S.why:'')+(S.ag?'\n【年齢差について書く材料（ツールの計算。年齢・大運はこのとおり）】'+S.ag.lines.join('／'):'')+(S.af?'\n【既婚の立場から見た流れ（ツールの計算。本文に【既婚の立場から見た流れ】の見出しを立てて書く。1行目は見通し→家庭の側→いちばん動きやすい月の順。年柱＝家・親族・地元／配偶宮＝夫婦の関係・家庭の中。分かれ道〈続ける・一緒になる・離れる〉は中立に書き、決めるのは本人。説教・責める言い方・「やめたほうがよい」は書かない。だます・隠す・無理に別れさせる方法は書かない。「誘う・デート・大事な話に向く」ではなく「気持ちを確かめ合う・話し合う」と書く）】'+S.af.lines.join('／'):'')+'\n【「どうすればよいか」に入れること】'+S.how.join('／'); }
 /* 通信できないときの相性の時期の段：2人の縁が動く月（compatMonths）と、縁が深まる年（干支・年齢つき） */

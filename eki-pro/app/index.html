@@ -3580,14 +3580,14 @@ ${jargonLine}${koStageLine}プロの鑑定に聞こえるよう、温かく具�
   function ekiMoneyQ(q){ q=String(q||''); if(pkSafeQ(q)) return false;   // 占いで決めないご相談（借金のギャンブル・投資など）・つらさのご相談には、金運が上向く時期を書き足さない（2026-11-05）
     return PK_GAMBLE_Q.test(q)||/金運|お金|収入|副業|貯金|貯め|出費|借金|給料|年収|資産|売上|売り上げ/.test(q); }
   function ekiQForm(q){ q=String(q||''); if(/今年.{0,20}来年|来年.{0,20}今年/.test(q)) return 'year';
-    if(/(どちら|どっち)(が|を|に|の|で|へ|と)|それとも|か[、,]?\s*(どちら|どっち)/.test(q)) return 'choice';
+    if(/(どちら|どっち)(が|を|に|の|で|へ|と)|それとも|か[、,]?\s*(どちら|どっち)/.test(q)||(/[^。、]{1,20}か[、,]?[^。、]{1,20}か(?:で|を)?(?:迷|悩)/.test(q)&&ekiChoiceOpts(q))) return 'choice';   // 「続けるか独立するか迷っています」も選ぶ相談（2026-11-20）
     if(/いつ|何月|何年|時期|タイミング|何歳/.test(q)) return 'when'; if(ekiStayQ(q)) return 'stay'; return ''; }   // 「今の仕事を続けるべきか」（2026-11-14）
   function ekiGrp(rank){ return (rank==='A'||rank==='B')?'g':(rank==='E')?'b':'m'; }
   function ekiPos(r){ const b=r&&r.basis; return (b&&(b.src==='hon'||b.src==='shi'))?(+b.ko||0):0; }
   function ekiFromShi(r){ return !!(r&&r.shika&&r.shika.hex&&r.basis&&(r.basis.src==='shi'||r.basis.src==='shigua')); }
   function ekiShBetter(r){ const O='ABCDE'; return !!(r&&r.shika&&r.shika.hex&&O.indexOf(r.shika.rank)<O.indexOf(r.hexRank)); }
   function ekiChoiceOpts(q){ q=String(q||'').replace(/[。．]/g,'、').replace(/[？?！!]/g,'').replace(/[ 　]+/g,'');
-    const m=q.match(/([^、,\s]{1,24}?)か[、,]?\s*(?:それとも)?\s*([^、,\s]{1,24}?)か(?:[、,]?[^、,]{0,12}?[、,])?\s*(?:どちら|どっち)/)||q.match(/([^、,\s]{1,24}?)と([^、,\s]{1,24}?)(?:の|で)?(?:どちら|どっち)/)||q.match(/([^、,\s]{1,24}?)と([^、,\s]{1,24}?)(?:から|の|で|に|は|を|が|、)[\s\S]{0,40}?(?:どちら|どっち)/)||q.match(/([^、,\s]{1,24}?)か[、,]?\s*それとも[、,]?\s*([^、,\s]{1,24})/);
+    const m=q.match(/([^、,\s]{1,24}?)か[、,]?\s*(?:それとも)?\s*([^、,\s]{1,24}?)か(?:[、,]?[^、,]{0,12}?[、,])?\s*(?:どちら|どっち)/)||q.match(/([^、,\s]{1,24}?)と([^、,\s]{1,24}?)(?:の|で)?(?:どちら|どっち)/)||q.match(/([^、,\s]{1,24}?)と([^、,\s]{1,24}?)(?:から|の|で|に|は|を|が|、)[\s\S]{0,40}?(?:どちら|どっち)/)||q.match(/([^、,\s]{1,24}?)か[、,]?\s*それとも[、,]?\s*([^、,\s]{1,24})/)||q.match(/([^、,\s]{1,24}?)か[、,]?\s*([^、,\s]{1,24}?)か(?:で|を)?(?:迷|悩)/);
     if(!m) return null; const cl=x=>String(x).replace(/^(?:(?:私|わたし|僕|俺)(?:は|が))/,'').replace(/^[^、]{1,16}?のは(?=.)/,'').replace(/か$/,'').replace(/(?:です|でしょう|ます)$/,'').replace(/(?:がいい|がよい|が良い|べき)$/,'').replace(/(?:べき|方|ほう)$/,'').trim();
     const a=cl(m[1]), b=cl(m[2]); if(!a||!b||a===b) return null;
     const MOVE=/独立|転職|辞め|退職|始め|新し|引っ越|引越|移|挑戦|告白|別れ|離婚|起業|開業|変え|動く|動き|出る|行く|進む|受ける|応募|結婚|入籍|復縁|継ぐ|引き受け|思い切|買う|購入|^今(?:すぐ)?$/, STAY=/続け|残る|残り|今の|このまま|待つ|待ち|現状|守る|見送|留ま|とどま|様子を見|やめておく|断る|今まで/;
@@ -3658,9 +3658,10 @@ ${jargonLine}${koStageLine}プロの鑑定に聞こえるよう、温かく具�
   /* 「いつ」「今年か来年か」の2文目（記号の向きを、卦全体のテーマ名と組み合わせずに言う。2026-11-16） */
   function ekiTimeAnsMid(r){ const g=ekiGrp(r.rank); return g==='g'?'今は動いてよい流れなので、準備が整いしだい進んで大丈夫です。':g==='m'?'今は足元を整える流れなので、準備を進めながら合図を待ちましょう。':'今は無理に動かず守る流れなので、状況が落ち着くのを待ちましょう。'; }
   /* 「〜できますか」：可能性で答える（◎＝高い／〇＝ある／△＝ある・条件しだい／✖＝今は低め。2026-11-16） */
-  function ekiCanQ(q){ q=String(q||''); if(ekiExamQ(q)||/^(?:year|when)$/.test(ekiQForm(q))) return false; return /(?:でき|叶い|叶え|かない|戻れ|戻り|うまくいき|成功し|付き合え|結ばれ|やり直せ|仲直りでき|会え|通じ)(?:ます|る)(?:か|でしょうか)|叶う(?:か|でしょうか)|可能性(?:は|って)?(?:あり|ある)/.test(q); }
+  function ekiCanQ(q){ q=String(q||''); if(ekiExamQ(q)||/^(?:year|when)$/.test(ekiQForm(q))) return false; return /(?:でき|叶い|叶え|かない|戻れ|戻り|うまくいき|成功し|付き合え|結ばれ|やり直せ|仲直りでき|会え|通じ|一緒になれ|なれ)(?:ます|る)(?:か|でしょうか)|叶う(?:か|でしょうか)|可能性(?:は|って)?(?:あり|ある)|脈(?:あり|が|は)|気がある(?:か|でしょうか)/.test(q); }   // 「一緒になれますか」「脈ありですか」も可能性で答える（2026-11-20 聞き方を広げた点検）
   function ekiCanLead(r,q){ if(!ekiCanQ(q)) return ''; const sym=rankToVerdict(r.rank).sym, t=ekiSignTopic(q);
-    const L={'◎':'可能性は高いです。','〇':'可能性はあります。','△':'可能性はあります（条件しだいです）。','✖':'今は可能性が低めです。'}[sym]||'可能性はあります。';
+    let L={'◎':'可能性は高いです。','〇':'可能性はあります。','△':'可能性はあります（条件しだいです）。','✖':'今は可能性が低めです。'}[sym]||'可能性はあります。';
+    if(/脈|気がある/.test(String(q||''))) L=(sym==='✖'?'お相手の気持ちは、今はまだはっきり向いていない流れです。':'お相手に気持ちがある'+L);   // 「脈ありですか」（2026-11-20）
     const solo=t==='love'&&!ekiHasPartner(q);   // お相手が出てこない恋愛の相談（「来年結婚できますか」）では、お相手を前提にしない（2026-11-17）
     const C=solo?{'◎':'人と会う場に前向きに出かけることが、形にする鍵です。','〇':'焦らず、人と会う機会を少しずつ増やすことが鍵です。','△':'自分の暮らしを整え、人と会う機会を少しずつ増やすことが条件です。','✖':'今は焦らず、まず自分の毎日を整えることが先です。'}
       :t==='love'?{'◎':'素直な気持ちを短く伝えることが、形にする鍵です。','〇':'焦らず、素直な気持ちを短く伝えることが鍵です。','△':'相手の気持ちが落ち着くのを待ち、追いかけすぎないことが条件です。','✖':'今は追いかけず、まず自分の暮らしを整えることが先です。'}:{'◎':'準備を整えて進めば、形になりやすいでしょう。','〇':'準備を一つずつ整えて進めることが鍵です。','△':'足元を整え、条件をそろえてから進むことが条件です。','✖':'今は無理に進めず、足元を整えることが先です。'};
@@ -3718,7 +3719,10 @@ ${jargonLine}${koStageLine}プロの鑑定に聞こえるよう、温かく具�
     return String(t).split('\n').map(function(line){ const ss=line.match(/[^。！？]+[。！？]*|[。！？]+/g)||[]; return ss.filter(function(x){ return !W.test(x)&&!/(?:答え|判定|記号)[はがの]?[：:「『（(]?\s*[◎〇○◯△▲✖✕×]/.test(x); }).join(''); }).join('\n')
       .replace(/[「『（(][◎〇○◯△▲✖✕×][」』）)]/g,'').replace(/[◎△▲✖✕]/g,'').replace(/[ 　]+\n/g,'\n'); }
   function ekiPunct(x){ return String(x==null?'':x).replace(/\s+$/,'').replace(/([^。！？!?」』）)\s])$/,'$1。'); }
-  function ekiOfflineLead(r,q){ const f=ekiQForm(q); if(!f) return ekiHowQ(q)?ekiHowLead(r,q):(ekiFutureQ(q)?ekiFutureLead(r,q):''); const g=ekiGrp(r.rank), pos=ekiPos(r), fs=ekiFromShi(r), sh=r.shika&&r.shika.hex, shT=sh?mTheme(sh):'', better=ekiShBetter(r)||fs;
+  /* 「別れるべきか」「離婚するか迷っています」：どちらを指すかわからない「進んで大丈夫／控えて」にせず、決めるのは本人＋卦から見た考え方で答える（記号は卦のまま。2026-11-20 聞き方を広げた点検） */
+  function ekiBreakQ(q){ q=String(q||''); return /別れ(?:る|た)?べき|別れるか(?:どうか)?(?:で)?(?:迷|悩)|別れたほうが|離婚(?:す)?べき|離婚するか(?:どうか)?(?:で)?(?:迷|悩)|離婚したほうが/.test(q)&&!/復縁|やり直|よりを戻/.test(q); }
+  function ekiBreakLead(r,q){ const g=ekiGrp(r.rank); return '別れる・続けるは、ご本人が決めることです。'+({g:'卦から見ると、気持ちは整ってきていて、どちらを選んでも前を向ける流れです。',m:'卦から見ると、急いで答えを出さず、自分の気持ちを確かめながら考える流れです。',b:'卦から見ると、今は大きな決断を急がず、まず自分の気持ちを落ち着ける流れです。'})[g]; }
+  function ekiOfflineLead(r,q){ if(ekiBreakQ(q)) return ekiBreakLead(r,q); const f=ekiQForm(q); if(!f) return ekiHowQ(q)?ekiHowLead(r,q):(ekiFutureQ(q)?ekiFutureLead(r,q):''); const g=ekiGrp(r.rank), pos=ekiPos(r), fs=ekiFromShi(r), sh=r.shika&&r.shika.hex, shT=sh?mTheme(sh):'', better=ekiShBetter(r)||fs;
     const after=(better&&shT)?'流れが「'+shT+'」に移ってから':'足元が整ってから';
     if((f==='year'||f==='when')&&ekiMoneyQ(q)) return '時期を言い当てるより、今のお金との向き合い方が大切な流れです。'+ekiMoneyFlow(r).split(/(?<=。)/).slice(1).join('');   // 金運は時期を出さない（2026-11-14）
     if(f==='year') return 'どちらの年がよいかは、易では言い当てません。'+ekiTimeAnsMid(r);   // 1行目は2文まで。合図は③で（2026-11-16）   // 易は時期を出さない（鑑定者本人の決定 2026-11-15）
@@ -4130,7 +4134,8 @@ function pkSafeFix(t,q,note){ try{ t=String(t==null?'':t); let cut=0, tcut=0, so
     if(!ph.trim()&&ekiOfflineLead(r,q)){ const L0=ekiOfflineLead(r,q); ph=(/^(?:year|when)$/.test(ekiQForm(q))?L0:L0.split(/(?<=。)/)[0]).replace(/。$/,''); stFix=true; }   // 時期の文を外して1行目が空になったら、ツールの1行目に（2026-11-15）
     if(ekiCanQ(q)&&(!ekiCanMatch(ph,want)||(ekiCanTimeQ(q)&&!/言い当て/.test(ph)))){ const L=ekiCanLead(r,q); if(L){ ph=L.replace(/。$/,''); stFix=true; } }   // 「できますか」は1行目で可能性を・記号と合わない可能性の言葉（△なのに「低い」）は置きかえる・「来年〜」は時期を言い当てないことも（2026-11-16／2026-11-17）   // 「できますか」は1行目で可能性を（2026-11-16）
     if(ekiHowQ(q)&&(/進めて大丈夫|進んで大丈夫|控えるのが賢明|急がないのが吉|前向きに進|よい流れです。?$/.test(ph)||!/すると|ことで|近づ|コツ|大切に|鍵|ように|ながら|重ね|整え/.test(ph))){ const L=ekiHowLead(r,q); if(L){ ph=L.replace(/。$/,''); stFix=true; } }   // 「どうすれば」には「〜すると近づきやすい」で答える（2026-11-20）
-    if(ekiFutureQ(q)&&(/進めて大丈夫|進んで大丈夫|控えるのが賢明|急がないのが吉|前向きに進|よい流れです。?$|慎重に/.test(ph)||!/流れ/.test(ph))){ const L=ekiFutureLead(r,q); if(L){ ph=L.replace(/。$/,''); stFix=true; } }   // 「この先どうなりますか」は卦から見た流れで答える（2026-11-20）   // 「どうすれば」には「〜すると近づきやすい」で答える（2026-11-20）
+    if(ekiFutureQ(q)&&(/進めて大丈夫|進んで大丈夫|控えるのが賢明|急がないのが吉|前向きに進|よい流れです。?$|慎重に/.test(ph)||!/流れ/.test(ph))){ const L=ekiFutureLead(r,q); if(L){ ph=L.replace(/。$/,''); stFix=true; } }
+    if(ekiBreakQ(q)&&!/ご本人|あなたが決め|ご自身が決め/.test(ph)){ ph=ekiBreakLead(r,q).replace(/。$/,''); stFix=true; }   // 「別れるべきか」は、決めるのは本人＋卦から見た考え方（2026-11-20）   // 「この先どうなりますか」は卦から見た流れで答える（2026-11-20）   // 「どうすれば」には「〜すると近づきやすい」で答える（2026-11-20）
     if(/(?:両方|二股|ふたまた|2人とも|二人とも|ふたりとも|同時に)[^。]{0,12}(?:付き合|交際|関係を続|キープ)/.test(q)&&!/おすすめしません|すすめません|勧めません|控え|避け|誠実|どちらか(?:一方|ひとり|1人)/.test(ph)){ ph='両方と同時にお付き合いするのはおすすめしません。'+ph.replace(/^[ 　]+/,''); stFix=true; }   // 二股・両方と付き合う相談はすすめない（PRO・ビギナーの PK_TWO_NO と同じ。2026-11-20 恋愛相談の点検）
     if(!ph.trim()&&ekiFeelLead(r,q)){ ph=ekiFeelLead(r,q).replace(/。$/,''); stFix=true; }
     if(!ph.trim()){ ph=({'◎':'よい流れです。進んで大丈夫','〇':'前向きに進んで大丈夫です','△':'今は慎重に。急がないのが吉','✖':'今は控えるのが賢明です'})[want]; stFix=true; }   // 注記を外して空になったとき
