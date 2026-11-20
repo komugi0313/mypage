@@ -997,6 +997,26 @@ body.rdy-on #gres-body{padding-bottom:230px}
 .hspd .nm{flex:1;min-width:0;font-weight:900;font-size:17px}.hspd .nm small{display:block;font-size:13px;color:#4A4458;font-weight:700}
 .hspd .sc{flex:none;font-family:"Mochiy Pop One",sans-serif;font-size:20px;color:#B4410C;white-space:nowrap}.hspd .sc small{font-size:13px}
 .aq-n span em{font-style:normal;font-size:12.5px;color:#4A4458;margin-left:3px}
+/* みんなの答え（恋愛編・まぜまぜ編）：分かれた問題を先に・左右のマス・全員一致はまとめて（2026-11-20） */
+.aq-lg{display:flex;flex-wrap:wrap;gap:4px 6px;justify-content:center;margin:8px 0 4px}
+.aqc{display:inline-block;background:var(--c);color:#fff;font-weight:900;font-size:13px;line-height:1.5;border-radius:999px;padding:1px 10px;white-space:nowrap}
+.aq-sec{margin:14px 0 8px;font-weight:900;font-size:15px}.aq-sec b{color:#C2185B}
+.aq2{padding:10px 0 12px;border-top:1.5px dashed #EDE3C8}.aq-sec+.aq2{border-top:0;padding-top:0}
+.aq-split{font-style:normal;background:#FF3D7F;color:#fff;border-radius:999px;padding:0 9px;font-size:12.5px}
+.aq-two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.aq-cell{min-width:0;border-radius:14px;padding:8px 9px 9px;border:2px solid #1E1E2A;display:flex;flex-direction:column;gap:5px}
+.aq-cell.A{background:#FFE3EC}.aq-cell.B{background:#E3EEFF}
+.aq-tg{align-self:flex-start;font-size:12px;font-weight:900;background:#1E1E2A;color:#fff;border-radius:6px;padding:0 7px;line-height:1.6}
+.aq-cell p{margin:0;font-size:14px;font-weight:700;line-height:1.5;flex:1}
+.aq-cn{display:flex;flex-wrap:wrap;gap:4px}
+.aq-allbox{background:#FFF8DA;border:1.5px solid #F2D97A;border-radius:12px;padding:4px 12px}
+.aq-arow{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-top:1px dashed #EAD9A0}.aq-arow:first-child{border-top:0}
+.aq-arow b{flex:0 0 auto;font-size:13px;color:var(--sub)}
+.aq-arow p{margin:0;font-size:14px;font-weight:700;line-height:1.55;min-width:0}
+.aq-arow small{display:block;font-weight:700;color:var(--sub);font-size:12px}
+/* スマホ（幅430まで）は、AとBのマスを上下に並べて読みやすく（鑑定者本人 2026-11-20「読みづらいなら読みやすい形で」）。広い画面は左右 */
+@media (max-width:430px){.aq-two{grid-template-columns:1fr;gap:6px}.aq-cell{flex-direction:row;flex-wrap:wrap;align-items:flex-start;gap:4px 8px;padding:8px 10px}.aq-tg{margin-top:2px}.aq-cell p{flex:1 1 0;min-width:0;font-size:15px}.aq-cn{flex:0 0 100%;padding-left:28px}}
+@media (max-width:360px){.aq-cell p{font-size:14px}.aqc{font-size:12.5px;padding:1px 8px}.aq-cn{padding-left:0}}
 .aq-to{margin:4px 0 0;font-size:13.5px;color:#4A4458;font-weight:700}
 .mix{display:flex;gap:12px;align-items:center;background:#FFE3EE;border:2.5px solid #1E1E2A;border-radius:16px;padding:12px;margin-top:8px}
 .mix b{font-family:"Mochiy Pop One",sans-serif;font-weight:400;font-size:26px;color:#B0124D;flex:none}.mix div{min-width:0}.mix small{display:block;font-size:13px;color:#4A4458}
@@ -4134,15 +4154,34 @@ function showGroupResultCore(){
   var AP=aishoPairs(), pb=AP[0];
   // みんなの答え（1問ずつ、だれがどっちを選んだか）
   h+='<div class="card aq-card"><details class="kok"><summary><span><img class="ico-i" src="img/icon-list.webp" alt="" width="20" height="20">みんなの答えを見る（'+S.qs.length+'問）</span></summary><p class="hint">1問ずつ、だれがどっちを選んだかを見られます。</p>';
+  // 見せ方は「分かれた問題を先に・AとBを左右のマス・全員一致は下にまとめて1行ずつ・名前の札は人ごとの色」
+  // （鑑定者本人 2026-11-20「パッと見づらい」→見本 https://claude.ai/artifact/WEnmYKNJD9fX9tjHb33qVD のB＋Aで「これでok」）
+  var AQC=['#D23F6E','#2F6FCB','#23805A','#A8640A','#7148C2','#17788A','#B04A30','#55606E'];
+  var aqc=function(n){ var i=-1; S.players.some(function(p,j){ if(p.name===n){ i=j; return true; } }); return AQC[(i<0?0:i)%AQC.length]; };
+  var aqChip=function(n){ return '<span class="aqc" style="--c:'+aqc(n)+'">'+esc(n)+'</span>'; };
+  var AQS=[], AQ1=[];
   S.qs.forEach(function(q,qi){
     var A=[], B=[];
     S.players.forEach(function(p,i){ var c=S.ans[i][qi]; if(c==='A') A.push(p.name); else if(c==='B') B.push(p.name); });
-    var nm=function(list){ return list.length ? list.map(function(x){ return '<span>'+esc(x)+'</span>'; }).join('') : '<span class="none">だれもいない</span>'; };
-    var tag = A.length && B.length ? '' : '<em class="aq-all">全員一致</em>';
-    h+='<div class="aq"><div class="aq-q">Q.'+(qi+1)+tag+(q.by?'<small>'+esc(q.by)+'さんが考えた問題</small>':'')+'</div>'+
-       '<div class="aq-row A"><b>A</b><div><p>'+esc(q.a)+'</p><div class="aq-n">'+nm(A)+'</div></div></div>'+
-       '<div class="aq-row B"><b>B</b><div><p>'+esc(q.b)+'</p><div class="aq-n">'+nm(B)+'</div></div></div></div>';
+    (A.length && B.length ? AQS : AQ1).push({q:q, qi:qi, A:A, B:B});
   });
+  h+='<div class="aq-lg">'+S.players.map(function(p){ return aqChip(p.name); }).join('')+'</div>';
+  if(AQS.length){
+    h+='<p class="aq-sec">分かれた問題 <b>'+AQS.length+'問</b></p>';
+    AQS.forEach(function(o){
+      h+='<div class="aq2"><div class="aq-q">Q.'+(o.qi+1)+'<em class="aq-split">分かれた！</em>'+(o.q.by?'<small>'+esc(o.q.by)+'さんが考えた問題</small>':'')+'</div><div class="aq-two">'+
+         [['A',o.q.a,o.A],['B',o.q.b,o.B]].map(function(x){ return '<div class="aq-cell '+x[0]+'"><span class="aq-tg">'+x[0]+'</span><p>'+esc(x[1])+'</p><div class="aq-cn">'+x[2].map(aqChip).join('')+'</div></div>'; }).join('')+
+         '</div></div>';
+    });
+  }
+  if(AQ1.length){
+    h+='<p class="aq-sec">全員一致 <b>'+AQ1.length+'問</b></p><div class="aq-allbox">';
+    AQ1.forEach(function(o){
+      var t=o.A.length ? o.q.a : (o.B.length ? o.q.b : '');
+      h+='<div class="aq-arow"><b>Q.'+(o.qi+1)+'</b><p>'+(t ? 'みんな'+qq(t) : 'だれも答えていません')+(o.q.by?'<small>'+esc(o.q.by)+'さんが考えた問題</small>':'')+'</p></div>';
+    });
+    h+='</div>';
+  }
   h+='</details></div>';
 
   h+=PROMO+endButtons()+shareRow('lgshare','gshare','gsave')+SIS_HTML+homeLink();
