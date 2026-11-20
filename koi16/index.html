@@ -45,6 +45,13 @@
 html,body{margin:0;padding:0}
 body{background:var(--bg);color:var(--ink);font-family:"Noto Sans JP",-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",Meiryo,sans-serif;line-height:1.8;font-size:16px;-webkit-text-size-adjust:100%}
 .wrap{max-width:680px;margin:0 auto;padding:16px 16px 48px}
+html,body{touch-action:manipulation} /* ダブルタップで大きくしない（2本の指で広げる拡大は残す） */
+.subbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;display:flex;align-items:center;gap:8px;margin:0 -16px 10px;padding:6px 16px;background:rgba(251,246,241,.96);border-bottom:1px solid #EADDD3;box-shadow:0 4px 10px -8px rgba(90,58,42,.4);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.subbar.hidden{display:none}
+[id]{scroll-margin-top:64px} /* 帯の下に飛び先がかくれないように */
+.subbar .sb-back{flex:none;min-height:44px;padding:0 14px;border:1.5px solid var(--rose);border-radius:99px;background:#fff;color:var(--rose);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.subbar .sb-t{flex:1;min-width:0;text-align:center;font-size:13px;font-weight:700;color:var(--sub,#5E4A3D);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.subbar .sb-home{flex:none;min-height:44px;padding:0 6px;border:0;background:none;color:var(--rose);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
 header.top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0 12px}
 .logo{font-weight:800;color:var(--rose);text-decoration:none;font-size:17px;letter-spacing:.04em;display:inline-flex;align-items:center;min-height:44px}
 .navbtn{background:none;border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:6px 14px;font-size:14px;cursor:pointer}
@@ -784,6 +791,7 @@ header.top .navbtn:active{transform:translateY(1px)}
     <a class="logo" href="./" id="go-home"><span class="logo-ico" aria-hidden="true"><img src="img/LVTP.webp" alt=""><img src="img/LVTC.webp" alt=""><img src="img/RATP.webp" alt=""></span><span class="logo-t"><b>恋のかたち診断</b><small><span class="sub-l">16タイプ×愛着スタイル診断</span><span class="sub-s">16タイプ×愛着スタイル診断</span></small></span></a>
     <button class="navbtn" id="go-types" type="button"><span class="nv-i" aria-hidden="true">★</span><span>キャラ図鑑</span></button>
   </header>
+  <div class="subbar hidden" id="subbar"><button class="sb-back" type="button" id="sb-back">‹ もどる</button><span class="sb-t" id="sb-t"></span><button class="sb-home" type="button" data-act="home">トップへ</button></div>
 
   <!-- はじめの画面 -->
   <main id="v-home">
@@ -3062,7 +3070,21 @@ function validCode(c){ c=(c||'').toUpperCase(); return T[c]?c:null; }
 
 var $ = function(id){ return document.getElementById(id); };
 function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
-function show(id){ if(id!=='v-room'&&!(id==='v-quiz'&&RM.view==='quiz')){ RM.view=null; RM.sig=''; } ['v-home','v-quiz','v-result','v-types','v-about','v-privacy','v-group','v-room','v-mine'].forEach(function(v){ $(v).classList.toggle('hidden',v!==id); }); window.scrollTo(0,0); }
+function show(id){ if(id!=='v-room'&&!(id==='v-quiz'&&RM.view==='quiz')){ RM.view=null; RM.sig=''; } ['v-home','v-quiz','v-result','v-types','v-about','v-privacy','v-group','v-room','v-mine'].forEach(function(v){ $(v).classList.toggle('hidden',v!==id); }); subBar(id); window.scrollTo(0,0); }
+/* 説明のページなどの上に残る「もどる」の帯（鑑定者本人 2026-11-20「閉じるとか戻るボタンがない」→見本 https://claude.ai/artifact/NGfj1NrVCSGePzFH4Pn34x で「お願い」）。
+   もどる＝このサイトの中の1つ前の画面（なければトップ）・トップへ＝はじめの画面。質問の画面とトップには出さない */
+var SB_IN=false;
+try{ SB_IN=!!document.referrer&&new URL(document.referrer).host===location.host; }catch(e){}
+(function(){ var ps=history.pushState; history.pushState=function(){ SB_IN=true; return ps.apply(history,arguments); }; })();
+function subBar(id){
+  var q=new URLSearchParams(location.search), t='';
+  if(id==='v-about') t='この診断の考え方';
+  else if(id==='v-types') t=q.get('z')==='h'?'ハートの図鑑':'キャラ図鑑';
+  else if(id==='v-privacy') t=q.get('licenses')?'ライセンス':'プライバシーポリシー';
+  else if(id==='v-mine') t='わたしの結果';
+  else if(id==='v-result'&&!window.__resMine) t='このタイプの結果';
+  var b=$('subbar'); if(!b) return; b.classList.toggle('hidden',!t); $('sb-t').textContent=t;
+}
 function toast(msg){ var d=document.createElement('div'); d.className='toast'; d.textContent=msg; document.body.appendChild(d); setTimeout(function(){d.remove();},2200); }
 
 /* ===== 採点 ===== */
@@ -3386,7 +3408,7 @@ function c66MiniHTML(){
 }
 function renderResult(code,mine,withCode){
   KOI_PAGE=code;
-  var t=T[code], g=grp(code), isMine = mine&&mine.code===code&&mine.pct;
+  var t=T[code], g=grp(code), isMine = mine&&mine.code===code&&mine.pct; window.__resMine=!!isMine;
   var poles=code.split('');
   var h='';
   if(!isMine){
@@ -3855,7 +3877,7 @@ function mineBar(vid,at,tab){
 }
 function renderMine(tab){
   var hs=histList(), gk=mineGroups(); if(tab!=='g'&&!hs.length&&gk.length) tab='g'; if(tab==='g'&&!gk.length&&hs.length) tab='s';
-  var h='<button class="mine-back" type="button" data-act="home">‹ トップへ</button><section class="card mine"><h1>わたしの結果</h1>';
+  var h='<section class="card mine"><h1>わたしの結果</h1>';
   if(!hs.length&&!gk.length){ h+='<p>まだ結果がありません。診断すると、ここに残ります。</p><button class="btn btn-wide" type="button" data-act="home">診断をはじめる</button></section>'; }
   else{
     h+='<div class="mine-tabs" role="tablist"><button type="button" role="tab" data-act="mine-tab" data-tab="s" class="'+(tab!=='g'?'on':'')+'" aria-selected="'+(tab!=='g')+'" data-nocg><span class="nw">自分の診断</span></button><button type="button" role="tab" data-act="mine-tab" data-tab="g" class="'+(tab==='g'?'on':'')+'" aria-selected="'+(tab==='g')+'" data-nocg><span class="nw">みんなで診断</span></button></div>';
@@ -4531,6 +4553,7 @@ $('start-quick').addEventListener('click',function(){ startQuiz(true,'quick'); }
 $('q-back').addEventListener('click',function(){ if(qi>0){ qi--; renderQ(); } });
 $('q-quit').addEventListener('click',function(){ home(); });
 $('st-back').addEventListener('click',function(){ home(); });
+$('sb-back').addEventListener('click',function(){ if(SB_IN&&history.length>1) history.back(); else home(); });
 $('dur-back').addEventListener('click',function(){ st.status=null; save(st); $('dur-pick').classList.add('hidden'); $('status-pick').classList.remove('hidden'); });
 $('go-home').addEventListener('click',function(e){ e.preventDefault(); history.pushState(null,'',location.pathname); home(); });
 $('go-types').addEventListener('click',function(){ history.pushState(null,'','?types=1'); renderTypes(); });
