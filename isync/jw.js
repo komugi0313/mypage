@@ -74,7 +74,7 @@
     var js=(root||document.body).querySelectorAll('j-p'); var big=[];
     for(var i=0;i<js.length;i++){ var j=js[i]; if(j.style.whiteSpace!=='nowrap') continue; var w=j.getBoundingClientRect().width; if(!w) continue; var bw=boxW(j); if(bw>0&&w>bw+1) big.push(j); }
     big.forEach(function(j){ var t=j.textContent,pc=t.replace(/・/g,'・\u0001').split('\u0001').filter(Boolean),xs=[]; pc.forEach(function(q){ sub(q).forEach(function(r){ xs.push(r); }); });
-      if(xs.length<2){ j.style.whiteSpace=''; return; }
+      if(xs.length<2) return;
       var f=document.createDocumentFragment(); xs.forEach(function(q,i){ if(i) f.appendChild(document.createElement('wbr')); var s=document.createElement('j-p'); s.style.whiteSpace='nowrap'; s.textContent=q; f.appendChild(s); });
       j.parentNode.replaceChild(f,j); });
     if(big.length) fit(root);
