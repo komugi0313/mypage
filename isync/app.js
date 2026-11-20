@@ -44,6 +44,13 @@ function store(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 const app=$('app');
 function view(h){app.innerHTML='<div class="scr">'+h+'</div>';window.scrollTo(0,0)}
+/* 画面の左上の「‹ もどる」（鑑定者本人 2026-11-20「全体的に戻るボタンとか閉じるボタンがない」）。
+   sure：答えている途中でやめるときは2回押し（1回目は「もう一度押すと、やめます」。3.5秒でもとにもどる） */
+function addBack(label,fn,sure){const sc=app.querySelector('.scr');if(!sc)return;
+  const old=sc.querySelector(':scope>.tbk-row');if(old)old.remove();
+  sc.insertAdjacentHTML('afterbegin',`<div class="tbk-row"><button type="button" class="tbk" id="tbk" data-nojw>‹ ${esc(label)}</button></div>`);
+  const b=$('tbk');let armed=0,t=0;
+  b.onclick=()=>{if(sure&&!armed){armed=1;b.textContent='‹ '+sure;b.classList.add('arm');clearTimeout(t);t=setTimeout(()=>{armed=0;b.textContent='‹ '+label;b.classList.remove('arm')},3500);return}clearTimeout(t);fn()}}
 /* 価値観のタイプ（axes.js）：問題の文から番号を引く。left＝左の傾向になる答え */
 const AX=Object.entries(window.SY_AX||{}).map(([key,a])=>{const m=new Map();a.qs.forEach(([t,o])=>{const i=Q.findIndex(q=>q[1]===t);if(i>=0)m.set(i,o)});return{key,l:a.l,r:a.r,name:a.name,m}}).filter(a=>a.m.size);
 // その人の傾向：左の答え＝1・こだわらない＝0.5・右の答え＝0 の平均（左寄りの％）。その物差しの問題に答えていなければ null
@@ -261,6 +268,10 @@ function bindAsk(onPick){
 
 /* ===== ひとりで ===== */
 const L={};  // 手元で遊ぶときのゲーム
+// 答えている途中でやめたときの行き先：ひとりで＝トップ／答え合わせのリンク＝お誘いの画面／あとから参加＝その部屋の最初の画面
+function localQuit(){if(L.mode==='pair'&&L.withX){const x=L.withX;return['お誘いの画面へ',()=>withStart(x)]}
+  if(L.mode==='late'&&L.lateRoom){const c=L.late.code,r=L.lateRoom;return['もどる',()=>lateJoin(c,r)]}
+  return['トップへ',goTop]}
 function soloStart(name){
   Object.assign(L,{counts:undefined,mode:'solo',qs:deal(CFG.len,CFG.topic),players:[{id:'me',name:name||'あなた',ans:{}}],p:0,i:0});
   localAsk();
@@ -279,24 +290,31 @@ function flashVotes(k,v){
   const o=app.querySelector('.opts');if(o&&t>=SHOW_COUNT)o.insertAdjacentHTML('afterend',`<p class="wnote">これまでに${t.toLocaleString()}人が答えました</p>`);
   return true}
 // ★ゆずれないの使い方：はじめる前に画面いっぱいで説明し、「わかった」で進む（鑑定者本人 2026-11-19「押すってことが絶対分からない」「OKしたらスタート」）
-function starIntro(key,ok,go){if(R.starSeen===key){go&&go();return}const old=$('siov');if(old)return;
+// close：「✕ 閉じる」・Esc・まわりの暗いところを押したとき（はじめずに、もとの画面へ）。なければ閉じるだけ
+function starIntro(key,ok,go,close){if(R.starSeen===key){go&&go();return}const old=$('siov');if(old)return;
   const d=document.createElement('div');d.id='siov';d.className='si-ov';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-labelledby','si-t');
-  d.innerHTML=`<section class="si-card"><p class="si-tag">はじめる前に</p><h2 id="si-t">「★ ここはゆずれない」ボタン</h2>
+  d.innerHTML=`<section class="si-card"><div class="si-top"><p class="si-tag">はじめる前に</p><button type="button" class="si-x" id="si-x" aria-label="閉じる">✕ 閉じる</button></div><h2 id="si-t">「★ ここはゆずれない」ボタン</h2>
     <div class="si-demo" aria-hidden="true"><span class="si-q">お風呂は？</span><span class="star si-star">★ ここはゆずれない</span><span class="si-finger">↑ ここを押す</span></div>
     <div class="si-what"><b>「ゆずれない」とは？</b><span>相手とちがうと困る、ここは合わせられない、と思うことです。</span><span class="ex">例：お金のため方は、絶対にこうしたい</span></div>
     <p class="si-lead">そう思った問題では、答えを選ぶ前にこのボタンを押してください。</p>
     <ul class="si-list"><li>結果の「★ ゆずれないところ」で、答えをくらべます</li><li>シンクロ率の点数には入りません。気軽に押してください</li><li>押さなくても大丈夫。ゆずれない問題にだけ押してください</li></ul>
     <button class="btn" id="si-ok" type="button">${esc(ok)}</button></section>`;
-  document.body.appendChild(d);const b=$('si-ok');try{b.focus()}catch(e){}
-  b.onclick=()=>{R.starSeen=key;d.remove();go&&go()}}
+  document.body.appendChild(d);const b=$('si-ok');try{b.focus({preventScroll:true})}catch(e){}
+  const off=()=>{d.remove();document.removeEventListener('keydown',esc1)};
+  const shut=()=>{off();if(close)close();else R.starSeen=key};   // 部屋では閉じるだけ（もう一度は出さない）
+  const esc1=e=>{if(e.key==='Escape'||e.key==='Esc'){e.preventDefault();shut()}};
+  document.addEventListener('keydown',esc1);$('si-x').onclick=shut;d.addEventListener('click',e=>{if(e.target===d)shut()});
+  b.onclick=()=>{R.starSeen=key;off();go&&go()}}
 function localAsk(){
   if(L.i===0&&L.p===0&&L.counts===undefined)prefetchVotes();
   const p=L.players[L.p],k=L.qs[L.i],n=L.qs.length,multi=L.players.length>1;
-  if(n===30&&L.i===0&&L.p===0&&!(R.starDone||{}).local){starIntro('local','わかった、はじめる',()=>{R.starDone=Object.assign(R.starDone||{},{local:1});localAsk()});return}
+  const gen=L.gen=(L.gen||0)+1,quit=localQuit();
+  if(n===30&&L.i===0&&L.p===0&&!(R.starDone||{}).local){starIntro('local','わかった、はじめる',()=>{R.starDone=Object.assign(R.starDone||{},{local:1});localAsk()},quit[1]);return}
   const a=p.ans[L.i]||(p.ans[L.i]={o:-1,st:0,ms:0});
   view(askHTML(k,L.i,n,{who:multi?p.name+'さん':'',step:'own',star:n===30,starOn:a.st}));
+  addBack(quit[0],()=>{L.gen++;clearInterval(QT);quit[1]()},'もう一度押すと、やめます');
   const t0=Date.now();let fin=false;
-  const go=()=>{
+  const go=()=>{if(L.gen!==gen)return;
     L.i++;
     if(L.i<n){localAsk();return}
     L.i=0;L.p++;
@@ -599,10 +617,14 @@ function mineView(){const L2=mineList();
       const main=solo?(sw?sw.split('×').map(w=>`<span class="nw">${esc(w)}</span>`).join('<span class="mb-x">×</span><wbr>'):'価値観のかたち'):others.slice(0,3).map(w=>`<span class="nw">${esc(w)}</span>`).join('・<wbr>')+(others.length>3?`<span class="mb-more">ほか${others.length-3}人</span>`:'');
       return `<li><button type="button" class="mine-b" data-j="${j}"><span class="mb-top">${tag}<span class="md">${x.dt}・${x.q}問</span></span><span class="mb-main${solo?' solo':''}">${main}</span>${e.pct!=null?`<span class="mb-pct"><i>シンクロ率</i><b>${e.pct}<small>%</small></b></span>`:''}<span class="mb-go" aria-hidden="true">›</span></button></li>`}).join('')}</ul>`:'<p class="hint">まだありません。</p>'}
     <button class="btn ghost" id="mine-back" style="align-self:stretch">トップへ</button></section>`);
-  app.querySelectorAll('.mine-b').forEach(b=>b.onclick=()=>mineOpen(L2[+b.dataset.j]));$('mine-back').onclick=goTop}
+  app.querySelectorAll('.mine-b').forEach(b=>b.onclick=()=>mineOpen(L2[+b.dataset.j]));$('mine-back').onclick=goTop;addBack('トップへ',goTop)}
 function showResult(G){showResultCore(G);
-  if(G.mine){const sc=app.querySelector('.scr'),x=mineLabel(G.mine);if(sc)sc.insertAdjacentHTML('afterbegin',`<section class="card mine-note"><p class="pt-h"><em>わたしの結果</em>${x.dt}の結果</p><p class="hint">このスマホに残っていた結果です。</p><button class="btn ghost small" id="mine-ls" style="align-self:stretch">わたしの結果の一覧へ</button></section>`);const b=$('mine-ls');if(b)b.onclick=mineView;scrollTo(0,0)}
-  else if(!G.view){mineSave(G);statPlay(G)}}
+  if(G.mine){const sc=app.querySelector('.scr'),x=mineLabel(G.mine);if(sc)sc.insertAdjacentHTML('afterbegin',`<section class="card mine-note"><p class="pt-h"><em>わたしの結果</em>${x.dt}の結果</p><p class="hint">このスマホに残っていた結果です。</p></section>`);addBack('わたしの結果の一覧へ',mineView);scrollTo(0,0)}
+  else if(!G.view){mineSave(G);statPlay(G)}
+  resultBack(G)}
+// 結果の画面の左上：わたしの結果から＝一覧へ／届いた答え合わせから＝その一覧へ／部屋＝部屋を出てトップへ（下の「トップへ」と同じ）／ほか＝トップへ
+function resultBack(G){if(G.mine)return addBack('わたしの結果の一覧へ',mineView);if(G.back)return addBack(G.back[0],G.back[1]);
+  if(!G.local&&R.code)return addBack('トップへ',()=>{if(R.code)leaveRoom();goTop()});addBack('トップへ',goTop)}
 /* 診断した回数を数える（統計のページ stats.html 用。名前・答えは送らない。同じ回は1回だけ＝部屋に人が加わって描き直しても数え直さない。2026-11-19） */
 function statPlay(G){try{if(!G.qs||!G.qs.length)return;
   const me=G.players.find(p=>p.id===G.me);if(!me)return;
@@ -850,13 +872,14 @@ function withStart(x){
     <p class="hint" id="wmsg" hidden>ニックネームを入れてください（2人の結果に出ます）。</p>
     <button class="btn" id="wgo" style="align-self:stretch">答えはじめる</button>
     <button class="btn ghost small" id="wtop">アイ・シンクのトップを見る</button></section>`);
+  addBack('トップへ',goTop);
   $('wgo').onclick=()=>{const v=$('wn').value.trim();if(!v){$('wmsg').hidden=false;$('wn').focus();return}store('kv_name',v);
-    Object.assign(L,{counts:undefined,mode:'pair',qs:x.qs,players:[{id:'me',name:v||'ともだち',ans:{}}],partner:{id:'p',name:x.name,ans:x.ans,ibx:x.id||''},p:0,i:0});localAsk()};
+    Object.assign(L,{counts:undefined,mode:'pair',qs:x.qs,players:[{id:'me',name:v||'ともだち',ans:{}}],partner:{id:'p',name:x.name,ans:x.ans,ibx:x.id||''},p:0,i:0,withX:x});localAsk()};
   $('wtop').onclick=goTop}
 // 結果のリンク（送り返された結果）を開いた人
-function pairView(x){
+function pairView(x,back){
   try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
-  L.players=[];showResult({players:[x.A,x.B],qs:x.qs,me:'a',anon:false,local:true,view:true})}
+  L.players=[];showResult({players:[x.A,x.B],qs:x.qs,me:'a',anon:false,local:true,view:true,back})}
 
 /* ===== 答え合わせが届く（送った人のトップに、答えた人の結果を30日間） =====
    送った人：リンクに目印（12文字）を入れ、このスマホの kv_sent に目印・問題・自分の答えを覚える。
@@ -903,8 +926,8 @@ function inboxView(got){
     <p class="ib-wait">まだ答えていない人もいます。答えると、ここに増えます。</p>
     <p class="ib-note">この一覧は、あなたにしか見えません。答えた人どうしは、おたがいの結果を見られません。届いた結果は${IBX_DAYS}日で消えます。</p>
     <button class="btn ghost small" id="ibtop">トップへ</button></section>`);
-  document.querySelectorAll('.ib-row').forEach(b=>b.onclick=()=>{const x=got.find(y=>y.key===b.dataset.k);if(x)pairView(ibxPair(x))});
-  $('ibtop').onclick=goTop}
+  document.querySelectorAll('.ib-row').forEach(b=>b.onclick=()=>{const x=got.find(y=>y.key===b.dataset.k);if(x)pairView(ibxPair(x),['答え合わせの一覧へ',()=>inboxView(got)])});
+  $('ibtop').onclick=goTop;addBack('トップへ',goTop)}
 
 /* ===== みんなの答え（これまでに診断した人の割合） =====
    Firestore の isync_votes/<問題の目印> に、答えA・B・3つ目の数だけを1つずつ足す（名前は送らない）。同じスマホで同じ問題は1回だけ数える */
@@ -1152,8 +1175,8 @@ async function enterRoom(code){
   leaveRoom(true);
   Object.assign(R,{code,key:'',room:undefined,players:{},seen:{},adv:{},my:null,snapAt:0});store('kv_room',{code});
   try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}JOIN='';
-  view('<section class="card hand"><p class="hint">部屋につないでいます…</p></section>');
-  await subscribe();
+  view('<section class="card hand"><p class="hint">部屋につないでいます…</p></section>');addBack('トップへ',()=>{leaveRoom();goTop()});
+  await subscribe();if(R.code!==code)return;
   R.last=Date.now();pull(true);R.poll=setInterval(()=>pull(),2000);   // 知らせが止まっても取り残されないよう、2秒ごとに自分からも確かめる
   setTimeout(()=>connWatch(code),6000);
 }
@@ -1165,7 +1188,7 @@ function connWatch(code){
   view(`<section class="card hand"><p class="big">部屋にうまくつながりません</p>
     <p class="hint">電波の弱い所や、LINEなどのアプリの中の画面では、つながりにくいことがあります。もう一度押すか、Safari・Chromeで開いてみてください。</p>
     <button class="btn" id="cw-re" style="align-self:stretch">もう一度つなぐ</button>
-    <button class="btn ghost small" id="cw-top">トップへ</button></section>`);
+    <button class="btn ghost small" id="cw-top">トップへ</button></section>`);addBack('トップへ',()=>{leaveRoom();goTop()});
   $('cw-re').onclick=()=>enterRoom(code);
   $('cw-top').onclick=()=>{leaveRoom();goTop()};
 }
@@ -1328,6 +1351,7 @@ function lobby(){
   $('st').onclick=e=>{if(ps.length<2)return;e.target.disabled=true;roomUpdate({phase:'play',qi:0})};
   const s1=$('st1');if(s1)s1.onclick=e=>{e.target.disabled=true;roomUpdate({phase:'play',qi:0})};
   $('home').onclick=async()=>{const db=await getDb(),code=R.code;leaveRoom();try{await db.doc(pPath(code,PID)).delete()}catch(e){}goTop()};
+  addBack('部屋を出る',()=>$('home').click(),'もう一度押すと、部屋を出ます');
 }
 /* 招待のリンク・QRコード（…#join-1234）で開いたとき：トップを出さずに、その部屋へまっすぐ入る。
    前に名前を入れたことがあれば何も押さずに入る。はじめての人は、ニックネームを入れて「参加する」を1回押すだけ（空でも入れる） */
@@ -1339,7 +1363,7 @@ async function joinFromLink(code){
   let room=null,ps=[];
   try{const rs=await db.doc('rooms/'+code).get();room=rs.exists&&alive(rs.data())?rs.data():null;
     if(room){const q=await db.collection('rooms/'+code+'/players').get();ps=q.docs.map(d=>d.id)}}catch(e){}
-  const fail=msg=>{clearHash();view(`<section class="card hand"><p class="big">${msg}</p><p class="hint">部屋は12時間で閉じます。部屋を作った人に、もう一度送ってもらってください。</p><button class="btn" id="tp" style="align-self:stretch">トップへ</button></section>`);$('tp').onclick=goTop};
+  const fail=msg=>{clearHash();view(`<section class="card hand"><p class="big">${msg}</p><p class="hint">部屋は12時間で閉じます。部屋を作った人に、もう一度送ってもらってください。</p><button class="btn" id="tp" style="align-self:stretch">トップへ</button></section>`);$('tp').onclick=goTop;addBack('トップへ',goTop)};
   if(!room)return fail('この部屋は見つかりませんでした');
   if(ps.includes(PID)){enterRoom(code);return}                     // もう入っている（ページを開きなおした）
   if(room.phase==='result'&&room.kind!=='kon'){clearHash();return lateJoin(code,room)}   // 先に答えた人がいる部屋：同じ問題にひとりで答えて、結果に加わる
@@ -1359,6 +1383,7 @@ async function joinFromLink(code){
   const inp=$('jn-name');
   const submit=e=>{if(e)e.preventDefault();const v=inp.value.trim();if(v)store('kv_name',v);$('jn-go').disabled=true;go(v||('ゲスト'+(ps.length+1)))};
   $('jn-go').onclick=submit;inp.onkeydown=e=>{if(e.key==='Enter')submit(e)};
+  addBack('トップへ',()=>{try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}goTop()});   // 部屋番号はトップの欄に残る
 }
 // 同じ名前の人がいるとき：「あなた自身ですか？」→ はい＝その人として続ける／ちがう人＝別の名前で入る（鑑定者本人 2026-11-19「作った人がLINEのリンクから入ると3人になる」）
 function sameAsk(code,name,id,shown){
@@ -1367,11 +1392,13 @@ function sameAsk(code,name,id,shown){
     <p class="hint">部屋を作った人が、自分で送ったリンクを開いたときなどに出ます。あなた自身ですか？</p>
     <button class="btn" id="sm-yes" style="align-self:stretch">はい、自分です（この画面で続ける）</button>
     <button class="btn ghost" id="sm-no" style="align-self:stretch">ちがう人です（別の名前で入る）</button></section>`);
+  addBack('トップへ',goTop);
   $('sm-yes').onclick=()=>{PID=id;store('kv_pid',id);store('kv_name',shown||name);enterRoom(code)};
   $('sm-no').onclick=()=>{
     view(`<section class="card hand"><p class="big">別のニックネームで入る</p><p class="hint">同じ名前の人がいるので、ちがうニックネームにしてください。</p>
       <label class="one-name" for="sm-name" style="align-self:stretch;text-align:left"><span>ニックネーム</span><input type="text" id="sm-name" maxlength="10" autocomplete="nickname"></label>
       <p class="err" id="sm-err" role="alert"></p><button class="btn" id="sm-go" style="align-self:stretch">参加する</button></section>`);
+    addBack('もどる',()=>sameAsk(code,name,id,shown));
     const inp=$('sm-name'),go=async e=>{if(e)e.preventDefault();const v=inp.value.trim();if(!v){$('sm-err').textContent='ニックネームを入れてください';return}
       if(v===String(shown||name).trim()){$('sm-err').textContent='同じ名前の人がいます。少し変えてください（例：'+esc(v)+'2）';return}
       store('kv_name',v);$('sm-go').disabled=true;const r=await joinRoom(code,v);if(r!=='ok'){$('sm-err').textContent=r;$('sm-go').disabled=false}};
@@ -1382,7 +1409,7 @@ function sameAsk(code,name,id,shown){
 async function lateJoin(code,room){
   const db=await getDb();let ps=[];try{const q=await db.collection('rooms/'+code+'/players').get();ps=q.docs.map(d=>({id:d.id,name:String((d.data()||{}).name||''),ans:(d.data()||{}).ans||{},round:(d.data()||{}).round||1}))}catch(e){}
   if(ps.some(p=>p.id===PID)){enterRoom(code);return}
-  if(ps.length>=MAXP){view(`<section class="card hand"><p class="big">この部屋は、もう${MAXP}人そろっています</p><button class="btn" id="tp" style="align-self:stretch">トップへ</button></section>`);$('tp').onclick=goTop;return}
+  if(ps.length>=MAXP){view(`<section class="card hand"><p class="big">この部屋は、もう${MAXP}人そろっています</p><button class="btn" id="tp" style="align-self:stretch">トップへ</button></section>`);$('tp').onclick=goTop;addBack('トップへ',goTop);return}
   const n=(room.qs||[]).length,nm=ps.map(p=>esc(p.name)+'さん').slice(0,3).join('・')+(ps.length>3?' ほか':'');
   view(`<section class="card hand"><img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
     <p class="big">${nm}が、もう答えています</p>
@@ -1391,11 +1418,11 @@ async function lateJoin(code,room){
     <p class="err" id="lj-err" role="alert"></p>
     <button class="btn" id="lj-go" style="align-self:stretch">答えはじめる</button>
     <button class="btn ghost small" id="lj-top" style="align-self:stretch">トップへ</button></section>`);
-  $('lj-top').onclick=goTop;
+  $('lj-top').onclick=goTop;addBack('トップへ',goTop);
   const inp=$('lj-name'),go=e=>{if(e)e.preventDefault();const v=inp.value.trim();if(!v){$('lj-err').textContent='ニックネームを入れてください';return}
     const sm=ps.find(p=>p.name.trim()===v);if(sm){sameAsk(code,v,sm.id,sm.name);return}
     store('kv_name',v);
-    Object.assign(L,{counts:undefined,mode:'late',qs:(room.qs||[]).slice(),players:[{id:'me',name:v,ans:{}}],p:0,i:0,late:{code,round:room.round||1,name:v,others:ps.filter(p=>p.round===(room.round||1))}});localAsk()};
+    Object.assign(L,{counts:undefined,mode:'late',qs:(room.qs||[]).slice(),players:[{id:'me',name:v,ans:{}}],p:0,i:0,late:{code,round:room.round||1,name:v,others:ps.filter(p=>p.round===(room.round||1))},lateRoom:room});localAsk()};
   $('lj-go').onclick=go;inp.onkeydown=e=>{if(e.key==='Enter')go(e)}}
 // あとから答える人に、先に答えた人がその問題で何秒悩んだかを見せる（答えの中身は見せない。鑑定者本人 2026-11-19「はい」）
 function lateTimes(i){const os=((L.late||{}).others||[]).filter(p=>p.ans&&p.ans[i]);if(!os.length)return false;
@@ -1416,10 +1443,10 @@ function doneRoom(clear){if(clear)clear();
     <p class="hint">あとから入ると、みんなの結果が変わってしまうので、終わった部屋には入れません。</p>
     <p class="hint">送ってくれた人に、新しい部屋か「答え合わせのリンク」（ひとりで診断したあとに送れるリンク。好きなときに答えられます）を送ってもらってください。</p>
     <button class="btn" id="dr-solo" style="align-self:stretch">ひとりで診断する</button><button class="btn ghost" id="dr-top" style="align-self:stretch">トップへ</button></section>`);
-  $('dr-top').onclick=goTop;$('dr-solo').onclick=()=>{soloStart(store('kv_name')||'')}}
+  $('dr-top').onclick=goTop;addBack('トップへ',goTop);$('dr-solo').onclick=()=>{soloStart(store('kv_name')||'')}}
 // 部屋の結果のいちばん上：まだ1人のとき／あとからでも加われること（部屋ができてから12時間）
 function roomLaterCard(ps,room){const sc=app.querySelector('.scr');if(!sc||room.kind==='kon')return;const url=joinUrl(R.code),left=Math.max(0,Math.round(((room.created||0)+12*3600e3-Date.now())/3600e3));
-  const sco=ps.length>=2&&sc.querySelector('.score');(sco?sco:sc).insertAdjacentHTML(sco?'afterend':'afterbegin',`<section class="card later-card"><p class="pt-h"><em>あとからでもOK</em>${ps.length<2?'まだあなただけです':'ほかの人も、あとから加われます'}</p>
+  const sco=ps.length>=2&&sc.querySelector('.score'),tb=sc.querySelector(':scope>.tbk-row');(sco||tb||sc).insertAdjacentHTML(sco||tb?'afterend':'afterbegin',`<section class="card later-card"><p class="pt-h"><em>あとからでもOK</em>${ps.length<2?'まだあなただけです':'ほかの人も、あとから加われます'}</p>
     <p class="hint">この部屋のリンクを開いた人は、同じ問題に答えると、この結果に加わります（あと${left}時間くらい）。加わると、この画面も新しくなります。</p>
     <a class="btn line${ps.length<2?'':' line-w'}" id="lt-ln" href="${lineUrl('アイ・シンクで価値観の答え合わせをしよう！\nこのリンクを開いて答えると、'+(ps.length<2?'2人の結果が見られます。':'みんなの結果に加われます。'),url)}" target="_blank" rel="noopener" style="align-self:stretch">LINEで友だちに送る</a></section>`)}
 /* 画面の下に、短いお知らせを出す（数秒で消える） */
