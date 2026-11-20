@@ -202,6 +202,17 @@ h3.whoh{font-size:16px;margin:18px 0 10px}
 @media (prefers-reduced-motion:reduce){.qs .qs-p{animation:none!important}}
 .rlate{margin-top:14px;padding:10px 12px;border-radius:12px;background:#FFF6D8;border:1px solid #E9D38C}.rlate p{margin:2px 0 0;font-size:14px}
 .rsolo{text-align:center;margin:6px 0 0}.rsolo .linkbtn{min-height:44px}
+.fromgrp{margin:0 0 12px;padding:12px 14px;border-radius:16px;background:#EAF4FB;border:2px solid #7FB3D9;display:flex;flex-direction:column;gap:8px}
+.fromgrp.me{background:#FCE8EF;border-color:var(--rose)}
+.fromgrp .fg-t{margin:0;font-size:16px;font-weight:700;color:var(--ink);text-align:center}
+.fromgrp .fg-x{min-height:44px;border-radius:999px;border:1.5px solid var(--line);background:#fff;color:var(--ink);font:inherit;font-weight:700;font-size:15px;cursor:pointer}
+.rinv{margin:14px 0 6px}
+.rinv-sub{margin:6px 0 0;text-align:center}
+.rqr{margin-top:12px;border:1px solid var(--line);border-radius:14px;padding:4px 12px;background:#fff}
+.rqr summary{min-height:44px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;font-weight:700;color:var(--rose);cursor:pointer;list-style:none}
+.rqr summary::-webkit-details-marker{display:none}
+.rqr summary::after{content:' ▼';font-size:12px;margin-left:4px}
+.rqr[open] summary::after{content:' ▲'}
 .rline-back{margin:10px 0 0;padding:8px 10px;border-radius:10px;background:#F6F0EA;font-size:14px}
 .rcode{font-size:15px;color:var(--ink)!important}.rcode b{font-size:22px;letter-spacing:.12em}
 .rnote{margin:8px 0 0;padding:8px 12px;border-radius:12px;background:#FFF7E0;border:1px solid #F0D48A;color:#5A4200;font-size:14px}
@@ -3264,6 +3275,26 @@ var QV = [
 /* 5回目までは1問ずつ順番に回して全部の文を1回ずつ出し、6回目からは1問ずつ「前回とちがう文」をくじ引きで選ぶ（鑑定者本人 2026-11-17「これで実装してください」）。48問の組み合わせが前と同じになることは、まずない */
 function qNextV(){ var prev=st.qv, had=!!st.me, n=(st.qn||0)+1; st.qn=n; var v=[]; for(var i=0;i<QS.length;i++){ var p0=(prev&&prev[i]!=null)?prev[i]:(had?0:(i+4)%5); if(n>5&&prev&&prev[i]!=null){ var r=Math.floor(Math.random()*4); v.push(r>=p0?r+1:r); } else v.push((p0+1)%5); } return v; }
 function qV(k){ return (st.qv&&st.qv[k])||0; }
+// 質問の文の改行を自分で決める（鑑定者本人 2026-11-20「泣き別れが気になる」）：文節の切れ目だけで切り、「、」のあと・「の前・」と のあとを優先。
+// 1行に入る文字数（cap）から、行の長さがそろい、最後の行が短すぎない切り方を選ぶ。各行は改行しないまとまり（nw）にする。
+function qLayout(t,cap){
+  t=String(t); var n=t.length; if(!cap||n<=cap) return esc(t);
+  var cut={}; BX(t).forEach(function(i){ cut[i]=1; });
+  var pref={}; for(var i=1;i<n;i++){ if(t[i-1]==='、'||t[i-1]==='。'||t[i]==='「') pref[i]=1; if(t[i-1]==='」'&&i>1) {} if(i>=2&&t[i-2]==='」'&&/[とをはがにも]/.test(t[i-1])) pref[i]=1; if(pref[i]) cut[i]=1; }
+  // 「…」の中は切らない（短いとき）
+  var inq={}, q=-1; for(var k=0;k<n;k++){ if(t[k]==='「') q=k; else if(t[k]==='」'&&q>=0){ for(var m=q+1;m<=k;m++) inq[m]=1; if(k+1<n&&/[とをはがにも]/.test(t[k+1])) inq[k+1]=1; q=-1; } }
+  Object.keys(cut).forEach(function(i){ if(/[、。，．・）」』！？…ー]/.test(t[i])||/[「（『]/.test(t[i-1])) delete cut[i]; });
+  var pts=[0].concat(Object.keys(cut).map(Number).filter(function(x){return x>0&&x<n;}).sort(function(a,b){return a-b;}),[n]);
+  var best={}; best[0]={c:0,p:-1};
+  for(var a=1;a<pts.length;a++){ for(var b=0;b<a;b++){ if(!best[b]) continue; var len=pts[a]-pts[b]; if(len>cap) continue;
+      var last=a===pts.length-1, c=best[b].c+(last?(len<4?400:0):Math.pow(cap-len,2))+(last||pref[pts[a]]?0:25)+(!last&&inq[pts[a]]?120:0)+10;
+      if(!best[a]||c<best[a].c) best[a]={c:c,p:b}; } }
+  if(!best[pts.length-1]) return esc(t);
+  var cuts=[], x=pts.length-1; while(x>0){ cuts.unshift(pts[x]); x=best[x].p; }
+  var out=[], s0=0; cuts.forEach(function(e){ out.push('<span class="nw">'+esc(t.slice(s0,e))+'</span>'); s0=e; });
+  return out.join('<wbr>');
+}
+function qCap(){ var el=$('qtext'); if(!el) return 0; var cs=getComputedStyle(el), w=el.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight), fs=parseFloat(cs.fontSize)||20; return Math.max(6,Math.floor(w/fs/1.02)); }
 function qText(k){ var v=qV(k); return v?QV[k][v-1][0]:QS[k][2]; }
 function qEx(k){ var v=qV(k); return v?QV[k][v-1][1]:(QEX[k]||''); }
 var SUBAX = {"FU": {"name": "2人のこれから", "L": "先を描く", "R": "今を大事にする", "res": {"L": ["2人の先を描きたいタイプ", "恋を、2人で育てていくものと考えるタイプです。先の話ができると安心し、関係を大事に積み上げていけます。", "気をつけたいのは、相手のペースより先に話を進めてしまうこと。相手が今を楽しみたい人なら、「先の話」は少しずつがうまくいきます。"], "M": ["今も先も大事にするタイプ", "今の楽しさも、これからのことも、どちらも大事にできるタイプです。相手に合わせて、先の話をする・しないを変えられます。", "相手の考えに合わせすぎると、自分がどうしたいのかが見えなくなることも。ときどき自分の気持ちを言葉にしておくと安心です。"], "R": ["今を大事にするタイプ", "先の形にしばられず、今の2人の気持ちを大事にするタイプです。一緒にいる時間そのものを、まっすぐ楽しめます。", "相手が先を描きたい人だと、「この人は本気かな」と不安にさせることも。今を大事にしている気持ちを言葉で伝えると伝わります。"]}}, "FG": {"name": "けんかのしかた", "L": "すぐ向き合う", "R": "時間をおく", "res": {"L": ["すぐ向き合うタイプ", "すれ違いをそのままにせず、早めに話して解決したいタイプです。問題が小さいうちに片づけられます。", "相手が時間をおきたい人だと、追いかけるように感じさせることも。「落ち着いたら話そう」と待つ時間も、仲直りの一部です。"], "M": ["場面で使い分けるタイプ", "すぐ話すときと、時間をおくときを使い分けられるタイプです。相手の様子を見て、仲直りのしかたを選べます。", "どちらにするか迷っているあいだに、話すきっかけをのがすことも。「今話す？ あとにする？」と相手に聞いてみると決めやすくなります。"], "R": ["時間をおいて向き合うタイプ", "カッとしたまま話さず、落ち着いてから向き合うタイプです。言いすぎて後悔することが少なくすみます。", "相手がすぐ話したい人だと、「避けられている」と感じさせることも。「少し時間をちょうだい。あとで話そう」とひとこと伝えると安心させられます。"]}}};
@@ -3282,7 +3313,8 @@ function renderQ(){
   var L=qlist(), k=L[qi], q=QS[k]; qSeats();
   $('qnum').textContent=(mode==='quick'?'かんたん版 ':'')+(qi+1)+' / '+L.length;
   $('qbar').style.width=(qi/L.length*100)+'%';
-  $('qtext').innerHTML='<span>'+esc(qText(k))+'</span>'; glue($('qtext'));
+  // 質問の文は「、」のあと・「の前で区切って、ひとまとまりで改行する（鑑定者本人 2026-11-20「泣き別れが気になる」）
+  $('qtext').innerHTML='<span>'+qLayout(qText(k),qCap())+'</span>'; glue($('qtext'));
   // 途中の応援（鑑定者本人 2026-11-17「1と2でお願いします」）：本格版は12問ごと、かんたん版は半分で1回
   var CH=mode==='quick'?{10:'半分きました！ あと10問で、あなたのキャラクターがわかります'}:{12:'4分の1終わり！ あなたの恋のかたちが見えてきました',24:'半分きました！ この調子で、あと24問',36:'あと12問！ もうすぐ、あなたのキャラクターがわかります'};
   var ce=$('q-cheer'), cm=CH[qi]; ce.textContent=cm||''; ce.classList.toggle('hidden',!cm); if(cm) glue(ce);
@@ -3467,10 +3499,13 @@ function c66MiniHTML(){
 }
 function renderResult(code,mine,withCode){
   KOI_PAGE=code;
-  var t=T[code], g=grp(code), isMine = mine&&mine.code===code&&mine.pct; window.__resMine=!!isMine;
+  var fg=window.__fromGrp; window.__fromGrp=null; if(fg&&fg.code!==code) fg=null;
+  // みんなの結果でほかの人の名前を押したときは、同じタイプでも「あなたの結果」にしない
+  var t=T[code], g=grp(code), isMine = mine&&mine.code===code&&mine.pct&&!(fg&&fg.who); window.__resMine=!!isMine;
   var poles=code.split('');
   var h='';
-  if(!isMine){
+  if(fg) h+='<div class="fromgrp'+(fg.who?'':' me')+'"><p class="fg-t">'+(fg.who?'<b class="nw">'+esc(fg.who)+'さん</b>の結果を見ています':'<b>あなた</b>の結果を見ています')+'</p><button class="fg-x" type="button" data-act="back-grp">✕ 閉じて、みんなの結果にもどる</button></div>';
+  if(!isMine && !fg){
     h+='<div class="invite">これは「'+esc(t.c)+'」タイプの結果です。'+(st.me?'':'あなたも診断すると、この人との相性がわかります。')+'</div>';
   }
   // 結果の表紙（鑑定者本人 2026-11-16「結果の画面も表紙風に」）：色の帯をやめ、明るい地にキャラクターを大きく・タイプ名は明朝
@@ -4261,6 +4296,15 @@ async function roomKick(id){
 }
 function rDupNames(ps){ var seen={}, d=[]; ps.forEach(function(p){ if(seen[p.name]&&d.indexOf(p.name)<0) d.push(p.name); seen[p.name]=1; }); return d; }
 function rQrBox(){ return '<div class="qr-box">'+qrSVG(rUrl(RM.code))+'<p class="muted">スマホのカメラで読むと、この部屋に入れます</p><p class="rcode">部屋番号 <b>'+dcode(RM.code)+'</b></p></div>'; }
+function rInvKey(){ return 'koi16_inv_'+RM.code; }
+function rInvited(){ try{ return !!sessionStorage.getItem(rInvKey())||!!localStorage.getItem(rInvKey()); }catch(e){ return false; } }
+function rMarkInv(){ try{ localStorage.setItem(rInvKey(),'1'); }catch(e){} }
+function rInviteMain(inv){
+  return '<div class="rinv"><button class="btn btn-line btn-wide" type="button" data-act="room-line">LINEで友だちを誘う</button>'+
+    '<p class="rinv-sub"><button class="linkbtn" type="button" data-act="room-copy">リンクをコピー（ほかのアプリで送る）</button></p>'+
+    (inv?'<p class="rline-back">LINEで送ったら、この画面にもどって「スタート」を押してね。自分で送ったリンクは押さなくて大丈夫です。</p>':'')+
+    '<details class="rqr" id="rqr"><summary><span class="nw">その場にいる人は</span><span class="nw">QRコードで</span></summary><p class="muted">スマホのカメラで読むだけ。人のスマホにはさわりません。</p>'+rQrBox()+'</details></div>';
+}
 function rInviteBtns(){ return '<div class="share" style="margin-top:14px"><button class="btn btn-line" type="button" data-act="room-line">LINEで招待する</button><button class="btn btn-sub" type="button" data-act="room-copy">リンクをコピー</button></div>'; }
 function roomJoinHTML(){
   var r=RM.room, ps=rPlayers(), n=ps.length, hn=rHostName()||'友だち', play=r.phase==='play', late=rLate(r)||(play&&n>0&&ps.every(function(p){ return p.done; }));
@@ -4283,13 +4327,17 @@ function roomJoinHTML(){
 function roomLobbyHTML(){
   var r=RM.room, ps=rPlayers(), n=ps.length, host=rHost(), me=rMe(), hn=rHostName();
   var h='<section class="card">';
-  if(host) h+=(n<2?'<p class="rchip wait">⏳ みんなを待っています</p><h1><span class="nw">みんなに</span><span class="nw">QRを読んでもらおう</span></h1>':'<p class="rchip ok">✅ '+n+'人そろいました</p><h1>スタートできます！</h1>');
+  // 誘う前に「待っています」と出さない（鑑定者本人 2026-11-20）。LINE・コピー・QRを開いたら「誘った」とみなす
+  var inv=rInvited();
+  if(host) h+=(n<2?(inv?'<p class="rchip wait">⏳ 友だちが入るのを待っています</p><h1><span class="nw">友だちが</span><span class="nw">リンクを開くと、</span><span class="nw">ここに名前が出ます</span></h1>':'<p class="rchip wait">📨 まず友だちを誘ってね</p><h1><span class="nw">LINEで</span><span class="nw">友だちを誘おう</span></h1>'):'<p class="rchip ok">✅ '+n+'人そろいました</p><h1>スタートできます！</h1>');
   else h+='<p class="rchip ok">✅ 参加できました（いま'+n+'人）</p><h1><span class="nw">'+esc(hn)+'さんの</span><span class="nw">スタートを</span><span class="nw">待っています</span></h1>';
   h+='<p class="muted">部屋 '+dcode(RM.code)+'・'+rModeTxt(r.mode)+'</p><p class="rlabel">いま部屋にいる人（'+n+'人）</p>'+rMembers(ps,r.host,me,true,host);
   if(host&&n>=2) h+='<p class="muted rkick-note">来ていない人・まちがえて入った人は、名前の横の × を2回押すと外せます。</p>';
   var dn=rDupNames(ps); if(host&&dn.length) h+='<p class="rnote warn">同じニックネームの人が2人います（'+dn.map(esc).join('・')+'）。同じ人が2回入ったときは、× で外してください。</p>';
   // 1人ずつ始めてもよい（鑑定者本人 2026-11-19「クイズじゃないから、一人一人が始めてもいい」「結果が12時間以内に出る形で」）
   // 基本はリアルタイムで一緒に（鑑定者本人 2026-11-19「送ったらすぐにやってもらうのが一番面白い」「リアルタイムに遊ぼうっていうノリ」）
+  // 誘うのはLINEがいちばん上、その次にQR（鑑定者本人 2026-11-20「メインはLINE、その次にQR」）
+  if(host&&n<2&&n<ROOM_MAX) h+=rInviteMain(inv);
   if(host){
     h+='<button class="btn btn-main btn-wide" type="button" data-act="room-start" id="r-start"'+(n<2?' disabled':'')+'>スタート（'+n+'人で診断する）</button>';
     h+='<p class="muted">'+(n<2?'2人以上そろうと押せます。':'押すと、全員のスマホで一斉に始まります。答えているあいだ、みんなの「悩み中…」「決めた！」が見えます。')+'</p>';
@@ -4297,7 +4345,7 @@ function roomLobbyHTML(){
   } else h+='<p class="rwait-t">あなたは何もしなくて大丈夫です。'+esc(hn)+'さんが「スタート」を押すと、自動で診断が始まります。</p>';
   h+='<p class="rnote hidden" id="r-snote"></p></section>';
   if(n<ROOM_MAX){
-    if(host) h+='<section class="card">'+secH('h2','want','みんなを呼ぶ')+'<p>その場にいる人は、このQRをスマホのカメラで読むだけ。人のスマホにはさわりません。</p>'+rQrBox()+rInviteBtns()+'<p class="rline-back">LINEで送ったら、この画面にもどって「スタート」を押してね。自分で送ったリンクは押さなくて大丈夫です。</p></section>';
+    if(host){ if(n>=2) h+='<section class="card">'+secH('h2','want','＋ もっと誘う')+rInviteMain(true)+'</section>'; }
     else h+='<details class="card st-fold"><summary><span><span class="nw">ほかの人を呼ぶ</span><span class="nw">（QRコード）</span></span></summary>'+rQrBox()+rInviteBtns()+'</details>';
   }
   h+='<p class="rleave"><button class="linkbtn" type="button" data-act="room-leave">'+(host?'トップにもどる':'この部屋から出る')+'</button></p>';
@@ -4568,7 +4616,10 @@ document.addEventListener('click',function(e){
   var jp=e.target.closest('[data-jump]');
   if(jp){ e.preventDefault(); var jt=jp.getAttribute('data-jump'), el=jt==='top'?$('v-types'):$('z-'+jt); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); return; }
   var a=e.target.closest('[data-type]');
-  if(a){ e.preventDefault(); var c=a.getAttribute('data-type'); history.pushState(null,'','?t='+c); renderResult(c,st.me,null); return; }
+  if(a){ e.preventDefault(); var c=a.getAttribute('data-type');
+    // みんなの結果から開いたときは、だれの結果かと「閉じる」の帯を上に出す（鑑定者本人 2026-11-20「自分のか相手のかわからない」「閉じるボタンでバナー」）
+    if(a.closest('#v-room,#v-group')){ var nb=a.querySelector('b'); window.__fromGrp={who:a.classList.contains('me')?'':(nb?nb.textContent:''),code:c}; }
+    history.pushState(null,'','?t='+c); renderResult(c,st.me,null); return; }
   var tb=e.target.closest('[data-tone-set]');
   if(tb){ var tv=tb.getAttribute('data-tone-set'), card=tb.closest('.aru-card'); st.tone=tv; save(st); if(card){ card.setAttribute('data-tone',tv); Array.prototype.forEach.call(card.querySelectorAll('.tone-b'),function(x){ var on=x===tb; x.classList.toggle('on',on); x.setAttribute('aria-pressed',on); }); } return; }
   var b=e.target.closest('[data-act]'); if(!b) return;
@@ -4607,7 +4658,7 @@ document.addEventListener('click',function(e){
   else if(act==='room-home'){ roomStop(); RM.code=null; history.pushState(null,'',location.pathname); home(); }
   else if(act==='room-retry'){ roomOpen(RM.code); }
   else if(act==='room-img'){ gImage(rGroup()); }
-  else if(act==='room-line'||act==='room-copy'||act==='room-rline'||act==='room-rcopy'){ rShare(act); }
+  else if(act==='room-line'||act==='room-copy'||act==='room-rline'||act==='room-rcopy'){ rShare(act); if(act==='room-line'||act==='room-copy'){ var was=rInvited(); rMarkInv(); if(!was) setTimeout(function(){ RM.sig=''; roomUpdate(); },400); } }
   else if(act==='gjoin'){ gJoin($('v-group').__g,$('g-name').value); }
   else if(act==='gquiz-full'||act==='gquiz-quick'){ var gg=$('v-group').__g, nm2=gName($('g-name').value); if(!nm2){ toast('ニックネームを入れてください'); return; } if(gg.m.some(function(m){return m.n===nm2;})){ toast('同じニックネームの人がいます。少し変えてください'); return; } st.pendingG={id:gg.id,m:gg.m,name:nm2}; save(st); startQuiz(true,act==='gquiz-full'?'full':'quick'); }
   else if(act==='gline'||act==='gcopy'){ var g3=$('v-group').__g, gu=gUrl(g3), gt=gShareText(g3);
@@ -4618,7 +4669,8 @@ document.addEventListener('click',function(e){
   else if(act==='mine-tab'){ var mt2=b.getAttribute('data-tab'); history.replaceState(null,'','?mine=1'+(mt2==='g'?'&tab=g':'')); renderMine(mt2); }
   else if(act==='mine-h'){ var ha=+b.getAttribute('data-at'), hc=b.getAttribute('data-code'), hh=histList().filter(function(x){return x.at===ha&&x.code===hc;})[0]; if(hh){ history.pushState(null,'','?t='+hc+'&h='+ha); renderResult(hc,hh,null); mineBar('v-result',hh.at,'s'); } }
   else if(act==='mine-g'){ var mg=b.getAttribute('data-gid'), msg=st.groups&&st.groups[mg]; if(msg){ var mgo={id:mg,m:msg.m.slice()}; history.pushState(null,'',gQuery(mgo)+'&mine=1'); renderGroup(mgo); mineBar('v-group',msg.t0||msg.at,'g'); } }
-  else if(act==='mine'){ history.pushState(null,'','?t='+st.me.code); renderResult(st.me.code,st.me,st.partner||null); }
+  else if(act==='back-grp'){ if(history.length>1) history.back(); else home(); }
+  else if(act==='mine'){ if(b.closest('#v-room,#v-group')) window.__fromGrp={who:'',code:st.me.code}; history.pushState(null,'','?t='+st.me.code); renderResult(st.me.code,st.me,st.partner||null); }
   else if(act==='invite'){
     var c2=b.getAttribute('data-code'); partner=c2; st.partner=c2; save(st);
     if(st.me&&st.me.code){ history.pushState(null,'','?t='+st.me.code+'&with='+c2); renderResult(st.me.code,st.me,c2); }
@@ -4638,6 +4690,7 @@ $('dur-back').addEventListener('click',function(){ st.status=null; save(st); $('
 $('go-home').addEventListener('click',function(e){ e.preventDefault(); history.pushState(null,'',location.pathname); home(); });
 $('go-types').addEventListener('click',function(){ history.pushState(null,'','?types=1'); renderTypes(); });
 window.addEventListener('popstate',route);
+document.addEventListener('toggle',function(e){ var d=e.target; if(d&&d.id==='rqr'&&d.open&&RM.code&&!rInvited()){ rMarkInv(); var ch=document.querySelector('#v-room .rchip.wait'); if(ch) ch.textContent='⏳ 友だちが入るのを待っています'; } },true);
 document.addEventListener('keydown',function(e){ if(e.key!=='Enter') return; if(e.target&&e.target.id==='r-jname'){ e.preventDefault(); roomDoJoin(false); } else if(e.target&&e.target.id==='r-name'){ e.preventDefault(); roomDoCreate(); } });
 
 function route(){
