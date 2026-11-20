@@ -146,7 +146,7 @@ function goTop(){
   <div class="gos">
     <p class="gos-h">あの人と、みんなと。<br>「ふつう」はどこまで同じ？</p>
     <button class="gobig g1" id="go-each"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg></span><span><b>2人で・みんなで</b><small>QRを読むだけ・2〜10人</small></span></button>
-    <button class="gobig g2" id="go-solo"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span><span><b>ひとりで診断</b><small id="solo-sub">${CFG.len}問・約${CFG.len>=30?6:3}分。あとで答え合わせ</small></span></button>
+    <button class="gobig g2" id="go-solo"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span><span><b>ひとりで診断</b><small id="solo-sub">${CFG.len}問・約${minsOf(CFG.len)}分。あとで答え合わせ</small></span></button>
     <p class="free">${Q.length}の質問・${TH_N.length}つのテーマ　無料・登録なし・アプリ不要</p>
   </div>
   <section class="card try" id="try">
@@ -213,7 +213,7 @@ function goTop(){
   <p class="credit" data-nocg><a class="pp-link" href="privacy.html">プライバシーポリシー</a><br>アイ・シンク（I-Sync）<br>Produced by Mizuki Nico</p>`);
   const DESC={kon:'最大40人。番号だけで参加して、名前を出さずに一斉に20問。終わると、自分と合う人が、自分のスマホにだけ出ます。',each:'2〜10人で。1人が部屋を作り、そばにいる人はQRコードを読みとるだけで参加できます。離れている人には、LINEなどでリンクを送ります。',solo:'自分の答えから、あなたのこだわりと、ゆずれることがわかります。'};
   const refresh=()=>{['each','solo','kon'].forEach(m=>$('m-'+m).hidden=CFG.mode!==m);
-    $('m-desc').textContent=DESC[CFG.mode];$('solo-sub').textContent=CFG.len+'問・約'+(CFG.len>=30?6:3)+'分。あとで答え合わせ';$('m-anon').hidden=CFG.mode!=='each';$('m-opts').hidden=CFG.mode==='kon';
+    $('m-desc').textContent=DESC[CFG.mode];$('solo-sub').textContent=CFG.len+'問・約'+minsOf(CFG.len)+'分。あとで答え合わせ';$('m-anon').hidden=CFG.mode!=='each';$('m-opts').hidden=CFG.mode==='kon';
   };
   app.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k,v=b.dataset.v;
     CFG[k]=k==='len'?+v:k==='anon'?v==='true':v;saveCfg();
@@ -853,7 +853,7 @@ function parseLink(){
     return{kind:'with',name:nm(p[1],'ともだち'),qs,ans:[...p[3]].map(ansDecode),id:p[0]==='2'&&IBX_ID.test(p[4]||'')?p[4]:''}}
   const qs=(p[3]||'').split('.').map(qi);if(!ok(qs,p[4]||'',p[5]||''))return{bad:1};
   return{kind:'pair',qs,A:{id:'a',name:nm(p[1],'ひとり目'),ans:[...p[4]].map(ansDecode)},B:{id:'b',name:nm(p[2],'ふたり目'),ans:[...p[5]].map(ansDecode)}}}
-const minsOf=n=>Math.max(2,Math.round(n/3));
+const minsOf=n=>Math.max(3,Math.round(n/5));   // 10問＝約3分・30問＝約6分（トップの表示とそろえる。2026-11-20）
 function inviteText(name,n){return `${name}さんから、アイ・シンクの答え合わせのお誘いです！\n同じ${n}問に答えると、2人の価値観がどれだけ重なるかがわかります（約${minsOf(n)}分・無料）。`}
 // ひとりの結果の下：この問題で、だれかと答え合わせ
 function inviteCard(G,p){const n=G.qs.length,nm=['あなた','ともだち'].includes(p.name)?(store('kv_name')||''):p.name;
