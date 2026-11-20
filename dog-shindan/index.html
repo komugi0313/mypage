@@ -4425,10 +4425,10 @@ function segInit(id,key,cb){
     st[key]=b.dataset.v;if(cb)cb();
   });
 }
-// ---------- 年齢：1歳未満・1〜29歳・30歳以上から選ぶ（鑑定者本人 2026-11-20「年齢は最初から選べるように」）。
+// ---------- 年齢：1歳未満・1〜19歳・20歳以上から選ぶ（鑑定者本人 2026-11-20「年齢は最初から選べるように」）。
 // 選んだ日から1年たつごとに1つずつ上がる（yrs＝選んだときの年齢・yrsAt＝選んだ日時）。
 // 1歳未満・1〜6歳・7歳以上の3つの区分（st.age）は、診断の説明などのためにここから決める。
-var AGE_MAX=30,YEAR_MS=365.2425*864e5;
+var AGE_MAX=20,YEAR_MS=365.2425*864e5;
 function ageNow(y,at){if(y==null||y==="")return null;y=+y;if(isNaN(y))return null;var n=y+Math.max(0,Math.floor((Date.now()-(at||Date.now()))/YEAR_MS));return Math.min(n,AGE_MAX)}
 function ageCat(n){return n==null?"adult":n<1?"puppy":n>=7?"senior":"adult"}
 function ageText(n){return n==null?"":n<1?"1歳未満":n>=AGE_MAX?AGE_MAX+"歳以上":n+"歳"}
@@ -4810,8 +4810,8 @@ function ecKey(){return "w44_ec_"+st.name}
 function ecLoad(){var d={};try{d=JSON.parse(localStorage.getItem(ecKey())||"{}")}catch(e){}EC_IDS.forEach(function(id){$(id).value=d[id]||""})}
 function ecSave(){var d={};EC_IDS.forEach(function(id){d[id]=$(id).value.trim()});try{localStorage.setItem(ecKey(),JSON.stringify(d))}catch(e){}}
 function ecData(){var d={r:rqTexts("ec",1),n:st.name||"うちの子",b:bodyName(st.breed)+(curYrs()!=null?"・"+ageText(curYrs()):st.age==="senior"?"・7歳以上":st.age==="puppy"?"・1歳未満":""),i:ownId(st.breed)||"",v:EC_IDS.map(function(id){return $(id).value.trim()})};return d}
-function renderEC(art){return renderECData(ecData(),art)}
-function renderECData(d,art){var W=1075,H=650,cv=document.createElement("canvas");cv.width=W;cv.height=H;var ctx=cv.getContext("2d");
+function renderEC(art){return renderECData(ecData(),art,"own")}
+function renderECData(d,art,mode){var W=1075,H=650,cv=document.createElement("canvas");cv.width=W;cv.height=H;var ctx=cv.getContext("2d");
   var F='"Mochiy Pop One","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',R='"M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif',dark="#2F3A45";
   ctx.fillStyle="#FFFFFF";ctx.fillRect(0,0,W,H);ctx.fillStyle="#D85C5C";ctx.fillRect(0,0,W,96);
   ctx.fillStyle="#FFFFFF";ctx.textAlign="left";ctx.font="400 40px "+F;ctx.fillText("もしものときカード",44,64);
@@ -4820,11 +4820,18 @@ function renderECData(d,art){var W=1075,H=650,cv=document.createElement("canvas"
   ctx.textAlign="left";var X=380,y=150,VX=X+190,STEP=d.r&&d.r.length?44:50;
   function row(l,v){ctx.font="800 22px "+R;ctx.fillStyle="#7A8790";ctx.fillText(l,X,y);ctx.fillStyle=dark;
     if(l==="メモ"){ctx.font="800 24px "+R;wrapJa(ctx,v.replace(/\n/g," "),W-VX-40,2).slice(0,2).forEach(function(t,k){ctx.fillText(t,VX,y+k*34)});y+=84;return}
-    fitText(ctx,v,W-VX-40,26,"800",R);ctx.fillText(v,VX,y);y+=STEP}
+    var fs=26;do{ctx.font="800 "+fs+"px "+R;fs-=1}while(ctx.measureText(v).width>W-VX-40&&fs>14);ctx.fillText(v,VX,y);y+=STEP}
   if(d.r&&d.r.length){drawRibbon(ctx,W-110,22,52);ctx.fillStyle="#FFF6CC";var rh=50+(function(){ctx.font="800 22px "+R;return Math.min(1,wrapJa(ctx,d.r.join("／"),W-VX-50).length-1)})()*30;roundRect(ctx,X-14,y-32,W-X-30,rh,12);ctx.fill();ctx.fillStyle="#F2C21B";ctx.fillRect(X-14,y-32,8,rh);
     ctx.font="800 22px "+R;ctx.fillStyle="#7A5A00";ctx.fillText("おねがい",X,y);ctx.fillStyle=dark;ctx.font="800 22px "+R;var rl=wrapJa(ctx,d.r.join("／"),W-VX-50,2);if(rl.length>2){rl=rl.slice(0,2);rl[1]=clipText(ctx,rl[1],W-VX-50)}rl.forEach(function(t,k){ctx.fillText(t,VX,y+k*30)});y+=STEP+4+(rl.length-1)*30}
   if(d.b)row("犬種",d.b);
   (d.v||[]).forEach(function(v,k){if(v&&EC_LB[k])row(EC_LB[k],String(v).slice(0,40))});
+  // 中身が空のときは、犬種だけが浮いて見えないように、何を入れるカードかを書いておく（鑑定者本人 2026-11-20）
+  if(!(d.v||[]).some(function(v){return v})&&!(d.r&&d.r.length)){var bx=X-14,bw=W-X-30,by=y-20,bh=Math.min(300,H-40-by);
+    ctx.fillStyle="#FBF4F4";roundRect(ctx,bx,by,bw,bh,16);ctx.fill();ctx.setLineDash([10,8]);ctx.strokeStyle="#E7B7B7";ctx.lineWidth=3;roundRect(ctx,bx,by,bw,bh,16);ctx.stroke();ctx.setLineDash([]);
+    ctx.textAlign="center";var cx=bx+bw/2;ctx.fillStyle=dark;ctx.font="800 28px "+R;ctx.fillText("まだ中身が入っていません",cx,by+70);
+    ctx.font="700 22px "+R;ctx.fillStyle="#5C6B75";
+    (mode==="own"?["体重・かかりつけの病院・緊急連絡先などを","下の欄に入れると、ここに入ります"]:["送ってくれた人に、中身を入れてから","もう一度送ってもらってね"]).forEach(function(t,k){ctx.fillText(t,cx,by+125+k*36)});
+    ctx.font="700 20px "+R;ctx.fillStyle="#7A8790";ctx.fillText("体重／かかりつけ／病院の電話／持病／薬／アレルギー",cx,by+125+2*36+28);ctx.textAlign="left"}
   ctx.strokeStyle="#E7B7B7";ctx.lineWidth=6;ctx.strokeRect(3,3,W-6,H-6);return cv.toDataURL("image/png")}
 var EC_ART=null;function ecRefresh(){ecSave();$("ec-img").src=renderEC(EC_ART)}
 EC_IDS.forEach(function(id){$(id).addEventListener("input",ecRefresh)});
@@ -4847,7 +4854,9 @@ $("eb-back").addEventListener("click",function(){show(ebFrom)});
 $("eb-list").addEventListener("click",function(e){var b=e.target.closest("button[data-act]");if(!b)return;var k=+b.closest(".eb-item").dataset.k,a=ebGet();
   if(b.dataset.act==="share"){shareCard("保存されないときは、カードの画像を長押しして保存してください。","eb-img"+k,a[k].n+"のもしものときカード")}
   if(b.dataset.act==="del"){if(b.dataset.sure){a.splice(k,1);ebSet(a);ebRender()}else{b.dataset.sure=1;b.textContent="もう一度押すと消えます"}}});
-$("sh-ec-line").addEventListener("click",function(){ecSave();var d=ecData(),url=location.href.split("#")[0]+"#ec="+b64e(d);
+$("sh-ec-line").addEventListener("click",function(){ecSave();var d=ecData();
+  if(!d.v.some(function(v){return v})&&!this.dataset.sure){this.dataset.sure=1;this.dataset.t=this.textContent;this.textContent="中身が空です。もう一度押すと、このまま送ります";var b=this;setTimeout(function(){if(b.dataset.sure){delete b.dataset.sure;b.textContent=b.dataset.t}},6000);return}
+  delete this.dataset.sure;if(this.dataset.t)this.textContent=this.dataset.t;var url=location.href.split("#")[0]+"#ec="+b64e(d);
   window.open("https://line.me/R/share?text="+encodeURIComponent(d.n+"のもしものときカードです。開くと、あなたの端末の「届いたもしものときカード」に入ります。\n"+url),"_blank","noopener")});
 (function(){ebSet(ebGet());var m=location.hash.match(/ec=([A-Za-z0-9_-]+)/);if(!m)return;var d=null;try{d=ebClean(b64d(m[1]))}catch(e){}if(!d)return;
   var a=ebGet().filter(function(x){return !(x.n===d.n&&x.b===d.b)});a.unshift(d);ebSet(a);
