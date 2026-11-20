@@ -201,6 +201,15 @@ ok('UX③：鑑定書の章の見出しのすぐ下に「恋愛での持ち味�
   ok('恋愛②：二股・両方と付き合う相談はすすめない', L2.twoOK);
   ok('恋愛②：「別れた彼とやり直せますか」を別れるかの相談にせず、1行目で見込みに答える', L2.reOK, L2.re);
   ok('恋愛②：1人の「一緒になれるか」で「可能性は十分」と言い切らない（pkLeadFix が止まらない）', L2.oneOK, L2.one); }
+{ const A=await p.evaluate(()=>{ try{ const pl=document.documentElement.classList.contains('bg-on'), k0=chart, k1=chartB; const W=baziCompute({year:1981,month:6,day:10,hour:22,minute:0,sex:'female'},0,'none'); chart=W; chartB=null;
+    const Qs=['既婚者の彼と結ばれますか','不倫中の彼が離婚して一緒になれますか','彼を奥さんから略奪できますか','彼に離婚させられますか','奥さんのいる彼といつ一緒になれますか'];
+    const safe=Qs.filter(q=>pkSafeKind(q,30)||dangerKind(q)||worryCaveat(q)), love=Qs.filter(q=>!pkIsLoveQ(q)), kind=Qs.filter(q=>pkCompatQKind(q)!=='fate');
+    const leads=Qs.map(q=>pkOfflineLead(W,q,pl)||''), lead=leads.filter(l=>!(/可能性はあります/.test(l)&&/20\d\d年/.test(l)));
+    const law=!!pkSafeKind('慰謝料を請求されたらどうなりますか',30), re=pkCompatQKind('不倫相手とやり直せますか')==='reunion';
+    chart=k0; chartB=k1; return {safe,love,kind,lead,lead0:leads[2].slice(0,60),law,re}; }catch(e){ return {err:String(e)}; } });
+  ok('不倫：既婚の方との恋・略奪・離婚させられるかは安全の相談にしない（慰謝料など法律の手続きは今までどおり安全の相談）', A.safe&&!A.safe.length&&A.law, JSON.stringify(A.safe||A.err));
+  ok('不倫：恋愛の相談として見分け、相性では「結ばれるか」の相談にする（やり直せるかは復縁）', A.love&&!A.love.length&&!A.kind.length&&A.re, JSON.stringify([A.love,A.kind]));
+  ok('不倫：通信なしの1行目で見込みと時期に答える（鑑定者本人の決定 2026-11-20）', A.lead&&!A.lead.length, A.lead0||A.err); }
 // 追加の質問
 const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃ですか'); await p.click('#consultBtn'); await p.click('#consultBtn').catch(()=>{});
 const ms2=await waitFor(()=>{const it=document.querySelectorAll('#reading .rd-item');const l=it[it.length-1];return it.length>=2&&l.querySelector('.rd-bar')&&!l.querySelector('.loading');},60000);
