@@ -28,6 +28,7 @@ ol{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 .a{background:var(--a)}.b{background:var(--b)}
 .vs{text-align:center;font-family:"Mochiy Pop One",sans-serif;font-size:13px;margin:4px 0!important}
 .ex{font-size:13px;color:var(--sub);margin-top:6px!important}
+html.jw body{word-break:keep-all;overflow-wrap:anywhere;line-break:strict}
 .how{background:#fff;border:2px solid var(--ink);border-radius:16px;padding:14px 16px;font-size:14px}
 .how p{margin:0 0 6px}
 .others{display:grid;gap:8px}
@@ -37,7 +38,7 @@ ol{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 </style></head><body><div class="w">
 <nav class="crumb"><a href="/">究極の二択 本音バレ診断</a> ＞ 難しい究極の二択</nav>
 <header class="hero"><h1>難しい究極の二択（地獄の二択）</h1><span class="cnt">40選</span><p class="lead">どっちを選んでも痛い、本気で悩む地獄の二択です。答えるまでの時間で、あなたの迷いどころが見えてきます。</p></header>
-<a class="cta" href="/">究極の二択で遊ぶ（無料・3分）<small>答えるだけで、小悪魔度・見栄っぱり度などが％でわかる</small></a>
+<a class="cta" href="/">究極の二択で遊ぶ（無料・約5分）<small>答えるだけで、小悪魔度などの％と恋のキャラがわかる</small></a>
 <h2><span>難しい究極の二択 40選</span></h2>
 <ol>
 <li class="it"><span class="n">1</span><div class="pair"><p class="a">浮気を正直に打ち明けられる</p><p class="vs">VS</p><p class="b">浮気に一生気づかないまま</p><p class="ex">たとえば：恋人が浮気をしていたら、どっちのほうがまだいい？</p></div></li>
@@ -83,11 +84,75 @@ ol{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 </ol>
 <a class="cta" href="/">答えて本音をチェックする<small>ひとりでも、みんなでも遊べます</small></a>
 <h2><span>遊び方</span></h2>
-<div class="how"><p>① 「どっちで遊ぶ？」で恋愛編かまぜまぜ編を選びます。</p><p>② 出てくる二択を、直感でどんどん選びます（ひとりで15問・友だちとは8問から）。</p><p>③ 最後に、小悪魔度などが％で出ます。みんなで遊ぶときは、近くの人はQRコード、離れた人はLINEで呼べます。</p></div>
+<div class="how"><p>① 「どっちで遊ぶ？」で恋愛編かまぜまぜ編を選びます。</p><p>② 出てくる二択を、直感でどんどん選びます（ひとりでも友だちとも15問。まぜまぜ編は20問）。</p><p>③ 最後に、小悪魔度などの％と恋のキャラが出ます。みんなで遊ぶときは、近くの人はQRコード、離れた人はLINEで呼べます。</p></div>
 <h2><span>ほかの究極の二択</span></h2>
 <div class="others"><a class="ol" href="/renai/">恋愛の究極の二択</a><a class="ol" href="/omoshiroi/">面白い究極の二択</a><a class="ol" href="/minna/">みんなで盛り上がる究極の二択</a></div>
 <p class="foot">究極の二択 本音バレ診断</p>
-</div><script id="pk-contrast-guard">
+</div>
+<script>
+/* 文節で改行する（「い／まだに」のような途中の改行・1〜2文字だけの行を作らない。iPhoneでも同じ） */
+(function(){
+  if(!(window.Intl&&Intl.Segmenter)) return;
+  var seg=new Intl.Segmenter('ja',{granularity:'word'});
+  document.documentElement.classList.add('jw');
+  var HIRA=/^[ぁ-ゟー]+$/, PUN=/^[、。！？!?…・）」』】〕）\)\s～〜ー]+$/, OPEN=/[（「『【〔\(]$/, END=/[、。！？!?…）」』】〕\)]$/;
+  var PART=/^(を|が|に|で|と|は|も|へ|の|から|まで|より|って|や|か|ね|よ|な)$/;
+  var JP=/[぀-ヿ一-鿿]/;
+  var FN=/^(こと|もの|ほう|ところ|とき|ため|よう|くらい)/; // 「あなたの／ことが」のように切らない
+  function len(t){ return t.replace(/[、。！？!?…・（）「」『』\s]/g,'').length; }
+  function phrases(t){
+    var out=[],cur='',prev='';
+    var it=seg.segment(t)[Symbol.iterator](),r;
+    while(!(r=it.next()).done){
+      var w=r.value.segment;
+      if(cur===''){ cur=w; prev=w; continue; }
+      var brk=false;
+      if(PUN.test(w)) brk=false;
+      else if(END.test(cur)) brk=true;
+      else if(OPEN.test(w)) brk=true;
+      else if(OPEN.test(cur)) brk=false;
+      else if(prev==='の'&&FN.test(w)) brk=false;
+      else if(HIRA.test(w)) brk=(PART.test(prev)&&len(cur)>=3&&w.length>=2&&!PART.test(w));
+      else brk=HIRA.test(prev);
+      if(brk){ out.push(cur); cur=w; } else cur+=w;
+      prev=w;
+    }
+    if(cur) out.push(cur);
+    // 「でも」「けど」のような短いつなぎの言葉は、次の言葉と同じ行へ
+    for(var i=out.length-2;i>=0;i--){ if(HIRA.test(out[i])&&out[i].length<=3){ out[i]+=out[i+1]; out.splice(i+1,1); } }
+    // 最後の行が1〜2文字だけにならないよう、短い最後のまとまりは前とくっつける
+    while(out.length>1&&len(out[out.length-1])<=2){ var l=out.pop(); out[out.length-1]+=l; }
+    // 最初の1〜2文字だけのまとまりも次とくっつける
+    if(out.length>1&&len(out[0])<=1){ out[1]=out[0]+out[1]; out.shift(); }
+    return out;
+  }
+  // 12文字より長いまとまり（「ずっとくっついていたくなる」など）は、どこでも切れて「る」だけの行ができていた。
+  // 単語の切れ目で3文字以上の小さなまとまりに分け、最後のまとまりも3文字以上にする（2026-11-18）
+  function longSplit(p){
+    if(len(p)<=12) return [p];
+    var ws=[],it=seg.segment(p)[Symbol.iterator](),r; while(!(r=it.next()).done) ws.push(r.value.segment);
+    var out=[],cur='';
+    ws.forEach(function(w){ if(cur&&len(cur)>=3&&!PUN.test(w)){ out.push(cur); cur=w; } else cur+=w; });
+    if(cur) out.push(cur);
+    while(out.length>1&&len(out[out.length-1])<3){ var l=out.pop(); out[out.length-1]+=l; }
+    return out;
+  }
+  var SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,OPTION:1,TITLE:1,NOSCRIPT:1};
+  function run(root){
+    var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null),ns=[],n;
+    while((n=w.nextNode())){ var pe=n.parentNode; if(!pe||SKIP[pe.nodeName]||pe.isContentEditable) continue; if(pe.nodeName==='J-P') continue; if(n.nodeValue.length>=5&&JP.test(n.nodeValue)) ns.push(n); }
+    ns.forEach(function(n){
+      var ps=[].concat.apply([],phrases(n.nodeValue).map(longSplit)); if(ps.length<2) return;
+      var f=document.createDocumentFragment();
+      ps.forEach(function(p,i){ if(i) f.appendChild(document.createElement('wbr')); var s=document.createElement('j-p'); if(len(p)<=12) s.style.whiteSpace='nowrap'; s.textContent=p; f.appendChild(s); });
+      n.parentNode.replaceChild(f,n);
+    });
+  }
+  window.jwRun=run;
+  function start(){ run(document.body); var t=null,q=[]; new MutationObserver(function(rs){ rs.forEach(function(r){ [].forEach.call(r.addedNodes,function(x){ if(x.nodeType===3){ if(x.parentNode&&x.parentNode.nodeName!=='J-P') q.push(x.parentNode); } else if(x.nodeType===1&&x.nodeName!=='J-P') q.push(x); }); if(r.type==='characterData'&&r.target.parentNode&&r.target.parentNode.nodeName!=='J-P') q.push(r.target.parentNode); }); if(!t) t=setTimeout(function(){ t=null; var a=q; q=[]; a.forEach(function(e){ if(e.isConnected) run(e); }); },0); }).observe(document.body,{childList:true,subtree:true,characterData:true}); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
+</script><script id="pk-contrast-guard">
 /* 文字の見えやすさの安全装置（tools/add_contrast_guard.py が3サイトの全ページに埋め込む。直すときはこのファイルを直して再実行）
    文字の色と、その後ろの背景の色を比べて、読みにくい組み合わせ（薄い背景に薄い文字／濃い背景に濃い文字）を見つけたら、
    その文字だけ色を自動で調整する（明るい背景→同じ色みのまま濃く、暗い背景→白く）。計算・鑑定の中身には一切さわらない。
