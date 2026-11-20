@@ -574,6 +574,13 @@ header.top .navbtn:active{transform:translateY(1px)}
 .hero .spec b{font-size:19px;color:var(--ink);margin:0 2px}
 /* 遊ぶたびに文が変わることを1行だけ（鑑定者本人 2026-11-17「AとCでお願いします」「ごちゃごちゃ書きたくない」） */
 .hero .spec-note{margin:-4px 0 0;font-size:13px;color:var(--sub);letter-spacing:.04em}
+.rcov .stb{margin:12px auto 0;max-width:22em;box-sizing:border-box;border-radius:12px;padding:8px 12px;font-size:13.5px;line-height:1.75;color:var(--text);text-align:left}
+.rcov .stb-n{background:#FFF6D9;text-align:center}
+.rcov .stb-d{display:flex;gap:5px;justify-content:center;margin-top:3px}.rcov .stb-d i{width:8px;height:8px;border-radius:50%;background:var(--rose)}
+.rcov .stb-o{background:#FCE8EF;display:flex;gap:10px;align-items:center}
+.rcov .stb-o .stb-a{flex:none;width:46px;height:46px;display:flex;align-items:center;justify-content:center}
+.rcov .stb-o .stb-a .art{width:46px!important;height:46px!important;max-width:46px;margin:0;object-fit:contain}
+.rcov .stb-o a{color:var(--rose);font-weight:700}
 .rcov .prev{margin:14px 0 0;font-size:13px;color:var(--sub);letter-spacing:.06em}
 .rcov .prev b{color:var(--ink);font-weight:700;letter-spacing:.08em}
 .hero .start-grid{width:100%}
@@ -3265,14 +3272,15 @@ function pickStatus(k,durDone){
 function finish(){
   var r=score(ans);
   if(st.me&&st.me.code) st.prev={code:st.me.code,at:st.me.at}; // 前回の結果（2回目からの結果の表紙に「前回 → 今回」を1行）
-  st.me={code:r.code,pct:r.pct,anx:r.anx,fu:r.fu,fg:r.fg,mode:mode,status:st.status||null,dur:st.status==='partner'?(st.dur||null):null,at:Date.now()}; st.ans=new Array(QS.length).fill(null);
+  var one={code:r.code,pct:r.pct,anx:r.anx,fu:r.fu,fg:r.fg,mode:mode,status:st.status||null,dur:st.status==='partner'?(st.dur||null):null,at:Date.now()}; st.ans=new Array(QS.length).fill(null);
   if(partner) st.partner=partner;
-  histAdd(st.me);
+  histAdd(one); // わたしの結果には、その回の答えだけの結果を残す
+  st.me=combineMe(one);  // いちばん大きく出すキャラは、これまでの答え（最新5回まで）を合わせて決める
   save(st); ans=st.ans;
-  if(RM.view==='quiz'&&RM.code){ roomDone(r.code); return; }
+  if(RM.view==='quiz'&&RM.code){ roomDone(st.me.code); return; }
   if(st.pendingG){ var pg=st.pendingG; delete st.pendingG; save(st); gJoin(pg,pg.name); return; }
-  history.replaceState(null,'',location.pathname+'?t='+r.code+(partner?'&with='+partner:''));
-  renderResult(r.code,st.me,partner);
+  history.replaceState(null,'',location.pathname+'?t='+st.me.code+(partner?'&with='+partner:''));
+  renderResult(st.me.code,st.me,partner);
 }
 
 /* ===== 結果 ===== */
@@ -3389,7 +3397,7 @@ function renderResult(code,mine,withCode){
      (KK?'<div class="duo"><figure><div class="ib" aria-hidden="true">'+art(code,146)+'</div><figcaption>恋愛タイプ<b>'+cname(code)+'</b><span class="ds">'+fname(code)+'</span></figcaption></figure><em aria-hidden="true">×</em>'+
        '<figure><div class="ib" aria-hidden="true"><img class="hi" src="img/ico/k-'+KK+'.webp" alt="" width="128" height="128"></div><figcaption>愛着スタイル<b>'+AT[KK].n+'</b><span class="ds ac">'+atP(KK)+'</span>'+(function(){ var nr=atNear(mine); return nr.length?'<span class="at-near">'+nr.map(function(k,i){ return '<span class="nw">'+AT[k].n+(i<nr.length-1?'・':'にも近い')+'</span>'; }).join('')+'</span>':''; })()+'</figcaption></figure></div>'
      :'<div class="rc-art" aria-hidden="true">'+art(code,190)+'</div><div class="chara">'+cname(code)+'</div><div class="formal">'+fname(code)+'</div>')+
-     '<div class="code"><span class="nw">'+code+'</span><span class="rc-dot" aria-hidden="true">·</span><span class="nw">'+esc(g.n)+'</span></div><p class="catch">'+esc(t.catch)+'</p>'+((isMine&&mine&&st.prev&&st.prev.code&&(!mine.at||st.prev.at<mine.at))?'<p class="prev"><span class="nw">前回：<b>'+esc(st.prev.code)+'</b></span> → <span class="nw">今回：<b>'+code+'</b></span></p>':'')+(isMine?'<div class="rc-share"><button class="btn btn-line" type="button" data-act="line">LINEで送る</button><button class="btn btn-sub" type="button" data-act="img">画像で保存</button></div><p class="rc-share-note">送った人が診断すると、2人の相性がわかります</p>':'')+'</section>';
+     '<div class="code"><span class="nw">'+code+'</span><span class="rc-dot" aria-hidden="true">·</span><span class="nw">'+esc(g.n)+'</span></div><p class="catch">'+esc(t.catch)+'</p>'+(isMine?stabHTML(code,mine):'')+((isMine&&mine&&st.prev&&st.prev.code&&st.prev.code!==code&&(!mine.at||st.prev.at<mine.at))?'<p class="prev"><span class="nw">前回：<b>'+esc(st.prev.code)+'</b></span> → <span class="nw">今回：<b>'+code+'</b></span></p>':'')+(isMine?'<div class="rc-share"><button class="btn btn-line" type="button" data-act="line">LINEで送る</button><button class="btn btn-sub" type="button" data-act="img">画像で保存</button></div><p class="rc-share-note">送った人が診断すると、2人の相性がわかります</p>':'')+'</section>';
 
   if(isMine && mine.anx!=null && mine.pct) h+=atCardHTML(mine);
   h+=c66MiniHTML();
@@ -3769,6 +3777,39 @@ function qrSVG(text){
    診断するたびに結果をこの端末に残し（st.hist＝新しい順に10回ぶん。どこにも送らない）、トップの「わたしの結果」から見返す。
    「自分の診断」と「みんなで診断」（前の「参加したグループ」＝st.groups）の2つのタブ */
 var HIST_MAX=10, AX_NM=['近づき方','伝え方','頼り方','原動力'];
+/* これまでの答えを合わせたキャラ（鑑定者本人 2026-11-20「A プラス C」「毎回変わると、結局どれなのってなって参考にならない」「一つが一番際立って見せれるなら、それがその人の結果」）：
+   最新5回までの、その回ごとの％を、答えた質問の数（本格版8問・かんたん版4問ずつ）で重みをつけて合わせる。ちょうど50%は今回の向き。
+   気持ちが変わらない人が5回診断して3種類以上のキャラが出る割合：本格版 21%→3%・かんたん版 36%→8%（計算でためした）。今回だけの結果は表紙に小さく出す */
+var COMB_N=5;
+function combineMe(one){
+  var use=histList().slice(0,COMB_N), qw=function(m){ return m.mode==='quick'?4:8; }, code='', pct={};
+  if(!use.length||use[0].at!==one.at) use=[one].concat(use).slice(0,COMB_N);
+  AXES.forEach(function(ax,i){ var s=0,w=0; use.forEach(function(m){ if(m.pct&&m.pct[ax.key]!=null){ s+=m.pct[ax.key]*qw(m); w+=qw(m); } });
+    var p=w?Math.round(s/w):one.pct[ax.key]; if(p===50) p=one.code[i]===ax.a?51:49; pct[ax.key]=p; code+=p>50?ax.a:ax.b; });
+  var avg=function(k,wf){ var s=0,w=0; use.forEach(function(m){ if(m[k]!=null){ var x=wf(m); s+=m[k]*x; w+=x; } }); return w?Math.round(s/w):null; };
+  var me=Object.assign({},one,{code:code,pct:pct,anx:avg('anx',qw),fu:avg('fu',function(){return 1;}),fg:avg('fg',function(){return 1;}),
+    mode:use.some(function(m){return m.mode!=='quick';})?'full':'quick',n:use.length,now:{code:one.code,pct:one.pct}});
+  if(me.anx==null) me.anx=one.anx;
+  return me;
+}
+/* 表紙の小さな枠：A＝何回ぶんの答えから決めたか・今回だけの結果／C＝まん中のものさしがあれば「もう1つの顔」 */
+function stabHTML(code,mine){
+  if(!mine||!mine.pct) return '';
+  var h='', n=mine.n||1, nw=mine.now&&mine.now.code;
+  if(n>1) h+='<div class="stb stb-n"><span class="nw">'+n+'回ぶんの答えから</span><span class="nw">決めました</span><span class="stb-d" aria-hidden="true">'+new Array(n+1).join('<i></i>')+'</span></div>';
+  var mids=AXES.map(function(ax,i){ return {ax:ax,i:i,d:Math.abs(mine.pct[ax.key]-50)}; }).filter(function(x){ return x.d<=MID_W; }).sort(function(a,b){ return a.d-b.d; });
+  var nm=function(c){ return '<a class="nw" href="?t='+c+'" data-type="'+c+'">'+esc(T[c].c)+'</a>'; };
+  var both=function(xs){ return '<span class="nw">'+xs.map(function(x){ return x.ax.title; }).join('・')+'が</span><span class="nw">「両方もってる」</span>ので、<span class="nw">この2つを</span><span class="nw">行き来しやすい人です。</span>'; };
+  if(nw&&nw!==code&&T[nw]){
+    var df=[]; for(var i=0;i<4;i++) if(nw[i]!==code[i]) df.push(i);
+    var dm=mids.filter(function(x){ return df.indexOf(x.i)>=0; });
+    h+='<div class="stb stb-o"><span class="stb-a" aria-hidden="true">'+art(nw,46)+'</span><span><span class="nw">今回の答えだけだと</span>'+nm(nw)+'。'+(dm.length&&df.length===1?both(dm):(df.length===1?'<span class="nw">今回は'+AXES[df[0]].title+'が</span><span class="nw">いつもと逆に出ました。</span>':'<span class="nw">答えが重なるほど、</span><span class="nw">いちばん大きく出るキャラが</span><span class="nw">確かになります。</span>'))+'</span></div>';
+  } else if(mids.length){
+    var x=mids[0], ax=x.ax, nb=code.substring(0,x.i)+(code[x.i]===ax.a?ax.b:ax.a)+code.substring(x.i+1);
+    h+='<div class="stb stb-o"><span class="stb-a" aria-hidden="true">'+art(nb,46)+'</span><span><span class="nw">'+(mine.at?'あなたの':'')+'もう1つの顔：</span>'+nm(nb)+'。'+both([x])+'</span></div>';
+  }
+  return h;
+}
 function histAdd(m){ if(!m||!m.code) return; var hs=(st.hist||[]).filter(function(x){return x.at!==m.at;}); hs.unshift(JSON.parse(JSON.stringify(m))); st.hist=hs.slice(0,HIST_MAX); }
 function histList(){ var hs=(st.hist||[]).slice(); if(st.me&&st.me.code&&!hs.some(function(x){return x.at===st.me.at;})){ hs.push(st.me); hs.sort(function(a,b){return (b.at||0)-(a.at||0);}); } return hs.filter(function(x){return x&&T[x.code];}).slice(0,HIST_MAX); }
 function mineGroups(){ var gs=st.groups||{}; return Object.keys(gs).filter(function(k){return gs[k].me&&(gs[k].m||[]).length;}).sort(function(a,b){return ((gs[b].t0||gs[b].at)||0)-((gs[a].t0||gs[a].at)||0);}); }
