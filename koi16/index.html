@@ -3052,7 +3052,7 @@ RASC: function(){ return '<path d="M28 104 L34 40 Q60 26 86 40 L92 104 Q60 114 2
 /* 名前は言葉の切れ目でだけ改行する（泣き別れを作らない） */
 var CSPLIT={LVTP:4,LATP:4,RVTP:4,RATP:3,LVTC:4,LATC:4,RVTC:4,RATC:4,LVSP:4,LASP:4,RVSP:4,RASP:4,LVSC:4,LASC:4,RVSC:4,RASC:4};
 function cname(code){ var c=T[code].c, k=CSPLIT[code]; return '<span class="nw">'+esc(c.slice(0,k))+'</span><span class="nw">'+esc(c.slice(k))+'</span>'; }
-function fname(code){ var f=T[code].f, m=f.match(/^(.*?(?:な|る|い|す))(.+)$/); return m?'<span class="nw">'+esc(m[1])+'</span><span class="nw">'+esc(m[2])+'</span>':esc(f); }
+function fname(code){ var f=T[code].f, m=f.match(/^(.*?[ぁ-ゖ])([一-龠々ァ-ヺ].*)$/)||f.match(/^(.*?(?:な|る|い|す))(.+)$/); return m?'<span class="nw">'+esc(m[1])+'</span><span class="nw">'+esc(m[2])+'</span>':esc(f); }
 /* 泣き別れを作らない：文のおしまいの5文字は、いっしょに改行させる（スマホで最後の行が1〜2文字にならないように） */
 var GLUE_SEL='p,li,.kt,.say,.catch,.invite,small,.pct,.qtext,h1,h2,h3,.facts li,.names span,.score,.formal,.label,.dt,.kuse-name,.sl-res,.sl-ends span,.sl-zl span,.scale button>span:last-child,.group-h,.zk-f,.zk-no';
 /* 文節で改行する（鑑定者本人 2026-11-12「泣き別れが起きないように」「Android と Apple 両方」）。
@@ -3074,9 +3074,18 @@ var BX=(function(){ var M={},base=0,k,g; for(k in BX_MODEL){ M[k]=BX_MODEL[k]; f
 // 文節の切れ目のうち、単語の途中（おたが｜い・が｜まん・とき｜めき など）になるものは使わない。
 // ブラウザの日本語の単語の区切り（Intl.Segmenter）とくらべ、単語の区切りでもあるところだけで改行する（鑑定者本人 2026-11-21「単語の途中で段が分かれているところは」）
 var BX_SEG=(function(){ try{ return new Intl.Segmenter('ja',{granularity:'word'}); }catch(e){ return null; } })();
-function bxWordOk(v,bs){ if(!BX_SEG||!bs.length) return bs; var ok={}; try{ var it=BX_SEG.segment(v); for(var s of it){ ok[s.index]=1; } }catch(e){ return bs; }
+function bxWordOk(v,bs){ if(!BX_SEG||!bs.length) return bs; var ok={}, segs=[]; try{ var it=BX_SEG.segment(v); for(var s of it){ ok[s.index]=1; segs.push(s); } }catch(e){ return bs; }
   var keep=[], re=/問い合わせ|お問合せ/g, m; while((m=re.exec(v))) keep.push([m.index,m.index+m[0].length]);
-  return bs.filter(function(i){ for(var k=0;k<keep.length;k++){ if(i>keep[k][0]&&i<keep[k][1]) return false; } return ok[i]||/[ぁ-ゖ]/.test(v[i-1])&&/[一-龠々ァ-ヺ]/.test(v[i]); }); }
+  var inKeep=function(i){ for(var k=0;k<keep.length;k++){ if(i>keep[k][0]&&i<keep[k][1]) return true; } return false; };
+  var PUNC=/[、。，．・！？!?…）」』】ー]/;
+  var out=bs.filter(function(i){ return !inKeep(i)&&(ok[i]||/[ぁ-ゖ]/.test(v[i-1])&&!/(^|[^ぁ-ゖ])[おご]$/.test(v.slice(Math.max(0,i-2),i))&&/[一-龠々ァ-ヺ]/.test(v[i])); });
+  // 切れ目を外して長くなったまとまり（10文字より長い）は、単語の区切りのうち、助詞のあと・新しい言葉（漢字・カタカナ）の前で切り直す
+  var PART=/^(を|が|に|で|と|は|も|へ|の|から|まで|より|として|って|には|では|とは)$/;
+  var pts=[0].concat(out,[v.length]), add=[];
+  for(var a=0;a<pts.length-1;a++){ var x=pts[a], y=pts[a+1]; if(y-x<=10) continue;
+    for(var q=1;q<segs.length;q++){ var p=segs[q].index; if(p<=x+2||p>=y-2||inKeep(p)||PUNC.test(v[p])) continue;
+      if(PART.test(segs[q-1].segment)||(/[ぁ-ゖ]$/.test(segs[q-1].segment)&&!/^[おご]$/.test(segs[q-1].segment)&&/^[一-龠々ァ-ヺ]/.test(segs[q].segment))) add.push(p); } }
+  return out.concat(add).sort(function(a,b){return a-b;}); }
 function phrase(el){
   if(!el || el.querySelector('wbr')) return; el.classList.add('bx'); // 同じ枠に文が入れかわる（質問など）ときも毎回分ける
   var nodes=[], w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null), n;
