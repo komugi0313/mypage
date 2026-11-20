@@ -253,7 +253,7 @@ ok('UX③：鑑定書の章の見出しのすぐ下に「恋愛での持ち味�
     const Q1='私は既婚者で、25歳年下の彼と不倫関係です。これからどうしたら良いですか。', Q2='彼とこれからどうしたら良いですか。';
     const S1=pkCompatSit(W,M,Q1,pl)||{}, S2=pkCompatSit(W,M,Q2,pl)||{}, Sf=pkCompatSit(W,M,'私は既婚者で、25歳年下の彼と不倫関係です。この2人の関係はこれからどうなりますか。',pl)||{};
     const adv=/^(?:年齢差（約\d+歳）[^、]*、)?これからは、/;
-    const l1=S1.lead||'', l2=S2.lead||'', ok1=adv.test(l1)&&/話し合/.test(l1)&&/流れ/.test(S1.why||''), ok2=adv.test(l2)&&/とよいでしょう/.test(l2), okf=!/^これからは、/.test(Sf.lead||'');
+    const l1=S1.lead||'', l2=S2.lead||'', ok1=adv.test(l1)&&/話し合/.test(l1)&&/流れ/.test(S1.why||'')&&!/いちばん近い2人とも縁が動く月/.test(S1.why||''), ok2=adv.test(l2)&&/とよいでしょう/.test(l2), okf=!/^これからは、/.test(Sf.lead||'');
     const lf=pkLeadFix('この2人は縁の深い関係で、関係は続きやすい流れです。\n【お客様へのお伝え方】\n本文。',W,Q1,true).split('\n')[0], lfOK=adv.test(lf);
     chartB=null; const L1=pkOfflineLead(W,'私は既婚者で、年下の彼と不倫関係です。これからどうしたら良いですか。',pl)||'', l1OK=/^これからは、/.test(L1);
     const T=compatTrio(W,M), lim=new Date().getFullYear()+25, far=[]; T.forEach(o=>o.du.forEach(d=>{ if(d.from>lim) far.push(d.from); }));
