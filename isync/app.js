@@ -507,20 +507,28 @@ const AXTIP={
     m:'どちらかがまん中に近いので、合わせやすい組み合わせです。大きな買い物のときだけ、先に話しておけば十分です。'}};
 const axSideK=pct=>pct>=60?'l':pct<=40?'r':'m';
 // 2人の価値観のかたち：シンクロ率のすぐ下に、4つのものさしで2人の位置を並べる（たたまない。鑑定者本人 2026-11-20）
+// コツの文を、ようす（太字）・気をつけたいこと・コツ（黄色の枠）に分けて見せる（鑑定者本人 2026-11-20「全部同じカラーで読みづらい」）
+function tipX(t,kind){const ss=String(t).match(/[^。]+。?/g)||[t];let h='',n='',k;
+  if(kind==='d')k=ss.join('');else if(kind==='m'){n=ss[0];k=ss.slice(1).join('')}else{h=ss[0];n=ss[1]||'';k=ss.slice(2).join('')}
+  if(!k){k=n;n=''}
+  return `<div class="tipx">${h?`<p class="tx-h">${h}</p>`:''}${n?`<p class="tx-n">${n}</p>`:''}<p class="tx-k"><b>コツ</b><span>${k}</span></p></div>`}
 function distHTML(G){const ps=G.players;if(ps.length!==2||G.anon)return'';const me=ps.find(p=>p.id===G.me);
   const nmS=p=>p===me?'あなた':esc(p.name);const P0=me||ps[0],P1=ps.find(p=>p!==P0);
   const rows=AX.map(a=>{const sa=axScore(ps[0],G.qs,a),sb=axScore(ps[1],G.qs,a);if(!sa||!sb||!AXTIP[a.key])return null;
     const ka=axSideK(sa.pct),kb=axSideK(sb.pct),kind=ka==='m'||kb==='m'?'m':ka===kb?ka:'d',t=AXTIP[a.key][kind];
     const lab=kind==='d'?['d','ちがう向き']:kind==='m'?['m','合わせやすい']:['s','同じ向き'];
     const near=Math.abs(sa.pct-sb.pct)<6,pin=(p,s,dx)=>`<i class="nxpin ${pcls(G,p)}" style="left:calc(${100-s.pct}% ${near?(dx<0?'- 7px':'+ 7px'):'+ 0px'})" title="${nmS(p)}"></i>`;
-    return {d:kind==='d',n:a.name,t,h:`<div class="dax"><div class="daxh"><b>${esc(a.name)}</b><span class="kind ${lab[0]}">${lab[1]}</span></div>
-      <div class="dbar2">${pin(ps[0],sa,-1)}${pin(ps[1],sb,1)}</div><div class="dends"><span>${esc(a.l)}</span><span>${esc(a.r)}</span></div>${kind==='d'?`<p class="dtip">${t}</p>`:''}</div>`}}).filter(Boolean);
+    const side=k=>k==='l'?a.l:k==='r'?a.r:'まん中',sP=p=>axSideK(p===ps[0]?sa.pct:sb.pct);
+    const who=kind==='s'||(ka===kb&&ka!=='m')?`<p class="dwho same"><b>2人とも</b><span class="nw">${esc(side(ka))}</span></p>`
+      :`<p class="dwho">${[P0,P1].map(p=>`<span class="dw">${nmChip(G,p,p===me?'あなた':p.name)}<span class="nw">${esc(side(sP(p)))}</span></span>`).join('')}</p>`;
+    return {d:kind==='d',n:a.name,t,kind,h:`<div class="dax"><div class="daxh"><b>${esc(a.name)}</b><span class="kind ${lab[0]}">${lab[1]}</span></div>${who}
+      <div class="dbar2">${pin(ps[0],sa,-1)}${pin(ps[1],sb,1)}</div><div class="dends"><span>${esc(a.l)}</span><span>${esc(a.r)}</span></div>${kind==='d'?tipX(t,'d'):''}</div>`}}).filter(Boolean);
   if(!rows.length)return'';
   const dd=rows.filter(x=>x.d),ot=rows.filter(x=>!x.d);
   const sum=dd.length?`${rows.length}つのうち、${ot.length}つが同じ向き・合わせやすい、${dd.length}つがちがう向きです。`:`${rows.length}つのものさしで、ちがう向きはありませんでした。`;
   return `<section class="card pshape"><p class="label">2人の価値観のかたち</p><p class="hint">${sum}</p>
     <div class="dist"><div class="dlg">${[P0,P1].map(p=>`<span><i class="${pcls(G,p)}"></i>${nmS(p)}</span>`).join('')}</div>${dd.map(x=>x.h).join('')}${ot.map(x=>x.h).join('')}
-    ${ot.length?`<details class="sfold"><summary>ほかのものさしのコツ（${ot.length}つ）</summary><ul class="list">${ot.map(x=>`<li><b>${esc(x.n)}</b>${x.t}</li>`).join('')}</ul></details>`:''}</div></section>`}
+    ${ot.length?`<details class="sfold"><summary>ほかのものさしのコツ（${ot.length}つ）</summary><div class="tipl">${ot.map(x=>`<div class="tipc"><b class="tipn">${esc(x.n)}</b>${tipX(x.t,x.kind)}</div>`).join('')}</div></details>`:''}</div></section>`}
 // E：このメンバーのかたち（3人以上）・つなぎ役
 const GTIP={
   kicchiri:{l:'きっちり派が多いメンバーです。みんなで使う場所は、きっちり派の基準に合わせると気持ちよく過ごせます。',r:'おおらか派が多いメンバーです。片づけや決めごとは、最後に1人だけ確かめ役を決めておくと安心です。',s:'半々に分かれています。みんなで使う場所のルールを、1つだけ決めておくとうまくいきます。'},
@@ -1531,7 +1539,8 @@ function doneRoom(clear){if(clear)clear();
     <button class="btn" id="dr-solo" style="align-self:stretch">ひとりで診断する</button><button class="btn ghost" id="dr-top" style="align-self:stretch">トップへ</button></section>`);
   $('dr-top').onclick=goTop;$('dr-solo').onclick=()=>{soloStart(store('kv_name')||'')}}
 // 部屋の結果のいちばん上：まだ1人のとき／あとからでも加われること（部屋ができてから10日）
-function roomLaterCard(ps,room){const sc=app.querySelector('.scr');if(!sc||room.kind==='kon')return;const url=joinUrl(R.code),ms=Math.max(0,(room.created||0)+ROOM_MS-Date.now()),left=ms>=2*864e5?Math.floor(ms/864e5)+'日':Math.max(1,Math.round(ms/3600e3))+'時間';
+function roomLaterCard(ps,room){const sc=app.querySelector('.scr');if(!sc||room.kind==='kon'||ps.length>=2)return;   // 2人以上そろったら出さない（鑑定者本人 2026-11-20「もう不要」）
+  const url=joinUrl(R.code),ms=Math.max(0,(room.created||0)+ROOM_MS-Date.now()),left=ms>=2*864e5?Math.floor(ms/864e5)+'日':Math.max(1,Math.round(ms/3600e3))+'時間';
   const sco=ps.length>=2&&sc.querySelector('.score');(sco?sco:sc).insertAdjacentHTML(sco?'afterend':'afterbegin',`<section class="card later-card"><p class="pt-h"><em>あとからでもOK</em>${ps.length<2?'まだあなただけです':'ほかの人も、あとから加われます'}</p>
     <p class="hint">この部屋のリンクを開いた人は、同じ問題に答えると、この結果に加わります（あと${left}くらい）。加わると、この画面も新しくなります。</p>
     <a class="btn line${ps.length<2?'':' line-w'}" id="lt-ln" href="${lineUrl('アイ・シンクで価値観の答え合わせをしよう！\nこのリンクを開いて答えると、'+(ps.length<2?'2人の結果が見られます。':'みんなの結果に加われます。'),url)}" target="_blank" rel="noopener" style="align-self:stretch">LINEで友だちに送る</a></section>`)}
