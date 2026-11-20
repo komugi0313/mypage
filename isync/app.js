@@ -474,7 +474,7 @@ function stepsHTML(G){const ps=G.players,two=ps.length===2,me=ps.find(p=>p.id===
   if(!its.length)return'';
   const i=its[0],k=G.qs[i],st=ps.some(p=>p.ans[i]&&p.ans[i].st&&p.ans[i].o<2),gs=ansGroups(G,i);
   const side=g=>{const c=G.anon?'pn':g.who.length===1?pcls(G,g.who[0]):'pm';
-    return `<div class="vside ${c}"><span class="vw">${G.anon?g.who.length+'人':g.who.map(p=>p===me?'あなた':esc(p.name)).join('・')}</span><span class="va">${esc(ans(g.v,k))}</span></div>`};
+    return `<div class="vside ${c}"><span class="vw">${G.anon?g.who.length+'人':g.who.map((p,j,l)=>`<span class="nw" data-nojw>${p===me?'あなた':esc(p.name)}${j<l.length-1?'・':''}</span>`).join('')}</span><span class="va">${esc(ans(g.v,k))}</span></div>`};
   const vlong=gs.some(g=>ans(g.v,k).replace(/[、。（）「」\s]/g,'').length>10);
   const vs=gs.length===2&&!vlong?`<div class="vs2">${side(gs[0])}<span class="vmid" aria-hidden="true">⇔</span>${side(gs[1])}</div>`:`<div class="vsn">${gs.map(side).join('')}</div>`;
   const ay=ayOf(k,two),key=QKEY[k].slice(0,5),ok=talkedOf(talkId(G)).includes(key);
