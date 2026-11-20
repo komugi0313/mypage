@@ -1244,7 +1244,11 @@ async function sync(){
     R.key=key;konResult();return}
   if(room.phase==='result'){const key='res'+rd+'-'+ps.map(p=>p.id).join();if(key===R.key)return;
     const before=R.key.startsWith('res'+rd+'-')?R.key.slice(('res'+rd+'-').length).split(','):null;R.key=key;
-    showResult({players:ps.map(p=>({id:p.id,name:p.name,ans:room.qs.map((q,i)=>rAns(p,i))})),qs:room.qs,me:PID,anon:!!room.anon});
+    // 途中で抜けた人（答えた問題が半分より少ない人。時間切れ・まだ決められないも、その場にいたに数える）は結果に入れない。残りが2人より少なくなるときは外さない（究極の二択と同じ）
+    const nq=room.qs.length,cnt=p=>room.qs.filter((q,i)=>{const a=rAns(p,i);return a&&a.d}).length;
+    let use=ps,gone=[];const keep=ps.filter(p=>p.id===PID||cnt(p)*2>=nq);if(keep.length>=2&&keep.length<ps.length){use=keep;gone=ps.filter(p=>!keep.includes(p))}
+    showResult({players:use.map(p=>({id:p.id,name:p.name,ans:room.qs.map((q,i)=>rAns(p,i))})),qs:room.qs,me:PID,anon:!!room.anon});
+    if(gone.length){const sc=app.querySelector('.score');if(sc)sc.insertAdjacentHTML('afterend',`<p class="gone-note">途中で抜けた人：${room.anon?gone.length+'人':gone.map(p=>esc(p.name)+'さん（'+cnt(p)+'／'+nq+'問）').join('、')}。答えた問題が半分より少ないので、結果には入れていません。</p>`)}
     if(before){ps.filter(p=>p.id!==PID&&!before.includes(p.id)).forEach(p=>toast(p.name+'さんが答えて、結果に加わりました'))}
     roomLaterCard(ps,room)}
 }
@@ -1258,8 +1262,9 @@ function rAsk(k,qk){
   const room=R.room,qid=room.qs[k],n=room.qs.length;
   if(room.len===30&&room.kind!=='kon')starIntro('room'+R.code,'わかった');
   const draw=()=>{const m=R.my,step=m.fin?'done':'own';
-    view(askHTML(qid,k,n,{step,star:room.len===30||room.kind==='kon',starOn:m.st,to:m.to,u:m.u}));
-    bindAsk(tap);paint();rCountNow();if(!m.fin&&room.kind!=='kon')qTimer(R.seen[qk],timeUp)};
+    const nav=room.kind==='kon'?'':'<nav class="tnav" aria-label="もどる"><span></span><button class="tnav-b quit" id="rquit" type="button">やめる</button></nav>';
+    view(askHTML(qid,k,n,{step,star:room.len===30||room.kind==='kon',starOn:m.st,to:m.to,u:m.u,nav}));
+    bindAsk(tap);paint();bindQuit();rCountNow();if(!m.fin&&room.kind!=='kon')qTimer(R.seen[qk],timeUp)};
   // 15秒たったら「時間切れ」を書いて待つ（答えなしとして数えない）
   const timeUp=()=>{const m=R.my;if(m.fin||R.key!==qk)return;m.o=-1;m.ms=Q_LIMIT*1000;m.fin=true;m.to=true;save(k,true,true);draw()};
   const tap=(v,starOn)=>{const m=R.my;if(v===null){m.st=starOn?1:0;return}
@@ -1267,6 +1272,9 @@ function rAsk(k,qk){
     m.u=v===3;m.o=v===3?-1:v;m.ms=Date.now()-R.seen[qk];m.fin=true;m.to=false;
     save(k,!!m.fin,false);draw()};
   const paint=()=>{};
+  // やめる：2回押しで部屋から出る。自分の記録を部屋から消すので、ほかの人は待たずに進める（鑑定者本人 2026-11-20「一人が抜けても周りは進むように」）
+  const bindQuit=()=>{const b=$('rquit');if(!b)return;b.onclick=async()=>{if(!b.dataset.arm){b.dataset.arm=1;b.textContent='もう一度押すと、部屋から出ます';setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent='やめる'}},4000);return}
+    clearInterval(QT);const db=await getDb(),code=R.code;leaveRoom();try{if(db&&code)await db.doc(pPath(code,PID)).delete()}catch(e){}goTop();toast('部屋から出ました。ほかの人はそのまま続けられます')}};
   clearInterval(R.tick);
   // 問題が出てから20秒たっても答えがそろわなければ、そのまま次へ進む（画面を閉じた人を待たない。婚活の部屋は主催者の画面が60秒で進める）
   R.tick=setInterval(()=>{if(R.key!==qk){clearInterval(R.tick);return}
