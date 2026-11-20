@@ -629,6 +629,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .rq-prev b,.f-req b{display:flex;gap:8px;align-items:center;color:#7A5A00;font-family:"Mochiy Pop One",sans-serif;font-weight:400;font-size:.95rem}
 .rq-prev b i,.f-req b i{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px #F2C21B;flex:0 0 auto}
 .rq-prev b .rib,.f-req b .rib{width:32px;height:32px}
+.rq-over{margin:2px 0 0;font-size:.85rem;font-weight:700;color:#7A5A00}
 .rq-prev span,.f-req span{display:flex;gap:8px;align-items:flex-start;background:#fff;border:2px solid #F6D96B;border-radius:14px;padding:8px 12px;font-weight:800;font-size:.92rem;line-height:1.5;color:#2F3A45;word-break:keep-all;overflow-wrap:anywhere}
 .rq-prev span::before,.f-req span::before{content:"";flex:0 0 auto;width:10px;height:10px;margin-top:.45em;border-radius:50%;background:#F2C21B}
 .rq-sum{display:inline-flex;gap:8px;align-items:center}
@@ -5279,11 +5280,14 @@ var RIB_PATH="M12 2C9.6 2 8 4 8 6.4c0 1.9 1 3.6 2.3 5.4L5.2 20.6l3 1.4L12 15.6l3
 function rqKey(){return "w44_req_"+st.name}
 function rqGet(){var d=lsGet(rqKey(),null)||lsGet("w44_req_"+st.name+"_"+st.breed,null);return d||{items:[],allergy:"",free:"",show:{qr:1,card:1,ec:1}}}
 var RQ_SHORT={"おやつはあげないでください":"おやつはあげないで","急にさわらないでください":"急にさわらないで","かむことがあります。手を出さず、そっとしておいてください":"かむことがあります","ほかのワンちゃんが苦手です。少しはなれてください":"ほかの犬が苦手","抱っこは苦手です":"抱っこが苦手","ほえることがあります。びっくりさせたらごめんなさい":"ほえることがあります"};
-function rqTexts(where,short){var d=rqGet();if(where&&!d.show[where])return [];var out=d.items.map(function(t){var x=short&&RQ_SHORT[t]?RQ_SHORT[t]:t;return t==="おやつはあげないでください"&&d.allergy?x+"（"+d.allergy+"アレルギー）":x});
-  if(d.allergy&&d.items.indexOf("おやつはあげないでください")<0)out.unshift(d.allergy+"アレルギーがあります");if(d.free)out.push(d.free);return out.slice(0,5)}
+function rqTexts(where,short){var d=rqGet();if(where&&where!=="all"&&!d.show[where])return [];var out=d.items.map(function(t){var x=short&&RQ_SHORT[t]?RQ_SHORT[t]:t;return t==="おやつはあげないでください"&&d.allergy?x+"（"+d.allergy+"アレルギー）":x});
+  if(d.allergy&&d.items.indexOf("おやつはあげないでください")<0)out.unshift(d.allergy+"アレルギーがあります");
+  // カード・QRにのるのは5つまで。自分で書いた文は必ずのせる（前は6つ以上選ぶと、自分で書いた文が消えていた）
+  if(where==="all"){if(d.free)out.push(d.free);return out}
+  return d.free?out.slice(0,4).concat(d.free):out.slice(0,5)}
 function rqLoad(){var d=rqGet();[].forEach.call($("rq-items").children,function(b){b.classList.toggle("on",d.items.indexOf(b.dataset.v)>=0)});$("rq-allergy").value=d.allergy;$("rq-free").value=d.free;
   $("rq-qr").checked=!!d.show.qr;$("rq-card").checked=!!d.show.card;$("rq-ec").checked=!!d.show.ec;rqPrev()}
-function rqPrev(){var t=rqTexts();$("rq-prev").hidden=!t.length;$("rq-prev").innerHTML=rqBox(st.name||"うちの子",t)}
+function rqPrev(){var t=rqTexts(),n=rqTexts("all").length;$("rq-prev").hidden=!t.length;$("rq-prev").innerHTML=rqBox(st.name||"うちの子",t)+(n>5?'<p class="rq-over">カード・ワン友QRにのるのは5つまでです（自分で書いた文は必ずのります）。ほかの'+(n-5)+'つはのりません。</p>':"")}
 function rqSave(){var d={items:[].filter.call($("rq-items").children,function(b){return b.classList.contains("on")}).map(function(b){return b.dataset.v}),allergy:$("rq-allergy").value.trim(),free:$("rq-free").value.trim(),show:{qr:$("rq-qr").checked?1:0,card:$("rq-card").checked?1:0,ec:$("rq-ec").checked?1:0}};
   lsSet(rqKey(),d);rqPrev();if(FEST){FEST.o.req=rqTexts("card",1);$("meishi-img").src=renderMeishi(FEST.o);$("meishi-back").src=renderMeishiBack(FEST.o);$("fest-out").hidden=true}
   if(typeof ecRefresh==="function")ecRefresh();if($("wf-more").open&&last){drawQR($("wf-qr"),wfUrl());wfDemo()}}
