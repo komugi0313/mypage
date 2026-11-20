@@ -19,7 +19,7 @@ const CI=n=>CATS.findIndex(c=>c[0]===n);
 // 問題ごとの重さ：大事＝2・ふつう＝1・軽い＝0.5（weights.js）
 const WB=new Set((window.SY_W||{}).b||[]),WL=new Set((window.SY_W||{}).l||[]);
 const WT=k=>WB.has(k)?2:WL.has(k)?.5:1;
-// 話題：いろいろ＝6テーマを同じくらい／盛り上がる＝ドキドキ多め・結婚とお金の話はなし
+// 話題：暮らし・価値観（前の「いろいろ」）＝6テーマを同じくらい／恋愛多め（前の「盛り上がる」）＝ドキドキ多め・結婚とお金の話はなし
 const TOPICS={all:['恋愛・連絡','暮らし','食','お金','休日・遊び','将来・家族'].map(CI),
   party:['ドキドキ','恋愛・連絡','休日・遊び','ドキドキ','食','暮らし'].map(CI)};
 const MAXP=10, KON_MAX=40, KON_LEN=20;
@@ -163,7 +163,7 @@ function goTop(){
     ${seg('len',[[10,'簡易版<br><small>10問・さくっと</small>'],[30,'しっかり版<br><small>30問・★ゆずれない</small>']])}
     <div class="star-what" id="star-what"${CFG.len===30?'':' hidden'}><b>★ゆずれない とは？</b><span>「ここは相手に合わせられない」と思う問題に付ける印です。</span><span>結果で、2人のゆずれないところをくらべます。点数には入りません。</span></div>
     ${PACK?'':`<p class="label">話題は？</p>
-    ${seg('topic',[['all','いろいろ'],['party','盛り上がる']])}`}
+    ${seg('topic',[['all','暮らし・価値観'],['party','恋愛多め']])}`}
     <div id="m-anon" class="stack">
       <p class="label">名前は？</p>
       ${seg('anon',[[false,'見せる'],[true,'見せない']])}
@@ -240,13 +240,15 @@ function goTop(){
 
 /* ===== 1問の画面（どのモードでも同じ） =====
    o: 0=A 1=B 2=こだわらない（3つ目の答え） ／ st: ★ゆずれない（相手の答えの予想はなくした＝鑑定者本人の判断 2026-11-13） */
-function askHTML(k,i,n,{who,step,star,starOn,to,u,nav}){
-  const q=Q[k],cat=CATS[q[0]];
+// 恋愛・ドキドキの問題の案内（鑑定者本人 2026-11-20「あなたが思う人を浮かべてくださいって言葉でいい」）。その回の最初の1問だけくわしく
+const IF_LONG='あなたが思う人（恋人・好きな人）を思い浮かべて答えてください。いない人は、いたらどうするかで答えてください。',IF_SHORT='※あなたが思う人を思い浮かべて答えてください';
+function askHTML(k,i,n,{who,step,star,starOn,to,u,nav,qs}){
+  const q=Q[k],cat=CATS[q[0]],first=!(qs||[]).slice(0,i).some(x=>CATS[Q[x][0]][1]);
   const opt=(v,cls='')=>`<button class="opt ${cls}" data-v="${v}">${v<2?`<span class="k">${OPTS[v]}</span>`:''}<span>${esc(ans(v,k))}</span></button>`;
   return `${nav||''}<section class="card ask"><img class="chara c-ask" src="img/pair-think.webp" width="124" height="79" alt="" aria-hidden="true">
     <div class="prog">${Array.from({length:n},(_,j)=>`<i class="${j<=i?'on':''}"></i>`).join('')}</div>
     <div class="qhead"><span class="tag catg c${q[0]}">${esc(cat[0])}</span><span class="qn">${i+1}／${n}${who?`　${esc(who)}`:''}</span></div>
-    ${cat[1]?`<p class="if">${esc(cat[1])}</p>`:''}
+    ${cat[1]?`<p class="if">${esc(cat[1])}</p><p class="if-note${first?'':' s'}">${first?IF_LONG:IF_SHORT}</p>`:''}
     <h2 class="q"><span class="qmark" aria-hidden="true">Q</span><span class="qtx">${esc(q[1])}</span></h2>
     <div class="hint" id="tcnt"></div><div class="allok" id="allok" hidden>全員決めた！<small>次の問題へ…</small></div>
     ${step==='done'?`<div class="match">${to?'時間切れ':u?'「'+UNDEC+'」にしました':'答えました！'}</div><div id="skipq"></div>`:`
@@ -301,7 +303,7 @@ function localAsk(){
   if(n===30&&L.i===0&&L.p===0&&!(R.starDone||{}).local){starIntro('local','わかった、はじめる',()=>{R.starDone=Object.assign(R.starDone||{},{local:1});localAsk()});return}
   const a=p.ans[L.i]||(p.ans[L.i]={o:-1,st:0,ms:0});
   const nav=`<nav class="tnav" aria-label="もどる">${L.i>0?'<button class="tnav-b" id="qprev" type="button"><span aria-hidden="true">‹</span> 1問もどる</button>':'<span></span>'}<button class="tnav-b quit" id="qquit" type="button">やめる</button></nav>`;
-  view(askHTML(k,L.i,n,{who:multi?p.name+'さん':'',step:'own',star:n===30,starOn:a.st,nav}));
+  view(askHTML(k,L.i,n,{who:multi?p.name+'さん':'',step:'own',star:n===30,starOn:a.st,nav,qs:L.qs}));
   const t0=Date.now();let fin=false;
   const pv=$('qprev');if(pv)pv.onclick=()=>{if(fin)return;fin=true;clearInterval(QT);L.i--;localAsk()};
   // やめる：まちがえて押しても消えないよう、2回押しでトップへ（答えはどこにも送らない）
@@ -543,7 +545,7 @@ function bindAgain(G){const b=$('reans');if(!b)return;const me=G.players.find(p=
   b.onclick=()=>{Object.assign(L,{counts:undefined,mode:'solo',qs:G.qs.slice(),players:[{id:'me',name:(me&&me.name)||store('kv_name')||'あなた',ans:{}}],p:0,i:0});localAsk()}}
 // シンクロ率のひとこと（低くても前向きに読める言い方。鑑定者本人 2026-11-17）
 function syncMsg(pct,two){const w=two?'2人':'メンバー';
-  if(pct>=HIGH_SYNC)return{msg:two?'とても相性のいい2人です':'とても相性のいいメンバーです',sub:''};
+  if(pct>=HIGH_SYNC)return{msg:two?'とても相性のいい2人です':'感覚がとても近いメンバーです',sub:''};
   if(pct>=60)return{msg:'いい感じにわかり合えています',sub:'重なるところが多いから、ちがうところも話しやすい関係です。'};
   if(pct>=40)return{msg:'ほどよく重なって、ほどよくちがう'+w,sub:'同じところは安心に、ちがうところは新しい発見に。'};
   return{msg:'発見の多い'+w,sub:'答えが分かれたところほど、話すとおたがいのことがよくわかります。'}}
@@ -1266,7 +1268,7 @@ function rAsk(k,qk){
   if(room.len===30&&room.kind!=='kon')starIntro('room'+R.code,'わかった');
   const draw=()=>{const m=R.my,step=m.fin?'done':'own';
     const nav=room.kind==='kon'?'':'<nav class="tnav" aria-label="もどる"><span></span><button class="tnav-b quit" id="rquit" type="button">やめる</button></nav>';
-    view(askHTML(qid,k,n,{step,star:room.len===30||room.kind==='kon',starOn:m.st,to:m.to,u:m.u,nav}));
+    view(askHTML(qid,k,n,{step,star:room.len===30||room.kind==='kon',starOn:m.st,to:m.to,u:m.u,nav,qs:room.qs}));
     bindAsk(tap);paint();bindQuit();rCountNow();if(!m.fin&&room.kind!=='kon')qTimer(R.seen[qk],timeUp)};
   // 15秒たったら「時間切れ」を書いて待つ（答えなしとして数えない）
   const timeUp=()=>{const m=R.my;if(m.fin||R.key!==qk)return;m.o=-1;m.ms=Q_LIMIT*1000;m.fin=true;m.to=true;save(k,true,true);draw()};
@@ -1339,7 +1341,7 @@ function lobby(){
     <button class="btn" id="st" ${ps.length>=2?'':'disabled'}>${ps.length>=2?`スタート（${ps.length}人で）`:'スタート（2人そろったら）'}</button>
     <p class="hint live-note">一緒に答えると、おたがいの「悩み中…」「決めた！」がリアルタイムで見えます。</p>
     ${ps.length<2?`<details class="sfold later-fold"><summary>今すぐそろわないときは</summary><p class="hint later-note">先にひとりで答えておくこともできます。部屋ができてから12時間以内なら、あとからリンクを開いた人も同じ問題に答えて、結果に加わります。</p><button class="btn ghost small" id="st1" style="align-self:stretch">先にひとりで答える</button></details>`:''}
-    <p class="hint">${room.len===30?'しっかり版（30問・★ゆずれない）':'簡易版（10問）'}・話題は${room.topic==='party'?'盛り上がる':'いろいろ'}${room.anon?'・名前は見せない':''}</p>
+    <p class="hint">${room.len===30?'しっかり版（30問・★ゆずれない）':'簡易版（10問）'}・話題は${room.topic==='party'?'恋愛多め':'暮らし・価値観'}${room.anon?'・名前は見せない':''}</p>
   </section>
   <button class="btn ghost small" id="home">部屋を出てトップへ</button>`);
   loadQR().then(()=>{const el=$('qr');if(!el)return;el.innerHTML='';new QRCode(el,{text:url,width:180,height:180,colorDark:'#22253A',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M})}).catch(()=>{const el=$('qr');if(el)el.hidden=true});
