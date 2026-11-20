@@ -389,7 +389,7 @@ function talkHTML(G,nm){
   const row=(i,n)=>{const k=G.qs[i],key=QKEY[k].slice(0,5),ok=done.has(key);
     const ws=ansGroups(G,i).map(({v,who})=>`<span class="tkr"><span class="tkw">${G.anon?`<span class="nmc pn">${who.length}人</span>`:who.map(p=>nmChip(G,p,p===me?'あなた':p.name)).join('')}</span><span class="tka">${esc(ans(v,k))}${who.some(p=>p.ans[i].st&&v<2)?' ★':''}</span></span>`).join('');
     const ay=ayOf(k,two),hint='';   // だれから聞くかの1文は出さない（答えは名前の札で見え、聞き方はコツ・主役のカードにある。鑑定者本人 2026-11-20「はい」）
-    return `<li class="${ok?'ok':''}"><b>${esc(Q[k][1])}</b>${ws}${hint?`<span class="tph">${hint}</span>`:''}${ay?`<span class="ayu"><b>${two?'歩み寄りの案':'みんなの歩み寄りの案'}</b>${esc(ay)}</span>`:''}<button class="talked" type="button" data-k="${key}" aria-pressed="${ok}">${ok?'✓ 話した':'話した'}</button></li>`};
+    return `<li class="${ok?'ok':''}"><b>${esc(Q[k][1])}</b><span class="tkg">${ws}</span>${hint?`<span class="tph">${hint}</span>`:''}${ay?`<span class="ayu"><b>${two?'歩み寄りの案':'みんなの歩み寄りの案'}</b>${esc(ay)}</span>`:''}<button class="talked" type="button" data-k="${key}" aria-pressed="${ok}">${ok?'✓ 話した':'話した'}</button></li>`};
   const rest=its.slice(1),top=rest.slice(0,2),more=rest.slice(2),ul=(xs,o)=>`<ul class="slist tk${two?'':' tkm'}">${xs.map((x,j)=>row(x,j+o)).join('')}</ul>`;
   return `<section class="card pt-a" id="talk"><p class="pt-h"><em>歩み寄り</em>${two?'ほかに話しておきたいこと':'みんなで話しておきたいこと'}</p>
     <p class="hint">${(()=>{const dn=two?pairStat(ps[0],ps[1],G.qs).diff.length:0;return two?(dn>its.length?`ちがった${dn}問のうち、上の1問とあわせて、大事な${its.length}問です。`:'')+'「どうしてそう思う？」から聞いてみてください。':'気になる問題から話してみてください。'})()}</p>${its.slice(1).some(i=>ps.some(p=>p.ans[i]&&p.ans[i].st&&p.ans[i].o>=0&&p.ans[i].o<2))?'<p class="stl"><i>★</i>＝ゆずれない（答える前に付けた印）</p>':''}
@@ -579,7 +579,7 @@ function twoFolds(G,trows,nm,r){
   if(G.anon){const ax=axHTML(G,me?[me]:G.players,nm);if(ax)out+=foldBox('価値観のタイプ',me?'あなたの位置':'2人の位置',ax)}
   if(r.starN){const row=(i,cls)=>{const k=G.qs[i],aa=A.ans[i],bb=B.ans[i];
       const who=(P,x)=>(G.anon&&me&&P!==me)?'':`<span class="tkr"><span class="tkw">${nmChip(G,P,P===me?'あなた':P.name)}</span><span class="tka">${esc(ans(x.o,k))}${x.st?' ★':''}</span></span>`;
-      return `<li class="${cls}"><b>${esc(Q[k][1])}</b>${who(A,aa)}${who(B,bb)}</li>`};
+      return `<li class="${cls}"><b>${esc(Q[k][1])}</b><span class="tkg">${who(A,aa)}${who(B,bb)}</span></li>`};
     const many=r.starDiff.length>=2&&r.starDiff.length>=r.starSame.length+r.starAdj.length;
     const verdict=!r.starDiff.length?`<p class="good">大事なところは、ちがいがありません</p>`:many?`<p class="warn">大事なところで、考え方がちがうことが多めです。この${r.starDiff.length}問は、先にゆっくり話しておくと安心です</p>`:`<p class="warn">大事なところで、ちがいが${r.starDiff.length}問あります。ここは先に話しておくと安心です</p>`;
     out+=foldBox('★ ゆずれないところ',`<span class="ftc"><i class="c-s">同じ ${r.starSame.length}</i><i class="c-m">近い ${r.starAdj.length}</i><i class="c-d">ちがう ${r.starDiff.length}</i></span>${r.starDiff.length?'<span class="ftl">ちがう問題：<em>'+esc(Q[G.qs[r.starDiff[0]]][1])+'</em></span>':''}`,
