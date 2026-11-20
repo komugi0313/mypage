@@ -577,8 +577,10 @@ header.top .navbtn:active{transform:translateY(1px)}
 .rcov .stb{margin:12px auto 0;max-width:22em;box-sizing:border-box;border-radius:12px;padding:8px 12px;font-size:13.5px;line-height:1.75;color:var(--text);text-align:left}
 .rcov .stb-n{background:#FFF6D9;text-align:center}
 .rcov .stb-d{display:flex;gap:5px;justify-content:center;margin-top:3px}.rcov .stb-d i{width:8px;height:8px;border-radius:50%;background:var(--rose)}
+.rcov .stb-r{background:#FCE8EF}.rcov .stb-r b{display:block;color:var(--rose)}
 .rcov .stb-o{background:#FCE8EF;display:flex;gap:10px;align-items:center}
 .rcov .stb-o .stb-a{flex:none;width:46px;height:46px;display:flex;align-items:center;justify-content:center}
+.rcov .stb-2{display:block}.rcov .stb-l{display:flex;gap:10px;align-items:center}.rcov .stb-l+.stb-l{margin-top:6px;padding-top:6px;border-top:1px dashed #E9C3D2}
 .rcov .stb-o .stb-a .art{width:46px!important;height:46px!important;max-width:46px;margin:0;object-fit:contain}
 .rcov .stb-o a{color:var(--rose);font-weight:700}
 .rcov .prev{margin:14px 0 0;font-size:13px;color:var(--sub);letter-spacing:.06em}
@@ -3732,6 +3734,11 @@ function renderAbout(){
     '<li><b>恋の原動力</b>：同じ 25点／ちがう 12点。大切にしたいもの（ときめき・安心）が似ている2人は、満足しやすいと考えます。</li>'+
     '<li><b>近づき方</b>：リードする人と受けとめる人 20点／2人とも自分から 15点／2人とも待つ 12点。役割がかみ合うと進めやすいと考えますが、研究の裏づけは強くないので、差は小さくしています。</li></ul>'+
     '<p style="margin-top:10px">合計が85点以上で「とても合う」、70点以上で「合う」、55点以上で「歩み寄りで育つ」、それより下は「ちがいから学び合う」です。点数が低くても、相性が悪いという意味ではありません。どこで歩み寄るとよいかの目安として使ってください。</p></section>';
+  // 何回か診断したときの結果（鑑定者本人 2026-11-20）
+  h+='<section class="card" id="ab-multi"><span class="about-tag own">独自のところ</span><h2>何回か診断したときの結果</h2>'+
+    '<p>2回目からは、これまでの答え（最新5回まで）を合わせて、あなたのキャラを決めます。何回か答えるほど、たまたまの答えのぶれが小さくなり、結果が正確になるからです。</p>'+
+    '<p>ただし、恋の状況が前回とちがうときは、その回から数え直します。たとえば、前は友だちや家族を思い浮かべて答え、今回は恋人を思い浮かべて答えた場合です。頼り方や気持ちのゆれ方は、だれを思い浮かべるかで変わるので、ちがう相手への答えはまぜません。</p>'+
+    '<p>1回ずつの結果は「わたしの結果」で見られます。</p></section>';
   h+='<section class="card"><h2>参考にした研究</h2><ol class="ref">'+REFS.map(function(r){return '<li>「'+esc(r.t)+'」<br><small class="muted">'+esc(r.j)+'</small>　<a class="nw" href="'+r.u+'" target="_blank" rel="noopener">論文を見る</a></li>';}).join('')+'</ol>'+
     '<p style="margin-top:14px"><button class="btn btn-main btn-wide" type="button" data-act="start">診断をはじめる</button></p></section>';
   $('v-about').innerHTML=h; glueAll($('v-about')); show('v-about');
@@ -3782,13 +3789,17 @@ var HIST_MAX=10, AX_NM=['近づき方','伝え方','頼り方','原動力'];
    気持ちが変わらない人が5回診断して3種類以上のキャラが出る割合：本格版 21%→3%・かんたん版 36%→8%（計算でためした）。今回だけの結果は表紙に小さく出す */
 var COMB_N=5;
 function combineMe(one){
-  var use=histList().slice(0,COMB_N), qw=function(m){ return m.mode==='quick'?4:8; }, code='', pct={};
-  if(!use.length||use[0].at!==one.at) use=[one].concat(use).slice(0,COMB_N);
+  var hs=histList(), qw=function(m){ return m.mode==='quick'?4:8; }, code='', pct={};
+  if(!hs.length||hs[0].at!==one.at) hs=[one].concat(hs);
+  // 恋の状況が同じ回だけ合わせる（鑑定者本人 2026-11-20「書いたらどうか」→見本で「お願いします」）：前回とちがう・記録がない回が出たら、そこで数え直す
+  var use=[hs[0]], broke=false;
+  // broke＝前の回と恋の状況がはっきりちがうときだけ（記録がない古い回では「相手がちがう」とは言えないので、数え直すだけで文は出さない）
+  for(var j=1;j<hs.length&&use.length<COMB_N;j++){ var sj=hs[j].status; if(one.status&&sj===one.status){ use.push(hs[j]); } else { broke=!!(one.status&&sj&&sj!==one.status); break; } }
   AXES.forEach(function(ax,i){ var s=0,w=0; use.forEach(function(m){ if(m.pct&&m.pct[ax.key]!=null){ s+=m.pct[ax.key]*qw(m); w+=qw(m); } });
     var p=w?Math.round(s/w):one.pct[ax.key]; if(p===50) p=one.code[i]===ax.a?51:49; pct[ax.key]=p; code+=p>50?ax.a:ax.b; });
   var avg=function(k,wf){ var s=0,w=0; use.forEach(function(m){ if(m[k]!=null){ var x=wf(m); s+=m[k]*x; w+=x; } }); return w?Math.round(s/w):null; };
   var me=Object.assign({},one,{code:code,pct:pct,anx:avg('anx',qw),fu:avg('fu',function(){return 1;}),fg:avg('fg',function(){return 1;}),
-    mode:use.some(function(m){return m.mode!=='quick';})?'full':'quick',n:use.length,now:{code:one.code,pct:one.pct}});
+    mode:use.some(function(m){return m.mode!=='quick';})?'full':'quick',n:use.length,since:broke,now:{code:one.code,pct:one.pct,anx:one.anx}});
   if(me.anx==null) me.anx=one.anx;
   return me;
 }
@@ -3796,14 +3807,29 @@ function combineMe(one){
 function stabHTML(code,mine){
   if(!mine||!mine.pct) return '';
   var h='', n=mine.n||1, nw=mine.now&&mine.now.code;
-  if(n>1) h+='<div class="stb stb-n"><span class="nw">'+n+'回ぶんの答えから</span><span class="nw">決めました</span><span class="stb-d" aria-hidden="true">'+new Array(n+1).join('<i></i>')+'</span></div>';
+  if(n>1) h+='<div class="stb stb-n">'+(mine.since?'<span class="nw">今の恋の状況になってからの</span><span class="nw">'+n+'回ぶんの答えで</span>':'<span class="nw">'+n+'回ぶんの答えから</span>')+'<span class="nw">決めました</span><span class="stb-d" aria-hidden="true">'+new Array(n+1).join('<i></i>')+'</span></div>';
+  else if(mine.since) h+='<div class="stb stb-r"><b>今回の答えから、決め直しました。</b><span class="nw">恋の状況が前回とちがうので、</span><span class="nw">前の答えとは</span><span class="nw">合わせていません。</span></div>';
   var mids=AXES.map(function(ax,i){ return {ax:ax,i:i,d:Math.abs(mine.pct[ax.key]-50)}; }).filter(function(x){ return x.d<=MID_W; }).sort(function(a,b){ return a.d-b.d; });
   var nm=function(c){ return '<a class="nw" href="?t='+c+'" data-type="'+c+'">'+esc(T[c].c)+'</a>'; };
   var both=function(xs){ return '<span class="nw">'+xs.map(function(x){ return x.ax.title; }).join('・')+'が</span><span class="nw">「両方もってる」</span>ので、<span class="nw">この2つを</span><span class="nw">行き来しやすい人です。</span>'; };
+  // ハートも「今回の答えだけだと」（鑑定者本人 2026-11-20 見本 https://claude.ai/artifact/1EC8UfDgt9yeBWj3S4s9wF で「この形で」）
+  var hl='', na=mine.now&&mine.now.anx, ntp=mine.now&&mine.now.pct&&mine.now.pct.TS;
+  if(n>1&&na!=null&&ntp!=null&&mine.anx!=null){
+    var kAll=kuseOf(mine.anx,100-mine.pct.TS), kNow=kuseOf(na,100-ntp);
+    if(kAll!==kNow){
+      var dA=(mine.anx>=50)!==(na>=50), dT=(100-mine.pct.TS>=50)!==(100-ntp>=50);
+      var why=dA&&dT?'<span class="nw">今回は心のゆれやすさと頼り方の両方が、</span><span class="nw">いつもとちがう向きに出ました。</span>':
+        dA?'<span class="nw">今回は心のゆれやすさが</span><span class="nw">いつもより</span><span class="nw">'+(na>=50?'強めに':'おだやかに')+'出ました。</span>':
+        '<span class="nw">今回は頼り方が</span><span class="nw">「'+(100-ntp>=50?'自分で立つ':'寄りかかれる')+'」側に出ました。</span>';
+      hl='<span class="stb-a" aria-hidden="true"><img class="art" src="img/ico/k-'+kNow+'.webp" alt="" width="46" height="46"></span><span>'+(nw&&nw!==code?'':'<span class="nw">今回の答えだけだと、</span>')+'<span class="nw">愛着スタイルは<a href="?types=1&amp;z=h" data-hgo="'+kNow+'">'+AT[kNow].n+'</a>。</span>'+why+'</span>';
+    }
+  }
   if(nw&&nw!==code&&T[nw]){
     var df=[]; for(var i=0;i<4;i++) if(nw[i]!==code[i]) df.push(i);
     var dm=mids.filter(function(x){ return df.indexOf(x.i)>=0; });
-    h+='<div class="stb stb-o"><span class="stb-a" aria-hidden="true">'+art(nw,46)+'</span><span><span class="nw">今回の答えだけだと</span>'+nm(nw)+'。'+(dm.length&&df.length===1?both(dm):(df.length===1?'<span class="nw">今回は'+AXES[df[0]].title+'が</span><span class="nw">いつもと逆に出ました。</span>':'<span class="nw">答えが重なるほど、</span><span class="nw">いちばん大きく出るキャラが</span><span class="nw">確かになります。</span>'))+'</span></div>';
+    h+='<div class="stb stb-o'+(hl?' stb-2':'')+'"><div class="stb-l"><span class="stb-a" aria-hidden="true">'+art(nw,46)+'</span><span><span class="nw">今回の答えだけだと</span>'+nm(nw)+'。'+(dm.length&&df.length===1?both(dm):(df.length===1?'<span class="nw">今回は'+AXES[df[0]].title+'が</span><span class="nw">いつもと逆に出ました。</span>':'<span class="nw">答えが重なるほど、</span><span class="nw">いちばん大きく出るキャラが</span><span class="nw">確かになります。</span>'))+'</span></div>'+(hl?'<div class="stb-l">'+hl+'</div>':'')+'</div>';
+  } else if(hl){
+    h+='<div class="stb stb-o stb-2"><div class="stb-l">'+hl+'</div></div>';
   } else if(mids.length){
     var x=mids[0], ax=x.ax, nb=code.substring(0,x.i)+(code[x.i]===ax.a?ax.b:ax.a)+code.substring(x.i+1);
     h+='<div class="stb stb-o"><span class="stb-a" aria-hidden="true">'+art(nb,46)+'</span><span><span class="nw">'+(mine.at?'あなたの':'')+'もう1つの顔：</span>'+nm(nb)+'。'+both([x])+'</span></div>';
@@ -4435,6 +4461,7 @@ function home(){
 document.addEventListener('click',function(e){
   var sb=e.target.closest('[data-status]'); if(sb){ pickStatus(sb.getAttribute('data-status')); return; }
   var db=e.target.closest('[data-dur]'); if(db){ pickDur(db.getAttribute('data-dur')); return; }
+  var hg=e.target.closest('[data-hgo]'); if(hg){ e.preventDefault(); var hk2=hg.getAttribute('data-hgo'); history.pushState(null,'','?types=1&z=h'); renderHearts(); setTimeout(function(){ var he2=$('hz-'+hk2); if(he2) he2.scrollIntoView({block:'start'}); },60); return; }
   var hz=e.target.closest('[data-hz]'); if(hz){ e.preventDefault(); var hk=hz.getAttribute('data-hz'), he=hk==='top'?$('v-types'):$('hz-'+hk); if(he) he.scrollIntoView({behavior:'smooth',block:'start'}); return; }
   var jp=e.target.closest('[data-jump]');
   if(jp){ e.preventDefault(); var jt=jp.getAttribute('data-jump'), el=jt==='top'?$('v-types'):$('z-'+jt); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); return; }
