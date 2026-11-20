@@ -142,11 +142,43 @@ a{color:var(--teal)}
       var top=Math.round(b.top);if(last<0)last=top;if(Math.abs(top-last)>3){break}cnt++;if(cnt>3)return false}
     if(i<0)return false; // 1行だけ
     var tail=t.slice(i+1).replace(/[。、！？」』）)ー]/g,"");if(tail.replace(/[\s\u200B]/g,"").length>2)return false;
-    var k=Math.max(0,t.length-(t.length-i-1)-3);var sp=document.createElement("span");sp.className="nob";sp.style.whiteSpace="nowrap";sp.textContent=t.slice(k);
-    n.textContent=t.slice(0,k);n.parentNode.insertBefore(sp,n.nextSibling);return true}
+    var k=Math.max(0,t.length-(t.length-i-1)-3);if(t.indexOf("\u200B")>=0){var z=t.lastIndexOf("\u200B",k);if(z<0)return false;k=z+1;if(t.length-k>9)return false} // 言葉の途中から包まない（2026-11-20）
+    var sp=document.createElement("span");sp.className="nob";sp.style.whiteSpace="nowrap";sp.textContent=t.slice(k);
+    n.textContent=t.slice(0,k);n.parentNode.insertBefore(sp,n.nextSibling);
+    if(sp.getBoundingClientRect().width>el.getBoundingClientRect().width+1){el.replaceChild(document.createTextNode(t),n);el.removeChild(sp);el.normalize();return false} // 枠に入りきらないなら包まない（はみ出し防止）
+    return true}
   // 日本語を言葉のまとまりで折り返す：ひらがなのあとに漢字・カタカナが来るところと、「、。」のあとに、目に見えない区切りを入れる
   var HIRA=/[ぁ-ゖ]/,HEAD=/[一-龯々ァ-ヺ]/;
-  function phrase(n){var t=n.textContent,el=n.parentElement;if(!el||SKIP[el.tagName]||el.closest("[data-plain]")||t.indexOf("\u200B")>=0||!/[ぁ-ゖ]/.test(t)||t.length<8)return;
+  // 言葉の切れ目（Intl.Segmenter）で区切る：単語の途中（「しあ｜わせ」「めずら｜しい」）では切らない。使えない古い端末は下の phraseOld（2026-11-20）
+  var SEG=(window.Intl&&Intl.Segmenter)?new Intl.Segmenter("ja",{granularity:"word"}):null;
+  var JH=/^[ぁ-ゟー]+$/,JPUN=/^[、。！？!?…・）」』】〕\)\s～〜ー]+$/,JOPEN=/[（「『【〔\(]$/,JEND=/[、。！？!?…）」』】〕\)]$/,
+      JPART=/^(を|が|に|で|と|は|も|へ|の|から|まで|より|って|や|か|ね|よ|な)$/,JAFTP=/^(を|が|に|で|と|は|も|へ|の|から|まで|より|って)$/,
+      JAFT=/^(を|が|に|で|と|は|も|へ|の|な|から|まで|より|では|には|とは|だから|ので|のに|けど|ても|でも)$/,JSMALL=/^[ぁぃぅぇぉっゃゅょゎー]/,JP=/[぀-ヿ一-鿿]/;
+  function jlen(t){return t.replace(/[、。！？!?…・（）「」『』\s]/g,"").length}
+  function jwords(t){var a=[],it=SEG.segment(t)[Symbol.iterator](),r;while(!(r=it.next()).done)a.push(r.value.segment);return a}
+  function jsub(p,mn,mr){var ws=jwords(p),out=[],cur="";
+    for(var i=0;i<ws.length;i++){cur+=ws[i];var nx=ws[i+1];if(nx===undefined)break;var rest=ws.slice(i+1).join("");
+      var good=((!JH.test(nx)&&!/^ー/.test(nx))||(JAFT.test(ws[i])&&!(i>0&&/^[ぁ-ゟ]$/.test(ws[i-1])))||(JH.test(nx)&&JH.test(ws[i])&&nx.length>=3&&ws[i].length>=3))&&!(JH.test(ws[i])&&ws[i].length===1&&!JAFT.test(ws[i]));
+      if(good&&jlen(cur)>=mn&&jlen(rest)>=mr&&!JPUN.test(nx)&&!JSMALL.test(nx)&&!JOPEN.test(ws[i])&&!/[0-9０-９.．]$/.test(cur)){out.push(cur);cur=""}}
+    if(cur)out.push(cur);return out}
+  function jphr(t){var ws=jwords(t),out=[],cur="",prev="";
+    for(var i=0;i<ws.length;i++){var w=ws[i];if(cur===""){cur=w;prev=w;continue}var brk;
+      if(JPUN.test(w))brk=false;else if(JEND.test(cur))brk=true;else if(JOPEN.test(w))brk=true;else if(JOPEN.test(cur))brk=false;
+      else if(JH.test(w))brk=(JAFTP.test(prev)&&jlen(cur)>=3&&w.length>=2&&!JPART.test(w)&&!/^(する|した|して|します|なる|なった|いる|ある|ない|です|ます)$/.test(w));else brk=!(/^[一-龯]$/.test(w)&&(ws[i+1]===undefined||!JH.test(ws[i+1])))&&(JH.test(prev)||(/^[一-龯々].*[るいたくてしうすつむぶぐ]$/.test(prev)));
+      if(brk){out.push(cur);cur=w}else cur+=w;prev=w}
+    if(cur)out.push(cur);
+    for(var j=out.length-2;j>=0;j--){if(JH.test(out[j])&&out[j].length<=3){out[j]+=out[j+1];out.splice(j+1,1)}}
+    var xs=[];
+    out.forEach(function(p){if(!(jlen(p)>8||(out.length<2&&jlen(p)>=4))){xs.push(p);return}
+      var sp=jsub(p,3,3);if(sp.length<2)sp=jsub(p,3,2); // 分けられないときは、2文字のまとまりも許す（「見た目どおりの｜性格」）
+      sp.forEach(function(q){xs.push(q)})});
+    if(xs.length>1&&jlen(xs[0])<=1){xs[1]=xs[0]+xs[1];xs.shift()} // 最後の1〜2文字だけの行は、画面に出たあと fixNode が前とまとめる
+    return xs}
+  function phrase(n){var t=n.textContent,el=n.parentElement;if(!SEG)return phraseOld(n);
+    if(!el||SKIP[el.tagName]||el.closest("[data-plain]")||t.indexOf("​")>=0||!JP.test(t)||jlen(t)<4)return;
+    var cs=getComputedStyle(el);if(cs.whiteSpace==="nowrap"||cs.whiteSpace==="pre")return;
+    var out=jphr(t).join("​");if(out!==t)n.textContent=out}
+  function phraseOld(n){var t=n.textContent,el=n.parentElement;if(!el||SKIP[el.tagName]||el.closest("[data-plain]")||t.indexOf("\u200B")>=0||!/[ぁ-ゖ]/.test(t)||t.length<8)return;
     var out="",i,c,p,pp;for(i=0;i<t.length;i++){c=t[i];p=t[i-1];pp=t[i-2];
       if(i>0&&HIRA.test(p)&&HEAD.test(c)&&!/[おご]/.test(p)&&(pp&&HIRA.test(pp)||/[はがをにでともへのや]/.test(p)))out+="\u200B"; // 「お気に入り」「ご家族」の「お・ご」のあとでは切らない
       out+=c;if(/[、。！？]/.test(c)&&i<t.length-1)out+="\u200B"}
