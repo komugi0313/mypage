@@ -2,7 +2,7 @@
 # 鑑定者本人 2026-11-20「プライバシーポリシーは大丈夫か？」「リリースしたい」
 # 使い方：python3 tools/free_privacy.py → nitaku/privacy.html・isync/privacy.html
 # 送る・残す中身を変えたら、ここも直して回し直す（改定日を上げる）
-import html
+import html, re
 
 SEIT = '2026年11月20日'  # 制定日
 REV = '2026年11月20日'   # 改定日
@@ -13,6 +13,8 @@ def esc(s): return html.escape(s, quote=True)
 def table(rows):
     out = '<dl class="xt">'
     for k, v in rows:
+        # 文の最後の5文字は一緒に改行する（「…表示する／ため」のように1〜2文字だけ残さない）
+        v = re.sub(r'([^<>&;\s]{2,5})$', lambda m: '<span class="nw">' + m.group(1) + '</span>', v)
         out += '<dt>' + esc(k) + '</dt><dd>' + v + '</dd>'
     return out + '</dl>'
 
@@ -98,7 +100,8 @@ def build(key, s):
     for t, n, u in s['parts']:
         h += '<li>' + esc(t) + '：<a href="' + u + '" target="_blank" rel="noopener">' + esc(n) + '</a></li>'
     sec.append(('11. 使っている部品', h + '</ul>'))
-    body = ''.join('<section><h2>' + esc(t) + '</h2>' + b + '</section>' for t, b in sec)
+    # 見出しの（…）は途中で改行しない（幅320で「外部／送信）」と割れていた）
+    body = ''.join('<section><h2>' + re.sub(r'（[^）]*）', lambda m: '<span class="nw">' + m.group(0) + '</span>', esc(t)) + '</h2>' + b + '</section>' for t, b in sec)
     css = f""":root{{--bg:{s['bg']};--card:{s['card']};--ink:{s['ink']};--sub:{s['sub']};--ac:{s['accent']};--line:{s['line']};--soft:{s['soft']}}}
 *{{box-sizing:border-box}}
 html{{-webkit-text-size-adjust:100%;touch-action:manipulation}}
@@ -110,6 +113,7 @@ h1{{font-size:24px;line-height:1.4;margin:10px 0 4px}}
 .date{{color:var(--sub);font-size:13.5px;margin:0 0 14px}}
 section{{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:14px 16px;margin:12px 0}}
 h2{{font-size:17px;margin:0 0 6px;color:var(--ac)}}
+.nw{{white-space:nowrap;display:inline-block}}
 p{{margin:6px 0}}
 .box{{background:var(--soft);border-radius:10px;padding:10px 12px}}
 .mail{{font-weight:700;user-select:all}}
