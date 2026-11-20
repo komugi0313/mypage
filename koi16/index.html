@@ -309,6 +309,17 @@ p,li,.say,.catch,.invite,small,.pct,.qtext{text-wrap:pretty}
 h1,h2,h3{text-wrap:balance}
 .mini a small{color:var(--sub);font-size:13px}
 .mini a .score{font-size:14px;color:#8A1246;font-weight:700}
+.cmp-pick{width:100%;min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:8px;border:2px solid var(--line);border-radius:14px;padding:6px 14px;background:#fff;color:var(--ink);font:inherit;font-size:16px;font-weight:700;text-align:left;cursor:pointer}
+.cmp-pick .cp-now{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+.cmp-pick .cp-now small{font-size:13px;color:var(--muted);font-weight:500}
+.cmp-pick .cp-ar{color:var(--rose);font-size:13px;flex:none}
+.cmp-pick[aria-expanded="true"]{border-color:var(--rose)}
+.cmp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+@media (max-width:374px){.cmp-grid{grid-template-columns:repeat(3,1fr)}}
+.cmp-t{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:44px;padding:6px 2px 8px;border:1.5px solid var(--line);border-radius:12px;background:var(--gp,#fff);color:var(--ink);font:inherit;cursor:pointer}
+.cmp-t b{font-size:11.5px;line-height:1.3;font-weight:700;text-align:center;word-break:keep-all;overflow-wrap:normal}
+.cmp-t small{font-size:10.5px;color:var(--muted)}
+.cmp-t.on{border:2.5px solid var(--rose);box-shadow:0 0 0 2px #fff inset}
 select{width:100%;min-height:48px;font-size:16px;border:2px solid var(--line);border-radius:12px;padding:8px 12px;background:#fff;color:var(--ink);font-family:inherit}
 .compat-out{margin-top:14px}
 .score-big{font-size:44px;font-weight:800;color:var(--rose);line-height:1.1}
@@ -3547,7 +3558,8 @@ function renderResult(code,mine,withCode){
 
   // 相性を調べる
   h+='<section class="card"><h2>好きな人・恋人との相性</h2><p class="muted">相手のタイプがわかれば、ここで選んでください。わからないときは、下の「相手にも送る」から診断してもらえます。</p>'+
-     '<select id="cmp-sel" aria-label="相手のタイプ"><option value="">相手のタイプを選ぶ</option>'+ORDER.map(function(o){return '<option value="'+o+'">'+T[o].e+' '+T[o].c+'（'+o+'）</option>';}).join('')+'</select><div id="cmp-out"></div></section>';
+     '<button type="button" class="cmp-pick" id="cmp-pick" aria-expanded="false" aria-controls="cmp-grid"><span class="cp-now" id="cp-now">相手のタイプを選ぶ</span><span class="cp-ar" aria-hidden="true">▼</span></button>'+
+     '<div class="cmp-grid hidden" id="cmp-grid" role="group" aria-label="相手のタイプ">'+ORDER.map(function(o){ var gk=o[2]+o[3]; return '<button type="button" class="cmp-t" data-cmp="'+o+'" aria-pressed="false" style="--gp:'+GPALE[gk]+'">'+art(o,52)+'<b>'+cname(o)+'</b><small>'+o+'</small></button>';}).join('')+'</div><div id="cmp-out"></div></section>';
 
   // シェア
   h+='<section class="card"><h2>結果をシェア・相手にも送る</h2><p class="muted">送った人が診断すると、あなたとの相性がその人の結果に出ます。</p>'+hookPickHTML(code)+'<div class="share">'+
@@ -3574,9 +3586,16 @@ function renderResult(code,mine,withCode){
 
   var v=$('v-result'); v.innerHTML=h; glueAll(v); show('v-result');
   v.dataset.code=code;
-  var sel=$('cmp-sel');
-  sel.addEventListener('change',function(){ $('cmp-out').innerHTML = sel.value?compatBlock(code,sel.value,'相性',isMine?code:(st.me&&st.me.code)):''; glueAll($('cmp-out')); });
-  if(!isMine && st.me && st.me.code){ sel.value=st.me.code; $('cmp-out').innerHTML=compatBlock(code,st.me.code,'このタイプと、あなた（'+T[st.me.code].c+'）',st.me.code); glueAll($('cmp-out')); }
+  // 相手のタイプは、キャラクターの絵のボタンから選ぶ（鑑定者本人 2026-11-20「選択のところは作ったイラストに」）
+  var cpBtn=$('cmp-pick'), cpGrid=$('cmp-grid');
+  var cpMark=function(o){ $('cp-now').innerHTML = o ? art(o,40)+'<b>'+cname(o)+'</b><small>（'+o+'）</small>' : '相手のタイプを選ぶ';
+    Array.prototype.forEach.call(cpGrid.querySelectorAll('.cmp-t'),function(x){ var on=x.getAttribute('data-cmp')===o; x.classList.toggle('on',on); x.setAttribute('aria-pressed',on); }); };
+  var cpOpen=function(on){ cpGrid.classList.toggle('hidden',!on); cpBtn.setAttribute('aria-expanded',on); };
+  cpBtn.addEventListener('click',function(){ cpOpen(cpGrid.classList.contains('hidden')); });
+  cpGrid.addEventListener('click',function(ev){ var t=ev.target.closest('.cmp-t'); if(!t) return; var o=t.getAttribute('data-cmp');
+    cpMark(o); cpOpen(false); $('cmp-out').innerHTML=compatBlock(code,o,'相性',isMine?code:(st.me&&st.me.code)); glueAll($('cmp-out'));
+    try{ cpBtn.scrollIntoView({block:'start',behavior:'smooth'}); }catch(e){} });
+  if(!isMine && st.me && st.me.code){ cpMark(st.me.code); $('cmp-out').innerHTML=compatBlock(code,st.me.code,'このタイプと、あなた（'+T[st.me.code].c+'）',st.me.code); glueAll($('cmp-out')); }
 }
 function miniCard(x,same){ var t=T[x.o]; return '<a href="?t='+x.o+'" data-type="'+x.o+'">'+(same?'<span class="mini-same">同じタイプ</span>':'')+art(x.o,56)+'<b>'+cname(x.o)+'</b><small>'+fname(x.o)+'・'+x.o+'</small><div class="score">相性 '+x.c.score+'点・'+esc(x.c.label)+'</div></a>'; }
 
