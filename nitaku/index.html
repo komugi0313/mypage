@@ -5754,8 +5754,12 @@ setMode('love'); lvBox();
       if(ok){ out.push(cur); cur=w; } else cur+=w; pv=w; }); if(cur) out.push(cur);
     while(out.length>1&&len(out[out.length-1])<3){ var l=out.pop(); out[out.length-1]+=l; } return out; }
   function fit(root){ (root||document).querySelectorAll('j-p').forEach(function(e){ if(e.style.whiteSpace!=='nowrap'||e.dataset.fit||!e.offsetParent) return; var bw=boxW(e); if(!bw||e.getBoundingClientRect().width<=bw+0.5) return;
-      var ps=piece3(e.textContent); e.dataset.fit='1'; if(ps.length<2){ e.style.whiteSpace=''; return; }
+      var ps=piece3(e.textContent); e.dataset.fit='1'; if(ps.length<2 && /・/.test(e.textContent)) ps=e.textContent.split(/(?<=・)/); if(ps.length<2) ps=chunk3(e.textContent);   /* 名前の並び「みずきちゃん・ゆか」は「・」のあとで */ if(ps.length<2){ e.style.whiteSpace=''; return; }
       e.style.whiteSpace=''; e.textContent=''; ps.forEach(function(p,i){ if(i) e.appendChild(document.createElement('wbr')); var s=document.createElement('span'); s.style.whiteSpace='nowrap'; s.textContent=p; e.appendChild(s); }); }); }
+  // 切れ目が見つからないとき：言葉の切れ目で3文字以上ずつに分け、最後も3文字以上に（「そっけなくな／る」を作らない）
+  function chunk3(p){ var ws=[],it=seg.segment(p)[Symbol.iterator](),r; while(!(r=it.next()).done) ws.push(r.value.segment); var out=[],cur='';
+    ws.forEach(function(w){ if(cur&&len(cur)>=3&&!PUN.test(w)&&!/^[んっゃゅょぁぃぅぇぉゎー]/.test(w)){ out.push(cur); cur=w; } else cur+=w; }); if(cur) out.push(cur);
+    while(out.length>1&&len(out[out.length-1])<3){ var l=out.pop(); out[out.length-1]+=l; } return out; }
   window.jwFit=fit;
   var fitT=null; function fitSoon(){ clearTimeout(fitT); fitT=setTimeout(function(){ fit(document); },60); }
   window.addEventListener('resize', fitSoon);
