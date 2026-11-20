@@ -406,12 +406,17 @@ function talkItems(G){
   if(ps.length===2){const r=pairStat(ps[0],ps[1],G.qs);return r.diff.slice().sort((x,y)=>wt(y)-wt(x)).slice(0,5)}
   return G.qs.map((k,i)=>{const c=[0,0];ps.forEach(p=>{const a=p.ans[i];if(a&&a.o>=0&&a.o<2)c[a.o]++});return{i,c}}).filter(x=>x.c[0]&&x.c[1])
     .sort((x,y)=>wt(y.i)-wt(x.i)||Math.abs(x.c[0]-x.c[1])-Math.abs(y.c[0]-y.c[1])).slice(0,5).map(x=>x.i)}
+// 答えのうしろの★が1つだけ次の行に落ちないよう、最後の言葉と★をひとまとめにする（2026-11-21）
+const ANS_SEG=window.Intl&&Intl.Segmenter?new Intl.Segmenter('ja',{granularity:'word'}):null;
+function ansSt(t,st){t=String(t);if(!st)return esc(t);let h=t,tl='';
+  const cm=t.lastIndexOf('、');if(cm>0&&t.length-cm-1>=2&&t.length-cm-1<=8){h=t.slice(0,cm+1);tl=t.slice(cm+1)}else if(ANS_SEG){const ws=[...ANS_SEG.segment(t)].map(x=>x.segment);tl=ws.pop()||'';while(ws.length&&tl.replace(/[、。！？]/g,'').length<3)tl=ws.pop()+tl;h=ws.join('')}else{h=t.slice(0,-3);tl=t.slice(-3)}
+  return `${esc(h)}<span class="nw" data-nojw>${esc(tl)}<span class="tk-st">★</span></span>`}
 function talkHTML(G,nm){
   const ps=G.players,its=talkItems(G),two=ps.length===2,me=ps.find(p=>p.id===G.me),tid=talkId(G),done=new Set(talkedOf(tid));
   if(its.length<2)return '';
   if(!its.length)return `<section class="card" id="talk"><p class="label">${two?'2人で':'みんなで'}話しておきたいこと</p><p class="hint">答えが反対になった問題はありませんでした。</p></section>`;
   const row=(i,n)=>{const k=G.qs[i],key=QKEY[k].slice(0,5),ok=done.has(key);
-    const ws=ansGroups(G,i).map(({v,who})=>`<span class="tkr"><span class="tkw">${G.anon?`<span class="nmc pn">${who.length}人</span>`:who.map(p=>nmChip(G,p,p===me?'あなた':p.name)).join('')}</span><span class="tka"><span>${esc(ans(v,k))}${who.some(p=>p.ans[i].st&&v<2)?'\u2060<span class="tk-st">★</span>':''}</span></span></span>`).join('');
+    const ws=ansGroups(G,i).map(({v,who})=>`<span class="tkr"><span class="tkw">${G.anon?`<span class="nmc pn">${who.length}人</span>`:who.map(p=>nmChip(G,p,p===me?'あなた':p.name)).join('')}</span><span class="tka"><span>${ansSt(ans(v,k),who.some(p=>p.ans[i].st&&v<2))}</span></span></span>`).join('');
     const ay=ayOf(k,two),hint='';   // だれから聞くかの1文は出さない（答えは名前の札で見え、聞き方はコツ・主役のカードにある。鑑定者本人 2026-11-20「はい」）
     return `<li class="${ok?'ok':''}"><b>${esc(Q[k][1])}</b><span class="tkg">${ws}</span>${hint?`<span class="tph">${hint}</span>`:''}${ay?`<span class="ayu"><b>${two?'歩み寄りの案':'みんなの歩み寄りの案'}</b>${esc(ay)}</span>`:''}<button class="talked" type="button" data-k="${key}" aria-pressed="${ok}">${ok?'✓ 話した':'話した'}</button></li>`};
   const rest=its.slice(1),top=rest.slice(0,2),more=rest.slice(2),ul=(xs,o)=>`<ul class="slist tk${two?'':' tkm'}">${xs.map((x,j)=>row(x,j+o)).join('')}</ul>`;
@@ -490,7 +495,7 @@ function stepsHTML(G){const ps=G.players,two=ps.length===2,me=ps.find(p=>p.id===
   if(!its.length)return'';
   const i=its[0],k=G.qs[i],st=ps.some(p=>p.ans[i]&&p.ans[i].st&&p.ans[i].o<2),gs=ansGroups(G,i);
   const side=g=>{const c=G.anon?'pn':g.who.length===1?pcls(G,g.who[0]):'pm';
-    return `<div class="vside ${c}"><span class="vw">${G.anon?g.who.length+'人':g.who.map(p=>p===me?'あなた':esc(p.name)).join('・')}</span><span class="va">${esc(ans(g.v,k))}</span></div>`};
+    return `<div class="vside ${c}"><span class="vw">${G.anon?g.who.length+'人':g.who.map((p,j,l)=>`<span class="nw" data-nojw>${p===me?'あなた':esc(p.name)}${j<l.length-1?'・':''}</span>`).join('')}</span><span class="va">${esc(ans(g.v,k))}</span></div>`};
   const vlong=gs.some(g=>ans(g.v,k).replace(/[、。（）「」\s]/g,'').length>10);
   const vs=gs.length===2&&!vlong?`<div class="vs2">${side(gs[0])}<span class="vmid" aria-hidden="true">⇔</span>${side(gs[1])}</div>`:`<div class="vsn">${gs.map(side).join('')}</div>`;
   const ay=ayOf(k,two),key=QKEY[k].slice(0,5),ok=talkedOf(talkId(G)).includes(key);
@@ -611,7 +616,7 @@ function twoFolds(G,trows,nm,r){
     out+=foldBox('テーマ別のシンクロ率',tz,(keep.length?themeHTML(keep,'2人'):'')+few)}
   if(G.anon){const ax=axHTML(G,me?[me]:G.players,nm);if(ax)out+=foldBox('価値観のタイプ',me?'あなたの位置':'2人の位置',ax)}
   if(r.starN){const row=(i,cls)=>{const k=G.qs[i],aa=A.ans[i],bb=B.ans[i];
-      const who=(P,x)=>(G.anon&&me&&P!==me)?'':`<span class="tkr"><span class="tkw">${nmChip(G,P,P===me?'あなた':P.name)}</span><span class="tka"><span>${esc(ans(x.o,k))}${x.st?'\u2060<span class="tk-st">★</span>':''}</span></span></span>`;
+      const who=(P,x)=>(G.anon&&me&&P!==me)?'':`<span class="tkr"><span class="tkw">${nmChip(G,P,P===me?'あなた':P.name)}</span><span class="tka"><span>${ansSt(ans(x.o,k),x.st)}</span></span></span>`;
       return `<li class="${cls}"><b>${esc(Q[k][1])}</b><span class="tkg">${who(A,aa)}${who(B,bb)}</span></li>`};
     const many=r.starDiff.length>=2&&r.starDiff.length>=r.starSame.length+r.starAdj.length;
     const verdict=!r.starDiff.length?`<p class="good">大事なところは、ちがいがありません</p>`:many?`<p class="warn">大事なところで、考え方がちがうことが多めです。この${r.starDiff.length}問は、先にゆっくり話しておくと安心です</p>`:`<p class="warn">大事なところで、ちがいが${r.starDiff.length}問あります。ここは先に話しておくと安心です</p>`;
@@ -873,6 +878,8 @@ function bindTail(G){
 const ansCode=a=>!a||a.o<0?(a&&a.u?'u':'-'):String(a.o+(a.st&&a.o<2?3:0));
 const ansDecode=c=>c==='-'?{o:-1,st:0,ms:0}:c==='u'?{o:-1,u:1,st:0,ms:0}:{o:(+c)%3,st:+c>=3?1:0,ms:0};
 const linkOf=(kind,parts)=>siteUrl()+'#'+kind+'='+parts.map(x=>encodeURIComponent(x)).join('~');
+// 名前に「さん」を付ける（もう「くん」「ちゃん」「さん」で終わる名前には付けない。「けんたろうくんさん」になっていた。2026-11-21）
+const san=n=>/(さん|くん|ちゃん|様|先生)$/.test(String(n).trim())?String(n):n+'さん';
 const keysOf=qs=>qs.map(k=>QKEY[k].slice(0,5)).join('.');
 const codesOf=(qs,ans)=>qs.map((k,i)=>ansCode(ans[i])).join('');
 function withLink(name,qs,ans,id){return id?linkOf('with',['2',name,keysOf(qs),codesOf(qs,ans),id]):linkOf('with',['1',name,keysOf(qs),codesOf(qs,ans)])}
@@ -887,7 +894,7 @@ function parseLink(){
   const qs=(p[3]||'').split('.').map(qi);if(!ok(qs,p[4]||'',p[5]||''))return{bad:1};
   return{kind:'pair',qs,A:{id:'a',name:nm(p[1],'ひとり目'),ans:[...p[4]].map(ansDecode)},B:{id:'b',name:nm(p[2],'ふたり目'),ans:[...p[5]].map(ansDecode)}}}
 const minsOf=n=>Math.max(3,Math.round(n/5));   // 10問＝約3分・30問＝約6分（トップの表示とそろえる。2026-11-20）
-function inviteText(name,n){return `${name}さんから、アイ・シンクの答え合わせのお誘いです！\n同じ${n}問に答えると、2人の価値観がどれだけ重なるかがわかります（約${minsOf(n)}分・無料）。`}
+function inviteText(name,n){return `${san(name)}から、アイ・シンクの答え合わせのお誘いです！\n同じ${n}問に答えると、2人の価値観がどれだけ重なるかがわかります（約${minsOf(n)}分・無料）。`}
 // ひとりの結果の下：この問題で、だれかと答え合わせ
 function inviteCard(G,p){const n=G.qs.length,nm=['あなた','ともだち'].includes(p.name)?(store('kv_name')||''):p.name;
   return `<section class="hero-pt invite-hero"><span class="hp-tag">次は、この${n}問で答え合わせ</span>
@@ -932,7 +939,7 @@ function bindInvite(G){const t3g=$('t3-go');if(t3g)t3g.onclick=()=>{const h=docu
   const il=$('inv-line');if(il){const set=()=>{const x=inv();il.href=lineUrl(x.t,x.u)};set();il.addEventListener('click',e=>{if(!need(e))set()});const nmI=$('inv-name');if(nmI)nmI.addEventListener('input',set)}
   const is=$('inv-share');if(is)is.onclick=()=>{if(need())return;const x=inv();sendVia(x.t,x.u,$('inv-msg'))};
   if(G.pair)bindBack(G)}
-function bindBack(G){const A=G.players[0],me=G.players.find(p=>p.id===G.me)||G.players[1],pct=pairStat(A,me,G.qs).pct,t=`${me.name}さんが答え終わりました！\n2人のシンクロ率は ${pct}% でした。くわしい結果はこちら`,u=pairLink(A,me,G.qs);
+function bindBack(G){const A=G.players[0],me=G.players.find(p=>p.id===G.me)||G.players[1],pct=pairStat(A,me,G.qs).pct,t=`${san(me.name)}が答え終わりました！\n2人のシンクロ率は ${pct}% でした。くわしい結果はこちら`,u=pairLink(A,me,G.qs);
     const bl=$('back-line');if(bl)bl.href=lineUrl(t,u);const bs=$('back-share');if(bs)bs.onclick=()=>sendVia(t,u,$('back-msg'))}
 // 答え合わせのリンクを開いた人：説明 → ニックネーム → 同じ問題に答える
 function withStart(x){
@@ -1343,7 +1350,7 @@ async function sync(){
     const key='lobby'+ps.map(p=>p.id+':'+p.name).join('|');
     if(key!==R.key){
       // 新しく入ってきた人を知らせる（最初に開いたときは知らせない）
-      if(R.key.startsWith('lobby')){const before=R.seenIds||[];ps.filter(p=>p.id!==PID&&!before.includes(p.id)).forEach(p=>{toast((room.kind==='kon'?p.no+'番':p.name)+'さんが入りました');try{navigator.vibrate&&navigator.vibrate(120)}catch(e){}})}
+      if(R.key.startsWith('lobby')){const before=R.seenIds||[];ps.filter(p=>p.id!==PID&&!before.includes(p.id)).forEach(p=>{toast((room.kind==='kon'?p.no+'番さん':san(p.name))+'が入りました');try{navigator.vibrate&&navigator.vibrate(120)}catch(e){}})}
       R.seenIds=ps.map(p=>p.id);R.key=key;room.kind==='kon'?konWait():lobby()}
     return}
   if(room.phase==='play'){
@@ -1370,7 +1377,7 @@ async function sync(){
     let use=ps,gone=[];const keep=ps.filter(p=>p.id===PID||cnt(p)*2>=nq);if(keep.length>=2&&keep.length<ps.length){use=keep;gone=ps.filter(p=>!keep.includes(p))}
     showResult({players:use.map(p=>({id:p.id,name:p.name,ans:room.qs.map((q,i)=>rAns(p,i))})),qs:room.qs,me:PID,anon:!!room.anon});
     if(gone.length){const sc=app.querySelector('.score');if(sc)sc.insertAdjacentHTML('afterend',`<p class="gone-note">途中で抜けた人：${room.anon?gone.length+'人':gone.map(p=>esc(p.name)+'さん（'+cnt(p)+'／'+nq+'問）').join('、')}。答えた問題が半分より少ないので、結果には入れていません。</p>`)}
-    if(before){ps.filter(p=>p.id!==PID&&!before.includes(p.id)).forEach(p=>toast(p.name+'さんが答えて、結果に加わりました'))}
+    if(before){ps.filter(p=>p.id!==PID&&!before.includes(p.id)).forEach(p=>toast(san(p.name)+'が答えて、結果に加わりました'))}
     roomLaterCard(ps,room)}
 }
 function countdown(qk,go){
@@ -1456,7 +1463,7 @@ function lobby(){
     <button class="btn" id="st" ${ps.length>=2?'':'disabled'}>${ps.length>=2?`スタート（${ps.length}人で）`:'スタート（2人そろったら）'}</button>
     <p class="hint live-note">一緒に答えると、おたがいの「悩み中…」「決めた！」がリアルタイムで見えます。</p>
     ${ps.length<2?`<details class="sfold later-fold"><summary>今すぐそろわないときは</summary><p class="hint later-note">先にひとりで答えておくこともできます。部屋ができてから10日のあいだは、あとからリンクを開いた人も同じ問題に答えて、結果に加わります（部屋番号で入れるのは12時間まで）。</p><button class="btn ghost small" id="st1" style="align-self:stretch">先にひとりで答える</button></details>`:''}
-    <p class="hint">${room.len===30?'しっかり版（30問・★ゆずれない）':'簡易版（10問）'}・話題は${room.topic==='party'?'恋愛多め':'暮らし・価値観'}${room.anon?'・名前は見せない':''}</p>
+    <p class="hint">${room.len===30?'しっかり版（30問・★ゆずれない）':'簡易版（10問）'}・<span class="nw" data-nojw>話題は${room.topic==='party'?'恋愛多め':'暮らし・価値観'}</span>${room.anon?'・名前は見せない':''}</p>
   </section>
   <button class="btn ghost small" id="home">部屋を出てトップへ</button>`);
   loadQR().then(()=>{const el=$('qr');if(!el)return;el.innerHTML='';new QRCode(el,{text:url,width:180,height:180,colorDark:'#22253A',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M})}).catch(()=>{const el=$('qr');if(el)el.hidden=true});
@@ -1527,7 +1534,7 @@ async function lateJoin(code,room){
   const db=await getDb();let ps=[];try{const q=await db.collection('rooms/'+code+'/players').get();ps=q.docs.map(d=>({id:d.id,name:String((d.data()||{}).name||''),ans:(d.data()||{}).ans||{},round:(d.data()||{}).round||1}))}catch(e){}
   if(ps.some(p=>p.id===PID)){enterRoom(code);return}
   if(ps.length>=MAXP){view(`<section class="card hand"><p class="big">この部屋は、もう${MAXP}人そろっています</p><button class="btn" id="tp" style="align-self:stretch">トップへ</button></section>`);$('tp').onclick=goTop;return}
-  const n=(room.qs||[]).length,nm=ps.map(p=>esc(p.name)+'さん').slice(0,3).join('・')+(ps.length>3?' ほか':'');
+  const n=(room.qs||[]).length,nm=ps.slice(0,3).map(p=>`<span class="nw" data-nojw>${esc(san(p.name))}${ps.length>1?'・':''}</span>`).join('').replace(/・<\/span>$/,'</span>')+(ps.length>3?' ほか':'');
   view(`${tnav('lj-top2')}<section class="card hand"><img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
     <p class="big">${nm}が、もう答えています</p>
     <p class="hint">同じ${n}問に答えると、みんなの結果にあなたも加わります（1問15秒・約${minsOf(n)}分）。答えは、答え終わるまで見えません。</p>
