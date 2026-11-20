@@ -201,6 +201,22 @@ ok('UX③：鑑定書の章の見出しのすぐ下に「恋愛での持ち味�
   ok('恋愛②：二股・両方と付き合う相談はすすめない', L2.twoOK);
   ok('恋愛②：「別れた彼とやり直せますか」を別れるかの相談にせず、1行目で見込みに答える', L2.reOK, L2.re);
   ok('恋愛②：1人の「一緒になれるか」で「可能性は十分」と言い切らない（pkLeadFix が止まらない）', L2.oneOK, L2.one); }
+{ const G=await p.evaluate(()=>{ try{ const pl=document.documentElement.classList.contains('bg-on'), k0=chart, k1=chartB; const mk=(y,m,d,h,sex)=>baziCompute({year:y,month:m,day:d,hour:h,minute:0,sex},0,'none');
+    const W=mk(1981,6,10,22,'female'), M=mk(2006,6,7,12,'male'); chart=W; chartB=M; const Q='かなりの年齢差がありますが、この2人の関係はどうなるか教えてください。';
+    const kind=pkCompatQKind(Q)==='future'&&pkCompatQKind('15歳年下の彼との相性が気になります')==='future';
+    const S=pkCompatSit(W,M,Q,pl)||{}, lead=S.lead||'', leadOK=/年齢差（約2[45]歳）/.test(lead)&&/流れ/.test(lead)&&/2人とも縁が動く月/.test(lead.split('。').slice(1).join('。')+lead)&&!/やめ|心配|まわりの目|介護/.test(lead);
+    const ag=S.ag||{}, agOK=(ag.lines||[]).join('').match(/年齢差は約\d+歳/)&&/役割/.test((ag.lines||[]).join(''))&&/(大運|10年)/.test((ag.lines||[]).join(''));
+    const T='\n【お客様へのお伝え方】\n本文。', lf=pkLeadFix('2人はこれから少しずつ距離が縮まります。'+T,W,Q,true).split('\n')[0], lfOK=/年齢差/.test(lf);
+    const en=pkEnsureAgeGap('1行目です。\n\n本文です。\n【どうすればよいか】\n・話し合う',W,M,Q), enOK=(pl?/【年の差について】/:/【年齢差について】/).test(en)&&!(pl&&/大運|律音|日干/.test(en.split('【年の差について】')[1].split('【')[0]));
+    const tx=pkCompatSitText(W,M,Q), txOK=/年齢差について書く材料/.test(tx)&&/全体の見通し/.test(tx);
+    const no=pkEnsureAgeGap('1行目。\n\n本文。',W,M,'2人の相性はどうですか'), noOK=!/年齢差について/.test(no);
+    chart=k0; chartB=k1; return {kind,leadOK:!!leadOK,lead:lead.slice(0,90),agOK:!!agOK,lfOK,lf:lf.slice(0,60),enOK,txOK,noOK}; }catch(e){ return {err:String(e)}; } });
+  ok('年齢差：年齢差の相談を「どうなるか」として見分ける', G.kind, G.err);
+  ok('年齢差：1行目で年齢差にふれ、全体の見通し→2人とも縁が動く月で答える（説教しない）', G.leadOK, G.lead||G.err);
+  ok('年齢差：材料に年齢・共通点・役割・いまの10年', G.agOK);
+  ok('年齢差：1行目が年齢差にふれていなければツールの1行目に', G.lfOK, G.lf);
+  ok('年齢差：【年齢差について】（ビギナーは【年の差について】・専門用語なし）を書き足す／年齢差の相談でなければ足さない', G.enOK&&G.noOK);
+  ok('年齢差：文章作成への渡しに年齢差の材料と「全体の見通し」', G.txOK); }
 { const A=await p.evaluate(()=>{ try{ const pl=document.documentElement.classList.contains('bg-on'), k0=chart, k1=chartB; const W=baziCompute({year:1981,month:6,day:10,hour:22,minute:0,sex:'female'},0,'none'); chart=W; chartB=null;
     const Qs=['既婚者の彼と結ばれますか','不倫中の彼が離婚して一緒になれますか','彼を奥さんから略奪できますか','彼に離婚させられますか','奥さんのいる彼といつ一緒になれますか'];
     const safe=Qs.filter(q=>pkSafeKind(q,30)||dangerKind(q)||worryCaveat(q)), love=Qs.filter(q=>!pkIsLoveQ(q)), kind=Qs.filter(q=>pkCompatQKind(q)!=='fate');
