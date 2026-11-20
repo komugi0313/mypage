@@ -69,7 +69,12 @@
     });
   }
   // 枠より広い1つのまとまり（せまい枠の「かっこいい・かわいい姿」など）は、枠からはみ出さないよう、言葉の切れ目で分ける（2026-11-21）
-  function boxW(e){ var a=e.parentNode; while(a&&a.nodeType===1){ var cs=getComputedStyle(a); if(!/^(inline|contents)$/.test(cs.display)) return a.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight); a=a.parentNode; } return 0; }
+  function cw(a){ var cs=getComputedStyle(a); return a.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight); }
+  function boxW(e){ var a=e.parentNode; while(a&&a.nodeType===1){ var cs=getComputedStyle(a); if(!/^(inline|contents)$/.test(cs.display)){
+      // 横に並ぶ箱（flex）の中の部品は、中身に合わせてのびるので、親の箱の幅からとなりの部品の幅とすき間を引いて測る
+      var pa=a.parentNode,ps=pa&&pa.nodeType===1?getComputedStyle(pa):null;
+      if(ps&&/flex/.test(ps.display)&&!/column/.test(ps.flexDirection)&&ps.flexWrap==='nowrap'){ var w=cw(pa),n=0; [].forEach.call(pa.children,function(c){ if(c!==a&&getComputedStyle(c).position!=='absolute'){ var r=c.getBoundingClientRect(); if(r.width){ w-=r.width; n++; } } }); w-=n*(parseFloat(ps.columnGap)||0); return Math.min(cw(a),w-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight)-parseFloat(cs.marginLeft||0)-parseFloat(cs.marginRight||0)); }
+      return cw(a); } a=a.parentNode; } return 0; }
   function fit(root){
     var js=(root||document.body).querySelectorAll('j-p'); var big=[];
     for(var i=0;i<js.length;i++){ var j=js[i]; if(j.style.whiteSpace!=='nowrap') continue; var w=j.getBoundingClientRect().width; if(!w) continue; var bw=boxW(j); if(bw>0&&w>bw+1) big.push(j); }
