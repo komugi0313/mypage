@@ -164,7 +164,7 @@ function goTop(){
     <div id="m-opts" class="stack">
     <p class="label">長さは？</p>
     ${seg('len',[[10,'簡易版<br><small>10問・さくっと</small>'],[30,'しっかり版<br><small>30問・★ゆずれない</small>']])}
-    <div class="star-what" id="star-what"${CFG.len===30?'':' hidden'}><b>★ゆずれない とは？</b><span>「ここは相手に合わせられない」と思う問題に付ける印です。</span><span>結果で、2人のゆずれないところをくらべます。点数には入りません。</span></div>
+    <div class="star-what" id="star-what"${CFG.len===30?'':' hidden'}><b>★ゆずれない とは？</b><span>「ここは相手に合わせられない」と思う問題に付ける印です。</span><span>結果で、おたがいのゆずれないところをくらべます。点数には入りません。</span></div>
     ${PACK?'':`<p class="label">話題は？</p>
     ${seg('topic',[['all','暮らし・価値観'],['party','恋愛多め']])}`}
     <div id="m-anon" class="stack">
@@ -389,10 +389,10 @@ function talkHTML(G,nm){
   const row=(i,n)=>{const k=G.qs[i],key=QKEY[k].slice(0,5),ok=done.has(key);
     const ws=ansGroups(G,i).map(({v,who})=>`<span class="tkr"><span class="tkw">${G.anon?`<span class="nmc pn">${who.length}人</span>`:who.map(p=>nmChip(G,p,p===me?'あなた':p.name)).join('')}</span><span class="tka">${esc(ans(v,k))}${who.some(p=>p.ans[i].st&&v<2)?' ★':''}</span></span>`).join('');
     const ay=ayOf(k,two),hint='';   // だれから聞くかの1文は出さない（答えは名前の札で見え、聞き方はコツ・主役のカードにある。鑑定者本人 2026-11-20「はい」）
-    return `<li class="${ok?'ok':''}">${two?'':`<span class="tkn">${n+2}</span>`}<b>${esc(Q[k][1])}</b>${ws}${hint?`<span class="tph">${hint}</span>`:''}${ay?`<span class="ayu"><b>${two?'歩み寄りの案':'みんなの歩み寄りの案'}</b>${esc(ay)}</span>`:''}<button class="talked" type="button" data-k="${key}" aria-pressed="${ok}">${ok?'✓ 話した':'話した'}</button></li>`};
+    return `<li class="${ok?'ok':''}"><b>${esc(Q[k][1])}</b>${ws}${hint?`<span class="tph">${hint}</span>`:''}${ay?`<span class="ayu"><b>${two?'歩み寄りの案':'みんなの歩み寄りの案'}</b>${esc(ay)}</span>`:''}<button class="talked" type="button" data-k="${key}" aria-pressed="${ok}">${ok?'✓ 話した':'話した'}</button></li>`};
   const rest=its.slice(1),top=rest.slice(0,2),more=rest.slice(2),ul=(xs,o)=>`<ul class="slist tk${two?'':' tkm'}">${xs.map((x,j)=>row(x,j+o)).join('')}</ul>`;
   return `<section class="card pt-a" id="talk"><p class="pt-h"><em>歩み寄り</em>${two?'ほかに話しておきたいこと':'みんなで話しておきたいこと'}</p>
-    <p class="hint">${(()=>{const dn=two?pairStat(ps[0],ps[1],G.qs).diff.length:0;return two?(dn>its.length?`ちがった${dn}問のうち、大事な${its.length}問です。`:'')+'「どうしてそう思う？」から聞いてみてください。':'気になる問題から話してみてください。'})()}</p>${its.slice(1).some(i=>ps.some(p=>p.ans[i]&&p.ans[i].st&&p.ans[i].o>=0&&p.ans[i].o<2))?'<p class="stl"><i>★</i>＝ゆずれない（答える前に付けた印）</p>':''}
+    <p class="hint">${(()=>{const dn=two?pairStat(ps[0],ps[1],G.qs).diff.length:0;return two?(dn>its.length?`ちがった${dn}問のうち、上の1問とあわせて、大事な${its.length}問です。`:'')+'「どうしてそう思う？」から聞いてみてください。':'気になる問題から話してみてください。'})()}</p>${its.slice(1).some(i=>ps.some(p=>p.ans[i]&&p.ans[i].st&&p.ans[i].o>=0&&p.ans[i].o<2))?'<p class="stl"><i>★</i>＝ゆずれない（答える前に付けた印）</p>':''}
     ${ul(top,0)}${more.length?`<details class="sfold"><summary>ほかに${more.length}問を見る</summary>${ul(more,2)}</details>`:''}
     <p class="tk-cnt" id="tkcnt">話した問題　${its.filter(i=>done.has(QKEY[G.qs[i]].slice(0,5))).length}／${its.length}</p>
     <p class="hint tk-note">話したら「話した」を押しておくと、このスマホに残ります。</p></section>`}
@@ -679,7 +679,7 @@ function showResultCore(G){
   if(starP.length)h+=foldBox('★ ゆずれないこと',starP.slice().sort((a,b)=>b.xs.length-a.xs.length).slice(0,2).map(x=>`<em>${esc(x.p===me?'あなた':x.p.name)} ${x.xs.length}問</em>`).join('・')+(starP.length>2?'　ほか':''),starCnt(G)+starP.map(x=>`<div class="tori"><p class="sub">${nm(x.p)}</p><ul>${x.xs.map(y=>`<li>${esc(Q[y.k][1])} ${esc(ans(y.a.o,y.k))}</li>`).join('')}</ul></div>`).join(''));
   const qst=G.qs.map((k,i)=>{let ms=0,m=0;ps.forEach(p=>{const a=p.ans[i];if(!a)return;if(a.o>=0||a.to){ms+=a.ms;m++}});return{i,k,avg:m?ms/m:0}});
   const hard=qst.slice().sort((a,b)=>b.avg-a.avg)[0],timed=hard&&hard.avg>0&&ps.every(p=>G.qs.some((k,i)=>p.ans[i]&&p.ans[i].ms>0));
-  if(timed&&hard.avg>=PONDER_MIN)h+=foldBox('いちばん悩んだ問題','',`<div class="ponder"><b>${esc(Q[hard.k][1])}</b><span>平均 <em>${sec(hard.avg)}</em> 秒</span></div>`);
+  if(timed&&hard.avg>=PONDER_MIN)h+=foldBox('いちばん悩んだ問題',`${esc(Q[hard.k][1])}（平均${sec(hard.avg)}秒）`,`<div class="ponder"><b>${esc(Q[hard.k][1])}</b><span>平均 <em>${sec(hard.avg)}</em> 秒</span></div>`);
   const all=G.qs.map((k,i)=>`<li><b>${esc(Q[k][1])}</b>${[0,1,2,3].map(v=>{const who=ps.filter(p=>oOf(p.ans[i])===v);return who.length?`<span class="ansrow"><i class="o${v}">${esc(ans(v,k))}</i>${G.anon?who.length+'人':who.map(nm).join('、')}</span>`:''}).join('')}</li>`).join('');
   h+=foldBox('みんなの答えを1問ずつ','全'+G.qs.length+'問',`<ul class="list all">${all}</ul>`);
   view(h+VS_SLOT+tailHTML(G));done();
@@ -743,7 +743,7 @@ function talk3HTML(G,t3){if(!t3.length)return'';
   return `<section class="card talk3"><p class="pt-h"><em>答え合わせの前に</em>${isFriendSet(G.qs)?'友だちに聞いてみたい':'恋人と話しておきたい'}${t3.length}問</p>
     <p class="hint">あなたの答え（★ゆずれない・大事な問題）から、相手とちがうと困りやすい問題を選びました。先に聞いておくと安心です。</p>${t3.some(x=>x.a.st)?'<p class="stl"><i>★</i>＝ゆずれない（答える前に付けた印）</p>':''}
     <ol class="t3-l">${t3.map(x=>{const th=CATS[Q[x.k][0]][0];return `<li><b>${esc(Q[x.k][1])}</b><span class="t3-a">あなた：${x.a.st?'<i class="mk-s">★</i>':''}${esc(ans(x.a.o,x.k))}</span><small>${esc(TALK3_WHY[th]||'')}</small></li>`}).join('')}</ol>
-    <button class="btn ghost small" id="t3-go" type="button"><span class="nw">この${t3.length}問もふくめて、</span><span class="nw">答え合わせに誘う ↓</span></button></section>`}
+    <button class="btn ghost small" id="t3-go" type="button"><span class="nw">この${t3.length}問で、</span><span class="nw">答え合わせに誘う ↓</span></button></section>`}
 function soloHTML(G){
   const p=G.players[0],xs=G.qs.map((k,i)=>({k,i,a:p.ans[i]})).filter(x=>x.a&&x.a.o>=0),sec=ms=>(ms/1000).toFixed(1);
   const firm=xs.filter(x=>x.a.o<2),flex=xs.filter(x=>isFlex(x.a.o,x.k)),mid=xs.filter(x=>x.a.o===2&&!isFlex(x.a.o,x.k)),star=firm.filter(x=>x.a.st);
@@ -775,7 +775,7 @@ function soloHTML(G){
     ${imp.length?`<p class="hint">お金・暮らし・将来など、大事な問題で選んだ答えです。</p>
     ${imp.some(x=>x.a.st)?'<p class="stl"><i>★</i>＝ゆずれない（答える前に付けた印）</p>':''}<ul class="mk-l">${imp.map(x=>`<li><b>${esc(Q[x.k][1])}</b><span class="mk-a">${x.a.st?'<i class="mk-s">★</i>':''}${esc(ans(x.a.o,x.k))}</span></li>`).join('')}</ul>
     <p class="hint mk-n">相手と答え合わせすると、同じ問題の相手の答えと並べて見られます。</p>`:''}
-    ${byT.length>1?`<div class="mk-t">${byT[0].a.ms>=PONDER_MIN?`<div><span>いちばん悩んだ</span><b>${esc(Q[byT[0].k][1])}</b><em>${sec(byT[0].a.ms)}秒</em></div>`:''}<div class="qk"><span>いちばん即決</span><b>${esc(Q[byT[byT.length-1].k][1])}</b><em>${SECF(byT[byT.length-1].a.ms)}</em></div></div>`:''}</section>`:'';
+    ${byT.length>1?`<div class="mk-t">${byT[0].a.ms>=PONDER_MIN?`<div><span>いちばん悩んだ</span><b>${esc(Q[byT[0].k][1])}</b><em>${sec(byT[0].a.ms)}秒</em><i>→ ${esc(ans(byT[0].a.o,byT[0].k))}</i></div>`:''}<div class="qk"><span>いちばん即決</span><b>${esc(Q[byT[byT.length-1].k][1])}</b><em>${SECF(byT[byT.length-1].a.ms)}</em><i>→ ${esc(ans(byT[byT.length-1].a.o,byT[byT.length-1].k))}</i></div></div>`:''}</section>`:'';
   return `${top}
   ${matchHTML(G,p)}
   ${mine}
