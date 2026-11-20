@@ -611,6 +611,13 @@ html[data-tone="f"] .tn-f,html[data-tone="s"] .tn-s{display:revert}
 .kc-say{margin:0;font-size:16px;font-weight:900;color:#1E1E2A;line-height:1.5}
 .kc-desc{margin:4px 0 0;font-size:14px;color:#3D3A4A;line-height:1.65}
 .kc-rows{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.kc-sub{display:flex;align-items:center;gap:10px;background:#FFF0F5;border:2px solid #FF3D7F;border-radius:14px;padding:8px 10px;text-align:left}
+.kc-sub img{width:52px;height:52px;object-fit:contain;flex:none}
+.kc-sub>div{min-width:0}
+.kc-sub b{display:block;font-size:12.5px;color:#5A546A}
+.kc-sub .ks-nm{font-family:"Mochiy Pop One","Zen Maru Gothic",sans-serif;font-size:18px;color:#1E1E2A}
+.kc-sub p{margin:2px 0 0;font-size:13.5px;line-height:1.5;color:#3D3A4A}
+.kc-sub .nw{display:inline-block;white-space:nowrap}
 .kc-row{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:14px;line-height:1.5}
 .kc-row b{flex:none;font-size:13px;color:#5A546A;min-width:8.5em}
 .kc-pill{white-space:nowrap;font-weight:800;font-size:14px;padding:2px 10px;border-radius:999px;border:1.5px solid #1E1E2A;background:#FFF6D6;color:#1E1E2A}
@@ -2782,6 +2789,7 @@ function toneApply(t){ document.documentElement.setAttribute('data-tone', t); do
 toneApply(toneGet());
 var QLV={};
 function qLevels(mode){ if(!QLV[mode]){ var o={}; (POOL[mode]||[]).forEach(function(q){ o[q.id]=q.lv; }); QLV[mode]=o; } return QLV[mode]; }
+var SUB_GAP=0.3;
 function charaOf(qs, ans, opt){
   opt=opt||{}; var NM=opt.mode==='normal', D=NM?CHN:CH; if(!D) return null;
   // 本能モード：恋の問題のことば（KOTOBA.honL）から。1秒以内に選んだ答えは2倍に数える（鑑定者本人の指示 2026-11-16「おすすめで」）
@@ -2810,7 +2818,9 @@ function charaOf(qs, ans, opt){
   var ord=D.list.slice().sort(function(x,y){ return cs[y.id]-cs[x.id]; }), fit=ord.filter(axFit);
   if(fit.length) ord=fit.concat(ord.filter(function(c){ return fit.indexOf(c)<0; }));
   var main=ord[0];
-  var sub=(fit.length>1 && cs[ord[1].id]>0.5 && cs[ord[1].id]>=cs[main.id]*0.6) ? ord[1] : null;
+  // もう1つの顔は、2番目のキャラの点がいちばんのキャラとほとんど同じ人にだけ出す（鑑定者本人 2026-11-20「わかった、そうする」→見本「お願いします」）。
+  // 前は2番目が1番目の6割以上ならだれにでも出していて、ほぼ全員（約9割）に出ていた。今は差が SUB_GAP より小さいときだけ（1回目約2割・3回目から約4割）
+  var sub=(fit.length>1 && fit.indexOf(ord[1])>=0 && cs[ord[1].id]>0.5 && (cs[main.id]-cs[ord[1].id])<SUB_GAP) ? ord[1] : null;
   var ani=null; if(AN.length){ ani=AN.slice().sort(function(x,y){ return as[y.id]-as[x.id]; })[0];
   if(!(as[ani.id]>0.3)) ani=AN[(sc.A>=60) ? 2 : (sc.K>=60 ? 1 : 0)]; }
   var pref=[]; [['年上','年下'],['かわいい系','かっこいい系']].forEach(function(p){ var d=(pf[p[0]]||0)-(pf[p[1]]||0); if(d) pref.push(d>0?p[0]:p[1]); });
@@ -2851,7 +2861,7 @@ function charaHTML(qs, ans, label, cls, fold, opt){
   var h='<div class="card kc'+(NM?' kc-n':'')+(cls?' '+cls:'')+'"><p class="kc-pre"><span class="nm">'+esc(label)+'</span>の'+(NM?'ふだんのキャラ':(opt.hon?'本能の':'')+'恋のキャラ')+(opt.hero?'「'+esc(c.name)+'」':'')+'</p>'+(opt.hon?'<p class="kc-from">考える前に選んだ恋の答えから決めました</p>':'')+
     (opt.hero ? '<div class="kc-top"><div class="kc-tx"><p class="kc-desc">'+esc(c.desc)+'</p></div></div>' : '<div class="kc-top">'+(CHARA_IMG[c.id]?'<div class="kc-pic"><img src="'+CHARA_IMG[c.id]+'" alt="" width="104" height="104" loading="lazy"><div class="kc-badge"><span>'+esc(c.name)+'</span></div></div>':'<div class="kc-badge"><span>'+esc(c.name)+'</span></div>')+'<div class="kc-tx"><p class="kc-say">'+esc(c.say)+'</p>'+(c.miryoku?'<p class="kc-mi"><b>あなたの恋の魅力</b>'+esc(c.miryoku)+'</p>':'')+'<p class="kc-desc">'+esc(c.desc)+'</p></div></div>')+
     '<div class="kc-rows">'+
-      (r.sub ? '<div class="kc-row"><b>もう1つの顔</b>'+pill(r.sub.name)+'<span class="kc-rs">'+esc(r.sub.say)+'</span></div>' : '')+
+      (r.sub ? '<div class="kc-sub">'+(CHARA_IMG[r.sub.id]?'<img src="'+CHARA_IMG[r.sub.id]+'" alt="" width="52" height="52" loading="lazy">':'')+'<div><b>もう1つの顔</b><span class="ks-nm">'+esc(r.sub.name)+'</span><p><span class="nw">'+esc(c.name)+'と同じくらい</span><span class="nw">強く出ています</span></p></div></div>' : '')+
       (r.ani ? '<div class="kc-row"><b>動物でいうと</b>'+pill(r.ani.name)+'<span class="kc-rs">'+esc(r.ani.say)+'</span></div>' : '')+
       (r.pref.length ? '<div class="kc-row"><b>好きになりやすい人</b>'+r.pref.map(pill).join('')+'</div>' : '')+
     '</div>'+
