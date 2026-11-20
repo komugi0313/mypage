@@ -226,6 +226,27 @@ ok('UX③：鑑定書の章の見出しのすぐ下に「恋愛での持ち味�
   ok('不倫：既婚の方との恋・略奪・離婚させられるかは安全の相談にしない（慰謝料など法律の手続きは今までどおり安全の相談）', A.safe&&!A.safe.length&&A.law, JSON.stringify(A.safe||A.err));
   ok('不倫：恋愛の相談として見分け、相性では「結ばれるか」の相談にする（やり直せるかは復縁）', A.love&&!A.love.length&&!A.kind.length&&A.re, JSON.stringify([A.love,A.kind]));
   ok('不倫：通信なしの1行目で見込みと時期に答える（鑑定者本人の決定 2026-11-20）', A.lead&&!A.lead.length, A.lead0||A.err); }
+{ /* 不倫の相談の「この先」：1行目に見通し→家庭の側→動きやすい月、【既婚の立場から見た流れ】、どうすればよいかは話し合う言い方（鑑定者本人の承認 2026-11-20） */
+  const F=await p.evaluate(()=>{ try{ const pl=document.documentElement.classList.contains('bg-on'), k0=chart, k1=chartB; const mk=(y,m,d,h,sx)=>baziCompute({year:y,month:m,day:d,hour:h,minute:0,sex:sx},0,'none');
+    const W=mk(1981,6,10,22,'female'), M=mk(2006,6,7,12,'male'); chart=W; chartB=M; const Q='私は既婚者で、25歳年下の彼と不倫関係です。この2人の関係はこれからどうなりますか。';
+    const who=[pkAffairWho(Q),pkAffairWho('彼には奥さんがいます。この先どうなりますか'),pkAffairWho('W不倫です。これからどうなりますか')].join(',');
+    const S=pkCompatSit(W,M,Q,pl)||{}, lead=S.lead||'', leadOK=/流れ/.test(lead)&&/家庭の側/.test(lead)&&/動きやすいのは20\d\d年/.test(lead)&&!/やめ|控え|いけない|許され/.test(lead);
+    const how=(S.how||[]).join(''), howOK=/話し合/.test(how)&&!/誘|デート|大事な話に向/.test(how)&&/決めるのはご本人/.test(how);
+    const af=(S.af&&S.af.lines||[]).join(''), afOK=pl?(/家や親族|夫婦の関係/.test(af)&&!/年柱|配偶宮|天戦地冲/.test(af)):(/年柱「辛酉」/.test(af)&&/天戦地冲/.test(af)&&/分かれ道/.test(af));
+    const en=pkEnsureAffair('1行目です。\n\n本文です。\n【どうすればよいか】\n・話し合う',W,M,Q), enOK=(pl?/【結婚している立場から見た流れ】/:/【既婚の立場から見た流れ】/).test(en);
+    const dup=pkEnsureAffair(en,W,M,Q)===en, no=!/立場から見た流れ/.test(pkEnsureAffair('1行目。\n\n本文。',W,M,'2人の相性はどうですか'));
+    const lf=pkLeadFix('2人はこれから少しずつ距離が縮まります。\n【お客様へのお伝え方】\n本文。',W,Q,true).split('\n')[0], lfOK=/家庭の側/.test(lf);
+    const tx=pkCompatSitText(W,M,Q), txOK=/既婚の立場から見た流れ/.test(tx)&&/説教/.test(tx);
+    chartB=null; const L1=pkOfflineLead(W,'私は既婚者で、年下の彼と不倫関係です。この関係はこれからどうなりますか。',pl)||'', l1OK=/家庭の側/.test(L1)&&/20\d\d年/.test(L1);
+    const e1=pkEnsureAffair('1行目。\n\n本文。',W,null,'私は既婚者で、年下の彼と不倫関係です。この関係はこれからどうなりますか。'), e1OK=/立場から見た流れ/.test(e1)&&!/2人の生まれ持った相性には目立ちません|もう一人の命式/.test(e1);
+    chart=k0; chartB=k1; return {who,leadOK,lead:lead.slice(0,120),howOK,how:how.slice(0,120),afOK,enOK,dup,no,lfOK,lf:lf.slice(0,80),txOK,l1OK,L1:L1.slice(0,90),e1OK}; }catch(e){ return {err:String(e)}; } });
+  ok('不倫②：だれが既婚かを相談文から見分ける（私は既婚＝本人／奥さんがいる＝お相手／W不倫＝2人）', F.who==='a,b,ab', F.who||F.err);
+  ok('不倫②：相性の1行目は見通し→家庭の側→いちばん動きやすい月（説教しない）', F.leadOK, F.lead||F.err);
+  ok('不倫②：どうすればよいかは「気持ちを確かめ合う・話し合う」・誘い／デートの助言にしない・決めるのは本人', F.howOK, F.how);
+  ok('不倫②：既婚の側の年柱・配偶宮の冲刑（相手・年・月）と分かれ道の材料（ビギナーは専門用語なし）', F.afOK);
+  ok('不倫②：【既婚の立場から見た流れ】（ビギナー【結婚している立場から見た流れ】）を1回だけ書き足す／不倫の相談でなければ足さない', F.enOK&&F.dup&&F.no);
+  ok('不倫②：1行目が家庭の側にふれていなければツールの1行目に・文章作成への渡しに材料', F.lfOK&&F.txOK, F.lf);
+  ok('不倫②：1人の相談も1行目に家庭の側・お相手がいないときは相性の文を出さない', F.l1OK&&F.e1OK, F.L1); }
 // 追加の質問
 const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃ですか'); await p.click('#consultBtn'); await p.click('#consultBtn').catch(()=>{});
 const ms2=await waitFor(()=>{const it=document.querySelectorAll('#reading .rd-item');const l=it[it.length-1];return it.length>=2&&l.querySelector('.rd-bar')&&!l.querySelector('.loading');},60000);
