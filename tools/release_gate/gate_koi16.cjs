@@ -134,7 +134,7 @@ function scan() {
       const other = CODES[(i + 5) % 16];
       const me = { code: c, pct: { LR: 62, VA: 71, TS: 55, PC: 80 }, anx: 30 + i * 4, mode: 'full', status: ['partner','crush','none','skip'][i % 4], at: 1 };
       await p.evaluate(m => localStorage.setItem('koi16_v1', JSON.stringify({ me: m })), me);
-      await p.goto(URL + '?t=' + c + '&with=' + other); await p.selectOption('#cmp-sel', other); await check('結果 ' + c);
+      await p.goto(URL + '?t=' + c + '&with=' + other); await p.click('#cmp-pick'); await p.click('.cmp-t[data-cmp="'+other+'"]'); await p.click('#cmp-pick'); await check('結果 ' + c);
       await p.evaluate(m => localStorage.setItem('koi16_v1', JSON.stringify({ me: Object.assign({}, m, { anx: null, mode: 'quick' }) })), me);
       await p.goto(URL + '?t=' + c); await check('結果（かんたん版） ' + c);
       await p.goto(URL + '?t=' + other); await check('友だちの結果 ' + other);
