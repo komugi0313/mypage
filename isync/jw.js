@@ -68,7 +68,20 @@
       else n.parentNode.replaceChild(f,n);
     });
   }
+  // 枠より広い1つのまとまり（せまい枠の「かっこいい・かわいい姿」など）は、枠からはみ出さないよう、言葉の切れ目で分ける（2026-11-21）
+  function boxW(e){ var a=e.parentNode; while(a&&a.nodeType===1){ var cs=getComputedStyle(a); if(!/^(inline|contents)$/.test(cs.display)) return a.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight); a=a.parentNode; } return 0; }
+  function fit(root){
+    var js=(root||document.body).querySelectorAll('j-p'); var big=[];
+    for(var i=0;i<js.length;i++){ var j=js[i]; if(j.style.whiteSpace!=='nowrap') continue; var w=j.getBoundingClientRect().width; if(!w) continue; var bw=boxW(j); if(bw>0&&w>bw+1) big.push(j); }
+    big.forEach(function(j){ var t=j.textContent,pc=t.replace(/・/g,'・\u0001').split('\u0001').filter(Boolean),xs=[]; pc.forEach(function(q){ sub(q).forEach(function(r){ xs.push(r); }); });
+      if(xs.length<2){ j.style.whiteSpace=''; return; }
+      var f=document.createDocumentFragment(); xs.forEach(function(q,i){ if(i) f.appendChild(document.createElement('wbr')); var s=document.createElement('j-p'); s.style.whiteSpace='nowrap'; s.textContent=q; f.appendChild(s); });
+      j.parentNode.replaceChild(f,j); });
+    if(big.length) fit(root);
+  }
+  var fq=null; function fitSoon(){ if(fq) return; fq=requestAnimationFrame(function(){ fq=null; fit(document.body); }); }
+  window.addEventListener('resize',fitSoon);
   window.jwRun=run;
-  function start(){ run(document.body); var t=null,q=[]; new MutationObserver(function(rs){ rs.forEach(function(r){ [].forEach.call(r.addedNodes,function(x){ if(x.nodeType===3){ if(x.parentNode&&x.parentNode.nodeName!=='J-P') q.push(x.parentNode); } else if(x.nodeType===1&&x.nodeName!=='J-P') q.push(x); }); if(r.type==='characterData'&&r.target.parentNode&&r.target.parentNode.nodeName!=='J-P') q.push(r.target.parentNode); }); if(!t) t=setTimeout(function(){ t=null; var a=q; q=[]; a.forEach(function(e){ if(e.isConnected) run(e); }); },0); }).observe(document.body,{childList:true,subtree:true,characterData:true}); }
+  function start(){ run(document.body); fitSoon(); var t=null,q=[]; new MutationObserver(function(rs){ rs.forEach(function(r){ [].forEach.call(r.addedNodes,function(x){ if(x.nodeType===3){ if(x.parentNode&&x.parentNode.nodeName!=='J-P') q.push(x.parentNode); } else if(x.nodeType===1&&x.nodeName!=='J-P') q.push(x); }); if(r.type==='characterData'&&r.target.parentNode&&r.target.parentNode.nodeName!=='J-P') q.push(r.target.parentNode); }); if(!t) t=setTimeout(function(){ t=null; var a=q; q=[]; a.forEach(function(e){ if(e.isConnected) run(e); }); fitSoon(); },0); }).observe(document.body,{childList:true,subtree:true,characterData:true}); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
 })();
