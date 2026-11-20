@@ -388,7 +388,7 @@ function talkItems(G){
 // 答えのうしろの★が1つだけ次の行に落ちないよう、最後の言葉と★をひとまとめにする（2026-11-21）
 const ANS_SEG=window.Intl&&Intl.Segmenter?new Intl.Segmenter('ja',{granularity:'word'}):null;
 function ansSt(t,st){t=String(t);if(!st)return esc(t);let h=t,tl='';
-  if(ANS_SEG){const ws=[...ANS_SEG.segment(t)].map(x=>x.segment);tl=ws.pop()||'';while(ws.length&&tl.replace(/[、。！？]/g,'').length<3)tl=ws.pop()+tl;h=ws.join('')}else{h=t.slice(0,-3);tl=t.slice(-3)}
+  const cm=t.lastIndexOf('、');if(cm>0&&t.length-cm-1>=2&&t.length-cm-1<=8){h=t.slice(0,cm+1);tl=t.slice(cm+1)}else if(ANS_SEG){const ws=[...ANS_SEG.segment(t)].map(x=>x.segment);tl=ws.pop()||'';while(ws.length&&tl.replace(/[、。！？]/g,'').length<3)tl=ws.pop()+tl;h=ws.join('')}else{h=t.slice(0,-3);tl=t.slice(-3)}
   return `${esc(h)}<span class="nw" data-nojw>${esc(tl)}<span class="tk-st">★</span></span>`}
 function talkHTML(G,nm){
   const ps=G.players,its=talkItems(G),two=ps.length===2,me=ps.find(p=>p.id===G.me),tid=talkId(G),done=new Set(talkedOf(tid));

@@ -82,12 +82,15 @@
     var out=[],cur='';
     for(var i=0;i<ws.length;i++){ cur+=ws[i]; var nx=ws[i+1]; if(nx===undefined) break;
       // 切るのは「て・ら・に・が・を・は・で・と・も・の・ば」で終わる言葉のあとだけ（「お｜こづかい」「そっ｜と」のようには切らない）
-      if(/[てらにがをはでともの\u3070]$/.test(ws[i])&&HIRA.test(ws[i])&&len(cur)>=2&&!PUN.test(nx)&&!SMALL.test(nx)&&ws.slice(i+1).join('').length>=2){ out.push(cur); cur=''; } }
+      if(((/[てらにがをはでともの\u3070]$/.test(ws[i])&&HIRA.test(ws[i]))||/、$/.test(ws[i]))&&len(cur)>=2&&!PUN.test(nx)&&!SMALL.test(nx)&&ws.slice(i+1).join('').length>=2){ out.push(cur); cur=''; } }
     if(cur) out.push(cur);
     while(out.length>1&&len(out[out.length-1])<=2){ var l=out.pop(); out[out.length-1]+=l; }   // 最後が1〜2文字だけにならないように
     if(out.length<2){   // 言葉の区切りを読みちがえるとき（「ときにわかれば」を「にわか」と読む）は、まん中にいちばん近い「に・で・て・が・を・は・ば」のあとで1回だけ分ける
-      var best=-1; for(var k=2;k<=t.length-3;k++){ if(/[にでてがをはば]/.test(t[k-1])&&/[ぁ-ゟ]/.test(t[k-1])&&!SMALL.test(t[k])&&!PUN.test(t[k])&&(best<0||Math.abs(k-t.length/2)<Math.abs(best-t.length/2))) best=k; }
-      if(best>0) return [t.slice(0,best),t.slice(best)]; }
+      var best=-1; for(var k=2;k<=t.length-3;k++){ if((/[にでてがをはば、]/.test(t[k-1])||(t[k-1]==='と'&&t[k-2]==='ッ'))&&/[ぁ-ゟ]/.test(t[k-1])&&!SMALL.test(t[k])&&!PUN.test(t[k])&&!/ー/.test(t[k])&&(best<0||Math.abs(k-t.length/2)<Math.abs(best-t.length/2))) best=k; }
+      if(best>0) return [t.slice(0,best),t.slice(best)];
+      // 最後に、3文字以上の言葉どうしの切れ目（「おなか｜いっぱいなら、」）
+      var pos=0,cand=-1; for(var m=0;m<ws.length-1;m++){ pos+=ws[m].length; if(len(ws[m])>=3&&len(ws.slice(m+1).join(''))>=3&&!SMALL.test(ws[m+1])&&!PUN.test(ws[m+1])&&!/^ー/.test(ws[m+1])&&(cand<0||Math.abs(pos-t.length/2)<Math.abs(cand-t.length/2))) cand=pos; }
+      if(cand>0) return [t.slice(0,cand),t.slice(cand)]; }
     return out; }
   function fit(root){
     var js=(root||document.body).querySelectorAll('j-p'); var big=[],ch=0;
