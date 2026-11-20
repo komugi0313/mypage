@@ -526,7 +526,7 @@ function distHTML(G){const ps=G.players;if(ps.length!==2||G.anon)return'';const 
       <div class="dbar2">${pin(ps[0],sa,-1)}${pin(ps[1],sb,1)}</div><div class="dends"><span>${esc(a.l)}</span><span>${esc(a.r)}</span></div>${kind==='d'?tipX(t,'d'):''}</div>`}}).filter(Boolean);
   if(!rows.length)return'';
   const dd=rows.filter(x=>x.d),ot=rows.filter(x=>!x.d);
-  const sum=dd.length?`${rows.length}つのうち、${ot.length}つが同じ向き・合わせやすい、${dd.length}つがちがう向きです。`:`${rows.length}つのものさしで、ちがう向きはありませんでした。`;
+  const sum=dd.length?`${ot.length?`${rows.length}つのうち、${ot.length}つは同じ向きか合わせやすく、${dd.length}つはちがう向きです。`:`${rows.length}つとも、ちがう向きです。`}`:`${rows.length}つのものさしで、ちがう向きはありませんでした。`;
   return `<section class="card pshape"><p class="label">2人の価値観のかたち</p><p class="hint">${sum}</p>
     <div class="dist"><div class="dlg">${[P0,P1].map(p=>`<span><i class="${pcls(G,p)}"></i>${nmS(p)}</span>`).join('')}</div>${dd.map(x=>x.h).join('')}${ot.map(x=>x.h).join('')}
     ${ot.length?`<details class="sfold"><summary>ほかのものさしのコツ（${ot.length}つ）</summary><div class="tipl">${ot.map(x=>`<div class="tipc"><b class="tipn">${esc(x.n)}</b>${tipX(x.t,x.kind)}</div>`).join('')}</div></details>`:''}</div></section>`}
@@ -663,7 +663,7 @@ function showResultCore(G){
   h+=`<section class="card score${hi?' hisync':''}">${hi?'<span class="hs-badge" data-nocg>HIGH SYNC</span>':''}<img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
     ${whoLine(G)}<p class="cap">${two?'2人':ps.length+'人'}のシンクロ率</p><p class="hint cap-h">${two?'2人の':'みんなの'}答えが、どれだけ重なったか。お金・将来・暮らしのような大事な問題ほど、大きく効きます。</p>
     <div class="ring" style="background:${hi?`conic-gradient(#8FE3CF 0,#A9B2F5 ${pct/2}%,#F4B6D6 ${pct}%,var(--line) ${pct}% 100%)`:`conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)`}"><div class="in"><span class="num" data-v="${pct}">${pct}<small>%</small></span></div></div>
-    <p class="msg">${sm.msg}</p>${hi?`<p class="hs-sub">${two?'暮らしの感覚が、ほとんど重なっています。<br>一緒にいて自然体でいられる組み合わせ。':'みんなの感覚が、ほとんど重なっています。<br>集まると自然体でいられるメンバー。'}</p>`:sm.sub?`<p class="hs-sub">${sm.sub}</p>`:''}${P2?`<div class="nums"><div class="n1"><small>ぴったり</small><b>${P2.same.length}<i>問</i></b></div><div class="n2"><small>近い</small><b>${P2.adj.length}<i>問</i></b></div><div class="n3"><small>ちがい</small><b>${P2.diff.length}<i>問</i></b></div></div>`:''}
+    <p class="msg">${sm.msg}</p>${hi?`<p class="hs-sub">${two?'暮らしの感覚が、ほとんど重なっています。<br>一緒にいて自然体でいられる組み合わせ。':'みんなの感覚が、ほとんど重なっています。<br>集まると自然体でいられるメンバー。'}</p>`:sm.sub?`<p class="hs-sub">${sm.sub}</p>`:''}${P2?`<div class="nums"><div class="n1"><small>ぴったり</small><b>${P2.same.length}<i>問</i></b></div><div class="n2"><small>近い</small><b>${P2.adj.length}<i>問</i></b></div><div class="n3"><small>ちがい</small><b>${P2.diff.length}<i>問</i></b></div></div>${P2.adj.length?`<p class="nums-n">近い＝片方が「日による」「ふつう」などの、<span class="nw">まん中の答え</span></p>`:''}`:''}
     ${diffN?`<button class="jump" id="tojump" type="button">${hi?'100%に近づくヒントを見る ↓':(()=>{const tn=talkItems(G).length;return tn<diffN?`話しておきたい${tn}問を見る ↓`:`ちがった${diffN}問から、話すことを見る ↓`})()}</button>`:''}</section>`;
   const trows=themeRows(G);
   const done=()=>{vsFit();setTimeout(vsFit,60);setTimeout(vsFit,600);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(vsFit);bindTail(G);bindTalked(G);bindAgain(G);countUp();votesRun(G);kyoRun(G);const j=$('tojump');if(j)j.onclick=()=>{const t=$('steps')||$('talk');if(t)t.scrollIntoView({behavior:'smooth',block:'start'})}};

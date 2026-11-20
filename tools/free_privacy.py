@@ -44,6 +44,7 @@ SITES = {
     about='この診断は、心理学の考え方を参考にした遊びです。医療や心理の専門的な検査ではありません。結果は、自分や友だちを知るヒントとしてお使いください。',
   ),
   'isync': dict(
+    tail='<style>html.jw body{word-break:keep-all;overflow-wrap:anywhere;line-break:strict}</style><script src="jw.js"></script>',  # 言葉の切れ目で改行（2026-11-21）
     name='アイシンク（I-Sync）', short='アイシンク', url='https://i-sync.jp/',
     bg='#FBEFEA', card='#FFFFFF', ink='#2A2559', sub='#4E4880', accent='#6E5FA8', line='#BFB6E2', soft='#F1EEFA',
     prefix='kv_',
@@ -149,7 +150,7 @@ armed=0;b.classList.remove('on');b.textContent='この端末の答えと結果�
 {body}
 <button class="wipe" id="wipe" type="button">この端末の答えと結果を消す</button>
 <p id="wipe-note" role="status"></p>
-</main><script>{js}</script></body></html>
+</main><script>{js}</script>{s.get('tail','')}</body></html>
 """
 
 for k, s in SITES.items():
