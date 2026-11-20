@@ -277,6 +277,9 @@ ok('UX③：鑑定書の章の見出しのすぐ下に「恋愛での持ち味�
     chartB=null; const lf1=pkLeadFix('縁が動きやすいのは来月です。\n【お客様へのお伝え方】\n本文。',W,'好きな人がいます。どうしたら良いですか',false).split('\n')[0]; if(!/^まずは/.test(lf1)) bad.push('オンラインの1行目の置きかえ（1人のどうしたら）：'+lf1.slice(0,40));
     chart=k0; chartB=k1; return {bad}; }catch(e){ return {bad:[String(e)]}; } });
   ok('聞き方：どうしたら＝助言・できますか＝見込み・今月と来月／今年と来年＝どちらか・恋愛のこの先＝見通しの一言（1人・相性・通信なし・オンラインの1行目の置きかえ）', K.bad.length===0, K.bad.join(' / ')); }
+{ /* 言葉の途中で改行しない（iPhone の Safari でも。2026-11-20）：まとまりの切れ目に <wbr> が入り、文字は変わらず、横にはみ出さない */
+  const W=await p.evaluate(()=>{ const d=document.createElement('div'); d.style.width='120px'; d.textContent='縁が動きやすいのは来年です。追い風のなかで伸ばしていける時期です。'; document.body.appendChild(d); return new Promise(res=>setTimeout(()=>{ const r={on:!!window.__pkPhrase, wbr:d.querySelectorAll('wbr').length, same:d.textContent==='縁が動きやすいのは来年です。追い風のなかで伸ばしていける時期です。', inner:!/<wbr|​/.test(d.innerText), kept:!/追い<wbr>風|伸ば<wbr>し/.test(d.innerHTML), over:document.documentElement.scrollWidth<=document.documentElement.clientWidth+1}; d.remove(); res(r); },700)); });
+  ok('改行：言葉のまとまりの切れ目で改行する（<wbr>・文字は変わらない・コピーに入らない・横にはみ出さない）', W.on&&W.wbr>=3&&W.same&&W.inner&&W.kept&&W.over, JSON.stringify(W)); }
 // 追加の質問
 const c1=calls; await p.fill('#worry','彼から連絡が来るのはいつ頃ですか'); await p.click('#consultBtn'); await p.click('#consultBtn').catch(()=>{});
 const ms2=await waitFor(()=>{const it=document.querySelectorAll('#reading .rd-item');const l=it[it.length-1];return it.length>=2&&l.querySelector('.rd-bar')&&!l.querySelector('.loading');},60000);
