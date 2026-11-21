@@ -201,6 +201,18 @@ h3.whoh{font-size:16px;margin:18px 0 10px}
 .qs{position:relative}.qs-you{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:800;color:#fff;background:var(--rose);border-radius:999px;padding:0 8px;line-height:17px;white-space:nowrap;z-index:1}
 .qs-g{padding-top:9px}
 @keyframes qhop{40%{transform:translateY(-6px) scale(1.08)}}
+/* 5人以上は1列に並べて、問題と答えが1画面に入るように（状態は色で。鑑定者本人 2026-11-21「上下にずらさないと読めない」を防ぐ） */
+.qs-g.many{grid-template-columns:repeat(var(--qn,8),minmax(0,1fr));gap:4px}
+.qs-g.many .qs{padding:4px 1px 3px;border-radius:10px}
+.qs-g.many .qs-p{height:28px}.qs-g.many .qs-p img,.qs-g.many .qs-p .art{width:28px;height:28px}
+.qs-g.many .qs b{font-size:10.5px}
+.qs-g.many .qs small{display:none}
+.qs-g.many .qs.think{background:#FFF6D9;border-color:#E6C66A}
+.qs-g.many .qs-you{font-size:10px;padding:0 5px;line-height:15px;top:-8px}
+/* それでも入らないときだけ小さく（qFit） */
+#q-seats.qs-tight .qs-p{height:28px}#q-seats.qs-tight .qs-p img,#q-seats.qs-tight .qs-p .art{width:28px;height:28px}
+#q-seats.qs-tight .qs{padding-top:4px;padding-bottom:3px}
+#v-quiz .qtext.q-tight{min-height:0;padding-top:8px;padding-bottom:8px;margin-top:14px;margin-bottom:8px}
 @media (prefers-reduced-motion:reduce){.qs .qs-p{animation:none!important}}
 .rlate{margin-top:14px;padding:10px 12px;border-radius:12px;background:#FFF6D8;border:1px solid #E9D38C}.rlate p{margin:2px 0 0;font-size:14px}
 .rsolo{text-align:center;margin:6px 0 0}.rsolo .linkbtn{min-height:44px}
@@ -3398,7 +3410,7 @@ function renderQ(){
 // その問題の文が長くて答えが1画面に入らないときだけ、その問題の文字を少しずつ小さくする（問題の文16px・たとえば13.5pxまで。鑑定者本人 2026-11-21「とにかくはみ出さないで」）
 function qFit(){
   var v=$('v-quiz'), t=$('qtext'), ex=$('q-ex'), box=$('scale'); if(!v||v.classList.contains('hidden')||!t||!box) return;
-  t.style.fontSize=''; if(ex){ ex.style.fontSize=''; ex.classList.remove('q-ex-in'); } box.style.gap=''; var hEl=$('q-hint'); if(hEl) hEl.classList.remove('q-fit-off');
+  t.style.fontSize=''; t.classList.remove('q-tight'); var sEl=$('q-seats'); if(sEl) sEl.classList.remove('qs-tight'); if(ex){ ex.style.fontSize=''; ex.classList.remove('q-ex-in'); } box.style.gap=''; var hEl=$('q-hint'); if(hEl) hEl.classList.remove('q-fit-off');
   var bs=box.querySelectorAll('button'); if(!bs.length) return;
   var need=function(){ return bs[bs.length-1].getBoundingClientRect().bottom+(window.scrollY||0); };
   var fs=parseFloat(getComputedStyle(t).fontSize)||18, efs=ex?parseFloat(getComputedStyle(ex).fontSize)||15:0, g=parseFloat(getComputedStyle(box).rowGap)||8, n=0;
@@ -3408,6 +3420,8 @@ function qFit(){
     else if(g>5){ g=5; box.style.gap='5px'; }
     else if(ex&&!ex.classList.contains('q-ex-in')){ ex.classList.add('q-ex-in'); }
     else if(hEl&&!hEl.classList.contains('hidden')&&!hEl.classList.contains('q-fit-off')){ hEl.classList.add('q-fit-off'); }
+    else if(!t.classList.contains('q-tight')){ t.classList.add('q-tight'); }
+    else if(sEl&&!sEl.classList.contains('hidden')&&!sEl.classList.contains('qs-tight')){ sEl.classList.add('qs-tight'); }
     else break; }
 }
 (function(){ var tm; window.addEventListener('resize',function(){ clearTimeout(tm); tm=setTimeout(qFit,120); }); })();
@@ -4485,10 +4499,10 @@ function qSeats(){
   if(RM.view!=='quiz'||!RM.code){ el.classList.add('hidden'); el.innerHTML=''; return; }
   var ps=rPlayers(), now=Date.now(), id=rPid(); if(ps.length<2){ el.classList.add('hidden'); return; }
   ps.forEach(function(p){ var pv=RM.lastQ[p.id]; if(pv!=null&&((p.q||0)>pv||(p.done&&!RM.lastD[p.id]))) RM.okAt[p.id]=now; RM.lastQ[p.id]=p.q||0; RM.lastD[p.id]=!!p.done; });
-  var h='<div class="qs-g'+(ps.length>4?' many':'')+'">';
+  var was=el.classList.contains('hidden'), h='<div class="qs-g'+(ps.length>4?' many':'')+'" style="--qn:'+ps.length+'">';
   ps.forEach(function(p){ var me=p.id===id, ok=p.done||(now-(RM.okAt[p.id]||0)<1400), pc=me?(st.me&&validCode(st.me.code)?st.me.code:''):(validCode(p.pc||'')?p.pc:''), code=p.done&&validCode(p.code)?p.code:pc;
     h+='<div class="qs'+(ok?' ok':' think')+(me?' me':'')+'"><span class="qs-p">'+(code?art(code,40):'<img class="sil" src="img/'+silOf(p.id)+'.webp" width="40" height="40" alt="">')+'</span>'+(me?'<span class="qs-you">あなた</span>':'')+'<b>'+esc(p.name)+'</b><small>'+(p.done?'終わった！':ok?'決めた！':'悩み中<span class="rdt" aria-hidden="true"><i></i><i></i><i></i></span>')+'</small></div>'; });
-  el.innerHTML=h+'</div>'; el.classList.remove('hidden');
+  el.innerHTML=h+'</div>'; el.classList.remove('hidden'); if(was) qFit();
   if(RM.seatT) clearTimeout(RM.seatT); RM.seatT=setTimeout(qSeats,1500);
 }
 async function roomDone(code){
