@@ -14,6 +14,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 JS = (ROOT / 'tools' / 'contrast_guard.js').read_text(encoding='utf-8').strip()
 BLOCK = '<script id="pk-contrast-guard">\n' + JS + '\n</script>\n'
+# 無料サイト（究極の二択・アイ・シンク・恋のかたち診断）で、ページが自分で文節の改行をしているときは、
+# 安全装置の「言葉の途中で行が分かれないようにする」を止める（2つが重なって同じ文を二重に区切らないように。2026-11-21）
+OWN = re.compile(r'Intl\.Segmenter|jw\.js|BX_MODEL|seo\.js')
+BLOCK_OWN = '<script id="pk-contrast-guard">\nwindow.__pkPhrase=true; /* このページは自分で文節の改行をしている */\n' + JS + '\n</script>\n'
 PAT = re.compile(r'<script id="pk-contrast-guard">[\s\S]*?</script>\n?')
 
 done = []
@@ -24,11 +28,12 @@ for d in ('pro', 'beginner', 'eki-pro', 'meishiki-original', 'nitaku', 'isync', 
         if p.name.endswith('-src.html'):  # アイコン・シェア画像の元（撮るときに色が変わらないよう入れない）
             continue
         s = p.read_text(encoding='utf-8')
+        blk = BLOCK_OWN if d in ('nitaku', 'isync', 'koi16') and OWN.search(PAT.sub('', s)) else BLOCK
         if PAT.search(s):
-            s2 = PAT.sub(lambda m: BLOCK, s, count=1)
+            s2 = PAT.sub(lambda m: blk, s, count=1)
         else:
             i = s.rfind('</body>')
-            s2 = (s[:i] + BLOCK + s[i:]) if i >= 0 else (s + '\n' + BLOCK)
+            s2 = (s[:i] + blk + s[i:]) if i >= 0 else (s + '\n' + blk)
         if s2 != s:
             p.write_text(s2, encoding='utf-8')
             done.append(str(p.relative_to(ROOT)))
