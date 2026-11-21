@@ -548,9 +548,10 @@ function distHTML(G){const ps=G.players;if(ps.length!==2||G.anon)return'';const 
     const ka=axSideK(sa.pct),kb=axSideK(sb.pct),kind=ka==='m'||kb==='m'?'m':ka===kb?ka:'d',t=AXTIP[a.key][kind];
     const lab=kind==='d'?['d','ちがう向き']:kind==='m'?['m','合わせやすい']:['s','同じ向き'];
     const near=Math.abs(sa.pct-sb.pct)<6,pin=(p,s,dx)=>`<i class="nxpin ${pcls(G,p)}" style="left:calc(${100-s.pct}% ${near?(dx<0?'- 7px':'+ 7px'):'+ 0px'})" title="${nmS(p)}"></i>`;
-    const side=k=>k==='l'?a.l:k==='r'?a.r:'まん中',sP=p=>axSideK(p===ps[0]?sa.pct:sb.pct);
-    const who=kind==='s'||(ka===kb&&ka!=='m')?`<p class="dwho same"><b>2人とも</b><span class="nw">${esc(side(ka))}</span></p>`
-      :`<p class="dwho">${[P0,P1].map(p=>`<span class="dw">${nmChip(G,p,p===me?'あなた':p.name)}<span class="nw">${esc(side(sP(p)))}</span></span>`).join('')}</p>`;
+    // 1問だけで決めたものさしは「○○派寄り」（ひとりの結果と同じ。2026-11-21）
+    const side=(k,n)=>(k==='l'?a.l:k==='r'?a.r:'まん中')+(k!=='m'&&n<2?'寄り':''),sP=p=>axSideK(p===ps[0]?sa.pct:sb.pct),sN=p=>(p===ps[0]?sa:sb).n;
+    const who=kind==='s'||(ka===kb&&ka!=='m')?`<p class="dwho same"><b>2人とも</b><span class="nw">${esc(side(ka,Math.min(sa.n,sb.n)))}</span></p>`
+      :`<p class="dwho">${[P0,P1].map(p=>`<span class="dw">${nmChip(G,p,p===me?'あなた':p.name)}<span class="nw">${esc(side(sP(p),sN(p)))}</span></span>`).join('')}</p>`;
     return {d:kind==='d',n:a.name,t,kind,h:`<div class="dax"><div class="daxh"><b>${esc(a.name)}</b><span class="kind ${lab[0]}">${lab[1]}</span></div>${who}
       <div class="dbar2">${pin(ps[0],sa,-1)}${pin(ps[1],sb,1)}</div><div class="dends"><span>${esc(a.l)}</span><span>${esc(a.r)}</span></div>${kind==='d'?tipX(t,'d'):''}</div>`}}).filter(Boolean);
   if(!rows.length)return'';
@@ -732,15 +733,20 @@ const POLE={kicchiri:['身のまわりや決めごとを、きちんと整えて
   keikaku:['予定は、先に決めておくと安心。','予定は、その場の気分で決めるのが楽しい。'],
   futari:['好きな人とは、できるだけ一緒に過ごしたい。','好きな人がいても、ひとりの時間も大事にしたい。'],
   okane:['お金は先のことを考えて、コツコツためたい。','お金は、今の楽しみにもしっかり使いたい。']};
-function shapeLean(G,p){const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x=>x.s);
-  return rows.filter(x=>Math.abs(x.s.pct-50)>=10).sort((x,y)=>Math.abs(y.s.pct-50)-Math.abs(x.s.pct-50)).slice(0,2).map(x=>x.s.pct>50?x.a.l:x.a.r)}
+// 寄ったものさしを2つまで選ぶ（2026-11-21 鑑定者本人「1と2の両方直して」）：強さが同じときは、答えた問題の多いほう→その回の問題で決まる公平なくじ（前は並び順の先の「暮らし・予定」ばかりが選ばれていた）。
+function leanTie(G,k){let h=2166136261;const t=k+'|'+G.qs.join(',');for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0)%997}
+function leanRows(G,p,rows){rows=rows||AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x=>x.s);
+  return rows.filter(x=>Math.abs(x.s.pct-50)>=10).sort((x,y)=>(Math.abs(y.s.pct-50)-Math.abs(x.s.pct-50))||(y.s.n-x.s.n)||(leanTie(G,y.a.key)-leanTie(G,x.a.key))).slice(0,2)}
+// 1問だけで決めたものさしは「○○派寄り」（言い切らない）
+function leanLab(x){const w=x.s.pct>50?x.a.l:x.a.r;return x.s.n<2?w+'寄り':w}
+function shapeLean(G,p){return leanRows(G,p).map(leanLab)}
 function shapeWords(G,p){const l=shapeLean(G,p);return l.length?l.join('×'):'どれにも寄らない、やわらかい人'}
 function shapeBars(G,p){const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x=>x.s);
   return rows.map(({a,s})=>`<div class="shx"><p>${esc(a.name)}</p><div class="sbar"><i style="left:calc(9px + (100% - 18px) * ${(100-s.pct)/100})"></i></div><div class="ends"><span${s.pct>=60?' class="on"':''}>${esc(a.l)}</span><span${s.pct<=40?' class="on"':''}>${esc(a.r)}</span></div></div>`).join('')}
 function shapeHTML(G,p,who,extra){
   const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x=>x.s);if(!rows.length)return '';
-  const lean=rows.filter(x=>Math.abs(x.s.pct-50)>=10).sort((x,y)=>Math.abs(y.s.pct-50)-Math.abs(x.s.pct-50)).slice(0,2)
-    .map(x=>x.s.pct>50?{w:x.a.l,t:(POLE[x.a.key]||[])[0]}:{w:x.a.r,t:(POLE[x.a.key]||[])[1]});
+  const lean=leanRows(G,p,rows)
+    .map(x=>({w:leanLab(x),t:(POLE[x.a.key]||[])[x.s.pct>50?0:1]}));
   const big=lean.length?lean.map(x=>`<span class="nw">${esc(x.w)}</span>`).join('<span class="x">×</span>'):'どれにも寄らない、やわらかい人';
   const desc=(lean.length?lean.map(x=>x.t||''):['どのものさしでも、まん中あたり。相手に合わせて動ける人です。']).filter(Boolean).map(t=>`<span class="sl">${esc(t)}</span>`).join('');
   const bars=rows.map(({a,s})=>`<div class="shx"><p>${esc(a.name)}</p><div class="sbar"><i style="left:calc(9px + (100% - 18px) * ${(100-s.pct)/100})"></i></div><div class="ends"><span${s.pct>=60?' class="on"':''}>${esc(a.l)}</span><span${s.pct<=40?' class="on"':''}>${esc(a.r)}</span></div></div>`).join('');
@@ -757,10 +763,10 @@ const MATCH={kicchiri:[['暮らしのリズムが合い、片づけや決めご�
   okane:[['将来のお金の話がしやすく、安心できる。','外食・旅行・買い物にかけるお金で、ぶつかりやすい。','毎月ためる分を先に一緒に決めて、残りの使い方には口を出さない。'],
     ['一緒に楽しむことに、気持ちよくお金を使える。','「それ、本当に必要？」と、お金の使い方でぶつかりやすい。','ためる分だけは先に一緒に決めて、楽しむお金は気持ちよく使う。']]};
 function matchHTML(G,p){const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x=>x.s&&MATCH[x.a.key]);if(!rows.length)return'';
-  const lean=rows.filter(x=>Math.abs(x.s.pct-50)>=10).sort((x,y)=>Math.abs(y.s.pct-50)-Math.abs(x.s.pct-50)).slice(0,2);
+  const lean=leanRows(G,p,rows);
   const nw=t=>`<span class="nw">${esc(t)}</span>`;
-  const body=lean.length?lean.map(({a,s})=>{const l=s.pct>50,me=l?a.l:a.r,ot=l?a.r:a.l,m=MATCH[a.key][l?0:1];
-    return `<div class="mt-ax"><p class="mt-h">${nw(me)}のあなたは</p>
+  const body=lean.length?lean.map(x=>{const {a,s}=x,l=s.pct>50,me=l?a.l:a.r,ot=l?a.r:a.l,m=MATCH[a.key][l?0:1];
+    return `<div class="mt-ax"><p class="mt-h">${nw(leanLab(x))}のあなたは</p>
       <div class="mt-r ok"><span class="mt-k">合いやすい</span><p><b>同じ${nw(me)}の人</b>${esc(m[0])}</p></div>
       <div class="mt-r ng"><span class="mt-k">ぶつかりやすい</span><p><b>${nw(ot)}の人</b>${esc(m[1])}</p></div>
       <p class="mt-tip"><span>合わせ方</span>${esc(m[2])}</p></div>`}).join('')
@@ -800,7 +806,7 @@ function soloHTML(G){
   const top=shape||`<section class="card score"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true"><p class="cap">${who}の「合わせられる度」</p>
     <div class="ring" style="background:conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)"><div class="in"><span class="num">${pct}<small>%</small></span></div></div><p class="msg">${msg}</p></section>`;
   const kod=(star.length?`<p class="sub">★ ゆずれないこと</p><ul class="list">${star.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${esc(ans(x.a.o,x.k))}</li>`).join('')}</ul>`:'')
-    +`<ul class="list">${firm.filter(x=>!x.a.st).map(x=>`<li><b>${esc(CATS[Q[x.k][0]][0])}｜${esc(Q[x.k][1])}</b><span class="ansrow"><i class="o${x.a.o}">${esc(ans(x.a.o,x.k))}</i></span></li>`).join('')||(star.length?'':xs.length?'<li>今回はぜんぶ「こだわらない」でした</li>':(G.qs.some((k,i)=>p.ans[i]&&p.ans[i].u)?'<li>どの問題も、まだ決められませんでした</li>':'<li>時間切れで、答えた問題がありませんでした</li>'))}</ul>`;
+    +(star.length&&firm.some(x=>!x.a.st)?'<p class="sub">そのほかのこだわり</p>':'')+`<ul class="list">${firm.filter(x=>!x.a.st).map(x=>`<li><b>${esc(CATS[Q[x.k][0]][0])}｜${esc(Q[x.k][1])}</b><span class="ansrow"><i class="o${x.a.o}">${esc(ans(x.a.o,x.k))}</i></span></li>`).join('')||(star.length?'':xs.length?'<li>今回はぜんぶ「こだわらない」でした</li>':(G.qs.some((k,i)=>p.ans[i]&&p.ans[i].u)?'<li>どの問題も、まだ決められませんでした</li>':'<li>時間切れで、答えた問題がありませんでした</li>'))}</ul>`;
   const flx=(flex.length?`<p class="sub">合わせられること</p><p class="hint">${flex.map(x=>`<span class="qi">${esc(Q[x.k][1])}</span>`).join('　')}</p>`:'')
     +(mid.length?`<p class="sub">まん中の答え</p><ul class="list">${mid.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${esc(ans(x.a.o,x.k))}</li>`).join('')}</ul>`:'')
     +(byT.length>1&&byT[0].a.ms>=PONDER_MIN?`<p class="sub">いちばん悩んだ問題</p><div class="ponder"><b>${esc(Q[byT[0].k][1])}</b><span>「${esc(ans(byT[0].a.o,byT[0].k))}<span style="white-space:nowrap">」まで <em>${sec(byT[0].a.ms)}</em> 秒</span></span></div>
@@ -827,7 +833,7 @@ function soloHTML(G){
 }
 // 1.66 奇跡の相性診断（鑑定者本人のメインサービス）へのバナー。無料の診断から会員登録（毎朝の開運予報メール）へつながる
 /* ほかの診断（3つのサイトの相互リンク。鑑定者本人 2026-11-20「見本その1のバナーでいきます」） */
-const SIS_HTML=`<section class="sis"><p class="sis-h">あなたのこと、もっと知りたくない？</p><a class="bn bn-ko" data-nocg href="https://koikata.jp/aichaku/?ref=isync" target="_blank" rel="noopener" aria-label="恋のかたち診断（別のサイト koikata.jp が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/koi.webp" alt="" width="58" height="58" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">恋のかたち診断</span><span class="ln"><span class="nw">16の恋愛タイプ×</span><span class="nw">愛着スタイル</span></span><span class="dm"><span class="nw">koikata.jp・</span><span class="nw">無料4分</span></span></span><span class="go">診断 ↗</span></a><a class="bn bn-nt" data-nocg href="https://honbare.com/?ref=isync" target="_blank" rel="noopener" aria-label="究極の二択（別のサイト honbare.com が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/panda.webp" alt="" width="56" height="56" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">究極の二択</span><span class="ln"><span class="nw">恋もあるあるも、</span><span class="nw">本音がバレる2択</span></span><span class="dm"><span class="nw">honbare.com・</span><span class="nw">無料3分</span></span></span><span class="go">あそぶ ↗</span></a><a class="bn bn-wa" data-nocg href="https://44wansona.com/?ref=isync" target="_blank" rel="noopener" aria-label="ワンソナ（別のサイト 44wansona.com が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/wansona.webp" alt="" width="54" height="54" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">ワンソナ</span><span class="ln"><span class="nw">うちの子の性格を、</span><span class="nw">44犬種のタイプで診断</span></span><span class="dm"><span class="nw">44wansona.com・</span><span class="nw">無料</span></span></span><span class="go">診断 ↗</span></a></section>`;
+const SIS_HTML=`<section class="sis"><p class="sis-h">あなたのこと、もっと知りたくない？</p><a class="bn bn-ko" data-nocg href="https://koikata.jp/aichaku/?ref=isync" target="_blank" rel="noopener" aria-label="恋のかたち診断（別のサイト koikata.jp が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/koi.webp" alt="" width="58" height="58" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">恋のかたち診断</span><span class="ln"><span class="nw">16の恋愛タイプ×</span><span class="nw">愛着スタイル</span></span><span class="dm"><span class="nw">koikata.jp・</span><span class="nw">無料4分</span></span></span><span class="go">診断 ↗</span></a><a class="bn bn-nt" data-nocg href="https://honbare.com/?ref=isync" target="_blank" rel="noopener" aria-label="究極の二択（別のサイト honbare.com が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/panda.webp" alt="" width="56" height="56" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">究極の二択</span><span class="ln"><span class="nw">恋もあるあるも、</span><span class="nw">本音がバレる2択</span></span><span class="dm"><span class="nw">honbare.com・</span><span class="nw">無料5分</span></span></span><span class="go">あそぶ ↗</span></a><a class="bn bn-wa" data-nocg href="https://44wansona.com/?ref=isync" target="_blank" rel="noopener" aria-label="ワンソナ（別のサイト 44wansona.com が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/wansona.webp" alt="" width="54" height="54" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">ワンソナ</span><span class="ln"><span class="nw">うちの子の性格を、</span><span class="nw">44犬種のタイプで診断</span></span><span class="dm"><span class="nw">44wansona.com・</span><span class="nw">無料</span></span></span><span class="go">診断 ↗</span></a></section>`;
 const PROMO=`<a class="promo" href="https://166unmei.com" target="_blank" rel="noopener" aria-label="1.66 奇跡の相性診断で占う（別のサイト 166unmei.com が開きます）">
     <span class="pr-top">価値観の次は、生まれた日でわかる「運命の相性」</span>
     <span class="pr-pair" aria-hidden="true"><img src="img/166-usagi.webp" alt="" width="74" height="72" loading="lazy"><i>×</i><img src="img/166-inu.webp" alt="" width="63" height="72" loading="lazy"></span>
