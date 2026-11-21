@@ -44,7 +44,7 @@ h1{font-family:"Mochiy Pop One",sans-serif;font-weight:400;font-size:26px;line-h
 .lead{margin:12px 0 0;font-weight:700;font-size:15px;text-align:left}
 .cta{display:block;text-align:center;margin:18px 4px 0;background:var(--ink);color:#fff;text-decoration:none;font-family:"Mochiy Pop One",sans-serif;font-size:18px;border-radius:999px;padding:14px;box-shadow:4px 4px 0 var(--yel)}
 .cta small{display:block;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:12px;opacity:.85}
-h2{font-family:"Mochiy Pop One",sans-serif;font-weight:400;font-size:19px;margin:28px 2px 10px}h2 span{background:linear-gradient(transparent 58%,var(--mk) 58%);padding:0 4px}
+h2{font-family:"Mochiy Pop One",sans-serif;font-weight:400;font-size:19px;margin:28px 2px 10px}@media (max-width:340px){h1{font-size:23px}}h2 span{background:linear-gradient(transparent 58%,var(--mk) 58%);padding:0 4px}
 ol{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 .it{display:flex;gap:10px;background:#fff;border:2px solid var(--ink);border-radius:16px;padding:12px}
 .n{flex:none;width:30px;height:30px;border-radius:50%;background:var(--ink);color:#fff;font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center}
