@@ -548,9 +548,10 @@ function distHTML(G){const ps=G.players;if(ps.length!==2||G.anon)return'';const 
     const ka=axSideK(sa.pct),kb=axSideK(sb.pct),kind=ka==='m'||kb==='m'?'m':ka===kb?ka:'d',t=AXTIP[a.key][kind];
     const lab=kind==='d'?['d','ちがう向き']:kind==='m'?['m','合わせやすい']:['s','同じ向き'];
     const near=Math.abs(sa.pct-sb.pct)<6,pin=(p,s,dx)=>`<i class="nxpin ${pcls(G,p)}" style="left:calc(${100-s.pct}% ${near?(dx<0?'- 7px':'+ 7px'):'+ 0px'})" title="${nmS(p)}"></i>`;
-    const side=k=>k==='l'?a.l:k==='r'?a.r:'まん中',sP=p=>axSideK(p===ps[0]?sa.pct:sb.pct);
-    const who=kind==='s'||(ka===kb&&ka!=='m')?`<p class="dwho same"><b>2人とも</b><span class="nw">${esc(side(ka))}</span></p>`
-      :`<p class="dwho">${[P0,P1].map(p=>`<span class="dw">${nmChip(G,p,p===me?'あなた':p.name)}<span class="nw">${esc(side(sP(p)))}</span></span>`).join('')}</p>`;
+    // 1問だけで決めたものさしは「○○派寄り」（ひとりの結果と同じ。2026-11-21）
+    const side=(k,n)=>(k==='l'?a.l:k==='r'?a.r:'まん中')+(k!=='m'&&n<2?'寄り':''),sP=p=>axSideK(p===ps[0]?sa.pct:sb.pct),sN=p=>(p===ps[0]?sa:sb).n;
+    const who=kind==='s'||(ka===kb&&ka!=='m')?`<p class="dwho same"><b>2人とも</b><span class="nw">${esc(side(ka,Math.min(sa.n,sb.n)))}</span></p>`
+      :`<p class="dwho">${[P0,P1].map(p=>`<span class="dw">${nmChip(G,p,p===me?'あなた':p.name)}<span class="nw">${esc(side(sP(p),sN(p)))}</span></span>`).join('')}</p>`;
     return {d:kind==='d',n:a.name,t,kind,h:`<div class="dax"><div class="daxh"><b>${esc(a.name)}</b><span class="kind ${lab[0]}">${lab[1]}</span></div>${who}
       <div class="dbar2">${pin(ps[0],sa,-1)}${pin(ps[1],sb,1)}</div><div class="dends"><span>${esc(a.l)}</span><span>${esc(a.r)}</span></div>${kind==='d'?tipX(t,'d'):''}</div>`}}).filter(Boolean);
   if(!rows.length)return'';
@@ -805,7 +806,7 @@ function soloHTML(G){
   const top=shape||`<section class="card score"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true"><p class="cap">${who}の「合わせられる度」</p>
     <div class="ring" style="background:conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)"><div class="in"><span class="num">${pct}<small>%</small></span></div></div><p class="msg">${msg}</p></section>`;
   const kod=(star.length?`<p class="sub">★ ゆずれないこと</p><ul class="list">${star.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${esc(ans(x.a.o,x.k))}</li>`).join('')}</ul>`:'')
-    +`<ul class="list">${firm.filter(x=>!x.a.st).map(x=>`<li><b>${esc(CATS[Q[x.k][0]][0])}｜${esc(Q[x.k][1])}</b><span class="ansrow"><i class="o${x.a.o}">${esc(ans(x.a.o,x.k))}</i></span></li>`).join('')||(star.length?'':xs.length?'<li>今回はぜんぶ「こだわらない」でした</li>':(G.qs.some((k,i)=>p.ans[i]&&p.ans[i].u)?'<li>どの問題も、まだ決められませんでした</li>':'<li>時間切れで、答えた問題がありませんでした</li>'))}</ul>`;
+    +(star.length&&firm.some(x=>!x.a.st)?'<p class="sub">そのほかのこだわり</p>':'')+`<ul class="list">${firm.filter(x=>!x.a.st).map(x=>`<li><b>${esc(CATS[Q[x.k][0]][0])}｜${esc(Q[x.k][1])}</b><span class="ansrow"><i class="o${x.a.o}">${esc(ans(x.a.o,x.k))}</i></span></li>`).join('')||(star.length?'':xs.length?'<li>今回はぜんぶ「こだわらない」でした</li>':(G.qs.some((k,i)=>p.ans[i]&&p.ans[i].u)?'<li>どの問題も、まだ決められませんでした</li>':'<li>時間切れで、答えた問題がありませんでした</li>'))}</ul>`;
   const flx=(flex.length?`<p class="sub">合わせられること</p><p class="hint">${flex.map(x=>`<span class="qi">${esc(Q[x.k][1])}</span>`).join('　')}</p>`:'')
     +(mid.length?`<p class="sub">まん中の答え</p><ul class="list">${mid.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${esc(ans(x.a.o,x.k))}</li>`).join('')}</ul>`:'')
     +(byT.length>1&&byT[0].a.ms>=PONDER_MIN?`<p class="sub">いちばん悩んだ問題</p><div class="ponder"><b>${esc(Q[byT[0].k][1])}</b><span>「${esc(ans(byT[0].a.o,byT[0].k))}<span style="white-space:nowrap">」まで <em>${sec(byT[0].a.ms)}</em> 秒</span></span></div>
