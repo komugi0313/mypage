@@ -13,7 +13,7 @@ def img(rel):
     with open(os.path.join(ROOT, rel), 'rb') as f:
         return 'data:image/webp;base64,' + base64.b64encode(f.read()).decode()
 
-LATC = img('nitaku/img/sis/latc.webp')
+LATC = img('nitaku/img/sis/koi.webp')  # 恋のかたち診断のバナーの絵＝サイトのアイコン「ハートに恋」（鑑定者本人 2026-11-21）
 PANDA = img('isync/img/sis/panda.webp')
 AI = img('nitaku/img/sis/ai.webp')
 YUU = img('nitaku/img/sis/yuu.webp')
@@ -37,7 +37,7 @@ CSS = """<style>
 .sis166 .bn-ko{background:linear-gradient(180deg,#FCE8EF,#FFFDFB);border:1px solid #EADDD3;box-shadow:0 4px 14px rgba(90,58,42,.12);color:#4A362B}
 .sis166 .bn-ko .nm{font-family:'Shippori Mincho B1','Shippori Mincho',serif;font-weight:800;color:#5A3A2A}
 .sis166 .bn-ko .dm{color:#6A5244}
-.sis166 .bn-ko .go{background:#B01A5A;color:#fff}
+.sis166 .bn-ko .go{background:#B01A5A;color:#fff}.sis166 .bn-ko .pic{align-items:center}.sis166 .bn-ko .pic img{border-radius:14px;box-shadow:0 1px 3px rgba(90,58,42,.16)}
 .sis166 .bn-nt{background:#FFF8E1 radial-gradient(#F2DFA6 1.2px,transparent 1.3px) 0 0/12px 12px;border:2px solid #1E1E2A;box-shadow:3px 3px 0 #F2C94C;color:#1E1E2A}
 .sis166 .bn-nt .nm{font-family:'Mochiy Pop One','Zen Maru Gothic',sans-serif;color:#C42E62;font-weight:400}
 .sis166 .bn-nt .dm{color:#4A4A5A}
