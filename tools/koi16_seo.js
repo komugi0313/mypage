@@ -75,7 +75,11 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans JP",-
 img{max-width:100%}
 a{color:var(--rose-ink)}
 .top{display:flex;align-items:center;justify-content:space-between;gap:10px;max-width:640px;margin:0 auto;padding:6px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
-.logo{display:flex;flex-direction:column;justify-content:center;text-decoration:none;min-height:48px;line-height:1.25}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none;min-height:48px;line-height:1.25}
+.lg-t{display:flex;flex-direction:column;justify-content:center}
+.lg-h{width:36px;height:36px;border-radius:10px;flex:0 0 auto;box-shadow:0 1px 3px rgba(90,58,42,.16)}
+.ft-mark{display:block;width:44px;height:44px;border-radius:12px;margin:0 auto 10px;box-shadow:0 1px 3px rgba(90,58,42,.16)}
+@media (max-width:359px){header.top .lg-h{display:none}}
 .logo b{font-family:var(--mincho);font-weight:800;color:var(--rose);font-size:19px}
 .logo small{font-size:11.5px;font-weight:700;color:var(--navy);letter-spacing:.03em}
 .top a.zk{font-size:13px;font-weight:700;text-decoration:none;color:var(--rose-ink);background:var(--rose-soft);border-radius:999px;padding:0 14px;min-height:44px;display:inline-flex;align-items:center;white-space:nowrap}
@@ -216,18 +220,20 @@ function page({ url, title, desc, body, ld, img }) {
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${im}">
 <meta name="theme-color" content="#FBF6F1">
-<link rel="icon" type="image/png" href="/favicon.png">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" href="/favicon.ico?v=2" sizes="48x48">
+<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png?v=2">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=2">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700;900&family=Shippori+Mincho+B1:wght@700;800&display=swap">
 <link rel="stylesheet" href="/seo.css">
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
 </head>
 <body>
-<header class="top"><a class="logo" href="/"><b>恋のかたち診断</b><small>16タイプ×愛着スタイル診断</small></a><a class="zk" href="/chara/">16キャラ一覧</a></header>
+<header class="top"><a class="logo" href="/"><img class="lg-h" src="/img/logo-heart.webp?v=1" alt="" width="36" height="36"><span class="lg-t"><b>恋のかたち診断</b><small>16タイプ×愛着スタイル診断</small></span></a><a class="zk" href="/chara/">16キャラ一覧</a></header>
 <main>
 ${body}
 </main>
-<footer><a href="/">恋のかたち診断のトップへ</a>　<a href="/?privacy=1">プライバシーポリシー</a><div class="credit" data-nocg>Produced by Mizuki Nico</div></footer>
+<footer><img class="ft-mark" src="/img/logo-heart.webp?v=1" alt="" width="44" height="44"><a href="/">恋のかたち診断のトップへ</a>　<a href="/?privacy=1">プライバシーポリシー</a><div class="credit" data-nocg>Produced by Mizuki Nico</div></footer>
 <script src="/seo.js"></script>
 </body>
 </html>

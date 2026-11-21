@@ -17,6 +17,21 @@ var BX=(function(){ var M={},base=0,k,g; for(k in BX_MODEL){ M[k]=BX_MODEL[k]; f
     while(changed){ changed=false; for(var j=0;j<pts.length-1;j++){ var a=pts[j],b=pts[j+1]; if(b-a<9) continue; var best=-1,bs=-1e9; for(var k=a+3;k<=b-3;k++){ if(ok(k)&&sc2[k]>bs){ bs=sc2[k]; best=k; } } if(best>0){ pts.splice(j+1,0,best); changed=true; break; } } }
     return pts.slice(1,-1); };
 })();
+// 文節の切れ目のうち、単語の途中（おたが｜い・が｜まん・とき｜めき など）になるものは使わない。
+// ブラウザの日本語の単語の区切り（Intl.Segmenter）とくらべ、単語の区切りでもあるところだけで改行する（鑑定者本人 2026-11-21「単語の途中で段が分かれているところは」）
+var BX_SEG=(function(){ try{ return new Intl.Segmenter('ja',{granularity:'word'}); }catch(e){ return null; } })();
+function bxWordOk(v,bs){ if(!BX_SEG||!bs.length) return bs; var ok={}, segs=[]; try{ var it=BX_SEG.segment(v); for(var s of it){ ok[s.index]=1; segs.push(s); } }catch(e){ return bs; }
+  var keep=[], re=/問い合わせ|お問合せ/g, m; while((m=re.exec(v))) keep.push([m.index,m.index+m[0].length]);
+  var inKeep=function(i){ for(var k=0;k<keep.length;k++){ if(i>keep[k][0]&&i<keep[k][1]) return true; } return false; };
+  var PUNC=/[、。，．・！？!?…）」』】ー]/;
+  var out=bs.filter(function(i){ return !inKeep(i)&&(ok[i]||/[ぁ-ゖ]/.test(v[i-1])&&!/(^|[^ぁ-ゖ])[おご]$/.test(v.slice(Math.max(0,i-2),i))&&/[一-龠々ァ-ヺ]/.test(v[i])); });
+  // 切れ目を外して長くなったまとまり（10文字より長い）は、単語の区切りのうち、助詞のあと・新しい言葉（漢字・カタカナ）の前で切り直す
+  var PART=/^(を|が|に|で|と|は|も|へ|の|から|まで|より|として|って|には|では|とは)$/;
+  var pts=[0].concat(out,[v.length]), add=[];
+  for(var a=0;a<pts.length-1;a++){ var x=pts[a], y=pts[a+1]; if(y-x<=10) continue;
+    for(var q=1;q<segs.length;q++){ var p=segs[q].index; if(p<=x+2||p>=y-2||inKeep(p)||PUNC.test(v[p])) continue;
+      if(PART.test(segs[q-1].segment)||(/[ぁ-ゖ]$/.test(segs[q-1].segment)&&!/^[おご]$/.test(segs[q-1].segment)&&/^[一-龠々ァ-ヺ]/.test(segs[q].segment))) add.push(p); } }
+  return out.concat(add).sort(function(a,b){return a-b;}); }
 function phrase(el){
   if(!el || el.querySelector('wbr')) return; el.classList.add('bx'); // 同じ枠に文が入れかわる（質問など）ときも毎回分ける
   var nodes=[], w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null), n;
@@ -25,7 +40,7 @@ function phrase(el){
   var seen=0;
   nodes.forEach(function(t){
     t.nodeValue=t.nodeValue.replace(/(\S)(／)/g,'$1\u2060$2');
-    var v=t.nodeValue, bs=BX(v), frag=document.createDocumentFragment(), last=0;
+    var v=t.nodeValue, bs=bxWordOk(v,BX(v)), frag=document.createDocumentFragment(), last=0;
     bs.forEach(function(b){ var rest=total-(seen+b); if(rest<5) return; frag.appendChild(document.createTextNode(v.slice(last,b))); frag.appendChild(document.createElement('wbr')); last=b; });
     seen+=v.length;
     if(!last) return;
