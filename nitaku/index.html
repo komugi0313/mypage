@@ -722,6 +722,11 @@ html[data-tone="f"] .tn-f,html[data-tone="s"] .tn-s{display:revert}
 .ct-note small{font-size:12.5px;font-weight:500}
 .rh-mi,.kc-mi{margin:8px auto 0;max-width:30em;padding:8px 12px;border-radius:12px;background:#FFE9F1;color:#1E1E2A;font-size:15px;font-weight:700;line-height:1.6;text-align:center}
 .rh-mi b,.kc-mi b{display:block;font-size:12px;color:#9C1445;letter-spacing:.04em;margin-bottom:2px}
+.kc-why{margin:12px 0 4px;background:#FFE9F1;border:2px solid #FF3D7F;border-radius:16px;padding:12px 12px 10px;text-align:left}
+.kc-why h4{margin:0;font-size:16px;font-weight:800;color:#1E1E2A}.kc-why .kw-lead{margin:2px 0 8px;font-size:13px;color:#5B5866}
+.kc-why ol{list-style:none;margin:0;padding:0;display:grid;gap:8px}.kc-why li{background:#fff;border:1.5px solid #1E1E2A;border-radius:12px;padding:8px 10px}
+.kc-why .kw-q{margin:0;font-size:12.5px;color:#5B5866}.kc-why .kw-a{margin:0;font-size:15px;font-weight:800;line-height:1.5;color:#1E1E2A}
+.kc-why .kw-w{margin:2px 0 0;font-size:13px;color:#1E1E2A}.kc-why .kw-w b{background:#fff;border:1.5px solid #FF3D7F;color:#9C1445;border-radius:99px;padding:0 8px;font-weight:800;white-space:nowrap}
 .kc-mi{text-align:left;margin:6px 0}.kc-mi-w{max-width:none;margin:10px 0 0}.zk-mi{text-align:center}
 
 .zk-kiki{margin:0;font-size:15px}
@@ -3060,6 +3065,31 @@ var CHARA_NG={koakuma:'追いかけたい・ストレート・恋愛全力・重
 var CHARA_WARN={hunter:'追いかけたい',kirakira:'見栄っぱり'}; // 成分表示の「注意」に入れるキャラの言葉（ふつうは h の1つ目）
 function charaWordsOk(c, ws){ var ng=(CHARA_NG[c.id]||'').split('・'); return ws.filter(function(w){ return ng.indexOf(w)<0; }); }
 function charaFill(list, extra, n){ var out=list.slice(); extra.forEach(function(w){ if(out.length<n && out.indexOf(w)<0) out.push(w); }); return out; }
+/* キャラになった理由（鑑定者本人 2026-11-21「Aを入れて」。見本 https://claude.ai/artifact/YQ5MsZr4htjeV5vjdGuP14）：
+   このキャラの点がいちばん大きく入った答えを、上から3つまで見せる。キャラの決め方・点数は変えない。
+   ことば（キャラの言葉と同じもの）かキャラの印でつながる答えだけ。2つ以上ないときは出さない（こじつけに見えないように） */
+function charaWhy(qs, ans, c, opt){
+  opt=opt||{}; if(!c || opt.mode==='normal') return [];
+  var K=opt.hon ? KOTOBA.honL : KOTOBA.love, cw=(c.w||[]).concat(c.h||[]), out=[];
+  qs.forEach(function(q,qi){
+    var a=ans&&ans[qi]; if(a!=='A' && a!=='B') return;
+    var o=a==='A'?'B':'A', side=canon(q,a), k=K.byId[q.id], t=CH.q ? CH.q[q[side]] : null;
+    var ws=k ? (k[side]||[]).concat(k[side+'h']?[k[side+'h']]:[]) : [], hit=ws.filter(function(w){ return cw.indexOf(w)>=0; });
+    var mk=!!(t && (t.c||[]).indexOf(c.id)>=0);
+    if(!hit.length && !mk) return;
+    var o1={mode:'love', hon:opt.hon}, x=charaOf([q],[a],o1), y=charaOf([q],[o],o1);
+    var d=((x&&x.cs[c.id])||0)-((y&&y.cs[c.id])||0); if(!(d>0.3)) return;
+    out.push({ q:q.ex||'', a:a==='A'?q.a:q.b, w:hit[0]||'', mk:mk, d:d });
+  });
+  out.sort(function(x,y){ return (y.mk-x.mk)||(y.d-x.d); });
+  var used={}; out=out.filter(function(r){ var k=r.w||'_'; if(used[k]) return false; used[k]=1; return true; });   // 同じことばを2回出さない
+  return out.length>=2 ? out.slice(0,3) : [];
+}
+function charaWhyHTML(qs, ans, c, label, opt){
+  var rs; try{ rs=charaWhy(qs, ans, c, opt); }catch(e){ rs=[]; } if(!rs.length) return '';
+  return '<div class="kc-why"><h4>'+esc(label)+'が'+qq(c.name)+'になった理由</h4><p class="kw-lead">'+(label==='あなた'?'あなた':esc(label))+'が選んだ答えから、こんなところが見えました。</p><ol>'+
+    rs.map(function(r){ return '<li>'+(r.q?'<p class="kw-q">'+esc(r.q)+'</p>':'')+'<p class="kw-a">'+qq(r.a)+'</p><p class="kw-w">→ '+(r.w?'<b>'+esc(r.w)+'</b> なところ':'<b>'+esc(c.name)+'</b> らしい答え')+'</p></li>'; }).join('')+'</ol></div>';
+}
 function charaHTML(qs, ans, label, cls, fold, opt){
   var r=(opt && opt.r) || charaOf(qs, ans, opt); if(!r) return ''; opt=opt||{}; var NM=opt.mode==='normal', D=NM?CHN:CH, MK=NM?'normal':'love', an=r.ani?r.ani.name:'';
   var c=r.main, kt=kotobaOf(qs, ans, MK) || { words:[], hito:[], both:[] }, sc=r.sc;
@@ -3069,6 +3099,7 @@ function charaHTML(qs, ans, label, cls, fold, opt){
     (opt.hero ? '<div class="kc-top"><div class="kc-tx"><p class="kc-desc">'+esc(c.desc)+'</p></div></div>' : '<div class="kc-top">'+(CHARA_IMG[c.id]?'<div class="kc-pic"><img src="'+CHARA_IMG[c.id]+'" alt="" width="104" height="104" loading="lazy"><div class="kc-badge"><span>'+esc(c.name)+'</span></div></div>':'<div class="kc-badge"><span>'+esc(c.name)+'</span></div>')+'<div class="kc-tx"><p class="kc-say">'+esc(c.say)+'</p>'+(c.miryoku&&!fold?'<p class="kc-mi"><b>'+esc(label)+'の恋の魅力</b>'+esc(c.miryoku)+'</p>':'')+'<p class="kc-desc">'+esc(c.desc)+'</p></div></div>'+
       // みんなの結果（せまい枠）では、恋の魅力は絵の横ではなく横いっぱいに出す（「安心して任せられるところ」がピンクの枠からはみ出していたため）
       (c.miryoku&&fold?'<p class="kc-mi kc-mi-w"><b>'+esc(label)+'の恋の魅力</b>'+esc(c.miryoku)+'</p>':''))+
+    (NM ? '' : charaWhyHTML(qs, ans, c, label, opt))+
     (fold ? '\u0001KCARDS\u0001' : '')+
     '<div class="kc-rows">'+
       (r.sub ? '<div class="kc-sub">'+(CHARA_IMG[r.sub.id]?'<img src="'+CHARA_IMG[r.sub.id]+'" alt="" width="52" height="52" loading="lazy">':'')+'<div><b>もう1つの顔</b><span class="ks-nm">'+esc(r.sub.name)+'</span><p><span class="nw">'+esc(c.name)+'と同じくらい</span><span class="nw">強く出ています</span></p></div></div>' : '')+
