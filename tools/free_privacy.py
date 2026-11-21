@@ -13,7 +13,7 @@ def _tailnw(v):
     m = re.search(r'([^<>&;\s]{2,5})$', v)
     if not m: return v
     cut = m.start(1)
-    K = re.compile(r'[\u4e00-\u9fff々ァ-ヺー]')
+    K = re.compile(r'[\u4e00-\u9fff々ァ-ヺーA-Za-z]')   # 英語の言葉（Hosting）も途中で割らない
     while cut > 0 and K.match(v[cut-1]) and K.match(v[cut]) and v[cut-1] not in '<>&;':
         cut -= 1
     return v[:cut] + '<span class="nw">' + v[cut:] + '</span>'
