@@ -216,8 +216,10 @@ function page({ url, title, desc, body, ld, img }) {
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${im}">
 <meta name="theme-color" content="#FBF6F1">
-<link rel="icon" type="image/png" href="/favicon.png">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" href="/favicon.ico?v=2" sizes="48x48">
+<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png?v=2">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=2">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700;900&family=Shippori+Mincho+B1:wght@700;800&display=swap">
 <link rel="stylesheet" href="/seo.css">
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
