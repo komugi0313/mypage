@@ -53,6 +53,7 @@
 <footer><a href="/">恋のかたち診断のトップへ</a>　<a href="/?privacy=1">プライバシーポリシー</a><div class="credit" data-nocg>Produced by Mizuki Nico</div></footer>
 <script src="/seo.js"></script>
 <script id="pk-contrast-guard">
+window.__pkPhrase=true;
 /* 文字の見えやすさの安全装置（tools/add_contrast_guard.py が3サイトの全ページに埋め込む。直すときはこのファイルを直して再実行）
    文字の色と、その後ろの背景の色を比べて、読みにくい組み合わせ（薄い背景に薄い文字／濃い背景に濃い文字）を見つけたら、
    その文字だけ色を自動で調整する（明るい背景→同じ色みのまま濃く、暗い背景→白く）。計算・鑑定の中身には一切さわらない。
@@ -221,6 +222,61 @@
       if(b.dataset.a==='copy'){ var ok=function(){ b.textContent='コピーしました。Safari・Chromeに貼りつけて開いてください'; }; try{ navigator.clipboard.writeText(u).then(ok,function(){ window.prompt('このリンクをコピーしてください',u); }); }catch(_e){ try{ window.prompt('このリンクをコピーしてください',u); }catch(__e){} } } });
     (document.body||document.documentElement).appendChild(d); }catch(e){} }
   window.print=function(){ opened=false; var r; try{ r=orig.apply(window,arguments); }catch(e){} setTimeout(function(){ if(!opened&&!document.hidden) show(); },1500); return r; };
+})();
+/* 言葉の途中で行が分かれないようにする（鑑定者本人の指摘 2026-11-20「単語の途中で段が分かれているところはありませんか」）：
+   Chrome の word-break:auto-phrase は iPhone の Safari では効かない。教科書・用語・規約・鑑定書のページにはその設定も入っていない。
+   そこで、言葉のまとまり（助詞・送りがなまでを1つ）の切れ目にだけ <wbr> を入れ、まとまりの中では改行しない（word-break:keep-all）。
+   auto-phrase が効いている所（Chrome のアプリ）は触らない。長いまとまり（14字以上）は途中でも切れる。はみ出しそうなときは overflow-wrap で折り返す。
+   <wbr> はコピー・LINEの文（innerText・textContent）には入らない。入力欄・表の数字・コード・縦書き・横並びの札（nowrap）には触らない。 */
+(function(){
+  if(window.__pkPhrase) return; window.__pkPhrase=true;
+  if(typeof Intl==='undefined'||!Intl.Segmenter) return;
+  var SEG; try{ SEG=new Intl.Segmenter('ja',{granularity:'word'}); }catch(e){ return; }
+  var JA=/[぀-ヿ㐀-鿿々〆ヵヶ]/, HIRA=/^[ぁ-ゟー]+$/, HEAD=/^[㐀-鿿々〆゠-ヿA-Za-z0-9０-９Ａ-Ｚａ-ｚ「『（(【〔〈《]/, AFTER=/[、。，．！？!?」』）)】〕〉》…・／\/：:；\s]$/;
+  var st=document.createElement('style'); st.textContent='.pk-ph{word-break:keep-all;overflow-wrap:break-word;line-break:strict}.pk-nw{white-space:nowrap}.pk-ph.pk-ph-any{overflow-wrap:anywhere}.pk-ph.pk-ph-off{word-break:normal}.pk-nw.pk-ph-off{white-space:normal}'; (document.head||document.documentElement).appendChild(st);
+  var SKIP='script,style,textarea,input,select,option,code,pre,svg,canvas,[contenteditable],.no-phrase,.no-og,title,noscript';
+  var done=new WeakSet();
+  function phrases(t){ var out=[], cur='', prev=null;
+    var it=SEG.segment(t)[Symbol.iterator](), r;
+    while(!(r=it.next()).done){ var s=r.value.segment;
+      if(cur&&prev!=null){ var br=false;
+        if(AFTER.test(prev)&&!/^[、。，．！？!?」』）)】〕〉》…・ー]/.test(s)) br=true;            // 句読点・とじかっこのあと
+        else if(HIRA.test(prev)&&(prev.length>=2||/[がのをにへとでやはもかねよ]$/.test(prev))&&HEAD.test(s)) br=true;   // 助詞など（ひらがなだけのまとまり）のあと、漢字・カタカナ・数字の前（1文字の送りがな「植え｜替え」では切らない）
+        else if(/^[「『（(【〔〈《]/.test(s)) br=true;                                              // ひらきかっこの前
+        else if(cur.length>=14) br=true;                                                          // 長すぎるまとまりは切ってよい
+        if(br){ out.push(cur); cur=''; } }
+      cur+=s; prev=s; }
+    if(cur) out.push(cur); return out; }
+  function okEl(p){ if(!p||p.closest(SKIP)) return false; if(p.classList.contains('pk-ph')) return !p.classList.contains('pk-ph-off'); var cs=getComputedStyle(p); if(!/^(normal|auto-phrase|break-word|keep-all)$/.test(cs.wordBreak)) return false;   /* Chrome の auto-phrase も同じ切れ目にそろえる（iPhone と同じ見た目に） */ if(/^(nowrap|pre)$/.test(cs.whiteSpace)) return false; if(cs.writingMode&&cs.writingMode.indexOf('vertical')===0) return false; return true; }
+  function doNode(n){ if(done.has(n)) return; done.add(n); var v=n.nodeValue; if(!v||!JA.test(v)) return; var p=n.parentElement;
+    if(v.trim().length>=2&&v.trim().length<=6&&!/[\s、。・／\/]/.test(v.trim())&&p&&p.closest('td,th')&&okEl(p)&&p.childNodes.length===1){ p.classList.add('pk-nw'); touched.push(p); return; }   // 表の短い言葉（女性・華蓋・向き）は1つにまとめる
+    if(v.length<6) return; if(!okEl(p)) return;
+    var ps=phrases(v), END=/[\u3041-\u309f、。！？」』）)】〕]$/;
+    // 太字・黄色の印などのとなり：助詞・句読点のあとなら、飾りの前後でも改行できるようにする
+    var pv=n.previousSibling, pt=pv&&(pv.nodeType===3?pv.nodeValue:(pv.nodeType===1&&pv.tagName!=='WBR'?pv.textContent:''))||'';
+    var lead=!!(pv&&pv.nodeType===1&&pv.tagName!=='WBR'&&HEAD.test(v)&&END.test(pt)), trail=!!(n.nextSibling&&n.nextSibling.nodeType===1&&n.nextSibling.tagName!=='WBR'&&END.test(v)&&HEAD.test((n.nextSibling.textContent||'').trim()));
+    if(ps.length<2&&!lead&&!trail) { p.classList.add('pk-ph'); touched.push(p); return; }
+    var f=document.createDocumentFragment(); if(lead) f.appendChild(document.createElement('wbr')); ps.forEach(function(x,i){ if(i) f.appendChild(document.createElement('wbr')); var tn=document.createTextNode(x); done.add(tn); f.appendChild(tn); }); if(trail) f.appendChild(document.createElement('wbr'));
+    p.classList.add('pk-ph'); p.replaceChild(f,n); touched.push(p); }
+  var touched=[];
+  // まとまりで改行したせいで横にはみ出したところは、元の改行にもどす（表・横並びの札など）
+  function fixOver(){ var vw=document.documentElement.clientWidth, tbls=new Set(), redo=[];
+    var tf=function(e){ for(var a=e;a&&a!==document.body;a=a.parentElement){ var c=getComputedStyle(a); if(c.transform&&c.transform!=='none') return true; } return false; };   // 動き（ふわっと出る）の途中は位置がずれて見えるので、位置では測らない
+    var over=function(p){ var cs=getComputedStyle(p), r=p.getBoundingClientRect(), inl=/^inline/.test(cs.display); if((!tf(p)&&r.right>vw+1)||(!inl&&/visible/.test(cs.overflowX)&&p.scrollWidth>p.clientWidth+2)) return true; var pa=p.parentElement, pc=pa&&getComputedStyle(pa); if(pa&&/flex|grid/.test(pc.display)){ if(pa.scrollWidth>pa.clientWidth+2) return true; for(var k=pa.firstElementChild;k;k=k.nextElementSibling){ var kr=k.getBoundingClientRect(); if(kr.width>0&&!tf(k)&&kr.right>vw+1&&getComputedStyle(k).position!=='fixed') return true; } } return false; };   /* 横並びの中では、となりの札が押し出されていないかも見る */
+    touched.forEach(function(p){ if(!p.isConnected) return;
+      for(var a=p.parentElement;a&&a!==document.body;a=a.parentElement){ if(/(auto|scroll)/.test(getComputedStyle(a).overflowX)) return; }   // 横にすべらせる入れ物の中は、はみ出してよい
+      var t=p.closest('table'); if(t){ tbls.add(t); return; }
+      if(over(p)){ p.classList.add('pk-ph-any'); redo.push(p); } });
+    tbls.forEach(function(t){ if(!tf(t)&&t.getBoundingClientRect().right>vw+1) t.querySelectorAll('.pk-ph,.pk-nw').forEach(function(x){ x.classList.add('pk-ph-off'); }); });
+    if(redo.length) requestAnimationFrame(function(){ redo.forEach(function(p){ if(p.isConnected&&over(p)) p.classList.add('pk-ph-off'); }); });   // まとまりを保ったまま折ってもはみ出すときだけ、元の改行に
+    touched=[]; }
+  var busy=false;
+  function run(root){ if(busy) return; busy=true; try{ var w=document.createTreeWalker(root||document.body,NodeFilter.SHOW_TEXT,null), a=[], n; while((n=w.nextNode())) if(!done.has(n)) a.push(n); a.forEach(doNode); if(touched.length){ var tt=touched; touched=[]; setTimeout(function(){ requestAnimationFrame(function(){ touched=tt.concat(touched); fixOver(); }); },400); } }catch(e){} busy=false; }   /* 幅が落ち着いてから測る（読み込みの途中で測ると、はみ出していないのに元にもどしていた） */
+  var tm=null, q=[];
+  function later(){ if(tm) return; tm=setTimeout(function(){ tm=null; var r=q; q=[]; if(r.length>40) run(document.body); else r.forEach(function(x){ if(x.isConnected) run(x); }); },120); }
+  function start(){ if(!document.body) return; run(document.body);
+    try{ new MutationObserver(function(ms){ if(busy) return; ms.forEach(function(m){ m.addedNodes.forEach(function(x){ if(x.nodeType===1) q.push(x); else if(x.nodeType===3&&x.parentElement) q.push(x.parentElement); }); }); if(q.length) later(); }).observe(document.body,{childList:true,subtree:true}); }catch(e){} }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
 })();
 </script>
 </body>
