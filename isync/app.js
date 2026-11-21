@@ -732,15 +732,20 @@ const POLE={kicchiri:['身のまわりや決めごとを、きちんと整えて
   keikaku:['予定は、先に決めておくと安心。','予定は、その場の気分で決めるのが楽しい。'],
   futari:['好きな人とは、できるだけ一緒に過ごしたい。','好きな人がいても、ひとりの時間も大事にしたい。'],
   okane:['お金は先のことを考えて、コツコツためたい。','お金は、今の楽しみにもしっかり使いたい。']};
-function shapeLean(G,p){const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x=>x.s);
-  return rows.filter(x=>Math.abs(x.s.pct-50)>=10).sort((x,y)=>Math.abs(y.s.pct-50)-Math.abs(x.s.pct-50)).slice(0,2).map(x=>x.s.pct>50?x.a.l:x.a.r)}
+// 寄ったものさしを2つまで選ぶ（2026-11-21 鑑定者本人「1と2の両方直して」）：強さが同じときは、答えた問題の多いほう→その回の問題で決まる公平なくじ（前は並び順の先の「暮らし・予定」ばかりが選ばれていた）。
+function leanTie(G,k){let h=2166136261;const t=k+'|'+G.qs.join(',');for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0)%997}
+function leanRows(G,p,rows){rows=rows||AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x=>x.s);
+  return rows.filter(x=>Math.abs(x.s.pct-50)>=10).sort((x,y)=>(Math.abs(y.s.pct-50)-Math.abs(x.s.pct-50))||(y.s.n-x.s.n)||(leanTie(G,y.a.key)-leanTie(G,x.a.key))).slice(0,2)}
+// 1問だけで決めたものさしは「○○派寄り」（言い切らない）
+function leanLab(x){const w=x.s.pct>50?x.a.l:x.a.r;return x.s.n<2?w+'寄り':w}
+function shapeLean(G,p){return leanRows(G,p).map(leanLab)}
 function shapeWords(G,p){const l=shapeLean(G,p);return l.length?l.join('×'):'どれにも寄らない、やわらかい人'}
 function shapeBars(G,p){const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x=>x.s);
   return rows.map(({a,s})=>`<div class="shx"><p>${esc(a.name)}</p><div class="sbar"><i style="left:calc(9px + (100% - 18px) * ${(100-s.pct)/100})"></i></div><div class="ends"><span${s.pct>=60?' class="on"':''}>${esc(a.l)}</span><span${s.pct<=40?' class="on"':''}>${esc(a.r)}</span></div></div>`).join('')}
 function shapeHTML(G,p,who,extra){
   const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x=>x.s);if(!rows.length)return '';
-  const lean=rows.filter(x=>Math.abs(x.s.pct-50)>=10).sort((x,y)=>Math.abs(y.s.pct-50)-Math.abs(x.s.pct-50)).slice(0,2)
-    .map(x=>x.s.pct>50?{w:x.a.l,t:(POLE[x.a.key]||[])[0]}:{w:x.a.r,t:(POLE[x.a.key]||[])[1]});
+  const lean=leanRows(G,p,rows)
+    .map(x=>({w:leanLab(x),t:(POLE[x.a.key]||[])[x.s.pct>50?0:1]}));
   const big=lean.length?lean.map(x=>`<span class="nw">${esc(x.w)}</span>`).join('<span class="x">×</span>'):'どれにも寄らない、やわらかい人';
   const desc=(lean.length?lean.map(x=>x.t||''):['どのものさしでも、まん中あたり。相手に合わせて動ける人です。']).filter(Boolean).map(t=>`<span class="sl">${esc(t)}</span>`).join('');
   const bars=rows.map(({a,s})=>`<div class="shx"><p>${esc(a.name)}</p><div class="sbar"><i style="left:calc(9px + (100% - 18px) * ${(100-s.pct)/100})"></i></div><div class="ends"><span${s.pct>=60?' class="on"':''}>${esc(a.l)}</span><span${s.pct<=40?' class="on"':''}>${esc(a.r)}</span></div></div>`).join('');
@@ -757,10 +762,10 @@ const MATCH={kicchiri:[['暮らしのリズムが合い、片づけや決めご�
   okane:[['将来のお金の話がしやすく、安心できる。','外食・旅行・買い物にかけるお金で、ぶつかりやすい。','毎月ためる分を先に一緒に決めて、残りの使い方には口を出さない。'],
     ['一緒に楽しむことに、気持ちよくお金を使える。','「それ、本当に必要？」と、お金の使い方でぶつかりやすい。','ためる分だけは先に一緒に決めて、楽しむお金は気持ちよく使う。']]};
 function matchHTML(G,p){const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x=>x.s&&MATCH[x.a.key]);if(!rows.length)return'';
-  const lean=rows.filter(x=>Math.abs(x.s.pct-50)>=10).sort((x,y)=>Math.abs(y.s.pct-50)-Math.abs(x.s.pct-50)).slice(0,2);
+  const lean=leanRows(G,p,rows);
   const nw=t=>`<span class="nw">${esc(t)}</span>`;
-  const body=lean.length?lean.map(({a,s})=>{const l=s.pct>50,me=l?a.l:a.r,ot=l?a.r:a.l,m=MATCH[a.key][l?0:1];
-    return `<div class="mt-ax"><p class="mt-h">${nw(me)}のあなたは</p>
+  const body=lean.length?lean.map(x=>{const {a,s}=x,l=s.pct>50,me=l?a.l:a.r,ot=l?a.r:a.l,m=MATCH[a.key][l?0:1];
+    return `<div class="mt-ax"><p class="mt-h">${nw(leanLab(x))}のあなたは</p>
       <div class="mt-r ok"><span class="mt-k">合いやすい</span><p><b>同じ${nw(me)}の人</b>${esc(m[0])}</p></div>
       <div class="mt-r ng"><span class="mt-k">ぶつかりやすい</span><p><b>${nw(ot)}の人</b>${esc(m[1])}</p></div>
       <p class="mt-tip"><span>合わせ方</span>${esc(m[2])}</p></div>`}).join('')
