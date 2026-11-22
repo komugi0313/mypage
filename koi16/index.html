@@ -573,7 +573,7 @@ header.top .navbtn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(
 @media(max-width:360px){.mine-it{gap:6px;padding:10px 8px}.mine-it .mi-m .art{width:24px;height:24px}.mine-it b{font-size:15px}.mine-it .mi-s{font-size:12px}}
 .mtag{display:inline-block;font-size:11px;font-weight:700;border-radius:99px;padding:1px 8px;color:var(--text)}
 .mtag.q{background:#E5EEF9}.mtag.f{background:#FFF6D9}.mtag.g{background:#E4F4EC}
-.mine-note{font-size:13px;margin:10px 0 0}
+.mine-note{font-size:13px;margin:10px 0 0}.mine-line{margin:12px 0 0;background:#FCE8EF;border:1.5px solid var(--rose);border-radius:14px;padding:10px 12px;font-size:14px;line-height:1.7}.mine-line b{color:var(--rose)}.mine-line .btn{margin-top:10px}body.koi-ext>*:not(#koi-ext){display:none!important}#koi-ext{max-width:420px;margin:0 auto;padding:64px 20px;text-align:center}#koi-ext p{margin:0 0 10px}#koi-ext .btn{margin-top:18px}
 .mine-bar{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:0 0 10px}
 .mine-bar p{margin:0;background:#FFF6D9;border-radius:99px;padding:4px 12px;font-size:13px;font-weight:700}
 /* 読みやすさ（鑑定者本人 2026-11-12「黒文字だらけで読みづらい・読み疲れる・頭に入ってこない」）：
@@ -3201,6 +3201,18 @@ var params = new URLSearchParams(location.search);
 var partner = validCode(params.get('from')) || (st.partner&&validCode(st.partner)) || null;
 (function(){ var f=validCode(params.get('from')), k=(params.get('k')||'').match(/^(\d{1,3})\.(\d{1,3})$/); if(f&&k){ var a=+k[1], t=+k[2]; if(a<=100&&t<=100){ st.partnerK={c:f,anx:a,ts:t}; try{ localStorage.setItem(LS,JSON.stringify(st)); }catch(e){} } } })();
 function validCode(c){ c=(c||'').toUpperCase(); return T[c]?c:null; }
+/* LINEの中の画面で開いたら、ふだんのブラウザ（Safari・Chrome）で開き直す。この画面の結果も一緒にうつす（鑑定者本人 2026-11-22「限りなくミスがないやり方に」） */
+var KOI_IN_LINE=/\sLine\/\d/i.test(navigator.userAgent||'');
+function lx(u){ return u+(u.indexOf('?')<0?'?':'&')+'openExternalBrowser=1'; }
+function mvPack(){ try{ var o={}; if(st.hist&&st.hist.length) o.h=st.hist; if(st.me&&st.me.code) o.me=st.me; if(st.groups&&Object.keys(st.groups).length) o.g=st.groups; if(!o.h&&!o.me&&!o.g) return ''; if(st.nick) o.n=st.nick;
+  return btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }catch(e){ return ''; } }
+function mvUnpack(s){ try{ s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; return JSON.parse(decodeURIComponent(escape(atob(s)))); }catch(e){ return null; } }
+function mvGo(){ var q=new URLSearchParams(location.search); q.delete('openExternalBrowser'); var qs=q.toString(), mv=mvPack();
+  location.replace(location.origin+location.pathname+'?'+(qs?qs+'&':'')+'openExternalBrowser=1'+(mv?'#mv='+mv:'')); }
+(function(){ if(!KOI_IN_LINE||params.has('openExternalBrowser')) return; var stay=false; try{ stay=sessionStorage.getItem('koi16_stay')==='1'; }catch(e){} if(stay) return; window.__koiExt=true; mvGo(); })();
+var MV_IN=null; (function(){ var h=location.hash||''; if(h.indexOf('#mv=')===0) MV_IN=mvUnpack(h.slice(4));
+  if(params.has('openExternalBrowser')||MV_IN){ var q=new URLSearchParams(location.search); q.delete('openExternalBrowser'); var qs=q.toString(); try{ history.replaceState(null,'',location.pathname+(qs?'?'+qs:'')); }catch(e){} } })();
+
 
 var $ = function(id){ return document.getElementById(id); };
 function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
@@ -4078,7 +4090,7 @@ function mineBar(vid,at,tab){
   v.insertBefore(d,v.firstChild);
 }
 function renderMine(tab){
-  var hs=histList(), gk=mineGroups(); if(tab!=='g'&&!hs.length&&gk.length) tab='g'; if(tab==='g'&&!gk.length&&hs.length) tab='s';
+  var hs=histList(), gk=mineGroups(); if(tab!=='g'&&!hs.length&&gk.length) tab='g';
   var h='<section class="card mine"><h1>わたしの結果</h1>';
   if(!hs.length&&!gk.length){ h+='<p>まだ結果がありません。診断すると、ここに残ります。</p><button class="btn btn-wide" type="button" data-act="home">診断をはじめる</button></section>'; }
   else{
@@ -4093,7 +4105,7 @@ function renderMine(tab){
         h+='<p class="muted mine-note">押すと、そのときの結果が開きます。</p>';
       }
     }else{
-      if(!gk.length) h+='<p class="muted">まだみんなで診断した結果がありません。</p>';
+      if(!gk.length) h+='<p class="muted">まだ、みんなで診断した結果はありません。友だちと部屋を作って一緒に診断すると、ここに全員の結果が残ります。</p><button class="btn btn-main btn-wide" type="button" data-act="room-new">みんなで診断する（部屋を作る）</button>';
       else{
         h+='<div class="mine-list">'+gk.map(function(k){ var g=st.groups[k], m=g.m, best=null;
           for(var i=0;i<m.length;i++) for(var j=i+1;j<m.length;j++){ var sc=compat(m[i].c,m[j].c).score; if(!best||sc>best.s) best={a:m[i].n,b:m[j].n,s:sc}; }
@@ -4101,7 +4113,8 @@ function renderMine(tab){
         h+='<p class="muted mine-note">部屋が終わったあとも、ここから全員の結果が見られます。</p>';
       }
     }
-    h+='<p class="muted mine-note">結果はこのスマホの中だけに残り、どこにも送りません。LINEの中で開いた画面と Safari・Chrome では、保存先が別になります。</p></section>';
+    if(KOI_IN_LINE) h+='<div class="mine-line"><b>いまLINEの中で開いています。</b><button class="btn btn-main btn-wide" type="button" data-act="mv-go">いつもの画面で開く（結果も一緒にうつります）</button></div>';
+    h+='<p class="muted mine-note">結果はこのスマホの中だけに残ります。どこにも送りません。</p></section>';
   }
   var v=$('v-mine'); v.innerHTML=h; glueAll(v); show('v-mine');
 }
@@ -4591,9 +4604,9 @@ async function roomLeave(){
 }
 function rInviteText(){ return (rHostName()||'友だち')+'さんが「恋のかたち診断」の部屋で待っています！ リンクを開いて、ニックネームを入れるだけで参加できます（部屋番号：'+dcode(RM.code)+'）'; }
 function rShare(act){
-  if(act==='room-line'){ window.open('https://line.me/R/share?text='+encodeURIComponent(rInviteText()+'\n'+rUrl(RM.code)),'_blank','noopener'); return; }
-  if(act==='room-rline'){ var g=rGroup(); window.open('https://line.me/R/share?text='+encodeURIComponent(gShareText(g)+'\n'+gUrl(g)),'_blank','noopener'); return; }
-  var s2=act==='room-copy'?rInviteText()+'\n'+rUrl(RM.code):(function(){ var g=rGroup(); return gShareText(g)+'\n'+gUrl(g); })();
+  if(act==='room-line'){ window.open('https://line.me/R/share?text='+encodeURIComponent(rInviteText()+'\n'+lx(rUrl(RM.code))),'_blank','noopener'); return; }
+  if(act==='room-rline'){ var g=rGroup(); window.open('https://line.me/R/share?text='+encodeURIComponent(gShareText(g)+'\n'+lx(gUrl(g))),'_blank','noopener'); return; }
+  var s2=act==='room-copy'?rInviteText()+'\n'+lx(rUrl(RM.code)):(function(){ var g=rGroup(); return gShareText(g)+'\n'+lx(gUrl(g)); })();
   if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(s2).then(function(){ toast('コピーしました'); },function(){ prompt('コピーしてください',s2); }); else prompt('コピーしてください',s2);
 }
 
@@ -4615,10 +4628,10 @@ function kParam(){ var m=st.me; return (m&&m.mode!=='quick'&&m.anx!=null&&m.pct&
 function inviteUrl(code){ return location.origin+location.pathname+'?from='+code+(st.me&&st.me.code===code?kParam():''); }
 function doShare(act,code){
   var url=inviteUrl(code), txt=shareText(code);
-  if(act==='line') window.open('https://line.me/R/share?text='+encodeURIComponent(txt+'\n'+url),'_blank','noopener');
+  if(act==='line') window.open('https://line.me/R/share?text='+encodeURIComponent(txt+'\n'+lx(url)),'_blank','noopener');
   else if(act==='x') window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(txt)+'&url='+encodeURIComponent(url),'_blank','noopener');
   else if(act==='copy'){
-    var s=txt+'\n'+url;
+    var s=txt+'\n'+lx(url);
     if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(s).then(function(){toast('コピーしました');},function(){prompt('コピーしてください',s);});
     else prompt('コピーしてください',s);
   } else if(act==='img') saveImage(code);
@@ -4762,11 +4775,12 @@ document.addEventListener('click',function(e){
   else if(act==='room-line'||act==='room-copy'||act==='room-rline'||act==='room-rcopy'){ rShare(act); if(act==='room-line'||act==='room-copy'){ var was=rInvited(); rMarkInv(); if(!was) setTimeout(function(){ RM.sig=''; roomUpdate(); },400); } }
   else if(act==='gjoin'){ gJoin($('v-group').__g,$('g-name').value); }
   else if(act==='gquiz-full'||act==='gquiz-quick'){ var gg=$('v-group').__g, nm2=gName($('g-name').value); if(!nm2){ toast('ニックネームを入れてください'); return; } if(gg.m.some(function(m){return m.n===nm2;})){ toast('同じニックネームの人がいます。少し変えてください'); return; } st.pendingG={id:gg.id,m:gg.m,name:nm2}; save(st); startQuiz(true,act==='gquiz-full'?'full':'quick'); }
-  else if(act==='gline'||act==='gcopy'){ var g3=$('v-group').__g, gu=gUrl(g3), gt=gShareText(g3);
+  else if(act==='gline'||act==='gcopy'){ var g3=$('v-group').__g, gu=lx(gUrl(g3)), gt=gShareText(g3);
     if(act==='gline') window.open('https://line.me/R/share?text='+encodeURIComponent(gt+'\n'+gu),'_blank','noopener');
     else { var s3=gt+'\n'+gu; if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(s3).then(function(){toast('コピーしました');},function(){prompt('コピーしてください',s3);}); else prompt('コピーしてください',s3); } }
   else if(act==='home'){ history.pushState(null,'',location.pathname); home(); }
   else if(act==='mine-open'){ var mt=b.getAttribute('data-tab')||'s'; history.pushState(null,'','?mine=1'+(mt==='g'?'&tab=g':'')); renderMine(mt); }
+  else if(act==='mv-go'){ try{ sessionStorage.removeItem('koi16_stay'); }catch(e){} mvGo(); }
   else if(act==='mine-tab'){ var mt2=b.getAttribute('data-tab'); history.replaceState(null,'','?mine=1'+(mt2==='g'?'&tab=g':'')); renderMine(mt2); }
   else if(act==='mine-h'){ var ha=+b.getAttribute('data-at'), hc=b.getAttribute('data-code'), hh=histList().filter(function(x){return x.at===ha&&x.code===hc;})[0]; if(hh){ history.pushState(null,'','?t='+hc+'&h='+ha); renderResult(hc,hh,null); mineBar('v-result',hh.at,'s'); } }
   else if(act==='mine-g'){ var mg=b.getAttribute('data-gid'), msg=st.groups&&st.groups[mg]; if(msg){ var mgo={id:mg,m:msg.m.slice()}; history.pushState(null,'',gQuery(mgo)+'&mine=1'); renderGroup(mgo); mineBar('v-group',msg.t0||msg.at,'g'); } }
@@ -4794,7 +4808,18 @@ window.addEventListener('popstate',route);
 document.addEventListener('toggle',function(e){ var d=e.target; if(d&&d.id==='rqr'&&d.open&&RM.code&&!rInvited()){ rMarkInv(); var ch=document.querySelector('#v-room .rchip.wait'); if(ch) ch.textContent='⏳ 友だちが入るのを待っています'; } },true);
 document.addEventListener('keydown',function(e){ if(e.key!=='Enter') return; if(e.target&&e.target.id==='r-jname'){ e.preventDefault(); roomDoJoin(false); } else if(e.target&&e.target.id==='r-name'){ e.preventDefault(); roomDoCreate(); } });
 
+function mvMerge(o){ if(!o||typeof o!=='object') return 0; var n=0;
+  if(Array.isArray(o.h)){ var hs=(st.hist||[]).slice(); o.h.forEach(function(x){ if(x&&x.at&&T[x.code]&&!hs.some(function(y){return y.at===x.at;})){ hs.push(x); n++; } }); hs.sort(function(a,b){return (b.at||0)-(a.at||0);}); st.hist=hs.slice(0,HIST_MAX); }
+  if(o.me&&T[o.me.code]&&(!st.me||!st.me.code||(o.me.at||0)>(st.me.at||0))){ st.me=o.me; n++; }
+  if(o.g&&typeof o.g==='object'){ st.groups=st.groups||{}; Object.keys(o.g).forEach(function(k){ var a=st.groups[k], b=o.g[k]; if(!b||!Array.isArray(b.m)) return;
+    if(!a){ st.groups[k]=b; n++; } else if((b.at||0)>(a.at||0)){ b.t0=Math.min(a.t0||b.t0||Date.now(),b.t0||a.t0||Date.now()); b.me=b.me||a.me; st.groups[k]=b; n++; } });
+    var ks=Object.keys(st.groups).sort(function(a,b){return (st.groups[b].at||0)-(st.groups[a].at||0);}); ks.slice(10).forEach(function(k){ delete st.groups[k]; }); }
+  if(o.n&&!st.nick) st.nick=o.n;
+  if(n) save(st); return n; }
 function route(){
+  if(window.__koiExt){ document.body.classList.add('koi-ext'); var m=document.createElement('div'); m.id='koi-ext'; m.innerHTML='<p><b>いつもの画面で開いています…</b></p><p class="muted">開いた画面で、そのまま続けてください。</p><button class="btn btn-sub" type="button" id="koi-stay">開かないときは、ここで続ける</button>'; document.body.appendChild(m);
+    $('koi-stay').onclick=function(){ try{ sessionStorage.setItem('koi16_stay','1'); }catch(e){} location.replace(location.pathname+location.search); }; return; }
+  if(MV_IN){ var mvn=mvMerge(MV_IN); MV_IN=null; if(mvn) setTimeout(function(){ toast('LINEの中で出した結果も、こちらにうつしました'); },300); }
   var p=new URLSearchParams(location.search), t=validCode(p.get('t')), w=validCode(p.get('with'));
   if(p.get('types')) return renderTypes();
   if(p.get('about')) return renderAbout();
