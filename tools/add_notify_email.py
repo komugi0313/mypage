@@ -27,13 +27,15 @@ def css(ink, line, bg, fg, bd, tag, card):
 .pkn-soon{{background:#ECECEC;color:#4A4A4A}}
 .pkn-d{{margin:0 0 10px;font-size:14px;line-height:1.7}}
 .pkn-f{{margin:0}}
+.pkn-row{{display:flex;gap:8px}}
+.pkn-row .pkn-in{{flex:1 1 auto;min-width:0}}
 .pkn-l{{display:block;margin:0 0 8px;font-size:13px;font-weight:700}}
 .pkn-l span{{display:block;margin:0 0 4px}}
 .pkn-in{{display:block;box-sizing:border-box;width:100%;min-height:46px;padding:10px 12px;border:2px solid {line};border-radius:12px;background:#FFFFFF;color:{ink};font:inherit;font-size:16px}}
 .pkn-c{{display:flex;align-items:flex-start;gap:8px;margin:0 0 10px;min-height:44px;font-size:13.5px;line-height:1.6;cursor:pointer}}
 .pkn-c input{{flex:none;width:22px;height:22px;margin:2px 0 0}}
-.pkn-c a{{color:{ink};text-decoration:underline;white-space:nowrap}}
-.pkn-go{{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;padding:8px 16px;border:2px solid {bd};border-radius:999px;background:{bg};color:{fg};font:inherit;font-size:15.5px;font-weight:800;cursor:pointer}}
+.pkn-s a{{color:{ink};text-decoration:underline;white-space:nowrap}}
+.pkn-go{{flex:none;display:flex;align-items:center;justify-content:center;min-height:46px;padding:8px 20px;white-space:nowrap;border:2px solid {bd};border-radius:999px;background:{bg};color:{fg};font:inherit;font-size:15.5px;font-weight:800;cursor:pointer}}
 .pkn-go:disabled{{opacity:.6}}
 .pkn-m{{margin:8px 0 0;padding:8px 10px;border-radius:10px;font-size:13.5px;line-height:1.6;background:#F3F7EE;color:#2F4A1E}}
 .pkn-m.bad{{background:#FDECEC;color:#8A1F1F}}

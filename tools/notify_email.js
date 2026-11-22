@@ -18,32 +18,29 @@
   }
   /* 送る人の画面に出すカード。o = { kind:'with'|'room'|'invite', ref:function(){…} か 文字列, days:10, onSubscribed:function(ref){…} } */
   function card(o){
-    o=o||{}; var id='pkn'+(++seq); REG[id]=o; var days=o.days||10;
+    o=o||{}; var id='pkn'+(++seq); REG[id]=o; 
     return '<section class="pkn" id="'+id+'" data-pkn="'+id+'">'+
       '<p class="pkn-h"><svg class="pkn-ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 7l8 6 8-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>'+
       '<span class="pkn-t"><span class="nw">相手が答えたら、</span><span class="nw">メールでお知らせ</span></span><span class="pkn-tag">任意</span>'+(on()?'':'<span class="pkn-tag pkn-soon">準備中</span>')+'</p>'+
-      '<p class="pkn-d">送ったリンクから相手があとで答えたとき、メールでお知らせします（リンクが使える'+days+'日のあいだ）。登録しなくても、このまま使えます。</p>'+
-      '<form class="pkn-f" novalidate>'+
-        '<label class="pkn-l"><span>メールアドレス</span><input type="email" class="pkn-in" inputmode="email" autocomplete="email" maxlength="120" placeholder="example@mail.com"></label>'+
-        '<label class="pkn-c"><input type="checkbox" class="pkn-ok"><span>お知らせのメールを受け取ることに同意します（<a href="'+esc(CFG.privacy||'privacy.html')+'" target="_blank" rel="noopener">プライバシーポリシー</a>）</span></label>'+
-        '<button type="submit" class="pkn-go">お知らせを受け取る</button>'+
+      '<form class="pkn-f" novalidate><div class="pkn-row">'+
+        '<input type="email" class="pkn-in" inputmode="email" autocomplete="email" maxlength="120" placeholder="メールアドレス" aria-label="メールアドレス">'+
+        '<button type="submit" class="pkn-go">登録</button></div>'+
         '<p class="pkn-m" role="status" hidden></p>'+
       '</form>'+
-      '<p class="pkn-s">お知らせは、相手が答えたことだけ。広告のメールは送りません。いつでも止められます。</p>'+
+      '<p class="pkn-s">相手が答えたことだけをお知らせします（<a href="'+esc(CFG.privacy||'privacy.html')+'" target="_blank" rel="noopener">プライバシーポリシー</a>）。</p>'+
     '</section>';
   }
   function msg(f,t,bad){ var m=f.querySelector('.pkn-m'); m.hidden=false; m.textContent=t; m.className='pkn-m'+(bad?' bad':' ok'); }
   document.addEventListener('submit',function(e){
     var f=e.target; if(!f||!f.classList||!f.classList.contains('pkn-f')) return; e.preventDefault();
     var box=f.closest('[data-pkn]'), o=REG[box&&box.getAttribute('data-pkn')]||{};
-    var mail=(f.querySelector('.pkn-in').value||'').trim(), ok=f.querySelector('.pkn-ok').checked;
+    var mail=(f.querySelector('.pkn-in').value||'').trim();
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mail)){ msg(f,'メールアドレスを正しく入れてください。',true); f.querySelector('.pkn-in').focus(); return; }
-    if(!ok){ msg(f,'「同意します」にチェックを入れてください。',true); return; }
     if(!EP){ msg(f,'メールでのお知らせは、ただいま準備中です。始まったら、ここから登録できます（入れたアドレスは、どこにも送っていません）。',false); return; }
     var ref=typeof o.ref==='function'?o.ref():o.ref; if(!ref){ msg(f,'先にリンクを作ってから（ニックネームを入れてから）登録してください。',true); return; }
-    var btn=f.querySelector('.pkn-go'); btn.disabled=true; btn.textContent='登録しています…';
-    post({type:'subscribe',kind:o.kind||'',ref:ref,email:mail,consent:true,days:o.days||10}).then(function(r){
-      btn.disabled=false; btn.textContent='お知らせを受け取る';
+    var btn=f.querySelector('.pkn-go'); btn.disabled=true; btn.textContent='登録中…';
+    post({type:'subscribe',kind:o.kind||'',ref:ref,email:mail,days:o.days||10}).then(function(r){
+      btn.disabled=false; btn.textContent='登録';
       if(r){ msg(f,'登録しました。相手が答えたら、'+mail+' にお知らせします。',false); if(o.onSubscribed) try{ o.onSubscribed(ref); }catch(e2){} }
       else msg(f,'うまく登録できませんでした。少し時間をおいて、もう一度お試しください。',true);
     });
