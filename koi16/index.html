@@ -274,6 +274,9 @@ h3.whoh{font-size:16px;margin:18px 0 10px}
 .qr-box{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:12px;padding:14px;border:2px solid var(--brown);border-radius:16px;background:#fff;box-shadow:4px 4px 0 var(--brown)}
 .qr-box svg{width:min(240px,70vw);height:auto;display:block}
 .qr-box p{margin:0;text-align:center}
+.qr-tap{display:block;cursor:pointer;border-radius:8px}
+.qr-tap:focus-visible{outline:3px solid var(--rose);outline-offset:3px}
+.qr-box .qr-tapn{font-size:13px;color:var(--rose);font-weight:700}
 .lic{white-space:pre-wrap;overflow-wrap:break-word;font-family:inherit;font-size:13px;line-height:1.65;color:var(--text);background:#fff;border:2px solid var(--line);border-radius:12px;padding:12px;margin:10px 0 0}
 .q-ex{background:#FFF6E5;border:0;border-left:4px solid #E0AE62;border-radius:10px;padding:8px 12px 10px;margin:0 0 14px;font-size:15px;line-height:1.75;color:var(--ink)}
 .q-ex.q-ex-in b{display:inline;margin-right:6px}.q-fit-off{display:none!important}
@@ -4013,6 +4016,18 @@ function gJoin(g,name){
   var ak=myAK(); g.m.push(ak?{c:st.me.code,n:name,k:ak}:{c:st.me.code,n:name}); st.nick=name; gStore(g,name);
   history.replaceState(null,'',gQuery(g)); renderGroup(g);
 }
+/* QRを押すと、そのリンクをスマホの共有で送れる（鑑定者本人 2026-11-22「恋のかたち診断とアイシンクにも同じように」。究極の二択と同じ） */
+function qrTap(url,text){ return '<span class="qr-tap" role="button" tabindex="0" aria-label="リンクを送る" data-qu="'+encodeURIComponent(url)+'" data-qt="'+encodeURIComponent(text||'')+'">'+qrSVG(url)+'</span><p class="muted qr-tapn">QRを押すと、リンクをLINEなどで送れます</p>'; }
+function qrTapShare(el){
+  var url=lx(decodeURIComponent(el.getAttribute('data-qu'))), text=decodeURIComponent(el.getAttribute('data-qt')||'');
+  if(el.closest('#rqr')&&RM.code&&!rInvited()) rMarkInv();
+  if(navigator.share){ navigator.share({title:SITE_NAME,text:text,url:url}).catch(function(){}); return; }
+  var s2=(text?text+'\n':'')+url;
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(s2).then(function(){toast('リンクをコピーしました。LINEやメールに貼ってね');},function(){prompt('コピーしてください',s2);});
+  else prompt('コピーしてください',s2);
+}
+document.addEventListener('click',function(e){ var q=e.target.closest&&e.target.closest('.qr-tap'); if(q) qrTapShare(q); });
+document.addEventListener('keydown',function(e){ var q=e.target.closest&&e.target.closest('.qr-tap'); if(q&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); qrTapShare(q); } });
 function qrSVG(text){
   var q=qrcode(0,'L'); q.addData(text); q.make();
   var n=q.getModuleCount(), M=4, d='';
@@ -4220,7 +4235,7 @@ function renderGroup(g){
   }
   if(n>=2) h+=groupSecs(g,me);
   if(me&&n<G_MAX){
-    h+='<section class="card">'+secH('h2','want','次の人を招待する')+'<p>となりの人には、このQRを見せて、スマホのカメラで読んでもらうだけ。人のスマホにはさわりません。</p><div class="qr-box">'+qrSVG(gUrl(g))+'<p class="muted">読みこむと、このグループに入って診断できます</p></div>'+
+    h+='<section class="card">'+secH('h2','want','次の人を招待する')+'<p>となりの人には、このQRを見せて、スマホのカメラで読んでもらうだけ。人のスマホにはさわりません。</p><div class="qr-box">'+qrTap(gUrl(g),gShareText(g))+'<p class="muted">読みこむと、このグループに入って診断できます</p></div>'+
        '<div class="share" style="margin-top:14px"><button class="btn btn-line" type="button" data-act="gline">LINEで送る</button><button class="btn btn-sub" type="button" data-act="gcopy">リンクをコピー</button></div>'+
        (n>=2?'<p style="margin-top:10px"><button class="btn btn-sub btn-wide" type="button" data-act="gimg"><span class="nw">グループの結果を</span><span class="nw">画像で保存</span></button></p>':'')+
        '<p class="muted" style="margin-top:10px">診断が終わった人の画面に、その人まで入った新しいQRが出ます。次の人は、いちばん最後に入った人のQRを読んでください。最後の人がLINEのグループに送ると、全員で同じ結果を見られます。</p></section>';
@@ -4412,7 +4427,7 @@ async function roomKick(id){
   catch(e){ toast('うまく外せませんでした。もう一度ためしてください'); }
 }
 function rDupNames(ps){ var seen={}, d=[]; ps.forEach(function(p){ if(seen[p.name]&&d.indexOf(p.name)<0) d.push(p.name); seen[p.name]=1; }); return d; }
-function rQrBox(){ return '<div class="qr-box">'+qrSVG(rUrl(RM.code))+'<p class="muted">スマホのカメラで読むと、この部屋に入れます</p><p class="rcode">部屋番号 <b>'+dcode(RM.code)+'</b></p></div>'; }
+function rQrBox(){ return '<div class="qr-box">'+qrTap(rUrl(RM.code),rInviteText())+'<p class="muted">スマホのカメラで読むと、この部屋に入れます</p><p class="rcode">部屋番号 <b>'+dcode(RM.code)+'</b></p></div>'; }
 function rInvKey(){ return 'koi16_inv_'+RM.code; }
 function rInvited(){ try{ return !!sessionStorage.getItem(rInvKey())||!!localStorage.getItem(rInvKey()); }catch(e){ return false; } }
 function rMarkInv(){ try{ localStorage.setItem(rInvKey(),'1'); }catch(e){} }
@@ -4751,7 +4766,7 @@ document.addEventListener('click',function(e){
   else if(act==='licenses'){ history.pushState(null,'','?licenses=1'); renderLicenses(); }
   else if(act==='privacy'){ history.pushState(null,'','?privacy=1'); renderPrivacy(); }
   else if(act==='wipe'){ wipeAll(); }
-  else if(act==='qr'){ var qo=$('qr-out'); if(qo.innerHTML){ qo.innerHTML=''; } else { qo.innerHTML='<div class="qr-box">'+qrSVG(inviteUrl(code))+'<p class="muted">となりの人に、スマホのカメラで読んでもらってください。診断が終わると、2人の相性が出ます。</p></div>'; glueAll(qo); } }
+  else if(act==='qr'){ var qo=$('qr-out'); if(qo.innerHTML){ qo.innerHTML=''; } else { qo.innerHTML='<div class="qr-box">'+qrTap(inviteUrl(code),shareText(code))+'<p class="muted">となりの人に、スマホのカメラで読んでもらってください。診断が終わると、2人の相性が出ます。</p></div>'; glueAll(qo); } }
   else if(act==='gnew'){ var nm=gName($('g-name-new').value); if(!nm){ toast('ニックネームを入れてください'); return; } var ng={id:Math.random().toString(36).slice(2,8),m:[]}; history.pushState(null,'',location.pathname); gJoin(ng,nm); }
   else if(act==='gopen'){ var gid=b.getAttribute('data-gid'), sg=st.groups&&st.groups[gid]; if(sg){ var go={id:gid,m:sg.m.slice()}; history.pushState(null,'',gQuery(go)); renderGroup(go); } }
   else if(act==='gimg'){ gImage($('v-group').__g); }
