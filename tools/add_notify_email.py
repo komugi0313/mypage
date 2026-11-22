@@ -32,7 +32,7 @@ def css(ink, line, bg, fg, bd, tag, card):
 .pkn-in{{display:block;box-sizing:border-box;width:100%;min-height:46px;padding:10px 12px;border:2px solid {line};border-radius:12px;background:#FFFFFF;color:{ink};font:inherit;font-size:16px}}
 .pkn-c{{display:flex;align-items:flex-start;gap:8px;margin:0 0 10px;min-height:44px;font-size:13.5px;line-height:1.6;cursor:pointer}}
 .pkn-c input{{flex:none;width:22px;height:22px;margin:2px 0 0}}
-.pkn-c a{{color:{ink};text-decoration:underline}}
+.pkn-c a{{color:{ink};text-decoration:underline;white-space:nowrap}}
 .pkn-go{{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;padding:8px 16px;border:2px solid {bd};border-radius:999px;background:{bg};color:{fg};font:inherit;font-size:15.5px;font-weight:800;cursor:pointer}}
 .pkn-go:disabled{{opacity:.6}}
 .pkn-m{{margin:8px 0 0;padding:8px 10px;border-radius:10px;font-size:13.5px;line-height:1.6;background:#F3F7EE;color:#2F4A1E}}
