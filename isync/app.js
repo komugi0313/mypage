@@ -1062,7 +1062,7 @@ function histHTML(h){
 function histSetM(G,m){const id=G.qs.join('.'),h=store('kv_hist')||[],r=h.find(x=>x&&x.id===id);if(!r||r.m!=null)return;r.m=m;store('kv_hist',h);const el=$('hist');if(el){el.innerHTML=histHTML(h);if(window.__jw)window.__jw(el)}}
 
 /* ===== 結果を画像で保存（インスタのストーリーズの縦長 1080×1920） ===== */
-/* 写真つきで送る（鑑定者本人 2026-11-23「2択とアイシンクも同じ形に」。LINEのURLプレビューがオフの人が多く、リンクだけでは絵が見えないため）：
+/* 写真つきで送る（鑑定者本人 2026-11-22「2択とアイシンクも同じ形に」。LINEのURLプレビューがオフの人が多く、リンクだけでは絵が見えないため）：
    スマホで写真の共有ができるときは、結果の「LINEで結果を送る」「○○さんにも結果を送る」を押すと、結果の画像と、送る文＋リンクを一緒に共有の画面へ渡す（LINEを選ぶと写真と文の両方が届く）。
    パソコン・共有できない端末は今までどおり LINE の送る画面。招待のボタンは文だけのまま */
 function pkCanFiles(){try{return !!(window.matchMedia&&matchMedia('(pointer:coarse)').matches&&navigator.canShare&&navigator.canShare({files:[new File(['x'],'a.png',{type:'image/png'})]}))}catch(e){return false}}
