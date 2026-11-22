@@ -1591,7 +1591,7 @@ input,select,textarea{font-size:max(16px,1em)}
       <summary><span>となりの友だちに、QRコードを見せる</span></summary>
       <p class="lb-note">みんなにスマホのカメラでこのQRを読みとってもらうと、そのまま部屋に入れます。</p>
       <div id="lb-qrbox"><div class="lb-qr" id="lb-qr"></div></div>
-      <button class="tell-s" id="lb-qrsave" type="button">このQRを画像で送る・保存する</button>
+      <p class="lb-note lb-qrtap">QRを押すと、部屋のリンクをLINEなどで送れます</p>
       <p class="lb-note">QRが読めないときは、トップの「招待された人はこちら」で番号 <b id="lb-code"></b> を入れてもらってね。</p>
     </details>
     <button class="tell-s" id="lb-invite" type="button">ほかのアプリで誘う（メール・SMSなど）</button>
@@ -5263,42 +5263,18 @@ async function saveImage(el){
   }catch(e){ toast('画像を作れませんでした。画面のスクリーンショットで残してね'); }
   finally{ if(b && b.tagName==='BUTTON') b.disabled=false; }
 }
-/* 部屋のQRを画像にして送る・保存する（画像と一緒に部屋のリンクも送る。鑑定者本人 2026-11-22「QRを保存してリンクとして送れるように」） */
-async function qrShare(){
+/* 部屋のQRを押すと、部屋のリンクをスマホの共有で送る（鑑定者本人 2026-11-22「QRをリンクにしたい」→「QRを押すと共有画面」） */
+function qrShare(){
   var R=S.room; if(!R) return;
-  var b=$('lb-qrsave'); if(b) b.disabled=true;
-  try{
-    await loadQR();
-    var url=joinUrl(R.code), code=dcode(R.code);
-    var tmp=document.createElement('div');
-    new QRCode(tmp, { text:url, width:480, height:480, colorDark:'#1E1E2A', colorLight:'#FFFFFF', correctLevel:QRCode.CorrectLevel.M });
-    var src=tmp.querySelector('canvas');
-    var W=640, H=900, cv=document.createElement('canvas'); cv.width=W; cv.height=H;
-    var g=cv.getContext('2d');
-    g.fillStyle='#FFF8E1'; g.fillRect(0,0,W,H);
-    g.fillStyle='#fff'; g.strokeStyle='#1E1E2A'; g.lineWidth=4;
-    if(g.roundRect){ g.beginPath(); g.roundRect(24,24,W-48,H-48,28); g.fill(); g.stroke(); } else { g.fillRect(24,24,W-48,H-48); g.strokeRect(24,24,W-48,H-48); }
-    g.textAlign='center'; g.fillStyle='#CC3166'; g.font='bold 44px sans-serif'; g.fillText('究極の二択',W/2,104);
-    g.fillStyle='#1E1E2A'; g.font='bold 28px sans-serif'; g.fillText((R.me&&R.me.name?R.me.name+'さんの部屋':'みんなで遊ぶ部屋'),W/2,152);
-    if(src) g.drawImage(src,80,186,480,480);
-    g.font='bold 34px sans-serif'; g.fillText('部屋番号　'+code,W/2,726);
-    g.fillStyle='#555'; g.font='24px sans-serif';
-    g.fillText('スマホのカメラでQRを読むと、',W/2,782); g.fillText('そのまま部屋に入れます',W/2,816);
-    g.fillStyle='#888'; g.font='20px sans-serif'; g.fillText('honbare.com',W/2,856);
-    var blob=await new Promise(function(ok){ cv.toBlob(ok,'image/png'); });
-    var text=inviteText(code, R.me && R.me.name)+'\n'+url;
-    var file=null; try{ file=new File([blob],'nitaku-room-'+code+'.png',{ type:'image/png' }); }catch(e){}
-    markInvited('qr');
-    if(file && navigator.canShare && navigator.canShare({ files:[file] })){
-      try{ await navigator.share({ files:[file], title:'究極の二択', text:text }); return; }catch(e){ if(e && e.name==='AbortError') return; }
-    }
-    var u=URL.createObjectURL(blob);
-    $('imgov-img').src=u; $('imgov-dl').href=u; $('imgov').hidden=false;
-    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function(){ toast('部屋のリンクもコピーしました。画像と一緒に貼ってね'); }, function(){});
-  }catch(e){ toast('QRの画像を作れませんでした。リンクで送ってね'); }
-  finally{ if(b) b.disabled=false; }
+  var url=joinUrl(R.code), text=inviteText(dcode(R.code), R.me && R.me.name);
+  markInvited('qr');
+  if(navigator.share){ navigator.share({ title:'究極の二択', text:text, url:url }).catch(function(){}); return; }
+  var full=text+'\n'+url, done=function(){ toast('部屋のリンクをコピーしました。LINEやメールに貼ってね'); };
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(full).then(done, function(){ prompt('コピーしてください', full); }); }
+  else prompt('コピーしてください', full);
 }
-$('lb-qrsave').onclick=qrShare;
+(function(q){ q.setAttribute('role','button'); q.setAttribute('tabindex','0'); q.setAttribute('aria-label','部屋のリンクを送る'); q.style.cursor='pointer';
+  q.addEventListener('click', qrShare); q.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); qrShare(); } }); })($('lb-qr'));
 function imgovClose(){ $('imgov').hidden=true; }
 $('imgov-x').onclick=imgovClose; $('imgov-x2').onclick=imgovClose;
 $('imgov').addEventListener('click', function(e){ if(e.target===this) imgovClose(); });
