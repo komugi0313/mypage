@@ -216,7 +216,7 @@ footer .credit{font-size:11px;color:#A3948A;margin-top:4px}
 .hy .me{flex:0 0 96px;text-align:center;text-decoration:none;color:var(--ink)}
 .hy .me img{width:56px;height:56px;object-fit:contain;display:block;margin:0 auto}
 .hy .me b{display:block;font-family:var(--mincho);font-size:13px;line-height:1.4;color:var(--gc)}
-.hy .bs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;flex:1;min-width:0}
+.hy .bs{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:6px;flex:1;min-width:0}
 .hy .bs a{display:block;text-align:center;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px 2px;text-decoration:none;color:var(--ink);min-height:44px}
 .hy .bs img{width:40px;height:40px;object-fit:contain;display:block;margin:0 auto}
 .hy .bs small{display:block;font-size:11.5px;line-height:1.35}
@@ -295,7 +295,8 @@ function write(rel, html) { const f = path.join(K, rel); fs.mkdirSync(path.dirna
 CUR = 'chara';
 ORDER.forEach(c => {
   const t = T[c], a = ARU_T[c], j = JAKU[c], g = grp(c);
-  const best = ORDER.filter(x => x !== c).map(x => ({ o: x, s: compat(c, x).score })).sort((p, q) => q.s - p.s).slice(0, 2);
+  const best0 = ORDER.filter(x => x !== c).map(x => ({ o: x, s: compat(c, x).score })).sort((p, q) => q.s - p.s);
+  const best = best0.filter(b => b.s >= best0[1].s);
   const body = `${crumb([['恋愛キャラ診断', 'chara/'], [t.f, '']])}
 <section class="hero2" style="--gp:${GPALE[c[2] + c[3]]};--gc:${g.hex}">
 <img src="/img/${c}.webp" alt="${esc(t.c)}のキャラクター" width="180" height="180">
@@ -450,7 +451,7 @@ write('mbti/index.html', page({
   desc: 'MBTIや性格の16タイプでわかること・わからないこと。恋愛の場面だけで決める「恋愛の16タイプ」と愛着スタイルで、好きになり方・脈ありサイン・相性がわかる無料の診断。MBTIとは別の、この診断独自の16タイプです。',
   ld: [crumbLd([['恋のかたち診断', ''], ['MBTIと恋愛の16タイプ', 'mbti/']]), { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: MB_FAQ.map(x => ({ '@type': 'Question', name: x[0], acceptedAnswer: { '@type': 'Answer', text: x[1] } })) }],
   body: `${crumb([['MBTIと恋愛の16タイプ', '']])}
-<section class="hero"><span class="kick">MBTIが好きな人へ</span><h1>MBTIで、恋愛はわかる？<span class="sub">恋のための、もうひとつの16タイプ</span></h1><div class="trio" aria-hidden="true"><img src="/img/LVTP.webp" alt="" width="84" height="84"><img src="/img/RATC.webp" alt="" width="84" height="84"><img src="/img/RASP.webp" alt="" width="84" height="84"></div>${START('恋愛の16タイプを診断する（無料）')}<span class="meta">20問・約4分／本格版48問・登録なし</span></section>
+<section class="hero"><span class="kick">性格の16タイプと、恋のタイプ</span><h1>MBTIで、恋愛はわかる？<span class="sub">恋のための、もうひとつの16タイプ</span></h1><div class="trio" aria-hidden="true"><img src="/img/LVTP.webp" alt="" width="84" height="84"><img src="/img/RATC.webp" alt="" width="84" height="84"><img src="/img/RASP.webp" alt="" width="84" height="84"></div>${START('恋愛の16タイプを診断する（無料）')}<span class="meta">20問・約4分／本格版48問・登録なし</span></section>
 <section class="box"><h2>MBTIでわかること・わかりにくいこと</h2><p>MBTIや、ネットで人気の性格の16タイプは、ふだんの性格の好み（人と過ごすと元気が出るか、ものごとをどう決めるか など）を見るものです。</p><p>でも恋愛は、好きな人ができたときにだけ出てくる「心のくせ」がたくさんあります。</p>${ul(['好きな人に、自分から近づけるか', '「好き」を言葉で伝えるか、行動で見せるか', '恋人に、弱いところを見せて頼れるか', '既読がつくと気になる・好きなのに一歩引いてしまう'])}<p class="note">ふだんは同じ性格のタイプの人でも、恋をすると、ちがう顔になることがよくあります。</p></section>
 <section class="box"><h2>恋のかたち診断の、4つのものさし</h2><p>恋愛の場面の質問だけで、4つのものさしを測ります。組み合わせで16タイプです。</p><div class="ax4">${AXES.map(a => `<div><b>${esc(a.title)}</b><span>${nw(a.an)}／${nw(a.bn)}</span></div>`).join('')}</div><p class="note">頼り方と恋の原動力は、恋愛心理学の研究を参考にしたものさしです。近づき方と気持ちの伝え方は、この診断独自のものさしです。</p></section>
 <section class="box"><h2>性格の16タイプと、恋のかたち診断</h2><div class="cmp">${[['見るもの', 'ふだんの性格の好み', '恋愛の場面の、心のくせ'], ['質問', 'ふだんの暮らし・仕事・人づきあい', '好きな人・恋人との場面だけ'], ['愛着スタイル', '見ない', '安定型・不安型・回避型・恐れ型も見る'], ['わかること', '性格の傾向', '好きになり方・脈ありサイン・恋の弱点・相性']].map(r => `<div class="cr"><div class="cl">${esc(r[0])}</div><p><small>性格の16タイプ（MBTIなど）</small>${r[1].split('・').map(nw).join('・<wbr>')}</p><p class="me"><small>恋のかたち診断</small>${r[2].split('・').map(nw).join('・<wbr>')}</p></div>`).join('')}</div></section>
@@ -477,7 +478,7 @@ write('aishohyo/index.html', page({
   body: `${crumb([['16タイプ相性表', '']])}
 <section class="hero"><span class="kick">恋愛の16タイプ</span><h1>16タイプ相性表<span class="sub">いちばん合うのは、どのタイプ？</span></h1>${START('自分のタイプを診断する（無料）')}<span class="meta">20問・約4分／本格版48問・登録なし</span></section>
 <section class="box"><h2>相性の高い組み合わせ</h2><ol class="top10">${PAIRS.slice(0, 10).map(p => `<li><img src="/img/${p.a}.webp" alt="" width="40" height="40" loading="lazy"><img src="/img/${p.b}.webp" alt="" width="40" height="40" loading="lazy"><span>${cname(p.a)}<wbr>×<wbr>${cname(p.b)}</span><i>${p.s}点</i></li>`).join('')}</ol><p class="note" style="margin-top:8px">同じタイプどうしは ${Math.min(...SAME)}〜${Math.max(...SAME)}点です。</p></section>
-<section class="box"><h2>タイプごとの、相性のいいタイプ</h2><p class="note">左のタイプにとって、相性のいいタイプを3つ。押すと、そのタイプのページが開きます。</p><div class="hy">${ORDER.slice().sort((a, b) => NO[a] - NO[b]).map(a => `<div class="r"><a class="me" href="/type/${lc(a)}/" style="--gc:${grp(a).hex}"><img src="/img/${a}.webp" alt="" width="56" height="56" loading="lazy"><b>${cname(a)}</b></a><div class="bs">${SC[a].slice(0, 3).map(b => `<a href="/type/${lc(b.o)}/"><img src="/img/${b.o}.webp" alt="" width="40" height="40" loading="lazy"><small>${cname(b.o)}</small><i>${b.s}点</i></a>`).join('')}</div></div>`).join('')}</div></section>
+<section class="box"><h2>タイプごとの、相性のいいタイプ</h2><p class="note">左のタイプにとって、相性のいいタイプを3つ（同じ点数のタイプがあるときは、その分も）。押すと、そのタイプのページが開きます。</p><div class="hy">${ORDER.slice().sort((a, b) => NO[a] - NO[b]).map(a => `<div class="r"><a class="me" href="/type/${lc(a)}/" style="--gc:${grp(a).hex}"><img src="/img/${a}.webp" alt="" width="56" height="56" loading="lazy"><b>${cname(a)}</b></a><div class="bs" style="--n:${SC[a].filter(b => b.s >= SC[a][2].s).length}">${SC[a].filter(b => b.s >= SC[a][2].s).map(b => `<a href="/type/${lc(b.o)}/"><img src="/img/${b.o}.webp" alt="" width="40" height="40" loading="lazy"><small>${cname(b.o)}</small><i>${b.s}点</i></a>`).join('')}</div></div>`).join('')}</div></section>
 <section class="box"><h2>相性の決め方</h2><p>4つのものさしの組み合わせで計算します（100点満点）。いちばん重く見るのは頼り方です。</p>${ul(['頼り方：2人とも頼り合える組み合わせがいちばん高い', '恋の原動力：ときめき派どうし・安心派どうしは満足しやすい', '気持ちの伝え方：言葉どうし・行動どうしは伝わりやすい', '近づき方：リードする人と受けとめる人は、かみ合いやすい'])}<p class="note">この診断独自のめやすです。MBTIなど、ほかの16タイプの相性とは関係ありません。点数が低くても、ちがいから学び合える組み合わせです。</p></section>
 ${CTA('自分のタイプを知って、相手にも送る', '無料で診断する', '相手が診断すると、2人の相性と心のくせの組み合わせがわかります')}
 <section class="box"><h2>MBTIで恋愛はわかる？</h2><p>性格の16タイプと、恋愛の16タイプのちがいは、<a href="/mbti/">MBTIと恋愛の16タイプ</a>のページにまとめています。</p></section>

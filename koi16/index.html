@@ -3705,7 +3705,9 @@ function renderResult(code,mine,withCode){
 
   // 相性のいいタイプ
   var ranked=ORDER.map(function(o){return {o:o,c:compat(code,o)};}).sort(function(a,b){return b.c.score-a.c.score;});
-  var best=ranked.slice(0,4), grow=ranked.slice(-2).reverse();
+  /* 同じ点数のタイプは、並び順で外さずに全部出す（2026-11-22 点検） */
+  var cut4=ranked[3].c.score, cutL=ranked[ranked.length-2].c.score;
+  var best=ranked.filter(function(x){return x.c.score>=cut4;}), grow=ranked.filter(function(x){return x.c.score<=cutL;}).reverse();
   h+='<section class="card">'+secH('h2','match','相性のいいタイプ')+'<div class="mini">'+best.map(function(x){return miniCard(x,x.o===code);}).join('')+'</div>'+
      '<h3 style="margin-top:16px">ちがいから学び合えるタイプ</h3><div class="mini">'+grow.map(function(x){return miniCard(x);}).join('')+'</div></section>';
 
@@ -3764,7 +3766,7 @@ function renderTypes(){
   ['TP','TC','SP','SC'].forEach(function(k){
     var g=GROUP[k];
     ORDER.filter(function(o){return o[2]+o[3]===k;}).forEach(function(o){ var t=T[o];
-      var best=ORDER.filter(function(x){return x!==o;}).map(function(x){return {o:x,c:compat(o,x)};}).sort(function(a,b){return b.c.score-a.c.score;}).slice(0,2);
+      var best=ORDER.filter(function(x){return x!==o;}).map(function(x){return {o:x,c:compat(o,x)};}).sort(function(a,b){return b.c.score-a.c.score;}); best=best.filter(function(x){return x.c.score>=best[1].c.score;});
       h+='<section class="card zk" id="z-'+o+'">'+
         '<div class="zk-head" style="--gc:'+g.hex+';--gp:'+GPALE[k]+'">'+art(o,96)+'<div class="zk-name"><div class="zk-no"><span class="nw">No.'+('0'+nos[o]).slice(-2)+'</span>　<span class="nw">'+g.n+'</span></div><div class="zk-c">'+cname(o)+'</div><div class="zk-f">'+fname(o)+'</div><span class="zk-code">'+o+'</span></div></div>'+
         '<p class="lead-1"><span class="mk">'+esc(t.catch)+'</span></p><p>'+esc(t.sum)+'</p>'+
