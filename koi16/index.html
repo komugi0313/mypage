@@ -4170,7 +4170,7 @@ function gDraw(g,imgs){
   x.textAlign='center'; x.fillStyle='#5A3A2A'; siteMark(x,W/2-8,H-130,'800 36px '+MINCHO,46); x.fillStyle='#9A8576'; x.font='700 26px '+F; x.fillText('koikata.jp',W/2-8,H-88);
   cv.toBlob(function(bl){
     var file=new File([bl],'koi16-group.png',{type:'image/png'});
-    if(navigator.canShare&&navigator.canShare({files:[file]})){ navigator.share({files:[file],text:gShareText(g)}).catch(function(){}); return; }
+    if(pkShareFile(file,gShareText(g)+'\n'+lx(gUrl(g)))) return;
     var a=document.createElement('a'); a.href=URL.createObjectURL(bl); a.download=file.name; document.body.appendChild(a); a.click(); a.remove();
     toast('画像を保存しました');
   },'image/png');
@@ -4608,6 +4608,7 @@ async function roomLeave(){
 function rInviteText(){ return (rHostName()||'友だち')+'さんが「恋のかたち診断」の部屋で待っています！ リンクを開いて、ニックネームを入れるだけで参加できます（部屋番号：'+dcode(RM.code)+'）'; }
 function rShare(act){
   if(act==='room-line'){ window.open('https://line.me/R/share?text='+encodeURIComponent(rInviteText()+'\n'+lx(rUrl(RM.code))),'_blank','noopener'); return; }
+  if(act==='room-rline'&&pkCanFiles()){ gImage(rGroup()); return; }
   if(act==='room-rline'){ var g=rGroup(); window.open('https://line.me/R/share?text='+encodeURIComponent(gShareText(g)+'\n'+lx(gUrl(g))),'_blank','noopener'); return; }
   var s2=act==='room-copy'?rInviteText()+'\n'+lx(rUrl(RM.code)):(function(){ var g=rGroup(); return gShareText(g)+'\n'+lx(gUrl(g)); })();
   if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(s2).then(function(){ toast('コピーしました'); },function(){ prompt('コピーしてください',s2); }); else prompt('コピーしてください',s2);
@@ -4629,8 +4630,28 @@ function shareText(code){ var t=T[code], h=hookOf(code);
 /* 相手の点（鑑定者本人 2026-11-17「相手の点もお願いします」）：本格版の人は、心のゆれやすさと寄りかかれる%の2つをリンクに入れる（リンクの中だけ・どこにも送らない） */
 function kParam(){ var m=st.me; return (m&&m.mode!=='quick'&&m.anx!=null&&m.pct&&m.pct.TS!=null)?'&k='+Math.round(m.anx)+'.'+Math.round(m.pct.TS):''; }
 function inviteUrl(code){ return location.origin+location.pathname+'?from='+code+(st.me&&st.me.code===code?kParam():''); }
+/* 写真つきで送る（鑑定者本人 2026-11-23：LINEのURLプレビューがオフの人が多く、リンクだけでは絵が見えないため）。
+   スマホで写真の共有ができるときは、結果の画像とリンクの入った文を一緒に共有の画面へ渡す（LINEは写真と文の両方を送る＝鑑定者本人の端末で確認） */
+function pkCanFiles(){ try{ return !!(window.matchMedia&&matchMedia('(pointer:coarse)').matches&&navigator.canShare&&navigator.canShare({files:[new File(['x'],'a.png',{type:'image/png'})]})); }catch(e){ return false; } }
+function pkShareFile(file,text){
+  if(!(navigator.canShare&&navigator.canShare({files:[file]}))) return false;
+  navigator.share({files:[file],text:text}).catch(function(e){ if(e&&e.name==='AbortError') return; pkShareAgain(file,text); });
+  return true;
+}
+function pkShareAgain(file,text){
+  // 画像を作るのに時間がかかり、共有の画面が開けなかったときは、もう一度押してもらう
+  var d=document.getElementById('pk-share-again'); if(d) d.remove();
+  d=document.createElement('div'); d.id='pk-share-again';
+  d.setAttribute('style','position:fixed;left:16px;right:16px;bottom:20px;z-index:9999;background:#FFFCF7;border:1px solid #E7B9CB;border-radius:18px;box-shadow:0 8px 24px rgba(90,58,42,.18);padding:16px;text-align:center;color:#4A362B;font-weight:700');
+  d.innerHTML='<p style="margin:0 0 10px">画像ができました</p><button type="button" class="btn btn-line" style="min-height:48px;width:100%">送る（LINEを選んでね）</button><button type="button" style="margin-top:6px;min-height:44px;background:none;border:0;color:#8A7364;font-weight:700">閉じる</button>';
+  document.body.appendChild(d);
+  var bs=d.querySelectorAll('button');
+  bs[0].onclick=function(){ d.remove(); navigator.share({files:[file],text:text}).catch(function(){}); };
+  bs[1].onclick=function(){ d.remove(); };
+}
 function doShare(act,code){
   var url=inviteUrl(code), txt=shareText(code);
+  if(act==='line'&&pkCanFiles()){ saveImage(code); return; }
   if(act==='line') window.open('https://line.me/R/share?text='+encodeURIComponent(txt+'\n'+lx(url)),'_blank','noopener');
   else if(act==='x') window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(txt)+'&url='+encodeURIComponent(url),'_blank','noopener');
   else if(act==='copy'){
@@ -4682,7 +4703,7 @@ function drawCard(code,img){
   x.fillStyle='#9A8576'; x.font='700 26px '+F; x.fillText('16の恋愛タイプ診断　koikata.jp',W/2,H-80);
   cv.toBlob(function(b){
     var file=new File([b],'koi16-'+code+'.png',{type:'image/png'});
-    if(navigator.canShare&&navigator.canShare({files:[file]})){ navigator.share({files:[file],text:shareText(code)}).catch(function(){}); return; }
+    if(pkShareFile(file,shareText(code)+'\n'+lx(inviteUrl(code)))) return;
     var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=file.name; document.body.appendChild(a); a.click(); a.remove();
     toast('画像を保存しました');
   },'image/png');
@@ -4778,6 +4799,7 @@ document.addEventListener('click',function(e){
   else if(act==='room-line'||act==='room-copy'||act==='room-rline'||act==='room-rcopy'){ rShare(act); if(act==='room-line'||act==='room-copy'){ var was=rInvited(); rMarkInv(); if(!was) setTimeout(function(){ RM.sig=''; roomUpdate(); },400); } }
   else if(act==='gjoin'){ gJoin($('v-group').__g,$('g-name').value); }
   else if(act==='gquiz-full'||act==='gquiz-quick'){ var gg=$('v-group').__g, nm2=gName($('g-name').value); if(!nm2){ toast('ニックネームを入れてください'); return; } if(gg.m.some(function(m){return m.n===nm2;})){ toast('同じニックネームの人がいます。少し変えてください'); return; } st.pendingG={id:gg.id,m:gg.m,name:nm2}; save(st); startQuiz(true,act==='gquiz-full'?'full':'quick'); }
+  else if(act==='gline'&&pkCanFiles()){ gImage($('v-group').__g); }
   else if(act==='gline'||act==='gcopy'){ var g3=$('v-group').__g, gu=lx(gUrl(g3)), gt=gShareText(g3);
     if(act==='gline') window.open('https://line.me/R/share?text='+encodeURIComponent(gt+'\n'+gu),'_blank','noopener');
     else { var s3=gt+'\n'+gu; if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(s3).then(function(){toast('コピーしました');},function(){prompt('コピーしてください',s3);}); else prompt('コピーしてください',s3); } }
