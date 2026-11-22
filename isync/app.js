@@ -1470,8 +1470,8 @@ function lobby(){
   view(`<img class="chara c-lobby" src="img/pair-smile.webp" width="180" height="100" alt="" aria-hidden="true">
   <section class="card hand">
     <p class="cap">部屋番号</p><p class="code">${esc(dcode(c))}</p>
-    <div class="qr" id="qr" aria-label="参加用のQRコード"></div>
-    <p class="hint">そばにいる人は、スマホのカメラでこのQRコードを読みとるだけで入れます。</p>
+    <div class="qr qr-tap" id="qr" role="button" tabindex="0" aria-label="参加用のQRコード（押すとリンクを送れます）"></div>
+    <p class="hint">そばにいる人は、スマホのカメラでこのQRコードを読みとるだけで入れます。<br><b class="qr-tapn">QRを押すと、部屋のリンクをLINEなどで送れます</b></p>
     <a class="btn line" id="ln" href="#" target="_blank" rel="noopener" style="align-self:stretch">LINEで友だちを招待する</a>
     <button class="btn ghost small" id="cp" style="align-self:stretch">ほかのアプリで送る</button><p class="hint" id="cpd" hidden></p>
     <p class="hint">送ったリンクを開くだけで、この部屋に入れます。</p>
@@ -1492,6 +1492,7 @@ function lobby(){
     // スマホの「共有」でLINE・メッセージなどへ（送るのは部屋に直接入れるリンク）。使えないときは文とリンクをコピー
     if(navigator.share){navigator.share({title:'アイ・シンク',text,url}).catch(()=>{});return}
     d.hidden=false;const full=text+'\n'+url;try{navigator.clipboard.writeText(full).then(()=>{d.textContent='招待の文とリンクをコピーしました。LINEなどに貼って送ってください。'},()=>{d.textContent=full})}catch(e){d.textContent=full}};
+  {const q=$('qr');if(q){q.onclick=()=>$('cp').click();q.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('cp').click()}}}}
   $('st').onclick=e=>{if(ps.length<2)return;e.target.disabled=true;roomUpdate({phase:'play',qi:0})};
   const s1=$('st1');if(s1)s1.onclick=e=>{e.target.disabled=true;roomUpdate({phase:'play',qi:0})};
   $('home').onclick=async()=>{const db=await getDb(),code=R.code;leaveRoom();try{await db.doc(pPath(code,PID)).delete()}catch(e){}goTop()};

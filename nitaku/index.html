@@ -1508,7 +1508,7 @@ input,select,textarea{font-size:max(16px,1em)}
 <!-- ％の見かた（鑑定者本人 2026-11-21「結果に詰め込まず、説明を1枚のページにまとめる」→見本 https://claude.ai/artifact/EUXmh2rCVk8iEBdu8kqXHE で「この形で」） -->
 <section class="scr" id="s-mitakata">
   <div class="nav"><button class="navb" data-nav="back">← もどる</button><span class="navr"><button class="navb" data-nav="top">TOP</button></span></div>
-  <div class="card mtk"><h2>％の見かた</h2><p class="mtk-sub">恋愛編・まぜまぜ編の結果に出る、4つの％です。</p><div id="mtk-list"></div>
+  <div class="card mtk"><h2>％の見かた</h2><p class="mtk-sub">恋愛編・まぜまぜ編の結果に出る、<span style="white-space:nowrap">4つの％です。</span></p><div id="mtk-list"></div>
   <p class="mtk-foot">答えから出した遊びの診断です。性格を決めつけるものではありません。</p></div>
 </section>
 <!-- この診断について（鑑定者本人の指示 2026-11-12「①の表で進めて」） -->
@@ -1591,6 +1591,7 @@ input,select,textarea{font-size:max(16px,1em)}
       <summary><span>となりの友だちに、QRコードを見せる</span></summary>
       <p class="lb-note">みんなにスマホのカメラでこのQRを読みとってもらうと、そのまま部屋に入れます。</p>
       <div id="lb-qrbox"><div class="lb-qr" id="lb-qr"></div></div>
+      <p class="lb-note lb-qrtap">QRを押すと、部屋のリンクをLINEなどで送れます</p>
       <p class="lb-note">QRが読めないときは、トップの「招待された人はこちら」で番号 <b id="lb-code"></b> を入れてもらってね。</p>
     </details>
     <button class="tell-s" id="lb-invite" type="button">ほかのアプリで誘う（メール・SMSなど）</button>
@@ -3178,8 +3179,8 @@ document.addEventListener('click', function(e){
   if(sv){ var cd=sv.closest('.kc').querySelector('.kc-c:not([hidden]) .kcd'); if(cd) saveImage(cd); }
 });
 
-/* 同じスマホで同じ問題は1回だけ数える（鑑定者本人 2026-11-16「同じ人が何回遊んでも1カウントに」）。初めての問題なら true を返して覚える */
-function votedOnce(id){ var v=store('nitaku_voted')||[]; if(v.indexOf(id)>=0) return false; v.push(id); store('nitaku_voted', v.slice(-3000)); (S.fresh=S.fresh||{})[id]=1; return true; }
+/* 前は同じスマホで同じ問題は1回だけ数えていた（2026-11-16）。2026-11-22 から遊ぶたびに数える。初めての問題なら true を返して覚える */
+function votedOnce(id){ (S.fresh=S.fresh||{})[id]=1; return true; }   // 遊ぶたびに1票（鑑定者本人 2026-11-22「同じ人が10回遊んだら10票」）
 /* 答えた人の数は、その問題に10人以上が答えてから出す（少ないうちは％だけ。鑑定者本人 2026-11-16） */
 var SHOW_COUNT=10;
 /* ───── 遊んだ回数と、4つの％の分布（鑑定者本人 2026-11-17「遊んだ人数を統計取り、一問一問統計を取りたい」「それで%を測っていきたい」） ─────
@@ -3250,7 +3251,7 @@ function worldCounts(q, picks){
   if(!c) return null;
   var a=c.a||0, b=c.b||0, before=a+b;
   // 前に遊んだときに、もう数えてある問題なら、自分の答えを足さない（2回数えない）
-  var mineIn = picks.length===1 && S.who==='solo' && !(S.fresh&&S.fresh[q.id]) && (store('nitaku_voted')||[]).indexOf(q.id)>=0 && before>0;
+  var mineIn = false;   // 遊ぶたびに数えるので、今の答えはいつも足す
   if(!mineIn) picks.forEach(function(p){ if(!p) return; if(canon(q,p)==='a') a++; else b++; });
   var A = q.sw ? b : a, B = q.sw ? a : b, t=A+B;
   return { A:A, B:B, t:t, before:before, pa: t?Math.round(100*A/t):0, pb: t?100-Math.round(100*A/t):0 };
@@ -3963,8 +3964,8 @@ function yurusuHTML(qs, ans, label){
   var row=function(x){ return '<div class="yl-row"><div class="yl-th">'+esc(x.lab)+'</div>'+
     '<div class="yl-c ok"><b>まだ平気</b><span>'+esc(x.ok)+'</span></div><div class="yl-c no"><b>つらい</b><span>'+esc(x.no)+'</span></div>'+
     (x.pc!=null && x.pc<50 ? '<div class="yl-min">この答えは、みんなの中では<em>少数派（'+x.pc+'%）</em></div>' : '')+'</div>'; };
-  var h='<div class="card yl"><div class="yl-hd"><span class="yl-ic" aria-hidden="true">♡</span><h3>'+(me?'あなた':esc(label))+'の許せるライン</h3></div>'+
-    '<p class="yl-lead">「どっちがまだマシ？」の問題で、'+(me?'あなた':esc(label))+'が「まだ平気」と選んだほうと、「つらい」ほうです。</p>'+
+  var h='<div class="card yl"><div class="yl-hd"><img class="yl-ic" src="img/icon-ok.webp" alt="" width="40" height="40"><h3>'+(me?'あなた':esc(label))+'の許せるライン</h3></div>'+
+    '<p class="yl-lead">「どっちがまだマシ？」の問題で、'+(me?'あなた':esc(label))+'が<span style="white-space:nowrap">「まだ平気」</span>と選んだほうと、<span style="white-space:nowrap">「つらい」</span>ほうです。</p>'+
     L.slice(0,3).map(row).join('');
   if(L.length>3) h+='<details class="yl-more"><summary>ほかに'+(L.length-3)+'問を見る ▼</summary>'+L.slice(3).map(row).join('')+'</details>';
   return h+'<p class="yl-foot">この「まだ平気」と「つらい」を相手に伝えておくと、すれ違いが減ります。</p></div>';
@@ -5283,6 +5284,18 @@ async function saveImage(el, text){
   }catch(e){ toast('画像を作れませんでした。画面のスクリーンショットで残してね'); }
   finally{ if(b && b.tagName==='BUTTON') b.disabled=false; }
 }
+/* 部屋のQRを押すと、部屋のリンクをスマホの共有で送る（鑑定者本人 2026-11-22「QRをリンクにしたい」→「QRを押すと共有画面」） */
+function qrShare(){
+  var R=S.room; if(!R) return;
+  var url=joinUrl(R.code), text=inviteText(dcode(R.code), R.me && R.me.name);
+  markInvited('qr');
+  if(navigator.share){ navigator.share({ title:'究極の二択', text:text, url:url }).catch(function(){}); return; }
+  var full=text+'\n'+url, done=function(){ toast('部屋のリンクをコピーしました。LINEやメールに貼ってね'); };
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(full).then(done, function(){ prompt('コピーしてください', full); }); }
+  else prompt('コピーしてください', full);
+}
+(function(q){ q.setAttribute('role','button'); q.setAttribute('tabindex','0'); q.setAttribute('aria-label','部屋のリンクを送る'); q.style.cursor='pointer';
+  q.addEventListener('click', qrShare); q.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); qrShare(); } }); })($('lb-qr'));
 function imgovClose(){ $('imgov').hidden=true; }
 $('imgov-x').onclick=imgovClose; $('imgov-x2').onclick=imgovClose;
 $('imgov').addEventListener('click', function(e){ if(e.target===this) imgovClose(); });
