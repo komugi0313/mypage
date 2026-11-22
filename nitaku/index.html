@@ -3495,7 +3495,7 @@ function shareText(mode, sc, sp, ch){
     if(x&&x.q&&x.q.a&&x.q.b){
       var mine=x.c==='A'?x.q.a:x.q.b, sec=Math.round((x.t||0)/100)/10;
       var tail=ch&&ch.main ? '（ちなみに、わたしの'+(mode==='love'?'恋':'ふだん')+'のキャラは「'+ch.main.name+'」）' : '（ちなみに、わたしの'+hd.cap+'は'+sc[hd.k]+'%）';
-      return '【究極の二択】\n'+x.q.a+' VS '+x.q.b+'\n\nわたしは'+(sec>0&&sec<3?sec+'秒で':'')+(/^「.*」$/.test(mine)?mine:'「'+mine+'」')+'を選んだ。\nあなたはどっち？\n\n'+tail+'\n#究極の二択 #本音バレ診断';
+      return '【究極の二択】\n'+x.q.a+' VS '+x.q.b+'\n\nわたしは'+(sec>0&&sec<3?sec+'秒で':'')+(/^「[^「」]*」$/.test(mine)?mine:/[「」]/.test(mine)?'『'+mine+'』':'「'+mine+'」')+'を選んだ。\nあなたはどっち？\n\n'+tail+'\n#究極の二択 #本音バレ診断';
     }
   }catch(e){}
   return 'わたしの'+hd.cap+'は '+sc[hd.k]+'% でした\n'+others.map(function(ax){ return ax.name+sc[ax.k]+'%'; }).join('／')+
@@ -5231,8 +5231,29 @@ function loadH2C(){
   h2c=new Promise(function(ok, ng){ var sc=document.createElement('script'); sc.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'; sc.onload=ok; sc.onerror=function(){ h2c=null; ng(); }; document.head.appendChild(sc); });
   return h2c;
 }
-async function saveImage(el){
+/* 写真つきで送る（鑑定者本人 2026-11-23「2択とアイシンクも同じ形に」。LINEのURLプレビューがオフの人が多く、リンクだけでは絵が見えないため）：
+   スマホで写真の共有ができるときは、結果の「LINEで結果を送る」を押すと、結果の画像と、送る文＋リンクを一緒に共有の画面へ渡す（LINEを選ぶと写真と文の両方が届く）。
+   パソコン・共有できない端末は今までどおり LINE の送る画面（文とリンク）。招待のボタンは文だけのまま */
+function pkCanFiles(){ try{ return !!(window.matchMedia && matchMedia('(pointer:coarse)').matches && navigator.canShare && navigator.canShare({ files:[new File(['x'],'a.png',{type:'image/png'})] })); }catch(e){ return false; } }
+function pkLineText(a){ try{ return a && a.href ? (new URL(a.href)).searchParams.get('text') : null; }catch(e){ return null; } }
+function pkShareAgain(file, text){
+  var d=document.getElementById('pk-share-again'); if(d) d.remove();
+  d=document.createElement('div'); d.id='pk-share-again';
+  d.setAttribute('style','position:fixed;left:16px;right:16px;bottom:20px;z-index:9999;background:#fff;border:3px solid #1E1E2A;border-radius:18px;box-shadow:0 6px 0 #F2C94C;padding:16px;text-align:center;color:#1E1E2A;font-weight:800');
+  d.innerHTML='<p style="margin:0 0 10px">画像ができました</p><button type="button" style="min-height:48px;width:100%;border-radius:14px;border:3px solid #1E1E2A;background:#06C755;color:#fff;font-weight:900;font-size:16px">送る（LINEを選んでね）</button><button type="button" style="margin-top:6px;min-height:44px;background:none;border:0;color:#5A5468;font-weight:800">閉じる</button>';
+  document.body.appendChild(d);
+  var bs=d.querySelectorAll('button');
+  bs[0].onclick=function(){ d.remove(); navigator.share({ files:[file], text:text }).catch(function(){}); };
+  bs[1].onclick=function(){ d.remove(); };
+}
+document.addEventListener('click', function(e){
+  var a=e.target.closest && e.target.closest('#res-body a.lb-line.end-line, #gres-body a.lb-line.end-line'); if(!a || !pkCanFiles()) return;
+  var body=a.closest('#res-body,#gres-body'), t=pkLineText(a.classList.contains('ts-line') && body.querySelector('#lshare,#lgshare') || a); if(!t) return;
+  e.preventDefault(); saveImage(body, t);
+}, true);
+async function saveImage(el, text){
   var b=document.activeElement; if(b && b.tagName==='BUTTON') b.disabled=true;
+  if(!text){ var bd=el.closest && el.closest('#res-body,#gres-body'); text=pkLineText(bd && bd.querySelector('#lshare,#lgshare')); }
   toast('画像を作っています…');
   try{
     await loadH2C();
@@ -5255,7 +5276,7 @@ async function saveImage(el){
     var blob=await new Promise(function(ok){ cv.toBlob(ok, 'image/png'); });
     var file=null; try{ file=new File([blob], 'kyukyoku-nitaku.png', { type:'image/png' }); }catch(e){}
     if(file && navigator.canShare && navigator.canShare({ files:[file] })){
-      try{ await navigator.share({ files:[file], title:'究極の二択の結果' }); return; }catch(e){ if(e && e.name==='AbortError') return; }
+      try{ await navigator.share(text ? { files:[file], text:text } : { files:[file], title:'究極の二択の結果' }); return; }catch(e){ if(e && e.name==='AbortError') return; if(text){ pkShareAgain(file, text); return; } }
     }
     var url=URL.createObjectURL(blob);
     $('imgov-img').src=url; $('imgov-dl').href=url; $('imgov').hidden=false;

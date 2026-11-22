@@ -868,7 +868,7 @@ function bindTail(G){
   const nmNow=()=>{if(!solo)return '';const i=$('inv-name'),v=i?i.value.trim():'';if(v){store('kv_name',v);return v}const p=G.players[0];return ['あなた','ともだち'].includes(p.name)?(store('kv_name')||''):p.name};
   const askName=e=>{if(!solo||nmNow())return false;if(e)e.preventDefault();const m=$('inv-msg'),i=$('inv-name');if(m){m.hidden=false;m.textContent='先にニックネームを入れてください。相手は同じ問題に答えて、あなたと答え合わせできます（相手の画面に「○○さんから」と出ます）。'}if(i){i.scrollIntoView({block:'center'});i.focus()}return true};
   if($('share'))$('share').onclick=()=>{if(askName())return;doShare(G,nmNow())};
-  const lr=$('lnres');if(lr){const set=()=>{const {t,url}=shareText(G,nmNow());lr.href=lineUrl(t,url)};set();lr.addEventListener('click',e=>{if(!askName(e))set()});const ni=$('inv-name');if(ni)ni.addEventListener('input',set)}
+  const lr=$('lnres');if(lr){const set=()=>{const {t,url}=shareText(G,nmNow());lr.href=lineUrl(t,url)};set();lr.addEventListener('click',e=>{if(askName(e))return;set();if(pkCanFiles()){e.preventDefault();const {t,url}=shareText(G,nmNow());saveImage(G,t+'\n'+url)}});const ni=$('inv-name');if(ni)ni.addEventListener('input',set)}
   const t=$('tog');if(t)t.onclick=()=>{CFG.mode='each';saveCfg();goTop()};
   $('again').onclick=e=>{if(R.code){e.target.disabled=true;roomAgain();return}
     const nm=L.players&&L.players[0]?L.players[0].name:'';soloStart(['あなた','ともだち'].includes(nm)?'':nm)};
@@ -946,7 +946,7 @@ function bindInvite(G){const t3g=$('t3-go');if(t3g)t3g.onclick=()=>{const h=docu
   const is=$('inv-share');if(is)is.onclick=()=>{if(need())return;const x=inv();sendVia(x.t,x.u,$('inv-msg'))};
   if(G.pair)bindBack(G)}
 function bindBack(G){const A=G.players[0],me=G.players.find(p=>p.id===G.me)||G.players[1],pct=pairStat(A,me,G.qs).pct,t=`${san(me.name)}が答え終わりました！\n2人のシンクロ率は ${pct}% でした。くわしい結果はこちら`,u=pairLink(A,me,G.qs);
-    const bl=$('back-line');if(bl)bl.href=lineUrl(t,u);const bs=$('back-share');if(bs)bs.onclick=()=>sendVia(t,u,$('back-msg'))}
+    const bl=$('back-line');if(bl){bl.href=lineUrl(t,u);bl.addEventListener('click',e=>{if(pkCanFiles()){e.preventDefault();saveImage(G,t+'\n'+u)}})}const bs=$('back-share');if(bs)bs.onclick=()=>sendVia(t,u,$('back-msg'))}
 // 答え合わせのリンクを開いた人：説明 → ニックネーム → 同じ問題に答える
 function withStart(x){
   try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
@@ -1062,14 +1062,28 @@ function histHTML(h){
 function histSetM(G,m){const id=G.qs.join('.'),h=store('kv_hist')||[],r=h.find(x=>x&&x.id===id);if(!r||r.m!=null)return;r.m=m;store('kv_hist',h);const el=$('hist');if(el){el.innerHTML=histHTML(h);if(window.__jw)window.__jw(el)}}
 
 /* ===== 結果を画像で保存（インスタのストーリーズの縦長 1080×1920） ===== */
-async function saveImage(G){
+/* 写真つきで送る（鑑定者本人 2026-11-23「2択とアイシンクも同じ形に」。LINEのURLプレビューがオフの人が多く、リンクだけでは絵が見えないため）：
+   スマホで写真の共有ができるときは、結果の「LINEで結果を送る」「○○さんにも結果を送る」を押すと、結果の画像と、送る文＋リンクを一緒に共有の画面へ渡す（LINEを選ぶと写真と文の両方が届く）。
+   パソコン・共有できない端末は今までどおり LINE の送る画面。招待のボタンは文だけのまま */
+function pkCanFiles(){try{return !!(window.matchMedia&&matchMedia('(pointer:coarse)').matches&&navigator.canShare&&navigator.canShare({files:[new File(['x'],'a.png',{type:'image/png'})]}))}catch(e){return false}}
+function pkShareAgain(file,text){
+  let d=document.getElementById('pk-share-again');if(d)d.remove();
+  d=document.createElement('div');d.id='pk-share-again';
+  d.setAttribute('style','position:fixed;left:16px;right:16px;bottom:20px;z-index:9999;background:#fff;border:2px solid #BFB6E2;border-radius:22px;box-shadow:0 10px 28px rgba(42,37,89,.22);padding:16px;text-align:center;color:#2A2559;font-weight:700');
+  d.innerHTML='<p style="margin:0 0 10px">画像ができました</p><button type="button" style="min-height:48px;width:100%;border-radius:999px;border:0;background:#06C755;color:#1E1E2A;font-weight:800;font-size:16px">送る（LINEを選んでね）</button><button type="button" style="margin-top:6px;min-height:44px;background:none;border:0;color:#4E4878;font-weight:700">閉じる</button>';
+  document.body.appendChild(d);
+  const bs=d.querySelectorAll('button');
+  bs[0].onclick=()=>{d.remove();navigator.share({files:[file],text}).catch(()=>{})};
+  bs[1].onclick=()=>d.remove()}
+async function saveImage(G,text){
   const msg=$('imgmsg');msg.hidden=false;msg.textContent='画像を作っています…';
   try{
     try{await Promise.all(['900 60px "Zen Maru Gothic"','700 60px Quicksand','500 30px "Zen Kaku Gothic New"'].map(f=>document.fonts.load(f)))}catch(e){}
     const cv=document.createElement('canvas');cv.width=1080;cv.height=1920;const c=cv.getContext('2d');drawResult(c,G);
     const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
     const file=new File([blob],'i-sync.png',{type:'image/png'});
-    if(navigator.canShare&&navigator.canShare({files:[file]})){msg.hidden=true;await navigator.share({files:[file],title:'アイ・シンク（I-Sync）'}).catch(()=>{});return}
+    if(!text){try{const x=shareText(G,store('kv_name')||'');text=x.t+'\n'+x.url}catch(e){}}
+    if(navigator.canShare&&navigator.canShare({files:[file]})){msg.hidden=true;await navigator.share(text?{files:[file],text}:{files:[file],title:'アイ・シンク（I-Sync）'}).catch(e=>{if(e&&e.name!=='AbortError'&&text)pkShareAgain(file,text)});return}
     const url=URL.createObjectURL(blob);
     msg.innerHTML=`<img class="shot" src="${url}" alt="結果の画像">画像を長押しして保存してください。`;
   }catch(e){msg.textContent='画像を作れませんでした。画面のスクリーンショットで保存してください。'}}
