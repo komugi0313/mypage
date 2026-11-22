@@ -21,13 +21,13 @@
     o=o||{}; var id='pkn'+(++seq); REG[id]=o; 
     return '<section class="pkn" id="'+id+'" data-pkn="'+id+'">'+
       '<p class="pkn-h"><svg class="pkn-ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 7l8 6 8-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>'+
-      '<span class="pkn-t"><span class="nw">相手が答えたら、</span><span class="nw">メールでお知らせ</span></span><span class="pkn-tag">任意</span>'+(on()?'':'<span class="pkn-tag pkn-soon">準備中</span>')+'</p>'+
+      '<span class="pkn-t"><span class="nw">送ったリンクから</span><span class="nw">相手があとで答えたら、</span><span class="nw">メールでお知らせします</span></span><span class="pkn-tag">任意</span></p>'+
+      '<p class="pkn-d">リンクを送ってから10日のあいだ</p>'+
       '<form class="pkn-f" novalidate><div class="pkn-row">'+
         '<input type="email" class="pkn-in" inputmode="email" autocomplete="email" maxlength="120" placeholder="メールアドレス" aria-label="メールアドレス">'+
         '<button type="submit" class="pkn-go">登録</button></div>'+
         '<p class="pkn-m" role="status" hidden></p>'+
       '</form>'+
-      '<p class="pkn-s">相手が答えたことだけをお知らせします（<a href="'+esc(CFG.privacy||'privacy.html')+'" target="_blank" rel="noopener">プライバシーポリシー</a>）。</p>'+
     '</section>';
   }
   function msg(f,t,bad){ var m=f.querySelector('.pkn-m'); m.hidden=false; m.textContent=t; m.className='pkn-m'+(bad?' bad':' ok'); }

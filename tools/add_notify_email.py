@@ -20,12 +20,12 @@ SITES = [
 def css(ink, line, bg, fg, bd, tag, card):
     return f'''<style id="pk-notify-css">
 .pkn{{margin:14px 0;padding:16px 16px 12px;border:1.5px solid {line};border-radius:16px;background:{card};color:{ink};text-align:left}}
-.pkn-h{{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;margin:0 0 6px;font-weight:800;font-size:16px;line-height:1.5}}
-.pkn-ic{{flex:none;color:{ink}}}
-.pkn-t{{flex:0 1 auto}}
+.pkn-h{{display:flex;align-items:flex-start;flex-wrap:wrap;gap:6px 8px;margin:0 0 6px;font-weight:800;font-size:16px;line-height:1.5}}
+.pkn-ic{{flex:none;color:{ink};margin-top:2px}}
+.pkn-t{{flex:1 1 0;min-width:0}}
 .pkn-tag{{display:inline-block;padding:1px 9px;border-radius:999px;background:{tag};color:{ink};font-size:12.5px;font-weight:800;white-space:nowrap}}
 .pkn-soon{{background:#ECECEC;color:#4A4A4A}}
-.pkn-d{{margin:0 0 10px;font-size:14px;line-height:1.7}}
+.pkn-d{{margin:0 0 10px;font-size:13.5px;line-height:1.6}}
 .pkn-f{{margin:0}}
 .pkn-row{{display:flex;gap:8px}}
 .pkn-row .pkn-in{{flex:1 1 auto;min-width:0}}
