@@ -341,7 +341,7 @@ function localAsk(){
     if(L.i<n){localAsk();return}
     L.i=0;L.p++;
     if(L.mode==='late'){lateFinish();return}
-    if(L.mode==='pair'){{const G2={players:[L.partner,L.players[0]],qs:L.qs,me:'me',anon:false,local:true,pair:true,ibx:L.partner.ibx};showResult(G2);inboxSend(L.partner.ibx,L.players[0],L.qs).then(ok=>backDone(G2,ok))}return}
+    if(L.mode==='pair'){{const G2={players:[L.partner,L.players[0]],qs:L.qs,me:'me',anon:false,local:true,pair:true,ibx:L.partner.ibx};showResult(G2);inboxSend(L.partner.ibx,L.players[0],L.qs).then(ok=>backDone(G2,ok));if(window.PkNotify&&L.partner.ibx)window.PkNotify.answered({kind:'with',ref:L.partner.ibx,name:L.players[0].name})}return}
     showResult({players:L.players,qs:L.qs,me:L.mode==='solo'?'me':null,anon:false,local:true});
     };
   bindAsk((v,starOn)=>{
@@ -910,7 +910,9 @@ function inviteCard(G,p){const n=G.qs.length,nm=['あなた','ともだち'].inc
     <a class="btn line" id="inv-line" href="#" target="_blank" rel="noopener">LINEで答え合わせに誘う</a>
     <button class="btn ghost small" id="inv-share">ほかのアプリで送る</button><p class="hint" id="inv-msg" hidden></p>
     <p class="hint hp-note">あなたの答えは、相手が答え終わるまで見えません。答えた人との結果は、このスマホのトップに${IBX_DAYS}日間届きます（答えた人どうしは、おたがいの結果を見られません）。</p>
-    <button class="btn ghost small" id="tog">みんなで診断する（部屋を作る）</button></section>`}
+    <button class="btn ghost small" id="tog">みんなで診断する（部屋を作る）</button></section>${notifyCard(G,p)}`}
+// 相手が答えたらメールでお知らせ（任意・いまは形だけ。tools/notify_email.js）。目印＝答え合わせのリンクの id（届く答え合わせと同じ）
+function notifyCard(G,p){if(!window.PkNotify)return'';return window.PkNotify.card({kind:'with',days:IBX_DAYS,ref:()=>{const nm=($('inv-name')&&$('inv-name').value.trim())||store('kv_name')||'';if(!nm)return'';return ibxId(G,p,nm)||window.PkNotify.refOf(withLink(nm,G.qs,p.ans,''))}})}
 // 答え合わせのリンクから答えた人の結果の下：送ってくれた人に結果を返す／同じ問題のまま、ほかの人も誘う
 // 答え合わせのリンクから答えた人：2人の結果は自動で相手のスマホに届く（答え合わせが届く・2026-11-18〜）。
 // 届いたときは1行だけ。届かなかったとき（古いリンク・通信の失敗）だけ「送り返す」枠を出す（鑑定者本人 2026-11-20「今ここで出す必要があるか」）

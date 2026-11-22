@@ -1366,6 +1366,85 @@ html,body{overflow-x:clip;max-width:100%}
 button,a,[role="button"],label,input,select,textarea{touch-action:manipulation}
 input,select,textarea{font-size:max(16px,1em)}
 </style>
+<!--NOTIFY-MAIL:start（相手が答えたらメールでお知らせ＝3サイト共通。元は tools/notify_email.js、tools/add_notify_email.py が埋め込む。直すときは元を直して再実行）-->
+<style id="pk-notify-css">
+.pkn{margin:14px 0;padding:16px 16px 12px;border:1.5px solid #1E1E2A;border-radius:16px;background:#FFFFFF;color:#1E1E2A;text-align:left}
+.pkn-h{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;margin:0 0 6px;font-weight:800;font-size:16px;line-height:1.5}
+.pkn-ic{flex:none;color:#1E1E2A}
+.pkn-t{flex:0 1 auto}
+.pkn-tag{display:inline-block;padding:1px 9px;border-radius:999px;background:#FFE071;color:#1E1E2A;font-size:12.5px;font-weight:800;white-space:nowrap}
+.pkn-soon{background:#ECECEC;color:#4A4A4A}
+.pkn-d{margin:0 0 10px;font-size:14px;line-height:1.7}
+.pkn-f{margin:0}
+.pkn-l{display:block;margin:0 0 8px;font-size:13px;font-weight:700}
+.pkn-l span{display:block;margin:0 0 4px}
+.pkn-in{display:block;box-sizing:border-box;width:100%;min-height:46px;padding:10px 12px;border:2px solid #1E1E2A;border-radius:12px;background:#FFFFFF;color:#1E1E2A;font:inherit;font-size:16px}
+.pkn-c{display:flex;align-items:flex-start;gap:8px;margin:0 0 10px;min-height:44px;font-size:13.5px;line-height:1.6;cursor:pointer}
+.pkn-c input{flex:none;width:22px;height:22px;margin:2px 0 0}
+.pkn-c a{color:#1E1E2A;text-decoration:underline}
+.pkn-go{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;padding:8px 16px;border:2px solid #1E1E2A;border-radius:999px;background:#FF3D7F;color:#1E1E2A;font:inherit;font-size:15.5px;font-weight:800;cursor:pointer}
+.pkn-go:disabled{opacity:.6}
+.pkn-m{margin:8px 0 0;padding:8px 10px;border-radius:10px;font-size:13.5px;line-height:1.6;background:#F3F7EE;color:#2F4A1E}
+.pkn-m.bad{background:#FDECEC;color:#8A1F1F}
+.pkn-s{margin:10px 0 0;font-size:12.5px;line-height:1.6;color:#1E1E2A;opacity:.85}
+</style>
+<script>window.PK_NOTIFY_CFG={"site": "nitaku", "endpoint": null, "privacy": "privacy.html"};
+/* 相手が答えたら、メールでお知らせ（任意）＝3つの無料サイト共通の部品（鑑定者本人 2026-11-22）
+   いまは画面の形だけ。送り先のサーバーはまだない（あとでエンジニアさんが共通の会員基盤のサーバーにつなぐ）。
+   つなぐときは、各サイトの PK_NOTIFY_CFG.endpoint に受け口のアドレスを入れるだけ（くわしくは handoff/メール通知_つなぎ方.md）。
+   endpoint が null のあいだは、メールアドレスはどこにも送らず・どこにも残さない（「準備中です」と出すだけ）。
+   元はこのファイル。python3 tools/add_notify_email.py が3つのサイトに埋め込む。 */
+(function(){
+  var CFG = window.PK_NOTIFY_CFG || {};
+  var EP = CFG.endpoint || null;
+  var REG = {}, seq = 0;
+  function on(){ return !!EP; }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  // リンクの目印（同じ文字列からは、送った人のスマホでも答えた人のスマホでも同じ目印になる）
+  function refOf(s){ s=String(s||''); var h1=0x811c9dc5, h2=0x01000193; for(var i=0;i<s.length;i++){ var c=s.charCodeAt(i); h1=Math.imul(h1^c,16777619)>>>0; h2=Math.imul(h2^c,2246822519)>>>0; } return (h1.toString(36)+h2.toString(36)).slice(0,14); }
+  function post(body){
+    if(!EP) return Promise.resolve(false);
+    body.site = CFG.site || ''; body.at = Date.now();
+    try{ return fetch(EP,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),keepalive:true}).then(function(r){ return r.ok; }).catch(function(){ return false; }); }catch(e){ return Promise.resolve(false); }
+  }
+  /* 送る人の画面に出すカード。o = { kind:'with'|'room'|'invite', ref:function(){…} か 文字列, days:10, onSubscribed:function(ref){…} } */
+  function card(o){
+    o=o||{}; var id='pkn'+(++seq); REG[id]=o; var days=o.days||10;
+    return '<section class="pkn" id="'+id+'" data-pkn="'+id+'">'+
+      '<p class="pkn-h"><svg class="pkn-ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 7l8 6 8-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>'+
+      '<span class="pkn-t"><span class="nw">相手が答えたら、</span><span class="nw">メールでお知らせ</span></span><span class="pkn-tag">任意</span>'+(on()?'':'<span class="pkn-tag pkn-soon">準備中</span>')+'</p>'+
+      '<p class="pkn-d">送ったリンクから相手があとで答えたとき、メールでお知らせします（リンクが使える'+days+'日のあいだ）。登録しなくても、このまま使えます。</p>'+
+      '<form class="pkn-f" novalidate>'+
+        '<label class="pkn-l"><span>メールアドレス</span><input type="email" class="pkn-in" inputmode="email" autocomplete="email" maxlength="120" placeholder="example@mail.com"></label>'+
+        '<label class="pkn-c"><input type="checkbox" class="pkn-ok"><span>お知らせのメールを受け取ることに同意します（<a href="'+esc(CFG.privacy||'privacy.html')+'" target="_blank" rel="noopener">プライバシーポリシー</a>）</span></label>'+
+        '<button type="submit" class="pkn-go">お知らせを受け取る</button>'+
+        '<p class="pkn-m" role="status" hidden></p>'+
+      '</form>'+
+      '<p class="pkn-s">お知らせは、相手が答えたことだけ。広告のメールは送りません。いつでも止められます。</p>'+
+    '</section>';
+  }
+  function msg(f,t,bad){ var m=f.querySelector('.pkn-m'); m.hidden=false; m.textContent=t; m.className='pkn-m'+(bad?' bad':' ok'); }
+  document.addEventListener('submit',function(e){
+    var f=e.target; if(!f||!f.classList||!f.classList.contains('pkn-f')) return; e.preventDefault();
+    var box=f.closest('[data-pkn]'), o=REG[box&&box.getAttribute('data-pkn')]||{};
+    var mail=(f.querySelector('.pkn-in').value||'').trim(), ok=f.querySelector('.pkn-ok').checked;
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mail)){ msg(f,'メールアドレスを正しく入れてください。',true); f.querySelector('.pkn-in').focus(); return; }
+    if(!ok){ msg(f,'「同意します」にチェックを入れてください。',true); return; }
+    if(!EP){ msg(f,'メールでのお知らせは、ただいま準備中です。始まったら、ここから登録できます（入れたアドレスは、どこにも送っていません）。',false); return; }
+    var ref=typeof o.ref==='function'?o.ref():o.ref; if(!ref){ msg(f,'先にリンクを作ってから（ニックネームを入れてから）登録してください。',true); return; }
+    var btn=f.querySelector('.pkn-go'); btn.disabled=true; btn.textContent='登録しています…';
+    post({type:'subscribe',kind:o.kind||'',ref:ref,email:mail,consent:true,days:o.days||10}).then(function(r){
+      btn.disabled=false; btn.textContent='お知らせを受け取る';
+      if(r){ msg(f,'登録しました。相手が答えたら、'+mail+' にお知らせします。',false); if(o.onSubscribed) try{ o.onSubscribed(ref); }catch(e2){} }
+      else msg(f,'うまく登録できませんでした。少し時間をおいて、もう一度お試しください。',true);
+    });
+  });
+  /* 答えた人のスマホから「答えました」を知らせる（つながっていなければ何もしない） */
+  function answered(o){ o=o||{}; if(!o.ref) return Promise.resolve(false); return post({type:'answered',kind:o.kind||'',ref:o.ref,name:String(o.name||'').slice(0,10)}); }
+  window.PkNotify={ on:on, card:card, answered:answered, refOf:refOf, cfg:CFG };
+})();
+</script>
+<!--NOTIFY-MAIL:end-->
 </head>
 <body data-mode="love">
 <div class="wrap">
@@ -4062,8 +4141,10 @@ function wCardHTML(){
     '<p class="hint">リンクを開いた人が同じ問題に答えると、2人の価値観の近さが出ます。あなたの答えは、相手が答え終わるまで見えません。</p>'+
     '<div class="prow"><div class="pf"><input type="text" id="w-name" maxlength="6" placeholder="あなたの名前（6文字まで）" value="'+esc(wName())+'"></div></div>'+
     '<a class="big lb-line" id="w-line" href="https://line.me/R/share" target="_blank" rel="noopener">LINEで答え合わせに誘う</a>'+
-    '<button class="tell-s" id="w-share" type="button">ほかのアプリで送る</button></div>';
+    '<button class="tell-s" id="w-share" type="button">ほかのアプリで送る</button></div>'+wNotifyHTML();
 }
+/* 相手が答えたらメールでお知らせ（任意・いまは形だけ。tools/notify_email.js）。目印＝リンクの答えの部分（答えた人のスマホでも同じ目印になる） */
+function wNotifyHTML(){ if(!window.PkNotify) return ''; var qs=S.qs, a=S.ans[0], t=S.times[0]; return window.PkNotify.card({ kind:'with', ref:function(){ return window.PkNotify.refOf(wPack(qs, a, t)); } }); }
 function bindWCard(){
   var inp=$('w-name'); if(!inp) return;
   var text=function(){ return '究極の二択、同じ'+S.qs.length+'問で答え合わせしよう！\nわたしの答えは、あなたが答え終わるまで見えないよ。\n終わったら、2人の価値観の近さが何%か出る！\n#究極の二択 #本音バレ診断'; };
@@ -4120,6 +4201,7 @@ function showWithResult(){
   saveHist(resMode(mode), score(resMode(mode),S.qs,myA));
   var invA=wAns(S.qs, W.i1), invT=wTimes(W.i1);
   var pb=wTwo(me, myA, myT, W.n1, invA, invT);
+  if(window.PkNotify) window.PkNotify.answered({ kind:'with', ref:window.PkNotify.refOf(W.raw1), name:me });
   var pairUrl=wBase()+'#pair='+wHead(mode, W.lv, me)+'.'+wPack(S.qs, myA, myT)+'.'+encodeURIComponent(W.n1.replace(/[.~#]/g,''))+'.'+W.raw1;
   var t='究極の二択で、'+W.n1+'さんと答え合わせしたよ！'+(pb?'\n2人の価値観の近さは '+pb.r+'%':'')+'\n\n2人の結果はこちら↓';
   var l=$('lgshare'); if(l){ l.textContent=W.n1+'さんに結果を送る'; l.href='https://line.me/R/share?text='+encodeURIComponent(t+'\n'+pairUrl); }

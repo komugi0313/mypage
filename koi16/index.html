@@ -897,6 +897,85 @@ header.top .navbtn:active{transform:translateY(1px)}
 .types-grid a small{color:var(--sub);opacity:1}
 .types-grid a small:first-of-type{color:var(--gc);font-weight:700}
 </style>
+<!--NOTIFY-MAIL:start（相手が答えたらメールでお知らせ＝3サイト共通。元は tools/notify_email.js、tools/add_notify_email.py が埋め込む。直すときは元を直して再実行）-->
+<style id="pk-notify-css">
+.pkn{margin:14px 0;padding:16px 16px 12px;border:1.5px solid #E3CFC4;border-radius:16px;background:#FFFCF7;color:#4A362B;text-align:left}
+.pkn-h{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;margin:0 0 6px;font-weight:800;font-size:16px;line-height:1.5}
+.pkn-ic{flex:none;color:#4A362B}
+.pkn-t{flex:0 1 auto}
+.pkn-tag{display:inline-block;padding:1px 9px;border-radius:999px;background:#FBE4EC;color:#4A362B;font-size:12.5px;font-weight:800;white-space:nowrap}
+.pkn-soon{background:#ECECEC;color:#4A4A4A}
+.pkn-d{margin:0 0 10px;font-size:14px;line-height:1.7}
+.pkn-f{margin:0}
+.pkn-l{display:block;margin:0 0 8px;font-size:13px;font-weight:700}
+.pkn-l span{display:block;margin:0 0 4px}
+.pkn-in{display:block;box-sizing:border-box;width:100%;min-height:46px;padding:10px 12px;border:2px solid #E3CFC4;border-radius:12px;background:#FFFFFF;color:#4A362B;font:inherit;font-size:16px}
+.pkn-c{display:flex;align-items:flex-start;gap:8px;margin:0 0 10px;min-height:44px;font-size:13.5px;line-height:1.6;cursor:pointer}
+.pkn-c input{flex:none;width:22px;height:22px;margin:2px 0 0}
+.pkn-c a{color:#4A362B;text-decoration:underline}
+.pkn-go{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;padding:8px 16px;border:2px solid #B01A5A;border-radius:999px;background:#B01A5A;color:#FFFFFF;font:inherit;font-size:15.5px;font-weight:800;cursor:pointer}
+.pkn-go:disabled{opacity:.6}
+.pkn-m{margin:8px 0 0;padding:8px 10px;border-radius:10px;font-size:13.5px;line-height:1.6;background:#F3F7EE;color:#2F4A1E}
+.pkn-m.bad{background:#FDECEC;color:#8A1F1F}
+.pkn-s{margin:10px 0 0;font-size:12.5px;line-height:1.6;color:#4A362B;opacity:.85}
+</style>
+<script>window.PK_NOTIFY_CFG={"site": "koi16", "endpoint": null, "privacy": "?privacy=1"};
+/* 相手が答えたら、メールでお知らせ（任意）＝3つの無料サイト共通の部品（鑑定者本人 2026-11-22）
+   いまは画面の形だけ。送り先のサーバーはまだない（あとでエンジニアさんが共通の会員基盤のサーバーにつなぐ）。
+   つなぐときは、各サイトの PK_NOTIFY_CFG.endpoint に受け口のアドレスを入れるだけ（くわしくは handoff/メール通知_つなぎ方.md）。
+   endpoint が null のあいだは、メールアドレスはどこにも送らず・どこにも残さない（「準備中です」と出すだけ）。
+   元はこのファイル。python3 tools/add_notify_email.py が3つのサイトに埋め込む。 */
+(function(){
+  var CFG = window.PK_NOTIFY_CFG || {};
+  var EP = CFG.endpoint || null;
+  var REG = {}, seq = 0;
+  function on(){ return !!EP; }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  // リンクの目印（同じ文字列からは、送った人のスマホでも答えた人のスマホでも同じ目印になる）
+  function refOf(s){ s=String(s||''); var h1=0x811c9dc5, h2=0x01000193; for(var i=0;i<s.length;i++){ var c=s.charCodeAt(i); h1=Math.imul(h1^c,16777619)>>>0; h2=Math.imul(h2^c,2246822519)>>>0; } return (h1.toString(36)+h2.toString(36)).slice(0,14); }
+  function post(body){
+    if(!EP) return Promise.resolve(false);
+    body.site = CFG.site || ''; body.at = Date.now();
+    try{ return fetch(EP,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),keepalive:true}).then(function(r){ return r.ok; }).catch(function(){ return false; }); }catch(e){ return Promise.resolve(false); }
+  }
+  /* 送る人の画面に出すカード。o = { kind:'with'|'room'|'invite', ref:function(){…} か 文字列, days:10, onSubscribed:function(ref){…} } */
+  function card(o){
+    o=o||{}; var id='pkn'+(++seq); REG[id]=o; var days=o.days||10;
+    return '<section class="pkn" id="'+id+'" data-pkn="'+id+'">'+
+      '<p class="pkn-h"><svg class="pkn-ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 7l8 6 8-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>'+
+      '<span class="pkn-t"><span class="nw">相手が答えたら、</span><span class="nw">メールでお知らせ</span></span><span class="pkn-tag">任意</span>'+(on()?'':'<span class="pkn-tag pkn-soon">準備中</span>')+'</p>'+
+      '<p class="pkn-d">送ったリンクから相手があとで答えたとき、メールでお知らせします（リンクが使える'+days+'日のあいだ）。登録しなくても、このまま使えます。</p>'+
+      '<form class="pkn-f" novalidate>'+
+        '<label class="pkn-l"><span>メールアドレス</span><input type="email" class="pkn-in" inputmode="email" autocomplete="email" maxlength="120" placeholder="example@mail.com"></label>'+
+        '<label class="pkn-c"><input type="checkbox" class="pkn-ok"><span>お知らせのメールを受け取ることに同意します（<a href="'+esc(CFG.privacy||'privacy.html')+'" target="_blank" rel="noopener">プライバシーポリシー</a>）</span></label>'+
+        '<button type="submit" class="pkn-go">お知らせを受け取る</button>'+
+        '<p class="pkn-m" role="status" hidden></p>'+
+      '</form>'+
+      '<p class="pkn-s">お知らせは、相手が答えたことだけ。広告のメールは送りません。いつでも止められます。</p>'+
+    '</section>';
+  }
+  function msg(f,t,bad){ var m=f.querySelector('.pkn-m'); m.hidden=false; m.textContent=t; m.className='pkn-m'+(bad?' bad':' ok'); }
+  document.addEventListener('submit',function(e){
+    var f=e.target; if(!f||!f.classList||!f.classList.contains('pkn-f')) return; e.preventDefault();
+    var box=f.closest('[data-pkn]'), o=REG[box&&box.getAttribute('data-pkn')]||{};
+    var mail=(f.querySelector('.pkn-in').value||'').trim(), ok=f.querySelector('.pkn-ok').checked;
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mail)){ msg(f,'メールアドレスを正しく入れてください。',true); f.querySelector('.pkn-in').focus(); return; }
+    if(!ok){ msg(f,'「同意します」にチェックを入れてください。',true); return; }
+    if(!EP){ msg(f,'メールでのお知らせは、ただいま準備中です。始まったら、ここから登録できます（入れたアドレスは、どこにも送っていません）。',false); return; }
+    var ref=typeof o.ref==='function'?o.ref():o.ref; if(!ref){ msg(f,'先にリンクを作ってから（ニックネームを入れてから）登録してください。',true); return; }
+    var btn=f.querySelector('.pkn-go'); btn.disabled=true; btn.textContent='登録しています…';
+    post({type:'subscribe',kind:o.kind||'',ref:ref,email:mail,consent:true,days:o.days||10}).then(function(r){
+      btn.disabled=false; btn.textContent='お知らせを受け取る';
+      if(r){ msg(f,'登録しました。相手が答えたら、'+mail+' にお知らせします。',false); if(o.onSubscribed) try{ o.onSubscribed(ref); }catch(e2){} }
+      else msg(f,'うまく登録できませんでした。少し時間をおいて、もう一度お試しください。',true);
+    });
+  });
+  /* 答えた人のスマホから「答えました」を知らせる（つながっていなければ何もしない） */
+  function answered(o){ o=o||{}; if(!o.ref) return Promise.resolve(false); return post({type:'answered',kind:o.kind||'',ref:o.ref,name:String(o.name||'').slice(0,10)}); }
+  window.PkNotify={ on:on, card:card, answered:answered, refOf:refOf, cfg:CFG };
+})();
+</script>
+<!--NOTIFY-MAIL:end-->
 </head>
 <body>
 <div class="wrap">
@@ -3203,6 +3282,7 @@ var FULL_ORDER=(function(){ var o=[], extra=[40,44,41,45,42,46,43,47]; for(var g
 function qlist(){ return mode==='quick'?QUICK:FULL_ORDER; }
 var params = new URLSearchParams(location.search);
 var partner = validCode(params.get('from')) || (st.partner&&validCode(st.partner)) || null;
+(function(){ var n=params.get('n'); if(validCode(params.get('from'))&&n&&/^[0-9a-z]{10}$/.test(n)){ st.partnerN=n; try{ localStorage.setItem(LS,JSON.stringify(st)); }catch(e){} } })();   // 送った人がメールのお知らせを登録しているリンク
 (function(){ var f=validCode(params.get('from')), k=(params.get('k')||'').match(/^(\d{1,3})\.(\d{1,3})$/); if(f&&k){ var a=+k[1], t=+k[2]; if(a<=100&&t<=100){ st.partnerK={c:f,anx:a,ts:t}; try{ localStorage.setItem(LS,JSON.stringify(st)); }catch(e){} } } })();
 function validCode(c){ c=(c||'').toUpperCase(); return T[c]?c:null; }
 /* LINEの中の画面で開いたら、ふだんのブラウザ（Safari・Chrome）で開き直す。この画面の結果も一緒にうつす（鑑定者本人 2026-11-22「限りなくミスがないやり方に」） */
@@ -3499,6 +3579,7 @@ function finish(){
   if(st.me&&st.me.code) st.prev={code:st.me.code,at:st.me.at}; // 前回の結果（2回目からの結果の表紙に「前回 → 今回」を1行）
   var one={code:r.code,pct:r.pct,anx:r.anx,fu:r.fu,fg:r.fg,mode:mode,status:st.status||null,dur:st.status==='partner'?(st.dur||null):null,at:Date.now()}; st.ans=new Array(QS.length).fill(null);
   if(partner) st.partner=partner;
+  if(partner&&st.partnerN){ if(window.PkNotify) window.PkNotify.answered({ kind:'invite', ref:st.partnerN }); delete st.partnerN; }   // 送った人に「答えました」をお知らせ（つながっていなければ何もしない）
   histAdd(one); // わたしの結果には、その回の答えだけの結果を残す
   try{ if(window.gaEv) gaEv('play_done',{mode:mode, room:(typeof RM!=='undefined'&&RM&&RM.code)?'room':'solo'}); }catch(e){}   // アクセス解析：診断された回数（本格版・かんたん版・部屋かどうかだけ。答え・タイプは送らない）
   st.me=combineMe(one);  // いちばん大きく出すキャラは、これまでの答え（最新5回まで）を合わせて決める
@@ -3726,6 +3807,7 @@ function renderResult(code,mine,withCode){
      '<button class="btn btn-sub" type="button" data-act="copy">リンクをコピー</button>'+
      '<button class="btn btn-sub" type="button" data-act="img">画像で保存</button></div>'+
      '<p style="margin-top:10px"><button class="btn btn-sub btn-wide" type="button" data-act="qr"><span class="nw">となりの人に</span><span class="nw">QRを見せる</span></button></p><div id="qr-out"></div></section>';
+  if(isMine) h+=koiNotifyHTML();
   if(isMine){
     h+='<section class="card">'+secH('h2','match','<span class="nw">友だちと、</span><span class="nw">恋のかたち診断</span>')+'<p>友だちと集まったときに。1人が部屋を作って、みんなはQRを読むだけ。全員いっしょに診断をはじめて、全員の相性がわかります（8人まで）。</p>'+
        '<button class="btn btn-main btn-wide" type="button" data-act="room-new">部屋を作る</button>'+(function(){ var gl=groupListHTML(); return gl?'<h3 style="margin-top:16px">参加したグループ</h3>'+gl:''; })()+'</section>';
@@ -4644,7 +4726,12 @@ function shareText(code){ var t=T[code], h=hookOf(code);
   return '私は「'+t.c+'」タイプ。'+(h.k==='w'?'恋の弱点は「'+h.a+'」でした…':'脈ありサインは「'+h.a+'」。')+h.ask+'診断すると、私との相性もわかります。｜'+SITE_NAME; }
 /* 相手の点（鑑定者本人 2026-11-17「相手の点もお願いします」）：本格版の人は、心のゆれやすさと寄りかかれる%の2つをリンクに入れる（リンクの中だけ・どこにも送らない） */
 function kParam(){ var m=st.me; return (m&&m.mode!=='quick'&&m.anx!=null&&m.pct&&m.pct.TS!=null)?'&k='+Math.round(m.anx)+'.'+Math.round(m.pct.TS):''; }
-function inviteUrl(code){ return location.origin+location.pathname+'?from='+code+(st.me&&st.me.code===code?kParam():''); }
+function inviteUrl(code){ return location.origin+location.pathname+'?from='+code+(st.me&&st.me.code===code?kParam()+notifyParam():''); }
+/* 相手が答えたらメールでお知らせ（任意・いまは形だけ。tools/notify_email.js）。
+   目印＝この端末の送り主の印（10文字）。メールを登録したときだけ、送るリンクに &n=印 を付ける（つながるまでリンクは変わらない） */
+function notifyId(){ if(!st.nid){ var c='0123456789abcdefghijklmnopqrstuvwxyz', a=new Uint8Array(10), r=''; try{ crypto.getRandomValues(a); }catch(e){ for(var i=0;i<10;i++) a[i]=Math.random()*256; } for(var j=0;j<10;j++) r+=c[a[j]%36]; st.nid=r; save(st); } return st.nid; }
+function notifyParam(){ return (st.nidOn&&st.nid&&window.PkNotify&&window.PkNotify.on())?'&n='+st.nid:''; }
+function koiNotifyHTML(){ if(!window.PkNotify) return ''; return window.PkNotify.card({ kind:'invite', days:10, ref:notifyId, onSubscribed:function(){ st.nidOn=true; save(st); } }); }
 /* 写真つきで送る（鑑定者本人 2026-11-22：LINEのURLプレビューがオフの人が多く、リンクだけでは絵が見えないため）。
    スマホで写真の共有ができるときは、結果の画像とリンクの入った文を一緒に共有の画面へ渡す（LINEは写真と文の両方を送る＝鑑定者本人の端末で確認） */
 function pkCanFiles(){ try{ return !!(window.matchMedia&&matchMedia('(pointer:coarse)').matches&&navigator.canShare&&navigator.canShare({files:[new File(['x'],'a.png',{type:'image/png'})]})); }catch(e){ return false; } }
