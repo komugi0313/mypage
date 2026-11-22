@@ -1591,6 +1591,7 @@ input,select,textarea{font-size:max(16px,1em)}
       <summary><span>となりの友だちに、QRコードを見せる</span></summary>
       <p class="lb-note">みんなにスマホのカメラでこのQRを読みとってもらうと、そのまま部屋に入れます。</p>
       <div id="lb-qrbox"><div class="lb-qr" id="lb-qr"></div></div>
+      <p class="lb-note lb-qrtap">QRを押すと、部屋のリンクをLINEなどで送れます</p>
       <p class="lb-note">QRが読めないときは、トップの「招待された人はこちら」で番号 <b id="lb-code"></b> を入れてもらってね。</p>
     </details>
     <button class="tell-s" id="lb-invite" type="button">ほかのアプリで誘う（メール・SMSなど）</button>
@@ -5262,6 +5263,18 @@ async function saveImage(el){
   }catch(e){ toast('画像を作れませんでした。画面のスクリーンショットで残してね'); }
   finally{ if(b && b.tagName==='BUTTON') b.disabled=false; }
 }
+/* 部屋のQRを押すと、部屋のリンクをスマホの共有で送る（鑑定者本人 2026-11-22「QRをリンクにしたい」→「QRを押すと共有画面」） */
+function qrShare(){
+  var R=S.room; if(!R) return;
+  var url=joinUrl(R.code), text=inviteText(dcode(R.code), R.me && R.me.name);
+  markInvited('qr');
+  if(navigator.share){ navigator.share({ title:'究極の二択', text:text, url:url }).catch(function(){}); return; }
+  var full=text+'\n'+url, done=function(){ toast('部屋のリンクをコピーしました。LINEやメールに貼ってね'); };
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(full).then(done, function(){ prompt('コピーしてください', full); }); }
+  else prompt('コピーしてください', full);
+}
+(function(q){ q.setAttribute('role','button'); q.setAttribute('tabindex','0'); q.setAttribute('aria-label','部屋のリンクを送る'); q.style.cursor='pointer';
+  q.addEventListener('click', qrShare); q.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); qrShare(); } }); })($('lb-qr'));
 function imgovClose(){ $('imgov').hidden=true; }
 $('imgov-x').onclick=imgovClose; $('imgov-x2').onclick=imgovClose;
 $('imgov').addEventListener('click', function(e){ if(e.target===this) imgovClose(); });
