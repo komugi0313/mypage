@@ -9,7 +9,7 @@ const srv=http.createServer((q,r)=>{ let f=decodeURIComponent(q.url.split('?')[0
 const g=fs.readFileSync(path.join(__dirname,'gate_koi16.cjs'),'utf8');
 const scanSrc=g.slice(g.indexOf('function scan()'), g.indexOf('\n(async () =>'));
 const scan=new Function(scanSrc+'; return scan();');
-const PAGES=['aichaku/','chara/','kataomoi/','aisho/','izon/'].concat(['LVTP','LVTC','LATP','LATC','LVSP','LVSC','LASP','LASC','RVTP','RVTC','RATP','RATC','RVSP','RVSC','RASP','RASC'].map(c=>'type/'+c.toLowerCase()+'/'));
+const PAGES=['aichaku/','chara/','kataomoi/','aisho/','izon/','mbti/','aishohyo/'].concat(['LVTP','LVTC','LATP','LATC','LVSP','LVSC','LASP','LASC','RVTP','RVTC','RATP','RATC','RVSP','RVSC','RASP','RASC'].map(c=>'type/'+c.toLowerCase()+'/'));
 const MODE=process.env.KOI_MODE||'';
 const WIDTHS = MODE === 'android' ? [360, 384, 393, 412, 432] : MODE === 'iphone' ? [375, 390, 393, 402, 430, 440] : [320, 360, 375, 390, 414, 430];
 (async()=>{ await new Promise(ok=>srv.listen(0,'127.0.0.1',ok)); const PORT=srv.address().port; const b=await chromium.launch(); const probs=[];
