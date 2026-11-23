@@ -1041,7 +1041,7 @@ async function votesRun(G){
   el.innerHTML=`<p class="label">これまでに診断した人とくらべると</p>
     <p class="vtop">${G.players.length>1?'あなたの':''}多数派度 <b>${avg}%</b></p><p class="msg">${msg}</p>
     ${minor.length?`<p class="sub">少数派だった答え</p><ul class="list">${minor.map(r=>`<li><b>${esc(Q[r.k][1])}</b><span class="ansrow"><i class="o${r.o}">${esc(ans(r.o,r.k))}</i>同じ答えの人 ${pc(r.share)}%</span></li>`).join('')}</ul>`:''}
-    <details><summary class="label">1問ずつ、みんなの答えを見る</summary><ul class="list vlist">${rows.map(r=>`<li><b>${esc(Q[r.k][1])}</b>${bar(r)}${r.tot>=SHOW_COUNT?`<small>${r.tot}人が答えました</small>`:''}</li>`).join('')}</ul></details>
+    <details><summary>1問ずつ、みんなの答えを見る</summary><ul class="list vlist">${rows.map(r=>`<li><b>${esc(Q[r.k][1])}</b>${bar(r)}${r.tot>=SHOW_COUNT?`<small>${r.tot}人が答えました</small>`:''}</li>`).join('')}</ul></details>
     <p class="hint">これまでにアイ・シンクで答えた人の割合です（答えの数だけを数えていて、名前などは送っていません）。</p>`;
   el.hidden=false;if(window.__jw)window.__jw(el)}
 
