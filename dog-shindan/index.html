@@ -280,11 +280,13 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .friend img{width:120px;height:120px;object-fit:contain}
 .friend .ft{font-family:var(--pop);font-size:1.15rem;line-height:1.6}
 .friend .ft em{font-style:normal;color:var(--teal)}
-/* ギャップ度・レア度 */
+/* 見た目の犬種の順位（○○度）・レア度 */
 .meters{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
 .meter{background:var(--bg);border-radius:16px;padding:12px;text-align:center;display:flex;flex-direction:column;gap:2px}
 .meter b{font-family:var(--pop);font-weight:400;color:var(--teal);font-size:1.7rem;line-height:1.3}
 .meter span{font-weight:800;font-size:.85rem}
+.meter .gr-of{font-style:normal;font-size:.8rem;font-family:var(--body);font-weight:800;color:var(--muted)}
+.meter .nw{display:inline-block;white-space:nowrap;font-weight:inherit;font-size:inherit}
 .meter small{color:var(--muted);font-size:.78rem;line-height:1.5;text-wrap:pretty;word-break:keep-all;overflow-wrap:anywhere}
 .rarekey{margin-top:12px;display:flex;flex-direction:column;gap:10px;text-align:left}
 .cb-box{background:#FFF8D6;border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
@@ -591,6 +593,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .friend .guide b{color:var(--teal);font-size:.8rem}
 .wfqr{align-self:center;background:#FFFFFF;border-radius:16px;padding:12px;box-shadow:0 0 0 3px var(--mint)}
 .wfqr canvas{display:block;width:200px;height:200px;image-rendering:pixelated}
+#wf-qrtap{cursor:pointer}#wf-qrtap:focus-visible{outline:3px solid var(--mint);outline-offset:3px}.wf-qrtapn{color:#0A6B5A;font-weight:700}
 .wf-demo{align-self:stretch;text-align:left}
 .wf-demo-in{background:var(--bg);border-radius:18px;padding:14px;margin-top:4px}
 .friend .fhd{display:flex;gap:14px;align-items:center;text-align:left}
@@ -1203,7 +1206,8 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
           <div class="chips nst"><button type="button" data-v="plain"></button><button type="button" data-v="fun"></button></div>
         </div>
         <p class="note">相手にスマホなどのカメラで読んでもらうと、その人の「ワン友帳」にこの子が入ります（名前・気質の犬種・はじめましてガイド）。</p>
-        <div class="wfqr"><canvas id="wf-qr" width="400" height="400" aria-label="ワン友QR"></canvas></div>
+        <div class="wfqr" id="wf-qrtap" role="button" tabindex="0" aria-label="ワン友QR（押すとリンクを送れます）"><canvas id="wf-qr" width="400" height="400" aria-label="ワン友QR"></canvas></div>
+        <p class="note wf-qrtapn">QRを押すと、ワン友のリンクをLINEなどで送れます</p>
         <p class="note">相手のQRを読むときは、スマホなどのカメラを向けてください。</p>
         <details class="mini-fold wf-demo"><summary>相手のスマホには、こう見えます（見本）</summary>
           <div class="friend wf-demo-in" id="wf-demo"></div>
@@ -5203,6 +5207,11 @@ function wfOpen(i){var d=lsGet("w44_wbook",[])[i];if(!d)return;wfI=i;var im=d.o&
 function wfDemo(){if(!last)return;var d=wfData(),im=d.o&&IMG[d.o]?d.o:d.m;
   $("wf-demo").innerHTML='<div class="fhd">'+(IMG[im]?'<img src="'+IMG[im]+'?v=5" alt="">':'')+'<div><b>'+esc(d.n)+'</b><small>'+esc(d.h)+'</small></div></div>'+((d.r||[]).length?'<div class="f-req">'+rqBox(d.n,d.r)+'</div>':'')
     +'<section class="fsec"><h3>'+esc(d.n)+'に会うときは（はじめましてガイド）</h3><div class="fpts">'+(d.g||[]).map(function(t,k){return '<div class="fpt"><b>'+esc(G_LBL[k]||"")+'</b><span>'+esc(t)+'</span></div>'}).join("")+'</div></section>'}
+/* QRを押すと、ワン友のリンクをスマホの共有で送れる（鑑定者本人 2026-11-22「ワンソナにも同じように」） */
+function wfQrShare(){if(!last)return;var u=wfUrl(),tx=(st.name||"うちの子")+"のワン友QRです。開くと、あなたのワン友帳に入ります。";
+  if(navigator.share){navigator.share({title:"ワンソナ",text:tx,url:u}).catch(function(){});return}
+  var s2=tx+"\n"+u;if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(s2).then(function(){toast("リンクをコピーしました。LINEやメールに貼ってね")},function(){prompt("コピーしてください",s2)});else prompt("コピーしてください",s2)}
+$("wf-qrtap").addEventListener("click",wfQrShare);$("wf-qrtap").addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();wfQrShare()}});
 $("wf-more").addEventListener("toggle",function(){if(this.open&&last){drawQR($("wf-qr"),wfUrl());wfDemo()}});
 // 予告の帯とタイル：押した機能だけを開いて、そこまで動かす
 (function(){var IDS=["meishi-more","wf-more","rq-more","ec-more"];
@@ -5473,9 +5482,9 @@ function renderCardC(o){
     ctx.fillStyle=v<50?dark:"#8A96A0";ctx.textAlign="left";ctx.fillText(AXES[i].b,bx2+bw2+22,y+8);
     ctx.fillStyle="#E3F0F3";roundRect(ctx,bx2,y-5,bw2,10,5);ctx.fill();
     var x=bx2+bw2*(1-v/100);ctx.fillStyle=AXC[i][0];ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#FFFFFF";ctx.lineWidth=4;ctx.stroke()});
-  // ギャップ度・レア度
-  var chips=[];if(o.gap!==null&&o.gap!==undefined&&!o.pure)chips.push("ギャップ度 "+o.gap+"%");if(o.rare)chips.push("レア度");
-  ctx.font="800 28px "+R;var SW=o.star?5*30+8:0,cws=chips.map(function(c){return ctx.measureText(c).width+50+(c==="レア度"?SW:0)}),tt=cws.reduce(function(a,b){return a+b},0)+(chips.length-1)*20,c0=W/2-tt/2;
+  // 見た目の犬種の順位（○○度）・レア度
+  var chips=[];if(o.gap!==null&&o.gap!==undefined&&!o.pure)chips.push(gapChip(o));if(o.rare)chips.push("レア度");
+  var cfs=28,SW,cws,tt;do{ctx.font="800 "+cfs+"px "+R;SW=o.star?5*30+8:0;cws=chips.map(function(c){return ctx.measureText(c).width+50+(c==="レア度"?SW:0)});tt=cws.reduce(function(a,b){return a+b},0)+(chips.length-1)*20;cfs-=2}while(tt>W-140&&cfs>=20);var c0=W/2-tt/2;
   chips.forEach(function(c,i){ctx.fillStyle="#FFF3C4";roundRect(ctx,c0,1200,cws[i],50,25);ctx.fill();ctx.fillStyle=dark;ctx.textAlign="left";ctx.fillText(c,c0+25,1235);
     if(c==="レア度"){var sx2=c0+25+ctx.measureText(c).width+8;for(var k=0;k<5;k++){if(o.star){ctx.globalAlpha=k<o.rare.stars?1:.25;ctx.drawImage(o.star,sx2+k*30,1211,28,28)}}ctx.globalAlpha=1}c0+=cws[i]+20});
   ctx.textAlign="center";ctx.fillStyle=mute;ctx.font="800 22px "+R;ctx.fillText("44wansona.com",W/2,1285);
@@ -5540,8 +5549,8 @@ function renderCard(o){
     var x=bx+bw*(1-v/100);ctx.fillStyle=AXC[i][0];ctx.beginPath();ctx.arc(x,y+1,13,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#FFFFFF";ctx.lineWidth=4;ctx.stroke();
   });
   ctx.textAlign="center";
-  var chips=[];if(o.gap!==null&&o.gap!==undefined)chips.push("ギャップ度 "+o.gap+"%");if(o.rare)chips.push(o.star?"レア度":"レア度 "+starStr(o.rare.stars));
-  ctx.font="800 30px "+R;var SW=o.star&&o.rare?5*32+8:0,cws=chips.map(function(c){return ctx.measureText(c).width+56+(c==="レア度"?SW:0)}),tot=cws.reduce(function(a,b){return a+b},0)+(chips.length-1)*20,cx0=W/2-tot/2;
+  var chips=[];if(o.gap!==null&&o.gap!==undefined)chips.push(gapChip(o));if(o.rare)chips.push(o.star?"レア度":"レア度 "+starStr(o.rare.stars));
+  var cfs=30,SW,cws,tot;do{ctx.font="800 "+cfs+"px "+R;SW=o.star&&o.rare?5*32+8:0;cws=chips.map(function(c){return ctx.measureText(c).width+56+(c==="レア度"?SW:0)});tot=cws.reduce(function(a,b){return a+b},0)+(chips.length-1)*20;cfs-=2}while(tot>W-140&&cfs>=20);var cx0=W/2-tot/2;
   chips.forEach(function(c,i){ctx.fillStyle="#FFF3C4";roundRect(ctx,cx0,1186,cws[i],54,27);ctx.fill();ctx.fillStyle=dark;
     if(c==="レア度"&&SW){ctx.textAlign="left";ctx.fillText(c,cx0+28,1224);var sx=cx0+28+ctx.measureText(c).width+8;
       for(var k=0;k<5;k++){ctx.globalAlpha=k<o.rare.stars?1:.25;ctx.drawImage(o.star,sx+k*32,1197,30,30)}ctx.globalAlpha=1}
@@ -5695,6 +5704,10 @@ $("in-pick").addEventListener("click",function(e){var b=e.target.closest("button
 // ---------- ギャップ度・レア度 ----------
 function gapOf(){var oid=ownId(st.breed);if(!oid)return null;var i=last.rank.findIndex(function(x){return x.b.id===oid});if(i<0)return null;return Math.round(i/(BR.length-1)*100)}
 function starHTML(n){var h="";for(var i=0;i<5;i++)h+='<img src="icon/star.png" alt=""'+(i<n?"":' class="off"')+">";return '<span class="stars" role="img" aria-label="星5つ中'+n+'つ">'+h+"</span>"}
+// ギャップ度は「見た目の犬種が44犬種中何位か」で見せる（鑑定者本人 2026-11-21「この形で進めてください」）
+function gapRank(g){return Math.round(g*(BR.length-1)/100)+1}
+function gapRankWord(rk,short){return rk===1?"見た目も性格も、生粋の"+short:rk<=5?short+"らしさも、しっかり残っています":rk<=20?short+"らしさも、少し残っています":rk<=35?"見た目と性格に、ちょっと意外さ":"見た目からは想像できない、ほぼ別の犬種"}
+function gapChip(o){return (o.bodyName||"")+"度 "+BR.length+"犬種中"+gapRank(o.gap)+"位"}
 function gapWord(g,short){return g===0?"見た目も性格も"+short:g<25?"見た目どおりの性格":g<50?"見た目どおり\u200Bだけど、\u200B意外な\u200B一面も":g<75?"見た目と性格に、ちょっと意外さ":"見た目からは想像できない性格"}
 function starStr(n){return "★★★★★".slice(0,n)+"☆☆☆☆☆".slice(0,5-n)}
 // いちばん強い性格2つの組み合わせ（10の性格×2つの向き＝180通り）
@@ -5760,7 +5773,7 @@ function renderPairPanel(){
 }
 function renderMeters(){
   var g=gapOf(),R2=rarityOf(last.pct),short=bodyShort(st.breed),h="";
-  if(g!==null)h+='<div class="meter"><span>ギャップ度</span><b>'+g+'%</b><small>'+esc(gapWord(g,short))+'</small></div>';
+  if(g!==null){var rk=gapRank(g);var nwS=function(t){return t.length>7?esc(t).replace(/・/g,'・<wbr>'):'<span class="nw">'+esc(t)+'</span>'};h+='<div class="meter"><span>'+nwS(short)+'度</span><b>'+rk+'位<i class="gr-of">／'+BR.length+'犬種</i></b><small>'+esc(gapRankWord(rk,short)).replace(esc(short),nwS(short))+'</small></div>'}
   var CB=comboOf(last.pct);
   h+='<div class="meter"'+(g===null?' style="grid-column:1/-1"':'')+'><span>レア度</span><b>'+starHTML(CB.stars)+'</b><small>'+esc(CB.text)+'</small></div>';
   $("r-meters").innerHTML=h;
@@ -5966,7 +5979,7 @@ document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!$("z-sheet
 function toast(t){var el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(function(){el.hidden=true},3500)}
 function shareText(){if(!last)return "";var B=last.main,short=bodyShort(st.breed),oid=ownId(st.breed),pure=last.rank[0].b.id===oid;
   var g=gapOf(),CB=comboOf(last.pct);
-  return (pure?st.name+"は生粋の"+short+"でした！":st.name+"は「"+headName(B,short,false)+"」でした！")+(window.__catch?"いちばんの個性は「"+window.__catch+"」。":"")+(g!==null&&!pure?"ギャップ度"+g+"%":"")+"（強みの組み合わせ「"+CB.name+"」・レア度"+starStr(CB.stars)+"）\nあなたの子は何気質？\n#44Wansonalities #ワンソナ"+(st.tag===undefined?" #うちの子が世界一":st.tag?" "+st.tag:"");}
+  return (pure?st.name+"は生粋の"+short+"でした！":st.name+"は「"+headName(B,short,false)+"」でした！")+(window.__catch?"いちばんの個性は「"+window.__catch+"」。":"")+(g!==null&&!pure?short+"度は"+BR.length+"犬種中"+gapRank(g)+"位。":"")+"（強みの組み合わせ「"+CB.name+"」・レア度"+starStr(CB.stars)+"）\nあなたの子は何気質？\n#44Wansonalities #ワンソナ"+(st.tag===undefined?" #うちの子が世界一":st.tag?" "+st.tag:"");}
 function shareUrl(){var t=last?encodeRes():"";return location.href.split("#")[0]+(t?"#r="+t:"")}
 function cardFile(id){return fetch($(id||"card-img").src).then(function(r){return r.blob()}).then(function(b){return new File([b],"44wansonalities."+(b.type==="image/png"?"png":"jpg"),{type:b.type||"image/jpeg"})})}
 function saveCard(){var a=document.createElement("a");a.href=$("card-img").src;a.download="44wansonalities.jpg";document.body.appendChild(a);a.click();a.remove()}

@@ -42,7 +42,7 @@ const ctx = {};
 vm.createContext(ctx);
 vm.runInContext(['AXES', 'T', 'ORDER', 'GROUP', 'GPALE', 'KUSE', 'PAIR', 'ARU_T', 'JAKU', 'CSPLIT'].map(grab).join('') +
   grabFn('pairPart') + grabFn('compat') + 'this.D={AXES,T,ORDER,GROUP,GPALE,KUSE,ARU_T,JAKU,CSPLIT,compat};', ctx);
-const { T, ORDER, GROUP, GPALE, KUSE, ARU_T, JAKU, CSPLIT, compat } = ctx.D;
+const { AXES, T, ORDER, GROUP, GPALE, KUSE, ARU_T, JAKU, CSPLIT, compat } = ctx.D;
 
 // 図鑑と同じ番号（色の仲間 TP→TC→SP→SC の順）
 const NO = {}; let n = 0;
@@ -198,6 +198,35 @@ footer .credit{font-size:11px;color:#A3948A;margin-top:4px}
 .nw{display:inline-block}.nb{white-space:nowrap}
 .bx{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
 :focus-visible{outline:3px solid #F2B8CF;outline-offset:2px}
+.cmp{display:grid;gap:8px}
+.cmp .cr{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.cmp .cl{background:var(--bg);font-size:13px;font-weight:700;color:var(--sub);padding:4px 12px}
+.cmp p{margin:0;padding:6px 12px;font-size:15px;line-height:1.6}
+.cmp p small{display:block;font-size:12px;color:var(--sub)}
+.cmp p.me{border-top:1px dashed var(--line);font-weight:700}
+.cmp p.me small{color:var(--rose)}
+.ax4{display:grid;gap:8px}
+.ax4 div{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+.ax4 b{display:block;font-size:13px;color:var(--rose-ink)}
+.ax4 span{font-size:15px}
+.tm{font-size:12.5px;color:var(--sub);line-height:1.7}
+.hy{display:grid;gap:8px}
+.hy .r{display:flex;gap:10px;align-items:center;border-top:1px solid var(--line);padding:8px 0}
+.hy .r:first-child{border-top:0}
+.hy .me{flex:0 0 96px;text-align:center;text-decoration:none;color:var(--ink)}
+.hy .me img{width:56px;height:56px;object-fit:contain;display:block;margin:0 auto}
+.hy .me b{display:block;font-family:var(--mincho);font-size:13px;line-height:1.4;color:var(--gc)}
+.hy .bs{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:6px;flex:1;min-width:0}
+.hy .bs a{display:block;text-align:center;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px 2px;text-decoration:none;color:var(--ink);min-height:44px}
+.hy .bs img{width:40px;height:40px;object-fit:contain;display:block;margin:0 auto}
+.hy .bs small{display:block;font-size:11.5px;line-height:1.35}
+.hy .bs i{display:block;font-style:normal;color:var(--rose);font-weight:700;font-size:13px}
+.top10{list-style:none;margin:0;padding:0;display:grid;gap:6px;counter-reset:t}
+.top10 li{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:6px 10px;counter-increment:t}
+.top10 li::before{content:counter(t);flex:none;width:24px;height:24px;border-radius:50%;background:var(--rose);color:#fff;font-weight:900;font-size:13px;display:grid;place-items:center}
+.top10 img{width:40px;height:40px;object-fit:contain;flex:none}
+.top10 span{flex:1;min-width:0;font-size:14px;line-height:1.5}
+.top10 i{font-style:normal;color:var(--rose);font-weight:900;flex:none}
 `;
 fs.writeFileSync(path.join(K, 'seo.css'), CSS);
 
@@ -257,7 +286,7 @@ const KT = {
   fear: { k: '恐れ型（不安＋回避）', h: '好きなのに一歩引いちゃう派' },
 };
 const tyCell = k => `<div class="ty t-${k}"><img src="/img/ico/k-${k}.webp" alt="" width="44" height="44" loading="lazy"><span class="k">${esc(KT[k].k)}</span><b>${esc(KT[k].h)}</b><span>${esc(KUSE[k].one)}</span></div>`;
-const LINKS = (skip) => '<section class="box"><h2>ほかの恋愛診断</h2><div class="links">' + [['aichaku/', '愛着スタイル診断'], ['chara/', '恋愛キャラ診断'], ['kataomoi/', '片思い診断'], ['aisho/', '自分に合う人のタイプ診断'], ['izon/', '恋愛依存体質チェック']].filter(x => x[0] !== skip).map(x => `<a href="/${x[0]}"><span>${esc(x[1])}</span></a>`).join('') + '</div></section>';
+const LINKS = (skip) => '<section class="box"><h2>ほかの恋愛診断</h2><div class="links">' + [['aichaku/', '愛着スタイル診断'], ['chara/', '恋愛キャラ診断'], ['mbti/', 'MBTIと恋愛16タイプ'], ['aishohyo/', '16タイプ相性表'], ['kataomoi/', '片思い診断'], ['aisho/', '自分に合う人のタイプ診断'], ['izon/', '恋愛依存体質チェック']].filter(x => x[0] !== skip).map(x => `<a href="/${x[0]}"><span>${esc(x[1])}</span></a>`).join('') + '</div></section>';
 
 const out = [];
 function write(rel, html) { const f = path.join(K, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, html); out.push(rel.replace(/index\.html$/, '')); }
@@ -266,7 +295,8 @@ function write(rel, html) { const f = path.join(K, rel); fs.mkdirSync(path.dirna
 CUR = 'chara';
 ORDER.forEach(c => {
   const t = T[c], a = ARU_T[c], j = JAKU[c], g = grp(c);
-  const best = ORDER.filter(x => x !== c).map(x => ({ o: x, s: compat(c, x).score })).sort((p, q) => q.s - p.s).slice(0, 2);
+  const best0 = ORDER.filter(x => x !== c).map(x => ({ o: x, s: compat(c, x).score })).sort((p, q) => q.s - p.s);
+  const best = best0.filter(b => b.s >= best0[1].s);
   const body = `${crumb([['恋愛キャラ診断', 'chara/'], [t.f, '']])}
 <section class="hero2" style="--gp:${GPALE[c[2] + c[3]]};--gc:${g.hex}">
 <img src="/img/${c}.webp" alt="${esc(t.c)}のキャラクター" width="180" height="180">
@@ -403,6 +433,56 @@ write('izon/index.html', page({
 ${CTA('自分の心のゆれやすさを見てみる', '無料で診断する')}
 <section class="help"><h2>つらい気持ちが続くときは</h2><p>眠れない・食べられない・自分を責めてしまう気持ちが続くときは、ひとりで抱えずに相談してください。</p><p>こころの健康相談統一ダイヤル<br><span class="tel">0570-064-556</span></p><p class="note">この診断は、医療や心理の専門的な検査ではありません。</p></section>
 ${LINKS('izon/')}`,
+}));
+
+
+// ===== MBTIと恋愛の16タイプ（鑑定者本人 2026-11-22「MBTIと16タイプで検索されたい」。MBTI は登録商標なので、説明のためにだけ使い、診断の名前には入れない。対応表も作らない） =====
+const MB_FAQ = [
+  ['MBTIの診断ですか？', 'いいえ。恋のかたち診断は、MBTIや16Personalitiesとは関係のない、この診断独自の16タイプです。MBTIのタイプ（INFPなど）はわかりません。'],
+  ['MBTIのタイプと対応していますか？', '対応していません。MBTIはふだんの性格の好みを見るもので、恋のかたち診断は恋愛の場面だけを見る、別のものさしです。同じMBTIのタイプの人でも、恋のタイプはちがうことがよくあります。'],
+  ['MBTIの相性表とは、なにがちがいますか？', 'MBTIのもともとの考え方には、タイプどうしの決まった「相性表」はありません。ネットで見る相性表の多くは、それぞれのサイトが作ったものです。恋のかたち診断の相性も、4つのものさしから出した、この診断独自のめやすです。'],
+  ['何問ありますか？', 'かんたん版は20問（約4分）、本格版は48問（約8分）です。'],
+  ['本当に無料ですか？', '無料で、登録もいりません。答えと結果は、このスマホの中だけに残り、どこにも送りません。'],
+];
+CUR = 'mbti';
+write('mbti/index.html', page({
+  url: 'mbti/',
+  title: 'MBTIで恋愛はわかる？恋愛に特化した16タイプ診断と相性（無料）｜恋のかたち診断',
+  desc: 'MBTIや性格の16タイプでわかること・わからないこと。恋愛の場面だけで決める「恋愛の16タイプ」と愛着スタイルで、好きになり方・脈ありサイン・相性がわかる無料の診断。MBTIとは別の、この診断独自の16タイプです。',
+  ld: [crumbLd([['恋のかたち診断', ''], ['MBTIと恋愛の16タイプ', 'mbti/']]), { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: MB_FAQ.map(x => ({ '@type': 'Question', name: x[0], acceptedAnswer: { '@type': 'Answer', text: x[1] } })) }],
+  body: `${crumb([['MBTIと恋愛の16タイプ', '']])}
+<section class="hero"><span class="kick">性格の16タイプと、恋のタイプ</span><h1>MBTIで、恋愛はわかる？<span class="sub">恋のための、もうひとつの16タイプ</span></h1><div class="trio" aria-hidden="true"><img src="/img/LVTP.webp" alt="" width="84" height="84"><img src="/img/RATC.webp" alt="" width="84" height="84"><img src="/img/RASP.webp" alt="" width="84" height="84"></div>${START('恋愛の16タイプを診断する（無料）')}<span class="meta">20問・約4分／本格版48問・登録なし</span></section>
+<section class="box"><h2>MBTIでわかること・わかりにくいこと</h2><p>MBTIや、ネットで人気の性格の16タイプは、ふだんの性格の好み（人と過ごすと元気が出るか、ものごとをどう決めるか など）を見るものです。</p><p>でも恋愛は、好きな人ができたときにだけ出てくる「心のくせ」がたくさんあります。</p>${ul(['好きな人に、自分から近づけるか', '「好き」を言葉で伝えるか、行動で見せるか', '恋人に、弱いところを見せて頼れるか', '既読がつくと気になる・好きなのに一歩引いてしまう'])}<p class="note">ふだんは同じ性格のタイプの人でも、恋をすると、ちがう顔になることがよくあります。</p></section>
+<section class="box"><h2>恋のかたち診断の、4つのものさし</h2><p>恋愛の場面の質問だけで、4つのものさしを測ります。組み合わせで16タイプです。</p><div class="ax4">${AXES.map(a => `<div><b>${esc(a.title)}</b><span>${nw(a.an)}／${nw(a.bn)}</span></div>`).join('')}</div><p class="note">頼り方と恋の原動力は、恋愛心理学の研究を参考にしたものさしです。近づき方と気持ちの伝え方は、この診断独自のものさしです。</p></section>
+<section class="box"><h2>性格の16タイプと、恋のかたち診断</h2><div class="cmp">${[['見るもの', 'ふだんの性格の好み', '恋愛の場面の、心のくせ'], ['質問', 'ふだんの暮らし・仕事・人づきあい', '好きな人・恋人との場面だけ'], ['愛着スタイル', '見ない', '安定型・不安型・回避型・恐れ型も見る'], ['わかること', '性格の傾向', '好きになり方・脈ありサイン・恋の弱点・相性']].map(r => `<div class="cr"><div class="cl">${esc(r[0])}</div><p><small>性格の16タイプ（MBTIなど）</small>${r[1].split('・').map(nw).join('・<wbr>')}</p><p class="me"><small>恋のかたち診断</small>${r[2].split('・').map(nw).join('・<wbr>')}</p></div>`).join('')}</div></section>
+<section class="dif"><div class="lb">恋のかたち診断なら</div><div class="n">恋愛の16タイプ ＋ 愛着スタイル</div><p>好きな人にもリンクを送ると、2人の相性と、心のくせの組み合わせまで見られます。</p></section>
+${START('自分の恋のタイプを見る（無料）')}
+<section class="box"><h2>恋愛の16タイプ</h2><p class="note">押すと、そのタイプのくわしいページが開きます。<a href="/aishohyo/">16タイプの相性表</a>も見られます。</p>${allGrid('')}</section>
+<section class="box faq"><h2>よくある質問</h2>${MB_FAQ.map((x, i) => `<details${i ? '' : ' open'}><summary><span>${esc(x[0])}</span></summary><p>${esc(x[1])}</p></details>`).join('')}</section>
+${CTA('MBTIの次は、恋のタイプ', '無料で診断する')}
+${LINKS('mbti/')}
+<p class="tm">MBTI、Myers-Briggs Type Indicator は、The Myers-Briggs Company の登録商標です。恋のかたち診断は、MBTI・16Personalities とは関係のない、独自の診断です。</p>`,
+}));
+
+// ===== 16タイプ相性表（鑑定者本人 2026-11-22「16タイプ 相性」で検索されたい） =====
+const SC = {}; ORDER.forEach(a => { SC[a] = ORDER.filter(b => b !== a).map(b => ({ o: b, s: compat(a, b).score })).sort((p, q) => q.s - p.s); });
+const PAIRS = []; ORDER.forEach((a, i) => ORDER.slice(i + 1).forEach(b => PAIRS.push({ a, b, s: compat(a, b).score })));
+PAIRS.sort((p, q) => q.s - p.s || NO[p.a] - NO[q.a] || NO[p.b] - NO[q.b]);
+const SAME = ORDER.map(a => compat(a, a).score);
+CUR = 'aisho';
+write('aishohyo/index.html', page({
+  url: 'aishohyo/',
+  title: '16タイプ相性表｜恋愛の16タイプ、いちばん合うのはどのタイプ？（無料診断つき）｜恋のかたち診断',
+  desc: '恋愛の16タイプどうしの相性を100点満点で。タイプごとの相性のいいタイプ3つと、相性の高い組み合わせランキング。相性の決め方つき。自分のタイプは無料の診断でわかります。',
+  ld: crumbLd([['恋のかたち診断', ''], ['16タイプ相性表', 'aishohyo/']]),
+  body: `${crumb([['16タイプ相性表', '']])}
+<section class="hero"><span class="kick">恋愛の16タイプ</span><h1>16タイプ相性表<span class="sub">いちばん合うのは、どのタイプ？</span></h1>${START('自分のタイプを診断する（無料）')}<span class="meta">20問・約4分／本格版48問・登録なし</span></section>
+<section class="box"><h2>相性の高い組み合わせ</h2><ol class="top10">${PAIRS.slice(0, 10).map(p => `<li><img src="/img/${p.a}.webp" alt="" width="40" height="40" loading="lazy"><img src="/img/${p.b}.webp" alt="" width="40" height="40" loading="lazy"><span>${cname(p.a)}<wbr>×<wbr>${cname(p.b)}</span><i>${p.s}点</i></li>`).join('')}</ol><p class="note" style="margin-top:8px">同じタイプどうしは ${Math.min(...SAME)}〜${Math.max(...SAME)}点です。</p></section>
+<section class="box"><h2>タイプごとの、相性のいいタイプ</h2><p class="note">左のタイプにとって、相性のいいタイプを3つ（同じ点数のタイプがあるときは、その分も）。押すと、そのタイプのページが開きます。</p><div class="hy">${ORDER.slice().sort((a, b) => NO[a] - NO[b]).map(a => `<div class="r"><a class="me" href="/type/${lc(a)}/" style="--gc:${grp(a).hex}"><img src="/img/${a}.webp" alt="" width="56" height="56" loading="lazy"><b>${cname(a)}</b></a><div class="bs" style="--n:${SC[a].filter(b => b.s >= SC[a][2].s).length}">${SC[a].filter(b => b.s >= SC[a][2].s).map(b => `<a href="/type/${lc(b.o)}/"><img src="/img/${b.o}.webp" alt="" width="40" height="40" loading="lazy"><small>${cname(b.o)}</small><i>${b.s}点</i></a>`).join('')}</div></div>`).join('')}</div></section>
+<section class="box"><h2>相性の決め方</h2><p>4つのものさしの組み合わせで計算します（100点満点）。いちばん重く見るのは頼り方です。</p>${ul(['頼り方：2人とも頼り合える組み合わせがいちばん高い', '恋の原動力：ときめき派どうし・安心派どうしは満足しやすい', '気持ちの伝え方：言葉どうし・行動どうしは伝わりやすい', '近づき方：リードする人と受けとめる人は、かみ合いやすい'])}<p class="note">この診断独自のめやすです。MBTIなど、ほかの16タイプの相性とは関係ありません。点数が低くても、ちがいから学び合える組み合わせです。</p></section>
+${CTA('自分のタイプを知って、相手にも送る', '無料で診断する', '相手が診断すると、2人の相性と心のくせの組み合わせがわかります')}
+<section class="box"><h2>MBTIで恋愛はわかる？</h2><p>性格の16タイプと、恋愛の16タイプのちがいは、<a href="/mbti/">MBTIと恋愛の16タイプ</a>のページにまとめています。</p></section>
+${LINKS('aishohyo/')}`,
 }));
 
 // 前の16タイプの一覧（/type/）は恋愛キャラ診断（/chara/）にまとめた（firebase.json で /type/ → /chara/）
