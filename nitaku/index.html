@@ -262,6 +262,7 @@ h2{font-size:20px;margin:22px 0 10px;font-weight:900}
 .ai-li{margin:0;padding:0;list-style:none;display:grid;gap:6px}
 .ai-li li{background:#FFF8E1;border:2px solid #1E1E2A;border-radius:12px;padding:8px 10px;font-size:14px;font-weight:700;line-height:1.5}
 .ai-li.df li{background:#E2F3FD}
+.rq{display:block;font-size:12.5px;font-weight:600;color:#5A546A;margin-bottom:2px;text-align:left}.rank .k .rq,.rank .v .rq{white-space:normal}
 .ai-li .ai-q{display:block;font-size:12.5px;font-weight:600;color:#5A546A;margin-bottom:2px}
 .ai-li small{display:block;color:#5A546A;font-weight:500}
 .ai-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
@@ -2467,21 +2468,22 @@ function showHonResult(){
   var avg=ok.length ? ok.reduce(function(a,r){ return a+r.t; },0)/ok.length/1000 : 0;
   var lvl=honLevel(avg, ok.length), sec=function(t){ return (Math.round(t/100)/10).toFixed(1); };
   var pick=function(r){ return r.c==='A' ? r.q.a : r.q.b; };
+  var rq=function(q){ return q&&q.ex ? '<span class="rq">'+esc(q.ex)+'</span>' : ''; };   // 答えだけでは何の問題かわからないので、問題の文を小さく添える（鑑定者本人 2026-11-23「全部直してください」）
   var h=charaHTML(S.qs, S.ans[0], 'あなた', '', false, {hon:true, times:S.times[0]})+kimochiHTML(S.qs, S.ans[0], 'あなた', '', {hon:true})+kotobaHonHTML(S.qs, S.ans[0], S.times[0], 'あなた', '')+'<div class="res-hero"><div class="pre">本能モード　あなたの結果</div>'+
     '<img class="pnd" src="img/panda-'+(!ok.length?'sad':(avg<1.2?'joy':(avg<2?'smirk':'1')))+'.webp" alt="" width="96" height="96">'+
     '<div class="type" style="font-size:44px">'+(ok.length?avg.toFixed(1):'—')+'<span style="font-size:22px">秒</span></div>'+
     '<div class="catch">本能スピード（答えた'+ok.length+'問の平均）</div><div class="subt"><img class="ico-zap" src="img/icon-zap.webp" alt="" width="20" height="20">'+lvl+'</div></div>';
   h+='<div class="card hon-list"><h3>あなたの本能の答え</h3>'+rows.map(function(r){
-      return r.c ? '<div class="rank"><span class="k">'+esc(pick(r))+'</span><span class="v">'+sec(r.t)+'秒</span></div>'
-                 : '<div class="rank"><span class="k to">'+esc(r.q.a)+' ／ '+esc(r.q.b)+'</span><span class="v to">時間切れ</span></div>';
+      return r.c ? '<div class="rank"><span class="k">'+rq(r.q)+esc(pick(r))+'</span><span class="v">'+sec(r.t)+'秒</span></div>'
+                 : '<div class="rank"><span class="k to">'+rq(r.q)+esc(r.q.a)+' ／ '+esc(r.q.b)+'</span><span class="v to">時間切れ</span></div>';
     }).join('')+'</div>';
   var spS=honSplit(ok), aw=ok.length ? honSelfAward(avg, out, spS, honSd(ok.map(function(r){ return r.t; }))) : ['😴','時間切れ常習犯','本能がずっとお昼寝していた'];
   h=h.replace('<div class="card hon-list">','<div class="card hon-aw"><h3><img class="ico-award" src="img/icon-award.webp" alt="" width="26" height="26">あなたの本能アワード</h3>'+honAwardRow(aw)+'</div><div class="card hon-list">');
   if(ok.length){
     var by=ok.slice().sort(function(a,b){ return a.t-b.t; }), f=by[0], sl=by[by.length-1];
     h+='<div class="card hon-rk"><h3>速さのランキング</h3>'+
-      '<div class="rank"><span class="k">いちばん即決</span><span class="v">'+esc(pick(f))+'（'+sec(f.t)+'秒）</span></div>'+
-      (ok.length>1?'<div class="rank"><span class="k">'+(sl.t<1500?'いちばん時間がかかった':'いちばん迷った')+'</span><span class="v">'+esc(pick(sl))+'（'+sec(sl.t)+'秒）</span></div><p class="tsk">'+(sl.t<1500?'いちばん時間がかかったのも'+sec(sl.t)+'秒。どの問題も、ほぼ迷いなし！':qq(pick(sl))+'に'+sec(sl.t)+'秒。'+honTsukkomi(sl.q))+'</p>':'')+
+      '<div class="rank"><span class="k">いちばん即決</span><span class="v">'+rq(f.q)+esc(pick(f))+'（'+sec(f.t)+'秒）</span></div>'+
+      (ok.length>1?'<div class="rank"><span class="k">'+(sl.t<1500?'いちばん時間がかかった':'いちばん迷った')+'</span><span class="v">'+rq(sl.q)+esc(pick(sl))+'（'+sec(sl.t)+'秒）</span></div><p class="tsk">'+(sl.t<1500?'いちばん時間がかかったのも'+sec(sl.t)+'秒。どの問題も、ほぼ迷いなし！':qq(pick(sl))+'に'+sec(sl.t)+'秒。'+honTsukkomi(sl.q))+'</p>':'')+
       '<div class="rank"><span class="k">時間切れ</span><span class="v">'+out+'問</span></div>'+honSplitHTML(spS)+'</div>';
   }
   var txt='究極の二択【本能モード】1問5秒で選んだら…\nわたしの本能スピードは '+(ok.length?avg.toFixed(1)+'秒':'全部時間切れ')+'（'+lvl+'）\n'+aw[0]+aw[1]+'でした\n\nあなたは何秒？\n#究極の二択 #本音バレ診断';
@@ -3025,7 +3027,7 @@ function charaOf(qs, ans, opt){
   D.list.forEach(function(c){ cs[c.id]=0; }); AN.forEach(function(a){ as[a.id]=0; });
   qs.forEach(function(q,qi){
     var c=ans&&ans[qi]; if(c!=='A' && c!=='B') return;
-    var side=canon(q,c), k=K.byId[q.id], t=D.q ? D.q[q[side]] : null, wt=((tm && tm[qi]>0 && tm[qi]<=1000) ? 2 : 1)/(opt.k||1);
+    var side=canon(q,c), k=K.byId[q.id], t=D.q ? D.q[c==='A'?q.a:q.b] : null, wt=((tm && tm[qi]>0 && tm[qi]<=1000) ? 2 : 1)/(opt.k||1);
     if(k || t) n++;
     if(k){ (k[side]||[]).forEach(function(w){ if(!opt.hon && !kotobaAxOk(NM?'normal':'love', w, sc)) return; words[w]=(words[w]||0)+wt/Math.sqrt(K.freq[w]||1); cnt[w]=(cnt[w]||0)+1; }); var h=k[side+'h']; if(h && (opt.hon || kotobaAxOk(NM?'normal':'love', h, sc))){ hs[h]=(hs[h]||0)+wt/Math.sqrt(K.hfreq[h]||1); cnt[h]=(cnt[h]||0)+1; } }
     if(t){ (t.c||[]).forEach(function(id){ cs[id]+=1.2/(opt.k||1); }); (t.a||[]).forEach(function(id){ as[id]+=1.2; }); (t.p||[]).forEach(function(p){ pf[p]=(pf[p]||0)+1; }); }
@@ -3109,7 +3111,7 @@ function charaWhy(qs, ans, c, opt){
   var K=opt.hon ? KOTOBA.honL : KOTOBA.love, cw=(c.w||[]).concat(c.h||[]), out=[];
   qs.forEach(function(q,qi){
     var a=ans&&ans[qi]; if(a!=='A' && a!=='B') return;
-    var o=a==='A'?'B':'A', side=canon(q,a), k=K.byId[q.id], t=CH.q ? CH.q[q[side]] : null;
+    var o=a==='A'?'B':'A', side=canon(q,a), k=K.byId[q.id], t=CH.q ? CH.q[a==='A'?q.a:q.b] : null;
     var ws=k ? (k[side]||[]).concat(k[side+'h']?[k[side+'h']]:[]) : [], hit=ws.filter(function(w){ return cw.indexOf(w)>=0; });
     var mk=!!(t && (t.c||[]).indexOf(c.id)>=0);
     if(!hit.length && !mk) return;
@@ -3502,7 +3504,7 @@ function pickHTML(icon, label, x){
   var mine = x.c==='A' ? x.q.a : (x.c==='B' ? x.q.b : ''), other = x.c==='A' ? x.q.b : x.q.a;
   return '<div class="pk '+(icon==='⚡'?'pk-q':'pk-s')+'"><div class="pk-h"><b>'+(icon==='🌀'?'<img class="ico-i" src="img/icon-mayou.webp" alt="" width="20" height="20">':icon==='⚡'?'<img class="ico-zap" src="img/icon-zap.webp" alt="" width="20" height="20">':icon+' ')+label+'</b><span>'+(Math.round(x.t/100)/10)+'秒</span></div>'+
     // 答えに「」が入っていると「「…」」と二重になって読みにくいので、外のかっこはつけない（2026-11-20）
-    (mine ? '<div class="pk-l">選んだのは</div><div class="pk-c">'+esc(mine)+'</div><div class="pk-o"><span class="pk-ol">もう一方</span>'+esc(other)+'</div>'
+    (x.q.ex ? '<div class="rq">'+esc(x.q.ex)+'</div>' : '')+(mine ? '<div class="pk-l">選んだのは</div><div class="pk-c">'+esc(mine)+'</div><div class="pk-o"><span class="pk-ol">もう一方</span>'+esc(other)+'</div>'
           : '<div class="pk-c">'+esc(x.q.a)+'</div><div class="pk-l">VS</div><div class="pk-c">'+esc(x.q.b)+'</div>')+'</div>';
 }
 function pctLine(mode, sc){ return AXES[mode].map(function(ax){ return ax.name+sc[ax.k]+'%'; }).join('／'); }
