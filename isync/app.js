@@ -776,16 +776,18 @@ function matchHTML(G,p){const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x
       <p class="mt-tip"><span>合わせ方</span>ときどき「わたしはこうしたい」を1つだけ言ってみる。</p></div>`;
   return `<section class="card match"><p class="pt-h"><em>相性のヒント</em><span><span class="nw">あなたと合いやすい人・</span><span class="nw">ぶつかりやすい人</span></span></p>${body}</section>`}
 // 恋人と話しておきたい3問：★→大事な問題の答えから3つ（ちがうと困るので、先に聞いておきたい問題）
-const TALK3_WHY={'お金':'お金の考え方のちがいは、毎月くり返し出てきます。','将来・家族':'将来のことは、あとから変えにくいところです。','暮らし':'毎日のことなので、小さなちがいが積み重なります。','恋愛・連絡':'連絡や会い方のちがいは、気持ちのすれ違いにつながりやすいところです。','食':'毎日のごはんは、一緒にいる時間の大部分です。','休日・遊び':'一緒に過ごす時間の楽しさに関わります。','ドキドキ':'仲が近づくペースのちがいは、言葉にしないと伝わりにくいところです。'};
+const TALK3_WHY={'お金':'お金の考え方のちがいは、毎月くり返し出てきます。','将来・家族':'将来のことは、あとから変えにくいところです。','暮らし':'毎日のことなので、小さなちがいが積み重なります。','恋愛・連絡':'連絡や会い方のちがいは、気持ちのすれ違いにつながりやすいところです。','食':'ごはんは毎日のことなので、2人で何度も向き合う場面です。','休日・遊び':'一緒に過ごす時間の楽しさに関わります。','ドキドキ':'仲が近づくペースのちがいは、言葉にしないと伝わりにくいところです。'};
 // 順番：★の大事な問題→大事な問題→★のほかの問題→ふつうの問題（軽い問題は入れない）。同じテーマは、ほかがなければ2つ目から
-function talk3Pick(firm){const B=x=>WB.has(x.k),pool=firm.filter(x=>x.a.st&&B(x)).concat(firm.filter(x=>!x.a.st&&B(x)),firm.filter(x=>x.a.st&&!B(x)&&!WL.has(x.k)),firm.filter(x=>!x.a.st&&!B(x)&&!WL.has(x.k)));
+// 付き合う前・はじめてのデートの問題は「恋人と話しておきたい」に入れない（恋人がいる人にも「初デートで手をつなぐのは？」が出ていたため。鑑定者本人 2026-11-23「全部直してください」）
+const T3_PRE=/初デート|はじめてのデート|付き合う前|告白|気になる人/;
+function talk3Pick(firm){firm=firm.filter(x=>!T3_PRE.test(Q[x.k][1]));const B=x=>WB.has(x.k),pool=firm.filter(x=>x.a.st&&B(x)).concat(firm.filter(x=>!x.a.st&&B(x)),firm.filter(x=>x.a.st&&!B(x)&&!WL.has(x.k)),firm.filter(x=>!x.a.st&&!B(x)&&!WL.has(x.k)));
   const out=[],th=new Set();for(const x of pool){if(out.length>=3)break;const t=Q[x.k][0];if(!th.has(t)){out.push(x);th.add(t)}}
   for(const x of pool){if(out.length>=3)break;if(!out.includes(x))out.push(x)}return out}
 // 友だちのテーマの質問で診断した回か（URLではなく質問で見る＝わたしの結果から開き直しても同じ）
 function isFriendSet(qs){const f=((window.SY_PACKS||{}).tomodachi||{}).keys;if(!f||!qs.length)return false;const set=new Set(f);return qs.every(k=>set.has(QKEY[k]))}
 function talk3HTML(G,t3){if(!t3.length)return'';
   return `<section class="card talk3"><p class="pt-h"><em>答え合わせの前に</em>${isFriendSet(G.qs)?'友だちに聞いてみたい':'恋人と話しておきたい'}${t3.length}問</p>
-    <p class="hint">あなたの答え（★ゆずれない・大事な問題）から、相手とちがうと困りやすい問題を選びました。先に聞いておくと安心です。</p>${t3.some(x=>x.a.st)?'<p class="stl"><i>★</i>＝ゆずれない（答える前に付けた印）</p>':''}
+    <p class="hint">あなたの答えから、相手とちがうと困りやすい問題を選びました（★ゆずれない問題・大事な問題を先に）。先に聞いておくと安心です。</p>${t3.some(x=>x.a.st)?'<p class="stl"><i>★</i>＝ゆずれない（答える前に付けた印）</p>':''}
     <ol class="t3-l">${t3.map(x=>{const th=CATS[Q[x.k][0]][0];return `<li><b>${esc(Q[x.k][1])}</b><span class="t3-a">あなた：${x.a.st?'<i class="mk-s">★</i>':''}${esc(ans(x.a.o,x.k))}</span><small>${esc(TALK3_WHY[th]||'')}</small></li>`}).join('')}</ol>
     <button class="btn ghost small" id="t3-go" type="button"><span class="nw">この${t3.length}問で、</span><span class="nw">答え合わせに誘う ↓</span></button></section>`}
 function soloHTML(G){

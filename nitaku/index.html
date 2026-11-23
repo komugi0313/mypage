@@ -2950,8 +2950,18 @@ function kotobaBothHTML(list){
   }).join('')+'</div></div>';
 }
 /* 本能モード：恋愛の問題のことば（恋愛編のテーマ）と、ふつうの問題のことば（「ふだんのあなた」1行）をまとめて出す */
+/* キャラと正反対のことばは「あなたの中にあることば」に出さない（「恋する乙女」の「気持ちを、まっすぐ伝えられる」の下に「本音を言えない」が出ていたため。鑑定者本人 2026-11-23「全部直してください」）。
+   charaHTML がすぐ前に描いたキャラ（同じ人）の、外す言葉（CHARA_NG）と、キャラのことばの反対の意味（KOTOBA_OPP）を外す */
+function ktChFilter(r, mk){
+  var k=window.__ktCh; window.__ktCh=null; if(!r || !k || !k.c || k.mk!==mk) return r;
+  var cw=(k.c.w||[]).concat(k.c.h||[]), OP=(KOTOBA_OPP[mk]||[]);
+  var bad=function(w){ return charaWordsOk(k.c,[w]).length===0 || OP.some(function(p){ var i=p.indexOf(w); return i>=0 && cw.indexOf(p[1-i])>=0; }); };
+  r.hito=r.hito.filter(function(w){ return !bad(w); }); r.words=r.words.filter(function(w){ return !bad(w); });
+  if(r.both) r.both=r.both.filter(function(x){ return !bad(x.a) && !bad(x.b); });
+  return r;
+}
 function kotobaHonHTML(qs, ans, times, label, cls){
-  var rL=kotobaOf(qs, ans, 'honL', times), rN=kotobaOf(qs, ans, 'honN', times, 5);
+  var rL=ktChFilter(kotobaOf(qs, ans, 'honL', times),'love'), rN=kotobaOf(qs, ans, 'honN', times, 5);
   if(!rL && !rN) return '';
   var hp=[]; [rL,rN].forEach(function(r){ if(r) r.hito.forEach(function(w){ hp.push([w, r.hs[w]||0]); }); });
   var OPS=(KOTOBA_OPP.love||[]).concat(KOTOBA_OPP.normal||[]);
@@ -2978,7 +2988,7 @@ function kotobaHonHTML(qs, ans, times, label, cls){
   return h+'</div></div>';
 }
 function kotobaHTML(qs, ans, label, cls, mode){
-  var K=KOTOBA[mode], r=kotobaOf(qs, ans, mode); if(!r) return '';
+  var K=KOTOBA[mode], r=ktChFilter(kotobaOf(qs, ans, mode), mode==='normal'?'normal':'love'); if(!r) return '';
   var h='<div class="card kt'+(cls?' '+cls:'')+'"><p class="kt-hd"><span class="nm">'+esc(label)+'</span><span class="nw1">の中に</span><wbr><span class="nw1">あることば</span></p><p class="kt-sub">'+KOTOBA_SUB[mode]+'</p>';
   if(r.hito.length) h+='<div class="kt-hito"><h4>ひとことで言うと</h4><div class="kt-hw">'+r.hito.map(function(w){ return '<span class="kt-h">'+esc(w)+'</span>'; }).join('')+'</div></div>';
   // 結果の見直し（鑑定者本人 2026-11-19「C 直したあとに変更」）：ことばが多いときは、いちばん強く出た5つだけを1色で見せ、残りはテーマごとにたたむ
@@ -3085,7 +3095,7 @@ function byoSubH(t){ // 「○○」の疑い：かっこを病名の最初と�
   h=h.slice(0,j)+'」の疑いも'+h.slice(j); return h.slice(0,i+18)+'「'+h.slice(i+18);
 }
 /* 恋のカードの中の「答えから出た言葉」は、キャラと食いちがう言葉を外す（赤ちゃんなのに「強がり」成分・原因「素直になれない」と出ていたため。鑑定者本人 2026-11-20 見本 https://claude.ai/artifact/BWXVvwDnQN7Mv4JZWZ8b5F で「方向性はこれでいい」） */
-var CHARA_NG={koakuma:'追いかけたい・ストレート・恋愛全力・重め・かまってちゃん・天然系',tenshi:'駆け引き上手・小悪魔・甘えたい・甘えんぼう・かまってほしい・かまってちゃん・ほうっておいてほしい・自由人・プライドが高め',aka:'強がり・しっかり者・さっぱり系・自由人・マイペース・ほうっておいてほしい・自分の時間もほしい・素直になれない・本音を言えない・プライドが高め・ひみつ主義・ツンデレ',ouji:'現実派・さっぱり系',otome:'好きになるまで時間がかかる・慎重・さっぱり系・自由人・ほうっておいてほしい・自分の時間もほしい・駆け引き上手・小悪魔',cool:'ストレート・恋愛全力・甘えたい・甘えんぼう・かまってほしい・かまってちゃん・重め',shikkari:'甘えたい・甘えんぼう・かまってちゃん・リードしてほしい・天然系・夢見がち・ロマンチスト・ムードを大事にする',juunan:'プライドが高め',jiyu:'重め・かまってほしい・かまってちゃん・甘えんぼう・恋愛全力・根っから一途・こまめな連絡がほしい・やきもちやき・ふたりの時間を大切にしたい',hunter:'恥ずかしがり・照れ屋・追いかけられたい・慎重・好きになるまで時間がかかる・リードしてほしい',boken:'慎重派・堅実派・心配性・いつものが安心・計画どおりに進めたい・家でのんびり・安定',shincho:'冒険家・即決派・直感で選ぶ・ハプニングも楽しむ・好奇心旺盛・せっかち・気分屋・ぱっと使う',mood:'ひとりの時間が好き・少人数が好き・目立ちたくない・クール・自分のペースを守る・マイペース',mypace:'みんなでわいわい・盛り上げ役・ムードメーカー・目立ちたい・気をつかう・せっかち',kodawari:'ほどほどで満足・めんどうくさがり・コスパ重視',hodohodo:'最高を選びたい・こだわりが強い・完璧主義・こだわり派・見栄っぱり・ぱっと使う',kirakira:'中身が大事・目立ちたくない・めんどうくさがり',arinomama:'見た目も大事・見栄っぱり・目立ちたい',dandori:'ハプニングも楽しむ・めんどうくさがり・気分屋・自由人・のんびり屋・迷いやすい',nonbiri:'せっかち・即決派・完璧主義・負けずぎらい・計画どおりに進めたい'};
+var CHARA_NG={koakuma:'追いかけたい・ストレート・恋愛全力・重め・かまってちゃん・天然系',tenshi:'駆け引き上手・小悪魔・甘えたい・甘えんぼう・かまってほしい・かまってちゃん・ほうっておいてほしい・自由人・プライドが高め',aka:'強がり・しっかり者・さっぱり系・自由人・マイペース・ほうっておいてほしい・自分の時間もほしい・素直になれない・本音を言えない・プライドが高め・ひみつ主義・ツンデレ',ouji:'現実派・さっぱり系',otome:'好きになるまで時間がかかる・慎重・さっぱり系・自由人・ほうっておいてほしい・自分の時間もほしい・駆け引き上手・小悪魔・本音を言えない・素直になれない・照れ隠し・ひみつ主義',cool:'ストレート・恋愛全力・甘えたい・甘えんぼう・かまってほしい・かまってちゃん・重め',shikkari:'甘えたい・甘えんぼう・かまってちゃん・リードしてほしい・天然系・夢見がち・ロマンチスト・ムードを大事にする',juunan:'プライドが高め',jiyu:'重め・かまってほしい・かまってちゃん・甘えんぼう・恋愛全力・根っから一途・こまめな連絡がほしい・やきもちやき・ふたりの時間を大切にしたい',hunter:'恥ずかしがり・照れ屋・追いかけられたい・慎重・好きになるまで時間がかかる・リードしてほしい',boken:'慎重派・堅実派・心配性・いつものが安心・計画どおりに進めたい・家でのんびり・安定',shincho:'冒険家・即決派・直感で選ぶ・ハプニングも楽しむ・好奇心旺盛・せっかち・気分屋・ぱっと使う',mood:'ひとりの時間が好き・少人数が好き・目立ちたくない・クール・自分のペースを守る・マイペース',mypace:'みんなでわいわい・盛り上げ役・ムードメーカー・目立ちたい・気をつかう・せっかち',kodawari:'ほどほどで満足・めんどうくさがり・コスパ重視',hodohodo:'最高を選びたい・こだわりが強い・完璧主義・こだわり派・見栄っぱり・ぱっと使う',kirakira:'中身が大事・目立ちたくない・めんどうくさがり',arinomama:'見た目も大事・見栄っぱり・目立ちたい',dandori:'ハプニングも楽しむ・めんどうくさがり・気分屋・自由人・のんびり屋・迷いやすい',nonbiri:'せっかち・即決派・完璧主義・負けずぎらい・計画どおりに進めたい'};
 var CHARA_WARN={hunter:'追いかけたい',kirakira:'見栄っぱり'}; // 成分表示の「注意」に入れるキャラの言葉（ふつうは h の1つ目）
 function charaWordsOk(c, ws){ var ng=(CHARA_NG[c.id]||'').split('・'); return ws.filter(function(w){ return ng.indexOf(w)<0; }); }
 function charaFill(list, extra, n){ var out=list.slice(); extra.forEach(function(w){ if(out.length<n && out.indexOf(w)<0) out.push(w); }); return out; }
@@ -3103,7 +3113,9 @@ function charaWhy(qs, ans, c, opt){
     if(!hit.length && !mk) return;
     var o1={mode:'love', hon:opt.hon}, x=charaOf([q],[a],o1), y=charaOf([q],[o],o1);
     var d=((x&&x.cs[c.id])||0)-((y&&y.cs[c.id])||0); if(!(d>0.3)) return;
-    out.push({ q:q.ex||'', a:a==='A'?q.a:q.b, w:hit[0]||'', mk:mk, d:d });
+    // キャラの印だけでつながった答えも、その答えのことばで「何らしいか」を書く（「○○ らしい答え」では理由にならないため。鑑定者本人 2026-11-23「全部直してください」）
+    var w2=hit[0]||ws.filter(function(w){ return charaWordsOk(c,[w]).length; })[0]||'';
+    out.push({ q:q.ex||'', a:a==='A'?q.a:q.b, w:w2, mk:mk, d:d });
   });
   out.sort(function(x,y){ return (y.mk-x.mk)||(y.d-x.d); });
   var used={}; out=out.filter(function(r){ var k=r.w||'_'; if(used[k]) return false; used[k]=1; return true; });   // 同じことばを2回出さない
@@ -3112,10 +3124,11 @@ function charaWhy(qs, ans, c, opt){
 function charaWhyHTML(qs, ans, c, label, opt){
   var rs; try{ rs=charaWhy(qs, ans, c, opt); }catch(e){ rs=[]; } if(!rs.length) return '';
   return '<div class="kc-why"><h4>'+esc(label)+'が'+qq(c.name)+'になった理由</h4><p class="kw-lead">'+(label==='あなた'?'あなた':esc(label))+'が選んだ答えから、こんなところが見えました。</p><ol>'+
-    rs.map(function(r){ return '<li>'+(r.q?'<p class="kw-q">'+esc(r.q)+'</p>':'')+'<p class="kw-a">'+qq(r.a)+'</p><p class="kw-w">→ '+(r.w?'<b>'+esc(r.w)+'</b> なところ':'<b>'+esc(c.name)+'</b> らしい答え')+'</p></li>'; }).join('')+'</ol></div>';
+    rs.map(function(r){ return '<li>'+(r.q?'<p class="kw-q">'+esc(r.q)+'</p>':'')+'<p class="kw-a">'+qq(r.a)+'</p><p class="kw-w">→ '+(r.w?'<b>'+esc(r.w)+'</b> なところ':'「'+esc(c.say||c.name)+'」らしい選び方')+'</p></li>'; }).join('')+'</ol></div>';
 }
 function charaHTML(qs, ans, label, cls, fold, opt){
   var r=(opt && opt.r) || charaOf(qs, ans, opt); if(!r) return ''; opt=opt||{}; var NM=opt.mode==='normal', D=NM?CHN:CH, MK=NM?'normal':'love', an=r.ani?r.ani.name:'';
+  window.__ktCh={c:r.main, mk:MK};   // すぐあとの「あなたの中にあることば」で、キャラと正反対のことばを外すため（ktChFilter）
   var c=r.main, kt=kotobaOf(qs, ans, MK) || { words:[], hito:[], both:[] }, sc=r.sc;
   var pill=function(s){ return '<span class="kc-pill">'+esc(s)+'</span>'; };
   var who=label==='あなた' ? 'あなた' : label.replace(/さん$/,'');
