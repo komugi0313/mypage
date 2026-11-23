@@ -430,7 +430,7 @@ function hitokoto(G,rows){
   const ps=G.players,two=ps.length===2,who=two?'2人':'みんな',all=two?'2人とも':'全員',out=[];
   const srt=rows.slice().sort((a,b)=>b.pct-a.pct),best=srt.filter(r=>r.pct>=70).slice(0,2),low=srt.filter(r=>r.pct<50&&!best.includes(r)).slice(-1);
   if(best.length){const b=best.map(r=>'「'+r.name+'」').join('と');out.push(two?`${b}の感覚が近い2人です。`:`みんな、${b}の感覚が近いようです。`)}
-  else if(srt.length)out.push(`いちばん重なったのは「${srt[0].name}」（${srt[0].pct}%）。`);
+  else if(srt.length)out.push(srt[0].pct>0?`いちばん重なったのは「${srt[0].name}」（${srt[0].pct}%）。`:`どのテーマも、答えが分かれました。`);
   const ax=axRows(G,ps).filter(x=>x.xs.length===ps.length);
   const same=ax.filter(x=>x.xs.every(y=>y.s.pct>=60)).map(x=>x.a.l).concat(ax.filter(x=>x.xs.every(y=>y.s.pct<=40)).map(x=>x.a.r));
   if(same.length)out.push(`${all}「${same.slice(0,2).join('」「')}」の傾向です。`);
@@ -613,7 +613,7 @@ function twoFolds(G,trows,nm,r){
   const [A,B]=G.players,me=G.players.find(p=>p.id===G.me);let out='';
   const keep=trows.filter(x=>x.q>=2),drop=trows.filter(x=>x.q<2);
   if(trows.length){const few=drop.length?`<p class="few">${drop.map(x=>'「'+esc(x.name)+'」').join('')}は1問だけだったので出していません。${G.qs.length<30?'しっかり版（30問）なら、テーマごとにくわしくわかります。':''}</p>`:'';
-    const ks=keep.slice().sort((a,b)=>b.pct-a.pct),tz=ks.length?`<span class="sml">いちばん重なった：<em class="nw">${esc(ks[0].name)}（${ks[0].pct}%）</em></span>${ks.length>1&&ks[ks.length-1].pct<ks[0].pct?`<span class="sml">分かれた：<em class="nw">${esc(ks[ks.length-1].name)}（${ks[ks.length-1].pct}%）</em></span>`:''}`:'';
+    const ks=keep.slice().sort((a,b)=>b.pct-a.pct),tz=ks.length&&ks[0].pct<=0?`<span class="sml">どのテーマも、答えが分かれました</span>`:ks.length?`<span class="sml">いちばん重なった：<em class="nw">${esc(ks[0].name)}（${ks[0].pct}%）</em></span>${ks.length>1&&ks[ks.length-1].pct<ks[0].pct?`<span class="sml">分かれた：<em class="nw">${esc(ks[ks.length-1].name)}（${ks[ks.length-1].pct}%）</em></span>`:''}`:'';
     out+=foldBox('テーマ別のシンクロ率',tz,(keep.length?themeHTML(keep,'2人'):'')+few)}
   if(G.anon){const ax=axHTML(G,me?[me]:G.players,nm);if(ax)out+=foldBox('価値観のタイプ',me?'あなたの位置':'2人の位置',ax)}
   if(r.starN){const row=(i,cls)=>{const k=G.qs[i],aa=A.ans[i],bb=B.ans[i];
@@ -712,7 +712,7 @@ function showResultCore(G){
   // ③ みんなの共通点 → ④ みんなで話しておきたいこと
   h+=stepsHTML(G)+kyoSlot(G)+talkHTML(G,nm)+bridgeHTML(G)+'<p class="ref-h">くわしく見る</p>'+tipsHTML(G)+undecHTML(G,nm)+groupShapeHTML(G);
   // ⑤ 残りはたたむ
-  if(trows.length){const ks=trows.slice().sort((a,b)=>b.pct-a.pct);h+=foldBox('テーマ別のシンクロ率',`<span class="sml">いちばん重なった：<em class="nw">${esc(ks[0].name)}（${ks[0].pct}%）</em></span>`,themeHTML(trows,'みんな'))}
+  if(trows.length){const ks=trows.slice().sort((a,b)=>b.pct-a.pct);h+=foldBox('テーマ別のシンクロ率',ks[0].pct>0?`<span class="sml">いちばん重なった：<em class="nw">${esc(ks[0].name)}（${ks[0].pct}%）</em></span>`:`<span class="sml">どのテーマも、答えが分かれました</span>`,themeHTML(trows,'みんな'))}
   const ax=axHTML(G,(G.anon&&me)?[me]:ps,nm);if(ax)h+=foldBox('価値観のタイプ',(G.anon&&me)?'あなたの位置':ps.length+'人の位置',ax);
   const starP=(G.anon&&me?[me]:ps).map(p=>({p,xs:G.qs.map((k,i)=>({k,a:p.ans[i]})).filter(x=>x.a&&x.a.st&&x.a.o>=0&&x.a.o<2)})).filter(x=>x.xs.length);
   if(starP.length)h+=foldBox('★ ゆずれないこと',starP.slice().sort((a,b)=>b.xs.length-a.xs.length).slice(0,2).map(x=>`<em>${esc(x.p===me?'あなた':x.p.name)} ${x.xs.length}問</em>`).join('・')+(starP.length>2?'　ほか':''),starCnt(G)+starP.map(x=>`<div class="tori"><p class="sub">${nm(x.p)}</p><ul>${x.xs.map(y=>`<li>${esc(Q[y.k][1])} ${esc(ans(y.a.o,y.k))}</li>`).join('')}</ul></div>`).join(''));
@@ -1006,7 +1006,7 @@ function inboxView(got){
   const md=t=>{const d=new Date(t);return(d.getMonth()+1)+'月'+d.getDate()+'日'};
   const row=x=>{const P=ibxPair(x),G={players:[P.A,P.B],qs:P.qs},pc=pairStat(P.A,P.B,P.qs).pct,tr=themeRows(G).filter(r=>r.q>=2);
     let t='';if(tr.length){const hi=tr.reduce((a,b)=>b.pct>a.pct?b:a),lo=tr.reduce((a,b)=>b.pct<a.pct?b:a);
-      t=hi.pct>=60||hi===lo?`よく重なった：${hi.name}`:`分かれた：${lo.name}`}
+      t=hi.pct<=0?`どのテーマも分かれました`:hi.pct>=60?`よく重なった：${hi.name}`:`分かれた：${lo.name}`}
     return `<button class="ib-row" data-k="${esc(x.key)}"><span class="ib-r" style="--p:${pc}%"><i>${pc}%</i></span><span class="ib-n"><b>${esc(x.name)}さん${pc>=HIGH_SYNC?'<span class="ib-hs">HIGH SYNC</span>':''}</b><span>${esc(t||md(x.at)+'に届きました')}</span></span><span class="ib-go" aria-hidden="true">›</span></button>`};
   view(`${tnav('ib-top')}<section class="card ibx"><p class="label">答え合わせの結果</p>
     ${groups.map(g=>`<p class="hint ib-h">${md(g.s.at)}に送った${g.s.k.split('.').length}問</p>${g.xs.map(row).join('')}`).join('')}
@@ -1062,7 +1062,7 @@ function histHTML(h){
 function histSetM(G,m){const id=G.qs.join('.'),h=store('kv_hist')||[],r=h.find(x=>x&&x.id===id);if(!r||r.m!=null)return;r.m=m;store('kv_hist',h);const el=$('hist');if(el){el.innerHTML=histHTML(h);if(window.__jw)window.__jw(el)}}
 
 /* ===== 結果を画像で保存（インスタのストーリーズの縦長 1080×1920） ===== */
-/* 写真つきで送る（鑑定者本人 2026-11-23「2択とアイシンクも同じ形に」。LINEのURLプレビューがオフの人が多く、リンクだけでは絵が見えないため）：
+/* 写真つきで送る（鑑定者本人 2026-11-22「2択とアイシンクも同じ形に」。LINEのURLプレビューがオフの人が多く、リンクだけでは絵が見えないため）：
    スマホで写真の共有ができるときは、結果の「LINEで結果を送る」「○○さんにも結果を送る」を押すと、結果の画像と、送る文＋リンクを一緒に共有の画面へ渡す（LINEを選ぶと写真と文の両方が届く）。
    パソコン・共有できない端末は今までどおり LINE の送る画面。招待のボタンは文だけのまま */
 function pkCanFiles(){try{return !!(window.matchMedia&&matchMedia('(pointer:coarse)').matches&&navigator.canShare&&navigator.canShare({files:[new File(['x'],'a.png',{type:'image/png'})]}))}catch(e){return false}}
