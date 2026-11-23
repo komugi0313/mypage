@@ -106,6 +106,14 @@ p{margin:0 0 12px}
 .st-fold>summary::-webkit-details-marker{display:none}
 .st-fold>summary::after{content:'開く ▼';flex:0 0 auto;font-size:13px;font-weight:700;color:var(--rose);background:#FBEAF0;border-radius:999px;padding:3px 10px;white-space:nowrap}
 .st-fold[open]>summary::after{content:'閉じる ▲'}
+.lv-side{font-size:.78em;font-weight:700}
+/* たたんだ欄だとひと目でわかるように（鑑定者本人 2026-11-23「閉じてあることがわかりづらい」→案1・2）：見出しの行をうすいピンクの帯で囲み、「開く ▼」はローズの地に白い文字の札 */
+.st-fold{border-top:0;padding-top:0;margin-top:14px}
+.st-fold>summary{background:#FDF1F5;border:1.5px solid #EFC3D3;border-radius:14px;padding:8px 10px 8px 14px;min-height:52px}
+.st-fold>summary::after{background:var(--rose);color:#fff;font-size:14px;padding:6px 12px}
+.st-fold[open]>summary{margin-bottom:10px}
+.st-fold[open]>summary::after{background:#fff;color:var(--rose);box-shadow:inset 0 0 0 1.5px var(--rose)}
+@media (max-width:360px){.st-fold>summary{padding:6px 6px 6px 10px;gap:6px;font-size:15px}.st-fold>summary::after{font-size:12.5px;padding:5px 8px}}
 .st-fold p{margin:4px 0 0}
 .jk-name{font-family:'Shippori Mincho B1',serif;font-size:20px;font-weight:800;color:#8E3A1A;margin:2px 0 4px}
 .jk-tip{margin-top:10px;background:#FFF6E6;border:1.5px solid #F0D3A8;border-radius:12px;padding:10px 12px;display:grid;gap:2px}
@@ -3663,8 +3671,9 @@ function renderResult(code,mine,withCode){
     h+='</div></details>';
     // 恋の状況は、押すと開く欄にしまう（画面をのぞかれても見えないように。鑑定者本人 2026-11-12「両方入れてください」）。「答えたくない」のときは出さない
     if(mine.status==='never') h+='<p class="st-vis">'+esc(STATUS.never.vis)+'</p>';
-    if(mine.status==='partner'&&DUR_TXT[mine.dur]) h+='<p class="st-vis">'+esc(DUR_TXT[mine.dur][poles[3]==='P'?'P':'C'])+'</p>';
-    if(mine.status&&STATUS[mine.status]&&mine.status!=='skip'){ var S=STATUS[mine.status]; h+='<details class="st-fold"><summary><span><span class="nw">答えたときの</span><span class="nw">状況にあわせた説明</span></span></summary><p class="muted">いまの恋の状況：'+esc(S.n)+'での結果です。'+(S.note?esc(S.note):'')+'</p></details>'; }
+    /* 付き合っている長さの1行も、たたんだ欄の中へ（たたまずに出すと、のぞかれたときに恋人がいるとわかってしまうため。鑑定者本人 2026-11-23「全部直してください」） */
+    var durP=(mine.status==='partner'&&DUR_TXT[mine.dur])?'<p class="muted"><b>付き合っている長さから：</b>'+esc(DUR_TXT[mine.dur][poles[3]==='P'?'P':'C'])+'</p>':'';
+    if(mine.status&&STATUS[mine.status]&&mine.status!=='skip'){ var S=STATUS[mine.status]; h+='<details class="st-fold"><summary><span><span class="nw">答えたときの</span><span class="nw">状況にあわせた説明</span></span></summary><p class="muted">いまの恋の状況：'+esc(S.n)+'での結果です。'+(S.note?esc(S.note):'')+'</p>'+durP+'</details>'; }
     h+='</section>';
     axH=h; h=h0;
   }
@@ -3701,7 +3710,9 @@ function renderResult(code,mine,withCode){
   }
   if(isMine && mine.anx!=null){
     var a=mine.anx, lv=ANX.filter(function(x){return a<=x.max;})[0], on=Math.min(5,Math.max(1,Math.ceil(a/20)));
-    h+='<section class="card"><div class="rb-h"><h2><span class="nw">心のゆれやすさ：</span><span class="nw">'+lv.n+'</span></h2>'+rbHTML(1)+'</div><p>'+esc(lv.t)+'</p>'+''+'<details class="st-fold"><summary>メーターで見る</summary><div class="sl anx"><div class="sl-track zones" role="img" aria-label="心のゆれやすさ：'+lv.n+'"><i class="z z1"></i><i class="z z2"></i><i class="z z3"></i><i class="sl-dot" style="left:'+Math.max(3,Math.min(97,a))+'%"></i></div><div class="sl-zl">'+ANX.map(function(x){return '<span class="'+(x===lv?'on':'')+'">'+x.n+'</span>';}).join('')+'</div></div><p class="muted">恋をしているときの気持ちのゆれ方の目安です。タイプとは別に、4つのものさしとは関係なく出しています。</p></details></section>';
+    /* 「ふつう」でも、愛着スタイルの型はまん中（50%）で分かれるので、どちら側かを添える（恐れ型なのに「ふつう」とだけ出て食いちがって見えたため。鑑定者本人 2026-11-23「全部直してください」） */
+    var lvSide=lv.n==='ふつう'?'<span class="nw lv-side">（'+(a>=50?'少しゆれやすい側':'少しおだやかな側')+'）</span>':'';
+    h+='<section class="card"><div class="rb-h"><h2><span class="nw">心のゆれやすさ：</span><span class="nw">'+lv.n+'</span>'+lvSide+'</h2>'+rbHTML(1)+'</div><p>'+esc(lv.t)+'</p>'+''+'<details class="st-fold"><summary>メーターで見る</summary><div class="sl anx"><div class="sl-track zones" role="img" aria-label="心のゆれやすさ：'+lv.n+'"><i class="z z1"></i><i class="z z2"></i><i class="z z3"></i><i class="sl-dot" style="left:'+Math.max(3,Math.min(97,a))+'%"></i></div><div class="sl-zl">'+ANX.map(function(x){return '<span class="'+(x===lv?'on':'')+'">'+x.n+'</span>';}).join('')+'</div></div><p class="muted">恋をしているときの気持ちのゆれ方の目安です。タイプとは別に、4つのものさしとは関係なく出しています。</p></details></section>';
     h+=kuseHTML(mine,withCode);
   }
   if(isMine) h+=subAxHTML(mine);
@@ -4645,7 +4656,7 @@ function shareText(code){ var t=T[code], h=hookOf(code);
 /* 相手の点（鑑定者本人 2026-11-17「相手の点もお願いします」）：本格版の人は、心のゆれやすさと寄りかかれる%の2つをリンクに入れる（リンクの中だけ・どこにも送らない） */
 function kParam(){ var m=st.me; return (m&&m.mode!=='quick'&&m.anx!=null&&m.pct&&m.pct.TS!=null)?'&k='+Math.round(m.anx)+'.'+Math.round(m.pct.TS):''; }
 function inviteUrl(code){ return location.origin+location.pathname+'?from='+code+(st.me&&st.me.code===code?kParam():''); }
-/* 写真つきで送る（鑑定者本人 2026-11-23：LINEのURLプレビューがオフの人が多く、リンクだけでは絵が見えないため）。
+/* 写真つきで送る（鑑定者本人 2026-11-22：LINEのURLプレビューがオフの人が多く、リンクだけでは絵が見えないため）。
    スマホで写真の共有ができるときは、結果の画像とリンクの入った文を一緒に共有の画面へ渡す（LINEは写真と文の両方を送る＝鑑定者本人の端末で確認） */
 function pkCanFiles(){ try{ return !!(window.matchMedia&&matchMedia('(pointer:coarse)').matches&&navigator.canShare&&navigator.canShare({files:[new File(['x'],'a.png',{type:'image/png'})]})); }catch(e){ return false; } }
 function pkShareFile(file,text){
