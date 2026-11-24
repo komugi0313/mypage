@@ -596,12 +596,26 @@ function syncMsg(pct,two){const w=two?'2人':'メンバー';
   if(pct>=40)return{msg:'ほどよく重なって、ほどよくちがう'+w,sub:'同じところは安心に、ちがうところは新しい発見に。'};
   return{msg:'発見の多い'+w,sub:'答えが分かれたところほど、話すとおたがいのことがよくわかります。'}}
 // たたむ欄：左に色のマーク、題名の下に中身の一部（鑑定者本人 2026-11-19「表のバーが簡素すぎて開いてもらえない」）
-const FIC={'話し合うときのコツ':['話','a'],'2人の距離の縮め方':['距','b'],'テーマ別のシンクロ率':['テ','c'],'価値観のタイプ':['型','a'],'★ ゆずれないところ':['★','d'],'★ ゆずれないこと':['★','d'],'みんなの答えを1問ずつ':['答','c'],'1か月後に、もう一度答え合わせ':['再','b'],'まだ決められなかった問題':['？','c'],'このメンバーのかたち':['形','b'],'いちばん悩んだ問題':['悩','d'],'4つのものさし':['型','a'],'あなたのこだわり':['芯','b'],'合わせられること・悩んだ問題':['柔','a'],'合わせられること':['柔','a'],'まん中の答え':['柔','a'],'まん中の答え・悩んだ問題':['柔','a'],'2人の価値観のかたち':['型','a']};
+// マークは線の絵（前の1文字の漢字〈芯・柔など〉は意味がわかりにくい＝鑑定者本人 2026-11-23）
+const FIS={talk:'<path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4 3.5V16h0a2 2 0 0 1-2-2z"/>',
+ near:'<path d="M3 12h6M6.5 9 9 12l-2.5 3M21 12h-6M17.5 9 15 12l2.5 3"/>',
+ bars:'<path d="M5 20V12M10 20V6M15 20v-9M20 20V9M3 20.5h18"/>',
+ shape:'<circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/>',
+ star:'<path d="m12 3.5 2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>',
+ list:'<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2"/><circle cx="4.5" cy="12" r="1.2"/><circle cx="4.5" cy="18" r="1.2"/>',
+ again:'<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4"/>',
+ ask:'<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.6"/><circle cx="12" cy="16.8" r=".6"/>',
+ group:'<circle cx="8" cy="8.5" r="3"/><circle cx="16.5" cy="9.5" r="2.5"/><path d="M2.5 19c.6-3.3 2.8-5 5.5-5s4.9 1.7 5.5 5M14 14.3c2.6-.6 5.2.8 6 4.2"/>',
+ think:'<path d="M7 3.5h10M7 20.5h10M8 3.5c0 4 8 5 8 8.5s-8 4.5-8 8.5M16 3.5c0 4-8 5-8 8.5s8 4.5 8 8.5"/>',
+ pin:'<path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>',
+ flex:'<circle cx="9" cy="12" r="5.5"/><circle cx="15" cy="12" r="5.5"/>'};
+const FIC={'話し合うときのコツ':['talk','a'],'2人の距離の縮め方':['near','b'],'テーマ別のシンクロ率':['bars','c'],'価値観のタイプ':['shape','a'],'★ ゆずれないところ':['star','d'],'★ ゆずれないこと':['star','d'],'みんなの答えを1問ずつ':['list','c'],'1か月後に、もう一度答え合わせ':['again','b'],'まだ決められなかった問題':['ask','c'],'このメンバーのかたち':['group','b'],'いちばん悩んだ問題':['think','d'],'4つのものさし':['shape','a'],'あなたのこだわり':['pin','b'],'合わせられること・悩んだ問題':['flex','a'],'合わせられること':['flex','a'],'まん中の答え':['flex','a'],'まん中の答え・悩んだ問題':['flex','a'],'2人の価値観のかたち':['shape','a']};
+const ficSvg=k=>`<svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${FIS[k]}</svg>`;
 // ★を押した数（人によって、ゆずれないことの多さがちがう。シンクロ率には入れない）
 function starCnt(G){const ps=G.players,me=ps.find(p=>p.id===G.me),list=(G.anon&&me)?[me]:ps;
   const n=p=>G.qs.filter((k,i)=>{const a=p.ans[i];return a&&a.st&&a.o>=0&&a.o<2}).length;
   return `<p class="stcnt"><b>★を押した数</b>${list.map(p=>`<span>${nmChip(G,p,p===me?'あなた':p.name)}${n(p)}問</span>`).join('')}</p><p class="hint stnote">★はシンクロ率の点数には入れていません。ゆずれないことの多さは、人それぞれです。</p>`}
-const foldBox=(t,sm,inner)=>{const ic=FIC[t]||[t.replace(/^★\s*/,'').charAt(0),'c'];return `<details class="fold"><summary><span class="fic f${ic[1]}" aria-hidden="true">${ic[0]}</span><span class="ft">${t}${sm?`<small>${sm}</small>`:''}</span></summary><div class="fb">${inner}</div></details>`};
+const foldBox=(t,sm,inner)=>{const ic=FIC[t]||['list','c'];return `<details class="fold"><summary><span class="fic f${ic[1]}" aria-hidden="true">${ficSvg(ic[0])}</span><span class="ft">${t}${sm?`<small>${sm}</small>`:''}</span></summary><div class="fb">${inner}</div></details>`};
 // 人の色：あなた＝p0（みどり）・相手は順に p1（ピンク）…。あなたがわからないときは1人目が p0
 function pcls(G,p){const ps=G.players,me=ps.find(x=>x.id===G.me)||ps[0];if(p===me)return 'p0';const o=ps.filter(x=>x!==me);return 'p'+((o.indexOf(p)+1)%6)}
 const nmChip=(G,p,txt)=>`<span class="nmc ${pcls(G,p)}">${esc(txt)}</span>`;
