@@ -796,6 +796,7 @@ input[type=range]{width:100%;accent-color:var(--teal);min-height:44px}
 .ws-odai .d{margin:0;font-size:.86rem;font-weight:500;color:var(--ink);line-height:1.55}
 .ws-odai .m{display:flex;flex-wrap:wrap;gap:0 12px;font-size:.78rem;font-weight:800;color:var(--muted)}
 .ws-md{position:absolute;left:5px;top:5px;z-index:1;border-radius:999px;font-size:.7rem;font-weight:800;padding:0 8px;line-height:1.6;white-space:nowrap}
+.ws-md .ws-crown{width:1.35em;height:1.35em;vertical-align:-.3em;margin-right:2px}
 .ws-md.m1{background:#E7B530;color:#3E2C00}.ws-md.m2{background:#B9C3CC;color:#26313A}.ws-md.m3{background:#D59A6A;color:#3A2210}
 .wt-ph.r1,.ws-fc.r1 .ws-ph{box-shadow:inset 0 0 0 3px #E7B530}.wt-ph.r2,.ws-fc.r2 .ws-ph{box-shadow:inset 0 0 0 3px #B9C3CC}.wt-ph.r3,.ws-fc.r3 .ws-ph{box-shadow:inset 0 0 0 3px #D59A6A}
 .ws-fc{position:relative}
@@ -6071,7 +6072,7 @@ function wsOdaiNow(){return wsOdaiAt(Math.floor((Date.now()-WS_ODAI_0)/(7*864e5)
 function wsOdaiHTML(o,count){o=o||wsOdaiNow();return '<div class="ws-odai"><span class="k">今週のお題（'+esc(o.range)+'）</span><span class="t">'+esc(o.t)+'</span><p class="d">'+esc(o.d)+'</p><span class="m">'+(count!=null?'<span>のせた子 '+wsN(count)+'匹</span>':'')+''+(WS_RANK?'<span>結果は'+esc(o.result)+'</span>':'<span>次のお題は'+esc(o.result)+'から</span>')+'</span></div>'}
 // ランキング・入賞の札・受賞歴・入賞のお知らせ・SNS紹介の同意は、写真が集まるまで出さない（鑑定者本人 2026-11-19）。出すときは true にする
 var WS_RANK=false;
-function wsMedal(i){if(!WS_RANK)return "";return i>=0&&i<3?'<span class="ws-md m'+(i+1)+'">'+(i===0?'👑 ':'')+(i+1)+'位</span>':''}
+function wsMedal(i){if(!WS_RANK)return "";return i>=0&&i<3?'<span class="ws-md m'+(i+1)+'">'+(i===0?'<img class="ws-crown" src="img/ico-crown.webp" alt="" width="18" height="18">':'')+(i+1)+'位</span>':''}
 var WS_AWK={odai:"のお題",week:"の今週のワンスタ",month:"の今月のワンスタ",kishitsu:"の気質ごと"};
 function wsAwTitle(a){return a.kind==="odai"?a.title:a.kind==="week"?"今週のワンスタ":a.kind==="month"?"今月のワンスタ":(a.title||"")+"気質"}
 var WS_REASON={face:"ほかの人の顔・住所などが写っている",caption:"ひとことが気になる",sad:"犬がかわいそう",other:"その他"};
@@ -6281,14 +6282,15 @@ function wsAwardsHTML(A){if(!WS_RANK||!A||!A.length)return '';return '<div class
 function wsLoadImg(src){return new Promise(function(res,rej){var im=new Image();im.crossOrigin="anonymous";im.onload=function(){res(im)};im.onerror=rej;im.src=src})}
 function wsRRect(x,c,y,w,h,r){x.beginPath();x.moveTo(c+r,y);x.arcTo(c+w,y,c+w,y+h,r);x.arcTo(c+w,y+h,c,y+h,r);x.arcTo(c,y+h,c,y,r);x.arcTo(c,y,c+w,y,r);x.closePath()}
 function wsFitFont(x,t,max,w,fam,wt){var f=max,set=function(){x.font=(wt?wt+" ":"")+f+"px "+fam};set();while(x.measureText(t).width>w&&f>24){f-=2;set()}return f}
+var wsCrownIm=null;
 function wsKinen(a){var p=a.post,W=1080,H=1350,c=document.createElement("canvas");c.width=W;c.height=H;var x=c.getContext("2d"),POP='"Mochiy Pop One","M PLUS Rounded 1c",sans-serif',BODY='"M PLUS Rounded 1c",sans-serif';
   var MC=["#E7B530","#B9C3CC","#D59A6A"][a.rank-1]||"#E7B530",MD=["#7A5600","#4A5560","#7A4A22"][a.rank-1]||"#7A5600";
-  return Promise.all([document.fonts?document.fonts.load('80px "Mochiy Pop One"'):0,document.fonts?document.fonts.load('800 40px "M PLUS Rounded 1c"'):0]).catch(function(){}).then(function(){return wsLoadImg(p.photoUrl||p.thumbUrl).catch(function(){return null})}).then(function(im){
+  return Promise.all([document.fonts?document.fonts.load('80px "Mochiy Pop One"'):0,document.fonts?document.fonts.load('800 40px "M PLUS Rounded 1c"'):0]).catch(function(){}).then(function(){return wsLoadImg("img/ico-crown.webp").then(function(c){wsCrownIm=c},function(){})}).then(function(){return wsLoadImg(p.photoUrl||p.thumbUrl).catch(function(){return null})}).then(function(im){
     var g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,"#FFF6D8");g.addColorStop(.55,"#FFFFFF");x.fillStyle=g;x.fillRect(0,0,W,H);
     x.lineWidth=14;x.strokeStyle=MC;wsRRect(x,24,24,W-48,H-48,48);x.stroke();
     x.textAlign="center";x.textBaseline="middle";
     var rib=a.kind==="odai"?"ワンスタ お題":a.kind==="kishitsu"?"ワンスタ 気質ごと":"ワンスタ";x.font="800 38px "+BODY;var rw=x.measureText(rib).width+80;x.fillStyle="#A62457";wsRRect(x,(W-rw)/2,80,rw,70,35);x.fill();x.fillStyle="#FFFFFF";x.fillText(rib,W/2,116);
-    x.fillStyle=MD;wsFitFont(x,wsAwTitle(a),84,W-160,POP);x.fillText(wsAwTitle(a),W/2,220);x.font="110px "+POP;x.fillText((a.rank===1?"👑 ":"")+a.rank+"位",W/2,340);
+    x.fillStyle=MD;wsFitFont(x,wsAwTitle(a),84,W-160,POP);x.fillText(wsAwTitle(a),W/2,220);x.font="110px "+POP;var rkT=a.rank+"位";if(a.rank===1&&wsCrownIm){var cw=x.measureText(rkT).width,cs=112,gx=(W-(cs+16+cw))/2;x.drawImage(wsCrownIm,gx,340-cs/2,cs,cs);x.textAlign="left";x.fillText(rkT,gx+cs+16,340);x.textAlign="center"}else x.fillText(rkT,W/2,340);
     var S=560,px=(W-S)/2,py=420;x.save();wsRRect(x,px,py,S,S,40);x.fillStyle=p.bg||"#F3E9DA";x.fill();x.clip();
     if(im){var iw=im.naturalWidth,ih=im.naturalHeight,sc=p.art?Math.min(S*.84/iw,S*.9/ih):Math.max(S/iw,S/ih),dw=iw*sc,dh=ih*sc;x.drawImage(im,px+(S-dw)/2,p.art?py+S-dh:py+(S-dh)/2,dw,dh)}
     x.restore();x.lineWidth=12;x.strokeStyle=MC;wsRRect(x,px,py,S,S,40);x.stroke();
