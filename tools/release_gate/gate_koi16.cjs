@@ -127,17 +127,17 @@ function scan() {
         await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true)); await check('チェックの結果 ' + k + ' 答え' + j);
       }
     }
-    // 質問は遊ぶたびに言いかえの文に入れかわる（1問5通り・本格版56問）。5回遊んで280の文をすべて確かめる
+    // 質問は遊ぶたびに言いかえの文に入れかわる（1問5通り・短い「どっち派？」のある10問は6通り・本格版56問）。6回遊んで290の文をすべて確かめる
     const seenQ = new Set();
     const rounds = [];
-    for (let r = 0; r < 7; r++) {
+    for (let r = 0; r < 8; r++) {
       await p.goto(URL); await p.click('#start'); if (r === 0) await check('恋の状況'); await p.click('[data-status=crush]');
       const cur = []; rounds.push(cur);
-      for (let i = 0; i < 56; i++) { const qt = await p.$eval('#qtext', e => e.textContent); cur.push(qt); if (r < 5) seenQ.add(qt); if (r >= 5) { const bs0 = await p.$$('#scale button'); await bs0[i % 5].click(); await p.waitForTimeout(330); continue; } await check('質問' + (i + 1) + '（' + (r + 1) + '回目）'); const bs = await p.$$('#scale button'); await bs[i % 5].click(); await p.waitForTimeout(320); }
+      for (let i = 0; i < 56; i++) { const qt = await p.$eval('#qtext', e => e.textContent); cur.push(qt); if (r < 6) seenQ.add(qt); if (r >= 6) { const bs0 = await p.$$('#scale button'); await bs0[i % 5].click(); await p.waitForTimeout(330); continue; } await check('質問' + (i + 1) + '（' + (r + 1) + '回目）'); const bs = await p.$$('#scale button'); await bs[i % 5].click(); await p.waitForTimeout(320); }
     }
-    if (seenQ.size !== 280) problems.push(w + 'px 質問の文が5回で280通りになっていない（' + seenQ.size + '）');
-    // 6回目・7回目（くじ引き）：どの問いも前回とちがう文になる
-    for (const r of [5, 6]) { const same = rounds[r].filter((t, i) => t === rounds[r - 1][i]).length; if (same) problems.push(w + 'px ' + (r + 1) + '回目に前回と同じ文が' + same + '問'); }
+    if (seenQ.size !== 290) problems.push(w + 'px 質問の文が6回で290通りになっていない（' + seenQ.size + '）');
+    // 7回目・8回目（くじ引き）：どの問いも前回とちがう文になる
+    for (const r of [6, 7]) { const same = rounds[r].filter((t, i) => t === rounds[r - 1][i]).length; if (same) problems.push(w + 'px ' + (r + 1) + '回目に前回と同じ文が' + same + '問'); }
     for (const [i, c] of CODES.entries()) {
       const other = CODES[(i + 5) % 16];
       const me = { code: c, pct: { LR: 62, VA: 71, TS: 55, PC: 80 }, anx: 30 + i * 4, mode: 'full', status: ['partner','crush','none','skip'][i % 4], at: 1 };
