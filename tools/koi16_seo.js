@@ -40,9 +40,9 @@ function grabFn(name) {
 }
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(['AXES', 'T', 'ORDER', 'GROUP', 'GPALE', 'KUSE', 'PAIR', 'ARU_T', 'JAKU', 'CSPLIT'].map(grab).join('') +
-  grabFn('pairPart') + grabFn('compat') + 'this.D={AXES,T,ORDER,GROUP,GPALE,KUSE,ARU_T,JAKU,CSPLIT,compat};', ctx);
-const { AXES, T, ORDER, GROUP, GPALE, KUSE, ARU_T, JAKU, CSPLIT, compat } = ctx.D;
+vm.runInContext(['AXES', 'T', 'ORDER', 'GROUP', 'GPALE', 'KUSE', 'PAIR', 'ARU_T', 'JAKU', 'CSPLIT', 'POLE'].map(grab).join('') +
+  grabFn('pairPart') + grabFn('compat') + 'this.D={AXES,T,ORDER,GROUP,GPALE,KUSE,ARU_T,JAKU,CSPLIT,POLE,compat};', ctx);
+const { AXES, T, ORDER, GROUP, GPALE, KUSE, ARU_T, JAKU, CSPLIT, POLE, compat } = ctx.D;
 
 // 図鑑と同じ番号（色の仲間 TP→TC→SP→SC の順）
 const NO = {}; let n = 0;
@@ -60,7 +60,7 @@ const kh = k => KUSE[k].n.split('|').map(nw).join('');
 // 改行のしくみ（診断と同じ BudouX）を共通のファイルに書き出す
 const bxSrc = SRC.match(/\nvar GLUE_SEL=[^\n]*\n/)[0] + SRC.match(/\nvar BX_MODEL=[^\n]*\n/)[0] +
   SRC.slice(SRC.indexOf('\nvar BX=(function(){'), SRC.indexOf('\nfunction glueAll(')) + grabFn('glueAll');
-const EXTRA = '.ty b,.ty>span,.dif .n,.links a>span,.q>b,.q>span,.jk .t,.jk .lb,.tip,.hero .k,.hero .sub,.pair i,.crumb,.cta small,.meta,.kick,.ex div>span,.ex b,.wk span,.kp>span,.dif p,summary span,.rk i';
+const EXTRA = '.l4t>span,.ty b,.ty>span,.dif .n,.links a>span,.q>b,.q>span,.jk .t,.jk .lb,.tip,.hero .k,.hero .sub,.pair i,.crumb,.cta small,.meta,.kick,.ex div>span,.ex b,.wk span,.kp>span,.dif p,summary span,.rk i';
 fs.writeFileSync(path.join(K, 'seo.js'),
   '/* 恋のかたち診断の説明ページ用（tools/koi16_seo.js が koi16/index.html から写して作る。直接直さない）。\n' +
   '   文節で改行する（BudouX・Google・Apache License 2.0 https://github.com/google/budoux の日本語モデル）。 */\n' +
@@ -221,6 +221,13 @@ footer .credit{font-size:11px;color:#A3948A;margin-top:4px}
 .hy .bs img{width:40px;height:40px;object-fit:contain;display:block;margin:0 auto}
 .hy .bs small{display:block;font-size:11.5px;line-height:1.35}
 .hy .bs i{display:block;font-style:normal;color:var(--rose);font-weight:700;font-size:13px}
+.l4s{display:grid;gap:8px}
+.l4{display:flex;gap:12px;align-items:flex-start;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.l4c{flex:none;width:36px;height:36px;border-radius:50%;background:var(--gc,var(--rose));color:#fff;font-weight:900;font-size:18px;display:grid;place-items:center}
+.l4t{min-width:0;flex:1}
+.l4t small{display:block;font-size:12.5px;font-weight:700;color:var(--sub)}
+.l4t b{display:block;font-size:16px;line-height:1.5}
+.l4t>span{display:block;font-size:14px;color:var(--sub);line-height:1.65;margin-top:2px}
 .top10{list-style:none;margin:0;padding:0;display:grid;gap:6px;counter-reset:t}
 .top10 li{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:6px 10px;counter-increment:t}
 .top10 li::before{content:counter(t);flex:none;width:24px;height:24px;border-radius:50%;background:var(--rose);color:#fff;font-weight:900;font-size:13px;display:grid;place-items:center}
@@ -297,6 +304,19 @@ ORDER.forEach(c => {
   const t = T[c], a = ARU_T[c], j = JAKU[c], g = grp(c);
   const best0 = ORDER.filter(x => x !== c).map(x => ({ o: x, s: compat(c, x).score })).sort((p, q) => q.s - p.s);
   const best = best0.filter(b => b.s >= best0[1].s);
+  // 4文字の意味（1文字1行）・なりやすい愛着スタイル・よくある質問（鑑定者本人 2026-11-25「見本お願いします」）
+  const ax4 = AXES.map((x, i) => { const p = c[i], on = p === x.a ? x.an : x.bn; return `<div class="l4"><span class="l4c" style="--gc:${g.hex}">${p}</span><div class="l4t"><small>${nw(x.title)}</small><b>${nw(on)}</b><span>たとえば：${esc(POLE[p].aru)}</span></div></div>`; }).join('');
+  const atK = c[2] === 'T' ? ['secure', 'preoc'] : ['dismiss', 'fear'];
+  const atTxt = `頼り方が「${c[2] === 'T' ? '寄りかかれる' : '自分で立つ'}」なので、${KT[atK[0]].k.replace(/（.*/, '')}か${KT[atK[1]].k.replace(/（.*/, '')}になりやすいタイプです。どちらになるかは、タイプとは別の「心のゆれやすさ」で決まり、診断の結果でわかります。`;
+  const bestNames = best.map(b => `${T[b.o].f}（${T[b.o].c}・${b.s}点）`).join('、');
+  const FQ = [
+    [`${t.f}と相性がいいタイプは？`, `${bestNames}です。相性の点数は、4つのものさしの組み合わせから出した、この診断独自のめやすです。`],
+    [`${t.f}の脈ありサインは？`, a.sign.join('。') + '。'],
+    [`${t.f}の恋の弱点は？`, `「${j[0]}」です。${j[1]}。克服のコツは、${j[2]}`],
+    [`${t.f}は、どの愛着スタイルになりやすい？`, atTxt],
+    [`${t.f}（${c}）の4文字の意味は？`, AXES.map((x, i) => `${c[i]}＝${x.title}が「${c[i] === x.a ? x.an : x.bn}」`).join('、') + '。この診断独自の4つのものさしで、MBTIなどとは別のものです。',
+      AXES.map((x, i) => nw(`${c[i]}＝${x.title}が`) + nw(`「${c[i] === x.a ? x.an : x.bn}」`)).join('、<wbr>') + '。<wbr>' + ['この診断独自の', '4つのものさしで、', 'MBTIなどとは', '別のものです。'].map(nw).join('<wbr>')],
+  ];
   const body = `${crumb([['恋愛キャラ診断', 'chara/'], [t.f, '']])}
 <section class="hero2" style="--gp:${GPALE[c[2] + c[3]]};--gc:${g.hex}">
 <img src="/img/${c}.webp" alt="${esc(t.c)}のキャラクター" width="180" height="180">
@@ -307,22 +327,26 @@ ORDER.forEach(c => {
 <p>${esc(t.catch)}</p>
 </section>
 <section class="box"><h2>どんな恋をする人？</h2><p>${esc(t.sum)}</p></section>
+<section class="box"><h2>4文字「${c}」の意味</h2><div class="l4s">${ax4}</div><p class="note">4つのものさしは、この診断独自のものです（MBTIなどとは別のものです）。</p></section>
 <section class="box"><h2>好きになり方</h2><p>${esc(t.fall)}</p></section>
 <section class="box"><h2>好きな人の前でやりがちなこと</h2>${ul(a.aru)}</section>
 <section class="box"><h2>このタイプの脈ありサイン</h2>${ul(a.sign)}</section>
-<section class="box jk"><div class="lb">このタイプの恋の弱点</div><div class="t">${esc(j[0])}</div><p>${esc(j[1])}。</p><div class="tip">克服のコツ：${esc(j[2])}</div></section>
+<section class="box"><h2>けんかしたとき</h2>${ul(a.fight)}</section>
+<section class="box jk"><h2>このタイプの恋の弱点</h2><div class="t">${esc(j[0])}</div><p>${esc(j[1])}。</p><div class="tip">克服のコツ：${esc(j[2])}</div></section>
 <section class="box"><h2>恋愛での強み</h2>${ul(t.st)}<h2 style="margin-top:14px">気をつけたいところ</h2>${ul(t.ca)}</section>
 <section class="box"><h2>相性がいいタイプ</h2><div class="rank">${best.map(b => `<a href="/type/${lc(b.o)}/"><img src="/img/${b.o}.webp" alt="" width="72" height="72" loading="lazy"><b>${fname(b.o)}</b><small>${esc(T[b.o].c)}</small><i>${b.s}点</i></a>`).join('')}</div><p class="note" style="margin-top:8px">相性の点数は、4つのものさしの組み合わせから出した、この診断独自のめやすです。</p></section>
+<section class="box"><h2>なりやすい愛着スタイル</h2><p>${esc(atTxt)}</p><div class="types">${atK.map(tyCell).join('')}</div></section>
 ${CTA('あなたは、どのタイプ？', '無料で診断する')}
+<section class="box faq"><h2>よくある質問</h2>${FQ.map((x, i) => `<details${i ? '' : ' open'}><summary><span>${esc(x[0])}</span></summary><p>${x[2] || esc(x[1])}</p></details>`).join('')}</section>
 <section class="box"><h2>このタイプの結果をくわしく見る</h2><p>すれ違いやすい場面・長く続けるコツ・16タイプすべてとの相性は、診断の結果の画面で見られます。</p><a class="btn btn2" href="/?t=${c}"><span class="nw">${esc(t.f)}の</span><span class="nw">結果を見る</span></a></section>
 <section class="box"><h2>16の恋愛キャラ</h2>${allGrid(c)}</section>
 ${LINKS('')}`;
   write(`type/${lc(c)}/index.html`, page({
     url: `type/${lc(c)}/`,
     title: `${t.f}（${t.c}）の恋愛の特徴・脈ありサイン・相性｜恋のかたち診断`,
-    desc: `${t.catch}16タイプ×愛着スタイルの恋愛診断「恋のかたち診断」の「${t.f}」タイプの、好きになり方・やりがちなこと・脈ありサイン・恋の弱点・相性のいいタイプ。`,
+    desc: `${t.catch}16タイプ×愛着スタイルの恋愛診断「恋のかたち診断」の「${t.f}」タイプの、4文字の意味・好きになり方・脈ありサイン・けんかしたとき・恋の弱点・愛着スタイル・相性のいいタイプ。`,
     img: BASE + 'img/' + c + '.png',
-    ld: crumbLd([['恋のかたち診断', ''], ['恋愛キャラ診断', 'chara/'], [t.f, `type/${lc(c)}/`]]),
+    ld: [crumbLd([['恋のかたち診断', ''], ['恋愛キャラ診断', 'chara/'], [t.f, `type/${lc(c)}/`]]), { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: FQ.map(x => ({ '@type': 'Question', name: x[0], acceptedAnswer: { '@type': 'Answer', text: x[1] } })) }],
     body,
   }));
 });
