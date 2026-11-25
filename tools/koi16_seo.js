@@ -49,6 +49,10 @@ const NO = {}; let n = 0;
 ['TP', 'TC', 'SP', 'SC'].forEach(k => ORDER.filter(o => o[2] + o[3] === k).forEach(o => { NO[o] = ++n; }));
 const esc = s => String(s).replace(/○○(?=[\u3040-\u309f])/g, '○○\u2060').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const nw = s => '<span class="nw">' + esc(s) + '</span>';
+// 結果の画面と同じ「だれが・だれに」の見出し（キャラの絵＋影。鑑定者本人 2026-11-25）
+const wch = (code, label, me) => '<span class="wch' + (me ? ' me' : '') + '">' + (code ? '<span class="wpic" aria-hidden="true"><img src="/img/' + code + '.webp" width="52" height="52" alt=""></span>' : '<span class="wpic sil" aria-hidden="true"><img src="/img/RATP.webp" width="52" height="52" alt=""><i>?</i></span>') + '<span>' + esc(label) + '</span></span>';
+const wv = t => '<span class="wv">' + esc(t) + '</span>';
+const whoH = inner => '<h2 class="whoh">' + inner + '</h2>';
 const cname = c => { const t = T[c].c, k = CSPLIT[c]; return nw(t.slice(0, k)) + nw(t.slice(k)); };
 const fname = c => { const f = T[c].f, m = f.match(/^(.*?(?:な|る|い|す))(.+)$/); return m ? nw(m[1]) + nw(m[2]) : esc(f); };
 const grp = c => GROUP[c[2] + c[3]];
@@ -224,6 +228,14 @@ footer .credit{font-size:11px;color:#A3948A;margin-top:4px}
 .hy .bs i{display:block;font-style:normal;color:var(--rose);font-weight:700;font-size:13px}
 .l4s{display:grid;gap:8px}
 .lead2{font-size:14.5px;color:var(--sub);margin:0 0 8px}
+.whoh{display:flex;flex-wrap:wrap;align-items:center;gap:22px 0;font-size:17px;font-weight:800;line-height:1.5;margin:4px 0 14px}
+.whoh .wv{white-space:nowrap}.whoh .wv+.wch{margin-left:6px}
+.wch{margin:0 6px 0 0;display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 14px 2px 4px;background:#F1E9E3;font-size:15px;font-weight:800;white-space:nowrap}
+.wch.me{background:#FBE3EC;color:#9C1449}
+.wpic{position:relative;flex:0 0 auto;width:52px;height:52px;margin:-10px 0 -10px -6px;display:grid;place-items:center}
+.wpic img{width:52px;height:52px;object-fit:contain}
+.wpic.sil img{filter:brightness(0) opacity(.5)}
+.wpic.sil i{position:absolute;top:52%;left:50%;transform:translate(-50%,-50%);font-style:normal;font-weight:800;color:#fff;font-size:20px;line-height:1}
 .l4{display:flex;gap:12px;align-items:flex-start;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 .l4c{flex:none;width:36px;height:36px;border-radius:50%;background:var(--gc,var(--rose));color:#fff;font-weight:900;font-size:18px;display:grid;place-items:center}
 .l4t{min-width:0;flex:1}
@@ -333,10 +345,10 @@ ORDER.forEach(c => {
 <section class="box"><h2>どんな恋をする人？</h2><p>${esc(t.sum)}</p></section>
 <section class="box"><h2>4文字「${c}」の意味</h2><div class="l4s">${ax4}</div><p class="note">4つのものさしは、この診断独自のものです（MBTIなどとは別のものです）。</p></section>
 <section class="box"><h2>好きになり方</h2><p>${esc(t.fall)}</p></section>
-<section class="box"><h2>${['このタイプが、', '好きな人の前で', 'ついやってしまうこと'].map(nw).join('<wbr>')}</h2>${ul(a.aru)}</section>
-<section class="box"><h2>脈ありサイン</h2><p class="lead2">このタイプの人が、好きな人に見せるしぐさです。あなたにこんなことをしていたら、あなたのことが好きなのかもしれません。</p>${ul(a.sign)}</section>
-<section class="box"><h2>${['このタイプが、', '恋人と', 'けんかしたときに', 'すること'].map(nw).join('<wbr>')}</h2>${ul(a.fight)}</section>
-<section class="box jk"><h2>${['このタイプの', '恋の弱点'].map(nw).join('<wbr>')}</h2><p class="lead2">恋愛で、つまずきやすいところです。</p><div class="t">${esc(j[0])}</div><p>${esc(j[1])}。</p><div class="tip">克服のコツ：${esc(j[2])}</div></section>
+<section class="box">${whoH(wch(c, 'このタイプ', 1) + wv('が、') + wv('好きな人の前で') + wv('やりがちなこと'))}${ul(a.aru)}</section>
+<section class="box">${whoH(wch(c, 'このタイプ', 1) + wv('が') + wch('', '好きな人') + wv('に、') + wv('つい見せちゃう'))}<p class="lead2">このタイプの脈ありサインです。</p>${ul(a.sign)}</section>
+<section class="box">${whoH(wch(c, 'このタイプ', 1) + wv('が') + wch('', '恋人') + wv('と') + wv('けんかしたとき'))}${ul(a.fight)}</section>
+<section class="box jk">${whoH(wch(c, 'このタイプ', 1) + wv('の') + wv('恋の弱点'))}<div class="t">${esc(j[0])}</div><p>${esc(j[1])}。</p><div class="tip">克服のコツ：${esc(j[2])}</div></section>
 <section class="box"><h2>恋愛での強み</h2>${ul(t.st)}<h2 style="margin-top:14px">気をつけたいところ</h2>${ul(t.ca)}</section>
 <section class="box"><h2>相性がいいタイプ</h2><div class="rank">${best.map(b => `<a href="/type/${lc(b.o)}/"><img src="/img/${b.o}.webp" alt="" width="72" height="72" loading="lazy"><b>${fname(b.o)}</b><small>${esc(T[b.o].c)}</small><i>${b.s}点</i></a>`).join('')}</div><p class="note" style="margin-top:8px">相性の点数は、4つのものさしの組み合わせから出した、この診断独自のめやすです。</p></section>
 <section class="box"><h2>なりやすい愛着スタイル</h2><p>${esc(atTxt)}</p><div class="types">${atK.map(tyCell).join('')}</div></section>
