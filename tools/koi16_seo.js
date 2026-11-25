@@ -169,7 +169,8 @@ details.fold .in h3{font-size:16px;margin:12px 0 2px}
 .help{background:#FFF8E8;border:1px solid #EBD9A8;border-radius:16px;padding:14px 16px}
 .help h2{font-size:18px}
 .help p{margin:4px 0;font-size:15px}
-.tel{font-weight:900;font-size:18px;letter-spacing:.02em}
+.telp{font-size:14.5px;color:var(--sub)}
+.tel{color:inherit;font-weight:700;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px;white-space:nowrap}
 .hero2{text-align:center;background:linear-gradient(180deg,var(--gp,#FBE3EC),var(--bg));border-radius:22px;padding:14px 12px 18px}
 .hero2 img{width:180px;height:180px;object-fit:contain;display:block;margin:0 auto}
 .hero2 .k{font-size:13px;color:var(--gc,var(--rose));font-weight:700}
@@ -222,10 +223,12 @@ footer .credit{font-size:11px;color:#A3948A;margin-top:4px}
 .hy .bs small{display:block;font-size:11.5px;line-height:1.35}
 .hy .bs i{display:block;font-style:normal;color:var(--rose);font-weight:700;font-size:13px}
 .l4s{display:grid;gap:8px}
+.lead2{font-size:14.5px;color:var(--sub);margin:0 0 8px}
 .l4{display:flex;gap:12px;align-items:flex-start;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 .l4c{flex:none;width:36px;height:36px;border-radius:50%;background:var(--gc,var(--rose));color:#fff;font-weight:900;font-size:18px;display:grid;place-items:center}
 .l4t{min-width:0;flex:1}
-.l4t small{display:block;font-size:12.5px;font-weight:700;color:var(--sub)}
+.l4t small{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline;font-size:12.5px;font-weight:700;color:var(--sub)}
+.l4t small em{font-style:normal;font-weight:700;color:var(--gc,var(--rose));letter-spacing:.02em}
 .l4t b{display:block;font-size:16px;line-height:1.5}
 .l4t>span{display:block;font-size:14px;color:var(--sub);line-height:1.65;margin-top:2px}
 .top10{list-style:none;margin:0;padding:0;display:grid;gap:6px;counter-reset:t}
@@ -305,17 +308,18 @@ ORDER.forEach(c => {
   const best0 = ORDER.filter(x => x !== c).map(x => ({ o: x, s: compat(c, x).score })).sort((p, q) => q.s - p.s);
   const best = best0.filter(b => b.s >= best0[1].s);
   // 4文字の意味（1文字1行）・なりやすい愛着スタイル・よくある質問（鑑定者本人 2026-11-25「見本お願いします」）
-  const ax4 = AXES.map((x, i) => { const p = c[i], on = p === x.a ? x.an : x.bn; return `<div class="l4"><span class="l4c" style="--gc:${g.hex}">${p}</span><div class="l4t"><small>${nw(x.title)}</small><b>${nw(on)}</b><span>たとえば：${esc(POLE[p].aru)}</span></div></div>`; }).join('');
+  const EN = { L: 'Lead', R: 'Receive', V: 'Verbal', A: 'Action', T: 'Trust', S: 'Self', P: 'Passion', C: 'Comfort' };
+  const ax4 = AXES.map((x, i) => { const p = c[i], on = p === x.a ? x.an : x.bn; return `<div class="l4" style="--gc:${g.hex}"><span class="l4c">${p}</span><div class="l4t"><small>${nw(x.title)}<em>${p}＝${EN[p]}</em></small><b>${nw(on)}</b><span>たとえば：${esc(POLE[p].aru)}</span></div></div>`; }).join('');
   const atK = c[2] === 'T' ? ['secure', 'preoc'] : ['dismiss', 'fear'];
   const atTxt = `頼り方が「${c[2] === 'T' ? '寄りかかれる' : '自分で立つ'}」なので、${KT[atK[0]].k.replace(/（.*/, '')}か${KT[atK[1]].k.replace(/（.*/, '')}になりやすいタイプです。どちらになるかは、タイプとは別の「心のゆれやすさ」で決まり、診断の結果でわかります。`;
   const bestNames = best.map(b => `${T[b.o].f}（${T[b.o].c}・${b.s}点）`).join('、');
   const FQ = [
     [`${t.f}と相性がいいタイプは？`, `${bestNames}です。相性の点数は、4つのものさしの組み合わせから出した、この診断独自のめやすです。`],
-    [`${t.f}の脈ありサインは？`, a.sign.join('。') + '。'],
+    [`${t.f}の脈ありサインは？`, '好きな人には、' + a.sign.map(x => `「${x}」`).join('') + 'といったしぐさを見せます。'],
     [`${t.f}の恋の弱点は？`, `「${j[0]}」です。${j[1]}。克服のコツは、${j[2]}`],
     [`${t.f}は、どの愛着スタイルになりやすい？`, atTxt],
-    [`${t.f}（${c}）の4文字の意味は？`, AXES.map((x, i) => `${c[i]}＝${x.title}が「${c[i] === x.a ? x.an : x.bn}」`).join('、') + '。この診断独自の4つのものさしで、MBTIなどとは別のものです。',
-      AXES.map((x, i) => nw(`${c[i]}＝${x.title}が`) + nw(`「${c[i] === x.a ? x.an : x.bn}」`)).join('、<wbr>') + '。<wbr>' + ['この診断独自の', '4つのものさしで、', 'MBTIなどとは', '別のものです。'].map(nw).join('<wbr>')],
+    [`${t.f}（${c}）の4文字の意味は？`, AXES.map((x, i) => `${c[i]}＝${x.title}が「${c[i] === x.a ? x.an : x.bn}」（${EN[c[i]]}）`).join('、') + '。この診断独自の4つのものさしで、MBTIなどとは別のものです。',
+      AXES.map((x, i) => nw(`${c[i]}＝${x.title}が`) + nw(`「${c[i] === x.a ? x.an : x.bn}」（${EN[c[i]]}）`)).join('、<wbr>') + '。<wbr>' + ['この診断独自の', '4つのものさしで、', 'MBTIなどとは', '別のものです。'].map(nw).join('<wbr>')],
   ];
   const body = `${crumb([['恋愛キャラ診断', 'chara/'], [t.f, '']])}
 <section class="hero2" style="--gp:${GPALE[c[2] + c[3]]};--gc:${g.hex}">
@@ -329,10 +333,10 @@ ORDER.forEach(c => {
 <section class="box"><h2>どんな恋をする人？</h2><p>${esc(t.sum)}</p></section>
 <section class="box"><h2>4文字「${c}」の意味</h2><div class="l4s">${ax4}</div><p class="note">4つのものさしは、この診断独自のものです（MBTIなどとは別のものです）。</p></section>
 <section class="box"><h2>好きになり方</h2><p>${esc(t.fall)}</p></section>
-<section class="box"><h2>好きな人の前でやりがちなこと</h2>${ul(a.aru)}</section>
-<section class="box"><h2>このタイプの脈ありサイン</h2>${ul(a.sign)}</section>
-<section class="box"><h2>けんかしたとき</h2>${ul(a.fight)}</section>
-<section class="box jk"><h2>このタイプの恋の弱点</h2><div class="t">${esc(j[0])}</div><p>${esc(j[1])}。</p><div class="tip">克服のコツ：${esc(j[2])}</div></section>
+<section class="box"><h2>${['このタイプが、', '好きな人の前で', 'ついやってしまうこと'].map(nw).join('<wbr>')}</h2>${ul(a.aru)}</section>
+<section class="box"><h2>脈ありサイン</h2><p class="lead2">このタイプの人が、好きな人に見せるしぐさです。あなたにこんなことをしていたら、あなたのことが好きなのかもしれません。</p>${ul(a.sign)}</section>
+<section class="box"><h2>${['このタイプが、', '恋人と', 'けんかしたときに', 'すること'].map(nw).join('<wbr>')}</h2>${ul(a.fight)}</section>
+<section class="box jk"><h2>${['このタイプの', '恋の弱点'].map(nw).join('<wbr>')}</h2><p class="lead2">恋愛で、つまずきやすいところです。</p><div class="t">${esc(j[0])}</div><p>${esc(j[1])}。</p><div class="tip">克服のコツ：${esc(j[2])}</div></section>
 <section class="box"><h2>恋愛での強み</h2>${ul(t.st)}<h2 style="margin-top:14px">気をつけたいところ</h2>${ul(t.ca)}</section>
 <section class="box"><h2>相性がいいタイプ</h2><div class="rank">${best.map(b => `<a href="/type/${lc(b.o)}/"><img src="/img/${b.o}.webp" alt="" width="72" height="72" loading="lazy"><b>${fname(b.o)}</b><small>${esc(T[b.o].c)}</small><i>${b.s}点</i></a>`).join('')}</div><p class="note" style="margin-top:8px">相性の点数は、4つのものさしの組み合わせから出した、この診断独自のめやすです。</p></section>
 <section class="box"><h2>なりやすい愛着スタイル</h2><p>${esc(atTxt)}</p><div class="types">${atK.map(tyCell).join('')}</div></section>
@@ -387,7 +391,7 @@ ${START('自分の型を見る（無料）')}
 <details class="fold"><summary><span>4つの型のくわしい説明</span></summary><div class="in">${['secure', 'preoc', 'dismiss', 'fear'].map(k => `<h3>${esc(KT[k].k)}（${esc(kn(k))}）</h3><p>${esc(KUSE[k].lead)}</p><p class="note">ひとこと：${esc(KUSE[k].tip)}</p>`).join('')}</div></details>
 <details class="fold"><summary><span>この診断の考え方</span></summary><div class="in"><p>愛着の研究で使われている考え方を参考に、恋愛の場面の質問をこちらで作りました。研究の質問の文は使っていません。医療や心理の専門的な検査ではありません。</p><p>参考にした研究は「<a href="/?about=1">この診断の考え方</a>」にまとめています。</p></div></details>
 <section class="box refs"><h2>この診断のもとにした研究</h2><p class="note">愛着の研究の考え方を参考に、恋愛の場面の質問をこちらで作りました（研究の質問の文は使っていません）。</p>${AI_REFS.map(r => `<div class="ref"><b>${r.t.length > 1 ? r.t.map(nw).join('') : esc(r.t[0])}</b><small>${esc(r.j)}</small><a href="${r.u}" target="_blank" rel="noopener">論文を見る ›</a></div>`).join('')}</section>
-<section class="help"><h2>これは病気の診断ではありません</h2><p>「愛着障害」は、お医者さんが見立てるもので、この診断ではわかりません。この診断は、恋愛での気持ちのくせを知るためのものです。</p><p>つらい気持ちが続くときは、ひとりで抱えずに相談してください。</p><p>こころの健康相談統一ダイヤル<br><span class="tel">0570-064-556</span></p></section>
+<section class="help"><h2>これは病気の診断ではありません</h2><p>「愛着障害」は、お医者さんが見立てるもので、この診断ではわかりません。この診断は、恋愛での気持ちのくせを知るためのものです。</p><p>つらい気持ちが続くときは、ひとりで抱えずに相談してください。</p><p class="telp">相談先：こころの健康相談統一ダイヤル（<a class="tel" href="tel:0570064556">0570-064-556</a>）</p></section>
 <section class="box faq"><h2>よくある質問</h2>${AI_FAQ.map((x, i) => `<details${i ? '' : ' open'}><summary><span>${esc(x[0])}</span></summary><p>${esc(x[1])}</p></details>`).join('')}</section>
 ${LINKS('aichaku/')}`,
 }));
@@ -455,7 +459,7 @@ write('izon/index.html', page({
 <section class="box"><h2>「恋愛依存」と、心のゆれやすさ</h2><p>「恋愛依存」は病名ではなく、恋人のことで頭がいっぱいになり、自分の毎日がまわらなくなる状態をさす言葉です。愛着スタイルでいうと、不安型（心がゆれやすく、相手の気持ちを確かめたくなる）の人に起きやすいと言われています。</p><p>この診断では「心のゆれやすさ」を、おだやか・ふつう・ゆれやすいの3つで見られます。</p></section>
 <section class="box"><h2>心がゆれたときのコツ</h2>${ul(['「起きたこと」と「頭の中の想像」を分けて考える', '不安なときは、決めつけずに「どう思ってる？」と聞く', '恋人以外の、自分の好きなことに時間を使う'])}</section>
 ${CTA('自分の心のゆれやすさを見てみる', '無料で診断する')}
-<section class="help"><h2>つらい気持ちが続くときは</h2><p>眠れない・食べられない・自分を責めてしまう気持ちが続くときは、ひとりで抱えずに相談してください。</p><p>こころの健康相談統一ダイヤル<br><span class="tel">0570-064-556</span></p><p class="note">この診断は、医療や心理の専門的な検査ではありません。</p></section>
+<section class="help"><h2>つらい気持ちが続くときは</h2><p>眠れない・食べられない・自分を責めてしまう気持ちが続くときは、ひとりで抱えずに相談してください。</p><p class="telp">相談先：こころの健康相談統一ダイヤル（<a class="tel" href="tel:0570064556">0570-064-556</a>）</p><p class="note">この診断は、医療や心理の専門的な検査ではありません。</p></section>
 ${LINKS('izon/')}`,
 }));
 
