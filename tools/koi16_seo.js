@@ -40,9 +40,9 @@ function grabFn(name) {
 }
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(['AXES', 'T', 'ORDER', 'GROUP', 'GPALE', 'KUSE', 'PAIR', 'ARU_T', 'JAKU', 'CSPLIT', 'POLE'].map(grab).join('') +
-  grabFn('pairPart') + grabFn('compat') + 'this.D={AXES,T,ORDER,GROUP,GPALE,KUSE,ARU_T,JAKU,CSPLIT,POLE,compat};', ctx);
-const { AXES, T, ORDER, GROUP, GPALE, KUSE, ARU_T, JAKU, CSPLIT, POLE, compat } = ctx.D;
+vm.runInContext(['AXES', 'T', 'ORDER', 'GROUP', 'GPALE', 'KUSE', 'PAIR', 'ARU_T', 'JAKU', 'CSPLIT', 'POLE', 'MN_ASK'].map(grab).join('') +
+  grabFn('pairPart') + grabFn('compat') + 'this.D={AXES,T,ORDER,GROUP,GPALE,KUSE,ARU_T,JAKU,CSPLIT,POLE,MN_ASK,compat};', ctx);
+const { AXES, T, ORDER, GROUP, GPALE, KUSE, ARU_T, JAKU, CSPLIT, POLE, MN_ASK, compat } = ctx.D;
 
 // 図鑑と同じ番号（色の仲間 TP→TC→SP→SC の順）
 const NO = {}; let n = 0;
@@ -308,7 +308,7 @@ const KT = {
   fear: { k: '恐れ型（不安＋回避）', h: '好きなのに一歩引いちゃう派' },
 };
 const tyCell = k => `<div class="ty t-${k}"><img src="/img/ico/k-${k}.webp" alt="" width="44" height="44" loading="lazy"><span class="k">${esc(KT[k].k)}</span><b>${esc(KT[k].h)}</b><span>${esc(KUSE[k].one)}</span></div>`;
-const LINKS = (skip) => '<section class="box"><h2>ほかの恋愛診断</h2><div class="links">' + [['aichaku/', '愛着スタイル診断'], ['chara/', '恋愛キャラ診断'], ['mbti/', 'MBTIと恋愛16タイプ'], ['aishohyo/', '16タイプ相性表'], ['kataomoi/', '片思い診断'], ['aisho/', '自分に合う人のタイプ診断'], ['izon/', '恋愛依存体質チェック']].filter(x => x[0] !== skip).map(x => `<a href="/${x[0]}"><span>${esc(x[1])}</span></a>`).join('') + '</div></section>';
+const LINKS = (skip) => '<section class="box"><h2>ほかの恋愛診断</h2><div class="links">' + [['aichaku/', '愛着スタイル診断'], ['chara/', '恋愛キャラ診断'], ['mbti/', 'MBTIと恋愛16タイプ'], ['aishohyo/', '16タイプ相性表'], ['kataomoi/', '片思い診断'], ['aisho/', '自分に合う人のタイプ診断'], ['izon/', '恋愛依存体質チェック'], ['myaku/', '脈あり診断'], ['sukinahito/', '好きな人のタイプ診断']].filter(x => x[0] !== skip).map(x => `<a href="/${x[0]}"><span>${esc(x[1])}</span></a>`).join('') + '</div></section>';
 
 const out = [];
 function write(rel, html) { const f = path.join(K, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, html); out.push(rel.replace(/index\.html$/, '')); }
@@ -447,8 +447,8 @@ const ex = 'RATP', exBest = ORDER.filter(x => x !== ex).map(x => ({ o: x, s: com
 CUR = 'aisho';
 write('aisho/index.html', page({
   url: 'aisho/',
-  title: '自分に合う人のタイプ診断｜相性のいいタイプと2人の愛着スタイル（無料）｜恋のかたち診断',
-  desc: 'あなたに合うのはどんな人？16タイプすべてとの相性を100点満点で。好きな人も診断すると、2人の愛着スタイル（安定型・不安型・回避型・恐れ型）の組み合わせもわかる無料の相性診断。',
+  title: '自分に合う人のタイプ診断｜恋愛・カップルの相性と2人の愛着スタイル（無料）｜恋のかたち診断',
+  desc: '恋愛・カップルの相性診断。あなたに合うのはどんな人？16タイプすべてとの相性を100点満点で。好きな人も診断すると、2人の愛着スタイル（安定型・不安型・回避型・恐れ型）の組み合わせもわかる無料の相性診断。',
   ld: crumbLd([['恋のかたち診断', ''], ['自分に合う人のタイプ診断', 'aisho/']]),
   body: `${crumb([['自分に合う人のタイプ診断', '']])}
 <section class="hero"><span class="kick">相性診断</span><h1>自分に合う人のタイプ診断<span class="sub">相性のいいタイプと、2人の心のくせ</span></h1>${START('無料で診断する')}<span class="meta">無料・登録なし</span></section>
@@ -513,7 +513,7 @@ const SAME = ORDER.map(a => compat(a, a).score);
 CUR = 'aisho';
 write('aishohyo/index.html', page({
   url: 'aishohyo/',
-  title: '16タイプ相性表｜恋愛の16タイプ、いちばん合うのはどのタイプ？（無料診断つき）｜恋のかたち診断',
+  title: '16タイプ相性表｜恋愛・カップルの相性診断、いちばん合うのはどのタイプ？（無料）｜恋のかたち診断',
   desc: '恋愛の16タイプどうしの相性を100点満点で。タイプごとの相性のいいタイプ3つと、相性の高い組み合わせランキング。相性の決め方つき。自分のタイプは無料の診断でわかります。',
   ld: crumbLd([['恋のかたち診断', ''], ['16タイプ相性表', 'aishohyo/']]),
   body: `${crumb([['16タイプ相性表', '']])}
@@ -524,6 +524,46 @@ write('aishohyo/index.html', page({
 ${CTA('自分のタイプを知って、相手にも送る', '無料で診断する', '相手が診断すると、2人の相性と心のくせの組み合わせがわかります')}
 <section class="box"><h2>MBTIで恋愛はわかる？</h2><p>性格の16タイプと、恋愛の16タイプのちがいは、<a href="/mbti/">MBTIと恋愛の16タイプ</a>のページにまとめています。</p></section>
 ${LINKS('aishohyo/')}`,
+}));
+
+// ===== 脈あり診断・好きな人のタイプ診断（4つのチェックの入口。鑑定者本人 2026-11-25 スマホの Google の候補「脈あり診断」「脈ありサイン 女性／男性」「好きな人のタイプ診断」から→「お願いします」） =====
+const MSTART = (k, t) => `<a class="btn" href="/?mini=${k}">${t.split(/(?=（)/).map(nw).join('')}</a>`;
+const MCTA = (k, lead, btn, note) => `<section class="cta"><p>${esc(lead)}</p>${MSTART(k, btn)}<small>${esc(note || '登録なし・無料・答えはこの端末の中だけ')}</small></section>`;
+const signT = ['LVTP', 'RATP', 'RASC'];
+CUR = 'myaku';
+write('myaku/index.html', page({
+  url: 'myaku/',
+  title: '脈あり診断｜好きな人の脈ありサインをチェック（無料）｜恋のかたち診断',
+  desc: '好きな人は、あなたのことをどう思っている？最近のあの人のようすから、「目立つサイン」と「静かなサイン」で脈ありをチェック。男性にも女性にも使える無料の脈あり診断。連絡がこまめでない人の気持ちも読めます。',
+  ld: crumbLd([['恋のかたち診断', ''], ['脈あり診断', 'myaku/']]),
+  body: `${crumb([['脈あり診断', '']])}
+<section class="hero"><span class="kick">好きな人がいる人へ</span><h1>脈あり診断<span class="sub">好きな人の脈ありサインをチェック</span></h1>${MSTART('myaku', '脈ありチェックをはじめる（無料）')}<span class="meta">最近のあの人のようすを思い出して答えるだけ</span></section>
+<section class="box"><h2>脈ありとは？</h2><p>「脈あり」は、好きな人も、あなたに好意を持っていそうなことです。気持ちは本人にしかわかりませんが、好きな人には、ふだんのようすに小さなサインが出やすくなります。</p></section>
+<section class="box"><h2>2つの脈ありサイン</h2><p class="note">この診断では、サインを2つに分けて見ます。</p><h3>目立つサイン（あの人から近づいてくる）</h3>${ul(['用事がなくても、あの人から連絡が来る', '会話が続くように、質問を返してくる', '2人で話す時間や、会う時間を作ろうとする'])}<h3>静かなサイン（動かなくても出る）</h3>${ul(['返事は短くても、必ず返ってくる', '前に話したことを覚えている', '2人のときだけ、よく笑う'])}<p class="note">脈ありを見るときの中心は、目立つサインです。静かなサインは、仲がいいだけでも出るので、目立つサインの補いとして見ます。</p></section>
+<section class="box"><h2>男性と女性で、脈ありサインはちがう？</h2><p>この診断は、男性にも女性にも同じように使えます。サインの出方を大きく分けるのは、性別よりも、その人の恋のタイプです。自分から動くタイプは連絡や誘いに出やすく、待つタイプは「そばにいる」「覚えている」のような静かなサインに出やすくなります。</p>${signT.map(c => `<div class="ex"><img src="/img/${c}.webp" alt="" width="56" height="56" loading="lazy"><div><b>${esc(T[c].f)}</b><span>${esc(ARU_T[c].sign[0])}</span></div></div>`).join('')}<p class="note">あの人がどのタイプかは、<a href="/sukinahito/">好きな人のタイプ診断</a>で予想できます。</p></section>
+<section class="box"><h2>連絡がこまめでなくても</h2><p>好きな人には、連絡したくなるのがふつうです。だから、連絡がこまめな人は好きでいてくれる可能性が高いと言えます。ただ、好きでも、うるさいと思われたくない・何を話せばいいかわからない・断られるのがこわい、という理由で連絡できない人も、思っているより多くいます。</p></section>
+<section class="box"><h2>あなたの「好き」は、伝わってる？</h2><p>脈ありサインは、あの人から見たあなたにも、そのまま当てはまります。診断の結果には、好きな気持ちを伝える「小さな一歩」も出ます。</p><p><a href="/?mini=suki">どれくらい好き？診断</a>もすると、2つを合わせた「2人のいま」と、気持ちを伝えるタイミングがわかります。</p></section>
+${MCTA('myaku', 'あの人の脈ありサインを、チェックしてみる', '脈ありチェックをはじめる')}
+${LINKS('myaku/')}`,
+}));
+
+CUR = 'sukinahito';
+const askK = ['LR', 'VA', 'TS', 'PC'];
+const axName = { LR: '近づき方', VA: '気持ちの伝え方', TS: '頼り方', PC: '恋の原動力' };
+write('sukinahito/index.html', page({
+  url: 'sukinahito/',
+  title: '好きな人のタイプ診断｜あの人の恋愛タイプを当てる（無料）｜恋のかたち診断',
+  desc: '好きな人は、どんな恋をするタイプ？あの人を思い浮かべて答えると、16の恋愛タイプから予想します。タイプ別の脈ありサイン、あの人に聞いてみる質問の例つき。本人が診断すると答え合わせもできる無料診断。',
+  ld: crumbLd([['恋のかたち診断', ''], ['好きな人のタイプ診断', 'sukinahito/']]),
+  body: `${crumb([['好きな人のタイプ診断', '']])}
+<section class="hero"><span class="kick">あの人を想像してみる</span><h1>好きな人のタイプ診断<span class="sub">あの人の恋愛タイプを当ててみる</span></h1>${MSTART('type', 'タイプ当て診断をはじめる（無料）')}<span class="meta">あの人ならこうしそう、と答えるだけ</span></section>
+<section class="box"><h2>好きな人のタイプとは？</h2><p>ここでいうタイプは、見た目の好みではなく、その人がどんな恋をするかです。4つのものさしの組み合わせで、16のタイプに分けています。</p>${ul(['近づき方：自分から動く／相手を待つ', '気持ちの伝え方：言葉で伝える／行動で示す', '頼り方：人に頼れる／自分で立つ', '恋の原動力：ときめき重視／安心重視'])}<p class="note">好きな人のことほど、聞かれると「どっちだろう」と迷うものです。わからないところは「わからない」と答えて大丈夫です。</p></section>
+<section class="box"><h2>16タイプの一覧</h2>${allGrid()}</section>
+<section class="box"><h2>タイプ別の脈ありサイン（例）</h2>${['LVTP', 'LASC', 'RVTC', 'RASP'].map(c => `<div class="ex"><img src="/img/${c}.webp" alt="" width="56" height="56" loading="lazy"><div><b>${esc(T[c].f)}</b><span>${esc(ARU_T[c].sign[0])}</span></div></div>`).join('')}<p class="note">診断の結果には、予想したタイプの脈ありサイン・よろこびそうなこと・言わないほうがよさそうな言葉が出ます。</p></section>
+<section class="box"><h2>あの人に聞いてみる質問の例</h2>${askK.map(k => `<div class="ex"><div><b>${esc(axName[k])}がわからないとき</b><span>${esc(MN_ASK[k][0])}</span></div></div>`).join('')}<p class="note">何気ない質問の答えから、あの人のタイプが見えてきます。</p></section>
+<section class="box"><h2>本人と答え合わせ</h2><p>あなたが思うあの人と、本当のあの人。ちがうところがいちばん面白いところです。結果から、あの人に診断を送ると、本当のタイプと、2人の相性がわかります。</p><p>あの人の気持ちが気になるときは、<a href="/myaku/">脈あり診断</a>もどうぞ。</p></section>
+${MCTA('type', 'あの人のタイプを、当ててみる', 'タイプ当て診断をはじめる')}
+${LINKS('sukinahito/')}`,
 }));
 
 // 前の16タイプの一覧（/type/）は恋愛キャラ診断（/chara/）にまとめた（firebase.json で /type/ → /chara/）
