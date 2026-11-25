@@ -110,24 +110,32 @@ function scan() {
       await p.goto(URL + '?t=RASC'); await check('結果（参加したグループ）');
       await p.goto(URL + '?mine=1&tab=g'); await check('わたしの結果（参加したグループ）'); await p.click('[data-gid=g3]'); await check('参加したグループから開く');
       // 50%近くのものさし（両方もってる）が4つとも出る結果
-      await p.evaluate(() => { const o = JSON.parse(localStorage.getItem('koi16_v1') || '{}'); o.me = { code: 'RATC', pct: { LR: 45, VA: 44, TS: 55, PC: 43 }, anx: 50, fu: 50, fg: 50, mode: 'full', at: 1 }; localStorage.setItem('koi16_v1', JSON.stringify(o)); });
+      await p.evaluate(() => { const o = JSON.parse(localStorage.getItem('koi16_v1') || '{}'); o.me = { code: 'RATC', pct: { LR: 45, VA: 44, TS: 55, PC: 43 }, anx: 50, fu: 50, fg: 50, cg: 50, dm: 50, mode: 'full', at: 1 }; localStorage.setItem('koi16_v1', JSON.stringify(o)); });
       await p.goto(URL + '?t=RATC'); await check('結果（両方もってる）');
       // 2人のこれから・けんかのしかた（両はし）
       for (const [fu, fg] of [[90, 10], [10, 90]]) {
-        await p.evaluate(([a, b]) => { const o = JSON.parse(localStorage.getItem('koi16_v1') || '{}'); o.prev = { code: 'RASC', at: 0 }; o.me = { code: 'LVTP', pct: { LR: 80, VA: 80, TS: 80, PC: 80 }, anx: 30, fu: a, fg: b, mode: 'full', at: 1 }; localStorage.setItem('koi16_v1', JSON.stringify(o)); }, [fu, fg]);
+        await p.evaluate(([a, b]) => { const o = JSON.parse(localStorage.getItem('koi16_v1') || '{}'); o.prev = { code: 'RASC', at: 0 }; o.me = { code: 'LVTP', pct: { LR: 80, VA: 80, TS: 80, PC: 80 }, anx: 30, fu: a, fg: b, cg: a, dm: b, mode: 'full', at: 1 }; localStorage.setItem('koi16_v1', JSON.stringify(o)); }, [fu, fg]);
         await p.goto(URL + '?t=LVTP'); await check('結果（これから' + fu + '・けんか' + fg + '）');
       }
       await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true)); await p.waitForTimeout(400); await check('結果（たたんだ欄を開いた）');
     }
-    // 質問は遊ぶたびに言いかえの文に入れかわる（1問5通り・本格版48問）。5回遊んで240の文をすべて確かめる
+    // 4つのチェック（2026-11-25。かんたん版のかわり）：全部の問題と結果の画面（答え方を3通り）
+    for (const k of ['type', 'myaku', 'suki', 'jaku']) {
+      for (const j of [0, 1, 3]) {
+        await p.goto(URL + '?mini=' + k); let n = 0;
+        while (await p.$('#v-mini [data-mj]')) { if (j === 0) await check('チェック ' + k + ' ' + (n + 1) + '問目'); const bs = await p.$$('#v-mini [data-mj]'); await bs[Math.min(j, bs.length - 1)].click(); n++; }
+        await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true)); await check('チェックの結果 ' + k + ' 答え' + j);
+      }
+    }
+    // 質問は遊ぶたびに言いかえの文に入れかわる（1問5通り・本格版56問）。5回遊んで280の文をすべて確かめる
     const seenQ = new Set();
     const rounds = [];
     for (let r = 0; r < 7; r++) {
       await p.goto(URL); await p.click('#start'); if (r === 0) await check('恋の状況'); await p.click('[data-status=crush]');
       const cur = []; rounds.push(cur);
-      for (let i = 0; i < 48; i++) { const qt = await p.$eval('#qtext', e => e.textContent); cur.push(qt); if (r < 5) seenQ.add(qt); if (r >= 5) { const bs0 = await p.$$('#scale button'); await bs0[i % 5].click(); await p.waitForTimeout(330); continue; } await check('質問' + (i + 1) + '（' + (r + 1) + '回目）'); const bs = await p.$$('#scale button'); await bs[i % 5].click(); await p.waitForTimeout(320); }
+      for (let i = 0; i < 56; i++) { const qt = await p.$eval('#qtext', e => e.textContent); cur.push(qt); if (r < 5) seenQ.add(qt); if (r >= 5) { const bs0 = await p.$$('#scale button'); await bs0[i % 5].click(); await p.waitForTimeout(330); continue; } await check('質問' + (i + 1) + '（' + (r + 1) + '回目）'); const bs = await p.$$('#scale button'); await bs[i % 5].click(); await p.waitForTimeout(320); }
     }
-    if (seenQ.size !== 240) problems.push(w + 'px 質問の文が5回で240通りになっていない（' + seenQ.size + '）');
+    if (seenQ.size !== 280) problems.push(w + 'px 質問の文が5回で280通りになっていない（' + seenQ.size + '）');
     // 6回目・7回目（くじ引き）：どの問いも前回とちがう文になる
     for (const r of [5, 6]) { const same = rounds[r].filter((t, i) => t === rounds[r - 1][i]).length; if (same) problems.push(w + 'px ' + (r + 1) + '回目に前回と同じ文が' + same + '問'); }
     for (const [i, c] of CODES.entries()) {
