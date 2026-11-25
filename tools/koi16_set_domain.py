@@ -12,11 +12,11 @@ s = open(p, encoding='utf-8').read()
 block = ('<!--SITE-URL:start-->\n'
          f'<link rel="canonical" href="{base}">\n'
          f'<meta property="og:url" content="{base}">\n'
-         f'<meta name="twitter:image" content="{base}og-image.png?v=3">\n'
+         f'<meta name="twitter:image" content="{base}og-image.png?v=4">\n'
          '<!--SITE-URL:end-->')
 s, n = re.subn(r'<!--SITE-URL:start-->.*?<!--SITE-URL:end-->', block, s, flags=re.S)
 assert n == 1, 'SITE-URL の印が見つかりません'
-s, m = re.subn(r'<meta property="og:image" content="[^"]*">', f'<meta property="og:image" content="{base}og-image.png?v=3">', s)
+s, m = re.subn(r'<meta property="og:image" content="[^"]*">', f'<meta property="og:image" content="{base}og-image.png?v=4">', s)
 assert m == 1, 'og:image が見つかりません'
 open(p, 'w', encoding='utf-8').write(s)
 print('入れました：', base)
