@@ -84,5 +84,15 @@ def build():
     open(OUT+'app.js','w',encoding='utf-8').write(js)
     os.makedirs(OUT+'en',exist_ok=True)
     for f in os.listdir(R+'frozen/en'): shutil.copy(R+'frozen/en/'+f,OUT+'en/'+f)
+    # 検索用：robots.txt と sitemap.xml（トップの3つの言語だけ。プライバシーポリシーは noindex なので入れない）
+    open(OUT+'robots.txt','w',encoding='utf-8').write(
+        'User-agent: *\nAllow: /\n'
+        'Disallow: /img/%E8%B2%BC%E3%82%8A%E6%96%B9.html\n'   # バナーの貼り方の説明（ほかのサイト用）
+        '\nSitemap: '+URL['ja']+'sitemap.xml\n')
+    alts=''.join('    <xhtml:link rel="alternate" hreflang="%s" href="%s"/>\n'%(l,URL[l]) for l in URL)+'    <xhtml:link rel="alternate" hreflang="x-default" href="%s"/>\n'%URL['ja']
+    sm='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n'
+    for l in ['ja','en','ko']:
+        sm+='  <url>\n    <loc>%s</loc>\n%s  </url>\n'%(URL[l],alts)
+    open(OUT+'sitemap.xml','w',encoding='utf-8').write(sm+'</urlset>\n')
     print('built',OUT)
 if __name__=='__main__': build()
