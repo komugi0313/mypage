@@ -119,6 +119,14 @@ function scan() {
       }
       await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true)); await p.waitForTimeout(400); await check('結果（たたんだ欄を開いた）');
     }
+    // 4つのチェック（2026-11-25。かんたん版のかわり）：全部の問題と結果の画面（答え方を3通り）
+    for (const k of ['type', 'myaku', 'suki', 'jaku']) {
+      for (const j of [0, 1, 3]) {
+        await p.goto(URL + '?mini=' + k); let n = 0;
+        while (await p.$('#v-mini [data-mj]')) { if (j === 0) await check('チェック ' + k + ' ' + (n + 1) + '問目'); const bs = await p.$$('#v-mini [data-mj]'); await bs[Math.min(j, bs.length - 1)].click(); n++; }
+        await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true)); await check('チェックの結果 ' + k + ' 答え' + j);
+      }
+    }
     // 質問は遊ぶたびに言いかえの文に入れかわる（1問5通り・本格版56問）。5回遊んで280の文をすべて確かめる
     const seenQ = new Set();
     const rounds = [];
