@@ -1530,6 +1530,7 @@ details.mini-fold[open]>summary,details.deco-fold[open]>summary{margin-bottom:10
       <p class="ac-sub">届いたメールのボタンを押すと、<br>登録が終わります</p>
       <button class="mp-btn ac-demo-only" type="button" id="sent-demo" hidden>（見本）メールのボタンを押したことにする</button>
       <button class="sub" type="button" id="sent-again">メールが届かないので、もう一度送る</button>
+      <button class="sub" type="button" id="sent-fix">メールアドレスをまちがえた（入れ直す）</button>
       <p class="ac-box ok" id="sent-msg" hidden></p>
       <p class="note">迷惑メールのフォルダも見てみてね。<br>メールのボタンを押したあとは、ここからログインできます。</p>
       <button class="ac-link" type="button" data-acv="login">ログインする</button>
@@ -5099,6 +5100,8 @@ $("av-signup").addEventListener("submit",function(e){e.preventDefault();
     function(er){accBusy("su-go",false);var c=er&&er.code;if(c==="invalid-email")accErr("su-mail-e",accMsg(er));else if(c==="weak-password")accErr("su-pw-e",accMsg(er));else{$("su-e").textContent=accMsg(er);$("su-e").hidden=false}})});
 $("sent-again").addEventListener("click",function(){var b=this;accBusy("sent-again",true);ACC.api.resendVerification().then(function(){accBusy("sent-again",false);$("sent-msg").textContent="もう一度送りました";$("sent-msg").hidden=false;b.disabled=true;setTimeout(function(){b.disabled=false},60000)},function(er){accBusy("sent-again",false);toast(accMsg(er))})});
 $("sent-demo").addEventListener("click",function(){accVerify($("sent-mail").textContent)});
+// メールアドレスをまちがえたとき：いったんログアウトして、登録の画面にもどる（まちがえたアドレスを入れたまま・選んだ状態に）
+$("sent-fix").addEventListener("click",function(){var m=$("sent-mail").textContent;ACC.api.signOut().catch(function(){}).then(function(){ACC.user=null;accSyncOn=false;accRender();accView("signup");$("su-mail").value=m==="-"?"":m;accErr("su-mail-e","正しいメールアドレスに直して、もう一度「登録する」を押してね");try{$("su-mail").focus();$("su-mail").select()}catch(e){}})});
 function accVerify(code){accView("verify");$("vf-h").textContent="確かめています…";$("vf-ok").hidden=true;$("vf-e").hidden=true;$("vf-go").hidden=true;$("vf-login").hidden=true;
   ACC.api.verifyEmail(code).then(function(){$("vf-h").textContent="登録が終わりました";$("vf-ok").hidden=false;
     return ACC.api.currentUser().then(function(u){ACC.user=u;accRender();if(u){$("vf-go").hidden=false}else $("vf-login").hidden=false})},
