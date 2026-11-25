@@ -323,7 +323,7 @@ ORDER.forEach(c => {
   const EN = { L: 'Lead', R: 'Receive', V: 'Verbal', A: 'Action', T: 'Trust', S: 'Self', P: 'Passion', C: 'Comfort' };
   const ax4 = AXES.map((x, i) => { const p = c[i], on = p === x.a ? x.an : x.bn; return `<div class="l4" style="--gc:${g.hex}"><span class="l4c">${p}</span><div class="l4t"><small>${nw(x.title)}<em>${p}＝${EN[p]}</em></small><b>${nw(on)}</b><span>たとえば：${esc(POLE[p].aru)}</span></div></div>`; }).join('');
   const atK = c[2] === 'T' ? ['secure', 'preoc'] : ['dismiss', 'fear'];
-  const atTxt = `頼り方が「${c[2] === 'T' ? '寄りかかれる' : '自分で立つ'}」なので、${KT[atK[0]].k.replace(/（.*/, '')}か${KT[atK[1]].k.replace(/（.*/, '')}になりやすいタイプです。どちらになるかは、タイプとは別の「心のゆれやすさ」で決まり、診断の結果でわかります。`;
+  const atTxt = `頼り方が「${c[2] === 'T' ? '寄りかかれる' : '自分で立つ'}」なので、${KT[atK[0]].k.replace(/（.*/, '')}か${KT[atK[1]].k.replace(/（.*/, '')}の、どちらか1つになります。どちらになるかは、タイプとは別の「心のゆれやすさ」で決まり、診断の結果でわかります。`;
   const bestNames = best.map(b => `${T[b.o].f}（${T[b.o].c}・${b.s}点）`).join('、');
   const FQ = [
     [`${t.f}と相性がいいタイプは？`, `${bestNames}です。相性の点数は、4つのものさしの組み合わせから出した、この診断独自のめやすです。`],
