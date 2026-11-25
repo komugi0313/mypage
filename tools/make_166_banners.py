@@ -18,6 +18,7 @@ PANDA = img('isync/img/sis/panda.webp')
 AI = img('nitaku/img/sis/ai.webp')
 YUU = img('nitaku/img/sis/yuu.webp')
 WAN = img('nitaku/img/sis/wansona.webp')
+TP16 = img('nitaku/img/sis/16tp.webp')  # 16TYPE+（鑑定者本人 2026-11-25「両方足してください」）
 
 FONT_TEXT = urllib.parse.quote('恋のかたち診断究極の二択I-Sync')
 FONTS = ('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One'
@@ -52,6 +53,13 @@ CSS = """<style>
 .sis166 .bn-wa .ln{color:#2F5560}
 .sis166 .bn-wa .dm{color:#3E6670}
 .sis166 .bn-wa .go{background:#2C6573;color:#fff}
+.sis166 .bn-16{background:#FBF8F2;border:1px solid #E2E6EC;box-shadow:0 4px 14px rgba(31,39,51,.10);color:#1F2733}
+.sis166 .bn-16 .pic img{border-radius:14px}
+.sis166 .bn-16 .nm{font-family:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;font-weight:600;font-size:20px;letter-spacing:.02em;color:#1F2733}
+.sis166 .bn-16 .nm b{color:#C2553F;font-weight:700}
+.sis166 .bn-16 .ln{color:#38414E}
+.sis166 .bn-16 .dm{color:#5E6A7A}
+.sis166 .bn-16 .go{background:#1F2733;color:#fff}
 .sis166 .bn:active{transform:translateY(1px)}
 @media (max-width:360px){.sis166 .bn{gap:8px;padding:10px}.sis166 .bn .nm{font-size:16px}.sis166 .bn-is .nm{font-size:18px}.sis166 .bn .go{padding:8px 10px;font-size:12px}.sis166 .bn .pic img{transform:scale(.88);transform-origin:bottom}}
 </style>"""
@@ -61,6 +69,7 @@ HTML = ('<section class="sis166"><p class="sis-h">あなたのこと、もっと
  '<a class="bn bn-nt" data-nocg href="https://honbare.com/?ref=166" target="_blank" rel="noopener" aria-label="究極の二択（別のサイト honbare.com が開きます）"><span class="pic" aria-hidden="true"><img src="' + PANDA + '" alt="" width="56" height="56" decoding="async"></span><span class="tx"><span class="nm">究極の二択</span><span class="ln"><span class="nw">恋もあるあるも、</span><span class="nw">本音がバレる2択</span></span><span class="dm"><span class="nw">honbare.com・</span><span class="nw">無料5分</span></span></span><span class="go">あそぶ ↗</span></a>'
  '<a class="bn bn-is" data-nocg href="https://i-sync.jp/?ref=166" target="_blank" rel="noopener" aria-label="アイシンク（別のサイト i-sync.jp が開きます）"><span class="pic" aria-hidden="true"><img src="' + AI + '" alt="" width="34" height="30" decoding="async"><img src="' + YUU + '" alt="" width="34" height="30" decoding="async"></span><span class="tx"><span class="nm">I-Sync<small>アイシンク</small></span><span class="ln"><span class="nw">2人の答えを重ねて、</span><span class="nw">シンクロ率がわかる</span></span><span class="dm"><span class="nw">i-sync.jp・</span><span class="nw">無料</span></span></span><span class="go">診断 ↗</span></a>'
  '<a class="bn bn-wa" data-nocg href="https://44wansona.com/?ref=166" target="_blank" rel="noopener" aria-label="ワンソナ（別のサイト 44wansona.com が開きます）"><span class="pic" aria-hidden="true"><img src="' + WAN + '" alt="" width="56" height="56" decoding="async"></span><span class="tx"><span class="nm">ワンソナ</span><span class="ln"><span class="nw">うちの子の性格を、</span><span class="nw">44犬種の</span><span class="nw">タイプで診断</span></span><span class="dm"><span class="nw">44wansona.com・</span><span class="nw">無料</span></span></span><span class="go">診断 ↗</span></a>'
+'<a class="bn bn-16" data-nocg href="https://16typeplus.jp/?ref=166" target="_blank" rel="noopener" aria-label="16TYPE+（別のサイト 16typeplus.jp が開きます）"><span class="pic" aria-hidden="true"><img src="' + TP16 + '" alt="" width="54" height="54" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">16TYPE<b>+</b></span><span class="ln"><span class="nw">生まれ持った気質と、</span><span class="nw">育ってきた性格がわかる</span></span><span class="dm"><span class="nw">16typeplus.jp・</span><span class="nw">無料</span></span></span><span class="go">診断 ↗</span></a>'
  '</section>')
 
 SNIPPET = ('<!-- 3つの無料サイトのバナー（恋のかたち診断・究極の二択・アイシンク）ここから。\n'
@@ -78,9 +87,9 @@ with open(os.path.join(OUT, '見本.html'), 'w', encoding='utf-8') as f:
 
 README = """# 1.66 奇跡の相性診断に貼る、3つの無料サイトのバナー
 
-- `3サイトのバナー_貼る部品.html` … （2026-11-20 にワンソナ〈44wansona.com〉も足して4枚） このかたまりを、1.66 のページの置きたい場所にそのまま貼ります（トップのいちばん下・結果の下など）。
+- `3サイトのバナー_貼る部品.html` … （2026-11-20 にワンソナ、2026-11-25 に 16TYPE+ も足して5枚） このかたまりを、1.66 のページの置きたい場所にそのまま貼ります（トップのいちばん下・結果の下など）。
   - 絵は中に入っているので、ほかのファイルをアップロードする必要はありません。
-  - 押すと別のタブで、恋のかたち診断（koikata.jp/aichaku/）・究極の二択（honbare.com）・アイシンク（i-sync.jp）・ワンソナ（44wansona.com）が開きます。
+  - 押すと別のタブで、恋のかたち診断（koikata.jp/aichaku/）・究極の二択（honbare.com）・アイシンク（i-sync.jp）・ワンソナ（44wansona.com）・16TYPE+（16typeplus.jp）が開きます。
   - アドレスの後ろに `?ref=166` が付いているので、1.66 から来た人だとわかります。
   - 見た目は、3つのサイトどうしの相互リンクと同じです。
 - `見本.html` … ブラウザで開くと、貼ったときの見え方を確かめられます。
