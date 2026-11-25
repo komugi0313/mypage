@@ -976,16 +976,40 @@ function waitShow(){const cards=[...document.querySelectorAll(".nicks .nk")].fil
 function waitHide(){["waitBox","waitFun"].forEach(id=>{const x=$(id);if(x)x.remove();});document.querySelectorAll(".nicks .nk.pz").forEach(x=>x.classList.remove("pz"));}
 function flipCard(n){if(n.classList.contains("open")||n.classList.contains("turn"))return;n.classList.add("turn");
  setTimeout(()=>{n.classList.add("open");n.classList.remove("turn");n.classList.add("turn2");setTimeout(()=>n.classList.remove("turn2"),300);
-  const left=[...document.querySelectorAll(".nicks .nk")].filter(x=>!x.hidden&&!x.classList.contains("open")).length;if(left)waitShow();if(!left){waitHide();if(window.__story)$("rStory").innerHTML=window.__story;document.querySelectorAll(".hero .shr,#carPeek").forEach(x=>x.classList.remove("wait2"));["chgBox","coreBox","funBox","cloudFig","wkNote","kt"].forEach(id=>{const cb=$(id);if(cb&&cb.classList.contains("wait2")){cb.classList.remove("wait2");cb.classList.add("reveal");}});}},240);}
+  const left=[...document.querySelectorAll(".nicks .nk")].filter(x=>!x.hidden&&!x.classList.contains("open")).length;if(left)waitShow();if(!left){waitHide();if(window.__story)$("rStory").innerHTML=window.__story;document.querySelectorAll(".hero .shr,#carPeek").forEach(x=>x.classList.remove("wait2"));["chgBox","coreBox","funBox","cloudFig","wkNote","kt"].forEach(id=>{const cb=$(id);if(cb&&cb.classList.contains("wait2")){cb.classList.remove("wait2");cb.classList.add("reveal");}});mmTeasers();}},240);}
 /* ---- 結果ページの「もっと知りたい人へ」：たたんだ中身をカードの一覧にまとめ、読んだ数を見せる ---- */
 const KREAD="16tp.read.v1";
+/* カードごとのマーク（線の絵）と、その人の結果のひとこと（中身は開いたあとと同じ。めくる前はタイプを出さない） */
+const MMI={brief:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>',
+ talk:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.3A8 8 0 1 1 21 12z"/>',
+ abc:'<rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+ book:'<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/>',
+ bars:'<path d="M5 20V10M10 20V4M15 20v-7M20 20v-4"/>',
+ drop:'<path d="M12 3s6 6.6 6 11a6 6 0 0 1-12 0c0-4.4 6-11 6-11z"/>',
+ rx:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+ clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+ people:'<circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.6"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c2.9-.2 6 1.6 6 5.5"/>'};
+function mmTeasers(){const g=$("mmGrid");if(!g)return;const tx=e=>e?e.textContent.replace(/\s+/g," ").trim():"",em=x=>'<em>'+esc(x)+'</em>';
+ const fb=$("funBox"),locked=!!(fb&&fb.classList.contains("wait2"))||[...document.querySelectorAll(".nicks .nk")].some(x=>!x.hidden&&!x.classList.contains("open"));
+ const lockMsg=TR("上のカードを2枚めくると出てきます");
+ const Z={
+  dCareer:()=>{const j=[...document.querySelectorAll("#dCareer .cchips span")].slice(0,2).map(tx).filter(Boolean);return j.length?TR("向いている職種：")+j.map(em).join(TR("・"))+TR(" ほか"):"";},
+  dFun:()=>{if(locked)return lockMsg;const sy=fb&&fb.querySelector(".say");return sy?esc(tx(sy)):"";},
+  dLetters:()=>{const n=tx($("gNum")),l=tx($("gLbl"));return n?TR("気質と性格の違いは ")+em(n+"%")+(l?TR("（")+esc(l)+TR("）"):""):"";},
+  dPersona:()=>{if(locked)return lockMsg;const a=tx(document.querySelector("#p16Now .tnm")),b=tx(document.querySelector("#p16Born .tnm"));return a&&b?TR("今は")+em(a)+TR("、生まれつきは")+em(b):"";},
+  dBal:()=>{const b=document.querySelector("#bal .bnote b");return b?esc(tx(b)):"";},
+  dHints:()=>{const p=document.querySelector("#gapX .gx>p:not(.gxh)");if(!p)return "";const t=tx(p),i=t.search(/[。．.]/);return esc(i>0?t.slice(0,i+1):t);},
+  dKarte:()=>TR("あなた専用の")+em(TR("処方せん"))+TR("。画像で保存できます"),
+  dRec:()=>{const n=document.querySelectorAll("#recBody .rc-list li").length,nx=tx(document.querySelector("#recBody .rc-next b"));return n?TR("記録は")+em(TR("{n}回").replace("{n}",n))+TR("。")+esc(nx):"";},
+  group:()=>TR("友だちの16タイプを入れると、")+em(TR("気が合う2人"))+TR("がわかります")};
+ [...g.children].forEach(d=>{const z=d.querySelector(":scope>summary .mmz");if(!z||!Z[d.id])return;let h="";try{h=Z[d.id]();}catch(e){}if(h)z.innerHTML=h;});}
 function moreMenu(list){let m=$("moreMenu");if(!m){m=document.createElement("section");m.id="moreMenu";m.className="card moremenu";m.innerHTML='<h2>'+TR("もっと知りたい人へ")+'</h2><p class="mmsub" id="mmSub"></p><div class="mmbar"><i id="mmBar"></i></div><p class="mmcount" id="mmCount"></p><div class="mmgrid" id="mmGrid"></div>';}
  const g=m.querySelector("#mmGrid");
- list.forEach(([d,t,sub,wide])=>{if(!d)return;d.classList.add("mmt");d.classList.toggle("wide",!!wide);let sm=d.querySelector(":scope>summary");if(!sm){sm=document.createElement("summary");d.prepend(sm);}
-  sm.innerHTML='<span class="mmh"><b>'+TR(t)+'</b><small>'+TR(sub)+'</small></span>';if(d.parentNode!==g)g.appendChild(d);
+ list.forEach(([d,t,sub,wide,ic,c])=>{if(!d)return;d.classList.add("mmt");d.classList.toggle("wide",!!wide);if(c)d.style.setProperty("--mc","var("+c+")");let sm=d.querySelector(":scope>summary");if(!sm){sm=document.createElement("summary");d.prepend(sm);}
+  sm.innerHTML='<span class="mmh">'+(ic?'<span class="mmi" aria-hidden="true"><svg viewBox="0 0 24 24">'+MMI[ic]+'</svg></span>':'')+'<b>'+TR(t)+'</b></span><span class="mmz">'+TR(sub)+'</span>';if(d.parentNode!==g)g.appendChild(d);
   if(!d.dataset.mm){d.dataset.mm="1";d.addEventListener("toggle",()=>{if(d.open){const r=sget(KREAD)||[];if(!r.includes(d.id)){r.push(d.id);sset(KREAD,r);}mmCount();}});}});
  return m;}
-function mmCount(){const g=$("mmGrid");if(!g)return;const r=sget(KREAD)||[],ts=[...g.children].filter(d=>!d.hidden),k=ts.filter(d=>r.includes(d.id)).length;
+function mmCount(){const g=$("mmGrid");if(!g)return;mmTeasers();const r=sget(KREAD)||[],ts=[...g.children].filter(d=>!d.hidden),k=ts.filter(d=>r.includes(d.id)).length;
  ts.forEach(d=>d.classList.toggle("read",r.includes(d.id)));
  $("mmSub").textContent=TR("気になるものから開いてみてください。全部で{n}つあります。").replace("{n}",ts.length);
  $("mmBar").style.width=(ts.length?k/ts.length*100:0)+"%";
@@ -1014,7 +1038,7 @@ function layoutResult(){const hero=document.querySelector(".hero");if(!hero)retu
  if(!$("recBody")){const rb=document.createElement("div");rb.id="recBody";body(dR).appendChild(rb);}
  if(!$("carBody")){const cb=document.createElement("div");cb.id="carBody";body(dC).appendChild(cb);}
  dB.hidden=!$("bal")||$("bal").hidden;
- const mm=moreMenu([[dC,"仕事・進路のヒント","就活・転職・進路に使える強みと職種",1],[window.__dF,"あなたが言いそうなこと・やりそうなこと","辛口のひと言も"],[window.__dL,"4つの文字を、くわしく見る","文字くらべ・生年月日から出た理由"],[dP,"タイプごとのくわしい説明","気質と性格、それぞれの説明"],[dB,"気質の力のバランス","5つの力の多い・少ない"],[dH,"悩みのヒント","悩みやすいことと、その見方"],[dK,"性格カルテ","気質と性格の処方せん"],[dR,"性格の記録","結果をためて、変わりやすい文字を見る"],[$("group"),"グループの相性","友だちや職場の人とくらべる"]]);
+ const mm=moreMenu([[dC,"仕事・進路のヒント","就活・転職・進路に使える強みと職種",1,"brief","--tf"],[window.__dF,"あなたが言いそうなこと・やりそうなこと","辛口のひと言も",0,"talk","--rose"],[window.__dL,"4つの文字を、くわしく見る","文字くらべ・生年月日から出た理由",0,"abc","--ei"],[dP,"タイプごとのくわしい説明","気質と性格、それぞれの説明",0,"book","--jp"],[dB,"気質の力のバランス","5つの力の多い・少ない",0,"bars","--sn"],[dH,"悩みのヒント","悩みやすいことと、その見方",0,"drop","--ei"],[dK,"性格カルテ","気質と性格の処方せん",0,"rx","--plus"],[dR,"性格の記録","結果をためて、変わりやすい文字を見る",0,"clock","--muted"],[$("group"),"グループの相性","友だちや職場の人とくらべる",0,"people","--tf"]]);
  let at=hero;[$("carPeek"),$("love"),mm].forEach(el=>{if(el){at.after(el);at=el;}});if($("partner")){at.after($("partner"));at=$("partner");}/* 開運予報・ワンソナは「姉妹サイト」として、結果のいちばん下（トップに戻るボタンの下）に置く */
  {const cta=document.querySelector(".cta");let sh=$("sisH");if(!sh){sh=document.createElement("p");sh.id="sisH";sh.className="sish";sh.textContent="姉妹サイト";}
   if(cta&&LANG==="ja"){cta.after(sh);let a2=kaiunCard(sh);const w=wanCard("wanRes","result");if(w){a2.after(w);a2=w;}const s3=sisCard("sisRes","result");if(s3){a2.after(s3);a2=s3;}sh.hidden=a2===sh;}else{sh.hidden=true;kaiunCard(at);wanCard("wanRes","result");sisCard("sisRes","result");}}dB.hidden=!$("bal")||$("bal").hidden;
