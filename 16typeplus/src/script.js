@@ -242,6 +242,9 @@ function qLeftMsg(left){try{const sc=scoreAll(),cnt=k=>ord.filter(i=>QZ.Q[i].ax=
  if(und.length>=3)return TR("答えがまだはっきりしない文字について、あと少し聞きます。多くてもあと{n}問です").replace("{n}",rem);
  return TR("「{a}」だけ、あと少し聞きます。多くてもあと{n}問です").replace("{a}",und.map(k=>AXQ[AXN[k]].name).join(TR("」と「"))).replace("{n}",rem);}
  catch(e){return TR("迷っている文字だけ、あと少し聞きます（最大{n}問）").replace("{n}",left);}}
+const QRM=(()=>{try{return matchMedia("(prefers-reduced-motion: reduce)").matches;}catch(e){return false;}})();
+/* 1問目の「？」：くわしい説明を開く・閉じる */
+document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("#qNoteQ");if(!b)return;const m=$("qNoteMore");if(!m)return;m.hidden=!m.hidden;b.setAttribute("aria-expanded",String(!m.hidden));});
 function drawQ(){/* 数は「最大」から見せて、減ることはあっても増えないようにする */
  const fin=adDone&&qi>=ord.length,total=fin?ord.length+tbList.length:MAXQ;const left=Math.max(0,total-qi-1);
  if(qi<BASE){const l2=BASE-qi-1;$("qCount").innerHTML=(qi+1)+" / "+BASE+'<span class="qleft">'+(l2?TR("あと{n}問").replace("{n}",l2):(fin&&!left)?TR("最後の質問です"):TR("30問目です"))+'</span>';$("qProg").style.width=(qi/BASE*100)+"%";}
@@ -254,9 +257,10 @@ function drawQ(){/* 数は「最大」から見せて、減ることはあって
  const o=$("qOpts");o.innerHTML="";
  if(qi<ord.length){const qn=ord[qi],q=QZ.Q[qn],A=AXQ[AXN[q.ax]];
   $("qAxis").textContent=A.name;$("qAxis").style.color="var("+A.c+")";{const stu=(()=>{const g=stageAge();return g!=null&&g<=22;})();$("qText").textContent=(stu&&q.q_s)?uniW(q.q_s):q.q;$("qEx").textContent=(stu&&q.ex_s)?uniW(q.ex_s):q.ex;}$("qExW").hidden=false;$("qExW").open=true;
-  SCALE.forEach(([t,v,sz])=>{const bt=document.createElement("button");bt.type="button";bt.style.setProperty("--qc","var("+A.c+")");
-   bt.innerHTML='<i style="width:'+sz+'px;height:'+sz+'px"></i>'+t;bt.setAttribute("aria-pressed",qa[qn]===v);
-   bt.onclick=()=>{if(window.__qLock)return;window.__qLock=1;qa[qn]=v;bt.setAttribute("aria-pressed","true");setTimeout(()=>{window.__qLock=0;next();},180);};o.appendChild(bt);});
+  SCALE.forEach(([t,v,sz],i)=>{if(i===3){const sp=document.createElement("div");sp.className="qsep";sp.textContent=TR("ここから「当てはまらない」");o.appendChild(sp);}
+   const bt=document.createElement("button");bt.type="button";bt.className=i<3?"qy":"qn";bt.style.setProperty("--qc","var("+A.c+")");
+   bt.innerHTML='<i style="width:'+(sz+4)+'px;height:'+(sz+4)+'px"></i>'+t;bt.setAttribute("aria-pressed",qa[qn]===v);
+   bt.onclick=()=>{if(window.__qLock)return;window.__qLock=1;qa[qn]=v;o.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed","false"));bt.setAttribute("aria-pressed","true");setTimeout(()=>{window.__qLock=0;next();},QRM?150:400);};o.appendChild(bt);});
  }else{const k=tbList[qi-ord.length],T=QZ.TB[k],A=AXQ[AXN[k]];
   $("qAxis").textContent=A.name+TR("：あと少しで決まります");$("qAxis").style.color="var("+A.c+")";$("qText").textContent=T.q;$("qExW").hidden=true;
   [T.a,T.b].forEach(([t,p])=>{const bt=document.createElement("button");bt.type="button";bt.className="ab";bt.textContent=t;bt.setAttribute("aria-pressed",tbAns[k]===p);
