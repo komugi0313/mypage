@@ -389,17 +389,17 @@ const AI_FAQ = [
 CUR = 'aichaku';
 write('aichaku/index.html', page({
   url: 'aichaku/',
-  title: '愛着スタイル診断｜あなたは何型の恋をする？安定型・不安型・回避型・恐れ型（無料）｜恋のかたち診断',
-  desc: '既読がつくと気になる、好きなのに一歩引いてしまう。そんな恋のくせを、安定型・不安型・回避型・恐れ型の4つの愛着スタイルで見られる無料の診断。登録なし。恋愛の16タイプと好きな人との相性もわかります。',
+  title: '愛着スタイル診断｜16タイプ×4つの型でわかる、あなたの恋（無料）｜恋のかたち診断',
+  desc: '恋愛の16タイプと愛着スタイルが1回でわかる無料の診断。既読がつくと気になる、好きなのに一歩引いてしまう。そんな恋のくせを、安定型・不安型・回避型・恐れ型の4分類で見られます。登録なし。好きな人との相性もわかります。',
   ld: [crumbLd([['恋のかたち診断', ''], ['愛着スタイル診断', 'aichaku/']]), { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: AI_FAQ.map(x => ({ '@type': 'Question', name: x[0], acceptedAnswer: { '@type': 'Answer', text: x[1] } })) }],
   img: BASE + 'img/og-aichaku.png?v=2',
   body: `${crumb([['愛着スタイル診断', '']])}
-<section class="hero"><span class="kick">無料・登録なし</span><h1>愛着スタイル診断<span class="sub">あなたは、何型の恋をする？</span></h1>${HEARTS}${PICK}<span class="meta">安定型・不安型・回避型・恐れ型の4つから、あなたの心のくせがわかります</span></section>
+<section class="hero"><span class="kick">無料・登録なし</span><h1>愛着スタイル診断<span class="sub">あなたは、何型の恋をする？</span></h1>${HEARTS}${PICK}<span class="meta">恋愛の16タイプと、安定型・不安型・回避型・恐れ型の4分類が、1回の診断でわかります</span></section>
 <section class="box"><h2>こんなこと、ありませんか？</h2>${ul(['既読がついたのに返事がないと、何度もスマホを見てしまう', '好きな人ができると、なぜかそっけなくしてしまう', '恋人に頼るより、ひとりで片づけたほうが楽', '近づきたいのに、近づくと少し怖くなる'])}<p class="note">1つでも思い当たったら、あなたの「心のくせ」が関わっているかもしれません。</p></section>
 <section class="box"><h2>4つの愛着スタイル</h2><div class="types">${tyCell('preoc')}${tyCell('fear')}${tyCell('secure')}${tyCell('dismiss')}</div><div class="axis"><span>← 頼れる</span><span>ひとりで立つ →</span></div><p class="note">上の段ほど、心がゆれやすい型です。どれが良い・悪いではありません。境目の近くの人は、となりの型の面もあわせ持っています。</p></section>
 ${START('自分の型を見る（無料）')}
-<section class="dif"><div class="lb">ほかの愛着スタイル診断とのちがい</div><div class="n">16タイプ ＋ 愛着スタイル</div><p>恋愛の16タイプと、4つの愛着スタイルを1回の診断で。好きな人との「2人の心のくせ」の相性まで見られます。</p></section>
-<details class="fold"><summary><span>愛着スタイルって？</span></summary><div class="in"><p>大切な人に、どのくらい近づきたいか・頼りたいか、という心の向きのことです。「心のゆれやすさ（不安）」と「頼るのを避ける気持ち（回避）」の2つで、4つの型に分けて見るのが一般的です。</p><p>これまでの人とのかかわりの中で形づくられ、恋人ができたときに強く出やすいと言われています。同じ人でも、相手や時期によって変わります。</p></div></details>
+<section class="dif"><div class="lb">ほかの愛着スタイル診断とのちがい</div><div class="n">16タイプ ＋ 愛着スタイル</div><p>恋愛の16タイプと、4つの愛着スタイルを1回の診断で。16タイプは好きになり方や気持ちの伝え方、愛着スタイルは恋をしたときの心のゆれやすさと頼り方を見ます。好きな人との「2人の心のくせ」の相性まで見られます。</p></section>
+<details class="fold"><summary><span>愛着スタイルって？</span></summary><div class="in"><p>大切な人に、どのくらい近づきたいか・頼りたいか、という心の向きのことです。「心のゆれやすさ（不安）」と「頼るのを避ける気持ち（回避）」の2つで、4つの型に分けて見るのが一般的です（愛着スタイルの4分類）。</p><p>これまでの人とのかかわりの中で形づくられ、恋人ができたときに強く出やすいと言われています。同じ人でも、相手や時期によって変わります。</p></div></details>
 <details class="fold"><summary><span>4つの型のくわしい説明</span></summary><div class="in">${['secure', 'preoc', 'dismiss', 'fear'].map(k => `<h3>${esc(KT[k].k)}（${esc(kn(k))}）</h3><p>${esc(KUSE[k].lead)}</p><p class="note">ひとこと：${esc(KUSE[k].tip)}</p>`).join('')}</div></details>
 <details class="fold"><summary><span>この診断の考え方</span></summary><div class="in"><p>愛着の研究で使われている考え方を参考に、恋愛の場面の質問をこちらで作りました。研究の質問の文は使っていません。医療や心理の専門的な検査ではありません。</p><p>参考にした研究は「<a href="/?about=1">この診断の考え方</a>」にまとめています。</p></div></details>
 <section class="box refs"><h2>この診断のもとにした研究</h2><p class="note">愛着の研究の考え方を参考に、恋愛の場面の質問をこちらで作りました（研究の質問の文は使っていません）。</p>${AI_REFS.map(r => `<div class="ref"><b>${r.t.length > 1 ? r.t.map(nw).join('') : esc(r.t[0])}</b><small>${esc(r.j)}</small><a href="${r.u}" target="_blank" rel="noopener">論文を見る ›</a></div>`).join('')}</section>
