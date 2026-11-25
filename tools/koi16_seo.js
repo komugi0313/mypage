@@ -315,7 +315,7 @@ ORDER.forEach(c => {
     [`${t.f}の恋の弱点は？`, `「${j[0]}」です。${j[1]}。克服のコツは、${j[2]}`],
     [`${t.f}は、どの愛着スタイルになりやすい？`, atTxt],
     [`${t.f}（${c}）の4文字の意味は？`, AXES.map((x, i) => `${c[i]}＝${x.title}が「${c[i] === x.a ? x.an : x.bn}」`).join('、') + '。この診断独自の4つのものさしで、MBTIなどとは別のものです。',
-      AXES.map((x, i) => nw(`${c[i]}＝${x.title}が`) + nw(`「${c[i] === x.a ? x.an : x.bn}」`)).join('、<wbr>') + '。この診断独自の4つのものさしで、MBTIなどとは別のものです。'],
+      AXES.map((x, i) => nw(`${c[i]}＝${x.title}が`) + nw(`「${c[i] === x.a ? x.an : x.bn}」`)).join('、<wbr>') + '。<wbr>' + ['この診断独自の', '4つのものさしで、', 'MBTIなどとは', '別のものです。'].map(nw).join('<wbr>')],
   ];
   const body = `${crumb([['恋愛キャラ診断', 'chara/'], [t.f, '']])}
 <section class="hero2" style="--gp:${GPALE[c[2] + c[3]]};--gc:${g.hex}">
