@@ -468,6 +468,12 @@ body[data-mode="normal"] #q-body.sp .choice.B .wbar{background:#8EDDBA}
 .act b .nwp{white-space:nowrap}
 .rank .rk-np{white-space:nowrap;display:inline-block}
 .nmw{white-space:nowrap;display:inline-block}
+.tie-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px;margin:10px 0 8px;text-align:left}
+.tie-chip{display:flex;align-items:center;gap:6px;background:#FFE3EC;border:2px solid #FF3D7F;border-radius:14px;padding:5px 8px;min-width:0}
+.tie-chip img{width:36px;height:36px;flex:none;object-fit:contain}
+.tie-chip span{min-width:0;display:flex;flex-direction:column}
+.tie-chip b{font-size:14px;color:#1E1E2A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tie-chip small{font-size:11px;color:#6B6375}
 @media (max-width:374px){.act b{font-size:17px}.act b .zap{display:none}.act{gap:9px}}
 /* VSは白い札（鑑定者本人の選択 2026-11-13「左の白いVSとDで」） */
 .vsmark{margin:-12px 0}
@@ -2525,10 +2531,10 @@ function showHonGroupResult(){
     return { name:p.name, i:i, avg:avg, out:Q-ok.length, quick:by[0], slow:by.length>1?by[by.length-1]:null, sp:honSplit(ok), sd:honSd(ok.map(function(r){ return r.t; })), aw:[] };
   });
   var rank=P.slice().sort(function(a,b){ return (a.avg==null?1e9:a.avg)-(b.avg==null?1e9:b.avg); }), top=rank[0];
-  var topN=rank.filter(function(r){ return top.avg!=null ? (r.avg!=null && sec(r.avg)===sec(top.avg)) : r===top; }).map(function(r){ return esc(r.name); });
+  var topN=rank.filter(function(r){ return top.avg!=null ? (r.avg!=null && sec(r.avg)===sec(top.avg)) : r===top; }).map(function(r){ var co=charaOf(S.qs, S.ans[r.i], {hon:true, times:S.times[r.i]}); return { n:esc(r.name), img:co&&CHARA_IMG[co.main.id], c:co&&co.main.name }; });
   var pick=function(r){ return r.c==='A' ? r.q.a : r.q.b; };
   var h='<div class="res-hero"><div class="pre">本能モード　'+n+'人の結果</div><img class="pnd" src="img/panda-joy.webp" alt="" width="96" height="96">'+
-    '<div class="catch">いちばん本能が速いのは…</div><div class="meter"><div class="num" style="font-size:'+(topN.length>3?26:topN.length>1?30:40)+'px">'+nmj(topN)+'</div><div class="cap">'+(top.avg!=null ? '平均 '+sec(top.avg)+'秒・'+honLevel(top.avg/1000, 1) : '全員時間切れ')+'</div></div></div>';
+    '<div class="catch">いちばん本能が速いのは…</div><div class="meter">'+tieHTML(topN)+'<div class="cap">'+(top.avg!=null ? '平均 '+sec(top.avg)+'秒・'+honLevel(top.avg/1000, 1) : '全員時間切れ')+'</div></div></div>';
   // あなたの中にあることば（1人ずつ）
   S.players.forEach(function(p,i){ h+=charaHTML(S.qs, S.ans[i], p.name+'さん', i%2?'kt-b':'kt-a', true, {hon:true, times:S.times[i]})+kimochiHTML(S.qs, S.ans[i], p.name+'さん', i%2?'kt-b':'kt-a', {hon:true})+kotobaHonHTML(S.qs, S.ans[i], S.times[i], p.name+'さん', i%2?'kt-b':'kt-a'); });
   h+=kimochiGroupHTML(S.players.map(function(p,i){ return i; }), (function(){ var m=-1; if(S.room && S.room.pid) S.players.forEach(function(pl,i){ if(pl.pid===S.room.pid) m=i; }); return m; })());
@@ -4244,6 +4250,13 @@ function showGroupResult0(){
 function nmw(s){ return '<span class="nmw">'+s+'</span>'; }
 /* 名前を「・」でつなぐときは「・」を前の名前にくっつける（行の頭に「・」が来ないように） */
 function nmj(L){ return L.map(function(n,i){ return nmw(n+(i<L.length-1?'・':'')); }).join(''); }
+/* 3人以上が同点なら「○人が同点！」＋キャラの絵つきの札（鑑定者本人 2026-11-26 見本 https://claude.ai/artifact/2DGRZyL4PUoNYL1vRd9j3u で「OK」） */
+function tieHTML(L){
+  if(L.length<3) return '<div class="num" style="font-size:'+(L.length>1?30:40)+'px">'+nmj(L.map(function(x){ return x.n; }))+'</div>';
+  return '<div class="num" style="font-size:40px">'+L.length+'人が同点！</div><div class="tie-chips">'+L.map(function(x){
+    return '<div class="tie-chip">'+(x.img?'<img src="'+x.img+'" alt="" width="36" height="36">':'')+'<span><b>'+x.n+'</b>'+(x.c?'<small>'+esc(x.c)+'</small>':'')+'</span></div>';
+  }).join('')+'</div>';
+}
 function showGroupResultCore(){
   if(S.room && S.room.data && S.room.data.mode==='hon') return showHonGroupResult();
   var pm=S.mode, mode=resMode(pm), hd=headline(mode), n=S.players.length;
@@ -4257,8 +4270,8 @@ function showGroupResultCore(){
         '<div class="catch">いちばん'+hd.cap.replace('度','')+'なのは…</div>';
   var top = R.slice().sort(function(a,b){ return b.sc[hd.k]-a.sc[hd.k]; })[0];
   // 同じ％で並んだ人がいれば、全員の名前を出す
-  var tops = R.filter(function(r){ return r.sc[hd.k]===top.sc[hd.k]; }).map(function(r){ return esc(r.p.name); });
-  h+='<div class="meter"><div class="num" style="font-size:'+(tops.length>3?26:tops.length>1?30:40)+'px">'+nmj(tops)+'</div><div class="cap">'+hd.cap+' '+top.sc[hd.k]+'%'+(tops.length>1?'（同点）':'')+'</div></div></div>';
+  var tops = R.filter(function(r){ return r.sc[hd.k]===top.sc[hd.k]; }).map(function(r){ var co=charaOf(S.qs, S.ans[r.i], {mode:mode}); return { n:esc(r.p.name), img:co&&CHARA_IMG[co.main.id], c:co&&co.main.name }; });
+  h+='<div class="meter">'+tieHTML(tops)+'<div class="cap">'+hd.cap+' '+top.sc[hd.k]+'%'+(tops.length>1?'（同点）':'')+'</div></div></div>';
 
   // ひとりずつの結果（名前で切りかえ）を、価値観の近さ・ランキングより先に
   // ひとりずつ（1人1枚にまとめて、押すと開く。部屋で自分がわかるときは自分を先頭にして開いておく）
