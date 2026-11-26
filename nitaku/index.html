@@ -3113,7 +3113,28 @@ function tnList(c, from, to, key){ // あるある（または症状）の from�
   var h=''; ['y','f','s'].forEach(function(t){ c[key||'tone'][t].slice(from,to).forEach(function(s){ h+='<li class="tn tn-'+t+'">'+esc(s)+'</li>'; }); }); return h;
 }
 /* 恋の病名は、言葉の切れ目でだけ改行する（幅の小さいスマホで「既読チェッ／ク依存症」と割れていたため） */
-var BYO_BR={}; ['追われると｜冷める｜症候群','尽くしすぎ｜貧血','既読チェック｜依存症','理想高すぎ｜乱視','恋愛全力疾走｜による｜息切れ','好きな人の｜前だけ｜無口症','段取りしすぎ｜肩こり','自分迷子症','恋人より｜昼寝症','押しが強すぎ｜発熱症','じっとして｜いられない｜症候群','念のため｜確認しすぎ症','盛り上げすぎて｜声がれ症','予定｜合わせられない｜症候群','比較サイト｜見すぎ症','欲がなさすぎ｜欠乏症','写真撮り直し｜症候群','正直すぎ｜発言症','予定表｜つくりすぎ症','あとでやる｜慢性化症'].forEach(function(b){ BYO_BR[b.replace(/｜/g,'')]=b.split('｜'); });
+var BYO_BR={}; ['追われると｜冷める｜症候群','尽くしすぎ｜貧血','既読チェック｜依存症','理想高すぎ｜乱視','恋愛全力疾走｜による｜息切れ','好きな人の｜前だけ｜無口症','段取りしすぎ｜肩こり','自分迷子症','恋人より｜昼寝症','押しが強すぎ｜発熱症','じっとして｜いられない｜症候群','念のため｜確認しすぎ症','盛り上げすぎて｜声がれ症','予定｜合わせられない｜症候群','比較サイト｜見すぎ症','欲がなさすぎ｜欠乏症','写真撮り直し｜症候群','正直すぎ｜発言症','予定表｜つくりすぎ症','あとでやる｜慢性化症','既読わざと｜寝かせ症','「別に」多用性｜ツンデレ炎','「大丈夫？」｜連発症','自分あとまわし｜慢性疲労','会いたい｜禁断症状','甘えすぎ｜糖分過多','記念日｜つくりすぎ症','運命の人｜待ちすぎ｜遠視','妄想デート｜過多症','好き好き｜沸騰症','本音ひた隠し症','平気なふり｜慢性化症','先回り｜過敏症','頼られすぎ｜腰痛','「なんでもいいよ」｜常用症','好みの｜りうつり症','既読スルー｜常習症','束縛｜アレルギー','恋の｜早押し症','手に入れたら｜冷め症','新しもの好き｜発作','思いつき｜出発症','口コミ｜読みすぎ症','心配｜先取り症','沈黙｜こわい症','はしゃぎすぎ｜筋肉痛','遅刻ぎりぎり｜症候群','気分しだい｜出欠症','100点じゃないと｜気がすまない症','こだわり道具｜増殖症','「これで十分」｜連発症','割引｜待ちすぎ症','映え探し｜症候群','盛りすぎ症','気どれない症','顔に｜出すぎ症','予定変更｜パニック症','先の先まで｜計画症','二度寝｜常習症','ソファ｜離れられない症'].forEach(function(b){ BYO_BR[b.replace(/｜/g,'')]=b.split('｜'); });
+/* 診断書の病名は1キャラ3つ（鑑定者本人 2026-11-26「全部面白いので実装してください」）。どれを出すかは、その回の答えのことば（kotoba-*.js）で決める。
+   遊ぶたびにくじで変えるのではなく、同じ答えなら同じ病名（「自分は何だろう」と思わせないため＝鑑定者本人 2026-11-26）。どれにも当たらなければ今の病名 */
+function byoPick(c, qs, ans, mk, times){
+  var L=[{byo:c.byo, sho:c.sho, doc:c.doc, w:c.byoW||[]}].concat(c.byoMore||[]);
+  var K=KOTOBA[mk]; if(L.length<2 || !K || !qs) return L[0];
+  var sc={};
+  qs.forEach(function(q,qi){
+    var a=ans&&ans[qi]; if(a!=='A' && a!=='B') return;
+    var k=K.byId[q.id]; if(!k) return;
+    var side=canon(q,a), wt=(times && times[qi]>0 && times[qi]<=1000) ? 2 : 1;
+    (k[side]||[]).forEach(function(w){ sc[w]=(sc[w]||0)+wt/Math.sqrt(K.freq[w]||1); });
+    var h=k[side+'h']; if(h) sc[h]=(sc[h]||0)+wt/Math.sqrt(K.hfreq[h]||1);
+  });
+  var best=0, bs=0;
+  var BK=c.byoK||[]; L.forEach(function(x,i){ var v=0; (x.w||[]).forEach(function(w){ v+=sc[w]||0; }); v*=(BK[i]||1); if(v>bs+1e-9){ bs=v; best=i; } });
+  return L[best];
+}
+function byoScores(c, qs, ans, mk, times){ var K=KOTOBA[mk], sc={}; if(!K) return null; var L=[{w:c.byoW||[]}].concat(c.byoMore||[]);
+  qs.forEach(function(q,qi){ var a=ans&&ans[qi]; if(a!=='A'&&a!=='B') return; var k=K.byId[q.id]; if(!k) return; var side=canon(q,a), wt=(times&&times[qi]>0&&times[qi]<=1000)?2:1;
+    (k[side]||[]).forEach(function(w){ sc[w]=(sc[w]||0)+wt/Math.sqrt(K.freq[w]||1); }); var h=k[side+'h']; if(h) sc[h]=(sc[h]||0)+wt/Math.sqrt(K.hfreq[h]||1); });
+  return L.map(function(x){ var v=0; (x.w||[]).forEach(function(w){ v+=sc[w]||0; }); return v; }); }
 function byoH(t){
   if(BYO_BR[t]) return BYO_BR[t].map(function(w){ return '<span class="byw">'+esc(w)+'</span>'; }).join('<wbr>');
   try{ var sg=new Intl.Segmenter('ja',{granularity:'word'}), ps=[];
@@ -3122,7 +3143,7 @@ function byoH(t){
   }catch(e){ return esc(t); }
 }
 /* 処方の「週1回」などの短いうしろと一緒に改行するまとまりを、言葉の切れ目で決める（前は最後の2文字で「「今日はやってもらう／日」　月2回」と割れていた） */
-var SHO_BR={}; ['自分から「会いたい」と｜言う練習','自分に｜ごほうび','「今日は｜やってもらう日」','ひとりで｜楽しめる趣味','ふつうの日の｜デート','「今日も｜楽しかった」を言う','友だちとの｜予定','本音の｜LINE','ひとりで｜決める練習','記念日をカレンダーに｜入れる','行きたい場所｜リスト','口コミを読まずに｜入る店','待ち合わせの｜10分前に出る','3つまでで｜選ぶ練習','自分への｜ごほうび','ちょっと｜いい物を買う','撮らずに｜食べる日','加工｜しない写真','ほめ言葉を｜ひとつ足す','予定を｜入れない休み','自分の｜意見を言う'].forEach(function(b){ SHO_BR[b.replace('｜','')]=b.indexOf('｜'); });
+var SHO_BR={}; ['自分から「会いたい」と｜言う練習','自分に｜ごほうび','「今日は｜やってもらう日」','ひとりで｜楽しめる趣味','ふつうの日の｜デート','「今日も｜楽しかった」を言う','友だちとの｜予定','本音の｜LINE','ひとりで｜決める練習','記念日をカレンダーに｜入れる','行きたい場所｜リスト','口コミを読まずに｜入る店','待ち合わせの｜10分前に出る','3つまでで｜選ぶ練習','自分への｜ごほうび','ちょっと｜いい物を買う','撮らずに｜食べる日','加工｜しない写真','ほめ言葉を｜ひとつ足す','予定を｜入れない休み','自分の｜意見を言う','既読から｜5分で返す','「うれしい」を｜顔に出す','「別に」を｜「うれしい」に言いかえる','素直な｜スタンプ','自分に｜「大丈夫？」と聞く','何も｜気をつかわない日','自分の予定を｜先に入れる','「わたしはこうしたい」を｜言う','ひとりで｜楽しむ時間','会えない日の｜楽しみ','甘える前に｜「ありがとう」','自分でできることは｜自分で','なんでもない日の｜「ありがとう」','近くの人と｜話す','「運命」を｜忘れる日','本物のデートの｜予定','気持ちをノートに｜書く','友だちに話を｜聞いてもらう','本音をひとつ｜話す','「さびしかった」と｜言う','相手に｜決めてもらう日','何も調べずに｜出かける','「手伝って」と｜言う','ひとりで｜休む日','「これがいい」と｜言う','食べたい物を｜先に言う','昔から好きな物を｜思い出す','ひとりで｜好きなお店へ','「あとで返すね」の｜ひとこと','次に会う約束を｜先に入れる','自分から｜「今なにしてる？」','次に会う日を｜決める','2人の思い出を｜ふり返る','付き合ったあとの｜デートの計画','相手のいいところを｜書き出す','いつものお店に｜行く','1つのことを｜続ける','出かける前に｜持ち物の確認','帰りの時間を｜決める','「たぶん大丈夫」と｜言う','心配ごとをメモに｜書いて閉じる','3秒｜だまる練習','静かな｜カフェへ','帰ったら｜すぐ寝る','時計を｜5分すすめる','前の日に｜服を決める','誘いに｜「行く」と答える','80点で｜決める練習','迷ったら｜最初の物','1つ買ったら｜1つ手放す','持っている物を｜使い切る','「ほしい」と｜言う','行ってみたい｜お店へ','定価で買う物を｜1つ','値段を見ずに｜選ぶ','写真を撮らずに｜出かける','その場の感想を｜ひとこと','加工なしで｜投稿','すっぴんの｜写真','特別な日の｜ちょっといい服','写真を1枚｜撮ってみる','鏡で表情を｜確かめる','「おいしい」を｜先に言う','予定を1つ｜変えてみる','「それもいいね」と｜言う','今日だけを｜楽しむ日','行き先を決めずに｜出かける','目覚ましは｜1回で止める','朝の楽しみを｜1つ','休みの日に｜1つ出かける','起きたら｜カーテンを開ける'].forEach(function(b){ SHO_BR[b.replace('｜','')]=b.indexOf('｜'); });
 function shoTailAt(t){ // 手で決めた切れ目。一覧にない短い文（6文字まで）はまるごと、長い文は最後の2文字
   if(SHO_BR[t]!=null) return SHO_BR[t];
   return t.length<=6 ? 0 : t.length-2;
@@ -3199,13 +3220,14 @@ function charaHTML(qs, ans, label, cls, fold, opt){
     '<div class="mn-s mn-c"><b>注意</b><ul>'+['y','f','s'].map(function(t){ return '<li>'+esc(c.chui[t])+'</li>'; }).join('')+'</ul></div>'+
     '<div class="mn-s"><b>相性のいい機種</b><ul><li>'+c.kiki.map(esc).join('・')+'</li></ul></div></div></div>';
   var cause=charaWordsOk(c, kt.words).filter(function(w){ return KOTOBA[MK].theme[w]===5; }).slice(0,2); if(!cause.length) cause=top.slice(0,2);
+  var BY=byoPick(c, qs, ans, opt.hon?'honL':MK, opt.times), BYS=r.sub?byoPick(r.sub, qs, ans, opt.hon?'honL':MK, opt.times):null;
   var E='<div class="kcd kc-karte"><h3>診断書</h3><dl class="kr">'+
     '<dt>患者名</dt><dd>'+esc(who)+(who==='あなた'?'':' 様')+'</dd>'+
-    '<dt>病名</dt><dd><span class="kr-byo">'+byoH(c.byo)+'</span>'+(r.sub?'<span class="kr-sub">ほかに'+byoSubH(r.sub.byo)+'</span>':'')+'</dd>'+
+    '<dt>病名</dt><dd><span class="kr-byo">'+byoH(BY.byo)+'</span>'+(BYS?'<span class="kr-sub">ほかに'+byoSubH(BYS.byo)+'</span>':'')+'</dd>'+
     '<dt>症状</dt><dd><ul>'+['y','f','s'].map(function(t){ return '<li>'+esc(c.sym[t][0])+'</li>'; }).join('')+'</ul></dd>'+
     (cause.length ? '<dt>原因</dt><dd>'+cause.map(esc).join('／')+'</dd>' : '')+
-    '<dt>処方</dt><dd><ul>'+c.sho.map(function(s){ return '<li>'+(function(ps){ if(ps.length>1 && ps[ps.length-1].length<=3){ var l=ps.pop(); ps[ps.length-1]=[ps[ps.length-1], l]; } return ps.map(function(x){ return '<span class="byw">'+(Array.isArray(x)?(function(k){ return esc(x[0].slice(0,k))+'<span class="nw">'+esc(x[0].slice(k))+'\u3000'+esc(x[1])+'</span>'; })(shoTailAt(x[0])):esc(x))+'</span>'; }).join(' '); })(String(s).split('　'))+'</li>'; }).join('')+'</ul></dd></dl>'+
-    '<div class="kr-doc"><p><b class="kd1">担当医より：</b>'+esc(c.doc.f)+'</p><p class="kd2"><b>院長より：</b>'+esc(c.doc.s)+'</p></div><div class="kr-hanko">'+(NM?'ふだんの':'恋の')+'<br>クリニック</div></div>';
+    '<dt>処方</dt><dd><ul>'+BY.sho.map(function(s){ return '<li>'+(function(ps){ if(ps.length>1 && ps[ps.length-1].length<=3){ var l=ps.pop(); ps[ps.length-1]=[ps[ps.length-1], l]; } return ps.map(function(x){ return '<span class="byw">'+(Array.isArray(x)?(function(k){ return esc(x[0].slice(0,k))+'<span class="nw">'+esc(x[0].slice(k))+'\u3000'+esc(x[1])+'</span>'; })(shoTailAt(x[0])):esc(x))+'</span>'; }).join(' '); })(String(s).split('　'))+'</li>'; }).join('')+'</ul></dd></dl>'+
+    '<div class="kr-doc"><p><b class="kd1">担当医より：</b>'+esc(BY.doc.f)+'</p><p class="kd2"><b>院長より：</b>'+esc(BY.doc.s)+'</p></div><div class="kr-hanko">'+(NM?'ふだんの':'恋の')+'<br>クリニック</div></div>';
   var G=D.subj.map(function(s){ return { s:s, g:r.grade[s.k] }; });
   var hi=G.slice().sort(function(a,b){ return b.g-a.g; })[0], lo=G.slice().sort(function(a,b){ return a.g-b.g; })[0];
   var tch=hi.g===lo.g ? {y:'どの科目も、バランスよくできました。',f:'どの科目もそろっています。次は、どれか1つで目立ってみましょう。',s:'全部の科目が同じ点です。逆に、先生はあなたのことがまだよくわかりません。'} :
