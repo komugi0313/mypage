@@ -474,6 +474,21 @@ body[data-mode="normal"] #q-body.sp .choice.B .wbar{background:#8EDDBA}
 .tie-chip span{min-width:0;display:flex;flex-direction:column}
 .tie-chip b{font-size:14px;color:#1E1E2A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tie-chip small{font-size:11px;color:#6B6375}
+.tie-chip{position:relative}
+.tie-chip.me{background:#fff;border-width:3px}
+.tie-you{position:absolute;top:-10px;left:8px;font-style:normal;font-size:11px;font-weight:800;line-height:1.5;background:#FF3D7F;color:#fff;border-radius:99px;padding:0 8px}
+.tie-chips:has(.me){margin-top:14px}
+.tie-same{display:flex;width:-moz-fit-content;width:fit-content;max-width:100%;box-sizing:border-box;align-items:center;gap:8px;background:#DDF5EA;border:2px solid #2E9B6A;border-radius:14px;padding:5px 12px;font-weight:800;font-size:15px;line-height:1.4;color:#1E1E2A;margin:6px auto 4px}
+.tie-same img{width:34px;height:34px;flex:none;object-fit:contain}
+.tie-same span{white-space:nowrap}
+#imgpick{position:fixed;inset:0;z-index:9999;background:rgba(30,30,42,.45);display:flex;align-items:flex-end;justify-content:center;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+#imgpick .ip{background:#fff;border:3px solid #1E1E2A;border-radius:18px;box-shadow:0 6px 0 #F2C94C;padding:16px;width:100%;max-width:420px;color:#1E1E2A;text-align:center}
+#imgpick p{margin:0 0 12px;font-weight:800;font-size:16px}
+#imgpick button{display:block;width:100%;min-height:50px;margin:0 0 8px;border-radius:14px;border:3px solid #1E1E2A;background:#fff;color:#1E1E2A;font-weight:800;font-size:15.5px;line-height:1.35;padding:6px 10px}
+#imgpick button small{display:block;font-size:12.5px;font-weight:700;color:#5A546A}
+#imgpick button.ip-s{background:#FF3D7F;color:#1E1E2A}
+#imgpick button.ip-s small{color:#1E1E2A}
+#imgpick button.ip-x{border:0;min-height:44px;margin:0;text-decoration:underline;font-size:14px}
 @media (max-width:374px){.act b{font-size:17px}.act b .zap{display:none}.act{gap:9px}}
 /* VSは白い札（鑑定者本人の選択 2026-11-13「左の白いVSとDで」） */
 .vsmark{margin:-12px 0}
@@ -785,6 +800,7 @@ html[data-tone="f"] .tn-f,html[data-tone="s"] .tn-s{display:revert}
 .kr li .byw{vertical-align:top} /* 2行になる処方で、点（・）が2行目についていたため */
 .kr li .nw{white-space:nowrap}
 /* みんなの結果の1人ずつの枠の中（幅360以下）は、診断書の見出しを上・中身を下にして横いっぱいに使う */
+@media (max-width:390px){.pcard .kr{grid-template-columns:4em 1fr;column-gap:8px}.pcard .kr dd{padding-right:4px}} /* 8人の診断書で文が枠ぎりぎりだったので右にゆとり（2026-11-26） */
 @media (max-width:360px){.pcard .kr{grid-template-columns:1fr;gap:0}.pcard .kr dd{margin-bottom:6px}.pcard .kc-karte{padding:12px 10px 16px}}
 .kr-byo{display:block;font-family:'Mochiy Pop One',sans-serif;font-size:19px;color:#B0281C;line-height:1.4}
 .kr-sub{display:block;font-size:13px;color:#5A546A}
@@ -2609,7 +2625,7 @@ function showHonGroupResult(){
     return { name:p.name, i:i, avg:avg, out:Q-ok.length, quick:by[0], slow:by.length>1?by[by.length-1]:null, sp:honSplit(ok), sd:honSd(ok.map(function(r){ return r.t; })), aw:[] };
   });
   var rank=P.slice().sort(function(a,b){ return (a.avg==null?1e9:a.avg)-(b.avg==null?1e9:b.avg); }), top=rank[0];
-  var topN=rank.filter(function(r){ return top.avg!=null ? (r.avg!=null && sec(r.avg)===sec(top.avg)) : r===top; }).map(function(r){ var co=charaOf(S.qs, S.ans[r.i], {hon:true, times:S.times[r.i]}); return { n:esc(r.name), img:co&&CHARA_IMG[co.main.id], c:co&&co.main.name }; });
+  var topN=rank.filter(function(r){ return top.avg!=null ? (r.avg!=null && sec(r.avg)===sec(top.avg)) : r===top; }).map(function(r){ var co=charaOf(S.qs, S.ans[r.i], {hon:true, times:S.times[r.i]}); return { n:esc(r.name), img:co&&CHARA_IMG[co.main.id], c:co&&co.main.name, me:!!(S.room&&S.room.pid&&S.players[r.i]&&S.players[r.i].pid===S.room.pid) }; });
   var pick=function(r){ return r.c==='A' ? r.q.a : r.q.b; };
   var h='<div class="res-hero"><div class="pre">本能モード　'+n+'人の結果</div><img class="pnd" src="img/panda-joy.webp" alt="" width="96" height="96">'+
     '<div class="catch">いちばん本能が速いのは…</div><div class="meter">'+tieHTML(topN)+'<div class="cap">'+(top.avg!=null ? '平均 '+sec(top.avg)+'秒・'+honLevel(top.avg/1000, 1) : '全員時間切れ')+'</div></div></div>';
@@ -4334,8 +4350,11 @@ function nmj(L){ return L.map(function(n,i){ return nmw(n+(i<L.length-1?'・':''
 /* 3人以上が同点なら「○人が同点！」＋キャラの絵つきの札（鑑定者本人 2026-11-26 見本 https://claude.ai/artifact/2DGRZyL4PUoNYL1vRd9j3u で「OK」） */
 function tieHTML(L){
   if(L.length<3) return '<div class="num" style="font-size:'+(L.length>1?30:40)+'px">'+nmj(L.map(function(x){ return x.n; }))+'</div>';
-  return '<div class="num" style="font-size:40px">'+L.length+'人が同点！</div><div class="tie-chips">'+L.map(function(x){
-    return '<div class="tie-chip">'+(x.img?'<img src="'+x.img+'" alt="" width="36" height="36">':'')+'<span><b>'+x.n+'</b>'+(x.c?'<small>'+esc(x.c)+'</small>':'')+'</span></div>';
+  /* 同点の人がみんな同じキャラなら一言（鑑定者本人 2026-11-26 見本 https://claude.ai/artifact/2MenapyhTFaPaCPoXGZ39i で「全部これで」） */
+  var same=L[0].c && L.every(function(x){ return x.c===L[0].c; });
+  var sameH=same ? '<div class="tie-same">'+(L[0].img?'<img src="'+L[0].img+'" alt="" width="34" height="34">':'')+'<span>'+(L.length===S.players.length?'全員':L.length+'人とも')+'「'+esc(L[0].c)+'」！</span></div>' : '';
+  return '<div class="num" style="font-size:40px">'+L.length+'人が同点！</div>'+sameH+'<div class="tie-chips">'+L.map(function(x){
+    return '<div class="tie-chip'+(x.me?' me':'')+'">'+(x.me?'<i class="tie-you">あなた</i>':'')+(x.img?'<img src="'+x.img+'" alt="" width="36" height="36">':'')+'<span><b>'+x.n+'</b>'+(x.c?'<small>'+esc(x.c)+'</small>':'')+'</span></div>';
   }).join('')+'</div>';
 }
 function showGroupResultCore(){
@@ -4351,7 +4370,7 @@ function showGroupResultCore(){
         '<div class="catch">いちばん'+hd.cap.replace('度','')+'なのは…</div>';
   var top = R.slice().sort(function(a,b){ return b.sc[hd.k]-a.sc[hd.k]; })[0];
   // 同じ％で並んだ人がいれば、全員の名前を出す
-  var tops = R.filter(function(r){ return r.sc[hd.k]===top.sc[hd.k]; }).map(function(r){ var co=charaOf(S.qs, S.ans[r.i], {mode:mode}); return { n:esc(r.p.name), img:co&&CHARA_IMG[co.main.id], c:co&&co.main.name }; });
+  var tops = R.filter(function(r){ return r.sc[hd.k]===top.sc[hd.k]; }).map(function(r){ var co=charaOf(S.qs, S.ans[r.i], {mode:mode}); return { n:esc(r.p.name), img:co&&CHARA_IMG[co.main.id], c:co&&co.main.name, me:!!(S.room&&S.room.pid&&r.p.pid===S.room.pid) }; });
   h+='<div class="meter">'+tieHTML(tops)+'<div class="cap">'+hd.cap+' '+top.sc[hd.k]+'%'+(tops.length>1?'（同点）':'')+'</div></div></div>';
 
   // ひとりずつの結果（名前で切りかえ）を、価値観の近さ・ランキングより先に
@@ -5414,7 +5433,23 @@ document.addEventListener('click', function(e){
   var body=a.closest('#res-body,#gres-body'), t=pkLineText(a.classList.contains('ts-line') && body.querySelector('#lshare,#lgshare') || a); if(!t) return;
   e.preventDefault(); saveImage(body, t);
 }, true);
-async function saveImage(el, text){
+/* みんなの結果を画像にするときは、短い画像（発表・価値観の近さ・ランキング）と、ぜんぶの結果を選べる（鑑定者本人 2026-11-26「全部これで」。8人だと縦に約6画面になるため。ぜんぶも今までどおり送れる） */
+var IMG_SHORT_KEEP='.res-hero,.gone-note,.card.aisho,.card.rk-card,.card.hon-rk,.card.hon-pair,.card.hon-aw';
+function imgPick(el, text){
+  var d=document.getElementById('imgpick'); if(d) d.remove();
+  d=document.createElement('div'); d.id='imgpick';
+  d.innerHTML='<div class="ip" role="dialog" aria-label="画像の長さを選ぶ"><p>どの画像にする？</p><button type="button" class="ip-s">短い画像<small>発表・価値観の近さ・ランキング</small></button><button type="button" class="ip-a">ぜんぶの結果<small>ひとりずつの結果・みんなの答えも入る（長い画像）</small></button><button type="button" class="ip-x">やめる</button></div>';
+  document.body.appendChild(d);
+  var go=function(short){ d.remove(); saveImage(el, text, short?'short':'all'); };
+  d.querySelector('.ip-s').onclick=function(){ go(true); };
+  d.querySelector('.ip-a').onclick=function(){ go(false); };
+  d.querySelector('.ip-x').onclick=function(){ d.remove(); };
+  d.addEventListener('click', function(e){ if(e.target===d) d.remove(); });
+}
+async function saveImage(el, text, len){
+  if(el && el.id==='gres-body' && !len){ imgPick(el, text); return; }
+  var hid=[], sy=window.scrollY;
+  if(len==='short') Array.prototype.forEach.call(el.children, function(c){ if(!c.matches(IMG_SHORT_KEEP) && !c.hidden){ c.hidden=true; hid.push(c); } });
   var b=document.activeElement; if(b && b.tagName==='BUTTON') b.disabled=true;
   if(!text){ var bd=el.closest && el.closest('#res-body,#gres-body'); text=pkLineText(bd && bd.querySelector('#lshare,#lgshare')); }
   toast('画像を作っています…');
@@ -5447,7 +5482,7 @@ async function saveImage(el, text){
     var url=URL.createObjectURL(blob);
     $('imgov-img').src=url; $('imgov-dl').href=url; $('imgov').hidden=false;
   }catch(e){ toast('画像を作れませんでした。画面のスクリーンショットで残してね'); }
-  finally{ if(b && b.tagName==='BUTTON') b.disabled=false; }
+  finally{ if(b && b.tagName==='BUTTON') b.disabled=false; hid.forEach(function(c){ c.hidden=false; }); if(hid.length) window.scrollTo(0, sy); }
 }
 /* 部屋のQRを押すと、部屋のリンクをスマホの共有で送る（鑑定者本人 2026-11-22「QRをリンクにしたい」→「QRを押すと共有画面」） */
 function qrShare(){
