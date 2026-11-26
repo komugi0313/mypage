@@ -2099,7 +2099,7 @@ function showReady(){
   $('rdy-t').innerHTML = S.hon ? '<img class="ico-zap" src="img/icon-zap.webp" alt="" width="20" height="20">本能モード' : (S.mode==='love' ? '恋愛編' : 'まぜまぜ編');
   var tags = S.hon ? ['20問','1問5秒'] : [LV[S.lv]||'ノーマル',(S.mode==='normal'?MIX_N:15)+'問','1問20秒'];
   $('rdy-tags').innerHTML = tags.map(function(t){ return '<span>'+t+'</span>'; }).join('');
-  $('rdy-n').innerHTML = S.hon ? '<div class="rdy-hon"><div class="rh-top"><b class="rh-n">5<small>秒</small></b><b class="rh-h">1問5秒で<br>答えてね</b></div><ol class="rh-l"><li><i>1</i><span>5秒以内に押す</span></li><li><i>2</i><span>時間切れは次の問題へ</span></li></ol></div><span>考える前に、直感で選んでね。</span>' : '<span>1問20秒で次の問題へ進みます。</span><span>じっくり悩んで選んでね。</span><span class="rdy-b">遊ぶたびに、ちがう問題。まだ見つけていない病名に会えるかも</span>';
+  $('rdy-n').innerHTML = S.hon ? '<div class="rdy-hon"><div class="rh-top"><b class="rh-n">5<small>秒</small></b><b class="rh-h">1問5秒で<br>答えてね</b></div><ol class="rh-l"><li><i>1</i><span>5秒以内に押す</span></li><li><i>2</i><span>時間切れは次の問題へ</span></li></ol></div><span>考える前に、直感で選んでね。</span>' : '<span>1問20秒で次の問題へ進みます。</span><span>じっくり悩んで選んでね。</span><span class="rdy-b">遊ぶたびに、ちがう問題。次は、ちがう病名が出るかも</span>';
   show('s-ready');
 }
 $('rdy-go').onclick=function(){ if(S.late && !S.late.on){ lateBegin(); return; } if(S.hon){ startHon(); return; } $('go').onclick(); };
@@ -3186,12 +3186,22 @@ function byoScores(c, qs, ans, mk, times){ var K=KOTOBA[mk], sc={}; if(!K) retur
   return L.map(function(x){ var v=0; (x.w||[]).forEach(function(w){ v+=sc[w]||0; }); return v; }); }
 /* 病名集め（鑑定者本人 2026-11-26「OK です」）：あなたの結果で出た病名を、このスマホが覚える（どこにも送らない）。
    まだ出ていない病名は「？？？」。答え方が変わると、ほかの病名が出る */
+function byoNext(c, BY){
+  var L=[{byo:c.byo, sho:c.sho, doc:c.doc, i:0}].concat((c.byoMore||[]).map(function(x,i){ return Object.assign({}, x, {i:i+1}); }));
+  if(L.length<2) return BY;
+  var d=store('nitaku_byo')||{}, last=d._last||{}, g=(S && S.qs && S.qs._g) || '', got=d[c.id]||[], k=BY.i||0;
+  if(g && last[c.id] && last[c.id].g===g) k=last[c.id].i;   // 同じ回を出し直したときは同じ病名
+  else if(got.indexOf(k)>=0){ var rest=L.filter(function(x){ return got.indexOf(x.i)<0; }); if(rest.length) k=rest[0].i; }
+  if(got.indexOf(k)<0) d[c.id]=got.concat([k]);
+  last[c.id]={g:g, i:k}; d._last=last; store('nitaku_byo', d);
+  return L[k];
+}
 function byoColHTML(c, BY){
   var all=[c.byo].concat((c.byoMore||[]).map(function(x){ return x.byo; })); if(all.length<2) return '';
-  var d=store('nitaku_byo')||{}, got=d[c.id]||[]; if(got.indexOf(BY.i||0)<0){ got=got.concat([BY.i||0]); d[c.id]=got; store('nitaku_byo', d); }
-  return '<span class="byo-col"><span class="bc-t">あなたの病名 <b>'+got.length+'／'+all.length+'</b> 見つけた</span><span class="bc-l">'+
+  var got=(store('nitaku_byo')||{})[c.id]||[BY.i||0];
+  return '<span class="byo-col"><span class="bc-t">あなたの病名 <b>'+got.length+'／'+all.length+'</b>'+(got.length>=all.length?' ぜんぶ見つけた！':'')+'</span><span class="bc-l">'+
     all.map(function(n,i){ return got.indexOf(i)>=0 ? '<span class="bc-g'+(i===(BY.i||0)?' now':'')+'">'+esc(n)+'</span>' : '<span class="bc-n">？？？</span>'; }).join('')+'</span>'+
-    (got.length<all.length ? '<span class="bc-h">遊ぶたびに、ちがう問題。まだ見つけていない病名に会えるかも</span>' : '<span class="bc-h">ぜんぶ見つけました！</span>')+'</span>';
+    (got.length<all.length ? '<span class="bc-h">遊ぶたびに、ちがう問題。次は、ちがう病名が出るかも</span>' : '')+'</span>';
 }
 function byoH(t){
   if(BYO_BR[t]) return BYO_BR[t].map(function(w){ return '<span class="byw">'+esc(w)+'</span>'; }).join('<wbr>');
@@ -3279,6 +3289,7 @@ function charaHTML(qs, ans, label, cls, fold, opt){
     '<div class="mn-s"><b>相性のいい機種</b><ul><li>'+c.kiki.map(esc).join('・')+'</li></ul></div></div></div>';
   var cause=charaWordsOk(c, kt.words).filter(function(w){ return KOTOBA[MK].theme[w]===5; }).slice(0,2); if(!cause.length) cause=top.slice(0,2);
   var BY=byoPick(c, qs, ans, opt.hon?(NM?'honN':'honL'):MK, opt.times), BYS=r.sub?byoPick(r.sub, qs, ans, opt.hon?(NM?'honN':'honL'):MK, opt.times):null;
+  if(label==='あなた' && !opt.noCol){ try{ BY=byoNext(c, BY); }catch(e){} }
   var E='<div class="kcd kc-karte"><h3>診断書</h3><dl class="kr">'+
     '<dt>患者名</dt><dd>'+esc(who)+(who==='あなた'?'':' 様')+'</dd>'+
     '<dt>病名</dt><dd><span class="kr-byo">'+byoH(BY.byo)+'</span>'+(BYS?'<span class="kr-sub">ほかに'+byoSubH(BYS.byo)+'</span>':'')+(label==='あなた' && !opt.noCol ? byoColHTML(c, BY) : '')+'</dd>'+
@@ -3668,7 +3679,7 @@ function endButtons(){
       '<p class="hint end-hint">みんなが「準備OK」を押してから始まります。</p>'+endq;
     return '<p class="hint lb-wait" style="margin-top:22px">部屋を作った人が「もう1回」を押すと、このまま次が始まります。</p>'+endq;
   }
-  return nextPick()+'<p class="again-h">遊ぶたびに、ちがう問題。まだ見つけていない病名に会えるかも</p><button class="big" id="again">もう1回（ちがう問題で）</button>';
+  return nextPick()+'<p class="again-h">遊ぶたびに、ちがう問題。次は、ちがう病名が出るかも</p><button class="big" id="again">もう1回（ちがう問題で）</button>';
 }
 /* もう1回の前に、次のモードを選ぶ（「○○編でもう1回」のボタンはやめた＝鑑定者本人 2026-11-14「普通編とかは要らないかも　また選ばせたら？」） */
 function curPlayMode(){ return (S.room && S.room.data && S.room.data.mode==='hon') || (!S.room && S.lastHon) ? 'hon' : S.mode; }
