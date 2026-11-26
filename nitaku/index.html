@@ -3096,6 +3096,7 @@ toneApply(toneGet());
 var QLV={};
 function qLevels(mode){ if(!QLV[mode]){ var o={}; (POOL[mode]||[]).forEach(function(q){ o[q.id]=q.lv; }); QLV[mode]=o; } return QLV[mode]; }
 var SUB_GAP=0.3;
+function qsHasNormal(qs){ if(!qsHasNormal.s){ var o={}; POOL.normal.forEach(function(q){ o[q.id]=1; }); qsHasNormal.s=o; } return qs.some(function(q){ return qsHasNormal.s[q.id]; }); }
 function charaOf(qs, ans, opt){
   opt=opt||{}; var NM=opt.mode==='normal', D=NM?CHN:CH; if(!D) return null;
   // 本能モード：恋の問題のことば（KOTOBA.honL）から。1秒以内に選んだ答えは2倍に数える（鑑定者本人の指示 2026-11-16「おすすめで」）
@@ -3110,10 +3111,12 @@ function charaOf(qs, ans, opt){
   });
   if(!n) return null;
   // 難しさで％の出方がちがうので、イージー・ハードの問題の割合に合わせてキャラの出やすさを少しずつ直す（D.bl＝[イージー,ハード]）
+  // まぜまぜ編の答え（恋の問題と日常の問題がまざる）は、キャラの出やすさを別に合わせる（D.mixB。2026-11-26 でたらめに答えた7500回でどのキャラも約10%）
+  var MX=!opt.hon && (NM || qsHasNormal(qs));
   var LV=qLevels(NM?'normal':'love', qs), f1=0, f3=0; qs.forEach(function(q){ var v=LV[q.id]; if(v===1) f1++; else if(v===3) f3++; }); f1/=qs.length; f3/=qs.length;
   D.list.forEach(function(c){
     var bl=(!opt.hon && D.bl && D.bl[c.id]) || [0,0];
-    cs[c.id]+=(c.b||0)+bl[0]*f1+bl[1]*f3+(opt.hon && D.honB ? D.honB[c.id]||0 : 0);
+    cs[c.id]+=(c.b||0)+bl[0]*f1+bl[1]*f3+(opt.hon && D.honB ? D.honB[c.id]||0 : 0)+(MX && D.mixB ? D.mixB[c.id]||0 : 0);
     c.w.forEach(function(w){ cs[c.id]+=words[w]||0; }); c.h.forEach(function(h){ cs[c.id]+=hs[h]||0; });
     Object.keys(c.ax).forEach(function(k){ cs[c.id]+=c.ax[k]*(sc['_'+k]||0)*1.5; });
   });

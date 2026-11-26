@@ -353,3 +353,6 @@ window.CHARA_LOVE = {
 })(window.CHARA_LOVE);
 /* 3つの病名が同じくらい出るように合わせた重み（でたらめに答えた人で恋愛編・ふつう編・本能モード各難しさ約1万7千回。どの病名も約3分の1） */
 (function(D){ var K={"koakuma":[1,1.49,0.79],"hunter":[1,1.15,1.29],"tenshi":[1,1.11,1.3],"aka":[1,1.08,0.75],"jiyu":[1,0.6,0.67],"ouji":[1,0.89,1.6],"cool":[1,0.37,0.44],"shikkari":[1,2.47,1.37],"otome":[1,2.36,1.2],"juunan":[1,0.26,0.58]}; D.list.forEach(function(c){ if(K[c.id]) c.byoK=K[c.id]; }); })(window.CHARA_LOVE);
+/* まぜまぜ編・本能モードでも、どの恋のキャラも同じくらい出るように合わせた分（2026-11-26。でたらめに答えた人で、まぜまぜ編はクール系17%・小悪魔16%、本能モードはクール系61%にかたよっていた→どれも約10%） */
+window.CHARA_LOVE.mixB={"koakuma": -0.41, "tenshi": 0.14, "aka": -0.55, "ouji": -0.15, "otome": 0.28, "cool": -0.48, "shikkari": 0.49, "juunan": 0.38, "jiyu": 0.5, "hunter": 0.21};
+(function(D,A){ Object.keys(A).forEach(function(k){ D.honB[k]=(D.honB[k]||0)+A[k]; }); })(window.CHARA_LOVE, {"koakuma": 0.05, "tenshi": 0.7, "aka": -0.08, "ouji": 0.71, "otome": 0.46, "cool": -1.83, "shikkari": 0.54, "juunan": 0.72, "jiyu": 0.79, "hunter": 0.62});

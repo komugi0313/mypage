@@ -169,3 +169,5 @@ window.CHARA_NORMAL = {
 (function(D){ var K={"nonbiri":[1,1.16,0.95],"hodohodo":[1,1.17,0.72],"shincho":[1,1.02,0.94],"mood":[1,1.73,1.55],"boken":[1,0.7,0.59],"mypace":[1,3.89,1.22],"kodawari":[1,1.42,2.53],"kirakira":[1,0.85,0.68],"dandori":[1,0.72,0.75],"arinomama":[1,1.04,1.23]}; D.list.forEach(function(c){ if(K[c.id]) c.byoK=K[c.id]; }); })(window.CHARA_NORMAL);
 /* 本能モードの日常の問題から決めるふだんのキャラの出やすさ（2026-11-26。でたらめに答えた6000回で、どのキャラも約10%） */
 window.CHARA_NORMAL.honB={"boken":0.75,"shincho":0.33,"mood":0.57,"mypace":0.21,"kodawari":0.71,"hodohodo":0.49,"kirakira":0.26,"arinomama":0.3,"dandori":-1.02,"nonbiri":-0.67};
+/* まぜまぜ編の日常の問題から決めるふだんのキャラの出やすさ（2026-11-26。段取り名人23%・慎重派18%・ほどほど名人3%にかたよっていた→どれも約10%） */
+window.CHARA_NORMAL.mixB={"boken": 0.3, "shincho": -0.36, "mood": 0.12, "mypace": -0.08, "kodawari": 0.11, "hodohodo": 0.32, "kirakira": 0.05, "arinomama": -0.1, "dandori": -0.26, "nonbiri": 0.21};
