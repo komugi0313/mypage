@@ -467,6 +467,7 @@ body[data-mode="normal"] #q-body.sp .choice.B .wbar{background:#8EDDBA}
 .mode[aria-pressed="true"] .pick{display:grid}
 .act b .nwp{white-space:nowrap}
 .rank .rk-np{white-space:nowrap;display:inline-block}
+.nmw{white-space:nowrap;display:inline-block}
 @media (max-width:374px){.act b{font-size:17px}.act b .zap{display:none}.act{gap:9px}}
 /* VSは白い札（鑑定者本人の選択 2026-11-13「左の白いVSとDで」） */
 .vsmark{margin:-12px 0}
@@ -2527,7 +2528,7 @@ function showHonGroupResult(){
   var topN=rank.filter(function(r){ return top.avg!=null ? (r.avg!=null && sec(r.avg)===sec(top.avg)) : r===top; }).map(function(r){ return esc(r.name); });
   var pick=function(r){ return r.c==='A' ? r.q.a : r.q.b; };
   var h='<div class="res-hero"><div class="pre">本能モード　'+n+'人の結果</div><img class="pnd" src="img/panda-joy.webp" alt="" width="96" height="96">'+
-    '<div class="catch">いちばん本能が速いのは…</div><div class="meter"><div class="num" style="font-size:'+(topN.length>1?30:40)+'px">'+topN.join('・')+'</div><div class="cap">'+(top.avg!=null ? '平均 '+sec(top.avg)+'秒・'+honLevel(top.avg/1000, 1) : '全員時間切れ')+'</div></div></div>';
+    '<div class="catch">いちばん本能が速いのは…</div><div class="meter"><div class="num" style="font-size:'+(topN.length>3?26:topN.length>1?30:40)+'px">'+nmj(topN)+'</div><div class="cap">'+(top.avg!=null ? '平均 '+sec(top.avg)+'秒・'+honLevel(top.avg/1000, 1) : '全員時間切れ')+'</div></div></div>';
   // あなたの中にあることば（1人ずつ）
   S.players.forEach(function(p,i){ h+=charaHTML(S.qs, S.ans[i], p.name+'さん', i%2?'kt-b':'kt-a', true, {hon:true, times:S.times[i]})+kimochiHTML(S.qs, S.ans[i], p.name+'さん', i%2?'kt-b':'kt-a', {hon:true})+kotobaHonHTML(S.qs, S.ans[i], S.times[i], p.name+'さん', i%2?'kt-b':'kt-a'); });
   h+=kimochiGroupHTML(S.players.map(function(p,i){ return i; }), (function(){ var m=-1; if(S.room && S.room.pid) S.players.forEach(function(pl,i){ if(pl.pid===S.room.pid) m=i; }); return m; })());
@@ -4041,7 +4042,7 @@ function yurusuGroupHTML(idx, meI){
   if(!diff.length && !same.length) return '';
   var two=P.length===2;
   var row=function(d){ return '<div class="yl-row"><div class="yl-th">'+esc(d.lab)+'</div><div class="yl-who">'+
-    ['A','B'].map(function(c,k){ return '<div class="yl-p '+(k?'b':'a')+'"><span class="n">'+d.by[c].map(nm).join('・')+'は「まだ平気」</span>'+esc(c==='A'?d.q.a:d.q.b)+'</div>'; }).join('')+'</div></div>'; };
+    ['A','B'].map(function(c,k){ return '<div class="yl-p '+(k?'b':'a')+'"><span class="n">'+nmj(d.by[c].map(nm))+'は「まだ平気」</span>'+esc(c==='A'?d.q.a:d.q.b)+'</div>'; }).join('')+'</div></div>'; };
   var h='<div class="card yl"><div class="yl-hd"><img class="yl-ic" src="img/icon-ok.webp" alt="" width="40" height="40"><h3>'+(two?'2人':'みんな')+'の許せるライン'+(diff.length?'、ここがちがう':'')+'</h3></div>';
   if(diff.length){
     h+=diff.slice(0,3).map(row).join('');
@@ -4239,6 +4240,10 @@ function showGroupResult0(){
     hero.parentNode.insertBefore(d, hero.nextSibling);
   }
 }
+/* 名前の途中で改行しない（8人の結果で「あやの／ん」と割れていた 2026-11-26） */
+function nmw(s){ return '<span class="nmw">'+s+'</span>'; }
+/* 名前を「・」でつなぐときは「・」を前の名前にくっつける（行の頭に「・」が来ないように） */
+function nmj(L){ return L.map(function(n,i){ return nmw(n+(i<L.length-1?'・':'')); }).join(''); }
 function showGroupResultCore(){
   if(S.room && S.room.data && S.room.data.mode==='hon') return showHonGroupResult();
   var pm=S.mode, mode=resMode(pm), hd=headline(mode), n=S.players.length;
@@ -4253,7 +4258,7 @@ function showGroupResultCore(){
   var top = R.slice().sort(function(a,b){ return b.sc[hd.k]-a.sc[hd.k]; })[0];
   // 同じ％で並んだ人がいれば、全員の名前を出す
   var tops = R.filter(function(r){ return r.sc[hd.k]===top.sc[hd.k]; }).map(function(r){ return esc(r.p.name); });
-  h+='<div class="meter"><div class="num" style="font-size:'+(tops.length>1?30:40)+'px">'+tops.join('・')+'</div><div class="cap">'+hd.cap+' '+top.sc[hd.k]+'%'+(tops.length>1?'（同点）':'')+'</div></div></div>';
+  h+='<div class="meter"><div class="num" style="font-size:'+(tops.length>3?26:tops.length>1?30:40)+'px">'+nmj(tops)+'</div><div class="cap">'+hd.cap+' '+top.sc[hd.k]+'%'+(tops.length>1?'（同点）':'')+'</div></div></div>';
 
   // ひとりずつの結果（名前で切りかえ）を、価値観の近さ・ランキングより先に
   // ひとりずつ（1人1枚にまとめて、押すと開く。部屋で自分がわかるときは自分を先頭にして開いておく）
@@ -4286,9 +4291,9 @@ function showGroupResultCore(){
   AXES[mode].forEach(function(ax){
     // 同じ％の人がいるときは全員の名前を出す。全員同じなら「みんな同じ」の1行だけ（同じ人が「高い」と「低い」の両方に出ないように）
     var hi=Math.max.apply(null,R.map(function(r){ return r.sc[ax.k]; })), lo=Math.min.apply(null,R.map(function(r){ return r.sc[ax.k]; }));
-    var who=function(v){ return R.filter(function(r){ return r.sc[ax.k]===v; }).map(function(r){ return esc(r.p.name); }).join('・'); };
+    var who=function(v){ return nmj(R.filter(function(r){ return r.sc[ax.k]===v; }).map(function(r){ return esc(r.p.name); })); };
     // 最後の名前と（○%）は割らない（幅320で「（0%）」だけが次の行に落ちていたため）
-    var whoP=function(v){ var L=R.filter(function(r){ return r.sc[ax.k]===v; }).map(function(r){ return esc(r.p.name); }); var last=L.pop(); return (L.length?L.join('・')+'・':'')+'<span class="rk-np">'+last+'（'+v+'%）</span>'; };
+    var whoP=function(v){ var L=R.filter(function(r){ return r.sc[ax.k]===v; }).map(function(r){ return esc(r.p.name); }); var last=L.pop(); return (L.length?L.map(function(n){ return nmw(n+'・'); }).join(''):'')+'<span class="rk-np">'+last+'（'+v+'%）</span>'; };
     if(hi===lo){ h+='<div class="rank"><span class="k">'+ax.name+'</span><span class="v">'+(R.length===2?'2人とも同じ':'みんな同じ')+'（'+hi+'%）</span></div>'; return; }
     h+='<div class="rank"><span class="k">'+ax.name+'がいちばん高い</span><span class="v">'+whoP(hi)+'</span></div>';
     h+='<div class="rank"><span class="k">'+ax.name+'がいちばん低い</span><span class="v">'+whoP(lo)+'</span></div>';
@@ -4304,7 +4309,7 @@ function showGroupResultCore(){
   var mi = minority.indexOf(Math.max.apply(null,minority));
   var miN = R.filter(function(r,k){ return minority[k]===minority[mi]; }).map(function(r){ return esc(r.p.name); });
   // 2人のときは、ちがう答えのたびに両方が「少数派」になるので出さない。全員同じ回数のときも出さない
-  if(minority[mi]>0 && n>=3 && miN.length<n) h+='<div class="rank rank-pnd"><span class="k"><img class="mini-pnd" src="img/panda-wow.webp" alt="" width="34" height="34"><span>いちばんの少数派（個性派）</span></span><span class="v">'+(function(L){ var last=L.pop(); return (L.length?L.join('・')+'・':'')+'<span class="rk-np">'+last+'（少数派の答え'+minority[mi]+'回）</span>'; })(miN.slice())+'</span></div>';
+  if(minority[mi]>0 && n>=3 && miN.length<n) h+='<div class="rank rank-pnd"><span class="k"><img class="mini-pnd" src="img/panda-wow.webp" alt="" width="34" height="34"><span>いちばんの少数派（個性派）</span></span><span class="v">'+(function(L){ var last=L.pop(); return (L.length?L.map(function(n){ return nmw(n+'・'); }).join(''):'')+'<span class="rk-np">'+last+'（少数派の答え'+minority[mi]+'回）</span>'; })(miN.slice())+'</span></div>';
   // 即決王（答えるまでの時間）
   {
     var avg=R.map(function(r){ var t=S.times[r.i].filter(Boolean); return t.length? t.reduce(function(x,y){return x+y;},0)/t.length : 1e9; });
@@ -4312,7 +4317,7 @@ function showGroupResultCore(){
     var okA=avg.filter(function(v){ return v<1e9; });
     if(okA.length>=2){
       var sec=function(v){ return Math.round(v/100)/10; }, mn=Math.min.apply(null,okA), mx=Math.max.apply(null,okA);
-      var whoT=function(v){ return R.filter(function(r,k){ return avg[k]<1e9 && sec(avg[k])===sec(v); }).map(function(r){ return esc(r.p.name); }).join('・'); };
+      var whoT=function(v){ return nmj(R.filter(function(r,k){ return avg[k]<1e9 && sec(avg[k])===sec(v); }).map(function(r){ return esc(r.p.name); })); };
       if(sec(mn)===sec(mx)) h+='<div class="rank"><span class="k">答える速さ</span><span class="v">'+(okA.length===2?'2人とも同じ':'みんな同じ')+'（平均'+sec(mn)+'秒）</span></div>';
       else {
         h+='<div class="rank"><span class="k">即決王</span><span class="v">'+whoT(mn)+'（平均'+sec(mn)+'秒）</span></div>';
@@ -5336,6 +5341,9 @@ async function saveImage(el, text){
           r.classList.add('h2c');
         });
         var st=doc.createElement('style'); st.textContent='.pp-ring.h2c::after{display:none}'; doc.head.appendChild(st);
+        // 画像には結果だけを入れる。押す部品の入れ物（目次・答え合わせの誘い・次はどれで遊ぶ・ほかの診断・開く欄の見出し）は、中のボタンが消えて空の枠になるので外す（2026-11-26 の点検）
+        doc.querySelectorAll('.res-toc,.wcard,.end-pick,.sis,.end-links,.top-share,.ts-kept,.end-home,.aq-card,details.km-more,details.kt-more,details.yl-more,details.ai-more,details.kok').forEach(function(x){ x.remove(); });
+        doc.querySelectorAll('.card').forEach(function(c){ var cc=c.cloneNode(true); cc.querySelectorAll('button,.big,.promo,.promo-u,.kok').forEach(function(x){ x.remove(); }); if(!cc.textContent.trim()) c.remove(); });
       } });
     var blob=await new Promise(function(ok){ cv.toBlob(ok, 'image/png'); });
     var file=null; try{ file=new File([blob], 'kyukyoku-nitaku.png', { type:'image/png' }); }catch(e){}
