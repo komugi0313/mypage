@@ -880,6 +880,27 @@ html[data-tone="f"] .tn-f,html[data-tone="s"] .tn-s{display:revert}
 .sis .bn-ko .pic{align-items:center}.sis .bn-ko .pic img{border-radius:14px;box-shadow:0 1px 3px rgba(90,58,42,.16)}
 .sis .bn:active{transform:translateY(1px)}
 @media (max-width:360px){.sis .bn{gap:8px;padding:10px}.sis .bn .nm{font-size:16px}.sis .bn-is .nm{font-size:18px}.sis .bn .go{padding:8px 10px;font-size:12px}.sis .bn .pic img{transform:scale(.88);transform-origin:bottom}}
+
+/* ふだんのキャラのカード・病名集め（2026-11-26） */
+.card.kc-mixn.kc-fu{display:block}.kc-fu .fu-top{display:flex;align-items:flex-start;gap:12px}
+.kc-fu .fu-near{font-size:13px;color:#17634A;font-weight:700}
+.kc-fu .kc-why{background:#E8F7F0;border-color:#2E9B6A}
+details.fu-open{margin:10px 0 4px;border:1.5px solid #1E1E2A;border-radius:14px;background:#fff}
+details.fu-open>summary{list-style:none;cursor:pointer;min-height:44px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:800;font-size:15px}
+details.fu-open>summary::-webkit-details-marker{display:none}
+details.fu-open>summary::after{content:"開く ▼";flex:none;font-size:12px;font-weight:800;background:#17634A;color:#fff;border-radius:999px;padding:3px 10px}
+details.fu-open[open]>summary::after{content:"閉じる ▲";background:#E8F7F0;color:#17634A}
+.kc-fd{padding:0 10px 10px}
+.card.kc-mixn.fu-hint{display:block}.fu-hint b{font-size:17px}
+.byo-col{display:block;margin-top:8px;padding:8px 10px;background:#FFF6D6;border:1.5px dashed #C9A227;border-radius:12px;font-size:13px;line-height:1.6}
+.byo-col .bc-t{display:block;font-weight:800;color:#1E1E2A}.byo-col .bc-t b{color:#B0281C;font-size:15px}
+.byo-col .bc-l{display:flex;flex-wrap:wrap;gap:4px 6px;margin:4px 0 2px}
+.byo-col .bc-g,.byo-col .bc-n{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12.5px;border:1.5px solid #1E1E2A;background:#fff}
+.byo-col .bc-g.now{background:#FFE3EC;border-color:#B0281C;color:#8E1240;font-weight:800}
+.byo-col .bc-n{color:#8A8496;border-style:dashed;border-color:#B9B3C9}
+.byo-col .bc-h{display:block;color:#5A546A;font-size:12.5px}
+.again-h{margin:12px 0 6px;text-align:center;font-size:13.5px;color:#5A546A}
+.rdy-b{display:block;margin-top:6px;font-size:13px;color:#5A546A}
 </style>
 <style id="flow2">
 /* はじめ方を「押したら何が起きるか」でわかる形に（鑑定者本人の指示 2026-11-13「この形で進めてください」） */
@@ -1853,14 +1874,35 @@ var MIX_N=20, MIX_LOVE=12;
 function resMode(m){ return m==='normal' ? 'love' : m; }   // 結果の主役の％・キャラ（まぜまぜ編は恋）
 function playName2(m){ return m==='normal' ? MODE_NAME.normal+'・'+(LV_NAME[S.lv]||'ノーマル') : playName(m); }
 /* まぜまぜ編の結果に、日常の問題から「ふだんのキャラ」を小さく足す */
+/* ふだんのキャラ（鑑定者本人 2026-11-26「どのモードでも出るように」「OK です」）：
+   まぜまぜ編＝日常の問題から／本能モード＝考える前に選んだ日常の問題から／恋愛編＝前に遊んだ日常の答えから（なければ案内）。
+   なった理由・近いキャラ・開くと出る4枚のカード（診断書・通知表・成分表示・取扱説明書） */
+function fudanHTML(ch, qs, ans, label, cls, opt){
+  opt=opt||{}; if(!ch || !ch.main) return '';
+  var c=ch.main, im=CHARA_IMG[c.id], o={mode:'normal', hon:opt.hon, times:opt.times};
+  var why=''; try{ why=charaWhyHTML(qs, ans, c, label, o); }catch(e){ why=''; }
+  var cards=''; try{ cards=charaHTML(qs, ans, label, '', false, Object.assign({r:ch, cardsOnly:true}, o)); }catch(e){ cards=''; }
+  return '<div class="card kc-mixn kc-fu '+(cls||'')+'"><div class="fu-top">'+(im?'<img src="'+im+'" alt="" width="64" height="64">':'')+
+    '<div class="mxn-t"><small>'+esc(label)+'のふだんのキャラ</small><b>'+esc(c.name)+'</b><span>'+esc(c.say)+'</span>'+
+    (ch.sub ? '<span class="fu-near">'+esc(ch.sub.name)+'にも近い</span>' : '')+(opt.note||'')+'</div></div>'+why+
+    (cards ? '<details class="fu-open"><summary><span class="fu-st">'+(label==='あなた'?'ふだんの診断書・通知表を見る':'<span class="nw1">'+esc(label)+'の</span>ふだんの診断書・通知表')+'</span></summary>'+cards+'</details>' : '')+
+    '<button type="button" class="linkb kc-zk" data-zukan="normal">ほかのキャラも見る（キャラ図鑑）</button></div>';
+}
 function mixFudan(m, qs, ans, label, cls, pre, note){
   if(m!=='normal') return '';
+  try{ return fudanHTML(pre || charaOf(qs, ans, {mode:'normal'}), qs, ans, label, cls, {note:note}); }catch(e){ return ''; }
+}
+function honFudan(qs, ans, tm, label, cls){
+  try{ var ch=charaOf(qs, ans, {mode:'normal', hon:true, times:tm}); if(!ch) return '';
+    return fudanHTML(ch, qs, ans, label, cls, {hon:true, times:tm, note:'<p class="ct-note">考える前に選んだ、日常の問題から決めました</p>'}); }catch(e){ return ''; }
+}
+function lovePastFudan(){
   try{
-    var ch=pre || charaOf(qs, ans, {mode:'normal'}); if(!ch || !ch.main) return '';
-    var c=ch.main, im=CHARA_IMG[c.id];
-    return '<div class="card kc-mixn '+(cls||'')+'">'+(im?'<img src="'+im+'" alt="" width="64" height="64">':'')+
-      '<div class="mxn-t"><small>'+esc(label)+'のふだんのキャラ</small><b>'+esc(c.name)+'</b><span>'+esc(c.say)+'</span>'+(note||'')+
-      '<button type="button" class="linkb kc-zk" data-zukan="normal">ほかのキャラも見る（キャラ図鑑）</button></div></div>';
+    var d=store(CT_KEY)||{}, L=(d.v3 && d.normal)||[], AQ=[], AA=[];
+    L.slice(0, CT_MAX).forEach(function(r){ var u=ctUnpack(r.a, 'normal'); AQ=AQ.concat(u.qs); AA=AA.concat(u.ans); });
+    var ch=AQ.length ? charaOf(AQ, AA, {mode:'normal', k:Math.max(1, L.length)}) : null;
+    if(!ch) return '<div class="card kc-mixn kc-fu fu-hint"><div class="mxn-t"><small>あなたのふだんのキャラ</small><b>まだわかりません</b><span>まぜまぜ編か本能モードで遊ぶと、日常の問題から、あなたのふだんのキャラもわかります。</span></div></div>';
+    return fudanHTML(ch, AQ, AA, 'あなた', '', {note:'<p class="ct-note">これまでに遊んだ日常の問題（'+AQ.length+'問）から決めました。今回の恋愛編には日常の問題がないので、前回までの答えです。</p>'});
   }catch(e){ return ''; }
 }
 var LV_NAME = { easy:'イージー', normal:'ノーマル', hard:'ハード' };
@@ -2135,7 +2177,7 @@ function showReady(){
   $('rdy-t').innerHTML = S.hon ? '<img class="ico-zap" src="img/icon-zap.webp" alt="" width="20" height="20">本能モード' : (S.mode==='love' ? '恋愛編' : 'まぜまぜ編');
   var tags = S.hon ? ['20問','1問5秒'] : [LV[S.lv]||'ノーマル',(S.mode==='normal'?MIX_N:15)+'問','1問20秒'];
   $('rdy-tags').innerHTML = tags.map(function(t){ return '<span>'+t+'</span>'; }).join('');
-  $('rdy-n').innerHTML = S.hon ? '<div class="rdy-hon"><div class="rh-top"><b class="rh-n">5<small>秒</small></b><b class="rh-h">1問5秒で<br>答えてね</b></div><ol class="rh-l"><li><i>1</i><span>5秒以内に押す</span></li><li><i>2</i><span>時間切れは次の問題へ</span></li></ol></div><span>考える前に、直感で選んでね。</span>' : '<span>1問20秒で次の問題へ進みます。</span><span>じっくり悩んで選んでね。</span>';
+  $('rdy-n').innerHTML = S.hon ? '<div class="rdy-hon"><div class="rh-top"><b class="rh-n">5<small>秒</small></b><b class="rh-h">1問5秒で<br>答えてね</b></div><ol class="rh-l"><li><i>1</i><span>5秒以内に押す</span></li><li><i>2</i><span>時間切れは次の問題へ</span></li></ol></div><span>考える前に、直感で選んでね。</span>' : '<span>1問20秒で次の問題へ進みます。</span><span>じっくり悩んで選んでね。</span><span class="rdy-b">遊ぶたびに、ちがう問題。次は、ちがう病名が出るかも</span>';
   show('s-ready');
 }
 $('rdy-go').onclick=function(){ if(S.late && !S.late.on){ lateBegin(); return; } if(S.hon){ startHon(); return; } $('go').onclick(); };
@@ -2582,7 +2624,7 @@ function showHonResult(){
   var rq=function(q){ return q&&q.ex ? '<span class="rq">'+esc(q.ex)+'</span>' : ''; };   // 答えだけでは何の問題かわからないので、問題の文を小さく添える（鑑定者本人 2026-11-23「全部直してください」）
   if(!S.qs._g) S.qs._g=Date.now()+'-'+Math.random();
   var chH=null; try{ chH=ctDecideHon(S.qs, S.ans[0], S.times[0], S.qs._g); }catch(e){ chH=null; }
-  var h=charaHTML(S.qs, S.ans[0], 'あなた', '', false, chH?{hon:true, times:S.times[0], r:chH, ctn:ctNote(chH,'love')}:{hon:true, times:S.times[0]})+kimochiHTML(S.qs, S.ans[0], 'あなた', '', {hon:true})+kotobaHonHTML(S.qs, S.ans[0], S.times[0], 'あなた', '')+'<div class="res-hero"><div class="pre">本能モード　あなたの結果</div>'+
+  var h=charaHTML(S.qs, S.ans[0], 'あなた', '', false, chH?{hon:true, times:S.times[0], r:chH, ctn:ctNote(chH,'love')}:{hon:true, times:S.times[0]})+kimochiHTML(S.qs, S.ans[0], 'あなた', '', {hon:true})+kotobaHonHTML(S.qs, S.ans[0], S.times[0], 'あなた', '')+honFudan(S.qs, S.ans[0], S.times[0], 'あなた', '')+'<div class="res-hero"><div class="pre">本能モード　あなたの結果</div>'+
     '<img class="pnd" src="img/panda-'+(!ok.length?'sad':(avg<1.2?'joy':(avg<2?'smirk':'1')))+'.webp" alt="" width="96" height="96">'+
     '<div class="type" style="font-size:44px">'+(ok.length?avg.toFixed(1):'—')+'<span style="font-size:22px">秒</span></div>'+
     '<div class="catch">本能スピード（答えた'+ok.length+'問の平均）</div><div class="subt"><img class="ico-zap" src="img/icon-zap.webp" alt="" width="20" height="20">'+lvl+'</div></div>';
@@ -2630,7 +2672,7 @@ function showHonGroupResult(){
   var h='<div class="res-hero"><div class="pre">本能モード　'+n+'人の結果</div><img class="pnd" src="img/panda-joy.webp" alt="" width="96" height="96">'+
     '<div class="catch">いちばん本能が速いのは…</div><div class="meter">'+tieHTML(topN)+'<div class="cap">'+(top.avg!=null ? '平均 '+sec(top.avg)+'秒・'+honLevel(top.avg/1000, 1) : '全員時間切れ')+'</div></div></div>';
   // あなたの中にあることば（1人ずつ）
-  S.players.forEach(function(p,i){ h+=charaHTML(S.qs, S.ans[i], p.name+'さん', i%2?'kt-b':'kt-a', true, {hon:true, times:S.times[i]})+kimochiHTML(S.qs, S.ans[i], p.name+'さん', i%2?'kt-b':'kt-a', {hon:true})+kotobaHonHTML(S.qs, S.ans[i], S.times[i], p.name+'さん', i%2?'kt-b':'kt-a'); });
+  S.players.forEach(function(p,i){ h+=charaHTML(S.qs, S.ans[i], p.name+'さん', i%2?'kt-b':'kt-a', true, {hon:true, times:S.times[i]})+kimochiHTML(S.qs, S.ans[i], p.name+'さん', i%2?'kt-b':'kt-a', {hon:true})+kotobaHonHTML(S.qs, S.ans[i], S.times[i], p.name+'さん', i%2?'kt-b':'kt-a')+honFudan(S.qs, S.ans[i], S.times[i], p.name+'さん', i%2?'kt-b':'kt-a'); });
   h+=kimochiGroupHTML(S.players.map(function(p,i){ return i; }), (function(){ var m=-1; if(S.room && S.room.pid) S.players.forEach(function(pl,i){ if(pl.pid===S.room.pid) m=i; }); return m; })());
   // 平均の秒数が同じ人は同じ順位にする
   var place=[]; rank.forEach(function(r,k){ place[k] = k>0 && r.avg!=null && rank[k-1].avg!=null && sec(r.avg)===sec(rank[k-1].avg) ? place[k-1] : k+1; });
@@ -3132,10 +3174,11 @@ toneApply(toneGet());
 var QLV={};
 function qLevels(mode){ if(!QLV[mode]){ var o={}; (POOL[mode]||[]).forEach(function(q){ o[q.id]=q.lv; }); QLV[mode]=o; } return QLV[mode]; }
 var SUB_GAP=0.3;
+function qsHasNormal(qs){ if(!qsHasNormal.s){ var o={}; POOL.normal.forEach(function(q){ o[q.id]=1; }); qsHasNormal.s=o; } return qs.some(function(q){ return qsHasNormal.s[q.id]; }); }
 function charaOf(qs, ans, opt){
   opt=opt||{}; var NM=opt.mode==='normal', D=NM?CHN:CH; if(!D) return null;
   // 本能モード：恋の問題のことば（KOTOBA.honL）から。1秒以内に選んだ答えは2倍に数える（鑑定者本人の指示 2026-11-16「おすすめで」）
-  var K=NM ? KOTOBA.normal : (opt.hon ? KOTOBA.honL : KOTOBA.love), sc=score(NM?'normal':'love', qs, ans), AN=D.ani||[], tm=opt.times, cs={}, as={}, pf={}, words={}, hs={}, cnt={}, n=0;
+  var K=NM ? (opt.hon ? KOTOBA.honN : KOTOBA.normal) : (opt.hon ? KOTOBA.honL : KOTOBA.love), sc=score(NM?'normal':'love', qs, ans), AN=D.ani||[], tm=opt.times, cs={}, as={}, pf={}, words={}, hs={}, cnt={}, n=0;
   D.list.forEach(function(c){ cs[c.id]=0; }); AN.forEach(function(a){ as[a.id]=0; });
   qs.forEach(function(q,qi){
     var c=ans&&ans[qi]; if(c!=='A' && c!=='B') return;
@@ -3146,10 +3189,12 @@ function charaOf(qs, ans, opt){
   });
   if(!n) return null;
   // 難しさで％の出方がちがうので、イージー・ハードの問題の割合に合わせてキャラの出やすさを少しずつ直す（D.bl＝[イージー,ハード]）
+  // まぜまぜ編の答え（恋の問題と日常の問題がまざる）は、キャラの出やすさを別に合わせる（D.mixB。2026-11-26 でたらめに答えた7500回でどのキャラも約10%）
+  var MX=!opt.hon && (NM || qsHasNormal(qs));
   var LV=qLevels(NM?'normal':'love', qs), f1=0, f3=0; qs.forEach(function(q){ var v=LV[q.id]; if(v===1) f1++; else if(v===3) f3++; }); f1/=qs.length; f3/=qs.length;
   D.list.forEach(function(c){
     var bl=(!opt.hon && D.bl && D.bl[c.id]) || [0,0];
-    cs[c.id]+=(c.b||0)+bl[0]*f1+bl[1]*f3+(opt.hon && D.honB ? D.honB[c.id]||0 : 0);
+    cs[c.id]+=(c.b||0)+bl[0]*f1+bl[1]*f3+(opt.hon && D.honB ? D.honB[c.id]||0 : 0)+(MX && D.mixB ? D.mixB[c.id]||0 : 0);
     c.w.forEach(function(w){ cs[c.id]+=words[w]||0; }); c.h.forEach(function(h){ cs[c.id]+=hs[h]||0; });
     Object.keys(c.ax).forEach(function(k){ cs[c.id]+=c.ax[k]*(sc['_'+k]||0)*1.5; });
   });
@@ -3167,7 +3212,11 @@ function charaOf(qs, ans, opt){
   if(!(as[ani.id]>0.3)) ani=AN[(sc.A>=60) ? 2 : (sc.K>=60 ? 1 : 0)]; }
   var pref=[]; [['年上','年下'],['かわいい系','かっこいい系']].forEach(function(p){ var d=(pf[p[0]]||0)-(pf[p[1]]||0); if(d) pref.push(d>0?p[0]:p[1]); });
   // 本能モードの問題には％の点がないので、成分表示・通知表の％はことばの数から出す（キャラの決め方には使わない）
-  if(opt.hon){
+  if(opt.hon && NM){   // 本能モードの日常の問題から、ふだんのキャラ（鑑定者本人 2026-11-26「どのモードでも」）。％はことばの数から
+    var cn=function(pl,mi){ var a=0,b=0; pl.forEach(function(w){ a+=cnt[w]||0; }); mi.forEach(function(w){ b+=cnt[w]||0; }); return Math.round(50+50*(a-b)/(a+b+2)); };
+    sc={ B:cn(['新しいことをしたい','外に出たい','ハプニングも楽しむ','冒険家','好奇心旺盛'],['いつものが安心','家でのんびり','慎重派','心配性']), Y:cn(['最高を選びたい','こだわりが強い','完璧主義','こだわり派'],['ほどほどで満足','コスパ重視']),
+         M:cn(['見た目も大事','見栄っぱり','目立ちたい'],['中身が大事','目立ちたくない']), N:cn(['みんなでわいわい','盛り上げ役','ムードメーカー'],['ひとりの時間が好き','少人数が好き']) };
+  } else if(opt.hon){
     var cc=function(pl,mi){ var a=0,b=0; pl.forEach(function(w){ a+=cnt[w]||0; }); mi.forEach(function(w){ b+=cnt[w]||0; }); return Math.round(50+50*(a-b)/(a+b+2)); };
     sc={ K:cc(['駆け引き上手','追いかけられたい','ひみつ主義','小悪魔'],['ストレート','一途']), R:cc(['ムードを大事にする','サプライズが好き','記念日を覚えている','ロマンチスト'],['現実派','態度で伝える','安心がいちばん','さっぱり系']),
          S:cc(['ドキドキしたい','新しいことをしたい','直感で動く'],['安心がいちばん','のんびり派']), A:cc(['甘えたい','かまってほしい','じつは、さびしがり','甘えんぼう'],['尽くしたい','しっかり者','自分の時間もほしい','ほうっておいてほしい','対等でいたい']) };
@@ -3191,7 +3240,47 @@ function tnList(c, from, to, key){ // あるある（または症状）の from�
   var h=''; ['y','f','s'].forEach(function(t){ c[key||'tone'][t].slice(from,to).forEach(function(s){ h+='<li class="tn tn-'+t+'">'+esc(s)+'</li>'; }); }); return h;
 }
 /* 恋の病名は、言葉の切れ目でだけ改行する（幅の小さいスマホで「既読チェッ／ク依存症」と割れていたため） */
-var BYO_BR={}; ['追われると｜冷める｜症候群','尽くしすぎ｜貧血','既読チェック｜依存症','理想高すぎ｜乱視','恋愛全力疾走｜による｜息切れ','好きな人の｜前だけ｜無口症','段取りしすぎ｜肩こり','自分迷子症','恋人より｜昼寝症','押しが強すぎ｜発熱症','じっとして｜いられない｜症候群','念のため｜確認しすぎ症','盛り上げすぎて｜声がれ症','予定｜合わせられない｜症候群','比較サイト｜見すぎ症','欲がなさすぎ｜欠乏症','写真撮り直し｜症候群','正直すぎ｜発言症','予定表｜つくりすぎ症','あとでやる｜慢性化症'].forEach(function(b){ BYO_BR[b.replace(/｜/g,'')]=b.split('｜'); });
+var BYO_BR={}; ['追われると｜冷める｜症候群','尽くしすぎ｜貧血','既読チェック｜依存症','理想高すぎ｜乱視','恋愛全力疾走｜による｜息切れ','好きな人の｜前だけ｜無口症','段取りしすぎ｜肩こり','自分迷子症','恋人より｜昼寝症','押しが強すぎ｜発熱症','じっとして｜いられない｜症候群','念のため｜確認しすぎ症','盛り上げすぎて｜声がれ症','予定｜合わせられない｜症候群','比較サイト｜見すぎ症','欲がなさすぎ｜欠乏症','写真撮り直し｜症候群','正直すぎ｜発言症','予定表｜つくりすぎ症','あとでやる｜慢性化症','既読わざと｜寝かせ症','「別に」多用性｜ツンデレ炎','「大丈夫？」｜連発症','自分あとまわし｜慢性疲労','会いたい｜禁断症状','甘えすぎ｜糖分過多','記念日｜つくりすぎ症','運命の人｜待ちすぎ｜遠視','妄想デート｜過多症','好き好き｜沸騰症','本音ひた隠し症','平気なふり｜慢性化症','先回り｜過敏症','頼られすぎ｜腰痛','「なんでもいいよ」｜常用症','好み｜のりうつり症','既読スルー｜常習症','束縛｜アレルギー','恋の｜早押し症','手に入れたら｜冷め症','新しもの好き｜発作','思いつき｜出発症','口コミ｜読みすぎ症','心配｜先取り症','沈黙｜こわい症','はしゃぎすぎ｜筋肉痛','遅刻ぎりぎり｜症候群','気分しだい｜出欠症','100点じゃないと｜気がすまない症','こだわり道具｜増殖症','「これで十分」｜連発症','割引｜待ちすぎ症','映え探し｜症候群','盛りすぎ症','気どれない症','顔に｜出すぎ症','予定変更｜パニック症','先の先まで｜計画症','二度寝｜常習症','ソファ｜離れられない症'].forEach(function(b){ BYO_BR[b.replace(/｜/g,'')]=b.split('｜'); });
+/* 診断書の病名は1キャラ3つ（鑑定者本人 2026-11-26「全部面白いので実装してください」）。どれを出すかは、その回の答えのことば（kotoba-*.js）で決める。
+   遊ぶたびにくじで変えるのではなく、同じ答えなら同じ病名（「自分は何だろう」と思わせないため＝鑑定者本人 2026-11-26）。どれにも当たらなければ今の病名 */
+function byoPick(c, qs, ans, mk, times){
+  var L=[{byo:c.byo, sho:c.sho, doc:c.doc, w:c.byoW||[], i:0}].concat((c.byoMore||[]).map(function(x,i){ return Object.assign({}, x, {i:i+1}); }));
+  var K=KOTOBA[mk]; if(L.length<2 || !K || !qs) return L[0];
+  var sc={};
+  qs.forEach(function(q,qi){
+    var a=ans&&ans[qi]; if(a!=='A' && a!=='B') return;
+    var k=K.byId[q.id]; if(!k) return;
+    var side=canon(q,a), wt=(times && times[qi]>0 && times[qi]<=1000) ? 2 : 1;
+    (k[side]||[]).forEach(function(w){ sc[w]=(sc[w]||0)+wt/Math.sqrt(K.freq[w]||1); });
+    var h=k[side+'h']; if(h) sc[h]=(sc[h]||0)+wt/Math.sqrt(K.hfreq[h]||1);
+  });
+  var best=0, bs=0;
+  var BK=c.byoK||[]; L.forEach(function(x,i){ var v=0; (x.w||[]).forEach(function(w){ v+=sc[w]||0; }); v*=(BK[i]||1); if(v>bs+1e-9){ bs=v; best=i; } });
+  return L[best];
+}
+function byoScores(c, qs, ans, mk, times){ var K=KOTOBA[mk], sc={}; if(!K) return null; var L=[{w:c.byoW||[]}].concat(c.byoMore||[]);
+  qs.forEach(function(q,qi){ var a=ans&&ans[qi]; if(a!=='A'&&a!=='B') return; var k=K.byId[q.id]; if(!k) return; var side=canon(q,a), wt=(times&&times[qi]>0&&times[qi]<=1000)?2:1;
+    (k[side]||[]).forEach(function(w){ sc[w]=(sc[w]||0)+wt/Math.sqrt(K.freq[w]||1); }); var h=k[side+'h']; if(h) sc[h]=(sc[h]||0)+wt/Math.sqrt(K.hfreq[h]||1); });
+  return L.map(function(x){ var v=0; (x.w||[]).forEach(function(w){ v+=sc[w]||0; }); return v; }); }
+/* 病名集め（鑑定者本人 2026-11-26「OK です」）：あなたの結果で出た病名を、このスマホが覚える（どこにも送らない）。
+   まだ出ていない病名は「？？？」。答え方が変わると、ほかの病名が出る */
+function byoNext(c, BY){
+  var L=[{byo:c.byo, sho:c.sho, doc:c.doc, i:0}].concat((c.byoMore||[]).map(function(x,i){ return Object.assign({}, x, {i:i+1}); }));
+  if(L.length<2) return BY;
+  var d=store('nitaku_byo')||{}, last=d._last||{}, g=(S && S.qs && S.qs._g) || '', got=d[c.id]||[], k=BY.i||0;
+  if(g && last[c.id] && last[c.id].g===g) k=last[c.id].i;   // 同じ回を出し直したときは同じ病名
+  else if(got.indexOf(k)>=0){ var rest=L.filter(function(x){ return got.indexOf(x.i)<0; }); if(rest.length) k=rest[0].i; }
+  if(got.indexOf(k)<0) d[c.id]=got.concat([k]);
+  last[c.id]={g:g, i:k}; d._last=last; store('nitaku_byo', d);
+  return L[k];
+}
+function byoColHTML(c, BY){
+  var all=[c.byo].concat((c.byoMore||[]).map(function(x){ return x.byo; })); if(all.length<2) return '';
+  var got=(store('nitaku_byo')||{})[c.id]||[BY.i||0];
+  return '<span class="byo-col"><span class="bc-t">あなたの病名 <b>'+got.length+'／'+all.length+'</b>'+(got.length>=all.length?' ぜんぶ見つけた！':'')+'</span><span class="bc-l">'+
+    all.map(function(n,i){ return got.indexOf(i)>=0 ? '<span class="bc-g'+(i===(BY.i||0)?' now':'')+'">'+esc(n)+'</span>' : '<span class="bc-n">？？？</span>'; }).join('')+'</span>'+
+    (got.length<all.length ? '<span class="bc-h">遊ぶたびに、ちがう問題。次は、ちがう病名が出るかも</span>' : '')+'</span>';
+}
 function byoH(t){
   if(BYO_BR[t]) return BYO_BR[t].map(function(w){ return '<span class="byw">'+esc(w)+'</span>'; }).join('<wbr>');
   try{ var sg=new Intl.Segmenter('ja',{granularity:'word'}), ps=[];
@@ -3200,7 +3289,7 @@ function byoH(t){
   }catch(e){ return esc(t); }
 }
 /* 処方の「週1回」などの短いうしろと一緒に改行するまとまりを、言葉の切れ目で決める（前は最後の2文字で「「今日はやってもらう／日」　月2回」と割れていた） */
-var SHO_BR={}; ['自分から「会いたい」と｜言う練習','自分に｜ごほうび','「今日は｜やってもらう日」','ひとりで｜楽しめる趣味','ふつうの日の｜デート','「今日も｜楽しかった」を言う','友だちとの｜予定','本音の｜LINE','ひとりで｜決める練習','記念日をカレンダーに｜入れる','行きたい場所｜リスト','口コミを読まずに｜入る店','待ち合わせの｜10分前に出る','3つまでで｜選ぶ練習','自分への｜ごほうび','ちょっと｜いい物を買う','撮らずに｜食べる日','加工｜しない写真','ほめ言葉を｜ひとつ足す','予定を｜入れない休み','自分の｜意見を言う'].forEach(function(b){ SHO_BR[b.replace('｜','')]=b.indexOf('｜'); });
+var SHO_BR={}; ['自分から「会いたい」と｜言う練習','自分に｜ごほうび','「今日は｜やってもらう日」','ひとりで｜楽しめる趣味','ふつうの日の｜デート','「今日も｜楽しかった」を言う','友だちとの｜予定','本音の｜LINE','ひとりで｜決める練習','記念日をカレンダーに｜入れる','行きたい場所｜リスト','口コミを読まずに｜入る店','待ち合わせの｜10分前に出る','3つまでで｜選ぶ練習','自分への｜ごほうび','ちょっと｜いい物を買う','撮らずに｜食べる日','加工｜しない写真','ほめ言葉を｜ひとつ足す','予定を｜入れない休み','自分の｜意見を言う','既読から｜5分で返す','「うれしい」を｜顔に出す','「別に」を｜「うれしい」に言いかえる','素直な｜スタンプ','自分に｜「大丈夫？」と聞く','何も｜気をつかわない日','自分の予定を｜先に入れる','「わたしはこうしたい」を｜言う','ひとりで｜楽しむ時間','会えない日の｜楽しみ','甘える前に｜「ありがとう」','自分でできることは｜自分で','なんでもない日の｜「ありがとう」','近くの人と｜話す','「運命」を｜忘れる日','本物のデートの｜予定','気持ちをノートに｜書く','友だちに話を｜聞いてもらう','本音をひとつ｜話す','「さびしかった」と｜言う','相手に｜決めてもらう日','何も調べずに｜出かける','「手伝って」と｜言う','ひとりで｜休む日','「これがいい」と｜言う','食べたい物を｜先に言う','昔から好きな物を｜思い出す','ひとりで｜好きなお店へ','「あとで返すね」の｜ひとこと','次に会う約束を｜先に入れる','自分から｜「今なにしてる？」','次に会う日を｜決める','2人の思い出を｜ふり返る','付き合ったあとの｜デートの計画','相手のいいところを｜書き出す','いつものお店に｜行く','1つのことを｜続ける','出かける前に｜持ち物の確認','帰りの時間を｜決める','「たぶん大丈夫」と｜言う','心配ごとをメモに｜書いて閉じる','3秒｜だまる練習','静かな｜カフェへ','帰ったら｜すぐ寝る','時計を｜5分すすめる','前の日に｜服を決める','誘いに｜「行く」と答える','80点で｜決める練習','迷ったら｜最初の物','1つ買ったら｜1つ手放す','持っている物を｜使い切る','「ほしい」と｜言う','行ってみたい｜お店へ','定価で買う物を｜1つ','値段を見ずに｜選ぶ','写真を撮らずに｜出かける','その場の感想を｜ひとこと','加工なしで｜投稿','すっぴんの｜写真','特別な日の｜ちょっといい服','写真を1枚｜撮ってみる','鏡で表情を｜確かめる','「おいしい」を｜先に言う','予定を1つ｜変えてみる','「それもいいね」と｜言う','今日だけを｜楽しむ日','行き先を決めずに｜出かける','目覚ましは｜1回で止める','朝の楽しみを｜1つ','休みの日に｜1つ出かける','起きたら｜カーテンを開ける'].forEach(function(b){ SHO_BR[b.replace('｜','')]=b.indexOf('｜'); });
 function shoTailAt(t){ // 手で決めた切れ目。一覧にない短い文（6文字まで）はまるごと、長い文は最後の2文字
   if(SHO_BR[t]!=null) return SHO_BR[t];
   return t.length<=6 ? 0 : t.length-2;
@@ -3219,15 +3308,15 @@ function charaFill(list, extra, n){ var out=list.slice(); extra.forEach(function
    このキャラの点がいちばん大きく入った答えを、上から3つまで見せる。キャラの決め方・点数は変えない。
    ことば（キャラの言葉と同じもの）かキャラの印でつながる答えだけ。2つ以上ないときは出さない（こじつけに見えないように） */
 function charaWhy(qs, ans, c, opt){
-  opt=opt||{}; if(!c || opt.mode==='normal') return [];
-  var K=opt.hon ? KOTOBA.honL : KOTOBA.love, cw=(c.w||[]).concat(c.h||[]), out=[];
+  opt=opt||{}; if(!c) return [];
+  var NM=opt.mode==='normal', DQ=NM?CHN.q:CH.q, K=NM ? (opt.hon ? KOTOBA.honN : KOTOBA.normal) : (opt.hon ? KOTOBA.honL : KOTOBA.love), cw=(c.w||[]).concat(c.h||[]), out=[];
   qs.forEach(function(q,qi){
     var a=ans&&ans[qi]; if(a!=='A' && a!=='B') return;
-    var o=a==='A'?'B':'A', side=canon(q,a), k=K.byId[q.id], t=CH.q ? CH.q[a==='A'?q.a:q.b] : null;
+    var o=a==='A'?'B':'A', side=canon(q,a), k=K.byId[q.id], t=DQ ? DQ[a==='A'?q.a:q.b] : null;
     var ws=k ? (k[side]||[]).concat(k[side+'h']?[k[side+'h']]:[]) : [], hit=ws.filter(function(w){ return cw.indexOf(w)>=0; });
     var mk=!!(t && (t.c||[]).indexOf(c.id)>=0);
     if(!hit.length && !mk) return;
-    var o1={mode:'love', hon:opt.hon}, x=charaOf([q],[a],o1), y=charaOf([q],[o],o1);
+    var o1={mode:NM?'normal':'love', hon:opt.hon}, x=charaOf([q],[a],o1), y=charaOf([q],[o],o1);
     var d=((x&&x.cs[c.id])||0)-((y&&y.cs[c.id])||0); if(!(d>0.3)) return;
     // キャラの印だけでつながった答えも、その答えのことばで「何らしいか」を書く（「○○ らしい答え」では理由にならないため。鑑定者本人 2026-11-23「全部直してください」）
     var w2=hit[0]||ws.filter(function(w){ return charaWordsOk(c,[w]).length; })[0]||'';
@@ -3245,7 +3334,7 @@ function charaWhyHTML(qs, ans, c, label, opt){
 function charaHTML(qs, ans, label, cls, fold, opt){
   var r=(opt && opt.r) || charaOf(qs, ans, opt); if(!r) return ''; opt=opt||{}; var NM=opt.mode==='normal', D=NM?CHN:CH, MK=NM?'normal':'love', an=r.ani?r.ani.name:'';
   window.__ktCh={c:r.main, mk:MK};   // すぐあとの「あなたの中にあることば」で、キャラと正反対のことばを外すため（ktChFilter）
-  var c=r.main, kt=kotobaOf(qs, ans, MK) || { words:[], hito:[], both:[] }, sc=r.sc;
+  var c=r.main, kt=kotobaOf(qs, ans, opt.hon ? (NM?'honN':'honL') : MK) || { words:[], hito:[], both:[] }, sc=r.sc;
   var pill=function(s){ return '<span class="kc-pill">'+esc(s)+'</span>'; };
   var who=label==='あなた' ? 'あなた' : label.replace(/さん$/,'');
   var h='<div class="card kc'+(NM?' kc-n':'')+(cls?' '+cls:'')+'"><p class="kc-pre"><span class="nm">'+esc(label)+'</span>の'+(NM?'ふだんのキャラ':(opt.hon?'本能の':'')+'恋のキャラ')+(opt.hero?''+qq(c.name)+'':'')+'</p>'+(opt.hon?(opt.ctn||'<p class="kc-from">考える前に選んだ恋の答えから決めました</p>'):'')+
@@ -3277,13 +3366,15 @@ function charaHTML(qs, ans, label, cls, fold, opt){
     '<div class="mn-s mn-c"><b>注意</b><ul>'+['y','f','s'].map(function(t){ return '<li>'+esc(c.chui[t])+'</li>'; }).join('')+'</ul></div>'+
     '<div class="mn-s"><b>相性のいい機種</b><ul><li>'+c.kiki.map(esc).join('・')+'</li></ul></div></div></div>';
   var cause=charaWordsOk(c, kt.words).filter(function(w){ return KOTOBA[MK].theme[w]===5; }).slice(0,2); if(!cause.length) cause=top.slice(0,2);
+  var BY=byoPick(c, qs, ans, opt.hon?(NM?'honN':'honL'):MK, opt.times), BYS=r.sub?byoPick(r.sub, qs, ans, opt.hon?(NM?'honN':'honL'):MK, opt.times):null;
+  if(label==='あなた' && !opt.noCol){ try{ BY=byoNext(c, BY); }catch(e){} }
   var E='<div class="kcd kc-karte"><h3>診断書</h3><dl class="kr">'+
     '<dt>患者名</dt><dd>'+esc(who)+(who==='あなた'?'':' 様')+'</dd>'+
-    '<dt>病名</dt><dd><span class="kr-byo">'+byoH(c.byo)+'</span>'+(r.sub?'<span class="kr-sub">ほかに'+byoSubH(r.sub.byo)+'</span>':'')+'</dd>'+
+    '<dt>病名</dt><dd><span class="kr-byo">'+byoH(BY.byo)+'</span>'+(BYS?'<span class="kr-sub">ほかに'+byoSubH(BYS.byo)+'</span>':'')+(label==='あなた' && !opt.noCol ? byoColHTML(c, BY) : '')+'</dd>'+
     '<dt>症状</dt><dd><ul>'+['y','f','s'].map(function(t){ return '<li>'+esc(c.sym[t][0])+'</li>'; }).join('')+'</ul></dd>'+
     (cause.length ? '<dt>原因</dt><dd>'+cause.map(esc).join('／')+'</dd>' : '')+
-    '<dt>処方</dt><dd><ul>'+c.sho.map(function(s){ return '<li>'+(function(ps){ if(ps.length>1 && ps[ps.length-1].length<=3){ var l=ps.pop(); ps[ps.length-1]=[ps[ps.length-1], l]; } return ps.map(function(x){ return '<span class="byw">'+(Array.isArray(x)?(function(k){ return esc(x[0].slice(0,k))+'<span class="nw">'+esc(x[0].slice(k))+'\u3000'+esc(x[1])+'</span>'; })(shoTailAt(x[0])):esc(x))+'</span>'; }).join(' '); })(String(s).split('　'))+'</li>'; }).join('')+'</ul></dd></dl>'+
-    '<div class="kr-doc"><p><b class="kd1">担当医より：</b>'+esc(c.doc.f)+'</p><p class="kd2"><b>院長より：</b>'+esc(c.doc.s)+'</p></div><div class="kr-hanko">'+(NM?'ふだんの':'恋の')+'<br>クリニック</div></div>';
+    '<dt>処方</dt><dd><ul>'+BY.sho.map(function(s){ return '<li>'+(function(ps){ if(ps.length>1 && ps[ps.length-1].length<=3){ var l=ps.pop(); ps[ps.length-1]=[ps[ps.length-1], l]; } return ps.map(function(x){ return '<span class="byw">'+(Array.isArray(x)?(function(k){ return esc(x[0].slice(0,k))+'<span class="nw">'+esc(x[0].slice(k))+'\u3000'+esc(x[1])+'</span>'; })(shoTailAt(x[0])):esc(x))+'</span>'; }).join(' '); })(String(s).split('　'))+'</li>'; }).join('')+'</ul></dd></dl>'+
+    '<div class="kr-doc"><p><b class="kd1">担当医より：</b>'+esc(BY.doc.f)+'</p><p class="kd2"><b>院長より：</b>'+esc(BY.doc.s)+'</p></div><div class="kr-hanko">'+(NM?'ふだんの':'恋の')+'<br>クリニック</div></div>';
   var G=D.subj.map(function(s){ return { s:s, g:r.grade[s.k] }; });
   var hi=G.slice().sort(function(a,b){ return b.g-a.g; })[0], lo=G.slice().sort(function(a,b){ return a.g-b.g; })[0];
   var tch=hi.g===lo.g ? {y:'どの科目も、バランスよくできました。',f:'どの科目もそろっています。次は、どれか1つで目立ってみましょう。',s:'全部の科目が同じ点です。逆に、先生はあなたのことがまだよくわかりません。'} :
@@ -3296,6 +3387,7 @@ function charaHTML(qs, ans, label, cls, fold, opt){
   var tabs='<div class="kc-tabs" role="tablist">'+[['E','診断書'],['F','通知表'],['A','成分表示'],['C','取扱説明書']].map(function(x,i){ return '<button type="button" data-nocg data-card="'+x[0]+'" aria-selected="'+(i?'false':'true')+'">'+x[1]+'</button>'; }).join('')+'</div>'+
     '<div class="kc-cards"><div class="kc-c" data-c="E">'+E+'</div><div class="kc-c" data-c="F" hidden>'+F+'</div><div class="kc-c" data-c="A" hidden>'+A+'</div><div class="kc-c" data-c="C" hidden>'+C+'</div></div>'+
     '<button type="button" class="linkb kc-save">このカードを画像で送る</button>';
+  if(opt.cardsOnly) return '<div class="kc kc-n kc-fd">'+tabs+'</div>';
   // みんなの結果（fold）では、カードをキャラの名前とひとことのすぐ下に、はじめから診断書を開いて出す（鑑定者本人 2026-11-20 見本 https://claude.ai/artifact/KUK16iX8KoPNVP4kGistvy の「B」。前はいちばん下の黄色い「カードを見る」で、押されにくかった）
   if(fold) h=h.replace('\u0001KCARDS\u0001', '<div class="kc-open"><p class="kc-cap">'+esc(label)+'の'+(NM?'ふだんのカード':'恋のカード')+'</p>'+tabs+'</div>');
   else h+='<p class="kc-cap">'+(NM?'ふだんのカード':'恋のカード')+'</p>'+tabs;
@@ -3529,7 +3621,7 @@ function resetAll(){
   }
   resetAll.armed=0; clearTimeout(resetAll.t); if($('reset-note')) $('reset-note').hidden=true;
   leaveRoom();
-  try{ localStorage.removeItem('nitaku_tone'); localStorage.removeItem('nitaku_mine'); localStorage.removeItem('nitaku_me'); localStorage.removeItem('nitaku_room'); localStorage.removeItem('nitaku_players'); localStorage.removeItem('nitaku_seen_love'); localStorage.removeItem('nitaku_seen_normal'); localStorage.removeItem('nitaku_recent_love'); localStorage.removeItem('nitaku_recent_normal'); localStorage.removeItem('nitaku_hist_love'); localStorage.removeItem('nitaku_hist_normal'); localStorage.removeItem('nitaku_seen_hon'); localStorage.removeItem('nitaku_chara_ans'); }catch(e){}
+  try{ localStorage.removeItem('nitaku_tone'); localStorage.removeItem('nitaku_mine'); localStorage.removeItem('nitaku_me'); localStorage.removeItem('nitaku_room'); localStorage.removeItem('nitaku_players'); localStorage.removeItem('nitaku_seen_love'); localStorage.removeItem('nitaku_seen_normal'); localStorage.removeItem('nitaku_recent_love'); localStorage.removeItem('nitaku_recent_normal'); localStorage.removeItem('nitaku_hist_love'); localStorage.removeItem('nitaku_hist_normal'); localStorage.removeItem('nitaku_seen_hon'); localStorage.removeItem('nitaku_chara_ans'); localStorage.removeItem('nitaku_byo'); }catch(e){}
   S.players=[]; S.qs=[]; S.qi=0; S.pi=0; S.ans=[]; S.times=[]; S.counts=null; S.sent={}; S.mix=false;
   S.who='solo'; S.lv='normal'; S.gnum=15; S.style='room'; S.rv='end';
   [['seg-who','solo'],['seg-lv','normal'],['seg-style','room']].forEach(function(x){
@@ -3665,7 +3757,7 @@ function endButtons(){
       '<p class="hint end-hint">みんなが「準備OK」を押してから始まります。</p>'+endq;
     return '<p class="hint lb-wait" style="margin-top:22px">部屋を作った人が「もう1回」を押すと、このまま次が始まります。</p>'+endq;
   }
-  return nextPick()+'<button class="big" id="again">もう1回（ちがう問題で）</button>';
+  return nextPick()+'<p class="again-h">遊ぶたびに、ちがう問題。次は、ちがう病名が出るかも</p><button class="big" id="again">もう1回（ちがう問題で）</button>';
 }
 /* もう1回の前に、次のモードを選ぶ（「○○編でもう1回」のボタンはやめた＝鑑定者本人 2026-11-14「普通編とかは要らないかも　また選ばせたら？」） */
 function curPlayMode(){ return (S.room && S.room.data && S.room.data.mode==='hon') || (!S.room && S.lastHon) ? 'hon' : S.mode; }
@@ -3915,7 +4007,7 @@ function showResult(){
     '<div class="catch">'+axComment(hd.k,val)+'</div>'+bridgeLine(mode, hd.k, val, ch)+
     '<div class="minis">'+others.map(function(ax){ return '<div><b>'+sc[ax.k]+'<small>%</small></b><span>'+ax.name.replace(/度$/,'')+'</span>'+(axWord(ax.k,sc[ax.k])?'<i class="axw-s">'+axWord(ax.k,sc[ax.k])+'</i>':'')+'</div>'; }).join('')+'</div>'+
     (mode==='love' ? '<button type="button" class="linkb mtk-go" data-mtk>％の見かた ›</button>' : '')+'</div>';
-  h+=charaHTML(S.qs, S.ans[0], 'あなた', '', false, {mode:mode, hero:!!chImg, r:ch})+(mode==='love'?kimochiHTML(S.qs, S.ans[0], 'あなた', '')+yurusuHTML(S.qs, S.ans[0], 'あなた'):nHintHTML(S.qs, S.ans[0], 'あなた', ''))+kotobaHTML(S.qs, S.ans[0], 'あなた', '', mode)+mixFudan(pm, S.qs, S.ans[0], 'あなた', '', chN, ctNorm)+(pm==='normal'?nHintHTML(S.qs, S.ans[0], 'あなた', ''):'');
+  h+=charaHTML(S.qs, S.ans[0], 'あなた', '', false, {mode:mode, hero:!!chImg, r:ch})+(mode==='love'?kimochiHTML(S.qs, S.ans[0], 'あなた', '')+yurusuHTML(S.qs, S.ans[0], 'あなた'):nHintHTML(S.qs, S.ans[0], 'あなた', ''))+kotobaHTML(S.qs, S.ans[0], 'あなた', '', mode)+mixFudan(pm, S.qs, S.ans[0], 'あなた', '', chN, ctNorm)+(pm==='love'?lovePastFudan():'')+(pm==='normal'?nHintHTML(S.qs, S.ans[0], 'あなた', ''):'');
   h+='<div class="card"><details class="kok"><summary><span><img class="ico-i" src="img/icon-detail.webp" alt="" width="20" height="20">4つの％をくわしく見る</span></summary>'+axisHTML(mode,sc)+AXES[mode].map(function(ax){ return rkSpan(mode, ax.k, sc[ax.k]); }).join('')+(mode==='love'?'<button class="linkb" data-mtk>％の見かた ›</button>':'')+'<button class="linkb" data-about>この診断について（％の考え方）</button></details></div>';
   if(hist && hist.length>=2) h+=histHTML(mode, hist);   // 1回目は中身のない「平均」のカードを出さない
   var maj=majorityStats(S.qs, S.ans[0]);
@@ -3950,7 +4042,7 @@ function showResult(){
 /* みんなの結果の目次（鑑定者本人 2026-11-19「みんなの結果にも入れる」） */
 var GRES_TOC=[['.card.pc-wrap','ひとりずつの結果','koi','p','キャラと％・カード'],['.card.kmg:not(.kn)','気持ちの出し方','eyes','b','だれが言える派？'],['.card.kmg.kn','決め方・元気の出し方','eyes','b','だれが何派？'],['.card.yl','許せるライン','ok','m','「まだ平気」がちがうところ'],['.card.aisho','価値観の近さ','aisho','v','いちばん近い2人は？'],['.card.rk-card','ランキング','award','y','いちばん○○なのは？'],['.card.aq-card','みんなの答え','list','o','だれがどっちを選んだか']];
 /* 本能モードの目次（鑑定者本人 2026-11-20「3番修正」。前は本能モードの結果に目次が出ていなかった） */
-var HON_TOC=[['.card.hon-aw','あなたの本能アワード','award','y','本能が選んだ、あなただけの賞'],['.card.hon-list','あなたの本能の答え','list','o','何秒で、どっちを選んだか'],['.card.hon-rk','速さのランキング','zap','p','いちばん即決・いちばん迷った']];
+var HON_TOC=[['.card.kc-fu','ふだんのキャラ','minna','v','日常の問題から見えた、ふだんのあなた'],['.card.hon-aw','あなたの本能アワード','award','y','本能が選んだ、あなただけの賞'],['.card.hon-list','あなたの本能の答え','list','o','何秒で、どっちを選んだか'],['.card.hon-rk','速さのランキング','zap','p','いちばん即決・いちばん迷った']];
 var HON_GTOC=[['.card.kc','ひとりずつの恋のキャラ','koi','p','キャラと恋のカード'],['.card.kmg','気持ちの出し方','eyes','b','だれが言える派？'],['.card.hon-rk','本能スピードのランキング','zap','y','いちばん速いのはだれ？'],['.card.hon-pair','本能が合う2人','aisho','v','いちばん本能が近い2人'],['.card.hon-aw','本能アワード','award','m','全員に1つずつ賞'],['.hon-all','みんなの答え','list','o','だれが・どっちを・何秒で'],['.card.hon-each','ひとりずつの本能','mayou','p','いちばん即決と、迷った問題']];
 function resToc(body, LIST){
   if(!body || body.querySelector('.res-toc')) return;
