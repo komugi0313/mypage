@@ -941,6 +941,14 @@ details.fu-open[open]>summary::after{content:"閉じる ▲";background:#E8F7F0;
 .stp{display:flex;gap:8px;align-items:center;font-weight:900;font-size:16px;margin:4px 0 10px}
 .stp .num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#1E1E2A;color:#fff;font-size:15px;flex:none}
 .lb-main{text-align:center;padding:20px 16px}
+.netp{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px 8px;margin:0 auto 10px;padding:5px 12px;border-radius:999px;font-size:13.5px;font-weight:800;line-height:1.5;max-width:100%;width:fit-content;color:#1E5E3A;background:#E6F6EC}
+.netp>span:not(.nd){min-width:0;text-align:left}.netp>span .nd{display:inline-block;margin-right:6px;vertical-align:1px}.netp .nd{width:9px;height:9px;border-radius:50%;background:#2E9B6A;flex:none;animation:ndp 1.6s ease-in-out infinite}
+.netp.weak{color:#6B4A00;background:#FFF1C2}.netp.weak .nd{background:#E0A100}
+.netp.ng{color:#8A1538;background:#FFE3EC;border-radius:14px}.netp.ng .nd{background:#D0285B;animation:none}
+.netp .net-re{min-height:44px;padding:4px 14px;border:2px solid #8A1538;border-radius:999px;background:#fff;color:#8A1538;font-weight:900;font-size:13.5px}
+#q-net{margin:0 auto 8px}
+@keyframes ndp{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.netp .nd{animation:none}}
 .lb-pill{display:inline-block;margin:0 0 10px;padding:6px 16px;border:2.5px solid #1E1E2A;border-radius:999px;font-weight:900;font-size:15px}
 .lb-pill:empty{display:none}
 .lb-pill.wait{background:#FFE071}
@@ -1632,6 +1640,7 @@ input,select,textarea{font-size:max(16px,1em)}
   <div class="card lb-main">
     <img class="pnd" id="lb-panda" src="img/panda-wait.webp" alt="" width="110" height="110">
     <p class="lb-pill" id="lb-pill"></p>
+    <p class="netp" id="lb-net" hidden></p>
     <p class="lb-head" id="lb-head">部屋ができました</p>
     <p class="lb-sub" id="lb-sub"></p>
     <p class="lb-timer" id="lb-timer" hidden></p>
@@ -1730,6 +1739,7 @@ input,select,textarea{font-size:max(16px,1em)}
     <div class="count" id="q-count"></div>
   </div><span class="navr"><button class="navb q-mine" id="q-mine" type="button" hidden>さっきの結果</button><button class="navb" data-nav="top">TOP</button></span></div>
   <p class="turn" id="q-turn" hidden><span></span></p>
+  <p class="netp" id="q-net" hidden></p>
   <div class="qwho" id="q-who" hidden></div>
   <div class="qcard" id="q-card"><img class="q-pd" id="q-pd" src="img/panda-1.webp" alt="" width="56" height="56" hidden><span class="qno" id="q-no"></span><p class="qhint" id="q-hint"></p></div>
   <p class="qby" id="q-by" hidden></p>
@@ -2755,7 +2765,10 @@ var FB=(function(){
     var ac=typeof AbortController==='function' ? new AbortController() : null, tm=ac && setTimeout(function(){ ac.abort(); }, 12000);
     try{
       var url=(path.charAt(0)===':' ? base.replace(/\/$/,'') : base)+path+'?key='+key+(q?'&'+q:'');
-      var r=await fetch(url, { method:method, headers:body?{'Content-Type':'application/json'}:{}, body:body?JSON.stringify(body):undefined, signal:ac&&ac.signal, cache:'no-store' });
+      var r;
+      try{ r=await fetch(url, { method:method, headers:body?{'Content-Type':'application/json'}:{}, body:body?JSON.stringify(body):undefined, signal:ac&&ac.signal, cache:'no-store' }); }
+      catch(e){ netMark(false); throw e; }
+      netMark(true);
       if(r.status===404 && method==='GET') return null;
       var j={}; try{ j=await r.json(); }catch(e){}
       if(!r.ok){ var er=new Error((j.error&&j.error.message)||('HTTP '+r.status)); er.status=r.status; throw er; }
@@ -4671,8 +4684,8 @@ var Room=(function(){
         un.forEach(function(f){ try{ f(); }catch(e){} }); un=[];
         if(stopped) return;
         var again=function(){ setTimeout(function(){ if(!stopped) sub(); }, 1000); };
-        un.push(db.doc('rooms/'+code).onSnapshot(function(s){ last=snapAt=Date.now(); room=s.exists ? upk(s.data()) : null; got=true; deliver(); }, again));
-        un.push(db.collection('rooms/'+code+'/players').onSnapshot(function(s){ last=snapAt=Date.now(); players=plist(s.docs); deliver(); }, again));
+        un.push(db.doc('rooms/'+code).onSnapshot(function(s){ last=snapAt=Date.now(); netMark(true); room=s.exists ? upk(s.data()) : null; got=true; deliver(); }, again));
+        un.push(db.collection('rooms/'+code+'/players').onSnapshot(function(s){ last=snapAt=Date.now(); netMark(true); players=plist(s.docs); deliver(); }, again));
       };
       /* 読む回数を少なく（データを読む回数には1日の上限がある）：知らせが4秒以上届いていないときだけ、自分から確かめる。
          ふだんは部屋だけ（1回）を読み、全員の答えは5回に1回（約10秒ごと）。アプリから戻ったときは全部すぐ読む */
@@ -5207,13 +5220,34 @@ function onRoom(room, players){
   }
   if(room.phase!=='ready') hideReady();
 }
+/* 通信のようす（鑑定者本人 2026-11-26「通信状況が全く分からないのが不安」「通信中ってなってた方が分かりやすい」）：
+   最後にサーバーとやりとりできた時刻を覚え、部屋の画面に「通信中（つながっています）」、8秒以上とぎれたら「電波が弱いようです。つなぎ直しています…」、
+   25秒以上とぎれたら「つながりにくくなっています」と「もう一度つなぐ」を出す。問題の画面は、とぎれたときだけ出す */
+var NET={ok:0,bad:0};
+function netMark(ok){ if(ok){ NET.ok=Date.now(); NET.bad=0; } else NET.bad++; netPaint(); }
+function netState(){ var a=Date.now()-(NET.ok||0); return (!NET.ok||a>25000) ? 'ng' : ((a>8000||NET.bad) ? 'weak' : 'ok'); }
+function netHTML(st, always){
+  if(st==='ok') return always ? '<span class="nd"></span><span>通信中（つながっています）</span>' : '';
+  if(st==='weak') return '<span class="nd"></span><span>電波が弱いようです。つなぎ直しています…</span>';
+  return '<span><span class="nd"></span>つながりにくくなっています。電波のよい場所で、このまま待ってね</span><button type="button" class="net-re">もう一度つなぐ</button>';
+}
+function netPaint(){
+  var st=netState();
+  [['lb-net',true],['q-net',false]].forEach(function(k){ var el=$(k[0]); if(!el) return;
+    var on=!!S.room && (k[0]==='lb-net' ? curScr()==='s-lobby' : curScr()==='s-q');
+    var h=on ? netHTML(st, k[1]) : ''; if(el.dataset.h===h) return; el.dataset.h=h;
+    el.className='netp '+st; el.innerHTML=h; el.hidden=!h; });
+}
+setInterval(netPaint, 2000);
+document.addEventListener('click', function(e){ var b=e.target.closest && e.target.closest('.net-re'); if(!b) return; var R=S.room; if(R && R.stop && R.stop.poke) R.stop.poke(); b.textContent='つないでいます…'; });
 /* つないでいる間の知らせ：数秒かかることがあるので、止まって見えないようにする。30秒でつながらなければ、もう一度押してもらう */
 function busyNote(el, btn, label){
   var t0=Date.now(), old=btn.textContent;
   btn.textContent=label; el.className='join-wait'; el.hidden=false;
   el.textContent='部屋につないでいます…（数秒かかることがあります）';
   var iv=setInterval(function(){ var s=(Date.now()-t0)/1000;
-    if(s>=8) el.textContent='もう少しで入れます。このまま待ってね。'; }, 1000);
+    if(s>=20) el.textContent='電波が弱いようです。つながるまで、このまま待ってね（1〜2分かかることもあります）。';
+    else if(s>=8) el.textContent='もう少しで入れます。このまま待ってね。'; }, 1000);
   return { done:function(ok){ clearInterval(iv); btn.textContent=old; if(ok!==false){ el.hidden=true; } },
            fail:function(msg){ clearInterval(iv); btn.textContent=old; el.className='join-wait ng'; el.hidden=false; el.textContent=msg; } };
 }
@@ -5271,7 +5305,8 @@ function renderLobby(){
     } else if(pend){
       pill.className='lb-pill open'; pill.innerHTML='<img class="ico-i" src="img/icon-eyes.webp" alt="" width="20" height="20">友だちがリンクを開きました';
       $('lb-head').textContent='いま名前を入れています…';
-      $('lb-sub').textContent='入ると、ここに名前が出ます。このまま少し待ってね。';
+      R.pendSeen=R.pendSeen||{}; var pw=Math.max.apply(null,(R.pending||[]).map(function(p){ if(!R.pendSeen[p.pid]) R.pendSeen[p.pid]=Date.now(); return Date.now()-R.pendSeen[p.pid]; }));   /* 書きこみの joined は30秒ごとに新しくなるので、この画面で最初に見た時刻からはかる */
+      $('lb-sub').textContent='入ると、ここに名前が出ます。このまま少し待ってね。'+(pw>20000 ? '友だちの電波が弱いと、入るまで1〜2分かかることがあります。' : '');
     } else if(!inv){
       pill.className='lb-pill inv'; pill.innerHTML='<img class="ico-ok" src="img/icon-mail.webp" alt="" width="20" height="20">まず友だちを誘ってね';
       $('lb-head').textContent='友だちを誘いましょう';
