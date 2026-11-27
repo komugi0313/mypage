@@ -327,3 +327,5 @@ window.CHARA_LOVE = {
 /* まぜまぜ編・本能モードでも、どの恋のキャラも同じくらい出るように合わせた分（2026-11-26。でたらめに答えた人で、まぜまぜ編はクール系17%・小悪魔16%、本能モードはクール系61%にかたよっていた→どれも約10%） */
 window.CHARA_LOVE.mixB={"koakuma": -0.41, "tenshi": 0.14, "aka": -0.55, "ouji": -0.15, "otome": 0.28, "cool": -0.48, "shikkari": 0.49, "juunan": 0.38, "jiyu": 0.5, "hunter": 0.21};
 (function(D,A){ Object.keys(A).forEach(function(k){ D.honB[k]=(D.honB[k]||0)+A[k]; }); })(window.CHARA_LOVE, {"koakuma": 0.05, "tenshi": 0.7, "aka": -0.08, "ouji": 0.71, "otome": 0.46, "cool": -1.83, "shikkari": 0.54, "juunan": 0.72, "jiyu": 0.79, "hunter": 0.62});
+/* 本能モードの気持ちの出し方の問題を10問足したので、出やすさを合わせ直した（2026-11-27。でたらめに答えた6000回で、どのキャラも約10%） */
+(function(D,A){ Object.keys(A).forEach(function(k){ D.honB[k]=(D.honB[k]||0)+A[k]; }); })(window.CHARA_LOVE, {"koakuma":0.08,"tenshi":-0.18,"aka":0.12,"ouji":-0.11,"otome":-0.15,"cool":0.97,"shikkari":-0.14,"juunan":-0.09,"jiyu":-0.15,"hunter":-0.01});
