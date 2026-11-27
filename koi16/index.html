@@ -729,6 +729,18 @@ header.top .navbtn:active{transform:translateY(1px)}
 /* はじめの画面：本格版とかんたん版を同じ大きさの枠で（鑑定者本人 2026-11-17「全部お願いします」） */
 /* はじめるボタン：B「横長の2段」（鑑定者本人 2026-11-19「時間まで要らないのでは？」→見本 https://claude.ai/artifact/KbMhckNLDpqujU8CeHpW3F で「B」）。下の「みんなで診断する」と同じ横長の形 */
 .start-two{display:flex;flex-direction:column;gap:8px;width:100%}
+.lenpick{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;text-align:left}
+.lenp{display:flex;flex-direction:column;gap:4px;min-height:44px;border:1.5px solid #E2CFC4;border-radius:14px;background:#fff;color:var(--ink);font-family:inherit;padding:10px 12px;cursor:pointer;text-align:left}
+.lenp.on{border:2px solid var(--rose);background:#FCE6EE}
+.lenp .lp-h{display:flex;align-items:baseline;gap:6px}
+.lenp .lp-h b{font-size:18px;color:var(--rose)}
+.lenp .lp-h small{font-size:13px;color:var(--sub)}
+.lenp .lp-l{font-size:13px;line-height:1.6;color:var(--text)}
+.lenp .lp-l i{display:block;font-style:normal;white-space:nowrap}
+.lenp .lp-l i:not(.lp-plus)::before{content:'・'}
+.lenp .lp-l i.lp-plus{color:var(--rose);font-weight:700}
+@media (max-width:359px){.lenp{padding:9px 8px}.lenp .lp-l i{white-space:normal;word-break:keep-all}}
+.lp-note{margin:2px 0 0;font-size:13px;color:var(--sub);text-align:center}
 .sopt{display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;min-height:48px;border:1.5px solid var(--rose);border-radius:16px;background:#fff;color:var(--rose);padding:9px 16px;font-family:inherit;cursor:pointer;text-align:left;box-shadow:0 3px 10px rgba(176,26,90,.08)}
 .sopt .st{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
 .sopt b{font-size:15px;line-height:1.4}
@@ -1045,6 +1057,7 @@ header.top .navbtn:active{transform:translateY(1px)}
       <a class="h-what" href="?about=1&amp;s=at"><span class="nw">16タイプ・愛着スタイルって</span><span class="nw">なに？</span></a>
       <div id="invite-home" class="invite hidden"></div>
       <div class="start-two" id="start-two">
+        <div id="home-len"></div>
         <button class="sopt sopt-m" id="start" type="button"><span class="st"><b><span class="nw">診断を</span><span class="nw">はじめる</span></b><small><span class="nw">恋愛タイプ・</span><span class="nw">愛着スタイル・</span><span class="nw">相性まで</span></small></span><span class="sa" aria-hidden="true">›</span></button>
         
       </div>
@@ -3337,10 +3350,22 @@ function save(o){ try{ localStorage.setItem(LS,JSON.stringify(o)); }catch(e){} }
 var st = load();
 var ans = Array.isArray(st.ans)&&st.ans.length===QS.length ? st.ans : new Array(QS.length).fill(null);
 var qi = 0;
-var mode = st.mode==='quick'?'quick':'full';
+var mode = ['quick','std','more'].indexOf(st.mode)>=0?st.mode:'full';
 /* 本格版の並び：今の40問の5問ごとに、新しいものさしの問いを2つずつはさむ（56問。2026-11-25 に48問から） */
 var FULL_ORDER=(function(){ var o=[], extra=[[40,48],[44,52],[41,49],[45,53],[42,50],[46,54],[43,51],[47,55]]; for(var g=0;g<8;g++){ for(var j=0;j<5;j++) o.push(g*5+j); o.push(extra[g][0],extra[g][1]); } return o; })();
-function qlist(){ return mode==='quick'?QUICK:FULL_ORDER; }
+/* 40問（鑑定者本人 2026-11-27「カフェとか飲み会でQR読んでちょっと遊ぼう」→「OK」）：タイプ（4つのものさし×8問）と心のゆれやすさ（8問）だけ。
+   タイプ・ハートは56問と同じ答えになる。のこりの16問（2人のこれから・けんかのしかた・愛情のかけ方・好きになる決め手）は「あと16問」（more）で続きから */
+var STD_ORDER=FULL_ORDER.filter(function(i){ return i<40; }), MORE_ORDER=FULL_ORDER.filter(function(i){ return i>=40; });
+function qlist(){ return mode==='quick'?QUICK:(mode==='std'?STD_ORDER:(mode==='more'?MORE_ORDER:FULL_ORDER)); }
+function lenPickHTML(g,cur){
+  var o=function(m,t,mi,li){ var on=cur===m; return '<button type="button" class="lenp'+(on?' on':'')+'" data-act="len-pick" data-g="'+g+'" data-m="'+m+'" aria-pressed="'+on+'"><span class="lp-h"><b>'+t+'</b><small>'+mi+'</small></span><span class="lp-l">'+li+'</span></button>'; };
+  return '<div class="lenpick" role="group" aria-label="問題の数">'+
+    o('std','40問','約5分','<i>恋愛タイプ</i><i>愛着スタイル</i><i>相性</i>')+
+    o('full','56問','約7分','<i>40問の結果</i><i class="lp-plus">＋ 2人のこれから</i><i class="lp-plus">＋ けんかのしかた</i><i class="lp-plus">＋ 愛情のかけ方</i><i class="lp-plus">＋ 好きになる決め手</i>')+
+    '</div><p class="lp-note"><span class="nw">タイプとハートの正確さは、</span><span class="nw">どちらも同じです。</span></p>';
+}
+var HOME_LEN='full';
+function modeLen(m){ return m==='quick'?QUICK.length:(m==='std'?40:(m==='more'?16:56)); }
 var params = new URLSearchParams(location.search);
 var partner = validCode(params.get('from')) || (st.partner&&validCode(st.partner)) || null;
 (function(){ var f=validCode(params.get('from')), k=(params.get('k')||'').match(/^(\d{1,3})\.(\d{1,3})$/); if(f&&k){ var a=+k[1], t=+k[2]; if(a<=100&&t<=100){ st.partnerK={c:f,anx:a,ts:t}; try{ localStorage.setItem(LS,JSON.stringify(st)); }catch(e){} } } })();
@@ -3559,7 +3584,7 @@ function renderQ(){
   // 質問の文は「、」のあと・「の前で区切って、ひとまとまりで改行する（鑑定者本人 2026-11-20「泣き別れが気になる」）
   $('qtext').innerHTML='<span>'+qLayout(qText(k),qCap())+'</span>'; glue($('qtext'));
   // 途中の応援（鑑定者本人 2026-11-17「1と2でお願いします」）：本格版は12問ごと、かんたん版は半分で1回
-  var CH=mode==='quick'?{10:'半分きました！ あと10問で、あなたのキャラクターがわかります'}:{14:'4分の1終わり！ あなたの恋のかたちが見えてきました',28:'半分きました！ この調子で、あと28問',42:'あと14問！ もうすぐ、あなたのキャラクターがわかります'};
+  var CH=mode==='more'?{8:'半分きました！ あと8問で、4つの結果がそろいます'}:mode==='std'?{10:'4分の1終わり！ あなたの恋のかたちが見えてきました',20:'半分きました！ この調子で、あと20問',30:'あと10問！ もうすぐ、あなたのキャラクターがわかります'}:mode==='quick'?{10:'半分きました！ あと10問で、あなたのキャラクターがわかります'}:{14:'4分の1終わり！ あなたの恋のかたちが見えてきました',28:'半分きました！ この調子で、あと28問',42:'あと14問！ もうすぐ、あなたのキャラクターがわかります'};
   var ce=$('q-cheer'), cm=CH[qi]; ce.textContent=cm||''; ce.classList.toggle('hidden',!cm); if(cm) glue(ce);
   // 「恋人」の案内は毎回は出さない（鑑定者本人 2026-11-13「ずっとこの文字は必要か」）：「恋人」が出てくる質問のときだけ、最初の1回はくわしく、2回目からは短く
   var hEl=$('q-hint'), full=(STATUS[st.status]||{}).hint||'';
@@ -3618,7 +3643,8 @@ function qStableH(){ var d=$('q-svh'); if(!d){ d=document.createElement('div'); 
 (function(){ var tm, w=innerWidth; window.addEventListener('resize',function(){ if(innerWidth===w) return; w=innerWidth; clearTimeout(tm); tm=setTimeout(qFit,120); }); })();
 function startQuiz(fresh,m){
   if(m){ mode=m; st.mode=m; save(st); }
-  if(fresh){ ans=new Array(QS.length).fill(null); st.ans=ans; st.status=null; st.dur=null; st.qv=qNextV(); save(st); qi=0; }
+  if(fresh&&mode==='more'){ ans=new Array(QS.length).fill(null); st.ans=ans; st.status=(st.me&&st.me.status)||'skip'; save(st); qi=0; }
+  else if(fresh){ ans=new Array(QS.length).fill(null); st.ans=ans; st.status=null; st.dur=null; st.qv=qNextV(); save(st); qi=0; }
   else { var L=qlist(); qi=0; while(qi<L.length-1&&ans[L[qi]]!=null) qi++; }
   show('v-quiz');
   var need=!st.status;
@@ -3650,11 +3676,15 @@ function pickStatus(k,durDone){
 /* 恋の状況を選んだあと、1問目の前に1.5秒だけ「では、はじめます」（鑑定者本人 2026-11-21「B」「全48問　本格版」。2026-11-25 から全56問） */
 function qGoShow(){
   var o=$('q-go'); if(!o) return;
-  $('q-go-s').textContent='全'+qlist().length+'問・'+(mode==='quick'?'かんたん版':'本格版');
+  $('q-go-s').textContent=mode==='more'?'続きの16問':('全'+qlist().length+'問'+(mode==='quick'?'・かんたん版':''));
   clearTimeout(qGoShow.t); o.classList.remove('on'); void o.offsetWidth; o.classList.add('on');
   qGoShow.t=setTimeout(function(){ o.classList.remove('on'); },1500);
 }
 function finish(){
+  if(mode==='more'&&st.me){ var rs=score(ans), add={fu:rs.fu,fg:rs.fg,cg:rs.cg,dm:rs.dm}; Object.assign(st.me,add);
+    (st.hist||[]).forEach(function(x){ if(x&&x.at===st.me.at&&x.fu==null) Object.assign(x,add); });
+    st.ans=new Array(QS.length).fill(null); mode='full'; st.mode='full'; save(st); ans=st.ans;
+    history.replaceState(null,'',location.pathname+'?t='+st.me.code); renderResult(st.me.code,st.me); setTimeout(function(){ var e=$('sub4'); if(e) e.scrollIntoView({block:'start'}); },80); return; }
   var r=score(ans);
   if(st.me&&st.me.code) st.prev={code:st.me.code,at:st.me.at}; // 前回の結果（2回目からの結果の表紙に「前回 → 今回」を1行）
   var one={code:r.code,pct:r.pct,anx:r.anx,fu:r.fu,fg:r.fg,cg:r.cg,dm:r.dm,mode:mode,status:st.status||null,dur:st.status==='partner'?(st.dur||null):null,at:Date.now()}; st.ans=new Array(QS.length).fill(null);
@@ -3869,7 +3899,9 @@ function renderResult(code,mine,withCode){
     h+='<section class="card"><div class="rb-h"><h2><span class="nw">心のゆれやすさ：</span><span class="nw">'+lv.n+'</span>'+lvSide+'</h2>'+rbHTML(1)+'</div><p>'+esc(lv.n==='ふつう'&&a>=50?'ふだんはバランスがとれていますが、少しゆれやすい側なので、連絡が少ないときなどに不安が出やすいほうです。不安なときは、ひとりで考えこまずに気持ちを言葉にしてみましょう。':lv.t)+'</p>'+''+'<details class="st-fold"><summary>メーターで見る</summary><div class="sl anx"><div class="sl-track zones" role="img" aria-label="心のゆれやすさ：'+lv.n+'"><i class="z z1"></i><i class="z z2"></i><i class="z z3"></i><i class="sl-dot" style="left:'+Math.max(3,Math.min(97,a))+'%"></i></div><div class="sl-zl">'+ANX.map(function(x){return '<span class="'+(x===lv?'on':'')+'">'+x.n+'</span>';}).join('')+'</div></div><p class="muted">恋をしているときの気持ちのゆれ方の目安です。4つのものさし（タイプ）とは別に測っています。</p></details></section>';
     h+=kuseHTML(mine,withCode);
   }
-  if(isMine) h+=subAxHTML(mine);
+  if(isMine){ var sa=subAxHTML(mine);
+    if(sa) h+='<div id="sub4">'+sa+'</div>';
+    else if(mine.anx!=null&&mine.fu==null&&mine.fg==null&&mine.cg==null&&mine.dm==null) h+='<section class="card more16" id="sub4"><h2><span class="nw">あと16問で、</span><span class="nw">4つの結果も見られます</span></h2><p>答えた40問はそのまま使います。続きの16問に答えると、「2人のこれから」「けんかのしかた」「愛情のかけ方」「好きになる決め手」がわかります（約2分）。タイプとハートは変わりません。</p><button class="btn btn-main btn-wide" type="button" data-act="more16">続きの16問に答える</button></section>'; }
 
   // 相性のいいタイプ
   var ranked=ORDER.map(function(o){return {o:o,c:compat(code,o)};}).sort(function(a,b){return b.c.score-a.c.score;});
@@ -4462,7 +4494,7 @@ function dcode(c){ return String(c||'').split('-')[0]; }
 function rUrl(c){ return location.origin+location.pathname+'?room='+c; }
 function rSleep(ms){ return new Promise(function(ok){ setTimeout(ok,ms); }); }
 function rTO(p,ms){ return Promise.race([p,new Promise(function(_,ng){ setTimeout(function(){ ng(new Error('timeout')); },ms); })]); }
-function rModeTxt(m){ return m==='full'?'本格版（56問）':'かんたん版（20問）'; }  // かんたん版は 2026-11-25 にやめた（前に作った部屋だけ）
+function rModeTxt(m){ return m==='full'?'56問':(m==='std'?'40問':'かんたん版（20問）'); }  // かんたん版は 2026-11-25 にやめた（前に作った部屋だけ）
 // この部屋（同じ番号でも、作り直した部屋とまざらないよう rc＝部屋を作った時刻で見分ける）に入っている人。入った順
 function rPlayers(){ var r=RM.room; if(!r) return []; return RM.ps.filter(function(p){ return p.name&&p.rc===r.created; }).sort(function(a,b){ return (a.joined||0)-(b.joined||0); }); }
 function rMe(){ var id=rPid(); return rPlayers().filter(function(p){ return p.id===id; })[0]||null; }
@@ -4539,12 +4571,13 @@ document.addEventListener('visibilitychange',function(){ if(document.visibilityS
 
 function roomSetup(){
   roomStop(); RM.code=null; RM.room=null; RM.ps=[];
-  RM.mode='full';
+  RM.mode='std';
   var h='<section class="card"><p class="rc-eye">FOR GROUPS</p><h1><span class="nw">みんなで</span><span class="nw">診断する</span></h1>'+
     '<ol class="rsteps"><li><b>1</b><span>部屋を作る</span></li><li><b>2</b><span>LINEかQRで誘う</span></li><li><b>3</b><span>スタートでみんなの診断が始まる</span></li></ol>'+
     '<p>診断が終わった人から、全員の相性といちばん相性のいい2人が出てきます（8人まで）。</p>'+
     (function(){ var mr=st.myRoom; if(!mr||!mr.c||Date.now()-(mr.t||0)>=ROOM_TTL) return ''; return '<div class="rback"><b><span class="nw">さっき作った部屋（'+esc(dcode(mr.c))+'）が</span><span class="nw">まだあります</span></b><p>同じメンバーで診断するなら、その部屋にもどってください。新しく作ると、前の部屋のリンクを開いた人とは別の部屋になります。</p><button class="btn btn-main btn-wide" type="button" data-act="room-back">その部屋にもどる</button></div>'; })()+
-    '<label class="muted" for="r-name">あなたのニックネーム（8文字まで）</label><input class="gname" id="r-name" maxlength="8" autocomplete="off" value="'+esc(st.nick||'')+'" placeholder="例：みき">'+
+    '<p class="rlabel">問題の数</p>'+lenPickHTML('room',RM.mode)+
+    '<label class="muted" for="r-name" style="display:block;margin-top:12px">あなたのニックネーム（8文字まで）</label><input class="gname" id="r-name" maxlength="8" autocomplete="off" value="'+esc(st.nick||'')+'" placeholder="例：みき">'+
     '<button class="btn btn-main btn-wide" type="button" data-act="room-create" id="r-create">部屋を作る</button><p class="rnote hidden" id="r-note"></p>'+
     '<p class="muted" style="margin-top:10px">部屋に送るのは、ニックネームと、診断が終わった人のタイプ（4文字）・愛着スタイル、答えた問題の数、前に診断したことがある人は前回のタイプだけです。質問への答え・恋の状況は送りません。部屋のリンクは、作ってから10日使えます（みんなでそろって始められるのは12時間まで）。本名でなくて大丈夫です。</p></section>';
   RM.view='setup'; RM.sig='';
@@ -4670,7 +4703,7 @@ function roomResultHTML(){
     '<p class="muted">部屋 '+dcode(RM.code)+'・名前を押すと、その人のタイプの説明が見られます。</p><div class="gmem">';
   ps.forEach(function(p){
     if(p.done&&validCode(p.code)){ var pk=/^[spdf]$/.test(p.ak||'')?p.ak:''; h+='<a href="?t='+p.code+'" data-type="'+p.code+'"'+(me&&p.id===me.id?' class="me"':'')+'><span class="gm-p">'+art(p.code,56)+(pk?'<i>×</i>'+akHeart(pk,44):'')+'</span>'+(me&&p.id===me.id?'<span class="you">あなた</span>':'')+'<b class="nw">'+esc(p.name)+'</b><small>'+cname(p.code)+(pk?'<span class="gm-k">'+akName(pk)+'</span>':'')+'</small></a>'; }
-    else { var pq=(p.q>0&&p.qn>0)?Math.min(p.q,p.qn):0, pn=p.qn||(RM.room&&RM.room.mode==='full'?56:20);
+    else { var pq=(p.q>0&&p.qn>0)?Math.min(p.q,p.qn):0, pn=p.qn||modeLen(RM.room&&RM.room.mode);
       h+='<div class="gmem-w"><span class="wpic sil rsil" aria-hidden="true"><img src="img/'+silOf(p.id)+'.webp" width="56" height="56" alt=""><i>?</i></span><b class="nw">'+esc(p.name)+'</b><small class="rnay">悩み中<span class="rdt" aria-hidden="true"><i></i><i></i><i></i></span></small>'+(pq?'<span class="rbar" aria-hidden="true"><span style="width:'+Math.round(pq/pn*100)+'%"></span></span><small class="rqn">'+pq+'／'+pn+'問</small>':'')+'</div>'; }
   });
   h+='</div></section>';
@@ -4689,7 +4722,7 @@ function roomQuiz(){
   RM.view='quiz'; RM.sig='';
   var cont=st.roomQ===key&&ans.some(function(v){ return v!=null; });
   if(!cont){ st.roomQ=key; save(st); }
-  if(cont){ mode=RM.room.mode==='full'?'full':'quick'; startQuiz(false); } else startQuiz(true,RM.room.mode==='full'?'full':'quick');
+  var rmM=['full','std'].indexOf(RM.room.mode)>=0?RM.room.mode:'quick'; if(cont){ mode=rmM; startQuiz(false); } else startQuiz(true,rmM);
   toast('スタート！ 診断が始まりました');
 }
 function rTyped(v){ if(typeof v==='boolean') return {booleanValue:v}; if(typeof v==='number') return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v}; if(v instanceof Date) return {timestampValue:v.toISOString()}; return {stringValue:String(v)}; }
@@ -4953,7 +4986,8 @@ document.addEventListener('click',function(e){
   if(tb){ var tv=tb.getAttribute('data-tone-set'), card=tb.closest('.aru-card'); st.tone=tv; save(st); if(card){ card.setAttribute('data-tone',tv); Array.prototype.forEach.call(card.querySelectorAll('.tone-b'),function(x){ var on=x===tb; x.classList.toggle('on',on); x.setAttribute('aria-pressed',on); }); } return; }
   var b=e.target.closest('[data-act]'); if(!b) return;
   var act=b.getAttribute('data-act'), code=$('v-result').dataset.code;
-  if(act==='start'||act==='retry') startQuiz(true,'full');
+  if(act==='more16'){ startQuiz(true,'more'); qGoShow(); }
+  else if(act==='start'||act==='retry') startQuiz(true,'full');
   else if(act==='full'||act==='inv-full') startQuiz(true,'full');
   else if(act==='inv-quick') startQuiz(true,'full');
   else if(act==='resume') startQuiz(false);
@@ -4968,7 +5002,9 @@ document.addEventListener('click',function(e){
   else if(act==='gopen'){ var gid=b.getAttribute('data-gid'), sg=st.groups&&st.groups[gid]; if(sg){ var go={id:gid,m:sg.m.slice()}; history.pushState(null,'',gQuery(go)); renderGroup(go); } }
   else if(act==='gimg'){ gImage($('v-group').__g); }
   else if(act==='room-new'){ history.pushState(null,'','?room=new'); roomSetup(); }
-  else if(act==='room-mode'){ RM.mode=b.getAttribute('data-m')==='full'?'full':'quick'; Array.prototype.forEach.call(document.querySelectorAll('.rseg button'),function(x){ var on=x.getAttribute('data-m')===RM.mode; x.classList.toggle('on',on); x.setAttribute('aria-pressed',on); }); }
+  else if(act==='len-pick'){ var lm=b.getAttribute('data-m')==='std'?'std':'full', lg=b.getAttribute('data-g'); if(lg==='room') RM.mode=lm; else HOME_LEN=lm;
+    Array.prototype.forEach.call(b.parentNode.querySelectorAll('.lenp'),function(x){ var on=x===b; x.classList.toggle('on',on); x.setAttribute('aria-pressed',on); }); }
+  else if(act==='room-mode'){ RM.mode=b.getAttribute('data-m')==='full'?'full':'std'; Array.prototype.forEach.call(document.querySelectorAll('.rseg button'),function(x){ var on=x.getAttribute('data-m')===RM.mode; x.classList.toggle('on',on); x.setAttribute('aria-pressed',on); }); }
   else if(act==='room-create'){ roomDoCreate(); }
   else if(act==='room-join'){ roomDoJoin(false); }
   else if(act==='room-pick'){ var pid2=b.getAttribute('data-id'), pp=rPlayers().filter(function(x){ return x.id===pid2; })[0], ak2=$('r-pick-ask'); if(!pp||!ak2) return; RM.pickId=pid2;
@@ -5012,7 +5048,8 @@ document.addEventListener('click',function(e){
     hp.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-pressed',x===b); }); var h4=hookOf(code), pv=$('hookprev'); if(pv){ pv.innerHTML=esc(h4.q)+'：<b>'+esc(h4.a)+'</b>'; glueAll(pv); } }
   else doShare(act,code);
 });
-$('start').addEventListener('click',function(){ startQuiz(true,'full'); });
+$('start').addEventListener('click',function(){ startQuiz(true,HOME_LEN); });
+(function(){ var e=$('home-len'); if(e){ e.innerHTML=lenPickHTML('home',HOME_LEN); glueAll(e); } })();
 $('q-back').addEventListener('click',function(){ if(qi>0){ qi--; renderQ(); } });
 $('q-quit').addEventListener('click',function(){ home(); });
 $('st-back').addEventListener('click',function(){ home(); });
