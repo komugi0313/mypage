@@ -52,7 +52,7 @@ const AX=Object.entries(window.SY_AX||{}).map(([key,a])=>{const m=new Map();a.qs
 // その人の傾向：左の答え＝1・こだわらない＝0.5・右の答え＝0 の平均（左寄りの％）。その物差しの問題に答えていなければ null
 function axScore(p,qs,a){let s=0,n=0;qs.forEach((k,i)=>{if(!a.m.has(k))return;const x=p.ans[i];if(!x||x.o<0)return;n++;s+=x.o===2?.5:x.o===a.m.get(k)?1:0});return n?{pct:Math.round(s/n*100),n}:null}
 // 本当に「どっちでも合わせられる」答え（3つ目の答えが「日による」「ふつう」などの問題は、まん中の答えで、合わせられるには数えない。鑑定者本人 2026-11-20）
-const FLEX_L=new Set(['どっちも','どっちも好き','どっちも大事','気にしない','金額は気にしない']);
+const FLEX_L=new Set(['どっちも','どっちも好き','どっちも大事','気にしない','金額は気にしない','年は気にしない','どっちでもうれしい','どっちもうれしい','どっちも買う']);
 const isFlex=(o,k)=>o===2&&(!Q[k][4]||FLEX_L.has(Q[k][4]));
 const ans=(o,k)=>o===0?Q[k][2]:o===1?Q[k][3]:o===2?(Q[k][4]||'どっちでも合わせられる'):o===3?UNDEC:'時間切れ';
 // 「まだ決められない」（鑑定者本人 2026-11-19「絶対に答えなくても良いように」「即決できないという答えもわかる」）：答えの o は -1 のまま u:1 を付ける＝シンクロ率・みんなの答えの％には数えない。結果に「まだ決められなかった問題」として出す
@@ -793,7 +793,7 @@ function matchHTML(G,p){const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x
 const TALK3_WHY={'お金':'お金の考え方のちがいは、毎月くり返し出てきます。','将来・家族':'将来のことは、あとから変えにくいところです。','暮らし':'毎日のことなので、小さなちがいが積み重なります。','恋愛・連絡':'連絡や会い方のちがいは、気持ちのすれ違いにつながりやすいところです。','食':'ごはんは毎日のことなので、好みのちがいに何度も出会います。','休日・遊び':'休みの過ごし方がちがうと、どちらかが毎回合わせることになりがちです。','ドキドキ':'仲が近づくペースのちがいは、言葉にしないと伝わりにくいところです。'};
 // 順番：★の大事な問題→大事な問題→★のほかの問題→ふつうの問題（軽い問題は入れない）。同じテーマは、ほかがなければ2つ目から
 // 付き合う前・はじめてのデートの問題は「恋人と話しておきたい」に入れない（恋人がいる人にも「初デートで手をつなぐのは？」が出ていたため。鑑定者本人 2026-11-23「全部直してください」）
-const T3_PRE=/初デート|はじめてのデート|付き合う前|告白|気になる人/;
+const T3_PRE=/初デート|はじめてのデート|付き合う前|告白|気になる人|仲良くなるペース|好きな人には？|恋愛経験/;
 function talk3Pick(firm){firm=firm.filter(x=>!T3_PRE.test(Q[x.k][1]));const B=x=>WB.has(x.k),pool=firm.filter(x=>x.a.st&&B(x)).concat(firm.filter(x=>!x.a.st&&B(x)),firm.filter(x=>x.a.st&&!B(x)&&!WL.has(x.k)),firm.filter(x=>!x.a.st&&!B(x)&&!WL.has(x.k)));
   const out=[],th=new Set();for(const x of pool){if(out.length>=3)break;const t=Q[x.k][0];if(!th.has(t)){out.push(x);th.add(t)}}
   for(const x of pool){if(out.length>=3)break;if(!out.includes(x))out.push(x)}return out}
