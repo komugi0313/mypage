@@ -320,7 +320,7 @@ ORDER.forEach(c => {
   const best0 = ORDER.filter(x => x !== c).map(x => ({ o: x, s: compat(c, x).score })).sort((p, q) => q.s - p.s);
   const best = best0.filter(b => b.s >= best0[1].s);
   // 4文字の意味（1文字1行）・なりやすい愛着スタイル・よくある質問（鑑定者本人 2026-11-25「見本お願いします」）
-  const EX4 = { C: 'ドキドキより、一緒にいてほっとできる時間を大事にする', S: 'つらいことがあっても、まずひとりで整理してから話す' };
+  const EX4 = { T: 'つらいことがあったら、まず恋人に話して聞いてもらう', C: 'ドキドキより、一緒にいてほっとできる時間を大事にする', S: 'つらいことがあっても、まずひとりで整理してから話す' };
   const EN = { L: 'Lead', R: 'Receive', V: 'Verbal', A: 'Action', T: 'Trust', S: 'Self', P: 'Passion', C: 'Comfort' };
   const ax4 = AXES.map((x, i) => { const p = c[i], on = p === x.a ? x.an : x.bn; return `<div class="l4" style="--gc:${g.hex}"><span class="l4c">${p}</span><div class="l4t"><small>${nw(x.title)}<em>${p}＝${EN[p]}</em></small><b>${nw(on)}</b><span>たとえば：${esc(EX4[p] || POLE[p].aru)}</span></div></div>`; }).join('');
   const atK = c[2] === 'T' ? ['secure', 'preoc'] : ['dismiss', 'fear'];
@@ -434,7 +434,7 @@ write('kataomoi/index.html', page({
   ld: crumbLd([['恋のかたち診断', ''], ['片思い診断', 'kataomoi/']]),
   body: `${crumb([['片思い診断', '']])}
 <section class="hero"><span class="kick">片思い中の人へ</span><h1>片思い診断<span class="sub">あなたの脈ありサインと、恋の弱点</span></h1>${START('無料で診断する')}<span class="meta">はじめに「片思い中」を選ぶと、片思いの人向けの説明が出ます</span></section>
-<section class="box"><h2>あの人のことも、診断してみる</h2><p class="note">好きな人のことを思い浮かべて答える、無料のチェックです。</p><ul><li><a href="/?mini=myaku">脈ありチェック</a>　最近のあの人のようすから、「目立つサイン」と「静かなサイン」を見ます。</li><li><a href="/?mini=suki">どれくらい好き？診断</a>　あなたの「好き」の大きさと、動けないときのあと一歩。</li><li><a href="/?mini=type">あの人のタイプ当て診断</a>　あの人の恋のタイプを予想します。</li><li><a href="/?mini=jaku">恋の弱点チェック</a>　いまの恋で出ているくせと、克服のコツ。</li></ul></section>
+<section class="box"><h2>片思い中に、もっと知りたいこと</h2><p class="note">あの人のようすや、いまのあなたの気持ちから見る、無料のチェックです。</p><ul><li><a href="/?mini=myaku">脈ありチェック</a>　最近のあの人のようすから、「目立つサイン」と「静かなサイン」を見ます。</li><li><a href="/?mini=suki">どれくらい好き？診断</a>　あなたの「好き」の大きさと、動けないときのあと一歩。</li><li><a href="/?mini=type">あの人のタイプ当て診断</a>　あの人の恋のタイプを予想します。</li><li><a href="/?mini=jaku">恋の弱点チェック</a>　いまの恋で出ているくせと、克服のコツ。</li></ul></section>
 <section class="box"><h2>片思い中に、こんなことありませんか？</h2>${ul(['好きな人のSNSは毎日見るのに、いいねは押せない', '好きな人の前だと、なぜかそっけなくなる', '返事が来るまで、何度もスマホを見てしまう', '「好きかも」と気づいてから、動くまでが長い'])}<p class="note">どれも、あなたの恋のタイプと心のくせから説明できます。</p></section>
 <section class="box"><h2>タイプでちがう「脈ありサイン」</h2><p class="note">好きな人の前で、つい見せてしまうしぐさです。</p>${exT.map(c => `<div class="ex"><img src="/img/${c}.webp" alt="" width="56" height="56" loading="lazy"><div><b>${esc(T[c].f)}</b><span>${esc(ARU_T[c].sign[0])}</span></div></div>`).join('')}</section>
 <section class="box"><h2>片思いが長引きやすい「恋の弱点」</h2>${wkT.map(c => `<div class="wk"><span class="t">${esc(JAKU[c][0])}</span><span>${esc(T[c].f)}</span></div>`).join('')}<p class="note">診断の結果には、あなたのタイプの克服のコツが出ます。</p></section>
@@ -543,7 +543,7 @@ write('myaku/index.html', page({
 <section class="box"><h2>2つの脈ありサイン</h2><p class="note">この診断では、サインを2つに分けて見ます。</p><h3>目立つサイン（あの人から近づいてくる）</h3>${ul(['用事がなくても、あの人から連絡が来る', '会話が続くように、質問を返してくる', '2人で話す時間や、会う時間を作ろうとする'])}<h3>静かなサイン（あの人から近づいてこなくても出るもの）</h3>${ul(['返事は短くても、必ず返ってくる', '前に話したことを覚えている', '2人のときだけ、よく笑う'])}<p class="note">脈ありを見るときの中心は、目立つサインです。静かなサインは、仲がいいだけでも出るので、目立つサインの補いとして見ます。</p></section>
 <section class="box"><h2>男性と女性で、脈ありサインはちがう？</h2><p>この診断は、男性にも女性にも同じように使えます。サインの出方を大きく分けるのは、性別よりも、その人の恋のタイプです。自分から動くタイプは連絡や誘いに出やすく、待つタイプは「そばにいる」「覚えている」のような静かなサインに出やすくなります。</p>${signT.map(c => `<div class="ex"><img src="/img/${c}.webp" alt="" width="56" height="56" loading="lazy"><div><b>${esc(T[c].f)}</b><span>${esc(ARU_T[c].sign[0])}</span></div></div>`).join('')}<p class="note">あの人がどのタイプかは、<a href="/sukinahito/">好きな人のタイプ診断</a>で予想できます。</p></section>
 <section class="box"><h2>連絡がこまめでなくても</h2><p>連絡の多さは、気持ちの大きさとはかぎりません。好きだからこそ、何を送ればいいか迷ったり、相手の負担にならないかと考えたり、返事が来なかったらと不安になったりして、連絡をひかえる人もいます。連絡が少ないことだけで、気持ちを決めつけなくて大丈夫です。</p></section>
-<section class="box"><h2>あなたの「好き」は、伝わってる？</h2><p>脈ありサインは、あの人から見たあなたにも、そのまま当てはまります。診断の結果には、好きな気持ちを伝える「小さな一歩」も出ます。</p><p><a href="/?mini=suki">どれくらい好き？診断</a>もすると、2つを合わせた「2人のいま」と、気持ちを伝えるタイミングがわかります。</p></section>
+<section class="box"><h2>あなたの「好き」は、伝わってる？</h2><p>同じサインは、あなたの側にも出ています。あの人から見て、あなたの「好き」は伝わっているでしょうか。診断の結果には、好きな気持ちを伝える「小さな一歩」も出ます。</p><p><a href="/?mini=suki">どれくらい好き？診断</a>もすると、2つを合わせた「2人のいま」と、気持ちを伝えるタイミングがわかります。</p></section>
 ${MCTA('myaku', 'あの人の脈ありサインを、チェックしてみる', '脈ありチェックをはじめる')}
 ${LINKS('myaku/')}`,
 }));
