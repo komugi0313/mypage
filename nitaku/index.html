@@ -2646,7 +2646,19 @@ function showHonResult(){
 }
 
 /* 本能モードをみんなで遊んだ結果（鑑定者本人の指示 2026-11-14「作って」。見本 https://claude.ai/artifact/NwJwcCj7gL7XiDpV12mE8F） */
+/* みんなで遊んだ回・答え合わせの回も、自分の答えをキャラ決めに数える（鑑定者本人 2026-11-27「1」）。
+   画面に出すキャラはその回だけのまま。回ごとの目印（部屋の番号と回）で、出し直しても重ねない */
+function ctGroupSave(hon){
+  var R=S.room; if(!R || !R.data || !R.pid) return; var mi=-1;
+  S.players.forEach(function(p,i){ if(p.pid===R.pid) mi=i; }); if(mi<0 || !S.ans[mi]) return;
+  var g='room:'+R.code+':'+R.data.round;
+  try{
+    if(hon) ctDecideHon(S.qs, S.ans[mi], S.times[mi], g);
+    else { var pm=S.mode, m=resMode(pm); ctDecide(S.qs, S.ans[mi], g, m); if(pm==='normal') ctDecide(S.qs, S.ans[mi], g, 'normal'); }
+  }catch(e){}
+}
 function showHonGroupResult(){
+  ctGroupSave(true);
   var n=S.players.length, Q=S.qs.length, sec=function(t){ return (Math.round(t/100)/10).toFixed(1); };
   if(!S.room || S.room.host) S.qs.forEach(function(q,qi){ if(q.custom || S.sent[sentKey(q)]) return; var picks=S.ans.map(function(a){ return a[qi]; }).filter(function(c){ return c==='A'||c==='B'; }); if(!picks.length) return; S.sent[sentKey(q)]=1; Votes.send(picks.map(function(c){ return { id:q.id, c:canon(q,c) }; })); });
   var P=S.players.map(function(p,i){
@@ -4384,6 +4396,7 @@ function showWithResult(){
   var me=W.me||wName()||'あなた', myA=S.ans[0]||[], myT=S.times[0]||[];
   Stats.play('solo:'+(S.qs._g=Date.now()+'-'+Math.random()), 'solo', mode, playLv(), S.qs, myA);
   saveHist(resMode(mode), score(resMode(mode),S.qs,myA));
+  try{ var _m=resMode(mode); ctDecide(S.qs, myA, S.qs._g, _m); if(mode==='normal') ctDecide(S.qs, myA, S.qs._g, 'normal'); }catch(e){}
   var invA=wAns(S.qs, W.i1), invT=wTimes(W.i1);
   var pb=wTwo(me, myA, myT, W.n1, invA, invT);
   var pairUrl=wBase()+'#pair='+wHead(mode, W.lv, me)+'.'+wPack(S.qs, myA, myT)+'.'+encodeURIComponent(W.n1.replace(/[.~#]/g,''))+'.'+W.raw1;
@@ -4460,6 +4473,7 @@ function tieHTML(L){
 }
 function showGroupResultCore(){
   if(S.room && S.room.data && S.room.data.mode==='hon') return showHonGroupResult();
+  ctGroupSave(false);
   var pm=S.mode, mode=resMode(pm), hd=headline(mode), n=S.players.length;
   // 最後にまとめて答え合わせしたときは、ここでみんなの回答％に数える（1問ずつのときは結果発表のたびに数えている）
   if(S.rv==='end' && (!S.room || S.room.host)) S.qs.forEach(function(q,qi){ if(q.custom || S.sent[sentKey(q)]) return; var picks=S.ans.map(function(a){ return a[qi]; }).filter(function(c){ return c==='A'||c==='B'; }); if(!picks.length) return; S.sent[sentKey(q)]=1; Votes.send(picks.map(function(c){ return { id:q.id, c:canon(q,c) }; })); });
