@@ -305,7 +305,7 @@ const KT = {
   secure: { k: '安定型', h: '甘えもひとり時間も平気派' },
   preoc: { k: '不安型', h: '既読がつくと気になる派' },
   dismiss: { k: '回避型', h: '大事なことはひとりで決めたい派' },
-  fear: { k: '恐れ型（不安＋回避）', h: '好きなのに一歩引いちゃう派' },
+  fear: { k: '恐れ型（不安＋回避）', k2: '恐れ型', h: '好きなのに一歩引いちゃう派' },
 };
 const tyCell = k => `<div class="ty t-${k}"><img src="/img/ico/k-${k}.webp" alt="" width="44" height="44" loading="lazy"><span class="k">${esc(KT[k].k)}</span><b>${esc(KT[k].h)}</b><span>${esc(KUSE[k].one)}</span></div>`;
 const LINKS = (skip) => '<section class="box"><h2>ほかの恋愛診断</h2><div class="links">' + [['aichaku/', '愛着スタイル診断'], ['chara/', '恋愛キャラ診断'], ['mbti/', 'MBTIと恋愛16タイプ'], ['aishohyo/', '16タイプ相性表'], ['kataomoi/', '片思い診断'], ['aisho/', '自分に合う人のタイプ診断'], ['izon/', '恋愛依存体質チェック'], ['myaku/', '脈あり診断'], ['sukinahito/', '好きな人のタイプ診断']].filter(x => x[0] !== skip).map(x => `<a href="/${x[0]}"><span>${esc(x[1])}</span></a>`).join('') + '</div></section>';
@@ -320,18 +320,19 @@ ORDER.forEach(c => {
   const best0 = ORDER.filter(x => x !== c).map(x => ({ o: x, s: compat(c, x).score })).sort((p, q) => q.s - p.s);
   const best = best0.filter(b => b.s >= best0[1].s);
   // 4文字の意味（1文字1行）・なりやすい愛着スタイル・よくある質問（鑑定者本人 2026-11-25「見本お願いします」）
+  const EX4 = { C: 'ドキドキより、一緒にいてほっとできる時間を大事にする', S: 'つらいことがあっても、まずひとりで整理してから話す' };
   const EN = { L: 'Lead', R: 'Receive', V: 'Verbal', A: 'Action', T: 'Trust', S: 'Self', P: 'Passion', C: 'Comfort' };
-  const ax4 = AXES.map((x, i) => { const p = c[i], on = p === x.a ? x.an : x.bn; return `<div class="l4" style="--gc:${g.hex}"><span class="l4c">${p}</span><div class="l4t"><small>${nw(x.title)}<em>${p}＝${EN[p]}</em></small><b>${nw(on)}</b><span>たとえば：${esc(POLE[p].aru)}</span></div></div>`; }).join('');
+  const ax4 = AXES.map((x, i) => { const p = c[i], on = p === x.a ? x.an : x.bn; return `<div class="l4" style="--gc:${g.hex}"><span class="l4c">${p}</span><div class="l4t"><small>${nw(x.title)}<em>${p}＝${EN[p]}</em></small><b>${nw(on)}</b><span>たとえば：${esc(EX4[p] || POLE[p].aru)}</span></div></div>`; }).join('');
   const atK = c[2] === 'T' ? ['secure', 'preoc'] : ['dismiss', 'fear'];
   const atTxt = `頼り方が「${c[2] === 'T' ? '寄りかかれる' : '自分で立つ'}」なので、${KT[atK[0]].k.replace(/（.*/, '')}か${KT[atK[1]].k.replace(/（.*/, '')}の、どちらか1つになります。どちらになるかは、タイプとは別の「心のゆれやすさ」で決まり、診断の結果でわかります。`;
   const bestNames = best.map(b => `${T[b.o].f}（${T[b.o].c}・${b.s}点）`).join('、');
   const FQ = [
     [`${t.f}と相性がいいタイプは？`, `${bestNames}です。相性の点数は、4つのものさしの組み合わせから出した、この診断独自のめやすです。`],
-    [`${t.f}の脈ありサインは？`, '好きな人には、' + a.sign.map(x => `「${x}」`).join('') + 'といったしぐさを見せます。'],
-    [`${t.f}の恋の弱点は？`, `「${j[0]}」です。${j[1]}。克服のコツは、${j[2]}`],
+    [`${t.f}の脈ありサインは？`, '好きな人には、' + a.sign.map(x => `「${x}」`).join('') + 'といったサインを見せます。'],
+    [`${t.f}の恋の弱点は？`, `「${j[0]}」です。${j[1]}${/(やすい|くたくた)$/.test(j[1]) ? '。' : 'ことがあります。'}克服のコツは、${j[2]}ことです。`],
     [`${t.f}は、どの愛着スタイルになりやすい？`, atTxt],
-    [`${t.f}（${c}）の4文字の意味は？`, AXES.map((x, i) => `${c[i]}＝${x.title}が「${c[i] === x.a ? x.an : x.bn}」（${EN[c[i]]}）`).join('、') + '。この診断独自の4つのものさしで、MBTIなどとは別のものです。',
-      AXES.map((x, i) => nw(`${c[i]}＝${x.title}が`) + nw(`「${c[i] === x.a ? x.an : x.bn}」（${EN[c[i]]}）`)).join('、<wbr>') + '。<wbr>' + ['この診断独自の', '4つのものさしで、', 'MBTIなどとは', '別のものです。'].map(nw).join('<wbr>')],
+    [`${t.f}（${c}）の4文字の意味は？`, AXES.map((x, i) => `${c[i]}＝${x.title}が「${c[i] === x.a ? x.an : x.bn}」（${EN[c[i]]}）`).join('、') + '。この4つの組み合わせは、この診断独自のタイプです（MBTIなどとは別のものです）。',
+      AXES.map((x, i) => nw(`${c[i]}＝${x.title}が`) + nw(`「${c[i] === x.a ? x.an : x.bn}」（${EN[c[i]]}）`)).join('、<wbr>') + '。<wbr>' + ['この4つの', '組み合わせは、', 'この診断独自の', 'タイプです', '（MBTIなどとは', '別のものです）。'].map(nw).join('<wbr>')],
   ];
   const body = `${crumb([['恋愛キャラ診断', 'chara/'], [t.f, '']])}
 <section class="hero2" style="--gp:${GPALE[c[2] + c[3]]};--gc:${g.hex}">
@@ -343,7 +344,7 @@ ORDER.forEach(c => {
 <p>${esc(t.catch)}</p>
 </section>
 <section class="box"><h2>どんな恋をする人？</h2><p>${esc(t.sum)}</p></section>
-<section class="box"><h2>4文字「${c}」の意味</h2><div class="l4s">${ax4}</div><p class="note">4つのものさしは、この診断独自のものです（MBTIなどとは別のものです）。</p></section>
+<section class="box"><h2>4文字「${c}」の意味</h2><div class="l4s">${ax4}</div><p class="note">4つのものさしの組み合わせは、この診断独自のタイプです（MBTIなどとは別のものです）。</p></section>
 <section class="box"><h2>好きになり方</h2><p>${esc(t.fall)}</p></section>
 <section class="box">${whoH(wch(c, 'このタイプ', 1) + wv('が、') + wv('好きな人の前で') + wv('やりがちなこと'))}${ul(a.aru)}</section>
 <section class="box">${whoH(wch(c, 'このタイプ', 1) + wv('が') + wch('', '好きな人') + wv('に、') + wv('つい見せちゃう'))}<p class="lead2">このタイプの脈ありサインです。</p>${ul(a.sign)}</section>
@@ -396,13 +397,13 @@ write('aichaku/index.html', page({
   body: `${crumb([['愛着スタイル診断', '']])}
 <section class="hero"><span class="kick">無料・登録なし</span><h1>愛着スタイル診断<span class="sub">あなたは、何型の恋をする？</span></h1>${HEARTS}${PICK}<span class="meta">恋愛の16タイプと、安定型・不安型・回避型・恐れ型の4分類が、1回の診断でわかります</span></section>
 <section class="box"><h2>こんなこと、ありませんか？</h2>${ul(['既読がついたのに返事がないと、何度もスマホを見てしまう', '好きな人ができると、なぜかそっけなくしてしまう', '恋人に頼るより、ひとりで片づけたほうが楽', '近づきたいのに、近づくと少し怖くなる'])}<p class="note">1つでも思い当たったら、あなたの「心のくせ」が関わっているかもしれません。</p></section>
-<section class="box"><h2>4つの愛着スタイル</h2><div class="types">${tyCell('preoc')}${tyCell('fear')}${tyCell('secure')}${tyCell('dismiss')}</div><div class="axis"><span>← 頼れる</span><span>ひとりで立つ →</span></div><p class="note">上の段ほど、心がゆれやすい型です。どれが良い・悪いではありません。境目の近くの人は、となりの型の面もあわせ持っています。</p></section>
+<section class="box"><h2>4つの愛着スタイル</h2><div class="types">${tyCell('preoc')}${tyCell('fear')}${tyCell('secure')}${tyCell('dismiss')}</div><div class="axis"><span>← 寄りかかれる</span><span>自分で立つ →</span></div><p class="note">上の段ほど、心がゆれやすい型です。どれが良い・悪いではありません。境目の近くの人は、となりの型の面もあわせ持っています。</p></section>
 ${START('自分の型を見る（無料）')}
 <section class="dif"><div class="lb">ほかの愛着スタイル診断とのちがい</div><div class="n">16タイプ ＋ 愛着スタイル</div><p>恋愛の16タイプと、4つの愛着スタイルを1回の診断で。16タイプは好きになり方や気持ちの伝え方、愛着スタイルは恋をしたときの心のゆれやすさと頼り方を見ます。好きな人との「2人の心のくせ」の相性まで見られます。</p></section>
 <details class="fold"><summary><span>愛着スタイルって？</span></summary><div class="in"><p>大切な人に、どのくらい近づきたいか・頼りたいか、という心の向きのことです。「心のゆれやすさ（不安）」と「頼るのを避ける気持ち（回避）」の2つで、4つの型に分けて見るのが一般的です（愛着スタイルの4分類）。</p><p>これまでの人とのかかわりの中で形づくられ、恋人ができたときに強く出やすいと言われています。同じ人でも、相手や時期によって変わります。</p></div></details>
-<details class="fold"><summary><span>4つの型のくわしい説明</span></summary><div class="in">${['secure', 'preoc', 'dismiss', 'fear'].map(k => `<h3>${esc(KT[k].k)}（${esc(kn(k))}）</h3><p>${esc(KUSE[k].lead)}</p><p class="note">ひとこと：${esc(KUSE[k].tip)}</p>`).join('')}</div></details>
+<details class="fold"><summary><span>4つの型のくわしい説明</span></summary><div class="in">${['secure', 'preoc', 'dismiss', 'fear'].map(k => `<h3>${esc(KT[k].k2 || KT[k].k)}（${k === 'fear' ? '不安＋回避／' : ''}${esc(kn(k))}）</h3><p>${esc(KUSE[k].lead)}</p><p class="note">ひとこと：${esc(KUSE[k].tip)}</p>`).join('')}</div></details>
 <details class="fold"><summary><span>この診断の考え方</span></summary><div class="in"><p>愛着の研究で使われている考え方を参考に、恋愛の場面の質問をこちらで作りました。研究の質問の文は使っていません。医療や心理の専門的な検査ではありません。</p><p>参考にした研究は「<a href="/?about=1">この診断の考え方</a>」にまとめています。</p></div></details>
-<section class="box refs"><h2>この診断のもとにした研究</h2><p class="note">愛着の研究の考え方を参考に、恋愛の場面の質問をこちらで作りました（研究の質問の文は使っていません）。</p>${AI_REFS.map(r => `<div class="ref"><b>${r.t.length > 1 ? r.t.map(nw).join('') : esc(r.t[0])}</b><small>${esc(r.j)}</small><a href="${r.u}" target="_blank" rel="noopener">論文を見る ›</a></div>`).join('')}</section>
+<section class="box refs"><h2>この診断のもとにした研究</h2><p class="note">ここに挙げた研究の考え方をもとに、恋愛の場面の質問をこちらで作りました（研究の質問の文は使っていません。題名を押すと論文が開きます）。</p>${AI_REFS.map(r => `<div class="ref"><b>${r.t.length > 1 ? r.t.map(nw).join('') : esc(r.t[0])}</b><small>${esc(r.j)}</small><a href="${r.u}" target="_blank" rel="noopener">論文を見る ›</a></div>`).join('')}</section>
 <section class="help"><h2>これは病気の診断ではありません</h2><p>「愛着障害」は、お医者さんが見立てるもので、この診断ではわかりません。この診断は、恋愛での気持ちのくせを知るためのものです。</p><p>つらい気持ちが続くときは、ひとりで抱えずに相談してください。</p><p class="telp">相談先：こころの健康相談統一ダイヤル（<a class="tel" href="tel:0570064556">0570-064-556</a>）</p></section>
 <section class="box faq"><h2>よくある質問</h2>${AI_FAQ.map((x, i) => `<details${i ? '' : ' open'}><summary><span>${esc(x[0])}</span></summary><p>${esc(x[1])}</p></details>`).join('')}</section>
 ${LINKS('aichaku/')}`,
@@ -447,13 +448,13 @@ const ex = 'RATP', exBest = ORDER.filter(x => x !== ex).map(x => ({ o: x, s: com
 CUR = 'aisho';
 write('aisho/index.html', page({
   url: 'aisho/',
-  title: '自分に合う人のタイプ診断｜恋愛・カップルの相性と2人の愛着スタイル（無料）｜恋のかたち診断',
+  title: '自分に合う人のタイプ診断｜あなたと相性抜群なのはどのタイプ？恋愛・カップル診断（無料）｜恋のかたち診断',
   desc: '恋愛・カップルの相性診断。あなたに合うのはどんな人？16タイプすべてとの相性を100点満点で。好きな人も診断すると、2人の愛着スタイル（安定型・不安型・回避型・恐れ型）の組み合わせもわかる無料の相性診断。',
   ld: crumbLd([['恋のかたち診断', ''], ['自分に合う人のタイプ診断', 'aisho/']]),
   body: `${crumb([['自分に合う人のタイプ診断', '']])}
 <section class="hero"><span class="kick">相性診断</span><h1>自分に合う人のタイプ診断<span class="sub">相性のいいタイプと、2人の心のくせ</span></h1>${START('無料で診断する')}<span class="meta">無料・登録なし</span></section>
 <section class="box"><h2>あなたに合うのは、どんな人？</h2><p>診断すると、16タイプすべてとの相性が100点満点で出ます。たとえば「${esc(T[ex].f)}」の人なら…</p><div class="rank">${exBest.map(b => `<a href="/type/${lc(b.o)}/"><img src="/img/${b.o}.webp" alt="" width="72" height="72" loading="lazy"><b>${fname(b.o)}</b><small>${esc(T[b.o].c)}</small><i>${b.s}点</i></a>`).join('')}</div></section>
-<section class="box"><h2>相性の決め方</h2><p>4つのものさしの組み合わせで計算します。いちばん重く見るのは頼り方です。愛着の研究では、2人が頼り合えるかどうかが、関係の満足度に大きく関わることがわかっています。</p>${ul(['頼り方：2人とも頼り合える組み合わせがいちばん高い', '恋の原動力：ときめき派どうし・安心派どうしは満足しやすい', '気持ちの伝え方：言葉どうし・行動どうしは伝わりやすい', '近づき方：リードする人と受けとめる人は、かみ合いやすい'])}<p class="note">この診断独自のめやすです。</p></section>
+<section class="box"><h2>相性の決め方</h2><p>4つのものさしの組み合わせで計算します。いちばん重く見るのは頼り方です。愛着の研究では、どちらかの「頼るのを避ける気持ち」が強いと、相手への親しさや、この関係を大切に思う気持ちが育ちにくいことがわかっています。</p>${ul(['頼り方：2人とも頼り合える組み合わせがいちばん高い', '恋の原動力：ときめき派どうし・安心派どうしは満足しやすい', '気持ちの伝え方：言葉どうし・行動どうしは伝わりやすい', '近づき方：リードする人と受けとめる人は、かみ合いやすい'])}<p class="note">この診断独自のめやすです。</p></section>
 <section class="box"><h2>2人の愛着スタイルの組み合わせ</h2><p>相手も診断すると、2人の心のくせの組み合わせが出ます。</p><div class="kp"><span class="t">追いかける人と、離れる人</span><span>不安型 × 回避型</span><p>不安になると近づきたくなる人と、近づかれるとひとりになりたい人。それぞれのコツも出ます。</p></div></section>
 ${CTA('診断して、相手にも送る', '無料で診断する', '相手が診断すると、2人の相性がわかります')}
 ${LINKS('aisho/')}`,
@@ -479,8 +480,8 @@ ${LINKS('izon/')}`,
 
 // ===== MBTIと恋愛の16タイプ（鑑定者本人 2026-11-22「MBTIと16タイプで検索されたい」。MBTI は登録商標なので、説明のためにだけ使い、診断の名前には入れない。対応表も作らない） =====
 const MB_FAQ = [
-  ['MBTIの診断ですか？', 'いいえ。恋のかたち診断は、MBTIや16Personalitiesとは関係のない、この診断独自の16タイプです。MBTIのタイプ（INFPなど）はわかりません。'],
-  ['MBTIのタイプと対応していますか？', '対応していません。MBTIはふだんの性格の好みを見るもので、恋のかたち診断は恋愛の場面だけを見る、別のものさしです。同じMBTIのタイプの人でも、恋のタイプはちがうことがよくあります。'],
+  ['MBTIや16タイプとは、どうちがいますか？', '性格の16タイプは、ふだんの性格を見るもの。恋のかたち診断は、恋愛の場面だけで決める「恋の16タイプ」です。性格のタイプがわかっている人ほど、「恋だとこうなるんだ」と違いを楽しめます。'],
+  ['MBTIのタイプと対応していますか？', 'MBTIのタイプ（INFPなど）とは別のものさしです。MBTIはふだんの性格の好みを見るもので、恋のかたち診断は恋愛の場面だけを見ます。同じMBTIのタイプの人でも、恋のタイプはちがうことがよくあります。'],
   ['MBTIの相性表とは、なにがちがいますか？', 'MBTIのもともとの考え方には、タイプどうしの決まった「相性表」はありません。ネットで見る相性表の多くは、それぞれのサイトが作ったものです。恋のかたち診断の相性も、4つのものさしから出した、この診断独自のめやすです。'],
   ['何問ありますか？', '56問です。遊ぶたびに、質問の文が入れかわります。'],
   ['本当に無料ですか？', '無料で、登録もいりません。答えと結果は、このスマホの中だけに残り、どこにも送りません。'],
@@ -488,12 +489,12 @@ const MB_FAQ = [
 CUR = 'mbti';
 write('mbti/index.html', page({
   url: 'mbti/',
-  title: 'MBTIで恋愛はわかる？恋愛に特化した16タイプ診断と相性（無料）｜恋のかたち診断',
-  desc: 'MBTIや性格の16タイプでわかること・わからないこと。恋愛の場面だけで決める「恋愛の16タイプ」と愛着スタイルで、好きになり方・脈ありサイン・相性がわかる無料の診断。MBTIとは別の、この診断独自の16タイプです。',
+  title: '16タイプ×恋愛診断｜MBTI・性格の16タイプの次は、恋のタイプを（無料）｜恋のかたち診断',
+  desc: '16タイプ診断が好きな人へ。性格の16タイプではわからない「恋の16タイプ」を、56の質問で診断。好きになり方・脈ありサイン・相性・愛着スタイルまでわかります（無料・登録なし）。',
   ld: [crumbLd([['恋のかたち診断', ''], ['MBTIと恋愛の16タイプ', 'mbti/']]), { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: MB_FAQ.map(x => ({ '@type': 'Question', name: x[0], acceptedAnswer: { '@type': 'Answer', text: x[1] } })) }],
   body: `${crumb([['MBTIと恋愛の16タイプ', '']])}
 <section class="hero"><span class="kick">性格の16タイプと、恋のタイプ</span><h1>MBTIで、恋愛はわかる？<span class="sub">恋のための、もうひとつの16タイプ</span></h1><div class="trio" aria-hidden="true"><img src="/img/LVTP.webp" alt="" width="84" height="84"><img src="/img/RATC.webp" alt="" width="84" height="84"><img src="/img/RASP.webp" alt="" width="84" height="84"></div>${START('恋愛の16タイプを診断する（無料）')}<span class="meta">無料・登録なし</span></section>
-<section class="box"><h2>MBTIでわかること・わかりにくいこと</h2><p>MBTIや、ネットで人気の性格の16タイプは、ふだんの性格の好み（人と過ごすと元気が出るか、ものごとをどう決めるか など）を見るものです。</p><p>でも恋愛は、好きな人ができたときにだけ出てくる「心のくせ」がたくさんあります。</p>${ul(['好きな人に、自分から近づけるか', '「好き」を言葉で伝えるか、行動で見せるか', '恋人に、弱いところを見せて頼れるか', '既読がつくと気になる・好きなのに一歩引いてしまう'])}<p class="note">ふだんは同じ性格のタイプの人でも、恋をすると、ちがう顔になることがよくあります。</p></section>
+<section class="box"><h2>MBTIでわかること・わかりにくいこと</h2><p>MBTIや、ネットで人気の性格の16タイプは、ふだんの性格の好み（人と過ごすと元気が出るか、ものごとをどう決めるか など）を見るものです。</p><p>でも恋愛は、好きな人ができたときにだけ出てくる「心のくせ」がたくさんあります。</p>${ul(['好きな人に、自分から近づけるか', '「好き」を言葉で伝えるか、行動で見せるか', '恋人に、弱いところを見せて頼れるか', '既読がつくと気になる・好きなのに一歩引いてしまう'])}<p class="note">ふだんの性格のタイプが同じ人でも、恋をすると、ちがう顔になることがよくあります。</p></section>
 <section class="box"><h2>恋のかたち診断の、4つのものさし</h2><p>恋愛の場面の質問だけで、4つのものさしを測ります。組み合わせで16タイプです。</p><div class="ax4">${AXES.map(a => `<div><b>${esc(a.title)}</b><span>${nw(a.an)}／${nw(a.bn)}</span></div>`).join('')}</div><p class="note">頼り方と恋の原動力は、恋愛心理学の研究を参考にしたものさしです。近づき方と気持ちの伝え方は、この診断独自のものさしです。</p></section>
 <section class="box"><h2>性格の16タイプと、恋のかたち診断</h2><div class="cmp">${[['見るもの', 'ふだんの性格の好み', '恋愛の場面の、心のくせ'], ['質問', 'ふだんの暮らし・仕事・人づきあい', '好きな人・恋人との場面だけ'], ['愛着スタイル', '見ない', '安定型・不安型・回避型・恐れ型も見る'], ['わかること', '性格の傾向', '好きになり方・脈ありサイン・恋の弱点・相性']].map(r => `<div class="cr"><div class="cl">${esc(r[0])}</div><p><small>性格の16タイプ（MBTIなど）</small>${r[1].split('・').map(nw).join('・<wbr>')}</p><p class="me"><small>恋のかたち診断</small>${r[2].split('・').map(nw).join('・<wbr>')}</p></div>`).join('')}</div></section>
 <section class="dif"><div class="lb">恋のかたち診断なら</div><div class="n">恋愛の16タイプ ＋ 愛着スタイル</div><p>好きな人にもリンクを送ると、2人の相性と、心のくせの組み合わせまで見られます。</p></section>
@@ -534,14 +535,14 @@ CUR = 'myaku';
 write('myaku/index.html', page({
   url: 'myaku/',
   title: '脈あり診断｜好きな人の脈ありサインをチェック（無料）｜恋のかたち診断',
-  desc: '好きな人は、あなたのことをどう思っている？最近のあの人のようすから、「目立つサイン」と「静かなサイン」で脈ありをチェック。男性にも女性にも使える無料の脈あり診断。連絡がこまめでない人の気持ちも読めます。',
+  desc: '好きな人は、あなたのことをどう思っている？最近のあの人のようすから、「目立つサイン」と「静かなサイン」で脈ありをチェック。男性にも女性にも使える無料の脈あり診断。連絡がこまめでない人の、静かなサインも見られます。',
   ld: crumbLd([['恋のかたち診断', ''], ['脈あり診断', 'myaku/']]),
   body: `${crumb([['脈あり診断', '']])}
 <section class="hero"><span class="kick">好きな人がいる人へ</span><h1>脈あり診断<span class="sub">好きな人の脈ありサインをチェック</span></h1>${MSTART('myaku', '脈ありチェックをはじめる（無料）')}<span class="meta">最近のあの人のようすを思い出して答えるだけ</span></section>
-<section class="box"><h2>脈ありとは？</h2><p>「脈あり」は、好きな人も、あなたに好意を持っていそうなことです。気持ちは本人にしかわかりませんが、好きな人には、ふだんのようすに小さなサインが出やすくなります。</p></section>
-<section class="box"><h2>2つの脈ありサイン</h2><p class="note">この診断では、サインを2つに分けて見ます。</p><h3>目立つサイン（あの人から近づいてくる）</h3>${ul(['用事がなくても、あの人から連絡が来る', '会話が続くように、質問を返してくる', '2人で話す時間や、会う時間を作ろうとする'])}<h3>静かなサイン（動かなくても出る）</h3>${ul(['返事は短くても、必ず返ってくる', '前に話したことを覚えている', '2人のときだけ、よく笑う'])}<p class="note">脈ありを見るときの中心は、目立つサインです。静かなサインは、仲がいいだけでも出るので、目立つサインの補いとして見ます。</p></section>
+<section class="box"><h2>脈ありとは？</h2><p>「脈あり」は、好きな人が、あなたに好意を持っていそうなようすのことです。気持ちは本人にしかわかりませんが、好きな人には、ふだんのようすに小さなサインが出やすくなります。</p></section>
+<section class="box"><h2>2つの脈ありサイン</h2><p class="note">この診断では、サインを2つに分けて見ます。</p><h3>目立つサイン（あの人から近づいてくる）</h3>${ul(['用事がなくても、あの人から連絡が来る', '会話が続くように、質問を返してくる', '2人で話す時間や、会う時間を作ろうとする'])}<h3>静かなサイン（あの人から近づいてこなくても出るもの）</h3>${ul(['返事は短くても、必ず返ってくる', '前に話したことを覚えている', '2人のときだけ、よく笑う'])}<p class="note">脈ありを見るときの中心は、目立つサインです。静かなサインは、仲がいいだけでも出るので、目立つサインの補いとして見ます。</p></section>
 <section class="box"><h2>男性と女性で、脈ありサインはちがう？</h2><p>この診断は、男性にも女性にも同じように使えます。サインの出方を大きく分けるのは、性別よりも、その人の恋のタイプです。自分から動くタイプは連絡や誘いに出やすく、待つタイプは「そばにいる」「覚えている」のような静かなサインに出やすくなります。</p>${signT.map(c => `<div class="ex"><img src="/img/${c}.webp" alt="" width="56" height="56" loading="lazy"><div><b>${esc(T[c].f)}</b><span>${esc(ARU_T[c].sign[0])}</span></div></div>`).join('')}<p class="note">あの人がどのタイプかは、<a href="/sukinahito/">好きな人のタイプ診断</a>で予想できます。</p></section>
-<section class="box"><h2>連絡がこまめでなくても</h2><p>好きな人には、連絡したくなるのがふつうです。だから、連絡がこまめな人は好きでいてくれる可能性が高いと言えます。ただ、好きでも、うるさいと思われたくない・何を話せばいいかわからない・断られるのがこわい、という理由で連絡できない人も、思っているより多くいます。</p></section>
+<section class="box"><h2>連絡がこまめでなくても</h2><p>連絡の多さは、気持ちの大きさとはかぎりません。好きだからこそ、何を送ればいいか迷ったり、相手の負担にならないかと考えたり、返事が来なかったらと不安になったりして、連絡をひかえる人もいます。連絡が少ないことだけで、気持ちを決めつけなくて大丈夫です。</p></section>
 <section class="box"><h2>あなたの「好き」は、伝わってる？</h2><p>脈ありサインは、あの人から見たあなたにも、そのまま当てはまります。診断の結果には、好きな気持ちを伝える「小さな一歩」も出ます。</p><p><a href="/?mini=suki">どれくらい好き？診断</a>もすると、2つを合わせた「2人のいま」と、気持ちを伝えるタイミングがわかります。</p></section>
 ${MCTA('myaku', 'あの人の脈ありサインを、チェックしてみる', '脈ありチェックをはじめる')}
 ${LINKS('myaku/')}`,
@@ -557,7 +558,7 @@ write('sukinahito/index.html', page({
   ld: crumbLd([['恋のかたち診断', ''], ['好きな人のタイプ診断', 'sukinahito/']]),
   body: `${crumb([['好きな人のタイプ診断', '']])}
 <section class="hero"><span class="kick">あの人を想像してみる</span><h1>好きな人のタイプ診断<span class="sub">あの人の恋愛タイプを当ててみる</span></h1>${MSTART('type', 'タイプ当て診断をはじめる（無料）')}<span class="meta">あの人ならこうしそう、と答えるだけ</span></section>
-<section class="box"><h2>好きな人のタイプとは？</h2><p>ここでいうタイプは、見た目の好みではなく、その人がどんな恋をするかです。4つのものさしの組み合わせで、16のタイプに分けています。</p>${ul(['近づき方：自分から動く／相手を待つ', '気持ちの伝え方：言葉で伝える／行動で示す', '頼り方：人に頼れる／自分で立つ', '恋の原動力：ときめき重視／安心重視'])}<p class="note">好きな人のことほど、聞かれると「どっちだろう」と迷うものです。わからないところは「わからない」と答えて大丈夫です。</p></section>
+<section class="box"><h2>好きな人のタイプとは？</h2><p>ここでいうタイプは、見た目の好みではなく、その人がどんな恋をするかです。4つのものさしの組み合わせで、16のタイプに分けています。</p>${ul(['近づき方：自分から動く／相手を待つ', '気持ちの伝え方：言葉で伝える／行動で示す', '頼り方：寄りかかれる／自分で立つ', '恋の原動力：ときめき優先／安心優先'])}<p class="note">好きな人のことほど、聞かれると「どっちだろう」と迷うものです。わからないところは「わからない」と答えて大丈夫です。</p></section>
 <section class="box"><h2>16タイプの一覧</h2>${allGrid()}</section>
 <section class="box"><h2>タイプ別の脈ありサイン（例）</h2>${['LVTP', 'LASC', 'RVTC', 'RASP'].map(c => `<div class="ex"><img src="/img/${c}.webp" alt="" width="56" height="56" loading="lazy"><div><b>${esc(T[c].f)}</b><span>${esc(ARU_T[c].sign[0])}</span></div></div>`).join('')}<p class="note">診断の結果には、予想したタイプの脈ありサイン・よろこびそうなこと・言わないほうがよさそうな言葉が出ます。</p></section>
 <section class="box"><h2>あの人に聞いてみる質問の例</h2>${askK.map(k => `<div class="ex"><div><b>${esc(axName[k])}がわからないとき</b><span>${esc(MN_ASK[k][0])}</span></div></div>`).join('')}<p class="note">何気ない質問の答えから、あの人のタイプが見えてきます。</p></section>

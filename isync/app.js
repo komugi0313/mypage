@@ -211,7 +211,7 @@ function goTop(){
   ${SIS_HTML}
   <p class="note">どの問題にも正解はありません。どちらでもいいときは、3つ目の答え（「どっちでも合わせられる」「どっちも好き」など）を選んでください。</p>
   <p class="credit" data-nocg><a class="pp-link" href="privacy.html">プライバシーポリシー</a><br>アイ・シンク（I-Sync）<br>Produced by Mizuki Nico</p>`);
-  const DESC={kon:'最大40人。番号だけで参加して、名前を出さずに一斉に20問。終わると、自分と合う人が、自分のスマホにだけ出ます。',each:'2〜10人で。1人が部屋を作り、そばにいる人はQRコードを読みとるだけで参加できます。離れている人には、LINEなどでリンクを送ります。',solo:'自分の答えから、あなたのこだわりと、ゆずれることがわかります。'};
+  const DESC={kon:'最大40人。番号だけで参加して、名前を出さずに一斉に20問。終わると、自分と合う人が、自分のスマホにだけ出ます。',each:'2〜10人で。1人が部屋を作り、そばにいる人はQRコードを読みとるだけで参加できます。離れている人には、LINEなどでリンクを送ります。',solo:'答えから、あなたの価値観のかたちと、こだわり・合わせられることがわかります。'};
   const refresh=()=>{['each','solo','kon'].forEach(m=>$('m-'+m).hidden=CFG.mode!==m);
     $('m-desc').textContent=DESC[CFG.mode];$('solo-sub').textContent=CFG.len+'問・約'+minsOf(CFG.len)+'分。あとで答え合わせ';$('m-anon').hidden=CFG.mode!=='each';$('m-opts').hidden=CFG.mode==='kon';
   };
@@ -421,7 +421,7 @@ function talkHTML(G,nm){
     return `<li class="${ok?'ok':''}"><b>${esc(Q[k][1])}</b><span class="tkg">${ws}</span>${hint?`<span class="tph">${hint}</span>`:''}${ay?`<span class="ayu"><b>${two?'歩み寄りの案':'みんなの歩み寄りの案'}</b>${esc(ay)}</span>`:''}<button class="talked" type="button" data-k="${key}" aria-pressed="${ok}">${ok?'✓ 話した':'話した'}</button></li>`};
   const rest=its.slice(1),top=rest.slice(0,2),more=rest.slice(2),ul=(xs,o)=>`<ul class="slist tk${two?'':' tkm'}">${xs.map((x,j)=>row(x,j+o)).join('')}</ul>`;
   return `<section class="card pt-a" id="talk"><p class="pt-h"><em>歩み寄り</em>${two?'ほかに話しておきたいこと':'みんなで話しておきたいこと'}</p>
-    <p class="hint">${(()=>{const dn=two?pairStat(ps[0],ps[1],G.qs).diff.length:0;return two?(dn>its.length?`ちがった${dn}問のうち、上の1問とあわせて、大事な${its.length}問です。`:'')+'「どうしてそう思う？」から聞いてみてください。':'気になる問題から話してみてください。'})()}</p>${its.slice(1).some(i=>ps.some(p=>p.ans[i]&&p.ans[i].st&&p.ans[i].o>=0&&p.ans[i].o<2))?'<p class="stl"><i>★</i>＝ゆずれない（答える前に付けた印）</p>':''}
+    <p class="hint">${(()=>{const dn=two?pairStat(ps[0],ps[1],G.qs).diff.length:0;return two?(dn>its.length?`ちがった${dn}問のうち、大事な${its.length}問をのせました（いちばん上の1問もふくみます）。`:'')+'気になる問題から、1問ずつ話してみてください。':'気になる問題から話してみてください。'})()}</p>${its.slice(1).some(i=>ps.some(p=>p.ans[i]&&p.ans[i].st&&p.ans[i].o>=0&&p.ans[i].o<2))?'<p class="stl"><i>★</i>＝ゆずれない（答える前に付けた印）</p>':''}
     ${ul(top,0)}${more.length?`<details class="sfold"><summary>ほかに${more.length}問を見る</summary>${ul(more,2)}</details>`:''}
     <p class="tk-cnt" id="tkcnt">話した問題　${its.filter(i=>done.has(QKEY[G.qs[i]].slice(0,5))).length}／${its.length}</p>
     <p class="hint tk-note">話したら「話した」を押しておくと、このスマホに残ります。</p></section>`}
@@ -503,7 +503,7 @@ function stepsHTML(G){const ps=G.players,two=ps.length===2,me=ps.find(p=>p.id===
     <div class="hq"><div class="hqh"><span class="qmark" aria-hidden="true">Q</span><p class="hqt">${esc(Q[k][1])}</p></div>${vs}</div>
     <p class="hp-arrow">↓ 歩み寄るなら</p>
     <div class="hp-ayu"><span class="rb">歩み寄りの案</span><p>${ay?esc(ay):'「どうしてそう思うの？」を聞き合って、'+(two?'2人':'みんな')+'のやり方を1つだけ決めてみる。'}</p></div>
-    <div class="howto"><b>1</b><span>「どうしてそう思う？」と聞いてみる</span><b>2</b><span>この案を1週間ためして、また話す</span></div>
+    <div class="howto"><b>1</b><span>その答えになった、きっかけを聞いてみる</span><b>2</b><span>この案を1週間ためして、また話す</span></div>
     <button class="talked big" type="button" data-k="${key}" aria-pressed="${ok}">${ok?'✓ 話しました':'話したら、ここを押す'}</button></section>`}
 // C：話し合うときのコツ（切り出しの例は、いちばん上の分かれた問題の答えから作る）
 function tipsHTML(G){const ps=G.players,me=ps.find(p=>p.id===G.me),its=talkItems(G);let open='この答え、どうしてそう思ったの？';
@@ -565,7 +565,7 @@ const GTIP={
   kicchiri:{l:'きっちり派が多いメンバーです。みんなで使う場所は、きっちり派の基準に合わせると気持ちよく過ごせます。',r:'おおらか派が多いメンバーです。片づけや決めごとは、最後に1人だけ確かめ役を決めておくと安心です。',s:'半々に分かれています。みんなで使う場所のルールを、1つだけ決めておくとうまくいきます。'},
   keikaku:{l:'計画派が多いメンバーです。計画派が骨組みを作り、当日のお楽しみを1つ、その場で決める人にまかせると、全員が楽しめます。',r:'その場で決める派が多いメンバーです。集まる日と場所だけは、先に1人が決めておくと集まりやすくなります。',s:'半々に分かれています。日にちと場所は先に決めて、そこで何をするかは当日に決めると、どちらも楽しめます。'},
   futari:{l:'一緒派が多いメンバーです。集まる回数が多くなりやすいので、来られない人がいても気にしない空気を作っておくと長続きします。',r:'ひとりの時間も派が多いメンバーです。気づけば集まらなくなりがちなので、次に集まる日をその場で決めておくと安心です。',s:'半々に分かれています。参加は自由、でも次に集まる日は決めておく、くらいがちょうどいいメンバーです。'},
-  okane:{l:'コツコツ派が多いメンバーです。みんなで使うお金は、先に「1人いくらまで」を決めておくと気持ちよく遊べます。',r:'楽しみ優先派が多いメンバーです。盛り上がって使いすぎないよう、行く前に「1人いくらまで」を決めておくと安心です。',s:'半々に分かれています。みんなで使うお金は、先に「1人いくらまで」を決めておくと気持ちよく遊べます。'}};
+  okane:{l:'コツコツ派が多いメンバーです。お金の面では安心なぶん、ときには「今日はちょっとぜいたく」の日を作ると、もっと楽しめます。',r:'楽しみ優先派が多いメンバーです。盛り上がって使いすぎないよう、行く前に「1人いくらまで」を決めておくと安心です。',s:'半々に分かれています。みんなで使うお金は、先に「1人いくらまで」を決めておくと気持ちよく遊べます。'}};
 function groupShapeHTML(G){const ps=G.players;if(ps.length<3||G.anon)return'';
   const rows=AX.map(a=>{const c={l:0,r:0,m:0};ps.forEach(p=>{const s=axScore(p,G.qs,a);if(s)c[axSideK(s.pct)]++});if(!GTIP[a.key]||c.l+c.r===0)return'';
     const kind=c.l>c.r?'l':c.r>c.l?'r':'s',lab=c.l&&c.r?`${Math.max(c.l,c.r)}対${Math.min(c.l,c.r)}`:'同じ向き';
@@ -646,7 +646,7 @@ const MINE_MAX=10;
 // 3人以上の結果では、歩み寄りの案の「2人で」などを「みんなで」に言いかえる（鑑定者本人 2026-11-19「全部直してください」）。
 // 「2人きり」・暮らし／結婚の話（もともと2人の話）はそのまま
 function ayOf(k,two){const a=(window.SY_AYUMI||{})[Q[k][1]];if(!a||two)return a;
-  return a.split(/(?<=。)/).map(t=>/2人きり|暮らし|生活費|職場|家賃|結婚|一緒に住/.test(t)?t:t.replace(/2人とも/g,'みんな').replace(/2人で/g,'みんなで').replace(/2人の/g,'みんなの').replace(/2人に。/g,'みんなに。')).join('')}
+  return (a.match(/[^。]+。?|。/g)||[a]).map(t=>/2人きり|暮らし|生活費|職場|家賃|結婚|一緒に住/.test(t)?t:t.replace(/2人とも/g,'みんな').replace(/2人で/g,'みんなで').replace(/2人の/g,'みんなの').replace(/2人に。/g,'みんなに。')).join('')}
 function mineList(){const a=store('kv_mine');return Array.isArray(a)?a:[]}
 function mineSave(G){try{
   const ps=G.players;if(!ps.some(p=>G.qs.some((k,i)=>{const a=p.ans[i];return a&&a.o>=0})))return;
@@ -707,7 +707,7 @@ function showResultCore(G){
   h+=`<section class="card score${hi?' hisync':''}">${hi?'<span class="hs-badge" data-nocg>HIGH SYNC</span>':''}<img class="chara c-mid" src="img/pair-smile.webp" width="200" height="111" alt="" aria-hidden="true">
     ${whoLine(G)}<p class="cap">${two?'2人':ps.length+'人'}のシンクロ率</p><p class="hint cap-h">${two?'2人の':'みんなの'}答えが、どれだけ重なったか。お金・将来・暮らしのような大事な問題ほど、大きく効きます。</p>
     <div class="ring" style="background:${hi?`conic-gradient(#8FE3CF 0,#A9B2F5 ${pct/2}%,#F4B6D6 ${pct}%,var(--line) ${pct}% 100%)`:`conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)`}"><div class="in"><span class="num" data-v="${pct}">${pct}<small>%</small></span></div></div>
-    <p class="msg">${sm.msg}</p>${hi?`<p class="hs-sub">${two?'暮らしの感覚が、ほとんど重なっています。<br>一緒にいて自然体でいられる組み合わせ。':'みんなの感覚が、ほとんど重なっています。<br>集まると自然体でいられるメンバー。'}</p>`:sm.sub?`<p class="hs-sub">${sm.sub}</p>`:''}${P2?`<div class="nums"><div class="n1"><small>ぴったり</small><b>${P2.same.length}<i>問</i></b></div><div class="n2"><small>近い</small><b>${P2.adj.length}<i>問</i></b></div><div class="n3"><small>ちがい</small><b>${P2.diff.length}<i>問</i></b></div></div>${P2.adj.length?`<p class="nums-n">近い＝片方が「日による」「ふつう」などの、<span class="nw">まん中の答え</span></p>`:''}`:''}
+    <p class="msg">${sm.msg}</p>${hi?`<p class="hs-sub">${two?'ふだんの感覚が、ほとんど重なっています。<br>一緒にいて自然体でいられる組み合わせ。':'みんなの感覚が、ほとんど重なっています。<br>集まると自然体でいられるメンバー。'}</p>`:sm.sub?`<p class="hs-sub">${sm.sub}</p>`:''}${P2?`<div class="nums"><div class="n1"><small>ぴったり</small><b>${P2.same.length}<i>問</i></b></div><div class="n2"><small>近い</small><b>${P2.adj.length}<i>問</i></b></div><div class="n3"><small>ちがい</small><b>${P2.diff.length}<i>問</i></b></div></div>${P2.adj.length?`<p class="nums-n">近い＝片方が「日による」「ふつう」などの、<span class="nw">まん中の答え</span></p>`:''}`:''}
     ${diffN?`<button class="jump" id="tojump" type="button">${hi?'100%に近づくヒントを見る ↓':(()=>{const tn=talkItems(G).length;return tn<diffN?`話しておきたい${tn}問を見る ↓`:`ちがった${diffN}問から、話すことを見る ↓`})()}</button>`:''}</section>`;
   const trows=themeRows(G);
   const done=()=>{vsFit();setTimeout(vsFit,60);setTimeout(vsFit,600);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(vsFit);bindTail(G);bindTalked(G);bindAgain(G);countUp();votesRun(G);kyoRun(G);const j=$('tojump');if(j)j.onclick=()=>{const t=$('steps')||$('talk');if(t)t.scrollIntoView({behavior:'smooth',block:'start'})}};
@@ -790,7 +790,7 @@ function matchHTML(G,p){const rows=AX.map(a=>({a,s:axScore(p,G.qs,a)})).filter(x
       <p class="mt-tip"><span>合わせ方</span>ときどき「わたしはこうしたい」を1つだけ言ってみる。</p></div>`;
   return `<section class="card match"><p class="pt-h"><em>相性のヒント</em><span><span class="nw">あなたと合いやすい人・</span><span class="nw">ぶつかりやすい人</span></span></p>${body}</section>`}
 // 恋人と話しておきたい3問：★→大事な問題の答えから3つ（ちがうと困るので、先に聞いておきたい問題）
-const TALK3_WHY={'お金':'お金の考え方のちがいは、毎月くり返し出てきます。','将来・家族':'将来のことは、あとから変えにくいところです。','暮らし':'毎日のことなので、小さなちがいが積み重なります。','恋愛・連絡':'連絡や会い方のちがいは、気持ちのすれ違いにつながりやすいところです。','食':'ごはんは毎日のことなので、2人で何度も向き合う場面です。','休日・遊び':'一緒に過ごす時間の楽しさに関わります。','ドキドキ':'仲が近づくペースのちがいは、言葉にしないと伝わりにくいところです。'};
+const TALK3_WHY={'お金':'お金の考え方のちがいは、毎月くり返し出てきます。','将来・家族':'将来のことは、あとから変えにくいところです。','暮らし':'毎日のことなので、小さなちがいが積み重なります。','恋愛・連絡':'連絡や会い方のちがいは、気持ちのすれ違いにつながりやすいところです。','食':'ごはんは毎日のことなので、好みのちがいに何度も出会います。','休日・遊び':'休みの過ごし方がちがうと、どちらかが毎回合わせることになりがちです。','ドキドキ':'仲が近づくペースのちがいは、言葉にしないと伝わりにくいところです。'};
 // 順番：★の大事な問題→大事な問題→★のほかの問題→ふつうの問題（軽い問題は入れない）。同じテーマは、ほかがなければ2つ目から
 // 付き合う前・はじめてのデートの問題は「恋人と話しておきたい」に入れない（恋人がいる人にも「初デートで手をつなぐのは？」が出ていたため。鑑定者本人 2026-11-23「全部直してください」）
 const T3_PRE=/初デート|はじめてのデート|付き合う前|告白|気になる人/;
@@ -822,7 +822,7 @@ function soloHTML(G){
   const top=shape||`<section class="card score"><img class="chara c-solo" src="img/ai.webp" width="120" height="106" alt="" aria-hidden="true"><p class="cap">${who}の「合わせられる度」</p>
     <div class="ring" style="background:conic-gradient(var(--a) 0 ${pct}%,var(--line) ${pct}% 100%)"><div class="in"><span class="num">${pct}<small>%</small></span></div></div><p class="msg">${msg}</p></section>`;
   const kod=(star.length?`<p class="sub">★ ゆずれないこと</p><ul class="list">${star.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${esc(ans(x.a.o,x.k))}</li>`).join('')}</ul>`:'')
-    +(star.length&&firm.some(x=>!x.a.st)?'<p class="sub">そのほかのこだわり</p>':'')+`<ul class="list">${firm.filter(x=>!x.a.st).map(x=>`<li><b>${esc(CATS[Q[x.k][0]][0])}｜${esc(Q[x.k][1])}</b><span class="ansrow"><i class="o${x.a.o}">${esc(ans(x.a.o,x.k))}</i></span></li>`).join('')||(star.length?'':xs.length?'<li>今回はぜんぶ「こだわらない」でした</li>':(G.qs.some((k,i)=>p.ans[i]&&p.ans[i].u)?'<li>どの問題も、まだ決められませんでした</li>':'<li>時間切れで、答えた問題がありませんでした</li>'))}</ul>`;
+    +(star.length&&firm.some(x=>!x.a.st)?'<p class="sub">そのほかのこだわり</p>':'')+`<ul class="list">${firm.filter(x=>!x.a.st).map(x=>`<li><b>${esc(CATS[Q[x.k][0]][0])}｜${esc(Q[x.k][1])}</b><span class="ansrow"><i class="o${x.a.o}">${esc(ans(x.a.o,x.k))}</i></span></li>`).join('')||(star.length?'':xs.length?'<li>今回は、どの問題も「どっちでも合わせられる」か、まん中の答えでした</li>':(G.qs.some((k,i)=>p.ans[i]&&p.ans[i].u)?'<li>どの問題も、まだ決められませんでした</li>':'<li>時間切れで、答えた問題がありませんでした</li>'))}</ul>`;
   const flx=(flex.length?`<p class="sub">合わせられること</p><p class="hint">${flex.map(x=>`<span class="qi">${esc(Q[x.k][1])}</span>`).join('　')}</p>`:'')
     +(mid.length?`<p class="sub">まん中の答え</p><ul class="list">${mid.map(x=>`<li><b>${esc(Q[x.k][1])}</b>${esc(ans(x.a.o,x.k))}</li>`).join('')}</ul>`:'')
     +(byT.length>1&&byT[0].a.ms>=PONDER_MIN?`<p class="sub">いちばん悩んだ問題</p><div class="ponder"><b>${esc(Q[byT[0].k][1])}</b><span>「${esc(ans(byT[0].a.o,byT[0].k))}<span style="white-space:nowrap">」まで <em>${sec(byT[0].a.ms)}</em> 秒</span></span></div>
@@ -849,7 +849,7 @@ function soloHTML(G){
 }
 // 1.66 奇跡の相性診断（鑑定者本人のメインサービス）へのバナー。無料の診断から会員登録（毎朝の開運予報メール）へつながる
 /* ほかの診断（3つのサイトの相互リンク。鑑定者本人 2026-11-20「見本その1のバナーでいきます」） */
-const SIS_HTML=`<section class="sis"><p class="sis-h">あなたのこと、もっと知りたくない？</p><a class="bn bn-ko" data-nocg href="https://koikata.jp/aichaku/?ref=isync" target="_blank" rel="noopener" aria-label="恋のかたち診断（別のサイト koikata.jp が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/koi.webp" alt="" width="58" height="58" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">恋のかたち診断</span><span class="ln"><span class="nw">16の恋愛タイプ×</span><span class="nw">愛着スタイル</span></span><span class="dm"><span class="nw">koikata.jp・</span><span class="nw">無料4分</span></span></span><span class="go">診断 ↗</span></a><a class="bn bn-nt" data-nocg href="https://honbare.com/?ref=isync" target="_blank" rel="noopener" aria-label="究極の二択（別のサイト honbare.com が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/panda.webp" alt="" width="56" height="56" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">究極の二択</span><span class="ln"><span class="nw">恋もあるあるも、</span><span class="nw">本音がバレる2択</span></span><span class="dm"><span class="nw">honbare.com・</span><span class="nw">無料5分</span></span></span><span class="go">あそぶ ↗</span></a><a class="bn bn-wa" data-nocg href="https://44wansona.com/?ref=isync" target="_blank" rel="noopener" aria-label="ワンソナ（別のサイト 44wansona.com が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/wansona.webp" alt="" width="54" height="54" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">ワンソナ</span><span class="ln"><span class="nw">うちの子の性格を、</span><span class="nw">44犬種のタイプで診断</span></span><span class="dm"><span class="nw">44wansona.com・</span><span class="nw">無料</span></span></span><span class="go">診断 ↗</span></a><a class="bn bn-16" data-nocg href="https://16typeplus.jp/?ref=isync" target="_blank" rel="noopener" aria-label="16TYPE+（別のサイト 16typeplus.jp が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/16tp.webp" alt="" width="54" height="54" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">16TYPE<b>+</b></span><span class="ln"><span class="nw">生まれ持った気質と、</span><span class="nw">育ってきた性格がわかる</span></span><span class="dm"><span class="nw">16typeplus.jp・</span><span class="nw">無料</span></span></span><span class="go">診断 ↗</span></a></section>`;
+const SIS_HTML=`<section class="sis"><p class="sis-h">あなたのこと、もっと知りたくない？</p><a class="bn bn-ko" data-nocg href="https://koikata.jp/aichaku/?ref=isync" target="_blank" rel="noopener" aria-label="恋のかたち診断（別のサイト koikata.jp が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/koi.webp" alt="" width="58" height="58" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">恋のかたち診断</span><span class="ln"><span class="nw">16の恋愛タイプ×</span><span class="nw">愛着スタイル</span></span><span class="dm"><span class="nw">koikata.jp・</span><span class="nw">無料</span></span></span><span class="go">診断 ↗</span></a><a class="bn bn-nt" data-nocg href="https://honbare.com/?ref=isync" target="_blank" rel="noopener" aria-label="究極の二択（別のサイト honbare.com が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/panda.webp" alt="" width="56" height="56" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">究極の二択</span><span class="ln"><span class="nw">恋もあるあるも、</span><span class="nw">本音がバレる2択</span></span><span class="dm"><span class="nw">honbare.com・</span><span class="nw">無料5分</span></span></span><span class="go">あそぶ ↗</span></a><a class="bn bn-wa" data-nocg href="https://44wansona.com/?ref=isync" target="_blank" rel="noopener" aria-label="ワンソナ（別のサイト 44wansona.com が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/wansona.webp" alt="" width="54" height="54" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">ワンソナ</span><span class="ln"><span class="nw">うちの子の性格を、</span><span class="nw">44犬種のタイプで診断</span></span><span class="dm"><span class="nw">44wansona.com・</span><span class="nw">無料</span></span></span><span class="go">診断 ↗</span></a><a class="bn bn-16" data-nocg href="https://16typeplus.jp/?ref=isync" target="_blank" rel="noopener" aria-label="16TYPE+（別のサイト 16typeplus.jp が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis/16tp.webp" alt="" width="54" height="54" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">16TYPE<b>+</b></span><span class="ln"><span class="nw">生まれ持った気質と、</span><span class="nw">育ってきた性格がわかる</span></span><span class="dm"><span class="nw">16typeplus.jp・</span><span class="nw">無料</span></span></span><span class="go">診断 ↗</span></a></section>`;
 const PROMO=`<a class="promo" href="https://166unmei.com" target="_blank" rel="noopener" aria-label="1.66 奇跡の相性診断で占う（別のサイト 166unmei.com が開きます）">
     <span class="pr-top">価値観の次は、生まれた日でわかる「運命の相性」</span>
     <span class="pr-pair" aria-hidden="true"><img src="img/166-usagi.webp" alt="" width="74" height="72" loading="lazy"><i>×</i><img src="img/166-inu.webp" alt="" width="63" height="72" loading="lazy"></span>
@@ -870,10 +870,10 @@ function shareText(G,name){
   if(ps.length<2){const p=ps[0],xs=G.qs.map((k,i)=>p.ans[i]).filter(a=>a&&a.o>=0),f=G.qs.filter((k,i)=>p.ans[i]&&isFlex(p.ans[i].o,k)).length,pc=xs.length?Math.round(f/xs.length*100):0,n=G.qs.length;
     // 送る文は「価値観のかたち」で問いかける（％は出さない。鑑定者本人 2026-11-18「B」）
     const sw=shapeWords(G,p);
-    if(name)return{t:`わたしは「${sw}」でした。あなたは何派？\n同じ${n}問に答えると、2人のシンクロ率がわかります（約${minsOf(n)}分・無料）\n#アイシンク`,url:withLink(name,G.qs,p.ans,ibxId(G,p,name))};
-    return{t:`わたしは「${sw}」でした。あなたは何派？\n#アイシンク`,url}}
+    if(name)return{t:`わたしは「${sw}」でした。${/派/.test(sw)?'あなたは何派？':'あなたはどんなタイプ？'}\n同じ${n}問に答えると、2人のシンクロ率がわかります（約${minsOf(n)}分・無料）\n#アイシンク`,url:withLink(name,G.qs,p.ans,ibxId(G,p,name))};
+    return{t:`わたしは「${sw}」でした。${/派/.test(sw)?'あなたは何派？':'あなたはどんなタイプ？'}\n#アイシンク`,url}}
   const sp=syncStat(G).pct;
-  return{t:`${sp>=HIGH_SYNC?'HIGH SYNC！ ':''}${ps.length===2?'2人':ps.length+'人'}のシンクロ率は ${sp}% でした！\n2択に答えて答え合わせ。みんなでも診断できます\n#アイシンク`,url}}
+  return{t:`${sp>=HIGH_SYNC?'HIGH SYNC！ ':''}${ps.length===2?'2人':ps.length+'人'}のシンクロ率は ${sp}% でした！\n同じ質問に答えて答え合わせ。みんなでも診断できます\n#アイシンク`,url}}
 function doShare(G,name){const {t,url}=shareText(G,name),d=$('shared');
   if(navigator.share){navigator.share({title:'アイ・シンク（I-Sync）',text:t,url}).catch(()=>{});return}
   const full=t+'\n'+url;d.hidden=false;
