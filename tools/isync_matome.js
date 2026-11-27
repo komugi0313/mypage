@@ -32,7 +32,7 @@ const PAGES = [
   { slug: 'dousei', desc: '同棲前に話し合うことを、2択のチェックリストで答え合わせ。お金の分け方・家事・生活の時間など、2人の「ふつう」が重なるところと、ちがうところがわかります。ちがいには歩み寄りの案つき。', title: n => `同棲前に話し合うことチェックリスト${n}｜お金・家事・生活リズム｜アイシンク`, h1: n => `同棲前に話し合うことチェックリスト${n}`, short: '同棲前に話し合うこと',
     lead: '一緒に住みはじめてから「えっ、そうなの？」となりやすいのは、大きなことより毎日の小さなこと。お金の分け方、家事、生活の時間、部屋の使い方。同棲の前に話しておきたいことを、2択のチェックリストにしました。',
     guide: { h: '同棲の前に、とくに話しておきたい4つ', items: ['お金：家賃や生活費をどう分けるか。ぴったり半分か、収入に合わせるか。', '家事：だれが何をするか、よりも「どのくらいきれいなら気にならないか」。', '生活の時間：起きる時間・寝る時間・ひとりになりたいとき。', 'ルール：友だちを呼ぶとき、帰りが遅くなるとき、連絡はどうするか。'] },
-    ids: quota([[x => x.cat === '暮らし' && sumi.test(x.q), 20], [cat('暮らし'), 18], [x => x.cat === 'お金' && sumi.test(x.q), 4], [cat('お金'), 10], [cat('食'), 5]]) },
+    ids: quota([[x => x.cat === '暮らし' && sumi.test(x.q), 20], [x => x.cat === '暮らし' && !/待ち合わせ|雨の日|飼うなら/.test(x.q), 18], [x => x.cat === 'お金' && sumi.test(x.q), 4], [cat('お金'), 10], [cat('食'), 5]]) },
   { slug: 'hatsudate', desc: 'マッチングアプリの初デートで会話に困らない、価値観がわかる2択の質問。答え合わせすると、2人の「ふつう」が重なるところと、ちがうところがわかります。', title: n => `マッチングアプリの初デートで会話に困らない｜価値観がわかる2択の質問${n}選｜アイシンク`, h1: n => `マッチングアプリの初デートで会話に困らない｜価値観がわかる2択の質問${n}選`, short: '初デートで聞ける、価値観がわかる質問',
     lead: '初めて会う人と、何を話せばいいかわからない。重い話はまだ早いけれど、その人の「ふつう」は知りたい。そんなときは2択の質問が便利です。答えやすくて、会話が自然に広がり、価値観も少し見えてきます。',
     guide: { h: '2択の質問で、会話を広げるコツ', items: ['自分の答えも先に言う。「わたしは朝型なんだけど、どっち？」と聞くと、相手も答えやすくなります。', '答えを聞いたら「どうして？」を1つ。そこから好きなことや思い出の話に広がります。', 'お金・結婚・家族のくわしい話は、何度か会ってから。初デートは休日の過ごし方や食べものくらいがちょうどいい。'] },
@@ -44,7 +44,7 @@ const PAGES = [
   { slug: 'couple', desc: '夫婦の価値観チェック。2択の質問に答えるだけで、2人の「ふつう」が重なるところと、ちがうところがわかります。ちがいには歩み寄りの案つき。', title: n => `夫婦の価値観チェック${n}｜違いが見つかったときの歩み寄り方｜アイシンク`, h1: () => '夫婦の価値観チェック｜違いが見つかったときの歩み寄り方', short: '夫婦の価値観チェック',
     lead: '一緒に暮らしていても、毎日の「ふつう」は意外とちがいます。ちがいがあるのは悪いことではありません。どこがちがうのかを知って、2人のやり方を決めればいいのです。夫婦で答え合わせできる価値観チェックと、ちがいが見つかったときの歩み寄り方をまとめました。',
     guide: { h: 'ちがいが見つかったときの、3つのステップ', ol: true, items: ['どっちが正しいかではなく「なぜそう思うの？」を聞く。', '「ゆずれないこと」と「合わせられること」を分ける。どちらかにとって大事なことから決めます。', '試すルールを決めて、1か月たったら見直す。うまくいかなければ、また変えればいいだけです。'] },
-    ids: quota([[cat('将来・家族'), 10], [cat('お金'), 12], [cat('暮らし'), 10], [cat('食'), 8]]) },
+    ids: quota([[x => x.cat === '将来・家族' && !/プロポーズ|顔合わせ/.test(x.q), 10], [cat('お金'), 12], [cat('暮らし'), 10], [cat('食'), 8]]), smpCats: ['暮らし', 'お金', '将来・家族'] },
   { slug: 'kachikan', desc: '恋人との価値観のすり合わせに。2択の質問に答えるだけで、2人の「ふつう」が重なるところと、ちがうところがわかる恋愛価値観診断。ちがいには歩み寄りの案つき。', title: n => `恋人と価値観が合わない？すり合わせの仕方と、2人でできる恋愛価値観診断｜アイシンク`, h1: () => '恋人と価値観が合わない？すり合わせの仕方と、2人でできる恋愛価値観診断', short: '恋人との価値観のすり合わせ',
     lead: '「価値観が合わないかも」と感じるのは、だめな2人だからではありません。それまで別々に暮らしてきた2人なら、ちがうところがあって当たり前。大事なのは、どこがどのくらいちがうのかを知ることです。2人で同じ質問に答えると、重なるところとちがうところが、数字と一覧でわかります。',
     guide: { h: '価値観のすり合わせ、4つのステップ', ol: true, items: ['同じ質問に、別々に答える。先に相手の答えを聞かないのがポイントです。', '重なったところを先に見る。「ここは同じだね」から話すと、気持ちが楽になります。', '分かれたところは、片方ががまんするのではなく、2人の間の案を探す。', '★ゆずれないことが分かれたときは、時間をかけて話す。すぐに答えを出さなくても大丈夫です。'] },
@@ -154,7 +154,7 @@ const head = (title, desc, url) => `<!doctype html>
 <style>${CSS}</style></head><body><div class="wrap">
 <a class="top" href="../"><b>I-Sync</b><small>アイ・シンク　わたしとあなたの、重なるところ</small></a>`;
 const others = (self) => `<section class="card"><h2>ほかのテーマの質問</h2><ul class="links">${PAGES.filter(p => p.slug !== self).map(p => `<li><a href="../${p.slug}/">${esc(p.h1s)}</a></li>`).join('')}<li><a href="../">アイ・シンクのトップへ</a></li></ul></section>`;
-const foot = `<footer>アイシンク（アイ・シンク／I-Sync）｜2択に答えて答え合わせ。無料・登録なし</footer></div><script src="../jw.js"></script></body></html>\n`;
+const foot = `<footer>アイシンク（アイ・シンク／I-Sync）｜同じ質問に答えて答え合わせ。無料・登録なし</footer></div><script src="../jw.js"></script></body></html>\n`;
 const opt3 = x => `<span class="opts"><span class="o0">${esc(x.a)}</span><span class="o1">${esc(x.b)}</span><span class="o2">${esc(x.c)}</span></span>`;
 // アイ・シンクでできること（どのページも同じ）
 const STRONG = `<section class="card strong"><h2>アイ・シンクで、できること</h2><ul class="ok">
@@ -169,21 +169,27 @@ PAGES.forEach(p => {
     itemListElement: p.list.map((i, n) => ({ '@type': 'ListItem', position: n + 1, name: Q[i].q })) };
   // 結果の見本：ずれた2問（歩み寄りの案がある大事な問題）・ぴったり4問・近い1問
   const byW = [...p.list].sort((a, b) => (WB.has(b) - WB.has(a)) || len(Q[a]) - len(Q[b]));
-  const dif = byW.filter(i => AY[Q[i].q]).slice(0, 2);
-  const rest = byW.filter(i => !dif.includes(i));
-  const same = rest.slice(0, 4), adj = rest.slice(4, 5);
+  // かみ合う組み合わせ（されたい／したい など）は「ずれたところ」の見本にしない・「近い」の見本は「どっちでも合わせられる」の問題から
+  const comp = x => /(され|て)(たい|ほしい)$/.test(x.a) && /(し|てあげ)たい$/.test(x.b) || /(し|てあげ)たい$/.test(x.a) && /(され|て)(たい|ほしい)$/.test(x.b) || /甘えたい/.test(x.a + x.b) && /甘えてほしい/.test(x.a + x.b);
+  const smpOk = i => !p.smpCats || p.smpCats.includes(Q[i].cat);
+  const ord = xs => [...xs.filter(smpOk), ...xs.filter(i => !smpOk(i))];
+  const dif = ord(byW.filter(i => AY[Q[i].q] && !comp(Q[i]))).slice(0, 2);
+  const rest = byW.filter(i => !dif.includes(i) && !comp(Q[i]));
+  const adj = ord(rest.filter(i => Q[i].c === 'どっちでも合わせられる' && Q[i].cat !== 'ドキドキ')).slice(0, 1);
+  const same = [...rest.filter(i => !adj.includes(i) && smpOk(i)), ...rest.filter(i => !adj.includes(i) && !smpOk(i))].slice(0, 4);
   const tot = dif.length + same.length + adj.length, pct = Math.round((same.length + adj.length * 0.5) * 100 / tot);
   const groups = [...new Set(p.list.map(i => Q[i].cat))].map(c => ({ c, is: p.list.filter(i => Q[i].cat === c) }));
-  const cta = `<a class="btn" href="../?pack=${p.slug}&amp;mode=solo">この質問で、2人で答え合わせ<small>無料・アプリ不要・約6分</small></a>`;
+  const grp = p.slug === 'tomodachi';
+  const cta = grp ? `<a class="btn" href="../?pack=${p.slug}&amp;mode=each">この質問で、みんなで答え合わせ<small>無料・アプリ不要・部屋を作る</small></a>` : `<a class="btn" href="../?pack=${p.slug}&amp;mode=solo">この質問で、2人で答え合わせ<small>無料・アプリ不要・約6分</small></a>`;
   const G = p.guide;
   const ans = (x, v) => v ? x.b : x.a;
   const html = head(p.titles, desc, url) + `
 <h1>${esc(p.h1s)}</h1>
 <section class="card"><p class="lead">${esc(p.lead)}</p>
  ${cta}
- <a class="btn ghost" href="../?pack=${p.slug}&amp;mode=each">そばにいる人と、みんなのスマホで（部屋を作る）</a></section>
+ ${grp ? `<a class="btn ghost" href="../?pack=${p.slug}&amp;mode=solo">先にひとりで答えて、あとでリンクで誘う</a>` : `<a class="btn ghost" href="../?pack=${p.slug}&amp;mode=each">そばにいる人と、それぞれのスマホで答え合わせ（部屋を作る）</a>`}</section>
 <section class="card smp"><div class="smp-h"><i aria-hidden="true"></i><p><b>2人の結果は、こんなふうに出ます</b><span>見本・あなた × あの人</span></p></div>
- <div class="sr"><div class="ring" style="--p:${pct}"><b>${pct}<small>%</small></b></div><p><b>シンクロ率</b><span>合う ${same.length + adj.length}問・ずれた ${dif.length}問</span></p></div>
+ <div class="sr"><div class="ring" style="--p:${pct}"><b>${pct}<small>%</small></b></div><p><b>シンクロ率</b><span>ぴったり ${same.length}問・近い ${adj.length}問・ちがい ${dif.length}問</span></p></div>
  <h3 class="g-ok">合うところ</h3><ul class="sl">
  ${same.map((i, n) => { const x = Q[i]; return `<li><span class="sq">${esc(x.q)}</span><span class="sa ok">2人とも「${esc(ans(x, n % 2))}」</span></li>`; }).join('')}
  ${adj.map(i => { const x = Q[i]; return `<li><span class="sq">${esc(x.q)}</span><span class="sa ad">あなた「${esc(x.a)}」／あの人「${esc(x.c)}」＝近い</span></li>`; }).join('')}</ul>
@@ -193,13 +199,15 @@ PAGES.forEach(p => {
  ${cta}</section>
 ${STRONG}
 <section class="card"><h2>${esc(G.h)}</h2><${G.ol ? 'ol' : 'ul'} class="gd">${G.items.map(t => `<li>${esc(t)}</li>`).join('')}</${G.ol ? 'ol' : 'ul'}></section>
-<section class="card"><h2>こんな質問が出ます（${p.n}問）</h2><p class="note">答えは、アプリの中で。口で聞くと相手に合わせた答えになりがちですが、別々に答えると本音が見えます。</p>
+<section class="card"><h2>こんな質問が出ます（${p.n}問）</h2><p class="note">答えは、アイ・シンクの中で。口で聞くと相手に合わせた答えになりがちですが、別々に答えると本音が見えます。</p>
 ${groups.map(g => `<h3>${esc(g.c)}編</h3><ul class="ql">${g.is.map(i => `<li>${esc(Q[i].q)}</li>`).join('')}</ul>`).join('\n')}
 ${cta}</section>
 <section class="card"><h2>答え合わせのしかた</h2><ol class="steps">
- <li>「この質問で、2人で答え合わせ」を押して、まず自分が答えます。</li>
+ ${grp ? `<li>「この質問で、みんなで答え合わせ」を押して、部屋を作ります。</li>
+ <li>LINEかQRコードで、友だちを部屋に呼びます。</li>
+ <li>そろったら「スタート」。みんなが同じ質問に答えると、みんなのシンクロ率・重なったところ・話しておきたいことがわかります。</li>` : `<li>「この質問で、2人で答え合わせ」を押して、まず自分が答えます。</li>
  <li>結果の画面の「LINEで答え合わせに誘う」で、相手にリンクを送ります。</li>
- <li>相手が同じ質問に答えると、2人のシンクロ率・重なったところ・話しておきたいこと・歩み寄りの案がわかります。結果はあなたにも届きます。</li></ol>
+ <li>相手が同じ質問に答えると、2人のシンクロ率・重なったところ・話しておきたいこと・歩み寄りの案がわかります。結果はあなたにも届きます。</li>`}</ol>
  ${cta}</section>
 ${others(p.slug)}
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
