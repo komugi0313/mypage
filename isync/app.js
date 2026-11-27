@@ -86,7 +86,8 @@ function view(h){app.innerHTML='<div class="scr">'+h+'</div>';window.scrollTo(0,
 let NAV_ON=false,NAV_TOP=false;
 function navPush(){if(NAV_ON||WHERE==='claude')return;try{history.pushState({isync:1},'',location.href);NAV_ON=true}catch(e){}}
 window.addEventListener('popstate',()=>{NAV_ON=false;
-  const ov=$('siov');if(ov){const x=$('si-x');if(x)x.click();else ov.remove();navPush();return}
+  const ov=$('siov');if(ov){const x=$('si-x');if(x)x.click();else ov.remove();if(!$('go-each'))navPush();return}
+  if($('mine-ls')){mineView();return}
   if(LT.active&&L.qs){const pv=$('qprev');if(pv){navPush();pv.click();return}LT.active=false;clearInterval(QT);toast('トップにもどりました。答えた分は「さっきの続きから答える」で続けられます');goTop();return}
   if(R.code){navPush();toast('部屋から出るときは、画面の「やめる」か「トップへ」を押してください');return}
   if(!$('go-each'))goTop()});
@@ -383,7 +384,7 @@ function starIntro(key,ok,go){if(R.starSeen===key){go&&go();return}const old=$('
     <p class="si-lead">そう思った問題では、答えを選ぶ前にこのボタンを押してください。</p>
     <ul class="si-list"><li>結果の「★ ゆずれないところ」で、答えをくらべます</li><li>シンクロ率の点数には入りません。気軽に押してください</li><li>押さなくても大丈夫。ゆずれない問題にだけ押してください</li></ul>
     <button class="btn" id="si-ok" type="button">${esc(ok)}</button></section>`;
-  document.body.appendChild(d);const b=$('si-ok');try{b.focus()}catch(e){}
+  document.body.appendChild(d);navPush();const b=$('si-ok');try{b.focus()}catch(e){}
   b.onclick=()=>{R.starSeen=key;d.remove();go&&go()};
   // 閉じる：ひとりで・答え合わせはまだ始めずに元の画面へ（もう一度はじめると、また出る）／部屋はこの説明だけ閉じる
   const close=()=>{d.remove();document.removeEventListener('keydown',esc_);if(!go)R.starSeen=key};const esc_=e=>{if(e.key==='Escape')close()};
@@ -731,7 +732,7 @@ function mineLabel(ent){const n=ent.pl.length,me=ent.pl[ent.me];
 // ひとりの結果は、一覧に価値観のかたち（○○派×○○派）を添える（％がないので見分けられなかった。鑑定者本人 2026-11-19）
 function mineShape(e){try{const x=e.pl[0],p={name:x.n,ans:x.a.map(v=>v?{o:v[0],st:v[1],ms:v[2]*100,to:!!v[3],u:v[4]}:null)};return shapeWords({qs:e.qs,players:[p]},p)}catch(err){return''}}
 function mineView(){const L2=mineList();
-  view(`${tnav('mine-top')}<section class="card"><p class="label">わたしの結果</p><p class="hint">このスマホに残っている結果です（新しい順・${MINE_MAX}回まで）。この一覧は、このスマホの中だけにあります。</p>
+  view(`${tnav('mine-top')}<section class="card"><p class="label">わたしの結果</p><p class="hint">このスマホに残っている結果です（新しい順・${MINE_MAX}回まで）。この一覧は、このスマホの中だけにあります。開いた結果のいちばん下から、1つずつ消せます。</p>
     ${L2.length?`<ul class="mine-l">${L2.map((e,j)=>{const x=mineLabel(e),n=e.pl.length,solo=n<2;
       const others=e.pl.filter((p,k)=>k!==e.me).map(p=>p.n+'さん'),sw=solo?mineShape(e):'';
       const tag=solo?'<span class="mb-tag t1">ひとりで</span>':n===2?'<span class="mb-tag t2">2人で</span>':`<span class="mb-tag t3">みんなで（${n}人）</span>`;
@@ -742,7 +743,12 @@ function mineView(){const L2=mineList();
   const mvb=$('mv-go');if(mvb)mvb.onclick=()=>{try{sessionStorage.removeItem('kv_stay')}catch(e){}mvGo()};
   app.querySelectorAll('.mine-b').forEach(b=>b.onclick=()=>mineOpen(L2[+b.dataset.j]));$('mine-back').onclick=goTop;$('mine-top').onclick=goTop}
 function showResult(G){showResultCore(G);
-  if(G.mine){const sc=app.querySelector('.scr'),x=mineLabel(G.mine);if(sc)sc.insertAdjacentHTML('afterbegin',tnav('mine-ls','わたしの結果の一覧へ',`<span class="tnav-n">${x.dt}の結果</span>`));const b=$('mine-ls');if(b)b.onclick=mineView;scrollTo(0,0)}
+  if(G.mine){const sc=app.querySelector('.scr'),x=mineLabel(G.mine);if(sc)sc.insertAdjacentHTML('afterbegin',tnav('mine-ls','わたしの結果の一覧へ',`<span class="tnav-n">${x.dt}の結果</span>`));const b=$('mine-ls');if(b)b.onclick=mineView;
+    // この結果だけを消す（2回押し。2026-11-27）
+    if(sc){sc.insertAdjacentHTML('beforeend',`<section class="card mine-del"><button class="btn ghost" id="mine-del" type="button">この結果を消す</button><p class="hint" id="mine-del-n">わたしの結果の一覧から、この結果だけを消します。</p></section>`);
+      const db=$('mine-del');let armed=0,tm=0;db.onclick=()=>{if(!armed){armed=1;db.textContent='もう一度押すと、消します';$('mine-del-n').textContent='消した結果は、もとにもどせません。';tm=setTimeout(()=>{armed=0;db.textContent='この結果を消す';$('mine-del-n').textContent='わたしの結果の一覧から、この結果だけを消します。'},4000);return}
+        clearTimeout(tm);const id=G.mine.id,at=G.mine.at;store('kv_mine',mineList().filter(x=>x&&!(x.id===id&&x.at===at)));toast('この結果を消しました');mineView()}}
+    scrollTo(0,0)}
   else if(!G.view){mineSave(G);statPlay(G)}}
 /* 診断した回数を数える（統計のページ stats.html 用。名前・答えは送らない。同じ回は1回だけ＝部屋に人が加わって描き直しても数え直さない。2026-11-19） */
 function statPlay(G){try{if(!G.qs||!G.qs.length)return;
