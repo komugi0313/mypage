@@ -5257,13 +5257,14 @@ function onRoom(room, players){
   if(room.phase!=='ready') hideReady();
 }
 /* 通信のようす（鑑定者本人 2026-11-26「通信状況が全く分からないのが不安」「通信中ってなってた方が分かりやすい」）：
-   最後にサーバーとやりとりできた時刻を覚え、部屋の画面に「通信中（つながっています）」、8秒以上とぎれたら「電波が弱いようです。つなぎ直しています…」、
+   最後にサーバーとやりとりできた時刻を覚え、部屋の画面に（2人以上そろったら）「通信中（みんなとつながっています）」、8秒以上とぎれたら「電波が弱いようです。つなぎ直しています…」、
    25秒以上とぎれたら「つながりにくくなっています」と「もう一度つなぐ」を出す。問題の画面は、とぎれたときだけ出す */
 var NET={ok:0,bad:0};
 function netMark(ok){ if(ok){ NET.ok=Date.now(); NET.bad=0; } else NET.bad++; netPaint(); }
 function netState(){ var a=Date.now()-(NET.ok||0); return (!NET.ok||a>25000) ? 'ng' : ((a>8000||NET.bad) ? 'weak' : 'ok'); }
 function netHTML(st, always){
-  if(st==='ok') return always ? '<span class="nd"></span><span>通信中（つながっています）</span>' : '';
+  /* 自分だけのとき「つながっています」は友だちとつながったように読めるので出さない（鑑定者本人 2026-11-27「まだつながってない状態で通信中で出るのはおかしい」）。2人以上そろってから「みんなとつながっています」 */
+  if(st==='ok'){ var R=S.room, n=R ? (R.players||[]).length : 0; return (always && n>=2) ? '<span class="nd"></span><span>通信中（みんなとつながっています）</span>' : ''; }
   if(st==='weak') return '<span class="nd"></span><span>電波が弱いようです。つなぎ直しています…</span>';
   return '<span><span class="nd"></span>つながりにくくなっています。電波のよい場所で、このまま待ってね</span><button type="button" class="net-re">もう一度つなぐ</button>';
 }
