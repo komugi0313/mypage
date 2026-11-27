@@ -967,6 +967,11 @@ details.fu-open[open]>summary::after{content:"閉じる ▲";background:#E8F7F0;
 .lb-pill.ok{background:#9BE7B4}
 .splash{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));background:rgba(255,248,225,.94);text-align:center}
 .splash[hidden]{display:none}
+.cdown{position:fixed;inset:0;z-index:55;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));background:rgba(255,248,225,.96);text-align:center}.cdown[hidden]{display:none}
+.cdown small{font-family:"Mochiy Pop One","Zen Maru Gothic",sans-serif;font-size:20px;color:#1E1E2A}
+.cdown b{font-family:"Mochiy Pop One","Zen Maru Gothic",sans-serif;font-weight:400;font-size:84px;line-height:1;color:#fff;background:#FF3D7F;border:4px solid #1E1E2A;border-radius:50%;box-shadow:6px 6px 0 #1E1E2A;min-width:150px;height:150px;display:flex;align-items:center;justify-content:center;padding:0 18px;box-sizing:border-box;white-space:nowrap}
+#cd-n.go{font-size:30px;border-radius:40px;min-width:0;padding:0 26px}@media (prefers-reduced-motion:no-preference){#cd-n.pop{animation:pop .35s ease-out}}
+.cdown span{font-size:15px;font-weight:700;color:#1E1E2A}
 .splash b{font-family:"Mochiy Pop One","Zen Maru Gothic",sans-serif;font-weight:400;font-size:30px;line-height:1.35;color:#1E1E2A;background:#9BE7B4;border:3px solid #1E1E2A;border-radius:22px;box-shadow:5px 5px 0 #1E1E2A;padding:18px 22px;max-width:92%}
 .splash.go b{background:#FF3D7F;font-size:32px}
 .splash small{font-size:15px;font-weight:900;color:#1E1E2A}
@@ -1166,8 +1171,8 @@ body.rdy-on #gres-body{padding-bottom:230px}
 .kc-mixn img{flex:none;width:64px;height:64px;object-fit:contain}
 .kc-mixn .mxn-t{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
 .kc-mixn small{font-size:13px;font-weight:700;color:#17634A}
-.kc-mixn b{font-family:'Mochiy Pop One',sans-serif;font-weight:400;font-size:20px}
-.kc-mixn span{font-size:14px;line-height:1.55}
+.kc-mixn .mxn-t>b{font-family:'Mochiy Pop One',sans-serif;font-weight:400;font-size:20px}
+.kc-mixn .mxn-t>span{font-size:14px;line-height:1.55}
 .kc-mixn .kc-zk{margin:4px 0 0;padding:0;min-height:44px;text-align:left}
 .mine-open{margin:2px 0 16px;background:#FFF3C4;box-shadow:4px 4px 0 #FF3D7F}
 .mine-open small{color:#3A3550;font-weight:700}
@@ -1644,6 +1649,7 @@ input,select,textarea{font-size:max(16px,1em)}
   <button class="big alt end-top" type="button" data-nav="top">トップにもどる</button>
 </section>
 
+<div class="cdown" id="cdown" hidden><small id="cd-h">はじまるよ！</small><b id="cd-n">3</b><span id="cd-s"></span></div>
 <div class="splash" id="splash" hidden><img class="pnd" id="splash-img" alt="" width="120" height="120"><b id="splash-t"></b><small id="splash-s"></small></div>
 <!-- 部屋（集まるまで） -->
 <section class="scr" id="s-lobby">
@@ -1969,8 +1975,15 @@ function kimoEnsureOne(mode, pick, groups, seenSet, recent, MAP, need, keep, th0
   var inPick={}; pick.forEach(function(q){ inPick[q.id]=1; });
   var cands=[];
   var g0=groups[0]||[];
-  cands=shuffle(g0.filter(function(q){ return isK(q) && !inPick[q.id] && !seenSet[q.id] && !recent[q.id]; }));
-  cands=cands.concat(shuffle(g0.filter(function(q){ return isK(q) && !inPick[q.id] && cands.indexOf(q)<0; })));
+  /* この難しさの問題が少ないと、毎回同じ問題が入っていた（鑑定者本人 2026-11-27「2回やって同じ問題が出てくるのがおかしい」。まぜまぜ編イージーの元気の出し方は2問しかなく、毎回同じ2問だった）。
+     この難しさのまだ出ていない問題 → ほかの難しさのまだ出ていない問題 → 直前の3回に出ていない問題 → すぐ前の1回に出ていない問題 の順で選ぶ（すぐ前の回と同じ問題は入れない） */
+  var all=(POOL[mode]||[]).filter(function(q){ return isK(q) && !inPick[q.id]; });
+  var fresh=function(q){ return !seenSet[q.id] && !recent[q.id]; };
+  cands=shuffle(g0.filter(function(q){ return isK(q) && !inPick[q.id] && fresh(q); }));
+  cands=cands.concat(shuffle(all.filter(function(q){ return fresh(q) && cands.indexOf(q)<0; })));
+  cands=cands.concat(shuffle(all.filter(function(q){ return !recent[q.id] && cands.indexOf(q)<0; })));
+  var last={}; (store('nitaku_recent_'+mode)||[]).slice(-pick.length).forEach(function(id){ last[id]=1; });   // それでも足りないときは、すぐ前の1回に出ていない問題（カードを毎回出すため）
+  cands=cands.concat(shuffle(all.filter(function(q){ return !last[q.id] && cands.indexOf(q)<0; })));
   while(pick.filter(isK).length<need && cands.length){
     var cand=cands.shift(); if(inPick[cand.id]) continue;
     var out=null, best=99;
@@ -2216,7 +2229,7 @@ function start(){
   S.qi=0; S.pi=0;
   S.ans = S.players.map(function(){ return []; });
   S.times = S.players.map(function(){ return []; });
-  if(S.who==='group' && S.style==='secret') showPass(); else showQ();
+  if(S.who==='group' && S.style==='secret') showPass(); else countdown('', showQ);
 }
 function showPass(){
   $('pass-who').textContent = S.players[S.pi].name+' さんの番';
@@ -2460,12 +2473,14 @@ function honPick(){
     // 恋の問題には、気持ちの出し方を見る問題を5問入れる（kimochi.js）
     if(m==='love'){ var top=fresh.slice(0,half[m]), isK=function(q){ return !!KIMO.hon[q.id]; };
       var rest=fresh.slice(half[m]).concat(shuffle(all.filter(function(q){ return fresh.indexOf(q)<0; })));   // まだ出ていない問題を先に、なければ出た問題から
+      var lastH={}; (store('nitaku_hon_last')||[]).forEach(function(id){ lastH[id]=1; });   // すぐ前の回に出た気持ちの問題は入れない（9問しかなく、毎回同じ問題が出ていた＝鑑定者本人 2026-11-27）
+      rest=rest.filter(function(q){ return !(isK(q) && lastH[q.id]); });
       rest.filter(isK).forEach(function(q){ if(top.filter(isK).length>=5) return; var j=-1; top.forEach(function(t,i){ if(j<0 && !isK(t)) j=i; }); if(j>=0) top[j]=q; });
       fresh=top; }
     fresh.slice(0,half[m]).forEach(function(q){ out.push({q:q, m:m}); });
   });
   out.forEach(function(x){ if(seen.indexOf(x.q.id)<0) seen.push(x.q.id); });
-  store('nitaku_seen_hon', seen);
+  store('nitaku_seen_hon', seen); store('nitaku_hon_last', out.map(function(x){ return x.q.id; }));
   return shuffle(out).map(function(x){ var q=x.q, sw=Math.random()<0.5;
     return { id:q.id, a:sw?q.b:q.a, b:sw?q.a:q.b, ta:{}, tb:{}, ex:q.ex, m:x.m, sw:sw }; });
 }
@@ -2474,7 +2489,7 @@ function startHon(){
   S.players=[{name:'あなた'}];
   S.qs=honPick(); S.counts=null; S.sent={};
   S.qi=0; S.pi=0; S.ans=[[]]; S.times=[[]];
-  showQ();
+  countdown('本能モードは1問5秒', showQ);
 }
 function honStop(){ cancelAnimationFrame(S.honRaf||0); clearTimeout(S.honT); S.honT=null; S.honRaf=0; }
 /* 答えをちゃんと読んでから選ぶ（鑑定者本人の指示 2026-11-14「問題を読まないと適当になる」）：
@@ -3342,7 +3357,7 @@ function charaHTML(qs, ans, label, cls, fold, opt){
     '<div class="mn-s"><b>よろこぶこと</b><ul>'+c.yoro.map(function(s){ return '<li>'+esc(s)+'</li>'; }).join('')+'</ul></div>'+
     '<div class="mn-s"><b>こうすると、すねます</b><ul>'+c.sune.map(function(s){ return '<li>'+esc(s)+'</li>'; }).join('')+'</ul></div>'+
     '<div class="mn-s mn-c"><b>注意</b><ul>'+['y','f','s'].map(function(t){ return '<li>'+esc(c.chui[t])+'</li>'; }).join('')+'</ul></div>'+
-    '<div class="mn-s"><b>相性のいい機種</b><ul><li>'+c.kiki.map(esc).join('・')+'</li></ul></div></div></div>';
+    '<div class="mn-s"><b>相性のいいキャラ</b><ul><li>'+c.kiki.map(esc).join('・')+'</li></ul></div></div></div>';
   var cause=charaWordsOk(c, kt.words).filter(function(w){ return KOTOBA[MK].theme[w]===5; }).slice(0,2); if(!cause.length) cause=top.slice(0,2);
   var BY=byoPick(c, qs, ans, opt.hon?(NM?'honN':'honL'):MK, opt.times), BYS=r.sub?byoPick(r.sub, qs, ans, opt.hon?(NM?'honN':'honL'):MK, opt.times):null;
   if(label==='あなた' && !opt.noCol){ try{ BY=byoNext(c, BY); }catch(e){} }
@@ -3599,7 +3614,7 @@ function resetAll(){
   }
   resetAll.armed=0; clearTimeout(resetAll.t); if($('reset-note')) $('reset-note').hidden=true;
   leaveRoom();
-  try{ localStorage.removeItem('nitaku_tone'); localStorage.removeItem('nitaku_mine'); localStorage.removeItem('nitaku_me'); localStorage.removeItem('nitaku_room'); localStorage.removeItem('nitaku_players'); localStorage.removeItem('nitaku_seen_love'); localStorage.removeItem('nitaku_seen_normal'); localStorage.removeItem('nitaku_recent_love'); localStorage.removeItem('nitaku_recent_normal'); localStorage.removeItem('nitaku_hist_love'); localStorage.removeItem('nitaku_hist_normal'); localStorage.removeItem('nitaku_seen_hon'); localStorage.removeItem('nitaku_chara_ans'); localStorage.removeItem('nitaku_byo'); }catch(e){}
+  try{ localStorage.removeItem('nitaku_tone'); localStorage.removeItem('nitaku_mine'); localStorage.removeItem('nitaku_me'); localStorage.removeItem('nitaku_room'); localStorage.removeItem('nitaku_players'); localStorage.removeItem('nitaku_seen_love'); localStorage.removeItem('nitaku_seen_normal'); localStorage.removeItem('nitaku_recent_love'); localStorage.removeItem('nitaku_recent_normal'); localStorage.removeItem('nitaku_hist_love'); localStorage.removeItem('nitaku_hist_normal'); localStorage.removeItem('nitaku_seen_hon'); localStorage.removeItem('nitaku_hon_last'); localStorage.removeItem('nitaku_chara_ans'); localStorage.removeItem('nitaku_byo'); }catch(e){}
   S.players=[]; S.qs=[]; S.qi=0; S.pi=0; S.ans=[]; S.times=[]; S.counts=null; S.sent={}; S.mix=false;
   S.who='solo'; S.lv='normal'; S.gnum=15; S.style='room'; S.rv='end';
   [['seg-who','solo'],['seg-lv','normal'],['seg-style','room']].forEach(function(x){
@@ -3748,7 +3763,17 @@ function bindPick(){
   var el=$('nxt'); if(!el) return;
   el.onclick=function(e){ var b=e.target.closest('button'); if(!b) return; S.nextM=b.dataset.m; [].forEach.call(el.children, function(x){ x.setAttribute('aria-pressed', x===b?'true':'false'); }); };
 }
-function soloAgain(){ var m=S.nextM||curPlayMode(); if(m==='hon') S.hon=true; else setMode(m); document.querySelectorAll('.mode').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.m===m?'true':'false'); }); honSoloText(); if(m==='hon'){ startHon(); return; } start(); }
+function soloAgain(){ var m=S.nextM||curPlayMode(); if(m==='hon') S.hon=true; else setMode(m); document.querySelectorAll('.mode').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.m===m?'true':'false'); }); honSoloText(); S.cdAgain=true; if(m==='hon'){ startHon(); return; } start(); }
+/* 問題が始まるときは、どんなときも3・2・1のカウントダウンをしてから1問目へ（鑑定者本人 2026-11-27「急に問題が始まるので、カウントダウンみたいなのしてほしい」「どんな時も必ず」）。動きを減らす設定でも数字は出す */
+var CD_MS=3000;
+function countdown(sub, done){
+  var el=$('cdown'); if(!el){ done(); return; }
+  var tok=(S.cdTok=(S.cdTok||0)+1);   // 2回続けて呼ばれても、最後の1回だけ進む
+  var n=3; el.hidden=false; $('cd-h').textContent=S.cdAgain?'もう1回！':'はじまるよ！'; S.cdAgain=false; $('cd-n').classList.remove('go'); $('cd-s').textContent=sub||'1問目が始まるよ';
+  function step(){ $('cd-n').textContent=n; var b=$('cd-n'); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); try{ navigator.vibrate&&navigator.vibrate(40); }catch(e){}
+    if(n<=0){ b.textContent='スタート！'; b.classList.add('go'); setTimeout(function(){ if(tok!==S.cdTok) return; el.hidden=true; done(); }, 450); return; } n--; setTimeout(function(){ if(tok===S.cdTok) step(); }, (CD_MS-450)/3); }
+  step();
+}
 /* 結果のいちばん下：大きいボタンは「もう1回」と「LINEで送る」だけ。ほかは小さい文字のリンク（鑑定者本人の指摘 2026-11-14「こんなにボタンがあるのどうかな？やや見づらい」） */
 function shareRow(l, a, v){
   return '<a class="big lb-line end-line" id="'+l+'" href="https://line.me/R/share" target="_blank" rel="noopener">LINEで結果を送る</a>'+
@@ -4329,7 +4354,7 @@ $('wi-go').onclick=function(){
   S.counts=null; S.sent={};
   Votes.get(S.qs.map(function(q){ return q.id; })).then(function(c){ S.counts=c; });
   S.players=[{name:v}]; S.qi=0; S.pi=0; S.ans=[[]]; S.times=[[]];
-  showQ();
+  countdown('', showQ);
 };
 $('wi-name').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); $('wi-go').onclick(); } });
 /* 2人の結果（みんなの結果と同じ形）。答えた人＝自分を先に */
@@ -5056,7 +5081,7 @@ function lateGo(key, d, pid, p){
 function lateBegin(){
   var L=S.late; if(!L || L.on) return; L.on=true;
   if(L.V.mode==='hon'){ S.honPlay=true; S.lastHon=true; } else { S.honPlay=false; S.lastHon=false; }
-  showQ();
+  countdown(L.V.mode==='hon'?'本能モードは1問5秒':'', showQ);
 }
 /* 1問ごとに、先に答えた人の速さ（4人まで・約1.8秒） */
 function lateFlash(qi){
@@ -5236,7 +5261,9 @@ function onRoom(room, players){
   if(resPh) R.ansSig=asg;
   if(R.cntRound!==room.round){ R.cntRound=room.round; S.counts=null; Votes.get(room.qs.filter(function(q){ return !q.custom; }).map(function(q){ return q.id; })).then(function(c){ S.counts=c; }); }
   if(room.phase==='q'){
-    if(R.view!==key){ var first=/^(lobby|)$/.test(R.view); R.view=key; R.qAt=Date.now(); if(R.lateT){ clearTimeout(R.lateT); R.lateT=null; } showQ(); ntAutoNext(R, key); if(first){ if(!S.resuming && room.qi===0){ if(S.honPlay){ S.honHold=Date.now()+2200; showQ(); splash('スタート！', '本能モードは1問5秒。考える前に、どっちか押してね', 'go'); } else splash('スタート！', '1問目です。答えを選んでね', 'go'); } else toast(S.resuming ? 'さっきの部屋にもどりました' : '途中から参加しました（'+(room.qi+1)+'問目）'); S.resuming=false; try{ navigator.vibrate&&navigator.vibrate(150); }catch(e){} } } else updateWait();
+    if(R.view!==key){ var first=/^(lobby|)$/.test(R.view), again=!first && !S.resuming && room.qi===0 && !/^q:/.test(R.view), cd0=first && !S.resuming && room.qi===0; R.view=key; R.qAt=Date.now(); if(R.lateT){ clearTimeout(R.lateT); R.lateT=null; }
+      if(again || cd0){ if(again) S.cdAgain=true; R.qAt=Date.now()+CD_MS; hideReady(); countdown(S.honPlay?'本能モードは1問5秒':'', function(){ if(S.room===R && R.view===key){ showQ(); ntAutoNext(R, key); } }); } else { showQ(); ntAutoNext(R, key); }
+      if(first){ if(!S.resuming && room.qi===0){ /* カウントダウンで始める（鑑定者本人 2026-11-27「質問が始まる時はどんな時も必ずカウントダウン」） */ } else toast(S.resuming ? 'さっきの部屋にもどりました' : '途中から参加しました（'+(room.qi+1)+'問目）'); S.resuming=false; try{ navigator.vibrate&&navigator.vibrate(150); }catch(e){} } } else updateWait();
     autoCheck();
   } else if(room.phase==='reveal'){
     if(R.view!==key){ R.view=key; showReveal(); }
@@ -5257,13 +5284,14 @@ function onRoom(room, players){
   if(room.phase!=='ready') hideReady();
 }
 /* 通信のようす（鑑定者本人 2026-11-26「通信状況が全く分からないのが不安」「通信中ってなってた方が分かりやすい」）：
-   最後にサーバーとやりとりできた時刻を覚え、部屋の画面に「通信中（つながっています）」、8秒以上とぎれたら「電波が弱いようです。つなぎ直しています…」、
+   最後にサーバーとやりとりできた時刻を覚え、部屋の画面に（2人以上そろったら）「通信中（みんなとつながっています）」、8秒以上とぎれたら「電波が弱いようです。つなぎ直しています…」、
    25秒以上とぎれたら「つながりにくくなっています」と「もう一度つなぐ」を出す。問題の画面は、とぎれたときだけ出す */
 var NET={ok:0,bad:0};
 function netMark(ok){ if(ok){ NET.ok=Date.now(); NET.bad=0; } else NET.bad++; netPaint(); }
 function netState(){ var a=Date.now()-(NET.ok||0); return (!NET.ok||a>25000) ? 'ng' : ((a>8000||NET.bad) ? 'weak' : 'ok'); }
 function netHTML(st, always){
-  if(st==='ok') return always ? '<span class="nd"></span><span>通信中（つながっています）</span>' : '';
+  /* 自分だけのとき「つながっています」は友だちとつながったように読めるので出さない（鑑定者本人 2026-11-27「まだつながってない状態で通信中で出るのはおかしい」）。2人以上そろってから「みんなとつながっています」 */
+  if(st==='ok'){ var R=S.room, n=R ? (R.players||[]).length : 0; return (always && n>=2) ? '<span class="nd"></span><span>通信中（みんなとつながっています）</span>' : ''; }
   if(st==='weak') return '<span class="nd"></span><span>電波が弱いようです。つなぎ直しています…</span>';
   return '<span><span class="nd"></span>つながりにくくなっています。電波のよい場所で、このまま待ってね</span><button type="button" class="net-re">もう一度つなぐ</button>';
 }
