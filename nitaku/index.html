@@ -306,6 +306,7 @@ h2{font-size:20px;margin:22px 0 10px;font-weight:900}
 .four .f-v small{font-size:14px}
 .four .f-w{display:block;font-style:normal;font-size:12.5px;font-weight:900;color:#9C1445}
 .ppl>.four-h:first-child{margin-top:2px}
+.mis{margin:10px 0 0;background:#FFF3C4;border:2px solid #1E1E2A;border-radius:12px;padding:8px 10px;font-size:13.5px;line-height:1.65;text-align:left;font-weight:700;color:#1E1E2A}.mis i{font-style:normal;color:#9C1445}
 .four .f0{background:#FFE1EA}.four .f1{background:#EDE6FF}.four .f2{background:#FFE8D2}.four .f3{background:#DFF6EC}
 .pp-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .pp-tiles div{border:2px solid #1E1E2A;border-radius:14px;padding:8px 4px;text-align:center}
@@ -2016,6 +2017,24 @@ function fourHTML(mode, sc, who){
     var v=sc[ax.k], w=axWord(ax.k,v);
     return '<div class="f'+j+'"><span class="f-n">'+ax.name+'</span><b class="f-v">'+v+'<small>%</small></b>'+(w?'<i class="f-w">'+w+'</i>':'')+'</div>';
   }).join('')+'</div>';
+}
+/* キャラと今回の％の向きが食いちがうときだけ、4つの％の下に1行（鑑定者本人 2026-11-27 見本 https://claude.ai/artifact/VVrjyC8NKpmLn5wkRWtq47 で「この形で入れて」）
+   向きの決まっていないキャラ（クール系・自由人・恋する乙女）にも、反対に見える組み合わせを決めておく */
+var CH_IMPL={cool:{A:-1}, jiyu:{A:-1}, otome:{R:1}};
+function mismatchLine(mode, sc, ch){
+  if(!ch || !ch.main || !sc) return '';
+  var c=ch.main, d=Object.keys(c.ax||{}).length ? c.ax : (CH_IMPL[c.id]||{}), best=null;
+  Object.keys(d).forEach(function(k){
+    var v=sc[k]; if(v==null || (!sc['_'+k] && v===50)) return;
+    var off=d[k]>0 ? 45-v : v-55; if(off<0) return;
+    if(!best || off>best.off) best={k:k, v:v, off:off};
+  });
+  if(!best) return '';
+  var ax=AXES[mode].filter(function(a){ return a.k===best.k; })[0]; if(!ax) return '';
+  var hl=best.v>=55?'高め':'低め', t;
+  if(ch.pooled) t='今回は<i>'+ax.name+'が'+best.v+'%と'+hl+'</i>に出ましたが、キャラ「'+esc(c.name)+'」は、これまでの'+ch.n+'回の答えを合わせて決めています。';
+  else t=ax.name+'は'+best.v+'%と'+hl+'ですが、ほかの答えに「'+esc(c.name)+'」らしい選び方がいちばん多く出ました。';
+  return '<p class="mis">'+t+'</p>';
 }
 function bridgeLine(mode, k, v, ch){
   if(!ch || !ch.main) return '';
@@ -3963,6 +3982,7 @@ function showResult(){
     (chImg ? '<div class="rh-ch"><img src="'+chImg+'" alt="" width="132" height="132"><p class="rh-you">あなたは</p><p class="type">'+esc(ch.main.name)+'</p><p class="rh-say">'+esc(ch.main.say)+'</p>'+ctLove+(ch.main.miryoku?'<p class="rh-mi"><b>あなたの恋の魅力</b>'+esc(ch.main.miryoku)+'</p>':'')+'</div>'
       : '<img class="pnd" src="img/panda-'+(val>=65?'smirk':(val<35?'shy':'1'))+'.webp" alt="" width="96" height="96">')+
     fourHTML(mode, sc, 'あなた')+
+    mismatchLine(mode, sc, ch)+
     (mode==='love' ? '<button type="button" class="linkb mtk-go" data-mtk>％の見かた ›</button>' : '')+'</div>';
   h+=charaHTML(S.qs, S.ans[0], 'あなた', '', false, {mode:mode, hero:!!chImg, r:ch})+(mode==='love'?kimochiHTML(S.qs, S.ans[0], 'あなた', '')+yurusuHTML(S.qs, S.ans[0], 'あなた'):nHintHTML(S.qs, S.ans[0], 'あなた', ''))+kotobaHTML(S.qs, S.ans[0], 'あなた', '', mode)+mixFudan(pm, S.qs, S.ans[0], 'あなた', '', chN, ctNorm)+(pm==='love'?lovePastFudan():'')+(pm==='normal'?nHintHTML(S.qs, S.ans[0], 'あなた', ''):'');
   h+='<div class="card"><details class="kok"><summary><span><img class="ico-i" src="img/icon-detail.webp" alt="" width="20" height="20">4つの％をくわしく見る</span></summary>'+axisHTML(mode,sc)+AXES[mode].map(function(ax){ return rkSpan(mode, ax.k, sc[ax.k]); }).join('')+(mode==='love'?'<button class="linkb" data-mtk>％の見かた ›</button>':'')+'<button class="linkb" data-about>この診断について（％の考え方）</button></details></div>';
@@ -4434,7 +4454,7 @@ function showGroupResultCore(){
        '<summary class="pc-sum">'+(cimg?'<img src="'+cimg+'" alt="" width="52" height="52">':'')+
        '<span class="pc-n"><b class="pc-nm">'+esc(r.p.name)+(me?'<i class="pc-me">あなた</i>':'')+'</b><small>'+(co?esc(co.main.name):'<span class="nw1">'+hd.cap+' '+hv+'%</span>')+(r.p.part?'・'+r.p.part+'問':'')+'</small></span></summary>'+
        (r.p.part?'<p class="pc-partn">'+esc(r.p.name)+'さんは<i class="pc-part">'+r.p.part+'問</i>だけ答えました</p>':'')+
-       charaHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone, true, {mode:mode})+'<div class="ppl '+(ri%2?'ppl-b':'ppl-a')+'">'+fourHTML(mode, r.sc, me?'あなた':r.p.name+'さん')+
+       charaHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone, true, {mode:mode})+'<div class="ppl '+(ri%2?'ppl-b':'ppl-a')+'">'+fourHTML(mode, r.sc, me?'あなた':r.p.name+'さん')+mismatchLine(mode, r.sc, co)+
        (function(){ var sp=speedStats(S.qs,S.times[r.i],S.ans[r.i]); return sp ? '<div class="pks">'+pickHTML('⚡','即決',sp.quick)+pickHTML('🌀','いちばん悩んだ',sp.slow)+'</div>' : ''; })()+
        '</div>'+(mode==='love'?kimochiHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone):nHintHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone))+kotobaHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone, mode)+mixFudan(pm, S.qs, S.ans[r.i], r.p.name+'さん', tone)+(pm==='normal'?nHintHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone):'')+
        '<details class="kok"><summary><span><img class="ico-i" src="img/icon-detail.webp" alt="" width="20" height="20">4つの％をくわしく見る</span></summary>'+axisHTML(mode,r.sc)+AXES[mode].map(function(ax){ return rkSpan(mode, ax.k, r.sc[ax.k], me?'あなた':r.p.name+'さん'); }).join('')+'</details>'+
