@@ -10,7 +10,7 @@ OUT=R+'site/'
 META={
  'ja':('16タイプ、診断するたびに結果が変わる人へ｜16TYPE+（無料診断）','16タイプの結果が、診断するたびに変わる。それは、あなたの中に「生まれつきのタイプ」と「今のタイプ」の2つがあるから。生年月日と16タイプから2つを並べて、変わったところ・変わらないところがわかる無料診断。入力は約30秒・登録なし。','日本語','ja_JP'),
  'en':('16TYPE+ | Your temperament and character, side by side','The temperament you were born with, from your birth date, and the character shaped by experience, from the 16 types. A free personality test that puts the two side by side and shows where you tend to struggle.','English','en_US'),
- 'ko':('16TYPE+ | 타고난 기질과 자라 온 성격을 알 수 있는 무료 검사','생년월일로 보는 기질과 16타입으로 보는 성격. 둘을 나란히 놓고 나다움과 고민하기 쉬운 지점을 알려 주는 무료 성격 검사.','한국어','ko_KR')}
+ 'ko':('16타입 검사, 할 때마다 결과가 바뀐다면? | 16TYPE+ (무료 검사)','16타입 결과가 검사할 때마다 바뀌나요? 당신 안에는 「타고난 타입」과 「지금의 타입」, 두 가지가 있기 때문이에요. 생년월일과 16타입으로 둘을 나란히 놓고, 바뀐 곳과 바뀌지 않는 곳을 알려 주는 무료 검사. 입력은 약 30초, 회원가입 없음.','한국어','ko_KR')}
 URL={'ja':'https://16typeplus.jp/','en':'https://16typeplus.jp/en/','ko':'https://16typeplus.jp/ko/'}
 GA='G-XLMXSC0LY0'
 # プライバシーポリシーのお問い合わせ先（決まったら入れる。空なら行ごと出さない）
@@ -59,13 +59,13 @@ def build():
 <meta property="og:description" content="{desc}">
 <meta property="og:url" content="{u}">
 <meta property="og:locale" content="{loc}">
-<meta property="og:image" content="https://16typeplus.jp/img/ogp-{lang}.png{'?v=2' if lang=='ja' else ''}">
+<meta property="og:image" content="https://16typeplus.jp/img/ogp-{lang}.png?v=2">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#F6F7F9">
 <script async src="https://www.googletagmanager.com/gtag/js?id={GA}"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments);}}gtag('js',new Date());gtag('config','{GA}',{{page_location:(function(){{try{{var u=new URL(location.href);u.searchParams.delete('from');u.hash='';return u.toString();}}catch(e){{return location.origin+location.pathname;}}}})()}});</script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments);}}gtag('js',new Date());gtag('config','{GA}',{{page_location:(function(){{try{{var u=new URL(location.href);u.searchParams.delete('from');u.searchParams.delete('g');u.searchParams.delete('k');u.hash='';return u.toString();}}catch(e){{return location.origin+location.pathname;}}}})()}});</script>
 '''
         data='var PAGE_LANG="%s";window.CHAR_BASE="%schars/";\n'%(lang,base)+''.join('var %s=%s;\n'%(k,json.dumps(v,ensure_ascii=False)) for k,v in d.items())
         os.makedirs(OUT+('' if lang=='ja' else lang+'/'),exist_ok=True)
