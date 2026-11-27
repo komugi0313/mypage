@@ -171,3 +171,5 @@ window.CHARA_NORMAL = {
 window.CHARA_NORMAL.honB={"boken":0.75,"shincho":0.33,"mood":0.57,"mypace":0.21,"kodawari":0.71,"hodohodo":0.49,"kirakira":0.26,"arinomama":0.3,"dandori":-1.02,"nonbiri":-0.67};
 /* まぜまぜ編の日常の問題から決めるふだんのキャラの出やすさ（2026-11-26。段取り名人23%・慎重派18%・ほどほど名人3%にかたよっていた→どれも約10%） */
 window.CHARA_NORMAL.mixB={"boken": 0.3, "shincho": -0.36, "mood": 0.12, "mypace": -0.08, "kodawari": 0.11, "hodohodo": 0.32, "kirakira": 0.05, "arinomama": -0.1, "dandori": -0.26, "nonbiri": 0.21};
+/* 決め方・元気の出し方の問題を10問ずつ足したので、まぜまぜ編の出やすさを合わせ直した（2026-11-27） */
+(function(D,A){ Object.keys(A).forEach(function(k){ D.mixB[k]=(D.mixB[k]||0)+A[k]; }); })(window.CHARA_NORMAL, {"boken":-0.12,"shincho":0.03,"mood":-0.02,"mypace":0.15,"kodawari":0.04,"hodohodo":-0.05,"kirakira":-0.1,"arinomama":-0.04,"dandori":0.12,"nonbiri":0.03});
