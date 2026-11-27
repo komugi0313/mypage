@@ -298,6 +298,14 @@ h2{font-size:20px;margin:22px 0 10px;font-weight:900}
 .pp-who strong{display:block;font-family:"Mochiy Pop One",sans-serif;font-weight:400;font-size:22px;color:#1E1E2A;overflow-wrap:anywhere}
 .pp-who span{display:block;font-family:"Mochiy Pop One",sans-serif;font-weight:400;font-size:15px;color:#B0124D}
 .pp-say{background:#FFF4C9;border-radius:14px;padding:10px 12px;font-size:16px;font-weight:900;line-height:1.6;color:#1E1E2A;margin:12px 0}
+.four-h{margin:16px 0 8px;font-weight:900;font-size:15px;text-align:center}
+.four{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;text-align:left}
+.four>div{border:2px solid #1E1E2A;border-radius:14px;padding:8px 10px;min-width:0}
+.four .f-n{display:block;font-size:13px;font-weight:900;color:#1E1E2A}
+.four .f-v{display:block;font-family:"Mochiy Pop One",sans-serif;font-weight:400;font-size:26px;line-height:1.25;color:#1E1E2A}
+.four .f-v small{font-size:14px}
+.four .f-w{display:block;font-style:normal;font-size:12.5px;font-weight:900;color:#9C1445}
+.four .f0{background:#FFE1EA}.four .f1{background:#EDE6FF}.four .f2{background:#FFE8D2}.four .f3{background:#DFF6EC}
 .pp-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .pp-tiles div{border:2px solid #1E1E2A;border-radius:14px;padding:8px 4px;text-align:center}
 .pp-tiles small{display:block;font-size:13px;font-weight:900;color:#1E1E2A}
@@ -2000,6 +2008,14 @@ var AXC = {
 };
 function axComment(k, v){ return AXC[k][v<35?0:(v<65?1:2)]; }
 /* ％とキャラをつなぐ1行（鑑定者本人 2026-11-18「この形でお願いします」）。大きな％とキャラの名前が食いちがって見えないように */
+// 4つの％を同じ大きさで並べる（鑑定者本人 2026-11-27 見本 https://claude.ai/artifact/8pA5WVHmErsPz8r2vCPEU6 で「この形で、みんなの結果もそろえて」）
+// 結果の主役はキャラ1つ。小悪魔度だけを大きくしない（キャラの「小悪魔」と名前がかぶり「結局どっち？」になるため）。シェアの文の「小悪魔度」はそのまま
+function fourHTML(mode, sc, who){
+  return '<div class="four-h">'+esc(who)+'の4つの％（今回の答えから）</div><div class="four">'+AXES[mode].map(function(ax,j){
+    var v=sc[ax.k], w=axWord(ax.k,v);
+    return '<div class="f'+j+'"><span class="f-n">'+ax.name+'</span><b class="f-v">'+v+'<small>%</small></b>'+(w?'<i class="f-w">'+w+'</i>':'')+'</div>';
+  }).join('')+'</div>';
+}
 function bridgeLine(mode, k, v, ch){
   if(!ch || !ch.main) return '';
   var cap=headline(mode).cap, c=ch.main, ax=(c.ax||{})[k]||0, sk=mode==='love'?'駆け引き':'見せ方の工夫';
@@ -3945,9 +3961,7 @@ function showResult(){
   var h='<div class="res-hero"><div class="pre">'+playName2(pm)+'　あなたの結果</div>'+
     (chImg ? '<div class="rh-ch"><img src="'+chImg+'" alt="" width="132" height="132"><p class="rh-you">あなたは</p><p class="type">'+esc(ch.main.name)+'</p><p class="rh-say">'+esc(ch.main.say)+'</p>'+ctLove+(ch.main.miryoku?'<p class="rh-mi"><b>あなたの恋の魅力</b>'+esc(ch.main.miryoku)+'</p>':'')+'</div>'
       : '<img class="pnd" src="img/panda-'+(val>=65?'smirk':(val<35?'shy':'1'))+'.webp" alt="" width="96" height="96">')+
-    '<div class="meter"><div class="cap">'+hd.cap+'</div><div class="num">'+val+'<small>%</small></div>'+(axWord(hd.k,val)?'<div class="axw">'+axWord(hd.k,val)+'</div>':'')+'</div>'+rkSpan(mode, hd.k, val)+
-    '<div class="catch">'+axComment(hd.k,val)+'</div>'+bridgeLine(mode, hd.k, val, ch)+
-    '<div class="minis">'+others.map(function(ax){ return '<div><b>'+sc[ax.k]+'<small>%</small></b><span>'+ax.name.replace(/度$/,'')+'</span>'+(axWord(ax.k,sc[ax.k])?'<i class="axw-s">'+axWord(ax.k,sc[ax.k])+'</i>':'')+'</div>'; }).join('')+'</div>'+
+    fourHTML(mode, sc, 'あなた')+
     (mode==='love' ? '<button type="button" class="linkb mtk-go" data-mtk>％の見かた ›</button>' : '')+'</div>';
   h+=charaHTML(S.qs, S.ans[0], 'あなた', '', false, {mode:mode, hero:!!chImg, r:ch})+(mode==='love'?kimochiHTML(S.qs, S.ans[0], 'あなた', '')+yurusuHTML(S.qs, S.ans[0], 'あなた'):nHintHTML(S.qs, S.ans[0], 'あなた', ''))+kotobaHTML(S.qs, S.ans[0], 'あなた', '', mode)+mixFudan(pm, S.qs, S.ans[0], 'あなた', '', chN, ctNorm)+(pm==='love'?lovePastFudan():'')+(pm==='normal'?nHintHTML(S.qs, S.ans[0], 'あなた', ''):'');
   h+='<div class="card"><details class="kok"><summary><span><img class="ico-i" src="img/icon-detail.webp" alt="" width="20" height="20">4つの％をくわしく見る</span></summary>'+axisHTML(mode,sc)+AXES[mode].map(function(ax){ return rkSpan(mode, ax.k, sc[ax.k]); }).join('')+(mode==='love'?'<button class="linkb" data-mtk>％の見かた ›</button>':'')+'<button class="linkb" data-about>この診断について（％の考え方）</button></details></div>';
@@ -4417,11 +4431,9 @@ function showGroupResultCore(){
     var me=(r.i===meI), tone=ri%2?'kt-b':'kt-a';
     h+='<details class="pcard pcb '+(ri%2?'ppl-b':'ppl-a')+'" data-pi="'+r.i+'">'+
        '<summary class="pc-sum">'+(cimg?'<img src="'+cimg+'" alt="" width="52" height="52">':'')+
-       '<span class="pc-n"><b class="pc-nm">'+esc(r.p.name)+(me?'<i class="pc-me">あなた</i>':'')+'</b><small>'+(co?esc(co.main.name)+'｜':'')+'<span class="nw1">'+hd.cap+' '+hv+'%</span>'+(r.p.part?'・'+r.p.part+'問':'')+'</small></span></summary>'+
+       '<span class="pc-n"><b class="pc-nm">'+esc(r.p.name)+(me?'<i class="pc-me">あなた</i>':'')+'</b><small>'+(co?esc(co.main.name):'<span class="nw1">'+hd.cap+' '+hv+'%</span>')+(r.p.part?'・'+r.p.part+'問':'')+'</small></span></summary>'+
        (r.p.part?'<p class="pc-partn">'+esc(r.p.name)+'さんは<i class="pc-part">'+r.p.part+'問</i>だけ答えました</p>':'')+
-       '<div class="ppl '+(ri%2?'ppl-b':'ppl-a')+'"><div class="pp-top"><div class="pp-ring" style="--v:'+hv+'"><b>'+hv+'%</b></div><div class="pp-who"><strong>'+esc(r.p.name)+'</strong><span>'+hd.cap+'</span></div></div>'+
-       '<div class="pp-say">'+axComment(hd.k, hv)+'</div>'+bridgeLine(mode, hd.k, hv, co)+rkSpan(mode, hd.k, hv, me?'あなた':r.p.name+'さん')+
-       '<div class="pp-tiles">'+oth.map(function(ax,j){ return '<div class="pt'+j+'"><small>'+ax.name.replace(/度$/,'')+'</small><b>'+r.sc[ax.k]+'%</b>'+(axWord(ax.k,r.sc[ax.k])?'<i class="axw-s">'+axWord(ax.k,r.sc[ax.k])+'</i>':'')+'</div>'; }).join('')+'</div>'+
+       '<div class="ppl '+(ri%2?'ppl-b':'ppl-a')+'">'+fourHTML(mode, r.sc, me?'あなた':r.p.name+'さん')+
        (function(){ var sp=speedStats(S.qs,S.times[r.i],S.ans[r.i]); return sp ? '<div class="pks">'+pickHTML('⚡','即決',sp.quick)+pickHTML('🌀','いちばん悩んだ',sp.slow)+'</div>' : ''; })()+
        '</div>'+charaHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone, true, {mode:mode})+(mode==='love'?kimochiHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone):nHintHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone))+kotobaHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone, mode)+mixFudan(pm, S.qs, S.ans[r.i], r.p.name+'さん', tone)+(pm==='normal'?nHintHTML(S.qs, S.ans[r.i], r.p.name+'さん', tone):'')+
        '<details class="kok"><summary><span><img class="ico-i" src="img/icon-detail.webp" alt="" width="20" height="20">4つの％をくわしく見る</span></summary>'+axisHTML(mode,r.sc)+AXES[mode].map(function(ax){ return rkSpan(mode, ax.k, r.sc[ax.k], me?'あなた':r.p.name+'さん'); }).join('')+'</details>'+
