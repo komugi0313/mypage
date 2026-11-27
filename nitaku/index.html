@@ -1975,8 +1975,15 @@ function kimoEnsureOne(mode, pick, groups, seenSet, recent, MAP, need, keep, th0
   var inPick={}; pick.forEach(function(q){ inPick[q.id]=1; });
   var cands=[];
   var g0=groups[0]||[];
-  cands=shuffle(g0.filter(function(q){ return isK(q) && !inPick[q.id] && !seenSet[q.id] && !recent[q.id]; }));
-  cands=cands.concat(shuffle(g0.filter(function(q){ return isK(q) && !inPick[q.id] && cands.indexOf(q)<0; })));
+  /* この難しさの問題が少ないと、毎回同じ問題が入っていた（鑑定者本人 2026-11-27「2回やって同じ問題が出てくるのがおかしい」。まぜまぜ編イージーの元気の出し方は2問しかなく、毎回同じ2問だった）。
+     この難しさのまだ出ていない問題 → ほかの難しさのまだ出ていない問題 → 直前の3回に出ていない問題 → すぐ前の1回に出ていない問題 の順で選ぶ（すぐ前の回と同じ問題は入れない） */
+  var all=(POOL[mode]||[]).filter(function(q){ return isK(q) && !inPick[q.id]; });
+  var fresh=function(q){ return !seenSet[q.id] && !recent[q.id]; };
+  cands=shuffle(g0.filter(function(q){ return isK(q) && !inPick[q.id] && fresh(q); }));
+  cands=cands.concat(shuffle(all.filter(function(q){ return fresh(q) && cands.indexOf(q)<0; })));
+  cands=cands.concat(shuffle(all.filter(function(q){ return !recent[q.id] && cands.indexOf(q)<0; })));
+  var last={}; (store('nitaku_recent_'+mode)||[]).slice(-pick.length).forEach(function(id){ last[id]=1; });   // それでも足りないときは、すぐ前の1回に出ていない問題（カードを毎回出すため）
+  cands=cands.concat(shuffle(all.filter(function(q){ return !last[q.id] && cands.indexOf(q)<0; })));
   while(pick.filter(isK).length<need && cands.length){
     var cand=cands.shift(); if(inPick[cand.id]) continue;
     var out=null, best=99;
@@ -2466,12 +2473,14 @@ function honPick(){
     // 恋の問題には、気持ちの出し方を見る問題を5問入れる（kimochi.js）
     if(m==='love'){ var top=fresh.slice(0,half[m]), isK=function(q){ return !!KIMO.hon[q.id]; };
       var rest=fresh.slice(half[m]).concat(shuffle(all.filter(function(q){ return fresh.indexOf(q)<0; })));   // まだ出ていない問題を先に、なければ出た問題から
+      var lastH={}; (store('nitaku_hon_last')||[]).forEach(function(id){ lastH[id]=1; });   // すぐ前の回に出た気持ちの問題は入れない（9問しかなく、毎回同じ問題が出ていた＝鑑定者本人 2026-11-27）
+      rest=rest.filter(function(q){ return !(isK(q) && lastH[q.id]); });
       rest.filter(isK).forEach(function(q){ if(top.filter(isK).length>=5) return; var j=-1; top.forEach(function(t,i){ if(j<0 && !isK(t)) j=i; }); if(j>=0) top[j]=q; });
       fresh=top; }
     fresh.slice(0,half[m]).forEach(function(q){ out.push({q:q, m:m}); });
   });
   out.forEach(function(x){ if(seen.indexOf(x.q.id)<0) seen.push(x.q.id); });
-  store('nitaku_seen_hon', seen);
+  store('nitaku_seen_hon', seen); store('nitaku_hon_last', out.map(function(x){ return x.q.id; }));
   return shuffle(out).map(function(x){ var q=x.q, sw=Math.random()<0.5;
     return { id:q.id, a:sw?q.b:q.a, b:sw?q.a:q.b, ta:{}, tb:{}, ex:q.ex, m:x.m, sw:sw }; });
 }
@@ -3605,7 +3614,7 @@ function resetAll(){
   }
   resetAll.armed=0; clearTimeout(resetAll.t); if($('reset-note')) $('reset-note').hidden=true;
   leaveRoom();
-  try{ localStorage.removeItem('nitaku_tone'); localStorage.removeItem('nitaku_mine'); localStorage.removeItem('nitaku_me'); localStorage.removeItem('nitaku_room'); localStorage.removeItem('nitaku_players'); localStorage.removeItem('nitaku_seen_love'); localStorage.removeItem('nitaku_seen_normal'); localStorage.removeItem('nitaku_recent_love'); localStorage.removeItem('nitaku_recent_normal'); localStorage.removeItem('nitaku_hist_love'); localStorage.removeItem('nitaku_hist_normal'); localStorage.removeItem('nitaku_seen_hon'); localStorage.removeItem('nitaku_chara_ans'); localStorage.removeItem('nitaku_byo'); }catch(e){}
+  try{ localStorage.removeItem('nitaku_tone'); localStorage.removeItem('nitaku_mine'); localStorage.removeItem('nitaku_me'); localStorage.removeItem('nitaku_room'); localStorage.removeItem('nitaku_players'); localStorage.removeItem('nitaku_seen_love'); localStorage.removeItem('nitaku_seen_normal'); localStorage.removeItem('nitaku_recent_love'); localStorage.removeItem('nitaku_recent_normal'); localStorage.removeItem('nitaku_hist_love'); localStorage.removeItem('nitaku_hist_normal'); localStorage.removeItem('nitaku_seen_hon'); localStorage.removeItem('nitaku_hon_last'); localStorage.removeItem('nitaku_chara_ans'); localStorage.removeItem('nitaku_byo'); }catch(e){}
   S.players=[]; S.qs=[]; S.qi=0; S.pi=0; S.ans=[]; S.times=[]; S.counts=null; S.sent={}; S.mix=false;
   S.who='solo'; S.lv='normal'; S.gnum=15; S.style='room'; S.rv='end';
   [['seg-who','solo'],['seg-lv','normal'],['seg-style','room']].forEach(function(x){
