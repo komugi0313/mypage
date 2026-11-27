@@ -1574,7 +1574,7 @@ details.mini-fold[open]>summary,details.deco-fold[open]>summary{margin-bottom:10
 
     <div class="ac-v" id="av-verify" hidden>
       <h2 id="vf-h">確かめています…</h2>
-      <p class="ac-box ok" id="vf-ok" hidden>メールアドレスを確かめました。<br>登録が終わりました</p>
+      <p class="ac-box ok" id="vf-ok" hidden>メールアドレスを確かめました。<br>登録が終わりました<br><small style="display:block;margin-top:8px;font-weight:700">メールのアプリの中など、いつもとちがう画面で開いたときは、いつもの画面（登録した画面）にもどってください。うちの子の記録は、そちらでそのまま続けられます。</small></p>
       <p class="ac-box err" id="vf-e" hidden></p>
       <button class="mp-btn" type="button" id="vf-go" hidden>マイページへ</button>
       <button class="ac-link" type="button" data-acv="login" id="vf-login" hidden>ログインする</button>
@@ -4424,8 +4424,8 @@ var GROUPS={s:"小さめの犬",m:"中くらいの犬",l:"大きめの犬"};
 // 選ぶ一覧だけに入れる犬種。[名前, 性格をくらべる犬種, 大きさ]
 var ALIAS=[["豆柴","shiba","s"],["カニンヘン・ダックスフンド","mdachs","s"],["ミニチュア・プードル","toypoodle","s"],["チャイニーズ・クレステッド・ドッグ","iggy","s"],["ラサ・アプソ","shihtzu","s"],["ボロニーズ","bichon","s"],["ノーフォーク・テリア","westie","s"],["ケアーン・テリア","westie","s"],["ウィペット","iggy","m"],["甲斐犬","shiba","m"],["北海道犬","shiba","m"],["紀州犬","akita","m"],["四国犬","shiba","m"],["グレート・ピレニーズ","akita","l"],["イングリッシュ・コッカー・スパニエル","cocker","s"],["トイ・マンチェスター・テリア","minpin","s"],["スコティッシュ・テリア","westie","s"],["ワイアー・フォックス・テリア","jrt","s"],["ミニチュア・ブル・テリア","boxer","m"],["オーストラリアン・シェパード","border","m"],["ラフ・コリー","sheltie","m"],["バセット・ハウンド","beagle","m"],["フラットコーテッド・レトリバー","golden","l"],["ボルゾイ","iggy","l"],["ワイマラナー","lab","l"],["ホワイト・スイス・シェパード・ドッグ","gsd","l"],["ロットワイラー","doberman","l"],["ニューファンドランド","bernese","l"],["グレート・デーン","bordeaux","l"]];
 // 出やすさの調整：どの犬種も同じくらいの割合で出るように、犬種ごとに少しだけ近さを足し引きする
-// （答えの出方を2万人分ためして決めた値。性格の数字を変えたら作り直す）
-var ADJ=[-1.9,0.3,0.6,-2.4,-0.7,-6.6,0.1,1.5,-1.4,0.4,-0.2,-1.8,4.4,-4,-1.1,2,-1.3,-0.2,3.4,-0.9,0.8,0.1,-1.5,-3.2,-1.7,-1.8,1.8,2.1,4.8,1.2,3.5,-0.4,0.9,-2.9,-0.1,4.9,0.5,2.7,2,4.1,-3.2,-0.9,-2.8,-1.4];
+// （答えの出方を4万人分ためして決めた値。半分は性格がはっきりした子、半分はまん中寄りの子。性格の数字を変えたら作り直す。2026-11-27 作り直し：前の値ではシュナウザーが出すぎていた）
+var ADJ=[-0.7,-1.7,1,-2.8,1.2,-2.5,1.1,0.6,-2.4,0.3,-2,-3.2,3.7,-4.4,-2.1,0.5,-0.7,-0.5,0.8,-0.5,0.8,3,0.1,-3.7,-1.1,-2.3,-0.2,1,1.7,-0.6,4.2,-2,-0.5,-3.2,-2.2,0,1.7,1.9,-0.9,3.5,-2.4,-0.5,-2.4,0.9];
 var BY={};BR.forEach(function(b,i){b.s=b.s||b.n;b.adj=ADJ[i]||0;BY[b.id]=b});
 
 
@@ -5069,9 +5069,14 @@ function accSaveNow(){clearTimeout(accSaveT);if(!accSyncOn||!ACC.user)return Pro
     P.setItem=function(k,v){si.call(this,k,v);if(this===window.localStorage&&String(k).indexOf("w44_")===0&&!MV_SKIP[k])accSaveSoon()};
     P.removeItem=function(k){ri.call(this,k);if(this===window.localStorage&&String(k).indexOf("w44_")===0&&!MV_SKIP[k])accSaveSoon()};
   }catch(e){}
-  document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden"&&accSaveT)accSaveNow()});
+  document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden"&&accSaveT)accSaveNow();if(document.visibilityState==="visible")accRecheck()});
+  window.addEventListener("focus",accRecheck);window.addEventListener("pageshow",accRecheck);
 })();
 // ログインしたとき：記録をそろえる
+// 確認メールのボタンを別の画面（メールのアプリの中など）で押したあと、この画面にもどってきたら、確認できたかを確かめ直す
+var accRecheckAt=0;
+function accRecheck(){if(!ACC.on||!ACC.user||ACC.user.verified||Date.now()-accRecheckAt<2000)return;accRecheckAt=Date.now();
+  ACC.api.currentUser().then(function(u){if(u&&u.verified&&!(ACC.user&&ACC.user.verified)){w44ev("verify_complete",{via:"return"});toast("メールアドレスを確かめました。登録が終わりました");accAfterLogin(u)}},function(){})}
 function accAfterLogin(u){ACC.user=u;accRender();
   if(!u.verified){$("sent-mail").textContent=u.email;accView("sent");if(ACC.demo)$("sent-demo").hidden=false;return}
   ACC.api.loadData().then(function(r){var l=accPack();
@@ -5080,11 +5085,11 @@ function accAfterLogin(u){ACC.user=u;accRender();
       var cnt=function(o){try{return Object.keys(JSON.parse(o.d.w44_grow||"{}")).length}catch(e){return 0}};
       $("ch-remote-s").textContent=cnt(r)+"匹の記録"+(r.t?"（"+new Date(r.t).toLocaleDateString("ja-JP")+"に保存）":"");
       $("ch-local-s").textContent=cnt(l)+"匹の記録";accView("choose");return}
-    accSyncOn=true;accSaveNow();openMy()
-  },function(e){accSyncOn=true;openMy();toast(accMsg(e))});
+    accSyncOn=true;accSaveNow();accGoBack()
+  },function(e){accSyncOn=true;accGoBack();toast(accMsg(e))});
 }
 $("ch-remote").addEventListener("click",function(){ACC.api.loadData().then(accApply,function(e){toast(accMsg(e))})});
-$("ch-local").addEventListener("click",function(){accSyncOn=true;accSaveNow().then(function(){openMy();toast("このスマホの記録を、アカウントに保存しました")})});
+$("ch-local").addEventListener("click",function(){accSyncOn=true;accSaveNow().then(function(){if(accRet)accGoBack();else{openMy();toast("このスマホの記録を、アカウントに保存しました")}})});
 // ボタン
 document.addEventListener("click",function(e){var b=e.target.closest("[data-acv]");if(b&&ACC.on){e.preventDefault();var v=b.dataset.acv;
   if(v==="login"&&ACC.user&&ACC.user.verified){openMy();return}accView(v);
@@ -5106,7 +5111,7 @@ $("sent-demo").addEventListener("click",function(){accVerify($("sent-mail").text
 // メールアドレスをまちがえたとき：いったんログアウトして、登録の画面にもどる（まちがえたアドレスを入れたまま・選んだ状態に）
 $("sent-fix").addEventListener("click",function(){var m=$("sent-mail").textContent;ACC.api.signOut().catch(function(){}).then(function(){ACC.user=null;accSyncOn=false;accRender();accView("signup");$("su-mail").value=m==="-"?"":m;accErr("su-mail-e","正しいメールアドレスに直して、もう一度「登録する」を押してね");try{$("su-mail").focus();$("su-mail").select()}catch(e){}})});
 function accVerify(code){accView("verify");$("vf-h").textContent="確かめています…";$("vf-ok").hidden=true;$("vf-e").hidden=true;$("vf-go").hidden=true;$("vf-login").hidden=true;
-  ACC.api.verifyEmail(code).then(function(){$("vf-h").textContent="登録が終わりました";$("vf-ok").hidden=false;
+  ACC.api.verifyEmail(code).then(function(){w44ev("verify_complete",{via:"link"});$("vf-h").textContent="登録が終わりました";$("vf-ok").hidden=false;
     return ACC.api.currentUser().then(function(u){ACC.user=u;accRender();if(u){$("vf-go").hidden=false}else $("vf-login").hidden=false})},
   function(er){$("vf-h").textContent="確かめられませんでした";$("vf-e").textContent=accMsg(er);$("vf-e").hidden=false;$("vf-login").hidden=false})}
 $("vf-go").addEventListener("click",function(){if(ACC.user)accAfterLogin(ACC.user);else accView("login")});
@@ -5156,7 +5161,7 @@ function accGated(){if(typeof ACC==="undefined"||!ACC.on)return false;if(ACC.use
 accGated();
 function showGate(name){var g=$("gate");if(!g){g=document.createElement("div");g.id="gate";g.className="gate";g.setAttribute("role","dialog");g.setAttribute("aria-modal","true");
     g.innerHTML='<div class="in"><h2>無料の会員登録で使えます</h2><p class="gname" id="gate-name"></p><ul><li>うちの子の記録を、サーバーにも保存</li><li>機種を変えても、ログインすれば同じ記録</li><li>名刺・ワン友QR・予定・成長の記録なども使える</li></ul><div class="row"><button class="mp-btn" type="button" data-acv="signup">会員登録（無料）</button><button class="sub" type="button" data-acv="login">ログイン</button></div><button class="later" type="button" id="gate-x">あとで</button></div>';
-    document.body.appendChild(g);g.addEventListener("click",function(e){if(e.target===g||e.target.id==="gate-x"||e.target.closest("[data-acv]"))g.hidden=true})}
+    document.body.appendChild(g);g.addEventListener("click",function(e){if(e.target===g||e.target.id==="gate-x"){g.hidden=true;accRet=null}else if(e.target.closest("[data-acv]"))g.hidden=true})}
   $("gate-name").textContent="「"+name+"」は、会員の方が使える機能です";g.hidden=false;w44ev("gate_view",{feature:name})}
 var GATE_TOOL={"meishi-more":"名刺カード","wf-more":"ワン友QR","rq-more":"おねがい（黄色いリボン）"},GATE_GO={rem:"予定"}; // ワン友帳（受け取ったワン友を見る）は登録なしで見られる。自分のQR・カードを作るときだけ登録
 document.addEventListener("click",function(e){if(!e.target.closest||!accGated())return;
@@ -5164,7 +5169,14 @@ document.addEventListener("click",function(e){if(!e.target.closest||!accGated())
   if(t.dataset.tool)name=GATE_TOOL[t.dataset.tool];else if(t.id==="sh-ec-line")name="もしものときカードをLINEで送る";else if(t.dataset.go)name=GATE_GO[t.dataset.go];else if(t.dataset.t)name=GATE_GO[t.dataset.t];
   else if(t.id==="mp-ribbon")name="おねがい（黄色いリボン）";else if(t.id==="new-dog")name="2匹目からの診断";else if(t.id==="g-save")name="成長の記録の画像";
   else if(t.id==="go-quiz"){var g=lsGet("w44_grow",{}),ns=Object.keys(g).map(function(k){return g[k].n}),nm=($("in-name").value||"").trim();if(ns.length&&nm&&ns.indexOf(nm)<0)name="2匹目からの診断"}
-  if(!name)return;e.preventDefault();e.stopImmediatePropagation();showGate(name)},true);
+  if(!name)return;e.preventDefault();e.stopImmediatePropagation();
+  // 登録・ログインが終わったら、押そうとしていた機能の場所にもどる
+  var sel=t.id?"#"+t.id:t.dataset.tool?'[data-tool="'+t.dataset.tool+'"]':t.dataset.go?'.mp-grid [data-go="'+t.dataset.go+'"]':t.dataset.t?'.mytabs [data-t="'+t.dataset.t+'"]':null;
+  var scr=["s-start","s-intro","s-result","s-my","s-zukan","s-ecbook","s-wansta"].filter(function(s){return $(s)&&!$(s).hidden})[0];
+  accRet=sel&&scr?{sel:sel,scr:scr,name:name}:null;showGate(name)},true);
+var accRet=null;
+function accGoBack(){var r=accRet;accRet=null;if(!r||!accGated||accGated()){openMy();return}
+  show(r.scr);setTimeout(function(){var el=document.querySelector(r.sel);if(el){el.scrollIntoView({block:"center"});el.click()}toast("登録が終わりました。「"+r.name+"」が使えます")},250)}
 // 予定：あなたが入れた予定を並べ、カレンダーに登録できる
 var REP={none:"くり返しなし",m:"毎月","2m":"2か月ごと",y:"毎年"};
 // 月をたすとき、その月にない日（2月30日など）は月末にする（31日の予定が、次の月の3日などにずれないように）
