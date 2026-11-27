@@ -406,7 +406,7 @@ function render(instant){
 const SHARE_URL="https://16typeplus.jp/"+(LANG==="ja"?"":LANG+"/");
 const SC={ei:"#3E7FA6",sn:"#C29A3A",tf:"#3F9A72",jp:"#7A5EA8",plus:"#C2553F",rose:"#C9607A",ink:"#1F2733",muted:"#5E6A7A",rule:"#E2E6EC",bg:"#F6F7F9",soft:"#EEF1F5",paper:"#F8F3EA",card:"#FFFFFF"};
 function wrapLines(ctx,text,maxW,maxLines){
- const units=LANG==="ja"&&typeof BX!=="undefined"?BX.seg(text.replace(/​/g,"")).split("​"):text.split(/(?<=\s)/);
+ const units=LANG==="ja"&&typeof BX!=="undefined"?BX.seg(text.replace(/​/g,"")).split("​"):(text.match(/\S*\s|\S+$/g)||[""]);
  const lines=[];let cur="";
  const push=u=>{if(ctx.measureText(cur+u).width<=maxW||!cur){if(ctx.measureText(u).width>maxW&&!cur){for(const ch of u){if(ctx.measureText(cur+ch).width>maxW){lines.push(cur);cur="";}cur+=ch;}}else cur+=u;}else{lines.push(cur.trimEnd());cur=u.trimStart();}};
  units.forEach(push);if(cur)lines.push(cur);
@@ -900,7 +900,7 @@ const SWN={EI:["元気の出し方","人といるか、ひとりか","--ei"],SN:
 const UNIW=[["クラス替えの日に","新しい授業の初日に"],["クラス替えから","新学期から"],["部活やサークル","サークル"],["部活やクラス","サークルやゼミ"],["クラスや部活","ゼミやサークル"],["部活","サークル"],["文化祭","学園祭"],["クラスのみんな","サークルのみんな"],["同じクラス","同じ授業"],["クラス替え","新学期"],["クラス","ゼミ"]];
 const UNIW_X={en:[["my teacher","my professor"],["My teacher","My professor"],["a teacher","a professor"],["the teacher","the professor"],["teachers","professors"],["teacher","professor"],["classmates","people in my classes"],["homeroom","class"],["student council meeting","student group meeting"],["Student council","Student group"],["student council","student group"],["school festival","campus festival"],["School festival","Campus festival"],["sports day","campus sports event"],["Sports day","Campus sports event"]],
  ko:[["선생님","교수님"],["담임","교수님"],["반 친구들","같은 수업 사람들"],["반 친구","같은 수업 친구"],["반에서는","과에서는"],["반에서","과에서"],["하굣길","집에 가는 길"],["등굣길","학교 가는 길"],["교실","강의실"],["학생회","학생 모임"],["학교 축제","대학 축제"],["체육대회","과 체육대회"],["반이 바뀌고","새 학기가 되고"],["새 반이나","새 학기 수업이나"]]};
-const ADULT_SCENE=/職場|会社|上司|同僚|部署|会議|残業|飲み会|取引先|出張|家賃|引っ越し|(?<!丈)夫(?!婦)|\b(meetings?|office|boss|coworkers?|colleagues?|rent|husband|wife|workplace)\b|회의|회사|직장|상사|동료|회식|야근|월세|남편|아내/i;
+const ADULT_SCENE=/職場|会社|上司|同僚|部署|会議|残業|飲み会|取引先|出張|家賃|引っ越し|(?:^|[^丈])夫(?!婦)|\b(meetings?|office|boss|coworkers?|colleagues?|rent|husband|wife|workplace)\b|회의|회사|직장|상사|동료|회식|야근|월세|남편|아내/i;
 function uniW(t){if(typeof t!=="string")return t;const g=stageAge();if(g==null||g<19||g>22)return t;(LANG==="ja"?UNIW:(UNIW_X[LANG]||[])).forEach(([a,b])=>{t=t.split(a).join(b);});return t;}
 /* 22歳以下には、くわしい鑑定などの文で学生向け（〇〇_s）があればそちらを出す */
 function ktStu(o){if(!o)return o;const g=stageAge();if(g==null||g>22)return o;const r={};for(const k in o){if(!k.endsWith("_s"))r[k]=o[k+"_s"]?uniW(o[k+"_s"]):o[k];}return r;}

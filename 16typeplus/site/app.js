@@ -216,7 +216,7 @@ let shown=false;
 function saveResult(){if(!shown)return;sset(KR,{y:st.y,m:st.m,d:st.d,t:st.t,at:st.at,pct:st.pct,half:st.half,sway:st.sway,love:st.love||null,prev:st.prev||[]});}
 /* 入力をやり直し始めたら、前の結果はいったん隠す（「結果を見る」で新しく出す） */
 function hideOld(){if(!shown)return;shown=false;$("result").style.display="none";const w=document.querySelector(".welcome");if(w)w.hidden=true;const f=$("formCard");if(f)requestAnimationFrame(()=>f.scrollIntoView({block:"start"}));}
-function showResult(){shown=true;$("result").style.display="contents";setTimeout(gSetup,0);}
+function showResult(){shown=true;$("result").style.display="contents";document.querySelectorAll("#wanTop,#sisTop").forEach(e=>e.hidden=true);setTimeout(gSetup,0);}
 function showQuiz(on){$("quizCard").hidden=!on;{const fb=$("fabTop");if(fb&&on)fb.hidden=true;}$("formCard").hidden=on;$("result").style.display=(!on&&shown)?"contents":"none";}
 $("hasType").onclick=()=>{if(!dateOK())return;hideOld();$("hasType").setAttribute("aria-pressed","true");$("pickField").hidden=false;$("pickField").scrollIntoView({behavior:"smooth",block:"nearest"});};
 function startQuiz(saved){if(saved){qa=saved.qa;qi=saved.qi;tbList=saved.tbList||[];tbAns=saved.tbAns||{};ord=saved.ord;ext=!!saved.ext;adDone=!!saved.adDone;}else{qa=new Array(QZ.Q.length).fill(null);qi=0;tbList=[];tbAns={};ord=baseOrd();ext=false;adDone=false;sset(KQ,null);}
@@ -410,7 +410,7 @@ function render(instant){
 const SHARE_URL="https://16typeplus.jp/"+(LANG==="ja"?"":LANG+"/");
 const SC={ei:"#3E7FA6",sn:"#C29A3A",tf:"#3F9A72",jp:"#7A5EA8",plus:"#C2553F",rose:"#C9607A",ink:"#1F2733",muted:"#5E6A7A",rule:"#E2E6EC",bg:"#F6F7F9",soft:"#EEF1F5",paper:"#F8F3EA",card:"#FFFFFF"};
 function wrapLines(ctx,text,maxW,maxLines){
- const units=LANG==="ja"&&typeof BX!=="undefined"?BX.seg(text.replace(/​/g,"")).split("​"):text.split(/(?<=\s)/);
+ const units=LANG==="ja"&&typeof BX!=="undefined"?BX.seg(text.replace(/​/g,"")).split("​"):(text.match(/\S*\s|\S+$/g)||[""]);
  const lines=[];let cur="";
  const push=u=>{if(ctx.measureText(cur+u).width<=maxW||!cur){if(ctx.measureText(u).width>maxW&&!cur){for(const ch of u){if(ctx.measureText(cur+ch).width>maxW){lines.push(cur);cur="";}cur+=ch;}}else cur+=u;}else{lines.push(cur.trimEnd());cur=u.trimStart();}};
  units.forEach(push);if(cur)lines.push(cur);
@@ -868,6 +868,7 @@ if($("cvBtn"))$("cvBtn").onclick=()=>{track("karte_click");const btn=$("cvBtn");
 function goHome(e){if(e)e.preventDefault();if(!$("quizCard").hidden)showQuiz(false);
  /* 2回目以降の「おかえりなさい」表示のときは、トップの説明と入力欄を元の位置に戻す */
  const intro=document.querySelector(".intro");if(intro&&intro.hidden){document.querySelectorAll(".intro,.how,#wanTop,#sisTop").forEach(x=>x.hidden=false);const how=document.querySelector(".how");intro.after($("formCard"));$("formCard").after($("quizCard"));if(how)$("quizCard").after(how);wanTop();$("formh").textContent=TR("診断をはじめる");const wb=document.querySelector(".welcome");if(wb)wb.remove();}
+ try{wanTop();}catch(e){}
  window.scrollTo({top:0,behavior:"smooth"});}
 ["logoHome","homeBtn","toTop","fabTop"].forEach(id=>{const el=$(id);if(el)el.addEventListener("click",goHome);});
 {const fab=$("fabTop");if(fab){const f=()=>{const fc=$("formCard"),r=fc&&!fc.hidden?fc.getBoundingClientRect():null;fab.hidden=window.scrollY<700||!$("quizCard").hidden||!!(r&&r.top<innerHeight&&r.bottom>0);};window.addEventListener("scroll",f,{passive:true});f();}}
@@ -894,7 +895,7 @@ function sisCard(id,med){let c=$(id);if(LANG!=="ja"){if(c)c.hidden=true;return n
   c.innerHTML='<p class="wl">ほかの無料診断（姉妹サイト）</p><div class="sis3"><a class="bn bn-ko" data-nocg href="https://koikata.jp/aichaku/?ref=16typeplus" target="_blank" rel="noopener" aria-label="恋のかたち診断（別のサイト koikata.jp が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis-koi.webp" alt="" width="58" height="58" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">恋のかたち診断</span><span class="ln"><span class="nw">16の恋愛タイプ×</span><span class="nw">愛着スタイル</span></span><span class="dm"><span class="nw">koikata.jp・</span><span class="nw">無料</span></span></span><span class="go">診断 ↗</span></a><a class="bn bn-nt" data-nocg href="https://honbare.com/?ref=16typeplus" target="_blank" rel="noopener" aria-label="究極の二択（別のサイト honbare.com が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis-panda.webp" alt="" width="56" height="56" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">究極の二択</span><span class="ln"><span class="nw">恋もあるあるも、</span><span class="nw">本音がバレる2択</span></span><span class="dm"><span class="nw">honbare.com・</span><span class="nw">無料5分</span></span></span><span class="go">あそぶ ↗</span></a><a class="bn bn-is" data-nocg href="https://i-sync.jp/?ref=16typeplus" target="_blank" rel="noopener" aria-label="アイシンク（別のサイト i-sync.jp が開きます）"><span class="pic" aria-hidden="true"><img src="img/sis-ai.webp" alt="" width="34" height="30" loading="lazy" decoding="async"><img src="img/sis-yuu.webp" alt="" width="34" height="30" loading="lazy" decoding="async"></span><span class="tx"><span class="nm">I-Sync<small>アイシンク</small></span><span class="ln"><span class="nw">2人の答えを重ねて、</span><span class="nw">シンクロ率がわかる</span></span><span class="dm"><span class="nw">i-sync.jp・</span><span class="nw">無料</span></span></span><span class="go">診断 ↗</span></a></div>';
   c.querySelectorAll("a").forEach(a=>{a.onclick=()=>{try{track("sis_click",{at:med,to:(a.href.match(/\/\/([^/]+)/)||[])[1]});}catch(e){}};});}
  c.hidden=false;return c;}
-function wanTop(){const how=document.querySelector(".how"),c=wanCard("wanTop","top");if(c&&how){how.after(c);c.hidden=!!how.hidden;}const s=sisCard("sisTop","top");if(s&&how){(c||how).after(s);s.hidden=!!how.hidden;}}
+function wanTop(){const how=document.querySelector(".how"),res=$("result"),off=!!(how&&how.hidden)||!!(res&&res.style.display==="contents"),c=wanCard("wanTop","top");if(c&&how){how.after(c);c.hidden=off;}const s=sisCard("sisTop","top");if(s&&how){(c||how).after(s);s.hidden=off;}}
 function kaiunCard(at){let c=$("kaiun");if(LANG!=="ja"||!KAIUN_URL||!st.y){if(c)c.hidden=true;return at;}
  if(!c){c=document.createElement("section");c.id="kaiun";c.className="card kaiun";}
  const p2=n=>String(n).padStart(2,"0"),Y=String(st.y),M=p2(st.m),D=p2(st.d);
@@ -910,7 +911,7 @@ const SWN={EI:["元気の出し方","人といるか、ひとりか","--ei"],SN:
 const UNIW=[["クラス替えの日に","新しい授業の初日に"],["クラス替えから","新学期から"],["部活やサークル","サークル"],["部活やクラス","サークルやゼミ"],["クラスや部活","ゼミやサークル"],["部活","サークル"],["文化祭","学園祭"],["クラスのみんな","サークルのみんな"],["同じクラス","同じ授業"],["クラス替え","新学期"],["クラス","ゼミ"]];
 const UNIW_X={en:[["my teacher","my professor"],["My teacher","My professor"],["a teacher","a professor"],["the teacher","the professor"],["teachers","professors"],["teacher","professor"],["classmates","people in my classes"],["homeroom","class"],["student council meeting","student group meeting"],["Student council","Student group"],["student council","student group"],["school festival","campus festival"],["School festival","Campus festival"],["sports day","campus sports event"],["Sports day","Campus sports event"]],
  ko:[["선생님","교수님"],["담임","교수님"],["반 친구들","같은 수업 사람들"],["반 친구","같은 수업 친구"],["반에서는","과에서는"],["반에서","과에서"],["하굣길","집에 가는 길"],["등굣길","학교 가는 길"],["교실","강의실"],["학생회","학생 모임"],["학교 축제","대학 축제"],["체육대회","과 체육대회"],["반이 바뀌고","새 학기가 되고"],["새 반이나","새 학기 수업이나"]]};
-const ADULT_SCENE=/職場|会社|上司|同僚|部署|会議|残業|飲み会|取引先|出張|家賃|引っ越し|(?<!丈)夫(?!婦)|\b(meetings?|office|boss|coworkers?|colleagues?|rent|husband|wife|workplace)\b|회의|회사|직장|상사|동료|회식|야근|월세|남편|아내/i;
+const ADULT_SCENE=/職場|会社|上司|同僚|部署|会議|残業|飲み会|取引先|出張|家賃|引っ越し|(?:^|[^丈])夫(?!婦)|\b(meetings?|office|boss|coworkers?|colleagues?|rent|husband|wife|workplace)\b|회의|회사|직장|상사|동료|회식|야근|월세|남편|아내/i;
 function uniW(t){if(typeof t!=="string")return t;const g=stageAge();if(g==null||g<19||g>22)return t;(LANG==="ja"?UNIW:(UNIW_X[LANG]||[])).forEach(([a,b])=>{t=t.split(a).join(b);});return t;}
 /* 22歳以下には、くわしい鑑定などの文で学生向け（〇〇_s）があればそちらを出す */
 function ktStu(o){if(!o)return o;const g=stageAge();if(g==null||g>22)return o;const r={};for(const k in o){if(!k.endsWith("_s"))r[k]=o[k+"_s"]?uniW(o[k+"_s"]):o[k];}return r;}
