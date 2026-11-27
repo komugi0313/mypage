@@ -1909,7 +1909,7 @@ function pickQuestions(mode, n, level, opt){
     groups.forEach(function(g){ take(g); });
   }
   balanceAxes(mode, pick, groups, seenSet, recent);
-  if(!(opt&&opt.noHint)) kimoEnsure(mode, pick, groups, seenSet, recent, opt&&opt.mix);
+  if(!(opt&&opt.noHint)) kimoEnsure(mode, pick, groups, seenSet, recent, (opt&&opt.mix)||0);
   pick.forEach(function(q){ if(seen.indexOf(q.id)<0) seen.push(q.id); });
   store(key, seen);
   addRecent(mode, pick);
@@ -1920,10 +1920,10 @@ function pickQuestions(mode, n, level, opt){
 }
 /* まぜまぜ編の20問：恋の問題12問（イージー＝軽めの問題。付き合う前の人と遊んでも気まずくないように）と日常の問題8問をまぜる。
    恋の点（K・R・S・A）と日常の点（B・Y・M・N）は記号がちがうので、結果では恋の％・恋のキャラ・ふだんのキャラを、それぞれの問題から出せる */
-function pickMix(level){
+function pickMix(level, few){
   var lv=(['easy','normal','hard'].indexOf(level)>=0)?level:'normal';
   var L=pickQuestions('love', MIX_LOVE, lv==='hard'?'hard':'easy'),   /* ハードのときは恋の問題も全部の問題から（鑑定者本人 2026-11-25「どのモードでもハードではこの仕様に」） */
-       N=pickQuestions('normal', MIX_N-MIX_LOVE, lv, {mix:true});
+       N=pickQuestions('normal', MIX_N-MIX_LOVE, lv, {mix:few?1:2});
   return shuffle(L.concat(N));
 }
 /* 4つの％それぞれを見る問題が、1回の中に4問以上入るように入れかえる（鑑定者本人の指示 2026-11-12「AとBの両方」）
@@ -1957,7 +1957,7 @@ function balanceAxes(mode, pick, groups, seenSet, recent){
    入れかえるのは、選んだ難しさの問題だけ（ハードにはまだこの問題がないので入れかえない）。4つの％の問題は減らしすぎない */
 function kimoEnsure(mode, pick, groups, seenSet, recent, mix){
   // まぜまぜ編の日常8問にも、決め方・元気の出し方の問題を2問ずつ入れる（鑑定者本人 2026-11-23「A＋B＋C」。日常の％はふだんのキャラにしか使わないので、％の問題の数は1問まで減らしてよい）
-  if(mix && mode==='normal'){ [[NHINT.kime,2],[NHINT.genki,2]].forEach(function(st,si,A){ var keep=function(q){ return A.slice(0,si+1).some(function(x){ return !!x[0][q.id]; }); }; kimoEnsureOne(mode, pick, groups, seenSet, recent, st[0], st[1], keep, 1); }); return; }
+  if(mix && mode==='normal'){ var mn=mix===1?1:2; [[NHINT.kime,mn],[NHINT.genki,mn]].forEach(function(st,si,A){ var keep=function(q){ return A.slice(0,si+1).some(function(x){ return !!x[0][q.id]; }); }; kimoEnsureOne(mode, pick, groups, seenSet, recent, st[0], st[1], keep, 1); }); return; }
   if(pick.length<4) return;
   // 恋愛編＝気持ちの出し方（15問に3問）／ふつう編＝決め方・元気の出し方（15問にそれぞれ2問）
   // 恋愛編は「あなたの許せるライン」の問題も入れる（15問に2問・8問に1問。同じ難しさにこの問題が6問より少ないとき〈イージー〉は入れかえない＝同じ問題ばかりになるため）
@@ -2221,7 +2221,7 @@ function start(){
   S.late=null; S.honPlay=false; S.lastHon=false;
   S.num = S.mode==='normal' ? MIX_N : 15;
   S.mix = S.mode!=='normal' && S.who==='group' && S.num===8 && S.lv==='normal';   // イージー・ハードを選んだときは、みんなで8問でも全部その難しさ（鑑定者本人の指示 2026-11-15）
-  S.qs = S.mode==='normal' ? pickMix(S.lv) : S.mix
+  S.qs = S.mode==='normal' ? pickMix(S.lv, S.who==='solo' && mixPastN()>0) : S.mix
     ? pickQuestions(S.mode, 4, 'normalOnly').concat(pickQuestions(S.mode, 4, 'hard'))   // 前半ノーマル・後半ハード
     : pickQuestions(S.mode, S.num, S.lv);
   S.counts = null; S.sent = {};
@@ -3185,9 +3185,11 @@ function charaOf(qs, ans, opt){
   // まぜまぜ編の答え（恋の問題と日常の問題がまざる）は、キャラの出やすさを別に合わせる（D.mixB。2026-11-26 でたらめに答えた7500回でどのキャラも約10%）
   var MX=!opt.hon && (NM || qsHasNormal(qs));
   var LV=qLevels(NM?'normal':'love', qs), f1=0, f3=0; qs.forEach(function(q){ var v=LV[q.id]; if(v===1) f1++; else if(v===3) f3++; }); f1/=qs.length; f3/=qs.length;
+  // まぜまぜ編の日常のキャラ：決め方・元気の出し方の問題が少ない回（2回目からの1問ずつ）は D.mixF を足す（2問ずつの回は足さない）
+  var FEW=0; if(NM && MX && !opt.hon && D.mixF && typeof NHINT!=='undefined'){ var nd=0, nh=0; qs.forEach(function(q){ if(LV[q.id]!=null){ nd++; if((NHINT.kime||{})[q.id]||(NHINT.genki||{})[q.id]) nh++; } }); if(nd) FEW=Math.max(0, Math.min(1, (0.5-nh/nd)/0.2)); }
   D.list.forEach(function(c){
     var bl=(!opt.hon && D.bl && D.bl[c.id]) || [0,0];
-    cs[c.id]+=(c.b||0)+bl[0]*f1+bl[1]*f3+(opt.hon && D.honB ? D.honB[c.id]||0 : 0)+(MX && D.mixB ? D.mixB[c.id]||0 : 0);
+    cs[c.id]+=(c.b||0)+bl[0]*f1+bl[1]*f3+(opt.hon && D.honB ? D.honB[c.id]||0 : 0)+(MX && D.mixB ? D.mixB[c.id]||0 : 0)+(FEW && D.mixF ? FEW*(D.mixF[c.id]||0) : 0);
     c.w.forEach(function(w){ cs[c.id]+=words[w]||0; }); c.h.forEach(function(h){ cs[c.id]+=hs[h]||0; });
     Object.keys(c.ax).forEach(function(k){ cs[c.id]+=c.ax[k]*(sc['_'+k]||0)*1.5; });
   });
@@ -4009,7 +4011,7 @@ function showResult(){
     fourHTML(mode, sc, 'あなた')+
     mismatchLine(mode, sc, ch)+
     (mode==='love' ? '<button type="button" class="linkb mtk-go" data-mtk>％の見かた ›</button>' : '')+'</div>';
-  h+=charaHTML(S.qs, S.ans[0], 'あなた', '', false, {mode:mode, hero:!!chImg, r:ch})+(mode==='love'?kimochiHTML(S.qs, S.ans[0], 'あなた', '')+yurusuHTML(S.qs, S.ans[0], 'あなた'):nHintHTML(S.qs, S.ans[0], 'あなた', ''))+kotobaHTML(S.qs, S.ans[0], 'あなた', '', mode)+mixFudan(pm, S.qs, S.ans[0], 'あなた', '', chN, ctNorm)+(pm==='love'?lovePastFudan():'')+(pm==='normal'?nHintHTML(S.qs, S.ans[0], 'あなた', ''):'');
+  h+=charaHTML(S.qs, S.ans[0], 'あなた', '', false, {mode:mode, hero:!!chImg, r:ch})+(mode==='love'?kimochiHTML(S.qs, S.ans[0], 'あなた', '')+yurusuHTML(S.qs, S.ans[0], 'あなた'):nHintHTML(S.qs, S.ans[0], 'あなた', ''))+kotobaHTML(S.qs, S.ans[0], 'あなた', '', mode)+mixFudan(pm, S.qs, S.ans[0], 'あなた', '', chN, ctNorm)+(pm==='love'?lovePastFudan():'')+(pm==='normal'?nHintSolo():'');
   h+='<div class="card"><details class="kok"><summary><span><img class="ico-i" src="img/icon-detail.webp" alt="" width="20" height="20">4つの％をくわしく見る</span></summary>'+axisHTML(mode,sc)+AXES[mode].map(function(ax){ return rkSpan(mode, ax.k, sc[ax.k]); }).join('')+(mode==='love'?'<button class="linkb" data-mtk>％の見かた ›</button>':'')+'<button class="linkb" data-about>この診断について（％の考え方）</button></details></div>';
   if(hist && hist.length>=2) h+=histHTML(mode, hist);   // 1回目は中身のない「平均」のカードを出さない
   var maj=majorityStats(S.qs, S.ans[0]);
@@ -4146,7 +4148,15 @@ function nHintOf(k, qs, ans){
   var r=n.x/all, type=r>=0.67?'x':(r<=0.33?'y':'both');
   return { type:type, r:r, ex:(type==='both'?[ex.x[0],ex.y[0]]:ex[type].slice(0,2)) };
 }
-function nHintHTML(qs, ans, label, cls){
+/* まぜまぜ編のひとりの結果：決め方・元気の出し方は、これまでの答え（最近5回まで）も合わせて決める。
+   2回目からは毎回1問ずつしか入れないので、日常のほかの問題とだいたい同じ回数で出る（鑑定者本人 2026-11-27「混ぜ辺もまんべんなく出るようにしたい」） */
+function mixPastN(){ try{ var d=store(CT_KEY)||{}; return (d.normal||[]).length; }catch(e){ return 0; } }
+function nHintSolo(){
+  var AQ=S.qs.slice(), AA=(S.ans[0]||[]).slice(), n=1;
+  try{ var d=store(CT_KEY)||{}; (d.normal||[]).filter(function(r){ return r.g!==S.qs._g; }).slice(0,4).forEach(function(r){ var u=ctUnpack(r.a,'normal'); if(u.qs.length){ AQ=AQ.concat(u.qs); AA=AA.concat(u.ans); n++; } }); }catch(e){}
+  return nHintHTML(AQ, AA, 'あなた', '', n);
+}
+function nHintHTML(qs, ans, label, cls, nPlay){
   var TX=window.HINT_N_TXT; if(!TX) return '';
   var me=label==='あなた', h='';
   ['kime','genki'].forEach(function(k){
@@ -4157,7 +4167,7 @@ function nHintHTML(qs, ans, label, cls){
       '<div class="kmeter"><span>'+D.L+'</span><span class="bar"><i style="left:'+pos+'%"></i></span><span>'+D.R+'</span></div>'+
       '<div class="km-row me"><b>'+esc(label)+'は</b>'+T.me+'</div>'+
       '<div class="km-row tip"><b>'+(me?'まわりの人へ（接し方のヒント）':esc(label)+'への接し方のヒント')+'</b>'+T.tip+'</div>'+
-      '<p class="km-src">'+o.ex.filter(Boolean).map(function(a){ return qq(a); }).join('・')+'などの答えをもとにしています。</p></div>';
+      '<p class="km-src">'+o.ex.filter(Boolean).map(function(a){ return qq(a); }).join('・')+'などの答えをもとにしています'+(nPlay>1?'（これまでの'+nPlay+'回ぶんの答えを合わせています）':'')+'。</p></div>';
   });
   return h;
 }
