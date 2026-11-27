@@ -333,3 +333,5 @@ window.CHARA_LOVE.mixB={"koakuma": -0.41, "tenshi": 0.14, "aka": -0.55, "ouji": 
 (function(D,A){ Object.keys(A).forEach(function(k){ D.mixB[k]=(D.mixB[k]||0)+A[k]; }); })(window.CHARA_LOVE, {"koakuma":-0.16,"tenshi":-0.53,"aka":0.71,"ouji":-0.1,"otome":0.16,"cool":1.16,"shikkari":-0.21,"juunan":-0.09,"jiyu":-0.2,"hunter":-0.21});
 /* 恋愛編も合わせ直した分（2026-11-27。c.b に足し、まぜまぜ編・本能モードは変わらないよう mixB・honB から同じだけ引く） */
 (function(D,A){ (D.chars||D.list||[]).forEach(function(c){ if(A[c.id]!=null){ c.b=(c.b||0)+A[c.id]; D.mixB[c.id]=(D.mixB[c.id]||0)-A[c.id]; D.honB[c.id]=(D.honB[c.id]||0)-A[c.id]; } }); })(window.CHARA_LOVE, {"koakuma":-0.11,"tenshi":-0.31,"aka":0.3,"ouji":-0.17,"otome":0.28,"cool":0.38,"shikkari":-0.21,"juunan":0.17,"jiyu":-0.16,"hunter":-0.03});
+/* 本能モードの気持ちの出し方を毎回3問にしたので、本能モードの出やすさを合わせ直した（2026-11-27。でたらめに答えた6000回で、どのキャラも約10%） */
+(function(D,A){ Object.keys(A).forEach(function(k){ D.honB[k]=(D.honB[k]||0)+A[k]; }); })(window.CHARA_LOVE, {"koakuma":0.21,"tenshi":-0.09,"aka":0.09,"ouji":-0.16,"otome":-0.01,"cool":0.59,"shikkari":-0.1,"juunan":-0.11,"jiyu":-0.15,"hunter":-0.1});
