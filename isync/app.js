@@ -50,7 +50,10 @@ function view(h){app.innerHTML='<div class="scr">'+h+'</div>';window.scrollTo(0,
 /* 価値観のタイプ（axes.js）：問題の文から番号を引く。left＝左の傾向になる答え */
 const AX=Object.entries(window.SY_AX||{}).map(([key,a])=>{const m=new Map();a.qs.forEach(([t,o])=>{const i=Q.findIndex(q=>q[1]===t);if(i>=0)m.set(i,o)});return{key,l:a.l,r:a.r,name:a.name,m}}).filter(a=>a.m.size);
 // その人の傾向：左の答え＝1・こだわらない＝0.5・右の答え＝0 の平均（左寄りの％）。その物差しの問題に答えていなければ null
-function axScore(p,qs,a){let s=0,n=0;qs.forEach((k,i)=>{if(!a.m.has(k))return;const x=p.ans[i];if(!x||x.o<0)return;n++;s+=x.o===2?.5:x.o===a.m.get(k)?1:0});return n?{pct:Math.round(s/n*100),n}:null}
+// 3つ目の答えが「自分には当てはまらない」の意味（料理はあまりしない・お酒は飲まない など）。ものさしには数えず、片方だけがこの答えの問題はシンクロ率にも数えない（2026-11-27）
+const NA_L=new Set(['料理はあまりしない','お酒は飲まない','あまり食べない','あまり読まない','あまり興味がない','あまり見ない']);
+const isNA=(o,k)=>o===2&&NA_L.has(Q[k][4]);
+function axScore(p,qs,a){let s=0,n=0;qs.forEach((k,i)=>{if(!a.m.has(k))return;const x=p.ans[i];if(!x||x.o<0||isNA(x.o,k))return;n++;s+=x.o===2?.5:x.o===a.m.get(k)?1:0});return n?{pct:Math.round(s/n*100),n}:null}
 // 本当に「どっちでも合わせられる」答え（3つ目の答えが「日による」「ふつう」などの問題は、まん中の答えで、合わせられるには数えない。鑑定者本人 2026-11-20）
 const FLEX_L=new Set(['どっちも','どっちも好き','どっちも大事','気にしない','金額は気にしない','年は気にしない','どっちでもうれしい','どっちもうれしい','どっちも買う']);
 const isFlex=(o,k)=>o===2&&(!Q[k][4]||FLEX_L.has(Q[k][4]));
@@ -369,6 +372,7 @@ function pairStat(A,B,qs,only){
   // 問題の重さ（大事＝2・軽い＝0.5）で数える。★ゆずれないはシンクロ率に入れず、「★ ゆずれないところ」の枠で別に見せる（鑑定者本人 2026-11-19「点数差はつけない方がいい」）
   let s=0,n=0;const r={same:[],adj:[],diff:[],starSame:[],starAdj:[],starDiff:[]};
   qs.forEach((k,i)=>{if(only&&!only.has(i))return;const a=A.ans[i],b=B.ans[i];if(!a||!b||a.o<0||b.o<0)return;
+    if(isNA(a.o,k)!==isNA(b.o,k))return; // 片方だけ「当てはまらない」答えの問題はくらべない
     const st=(a.st&&a.o<2)||(b.st&&b.o<2),w=WT(k);n+=w;
     if(a.o===b.o){s+=w;r.same.push(i);if(st)r.starSame.push(i)}
     else if(a.o===2||b.o===2){s+=w/2;r.adj.push(i);if(st)r.starAdj.push(i)}
@@ -805,7 +809,7 @@ function talk3Pick(firm){firm=firm.filter(x=>!T3_PRE.test(Q[x.k][1]));const B=x=
 function isFriendSet(qs){const f=((window.SY_PACKS||{}).tomodachi||{}).keys;if(!f||!qs.length)return false;const set=new Set(f);return qs.every(k=>set.has(QKEY[k]))}
 function talk3HTML(G,t3){if(!t3.length)return'';
   return `<section class="card talk3"><p class="pt-h"><em>答え合わせの前に</em>${isFriendSet(G.qs)?'友だちに聞いてみたい':'恋人と話しておきたい'}${t3.length}問</p>
-    <p class="hint">あなたの答えから、相手とちがうと困りやすい問題を選びました（★ゆずれない問題・大事な問題を先に）。先に聞いておくと安心です。</p>${t3.some(x=>x.a.st)?'<p class="stl"><i>★</i>＝ゆずれない（答える前に付けた印）</p>':''}
+    <p class="hint">${(()=>{const imp=t3.filter(x=>x.a.st||WB.has(x.k)).length;return imp===t3.length?'あなたの答えから、相手とちがうと困りやすい問題を選びました（★ゆずれない問題・大事な問題を先に）。先に聞いておくと安心です。':imp?'あなたの答えから、相手とちがうと困りやすい問題と、先に聞いておくと話が広がる問題を選びました（★ゆずれない問題・大事な問題を先に）。':'あなたの答えから、先に聞いておくと話が広がる問題を選びました。'})()}</p>${t3.some(x=>x.a.st)?'<p class="stl"><i>★</i>＝ゆずれない（答える前に付けた印）</p>':''}
     <ol class="t3-l">${t3.map(x=>{const th=CATS[Q[x.k][0]][0];return `<li><b>${esc(Q[x.k][1])}</b><span class="t3-a">あなた：${x.a.st?'<i class="mk-s">★</i>':''}${esc(ans(x.a.o,x.k))}</span><small>${esc(TALK3_WHY[th]||'')}</small></li>`}).join('')}</ol>
     <button class="btn ghost small" id="t3-go" type="button"><span class="nw">この${t3.length}問で、</span><span class="nw">答え合わせに誘う ↓</span></button></section>`}
 function soloHTML(G){
