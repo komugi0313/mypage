@@ -437,7 +437,7 @@ async function drawShare(){
  ctx.textAlign="center";ctx.font="500 28px "+SANS;ctx.fillStyle=SC.muted;ctx.fillText(TR("あなたの気質と性格も見てみる →"),W/2,H-134);
  ctx.font="600 34px "+MONO;ctx.fillStyle=SC.ink;ctx.fillText(SHARE_URL.replace("https://",""),W/2,H-88);
  return cv;}
-function shareText(){const me=window.__me,co=coreOf(me.born,me.now);return (co?TR("わたしは「{n}」タイプでした。").replace("{n}",co.name):"")+(me.born===me.now?TR("気質も性格も ")+an(me.now)+TR("。"):TR("気質は ")+an(me.born)+TR("、性格は ")+an(me.now)+TR("。"))+TR("｜16TYPE+（16タイププラス）");}
+function shareText(){const me=window.__me,co=coreOf(me.born,me.now);if(LANG==="ja"){const nm=t=>t+(NM[t]?" "+NM[t]:"");return (co?"わたしは「"+co.name+"」タイプでした。":"")+(me.born===me.now?"生まれつきも今も "+nm(me.now)+"。":"生まれつきは "+nm(me.born)+"、今は "+nm(me.now)+"。")+"あなたの生まれつきのタイプは？｜16TYPE+（16タイププラス）";}return (co?TR("わたしは「{n}」タイプでした。").replace("{n}",co.name):"")+(me.born===me.now?TR("気質も性格も ")+an(me.now)+TR("。"):TR("気質は ")+an(me.born)+TR("、性格は ")+an(me.now)+TR("。"))+TR("｜16TYPE+（16タイププラス）");}
 function track(ev,extra){try{const m=window.__me||{};if(typeof gtag!=="function")return;gtag("event",ev,Object.assign({born_type:m.born||"",now_type:m.now||"",lang:LANG},extra||{}));}catch(e){}}
 async function shareResult(){track("share_click");const b=$("shareBtn"),lbl=b.textContent;b.disabled=true;b.textContent=TR("画像をつくっています…");
  try{const me0=window.__me||{},cvs=[await drawShare()].concat(me0.prev&&me0.prev.length?[await drawChange()]:[]).concat([await drawCloud(),await drawKarte()]);const blobs=await Promise.all(cvs.map(cv=>new Promise(r=>cv.toBlob(r,"image/png"))));
@@ -730,7 +730,7 @@ function lvShow(t){const me=window.__me,P=lvTy(t);if(!me)return;const el=$("lvRe
 async function lvShareRun(t){track("love_share_click");const b=$("lvShare"),lbl=b.textContent;b.disabled=true;b.textContent=TR("画像をつくっています…");
  try{const P=lvTy(t),cvs=[await lvCloud(P),await lvSheet(P)];const blobs=await Promise.all(cvs.map(cv=>new Promise(r=>cv.toBlob(r,"image/png"))));
   const files=blobs.map((bl,i)=>new File([bl],"16typeplus-love-"+(i+1)+".png",{type:"image/png"}));
-  if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,text:TR("恋のときのあなたは")+" "+P.t+p16(P.t)+TR("｜16TYPE+（16タイププラス）")+" "+SHARE_URL});}catch(e){if(e&&e.name!=="AbortError")showShareBox(cvs);}}
+  if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,text:(LANG==="ja"?"恋のときのわたしは "+P.t+p16(P.t)+"。あなたは？｜16TYPE+（16タイププラス）":TR("恋のときのあなたは")+" "+P.t+p16(P.t)+TR("｜16TYPE+（16タイププラス）"))+" "+SHARE_URL});}catch(e){if(e&&e.name!=="AbortError")showShareBox(cvs);}}
   else showShareBox(cvs);}catch(e){alert(TR("画像をつくれませんでした。もう一度お試しください。"));}finally{b.disabled=false;b.textContent=lbl;}}
 const LVC={ink:SC.ink,muted:SC.muted,soft:"#EEF1F5",rule:"#E2E6EC",rose:"#C9607A",roseT:"#F8E4EA",rose2:"#DE8FA3"};
 function lvFonts(){const SANS=(LANG==="ko"?'"Noto Sans KR",':'')+'"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",sans-serif',MONO='"IBM Plex Mono",ui-monospace,Menlo,monospace';
@@ -766,7 +766,7 @@ async function lvCloud(P){const {SANS,MONO}=await lvFonts(),W=1080,H=1350,cv=doc
 async function lvSheet(P){const {SANS,MONO}=await lvFonts(),LP=(window.__lvPtImg&&st.love&&st.love.sit!=="none"&&st.love.pt&&LV.partner&&LV.partner[st.love.pt])?st.love:null,W=1080,H=LP?2600:1700,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
  const wrap=(t,w)=>wrapLines(c,t,w,9);
  c.fillStyle="#FFFFFF";c.fillRect(0,0,W,H);c.fillStyle=LVC.rose;c.fillRect(0,0,W,14);
- c.font="600 26px "+MONO;c.fillStyle=LVC.muted;c.fillText("16TYPE+  "+TR("恋愛編"),70,95);c.font="600 34px "+SANS;c.fillStyle=LVC.rose;c.fillText(TR("恋のときのあなたは"),70,185);
+ c.font="600 26px "+MONO;c.fillStyle=LVC.muted;c.fillText("16TYPE+  "+TR("恋愛編"),70,95);c.font="600 34px "+SANS;c.fillStyle=LVC.rose;c.fillText(LANG==="ja"?"恋のときのわたしは":TR("恋のときのあなたは"),70,185);
  c.font="700 60px "+SANS;fillNm(c,P.t,P.t,70,275,"left",LVC.ink,"#B7A9AE",W-140);
  let y=390;c.font="700 34px "+SANS;const L1=wrap(lvQ(P.one),W-180).slice(0,2),bh=L1.length>1?176:130;c.fillStyle=LVC.roseT;rrect(c,60,y,W-120,bh,20);c.fill();c.font="500 24px "+SANS;c.fillStyle=LVC.rose;c.fillText(TR("ひと言で言うと…"),90,y+42);
  c.font="700 34px "+SANS;c.fillStyle=LVC.ink;L1.forEach((l,i)=>c.fillText(l,90,y+92+i*44));
@@ -1167,7 +1167,7 @@ async function drawGroup(G,title){const W=1080,H=2200,cv=document.createElement(
  o.textAlign="center";o.font="600 30px "+MONO;o.fillStyle=SC.plus;o.fillText(SHARE_URL.replace("https://",""),W/2,H2-86);o.textAlign="left";return out;}
 async function shareGroup(G,title){track("group_share");const b=$("gShare"),lbl=b.textContent;b.disabled=true;b.textContent=TR("画像をつくっています…");
  try{const cv=await drawGroup(G,title);const bl=await new Promise(r=>cv.toBlob(r,"image/png"));const files=[new File([bl],"16typeplus-group.png",{type:"image/png"})];
-  if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,text:TR("グループの相性")+TR("｜16TYPE+（16タイププラス）")+" "+SHARE_URL});}catch(e){if(e&&e.name!=="AbortError")showShareBox([cv]);}}else showShareBox([cv]);}
+  if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,text:(LANG==="ja"?"わたしたちのグループの相性を見てみました｜16TYPE+（16タイププラス）":TR("グループの相性")+TR("｜16TYPE+（16タイププラス）"))+" "+SHARE_URL});}catch(e){if(e&&e.name!=="AbortError")showShareBox([cv]);}}else showShareBox([cv]);}
  catch(e){alert(TR("画像をつくれませんでした。もう一度お試しください。"));}finally{b.disabled=false;b.textContent=lbl;}}
 
 /* ---- グループの相性（その場で入力。サーバーは使わない） ---- */

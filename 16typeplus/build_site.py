@@ -8,7 +8,7 @@ R=os.path.dirname(os.path.abspath(__file__))+'/'
 sys.path.insert(0,R+'i18n');from build_preview import lang_data
 OUT=R+'site/'
 META={
- 'ja':('16TYPE+｜生まれ持った気質と、育ってきた性格がわかる無料診断','生年月日からわかる「気質」と、16タイプからわかる「性格」。2つを並べて、あなたらしいところと悩みやすいところがわかる無料の性格診断。','日本語','ja_JP'),
+ 'ja':('16タイプ、診断するたびに結果が変わる人へ｜16TYPE+（無料診断）','16タイプの結果が、診断するたびに変わる。それは、あなたの中に「生まれつきのタイプ」と「今のタイプ」の2つがあるから。生年月日と16タイプから2つを並べて、変わったところ・変わらないところがわかる無料診断。入力は約30秒・登録なし。','日本語','ja_JP'),
  'en':('16TYPE+ | Your temperament and character, side by side','The temperament you were born with, from your birth date, and the character shaped by experience, from the 16 types. A free personality test that puts the two side by side and shows where you tend to struggle.','English','en_US'),
  'ko':('16TYPE+ | 타고난 기질과 자라 온 성격을 알 수 있는 무료 검사','생년월일로 보는 기질과 16타입으로 보는 성격. 둘을 나란히 놓고 나다움과 고민하기 쉬운 지점을 알려 주는 무료 성격 검사.','한국어','ko_KR')}
 URL={'ja':'https://16typeplus.jp/','en':'https://16typeplus.jp/en/','ko':'https://16typeplus.jp/ko/'}
@@ -59,7 +59,7 @@ def build():
 <meta property="og:description" content="{desc}">
 <meta property="og:url" content="{u}">
 <meta property="og:locale" content="{loc}">
-<meta property="og:image" content="https://16typeplus.jp/img/ogp-{lang}.png">
+<meta property="og:image" content="https://16typeplus.jp/img/ogp-{lang}.png{'?v=2' if lang=='ja' else ''}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
