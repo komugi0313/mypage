@@ -57,9 +57,10 @@ SITES = {
   'isync': dict(
     tail='<style>html.jw body{word-break:keep-all;overflow-wrap:break-word;line-break:strict}</style><script src="jw.js"></script>',  # 言葉の切れ目で改行（2026-11-21）
     name='アイシンク（I-Sync）', short='アイシンク', url='https://i-sync.jp/',
+    rev='2026年11月27日',   # 続きから答える・LINEから開き直すを書き足した
     bg='#FBEFEA', card='#FFFFFF', ink='#2A2559', sub='#4E4880', accent='#6E5FA8', line='#BFB6E2', soft='#F1EEFA',
     prefix='kv_',
-    local='ニックネーム、選んだ設定（長さ・話題など）、これまでに出た問題の記録、答えた問題の印、結果（「わたしの結果」の10回ぶん）と平均、送った答え合わせの記録（20件まで）、「話した」の印、参加中の部屋の番号',
+    local='ニックネーム、選んだ設定（長さ・話題など）、これまでに出た問題の記録、答えた問題の印、結果（「わたしの結果」の10回ぶん）と平均、送った答え合わせの記録（20件まで）、「話した」の印、参加中の部屋の番号、答えている途中の答え（続きから答えるため。24時間で消えます）',
     reset='このページのいちばん下のボタンで消せます。',
     sends=[
       ('みんなの部屋', 'Firebase Cloud Firestore（Google LLC）',
@@ -75,7 +76,8 @@ SITES = {
        'ひとりで・部屋・答え合わせごとの診断した回数（名前なしの数だけ）',
        'サイトをよくするため'),
     ],
-    extra=[('答え合わせのリンク', '「答え合わせに誘う」で送るリンクの中には、あなたのニックネームと答えが入ります。リンクを受け取った人と、その人がさらに送った人が見られます。')],
+    extra=[('答え合わせのリンク', '「答え合わせに誘う」で送るリンクの中には、あなたのニックネームと答えが入ります。リンクを受け取った人と、その人がさらに送った人が見られます。'),
+           ('LINEの中の画面で開いたとき', 'LINEの中の画面で開くと、いつものブラウザ（Safari・Chromeなど）で開き直します。そのとき、LINEの中の画面に残っている結果・途中の答え・ニックネームを、アドレスの「#」より後ろに入れて、いつものブラウザにうつします。「#」より後ろは、サーバーにもアクセス解析にも送られません。')],
     parts=[('QRコード', 'qrcodejs（MIT ライセンス）', 'https://github.com/davidshimjs/qrcodejs')],
     cdn='QRコードを作る部品（cdnjs＝Cloudflare, Inc.）',
     links='1.66 奇跡の相性診断・恋のかたち診断・究極の二択',
@@ -157,7 +159,7 @@ armed=0;b.classList.remove('on');b.textContent='この端末の答えと結果�
 <body><main>
 <div class="bar"><a href="/">‹ トップへ</a></div>
 <h1>プライバシーポリシー</h1>
-<p class="date">{esc(s['name'])}　制定日：{SEIT}／改定日：{REV}</p>
+<p class="date">{esc(s['name'])}　制定日：{SEIT}／改定日：{s.get('rev',REV)}</p>
 {body}
 <button class="wipe" id="wipe" type="button">この端末の答えと結果を消す</button>
 <p id="wipe-note" role="status"></p>
