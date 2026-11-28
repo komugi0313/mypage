@@ -4708,10 +4708,26 @@ function rInviteBtns(){ return '<div class="share" style="margin-top:14px"><butt
 /* この中で、だれ？（それだけで遊べるゲーム。鑑定者本人 2026-11-27「40問とか大変だから友達集まった時に面白いミニゲームみたいな診断があったらいい」→見本で「お願いします」）：
    部屋を作るときに選ぶ（部屋の gm='who'）。3人以上で、10問。全員が同時に、自分以外のメンバーから1人を選ぶ。全員が選んだら次の質問へ（部屋を作った人は、答えない人を待たずに進める＝gq）。
    選んだ人は自分の参加者の記録の wv（10人ぶんの目印を「,」でつないだもの。選ばなかった問題は「-」）にだけ入れて送る。だれがだれを選んだかは画面に出さない。
-   終わったら「みんなが選んだのは…」。そのあと部屋を作った人が「みんなで診断する」を押すと、同じ部屋で40問の診断（gm='end'）。診断が終わると、はじめの5問を本当のタイプで答え合わせ */
-var WG_Q=[['L','いちばん自分から誘いそうな人は？'],['V','いちばん「好き」を言葉にしそうな人は？'],['T','いちばん恋人に甘えそうな人は？'],['P','いちばんドキドキを求めそうな人は？'],['A','いちばん返事を待ってそわそわしそうな人は？'],
-  ['','いちばん記念日を大事にしそうな人は？'],['','いちばん一目ぼれしそうな人は？'],['','けんかのあと、いちばん先に謝りそうな人は？'],['','いちばん恋人の世話を焼きそうな人は？'],['','いちばん恋の相談に乗るのがうまそうな人は？']];
-var WG_N=WG_Q.length, WG_MIN=3, WG_WAIT=25000;
+   終わったら「みんなが選んだのは…」。そのあと部屋を作った人が「みんなで診断する」を押すと、同じ部屋で40問の診断（gm='end'）。診断が終わると、答え合わせできる5問を本当のタイプで答え合わせ */
+// 質問は33問（鑑定者本人 2026-11-28「問題は全部入れてください」）。1回で出すのは10問＝答え合わせできる5問（近づき方・気持ちの伝え方・頼り方・恋の原動力・心のゆれやすさから1問ずつ）＋盛り上がる5問。
+// どの10問かは部屋を作った時刻（created）から決めるので、同じ部屋の全員が同じ質問・同じ順番になる。[ものさし, 質問, 0＝左の向きを聞く／1＝右の向きを聞く]（並びを変えると前の部屋の質問が変わるので、足すときはそれぞれの最後に）
+var WG_CK={L:[['L','いちばん自分から誘いそうな人は？',0],['L','いちばん先に告白しそうな人は？',0],['L','告白されるのを、いちばん待っていそうな人は？',1]],
+  V:[['V','いちばん「好き」を言葉にしそうな人は？',0],['V','「好き」を毎日言いそうな人は？',0],['V','言葉より、行動で好きを伝えそうな人は？',1]],
+  T:[['T','いちばん恋人に甘えそうな人は？',0],['T','恋人に悩みを全部話しそうな人は？',0],['T','つらいことを、ひとりで抱えこみそうな人は？',1]],
+  P:[['P','いちばんドキドキを求めそうな人は？',0],['P','ドキドキするデートを計画しそうな人は？',0],['P','いつもの場所でのデートがいちばん落ち着きそうな人は？',1]],
+  A:[['A','いちばん返事を待ってそわそわしそうな人は？',0],['A','既読がつかないと、そわそわしそうな人は？',0],['A','返事が遅くても、まったく気にしなさそうな人は？',1]]};
+var WG_FUN=[['','いちばん記念日を大事にしそうな人は？'],['','いちばん一目ぼれしそうな人は？'],['','けんかのあと、いちばん先に謝りそうな人は？'],['','いちばん恋人の世話を焼きそうな人は？'],['','いちばん恋の相談に乗るのがうまそうな人は？'],
+  ['','恋をすると、すぐ顔に出そうな人は？'],['','好きな人の前で、キャラが変わりそうな人は？'],['','初デートで緊張して、話せなくなりそうな人は？'],['','プレゼント選びに、3時間かけそうな人は？'],['','デートの予定を、分きざみで立てそうな人は？'],
+  ['','記念日にサプライズをしそうな人は？'],['','恋人の写真を待ち受けにしそうな人は？'],['','恋人と毎日電話しそうな人は？'],['','恋愛ドラマで、いちばん泣きそうな人は？'],['','告白のセリフを、考えすぎそうな人は？'],
+  ['','片思いを、何年も続けそうな人は？'],['','恋の悩みを、夜中まで聞いてくれそうな人は？'],['','いちばん早く結婚しそうな人は？']];
+// 質問の終わり（「誘いそうな人は？」「一目ぼれしそうな人は？」）は途中で改行しない
+function wgTx(t){ return esc(t).replace(/([一-龥ァ-ヶー]*[ぁ-ん]*そうな人は？)$/,'<span class="nw">$1</span>'); }
+function wgRand(seed){ var a=(seed>>>0)||1; return function(){ a=(a+0x6D2B79F5)>>>0; var t=a; t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; }; }
+function wgQs(r){ r=r||RM.room||{}; var key=r.created||0; if(RM.wgQK===key&&RM.wgQL) return RM.wgQL;
+  var rd=wgRand(key%4294967296), pick=function(a){ return a[Math.floor(rd()*a.length)]; }, shuf=function(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(rd()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; } return a; };
+  var L=['L','V','T','P','A'].map(function(k){ return pick(WG_CK[k]); }).concat(shuf(WG_FUN).slice(0,5));
+  RM.wgQK=key; RM.wgQL=shuf(L); return RM.wgQL; }
+var WG_N=10, WG_MIN=3, WG_WAIT=25000;
 var RV_POLE={L:['自分から動く','相手を待つ'],V:['言葉で伝える','行動で示す'],T:['寄りかかれる','自分で立つ'],P:['ときめき優先','安心優先'],A:['心がゆれやすい','心がおだやか']};
 function wgIs(r){ r=r||RM.room; return !!r&&r.gm==='who'; }
 function wgSplit(s){ return s?String(s).split(','):[]; }
@@ -4741,13 +4757,13 @@ function wgPlayHTML(){
   var skp=host&&Date.now()-RM.whoT.t>=WG_WAIT&&S.core.some(function(p){ return Math.max(wgWv(p).length,(RM.room.gq||0))<=S.idx; });
   var h='<section class="card wg" data-ws="'+S.my+'|'+S.idx+'|'+(skp?1:0)+'|'+others.map(function(p){ return p.id+p.name; }).join(',')+'">';
   if(S.my<=S.idx&&S.my<WG_N){
-    var k=S.my, q=WG_Q[k];
-    h+=wgSeats(S,k)+'<p class="wg-n">'+(k+1)+' / '+WG_N+'</p><p class="wg-t">'+esc(q[1])+'</p><div class="wg-c">'+
+    var k=S.my, q=wgQs()[k];
+    h+=wgSeats(S,k)+'<p class="wg-n">'+(k+1)+' / '+WG_N+'</p><p class="wg-t">'+wgTx(q[1])+'</p><div class="wg-c">'+
       others.map(function(p){ return '<button type="button" class="wg-b" data-nocg data-act="who-pick" data-q="'+k+'" data-p="'+esc(p.id)+'"><span class="nw">'+esc(p.name)+'</span></button>'; }).join('')+'</div>'+
       '<p class="wg-note"><span class="nw">だれが、だれを選んだかは</span><span class="nw">出ません</span></p>';
   } else {
     var k2=S.idx, mine=rMyWv()[S.my-1], pn=S.ps.filter(function(p){ return p.id===mine; })[0];
-    h+=wgSeats(S,k2)+'<p class="wg-n">'+(k2+1)+' / '+WG_N+'</p><p class="wg-t">'+esc(WG_Q[k2][1])+'</p>'+
+    h+=wgSeats(S,k2)+'<p class="wg-n">'+(k2+1)+' / '+WG_N+'</p><p class="wg-t">'+wgTx(wgQs()[k2][1])+'</p>'+
       '<p class="wg-wait"><b>決めた！</b>'+(pn?'<span class="nw">（あなたは「'+esc(pn.name)+'」）</span>':'')+'<br><span class="nw">みんなが選ぶのを</span><span class="nw">待っています</span></p>';
     var late=S.core.some(function(p){ return Math.max(wgWv(p).length,(RM.room.gq||0))<=k2; });
     if(host&&late&&Date.now()-RM.whoT.t>=WG_WAIT) h+='<button class="btn btn-sub btn-wide" type="button" data-act="who-skip"><span class="nw">まだの人を待たずに</span><span class="nw">次の質問へ</span></button>';
@@ -4758,22 +4774,22 @@ function wgPlayHTML(){
 // 1問ずつ、いちばん選ばれた人
 function wgTally(ps){
   var byId={}; ps.forEach(function(p){ byId[p.id]=p; });
-  return WG_Q.map(function(q,i){ var cnt={}, n=0; ps.forEach(function(p){ var v=wgWv(p)[i]; if(v&&byId[v]&&v!==p.id){ cnt[v]=(cnt[v]||0)+1; n++; } });
+  return wgQs().map(function(q,i){ var cnt={}, n=0; ps.forEach(function(p){ var v=wgWv(p)[i]; if(v&&byId[v]&&v!==p.id){ cnt[v]=(cnt[v]||0)+1; n++; } });
     var mx=0; Object.keys(cnt).forEach(function(k){ if(cnt[k]>mx) mx=cnt[k]; });
     return {q:q,i:i,n:n,mx:mx,cnt:cnt,top:Object.keys(cnt).filter(function(k){ return cnt[k]===mx; }).map(function(k){ return byId[k]; })}; });
 }
 function wgLab(t){ return t.replace('いちばん','').replace(/は？$/,''); }
 function wgRow(x,check){
-  var L=x.q[0], AX=['L','V','T','P'].indexOf(L), pole=RV_POLE[L], h='<div class="rv-a"><p class="rv-aq">'+esc(x.q[1])+'</p>';
+  var L=x.q[0], AX=['L','V','T','P'].indexOf(L), sd=x.q[2]?1:0, pole=RV_POLE[L], h='<div class="rv-a"><p class="rv-aq">'+wgTx(x.q[1])+'</p>';
   if(!x.n) return h+'<p class="rv-res rv-wait">まだだれも選んでいません</p></div>';
   if(x.top.length>=3) return h+'<p class="rv-split"><b>予想がばらばら！</b><span class="nw">'+x.mx+'票ずつ</span></p><div class="rv-tie">'+x.top.map(function(p){ return '<span>'+wgPic(p,34)+'<b class="nw">'+esc(p.name)+'</b></span>'; }).join('')+'</div></div>';
-  var real=function(p){ if(!(p.done&&validCode(p.code))) return null; if(L==='A') return /^[pf]$/.test(p.ak||'')?true:(/^[sd]$/.test(p.ak||'')?false:null); return AX>=0?p.code[AX]===L:null; };
-  x.top.forEach(function(p){ var rr=check&&pole?real(p):null;
+  var real=function(p){ if(!(p.done&&validCode(p.code))) return null; if(L==='A') return /^[pf]$/.test(p.ak||'')?true:(/^[sd]$/.test(p.ak||'')?false:null); return AX>=0?p.code[AX]===L:null; }, hitOf=function(p){ var v=real(p); return v==null?null:(sd?!v:v); };
+  x.top.forEach(function(p){ var rr=check&&pole?hitOf(p):null;
     h+='<div class="rv-ar">'+wgPic(p,52)+'<div><p class="rv-an"><span class="nw">'+esc(p.name)+'</span> <small>（'+x.mx+'票）</small></p>'+
-      (check&&pole?(rr==null?'<p class="rv-res rv-wait">まだ診断中…</p>':'<p class="rv-res"><span class="rv-hit '+(rr?'y':'n')+'">'+(rr?'当たり！':'はずれ')+'</span><span class="nw">'+(rr?'本当に':'本当は')+'「'+(rr?pole[0]:pole[1])+'」派</span></p>'):'')+'</div></div>'; });
-  if(check&&pole&&x.top.some(function(p){ return real(p)===false; })){
-    var rl=rPlayers().filter(function(p){ return real(p)===true&&x.top.indexOf(p)<0; }).map(function(p){ return '<span class="nw">'+esc(p.name)+'</span>'; });
-    if(rl.length) h+='<p class="rv-real">本当に「'+pole[0]+'」派だったのは：'+rl.join('・')+'</p>'; }
+      (check&&pole?(rr==null?'<p class="rv-res rv-wait">まだ診断中…</p>':'<p class="rv-res"><span class="rv-hit '+(rr?'y':'n')+'">'+(rr?'当たり！':'はずれ')+'</span><span class="nw">'+(rr?'本当に':'本当は')+'「'+(rr?pole[sd]:pole[1-sd])+'」派</span></p>'):'')+'</div></div>'; });
+  if(check&&pole&&x.top.some(function(p){ return hitOf(p)===false; })){
+    var rl=rPlayers().filter(function(p){ return hitOf(p)===true&&x.top.indexOf(p)<0; }).map(function(p){ return '<span class="nw">'+esc(p.name)+'</span>'; });
+    if(rl.length) h+='<p class="rv-real">本当に「'+pole[sd]+'」派だったのは：'+rl.join('・')+'</p>'; }
   return h+'</div>';
 }
 function wgMeBox(T){
@@ -4785,14 +4801,14 @@ function wgResHTML(){
   var S=wgState(), host=rHost(), hn=rHostName(), hs=hn?esc(hn)+'さん':'部屋を作った人', T=wgTally(S.ps);
   var h='<section class="card rvote"><p class="rchip ok"><img class="rc-ic" src="img/ico/ok.webp" alt="" width="30" height="30">全員が選びました</p><h1>みんなが選んだのは…</h1>'+wgMeBox(T)+
     '<p class="rv-cap"><span class="nw">キャラクターは、</span><span class="nw">前に診断したことがある人のタイプです。</span><span class="nw">まだの人は影で出ます。</span></p>'+T.map(function(x){ return wgRow(x,false); }).join('')+'</section>';
-  h+='<section class="card wg-cta"><p class="wg-cta-h"><span class="nw">本当はどうか、</span><span class="nw">診断で答え合わせ</span></p><p class="muted"><span class="nw">このまま、みんなで</span><span class="nw">本当の恋のタイプを診断（40問）。</span><span class="nw">終わると、はじめの5問の</span><span class="nw">「当たり／はずれ」がわかります。</span></p>'+
+  h+='<section class="card wg-cta"><p class="wg-cta-h"><span class="nw">本当はどうか、</span><span class="nw">診断で答え合わせ</span></p><p class="muted"><span class="nw">このまま、みんなで</span><span class="nw">本当の恋のタイプを診断（40問）。</span><span class="nw">終わると、そのうち5問の</span><span class="nw">「当たり／はずれ」がわかります。</span></p>'+
     (host?'<button class="btn btn-main btn-wide" type="button" data-act="who-diag" id="wg-diag"><span class="nw">みんなで診断する</span><span class="nw">（'+S.ps.length+'人）</span></button>':
       '<p class="rwait-t">'+hs+'が「みんなで診断する」を押すと、全員の診断が始まります。</p><p class="rsolo"><button class="linkbtn" type="button" data-act="who-solo">先に自分だけ診断する</button></p>')+
     '<p class="rnote hidden" id="wg-note"></p></section>';
   h+='<p class="rleave"><button class="linkbtn" type="button" data-act="room-leave">ここで終わる</button></p>';
   return h;
 }
-// 診断が終わったあとの、みんなの結果の中の答え合わせ（はじめの5問。ほかの5問はたたむ）
+// 診断が終わったあとの、みんなの結果の中の答え合わせ（答え合わせできる5問。ほかの5問はたたむ）
 function rVoteResultHTML(){
   var ps=rPlayers(); if(!RM.room||!RM.room.gm||ps.length<WG_MIN) return '';
   var T=wgTally(ps); if(!T.some(function(x){ return x.n; })) return '';
