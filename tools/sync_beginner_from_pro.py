@@ -28,8 +28,8 @@ PRO, BEG = ROOT / 'pro', ROOT / 'beginner'
 B_TITLE = '今日から占い師｜知識ゼロから、今日から鑑定できる'
 B_NAME = '今日から占い師'
 B_DESC = '生年月日を入れるだけで、生まれ持った性質・運の流れ・相性まで、ふつうの言葉で読み解く鑑定ツール。知識ゼロでも、今日から鑑定ができます。'
-B_URL = 'https://www.suimei.jp/app-beginner.html'
-B_OGP = 'https://www.suimei.jp/og-image.png'
+B_URL = 'https://suimei.jp/app-beginner.html'
+B_OGP = 'https://suimei.jp/og-image.png'
 
 # ビギナーの見た目（色・縁取り・ボタン文言）。CSS と文言だけで、計算・判定・鑑定文には一切影響しない。
 BEGINNER_SKIN = """<style id="beginner-skin">
@@ -89,14 +89,14 @@ def build_app():
     # ---- head：タイトル・説明・OGP・アイコン・マニフェスト ----
     s = rep(s, '<title>四柱推命占い自動鑑定</title>', f'<title>{B_TITLE}</title>\n{link_icon}', 1)
     s = re.sub(r'<meta name="description" content="[^"]*">', f'<meta name="description" content="{B_DESC}">', s, count=1)
-    s = rep(s, '★本番ドメインが72k.ai以外なら', '★本番ドメインがsuimei.jp以外なら', 1)
+    s = rep(s, '★本番ドメインがsuimeipro.jp以外なら', '★本番ドメインがsuimei.jp以外なら', 1)
     s = rep(s, '<meta property="og:site_name" content="72k株式会社">', f'<meta property="og:site_name" content="{B_NAME}">', 1)
     s = rep(s, '<meta property="og:title" content="四柱推命占い自動鑑定">', f'<meta property="og:title" content="{B_NAME}">', 1)
     s = rep(s, '<meta name="twitter:title" content="四柱推命占い自動鑑定">', f'<meta name="twitter:title" content="{B_NAME}">', 1)
     s = re.sub(r'<meta property="og:description" content="[^"]*">', f'<meta property="og:description" content="{B_DESC}">', s, count=1)
     s = re.sub(r'<meta name="twitter:description" content="[^"]*">', f'<meta name="twitter:description" content="{B_DESC}">', s, count=1)
-    s = rep(s, 'https://72k.ai/app-pro.html', B_URL, 1)
-    s = rep(s, 'https://72k.ai/ogp.png', B_OGP, 2)
+    s = rep(s, 'https://suimeipro.jp/app-pro.html', B_URL, 1)
+    s = rep(s, 'https://suimeipro.jp/ogp.png', B_OGP, 2)
     s = re.sub(r'<script>window\.__ICON__=[\s\S]*?</script>', lambda m: icon_script, s, count=1)
     s = rep(s, f'<meta name="apple-mobile-web-app-title" content="{B_NAME}">',
             f'<meta name="apple-mobile-web-app-title" content="{B_NAME}">', 1)   # PROのホーム画面の名前「自動鑑定PRO」（PROの文字は先に外れる＝鑑定者本人の指示 2026-10-25「自動鑑定PROに短く」）
@@ -156,7 +156,7 @@ def build_app():
     # アプリ下部の「マイページ・規約・特商法・プライバシー」リンクをビギナーのページへ
     s = s.replace('terms-pro.html', 'terms.html').replace('tokushoho-pro.html', 'tokushoho.html').replace('privacy-pro.html', 'privacy.html')
 
-    left = [w for w in ('app-pro.html', '-pro.html', 'manifest-pro', 'shichu-jidou', '72k.ai/app') if w in s]
+    left = [w for w in ('app-pro.html', '-pro.html', 'manifest-pro', 'shichu-jidou', 'suimeipro.jp/app') if w in s]
     if left:
         sys.exit(f'[止めました] PRO固有の参照が残っています：{left}')
     head = ('<!-- このファイルは tools/sync_beginner_from_pro.py が pro/app-pro.html から生成しています。'
