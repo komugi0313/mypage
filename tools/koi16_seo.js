@@ -284,7 +284,7 @@ function page({ url, title, desc, body, ld, img }) {
 <main>
 ${body}
 </main>
-<footer><img class="ft-mark" src="/img/logo-heart.webp?v=1" alt="" width="44" height="44"><a href="/">恋のかたち診断のトップへ</a>　<a href="/?privacy=1">プライバシーポリシー</a><div class="credit" data-nocg>Produced by Mizuki Nico</div></footer>
+<footer><img class="ft-mark" src="/img/logo-heart.webp?v=1" alt="" width="44" height="44"><a href="/">恋のかたち診断のトップへ</a>　<a href="/?privacy=1">プライバシーポリシー</a></footer>
 <script src="/seo.js"></script>
 </body>
 </html>
