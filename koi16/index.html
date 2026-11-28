@@ -763,6 +763,7 @@ header.top .navbtn:active{transform:translateY(1px)}
 .wg-tag{display:inline-block;font-size:12px;font-weight:800;background:var(--rose);color:#fff;border-radius:999px;padding:1px 9px;margin-left:6px;vertical-align:2px}
 .wg-md{display:block;margin-top:4px;font-size:14px;line-height:1.6}
 .wg .wg-seats{margin:0 0 14px}
+.qs.rest{background:#F1EEEB;border-color:#DDD5CF}.qs.rest small{color:#6E625A}.qs.rest .qs-p{opacity:.6}
 .wg-n{font-size:13px;color:var(--rose);font-weight:800;margin:0}
 .wg-t{font-size:20px;font-weight:800;color:var(--ink);margin:4px 0 14px;line-height:1.5}
 .wg-c{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -4668,7 +4669,7 @@ function roomUpdate(){
   roomRender('result');
 }
 function roomRender(kind){
-  var sig=kind+'|'+(RM.room&&Date.now()-(RM.room.created||0)>180000?'L':'')+'|'+JSON.stringify([RM.room&&RM.room.phase,RM.room&&RM.room.gm,RM.room&&RM.room.gq,rPlayers().map(function(p){ return [p.id,p.name,p.code,!!p.done,p.q||0,wgWv(p).join(',')]; })])+(kind==='who'&&RM.whoT&&Date.now()-RM.whoT.t>=WG_WAIT?'|W':'');
+  var sig=kind+'|'+(RM.room&&Date.now()-(RM.room.created||0)>180000?'L':'')+'|'+JSON.stringify([RM.room&&RM.room.phase,RM.room&&RM.room.gm,RM.room&&RM.room.gq,rPlayers().map(function(p){ return [p.id,p.name,p.code,!!p.done,p.q||0,wgWv(p).join(',')]; })])+(kind==='who'&&RM.whoT&&Date.now()-RM.whoT.t>=wgWaitMs()?'|W':'');
   if(RM.view===kind&&RM.sig===sig) return;
   var same=RM.view===kind, keep=$('r-jname')?$('r-jname').value:null, y=window.scrollY, h;
   if(kind==='join') h=roomJoinHTML(); else if(kind==='lobby') h=roomLobbyHTML(); else if(kind==='result') h=roomResultHTML(); else if(kind==='who') h=wgPlayHTML(); else if(kind==='whores') h=wgResHTML();
@@ -4681,7 +4682,7 @@ function roomRender(kind){
   var wk=kind==='who'?wgState().my:null;
   if(same&&!$('v-room').classList.contains('hidden')&&!(kind==='who'&&RM.whoK!==wk)) window.scrollTo(0,y); else { show('v-room'); if(kind==='who'||kind==='whores') window.scrollTo(0,0); }
   RM.whoK=wk;
-  if(kind==='who'){ if(RM.whoTm) clearTimeout(RM.whoTm); var wl=RM.whoT?WG_WAIT-(Date.now()-RM.whoT.t)+300:0; if(wl>0) RM.whoTm=setTimeout(function(){ RM.sig=''; roomUpdate(); },wl); }
+  if(kind==='who'){ if(RM.whoTm) clearTimeout(RM.whoTm); var wl=RM.whoT?wgWaitMs()-(Date.now()-RM.whoT.t)+300:0; if(wl>0) RM.whoTm=setTimeout(function(){ RM.sig=''; roomUpdate(); },wl); }
   RM.view=kind; RM.sig=sig;
 }
 function rMembers(ps,host,me,showDone,kick){
@@ -4732,6 +4733,8 @@ function wgQs(r){ r=r||RM.room||{}; var key=r.created||0; if(RM.wgQK===key&&RM.w
   var L=['L','V','T','P','A'].map(function(k){ return pick(WG_CK[k]); }).concat(shuf(WG_FUN).slice(0,5));
   RM.wgQK=key; RM.wgQL=shuf(L); return RM.wgQL; }
 var WG_N=10, WG_MIN=3, WG_WAIT=25000;
+// 答えない人がいるとき、部屋を作った人は25秒、ほかの人は45秒で「まだの人を待たずに次の質問へ」を押せる（部屋を作った人がアプリを閉じても止まらないように）
+function wgWaitMs(){ return rHost()?WG_WAIT:45000; }
 var RV_POLE={L:['自分から動く','相手を待つ'],V:['言葉で伝える','行動で示す'],T:['寄りかかれる','自分で立つ'],P:['ときめき優先','安心優先'],A:['心がゆれやすい','心がおだやか']};
 function wgIs(r){ r=r||RM.room; return !!r&&r.gm==='who'; }
 function wgSplit(s){ return s?String(s).split(','):[]; }
@@ -4742,23 +4745,29 @@ function rRoomW(r){ var d={created:r.created,phase:r.phase,mode:r.mode,host:r.ho
 function rRoomTxt(r){ return wgIs(r)?'この中で、だれ？（10問）':rModeTxt(r&&r.mode); }
 // いまの質問：はじめからいた人（スタートより前に入った人）が、みんな答えた問題の次。部屋を作った人が先に進めたら（gq）そこまで
 function wgState(){
-  var r=RM.room||{}, ps=rPlayers(), gt=r.gt||0, core=ps.filter(function(p){ return (p.joined||0)<=gt; }); if(!core.length) core=ps;
-  var gq=r.gq||0, base=core.length?Math.min.apply(null,core.map(function(p){ return Math.max(wgWv(p).length,gq); })):0, idx=Math.min(WG_N,Math.max(base,gq));
-  return {ps:ps,core:core,idx:idx,my:Math.max(rMyWv().length,gq),fin:idx>=WG_N};
+  var r=RM.room||{}, ps=rPlayers(), gt=r.gt||0, inG=function(p){ return !gt||(p.joined||0)<=gt; }, core=ps.filter(inG); if(!core.length) core=ps;
+  // 部屋を作った人などが先に進めた（gq）質問は、はじめからいた人だけ「答えた」とみなす（あとから入った人は1問目から答える）
+  var gq=r.gq||0, cnt=function(p){ var n=wgWv(p).length; return inG(p)?Math.max(n,gq):n; };
+  // 一度飛ばされて、まだ答えていない人は「お休み中」（待たない）。もどってきて答えれば、また一緒に進む
+  var rest=function(p){ return inG(p)&&wgWv(p).length<gq; }, act=core.filter(function(p){ return !rest(p); }); if(!act.length) act=core;
+  var base=act.length?Math.min.apply(null,act.map(cnt)):0, idx=Math.min(WG_N,Math.max(base,gq));
+  var hk=RM.code+':'+(r.created||0); if(RM.wgHiK!==hk){ RM.wgHiK=hk; RM.wgHi=0; } idx=Math.max(idx,RM.wgHi||0); RM.wgHi=idx; // 質問の番号はもどさない（お休みの人がもどってきて追いつくあいだも）
+  var me=rMe(); return {ps:ps,core:act,rest:rest,cnt:cnt,idx:idx,my:me?cnt(me):rMyWv().length,fin:idx>=WG_N};
 }
 function wgPic(p,sz){ var c=p.done&&validCode(p.code)?p.code:(p.id===rPid()&&st.me&&validCode(st.me.code)?st.me.code:(validCode(p.pc||'')?p.pc:''));
   return c?art(c,sz):'<span class="wpic sil rv-sil" style="width:'+sz+'px;height:'+sz+'px" aria-hidden="true"><img src="img/'+silOf(p.id)+'.webp" width="'+sz+'" height="'+sz+'" alt=""><i>?</i></span>'; }
 function wgSeats(S,k){
   var id=rPid(), h='<div class="qs-g wg-seats" style="--qn:'+S.ps.length+'">';
-  S.ps.forEach(function(p){ var me=p.id===id, ok=Math.max(wgWv(p).length,(RM.room&&RM.room.gq)||0)>k;
+  S.ps.forEach(function(p){ var me=p.id===id, ok=S.cnt(p)>k;
     var c=p.done&&validCode(p.code)?p.code:(me?(st.me&&validCode(st.me.code)?st.me.code:''):(validCode(p.pc||'')?p.pc:''));
-    h+='<div class="qs'+(ok?' ok':' think')+(me?' me':'')+'"><span class="qs-p">'+(c?art(c,40):'<img class="sil" src="img/'+silOf(p.id)+'.webp" width="40" height="40" alt="">')+'</span>'+(me?'<span class="qs-you">あなた</span>':'')+'<b>'+esc(p.name)+'</b><small>'+(ok?'決めた！':'悩み中<span class="rdt" aria-hidden="true"><i></i><i></i><i></i></span>')+'</small></div>'; });
+    var zz=!ok&&!me&&S.rest(p);
+    h+='<div class="qs'+(ok?' ok':zz?' rest':' think')+(me?' me':'')+'"><span class="qs-p">'+(c?art(c,40):'<img class="sil" src="img/'+silOf(p.id)+'.webp" width="40" height="40" alt="">')+'</span>'+(me?'<span class="qs-you">あなた</span>':'')+'<b>'+esc(p.name)+'</b><small>'+(ok?'決めた！':zz?'お休み中':'悩み中<span class="rdt" aria-hidden="true"><i></i><i></i><i></i></span>')+'</small></div>'; });
   return h+'</div>';
 }
 function wgPlayHTML(){
   var S=wgState(), id=rPid(), host=rHost(), others=S.ps.filter(function(p){ return p.id!==id; });
   if(!RM.whoT||RM.whoT.k!==S.idx) RM.whoT={k:S.idx,t:Date.now()};
-  var skp=host&&Date.now()-RM.whoT.t>=WG_WAIT&&S.core.some(function(p){ return Math.max(wgWv(p).length,(RM.room.gq||0))<=S.idx; });
+  var skp=Date.now()-RM.whoT.t>=wgWaitMs()&&S.core.some(function(p){ return S.cnt(p)<=S.idx; });
   var h='<section class="card wg" data-ws="'+S.my+'|'+S.idx+'|'+(skp?1:0)+'|'+others.map(function(p){ return p.id+p.name; }).join(',')+'">';
   if(S.my<=S.idx&&S.my<WG_N){
     var k=S.my, q=wgQs()[k];
@@ -4769,8 +4778,8 @@ function wgPlayHTML(){
     var k2=S.idx, mine=rMyWv()[S.my-1], pn=S.ps.filter(function(p){ return p.id===mine; })[0];
     h+=wgSeats(S,k2)+'<p class="wg-n">'+(k2+1)+' / '+WG_N+'</p><p class="wg-t">'+wgTx(wgQs()[k2][1])+'</p>'+
       '<p class="wg-wait"><b>決めた！</b>'+(pn?'<span class="nw">（あなたは「'+esc(pn.name)+'」）</span>':'')+'<br><span class="nw">みんなが選ぶのを</span><span class="nw">待っています</span></p>';
-    var late=S.core.some(function(p){ return Math.max(wgWv(p).length,(RM.room.gq||0))<=k2; });
-    if(host&&late&&Date.now()-RM.whoT.t>=WG_WAIT) h+='<button class="btn btn-sub btn-wide" type="button" data-act="who-skip"><span class="nw">まだの人を待たずに</span><span class="nw">次の質問へ</span></button>';
+    var late=S.core.some(function(p){ return S.cnt(p)<=k2; });
+    if(late&&Date.now()-RM.whoT.t>=wgWaitMs()) h+='<button class="btn btn-sub btn-wide" type="button" data-act="who-skip"><span class="nw">まだの人を待たずに</span><span class="nw">次の質問へ</span></button>';
   }
   h+='</section><p class="rleave"><button class="linkbtn" type="button" data-act="room-leave">'+(host?'トップにもどる':'この部屋から出る')+'</button></p>';
   return h;
@@ -4803,7 +4812,7 @@ function wgMeBox(T){
 }
 function wgResHTML(){
   var S=wgState(), host=rHost(), hn=rHostName(), hs=hn?esc(hn)+'さん':'部屋を作った人', T=wgTally(S.ps);
-  var h='<section class="card rvote"><p class="rchip ok"><img class="rc-ic" src="img/ico/ok.webp" alt="" width="30" height="30">全員が選びました</p><h1>みんなが選んだのは…</h1>'+wgMeBox(T)+
+  var h='<section class="card rvote"><p class="rchip ok"><img class="rc-ic" src="img/ico/ok.webp" alt="" width="30" height="30">'+WG_N+'問、終わりました</p><h1>みんなが選んだのは…</h1>'+wgMeBox(T)+
     '<p class="rv-cap"><span class="nw">キャラクターは、</span><span class="nw">前に診断したことがある人のタイプです。</span><span class="nw">まだの人は影で出ます。</span></p>'+T.map(function(x){ return wgRow(x,false); }).join('')+'</section>';
   h+='<section class="card wg-cta"><p class="wg-cta-h"><span class="nw">本当はどうか、</span><span class="nw">診断で答え合わせ</span></p><p class="muted"><span class="nw">このまま、みんなで</span><span class="nw">本当の恋のタイプを診断（40問）。</span><span class="nw">終わると、そのうち5問の</span><span class="nw">「当たり／はずれ」がわかります。</span></p>'+
     (host?'<button class="btn btn-main btn-wide" type="button" data-act="who-diag" id="wg-diag"><span class="nw">みんなで診断する</span><span class="nw">（'+S.ps.length+'人）</span></button>':
@@ -5197,7 +5206,7 @@ document.addEventListener('click',function(e){
   else if(act==='room-new'){ history.pushState(null,'','?room=new'); roomSetup(); }
   else if(act==='go-mini'){ var mh=$('mn-home')||$('home-mini'); if(mh) mh.scrollIntoView({behavior:'smooth',block:'start'}); }
   else if(act==='who-pick'){ wgPick(+b.getAttribute('data-q'),b.getAttribute('data-p')); }
-  else if(act==='who-skip'){ var wsS=wgState(); wgRoomSet({gq:wsS.idx+1}); }
+  else if(act==='who-skip'){ var wsS=wgState(); b.disabled=true; wgRoomSet({gq:Math.min(WG_N,Math.max((RM.room&&RM.room.gq)||0,wsS.idx+1))}); }
   else if(act==='who-diag'){ var wb=$('wg-diag'); if(wb){ wb.disabled=true; wb.textContent='始めています…'; } wgRoomSet({gm:'end'},'wg-note').then(function(ok){ if(!ok&&wb){ wb.disabled=false; wb.textContent='みんなで診断する'; } }); }
   else if(act==='who-solo'){ if(RM.room&&rMe()) roomQuiz(); }
   else if(act==='room-gm'){ RM.gm=b.getAttribute('data-g')==='who'?'who':''; RM.sig=''; roomSetupPaint(); }
