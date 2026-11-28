@@ -443,7 +443,7 @@
 1. フォルダを用意する（既存の商品をもとに作る）。
 2. `tools/add_product_tag.py` の `PRODUCTS` に「フォルダ: 商品ID」を1行足す。
 3. 申込画面の `ORDER_PREFIX`（重ならない頭文字）・`TELECOM_PAYMENT_URL`・`TELECOM_PARAM`。
-4. 各ファイルの本番ドメインの判定式 `/(^|\.)(72k\.ai|suimei\.jp|ekipro\.jp)$/` に新しいドメインを足す。
+4. 各ファイルの本番ドメインの判定式 `/(^|\.)(72k\.ai|suimeipro\.jp|suimei\.jp|ekipro\.jp)$/` に新しいドメインを足す。
 5. 規約・特商法・プライバシーポリシー（商品名・販売URL・料金・回数上限）。
 6. `python3 tools/add_contrast_guard.py` → 生成スクリプト → `python3 tools/add_product_tag.py` → `sw.js` の `CACHE` を上げる。
 7. 基盤の商品マスタに1行足す（11-2）。
